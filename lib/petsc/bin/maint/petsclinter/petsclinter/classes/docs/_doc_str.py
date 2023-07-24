@@ -33,7 +33,9 @@ from ._doc_section      import SeeAlso
 
 if TYPE_CHECKING:
   from typing          import Union, Any, Optional, TypeVar
-  from collections.abc import Iterable, Sequence, Generator
+  from collections.abc import Iterator, Iterable, Sequence, Generator
+
+  from .._diag import DiagnosticMap
 
   SectionImpl = TypeVar('SectionImpl', bound=SectionBase)
 
@@ -100,7 +102,7 @@ class SectionManager:
   _verbose: bool
   _sections: dict[str, SectionBase]
   _cachekey: tuple[str, ...]
-  _findcache: dict[tuple[str, ...], dict[str, SectionBase]]
+  _findcache: dict[tuple[str, ...], dict[str, str]]
 
   def __init__(self, *args: SectionImpl, verbose: bool = False) -> None:
     r"""Construct a `SectionManager` object
@@ -131,14 +133,14 @@ class SectionManager:
     try:
       return sections[attr]
     except KeyError as ke:
-      replaced_attr = attr.replace('_', ' ')
+      replaced_attr = attr.replace('_', ' ').casefold()
       try:
         return sections[replaced_attr]
       except KeyError:
         pass
     raise AttributeError(attr)
 
-  def __iter__(self) -> SectionBase:
+  def __iter__(self) -> Iterator[SectionBase]:
     yield from self._sections.values()
 
   def __contains__(self, section: SectionImpl) -> bool:
@@ -213,7 +215,7 @@ class SectionManager:
 
     section_names = sections.keys()
     found_reason  = MatchReason.NOT_FOUND
-    matched       = 'UNKNOWN'
+    matched       = self.UNKNOWN_SECTION.name
     try:
       matched = difflib.get_close_matches(heading, section_names, n=1)[0]
     except IndexError:
@@ -344,10 +346,10 @@ class SectionManager:
         return Verdict.IS_HEADING_BUT_PROBABLY_SHOULDNT_BE
 
       try:
-        guessed = self.guess_heading(text, cache_result=False, strict=True)
+        _, _, section = self.fuzzy_find_section(text, cache_result=False, strict=True)
       except GuessHeadingFailError:
         return Verdict.NOT_HEADING
-      return Verdict.IS_HEADING if guessed else Verdict.NOT_HEADING
+      return Verdict.NOT_HEADING if isinstance(section, DefaultSection) else Verdict.IS_HEADING
 
     def handle_header_without_colon(line: str, prev_line: str) -> Verdict:
       linelo  = line.casefold()
@@ -369,7 +371,7 @@ class SectionManager:
       return handle_header_with_colon(line)
     return handle_header_without_colon(line, prev_line)
 
-  def guess_heading(self, line: str, strict: bool = False, **kwargs) -> tuple[str, str]:
+  def fuzzy_find_section(self, line: str, strict: bool = False, **kwargs) -> tuple[str, str, SectionBase]:
     r"""Try to fuzzy guess what section a heading belongs to.
 
     Parameters
@@ -385,8 +387,10 @@ class SectionManager:
     -------
     attempt :
       the attempt which was successful
-    match_name :
-      the name of the guess section
+    match_title :
+      the matched title of the guessed section
+    section :
+      the matched section
 
     Raises
     ------
@@ -394,19 +398,21 @@ class SectionManager:
       if header guessing failed
 
     Notes
+    -----
+    This needs to be combined with self.find() somehow...
     """
     strp = line.split(':', maxsplit=1)[0].strip()
     if strp:
       for attempt in (strp, strp.split(maxsplit=1)[0].strip(), strp.title()):
-        found_match = self.find(attempt, **kwargs).titles
-        if len(found_match) != 1:
-          found_match = difflib.get_close_matches(attempt, found_match, n=1)
+        section = self.find(attempt, **kwargs)
+        titles  = section.titles
+        if len(titles) > 1:
+          titles = difflib.get_close_matches(attempt, titles, n=1)
 
-        if found_match:
-          match_name = found_match[0]
-          if strict and match_name == '__UNKNOWN_SECTION__':
+        if titles:
+          if strict and isinstance(section, DefaultSection):
             break
-          return attempt, match_name
+          return attempt, titles[0], section
 
     raise GuessHeadingFailError(f'Could not guess heading for:\n{line}')
 
@@ -424,6 +430,10 @@ class PetscDocString(DocBase):
   Container to encapsulate a sowing docstring and retrieve various objects for it.
   Essentially a Cursor for comments.
   """
+
+  # to pacify type checkers...
+  diags: DiagnosticMap
+
   Type     = DocStringType
   Modifier = DocStringTypeModifier
   sections = SectionManager(
@@ -780,9 +790,9 @@ class PetscDocString(DocBase):
     self._attr = self._default_attributes()
     return
 
-  def guess_heading(self, line: str, **kwargs) -> tuple[str, str]:
-    r"""A shorthand for `SectionManager.guess_heading()`"""
-    return self.sections.guess_heading(line, **kwargs)
+  def guess_heading(self, line: str, **kwargs) -> tuple[str, str, SectionBase]:
+    r"""A shorthand for `SectionManager.fuzzy_find_section()`"""
+    return self.sections.fuzzy_find_section(line, **kwargs)
 
   def _check_floating(self) -> None:
     r"""Check that the docstring isn't a floating docstring, i.e. for a mansection or particular type
@@ -830,6 +840,7 @@ class PetscDocString(DocBase):
       self.Modifier.FLOATING in self.type_mod
     )
     if pointless:
+      assert linkage_cursor is not None
       begin_sowing_range = self._attr['sowing_char_range']
       linkage_extent     = SourceRange.cast(linkage_cursor.extent)
       diag               = self.make_diagnostic(
@@ -1062,16 +1073,16 @@ class PetscDocString(DocBase):
     """
     if verdict == Verdict.MAYBE_HEADING:
       try:
-        name, matched = self.guess_heading(line, strict=True)
+        name, match_title, _ = self.guess_heading(line, strict=True)
       except GuessHeadingFailError as ghfe:
         # Not being able to guess the heading here is OK since we only *think* it's a
         # heading
         self.sections._print(ghfe)
         return Verdict.NOT_HEADING
       if ':' in line:
-        mess = f'Line seems to be a section header but doesn\'t directly end with with \':\', did you mean \'{matched}\'?'
+        mess = f'Line seems to be a section header but doesn\'t directly end with with \':\', did you mean \'{match_title}\'?'
       else:
-        mess = f'Line seems to be a section header but missing \':\', did you mean \'{matched}:\'?'
+        mess = f'Line seems to be a section header but missing \':\', did you mean \'{match_title}:\'?'
       self.add_error_from_source_range(
         self.diags.section_header_maybe_header, mess, self.make_source_range(name, line, lineno)
       )
@@ -1098,14 +1109,15 @@ class PetscDocString(DocBase):
     """
     if verdict < 0:
       try:
-        possible_heading, section_guess = self.guess_heading(line, cache_result=False)
+        _, _, section_guess = self.guess_heading(line, cache_result=False)
       except GuessHeadingFailError as ghfe:
         # Not being able to guess the heading here is OK since we aren't sure this isn't a
         # heading after all
         self.sections._print(ghfe)
         verdict = Verdict.NOT_HEADING
       else:
-        if section_guess == '__UNKNOWN_SECTION__':
+        if isinstance(section_guess, DefaultSection):
+          # we could not find a suitable section for it
           assert not line.endswith(r'\:')
           eloc = self.make_source_range(':', line, lineno, offset=line.rfind(':'))
           mess = f'Sowing treats all lines ending with \':\' as header, are you sure \'{textwrap.shorten(stripped, width=35)}\' qualifies? Use \'\:\' to escape the colon if not'

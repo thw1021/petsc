@@ -24,7 +24,6 @@ if TYPE_CHECKING:
   from ._patch   import Patch
   from ._src_pos import SourceLocationLike
 
-  T = TypeVar('T')
   FuncOrClass = TypeVar('FuncOrClass')
 
   class HasDiagnostics(Protocol):
@@ -387,6 +386,13 @@ DiagnosticManager = _DiagnosticsManager()
 class Diagnostic:
   FLAG_SUBST = r'%DIAG_FLAG%'
   __slots__  = 'flag', 'message', 'location', 'patch', 'clflag', 'notes'
+
+  flag: str
+  message: str
+  location: SourceLocation
+  patch: Patch
+  clflag: str
+  notes: list[str]
 
   def __init__(self, flag: str, message: str, location: SourceLocationLike, patch: Optional[Patch] = None, notes: Optional[list[tuple[SourceLocationLike, str]]] = None) -> None:
     r"""Construct a `Diagnostic`

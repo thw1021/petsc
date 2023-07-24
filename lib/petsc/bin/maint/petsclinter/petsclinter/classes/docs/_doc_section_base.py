@@ -171,8 +171,9 @@ class SectionBase(DocBase):
 
   name: str
   required: bool
+  solitary: bool
 
-  def __init__(self, name: str, required: bool = False, keywords=None, titles=None, solitary: bool = True) -> None:
+  def __init__(self, name: str, required: bool = False, keywords: Optional[tuple[str, ...]] = None, titles: Optional[tuple[str, ...]] = None, solitary: bool = True) -> None:
     assert isinstance(name, str)
     titlename = name.title()
     if titles is None:
@@ -286,7 +287,7 @@ class SectionBase(DocBase):
       if not sep:
         # missing colon, but if we are at this point then we are pretty sure it is a
         # header, so we assume the first word is the header
-        before, _ = docstring.guess_heading(text)
+        before, _, _ = docstring.guess_heading(text)
 
       heading = before.strip()
       if any(t in heading for t in self.titles):
@@ -360,7 +361,7 @@ class SectionBase(DocBase):
     for loc, text, verdict in headings:
       _, sep, after = text.partition(':')
       if not sep:
-        head, _       = docstring.guess_heading(text)
+        head, _, _    = docstring.guess_heading(text)
         _, sep, after = text.partition(head)
         assert sep
       if after.strip():

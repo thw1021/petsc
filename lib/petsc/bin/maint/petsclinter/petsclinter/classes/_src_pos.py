@@ -511,7 +511,7 @@ class SourceRange(AttributeCache):
     cast = SourceLocation.cast
     return end >= cast(other.start) and cast(other.end) >= self.__start()
 
-  def resized(self, lbegin: int = 0, lend: int = 0, cbegin: int = 0, cend: int = 0) -> SourceRange:
+  def resized(self, lbegin: int = 0, lend: int = 0, cbegin: Union[int, None] = 0, cend: Union[int, None] = 0) -> SourceRange:
     r"""Return a resized SourceRange, if the sourceRange was resized it is a new object
 
     Parameters

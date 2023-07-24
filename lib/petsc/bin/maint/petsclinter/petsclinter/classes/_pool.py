@@ -23,7 +23,7 @@ from ._linter import Linter
 
 if TYPE_CHECKING:
   from collections.abc import Collection, MutableSequence
-  from typing          import Optional, Union, Any, TypeVar
+  from typing          import Optional, Union, Any, TypeVar, NoReturn
 
   from ..util._clang import CXTranslationUnit
   from ._path        import Path, PathLike, StrPathLike
@@ -220,7 +220,7 @@ class ParallelPool(WorkerPoolBase):
     return
 
   @timeout(seconds=10)
-  def __crash_and_burn(self, message: str) -> None:
+  def __crash_and_burn(self, message: str) -> NoReturn:
     r"""Forcefully annihilate the pool and crash the program
 
     Parameters

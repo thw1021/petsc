@@ -199,6 +199,7 @@ def make_cxcursor_and_range_callback(cursor: CursorLike, parsing_error_handler: 
     try:
       found_cursors.append(Cursor(cursor))
     except ParsingError as pe:
+      assert callable(parsing_error_handler)
       parsing_error_handler(pe)
     except Exception:
       import traceback

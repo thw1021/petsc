@@ -187,11 +187,12 @@ def get_petsc_extra_includes(petsc_dir: StrPathLike, petsc_arch: str) -> list[st
   ]
   cxx_flags = [std_flags[-1]] if std_flags else [] # take only the last one
 
-  seen           = set()
+  seen: set[str] = set()
   include_gen    = (
     flag for sublist in discard_empty_flags(petsc_includes + mpi_includes) for flag in sublist if flag.startswith('-I')
   )
-  extra_includes = [flag for flag in include_gen if not flag in seen and not seen.add(flag)]
+  seen_add       = seen.add
+  extra_includes = [flag for flag in include_gen if not flag in seen and not seen_add(flag)]
 
   return cxx_flags + extra_includes
 
