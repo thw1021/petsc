@@ -3,6 +3,10 @@
 # Created: Thu Nov 17 11:50:52 2022 (-0500)
 # @author: Jacob Faibussowitsch
 """
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Union
+
 import re
 import difflib
 import clang.cindex as clx
@@ -19,6 +23,11 @@ from ._doc_section_base import (
 
 from ...util._clang import clx_enum_type_kinds
 
+if TYPE_CHECKING:
+  from typing import TypeAlias
+
+  from ._doc_str import PetscDocString, Verdict
+
 """
 ==========================================================================================
 Derived Classes
@@ -30,8 +39,17 @@ class DefaultSection(SectionBase):
   def __diagnostic_prefix__(cls, *flags):
     return DiagnosticManager.flag_prefix(super())('', *flags)
 
-  def __init__(self, *args, **kwargs):
-    kwargs.setdefault('name', 'UNKNOWN')
+  def __init__(self, *args, **kwargs) -> None:
+    r"""Construct a `DefaultSection`
+
+    Parameters
+    ----------
+    *args :
+      additional positional arguments to `SectionBase.__init__()`
+    **kwargs :
+      additional keyword arguments to `SectionBase.__init__()`
+    """
+    kwargs.setdefault('name', 'UNKNOWN_SECTION')
     kwargs.setdefault('titles', ('__UNKNOWN_SECTION__',))
     super().__init__(*args, **kwargs)
     return
@@ -50,46 +68,70 @@ class Synopsis(SectionBase):
     __header_include_finder.pattern + r'\s*/\*\s*I\s*(["<].*[>"])\s*I\s*\*/.*'
   )
 
+  ItemsEntry: TypeAlias = dict[str, Union[list[tuple[SourceRange, str]], tuple[SourceRange, str]]]
+  ItemsType: TypeAlias  = tuple[ItemsEntry, ...]
+  items: ItemsType
+
   @classmethod
   def __diagnostic_prefix__(cls, *flags):
     return DiagnosticManager.flag_prefix(super())('synopsis', *flags)
 
-  def __init__(self, *args, **kwargs):
+  def __init__(self, *args, **kwargs) -> None:
+    r"""Construct a `Synopsis`
+
+    Parameters
+    ----------
+    *args :
+      additional positional arguments to `SectionBase.__init__()`
+    **kwargs :
+      additional keyword arguments to `SectionBase.__init__()`
+    """
     kwargs.setdefault('name', 'synopsis')
     kwargs.setdefault('required', True)
     kwargs.setdefault('keywords', ('Synopsis', 'Not Collective'))
     super().__init__(*args, **kwargs)
     return
 
-  @staticmethod
-  def barren():
+  def barren(self) -> bool:
     return False # synoposis is never barren
 
-  def setup(self, ds, *args, **kwargs):
+  def setup(self, ds: PetscDocString) -> None:
+    r"""Set up a `Synopsis`
+
+    Parameters
+    ----------
+    ds :
+      the `PetscDocString` instance for this section
+    """
     cursor_name = ds.cursor.name
     lo_name     = cursor_name.casefold()
-    items       = [{'name' : (None, None), 'blurb' : [], 'synopsis' : []}]
+    items: list[Synopsis.ItemsEntry] = [{'name' : (None, None), 'blurb' : [], 'synopsis' : []}]
 
     class Inspector:
       __slots__ = 'found_description', 'found_synopsis', 'is_enum', 'capturing'
 
-      def __init__(self, cursor):
+      found_description: bool
+      found_synopsis: bool
+      is_enum: bool
+      capturing: Union[bool, str]
+
+      def __init__(self, cursor: Cursor) -> None:
         self.found_description = False
         self.found_synopsis    = False
         self.is_enum           = cursor.type.kind in clx_enum_type_kinds
         self.capturing         = False
         return
 
-      def __call__(self, *args, **kwargs):
+      def __call__(self, loc: SourceRange, line: str, verdict: Verdict) -> None:
         if not self.found_description:
-          self.description(*args, **kwargs)
+          self.description(loc, line)
         if self.is_enum:
-          self.enum(*args, **kwargs)
+          self.enum(loc, line)
         elif not self.found_synopsis:
-          self.synopsis(*args, **kwargs)
+          self.synopsis(loc, line)
         return
 
-      def description(self, loc, line, *args, **kwargs):
+      def description(self, loc: SourceRange, line: str) -> None:
         """
         Look for the '<NAME> - description' block in a synopsis
         """
@@ -118,7 +160,7 @@ class Synopsis(SectionBase):
           self.capturing = 'description' # now capture the rest of the blurb
         return
 
-      def synopsis(self, loc, line, *args, **kwargs):
+      def synopsis(self, loc: SourceRange, line: str) -> None:
         """
         Look for the Synopsis: heading and block in a synopsis
         """
@@ -135,7 +177,7 @@ class Synopsis(SectionBase):
           items[0]['synopsis'].append((ds.make_source_range(lstrp, line, loc.start.line), line))
         return
 
-      def enum(self, loc, line, *args, **kwargs):
+      def enum(self, loc: SourceRange, line: str) -> None:
         lstr = line.lstrip()
         # check that '-' is in the line since some people like to use entire blocks of $'s
         # to describe a single enum value...
@@ -146,10 +188,10 @@ class Synopsis(SectionBase):
         return
 
     inspector = Inspector(ds.cursor)
-    super().setup(ds, *args, inspect_line=inspector, **kwargs)
+    super().setup(ds, inspect_line=inspector)
 
     if inspector.is_enum:
-      def check_enum_starts_with_dollar(self, ds, items):
+      def check_enum_starts_with_dollar(self, ds: PetscDocString, items):
         for key, opts in sorted(items.items()):
           if len(opts) < 1:
             raise RuntimeError(f'number of options {len(opts)} < 1, key: {key}, items: {items}')
@@ -162,7 +204,7 @@ class Synopsis(SectionBase):
       param_lines = items[1:]
       assert param_lines, 'No parameter lines in enum description!'
       params.consume(param_lines)
-      params.setup(ds, *args, parameter_list_prefix_check=check_enum_starts_with_dollar, **kwargs)
+      params.setup(ds, parameter_list_prefix_check=check_enum_starts_with_dollar)
       # shuffle the enum values up
       params.items = {k + 1 : v for k, v in params.items.items()}
       # reinsert the heading
@@ -172,9 +214,17 @@ class Synopsis(SectionBase):
       self.items = tuple(items)
     return
 
-  def _check_missing_description(self, docstring, cursor, symbol):
-    """
-    Ensure that a synopsis is present and properly formatted with Cursor - description
+  def _check_missing_description(self, docstring: PetscDocString, cursor: Cursor, symbol: Union[str, None]) -> None:
+    r"""Ensure that a synopsis is present and properly formatted with Cursor - description
+
+    Parameters
+    ----------
+    docstring :
+      the `PetscDocString` instance that owns this section
+    cursor :
+      the `Cursor` to which this docstring belongs
+    symbol :
+      the symbol description, or None if not found
     """
     if symbol is None:
       docstring.add_error_from_diagnostic(
@@ -314,7 +364,7 @@ class Synopsis(SectionBase):
     """
     for sloc, sline, _ in self.lines():
       if sloc.start.line == start_line:
-        item = DescribableItem.cast(sline, sep='-').check(docstring, self, sloc, expected_sep='-')
+        DescribableItem(sline, expected_sep='-').check(docstring, self, sloc)
         break
     return
 
@@ -509,7 +559,7 @@ class FunctionParameterList(ParameterList):
             not_found.append((sub, docstring.make_source_range(sub, descr_item.text, loc.start.line)))
             remove.add(i)
           else:
-            DescribableItem.cast(descr_item, sep='-').check(docstring, self, loc, expected_sep='-')
+            descr_item.check(docstring, self, loc)
       self.check_aligned_descriptions(docstring, [g for i, g in enumerate(group) if i not in remove])
     return not_found
 
@@ -891,12 +941,16 @@ class Level(InlineList):
   ('backticks','Verify that seealso list entries are all enclosed by \'`\''),
 )
 class SeeAlso(InlineList):
+  __slots__ = ('special_chars',)
+
+  special_chars: str
+
   def __init__(self, *args, **kwargs):
     kwargs.setdefault('name', 'seealso')
     kwargs.setdefault('required', True)
     kwargs.setdefault('titles', ('.seealso',))
-    kwargs.setdefault('special_chars', '`')
     super().__init__(*args, **kwargs)
+    self.special_chars = '`'
     return
 
   @classmethod

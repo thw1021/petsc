@@ -10,8 +10,8 @@ sync_print = print
 
 from .__version__ import __MIN_PYTHON_VERSION__, version_tuple, version_str
 
-if sys.version_info < __version__.__MIN_PYTHON_VERSION__:
-  raise ImportError('Need python ' + str(__version__.__MIN_PYTHON_VERSION__) + '+')
+if sys.version_info < __MIN_PYTHON_VERSION__:
+  raise ImportError('Need python ' + version_str() + '+')
 
 del __MIN_PYTHON_VERSION__
 
