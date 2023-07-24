@@ -37,7 +37,7 @@ if TYPE_CHECKING:
 
   from .._diag import DiagnosticMap
 
-  SectionImpl = TypeVar('SectionImpl', bound=SectionBase)
+  from ._doc_section_base import SectionImpl
 
 @enum.unique
 class Verdict(enum.IntEnum):
@@ -407,7 +407,7 @@ class SectionManager:
         section = self.find(attempt, **kwargs)
         titles  = section.titles
         if len(titles) > 1:
-          titles = difflib.get_close_matches(attempt, titles, n=1)
+          titles = tuple(difflib.get_close_matches(attempt, titles, n=1))
 
         if titles:
           if strict and isinstance(section, DefaultSection):
