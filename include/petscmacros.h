@@ -1235,6 +1235,24 @@ static inline constexpr std::size_t PETSC_STATIC_ARRAY_LENGTH(const T &) noexcep
   #undef PETSC_PRAGMA_DIAGNOSTIC_IGNORED_END_
 #endif
 
+// gcc >= 4.6.0 (earliest known version of GCC to support push-popping visibility), clang
+// always had it
+#if defined(__clang__) || ((defined(__GNUC__) || defined(__GNUG__)) && ((__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__) >= 40600))
+  #if PetscDefined(USE_VISIBILITY_CXX) || PetscDefined(USE_VISIBILITY_C)
+    #define PETSC_PRAGMA_VISIBILITY_BEGIN_(vis) _Pragma(PetscStringize(GCC visibility push(vis)))
+    #define PETSC_PRAGMA_VISIBILITY_END_()      _Pragma(PetscStringize(GCC visibility pop))
+  #else
+    #define PETSC_PRAGMA_VISIBILITY_BEGIN_(vis)
+    #define PETSC_PRAGMA_VISIBILITY_END_()
+  #endif
+
+  #define PETSC_PRAGMA_VISIBILITY_BEGIN(vis) PETSC_PRAGMA_VISIBILITY_BEGIN_(vis)
+  #define PETSC_PRAGMA_VISIBILITY_END()      PETSC_PRAGMA_VISIBILITY_END_()
+#else
+  #define PETSC_PRAGMA_VISIBILITY_BEGIN(vis)
+  #define PETSC_PRAGMA_VISIBILITY_END()
+#endif
+
 /* OpenMP support */
 #if defined(_OPENMP)
   #if defined(_MSC_VER)
