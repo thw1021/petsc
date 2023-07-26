@@ -167,7 +167,7 @@ class WorkerPoolBase(abc.ABC):
           self._consume_results()
     return self
 
-  def finalize(self: PoolImpl) -> tuple[list[tuple[Path, str]], list[tuple[Path, str]], list, list[tuple[Path, str]]]:
+  def finalize(self: PoolImpl) -> tuple[list[tuple[Path, str]], list[tuple[Path, str]], list[tuple[Path, str]], list[tuple[Path, str]]]:
     r"""Finalize the queue and return the results
 
     Returns
@@ -272,7 +272,7 @@ class ParallelPool(WorkerPoolBase):
         elif signal == self.QueueSignal.UNIFIED_DIFF:
           self.patches.extend(data)
         elif signal == self.QueueSignal.WARNING:
-          self.warnings.append(data)
+          self.warnings.extend(data)
         else:
           raise ValueError(f'Unknown data returned by return_queue {signal}, {data}')
     return
@@ -415,7 +415,7 @@ class SerialPool(WorkerPoolBase):
     err_left, err_fixed, warnings, patches = self.linter.parse(item).diagnostics()
     self.errors_left.extend(err_left)
     self.errors_fixed.extend(err_fixed)
-    self.warnings.append(warnings)
+    self.warnings.extend(warnings)
     self.patches.extend(patches)
     return
 

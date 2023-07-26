@@ -172,7 +172,7 @@ class Linter:
   warn_prefix: str
   index: clx.Index
   errors: collections.OrderedDict[Path, collections.OrderedDict[int, WeakList]]
-  warnings: list[tuple[StrPathLike, str]]
+  warnings: collections.OrderedDict[Path, collections.OrderedDict[int, WeakList]]
   patches: collections.defaultdict[Path, list[Patch]]
 
   diags: DiagnosticMap # satisfy type checkers
@@ -206,16 +206,15 @@ class Linter:
     return
 
   def __str__(self) -> str:
-    flag_str   = f'Compiler Flags: {self.flags}'
-    clang_str  = f'Clang Options:  {self.clang_opts}'
-    show_str   = f'Verbose:        {self.verbose}'
-    print_list = [flag_str, clang_str, show_str]
-    for v in self.get_all_errors():
-      for path, mess in v:
-        print_list.append(mess)
-    warn_str = self.get_all_warnings(join_to_string=True)
-    if warn_str:
-      print_list.append(warn_str)
+    print_list = [
+      f'Compiler Flags: {self.flags}',
+      f'Clang Options:  {self.clang_opts}',
+      f'Verbose:        {self.verbose}'
+    ]
+    for getter_func in (self.get_all_errors, self.get_all_warnings):
+      for v in getter_func():
+        for _, mess in v:
+          print_list.append(mess)
     return '\n'.join(print_list)
 
   def __enter__(self) -> Linter:
@@ -224,7 +223,11 @@ class Linter:
   def __exit__(self, exception_type: Exception, *args) -> None:
     if not exception_type:
       if self.verbose:
-        pl.sync_print(self.get_all_warnings(join_to_string=True))
+        pl.sync_print(
+          '\n'.join([
+            self.warn_prefix, '\n'.join(s for _, s in self.get_all_warnings())[1:], self.warn_prefix
+          ])
+        )
       pl.sync_print(self.get_all_errors())
     return
 
@@ -405,7 +408,7 @@ class Linter:
     Called automatically before parsing a file
     """
     self.errors   = collections.OrderedDict()
-    self.warnings = []
+    self.warnings = collections.OrderedDict()
     # This can actually just be a straight list, since each linter object only ever
     # handles a single file, but use dict nonetheless
     self.patches  = collections.defaultdict(list)
@@ -493,6 +496,51 @@ class Linter:
     self._check_duplicate_function_calls(processed_funcs)
     return
 
+  def __add_diag_from_cursor(self, cursor: Cursor, diagnostic: Diagnostic, dest: collections.OrderedDict[Path, collections.OrderedDict[int, WeakList]], color: str, name: str) -> None:
+    r"""Add a diagnostic error or warning from a cursor
+
+    Parameters
+    ----------
+    cursor :
+      the cursor about which the diagnostic is concerned
+    diagnostic :
+      the diagnostic
+    dest :
+      the destination container, either self.warnings or self.errors
+    color :
+      the color code to prefix the message with
+    name :
+      the type of message, either 'error' or 'warning'
+    """
+    if diagnostic.disabled():
+      return
+
+    assert isinstance(cursor, Cursor)
+    filename = cursor.get_file()
+
+    if filename not in dest:
+      dest[filename] = collections.OrderedDict()
+
+    file_local = dest[filename]
+    cursor_id  = cursor.hash
+    if cursor_id not in file_local:
+      file_local[cursor_id] = WeakList()
+
+    patch                = diagnostic.patch
+    have_patch           = patch is not None
+    cursor_id_file_local = file_local[cursor_id]
+    cursor_id_file_local.append((
+      f'{color}{diagnostic.location}: {name}:{util.color.reset()} {diagnostic.format_message()}',
+      have_patch,
+      patch.id if have_patch else -1
+    ))
+
+    if patch:
+      patch.attach(weakref.ref(cursor_id_file_local))
+      self.patches[filename].append(patch)
+    return
+
+
   def add_error_from_cursor(self, cursor: Cursor, diagnostic: Diagnostic) -> None:
     r"""Given a cursor and a diagnostic, log the error with the linter
 
@@ -503,32 +551,7 @@ class Linter:
     diagnostic :
       the diagnostic detailing the error
     """
-    if diagnostic.disabled():
-      return
-
-    assert isinstance(cursor, Cursor)
-    filename = cursor.get_file()
-
-    if filename not in self.errors:
-      self.errors[filename] = collections.OrderedDict()
-
-    errors    = self.errors[filename]
-    cursor_id = cursor.hash
-    if cursor_id not in errors:
-      errors[cursor_id] = WeakList()
-
-    patch            = diagnostic.patch
-    have_patch       = patch is not None
-    cursor_id_errors = errors[cursor_id]
-    cursor_id_errors.append((
-      f'{util.color.bright_red()}{diagnostic.location}: error:{util.color.reset()} {diagnostic.format_message()}',
-      have_patch,
-      patch.id if have_patch else -1
-    ))
-
-    if patch:
-      patch.attach(weakref.ref(cursor_id_errors))
-      self.patches[filename].append(patch)
+    self.__add_diag_from_cursor(cursor, diagnostic, self.errors, util.color.bright_red(), 'error')
     return
 
   def view_last_error(self) -> None:
@@ -540,41 +563,37 @@ class Linter:
       break
     return
 
-  def add_warning(self, filename: StrPathLike, diag: Diagnostic) -> None:
-    r"""Add a generic warning given a filename"""
-    if self.werror:
-      self.add_error_from_cursor(filename, diag)
-      return
-
-    if diag.disabled():
-      return
-
-    warn_msg = diag.format_message()
-    try:
-      if warn_msg in self.warnings[-1][1]:
-        # we just had the exact same warning, we can ignore it. This happens very often
-        # for warnings occurring deep within a macro
-        return
-    except IndexError:
-      pass
-    self.warnings.append(
-      (filename, f'{util.color.bright_yellow()}{filename}: warning:{util.color.reset()} {warn_msg}')
-    )
-    return
-
-  def add_warning_from_cursor(self, cursor: Cursor, diag: Diagnostic) -> None:
+  def add_warning_from_cursor(self, cursor: Cursor, diagnostic: Diagnostic) -> None:
     r"""Like `Linter.add_error_from_cursor()` but for warnings"""
     if self.werror:
-      self.add_error_from_cursor(cursor, diag)
-      return
-
-    if diag.disabled():
-      return
-
-    assert isinstance(cursor, Cursor)
-    warn_str = f'{util.color.bright_yellow()}{diag.location}: warning:{util.color.reset()} {str(cursor)}\n{diag.format_message()}'
-    self.warnings.append((cursor.get_file(), warn_str))
+      self.add_error_from_cursor(cursor, diagnostic)
+    else:
+      self.__add_diag_from_cursor(
+        cursor, diagnostic, self.warnings, util.color.bright_yellow(), 'warning'
+      )
     return
+
+  def __get_all_diags(self, container: collections.OrderedDict[Path, collections.OrderedDict[int, WeakList]], prefix: str) -> tuple[list[tuple[Path, str]], list[tuple[Path, str]]]:
+    def maybe_add_to_global_list(global_list: list[tuple[Path, str]], local_list: list[str], path: Path) -> None:
+      if local_list:
+        global_list.append((
+          path, '{prefix}\n{}\n{prefix}'.format('\n'.join(local_list), prefix=prefix)
+        ))
+      return
+
+    all_unresolved: list[tuple[Path, str]] = []
+    all_resolved: list[tuple[Path, str]]   = []
+    for path, diags in container.items():
+      extracted: tuple[list[str], list[str]] = (
+        [], # unresolved
+        []  # resolved
+      )
+      for err_list in diags.values():
+        for err, have_patch, _ in err_list:
+          extracted[have_patch].append(err)
+      maybe_add_to_global_list(all_unresolved, extracted[0], path)
+      maybe_add_to_global_list(all_resolved, extracted[1], path)
+    return all_unresolved, all_resolved
 
   def get_all_errors(self) -> tuple[list[tuple[Path, str]], list[tuple[Path, str]]]:
     r"""Return all errors collected so far
@@ -586,47 +605,17 @@ class Linter:
     all_resolve :
       a lit of tuples of the path and message of resolved errors (i.e. those with a `Patch`)
     """
-    def maybe_add_to_global_list(global_list: list[tuple[Path, str]], local_list: list[str], path: Path) -> None:
-      if local_list:
-        global_list.append((
-          path, '{prefix}\n{}\n{prefix}'.format('\n'.join(local_list), prefix=self.err_prefix)
-        ))
-      return
+    return self.__get_all_diags(self.errors, self.err_prefix)
 
-    all_unresolved: list[tuple[Path, str]] = []
-    all_resolved: list[tuple[Path, str]]   = []
-    for path, errors in self.errors.items():
-      extracted: tuple[list[str], list[str]] = (
-        [], # unresolved
-        []  # resolved
-      )
-      for err_list in errors.values():
-        for err, have_patch, _ in err_list:
-          extracted[have_patch].append(err)
-      maybe_add_to_global_list(all_unresolved, extracted[0], path)
-      maybe_add_to_global_list(all_resolved, extracted[1], path)
-    return all_unresolved, all_resolved
-
-  def get_all_warnings(self, join_to_string: bool = False):
-    r"""Return all warnings collected so far, and optionally join them all as one string
-
-    Parameters
-    ----------
-    join_to_string : optional
-      join the warnings to string
+  def get_all_warnings(self) -> tuple[list[tuple[Path, str]], list[tuple[Path, str]]]:
+    r"""Return all warnings collected so far
 
     Returns
     -------
     warnings :
       the list of warnings
     """
-    if join_to_string:
-      if self.warnings:
-        return '\n'.join([
-          self.warn_prefix, '\n'.join(s for _, s in self.warnings)[1:], self.warn_prefix
-        ])
-      return ''
-    return self.warnings
+    return self.__get_all_diags(self.warnings, self.warn_prefix)
 
   def coalesce_patches(self) -> list[tuple[Path, str]]:
     r"""Given a set of patches, collapse all patches and return the minimal set of diffs required
@@ -682,12 +671,13 @@ class Linter:
 
     return list(itertools.starmap(combine, self.patches.items()))
 
-  def diagnostics(self) -> tuple[list[tuple[Path, str]], list[tuple[Path, str]], list, list[tuple[Path, str]]]:
+  def diagnostics(self) -> tuple[list[tuple[Path, str]], list[tuple[Path, str]], list[tuple[Path, str]], list[tuple[Path, str]]]:
     r"""Return the errors left (unfixed), fixed errors, warnings and avaiable patches. Automatically
     coalesces the patches
     """
     # order is ciritical, coalesce_patches() will prune the patch and warning lists
-    patches = self.coalesce_patches()
-    errors_left, errors_fixed = self.get_all_errors()
-    warnings = self.get_all_warnings()
-    return errors_left, errors_fixed, warnings, patches
+    patches                       = self.coalesce_patches()
+    errors_left, errors_fixed     = self.get_all_errors()
+    warnings_left, warnings_fixed = self.get_all_warnings()
+    assert len(warnings_fixed) == 0
+    return errors_left, errors_fixed, warnings_left, patches

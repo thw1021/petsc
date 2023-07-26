@@ -853,7 +853,7 @@ class FunctionParameterList(ParameterList):
           docstring.make_error_message(
             f'Parameter \'{arg}\' defined here', full_arg_cursors[idx], num_context=1
           ),
-          location=arg_cursors[idx].extent.start
+          location=full_arg_cursors[idx].extent.start
         )
       )
     return
