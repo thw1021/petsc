@@ -32,7 +32,7 @@ PetscErrorCode LSCLoadOperators(Mat *A, Mat *Q, Mat *L, Vec *rhs, IS *velocity, 
 
 PetscErrorCode port_lsd_bfbt(void)
 {
-  Mat       A, P, Q, L = NULL;
+  Mat       A, Q, L = NULL;
   Vec       x, b;
   KSP       ksp_A;
   PC        pc_A;
@@ -51,12 +51,9 @@ PetscErrorCode port_lsd_bfbt(void)
   else PetscCall(LSCLoadOperators(&A, &Q, NULL, &b, &isu, &isp));
   PetscCall(VecDuplicate(b, &x));
 
-  PetscCall(PetscObjectReference((PetscObject)A));
-  P = A;
-
   PetscCall(KSPCreate(PETSC_COMM_WORLD, &ksp_A));
   PetscCall(KSPSetOptionsPrefix(ksp_A, "fc_"));
-  PetscCall(KSPSetOperators(ksp_A, A, P));
+  PetscCall(KSPSetOperators(ksp_A, A, A));
 
   PetscCall(KSPSetFromOptions(ksp_A));
   PetscCall(KSPGetPC(ksp_A, &pc_A));
@@ -77,7 +74,6 @@ PetscErrorCode port_lsd_bfbt(void)
   PetscCall(KSPSolve(ksp_A, b, x));
 
   PetscCall(KSPDestroy(&ksp_A));
-  PetscCall(MatDestroy(&P));
   PetscCall(MatDestroy(&A));
   PetscCall(MatDestroy(&Q));
   if (L) PetscCall(MatDestroy(&L));
