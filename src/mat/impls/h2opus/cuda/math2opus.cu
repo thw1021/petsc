@@ -1,6 +1,9 @@
 #include <h2opusconf.h>
 /* skip compilation of this .cu file if H2OPUS is CPU only while PETSc has GPU support */
 #if !defined(__CUDACC__) || defined(H2OPUS_USE_GPU)
+  #include <petscmacros.h>
+
+PETSC_PRAGMA_VISIBILITY_BEGIN(default)
   #include <h2opus.h>
   #if defined(H2OPUS_USE_MPI)
     #include <h2opus/distributed/distributed_h2opus_handle.h>
@@ -10,6 +13,7 @@
     #include <h2opus/distributed/distributed_hcompress.h>
   #endif
   #include <h2opus/util/boxentrygen.h>
+PETSC_PRAGMA_VISIBILITY_END()
   #include <petsc/private/matimpl.h>
   #include <petsc/private/vecimpl.h>
   #include <petsc/private/deviceimpl.h>
