@@ -390,9 +390,9 @@ class Diagnostic:
   flag: str
   message: str
   location: SourceLocation
-  patch: Patch
+  patch: Optional[Patch]
   clflag: str
-  notes: list[str]
+  notes: list[tuple[SourceLocationLike, str]]
 
   def __init__(self, flag: str, message: str, location: SourceLocationLike, patch: Optional[Patch] = None, notes: Optional[list[tuple[SourceLocationLike, str]]] = None) -> None:
     r"""Construct a `Diagnostic`

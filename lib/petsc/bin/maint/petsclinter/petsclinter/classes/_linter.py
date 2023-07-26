@@ -5,7 +5,7 @@
 """
 from __future__ import annotations
 
-from typing import Optional, Any
+from typing import TYPE_CHECKING
 
 import re
 import weakref
@@ -17,8 +17,7 @@ import clang.cindex as clx
 import petsclinter  as pl
 
 from ._diag    import DiagnosticManager, Diagnostic
-from ._cursor  import Cursor, CursorLike
-from ._path    import Path, PathLike, StrPathLike
+from ._cursor  import Cursor
 from ._src_pos import SourceRange
 from ._patch   import Patch
 
@@ -26,7 +25,14 @@ from .._error import ParsingError, KnownUnhandleableCursorError
 
 from .. import util
 
-from ..util._clang import CXTranslationUnit
+if TYPE_CHECKING:
+  from typing import Optional, Any
+
+  from ._cursor import CursorLike
+  from ._path   import Path, PathLike, StrPathLike
+  from ._diag   import DiagnosticMap
+
+  from ..util._clang import CXTranslationUnit
 
 class WeakList(list):
   """
@@ -168,6 +174,8 @@ class Linter:
   errors: collections.OrderedDict[Path, collections.OrderedDict[int, WeakList]]
   warnings: list[tuple[StrPathLike, str]]
   patches: collections.defaultdict[Path, list[Patch]]
+
+  diags: DiagnosticMap # satisfy type checkers
 
   def __init__(self, compiler_flags: list[str], clang_options: Optional[CXTranslationUnit] = None, verbose: bool = False, werror: bool = False) -> None:
     r"""Construct a `Linter`

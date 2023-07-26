@@ -5,8 +5,7 @@
 """
 from __future__ import annotations
 
-from typing import Union, Optional, TypeAlias, Any
-from collections.abc import Callable
+from typing import TYPE_CHECKING, Union
 
 import weakref
 import functools
@@ -14,6 +13,10 @@ import clang.cindex as clx
 
 from .      import _util
 from ._path import Path
+
+if TYPE_CHECKING:
+  from typing          import Optional, Any
+  from collections.abc import Callable
 
 class ClangFileNameCache(weakref.WeakKeyDictionary):
   """
@@ -214,7 +217,7 @@ class SourceLocation(AttributeCache):
       return other
     raise NotImplementedError(type(other))
 
-SourceLocationLike: TypeAlias = SourceLocation.SourceLocationLike
+SourceLocationLike = SourceLocation.SourceLocationLike
 
 def _functools_lru_cache_member(func, *args, **kwargs):
   from ..__version__ import py_version_lt
@@ -584,6 +587,6 @@ class SourceRange(AttributeCache):
     print(self.formatted(*args, **kwargs))
     return
 
-SourceRangeLike: TypeAlias = SourceRange.SourceRangeLike
+SourceRangeLike = SourceRange.SourceRangeLike
 
 del _functools_lru_cache_member

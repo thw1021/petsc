@@ -8,6 +8,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Union
 
 import re
+import enum
 import difflib
 import clang.cindex as clx
 
@@ -21,12 +22,17 @@ from ._doc_section_base import (
   DescribableItem, SectionBase, ParameterList, Prose, VerbatimBlock, InlineList
 )
 
-from ...util._clang import clx_enum_type_kinds
+from ...util._clang import clx_enum_type_kinds, clx_char_type_kinds, clx_function_type_kinds
 
 if TYPE_CHECKING:
-  from typing import TypeAlias
+  from typing          import Optional
+  from collections.abc import Iterable, Sequence
 
   from ._doc_str import PetscDocString, Verdict
+
+  from .._linter import Linter
+  from .._diag   import DiagnosticMap
+  from .._cursor import CursorLike
 
 """
 ==========================================================================================
@@ -54,6 +60,7 @@ class DefaultSection(SectionBase):
     super().__init__(*args, **kwargs)
     return
 
+# TODO: Synopsis should be factored out into a FunctionSynopsis, and EnumSynopsis.
 @DiagnosticManager.register(
   ('matching-symbol-name','Verify that description matches the symbol name'),
   ('missing-description','Verify that a synopsis has a description'),
@@ -68,9 +75,12 @@ class Synopsis(SectionBase):
     __header_include_finder.pattern + r'\s*/\*\s*I\s*(["<].*[>"])\s*I\s*\*/.*'
   )
 
-  ItemsEntry: TypeAlias = dict[str, Union[list[tuple[SourceRange, str]], tuple[SourceRange, str]]]
-  ItemsType: TypeAlias  = tuple[ItemsEntry, ...]
+  ItemsEntrySingleType = tuple[SourceRange, str]
+  ItemsEntryType       = dict[str, Union[list[ItemsEntrySingleType], ItemsEntrySingleType]]
+  ItemsType            = tuple[ItemsEntryType, ...]
   items: ItemsType
+
+  diags: DiagnosticMap # satisfy type checkers
 
   @classmethod
   def __diagnostic_prefix__(cls, *flags):
@@ -105,44 +115,42 @@ class Synopsis(SectionBase):
     """
     cursor_name = ds.cursor.name
     lo_name     = cursor_name.casefold()
-    items: list[Synopsis.ItemsEntry] = [{'name' : (None, None), 'blurb' : [], 'synopsis' : []}]
+    items: list[Synopsis.ItemsEntryType] = [{'name' : (None, None), 'blurb' : [], 'synopsis' : []}]
+
+    class CaptureKind(enum.Enum):
+      NONE        = enum.auto()
+      DESCRIPTION = enum.auto()
+      SYNOPSIS    = enum.auto()
+
+      def __bool__(self) -> bool:
+        return self != CaptureKind.NONE
 
     class Inspector:
-      __slots__ = 'found_description', 'found_synopsis', 'is_enum', 'capturing'
+      __slots__ = 'found_description', 'found_synopsis', 'capturing'
 
       found_description: bool
       found_synopsis: bool
-      is_enum: bool
-      capturing: Union[bool, str]
+      capturing: CaptureKind
 
-      def __init__(self, cursor: Cursor) -> None:
+      def __init__(self) -> None:
         self.found_description = False
         self.found_synopsis    = False
-        self.is_enum           = cursor.type.kind in clx_enum_type_kinds
-        self.capturing         = False
+        self.capturing         = CaptureKind.NONE
         return
 
       def __call__(self, loc: SourceRange, line: str, verdict: Verdict) -> None:
-        if not self.found_description:
-          self.description(loc, line)
-        if self.is_enum:
-          self.enum(loc, line)
-        elif not self.found_synopsis:
-          self.synopsis(loc, line)
-        return
+        r"""Look for the '<NAME> - description' block in a synopsis"""
+        if self.found_description:
+          return
 
-      def description(self, loc: SourceRange, line: str) -> None:
-        """
-        Look for the '<NAME> - description' block in a synopsis
-        """
         startline = loc.start.line
         if self.capturing:
-          assert self.capturing == 'description', 'Mixing blurb and synopsis capture?'
+          assert self.capturing == CaptureKind.DESCRIPTION, 'Mixing blurb and synopsis capture?'
           item = line.strip()
           if item:
             items[0]['blurb'].append((ds.make_source_range(item, line, startline), item))
           else:
-            self.capturing        = False
+            self.capturing         = CaptureKind.NONE
             self.found_description = True
         else:
           pre, dash, rest = line.partition('-')
@@ -157,27 +165,31 @@ class Synopsis(SectionBase):
           item = pre.strip()
           items[0]['name'] = (ds.make_source_range(item, line, startline), item)
           items[0]['blurb'].append((ds.make_source_range(rest, line, startline), rest))
-          self.capturing = 'description' # now capture the rest of the blurb
+          self.capturing = CaptureKind.DESCRIPTION # now capture the rest of the blurb
         return
 
-      def synopsis(self, loc: SourceRange, line: str) -> None:
-        """
-        Look for the Synopsis: heading and block in a synopsis
-        """
+    class FunctionInspector(Inspector):
+      def __call__(self, loc: SourceRange, line: str, verdict: Verdict) -> None:
+        super().__call__(loc, line, verdict)
+        if self.found_synopsis:
+          return
+
         lstrp = line.strip()
         if 'synopsis:' in lstrp.casefold():
-          self.capturing = 'synopsis'
-        if self.capturing == 'synopsis':
+          self.capturing = CaptureKind.SYNOPSIS
+        if self.capturing == CaptureKind.SYNOPSIS:
           # don't want to accidentally capture the blurb
           if not lstrp:
             # reached the end of the synopsis block
             self.found_synopsis = True
-            self.capturing      = False
+            self.capturing      = CaptureKind.NONE
             return
           items[0]['synopsis'].append((ds.make_source_range(lstrp, line, loc.start.line), line))
         return
 
-      def enum(self, loc: SourceRange, line: str) -> None:
+    class EnumInspector(Inspector):
+      def __call__(self, loc: SourceRange, line: str, verdict: Verdict) -> None:
+        super().__call__(loc, line, verdict)
         lstr = line.lstrip()
         # check that '-' is in the line since some people like to use entire blocks of $'s
         # to describe a single enum value...
@@ -187,11 +199,11 @@ class Synopsis(SectionBase):
           items.append((ds.make_source_range(name, line, loc.start.line), line, 0))
         return
 
-    inspector = Inspector(ds.cursor)
+    inspector = EnumInspector() if ds.cursor.type.kind in clx_enum_type_kinds else FunctionInspector()
     super().setup(ds, inspect_line=inspector)
 
-    if inspector.is_enum:
-      def check_enum_starts_with_dollar(self, ds: PetscDocString, items):
+    if isinstance(inspector, EnumInspector):
+      def check_enum_starts_with_dollar(self, ds: PetscDocString, items: dict[str, list]) -> dict[str, list]:
         for key, opts in sorted(items.items()):
           if len(opts) < 1:
             raise RuntimeError(f'number of options {len(opts)} < 1, key: {key}, items: {items}')
@@ -214,31 +226,29 @@ class Synopsis(SectionBase):
       self.items = tuple(items)
     return
 
-  def _check_missing_description(self, docstring: PetscDocString, cursor: Cursor, symbol: Union[str, None]) -> None:
-    r"""Ensure that a synopsis is present and properly formatted with Cursor - description
+  def _check_macro_synopsis(self, linter: Linter, cursor: Cursor, docstring: PetscDocString, explicit_synopsis: list[Synopsis.ItemsEntrySingleType]) -> bool:
+    r"""Ensure that synopsese of macros exist and have proper prototypes
 
     Parameters
     ----------
-    docstring :
-      the `PetscDocString` instance that owns this section
+    linter :
+      the `Linter` instance to log errors to
     cursor :
-      the `Cursor` to which this docstring belongs
-    symbol :
-      the symbol description, or None if not found
-    """
-    if symbol is None:
-      docstring.add_error_from_diagnostic(
-        docstring.make_diagnostic(
-          self.diags.missing_description, 'Docstring missing synopsis', self.extent, highlight=False
-        ).add_note(
-          f"Expected '{cursor.name} - a very useful description'"
-        )
-      )
-    return
+      the cursor this docstring section belongs to
+    docstring :
+      the docstring that owns this section
+    explicit_synopsis :
+      the list of source-range - text pairs of lines that make up the synopsis section
 
-  def _check_macro_synopsis(self, linter, cursor, docstring, explicit_synopsis):
-    """
-    Ensure that synopsese of macros exist and have proper prototypes
+    Returns
+    -------
+    should_check :
+      True if the section should continue to check that the synopsis name matches the symbol
+
+    Notes
+    -----
+    If the synopsis is a macro type, then the name in the synopsis won't match the actual symbol type,
+    so it is pointless to check it
     """
     if not (len(explicit_synopsis) or docstring.Modifier.FLOATING in docstring.type_mod):
       # we are missing the synopsis section entirely
@@ -250,7 +260,7 @@ class Synopsis(SectionBase):
         include_header = lines[0]
       except IndexError:
         include_header = '"some_header.h"'
-      args = ', '.join(
+      args        = ', '.join(
         f'{c.derivedtypename} {c.name}' for c in linter.get_argument_cursors(cursor)
       )
       extent      = docstring._attr['sowing_char_range']
@@ -272,7 +282,8 @@ class Synopsis(SectionBase):
         location=macro_ident.start
       )
       linter.add_error_from_cursor(cursor, diag)
-      return False # the code should not check the name
+       # the code should not check the name
+      return False
 
     # search the explicit docstring for the
     # #include <header.h>
@@ -302,7 +313,7 @@ class Synopsis(SectionBase):
     # OK found it, now find the actual file. Clang unfortunately cannot help us here since
     # it does not pick up header that are in the precompiled header (which chances are,
     # this one is). So we search for it ourselves
-    def find_header(directory):
+    def find_header(directory: Path) -> Optional[Path]:
       header_path = directory / header_name
       if header_path.exists():
         return header_path.resolve()
@@ -323,8 +334,9 @@ class Synopsis(SectionBase):
     if not decls:
       # the name was not in the header, so the docstring is wrong
       mess = f"Macro docstring explicit synopsis appears to have incorrect include line. Could not locate '{fn_name}()' in '{header_name}'. Are you sure that's where it lives?"
-      diag = self.diags.macro_explicit_synopsis_valid_header
-      docstring.add_error_from_source_range(diag, mess, header_loc)
+      docstring.add_error_from_source_range(
+        self.diags.macro_explicit_synopsis_valid_header, mess, header_loc
+      )
       return False
 
     cursor_spelling = cursor.spelling
@@ -344,9 +356,30 @@ class Synopsis(SectionBase):
     # assert len(decls) == 1
     return False
 
-  def _check_symbol_matches_synopsis_name(self, docstring, cursor, loc, symbol):
-    """
-    Ensure that the name of the symbol matches that of the name in the custom synopsis (if provided)
+  def _check_symbol_matches_synopsis_name(self, docstring: PetscDocString, cursor: Cursor, loc: SourceRange, symbol: str) -> None:
+    r"""Ensure that the name of the symbol matches that of the name in the custom synopsis (if provided)
+
+    Parameters
+    ----------
+    docstring :
+      the `PetscDocString` this section belongs to
+    cursor :
+      the cursor this docstring belongs to
+    loc :
+      the source range for symbol
+    symbol :
+      the name of the symbol in the docstring description
+
+    Notes
+    -----
+    Checks:
+
+    /*@
+      FooBar - ....
+      ^^^^^^------------------x-- Checks that these match
+      ...             ________|
+    @*/            vvvvvv
+    PetscErrorCode FooBar(...)
     """
     if symbol != cursor.name:
       if len(difflib.get_close_matches(symbol, [cursor.name], n=1)):
@@ -358,9 +391,15 @@ class Synopsis(SectionBase):
       docstring.add_error_from_source_range(self.diags.matching_symbol_name, mess, loc, patch=patch)
     return
 
-  def _check_synopsis_description_separator(self, docstring, start_line):
-    """
-    Ensure that the synopsis uses the proper separator
+  def _check_synopsis_description_separator(self, docstring: PetscDocString, start_line: int) -> None:
+    r"""Ensure that the synopsis uses the proper separator
+
+    Parameters
+    ----------
+    docstring :
+      the docstring this section belongs to
+    start_line :
+      the line number of the description
     """
     for sloc, sline, _ in self.lines():
       if sloc.start.line == start_line:
@@ -368,11 +407,21 @@ class Synopsis(SectionBase):
         break
     return
 
-  def _check_blurb_length(self, docstring, cursor, items):
+  def _check_blurb_length(self, docstring: PetscDocString, cursor: Cursor, items: Synopsis.ItemsType) -> None:
+    r"""Ensure the blurb is not too wordy
+
+    Paramaters
+    ----------
+    docstring :
+      the docstring this section belongs to
+    cursor :
+      the cursor this docstring belongs to
+    items :
+      the synopsis items
     """
-    Ensure the blurb is not too wordy
-    """
-    total_blurb = [line for _, line in items[0]['blurb']]
+    blurb_items: list[tuple[SourceRange, str]] = items[0]['blurb']
+
+    total_blurb = [line for _, line in blurb_items]
     word_count  = sum(len(l.split()) for l in total_blurb)
     char_count  = sum(map(len, total_blurb))
 
@@ -385,7 +434,18 @@ class Synopsis(SectionBase):
       )
     return
 
-  def check(self, linter, cursor, docstring):
+  def check(self, linter: Linter, cursor: Cursor, docstring: PetscDocString) -> None:
+    r"""Perform all checks for this synopsis
+
+    Parameters
+    ----------
+    linter :
+      the `Linter` instance to log any errors with
+    cursor :
+      the cursor to which the docstring this section belongs to belongs
+    docstring :
+      the docstring to which this section belongs
+    """
     super().check(linter, cursor, docstring)
 
     items = self.items
@@ -395,20 +455,31 @@ class Synopsis(SectionBase):
       items = items.items # enum synopsis
     else:
       raise ValueError(type(items))
-    loc, symbol = items[0]['name']
+    name_loc, symbol = items[0]['name']
 
-    self._check_missing_description(docstring, cursor, symbol)
-    if loc is None:
+    if name_loc is None or symbol is None:
+      docstring.add_error_from_diagnostic(
+        docstring.make_diagnostic(
+          self.diags.missing_description, 'Docstring missing synopsis', self.extent, highlight=False
+        ).add_note(
+          f"Expected '{cursor.name} - a very useful description'"
+        )
+      )
       # missing synopsis entirely
       return
 
+    # to satisfy type checkers
+    assert isinstance(name_loc, SourceRange)
+    assert isinstance(symbol, str)
     if docstring.Modifier.MACRO in docstring.type_mod:
       # chances are that if it is a macro then the name won't match
-      self._check_macro_synopsis(linter, cursor, docstring, items[0]['synopsis'])
+      explicit_synopsis = items[0]['synopsis']
+      assert isinstance(explicit_synopsis, list)
+      self._check_macro_synopsis(linter, cursor, docstring, explicit_synopsis)
       return
 
-    self._check_symbol_matches_synopsis_name(docstring, cursor, loc, symbol)
-    self._check_synopsis_description_separator(docstring, loc.start.line)
+    self._check_symbol_matches_synopsis_name(docstring, cursor, name_loc, symbol)
+    self._check_synopsis_description_separator(docstring, name_loc.start.line)
     self._check_blurb_length(docstring, cursor, items)
     return
 
@@ -417,18 +488,32 @@ class Synopsis(SectionBase):
   ('fortran-interface','Verify that functions needing a custom fortran interface have the correct sowing indentifiers'),
 )
 class FunctionParameterList(ParameterList):
+  diags: DiagnosticMap # satisfy type checkers
+
   @classmethod
   def __diagnostic_prefix__(cls, *flags):
     return DiagnosticManager.flag_prefix(super())('func', *flags)
 
-  def __init__(self, *args, **kwargs):
+  def __init__(self, *args, **kwargs) -> None:
+    r"""Construct a `FunctionParameterList`
+
+    Parameters
+    ----------
+    *args :
+      additional positional arguments to `SectionBase.__init__()`
+    **kwargs :
+      additional keyword arguments to `SectionBase.__init__()`
+    """
     kwargs.setdefault('titles', ('Input Parameter', 'Output Parameter', 'Calling sequence'))
     kwargs.setdefault('keywords', ('Input', 'Output', 'Calling sequence of'))
     super().__init__(*args, **kwargs)
     return
 
   @staticmethod
-  def _get_deref_pointer_cursor_type(cursor):
+  def _get_deref_pointer_cursor_type(cursor: CursorLike) -> clx.TypeKind:
+    r"""Get the 'bottom' type of a muli-level pointer type, i.e. get double from
+    const double *const ****volatile *const *ptr
+    """
     canon_type = cursor.type.get_canonical()
     it         = 0
     while canon_type.kind == clx.TypeKind.POINTER:
@@ -437,20 +522,24 @@ class FunctionParameterList(ParameterList):
         # there is no chance that someone has a variable over 100 pointers deep, so
         # clearly something is wrong
         cursorview = '\n'.join(pl.classes._util.view_ast_from_cursor(cursor))
-        emess      = f'Ran for {it} iterations (>= 100) trying to get pointer type for\n{cursor.error_view_from_cursor(arg)}\n{cursorview}'
-        raise RuntimError(emess)
+        emess      = f'Ran for {it} iterations (>= 100) trying to get pointer type for\n{cursor.error_view_from_cursor(cursor)}\n{cursorview}'
+        raise RuntimeError(emess)
       canon_type = canon_type.get_pointee()
       it        += 1
     return canon_type
 
-  def _check_fortran_interface(self, docstring, fnargs):
-    """
-    Ensure that functions which require a custom fortran interface are correctly tagged with 'C' sowing
-    designator
-    """
-    from ...util._clang import clx_char_type_kinds, clx_function_type_kinds
+  def _check_fortran_interface(self, docstring: PetscDocString, fnargs: tuple[Cursor, ...]) -> None:
+    r"""Ensure that functions which require a custom fortran interface are correctly tagged with 'C'
+    sowing designator
 
-    requires_c = []
+    Parameters
+    ----------
+    docstring :
+      the docstring this section belongs to
+    fnargs :
+      the set of cursors of the function arguments
+    """
+    requires_c: list[tuple[Cursor, str]] = []
     for arg in fnargs:
       kind = self._get_deref_pointer_cursor_type(arg).kind
 
@@ -477,9 +566,20 @@ class FunctionParameterList(ParameterList):
         docstring.add_error_from_diagnostic(diag)
     return
 
-  def _check_no_args_documented(self, linter, docstring, arg_cursors):
-    """
-    Return True (and log the appropriate error) if no arguments were documented, False otherwise
+  def _check_no_args_documented(self, docstring: PetscDocString, arg_cursors: tuple[Cursor, ...]) -> bool:
+    r"""Check if no arguments were documented
+
+    Parameters
+    ----------
+    docstring :
+      the docstring this section belongs to
+    arg_cursors :
+      the set of argument cursors for the function cursor to check
+
+    Returns
+    -------
+    ret :
+      True (and logs the appropriate error) if no arguments were documented, False otherwise
     """
     if arg_cursors and not self:
       # none of the function arguments are documented
@@ -521,10 +621,26 @@ class FunctionParameterList(ParameterList):
 
     return False
 
-  def _param_initial_traversal(self, linter, docstring, visitor):
-    """
-    Perform the initial traversal of a parameter list, and return any arguments that were seemingly
+  def _param_initial_traversal(self, docstring: PetscDocString, visitor) -> list[tuple[str, SourceRange]]:
+    r"""Perform the initial traversal of a parameter list, and return any arguments that were seemingly
     never found
+
+    Parameters
+    ----------
+    docstring :
+      the docstring this section belongs to
+    visitor :
+      the visitor to call on each argument
+
+    Returns
+    -------
+    not_found :
+      a list of names (and their source ranges) which were not found in the function arguments
+
+    Notes
+    -----
+    The visitor should implement `mark_as_seen(name: str) -> int` which returns the 0-based index of
+    `name` in the list of function arguments if it was found, and `-1` otherwise
     """
     not_found           = []
     solitary_param_diag = self.diags.solitary_parameter
@@ -533,7 +649,7 @@ class FunctionParameterList(ParameterList):
       for i, (loc, descr_item, _) in enumerate(group):
         arg, sep = descr_item.arg, descr_item.sep
         if sep == ',' or ',' in arg:
-          sub_args = list(map(str.strip, arg.split(',')))
+          sub_args = tuple(map(str.strip, arg.split(',')))
           if len(sub_args) > 1:
             diag = docstring.make_diagnostic(
               solitary_param_diag,
@@ -542,9 +658,9 @@ class FunctionParameterList(ParameterList):
             )
             if docstring.cursor.is_variadic_function():
               diag.add_note('variable argument lists should be documented in notes')
-            linter.add_error_from_cursor(docstring.cursor, diag)
+            docstring.add_error_from_diagnostic(diag)
         elif sep == '=':
-          sub_args = list(map(str.strip, arg.split(' = ')))
+          sub_args = tuple(map(str.strip, arg.split(' = ')))
           if len(sub_args) > 1:
             sub_args = (sub_args[0],) # case of bad separator, only the first entry is valid
         else:
@@ -563,10 +679,30 @@ class FunctionParameterList(ParameterList):
       self.check_aligned_descriptions(docstring, [g for i, g in enumerate(group) if i not in remove])
     return not_found
 
-  def _check_docstring_param_is_in_symbol_list(self, docstring, arg_cursors, not_found, args_left, visitor):
-    """
-    Check that all documented parameters are actually in the symbol list. This catches things that
-    were documented, but don't actually exist
+  def _check_docstring_param_is_in_symbol_list(self, docstring: PetscDocString, arg_cursors: Sequence[Cursor], not_found: list[tuple[str, SourceRange]], args_left: list[str], visitor) -> list[str]:
+    r"""Check that all documented parameters are actually in the symbol list.
+
+    Parameters
+    ----------
+    docstring :
+      the docstring to which this section belongs
+    arg_cursors :
+      the set of argument cursors for the function cursor
+    note_found :
+      a list of name - source range pairs of arguments in the docstring which were not found
+    args_left :
+      a list of function argument names which were not seen in the docstring
+    visitor :
+      the visitor to call on each argument
+
+    Returns
+    -------
+    args_left :
+      the pruned args_left, all remaining entries will be undocuments function argument names
+
+    Notes
+    -----
+    This catches items that were documented, but don't actually exist in the argument list
     """
     param_doc_diag   = self.diags.parameter_documentation
     func_ptr_cursors = None
@@ -595,7 +731,7 @@ class FunctionParameterList(ParameterList):
         )
         args_left.remove(arg_match)
         idx = visitor.mark_as_seen(arg_match)
-        assert idx != -1, f'{arg_match=} was not found in {arg_names=}'
+        assert idx != -1, f'{arg_match} was not found in arg_names'
       diag = docstring.make_diagnostic(
         param_doc_diag, f"Extra docstring parameter \'{arg}\' not found in symbol parameter list",
         loc, patch=patch
@@ -629,14 +765,20 @@ class FunctionParameterList(ParameterList):
       docstring.add_error_from_diagnostic(diag)
     return args_left
 
-  def _check_valid_param_list_from_cursor(self, linter, docstring, arg_cursors):
+  def _check_valid_param_list_from_cursor(self, docstring: PetscDocString, arg_cursors: tuple[Cursor, ...]) -> None:
+    r"""Ensure that the parameter list matches the documented values, and that their order is correct
+
+    Parameters
+    ----------
+    docstring :
+      the docstring to which this section belongs
+    arg_cursors :
+      the set of argument cursors for the function cursor
     """
-    Ensure that the parameter list matches the documented values, and that their order is correct
-    """
-    if self._check_no_args_documented(linter, docstring, arg_cursors) or not self:
+    if self._check_no_args_documented(docstring, arg_cursors) or not self:
       return
 
-    def get_recursive_cursor_list(cursor_list):
+    def get_recursive_cursor_list(cursor_list: Iterable[CursorLike]) -> list[Cursor]:
       new_cursor_list = []
       PARM_DECL_KIND  = clx.CursorKind.PARM_DECL
       for cursor in map(Cursor.cast, cursor_list):
@@ -652,13 +794,13 @@ class FunctionParameterList(ParameterList):
       return new_cursor_list
 
     class Visitor:
-      def __init__(self, num_groups, arg_cursors):
+      def __init__(self, num_groups: int, arg_cursors: Iterable[Cursor]) -> None:
         self.num_groups = num_groups
         self.arg_names  = [a.name for a in arg_cursors if a.name]
         self.arg_seen   = [0] * len(self.arg_names)
         return
 
-      def mark_as_seen(self, name):
+      def mark_as_seen(self, name: str) -> int:
         idx  = 0
         prev = -1
         while 1:
@@ -685,11 +827,11 @@ class FunctionParameterList(ParameterList):
           self.arg_seen[idx] += 1
         return idx
 
-    arg_cursors = get_recursive_cursor_list(arg_cursors)
-    visitor     = Visitor(max(self.items.keys(), default=0), arg_cursors)
-    not_found   = self._param_initial_traversal(linter, docstring, visitor)
-    args_left   = self._check_docstring_param_is_in_symbol_list(
-      docstring, arg_cursors, not_found,
+    full_arg_cursors = get_recursive_cursor_list(arg_cursors)
+    visitor          = Visitor(max(self.items.keys(), default=0), full_arg_cursors)
+    not_found        = self._param_initial_traversal(docstring, visitor)
+    args_left        = self._check_docstring_param_is_in_symbol_list(
+      docstring, full_arg_cursors, not_found,
       [name for seen, name in zip(visitor.arg_seen, visitor.arg_names) if not seen],
       visitor
     )
@@ -709,84 +851,165 @@ class FunctionParameterList(ParameterList):
           self.extent, highlight=False
         ).add_note(
           docstring.make_error_message(
-            f'Parameter \'{arg}\' defined here', arg_cursors[idx], num_context=1
+            f'Parameter \'{arg}\' defined here', full_arg_cursors[idx], num_context=1
           ),
           location=arg_cursors[idx].extent.start
         )
       )
     return
 
-  def check(self, linter, cursor, docstring):
+  def check(self, linter: Linter, cursor: Cursor, docstring: PetscDocString) -> None:
+    r"""Perform all checks for this function param list
+
+    Parameters
+    ----------
+    linter :
+      the `Linter` instance to log any errors with
+    cursor :
+      the cursor to which the docstring this section belongs to belongs
+    docstring :
+      the docstring to which this section belongs
+    """
     super().check(linter, cursor, docstring)
     fnargs = linter.get_argument_cursors(cursor)
 
     self._check_fortran_interface(docstring, fnargs)
-    self._check_valid_param_list_from_cursor(linter, docstring, fnargs)
+    self._check_valid_param_list_from_cursor(docstring, fnargs)
     return
 
 class OptionDatabaseKeys(ParameterList):
+  diags: DiagnosticMap # satisfy type checkers
+
   @classmethod
   def __diagnostic_prefix__(cls, *flags):
     return DiagnosticManager.flag_prefix(super())('option-keys', *flags)
 
-  def __init__(self, *args, **kwargs):
+  def __init__(self, *args, **kwargs) -> None:
+    r"""Construct an `OptionsDatabaseKeys`
+
+    Parameters
+    ----------
+    *args :
+      additional positional arguments to `SectionBase.__init__()`
+    **kwargs :
+      additional keyword arguments to `SectionBase.__init__()`
+    """
     kwargs.setdefault('name', 'options')
     kwargs.setdefault('titles', ('Options Database',))
     super().__init__(*args, **kwargs)
     return
 
-  def _check_option_database_key_alignment(self, docstring):
-    """
-    Ensure that option database keys and their descriptions are properly aligned
+  def _check_option_database_key_alignment(self, docstring: PetscDocString) -> None:
+    r"""Ensure that option database keys and their descriptions are properly aligned
+
+    Parameters
+    ----------
+    docstring :
+      the docstring to which this section belongs
     """
     for _, group in sorted(self.items.items()):
       self.check_aligned_descriptions(docstring, group)
     return
 
-  def check(self, linter, cursor, docstring):
+  def check(self, linter: Linter, cursor: Cursor, docstring: PetscDocString) -> None:
+    r"""Perform all checks for this optionsdb list
+
+    Parameters
+    ----------
+    linter :
+      the `Linter` instance to log any errors with
+    cursor :
+      the cursor to which the docstring this section belongs to belongs
+    docstring :
+      the docstring to which this section belongs
+    """
     super().check(linter, cursor, docstring)
 
     self._check_option_database_key_alignment(docstring)
     return
 
 class Notes(Prose):
+  diags: DiagnosticMap # satisfy type checkers
+
   @classmethod
   def __diagnostic_prefix__(cls, *flags):
     return DiagnosticManager.flag_prefix(super())('notes', *flags)
 
-  def __init__(self, *args, **kwargs):
+  def __init__(self, *args, **kwargs) -> None:
+    r"""Construct a `Notes`
+
+    Parameters
+    ----------
+    *args :
+      additional positional arguments to `SectionBase.__init__()`
+    **kwargs :
+      additional keyword arguments to `SectionBase.__init__()`
+    """
     kwargs.setdefault('name', 'notes')
     kwargs.setdefault('titles', ('Notes', 'Note'))
     super().__init__(*args, **kwargs)
     return
 
 class DeveloperNotes(Prose):
+  diags: DiagnosticMap # satisfy type checkers
+
   @classmethod
   def __diagnostic_prefix__(cls, *flags):
     return DiagnosticManager.flag_prefix(super())('dev-notes', *flags)
 
-  def __init__(self, *args, **kwargs):
+  def __init__(self, *args, **kwargs) -> None:
+    r"""Construct a `DeveloperNotes`
+
+    Parameters
+    ----------
+    *args :
+      additional positional arguments to `SectionBase.__init__()`
+    **kwargs :
+      additional keyword arguments to `SectionBase.__init__()`
+    """
     kwargs.setdefault('name', 'developer notes')
     kwargs.setdefault('titles', ('Developer Notes', 'Developer Note'))
     super().__init__(*args, **kwargs)
 
 class References(Prose):
+  diags: DiagnosticMap # satisfy type checkers
+
   @classmethod
   def __diagnostic_prefix__(cls, *flags):
     return DiagnosticManager.flag_prefix(super())('references', *flags)
 
-  def __init__(self, *args, **kwargs):
+  def __init__(self, *args, **kwargs) -> None:
+    r"""Construct a `References`
+
+    Parameters
+    ----------
+    *args :
+      additional positional arguments to `SectionBase.__init__()`
+    **kwargs :
+      additional keyword arguments to `SectionBase.__init__()`
+    """
     kwargs.setdefault('name', 'references')
     kwargs.setdefault('solitary', False)
     super().__init__(*args, **kwargs)
     return
 
 class FortranNotes(Prose):
+  diags: DiagnosticMap # satisfy type checkers
+
   @classmethod
   def __diagnostic_prefix__(cls, *flags):
     return DiagnosticManager.flag_prefix(super())('fortran-notes', *flags)
 
-  def __init__(self, *args, **kwargs):
+  def __init__(self, *args, **kwargs) -> None:
+    r"""Construct a `FortranNotes`
+
+    Parameters
+    ----------
+    *args :
+      additional positional arguments to `SectionBase.__init__()`
+    **kwargs :
+      additional keyword arguments to `SectionBase.__init__()`
+    """
     kwargs.setdefault('name', 'fortran notes')
     kwargs.setdefault('titles', ('Fortran Notes', 'Fortran Note'))
     kwargs.setdefault('keywords', ('Fortran', ))
@@ -794,11 +1017,22 @@ class FortranNotes(Prose):
     return
 
 class SourceCode(VerbatimBlock):
+  diags: DiagnosticMap # satisfy type checkers
+
   @classmethod
   def __diagnostic_prefix__(cls, *flags):
     return DiagnosticManager.flag_prefix(super())('source-code', *flags)
 
-  def __init__(self, *args, **kwargs):
+  def __init__(self, *args, **kwargs) -> None:
+    r"""Construct a `SourceCode`
+
+    Parameters
+    ----------
+    *args :
+      additional positional arguments to `SectionBase.__init__()`
+    **kwargs :
+      additional keyword arguments to `SectionBase.__init__()`
+    """
     kwargs.setdefault('name', 'code')
     # kwargs.setdefault('titles', ('Example Usage', 'Example', 'Calling Sequence'))
     # kwargs.setdefault('keywords', ('Example', 'Usage', 'Sample Usage', 'Calling
@@ -815,7 +1049,20 @@ class SourceCode(VerbatimBlock):
 class Level(InlineList):
   __slots__ = ('valid_levels',)
 
-  def __init__(self, *args, **kwargs):
+  valid_levels: tuple[str, ...]
+
+  diags: DiagnosticMap # satisfy type checkers
+
+  def __init__(self, *args, **kwargs) -> None:
+    r"""Construct a `Level`
+
+    Parameters
+    ----------
+    *args :
+      additional positional arguments to `SectionBase.__init__()`
+    **kwargs :
+      additional keyword arguments to `SectionBase.__init__()`
+    """
     kwargs.setdefault('name', 'level')
     kwargs.setdefault('required', True)
     super().__init__(*args, **kwargs)
@@ -826,12 +1073,12 @@ class Level(InlineList):
   def __diagnostic_prefix__(cls, *flags):
     return DiagnosticManager.flag_prefix(super())('level', *flags)
 
-  def __do_check_valid_level_spelling(self, docstring, loc, level_name):
+  def __do_check_valid_level_spelling(self, docstring: PetscDocString, loc: SourceRange, level_name: str) -> None:
     if level_name in self.valid_levels:
       return # all good
 
-    def make_sub_loc(loc, sub):
-      return docstring.make_source_range(sub, loc.raw(), loc.start.line, offset=loc.start.column - 1)
+    def make_sub_loc(loc: SourceRange, substr: str) -> SourceRange:
+      return docstring.make_source_range(substr, loc.raw(), loc.start.line, offset=loc.start.column - 1)
 
     locase  = level_name.casefold()
     patch   = None
@@ -841,16 +1088,16 @@ class Level(InlineList):
       mess  = f"Level subheading must be lowercase, expected '{locase}' found '{level_name}'"
       patch = Patch(loc, locase)
     else:
-      diag      = self.diags.spelling
-      lvl_match = difflib.get_close_matches(locase, self.valid_levels, n=1)
-      if not lvl_match:
+      diag            = self.diags.spelling
+      lvl_match_close = difflib.get_close_matches(locase, self.valid_levels, n=1)
+      if not lvl_match_close:
         sub_split = level_name.split(maxsplit=1)[0]
         if sub_split != level_name:
-          sub_loc   = make_sub_loc(loc, sub_split)
-          lvl_match = difflib.get_close_matches(sub_split.casefold(), self.valid_levels, n=1)
+          sub_loc         = make_sub_loc(loc, sub_split)
+          lvl_match_close = difflib.get_close_matches(sub_split.casefold(), self.valid_levels, n=1)
 
-      if lvl_match:
-        lvl_match = lvl_match[0]
+      if lvl_match_close:
+        lvl_match = lvl_match_close[0]
         if lvl_match == 'deprecated':
           re_match = re.match(
             r'(\w+)\s*(\(\s*[sS][iI][nN][cC][eE]\s*\d+\.\d+[\.\d\s]*\))', level_name
@@ -880,9 +1127,13 @@ class Level(InlineList):
     docstring.add_error_from_source_range(diag, mess, sub_loc, patch=patch)
     return
 
-  def _check_valid_level_spelling(self, docstring):
-    """
-    Ensure that the level values are both proper and properly spelled
+  def _check_valid_level_spelling(self, docstring: PetscDocString) -> None:
+    r"""Ensure that the level values are both proper and properly spelled
+
+    Parameters
+    ----------
+    docstring :
+      the docstring to which this section belongs
     """
     for line_after_colon, sub_items in self.items:
       for loc, level_name in sub_items:
@@ -890,8 +1141,11 @@ class Level(InlineList):
     return
 
   def _check_level_heading_on_same_line(self):
-    """
-    Ensure that the level heading value is on the same line as Level:
+    r"""Ensure that the level heading value is on the same line as Level:
+
+    Notes
+    -----
+    TODO
     """
     return
     # TODO FIX ME, need to be able to handle the below
@@ -930,7 +1184,18 @@ class Level(InlineList):
       prevline = line
     return
 
-  def check(self, linter, cursor, docstring):
+  def check(self, linter: Linter, cursor: Cursor, docstring: PetscDocString) -> None:
+    r"""Perform all checks for this level
+
+    Parameters
+    ----------
+    linter :
+      the `Linter` instance to log any errors with
+    cursor :
+      the cursor to which th docstring this section belongs to belongs
+    docstring :
+      the docstring to which this section belongs
+    """
     super().check(linter, cursor, docstring)
     self._check_valid_level_spelling(docstring)
     self._check_level_heading_on_same_line()
@@ -946,7 +1211,18 @@ class SeeAlso(InlineList):
 
   special_chars: str
 
-  def __init__(self, *args, **kwargs):
+  diags: DiagnosticMap # satisfy type checkers
+
+  def __init__(self, *args, **kwargs) -> None:
+    r"""Construct a `SeeAlso`
+
+    Parameters
+    ----------
+    *args :
+      additional positional arguments to `SectionBase.__init__()`
+    **kwargs :
+      additional keyword arguments to `SectionBase.__init__()`
+    """
     kwargs.setdefault('name', 'seealso')
     kwargs.setdefault('required', True)
     kwargs.setdefault('titles', ('.seealso',))
@@ -959,12 +1235,29 @@ class SeeAlso(InlineList):
     return DiagnosticManager.flag_prefix(super())('seealso', *flags)
 
   @staticmethod
-  def transform(text):
+  def transform(text: str) -> str:
     return text.casefold()
 
   @staticmethod
-  def __make_deletion_patch(loc, text, look_behind):
-    """
+  def __make_deletion_patch(loc: SourceRange, text: str, look_behind: bool) -> Patch:
+    """Make a cohesive deletion patch
+
+    Paramaters
+    ----------
+    loc :
+      the source range for the item to delete
+    text :
+      the text of the full line
+    look_behind :
+      should we remove the comma and space behind the location as well?
+
+    Returns
+    -------
+    patch :
+      the patch
+
+    Notes
+    -----
     first(),    second(),      third
 
     Extend source range of 'second' so that deleting it yields
@@ -988,12 +1281,27 @@ class SeeAlso(InlineList):
       cbegin = 0
     return Patch(loc.resized(cbegin=cbegin, cend=cend), '')
 
-  def _check_self_referential(self, cursor, docstring, items, last_loc):
-    """
-    Ensure that the seealso list does not contain the name of the cursors symbol, i.e. that the
+  def _check_self_referential(self, cursor: Cursor, docstring: PetscDocString, items: InlineList.ItemsType, last_loc: SourceRange) -> list[tuple[SourceRange, str]]:
+    r"""Ensure that the seealso list does not contain the name of the cursors symbol, i.e. that the
     docstring is not self-referential
+
+    Parameters
+    ----------
+    cursor :
+      the cursor to which this docstring belongs
+    docstring :
+      the docstring to which this section belongs
+    items :
+      the inline list items
+    last_loc :
+      the location of the final entry in the list
+
+    Returns
+    -------
+    item_remain :
+      the list of items, with self-referential items removed
     """
-    item_remain = []
+    item_remain: list[tuple[SourceRange, str]] = []
     symbol_name = Cursor.get_name_from_cursor(cursor)
     for line_after_colon, sub_items in items:
       for loc, text in sub_items:
@@ -1007,25 +1315,44 @@ class SeeAlso(InlineList):
           item_remain.append((loc, text))
     return item_remain
 
-  def _check_enclosed_by_special_chars(self, docstring, item_remain):
+  def _check_enclosed_by_special_chars(self, docstring: PetscDocString, item_remain: list[tuple[SourceRange, str]]) -> None:
+    r"""Ensure that every entry in the seealso list is enclosed in backticks
+
+    Parameters
+    ----------
+    docstring :
+      the docstring to which this sectiion belongs
+    item_remain :
+      the list of valid items to check
     """
-    Ensure that every entry in the seealso list is enclosed in backticks
-    """
-    def enclosed_by(string, begin_char, end_char):
-      return string.startswith(begin_char) and string.endswith(end_char)
+    def enclosed_by(string: str, char: str) -> bool:
+      return string.startswith(char) and string.endswith(char)
 
     chars = self.special_chars
     for loc, text in item_remain:
-      if not enclosed_by(text, chars, chars) and not re.search(r'\[.*\]\(\w+\)', text):
+      if not enclosed_by(text, chars) and not re.search(r'\[.*\]\(\w+\)', text):
         docstring.add_error_from_source_range(
           self.diags.backticks, f"seealso symbol '{text}' not enclosed with '{chars}'",
           loc, patch=Patch(loc, f'{chars}{text.replace(chars, "")}{chars}')
         )
     return
 
-  def _check_duplicate_entries(self, linter, cursor, docstring, item_remain, last_loc):
-    """
-    Ensure that the seealso list has no duplicate entries
+  def _check_duplicate_entries(self, docstring: PetscDocString, item_remain: list[tuple[SourceRange, str]], last_loc: SourceRange) -> None:
+    r"""Ensure that the seealso list has no duplicate entries
+
+    Parameters
+    ----------
+    docstring :
+      the docstring to which this section belongs
+    item_remain :
+      the list of valid items to check
+    last_loc :
+      the location of the final entry in the list
+
+    Notes
+    -----
+    `last_loc` must be the original final location, even if `item_remain` does not contain it (i.e. it
+    is an invalid entry)!
     """
     seen     = {}
     dup_diag = self.diags.duplicate
@@ -1037,17 +1364,29 @@ class SeeAlso(InlineList):
 
       assert text_no_special
       first_seen = seen[text_no_special]
-      diag       = docstring.make_diagnostic(
-        dup_diag, f"Seealso entry '{text}' is duplicate", loc,
-        patch=self.__make_deletion_patch(loc, text, loc == last_loc)
-      ).add_note(
-        docstring.make_error_message('first instance found here', first_seen, num_context=1),
-        location=first_seen.start
+      docstring.add_error_from_diagnostic(
+        docstring.make_diagnostic(
+          dup_diag, f"Seealso entry '{text}' is duplicate", loc,
+          patch=self.__make_deletion_patch(loc, text, loc == last_loc)
+        ).add_note(
+          docstring.make_error_message('first instance found here', first_seen, num_context=1),
+          location=first_seen.start
+        )
       )
-      linter.add_error_from_cursor(cursor, diag)
     return
 
-  def check(self, linter, cursor, docstring):
+  def check(self, linter: Linter, cursor: Cursor, docstring: PetscDocString) -> None:
+    r"""Perform all checks for this seealso list
+
+    Parameters
+    ----------
+    linter :
+      the `Linter` instance to log any errors with
+    cursor :
+      the cursor to which th docstring this section belongs to belongs
+    docstring :
+      the docstring to which this section belongs
+    """
     super().check(linter, cursor, docstring)
 
     if self.barren() or not self:
@@ -1057,5 +1396,5 @@ class SeeAlso(InlineList):
     last_loc    = items[-1][1][-1][0]
     item_remain = self._check_self_referential(cursor, docstring, items, last_loc)
     self._check_enclosed_by_special_chars(docstring, item_remain)
-    self._check_duplicate_entries(linter, cursor, docstring, item_remain, last_loc)
+    self._check_duplicate_entries(docstring, item_remain, last_loc)
     return

@@ -73,7 +73,7 @@ def view_type(t, level, title):
     retList.extend(view_type(t.get_pointee(), level + 1, 'points to:'))
   return retList
 
-def view_ast_from_cursor(cursor: CursorLike, pred=verbose_print, level: Level = Level(), max_depth: int = -1, **kwargs) -> list:
+def view_ast_from_cursor(cursor, pred=verbose_print, level = Level(), max_depth = -1, **kwargs):
   """
   pretty print cursor AST
   """

@@ -646,7 +646,7 @@ class PetscDocString(DocBase):
     return dict(pragmas)
 
   @staticmethod
-  def make_error_message(message: str, crange: Optional[SourceRange] = None, num_context: int = 2, **kwargs) -> str:
+  def make_error_message(message: str, crange: Optional[Union[SourceRange, Cursor]] = None, num_context: int = 2, **kwargs) -> str:
     r"""Make a formatted error message from a source range
 
     Parameters
@@ -720,7 +720,7 @@ class PetscDocString(DocBase):
     col_end   = col_begin + len(token)
     return SourceRange.from_positions(self.cursor.translation_unit, lineno, col_begin, lineno, col_end)
 
-  def make_diagnostic(self, diag_flag: str, msg: str, src_range: Optional[SourceRangeLike], patch: Optional[Patch] = None, **kwargs) -> Diagnostic:
+  def make_diagnostic(self, diag_flag: str, msg: str, src_range: Optional[Union[SourceRange, Cursor]], patch: Optional[Patch] = None, **kwargs) -> Diagnostic:
     r"""Construct a `Diagnostic`
 
     Parameters

@@ -21,7 +21,7 @@ from .._src_pos import SourceRange
 from .._patch   import Patch
 
 if TYPE_CHECKING:
-  from typing          import Union, Optional, TypeAlias, TypeVar, Any
+  from typing          import Union, Optional, TypeVar, Any
   from collections.abc import Sequence, Iterable
 
   from .._linter  import Linter
@@ -237,7 +237,7 @@ class SectionBase(DocBase):
   # to pacify type checkers...
   diags: DiagnosticMap
 
-  LineInspector: TypeAlias = Callable[[SourceRange, str, 'Verdict'], None]
+  LineInspector = Callable[[SourceRange, str, 'Verdict'], None]
 
   def __init__(self, name: str, required: bool = False, keywords: Optional[tuple[str, ...]] = None, titles: Optional[tuple[str, ...]] = None, solitary: bool = True) -> None:
     r"""Construct a `SectionBase`
@@ -620,7 +620,7 @@ class ParameterList(SectionBase):
 
   prefixes: tuple[str, ...]
 
-  ItemsType: TypeAlias = dict[int, list[tuple[SourceRange, DescribableItem, int]]]
+  ItemsType = dict[int, list[tuple[SourceRange, DescribableItem, int]]]
   items: ItemsType
 
   @classmethod
@@ -795,7 +795,7 @@ class ParameterList(SectionBase):
     return
 
 class Prose(SectionBase):
-  ItemsType: TypeAlias = dict[int, tuple[tuple[SourceRange, str], list[tuple[SourceRange, str]]]]
+  ItemsType = dict[int, tuple[tuple[SourceRange, str], list[tuple[SourceRange, str]]]]
   items: ItemsType
 
   @classmethod
@@ -842,7 +842,7 @@ class Prose(SectionBase):
     return
 
 class VerbatimBlock(SectionBase):
-  ItemsType: TypeAlias = dict[int, list[int]]
+  ItemsType = dict[int, list[int]]
   items: ItemsType
 
   def setup(self, ds: PetscDocString) -> None:
@@ -885,8 +885,8 @@ class VerbatimBlock(SectionBase):
   ('formatting', 'Verify that inline lists are correctly white-space formatted')
 )
 class InlineList(SectionBase):
-  ItemsEntry: TypeAlias = tuple[tuple[str, str], list[tuple[SourceRange, str]]]
-  ItemsType: TypeAlias = tuple[ItemsEntry, ...]
+  ItemsEntry = tuple[tuple[str, str], list[tuple[SourceRange, str]]]
+  ItemsType  = tuple[ItemsEntry, ...]
   items: ItemsType
 
   def __init__(self, *args, **kwargs) -> None:
@@ -926,7 +926,7 @@ class InlineList(SectionBase):
       the `PetscDocString` instance for this section
     """
     items: list[InlineList.ItemsEntry] = []
-    titles                  = set(map(str.casefold, self.titles))
+    titles                             = set(map(str.casefold, self.titles))
 
     def inspector(loc: SourceRange, line: str, verdict: Verdict) -> None:
       rest = (line.split(':', maxsplit=2)[1] if ':' in line else line).strip()
