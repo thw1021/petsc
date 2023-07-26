@@ -75,18 +75,17 @@ static PetscErrorCode PCSetUp_LSC(PC pc)
         Mat CAdiaginv;
         PetscCall(MatDuplicate(C, MAT_COPY_VALUES, &CAdiaginv));
         PetscCall(MatDiagonalScale(CAdiaginv, NULL, lsc->scale));
-        if (!lsc->L) {
-          PetscCall(MatMatMult(CAdiaginv, B, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &lsc->L));
-        } else {
-          PetscCall(MatMatMult(CAdiaginv, B, MAT_REUSE_MATRIX, PETSC_DEFAULT, &lsc->L));
-        }
+        if (!lsc->L) PetscCall(MatMatMult(CAdiaginv, B, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &lsc->L));
+        else PetscCall(MatMatMult(CAdiaginv, B, MAT_REUSE_MATRIX, PETSC_DEFAULT, &lsc->L));
         PetscCall(MatDestroy(&CAdiaginv));
       } else {
         if (!lsc->L) {
-          PetscCall(MatMatMult(C, B, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &lsc->L));
-        } else {
-          PetscCall(MatMatMult(C, B, MAT_REUSE_MATRIX, PETSC_DEFAULT, &lsc->L));
+          PetscCall(MatProductCreate(C, B, NULL, &lsc->L));
+          PetscCall(MatProductSetType(lsc->L, MATPRODUCT_AB));
+          PetscCall(MatProductSetFromOptions(lsc->L));
+          PetscCall(MatProductSymbolic(lsc->L));
         }
+        PetscCall(MatProductNumeric(lsc->L));
       }
       Lp = L = lsc->L;
     }
