@@ -449,10 +449,57 @@ M*/
 
 .seealso: `PetscCall()`, `PetscErrorCode`
 M*/
+
+/*MC
+  PetscCallNull - Like `PetscCall()` but for functions returning a pointer
+
+  Synopsis:
+  #include <petscerror.h>
+  void PetscCallNull(PetscFunction(args))
+
+  Not Collective; No Fortran Support
+
+  Input Parameter:
+. PetscFunction - any PETSc function that returns an error code
+
+  Example Usage:
+.vb
+  void foo()
+  {
+    KSP ksp;
+
+    PetscFunctionBeginUser;
+    // OK, properly handles PETSc error codes
+    PetscCallNull(KSPCreate(PETSC_COMM_WORLD, &ksp));
+    PetscFunctionReturn(PETSC_NULLPTR);
+  }
+
+  PetscErrorCode bar()
+  {
+    KSP ksp;
+
+    PetscFunctionBeginUser;
+    // ERROR, Non-void function 'bar' should return a value
+    PetscCallNull(KSPCreate(PETSC_COMM_WORLD, &ksp));
+    // OK, returning PetscErrorCode
+    PetscCall(KSPCreate(PETSC_COMM_WORLD, &ksp));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+.ve
+
+  Level: developer
+
+  Notes:
+  Has identical usage to `PetscCall()`, except that it returns `PETSC_NULLPTR` on error instead of a
+  `PetscErrorCode`. See `PetscCall()` for more detailed discussion.
+
+.seealso: `PetscCall()`, `PetscErrorCode`, `PetscCallVoid()`
+M*/
 #if defined(PETSC_CLANG_STATIC_ANALYZER)
 void PetscCall(PetscErrorCode);
 void PetscCallBack(const char *, PetscErrorCode);
 void PetscCallVoid(PetscErrorCode);
+void PetscCallNull(PetscErrorCode);
 #else
   #define PetscCall(...) \
     do { \
@@ -479,6 +526,17 @@ void PetscCallVoid(PetscErrorCode);
         ierr_petsc_call_void_ = PetscError(PETSC_COMM_SELF, __LINE__, PETSC_FUNCTION_NAME, __FILE__, ierr_petsc_call_void_, PETSC_ERROR_REPEAT, " "); \
         (void)ierr_petsc_call_void_; \
         return; \
+      } \
+    } while (0)
+  #define PetscCallNull(...) \
+    do { \
+      PetscErrorCode ierr_petsc_call_void_; \
+      PetscStackUpdateLine; \
+      ierr_petsc_call_void_ = __VA_ARGS__; \
+      if (PetscUnlikely(ierr_petsc_call_void_ != PETSC_SUCCESS)) { \
+        ierr_petsc_call_void_ = PetscError(PETSC_COMM_SELF, __LINE__, PETSC_FUNCTION_NAME, __FILE__, ierr_petsc_call_void_, PETSC_ERROR_REPEAT, " "); \
+        (void)ierr_petsc_call_void_; \
+        return PETSC_NULLPTR; \
       } \
     } while (0)
 #endif
