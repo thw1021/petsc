@@ -1001,4 +1001,6 @@ VEC_HIP__DECL_OR_STUB(PetscErrorCode VecHIPResetArray(Vec a), (void)a)
 #undef VEC_CUDA_DECL_OR_STUB
 #undef VEC_HIP__DECL_OR_STUB
 
+PETSC_EXTERN PetscErrorCode VecCreateWithArraysAndMemType(MPI_Comm, PetscInt, PetscInt, PetscInt, const PetscScalar[], PetscMemType, const PetscScalar[], Vec *);
+
 #endif
