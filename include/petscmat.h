@@ -921,10 +921,6 @@ PETSC_EXTERN PetscErrorCode MatCreateMPIMatConcatenateSeqMat(MPI_Comm, Mat, Pets
    This value may be cached, so `MatAssemblyBegin()` and `MatAssemblyEnd()`
    MUST be called after all calls to `MatSetValue()` have been completed.
 
-   Synopsis:
-     #include <petscmat.h>
-     PetscErrorCode MatSetValue(Mat mat,PetscInt i,PetscInt j,PetscScalar va,InsertMode mode)
-
    Not Collective
 
    Input Parameters:
