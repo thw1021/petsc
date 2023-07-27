@@ -23,14 +23,6 @@ static PetscErrorCode KSPPIPEFGMRESUpdateHessenberg(KSP, PetscInt, PetscBool *, 
 static PetscErrorCode KSPPIPEFGMRESBuildSoln(PetscScalar *, Vec, Vec, KSP, PetscInt);
 extern PetscErrorCode KSPReset_PIPEFGMRES(KSP);
 
-/*
-
-    KSPSetUp_PIPEFGMRES - Sets up the workspace needed by pipefgmres.
-
-    This is called once, usually automatically by KSPSolve() or KSPSetUp(),
-    but can be called directly by KSPSetUp().
-
-*/
 static PetscErrorCode KSPSetUp_PIPEFGMRES(KSP ksp)
 {
   PetscInt        k;
@@ -57,23 +49,6 @@ static PetscErrorCode KSPSetUp_PIPEFGMRES(KSP ksp)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*
-
-    KSPPIPEFGMRESCycle - Run pipefgmres, possibly with restart.  Return residual
-                  history if requested.
-
-    input parameters:
-.        pipefgmres  - structure containing parameters and work areas
-
-    output parameters:
-.        itcount - number of iterations used.  If null, ignored.
-.        converged - 0 if not converged
-
-    Notes:
-    On entry, the value in vector VEC_VV(0) should be
-    the initial residual.
-
-*/
 static PetscErrorCode KSPPIPEFGMRESCycle(PetscInt *itcount, KSP ksp)
 {
   KSP_PIPEFGMRES *pipefgmres = (KSP_PIPEFGMRES *)(ksp->data);
@@ -327,16 +302,6 @@ static PetscErrorCode KSPPIPEFGMRESCycle(PetscInt *itcount, KSP ksp)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*
-    KSPSolve_PIPEFGMRES - This routine applies the PIPEFGMRES method.
-
-   Input Parameter:
-.     ksp - the Krylov space object that was set to use pipefgmres
-
-   Output Parameter:
-.     outits - number of iterations used
-
-*/
 static PetscErrorCode KSPSolve_PIPEFGMRES(KSP ksp)
 {
   PetscInt        its, itcount;
@@ -379,19 +344,6 @@ static PetscErrorCode KSPDestroy_PIPEFGMRES(KSP ksp)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*
-    KSPPIPEFGMRESBuildSoln - create the solution from the starting vector and the
-                      current iterates.
-
-    Input parameters:
-        nrs - work area of size it + 1.
-        vguess  - index of initial guess
-        vdest - index of result.  Note that vguess may == vdest (replace
-                guess with the solution).
-        it - HH upper triangular part is a block of size (it+1) x (it+1)
-
-     This is an internal routine that knows about the PIPEFGMRES internals.
- */
 static PetscErrorCode KSPPIPEFGMRESBuildSoln(PetscScalar *nrs, Vec vguess, Vec vdest, KSP ksp, PetscInt it)
 {
   PetscScalar     tt;
@@ -429,25 +381,6 @@ static PetscErrorCode KSPPIPEFGMRESBuildSoln(PetscScalar *nrs, Vec vguess, Vec v
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*
-
-    KSPPIPEFGMRESUpdateHessenberg - Do the scalar work for the orthogonalization.
-                            Return new residual.
-
-    input parameters:
-
-.        ksp -    Krylov space object
-.        it  -    plane rotations are applied to the (it+1)th column of the
-                  modified hessenberg (i.e. HH(:,it))
-.        hapend - PETSC_FALSE not happy breakdown ending.
-
-    output parameters:
-.        res - the new residual
-
- */
-/*
-.  it - column of the Hessenberg that is complete, PIPEFGMRES is actually computing two columns ahead of this
- */
 static PetscErrorCode KSPPIPEFGMRESUpdateHessenberg(KSP ksp, PetscInt it, PetscBool *hapend, PetscReal *res)
 {
   PetscScalar    *hh, *cc, *ss, *rs;
@@ -520,20 +453,6 @@ static PetscErrorCode KSPPIPEFGMRESUpdateHessenberg(KSP ksp, PetscInt it, PetscB
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*
-  KSPBuildSolution_PIPEFGMRES
-
-  Input Parameter:
-+ ksp - the Krylov space object
-- ptr - the vec
-
-  Output Parameter:
-. result - the solution
-
-  Note: this calls KSPPIPEFGMRESBuildSoln - the same function that KSPPIPEFGMRESCycle
-  calls directly.
-
-*/
 PetscErrorCode KSPBuildSolution_PIPEFGMRES(KSP ksp, Vec ptr, Vec *result)
 {
   KSP_PIPEFGMRES *pipefgmres = (KSP_PIPEFGMRES *)ksp->data;
@@ -621,9 +540,8 @@ PetscErrorCode KSPReset_PIPEFGMRES(KSP ksp)
    Options Database Keys:
 +   -ksp_gmres_restart <restart> - the number of Krylov directions to orthogonalize against
 .   -ksp_gmres_haptol <tol> - sets the tolerance for "happy ending" (exact convergence)
-.   -ksp_gmres_preallocate - preallocate all the Krylov search directions initially (otherwise groups of
+.   -ksp_gmres_preallocate - preallocate all the Krylov search directions initially (otherwise groups of vectors are allocated as needed)
 .   -ksp_pipefgmres_shift - the shift to use (defaults to 1. See KSPPIPEFGMRESSetShift()
-                             vectors are allocated as needed)
 -   -ksp_gmres_krylov_monitor - plot the Krylov space generated
 
    Level: intermediate
@@ -639,16 +557,14 @@ PetscErrorCode KSPReset_PIPEFGMRES(KSP ksp)
    See [](doc_faq_pipelined)
 
    Developer Note:
-    This class is subclassed off of `KSPGMRES`.
+    This class is subclassed off of `KSPGMRES` so refer to its source code for commewnts
 
    Contributed by:
    P. Sanan and S.M. Schnepp
 
    Reference:
-    P. Sanan, S.M. Schnepp, and D.A. May,
-    "Pipelined, Flexible Krylov Subspace Methods,"
-    SIAM Journal on Scientific Computing 2016 38:5, C441-C470,
-    DOI: 10.1137/15M1049130
+.  * -   P. Sanan, S.M. Schnepp, and D.A. May,  "Pipelined, Flexible Krylov Subspace Methods,"
+    SIAM Journal on Scientific Computing 2016 38:5, C441-C470,  DOI: 10.1137/15M1049130
 
 .seealso: [](ch_ksp), [](doc_faq_pipelined), [](sec_pipelineksp), [](sec_flexibleksp), `KSPCreate()`, `KSPSetType()`, `KSPType`, `KSP`, `KSPLGMRES`, `KSPPIPECG`, `KSPPIPECR`, `KSPPGMRES`, `KSPFGMRES`
           `KSPGMRESSetRestart()`, `KSPGMRESSetHapTol()`, `KSPGMRESSetPreAllocateVectors()`, `KSPGMRESMonitorKrylov()`, `KSPPIPEFGMRESSetShift()`
