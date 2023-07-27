@@ -5,11 +5,11 @@
 """
 class Color:
   try:
-    import colorama
+    import colorama # type: ignore[import]
 
-    __COLOR_BRIGHT_RED__    = colorama.Fore.RED + colorama.Style.BRIGHT
-    __COLOR_BRIGHT_YELLOW__ = colorama.Fore.YELLOW + colorama.Style.BRIGHT
-    __COLOR_RESET__         = colorama.Style.RESET_ALL
+    __COLOR_BRIGHT_RED__: str    = colorama.Fore.RED + colorama.Style.BRIGHT
+    __COLOR_BRIGHT_YELLOW__: str = colorama.Fore.YELLOW + colorama.Style.BRIGHT
+    __COLOR_RESET__: str         = colorama.Style.RESET_ALL
   except ImportError:
     __COLOR_BRIGHT_RED__    = ''
     __COLOR_BRIGHT_YELLOW__ = ''

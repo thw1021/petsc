@@ -5,30 +5,20 @@
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 import os
+import abc
 import enum
 import queue
 import multiprocessing as mp
-import clang.cindex as clx
-import petsclinter  as pl
+import clang.cindex    as clx # type: ignore[import]
+import petsclinter     as pl
 
-import abc
+from ..typing import *
 
-from ..util._timeout import timeout, TimeoutError
+from ..util._timeout import timeout
 
 from ._diag   import DiagnosticManager
 from ._linter import Linter
-
-if TYPE_CHECKING:
-  from collections.abc import Collection, MutableSequence
-  from typing          import Optional, Union, Any, TypeVar, NoReturn
-
-  from ..util._clang import CXTranslationUnit
-  from ._path        import Path, PathLike, StrPathLike
-
-  PoolImpl = TypeVar('PoolImpl', bound='WorkerPoolBase')
 
 # directory names to exclude from processing, case sensitive
 exclude_dir_names = {

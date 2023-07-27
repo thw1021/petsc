@@ -5,16 +5,17 @@
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 import re
+import typing
 import weakref
 import difflib
 import datetime
 import itertools
 import collections
-import clang.cindex as clx
+import clang.cindex as clx # type: ignore[import]
 import petsclinter  as pl
+
+from ..typing import *
 
 from ._diag    import DiagnosticManager, Diagnostic
 from ._cursor  import Cursor
@@ -24,15 +25,6 @@ from ._patch   import Patch
 from .._error import ParsingError, KnownUnhandleableCursorError
 
 from .. import util
-
-if TYPE_CHECKING:
-  from typing import Optional, Any
-
-  from ._cursor import CursorLike
-  from ._path   import Path, PathLike, StrPathLike
-  from ._diag   import DiagnosticMap
-
-  from ..util._clang import CXTranslationUnit
 
 class WeakList(list):
   """
@@ -223,11 +215,7 @@ class Linter:
   def __exit__(self, exception_type: Exception, *args) -> None:
     if not exception_type:
       if self.verbose:
-        pl.sync_print(
-          '\n'.join([
-            self.warn_prefix, '\n'.join(s for _, s in self.get_all_warnings())[1:], self.warn_prefix
-          ])
-        )
+        pl.sync_print(self.get_all_warnings())
       pl.sync_print(self.get_all_errors())
     return
 
@@ -528,14 +516,16 @@ class Linter:
 
     patch                = diagnostic.patch
     have_patch           = patch is not None
+    patch_id             = typing.cast(Patch, patch).id if have_patch else -1
     cursor_id_file_local = file_local[cursor_id]
     cursor_id_file_local.append((
       f'{color}{diagnostic.location}: {name}:{util.color.reset()} {diagnostic.format_message()}',
       have_patch,
-      patch.id if have_patch else -1
+      patch_id
     ))
 
-    if patch:
+    if have_patch:
+      assert patch is not None # to satisfy type checkers
       patch.attach(weakref.ref(cursor_id_file_local))
       self.patches[filename].append(patch)
     return

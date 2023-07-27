@@ -5,11 +5,10 @@
 """
 from __future__ import annotations
 
-from typing import Union, Optional, Any, TypeAlias
-from collections.abc import Callable
-
-import clang.cindex as clx
+import clang.cindex as clx # type: ignore[import]
 import petsclinter  as pl
+
+from ..typing  import *
 
 from ._src_pos import SourceRange, SourceLocation
 from ._path    import Path
@@ -38,8 +37,6 @@ class Cursor:
   derivedtypename: str
   argidx: int
   _cache: dict[str, Any]
-
-  CursorLike: TypeAlias = Union[clx.Cursor, "Cursor"]
 
   def __init__(self, cursor: CursorLike, idx: int = -12345) -> None:
     r"""Construct a `Cursor`
@@ -720,5 +717,3 @@ class Cursor:
   def clang_cursor(self) -> clx.Cursor:
     r"""See `Cursor.get_clang_cursor_from_cursor()`"""
     return self.get_clang_cursor_from_cursor(self)
-
-CursorLike: TypeAlias = Cursor.CursorLike

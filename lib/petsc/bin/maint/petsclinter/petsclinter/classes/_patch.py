@@ -5,12 +5,12 @@
 """
 from __future__ import annotations
 
-from typing import Any
+from ..typing import *
 
-from weakref import ReferenceType
+from ._src_pos import SourceRange
 
-from ._cursor  import CursorLike
-from ._src_pos import SourceRange, SourceRangeLike
+if TYPE_CHECKING:
+  from weakref import ReferenceType
 
 class Delta:
   __slots__ = 'value', 'extent', 'offset'
@@ -90,8 +90,8 @@ class Delta:
     return self.deleter() and other.extent in self.extent
 
 class Patch:
-  __global_counter:int = 0
-  __slots__            = 'extent', 'ctxlines', 'deltas', 'weak_data', '_cache', 'id'
+  __global_counter: int = 0
+  __slots__             = 'extent', 'ctxlines', 'deltas', 'weak_data', '_cache', 'id'
 
   extent: SourceRange
   ctxlines: int

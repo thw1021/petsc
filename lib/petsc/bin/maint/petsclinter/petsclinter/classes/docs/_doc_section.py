@@ -5,12 +5,12 @@
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Union
-
 import re
 import enum
 import difflib
-import clang.cindex as clx
+import clang.cindex as clx # type: ignore[import]
+
+from ...typing import *
 
 from .._diag    import DiagnosticManager, Diagnostic
 from .._src_pos import SourceRange
@@ -23,16 +23,6 @@ from ._doc_section_base import (
 )
 
 from ...util._clang import clx_enum_type_kinds, clx_char_type_kinds, clx_function_type_kinds
-
-if TYPE_CHECKING:
-  from typing          import Optional
-  from collections.abc import Iterable, Sequence
-
-  from ._doc_str import PetscDocString, Verdict
-
-  from .._linter import Linter
-  from .._diag   import DiagnosticMap
-  from .._cursor import CursorLike
 
 """
 ==========================================================================================
@@ -200,7 +190,7 @@ class Synopsis(SectionBase):
         return
 
     inspector = EnumInspector() if ds.cursor.type.kind in clx_enum_type_kinds else FunctionInspector()
-    super().setup(ds, inspect_line=inspector)
+    super()._do_setup(ds, inspector)
 
     if isinstance(inspector, EnumInspector):
       def check_enum_starts_with_dollar(self, ds: PetscDocString, items: dict[str, list]) -> dict[str, list]:
@@ -457,7 +447,7 @@ class Synopsis(SectionBase):
       raise ValueError(type(items))
     name_loc, symbol = items[0]['name']
 
-    if name_loc is None or symbol is None:
+    if symbol is None:
       docstring.add_error_from_diagnostic(
         docstring.make_diagnostic(
           self.diags.missing_description, 'Docstring missing synopsis', self.extent, highlight=False
@@ -474,7 +464,7 @@ class Synopsis(SectionBase):
     if docstring.Modifier.MACRO in docstring.type_mod:
       # chances are that if it is a macro then the name won't match
       explicit_synopsis = items[0]['synopsis']
-      assert isinstance(explicit_synopsis, list)
+      assert isinstance(explicit_synopsis, list) # satisfy type checkers
       self._check_macro_synopsis(linter, cursor, docstring, explicit_synopsis)
       return
 

@@ -5,33 +5,18 @@
 """
 from __future__ import annotations
 
-from typing          import TYPE_CHECKING, TypeVar
-from collections.abc import Callable
-
 import difflib
 import textwrap
 import itertools
 import collections
 import petsclinter as pl
 
+from ...typing import *
 from ..._error import ParsingError
 
 from .._diag    import DiagnosticManager, Diagnostic
 from .._src_pos import SourceRange
 from .._patch   import Patch
-
-if TYPE_CHECKING:
-  from typing          import Union, Optional, TypeVar, Any
-  from collections.abc import Sequence, Iterable
-
-  from .._linter  import Linter
-  from .._src_pos import SourceLocationLike, SourceRangeLike
-  from .._diag    import DiagnosticMap
-  from .._cursor  import Cursor
-
-  from ._doc_str  import PetscDocString, Verdict
-
-  SectionImpl = TypeVar('SectionImpl', bound='SectionBase')
 
 """
 ==========================================================================================
@@ -231,13 +216,13 @@ class SectionBase(DocBase):
   extent: SourceRange
   _lines: list[tuple[SourceRange, str, Verdict]]
   items: Any
-  seen_headers: dict[str, SourceRange]
+  seen_headers: dict[str, list[SourceRange]]
   solitary: bool
 
   # to pacify type checkers...
   diags: DiagnosticMap
 
-  LineInspector = Callable[[SourceRange, str, 'Verdict'], None]
+  LineInspector = collections.abc.Callable[[SourceRange, str, 'Verdict'], None]
 
   def __init__(self, name: str, required: bool = False, keywords: Optional[tuple[str, ...]] = None, titles: Optional[tuple[str, ...]] = None, solitary: bool = True) -> None:
     r"""Construct a `SectionBase`
@@ -305,13 +290,13 @@ class SectionBase(DocBase):
     Resets the section to its default state
     """
     self.raw          = ''
-    self.extent       = None
+    self.extent       = None # type: ignore[assignment]
     self._lines       = []
     self.items        = None
     self.seen_headers = {}
     return
 
-  def lines(self, headings_only: bool = False):
+  def lines(self, headings_only: bool = False) -> list[tuple[SourceRange, str, Verdict]]:
     r"""Retrieve the lines for this section
 
     Parameters
@@ -347,15 +332,40 @@ class SectionBase(DocBase):
       self.extent = SourceRange.from_locations(self.lines()[0][0].start, self.lines()[-1][0].end)
     return []
 
-  def setup(self, docstring: PetscDocString, inspect_line: Optional[LineInspector] = None) -> None:
+  def _do_setup(self, docstring: PetscDocString, inspect_line: LineInspector) -> None:
+    r"""Do the actual seting up
+
+    Parameters
+    ----------
+    docstring :
+      the `PetscDocString` instance to use to log any errors
+    inspect_line
+      a callback to inspect each line
+
+    Notes
+    -----
+    This is intended to be called by derived classes that wish to set a custom line inspector
+    """
+    seen = collections.defaultdict(list)
+    for loc, line, verdict in self.lines():
+      if verdict > 0:
+        possible_header = line.split(':' if ':' in line else None, maxsplit=1)[0].strip()
+        seen[possible_header.casefold()].append(
+          docstring.make_source_range(possible_header, line, loc.start.line)
+        )
+      # let each section type determine if this line is useful
+      inspect_line(loc, line, verdict)
+
+    self.seen_headers = dict(seen)
+    return
+
+  def setup(self, docstring: PetscDocString) -> None:
     r"""Set up a section
 
     Parameters
     ----------
     docstring :
       the `PetscDocString` instance to use to log any errors
-    inspect_line : optional
-      a callback to inspect each line
 
     Notes
     -----
@@ -363,21 +373,7 @@ class SectionBase(DocBase):
     subclasses should do minimal error handling or checking here, gathering only the necessary
     statistics and data.
     """
-    seen = collections.defaultdict(list)
-    if inspect_line is not None:
-      assert callable(inspect_line)
-
-    for loc, line, verdict in self.lines():
-      if verdict > 0:
-        possible_header = line.split(':' if ':' in line else None, maxsplit=1)[0].strip()
-        seen[possible_header.casefold()].append(
-          docstring.make_source_range(possible_header, line, loc.start.line)
-        )
-      if inspect_line is not None:
-        # let each section type determine if this line is useful
-        inspect_line(loc, line, verdict)
-
-    self.seen_headers = dict(seen)
+    self._do_setup(docstring, lambda loc, line, verdict: None)
     return
 
   def barren(self) -> bool:
@@ -725,7 +721,7 @@ class ParameterList(SectionBase):
         groups[subheading].append((loc, item, item.arglen()))
       return
 
-    super().setup(ds, inspect_line=inspector)
+    super()._do_setup(ds, inspector)
     items = dict(groups)
     if parameter_list_prefix_check is not None:
       assert callable(parameter_list_prefix_check)
@@ -838,7 +834,7 @@ class Prose(SectionBase):
           raise ParsingError from ke
       return
 
-    super().setup(ds, inspect_line=inspector)
+    super()._do_setup(ds, inspector)
     return
 
 class VerbatimBlock(SectionBase):
@@ -877,7 +873,7 @@ class VerbatimBlock(SectionBase):
           self.codeblocks += 1
         return
 
-    super().setup(ds, inspect_line=Inspector(self))
+    super()._do_setup(ds, Inspector(self))
     self.items = items
     return
 
@@ -953,7 +949,7 @@ class InlineList(SectionBase):
         items.append(((line, rest), sub_items))
       return
 
-    super().setup(ds, inspect_line=inspector)
+    super()._do_setup(ds, inspector)
     self.items = tuple(items)
     return
 

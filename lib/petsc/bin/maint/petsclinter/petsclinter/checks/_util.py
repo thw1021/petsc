@@ -4,7 +4,7 @@
 # @author: Jacob Faibussowitsch
 """
 import itertools
-import clang.cindex as clx
+import clang.cindex as clx # type: ignore[import]
 
 from .._error import ParsingError
 
@@ -500,7 +500,7 @@ def check_matching_specific_type(linter, obj, expected_type_kinds, pointer, unex
   if permissive or obj_type.kind in expected_type_kinds:
     handled = success_function(linter, obj, obj_type, **kwargs)
     if not handled:
-      error_message = "{}\nType checker successfully matched object of type {} to (one of) expected types:\n- {}\n\nBut user supplied on-successful-match hook '{}' returned non-truthy value '{}' indicating unhandled error!".format(obj, obj_type.kind, '\n- '.join(map(str, expected_type_kinds)), success_function, handled, expected_type_kinds, obj_type.kind)
+      error_message = "{}\nType checker successfully matched object of type {} to (one of) expected types:\n- {}\n\nBut user supplied on-successful-match hook '{}' returned non-truthy value '{}' indicating unhandled error!".format(obj, obj_type.kind, '\n- '.join(map(str, expected_type_kinds)), success_function, handled)
       raise RuntimeError(error_message)
   else:
     handled = failure_function(linter, obj, obj_type, **kwargs)

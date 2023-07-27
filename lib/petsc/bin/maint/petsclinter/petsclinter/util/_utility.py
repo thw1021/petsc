@@ -5,22 +5,21 @@
 """
 from __future__ import annotations
 
-from typing import Optional, Union
-
 import os
 import re
 import subprocess
 import ctypes.util
-import clang.cindex as clx
+import clang.cindex as clx # type: ignore[import]
 import petsclinter  as pl
 
-from ..classes._path import Path, PathLike, StrPathLike
+from ..typing import *
 
-from .. import __version__
+# TODO disentangle!
+from ..classes._path import Path
 
-from ._clang import CXTranslationUnit, base_pch_clang_options
+from ._clang import base_pch_clang_options
 
-def subprocess_run(*args, **kwargs):
+def subprocess_run(*args, **kwargs) -> subprocess.CompletedProcess:
   r"""Lightweight wrapper over subprocess.run
 
   Hoists the ugly version check out of the regular code, turns a subprocess.CalledProcessError into a
@@ -165,7 +164,7 @@ def get_petsc_extra_includes(petsc_dir: StrPathLike, petsc_arch: str) -> list[st
   # a bug report for python believing that cdll.load() was not deterministic...
   petsc_includes = []
   mpi_includes   = []
-  raw_cxx_flags      = []
+  raw_cxx_flags  = []
   with open(Path(petsc_dir, petsc_arch, 'lib', 'petsc', 'conf', 'petscvariables'), 'r') as pv:
     cc_includes_re  = re.compile('^PETSC_CC_INCLUDES\s*=')
     mpi_includes_re = re.compile('^MPI_INCLUDE\s*=')
@@ -260,6 +259,9 @@ def build_compiler_flags(petsc_dir: StrPathLike, petsc_arch: str, extra_compiler
 class PrecompiledHeader:
   __slots__ = ('verbose', 'pch')
 
+  verbose: bool
+  pch: PathLike
+
   def __init__(self, pch: PathLike, verbose: bool = False) -> None:
     r"""Construct the PrecompiledHeader
 
@@ -274,10 +276,10 @@ class PrecompiledHeader:
     self.verbose = verbose
     return
 
-  def __enter__(self):
+  def __enter__(self) -> PrecompiledHeader:
     return self
 
-  def __exit__(self, *args, **kwargs):
+  def __exit__(self, *args, **kwargs) -> None:
     if self.verbose:
       pl.sync_print('Deleting precompiled header', self.pch)
       self.pch.unlink()

@@ -5,18 +5,14 @@
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Union
-
 import weakref
 import functools
-import clang.cindex as clx
+import clang.cindex as clx # type: ignore[import]
+
+from ..typing import *
 
 from .      import _util
 from ._path import Path
-
-if TYPE_CHECKING:
-  from typing          import Optional, Any
-  from collections.abc import Callable
 
 class ClangFileNameCache(weakref.WeakKeyDictionary):
   """
@@ -61,8 +57,6 @@ class SourceLocation(AttributeCache):
   source_location: clx.SourceLocation
   translation_unit: Optional[clx.TranslationUnit]
   offset: int
-
-  SourceLocationLike = Union[clx.SourceLocation, "SourceLocation"]
 
   def __init__(self, source_location: SourceLocationLike, tu: Optional[clx.TranslationUni] = None) -> None:
     r"""Construct a `SourceLocation`
@@ -217,17 +211,6 @@ class SourceLocation(AttributeCache):
       return other
     raise NotImplementedError(type(other))
 
-SourceLocationLike = SourceLocation.SourceLocationLike
-
-def _functools_lru_cache_member(func, *args, **kwargs):
-  from ..__version__ import py_version_lt
-
-  if py_version_lt(3, 8, 0):
-    decorator = func
-  else:
-    decorator = functools.lru_cache(func, *args, **kwargs)
-  return decorator
-
 @functools.total_ordering
 class SourceRange(AttributeCache):
   """Like SourceLocation but for clx.SourceRanges"""
@@ -237,8 +220,6 @@ class SourceRange(AttributeCache):
   translation_unit: Optional[clx.TranslationUnit]
   _end: Optional[SourceLocation]
   _start: Optional[SourceLocation]
-
-  SourceRangeLike = Union[clx.SourceRange, "SourceRange"]
 
   def __init__(self, source_range: SourceRangeLike, tu: Optional[clx.TranslationUnit] = None) -> None:
     r"""Construct a `SourceRange`
@@ -545,7 +526,7 @@ class SourceRange(AttributeCache):
       self.translation_unit, start.line + lbegin, start.column + cbegin, end.line + lend, endcol
     )
 
-  @_functools_lru_cache_member
+  @functools.lru_cache
   def raw(self, *args, **kwargs) -> str:
     r"""Get the raw source for a `SourceRange`
 
@@ -563,7 +544,7 @@ class SourceRange(AttributeCache):
     """
     return _util.get_raw_source_from_source_range(self, *args, **kwargs)
 
-  @_functools_lru_cache_member
+  @functools.lru_cache
   def formatted(self, *args, **kwargs) -> str:
     r"""Get the formatted source for a `SourceRange`
 
@@ -586,7 +567,3 @@ class SourceRange(AttributeCache):
     kwargs.setdefault('num_context', 5)
     print(self.formatted(*args, **kwargs))
     return
-
-SourceRangeLike = SourceRange.SourceRangeLike
-
-del _functools_lru_cache_member

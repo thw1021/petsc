@@ -5,7 +5,7 @@
 """
 from __future__ import annotations
 
-from typing import Union, TypeAlias
+from ..typing import *
 
 import pathlib
 
@@ -49,30 +49,3 @@ class Path(type(pathlib.Path())): # type: ignore
       the path with the name
     """
     return self.with_name(f'{self.stem}{name}')
-
-  def unlink(self, missing_ok: bool = False) -> None:
-    r"""Deletes a path
-
-    Parameters
-    ----------
-    missing_ok: optional
-      don't raise an exception if `self` does not exist
-
-    Raises
-    ------
-    FileNotFoundError
-      if `self` does not exist and `missing_ok` is False
-    """
-    if __version__.py_version_lt(3, 8):
-      try:
-        super().unlink()
-      except FileNotFoundError as fnfe:
-        if missing_ok:
-          return
-        raise
-    else:
-      super().unlink(missing_ok=missing_ok)
-    return
-
-PathLike: TypeAlias    = Union[pathlib.Path, Path]
-StrPathLike: TypeAlias = Union[PathLike, str]

@@ -5,11 +5,9 @@
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import functools
 
-if TYPE_CHECKING:
-  from ._src_pos import SourceRangeLike
-  from ._cursor  import CursorLike
+from ..typing import *
 
 from .. import util
 
@@ -36,7 +34,7 @@ def only_files(cursor, level, **kwargs):
 
 # A function show(level, *args) would have been simpler but less fun
 # and you'd need a separate parameter for the AST walkers if you want it to be exchangeable.
-class Level(int):
+class IndentLevel(int):
   """
   represent currently visited level of a tree
   """
@@ -50,10 +48,10 @@ class Level(int):
     """
     increase number of tabs and newlines
     """
-    return Level(super().__add__(inc))
+    return IndentLevel(super().__add__(inc))
 
 def check_valid_type(t):
-  import clang.cindex as clx
+  import clang.cindex as clx # type: ignore[import]
 
   return t.kind != clx.TypeKind.INVALID
 
@@ -73,7 +71,7 @@ def view_type(t, level, title):
     retList.extend(view_type(t.get_pointee(), level + 1, 'points to:'))
   return retList
 
-def view_ast_from_cursor(cursor, pred=verbose_print, level = Level(), max_depth = -1, **kwargs):
+def view_ast_from_cursor(cursor, pred=verbose_print, level = IndentLevel(), max_depth = -1, **kwargs):
   """
   pretty print cursor AST
   """
@@ -92,26 +90,13 @@ def view_ast_from_cursor(cursor, pred=verbose_print, level = Level(), max_depth 
       )
   return ret_list
 
-def _functools_lru_cache(func, *args, **kwargs):
-  from ..__version__ import py_version_lt
-
-  if py_version_lt(3, 8, 0):
-    decorator = func
-  else:
-    from functools import lru_cache
-
-    decorator = lru_cache(func, *args, **kwargs)
-  return decorator
-
 # surprise, surprise, we end up reading the same files over and over again when
 # constructing the error messages and diagnostics and hence we make about a 8x performance
 # improvement by caching the files read
-@_functools_lru_cache
+@functools.lru_cache
 def read_file_lines_cached(*args, **kwargs) -> list[str]:
   with open(*args, **kwargs) as fd:
     return fd.readlines()
-
-del _functools_lru_cache
 
 def get_raw_source_from_source_range(source_range: SourceRangeLike, num_before_context: int = 0, num_after_context: int = 0, num_context: int = 0, trim: bool = False, tight: bool = False) -> str:
   num_before_context   = num_before_context if num_before_context else num_context

@@ -3,20 +3,21 @@
 # Created: Tue Nov 29 18:02:22 2022 (-0500)
 # @author: Jacob Faibussowitsch
 """
-from typing import Optional
+from __future__ import annotations
 
 import os
 import errno
 import signal
 import functools
 
+from ..typing import *
 from .._error import BaseError
 
 class TimeoutError(BaseError):
   r"""An error to indicate some operation timed out"""
   pass
 
-def timeout(seconds: int = 10, error_message: Optional[str] = None):
+def timeout(seconds: int = 10, error_message: Optional[str] = None) -> Callable:
   r"""Decorator to run the decorated function for `seconds` seconds.
 
   Parameters
@@ -39,8 +40,8 @@ def timeout(seconds: int = 10, error_message: Optional[str] = None):
   if error_message is None:
     error_message = os.strerror(errno.ETIME)
 
-  def decorator(func):
-    def timeout_handler(signum, frame):
+  def decorator(func: Callable) -> Callable:
+    def timeout_handler(signum, frame) -> NoReturn:
       raise TimeoutError(error_message)
 
     @functools.wraps(func)

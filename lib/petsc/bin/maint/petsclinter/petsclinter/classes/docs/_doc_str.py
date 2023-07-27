@@ -5,16 +5,15 @@
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 import re
 import enum
 import difflib
 import textwrap
 import collections
-import clang.cindex as clx
+import clang.cindex as clx # type: ignore[import]
 import petsclinter  as pl
 
+from ...typing      import *
 from ...__version__ import py_version_lt
 from ..._error      import KnownUnhandleableCursorError
 
@@ -23,21 +22,14 @@ from .. import _util
 from .._diag    import DiagnosticManager, Diagnostic
 from .._linter  import Linter
 from .._cursor  import Cursor
-from .._src_pos import SourceRange, SourceRangeLike, SourceLocation
+from .._src_pos import SourceRange, SourceLocation
 from .._patch   import Patch
 
 from ._doc_section_base import DocBase, SectionBase
-from ._doc_section      import DefaultSection, Synopsis, FunctionParameterList, OptionDatabaseKeys
-from ._doc_section      import Level, Notes, FortranNotes, DeveloperNotes, SourceCode, References
-from ._doc_section      import SeeAlso
-
-if TYPE_CHECKING:
-  from typing          import Union, Any, Optional, TypeVar
-  from collections.abc import Iterator, Iterable, Sequence, Generator
-
-  from .._diag import DiagnosticMap
-
-  from ._doc_section_base import SectionImpl
+from ._doc_section      import (
+  DefaultSection, Synopsis, FunctionParameterList, OptionDatabaseKeys, Level, Notes, FortranNotes,
+  DeveloperNotes, SourceCode, References, SeeAlso
+)
 
 @enum.unique
 class Verdict(enum.IntEnum):

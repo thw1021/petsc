@@ -7,6 +7,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import clang.cindex as clx # type: ignore[import]
+
 if TYPE_CHECKING:
   from collections.abc import Callable, Collection
   from typing          import TypeVar, TypeAlias
@@ -19,8 +21,6 @@ if TYPE_CHECKING:
 
   FunctionChecker: TypeAlias = Callable[[Linter, Cursor, Cursor], None]
   DocChecker: TypeAlias      = Callable[[Linter, Cursor], None]
-
-import clang.cindex as clx
 
 classid_map: dict[str, str]                    = {}
 check_function_map: dict[str, FunctionChecker] = {}

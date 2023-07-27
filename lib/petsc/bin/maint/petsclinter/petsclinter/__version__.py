@@ -5,7 +5,7 @@
 """
 import sys
 
-__MIN_PYTHON_VERSION__ = (3, 7, 0)
+__MIN_PYTHON_VERSION__ = (3, 8, 0)
 __version__            = (1, 1, 0)
 __version_str__        = '.'.join(map(str, __version__))
 

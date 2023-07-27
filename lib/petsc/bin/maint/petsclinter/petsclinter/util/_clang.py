@@ -5,17 +5,13 @@
 """
 from __future__ import annotations
 
-from typing import Optional, TYPE_CHECKING
-from collections.abc import Callable, Sequence
+from ..typing import *
 
 import enum
 import ctypes
-import clang.cindex as clx
+import clang.cindex as clx # type: ignore[import]
 
 from .._error import ParsingError
-
-if TYPE_CHECKING:
-  from ..classes._cursor import Cursor, CursorLike
 
 class CXTranslationUnit(enum.IntFlag):
   """
@@ -191,7 +187,7 @@ def make_cxcursor_and_range_callback(cursor: CursorLike, parsing_error_handler: 
     parsing_error_handler = lambda exc: None
 
   found_cursors = []
-  def visitor(ctx, cursor: clx.Cursor, src_range: clx.SourceRange) -> CXChildVisitResult:
+  def visitor(ctx: Any, cursor: clx.Cursor, src_range: clx.SourceRange) -> CXChildVisitResult:
     # The "cursor" returned here is actually just a CXCursor, not the real
     # clx.Cursor that we lead python to believe in our function prototype. Luckily we
     # have all we need to remake the python object from scratch
@@ -237,10 +233,10 @@ class ClangFunction:
     self._function = function
     return
 
-  def __getattr__(self, attr: str):
+  def __getattr__(self, attr: str) -> Any:
     return getattr(self._function, attr)
 
-  def __call__(self, *args, check: bool = True):
+  def __call__(self, *args, check: bool = True) -> Any:
     r"""Invoke the clang function
 
     Parameters

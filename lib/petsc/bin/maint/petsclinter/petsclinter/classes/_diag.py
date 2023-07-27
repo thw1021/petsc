@@ -5,29 +5,14 @@
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 import copy
 import inspect
 import functools
 import contextlib
 
+from ..typing  import *
+
 from ._src_pos import SourceLocation
-
-if TYPE_CHECKING:
-  from typing          import Optional, Union, Any, TypeVar, Protocol
-  from collections.abc import Iterable, Callable
-
-  import re
-  import typing
-
-  from ._patch   import Patch
-  from ._src_pos import SourceLocationLike
-
-  FuncOrClass = TypeVar('FuncOrClass')
-
-  class HasDiagnostics(Protocol):
-    diags: DiagnosticMap
 
 class DiagnosticMapProxy:
   __slots__ = '__diag_map', '__mro'
@@ -224,8 +209,8 @@ class _DiagnosticsManager:
     return flag
 
   @classmethod
-  def register(cls, *args: tuple[str, str]) -> Callable[[FuncOrClass], HasDiagnostics]:
-    def decorator(symbol: FuncOrClass) -> HasDiagnostics:
+  def register(cls, *args):
+    def decorator(symbol):
       if inspect.isclass(symbol):
         wrapper = symbol
       else:
@@ -242,8 +227,6 @@ class _DiagnosticsManager:
         wrapper.diags = DiagnosticMap()
       wrapper.diags.update(wrapper, [d for d, _ in diag_list])
       cls._registered.update(diag_list)
-      if TYPE_CHECKING:
-        return typing.cast(HasDiagnostics, wrapper)
       return wrapper
     return decorator
 
@@ -343,7 +326,7 @@ class _DiagnosticsManager:
     return f'{self.flagprefix}{self.check_flag(flag)}'
 
   @contextlib.contextmanager
-  def push_from(self, dict_like: dict[str, Iterable[re.Pattern]]):
+  def push_from(self, dict_like: dict[str, Collection[re.Pattern[str]]]):
     r"""Temporarily enable or disable flags based on `dict_like`
 
     Parameters
