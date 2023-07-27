@@ -923,12 +923,12 @@ PETSC_EXTERN PetscErrorCode MatCreateMPIMatConcatenateSeqMat(MPI_Comm, Mat, Pets
 
    Synopsis:
      #include <petscmat.h>
-     PetscErrorCode MatSetValue(Mat m,PetscInt i,PetscInt j,PetscScalar va,InsertMode mode)
+     PetscErrorCode MatSetValue(Mat mat,PetscInt i,PetscInt j,PetscScalar va,InsertMode mode)
 
    Not Collective
 
    Input Parameters:
-+  m - the matrix
++  mat - the matrix
 .  i - the row location of the entry
 .  j - the column location of the entry
 .  va - the value to insert
@@ -942,9 +942,9 @@ PETSC_EXTERN PetscErrorCode MatCreateMPIMatConcatenateSeqMat(MPI_Comm, Mat, Pets
 .seealso: [](ch_matrices), `Mat`, `MatAssemblyBegin()`, `MatAssemblyEnd`, `InsertMode`, `MatGetValue()`, `MatSetValues()`,
           `MatSetValueLocal()`, `MatSetValuesLocal()`
 M*/
-static inline PetscErrorCode MatSetValue(Mat m, PetscInt i, PetscInt j, PetscScalar va, InsertMode mode)
+static inline PetscErrorCode MatSetValue(Mat mat, PetscInt i, PetscInt j, PetscScalar va, InsertMode mode)
 {
-  return MatSetValues(m, 1, &i, 1, &j, &va, mode);
+  return MatSetValues(mat, 1, &i, 1, &j, &va, mode);
 }
 
 /*@C
@@ -982,7 +982,7 @@ static inline PetscErrorCode MatGetValue(Mat mat, PetscInt row, PetscInt col, Pe
    Not Collective
 
    Input Parameters:
-+  m - the matrix
++  mat - the matrix
 .  i - the row location of the entry
 .  j - the column location of the entry
 .  va - the value to insert
@@ -997,9 +997,9 @@ static inline PetscErrorCode MatGetValue(Mat mat, PetscInt row, PetscInt col, Pe
 
 .seealso: [](ch_matrices), `MatSetValue()`, `MatSetValuesLocal()`
 M*/
-static inline PetscErrorCode MatSetValueLocal(Mat m, PetscInt i, PetscInt j, PetscScalar va, InsertMode mode)
+static inline PetscErrorCode MatSetValueLocal(Mat mat, PetscInt i, PetscInt j, PetscScalar va, InsertMode mode)
 {
-  return MatSetValuesLocal(m, 1, &i, 1, &j, &va, mode);
+  return MatSetValuesLocal(mat, 1, &i, 1, &j, &va, mode);
 }
 
 /*MC
