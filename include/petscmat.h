@@ -992,7 +992,7 @@ static inline PetscErrorCode MatGetValue(Mat mat, PetscInt row, PetscInt col, Pe
    See notes for `MatSetValuesLocal()` for additional information on when and how this function can be used.
 
 .seealso: [](ch_matrices), `MatSetValue()`, `MatSetValuesLocal()`
-M*/
+@*/
 static inline PetscErrorCode MatSetValueLocal(Mat mat, PetscInt i, PetscInt j, PetscScalar va, InsertMode mode)
 {
   return MatSetValuesLocal(mat, 1, &i, 1, &j, &va, mode);
