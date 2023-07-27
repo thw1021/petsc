@@ -3,29 +3,45 @@
 # Created: Tue Nov 29 18:02:22 2022 (-0500)
 # @author: Jacob Faibussowitsch
 """
+from __future__ import annotations
+
 import os
 import errno
 import signal
 import functools
 
+from ..typing import *
 from .._error import BaseError
 
 class TimeoutError(BaseError):
-  """
-  An error to indicate some operation timed out
-  """
+  r"""An error to indicate some operation timed out"""
   pass
 
-def timeout(seconds=10, error_message=None):
-  """
-  Decorator to run the decorated function for SECONDS seconds. If the function exceeds this time,
-  raises a TimeoutError.
+def timeout(seconds: int = 10, error_message: Optional[str] = None) -> Callable:
+  r"""Decorator to run the decorated function for `seconds` seconds.
+
+  Parameters
+  ----------
+  seconds : 10, optional
+    the number of seconds to wait before timing out
+  error_message : optional
+    the error message to attach to the timeout
+
+  Returns
+  -------
+  decorator : callable
+    the wrapped function
+
+  Raises
+  ------
+  TimeoutError
+    If the function exceeds `seconds` seconds of execution time
   """
   if error_message is None:
     error_message = os.strerror(errno.ETIME)
 
-  def decorator(func):
-    def timeout_handler(signum, frame):
+  def decorator(func: Callable) -> Callable:
+    def timeout_handler(signum, frame) -> NoReturn:
       raise TimeoutError(error_message)
 
     @functools.wraps(func)

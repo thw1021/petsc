@@ -3,9 +3,15 @@
 # Created: Mon Jun 20 17:45:39 2022 (-0400)
 # @author: Jacob Faibussowitsch
 """
+from __future__ import annotations
+
+from ..typing import *
+
 import enum
 import ctypes
-import clang.cindex as clx
+import clang.cindex as clx # type: ignore[import]
+
+from .._error import ParsingError
 
 class CXTranslationUnit(enum.IntFlag):
   """
@@ -122,7 +128,7 @@ class CtypesEnum(enum.IntEnum):
   A ctypes-compatible IntEnum superclass
   """
   @classmethod
-  def from_param(cls, obj):
+  def from_param(cls, obj) -> int:
     return int(obj)
 
 class CXChildVisitResult(CtypesEnum):
@@ -156,27 +162,42 @@ class PetscCXCursorAndRangeVisitor(ctypes.Structure):
     ('visit',   CXCursorAndRangeVisitorCallBackProto)
   ]
 
-def make_cxcursor_and_range_callback(cursor, found_cursors=None, parsing_error_handler=None):
-  import petsclinter as pl
-  from ..classes._cursor import Cursor
+def make_cxcursor_and_range_callback(cursor: CursorLike, parsing_error_handler: Optional[Callable[[ParsingError], None]] = None) -> tuple[PetscCXCursorAndRangeVisitor, list[Cursor]]:
+  r"""Make a clang cxcursor and range callback functor
 
-  if found_cursors is None:
-    found_cursors = []
+  Parameters
+  ----------
+  cursor : cursor_like
+    the cursor to create the callback visitor for
+  found_cursors : array_like, optional
+    an array or list to append found cursors to, None to create a new list
+  parsing_error_handler : callable, optional
+    an error handler to handle petsclinter.ParsingError exceptions, which takes the exception object
+    as a single parameter
+
+  Returns
+  -------
+  cx_callback, found_cursors : callable, array_like
+    the callback and found_cursors list
+  """
+  from ..classes._cursor import Cursor
+  import petsclinter as pl
 
   if parsing_error_handler is None:
     parsing_error_handler = lambda exc: None
 
-  def visitor(ctx, cursor, src_range):
+  found_cursors = []
+  def visitor(ctx: Any, cursor: clx.Cursor, src_range: clx.SourceRange) -> CXChildVisitResult:
     # The "cursor" returned here is actually just a CXCursor, not the real
     # clx.Cursor that we lead python to believe in our function prototype. Luckily we
     # have all we need to remake the python object from scratch
     cursor = clx.Cursor.from_location(ctx.translation_unit, src_range.start)
     try:
       found_cursors.append(Cursor(cursor))
-    except pl.ParsingError as pe:
+    except ParsingError as pe:
+      assert callable(parsing_error_handler)
       parsing_error_handler(pe)
     except Exception:
-
       import traceback
 
       string = "Full error full error message below:"
@@ -194,35 +215,82 @@ def make_cxcursor_and_range_callback(cursor, found_cursors=None, parsing_error_h
   return cx_callback, found_cursors
 
 class ClangFunction:
-  """
-  A wrapper to enable safely calling a clang function from python. Automatically check the return-type
-  (if it is some kind of int) and raises a RuntimeError if an error is detected
+  r"""A wrapper to enable safely calling a clang function from python.
+
+  Automatically check the return-type (if it is some kind of int) and raises a RuntimeError if an
+  error is detected
   """
   __slots__ = ('_function',)
 
-  def __init__(self, function):
+  def __init__(self, function) -> None:
+    r"""Construct a clang function
+
+    Parameters
+    ----------
+    function : callable
+      the underlying clang function
+    """
     self._function = function
     return
 
-  def __getattr__(self, attr):
+  def __getattr__(self, attr: str) -> Any:
     return getattr(self._function, attr)
 
-  def __call__(self, *args, check=True):
+  def __call__(self, *args, check: bool = True) -> Any:
+    r"""Invoke the clang function
+
+    Parameters
+    ----------
+    *args : iterable
+      arguments to pass to the clang function
+    check : optional
+      if the return type is ctype.c_uint, check that it is 0
+
+    Returns
+    -------
+    ret :
+      the return value of the clang function
+
+    Raises
+    ------
+    ValueError
+      if the clang function is called with the wrong number of Arguments
+    TypeError
+      if the clang function was called with the wrong argument types
+    RuntimeError
+      if the clang function returned a nonzero exit code
+    """
     if len(args) != len(self._function.argtypes):
       mess = f'Trying to call {self._function.__name__}(). Wrong number of arguments for function, expected {len(self._function.argtypes)} got {len(args)}'
-      raise RuntimeError(mess)
+      raise ValueError(mess)
     for i, (arg, expected) in enumerate(zip(args, self._function.argtypes)):
       if type(arg) != expected:
         mess = f'Trying to call {self._function.__name__}(). Argument type for argument #{i} does not match. Expected {expected}, got {type(arg)}'
-        raise RuntimeError(mess)
+        raise TypeError(mess)
     ret = self._function(*args)
     if check and isinstance(ret, int) and ret != 0:
       raise RuntimeError(f'{self._function.__name__}() returned nonzero exit code {ret}')
     return ret
 
-def get_clang_function(name, arg_types, ret_type=None):
-  """
-  Get (or register) the clang function RET_TYPE (NAME *)(ARG_TYPES...)
+def get_clang_function(name: str, arg_types: Sequence[type], ret_type: Optional[type] = None) -> ClangFunction:
+  r"""Get (or register) the clang function RET_TYPE (NAME *)(ARG_TYPES...)
+
+  A useful helper routine to reduce verbiage when retrieving a clang function which maye or may not
+  already be exposed by clang.cindex
+
+  Parameters
+  ----------
+  name :
+    the name of the clang function
+  arg_types :
+    the argument types of the clang function
+  ret_type : optional
+    the return type of the clang function, or ctypes.c_uint if None
+
+  Returns
+  -------
+  clang_func :
+    the callable clang function
   """
   if ret_type is None:
     ret_type = ctypes.c_uint

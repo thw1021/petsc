@@ -179,7 +179,7 @@ def main(
   if warnings:
     if verbose:
       pl.sync_print(format_str.format(' Found Warnings '))
-      pl.sync_print('\n'.join(s for tup in warnings for _, s in tup))
+      pl.sync_print('\n'.join(e for _, e in warnings))
       pl.sync_print(format_str.format(' End warnings '))
     if werror:
       ret |= ReturnCode.ERROR_WERROR
@@ -398,7 +398,7 @@ def command_line_main():
       pl.sync_print('Running with --pm flag, setting number of workers to 1')
     args.workers = 1
     try:
-      import ipdb as py_db # LINT IGNORE
+      import ipdb as py_db # type: ignore
     except ModuleNotFoundError:
       import pdb as py_db # LINT IGNORE
 
