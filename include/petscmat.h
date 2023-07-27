@@ -915,7 +915,7 @@ PETSC_EXTERN PetscErrorCode MatFindZeroDiagonals(Mat, IS *);
 PETSC_EXTERN PetscErrorCode MatFindOffBlockDiagonalEntries(Mat, IS *);
 PETSC_EXTERN PetscErrorCode MatCreateMPIMatConcatenateSeqMat(MPI_Comm, Mat, PetscInt, MatReuse, Mat *);
 
-/*MC
+/*@C
    MatSetValue - Set a single entry into a matrix.
 
    This value may be cached, so `MatAssemblyBegin()` and `MatAssemblyEnd()`
@@ -937,7 +937,7 @@ PETSC_EXTERN PetscErrorCode MatCreateMPIMatConcatenateSeqMat(MPI_Comm, Mat, Pets
 
 .seealso: [](ch_matrices), `Mat`, `MatAssemblyBegin()`, `MatAssemblyEnd`, `InsertMode`, `MatGetValue()`, `MatSetValues()`,
           `MatSetValueLocal()`, `MatSetValuesLocal()`
-M*/
+@*/
 static inline PetscErrorCode MatSetValue(Mat mat, PetscInt i, PetscInt j, PetscScalar va, InsertMode mode)
 {
   return MatSetValues(mat, 1, &i, 1, &j, &va, mode);
@@ -972,7 +972,7 @@ static inline PetscErrorCode MatGetValue(Mat mat, PetscInt row, PetscInt col, Pe
   return MatGetValues(mat, 1, &row, 1, &col, va);
 }
 
-/*MC
+/*@C
    MatSetValueLocal - Inserts or adds a single value into a matrix, using a local numbering of the nodes.
 
    Not Collective
