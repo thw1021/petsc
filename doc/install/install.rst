@@ -369,6 +369,31 @@ details.
 
      $  ./configure --with-mpi-dir=/absolute/path/to/mpich/install
 
+Using Intel MPI (IMPI)
+^^^^^^^^^^^^^^^^^^^^^^
+
+Intel compilers are currently transitioning to OneAPI, and MPI compiler support within IMPI is in flux. We recommend the following usage:
+
+- Using GNU compilers ``gcc``, ``g++``, ``gfortran``:
+
+  .. code-block:: console
+
+     $ ./configure --with-cc=mpicc --with-cxx=mpicxx --with-fc=mpif90
+
+- Using Old Intel compilers ``icc``, ``icpc``, ``ifort``: ``mpiicc``, ``mpiicpc``, ``mpiifort`` are the compilers to use here - but they might not work with some IMPI versions. Hence suggest using:
+
+  .. code-block:: console
+
+     $ export I_MPI_CC=icc && export I_MPI_CXX=icpc && export I_MPI_F90=ifort
+     $ ./configure --with-cc=mpicc --with-cxx=mpicxx --with-fc=mpif90
+
+- Using OneAPI compilers ``icx``, ``icpx``, ``ifx``: ``mpiicx``, ``mpiicpx``, ``mpiifx`` are the compilers to use here - but they might not work with some IMPI versions. Hence suggest using:
+
+  .. code-block:: console
+
+     $ export I_MPI_CC=icx && export I_MPI_CXX=icpx && export I_MPI_F90=ifx
+     $ ./configure --with-cc=mpicc --with-cxx=mpicxx --with-fc=mpif90
+
 Installing Without MPI
 ^^^^^^^^^^^^^^^^^^^^^^
 
