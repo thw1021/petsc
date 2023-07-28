@@ -22,13 +22,6 @@ PetscErrorCode KSPLGMRESSetConstant(KSP ksp)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*
-    KSPSetUp_LGMRES - Sets up the workspace needed by lgmres.
-
-    This is called once, usually automatically by KSPSolve() or KSPSetUp(),
-    but can be called directly by KSPSetUp().
-
-*/
 PetscErrorCode KSPSetUp_LGMRES(KSP ksp)
 {
   PetscInt    max_k, k, aug_dim;
@@ -58,25 +51,6 @@ PetscErrorCode KSPSetUp_LGMRES(KSP ksp)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*
-    KSPLGMRESCycle - Run lgmres, possibly with restart.  Return residual
-                  history if requested.
-
-    input parameters:
-.        lgmres  - structure containing parameters and work areas
-
-    output parameters:
-.        nres    - residuals (from preconditioned system) at each step.
-                  If restarting, consider passing nres+it.  If null,
-                  ignored
-.        itcount - number of iterations used.   nres[0] to nres[itcount]
-                  are defined.  If null, ignored.  If null, ignored.
-.        converged - 0 if not converged
-
-    Notes:
-    On entry, the value in vector VEC_VV(0) should be
-    the initial residual.
- */
 PetscErrorCode KSPLGMRESCycle(PetscInt *itcount, KSP ksp)
 {
   KSP_LGMRES *lgmres = (KSP_LGMRES *)(ksp->data);
@@ -292,16 +266,6 @@ PetscErrorCode KSPLGMRESCycle(PetscInt *itcount, KSP ksp)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*
-  KSPSolve_LGMRES - This routine applies the LGMRES method.
-
-  Input Parameter:
-. ksp - the Krylov space object that was set to use lgmres
-
-  Output Parameter:
-.     outits - number of iterations used
-
-*/
 PetscErrorCode KSPSolve_LGMRES(KSP ksp)
 {
   PetscInt    cycle_its; /* iterations done in a call to KSPLGMRESCycle */
@@ -341,9 +305,6 @@ PetscErrorCode KSPSolve_LGMRES(KSP ksp)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*
-   KSPDestroy_LGMRES - Frees all memory space used by the Krylov method.
-*/
 PetscErrorCode KSPDestroy_LGMRES(KSP ksp)
 {
   KSP_LGMRES *lgmres = (KSP_LGMRES *)ksp->data;
@@ -360,19 +321,6 @@ PetscErrorCode KSPDestroy_LGMRES(KSP ksp)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*
-    KSPLGMRESBuildSoln - create the solution from the starting vector and the
-                      current iterates.
-
-    Input parameters:
-        nrs - work area of size it + 1.
-        vguess  - index of initial guess
-        vdest - index of result.  Note that vguess may == vdest (replace
-                guess with the solution).
-        it - HH upper triangular part is a block of size (it+1) x (it+1)
-
-     This is an internal routine that knows about the LGMRES internals.
- */
 static PetscErrorCode KSPLGMRESBuildSoln(PetscScalar *nrs, Vec vguess, Vec vdest, KSP ksp, PetscInt it)
 {
   PetscScalar tt;
@@ -460,21 +408,6 @@ static PetscErrorCode KSPLGMRESBuildSoln(PetscScalar *nrs, Vec vguess, Vec vdest
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*
-    KSPLGMRESUpdateHessenberg - Do the scalar work for the orthogonalization.
-                            Return new residual.
-
-    input parameters:
-
-.        ksp -    Krylov space object
-.        it  -    plane rotations are applied to the (it+1)th column of the
-                  modified hessenberg (i.e. HH(:,it))
-.        hapend - PETSC_FALSE not happy breakdown ending.
-
-    output parameters:
-.        res - the new residual
-
- */
 static PetscErrorCode KSPLGMRESUpdateHessenberg(KSP ksp, PetscInt it, PetscBool hapend, PetscReal *res)
 {
   PetscScalar *hh, *cc, *ss, tt;
@@ -578,20 +511,6 @@ static PetscErrorCode KSPLGMRESGetNewVectors(KSP ksp, PetscInt it)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*
-  KSPBuildSolution_LGMRES
-
-  Input Parameter:
-+ ksp - the Krylov space object
-- ptr - the ptr
-
-  Output Parameter:
-. result - the solution
-
-  Note: this calls KSPLGMRESBuildSoln - the same function that KSPLGMRESCycle
-  calls directly.
-
-*/
 PetscErrorCode KSPBuildSolution_LGMRES(KSP ksp, Vec ptr, Vec *result)
 {
   KSP_LGMRES *lgmres = (KSP_LGMRES *)ksp->data;
@@ -672,8 +591,7 @@ static PetscErrorCode KSPLGMRESSetAugDim_LGMRES(KSP ksp, PetscInt aug_dim)
   Options Database Keys:
 +   -ksp_gmres_restart <restart> - total approximation space size (Krylov directions + error approximations)
 .   -ksp_gmres_haptol <tol> - sets the tolerance for "happy ending" (exact convergence)
-.   -ksp_gmres_preallocate - preallocate all the Krylov search directions initially (otherwise groups of
-                            vectors are allocated as needed)
+.   -ksp_gmres_preallocate - preallocate all the Krylov search directions initially (otherwise groups of vectors are allocated as needed)
 .   -ksp_gmres_classicalgramschmidt - use classical (unmodified) Gram-Schmidt to orthogonalize against the Krylov space (fast) (the default)
 .   -ksp_gmres_modifiedgramschmidt - use modified Gram-Schmidt in the orthogonalization (more stable, but slower)
 .   -ksp_gmres_cgs_refinement_type <refine_never,refine_ifneeded,refine_always> - determine if iterative refinement is used to increase the
@@ -692,7 +610,7 @@ static PetscErrorCode KSPLGMRESSetAugDim_LGMRES(KSP ksp, PetscInt aug_dim)
     Supports both left and right preconditioning, but not symmetric.
 
   Developer Note:
-    This object is subclassed off of `KSPGMRES`
+    This object is subclassed off of `KSPGMRES`, see its source code for comments on the data structures and routines
 
   Contributed by:
   Allison Baker
