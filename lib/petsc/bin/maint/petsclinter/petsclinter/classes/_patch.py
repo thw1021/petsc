@@ -151,7 +151,7 @@ class Patch:
     """
     return self.extent.raw(num_context=self.ctxlines)
 
-  def _get_cached(self, attr: str, func, *args, **kwargs):
+  def _get_cached(self, attr: str, func: Callable, *args, **kwargs) -> Any:
     cache = self._cache
     if attr in cache:
       return cache[attr]

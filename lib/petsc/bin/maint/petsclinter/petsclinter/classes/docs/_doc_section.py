@@ -243,8 +243,10 @@ class Synopsis(SectionBase):
     if not (len(explicit_synopsis) or docstring.Modifier.FLOATING in docstring.type_mod):
       # we are missing the synopsis section entirely
       with open(cursor.get_file()) as fh:
-        lines = [l.strip() for l in fh if l.lstrip().startswith('#') and 'include' in l and '/*' in l]
-      lines = [l.group(2).strip() for l in filter(None, map(self.__sowing_include_finder.match, lines))]
+        gen   = (l.strip() for l in fh if l.lstrip().startswith('#') and 'include' in l and '/*' in l)
+        lines = [
+          l.group(2).strip() for l in filter(None, map(self.__sowing_include_finder.match, gen))
+        ]
 
       try:
         include_header = lines[0]
@@ -283,8 +285,7 @@ class Synopsis(SectionBase):
       stripped = line.strip()
       if not stripped or stripped.endswith(':') or stripped.casefold().startswith('synopsis'):
         continue
-      found = self.__header_include_finder.match(stripped)
-      if found:
+      if found := self.__header_include_finder.match(stripped):
         header_name = found.group(1)
         header_loc  = loc
         break
@@ -472,6 +473,7 @@ class Synopsis(SectionBase):
     self._check_synopsis_description_separator(docstring, name_loc.start.line)
     self._check_blurb_length(docstring, cursor, items)
     return
+
 
 @DiagnosticManager.register(
   ('parameter-documentation','Verify that if a, b, c are documented then the function exactly has parameters a, b, and c and vice versa'),
@@ -1344,25 +1346,23 @@ class SeeAlso(InlineList):
     `last_loc` must be the original final location, even if `item_remain` does not contain it (i.e. it
     is an invalid entry)!
     """
-    seen     = {}
-    dup_diag = self.diags.duplicate
+    seen: dict[str, SourceRange] = {}
     for loc, text in item_remain:
       text_no_special = text.replace(self.special_chars, '')
-      if text_no_special not in seen:
-        seen[text_no_special] = loc
-        continue
-
       assert text_no_special
-      first_seen = seen[text_no_special]
-      docstring.add_error_from_diagnostic(
-        docstring.make_diagnostic(
-          dup_diag, f"Seealso entry '{text}' is duplicate", loc,
-          patch=self.__make_deletion_patch(loc, text, loc == last_loc)
-        ).add_note(
-          docstring.make_error_message('first instance found here', first_seen, num_context=1),
-          location=first_seen.start
+      if text_no_special in seen:
+        first_seen = seen[text_no_special]
+        docstring.add_error_from_diagnostic(
+          docstring.make_diagnostic(
+            self.diags.duplicate, f"Seealso entry '{text}' is duplicate", loc,
+            patch=self.__make_deletion_patch(loc, text, loc == last_loc)
+          ).add_note(
+            docstring.make_error_message('first instance found here', first_seen, num_context=1),
+            location=first_seen.start
+          )
         )
-      )
+      else:
+        seen[text_no_special] = loc
     return
 
   def check(self, linter: Linter, cursor: Cursor, docstring: PetscDocString) -> None:

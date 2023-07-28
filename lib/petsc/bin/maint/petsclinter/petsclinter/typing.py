@@ -10,11 +10,13 @@ from typing import TYPE_CHECKING, Union
 if TYPE_CHECKING:
   import re
   import pathlib
-  import clang.cindex as clx
+  import clang.cindex as clx # type: ignore[import]
 
   from typing import Optional, Any, NoReturn, TypeVar
 
-  from collections.abc import Iterator, Iterable, Generator, Callable, Collection, Sequence
+  from collections.abc import (
+    Iterator, Iterable, Generator, Callable, Collection, Sequence, Container, Mapping
+  )
 
   ##
   # CLASSES

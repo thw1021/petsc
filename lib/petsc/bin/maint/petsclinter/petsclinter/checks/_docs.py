@@ -5,18 +5,23 @@
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from ..typing import *
 
 from ..classes._diag import DiagnosticManager
 
 from ..classes.docs._doc_str import PetscDocString
 
-if TYPE_CHECKING:
-  from ..classes._linter import Linter
-  from ..classes._cursor import Cursor
-
 """Specific 'driver' function to test a particular docstring archetype"""
 def check_petsc_function_docstring(linter: Linter, cursor: Cursor) -> None:
+  r"""Check a PETSc function docstring
+
+  Parameters
+  ----------
+  linter :
+    the linter to check the docstring with
+  cursor :
+    the cursor representing the function declaration
+  """
   docstring = PetscDocString(linter, cursor)
 
   with DiagnosticManager.push_from(docstring.get_pragmas()):
@@ -25,6 +30,15 @@ def check_petsc_function_docstring(linter: Linter, cursor: Cursor) -> None:
   return
 
 def check_petsc_enum_docstring(linter: Linter, cursor: Cursor) -> None:
+  r"""Check a PETSc enum docstring
+
+  Parameters
+  ----------
+  linter :
+    the linter to check the docstring with
+  cursor :
+    the cursor representing the enum declaration
+  """
   docstring = PetscDocString(linter, cursor)
 
   with DiagnosticManager.push_from(docstring.get_pragmas()):

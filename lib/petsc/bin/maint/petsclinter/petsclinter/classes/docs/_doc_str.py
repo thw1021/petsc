@@ -15,13 +15,11 @@ import petsclinter  as pl
 
 from ...typing      import *
 from ...__version__ import py_version_lt
-from ..._error      import KnownUnhandleableCursorError
+from ..._error      import BaseError, KnownUnhandleableCursorError
 
 from .. import _util
 
 from .._diag    import DiagnosticManager, Diagnostic
-from .._linter  import Linter
-from .._cursor  import Cursor
 from .._src_pos import SourceRange, SourceLocation
 from .._patch   import Patch
 
@@ -76,16 +74,12 @@ _pragma_regex = re.compile(r'.*PetscClangLinter\s+pragma\s+(\w+):\s*(.*)')
 # Regex to match /* */ patterns
 _c_comment_regex = re.compile(r'\/\*(\*(?!\/)|[^*])*\*\/')
 
-class SectionNotFoundError(pl.BaseError):
-  """
-  Exception thrown when a section is searched for, not found, and strict mode was enabled
-  """
+class SectionNotFoundError(BaseError):
+  r"""Exception thrown when a section is searched for, not found, and strict mode was enabled"""
   pass
 
-class GuessHeadingFailError(pl.BaseError):
-  """
-  Exception thrown then sections fails to guess the appropriate heading for a line
-  """
+class GuessHeadingFailError(BaseError):
+  r"""Exception thrown then sections fails to guess the appropriate heading for a line"""
   pass
 
 class SectionManager:
@@ -468,17 +462,7 @@ class PetscDocString(DocBase):
       the cursor to which this docstring belongs
     indent : optional
       the number of line indents for normal lines
-
-    Raises
-    ------
-    ValueError
-      if `linter` is not a `Linter`, or if `cursor` is not a `Cursor`
     """
-    if not isinstance(linter, Linter):
-      raise ValueError(type(linter))
-    if not isinstance(cursor, Cursor):
-      raise ValueError(type(cursor))
-
     self.sections.set_verbose(linter.verbose)
     self._linter          = linter
     self.cursor           = cursor
@@ -490,7 +474,7 @@ class PetscDocString(DocBase):
     return
 
   @staticmethod
-  def _default_attributes() -> dict:
+  def _default_attributes() -> dict[str, Any]:
     return dict()
 
   @classmethod
@@ -583,8 +567,7 @@ class PetscDocString(DocBase):
       last_match = re_match
 
     assert last_match is not None
-    start = last_match.start()
-    if start:
+    if start := last_match.start():
       # this handles the following case:
       #
       # /* a dummy comment that is attributed to the symbol */
@@ -627,8 +610,7 @@ class PetscDocString(DocBase):
       line = line.rstrip()
       if line.endswith(('}', ';', ')', '>', '"')):
         break
-      re_match = _pragma_regex.match(line)
-      if re_match:
+      if re_match := _pragma_regex.match(line):
         pragmas[re_match.group(1)].update(
           map(
             re.compile,
@@ -999,8 +981,7 @@ class PetscDocString(DocBase):
     left_stripped :
       the line that has been left-stripped
     """
-    linelen = len(line)
-    if linelen:
+    if linelen := len(line):
       indent       = linelen - len(left_stripped)
       expected_ind = 0 if line.startswith(('.', '+', '-', '$')) else self.indent
       if indent != expected_ind:

@@ -5,22 +5,16 @@
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from ..typing import *
 
 import clang.cindex as clx # type: ignore[import]
 
 if TYPE_CHECKING:
-  from collections.abc import Callable, Collection
-  from typing          import TypeVar, TypeAlias
+  T = TypeVar('T')
+  U = TypeVar('U')
 
-  from ..classes._linter import Linter
-  from ..classes._cursor import Cursor
-
-  T = TypeVar("T")
-  U = TypeVar("U")
-
-  FunctionChecker: TypeAlias = Callable[[Linter, Cursor, Cursor], None]
-  DocChecker: TypeAlias      = Callable[[Linter, Cursor], None]
+  FunctionChecker = Callable[[Linter, Cursor, Cursor], None]
+  DocChecker      = Callable[[Linter, Cursor], None]
 
 classid_map: dict[str, str]                    = {}
 check_function_map: dict[str, FunctionChecker] = {}

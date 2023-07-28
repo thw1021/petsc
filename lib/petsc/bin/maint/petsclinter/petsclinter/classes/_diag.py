@@ -22,7 +22,7 @@ class DiagnosticMapProxy:
     self.__mro      = mro
     return
 
-  def __fuzzy_get_attribute__(self, in_diags: dict[str, str], in_attr: str) -> tuple[bool, str]:
+  def __fuzzy_get_attribute(self, in_diags: dict[str, str], in_attr: str) -> tuple[bool, str]:
     try:
       return True, in_diags[in_attr]
     except KeyError:
@@ -44,7 +44,7 @@ class DiagnosticMapProxy:
         sub_diag_map = diag_map_diags[cls.__qualname__]
       except KeyError:
         continue
-      success, ret = self.__fuzzy_get_attribute__(sub_diag_map, attr)
+      success, ret = self.__fuzzy_get_attribute(sub_diag_map, attr)
       if success:
         return ret
     raise AttributeError(attr)
@@ -326,7 +326,7 @@ class _DiagnosticsManager:
     return f'{self.flagprefix}{self.check_flag(flag)}'
 
   @contextlib.contextmanager
-  def push_from(self, dict_like: dict[str, Collection[re.Pattern[str]]]):
+  def push_from(self, dict_like: Mapping[str, Collection[re.Pattern[str]]]):
     r"""Temporarily enable or disable flags based on `dict_like`
 
     Parameters
@@ -346,7 +346,8 @@ class _DiagnosticsManager:
     """
     if dict_like:
       dispatcher   = {
-        'disable' : self.disabled.update
+        'disable' : self.disabled.update,
+        'ignore'  : self.disabled.update
       }
       reg          = self.registered().keys()
       old_disabled = copy.deepcopy(self.disabled)

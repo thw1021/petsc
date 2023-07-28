@@ -3,9 +3,12 @@
 # Created: Mon Jun 20 17:06:22 2022 (-0400)
 # @author: Jacob Faibussowitsch
 """
+from __future__ import annotations
+
 import itertools
 import clang.cindex as clx # type: ignore[import]
 
+from ..typing import *
 from .._error import ParsingError
 
 from ..classes._diag    import DiagnosticManager, Diagnostic
@@ -23,9 +26,19 @@ from ..util._clang import (
 @DiagnosticManager.register(
   ('incompatible-function', 'Verify that the correct function was used for a type')
 )
-def add_function_fix_to_bad_source(linter, obj, func_cursor, valid_func_name):
-  """
-  Shorthand for extracting a fix from a function cursor
+def add_function_fix_to_bad_source(linter: Linter, obj: Cursor, func_cursor: Cursor, valid_func_name: str) -> None:
+  r"""Shorthand for extracting a fix from a function cursor
+
+  Parameters
+  ----------
+  linter :
+    the linter instance
+  obj :
+    the cursor representing the object
+  func_cursor :
+    the cursor of the parent function
+  valid_func_name :
+    the name that should be used instead
   """
   call = [
     c for c in func_cursor.get_children() if c.type.get_pointee().kind == clx.TypeKind.FUNCTIONPROTO
@@ -41,12 +54,25 @@ def add_function_fix_to_bad_source(linter, obj, func_cursor, valid_func_name):
   linter.add_error_from_cursor(obj, diag)
   return
 
-def convert_to_correct_PetscValidLogicalCollectiveXXX(linter, obj, obj_type, func_cursor=None, **kwargs):
+def convert_to_correct_PetscValidLogicalCollectiveXXX(linter: Linter, obj: Cursor, obj_type: clx.Type, func_cursor: Optional[Cursor] = None, **kwargs) -> bool:
+  r"""Try to glean the correct PetscValidLogicalCollectiveXXX from the type.
+
+  Parameters
+  ----------
+  linter :
+    the linter instance
+  obj :
+    the cursor for the object to check
+  obj_type :
+    the type of obj
+  func_cursor : optional
+    the cursor representing the parent function
+
+  Notes
+  -----
+  Used as a failure hook in the validlogicalcollective checks.
   """
-  Try to glean the correct PetscValidLogicalCollectiveXXX from the type, used as a failure hook in the
-  validlogicalcollective checks.
-  """
-  valid_func_name = None
+  valid_func_name = ''
   obj_type_kind   = obj_type.kind
   if obj_type_kind in clx_scalar_type_kinds:
     if 'PetscReal' in obj.derivedtypename:
@@ -65,15 +91,38 @@ def convert_to_correct_PetscValidLogicalCollectiveXXX(linter, obj, obj_type, fun
       valid_func_name = 'PetscValidLogicalCollectiveMPIInt'
   if valid_func_name:
     add_function_fix_to_bad_source(linter, obj, func_cursor, valid_func_name)
-    return True
-  return False
+  return bool(valid_func_name)
 
 @DiagnosticManager.register(
   ('incompatible-type', 'Verify that a particular type matches the expected type')
 )
-def check_is_type_x_and_not_type_y(typeX, typeY, linter, obj, obj_type, func_cursor=None, valid_func=None):
-  """
-  Check that a cursor is at least some form of derived type X and not some form of type Y
+def check_is_type_x_and_not_type_y(type_x: str, type_y: str, linter: Linter, obj: Cursor, obj_type: clx.Type, func_cursor: Optional[Cursor] = None, valid_func: str = '') -> bool:
+  r"""Check that a cursor is at least some form of derived type X and not some form of type Y
+
+  Parameters
+  ----------
+  type_x :
+    the name of type "x"
+  type_y :
+    the name that `type_x` should not be
+  linter :
+    the linter instance
+  obj :
+    the object which is of `type_x`
+  obj_type :
+    the type of `obj`
+  func_cursor : optional
+    the cursor representing the parent function
+  valid_func : optional
+    the name of the valid function name
+
+  Returns
+  -------
+  ret :
+    True, as this routine always fixes the problem
+
+  Notes
+  -----
   i.e. for
 
   myInt **********x;
@@ -81,43 +130,136 @@ def check_is_type_x_and_not_type_y(typeX, typeY, linter, obj, obj_type, func_cur
   you may check that 'x' is some form of 'myInt' instead of say 'PetscBool'
   """
   derived_name = obj.derivedtypename
-  if typeX not in derived_name:
-    if typeY in derived_name:
+  if type_x not in derived_name:
+    if type_y in derived_name:
       add_function_fix_to_bad_source(linter, obj, func_cursor, valid_func)
     else:
-      mess = f'Incorrect use of {funcName}(), {funcName}() should only be used for {typeX}'
+      mess = f'Incorrect use of {valid_func}(), {valid_func}() should only be used for {type_x}'
       linter.add_error_from_cursor(
-        obj, Diagnostic(checkIsTypeXandNotTypeY.diags.incompatible_type, mess, obj.extent.start)
+        obj, Diagnostic(check_is_type_x_and_not_type_y.diags.incompatible_type, mess, obj.extent.start)
       )
   return True
 
-def check_is_PetscScalar_and_not_PetscReal(*args, **kwargs):
+def check_is_PetscScalar_and_not_PetscReal(*args, **kwargs) -> bool:
+  r"""Check that a cursor is a PetscScalar and not a PetscReal
+
+  Parameters
+  ----------
+  *args :
+    positional arguments to `check_is_type_x_and_not_type_y()`
+  **kwargs :
+    keyword arguments to `check_is_type_x_and_not_type_y()`
+
+  Returns
+  -------
+  ret :
+    the return value of `check_is_type_x_and_not_type_y()`
+  """
   return check_is_type_x_and_not_type_y('PetscScalar', 'PetscReal', *args, **kwargs)
 
-def check_is_PetscReal_and_not_PetscScalar(*args, **kwargs):
+def check_is_PetscReal_and_not_PetscScalar(*args, **kwargs) -> bool:
+  r"""Check that a cursor is a PetscReal and not a PetscScalar
+
+  Parameters
+  ----------
+  *args :
+    positional arguments to `check_is_type_x_and_not_type_y()`
+  **kwargs :
+    keyword arguments to `check_is_type_x_and_not_type_y()`
+
+  Returns
+  -------
+  ret :
+    the return value of `check_is_type_x_and_not_type_y()`
+  """
   return check_is_type_x_and_not_type_y('PetscReal', 'PetscScalar', *args, **kwargs)
 
-def check_is_not_type(typename, linter, obj, func_cursor=None, valid_func=None):
-  if isinstance(typename, str):
-    contains = typename in obj.derivedtypename
-  elif isinstance(typename, (tuple, list)):
-    contains = any(t in obj.derivedtypename for t in typename)
-  else:
-    raise ValueError(type(typename))
-  if contains:
+def check_is_not_type(typename: str, linter: Linter, obj: Cursor, func_cursor: Optional[Cursor] = None, valid_func: str = '') -> bool:
+  r"""Check a cursor is not of type `typename`
+
+  Parameters
+  ----------
+  typename :
+    the type that the cursor should not be
+  linter :
+    the linter instance
+  obj :
+    the cursor representing the object
+  func_cursor : optional
+    the cursor representing the parent function
+  valid_func : optional
+    the name of the valid function name
+
+  Returns
+  -------
+  ret :
+    True, since this routine always fixes the problem
+  """
+  if typename in obj.derivedtypename:
     add_function_fix_to_bad_source(linter, obj, func_cursor, valid_func)
   return True
 
-def check_int_is_not_PetscBool(linter, obj, *args, **kwargs):
+def check_int_is_not_PetscBool(linter: Linter, obj: Cursor, *args, **kwargs) -> bool:
+  r"""Check an int-like object is not a PetscBool
+
+  Parameters
+  ----------
+  linter :
+    the linter instance
+  obj :
+    the cursor representing the object
+  *args :
+    additional positional arguments to `check_is_not_type()`
+  **kwargs :
+    additional keyword arguments to `check_is_not_type()`
+
+  Returns
+  -------
+  ret :
+    the return value of `check_is_not_type()`
+  """
   return check_is_not_type('PetscBool', linter, obj, **kwargs)
 
-def check_MPIInt_is_not_PetscInt(linter, obj, *args, **kwargs):
+def check_MPIInt_is_not_PetscInt(linter: Linter, obj: Cursor, *args, **kwargs) -> bool:
+  r"""Check a PetscMPIInt object is not a PetscBool
+
+  Parameters
+  ----------
+  linter :
+    the linter instance
+  obj :
+    the cursor representing the object
+  *args :
+    additional positional arguments to `check_is_not_type()`
+  **kwargs :
+    additional keyword arguments to `check_is_not_type()`
+
+  Returns
+  -------
+  ret :
+    the return value of `check_is_not_type()`
+  """
   return check_is_not_type('PetscInt', linter, obj, **kwargs)
 
 @DiagnosticManager.register(
   ('incompatible-function', 'Verify that the correct function was used for a type')
 )
-def check_is_PetscBool(linter, obj, *args, func_cursor=None, **kwargs):
+def check_is_PetscBool(linter: Linter, obj: Cursor, obj_type: clx.Type, func_cursor: Optional[Cursor] = None, valid_func: str = '') -> bool:
+  r"""Check that a cursor is exactly a PetscBool
+
+  Parameters
+  ----------
+  linter :
+    the linter instance
+  obj :
+    the cursor representing the object
+  obj_type :
+    the type of obj
+  func_cursor : optional
+    the cursor representing the parent function
+  valid_func_name : optional
+    the name that should be used instead, unused
+  """
   if ('PetscBool' not in obj.derivedtypename) and ('bool' not in obj.typename):
     func_name = func_cursor.displayname
     mess      = f'Incorrect use of {func_name}(), {func_name}() should only be used for PetscBool or bool:{Cursor.get_formatted_source_from_cursor(func_cursor, num_context=2)}'

@@ -9,7 +9,6 @@ import difflib
 import textwrap
 import itertools
 import collections
-import petsclinter as pl
 
 from ...typing import *
 from ..._error import ParsingError
@@ -190,7 +189,6 @@ class DocBase:
     if not text[0].startswith(prefix):
       text.appendleft(prefix)
     return text
-
 
 @DiagnosticManager.register(
   ('section-header-missing', 'Verify that required sections exist in the docstring'),
@@ -607,7 +605,6 @@ class SectionBase(DocBase):
   ('alignment', 'Verify that parameter list entries are correctly white-space aligned'),
   ('prefix', 'Verify that parameter list entries begin with the correct prefix'),
   ('missing-description', 'Verify that parameter list entries have a description'),
-  ('missing-description-separator', 'Verify that a parameter list entry has a separator before the description'),
   ('wrong-description-separator', 'Verify that parameter list entries use the right description separator'),
   ('solitary-parameter', 'Verify that each parameter has its own entry'),
 )

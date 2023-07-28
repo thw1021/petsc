@@ -411,7 +411,7 @@ class SerialPool(WorkerPoolBase):
 
 def WorkerPool(num_workers: int, verbose: bool = False) -> Union[SerialPool, ParallelPool]:
   if num_workers < 0:
-      num_workers = max(mp.cpu_count() - 1, 1)
+    num_workers = max(mp.cpu_count() - 1, 1)
 
   if num_workers in (0, 1):
     if verbose:

@@ -47,5 +47,3 @@ class Color:
       the ASCII code to reset all color characteristics
     """
     return cls.__COLOR_RESET__
-
-color = Color()

@@ -9,7 +9,7 @@ import functools
 
 from ..typing import *
 
-from .. import util
+from ..util._color import Color
 
 def verbose_print(*args, **kwargs):
     """
@@ -145,7 +145,7 @@ def get_formatted_source_from_source_range(source_range: SourceRangeLike, num_be
     symbol_end    = end.column - 1
     begin_offset  = max(symbol_begin, 0)
     len_underline = max(abs(max(symbol_end, 1) - begin_offset), 1)
-    underline     = begin_offset * ' ' + util.color.bright_yellow() + len_underline * '^' + util.color.reset()
+    underline     = begin_offset * ' ' + Color.bright_yellow() + len_underline * '^' + Color.reset()
 
   line_list = []
   raw_lines = read_file_lines_cached(begin.file.name, 'r')[lo_bound - 1:hi_bound]
@@ -153,7 +153,7 @@ def get_formatted_source_from_source_range(source_range: SourceRangeLike, num_be
     indicator = '>' if (line_begin <= line_file <= line_end) else ' '
     prefix    = f'{indicator} {line_file: <{max_width}}: '
     if highlight and (line_file == line_begin):
-      line = f'{line[:symbol_begin]}{util.color.bright_yellow()}{line[symbol_begin:symbol_end]}{util.color.reset()}{line[symbol_end:]}'
+      line = f'{line[:symbol_begin]}{Color.bright_yellow()}{line[symbol_begin:symbol_end]}{Color.reset()}{line[symbol_end:]}'
       line_list.extend([
         (prefix, line),
         (' ' * len(prefix), underline)

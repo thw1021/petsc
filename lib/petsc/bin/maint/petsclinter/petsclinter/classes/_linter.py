@@ -24,7 +24,8 @@ from ._patch   import Patch
 
 from .._error import ParsingError, KnownUnhandleableCursorError
 
-from .. import util
+from ..util._color import Color
+from ..util._clang import clx_func_call_cursor_kinds, base_clang_options
 
 class WeakList(list):
   """
@@ -143,6 +144,9 @@ class Addline:
     rl, rr  = re_match.group(2).split(',')
     return f'@@ -{self.offset + int(ll)},{lr} +{self.offset + int(rl)},{rr} @@'
 
+PathMessagePair         = tuple['Path', str]
+DiagnosticContainerType = collections.OrderedDict['Path', collections.OrderedDict[int, WeakList]]
+
 @DiagnosticManager.register(
   ('duplicate-function', 'Check for duplicate function-calls on the same execution path'),
   ('parsing-error', 'Generic parsing errors')
@@ -163,8 +167,8 @@ class Linter:
   err_prefix: str
   warn_prefix: str
   index: clx.Index
-  errors: collections.OrderedDict[Path, collections.OrderedDict[int, WeakList]]
-  warnings: collections.OrderedDict[Path, collections.OrderedDict[int, WeakList]]
+  errors: DiagnosticContainerType
+  warnings: DiagnosticContainerType
   patches: collections.defaultdict[Path, list[Patch]]
 
   diags: DiagnosticMap # satisfy type checkers
@@ -185,7 +189,7 @@ class Linter:
       whether to treat warnings as errors
     """
     if clang_options is None:
-      clang_options = util.base_clang_options
+      clang_options = base_clang_options
 
     self.flags       = compiler_flags
     self.clang_opts  = clang_options
@@ -236,7 +240,7 @@ class Linter:
     for function_list in processed_funcs.values():
       seen = {}
       for func, scope in function_list:
-        combo = [func.displayname]
+        combo: list[str] = [func.displayname]
         try:
           combo.extend(map(Cursor.get_raw_name_from_cursor, func.get_arguments()))
         except ParsingError:
@@ -261,7 +265,7 @@ class Linter:
     return
 
   @staticmethod
-  def find_lintable_expressions(tu: clx.TranslationUnit, symbol_names) -> clx.Cursor:
+  def find_lintable_expressions(tu: clx.TranslationUnit, symbol_names: Container[str]) -> Generator[Union[tuple[clx.Cursor, clx.Cursor, Scope], clx.Cursor], None, None]:
     r"""Finds all lintable expressions in container symbol_names.
 
     Parameters
@@ -287,7 +291,7 @@ class Linter:
     COMPOUND_STMT  = clx.CursorKind.COMPOUND_STMT
     CALL_EXPR      = clx.CursorKind.CALL_EXPR
 
-    def walk_scope_switch(parent: clx.Cursor, scope: Scope):
+    def walk_scope_switch(parent: clx.Cursor, scope: Scope) -> Generator[tuple[clx.Cursor, clx.Cursor, Scope], None, None]:
       """
       Special treatment for switch-case since the AST setup for it is mind-boggingly stupid.
       The first node after a case statement is listed as the cases *child* whereas every other
@@ -310,7 +314,7 @@ class Linter:
         elif child_kind == COMPOUND_STMT:
           yield from walk_scope_switch(child, case_scope.sub())
 
-    def walk_scope(parent: clx.Cursor, scope: Optional[Scope] = None):
+    def walk_scope(parent: clx.Cursor, scope: Optional[Scope] = None) -> Generator[tuple[clx.Cursor, clx.Cursor, Scope], None, None]:
       """
       Walk the tree determining the scope of a node. here 'scope' refers not only
       to lexical scope but also to logical scope, see Scope object above
@@ -337,7 +341,7 @@ class Linter:
           yield from walk_scope(child, scope=scope)
 
     # normal lintable cursor kinds, the type of cursors we directly want to deal with
-    lintable_kinds          = util.clx_func_call_cursor_kinds | {clx.CursorKind.ENUM_DECL}
+    lintable_kinds          = clx_func_call_cursor_kinds | {clx.CursorKind.ENUM_DECL}
     # "extended" lintable kinds.
     extended_lintable_kinds = lintable_kinds | {UNEXPOSED_DECL}
 
@@ -368,7 +372,7 @@ class Linter:
       # if we've gotten this far we have found something worth looking into, so first
       # yield the parent to process any documentation
       yield possible_parent
-      if possible_parent.kind in util.clx_func_call_cursor_kinds:
+      if possible_parent.kind in clx_func_call_cursor_kinds:
         # then yield any children matching our function calls
         yield from walk_scope(possible_parent)
 
@@ -484,7 +488,7 @@ class Linter:
     self._check_duplicate_function_calls(processed_funcs)
     return
 
-  def __add_diag_from_cursor(self, cursor: Cursor, diagnostic: Diagnostic, dest: collections.OrderedDict[Path, collections.OrderedDict[int, WeakList]], color: str, name: str) -> None:
+  def __add_diag_from_cursor(self, cursor: Cursor, diagnostic: Diagnostic, dest: DiagnosticContainerType, color: str, name: str) -> None:
     r"""Add a diagnostic error or warning from a cursor
 
     Parameters
@@ -519,7 +523,7 @@ class Linter:
     patch_id             = typing.cast(Patch, patch).id if have_patch else -1
     cursor_id_file_local = file_local[cursor_id]
     cursor_id_file_local.append((
-      f'{color}{diagnostic.location}: {name}:{util.color.reset()} {diagnostic.format_message()}',
+      f'{color}{diagnostic.location}: {name}:{Color.reset()} {diagnostic.format_message()}',
       have_patch,
       patch_id
     ))
@@ -529,7 +533,6 @@ class Linter:
       patch.attach(weakref.ref(cursor_id_file_local))
       self.patches[filename].append(patch)
     return
-
 
   def add_error_from_cursor(self, cursor: Cursor, diagnostic: Diagnostic) -> None:
     r"""Given a cursor and a diagnostic, log the error with the linter
@@ -541,16 +544,31 @@ class Linter:
     diagnostic :
       the diagnostic detailing the error
     """
-    self.__add_diag_from_cursor(cursor, diagnostic, self.errors, util.color.bright_red(), 'error')
+    self.__add_diag_from_cursor(cursor, diagnostic, self.errors, Color.bright_red(), 'error')
     return
+
+  def __view_last_diag(self, container: DiagnosticContainerType) -> None:
+    r"""Print the last diagnostic added
+
+    Parameters
+    ----------
+    container :
+      the container to print from, either self.errors or self.warnings
+    """
+    for files in reversed(container):
+      diags = container[files]
+      last  = diags[next(reversed(diags))]
+      pl.sync_print(last[-1][0])
+      return
 
   def view_last_error(self) -> None:
     r"""Print the last error added, useful for debugging"""
-    for files in reversed(self.errors):
-      errors = self.errors[files]
-      last   = errors[next(reversed(errors))]
-      pl.sync_print(last[0][-1])
-      break
+    self.__view_last_diag(self.errors)
+    return
+
+  def view_last_warning(self) -> None:
+    r"""Print the last warning added, useful for debugging"""
+    self.__view_last_diag(self.warnings)
     return
 
   def add_warning_from_cursor(self, cursor: Cursor, diagnostic: Diagnostic) -> None:
@@ -559,20 +577,20 @@ class Linter:
       self.add_error_from_cursor(cursor, diagnostic)
     else:
       self.__add_diag_from_cursor(
-        cursor, diagnostic, self.warnings, util.color.bright_yellow(), 'warning'
+        cursor, diagnostic, self.warnings, Color.bright_yellow(), 'warning'
       )
     return
 
-  def __get_all_diags(self, container: collections.OrderedDict[Path, collections.OrderedDict[int, WeakList]], prefix: str) -> tuple[list[tuple[Path, str]], list[tuple[Path, str]]]:
-    def maybe_add_to_global_list(global_list: list[tuple[Path, str]], local_list: list[str], path: Path) -> None:
+  def __get_all_diags(self, container: DiagnosticContainerType, prefix: str) -> tuple[list[PathMessagePair], list[PathMessagePair]]:
+    def maybe_add_to_global_list(global_list: list[PathMessagePair], local_list: list[str], path: Path) -> None:
       if local_list:
         global_list.append((
           path, '{prefix}\n{}\n{prefix}'.format('\n'.join(local_list), prefix=prefix)
         ))
       return
 
-    all_unresolved: list[tuple[Path, str]] = []
-    all_resolved: list[tuple[Path, str]]   = []
+    all_unresolved: list[PathMessagePair] = []
+    all_resolved: list[PathMessagePair]   = []
     for path, diags in container.items():
       extracted: tuple[list[str], list[str]] = (
         [], # unresolved
@@ -585,7 +603,7 @@ class Linter:
       maybe_add_to_global_list(all_resolved, extracted[1], path)
     return all_unresolved, all_resolved
 
-  def get_all_errors(self) -> tuple[list[tuple[Path, str]], list[tuple[Path, str]]]:
+  def get_all_errors(self) -> tuple[list[PathMessagePair], list[PathMessagePair]]:
     r"""Return all errors collected so far
 
     Returns
@@ -597,7 +615,7 @@ class Linter:
     """
     return self.__get_all_diags(self.errors, self.err_prefix)
 
-  def get_all_warnings(self) -> tuple[list[tuple[Path, str]], list[tuple[Path, str]]]:
+  def get_all_warnings(self) -> tuple[list[PathMessagePair], list[PathMessagePair]]:
     r"""Return all warnings collected so far
 
     Returns
@@ -607,7 +625,7 @@ class Linter:
     """
     return self.__get_all_diags(self.warnings, self.warn_prefix)
 
-  def coalesce_patches(self) -> list[tuple[Path, str]]:
+  def coalesce_patches(self) -> list[PathMessagePair]:
     r"""Given a set of patches, collapse all patches and return the minimal set of diffs required
 
     Returns
@@ -615,7 +633,7 @@ class Linter:
     patches :
       the list of pairs of coalesced patches and their source files
     """
-    def combine(filename: Path, patches: list[Patch]) -> tuple[Path, str]:
+    def combine(filename: Path, patches: list[Patch]) -> PathMessagePair:
       fstr                   = str(filename)
       diffs: list[list[str]] = []
       for patch in patches:
@@ -661,13 +679,38 @@ class Linter:
 
     return list(itertools.starmap(combine, self.patches.items()))
 
-  def diagnostics(self) -> tuple[list[tuple[Path, str]], list[tuple[Path, str]], list[tuple[Path, str]], list[tuple[Path, str]]]:
+  def diagnostics(self) -> tuple[list[PathMessagePair], list[PathMessagePair], list[PathMessagePair], list[PathMessagePair]]:
     r"""Return the errors left (unfixed), fixed errors, warnings and avaiable patches. Automatically
     coalesces the patches
+
+    Returns
+    -------
+    errors_left :
+      the list of filename - error-message pairs of errors that could not be patched
+    errors_fixed :
+      the list of filename - error-message pairs of errors that can be patched
+    warnings_left :
+      the list of filename - warning-message pairs of warnings that could not be patched
+    patches :
+      the set of patches corresponding to entries in `errors_fixed`
+
+    Raises
+    ------
+    RuntimeError
+      if there exist any fixable warnings
+
+    Notes
+    -----
+    The linter technically also collects a `warnings_fixed` set, but these are not returned.
+    As warnings indicate a failure of the linter to parse or understand some construct there is no
+    reason for a warning to ever be fixable. These diagnostics should be errors instead.
     """
-    # order is ciritical, coalesce_patches() will prune the patch and warning lists
+    # order is critical, coalesce_patches() will prune the patch and warning lists
     patches                       = self.coalesce_patches()
     errors_left, errors_fixed     = self.get_all_errors()
     warnings_left, warnings_fixed = self.get_all_warnings()
-    assert len(warnings_fixed) == 0
+    if nfix := len(warnings_fixed):
+      raise RuntimeError(
+        f'Have {nfix} "fixable" warnings, this should not happen! If a warning has a fix then it should be an error instead!'
+      )
     return errors_left, errors_fixed, warnings_left, patches

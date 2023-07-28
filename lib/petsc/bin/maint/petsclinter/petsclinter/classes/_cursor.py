@@ -5,6 +5,8 @@
 """
 from __future__ import annotations
 
+import enum
+import ctypes
 import clang.cindex as clx # type: ignore[import]
 import petsclinter  as pl
 
@@ -17,6 +19,94 @@ from .         import _util
 from .._error import KnownUnhandleableCursorError, ParsingError
 
 from ..util._clang import *
+
+class CtypesEnum(enum.IntEnum):
+  """
+  A ctypes-compatible IntEnum superclass
+  """
+  @classmethod
+  def from_param(cls, obj) -> int:
+    return int(obj)
+
+class CXChildVisitResult(CtypesEnum):
+  # see
+  # https://clang.llvm.org/doxygen/group__CINDEX__CURSOR__TRAVERSAL.html#ga99a9058656e696b622fbefaf5207d715
+  # Terminates the cursor traversal.
+  Break    = enum.auto()
+  # Continues the cursor traversal with the next sibling of the cursor just visited,
+  # without visiting its children.
+  Continue = enum.auto()
+  # Recursively traverse the children of this cursor, using the same visitor and client
+  # data.
+  Recurse  = enum.auto()
+
+CXCursorAndRangeVisitorCallBackProto = ctypes.CFUNCTYPE(
+  ctypes.c_uint, ctypes.py_object, clx.Cursor, clx.SourceRange
+)
+
+class PetscCXCursorAndRangeVisitor(ctypes.Structure):
+  # see https://clang.llvm.org/doxygen/structCXCursorAndRangeVisitor.html
+  #
+  # typedef struct CXCursorAndRangeVisitor {
+  #   void *context;
+  #   enum CXVisitorResult (*visit)(void *context, CXCursor, CXSourceRange);
+  # } CXCursorAndRangeVisitor;
+  #
+  # Note this is not a  strictly accurate recreation, as this struct expects a
+  # (void *) but since C lets anything be a (void *) we can pass in a (PyObject *)
+  _fields_ = [
+    ('context', ctypes.py_object),
+    ('visit',   CXCursorAndRangeVisitorCallBackProto)
+  ]
+
+def make_cxcursor_and_range_callback(cursor: CursorLike, parsing_error_handler: Optional[Callable[[ParsingError], None]] = None) -> tuple[PetscCXCursorAndRangeVisitor, list[Cursor]]:
+  r"""Make a clang cxcursor and range callback functor
+
+  Parameters
+  ----------
+  cursor : cursor_like
+    the cursor to create the callback visitor for
+  found_cursors : array_like, optional
+    an array or list to append found cursors to, None to create a new list
+  parsing_error_handler : callable, optional
+    an error handler to handle petsclinter.ParsingError exceptions, which takes the exception object
+    as a single parameter
+
+  Returns
+  -------
+  cx_callback, found_cursors : callable, array_like
+    the callback and found_cursors list
+  """
+  if parsing_error_handler is None:
+    parsing_error_handler = lambda exc: None
+
+  found_cursors = []
+  def visitor(ctx: Any, cursor: clx.Cursor, src_range: clx.SourceRange) -> CXChildVisitResult:
+    # The "cursor" returned here is actually just a CXCursor, not the real
+    # clx.Cursor that we lead python to believe in our function prototype. Luckily we
+    # have all we need to remake the python object from scratch
+    cursor = clx.Cursor.from_location(ctx.translation_unit, src_range.start)
+    try:
+      found_cursors.append(Cursor(cursor))
+    except ParsingError as pe:
+      assert callable(parsing_error_handler)
+      parsing_error_handler(pe)
+    except Exception:
+      import traceback
+
+      string = "Full error full error message below:"
+      pl.sync_print('='*30, "CXCursorAndRangeVisitor Error", '='*30)
+      pl.sync_print("It is possible that this is a false positive! E.g. some 'unexpected number of tokens' errors are due to macro instantiation locations being misattributed.\n", string, "\n", "-" * len(string), "\n", traceback.format_exc(), sep="")
+      pl.sync_print('='*30, "CXCursorAndRangeVisitor End Error", '='*26)
+    return CXChildVisitResult.Continue # continue, recursively
+
+  cx_callback = PetscCXCursorAndRangeVisitor(
+    # (PyObject *)cursor;
+    ctypes.py_object(cursor),
+    # (enum CXVisitorResult(*)(void *, CXCursor, CXSourceRange))visitor;
+    CXCursorAndRangeVisitorCallBackProto(visitor)
+  )
+  return cx_callback, found_cursors
 
 class Cursor:
   """
@@ -89,7 +179,7 @@ class Cursor:
     return hash(self.__cursor.hash)
 
   @classmethod
-  def _unhandleable_cursor(cls, cursor: CursorLike) -> None:
+  def _unhandleable_cursor(cls, cursor: CursorLike) -> NoReturn:
     r"""Given a `cursor`, try to construct as useful an error message as possible from it before
     self destructing
 
@@ -556,13 +646,11 @@ class Cursor:
     found_cursors :
       a list of references to the cursor in the file
     """
-    import typing
-
     cx_callback, found_cursors = make_cxcursor_and_range_callback(cursor)
     get_clang_function(
       'clang_findReferencesInFile', [clx.Cursor, clx.File, PetscCXCursorAndRangeVisitor]
     )(cls.get_clang_cursor_from_cursor(cursor), cls.get_clang_file_from_cursor(cursor), cx_callback)
-    return typing.cast(list[Cursor], found_cursors)
+    return found_cursors
 
   def find_cursor_references(self) -> list[Cursor]:
     r"""See `Cursor.find_cursor_references_from_cursor()`"""

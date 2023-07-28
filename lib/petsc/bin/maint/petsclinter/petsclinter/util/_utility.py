@@ -22,8 +22,7 @@ from ._clang import base_pch_clang_options
 def subprocess_run(*args, **kwargs) -> subprocess.CompletedProcess:
   r"""Lightweight wrapper over subprocess.run
 
-  Hoists the ugly version check out of the regular code, turns a subprocess.CalledProcessError into a
-  RuntimeError with more diagnostics
+  turns a subprocess.CalledProcessError into a RuntimeError with more diagnostics
 
   Parameters
   ----------
