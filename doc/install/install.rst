@@ -112,9 +112,7 @@ Compilers
 
 .. important::
 
-   It's best to use MPI compilers as this will avoid the situation where MPI is compiled
-   with one set of compilers (like ``gcc``/``gfortran``) and the user specified incompatible
-   compilers to PETSc (perhaps ``icc``/``ifort``). This can be done by either specifying
+   It's best to use MPI compiler wrappers. This can be done by either specifying
    ``--with-cc=mpicc`` or ``--with-mpi-dir`` (and not ``--with-cc=gcc``)
 
    .. code-block:: console
@@ -126,6 +124,8 @@ Compilers
    .. code-block:: console
 
       $ ./configure --with-mpi-dir=/opt/mpich2-1.1
+
+   See :any:`doc_config_mpi` for details on how to select MPI compilers
 
 * If a fortran compiler is not available or not needed - disable using:
 
@@ -326,14 +326,14 @@ to use `ESSL`_, see https://www.pdc.kth.se/hpc-services.
 
 .. _doc_config_mpi:
 
-MPI Problems/I Don't Want MPI
-=============================
+MPI
+===
 
 The Message Passing Interface (MPI) provides the parallel functionality for PETSc.
 
-``configure`` will automatically look for MPI compilers ``mpicc``/``mpif90`` etc and use
-them if found in your PATH. One can use the following options to let ``configure``
-download/install MPI automatically:
+MPI might already be installed. IBM, Intel, NVIDIA, and Cray provide their own and Linux and macOS package
+managers also provide open source versions called MPICH and OpenMPI. If MPI is not already installed use
+the following options to let PETSc's ``configure`` bdownload and install MPI.
 
 - For `MPICH`_:
 
@@ -347,39 +347,80 @@ download/install MPI automatically:
 
      $ ./configure --download-openmpi
 
-Using MPI Compilers
-^^^^^^^^^^^^^^^^^^^
-
-It's best to install PETSc with MPI compiler wrappers (often called ``mpicc``,
-``mpicxx``, ``mpif90``) - this way, the SAME compilers used to build MPI are used to
-build PETSc. See the section on :ref:`compilers <doc_config_compilers>` above for more
-details.
-
-- Vendor provided MPI might already be installed. IBM, Intel, NVIDIA, and Cray provide their own:
+- To not use MPI:
 
   .. code-block:: console
 
-     $ ./configure --with-cc=vendor_mpicc --with-fc=vendor_mpif90
+     $ ./configure --with-mpi=0
 
-- If using `MPICH`_ which is already installed (perhaps using myrinet/gm) then use
-  (without specifying ``--with-cc=gcc`` etc. so that ``configure`` picks up ``mpicc``
-  from mpi-dir):
+- To use an installed version of MPI
 
   .. code-block:: console
 
-     $  ./configure --with-mpi-dir=/absolute/path/to/mpich/install
+     $ ./configure --with-cc=mpicc --with-cxx=mpicxx --with-fc=mpif90
 
-Installing Without MPI
-^^^^^^^^^^^^^^^^^^^^^^
+- The Intel MPI library provides MPI wrappers with compiler specific names.
 
-You can build (sequential) PETSc without MPI. This is useful for quickly installing PETSc:
+  GNU compilers: ``gcc``, ``g++``, ``gfortran``:
 
-.. code-block:: console
+  .. code-block:: console
 
-   $ ./configure --with-mpi=0
+     $ ./configure --with-cc=mpicc --with-cxx=mpicxx --with-fc=mpif90
 
-However - if there is any MPI code in user application, then its best to install a full
-MPI implementation - even if the usage is currently limited to uniprocessor mode:
+  "Old" Intel compilers: ``icc``, ``icpc``, ``ifort``: 
+
+  .. code-block:: console
+
+     $ ./configure --with-cc=mpiicc --with-cxx=mpiicpc --with-fc=mpiifort
+
+  they might not work with some Intel MPI library versions. In those cases use
+
+  .. code-block:: console
+
+     $ export I_MPI_CC=icc && export I_MPI_CXX=icpc && export I_MPI_F90=ifort
+     $ ./configure --with-cc=mpicc --with-cxx=mpicxx --with-fc=mpif90
+
+- "New" OneAPI Intel compilers: ``icx``, ``icpx``, ``ifx``
+
+  .. code-block:: console
+
+     $ ./configure --with-cc=mpiicx --with-cxx=mpiicpx --with-fc=mpiifx
+
+  they might not work with some Intel MPI library versions. In those cases use
+
+  .. code-block:: console
+
+     $ export I_MPI_CC=icx && export I_MPI_CXX=icpx && export I_MPI_F90=ifx
+     $ ./configure --with-cc=mpicc --with-cxx=mpicxx --with-fc=mpif90
+
+- On Cray systems, after loading the appropriate MPI module, the regular compiler names, such as ``CC``,
+  automatically become MPI compiler wrappers.
+
+- It is also possible to provide the MPI installation directory instead of the MPI compiler wrappers using
+  (without specifying ``--with-cc=gcc`` etc.)
+
+  .. code-block:: console
+
+     $  ./configure --with-mpi-dir=/absolute/path/to/mpi/install/directory
+
+- To control the compilers selected by ``mpicc``, ``mpicxx``, and ``mpif90`` one may use environmental
+  variables appropriate for the MPI libraries. For Intel, MPICH, and OpenMPI they are
+
+  .. code-block:: console
+
+     $ export I_MPI_CC=c_compiler && export I_MPI_CXX=c++_compiler && export I_MPI_F90=fortran_compiler
+     $ export MPICH_CC=c_compiler && export MPICH_CXX=c++_compiler && export MPICH_FC=fortran_compiler
+     $ export OMPI_CC=c_compiler && export OMPI_CXX=c++_compiler && export OMPI_FC=fortran_compiler
+
+  Then use
+
+  .. code-block:: console
+
+     $ ./configure --with-cc=mpicc --with-fc=mpif90 --with-cxx=mpicxx
+
+  Do not use the syntax ``--with-cc="mpicc -cc=icx"`` We recommend avoiding this approach with environmental
+  variables unless absolutely necessary since it is easy to forget to set the environmental variables or they may be set
+  and then forgotten.
 
 
 Installing With Open MPI With Shared MPI Libraries
