@@ -72,6 +72,28 @@ Common Example Usages
    Do not specify ``--with-cc``, ``--with-fc`` etc for the above when using
    ``--with-mpi-dir`` - so that ``mpicc``/ ``mpif90`` will be picked up from mpi-dir!
 
+* Select a particular compiler to use with an installed MPI
+
+  .. code-block:: console
+
+     $ export I_MPI_CC=icx && export I_MPI_CXX=icpx && export I_MPI_F90=ifx
+     $ ./configure --with-cc=mpicc --with-fc=mpifc --with-cxx=mpicxx
+
+  or
+
+  .. code-block:: console
+
+     $ export MPICH_CC=icx && export MPICH_CXX=g++ && export MPICH_F90=gfortran
+     $ ./configure --with-cc=mpicc --with-fc=mpifc --with-cxx=mpicxx
+
+
+  or
+
+  .. code-block:: console
+
+     $ export OMPI_CC=gcc && export OMPI_CXX=g++ && export OMPI_F90=gfortran
+     $ ./configure --with-cc=mpicc --with-fc=mpifc --with-cxx=mpicxx
+
 * Build Complex version of PETSc (using c++ compiler):
 
   .. code-block:: console
@@ -126,6 +148,18 @@ Compilers
    .. code-block:: console
 
       $ ./configure --with-mpi-dir=/opt/mpich2-1.1
+
+   To control the compilers selected by ``mpicc``, ``mpicxx``, and ``mpif90`` use environmental
+   variables appropriate for the MPI libraries.
+
+   .. code-block:: console
+
+      $ export I_MPI_CC=c_compiler && export I_MPI_CXX=c++_compiler && export I_MPI_F90=fortran_compiler
+      $ export MPICH_CC=c_compiler && export MPICH_CXX=c++_compiler && export MPICH_F90=fortran_compiler
+      $ export OMPI_CC=c_compiler && export OMPI_CXX=c++_compiler && export OMPI_F90=fortran_compiler
+
+   Where the first line is for Intel MPI libraries, the second MPICH-based MPI libraries, and the third
+   OpenMPI-based libraries. Do not use the syntax ``--with-cc="mpicc -cc=icx"``
 
 * If a fortran compiler is not available or not needed - disable using:
 
@@ -368,6 +402,18 @@ details.
   .. code-block:: console
 
      $  ./configure --with-mpi-dir=/absolute/path/to/mpich/install
+
+- To control the compilers selected by ``mpicc``, ``mpicxx``, and ``mpif90`` use environmental
+  variables appropriate for the MPI libraries.
+
+  .. code-block:: console
+
+     $ export I_MPI_CC=c_compiler && export I_MPI_CXX=c++_compiler && export I_MPI_F90=fortran_compiler
+     $ export MPICH_CC=c_compiler && export MPICH_CXX=c++_compiler && export MPICH_F90=fortran_compiler
+     $ export OMPI_CC=c_compiler && export OMPI_CXX=c++_compiler && export OMPI_F90=fortran_compiler
+
+  Where the first line is for Intel MPI libraries, the second MPICH based MPI libraries, and the third
+  OpenMPI based libraries. Do not use the syntax ``--with-cc="mpicc -cc=icx"``
 
 Installing Without MPI
 ^^^^^^^^^^^^^^^^^^^^^^
