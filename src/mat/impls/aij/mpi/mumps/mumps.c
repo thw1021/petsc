@@ -2178,10 +2178,10 @@ PetscErrorCode MatFactorSymbolic_MUMPS_ReportIfError(Mat F, Mat A, const MatFact
       PetscCall(PetscInfo(F, "MUMPS error in analysis: matrix is singular, INFOG(1)=%d, INFO(2)=%d\n", mumps->id.INFOG(1), mumps->id.INFO(2)));
       F->factorerrortype = MAT_FACTOR_STRUCT_ZEROPIVOT;
     } else if (mumps->id.INFOG(1) == -5 || mumps->id.INFOG(1) == -7) {
-      PetscCall(PetscInfo(F, "MUMPS error in analysis: problem of workspace, INFOG(1)=%d, INFO(2)=%d\n", mumps->id.INFOG(1), mumps->id.INFO(2)));
+      PetscCall(PetscInfo(F, "MUMPS error in analysis: problem with work array, INFOG(1)=%d, INFO(2)=%d\n", mumps->id.INFOG(1), mumps->id.INFO(2)));
       F->factorerrortype = MAT_FACTOR_OUTMEMORY;
     } else if (mumps->id.INFOG(1) == -16 && mumps->id.INFOG(1) == 0) {
-      PetscCall(PetscInfo(F, "MUMPS error in analysis: Empty matrix\n"));
+      PetscCall(PetscInfo(F, "MUMPS error in analysis: empty matrix\n"));
     } else {
       PetscCall(PetscInfo(F, "MUMPS error in analysis: INFOG(1)=%d, INFO(2)=%d " MUMPS_MANUALS "\n", mumps->id.INFOG(1), mumps->id.INFO(2)));
       F->factorerrortype = MAT_FACTOR_OTHER;
