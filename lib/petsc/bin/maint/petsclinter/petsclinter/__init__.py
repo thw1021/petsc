@@ -10,13 +10,13 @@ sync_print = print
 
 from .__version__ import __MIN_PYTHON_VERSION__, version_tuple, version_str
 
-if sys.version_info < __version__.__MIN_PYTHON_VERSION__:
-  raise ImportError('Need python ' + str(__version__.__MIN_PYTHON_VERSION__) + '+')
+if sys.version_info < __MIN_PYTHON_VERSION__:
+  raise ImportError('Need python ' + version_str() + '+')
 
 del __MIN_PYTHON_VERSION__
 
 try:
-  import clang.cindex
+  import clang.cindex # type: ignore[import]
 except ModuleNotFoundError as mnfe:
   if mnfe.name == 'clang':
     raise RuntimeError('Must run e.g. \'python3 -m pip install clang\' to use linter') from mnfe
