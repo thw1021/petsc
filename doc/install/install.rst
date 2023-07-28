@@ -413,7 +413,7 @@ details.
      $ export OMPI_CC=c_compiler && export OMPI_CXX=c++_compiler && export OMPI_F90=fortran_compiler
 
   Where the first line is for Intel MPI libraries, the second MPICH based MPI libraries, and the third
-  OpenMPI based libraries. Do not use the syntax ``--with-cc="mpicc -cc=icx"
+  OpenMPI based libraries. Do not use the syntax ``--with-cc="mpicc -cc=icx"``
 
 Installing Without MPI
 ^^^^^^^^^^^^^^^^^^^^^^
