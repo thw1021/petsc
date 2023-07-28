@@ -333,7 +333,7 @@ The Message Passing Interface (MPI) provides the parallel functionality for PETS
 
 MPI might already be installed. IBM, Intel, NVIDIA, and Cray provide their own and Linux and macOS package
 managers also provide open source versions called MPICH and OpenMPI. If MPI is not already installed use
-the following options to let PETSc's ``configure`` bdownload and install MPI.
+the following options to let PETSc's ``configure`` download and install MPI.
 
 - For `MPICH`_:
 
