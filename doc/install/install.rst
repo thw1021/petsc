@@ -393,7 +393,7 @@ the following options to let PETSc's ``configure`` download and install MPI.
      $ export I_MPI_CC=icx && export I_MPI_CXX=icpx && export I_MPI_F90=ifx
      $ ./configure --with-cc=mpicc --with-cxx=mpicxx --with-fc=mpif90
 
-- On Cray systems, after loading the appropriate MPI module, the regular compilers `cc`, ``CC``, ``ftn``
+- On Cray systems, after loading the appropriate MPI module, the regular compilers ``cc``, ``CC``, ``ftn``
   automatically become MPI compiler wrappers.
 
   .. code-block:: console
@@ -426,7 +426,7 @@ the following options to let PETSc's ``configure`` download and install MPI.
   variables unless absolutely necessary, it is easy to forget and not set them when needed (for subsequent library, or application build), or they may be set
   and then forgotten for non-PETSc usage.
 
-   And avoid using the syntax ``--with-cc="mpicc -cc=icx"`` - this can break some builds (for example: external packages that use CMake)
+  And avoid using the syntax ``--with-cc="mpicc -cc=icx"`` - this can break some builds (for example: external packages that use CMake)
 
 
 Installing With Open MPI With Shared MPI Libraries
