@@ -1,4 +1,3 @@
-
 /*
     Routines to set PC methods and options.
 */
@@ -230,7 +229,7 @@ PetscErrorCode PCGetDM(PC pc, DM *dm)
 
   Level: intermediate
 
-.seealso: `PCGetApplicationContext()`
+.seealso: `PC`, `PCGetApplicationContext()`, `KSPSetApplicationContext()`, `KSPGetApplicationContext()`, `PetscObjectCompose()`
 @*/
 PetscErrorCode PCSetApplicationContext(PC pc, void *usrP)
 {
@@ -253,7 +252,7 @@ PetscErrorCode PCSetApplicationContext(PC pc, void *usrP)
 
   Level: intermediate
 
-.seealso: `PCSetApplicationContext()`
+.seealso: `PC`, `PCSetApplicationContext()`, `KSPSetApplicationContext()`, `KSPGetApplicationContext()`
 @*/
 PetscErrorCode PCGetApplicationContext(PC pc, void *usrP)
 {
