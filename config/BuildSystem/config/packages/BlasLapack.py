@@ -588,6 +588,8 @@ class Configure(config.package.Package):
       self.addDefine('HAVE_MKL_INTEL_ILP64',1)
     if self.argDB['with-64-bit-blas-indices'] and not self.has64bitindices:
       raise RuntimeError('You requested 64-bit integer BLAS/LAPACK using --with-64-bit-blas-indices but they are not available given your other BLAS/LAPACK options')
+    if self.libraries.check(self.dlib, 'bli_thread_set_num_threads') and not self.libraries.check(self.dlib, 'flexiblas_avail'):
+      self.addDefine('HAVE_BLI_THREAD_SET_NUM_THREADS',1)
 
   def checkMKL(self):
     '''Check for Intel MKL library'''
@@ -595,6 +597,7 @@ class Configure(config.package.Package):
     if self.libraries.check(self.dlib, 'mkl_set_num_threads') and not self.libraries.check(self.dlib, 'flexiblas_avail'):
       self.mkl = 1
       self.addDefine('HAVE_MKL_LIBS',1)
+      self.addDefine('HAVE_MKL_SET_NUM_THREADS',1)
       '''Set include directory for mkl.h and friends'''
       '''(the include directory is in CPATH if mklvars.sh has been sourced.'''
       ''' if the script hasn't been sourced, we still try to pick up the include dir)'''
