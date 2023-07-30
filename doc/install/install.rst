@@ -430,9 +430,9 @@ the following options to let PETSc's ``configure`` download and install MPI.
 
   .. note::
 
-     The Intel environmental variables ``I_MPI_CC``, ``I_MPI_CXX``, and ``I_MPI_F90`` also change the
-     behavior of the compiler specific MPI compiler wrappers ``mpigcc, ``mpigxx``, ``mpif90``, ``mpiicx``,
-     ``mpiicpx``, ``mpiifx``, ``mpiicx``, ``mpiicpx``, and ``mpiifx``. These variables may be automatically
+     The Intel environmental variables ``I_MPI_CC``, ``I_MPI_CXX``, and ``I_MPI_F90`` also changing the
+     behavior of the compiler-specific MPI compiler wrappers ``mpigcc, ``mpigxx``, ``mpif90``, ``mpiicx``,
+     ``mpiicpx``, ``mpiifx``, ``mpiicc``, ``mpiicpc``, and ``mpiifort``. These variables may be automatically
      set by certain modules. So one must be careful to ensure they are using the desired compilers.
 
 
