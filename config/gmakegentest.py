@@ -880,7 +880,7 @@ class generateExamples(Petsc):
      the examples based on the metadata contained in the source files
     """
     debug=False
-    # Use examplesAnalyze to get what the makefles think are sources
+    # Use examplesAnalyze to get what the makefiles think are sources
     #self.examplesAnalyze(root,dirs,files,anlzDict)
 
     data = {}
