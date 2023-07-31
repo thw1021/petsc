@@ -510,7 +510,7 @@ struct MAXPYFunctor {
   typedef ConstPetscScalarKokkosView::size_type size_type;
 
   PetscScalarKokkosView      yv;
-  PetscInt                   nx; /* Significent entries in a[8] and xv[8] */
+  PetscInt                   nx; /* Significant entries in a[8] and xv[8] */
   PetscScalar                a[8];
   ConstPetscScalarKokkosView xv[8];
 
