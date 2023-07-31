@@ -3,26 +3,35 @@
 # Created: Tue Jun 21 09:44:08 2022 (-0400)
 # @author: Jacob Faibussowitsch
 """
+from __future__ import annotations
+
+import copy
 import multiprocessing as mp
 import petsclinter     as pl
 
 from .classes._diag   import DiagnosticManager
-from .classes._pool   import WorkerPool
+from .classes._pool   import WorkerPoolBase
 from .classes._linter import Linter
 
 from .util._timeout import timeout
 
-class MainLoopError(pl.BaseError):
+from ._error import BaseError
+from .typing import *
+
+if TYPE_CHECKING:
+  ExceptionKind = TypeVar('ExceptionKind', bound=Exception)
+
+class MainLoopError(BaseError):
   """
   Thrown by child processes when they encounter an error in the main loop
   """
-  def __init__(self, filename, *args, **kwargs):
+  def __init__(self, filename: str, *args, **kwargs) -> None:
     super().__init__(*args, **kwargs)
     self._main_loop_error_filename = filename
     return
 
 @timeout(seconds=5)
-def __handle_error(error_prefix, filename, error_queue, file_queue, base_e):
+def __handle_error(error_prefix: str, filename: str, error_queue: mp.Queue, file_queue: mp.JoinableQueue, base_e: ExceptionKind) -> None:
   try:
     import traceback
 
@@ -47,20 +56,20 @@ def __handle_error(error_prefix, filename, error_queue, file_queue, base_e):
       pass
   return
 
-def __main_loop(file_queue, return_queue, linter):
+def __main_loop(file_queue: mp.JoinableQueue, return_queue: mp.Queue, linter: Linter) -> None:
   try:
     while 1:
       filename = file_queue.get()
-      if filename == WorkerPool.QueueSignal.EXIT_QUEUE:
+      if filename == WorkerPoolBase.QueueSignal.EXIT_QUEUE:
         # bail, the queue is done feeding us work
         break
 
       errors_left, errors_fixed, warnings, patches = linter.parse(filename).diagnostics()
       return_queue.put((
-        (WorkerPool.QueueSignal.UNIFIED_DIFF, patches),
-        (WorkerPool.QueueSignal.ERRORS_LEFT , errors_left),
-        (WorkerPool.QueueSignal.ERRORS_FIXED, errors_fixed),
-        (WorkerPool.QueueSignal.WARNING     , warnings)
+        (WorkerPoolBase.QueueSignal.UNIFIED_DIFF, patches),
+        (WorkerPoolBase.QueueSignal.ERRORS_LEFT , errors_left),
+        (WorkerPoolBase.QueueSignal.ERRORS_FIXED, errors_fixed),
+        (WorkerPoolBase.QueueSignal.WARNING     , warnings)
       ))
       file_queue.task_done()
   except Exception as exc:
@@ -83,13 +92,12 @@ class LockPrinter:
         print(self._print_prefix, *args, **kwargs)
     return
 
-def queue_main(clang_lib, clang_compat_check, updated_check_function_map, updated_classid_map, updated_diagnostics_mngr, compiler_flags, clang_options, verbose, werror, error_queue, return_queue, file_queue, lock):
+def queue_main(clang_lib: PathLike, clang_compat_check: bool, updated_check_function_map: dict[str, FunctionChecker], updated_classid_map: dict[str, str], updated_diagnostics_mngr: _DiagnosticsManager, compiler_flags: list[str], clang_options: CXTranslationUnit, verbose: bool, werror: bool, error_queue: mp.Queue, return_queue: mp.Queue, file_queue: mp.JoinableQueue, lock: mp.synchronize.Lock) -> None:
   """
   main function for worker processes in the queue, does pretty much the same thing the
   main process would do in their place
   """
-  def update_globals():
-    import copy
+  def update_globals() -> None:
     from .checks import _register
 
     _register.check_function_map = copy.deepcopy(updated_check_function_map)
@@ -108,7 +116,10 @@ def queue_main(clang_lib, clang_compat_check, updated_check_function_map, update
     error_prefix = f'{print_prefix} Exception detected while processing'
 
     update_globals()
-    pl.sync_print = LockPrinter(verbose, print_prefix, lock)
+    # removing the type: ignore would require us to type-annotate sync_print in
+    # __init__.py. However, __init__.py does a version check so we cannot put stuff (like
+    # type annotations) that may require a higher version of python to even byte-compile.
+    pl.sync_print = LockPrinter(verbose, print_prefix, lock) # type: ignore[assignment]
     pl.sync_print(printbar, 'Performing setup', printbar)
     # initialize libclang, and create a linter instance
     pl.util.initialize_libclang(clang_lib=clang_lib, compat_check=clang_compat_check)
