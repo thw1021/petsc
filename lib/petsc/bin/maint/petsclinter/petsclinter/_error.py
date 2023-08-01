@@ -27,3 +27,9 @@ class KnownUnhandleableCursorError(ParsingError):
   all intents and purposes uncheckable :)
   """
   pass
+
+class ClassidNotRegisteredError(BaseError):
+  """
+  An error to indicate that a particular object has not been registered in the classid map
+  """
+  pass
