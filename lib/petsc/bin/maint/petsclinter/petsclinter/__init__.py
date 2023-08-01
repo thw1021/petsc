@@ -10,20 +10,18 @@ sync_print = print
 
 from .__version__ import __MIN_PYTHON_VERSION__, version_tuple, version_str
 
-if sys.version_info < __version__.__MIN_PYTHON_VERSION__:
-  raise ImportError('Need python ' + str(__version__.__MIN_PYTHON_VERSION__) + '+')
+if sys.version_info < __MIN_PYTHON_VERSION__:
+  raise ImportError('Need python ' + version_str() + '+')
 
 del __MIN_PYTHON_VERSION__
 
 try:
-  import clang.cindex
+  import clang.cindex # type: ignore[import]
 except ModuleNotFoundError as mnfe:
   if mnfe.name == 'clang':
     raise RuntimeError('Must run e.g. \'python3 -m pip install clang\' to use linter') from mnfe
   raise # whatever it is they should know about it
 
-import pkgutil
-import importlib
 
 def __import_submodules(package, parent, recursive=True):
   """
@@ -33,6 +31,9 @@ def __import_submodules(package, parent, recursive=True):
   :type package: str | module
   :rtype: dict[str, types.ModuleType]
   """
+  import pkgutil
+  import importlib
+
   if isinstance(package, str):
     package = importlib.import_module(package)
 
@@ -51,6 +52,8 @@ def __import_submodules(package, parent, recursive=True):
   return results
 
 def __build__all__(name, **kwargs):
+  import importlib
+
   parent   = importlib.import_module(name)
   _modules = __import_submodules(name, parent, **kwargs)
   return list(_modules.keys())
@@ -60,6 +63,7 @@ def __lazy_import(name, package=None):
   Lazily import the module NAME, it is loaded but not fully imported until an attribute of it is
   accessed
   """
+  import importlib
   import importlib.util
 
   spec              = importlib.util.find_spec(name, package=package)
@@ -69,6 +73,8 @@ def __lazy_import(name, package=None):
   sys.modules[name] = module
   loader.exec_module(module)
   return module
+
+from . import _typing as typing
 
 from ._error import *
 
@@ -85,4 +91,3 @@ __all__ = __build__all__(__name__)
 del __lazy_import
 del __build__all__
 del __import_submodules
-del sys
