@@ -3,15 +3,21 @@
 # Created: Mon Jun 20 17:45:39 2022 (-0400)
 # @author: Jacob Faibussowitsch
 """
+from __future__ import annotations
+
+from .._typing import *
+
 import enum
 import ctypes
-import clang.cindex as clx
+import clang.cindex as clx # type: ignore[import]
+
+from .._error import ParsingError
 
 class CXTranslationUnit(enum.IntFlag):
   """
   clang.cindex.TranslationUnit does not have all latest flags
 
-  see: https://clang.llvm.org/doxygen/group__CINDEX__TRANSLATION__UNIT.html#gab1e4965c1ebe8e41d71e90203a723fe9
+  see: https://clang.llvm.org/doxygen/group__CINDEX__TRANSLATION__UNIT.html
   """
   NONE                                 = 0x0
   DetailedPreprocessingRecord          = 0x01
@@ -32,7 +38,7 @@ class CXTranslationUnit(enum.IntFlag):
 
 # clang options used for parsing files
 base_clang_options = (
-  #CXTranslationUnit.PrecompiledPreamble |
+  CXTranslationUnit.PrecompiledPreamble |
   #CXTranslationUnit.DetailedPreprocessingRecord |
   CXTranslationUnit.SkipFunctionBodies          |
   CXTranslationUnit.LimitSkipFunctionBodiesToPreamble
@@ -40,7 +46,7 @@ base_clang_options = (
 
 # clang options for creating the precompiled megaheader
 base_pch_clang_options = (
-  #CXTranslationUnit.CreatePreambleOnFirstParse |
+  CXTranslationUnit.CreatePreambleOnFirstParse |
   CXTranslationUnit.Incomplete                 |
   CXTranslationUnit.ForSerialization           |
   CXTranslationUnit.KeepGoing
@@ -117,112 +123,83 @@ clx_real_type_kinds = {
 
 clx_scalar_type_kinds = clx_real_type_kinds | {clx.TypeKind.COMPLEX}
 
-class CtypesEnum(enum.IntEnum):
-  """
-  A ctypes-compatible IntEnum superclass
-  """
-  @classmethod
-  def from_param(cls, obj):
-    return int(obj)
-
-class CXChildVisitResult(CtypesEnum):
-  # see
-  # https://clang.llvm.org/doxygen/group__CINDEX__CURSOR__TRAVERSAL.html#ga99a9058656e696b622fbefaf5207d715
-  # Terminates the cursor traversal.
-  Break    = enum.auto()
-  # Continues the cursor traversal with the next sibling of the cursor just visited,
-  # without visiting its children.
-  Continue = enum.auto()
-  # Recursively traverse the children of this cursor, using the same visitor and client
-  # data.
-  Recurse  = enum.auto()
-
-CXCursorAndRangeVisitorCallBackProto = ctypes.CFUNCTYPE(
-  ctypes.c_uint, ctypes.py_object, clx.Cursor, clx.SourceRange
-)
-
-class PetscCXCursorAndRangeVisitor(ctypes.Structure):
-  # see https://clang.llvm.org/doxygen/structCXCursorAndRangeVisitor.html
-  #
-  # typedef struct CXCursorAndRangeVisitor {
-  #   void *context;
-  #   enum CXVisitorResult (*visit)(void *context, CXCursor, CXSourceRange);
-  # } CXCursorAndRangeVisitor;
-  #
-  # Note this is not a  strictly accurate recreation, as this struct expects a
-  # (void *) but since C lets anything be a (void *) we can pass in a (PyObject *)
-  _fields_ = [
-    ('context', ctypes.py_object),
-    ('visit',   CXCursorAndRangeVisitorCallBackProto)
-  ]
-
-def make_cxcursor_and_range_callback(cursor, found_cursors=None, parsing_error_handler=None):
-  import petsclinter as pl
-  from ..classes._cursor import Cursor
-
-  if found_cursors is None:
-    found_cursors = []
-
-  if parsing_error_handler is None:
-    parsing_error_handler = lambda exc: None
-
-  def visitor(ctx, cursor, src_range):
-    # The "cursor" returned here is actually just a CXCursor, not the real
-    # clx.Cursor that we lead python to believe in our function prototype. Luckily we
-    # have all we need to remake the python object from scratch
-    cursor = clx.Cursor.from_location(ctx.translation_unit, src_range.start)
-    try:
-      found_cursors.append(Cursor(cursor))
-    except pl.ParsingError as pe:
-      parsing_error_handler(pe)
-    except Exception:
-
-      import traceback
-
-      string = "Full error full error message below:"
-      pl.sync_print('='*30, "CXCursorAndRangeVisitor Error", '='*30)
-      pl.sync_print("It is possible that this is a false positive! E.g. some 'unexpected number of tokens' errors are due to macro instantiation locations being misattributed.\n", string, "\n", "-" * len(string), "\n", traceback.format_exc(), sep="")
-      pl.sync_print('='*30, "CXCursorAndRangeVisitor End Error", '='*26)
-    return CXChildVisitResult.Continue # continue, recursively
-
-  cx_callback = PetscCXCursorAndRangeVisitor(
-    # (PyObject *)cursor;
-    ctypes.py_object(cursor),
-    # (enum CXVisitorResult(*)(void *, CXCursor, CXSourceRange))visitor;
-    CXCursorAndRangeVisitorCallBackProto(visitor)
-  )
-  return cx_callback, found_cursors
-
 class ClangFunction:
-  """
-  A wrapper to enable safely calling a clang function from python. Automatically check the return-type
-  (if it is some kind of int) and raises a RuntimeError if an error is detected
+  r"""A wrapper to enable safely calling a clang function from python.
+
+  Automatically check the return-type (if it is some kind of int) and raises a RuntimeError if an
+  error is detected
   """
   __slots__ = ('_function',)
 
-  def __init__(self, function):
+  def __init__(self, function) -> None:
+    r"""Construct a clang function
+
+    Parameters
+    ----------
+    function : callable
+      the underlying clang function
+    """
     self._function = function
     return
 
-  def __getattr__(self, attr):
+  def __getattr__(self, attr: str) -> Any:
     return getattr(self._function, attr)
 
-  def __call__(self, *args, check=True):
+  def __call__(self, *args, check: bool = True) -> Any:
+    r"""Invoke the clang function
+
+    Parameters
+    ----------
+    *args : iterable
+      arguments to pass to the clang function
+    check : optional
+      if the return type is ctype.c_uint, check that it is 0
+
+    Returns
+    -------
+    ret :
+      the return value of the clang function
+
+    Raises
+    ------
+    ValueError
+      if the clang function is called with the wrong number of Arguments
+    TypeError
+      if the clang function was called with the wrong argument types
+    RuntimeError
+      if the clang function returned a nonzero exit code
+    """
     if len(args) != len(self._function.argtypes):
       mess = f'Trying to call {self._function.__name__}(). Wrong number of arguments for function, expected {len(self._function.argtypes)} got {len(args)}'
-      raise RuntimeError(mess)
+      raise ValueError(mess)
     for i, (arg, expected) in enumerate(zip(args, self._function.argtypes)):
       if type(arg) != expected:
         mess = f'Trying to call {self._function.__name__}(). Argument type for argument #{i} does not match. Expected {expected}, got {type(arg)}'
-        raise RuntimeError(mess)
+        raise TypeError(mess)
     ret = self._function(*args)
     if check and isinstance(ret, int) and ret != 0:
       raise RuntimeError(f'{self._function.__name__}() returned nonzero exit code {ret}')
     return ret
 
-def get_clang_function(name, arg_types, ret_type=None):
-  """
-  Get (or register) the clang function RET_TYPE (NAME *)(ARG_TYPES...)
+def get_clang_function(name: str, arg_types: Sequence[type], ret_type: Optional[type] = None) -> ClangFunction:
+  r"""Get (or register) the clang function RET_TYPE (NAME *)(ARG_TYPES...)
+
+  A useful helper routine to reduce verbiage when retrieving a clang function which maye or may not
+  already be exposed by clang.cindex
+
+  Parameters
+  ----------
+  name :
+    the name of the clang function
+  arg_types :
+    the argument types of the clang function
+  ret_type : optional
+    the return type of the clang function, or ctypes.c_uint if None
+
+  Returns
+  -------
+  clang_func :
+    the callable clang function
   """
   if ret_type is None:
     ret_type = ctypes.c_uint

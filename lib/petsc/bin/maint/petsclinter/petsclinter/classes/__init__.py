@@ -13,12 +13,5 @@ from ._patch   import Patch
 
 from . import docs
 
-__export_symbols__ = {
-  'Path',
-  'Linter',
-  'DiagnosticManager','Diagnostic',
-  'WorkerPool',
-  'Cursor',
-  'SourceRange', 'SourceLocation',
-  'Patch'
-}
+# must do this manually since DiagnosticManager is in fact a singleton
+_exported_symbols_ = ['DiagnosticManager']
