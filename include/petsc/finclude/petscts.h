@@ -93,6 +93,7 @@
 
 #define TSDIRKType character*(80)
 #define TSDIRK212      '212'
+#define TSESDIRK212    'es212'
 #define TSDIRK606a     '606a'
 
 #define TSROSWType character*(80)

@@ -293,6 +293,7 @@ PetscErrorCode TSARKIMEXRegisterAll(void)
 
   /* Diagonally implicit methods */
   {
+    /* DIRK212, default of SUNDIALS */
     const PetscReal A[2][2] = {
       {RC(1.0),  RC(0.0)},
       {RC(-1.0), RC(1.0)}
@@ -300,6 +301,17 @@ PetscErrorCode TSARKIMEXRegisterAll(void)
     const PetscReal b[2]      = {RC(0.5), RC(0.5)};
     const PetscReal bembed[2] = {RC(1.0), RC(0.0)};
     PetscCall(TSDIRKRegister(TSDIRK212, 2, 2, &A[0][0], b, NULL, bembed, 1, b));
+  }
+
+  {
+    /* ESDIRK12 from https://arxiv.org/pdf/1803.01613.pdf */
+    const PetscReal A[2][2] = {
+      {RC(0.0), RC(0.0)},
+      {RC(0.0), RC(1.0)}
+    };
+    const PetscReal b[2]      = {RC(0.0), RC(1.0)};
+    const PetscReal bembed[2] = {RC(0.5), RC(0.5)};
+    PetscCall(TSDIRKRegister(TSESDIRK212, 2, 2, &A[0][0], b, NULL, bembed, 1, b));
   }
 
   {
@@ -937,7 +949,7 @@ static PetscErrorCode TSStep_ARKIMEX(TS ts)
   SNES             snes;
   PetscInt         i, j, its, lits;
   PetscInt         rejections = 0;
-  PetscBool        hasG, stageok, accept = PETSC_TRUE;
+  PetscBool        hasG, stageok, dirk, accept = PETSC_TRUE;
   PetscReal        next_time_step = ts->time_step;
 
   PetscFunctionBegin;
@@ -961,7 +973,15 @@ static PetscErrorCode TSStep_ARKIMEX(TS ts)
     }
   }
 
-  if (ts->equation_type >= TS_EQ_IMPLICIT && tab->explicit_first_stage && ts->steprestart) {
+  PetscCall(PetscObjectTypeCompare((PetscObject)ts, TSDIRK, &dirk));
+  if (dirk && tab->explicit_first_stage && ts->steprestart) {
+    ark->scoeff = 0.0;
+    PetscCall(VecCopy(ts->vec_sol, Z));
+    PetscCall(TSGetSNES(ts, &snes));
+    PetscCall(SNESSolve(snes, NULL, Ydot0));
+  }
+
+  if (!dirk && ts->equation_type >= TS_EQ_IMPLICIT && tab->explicit_first_stage && ts->steprestart) {
     TS ts_start;
     if (PetscDefined(USE_DEBUG) && hasG) {
       PetscBool id = PETSC_FALSE;
@@ -1047,7 +1067,7 @@ static PetscErrorCode TSStep_ARKIMEX(TS ts)
           goto reject_step;
         }
       }
-      if (ts->equation_type >= TS_EQ_IMPLICIT) {
+      if (ts->equation_type >= TS_EQ_IMPLICIT || !tab->additive) {
         if (i == 0 && tab->explicit_first_stage) {
           PetscCheck(tab->stiffly_accurate, PetscObjectComm((PetscObject)ts), PETSC_ERR_SUP, "%s %s is not stiffly accurate and therefore explicit-first stage methods cannot be used if the equation is implicit because the slope cannot be evaluated",
                      ((PetscObject)ts)->type_name, ark->tableau->name);
@@ -1063,7 +1083,7 @@ static PetscErrorCode TSStep_ARKIMEX(TS ts)
         } else {
           PetscCall(VecAXPBYPCZ(YdotI[i], -ark->scoeff / h, ark->scoeff / h, 0, Z, Y[i])); /* YdotI = shift*(X-Z) */
         }
-        if (tab->additive && hasG) {
+        if (hasG) {
           if (ark->imex) {
             PetscCall(TSComputeRHSFunction(ts, t + h * c[i], Y[i], YdotRHS[i]));
           } else {
@@ -1407,11 +1427,15 @@ static PetscErrorCode SNESTSFormFunction_ARKIMEX(SNES snes, Vec X, Vec F, TS ts)
   PetscFunctionBegin;
   PetscCall(SNESGetDM(snes, &dm));
   PetscCall(TSARKIMEXGetVecs(ts, dm, &Z, &Ydot));
-  PetscCall(VecAXPBYPCZ(Ydot, -shift, shift, 0, Z, X)); /* Ydot = shift*(X-Z) */
   dmsave = ts->dm;
   ts->dm = dm;
 
-  PetscCall(TSComputeIFunction(ts, ark->stage_time, X, Ydot, F, ark->imex));
+  if (ark->scoeff == 0.0) {
+    PetscCall(TSComputeIFunction(ts, ark->stage_time, Z, X, F, ark->imex));
+  } else {
+    PetscCall(VecAXPBYPCZ(Ydot, -shift, shift, 0, Z, X)); /* Ydot = shift*(X-Z) */
+    PetscCall(TSComputeIFunction(ts, ark->stage_time, X, Ydot, F, ark->imex));
+  }
 
   ts->dm = dmsave;
   PetscCall(TSARKIMEXRestoreVecs(ts, dm, &Z, &Ydot));
@@ -1422,20 +1446,23 @@ static PetscErrorCode SNESTSFormJacobian_ARKIMEX(SNES snes, Vec X, Mat A, Mat B,
 {
   TS_ARKIMEX *ark = (TS_ARKIMEX *)ts->data;
   DM          dm, dmsave;
-  Vec         Ydot;
+  Vec         Ydot, Z;
   PetscReal   shift = ark->scoeff / ts->time_step;
 
   PetscFunctionBegin;
   PetscCall(SNESGetDM(snes, &dm));
-  PetscCall(TSARKIMEXGetVecs(ts, dm, NULL, &Ydot));
+  PetscCall(TSARKIMEXGetVecs(ts, dm, &Z, &Ydot));
   /* ark->Ydot has already been computed in SNESTSFormFunction_ARKIMEX (SNES guarantees this) */
   dmsave = ts->dm;
   ts->dm = dm;
 
-  PetscCall(TSComputeIJacobian(ts, ark->stage_time, X, Ydot, shift, A, B, ark->imex));
-
+  if (ark->scoeff == 0.0) {
+    PetscCall(TSComputeIJacobian(ts, ark->stage_time, Z, X, PETSC_MAX_REAL, A, B, ark->imex));
+  } else {
+    PetscCall(TSComputeIJacobian(ts, ark->stage_time, X, Ydot, shift, A, B, ark->imex));
+  }
   ts->dm = dmsave;
-  PetscCall(TSARKIMEXRestoreVecs(ts, dm, NULL, &Ydot));
+  PetscCall(TSARKIMEXRestoreVecs(ts, dm, &Z, &Ydot));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
