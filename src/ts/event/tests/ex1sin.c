@@ -6,7 +6,7 @@
 static char help[] = "Simple linear problem with events\n"
                      "x_dot =  0.2*y\n"
                      "y_dot = -0.2*x\n"
-                     "Using two event functions = piecewise-polynomials, zeros = 1 (rank-0), 9 (last rank)\n"
+                     "Using one event function = sin(pi*t), zeros = 1,...,10\n"
                      "Options:\n"
                      "-dir    d : zero-crossing direction for events\n"
                      "-flg      : additional output in Postevent\n"
@@ -106,10 +106,6 @@ int main(int argc, char **argv)
     dir[n]    = dir0;
     term[n++] = PETSC_FALSE;
   }
-  if (ctx.rank == ctx.size - 1) { // second event -- on last rank
-    dir[n]    = dir0;
-    term[n++] = PETSC_FALSE;
-  }
   PetscCall(TSSetEventHandler(ts, n, dir, term, EventHandler, Postevent, &ctx));
   // ----------------------
 
@@ -167,16 +163,7 @@ PetscErrorCode EventHandler(TS ts, PetscReal t, Vec U, PetscReal gval[], void *c
   PetscFunctionBeginUser;
   // for the test purposes, event-functions are defined based on t
   // first event -- on rank-0
-  if (Ctx->rank == 0) {
-    if (t < 2.0) gval[n++] = 0.5 * (1 - PetscPowReal(t - 2.0, 12));
-    else gval[n++] = 0.5;
-  }
-
-  // second event -- on last rank
-  if (Ctx->rank == Ctx->size - 1) {
-    if (t > 8.0) gval[n++] = 0.25 * (1 - PetscPowReal(t - 8.0, 12));
-    else gval[n++] = 0.25;
-  }
+  if (Ctx->rank == 0) { gval[n++] = PetscSinReal(Ctx->pi * t); }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -219,33 +206,9 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
 /*---------------------------------------------------------------------------------------------*/
 /*TEST
   test:
-    suffix: 0s1
-    output_file: output/ex2_0s1.out
+    suffix: 0
+    output_file: output/ex1sin_0.out
     args: -dir 0
-    args: -restart {{0 1}}
-    args: -dtpost {{0 0.25}}
-    args: -ts_event_post_event_step {{0 0.31}}
-    args: -ts_type {{beuler rk}}
-    args: -ts_adapt_type {{none basic}}
-    nsize: 1
-
-  test:
-    suffix: 0s4
-    output_file: output/ex2_0s4.out
-    args: -dir 0
-    args: -restart {{0 1}}
-    args: -dtpost {{0 0.25}}
-    args: -ts_event_post_event_step {{0 0.31}}
-    args: -ts_type {{beuler rk}}
-    args: -ts_adapt_type {{none basic}}
-    nsize: 4
-    filter: sort
-    filter_output: sort
-
-  test:
-    suffix: pos
-    output_file: output/ex2_pos.out
-    args: -dir 1
     args: -restart {{0 1}}
     args: -dtpost {{0 0.25}}
     args: -ts_event_post_event_step {{0 0.31}}
@@ -256,26 +219,28 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
     filter_output: sort
 
   test:
-    suffix: ns1
-    output_file: output/ex2_ns1.out
-    args: -dir -1
+    suffix: p
+    output_file: output/ex1sin_p.out
+    args: -dir 1
     args: -restart {{0 1}}
-    args: -dtpost {{0 0.25}}
-    args: -ts_event_post_event_step {{0 0.31}}
+    args: -dtpost {{0 0.31}}
+    args: -ts_event_post_event_step {{0 0.25}}
     args: -ts_type {{beuler rk}}
     args: -ts_adapt_type {{none basic}}
-    nsize: 1
+    nsize: {{1 2}}
+    filter: sort
+    filter_output: sort
 
   test:
-    suffix: ns4
-    output_file: output/ex2_ns4.out
+    suffix: n
+    output_file: output/ex1sin_n.out
     args: -dir -1
     args: -restart {{0 1}}
     args: -dtpost {{0 0.25}}
     args: -ts_event_post_event_step {{0 0.31}}
     args: -ts_type {{beuler rk}}
     args: -ts_adapt_type {{none basic}}
-    nsize: 4
+    nsize: {{1 4}}
     filter: sort
     filter_output: sort
 TEST*/
