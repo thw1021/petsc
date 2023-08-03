@@ -963,7 +963,7 @@ static PetscErrorCode TSStep_ARKIMEX(TS ts)
 
   if (ts->equation_type >= TS_EQ_IMPLICIT && tab->explicit_first_stage && ts->steprestart) {
     TS ts_start;
-    if (PetscDefined(USE_DEBUG)) {
+    if (PetscDefined(USE_DEBUG) && hasG) {
       PetscBool id = PETSC_FALSE;
       PetscCall(TSARKIMEXTestMassIdentity(ts, &id));
       PetscCheck(id, PetscObjectComm((PetscObject)ts), PETSC_ERR_ARG_INCOMP, "This scheme requires an identity mass matrix, however the TSIFunction you provided does not utilize an identity mass matrix");
