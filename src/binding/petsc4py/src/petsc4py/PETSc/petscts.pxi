@@ -213,7 +213,7 @@ cdef extern from * nogil:
     PetscErrorCode TSMonitorCancel(PetscTS)
     PetscErrorCode TSMonitor(PetscTS,PetscInt,PetscReal,PetscVec)
 
-    ctypedef PetscErrorCode (*PetscTSEventHandler)(PetscTS,PetscReal,PetscVec,PetscScalar[],void*) except PETSC_ERR_PYTHON
+    ctypedef PetscErrorCode (*PetscTSEventHandler)(PetscTS,PetscReal,PetscVec,PetscReal[],void*) except PETSC_ERR_PYTHON
     ctypedef PetscErrorCode (*PetscTSPostEvent)(PetscTS,PetscInt,PetscInt[],PetscReal,PetscVec, PetscBool, void*) except PETSC_ERR_PYTHON
 
     PetscErrorCode TSSetEventHandler(PetscTS, PetscInt, PetscInt[], PetscBool[], PetscTSEventHandler, PetscTSPostEvent, void*)
