@@ -172,6 +172,7 @@ Changes: Development
 - Option ``-ts_event_post_event_step`` can now accept special value 0 to keep the previous time steps after event
 - Deprecate ``TSSetPostEventIntervalStep()``
 - Deprecate option ``-ts_event_post_eventinterval_step``
+- Change the event-functions type from ``PetscScalar[]`` to ``PetscReal[]`` in the user eventhandler callback set by ``TSSetEventHandler()``
 
 .. rubric:: TAO:
 
