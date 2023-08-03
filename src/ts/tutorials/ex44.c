@@ -19,7 +19,7 @@ typedef struct {
   PetscInt  maxbounces;
 } AppCtx;
 
-static PetscErrorCode Event(TS ts, PetscReal t, Vec U, PetscScalar *fvalue, void *ctx)
+static PetscErrorCode Event(TS ts, PetscReal t, Vec U, PetscReal *fvalue, void *ctx)
 {
   AppCtx            *app = (AppCtx *)ctx;
   Vec                V;
@@ -30,7 +30,7 @@ static PetscErrorCode Event(TS ts, PetscReal t, Vec U, PetscScalar *fvalue, void
   PetscCall(TS2GetSolution(ts, &U, &V));
   PetscCall(VecGetArrayRead(U, &u));
   PetscCall(VecGetArrayRead(V, &v));
-  fvalue[0] = u[0];
+  fvalue[0] = PetscRealPart(u[0]);
   /* Event for number of bounces */
   fvalue[1] = app->maxbounces - app->bounces;
   PetscCall(VecRestoreArrayRead(U, &u));
