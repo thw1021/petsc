@@ -437,22 +437,22 @@ PETSC_EXTERN PetscErrorCode DMTSLoad(DMTS, PetscViewer);
 PETSC_EXTERN PetscErrorCode DMTSCopy(DMTS, DMTS);
 
 struct _n_TSEvent {
-  PetscScalar *fvalue_prev;                                                                 /* value of event function at the left end-point of the event interval */
-  PetscScalar *fvalue;                                                                      /* value of event function at the current point */
-  PetscScalar *fvalue_right;                                                                /* value of event function at the right end-point of the event interval */
-  PetscInt    *fsign_prev;                                                                  /* sign of event function at the left end-point of the event interval */
-  PetscInt    *fsign;                                                                       /* sign of event function at the current point */
-  PetscInt    *fsign_right;                                                                 /* sign of event function at the right end-point of the event interval */
-  PetscReal    ptime_prev;                                                                  /* time at the previous point (left end-point of the event interval) */
-  PetscReal    ptime_right;                                                                 /* time at the right end-point of the event interval */
-  PetscReal    ptime_cache;                                                                 /* the point visited by the TS before the event interval was detected; cached - to reuse if necessary */
-  PetscReal    timestep_cache;                                                              /* time step considered by the TS before the event interval was detected; cached - to reuse if necessary */
-  PetscInt    *side;                                                                        /* upon bracket subdivision, indicates which sub-bracket is taken further, -1 -> left one, +1 -> right one, +2 -> neither, 0 -> zero-crossing located */
-  PetscInt    *side_prev;                                                                   /* counts the repeating previous side's (with values: -n <=> '-1'*n; +n <=> '+1'*n); used in the Anderson-Bjorck iteration */
-  PetscReal    timestep_postevent;                                                          /* time step to take immediately after the event */
-  PetscReal    timestep_min;                                                                /* minimum time step */
-  PetscBool   *justrefined_AB;                                                              /* this flag indicates if the given event function i = [0..nevents) participated in Anderson-Bjorck process in the last iteration of TSEventHandler() */
-  PetscReal   *gamma_AB;                                                                    /* cumulative scaling factor for the Anderson-Bjorck iteration */
+  PetscReal *fvalue_prev;                                                                   /* value of event function at the left end-point of the event interval */
+  PetscReal *fvalue;                                                                        /* value of event function at the current point */
+  PetscReal *fvalue_right;                                                                  /* value of event function at the right end-point of the event interval */
+  PetscInt  *fsign_prev;                                                                    /* sign of event function at the left end-point of the event interval */
+  PetscInt  *fsign;                                                                         /* sign of event function at the current point */
+  PetscInt  *fsign_right;                                                                   /* sign of event function at the right end-point of the event interval */
+  PetscReal  ptime_prev;                                                                    /* time at the previous point (left end-point of the event interval) */
+  PetscReal  ptime_right;                                                                   /* time at the right end-point of the event interval */
+  PetscReal  ptime_cache;                                                                   /* the point visited by the TS before the event interval was detected; cached - to reuse if necessary */
+  PetscReal  timestep_cache;                                                                /* time step considered by the TS before the event interval was detected; cached - to reuse if necessary */
+  PetscInt  *side;                                                                          /* upon bracket subdivision, indicates which sub-bracket is taken further, -1 -> left one, +1 -> right one, +2 -> neither, 0 -> zero-crossing located */
+  PetscInt  *side_prev;                                                                     /* counts the repeating previous side's (with values: -n <=> '-1'*n; +n <=> '+1'*n); used in the Anderson-Bjorck iteration */
+  PetscReal  timestep_postevent;                                                            /* time step to take immediately after the event */
+  PetscReal  timestep_min;                                                                  /* minimum time step */
+  PetscBool *justrefined_AB;                                                                /* this flag indicates if the given event function i = [0..nevents) participated in Anderson-Bjorck process in the last iteration of TSEventHandler() */
+  PetscReal *gamma_AB;                                                                      /* cumulative scaling factor for the Anderson-Bjorck iteration */
   PetscErrorCode (*eventhandler)(TS, PetscReal, Vec, PetscScalar *, void *);                /* User event handler function */
   PetscErrorCode (*postevent)(TS, PetscInt, PetscInt[], PetscReal, Vec, PetscBool, void *); /* User post event function */
   void       *ctx;                                                                          /* User context for event handler and post event functions */

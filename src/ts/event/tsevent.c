@@ -4,11 +4,11 @@
    Fills array sign[] with signs of array f[]. If abs(f[i]) < vtol[i], the zero sign is taken.
    All arrays should have length 'nev'
 */
-static inline void TSEventCalcSigns(PetscInt nev, const PetscScalar *f, const PetscReal *vtol, PetscInt *sign)
+static inline void TSEventCalcSigns(PetscInt nev, const PetscReal *f, const PetscReal *vtol, PetscInt *sign)
 {
   for (PetscInt i = 0; i < nev; i++) {
-    if (PetscAbsScalar(f[i]) < vtol[i]) sign[i] = 0;
-    else sign[i] = PetscSign(PetscRealPart(f[i]));
+    if (PetscAbsReal(f[i]) < vtol[i]) sign[i] = 0;
+    else sign[i] = PetscSign(f[i]);
   }
 }
 
@@ -89,7 +89,7 @@ PetscErrorCode TSEventDestroy(TSEvent *event)
 
   In the latter case, instead of explicitly setting the post-event time step,
   the user may also choose a special option of keeping the time steps used before the event, which is a sort of 'petsc-decide' strategy.
-  For this, specify value 0. It will signal the TS to directly step to the time point it planned to visit prior to the event detection.
+  For this, use special value 0. It will signal the TS to directly step to the time point it planned to visit prior to the event detection.
   E.g. if a step t0 -> t1 was planned originally, and an event 'te' occurred, t0 < te < t1, then after the event the TS will step: te -> t1.
   Moreover, in this situation the originally planned subsequent step t1 -> t2 will also be preserved.
 
@@ -157,8 +157,8 @@ PetscErrorCode TSSetPostEventIntervalStep(TS ts, PetscReal dt)
 
   Input Parameters:
 + ts   - time integration context
-. tol  - scalar tolerance, `PETSC_DECIDE` or `PETSC_DEFAULT` to leave the current value
-- vtol - array of tolerances or `NULL`, used in preference to tol if present
+. tol  - tolerance, `PETSC_DECIDE` or `PETSC_DEFAULT` to leave the current value
+- vtol - array of tolerances or `NULL`, used in preference to `tol` if present
 
   Options Database Key:
 . -ts_event_tol <tol> - tolerance for event zero crossing
@@ -204,8 +204,8 @@ PetscErrorCode TSSetEventTolerances(TS ts, PetscReal tol, PetscReal vtol[])
 + ts           - the `TS` context obtained from `TSCreate()`
 . nevents      - number of events managed by the given MPI process
 . direction    - direction of zero crossing to be detected (one for each local event).
-                 `-1` => Zero crossing in negative direction,
-                 `+1` => Zero crossing in positive direction, `0` => both ways
+                 `-1` => zero crossing in negative direction,
+                 `+1` => zero crossing in positive direction, `0` => both ways
 . terminate    - flag to indicate whether time stepping should be terminated after
                  event is detected (one for each local event)
 . eventhandler - event monitoring routine, which defines the event-functions
@@ -215,12 +215,12 @@ PetscErrorCode TSSetEventTolerances(TS ts, PetscReal tol, PetscReal vtol[])
                  context is desired)
 
   Calling sequence of `eventhandler`:
-$   PetscErrorCode eventhandler(TS ts, PetscReal t, Vec U, PetscScalar fvalue[], void* ctx)
-+ ts  - the `TS` context
-. t   - current time
-. U   - current solution
-. ctx - [optional] context passed with `TSSetEventHandler()`
-- fvalue - output array with values of local event-functions (the length is `nevents`) for time t and state-vector U
+$   PetscErrorCode eventhandler(TS ts, PetscReal t, Vec U, PetscReal fvalue[], void* ctx)
++ ts     - the `TS` context
+. t      - current time
+. U      - current solution
+. fvalue - output array with values of local event-functions (the length is `nevents`) for time t and state-vector U
+- ctx    - the context passed with `TSSetEventHandler()`
 
   Calling sequence of `postevent`:
 $   PetscErrorCode postevent(TS ts, PetscInt nevents_zero, PetscInt events_zero[], PetscReal t, Vec U, PetscBool forwardsolve, void *ctx)
@@ -233,13 +233,17 @@ $   PetscErrorCode postevent(TS ts, PetscInt nevents_zero, PetscInt events_zero[
 - ctx          - the context passed with `TSSetEventHandler()`
 
   Options Database Keys:
-+ -ts_event_tol <tol>                       - scalar event tolerance for zero crossing check
++ -ts_event_tol <tol>                       - tolerance for zero crossing check of event-functions
 . -ts_event_monitor                         - print choices made by event handler
 . -ts_event_recorder_initial_size <recsize> - initial size of event recorder
 . -ts_event_post_event_step <dt>            - time step after event
 - -ts_event_dt_min <dt>                     - minimum time step considered for TSEvent
 
   Notes:
+  The event-functions should be defined in the `eventhandler` callback using the components of solution `U` and/or time `t`.
+  Note that `U` is `PetscScalar`-valued, and the event-functions are `PetscReal`-valued. It is the user's responsibility to
+  properly handle this difference, e.g. by applying `PetscRealPart()` or other appropriate conversion means.
+
   The full set of events is distributed (by the user design) across MPI processes, with each process defining its own local sub-set of events.
   However, event resolution, and the `postevent` callback invocation are performed synchronously on all processes, including
   those processes which have not currently triggered any events.
@@ -248,7 +252,7 @@ $   PetscErrorCode postevent(TS ts, PetscInt nevents_zero, PetscInt events_zero[
 
 .seealso: [](ch_ts), `TSEvent`, `TSCreate()`, `TSSetTimeStep()`, `TSSetConvergedReason()`
 @*/
-PetscErrorCode TSSetEventHandler(TS ts, PetscInt nevents, PetscInt direction[], PetscBool terminate[], PetscErrorCode (*eventhandler)(TS ts, PetscReal t, Vec U, PetscScalar fvalue[], void *ctx), PetscErrorCode (*postevent)(TS ts, PetscInt nevents_zero, PetscInt events_zero[], PetscReal t, Vec U, PetscBool forwardsolve, void *ctx), void *ctx)
+PetscErrorCode TSSetEventHandler(TS ts, PetscInt nevents, PetscInt direction[], PetscBool terminate[], PetscErrorCode (*eventhandler)(TS ts, PetscReal t, Vec U, PetscReal fvalue[], void *ctx), PetscErrorCode (*postevent)(TS ts, PetscInt nevents_zero, PetscInt events_zero[], PetscReal t, Vec U, PetscBool forwardsolve, void *ctx), void *ctx)
 {
   TSAdapt   adapt;
   PetscReal hmin;
@@ -303,7 +307,7 @@ PetscErrorCode TSSetEventHandler(TS ts, PetscInt nevents, PetscInt direction[], 
   event->recsize = 8; /* Initial size of the recorder */
   PetscOptionsBegin(((PetscObject)ts)->comm, ((PetscObject)ts)->prefix, "TS Event options", "TS");
   {
-    PetscCall(PetscOptionsReal("-ts_event_tol", "Scalar event tolerance for zero crossing check", "TSSetEventTolerances", tol, &tol, NULL));
+    PetscCall(PetscOptionsReal("-ts_event_tol", "Tolerance for zero crossing check of event-functions", "TSSetEventTolerances", tol, &tol, NULL));
     PetscCall(PetscOptionsName("-ts_event_monitor", "Print choices made by event handler", "", &flg));
     PetscCall(PetscOptionsInt("-ts_event_recorder_initial_size", "Initial size of event recorder", "", event->recsize, &event->recsize, NULL));
     PetscCall(PetscOptionsReal("-ts_event_post_event_step", "Time step after event", "", event->timestep_postevent, &event->timestep_postevent, NULL));
@@ -410,12 +414,13 @@ static PetscErrorCode TSPostEvent(TS ts, PetscReal t, Vec U)
   if (restart) PetscCall(TSRestartStep(ts));
   if (terminate) PetscCall(TSSetConvergedReason(ts, TS_CONVERGED_EVENT));
 
-  // Recalculate the functions and signs if states have been changed by the user postevent callback.
-  /* Note! If the state HAS NOT changed, the previous 'event->fsign' is kept, which:
+  /* Recalculate the functions and signs if states have been changed by the user postevent callback.
+     Note! If the state HAS NOT changed, the previous 'event->fsign' is kept, which:
      - might have been defined using the previous (now-possibly-overridden) event->vtol,
      - might have been set to zero on reaching a small time step rather than using the vtol criterion.
      This will enforce keeping event->fsign = 0 where the zero-crossings were actually triggered,
-     resulting in a more consistent behaviour of fsign's. */
+     resulting in a more consistent behaviour of fsign's.
+  */
   if (statechanged) {
     if (event->monitor) PetscCall(PetscPrintf(((PetscObject)ts)->comm, "TSEvent: at time %g the vector state has been changed by PostEvent, recalculating fvalues and signs\n", (double)t));
     PetscCall(VecLockReadPush(U));
@@ -445,16 +450,16 @@ static PetscErrorCode TSPostEvent(TS ts, PetscReal t, Vec U)
    The underlying pure Anderson-Bjorck algorithm was taken as described in
    J.M. Fernandez-Diaz, C.O. Menendez-Perez "A common framework for modified Regula Falsi methods and new methods of this kind", 2023.
    The modifications subsequently introduced have little effect on the behaviour for simple cases requiring only a few iterations
-   (some minor convergence slow down may take place though), but the effect becomes more pronounced for tough cases requiring many iterations.
+   (some minor convergence slowdown may take place though), but the effect becomes more pronounced for tough cases requiring many iterations.
    For the latter situation the speed-up may be order(s) of magnitude compared to the classical Anderson-Bjorck.
    The modifications (the threshold trick, and the drift towards bisection) were tested and tweaked
    based on a number of test functions from the mentioned paper.
 */
-static inline PetscReal RefineAndersonBjorck(PetscReal tleft, PetscReal t, PetscReal tright, PetscScalar fleft, PetscScalar f, PetscScalar fright, PetscInt side, PetscInt *side_prev, PetscBool justrefined, PetscReal *gamma)
+static inline PetscReal RefineAndersonBjorck(PetscReal tleft, PetscReal t, PetscReal tright, PetscReal fleft, PetscReal f, PetscReal fright, PetscInt side, PetscInt *side_prev, PetscBool justrefined, PetscReal *gamma)
 {
   PetscReal      new_dt, scal = 1.0, scalB = 1.0, threshold = 0.0, power;
   PetscInt       reps     = 0;
-  const PetscInt REPS_CAP = 8; // an upper bound to be imposed on 'reps' (set to 8, somewhat arbitrary number, after some tweaking)
+  const PetscInt REPS_CAP = 8; // an upper bound to be imposed on 'reps' (set to 8, somewhat arbitrary number, found after some tweaking)
 
   // Preparations
   if (justrefined) {
@@ -466,14 +471,14 @@ static inline PetscReal RefineAndersonBjorck(PetscReal tleft, PetscReal t, Petsc
 
   // Time step calculation
   if (side == -1) {
-    if (justrefined && PetscRealPart(fright) != 0.0 && PetscRealPart(fleft) != 0.0) {
-      scal  = (PetscRealPart(fright) - PetscRealPart(f)) / PetscRealPart(fright);
-      scalB = -PetscRealPart(f) / PetscRealPart(fleft);
+    if (justrefined && fright != 0.0 && fleft != 0.0) {
+      scal  = (fright - f) / fright;
+      scalB = -f / fleft;
     }
   } else { // must be side == +1
-    if (justrefined && PetscRealPart(fleft) != 0.0 && PetscRealPart(fright) != 0.0) {
-      scal  = (PetscRealPart(fleft) - PetscRealPart(f)) / PetscRealPart(fleft);
-      scalB = -PetscRealPart(f) / PetscRealPart(fright);
+    if (justrefined && fleft != 0.0 && fright != 0.0) {
+      scal  = (fleft - f) / fleft;
+      scalB = -f / fright;
     }
   }
 
@@ -483,8 +488,8 @@ static inline PetscReal RefineAndersonBjorck(PetscReal tleft, PetscReal t, Petsc
   power = PetscMax(0.0, (reps - 2.0) / (REPS_CAP - 2.0));
   scal  = PetscPowReal(scalB / *gamma, power) * (*gamma); // mix the Anderson-Bjorck scaling and Bisection scaling
 
-  if (side == -1) new_dt = (scal * PetscRealPart(fleft) * t - PetscRealPart(f) * tleft) / (scal * PetscRealPart(fleft) - PetscRealPart(f)) - tleft;
-  else new_dt = (PetscRealPart(f) * tright - scal * PetscRealPart(fright) * t) / (PetscRealPart(f) - scal * PetscRealPart(fright)) - t;
+  if (side == -1) new_dt = (scal * fleft * t - f * tleft) / (scal * fleft - f) - tleft;
+  else new_dt = (f * tright - scal * fright * t) / (f - scal * fright) - t;
   /* In tough cases (e.g. a polynomial of high order), there is a failure mode for the standard Anderson-Bjorck,
      when the new proposed point jumps from one end-point of the bracket to the other, however the bracket is contracting very slowly.
      A larger threshold for 'scal' prevents entering this mode.
