@@ -21,7 +21,7 @@ static char help[] = "Simple linear problem with events\n"
 
 typedef struct {
   PetscMPIInt rank, size;
-  PetscScalar pi;
+  PetscReal   pi;
   PetscReal   fvals[MAX_NFUNC]; // helper array for reporting the residuals
   PetscReal   evres[MAX_NEV];   // times of found zero-crossings
   PetscInt    evnum[MAX_NEV];   // number of zero-crossings at each time
@@ -34,7 +34,7 @@ typedef struct {
   PetscInt    Fnum;             // total available event functions
 } AppCtx;
 
-PetscErrorCode EventHandler(TS ts, PetscReal t, Vec U, PetscScalar gval[], void *ctx);
+PetscErrorCode EventHandler(TS ts, PetscReal t, Vec U, PetscReal gval[], void *ctx);
 PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscReal t, Vec U, PetscBool fwd, void *ctx);
 
 int main(int argc, char **argv)
@@ -53,7 +53,7 @@ int main(int argc, char **argv)
   setbuf(stdout, NULL);
   PetscCallMPI(MPI_Comm_rank(PETSC_COMM_WORLD, &ctx.rank));
   PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD, &ctx.size));
-  ctx.pi      = PetscAcosScalar(-1.0);
+  ctx.pi      = PetscAcosReal(-1.0);
   ctx.cnt     = 0;
   ctx.flg     = PETSC_FALSE;
   ctx.restart = PETSC_FALSE;
@@ -171,7 +171,7 @@ int main(int argc, char **argv)
 /*
   User callback for defining the event-functions
 */
-PetscErrorCode EventHandler(TS ts, PetscReal t, Vec U, PetscScalar gval[], void *ctx)
+PetscErrorCode EventHandler(TS ts, PetscReal t, Vec U, PetscReal gval[], void *ctx)
 {
   PetscInt n   = 0;
   AppCtx  *Ctx = (AppCtx *)ctx;

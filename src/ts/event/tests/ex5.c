@@ -23,7 +23,7 @@ static char help[] = "Simple linear problem with events\n"
 
 typedef struct {
   PetscMPIInt rank, size;
-  PetscScalar pi;
+  PetscReal   pi;
   PetscReal   fvals[MAX_NFUNC]; // helper array for reporting the residuals
   PetscReal   evres[MAX_NEV];   // times of found zero-crossings
   PetscInt    evnum[MAX_NEV];   // number of zero-crossings at each time
@@ -32,13 +32,13 @@ typedef struct {
   PetscBool   restart;          // flag for TSRestartStep() in PostEvent
   PetscReal   dtpost;           // post-event step
   PetscInt    postcnt;          // counter for PostEvent calls
-  PetscScalar vtol[MAX_NFUNC];  // vtol array, with extra storage
+  PetscReal   vtol[MAX_NFUNC];  // vtol array, with extra storage
   PetscInt    dir0;             // desired zero-crossing direction
 } AppCtx;
 
-PetscErrorCode     EventHandler(TS ts, PetscReal t, Vec U, PetscScalar gval[], void *ctx);
+PetscErrorCode     EventHandler(TS ts, PetscReal t, Vec U, PetscReal gval[], void *ctx);
 PetscErrorCode     Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscReal t, Vec U, PetscBool fwd, void *ctx);
-static inline void SetVtols(PetscMPIInt rank, PetscMPIInt size, PetscScalar tol0, PetscScalar tolsin, PetscScalar *vtol); // helper function to fill vtol[]
+static inline void SetVtols(PetscMPIInt rank, PetscMPIInt size, PetscReal tol0, PetscReal tolsin, PetscReal *vtol); // helper function to fill vtol[]
 
 int main(int argc, char **argv)
 {
@@ -56,7 +56,7 @@ int main(int argc, char **argv)
   setbuf(stdout, NULL);
   PetscCallMPI(MPI_Comm_rank(PETSC_COMM_WORLD, &ctx.rank));
   PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD, &ctx.size));
-  ctx.pi      = PetscAcosScalar(-1.0);
+  ctx.pi      = PetscAcosReal(-1.0);
   ctx.cnt     = 0;
   ctx.flg     = PETSC_FALSE;
   ctx.restart = PETSC_FALSE;
@@ -180,7 +180,7 @@ int main(int argc, char **argv)
 /*
   User callback for defining the event-functions
 */
-PetscErrorCode EventHandler(TS ts, PetscReal t, Vec U, PetscScalar gval[], void *ctx)
+PetscErrorCode EventHandler(TS ts, PetscReal t, Vec U, PetscReal gval[], void *ctx)
 {
   PetscInt  n   = 0;
   AppCtx   *Ctx = (AppCtx *)ctx;
@@ -256,7 +256,7 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
 }
 
 // helper function to fill vtol[]
-static inline void SetVtols(PetscMPIInt rank, PetscMPIInt size, PetscScalar tol0, PetscScalar tolsin, PetscScalar *vtol)
+static inline void SetVtols(PetscMPIInt rank, PetscMPIInt size, PetscReal tol0, PetscReal tolsin, PetscReal *vtol)
 {
   PetscInt n = 0;
   for (PetscInt i = -3; i <= 3; i++)
