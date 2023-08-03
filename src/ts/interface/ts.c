@@ -4537,7 +4537,7 @@ PetscErrorCode TSComputeIFunctionLinear(TS ts, PetscReal t, Vec U, Vec Udot, Vec
 }
 
 /*@C
-  TSComputeIJacobianConstant - Reuses a time-independent for a semi-implicit DAE or ODE
+  TSComputeIJacobianConstant - Reuses the IJacobian for a semi-implicit DAE or ODE
 
   Collective
 
