@@ -27,7 +27,7 @@ static char help[] = "Simple linear problem with events\n"
 
 typedef struct {
   PetscMPIInt rank, size;
-  PetscScalar pi;
+  PetscReal   pi;
   PetscReal   fvals[MAX_NFUNC]; // helper array for reporting the residuals
   PetscReal   evres[MAX_NEV];   // times of found zero-crossings
   PetscInt    evnum[MAX_NEV];   // number of zero-crossings at each time
@@ -36,12 +36,12 @@ typedef struct {
   PetscBool   restart;          // flag for TSRestartStep() in PostEvent
   PetscReal   dtpost;           // post-event step
   PetscInt    postcnt;          // counter for PostEvent calls
-  PetscScalar V;                // vertical scaling for sin()
-  PetscScalar vtol[MAX_NFUNC];  // vtol array, with extra storage
+  PetscReal   V;                // vertical scaling for sin()
+  PetscReal   vtol[MAX_NFUNC];  // vtol array, with extra storage
   PetscBool   change5;          // flag to change the state vector at t=5 PostEvent
 } AppCtx;
 
-PetscErrorCode EventHandler(TS ts, PetscReal t, Vec U, PetscScalar gval[], void *ctx);
+PetscErrorCode EventHandler(TS ts, PetscReal t, Vec U, PetscReal gval[], void *ctx);
 PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscReal t, Vec U, PetscBool fwd, void *ctx);
 
 int main(int argc, char **argv)
@@ -50,7 +50,7 @@ int main(int argc, char **argv)
   Mat               A;
   Vec               sol;
   PetscInt          n, dir0, m = 0;
-  PetscScalar       tol = 1e-7;
+  PetscReal         tol = 1e-7;
   PetscInt          dir[MAX_NFUNC], inds[2];
   PetscBool         term[MAX_NFUNC];
   PetscScalar      *x, vals[4];
@@ -62,7 +62,7 @@ int main(int argc, char **argv)
   setbuf(stdout, NULL);
   PetscCallMPI(MPI_Comm_rank(PETSC_COMM_WORLD, &ctx.rank));
   PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD, &ctx.size));
-  ctx.pi      = PetscAcosScalar(-1.0);
+  ctx.pi      = PetscAcosReal(-1.0);
   ctx.cnt     = 0;
   ctx.flg     = PETSC_FALSE;
   ctx.restart = PETSC_FALSE;
@@ -115,7 +115,7 @@ int main(int argc, char **argv)
   PetscCall(PetscOptionsHasName(NULL, NULL, "-flg", &ctx.flg));               // flag for additional output
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-restart", &ctx.restart, NULL)); // flag for TSRestartStep()
   PetscCall(PetscOptionsGetReal(NULL, NULL, "-dtpost", &ctx.dtpost, NULL));   // post-event step
-  PetscCall(PetscOptionsGetScalar(NULL, NULL, "-V", &ctx.V, NULL));
+  PetscCall(PetscOptionsGetReal(NULL, NULL, "-V", &ctx.V, NULL));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-change5", &ctx.change5, NULL)); // flag to change the state vector at t=5 PostEvent
 
   n = 0;               // event counter
@@ -187,7 +187,7 @@ int main(int argc, char **argv)
 /*
   User callback for defining the event-functions
 */
-PetscErrorCode EventHandler(TS ts, PetscReal t, Vec U, PetscScalar gval[], void *ctx)
+PetscErrorCode EventHandler(TS ts, PetscReal t, Vec U, PetscReal gval[], void *ctx)
 {
   PetscInt n   = 0;
   AppCtx  *Ctx = (AppCtx *)ctx;
@@ -196,18 +196,18 @@ PetscErrorCode EventHandler(TS ts, PetscReal t, Vec U, PetscScalar gval[], void 
   // for the test purposes, event-functions are defined based on t
   // first event -- on rank-0
   if (Ctx->rank == 0) {
-    if (t < 2.05) gval[n++] = 0.5 * (1 - PetscPowScalar(t - 2.05, 12));
+    if (t < 2.05) gval[n++] = 0.5 * (1 - PetscPowReal(t - 2.05, 12));
     else gval[n++] = 0.5;
   }
 
   // second event -- on last rank
   if (Ctx->rank == Ctx->size - 1) {
-    if (t > 8.05) gval[n++] = 0.25 * (1 - PetscPowScalar(t - 8.05, 12));
+    if (t > 8.05) gval[n++] = 0.25 * (1 - PetscPowReal(t - 8.05, 12));
     else gval[n++] = 0.25;
   }
 
   // third event -- on rank = 1%ctx.size
-  if (Ctx->rank == 1 % Ctx->size) { gval[n++] = Ctx->V * PetscSinScalar(Ctx->pi * t); }
+  if (Ctx->rank == 1 % Ctx->size) { gval[n++] = Ctx->V * PetscSinReal(Ctx->pi * t); }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
