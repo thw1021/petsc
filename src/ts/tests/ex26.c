@@ -99,7 +99,6 @@ PetscErrorCode IJacobian(TS ts, PetscReal t, Vec x, Vec xdot, PetscReal shift, M
 
     test:
       suffix: arkimex_implicit_stage
-      diff_args : -j
       args: -ts_type arkimex -ts_arkimex_type {{3 l2}} -ts_monitor_solution -ts_monitor
 
 TEST*/
