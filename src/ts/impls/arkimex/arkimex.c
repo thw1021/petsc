@@ -1661,7 +1661,14 @@ static PetscErrorCode SNESTSFormJacobian_ARKIMEX(SNES snes, Vec X, Mat A, Mat B,
   ts->dm = dm;
 
   if (ark->scoeff == 0.0) {
-    PetscCall(TSComputeIJacobian(ts, ark->stage_time, Z, X, PETSC_MAX_REAL, A, B, ark->imex));
+    // Mine
+    //PetscCall(TSComputeIJacobian(ts, ark->stage_time, Z, X, PETSC_MAX_REAL, A, B, ark->imex));
+
+    // Jed's
+    shift = 1.0 / PETSC_MACHINE_EPSILON;
+    PetscCall(TSComputeIJacobian(ts, ark->stage_time, Z, X, shift, A, B, ark->imex));
+    PetscCall(MatScale(B, PETSC_MACHINE_EPSILON));
+    if (A != B) PetscCall(MatScale(A, PETSC_MACHINE_EPSILON));
   } else {
     PetscCall(TSComputeIJacobian(ts, ark->stage_time, X, Ydot, shift, A, B, ark->imex));
   }
