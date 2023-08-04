@@ -1225,9 +1225,19 @@ PETSC_EXTERN PetscErrorCode TSARKIMEXRegisterDestroy(void);
 .seealso: [](ch_ts), `TSDIRKSetType()`, `TS`, `TSDIRK`, `TSDIRKRegister()`
 J*/
 typedef const char *TSDIRKType;
-#define TSDIRK212   "212"
-#define TSESDIRK212 "es212"
-#define TSDIRK606A  "606a"
+#define TSDIRK212       "212"
+#define TSDIRKES212     "es212"
+#define TSDIRK657A      "657a"
+#define TSDIRKES648SA   "es648sa"
+#define TSDIRK658A      "658a"
+#define TSDIRKS659A     "s659a"
+#define TSDIRK7510SAL   "7510sal"
+#define TSDIRKES7510SA  "es7510sa"
+#define TSDIRK759A      "759a"
+#define TSDIRKS7511SAL  "s7511sal"
+#define TSDIRK8614A     "8614a"
+#define TSDIRK8616SAL   "8616sal"
+#define TSDIRKES8516SAL "es8516sal"
 PETSC_EXTERN PetscErrorCode TSDIRKGetType(TS ts, TSDIRKType *);
 PETSC_EXTERN PetscErrorCode TSDIRKSetType(TS ts, TSDIRKType);
 PETSC_EXTERN PetscErrorCode TSDIRKRegister(TSDIRKType, PetscInt, PetscInt, const PetscReal[], const PetscReal[], const PetscReal[], const PetscReal[], PetscInt, const PetscReal[]);

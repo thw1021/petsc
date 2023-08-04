@@ -104,6 +104,6 @@ PetscErrorCode IJacobian(TS ts, PetscReal t, Vec X, Vec Xdot, PetscReal shift, M
     test:
       output_file: output/ex18_1.out
       suffix: dirk
-      args: -ts_type dirk -ts_dirk_type {{212 es212}}
+      args: -ts_type dirk -ts_dirk_type {{212 es212 657a es648sa 658a s659a 7510sal es7510sa 759a s7511sal 8614a 8616sal es8516sal}}
 
 TEST*/
