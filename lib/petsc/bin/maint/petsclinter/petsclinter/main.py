@@ -14,6 +14,8 @@ if __name__ == '__main__':
 import petsclinter as pl
 import enum
 
+from petsclinter._typing import *
+
 @enum.unique
 class ReturnCode(enum.IntFlag):
   SUCCESS           = 0
@@ -21,6 +23,7 @@ class ReturnCode(enum.IntFlag):
   ERROR_ERROR_FIXED = enum.auto()
   ERROR_ERROR_LEFT  = enum.auto()
   ERROR_ERROR_TEST  = enum.auto()
+  ERROR_TEST_FAILED = enum.auto()
 
 def main(
     petsc_dir, petsc_arch,
@@ -33,7 +36,7 @@ def main(
     extra_compiler_flags=None, extra_header_includes=None,
     test_output_dir=None, replace_tests=False,
     werror=False
-):
+) -> int:
   """
   entry point for linter
 
@@ -168,30 +171,37 @@ def main(
       if verbose: pl.sync_print('Applying patches from patch directory', patch_dir)
       for patch_file in patch_dir.glob('*' + mangle_postfix):
         if verbose: pl.sync_print('Applying patch', patch_file)
-        output = pl.util.subprocess_run(
-          [patch_exec, root_dir, '--strip=0', '--unified', f'--input={patch_file}'],
-          check=True, universal_newlines=True, capture_output=True
+        output = pl.util.subprocess_capture_output(
+          [patch_exec, root_dir, '--strip=0', '--unified', f'--input={patch_file}']
         )
         if verbose: pl.sync_print(output.stdout)
+
+  def flatten_diags(diag_list: 'List[CondensedDiags]') -> str:
+    return '\n'.join(
+      mess
+      for diags in diag_list
+        for dlist in diags.values()
+          for mess in dlist
+    )
 
   ret        = ReturnCode.SUCCESS
   format_str = '{:=^85}'
   if warnings:
     if verbose:
       pl.sync_print(format_str.format(' Found Warnings '))
-      pl.sync_print('\n'.join(s for tup in warnings for _, s in tup))
+      pl.sync_print(flatten_diags(warnings))
       pl.sync_print(format_str.format(' End warnings '))
     if werror:
       ret |= ReturnCode.ERROR_WERROR
   if errors_fixed:
     if verbose:
       pl.sync_print(format_str.format(' Fixed Errors ' if apply_patches else ' Fixable Errors '))
-      pl.sync_print('\n'.join(e for _, e in errors_fixed))
+      pl.sync_print(flatten_diags(errors_fixed))
       pl.sync_print(format_str.format(' End Fixed Errors '))
     ret |= ReturnCode.ERROR_ERROR_FIXED
   if errors_left:
     pl.sync_print(format_str.format(' Unfixable Errors '))
-    pl.sync_print('\n'.join(e for _, e in errors_left))
+    pl.sync_print(flatten_diags(errors_left))
     pl.sync_print(format_str.format(' End Unfixable Errors '))
     pl.sync_print('Some errors or warnings could not be automatically corrected via the patch files')
     ret |= ReturnCode.ERROR_ERROR_LEFT
@@ -216,11 +226,10 @@ __ADVANCED_HELP_FLAG__ = '--help-hidden'
 def __build_arg_parser(parent_parsers=None, advanced_help=False):
   import argparse
 
-  def add_advanced_argument(prsr, *args, help=None, **kwargs):
-    def help_str(descr):
-      return descr if advanced_help else argparse.SUPPRESS
-
-    return prsr.add_argument(*args, help=help_str(help), **kwargs)
+  def add_advanced_argument(prsr, *args, **kwargs):
+    if not advanced_help:
+      kwargs['help'] = argparse.SUPPRESS
+    return prsr.add_argument(*args, **kwargs)
 
   def add_bool_argument(prsr, *args, advanced=False, **kwargs):
     def str2bool(v):
@@ -329,14 +338,13 @@ def __build_arg_parser(parent_parsers=None, advanced_help=False):
   return parser, all_diagnostics
 
 def parse_command_line_args(argv=None, **kwargs):
-  import re
-
   def expand_argv_globs(in_argv, diagnostics):
+    import re
+
     argv        = []
     skip        = False
     nargv       = len(in_argv)
     flag_prefix = pl.DiagnosticManager.flagprefix
-
     # always skip first entry of argv
     for i, argi in enumerate(in_argv[1:], start=1):
       if skip:
@@ -376,7 +384,7 @@ def parse_command_line_args(argv=None, **kwargs):
 
   return args, parser
 
-def namespace_main(args):
+def namespace_main(args) -> int:
   return main(
     args.petsc_dir, args.petsc_arch,
     src_path=args.src_path,
@@ -390,7 +398,7 @@ def namespace_main(args):
     werror=args.werror
   )
 
-def command_line_main():
+def command_line_main() -> int:
   args, _ = parse_command_line_args()
   have_pm = args.pm
   if have_pm:
@@ -398,7 +406,7 @@ def command_line_main():
       pl.sync_print('Running with --pm flag, setting number of workers to 1')
     args.workers = 1
     try:
-      import ipdb as py_db # LINT IGNORE
+      import ipdb as py_db # type: ignore
     except ModuleNotFoundError:
       import pdb as py_db # LINT IGNORE
 
