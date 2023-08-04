@@ -85,8 +85,9 @@ class Configure(config.package.Package):
         args.append('CC=' + self.getCompiler())
       with self.Language('Cxx'):
         args.append('CXX=' + self.getCompiler())
-      with self.Language('FC'):
-        args.append('FC=' + self.getCompiler())
+      if hasattr(self.compilers, 'FC'):
+        with self.Language('FC'):
+          args.append('FC=' + self.getCompiler())
       args.append('auto')
       config.package.Package.executeShellCommand(args, cwd=self.packageDir, timeout=60, log=self.log)
     except RuntimeError as e:
