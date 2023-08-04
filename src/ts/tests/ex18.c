@@ -6,8 +6,7 @@ static char help[] = "Solves a DAE with a non-trivial mass matrix. \n\n";
    than can be rewritten in implicit form
                  x[0] * xdot[0] - x[0] - x[1]
    F(t,x,xdot) =
-                 x[0] - x[1] 
-
+                 x[0] - x[1]
 */
 
 #include <petscts.h>
