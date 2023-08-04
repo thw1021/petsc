@@ -627,7 +627,7 @@ static inline int PetscMPIParallelComm(MPI_Comm comm)
   #define PetscLogStageSetVisible(a, b)  ((void)(a), (void)(b), PETSC_SUCCESS)
   #define PetscLogStageGetId(a, b)       ((void)(a), *(b) = -1, PETSC_SUCCESS)
   #define PetscLogStageGetName(a, b)     ((void)(a), *(b) = NULL, PETSC_SUCCESS)
-  #define PetscLogStageGetPerfInfo(a, b) ((void)(a), *(c) = (const PetscEventPerfInfo){0}, PETSC_SUCCESS)
+  #define PetscLogStageGetPerfInfo(a, b) ((void)(a), *(b) = (const PetscEventPerfInfo){0}, PETSC_SUCCESS)
 
   #define PetscLogEventRegister(a, b, c)    ((void)(a), (void)(b), *(c) = -1, PETSC_SUCCESS)
   #define PetscLogEventSetCollective(a, b)  ((void)(a), (void)(b), PETSC_SUCCESS)
