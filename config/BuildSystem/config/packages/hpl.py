@@ -29,7 +29,7 @@ class Configure(config.package.Package):
     libDir         = os.path.join(self.installDir, 'lib')
     includeDir     = os.path.join(self.installDir, 'include')
     srcDir         = os.path.join(self.packageDir,'testing','matgen')
-    makefile        = os.path.join(srcDir, 'makefile')
+    makefile       = os.path.join(srcDir, 'makefile')
 
     g = open(makefile,'w')
     g.write('SHELL            = '+self.programs.SHELL+'\n')
