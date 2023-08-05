@@ -1084,7 +1084,7 @@ PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char *prog, const char 
       if (threads) PetscCall(PetscInfo(NULL, "BLAS: Environment number of OpenBLAS threads %s given by OMP_NUM_THREADS\n", threads));
     }
   #endif
-    if (threads) { (void)sscanf(threads, "%" PetscInt_FMT, &PetscNumBLASThreads); }
+    if (threads) (void)sscanf(threads, "%" PetscInt_FMT, &PetscNumBLASThreads);
     PetscCall(PetscOptionsInt("-blas_num_threads", "Number of threads to use for BLAS operations", "None", PetscNumBLASThreads, &PetscNumBLASThreads, &flg));
     PetscCall(PetscBLASSetNumThreads(PetscNumBLASThreads));
     if (blas_view_flag) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "BLAS: number of threads %" PetscInt_FMT "\n", PetscNumBLASThreads));
