@@ -19,6 +19,11 @@
 
       PetscOptions, parameter :: PETSC_NULL_OPTIONS = tPetscOptions(0)
 
+      type tPetscBM
+        PetscFortranAddr:: v PETSC_FORTRAN_TYPE_INITIALIZE
+      end type tPetscBM
+
+      PetscBM, parameter :: PETSC_NULL_BM = tPetscBM(0)
 ! ------------------------------------------------------------------------
 !     Non Common block Stuff declared first
 !
