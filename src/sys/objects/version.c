@@ -1,4 +1,5 @@
-#include <petscsys.h>
+#include <petsc/private/petscimpl.h> /*I  "petscsys.h"   I*/
+
 /*@C
   PetscGetVersion - Gets the PETSc version information in a string.
 
@@ -72,14 +73,14 @@ PetscInt PetscNumBLASThreads = 1;
   Input Parameter:
 . nt - the number of threads
 
-  Options Database Keys:
+  Options Database Key:
 . -blas_num_threads <nt> - set the number of threads when PETSc is initialized
 
   Level: intermediate
 
   Notes:
   The environmental variables ``BLIS_NUM_THREADS``, ``MKL_NUM_THREADS``, or ``OPENBLAS_NUM_THREADS``, ``OMP_NUM_THREADS``
-  may also effect the number of threads used depending on the BLAS libraries being used. A call to this function
+  may also affect the number of threads used depending on the BLAS libraries being used. A call to this function
   overwrites those values.
 
   With the BLIS BLAS implementation one can use `BLIS_THREAD_IMPL=pthread` or `BLIS_THREAD_IMPL=openmp` to determine how
@@ -119,6 +120,7 @@ PetscErrorCode PetscBLASSetNumThreads(PetscInt nt)
 PetscErrorCode PetscBLASGetNumThreads(PetscInt *nt)
 {
   PetscFunctionBegin;
+  PetscAssertPointer(nt, 1);
   *nt = PetscNumBLASThreads;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
