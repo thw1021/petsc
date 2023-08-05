@@ -29,7 +29,7 @@ class Configure(config.package.Package):
     libDir         = os.path.join(self.installDir, 'lib')
     includeDir     = os.path.join(self.installDir, 'include')
     srcDir         = os.path.join(self.packageDir,'testing','matgen')
-    makefile        = os.path.join(srcDir, 'makefile')
+    makefile       = os.path.join(srcDir, 'makefile')
 
     g = open(makefile,'w')
     g.write('SHELL            = '+self.programs.SHELL+'\n')
@@ -56,8 +56,8 @@ class Configure(config.package.Package):
     cflags += ' '+self.headers.toString('.')
     cflags += ' -fPIC'
 
-    g.write('CC             = '+self.getCompiler()+'\n')
-    g.write('CFLAGS         = '+cflags+'\n')
+    g.write('CC               = '+self.getCompiler()+'\n')
+    g.write('CFLAGS           = '+cflags+'\n')
     self.popLanguage()
     g.write('clean:\n')
     g.write('	${RM} -f *.o\n')

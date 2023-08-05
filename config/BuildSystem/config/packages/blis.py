@@ -21,7 +21,6 @@ class Configure(config.package.Package):
     import nargs
     config.package.Package.setupHelp(self, help)
     help.addArgument(self.PACKAGE,'-download-blis-use-pthreads=<bool>',nargs.ArgBool(None,1,'Use pthreads threading support for '+self.name ))
-    help.addArgument(self.PACKAGE,'-download-blis-use-pthreads=<bool>',nargs.ArgBool(None,1,'Use pthreads threading support for '+self.name))
     help.addArgument(self.PACKAGE,'-download-blis-use-openmp=<bool>',nargs.ArgBool(None,1,'Use OpenMP threading support for '+self.name))
     help.addArgument(self.PACKAGE,'-download-blis-enable-cblas-headers=<bool>',nargs.ArgBool(None,0,'Enable CBLAS headers for '+self.name ))
     help.addArgument(self.PACKAGE,'-download-blis-complex-return=<string>',nargs.ArgString(None,None,'Specify the method of returning complex numbers from blas routines ('+self.name+' supports "gnu" and "intel")'))
