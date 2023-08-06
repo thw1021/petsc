@@ -38,7 +38,7 @@ typedef struct {
   Level: advanced
 
   Note:
-  This routine is intended for use within the various user provided shell routines such as `PCShellSetApply()`
+  This routine is intended for use within the various user-provided routines set with, for example, `PCShellSetApply()`
 
   Fortran Note:
   To use this from Fortran you must write a Fortran interface definition for this
@@ -71,7 +71,7 @@ PetscErrorCode PCShellGetContext(PC pc, void *ctx)
   Level: advanced
 
   Notes:
-  This routine is intended for use within the various user-provided shell routines such as `PCShellSetApply()`
+  This routine is intended for use within the various user-provided routines set with, for example, `PCShellSetApply()`
 
   One should also provide a routine to destroy the context when `pc` is destroyed with `PCShellSetDestroy()`
 
