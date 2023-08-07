@@ -190,7 +190,7 @@ static PetscErrorCode PetscViewerExodusIISetOrder_ExodusII(PetscViewer viewer, P
 }
 
 /*MC
-   PETSCVIEWEREXODUSII - A viewer that writes to an Exodus II file
+   PETSCVIEWEREXODUSII - A viewer that read or writes to an Exodus II file
 
   Level: beginner
 
