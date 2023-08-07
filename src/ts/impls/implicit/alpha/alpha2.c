@@ -65,6 +65,7 @@ typedef struct {
 PETSC_EXTERN PetscErrorCode TSAlpha2SetPredictor(TS ts, TSAlpha2Predictor predictor, void *ctx)
 {
   TS_Alpha *th = (TS_Alpha *)(ts->data);
+
   PetscFunctionBegin;
   th->predictor     = predictor;
   th->predictor_ctx = ctx;
@@ -75,6 +76,7 @@ static PetscErrorCode TSAlpha_ApplyPredictor(TS ts, Vec X1)
 {
   /* Apply a custom predictor if set, or default to same-displacement. */
   TS_Alpha *th = (TS_Alpha *)(ts->data);
+
   PetscFunctionBegin;
   if(th->predictor) PetscCall(th->predictor(ts, th->X0, th->V0, th->A0, X1, th->predictor_ctx));
   else PetscCall(VecCopy(th->X0, X1));
@@ -220,7 +222,7 @@ finally:
   /* Revert TSAlpha to the initial state (t0,X0,V0), but retain
      potential time step reduction by factor after failed solve. */
   if (initok) *initok = stageok;
-  PetscCall(TSSetTimeStep(ts, 2 * (ts->time_step)));
+  PetscCall(TSSetTimeStep(ts, 2 * ts->time_step));
   PetscCall(TSAlpha2SetParams(ts, alpha_m, alpha_f, gamma, beta));
   PetscCall(VecCopy(ts->vec_sol, th->X0));
   PetscCall(VecCopy(ts->vec_dot, th->V0));
