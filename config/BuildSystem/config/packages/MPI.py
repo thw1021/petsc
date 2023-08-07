@@ -769,8 +769,6 @@ Unable to run hostname to check the network')
       self.isNecMPI = 1
       self.addDefine('HAVE_NECMPI',1)
 
-    import pdb
-    pdb.set_trace()
     # IBM Spectrum MPI is derived from OpenMPI, we do not yet have specific tests for it
     # https://www.ibm.com/us-en/marketplace/spectrum-mpi
     openmpi_test = '#include <mpi.h>\nint ompi_major = OMPI_MAJOR_VERSION;\nint ompi_minor = OMPI_MINOR_VERSION;\nint ompi_release = OMPI_RELEASE_VERSION;\n'
