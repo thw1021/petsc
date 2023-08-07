@@ -30,9 +30,6 @@ namespace cupm
 namespace impl
 {
 
-namespace
-{
-
 // ==========================================================================================
 // UseCUPMHostAllocGuard
 //
@@ -112,8 +109,6 @@ inline bool UseCUPMHostAllocGuard<T>::value() const noexcept
 {
   return v_;
 }
-
-} // anonymous namespace
 
 template <DeviceType T, PetscMemType MemoryType, PetscMemoryAccessMode AccessMode>
 class RestoreableArray : Interface<T> {
@@ -224,6 +219,7 @@ protected:
 
   static PetscErrorCode GetHandlesFrom_(PetscDeviceContext, cupmBlasHandle_t *, cupmSolverHandle_t * = nullptr, cupmStream_t * = nullptr) noexcept;
   static PetscErrorCode GetHandlesFrom_(PetscDeviceContext, cupmSolverHandle_t *, cupmStream_t * = nullptr) noexcept;
+  static PetscErrorCode GetHandlesFrom_(PetscDeviceContext, cupmBlasHandle_t *, cupmStream_t *) noexcept;
   static PetscErrorCode GetHandlesFrom_(PetscDeviceContext, cupmStream_t *) noexcept;
 
   // disallow implicit conversion
@@ -345,6 +341,12 @@ template <DeviceType T>
 inline PetscErrorCode CUPMObject<T>::GetHandlesFrom_(PetscDeviceContext dctx, cupmSolverHandle_t *solver_handle, cupmStream_t *stream) noexcept
 {
   return GetFromHandleDispatch_(dctx, nullptr, solver_handle, stream);
+}
+
+template <DeviceType T>
+inline PetscErrorCode CUPMObject<T>::GetHandlesFrom_(PetscDeviceContext dctx, cupmBlasHandle_t *blas_handle, cupmStream_t *stream) noexcept
+{
+  return GetFromHandleDispatch_(dctx, blas_handle, nullptr, stream);
 }
 
 template <DeviceType T>

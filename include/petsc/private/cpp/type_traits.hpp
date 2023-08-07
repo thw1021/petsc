@@ -111,11 +111,7 @@ static inline constexpr underlying_type_t<T> to_underlying(T value) noexcept
   static_assert(std::is_enum<T>::value, "");
   return static_cast<underlying_type_t<T>>(value);
 }
-
 #endif
-
-template <typename... T>
-struct always_false : std::false_type { };
 
 namespace detail
 {
@@ -167,18 +163,20 @@ template <typename T>
 using is_derived_petsc_object = detail::is_derived_petsc_object_impl<remove_pointer_t<decay_t<T>>>;
 
 template <class, template <class> class>
-struct is_instance : public std::false_type { };
+struct is_instance : std::false_type { };
 
 template <class T, template <class> class U>
-struct is_instance<U<T>, U> : public std::true_type { };
+struct is_instance<U<T>, U> : std::true_type { };
 
 namespace detail
 {
+
 template <template <class> class B, class E>
 struct is_crtp_base_of_impl : std::is_base_of<B<E>, E> { };
 
 template <template <class> class B, class E, template <class> class F>
 struct is_crtp_base_of_impl<B, F<E>> : disjunction<std::is_base_of<B<E>, F<E>>, std::is_base_of<B<F<E>>, F<E>>> { };
+
 } // namespace detail
 
 template <template <class> class B, class E>

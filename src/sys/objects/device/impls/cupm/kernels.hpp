@@ -15,15 +15,21 @@ namespace cupm
 namespace kernels
 {
 
+enum {
+  warp_size = 32
+};
+
 namespace util
 {
 
+#if PetscDefined(USING_CUPMCC)
 template <typename SizeType, typename T>
 PETSC_DEVICE_INLINE_DECL static void grid_stride_1D(const SizeType size, T &&func) noexcept
 {
   for (SizeType i = blockIdx.x * blockDim.x + threadIdx.x; i < size; i += blockDim.x * gridDim.x) func(i);
   return;
 }
+#endif
 
 } // namespace util
 

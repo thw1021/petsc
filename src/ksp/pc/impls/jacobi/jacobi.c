@@ -265,6 +265,8 @@ static PetscErrorCode PCSetUp_Jacobi_NonSymmetric(PC pc)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+#include <petscdevice.h>
+
 /*
    PCApply_Jacobi - Applies the Jacobi preconditioner to a vector.
 
@@ -279,11 +281,19 @@ static PetscErrorCode PCSetUp_Jacobi_NonSymmetric(PC pc)
  */
 static PetscErrorCode PCApply_Jacobi(PC pc, Vec x, Vec y)
 {
-  PC_Jacobi *jac = (PC_Jacobi *)pc->data;
+  PC_Jacobi         *jac = (PC_Jacobi *)pc->data;
+  PetscDeviceContext dctx;
+  PetscStreamType    stype;
 
   PetscFunctionBegin;
   if (!jac->diag) PetscCall(PCSetUp_Jacobi_NonSymmetric(pc));
-  PetscCall(VecPointwiseMult(y, x, jac->diag));
+  PetscCall(PetscDeviceContextGetCurrentContext(&dctx));
+  PetscCall(PetscDeviceContextGetStreamType(dctx, &stype));
+  if (stype == PETSC_STREAM_GLOBAL_BLOCKING) {
+    PetscCall(VecPointwiseMult(y, x, jac->diag));
+  } else {
+    PetscCall(VecPointwiseMultAsync(y, x, jac->diag, dctx));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

@@ -4,6 +4,7 @@
 #include <petsc/private/veccupmimpl.h> /*I <petscvec.h> I*/
 #include <../src/vec/vec/impls/seq/cupm/vecseqcupm.hpp>
 #include <../src/vec/vec/impls/mpi/pvecimpl.h>
+#include <petscmanagedmemory_fwd.hpp>
 
 namespace Petsc
 {
@@ -43,8 +44,11 @@ public:
   static PetscErrorCode Duplicate(Vec, Vec *) noexcept;
   static PetscErrorCode BindToCPU(Vec, PetscBool) noexcept;
   static PetscErrorCode Norm(Vec, NormType, PetscReal *) noexcept;
+  static PetscErrorCode NormAsync(Vec, NormType, ManagedReal *, PetscDeviceContext) noexcept;
   static PetscErrorCode Dot(Vec, Vec, PetscScalar *) noexcept;
+  static PetscErrorCode DotAsync(Vec, Vec, ManagedScalar &, PetscDeviceContext) noexcept;
   static PetscErrorCode TDot(Vec, Vec, PetscScalar *) noexcept;
+  static PetscErrorCode TDotAsync(Vec, Vec, ManagedScalar &, PetscDeviceContext) noexcept;
   static PetscErrorCode MDot(Vec, PetscInt, const Vec[], PetscScalar *) noexcept;
   static PetscErrorCode DotNorm2(Vec, Vec, PetscScalar *, PetscScalar *) noexcept;
   static PetscErrorCode Max(Vec, PetscInt *, PetscReal *) noexcept;

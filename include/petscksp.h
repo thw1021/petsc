@@ -83,6 +83,8 @@ typedef const char *KSPType;
 #define KSPCGLS       "cgls"
 #define KSPFETIDP     "fetidp"
 #define KSPHPDDM      "hpddm"
+#define KSPCGASYNC    "cgasync"
+#define KSPTFQMRASYNC "tfqmrasync"
 
 /* Logging support */
 PETSC_EXTERN PetscClassId KSP_CLASSID;

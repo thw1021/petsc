@@ -806,6 +806,17 @@ inline PetscErrorCode MatDense_Seq_CUPM<T>::MatMultAdd_Dispatch_(Mat A, Vec xx, 
   PetscDeviceContext dctx;
 
   PetscFunctionBegin;
+  PetscCall(GetHandles_(&dctx, &handle));
+  // clang-format off
+  PetscCall(
+    PetscDeviceContextMarkIntentFromIDBeginGroup(
+      dctx,
+      {PetscObjectCast(xx)->id, PetscObjectCast(zz)->id},
+      {PETSC_MEMORY_ACCESS_READ, PETSC_MEMORY_ACCESS_WRITE},
+      {PetscObjectCast(xx)->name, PetscObjectCast(zz)->name}
+    )
+  );
+  // clang-format on
   if (yy && yy != zz) PetscCall(VecSeq_CUPM::Copy(yy, zz)); // mult add
   if (!m || !n) {
     // mult only
@@ -813,7 +824,6 @@ inline PetscErrorCode MatDense_Seq_CUPM<T>::MatMultAdd_Dispatch_(Mat A, Vec xx, 
     PetscFunctionReturn(PETSC_SUCCESS);
   }
   PetscCall(PetscInfo(A, "Matrix-vector product %" PetscBLASInt_FMT " x %" PetscBLASInt_FMT " on backend\n", m, n));
-  PetscCall(GetHandles_(&dctx, &handle));
   {
     constexpr auto op   = transpose ? CUPMBLAS_OP_T : CUPMBLAS_OP_N;
     const auto     one  = cupmScalarCast(1.0);
@@ -827,6 +837,16 @@ inline PetscErrorCode MatDense_Seq_CUPM<T>::MatMultAdd_Dispatch_(Mat A, Vec xx, 
     PetscCall(PetscLogGpuTimeEnd());
   }
   PetscCall(PetscLogGpuFlops(2.0 * m * n - (yy ? 0 : m)));
+  // clang-format off
+  PetscCall(
+    PetscDeviceContextMarkIntentFromIDEndGroup(
+      dctx,
+      {PetscObjectCast(xx)->id, PetscObjectCast(zz)->id},
+      {PETSC_MEMORY_ACCESS_READ, PETSC_MEMORY_ACCESS_WRITE},
+      {PetscObjectCast(xx)->name, PetscObjectCast(zz)->name}
+    )
+  );
+  // clang-format on
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

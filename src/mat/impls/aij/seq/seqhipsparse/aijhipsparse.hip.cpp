@@ -1255,6 +1255,18 @@ static PetscErrorCode MatSolve_SeqAIJHIPSPARSE_ILU0(Mat fact, Vec b, Vec x)
   PetscCall(VecHIPGetArrayRead(b, &barray));
   PetscCall(PetscLogGpuTimeBegin());
 
+  // ASYNC TODO: I don't think this is the right place
+  PetscDeviceContext dctx;
+  PetscStreamType    stype;
+  hipStream_t        old_stream;
+  hipStream_t       *stream = nullptr;
+
+  PetscCall(PetscDeviceContextGetCurrentContext(&dctx));
+  PetscCall(PetscDeviceContextGetStreamType(dctx, &stype));
+  PetscCall(PetscDeviceContextGetStreamHandle_Internal(dctx, (void **)&stream));
+  PetscCallHIPSPARSE(hipsparseGetStream(fs->handle, &old_stream));
+  PetscCallHIPSPARSE(hipsparseSetStream(fs->handle, *stream));
+
   /* Solve L*y = b */
   PetscCallHIPSPARSE(hipsparseDnVecSetValues(fs->dnVecDescr_X, (void *)barray));
   PetscCallHIPSPARSE(hipsparseDnVecSetValues(fs->dnVecDescr_Y, fs->Y));
@@ -1274,6 +1286,11 @@ static PetscErrorCode MatSolve_SeqAIJHIPSPARSE_ILU0(Mat fact, Vec b, Vec x)
   PetscCallHIPSPARSE(hipsparseSpSV_solve(fs->handle, HIPSPARSE_OPERATION_NON_TRANSPOSE, &PETSC_HIPSPARSE_ONE, fs->spMatDescr_U,                                     /* U X = Y */
                                          fs->dnVecDescr_Y, fs->dnVecDescr_X, hipsparse_scalartype, HIPSPARSE_SPSV_ALG_DEFAULT, fs->spsvDescr_U, fs->spsvBuffer_U));
   #endif
+
+  // ASYNC TODO
+  PetscCallHIPSPARSE(hipsparseSetStream(fs->handle, old_stream));
+  if (stype == PETSC_STREAM_GLOBAL_BLOCKING) PetscCall(PetscDeviceContextSynchronize(dctx));
+
   PetscCall(VecHIPRestoreArrayRead(b, &barray));
   PetscCall(VecHIPRestoreArrayWrite(x, &xarray));
 
@@ -3111,6 +3128,18 @@ static PetscErrorCode MatMultAddKernel_SeqAIJHIPSPARSE(Mat A, Vec xx, Vec yy, Ve
         ny             = mat->num_cols;
       }
     }
+
+    PetscDeviceContext dctx;
+    PetscStreamType    stype;
+    hipStream_t        old_stream;
+    hipStream_t       *stream = nullptr;
+
+    PetscCall(PetscDeviceContextGetCurrentContext(&dctx));
+    PetscCall(PetscDeviceContextGetStreamType(dctx, &stype));
+    PetscCall(PetscDeviceContextGetStreamHandle_Internal(dctx, (void **)&stream));
+    PetscCallHIPSPARSE(hipsparseGetStream(hipsparsestruct->handle, &old_stream));
+    PetscCallHIPSPARSE(hipsparseSetStream(hipsparsestruct->handle, *stream));
+
     /* csr_spmv does y = alpha op(A) x + beta y */
     if (hipsparsestruct->format == MAT_HIPSPARSE_CSR) {
 #if PETSC_PKG_HIP_VERSION_GE(5, 1, 0)
@@ -3142,14 +3171,14 @@ static PetscErrorCode MatMultAddKernel_SeqAIJHIPSPARSE(Mat A, Vec xx, Vec yy, Ve
     PetscCall(PetscLogGpuTimeEnd());
 
     if (opA == HIPSPARSE_OPERATION_NON_TRANSPOSE) {
-      if (yy) {                                     /* MatMultAdd: zz = A*xx + yy */
-        if (compressed) {                           /* A is compressed. We first copy yy to zz, then ScatterAdd the work vector to zz */
-          PetscCall(VecSeq_HIP::Copy(yy, zz));      /* zz = yy */
-        } else if (zz != yy) {                      /* A is not compressed. zz already contains A*xx, and we just need to add yy */
-          PetscCall(VecSeq_HIP::AXPY(zz, 1.0, yy)); /* zz += yy */
+      if (yy) {                                                                      /* MatMultAdd: zz = A*xx + yy */
+        if (compressed) {                                                            /* A is compressed. We first copy yy to zz, then ScatterAdd the work vector to zz */
+          PetscCall(VecSeq_HIP::CopyAsync(yy, zz, dctx));                            /* zz = yy */
+        } else if (zz != yy) {                                                       /* A is not compressed. zz already contains A*xx, and we just need to add yy */
+          PetscCall(VecSeq_HIP::AXPYAsync(zz, Petsc::MANAGED_SCAL_ONE(), yy, dctx)); /* zz += yy */
         }
       } else if (compressed) { /* MatMult: zz = A*xx. A is compressed, so we zero zz first, then ScatterAdd the work vector to zz */
-        PetscCall(VecSeq_HIP::Set(zz, 0));
+        PetscCall(VecSeq_HIP::SetAsync(zz, Petsc::MANAGED_SCAL_ZERO(), dctx));
       }
 
       /* ScatterAdd the result from work vector into the full vector when A is compressed */
@@ -3174,6 +3203,10 @@ static PetscErrorCode MatMultAddKernel_SeqAIJHIPSPARSE(Mat A, Vec xx, Vec yy, Ve
     } else {
       if (yy && yy != zz) PetscCall(VecSeq_HIP::AXPY(zz, 1.0, yy)); /* zz += yy */
     }
+
+    PetscCallHIPSPARSE(hipsparseSetStream(hipsparsestruct->handle, old_stream));
+    if (stype == PETSC_STREAM_GLOBAL_BLOCKING) PetscCall(PetscDeviceContextSynchronize(dctx));
+
     PetscCall(VecHIPRestoreArrayRead(xx, (const PetscScalar **)&xarray));
     if (yy == zz) PetscCall(VecHIPRestoreArray(zz, &zarray));
     else PetscCall(VecHIPRestoreArrayWrite(zz, &zarray));

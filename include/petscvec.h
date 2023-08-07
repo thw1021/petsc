@@ -1002,4 +1002,21 @@ VEC_HIP__DECL_OR_STUB(PetscErrorCode VecHIPResetArray(Vec a), (void)a)
 #undef VEC_CUDA_DECL_OR_STUB
 #undef VEC_HIP__DECL_OR_STUB
 
+#ifdef __cplusplus
+  #include <petscmanagedmemory_fwd.hpp>
+
+PETSC_CXX_EXTERN PetscErrorCode VecAYPXAsync(Vec, const Petsc::ManagedScalar &, Vec, PetscDeviceContext) noexcept;
+PETSC_CXX_EXTERN PetscErrorCode VecAXPYAsync(Vec, const Petsc::ManagedScalar &, Vec, PetscDeviceContext) noexcept;
+PETSC_CXX_EXTERN PetscErrorCode VecDotAsync(Vec, Vec, Petsc::ManagedScalar *, PetscDeviceContext) noexcept;
+PETSC_CXX_EXTERN PetscErrorCode VecTDotAsync(Vec, Vec, Petsc::ManagedScalar *, PetscDeviceContext) noexcept;
+PETSC_CXX_EXTERN PetscErrorCode VecNormAsync(Vec, NormType, Petsc::ManagedReal *, PetscDeviceContext) noexcept;
+PETSC_CXX_EXTERN PetscErrorCode VecScaleAsync(Vec, const Petsc::ManagedScalar &, PetscDeviceContext) noexcept;
+PETSC_CXX_EXTERN PetscErrorCode VecSetAsync(Vec, const Petsc::ManagedScalar &, PetscDeviceContext) noexcept;
+PETSC_CXX_EXTERN PetscErrorCode VecWAXPYAsync(Vec, const Petsc::ManagedScalar &, Vec, Vec, PetscDeviceContext) noexcept;
+PETSC_CXX_EXTERN PetscErrorCode VecNormalizeAsync(Vec, Petsc::ManagedReal *, PetscDeviceContext) noexcept;
+PETSC_CXX_EXTERN PetscErrorCode VecMAXPYAsync(Vec, PetscInt, const Petsc::ManagedScalar *, Vec *, PetscDeviceContext) noexcept;
+#endif // __cplusplus
+
+PETSC_EXTERN PetscErrorCode VecCopyAsync(Vec, Vec, PetscDeviceContext);
+PETSC_EXTERN PetscErrorCode VecPointwiseMultAsync(Vec, Vec, Vec, PetscDeviceContext);
 #endif

@@ -8,6 +8,8 @@
 #include "../src/sys/objects/device/impls/cupm/cupmthrustutility.hpp"
 #include "../src/sys/objects/device/impls/cupm/kernels.hpp"
 
+#include <petscmanagedmemory.hpp>
+
 #if PetscDefined(USE_COMPLEX)
   #include <thrust/transform_reduce.h>
 #endif
@@ -119,32 +121,55 @@ inline PetscErrorCode VecSeq_CUPM<T>::CreateSeqCUPM_(Vec v, PetscDeviceContext d
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+namespace kernels
+{
+
+template <typename T>
+PETSC_KERNEL_DECL static void pointwise_binary(PetscInt size, PetscScalar *PETSC_RESTRICT z, const PetscScalar *PETSC_RESTRICT x, const PetscScalar *PETSC_RESTRICT y, T op)
+{
+  kernels::util::grid_stride_1D(size, [&](PetscInt i) { z[i] = op(x[i], y[i]); });
+}
+
+} // namespace kernels
+
 template <device::cupm::DeviceType T>
 template <typename BinaryFuncT>
-inline PetscErrorCode VecSeq_CUPM<T>::PointwiseBinary_(BinaryFuncT &&binary, Vec xin, Vec yin, Vec zout) noexcept
+inline PetscErrorCode VecSeq_CUPM<T>::PointwiseBinary_(BinaryFuncT &&binary, Vec xin, Vec yin, Vec zout, PetscDeviceContext dctx) noexcept
 {
   PetscFunctionBegin;
   if (const auto n = zout->map->n) {
-    PetscDeviceContext dctx;
-    cupmStream_t       stream;
+    PetscStreamType stype;
 
-    PetscCall(GetHandles_(&dctx, &stream));
-    // clang-format off
-    PetscCallThrust(
-      const auto dxptr = thrust::device_pointer_cast(DeviceArrayRead(dctx, xin).data());
+    PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+    PetscCall(PetscDeviceContextGetStreamType(dctx, &stype));
+    {
+      auto         xarr = DeviceArrayRead(dctx, xin);
+      auto         yarr = DeviceArrayRead(dctx, yin);
+      auto         zarr = DeviceArrayWrite(dctx, zout);
+      cupmStream_t stream;
 
-      THRUST_CALL(
-        thrust::transform,
-        stream,
-        dxptr, dxptr + n,
-        thrust::device_pointer_cast(DeviceArrayRead(dctx, yin).data()),
-        thrust::device_pointer_cast(DeviceArrayWrite(dctx, zout).data()),
-        std::forward<BinaryFuncT>(binary)
-      )
-    );
-    // clang-format on
+      PetscCall(GetHandlesFrom_(dctx, &stream));
+      if (PetscDefined(THRUST_HAS_ASYNC)) {
+        // clang-format off
+          PetscCallThrust(
+            const auto dxptr = thrust::device_pointer_cast(xarr.data());
+
+            THRUST_CALL(
+              thrust::transform,
+              stream,
+              dxptr, dxptr + n,
+              thrust::device_pointer_cast(yarr.data()),
+              thrust::device_pointer_cast(zarr.data()),
+              std::forward<BinaryFuncT>(binary)
+            )
+          );
+        // clang-format on
+      } else {
+        PetscCall(PetscCUPMLaunchKernel1D(n, 0, stream, kernels::pointwise_binary<BinaryFuncT>, n, zarr.data(), xarr.data(), yarr.data(), std::forward<BinaryFuncT>(binary)));
+      }
+      if (stype == PETSC_STREAM_GLOBAL_BLOCKING) PetscCall(PetscDeviceContextSynchronize(dctx));
+    }
     PetscCall(PetscLogFlops(n));
-    PetscCall(PetscDeviceContextSynchronize(dctx));
   } else {
     PetscCall(MaybeIncrementEmptyLocalVec(zout));
   }
@@ -153,14 +178,14 @@ inline PetscErrorCode VecSeq_CUPM<T>::PointwiseBinary_(BinaryFuncT &&binary, Vec
 
 template <device::cupm::DeviceType T>
 template <typename BinaryFuncT>
-inline PetscErrorCode VecSeq_CUPM<T>::PointwiseBinaryDispatch_(PetscErrorCode (*VecSeqFunction)(Vec, Vec, Vec), BinaryFuncT &&binary, Vec wout, Vec xin, Vec yin) noexcept
+inline PetscErrorCode VecSeq_CUPM<T>::PointwiseBinaryDispatch_(PetscErrorCode (*VecSeqFunction)(Vec, Vec, Vec), BinaryFuncT &&binary, Vec wout, Vec xin, Vec yin, PetscDeviceContext dctx) noexcept
 {
   PetscFunctionBegin;
   if (xin->boundtocpu || yin->boundtocpu) {
     PetscCall((*VecSeqFunction)(wout, xin, yin));
   } else {
     // note order of arguments! xin and yin are read, wout is written!
-    PetscCall(PointwiseBinary_(std::forward<BinaryFuncT>(binary), xin, yin, wout));
+    PetscCall(PointwiseBinary_(std::forward<BinaryFuncT>(binary), xin, yin, wout, dctx));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -277,6 +302,10 @@ inline PetscErrorCode VecSeq_CUPM<T>::BindToCPU(Vec v, PetscBool usehost) noexce
   VecSetOp_CUPM(min, VecMin_Seq, Min);
   VecSetOp_CUPM(setpreallocationcoo, VecSetPreallocationCOO_Seq, SetPreallocationCOO);
   VecSetOp_CUPM(setvaluescoo, VecSetValuesCOO_Seq, SetValuesCOO);
+
+  VecSetOp_CUPM(dot_async, nullptr, DotAsync);
+  VecSetOp_CUPM(tdot_async, nullptr, TDotAsync);
+  VecSetOp_CUPM(norm_async, nullptr, NormAsync);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -384,10 +413,45 @@ inline PetscErrorCode VecSeq_CUPM<T>::RestoreLocalVector(Vec v, Vec w) noexcept
 template <device::cupm::DeviceType T>
 inline PetscErrorCode VecSeq_CUPM<T>::AYPX(Vec yin, PetscScalar alpha, Vec xin) noexcept
 {
-  const auto         n    = static_cast<cupmBlasInt_t>(yin->map->n);
-  const auto         sync = n != 0;
-  PetscDeviceContext dctx;
-  PetscBool          xiscupm;
+  static PetscScalar   tmp_alpha;
+  static ManagedScalar scal{nullptr, &tmp_alpha, nullptr, 1, PETSC_USE_POINTER, PETSC_OWN_POINTER, PETSC_OFFLOAD_CPU};
+
+  PetscFunctionBegin;
+  tmp_alpha = alpha;
+  PetscCall(AYPXAsync_<PETSC_MEMTYPE_HOST>(yin, scal, xin, nullptr));
+  // ASYNC TODO
+  PetscCall(PetscDeviceContextSynchronize(nullptr));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+template <device::cupm::DeviceType T>
+inline PetscErrorCode VecSeq_CUPM<T>::AYPXAsync(Vec yin, const ManagedScalar &alpha, Vec xin, PetscDeviceContext dctx) noexcept
+{
+  PetscFunctionBegin;
+  PetscCall(AYPXAsync_<PETSC_MEMTYPE_DEVICE>(yin, alpha, xin, dctx));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+namespace detail
+{
+
+struct complex_one {
+  const PetscReal r;
+  const PetscReal i;
+
+  constexpr complex_one() noexcept : r(1.0), i(0.0) { }
+};
+
+static const PETSC_CONSTMEM_DECL PETSC_DEVICE_DECL complex_one GlobalDeviceOne{};
+
+} // namespace detail
+
+template <device::cupm::DeviceType T>
+template <PetscMemType mtype>
+inline PetscErrorCode VecSeq_CUPM<T>::AYPXAsync_(Vec yin, const ManagedScalar &alpha, Vec xin, PetscDeviceContext dctx) noexcept
+{
+  const auto n = static_cast<cupmBlasInt_t>(yin->map->n);
+  PetscBool  xiscupm;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectTypeCompareAny(PetscObjectCast(xin), &xiscupm, VECSEQCUPM(), VECMPICUPM(), ""));
@@ -395,8 +459,8 @@ inline PetscErrorCode VecSeq_CUPM<T>::AYPX(Vec yin, PetscScalar alpha, Vec xin) 
     PetscCall(VecAYPX_Seq(yin, alpha, xin));
     PetscFunctionReturn(PETSC_SUCCESS);
   }
-  PetscCall(GetHandles_(&dctx));
-  if (alpha == PetscScalar(0.0)) {
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+  if (alpha.KnownAndEqual(0.0)) {
     cupmStream_t stream;
 
     PetscCall(GetHandlesFrom_(dctx, &stream));
@@ -404,29 +468,42 @@ inline PetscErrorCode VecSeq_CUPM<T>::AYPX(Vec yin, PetscScalar alpha, Vec xin) 
     PetscCall(PetscCUPMMemcpyAsync(DeviceArrayWrite(dctx, yin).data(), DeviceArrayRead(dctx, xin).data(), n, cupmMemcpyDeviceToDevice, stream));
     PetscCall(PetscLogGpuTimeEnd());
   } else if (n) {
-    const auto       alphaIsOne = alpha == PetscScalar(1.0);
-    const auto       calpha     = cupmScalarPtrCast(&alpha);
-    cupmBlasHandle_t cupmBlasHandle;
+    const auto         alphaIsOne = alpha.KnownAndEqual(1.0);
+    const auto         yptr       = DeviceArrayReadWrite(dctx, yin);
+    const auto         xptr       = DeviceArrayRead(dctx, xin);
+    const PetscScalar *ptr;
+    cupmBlasHandle_t   cupmBlasHandle;
 
+    PetscCall(alpha.GetArrayRead(dctx, mtype, PETSC_FALSE, &ptr));
     PetscCall(GetHandlesFrom_(dctx, &cupmBlasHandle));
     {
-      const auto yptr = DeviceArrayReadWrite(dctx, yin);
-      const auto xptr = DeviceArrayRead(dctx, xin);
+      const auto calpha = cupmScalarPtrCast(ptr);
+      const auto _      = CUPMBlasPointerModeGuard{cupmBlasHandle, mtype};
 
       PetscCall(PetscLogGpuTimeBegin());
       if (alphaIsOne) {
         PetscCallCUPMBLAS(cupmBlasXaxpy(cupmBlasHandle, n, calpha, xptr.cupmdata(), 1, yptr.cupmdata(), 1));
       } else {
-        const auto one = cupmScalarCast(1.0);
+        const cupmScalar_t *one_ptr = nullptr;
 
+        if (PetscMemTypeHost(mtype)) {
+          static const auto h_one = cupmScalarCast(1.0);
+
+          one_ptr = &h_one;
+        } else {
+          static cupmScalar_t *d_one = nullptr;
+
+          if (PetscUnlikely(!d_one)) PetscCallCUPM(cupmGetSymbolAddress(reinterpret_cast<void **>(&d_one), detail::GlobalDeviceOne));
+          one_ptr = d_one;
+        }
         PetscCallCUPMBLAS(cupmBlasXscal(cupmBlasHandle, n, calpha, yptr.cupmdata(), 1));
-        PetscCallCUPMBLAS(cupmBlasXaxpy(cupmBlasHandle, n, &one, xptr.cupmdata(), 1, yptr.cupmdata(), 1));
+        PetscCallCUPMBLAS(cupmBlasXaxpy(cupmBlasHandle, n, one_ptr, xptr.cupmdata(), 1, yptr.cupmdata(), 1));
       }
       PetscCall(PetscLogGpuTimeEnd());
     }
     PetscCall(PetscLogGpuFlops((alphaIsOne ? 1 : 2) * n));
+    PetscCall(alpha.RestoreArrayRead(dctx, mtype, PETSC_FALSE, &ptr));
   }
-  if (sync) PetscCall(PetscDeviceContextSynchronize(dctx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -434,23 +511,55 @@ inline PetscErrorCode VecSeq_CUPM<T>::AYPX(Vec yin, PetscScalar alpha, Vec xin) 
 template <device::cupm::DeviceType T>
 inline PetscErrorCode VecSeq_CUPM<T>::AXPY(Vec yin, PetscScalar alpha, Vec xin) noexcept
 {
-  PetscBool xiscupm;
+  static PetscScalar   tmp_alpha;
+  static ManagedScalar scal{nullptr, &tmp_alpha, nullptr, 1, PETSC_USE_POINTER, PETSC_OWN_POINTER, PETSC_OFFLOAD_CPU};
 
   PetscFunctionBegin;
+  tmp_alpha = alpha;
+  PetscCall(AXPYAsync_<PETSC_MEMTYPE_HOST>(yin, scal, xin, nullptr));
+  PetscCall(PetscDeviceContextSynchronize(nullptr));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+template <device::cupm::DeviceType T>
+inline PetscErrorCode VecSeq_CUPM<T>::AXPYAsync(Vec yin, const ManagedScalar &alpha, Vec xin, PetscDeviceContext dctx) noexcept
+{
+  PetscFunctionBegin;
+  PetscCall(AXPYAsync_<PETSC_MEMTYPE_DEVICE>(yin, alpha, xin, dctx));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+template <device::cupm::DeviceType T>
+template <PetscMemType mtype>
+inline PetscErrorCode VecSeq_CUPM<T>::AXPYAsync_(Vec yin, const ManagedScalar &alpha, Vec xin, PetscDeviceContext dctx) noexcept
+{
+  PetscStreamType stype;
+  PetscBool       xiscupm;
+
+  PetscFunctionBegin;
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+  PetscCall(PetscDeviceContextGetStreamType(dctx, &stype));
   PetscCall(PetscObjectTypeCompareAny(PetscObjectCast(xin), &xiscupm, VECSEQCUPM(), VECMPICUPM(), ""));
   if (xiscupm) {
-    const auto         n = static_cast<cupmBlasInt_t>(yin->map->n);
-    PetscDeviceContext dctx;
+    const auto         n    = static_cast<cupmBlasInt_t>(yin->map->n);
+    auto               xptr = DeviceArrayRead(dctx, xin);
+    auto               yptr = DeviceArrayReadWrite(dctx, yin);
+    const PetscScalar *ptr;
     cupmBlasHandle_t   cupmBlasHandle;
 
-    PetscCall(GetHandles_(&dctx, &cupmBlasHandle));
-    PetscCall(PetscLogGpuTimeBegin());
-    PetscCallCUPMBLAS(cupmBlasXaxpy(cupmBlasHandle, n, cupmScalarPtrCast(&alpha), DeviceArrayRead(dctx, xin), 1, DeviceArrayReadWrite(dctx, yin), 1));
-    PetscCall(PetscLogGpuTimeEnd());
+    PetscCall(alpha.GetArrayRead(dctx, mtype, PETSC_FALSE, &ptr));
+    PetscCall(GetHandlesFrom_(dctx, &cupmBlasHandle));
+    {
+      const auto _ = CUPMBlasPointerModeGuard{cupmBlasHandle, mtype};
+
+      PetscCall(PetscLogGpuTimeBegin());
+      PetscCallCUPMBLAS(cupmBlasXaxpy(cupmBlasHandle, n, cupmScalarPtrCast(ptr), xptr, 1, yptr, 1));
+      PetscCall(PetscLogGpuTimeEnd());
+    }
     PetscCall(PetscLogGpuFlops(2 * n));
-    PetscCall(PetscDeviceContextSynchronize(dctx));
+    PetscCall(alpha.RestoreArrayRead(dctx, mtype, PETSC_FALSE, &ptr));
   } else {
-    PetscCall(VecAXPY_Seq(yin, alpha, xin));
+    PetscCall(VecAXPY_Seq(yin, alpha.front(dctx), xin));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -469,7 +578,23 @@ template <device::cupm::DeviceType T>
 inline PetscErrorCode VecSeq_CUPM<T>::PointwiseMult(Vec wout, Vec xin, Vec yin) noexcept
 {
   PetscFunctionBegin;
-  PetscCall(PointwiseBinaryDispatch_(VecPointwiseMult_Seq, thrust::multiplies<PetscScalar>{}, wout, xin, yin));
+  PetscCall(PointwiseMultAsync_(wout, xin, yin, nullptr));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+template <device::cupm::DeviceType T>
+inline PetscErrorCode VecSeq_CUPM<T>::PointwiseMultAsync(Vec wout, Vec xin, Vec yin, PetscDeviceContext dctx) noexcept
+{
+  PetscFunctionBegin;
+  PetscCall(PointwiseMultAsync_(wout, xin, yin, dctx));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+template <device::cupm::DeviceType T>
+inline PetscErrorCode VecSeq_CUPM<T>::PointwiseMultAsync_(Vec wout, Vec xin, Vec yin, PetscDeviceContext dctx) noexcept
+{
+  PetscFunctionBegin;
+  PetscCall(PointwiseBinaryDispatch_(VecPointwiseMult_Seq, thrust::multiplies<PetscScalar>{}, wout, xin, yin, dctx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -627,25 +752,51 @@ inline PetscErrorCode VecSeq_CUPM<T>::Log(Vec xin) noexcept
 template <device::cupm::DeviceType T>
 inline PetscErrorCode VecSeq_CUPM<T>::WAXPY(Vec win, PetscScalar alpha, Vec xin, Vec yin) noexcept
 {
+  static PetscScalar   tmp_alpha;
+  static ManagedScalar scal{nullptr, &tmp_alpha, nullptr, 1, PETSC_USE_POINTER, PETSC_OWN_POINTER, PETSC_OFFLOAD_CPU};
+  PetscDeviceContext   dctx;
+
   PetscFunctionBegin;
-  if (alpha == PetscScalar(0.0)) {
-    PetscCall(Copy(yin, win));
+  tmp_alpha = alpha;
+  PetscCall(PetscDeviceContextGetNullContext_Internal(&dctx));
+  PetscCall(WAXPYAsync_<PETSC_MEMTYPE_HOST>(win, scal, xin, yin, dctx));
+  PetscCall(PetscDeviceContextSynchronize(dctx));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+template <device::cupm::DeviceType T>
+inline PetscErrorCode VecSeq_CUPM<T>::WAXPYAsync(Vec win, const ManagedScalar &alpha, Vec xin, Vec yin, PetscDeviceContext dctx) noexcept
+{
+  PetscFunctionBegin;
+  PetscCall(WAXPYAsync_<PETSC_MEMTYPE_DEVICE>(win, alpha, xin, yin, dctx));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+template <device::cupm::DeviceType T>
+template <PetscMemType mtype>
+inline PetscErrorCode VecSeq_CUPM<T>::WAXPYAsync_(Vec win, const ManagedScalar &alpha, Vec xin, Vec yin, PetscDeviceContext dctx) noexcept
+{
+  PetscFunctionBegin;
+  if (alpha.KnownAndEqual(0.0)) {
+    PetscCall(CopyAsync(yin, win, dctx));
   } else if (const auto n = static_cast<cupmBlasInt_t>(win->map->n)) {
-    PetscDeviceContext dctx;
+    const PetscScalar *ptr;
     cupmBlasHandle_t   cupmBlasHandle;
     cupmStream_t       stream;
 
-    PetscCall(GetHandles_(&dctx, &cupmBlasHandle, &stream));
+    PetscCall(alpha.GetArrayRead(dctx, mtype, PETSC_FALSE, &ptr));
+    PetscCall(GetHandlesFrom_(dctx, &cupmBlasHandle, &stream));
     {
       const auto wptr = DeviceArrayWrite(dctx, win);
+      const auto _    = CUPMBlasPointerModeGuard{cupmBlasHandle, mtype};
 
       PetscCall(PetscLogGpuTimeBegin());
       PetscCall(PetscCUPMMemcpyAsync(wptr.data(), DeviceArrayRead(dctx, yin).data(), n, cupmMemcpyDeviceToDevice, stream, true));
-      PetscCallCUPMBLAS(cupmBlasXaxpy(cupmBlasHandle, n, cupmScalarPtrCast(&alpha), DeviceArrayRead(dctx, xin), 1, wptr.cupmdata(), 1));
+      PetscCallCUPMBLAS(cupmBlasXaxpy(cupmBlasHandle, n, cupmScalarPtrCast(ptr), DeviceArrayRead(dctx, xin).cupmdata(), 1, wptr.cupmdata(), 1));
       PetscCall(PetscLogGpuTimeEnd());
     }
     PetscCall(PetscLogGpuFlops(2 * n));
-    PetscCall(PetscDeviceContextSynchronize(dctx));
+    PetscCall(alpha.RestoreArrayRead(dctx, mtype, PETSC_FALSE, &ptr));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -789,20 +940,47 @@ inline PetscErrorCode VecSeq_CUPM<T>::MAXPY(Vec xin, PetscInt nv, const PetscSca
 template <device::cupm::DeviceType T>
 inline PetscErrorCode VecSeq_CUPM<T>::Dot(Vec xin, Vec yin, PetscScalar *z) noexcept
 {
-  PetscFunctionBegin;
-  if (const auto n = static_cast<cupmBlasInt_t>(xin->map->n)) {
-    PetscDeviceContext dctx;
-    cupmBlasHandle_t   cupmBlasHandle;
+  ManagedScalar scal{nullptr, z, nullptr, 1, PETSC_USE_POINTER, PETSC_OWN_POINTER, PETSC_OFFLOAD_CPU};
 
-    PetscCall(GetHandles_(&dctx, &cupmBlasHandle));
+  PetscFunctionBegin;
+  PetscCall(DotAsync_<PETSC_MEMTYPE_HOST>(xin, yin, scal, nullptr));
+  PetscCall(PetscDeviceContextSynchronize(nullptr));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+template <device::cupm::DeviceType T>
+inline PetscErrorCode VecSeq_CUPM<T>::DotAsync(Vec xin, Vec yin, ManagedScalar &z, PetscDeviceContext dctx) noexcept
+{
+  PetscFunctionBegin;
+  PetscCall(DotAsync_<PETSC_MEMTYPE_DEVICE>(xin, yin, z, dctx));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+template <device::cupm::DeviceType T>
+template <PetscMemType mtype>
+inline PetscErrorCode VecSeq_CUPM<T>::DotAsync_(Vec xin, Vec yin, ManagedScalar &z, PetscDeviceContext dctx) noexcept
+{
+  PetscFunctionBegin;
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+  if (const auto n = static_cast<cupmBlasInt_t>(xin->map->n)) {
+    cupmBlasHandle_t cupmBlasHandle;
+    PetscScalar     *ptr;
+
     // arguments y, x are reversed because BLAS complex conjugates the first argument, PETSc the
     // second
+    PetscCall(z.GetArray(dctx, mtype, PETSC_MEMORY_ACCESS_WRITE, PETSC_FALSE, &ptr));
+    PetscCall(GetHandlesFrom_(dctx, &cupmBlasHandle));
     PetscCall(PetscLogGpuTimeBegin());
-    PetscCallCUPMBLAS(cupmBlasXdot(cupmBlasHandle, n, DeviceArrayRead(dctx, yin), 1, DeviceArrayRead(dctx, xin), 1, cupmScalarPtrCast(z)));
+    {
+      auto _ = CUPMBlasPointerModeGuard{cupmBlasHandle, mtype};
+
+      PetscCallCUPMBLAS(cupmBlasXdot(cupmBlasHandle, n, DeviceArrayRead(dctx, yin), 1, DeviceArrayRead(dctx, xin), 1, cupmScalarPtrCast(ptr)));
+    }
     PetscCall(PetscLogGpuTimeEnd());
     PetscCall(PetscLogGpuFlops(2 * n - 1));
+    PetscCall(z.RestoreArray(dctx, mtype, PETSC_MEMORY_ACCESS_WRITE, PETSC_FALSE, &ptr));
   } else {
-    *z = 0.0;
+    z.front(dctx) = 0.0;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -910,18 +1088,6 @@ PETSC_KERNEL_DECL void sum_kernel(const PetscInt size, PetscScalar *PETSC_RESTRI
 }
 
 } // namespace
-
-#if PetscDefined(USING_HCC)
-namespace do_not_use
-{
-
-inline void silence_warning_function_sum_kernel_is_not_needed_and_will_not_be_emitted()
-{
-  (void)sum_kernel;
-}
-
-} // namespace do_not_use
-#endif
 
 } // namespace kernels
 
@@ -1109,23 +1275,66 @@ inline PetscErrorCode VecSeq_CUPM<T>::MDot(Vec xin, PetscInt nv, const Vec yin[]
 template <device::cupm::DeviceType T>
 inline PetscErrorCode VecSeq_CUPM<T>::Set(Vec xin, PetscScalar alpha) noexcept
 {
-  const auto         n = xin->map->n;
-  PetscDeviceContext dctx;
-  cupmStream_t       stream;
+  static PetscScalar   tmp_alpha;
+  static ManagedScalar scal{nullptr, &tmp_alpha, nullptr, 1, PETSC_USE_POINTER, PETSC_OWN_POINTER, PETSC_OFFLOAD_CPU};
+  PetscDeviceContext   dctx;
 
   PetscFunctionBegin;
-  PetscCall(GetHandles_(&dctx, &stream));
-  {
-    const auto xptr = DeviceArrayWrite(dctx, xin);
+  tmp_alpha = alpha;
+  PetscCall(PetscDeviceContextGetNullContext_Internal(&dctx));
+  PetscCall(SetAsync_<PETSC_MEMTYPE_HOST>(xin, scal, dctx));
+  PetscCall(PetscDeviceContextSynchronize(dctx));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
 
-    if (alpha == PetscScalar(0.0)) {
+template <device::cupm::DeviceType T>
+inline PetscErrorCode VecSeq_CUPM<T>::SetAsync(Vec xin, const ManagedScalar &alpha, PetscDeviceContext dctx) noexcept
+{
+  PetscFunctionBegin;
+  PetscCall(SetAsync_<PETSC_MEMTYPE_DEVICE>(xin, alpha, dctx));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+namespace kernels
+{
+
+PETSC_KERNEL_DECL static void set_value(PetscInt size, PetscScalar *PETSC_RESTRICT z, const PetscScalar *PETSC_RESTRICT alpha)
+{
+  const auto aval = *alpha;
+
+  kernels::util::grid_stride_1D(size, [&](PetscInt i) { z[i] = aval; });
+}
+
+} // namespace kernels
+
+template <device::cupm::DeviceType T>
+template <PetscMemType mtype>
+inline PetscErrorCode VecSeq_CUPM<T>::SetAsync_(Vec xin, const ManagedScalar &alpha, PetscDeviceContext dctx) noexcept
+{
+  const auto n = xin->map->n;
+
+  PetscFunctionBegin;
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+  {
+    const auto   xptr = DeviceArrayWrite(dctx, xin);
+    cupmStream_t stream;
+
+    PetscCall(GetHandlesFrom_(dctx, &stream));
+    if (alpha.KnownAndEqual(0.0)) {
       PetscCall(PetscCUPMMemsetAsync(xptr.data(), 0, n, stream));
     } else {
-      const auto dptr = thrust::device_pointer_cast(xptr.data());
+      const PetscScalar *aptr;
 
-      PetscCallThrust(THRUST_CALL(thrust::fill, stream, dptr, dptr + n, alpha));
+      PetscCall(alpha.GetArrayRead(dctx, mtype, PETSC_FALSE, &aptr));
+      if (PetscMemTypeHost(mtype)) {
+        const auto dptr = thrust::device_pointer_cast(xptr.data());
+
+        PetscCallThrust(THRUST_CALL(thrust::fill, stream, dptr, dptr + n, *aptr));
+      } else {
+        PetscCall(PetscCUPMLaunchKernel1D(n, 0, stream, kernels::set_value, n, xptr.data(), aptr));
+      }
+      PetscCall(alpha.RestoreArrayRead(dctx, mtype, PETSC_FALSE, &aptr));
     }
-    if (n) PetscCall(PetscDeviceContextSynchronize(dctx)); // don't sync if we did nothing
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1134,20 +1343,53 @@ inline PetscErrorCode VecSeq_CUPM<T>::Set(Vec xin, PetscScalar alpha) noexcept
 template <device::cupm::DeviceType T>
 inline PetscErrorCode VecSeq_CUPM<T>::Scale(Vec xin, PetscScalar alpha) noexcept
 {
+  static PetscScalar   tmp_alpha;
+  static ManagedScalar scal{nullptr, &tmp_alpha, nullptr, 1, PETSC_USE_POINTER, PETSC_OWN_POINTER, PETSC_OFFLOAD_CPU};
+  PetscDeviceContext   dctx;
+
   PetscFunctionBegin;
-  if (PetscUnlikely(alpha == PetscScalar(1.0))) PetscFunctionReturn(PETSC_SUCCESS);
-  if (PetscUnlikely(alpha == PetscScalar(0.0))) {
+  if (alpha == 0.0) {
     PetscCall(Set(xin, alpha));
-  } else if (const auto n = static_cast<cupmBlasInt_t>(xin->map->n)) {
-    PetscDeviceContext dctx;
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+  PetscCall(PetscDeviceContextGetNullContext_Internal(&dctx));
+  tmp_alpha = alpha;
+  PetscCall(ScaleAsync_<PETSC_MEMTYPE_HOST>(xin, scal, dctx));
+  PetscCall(PetscDeviceContextSynchronize(dctx));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+template <device::cupm::DeviceType T>
+inline PetscErrorCode VecSeq_CUPM<T>::ScaleAsync(Vec xin, const ManagedScalar &alpha, PetscDeviceContext dctx) noexcept
+{
+  PetscFunctionBegin;
+  PetscCall(ScaleAsync_<PETSC_MEMTYPE_DEVICE>(xin, alpha, dctx));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+template <device::cupm::DeviceType T>
+template <PetscMemType mtype>
+inline PetscErrorCode VecSeq_CUPM<T>::ScaleAsync_(Vec xin, const ManagedScalar &alpha, PetscDeviceContext dctx) noexcept
+{
+  PetscFunctionBegin;
+  if (PetscUnlikely(alpha.KnownAndEqual(1.0))) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+  if (const auto n = static_cast<cupmBlasInt_t>(xin->map->n)) {
+    const auto         xarr = DeviceArrayReadWrite(dctx, xin);
+    const PetscScalar *aptr;
     cupmBlasHandle_t   cupmBlasHandle;
 
-    PetscCall(GetHandles_(&dctx, &cupmBlasHandle));
-    PetscCall(PetscLogGpuTimeBegin());
-    PetscCallCUPMBLAS(cupmBlasXscal(cupmBlasHandle, n, cupmScalarPtrCast(&alpha), DeviceArrayReadWrite(dctx, xin), 1));
-    PetscCall(PetscLogGpuTimeEnd());
+    PetscCall(alpha.GetArrayRead(dctx, mtype, PETSC_FALSE, &aptr));
+    PetscCall(GetHandlesFrom_(dctx, &cupmBlasHandle));
+    {
+      const auto _ = CUPMBlasPointerModeGuard{cupmBlasHandle, mtype};
+
+      PetscCall(PetscLogGpuTimeBegin());
+      PetscCallCUPMBLAS(cupmBlasXscal(cupmBlasHandle, n, cupmScalarPtrCast(aptr), xarr.data(), 1));
+      PetscCall(PetscLogGpuTimeEnd());
+    }
     PetscCall(PetscLogGpuFlops(n));
-    PetscCall(PetscDeviceContextSynchronize(dctx));
+    PetscCall(alpha.RestoreArrayRead(dctx, mtype, PETSC_FALSE, &aptr));
   } else {
     PetscCall(MaybeIncrementEmptyLocalVec(xin));
   }
@@ -1158,18 +1400,45 @@ inline PetscErrorCode VecSeq_CUPM<T>::Scale(Vec xin, PetscScalar alpha) noexcept
 template <device::cupm::DeviceType T>
 inline PetscErrorCode VecSeq_CUPM<T>::TDot(Vec xin, Vec yin, PetscScalar *z) noexcept
 {
-  PetscFunctionBegin;
-  if (const auto n = static_cast<cupmBlasInt_t>(xin->map->n)) {
-    PetscDeviceContext dctx;
-    cupmBlasHandle_t   cupmBlasHandle;
+  ManagedScalar scal{nullptr, z, nullptr, 1, PETSC_USE_POINTER, PETSC_OWN_POINTER, PETSC_OFFLOAD_CPU};
 
-    PetscCall(GetHandles_(&dctx, &cupmBlasHandle));
+  PetscFunctionBegin;
+  PetscCall(TDotAsync_<PETSC_MEMTYPE_HOST>(xin, yin, scal, nullptr));
+  PetscCall(PetscDeviceContextSynchronize(nullptr));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+template <device::cupm::DeviceType T>
+inline PetscErrorCode VecSeq_CUPM<T>::TDotAsync(Vec xin, Vec yin, ManagedScalar &z, PetscDeviceContext dctx) noexcept
+{
+  PetscFunctionBegin;
+  PetscCall(TDotAsync_<PETSC_MEMTYPE_DEVICE>(xin, yin, z, dctx));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+template <device::cupm::DeviceType T>
+template <PetscMemType mtype>
+inline PetscErrorCode VecSeq_CUPM<T>::TDotAsync_(Vec xin, Vec yin, ManagedScalar &z, PetscDeviceContext dctx) noexcept
+{
+  PetscFunctionBegin;
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+  if (const auto n = static_cast<cupmBlasInt_t>(xin->map->n)) {
+    cupmBlasHandle_t cupmBlasHandle;
+    PetscScalar     *ptr;
+
+    PetscCall(z.GetArray(dctx, mtype, PETSC_MEMORY_ACCESS_WRITE, PETSC_FALSE, &ptr));
+    PetscCall(GetHandlesFrom_(dctx, &cupmBlasHandle));
     PetscCall(PetscLogGpuTimeBegin());
-    PetscCallCUPMBLAS(cupmBlasXdotu(cupmBlasHandle, n, DeviceArrayRead(dctx, xin), 1, DeviceArrayRead(dctx, yin), 1, cupmScalarPtrCast(z)));
+    {
+      const auto _ = CUPMBlasPointerModeGuard{cupmBlasHandle, mtype};
+
+      PetscCallCUPMBLAS(cupmBlasXdotu(cupmBlasHandle, n, DeviceArrayRead(dctx, xin), 1, DeviceArrayRead(dctx, yin), 1, cupmScalarPtrCast(ptr)));
+    }
     PetscCall(PetscLogGpuTimeEnd());
     PetscCall(PetscLogGpuFlops(2 * n - 1));
+    PetscCall(z.RestoreArray(dctx, mtype, PETSC_MEMORY_ACCESS_WRITE, PETSC_FALSE, &ptr));
   } else {
-    *z = 0.0;
+    z.front(dctx) = 0.0;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1179,14 +1448,35 @@ template <device::cupm::DeviceType T>
 inline PetscErrorCode VecSeq_CUPM<T>::Copy(Vec xin, Vec yout) noexcept
 {
   PetscFunctionBegin;
+  PetscCall(CopyAsync_(xin, yout, nullptr));
+  PetscCall(PetscDeviceContextSynchronize(nullptr));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+// v->ops->copy_async
+template <device::cupm::DeviceType T>
+inline PetscErrorCode VecSeq_CUPM<T>::CopyAsync(Vec xin, Vec yout, PetscDeviceContext dctx) noexcept
+{
+  PetscFunctionBegin;
+  PetscCall(CopyAsync_(xin, yout, dctx));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+template <device::cupm::DeviceType T>
+inline PetscErrorCode VecSeq_CUPM<T>::CopyAsync_(Vec xin, Vec yout, PetscDeviceContext dctx) noexcept
+{
+  PetscFunctionBegin;
   if (xin == yout) PetscFunctionReturn(PETSC_SUCCESS);
   if (const auto n = xin->map->n) {
-    const auto xmask = xin->offloadmask;
     // silence buggy gcc warning: mode may be used uninitialized in this function
-    auto               mode = cupmMemcpyDeviceToDevice;
-    PetscDeviceContext dctx;
-    cupmStream_t       stream;
+    auto            mode  = cupmMemcpyDeviceToDevice;
+    const auto      xmask = xin->offloadmask;
+    PetscStreamType stype;
+    cupmStream_t    stream;
 
+    PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+    PetscCall(PetscDeviceContextGetStreamType(dctx, &stype));
+    PetscCall(GetHandlesFrom_(dctx, &stream));
     // translate from PetscOffloadMask to cupmMemcpyKind
     switch (const auto ymask = yout->offloadmask) {
     case PETSC_OFFLOAD_UNALLOCATED: {
@@ -1212,7 +1502,6 @@ inline PetscErrorCode VecSeq_CUPM<T>::Copy(Vec xin, Vec yout) noexcept
       SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Incompatible offload mask %s", PetscOffloadMaskToString(ymask));
     }
 
-    PetscCall(GetHandles_(&dctx, &stream));
     switch (mode) {
     case cupmMemcpyDeviceToDevice: // the best case
     case cupmMemcpyHostToDevice: { // not terrible
@@ -1237,7 +1526,6 @@ inline PetscErrorCode VecSeq_CUPM<T>::Copy(Vec xin, Vec yout) noexcept
     default:
       SETERRQ(PETSC_COMM_SELF, PETSC_ERR_GPU, "Unknown cupmMemcpyKind %d", static_cast<int>(mode));
     }
-    PetscCall(PetscDeviceContextSynchronize(dctx));
   } else {
     PetscCall(MaybeIncrementEmptyLocalVec(yout));
   }
@@ -1328,48 +1616,86 @@ inline PetscErrorCode VecSeq_CUPM<T>::AXPBYPCZ(Vec zin, PetscScalar alpha, Petsc
 template <device::cupm::DeviceType T>
 inline PetscErrorCode VecSeq_CUPM<T>::Norm(Vec xin, NormType type, PetscReal *z) noexcept
 {
-  PetscDeviceContext dctx;
-  cupmBlasHandle_t   cupmBlasHandle;
+  // ASYNC TODO: depending on how NormAsync_() handles things (pointer to multiple or just
+  // reference to single that is sized right)
+  const auto  size = static_cast<typename ManagedReal::size_type>(1 + (type == NORM_1_AND_2));
+  ManagedReal scal{nullptr, z, nullptr, size, PETSC_USE_POINTER, PETSC_OWN_POINTER, PETSC_OFFLOAD_CPU};
 
   PetscFunctionBegin;
-  PetscCall(GetHandles_(&dctx, &cupmBlasHandle));
+  PetscCall(NormAsync_<PETSC_MEMTYPE_HOST>(xin, type, &scal, nullptr));
+  PetscCall(PetscDeviceContextSynchronize(nullptr));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+template <device::cupm::DeviceType T>
+inline PetscErrorCode VecSeq_CUPM<T>::NormAsync(Vec xin, NormType type, ManagedReal *z, PetscDeviceContext dctx) noexcept
+{
+  PetscFunctionBegin;
+  PetscCall(NormAsync_<PETSC_MEMTYPE_DEVICE>(xin, type, z, dctx));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+template <device::cupm::DeviceType T>
+template <PetscMemType mtype>
+inline PetscErrorCode VecSeq_CUPM<T>::NormAsync_(Vec xin, NormType type, ManagedReal *z, PetscDeviceContext dctx) noexcept
+{
+  const auto norm12 = type == NORM_1_AND_2;
+
+  PetscFunctionBegin;
+  PetscAssert(type != NORM_1_AND_2, PETSC_COMM_SELF, PETSC_ERR_SUP, "Not implemented yet");
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
   if (const auto n = static_cast<cupmBlasInt_t>(xin->map->n)) {
-    const auto xptr      = DeviceArrayRead(dctx, xin);
-    PetscInt   flopCount = 0;
+    PetscInt         flopCount = 0;
+    cupmBlasHandle_t cupmBlasHandle;
+    PetscReal       *zptr;
 
+    // ASYNC TODO:
+    // handle both norm types
+    PetscCall(z[0].GetArray(dctx, mtype, PETSC_MEMORY_ACCESS_WRITE, PETSC_FALSE, &zptr));
+    PetscCall(GetHandlesFrom_(dctx, &cupmBlasHandle));
     PetscCall(PetscLogGpuTimeBegin());
-    switch (type) {
-    case NORM_1_AND_2:
-    case NORM_1:
-      PetscCallCUPMBLAS(cupmBlasXasum(cupmBlasHandle, n, xptr.cupmdata(), 1, cupmRealPtrCast(z)));
-      flopCount = std::max(n - 1, 0);
-      if (type == NORM_1) break;
-      ++z; // fall-through
-#if PETSC_CPP_VERSION >= 17
-      [[fallthrough]];
-#endif
-    case NORM_2:
-    case NORM_FROBENIUS:
-      PetscCallCUPMBLAS(cupmBlasXnrm2(cupmBlasHandle, n, xptr.cupmdata(), 1, cupmRealPtrCast(z)));
-      flopCount += std::max(2 * n - 1, 0); // += in case we've fallen through from NORM_1_AND_2
-      break;
-    case NORM_INFINITY: {
-      cupmBlasInt_t max_loc = 0;
-      PetscScalar   xv      = 0.;
-      cupmStream_t  stream;
+    {
+      const auto xptr = DeviceArrayRead(dctx, xin);
+      const auto _    = CUPMBlasPointerModeGuard{cupmBlasHandle, mtype};
 
-      PetscCall(GetHandlesFrom_(dctx, &stream));
-      PetscCallCUPMBLAS(cupmBlasXamax(cupmBlasHandle, n, xptr.cupmdata(), 1, &max_loc));
-      PetscCall(PetscCUPMMemcpyAsync(&xv, xptr.data() + max_loc - 1, 1, cupmMemcpyDeviceToHost, stream));
-      *z = PetscAbsScalar(xv);
-      // REVIEW ME: flopCount = ???
-    } break;
+      switch (type) {
+      case NORM_1_AND_2:
+      case NORM_1:
+        PetscCallCUPMBLAS(cupmBlasXasum(cupmBlasHandle, n, xptr.cupmdata(), 1, cupmRealPtrCast(zptr)));
+        flopCount = std::max(n - 1, cupmBlasInt_t{0});
+        if (type == NORM_1) break;
+        ++zptr; // fall-through
+#if PETSC_CPP_VERSION >= 17
+        [[fallthrough]];
+#endif
+      case NORM_2:
+      case NORM_FROBENIUS:
+        // ASYNC TODO: decide whether we want this to be fusable, it is current much slower
+        PetscCallCUPMBLAS(cupmBlasXnrm2(cupmBlasHandle, n, xptr.cupmdata(), 1, cupmRealPtrCast(zptr)));
+        // += in case we've fallen through from NORM_1_AND_2
+        flopCount += std::max(2 * n - 1, cupmBlasInt_t{0});
+        break;
+      case NORM_INFINITY: {
+        cupmBlasInt_t max_loc = 0;
+        PetscScalar   xv      = 0.;
+        cupmStream_t  stream;
+
+        // ASYNC TODO
+        PetscCall(GetHandlesFrom_(dctx, &stream));
+        PetscCallCUPMBLAS(cupmBlasXamax(cupmBlasHandle, n, xptr.cupmdata(), 1, &max_loc));
+        PetscCall(PetscCUPMMemcpyAsync(&xv, xptr.data() + max_loc - 1, 1, cupmMemcpyDeviceToHost, stream));
+        *zptr = PetscAbsScalar(xv);
+        PetscCheck(PetscMemTypeHost(mtype), PETSC_COMM_SELF, PETSC_ERR_SUP, "%s memory not supported for NORM_INFINITY", PetscMemTypeToString(mtype));
+        // REVIEW ME: flopCount = ???
+      } break;
+      }
     }
     PetscCall(PetscLogGpuTimeEnd());
     PetscCall(PetscLogGpuFlops(flopCount));
+    PetscCall(z[0].RestoreArray(dctx, mtype, PETSC_MEMORY_ACCESS_WRITE, PETSC_FALSE, &zptr));
   } else {
-    z[0]                    = 0.0;
-    z[type == NORM_1_AND_2] = 0.0;
+    z[0].front(dctx) = 0.0;
+    if (norm12) z[1].front(dctx) = 0.0;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1701,7 +2027,7 @@ inline PetscErrorCode VecSeq_CUPM<T>::DotNorm2(Vec s, Vec t, PetscScalar *dp, Pe
       thrust::tie(*dp, *nm) = THRUST_CALL(
         thrust::inner_product,
         stream,
-        sdptr, sdptr+s->map->n, thrust::device_pointer_cast(DeviceArrayRead(dctx, t).data()),
+        sdptr, sdptr + s->map->n, thrust::device_pointer_cast(DeviceArrayRead(dctx, t).data()),
         thrust::make_tuple(dpt, nmt),
         detail::dotnorm2_tuple_plus{}, detail::dotnorm2_mult{}
       );
@@ -1730,7 +2056,6 @@ inline PetscErrorCode VecSeq_CUPM<T>::Conjugate(Vec xin) noexcept
 
 namespace detail
 {
-
 struct real_part {
   PETSC_NODISCARD PETSC_HOSTDEVICE_INLINE_DECL thrust::tuple<PetscReal, PetscInt> operator()(const thrust::tuple<PetscScalar, PetscInt> &x) const { return {PetscRealPart(x.get<0>()), x.get<1>()}; }
 

@@ -4,12 +4,8 @@ using namespace Petsc::device::cupm;
 
 PetscErrorCode PetscDeviceContextCreate_HIP(PetscDeviceContext dctx)
 {
-  static constexpr auto hip_context = CUPMContextHip();
-
   PetscFunctionBegin;
-  PetscCall(hip_context.initialize(dctx->device));
-  dctx->data = new PetscDeviceContext_(HIP);
-  *dctx->ops = hip_context.ops;
+  PetscCall(PetscDeviceContextCreate_CUPM<DeviceType::HIP>(dctx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -24,22 +20,14 @@ PetscErrorCode PetscDeviceContextCreate_HIP(PetscDeviceContext dctx)
 
 PetscErrorCode PetscHIPBLASGetHandle(hipblasHandle_t *handle)
 {
-  PetscDeviceContext dctx;
-
   PetscFunctionBegin;
-  PetscAssertPointer(handle, 1);
-  PetscCall(PetscDeviceContextGetCurrentContextAssertType_Internal(&dctx, PETSC_DEVICE_HIP));
-  PetscCall(PetscDeviceContextGetBLASHandle_Internal(dctx, handle));
+  PetscCall(PetscCUPMBLASGetHandle<DeviceType::HIP>(handle));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode PetscHIPSOLVERGetHandle(hipsolverHandle_t *handle)
+PetscErrorCode PetscHIPSOLVERDnGetHandle(hipsolverDnHandle_t *handle)
 {
-  PetscDeviceContext dctx;
-
   PetscFunctionBegin;
-  PetscAssertPointer(handle, 1);
-  PetscCall(PetscDeviceContextGetCurrentContextAssertType_Internal(&dctx, PETSC_DEVICE_HIP));
-  PetscCall(PetscDeviceContextGetSOLVERHandle_Internal(dctx, handle));
+  PetscCall(PetscCUPMSolverGetHandle<DeviceType::HIP>(handle));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

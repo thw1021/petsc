@@ -86,7 +86,15 @@ static PetscErrorCode TestAllocate(PetscDeviceContext dctx, PetscRandom rand, Pe
   PetscCall(PetscDeviceMalloc(dctx, mtype, n, &ptr));
   PetscCall(PetscDeviceArrayZero(dctx, ptr, n));
   PetscCall(PetscMalloc1(n, &tmp_ptr));
-  PetscCall(PetscDeviceRegisterMemory(tmp_ptr, PETSC_MEMTYPE_HOST, n * sizeof(*tmp_ptr)));
+  {
+    PetscPointerAttributes attr;
+
+    attr.mtype = PETSC_MEMTYPE_HOST;
+    attr.id    = PETSC_UNKNOWN_MEMORY_ID;
+    attr.size  = n * sizeof(*tmp_ptr);
+    attr.align = PETSC_DEVICE_ALIGNOF(*tmp_ptr);
+    PetscCall(PetscDeviceRegisterMemory(tmp_ptr, &attr));
+  }
   for (PetscInt i = 0; i < n; ++i) tmp_ptr[i] = (PetscScalar)i;
   PetscCall(PetscDeviceArrayCopy(dctx, tmp_ptr, ptr, n));
   PetscCall(PetscDeviceContextSynchronize(dctx));
@@ -105,6 +113,7 @@ static PetscErrorCode TestAsyncCoherence(PetscDeviceContext dctx, PetscRandom ra
   PetscDeviceContext *sub;
 
   PetscFunctionBegin;
+  (void)rand;
   PetscCall(PetscDeviceContextGetDeviceType(dctx, &dtype));
   // ensure the streams are nonblocking
   PetscCall(PetscDeviceContextForkWithStreamType(dctx, PETSC_STREAM_GLOBAL_NONBLOCKING, nsub, &sub));
@@ -128,8 +137,15 @@ static PetscErrorCode TestAsyncCoherence(PetscDeviceContext dctx, PetscRandom ra
   // zero on the other
   PetscCall(PetscDeviceArrayZero(sub[1], ptr, n));
   PetscCall(PetscDeviceContextSynchronize(sub[1]));
-  for (PetscInt i = 0; i < n; ++i) {
-    for (PetscInt i = 0; i < n; ++i) PetscCheck(ptr[i] == (PetscScalar)0.0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "PetscDeviceArrayZero() was not properly serialized, ptr[%" PetscInt_FMT "] %g != 0", i, (double)PetscAbsScalar(ptr[i]));
+  // loop 3 times to try and catch out any delayed issues
+  for (PetscInt j = 0; j < 3; ++j) {
+    for (PetscInt i = 0; i < n; ++i) {
+      // must force the optimizer to do this load each time, otherwise it can assume it does
+      // not change after the first loop and constant-folds it
+      const PetscScalar val = ((volatile PetscScalar *)ptr)[i];
+
+      PetscCheck(val == (PetscScalar)0.0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "PetscDeviceArrayZero() was not properly serialized, ptr[%" PetscInt_FMT "] %g != 0", i, (double)PetscAbsScalar(val));
+    }
   }
   PetscCall(PetscDeviceFree(sub[1], ptr));
 
@@ -139,8 +155,12 @@ static PetscErrorCode TestAsyncCoherence(PetscDeviceContext dctx, PetscRandom ra
     PetscCall(PetscDeviceMalloc(dctx, PETSC_MEMTYPE_HOST, n, &tmp_ptr));
     PetscCall(PetscDeviceArrayCopy(sub[0], tmp_ptr, ptr, n));
     PetscCall(PetscDeviceContextSynchronize(sub[0]));
-    for (PetscInt i = 0; i < n; ++i) {
-      for (PetscInt i = 0; i < n; ++i) PetscCheck(tmp_ptr[i] == (PetscScalar)0.0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "PetscDeviceArrayCopt() was not properly serialized, ptr[%" PetscInt_FMT "] %g != 0", i, (double)PetscAbsScalar(tmp_ptr[i]));
+    for (PetscInt j = 0; j < 3; ++j) {
+      for (PetscInt i = 0; i < n; ++i) {
+        const PetscScalar val = ((volatile PetscScalar *)tmp_ptr)[i];
+
+        PetscCheck(val == (PetscScalar)0.0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "PetscDeviceArrayCopt() was not properly serialized, ptr[%" PetscInt_FMT "] %g != 0", i, (double)PetscAbsScalar(val));
+      }
     }
     PetscCall(PetscDeviceFree(sub[1], ptr));
   }

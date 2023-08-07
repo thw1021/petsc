@@ -159,6 +159,8 @@ PetscErrorCode PetscDeviceInitializePackage(void)
   PetscCall(PetscDeviceRegisterEvent_Private("DCtxJoin", PETSC_DEVICE_CONTEXT_CLASSID, &DCONTEXT_Join));
   PetscCall(PetscDeviceRegisterEvent_Private("DCtxSync", PETSC_DEVICE_CONTEXT_CLASSID, &DCONTEXT_Sync));
   PetscCall(PetscDeviceRegisterEvent_Private("DCtxMark", PETSC_DEVICE_CONTEXT_CLASSID, &DCONTEXT_Mark));
+  // disable high traffic events by default
+  PetscCall(PetscLogEventSetActiveAll(DCONTEXT_Mark, PETSC_FALSE));
   {
     const PetscClassId classids[] = {PETSC_DEVICE_CONTEXT_CLASSID, PETSC_DEVICE_CLASSID};
 

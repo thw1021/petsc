@@ -528,6 +528,8 @@ PetscErrorCode VecDuplicate(Vec v, Vec *newv)
 @*/
 PetscErrorCode VecDestroy(Vec *v)
 {
+  PetscObjectId id;
+
   PetscFunctionBegin;
   PetscAssertPointer(v, 1);
   if (!*v) PetscFunctionReturn(PETSC_SUCCESS);
@@ -543,6 +545,8 @@ PetscErrorCode VecDestroy(Vec *v)
   PetscCall(PetscFree((*v)->defaultrandtype));
   /* destroy the external/common part */
   PetscCall(PetscLayoutDestroy(&(*v)->map));
+  PetscCall(PetscObjectGetId((PetscObject)*v, &id));
+  PetscCall(PetscDeviceContextClearIntentFromID(id));
   PetscCall(PetscHeaderDestroy(v));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

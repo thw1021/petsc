@@ -1,15 +1,10 @@
 #ifndef CUPMALLOCATOR_HPP
 #define CUPMALLOCATOR_HPP
 
+#include <petsc/private/cupminterface.hpp>
 #include <petsc/private/cpp/object_pool.hpp>
 
 #include "../segmentedmempool.hpp"
-#include "cupmthrustutility.hpp"
-
-#include <thrust/device_ptr.h>
-#include <thrust/fill.h>
-
-#include <limits> // std::numeric_limits
 
 namespace Petsc
 {
@@ -29,25 +24,19 @@ class HostAllocator;
 
 // Allocator class to allocate pinned host memory for use with device
 template <DeviceType T, typename PetscType>
-class HostAllocator : public memory::impl::SegmentedMemoryPoolAllocatorBase<PetscType>, impl::Interface<T> {
+class HostAllocator final : public memory::impl::SegmentedMemoryPoolAllocatorBase<PetscType>, impl::Interface<T> {
 public:
   PETSC_CUPM_INHERIT_INTERFACE_TYPEDEFS_USING(T);
-  using base_type       = memory::impl::SegmentedMemoryPoolAllocatorBase<PetscType>;
-  using real_value_type = typename base_type::real_value_type;
-  using size_type       = typename base_type::size_type;
-  using value_type      = typename base_type::value_type;
+  using base_type  = memory::impl::SegmentedMemoryPoolAllocatorBase<PetscType>;
+  using size_type  = typename base_type::size_type;
+  using value_type = typename base_type::value_type;
 
-  template <typename U>
-  static PetscErrorCode allocate(value_type **, size_type, const StreamBase<U> *) noexcept;
-  template <typename U>
-  static PetscErrorCode deallocate(value_type *, const StreamBase<U> *) noexcept;
-  template <typename U>
-  static PetscErrorCode uninitialized_copy(value_type *, const value_type *, size_type, const StreamBase<U> *) noexcept;
+  static PetscErrorCode allocate(PetscDeviceContext, size_type, value_type **) noexcept;
+  static PetscErrorCode deallocate(PetscDeviceContext, value_type **) noexcept;
 };
 
 template <DeviceType T, typename P>
-template <typename U>
-inline PetscErrorCode HostAllocator<T, P>::allocate(value_type **ptr, size_type n, const StreamBase<U> *) noexcept
+inline PetscErrorCode HostAllocator<T, P>::allocate(PetscDeviceContext, size_type n, value_type **ptr) noexcept
 {
   PetscFunctionBegin;
   PetscCall(PetscCUPMMallocHost(ptr, n));
@@ -55,20 +44,11 @@ inline PetscErrorCode HostAllocator<T, P>::allocate(value_type **ptr, size_type 
 }
 
 template <DeviceType T, typename P>
-template <typename U>
-inline PetscErrorCode HostAllocator<T, P>::deallocate(value_type *ptr, const StreamBase<U> *) noexcept
+inline PetscErrorCode HostAllocator<T, P>::deallocate(PetscDeviceContext, value_type **ptr) noexcept
 {
   PetscFunctionBegin;
-  PetscCallCUPM(cupmFreeHost(ptr));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-template <DeviceType T, typename P>
-template <typename U>
-inline PetscErrorCode HostAllocator<T, P>::uninitialized_copy(value_type *dest, const value_type *src, size_type n, const StreamBase<U> *stream) noexcept
-{
-  PetscFunctionBegin;
-  PetscCall(PetscCUPMMemcpyAsync(dest, src, n, cupmMemcpyHostToHost, stream->get_stream(), true));
+  PetscCallCUPM(cupmFreeHost(*ptr));
+  *ptr = nullptr;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -80,72 +60,39 @@ template <DeviceType T, typename PetscType = char>
 class DeviceAllocator;
 
 template <DeviceType T, typename PetscType>
-class DeviceAllocator : public memory::impl::SegmentedMemoryPoolAllocatorBase<PetscType>, impl::Interface<T> {
+class DeviceAllocator final : public memory::impl::SegmentedMemoryPoolAllocatorBase<PetscType>, impl::Interface<T> {
 public:
   PETSC_CUPM_INHERIT_INTERFACE_TYPEDEFS_USING(T);
-  using base_type       = memory::impl::SegmentedMemoryPoolAllocatorBase<PetscType>;
-  using real_value_type = typename base_type::real_value_type;
-  using size_type       = typename base_type::size_type;
-  using value_type      = typename base_type::value_type;
+  using base_type  = memory::impl::SegmentedMemoryPoolAllocatorBase<PetscType>;
+  using size_type  = typename base_type::size_type;
+  using value_type = typename base_type::value_type;
 
-  template <typename U>
-  static PetscErrorCode allocate(value_type **, size_type, const StreamBase<U> *) noexcept;
-  template <typename U>
-  static PetscErrorCode deallocate(value_type *, const StreamBase<U> *) noexcept;
-  template <typename U>
-  static PetscErrorCode zero(value_type *, size_type, const StreamBase<U> *) noexcept;
-  template <typename U>
-  static PetscErrorCode uninitialized_copy(value_type *, const value_type *, size_type, const StreamBase<U> *) noexcept;
-  template <typename U>
-  static PetscErrorCode set_canary(value_type *, size_type, const StreamBase<U> *) noexcept;
+  static PetscErrorCode allocate(PetscDeviceContext, size_type, value_type **) noexcept;
+  static PetscErrorCode deallocate(PetscDeviceContext, value_type **) noexcept;
 };
 
 template <DeviceType T, typename P>
-template <typename U>
-inline PetscErrorCode DeviceAllocator<T, P>::allocate(value_type **ptr, size_type n, const StreamBase<U> *stream) noexcept
+inline PetscErrorCode DeviceAllocator<T, P>::allocate(PetscDeviceContext dctx, size_type n, value_type **ptr) noexcept
 {
+  cupmStream_t *stream;
+
   PetscFunctionBegin;
-  PetscCall(PetscCUPMMallocAsync(ptr, n, stream->get_stream()));
+  // ASYNC TODO: maybe no need to use the accessors here
+  PetscCall(PetscDeviceContextGetStreamHandle_Internal(dctx, (void **)&stream));
+  PetscCall(PetscCUPMMallocAsync(ptr, n, *stream));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 template <DeviceType T, typename P>
-template <typename U>
-inline PetscErrorCode DeviceAllocator<T, P>::deallocate(value_type *ptr, const StreamBase<U> *stream) noexcept
+inline PetscErrorCode DeviceAllocator<T, P>::deallocate(PetscDeviceContext dctx, value_type **ptr) noexcept
 {
-  PetscFunctionBegin;
-  PetscCallCUPM(cupmFreeAsync(ptr, stream->get_stream()));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-template <DeviceType T, typename P>
-template <typename U>
-inline PetscErrorCode DeviceAllocator<T, P>::zero(value_type *ptr, size_type n, const StreamBase<U> *stream) noexcept
-{
-  PetscFunctionBegin;
-  PetscCall(PetscCUPMMemsetAsync(ptr, 0, n, stream->get_stream(), true));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-template <DeviceType T, typename P>
-template <typename U>
-inline PetscErrorCode DeviceAllocator<T, P>::uninitialized_copy(value_type *dest, const value_type *src, size_type n, const StreamBase<U> *stream) noexcept
-{
-  PetscFunctionBegin;
-  PetscCall(PetscCUPMMemcpyAsync(dest, src, n, cupmMemcpyDeviceToDevice, stream->get_stream(), true));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-template <DeviceType T, typename P>
-template <typename U>
-inline PetscErrorCode DeviceAllocator<T, P>::set_canary(value_type *ptr, size_type n, const StreamBase<U> *stream) noexcept
-{
-  using limit_t           = std::numeric_limits<real_value_type>;
-  const value_type canary = limit_t::has_signaling_NaN ? limit_t::signaling_NaN() : limit_t::max();
-  const auto       xptr   = thrust::device_pointer_cast(ptr);
+  cupmStream_t *stream;
 
   PetscFunctionBegin;
-  PetscCallThrust(THRUST_CALL(thrust::fill, stream->get_stream(), xptr, xptr + n, canary));
+  // ASYNC TODO: maybe no need to use the accessors here
+  PetscCall(PetscDeviceContextGetStreamHandle_Internal(dctx, (void **)&stream));
+  PetscCallCUPM(cupmFreeAsync(*ptr, *stream));
+  *ptr = nullptr;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

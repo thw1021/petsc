@@ -193,12 +193,15 @@ struct _n_PetscDevice {
   PetscDeviceType   type;     /* type of device */
 };
 
-typedef struct _n_PetscEvent *PetscEvent;
+typedef struct _n_WeakContext *WeakContext;
+typedef struct _n_PetscEvent  *PetscEvent;
 struct _n_PetscEvent {
-  PetscDeviceType  dtype;      // this cannot change for the lifetime of the event
-  PetscObjectId    dctx_id;    // id of last dctx to record this event
-  PetscObjectState dctx_state; // state of last dctx to record this event
-  void            *data;       // event handle
+  PetscDeviceType  dtype;   // this cannot change for the lifetime of the event
+  PetscObjectId    dctx_id; // id of last dctx to record this event
+  PetscObjectState refcnt;
+  PetscBool        pending; // is the event pending a record op
+  void            *data;    // backend event handle
+  WeakContext      weak;    // weak reference to last dctx to record the event
   PetscErrorCode (*destroy)(PetscEvent);
 };
 
@@ -216,18 +219,21 @@ struct _DeviceContextOps {
   PetscErrorCode (*begintimer)(PetscDeviceContext);
   PetscErrorCode (*endtimer)(PetscDeviceContext, PetscLogDouble *);
   PetscErrorCode (*memalloc)(PetscDeviceContext, PetscBool, PetscMemType, size_t, size_t, void **);                             // optional
-  PetscErrorCode (*memfree)(PetscDeviceContext, PetscMemType, void **);                                                         // optional
+  PetscErrorCode (*memfree)(PetscDeviceContext, PetscPointerAttributes *, void **);                                             // optional
+  PetscErrorCode (*memrealloc)(PetscDeviceContext, size_t, PetscPointerAttributes *, void **);                                  // optional
   PetscErrorCode (*memcopy)(PetscDeviceContext, void *PETSC_RESTRICT, const void *PETSC_RESTRICT, size_t, PetscDeviceCopyMode); // optional
   PetscErrorCode (*memset)(PetscDeviceContext, PetscMemType, void *, PetscInt, size_t);                                         // optional
   PetscErrorCode (*createevent)(PetscDeviceContext, PetscEvent);                                                                // optional
   PetscErrorCode (*recordevent)(PetscDeviceContext, PetscEvent);                                                                // optional
   PetscErrorCode (*waitforevent)(PetscDeviceContext, PetscEvent);                                                               // optional
+  PetscErrorCode (*getstreamcomm)(PetscDeviceContext, MPI_Comm, MPI_Comm *);                                                    // optional
 };
 
 struct _p_PetscDeviceContext {
   PETSCHEADER(struct _DeviceContextOps);
   PetscDevice     device;         /* the device this context stems from */
   void           *data;           /* solver contexts, event, stream */
+  PetscEvent      event;          /* last recorded event by this DeviceContext */
   PetscObjectId  *childIDs;       /* array containing ids of contexts currently forked from this one */
   PetscInt        numChildren;    /* how many children does this context expect to destroy */
   PetscInt        maxNumChildren; /* how many children can this context have room for without realloc'ing */
@@ -235,6 +241,21 @@ struct _p_PetscDeviceContext {
   PetscBool       setup;
   PetscBool       usersetdevice;
 };
+
+// ===================================================================================
+//                             PetscEvent Internal Functions
+// ===================================================================================
+#if PetscDefined(HAVE_CXX)
+PETSC_INTERN PetscErrorCode PetscDeviceContextCreateEvent_Internal(PetscDeviceContext, PetscEvent *);
+PETSC_INTERN PetscErrorCode PetscEventDestroy_Internal(PetscEvent *);
+PETSC_INTERN PetscErrorCode PetscDeviceContextRecordEvent_Internal(PetscDeviceContext, PetscEvent *);
+PETSC_INTERN PetscErrorCode PetscDeviceContextWaitForEvent_Internal(PetscDeviceContext, PetscEvent);
+#else // PetscDefined(HAVE_CXX)
+  #define PetscDeviceContextCreateEvent_Internal(PetscDeviceContext, PetscEvent_Ptr) (*(PetscEvent_Ptr) = PETSC_NULLPTR, PETSC_SUCCESS)
+  #define PetscEventDestroy_Internal(PetscEvent_Ptr)                                 (*(PetscEvent_Ptr) = PETSC_NULLPTR, PETSC_SUCCESS)
+  #define PetscDeviceContextRecordEvent_Internal(PetscDeviceContext, PetscEvent_Ptr) PETSC_SUCCESS
+  #define PetscDeviceContextWaitForEvent_Internal(PetscDeviceContext, PetscEvent)    PETSC_SUCCESS
+#endif // PetscDefined(HAVE_CXX)
 
 // ===================================================================================
 //                            PetscDevice Internal Functions
@@ -299,7 +320,30 @@ static inline PETSC_CONSTEXPR_14 PetscBool PetscDeviceConfiguredFor_Internal(Pet
 //                     PetscDeviceContext Internal Functions
 // ===================================================================================
 #if PetscDefined(HAVE_CXX)
-PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscDeviceContextGetNullContext_Internal(PetscDeviceContext *);
+PETSC_EXTERN PetscErrorCode PetscDeviceContextGetNullContext_Internal(PetscDeviceContext *);
+
+static inline PetscErrorCode PetscDeviceContextForceEventRecord_Internal(PetscDeviceContext dctx)
+{
+  PetscEvent event;
+
+  PetscFunctionBegin;
+  PetscValidDeviceContext(dctx, 1);
+  event = dctx->event;
+  if (event) {
+    PetscAssertPointer(event, 1);
+    if (PetscDefined(USE_DEBUG)) {
+      PetscObjectId id;
+
+      PetscCall(PetscObjectGetId((PetscObject)dctx, &id));
+      PetscCheck(event->dctx_id == id, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Cached event dctx id %" PetscInt64_FMT " != dctx id %" PetscInt64_FMT, event->dctx_id, id);
+    }
+    if (event->pending) {
+      PetscTryTypeMethod(dctx, recordevent, event);
+      event->pending = PETSC_FALSE;
+    }
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
 
 static inline PetscErrorCode PetscDeviceContextGetBLASHandle_Internal(PetscDeviceContext dctx, void *handle)
 {
@@ -307,6 +351,8 @@ static inline PetscErrorCode PetscDeviceContextGetBLASHandle_Internal(PetscDevic
   /* we do error checking here as this routine is an entry-point */
   PetscValidDeviceContext(dctx, 1);
   PetscUseTypeMethod(dctx, getblashandle, handle);
+  PetscCall(PetscDeviceContextForceEventRecord_Internal(dctx));
+  PetscCall(PetscObjectStateIncrease((PetscObject)dctx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -316,6 +362,8 @@ static inline PetscErrorCode PetscDeviceContextGetSOLVERHandle_Internal(PetscDev
   /* we do error checking here as this routine is an entry-point */
   PetscValidDeviceContext(dctx, 1);
   PetscUseTypeMethod(dctx, getsolverhandle, handle);
+  PetscCall(PetscDeviceContextForceEventRecord_Internal(dctx));
+  PetscCall(PetscObjectStateIncrease((PetscObject)dctx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -326,6 +374,8 @@ static inline PetscErrorCode PetscDeviceContextGetStreamHandle_Internal(PetscDev
   PetscValidDeviceContext(dctx, 1);
   PetscAssertPointer(handle, 2);
   PetscUseTypeMethod(dctx, getstreamhandle, handle);
+  PetscCall(PetscDeviceContextForceEventRecord_Internal(dctx));
+  PetscCall(PetscObjectStateIncrease((PetscObject)dctx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -380,28 +430,24 @@ static inline PetscErrorCode PetscDeviceContextGetOptionalNullContext_Internal(P
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+#if PetscDefined(HAVE_MPIX_STREAM)
+  // clang-format off
+  #define PetscDeviceContextAllReduce(dctx, a, b, c, d, e, comm) \
+    PetscMacroReturnStandard( \
+      MPI_Comm scomm; \
+      PetscUseTypeMethod(dctx, getstreamcomm, comm, &scomm); \
+      PetscCallMPI(MPIX_Allreduce_enqueue(a, b, c, d, e, scomm)); \
+    )
+  // clang-format on
+#else
+  #define PetscDeviceContextAllReduce(dctx, ...) MPIU_Allreduce(__VA_ARGS__)
+#endif
+
 /* Experimental API -- it will eventually become public */
 #if PetscDefined(HAVE_CXX)
-PETSC_EXTERN PetscErrorCode PetscDeviceRegisterMemory(const void *PETSC_RESTRICT, PetscMemType, size_t);
 PETSC_EXTERN PetscErrorCode PetscDeviceGetAttribute(PetscDevice, PetscDeviceAttribute, void *);
-PETSC_EXTERN PetscErrorCode PetscDeviceContextMarkIntentFromID(PetscDeviceContext, PetscObjectId, PetscMemoryAccessMode, const char name[]);
-  #if defined(__cplusplus)
-namespace
-{
-
-inline PetscErrorCode PetscDeviceContextMarkIntentFromID(PetscDeviceContext dctx, PetscObject obj, PetscMemoryAccessMode mode, const char name[])
-{
-  PetscFunctionBegin;
-  PetscCall(PetscDeviceContextMarkIntentFromID(dctx, obj->id, mode, name));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-} // anonymous namespace
-  #endif // __cplusplus
 #else
-  #define PetscDeviceRegisterMemory(void_ptr, PetscMemType, size)                                           PETSC_SUCCESS
-  #define PetscDeviceGetAttribute(PetscDevice, PetscDeviceAttribute, void_star)                             ((*((int *)(void_star)) = 0), PETSC_SUCCESS)
-  #define PetscDeviceContextMarkIntentFromID(PetscDeviceContext, PetscObjectId, PetscMemoryAccessMode, ptr) PETSC_SUCCESS
+  #define PetscDeviceGetAttribute(PetscDevice, PetscDeviceAttribute, void_star) ((*((int *)(void_star)) = 0), PETSC_SUCCESS)
 #endif
 
 PETSC_INTERN PetscErrorCode PetscDeviceContextCreate_HOST(PetscDeviceContext);
@@ -416,6 +462,6 @@ PETSC_INTERN PetscErrorCode PetscDeviceContextCreate_SYCL(PetscDeviceContext);
 #endif
 
 // Used for testing purposes, internal use ONLY
-PETSC_EXTERN PetscErrorCode PetscGetMarkedObjectMap_Internal(size_t *, PetscObjectId **, PetscMemoryAccessMode **, size_t **, PetscEvent ***);
-PETSC_EXTERN PetscErrorCode PetscRestoreMarkedObjectMap_Internal(size_t, PetscObjectId **, PetscMemoryAccessMode **, size_t **, PetscEvent ***);
+PETSC_EXTERN PetscErrorCode PetscGetMarkedObjectMap_Internal(size_t *, PetscObjectId **, PetscMemoryAccessMode **, PetscEvent **, size_t **, PetscEvent ***);
+PETSC_EXTERN PetscErrorCode PetscRestoreMarkedObjectMap_Internal(size_t, PetscObjectId **, PetscMemoryAccessMode **, PetscEvent **, size_t **, PetscEvent ***);
 #endif /* PETSCDEVICEIMPL_H */

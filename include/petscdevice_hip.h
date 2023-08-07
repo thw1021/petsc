@@ -207,4 +207,11 @@ PETSC_EXTERN PetscErrorCode PetscHIPSOLVERGetHandle(hipsolverHandle_t *);
   #define PETSC_HOSTDEVICE_INLINE_DECL PETSC_HOSTDEVICE_DECL PETSC_FORCEINLINE
 #endif
 
+#undef PETSC_LAUNCH_BOUNDS
+#if PetscDefined(USING_HCC)
+  #define PETSC_LAUNCH_BOUNDS(...) __launch_bounds__(__VA_ARGS__)
+#else
+  #define PETSC_LAUNCH_BOUNDS(...)
+#endif
+
 #endif // PETSCDEVICE_HIP_H

@@ -1,7 +1,12 @@
 
 #include <petsc/private/kspimpl.h>
 
-static PetscErrorCode KSPSetUp_TFQMR(KSP ksp)
+struct KSP_TFQMR {
+  PetscInt check_every;
+};
+typedef struct KSP_TFQMR KSP_TFQMR;
+
+PETSC_INTERN PetscErrorCode KSPSetUp_TFQMR(KSP ksp)
 {
   PetscFunctionBegin;
   PetscCheck(ksp->pc_side != PC_SYMMETRIC, PetscObjectComm((PetscObject)ksp), PETSC_ERR_SUP, "no symmetric preconditioning for KSPTFQMR");
@@ -11,10 +16,11 @@ static PetscErrorCode KSPSetUp_TFQMR(KSP ksp)
 
 static PetscErrorCode KSPSolve_TFQMR(KSP ksp)
 {
-  PetscInt    i, m;
-  PetscScalar rho, rhoold, a, s, b, eta, etaold, psiold, cf;
-  PetscReal   dp, dpold, w, dpest, tau, psi, cm;
-  Vec         X, B, V, P, R, RP, T, T1, Q, U, D, AUQ;
+  const KSP_TFQMR *tfqmr = (KSP_TFQMR *)ksp->data;
+  PetscInt         i, m;
+  PetscScalar      rho, rhoold, a, s, b, eta, etaold, psiold, cf;
+  PetscReal        dp, dpold, w, dpest, tau, psi, cm;
+  Vec              X, B, V, P, R, RP, T, T1, Q, U, D, AUQ;
 
   PetscFunctionBegin;
   X   = ksp->vec_sol;
@@ -94,10 +100,12 @@ static PetscErrorCode KSPSolve_TFQMR(KSP ksp)
       if (ksp->normtype != KSP_NORM_NONE) ksp->rnorm = dpest;
       else ksp->rnorm = 0.0;
       PetscCall(PetscObjectSAWsGrantAccess((PetscObject)ksp));
-      PetscCall(KSPLogResidualHistory(ksp, ksp->rnorm));
-      PetscCall(KSPMonitor(ksp, i + 1, ksp->rnorm));
-      PetscCall((*ksp->converged)(ksp, i + 1, ksp->rnorm, &ksp->reason, ksp->cnvP));
-      if (ksp->reason) break;
+      if (((i + 1) % tfqmr->check_every) == 0) {
+        PetscCall(KSPLogResidualHistory(ksp, ksp->rnorm));
+        PetscCall(KSPMonitor(ksp, i + 1, ksp->rnorm));
+        PetscCall((*ksp->converged)(ksp, i + 1, ksp->rnorm, &ksp->reason, ksp->cnvP));
+        if (ksp->reason) break;
+      }
 
       etaold = eta;
       psiold = psi;
@@ -119,6 +127,25 @@ static PetscErrorCode KSPSolve_TFQMR(KSP ksp)
   if (i >= ksp->max_it) ksp->reason = KSP_DIVERGED_ITS;
 
   PetscCall(KSPUnwindPreconditioner(ksp, X, T));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode KSPDestroy_TFQMR(KSP ksp)
+{
+  PetscFunctionBegin;
+  PetscCall(PetscFree(ksp->data));
+  PetscCall(KSPDestroyDefault(ksp));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode KSPSetFromOptions_TFQMR(KSP ksp, PetscOptionItems *PetscOptionsObject)
+{
+  KSP_TFQMR *tfqmr = (KSP_TFQMR *)ksp->data;
+
+  PetscFunctionBegin;
+  PetscOptionsHeadBegin(PetscOptionsObject, "KSP TFMQR options");
+  PetscCall(PetscOptionsBoundedInt("-ksp_check_interval", "Check norm and monitory convergence only every N iterations", NULL, tfqmr->check_every, &tfqmr->check_every, NULL, 0));
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -147,13 +174,17 @@ PETSC_EXTERN PetscErrorCode KSPCreate_TFQMR(KSP ksp)
   PetscCall(KSPSetSupportedNorm(ksp, KSP_NORM_NONE, PC_LEFT, 1));
   PetscCall(KSPSetSupportedNorm(ksp, KSP_NORM_NONE, PC_RIGHT, 1));
 
-  ksp->data                = (void *)0;
+  KSP_TFQMR *tfqmr;
+
+  PetscCall(PetscNew(&tfqmr));
+  tfqmr->check_every       = 1;
+  ksp->data                = tfqmr;
   ksp->ops->setup          = KSPSetUp_TFQMR;
   ksp->ops->solve          = KSPSolve_TFQMR;
-  ksp->ops->destroy        = KSPDestroyDefault;
+  ksp->ops->destroy        = KSPDestroy_TFQMR;
   ksp->ops->buildsolution  = KSPBuildSolutionDefault;
   ksp->ops->buildresidual  = KSPBuildResidualDefault;
-  ksp->ops->setfromoptions = NULL;
+  ksp->ops->setfromoptions = KSPSetFromOptions_TFQMR;
   ksp->ops->view           = NULL;
   PetscFunctionReturn(PETSC_SUCCESS);
 }

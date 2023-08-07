@@ -1,0 +1,11 @@
+===========================================
+Test: KSP performance
+  Grid: 8x8x8
+  Fields: 1
+  Input matrix: 27-pt stencil
+  DoFs: 512
+  Number of nonzeros: 10648
+
+Step1  - creating Vecs and Mat...
+Step2  - running KSPSolve()...
+===========================================

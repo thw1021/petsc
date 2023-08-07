@@ -99,10 +99,14 @@ void assert_never_put_petsc_headers_inside_an_extern_c(double);
   #define PETSC_EXTERN         extern "C" PETSC_VISIBILITY_PUBLIC
   #define PETSC_EXTERN_TYPEDEF extern "C"
   #define PETSC_INTERN         extern "C" PETSC_VISIBILITY_INTERNAL
+  #define PETSC_CXX_INTERN     extern PETSC_VISIBILITY_INTERNAL
+  #define PETSC_CXX_EXTERN     extern PETSC_VISIBILITY_PUBLIC
 #else
   #define PETSC_EXTERN extern PETSC_VISIBILITY_PUBLIC
   #define PETSC_EXTERN_TYPEDEF
-  #define PETSC_INTERN extern PETSC_VISIBILITY_INTERNAL
+  #define PETSC_INTERN     extern PETSC_VISIBILITY_INTERNAL
+  #define PETSC_CXX_INTERN PETSC_INTERN
+  #define PETSC_CXX_EXTERN PETSC_EXTERN
 #endif
 
 #if defined(PETSC_USE_SINGLE_LIBRARY)

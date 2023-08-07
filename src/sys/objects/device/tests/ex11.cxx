@@ -1,6 +1,7 @@
 static const char help[] = "Tests PetscDeviceContextMarkIntentFromID().\n\n";
 
 #include "petscdevicetestcommon.h"
+#include "../interface/petscdevice_interface_internal.hpp"
 #include <petscviewer.h>
 
 #include <petsc/private/cpp/type_traits.hpp>
@@ -24,17 +25,21 @@ struct Marker {
     PetscFunctionBegin;
     PetscCall(PetscObjectGetId(obj, &id));
     PetscCall(PetscObjectGetName(obj, &name));
-    PetscCall(PetscDeviceContextMarkIntentFromID(dctx, id, this->mode, name));
+    PetscCall(PetscDeviceContextMarkIntentFromIDBegin(dctx, id, this->mode, name));
+    PetscCall(PetscDeviceContextMarkIntentFromIDEnd(dctx, id, this->mode, name));
     PetscFunctionReturn(PETSC_SUCCESS);
   }
 };
 
-static constexpr auto mem_read       = Marker{PETSC_MEMORY_ACCESS_READ};
-static constexpr auto mem_write      = Marker{PETSC_MEMORY_ACCESS_WRITE};
-static constexpr auto mem_read_write = Marker{PETSC_MEMORY_ACCESS_READ_WRITE};
-static constexpr auto mark_funcs     = Petsc::util::make_array(mem_read, mem_write, mem_read_write);
+namespace
+{
 
-static PetscErrorCode MarkedObjectMapView(PetscViewer vwr, std::size_t nkeys, const PetscObjectId *keys, const PetscMemoryAccessMode *modes, const std::size_t *ndeps, const PetscEvent **dependencies)
+constexpr auto mem_read       = Marker{PETSC_MEMORY_ACCESS_READ};
+constexpr auto mem_write      = Marker{PETSC_MEMORY_ACCESS_WRITE};
+constexpr auto mem_read_write = Marker{PETSC_MEMORY_ACCESS_READ_WRITE};
+constexpr auto mark_funcs     = Petsc::util::make_array(mem_read, mem_write, mem_read_write);
+
+PetscErrorCode MarkedObjectMapView(PetscViewer vwr, std::size_t nkeys, const PetscObjectId *keys, const PetscMemoryAccessMode *modes, const PetscEvent *last_writes, const std::size_t *ndeps, const PetscEvent **dependencies)
 {
   PetscFunctionBegin;
   if (!vwr) PetscCall(PetscViewerASCIIGetStdout(PETSC_COMM_WORLD, &vwr));
@@ -46,17 +51,32 @@ static PetscErrorCode MarkedObjectMapView(PetscViewer vwr, std::size_t nkeys, co
   PetscCall(PetscViewerASCIISynchronizedPrintf(vwr, "entries:\n"));
   PetscCall(PetscViewerASCIIPushTab(vwr));
   for (std::size_t i = 0; i < nkeys; ++i) {
+    const auto PrintEvent = [&](const std::string &prefix, PetscEvent event) {
+      PetscFunctionBegin;
+      if (event) {
+        PetscCall(PetscViewerASCIISynchronizedPrintf(vwr, "%s {dtype: %s, dctx_id: %" PetscInt64_FMT ", dctx_state: %" PetscInt64_FMT ", data: %p, destroy: %p}\n", prefix.c_str(), PetscDeviceTypes[event->dtype], event->dctx_id, event->weak->state(),
+                                                     event->data, reinterpret_cast<void *>(event->destroy)));
+      } else {
+        PetscCall(PetscViewerASCIISynchronizedPrintf(vwr, "%s (%p)\n", prefix.c_str(), reinterpret_cast<void *>(event)));
+      }
+      PetscFunctionReturn(PETSC_SUCCESS);
+    };
+
     PetscCall(PetscViewerASCIISynchronizedPrintf(vwr, "id %" PetscInt64_FMT " -> {\n", keys[i]));
     PetscCall(PetscViewerASCIIPushTab(vwr));
     PetscCall(PetscViewerASCIISynchronizedPrintf(vwr, "mode: %s\n", PetscMemoryAccessModeToString(modes[i])));
-    PetscCall(PetscViewerASCIISynchronizedPrintf(vwr, "dependencies:\n"));
+    PetscCall(PetscViewerASCIISynchronizedPrintf(vwr, "last write:\n"));
+    PetscCall(PetscViewerASCIIPushTab(vwr));
+    PetscCall(PrintEvent("event", last_writes[i]));
+    PetscCall(PetscViewerASCIIPopTab(vwr));
+    PetscCall(PetscViewerASCIISynchronizedPrintf(vwr, "dependencies: (%zu)\n", ndeps[i]));
     PetscCall(PetscViewerASCIIPushTab(vwr));
     for (std::size_t j = 0; j < ndeps[i]; ++j) {
-      const auto event = dependencies[i][j];
+      std::string prefix = "event " + std::to_string(j);
 
-      PetscCall(PetscViewerASCIISynchronizedPrintf(vwr, "event %zu {dtype: %s, dctx_id: %" PetscInt64_FMT ", dctx_state: %" PetscInt64_FMT ", data: %p, destroy: %p}\n", j, PetscDeviceTypes[event->dtype], event->dctx_id, event->dctx_state, event->data,
-                                                   reinterpret_cast<void *>(event->destroy)));
+      PetscCall(PrintEvent(prefix, dependencies[i][j]));
     }
+
     PetscCall(PetscViewerASCIIPopTab(vwr));
     PetscCall(PetscViewerASCIIPopTab(vwr));
     PetscCall(PetscViewerASCIISynchronizedPrintf(vwr, "}\n"));
@@ -68,8 +88,8 @@ static PetscErrorCode MarkedObjectMapView(PetscViewer vwr, std::size_t nkeys, co
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_ATTRIBUTE_FORMAT(10, 11)
-static PetscErrorCode CheckMarkedObjectMap_Private(PetscBool cond, const char cond_str[], MPI_Comm comm, PetscDeviceContext dctx, std::size_t nkeys, const PetscObjectId *keys, const PetscMemoryAccessMode *modes, const std::size_t *ndeps, const PetscEvent **dependencies, const char *format, ...)
+PETSC_ATTRIBUTE_FORMAT(11, 12)
+PetscErrorCode CheckMarkedObjectMap_Private(PetscBool cond, const char cond_str[], MPI_Comm comm, PetscDeviceContext dctx, std::size_t nkeys, const PetscObjectId *keys, const PetscMemoryAccessMode *modes, const PetscEvent *last_writes, const std::size_t *ndeps, const PetscEvent **dependencies, const char *format, ...)
 {
   PetscFunctionBegin;
   if (PetscUnlikely(!cond)) {
@@ -84,14 +104,14 @@ static PetscErrorCode CheckMarkedObjectMap_Private(PetscBool cond, const char co
     va_end(argp);
     PetscCall(PetscViewerASCIIGetStdout(comm, &vwr));
     if (dctx) PetscCall(PetscDeviceContextView(dctx, vwr));
-    PetscCall(MarkedObjectMapView(vwr, nkeys, keys, modes, ndeps, dependencies));
+    PetscCall(MarkedObjectMapView(vwr, nkeys, keys, modes, last_writes, ndeps, dependencies));
     SETERRQ(comm, PETSC_ERR_PLIB, "Condition '%s' failed, marked object map in corrupt state: %s", cond_str, buf.data());
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-#define CheckMarkedObjectMap(__cond__, ...) CheckMarkedObjectMap_Private((PetscBool)(!!(__cond__)), PetscStringize(__cond__), PETSC_COMM_SELF, dctx, nkeys, keys, modes, ndeps, const_cast<const PetscEvent **>(dependencies), __VA_ARGS__);
+#define CheckMarkedObjectMap(__cond__, ...) CheckMarkedObjectMap_Private((PetscBool)(!!(__cond__)), PetscStringize(__cond__), PETSC_COMM_SELF, dctx, nkeys, keys, modes, last_writes, ndeps, const_cast<const PetscEvent **>(dependencies), __VA_ARGS__);
 
-static PetscErrorCode TestAllCombinations(PetscDeviceContext dctx, const std::vector<PetscContainer> &cont)
+PetscErrorCode TestAllCombinations(PetscDeviceContext dctx, const std::vector<PetscContainer> &cont)
 {
   std::vector<PetscObjectId> cont_ids;
   PetscObjectId              dctx_id;
@@ -114,13 +134,14 @@ static PetscErrorCode TestAllCombinations(PetscDeviceContext dctx, const std::ve
         std::size_t            nkeys;
         PetscObjectId         *keys;
         PetscMemoryAccessMode *modes;
+        PetscEvent            *last_writes;
         std::size_t           *ndeps;
         PetscEvent           **dependencies;
 
         if (next >= cont.cend()) next = cont.cbegin();
         PetscCall(func_i(dctx, *it));
         PetscCall(func_j(dctx, *next));
-        PetscCall(PetscGetMarkedObjectMap_Internal(&nkeys, &keys, &modes, &ndeps, &dependencies));
+        PetscCall(PetscGetMarkedObjectMap_Internal(&nkeys, &keys, &modes, &last_writes, &ndeps, &dependencies));
         PetscCallCXX(found_keys.resize(nkeys));
         {
           // The underlying marked object map is *unordered*, and hence the order in which we
@@ -143,8 +164,13 @@ static PetscErrorCode TestAllCombinations(PetscDeviceContext dctx, const std::ve
             PetscCall(CheckMarkedObjectMap(key_idx < std::distance(keys, keys_end), "marked object map could not find expected key %" PetscInt64_FMT, actual_key));
             // OK found it, now check the rest of the entries are as we expect them to be
             PetscCall(CheckMarkedObjectMap(modes[key_idx] == mode, "unexpected mode %s, expected %s", PetscMemoryAccessModeToString(modes[key_idx]), PetscMemoryAccessModeToString(mode)));
-            PetscCall(CheckMarkedObjectMap(ndeps[key_idx] == 1, "unexpected number of dependencies %zu, expected 1", ndeps[key_idx]));
-            PetscCall(CheckMarkedObjectMap(dependencies[key_idx][0]->dtype == dtype, "unexpected device type on event: %s, expected %s", PetscDeviceTypes[dependencies[key_idx][0]->dtype], PetscDeviceTypes[dtype]));
+            PetscCall(CheckMarkedObjectMap((ndeps[key_idx] == 1) || last_writes[key_idx], "unexpected number of dependencies %zu, expected 1", ndeps[key_idx]));
+            {
+              const auto event = ndeps[key_idx] ? dependencies[key_idx][0] : last_writes[key_idx];
+
+              PetscCall(CheckMarkedObjectMap(event, "unexpected event for key_idx %zu is NULL", key_idx));
+              PetscCall(CheckMarkedObjectMap(event->dtype == dtype, "unexpected device type on event: %s, expected %s", PetscDeviceTypes[event->dtype], PetscDeviceTypes[dtype]));
+            }
             PetscFunctionReturn(PETSC_SUCCESS);
           };
 
@@ -161,12 +187,12 @@ static PetscErrorCode TestAllCombinations(PetscDeviceContext dctx, const std::ve
         // zero find count
         for (auto it = found_keys.cbegin(); it != found_keys.cend(); ++it) PetscCall(CheckMarkedObjectMap(*it > 0, "Marked Object Map has extra object entry: id %" PetscInt64_FMT, keys[std::distance(found_keys.cbegin(), it)]));
 
-        PetscCall(PetscRestoreMarkedObjectMap_Internal(nkeys, &keys, &modes, &ndeps, &dependencies));
+        PetscCall(PetscRestoreMarkedObjectMap_Internal(nkeys, &keys, &modes, &last_writes, &ndeps, &dependencies));
 
         PetscCall(PetscDeviceContextSynchronize(dctx));
-        PetscCall(PetscGetMarkedObjectMap_Internal(&nkeys, &keys, &modes, &ndeps, &dependencies));
+        PetscCall(PetscGetMarkedObjectMap_Internal(&nkeys, &keys, &modes, &last_writes, &ndeps, &dependencies));
         PetscCall(CheckMarkedObjectMap(nkeys == 0, "synchronizing device context did not empty dependency map, have %zu keys", nkeys));
-        PetscCall(PetscRestoreMarkedObjectMap_Internal(nkeys, &keys, &modes, &ndeps, &dependencies));
+        PetscCall(PetscRestoreMarkedObjectMap_Internal(nkeys, &keys, &modes, &last_writes, &ndeps, &dependencies));
       }
     }
   }
@@ -175,31 +201,33 @@ static PetscErrorCode TestAllCombinations(PetscDeviceContext dctx, const std::ve
 }
 
 template <typename... T>
-PETSC_NODISCARD static std::pair<PetscObjectId, std::pair<PetscMemoryAccessMode, std::vector<PetscDeviceContext>>> make_map_entry(PetscObjectId id, PetscMemoryAccessMode mode, T &&...dctxs)
+PETSC_NODISCARD std::pair<PetscObjectId, std::pair<PetscMemoryAccessMode, std::vector<PetscDeviceContext>>> make_map_entry(PetscObjectId id, PetscMemoryAccessMode mode, T &&...dctxs)
 {
   return {
     id, {mode, {std::forward<T>(dctxs)...}}
   };
 }
 
-static PetscErrorCode CheckMapEqual(std::unordered_map<PetscObjectId, std::pair<PetscMemoryAccessMode, std::vector<PetscDeviceContext>>> expected_map)
+PetscErrorCode CheckMapEqual(std::unordered_map<PetscObjectId, std::pair<PetscMemoryAccessMode, std::vector<PetscDeviceContext>>> expected_map)
 {
   std::size_t            nkeys;
   PetscObjectId         *keys;
   PetscMemoryAccessMode *modes;
+  PetscEvent            *last_writes;
   std::size_t           *ndeps;
   PetscEvent           **dependencies;
   PetscDeviceContext     dctx = nullptr;
 
   PetscFunctionBegin;
-  PetscCall(PetscGetMarkedObjectMap_Internal(&nkeys, &keys, &modes, &ndeps, &dependencies));
+  PetscCall(PetscGetMarkedObjectMap_Internal(&nkeys, &keys, &modes, &last_writes, &ndeps, &dependencies));
   {
-    const auto key_end = keys + nkeys;
-    auto       mode_it = modes;
-    auto       ndep_it = ndeps;
-    auto       dep_it  = dependencies;
+    const auto key_end       = keys + nkeys;
+    auto       mode_it       = modes;
+    auto       last_write_it = last_writes;
+    auto       ndep_it       = ndeps;
+    auto       dep_it        = dependencies;
 
-    for (auto key_it = keys; key_it != key_end; ++key_it, ++mode_it, ++ndep_it, ++dep_it) {
+    for (auto key_it = keys; key_it != key_end; ++key_it, ++mode_it, ++last_write_it, ++ndep_it, ++dep_it) {
       const auto found_it = expected_map.find(*key_it);
 
       PetscCall(CheckMarkedObjectMap(found_it != expected_map.cend(), "marked object map did not contain key %" PetscInt64_FMT, *key_it));
@@ -207,10 +235,16 @@ static PetscErrorCode CheckMapEqual(std::unordered_map<PetscObjectId, std::pair<
         // must do these here since found_it may be expected_map.cend()
         const auto &expected_mode  = found_it->second.first;
         const auto &expected_dctxs = found_it->second.second;
-        auto        sub_dep_it     = *dep_it;
+        PetscEvent *sub_dep_it     = nullptr;
 
         PetscCall(CheckMarkedObjectMap(expected_mode == *mode_it, "unexpected mode %s, expected %s", PetscMemoryAccessModeToString(expected_mode), PetscMemoryAccessModeToString(*mode_it)));
-        PetscCall(CheckMarkedObjectMap(expected_dctxs.size() == *ndep_it, "unexpected number of dependencies %zu, expected %zu", *ndep_it, expected_dctxs.size()));
+        if (PetscMemoryAccessWrite(expected_mode)) {
+          PetscCall(CheckMarkedObjectMap(*last_write_it, "expected a write mode (%s), but have no last_write event", PetscMemoryAccessModeToString(expected_mode)));
+          sub_dep_it = last_write_it;
+        } else {
+          PetscCall(CheckMarkedObjectMap(expected_dctxs.size() == *ndep_it, "unexpected number of dependencies %zu, expected %zu", *ndep_it, expected_dctxs.size()));
+          sub_dep_it = *dep_it;
+        }
         // purposefully hide "dctx" with the loop variable, so we get more detailed output in
         // the error message
         for (auto &&dctx : expected_dctxs) {
@@ -225,6 +259,7 @@ static PetscErrorCode CheckMapEqual(std::unordered_map<PetscObjectId, std::pair<
           ++sub_dep_it;
         }
       }
+
       // remove the found iterator from the map, this ensure we either run out of map (which is
       // caught by the first check in the loop), or we run out of keys to check, which is
       // caught in the end of the loop
@@ -232,9 +267,11 @@ static PetscErrorCode CheckMapEqual(std::unordered_map<PetscObjectId, std::pair<
     }
   }
   PetscCall(CheckMarkedObjectMap(expected_map.empty(), "Not all keys in marked object map accounted for!"));
-  PetscCall(PetscRestoreMarkedObjectMap_Internal(nkeys, &keys, &modes, &ndeps, &dependencies));
+  PetscCall(PetscRestoreMarkedObjectMap_Internal(nkeys, &keys, &modes, &last_writes, &ndeps, &dependencies));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
+} // namespace
 
 int main(int argc, char *argv[])
 {

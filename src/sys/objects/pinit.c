@@ -32,6 +32,10 @@ PetscFPT              PetscFPTData = 0;
   #include <petscviewersaws.h>
 #endif
 
+#if PetscDefined(USE_NVTX)
+nvtxDomainHandle_t PetscGlobalNVTXDomain;
+#endif
+
 PETSC_INTERN FILE *petsc_history;
 
 PETSC_INTERN PetscErrorCode PetscInitialize_DynamicLibraries(void);
@@ -711,6 +715,7 @@ PETSC_INTERN PetscErrorCode PetscPreMPIInit_Private(void)
   /* see MPI.py for details on this bug */
   (void)setenv("HWLOC_COMPONENTS", "-x86", 1);
 #endif
+  if (PetscDefined(HAVE_MPIX_STREAM)) (void)setenv("MPIR_CVAR_CH4_RESERVE_VCIS", "1", 0);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

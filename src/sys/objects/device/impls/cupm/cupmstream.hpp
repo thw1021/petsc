@@ -4,7 +4,6 @@
 #include <petsc/private/cupminterface.hpp>
 
 #include "../segmentedmempool.hpp"
-#include "cupmevent.hpp"
 
 namespace Petsc
 {
@@ -22,36 +21,43 @@ namespace cupm
 // Address of the objects does not suffice since cupmStreams are very likely internally reused.
 
 template <DeviceType T>
-class CUPMStream : public StreamBase<CUPMStream<T>>, impl::Interface<T> {
-  using crtp_base_type = StreamBase<CUPMStream<T>>;
-  friend crtp_base_type;
-
+class CUPMStream : impl::Interface<T> {
 public:
   PETSC_CUPM_INHERIT_INTERFACE_TYPEDEFS_USING(T);
 
   using stream_type = cupmStream_t;
-  using id_type     = typename crtp_base_type::id_type;
-  using event_type  = CUPMEvent<T>;
   using flag_type   = unsigned int;
 
   CUPMStream() noexcept = default;
 
   PetscErrorCode destroy() noexcept;
   PetscErrorCode create(flag_type) noexcept;
-  PetscErrorCode change_type(PetscStreamType) noexcept;
+  PetscErrorCode change_type(PetscStreamType, bool *) noexcept;
+
+  PETSC_NODISCARD const stream_type &get_stream() const noexcept;
+  PETSC_NODISCARD int                get_id() const noexcept;
 
 private:
   stream_type stream_{};
-  id_type     id_ = new_id_();
+  int         id_ = new_id_();
 
-  PETSC_NODISCARD static id_type new_id_() noexcept;
-
-  // CRTP implementations
-  PETSC_NODISCARD const stream_type &get_stream_() const noexcept;
-  PETSC_NODISCARD id_type            get_id_() const noexcept;
-  PetscErrorCode                     record_event_(event_type &) const noexcept;
-  PetscErrorCode                     wait_for_(event_type &) const noexcept;
+  PETSC_NODISCARD static int new_id_() noexcept;
 };
+
+// ==========================================================================================
+// CUPMStream -- Private API
+// ==========================================================================================
+
+template <DeviceType T>
+inline int CUPMStream<T>::new_id_() noexcept
+{
+  static int id = 0;
+  return id++;
+}
+
+// ==========================================================================================
+// CUPMStream -- Public API
+// ==========================================================================================
 
 template <DeviceType T>
 inline PetscErrorCode CUPMStream<T>::destroy() noexcept
@@ -60,7 +66,7 @@ inline PetscErrorCode CUPMStream<T>::destroy() noexcept
   if (stream_) {
     PetscCallCUPM(cupmStreamDestroy(stream_));
     stream_ = cupmStream_t{};
-    id_     = 0;
+    id_     = PETSC_DEFAULT_STREAM_ID;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -84,10 +90,12 @@ inline PetscErrorCode CUPMStream<T>::create(flag_type flags) noexcept
 }
 
 template <DeviceType T>
-inline PetscErrorCode CUPMStream<T>::change_type(PetscStreamType newtype) noexcept
+inline PetscErrorCode CUPMStream<T>::change_type(PetscStreamType newtype, bool *did_change) noexcept
 {
   PetscFunctionBegin;
+  *did_change = true;
   if (newtype == PETSC_STREAM_GLOBAL_BLOCKING) {
+    if (!get_stream()) *did_change = false;
     PetscCall(destroy());
   } else {
     const flag_type preferred = newtype == PETSC_STREAM_DEFAULT_BLOCKING ? cupmStreamDefault : cupmStreamNonBlocking;
@@ -96,7 +104,10 @@ inline PetscErrorCode CUPMStream<T>::change_type(PetscStreamType newtype) noexce
       flag_type flag;
 
       PetscCallCUPM(cupmStreamGetFlags(stream_, &flag));
-      if (flag == preferred) PetscFunctionReturn(PETSC_SUCCESS);
+      if (flag == preferred) {
+        *did_change = false;
+        PetscFunctionReturn(PETSC_SUCCESS);
+      }
       PetscCall(destroy());
     }
     PetscCall(create(preferred));
@@ -105,39 +116,15 @@ inline PetscErrorCode CUPMStream<T>::change_type(PetscStreamType newtype) noexce
 }
 
 template <DeviceType T>
-inline typename CUPMStream<T>::id_type CUPMStream<T>::new_id_() noexcept
-{
-  static id_type id = 0;
-  return id++;
-}
-
-// CRTP implementations
-template <DeviceType T>
-inline const typename CUPMStream<T>::stream_type &CUPMStream<T>::get_stream_() const noexcept
+inline const typename CUPMStream<T>::stream_type &CUPMStream<T>::get_stream() const noexcept
 {
   return stream_;
 }
 
 template <DeviceType T>
-inline typename CUPMStream<T>::id_type CUPMStream<T>::get_id_() const noexcept
+inline int CUPMStream<T>::get_id() const noexcept
 {
   return id_;
-}
-
-template <DeviceType T>
-inline PetscErrorCode CUPMStream<T>::record_event_(event_type &event) const noexcept
-{
-  PetscFunctionBegin;
-  PetscCall(event.record(stream_));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-template <DeviceType T>
-inline PetscErrorCode CUPMStream<T>::wait_for_(event_type &event) const noexcept
-{
-  PetscFunctionBegin;
-  PetscCallCUPM(cupmStreamWaitEvent(stream_, event.get(), 0));
-  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 } // namespace cupm

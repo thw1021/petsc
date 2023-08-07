@@ -157,7 +157,7 @@ typedef enum {
     #pragma GCC diagnostic ignored "-Wtautological-compare"
   #endif
 static_assert(!PetscOffloadHost(PETSC_OFFLOAD_UNALLOCATED), "");
-static_assert(PetscOffloadHost(PETSC_OFFLOAD_BOTH), "");
+static_assert(PetscOffloadHost(PETSC_OFFLOAD_CPU), "");
 static_assert(!PetscOffloadHost(PETSC_OFFLOAD_GPU), "");
 static_assert(PetscOffloadHost(PETSC_OFFLOAD_BOTH), "");
 static_assert(!PetscOffloadHost(PETSC_OFFLOAD_KOKKOS), "");
@@ -472,5 +472,44 @@ case v: \
 }
 
 #undef PETSC_SHOULD_SILENCE_GCC_TAUTOLOGICAL_COMPARE_WARNING
+
+#define PETSC_STACK_MEMORY_ID   ((PetscObjectId)-1)
+#define PETSC_DELETED_MEMORY_ID ((PetscObjectId)-2)
+#define PETSC_UNKNOWN_MEMORY_ID ((PetscObjectId)-3)
+
+typedef struct PetscPointerAttributes {
+  PetscMemType  mtype; // memtype of allocation
+  PetscObjectId id;    // id of allocation
+  size_t        size;  // size of allocation (bytes)
+  size_t        align; // alignment of allocation (bytes)
+
+#ifdef __cplusplus
+  // even though this is a POD and can be aggregate initialized, the STL uses () constructors
+  // in unordered_map and so we need to provide a trivial constructor...
+  constexpr PetscPointerAttributes(PetscMemType mtype, PetscObjectId id, size_t size, size_t align) noexcept : mtype{mtype}, id{id}, size{size}, align{align} { }
+
+  constexpr PetscPointerAttributes(PetscMemType mtype, size_t size, size_t align) noexcept : PetscPointerAttributes{mtype, PETSC_UNKNOWN_MEMORY_ID, size, align} { }
+
+  constexpr explicit PetscPointerAttributes(PetscMemType mtype) noexcept : PetscPointerAttributes{mtype, PETSC_DELETED_MEMORY_ID, 0, 0} { }
+
+  constexpr PetscPointerAttributes() noexcept : PetscPointerAttributes{PETSC_MEMTYPE_HOST} { }
+
+  constexpr bool operator==(const PetscPointerAttributes &other) const noexcept { return (mtype == other.mtype) && (id == other.id) && (size == other.size) && (align == other.align); }
+
+  constexpr bool operator!=(const PetscPointerAttributes &other) const noexcept { return !(*this == other); }
+
+  /*
+  PointerAttributes::contains - asks and answers the question, does ptr_begin contain ptr
+
+  Input Parameters:
++ ptr_begin - pointer to the start of the range to check
+- ptr       - the pointer to query
+
+  Notes:
+  Returns true if ptr falls within ptr_begins range, false otherwise.
+*/
+  PETSC_NODISCARD constexpr bool contains(const void *ptr_begin, const void *ptr) const noexcept { return (ptr >= ptr_begin) && (ptr < (static_cast<const char *>(ptr_begin) + this->size)); }
+#endif
+} PetscPointerAttributes;
 
 #endif /* PETSCDEVICETYPES_H */

@@ -1,28 +1,13 @@
 #include "petscdevice_interface_internal.hpp" /*I <petscdevice.h> I*/
 
-static auto               rootDeviceType = PETSC_DEVICE_CONTEXT_DEFAULT_DEVICE_TYPE;
-static auto               rootStreamType = PETSC_DEVICE_CONTEXT_DEFAULT_STREAM_TYPE;
-static PetscDeviceContext globalContext  = nullptr;
-
-/* when PetsDevice initializes PetscDeviceContext eagerly the type of device created should
- * match whatever device is eagerly initialized */
-PetscErrorCode PetscDeviceContextSetRootDeviceType_Internal(PetscDeviceType type)
+namespace
 {
-  PetscFunctionBegin;
-  PetscValidDeviceType(type, 1);
-  rootDeviceType = type;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
 
-PetscErrorCode PetscDeviceContextSetRootStreamType_Internal(PetscStreamType type)
-{
-  PetscFunctionBegin;
-  PetscValidStreamType(type, 1);
-  rootStreamType = type;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
+auto               rootDeviceType = PETSC_DEVICE_CONTEXT_DEFAULT_DEVICE_TYPE;
+auto               rootStreamType = PETSC_DEVICE_CONTEXT_DEFAULT_STREAM_TYPE;
+PetscDeviceContext globalContext  = nullptr;
 
-static PetscErrorCode PetscDeviceContextSetupGlobalContext_Private() noexcept
+PetscErrorCode PetscDeviceContextSetupGlobalContext_Private() noexcept
 {
   PetscFunctionBegin;
   if (PetscUnlikely(!globalContext)) {
@@ -52,6 +37,26 @@ static PetscErrorCode PetscDeviceContextSetupGlobalContext_Private() noexcept
     PetscCall(PetscDeviceContextSetDefaultDeviceForType_Internal(globalContext, dtype));
     PetscCall(PetscDeviceContextSetUp(globalContext));
   }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+} // namespace
+
+/* when PetsDevice initializes PetscDeviceContext eagerly the type of device created should
+ * match whatever device is eagerly initialized */
+PetscErrorCode PetscDeviceContextSetRootDeviceType_Internal(PetscDeviceType type)
+{
+  PetscFunctionBegin;
+  PetscValidDeviceType(type, 1);
+  rootDeviceType = type;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode PetscDeviceContextSetRootStreamType_Internal(PetscStreamType type)
+{
+  PetscFunctionBegin;
+  PetscValidStreamType(type, 1);
+  rootStreamType = type;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -117,6 +122,7 @@ PetscErrorCode PetscDeviceContextSetCurrentContext(PetscDeviceContext dctx)
   PetscDeviceType dtype;
 
   PetscFunctionBegin;
+  if (globalContext == dctx) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
   PetscAssert(dctx->setup, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "PetscDeviceContext %" PetscInt64_FMT " must be set up before being set as global context", PetscObjectCast(dctx)->id);
   PetscCall(PetscDeviceContextGetDeviceType(dctx, &dtype));

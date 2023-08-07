@@ -7,6 +7,8 @@
 #include <../src/sys/objects/device/impls/cupm/kernels.hpp> // grid_stride_1D()
 #include <../src/vec/vec/impls/dvecimpl.h>                  // Vec_Seq
 
+#include <petscmanagedmemory_fwd.hpp>
+
 namespace Petsc
 {
 
@@ -45,9 +47,9 @@ private:
   static PetscErrorCode MinMax_(TupleFuncT &&, UnaryFuncT &&, Vec, PetscInt *, PetscReal *) noexcept;
   // common core for pointwise binary and pointwise unary thrust functions
   template <typename BinaryFuncT>
-  static PetscErrorCode PointwiseBinary_(BinaryFuncT &&, Vec, Vec, Vec) noexcept;
+  static PetscErrorCode PointwiseBinary_(BinaryFuncT &&, Vec, Vec, Vec, PetscDeviceContext) noexcept;
   template <typename BinaryFuncT>
-  static PetscErrorCode PointwiseBinaryDispatch_(PetscErrorCode (*)(Vec, Vec, Vec), BinaryFuncT &&, Vec, Vec, Vec) noexcept;
+  static PetscErrorCode PointwiseBinaryDispatch_(PetscErrorCode (*)(Vec, Vec, Vec), BinaryFuncT &&, Vec, Vec, Vec, PetscDeviceContext = nullptr) noexcept;
   template <typename UnaryFuncT>
   static PetscErrorCode PointwiseUnary_(UnaryFuncT &&, Vec, Vec /*out*/ = nullptr) noexcept;
   // mdot dispatchers
@@ -64,6 +66,25 @@ private:
   // common core for the various create routines
   static PetscErrorCode CreateSeqCUPM_(Vec, PetscDeviceContext, PetscScalar * /*host_ptr*/ = nullptr, PetscScalar * /*device_ptr*/ = nullptr) noexcept;
 
+  template <PetscMemType>
+  static PetscErrorCode AYPXAsync_(Vec, const ManagedScalar &, Vec, PetscDeviceContext) noexcept;
+  template <PetscMemType>
+  static PetscErrorCode AXPYAsync_(Vec, const ManagedScalar &, Vec, PetscDeviceContext) noexcept;
+  template <PetscMemType>
+  static PetscErrorCode NormAsync_(Vec, NormType, ManagedReal *, PetscDeviceContext) noexcept;
+  template <PetscMemType>
+  static PetscErrorCode DotAsync_(Vec, Vec, ManagedScalar &, PetscDeviceContext) noexcept;
+  template <PetscMemType>
+  static PetscErrorCode TDotAsync_(Vec, Vec, ManagedScalar &, PetscDeviceContext) noexcept;
+  static PetscErrorCode CopyAsync_(Vec, Vec, PetscDeviceContext) noexcept;
+  static PetscErrorCode PointwiseMultAsync_(Vec, Vec, Vec, PetscDeviceContext) noexcept;
+  template <PetscMemType>
+  static PetscErrorCode ScaleAsync_(Vec, const ManagedScalar &, PetscDeviceContext) noexcept;
+  template <PetscMemType>
+  static PetscErrorCode SetAsync_(Vec, const ManagedScalar &, PetscDeviceContext) noexcept;
+  template <PetscMemType>
+  static PetscErrorCode WAXPYAsync_(Vec, const ManagedScalar &, Vec, Vec, PetscDeviceContext) noexcept;
+
 public:
   // callable directly via a bespoke function
   static PetscErrorCode CreateSeqCUPM(MPI_Comm, PetscInt, PetscInt, Vec *, PetscBool) noexcept;
@@ -72,9 +93,12 @@ public:
   // callable indirectly via function pointers
   static PetscErrorCode Duplicate(Vec, Vec *) noexcept;
   static PetscErrorCode AYPX(Vec, PetscScalar, Vec) noexcept;
+  static PetscErrorCode AYPXAsync(Vec, const ManagedScalar &, Vec, PetscDeviceContext) noexcept;
   static PetscErrorCode AXPY(Vec, PetscScalar, Vec) noexcept;
+  static PetscErrorCode AXPYAsync(Vec, const ManagedScalar &, Vec, PetscDeviceContext) noexcept;
   static PetscErrorCode PointwiseDivide(Vec, Vec, Vec) noexcept;
   static PetscErrorCode PointwiseMult(Vec, Vec, Vec) noexcept;
+  static PetscErrorCode PointwiseMultAsync(Vec, Vec, Vec, PetscDeviceContext) noexcept;
   static PetscErrorCode PointwiseMax(Vec, Vec, Vec) noexcept;
   static PetscErrorCode PointwiseMaxAbs(Vec, Vec, Vec) noexcept;
   static PetscErrorCode PointwiseMin(Vec, Vec, Vec) noexcept;
@@ -84,17 +108,24 @@ public:
   static PetscErrorCode Exp(Vec) noexcept;
   static PetscErrorCode Log(Vec) noexcept;
   static PetscErrorCode WAXPY(Vec, PetscScalar, Vec, Vec) noexcept;
+  static PetscErrorCode WAXPYAsync(Vec, const ManagedScalar &, Vec, Vec, PetscDeviceContext) noexcept;
   static PetscErrorCode MAXPY(Vec, PetscInt, const PetscScalar[], Vec *) noexcept;
   static PetscErrorCode Dot(Vec, Vec, PetscScalar *) noexcept;
+  static PetscErrorCode DotAsync(Vec, Vec, ManagedScalar &, PetscDeviceContext) noexcept;
   static PetscErrorCode MDot(Vec, PetscInt, const Vec[], PetscScalar *) noexcept;
   static PetscErrorCode Set(Vec, PetscScalar) noexcept;
+  static PetscErrorCode SetAsync(Vec, const ManagedScalar &, PetscDeviceContext) noexcept;
   static PetscErrorCode Scale(Vec, PetscScalar) noexcept;
+  static PetscErrorCode ScaleAsync(Vec, const ManagedScalar &, PetscDeviceContext) noexcept;
   static PetscErrorCode TDot(Vec, Vec, PetscScalar *) noexcept;
+  static PetscErrorCode TDotAsync(Vec, Vec, ManagedScalar &, PetscDeviceContext) noexcept;
   static PetscErrorCode Copy(Vec, Vec) noexcept;
+  static PetscErrorCode CopyAsync(Vec, Vec, PetscDeviceContext) noexcept;
   static PetscErrorCode Swap(Vec, Vec) noexcept;
   static PetscErrorCode AXPBY(Vec, PetscScalar, PetscScalar, Vec) noexcept;
   static PetscErrorCode AXPBYPCZ(Vec, PetscScalar, PetscScalar, PetscScalar, Vec, Vec) noexcept;
   static PetscErrorCode Norm(Vec, NormType, PetscReal *) noexcept;
+  static PetscErrorCode NormAsync(Vec, NormType, ManagedReal *, PetscDeviceContext) noexcept;
   static PetscErrorCode ErrorWnorm(Vec, Vec, Vec, NormType, PetscReal, Vec, PetscReal, Vec, PetscReal, PetscReal *, PetscInt *, PetscReal *, PetscInt *, PetscReal *, PetscInt *) noexcept;
   static PetscErrorCode DotNorm2(Vec, Vec, PetscScalar *, PetscScalar *) noexcept;
   static PetscErrorCode Conjugate(Vec) noexcept;
@@ -177,7 +208,7 @@ template <device::cupm::DeviceType T>
 inline PetscErrorCode VecCreateSeqCUPMAsync(MPI_Comm comm, PetscInt n, Vec *v) noexcept
 {
   PetscFunctionBegin;
-  PetscAssertPointer(v, 4);
+  PetscAssertPointer(v, 3);
   PetscCall(impl::VecSeq_CUPM<T>::CreateSeqCUPM(comm, 0, n, v, PETSC_TRUE));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

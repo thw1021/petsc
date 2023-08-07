@@ -1434,6 +1434,17 @@ static PetscErrorCode MatSolve_SeqAIJCUSPARSE_LU(Mat A, Vec b, Vec x)
     PetscCallCUSPARSE(cusparseDnVecSetValues(fs->dnVecDescr_X, (void *)barray));
   }
 
+  PetscDeviceContext dctx;
+  PetscStreamType    stype;
+  cudaStream_t       old_stream;
+  cudaStream_t      *stream = nullptr;
+
+  PetscCall(PetscDeviceContextGetCurrentContext(&dctx));
+  PetscCall(PetscDeviceContextGetStreamType(dctx, &stype));
+  PetscCall(PetscDeviceContextGetStreamHandle_Internal(dctx, (void **)&stream));
+  PetscCallCUSPARSE(cusparseGetStream(fs->handle, &old_stream));
+  PetscCallCUSPARSE(cusparseSetStream(fs->handle, *stream));
+
   // Solve L Y = X
   PetscCallCUSPARSE(cusparseDnVecSetValues(fs->dnVecDescr_Y, fs->Y));
   // Note that cusparseSpSV_solve() secretly uses the external buffer used in cusparseSpSV_analysis()!
@@ -1452,6 +1463,10 @@ static PetscErrorCode MatSolve_SeqAIJCUSPARSE_LU(Mat A, Vec b, Vec x)
     PetscCallThrust(thrust::copy(thrust::cuda::par.on(PetscDefaultCudaStream), thrust::make_permutation_iterator(thrust::device_pointer_cast(fs->X), fs->cpermIndices->begin()),
                                  thrust::make_permutation_iterator(thrust::device_pointer_cast(fs->X + m), fs->cpermIndices->end()), xGPU));
   }
+
+  PetscCallCUSPARSE(cusparseSetStream(fs->handle, old_stream));
+  if (stype == PETSC_STREAM_GLOBAL_BLOCKING) PetscCall(PetscDeviceContextSynchronize(dctx));
+
   PetscCall(VecCUDARestoreArrayRead(b, &barray));
   PetscCall(VecCUDARestoreArrayWrite(x, &xarray));
   PetscCall(PetscLogGpuTimeEnd());
@@ -3608,6 +3623,16 @@ static PetscErrorCode MatMultAddKernel_SeqAIJCUSPARSE(Mat A, Vec xx, Vec yy, Vec
 #endif
     }
 
+    PetscDeviceContext dctx;
+    PetscStreamType    stype;
+    cudaStream_t       old_stream;
+    cudaStream_t      *stream = nullptr;
+
+    PetscCall(PetscDeviceContextGetCurrentContext(&dctx));
+    PetscCall(PetscDeviceContextGetStreamType(dctx, &stype));
+    PetscCall(PetscDeviceContextGetStreamHandle_Internal(dctx, (void **)&stream));
+    PetscCallCUSPARSE(cusparseGetStream(cusparsestruct->handle, &old_stream));
+    PetscCallCUSPARSE(cusparseSetStream(cusparsestruct->handle, *stream));
     /* csr_spmv does y = alpha op(A) x + beta y */
     if (cusparsestruct->format == MAT_CUSPARSE_CSR) {
 #if PETSC_PKG_CUDA_VERSION_GE(11, 0, 0)
@@ -3645,11 +3670,11 @@ static PetscErrorCode MatMultAddKernel_SeqAIJCUSPARSE(Mat A, Vec xx, Vec yy, Vec
     PetscCall(PetscLogGpuTimeEnd());
 
     if (opA == CUSPARSE_OPERATION_NON_TRANSPOSE) {
-      if (yy) {                                      /* MatMultAdd: zz = A*xx + yy */
-        if (compressed) {                            /* A is compressed. We first copy yy to zz, then ScatterAdd the work vector to zz */
-          PetscCall(VecSeq_CUDA::Copy(yy, zz));      /* zz = yy */
-        } else if (zz != yy) {                       /* A is not compressed. zz already contains A*xx, and we just need to add yy */
-          PetscCall(VecSeq_CUDA::AXPY(zz, 1.0, yy)); /* zz += yy */
+      if (yy) {                                            /* MatMultAdd: zz = A*xx + yy */
+        if (compressed) {                                  /* A is compressed. We first copy yy to zz, then ScatterAdd the work vector to zz */
+          PetscCall(VecSeq_CUDA::CopyAsync(yy, zz, dctx)); /* zz = yy */
+        } else if (zz != yy) {                             /* A is not compressed. zz already contains A*xx, and we just need to add yy */
+          PetscCall(VecSeq_CUDA::AXPY(zz, 1.0, yy));       /* zz += yy */
         }
       } else if (compressed) { /* MatMult: zz = A*xx. A is compressed, so we zero zz first, then ScatterAdd the work vector to zz */
         PetscCall(VecSeq_CUDA::Set(zz, 0));
@@ -3677,6 +3702,8 @@ static PetscErrorCode MatMultAddKernel_SeqAIJCUSPARSE(Mat A, Vec xx, Vec yy, Vec
     } else {
       if (yy && yy != zz) PetscCall(VecSeq_CUDA::AXPY(zz, 1.0, yy)); /* zz += yy */
     }
+    PetscCallCUSPARSE(cusparseSetStream(cusparsestruct->handle, old_stream));
+    if (stype == PETSC_STREAM_GLOBAL_BLOCKING) PetscCall(PetscDeviceContextSynchronize(dctx));
     PetscCall(VecCUDARestoreArrayRead(xx, (const PetscScalar **)&xarray));
     if (yy == zz) PetscCall(VecCUDARestoreArray(zz, &zarray));
     else PetscCall(VecCUDARestoreArrayWrite(zz, &zarray));

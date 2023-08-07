@@ -24,7 +24,9 @@ PETSC_INTERN PetscErrorCode VecAllocateNVSHMEM_SeqCUDA(Vec);
 
   #include <petsc/private/cpp/functional.hpp>
 
-  #include <limits> // std::numeric_limits
+  #include "../src/sys/objects/device/impls/cupm/kernels.hpp"
+
+PETSC_INTERN PetscErrorCode VecCUPMCheckMinimumPinnedMemory_Internal(Vec, PetscBool *);
 
 namespace Petsc
 {
@@ -36,9 +38,6 @@ namespace cupm
 {
 
 namespace impl
-{
-
-namespace
 {
 
 struct no_op {
@@ -60,18 +59,23 @@ struct CooPair {
 };
 
 template <typename U>
-static constexpr CooPair<U> make_coo_pair(U *&device, U *&host, PetscCount size) noexcept
+inline constexpr CooPair<U> make_coo_pair(U *&device, U *&host, typename CooPair<U>::size_type size) noexcept
 {
   return {device, host, size};
 }
-
-} // anonymous namespace
 
 // forward declarations
 template <device::cupm::DeviceType>
 class VecSeq_CUPM;
 template <device::cupm::DeviceType>
 class VecMPI_CUPM;
+
+namespace kernels
+{
+
+using namespace device::cupm::kernels;
+
+} // namespace kernels
 
 // ==========================================================================================
 // Vec_CUPMBase
@@ -313,25 +317,6 @@ inline PetscErrorCode Vec_CUPMBase<T, D>::ResetAllocatedDevicePtr_(PetscDeviceCo
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-namespace
-{
-
-inline PetscErrorCode VecCUPMCheckMinimumPinnedMemory_Internal(Vec v, PetscBool *set = nullptr) noexcept
-{
-  auto      mem = static_cast<PetscInt>(v->minimum_bytes_pinned_memory);
-  PetscBool flg;
-
-  PetscFunctionBegin;
-  PetscObjectOptionsBegin(PetscObjectCast(v));
-  PetscCall(PetscOptionsRangeInt("-vec_pinned_memory_min", "Minimum size (in bytes) for an allocation to use pinned memory on host", "VecSetPinnedMemoryMin", mem, &mem, &flg, 0, std::numeric_limits<decltype(mem)>::max()));
-  if (flg) v->minimum_bytes_pinned_memory = mem;
-  PetscOptionsEnd();
-  if (set) *set = flg;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-} // anonymous namespace
-
 template <device::cupm::DeviceType T, typename D>
 template <typename CastFunctionType>
 inline PetscErrorCode Vec_CUPMBase<T, D>::VecAllocateCheck_(Vec v, void *&dest, CastFunctionType &&cast) noexcept
@@ -375,7 +360,7 @@ inline PetscErrorCode Vec_CUPMBase<T, D>::HostAllocateCheck_(PetscDeviceContext,
   PetscCall(VecIMPLAllocateCheck_(v));
   if (auto &alloc = VecIMPLCast(v)->array_allocated) PetscFunctionReturn(PETSC_SUCCESS);
   else {
-    PetscCall(VecCUPMCheckMinimumPinnedMemory_Internal(v));
+    PetscCall(VecCUPMCheckMinimumPinnedMemory_Internal(v, nullptr));
     {
       const auto n     = v->map->n;
       const auto useit = UseCUPMHostAlloc((n * sizeof(*alloc)) > v->minimum_bytes_pinned_memory);
@@ -1042,6 +1027,17 @@ inline PetscErrorCode Vec_CUPMBase<T, D>::BindToCPU_CUPMBase(Vec v, PetscBool us
   VecSetOp_CUPM(restorelocalvectorread, nullptr, VecSeq_T::template RestoreLocalVector<PETSC_MEMORY_ACCESS_READ>);
   VecSetOp_CUPM(sum, nullptr, VecSeq_T::Sum);
   VecSetOp_CUPM(errorwnorm, nullptr, D::ErrorWnorm);
+
+  VecSetOp_CUPM(copy_async, nullptr, VecSeq_T::CopyAsync);
+  VecSetOp_CUPM(aypx_async, nullptr, VecSeq_T::AYPXAsync);
+  VecSetOp_CUPM(axpy_async, nullptr, VecSeq_T::AXPYAsync);
+  VecSetOp_CUPM(dot_local_async, nullptr, VecSeq_T::DotAsync);
+  VecSetOp_CUPM(tdot_local_async, nullptr, VecSeq_T::TDotAsync);
+  VecSetOp_CUPM(norm_local_async, nullptr, VecSeq_T::NormAsync);
+  VecSetOp_CUPM(pointwisemult_async, nullptr, VecSeq_T::PointwiseMultAsync);
+  VecSetOp_CUPM(scale_async, nullptr, VecSeq_T::ScaleAsync);
+  VecSetOp_CUPM(set_async, nullptr, VecSeq_T::SetAsync);
+  VecSetOp_CUPM(waxpy_async, nullptr, VecSeq_T::WAXPYAsync);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1200,7 +1196,7 @@ inline PetscErrorCode Vec_CUPMBase<T, D>::Convert_IMPL_IMPLCUPM(Vec v) noexcept
     using name::HostArrayReadWrite; \
     using name::ResetPreallocationCOO_CUPMBase; \
     using name::SetPreallocationCOO_CUPMBase; \
-    using name::Convert_IMPL_IMPLCUPM;
+    using name::Convert_IMPL_IMPLCUPM
 
 } // namespace impl
 

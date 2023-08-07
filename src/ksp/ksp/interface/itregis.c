@@ -50,6 +50,8 @@ PETSC_EXTERN PetscErrorCode KSPCreate_FETIDP(KSP);
 #if defined(PETSC_HAVE_HPDDM)
 PETSC_EXTERN PetscErrorCode KSPCreate_HPDDM(KSP);
 #endif
+PETSC_INTERN PetscErrorCode KSPCreate_CG_Async(KSP);
+PETSC_INTERN PetscErrorCode KSPCreate_TFQMR_Async(KSP);
 
 /*@C
   KSPRegisterAll - Registers all of the Krylov subspace methods in the `KSP` package.
@@ -117,6 +119,8 @@ PetscErrorCode KSPRegisterAll(void)
 #if defined(PETSC_HAVE_HPDDM)
   PetscCall(KSPRegister(KSPHPDDM, KSPCreate_HPDDM));
 #endif
+  PetscCall(KSPRegister(KSPCGASYNC, KSPCreate_CG_Async));
+  PetscCall(KSPRegister(KSPTFQMRASYNC, KSPCreate_TFQMR_Async));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

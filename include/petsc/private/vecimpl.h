@@ -11,6 +11,20 @@
 #include <petscvec.h>
 #include <petsc/private/petscimpl.h>
 
+#ifdef __cplusplus
+  #include <petscmanagedmemory_fwd.hpp>
+
+  #define PetscManagedScalarRef Petsc::ManagedScalar &
+  #define PetscManagedRealRef   Petsc::ManagedReal &
+  #define PetscManagedRealPtr   Petsc::ManagedReal *
+  #define PetscManagedScalarPtr Petsc::ManagedScalar *
+#else
+  #define PetscManagedScalarRef void *
+  #define PetscManagedRealRef   void *
+  #define PetscManagedRealPtr   void *
+  #define PetscManagedScalarPtr void *
+#endif
+
 PETSC_EXTERN PetscBool      VecRegisterAllCalled;
 PETSC_EXTERN PetscErrorCode VecRegisterAll(void);
 PETSC_EXTERN MPI_Op         MPIU_MAXLOC;
@@ -110,6 +124,22 @@ struct _VecOps {
   PetscErrorCode (*setvaluescoo)(Vec, const PetscScalar[], InsertMode);
   PetscErrorCode (*errorwnorm)(Vec, Vec, Vec, NormType, PetscReal, Vec, PetscReal, Vec, PetscReal, PetscReal *, PetscInt *, PetscReal *, PetscInt *, PetscReal *, PetscInt *);
   PetscErrorCode (*maxpby)(Vec, PetscInt, const PetscScalar *, PetscScalar, Vec *); /* y = beta y + alpha[j] x[j] */
+
+  // ASYNC OPS
+  PetscErrorCode (*copy_async)(Vec, Vec, PetscDeviceContext);
+  PetscErrorCode (*aypx_async)(Vec, const PetscManagedScalarRef, Vec, PetscDeviceContext);
+  PetscErrorCode (*axpy_async)(Vec, const PetscManagedScalarRef, Vec, PetscDeviceContext);
+  PetscErrorCode (*dot_async)(Vec, Vec, PetscManagedScalarRef, PetscDeviceContext);
+  PetscErrorCode (*dot_local_async)(Vec, Vec, PetscManagedScalarRef, PetscDeviceContext);
+  PetscErrorCode (*tdot_async)(Vec, Vec, PetscManagedScalarRef, PetscDeviceContext);
+  PetscErrorCode (*tdot_local_async)(Vec, Vec, PetscManagedScalarRef, PetscDeviceContext);
+  PetscErrorCode (*norm_async)(Vec, NormType, PetscManagedRealPtr, PetscDeviceContext);
+  PetscErrorCode (*norm_local_async)(Vec, NormType, PetscManagedRealPtr, PetscDeviceContext);
+  PetscErrorCode (*pointwisemult_async)(Vec, Vec, Vec, PetscDeviceContext);
+  PetscErrorCode (*scale_async)(Vec, const PetscManagedScalarRef, PetscDeviceContext);
+  PetscErrorCode (*set_async)(Vec, const PetscManagedScalarRef, PetscDeviceContext);
+  PetscErrorCode (*waxpy_async)(Vec, const PetscManagedScalarRef, Vec, Vec, PetscDeviceContext);
+  PetscErrorCode (*maxpy_async)(Vec, PetscInt, const PetscManagedScalarPtr, Vec *, PetscDeviceContext);
 };
 
 #if defined(offsetof) && (defined(__cplusplus) || (PETSC_C_VERSION >= 23))

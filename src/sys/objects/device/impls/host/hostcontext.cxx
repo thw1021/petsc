@@ -29,7 +29,7 @@ public:
   static PetscErrorCode synchronize(PetscDeviceContext) noexcept { return PETSC_SUCCESS; }
 
   // clang-format off
-  const _DeviceContextOps ops = {
+  static constexpr _DeviceContextOps ops = {
     PetscDesignatedInitializer(destroy, destroy),
     PetscDesignatedInitializer(changestreamtype, changeStreamType),
     PetscDesignatedInitializer(setup, setUp),
@@ -43,6 +43,7 @@ public:
     PetscDesignatedInitializer(endtimer, nullptr),
     PetscDesignatedInitializer(memalloc, nullptr),
     PetscDesignatedInitializer(memfree, nullptr),
+    PetscDesignatedInitializer(memrealloc, nullptr),
     PetscDesignatedInitializer(memcopy, nullptr),
     PetscDesignatedInitializer(memset, nullptr),
     PetscDesignatedInitializer(createevent, nullptr),
@@ -51,6 +52,8 @@ public:
   };
   // clang-format on
 };
+
+constexpr _DeviceContextOps DeviceContext::ops;
 
 } // namespace impl
 

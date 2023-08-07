@@ -38,6 +38,7 @@ typedef struct {
   PetscReal obj_min;
 
   PetscBool singlereduction; /* use variant of CG that combines both inner products */
+  PetscInt  check_every;
 } KSP_CG;
 
 #endif

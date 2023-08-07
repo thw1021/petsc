@@ -1,7 +1,7 @@
 -include ../../../../petscdir.mk
 
 MANSEC           = KSP
-CLEANFILES       = rhs.vtk solution.vtk bench_kspsolve
+CLEANFILES       = rhs.vtk solution.vtk bench_kspsolve bench_kspsolve_dmda
 NP               = 1
 DIRS             = network amrex
 

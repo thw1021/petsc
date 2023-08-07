@@ -4,6 +4,38 @@ import os
 import sys
 import re
 import pickle
+import textwrap
+
+class LogPrinter:
+  """
+  A useful helper class that prints the parent function name when called, i.e.:
+
+  def myConfigureFunc(self, ...):
+    log_printer = LogPrinter(self)
+    ...
+    log_printer('foo bar baz')
+
+  prints "myConfigureFunc(): foo bar baz" nicely formatted to the log
+  """
+  __slots__ = ('cfg', 'fmt_str')
+
+  def __init__(self, cfg):
+    self.cfg = cfg
+    try:
+      import inspect
+
+      calling_func_stack = inspect.stack()[1]
+      if sys.version_info >= (3, 5):
+        func_name = calling_func_stack.function
+      else:
+        func_name = calling_func_stack[3]
+    except:
+      func_name = 'Unknown'
+    self.fmt_str = func_name + '(): {}'
+    return
+
+  def __call__(self, msg, *args, **kwargs):
+    return self.cfg.logPrint(self.fmt_str.format(msg), *args, **kwargs)
 
 class Configure(config.base.Configure):
   def __init__(self, framework):
@@ -1010,24 +1042,6 @@ char assert_aligned[(sizeof(struct mystruct)==16)*2-1];
     - If no compilers supported the coverage flag, throws RuntimeError
     -
     """
-    class LogPrinter:
-      def __init__(self, cfg):
-        self.cfg = cfg
-        try:
-          import inspect
-
-          calling_func_stack = inspect.stack()[1]
-          if sys.version_info >= (3, 5):
-            func_name = calling_func_stack.function
-          else:
-            func_name = calling_func_stack[3]
-        except:
-          func_name = 'Unknown'
-        self.fmt_str = func_name + '(): {}'
-
-      def __call__(self, msg, *args, **kwargs):
-        return self.cfg.logPrint(self.fmt_str.format(msg), *args, **kwargs)
-
     argdb_flag = 'with-coverage'
     log_print  = LogPrinter(self)
     if not self.argDB[argdb_flag]:
@@ -1247,6 +1261,172 @@ char assert_aligned[(sizeof(struct mystruct)==16)*2-1];
       self.delDefine(define_name)
     return
 
+  def configureHostDeviceFeatureFlagsForLang(self, lang, feature_name, flag_list, includes, body, additional_notes = ''):
+    r"""Do the actual checking for host-device lambda flags. See configureHostDeviceFeatureFlags for
+    more info
+
+    Parameters
+    ----------
+    lang : str
+      the language to test, e.g. 'CUDA'
+    feature_name : str
+      the name of the feature to output in logging, e.g. '__host__ __device__ lambdas'
+    flag_list : array[str]
+      the set of flags to test, e.g. ('--extended-lambda', '--exp-extended-lambda'), must not be a
+      generator!
+    includes : str
+      the preamble section of the source snippet to use to test compilation
+    body : str
+      the body of the source snippet to use to test compilation
+    additonal_notes : optional, str
+      additional notes to add to the error message in case the compiler cannot compile `feature_name`
+
+    Returns
+    -------
+    None
+
+    Raises
+    ------
+    config.base.ConfigureSetupError
+      if the compiler exists but could not compile the feature, should not be caught
+
+    Notes
+    -----
+    Does nothing if there is no compiler for `lang`
+    """
+    assert isinstance(lang, str)
+    assert isinstance(feature_name, str)
+    assert isinstance(flag_list, (tuple, list))
+    for f in flag_list:
+      assert isinstance(f, str)
+    assert isinstance(includes, str)
+    assert isinstance(body, str)
+    assert isinstance(additional_notes, str)
+
+    log_print = LogPrinter(self)
+    log_print('Testing {} for {}'.format(lang, feature_name))
+    try:
+      device_cc = self.getCompiler(lang=lang)
+    except RuntimeError:
+      # no device compiler, nothing to do
+      log_print('No compiler found for {}, bailing'.format(lang))
+      return
+
+    def quoted(string):
+      return string.join(("'", "'"))
+
+    quoted_device_cc = quoted(device_cc)
+    log_print('Found {} compiler {}'.format(lang, quoted_device_cc))
+    with self.Language(lang):
+      with self.setCompilers.Language(lang):
+        for flag in flag_list:
+          # the linker should not get the flag
+          with self.setCompilers.extraCompilerFlags([flag], compilerOnly=True) as skip_flags:
+            if not skip_flags and self.checkLink(includes=includes, body=body):
+              # flag was accepted
+              break
+          log_print(
+            'Compiler {} did not accept {} flag {}'.format(quoted_device_cc, feature_name, quoted(flag))
+          )
+        else:
+          mess = 'Compiler {} did not accept any of the following flags {} to enable {}. If you know the correct flag, set it via --{}=\'<the flag>\' and re-run configure. If not, it\'s possible your compiler is too old.'.format(quoted_device_cc, flag_list, feature_name, self.getCompilerFlagsName(lang))
+          if additional_notes:
+            mess += ' ' + additional_notes
+          raise config.base.ConfigureSetupError(mess)
+        # must do this exactly here since:
+        #
+        # 1. setCompilers.extraCompilerFlags() will reset the compiler flags on __exit__()
+        #    (so cannot do it in the loop)
+        # 2. we need to set the compiler flag while setCompilers.Language() is still in
+        #    effect (so cannot do it outside the with statements)
+        self.setCompilers.insertCompilerFlag(flag, True)
+    return
+
+  def configureHostDeviceFeatureFlags(self):
+    r"""Adds the required flags to device compiler to allow certain C++ features in host/device code
+
+    Notes
+    -----
+    See self.configureHostDeviceFeatureFlagsForLang() for more information. This routine acts as a thin
+    wrapper over it.
+    """
+    self.executeTest(
+      self.configureHostDeviceFeatureFlagsForLang,
+      args=[
+        'CUDA', '__host__ __device__ lambdas',
+        ('', '--extended-lambda', '--exp-extended-lambda', '—expt-extended-lambda'),
+        textwrap.dedent(
+          """
+          #include <cuda_runtime.h>
+
+          template <typename T>
+          __global__ void kernel(T lambda)
+          {
+            lambda(0);
+          }
+
+          template <typename T>
+          void host_func(T lambda)
+          {
+            lambda(0);
+          }
+          """
+        ),
+        textwrap.dedent(
+          """
+          int  y      = 10;
+          auto lambda = [=] __host__ __device__ (int x) { return x + y; };
+
+          kernel<<<1, 1>>>(lambda);
+          host_func(lambda);
+          """
+        )
+      ],
+      kargs=dict(additional_notes='NVCC, for example, requires at least CUDA 8 for this feature.')
+    )
+    self.executeTest(
+      self.configureHostDeviceFeatureFlagsForLang,
+      args=[
+        'CUDA', 'relaxed __host__ __device__ constexpr',
+        ('', '--expt-relaxed-constexpr'),
+        textwrap.dedent(
+          """
+          #include <tuple>
+          #include <cuda_runtime.h>
+
+          __host__ __device__ tuple_get(std::tuple<int, int>& x)
+          {
+            return std::get<0>(x);
+          }
+
+          __global__ void kernel(int x, int y, int *ret)
+          {
+            std::tuple<int, int> tup{x, y};
+
+            *ret = tuple_get(tup)
+          }
+
+
+          void host_func(int x, int y, int *ret)
+          {
+            std::tuple<int, int> tup{x, y};
+
+            *ret = tuple_get(tup);
+          }
+          """
+        ),
+        textwrap.dedent(
+          """
+          int x = 1, y = 2, z = 3;
+
+          kernel<<<1, 1>>>(x, y, &z);
+          host_func(x, y, &z);
+          """
+        )
+      ]
+    )
+    return
+
 #-----------------------------------------------------------------------------------------------------
   def configureCygwinBrokenPipe(self):
     '''Cygwin version <= 1.7.18 had issues with pipes and long commands invoked from gnu-make
@@ -1385,6 +1565,7 @@ char assert_aligned[(sizeof(struct mystruct)==16)*2-1];
       raise RuntimeError('PETSc requires a functional math library. Please send configure.log to petsc-maint@mcs.anl.gov.')
     if self.languages.clanguage == 'Cxx' and not hasattr(self.compilers, 'CXX'):
       raise RuntimeError('Cannot set C language to C++ without a functional C++ compiler.')
+    self.executeTest(self.configureHostDeviceFeatureFlags)
     self.executeTest(self.configureRTLDDefault)
     self.executeTest(self.configurePrefetch)
     self.executeTest(self.configureUnused)

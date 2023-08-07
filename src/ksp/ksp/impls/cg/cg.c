@@ -69,7 +69,7 @@ static PetscErrorCode KSPCGSetRadius_CG(KSP ksp, PetscReal radius)
       This is called once, usually automatically by KSPSolve() or KSPSetUp()
      but can be called directly by KSPSetUp()
 */
-static PetscErrorCode KSPSetUp_CG(KSP ksp)
+PetscErrorCode KSPSetUp_CG(KSP ksp)
 {
   KSP_CG  *cgP   = (KSP_CG *)ksp->data;
   PetscInt maxit = ksp->max_it, nwork = 3;
@@ -189,8 +189,10 @@ static PetscErrorCode KSPSolve_CG(KSP ksp)
   cg->obj -= 0.5 * PetscRealPart(a);
 
   if (testobj) PetscCall(PetscInfo(ksp, "it %" PetscInt_FMT " obj %g\n", ksp->its, (double)cg->obj));
-  PetscCall(KSPLogResidualHistory(ksp, dp));
-  PetscCall(KSPMonitor(ksp, ksp->its, dp));
+  if (cg->check_every == 1) {
+    PetscCall(KSPLogResidualHistory(ksp, dp));
+    PetscCall(KSPMonitor(ksp, ksp->its, dp));
+  }
   ksp->rnorm = dp;
 
   PetscCall((*ksp->converged)(ksp, ksp->its, dp, &ksp->reason, ksp->cnvP)); /* test for convergence */
@@ -315,9 +317,11 @@ static PetscErrorCode KSPSolve_CG(KSP ksp)
     if (testobj) PetscCall(PetscInfo(ksp, "it %" PetscInt_FMT " obj %g\n", i + 1, (double)cg->obj));
 
     ksp->rnorm = dp;
-    PetscCall(KSPLogResidualHistory(ksp, dp));
-    PetscCall(KSPMonitor(ksp, i + 1, dp));
-    PetscCall((*ksp->converged)(ksp, i + 1, dp, &ksp->reason, ksp->cnvP));
+    if (((i + 1) % cg->check_every) == 0) {
+      PetscCall(KSPLogResidualHistory(ksp, dp));
+      PetscCall(KSPMonitor(ksp, i + 1, dp));
+      PetscCall((*ksp->converged)(ksp, i + 1, dp, &ksp->reason, ksp->cnvP));
+    }
 
     if (!ksp->reason && testobj && cg->obj <= cg->obj_min) {
       PetscCall(PetscInfo(ksp, "converged to objective target minimum\n"));
@@ -417,8 +421,10 @@ static PetscErrorCode KSPSolve_CG_SingleReduction(KSP ksp)
   default:
     SETERRQ(PetscObjectComm((PetscObject)ksp), PETSC_ERR_SUP, "%s", KSPNormTypes[ksp->normtype]);
   }
-  PetscCall(KSPLogResidualHistory(ksp, dp));
-  PetscCall(KSPMonitor(ksp, 0, dp));
+  if (cg->check_every == 1) {
+    PetscCall(KSPLogResidualHistory(ksp, dp));
+    PetscCall(KSPMonitor(ksp, 0, dp));
+  }
   ksp->rnorm = dp;
 
   PetscCall((*ksp->converged)(ksp, 0, dp, &ksp->reason, ksp->cnvP)); /* test for convergence */
@@ -582,6 +588,7 @@ PetscErrorCode KSPSetFromOptions_CG(KSP ksp, PetscOptionItems *PetscOptionsObjec
 #endif
   PetscCall(PetscOptionsBool("-ksp_cg_single_reduction", "Merge inner products into single MPI_Allreduce()", "KSPCGUseSingleReduction", cg->singlereduction, &cg->singlereduction, &flg));
   if (flg) PetscCall(KSPCGUseSingleReduction(ksp, cg->singlereduction));
+  PetscCall(PetscOptionsBoundedInt("-ksp_check_interval", "Check norm and monitory convergence only every N iterations", NULL, cg->check_every, &cg->check_every, NULL, 0));
   PetscOptionsHeadEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -686,8 +693,9 @@ PETSC_EXTERN PetscErrorCode KSPCreate_CG(KSP ksp)
 #else
   cg->type = KSP_CG_HERMITIAN;
 #endif
-  cg->obj_min = 0.0;
-  ksp->data   = (void *)cg;
+  cg->obj_min     = 0.0;
+  cg->check_every = 1;
+  ksp->data       = (void *)cg;
 
   PetscCall(KSPSetSupportedNorm(ksp, KSP_NORM_PRECONDITIONED, PC_LEFT, 3));
   PetscCall(KSPSetSupportedNorm(ksp, KSP_NORM_UNPRECONDITIONED, PC_LEFT, 2));
