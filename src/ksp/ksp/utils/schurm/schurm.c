@@ -53,11 +53,10 @@ PetscErrorCode MatMultTranspose_SchurComplement(Mat N, Vec x, Vec y)
   Mat_SchurComplement *Na = (Mat_SchurComplement *)N->data;
 
   PetscFunctionBegin;
-  if (!Na->work1) PetscCall(MatCreateVecs(Na->A, &Na->work1, NULL));
-  if (!Na->work2) PetscCall(MatCreateVecs(Na->A, &Na->work2, NULL));
-  PetscCall(MatMultTranspose(Na->C, x, Na->work1));
-  PetscCall(KSPSolveTranspose(Na->ksp, Na->work1, Na->work2));
-  PetscCall(MatMultTranspose(Na->B, Na->work2, y));
+  if (!Na->work) PetscCall(MatCreateVecs(Na->A, &Na->work, NULL));
+  PetscCall(MatMultTranspose(Na->C, x, Na->work));
+  PetscCall(KSPSolveTranspose(Na->ksp, Na->work, Na->work));
+  PetscCall(MatMultTranspose(Na->B, Na->work, y));
   PetscCall(VecScale(y, -1.0));
   if (Na->D) PetscCall(MatMultTransposeAdd(Na->D, x, y, y));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -71,11 +70,10 @@ PetscErrorCode MatMult_SchurComplement(Mat N, Vec x, Vec y)
   Mat_SchurComplement *Na = (Mat_SchurComplement *)N->data;
 
   PetscFunctionBegin;
-  if (!Na->work1) PetscCall(MatCreateVecs(Na->A, &Na->work1, NULL));
-  if (!Na->work2) PetscCall(MatCreateVecs(Na->A, &Na->work2, NULL));
-  PetscCall(MatMult(Na->B, x, Na->work1));
-  PetscCall(KSPSolve(Na->ksp, Na->work1, Na->work2));
-  PetscCall(MatMult(Na->C, Na->work2, y));
+  if (!Na->work) PetscCall(MatCreateVecs(Na->A, &Na->work, NULL));
+  PetscCall(MatMult(Na->B, x, Na->work));
+  PetscCall(KSPSolve(Na->ksp, Na->work, Na->work));
+  PetscCall(MatMult(Na->C, Na->work, y));
   PetscCall(VecScale(y, -1.0));
   if (Na->D) PetscCall(MatMultAdd(Na->D, x, y, y));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -89,15 +87,14 @@ PetscErrorCode MatMultAdd_SchurComplement(Mat N, Vec x, Vec y, Vec z)
   Mat_SchurComplement *Na = (Mat_SchurComplement *)N->data;
 
   PetscFunctionBegin;
-  if (!Na->work1) PetscCall(MatCreateVecs(Na->A, &Na->work1, NULL));
-  if (!Na->work2) PetscCall(MatCreateVecs(Na->A, &Na->work2, NULL));
-  PetscCall(MatMult(Na->B, x, Na->work1));
-  PetscCall(KSPSolve(Na->ksp, Na->work1, Na->work2));
+  if (!Na->work) PetscCall(MatCreateVecs(Na->A, &Na->work, NULL));
+  PetscCall(MatMult(Na->B, x, Na->work));
+  PetscCall(KSPSolve(Na->ksp, Na->work, Na->work));
   if (y == z) {
-    PetscCall(VecScale(Na->work2, -1.0));
-    PetscCall(MatMultAdd(Na->C, Na->work2, z, z));
+    PetscCall(VecScale(Na->work, -1.0));
+    PetscCall(MatMultAdd(Na->C, Na->work, z, z));
   } else {
-    PetscCall(MatMult(Na->C, Na->work2, z));
+    PetscCall(MatMult(Na->C, Na->work, z));
     PetscCall(VecAYPX(z, -1.0, y));
   }
   if (Na->D) PetscCall(MatMultAdd(Na->D, x, z, z));
@@ -128,8 +125,7 @@ PetscErrorCode MatDestroy_SchurComplement(Mat N)
   PetscCall(MatDestroy(&Na->B));
   PetscCall(MatDestroy(&Na->C));
   PetscCall(MatDestroy(&Na->D));
-  PetscCall(VecDestroy(&Na->work1));
-  PetscCall(VecDestroy(&Na->work2));
+  PetscCall(VecDestroy(&Na->work));
   PetscCall(KSPDestroy(&Na->ksp));
   PetscCall(PetscFree(N->data));
   PetscCall(PetscObjectComposeFunction((PetscObject)N, "MatProductSetFromOptions_schurcomplement_seqdense_C", NULL));
