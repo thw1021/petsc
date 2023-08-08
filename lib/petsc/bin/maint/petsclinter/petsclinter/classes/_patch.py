@@ -190,7 +190,7 @@ class Patch(AttributeCache):
     return
 
   def attach(self, cursor_id_errors: WeakListRef) -> None:
-    r"""Aattach a weak reference to this `Patch`s entries in the linters errors
+    r"""Attach a weak reference to this `Patch`s entries in the linters errors
 
     Parameters
     ----------

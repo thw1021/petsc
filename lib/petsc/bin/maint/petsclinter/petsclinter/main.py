@@ -128,7 +128,7 @@ def main(
   clang_dir : optional
     directory containing libclang.[so|dylib|dll] (default: None)
   clang_lib : optional
-    direct path to libclang.[so|dylib|dll], overrrides clang_dir if set (default: None)
+    direct path to libclang.[so|dylib|dll], overrides clang_dir if set (default: None)
   clang_compat_check : optional
     do clang lib compatibility check
   verbose : optional

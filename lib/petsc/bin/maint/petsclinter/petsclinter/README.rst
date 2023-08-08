@@ -74,7 +74,7 @@ correct for the argument number to match ``str``s (i.e. ``1``). But a naive pars
 
 This is a prime example of something that cannot be checked in the source alone, and
 requires a higher-level semantic view of the function to reliably check (in fact, it was
-the _the_ motivating case for the creation of the linter!).
+_the_ motivating case for the creation of the linter!).
 
 Checkers
 --------

@@ -405,7 +405,7 @@ class SectionManager:
     raise GuessHeadingFailError(f'Could not guess heading for:\n{line}')
 
 @DiagnosticManager.register(
-  ('internal-linkage','Verif2y that symbols with internal linkage don\'t have docstrings'),
+  ('internal-linkage','Verify that symbols with internal linkage don\'t have docstrings'),
   ('sowing-chars','Verify that sowing begin and end indicators match the symbol type'),
   ('symbol-spacing','Verify that dosctrings occur immediately above that which they describe'),
   ('indentation','Verify that docstring text is correctly indented'),

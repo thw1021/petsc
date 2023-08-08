@@ -612,7 +612,7 @@ class Linter:
     all_unresolved :
       a list of tuples of the path and message of unresolved errors (i.e. those without a `Patch`)
     all_resolved :
-      a lit of tuples of the path and message of resolved errors (i.e. those with a `Patch`)
+      a list of tuples of the path and message of resolved errors (i.e. those with a `Patch`)
     """
     return self.errors.split_and_condense()
 
@@ -624,7 +624,7 @@ class Linter:
     all_unresolved :
       a list of tuples of the path and message of unresolved warnings (i.e. those without a `Patch`)
     all_resolved :
-      a lit of tuples of the path and message of resolved warnings (i.e. those with a `Patch`)
+      a list of tuples of the path and message of resolved warnings (i.e. those with a `Patch`)
       (should be empty!)
     """
     return self.warnings.split_and_condense()

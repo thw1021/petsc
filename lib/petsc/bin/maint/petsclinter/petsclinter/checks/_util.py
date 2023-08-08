@@ -282,7 +282,7 @@ def check_is_PetscBool(linter: Linter, obj: Cursor, obj_type: clx.Type, func_cur
   return True
 
 def check_is_petsc_object(linter: Linter, obj: Cursor) -> bool:
-  r"""Check is `obj` is a PetscObject
+  r"""Check if `obj` is a PetscObject
 
   Parameters
   ----------

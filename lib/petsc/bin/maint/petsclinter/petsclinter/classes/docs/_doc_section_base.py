@@ -333,7 +333,7 @@ class SectionBase(DocBase):
     return []
 
   def _do_setup(self, docstring: PetscDocStringImpl, inspect_line: LineInspector[PetscDocStringImpl]) -> None:
-    r"""Do the actual seting up
+    r"""Do the actual setting up
 
     Parameters
     ----------
@@ -429,7 +429,7 @@ class SectionBase(DocBase):
     return True
 
   def _check_required_section_found(self, docstring: PetscDocStringImpl) -> None:
-    r"""Check a requred section does in fact exist
+    r"""Check a required section does in fact exist
 
     Parameters
     ----------
@@ -605,7 +605,7 @@ class SectionBase(DocBase):
     linter :
       the `Linter` instance to log any errors with
     cursor :
-      the cursor to which th docstring this section belongs to belongs
+      the cursor to which the docstring this section belongs to
     docstring :
       the docstring to which this section belongs
     """
@@ -800,14 +800,14 @@ class Synopsis(SectionBase):
     return
 
   def _syn_common_checks(self: SynopsisImpl, linter: Linter, cursor: Cursor, docstring: PetscDocStringImpl) -> None:
-    r"""Perform the common set of checks for all synopsese
+    r"""Perform the common set of checks for all synopses
 
     Parameters
     ----------
     linter :
       the `Linter` instance to log any errors with
     cursor :
-      the cursor to which the docstring this section belongs to belongs
+      the cursor to which the docstring this section belongs to
     docstring :
       the docstring to which this section belongs
 
@@ -1006,7 +1006,7 @@ class ParameterList(SectionBase):
     linter :
       the `Linter` instance to log any errors with
     cursor :
-      the cursor to which th docstring this section belongs to belongs
+      the cursor to which the docstring this section belongs to
     docstring :
       the docstring to which this section belongs
     """
@@ -1220,7 +1220,7 @@ class InlineList(SectionBase):
     linter :
       the `Linter` instance to log any errors with
     cursor :
-      the cursor to which th docstring this section belongs to belongs
+      the cursor to which the docstring this section belongs to
     docstring :
       the docstring to which this section belongs
     """

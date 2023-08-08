@@ -214,7 +214,7 @@ def get_clang_function(name: str, arg_types: Sequence[type[_T]], ret_type: type[
 def get_clang_function(name: str, arg_types: Sequence[type[_T]], ret_type: Optional[type[_U]] = None) -> ClangFunction[_T, _U]:
   r"""Get (or register) the clang function RET_TYPE (NAME *)(ARG_TYPES...)
 
-  A useful helper routine to reduce verbiage when retrieving a clang function which maye or may not
+  A useful helper routine to reduce verbiage when retrieving a clang function which may or may not
   already be exposed by clang.cindex
 
   Parameters

@@ -836,7 +836,7 @@ class FunctionParameterList(ParameterList):
     linter :
       the `Linter` instance to log any errors with
     cursor :
-      the cursor to which the docstring this section belongs to belongs
+      the cursor to which the docstring this section belongs to
     docstring :
       the docstring to which this section belongs
     """
@@ -889,7 +889,7 @@ class OptionDatabaseKeys(ParameterList):
     linter :
       the `Linter` instance to log any errors with
     cursor :
-      the cursor to which the docstring this section belongs to belongs
+      the cursor to which the docstring this section belongs to
     docstring :
       the docstring to which this section belongs
     """
@@ -1172,7 +1172,7 @@ class Level(InlineList):
     linter :
       the `Linter` instance to log any errors with
     cursor :
-      the cursor to which th docstring this section belongs to belongs
+      the cursor to which the docstring this section belongs to
     docstring :
       the docstring to which this section belongs
     """
@@ -1301,7 +1301,7 @@ class SeeAlso(InlineList):
     Parameters
     ----------
     docstring :
-      the docstring to which this sectiion belongs
+      the docstring to which this section belongs
     item_remain :
       the list of valid items to check
     """
@@ -1362,7 +1362,7 @@ class SeeAlso(InlineList):
     linter :
       the `Linter` instance to log any errors with
     cursor :
-      the cursor to which th docstring this section belongs to belongs
+      the cursor to which the docstring this section belongs to
     docstring :
       the docstring to which this section belongs
     """
