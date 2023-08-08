@@ -4,6 +4,7 @@
 /*@C
   DMPlexCreatePLYFromFile - Create a DMPlex mesh from a PLY file.
 
+  Input Parameters:
 + comm        - The MPI communicator
 . filename    - Name of the .med file
 - interpolate - Create faces and edges in the mesh
@@ -11,7 +12,8 @@
   Output Parameter:
 . dm - The DM object representing the mesh
 
-  Note: https://en.wikipedia.org/wiki/PLY_(file_format)
+  Note:
+  see https://en.wikipedia.org/wiki/PLY_(file_format)
 
   Level: beginner
 
