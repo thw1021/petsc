@@ -62,14 +62,14 @@ The role of the council is as follows.
 Votes are public, presented in the usual discussion venues, and the voting period must remain open for at least seven days or until a required majority has been achieved.
 The current members of the PETSc Council are
 Mark Adams,
-Satish Balay
+Satish Balay,
 Jed Brown,
 Jacob Faibussowitsch,
 Toby Isaac,
 Pierre Jolivet,
 Matt Knepley,
 Lois McInnes,
-Richard Trans Mills,
+Richard Tran Mills,
 Todd Munson,
 Jose Roman,
 Barry Smith,
