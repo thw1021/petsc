@@ -5,7 +5,7 @@
 typedef struct {
   Mat                        A, Ap, B, C, D;
   KSP                        ksp;
-  Vec                        work1, work2;
+  Vec                        work;
   MatSchurComplementAinvType ainvtype;
 } Mat_SchurComplement;
 
