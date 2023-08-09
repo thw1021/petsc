@@ -517,8 +517,6 @@ Unable to run hostname to check the network')
         cuda_aware = 1
     if cuda_aware:
       self.addDefine('HAVE_MPI_GPU_AWARE', 1)
-    else:
-      self.testoptions = '-use_gpu_aware_mpi 0'
     if self.checkLink('#include <mpi.h>\n', 'int ptr[1] = {0}; MPI_Win win = 0; if (MPI_Get_accumulate(ptr,1,MPI_INT,ptr,1,MPI_INT,0,0,1,MPI_INT,MPI_SUM,win)) { }\n'):
       self.addDefine('HAVE_MPI_GET_ACCUMULATE', 1)
     if self.checkLink('#include <mpi.h>\n', 'int ptr[1]; MPI_Win win = 0; MPI_Request req; if (MPI_Rget(ptr,1,MPI_INT,0,1,1,MPI_INT,win,&req)) { }\n'):
