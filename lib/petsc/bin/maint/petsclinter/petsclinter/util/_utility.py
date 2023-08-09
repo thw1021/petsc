@@ -12,14 +12,10 @@ import traceback
 import subprocess
 import ctypes.util
 import clang.cindex as clx # type: ignore[import]
-import petsclinter  as pl
 
 from .._typing import *
 
 from ..__version__ import py_version_lt
-
-# TODO disentangle!
-from ..classes._path import Path
 
 from ._clang import base_pch_clang_options
 
@@ -67,8 +63,9 @@ def subprocess_capture_output(*args, **kwargs) -> subprocess.CompletedProcess[st
     if subprocess.run raises a subprocess.CalledProcessError, this routine converts it into a
     RuntimeError with the output attached
   """
+  kwargs.setdefault('check', True)
   try:
-    ret = subprocess.run(*args, capture_output=True, universal_newlines=True, check=True, **kwargs)
+    ret = subprocess.run(*args, capture_output=True, universal_newlines=True, **kwargs)
   except subprocess.CalledProcessError as cpe:
     emess = '\n'.join([
       'Subprocess error:',
@@ -112,6 +109,8 @@ def initialize_libclang(clang_dir: Optional[StrPathLike] = None, clang_lib: Opti
   """
   clxconf = clx.conf
   if not clxconf.loaded:
+    from ..classes._path import Path
+
     clxconf.set_compatibility_check(compat_check)
     if clang_lib:
       clang_lib = Path(clang_lib).resolve()
@@ -134,6 +133,8 @@ def try_to_find_libclang_dir() -> Optional[Path]:
   llvm_lib_dir : path_like | None
     the path to libclang (i.e. LLVM_DIR/lib) or None if it was not found
   """
+  from ..classes._path import Path
+
   llvm_lib_dir = ctypes.util.find_library('clang')
   if not llvm_lib_dir:
     try:
@@ -223,6 +224,8 @@ def get_clang_sys_includes() -> list[str]:
   ret :
     list of paths to append to compiler flags to pick up sys inclusions (e.g. <ctypes> or <stdlib.h>)
   """
+  from ..classes._path import Path
+
   output = subprocess_capture_output(['clang', '-E', '-x', 'c++', os.devnull, '-v'])
   # goes to stderr because of /dev/null
   includes = output.stderr.split('#include <...> search starts here:\n')[1]
@@ -266,6 +269,8 @@ def build_compiler_flags(petsc_dir: Path, petsc_arch: str, extra_compiler_flags:
   petsc_includes = get_petsc_extra_includes(petsc_dir, petsc_arch)
   compiler_flags = get_clang_sys_includes() + misc_flags + petsc_includes + extra_compiler_flags
   if verbose > 1:
+    import petsclinter as pl
+
     pl.sync_print('\n'.join(['Compile flags:', *compiler_flags]))
   return compiler_flags
 
@@ -294,6 +299,8 @@ class PrecompiledHeader:
 
   def __exit__(self, *args, **kwargs) -> None:
     if self.verbose:
+      import petsclinter as pl
+
       pl.sync_print('Deleting precompiled header', self.pch)
       self.pch.unlink()
     return
@@ -333,7 +340,14 @@ class PrecompiledHeader:
     clang.cindex.LibclangError
       if `extra_header_includes` is not None, and the compilation results in compiler diagnostics
     """
-    assert isinstance(petsc_dir, Path)
+    import petsclinter as pl
+
+    def verbose_print(*args, **kwargs) -> None:
+      if verbose > 1:
+        pl.sync_print(*args, **kwargs)
+      return
+
+    assert isinstance(petsc_dir, pl.Path)
     if pch_clang_options is None:
       pch_clang_options = base_pch_clang_options
 
@@ -403,8 +417,7 @@ class PrecompiledHeader:
                 diags[filename] = (basename, diag)
       if diags:
         diagerrs = '\n'+'\n'.join(str(d) for _, d in diags.values())
-        if verbose > 1:
-          pl.sync_print('Included header has errors, removing', diagerrs)
+        verbose_print('Included header has errors, removing', diagerrs)
         mega_header_lines = [(hdr, hfi) for hdr, hfi in mega_header_lines if hdr not in diags]
       else:
         break
@@ -412,8 +425,7 @@ class PrecompiledHeader:
       # now include the other headers but this time immediately crash on errors, let the
       # user figure out their own busted header files
       mega_header += '\n'.join(extra_header_includes)
-      if verbose > 1:
-        pl.sync_print(f'Mega header:\n{mega_header}')
+      verbose_print(f'Mega header:\n{mega_header}')
       tu = index.parse(
         mega_header_name,
         args=compiler_flags, unsaved_files=[(mega_header_name, mega_header)], options=pch_clang_options
@@ -421,11 +433,10 @@ class PrecompiledHeader:
       if tu.diagnostics:
         pl.sync_print('\n'.join(map(str, tu.diagnostics)))
         raise clx.LibclangError('\n\nWarnings or errors generated when creating the precompiled header. This usually means that the provided libclang setup is faulty. If you used the auto-detection mechanism to find libclang then perhaps try specifying the location directly.')
-    elif verbose > 1:
-      pl.sync_print(f'Mega header:\n{mega_header}')
+    else:
+      verbose_print(f'Mega header:\n{mega_header}')
     precompiled_header.unlink(missing_ok=True)
     tu.save(precompiled_header)
     compiler_flags.extend(['-include-pch', str(precompiled_header)])
-    if verbose:
-      pl.sync_print('Saving precompiled header', precompiled_header)
+    verbose_print('Saving precompiled header', precompiled_header)
     return cls(precompiled_header, verbose)

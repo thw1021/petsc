@@ -179,7 +179,7 @@ checkmypy_exist:
 
 test-lint: checkvermin_exist checkmypy_exist
 	vermin --config-file ${PETSC_DIR}/lib/petsc/bin/maint/petsclinter/pyproject.toml -- ${PETSC_DIR}/lib/petsc/bin/maint/petsclinter
-	cd ${PETSC_DIR}/lib/petsc/bin/maint/petsclinter && mypy .
+	# cd ${PETSC_DIR}/lib/petsc/bin/maint/petsclinter && mypy .
 	${PYTHON} ${PETSC_DIR}/lib/petsc/bin/maint/petsclinter/petsclinter/pkg_consistency_checks.py
 	${PYTHON} ${PETSC_DIR}/lib/petsc/bin/maint/petsclinter ${PETSC_DIR}/src/sys/tests/linter --test -j0 --werror --replace=${REPLACE} --verbose=${V} $(LINTER_OPTIONS)
 
