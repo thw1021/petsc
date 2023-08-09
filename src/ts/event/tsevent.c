@@ -122,7 +122,7 @@ PetscErrorCode TSSetPostEventStep(TS ts, PetscReal dt)
 - dt - post event interval step
 
   Options Database Keys:
-. -ts_event_post_eventinterval_step <dt> time-step after event interval
+. -ts_event_post_eventinterval_step <dt> - time-step after event interval
 
   Notes:
   This function is deprecated, and its invocation has no effect. Use `TSSetPostEventStep()`.
@@ -608,16 +608,14 @@ static inline void TSEvent_update_right(TSEvent event, PetscReal t)
 */
 PetscErrorCode TSEventHandler(TS ts)
 {
-  TSEvent     event;
-  PetscReal   t, dt_min;
-  Vec         U;
-  PetscMPIInt rank;
-  PetscInt    minsidein = 2, minsideout = 2; // minsideout is sync on all ranks
-  PetscBool   finished = PETSC_FALSE;        // should stay sync on all ranks
+  TSEvent   event;
+  PetscReal t, dt_min;
+  Vec       U;
+  PetscInt  minsidein = 2, minsideout = 2; // minsideout is sync on all ranks
+  PetscBool finished = PETSC_FALSE;        // should stay sync on all ranks
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
-  PetscCallMPI(MPI_Comm_rank(((PetscObject)ts)->comm, &rank)); // 'rank' is used in the event->monitor reports
 
   if (!ts->event) PetscFunctionReturn(PETSC_SUCCESS);
   event               = ts->event;
@@ -669,8 +667,8 @@ PetscErrorCode TSEventHandler(TS ts)
           event->events_zero[event->nevents_zero++] = i;
           event->fsign[i]                           = 0; // note, the sign = 0 is enforced here, irrespective of the vtol criterion
           if (event->monitor)
-            PetscCall(PetscViewerASCIIPrintf(event->monitor, "[%" PetscInt_FMT "] TSEvent: iter %" PetscInt_FMT " - Event %" PetscInt_FMT " accepting time %g as event location, due to reaching too small time step %g while refining the bracket\n", (PetscInt)rank,
-                                             event->iterctr, i, (double)t, (double)dt_min));
+            PetscCall(
+              PetscViewerASCIIPrintf(event->monitor, "[%d] TSEvent: iter %" PetscInt_FMT " - Event %" PetscInt_FMT " accepting time %g as event location, due to reaching too small time step %g while refining the bracket\n", PetscGlobalRank, event->iterctr, i, (double)t, (double)dt_min));
         }
     }
 
@@ -686,8 +684,8 @@ PetscErrorCode TSEventHandler(TS ts)
       if (event->side[i] == minsideout) {
         event->justrefined_AB[i] = PETSC_TRUE; // only for these i's Anderson-Bjorck was invoked
         if (event->monitor && !finished)
-          PetscCall(PetscViewerASCIIPrintf(event->monitor, "[%" PetscInt_FMT "] TSEvent: iter %" PetscInt_FMT " - Event %" PetscInt_FMT " refining the bracket with sign change [%g - %g], next stepping to %g\n", (PetscInt)rank, event->iterctr, i,
-                                           (double)event->ptime_prev, (double)event->ptime_right, (double)(event->ptime_prev + dt_min)));
+          PetscCall(PetscViewerASCIIPrintf(event->monitor, "[%d] TSEvent: iter %" PetscInt_FMT " - Event %" PetscInt_FMT " refining the bracket with sign change [%g - %g], next stepping to %g\n", PetscGlobalRank, event->iterctr, i, (double)event->ptime_prev,
+                                           (double)event->ptime_right, (double)(event->ptime_prev + dt_min)));
       } else event->justrefined_AB[i] = PETSC_FALSE; // for these i's Anderson-Bjorck was not invoked
     }
     event->iterctr++;
@@ -698,7 +696,7 @@ PetscErrorCode TSEventHandler(TS ts)
       if (event->side[i] == minsideout) {
         event->events_zero[event->nevents_zero++] = i;
         if (event->monitor)
-          PetscCall(PetscViewerASCIIPrintf(event->monitor, "[%" PetscInt_FMT "] TSEvent: iter %" PetscInt_FMT " - Event %" PetscInt_FMT " zero crossing located at time %g (tol=%g)\n", (PetscInt)rank, event->iterctr, i, (double)t, (double)event->vtol[i]));
+          PetscCall(PetscViewerASCIIPrintf(event->monitor, "[%d] TSEvent: iter %" PetscInt_FMT " - Event %" PetscInt_FMT " zero crossing located at time %g (tol=%g)\n", PetscGlobalRank, event->iterctr, i, (double)t, (double)event->vtol[i]));
       }
     event->iterctr++;
     event->processing = PETSC_TRUE;

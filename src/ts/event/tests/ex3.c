@@ -142,7 +142,7 @@ int main(int argc, char **argv)
   // Solution
   PetscCall(TSSolve(ts, sol));
   PetscCall(TSGetConvergedReason(ts, &reason));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "CONVERGED REASON: %" PetscInt_FMT " (TS_CONVERGED_EVENT == %" PetscInt_FMT ")\n", reason, TS_CONVERGED_EVENT));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "CONVERGED REASON: %" PetscInt_FMT " (TS_CONVERGED_EVENT == %" PetscInt_FMT ")\n", (PetscInt)reason, (PetscInt)TS_CONVERGED_EVENT));
 
   // The 3 columns printed are: [RANK] [num. of events at the given time] [time of event]
   {
@@ -225,7 +225,7 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
     PetscCallBack("EventHandler", EventHandler(ts, t, U, Ctx->fvals, ctx));
     for (PetscInt i = 0; i < Ctx->size; i++) {
       if (i == Ctx->rank) {
-        PetscCall(PetscPrintf(PETSC_COMM_SELF, "[%" PetscInt_FMT "] At t = %20.16g : %" PetscInt_FMT " events triggered, fvalues =", Ctx->rank, (double)t, nev_zero));
+        PetscCall(PetscPrintf(PETSC_COMM_SELF, "[%d] At t = %20.16g : %" PetscInt_FMT " events triggered, fvalues =", Ctx->rank, (double)t, nev_zero));
         for (PetscInt j = 0; j < nev_zero; j++) PetscCall(PetscPrintf(PETSC_COMM_SELF, "\t%g", (double)Ctx->fvals[evs_zero[j]]));
         PetscCall(PetscPrintf(PETSC_COMM_SELF, "\n"));
       }
@@ -265,7 +265,7 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
   }
 #endif
 
-  if (Ctx->restart) TSRestartStep(ts);
+  if (Ctx->restart) PetscCall(TSRestartStep(ts));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 /*---------------------------------------------------------------------------------------------*/
