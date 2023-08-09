@@ -132,7 +132,7 @@ int main(int argc, char **argv)
   {
     PetscInt *rank_cnt; // sync
     PetscCall(PetscMalloc1(ctx.size, &rank_cnt));
-    PetscCallMPI(MPI_Allgather(&ctx.cnt, 1, MPI_INT, rank_cnt, 1, MPI_INT, PETSC_COMM_WORLD));
+    PetscCallMPI(MPI_Allgather(&ctx.cnt, 1, MPIU_INT, rank_cnt, 1, MPIU_INT, PETSC_COMM_WORLD));
 
     if (ctx.rank == 0) { // rank-0 collects data and prints; this is to ensure no mess takes place in stdout
       for (PetscInt i = 0; i < ctx.size; i++) {
@@ -144,16 +144,16 @@ int main(int argc, char **argv)
             n = ctx.evnum[j];
             t = ctx.evres[j];
           } else {
-            PetscCallMPI(MPI_Recv(&n, 1, MPI_INT, i, j, PETSC_COMM_WORLD, &stat));
-            PetscCallMPI(MPI_Recv(&t, 1, MPI_DOUBLE, i, j, PETSC_COMM_WORLD, &stat));
+            PetscCallMPI(MPI_Recv(&n, 1, MPIU_INT, i, j, PETSC_COMM_WORLD, &stat));
+            PetscCallMPI(MPI_Recv(&t, 1, MPIU_REAL, i, j, PETSC_COMM_WORLD, &stat));
           }
           PetscCall(PetscPrintf(PETSC_COMM_SELF, "%" PetscInt_FMT "\t%" PetscInt_FMT "\t%g\n", i, n, (double)t));
         }
       }
     } else { // other ranks only send their data
       for (PetscInt j = 0; j < rank_cnt[ctx.rank]; j++) {
-        PetscCallMPI(MPI_Send(&ctx.evnum[j], 1, MPI_INT, 0, j, PETSC_COMM_WORLD));
-        PetscCallMPI(MPI_Send(&ctx.evres[j], 1, MPI_DOUBLE, 0, j, PETSC_COMM_WORLD));
+        PetscCallMPI(MPI_Send(&ctx.evnum[j], 1, MPIU_INT, 0, j, PETSC_COMM_WORLD));
+        PetscCallMPI(MPI_Send(&ctx.evres[j], 1, MPIU_REAL, 0, j, PETSC_COMM_WORLD));
       }
     }
     PetscCall(PetscFree(rank_cnt));
@@ -211,7 +211,7 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
     PetscCallBack("EventHandler", EventHandler(ts, t, U, Ctx->fvals, ctx));
     for (PetscInt i = 0; i < Ctx->size; i++) {
       if (i == Ctx->rank) {
-        PetscCall(PetscPrintf(PETSC_COMM_SELF, "[%" PetscInt_FMT "] At t = %g : %" PetscInt_FMT " events triggered, fvalues =", Ctx->rank, (double)t, nev_zero));
+        PetscCall(PetscPrintf(PETSC_COMM_SELF, "[%d] At t = %g : %" PetscInt_FMT " events triggered, fvalues =", Ctx->rank, (double)t, nev_zero));
         for (PetscInt j = 0; j < nev_zero; j++) PetscCall(PetscPrintf(PETSC_COMM_SELF, "\t%g", (double)Ctx->fvals[evs_zero[j]]));
         PetscCall(PetscPrintf(PETSC_COMM_SELF, "\n"));
       }
@@ -232,7 +232,7 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
   }
 #endif
 
-  if (Ctx->restart) TSRestartStep(ts);
+  if (Ctx->restart) PetscCall(TSRestartStep(ts));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 /*---------------------------------------------------------------------------------------------*/
