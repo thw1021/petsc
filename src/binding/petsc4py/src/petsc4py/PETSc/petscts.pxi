@@ -540,11 +540,11 @@ cdef PetscErrorCode TS_Monitor(
 # -----------------------------------------------------------------------------
 
 cdef PetscErrorCode TS_EventHandler(
-    PetscTS     ts,
-    PetscReal   time,
-    PetscVec    u,
-    PetscScalar fvalue[],
-    void*       ctx,
+    PetscTS   ts,
+    PetscReal time,
+    PetscVec  u,
+    PetscReal fvalue[],
+    void*     ctx,
     ) except PETSC_ERR_PYTHON with gil:
     cdef TS  Ts = ref_TS(ts)
     cdef Vec Vu = ref_Vec(u)
@@ -554,7 +554,7 @@ cdef PetscErrorCode TS_EventHandler(
     cdef PetscInt nevents = 0
     CHKERR( TSGetNumEvents(ts, &nevents) )
     cdef npy_intp s = <npy_intp> nevents
-    fvalue_array = PyArray_SimpleNewFromData(1, &s, NPY_PETSC_SCALAR, fvalue)
+    fvalue_array = PyArray_SimpleNewFromData(1, &s, NPY_PETSC_REAL, fvalue)
     eventhandler(Ts, toReal(time), Vu, fvalue_array, *args, **kargs)
     return PETSC_SUCCESS
 
