@@ -348,7 +348,7 @@ TSPreStepFunction = Callable[[TS], None]
 TSPostStepFunction = Callable[[TS], None]
 """`TS` post-step callback."""
 
-TSEventHandlerFunction = Callable[[TS, float, Vec, NDArray[Scalar]], None]
+TSEventHandlerFunction = Callable[[TS, float, Vec, NDArray[float]], None]
 """`TS` event handler callback."""
 
 TSPostEventFunction = Callable[[TS, NDArray[int], float, Vec, bool], None]
