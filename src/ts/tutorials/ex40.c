@@ -17,7 +17,7 @@ typedef struct {
   PetscInt nbounces;
 } AppCtx;
 
-PetscErrorCode EventFunction(TS ts, PetscReal t, Vec U, PetscScalar *fvalue, void *ctx)
+PetscErrorCode EventFunction(TS ts, PetscReal t, Vec U, PetscReal *fvalue, void *ctx)
 {
   AppCtx            *app = (AppCtx *)ctx;
   const PetscScalar *u;
@@ -25,7 +25,7 @@ PetscErrorCode EventFunction(TS ts, PetscReal t, Vec U, PetscScalar *fvalue, voi
   PetscFunctionBeginUser;
   /* Event for ball height */
   PetscCall(VecGetArrayRead(U, &u));
-  fvalue[0] = u[0];
+  fvalue[0] = PetscRealPart(u[0]);
   /* Event for number of bounces */
   fvalue[1] = app->maxbounces - app->nbounces;
   PetscCall(VecRestoreArrayRead(U, &u));

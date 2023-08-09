@@ -19,7 +19,7 @@ typedef struct {
   PetscInt  maxbounces;
 } AppCtx;
 
-static PetscErrorCode Event(TS ts, PetscReal t, Vec U, PetscScalar *fvalue, void *ctx)
+static PetscErrorCode Event(TS ts, PetscReal t, Vec U, PetscReal *fvalue, void *ctx)
 {
   AppCtx            *app = (AppCtx *)ctx;
   Vec                V;
@@ -30,7 +30,7 @@ static PetscErrorCode Event(TS ts, PetscReal t, Vec U, PetscScalar *fvalue, void
   PetscCall(TS2GetSolution(ts, &U, &V));
   PetscCall(VecGetArrayRead(U, &u));
   PetscCall(VecGetArrayRead(V, &v));
-  fvalue[0] = u[0];
+  fvalue[0] = PetscRealPart(u[0]);
   /* Event for number of bounces */
   fvalue[1] = app->maxbounces - app->bounces;
   PetscCall(VecRestoreArrayRead(U, &u));
@@ -192,18 +192,18 @@ int main(int argc, char **argv)
 
     test:
       suffix: a
-      args: -ts_alpha_radius {{1.0 0.5}}
+      args: -ts_alpha_radius {{1.0 0.5}} -ts_max_time 50
       output_file: output/ex44.out
 
     test:
       suffix: b
-      args: -ts_rtol 0 -ts_atol 1e-1 -ts_adapt_type basic
+      args: -ts_rtol 0 -ts_atol 1e-1 -ts_adapt_type basic -ts_max_time 50
       output_file: output/ex44.out
 
     test:
       suffix: 2
       nsize: 2
-      args: -ts_rtol 0 -ts_atol 1e-1 -ts_adapt_type basic
+      args: -ts_rtol 0 -ts_atol 1e-1 -ts_adapt_type basic -ts_max_time 50
       output_file: output/ex44_2.out
       filter: sort -b
       filter_output: sort -b
