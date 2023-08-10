@@ -186,12 +186,14 @@ static PetscErrorCode MarkBoundary(DM dm, const char name[], PetscInt value, Pet
   if (verticesOnly) {
     IS              points;
     const PetscInt *idx;
-    PetscInt        i, n;
+    PetscInt        i, n = 0;
 
     PetscCall(DMLabelGetStratumIS(l, value, &points));
     PetscCheck(points, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Stratum is unexpectedly empty");
-    PetscCall(ISGetLocalSize(points, &n));
-    PetscCall(ISGetIndices(points, &idx));
+    if (points) {
+      PetscCall(ISGetLocalSize(points, &n));
+      PetscCall(ISGetIndices(points, &idx));
+    }
     for (i = 0; i < n; i++) {
       const PetscInt p = idx[i];
       PetscInt       d;
@@ -199,7 +201,7 @@ static PetscErrorCode MarkBoundary(DM dm, const char name[], PetscInt value, Pet
       PetscCall(DMPlexGetPointDepth(dm, p, &d));
       if (d != 0) PetscCall(DMLabelClearValue(l, p, value));
     }
-    PetscCall(ISRestoreIndices(points, &idx));
+    if (points) PetscCall(ISRestoreIndices(points, &idx));
     PetscCall(ISDestroy(&points));
   }
   if (label) *label = l;
@@ -402,7 +404,7 @@ int main(int argc, char **argv)
     requires: !complex datafilespath
     args: -dm_plex_name plex
     args: -dm_plex_check_all -dm_plex_view_hdf5_storage_version 2.0.0
-    args: -dm_plex_interpolate
+    args: -dm_plex_interpolate -petscpartitioner_type simple
     args: -load_dm_plex_check_all
     args: -use_low_level_functions {{0 1}} -compare_boundary
     args: -num_labels 1
@@ -435,7 +437,7 @@ int main(int argc, char **argv)
     requires: !complex datafilespath
     args: -dm_plex_name plex
     args: -dm_plex_check_all -dm_plex_view_hdf5_storage_version 2.0.0
-    args: -dm_plex_interpolate
+    args: -dm_plex_interpolate -petscpartitioner_type simple
     args: -load_dm_plex_check_all
     args: -use_low_level_functions -load_dm_distribute 0 -distribute_after_topo_load -compare_boundary
     args: -num_labels 1
@@ -468,7 +470,7 @@ int main(int argc, char **argv)
     requires: !complex datafilespath
     args: -dm_plex_name plex
     args: -dm_plex_view_hdf5_storage_version 2.0.0
-    args: -dm_plex_interpolate -load_dm_distribute 0
+    args: -dm_plex_interpolate -load_dm_distribute 0 -petscpartitioner_type simple
     args: -use_low_level_functions -compare_pre_post
     args: -num_labels 1
     args: -petscpartitioner_type simple
