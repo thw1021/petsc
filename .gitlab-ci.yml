@@ -547,6 +547,7 @@ linux-cuda-pkgs:
     # shell, and I could not manage to escape it enough times...
     TEST_OPTS: -j3 queryval='cuda,device,hypre,kokkos*,vec*' query='requires,requires,requires,requires%OR%name'
     MAKE_CUDAFLAGS: --compiler-options -Wall,-Werror
+    PETSC_OPTIONS: -use_gpu_aware_mpi 0
 
 linux-cuda112-omp:
   extends:
@@ -562,6 +563,7 @@ linux-cuda112-omp:
     OMP_PROC_BIND: "false"
     OMP_NUM_THREADS: 1
     MAKE_CUDAFLAGS: --compiler-options -Wall,-Werror
+    PETSC_OPTIONS: -use_gpu_aware_mpi 0
 
 linux-cuda-cmplx:
   extends:
@@ -572,6 +574,7 @@ linux-cuda-cmplx:
   variables:
     TEST_ARCH: arch-ci-linux-cuda-cmplx
     MAKE_CUDAFLAGS: --compiler-options -Wall,-Werror
+    PETSC_OPTIONS: -use_gpu_aware_mpi 0
 
 linux-cuda-double-64idx:
   extends:
