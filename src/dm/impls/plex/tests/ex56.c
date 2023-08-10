@@ -189,7 +189,6 @@ static PetscErrorCode MarkBoundary(DM dm, const char name[], PetscInt value, Pet
     PetscInt        i, n = 0;
 
     PetscCall(DMLabelGetStratumIS(l, value, &points));
-    PetscCheck(points, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Stratum is unexpectedly empty");
     if (points) {
       PetscCall(ISGetLocalSize(points, &n));
       PetscCall(ISGetIndices(points, &idx));
