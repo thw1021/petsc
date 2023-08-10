@@ -406,6 +406,7 @@ int main(int argc, char **argv)
     args: -load_dm_plex_check_all
     args: -use_low_level_functions {{0 1}} -compare_boundary
     args: -num_labels 1
+    args: -petscpartitioner_type simple
     args: -outfile ex56_1.h5
     nsize: {{1 3}}
     test:
@@ -438,6 +439,7 @@ int main(int argc, char **argv)
     args: -load_dm_plex_check_all
     args: -use_low_level_functions -load_dm_distribute 0 -distribute_after_topo_load -compare_boundary
     args: -num_labels 1
+    args: -petscpartitioner_type simple
     args: -outfile ex56_2.h5
     nsize: 3
     test:
@@ -469,6 +471,7 @@ int main(int argc, char **argv)
     args: -dm_plex_interpolate -load_dm_distribute 0
     args: -use_low_level_functions -compare_pre_post
     args: -num_labels 1
+    args: -petscpartitioner_type simple
     args: -outfile ex56_3.h5
     nsize: 3
     test:
