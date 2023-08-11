@@ -353,7 +353,7 @@ int main(int argc, char **argv)
   test:
     suffix: 0
     nsize: {{1 2}separate output}
-    args: -i ${wPETSC_DIR}/share/petsc/datafiles/meshes/blockcylinder-50.exo -interpolate
+    args: -i ${wPETSC_DIR}/share/petsc/datafiles/meshes/blockcylinder-50.exo -interpolate -petscpartitioner_type simple
     requires: exodusii
 
 TEST*/
