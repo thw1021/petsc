@@ -2464,6 +2464,7 @@ PetscErrorCode DMPlexTopologyLoad_HDF5_Internal(DM dm, PetscViewer viewer, Petsc
 /* does not contain coordinateDMs, so must fall back to the old implementation. */
 static PetscErrorCode DMPlexCoordinatesLoad_HDF5_Legacy_Private(DM dm, PetscViewer viewer)
 {
+  DM           cdm;
   PetscSection coordSection;
   Vec          coordinates;
   PetscReal    lengthScale;
@@ -2483,6 +2484,12 @@ static PetscErrorCode DMPlexCoordinatesLoad_HDF5_Legacy_Private(DM dm, PetscView
     PetscCall(VecSetBlockSize(coordinates, spatialDim));
   }
   PetscCall(VecLoad(coordinates, viewer));
+  PetscCall(DMGetCoordinateDM(dm, &cdm));
+  PetscCall(VecSetDM(coordinates, cdm));
+  PetscCall(VecSetOperation(coordinates, VECOP_VIEW, (void (*)(void))VecView_Plex));
+  PetscCall(VecSetOperation(coordinates, VECOP_VIEWNATIVE, (void (*)(void))VecView_Plex_Native));
+  PetscCall(VecSetOperation(coordinates, VECOP_LOAD, (void (*)(void))VecLoad_Plex));
+  PetscCall(VecSetOperation(coordinates, VECOP_LOADNATIVE, (void (*)(void))VecLoad_Plex_Native));
   PetscCall(PetscViewerHDF5PopGroup(viewer));
   PetscCall(DMPlexGetScale(dm, PETSC_UNIT_LENGTH, &lengthScale));
   PetscCall(VecScale(coordinates, 1.0 / lengthScale));

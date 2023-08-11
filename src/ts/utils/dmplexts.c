@@ -137,6 +137,14 @@ PetscErrorCode DMPlexTSComputeIFunctionFEM(DM dm, PetscReal time, Vec locX, Vec 
   PetscInt Nds, s;
 
   PetscFunctionBegin;
+  {
+    PetscCall(PetscObjectSetName((PetscObject)locX, "U"));
+    PetscCall(VecViewFromOptions(locX, NULL, "-u_view"));
+    PetscCall(PetscObjectCompose((PetscObject)locX_t, "__Vec_bc_zero__", (PetscObject)dm));
+    PetscCall(PetscObjectSetName((PetscObject)locX_t, "U_t"));
+    PetscCall(VecViewFromOptions(locX_t, NULL, "-u_t_view"));
+    PetscCall(PetscObjectCompose((PetscObject)locX_t, "__Vec_bc_zero__", NULL));
+  }
   PetscCall(DMTSConvertPlex(dm, &plex, PETSC_TRUE));
   PetscCall(DMPlexGetAllCells_Internal(plex, &allcellIS));
   PetscCall(DMGetNumDS(dm, &Nds));
