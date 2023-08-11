@@ -773,10 +773,11 @@ PETSC_EXTERN PetscErrorCode VecsDuplicate(Vecs, Vecs *);
 
 #if PetscDefined(HAVE_VIENNACL)
 typedef struct _p_PetscViennaCLIndices *PetscViennaCLIndices;
-PETSC_EXTERN PetscErrorCode             VecViennaCLCopyToGPUSome_Public(Vec, PetscViennaCLIndices);
-PETSC_EXTERN PetscErrorCode             VecViennaCLCopyFromGPUSome_Public(Vec, PetscViennaCLIndices);
-PETSC_EXTERN PetscErrorCode             VecCreateSeqViennaCL(MPI_Comm, PetscInt, Vec *);
-PETSC_EXTERN PetscErrorCode             VecCreateMPIViennaCL(MPI_Comm, PetscInt, PetscInt, Vec *);
+
+PETSC_EXTERN PetscErrorCode VecViennaCLCopyToGPUSome_Public(Vec, PetscViennaCLIndices);
+PETSC_EXTERN PetscErrorCode VecViennaCLCopyFromGPUSome_Public(Vec, PetscViennaCLIndices);
+PETSC_EXTERN PetscErrorCode VecCreateSeqViennaCL(MPI_Comm, PetscInt, Vec *);
+PETSC_EXTERN PetscErrorCode VecCreateMPIViennaCL(MPI_Comm, PetscInt, PetscInt, Vec *);
 #endif
 #if PetscDefined(HAVE_CUDA) || PetscDefined(HAVE_HIP)
 PETSC_EXTERN PetscErrorCode VecScatterInitializeForGPU(VecScatter, Vec);

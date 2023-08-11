@@ -307,7 +307,9 @@ struct _p_DMKSP {
 
   void (*fortran_func_pointers[3])(void); /* Store our own function pointers so they are associated with the DMKSP instead of the DM */
 };
+
 PETSC_EXTERN PetscErrorCode DMGetDMKSP(DM, DMKSP *);
+PETSC_EXTERN PetscErrorCode DMJSPCopy(DMKSP, DMKSP);
 PETSC_EXTERN PetscErrorCode DMGetDMKSPWrite(DM, DMKSP *);
 PETSC_EXTERN PetscErrorCode DMCopyDMKSP(DM, DM);
 

@@ -96,7 +96,7 @@ PETSC_EXTERN PetscErrorCode MatlabEngineGet_SeqAIJ(PetscObject obj, void *mengin
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatSolve_Matlab(Mat A, Vec b, Vec x)
+static PetscErrorCode MatSolve_Matlab(Mat A, Vec b, Vec x)
 {
   const char *_A, *_b, *_x;
 
@@ -116,7 +116,7 @@ PetscErrorCode MatSolve_Matlab(Mat A, Vec b, Vec x)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatLUFactorNumeric_Matlab(Mat F, Mat A, const MatFactorInfo *info)
+static PetscErrorCode MatLUFactorNumeric_Matlab(Mat F, Mat A, const MatFactorInfo *info)
 {
   size_t    len;
   char     *_A, *name;
@@ -156,7 +156,7 @@ PetscErrorCode MatLUFactorNumeric_Matlab(Mat F, Mat A, const MatFactorInfo *info
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatLUFactorSymbolic_Matlab(Mat F, Mat A, IS r, IS c, const MatFactorInfo *info)
+static PetscErrorCode MatLUFactorSymbolic_Matlab(Mat F, Mat A, IS r, IS c, const MatFactorInfo *info)
 {
   PetscFunctionBegin;
   PetscCheck(A->cmap->N == A->rmap->N, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "matrix must be square");
@@ -165,14 +165,14 @@ PetscErrorCode MatLUFactorSymbolic_Matlab(Mat F, Mat A, IS r, IS c, const MatFac
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatFactorGetSolverType_seqaij_matlab(Mat A, MatSolverType *type)
+static PetscErrorCode MatFactorGetSolverType_seqaij_matlab(Mat A, MatSolverType *type)
 {
   PetscFunctionBegin;
   *type = MATSOLVERMATLAB;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatDestroy_matlab(Mat A)
+static PetscErrorCode MatDestroy_matlab(Mat A)
 {
   const char *_A;
 
@@ -213,14 +213,14 @@ PETSC_EXTERN PetscErrorCode MatSolverTypeRegister_Matlab(void)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatView_Info_Matlab(Mat A, PetscViewer viewer)
+static PetscErrorCode MatView_Info_Matlab(Mat A, PetscViewer viewer)
 {
   PetscFunctionBegin;
   PetscCall(PetscViewerASCIIPrintf(viewer, "MATLAB run parameters:  -- not written yet!\n"));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatView_Matlab(Mat A, PetscViewer viewer)
+static PetscErrorCode MatView_Matlab(Mat A, PetscViewer viewer)
 {
   PetscBool iascii;
 
