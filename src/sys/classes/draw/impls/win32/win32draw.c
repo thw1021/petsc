@@ -514,7 +514,7 @@ static PetscErrorCode PetscDrawSetVisible_Win32(PetscDraw draw, PetscBool visibl
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-void PopMessageLoopThread_Win32(PetscDraw popdraw)
+static void PopMessageLoopThread_Win32(PetscDraw popdraw)
 {
   PetscDraw_Win32 *pop = (PetscDraw_Win32 *)popdraw->data;
   MSG              msg;
@@ -582,7 +582,7 @@ static PetscErrorCode PetscDrawDestroy_Win32(PetscDraw draw)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-void MessageLoopThread_Win32(PetscDraw draw)
+static void MessageLoopThread_Win32(PetscDraw draw)
 {
   PetscDraw_Win32 *windraw = (PetscDraw_Win32 *)draw->data;
   MSG              msg;

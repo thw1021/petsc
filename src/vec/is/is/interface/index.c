@@ -523,7 +523,7 @@ static PetscErrorCode ISGetInfo_Sorted(IS is, ISInfoType type, PetscBool *flg)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode ISGetIndicesCopy(IS is, PetscInt idx[]);
+static PetscErrorCode ISGetIndicesCopy(IS is, PetscInt idx[]);
 
 static PetscErrorCode ISGetInfo_Unique(IS is, ISInfoType type, PetscBool *flg)
 {
@@ -1965,7 +1965,7 @@ PetscErrorCode ISGetBlockSize(IS is, PetscInt *size)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode ISGetIndicesCopy(IS is, PetscInt idx[])
+static PetscErrorCode ISGetIndicesCopy(IS is, PetscInt idx[])
 {
   PetscInt        len, i;
   const PetscInt *ptr;

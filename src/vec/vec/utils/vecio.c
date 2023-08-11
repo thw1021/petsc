@@ -109,7 +109,7 @@ PetscErrorCode VecLoad_Binary(Vec vec, PetscViewer viewer)
 }
 
 #if defined(PETSC_HAVE_HDF5)
-PetscErrorCode VecLoad_HDF5(Vec xin, PetscViewer viewer)
+static PetscErrorCode VecLoad_HDF5(Vec xin, PetscViewer viewer)
 {
   hid_t        scalartype; /* scalar type (H5T_NATIVE_FLOAT or H5T_NATIVE_DOUBLE) */
   PetscScalar *x, *arr;
