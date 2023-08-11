@@ -43,7 +43,7 @@ static PetscErrorCode ISCopy_General(IS is, IS isy)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode ISShift_General(IS is, PetscInt shift, IS isy)
+static PetscErrorCode ISShift_General(IS is, PetscInt shift, IS isy)
 {
   IS_General *is_general = (IS_General *)is->data, *isy_general = (IS_General *)isy->data;
   PetscInt    i, n;
@@ -435,7 +435,7 @@ static PetscErrorCode ISSorted_General(IS is, PetscBool *flg)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode ISToGeneral_General(IS is)
+static PetscErrorCode ISToGeneral_General(IS is)
 {
   PetscFunctionBegin;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -537,7 +537,7 @@ PetscErrorCode ISGeneralSetIndices(IS is, PetscInt n, const PetscInt idx[], Pets
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode ISGeneralSetIndices_General(IS is, PetscInt n, const PetscInt idx[], PetscCopyMode mode)
+static PetscErrorCode ISGeneralSetIndices_General(IS is, PetscInt n, const PetscInt idx[], PetscCopyMode mode)
 {
   PetscLayout map;
   IS_General *sub = (IS_General *)is->data;
@@ -607,7 +607,7 @@ PetscErrorCode ISGeneralSetIndicesFromMask(IS is, PetscInt rstart, PetscInt rend
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode ISGeneralSetIndicesFromMask_General(IS is, PetscInt rstart, PetscInt rend, const PetscBool mask[])
+static PetscErrorCode ISGeneralSetIndicesFromMask_General(IS is, PetscInt rstart, PetscInt rend, const PetscBool mask[])
 {
   PetscInt  i, nidx;
   PetscInt *idx;
