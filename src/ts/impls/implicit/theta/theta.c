@@ -937,11 +937,13 @@ static PetscErrorCode SNESTSFormFunction_Theta(SNES snes, Vec x, Vec y, TS ts)
 {
   TS_Theta *th = (TS_Theta *)ts->data;
   Vec       X0, Xdot;
-  DM        dm, dmsave;
+  DM        dm, tdm, dmsave;
   PetscReal shift = th->shift;
 
   PetscFunctionBegin;
+  PetscCall(TSGetDM(ts, &tdm));
   PetscCall(SNESGetDM(snes, &dm));
+  PetscCheck(dm == tdm, PETSC_COMM_SELF, PETSC_ERR_PLIB, "DM from TS does not match DM from SNES");
   /* When using the endpoint variant, this is actually 1/Theta * Xdot */
   PetscCall(TSThetaGetX0AndXdot(ts, dm, &X0, &Xdot));
   if (x != X0) {
