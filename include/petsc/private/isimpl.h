@@ -2,9 +2,7 @@
 #define PETSC_IS_IMPL_H
 
 /*
-    Index sets for scatter-gather type operations in vectors
-and matrices.
-
+    Index sets for scatter-gather type operations in vectors and matrices.
 */
 
 #include <petscis.h>
