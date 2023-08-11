@@ -1,18 +1,15 @@
+#ifndef PETSC_IS_IMPL_H
+#define PETSC_IS_IMPL_H
+
 /*
-    Index sets for scatter-gather type operations in vectors
-and matrices.
-
+    Index sets for scatter-gather type operations in vectors and matrices.
 */
-
-#ifndef _IS_H
-#define _IS_H
 
 #include <petscis.h>
 #include <petsc/private/petscimpl.h>
 
-PETSC_EXTERN PetscBool      ISRegisterAllCalled;
-PETSC_EXTERN PetscBool      ISLocalToGlobalMappingRegisterAllCalled;
-PETSC_EXTERN PetscErrorCode ISRegisterAll(void);
+PETSC_INTERN PetscBool ISRegisterAllCalled;
+PETSC_INTERN PetscBool ISLocalToGlobalMappingRegisterAllCalled;
 
 /* events */
 PETSC_EXTERN PetscLogEvent IS_View;
@@ -63,9 +60,8 @@ struct _p_IS {
   ISInfoBool  info[2][IS_INFO_MAX];           /* local / global properties */
 };
 
-PETSC_EXTERN PetscErrorCode ISView_Binary(IS, PetscViewer);
-PETSC_EXTERN PetscErrorCode ISLoad_Binary(IS, PetscViewer);
-PETSC_EXTERN PetscErrorCode ISLoad_Default(IS, PetscViewer);
+PETSC_INTERN PetscErrorCode ISView_Binary(IS, PetscViewer);
+PETSC_INTERN PetscErrorCode ISLoad_Default(IS, PetscViewer);
 
 struct _ISLocalToGlobalMappingOps {
   PetscErrorCode (*globaltolocalmappingsetup)(ISLocalToGlobalMapping);
@@ -104,4 +100,4 @@ struct _n_ISColoring {
   PetscBool        allocated;
 };
 
-#endif
+#endif /* PETSC_IS_IMPL_H */
