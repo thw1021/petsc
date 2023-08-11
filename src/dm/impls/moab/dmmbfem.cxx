@@ -676,7 +676,7 @@ PetscErrorCode DMMoabFEMCreateQuadratureDefault(const PetscInt dim, const PetscI
 }
 
 /* Compute Jacobians */
-PetscErrorCode ComputeJacobian_Internal(const PetscInt dim, const PetscInt nverts, const PetscReal *coordinates, const PetscReal *quad, PetscReal *phypts, PetscReal *jacobian, PetscReal *ijacobian, PetscReal *dvolume)
+static PetscErrorCode ComputeJacobian_Internal(const PetscInt dim, const PetscInt nverts, const PetscReal *coordinates, const PetscReal *quad, PetscReal *phypts, PetscReal *jacobian, PetscReal *ijacobian, PetscReal *dvolume)
 {
   PetscInt  i;
   PetscReal volume = 1.0;
@@ -786,7 +786,7 @@ PetscErrorCode ComputeJacobian_Internal(const PetscInt dim, const PetscInt nvert
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode FEMComputeBasis_JandF(const PetscInt dim, const PetscInt nverts, const PetscReal *coordinates, const PetscReal *quadrature, PetscReal *phypts, PetscReal *phibasis, PetscReal *jacobian, PetscReal *ijacobian, PetscReal *volume)
+static PetscErrorCode FEMComputeBasis_JandF(const PetscInt dim, const PetscInt nverts, const PetscReal *coordinates, const PetscReal *quadrature, PetscReal *phypts, PetscReal *phibasis, PetscReal *jacobian, PetscReal *ijacobian, PetscReal *volume)
 {
   PetscFunctionBegin;
   switch (dim) {

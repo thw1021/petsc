@@ -373,7 +373,7 @@ PetscErrorCode VecMultiDot_Private(Vec xin, PetscInt nv, const Vec yin[], PetscS
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode VecMultiDot_Verbose(Vec xin, PetscInt nv, const Vec yin[], PetscScalar *z)
+static PetscErrorCode VecMultiDot_Verbose(Vec xin, PetscInt nv, const Vec yin[], PetscScalar *z)
 {
   PetscInt                   ngroup = nv / 8, rem = nv % 8, N = xin->map->n;
   ConstPetscScalarKokkosView xv, y0, y1, y2, y3, y4, y5, y6, y7;
@@ -1280,7 +1280,7 @@ PetscErrorCode VecGetSubVector_Kokkos_Private(Vec x, PetscBool xIsMPI, IS is, Ve
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode VecGetSubVector_SeqKokkos(Vec x, IS is, Vec *y)
+static PetscErrorCode VecGetSubVector_SeqKokkos(Vec x, IS is, Vec *y)
 {
   PetscFunctionBegin;
   PetscCall(VecGetSubVector_Kokkos_Private(x, PETSC_FALSE, is, y));
