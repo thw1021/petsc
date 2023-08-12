@@ -529,7 +529,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_SPAI(PC pc)
 /*
    Converts from a PETSc matrix to an SPAI matrix
 */
-PetscErrorCode ConvertMatToMatrix(MPI_Comm comm, Mat A, Mat AT, matrix **B)
+static PetscErrorCode ConvertMatToMatrix(MPI_Comm comm, Mat A, Mat AT, matrix **B)
 {
   matrix                  *M;
   int                      i, j, col;
@@ -653,7 +653,7 @@ PetscErrorCode ConvertMatToMatrix(MPI_Comm comm, Mat A, Mat AT, matrix **B)
    This assumes that the SPAI matrix B is stored in
    COMPRESSED-ROW format.
 */
-PetscErrorCode ConvertMatrixToMat(MPI_Comm comm, matrix *B, Mat *PB)
+static PetscErrorCode ConvertMatrixToMat(MPI_Comm comm, matrix *B, Mat *PB)
 {
   PetscMPIInt size, rank;
   int         m, n, M, N;
@@ -712,7 +712,7 @@ PetscErrorCode ConvertMatrixToMat(MPI_Comm comm, matrix *B, Mat *PB)
 /*
    Converts from an SPAI vector v  to a PETSc vec Pv.
 */
-PetscErrorCode ConvertVectorToVec(MPI_Comm comm, vector *v, Vec *Pv)
+static PetscErrorCode ConvertVectorToVec(MPI_Comm comm, vector *v, Vec *Pv)
 {
   PetscMPIInt size, rank;
   int         m, M, i, *mnls, *start_indices, *global_indices;
