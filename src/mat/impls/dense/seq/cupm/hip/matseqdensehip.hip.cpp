@@ -31,14 +31,14 @@ PETSC_INTERN PetscErrorCode MatSolverTypeRegister_DENSEHIP(void)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatConvert_SeqDense_SeqDenseHIP(Mat A, MatType newtype, MatReuse reuse, Mat *newmat)
+static PetscErrorCode MatConvert_SeqDense_SeqDenseHIP(Mat A, MatType newtype, MatReuse reuse, Mat *newmat)
 {
   PetscFunctionBegin;
   PetscCall(cupm_mat.Convert_SeqDense_SeqDenseCUPM(A, newtype, reuse, newmat));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatMatMultNumeric_SeqDenseHIP_SeqDenseHIP_Internal(Mat A, Mat B, Mat C, PetscBool TA, PetscBool TB)
+static PetscErrorCode MatMatMultNumeric_SeqDenseHIP_SeqDenseHIP_Internal(Mat A, Mat B, Mat C, PetscBool TA, PetscBool TB)
 {
   PetscFunctionBegin;
   PetscCall(impl::MatMatMultNumeric_SeqDenseCUPM_SeqDenseCUPM<DeviceType::HIP>(A, B, C, TA, TB));

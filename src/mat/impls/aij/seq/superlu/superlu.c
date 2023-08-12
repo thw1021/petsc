@@ -89,7 +89,7 @@ static PetscErrorCode MatView_Info_SuperLU(Mat A, PetscViewer viewer)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatSolve_SuperLU_Private(Mat A, Vec b, Vec x)
+static PetscErrorCode MatSolve_SuperLU_Private(Mat A, Vec b, Vec x)
 {
   Mat_SuperLU       *lu = (Mat_SuperLU *)A->data;
   const PetscScalar *barray;
@@ -188,7 +188,7 @@ PetscErrorCode MatSolve_SuperLU_Private(Mat A, Vec b, Vec x)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatSolve_SuperLU(Mat A, Vec b, Vec x)
+static PetscErrorCode MatSolve_SuperLU(Mat A, Vec b, Vec x)
 {
   Mat_SuperLU *lu = (Mat_SuperLU *)A->data;
   trans_t      oldOption;
@@ -207,7 +207,7 @@ PetscErrorCode MatSolve_SuperLU(Mat A, Vec b, Vec x)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatSolveTranspose_SuperLU(Mat A, Vec b, Vec x)
+static PetscErrorCode MatSolveTranspose_SuperLU(Mat A, Vec b, Vec x)
 {
   Mat_SuperLU *lu = (Mat_SuperLU *)A->data;
   trans_t      oldOption;
@@ -392,7 +392,7 @@ static PetscErrorCode MatView_SuperLU(Mat A, PetscViewer viewer)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatMatSolve_SuperLU(Mat A, Mat B, Mat X)
+static PetscErrorCode MatMatSolve_SuperLU(Mat A, Mat B, Mat X)
 {
   Mat_SuperLU *lu = (Mat_SuperLU *)A->data;
   PetscBool    flg;
@@ -511,7 +511,7 @@ PetscErrorCode MatSuperluSetILUDropTol(Mat F, PetscReal dtol)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatFactorGetSolverType_seqaij_superlu(Mat A, MatSolverType *type)
+static PetscErrorCode MatFactorGetSolverType_seqaij_superlu(Mat A, MatSolverType *type)
 {
   PetscFunctionBegin;
   *type = MATSOLVERSUPERLU;

@@ -214,6 +214,7 @@ struct _p_DMSNES {
    */
   DM originaldm;
 };
+
 PETSC_EXTERN PetscErrorCode DMGetDMSNES(DM, DMSNES *);
 PETSC_EXTERN PetscErrorCode DMSNESView(DMSNES, PetscViewer);
 PETSC_EXTERN PetscErrorCode DMSNESLoad(DMSNES, PetscViewer);
