@@ -12,24 +12,113 @@
   #define CGNS_ENUMV(a) a
 #endif
 
-PetscErrorCode DMPlexCreateCGNSFromFile_Internal(MPI_Comm comm, const char filename[], PetscBool interpolate, DM *dm)
+/*
+  Can/should we use a viewer format to indicate if the DM should be interpolated or not?
+*/
+PETSC_INTERN PetscErrorCode DMLoad_Plex_CGNS(DM dm, PetscViewer viewer)
 {
   PetscMPIInt rank;
   int         cgid = -1;
+  MPI_Comm    comm;
 
   PetscFunctionBegin;
-  PetscAssertPointer(filename, 2);
+  PetscCall(PetscObjectGetComm((PetscObject)dm, &comm));
   PetscCallMPI(MPI_Comm_rank(comm, &rank));
   if (rank == 0) {
+    const char *filename;
+
+    PetscCall(PetscViewerFileGetName(viewer, &filename));
     PetscCallCGNS(cg_open(filename, CG_MODE_READ, &cgid));
     PetscCheck(cgid > 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "cg_open(\"%s\",...) did not return a valid file ID", filename);
   }
-  PetscCall(DMPlexCreateCGNS(comm, cgid, interpolate, dm));
+  PetscCall(DMLoad_Plex_CGNS_Internal(dm, cgid, PETSC_TRUE));
   if (rank == 0) PetscCallCGNS(cg_close(cgid));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode DMPlexCreateCGNS_Internal(MPI_Comm comm, PetscInt cgid, PetscBool interpolate, DM *dm)
+/*@C
+  DMPlexCreateCGNSFromFile - Create a `DMPLEX` mesh from a CGNS file.
+
+  Collective
+
+  Input Parameters:
++ comm        - The MPI communicator
+. filename    - The name of the CGNS file
+- interpolate - Create faces and edges in the mesh
+
+  Output Parameter:
+. dm - The `DM` object representing the mesh
+
+  Level: beginner
+
+  Note:
+  One can also load CGNS meshes with  `DMLoad()` or `DMPlexCreateCGNS()`
+
+  References:
+. * - https://cgns.github.io
+
+.seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMLoad()`, `DMPlexCreate()`, `DMPlexCreateCGNS()`, `DMPlexCreateExodus()`
+@*/
+PetscErrorCode DMPlexCreateCGNSFromFile(MPI_Comm comm, const char filename[], PetscBool interpolate, DM *dm)
+{
+  PetscFunctionBegin;
+  PetscAssertPointer(filename, 2);
+#if defined(PETSC_HAVE_CGNS)
+  {
+    PetscMPIInt rank;
+    int         cgid = -1;
+
+    PetscCallMPI(MPI_Comm_rank(comm, &rank));
+    if (rank == 0) {
+      PetscCallCGNS(cg_open(filename, CG_MODE_READ, &cgid));
+      PetscCheck(cgid > 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "cg_open(\"%s\",...) did not return a valid file ID", filename);
+    }
+    PetscCall(DMPlexCreateCGNS(comm, cgid, interpolate, dm));
+    if (rank == 0) PetscCallCGNS(cg_close(cgid));
+  }
+#else
+  SETERRQ(comm, PETSC_ERR_SUP, "Loading meshes requires CGNS support. Reconfigure using --with-cgns-dir");
+#endif
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  DMPlexCreateCGNS - Create a `DMPLEX` mesh from a CGNS file ID.
+
+  Collective
+
+  Input Parameters:
++ comm        - The MPI communicator
+. cgid        - The CG id associated with a file and obtained using cg_open
+- interpolate - Create faces and edges in the mesh
+
+  Output Parameter:
+. dm - The `DM` object representing the mesh
+
+  Level: beginner
+
+  Note:
+  One can also load CGNS meshes with `DMLoad()` or `DMPlexCreateCGNSFromFile()`
+
+  References:
+. * - https://cgns.github.io
+
+.seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMLoad()`, `DMPlexCreateCGNSFromFile()`, `DMPlexCreate()`, `DMPlexCreateExodus()`
+@*/
+PetscErrorCode DMPlexCreateCGNS(MPI_Comm comm, PetscInt cgid, PetscBool interpolate, DM *dm)
+{
+  PetscFunctionBegin;
+#if defined(PETSC_HAVE_CGNS)
+  PetscCall(DMCreate(comm, dm));
+  PetscCall(DMSetType(*dm, DMPLEX));
+  PetscCall(DMLoad_Plex_CGNS_Internal(*dm, cgid, interpolate));
+#else
+  SETERRQ(comm, PETSC_ERR_SUP, "Loading meshes requires CGNS support. Reconfigure using --download-cgns");
+#endif
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode DMLoad_Plex_CGNS_Internal(DM dm, PetscInt cgid, PetscBool interpolate)
 {
   PetscMPIInt  num_proc, rank;
   DM           cdm;
@@ -40,16 +129,16 @@ PetscErrorCode DMPlexCreateCGNS_Internal(MPI_Comm comm, PetscInt cgid, PetscBool
   PetscInt    *cellStart, *vertStart, v;
   PetscInt     labelIdRange[2], labelId;
   /* Read from file */
-  char basename[CGIO_MAX_NAME_LENGTH + 1];
-  char buffer[CGIO_MAX_NAME_LENGTH + 1];
-  int  dim = 0, physDim = 0, coordDim = 0, numVertices = 0, numCells = 0;
-  int  nzones = 0;
+  char     basename[CGIO_MAX_NAME_LENGTH + 1];
+  char     buffer[CGIO_MAX_NAME_LENGTH + 1];
+  int      dim = 0, physDim = 0, coordDim = 0, numVertices = 0, numCells = 0;
+  int      nzones = 0;
+  MPI_Comm comm;
 
   PetscFunctionBegin;
+  PetscCall(PetscObjectGetComm((PetscObject)dm, &comm));
   PetscCallMPI(MPI_Comm_rank(comm, &rank));
   PetscCallMPI(MPI_Comm_size(comm, &num_proc));
-  PetscCall(DMCreate(comm, dm));
-  PetscCall(DMSetType(*dm, DMPLEX));
 
   /* Open CGNS II file and read basic information on rank 0, then broadcast to all processors */
   if (rank == 0) {
@@ -77,10 +166,10 @@ PetscErrorCode DMPlexCreateCGNS_Internal(MPI_Comm comm, PetscInt cgid, PetscBool
   PetscCallMPI(MPI_Bcast(&coordDim, 1, MPI_INT, 0, comm));
   PetscCallMPI(MPI_Bcast(&nzones, 1, MPI_INT, 0, comm));
 
-  PetscCall(PetscObjectSetName((PetscObject)*dm, basename));
-  PetscCall(DMSetDimension(*dm, dim));
-  PetscCall(DMCreateLabel(*dm, "celltype"));
-  PetscCall(DMPlexSetChart(*dm, 0, numCells + numVertices));
+  PetscCall(PetscObjectSetName((PetscObject)dm, basename));
+  PetscCall(DMSetDimension(dm, dim));
+  PetscCall(DMCreateLabel(dm, "celltype"));
+  PetscCall(DMPlexSetChart(dm, 0, numCells + numVertices));
 
   /* Read zone information */
   if (rank == 0) {
@@ -140,8 +229,8 @@ PetscErrorCode DMPlexCreateCGNS_Internal(MPI_Comm comm, PetscInt cgid, PetscBool
           default:
             SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Invalid cell type %d", (int)elements[off]);
           }
-          PetscCall(DMPlexSetConeSize(*dm, c, numCorners));
-          PetscCall(DMPlexSetCellType(*dm, c, ctype));
+          PetscCall(DMPlexSetConeSize(dm, c, numCorners));
+          PetscCall(DMPlexSetCellType(dm, c, ctype));
           off += numCorners + 1;
         }
         PetscCall(PetscFree(elements));
@@ -175,21 +264,21 @@ PetscErrorCode DMPlexCreateCGNS_Internal(MPI_Comm comm, PetscInt cgid, PetscBool
           SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Invalid cell type %d", (int)cellType);
         }
         for (c_loc = start; c_loc <= end; ++c_loc, ++c) {
-          PetscCall(DMPlexSetConeSize(*dm, c, numCorners));
-          PetscCall(DMPlexSetCellType(*dm, c, ctype));
+          PetscCall(DMPlexSetConeSize(dm, c, numCorners));
+          PetscCall(DMPlexSetCellType(dm, c, ctype));
         }
       }
     }
-    for (v = numCells; v < numCells + numVertices; ++v) PetscCall(DMPlexSetCellType(*dm, v, DM_POLYTOPE_POINT));
+    for (v = numCells; v < numCells + numVertices; ++v) PetscCall(DMPlexSetCellType(dm, v, DM_POLYTOPE_POINT));
   }
 
-  PetscCall(DMSetUp(*dm));
+  PetscCall(DMSetUp(dm));
 
-  PetscCall(DMCreateLabel(*dm, "zone"));
+  PetscCall(DMCreateLabel(dm, "zone"));
   if (rank == 0) {
     int z, c, c_loc, v_loc;
 
-    PetscCall(DMGetLabel(*dm, "zone", &label));
+    PetscCall(DMGetLabel(dm, "zone", &label));
     for (z = 1, c = 0; z <= nzones; ++z) {
       CGNS_ENUMT(ElementType_t) cellType;
       cgsize_t  elementDataSize, *elements, start, end;
@@ -229,8 +318,8 @@ PetscErrorCode DMPlexCreateCGNS_Internal(MPI_Comm comm, PetscInt cgid, PetscBool
           }
           ++v;
           for (v_loc = 0; v_loc < numCorners; ++v_loc, ++v) cone[v_loc] = elements[v] + numCells - 1;
-          PetscCall(DMPlexReorderCell(*dm, c, cone));
-          PetscCall(DMPlexSetCone(*dm, c, cone));
+          PetscCall(DMPlexReorderCell(dm, c, cone));
+          PetscCall(DMPlexSetCone(dm, c, cone));
           PetscCall(DMLabelSetValue(label, c, z));
         }
       } else {
@@ -259,8 +348,8 @@ PetscErrorCode DMPlexCreateCGNS_Internal(MPI_Comm comm, PetscInt cgid, PetscBool
         /* CGNS uses Fortran-based indexing, DMPlex uses C-style and numbers cell first then vertices. */
         for (c_loc = 0, v = 0; c_loc <= numc; ++c_loc, ++c) {
           for (v_loc = 0; v_loc < numCorners; ++v_loc, ++v) cone[v_loc] = elements[v] + numCells - 1;
-          PetscCall(DMPlexReorderCell(*dm, c, cone));
-          PetscCall(DMPlexSetCone(*dm, c, cone));
+          PetscCall(DMPlexReorderCell(dm, c, cone));
+          PetscCall(DMPlexSetCone(dm, c, cone));
           PetscCall(DMLabelSetValue(label, c, z));
         }
       }
@@ -268,19 +357,13 @@ PetscErrorCode DMPlexCreateCGNS_Internal(MPI_Comm comm, PetscInt cgid, PetscBool
     }
   }
 
-  PetscCall(DMPlexSymmetrize(*dm));
-  PetscCall(DMPlexStratify(*dm));
-  if (interpolate) {
-    DM idm;
-
-    PetscCall(DMPlexInterpolate(*dm, &idm));
-    PetscCall(DMDestroy(dm));
-    *dm = idm;
-  }
+  PetscCall(DMPlexSymmetrize(dm));
+  PetscCall(DMPlexStratify(dm));
+  if (interpolate) PetscCall(DMPlexInterpolateInPlace_Internal(dm));
 
   /* Read coordinates */
-  PetscCall(DMSetCoordinateDim(*dm, coordDim));
-  PetscCall(DMGetCoordinateDM(*dm, &cdm));
+  PetscCall(DMSetCoordinateDim(dm, coordDim));
+  PetscCall(DMGetCoordinateDM(dm, &cdm));
   PetscCall(DMGetLocalSection(cdm, &coordSection));
   PetscCall(PetscSectionSetNumFields(coordSection, 1));
   PetscCall(PetscSectionSetFieldComponents(coordSection, 0, coordDim));
@@ -333,11 +416,11 @@ PetscErrorCode DMPlexCreateCGNS_Internal(MPI_Comm comm, PetscInt cgid, PetscBool
 
   PetscCall(PetscObjectSetName((PetscObject)coordinates, "coordinates"));
   PetscCall(VecSetBlockSize(coordinates, coordDim));
-  PetscCall(DMSetCoordinatesLocal(*dm, coordinates));
+  PetscCall(DMSetCoordinatesLocal(dm, coordinates));
   PetscCall(VecDestroy(&coordinates));
 
   /* Read boundary conditions */
-  PetscCall(DMGetNumLabels(*dm, &labelIdRange[0]));
+  PetscCall(DMGetNumLabels(dm, &labelIdRange[0]));
   if (rank == 0) {
     CGNS_ENUMT(BCType_t) bctype;
     CGNS_ENUMT(DataType_t) datatype;
@@ -353,8 +436,8 @@ PetscErrorCode DMPlexCreateCGNS_Internal(MPI_Comm comm, PetscInt cgid, PetscBool
       PetscCallCGNS(cg_nbocos(cgid, 1, z, &nbc));
       for (bc = 1; bc <= nbc; ++bc) {
         PetscCallCGNS(cg_boco_info(cgid, 1, z, bc, bcname, &bctype, &pointtype, &npoints, normal, &nnormals, &datatype, &ndatasets));
-        PetscCall(DMCreateLabel(*dm, bcname));
-        PetscCall(DMGetLabel(*dm, bcname, &label));
+        PetscCall(DMCreateLabel(dm, bcname));
+        PetscCall(DMGetLabel(dm, bcname, &label));
         PetscCall(PetscMalloc2(npoints, &points, nnormals, &normals));
         PetscCallCGNS(cg_boco_read(cgid, 1, z, bc, points, (void *)normals));
         if (pointtype == CGNS_ENUMV(ElementRange)) {
@@ -390,7 +473,7 @@ PetscErrorCode DMPlexCreateCGNS_Internal(MPI_Comm comm, PetscInt cgid, PetscBool
     }
     PetscCall(PetscFree2(cellStart, vertStart));
   }
-  PetscCall(DMGetNumLabels(*dm, &labelIdRange[1]));
+  PetscCall(DMGetNumLabels(dm, &labelIdRange[1]));
   PetscCallMPI(MPI_Bcast(labelIdRange, 2, MPIU_INT, 0, comm));
 
   /* Create BC labels at all processes */
@@ -400,12 +483,12 @@ PetscErrorCode DMPlexCreateCGNS_Internal(MPI_Comm comm, PetscInt cgid, PetscBool
     const char *locName;
 
     if (rank == 0) {
-      PetscCall(DMGetLabelByNum(*dm, labelId, &label));
+      PetscCall(DMGetLabelByNum(dm, labelId, &label));
       PetscCall(PetscObjectGetName((PetscObject)label, &locName));
       PetscCall(PetscStrncpy(labelName, locName, len));
     }
     PetscCallMPI(MPI_Bcast(labelName, (PetscMPIInt)len, MPIU_INT, 0, comm));
-    PetscCallMPI(DMCreateLabel(*dm, labelName));
+    PetscCallMPI(DMCreateLabel(dm, labelName));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }

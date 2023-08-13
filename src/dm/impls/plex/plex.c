@@ -2134,14 +2134,25 @@ PetscErrorCode DMPlexLocalVectorView(DM dm, PetscViewer viewer, DM sectiondm, Ve
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+#if defined(PETSC_HAVE_CGNS)
+PETSC_INTERN PetscErrorCode DMLoad_Plex_CGNS(DM, PetscViewer);
+#endif
+
 PetscErrorCode DMLoad_Plex(DM dm, PetscViewer viewer)
 {
-  PetscBool ishdf5;
+  PetscBool ishdf5, iscgns, isgmsh, isexodusii, isfluent, isbinary;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 2);
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERHDF5, &ishdf5));
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERCGNS, &iscgns));
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERGMSH, &isgmsh));
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWEREXODUSII, &isexodusii));
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERFLUENT, &isfluent));
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERBINARY, &isbinary));
+  PetscCheck(!isbinary, PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "No support for binary file");
+
   if (ishdf5) {
 #if defined(PETSC_HAVE_HDF5)
     PetscViewerFormat format;
@@ -2155,7 +2166,26 @@ PetscErrorCode DMLoad_Plex(DM dm, PetscViewer viewer)
 #else
     SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "HDF5 not supported in this build.\nPlease reconfigure using --download-hdf5");
 #endif
-  } else SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "Viewer type %s not yet supported for DMPlex loading", ((PetscObject)viewer)->type_name);
+  }
+  if (iscgns) {
+#if defined(PETSC_HAVE_CGNS)
+    PetscCall(DMLoad_Plex_CGNS(dm, viewer));
+    PetscFunctionReturn(PETSC_SUCCESS);
+#else
+    SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "CGNS not supported in this build.\nPlease reconfigure using --download-cgns");
+#endif
+  }
+  if (isexodusii) {
+#if defined(PETSC_HAVE_EXODUSII)
+    ;
+#else
+    SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "Exodusii not supported in this build.\nPlease reconfigure using --download-exodusii");
+#endif
+  }
+  if (isfluent) { ; }
+  if (isgmsh) { ; }
+  SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "Viewer type %s not yet supported for DMPlex loading", ((PetscObject)viewer)->type_name);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@

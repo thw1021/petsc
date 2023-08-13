@@ -56,6 +56,7 @@ PETSC_EXTERN PetscErrorCode          DMRegisterDestroy(void);
 
 PETSC_EXTERN PetscErrorCode DMView(DM, PetscViewer);
 PETSC_EXTERN PetscErrorCode DMLoad(DM, PetscViewer);
+PETSC_EXTERN PetscErrorCode DMLoadFromFile(DM, const char *);
 PETSC_EXTERN PetscErrorCode DMDestroy(DM *);
 PETSC_EXTERN PetscErrorCode DMCreateGlobalVector(DM, Vec *);
 PETSC_EXTERN PetscErrorCode DMCreateLocalVector(DM, Vec *);

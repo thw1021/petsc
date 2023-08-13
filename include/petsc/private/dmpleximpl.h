@@ -329,8 +329,7 @@ PETSC_INTERN PetscErrorCode VecView_PlexExodusII_Internal(Vec, PetscViewer);
 PETSC_INTERN PetscErrorCode VecLoad_PlexExodusII_Internal(Vec, PetscViewer);
 #endif
 PETSC_INTERN PetscErrorCode DMView_PlexCGNS(DM, PetscViewer);
-PETSC_INTERN PetscErrorCode DMPlexCreateCGNSFromFile_Internal(MPI_Comm, const char *, PetscBool, DM *);
-PETSC_INTERN PetscErrorCode DMPlexCreateCGNS_Internal(MPI_Comm, PetscInt, PetscBool, DM *);
+PETSC_INTERN PetscErrorCode DMLoad_Plex_CGNS_Internal(DM, PetscInt, PetscBool);
 PETSC_INTERN PetscErrorCode DMPlexVTKGetCellType_Internal(DM, PetscInt, PetscInt, PetscInt *);
 PETSC_INTERN PetscErrorCode DMPlexGetAdjacency_Internal(DM, PetscInt, PetscBool, PetscBool, PetscBool, PetscInt *, PetscInt *[]);
 PETSC_INTERN PetscErrorCode DMPlexGetRawFaces_Internal(DM, DMPolytopeType, const PetscInt[], PetscInt *, const DMPolytopeType *[], const PetscInt *[], const PetscInt *[]);
