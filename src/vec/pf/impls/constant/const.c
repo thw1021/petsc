@@ -18,7 +18,7 @@ static PetscErrorCode PFApplyVec_Constant(void *value, Vec x, Vec y)
   PetscCall(VecSet(y, *((PetscScalar *)value)));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-PetscErrorCode PFView_Constant(void *value, PetscViewer viewer)
+static PetscErrorCode PFView_Constant(void *value, PetscViewer viewer)
 {
   PetscBool iascii;
 

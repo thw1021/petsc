@@ -26,6 +26,7 @@ _T = TypeVar('_T')
 exclude_dir_names = {
   'tests', 'tutorials', 'output', 'input', 'python', 'benchmarks', 'docs', 'binding', 'contrib',
   'fsrc', 'f90-mod', 'f90-src', 'f90-custom', 'ftn-auto', 'ftn-custom', 'f2003-src', 'ftn-kernels',
+  'perfstubs', 'yaml'
 }
 # directory suffixes to exclude from processing, case sensitive
 exclude_dir_suffixes  = ('.dSYM', '.DS_Store')
@@ -568,7 +569,8 @@ def WorkerPool(num_workers: int, verbose: int) -> Union[SerialPool, ParallelPool
   the number logical cores for the current machine.
   """
   if num_workers < 0:
-    num_workers = max(mp.cpu_count() - 1, 1)
+    # take number of cores - 1, up to a maximum of 16 as not to overload big machines
+    num_workers = min(max(mp.cpu_count() - 1, 1), 16)
 
   if num_workers in (0, 1):
     if verbose:
