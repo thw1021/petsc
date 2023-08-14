@@ -1,0 +1,37 @@
+<--- FIXED --->
+[31m[1m./src/sys/tests/linter/testStaticFunctionCandidates.cxx:3:1: error:[0m Function 'BareFunctionShouldGetStatic()' does not appear to be used anywhere outside of testStaticFunctionCandidates.cxx, and can be made static [-fstatic-function-candidate]:
+  1: #include "testheader.h"
+  2: 
+> 3: [33m[1mvoid BareFunctionShouldGetStatic(void) { }[0m
+     [33m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  4: 
+  5: extern void ExternFunctionShouldNotGetStatic(void) { }
+[31m[1m./src/sys/tests/linter/testStaticFunctionCandidates.cxx:13:1: error:[0m Function 'StaticFunctionPreDeclShouldNotGetStatic()' does not appear to be used anywhere outside of testStaticFunctionCandidates.cxx, and can be made static [-fstatic-function-candidate]:
+  11: 
+  12: // this should get static!
+> 13: [33m[1mvoid StaticFunctionPreDeclShouldNotGetStatic(void) { }[0m
+      [33m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  14: 
+  15: extern void ExternFunctionPreDeclShouldNotGetStatic(void);
+[31m[1m./src/sys/tests/linter/testStaticFunctionCandidates.cxx:19:1: error:[0m Function 'BareFunctionPreDeclShouldGetStatic()' does not appear to be used anywhere outside of testStaticFunctionCandidates.cxx, and can be made static [-fstatic-function-candidate]:
+  17: void ExternFunctionPreDeclShouldNotGetStatic(void) { }
+  18: 
+> 19: [33m[1mvoid BareFunctionPreDeclShouldGetStatic(void);[0m
+      [33m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  20: 
+  21: void BareFunctionPreDeclShouldGetStatic(void) { }
+[31m[1m./src/sys/tests/linter/testStaticFunctionCandidates.cxx:21:1: error:[0m Function 'BareFunctionPreDeclShouldGetStatic()' does not appear to be used anywhere outside of testStaticFunctionCandidates.cxx, and can be made static [-fstatic-function-candidate]:
+  19: void BareFunctionPreDeclShouldGetStatic(void);
+  20: 
+> 21: [33m[1mvoid BareFunctionPreDeclShouldGetStatic(void) { }[0m
+      [33m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  22: 
+  23: // declaration in testheader has "extern"
+[31m[1m./src/sys/tests/linter/testStaticFunctionCandidates.cxx:34:1: error:[0m Function 'silence_warnings()' does not appear to be used anywhere outside of testStaticFunctionCandidates.cxx, and can be made static [-fstatic-function-candidate]:
+  32: 
+  33: // ironically enough, this will get static
+> 34: [33m[1mvoid silence_warnings(void)[0m
+      [33m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  35: {
+  36:   (void)StaticFunctionShouldNotGetStatic;
+<--- LEFT --->
