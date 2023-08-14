@@ -1638,12 +1638,12 @@ static PetscErrorCode PetscDualSpaceCreateAllDataFromInteriorData(PetscDualSpace
  * Ideally most of the uses of PetscDualSpace in PetscFE will switch
  * to using intMat and allMat, so that the individual functionals
  * don't need to be constructed at all */
-static PetscErrorCode PetscDualSpaceComputeFunctionalsFromAllData(PetscDualSpace sp)
+PETSC_INTERN PetscErrorCode PetscDualSpaceComputeFunctionalsFromAllData(PetscDualSpace sp)
 {
   PetscQuadrature  allNodes;
   Mat              allMat;
   PetscInt         nDofs;
-  PetscInt         dim, k, Nk, Nc, f;
+  PetscInt         dim, Nc, f;
   DM               dm;
   PetscInt         nNodes, spdim;
   const PetscReal *nodes = NULL;
@@ -1654,8 +1654,6 @@ static PetscErrorCode PetscDualSpaceComputeFunctionalsFromAllData(PetscDualSpace
   PetscCall(PetscDualSpaceGetDM(sp, &dm));
   PetscCall(DMGetDimension(dm, &dim));
   PetscCall(PetscDualSpaceGetNumComponents(sp, &Nc));
-  PetscCall(PetscDualSpaceGetFormDegree(sp, &k));
-  PetscCall(PetscDTBinomialInt(dim, PetscAbsInt(k), &Nk));
   PetscCall(PetscDualSpaceGetAllData(sp, &allNodes, &allMat));
   nNodes = 0;
   if (allNodes) PetscCall(PetscQuadratureGetData(allNodes, NULL, NULL, &nNodes, &nodes, NULL));
@@ -1702,7 +1700,6 @@ static PetscErrorCode PetscDualSpaceComputeFunctionalsFromAllData(PetscDualSpace
     PetscInt           countNodes;
 
     PetscCall(MatGetRow(allMat, f, &ncols, &cols, &vals));
-    PetscCheck(ncols % Nk == 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "all matrix is not laid out as blocks of k-forms");
     for (c = 1, nNodesf = 1; c < ncols; c++) {
       if ((cols[c] / Nc) != (cols[c - 1] / Nc)) nNodesf++;
     }
