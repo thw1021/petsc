@@ -243,7 +243,7 @@ PetscErrorCode VecNorm_Seq(Vec xin, NormType type, PetscReal *z)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode VecView_Seq_ASCII(Vec xin, PetscViewer viewer)
+static PetscErrorCode VecView_Seq_ASCII(Vec xin, PetscViewer viewer)
 {
   PetscInt           i, n = xin->map->n;
   const char        *name;
@@ -432,7 +432,7 @@ PetscErrorCode VecView_Seq_ASCII(Vec xin, PetscViewer viewer)
 }
 
 #include <petscdraw.h>
-PetscErrorCode VecView_Seq_Draw_LG(Vec xin, PetscViewer v)
+static PetscErrorCode VecView_Seq_Draw_LG(Vec xin, PetscViewer v)
 {
   PetscDraw          draw;
   PetscBool          isnull;
@@ -476,7 +476,7 @@ PetscErrorCode VecView_Seq_Draw_LG(Vec xin, PetscViewer v)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode VecView_Seq_Draw(Vec xin, PetscViewer v)
+static PetscErrorCode VecView_Seq_Draw(Vec xin, PetscViewer v)
 {
   PetscDraw draw;
   PetscBool isnull;
@@ -490,7 +490,7 @@ PetscErrorCode VecView_Seq_Draw(Vec xin, PetscViewer v)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode VecView_Seq_Binary(Vec xin, PetscViewer viewer)
+static PetscErrorCode VecView_Seq_Binary(Vec xin, PetscViewer viewer)
 {
   return VecView_Binary(xin, viewer);
 }
