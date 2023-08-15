@@ -26,7 +26,7 @@
 +static void BareFunctionPreDeclShouldGetStatic(void) { }
  
  // declaration in testheader has "extern"
-@@ -35,5 +35,5 @@
+@@ -42,5 +42,5 @@
  
  // ironically enough, this will get static
 -void silence_warnings(void)

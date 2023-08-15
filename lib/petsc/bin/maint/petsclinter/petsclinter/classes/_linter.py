@@ -450,8 +450,7 @@ class Linter:
         return True
 
       for child in cursor.get_children():
-        if child.kind == clx.CursorKind.VISIBILITY_ATTR and \
-           SourceRange(child.extent).raw(tight=True).startswith('PETSC_'):
+        if child.kind == clx.CursorKind.VISIBILITY_ATTR and child.spelling in {'default', 'hidden'}:
           # The function cursor has a PETSC_INTERN or PETSC_EXTERN attached
           return True
       return False
@@ -503,7 +502,7 @@ class Linter:
       # the function is used elsewhere/is public API.
       return
 
-    func_name_and_type = rf'{func.result_type.spelling} +{func.spelling}\('
+    func_name_and_type = rf'{func.result_type.spelling} +{func.spelling} *\('
     # The absolute final check, we need to grep for the symbol across the code-base. This
     # is needed for cases when:
     #
