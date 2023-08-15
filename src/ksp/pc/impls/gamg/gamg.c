@@ -1294,7 +1294,7 @@ static PetscErrorCode PCGAMGSetNlevels_GAMG(PC pc, PetscInt n)
   In this case, `PCGAMGSetThresholdScale()` must be called before `PCGAMGSetThreshold()`.
   If `n` is greater than the total number of levels, the excess entries in threshold will not be used.
 
-.seealso: `PCGAMG`, `PCGAMGSetAggressiveLevels()`, `PCGAMGSetThresholdScale()`
+.seealso: `PCGAMG`, `PCGAMGSetAggressiveLevels()`, `PCGAMGSetAggressiveMISk()`, `PCGAMGSetMinDegreeOrderingMISk()`, `PCGAMGSetThresholdScale()`
 @*/
 PetscErrorCode PCGAMGSetThreshold(PC pc, PetscReal v[], PetscInt n)
 {
@@ -1572,8 +1572,11 @@ PetscErrorCode PCSetFromOptions_GAMG(PC pc, PetscOptionItems *PetscOptionsObject
 
    Options Database Keys for Aggregation:
 +  -pc_gamg_agg_nsmooths <nsmooth, default=1> - number of smoothing steps to use with smooth aggregation
-.  -pc_gamg_square_graph <n,default=1> - alias for pc_gamg_aggressive_coarsening (deprecated)
+.  -pc_gamg_aggressive_coarsening <n,default=1> - alias for -pc_gamg_square_graph (deprecated)
 -  -pc_gamg_aggressive_coarsening <n,default=1> - number of aggressive coarsening (MIS-2) levels from finest.
++  -pc_gamg_use_aggressive_square_graph <bool,default=false> - Use square graph (A'A) or MIS-k (k=2) for aggressive coarsening
+.  -pc_gamg_use_minimum_degree_ordering <bool,default=true> - Use minimum degree ordering in greedy MIS algorithm
+.  -pc_gamg_aggressive_mis_k <n,default=2> - Number (k) distance in MIS coarsening (>2 is 'aggressive')
 
    Options Database Keys for Multigrid:
 +  -pc_mg_cycle_type <v> - v or w, see `PCMGSetCycleType()`
