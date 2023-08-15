@@ -30,6 +30,13 @@ public:
 
 void swap() { }
 
+// clang-format off
+void                                                    testBadFormatting                      ( void)
+{
+
+}
+// clang-format on
+
 // ironically enough, this will get static
 void silence_warnings(void)
 {

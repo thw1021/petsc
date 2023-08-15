@@ -27,11 +27,11 @@
       [33m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
   22: 
   23: // declaration in testheader has "extern"
-[31m[1m./src/sys/tests/linter/testStaticFunctionCandidates.cxx:34:1: error:[0m Function 'silence_warnings()' does not appear to be used anywhere outside of testStaticFunctionCandidates.cxx, and can be made static [-fstatic-function-candidate]:
-  32: 
-  33: // ironically enough, this will get static
-> 34: [33m[1mvoid silence_warnings(void)[0m
+[31m[1m./src/sys/tests/linter/testStaticFunctionCandidates.cxx:41:1: error:[0m Function 'silence_warnings()' does not appear to be used anywhere outside of testStaticFunctionCandidates.cxx, and can be made static [-fstatic-function-candidate]:
+  39: 
+  40: // ironically enough, this will get static
+> 41: [33m[1mvoid silence_warnings(void)[0m
       [33m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
-  35: {
-  36:   (void)StaticFunctionShouldNotGetStatic;
+  42: {
+  43:   (void)StaticFunctionShouldNotGetStatic;
 <--- LEFT --->
