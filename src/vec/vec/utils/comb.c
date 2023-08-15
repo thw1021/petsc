@@ -264,7 +264,7 @@ PetscErrorCode PetscSplitReductionExtend(PetscSplitReduction *sr)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode PetscSplitReductionDestroy(PetscSplitReduction *sr)
+static PetscErrorCode PetscSplitReductionDestroy(PetscSplitReduction *sr)
 {
   PetscFunctionBegin;
   PetscCall(PetscFree6(sr->lvalues, sr->gvalues, sr->reducetype, sr->invecs, sr->lvalues_mix, sr->gvalues_mix));
