@@ -651,7 +651,7 @@ static PetscErrorCode fixAggregatesWithSquare(PC pc, Mat Gmat_2, Mat Gmat_1, Pet
       PetscInt gid1;
 
       PetscCall(PetscCDIntNdGetID(pos, &gid1));
-      PetscCheck(gid1 == lid + my0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "gid1 %D != lid %D + my0 %D", gid1, lid, my0);
+      PetscCheck(gid1 == lid + my0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "gid1 %d != lid %d + my0 %d", (int)gid1, (int)lid, (int)my0);
       lid_state[lid] = gid1;
     }
   }
@@ -733,7 +733,7 @@ static PetscErrorCode fixAggregatesWithSquare(PC pc, Mat Gmat_2, Mat Gmat_1, Pet
             }
             if (hav != 1) {
               PetscCheck(hav, PETSC_COMM_SELF, PETSC_ERR_PLIB, "failed to find adj in 'selected' lists - structurally unsymmetric matrix");
-              SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "found node %D times???", hav);
+              SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "found node %d times???", (int)hav);
             }
           } else { /* I'm stealing this local, owned by a ghost */
             PetscCheck(sgid == -1, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Mat has an un-symmetric graph. Use '-%spc_gamg_sym_graph true' to symmetrize the graph or '-%spc_gamg_threshold -1' if the matrix is structurally symmetric.",
@@ -773,8 +773,8 @@ static PetscErrorCode fixAggregatesWithSquare(PC pc, Mat Gmat_2, Mat Gmat_1, Pet
                 PetscCall(PetscCDGetNextPos(aggs_2, oldslidj, &pos));
               }
               if (hav != 1) {
-                PetscCheck(hav, PETSC_COMM_SELF, PETSC_ERR_PLIB, "failed to find (hav=%D) adj in 'selected' lists - structurally unsymmetric matrix", hav);
-                SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "found node %D times???", hav);
+                PetscCheck(hav, PETSC_COMM_SELF, PETSC_ERR_PLIB, "failed to find (hav=%d) adj in 'selected' lists - structurally unsymmetric matrix", (int)hav);
+                SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "found node %d times???", (int)hav);
               }
             } else {
               /* TODO: ghosts remove this later */
