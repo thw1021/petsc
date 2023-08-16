@@ -4404,9 +4404,19 @@ static PetscErrorCode DMSetFromOptions_Plex(DM dm, PetscOptionItems *PetscOption
       PetscCall(PetscObjectGetClassId(obj, &id));
     }
     if (!distributed && id != PETSCFE_CLASSID) {
+      const PetscInt *ind;
+      PetscInt        i, n;
+
       PetscCall(DMPlexGetOrdering1D(dm, &perm));
-      PetscCall(DMPlexPermute(dm, perm, &rdm));
-      PetscCall(DMPlexReplace_Internal(dm, &rdm));
+      // Check for identity permutation
+      PetscCall(ISGetLocalSize(perm, &n));
+      PetscCall(ISGetIndices(perm, &ind));
+      for (i = 0; i < n; ++i)
+        if (ind[i] != i) break;
+      if (i < n) {
+        PetscCall(DMPlexPermute(dm, perm, &rdm));
+        PetscCall(DMPlexReplace_Internal(dm, &rdm));
+      }
       PetscCall(ISDestroy(&perm));
     }
   }

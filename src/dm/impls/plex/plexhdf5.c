@@ -200,7 +200,7 @@ static PetscErrorCode DMPlexGetHDF5Name_Private(DM dm, const char *name[])
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode DMSequenceView_HDF5(DM dm, const char *seqname, PetscInt seqnum, PetscScalar value, PetscViewer viewer)
+PetscErrorCode DMSequenceView_HDF5(DM dm, const char *seqname, PetscInt seqnum, PetscScalar value, PetscViewer viewer)
 {
   Vec         stamp;
   PetscMPIInt rank;
@@ -410,7 +410,12 @@ PetscErrorCode VecView_Plex_Local_HDF5_Internal(Vec v, PetscViewer viewer)
         PetscCall(VecRestoreArray(subv, &suba));
         PetscCall(DMLabelDestroy(&cutVertexLabel));
       } else {
-        PetscCall(PetscSectionGetField_Internal(section, sectionGlobal, gv, f, pStart, pEnd, &is, &subv));
+        PetscInt bs;
+
+        PetscCall(DMCreateSubDMIS(dmBC, 1, &f, &is));
+        PetscCall(VecGetSubVector(gv, is, &subv));
+        PetscCall(ISGetBlockSize(is, &bs));
+        PetscCall(VecSetBlockSize(subv, bs));
       }
       PetscCall(PetscStrncpy(subname, name, sizeof(subname)));
       PetscCall(PetscStrlcat(subname, "_", sizeof(subname)));
@@ -433,8 +438,8 @@ PetscErrorCode VecView_Plex_Local_HDF5_Internal(Vec v, PetscViewer viewer)
         PetscCall(PetscViewerHDF5WriteObjectAttribute(viewer, (PetscObject)subv, componentNameLabel, PETSC_STRING, componentName));
       }
 
-      if (cutLabel) PetscCall(VecDestroy(&subv));
-      else PetscCall(PetscSectionRestoreField_Internal(section, sectionGlobal, gv, f, pStart, pEnd, &is, &subv));
+      if (!cutLabel) PetscCall(ISDestroy(&is));
+      PetscCall(VecDestroy(&subv));
       PetscCall(PetscViewerHDF5PopGroup(viewer));
     }
   }
@@ -2459,6 +2464,7 @@ PetscErrorCode DMPlexTopologyLoad_HDF5_Internal(DM dm, PetscViewer viewer, Petsc
 /* does not contain coordinateDMs, so must fall back to the old implementation. */
 static PetscErrorCode DMPlexCoordinatesLoad_HDF5_Legacy_Private(DM dm, PetscViewer viewer)
 {
+  DM           cdm;
   PetscSection coordSection;
   Vec          coordinates;
   PetscReal    lengthScale;
@@ -2478,6 +2484,12 @@ static PetscErrorCode DMPlexCoordinatesLoad_HDF5_Legacy_Private(DM dm, PetscView
     PetscCall(VecSetBlockSize(coordinates, spatialDim));
   }
   PetscCall(VecLoad(coordinates, viewer));
+  PetscCall(DMGetCoordinateDM(dm, &cdm));
+  PetscCall(VecSetDM(coordinates, cdm));
+  PetscCall(VecSetOperation(coordinates, VECOP_VIEW, (void (*)(void))VecView_Plex));
+  PetscCall(VecSetOperation(coordinates, VECOP_VIEWNATIVE, (void (*)(void))VecView_Plex_Native));
+  PetscCall(VecSetOperation(coordinates, VECOP_LOAD, (void (*)(void))VecLoad_Plex));
+  PetscCall(VecSetOperation(coordinates, VECOP_LOADNATIVE, (void (*)(void))VecLoad_Plex_Native));
   PetscCall(PetscViewerHDF5PopGroup(viewer));
   PetscCall(DMPlexGetScale(dm, PETSC_UNIT_LENGTH, &lengthScale));
   PetscCall(VecScale(coordinates, 1.0 / lengthScale));

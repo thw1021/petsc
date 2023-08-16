@@ -249,89 +249,10 @@ PetscErrorCode VecSetValuesSection(Vec v, PetscSection s, PetscInt point, PetscS
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode PetscSectionGetField_Internal(PetscSection section, PetscSection sectionGlobal, Vec v, PetscInt field, PetscInt pStart, PetscInt pEnd, IS *is, Vec *subv)
-{
-  PetscInt *subIndices;
-  PetscInt  Nc, subSize = 0, subOff = 0, p;
-
-  PetscFunctionBegin;
-  PetscCall(PetscSectionGetFieldComponents(section, field, &Nc));
-  for (p = pStart; p < pEnd; ++p) {
-    PetscInt gdof, fdof = 0;
-
-    PetscCall(PetscSectionGetDof(sectionGlobal, p, &gdof));
-    if (gdof > 0) PetscCall(PetscSectionGetFieldDof(section, p, field, &fdof));
-    subSize += fdof;
-  }
-  PetscCall(PetscMalloc1(subSize, &subIndices));
-  for (p = pStart; p < pEnd; ++p) {
-    PetscInt gdof, goff;
-
-    PetscCall(PetscSectionGetDof(sectionGlobal, p, &gdof));
-    if (gdof > 0) {
-      PetscInt fdof, fc, f2, poff = 0;
-
-      PetscCall(PetscSectionGetOffset(sectionGlobal, p, &goff));
-      /* Can get rid of this loop by storing field information in the global section */
-      for (f2 = 0; f2 < field; ++f2) {
-        PetscCall(PetscSectionGetFieldDof(section, p, f2, &fdof));
-        poff += fdof;
-      }
-      PetscCall(PetscSectionGetFieldDof(section, p, field, &fdof));
-      for (fc = 0; fc < fdof; ++fc, ++subOff) subIndices[subOff] = goff + poff + fc;
-    }
-  }
-  PetscCall(ISCreateGeneral(PetscObjectComm((PetscObject)v), subSize, subIndices, PETSC_OWN_POINTER, is));
-  PetscCall(VecGetSubVector(v, *is, subv));
-  PetscCall(VecSetBlockSize(*subv, Nc));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 PetscErrorCode PetscSectionRestoreField_Internal(PetscSection section, PetscSection sectionGlobal, Vec v, PetscInt field, PetscInt pStart, PetscInt pEnd, IS *is, Vec *subv)
 {
   PetscFunctionBegin;
   PetscCall(VecRestoreSubVector(v, *is, subv));
   PetscCall(ISDestroy(is));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@C
-  PetscSectionVecNorm - Computes the vector norm, separated into field components.
-
-  Input Parameters:
-+ s    - the local Section
-. gs   - the global section
-. x    - the vector
-- type - one of `NORM_1`, `NORM_2`, `NORM_INFINITY`.
-
-  Output Parameter:
-. val - the array of norms
-
-  Level: intermediate
-
-.seealso: `VecNorm()`, `PetscSectionCreate()`
-@*/
-PetscErrorCode PetscSectionVecNorm(PetscSection s, PetscSection gs, Vec x, NormType type, PetscReal val[])
-{
-  PetscInt Nf, f, pStart, pEnd;
-
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(s, PETSC_SECTION_CLASSID, 1);
-  PetscValidHeaderSpecific(gs, PETSC_SECTION_CLASSID, 2);
-  PetscValidHeaderSpecific(x, VEC_CLASSID, 3);
-  PetscAssertPointer(val, 5);
-  PetscCall(PetscSectionGetNumFields(s, &Nf));
-  if (Nf < 2) PetscCall(VecNorm(x, type, val));
-  else {
-    PetscCall(PetscSectionGetChart(s, &pStart, &pEnd));
-    for (f = 0; f < Nf; ++f) {
-      Vec subv;
-      IS  is;
-
-      PetscCall(PetscSectionGetField_Internal(s, gs, x, f, pStart, pEnd, &is, &subv));
-      PetscCall(VecNorm(subv, type, &val[f]));
-      PetscCall(PetscSectionRestoreField_Internal(s, gs, x, f, pStart, pEnd, &is, &subv));
-    }
-  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }

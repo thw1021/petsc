@@ -1,10 +1,10 @@
 #ifndef __TSIMPL_H
-#define __TSIMPL_H
+  #define __TSIMPL_H
 
-#include <petscts.h>
-#include <petsc/private/petscimpl.h>
+  #include <petscts.h>
+  #include <petsc/private/petscimpl.h>
 
-/*
+  /*
     Timesteping context.
       General DAE: F(t,U,U_t) = 0, required Jacobian is G'(U) where G(U) = F(t,U,U0+a*U)
       General ODE: U_t = F(t,U) <-- the right-hand-side function
@@ -12,10 +12,10 @@
       Linear (no time) ODE: U_t = A U <-- the right-hand-side matrix
 */
 
-/*
+  /*
      Maximum number of monitors you can run with a single TS
 */
-#define MAXTSMONITORS 10
+  #define MAXTSMONITORS 10
 
 PETSC_EXTERN PetscBool      TSRegisterAllCalled;
 PETSC_EXTERN PetscErrorCode TSRegisterAll(void);
@@ -44,6 +44,7 @@ struct _TSOps {
   PetscErrorCode (*destroy)(TS);
   PetscErrorCode (*view)(TS, PetscViewer);
   PetscErrorCode (*reset)(TS);
+  PetscErrorCode (*copy)(TS, TS);
   PetscErrorCode (*linearstability)(TS, PetscReal, PetscReal, PetscReal *, PetscReal *);
   PetscErrorCode (*load)(TS, PetscViewer);
   PetscErrorCode (*rollback)(TS);
@@ -570,3 +571,8 @@ struct _n_TSMonitorDrawCtx {
   PetscBool   showtimestepandtime;
 };
 #endif
+
+PETSC_EXTERN PetscErrorCode TSThetaGetX0AndXdot(TS, DM, Vec *, Vec *);
+PETSC_EXTERN PetscErrorCode TSThetaRestoreX0AndXdot(TS, DM, Vec *, Vec *);
+PETSC_EXTERN PetscErrorCode TSARKIMEXGetVecs(TS, DM, Vec *, Vec *);
+PETSC_EXTERN PetscErrorCode TSARKIMEXRestoreVecs(TS, DM, Vec *, Vec *);

@@ -1186,6 +1186,53 @@ PetscErrorCode PetscViewerHDF5WriteObjectAttribute(PetscViewer viewer, PetscObje
 }
 
 /*@C
+  PetscViewerHDF5ReadAttributeType - Read an attribute type
+
+  Collective
+
+  Input Parameters:
++ viewer - The `PETSCVIEWERHDF5` viewer
+. parent - The parent dataset/group name
+. name   - The attribute name
+
+  Output Parameter:
+. datatype - The attribute type
+
+  Level: advanced
+
+  Notes:
+  If parent starts with '/', it is taken as an absolute path overriding currently pushed group, else parent is relative to the current pushed group. `NULL` means the current pushed group.
+
+.seealso: [](sec_viewers), `PETSCVIEWERHDF5`, `PetscViewerHDF5Open()`, `PetscViewerHDF5ReadObjectAttribute()`, `PetscViewerHDF5WriteAttribute()`, `PetscViewerHDF5HasAttribute()`, `PetscViewerHDF5HasObject()`, `PetscViewerHDF5PushGroup()`, `PetscViewerHDF5PopGroup()`, `PetscViewerHDF5GetGroup()`
+@*/
+PetscErrorCode PetscViewerHDF5ReadAttributeType(PetscViewer viewer, const char parent[], const char name[], PetscDataType *datatype)
+{
+  char     *parentAbsPath;
+  hid_t     h5, obj, attribute, atype;
+  PetscBool has;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 1);
+  if (parent) PetscValidCharPointer(parent, 2);
+  PetscValidCharPointer(name, 3);
+  PetscValidPointer(datatype, 4);
+  PetscCall(PetscViewerHDF5GetGroup(viewer, parent, &parentAbsPath));
+  PetscCall(PetscViewerHDF5Traverse_Internal(viewer, parentAbsPath, PETSC_FALSE, &has, NULL));
+  if (has) PetscCall(PetscViewerHDF5HasAttribute_Internal(viewer, parentAbsPath, name, &has));
+  PetscCheck(has, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Attribute %s not found in group %s", name, parentAbsPath);
+  PetscCall(PetscViewerHDF5GetFileId(viewer, &h5));
+  PetscCallHDF5Return(obj, H5Oopen, (h5, parentAbsPath, H5P_DEFAULT));
+  PetscCallHDF5Return(attribute, H5Aopen_name, (obj, name));
+  PetscCallHDF5Return(atype, H5Aget_type, (attribute));
+  PetscCallHDF5(H5Aclose, (attribute));
+  // H5Oclose can be used to close groups, datasets, or committed datatypes
+  PetscCallHDF5(H5Oclose, (obj));
+  PetscCall(PetscFree(parentAbsPath));
+  PetscCall(PetscHDF5DataTypeToPetscDataType(atype, datatype));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
   PetscViewerHDF5ReadAttribute - Read an attribute
 
   Collective

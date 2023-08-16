@@ -4145,6 +4145,66 @@ PetscErrorCode DMPlexGetSubpointIS(DM dm, IS *subpointIS)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@C
+  DMCreateSubDomainIS - Returns an `IS` encapsulating a subproblem defined by the fields in the `PetscSection` in the `DM`.
+
+  Not Collective
+
+  Input Parameters:
++ dm    - The `DM` object
+- subdm - The subdomain `DM` object
+
+  Output Parameter:
+. is - The global indices for the subproblem
+
+  Level: intermediate
+
+.seealso `DMCreateSubDMIS()`, `DMCreateSubDM()`, `DMGetLocalSection()`
+@*/
+PetscErrorCode DMCreateSubDomainIS(DM dm, DM subdm, IS *is)
+{
+  PetscSection    s, gs;
+  IS              subis;
+  const PetscInt *points;
+  PetscInt       *subIndices;
+  PetscInt        n, subSize = 0, subOff = 0, pStart, pEnd;
+
+  PetscFunctionBegin;
+  // TODO Compute the blocksize (should be the same as orginal section)
+  PetscCall(DMPlexGetSubpointIS(subdm, &subis));
+  PetscCall(DMGetLocalSection(dm, &s));
+  PetscCall(DMGetGlobalSection(dm, &gs));
+  PetscCall(PetscSectionGetChart(gs, &pStart, &pEnd));
+  PetscCall(ISGetLocalSize(subis, &n));
+  PetscCall(ISGetIndices(subis, &points));
+  for (PetscInt i = 0; i < n; ++i) {
+    const PetscInt p = points[n];
+    PetscInt       gdof;
+
+    if (p < pStart || p >= pEnd) continue;
+    PetscCall(PetscSectionGetDof(gs, p, &gdof));
+    subSize += gdof > 0 ? gdof : 0;
+  }
+  PetscCall(PetscMalloc1(subSize, &subIndices));
+  for (PetscInt i = 0; i < n; ++i) {
+    const PetscInt p = points[n];
+    PetscInt       gdof, goff;
+
+    PetscCall(PetscSectionGetDof(gs, p, &gdof));
+    if (gdof > 0) {
+      PetscInt dof, cdof;
+
+      PetscCall(PetscSectionGetOffset(gs, p, &goff));
+      PetscCall(PetscSectionGetDof(s, p, &dof));
+      PetscCall(PetscSectionGetConstraintDof(s, p, &cdof));
+      for (PetscInt c = 0; c < dof - cdof; ++c, ++subOff) subIndices[subOff] = goff + c;
+    }
+  }
+  PetscCall(ISCreateGeneral(PetscObjectComm((PetscObject)dm), subSize, subIndices, PETSC_OWN_POINTER, is));
+  PetscCall(ISDestroy(&subis));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*@
   DMGetEnclosureRelation - Get the relationship between `dmA` and `dmB`
 

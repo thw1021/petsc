@@ -27,6 +27,7 @@ struct _SNESOps {
   PetscErrorCode (*computepfunction)(SNES, Vec, Vec, void *);
   PetscErrorCode (*computepjacobian)(SNES, Vec, Mat, Mat, void *);
   PetscErrorCode (*load)(SNES, PetscViewer);
+  PetscErrorCode (*setdm)(SNES, DM);
 };
 
 /*

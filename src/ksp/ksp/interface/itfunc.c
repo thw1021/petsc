@@ -1428,8 +1428,6 @@ PetscErrorCode KSPReset(KSP ksp)
   PetscCall(VecDestroy(&ksp->diagonal));
   PetscCall(VecDestroy(&ksp->truediagonal));
 
-  PetscCall(KSPResetViewers(ksp));
-
   ksp->setupstage = KSP_SETUP_NEW;
   ksp->nmax       = PETSC_DECIDE;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1469,6 +1467,7 @@ PetscErrorCode KSPDestroy(KSP *ksp)
   pc         = (*ksp)->pc;
   (*ksp)->pc = NULL;
   PetscCall(KSPReset((*ksp)));
+  PetscCall(KSPResetViewers((*ksp)));
   (*ksp)->pc = pc;
   PetscTryTypeMethod((*ksp), destroy);
 

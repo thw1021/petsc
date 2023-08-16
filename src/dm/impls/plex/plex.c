@@ -169,9 +169,9 @@ PetscErrorCode DMPlexVecView1D(DM dm, PetscInt n, Vec u[], PetscViewer viewer)
   PetscDrawLG        lg;
   Vec                coordinates;
   const PetscScalar *coords, **sol;
-  PetscReal         *vals;
+  PetscReal         *vals, *scales;
   PetscInt          *Nc;
-  PetscInt           Nf, f, c, Nl, l, i, vStart, vEnd, v;
+  PetscInt           Nf, f, c, Nl, Ns, l, i, vStart, vEnd, v;
   char             **names;
 
   PetscFunctionBegin;
@@ -184,7 +184,11 @@ PetscErrorCode DMPlexVecView1D(DM dm, PetscInt n, Vec u[], PetscViewer viewer)
   if (!draw) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(PetscDrawLGCreate(draw, n * Nl, &lg));
 
-  PetscCall(PetscMalloc3(n, &sol, n * Nl, &names, n * Nl, &vals));
+  PetscCall(PetscMalloc4(n, &sol, n * Nl, &names, n * Nl, &vals, Nl, &scales));
+  Ns = Nl;
+  for (PetscInt j = 0; j < Nl; ++j) scales[j] = 1.0;
+  PetscCall(PetscOptionsGetRealArray(NULL, dm->hdr.prefix, "-dm_plex_field_scale", scales, &Ns, NULL));
+
   for (i = 0, l = 0; i < n; ++i) {
     const char *vname;
 
@@ -217,14 +221,14 @@ PetscErrorCode DMPlexVecView1D(DM dm, PetscInt n, Vec u[], PetscViewer viewer)
     PetscCall(DMPlexPointLocalRead(dm, v, coords, &x));
     for (i = 0; i < n; ++i) {
       PetscCall(DMPlexPointLocalRead(dm, v, sol[i], &svals));
-      for (l = 0; l < Nl; ++l) vals[i * Nl + l] = PetscRealPart(svals[l]);
+      for (l = 0; l < Nl; ++l) vals[i * Nl + l] = scales[l] * PetscRealPart(svals[l]);
     }
     PetscCall(PetscDrawLGAddCommonPoint(lg, PetscRealPart(x[0]), vals));
   }
   PetscCall(VecRestoreArrayRead(coordinates, &coords));
   for (i = 0; i < n; ++i) PetscCall(VecRestoreArrayRead(u[i], &sol[i]));
   for (l = 0; l < n * Nl; ++l) PetscCall(PetscFree(names[l]));
-  PetscCall(PetscFree3(sol, names, vals));
+  PetscCall(PetscFree4(sol, names, vals, scales));
 
   PetscCall(PetscDrawLGDraw(lg));
   PetscCall(PetscDrawLGDestroy(&lg));
@@ -9689,18 +9693,22 @@ static void g0_identity_private(PetscInt dim, PetscInt Nf, PetscInt NfAux, const
 
 PetscErrorCode DMCreateMassMatrixLumped_Plex(DM dm, Vec *mass)
 {
-  DM           dmc;
-  PetscDS      ds;
-  Vec          ones, locmass;
-  IS           cellIS;
-  PetscFormKey key;
-  PetscInt     depth;
+  DM            dmc;
+  PetscDS       ds;
+  PetscWeakForm wf;
+  Vec           ones, locmass;
+  IS            cellIS;
+  PetscFormKey  key;
+  PetscInt      Nf, depth;
 
   PetscFunctionBegin;
   PetscCall(DMClone(dm, &dmc));
   PetscCall(DMCopyDisc(dm, dmc));
   PetscCall(DMGetDS(dmc, &ds));
-  PetscCall(PetscDSSetJacobian(ds, 0, 0, g0_identity_private, NULL, NULL, NULL));
+  PetscCall(PetscDSGetNumFields(ds, &Nf));
+  PetscCall(PetscDSGetWeakForm(ds, &wf));
+  PetscCall(PetscWeakFormClear(wf));
+  for (PetscInt f = 0; f < Nf; ++f) PetscCall(PetscDSSetJacobian(ds, f, f, g0_identity_private, NULL, NULL, NULL));
   PetscCall(DMCreateGlobalVector(dmc, mass));
   PetscCall(DMGetLocalVector(dmc, &ones));
   PetscCall(DMGetLocalVector(dmc, &locmass));
@@ -9739,14 +9747,15 @@ PetscErrorCode DMCreateMassMatrix_Plex(DM dmCoarse, DM dmFine, Mat *mass)
     Vec           u;
     IS            cellIS;
     PetscFormKey  key;
-    PetscInt      depth;
+    PetscInt      Nf, depth;
 
     PetscCall(DMClone(dmFine, &dmc));
     PetscCall(DMCopyDisc(dmFine, dmc));
     PetscCall(DMGetDS(dmc, &ds));
+    PetscCall(PetscDSGetNumFields(ds, &Nf));
     PetscCall(PetscDSGetWeakForm(ds, &wf));
     PetscCall(PetscWeakFormClear(wf));
-    PetscCall(PetscDSSetJacobian(ds, 0, 0, g0_identity_private, NULL, NULL, NULL));
+    for (PetscInt f = 0; f < Nf; ++f) PetscCall(PetscDSSetJacobian(ds, f, f, g0_identity_private, NULL, NULL, NULL));
     PetscCall(DMCreateMatrix(dmc, mass));
     PetscCall(DMGetLocalVector(dmc, &u));
     PetscCall(DMPlexGetDepth(dmc, &depth));

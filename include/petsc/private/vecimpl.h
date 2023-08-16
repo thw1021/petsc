@@ -308,9 +308,6 @@ PETSC_EXTERN PetscErrorCode VecMatlabEnginePut_Default(PetscObject, void *);
 PETSC_EXTERN PetscErrorCode VecMatlabEngineGet_Default(PetscObject, void *);
 #endif
 
-PETSC_EXTERN PetscErrorCode PetscSectionGetField_Internal(PetscSection, PetscSection, Vec, PetscInt, PetscInt, PetscInt, IS *, Vec *);
-PETSC_EXTERN PetscErrorCode PetscSectionRestoreField_Internal(PetscSection, PetscSection, Vec, PetscInt, PetscInt, PetscInt, IS *, Vec *);
-
 #define VecCheckSameLocalSize(x, ar1, y, ar2) \
   do { \
     PetscCheck((x)->map->n == (y)->map->n, PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Incompatible vector local lengths parameter # %d local size %" PetscInt_FMT " != parameter # %d local size %" PetscInt_FMT, ar1, (x)->map->n, ar2, (y)->map->n); \

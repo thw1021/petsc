@@ -47,6 +47,13 @@
 #define SNESNCG              'ncg'
 #define SNESFAS              'fas'
 #define SNESMS               'ms'
+#define SNESNASM             'nasm'
+#define SNESANDERSON         'anderson'
+#define SNESASPIN            'aspin'
+#define SNESCOMPOSITE        'composite'
+#define SNESPATCH            'patch'
+#define SNESMULTIBLOCK       'multiblock'
+#define SNESNONE             'none'
 
 !
 ! SNESLineSearchType

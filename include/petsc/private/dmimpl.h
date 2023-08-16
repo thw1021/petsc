@@ -305,6 +305,7 @@ struct _p_DM {
   DMBoundary   boundary; /* List of boundary conditions */
   PetscInt     Nds;      /* Number of discrete systems defined on the total domain */
   DMSpace     *probs;    /* Array of discrete systems */
+  IS           subdofIS; // IS mapping sol on this DM to the sol on the superDM, from DMCreateSubDM()
   /* Output structures */
   DM        dmBC;              /* The DM with boundary conditions in the global DM */
   PetscInt  outputSequenceNum; /* The current sequence number for output */
@@ -408,6 +409,7 @@ PETSC_EXTERN PetscErrorCode DMView_GLVis(DM, PetscViewer, PetscErrorCode (*)(DM,
 */
 
 #if defined(PETSC_HAVE_HDF5)
+PETSC_EXTERN PetscErrorCode DMSequenceView_HDF5(DM, const char *, PetscInt, PetscScalar, PetscViewer);
 PETSC_EXTERN PetscErrorCode DMSequenceLoad_HDF5_Internal(DM, const char *, PetscInt, PetscScalar *, PetscViewer);
 #endif
 
