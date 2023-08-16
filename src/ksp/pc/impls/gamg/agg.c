@@ -886,7 +886,7 @@ static PetscErrorCode fixAggregatesWithSquare(PC pc, Mat Gmat_2, Mat Gmat_1, Pet
     PetscCall(VecRestoreArray(mpimat_2->lvec, &cpcol_2_state));
     PetscCall(VecRestoreArray(ghostparents2, &cpcol_2_parent));
     PetscCall(VecRestoreArray(ghostgids2, &cpcol_2_gid));
-    if (lid_cprowID_1) PetscCall(PetscFree1(lid_cprowID_1));
+    if (lid_cprowID_1) PetscCall(PetscFree(lid_cprowID_1));
     PetscCall(VecDestroy(&ghostgids2));
     PetscCall(VecDestroy(&ghostparents2));
     PetscCall(VecDestroy(&ghost_par_orig2));
