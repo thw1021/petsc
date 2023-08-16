@@ -632,7 +632,7 @@ static PetscErrorCode fixAggregatesWithSquare(PC pc, Mat Gmat_2, Mat Gmat_1, Pet
     PetscBool isAIJ;
     PetscCall(PetscStrbeginswith(((PetscObject)Gmat_1)->type_name, MATSEQAIJ, &isAIJ));
     PetscCheck(isAIJ, PETSC_COMM_SELF, PETSC_ERR_USER, "Require AIJ matrix.");
-    matA_1        = (Mat_SeqAIJ *)Gmat_1->data;
+    matA_1 = (Mat_SeqAIJ *)Gmat_1->data;
   }
   if (nloc > 0) { PetscCheck(!matB_1 || matB_1->compressedrow.use, PETSC_COMM_SELF, PETSC_ERR_PLIB, "matB_1 && !matB_1->compressedrow.use: PETSc bug???"); }
   /* get state of locals and selected gid for deleted */
