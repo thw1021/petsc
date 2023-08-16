@@ -599,7 +599,7 @@ static PetscErrorCode fixAggregatesWithSquare(PC pc, Mat Gmat_2, Mat Gmat_1, Pet
   Mat_MPIAIJ    *mpimat_2 = NULL, *mpimat_1 = NULL;
   const PetscInt nloc = Gmat_2->rmap->n;
   PetscScalar   *cpcol_1_state, *cpcol_2_state, *cpcol_2_par_orig, *lid_parent_gid;
-  PetscInt      *lid_cprowID_1 = NULL;
+  PetscInt      *lid_cprowID_1[10000]; // = NULL;
   NState        *lid_state;
   Vec            ghost_par_orig2;
   PetscMPIInt    rank;
@@ -622,7 +622,7 @@ static PetscErrorCode fixAggregatesWithSquare(PC pc, Mat Gmat_2, Mat Gmat_1, Pet
     /* force compressed row storage for B matrix in AuxMat */
     PetscCall(MatCheckCompressedRow(mpimat_1->B, matB_1->nonzerorowcnt, &matB_1->compressedrow, matB_1->i, Gmat_1->rmap->n, -1.0));
 
-    PetscCall(PetscMalloc1(nloc, &lid_cprowID_1));
+    //PetscCall(PetscMalloc1(nloc, &lid_cprowID_1));
     for (lid = 0; lid < nloc; lid++) lid_cprowID_1[lid] = -1;
     for (ix = 0; ix < matB_1->compressedrow.nrows; ix++) {
       PetscInt lid       = matB_1->compressedrow.rindex[ix];
@@ -886,7 +886,7 @@ static PetscErrorCode fixAggregatesWithSquare(PC pc, Mat Gmat_2, Mat Gmat_1, Pet
     PetscCall(VecRestoreArray(mpimat_2->lvec, &cpcol_2_state));
     PetscCall(VecRestoreArray(ghostparents2, &cpcol_2_parent));
     PetscCall(VecRestoreArray(ghostgids2, &cpcol_2_gid));
-    if (lid_cprowID_1) PetscCall(PetscFree(lid_cprowID_1));
+    //PetscCall(PetscFree(lid_cprowID_1));
     PetscCall(VecDestroy(&ghostgids2));
     PetscCall(VecDestroy(&ghostparents2));
     PetscCall(VecDestroy(&ghost_par_orig2));
