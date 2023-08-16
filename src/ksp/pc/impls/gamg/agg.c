@@ -741,7 +741,7 @@ static PetscErrorCode fixAggregatesWithSquare(PC pc, Mat Gmat_2, Mat Gmat_1, Pet
           }
         }
       } /* local neighbors */
-    } else if (state == DELETED && lid_cprowID_1) {
+    } else if (state == DELETED /* && lid_cprowID_1 */) {
       PetscInt sgidold = (PetscInt)PetscRealPart(lid_parent_gid[lid]);
       /* see if I have a selected ghost neighbor that will steal me */
       if ((ix = lid_cprowID_1[lid]) != -1) {
