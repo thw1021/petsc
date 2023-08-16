@@ -599,7 +599,7 @@ static PetscErrorCode fixAggregatesWithSquare(PC pc, Mat Gmat_2, Mat Gmat_1, Pet
   Mat_MPIAIJ    *mpimat_2 = NULL, *mpimat_1 = NULL;
   const PetscInt nloc = Gmat_2->rmap->n;
   PetscScalar   *cpcol_1_state, *cpcol_2_state, *cpcol_2_par_orig, *lid_parent_gid;
-  PetscInt      lid_cprowID_1[10000]; // = NULL;
+  PetscInt       lid_cprowID_1[10000]; // = NULL;
   NState        *lid_state;
   Vec            ghost_par_orig2;
   PetscMPIInt    rank;
