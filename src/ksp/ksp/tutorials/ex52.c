@@ -49,9 +49,9 @@ int main(int argc, char **args)
 
   PetscFunctionBeginUser;
 
-#if defined(PETSC_HAVE_STRUMPACK) && (defined(PETSC_HAVE_SLATE) || defined(PETSC_HAVE_PTSCOTCH))
-  int thread_level;
-  MPI_Init_thread(&argc, &args, MPI_THREAD_MULTIPLE, &thread_level);
+#if defined(PETSC_HAVE_STRUMPACK) && defined(PETSC_HAVE_SLATE)
+  PetscMPIInt thread_level;
+  PetscCallMPI(MPI_Init_thread(&argc, &args, MPI_THREAD_MULTIPLE, &thread_level));
 #endif
   PetscCall(PetscInitialize(&argc, &args, (char *)0, help));
   PetscCallMPI(MPI_Comm_rank(PETSC_COMM_WORLD, &rank));
@@ -444,8 +444,8 @@ int main(int argc, char **args)
          options are chosen (e.g., -log_view).
   */
   PetscCall(PetscFinalize());
-#if defined(PETSC_HAVE_STRUMPACK) && (defined(PETSC_HAVE_SLATE) || defined(PETSC_HAVE_PTSCOTCH))
-  MPI_Finalize();
+#if defined(PETSC_HAVE_STRUMPACK) && defined(PETSC_HAVE_SLATE)
+  PetscCallMPI(MPI_Finalize());
 #endif
   return 0;
 }
