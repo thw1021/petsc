@@ -612,6 +612,7 @@ static PetscErrorCode fixAggregatesWithSquare(PC pc, Mat Gmat_2, Mat Gmat_1, Pet
   /* get submatrices */
   PetscCall(PetscStrbeginswith(((PetscObject)Gmat_1)->type_name, MATMPIAIJ, &isMPI));
   PetscCall(PetscInfo(pc, "isMPI = %s\n", isMPI ? "yes" : "no"));
+  PetscCall(PetscMalloc3(nloc, &lid_state, nloc, &lid_parent_gid, nloc, &lid_cprowID_1));
   if (isMPI) {
     /* grab matrix objects */
     mpimat_2 = (Mat_MPIAIJ *)Gmat_2->data;
@@ -621,8 +622,6 @@ static PetscErrorCode fixAggregatesWithSquare(PC pc, Mat Gmat_2, Mat Gmat_1, Pet
 
     /* force compressed row storage for B matrix in AuxMat */
     PetscCall(MatCheckCompressedRow(mpimat_1->B, matB_1->nonzerorowcnt, &matB_1->compressedrow, matB_1->i, Gmat_1->rmap->n, -1.0));
-
-    PetscCall(PetscMalloc1(nloc, &lid_cprowID_1));
     for (lid = 0; lid < nloc; lid++) lid_cprowID_1[lid] = -1;
     for (ix = 0; ix < matB_1->compressedrow.nrows; ix++) {
       PetscInt lid       = matB_1->compressedrow.rindex[ix];
@@ -636,7 +635,6 @@ static PetscErrorCode fixAggregatesWithSquare(PC pc, Mat Gmat_2, Mat Gmat_1, Pet
   }
   if (nloc > 0) { PetscCheck(!matB_1 || matB_1->compressedrow.use, PETSC_COMM_SELF, PETSC_ERR_PLIB, "matB_1 && !matB_1->compressedrow.use: PETSc bug???"); }
   /* get state of locals and selected gid for deleted */
-  PetscCall(PetscMalloc2(nloc, &lid_state, nloc, &lid_parent_gid));
   for (lid = 0; lid < nloc; lid++) {
     lid_parent_gid[lid] = -1.0;
     lid_state[lid]      = DELETED;
@@ -881,7 +879,6 @@ static PetscErrorCode fixAggregatesWithSquare(PC pc, Mat Gmat_2, Mat Gmat_1, Pet
         }
       }
     }
-    PetscCall(PetscFree(lid_cprowID_1));
     PetscCall(VecRestoreArray(mpimat_1->lvec, &cpcol_1_state));
     PetscCall(VecRestoreArray(mpimat_2->lvec, &cpcol_2_state));
     PetscCall(VecRestoreArray(ghostparents2, &cpcol_2_parent));
@@ -890,8 +887,7 @@ static PetscErrorCode fixAggregatesWithSquare(PC pc, Mat Gmat_2, Mat Gmat_1, Pet
     PetscCall(VecDestroy(&ghostparents2));
     PetscCall(VecDestroy(&ghost_par_orig2));
   }
-
-  PetscCall(PetscFree2(lid_state, lid_parent_gid));
+  PetscCall(PetscFree3(lid_state, lid_parent_gid, lid_cprowID_1));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
