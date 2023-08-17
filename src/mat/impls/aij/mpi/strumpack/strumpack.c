@@ -161,12 +161,10 @@ static PetscErrorCode MatSTRUMPACKSetCompression_STRUMPACK(Mat F, MatSTRUMPACKCo
 
   PetscFunctionBegin;
 #if !defined(STRUMPACK_HAVE_BPACK)
-  if (comp == MAT_STRUMPACK_HODLR || comp == MAT_STRUMPACK_BLR_HODLR || comp == MAT_STRUMPACK_ZFP_BLR_HODLR) {
-    SETERRQ(PetscObjectComm((PetscObject)F), PETSC_ERR_SUP, "Compression scheme requires ButterflyPACK, please reconfigure with --download-butterflypack");
-  }
+  PetscCheck(comp != MAT_STRUMPACK_HODLR && comp != MAT_STRUMPACK_BLR_HODLR && comp != MAT_STRUMPACK_ZFP_BLR_HODLR, PetscObjectComm((PetscObject)F), PETSC_ERR_SUP, "Compression scheme requires ButterflyPACK, please reconfigure with --download-butterflypack");
 #endif
 #if !defined(STRUMPACK_HAVE_ZFP)
-  if (comp == MAT_STRUMPACK_ZFP_BLR_HODLR || comp == MAT_STRUMPACK_LOSSLESS || comp == MAT_STRUMPACK_LOSSY) { SETERRQ(PetscObjectComm((PetscObject)F), PETSC_ERR_SUP, "Compression scheme requires ZFP, please reconfigure with --download-zfp"); }
+  PetscCheck(comp != MAT_STRUMPACK_ZFP_BLR_HODLR && comp != MAT_STRUMPACK_LOSSLESS && comp != MAT_STRUMPACK_LOSSY, PetscObjectComm((PetscObject)F), PETSC_ERR_SUP, "Compression scheme requires ZFP, please reconfigure with --download-zfp");
 #endif
   PetscStackCallExternalVoid("STRUMPACK_set_compression", STRUMPACK_set_compression(*S, (STRUMPACK_COMPRESSION_TYPE)comp));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -771,7 +769,9 @@ static PetscErrorCode MatGetFactor_aij_strumpack(Mat A, MatFactorType ftype, Mat
 #if defined(STRUMPACK_USE_BPACK)
   PetscInt bfly_lvls;
 #endif
+#if defined(STRUMPACK_USE_SLATE_SCALAPACK)
   PetscMPIInt                   mpithreads;
+#endif
   STRUMPACK_SparseSolver       *S;
   STRUMPACK_INTERFACE           iface;
   STRUMPACK_REORDERING_STRATEGY ndcurrent, ndvalue;
