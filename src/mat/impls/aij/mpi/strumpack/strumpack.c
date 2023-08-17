@@ -770,7 +770,7 @@ static PetscErrorCode MatGetFactor_aij_strumpack(Mat A, MatFactorType ftype, Mat
   PetscInt bfly_lvls;
 #endif
 #if defined(STRUMPACK_USE_SLATE_SCALAPACK)
-  PetscMPIInt                   mpithreads;
+  PetscMPIInt mpithreads;
 #endif
   STRUMPACK_SparseSolver       *S;
   STRUMPACK_INTERFACE           iface;
