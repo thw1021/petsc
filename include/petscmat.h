@@ -2248,44 +2248,66 @@ PETSC_EXTERN PetscErrorCode MatSuperluDistGetDiagU(Mat, PetscScalar *);
     MatSTRUMPACKReordering - sparsity reducing ordering to be used in `MATSOLVERSTRUMPACK``
 
     Values:
-+  `MAT_STRUMPACK_NATURAL` - use the current ordering
-.  `MAT_STRUMPACK_METIS` - use MeTis to compute an ordering
-.  `MAT_STRUMPACK_PARMETIS` - use ParMeTis to compute an ordering
-.  `MAT_STRUMPACK_SCOTCH` - use Scotch to compute an ordering
-.  `MAT_STRUMPACK_PTSCOTCH` - use parallel Scotch to compute an ordering
--  `MAT_STRUMPACK_RCM` - use an RCM ordering
++  `MAT_STRUMPACK_NATURAL`   - use the current ordering
+.  `MAT_STRUMPACK_METIS`     - use MeTis to compute an ordering
+.  `MAT_STRUMPACK_PARMETIS`  - use ParMeTis to compute an ordering
+.  `MAT_STRUMPACK_SCOTCH`    - use Scotch to compute an ordering
+.  `MAT_STRUMPACK_PTSCOTCH`  - use parallel Scotch to compute an ordering
+.  `MAT_STRUMPACK_RCM`       - use an RCM ordering
+.  `MAT_STRUMPACK_GEOMETRIC` - use a geometric ordering (needs mesh info from user)
+.  `MAT_STRUMPACK_AMD`       - approximate minimum degree
+.  `MAT_STRUMPACK_MMD`       - multiple minimum degree
+.  `MAT_STRUMPACK_AND`       - approximate nested dissection
+.  `MAT_STRUMPACK_MLF`       - minimum local fill
+-  `MAT_STRUMPACK_SPECTRAL`  - spectral nested dissection
 
     Level: intermediate
 
     Developer Note:
     Should be called `MatSTRUMPACKReorderingType`
 
-.seealso: `Mat`, `MATSOLVERSTRUMPACK`, `MatGetFactor()`, `MatSTRUMPACKSetHSSRelTol()`, `MatSTRUMPACKSetReordering()`
+.seealso: `Mat`, `MATSOLVERSTRUMPACK`, `MatGetFactor()`, `MatSTRUMPACKSetReordering()`
 E*/
 typedef enum {
-  MAT_STRUMPACK_NATURAL  = 0,
-  MAT_STRUMPACK_METIS    = 1,
-  MAT_STRUMPACK_PARMETIS = 2,
-  MAT_STRUMPACK_SCOTCH   = 3,
-  MAT_STRUMPACK_PTSCOTCH = 4,
-  MAT_STRUMPACK_RCM      = 5
+  MAT_STRUMPACK_NATURAL   = 0,
+  MAT_STRUMPACK_METIS     = 1,
+  MAT_STRUMPACK_PARMETIS  = 2,
+  MAT_STRUMPACK_SCOTCH    = 3,
+  MAT_STRUMPACK_PTSCOTCH  = 4,
+  MAT_STRUMPACK_RCM       = 5,
+  MAT_STRUMPACK_GEOMETRIC = 6,
+  MAT_STRUMPACK_AMD       = 7,
+  MAT_STRUMPACK_MMD       = 8,
+  MAT_STRUMPACK_AND       = 9,
+  MAT_STRUMPACK_MLF       = 10,
+  MAT_STRUMPACK_SPECTRAL  = 11
 } MatSTRUMPACKReordering;
 
 PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetReordering(Mat, MatSTRUMPACKReordering);
+PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetGeometricNxyz(Mat, PetscInt, PetscInt, PetscInt);
+PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetGeometricComponents(Mat, PetscInt);
+PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetGeometricWidth(Mat, PetscInt);
 PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetColPerm(Mat, PetscBool);
-PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetHSSRelTol(Mat, PetscReal);
-PETSC_DEPRECATED_FUNCTION(3, 9, 0, "MatSTRUMPACKSetHSSRelTol()", ) static inline PetscErrorCode MatSTRUMPACKSetHSSRelCompTol(Mat mat, PetscReal rtol)
-{
-  return MatSTRUMPACKSetHSSRelTol(mat, rtol);
-}
-PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetHSSAbsTol(Mat, PetscReal);
-PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetHSSMinSepSize(Mat, PetscInt);
-PETSC_DEPRECATED_FUNCTION(3, 9, 0, "MatSTRUMPACKSetHSSMinSepSize()", ) static inline PetscErrorCode MatSTRUMPACKSetHSSMinSize(Mat mat, PetscInt hssminsize)
-{
-  return MatSTRUMPACKSetHSSMinSepSize(mat, hssminsize);
-}
-PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetHSSMaxRank(Mat, PetscInt);
-PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetHSSLeafSize(Mat, PetscInt);
+PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetGPU(Mat, PetscBool);
+
+typedef enum {
+  MAT_STRUMPACK_NONE          = 0,
+  MAT_STRUMPACK_HSS           = 1,
+  MAT_STRUMPACK_BLR           = 2,
+  MAT_STRUMPACK_HODLR         = 3,
+  MAT_STRUMPACK_BLR_HODLR     = 4,
+  MAT_STRUMPACK_ZFP_BLR_HODLR = 5,
+  MAT_STRUMPACK_LOSSLESS      = 6,
+  MAT_STRUMPACK_LOSSY         = 7
+} MatSTRUMPACKCompression;
+
+PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetCompression(Mat, MatSTRUMPACKCompression);
+PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetCompRelTol(Mat, PetscReal);
+PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetCompAbsTol(Mat, PetscReal);
+PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetCompMinSepSize(Mat, PetscInt);
+PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetCompLeafSize(Mat, PetscInt);
+PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetCompLossyPrecision(Mat, PetscInt);
+PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetCompButterflyLevels(Mat, PetscInt);
 #endif
 
 PETSC_EXTERN PetscErrorCode MatBindToCPU(Mat, PetscBool);

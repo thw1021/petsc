@@ -137,6 +137,7 @@ native    MatCUSPARSEStorageFormat
 native    MatCUSPARSEFormatOperation
 
 native    MatSTRUMPACKReordering
+native    MatSTRUMPACKCompression
 
 # petscpc.h
 nativeptr PC
