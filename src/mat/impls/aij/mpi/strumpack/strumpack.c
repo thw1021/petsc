@@ -123,8 +123,7 @@ static PetscErrorCode MatSTRUMPACKSetGPU_STRUMPACK(Mat F, PetscBool gpu)
     PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Warning: strumpack was not configured with GPU support\n"));
 #endif
     PetscStackCallExternalVoid("STRUMPACK_enable_gpu", STRUMPACK_enable_gpu(*S));
-  }
-  else PetscStackCallExternalVoid("STRUMPACK_disable_gpu", STRUMPACK_disable_gpu(*S));
+  } else PetscStackCallExternalVoid("STRUMPACK_disable_gpu", STRUMPACK_disable_gpu(*S));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -162,18 +161,12 @@ static PetscErrorCode MatSTRUMPACKSetCompression_STRUMPACK(Mat F, MatSTRUMPACKCo
 
   PetscFunctionBegin;
 #if !defined(STRUMPACK_HAVE_BPACK)
-  if (comp == MAT_STRUMPACK_HODLR ||
-      comp == MAT_STRUMPACK_BLR_HODLR ||
-      comp == MAT_STRUMPACK_ZFP_BLR_HODLR) {
+  if (comp == MAT_STRUMPACK_HODLR || comp == MAT_STRUMPACK_BLR_HODLR || comp == MAT_STRUMPACK_ZFP_BLR_HODLR) {
     SETERRQ(PetscObjectComm((PetscObject)F), PETSC_ERR_SUP, "Compression scheme requires ButterflyPACK, please reconfigure with --download-butterflypack");
   }
 #endif
 #if !defined(STRUMPACK_HAVE_ZFP)
-  if (comp == MAT_STRUMPACK_ZFP_BLR_HODLR ||
-      comp == MAT_STRUMPACK_LOSSLESS ||
-      comp == MAT_STRUMPACK_LOSSY) {
-    SETERRQ(PetscObjectComm((PetscObject)F), PETSC_ERR_SUP, "Compression scheme requires ZFP, please reconfigure with --download-zfp");
-  }
+  if (comp == MAT_STRUMPACK_ZFP_BLR_HODLR || comp == MAT_STRUMPACK_LOSSLESS || comp == MAT_STRUMPACK_LOSSY) { SETERRQ(PetscObjectComm((PetscObject)F), PETSC_ERR_SUP, "Compression scheme requires ZFP, please reconfigure with --download-zfp"); }
 #endif
   PetscStackCallExternalVoid("STRUMPACK_set_compression", STRUMPACK_set_compression(*S, (STRUMPACK_COMPRESSION_TYPE)comp));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -767,25 +760,25 @@ static PetscErrorCode MatFactorGetSolverType_aij_strumpack(Mat A, MatSolverType 
 M*/
 static PetscErrorCode MatGetFactor_aij_strumpack(Mat A, MatFactorType ftype, Mat *F)
 {
-  Mat                           B;
-  PetscInt                      M = A->rmap->N, N = A->cmap->N;
-  PetscBool                     verb, flg, set;
-  PetscReal                     ctol;
-  PetscInt                      min_sep_size, leaf_size, nxyz[3], nrdims, nc, w;
+  Mat       B;
+  PetscInt  M = A->rmap->N, N = A->cmap->N;
+  PetscBool verb, flg, set;
+  PetscReal ctol;
+  PetscInt  min_sep_size, leaf_size, nxyz[3], nrdims, nc, w;
 #if defined(STRUMPACK_USE_ZFP)
-  PetscInt                      lossy_prec;
+  PetscInt lossy_prec;
 #endif
 #if defined(STRUMPACK_USE_BPACK)
-  PetscInt                      bfly_lvls;
+  PetscInt bfly_lvls;
 #endif
   PetscMPIInt                   mpithreads;
-  STRUMPACK_SparseSolver        *S;
+  STRUMPACK_SparseSolver       *S;
   STRUMPACK_INTERFACE           iface;
   STRUMPACK_REORDERING_STRATEGY ndcurrent, ndvalue;
   STRUMPACK_COMPRESSION_TYPE    compcurrent, compvalue;
   const STRUMPACK_PRECISION     table[2][2][2] = {
     {{STRUMPACK_FLOATCOMPLEX_64, STRUMPACK_DOUBLECOMPLEX_64}, {STRUMPACK_FLOAT_64, STRUMPACK_DOUBLE_64}},
-    {{STRUMPACK_FLOATCOMPLEX,    STRUMPACK_DOUBLECOMPLEX},    {STRUMPACK_FLOAT,    STRUMPACK_DOUBLE}   }
+    {{STRUMPACK_FLOATCOMPLEX, STRUMPACK_DOUBLECOMPLEX},       {STRUMPACK_FLOAT, STRUMPACK_DOUBLE}      }
   };
   const STRUMPACK_PRECISION prec               = table[(sizeof(PetscInt) == 8) ? 0 : 1][(PETSC_SCALAR == PETSC_COMPLEX) ? 0 : 1][(PETSC_REAL == PETSC_FLOAT) ? 0 : 1];
   const char *const         STRUMPACKNDTypes[] = {"NATURAL", "METIS", "PARMETIS", "SCOTCH", "PTSCOTCH", "RCM", "GEOMETRIC", "AMD", "MMD", "AND", "MLF", "SPECTRAL", "STRUMPACKNDTypes", "", 0};
