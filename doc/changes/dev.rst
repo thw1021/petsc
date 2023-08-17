@@ -139,6 +139,9 @@ Changes: Development
 - Add ``PCSetKSPNestLevel()`` and ``PCSetKSPNestLevel()``
 - Refactor ``PCMPI`` to be a private system used automatically when ``-mpi_linear_solver_server`` is used. The ``KSP`` and ``PC`` objects that solve the system now inherit any prefix provided
   initially with ``KSPSetPrefix()`` and do not require the previously required ``mpi_`` prefix
+- Add ``PCGAMGSetAggressiveSquareGraph()`` to use old square graph method for aggressive coarsening
+- Add ``PCGAMGSetAggressiveMISk()`` to set the number of levels (k) of aggressive MIS-k coarseing (2 is very common)
+- Add ``PCGAMGSetMinDegreeOrderingMISk()`` to use a minimum degree ordering for the (greedy) MIS-k algorithm
 
 .. rubric:: KSP:
 
