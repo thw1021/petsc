@@ -624,8 +624,8 @@ static PetscErrorCode fixAggregatesWithSquare(PC pc, Mat Gmat_2, Mat Gmat_1, Pet
     /* force compressed row storage for B matrix in AuxMat */
     PetscCall(MatCheckCompressedRow(mpimat_1->B, matB_1->nonzerorowcnt, &matB_1->compressedrow, matB_1->i, Gmat_1->rmap->n, -1.0));
     for (ix = 0; ix < matB_1->compressedrow.nrows; ix++) {
-      PetscInt lid       = matB_1->compressedrow.rindex[ix];
-      PetscCheck(lid <= nloc && lid >= -1, PETSC_COMM_SELF, PETSC_ERR_USER, "lid %d out of range. nloc = %d",(int)lid,(int)nloc);
+      PetscInt lid = matB_1->compressedrow.rindex[ix];
+      PetscCheck(lid <= nloc && lid >= -1, PETSC_COMM_SELF, PETSC_ERR_USER, "lid %d out of range. nloc = %d", (int)lid, (int)nloc);
       if (lid != -1) lid_cprowID_1[lid] = ix;
     }
   } else {
