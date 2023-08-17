@@ -520,7 +520,9 @@ static PetscErrorCode MatCoarsenApply_HEM_private(IS perm, Mat a_Gmat, PetscCoar
     for (kk = 0; kk < nloc; kk++) lid_cprowID[kk] = -1;
     /* set index into compressed row 'lid_cprowID' */
     if (matB) {
-      for (ix = 0; ix < matB->compressedrow.nrows; ix++) lid_cprowID[matB->compressedrow.rindex[ix]] = ix;
+      for (ix = 0; ix < matB->compressedrow.nrows; ix++) {
+        PetscInt lid = matB->compressedrow.rindex[ix];
+        if (lid >= 0) lid_cprowID[lid] = ix;
     }
 
     /* compute 'locMaxEdge' & 'locMaxPE', and create list of edges, count edges' */
