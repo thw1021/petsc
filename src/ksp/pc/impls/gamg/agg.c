@@ -599,7 +599,7 @@ static PetscErrorCode fixAggregatesWithSquare(PC pc, Mat Gmat_2, Mat Gmat_1, Pet
   Mat_MPIAIJ    *mpimat_2 = NULL, *mpimat_1 = NULL;
   const PetscInt nloc = Gmat_2->rmap->n;
   PetscScalar   *cpcol_1_state, *cpcol_2_state, *cpcol_2_par_orig, *lid_parent_gid;
-  PetscInt      *lid_cprowID_1;
+  PetscInt      *lid_cprowID_1 = NULL;
   NState        *lid_state;
   Vec            ghost_par_orig2;
   PetscMPIInt    rank;
@@ -613,6 +613,7 @@ static PetscErrorCode fixAggregatesWithSquare(PC pc, Mat Gmat_2, Mat Gmat_1, Pet
   PetscCall(PetscStrbeginswith(((PetscObject)Gmat_1)->type_name, MATMPIAIJ, &isMPI));
   PetscCall(PetscInfo(pc, "isMPI = %s\n", isMPI ? "yes" : "no"));
   PetscCall(PetscMalloc3(nloc, &lid_state, nloc, &lid_parent_gid, nloc, &lid_cprowID_1));
+  for (lid = 0; lid < nloc; lid++) lid_cprowID_1[lid] = -1;
   if (isMPI) {
     /* grab matrix objects */
     mpimat_2 = (Mat_MPIAIJ *)Gmat_2->data;
@@ -622,10 +623,10 @@ static PetscErrorCode fixAggregatesWithSquare(PC pc, Mat Gmat_2, Mat Gmat_1, Pet
 
     /* force compressed row storage for B matrix in AuxMat */
     PetscCall(MatCheckCompressedRow(mpimat_1->B, matB_1->nonzerorowcnt, &matB_1->compressedrow, matB_1->i, Gmat_1->rmap->n, -1.0));
-    for (lid = 0; lid < nloc; lid++) lid_cprowID_1[lid] = -1;
     for (ix = 0; ix < matB_1->compressedrow.nrows; ix++) {
       PetscInt lid       = matB_1->compressedrow.rindex[ix];
-      lid_cprowID_1[lid] = ix;
+      PetscCheck(lid <= nloc && lid >= -1, PETSC_COMM_SELF, PETSC_ERR_USER, "lid %d out of range. nloc = %d",(int)lid,(int)nloc);
+      if (lid != -1) lid_cprowID_1[lid] = ix;
     }
   } else {
     PetscBool isAIJ;
