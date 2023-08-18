@@ -2,8 +2,7 @@
 /*
     Defines the basic header of all PETSc objects.
 */
-#ifndef PETSCIMPL_H
-#define PETSCIMPL_H
+#pragma once
 #include <petscsys.h>
 
 /* SUBMANSEC = Sys */
@@ -1559,5 +1558,3 @@ struct _n_PetscObjectList {
   PetscObject     obj;
   PetscObjectList next;
 };
-
-#endif /* PETSCIMPL_H */

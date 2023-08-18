@@ -1,6 +1,5 @@
 
-#ifndef _MHYP_H
-#define _MHYP_H
+#pragma once
 
 #include <petscdmda.h> /*I "petscdmda.h" I*/
 #include <HYPRE_struct_mv.h>
@@ -46,5 +45,3 @@ typedef struct {
   const PetscInt *gindices;
   PetscInt        rstart, gnx, gnxgny, gnxgnygnz, xs, ys, zs, nx, ny, nz, nxny, nxnynz;
 } Mat_HYPRESStruct;
-
-#endif
