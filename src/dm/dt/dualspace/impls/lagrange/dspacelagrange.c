@@ -1638,7 +1638,7 @@ static PetscErrorCode PetscDualSpaceCreateAllDataFromInteriorData(PetscDualSpace
  * Ideally most of the uses of PetscDualSpace in PetscFE will switch
  * to using intMat and allMat, so that the individual functionals
  * don't need to be constructed at all */
-static PetscErrorCode PetscDualSpaceComputeFunctionalsFromAllData(PetscDualSpace sp)
+PETSC_INTERN PetscErrorCode PetscDualSpaceComputeFunctionalsFromAllData(PetscDualSpace sp)
 {
   PetscQuadrature  allNodes;
   Mat              allMat;
