@@ -1,5 +1,4 @@
-#ifndef PETSCDEVICEIMPL_H
-#define PETSCDEVICEIMPL_H
+#pragma once
 
 #include <petscdevice.h>
 #include <petsc/private/petscimpl.h>
@@ -418,4 +417,3 @@ PETSC_INTERN PetscErrorCode PetscDeviceContextCreate_SYCL(PetscDeviceContext);
 // Used for testing purposes, internal use ONLY
 PETSC_EXTERN PetscErrorCode PetscGetMarkedObjectMap_Internal(size_t *, PetscObjectId **, PetscMemoryAccessMode **, size_t **, PetscEvent ***);
 PETSC_EXTERN PetscErrorCode PetscRestoreMarkedObjectMap_Internal(size_t, PetscObjectId **, PetscMemoryAccessMode **, size_t **, PetscEvent ***);
-#endif /* PETSCDEVICEIMPL_H */
