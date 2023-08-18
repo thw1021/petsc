@@ -44,6 +44,9 @@ class Configure(config.package.CMakePackage):
       args.append('-Dgpu_backend=hip')
       args.append('-DCMAKE_HIP_ARCHITECTURES="'+self.hip.hipArch+'"') # cmake supports format like "gfx801;gfx900"
 
+    args.append('-DBLAS_LIBRARIES="'+self.libraries.toString(self.blasLapack.dlib)+'"')
+    args.append('-DLAPACK_LIBRARIES="'+self.libraries.toString(self.blasLapack.dlib)+'"')
+
     args.append('-Dbuild_tests=false')
 
     return args
