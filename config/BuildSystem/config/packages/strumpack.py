@@ -9,7 +9,7 @@ class Configure(config.package.CMakePackage):
     self.versioninclude   = 'StrumpackConfig.hpp'
     self.gitcommit        = 'v'+self.version
     self.download         = ['git://https://github.com/pghysels/STRUMPACK','https://github.com/pghysels/STRUMPACK/archive/v'+self.version+'.tar.gz']
-    self.functions        = ['STRUMPACK_init']
+    self.functionsCxx     = [1,'STRUMPACK_init','']
     self.includes         = ['StrumpackSparseSolver.h']
     self.liblist          = [['libstrumpack.a']]
     self.buildLanguages   = ['Cxx','FC']
