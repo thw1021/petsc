@@ -3,6 +3,7 @@
    This file defines the initialization of PETSc, including PetscInitialize()
 */
 #include <petsc/private/petscimpl.h> /*I  "petscsys.h"   I*/
+#include <petsc/private/logimpl.h>
 #include <petscviewer.h>
 #include <petsc/private/garbagecollector.h>
 
@@ -1451,6 +1452,9 @@ PetscErrorCode PetscFinalize(void)
     PetscCall(PetscOptionsGetString(NULL, NULL, "-log", mname, sizeof(mname), &flg2));
     if (flg1 || flg2) PetscCall(PetscLogDump(mname));
   }
+#if defined(PETSC_HAVE_DEVICE)
+  PetscCall(PetscLogGpuTimeOff_Private());
+#endif
 
   flg1 = PETSC_FALSE;
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-no_signal_handler", &flg1, NULL));
