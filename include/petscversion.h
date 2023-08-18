@@ -1,5 +1,4 @@
-#ifndef PETSCVERSION_H
-#define PETSCVERSION_H
+#pragma once
 #include <petscconf.h>
 
 #define PETSC_VERSION_RELEASE    0
@@ -42,5 +41,3 @@
 
 #define PETSC_VERSION_GE(MAJOR,MINOR,SUBMINOR) \
   (0 == PETSC_VERSION_LT(MAJOR,MINOR,SUBMINOR))
-
-#endif
