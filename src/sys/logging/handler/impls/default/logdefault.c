@@ -1207,10 +1207,12 @@ static PetscErrorCode PetscLogViewWarnNoGpuAwareMpi(MPI_Comm comm, FILE *fd)
 
 static PetscErrorCode PetscLogViewWarnGpuTime(MPI_Comm comm, FILE *fd)
 {
-#if defined(PETSC_HAVE_DEVICE)
+#if defined(PETSC_HAVE_DEVICE) && defined(PETSC_USE_LOG)
+  PetscBool gpuFlag;
 
   PetscFunctionBegin;
-  if (!PetscLogGpuTimeFlag || petsc_gflops == 0) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCall(PetscGetGpuTimeFlag_Private(&gpuFlag));
+  if (!gpuFlag || petsc_gflops == 0) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(PetscFPrintf(comm, fd, "\n\n"));
   PetscCall(PetscFPrintf(comm, fd, "      ##########################################################\n"));
   PetscCall(PetscFPrintf(comm, fd, "      #                                                        #\n"));
@@ -1591,9 +1593,11 @@ static PetscErrorCode PetscLogHandlerView_Default_Info(PetscLogHandler handler, 
           mint = 0;
         }
         PetscCheck(minf >= 0.0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Minimum flop %g over all processors for %s is negative! Not possible!", minf, event_name);
-#if defined(PETSC_HAVE_DEVICE)
+#if defined(PETSC_HAVE_DEVICE) && defined(PETSC_USE_LOG)
         /* Put NaN into the time for all events that may not be time accurately since they may happen asynchronously on the GPU */
-        if (!PetscLogGpuTimeFlag && petsc_gflops > 0) {
+        PetscBool gpuFlag;
+        PetscCall(PetscGetGpuTimeFlag_Private(&gpuFlag));
+        if (!gpuFlag && petsc_gflops > 0) {
           memcpy(&gmaxt, &nas, sizeof(PetscLogDouble));
           if (event_id != SNES_Solve && event_id != KSP_Solve && event_id != TS_Step && event_id != TAO_Solve) {
             memcpy(&mint, &nas, sizeof(PetscLogDouble));
