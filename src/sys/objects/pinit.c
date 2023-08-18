@@ -1443,7 +1443,6 @@ PetscErrorCode PetscFinalize(void)
     PetscCall(PetscOptionsPushGetViewerOff(PETSC_FALSE));
     PetscCall(PetscLogViewFromOptions());
     PetscCall(PetscOptionsPopGetViewerOff());
-    PetscLogGpuTimeFlag = PETSC_FALSE;
 
     // Free any objects created by the last block of code.
     PetscCall(PetscObjectRegisterDestroyAll());
@@ -1453,6 +1452,9 @@ PetscErrorCode PetscFinalize(void)
     PetscCall(PetscOptionsGetString(NULL, NULL, "-log", mname, sizeof(mname), &flg2));
     if (flg1 || flg2) PetscCall(PetscLogDump(mname));
   }
+#if defined(PETSC_HAVE_DEVICE)
+  PetscCall(PetscLogGpuTimeOff_Private());
+#endif
 
   flg1 = PETSC_FALSE;
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-no_signal_handler", &flg1, NULL));
