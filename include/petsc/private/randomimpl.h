@@ -1,6 +1,5 @@
 
-#ifndef PETSCRANDOMIMPL_H
-#define PETSCRANDOMIMPL_H
+#pragma once
 
 #include <petsc/private/petscimpl.h>
 
@@ -28,5 +27,3 @@ struct _p_PetscRandom {
   PetscBool     iset;       /* if true, indicates that the user has set the interval */
   /* array for shuffling ??? */
 };
-
-#endif

@@ -1,6 +1,5 @@
 
-#ifndef __FFT_H
-#define __FFT_H
+#pragma once
 
 #include <petsc/private/matimpl.h>
 
@@ -14,5 +13,3 @@ typedef struct {
 } Mat_FFT;
 
 PETSC_EXTERN PetscErrorCode MatCreate_FFTW(Mat);
-
-#endif

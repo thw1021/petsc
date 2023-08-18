@@ -1,6 +1,5 @@
 
-#ifndef __FNORM_H
-#define __FNORM_H
+#pragma once
 
 #include <petscsys.h>
 #if defined(PETSC_USE_FORTRAN_KERNEL_NORM)
@@ -10,5 +9,4 @@
     #define fortrannormsqr_ fortrannormsqr
   #endif
 PETSC_EXTERN void fortrannormsqr_(void *, PetscInt *, void *);
-#endif
 #endif
