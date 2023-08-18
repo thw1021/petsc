@@ -4,8 +4,7 @@
    of nonlinear equations
  */
 
-#ifndef __SNES_TR_H
-#define __SNES_TR_H
+#pragma once
 #include <petsc/private/snesimpl.h>
 
 typedef struct {
@@ -40,5 +39,3 @@ typedef struct {
   PetscErrorCode (*postcheck)(SNES, Vec, Vec, Vec, PetscBool *, PetscBool *, void *);
   void *postcheckctx;
 } SNES_NEWTONTRDC;
-
-#endif

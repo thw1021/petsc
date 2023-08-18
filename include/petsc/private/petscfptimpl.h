@@ -1,6 +1,5 @@
 
-#ifndef PETSCFPIMPL_H
-#define PETSCFPIMPL_H
+#pragma once
 #include <petscviewertypes.h>
 #include <petscsys.h>
 /*
@@ -116,5 +115,3 @@ static inline PetscErrorCode PetscFPTFind(void *key, char const **data)
   }
   return PETSC_SUCCESS;
 }
-
-#endif

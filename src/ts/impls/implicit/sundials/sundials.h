@@ -4,8 +4,7 @@
    solver developed at LLNL.
 */
 
-#ifndef PETSC_SUNDIALS_H
-#define PETSC_SUNDIALS_H
+#pragma once
 
 #include <petsc/private/tsimpl.h> /*I   "petscts.h"   I*/
 #include <petsc/private/pcimpl.h>
@@ -46,6 +45,4 @@ typedef struct {
   PetscInt  maxord;      /* max order of BDF / Adams method */
   PetscBool use_dense;   /* Use a dense instead of iterative solve within SUNDIALS (serial only) */
 } TS_Sundials;
-#endif
-
 #endif
