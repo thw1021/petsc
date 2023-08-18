@@ -136,7 +136,7 @@ static PetscErrorCode MatSTRUMPACKSetGPU_STRUMPACK(Mat F, PetscBool gpu)
 +  F - the factored matrix obtained by calling MatGetFactor() from PETSc-STRUMPACK interface
 -  gpu - whether or not to use GPU acceleration
 
-  Options Database:
+  Options Database Key:
 .   -mat_strumpack_gpu <gpu> - true to use gpu offload
 
    Level: intermediate
@@ -179,7 +179,7 @@ static PetscErrorCode MatSTRUMPACKSetCompression_STRUMPACK(Mat F, MatSTRUMPACKCo
       Possible values: NONE=0 HSS=1 BLR=2 HODLR=3 BLR_HODLR=4 ZFP_BLR_HODLR=5 LOSSLESS=6 LOSSY=7
       Default is NONE for -pc_type lu and BLR for -pc_type ilu
 
-  Options Database:
+  Options Database Key:
 .   -mat_strumpack_compression <NONE>  - Type of rank-structured compression in sparse LU factors (choose one of) NONE HSS BLR HODLR BLR_HODLR ZFP_BLR_HODLR LOSSLESS LOSSY (None)
 
    Level: intermediate
@@ -216,7 +216,7 @@ static PetscErrorCode MatSTRUMPACKSetCompRelTol_STRUMPACK(Mat F, PetscReal rtol)
 +  F - the factored matrix obtained by calling `MatGetFactor()`
 -  rtol - relative compression tolerance
 
-  Options Database:
+  Options Database Key:
 .   -mat_strumpack_compression_rel_tol <1e-4>         - Relative compression tolerance, when using pctype ilu (None)
 
    Level: intermediate
@@ -253,7 +253,7 @@ static PetscErrorCode MatSTRUMPACKSetCompAbsTol_STRUMPACK(Mat F, PetscReal atol)
 +  F - the factored matrix obtained by calling `MatGetFactor()`
 -  atol - absolute compression tolerance
 
-  Options Database:
+  Options Database Key:
 .   -mat_strumpack_compression_abs_tol <1e-10>         - Absolute compression tolerance, when using pctype ilu (None)
 
    Level: intermediate
@@ -290,7 +290,7 @@ static PetscErrorCode MatSTRUMPACKSetCompLeafSize_STRUMPACK(Mat F, PetscInt leaf
 +  F - the factored matrix obtained by calling MatGetFactor() from PETSc-STRUMPACK interface
 -  leaf_size - Size of diagonal blocks in rank-structured approximation
 
-  Options Database:
+  Options Database Key:
 .   -mat_strumpack_compression_leaf_size    - Size of diagonal blocks in rank-structured approximation, when using pctype ilu (None)
 
    Level: intermediate
@@ -388,7 +388,7 @@ PetscErrorCode MatSTRUMPACKSetGeometricNxyz(Mat F, PetscInt nx, PetscInt ny, Pet
 +  F - the factored matrix obtained by calling MatGetFactor() from PETSc-STRUMPACK interface
 -  nc - Number of components/dof's per grid point
 
-  Options Database:
+  Options Database Key:
 .   -mat_strumpack_geometric_components <1>   - Number of components per mesh point, for geometric nested dissection ordering (None)
 
    Level: intermediate
@@ -415,7 +415,7 @@ PetscErrorCode MatSTRUMPACKSetGeometricComponents(Mat F, PetscInt nc)
 +  F - the factored matrix obtained by calling MatGetFactor() from PETSc-STRUMPACK interface
 -  w - width of the separator
 
-  Options Database:
+  Options Database Key:
 .   -mat_strumpack_geometric_width <1>        - Width of the separator of the mesh, for geometric nested dissection ordering (None)
 
    Level: intermediate
@@ -452,7 +452,7 @@ static PetscErrorCode MatSTRUMPACKSetCompMinSepSize_STRUMPACK(Mat F, PetscInt mi
 +  F - the factored matrix obtained by calling MatGetFactor() from PETSc-STRUMPACK interface
 -  min_sep_size - minimum dense matrix size for low-rank approximation
 
-  Options Database:
+  Options Database Key:
 .   -mat_strumpack_compression_min_sep_size <min_sep_size>    - Minimum size of dense sub-block for low-rank compression
 
    Level: intermediate
@@ -489,7 +489,7 @@ static PetscErrorCode MatSTRUMPACKSetCompLossyPrecision_STRUMPACK(Mat F, PetscIn
 +  F - the factored matrix obtained by calling MatGetFactor() from PETSc-STRUMPACK interface
 -  lossy_prec - Number of bitplanes to use in lossy compression
 
-  Options Database:
+  Options Database Key:
 .   -mat_strumpack_compression_lossy_precision <lossy_prec>    - Precision when using lossy compression [1-64], when using pctype ilu, compression LOSSY (None)
 
    Level: intermediate
@@ -526,7 +526,7 @@ static PetscErrorCode MatSTRUMPACKSetCompButterflyLevels_STRUMPACK(Mat F, PetscI
 +  F - the factored matrix obtained by calling MatGetFactor() from PETSc-STRUMPACK interface
 -  bfly_lvls - Number of levels of butterfly compression in HODLR compression
 
-  Options Database:
+  Options Database Key:
 .   -mat_strumpack_compression_butterfly_levels <bfly_lvls>    - Number of levels in the hierarchically off-diagonal matrix for which to use butterfly, when using pctype ilu, (BLR_)HODLR compression (None)
 
    Level: intermediate
