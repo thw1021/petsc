@@ -203,7 +203,8 @@ PETSC_INTERN PetscInt PetscLogGetTid(void);
   #define PETSC_INTERN_TLS PETSC_INTERN
 #endif
 
-PETSC_EXTERN PetscBool PetscLogGpuTimeFlag;
+PETSC_INTERN PetscErrorCode PetscGetGpuTimeFlag_Private(PetscBool *);
+PETSC_INTERN PetscErrorCode PetscLogGpuTimeOff_Private(void);
 
 #define PETSC_LOG_VIEW_FROM_OPTIONS_MAX 4
 #endif /* PETSC_LOGIMPL_H */

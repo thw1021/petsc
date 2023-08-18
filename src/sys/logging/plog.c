@@ -100,8 +100,6 @@ PETSC_TLS PetscLogDouble petsc_gtime_th          = 0.0;
 PetscBool PetscLogMemory = PETSC_FALSE;
 PetscBool PetscLogSyncOn = PETSC_FALSE;
 
-PetscBool PetscLogGpuTimeFlag = PETSC_FALSE;
-
 PetscLogState petsc_log_state = NULL;
 
 #define PETSC_LOG_HANDLER_HOT_BLANK \
@@ -2288,18 +2286,10 @@ M*/
 .seealso: [](ch_profiling), `PetscLogEventRegister()`, `PetscLogEventBegin()`, `PetscLogEventEnd()`, `PetscPreLoadBegin()`, `PetscPreLoadEnd()`
 M*/
 
-  #if PetscDefined(HAVE_DEVICE)
+  #if defined(PETSC_HAVE_DEVICE)
     #include <petsc/private/deviceimpl.h>
 
-/*
-   This cannot be called by users between PetscInitialize() and PetscFinalize() at any random location in the code
-   because it will result in timing results that cannot be interpreted.
-*/
-static PetscErrorCode PetscLogGpuTime_Off(void)
-{
-  PetscLogGpuTimeFlag = PETSC_FALSE;
-  return PETSC_SUCCESS;
-}
+static PetscBool PetscLogGpuTimeFlag = PETSC_FALSE;
 
 /*@C
   PetscLogGpuTime - turn on the logging of GPU time for GPU kernels
@@ -2321,9 +2311,36 @@ static PetscErrorCode PetscLogGpuTime_Off(void)
 @*/
 PetscErrorCode PetscLogGpuTime(void)
 {
-  if (!PetscLogGpuTimeFlag) PetscCall(PetscRegisterFinalize(PetscLogGpuTime_Off));
-  PetscLogGpuTimeFlag = PETSC_TRUE;
+  if (!PetscLogGpuTimeFlag) {
+    PetscDeviceContext dctx;
+
+    PetscCall(PetscDeviceContextGetCurrentContext(&dctx));
+    PetscCall(PetscDeviceContextSynchronize(dctx)); // finish all pending kernels to have accurate gpu time log afterwards
+    PetscLogGpuTimeFlag = PETSC_TRUE;
+  }
   return PETSC_SUCCESS;
+}
+
+PetscErrorCode PetscGetGpuTimeFlag_Private(PetscBool *flag)
+{
+  PetscFunctionBegin;
+  if (flag) *flag = PetscLogGpuTimeFlag;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+   This cannot be called by users between PetscInitialize() and PetscFinalize() at any random location in the code
+   because it will result in timing results that cannot be interpreted.
+*/
+PetscErrorCode PetscLogGpuTimeOff_Private(void)
+{
+  PetscBool finalized;
+
+  PetscFunctionBegin;
+  PetscCall(PetscFinalized(&finalized));
+  PetscCheck(!finalized, PETSC_COMM_SELF, PETSC_ERR_PLIB, "cannot disable gpu timing outside of PetscFinalize()!");
+  PetscLogGpuTimeFlag = PETSC_FALSE;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C

@@ -3,6 +3,7 @@
    This file defines the initialization of PETSc, including PetscInitialize()
 */
 #include <petsc/private/petscimpl.h> /*I  "petscsys.h"   I*/
+#include <petsc/private/logimpl.h>
 #include <petscviewer.h>
 #include <petsc/private/garbagecollector.h>
 
@@ -1438,19 +1439,22 @@ PetscErrorCode PetscFinalize(void)
   // Free all objects registered with PetscObjectRegisterDestroy() such as PETSC_VIEWER_XXX_().
   PetscCall(PetscObjectRegisterDestroyAll());
 
-  if (PetscDefined(USE_LOG)) {
-    PetscCall(PetscOptionsPushGetViewerOff(PETSC_FALSE));
-    PetscCall(PetscLogViewFromOptions());
-    PetscCall(PetscOptionsPopGetViewerOff());
+#if defined(PETSC_USE_LOG)
+  PetscCall(PetscOptionsPushGetViewerOff(PETSC_FALSE));
+  PetscCall(PetscLogViewFromOptions());
+  PetscCall(PetscOptionsPopGetViewerOff());
 
-    // Free any objects created by the last block of code.
-    PetscCall(PetscObjectRegisterDestroyAll());
+  // Free any objects created by the last block of code.
+  PetscCall(PetscObjectRegisterDestroyAll());
 
-    mname[0] = 0;
-    PetscCall(PetscOptionsGetString(NULL, NULL, "-log_all", mname, sizeof(mname), &flg1));
-    PetscCall(PetscOptionsGetString(NULL, NULL, "-log", mname, sizeof(mname), &flg2));
-    if (flg1 || flg2) PetscCall(PetscLogDump(mname));
-  }
+  mname[0] = 0;
+  PetscCall(PetscOptionsGetString(NULL, NULL, "-log_all", mname, sizeof(mname), &flg1));
+  PetscCall(PetscOptionsGetString(NULL, NULL, "-log", mname, sizeof(mname), &flg2));
+  if (flg1 || flg2) PetscCall(PetscLogDump(mname));
+  #if defined(PETSC_HAVE_DEVICE)
+  PetscCall(PetscLogGpuTimeOff_Private());
+  #endif
+#endif
 
   flg1 = PETSC_FALSE;
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-no_signal_handler", &flg1, NULL));
