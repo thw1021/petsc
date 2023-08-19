@@ -722,11 +722,20 @@ static PetscErrorCode MatFactorGetSolverType_aij_strumpack(Mat A, MatSolverType 
   Consult the STRUMPACK manual for more info,
     https://portal.nersc.gov/project/sparse/strumpack/master/
 
-  Use ` ./configure --download-strumpack` to have PETSc installed with STRUMPACK
+  Use ` ./configure --download-strumpack --download-metis` to have PETSc installed with STRUMPACK.
+
+  For full functionality, add `--download-slate --download-magma --download-parmetis --download-ptscotch --download-zfp --download-butterflypack`.
+  SLATE provides GPU support in the multi-GPU setting, providing ScaLAPACK functionality but with GPU acceleration.
+  MAGMA can optionally be used for on node GPU support instead cuBLAS/cuSOLVER, and performs slightly better.
+  ParMETIS and PTScotch can be used for parallel fill-reducing ordering.
+  ZFP is used for floating point compression of the sparse factors (LOSSY or LOSSLESS compression).
+  ButterflyPACK is used for HODLR (Hierarchically Off-Diagonal Low Rank) and HODBF (Hierarchically Off-Diagonal Butterfly) compression of the sparse factors.
+
+  Recommended use is 1 MPI rank per GPU.
 
   Use `-pc_type lu` `-pc_factor_mat_solver_type strumpack` to use this as an exact (direct) solver.
 
-  Use `-pc_type ilu` `-pc_factor_mat_solver_type strumpack` to enable low-rank compression (i.e, use as a preconditioner).
+  Use `-pc_type ilu` `-pc_factor_mat_solver_type strumpack` to enable low-rank compression (i.e, use as a preconditioner), by default using block low rank (BLR).
 
   Works with `MATAIJ` matrices
 
@@ -749,9 +758,9 @@ static PetscErrorCode MatFactorGetSolverType_aij_strumpack(Mat A, MatSolverType 
 
  Level: beginner
 
- HODLR, HODBF and BLR_HODBF compression require STRUMPACK to be configured with ButterflyPACK support.
+ HODLR, BLR_HODBF and ZFP_BLR_HODLR compression require STRUMPACK to be configured with ButterflyPACK support (--download-butterflypack).
 
- LOSSY and LOSSLESS compression require STRUMPACK to be configured with ZFP support.
+ LOSSY, LOSSLESS and ZFP_BLR_HODLR compression require STRUMPACK to be configured with ZFP support (--download-zfp).
 
 .seealso: [](ch_matrices), `Mat`, `PCLU`, `PCILU`, `MATSOLVERSUPERLU_DIST`, `MATSOLVERMUMPS`, `PCFactorSetMatSolverType()`, `MatSolverType`,
           `MatGetFactor()`, `MatSTRUMPACKSetReordering()`, `MatSTRUMPACKSetColPerm()`.
