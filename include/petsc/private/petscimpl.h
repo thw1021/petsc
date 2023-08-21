@@ -814,7 +814,7 @@ extern void PetscCheckSorted(PetscInt, T);
    Use `PetscUseTypeMethod()` or `PetscTryTypeMethod()` to call functions that are included in the objects function table, the `ops` array
    in the object.
 
-.seealso: `PetscUseMethod()`, `PetscCall()`, `PetscUseTypeMethod()`, `PetscTryTypeMethod()`, `PetscCheck()`, `PetscObject`
+.seealso: `PetscUseMethod()`, `PetscCall()`, `PetscUseTypeMethod()`, `PetscTryTypeMethod()`, `PetscCheck()`, `PetscObject`, `PetscTryMethodSuccess()`
 M*/
 #define PetscTryMethod(obj, A, B, C) \
   do { \
