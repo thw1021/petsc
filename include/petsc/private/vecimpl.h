@@ -405,4 +405,64 @@ static inline PetscErrorCode PetscSortedIntUpperBound(const PetscInt *array, Pet
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+#define VEC_ASYNC_FN_NAME(Base) "Vec" Base "Async_Private_C"
+#define VecAsyncFnName(Base)    VEC_##Base##_ASYNC_FN_NAME
+
+#define VEC_Abs_ASYNC_FN_NAME             VEC_ASYNC_FN_NAME("Abs")
+#define VEC_AXPBY_ASYNC_FN_NAME           VEC_ASYNC_FN_NAME("AXPBY")
+#define VEC_AXPBYPCZ_ASYNC_FN_NAME        VEC_ASYNC_FN_NAME("AXPBYPCZ")
+#define VEC_AXPY_ASYNC_FN_NAME            VEC_ASYNC_FN_NAME("AXPY")
+#define VEC_AYPX_ASYNC_FN_NAME            VEC_ASYNC_FN_NAME("AYPX")
+#define VEC_Conjugate_ASYNC_FN_NAME       VEC_ASYNC_FN_NAME("Conjugate")
+#define VEC_Copy_ASYNC_FN_NAME            VEC_ASYNC_FN_NAME("Copy")
+#define VEC_Exp_ASYNC_FN_NAME             VEC_ASYNC_FN_NAME("Exp")
+#define VEC_Log_ASYNC_FN_NAME             VEC_ASYNC_FN_NAME("Log")
+#define VEC_MAXPY_ASYNC_FN_NAME           VEC_ASYNC_FN_NAME("MAXPY")
+#define VEC_PointwiseDivide_ASYNC_FN_NAME VEC_ASYNC_FN_NAME("PointwiseDivide")
+#define VEC_PointwiseMax_ASYNC_FN_NAME    VEC_ASYNC_FN_NAME("PointwiseMax")
+#define VEC_PointwiseMaxAbs_ASYNC_FN_NAME VEC_ASYNC_FN_NAME("PointwiseMaxAbs")
+#define VEC_PointwiseMin_ASYNC_FN_NAME    VEC_ASYNC_FN_NAME("PointwiseMin")
+#define VEC_PointwiseMult_ASYNC_FN_NAME   VEC_ASYNC_FN_NAME("PointwiseMult")
+#define VEC_Reciprocal_ASYNC_FN_NAME      VEC_ASYNC_FN_NAME("Reciprocal")
+#define VEC_Scale_ASYNC_FN_NAME           VEC_ASYNC_FN_NAME("Scale")
+#define VEC_Set_ASYNC_FN_NAME             VEC_ASYNC_FN_NAME("Set")
+#define VEC_Shift_ASYNC_FN_NAME           VEC_ASYNC_FN_NAME("Shift")
+#define VEC_SqrtAbs_ASYNC_FN_NAME         VEC_ASYNC_FN_NAME("SqrtAbs")
+#define VEC_Swap_ASYNC_FN_NAME            VEC_ASYNC_FN_NAME("Swap")
+#define VEC_WAXPY_ASYNC_FN_NAME           VEC_ASYNC_FN_NAME("WAXPY")
+
+PETSC_EXTERN PetscErrorCode VecAbsAsync_Private(Vec, PetscDeviceContext);
+PETSC_EXTERN PetscErrorCode VecAXPBYAsync_Private(Vec, PetscScalar, PetscScalar, Vec, PetscDeviceContext);
+PETSC_EXTERN PetscErrorCode VecAXPBYPCZAsync_Private(Vec, PetscScalar, PetscScalar, PetscScalar, Vec, Vec, PetscDeviceContext);
+PETSC_EXTERN PetscErrorCode VecAXPYAsync_Private(Vec, PetscScalar, Vec, PetscDeviceContext);
+PETSC_EXTERN PetscErrorCode VecAYPXAsync_Private(Vec, PetscScalar, Vec, PetscDeviceContext);
+PETSC_EXTERN PetscErrorCode VecConjugateAsync_Private(Vec, PetscDeviceContext);
+PETSC_EXTERN PetscErrorCode VecCopyAsync_Private(Vec, Vec, PetscDeviceContext);
+PETSC_EXTERN PetscErrorCode VecExpAsync_Private(Vec, PetscDeviceContext);
+PETSC_EXTERN PetscErrorCode VecLogAsync_Private(Vec, PetscDeviceContext);
+PETSC_EXTERN PetscErrorCode VecMAXPYAsync_Private(Vec, PetscInt, const PetscScalar *, Vec[], PetscDeviceContext);
+PETSC_EXTERN PetscErrorCode VecPointwiseDivideAsync_Private(Vec, Vec, Vec, PetscDeviceContext);
+PETSC_EXTERN PetscErrorCode VecPointwiseMaxAsync_Private(Vec, Vec, Vec, PetscDeviceContext);
+PETSC_EXTERN PetscErrorCode VecPointwiseMaxAbsAsync_Private(Vec, Vec, Vec, PetscDeviceContext);
+PETSC_EXTERN PetscErrorCode VecPointwiseMinAsync_Private(Vec, Vec, Vec, PetscDeviceContext);
+PETSC_EXTERN PetscErrorCode VecPointwiseMultAsync_Private(Vec, Vec, Vec, PetscDeviceContext);
+PETSC_EXTERN PetscErrorCode VecReciprocalAsync_Private(Vec, PetscDeviceContext);
+PETSC_EXTERN PetscErrorCode VecScaleAsync_Private(Vec, PetscScalar, PetscDeviceContext);
+PETSC_EXTERN PetscErrorCode VecSetAsync_Private(Vec, PetscScalar, PetscDeviceContext);
+PETSC_EXTERN PetscErrorCode VecShiftAsync_Private(Vec, PetscScalar, PetscDeviceContext);
+PETSC_EXTERN PetscErrorCode VecSqrtAbsAsync_Private(Vec, PetscDeviceContext);
+PETSC_EXTERN PetscErrorCode VecSwapAsync_Private(Vec, Vec, PetscDeviceContext);
+PETSC_EXTERN PetscErrorCode VecWAXPYAsync_Private(Vec, PetscScalar, Vec, Vec, PetscDeviceContext);
+
+#define VecMethodDispatch(v, dctx, async_name, name, async_arg_types, ...) \
+  do { \
+    PetscErrorCode(*_8_f) async_arg_types = NULL; \
+    if (dctx) PetscCall(PetscObjectQueryFunction((PetscObject)(v), async_name, &_8_f)); \
+    if (_8_f) { \
+      PetscCall((*_8_f)(v, __VA_ARGS__, dctx)); \
+    } else { \
+      PetscUseTypeMethod(v, name, __VA_ARGS__); \
+    } \
+  } while (0)
+
 #endif /* PETSCVECIMPL_H */
