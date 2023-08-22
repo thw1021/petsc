@@ -457,12 +457,12 @@ static PetscErrorCode PetscSpaceEvaluate_Sum(PetscSpace sp, PetscInt npoints, co
 
         for (j = 0; j < spdim; ++j) {
           PetscInt c;
-          PetscInt b = (sum->uniform && sum->interleave_basis) ? (j * Ns + s) : (j + offset);
+          PetscInt b = sum->interleave_basis ? (j * Ns + s) : (j + offset);
 
           for (c = 0; c < sNc; ++c) {
             PetscInt compoffset, BInd, sBInd;
 
-            compoffset = concatenate ? (sum->uniform && sum->interleave_basis) ? (c * Ns + s) : (c + ncoffset) : c;
+            compoffset = concatenate ? (sum->interleave_components ? (c * Ns + s) : (c + ncoffset)) : c;
             BInd       = (p * pdimfull + b) * Nc + compoffset;
             sBInd      = (p * spdim + j) * sNc + c;
             if (B) B[BInd] = sB[sBInd];

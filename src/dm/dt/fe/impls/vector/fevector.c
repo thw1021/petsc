@@ -68,10 +68,39 @@ static PetscErrorCode PetscFEView_Vector(PetscFE fe, PetscViewer v)
 
 static PetscErrorCode PetscFESetUp_Vector(PetscFE fe)
 {
-  PetscFE_Vec *v = (PetscFE_Vec *)fe->data;
+  PetscFE_Vec        *v = (PetscFE_Vec *)fe->data;
+  PetscDualSpace      dsp;
+  PetscInt            n, Ncopies = v->num_copies;
+  PetscInt            scalar_n;
+  PetscInt           *d, *d_mapped;
+  PetscDualSpace_Sum *sum;
+  PetscBool           is_sum;
 
   PetscFunctionBegin;
   PetscCall(PetscFESetUp(v->scalar_fe));
+  PetscCall(PetscFEGetDimension(v->scalar_fe, &scalar_n));
+  PetscCall(PetscFEGetDualSpace(fe, &dsp));
+  PetscCall(PetscObjectTypeCompare((PetscObject)dsp, PETSCDUALSPACESUM, &is_sum));
+  PetscCheck(is_sum, PetscObjectComm((PetscObject)fe), PETSC_ERR_ARG_INCOMP, "Expected PETSCDUALSPACESUM dual space");
+  sum = (PetscDualSpace_Sum *)dsp->data;
+  n   = Ncopies * scalar_n;
+  PetscCall(PetscCalloc1(n * n, &fe->invV));
+  PetscCall(PetscMalloc2(scalar_n, &d, scalar_n, &d_mapped));
+  for (PetscInt i = 0; i < scalar_n; i++) d[i] = i;
+  for (PetscInt c = 0; c < Ncopies; c++) {
+    PetscCall(ISLocalToGlobalMappingApply(sum->all_rows[c], scalar_n, d, d_mapped));
+    for (PetscInt i = 0; i < scalar_n; i++) {
+      PetscInt         iw      = d_mapped[i];
+      PetscReal       *row_w   = &fe->invV[iw * n];
+      const PetscReal *row_r   = &v->scalar_fe->invV[i * scalar_n];
+      PetscInt         j0      = v->interleave_basis ? c : c * scalar_n;
+      PetscInt         jstride = v->interleave_basis ? Ncopies : 1;
+
+      for (PetscInt j = 0; j < scalar_n; j++) row_w[j0 + j * jstride] = row_r[j];
+    }
+  }
+  PetscCall(PetscFree2(d, d_mapped));
+
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

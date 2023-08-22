@@ -187,6 +187,12 @@ typedef struct {
   ISLocalToGlobalMapping *all_cols;
   ISLocalToGlobalMapping *int_rows;
   ISLocalToGlobalMapping *int_cols;
+
+  PetscInt    ***symperms;
+  PetscScalar ***symflips;
+  PetscInt       numSelfSym;
+  PetscInt       selfSymOff;
+  PetscBool      symComputed;
 } PetscDualSpace_Sum;
 
 typedef struct {
@@ -433,6 +439,7 @@ static inline PetscErrorCode PetscFEInterpolateFieldAndGradient_Static(PetscFE f
 PETSC_INTERN PetscErrorCode PetscDualSpaceLatticePointLexicographic_Internal(PetscInt, PetscInt, PetscInt[]);
 PETSC_INTERN PetscErrorCode PetscDualSpaceTensorPointLexicographic_Internal(PetscInt, PetscInt, PetscInt[]);
 PETSC_INTERN PetscErrorCode PetscDualSpaceComputeFunctionalsFromAllData(PetscDualSpace);
+PETSC_INTERN PetscErrorCode PetscDualSpaceGetBoundarySymmetries_Internal(PetscDualSpace, PetscInt ***, PetscScalar ***);
 
 PETSC_INTERN PetscErrorCode PetscDualSpaceSectionCreate_Internal(PetscDualSpace, PetscSection *);
 PETSC_INTERN PetscErrorCode PetscDualSpaceSectionSetUp_Internal(PetscDualSpace, PetscSection);
