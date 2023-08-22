@@ -1,11 +1,15 @@
 PetscDualSpace Object: 1 MPI process
   type: sum
   Dual space with 2 components, size 12
-  Sum space of 2 subspaces
+  Sum dual space of 2 subspaces
     PetscDualSpace Object: H1 1 MPI process
-      type: lagrange
+      type: sum
       Dual space with 2 components, size 8
-      Continuous tensor Lagrange dual space
+      Sum dual space of 2 concatenated subspaces (all identical)
+        PetscDualSpace Object: H1 1 MPI process
+          type: lagrange
+          Dual space with 1 components, size 4
+          Continuous tensor Lagrange dual space
     PetscDualSpace Object: Hdiv 1 MPI process
       type: lagrange
       Dual space for 1-forms (stored in dual form) with 2 components, size 4
