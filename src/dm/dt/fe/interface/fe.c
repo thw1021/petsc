@@ -1901,6 +1901,16 @@ static PetscErrorCode PetscFECreate_Internal(MPI_Comm comm, PetscInt dim, PetscI
   PetscBool       tensor;
 
   PetscFunctionBegin;
+  if (Nc > 1) {
+    PetscFE scalar_fe;
+
+    PetscCall(PetscFECreate_Internal(comm, dim, 1, ct, prefix, degree, qorder, setFromOptions, &scalar_fe));
+    PetscCall(PetscFECreateVector(scalar_fe, Nc, PETSC_TRUE, PETSC_TRUE, fem));
+    PetscCall(PetscFESetQuadrature(*fem, scalar_fe->quadrature));
+    PetscCall(PetscFESetFaceQuadrature(*fem, scalar_fe->faceQuadrature));
+    PetscCall(PetscFEDestroy(&scalar_fe));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
   if (prefix) PetscAssertPointer(prefix, 5);
   PetscAssertPointer(fem, 9);
   switch (ct) {
