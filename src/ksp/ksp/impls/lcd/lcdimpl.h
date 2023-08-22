@@ -8,8 +8,7 @@
 
 */
 
-#ifndef __LCDIMPL_H
-#define __LCDIMPL_H
+#pragma once
 
 /*
         Defines the basic KSP object
@@ -23,5 +22,3 @@ typedef struct {
   Vec      *P;
   Vec      *Q;
 } KSP_LCD;
-
-#endif
