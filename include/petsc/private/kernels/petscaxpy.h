@@ -11,8 +11,7 @@
 
 */
 
-#ifndef PETSC_KERNELS_PETSCAXPY_H
-#define PETSC_KERNELS_PETSCAXPY_H
+#pragma once
 
 #if defined(PETSC_USE_FORTRAN_KERNEL_MAXPY)
   #if defined(PETSC_HAVE_FORTRAN_CAPS)
@@ -251,5 +250,3 @@ PETSC_EXTERN void fortranmaxpy2_(void *, const void *, const void *, const void 
     } while (0)
 
 #endif
-
-#endif // PETSC_KERNELS_PETSCAXPY_H

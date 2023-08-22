@@ -1,5 +1,4 @@
-#ifndef PETSC_VECIMPL_H
-#define PETSC_VECIMPL_H
+#pragma once
 
 /*
   This private file should not be included in users' code.  Defines the fields shared by all
@@ -404,5 +403,3 @@ static inline PetscErrorCode PetscSortedIntUpperBound(const PetscInt *array, Pet
   *upper = first;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-
-#endif /* PETSCVECIMPL_H */
