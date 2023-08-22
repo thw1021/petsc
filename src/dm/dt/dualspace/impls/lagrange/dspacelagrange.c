@@ -1722,50 +1722,6 @@ PETSC_INTERN PetscErrorCode PetscDualSpaceComputeFunctionalsFromAllData(PetscDua
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* take a matrix meant for k-forms and expand it to one for Ncopies */
-static PetscErrorCode PetscDualSpaceLagrangeMatrixCreateCopies(Mat A, PetscInt Nk, PetscInt Ncopies, Mat *Abs)
-{
-  PetscInt m, n, i, j, k;
-  PetscInt maxnnz, *nnz, *iwork;
-  Mat      Ac;
-
-  PetscFunctionBegin;
-  PetscCall(MatGetSize(A, &m, &n));
-  PetscCheck(n % Nk == 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Number of columns in A %" PetscInt_FMT " is not a multiple of Nk %" PetscInt_FMT, n, Nk);
-  PetscCall(PetscMalloc1(m * Ncopies, &nnz));
-  for (i = 0, maxnnz = 0; i < m; i++) {
-    PetscInt innz;
-    PetscCall(MatGetRow(A, i, &innz, NULL, NULL));
-    PetscCheck(innz % Nk == 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "A row %" PetscInt_FMT " nnzs is not a multiple of Nk %" PetscInt_FMT, innz, Nk);
-    for (j = 0; j < Ncopies; j++) nnz[i * Ncopies + j] = innz;
-    maxnnz = PetscMax(maxnnz, innz);
-  }
-  PetscCall(MatCreateSeqAIJ(PETSC_COMM_SELF, m * Ncopies, n * Ncopies, 0, nnz, &Ac));
-  PetscCall(MatSetOption(Ac, MAT_IGNORE_ZERO_ENTRIES, PETSC_FALSE));
-  PetscCall(PetscFree(nnz));
-  PetscCall(PetscMalloc1(maxnnz, &iwork));
-  for (i = 0; i < m; i++) {
-    PetscInt           innz;
-    const PetscInt    *cols;
-    const PetscScalar *vals;
-
-    PetscCall(MatGetRow(A, i, &innz, &cols, &vals));
-    for (j = 0; j < innz; j++) iwork[j] = (cols[j] / Nk) * (Nk * Ncopies) + (cols[j] % Nk);
-    for (j = 0; j < Ncopies; j++) {
-      PetscInt row = i * Ncopies + j;
-
-      PetscCall(MatSetValues(Ac, 1, &row, innz, iwork, vals, INSERT_VALUES));
-      for (k = 0; k < innz; k++) iwork[k] += Nk;
-    }
-    PetscCall(MatRestoreRow(A, i, &innz, &cols, &vals));
-  }
-  PetscCall(PetscFree(iwork));
-  PetscCall(MatAssemblyBegin(Ac, MAT_FINAL_ASSEMBLY));
-  PetscCall(MatAssemblyEnd(Ac, MAT_FINAL_ASSEMBLY));
-  *Abs = Ac;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 /* check if a cell is a tensor product of the segment with a facet,
  * specifically checking if f and f2 can be the "endpoints" (like the triangles
  * at either end of a wedge) */
@@ -2082,6 +2038,25 @@ static PetscErrorCode PetscDualSpaceSetUp_Lagrange(PetscDualSpace sp)
   nodeFamily = lag->nodeFamily;
   PetscCheck(interpolated == DMPLEX_INTERPOLATED_FULL || !continuous || (PetscAbsInt(formDegree) <= 0 && order <= 1), PETSC_COMM_SELF, PETSC_ERR_PLIB, "Reference element won't support all boundary nodes");
 
+  if (Ncopies > 1) {
+    PetscDualSpace scalarsp;
+
+    PetscCall(PetscDualSpaceDuplicate(sp, &scalarsp));
+    /* Setting the number of components to Nk is a space with 1 copy of each k-form */
+    sp->setupcalled = PETSC_FALSE;
+    PetscCall(PetscDualSpaceSetNumComponents(scalarsp, Nk));
+    PetscCall(PetscDualSpaceSetUp(scalarsp));
+    PetscCall(PetscDualSpaceSetType(sp, PETSCDUALSPACESUM));
+    PetscCall(PetscDualSpaceSumSetNumSubspaces(sp, Ncopies));
+    PetscCall(PetscDualSpaceSumSetConcatenate(sp, PETSC_TRUE));
+    PetscCall(PetscDualSpaceSumSetInterleave(sp, PETSC_TRUE, PETSC_FALSE));
+    for (PetscInt i = 0; i < Ncopies; i++) PetscCall(PetscDualSpaceSumSetSubspace(sp, i, scalarsp));
+    PetscCall(PetscDualSpaceSetUp(sp));
+    PetscCall(PetscDualSpaceDestroy(&scalarsp));
+    PetscCall(DMDestroy(&dmint));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+
   /* step 2: construct the boundary spaces */
   PetscCall(PetscMalloc2(depth + 1, &pStratStart, depth + 1, &pStratEnd));
   PetscCall(PetscCalloc1(pEnd, &(sp->pointSpaces)));
@@ -2157,39 +2132,6 @@ static PetscErrorCode PetscDualSpaceSetUp_Lagrange(PetscDualSpace sp)
       PetscCall(PetscDualSpaceGetInteriorDimension(sp->pointSpaces[p], &pspdim));
       PetscCall(PetscSectionSetDof(section, p, pspdim));
     }
-  }
-
-  if (Ncopies > 1) {
-    Mat                 intMatScalar, allMatScalar;
-    PetscDualSpace      scalarsp;
-    PetscDualSpace_Lag *scalarlag;
-
-    PetscCall(PetscDualSpaceDuplicate(sp, &scalarsp));
-    /* Setting the number of components to Nk is a space with 1 copy of each k-form */
-    PetscCall(PetscDualSpaceSetNumComponents(scalarsp, Nk));
-    PetscCall(PetscDualSpaceSetUp(scalarsp));
-    PetscCall(PetscDualSpaceGetInteriorData(scalarsp, &(sp->intNodes), &intMatScalar));
-    PetscCall(PetscObjectReference((PetscObject)(sp->intNodes)));
-    if (intMatScalar) PetscCall(PetscDualSpaceLagrangeMatrixCreateCopies(intMatScalar, Nk, Ncopies, &(sp->intMat)));
-    PetscCall(PetscDualSpaceGetAllData(scalarsp, &(sp->allNodes), &allMatScalar));
-    PetscCall(PetscObjectReference((PetscObject)(sp->allNodes)));
-    PetscCall(PetscDualSpaceLagrangeMatrixCreateCopies(allMatScalar, Nk, Ncopies, &(sp->allMat)));
-    sp->spdim    = scalarsp->spdim * Ncopies;
-    sp->spintdim = scalarsp->spintdim * Ncopies;
-    scalarlag    = (PetscDualSpace_Lag *)scalarsp->data;
-    PetscCall(PetscLagNodeIndicesReference(scalarlag->vertIndices));
-    lag->vertIndices = scalarlag->vertIndices;
-    PetscCall(PetscLagNodeIndicesReference(scalarlag->intNodeIndices));
-    lag->intNodeIndices = scalarlag->intNodeIndices;
-    PetscCall(PetscLagNodeIndicesReference(scalarlag->allNodeIndices));
-    lag->allNodeIndices = scalarlag->allNodeIndices;
-    PetscCall(PetscDualSpaceDestroy(&scalarsp));
-    PetscCall(PetscSectionSetDof(section, 0, sp->spintdim));
-    PetscCall(PetscDualSpaceSectionSetUp_Internal(sp, section));
-    PetscCall(PetscDualSpaceComputeFunctionalsFromAllData(sp));
-    PetscCall(PetscFree2(pStratStart, pStratEnd));
-    PetscCall(DMDestroy(&dmint));
-    PetscFunctionReturn(PETSC_SUCCESS);
   }
 
   if (trimmed && !continuous) {
