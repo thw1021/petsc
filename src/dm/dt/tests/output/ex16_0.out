@@ -287,20 +287,24 @@ PetscFE Object: base FE (scalar) 1 MPI process
     10    11    11    11    12    12    12    13    13    13    14    14    14    15    15    15  
     16    16    16    17    17    17    18    18    18    19    19    19  
 PetscFE Object: base FE (vector) 1 MPI process
-  type: basic
-  Basic Finite Element in 3 dimensions with 3 components
+  type: vector
+  Vector Finite Element in 3 dimensions with 3 components
   PetscSpace Object: P3 1 MPI process
     type: sum
     Space in 3 variables with 3 components, size 60
     Sum space of 3 concatenated subspaces (all identical)
-      PetscSpace Object: sum component (sumcomp_) 1 MPI process
+      PetscSpace Object: P3 (sumcomp_) 1 MPI process
         type: poly
         Space in 3 variables with 1 components, size 20
         Polynomial space of degree 3
   PetscDualSpace Object: P3 1 MPI process
-    type: lagrange
+    type: sum
     Dual space with 3 components, size 60
-    Continuous Lagrange dual space
+    Sum space of 3 concatenated subspaces (all identical)
+      PetscDualSpace Object: P3 1 MPI process
+        type: lagrange
+        Dual space with 1 components, size 20
+        Continuous Lagrange dual space
     Quadrature on a tetrahedron of order 6 on 24 points (dim 3)
   PetscFE Object: vector fe 1 MPI process
     type: vector
@@ -313,7 +317,7 @@ PetscFE Object: base FE (vector) 1 MPI process
           type: sum
           Space in 3 variables with 3 components, size 60
           Sum space of 3 concatenated subspaces (all identical)
-            PetscSpace Object: sum component (sumcomp_) 1 MPI process
+            PetscSpace Object: P3 (sumcomp_) 1 MPI process
               type: poly
               Space in 3 variables with 1 components, size 20
               Polynomial space of degree 3
@@ -322,9 +326,13 @@ PetscFE Object: base FE (vector) 1 MPI process
       Dual space with 3 components, size 60
       Sum space of 1 concatenated subspaces (all identical)
         PetscDualSpace Object: P3 1 MPI process
-          type: lagrange
+          type: sum
           Dual space with 3 components, size 60
-          Continuous Lagrange dual space
+          Sum space of 3 concatenated subspaces (all identical)
+            PetscDualSpace Object: P3 1 MPI process
+              type: lagrange
+              Dual space with 1 components, size 20
+              Continuous Lagrange dual space
   Vector basis to original basis:  
      0     1     2     3     4     5     6     7     8     9    10    11    12    13    14    15  
     16    17    18    19    20    21    22    23    24    25    26    27    28    29    30    31  
@@ -341,7 +349,7 @@ PetscFE Object: base FE (vector) 1 MPI process
           type: sum
           Space in 3 variables with 3 components, size 60
           Sum space of 3 concatenated subspaces (all identical)
-            PetscSpace Object: sum component (sumcomp_) 1 MPI process
+            PetscSpace Object: P3 (sumcomp_) 1 MPI process
               type: poly
               Space in 3 variables with 1 components, size 20
               Polynomial space of degree 3
@@ -350,9 +358,13 @@ PetscFE Object: base FE (vector) 1 MPI process
       Dual space with 3 components, size 60
       Sum space of 1 concatenated subspaces (all identical)
         PetscDualSpace Object: P3 1 MPI process
-          type: lagrange
+          type: sum
           Dual space with 3 components, size 60
-          Continuous Lagrange dual space
+          Sum space of 3 concatenated subspaces (all identical)
+            PetscDualSpace Object: P3 1 MPI process
+              type: lagrange
+              Dual space with 1 components, size 20
+              Continuous Lagrange dual space
   Vector basis to original basis:  
      0     1     2     3     4     5     6     7     8     9    10    11    12    13    14    15  
     16    17    18    19    20    21    22    23    24    25    26    27    28    29    30    31  
@@ -369,7 +381,7 @@ PetscFE Object: base FE (vector) 1 MPI process
           type: sum
           Space in 3 variables with 3 components, size 60
           Sum space of 3 concatenated subspaces (all identical)
-            PetscSpace Object: sum component (sumcomp_) 1 MPI process
+            PetscSpace Object: P3 (sumcomp_) 1 MPI process
               type: poly
               Space in 3 variables with 1 components, size 20
               Polynomial space of degree 3
@@ -378,9 +390,13 @@ PetscFE Object: base FE (vector) 1 MPI process
       Dual space with 3 components, size 60
       Sum space of 1 concatenated subspaces (all identical)
         PetscDualSpace Object: P3 1 MPI process
-          type: lagrange
+          type: sum
           Dual space with 3 components, size 60
-          Continuous Lagrange dual space
+          Sum space of 3 concatenated subspaces (all identical)
+            PetscDualSpace Object: P3 1 MPI process
+              type: lagrange
+              Dual space with 1 components, size 20
+              Continuous Lagrange dual space
   Vector basis to original basis:  
      0     1     2     3     4     5     6     7     8     9    10    11    12    13    14    15  
     16    17    18    19    20    21    22    23    24    25    26    27    28    29    30    31  
@@ -397,7 +413,7 @@ PetscFE Object: base FE (vector) 1 MPI process
           type: sum
           Space in 3 variables with 3 components, size 60
           Sum space of 3 concatenated subspaces (all identical)
-            PetscSpace Object: sum component (sumcomp_) 1 MPI process
+            PetscSpace Object: P3 (sumcomp_) 1 MPI process
               type: poly
               Space in 3 variables with 1 components, size 20
               Polynomial space of degree 3
@@ -406,9 +422,13 @@ PetscFE Object: base FE (vector) 1 MPI process
       Dual space with 3 components, size 60
       Sum space of 1 concatenated subspaces (all identical)
         PetscDualSpace Object: P3 1 MPI process
-          type: lagrange
+          type: sum
           Dual space with 3 components, size 60
-          Continuous Lagrange dual space
+          Sum space of 3 concatenated subspaces (all identical)
+            PetscDualSpace Object: P3 1 MPI process
+              type: lagrange
+              Dual space with 1 components, size 20
+              Continuous Lagrange dual space
   Vector basis to original basis:  
      0     1     2     3     4     5     6     7     8     9    10    11    12    13    14    15  
     16    17    18    19    20    21    22    23    24    25    26    27    28    29    30    31  
@@ -425,7 +445,7 @@ PetscFE Object: base FE (vector) 1 MPI process
           type: sum
           Space in 3 variables with 3 components, size 60
           Sum space of 3 concatenated subspaces (all identical)
-            PetscSpace Object: sum component (sumcomp_) 1 MPI process
+            PetscSpace Object: P3 (sumcomp_) 1 MPI process
               type: poly
               Space in 3 variables with 1 components, size 20
               Polynomial space of degree 3
@@ -434,9 +454,13 @@ PetscFE Object: base FE (vector) 1 MPI process
       Dual space with 6 components, size 120
       Sum space of 2 concatenated subspaces (all identical)
         PetscDualSpace Object: P3 1 MPI process
-          type: lagrange
+          type: sum
           Dual space with 3 components, size 60
-          Continuous Lagrange dual space
+          Sum space of 3 concatenated subspaces (all identical)
+            PetscDualSpace Object: P3 1 MPI process
+              type: lagrange
+              Dual space with 1 components, size 20
+              Continuous Lagrange dual space
   Vector basis to original basis:  
      0     1     2     0     1     2     3     4     5     3     4     5     6     7     8     6  
      7     8     9    10    11     9    10    11    12    13    14    15    16    17    12    13  
@@ -457,7 +481,7 @@ PetscFE Object: base FE (vector) 1 MPI process
           type: sum
           Space in 3 variables with 3 components, size 60
           Sum space of 3 concatenated subspaces (all identical)
-            PetscSpace Object: sum component (sumcomp_) 1 MPI process
+            PetscSpace Object: P3 (sumcomp_) 1 MPI process
               type: poly
               Space in 3 variables with 1 components, size 20
               Polynomial space of degree 3
@@ -466,9 +490,13 @@ PetscFE Object: base FE (vector) 1 MPI process
       Dual space with 6 components, size 120
       Sum space of 2 concatenated subspaces (all identical)
         PetscDualSpace Object: P3 1 MPI process
-          type: lagrange
+          type: sum
           Dual space with 3 components, size 60
-          Continuous Lagrange dual space
+          Sum space of 3 concatenated subspaces (all identical)
+            PetscDualSpace Object: P3 1 MPI process
+              type: lagrange
+              Dual space with 1 components, size 20
+              Continuous Lagrange dual space
   Vector basis to original basis:  
      0     1     2     0     1     2     3     4     5     3     4     5     6     7     8     6  
      7     8     9    10    11     9    10    11    12    13    14    15    16    17    12    13  
@@ -489,7 +517,7 @@ PetscFE Object: base FE (vector) 1 MPI process
           type: sum
           Space in 3 variables with 3 components, size 60
           Sum space of 3 concatenated subspaces (all identical)
-            PetscSpace Object: sum component (sumcomp_) 1 MPI process
+            PetscSpace Object: P3 (sumcomp_) 1 MPI process
               type: poly
               Space in 3 variables with 1 components, size 20
               Polynomial space of degree 3
@@ -498,9 +526,13 @@ PetscFE Object: base FE (vector) 1 MPI process
       Dual space with 6 components, size 120
       Sum space of 2 concatenated subspaces (all identical)
         PetscDualSpace Object: P3 1 MPI process
-          type: lagrange
+          type: sum
           Dual space with 3 components, size 60
-          Continuous Lagrange dual space
+          Sum space of 3 concatenated subspaces (all identical)
+            PetscDualSpace Object: P3 1 MPI process
+              type: lagrange
+              Dual space with 1 components, size 20
+              Continuous Lagrange dual space
   Vector basis to original basis:  
      0     0     1     1     2     2     3     3     4     4     5     5     6     6     7     7  
      8     8     9     9    10    10    11    11    12    12    13    13    14    14    15    15  
@@ -521,7 +553,7 @@ PetscFE Object: base FE (vector) 1 MPI process
           type: sum
           Space in 3 variables with 3 components, size 60
           Sum space of 3 concatenated subspaces (all identical)
-            PetscSpace Object: sum component (sumcomp_) 1 MPI process
+            PetscSpace Object: P3 (sumcomp_) 1 MPI process
               type: poly
               Space in 3 variables with 1 components, size 20
               Polynomial space of degree 3
@@ -530,9 +562,13 @@ PetscFE Object: base FE (vector) 1 MPI process
       Dual space with 6 components, size 120
       Sum space of 2 concatenated subspaces (all identical)
         PetscDualSpace Object: P3 1 MPI process
-          type: lagrange
+          type: sum
           Dual space with 3 components, size 60
-          Continuous Lagrange dual space
+          Sum space of 3 concatenated subspaces (all identical)
+            PetscDualSpace Object: P3 1 MPI process
+              type: lagrange
+              Dual space with 1 components, size 20
+              Continuous Lagrange dual space
   Vector basis to original basis:  
      0     0     1     1     2     2     3     3     4     4     5     5     6     6     7     7  
      8     8     9     9    10    10    11    11    12    12    13    13    14    14    15    15  
@@ -553,7 +589,7 @@ PetscFE Object: base FE (vector) 1 MPI process
           type: sum
           Space in 3 variables with 3 components, size 60
           Sum space of 3 concatenated subspaces (all identical)
-            PetscSpace Object: sum component (sumcomp_) 1 MPI process
+            PetscSpace Object: P3 (sumcomp_) 1 MPI process
               type: poly
               Space in 3 variables with 1 components, size 20
               Polynomial space of degree 3
@@ -562,9 +598,13 @@ PetscFE Object: base FE (vector) 1 MPI process
       Dual space with 9 components, size 180
       Sum space of 3 concatenated subspaces (all identical)
         PetscDualSpace Object: P3 1 MPI process
-          type: lagrange
+          type: sum
           Dual space with 3 components, size 60
-          Continuous Lagrange dual space
+          Sum space of 3 concatenated subspaces (all identical)
+            PetscDualSpace Object: P3 1 MPI process
+              type: lagrange
+              Dual space with 1 components, size 20
+              Continuous Lagrange dual space
   Vector basis to original basis:  
      0     1     2     0     1     2     0     1     2     3     4     5     3     4     5     3  
      4     5     6     7     8     6     7     8     6     7     8     9    10    11     9    10  
@@ -589,7 +629,7 @@ PetscFE Object: base FE (vector) 1 MPI process
           type: sum
           Space in 3 variables with 3 components, size 60
           Sum space of 3 concatenated subspaces (all identical)
-            PetscSpace Object: sum component (sumcomp_) 1 MPI process
+            PetscSpace Object: P3 (sumcomp_) 1 MPI process
               type: poly
               Space in 3 variables with 1 components, size 20
               Polynomial space of degree 3
@@ -598,9 +638,13 @@ PetscFE Object: base FE (vector) 1 MPI process
       Dual space with 9 components, size 180
       Sum space of 3 concatenated subspaces (all identical)
         PetscDualSpace Object: P3 1 MPI process
-          type: lagrange
+          type: sum
           Dual space with 3 components, size 60
-          Continuous Lagrange dual space
+          Sum space of 3 concatenated subspaces (all identical)
+            PetscDualSpace Object: P3 1 MPI process
+              type: lagrange
+              Dual space with 1 components, size 20
+              Continuous Lagrange dual space
   Vector basis to original basis:  
      0     1     2     0     1     2     0     1     2     3     4     5     3     4     5     3  
      4     5     6     7     8     6     7     8     6     7     8     9    10    11     9    10  
@@ -625,7 +669,7 @@ PetscFE Object: base FE (vector) 1 MPI process
           type: sum
           Space in 3 variables with 3 components, size 60
           Sum space of 3 concatenated subspaces (all identical)
-            PetscSpace Object: sum component (sumcomp_) 1 MPI process
+            PetscSpace Object: P3 (sumcomp_) 1 MPI process
               type: poly
               Space in 3 variables with 1 components, size 20
               Polynomial space of degree 3
@@ -634,9 +678,13 @@ PetscFE Object: base FE (vector) 1 MPI process
       Dual space with 9 components, size 180
       Sum space of 3 concatenated subspaces (all identical)
         PetscDualSpace Object: P3 1 MPI process
-          type: lagrange
+          type: sum
           Dual space with 3 components, size 60
-          Continuous Lagrange dual space
+          Sum space of 3 concatenated subspaces (all identical)
+            PetscDualSpace Object: P3 1 MPI process
+              type: lagrange
+              Dual space with 1 components, size 20
+              Continuous Lagrange dual space
   Vector basis to original basis:  
      0     0     0     1     1     1     2     2     2     3     3     3     4     4     4     5  
      5     5     6     6     6     7     7     7     8     8     8     9     9     9    10    10  
@@ -661,7 +709,7 @@ PetscFE Object: base FE (vector) 1 MPI process
           type: sum
           Space in 3 variables with 3 components, size 60
           Sum space of 3 concatenated subspaces (all identical)
-            PetscSpace Object: sum component (sumcomp_) 1 MPI process
+            PetscSpace Object: P3 (sumcomp_) 1 MPI process
               type: poly
               Space in 3 variables with 1 components, size 20
               Polynomial space of degree 3
@@ -670,9 +718,13 @@ PetscFE Object: base FE (vector) 1 MPI process
       Dual space with 9 components, size 180
       Sum space of 3 concatenated subspaces (all identical)
         PetscDualSpace Object: P3 1 MPI process
-          type: lagrange
+          type: sum
           Dual space with 3 components, size 60
-          Continuous Lagrange dual space
+          Sum space of 3 concatenated subspaces (all identical)
+            PetscDualSpace Object: P3 1 MPI process
+              type: lagrange
+              Dual space with 1 components, size 20
+              Continuous Lagrange dual space
   Vector basis to original basis:  
      0     0     0     1     1     1     2     2     2     3     3     3     4     4     4     5  
      5     5     6     6     6     7     7     7     8     8     8     9     9     9    10    10  
