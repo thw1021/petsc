@@ -566,6 +566,22 @@ static PetscErrorCode PetscDualSpaceCreateFacetSubspace_Sum(PetscDualSpace sp, P
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode PetscDualSpaceSumIsUniform(PetscDualSpace sp, PetscBool *is_uniform)
+{
+  PetscDualSpace_Sum *sum     = (PetscDualSpace_Sum *)sp->data;
+  PetscBool           uniform = PETSC_TRUE;
+
+  PetscFunctionBegin;
+  for (PetscInt s = 1; s < sum->numSumSpaces; s++) {
+    if (sum->sumspaces[s] != sum->sumspaces[0]) {
+      uniform = PETSC_FALSE;
+      break;
+    }
+  }
+  *is_uniform = uniform;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode PetscDualSpaceSetUp_Sum(PetscDualSpace sp)
 {
   PetscDualSpace_Sum *sum         = (PetscDualSpace_Sum *)sp->data;
@@ -595,10 +611,9 @@ static PetscErrorCode PetscDualSpaceSetUp_Sum(PetscDualSpace sp)
   PetscCall(PetscDualSpaceGetDM(sp, &K));
   PetscCall(DMGetCoordinateDim(K, &cdim));
   PetscCall(DMPlexGetDepth(K, &depth));
-  uniform = PETSC_TRUE;
+  PetscCall(PetscDualSpaceSumIsUniform(sp, &sp->uniform));
+  uniform = sp->uniform;
   {
-    PetscDualSpace first_subsp = NULL;
-
     for (PetscInt s = 0; s < Ns; s++) {
       PetscDualSpace subsp;
       DM             sub_K;
@@ -611,11 +626,8 @@ static PetscErrorCode PetscDualSpaceSetUp_Sum(PetscDualSpace sp)
         K = sub_K;
       }
       PetscCheck(sub_K == K, PetscObjectComm((PetscObject)sp), PETSC_ERR_ARG_WRONGSTATE, "Subspace %d does not have the same DM as the sum space", (int)s);
-      if (!s) first_subsp = subsp;
-      else if (subsp != first_subsp) uniform = PETSC_FALSE;
     }
   }
-  sum->uniform = uniform;
 
   // step 2: count components
   PetscCall(PetscDualSpaceGetNumComponents(sp, &Nc));
@@ -825,10 +837,10 @@ static PetscErrorCode PetscDualSpaceDestroy_Sum(PetscDualSpace sp)
   PetscFunctionBegin;
   for (i = 0; i < Ns; ++i) {
     PetscCall(PetscDualSpaceDestroy(&sum->sumspaces[i]));
-    PetscCall(ISLocalToGlobalMappingDestroy(&sum->all_rows[i]));
-    PetscCall(ISLocalToGlobalMappingDestroy(&sum->all_cols[i]));
-    PetscCall(ISLocalToGlobalMappingDestroy(&sum->int_rows[i]));
-    PetscCall(ISLocalToGlobalMappingDestroy(&sum->int_cols[i]));
+    if (sum->all_rows) PetscCall(ISLocalToGlobalMappingDestroy(&sum->all_rows[i]));
+    if (sum->all_cols) PetscCall(ISLocalToGlobalMappingDestroy(&sum->all_cols[i]));
+    if (sum->int_rows) PetscCall(ISLocalToGlobalMappingDestroy(&sum->int_rows[i]));
+    if (sum->int_cols) PetscCall(ISLocalToGlobalMappingDestroy(&sum->int_cols[i]));
   }
   PetscCall(PetscFree(sum->sumspaces));
   PetscCall(PetscFree(sum->all_rows));
@@ -843,7 +855,18 @@ static PetscErrorCode PetscDualSpaceDestroy_Sum(PetscDualSpace sp)
   PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceSumSetConcatenate_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceSumGetInterleave_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceSumSetInterleave_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceLagrangeGetContinuity_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceLagrangeSetContinuity_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceLagrangeGetMomentOrder_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceLagrangeSetMomentOrder_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceLagrangeGetNodeType_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceLagrangeSetNodeType_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceLagrangeGetTensor_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceLagrangeSetTensor_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceLagrangeGetTrimmed_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceLagrangeSetTrimmed_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceLagrangeGetUseMoments_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceLagrangeSetUseMoments_C", NULL));
   PetscCall(PetscFree(sum));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -916,10 +939,99 @@ static PetscErrorCode PetscDualSpaceSumGetInterleave_Sum(PetscDualSpace sp, Pets
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscDualSpaceLagrangeGetUseMoments_Sum(PetscDualSpace sp, PetscBool *use_moments)
+#define PetscDualSpaceSumPassthrough(sp, func, ...) \
+  do { \
+    PetscDualSpace_Sum *sum = (PetscDualSpace_Sum *)sp->data; \
+    PetscBool           is_uniform; \
+    PetscCall(PetscDualSpaceSumIsUniform(sp, &is_uniform)); \
+    if (is_uniform && sum->numSumSpaces > 0) { \
+      PetscDualSpace subsp; \
+      PetscCall(PetscDualSpaceSumGetSubspace(sp, 0, &subsp)); \
+      PetscCall(func(subsp, __VA_ARGS__)); \
+    } \
+  } while (0)
+
+static PetscErrorCode PetscDualSpaceLagrangeGetContinuity_Sum(PetscDualSpace sp, PetscBool *value)
 {
   PetscFunctionBegin;
-  *use_moments = PETSC_FALSE;
+  PetscDualSpaceSumPassthrough(sp, PetscDualSpaceLagrangeGetContinuity, value);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscDualSpaceLagrangeSetContinuity_Sum(PetscDualSpace sp, PetscBool value)
+{
+  PetscFunctionBegin;
+  PetscDualSpaceSumPassthrough(sp, PetscDualSpaceLagrangeSetContinuity, value);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscDualSpaceLagrangeGetTensor_Sum(PetscDualSpace sp, PetscBool *value)
+{
+  PetscFunctionBegin;
+  PetscDualSpaceSumPassthrough(sp, PetscDualSpaceLagrangeGetTensor, value);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscDualSpaceLagrangeSetTensor_Sum(PetscDualSpace sp, PetscBool value)
+{
+  PetscFunctionBegin;
+  PetscDualSpaceSumPassthrough(sp, PetscDualSpaceLagrangeSetTensor, value);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscDualSpaceLagrangeGetTrimmed_Sum(PetscDualSpace sp, PetscBool *value)
+{
+  PetscFunctionBegin;
+  PetscDualSpaceSumPassthrough(sp, PetscDualSpaceLagrangeGetTrimmed, value);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscDualSpaceLagrangeSetTrimmed_Sum(PetscDualSpace sp, PetscBool value)
+{
+  PetscFunctionBegin;
+  PetscDualSpaceSumPassthrough(sp, PetscDualSpaceLagrangeSetTrimmed, value);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscDualSpaceLagrangeGetUseMoments_Sum(PetscDualSpace sp, PetscBool *value)
+{
+  PetscFunctionBegin;
+  PetscDualSpaceSumPassthrough(sp, PetscDualSpaceLagrangeGetUseMoments, value);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscDualSpaceLagrangeSetUseMoments_Sum(PetscDualSpace sp, PetscBool value)
+{
+  PetscFunctionBegin;
+  PetscDualSpaceSumPassthrough(sp, PetscDualSpaceLagrangeSetUseMoments, value);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscDualSpaceLagrangeGetMomentOrder_Sum(PetscDualSpace sp, PetscInt *value)
+{
+  PetscFunctionBegin;
+  PetscDualSpaceSumPassthrough(sp, PetscDualSpaceLagrangeGetMomentOrder, value);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscDualSpaceLagrangeSetMomentOrder_Sum(PetscDualSpace sp, PetscInt value)
+{
+  PetscFunctionBegin;
+  PetscDualSpaceSumPassthrough(sp, PetscDualSpaceLagrangeSetMomentOrder, value);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscDualSpaceLagrangeGetNodeType_Sum(PetscDualSpace sp, PetscDTNodeType *node_type, PetscBool *include_endpoints, PetscReal *exponent)
+{
+  PetscFunctionBegin;
+  PetscDualSpaceSumPassthrough(sp, PetscDualSpaceLagrangeGetNodeType, node_type, include_endpoints, exponent);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscDualSpaceLagrangeSetNodeType_Sum(PetscDualSpace sp, PetscDTNodeType node_type, PetscBool include_endpoints, PetscReal exponent)
+{
+  PetscFunctionBegin;
+  PetscDualSpaceSumPassthrough(sp, PetscDualSpaceLagrangeSetNodeType, node_type, include_endpoints, exponent);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -948,7 +1060,18 @@ static PetscErrorCode PetscDualSpaceInitialize_Sum(PetscDualSpace sp)
   PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceSumSetConcatenate_C", PetscDualSpaceSumSetConcatenate_Sum));
   PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceSumGetInterleave_C", PetscDualSpaceSumGetInterleave_Sum));
   PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceSumSetInterleave_C", PetscDualSpaceSumSetInterleave_Sum));
+  PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceLagrangeGetContinuity_C", PetscDualSpaceLagrangeGetContinuity_Sum));
+  PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceLagrangeSetContinuity_C", PetscDualSpaceLagrangeSetContinuity_Sum));
+  PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceLagrangeGetMomentOrder_C", PetscDualSpaceLagrangeGetMomentOrder_Sum));
+  PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceLagrangeSetMomentOrder_C", PetscDualSpaceLagrangeSetMomentOrder_Sum));
+  PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceLagrangeGetNodeType_C", PetscDualSpaceLagrangeGetNodeType_Sum));
+  PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceLagrangeSetNodeType_C", PetscDualSpaceLagrangeSetNodeType_Sum));
+  PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceLagrangeGetTensor_C", PetscDualSpaceLagrangeGetTensor_Sum));
+  PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceLagrangeSetTensor_C", PetscDualSpaceLagrangeSetTensor_Sum));
+  PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceLagrangeGetTrimmed_C", PetscDualSpaceLagrangeGetTrimmed_Sum));
+  PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceLagrangeSetTrimmed_C", PetscDualSpaceLagrangeSetTrimmed_Sum));
   PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceLagrangeGetUseMoments_C", PetscDualSpaceLagrangeGetUseMoments_Sum));
+  PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceLagrangeSetUseMoments_C", PetscDualSpaceLagrangeSetUseMoments_Sum));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
