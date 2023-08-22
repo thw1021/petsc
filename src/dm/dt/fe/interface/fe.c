@@ -968,7 +968,7 @@ PetscErrorCode PetscFECreateTabulation(PetscFE fem, PetscInt nrepl, PetscInt npo
   (*T)->Nc   = Nc;
   (*T)->cdim = cdim;
   PetscCall(PetscMalloc1((*T)->K + 1, &(*T)->T));
-  for (k = 0; k <= (*T)->K; ++k) PetscCall(PetscMalloc1(nrepl * npoints * Nb * Nc * PetscPowInt(cdim, k), &(*T)->T[k]));
+  for (k = 0; k <= (*T)->K; ++k) PetscCall(PetscCalloc1(nrepl * npoints * Nb * Nc * PetscPowInt(cdim, k), &(*T)->T[k]));
   PetscUseTypeMethod(fem, createtabulation, nrepl * npoints, points, K, *T);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1901,6 +1901,16 @@ static PetscErrorCode PetscFECreate_Internal(MPI_Comm comm, PetscInt dim, PetscI
   PetscBool       tensor;
 
   PetscFunctionBegin;
+  if (Nc > 1) {
+    PetscFE scalar_fe;
+
+    PetscCall(PetscFECreate_Internal(comm, dim, 1, ct, prefix, degree, qorder, setFromOptions, &scalar_fe));
+    PetscCall(PetscFECreateVector(scalar_fe, Nc, PETSC_TRUE, PETSC_TRUE, fem));
+    PetscCall(PetscFESetQuadrature(*fem, scalar_fe->quadrature));
+    PetscCall(PetscFESetFaceQuadrature(*fem, scalar_fe->faceQuadrature));
+    PetscCall(PetscFEDestroy(&scalar_fe));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
   if (prefix) PetscAssertPointer(prefix, 5);
   PetscAssertPointer(fem, 9);
   switch (ct) {

@@ -72,6 +72,8 @@ typedef struct {
   PetscBool   uniform;
   PetscBool   concatenate;
   PetscBool   setupCalled;
+  PetscBool   interleave_basis;
+  PetscBool   interleave_components;
   PetscSpace *heightsubspaces; /* Height subspaces */
 } PetscSpace_Sum;
 
@@ -123,6 +125,7 @@ struct _p_PetscDualSpace {
   PetscBool        setupcalled;
   PetscBool        setfromoptionscalled;
   PetscSection     pointSection;
+  PetscSection     intPointSection;
   PetscDualSpace  *pointSpaces;
   PetscDualSpace  *heightSpaces;
   PetscInt        *numDof;
@@ -169,6 +172,22 @@ typedef struct {
   PetscLagNodeIndices intNodeIndices;
   PetscLagNodeIndices allNodeIndices;
 } PetscDualSpace_Lag;
+
+typedef struct {
+  PetscDualSpace         *sumspaces;
+  PetscInt                numSumSpaces;
+  PetscBool               uniform;
+  PetscBool               uniform_all_points;
+  PetscBool               uniform_interior_points;
+  PetscBool               concatenate;
+  PetscBool               setupCalled;
+  PetscBool               interleave_basis;
+  PetscBool               interleave_components;
+  ISLocalToGlobalMapping *all_rows;
+  ISLocalToGlobalMapping *all_cols;
+  ISLocalToGlobalMapping *int_rows;
+  ISLocalToGlobalMapping *int_cols;
+} PetscDualSpace_Sum;
 
 typedef struct {
   PetscInt  dim;
@@ -413,6 +432,7 @@ static inline PetscErrorCode PetscFEInterpolateFieldAndGradient_Static(PetscFE f
 
 PETSC_INTERN PetscErrorCode PetscDualSpaceLatticePointLexicographic_Internal(PetscInt, PetscInt, PetscInt[]);
 PETSC_INTERN PetscErrorCode PetscDualSpaceTensorPointLexicographic_Internal(PetscInt, PetscInt, PetscInt[]);
+PETSC_INTERN PetscErrorCode PetscDualSpaceComputeFunctionalsFromAllData(PetscDualSpace);
 
 PETSC_INTERN PetscErrorCode PetscDualSpaceSectionCreate_Internal(PetscDualSpace, PetscSection *);
 PETSC_INTERN PetscErrorCode PetscDualSpaceSectionSetUp_Internal(PetscDualSpace, PetscSection);

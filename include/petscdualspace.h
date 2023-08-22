@@ -69,9 +69,10 @@ PETSC_EXTERN PetscClassId PETSCDUALSPACE_CLASSID;
 
   Values:
 + PETSCDUALSPACELAGRANGE  - a dual space of pointwise evaluation functionals
-. PETSCDUALSPACESIMPLE -  a dual space defined by functionals provided with `PetscDualSpaceSimpleSetFunctional()`
-. PETSCDUALSPACEREFINED - the joint dual space defined by a group of cells, usually refined from one larger cell
-- PETSCDUALSPACEBDM - a dual space for Brezzi-Douglas-Marini elements
+. PETSCDUALSPACESIMPLE    - a dual space defined by functionals provided with `PetscDualSpaceSimpleSetFunctional()`
+. PETSCDUALSPACEREFINED   - the joint dual space defined by a group of cells, usually refined from one larger cell
+. PETSCDUALSPACEBDM       - a dual space for Brezzi-Douglas-Marini elements
+- PETSCDUALSPACESUM       - a dual space that is a sum of other dual spaces
 
   Level: beginner
 
@@ -82,6 +83,7 @@ typedef const char *PetscDualSpaceType;
 #define PETSCDUALSPACESIMPLE   "simple"
 #define PETSCDUALSPACEREFINED  "refined"
 #define PETSCDUALSPACEBDM      "bdm"
+#define PETSCDUALSPACESUM      "sum"
 
 /*MC
   PETSCDUALSPACEBDM = "bdm" - A `PetscDualSpace` object that encapsulates a dual space for Brezzi-Douglas-Marini elements
@@ -106,6 +108,7 @@ PETSC_EXTERN PetscErrorCode    PetscDualSpaceGetType(PetscDualSpace, PetscDualSp
 PETSC_EXTERN PetscErrorCode    PetscDualSpaceGetUniform(PetscDualSpace, PetscBool *);
 PETSC_EXTERN PetscErrorCode    PetscDualSpaceGetNumDof(PetscDualSpace, const PetscInt **);
 PETSC_EXTERN PetscErrorCode    PetscDualSpaceGetSection(PetscDualSpace, PetscSection *);
+PETSC_EXTERN PetscErrorCode    PetscDualSpaceGetInteriorSection(PetscDualSpace, PetscSection *);
 PETSC_EXTERN PetscErrorCode    PetscDualSpaceSetUp(PetscDualSpace);
 PETSC_EXTERN PetscErrorCode    PetscDualSpaceSetFromOptions(PetscDualSpace);
 PETSC_EXTERN PetscErrorCode    PetscDualSpaceViewFromOptions(PetscDualSpace, PetscObject, const char[]);
@@ -160,5 +163,15 @@ PETSC_EXTERN PetscErrorCode PetscDualSpaceSimpleSetFunctional(PetscDualSpace, Pe
 
 PETSC_EXTERN PetscErrorCode PetscDualSpaceRefinedSetCellSpaces(PetscDualSpace, const PetscDualSpace[]);
 PETSC_EXTERN PetscErrorCode PetscSpaceCreateSubspace(PetscSpace, PetscDualSpace, PetscReal *, PetscReal *, PetscReal *, PetscReal *, PetscCopyMode, PetscSpace *);
+
+PETSC_EXTERN PetscErrorCode PetscDualSpaceSumSetNumSubspaces(PetscDualSpace, PetscInt);
+PETSC_EXTERN PetscErrorCode PetscDualSpaceSumGetNumSubspaces(PetscDualSpace, PetscInt *);
+PETSC_EXTERN PetscErrorCode PetscDualSpaceSumSetSubspace(PetscDualSpace, PetscInt, PetscDualSpace);
+PETSC_EXTERN PetscErrorCode PetscDualSpaceSumGetSubspace(PetscDualSpace, PetscInt, PetscDualSpace *);
+PETSC_EXTERN PetscErrorCode PetscDualSpaceSumSetConcatenate(PetscDualSpace, PetscBool);
+PETSC_EXTERN PetscErrorCode PetscDualSpaceSumGetConcatenate(PetscDualSpace, PetscBool *);
+PETSC_EXTERN PetscErrorCode PetscDualSpaceSumSetInterleave(PetscDualSpace, PetscBool, PetscBool);
+PETSC_EXTERN PetscErrorCode PetscDualSpaceSumGetInterleave(PetscDualSpace, PetscBool *, PetscBool *);
+PETSC_EXTERN PetscErrorCode PetscDualSpaceCreateSum(PetscInt, const PetscDualSpace[], PetscBool, PetscDualSpace *);
 
 #endif
