@@ -68,10 +68,39 @@ static PetscErrorCode PetscFEView_Vector(PetscFE fe, PetscViewer v)
 
 static PetscErrorCode PetscFESetUp_Vector(PetscFE fe)
 {
-  PetscFE_Vec *v = (PetscFE_Vec *)fe->data;
+  PetscFE_Vec        *v = (PetscFE_Vec *)fe->data;
+  PetscDualSpace      dsp;
+  PetscInt            n, Ncopies = v->num_copies;
+  PetscInt            scalar_n;
+  PetscInt           *d, *d_mapped;
+  PetscDualSpace_Sum *sum;
+  PetscBool           is_sum;
 
   PetscFunctionBegin;
   PetscCall(PetscFESetUp(v->scalar_fe));
+  PetscCall(PetscFEGetDimension(v->scalar_fe, &scalar_n));
+  PetscCall(PetscFEGetDualSpace(fe, &dsp));
+  PetscCall(PetscObjectTypeCompare((PetscObject)dsp, PETSCDUALSPACESUM, &is_sum));
+  PetscCheck(is_sum, PetscObjectComm((PetscObject)fe), PETSC_ERR_ARG_INCOMP, "Expected PETSCDUALSPACESUM dual space");
+  sum = (PetscDualSpace_Sum *)dsp->data;
+  n   = Ncopies * scalar_n;
+  PetscCall(PetscCalloc1(n * n, &fe->invV));
+  PetscCall(PetscMalloc2(scalar_n, &d, scalar_n, &d_mapped));
+  for (PetscInt i = 0; i < scalar_n; i++) d[i] = i;
+  for (PetscInt c = 0; c < Ncopies; c++) {
+    PetscCall(ISLocalToGlobalMappingApply(sum->all_rows[c], scalar_n, d, d_mapped));
+    for (PetscInt i = 0; i < scalar_n; i++) {
+      PetscInt         iw      = d_mapped[i];
+      PetscReal       *row_w   = &fe->invV[iw * n];
+      const PetscReal *row_r   = &v->scalar_fe->invV[i * scalar_n];
+      PetscInt         j0      = v->interleave_basis ? c : c * scalar_n;
+      PetscInt         jstride = v->interleave_basis ? Ncopies : 1;
+
+      for (PetscInt j = 0; j < scalar_n; j++) row_w[j0 + j * jstride] = row_r[j];
+    }
+  }
+  PetscCall(PetscFree2(d, d_mapped));
+
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -173,6 +202,21 @@ static PetscErrorCode PetscFECreateTabulation_Vector(PetscFE fe, PetscInt npoint
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode PetscFECreatePointTrace_Vector(PetscFE fe, PetscInt refPoint, PetscFE *trFE)
+{
+  PetscFE_Vec *v = (PetscFE_Vec *)fe->data;
+  PetscFE      scalar_trFE;
+  const char  *name;
+
+  PetscFunctionBegin;
+  PetscCall(PetscFECreatePointTrace(v->scalar_fe, refPoint, &scalar_trFE));
+  PetscCall(PetscFECreateVector(scalar_trFE, v->num_copies, v->interleave_basis, v->interleave_components, trFE));
+  PetscCall(PetscFEDestroy(&scalar_trFE));
+  PetscCall(PetscObjectGetName((PetscObject)fe, &name));
+  if (name) PetscCall(PetscFESetName(*trFE, name));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 PETSC_INTERN PetscErrorCode PetscFEIntegrate_Basic(PetscDS, PetscInt, PetscInt, PetscFEGeom *, const PetscScalar[], PetscDS, const PetscScalar[], PetscScalar[]);
 PETSC_INTERN PetscErrorCode PetscFEIntegrateBd_Basic(PetscDS, PetscInt, PetscBdPointFunc, PetscInt, PetscFEGeom *, const PetscScalar[], PetscDS, const PetscScalar[], PetscScalar[]);
 PETSC_INTERN PetscErrorCode PetscFEIntegrateHybridResidual_Basic(PetscDS, PetscDS, PetscFormKey, PetscInt, PetscInt, PetscFEGeom *, const PetscScalar[], const PetscScalar[], PetscDS, const PetscScalar[], PetscReal, PetscScalar[]);
@@ -187,6 +231,7 @@ static PetscErrorCode PetscFEInitialize_Vector(PetscFE fe)
   fe->ops->view                    = PetscFEView_Vector;
   fe->ops->destroy                 = PetscFEDestroy_Vector;
   fe->ops->getdimension            = PetscFEGetDimension_Vector;
+  fe->ops->createpointtrace        = PetscFECreatePointTrace_Vector;
   fe->ops->createtabulation        = PetscFECreateTabulation_Vector;
   fe->ops->integrate               = PetscFEIntegrate_Basic;
   fe->ops->integratebd             = PetscFEIntegrateBd_Basic;
@@ -252,10 +297,11 @@ PETSC_EXTERN PetscErrorCode PetscFECreate_Vector(PetscFE fe)
 @*/
 PetscErrorCode PetscFECreateVector(PetscFE scalar_fe, PetscInt num_copies, PetscBool interleave_basis, PetscBool interleave_components, PetscFE *vector_fe)
 {
-  MPI_Comm     comm;
-  PetscFE      fe_vec;
-  PetscFE_Vec *v;
-  PetscInt     scalar_Nc;
+  MPI_Comm        comm;
+  PetscFE         fe_vec;
+  PetscFE_Vec    *v;
+  PetscInt        scalar_Nc;
+  PetscQuadrature quad;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(scalar_fe, PETSCFE_CLASSID, 1);
@@ -272,6 +318,10 @@ PetscErrorCode PetscFECreateVector(PetscFE scalar_fe, PetscInt num_copies, Petsc
   v->interleave_components = interleave_components;
   PetscCall(PetscFEGetNumComponents(scalar_fe, &scalar_Nc));
   PetscCall(PetscFESetNumComponents(fe_vec, scalar_Nc * num_copies));
+  PetscCall(PetscFEGetQuadrature(scalar_fe, &quad));
+  PetscCall(PetscFESetQuadrature(fe_vec, quad));
+  PetscCall(PetscFEGetFaceQuadrature(scalar_fe, &quad));
+  PetscCall(PetscFESetFaceQuadrature(fe_vec, quad));
   {
     PetscSpace  scalar_sp;
     PetscSpace *copies;

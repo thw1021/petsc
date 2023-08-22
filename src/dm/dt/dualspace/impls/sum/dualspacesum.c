@@ -566,6 +566,202 @@ static PetscErrorCode PetscDualSpaceCreateFacetSubspace_Sum(PetscDualSpace sp, P
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode PetscDualSpaceSumIsUniform(PetscDualSpace sp, PetscBool *is_uniform)
+{
+  PetscDualSpace_Sum *sum     = (PetscDualSpace_Sum *)sp->data;
+  PetscBool           uniform = PETSC_TRUE;
+
+  PetscFunctionBegin;
+  for (PetscInt s = 1; s < sum->numSumSpaces; s++) {
+    if (sum->sumspaces[s] != sum->sumspaces[0]) {
+      uniform = PETSC_FALSE;
+      break;
+    }
+  }
+  *is_uniform = uniform;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscDualSpaceGetSymmetries_Sum(PetscDualSpace sp, const PetscInt ****perms, const PetscScalar ****flips)
+{
+  PetscDualSpace_Sum *sum = (PetscDualSpace_Sum *)sp->data;
+
+  PetscFunctionBegin;
+  if (!sum->symComputed) {
+    PetscInt       Ns;
+    PetscBool      any_perms = PETSC_FALSE;
+    PetscBool      any_flips = PETSC_FALSE;
+    PetscInt    ***symperms  = NULL;
+    PetscScalar ***symflips  = NULL;
+
+    sum->symComputed = PETSC_TRUE;
+    PetscCall(PetscDualSpaceSumGetNumSubspaces(sp, &Ns));
+    for (PetscInt s = 0; s < Ns; s++) {
+      PetscDualSpace       subsp;
+      const PetscInt    ***sub_perms;
+      const PetscScalar ***sub_flips;
+
+      PetscCall(PetscDualSpaceSumGetSubspace(sp, s, &subsp));
+      PetscCall(PetscDualSpaceGetSymmetries(subsp, &sub_perms, &sub_flips));
+      if (sub_perms) any_perms = PETSC_TRUE;
+      if (sub_flips) any_flips = PETSC_TRUE;
+    }
+    if (any_perms || any_flips) {
+      DM       K;
+      PetscInt pStart, pEnd, numPoints;
+      PetscInt spintdim;
+
+      PetscCall(PetscDualSpaceGetDM(sp, &K));
+      PetscCall(DMPlexGetChart(K, &pStart, &pEnd));
+      numPoints = pEnd - pStart;
+      PetscCall(PetscCalloc1(numPoints, &symperms));
+      PetscCall(PetscCalloc1(numPoints, &symflips));
+      PetscCall(PetscDualSpaceGetBoundarySymmetries_Internal(sp, symperms, symflips));
+      // get interior symmetries
+      PetscCall(PetscDualSpaceGetInteriorDimension(sp, &spintdim));
+      if (spintdim) {
+        PetscInt       groupSize;
+        PetscInt     **cellPerms;
+        PetscScalar  **cellFlips;
+        DMPolytopeType ct;
+
+        PetscCall(DMPlexGetCellType(K, 0, &ct));
+        groupSize       = DMPolytopeTypeGetNumArrangments(ct);
+        sum->numSelfSym = groupSize;
+        sum->selfSymOff = groupSize / 2;
+        PetscCall(PetscCalloc1(groupSize, &cellPerms));
+        PetscCall(PetscCalloc1(groupSize, &cellFlips));
+        symperms[0] = &cellPerms[groupSize / 2];
+        symflips[0] = &cellFlips[groupSize / 2];
+        for (PetscInt o = -groupSize / 2; o < groupSize / 2; o++) {
+          PetscBool any_o_perms = PETSC_FALSE;
+          PetscBool any_o_flips = PETSC_FALSE;
+
+          for (PetscInt s = 0; s < Ns; s++) {
+            PetscDualSpace       subsp;
+            const PetscInt    ***sub_perms;
+            const PetscScalar ***sub_flips;
+
+            PetscCall(PetscDualSpaceSumGetSubspace(sp, s, &subsp));
+            PetscCall(PetscDualSpaceGetSymmetries(subsp, &sub_perms, &sub_flips));
+            if (sub_perms && sub_perms[0] && sub_perms[0][o]) any_o_perms = PETSC_TRUE;
+            if (sub_flips && sub_flips[0] && sub_flips[0][o]) any_o_flips = PETSC_TRUE;
+          }
+          if (any_o_perms) {
+            PetscInt *o_perm;
+            PetscBool is_identity;
+
+            PetscCall(PetscMalloc1(spintdim, &o_perm));
+            for (PetscInt i = 0; i < spintdim; i++) o_perm[i] = i;
+            for (PetscInt s = 0; s < Ns; s++) {
+              PetscDualSpace       subsp;
+              const PetscInt    ***sub_perms;
+              const PetscScalar ***sub_flips;
+
+              PetscCall(PetscDualSpaceSumGetSubspace(sp, s, &subsp));
+              PetscCall(PetscDualSpaceGetSymmetries(subsp, &sub_perms, &sub_flips));
+              if (sub_perms && sub_perms[0] && sub_perms[0][o]) {
+                PetscInt  subspdim;
+                PetscInt *range, *domain;
+                PetscInt *range_mapped, *domain_mapped;
+
+                PetscCall(PetscDualSpaceGetInteriorDimension(subsp, &subspdim));
+                PetscCall(PetscMalloc4(subspdim, &range, subspdim, &range_mapped, subspdim, &domain, subspdim, &domain_mapped));
+                for (PetscInt i = 0; i < subspdim; i++) domain[i] = i;
+                PetscCall(PetscArraycpy(range, sub_perms[0][o], subspdim));
+                PetscCall(ISLocalToGlobalMappingApply(sum->int_rows[s], subspdim, domain, domain_mapped));
+                PetscCall(ISLocalToGlobalMappingApply(sum->int_rows[s], subspdim, range, range_mapped));
+                for (PetscInt i = 0; i < subspdim; i++) o_perm[domain_mapped[i]] = range_mapped[i];
+                PetscCall(PetscFree4(range, range_mapped, domain, domain_mapped));
+              }
+            }
+            is_identity = PETSC_TRUE;
+            for (PetscInt i = 0; i < spintdim; i++) {
+              if (o_perm[i] != i) {
+                is_identity = PETSC_FALSE;
+                break;
+              }
+            }
+            if (is_identity) {
+              PetscFree(o_perm);
+              o_perm = NULL;
+            }
+            symperms[0][o] = o_perm;
+          }
+          if (any_o_flips) {
+            PetscScalar *o_flip;
+            PetscBool    is_identity;
+
+            PetscCall(PetscMalloc1(spintdim, &o_flip));
+            for (PetscInt i = 0; i < spintdim; i++) o_flip[i] = 1.0;
+            for (PetscInt s = 0; s < Ns; s++) {
+              PetscDualSpace       subsp;
+              const PetscInt    ***sub_perms;
+              const PetscScalar ***sub_flips;
+
+              PetscCall(PetscDualSpaceSumGetSubspace(sp, s, &subsp));
+              PetscCall(PetscDualSpaceGetSymmetries(subsp, &sub_perms, &sub_flips));
+              if (sub_perms && sub_perms[0] && sub_perms[0][o]) {
+                PetscInt  subspdim;
+                PetscInt *domain;
+                PetscInt *domain_mapped;
+
+                PetscCall(PetscDualSpaceGetInteriorDimension(subsp, &subspdim));
+                PetscCall(PetscMalloc2(subspdim, &domain, subspdim, &domain_mapped));
+                for (PetscInt i = 0; i < subspdim; i++) domain[i] = i;
+                PetscCall(ISLocalToGlobalMappingApply(sum->int_rows[s], subspdim, domain, domain_mapped));
+                for (PetscInt i = 0; i < subspdim; i++) o_flip[domain_mapped[i]] = sub_perms[0][o][i];
+                PetscCall(PetscFree2(domain, domain_mapped));
+              }
+            }
+            is_identity = PETSC_TRUE;
+            for (PetscInt i = 0; i < spintdim; i++) {
+              if (o_flip[i] != 1.0) {
+                is_identity = PETSC_FALSE;
+                break;
+              }
+            }
+            if (is_identity) {
+              PetscFree(o_flip);
+              o_flip = NULL;
+            }
+            symflips[0][o] = o_flip;
+          }
+        }
+        {
+          PetscBool any_perms = PETSC_FALSE;
+          PetscBool any_flips = PETSC_FALSE;
+          for (PetscInt o = -groupSize / 2; o < groupSize / 2; o++) {
+            if (symperms[0][o]) any_perms = PETSC_TRUE;
+            if (symflips[0][o]) any_flips = PETSC_TRUE;
+          }
+          if (!any_perms) {
+            PetscCall(PetscFree(cellPerms));
+            symperms[0] = NULL;
+          }
+          if (!any_flips) {
+            PetscCall(PetscFree(cellFlips));
+            symflips[0] = NULL;
+          }
+        }
+      }
+      if (!any_perms) {
+        PetscCall(PetscFree(symperms));
+        symperms = NULL;
+      }
+      if (!any_flips) {
+        PetscCall(PetscFree(symflips));
+        symflips = NULL;
+      }
+    }
+    sum->symperms = symperms;
+    sum->symflips = symflips;
+  }
+  if (perms) *perms = (const PetscInt ***)sum->symperms;
+  if (flips) *flips = (const PetscScalar ***)sum->symflips;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode PetscDualSpaceSetUp_Sum(PetscDualSpace sp)
 {
   PetscDualSpace_Sum *sum         = (PetscDualSpace_Sum *)sp->data;
@@ -595,10 +791,9 @@ static PetscErrorCode PetscDualSpaceSetUp_Sum(PetscDualSpace sp)
   PetscCall(PetscDualSpaceGetDM(sp, &K));
   PetscCall(DMGetCoordinateDim(K, &cdim));
   PetscCall(DMPlexGetDepth(K, &depth));
-  uniform = PETSC_TRUE;
+  PetscCall(PetscDualSpaceSumIsUniform(sp, &sp->uniform));
+  uniform = sp->uniform;
   {
-    PetscDualSpace first_subsp = NULL;
-
     for (PetscInt s = 0; s < Ns; s++) {
       PetscDualSpace subsp;
       DM             sub_K;
@@ -611,11 +806,8 @@ static PetscErrorCode PetscDualSpaceSetUp_Sum(PetscDualSpace sp)
         K = sub_K;
       }
       PetscCheck(sub_K == K, PetscObjectComm((PetscObject)sp), PETSC_ERR_ARG_WRONGSTATE, "Subspace %d does not have the same DM as the sum space", (int)s);
-      if (!s) first_subsp = subsp;
-      else if (subsp != first_subsp) uniform = PETSC_FALSE;
     }
   }
-  sum->uniform = uniform;
 
   // step 2: count components
   PetscCall(PetscDualSpaceGetNumComponents(sp, &Nc));
@@ -797,8 +989,8 @@ static PetscErrorCode PetscDualSpaceSumView_Ascii(PetscDualSpace sp, PetscViewer
   PetscInt            i, Ns = sum->numSumSpaces;
 
   PetscFunctionBegin;
-  if (concatenate) PetscCall(PetscViewerASCIIPrintf(v, "Sum space of %" PetscInt_FMT " concatenated subspaces%s\n", Ns, sum->uniform ? " (all identical)" : ""));
-  else PetscCall(PetscViewerASCIIPrintf(v, "Sum space of %" PetscInt_FMT " subspaces%s\n", Ns, sum->uniform ? " (all identical)" : ""));
+  if (concatenate) PetscCall(PetscViewerASCIIPrintf(v, "Sum dual space of %" PetscInt_FMT " concatenated subspaces%s\n", Ns, sum->uniform ? " (all identical)" : ""));
+  else PetscCall(PetscViewerASCIIPrintf(v, "Sum dual space of %" PetscInt_FMT " subspaces%s\n", Ns, sum->uniform ? " (all identical)" : ""));
   for (i = 0; i < (sum->uniform ? (Ns > 0 ? 1 : 0) : Ns); ++i) {
     PetscCall(PetscViewerASCIIPushTab(v));
     PetscCall(PetscDualSpaceView(sum->sumspaces[i], v));
@@ -823,12 +1015,35 @@ static PetscErrorCode PetscDualSpaceDestroy_Sum(PetscDualSpace sp)
   PetscInt            i, Ns = sum->numSumSpaces;
 
   PetscFunctionBegin;
+  if (sum->symperms) {
+    PetscInt **selfSyms = sum->symperms[0];
+
+    if (selfSyms) {
+      PetscInt i, **allocated = &selfSyms[-sum->selfSymOff];
+
+      for (i = 0; i < sum->numSelfSym; i++) PetscCall(PetscFree(allocated[i]));
+      PetscCall(PetscFree(allocated));
+    }
+    PetscCall(PetscFree(sum->symperms));
+  }
+  if (sum->symflips) {
+    PetscScalar **selfSyms = sum->symflips[0];
+
+    if (selfSyms) {
+      PetscInt      i;
+      PetscScalar **allocated = &selfSyms[-sum->selfSymOff];
+
+      for (i = 0; i < sum->numSelfSym; i++) PetscCall(PetscFree(allocated[i]));
+      PetscCall(PetscFree(allocated));
+    }
+    PetscCall(PetscFree(sum->symflips));
+  }
   for (i = 0; i < Ns; ++i) {
     PetscCall(PetscDualSpaceDestroy(&sum->sumspaces[i]));
-    PetscCall(ISLocalToGlobalMappingDestroy(&sum->all_rows[i]));
-    PetscCall(ISLocalToGlobalMappingDestroy(&sum->all_cols[i]));
-    PetscCall(ISLocalToGlobalMappingDestroy(&sum->int_rows[i]));
-    PetscCall(ISLocalToGlobalMappingDestroy(&sum->int_cols[i]));
+    if (sum->all_rows) PetscCall(ISLocalToGlobalMappingDestroy(&sum->all_rows[i]));
+    if (sum->all_cols) PetscCall(ISLocalToGlobalMappingDestroy(&sum->all_cols[i]));
+    if (sum->int_rows) PetscCall(ISLocalToGlobalMappingDestroy(&sum->int_rows[i]));
+    if (sum->int_cols) PetscCall(ISLocalToGlobalMappingDestroy(&sum->int_cols[i]));
   }
   PetscCall(PetscFree(sum->sumspaces));
   PetscCall(PetscFree(sum->all_rows));
@@ -843,7 +1058,18 @@ static PetscErrorCode PetscDualSpaceDestroy_Sum(PetscDualSpace sp)
   PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceSumSetConcatenate_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceSumGetInterleave_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceSumSetInterleave_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceLagrangeGetContinuity_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceLagrangeSetContinuity_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceLagrangeGetMomentOrder_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceLagrangeSetMomentOrder_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceLagrangeGetNodeType_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceLagrangeSetNodeType_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceLagrangeGetTensor_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceLagrangeSetTensor_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceLagrangeGetTrimmed_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceLagrangeSetTrimmed_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceLagrangeGetUseMoments_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceLagrangeSetUseMoments_C", NULL));
   PetscCall(PetscFree(sum));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -916,10 +1142,99 @@ static PetscErrorCode PetscDualSpaceSumGetInterleave_Sum(PetscDualSpace sp, Pets
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscDualSpaceLagrangeGetUseMoments_Sum(PetscDualSpace sp, PetscBool *use_moments)
+#define PetscDualSpaceSumPassthrough(sp, func, ...) \
+  do { \
+    PetscDualSpace_Sum *sum = (PetscDualSpace_Sum *)sp->data; \
+    PetscBool           is_uniform; \
+    PetscCall(PetscDualSpaceSumIsUniform(sp, &is_uniform)); \
+    if (is_uniform && sum->numSumSpaces > 0) { \
+      PetscDualSpace subsp; \
+      PetscCall(PetscDualSpaceSumGetSubspace(sp, 0, &subsp)); \
+      PetscCall(func(subsp, __VA_ARGS__)); \
+    } \
+  } while (0)
+
+static PetscErrorCode PetscDualSpaceLagrangeGetContinuity_Sum(PetscDualSpace sp, PetscBool *value)
 {
   PetscFunctionBegin;
-  *use_moments = PETSC_FALSE;
+  PetscDualSpaceSumPassthrough(sp, PetscDualSpaceLagrangeGetContinuity, value);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscDualSpaceLagrangeSetContinuity_Sum(PetscDualSpace sp, PetscBool value)
+{
+  PetscFunctionBegin;
+  PetscDualSpaceSumPassthrough(sp, PetscDualSpaceLagrangeSetContinuity, value);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscDualSpaceLagrangeGetTensor_Sum(PetscDualSpace sp, PetscBool *value)
+{
+  PetscFunctionBegin;
+  PetscDualSpaceSumPassthrough(sp, PetscDualSpaceLagrangeGetTensor, value);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscDualSpaceLagrangeSetTensor_Sum(PetscDualSpace sp, PetscBool value)
+{
+  PetscFunctionBegin;
+  PetscDualSpaceSumPassthrough(sp, PetscDualSpaceLagrangeSetTensor, value);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscDualSpaceLagrangeGetTrimmed_Sum(PetscDualSpace sp, PetscBool *value)
+{
+  PetscFunctionBegin;
+  PetscDualSpaceSumPassthrough(sp, PetscDualSpaceLagrangeGetTrimmed, value);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscDualSpaceLagrangeSetTrimmed_Sum(PetscDualSpace sp, PetscBool value)
+{
+  PetscFunctionBegin;
+  PetscDualSpaceSumPassthrough(sp, PetscDualSpaceLagrangeSetTrimmed, value);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscDualSpaceLagrangeGetUseMoments_Sum(PetscDualSpace sp, PetscBool *value)
+{
+  PetscFunctionBegin;
+  PetscDualSpaceSumPassthrough(sp, PetscDualSpaceLagrangeGetUseMoments, value);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscDualSpaceLagrangeSetUseMoments_Sum(PetscDualSpace sp, PetscBool value)
+{
+  PetscFunctionBegin;
+  PetscDualSpaceSumPassthrough(sp, PetscDualSpaceLagrangeSetUseMoments, value);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscDualSpaceLagrangeGetMomentOrder_Sum(PetscDualSpace sp, PetscInt *value)
+{
+  PetscFunctionBegin;
+  PetscDualSpaceSumPassthrough(sp, PetscDualSpaceLagrangeGetMomentOrder, value);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscDualSpaceLagrangeSetMomentOrder_Sum(PetscDualSpace sp, PetscInt value)
+{
+  PetscFunctionBegin;
+  PetscDualSpaceSumPassthrough(sp, PetscDualSpaceLagrangeSetMomentOrder, value);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscDualSpaceLagrangeGetNodeType_Sum(PetscDualSpace sp, PetscDTNodeType *node_type, PetscBool *include_endpoints, PetscReal *exponent)
+{
+  PetscFunctionBegin;
+  PetscDualSpaceSumPassthrough(sp, PetscDualSpaceLagrangeGetNodeType, node_type, include_endpoints, exponent);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscDualSpaceLagrangeSetNodeType_Sum(PetscDualSpace sp, PetscDTNodeType node_type, PetscBool include_endpoints, PetscReal exponent)
+{
+  PetscFunctionBegin;
+  PetscDualSpaceSumPassthrough(sp, PetscDualSpaceLagrangeSetNodeType, node_type, include_endpoints, exponent);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -933,7 +1248,7 @@ static PetscErrorCode PetscDualSpaceInitialize_Sum(PetscDualSpace sp)
   sp->ops->setup                = PetscDualSpaceSetUp_Sum;
   sp->ops->createheightsubspace = NULL;
   sp->ops->createpointsubspace  = NULL;
-  sp->ops->getsymmetries        = NULL;
+  sp->ops->getsymmetries        = PetscDualSpaceGetSymmetries_Sum;
   sp->ops->apply                = PetscDualSpaceApplyDefault;
   sp->ops->applyall             = PetscDualSpaceApplyAllDefault;
   sp->ops->applyint             = PetscDualSpaceApplyInteriorDefault;
@@ -948,7 +1263,18 @@ static PetscErrorCode PetscDualSpaceInitialize_Sum(PetscDualSpace sp)
   PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceSumSetConcatenate_C", PetscDualSpaceSumSetConcatenate_Sum));
   PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceSumGetInterleave_C", PetscDualSpaceSumGetInterleave_Sum));
   PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceSumSetInterleave_C", PetscDualSpaceSumSetInterleave_Sum));
+  PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceLagrangeGetContinuity_C", PetscDualSpaceLagrangeGetContinuity_Sum));
+  PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceLagrangeSetContinuity_C", PetscDualSpaceLagrangeSetContinuity_Sum));
+  PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceLagrangeGetMomentOrder_C", PetscDualSpaceLagrangeGetMomentOrder_Sum));
+  PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceLagrangeSetMomentOrder_C", PetscDualSpaceLagrangeSetMomentOrder_Sum));
+  PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceLagrangeGetNodeType_C", PetscDualSpaceLagrangeGetNodeType_Sum));
+  PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceLagrangeSetNodeType_C", PetscDualSpaceLagrangeSetNodeType_Sum));
+  PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceLagrangeGetTensor_C", PetscDualSpaceLagrangeGetTensor_Sum));
+  PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceLagrangeSetTensor_C", PetscDualSpaceLagrangeSetTensor_Sum));
+  PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceLagrangeGetTrimmed_C", PetscDualSpaceLagrangeGetTrimmed_Sum));
+  PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceLagrangeSetTrimmed_C", PetscDualSpaceLagrangeSetTrimmed_Sum));
   PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceLagrangeGetUseMoments_C", PetscDualSpaceLagrangeGetUseMoments_Sum));
+  PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscDualSpaceLagrangeSetUseMoments_C", PetscDualSpaceLagrangeSetUseMoments_Sum));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
