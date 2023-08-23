@@ -22,9 +22,10 @@ PetscErrorCode TSEventInitialize(TSEvent event, TS ts, PetscReal t, Vec U)
   PetscAssertPointer(event, 1);
   PetscValidHeaderSpecific(ts, TS_CLASSID, 2);
   PetscValidHeaderSpecific(U, VEC_CLASSID, 4);
-  event->ptime_prev = t;
-  event->iterctr    = 0;
-  event->processing = PETSC_FALSE;
+  event->ptime_prev    = t;
+  event->iterctr       = 0;
+  event->processing    = PETSC_FALSE;
+  event->revisit_right = PETSC_FALSE;
   PetscCall((*event->eventhandler)(ts, t, U, event->fvalue_prev, event->ctx));
   TSEventCalcSigns(event->nevents, event->fvalue_prev, event->vtol, event->fsign_prev); // by this moment event->vtol should have been defined
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -295,6 +296,7 @@ PetscErrorCode TSSetEventHandler(TS ts, PetscInt nevents, PetscInt direction[], 
   }
   event->iterctr            = 0;
   event->processing         = PETSC_FALSE;
+  event->revisit_right      = PETSC_FALSE;
   event->nevents            = nevents;
   event->eventhandler       = eventhandler;
   event->postevent          = postevent;
@@ -414,11 +416,11 @@ static PetscErrorCode TSPostEvent(TS ts, PetscReal t, Vec U)
   if (restart) PetscCall(TSRestartStep(ts));
   if (terminate) PetscCall(TSSetConvergedReason(ts, TS_CONVERGED_EVENT));
 
-  /* Recalculate the functions and signs if states have been changed by the user postevent callback.
-     Note! If the state HAS NOT changed, the previous 'event->fsign' is kept, which:
+  /* Recalculate the functions and signs if the state has been changed by the user postevent callback.
+     Note! If the state HAS NOT changed, the existing event->fsign (equal to zero) is kept, which:
      - might have been defined using the previous (now-possibly-overridden) event->vtol,
      - might have been set to zero on reaching a small time step rather than using the vtol criterion.
-     This will enforce keeping event->fsign = 0 where the zero-crossings were actually triggered,
+     This will enforce keeping event->fsign = 0 where the zero-crossings were actually marked,
      resulting in a more consistent behaviour of fsign's.
   */
   if (statechanged) {
@@ -488,8 +490,8 @@ static inline PetscReal RefineAndersonBjorck(PetscReal tleft, PetscReal t, Petsc
   power = PetscMax(0.0, (reps - 2.0) / (REPS_CAP - 2.0));
   scal  = PetscPowReal(scalB / *gamma, power) * (*gamma); // mix the Anderson-Bjorck scaling and Bisection scaling
 
-  if (side == -1) new_dt = (scal * fleft * t - f * tleft) / (scal * fleft - f) - tleft;
-  else new_dt = (f * tright - scal * fright * t) / (f - scal * fright) - t;
+  if (side == -1) new_dt = scal * fleft / (scal * fleft - f) * (t - tleft);
+  else new_dt = f / (f - scal * fright) * (tright - t);
   /* In tough cases (e.g. a polynomial of high order), there is a failure mode for the standard Anderson-Bjorck,
      when the new proposed point jumps from one end-point of the bracket to the other, however the bracket is contracting very slowly.
      A larger threshold for 'scal' prevents entering this mode.
@@ -499,27 +501,30 @@ static inline PetscReal RefineAndersonBjorck(PetscReal tleft, PetscReal t, Petsc
   return new_dt;
 }
 
-/* Checks if the current point (t) is the zero-crossing location, based on the event-function signs and direction[].
-   The situation (fsign_prev, fsign) = (0, 0) is treated as staying in the near-zero-zone of the previous zero-crossing.
+/* Checks if the current point (t) is the zero-crossing location, based on the event-function signs and direction[]:
+   - using the dt_min criterion,
+   - using the vtol criterion.
+   The situation (fsign_prev, fsign) = (0, 0) is treated as staying in the near-zero-zone of the previous zero-crossing,
+   and is not marked as a new zero-crossing.
    This function may update event->side[].
 */
-static PetscErrorCode TSEventTestZero(TS ts)
+static PetscErrorCode TSEventTestZero(TS ts, PetscReal t)
 {
   TSEvent event = ts->event;
 
   PetscFunctionBegin;
   for (PetscInt i = 0; i < event->nevents; i++) {
-    if (event->fsign[i] == 0) { // found the potential event location
-      if (event->fsign_prev[i] < 0 && event->direction[i] >= 0) event->side[i] = 0;
-      if (event->fsign_prev[i] > 0 && event->direction[i] <= 0) event->side[i] = 0;
-    }
+    const PetscBool bracket_is_left = (event->fsign_prev[i] * event->fsign[i] < 0 && event->fsign[i] * event->direction[i] >= 0) ? PETSC_TRUE : PETSC_FALSE;
+
+    if (bracket_is_left && ((t - event->ptime_prev <= event->timestep_min) || event->revisit_right)) event->side[i] = 0;          // mark zero-crossing from dt_min; 'bracket_is_left' accounts for direction
+    if (event->fsign[i] == 0 && event->fsign_prev[i] != 0 && event->fsign_prev[i] * event->direction[i] <= 0) event->side[i] = 0; // mark zero-crossing from vtol
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /* Checks if [fleft, f] or [f, fright] are 'brackets', i.e. intervals with the sign change, satisfying the 'direction'.
    The right interval is only checked if iterctr > 0 (i.e. Anderson-Bjorck refinement has started).
-   The intervals like [0, x] and [x, 0] are not counted as brackets.
+   The intervals like [0, x] and [x, 0] are not counted as brackets, i.e. intervals with the sign change.
    The function returns the 'side' value: -1 (left, or both are brackets), +1 (only right one), +2 (neither).
 */
 static inline PetscInt TSEventTestBracket(PetscInt fsign_left, PetscInt fsign, PetscInt fsign_right, PetscInt direction, PetscInt iterctr)
@@ -577,42 +582,113 @@ static inline PetscReal TSEvent_dt_cap(TS ts, PetscReal t, PetscReal dt, PetscBo
 */
 static inline void TSEvent_update_left(TSEvent event, PetscReal t)
 {
-  event->ptime_prev = t;
   for (PetscInt i = 0; i < event->nevents; i++) {
     event->fvalue_prev[i] = event->fvalue[i];
     event->fsign_prev[i]  = event->fsign[i];
   }
+  event->ptime_prev = t;
 }
 
 /* A helper function for updating the right-end values
 */
 static inline void TSEvent_update_right(TSEvent event, PetscReal t)
 {
-  event->ptime_right = t;
   for (PetscInt i = 0; i < event->nevents; i++) {
     event->fvalue_right[i] = event->fvalue[i];
     event->fsign_right[i]  = event->fsign[i];
   }
+  event->ptime_right = t;
+}
+
+/* A helper function for updating the current values from the right-end values
+*/
+static inline PetscReal TSEvent_update_from_right(TSEvent event)
+{
+  for (PetscInt i = 0; i < event->nevents; i++) {
+    event->fvalue[i] = event->fvalue_right[i];
+    event->fsign[i]  = event->fsign_right[i];
+  }
+  return event->ptime_right;
 }
 
 /* TSEventHandler() - the main function to perform a single iteration of event resolution.
    Developer notes:
    1) The 'event->iterctr > 0' is used as an indicator that Anderson-Bjorck refinement has started.
    2) If event->iterctr == 0, then justrefined_AB[i] is always false.
-   3) The right-end quantities: ptime_right, fvalue_right[i] and fsign_right[i] are only guaranteed to be valid for event->iterctr > 0.
+   3) The right-end quantities: ptime_right, fvalue_right[i] and fsign_right[i] are only guaranteed to be valid for
+      event->iterctr > 0.
    4) If event->iterctr > 0, then event->processing is PETSC_TRUE; the opposite may not hold.
+   5) event->side[i] indicates: 0 <=> point t is a zero-crossing for event-function i (via vtol/dt_min criterion);
+     -1/+1 <=> detected a bracket to the left/right of t for event-function i; +2 <=> no brackets/zero-crossings.
+   6) The signs event->fsign[i] (with values 0/-1/+1) are calculated for each new point. Zero sign is set if the function value is
+      smaller than the tolerance. Besides, zero sign is enforced after marking a zero-crossing due to small bracket size criterion.
 
-   The intervals containing the potential zero-crossings are called 'brackets'.
-   The algorithm first finds a bracket, and then sequentially subdivides it, generating a sequence
+   The intervals with the event-function sign change (i.e. containing the potential zero-crossings) are called 'brackets'.
+   To find a zero-crossing, the algorithm first locates a bracket, and then sequentially subdivides it, generating a sequence
    of brackets whose length tends to zero. The bracket subdivision involves the (modified) Anderson-Bjorck method.
+
+   Apart from the comments scattered throughout the code to clarify different lines and blocks,
+   a few tricky aspects of the algorithm (and the underlying reasoning) are discussed in detail below:
+
+   =Sign tracking=
+   When a zero-crossing is found, the sign variable (event->fsign[i]) is set to zero for the current point t.
+   This happens both for zero-crossings triggered via the vtol criterion, and those triggered via the dt_min
+   criterion. After the event, as the TS steps forward, the current sign values are handed over to event->fsign_prev[i].
+   The recalculation of signs is avoided if possible: e.g. if a 'vtol' criterion resulted in a zero-crossing at point t,
+   but the subsequent call to postevent() handler decreased 'vtol', making the event-function no longer "close to zero"
+   at point t, the fsign[i] will still consistently keep the zero value. This allows avoiding the erroneous duplication
+   of events:
+     E.g. consider a bracket [t0, t2], where f0 < 0, f2 > 0, which resulted in a zero-crossing t1 with f1 < 0, abs(f1) < vtol.
+     Suppose the postevent() handler changes vtol to vtol*, such that abs(f1) > vtol*. The TS makes a step t1 -> t3, where
+     again f1 < 0, f3 > 0, and the event handler will find a new event near t1, which is actually a duplication of the
+     original event at t1. The duplications are avoided by NOT counting the sign progressions 0 -> +1, or 0 -> -1
+     as brackets. Tracking (instead of recalculating) the sign values makes this procedure work more consistently.
+   The sign values are however recalculated if the postevent() callback has changed the current solution vector U
+   (such a change resets everything).
+   The sign value is also set to zero if the dt_min criterion has triggered the event. This allows the algorithm to
+   work more consistently, irrespective of the type of criterion involved (vtol/dt_min).
+
+   =Event from min bracket=
+   When the event handler ends up with a bracket [t0, t1] with size <= dt_min, a zero crossing is reported at t1,
+   and never at t0. If such a bracket is discovered when TS is staying at t0, one more step forward (to t1) is necessary
+   to mark the found event. This is the situation of revisiting t1, which is described below (see =Revisiting=).
+     Why t0 is not reported as event location? Suppose it is, and let f0 < 0, f1 > 0. Also suppose that the
+     postevent() handler has slightly changed the solution U, so the sign at t0 is recalculated: it equals -1. As the TS steps
+     further: t0 -> t2, with sign0 == -1, and sign2 == +1, the event handler will locate the bracket [t0, t2], eventually
+     resolving a new event near t1, i.e. finding a duplicate event.
+     This situation is avoided by reporting the event at t1 in the first place.
+
+   =Revisiting=
+   When handling the situation with small bracket size, the TS solver may happen to visit the same point twice,
+   but with different results.
+     E.g. originally it discovered a bracket with sign change [t0, t10], and started resolving the zero-crossing,
+     visiting the points t1,...,t9 : t0 < t1 < ... < t9 < t10. Suppose that at t9 the algorithm discovers
+     that [t9, t10] is a bracket with the sign change it was looking for, and that |t10 - t9| is too small.
+     So point t10 should be revisited and marked as the zero crossing (by the minimum bracket size criterion).
+     On re-visiting t10, via the refined sequence of steps t0,...,t10, the TS solver may arrive at a solution U*
+     different from the solution U it found at t10 originally. Hence, the event-functions at t10 may become different,
+     and the condition of the sign change, which existed originally, may disappear, breaking the logic of the algorithm.
+   To handle such (-=unlikely=-, but possible) situations, two strategies can be considered:
+   1) [not used here] Allow the brackets with sign change to disappear during iterations. The algorithm should be able
+   to cleanly exit the iteration and leave all the objects/variables/caches involved in a valid state.
+   2) [ADOPTED HERE!] On revisiting t10, the event handler reuses the event-functions previously calculated for the
+   original solution U. This U may be less precise than U*, but this trick does not allow the algorithm logic to break down.
+   HOWEVER, the original U is not stored anywhere, it is essentially lost since the TS performed the rollback from it.
+   On revisiting t10, the updated solution U* will inevitably be found and used everywhere EXCEPT the current
+   event-functions calculation, e.g. U* will be used in the postevent() handler call. Since t10 is the event location,
+   the appropriate event-function-signs will be enforced to be 0 (regardless if the solution was U or U*).
+   If the solution is then changed by the postevent(), the event-function-signs will be recalculated.
+
+   Whether the algorithm is revisiting a point in the current TSEventHandler() call is flagged by 'event->revisit_right'.
 */
 PetscErrorCode TSEventHandler(TS ts)
 {
   TSEvent   event;
-  PetscReal t, dt_min;
+  PetscReal t, dt_next = 0.0;
   Vec       U;
   PetscInt  minsidein = 2, minsideout = 2; // minsideout is sync on all ranks
   PetscBool finished = PETSC_FALSE;        // should stay sync on all ranks
+  PetscBool revisit_right_cache;           // [sync] flag for inner consistency checks
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
@@ -620,6 +696,7 @@ PetscErrorCode TSEventHandler(TS ts)
   if (!ts->event) PetscFunctionReturn(PETSC_SUCCESS);
   event               = ts->event;
   event->nevents_zero = 0;
+  revisit_right_cache = event->revisit_right;
   for (PetscInt i = 0; i < event->nevents; i++) event->side[i] = 2; // side's are reset on each new iteration
   if (event->iterctr == 0)
     for (PetscInt i = 0; i < event->nevents; i++) event->justrefined_AB[i] = PETSC_FALSE;
@@ -632,12 +709,17 @@ PetscErrorCode TSEventHandler(TS ts)
     event->timestep_cache = dt; // the next TS move is planned to be: t -> t+dt
   }
 
-  PetscCall(TSGetSolution(ts, &U));
-  PetscCall(VecLockReadPush(U));
-  PetscCall((*event->eventhandler)(ts, t, U, event->fvalue, event->ctx)); // fill fvalue's at point 't'
-  PetscCall(VecLockReadPop(U));
-  TSEventCalcSigns(event->nevents, event->fvalue, event->vtol, event->fsign); // fill fvalue signs
-  PetscCall(TSEventTestZero(ts));                                             // check if the current point 't' is the event location; event->side[] may get updated
+  PetscCall(TSGetSolution(ts, &U)); // if revisiting, this will be the updated U* (see discussion on "Revisiting" in the Developer notes above)
+  if (event->revisit_right) {
+    PetscReal tr = TSEvent_update_from_right(event);
+    PetscCheck(PetscAbsReal(tr - t) < PETSC_SMALL, PetscObjectComm((PetscObject)ts), PETSC_ERR_PLIB, "Inconsistent time value when performing 'revisiting' in TSEventHandler()");
+  } else {
+    PetscCall(VecLockReadPush(U));
+    PetscCall((*event->eventhandler)(ts, t, U, event->fvalue, event->ctx)); // fill fvalue's at point 't'
+    PetscCall(VecLockReadPop(U));
+    TSEventCalcSigns(event->nevents, event->fvalue, event->vtol, event->fsign); // fill fvalue signs
+  }
+  PetscCall(TSEventTestZero(ts, t)); // check if the current point 't' is the event location; event->side[] may get updated
 
   for (PetscInt i = 0; i < event->nevents; i++) { // check for brackets on the left/right of 't'
     if (event->side[i] != 0) event->side[i] = TSEventTestBracket(event->fsign_prev[i], event->fsign[i], event->fsign_right[i], event->direction[i], event->iterctr);
@@ -645,66 +727,85 @@ PetscErrorCode TSEventHandler(TS ts)
   }
   PetscCall(MPIU_Allreduce(&minsidein, &minsideout, 1, MPIU_INT, MPI_MIN, PetscObjectComm((PetscObject)ts)));
   /* minsideout (sync on all ranks) indicates the minimum of the following states:
-     -1 : [ptime_prev, t] is a bracket
-     +1 : [t, ptime_right] is a bracket
-      0 : t is a zero-crossing
+     -1 : [ptime_prev, t] is a bracket for some function-i
+     +1 : [t, ptime_right] is a bracket for some function-i
+      0 : t is a zero-crossing for some function-i
       2 : none of the above
   */
-  if (minsideout == -1 || minsideout == +1) { // this if-branch will refine the left/right bracket
-    PetscReal dti_min = PETSC_MAX_REAL;
-    for (PetscInt i = 0; i < event->nevents; i++) {
-      if (event->side[i] == minsideout) { // only refine the appropriate brackets
-        PetscReal dti = RefineAndersonBjorck(event->ptime_prev, t, event->ptime_right, event->fvalue_prev[i], event->fvalue[i], event->fvalue_right[i], event->side[i], &event->side_prev[i], event->justrefined_AB[i], &event->gamma_AB[i]);
-        dti_min       = PetscMin(dti_min, dti);
-      }
-    }
-    PetscCall(MPIU_Allreduce(&dti_min, &dt_min, 1, MPIU_REAL, MPIU_MIN, PetscObjectComm((PetscObject)ts)));
+  PetscCheck(!event->revisit_right || minsideout == 0, PetscObjectComm((PetscObject)ts), PETSC_ERR_PLIB, "minsideout != 0 when performing 'revisiting' in TSEventHandler()");
 
-    if (PetscAbsReal(dt_min) < event->timestep_min) { // check if the time step is small
-      finished = PETSC_TRUE;
-      for (PetscInt i = 0; i < event->nevents; i++)
-        if (event->side[i] == minsideout) {
-          event->events_zero[event->nevents_zero++] = i;
-          event->fsign[i]                           = 0; // note, the sign = 0 is enforced here, irrespective of the vtol criterion
-          if (event->monitor)
-            PetscCall(
-              PetscViewerASCIIPrintf(event->monitor, "[%d] TSEvent: iter %" PetscInt_FMT " - Event %" PetscInt_FMT " accepting time %g as event location, due to reaching too small time step %g while refining the bracket\n", PetscGlobalRank, event->iterctr, i, (double)t, (double)dt_min));
+  if (minsideout == -1 || minsideout == +1) {                                                           // this if-branch will refine the left/right bracket
+    const PetscReal bracket_size = (minsideout == -1) ? t - event->ptime_prev : event->ptime_right - t; // sync on all ranks
+
+    if (minsideout == +1 && bracket_size <= event->timestep_min) { // check if the bracket (right) is small
+      // [--------------------|-]
+      dt_next              = bracket_size; // need one more step to get to event->ptime_right
+      event->revisit_right = PETSC_TRUE;
+      TSEvent_update_left(event, t);
+      if (event->monitor)
+        PetscCall(PetscViewerASCIIPrintf(event->monitor, "[%d] TSEvent: iter %" PetscInt_FMT " - reached too small bracket [%g - %g], next stepping to its right end %g (revisiting)\n", PetscGlobalRank, event->iterctr, (double)event->ptime_prev,
+                                         (double)event->ptime_right, (double)(event->ptime_prev + dt_next)));
+    } else { // the bracket is not very small -> refine it
+      // [--------|-------------]
+      if (bracket_size <= 2 * event->timestep_min) dt_next = bracket_size / 2; // the bracket is almost small -> bisect it
+      else {                                                                   // the bracket is not small -> use Anderson-Bjorck
+        PetscReal dti_min = PETSC_MAX_REAL;
+        for (PetscInt i = 0; i < event->nevents; i++) {
+          if (event->side[i] == minsideout) { // only refine the appropriate brackets
+            PetscReal dti = RefineAndersonBjorck(event->ptime_prev, t, event->ptime_right, event->fvalue_prev[i], event->fvalue[i], event->fvalue_right[i], event->side[i], &event->side_prev[i], event->justrefined_AB[i], &event->gamma_AB[i]);
+            dti_min       = PetscMin(dti_min, dti);
+          }
         }
-    }
+        PetscCall(MPIU_Allreduce(&dti_min, &dt_next, 1, MPIU_REAL, MPIU_MIN, PetscObjectComm((PetscObject)ts)));
+        if (dt_next < event->timestep_min) dt_next = event->timestep_min;
+        if (bracket_size - dt_next < event->timestep_min) dt_next = bracket_size - event->timestep_min;
+      }
 
-    if (minsideout == -1) { // minsideout == -1, update the right-end values, retain the left-end values
-      TSEvent_update_right(event, t);
-      if (!finished) { // handle the rollback; note: 'finished' flag is sync on all ranks
+      if (minsideout == -1) { // minsideout == -1, update the right-end values, retain the left-end values
+        TSEvent_update_right(event, t);
         PetscCall(TSRollBack(ts));
         PetscCall(TSSetConvergedReason(ts, TS_CONVERGED_ITERATING)); // e.g. to override TS_CONVERGED_TIME on reaching ts->max_time
-      }
-    } else TSEvent_update_left(event, t); // minsideout == +1, update the left-end values, retain the right-end values
+      } else TSEvent_update_left(event, t);                          // minsideout == +1, update the left-end values, retain the right-end values
 
-    for (PetscInt i = 0; i < event->nevents; i++) { // update the "Anderson-Bjorck" flags
-      if (event->side[i] == minsideout) {
-        event->justrefined_AB[i] = PETSC_TRUE; // only for these i's Anderson-Bjorck was invoked
-        if (event->monitor && !finished)
-          PetscCall(PetscViewerASCIIPrintf(event->monitor, "[%d] TSEvent: iter %" PetscInt_FMT " - Event %" PetscInt_FMT " refining the bracket with sign change [%g - %g], next stepping to %g\n", PetscGlobalRank, event->iterctr, i, (double)event->ptime_prev,
-                                           (double)event->ptime_right, (double)(event->ptime_prev + dt_min)));
-      } else event->justrefined_AB[i] = PETSC_FALSE; // for these i's Anderson-Bjorck was not invoked
+      for (PetscInt i = 0; i < event->nevents; i++) { // update the "Anderson-Bjorck" flags
+        if (event->side[i] == minsideout) {
+          event->justrefined_AB[i] = PETSC_TRUE; // only for these i's Anderson-Bjorck was invoked
+          if (event->monitor)
+            PetscCall(PetscViewerASCIIPrintf(event->monitor, "[%d] TSEvent: iter %" PetscInt_FMT " - Event %" PetscInt_FMT " refining the bracket with sign change [%g - %g], next stepping to %g\n", PetscGlobalRank, event->iterctr, i, (double)event->ptime_prev,
+                                             (double)event->ptime_right, (double)(event->ptime_prev + dt_next)));
+        } else event->justrefined_AB[i] = PETSC_FALSE; // for these i's Anderson-Bjorck was not invoked
+      }
     }
     event->iterctr++;
     event->processing = PETSC_TRUE;
   } else if (minsideout == 0) { // found the appropriate zero-crossing (and no brackets to the left), finishing!
-    finished = PETSC_TRUE;
+    // [--------0-------------]
+    finished             = PETSC_TRUE;
+    event->revisit_right = PETSC_FALSE;
     for (PetscInt i = 0; i < event->nevents; i++)
       if (event->side[i] == minsideout) {
         event->events_zero[event->nevents_zero++] = i;
-        if (event->monitor)
-          PetscCall(PetscViewerASCIIPrintf(event->monitor, "[%d] TSEvent: iter %" PetscInt_FMT " - Event %" PetscInt_FMT " zero crossing located at time %g (tol=%g)\n", PetscGlobalRank, event->iterctr, i, (double)t, (double)event->vtol[i]));
+        if (event->fsign[i] == 0) { // vtol was engaged
+          if (event->monitor)
+            PetscCall(PetscViewerASCIIPrintf(event->monitor, "[%d] TSEvent: iter %" PetscInt_FMT " - Event %" PetscInt_FMT " zero crossing located at time %g (tol=%g)\n", PetscGlobalRank, event->iterctr, i, (double)t, (double)event->vtol[i]));
+        } else {               // dt_min was engaged
+          event->fsign[i] = 0; // sign = 0 is enforced further
+          if (event->monitor)
+            PetscCall(PetscViewerASCIIPrintf(event->monitor, "[%d] TSEvent: iter %" PetscInt_FMT " - Event %" PetscInt_FMT " accepting time %g as event location, due to reaching too small bracket [%g - %g]\n", PetscGlobalRank, event->iterctr, i, (double)t,
+                                             (double)event->ptime_prev, (double)t));
+        }
       }
     event->iterctr++;
     event->processing = PETSC_TRUE;
   } else { // minsideout == 2: no brackets, no zero-crossings
+    // [----------------------]
     PetscCheck(event->iterctr == 0, PetscObjectComm((PetscObject)ts), PETSC_ERR_PLIB, "Unexpected state (event->iterctr != 0) in TSEventHandler()");
     if (event->processing) PetscCall(TSSetTimeStep(ts, TSEvent_dt_cap(ts, t, event->timestep_cache, PETSC_FALSE)));
     event->processing = PETSC_FALSE;
   }
+
+  // if 'revisit_right' was flagged before the current iteration started, the iteration is expected to finish
+  PetscCheck(!revisit_right_cache || finished, PetscObjectComm((PetscObject)ts), PETSC_ERR_PLIB, "Unexpected state of 'revisit_right_cache' in TSEventHandler()");
 
   if (finished) { // finished handling the current event
     PetscCall(TSPostEvent(ts, t, U));
@@ -729,8 +830,8 @@ PetscErrorCode TSEventHandler(TS ts)
 
   if (event->iterctr == 0) TSEvent_update_left(event, t); // not found an event, or finished the event
   else {
-    PetscCall(TSGetTime(ts, &t));                                             // update 't' to account for potential rollback
-    PetscCall(TSSetTimeStep(ts, TSEvent_dt_cap(ts, t, dt_min, PETSC_FALSE))); // continue resolving the event
+    PetscCall(TSGetTime(ts, &t));                                              // update 't' to account for potential rollback
+    PetscCall(TSSetTimeStep(ts, TSEvent_dt_cap(ts, t, dt_next, PETSC_FALSE))); // continue resolving the event
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
