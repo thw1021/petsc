@@ -50,7 +50,7 @@ static PetscErrorCode MatSTRUMPACKSetReordering_STRUMPACK(Mat F, MatSTRUMPACKReo
 /*@
   MatSTRUMPACKSetReordering - Set STRUMPACK fill-reducing reordering
 
-   Logically Collective on Mat
+   Logically Collective
 
    Input Parameters:
 +  F - the factored matrix obtained by calling MatGetFactor() from PETSc-STRUMPACK interface
@@ -130,7 +130,7 @@ static PetscErrorCode MatSTRUMPACKSetGPU_STRUMPACK(Mat F, PetscBool gpu)
 /*@
   MatSTRUMPACKSetGPU - Set whether STRUMPACK should enable GPU acceleration (not supported for all compression types)
 
-   Logically Collective on Mat
+   Logically Collective
 
    Input Parameters:
 +  F - the factored matrix obtained by calling MatGetFactor() from PETSc-STRUMPACK interface
@@ -210,7 +210,7 @@ static PetscErrorCode MatSTRUMPACKSetCompRelTol_STRUMPACK(Mat F, PetscReal rtol)
 /*@
   MatSTRUMPACKSetCompRelTol - Set STRUMPACK relative tolerance for compression
 
-   Logically Collective on Mat
+   Logically Collective
 
    Input Parameters:
 +  F - the factored matrix obtained by calling `MatGetFactor()`
@@ -351,7 +351,7 @@ static PetscErrorCode MatSTRUMPACKSetGeometricWidth_STRUMPACK(Mat F, PetscInt w)
 /*@
   MatSTRUMPACKSetGeometricNxyz - Set STRUMPACK mesh x, y and z dimensions, for use with GEOMETRIC ordering.
 
-   Logically Collective on Mat
+   Logically Collective
 
    If the mesh is two (or one) dimensional one can use 1, PETSC_DECIDE or PETSC_DEFAULT
    for the missing z (and y) dimensions.
@@ -382,7 +382,7 @@ PetscErrorCode MatSTRUMPACKSetGeometricNxyz(Mat F, PetscInt nx, PetscInt ny, Pet
 /*@
   MatSTRUMPACKSetGeometricComponents - Set STRUMPACK number of degrees of freedom per mesh point, for use with GEOMETRIC ordering.
 
-   Logically Collective on Mat
+   Logically Collective
 
    Input Parameters:
 +  F - the factored matrix obtained by calling MatGetFactor() from PETSc-STRUMPACK interface
@@ -409,7 +409,7 @@ PetscErrorCode MatSTRUMPACKSetGeometricComponents(Mat F, PetscInt nc)
 /*@
   MatSTRUMPACKSetGeometricWidth - Set STRUMPACK width of the separator, for use with GEOMETRIC ordering.
 
-   Logically Collective on Mat
+   Logically Collective
 
    Input Parameters:
 +  F - the factored matrix obtained by calling MatGetFactor() from PETSc-STRUMPACK interface
@@ -446,7 +446,7 @@ static PetscErrorCode MatSTRUMPACKSetCompMinSepSize_STRUMPACK(Mat F, PetscInt mi
 /*@
   MatSTRUMPACKSetCompMinSepSize - Set STRUMPACK minimum separator size for low-rank approximation
 
-   Logically Collective on Mat
+   Logically Collective
 
    Input Parameters:
 +  F - the factored matrix obtained by calling MatGetFactor() from PETSc-STRUMPACK interface
@@ -483,7 +483,7 @@ static PetscErrorCode MatSTRUMPACKSetCompLossyPrecision_STRUMPACK(Mat F, PetscIn
 /*@
   MatSTRUMPACKSetCompLossyPrecision - Set STRUMPACK precision for lossy compression (requires ZFP support)
 
-   Logically Collective on Mat
+   Logically Collective
 
    Input Parameters:
 +  F - the factored matrix obtained by calling MatGetFactor() from PETSc-STRUMPACK interface
@@ -520,7 +520,7 @@ static PetscErrorCode MatSTRUMPACKSetCompButterflyLevels_STRUMPACK(Mat F, PetscI
 /*@
   MatSTRUMPACKSetCompButterflyLevels - Set STRUMPACK number of butterfly levels in HODLR compression (requires ButterflyPACK support)
 
-   Logically Collective on Mat
+   Logically Collective
 
    Input Parameters:
 +  F - the factored matrix obtained by calling MatGetFactor() from PETSc-STRUMPACK interface
