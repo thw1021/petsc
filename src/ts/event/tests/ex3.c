@@ -272,6 +272,7 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
 /*TEST
   test:
     suffix: spurious
+    requires: !single
     output_file: output/ex3_spurious.out
     args: -ts_type beuler
     args: -ts_adapt_type basic
