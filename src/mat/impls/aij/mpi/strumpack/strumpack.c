@@ -21,19 +21,30 @@ static PetscErrorCode MatDestroy_STRUMPACK(Mat A)
   /* clear composed functions */
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatFactorGetSolverType_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSTRUMPACKSetReordering_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSTRUMPACKGetReordering_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSTRUMPACKSetColPerm_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSTRUMPACKGetColPerm_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSTRUMPACKSetGeometricNxyz_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSTRUMPACKSetGeometricComponents_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSTRUMPACKSetGeometricWidth_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSTRUMPACKSetGPU_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSTRUMPACKGetGPU_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSTRUMPACKSetCompression_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSTRUMPACKGetCompression_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSTRUMPACKSetCompRelTol_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSTRUMPACKGetCompRelTol_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSTRUMPACKSetCompAbsTol_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSTRUMPACKGetCompAbsTol_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSTRUMPACKSetCompMaxRank_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSTRUMPACKGetCompMaxRank_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSTRUMPACKSetCompLeafSize_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSTRUMPACKGetCompLeafSize_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSTRUMPACKSetCompMinSepSize_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSTRUMPACKGetCompMinSepSize_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSTRUMPACKSetCompLossyPrecision_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSTRUMPACKGetCompLossyPrecision_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSTRUMPACKSetCompButterflyLevels_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSTRUMPACKGetCompButterflyLevels_C", NULL));
 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -44,6 +55,14 @@ static PetscErrorCode MatSTRUMPACKSetReordering_STRUMPACK(Mat F, MatSTRUMPACKReo
 
   PetscFunctionBegin;
   PetscStackCallExternalVoid("STRUMPACK_set_reordering_method", STRUMPACK_set_reordering_method(*S, (STRUMPACK_REORDERING_STRATEGY)reordering));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+static PetscErrorCode MatSTRUMPACKGetReordering_STRUMPACK(Mat F, MatSTRUMPACKReordering *reordering)
+{
+  STRUMPACK_SparseSolver *S = (STRUMPACK_SparseSolver *)F->data;
+
+  PetscFunctionBegin;
+  PetscStackCallExternalVoid("STRUMPACK_reordering_method", *reordering = (MatSTRUMPACKReordering)STRUMPACK_reordering_method(*S));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -75,6 +94,14 @@ PetscErrorCode MatSTRUMPACKSetReordering(Mat F, MatSTRUMPACKReordering reorderin
   PetscTryMethod(F, "MatSTRUMPACKSetReordering_C", (Mat, MatSTRUMPACKReordering), (F, reordering));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+PetscErrorCode MatSTRUMPACKGetReordering(Mat F, MatSTRUMPACKReordering *reordering)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(F, MAT_CLASSID, 1);
+  PetscTryMethod(F, "MatSTRUMPACKGetReordering_C", (Mat, MatSTRUMPACKReordering *), (F, reordering));
+  PetscValidLogicalCollectiveEnum(F, *reordering, 2);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
 
 static PetscErrorCode MatSTRUMPACKSetColPerm_STRUMPACK(Mat F, PetscBool cperm)
 {
@@ -82,6 +109,14 @@ static PetscErrorCode MatSTRUMPACKSetColPerm_STRUMPACK(Mat F, PetscBool cperm)
 
   PetscFunctionBegin;
   PetscStackCallExternalVoid("STRUMPACK_set_matching", STRUMPACK_set_matching(*S, cperm ? STRUMPACK_MATCHING_MAX_DIAGONAL_PRODUCT_SCALING : STRUMPACK_MATCHING_NONE));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+static PetscErrorCode MatSTRUMPACKGetColPerm_STRUMPACK(Mat F, PetscBool *cperm)
+{
+  STRUMPACK_SparseSolver *S = (STRUMPACK_SparseSolver *)F->data;
+
+  PetscFunctionBegin;
+  PetscStackCallExternalVoid("STRUMPACK_matching", *cperm = (STRUMPACK_matching(*S) != STRUMPACK_MATCHING_NONE));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -112,6 +147,14 @@ PetscErrorCode MatSTRUMPACKSetColPerm(Mat F, PetscBool cperm)
   PetscTryMethod(F, "MatSTRUMPACKSetColPerm_C", (Mat, PetscBool), (F, cperm));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+PetscErrorCode MatSTRUMPACKGetColPerm(Mat F, PetscBool *cperm)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(F, MAT_CLASSID, 1);
+  PetscTryMethod(F, "MatSTRUMPACKGetColPerm_C", (Mat, PetscBool *), (F, cperm));
+  PetscValidLogicalCollectiveBool(F, *cperm, 2);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
 
 static PetscErrorCode MatSTRUMPACKSetGPU_STRUMPACK(Mat F, PetscBool gpu)
 {
@@ -124,6 +167,14 @@ static PetscErrorCode MatSTRUMPACKSetGPU_STRUMPACK(Mat F, PetscBool gpu)
 #endif
     PetscStackCallExternalVoid("STRUMPACK_enable_gpu", STRUMPACK_enable_gpu(*S));
   } else PetscStackCallExternalVoid("STRUMPACK_disable_gpu", STRUMPACK_disable_gpu(*S));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+static PetscErrorCode MatSTRUMPACKGetGPU_STRUMPACK(Mat F, PetscBool *gpu)
+{
+  STRUMPACK_SparseSolver *S = (STRUMPACK_SparseSolver *)F->data;
+
+  PetscFunctionBegin;
+  PetscStackCallExternalVoid("STRUMPACK_use_gpu", *gpu = (PetscBool)STRUMPACK_use_gpu(*S));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -154,6 +205,14 @@ PetscErrorCode MatSTRUMPACKSetGPU(Mat F, PetscBool gpu)
   PetscTryMethod(F, "MatSTRUMPACKSetGPU_C", (Mat, PetscBool), (F, gpu));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+PetscErrorCode MatSTRUMPACKGetGPU(Mat F, PetscBool *gpu)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(F, MAT_CLASSID, 1);
+  PetscTryMethod(F, "MatSTRUMPACKGetGPU_C", (Mat, PetscBool *), (F, gpu));
+  PetscValidLogicalCollectiveBool(F, *gpu, 2);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
 
 static PetscErrorCode MatSTRUMPACKSetCompression_STRUMPACK(Mat F, MatSTRUMPACKCompression comp)
 {
@@ -167,6 +226,14 @@ static PetscErrorCode MatSTRUMPACKSetCompression_STRUMPACK(Mat F, MatSTRUMPACKCo
   PetscCheck(comp != MAT_STRUMPACK_ZFP_BLR_HODLR && comp != MAT_STRUMPACK_LOSSLESS && comp != MAT_STRUMPACK_LOSSY, PetscObjectComm((PetscObject)F), PETSC_ERR_SUP, "Compression scheme requires ZFP, please reconfigure with --download-zfp");
 #endif
   PetscStackCallExternalVoid("STRUMPACK_set_compression", STRUMPACK_set_compression(*S, (STRUMPACK_COMPRESSION_TYPE)comp));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+static PetscErrorCode MatSTRUMPACKGetCompression_STRUMPACK(Mat F, MatSTRUMPACKCompression *comp)
+{
+  STRUMPACK_SparseSolver *S = (STRUMPACK_SparseSolver *)F->data;
+
+  PetscFunctionBegin;
+  PetscStackCallExternalVoid("STRUMPACK_compression", *comp = (MatSTRUMPACKCompression)STRUMPACK_compression(*S));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -197,6 +264,14 @@ PetscErrorCode MatSTRUMPACKSetCompression(Mat F, MatSTRUMPACKCompression comp)
   PetscTryMethod(F, "MatSTRUMPACKSetCompression_C", (Mat, MatSTRUMPACKCompression), (F, comp));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+PetscErrorCode MatSTRUMPACKGetCompression(Mat F, MatSTRUMPACKCompression *comp)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(F, MAT_CLASSID, 1);
+  PetscTryMethod(F, "MatSTRUMPACKGetCompression_C", (Mat, MatSTRUMPACKCompression *), (F, comp));
+  PetscValidLogicalCollectiveEnum(F, *comp, 2);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
 
 static PetscErrorCode MatSTRUMPACKSetCompRelTol_STRUMPACK(Mat F, PetscReal rtol)
 {
@@ -204,6 +279,14 @@ static PetscErrorCode MatSTRUMPACKSetCompRelTol_STRUMPACK(Mat F, PetscReal rtol)
 
   PetscFunctionBegin;
   PetscStackCallExternalVoid("STRUMPACK_set_compression_rel_tol", STRUMPACK_set_compression_rel_tol(*S, rtol));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+static PetscErrorCode MatSTRUMPACKGetCompRelTol_STRUMPACK(Mat F, PetscReal *rtol)
+{
+  STRUMPACK_SparseSolver *S = (STRUMPACK_SparseSolver *)F->data;
+
+  PetscFunctionBegin;
+  PetscStackCallExternalVoid("STRUMPACK_compression_rel_tol", *rtol = (PetscReal)STRUMPACK_compression_rel_tol(*S));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -234,6 +317,14 @@ PetscErrorCode MatSTRUMPACKSetCompRelTol(Mat F, PetscReal rtol)
   PetscTryMethod(F, "MatSTRUMPACKSetCompRelTol_C", (Mat, PetscReal), (F, rtol));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+PetscErrorCode MatSTRUMPACKGetCompRelTol(Mat F, PetscReal *rtol)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(F, MAT_CLASSID, 1);
+  PetscTryMethod(F, "MatSTRUMPACKGetCompRelTol_C", (Mat, PetscReal *), (F, rtol));
+  PetscValidLogicalCollectiveReal(F, *rtol, 2);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
 
 static PetscErrorCode MatSTRUMPACKSetCompAbsTol_STRUMPACK(Mat F, PetscReal atol)
 {
@@ -241,6 +332,14 @@ static PetscErrorCode MatSTRUMPACKSetCompAbsTol_STRUMPACK(Mat F, PetscReal atol)
 
   PetscFunctionBegin;
   PetscStackCallExternalVoid("STRUMPACK_set_compression_abs_tol", STRUMPACK_set_compression_abs_tol(*S, atol));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+static PetscErrorCode MatSTRUMPACKGetCompAbsTol_STRUMPACK(Mat F, PetscReal *atol)
+{
+  STRUMPACK_SparseSolver *S = (STRUMPACK_SparseSolver *)F->data;
+
+  PetscFunctionBegin;
+  PetscStackCallExternalVoid("STRUMPACK_compression_abs_tol", *atol = (PetscReal)STRUMPACK_compression_abs_tol(*S));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -271,6 +370,14 @@ PetscErrorCode MatSTRUMPACKSetCompAbsTol(Mat F, PetscReal atol)
   PetscTryMethod(F, "MatSTRUMPACKSetCompAbsTol_C", (Mat, PetscReal), (F, atol));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+PetscErrorCode MatSTRUMPACKGetCompAbsTol(Mat F, PetscReal *atol)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(F, MAT_CLASSID, 1);
+  PetscTryMethod(F, "MatSTRUMPACKGetCompAbsTol_C", (Mat, PetscReal *), (F, atol));
+  PetscValidLogicalCollectiveReal(F, *atol, 2);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
 
 static PetscErrorCode MatSTRUMPACKSetCompLeafSize_STRUMPACK(Mat F, PetscInt leaf_size)
 {
@@ -278,6 +385,14 @@ static PetscErrorCode MatSTRUMPACKSetCompLeafSize_STRUMPACK(Mat F, PetscInt leaf
 
   PetscFunctionBegin;
   PetscStackCallExternalVoid("STRUMPACK_set_compression_leaf_size", STRUMPACK_set_compression_leaf_size(*S, leaf_size));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+static PetscErrorCode MatSTRUMPACKGetCompLeafSize_STRUMPACK(Mat F, PetscInt *leaf_size)
+{
+  STRUMPACK_SparseSolver *S = (STRUMPACK_SparseSolver *)F->data;
+
+  PetscFunctionBegin;
+  PetscStackCallExternalVoid("STRUMPACK_compression_leaf_size", *leaf_size = (PetscInt)STRUMPACK_compression_leaf_size(*S));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -306,6 +421,14 @@ PetscErrorCode MatSTRUMPACKSetCompLeafSize(Mat F, PetscInt leaf_size)
   PetscValidHeaderSpecific(F, MAT_CLASSID, 1);
   PetscValidLogicalCollectiveInt(F, leaf_size, 2);
   PetscTryMethod(F, "MatSTRUMPACKSetCompLeafSize_C", (Mat, PetscInt), (F, leaf_size));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+PetscErrorCode MatSTRUMPACKGetCompLeafSize(Mat F, PetscInt *leaf_size)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(F, MAT_CLASSID, 1);
+  PetscTryMethod(F, "MatSTRUMPACKGetCompLeafSize_C", (Mat, PetscInt *), (F, leaf_size));
+  PetscValidLogicalCollectiveInt(F, *leaf_size, 2);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -442,6 +565,14 @@ static PetscErrorCode MatSTRUMPACKSetCompMinSepSize_STRUMPACK(Mat F, PetscInt mi
   PetscStackCallExternalVoid("STRUMPACK_set_compression_min_sep_size", STRUMPACK_set_compression_min_sep_size(*S, min_sep_size));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+static PetscErrorCode MatSTRUMPACKGetCompMinSepSize_STRUMPACK(Mat F, PetscInt *min_sep_size)
+{
+  STRUMPACK_SparseSolver *S = (STRUMPACK_SparseSolver *)F->data;
+
+  PetscFunctionBegin;
+  PetscStackCallExternalVoid("STRUMPACK_compression_min_sep_size", *min_sep_size = (PetscInt)STRUMPACK_compression_min_sep_size(*S));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
 
 /*@
   MatSTRUMPACKSetCompMinSepSize - Set STRUMPACK minimum separator size for low-rank approximation
@@ -470,6 +601,14 @@ PetscErrorCode MatSTRUMPACKSetCompMinSepSize(Mat F, PetscInt min_sep_size)
   PetscTryMethod(F, "MatSTRUMPACKSetCompMinSepSize_C", (Mat, PetscInt), (F, min_sep_size));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+PetscErrorCode MatSTRUMPACKGetCompMinSepSize(Mat F, PetscInt *min_sep_size)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(F, MAT_CLASSID, 1);
+  PetscTryMethod(F, "MatSTRUMPACKGetCompMinSepSize_C", (Mat, PetscInt *), (F, min_sep_size));
+  PetscValidLogicalCollectiveInt(F, *min_sep_size, 2);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
 
 static PetscErrorCode MatSTRUMPACKSetCompLossyPrecision_STRUMPACK(Mat F, PetscInt lossy_prec)
 {
@@ -477,6 +616,14 @@ static PetscErrorCode MatSTRUMPACKSetCompLossyPrecision_STRUMPACK(Mat F, PetscIn
 
   PetscFunctionBegin;
   PetscStackCallExternalVoid("STRUMPACK_set_compression_lossy_precision", STRUMPACK_set_compression_lossy_precision(*S, lossy_prec));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+static PetscErrorCode MatSTRUMPACKGetCompLossyPrecision_STRUMPACK(Mat F, PetscInt *lossy_prec)
+{
+  STRUMPACK_SparseSolver *S = (STRUMPACK_SparseSolver *)F->data;
+
+  PetscFunctionBegin;
+  PetscStackCallExternalVoid("STRUMPACK_compression_lossy_precision", *lossy_prec = (PetscInt)STRUMPACK_compression_lossy_precision(*S));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -507,6 +654,14 @@ PetscErrorCode MatSTRUMPACKSetCompLossyPrecision(Mat F, PetscInt lossy_prec)
   PetscTryMethod(F, "MatSTRUMPACKSetCompLossyPrecision_C", (Mat, PetscInt), (F, lossy_prec));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+PetscErrorCode MatSTRUMPACKGetCompLossyPrecision(Mat F, PetscInt *lossy_prec)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(F, MAT_CLASSID, 1);
+  PetscTryMethod(F, "MatSTRUMPACKGetCompLossyPrecision_C", (Mat, PetscInt *), (F, lossy_prec));
+  PetscValidLogicalCollectiveInt(F, *lossy_prec, 2);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
 
 static PetscErrorCode MatSTRUMPACKSetCompButterflyLevels_STRUMPACK(Mat F, PetscInt bfly_lvls)
 {
@@ -514,6 +669,14 @@ static PetscErrorCode MatSTRUMPACKSetCompButterflyLevels_STRUMPACK(Mat F, PetscI
 
   PetscFunctionBegin;
   PetscStackCallExternalVoid("STRUMPACK_set_compression_butterfly_levels", STRUMPACK_set_compression_butterfly_levels(*S, bfly_lvls));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+static PetscErrorCode MatSTRUMPACKGetCompButterflyLevels_STRUMPACK(Mat F, PetscInt *bfly_lvls)
+{
+  STRUMPACK_SparseSolver *S = (STRUMPACK_SparseSolver *)F->data;
+
+  PetscFunctionBegin;
+  PetscStackCallExternalVoid("STRUMPACK_compression_butterfly_levels", *bfly_lvls = (PetscInt)STRUMPACK_compression_butterfly_levels(*S));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -542,6 +705,14 @@ PetscErrorCode MatSTRUMPACKSetCompButterflyLevels(Mat F, PetscInt bfly_lvls)
   PetscValidHeaderSpecific(F, MAT_CLASSID, 1);
   PetscValidLogicalCollectiveInt(F, bfly_lvls, 2);
   PetscTryMethod(F, "MatSTRUMPACKSetButterflyLevels_C", (Mat, PetscInt), (F, bfly_lvls));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+PetscErrorCode MatSTRUMPACKGetCompButterflyLevels(Mat F, PetscInt *bfly_lvls)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(F, MAT_CLASSID, 1);
+  PetscTryMethod(F, "MatSTRUMPACKGetButterflyLevels_C", (Mat, PetscInt *), (F, bfly_lvls));
+  PetscValidLogicalCollectiveInt(F, *bfly_lvls, 2);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -817,18 +988,28 @@ static PetscErrorCode MatGetFactor_aij_strumpack(Mat A, MatFactorType ftype, Mat
   B->ops->getdiagonal = MatGetDiagonal_STRUMPACK;
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatFactorGetSolverType_C", MatFactorGetSolverType_aij_strumpack));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSTRUMPACKSetReordering_C", MatSTRUMPACKSetReordering_STRUMPACK));
+  PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSTRUMPACKGetReordering_C", MatSTRUMPACKGetReordering_STRUMPACK));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSTRUMPACKSetColPerm_C", MatSTRUMPACKSetColPerm_STRUMPACK));
+  PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSTRUMPACKGetColPerm_C", MatSTRUMPACKGetColPerm_STRUMPACK));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSTRUMPACKSetGeometricNxyz_C", MatSTRUMPACKSetGeometricNxyz_STRUMPACK));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSTRUMPACKSetGeometricComponents_C", MatSTRUMPACKSetGeometricComponents_STRUMPACK));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSTRUMPACKSetGeometricWidth_C", MatSTRUMPACKSetGeometricWidth_STRUMPACK));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSTRUMPACKSetGPU_C", MatSTRUMPACKSetGPU_STRUMPACK));
+  PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSTRUMPACKGetGPU_C", MatSTRUMPACKGetGPU_STRUMPACK));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSTRUMPACKSetCompression_C", MatSTRUMPACKSetCompression_STRUMPACK));
+  PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSTRUMPACKGetCompression_C", MatSTRUMPACKGetCompression_STRUMPACK));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSTRUMPACKSetCompRelTol_C", MatSTRUMPACKSetCompRelTol_STRUMPACK));
+  PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSTRUMPACKGetCompRelTol_C", MatSTRUMPACKGetCompRelTol_STRUMPACK));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSTRUMPACKSetCompAbsTol_C", MatSTRUMPACKSetCompAbsTol_STRUMPACK));
+  PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSTRUMPACKGetCompAbsTol_C", MatSTRUMPACKGetCompAbsTol_STRUMPACK));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSTRUMPACKSetCompLeafSize_C", MatSTRUMPACKSetCompLeafSize_STRUMPACK));
+  PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSTRUMPACKGetCompLeafSize_C", MatSTRUMPACKGetCompLeafSize_STRUMPACK));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSTRUMPACKSetCompMinSepSize_C", MatSTRUMPACKSetCompMinSepSize_STRUMPACK));
+  PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSTRUMPACKGetCompMinSepSize_C", MatSTRUMPACKGetCompMinSepSize_STRUMPACK));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSTRUMPACKSetCompLossyPrecision_C", MatSTRUMPACKSetCompLossyPrecision_STRUMPACK));
+  PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSTRUMPACKGetCompLossyPrecision_C", MatSTRUMPACKGetCompLossyPrecision_STRUMPACK));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSTRUMPACKSetCompButterflyLevels_C", MatSTRUMPACKSetCompButterflyLevels_STRUMPACK));
+  PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSTRUMPACKGetCompButterflyLevels_C", MatSTRUMPACKGetCompButterflyLevels_STRUMPACK));
   B->factortype = ftype;
 
   /* set solvertype */
