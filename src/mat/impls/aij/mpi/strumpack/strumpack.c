@@ -69,19 +69,19 @@ static PetscErrorCode MatSTRUMPACKGetReordering_STRUMPACK(Mat F, MatSTRUMPACKReo
 /*@
   MatSTRUMPACKSetReordering - Set STRUMPACK fill-reducing reordering
 
-   Logically Collective
+  Logically Collective
 
-   Input Parameters:
-+  F - the factored matrix obtained by calling MatGetFactor() from PETSc-STRUMPACK interface
--  reordering - the code to be used to find the fill-reducing reordering
+  Input Parameters:
++ F          - the factored matrix obtained by calling MatGetFactor() from PETSc-STRUMPACK interface
+- reordering - the code to be used to find the fill-reducing reordering
       Possible values: NATURAL=0 METIS=1 PARMETIS=2 SCOTCH=3 PTSCOTCH=4 RCM=5 GEOMETRIC=6 AMD=7 MMD=8 AND=9 MLF=10 SPECTRAL=11
 
   Options Database Key:
-.   -mat_strumpack_reordering <METIS>  - Sparsity reducing matrix reordering, see `MatSTRUMPACKReordering`
+. -mat_strumpack_reordering <METIS> - Sparsity reducing matrix reordering, see `MatSTRUMPACKReordering`
 
-   Level: intermediate
+  Level: intermediate
 
-   References:
+  References:
 .  * - STRUMPACK documentation: https://portal.nersc.gov/project/sparse/strumpack/master/
 
 .seealso: [](ch_matrices), `Mat`, `MatSTRUMPACKReordering`, `MatGetFactor()`, `MatSTRUMPACKSetColPerm()`
@@ -123,18 +123,18 @@ static PetscErrorCode MatSTRUMPACKGetColPerm_STRUMPACK(Mat F, PetscBool *cperm)
 /*@
   MatSTRUMPACKSetColPerm - Set whether STRUMPACK should try to permute the columns of the matrix in order to get a nonzero diagonal
 
-   Logically Collective
+  Logically Collective
 
-   Input Parameters:
-+  F - the factored matrix obtained by calling `MatGetFactor()`
--  cperm - `PETSC_TRUE` to permute (internally) the columns of the matrix
+  Input Parameters:
++ F     - the factored matrix obtained by calling `MatGetFactor()`
+- cperm - `PETSC_TRUE` to permute (internally) the columns of the matrix
 
   Options Database Key:
-.   -mat_strumpack_colperm <cperm> - true to use the permutation
+. -mat_strumpack_colperm <cperm> - true to use the permutation
 
-   Level: intermediate
+  Level: intermediate
 
-   References:
+  References:
 .  * - STRUMPACK documentation: https://portal.nersc.gov/project/sparse/strumpack/master/
 
 .seealso: [](ch_matrices), `MatSTRUMPACKSetReordering()`, `Mat`, `MatGetFactor()`
@@ -181,21 +181,21 @@ static PetscErrorCode MatSTRUMPACKGetGPU_STRUMPACK(Mat F, PetscBool *gpu)
 /*@
   MatSTRUMPACKSetGPU - Set whether STRUMPACK should enable GPU acceleration (not supported for all compression types)
 
-   Logically Collective
+  Logically Collective
 
-   Input Parameters:
-+  F - the factored matrix obtained by calling MatGetFactor() from PETSc-STRUMPACK interface
--  gpu - whether or not to use GPU acceleration
+  Input Parameters:
++ F   - the factored matrix obtained by calling MatGetFactor() from PETSc-STRUMPACK interface
+- gpu - whether or not to use GPU acceleration
 
   Options Database Key:
-.   -mat_strumpack_gpu <gpu> - true to use gpu offload
+. -mat_strumpack_gpu <gpu> - true to use gpu offload
 
-   Level: intermediate
+  Level: intermediate
 
-   References:
+  References:
 .  * - STRUMPACK documentation: https://portal.nersc.gov/project/sparse/strumpack/master/
 
-.seealso: MatGetFactor()
+.seealso: `MatGetFactor()`
 @*/
 PetscErrorCode MatSTRUMPACKSetGPU(Mat F, PetscBool gpu)
 {
@@ -240,21 +240,21 @@ static PetscErrorCode MatSTRUMPACKGetCompression_STRUMPACK(Mat F, MatSTRUMPACKCo
 /*@
   MatSTRUMPACKSetCompression - Set STRUMPACK compression type
 
-   Input Parameters:
-+  F - the factored matrix obtained by calling MatGetFactor() from PETSc-STRUMPACK interface
--  comp - Type of compression to be used in the approximate sparse factorization
+  Input Parameters:
++ F    - the factored matrix obtained by calling MatGetFactor() from PETSc-STRUMPACK interface
+- comp - Type of compression to be used in the approximate sparse factorization
       Possible values: NONE=0 HSS=1 BLR=2 HODLR=3 BLR_HODLR=4 ZFP_BLR_HODLR=5 LOSSLESS=6 LOSSY=7
       Default is NONE for -pc_type lu and BLR for -pc_type ilu
 
   Options Database Key:
-.   -mat_strumpack_compression <NONE>  - Type of rank-structured compression in sparse LU factors (choose one of) NONE HSS BLR HODLR BLR_HODLR ZFP_BLR_HODLR LOSSLESS LOSSY (None)
+. -mat_strumpack_compression <NONE> - Type of rank-structured compression in sparse LU factors (choose one of) NONE HSS BLR HODLR BLR_HODLR ZFP_BLR_HODLR LOSSLESS LOSSY (None)
 
-   Level: intermediate
+  Level: intermediate
 
-   References:
+  References:
 .  * - STRUMPACK documentation: https://portal.nersc.gov/project/sparse/strumpack/master/
 
-.seealso: MatGetFactor()
+.seealso: `MatGetFactor()`
 @*/
 PetscErrorCode MatSTRUMPACKSetCompression(Mat F, MatSTRUMPACKCompression comp)
 {
@@ -293,18 +293,18 @@ static PetscErrorCode MatSTRUMPACKGetCompRelTol_STRUMPACK(Mat F, PetscReal *rtol
 /*@
   MatSTRUMPACKSetCompRelTol - Set STRUMPACK relative tolerance for compression
 
-   Logically Collective
+  Logically Collective
 
-   Input Parameters:
-+  F - the factored matrix obtained by calling `MatGetFactor()`
--  rtol - relative compression tolerance
+  Input Parameters:
++ F    - the factored matrix obtained by calling `MatGetFactor()`
+- rtol - relative compression tolerance
 
   Options Database Key:
-.   -mat_strumpack_compression_rel_tol <1e-4>         - Relative compression tolerance, when using pctype ilu (None)
+. -mat_strumpack_compression_rel_tol <1e-4> - Relative compression tolerance, when using pctype ilu (None)
 
-   Level: intermediate
+  Level: intermediate
 
-   References:
+  References:
 .  * - STRUMPACK documentation: https://portal.nersc.gov/project/sparse/strumpack/master/
 
 .seealso: [](ch_matrices), `Mat`, `MatGetFactor()`, `MatSTRUMPACKSetReordering()`, `MatSTRUMPACKSetColPerm()`
@@ -346,18 +346,18 @@ static PetscErrorCode MatSTRUMPACKGetCompAbsTol_STRUMPACK(Mat F, PetscReal *atol
 /*@
   MatSTRUMPACKSetCompAbsTol - Set STRUMPACK absolute tolerance for compression
 
-   Logically Collective
+  Logically Collective
 
-   Input Parameters:
-+  F - the factored matrix obtained by calling `MatGetFactor()`
--  atol - absolute compression tolerance
+  Input Parameters:
++ F    - the factored matrix obtained by calling `MatGetFactor()`
+- atol - absolute compression tolerance
 
   Options Database Key:
-.   -mat_strumpack_compression_abs_tol <1e-10>         - Absolute compression tolerance, when using pctype ilu (None)
+. -mat_strumpack_compression_abs_tol <1e-10> - Absolute compression tolerance, when using pctype ilu (None)
 
-   Level: intermediate
+  Level: intermediate
 
-   References:
+  References:
 .  * - STRUMPACK documentation: https://portal.nersc.gov/project/sparse/strumpack/master/
 
 .seealso: [](ch_matrices), `Mat`, `MatGetFactor()`, `MatSTRUMPACKSetReordering()`, `MatSTRUMPACKSetColPerm()`
@@ -399,18 +399,18 @@ static PetscErrorCode MatSTRUMPACKGetCompLeafSize_STRUMPACK(Mat F, PetscInt *lea
 /*@
   MatSTRUMPACKSetCompLeafSize - Set STRUMPACK leaf size for HSS, BLR, HODLR, ...
 
-   Logically Collective
+  Logically Collective
 
-   Input Parameters:
-+  F - the factored matrix obtained by calling MatGetFactor() from PETSc-STRUMPACK interface
--  leaf_size - Size of diagonal blocks in rank-structured approximation
+  Input Parameters:
++ F         - the factored matrix obtained by calling MatGetFactor() from PETSc-STRUMPACK interface
+- leaf_size - Size of diagonal blocks in rank-structured approximation
 
   Options Database Key:
-.   -mat_strumpack_compression_leaf_size    - Size of diagonal blocks in rank-structured approximation, when using pctype ilu (None)
+. -mat_strumpack_compression_leaf_size - Size of diagonal blocks in rank-structured approximation, when using pctype ilu (None)
 
-   Level: intermediate
+  Level: intermediate
 
-   References:
+  References:
 .  * - STRUMPACK documentation: https://portal.nersc.gov/project/sparse/strumpack/master/
 
 .seealso: [](ch_matrices), `Mat`, `MatGetFactor()`, `MatSTRUMPACKSetReordering()`, `MatSTRUMPACKSetColPerm()`
@@ -474,23 +474,23 @@ static PetscErrorCode MatSTRUMPACKSetGeometricWidth_STRUMPACK(Mat F, PetscInt w)
 /*@
   MatSTRUMPACKSetGeometricNxyz - Set STRUMPACK mesh x, y and z dimensions, for use with GEOMETRIC ordering.
 
-   Logically Collective
+  Logically Collective
 
-   If the mesh is two (or one) dimensional one can use 1, PETSC_DECIDE or PETSC_DEFAULT
-   for the missing z (and y) dimensions.
+  If the mesh is two (or one) dimensional one can use 1, PETSC_DECIDE or PETSC_DEFAULT
+  for the missing z (and y) dimensions.
 
-   Input Parameters:
-+  F - the factored matrix obtained by calling MatGetFactor() from PETSc-STRUMPACK interface
--  nx - x dimension of the mesh
--  ny - y dimension of the mesh
--  nz - z dimension of the mesh
+  Input Parameters:
++ F  - the factored matrix obtained by calling MatGetFactor() from PETSc-STRUMPACK interface
+. nx - x dimension of the mesh
+. ny - y dimension of the mesh
+- nz - z dimension of the mesh
 
-   Level: intermediate
+  Level: intermediate
 
-   References:
+  References:
 .  * - STRUMPACK documentation: https://portal.nersc.gov/project/sparse/strumpack/master/
 
-.seealso: MatGetFactor()
+.seealso: `MatGetFactor()`
 @*/
 PetscErrorCode MatSTRUMPACKSetGeometricNxyz(Mat F, PetscInt nx, PetscInt ny, PetscInt nz)
 {
@@ -505,21 +505,21 @@ PetscErrorCode MatSTRUMPACKSetGeometricNxyz(Mat F, PetscInt nx, PetscInt ny, Pet
 /*@
   MatSTRUMPACKSetGeometricComponents - Set STRUMPACK number of degrees of freedom per mesh point, for use with GEOMETRIC ordering.
 
-   Logically Collective
+  Logically Collective
 
-   Input Parameters:
-+  F - the factored matrix obtained by calling MatGetFactor() from PETSc-STRUMPACK interface
--  nc - Number of components/dof's per grid point
+  Input Parameters:
++ F  - the factored matrix obtained by calling MatGetFactor() from PETSc-STRUMPACK interface
+- nc - Number of components/dof's per grid point
 
   Options Database Key:
-.   -mat_strumpack_geometric_components <1>   - Number of components per mesh point, for geometric nested dissection ordering (None)
+. -mat_strumpack_geometric_components <1> - Number of components per mesh point, for geometric nested dissection ordering (None)
 
-   Level: intermediate
+  Level: intermediate
 
-   References:
+  References:
 .  * - STRUMPACK documentation: https://portal.nersc.gov/project/sparse/strumpack/master/
 
-.seealso: MatGetFactor()
+.seealso: `MatGetFactor()`
 @*/
 PetscErrorCode MatSTRUMPACKSetGeometricComponents(Mat F, PetscInt nc)
 {
@@ -532,21 +532,21 @@ PetscErrorCode MatSTRUMPACKSetGeometricComponents(Mat F, PetscInt nc)
 /*@
   MatSTRUMPACKSetGeometricWidth - Set STRUMPACK width of the separator, for use with GEOMETRIC ordering.
 
-   Logically Collective
+  Logically Collective
 
-   Input Parameters:
-+  F - the factored matrix obtained by calling MatGetFactor() from PETSc-STRUMPACK interface
--  w - width of the separator
+  Input Parameters:
++ F - the factored matrix obtained by calling MatGetFactor() from PETSc-STRUMPACK interface
+- w - width of the separator
 
   Options Database Key:
-.   -mat_strumpack_geometric_width <1>        - Width of the separator of the mesh, for geometric nested dissection ordering (None)
+. -mat_strumpack_geometric_width <1> - Width of the separator of the mesh, for geometric nested dissection ordering (None)
 
-   Level: intermediate
+  Level: intermediate
 
-   References:
+  References:
 .  * - STRUMPACK documentation: https://portal.nersc.gov/project/sparse/strumpack/master/
 
-.seealso: MatGetFactor()
+.seealso: `MatGetFactor()`
 @*/
 PetscErrorCode MatSTRUMPACKSetGeometricWidth(Mat F, PetscInt w)
 {
@@ -577,21 +577,21 @@ static PetscErrorCode MatSTRUMPACKGetCompMinSepSize_STRUMPACK(Mat F, PetscInt *m
 /*@
   MatSTRUMPACKSetCompMinSepSize - Set STRUMPACK minimum separator size for low-rank approximation
 
-   Logically Collective
+  Logically Collective
 
-   Input Parameters:
-+  F - the factored matrix obtained by calling MatGetFactor() from PETSc-STRUMPACK interface
--  min_sep_size - minimum dense matrix size for low-rank approximation
+  Input Parameters:
++ F            - the factored matrix obtained by calling MatGetFactor() from PETSc-STRUMPACK interface
+- min_sep_size - minimum dense matrix size for low-rank approximation
 
   Options Database Key:
-.   -mat_strumpack_compression_min_sep_size <min_sep_size>    - Minimum size of dense sub-block for low-rank compression
+. -mat_strumpack_compression_min_sep_size <min_sep_size> - Minimum size of dense sub-block for low-rank compression
 
-   Level: intermediate
+  Level: intermediate
 
-   References:
+  References:
 .  * - STRUMPACK documentation: https://portal.nersc.gov/project/sparse/strumpack/master/
 
-.seealso: MatGetFactor()
+.seealso: `MatGetFactor()`
 @*/
 PetscErrorCode MatSTRUMPACKSetCompMinSepSize(Mat F, PetscInt min_sep_size)
 {
@@ -630,21 +630,21 @@ static PetscErrorCode MatSTRUMPACKGetCompLossyPrecision_STRUMPACK(Mat F, PetscIn
 /*@
   MatSTRUMPACKSetCompLossyPrecision - Set STRUMPACK precision for lossy compression (requires ZFP support)
 
-   Logically Collective
+  Logically Collective
 
-   Input Parameters:
-+  F - the factored matrix obtained by calling MatGetFactor() from PETSc-STRUMPACK interface
--  lossy_prec - Number of bitplanes to use in lossy compression
+  Input Parameters:
++ F          - the factored matrix obtained by calling MatGetFactor() from PETSc-STRUMPACK interface
+- lossy_prec - Number of bitplanes to use in lossy compression
 
   Options Database Key:
-.   -mat_strumpack_compression_lossy_precision <lossy_prec>    - Precision when using lossy compression [1-64], when using pctype ilu, compression LOSSY (None)
+. -mat_strumpack_compression_lossy_precision <lossy_prec> - Precision when using lossy compression [1-64], when using pctype ilu, compression LOSSY (None)
 
-   Level: intermediate
+  Level: intermediate
 
-   References:
+  References:
 .  * - STRUMPACK documentation: https://portal.nersc.gov/project/sparse/strumpack/master/
 
-.seealso: MatGetFactor()
+.seealso: `MatGetFactor()`
 @*/
 PetscErrorCode MatSTRUMPACKSetCompLossyPrecision(Mat F, PetscInt lossy_prec)
 {
@@ -683,21 +683,21 @@ static PetscErrorCode MatSTRUMPACKGetCompButterflyLevels_STRUMPACK(Mat F, PetscI
 /*@
   MatSTRUMPACKSetCompButterflyLevels - Set STRUMPACK number of butterfly levels in HODLR compression (requires ButterflyPACK support)
 
-   Logically Collective
+  Logically Collective
 
-   Input Parameters:
-+  F - the factored matrix obtained by calling MatGetFactor() from PETSc-STRUMPACK interface
--  bfly_lvls - Number of levels of butterfly compression in HODLR compression
+  Input Parameters:
++ F         - the factored matrix obtained by calling MatGetFactor() from PETSc-STRUMPACK interface
+- bfly_lvls - Number of levels of butterfly compression in HODLR compression
 
   Options Database Key:
-.   -mat_strumpack_compression_butterfly_levels <bfly_lvls>    - Number of levels in the hierarchically off-diagonal matrix for which to use butterfly, when using pctype ilu, (BLR_)HODLR compression (None)
+. -mat_strumpack_compression_butterfly_levels <bfly_lvls> - Number of levels in the hierarchically off-diagonal matrix for which to use butterfly, when using pctype ilu, (BLR_)HODLR compression (None)
 
-   Level: intermediate
+  Level: intermediate
 
-   References:
+  References:
 .  * - STRUMPACK documentation: https://portal.nersc.gov/project/sparse/strumpack/master/
 
-.seealso: MatGetFactor()
+.seealso: `MatGetFactor()`
 @*/
 PetscErrorCode MatSTRUMPACKSetCompButterflyLevels(Mat F, PetscInt bfly_lvls)
 {
