@@ -272,7 +272,7 @@ static inline void SetVtols(PetscMPIInt rank, PetscMPIInt size, PetscReal tol0, 
   test:
     suffix: pos1
     output_file: output/ex5_pos1.out
-    args: -dir 1
+    args: -dir 1 -ts_event_dt_min 1e-6
     args: -restart {{0 1}}
     args: -dtpost {{0 0.25}}
     args: -ts_event_post_event_step {{0 0.31}}
@@ -283,7 +283,7 @@ static inline void SetVtols(PetscMPIInt rank, PetscMPIInt size, PetscReal tol0, 
   test:
     suffix: pos4
     output_file: output/ex5_pos4.out
-    args: -dir 1
+    args: -dir 1 -ts_event_dt_min 1e-6
     args: -restart {{0 1}}
     args: -dtpost {{0 0.25}}
     args: -ts_event_post_event_step {{0 0.31}}
@@ -296,7 +296,7 @@ static inline void SetVtols(PetscMPIInt rank, PetscMPIInt size, PetscReal tol0, 
   test:
     suffix: neu1
     output_file: output/ex5_neu1.out
-    args: -dir 0
+    args: -dir 0 -ts_event_dt_min 1e-6
     args: -restart {{0 1}}
     args: -dtpost {{0 0.25}}
     args: -ts_event_post_event_step {{0 0.31}}
@@ -307,7 +307,7 @@ static inline void SetVtols(PetscMPIInt rank, PetscMPIInt size, PetscReal tol0, 
   test:
     suffix: neu4
     output_file: output/ex5_neu4.out
-    args: -dir 0
+    args: -dir 0 -ts_event_dt_min 1e-6
     args: -restart {{0 1}}
     args: -dtpost {{0 0.25}}
     args: -ts_event_post_event_step {{0 0.31}}
@@ -320,7 +320,7 @@ static inline void SetVtols(PetscMPIInt rank, PetscMPIInt size, PetscReal tol0, 
   test:
     suffix: neg2
     output_file: output/ex5_neg2.out
-    args: -dir -1
+    args: -dir -1 -ts_event_dt_min 1e-6
     args: -restart {{0 1}}
     args: -dtpost {{0 0.25}}
     args: -ts_event_post_event_step {{0 0.31}}
@@ -333,7 +333,7 @@ static inline void SetVtols(PetscMPIInt rank, PetscMPIInt size, PetscReal tol0, 
   test:
     suffix: neg4
     output_file: output/ex5_neg4.out
-    args: -dir -1
+    args: -dir -1 -ts_event_dt_min 1e-6
     args: -restart {{0 1}}
     args: -dtpost {{0 0.25}}
     args: -ts_event_post_event_step {{0 0.31}}
