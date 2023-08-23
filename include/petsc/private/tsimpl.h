@@ -463,6 +463,7 @@ struct _n_TSEvent {
   PetscReal  *vtol;                                                                         /* array of tolerances for the event function zero check */
   PetscInt    iterctr;                                                                      /* iteration counter: used both for reporting and as a status indicator */
   PetscBool   processing;                                                                   /* this flag indicates if the event-resolving iterations are in progress, or the post-event dt handling is in progress */
+  PetscBool   revisit_right;                                                                /* [sync] "revisit the bracket's right end", if true, then fvalue(s) are not calculated, but are taken from fvalue_right(s) */
   PetscViewer monitor;
   /* Struct to record the events */
   struct {
