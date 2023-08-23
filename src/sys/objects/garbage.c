@@ -71,7 +71,7 @@ PetscErrorCode PetscObjectDelayedDestroy(PetscObject *obj)
     /* Only stash if the (non-cyclic) reference count hits 0 */
     if (count == 0) {
       (*obj)->refct = 1;
-      PetscCall(PetscObjectGetComm(*obj, &petsc_comm));
+      PetscCall(PetscObjectGetComm(*obj, &comm));
       PetscCallMPI(MPI_Comm_size(comm, &size));
       /* Eagerly destroy serial objects */
       if (size == 1) {
