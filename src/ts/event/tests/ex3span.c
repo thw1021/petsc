@@ -265,8 +265,17 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
 /*TEST
   test:
     suffix: 1
+    requires: !single
     output_file: output/ex3span_1.out
     args: -ts_monitor -ts_adapt_type none -restart
+    args: -dtpost 0.1127 -D 0.0015 -dir 0 -ts_max_time 9.8 -ts_dt 0.18
+    nsize: 1
+
+  test:
+    suffix: 1single
+    requires: single
+    output_file: output/ex3span_1single.out
+    args: -ts_monitor -ts_adapt_type none -restart -ts_event_dt_min 1e-6
     args: -dtpost 0.1127 -D 0.0015 -dir 0 -ts_max_time 9.8 -ts_dt 0.18
     nsize: 1
 
@@ -274,7 +283,7 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
     suffix: fin8
     output_file: output/ex3span_fin8.out
     args: -ts_max_time 8
-    args: -ts_monitor
+    args: -ts_monitor -ts_event_dt_min 1e-6
     args: -ts_adapt_type {{none basic}}
     args: -dtpost 0.1127
     args: -D {{0.0015 0.03}}
@@ -288,7 +297,7 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
     suffix: fin81
     output_file: output/ex3span_fin8.1.out
     args: -ts_max_time 8.1
-    args: -ts_monitor
+    args: -ts_monitor -ts_event_dt_min 1e-6
     args: -ts_adapt_type {{none basic}}
     args: -dtpost 0.1125
     args: -D {{0.0015 0.03}}
@@ -302,7 +311,7 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
     suffix: fin821
     output_file: output/ex3span_fin8.21.out
     args: -ts_max_time 8.21
-    args: -ts_monitor
+    args: -ts_monitor -ts_event_dt_min 1e-6
     args: -ts_adapt_type {{none basic}}
     args: -dtpost 0
     args: -D {{0.0015 0.03}}
@@ -316,7 +325,7 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
     suffix: fin899
     output_file: output/ex3span_fin8.99.out
     args: -ts_max_time 8.99
-    args: -ts_monitor
+    args: -ts_monitor -ts_event_dt_min 1e-6
     args: -ts_adapt_type {{none basic}}
     args: -dtpost 0.1127
     args: -D {{0.0015 0.03}}
@@ -330,7 +339,7 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
     suffix: fin9
     output_file: output/ex3span_fin9.out
     args: -ts_max_time 9
-    args: -ts_monitor
+    args: -ts_monitor -ts_event_dt_min 1e-6
     args: -ts_adapt_type {{none basic}}
     args: -dtpost 0
     args: -D {{0.0015 0.03}}
@@ -344,7 +353,7 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
     suffix: fin901
     output_file: output/ex3span_fin9.01.out
     args: -ts_max_time 9.01
-    args: -ts_monitor
+    args: -ts_monitor -ts_event_dt_min 1e-6
     args: -ts_adapt_type {{none basic}}
     args: -dtpost 0.1127
     args: -D {{0.0015 0.03}}
@@ -358,7 +367,7 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
     suffix: fin904
     output_file: output/ex3span_fin9.04.out
     args: -ts_max_time 9.04
-    args: -ts_monitor
+    args: -ts_monitor -ts_event_dt_min 1e-6
     args: -ts_adapt_type {{none basic}}
     args: -dtpost 0
     args: -D {{0.0015 0.03}}
@@ -372,7 +381,7 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
     suffix: fin905
     output_file: output/ex3span_fin9.05.out
     args: -ts_max_time 9.05
-    args: -ts_monitor
+    args: -ts_monitor -ts_event_dt_min 1e-6
     args: -ts_adapt_type {{none basic}}
     args: -dtpost 0.1127
     args: -D {{0.0015 0.03}}
@@ -386,7 +395,7 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
     suffix: fin905etc
     output_file: output/ex3span_fin9.05.out
     args: -ts_max_time {{9.06 9.07 9.1 9.21 9.5 9.99 10 11}}
-    args: -ts_monitor
+    args: -ts_monitor -ts_event_dt_min 1e-6
     args: -ts_adapt_type {{none basic}}
     args: -dtpost 0.11
     args: -D 0.0025
@@ -400,7 +409,7 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
     suffix: fin906
     output_file: output/ex3span_fin9.06.out
     args: -ts_max_time 9.06
-    args: -ts_monitor
+    args: -ts_monitor -ts_event_dt_min 1e-6
     args: -ts_adapt_type {{none basic}}
     args: -dtpost 0.1121
     args: -D {{0.0015 0.02}}
@@ -414,7 +423,7 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
     suffix: fin91
     output_file: output/ex3span_fin9.1.out
     args: -ts_max_time 9.1
-    args: -ts_monitor
+    args: -ts_monitor -ts_event_dt_min 1e-6
     args: -ts_adapt_type {{none basic}}
     args: -dtpost 0.09
     args: -D {{0.0015 0.03}}
@@ -428,7 +437,7 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
     suffix: fin921
     output_file: output/ex3span_fin9.21.out
     args: -ts_max_time 9.21
-    args: -ts_monitor
+    args: -ts_monitor -ts_event_dt_min 1e-6
     args: -ts_adapt_type {{none basic}}
     args: -dtpost 0.7
     args: -D {{0.0015 0.02}}
@@ -442,7 +451,7 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
     suffix: fin95
     output_file: output/ex3span_fin9.5.out
     args: -ts_max_time 9.5
-    args: -ts_monitor
+    args: -ts_monitor -ts_event_dt_min 1e-6
     args: -ts_adapt_type {{none basic}}
     args: -dtpost 0
     args: -D {{0.0015 0.0135}}
@@ -456,7 +465,7 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
     suffix: fin10
     output_file: output/ex3span_fin10.out
     args: -ts_max_time 10
-    args: -ts_monitor
+    args: -ts_monitor -ts_event_dt_min 1e-6
     args: -ts_adapt_type {{none basic}}
     args: -dtpost 0.17
     args: -D {{0.0015 0.02}}
@@ -470,7 +479,7 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
     suffix: fin11
     output_file: output/ex3span_fin11.out
     args: -ts_max_time 11
-    args: -ts_monitor
+    args: -ts_monitor -ts_event_dt_min 1e-6
     args: -ts_adapt_type {{none basic}}
     args: -dtpost 0
     args: -D {{0.0015 0.0016}}
