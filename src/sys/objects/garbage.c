@@ -51,8 +51,8 @@ static PetscErrorCode GarbageGetHMap_Private(MPI_Comm comm, PetscGarbage *garbag
 @*/
 PetscErrorCode PetscObjectDelayedDestroy(PetscObject *obj)
 {
-  MPI_Comm     petsc_comm;
-  PetscMPIInt  comm_size;
+  MPI_Comm     comm;
+  PetscMPIInt  size;
   PetscInt     count;
   PetscGarbage garbage;
 
@@ -72,12 +72,12 @@ PetscErrorCode PetscObjectDelayedDestroy(PetscObject *obj)
     if (count == 0) {
       (*obj)->refct = 1;
       PetscCall(PetscObjectGetComm(*obj, &petsc_comm));
-      PetscCallMPI(MPI_Comm_size(petsc_comm, &comm_size));
+      PetscCallMPI(MPI_Comm_size(comm, &size));
       /* Eagerly destroy serial objects */
-      if (comm_size == 1) {
+      if (size == 1) {
         PetscCall(PetscObjectDestroy(obj));
       } else {
-        PetscCall(GarbageGetHMap_Private(petsc_comm, &garbage));
+        PetscCall(GarbageGetHMap_Private(comm, &garbage));
         PetscCall(PetscHMapObjSet(garbage.map, (*obj)->cidx, *obj));
       }
     }
