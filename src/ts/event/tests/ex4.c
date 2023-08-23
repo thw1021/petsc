@@ -147,7 +147,7 @@ int main(int argc, char **argv)
             PetscCallMPI(MPI_Recv(&n, 1, MPIU_INT, i, j, PETSC_COMM_WORLD, &stat));
             PetscCallMPI(MPI_Recv(&t, 1, MPIU_REAL, i, j, PETSC_COMM_WORLD, &stat));
           }
-          PetscCall(PetscPrintf(PETSC_COMM_SELF, "%" PetscInt_FMT "\t%" PetscInt_FMT "\t%g\n", i, n, (double)t));
+          PetscCall(PetscPrintf(PETSC_COMM_SELF, "%" PetscInt_FMT "\t%" PetscInt_FMT "\t%.5g\n", i, n, (double)t));
         }
       }
     } else { // other ranks only send their data
@@ -219,9 +219,11 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
     }
   }
 
-  if (Ctx->cnt < MAX_NEV && nev_zero > 0) {
-    Ctx->evres[Ctx->cnt]   = t;
-    Ctx->evnum[Ctx->cnt++] = nev_zero;
+  if (Ctx->cnt + nev_zero < MAX_NEV) {
+    for (PetscInt i = 0; i < nev_zero; i++) { // save the repeating zeros separately for easier/unified testing
+      Ctx->evres[Ctx->cnt]   = t;
+      Ctx->evnum[Ctx->cnt++] = 1;
+    }
   }
 
 #ifdef NEW_VERSION
@@ -241,7 +243,7 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
     suffix: 0
     output_file: output/ex4_0.out
     args: -dir 0
-    args: -ts_adapt_dt_min 1e-10
+    args: -ts_adapt_dt_min 1e-10 -ts_event_dt_min 1e-6
     args: -ts_dt 0.4
     args: -restart 1
     args: -ts_event_tol {{1e-8 1e-15}}
@@ -257,7 +259,7 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
     suffix: pos
     output_file: output/ex4_pos.out
     args: -dir 1
-    args: -ts_adapt_dt_min 1e-10
+    args: -ts_adapt_dt_min 1e-10 -ts_event_dt_min 1e-6
     args: -ts_dt 0.4
     args: -restart 0
     args: -ts_event_tol {{1e-8 1e-15}}
@@ -273,7 +275,7 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
     suffix: neg
     output_file: output/ex4_neg.out
     args: -dir -1
-    args: -ts_adapt_dt_min 1e-10
+    args: -ts_adapt_dt_min 1e-10 -ts_event_dt_min 1e-6
     args: -ts_dt 0.4
     args: -restart 1
     args: -ts_event_tol {{1e-8 1e-15}}
