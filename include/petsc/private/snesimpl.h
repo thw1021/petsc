@@ -261,27 +261,26 @@ PETSC_INTERN PetscErrorCode SNESVISetComputeVariableBounds_VI(SNES, SNESVIComput
 PETSC_INTERN PetscErrorCode SNESVISetVariableBounds_VI(SNES, Vec, Vec);
 PETSC_INTERN PetscErrorCode SNESConvergedDefault_VI(SNES, PetscInt, PetscReal, PetscReal, PetscReal, SNESConvergedReason *, void *);
 
-PETSC_EXTERN PetscErrorCode DMSNESUnsetFunctionContext_Internal(DM);
+PETSC_INTERN PetscErrorCode DMSNESUnsetFunctionContext_Internal(DM);
 PETSC_EXTERN PetscErrorCode DMSNESUnsetJacobianContext_Internal(DM);
-PETSC_EXTERN PetscErrorCode DMSNESCheck_Internal(SNES, DM, Vec);
+PETSC_INTERN PetscErrorCode DMSNESCheck_Internal(SNES, DM, Vec);
 
 PETSC_EXTERN PetscLogEvent SNES_Solve;
-PETSC_EXTERN PetscLogEvent SNES_SetUp;
-PETSC_EXTERN PetscLogEvent SNES_LineSearch;
-PETSC_EXTERN PetscLogEvent SNES_FunctionEval;
-PETSC_EXTERN PetscLogEvent SNES_JacobianEval;
-PETSC_EXTERN PetscLogEvent SNES_NGSEval;
-PETSC_EXTERN PetscLogEvent SNES_NGSFuncEval;
-PETSC_EXTERN PetscLogEvent SNES_NPCSolve;
-PETSC_EXTERN PetscLogEvent SNES_ObjectiveEval;
+PETSC_INTERN PetscLogEvent SNES_SetUp;
+PETSC_INTERN PetscLogEvent SNES_FunctionEval;
+PETSC_INTERN PetscLogEvent SNES_JacobianEval;
+PETSC_INTERN PetscLogEvent SNES_NGSEval;
+PETSC_INTERN PetscLogEvent SNES_NGSFuncEval;
+PETSC_INTERN PetscLogEvent SNES_NPCSolve;
+PETSC_INTERN PetscLogEvent SNES_ObjectiveEval;
 
 PETSC_INTERN PetscBool  SNEScite;
 PETSC_INTERN const char SNESCitation[];
 
 /* Used by TAOBNK solvers */
-PETSC_EXTERN PetscErrorCode KSPPostSolve_SNESEW(KSP, Vec, Vec, SNES);
-PETSC_EXTERN PetscErrorCode KSPPreSolve_SNESEW(KSP, Vec, Vec, SNES);
-PETSC_EXTERN PetscErrorCode SNESEWSetFromOptions_Private(SNESKSPEW *, PetscBool, MPI_Comm, const char *);
+PETSC_INTERN PetscErrorCode KSPPostSolve_SNESEW(KSP, Vec, Vec, void *);
+PETSC_INTERN PetscErrorCode KSPPreSolve_SNESEW(KSP, Vec, Vec, void *);
+PETSC_INTERN PetscErrorCode SNESEWSetFromOptions_Private(SNESKSPEW *, PetscBool, MPI_Comm, const char *);
 
 /*
     Either generate an error or mark as diverged when a real from a SNES function norm is Nan or Inf.
