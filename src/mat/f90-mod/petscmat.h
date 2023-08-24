@@ -351,7 +351,7 @@
       PetscEnum, parameter :: MAT_STRUMPACK_MMD = 8
       PetscEnum, parameter :: MAT_STRUMPACK_AND = 9
       PetscEnum, parameter :: MAT_STRUMPACK_MLF = 10
-      PetscEnum, parameter :: MAT_STRUMPACK_SPECTRAL  = 11
+      PetscEnum, parameter :: MAT_STRUMPACK_SPECTRAL = 11
 !
 ! MatSTRUMPACKCompression
       PetscEnum, parameter :: MAT_STRUMPACK_NONE = 0

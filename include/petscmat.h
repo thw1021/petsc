@@ -2269,45 +2269,75 @@ PETSC_EXTERN PetscErrorCode MatSuperluDistGetDiagU(Mat, PetscScalar *);
 .seealso: `Mat`, `MATSOLVERSTRUMPACK`, `MatGetFactor()`, `MatSTRUMPACKSetReordering()`
 E*/
 typedef enum {
-  MAT_STRUMPACK_NATURAL   = 0,
-  MAT_STRUMPACK_METIS     = 1,
-  MAT_STRUMPACK_PARMETIS  = 2,
-  MAT_STRUMPACK_SCOTCH    = 3,
-  MAT_STRUMPACK_PTSCOTCH  = 4,
-  MAT_STRUMPACK_RCM       = 5,
-  MAT_STRUMPACK_GEOMETRIC = 6,
-  MAT_STRUMPACK_AMD       = 7,
-  MAT_STRUMPACK_MMD       = 8,
-  MAT_STRUMPACK_AND       = 9,
-  MAT_STRUMPACK_MLF       = 10,
-  MAT_STRUMPACK_SPECTRAL  = 11
+  MAT_STRUMPACK_NATURAL,
+  MAT_STRUMPACK_METIS,
+  MAT_STRUMPACK_PARMETIS,
+  MAT_STRUMPACK_SCOTCH,
+  MAT_STRUMPACK_PTSCOTCH,
+  MAT_STRUMPACK_RCM,
+  MAT_STRUMPACK_GEOMETRIC,
+  MAT_STRUMPACK_AMD,
+  MAT_STRUMPACK_MMD,
+  MAT_STRUMPACK_AND,
+  MAT_STRUMPACK_MLF,
+  MAT_STRUMPACK_SPECTRAL
 } MatSTRUMPACKReordering;
 
 PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetReordering(Mat, MatSTRUMPACKReordering);
+PETSC_EXTERN PetscErrorCode MatSTRUMPACKGetReordering(Mat, MatSTRUMPACKReordering *);
 PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetGeometricNxyz(Mat, PetscInt, PetscInt, PetscInt);
 PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetGeometricComponents(Mat, PetscInt);
 PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetGeometricWidth(Mat, PetscInt);
 PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetColPerm(Mat, PetscBool);
+PETSC_EXTERN PetscErrorCode MatSTRUMPACKGetColPerm(Mat, PetscBool *);
 PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetGPU(Mat, PetscBool);
+PETSC_EXTERN PetscErrorCode MatSTRUMPACKGetGPU(Mat, PetscBool *);
 
+/*E
+    MatSTRUMPACKCompression - Compression used in the approximate sparse factorization solver `MATSOLVERSTRUMPACK``
+
+    Values:
++  `MAT_STRUMPACK_NONE`          - no compression, direct solver
+.  `MAT_STRUMPACK_HSS`           - hierarchically semi-separable
+.  `MAT_STRUMPACK_BLR`           - block low rank
+.  `MAT_STRUMPACK_HODLR`         - hierarchically off-diagonal low rank (requires ButterfyPACK support, configure with --download-butterflypack)
+.  `MAT_STRUMPACK_BLR_HODLR`     - hybrid of BLR and HODLR (requires ButterfyPACK support, configure with --download-butterflypack)
+.  `MAT_STRUMPACK_ZFP_BLR_HODLR` - hybrid of lossy (ZFP), BLR and HODLR (requires ButterfyPACK and ZFP support, configure with --download-butterflypack --download-zfp)
+.  `MAT_STRUMPACK_LOSSLESS`      - lossless compression (requires ZFP support, configure with --download-zfp)
+-  `MAT_STRUMPACK_LOSSY`         - lossy compression (requires ZFP support, configure with --download-zfp)
+
+    Level: intermediate
+
+    Developer Note:
+    Should be called `MatSTRUMPACKCompressionType`
+
+.seealso: `Mat`, `MATSOLVERSTRUMPACK`, `MatGetFactor()`, `MatSTRUMPACKSetCompression()`
+E*/
 typedef enum {
-  MAT_STRUMPACK_NONE          = 0,
-  MAT_STRUMPACK_HSS           = 1,
-  MAT_STRUMPACK_BLR           = 2,
-  MAT_STRUMPACK_HODLR         = 3,
-  MAT_STRUMPACK_BLR_HODLR     = 4,
-  MAT_STRUMPACK_ZFP_BLR_HODLR = 5,
-  MAT_STRUMPACK_LOSSLESS      = 6,
-  MAT_STRUMPACK_LOSSY         = 7
+  MAT_STRUMPACK_NONE,
+  MAT_STRUMPACK_HSS,
+  MAT_STRUMPACK_BLR,
+  MAT_STRUMPACK_HODLR,
+  MAT_STRUMPACK_BLR_HODLR,
+  MAT_STRUMPACK_ZFP_BLR_HODLR,
+  MAT_STRUMPACK_LOSSLESS,
+  MAT_STRUMPACK_LOSSY
 } MatSTRUMPACKCompression;
 
 PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetCompression(Mat, MatSTRUMPACKCompression);
+PETSC_EXTERN PetscErrorCode MatSTRUMPACKGetCompression(Mat, MatSTRUMPACKCompression *);
 PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetCompRelTol(Mat, PetscReal);
+PETSC_EXTERN PetscErrorCode MatSTRUMPACKGetCompRelTol(Mat, PetscReal *);
 PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetCompAbsTol(Mat, PetscReal);
+PETSC_EXTERN PetscErrorCode MatSTRUMPACKGetCompAbsTol(Mat, PetscReal *);
 PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetCompMinSepSize(Mat, PetscInt);
+PETSC_EXTERN PetscErrorCode MatSTRUMPACKGetCompMinSepSize(Mat, PetscInt *);
 PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetCompLeafSize(Mat, PetscInt);
+PETSC_EXTERN PetscErrorCode MatSTRUMPACKGetCompLeafSize(Mat, PetscInt *);
 PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetCompLossyPrecision(Mat, PetscInt);
+PETSC_EXTERN PetscErrorCode MatSTRUMPACKGetCompLossyPrecision(Mat, PetscInt *);
 PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetCompButterflyLevels(Mat, PetscInt);
+PETSC_EXTERN PetscErrorCode MatSTRUMPACKGetCompButterflyLevels(Mat, PetscInt *);
 #endif
 
 PETSC_EXTERN PetscErrorCode MatBindToCPU(Mat, PetscBool);
