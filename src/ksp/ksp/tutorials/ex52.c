@@ -47,12 +47,10 @@ int main(int argc, char **args)
   PetscMPIInt   rank, size;
   PetscLogStage stage;
 
-  PetscFunctionBeginUser;
-
 #if defined(PETSC_HAVE_STRUMPACK) && defined(PETSC_HAVE_SLATE)
-  PetscMPIInt thread_level;
-  PetscCallMPI(MPI_Init_thread(&argc, &args, MPI_THREAD_MULTIPLE, &thread_level));
+  PETSC_MPI_THREAD_REQUIRED = MPI_THREAD_MULTIPLE;
 #endif
+  PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &args, (char *)0, help));
   PetscCallMPI(MPI_Comm_rank(PETSC_COMM_WORLD, &rank));
   PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD, &size));
@@ -444,9 +442,6 @@ int main(int argc, char **args)
          options are chosen (e.g., -log_view).
   */
   PetscCall(PetscFinalize());
-#if defined(PETSC_HAVE_STRUMPACK) && defined(PETSC_HAVE_SLATE)
-  PetscCallMPI(MPI_Finalize());
-#endif
   return 0;
 }
 
