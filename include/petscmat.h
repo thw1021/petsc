@@ -2245,7 +2245,7 @@ PETSC_EXTERN PetscErrorCode MatSuperluDistGetDiagU(Mat, PetscScalar *);
 
 #ifdef PETSC_HAVE_STRUMPACK
 /*E
-    MatSTRUMPACKReordering - sparsity reducing ordering to be used in `MATSOLVERSTRUMPACK``
+    MatSTRUMPACKReordering - sparsity reducing ordering to be used in `MATSOLVERSTRUMPACK`
 
     Values:
 +  `MAT_STRUMPACK_NATURAL`   - use the current ordering
@@ -2294,7 +2294,7 @@ PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetGPU(Mat, PetscBool);
 PETSC_EXTERN PetscErrorCode MatSTRUMPACKGetGPU(Mat, PetscBool *);
 
 /*E
-    MatSTRUMPACKCompressionType - Compression used in the approximate sparse factorization solver `MATSOLVERSTRUMPACK``
+    MatSTRUMPACKCompressionType - Compression used in the approximate sparse factorization solver `MATSOLVERSTRUMPACK`
 
     Values:
 +  `MAT_STRUMPACK_COMPRESSION_TYPE_NONE`          - no compression, direct solver

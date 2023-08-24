@@ -1112,9 +1112,9 @@ static PetscErrorCode MatFactorGetSolverType_aij_strumpack(Mat A, MatSolverType 
 
  Level: beginner
 
- HODLR, BLR_HODBF and ZFP_BLR_HODLR compression require STRUMPACK to be configured with ButterflyPACK support (--download-butterflypack).
+ HODLR, BLR_HODBF and ZFP_BLR_HODLR compression require STRUMPACK to be configured with ButterflyPACK support (`--download-butterflypack`).
 
- LOSSY, LOSSLESS and ZFP_BLR_HODLR compression require STRUMPACK to be configured with ZFP support (--download-zfp).
+ LOSSY, LOSSLESS and ZFP_BLR_HODLR compression require STRUMPACK to be configured with ZFP support (`--download-zfp`).
 
 .seealso: [](ch_matrices), `Mat`, `PCLU`, `PCILU`, `MATSOLVERSUPERLU_DIST`, `MATSOLVERMUMPS`, `PCFactorSetMatSolverType()`, `MatSolverType`,
           `MatGetFactor()`, `MatSTRUMPACKSetReordering()`, `MatSTRUMPACKReordering`, `MatSTRUMPACKCompressionType`, `MatSTRUMPACKSetColPerm()`.
