@@ -72,7 +72,7 @@ static PetscErrorCode MatSTRUMPACKGetReordering_STRUMPACK(Mat F, MatSTRUMPACKReo
   Logically Collective
 
   Input Parameters:
-+ F          - the factored matrix obtained by calling MatGetFactor() from PETSc-STRUMPACK interface
++ F          - the factored matrix obtained by calling `MatGetFactor()` from PETSc-STRUMPACK interface
 - reordering - the code to be used to find the fill-reducing reordering
       Possible values: NATURAL=0 METIS=1 PARMETIS=2 SCOTCH=3 PTSCOTCH=4 RCM=5 GEOMETRIC=6 AMD=7 MMD=8 AND=9 MLF=10 SPECTRAL=11
 
@@ -184,7 +184,7 @@ static PetscErrorCode MatSTRUMPACKGetGPU_STRUMPACK(Mat F, PetscBool *gpu)
   Logically Collective
 
   Input Parameters:
-+ F   - the factored matrix obtained by calling MatGetFactor() from PETSc-STRUMPACK interface
++ F   - the factored matrix obtained by calling `MatGetFactor()` from PETSc-STRUMPACK interface
 - gpu - whether or not to use GPU acceleration
 
   Options Database Key:
@@ -241,7 +241,7 @@ static PetscErrorCode MatSTRUMPACKGetCompression_STRUMPACK(Mat F, MatSTRUMPACKCo
   MatSTRUMPACKSetCompression - Set STRUMPACK compression type
 
   Input Parameters:
-+ F    - the factored matrix obtained by calling MatGetFactor() from PETSc-STRUMPACK interface
++ F    - the factored matrix obtained by calling `MatGetFactor()` from PETSc-STRUMPACK interface
 - comp - Type of compression to be used in the approximate sparse factorization
       Possible values: NONE=0 HSS=1 BLR=2 HODLR=3 BLR_HODLR=4 ZFP_BLR_HODLR=5 LOSSLESS=6 LOSSY=7
       Default is NONE for -pc_type lu and BLR for -pc_type ilu
@@ -397,12 +397,12 @@ static PetscErrorCode MatSTRUMPACKGetCompLeafSize_STRUMPACK(Mat F, PetscInt *lea
 }
 
 /*@
-  MatSTRUMPACKSetCompLeafSize - Set STRUMPACK leaf size for HSS, BLR, HODLR, ...
+  MatSTRUMPACKSetCompLeafSize - Set STRUMPACK leaf size for HSS, BLR, HODLR...
 
   Logically Collective
 
   Input Parameters:
-+ F         - the factored matrix obtained by calling MatGetFactor() from PETSc-STRUMPACK interface
++ F         - the factored matrix obtained by calling `MatGetFactor()` from PETSc-STRUMPACK interface
 - leaf_size - Size of diagonal blocks in rank-structured approximation
 
   Options Database Key:
@@ -438,18 +438,18 @@ static PetscErrorCode MatSTRUMPACKSetGeometricNxyz_STRUMPACK(Mat F, PetscInt nx,
 
   PetscFunctionBegin;
   if (nx < 1) {
-    if (nx == PETSC_DECIDE || nx == PETSC_DEFAULT) nx = 1;
-    else SETERRQ(PetscObjectComm((PetscObject)F), PETSC_ERR_ARG_OUTOFRANGE, "nx < 1");
+    PetscCheck(nx == PETSC_DECIDE || nx == PETSC_DEFAULT, PetscObjectComm((PetscObject)F), PETSC_ERR_ARG_OUTOFRANGE, "nx < 1");
+    nx = 1;
   }
   PetscStackCallExternalVoid("STRUMPACK_set_nx", STRUMPACK_set_nx(*S, nx));
   if (ny < 1) {
-    if (ny == PETSC_DECIDE || ny == PETSC_DEFAULT) ny = 1;
-    else SETERRQ(PetscObjectComm((PetscObject)F), PETSC_ERR_ARG_OUTOFRANGE, "ny < 1");
+    PetscCheck(ny == PETSC_DECIDE || ny == PETSC_DEFAULT, PetscObjectComm((PetscObject)F), PETSC_ERR_ARG_OUTOFRANGE, "ny < 1");
+    ny = 1;
   }
   PetscStackCallExternalVoid("STRUMPACK_set_ny", STRUMPACK_set_ny(*S, ny));
   if (nz < 1) {
-    if (nz == PETSC_DECIDE || nz == PETSC_DEFAULT) nz = 1;
-    else SETERRQ(PetscObjectComm((PetscObject)F), PETSC_ERR_ARG_OUTOFRANGE, "nz < 1");
+    PetscCheck(nz == PETSC_DECIDE || nz == PETSC_DEFAULT, PetscObjectComm((PetscObject)F), PETSC_ERR_ARG_OUTOFRANGE, "nz < 1");
+    nz = 1;
   }
   PetscStackCallExternalVoid("STRUMPACK_set_nz", STRUMPACK_set_nz(*S, nz));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -480,7 +480,7 @@ static PetscErrorCode MatSTRUMPACKSetGeometricWidth_STRUMPACK(Mat F, PetscInt w)
   for the missing z (and y) dimensions.
 
   Input Parameters:
-+ F  - the factored matrix obtained by calling MatGetFactor() from PETSc-STRUMPACK interface
++ F  - the factored matrix obtained by calling `MatGetFactor()` from PETSc-STRUMPACK interface
 . nx - x dimension of the mesh
 . ny - y dimension of the mesh
 - nz - z dimension of the mesh
@@ -508,7 +508,7 @@ PetscErrorCode MatSTRUMPACKSetGeometricNxyz(Mat F, PetscInt nx, PetscInt ny, Pet
   Logically Collective
 
   Input Parameters:
-+ F  - the factored matrix obtained by calling MatGetFactor() from PETSc-STRUMPACK interface
++ F  - the factored matrix obtained by calling `MatGetFactor()` from PETSc-STRUMPACK interface
 - nc - Number of components/dof's per grid point
 
   Options Database Key:
@@ -535,7 +535,7 @@ PetscErrorCode MatSTRUMPACKSetGeometricComponents(Mat F, PetscInt nc)
   Logically Collective
 
   Input Parameters:
-+ F - the factored matrix obtained by calling MatGetFactor() from PETSc-STRUMPACK interface
++ F - the factored matrix obtained by calling `MatGetFactor()` from PETSc-STRUMPACK interface
 - w - width of the separator
 
   Options Database Key:
@@ -580,7 +580,7 @@ static PetscErrorCode MatSTRUMPACKGetCompMinSepSize_STRUMPACK(Mat F, PetscInt *m
   Logically Collective
 
   Input Parameters:
-+ F            - the factored matrix obtained by calling MatGetFactor() from PETSc-STRUMPACK interface
++ F            - the factored matrix obtained by calling `MatGetFactor()` from PETSc-STRUMPACK interface
 - min_sep_size - minimum dense matrix size for low-rank approximation
 
   Options Database Key:
@@ -633,7 +633,7 @@ static PetscErrorCode MatSTRUMPACKGetCompLossyPrecision_STRUMPACK(Mat F, PetscIn
   Logically Collective
 
   Input Parameters:
-+ F          - the factored matrix obtained by calling MatGetFactor() from PETSc-STRUMPACK interface
++ F          - the factored matrix obtained by calling `MatGetFactor()` from PETSc-STRUMPACK interface
 - lossy_prec - Number of bitplanes to use in lossy compression
 
   Options Database Key:
@@ -686,7 +686,7 @@ static PetscErrorCode MatSTRUMPACKGetCompButterflyLevels_STRUMPACK(Mat F, PetscI
   Logically Collective
 
   Input Parameters:
-+ F         - the factored matrix obtained by calling MatGetFactor() from PETSc-STRUMPACK interface
++ F         - the factored matrix obtained by calling `MatGetFactor()` from PETSc-STRUMPACK interface
 - bfly_lvls - Number of levels of butterfly compression in HODLR compression
 
   Options Database Key:
@@ -893,7 +893,7 @@ static PetscErrorCode MatFactorGetSolverType_aij_strumpack(Mat A, MatSolverType 
   Consult the STRUMPACK manual for more info,
     https://portal.nersc.gov/project/sparse/strumpack/master/
 
-  Use ` ./configure --download-strumpack --download-metis` to have PETSc installed with STRUMPACK.
+  Use `./configure --download-strumpack --download-metis` to have PETSc installed with STRUMPACK.
 
   For full functionality, add `--download-slate --download-magma --download-parmetis --download-ptscotch --download-zfp --download-butterflypack`.
   SLATE provides GPU support in the multi-GPU setting, providing ScaLAPACK functionality but with GPU acceleration.
