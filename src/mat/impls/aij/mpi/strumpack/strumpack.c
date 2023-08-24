@@ -74,7 +74,6 @@ static PetscErrorCode MatSTRUMPACKGetReordering_STRUMPACK(Mat F, MatSTRUMPACKReo
   Input Parameters:
 + F          - the factored matrix obtained by calling `MatGetFactor()` from PETSc-STRUMPACK interface
 - reordering - the code to be used to find the fill-reducing reordering
-      Possible values: NATURAL=0 METIS=1 PARMETIS=2 SCOTCH=3 PTSCOTCH=4 RCM=5 GEOMETRIC=6 AMD=7 MMD=8 AND=9 MLF=10 SPECTRAL=11
 
   Options Database Key:
 . -mat_strumpack_reordering <METIS> - Sparsity reducing matrix reordering, see `MatSTRUMPACKReordering`
@@ -104,7 +103,6 @@ PetscErrorCode MatSTRUMPACKSetReordering(Mat F, MatSTRUMPACKReordering reorderin
 
   Output Parameter:
 . reordering - the code to be used to find the fill-reducing reordering
-      Possible values: NATURAL=0 METIS=1 PARMETIS=2 SCOTCH=3 PTSCOTCH=4 RCM=5 GEOMETRIC=6 AMD=7 MMD=8 AND=9 MLF=10 SPECTRAL=11
 
   Level: intermediate
 
@@ -269,26 +267,26 @@ PetscErrorCode MatSTRUMPACKGetGPU(Mat F, PetscBool *gpu)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatSTRUMPACKSetCompression_STRUMPACK(Mat F, MatSTRUMPACKCompression comp)
+static PetscErrorCode MatSTRUMPACKSetCompression_STRUMPACK(Mat F, MatSTRUMPACKCompressionType comp)
 {
   STRUMPACK_SparseSolver *S = (STRUMPACK_SparseSolver *)F->data;
 
   PetscFunctionBegin;
 #if !defined(STRUMPACK_HAVE_BPACK)
-  PetscCheck(comp != MAT_STRUMPACK_HODLR && comp != MAT_STRUMPACK_BLR_HODLR && comp != MAT_STRUMPACK_ZFP_BLR_HODLR, PetscObjectComm((PetscObject)F), PETSC_ERR_SUP, "Compression scheme requires ButterflyPACK, please reconfigure with --download-butterflypack");
+  PetscCheck(comp != MAT_STRUMPACK_COMPRESSION_TYPE_HODLR && comp != MAT_STRUMPACK_COMPRESSION_TYPE_BLR_HODLR && comp != MAT_STRUMPACK_COMPRESSION_TYPE_ZFP_BLR_HODLR, PetscObjectComm((PetscObject)F), PETSC_ERR_SUP, "Compression scheme requires ButterflyPACK, please reconfigure with --download-butterflypack");
 #endif
 #if !defined(STRUMPACK_HAVE_ZFP)
-  PetscCheck(comp != MAT_STRUMPACK_ZFP_BLR_HODLR && comp != MAT_STRUMPACK_LOSSLESS && comp != MAT_STRUMPACK_LOSSY, PetscObjectComm((PetscObject)F), PETSC_ERR_SUP, "Compression scheme requires ZFP, please reconfigure with --download-zfp");
+  PetscCheck(comp != MAT_STRUMPACK_COMPRESSION_TYPE_ZFP_BLR_HODLR && comp != MAT_STRUMPACK_COMPRESSION_TYPE_LOSSLESS && comp != MAT_STRUMPACK_COMPRESSION_TYPE_LOSSY, PetscObjectComm((PetscObject)F), PETSC_ERR_SUP, "Compression scheme requires ZFP, please reconfigure with --download-zfp");
 #endif
   PetscStackCallExternalVoid("STRUMPACK_set_compression", STRUMPACK_set_compression(*S, (STRUMPACK_COMPRESSION_TYPE)comp));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-static PetscErrorCode MatSTRUMPACKGetCompression_STRUMPACK(Mat F, MatSTRUMPACKCompression *comp)
+static PetscErrorCode MatSTRUMPACKGetCompression_STRUMPACK(Mat F, MatSTRUMPACKCompressionType *comp)
 {
   STRUMPACK_SparseSolver *S = (STRUMPACK_SparseSolver *)F->data;
 
   PetscFunctionBegin;
-  PetscStackCallExternalVoid("STRUMPACK_compression", *comp = (MatSTRUMPACKCompression)STRUMPACK_compression(*S));
+  PetscStackCallExternalVoid("STRUMPACK_compression", *comp = (MatSTRUMPACKCompressionType)STRUMPACK_compression(*S));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -298,25 +296,27 @@ static PetscErrorCode MatSTRUMPACKGetCompression_STRUMPACK(Mat F, MatSTRUMPACKCo
   Input Parameters:
 + F    - the factored matrix obtained by calling `MatGetFactor()` from PETSc-STRUMPACK interface
 - comp - Type of compression to be used in the approximate sparse factorization
-      Possible values: NONE=0 HSS=1 BLR=2 HODLR=3 BLR_HODLR=4 ZFP_BLR_HODLR=5 LOSSLESS=6 LOSSY=7
-      Default is NONE for -pc_type lu and BLR for -pc_type ilu
 
   Options Database Key:
-. -mat_strumpack_compression <NONE> - Type of rank-structured compression in sparse LU factors (choose one of) NONE HSS BLR HODLR BLR_HODLR ZFP_BLR_HODLR LOSSLESS LOSSY (None)
+. -mat_strumpack_compression <NONE> - Type of rank-structured compression in sparse LU factors (choose one of) NONE HSS BLR HODLR BLR_HODLR ZFP_BLR_HODLR LOSSLESS LOSSY
 
   Level: intermediate
+
+  Notes:
+  Default for `comp` is `MAT_STRUMPACK_COMPRESSION_TYPE_NONE` for `-pc_type lu` and `MAT_STRUMPACK_COMPRESSION_TYPE_BLR`
+  for `-pc_type ilu`
 
   References:
 .  * - STRUMPACK documentation: https://portal.nersc.gov/project/sparse/strumpack/master/
 
-.seealso: `MatGetFactor()`, `MatSTRUMPACKGetCompression()`
+.seealso: `MatGetFactor()`, `MatSTRUMPACKCompressionType`, `MatSTRUMPACKGetCompression()`
 @*/
-PetscErrorCode MatSTRUMPACKSetCompression(Mat F, MatSTRUMPACKCompression comp)
+PetscErrorCode MatSTRUMPACKSetCompression(Mat F, MatSTRUMPACKCompressionType comp)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(F, MAT_CLASSID, 1);
   PetscValidLogicalCollectiveEnum(F, comp, 2);
-  PetscTryMethod(F, "MatSTRUMPACKSetCompression_C", (Mat, MatSTRUMPACKCompression), (F, comp));
+  PetscTryMethod(F, "MatSTRUMPACKSetCompression_C", (Mat, MatSTRUMPACKCompressionType), (F, comp));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 /*@
@@ -327,21 +327,22 @@ PetscErrorCode MatSTRUMPACKSetCompression(Mat F, MatSTRUMPACKCompression comp)
 
   Output Parameter:
 . comp - Type of compression to be used in the approximate sparse factorization
-      Possible values: NONE=0 HSS=1 BLR=2 HODLR=3 BLR_HODLR=4 ZFP_BLR_HODLR=5 LOSSLESS=6 LOSSY=7
-      Default is NONE for -pc_type lu and BLR for -pc_type ilu
 
   Level: intermediate
+
+  Notes:
+  Default is `MAT_STRUMPACK_COMPRESSION_TYPE_NONE` for `-pc_type lu` and `MAT_STRUMPACK_COMPRESSION_TYPE_BLR` for `-pc_type ilu`
 
   References:
 .  * - STRUMPACK documentation: https://portal.nersc.gov/project/sparse/strumpack/master/
 
-.seealso: `MatGetFactor()`, `MatSTRUMPACKSetCompression()`
+.seealso: `MatGetFactor()`, `MatSTRUMPACKCompressionType`, `MatSTRUMPACKSetCompression()`
 @*/
-PetscErrorCode MatSTRUMPACKGetCompression(Mat F, MatSTRUMPACKCompression *comp)
+PetscErrorCode MatSTRUMPACKGetCompression(Mat F, MatSTRUMPACKCompressionType *comp)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(F, MAT_CLASSID, 1);
-  PetscTryMethod(F, "MatSTRUMPACKGetCompression_C", (Mat, MatSTRUMPACKCompression *), (F, comp));
+  PetscTryMethod(F, "MatSTRUMPACKGetCompression_C", (Mat, MatSTRUMPACKCompressionType *), (F, comp));
   PetscValidLogicalCollectiveEnum(F, *comp, 2);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -373,7 +374,7 @@ static PetscErrorCode MatSTRUMPACKGetCompRelTol_STRUMPACK(Mat F, PetscReal *rtol
 - rtol - relative compression tolerance
 
   Options Database Key:
-. -mat_strumpack_compression_rel_tol <1e-4> - Relative compression tolerance, when using pctype ilu (None)
+. -mat_strumpack_compression_rel_tol <1e-4> - Relative compression tolerance, when using `-pctype ilu`
 
   Level: intermediate
 
@@ -444,7 +445,7 @@ static PetscErrorCode MatSTRUMPACKGetCompAbsTol_STRUMPACK(Mat F, PetscReal *atol
 - atol - absolute compression tolerance
 
   Options Database Key:
-. -mat_strumpack_compression_abs_tol <1e-10> - Absolute compression tolerance, when using pctype ilu (None)
+. -mat_strumpack_compression_abs_tol <1e-10> - Absolute compression tolerance, when using `-pctype ilu`
 
   Level: intermediate
 
@@ -515,7 +516,7 @@ static PetscErrorCode MatSTRUMPACKGetCompLeafSize_STRUMPACK(Mat F, PetscInt *lea
 - leaf_size - Size of diagonal blocks in rank-structured approximation
 
   Options Database Key:
-. -mat_strumpack_compression_leaf_size - Size of diagonal blocks in rank-structured approximation, when using pctype ilu (None)
+. -mat_strumpack_compression_leaf_size - Size of diagonal blocks in rank-structured approximation, when using `-pctype ilu`
 
   Level: intermediate
 
@@ -603,9 +604,6 @@ static PetscErrorCode MatSTRUMPACKSetGeometricWidth_STRUMPACK(Mat F, PetscInt w)
 
   Logically Collective
 
-  If the mesh is two (or one) dimensional one can use 1, PETSC_DECIDE or PETSC_DEFAULT
-  for the missing z (and y) dimensions.
-
   Input Parameters:
 + F  - the factored matrix obtained by calling `MatGetFactor()` from PETSc-STRUMPACK interface
 . nx - x dimension of the mesh
@@ -613,6 +611,10 @@ static PetscErrorCode MatSTRUMPACKSetGeometricWidth_STRUMPACK(Mat F, PetscInt w)
 - nz - z dimension of the mesh
 
   Level: intermediate
+
+  Notes:
+  If the mesh is two (or one) dimensional one can use 1, `PETSC_DECIDE` or `PETSC_DEFAULT`
+  for the missing z (and y) dimensions.
 
   References:
 .  * - STRUMPACK documentation: https://portal.nersc.gov/project/sparse/strumpack/master/
@@ -639,7 +641,7 @@ PetscErrorCode MatSTRUMPACKSetGeometricNxyz(Mat F, PetscInt nx, PetscInt ny, Pet
 - nc - Number of components/dof's per grid point
 
   Options Database Key:
-. -mat_strumpack_geometric_components <1> - Number of components per mesh point, for geometric nested dissection ordering (None)
+. -mat_strumpack_geometric_components <1> - Number of components per mesh point, for geometric nested dissection ordering
 
   Level: intermediate
 
@@ -666,7 +668,7 @@ PetscErrorCode MatSTRUMPACKSetGeometricComponents(Mat F, PetscInt nc)
 - w - width of the separator
 
   Options Database Key:
-. -mat_strumpack_geometric_width <1> - Width of the separator of the mesh, for geometric nested dissection ordering (None)
+. -mat_strumpack_geometric_width <1> - Width of the separator of the mesh, for geometric nested dissection ordering
 
   Level: intermediate
 
@@ -782,7 +784,7 @@ static PetscErrorCode MatSTRUMPACKGetCompLossyPrecision_STRUMPACK(Mat F, PetscIn
 - lossy_prec - Number of bitplanes to use in lossy compression
 
   Options Database Key:
-. -mat_strumpack_compression_lossy_precision <lossy_prec> - Precision when using lossy compression [1-64], when using pctype ilu, compression LOSSY (None)
+. -mat_strumpack_compression_lossy_precision <lossy_prec> - Precision when using lossy compression [1-64], when using `-pctype ilu -mat_strumpack_compression MAT_STRUMPACK_COMPRESSION_TYPE_LOSSY`
 
   Level: intermediate
 
@@ -853,7 +855,7 @@ static PetscErrorCode MatSTRUMPACKGetCompButterflyLevels_STRUMPACK(Mat F, PetscI
 - bfly_lvls - Number of levels of butterfly compression in HODLR compression
 
   Options Database Key:
-. -mat_strumpack_compression_butterfly_levels <bfly_lvls> - Number of levels in the hierarchically off-diagonal matrix for which to use butterfly, when using pctype ilu, (BLR_)HODLR compression (None)
+. -mat_strumpack_compression_butterfly_levels <bfly_lvls> - Number of levels in the hierarchically off-diagonal matrix for which to use butterfly, when using `-pctype ilu`, (BLR_)HODLR compression
 
   Level: intermediate
 
@@ -1093,20 +1095,20 @@ static PetscErrorCode MatFactorGetSolverType_aij_strumpack(Mat A, MatSolverType 
 
   Options Database Keys:
 + -mat_strumpack_verbose                      - Enable verbose output
-. -mat_strumpack_compression                  - Type of rank-structured compression in sparse LU factors (choose one of) NONE HSS BLR HODLR BLR_HODLR ZFP_BLR_HODLR LOSSLESS LOSSY (None)
-. -mat_strumpack_compression_rel_tol          - Relative compression tolerance, when using pctype ilu (None)
-. -mat_strumpack_compression_abs_tol>         - Absolute compression tolerance, when using pctype ilu (None)
-. -mat_strumpack_compression_min_sep_size     - Minimum size of separator for rank-structured compression, when using pctype ilu (None)
-. -mat_strumpack_compression_leaf_size        - Size of diagonal blocks in rank-structured approximation, when using pctype ilu (None)
-. -mat_strumpack_compression_lossy_precision  - Precision when using lossy compression [1-64], when using pctype ilu, compression LOSSY (requires ZFP support) (None)
-. -mat_strumpack_compression_butterfly_levels - Number of levels in the hierarchically off-diagonal matrix for which to use butterfly, when using pctype ilu, (BLR_)HODLR compression (requires ButterflyPACK support) (None)
-. -mat_strumpack_gpu                          - Enable GPU acceleration in numerical factorization (not supported for all compression types) (None)
-. -mat_strumpack_colperm <TRUE>               - Permute matrix to make diagonal nonzeros (None)
-. -mat_strumpack_reordering <METIS>           - Sparsity reducing matrix reordering (choose one of) NATURAL METIS PARMETIS SCOTCH PTSCOTCH RCM GEOMETRIC AMD MMD AND MLF SPECTRAL (None)
-. -mat_strumpack_geometric_xyz <1,1,1>        - Mesh x,y,z dimensions, for use with GEOMETRIC ordering (None)
-. -mat_strumpack_geometric_components <1>     - Number of components per mesh point, for geometric nested dissection ordering (None)
-. -mat_strumpack_geometric_width <1>          - Width of the separator of the mesh, for geometric nested dissection ordering (None)
-- -mat_strumpack_metis_nodeNDP                - Use METIS_NodeNDP instead of METIS_NodeND, for a more balanced tree (None)
+. -mat_strumpack_compression                  - Type of rank-structured compression in sparse LU factors (choose one of) NONE HSS BLR HODLR BLR_HODLR ZFP_BLR_HODLR LOSSLESS LOSSY
+. -mat_strumpack_compression_rel_tol          - Relative compression tolerance, when using `-pctype ilu`
+. -mat_strumpack_compression_abs_tol>         - Absolute compression tolerance, when using `-pctype ilu`
+. -mat_strumpack_compression_min_sep_size     - Minimum size of separator for rank-structured compression, when using `-pctype ilu`
+. -mat_strumpack_compression_leaf_size        - Size of diagonal blocks in rank-structured approximation, when using `-pctype ilu`
+. -mat_strumpack_compression_lossy_precision  - Precision when using lossy compression [1-64], when using `-pctype ilu`, compression LOSSY (requires ZFP support)
+. -mat_strumpack_compression_butterfly_levels - Number of levels in the hierarchically off-diagonal matrix for which to use butterfly, when using `-pctype ilu`, (BLR_)HODLR compression (requires ButterflyPACK support)
+. -mat_strumpack_gpu                          - Enable GPU acceleration in numerical factorization (not supported for all compression types)
+. -mat_strumpack_colperm <TRUE>               - Permute matrix to make diagonal nonzeros
+. -mat_strumpack_reordering <METIS>           - Sparsity reducing matrix reordering (choose one of) NATURAL METIS PARMETIS SCOTCH PTSCOTCH RCM GEOMETRIC AMD MMD AND MLF SPECTRAL
+. -mat_strumpack_geometric_xyz <1,1,1>        - Mesh x,y,z dimensions, for use with GEOMETRIC ordering
+. -mat_strumpack_geometric_components <1>     - Number of components per mesh point, for geometric nested dissection ordering
+. -mat_strumpack_geometric_width <1>          - Width of the separator of the mesh, for geometric nested dissection ordering
+- -mat_strumpack_metis_nodeNDP                - Use METIS_NodeNDP instead of METIS_NodeND, for a more balanced tree
 
  Level: beginner
 
@@ -1115,7 +1117,7 @@ static PetscErrorCode MatFactorGetSolverType_aij_strumpack(Mat A, MatSolverType 
  LOSSY, LOSSLESS and ZFP_BLR_HODLR compression require STRUMPACK to be configured with ZFP support (--download-zfp).
 
 .seealso: [](ch_matrices), `Mat`, `PCLU`, `PCILU`, `MATSOLVERSUPERLU_DIST`, `MATSOLVERMUMPS`, `PCFactorSetMatSolverType()`, `MatSolverType`,
-          `MatGetFactor()`, `MatSTRUMPACKSetReordering()`, `MatSTRUMPACKSetColPerm()`.
+          `MatGetFactor()`, `MatSTRUMPACKSetReordering()`, `MatSTRUMPACKReordering`, `MatSTRUMPACKCompressionType`, `MatSTRUMPACKSetColPerm()`.
 M*/
 static PetscErrorCode MatGetFactor_aij_strumpack(Mat A, MatFactorType ftype, Mat *F)
 {

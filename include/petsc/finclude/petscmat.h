@@ -227,6 +227,6 @@
 !
 ! compression types for STRUMPACK
 !
-#define MatSTRUMPACKCompression PetscEnum
+#define MatSTRUMPACKCompressionType PetscEnum
 
 #endif

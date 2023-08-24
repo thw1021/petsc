@@ -353,15 +353,15 @@
       PetscEnum, parameter :: MAT_STRUMPACK_MLF = 10
       PetscEnum, parameter :: MAT_STRUMPACK_SPECTRAL = 11
 !
-! MatSTRUMPACKCompression
-      PetscEnum, parameter :: MAT_STRUMPACK_NONE = 0
-      PetscEnum, parameter :: MAT_STRUMPACK_HSS = 1
-      PetscEnum, parameter :: MAT_STRUMPACK_BLR = 2
-      PetscEnum, parameter :: MAT_STRUMPACK_HODLR = 3
-      PetscEnum, parameter :: MAT_STRUMPACK_BLR_HODLR = 4
-      PetscEnum, parameter :: MAT_STRUMPACK_ZFP_BLR_HODLR = 5
-      PetscEnum, parameter :: MAT_STRUMPACK_LOSSLESS = 6
-      PetscEnum, parameter :: MAT_STRUMPACK_LOSSY = 7
+! MatSTRUMPACKCompressionType
+      PetscEnum, parameter :: MAT_STRUMPACK_COMPRESSION_TYPE__NONE = 0
+      PetscEnum, parameter :: MAT_STRUMPACK_COMPRESSION_TYPE_HSS = 1
+      PetscEnum, parameter :: MAT_STRUMPACK_COMPRESSION_TYPE_BLR = 2
+      PetscEnum, parameter :: MAT_STRUMPACK_COMPRESSION_TYPE_HODLR = 3
+      PetscEnum, parameter :: MAT_STRUMPACK_COMPRESSION_TYPE_BLR_HODLR = 4
+      PetscEnum, parameter :: MAT_STRUMPACK_COMPRESSION_TYPE_ZFP_BLR_HODLR = 5
+      PetscEnum, parameter :: MAT_STRUMPACK_COMPRESSION_TYPE_LOSSLESS = 6
+      PetscEnum, parameter :: MAT_STRUMPACK_COMPRESSION_TYPE_LOSSY = 7
 #endif
 
 ! PetscScalarPrecision
