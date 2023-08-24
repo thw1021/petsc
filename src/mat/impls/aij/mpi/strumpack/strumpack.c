@@ -1097,7 +1097,7 @@ static PetscErrorCode MatFactorGetSolverType_aij_strumpack(Mat A, MatSolverType 
 + -mat_strumpack_verbose                      - Enable verbose output
 . -mat_strumpack_compression                  - Type of rank-structured compression in sparse LU factors (choose one of) NONE HSS BLR HODLR BLR_HODLR ZFP_BLR_HODLR LOSSLESS LOSSY
 . -mat_strumpack_compression_rel_tol          - Relative compression tolerance, when using `-pctype ilu`
-. -mat_strumpack_compression_abs_tol>         - Absolute compression tolerance, when using `-pctype ilu`
+. -mat_strumpack_compression_abs_tol          - Absolute compression tolerance, when using `-pctype ilu`
 . -mat_strumpack_compression_min_sep_size     - Minimum size of separator for rank-structured compression, when using `-pctype ilu`
 . -mat_strumpack_compression_leaf_size        - Size of diagonal blocks in rank-structured approximation, when using `-pctype ilu`
 . -mat_strumpack_compression_lossy_precision  - Precision when using lossy compression [1-64], when using `-pctype ilu`, compression LOSSY (requires ZFP support)
