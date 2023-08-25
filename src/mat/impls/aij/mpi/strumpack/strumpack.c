@@ -133,7 +133,7 @@ static PetscErrorCode MatSTRUMPACKGetColPerm_STRUMPACK(Mat F, PetscBool *cperm)
   STRUMPACK_SparseSolver *S = (STRUMPACK_SparseSolver *)F->data;
 
   PetscFunctionBegin;
-  PetscStackCallExternalVoid("STRUMPACK_matching", *cperm = (STRUMPACK_matching(*S) != STRUMPACK_MATCHING_NONE));
+  PetscStackCallExternalVoid("STRUMPACK_matching", *cperm = (PetscBool)(STRUMPACK_matching(*S) != STRUMPACK_MATCHING_NONE));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1219,7 +1219,7 @@ static PetscErrorCode MatGetFactor_aij_strumpack(Mat A, MatFactorType ftype, Mat
   PetscStackCallExternalVoid("STRUMPACK_compression", compcurrent = STRUMPACK_compression(*S));
   PetscCall(PetscOptionsEnum("-mat_strumpack_compression", "Rank-structured compression type", "None", CompTypes, (PetscEnum)compcurrent, (PetscEnum *)&compvalue, &set));
   if (set) {
-    MatSTRUMPACKSetCompression(B, compvalue);
+    MatSTRUMPACKSetCompression(B, (MatSTRUMPACKCompressionType)compvalue);
   } else {
     if (ftype == MAT_FACTOR_ILU) { PetscStackCallExternalVoid("STRUMPACK_set_compression", STRUMPACK_set_compression(*S, STRUMPACK_BLR)); }
   }
