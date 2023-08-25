@@ -44,6 +44,11 @@ if __name__ == '__main__':
     '--download-hypre',
     '--download-raja',
     '--download-amgx',
+    '--with-openmp=1',
+    '--download-slate',
+    '--download-zfp',
+    '--download-butterflypack',
+    '--download-strumpack',
     '--with-strict-petscerrorcode',
   ]
 
