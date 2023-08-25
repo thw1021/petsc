@@ -1155,8 +1155,7 @@ static PetscErrorCode MatGetFactor_aij_strumpack(Mat A, MatFactorType ftype, Mat
   /* Create the factorization matrix */
   PetscCall(MatCreate(PetscObjectComm((PetscObject)A), &B));
   PetscCall(MatSetSizes(B, A->rmap->n, A->cmap->n, M, N));
-  /* PetscCall(PetscStrallocpy("strumpack", &((PetscObject)B)->type_name)); */
-  PetscCall(MatSetType(B, ((PetscObject)A)->type_name));
+  PetscCall(PetscStrallocpy("strumpack", &((PetscObject)B)->type_name));
   PetscCall(MatSetUp(B));
   PetscCall(MatSeqAIJSetPreallocation(B, 0, NULL));
   PetscCall(MatMPIAIJSetPreallocation(B, 0, NULL, 0, NULL));
