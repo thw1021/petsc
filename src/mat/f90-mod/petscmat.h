@@ -354,7 +354,7 @@
       PetscEnum, parameter :: MAT_STRUMPACK_SPECTRAL = 11
 !
 ! MatSTRUMPACKCompressionType
-      PetscEnum, parameter :: MAT_STRUMPACK_COMPRESSION_TYPE__NONE = 0
+      PetscEnum, parameter :: MAT_STRUMPACK_COMPRESSION_TYPE_NONE = 0
       PetscEnum, parameter :: MAT_STRUMPACK_COMPRESSION_TYPE_HSS = 1
       PetscEnum, parameter :: MAT_STRUMPACK_COMPRESSION_TYPE_BLR = 2
       PetscEnum, parameter :: MAT_STRUMPACK_COMPRESSION_TYPE_HODLR = 3
