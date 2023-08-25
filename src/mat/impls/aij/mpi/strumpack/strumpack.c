@@ -1218,7 +1218,7 @@ static PetscErrorCode MatGetFactor_aij_strumpack(Mat A, MatFactorType ftype, Mat
   PetscStackCallExternalVoid("STRUMPACK_compression", compcurrent = STRUMPACK_compression(*S));
   PetscCall(PetscOptionsEnum("-mat_strumpack_compression", "Rank-structured compression type", "None", CompTypes, (PetscEnum)compcurrent, (PetscEnum *)&compvalue, &set));
   if (set) {
-    MatSTRUMPACKSetCompression(B, (MatSTRUMPACKCompressionType)compvalue);
+    PetscCall(MatSTRUMPACKSetCompression(B, (MatSTRUMPACKCompressionType)compvalue));
   } else {
     if (ftype == MAT_FACTOR_ILU) { PetscStackCallExternalVoid("STRUMPACK_set_compression", STRUMPACK_set_compression(*S, STRUMPACK_BLR)); }
   }
@@ -1272,7 +1272,7 @@ static PetscErrorCode MatGetFactor_aij_strumpack(Mat A, MatFactorType ftype, Mat
   PetscCall(PetscOptionsIntArray("-mat_strumpack_geometric_xyz", "Mesh sizes nx,ny,nz (Use 1 for default)", "", nxyz, &nrdims, &set));
   if (set) {
     PetscCheck(nrdims == 1 || nrdims == 2 || nrdims == 3, PetscObjectComm((PetscObject)F), PETSC_ERR_ARG_OUTOFRANGE, "'-mat_strumpack_geometric_xyz' requires 1, 2, or 3 values.");
-    MatSTRUMPACKSetGeometricNxyz(B, (int)nxyz[0], (int)nxyz[1], (int)nxyz[2]);
+    PetscCall(MatSTRUMPACKSetGeometricNxyz(B, (int)nxyz[0], (int)nxyz[1], (int)nxyz[2]));
   }
   PetscCall(PetscOptionsInt("-mat_strumpack_geometric_components", "Number of components per mesh point, for geometric nested dissection ordering", "None", 1, &nc, &set));
   if (set) PetscStackCallExternalVoid("STRUMPACK_set_components", STRUMPACK_set_components(*S, (int)nc));
