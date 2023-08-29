@@ -556,6 +556,8 @@ static PetscErrorCode PCGAMGCreateGraph_AGG(PC pc, Mat Amat, Mat *a_Gmat)
   const PetscReal vfilter     = pc_gamg->threshold[pc_gamg->current_level];
   PetscBool       ishem;
   const char     *prefix;
+  MatInfo         info0,info1;
+  PetscInt        bs;
 
   PetscFunctionBegin;
   PetscCall(PetscLogEventBegin(petsc_gamg_setup_events[GAMG_GRAPH], 0, 0, 0, 0));
@@ -568,7 +570,11 @@ static PetscErrorCode PCGAMGCreateGraph_AGG(PC pc, Mat Amat, Mat *a_Gmat)
   PetscCall(MatCoarsenSetFromOptions(pc_gamg_agg->crs));
   PetscCall(PetscObjectTypeCompare((PetscObject)pc_gamg_agg->crs, MATCOARSENHEM, &ishem));
   if (ishem) pc_gamg_agg->aggressive_coarsening_levels = 0; // aggressive and HEM does not make sense
+  PetscCall(MatGetInfo(Amat, MAT_LOCAL, &info0)); /* global reduction */
   PetscCall(MatCreateGraph(Amat, PETSC_TRUE, (vfilter >= 0 || ishem) ? PETSC_TRUE : PETSC_FALSE, vfilter, a_Gmat));
+  PetscCall(MatGetInfo(*a_Gmat, MAT_LOCAL, &info1)); /* global reduction */
+  PetscCall(MatGetBlockSize(Amat, &bs));
+  if (info0.nz_used > 0) PetscCall(PetscInfo(pc, "Filtering left %g %% edges in graph (%e %e)\n", 100.0*info1.nz_used*(double)(bs*bs)/info0.nz_used,info0.nz_used,info1.nz_used));
   PetscCall(PetscLogEventEnd(petsc_gamg_setup_events[GAMG_GRAPH], 0, 0, 0, 0));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1296,7 +1302,7 @@ PetscErrorCode PCCreateGAMG_AGG(PC pc)
   pc_gamg_agg->nsmooths                     = 1;
   pc_gamg_agg->aggressive_coarsening_levels = 1;
   pc_gamg_agg->use_aggressive_square_graph  = PETSC_FALSE;
-  pc_gamg_agg->use_minimum_degree_ordering  = PETSC_TRUE;
+  pc_gamg_agg->use_minimum_degree_ordering  = PETSC_FALSE;
   pc_gamg_agg->aggressive_mis_k             = 2;
 
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetNSmooths_C", PCGAMGSetNSmooths_AGG));
