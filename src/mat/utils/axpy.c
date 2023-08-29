@@ -503,11 +503,11 @@ PetscErrorCode MatFilter(Mat A, PetscReal tol, PetscBool compress, PetscBool kee
         PetscCall(MatGetRow(A, r, &ncols, &cols, &vals));
         nnz0 += ncols - 1;
         for (c = 0; c < ncols; ++c) {
-          if (PetscUnlikely(PetscAbsScalar(vals[c]) > tol)) newCols[newcols++] = cols[c];
+          if (PetscUnlikely(PetscAbsScalar(vals[c]) <= tol)) newCols[newcols++] = cols[c];
         }
+        nnz1 += ncols - newcols - 1;
         PetscCall(MatRestoreRow(A, r, &ncols, &cols, &vals));
         PetscCall(MatSetValues(A, 1, &r, newcols, newCols, newVals, INSERT_VALUES));
-        nnz1 += newcols - 1;
       }
       PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
       PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
@@ -515,8 +515,8 @@ PetscErrorCode MatFilter(Mat A, PetscReal tol, PetscBool compress, PetscBool kee
     PetscCall(MatRestoreRowUpperTriangular(A));
     PetscCall(PetscFree2(newCols, newVals));
     PetscCall(MatSetOption(A, MAT_NO_OFF_PROC_ENTRIES, flg)); /* reset option to its user-defined value */
-    if (nnz0>0) PetscCall(PetscInfo(NULL, "Filtering left %g %% edges in graph (%p)\n",100*(double)nnz1/(double)nnz0,A));
-    else PetscCall(PetscInfo(A, "Warning: %d edges to filter with %d rows\n",(int)nnz0,(int)maxRows));
+    if (nnz0 > 0) PetscCall(PetscInfo(NULL, "Filtering left %g %% edges in graph\n", 100*(double)nnz1/(double)nnz0));
+    else PetscCall(PetscInfo(NULL, "Warning: %d edges to filter with %d rows\n", (int)nnz0, (int)maxRows));
   }
   if (compress && A->ops->eliminatezeros) {
     Mat       B;
