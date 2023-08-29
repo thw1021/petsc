@@ -436,7 +436,7 @@
 !   requires: !single
 !   test:
 !      suffix: hem
-!      args: -mat_coarsen_type hem -ksp_monitor_short
+!      args: -mat_coarsen_type hem -ksp_monitor_short -pc_gamg_aggressive_coarsening 0
 !      output_file: output/ex54f_hem.out
 !   test:
 !      suffix: misk
