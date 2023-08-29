@@ -1,20 +1,21 @@
-  0 KSP Residual norm 771.822 
-  1 KSP Residual norm 204.863 
-  2 KSP Residual norm 67.9929 
-  3 KSP Residual norm 41.2582 
-  4 KSP Residual norm 14.5589 
-  5 KSP Residual norm 7.38264 
-  6 KSP Residual norm 3.60238 
-  7 KSP Residual norm 2.14095 
-  8 KSP Residual norm 1.05157 
-  9 KSP Residual norm 0.60435 
- 10 KSP Residual norm 0.313691 
- 11 KSP Residual norm 0.131098 
- 12 KSP Residual norm 0.0417432 
- 13 KSP Residual norm 0.0170378 
- 14 KSP Residual norm 0.00978096 
- 15 KSP Residual norm 0.00520133 
-Linear solve converged due to CONVERGED_RTOL iterations 15
+  0 KSP Residual norm 719.386 
+  1 KSP Residual norm 212.248 
+  2 KSP Residual norm 79.0048 
+  3 KSP Residual norm 52.197 
+  4 KSP Residual norm 25.5344 
+  5 KSP Residual norm 12.7474 
+  6 KSP Residual norm 5.33936 
+  7 KSP Residual norm 2.49275 
+  8 KSP Residual norm 1.82264 
+  9 KSP Residual norm 1.25546 
+ 10 KSP Residual norm 0.614442 
+ 11 KSP Residual norm 0.232263 
+ 12 KSP Residual norm 0.0870127 
+ 13 KSP Residual norm 0.0292775 
+ 14 KSP Residual norm 0.0130487 
+ 15 KSP Residual norm 0.00807981 
+ 16 KSP Residual norm 0.00401823 
+Linear solve converged due to CONVERGED_RTOL iterations 16
 KSP Object: 8 MPI processes
   type: cg
   maximum iterations=10000, initial guess is zero
@@ -35,7 +36,7 @@ PC Object: 8 MPI processes
           MIS-k aggressive coarsening
           MIS-2 coarsening on aggressive levels
           Number smoothing steps 1
-        Complexity:    grid = 1.036    operator = 1.03899
+        Complexity:    grid = 1.038    operator = 1.04428
   Coarse grid solver -- level 0 -------------------------------
     KSP Object: (mg_coarse_) 8 MPI processes
       type: cg
@@ -49,10 +50,10 @@ PC Object: 8 MPI processes
       linear system matrix = precond matrix:
       Mat Object: 8 MPI processes
         type: mpiaij
-        rows=108, cols=108, bs=6
-        total: nonzeros=7704, allocated nonzeros=7704
+        rows=114, cols=114, bs=6
+        total: nonzeros=8748, allocated nonzeros=8748
         total number of mallocs used during MatSetValues calls=0
-          using I-node (on process 0) routines: found 6 nodes, limit used is 5
+          using I-node (on process 0) routines: found 4 nodes, limit used is 5
   Down solver (pre-smoother) on level 1 -------------------------------
     KSP Object: (mg_levels_1_) 8 MPI processes
       type: chebyshev
@@ -83,23 +84,24 @@ PC Object: 8 MPI processes
     total number of mallocs used during MatSetValues calls=0
       has attached near null space
       using I-node (on process 0) routines: found 125 nodes, limit used is 5
-  0 KSP Residual norm 0.00771822 
-  1 KSP Residual norm 0.00204863 
-  2 KSP Residual norm 0.000679929 
-  3 KSP Residual norm 0.000412582 
-  4 KSP Residual norm 0.000145589 
-  5 KSP Residual norm 7.38264e-05 
-  6 KSP Residual norm 3.60238e-05 
-  7 KSP Residual norm 2.14095e-05 
-  8 KSP Residual norm 1.05157e-05 
-  9 KSP Residual norm 6.0435e-06 
- 10 KSP Residual norm 3.13691e-06 
- 11 KSP Residual norm 1.31098e-06 
- 12 KSP Residual norm 4.17432e-07 
- 13 KSP Residual norm 1.70378e-07 
- 14 KSP Residual norm 9.78096e-08 
- 15 KSP Residual norm 5.20133e-08 
-Linear solve converged due to CONVERGED_RTOL iterations 15
+  0 KSP Residual norm 0.00719386 
+  1 KSP Residual norm 0.00212248 
+  2 KSP Residual norm 0.000790048 
+  3 KSP Residual norm 0.00052197 
+  4 KSP Residual norm 0.000255344 
+  5 KSP Residual norm 0.000127474 
+  6 KSP Residual norm 5.33936e-05 
+  7 KSP Residual norm 2.49275e-05 
+  8 KSP Residual norm 1.82264e-05 
+  9 KSP Residual norm 1.25546e-05 
+ 10 KSP Residual norm 6.14442e-06 
+ 11 KSP Residual norm 2.32263e-06 
+ 12 KSP Residual norm 8.70127e-07 
+ 13 KSP Residual norm 2.92775e-07 
+ 14 KSP Residual norm 1.30487e-07 
+ 15 KSP Residual norm 8.07981e-08 
+ 16 KSP Residual norm 4.01823e-08 
+Linear solve converged due to CONVERGED_RTOL iterations 16
 KSP Object: 8 MPI processes
   type: cg
   maximum iterations=10000, initial guess is zero
@@ -120,7 +122,7 @@ PC Object: 8 MPI processes
           MIS-k aggressive coarsening
           MIS-2 coarsening on aggressive levels
           Number smoothing steps 1
-        Complexity:    grid = 1.036    operator = 1.03899
+        Complexity:    grid = 1.038    operator = 1.04428
   Coarse grid solver -- level 0 -------------------------------
     KSP Object: (mg_coarse_) 8 MPI processes
       type: cg
@@ -134,11 +136,11 @@ PC Object: 8 MPI processes
       linear system matrix = precond matrix:
       Mat Object: 8 MPI processes
         type: mpiaij
-        rows=108, cols=108, bs=6
-        total: nonzeros=7704, allocated nonzeros=7704
+        rows=114, cols=114, bs=6
+        total: nonzeros=8748, allocated nonzeros=8748
         total number of mallocs used during MatSetValues calls=0
           using nonscalable MatPtAP() implementation
-          using I-node (on process 0) routines: found 6 nodes, limit used is 5
+          using I-node (on process 0) routines: found 4 nodes, limit used is 5
   Down solver (pre-smoother) on level 1 -------------------------------
     KSP Object: (mg_levels_1_) 8 MPI processes
       type: chebyshev
@@ -169,23 +171,24 @@ PC Object: 8 MPI processes
     total number of mallocs used during MatSetValues calls=0
       has attached near null space
       using I-node (on process 0) routines: found 125 nodes, limit used is 5
-  0 KSP Residual norm 0.00771822 
-  1 KSP Residual norm 0.00204863 
-  2 KSP Residual norm 0.000679929 
-  3 KSP Residual norm 0.000412582 
-  4 KSP Residual norm 0.000145589 
-  5 KSP Residual norm 7.38264e-05 
-  6 KSP Residual norm 3.60238e-05 
-  7 KSP Residual norm 2.14095e-05 
-  8 KSP Residual norm 1.05157e-05 
-  9 KSP Residual norm 6.0435e-06 
- 10 KSP Residual norm 3.13691e-06 
- 11 KSP Residual norm 1.31098e-06 
- 12 KSP Residual norm 4.17432e-07 
- 13 KSP Residual norm 1.70378e-07 
- 14 KSP Residual norm 9.78096e-08 
- 15 KSP Residual norm 5.20133e-08 
-Linear solve converged due to CONVERGED_RTOL iterations 15
+  0 KSP Residual norm 0.00719386 
+  1 KSP Residual norm 0.00212248 
+  2 KSP Residual norm 0.000790048 
+  3 KSP Residual norm 0.00052197 
+  4 KSP Residual norm 0.000255344 
+  5 KSP Residual norm 0.000127474 
+  6 KSP Residual norm 5.33936e-05 
+  7 KSP Residual norm 2.49275e-05 
+  8 KSP Residual norm 1.82264e-05 
+  9 KSP Residual norm 1.25546e-05 
+ 10 KSP Residual norm 6.14442e-06 
+ 11 KSP Residual norm 2.32263e-06 
+ 12 KSP Residual norm 8.70127e-07 
+ 13 KSP Residual norm 2.92775e-07 
+ 14 KSP Residual norm 1.30487e-07 
+ 15 KSP Residual norm 8.07981e-08 
+ 16 KSP Residual norm 4.01823e-08 
+Linear solve converged due to CONVERGED_RTOL iterations 16
 KSP Object: 8 MPI processes
   type: cg
   maximum iterations=10000, initial guess is zero
@@ -206,7 +209,7 @@ PC Object: 8 MPI processes
           MIS-k aggressive coarsening
           MIS-2 coarsening on aggressive levels
           Number smoothing steps 1
-        Complexity:    grid = 1.036    operator = 1.03899
+        Complexity:    grid = 1.038    operator = 1.04428
   Coarse grid solver -- level 0 -------------------------------
     KSP Object: (mg_coarse_) 8 MPI processes
       type: cg
@@ -220,11 +223,11 @@ PC Object: 8 MPI processes
       linear system matrix = precond matrix:
       Mat Object: 8 MPI processes
         type: mpiaij
-        rows=108, cols=108, bs=6
-        total: nonzeros=7704, allocated nonzeros=7704
+        rows=114, cols=114, bs=6
+        total: nonzeros=8748, allocated nonzeros=8748
         total number of mallocs used during MatSetValues calls=0
           using nonscalable MatPtAP() implementation
-          using I-node (on process 0) routines: found 6 nodes, limit used is 5
+          using I-node (on process 0) routines: found 4 nodes, limit used is 5
   Down solver (pre-smoother) on level 1 -------------------------------
     KSP Object: (mg_levels_1_) 8 MPI processes
       type: chebyshev
@@ -255,4 +258,4 @@ PC Object: 8 MPI processes
     total number of mallocs used during MatSetValues calls=0
       has attached near null space
       using I-node (on process 0) routines: found 125 nodes, limit used is 5
-[0]main |b-Ax|/|b|=1.481483e-04, |b|=5.391826e+00, emax=9.932943e-01
+[0]main |b-Ax|/|b|=9.429752e-05, |b|=5.391826e+00, emax=9.988419e-01
