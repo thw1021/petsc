@@ -53,25 +53,25 @@ PC Object: 1 MPI process
           factor fill ratio given 5., needed 1.
             Factored matrix follows:
               Mat Object: (mg_coarse_sub_) 1 MPI process
-                type: seqaijkokkos
+                type: seqaijcusparse
                 rows=3, cols=3
-                package used to perform factorization: kokkos
+                package used to perform factorization: cusparse
                 total: nonzeros=9, allocated nonzeros=9
                   using I-node routines: found 1 nodes, limit used is 5
         linear system matrix = precond matrix:
         Mat Object: (mg_coarse_sub_) 1 MPI process
-          type: seqaijkokkos
+          type: seqaijcusparse
           rows=3, cols=3
           total: nonzeros=9, allocated nonzeros=9
           total number of mallocs used during MatSetValues calls=0
-            using I-node routines: found 1 nodes, limit used is 5
+            not using I-node routines
       linear system matrix = precond matrix:
       Mat Object: (mg_coarse_sub_) 1 MPI process
-        type: seqaijkokkos
+        type: seqaijcusparse
         rows=3, cols=3
         total: nonzeros=9, allocated nonzeros=9
         total number of mallocs used during MatSetValues calls=0
-          using I-node routines: found 1 nodes, limit used is 5
+          not using I-node routines
   Down solver (pre-smoother) on level 1 -------------------------------
     KSP Object: (mg_levels_1_) 1 MPI process
       type: chebyshev
@@ -87,7 +87,7 @@ PC Object: 1 MPI process
         type DIAGONAL
       linear system matrix = precond matrix:
       Mat Object: 1 MPI process
-        type: seqaijkokkos
+        type: seqaijcusparse
         rows=24, cols=24
         total: nonzeros=100, allocated nonzeros=120
         total number of mallocs used during MatSetValues calls=0
@@ -95,7 +95,7 @@ PC Object: 1 MPI process
   Up solver (post-smoother) same as down solver (pre-smoother)
   linear system matrix = precond matrix:
   Mat Object: 1 MPI process
-    type: seqaijkokkos
+    type: seqaijcusparse
     rows=24, cols=24
     total: nonzeros=100, allocated nonzeros=120
     total number of mallocs used during MatSetValues calls=0
