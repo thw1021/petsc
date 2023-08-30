@@ -6015,6 +6015,51 @@ PetscErrorCode DMCreateDS(DM dm)
 }
 
 /*@
+  DMUseTensorOrder - Use a tensor product closure ordering for the default section
+
+  Input Parameters:
++ dm     - The DM
+- tensor - Flag for tensor order
+
+  Level: developer
+
+.seealso: DMPlexSetClosurePermutationTensor(), PetscSectionResetClosurePermutation()
+@*/
+PetscErrorCode DMUseTensorOrder(DM dm, PetscBool tensor)
+{
+  PetscInt  Nf;
+  PetscBool reorder = PETSC_TRUE, isPlex;
+
+  PetscFunctionBegin;
+  PetscCall(PetscObjectTypeCompare((PetscObject)dm, DMPLEX, &isPlex));
+  PetscCall(DMGetNumFields(dm, &Nf));
+  for (PetscInt f = 0; f < Nf; ++f) {
+    PetscObject  obj;
+    PetscClassId id;
+
+    PetscCall(DMGetField(dm, f, NULL, &obj));
+    PetscCall(PetscObjectGetClassId(obj, &id));
+    if (id == PETSCFE_CLASSID) {
+      PetscSpace sp;
+      PetscBool  tensor;
+
+      PetscCall(PetscFEGetBasisSpace((PetscFE)obj, &sp));
+      PetscCall(PetscSpacePolynomialGetTensor(sp, &tensor));
+      reorder = (PetscBool)(reorder && tensor);
+    } else reorder = PETSC_FALSE;
+  }
+  if (tensor) {
+    if (reorder && isPlex) PetscCall(DMPlexSetClosurePermutationTensor(dm, PETSC_DETERMINE, NULL));
+  } else {
+    PetscSection s;
+
+    PetscCall(DMGetLocalSection(dm, &s));
+    if (s) { PetscCall(PetscSectionResetClosurePermutation(s)); }
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
   DMComputeExactSolution - Compute the exact solution for a given `DM`, using the `PetscDS` information.
 
   Collective
