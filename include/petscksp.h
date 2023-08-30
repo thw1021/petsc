@@ -639,7 +639,7 @@ PETSC_EXTERN PetscErrorCode KSPSetLagNorm(KSP, PetscBool);
 .  `KSP_CONVERGED_ITS` - requested number of iterations
 .  `KSP_CONVERGED_NEG_CURVE` - see note below
 .  `KSP_CONVERGED_STEP_LENGTH` - see note below
-.  `KSP_CONVERGED_HAPPY_BREAKDOWN` - happy breakdown (meaning early convergence of the `KSPType` occurred.
+.  `KSP_CONVERGED_HAPPY_BREAKDOWN` - happy breakdown (meaning early convergence of the `KSPType` occurred).
 .  `KSP_DIVERGED_NULL` - breakdown when solving the Hessenberg system within GMRES
 .  `KSP_DIVERGED_ITS` - requested number of iterations
 .  `KSP_DIVERGED_DTOL` - large increase in the residual norm
