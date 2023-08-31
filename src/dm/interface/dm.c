@@ -4083,51 +4083,162 @@ PetscErrorCode DMRegister(const char sname[], PetscErrorCode (*function)(DM))
 }
 
 /*@C
-  DMLoad - Loads a DM that has been stored in binary  with `DMView()`.
+  DMLoad - Loads a `DM` from a `PetscViewer`
 
   Collective
 
   Input Parameters:
-+ newdm  - the newly loaded `DM`, this needs to have been created with `DMCreate()` or
++ dm     - the newly loaded `DM`, this needs to have been created with `DMCreate()` or
            some related function before a call to `DMLoad()`.
-- viewer - binary file viewer, obtained from `PetscViewerBinaryOpen()` or
-           `PETSCVIEWERHDF5` file viewer, obtained from `PetscViewerHDF5Open()`
+- viewer - a viewer, for example, `PETSCVIEWERBINARY`, `PETSCVIEWERHDF5`, `PETSCVIEWERCGNS`
 
   Level: intermediate
 
   Notes:
-  The type is determined by the data in the file, any type set into the DM before this call is ignored.
+  `DMLoadFromFile()` offers a friendlier, but less flexible way, to load meshes without requiring creating a viewer
 
   Using `PETSCVIEWERHDF5` type with `PETSC_VIEWER_HDF5_PETSC` format, one can save multiple `DMPLEX`
   meshes in a single HDF5 file. This in turn requires one to name the `DMPLEX` object with `PetscObjectSetName()`
   before saving it with `DMView()` and before loading it with `DMLoad()` for identification of the mesh object.
 
-.seealso: [](ch_dmbase), `DM`, `PetscViewerBinaryOpen()`, `DMView()`, `MatLoad()`, `VecLoad()`
+.seealso: [](ch_dmbase), `DM`, `PETSCVIEWER`, `DMLoadFromFile()`, `PetscViewerBinaryOpen()`, `DMView()`, `MatLoad()`, `VecLoad()`
 @*/
-PetscErrorCode DMLoad(DM newdm, PetscViewer viewer)
+PetscErrorCode DMLoad(DM dm, PetscViewer viewer)
 {
-  PetscBool isbinary, ishdf5;
+  PetscBool isbinary;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(newdm, DM_CLASSID, 1);
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 2);
   PetscCall(PetscViewerCheckReadable(viewer));
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERBINARY, &isbinary));
-  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERHDF5, &ishdf5));
   PetscCall(PetscLogEventBegin(DM_Load, viewer, 0, 0, 0));
   if (isbinary) {
     PetscInt classid;
     char     type[256];
 
     PetscCall(PetscViewerBinaryRead(viewer, &classid, 1, NULL, PETSC_INT));
-    PetscCheck(classid == DM_FILE_CLASSID, PetscObjectComm((PetscObject)newdm), PETSC_ERR_ARG_WRONG, "Not DM next in file, classid found %d", (int)classid);
+    PetscCheck(classid == DM_FILE_CLASSID, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONG, "Not DM next in file, classid found %d", (int)classid);
     PetscCall(PetscViewerBinaryRead(viewer, type, 256, NULL, PETSC_CHAR));
-    PetscCall(DMSetType(newdm, type));
-    PetscTryTypeMethod(newdm, load, viewer);
-  } else if (ishdf5) {
-    PetscTryTypeMethod(newdm, load, viewer);
-  } else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Invalid viewer; open viewer with PetscViewerBinaryOpen() or PetscViewerHDF5Open()");
+    PetscCall(DMSetType(dm, type));
+    PetscTryTypeMethod(dm, load, viewer);
+  } else {
+    PetscTryTypeMethod(dm, load, viewer);
+  }
   PetscCall(PetscLogEventEnd(DM_Load, viewer, 0, 0, 0));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  DMLoadFromFile - convenience function that loads a `DM` from a file
+
+  Collective
+
+  Input Parameters:
++ dm       - the dmly loaded `DM`, this needs to have been created with `DMCreate()` or  some related function before a call to `DMLoad()`.
+- filename - the name of a file
+
+  Level: intermediate
+
+  Notes:
+  Currently this requires the `DM` be of type `DMPLEX`
+
+  `DMPLEX` meshes will be interpolated
+
+  Developer Note:
+  This uses the file extension to determine what kind of grid data structure is stored in the file and calls `DMLoad()` with the appropriate `PetscViewer`
+
+.seealso: [](ch_dmbase), `DM`, `DMLoad()`, `PetscViewer`, `PetscViewerBinaryOpen()`, `DMView()`, `MatLoad()`, `VecLoad()`
+@*/
+PetscErrorCode DMLoadFromFile(DM dm, const char *filename)
+{
+  const char      extGmsh[]      = ".msh";
+  const char      extGmsh2[]     = ".msh2";
+  const char      extGmsh4[]     = ".msh4";
+  const char      extCGNS[]      = ".cgns";
+  const char      extExodus[]    = ".exo";
+  const char      extExodus_e[]  = ".e";
+  const char      extGenesis[]   = ".gen";
+  const char      extFluent[]    = ".cas";
+  const char      extHDF5[]      = ".h5";
+  const char      extXDMFHDF5[]  = ".xdmf.h5";
+  const char      extMed[]       = ".med";
+  const char      extPLY[]       = ".ply";
+  const char      extEGADSLite[] = ".egadslite";
+  const char      extEGADS[]     = ".egads";
+  const char      extIGES[]      = ".igs";
+  const char      extSTEP[]      = ".stp";
+  const char      extCV[]        = ".dat";
+  size_t          len;
+  PetscBool       isGmsh, isGmsh2, isGmsh4, isCGNS, isExodus, isGenesis, isFluent, isHDF5, isMed, isPLY, isEGADSLite, isEGADS, isIGES, isSTEP, isCV, isXDMFHDF5;
+  PetscMPIInt     rank;
+  PetscViewer     viewer;
+  PetscViewerType vtype;
+  MPI_Comm        comm;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
+  PetscAssertPointer(filename, 2);
+  PetscCall(DMInitializePackage());
+  PetscCall(PetscObjectGetComm((PetscObject)dm, &comm));
+  PetscCallMPI(MPI_Comm_rank(comm, &rank));
+  PetscCall(PetscStrlen(filename, &len));
+  PetscCheck(len, comm, PETSC_ERR_ARG_WRONG, "Filename must be a valid path");
+
+#define CheckExtension(extension__, is_extension__) \
+  do { \
+    PetscAssert(sizeof(extension__), comm, PETSC_ERR_PLIB, "Zero-size extension: %s", extension__); \
+    /* don't count the null-terminator at the end */ \
+    const size_t ext_len = sizeof(extension__) - 1; \
+    if (len < ext_len) { \
+      is_extension__ = PETSC_FALSE; \
+    } else { \
+      PetscCall(PetscStrncmp(filename + len - ext_len, extension__, ext_len, &is_extension__)); \
+    } \
+  } while (0)
+
+  CheckExtension(extGmsh, isGmsh);
+  CheckExtension(extGmsh2, isGmsh2);
+  CheckExtension(extGmsh4, isGmsh4);
+  CheckExtension(extCGNS, isCGNS);
+  CheckExtension(extExodus, isExodus);
+  if (!isExodus) CheckExtension(extExodus_e, isExodus);
+  CheckExtension(extGenesis, isGenesis);
+  CheckExtension(extFluent, isFluent);
+  CheckExtension(extHDF5, isHDF5);
+  CheckExtension(extMed, isMed);
+  CheckExtension(extPLY, isPLY);
+  CheckExtension(extEGADSLite, isEGADSLite);
+  CheckExtension(extEGADS, isEGADS);
+  CheckExtension(extIGES, isIGES);
+  CheckExtension(extSTEP, isSTEP);
+  CheckExtension(extCV, isCV);
+  CheckExtension(extXDMFHDF5, isXDMFHDF5);
+
+#undef CheckExtension
+
+  if (isGmsh || isGmsh2 || isGmsh4) {
+    vtype = PETSCVIEWERGMSH;
+  } else if (isCGNS) {
+    vtype = PETSCVIEWERCGNS;
+  } else if (isExodus || isGenesis) {
+    vtype = PETSCVIEWEREXODUSII;
+  } else if (isFluent) {
+    vtype = PETSCVIEWERFLUENT;
+  } else if (isHDF5) {
+    /* PETSC_VIEWER_HDF5_XDMF is used if the filename ends with .xdmf.h5, or if -dm_plex_create_from_hdf5_xdmf option is present */
+    PetscCall(PetscOptionsGetBool(NULL, NULL, "-dm_plex_create_from_hdf5_xdmf", &isXDMFHDF5, NULL));
+    vtype = PETSCVIEWERHDF5;
+  } else vtype = PETSCVIEWERBINARY;
+  PetscCall(PetscViewerCreate(comm, &viewer));
+  PetscCall(PetscViewerSetType(viewer, vtype));
+  PetscCall(PetscViewerFileSetMode(viewer, FILE_MODE_READ));
+  PetscCall(PetscViewerFileSetName(viewer, filename));
+  PetscCall(PetscViewerSetOptionsPrefix(viewer, "dm_load_from_file_"));
+  PetscCall(PetscViewerSetFromOptions(viewer));
+  if (isXDMFHDF5) PetscCall(PetscViewerPushFormat(viewer, PETSC_VIEWER_HDF5_XDMF));
+  PetscCall(DMLoad(dm, viewer));
+  PetscCall(PetscViewerDestroy(&viewer));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

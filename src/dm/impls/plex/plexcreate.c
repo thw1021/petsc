@@ -3866,11 +3866,23 @@ static PetscErrorCode DMPlexCreateFromOptions_Internal(PetscOptionItems *PetscOp
   }
 
   if (fflg) {
-    DM dmnew;
+    if (interpolate) {
+      size_t   len;
+      DM_Plex *plex;
 
-    PetscCall(DMPlexCreateFromFile(PetscObjectComm((PetscObject)dm), filename, plexname, interpolate, &dmnew));
-    PetscCall(DMPlexCopy_Internal(dm, PETSC_FALSE, PETSC_FALSE, dmnew));
-    PetscCall(DMPlexReplace_Internal(dm, &dmnew));
+      PetscCall(PetscStrlen(plexname, &len));
+      if (len) PetscCall(PetscObjectSetName((PetscObject)dm, plexname));
+      PetscCall(DMLoadFromFile(dm, filename));
+      /* currently DMLoad_Plex_HDF5() does not automatically interpolate */
+      plex = (DM_Plex *)dm->data;
+      if (plex->interpolated == DMPLEX_INTERPOLATED_INVALID || plex->interpolated == DMPLEX_INTERPOLATED_NONE) PetscCall(DMPlexInterpolateInPlace_Internal(dm));
+    } else {
+      DM dmnew;
+
+      PetscCall(DMPlexCreateFromFile(PetscObjectComm((PetscObject)dm), filename, plexname, interpolate, &dmnew));
+      PetscCall(DMPlexCopy_Internal(dm, PETSC_FALSE, PETSC_FALSE, dmnew));
+      PetscCall(DMPlexReplace_Internal(dm, &dmnew));
+    }
   } else if (refDomain) {
     PetscCall(DMPlexCreateReferenceCell_Internal(dm, cell));
   } else if (bdfflg) {

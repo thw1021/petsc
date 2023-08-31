@@ -1,6 +1,6 @@
 -include ../../../../../petscdir.mk
 
-DIRS      = socket ascii binary string draw vu mathematica hdf5 matlab ams vtk glvis adios cgns
+DIRS      = socket ascii binary string draw vu mathematica hdf5 matlab ams vtk glvis adios cgns gmsh
 MANSEC    = Sys
 SUBMANSEC = Viewer
 

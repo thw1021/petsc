@@ -16,6 +16,7 @@ PETSC_EXTERN PetscErrorCode PetscViewerCreate_GLVis(PetscViewer);
 PETSC_EXTERN PetscErrorCode PetscViewerCreate_ADIOS(PetscViewer);
 PETSC_EXTERN PetscErrorCode PetscViewerCreate_ExodusII(PetscViewer);
 PETSC_EXTERN PetscErrorCode PetscViewerCreate_CGNS(PetscViewer);
+PETSC_EXTERN PetscErrorCode PetscViewerCreate_GMSH(PetscViewer);
 
 PetscBool PetscViewerRegisterAllCalled;
 
@@ -65,5 +66,7 @@ PetscErrorCode PetscViewerRegisterAll(void)
 #if defined(PETSC_HAVE_CGNS)
   PetscCall(PetscViewerRegister(PETSCVIEWERCGNS, PetscViewerCreate_CGNS));
 #endif
+  PetscCall(PetscViewerRegister(PETSCVIEWERGMSH, PetscViewerCreate_GMSH));
+  PetscCall(PetscViewerRegister(PETSCVIEWERFLUENT, PetscViewerCreate_ASCII));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

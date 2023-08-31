@@ -35,7 +35,7 @@ class Configure(config.package.GNUPackage):
     from shlex import quote
     args = config.package.GNUPackage.formGNUConfigureArgs(self)
     if self.argDB['with-p4est-debugging']:
-      args.append('--enable-debug')
+      args.append('--enablbe-debug')
     if not self.mpi.usingMPIUni:
       args.append('--enable-mpi')
       if self.mpi.mpiexecExecutable:

@@ -94,7 +94,6 @@ static PetscErrorCode PetscViewerFileSetName_ExodusII(PetscViewer viewer, const 
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
   PetscMPIInt           rank;
   int                   CPU_word_size, IO_word_size, EXO_mode;
-  MPI_Info              mpi_info = MPI_INFO_NULL;
   float                 EXO_version;
 
   PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)viewer), &rank));
@@ -130,8 +129,10 @@ static PetscErrorCode PetscViewerFileSetName_ExodusII(PetscViewer viewer, const 
   #if defined(PETSC_USE_64BIT_INDICES)
   EXO_mode += EX_ALL_INT64_API;
   #endif
-  exo->exoid = ex_open_par(name, EXO_mode, &CPU_word_size, &IO_word_size, &EXO_version, PETSC_COMM_WORLD, mpi_info);
-  PetscCheck(exo->exoid >= 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "ex_open_par failed for %s", name);
+  if (rank == 0) {
+    exo->exoid = ex_open(name, EXO_mode, &CPU_word_size, &IO_word_size, &EXO_version);
+    PetscCheck(exo->exoid >= 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "ex_open_par failed for %s", name);
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -190,7 +191,7 @@ static PetscErrorCode PetscViewerExodusIISetOrder_ExodusII(PetscViewer viewer, P
 }
 
 /*MC
-   PETSCVIEWEREXODUSII - A viewer that writes to an Exodus II file
+   PETSCVIEWEREXODUSII - A viewer that read or writes to an Exodus II file
 
   Level: beginner
 
@@ -1741,3 +1742,260 @@ PetscErrorCode DMPlexCreateExodus(MPI_Comm comm, PetscInt exoid, PetscBool inter
   SETERRQ(comm, PETSC_ERR_SUP, "This method requires ExodusII support. Reconfigure using --download-exodusii");
 #endif
 }
+
+static PetscErrorCode DMPlexCreateExodus_Internal(DM dm, PetscInt exoid, PetscBool interpolate)
+{
+#if defined(PETSC_HAVE_EXODUSII)
+  PetscMPIInt  num_proc, rank;
+  DMLabel      cellSets = NULL, faceSets = NULL, vertSets = NULL;
+  PetscSection coordSection;
+  Vec          coordinates;
+  PetscScalar *coords;
+  PetscInt     coordSize, v;
+  /* Read from ex_get_init() */
+  char     title[PETSC_MAX_PATH_LEN + 1];
+  int      dim = 0, dimEmbed = 0, numVertices = 0, numCells = 0;
+  int      num_cs = 0, num_vs = 0, num_fs = 0;
+  MPI_Comm comm;
+#endif
+
+  PetscFunctionBegin;
+#if defined(PETSC_HAVE_EXODUSII)
+  PetscCall(PetscObjectGetComm((PetscObject)dm, &comm));
+  PetscCallMPI(MPI_Comm_rank(comm, &rank));
+  PetscCallMPI(MPI_Comm_size(comm, &num_proc));
+  /* Open EXODUS II file and read basic information on rank 0, then broadcast to all processors */
+  if (rank == 0) {
+    PetscCall(PetscMemzero(title, PETSC_MAX_PATH_LEN + 1));
+    PetscCallExternal(ex_get_init, exoid, title, &dimEmbed, &numVertices, &numCells, &num_cs, &num_vs, &num_fs);
+    PetscCheck(num_cs, PETSC_COMM_SELF, PETSC_ERR_SUP, "Exodus file does not contain any cell set");
+  }
+  PetscCallMPI(MPI_Bcast(title, PETSC_MAX_PATH_LEN + 1, MPI_CHAR, 0, comm));
+  PetscCallMPI(MPI_Bcast(&dim, 1, MPI_INT, 0, comm));
+  PetscCall(PetscObjectSetName((PetscObject)dm, title));
+  PetscCall(DMPlexSetChart(dm, 0, numCells + numVertices));
+  /*   We do not want this label automatically computed, instead we compute it here */
+  PetscCall(DMCreateLabel(dm, "celltype"));
+
+  /* Read cell sets information */
+  if (rank == 0) {
+    PetscInt *cone;
+    int       c, cs, ncs, c_loc, v, v_loc;
+    /* Read from ex_get_elem_blk_ids() */
+    int *cs_id, *cs_order;
+    /* Read from ex_get_elem_block() */
+    char buffer[PETSC_MAX_PATH_LEN + 1];
+    int  num_cell_in_set, num_vertex_per_cell, num_hybrid, num_attr;
+    /* Read from ex_get_elem_conn() */
+    int *cs_connect;
+
+    /* Get cell sets IDs */
+    PetscCall(PetscMalloc2(num_cs, &cs_id, num_cs, &cs_order));
+    PetscCallExternal(ex_get_ids, exoid, EX_ELEM_BLOCK, cs_id);
+    /* Read the cell set connectivity table and build mesh topology
+       EXO standard requires that cells in cell sets be numbered sequentially and be pairwise disjoint. */
+    /* Check for a hybrid mesh */
+    for (cs = 0, num_hybrid = 0; cs < num_cs; ++cs) {
+      DMPolytopeType ct;
+      char           elem_type[PETSC_MAX_PATH_LEN];
+
+      PetscCall(PetscArrayzero(elem_type, sizeof(elem_type)));
+      PetscCallExternal(ex_get_elem_type, exoid, cs_id[cs], elem_type);
+      PetscCall(ExodusGetCellType_Internal(elem_type, &ct));
+      dim = PetscMax(dim, DMPolytopeTypeGetDim(ct));
+      PetscCallExternal(ex_get_block, exoid, EX_ELEM_BLOCK, cs_id[cs], buffer, &num_cell_in_set, &num_vertex_per_cell, 0, 0, &num_attr);
+      switch (ct) {
+      case DM_POLYTOPE_TRI_PRISM:
+        cs_order[cs] = cs;
+        ++num_hybrid;
+        break;
+      default:
+        for (c = cs; c > cs - num_hybrid; --c) cs_order[c] = cs_order[c - 1];
+        cs_order[cs - num_hybrid] = cs;
+      }
+    }
+    /* First set sizes */
+    for (ncs = 0, c = 0; ncs < num_cs; ++ncs) {
+      DMPolytopeType ct;
+      char           elem_type[PETSC_MAX_PATH_LEN];
+      const PetscInt cs = cs_order[ncs];
+
+      PetscCall(PetscArrayzero(elem_type, sizeof(elem_type)));
+      PetscCallExternal(ex_get_elem_type, exoid, cs_id[cs], elem_type);
+      PetscCall(ExodusGetCellType_Internal(elem_type, &ct));
+      PetscCallExternal(ex_get_block, exoid, EX_ELEM_BLOCK, cs_id[cs], buffer, &num_cell_in_set, &num_vertex_per_cell, 0, 0, &num_attr);
+      for (c_loc = 0; c_loc < num_cell_in_set; ++c_loc, ++c) {
+        PetscCall(DMPlexSetConeSize(dm, c, num_vertex_per_cell));
+        PetscCall(DMPlexSetCellType(dm, c, ct));
+      }
+    }
+    for (v = numCells; v < numCells + numVertices; ++v) PetscCall(DMPlexSetCellType(dm, v, DM_POLYTOPE_POINT));
+    PetscCall(DMSetUp(dm));
+    for (ncs = 0, c = 0; ncs < num_cs; ++ncs) {
+      const PetscInt cs = cs_order[ncs];
+      PetscCallExternal(ex_get_block, exoid, EX_ELEM_BLOCK, cs_id[cs], buffer, &num_cell_in_set, &num_vertex_per_cell, 0, 0, &num_attr);
+      PetscCall(PetscMalloc2(num_vertex_per_cell * num_cell_in_set, &cs_connect, num_vertex_per_cell, &cone));
+      PetscCallExternal(ex_get_conn, exoid, EX_ELEM_BLOCK, cs_id[cs], cs_connect, NULL, NULL);
+      /* EXO uses Fortran-based indexing, DMPlex uses C-style and numbers cell first then vertices. */
+      for (c_loc = 0, v = 0; c_loc < num_cell_in_set; ++c_loc, ++c) {
+        DMPolytopeType ct;
+
+        for (v_loc = 0; v_loc < num_vertex_per_cell; ++v_loc, ++v) cone[v_loc] = cs_connect[v] + numCells - 1;
+        PetscCall(DMPlexGetCellType(dm, c, &ct));
+        PetscCall(DMPlexInvertCell(ct, cone));
+        PetscCall(DMPlexSetCone(dm, c, cone));
+        PetscCall(DMSetLabelValue_Fast(dm, &cellSets, "Cell Sets", c, cs_id[cs]));
+      }
+      PetscCall(PetscFree2(cs_connect, cone));
+    }
+    PetscCall(PetscFree2(cs_id, cs_order));
+  }
+  {
+    PetscInt ints[] = {dim, dimEmbed};
+
+    PetscCallMPI(MPI_Bcast(ints, 2, MPIU_INT, 0, comm));
+    PetscCall(DMSetDimension(dm, ints[0]));
+    PetscCall(DMSetCoordinateDim(dm, ints[1]));
+    dim      = ints[0];
+    dimEmbed = ints[1];
+  }
+  PetscCall(DMPlexSymmetrize(dm));
+  PetscCall(DMPlexStratify(dm));
+  if (interpolate) { PetscCall(DMPlexInterpolateInPlace_Internal(dm)); }
+
+  /* Create vertex set label */
+  if (rank == 0 && (num_vs > 0)) {
+    int vs, v;
+    /* Read from ex_get_node_set_ids() */
+    int *vs_id;
+    /* Read from ex_get_node_set_param() */
+    int num_vertex_in_set;
+    /* Read from ex_get_node_set() */
+    int *vs_vertex_list;
+
+    /* Get vertex set ids */
+    PetscCall(PetscMalloc1(num_vs, &vs_id));
+    PetscCallExternal(ex_get_ids, exoid, EX_NODE_SET, vs_id);
+    for (vs = 0; vs < num_vs; ++vs) {
+      PetscCallExternal(ex_get_set_param, exoid, EX_NODE_SET, vs_id[vs], &num_vertex_in_set, NULL);
+      PetscCall(PetscMalloc1(num_vertex_in_set, &vs_vertex_list));
+      PetscCallExternal(ex_get_set, exoid, EX_NODE_SET, vs_id[vs], vs_vertex_list, NULL);
+      for (v = 0; v < num_vertex_in_set; ++v) PetscCall(DMSetLabelValue_Fast(dm, &vertSets, "Vertex Sets", vs_vertex_list[v] + numCells - 1, vs_id[vs]));
+      PetscCall(PetscFree(vs_vertex_list));
+    }
+    PetscCall(PetscFree(vs_id));
+  }
+  /* Read coordinates */
+  PetscCall(DMGetCoordinateSection(dm, &coordSection));
+  PetscCall(PetscSectionSetNumFields(coordSection, 1));
+  PetscCall(PetscSectionSetFieldComponents(coordSection, 0, dimEmbed));
+  PetscCall(PetscSectionSetChart(coordSection, numCells, numCells + numVertices));
+  for (v = numCells; v < numCells + numVertices; ++v) {
+    PetscCall(PetscSectionSetDof(coordSection, v, dimEmbed));
+    PetscCall(PetscSectionSetFieldDof(coordSection, v, 0, dimEmbed));
+  }
+  PetscCall(PetscSectionSetUp(coordSection));
+  PetscCall(PetscSectionGetStorageSize(coordSection, &coordSize));
+  PetscCall(VecCreate(PETSC_COMM_SELF, &coordinates));
+  PetscCall(PetscObjectSetName((PetscObject)coordinates, "coordinates"));
+  PetscCall(VecSetSizes(coordinates, coordSize, PETSC_DETERMINE));
+  PetscCall(VecSetBlockSize(coordinates, dimEmbed));
+  PetscCall(VecSetType(coordinates, VECSTANDARD));
+  PetscCall(VecGetArray(coordinates, &coords));
+  if (rank == 0) {
+    PetscReal *x, *y, *z;
+
+    PetscCall(PetscMalloc3(numVertices, &x, numVertices, &y, numVertices, &z));
+    PetscCallExternal(ex_get_coord, exoid, x, y, z);
+    if (dimEmbed > 0) {
+      for (v = 0; v < numVertices; ++v) coords[v * dimEmbed + 0] = x[v];
+    }
+    if (dimEmbed > 1) {
+      for (v = 0; v < numVertices; ++v) coords[v * dimEmbed + 1] = y[v];
+    }
+    if (dimEmbed > 2) {
+      for (v = 0; v < numVertices; ++v) coords[v * dimEmbed + 2] = z[v];
+    }
+    PetscCall(PetscFree3(x, y, z));
+  }
+  PetscCall(VecRestoreArray(coordinates, &coords));
+  PetscCall(DMSetCoordinatesLocal(dm, coordinates));
+  PetscCall(VecDestroy(&coordinates));
+
+  /* Create side set label */
+  if (rank == 0 && interpolate && (num_fs > 0)) {
+    int fs, f, voff;
+    /* Read from ex_get_side_set_ids() */
+    int *fs_id;
+    /* Read from ex_get_side_set_param() */
+    int num_side_in_set;
+    /* Read from ex_get_side_set_node_list() */
+    int *fs_vertex_count_list, *fs_vertex_list;
+    /* Read side set labels */
+    char   fs_name[MAX_STR_LENGTH + 1];
+    size_t fs_name_len;
+
+    /* Get side set ids */
+    PetscCall(PetscMalloc1(num_fs, &fs_id));
+    PetscCallExternal(ex_get_ids, exoid, EX_SIDE_SET, fs_id);
+    // Ids 1 and 2 are reserved by ExodusII for indicating things in 3D
+    for (fs = 0; fs < num_fs; ++fs) {
+      PetscCallExternal(ex_get_set_param, exoid, EX_SIDE_SET, fs_id[fs], &num_side_in_set, NULL);
+      PetscCall(PetscMalloc2(num_side_in_set, &fs_vertex_count_list, num_side_in_set * 4, &fs_vertex_list));
+      PetscCallExternal(ex_get_side_set_node_list, exoid, fs_id[fs], fs_vertex_count_list, fs_vertex_list);
+      /* Get the specific name associated with this side set ID. */
+      int fs_name_err = ex_get_name(exoid, EX_SIDE_SET, fs_id[fs], fs_name);
+      if (!fs_name_err) {
+        PetscCall(PetscStrlen(fs_name, &fs_name_len));
+        if (fs_name_len == 0) PetscCall(PetscStrncpy(fs_name, "Face Sets", MAX_STR_LENGTH));
+      }
+      PetscCheck(fs_id[fs] != 1 && fs_id[fs] != 2, comm, PETSC_ERR_ARG_WRONG, "Side set %s marker cannot be %d since this is reserved by ExodusII", fs_name, fs_id[fs]);
+      for (f = 0, voff = 0; f < num_side_in_set; ++f) {
+        const PetscInt *faces    = NULL;
+        PetscInt        faceSize = fs_vertex_count_list[f], numFaces;
+        PetscInt        faceVertices[4], v;
+
+        PetscCheck(faceSize <= 4, comm, PETSC_ERR_ARG_WRONG, "ExodusII side cannot have %" PetscInt_FMT " > 4 vertices", faceSize);
+        for (v = 0; v < faceSize; ++v, ++voff) faceVertices[v] = fs_vertex_list[voff] + numCells - 1;
+        PetscCall(DMPlexGetFullJoin(dm, faceSize, faceVertices, &numFaces, &faces));
+        PetscCheck(numFaces == 1, comm, PETSC_ERR_ARG_WRONG, "Invalid ExodusII side %d in set %d maps to %" PetscInt_FMT " faces", f, fs, numFaces);
+        PetscCall(DMSetLabelValue_Fast(dm, &faceSets, "Face Sets", faces[0], fs_id[fs]));
+        /* Only add the label if one has been detected for this side set. */
+        if (!fs_name_err) PetscCall(DMSetLabelValue(dm, fs_name, faces[0], fs_id[fs]));
+        PetscCall(DMPlexRestoreJoin(dm, faceSize, faceVertices, &numFaces, &faces));
+      }
+      PetscCall(PetscFree2(fs_vertex_count_list, fs_vertex_list));
+    }
+    PetscCall(PetscFree(fs_id));
+  }
+
+  { /* Create Cell/Face/Vertex Sets labels at all processes */
+    enum {
+      n = 3
+    };
+    PetscBool flag[n];
+
+    flag[0] = cellSets ? PETSC_TRUE : PETSC_FALSE;
+    flag[1] = faceSets ? PETSC_TRUE : PETSC_FALSE;
+    flag[2] = vertSets ? PETSC_TRUE : PETSC_FALSE;
+    PetscCallMPI(MPI_Bcast(flag, n, MPIU_BOOL, 0, comm));
+    if (flag[0]) PetscCall(DMCreateLabel(dm, "Cell Sets"));
+    if (flag[1]) PetscCall(DMCreateLabel(dm, "Face Sets"));
+    if (flag[2]) PetscCall(DMCreateLabel(dm, "Vertex Sets"));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+#else
+  SETERRQ(comm, PETSC_ERR_SUP, "This method requires ExodusII support. Reconfigure using --download-exodusii");
+#endif
+}
+
+#if defined(PETSC_HAVE_EXODUSII)
+PetscErrorCode DMLoad_Plex_Exodusii(DM dm, PetscViewer viewer)
+{
+  PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
+
+  PetscFunctionBegin;
+  PetscCall(DMPlexCreateExodus_Internal(dm, exo->exoid, PETSC_TRUE));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+#endif

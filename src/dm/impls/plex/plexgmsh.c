@@ -1,7 +1,7 @@
 #define PETSCDM_DLL
 #include <petsc/private/dmpleximpl.h> /*I   "petscdmplex.h"   I*/
 #include <petsc/private/hashmapi.h>
-
+#include <petsc/private/viewergmshimpl.h> /*I "petscviewer.h" I*/
 #include <../src/dm/impls/plex/gmshlex.h>
 
 #define GMSH_LEXORDER_ITEM(T, p) \
@@ -194,23 +194,7 @@ static PetscErrorCode GmshCellInfoSetUp(void)
   PetscMacroReturnStandard(const int _ct_ = (int)ct; PetscCheck(_ct_ >= 0 && _ct_ < (int)PETSC_STATIC_ARRAY_LENGTH(GmshCellMap), PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid Gmsh element type %d", _ct_); PetscCheck(GmshCellMap[_ct_].cellType == _ct_, PETSC_COMM_SELF, PETSC_ERR_SUP, "Unsupported Gmsh element type %d", _ct_); \
                            PetscCheck(GmshCellMap[_ct_].polytope != -1, PETSC_COMM_SELF, PETSC_ERR_SUP, "Unsupported Gmsh element type %d", _ct_);)
 
-typedef struct {
-  PetscViewer viewer;
-  int         fileFormat;
-  int         dataSize;
-  PetscBool   binary;
-  PetscBool   byteSwap;
-  size_t      wlen;
-  void       *wbuf;
-  size_t      slen;
-  void       *sbuf;
-  PetscInt   *nbuf;
-  PetscInt    nodeStart;
-  PetscInt    nodeEnd;
-  PetscInt   *nodeMap;
-} GmshFile;
-
-static PetscErrorCode GmshBufferGet(GmshFile *gmsh, size_t count, size_t eltsize, void *buf)
+static PetscErrorCode GmshBufferGet(PetscViewer_GMSH *gmsh, size_t count, size_t eltsize, void *buf)
 {
   size_t size = count * eltsize;
 
@@ -224,7 +208,7 @@ static PetscErrorCode GmshBufferGet(GmshFile *gmsh, size_t count, size_t eltsize
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode GmshBufferSizeGet(GmshFile *gmsh, size_t count, void *buf)
+static PetscErrorCode GmshBufferSizeGet(PetscViewer_GMSH *gmsh, size_t count, void *buf)
 {
   size_t dataSize = (size_t)gmsh->dataSize;
   size_t size     = count * dataSize;
@@ -239,7 +223,7 @@ static PetscErrorCode GmshBufferSizeGet(GmshFile *gmsh, size_t count, void *buf)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode GmshRead(GmshFile *gmsh, void *buf, PetscInt count, PetscDataType dtype)
+static PetscErrorCode GmshRead(PetscViewer_GMSH *gmsh, void *buf, PetscInt count, PetscDataType dtype)
 {
   PetscFunctionBegin;
   PetscCall(PetscViewerRead(gmsh->viewer, buf, count, NULL, dtype));
@@ -247,21 +231,21 @@ static PetscErrorCode GmshRead(GmshFile *gmsh, void *buf, PetscInt count, PetscD
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode GmshReadString(GmshFile *gmsh, char *buf, PetscInt count)
+static PetscErrorCode GmshReadString(PetscViewer_GMSH *gmsh, char *buf, PetscInt count)
 {
   PetscFunctionBegin;
   PetscCall(PetscViewerRead(gmsh->viewer, buf, count, NULL, PETSC_STRING));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode GmshMatch(PETSC_UNUSED GmshFile *gmsh, const char Section[], char line[PETSC_MAX_PATH_LEN], PetscBool *match)
+static PetscErrorCode GmshMatch(PETSC_UNUSED PetscViewer_GMSH *gmsh, const char Section[], char line[PETSC_MAX_PATH_LEN], PetscBool *match)
 {
   PetscFunctionBegin;
   PetscCall(PetscStrcmp(line, Section, match));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode GmshExpect(GmshFile *gmsh, const char Section[], char line[PETSC_MAX_PATH_LEN])
+static PetscErrorCode GmshExpect(PetscViewer_GMSH *gmsh, const char Section[], char line[PETSC_MAX_PATH_LEN])
 {
   PetscBool match;
 
@@ -271,7 +255,7 @@ static PetscErrorCode GmshExpect(GmshFile *gmsh, const char Section[], char line
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode GmshReadSection(GmshFile *gmsh, char line[PETSC_MAX_PATH_LEN])
+static PetscErrorCode GmshReadSection(PetscViewer_GMSH *gmsh, char line[PETSC_MAX_PATH_LEN])
 {
   PetscBool match;
 
@@ -289,7 +273,7 @@ static PetscErrorCode GmshReadSection(GmshFile *gmsh, char line[PETSC_MAX_PATH_L
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode GmshReadEndSection(GmshFile *gmsh, const char EndSection[], char line[PETSC_MAX_PATH_LEN])
+static PetscErrorCode GmshReadEndSection(PetscViewer_GMSH *gmsh, const char EndSection[], char line[PETSC_MAX_PATH_LEN])
 {
   PetscFunctionBegin;
   PetscCall(GmshReadString(gmsh, line, 1));
@@ -297,7 +281,7 @@ static PetscErrorCode GmshReadEndSection(GmshFile *gmsh, const char EndSection[]
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode GmshReadSize(GmshFile *gmsh, PetscInt *buf, PetscInt count)
+static PetscErrorCode GmshReadSize(PetscViewer_GMSH *gmsh, PetscInt *buf, PetscInt count)
 {
   PetscInt i;
   size_t   dataSize = (size_t)gmsh->dataSize;
@@ -324,14 +308,14 @@ static PetscErrorCode GmshReadSize(GmshFile *gmsh, PetscInt *buf, PetscInt count
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode GmshReadInt(GmshFile *gmsh, int *buf, PetscInt count)
+static PetscErrorCode GmshReadInt(PetscViewer_GMSH *gmsh, int *buf, PetscInt count)
 {
   PetscFunctionBegin;
   PetscCall(GmshRead(gmsh, buf, count, PETSC_ENUM));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode GmshReadDouble(GmshFile *gmsh, double *buf, PetscInt count)
+static PetscErrorCode GmshReadDouble(PetscViewer_GMSH *gmsh, double *buf, PetscInt count)
 {
   PetscFunctionBegin;
   PetscCall(GmshRead(gmsh, buf, count, PETSC_DOUBLE));
@@ -498,7 +482,7 @@ static PetscErrorCode GmshMeshDestroy(GmshMesh **mesh)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode GmshReadNodes_v22(GmshFile *gmsh, GmshMesh *mesh)
+static PetscErrorCode GmshReadNodes_v22(PetscViewer_GMSH *gmsh, GmshMesh *mesh)
 {
   PetscViewer viewer   = gmsh->viewer;
   PetscBool   byteSwap = gmsh->byteSwap;
@@ -529,7 +513,7 @@ static PetscErrorCode GmshReadNodes_v22(GmshFile *gmsh, GmshMesh *mesh)
    file contents multiple times to figure out the true number of cells and facets
    in the given mesh. To make this more efficient we read the file contents only
    once and store them in memory, while determining the true number of cells. */
-static PetscErrorCode GmshReadElements_v22(GmshFile *gmsh, GmshMesh *mesh)
+static PetscErrorCode GmshReadElements_v22(PetscViewer_GMSH *gmsh, GmshMesh *mesh)
 {
   PetscViewer  viewer   = gmsh->viewer;
   PetscBool    binary   = gmsh->binary;
@@ -608,7 +592,7 @@ $Entities
   ...
 $EndEntities
 */
-static PetscErrorCode GmshReadEntities_v40(GmshFile *gmsh, GmshMesh *mesh)
+static PetscErrorCode GmshReadEntities_v40(PetscViewer_GMSH *gmsh, GmshMesh *mesh)
 {
   PetscViewer viewer   = gmsh->viewer;
   PetscBool   byteSwap = gmsh->byteSwap;
@@ -656,7 +640,7 @@ $Nodes
   ...
 $EndNodes
 */
-static PetscErrorCode GmshReadNodes_v40(GmshFile *gmsh, GmshMesh *mesh)
+static PetscErrorCode GmshReadNodes_v40(PetscViewer_GMSH *gmsh, GmshMesh *mesh)
 {
   PetscViewer viewer   = gmsh->viewer;
   PetscBool   byteSwap = gmsh->byteSwap;
@@ -717,7 +701,7 @@ $Elements
   ...
 $EndElements
 */
-static PetscErrorCode GmshReadElements_v40(GmshFile *gmsh, GmshMesh *mesh)
+static PetscErrorCode GmshReadElements_v40(PetscViewer_GMSH *gmsh, GmshMesh *mesh)
 {
   PetscViewer  viewer   = gmsh->viewer;
   PetscBool    byteSwap = gmsh->byteSwap;
@@ -769,7 +753,7 @@ static PetscErrorCode GmshReadElements_v40(GmshFile *gmsh, GmshMesh *mesh)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode GmshReadPeriodic_v40(GmshFile *gmsh, PetscInt periodicMap[])
+static PetscErrorCode GmshReadPeriodic_v40(PetscViewer_GMSH *gmsh, PetscInt periodicMap[])
 {
   PetscViewer viewer     = gmsh->viewer;
   int         fileFormat = gmsh->fileFormat;
@@ -870,7 +854,7 @@ $Entities
   ...
 $EndEntities
 */
-static PetscErrorCode GmshReadEntities_v41(GmshFile *gmsh, GmshMesh *mesh)
+static PetscErrorCode GmshReadEntities_v41(PetscViewer_GMSH *gmsh, GmshMesh *mesh)
 {
   PetscInt    count[4], index, numTags, i;
   int         dim, eid, *tags = NULL;
@@ -914,7 +898,7 @@ $Nodes
   ...
 $EndNodes
 */
-static PetscErrorCode GmshReadNodes_v41(GmshFile *gmsh, GmshMesh *mesh)
+static PetscErrorCode GmshReadNodes_v41(PetscViewer_GMSH *gmsh, GmshMesh *mesh)
 {
   int         info[3], dim, eid, parametric;
   PetscInt    sizes[4], numEntityBlocks, numTags, t, numNodes, numNodesBlock = 0, block, node, n;
@@ -961,7 +945,7 @@ $Elements
   ...
 $EndElements
 */
-static PetscErrorCode GmshReadElements_v41(GmshFile *gmsh, GmshMesh *mesh)
+static PetscErrorCode GmshReadElements_v41(PetscViewer_GMSH *gmsh, GmshMesh *mesh)
 {
   int          info[3], eid, dim, cellType;
   PetscInt     sizes[4], *ibuf = NULL, numEntityBlocks, numElements, numBlockElements, numVerts, numNodes, numTags, block, elem, c, p;
@@ -1017,7 +1001,7 @@ $Periodic
   ...
 $EndPeriodic
 */
-static PetscErrorCode GmshReadPeriodic_v41(GmshFile *gmsh, PetscInt periodicMap[])
+static PetscErrorCode GmshReadPeriodic_v41(PetscViewer_GMSH *gmsh, PetscInt periodicMap[])
 {
   int       info[3];
   double    dbuf[16];
@@ -1050,7 +1034,7 @@ $MeshFormat // same as MSH version 2
   < int with value one; only in binary mode, to detect endianness >
 $EndMeshFormat
 */
-static PetscErrorCode GmshReadMeshFormat(GmshFile *gmsh)
+static PetscErrorCode GmshReadMeshFormat(PetscViewer_GMSH *gmsh)
 {
   char  line[PETSC_MAX_PATH_LEN];
   int   snum, fileType, fileFormat, dataSize, checkEndian;
@@ -1089,7 +1073,7 @@ PhysicalNames
   ...
 $EndPhysicalNames
 */
-static PetscErrorCode GmshReadPhysicalNames(GmshFile *gmsh, GmshMesh *mesh)
+static PetscErrorCode GmshReadPhysicalNames(PetscViewer_GMSH *gmsh, GmshMesh *mesh)
 {
   char line[PETSC_MAX_PATH_LEN], name[128 + 2], *p = NULL, *q = NULL, *r = NULL;
   int  snum, region, dim, tag;
@@ -1119,7 +1103,7 @@ static PetscErrorCode GmshReadPhysicalNames(GmshFile *gmsh, GmshMesh *mesh)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode GmshReadEntities(GmshFile *gmsh, GmshMesh *mesh)
+static PetscErrorCode GmshReadEntities(PetscViewer_GMSH *gmsh, GmshMesh *mesh)
 {
   PetscFunctionBegin;
   switch (gmsh->fileFormat) {
@@ -1133,7 +1117,7 @@ static PetscErrorCode GmshReadEntities(GmshFile *gmsh, GmshMesh *mesh)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode GmshReadNodes(GmshFile *gmsh, GmshMesh *mesh)
+static PetscErrorCode GmshReadNodes(PetscViewer_GMSH *gmsh, GmshMesh *mesh)
 {
   PetscFunctionBegin;
   switch (gmsh->fileFormat) {
@@ -1177,7 +1161,7 @@ static PetscErrorCode GmshReadNodes(GmshFile *gmsh, GmshMesh *mesh)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode GmshReadElements(GmshFile *gmsh, GmshMesh *mesh)
+static PetscErrorCode GmshReadElements(PetscViewer_GMSH *gmsh, GmshMesh *mesh)
 {
   PetscFunctionBegin;
   switch (gmsh->fileFormat) {
@@ -1249,7 +1233,7 @@ static PetscErrorCode GmshReadElements(GmshFile *gmsh, GmshMesh *mesh)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode GmshReadPeriodic(GmshFile *gmsh, GmshMesh *mesh)
+static PetscErrorCode GmshReadPeriodic(PetscViewer_GMSH *gmsh, GmshMesh *mesh)
 {
   PetscInt n;
 
@@ -1386,49 +1370,18 @@ static PetscErrorCode GmshCreateFE(MPI_Comm comm, const char prefix[], PetscBool
 
   Level: beginner
 
-.seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMPlexCreateFromFile()`, `DMPlexCreateGmsh()`, `DMPlexCreate()`
+  Note:
+  Preferred alternatives `DMLoadFromFile()` or `DMLoad()`
+
+.seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMLoadFromFile()`, `DMLoad()`, `DMPlexCreateFromFile()`, `DMPlexCreateGmsh()`, `DMPlexCreate()`
 @*/
 PetscErrorCode DMPlexCreateGmshFromFile(MPI_Comm comm, const char filename[], PetscBool interpolate, DM *dm)
 {
-  PetscViewer     viewer;
-  PetscMPIInt     rank;
-  int             fileType;
-  PetscViewerType vtype;
+  PetscViewer viewer;
 
   PetscFunctionBegin;
-  PetscCallMPI(MPI_Comm_rank(comm, &rank));
-
-  /* Determine Gmsh file type (ASCII or binary) from file header */
-  if (rank == 0) {
-    GmshFile gmsh[1];
-    char     line[PETSC_MAX_PATH_LEN];
-    int      snum;
-    float    version;
-    int      fileFormat;
-
-    PetscCall(PetscArrayzero(gmsh, 1));
-    PetscCall(PetscViewerCreate(PETSC_COMM_SELF, &gmsh->viewer));
-    PetscCall(PetscViewerSetType(gmsh->viewer, PETSCVIEWERASCII));
-    PetscCall(PetscViewerFileSetMode(gmsh->viewer, FILE_MODE_READ));
-    PetscCall(PetscViewerFileSetName(gmsh->viewer, filename));
-    /* Read only the first two lines of the Gmsh file */
-    PetscCall(GmshReadSection(gmsh, line));
-    PetscCall(GmshExpect(gmsh, "$MeshFormat", line));
-    PetscCall(GmshReadString(gmsh, line, 2));
-    snum       = sscanf(line, "%f %d", &version, &fileType);
-    fileFormat = (int)roundf(version * 10);
-    PetscCheck(snum == 2, PETSC_COMM_SELF, PETSC_ERR_FILE_UNEXPECTED, "Unable to parse Gmsh file header: %s", line);
-    PetscCheck(fileFormat >= 22, PETSC_COMM_SELF, PETSC_ERR_SUP, "Gmsh file version %3.1f must be at least 2.2", (double)version);
-    PetscCheck((int)version != 3, PETSC_COMM_SELF, PETSC_ERR_SUP, "Gmsh file version %3.1f not supported", (double)version);
-    PetscCheck(fileFormat <= 41, PETSC_COMM_SELF, PETSC_ERR_SUP, "Gmsh file version %3.1f must be at most 4.1", (double)version);
-    PetscCall(PetscViewerDestroy(&gmsh->viewer));
-  }
-  PetscCallMPI(MPI_Bcast(&fileType, 1, MPI_INT, 0, comm));
-  vtype = (fileType == 0) ? PETSCVIEWERASCII : PETSCVIEWERBINARY;
-
-  /* Create appropriate viewer and build plex */
   PetscCall(PetscViewerCreate(comm, &viewer));
-  PetscCall(PetscViewerSetType(viewer, vtype));
+  PetscCall(PetscViewerSetType(viewer, PETSCVIEWERGMSH));
   PetscCall(PetscViewerFileSetMode(viewer, FILE_MODE_READ));
   PetscCall(PetscViewerFileSetName(viewer, filename));
   PetscCall(DMPlexCreateGmsh(comm, viewer, interpolate, dm));
@@ -1436,58 +1389,31 @@ PetscErrorCode DMPlexCreateGmshFromFile(MPI_Comm comm, const char filename[], Pe
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@
-  DMPlexCreateGmsh - Create a `DMPLEX` mesh from a Gmsh file viewer
-
-  Collective
-
-  Input Parameters:
-+ comm        - The MPI communicator
-. viewer      - The `PetscViewer` associated with a Gmsh file
-- interpolate - Create faces and edges in the mesh
-
-  Output Parameter:
-. dm - The `DM` object representing the mesh
-
-  Options Database Keys:
-+ -dm_plex_gmsh_hybrid        - Force triangular prisms to use tensor order
-. -dm_plex_gmsh_periodic      - Read Gmsh periodic section and construct a periodic Plex
-. -dm_plex_gmsh_highorder     - Generate high-order coordinates
-. -dm_plex_gmsh_project       - Project high-order coordinates to a different space, use the prefix dm_plex_gmsh_project_ to define the space
-. -dm_plex_gmsh_use_regions   - Generate labels with region names
-. -dm_plex_gmsh_mark_vertices - Add vertices to generated labels
-. -dm_plex_gmsh_multiple_tags - Allow multiple tags for default labels
-- -dm_plex_gmsh_spacedim <d>  - Embedding space dimension, if different from topological dimension
-
-  Note:
-  The Gmsh file format is described in http://gmsh.info/doc/texinfo/gmsh.html#MSH-file-format
-
-  By default, the "Cell Sets", "Face Sets", and "Vertex Sets" labels are created, and only insert the first tag on a point. By using -dm_plex_gmsh_multiple_tags, all tags can be inserted. Instead, -dm_plex_gmsh_use_regions creates labels based on the region names from the PhysicalNames section, and all tags are used.
-
-  Level: beginner
-
-.seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMCreate()`
-@*/
-PetscErrorCode DMPlexCreateGmsh(MPI_Comm comm, PetscViewer viewer, PetscBool interpolate, DM *dm)
+PetscErrorCode DMLoad_Plex_GMSH(DM dm, PetscViewer view)
 {
-  GmshMesh    *mesh          = NULL;
-  PetscViewer  parentviewer  = NULL;
-  PetscBT      periodicVerts = NULL;
-  PetscBT     *periodicCells = NULL;
-  DM           cdm, cdmCell = NULL;
-  PetscSection cs, csCell   = NULL;
-  Vec          coordinates, coordinatesCell;
-  DMLabel      cellSets = NULL, faceSets = NULL, vertSets = NULL, marker = NULL, *regionSets;
-  PetscInt     dim = 0, coordDim = -1, order = 0, maxHeight = 0;
-  PetscInt     numNodes = 0, numElems = 0, numVerts = 0, numCells = 0, vStart, vEnd;
-  PetscInt     cell, cone[8], e, n, v, d;
-  PetscBool    binary, useregions = PETSC_FALSE, markvertices = PETSC_FALSE, multipleTags = PETSC_FALSE;
-  PetscBool    hybrid = interpolate, periodic = PETSC_TRUE;
-  PetscBool    highOrder = PETSC_TRUE, highOrderSet, project = PETSC_FALSE;
-  PetscBool    isSimplex = PETSC_FALSE, isHybrid = PETSC_FALSE, hasTetra = PETSC_FALSE;
-  PetscMPIInt  rank;
+  PetscViewer_GMSH *gmsh          = (PetscViewer_GMSH *)view->data;
+  PetscViewer       viewer        = gmsh->viewer;
+  PetscBool         interpolate   = PETSC_TRUE;
+  GmshMesh         *mesh          = NULL;
+  PetscViewer       parentviewer  = NULL;
+  PetscBT           periodicVerts = NULL;
+  PetscBT          *periodicCells = NULL;
+  DM                cdm, cdmCell = NULL;
+  PetscSection      cs, csCell   = NULL;
+  Vec               coordinates, coordinatesCell;
+  DMLabel           cellSets = NULL, faceSets = NULL, vertSets = NULL, marker = NULL, *regionSets;
+  PetscInt          dim = 0, coordDim = -1, order = 0, maxHeight = 0;
+  PetscInt          numNodes = 0, numElems = 0, numVerts = 0, numCells = 0, vStart, vEnd;
+  PetscInt          cell, cone[8], e, n, v, d;
+  PetscBool         binary, useregions = PETSC_FALSE, markvertices = PETSC_FALSE, multipleTags = PETSC_FALSE;
+  PetscBool         hybrid = interpolate, periodic = PETSC_TRUE;
+  PetscBool         highOrder = PETSC_TRUE, highOrderSet, project = PETSC_FALSE;
+  PetscBool         isSimplex = PETSC_FALSE, isHybrid = PETSC_FALSE, hasTetra = PETSC_FALSE;
+  PetscMPIInt       rank;
+  MPI_Comm          comm;
 
   PetscFunctionBegin;
+  PetscCall(PetscObjectGetComm((PetscObject)dm, &comm));
   PetscCallMPI(MPI_Comm_rank(comm, &rank));
   PetscObjectOptionsBegin((PetscObject)viewer);
   PetscOptionsHeadBegin(PetscOptionsObject, "DMPlex Gmsh options");
@@ -1505,9 +1431,7 @@ PetscErrorCode DMPlexCreateGmsh(MPI_Comm comm, PetscViewer viewer, PetscBool int
 
   PetscCall(GmshCellInfoSetUp());
 
-  PetscCall(DMCreate(comm, dm));
-  PetscCall(DMSetType(*dm, DMPLEX));
-  PetscCall(PetscLogEventBegin(DMPLEX_CreateGmsh, *dm, NULL, NULL, NULL));
+  PetscCall(PetscLogEventBegin(DMPLEX_CreateGmsh, dm, NULL, NULL, NULL));
 
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERBINARY, &binary));
 
@@ -1518,9 +1442,9 @@ PetscErrorCode DMPlexCreateGmsh(MPI_Comm comm, PetscViewer viewer, PetscBool int
   }
 
   if (rank == 0) {
-    GmshFile  gmsh[1];
-    char      line[PETSC_MAX_PATH_LEN];
-    PetscBool match;
+    PetscViewer_GMSH gmsh[1];
+    char             line[PETSC_MAX_PATH_LEN];
+    PetscBool        match;
 
     PetscCall(PetscArrayzero(gmsh, 1));
     gmsh->viewer = viewer;
@@ -1624,19 +1548,19 @@ PetscErrorCode DMPlexCreateGmsh(MPI_Comm comm, PetscViewer viewer, PetscBool int
   PetscCheck(!highOrder || !isHybrid, comm, PETSC_ERR_SUP, "No support for discretization on hybrid meshes yet");
 
   /* We do not want this label automatically computed, instead we fill it here */
-  PetscCall(DMCreateLabel(*dm, "celltype"));
+  PetscCall(DMCreateLabel(dm, "celltype"));
 
   /* Allocate the cell-vertex mesh */
-  PetscCall(DMPlexSetChart(*dm, 0, numCells + numVerts));
+  PetscCall(DMPlexSetChart(dm, 0, numCells + numVerts));
   for (cell = 0; cell < numCells; ++cell) {
     GmshElement   *elem  = mesh->elements + cell;
     DMPolytopeType ctype = DMPolytopeTypeFromGmsh(elem->cellType);
     if (hybrid && hasTetra && ctype == DM_POLYTOPE_TRI_PRISM) ctype = DM_POLYTOPE_TRI_PRISM_TENSOR;
-    PetscCall(DMPlexSetConeSize(*dm, cell, elem->numVerts));
-    PetscCall(DMPlexSetCellType(*dm, cell, ctype));
+    PetscCall(DMPlexSetConeSize(dm, cell, elem->numVerts));
+    PetscCall(DMPlexSetCellType(dm, cell, ctype));
   }
-  for (v = numCells; v < numCells + numVerts; ++v) PetscCall(DMPlexSetCellType(*dm, v, DM_POLYTOPE_POINT));
-  PetscCall(DMSetUp(*dm));
+  for (v = numCells; v < numCells + numVerts; ++v) PetscCall(DMPlexSetCellType(dm, v, DM_POLYTOPE_POINT));
+  PetscCall(DMSetUp(dm));
 
   /* Add cell-vertex connections */
   for (cell = 0; cell < numCells; ++cell) {
@@ -1646,21 +1570,15 @@ PetscErrorCode DMPlexCreateGmsh(MPI_Comm comm, PetscViewer viewer, PetscBool int
       const PetscInt vv = mesh->vertexMap[nn];
       cone[v]           = numCells + vv;
     }
-    PetscCall(DMPlexReorderCell(*dm, cell, cone));
-    PetscCall(DMPlexSetCone(*dm, cell, cone));
+    PetscCall(DMPlexReorderCell(dm, cell, cone));
+    PetscCall(DMPlexSetCone(dm, cell, cone));
   }
 
-  PetscCall(DMSetDimension(*dm, dim));
-  PetscCall(DMPlexSymmetrize(*dm));
-  PetscCall(DMPlexStratify(*dm));
-  if (interpolate) {
-    DM idm;
-
-    PetscCall(DMPlexInterpolate(*dm, &idm));
-    PetscCall(DMDestroy(dm));
-    *dm = idm;
-  }
-  PetscCall(DMPlexGetDepthStratum(*dm, 0, &vStart, &vEnd));
+  PetscCall(DMSetDimension(dm, dim));
+  PetscCall(DMPlexSymmetrize(dm));
+  PetscCall(DMPlexStratify(dm));
+  if (interpolate) { PetscCall(DMPlexInterpolateInPlace_Internal(dm)); }
+  PetscCall(DMPlexGetDepthStratum(dm, 0, &vStart, &vEnd));
 
   if (rank == 0) {
     const PetscInt Nr = useregions ? mesh->numRegions : 0;
@@ -1678,10 +1596,10 @@ PetscErrorCode DMPlexCreateGmsh(MPI_Comm comm, PetscViewer viewer, PetscBool int
             const PetscInt  tag     = elem->tags[t];
             const PetscBool generic = !Nr && (!t || multipleTags) ? PETSC_TRUE : PETSC_FALSE;
 
-            if (generic) PetscCall(DMSetLabelValue_Fast(*dm, &cellSets, "Cell Sets", cell, tag));
+            if (generic) PetscCall(DMSetLabelValue_Fast(dm, &cellSets, "Cell Sets", cell, tag));
             for (r = 0; r < Nr; ++r) {
               if (mesh->regionDims[r] != dim) continue;
-              if (mesh->regionTags[r] == tag) PetscCall(DMSetLabelValue_Fast(*dm, &regionSets[r], mesh->regionNames[r], cell, tag));
+              if (mesh->regionTags[r] == tag) PetscCall(DMSetLabelValue_Fast(dm, &regionSets[r], mesh->regionNames[r], cell, tag));
             }
           }
         }
@@ -1700,19 +1618,19 @@ PetscErrorCode DMPlexCreateGmsh(MPI_Comm comm, PetscViewer viewer, PetscBool int
           const PetscInt vv = mesh->vertexMap[nn];
           cone[v]           = vStart + vv;
         }
-        PetscCall(DMPlexGetFullJoin(*dm, elem->numVerts, cone, &joinSize, &join));
+        PetscCall(DMPlexGetFullJoin(dm, elem->numVerts, cone, &joinSize, &join));
         PetscCheck(joinSize == 1, PETSC_COMM_SELF, PETSC_ERR_SUP, "Could not determine Plex facet for Gmsh element %" PetscInt_FMT " (Plex cell %" PetscInt_FMT ")", elem->id, e);
         for (t = 0; t < Nt; ++t) {
           const PetscInt  tag     = elem->tags[t];
           const PetscBool generic = !Nr && (!t || multipleTags) ? PETSC_TRUE : PETSC_FALSE;
 
-          if (generic) PetscCall(DMSetLabelValue_Fast(*dm, &faceSets, "Face Sets", join[0], tag));
+          if (generic) PetscCall(DMSetLabelValue_Fast(dm, &faceSets, "Face Sets", join[0], tag));
           for (r = 0; r < Nr; ++r) {
             if (mesh->regionDims[r] != dim - 1) continue;
-            if (mesh->regionTags[r] == tag) PetscCall(DMSetLabelValue_Fast(*dm, &regionSets[r], mesh->regionNames[r], join[0], tag));
+            if (mesh->regionTags[r] == tag) PetscCall(DMSetLabelValue_Fast(dm, &regionSets[r], mesh->regionNames[r], join[0], tag));
           }
         }
-        PetscCall(DMPlexRestoreJoin(*dm, elem->numVerts, cone, &joinSize, &join));
+        PetscCall(DMPlexRestoreJoin(dm, elem->numVerts, cone, &joinSize, &join));
       }
 
       /* Create vertex sets */
@@ -1723,10 +1641,10 @@ PetscErrorCode DMPlexCreateGmsh(MPI_Comm comm, PetscViewer viewer, PetscBool int
           const PetscInt tag = elem->tags[0];
           PetscInt       r;
 
-          if (!Nr) PetscCall(DMSetLabelValue_Fast(*dm, &vertSets, "Vertex Sets", vStart + vv, tag));
+          if (!Nr) PetscCall(DMSetLabelValue_Fast(dm, &vertSets, "Vertex Sets", vStart + vv, tag));
           for (r = 0; r < Nr; ++r) {
             if (mesh->regionDims[r] != 0) continue;
-            if (mesh->regionTags[r] == tag) PetscCall(DMSetLabelValue_Fast(*dm, &regionSets[r], mesh->regionNames[r], vStart + vv, tag));
+            if (mesh->regionTags[r] == tag) PetscCall(DMSetLabelValue_Fast(dm, &regionSets[r], mesh->regionNames[r], vStart + vv, tag));
           }
         }
       }
@@ -1742,9 +1660,9 @@ PetscErrorCode DMPlexCreateGmsh(MPI_Comm comm, PetscViewer viewer, PetscBool int
           const PetscBool generic = !Nr && (!t || multipleTags) ? PETSC_TRUE : PETSC_FALSE;
 
           if (tag == -1) continue;
-          if (generic) PetscCall(DMSetLabelValue_Fast(*dm, &vertSets, "Vertex Sets", vStart + vv, tag));
+          if (generic) PetscCall(DMSetLabelValue_Fast(dm, &vertSets, "Vertex Sets", vStart + vv, tag));
           for (r = 0; r < Nr; ++r) {
-            if (mesh->regionTags[r] == tag) PetscCall(DMSetLabelValue_Fast(*dm, &regionSets[r], mesh->regionNames[r], vStart + vv, tag));
+            if (mesh->regionTags[r] == tag) PetscCall(DMSetLabelValue_Fast(dm, &regionSets[r], mesh->regionNames[r], vStart + vv, tag));
           }
         }
       }
@@ -1763,10 +1681,10 @@ PetscErrorCode DMPlexCreateGmsh(MPI_Comm comm, PetscViewer viewer, PetscBool int
     flag[2] = vertSets ? PETSC_TRUE : PETSC_FALSE;
     flag[3] = marker ? PETSC_TRUE : PETSC_FALSE;
     PetscCallMPI(MPI_Bcast(flag, n, MPIU_BOOL, 0, comm));
-    if (flag[0]) PetscCall(DMCreateLabel(*dm, "Cell Sets"));
-    if (flag[1]) PetscCall(DMCreateLabel(*dm, "Face Sets"));
-    if (flag[2]) PetscCall(DMCreateLabel(*dm, "Vertex Sets"));
-    if (flag[3]) PetscCall(DMCreateLabel(*dm, "marker"));
+    if (flag[0]) PetscCall(DMCreateLabel(dm, "Cell Sets"));
+    if (flag[1]) PetscCall(DMCreateLabel(dm, "Face Sets"));
+    if (flag[2]) PetscCall(DMCreateLabel(dm, "Vertex Sets"));
+    if (flag[3]) PetscCall(DMCreateLabel(dm, "marker"));
   }
 
   if (periodic) {
@@ -1780,18 +1698,18 @@ PetscErrorCode DMPlexCreateGmsh(MPI_Comm comm, PetscViewer viewer, PetscBool int
         }
       }
     }
-    PetscCall(DMGetCoordinateDM(*dm, &cdm));
+    PetscCall(DMGetCoordinateDM(dm, &cdm));
     PetscCall(PetscMalloc1(maxHeight + 1, &periodicCells));
     for (PetscInt h = 0; h <= maxHeight; ++h) {
       PetscInt pStart, pEnd;
 
-      PetscCall(DMPlexGetHeightStratum(*dm, h, &pStart, &pEnd));
+      PetscCall(DMPlexGetHeightStratum(dm, h, &pStart, &pEnd));
       PetscCall(PetscBTCreate(pEnd - pStart, &periodicCells[h]));
       for (PetscInt p = pStart; p < pEnd; ++p) {
         PetscInt *closure = NULL;
         PetscInt  Ncl;
 
-        PetscCall(DMPlexGetTransitiveClosure(*dm, p, PETSC_TRUE, &Ncl, &closure));
+        PetscCall(DMPlexGetTransitiveClosure(dm, p, PETSC_TRUE, &Ncl, &closure));
         for (PetscInt cl = 0; cl < Ncl * 2; cl += 2) {
           if (closure[cl] >= vStart && closure[cl] < vEnd) {
             if (PetscUnlikely(PetscBTLookup(periodicVerts, closure[cl] - vStart))) {
@@ -1800,15 +1718,15 @@ PetscErrorCode DMPlexCreateGmsh(MPI_Comm comm, PetscViewer viewer, PetscBool int
             }
           }
         }
-        PetscCall(DMPlexRestoreTransitiveClosure(*dm, p, PETSC_TRUE, &Ncl, &closure));
+        PetscCall(DMPlexRestoreTransitiveClosure(dm, p, PETSC_TRUE, &Ncl, &closure));
       }
     }
   }
 
   /* Setup coordinate DM */
   if (coordDim < 0) coordDim = dim;
-  PetscCall(DMSetCoordinateDim(*dm, coordDim));
-  PetscCall(DMGetCoordinateDM(*dm, &cdm));
+  PetscCall(DMSetCoordinateDim(dm, coordDim));
+  PetscCall(DMGetCoordinateDM(dm, &cdm));
   if (highOrder) {
     PetscFE         fe;
     PetscBool       continuity = periodic ? PETSC_FALSE : PETSC_TRUE;
@@ -1824,7 +1742,7 @@ PetscErrorCode DMPlexCreateGmsh(MPI_Comm comm, PetscViewer viewer, PetscBool int
   }
   if (periodic) {
     PetscCall(DMClone(cdm, &cdmCell));
-    PetscCall(DMSetCellCoordinateDM(*dm, cdmCell));
+    PetscCall(DMSetCellCoordinateDM(dm, cdmCell));
   }
 
   /* Create coordinates */
@@ -1887,7 +1805,7 @@ PetscErrorCode DMPlexCreateGmsh(MPI_Comm comm, PetscViewer viewer, PetscBool int
     double      *coords = mesh ? mesh->nodelist->xyz : NULL;
     PetscScalar *pointCoords;
 
-    PetscCall(DMGetCoordinateSection(*dm, &cs));
+    PetscCall(DMGetCoordinateSection(dm, &cs));
     PetscCall(PetscSectionSetNumFields(cs, 1));
     PetscCall(PetscSectionSetFieldComponents(cs, 0, coordDim));
     PetscCall(PetscSectionSetChart(cs, numCells, numCells + numVerts));
@@ -1917,18 +1835,18 @@ PetscErrorCode DMPlexCreateGmsh(MPI_Comm comm, PetscViewer viewer, PetscBool int
           PetscInt  Ncl, Nv = 0;
 
           if (PetscUnlikely(PetscBTLookup(periodicCells[h], p - pStart))) {
-            PetscCall(DMPlexGetTransitiveClosure(*dm, p, PETSC_TRUE, &Ncl, &closure));
+            PetscCall(DMPlexGetTransitiveClosure(dm, p, PETSC_TRUE, &Ncl, &closure));
             for (PetscInt cl = 0; cl < Ncl * 2; cl += 2) {
               if (closure[cl] >= vStart && closure[cl] < vEnd) ++Nv;
             }
-            PetscCall(DMPlexRestoreTransitiveClosure(*dm, p, PETSC_TRUE, &Ncl, &closure));
+            PetscCall(DMPlexRestoreTransitiveClosure(dm, p, PETSC_TRUE, &Ncl, &closure));
             PetscCall(PetscSectionSetDof(csCell, p, Nv * coordDim));
             PetscCall(PetscSectionSetFieldDof(csCell, p, 0, Nv * coordDim));
           }
         }
       }
       PetscCall(PetscSectionSetUp(csCell));
-      PetscCall(DMSetCellCoordinateSection(*dm, PETSC_DETERMINE, csCell));
+      PetscCall(DMSetCellCoordinateSection(dm, PETSC_DETERMINE, csCell));
     }
 
     PetscCall(DMCreateLocalVector(cdm, &coordinates));
@@ -1992,7 +1910,7 @@ PetscErrorCode DMPlexCreateGmsh(MPI_Comm comm, PetscViewer viewer, PetscBool int
       }
       PetscCall(VecSetBlockSize(coordinatesCell, coordDim));
       PetscCall(VecRestoreArray(coordinatesCell, &pointCoords));
-      PetscCall(DMSetCellCoordinatesLocal(*dm, coordinatesCell));
+      PetscCall(DMSetCellCoordinatesLocal(dm, coordinatesCell));
       PetscCall(VecDestroy(&coordinatesCell));
     }
     PetscCall(PetscFree(nodeMap));
@@ -2002,7 +1920,7 @@ PetscErrorCode DMPlexCreateGmsh(MPI_Comm comm, PetscViewer viewer, PetscBool int
 
   PetscCall(PetscObjectSetName((PetscObject)coordinates, "coordinates"));
   PetscCall(VecSetBlockSize(coordinates, coordDim));
-  PetscCall(DMSetCoordinatesLocal(*dm, coordinates));
+  PetscCall(DMSetCoordinatesLocal(dm, coordinates));
   PetscCall(VecDestroy(&coordinates));
 
   PetscCall(GmshMeshDestroy(&mesh));
@@ -2021,10 +1939,59 @@ PetscErrorCode DMPlexCreateGmsh(MPI_Comm comm, PetscViewer viewer, PetscBool int
     if (isSimplex) continuity = PETSC_FALSE; /* XXX FIXME Requires DMPlexSetClosurePermutationLexicographic() */
     PetscCall(GmshCreateFE(comm, prefix, isSimplex, continuity, nodeType, dim, coordDim, order, &fe));
     PetscCall(PetscFEViewFromOptions(fe, NULL, "-dm_plex_gmsh_project_fe_view"));
-    PetscCall(DMProjectCoordinates(*dm, fe));
+    PetscCall(DMProjectCoordinates(dm, fe));
     PetscCall(PetscFEDestroy(&fe));
   }
 
-  PetscCall(PetscLogEventEnd(DMPLEX_CreateGmsh, *dm, NULL, NULL, NULL));
+  PetscCall(PetscLogEventEnd(DMPLEX_CreateGmsh, dm, NULL, NULL, NULL));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  DMPlexCreateGmsh - Create a `DMPLEX` mesh from a `PETSCVIEWERGMSH` `PetscViewer`
+
+  Collective
+
+  Input Parameters:
++ comm        - The MPI communicator
+. viewer      - The `PETSCVIEWERGMSH` `PetscViewer` associated with a Gmsh file
+- interpolate - Create faces and edges in the mesh
+
+  Output Parameter:
+. dm - The `DM` object representing the mesh
+
+  Options Database Keys:
++ -dm_plex_gmsh_hybrid        - Force triangular prisms to use tensor order
+. -dm_plex_gmsh_periodic      - Read Gmsh periodic section and construct a periodic Plex
+. -dm_plex_gmsh_highorder     - Generate high-order coordinates
+. -dm_plex_gmsh_project       - Project high-order coordinates to a different space, use the prefix `dm_plex_gmsh_project_` to define the space
+. -dm_plex_gmsh_use_regions   - Generate labels with region names
+. -dm_plex_gmsh_mark_vertices - Add vertices to generated labels
+. -dm_plex_gmsh_multiple_tags - Allow multiple tags for default labels
+- -dm_plex_gmsh_spacedim <d>  - Embedding space dimension, if different from topological dimension
+
+  Level: beginner
+
+  Notes:
+  Preferred alternatives `DMLoadFromFile()` or `DMLoad()`
+
+  By default, the "Cell Sets", "Face Sets", and "Vertex Sets" labels are created, and only insert the first tag on a point.
+  By using `-dm_plex_gmsh_multiple_tags`, all tags can be inserted. Instead, `-dm_plex_gmsh_use_regions` creates labels based
+  on the region names from the PhysicalNames section, and all tags are used.
+
+  Developer Note:
+  Currently always interpolates.
+
+  References:
+. * - The Gmsh file format is described in http://gmsh.info/doc/texinfo/gmsh.html#MSH-file-format
+
+.seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMCreate()`, `DMLoadFromFile()`, `DMLoad()`, `DMPlexCreateGmshFromFile()`
+@*/
+PetscErrorCode DMPlexCreateGmsh(MPI_Comm comm, PetscViewer viewer, PetscBool interpolate, DM *dm)
+{
+  PetscFunctionBegin;
+  PetscCall(DMCreate(comm, dm));
+  PetscCall(DMSetType(*dm, DMPLEX));
+  PetscCall(DMLoad_Plex_GMSH(*dm, viewer));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

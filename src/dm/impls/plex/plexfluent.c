@@ -17,16 +17,21 @@
 
   Level: beginner
 
-.seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMPlexCreateFromFile()`, `DMPlexCreateFluent()`, `DMPlexCreate()`
+  Note:
+  Preferred alternatives `DMLoadFromFile()` or `DMLoad()`
+
+  Developer Note:
+  Currently lways interpolates the mesh
+
+.seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMLoadFromFile()`, `DMLoad()`, `DMPlexCreateFromFile()`, `DMPlexCreateFluent()`, `DMPlexCreate()`
 @*/
 PetscErrorCode DMPlexCreateFluentFromFile(MPI_Comm comm, const char filename[], PetscBool interpolate, DM *dm)
 {
   PetscViewer viewer;
 
   PetscFunctionBegin;
-  /* Create file viewer and build plex */
   PetscCall(PetscViewerCreate(comm, &viewer));
-  PetscCall(PetscViewerSetType(viewer, PETSCVIEWERASCII));
+  PetscCall(PetscViewerSetType(viewer, PETSCVIEWERFLUENT));
   PetscCall(PetscViewerFileSetMode(viewer, FILE_MODE_READ));
   PetscCall(PetscViewerFileSetName(viewer, filename));
   PetscCall(DMPlexCreateFluent(comm, viewer, interpolate, dm));
@@ -219,27 +224,7 @@ static PetscErrorCode DMPlexCreateFluent_ReadSection(PetscViewer viewer, FluentS
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
-  DMPlexCreateFluent - Create a `DMPLEX` mesh from a Fluent mesh file.
-
-  Collective
-
-  Input Parameters:
-+ comm        - The MPI communicator
-. viewer      - The `PetscViewer` associated with a Fluent mesh file
-- interpolate - Create faces and edges in the mesh
-
-  Output Parameter:
-. dm - The `DM` object representing the mesh
-
-  Note:
-  http://aerojet.engr.ucdavis.edu/fluenthelp/html/ug/node1490.htm
-
-  Level: beginner
-
-.seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMCreate()`
-@*/
-PetscErrorCode DMPlexCreateFluent(MPI_Comm comm, PetscViewer viewer, PetscBool interpolate, DM *dm)
+PetscErrorCode DMLoad_Plex_Fluent(DM dm, PetscViewer viewer)
 {
   PetscMPIInt  rank;
   PetscInt     c, v, dim = PETSC_DETERMINE, numCells = 0, numVertices = 0, numCellVertices = PETSC_DETERMINE;
@@ -250,8 +235,10 @@ PetscErrorCode DMPlexCreateFluent(MPI_Comm comm, PetscViewer viewer, PetscBool i
   PetscScalar *coords, *coordsIn = NULL;
   PetscSection coordSection;
   Vec          coordinates;
+  MPI_Comm     comm;
 
   PetscFunctionBegin;
+  PetscCall(PetscObjectGetComm((PetscObject)dm, &comm));
   PetscCallMPI(MPI_Comm_rank(comm, &rank));
 
   if (rank == 0) {
@@ -324,17 +311,15 @@ PetscErrorCode DMPlexCreateFluent(MPI_Comm comm, PetscViewer viewer, PetscBool i
   PetscCheck(dim >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Fluent file does not include dimension");
 
   /* Allocate cell-vertex mesh */
-  PetscCall(DMCreate(comm, dm));
-  PetscCall(DMSetType(*dm, DMPLEX));
-  PetscCall(DMSetDimension(*dm, dim));
-  PetscCall(DMPlexSetChart(*dm, 0, numCells + numVertices));
+  PetscCall(DMSetDimension(dm, dim));
+  PetscCall(DMPlexSetChart(dm, 0, numCells + numVertices));
   if (rank == 0) {
     PetscCheck(numCells >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Unknown number of cells in Fluent file");
     /* If no cell type was given we assume simplices */
     if (numCellVertices == PETSC_DETERMINE) numCellVertices = numFaceVertices + 1;
-    for (c = 0; c < numCells; ++c) PetscCall(DMPlexSetConeSize(*dm, c, numCellVertices));
+    for (c = 0; c < numCells; ++c) PetscCall(DMPlexSetConeSize(dm, c, numCellVertices));
   }
-  PetscCall(DMSetUp(*dm));
+  PetscCall(DMSetUp(dm));
 
   if (rank == 0 && faces) {
     /* Derive cell-vertex list from face-vertex and face-cell maps */
@@ -375,17 +360,11 @@ PetscErrorCode DMPlexCreateFluent(MPI_Comm comm, PetscViewer viewer, PetscBool i
         }
       }
     }
-    for (c = 0; c < numCells; c++) PetscCall(DMPlexSetCone(*dm, c, &(cellVertices[c * numCellVertices])));
+    for (c = 0; c < numCells; c++) PetscCall(DMPlexSetCone(dm, c, &(cellVertices[c * numCellVertices])));
   }
-  PetscCall(DMPlexSymmetrize(*dm));
-  PetscCall(DMPlexStratify(*dm));
-  if (interpolate) {
-    DM idm;
-
-    PetscCall(DMPlexInterpolate(*dm, &idm));
-    PetscCall(DMDestroy(dm));
-    *dm = idm;
-  }
+  PetscCall(DMPlexSymmetrize(dm));
+  PetscCall(DMPlexStratify(dm));
+  PetscCall(DMPlexInterpolateInPlace_Internal(dm));
 
   if (rank == 0 && faces) {
     PetscInt        fi, joinSize, meetSize, *fverts, cells[2];
@@ -399,16 +378,16 @@ PetscErrorCode DMPlexCreateFluent(MPI_Comm comm, PetscViewer viewer, PetscBool i
         /* If we know both adjoining cells we can use a single-level meet */
         cells[0] = cl;
         cells[1] = cr;
-        PetscCall(DMPlexGetMeet(*dm, 2, cells, &meetSize, &meet));
+        PetscCall(DMPlexGetMeet(dm, 2, cells, &meetSize, &meet));
         PetscCheck(meetSize == 1, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Could not determine Plex facet for Fluent face %" PetscInt_FMT, f);
-        PetscCall(DMSetLabelValue_Fast(*dm, &faceSets, "Face Sets", meet[0], faceZoneIDs[f]));
-        PetscCall(DMPlexRestoreMeet(*dm, numFaceVertices, fverts, &meetSize, &meet));
+        PetscCall(DMSetLabelValue_Fast(dm, &faceSets, "Face Sets", meet[0], faceZoneIDs[f]));
+        PetscCall(DMPlexRestoreMeet(dm, numFaceVertices, fverts, &meetSize, &meet));
       } else {
         for (fi = 0; fi < numFaceVertices; fi++) fverts[fi] = faces[f * numFaceEntries + fi] + numCells - 1;
-        PetscCall(DMPlexGetFullJoin(*dm, numFaceVertices, fverts, &joinSize, &join));
+        PetscCall(DMPlexGetFullJoin(dm, numFaceVertices, fverts, &joinSize, &join));
         PetscCheck(joinSize == 1, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Could not determine Plex facet for Fluent face %" PetscInt_FMT, f);
-        PetscCall(DMSetLabelValue_Fast(*dm, &faceSets, "Face Sets", join[0], faceZoneIDs[f]));
-        PetscCall(DMPlexRestoreJoin(*dm, numFaceVertices, fverts, &joinSize, &join));
+        PetscCall(DMSetLabelValue_Fast(dm, &faceSets, "Face Sets", join[0], faceZoneIDs[f]));
+        PetscCall(DMPlexRestoreJoin(dm, numFaceVertices, fverts, &joinSize, &join));
       }
     }
     PetscCall(PetscFree(fverts));
@@ -422,11 +401,11 @@ PetscErrorCode DMPlexCreateFluent(MPI_Comm comm, PetscViewer viewer, PetscBool i
 
     flag[0] = faceSets ? PETSC_TRUE : PETSC_FALSE;
     PetscCallMPI(MPI_Bcast(flag, n, MPIU_BOOL, 0, comm));
-    if (flag[0]) PetscCall(DMCreateLabel(*dm, "Face Sets"));
+    if (flag[0]) PetscCall(DMCreateLabel(dm, "Face Sets"));
   }
 
   /* Read coordinates */
-  PetscCall(DMGetCoordinateSection(*dm, &coordSection));
+  PetscCall(DMGetCoordinateSection(dm, &coordSection));
   PetscCall(PetscSectionSetNumFields(coordSection, 1));
   PetscCall(PetscSectionSetFieldComponents(coordSection, 0, dim));
   PetscCall(PetscSectionSetChart(coordSection, numCells, numCells + numVertices));
@@ -447,7 +426,7 @@ PetscErrorCode DMPlexCreateFluent(MPI_Comm comm, PetscViewer viewer, PetscBool i
     }
   }
   PetscCall(VecRestoreArray(coordinates, &coords));
-  PetscCall(DMSetCoordinatesLocal(*dm, coordinates));
+  PetscCall(DMSetCoordinatesLocal(dm, coordinates));
   PetscCall(VecDestroy(&coordinates));
 
   if (rank == 0) {
@@ -456,5 +435,40 @@ PetscErrorCode DMPlexCreateFluent(MPI_Comm comm, PetscViewer viewer, PetscBool i
     PetscCall(PetscFree(faceZoneIDs));
     PetscCall(PetscFree(coordsIn));
   }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  DMPlexCreateFluent - Create a `DMPLEX` mesh from a Fluent mesh file via a `PetscViewer`
+
+  Collective
+
+  Input Parameters:
++ comm        - The MPI communicator
+. viewer      - A `PETSCVIEWERASCII` or `PETSCVIEWERFLUENT` `PetscViewer` associated with a Fluent mesh file
+- interpolate - Create faces and edges in the mesh
+
+  Output Parameter:
+. dm - The `DM` object representing the mesh
+
+  Level: beginner
+
+  Note:
+  Preferred alternatives `DMLoadFromFile()` or `DMLoad()`
+
+  Developer Note:
+  Currently lways interpolates the mesh
+
+  References:
+. * - http://aerojet.engr.ucdavis.edu/fluenthelp/html/ug/node1490.htm
+
+.seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMCreate()`, `DMLoadFromFile()`, `DMLoad()`, `DMPlexCreateFluentFromFile()`
+@*/
+PetscErrorCode DMPlexCreateFluent(MPI_Comm comm, PetscViewer viewer, PetscBool interpolate, DM *dm)
+{
+  PetscFunctionBegin;
+  PetscCall(DMCreate(comm, dm));
+  PetscCall(DMSetType(*dm, DMPLEX));
+  PetscCall(DMLoad_Plex_Fluent(*dm, viewer));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

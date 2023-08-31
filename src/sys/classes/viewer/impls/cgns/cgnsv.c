@@ -159,7 +159,7 @@ static PetscErrorCode PetscViewerFileSetName_CGNS(PetscViewer viewer, const char
     // Templated file names open lazily, once we know DMGetOutputSequenceNumber()
   } else {
     PetscCall(PetscStrallocpy(filename, &cgv->filename));
-    PetscCall(PetscViewerCGNSFileOpen_Internal(viewer, -1));
+    if (cgv->btype == FILE_MODE_WRITE) PetscCall(PetscViewerCGNSFileOpen_Internal(viewer, -1));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }

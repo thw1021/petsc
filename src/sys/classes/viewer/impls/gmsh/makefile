@@ -1,9 +1,7 @@
 -include ../../../../../../petscdir.mk
-#requirespackage  'PETSC_HAVE_CGNS'
 
 ALL: lib
 
-CFLAGS    = ${CGNS_INCLUDE}
 MANSEC    = Sys
 SUBMANSEC = Viewer
 LIBBASE   = libpetscsys
