@@ -170,7 +170,7 @@ extern void PetscCheckCompatibleDeviceContexts(T, int, U, int);
 
 #define PETSC_DEVICE_CONTEXT_DEFAULT_DEVICE_TYPE PETSC_DEVICE_HARDWARE_DEFAULT_TYPE
 // REMOVE ME (change)
-#define PETSC_DEVICE_CONTEXT_DEFAULT_STREAM_TYPE PETSC_STREAM_GLOBAL_BLOCKING
+#define PETSC_DEVICE_CONTEXT_DEFAULT_STREAM_TYPE PETSC_STREAM_NULL
 
 typedef struct _DeviceOps *DeviceOps;
 struct _DeviceOps {
@@ -418,12 +418,12 @@ PETSC_INTERN PetscErrorCode PetscDeviceContextCreate_SYCL(PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode PetscGetMarkedObjectMap_Internal(size_t *, PetscObjectId **, PetscMemoryAccessMode **, size_t **, PetscEvent ***);
 PETSC_EXTERN PetscErrorCode PetscRestoreMarkedObjectMap_Internal(size_t, PetscObjectId **, PetscMemoryAccessMode **, size_t **, PetscEvent ***);
 
-static inline PetscErrorCode PetscDeviceContextSynchronizeIfGlobalBlocking_Internal(PetscDeviceContext dctx)
+static inline PetscErrorCode PetscDeviceContextSynchronizeIfNullExplicitsync_Internal(PetscDeviceContext dctx)
 {
   PetscStreamType stream_type;
 
   PetscFunctionBegin;
   PetscCall(PetscDeviceContextGetStreamType(dctx, &stream_type));
-  if (stream_type == PETSC_STREAM_GLOBAL_BLOCKING) PetscCall(PetscDeviceContextSynchronize(dctx));
+  if (stream_type == PETSC_STREAM_NULL_EXPLICITSYNC) PetscCall(PetscDeviceContextSynchronize(dctx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
