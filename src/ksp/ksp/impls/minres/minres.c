@@ -201,11 +201,17 @@ static PetscErrorCode KSPSolve_MINRES(KSP ksp)
     // Inexactness condition from https://arxiv.org/pdf/2208.07095.pdf
     rootl = Norm3(gbar, dltan, zero);
     phir  = PetscSqr(phi0 / phi);
-    phir  = PetscSqrtReal(phir - 1.0);
-    if (ksp->its > 1 && (rootl / phir) < minres->nutol) {
-      PetscCall(PetscInfo(ksp, "Detected nutol convergence %g < %g \n", (double)(rootl / phir), (double)minres->nutol));
-      ksp->reason = KSP_CONVERGED_HAPPY_BREAKDOWN;
-      break;
+    if (ksp->its > 2 && minres->nutol > 0.0) {
+      PetscReal tmp;
+
+      phir = PetscSqrtReal(phir - 1.0);
+      tmp  = rootl / phir;
+      PetscCall(PetscInfo(ksp, "it = %" PetscInt_FMT ": inexact check %g (%g / %g)\n", ksp->its - 2, (double)tmp, (double)rootl, (double)phir));
+      if (tmp < minres->nutol) {
+        ksp->its--;
+        ksp->reason = KSP_CONVERGED_RTOL;
+        break;
+      }
     }
 
     gama_tmp = gama;
@@ -752,7 +758,8 @@ PetscErrorCode KSPMINRESGetUseQLP(KSP ksp, PetscBool *qlp)
 +   -ksp_minres_qlp <bool> - activates QLP code
 .   -ksp_minres_radius <real> - maximum allowed solution norm
 .   -ksp_minres_trancond <real> - threshold on condition number to dynamically switch to QLP iterations when QLP has been activated
--   -ksp_minres_monitor - monitors convergence quantities
+.   -ksp_minres_monitor - monitors convergence quantities
+-   -ksp_minres_nutol <real> - inexactness tolerance (see https://arxiv.org/pdf/2208.07095.pdf)
 
    Level: beginner
 
@@ -763,7 +770,8 @@ PetscErrorCode KSPMINRESGetUseQLP(KSP ksp, PetscBool *qlp)
 
    Reference:
 + * - Paige & Saunders, Solution of sparse indefinite systems of linear equations, SIAM J. Numer. Anal. 12, 1975.
-- * - S.-C. T. Choi, C. C. Paige and M. A. Saunders. MINRES-QLP: A Krylov subspace method for indefinite or singular symmetric systems, SIAM J. Sci. Comput. 33:4, 2011.
+. * - S.-C. T. Choi, C. C. Paige and M. A. Saunders. MINRES-QLP: A Krylov subspace method for indefinite or singular symmetric systems, SIAM J. Sci. Comput. 33:4, 2011.
+- * - Y. Liu and F. Roosta. A Newton-MR algorithm with complexity guarantees for nonconvex smooth unconstrained optimization. https://arxiv.org/pdf/2208.07095.pdf
 
    Original MINRES code contributed by: Robert Scheichl: maprs@maths.bath.ac.uk
    QLP variant adapted from: https://stanford.edu/group/SOL/software/minresqlp/minresqlp-matlab/CPS11.zip
