@@ -76,7 +76,7 @@ int main(int argc, char *argv[])
     output_file: ./output/ExitSuccess.out
     nsize: {{1 4}}
     args: -device_enable {{lazy eager}}
-    args: -local_device_context_stream_type {{global_blocking default_blocking global_nonblocking}}
+    args: -local_device_context_stream_type {{null null_explicitsync default_blocking global_nonblocking}}
     test:
       requires: !device
       suffix: host_no_device

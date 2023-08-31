@@ -86,7 +86,7 @@ template <DeviceType T>
 inline PetscErrorCode CUPMStream<T>::change_type(PetscStreamType newtype) noexcept
 {
   PetscFunctionBegin;
-  if (newtype == PETSC_STREAM_GLOBAL_BLOCKING) {
+  if (newtype == PETSC_STREAM_NULL || newtype == PETSC_STREAM_NULL_EXPLICITSYNC) {
     PetscCall(destroy());
   } else {
     const flag_type preferred = newtype == PETSC_STREAM_DEFAULT_BLOCKING ? cupmStreamDefault : cupmStreamNonBlocking;
