@@ -6,11 +6,12 @@ int main(int argc, char *argv[])
 {
   const PetscStreamType stypes[] = {
 #if PetscDefined(HAVE_CXX)
-    PETSC_STREAM_GLOBAL_BLOCKING,
+    PETSC_STREAM_NULL,
+    PETSC_STREAM_NULL_EXPLICITSYNC,
     PETSC_STREAM_DEFAULT_BLOCKING,
     PETSC_STREAM_GLOBAL_NONBLOCKING
 #else
-    PETSC_STREAM_GLOBAL_BLOCKING,
+    PETSC_STREAM_NULL,
 #endif
   };
   const PetscInt ntypes = PETSC_STATIC_ARRAY_LENGTH(stypes);

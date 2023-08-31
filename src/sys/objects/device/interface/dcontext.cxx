@@ -900,7 +900,7 @@ static PetscErrorCode PetscDeviceContextGetNullContextForDevice_Private(PetscBoo
         PetscCall(PetscObjectSetName(pobj, name.c_str()));
         PetscCall(PetscObjectSetOptionsPrefix(pobj, prefix.c_str()));
       }
-      PetscCall(PetscDeviceContextSetStreamType(*dctx, PETSC_STREAM_GLOBAL_BLOCKING));
+      PetscCall(PetscDeviceContextSetStreamType(*dctx, PETSC_STREAM_NULL));
       PetscCall(PetscDeviceContextSetDevice_Private(*dctx, device, user_set_device));
       PetscCall(PetscDeviceContextSetUp(*dctx));
       // would use ctxlist.cbegin() but GCC 4.8 can't handle const iterator insert!
