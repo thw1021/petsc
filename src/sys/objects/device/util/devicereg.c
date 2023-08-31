@@ -29,7 +29,8 @@ PetscClassId PETSC_DEVICE_CONTEXT_CLASSID;
 
 // clang-format off
 const char *const PetscStreamTypes[] = {
-  "global_blocking",
+  "null",
+  "null_explicitsync",
   "default_blocking",
   "global_nonblocking",
   "max",

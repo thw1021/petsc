@@ -22,7 +22,8 @@ cdef extern from * nogil:
         PETSC_DEVICE_SYCL
 
     ctypedef enum PetscStreamType:
-        PETSC_STREAM_GLOBAL_BLOCKING
+        PETSC_STREAM_NULL
+        PETSC_STREAM_NULL_EXPLICITSYNC
         PETSC_STREAM_DEFAULT_BLOCKING
         PETSC_STREAM_GLOBAL_NONBLOCKING
 

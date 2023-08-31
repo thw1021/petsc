@@ -296,10 +296,11 @@ typedef struct _n_PetscDevice *PetscDevice;
 
 /*E
   PetscStreamType - Stream blocking mode, indicates how a stream implementation will interact
-  with the default `NULL` stream, which is usually blocking.
+  with the `NULL` stream.
 
   Values:
-+ `PETSC_STREAM_GLOBAL_BLOCKING`    - Alias for `NULL` stream. Any stream of this type will block the host for all other streams to finish work before starting its operations.
++ `PETSC_STREAM_NULL`               - The `NULL` stream. Any stream of this type will synchronize implicitly with all other streams except non-blocking streams.
+. `PETSC_STREAM_NULL_EXPLICITSYNC`  - The `NULL` stream with explicit device synchronization. Any stream of this type will block the host for all other streams to finish work before starting its operations by doing a device context synchronization explicitly.
 . `PETSC_STREAM_DEFAULT_BLOCKING`   - Stream will act independent of other streams, but will still be blocked by actions on the `NULL` stream.
 . `PETSC_STREAM_GLOBAL_NONBLOCKING` - Stream is truly asynchronous, and is blocked by nothing, not even the `NULL` stream.
 - `PETSC_STREAM_MAX`                - Always 1 greater than the largest `PetscStreamType`, do not use
@@ -309,7 +310,8 @@ typedef struct _n_PetscDevice *PetscDevice;
 .seealso: `PetscDeviceContextSetStreamType()`, `PetscDeviceContextGetStreamType()`
 E*/
 typedef enum {
-  PETSC_STREAM_GLOBAL_BLOCKING,
+  PETSC_STREAM_NULL,
+  PETSC_STREAM_NULL_EXPLICITSYNC,
   PETSC_STREAM_DEFAULT_BLOCKING,
   PETSC_STREAM_GLOBAL_NONBLOCKING,
   PETSC_STREAM_MAX
