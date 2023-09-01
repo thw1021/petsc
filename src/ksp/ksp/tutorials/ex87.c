@@ -168,13 +168,14 @@ PetscErrorCode MatAndISLoad(const char *prefix, const char *identifier, Mat A, I
         requires: mumps
         suffix: 1
         args: -viewer -system {{elasticity stokes}separate output} -fieldsplit_1_pc_hpddm_ksp_pc_side left
-        filter: grep -v -e "action of " -e "                            " -e "block size" -e "total: nonzeros=" -e "using I-node"
+        filter: grep -v -e "action of " -e "                            " -e "block size" -e "total: nonzeros=" -e "using I-node" -e "for selecting deflation vectors"
+
       test:
         requires: mumps
         suffix: 2
         output_file: output/ex87_1_system-stokes.out
         args: -viewer -system stokes -empty_A11 -fieldsplit_1_pc_hpddm_ksp_pc_side right -fieldsplit_1_pc_hpddm_coarse_mat_type baij
-        filter: grep -v -e "action of " -e "                            " -e "block size" -e "total: nonzeros=" -e "using I-node" | sed -e "s/      right preconditioning/      left preconditioning/g" -e "s/      using UNPRECONDITIONED/      using PRECONDITIONED/g" -e "s/^                  type: mpiaij/                  type: mpisbaij/g"
+        filter: grep -v -e "action of " -e "                            " -e "block size" -e "total: nonzeros=" -e "using I-node" -e "for selecting deflation vectors" | sed -e "s/      right preconditioning/      left preconditioning/g" -e "s/      using UNPRECONDITIONED/      using PRECONDITIONED/g" -e "s/^                  type: mpibaij/                  type: mpisbaij/g"
       test:
         suffix: 1_petsc
         args: -system {{elasticity stokes}separate output} -fieldsplit_1_pc_hpddm_ksp_pc_side left -fieldsplit_1_pc_hpddm_levels_1_sub_pc_factor_mat_solver_type petsc -fieldsplit_1_pc_hpddm_levels_1_eps_threshold 0.3 -permute
@@ -183,5 +184,10 @@ PetscErrorCode MatAndISLoad(const char *prefix, const char *identifier, Mat A, I
         output_file: output/ex87_1_petsc_system-stokes.out
         args: -system stokes -empty_A11 -transpose -fieldsplit_1_pc_hpddm_ksp_pc_side right -fieldsplit_1_pc_hpddm_levels_1_sub_pc_factor_mat_solver_type petsc -fieldsplit_1_pc_hpddm_coarse_mat_type baij -fieldsplit_1_pc_hpddm_levels_1_eps_threshold 0.3
         filter: sed -e "s/type: transpose/type: hermitiantranspose/g"
+      test:
+        suffix: threshold
+        output_file: output/ex87_1_system-elasticity.out
+        args: -viewer -fieldsplit_1_pc_hpddm_ksp_pc_side left -fieldsplit_1_pc_hpddm_levels_1_eps_threshold 0.2 -fieldsplit_1_pc_hpddm_coarse_mat_type {{baij sbaij}shared output}
+        filter: grep -v -e "action of " -e "                            " -e "block size" -e "total: nonzeros=" -e "using I-node" -e "for selecting deflation vectors" | sed -e "s/rows=24, cols=24/rows=60, cols=60, bs=15/g" -e "s/^                  type: mpiaij/                  type: mpisbaij/g"
 
 TEST*/
