@@ -317,6 +317,43 @@ The additional option `-log_view_memory` causes the display of additional column
 memory was allocated and freed during each logged event. This is useful
 to understand what phases of a computation require the most memory.
 
+.. _sec_ploggpuinfo:
+
+Interpreting ``-log_view`` Output: GPU Performance
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+When PETSc performs computations on a GPU, additional columns are added to the
+output of ``-log_view``.  Efficient usage of GPUs requires that their
+computations be performed *asynchronously* with respect to the host, but PETSc
+must synchronize the host and device in order to record the elapsed time of an
+event.  This means that accurately reporting this time can slow down a program.
+For GPU-centric computations, the values reported in the ``Time (sec)`` column
+can be very misleading.  If PETSc detects that the GPU is being used,
+these times will not be reported.  There are two ways to modify this:
+
+1. With ``-log_view_gpu_time``, the elapsed GPU times of events are measured,
+   at the expense of explicitly synchronizing the host and the GPU.  This gives
+   accurate timings for individual kernels, but slows down the whole program.
+2. A list of logging events whose host timings are required can be specified
+   like ``-log_view_cpu_time MatMult,MatSolve``.  This should only be
+   done for events that are not sensitive to asynchronous GPU computations.
+   Typically, this includes the full solve times of iterative methods
+   like ``KSPSolve()`` or ``SNESSolve()``.
+
+Additional columns are added to ``-log_view`` output when GPUs are used:
+
+- ``CpuToGpu`` and ``GpuToCpu``: measures the number of memory transfers
+  (``Count``) and total megabytes transfered (``Size``) during an event.
+  The latency of transfering data back and forth can completely
+  negate the computational advantage of a GPU over the host CPU,
+  so monitoring these transfers is important. Lots of
+  data movement can indicate bad assumptions about which
+  data has been offloaded and/or which algorithms are implemented on the GPU.
+
+- ``GPU %F``: The percentage of flops in an event that are performed by
+  the GPU during an event.  If an algorithm or kernel
+  runs entirely on the GPU, you should see ``100`` here.
+
 .. _sec_mpelogs:
 
 Using ``-log_mpe`` with Jumpshot

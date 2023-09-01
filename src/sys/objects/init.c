@@ -600,7 +600,8 @@ PETSC_INTERN PetscErrorCode PetscOptionsCheckInitial_Private(const char help[])
     PetscCall((*PetscHelpPrintf)(comm, " -log_trace [filename]: prints trace of all PETSc calls\n"));
     PetscCall((*PetscHelpPrintf)(comm, " -log_exclude <list,of,classnames>: exclude given classes from logging\n"));
   #if defined(PETSC_HAVE_DEVICE)
-    PetscCall((*PetscHelpPrintf)(comm, " -log_view_gpu_time: log the GPU time for each and event\n"));
+    PetscCall((*PetscHelpPrintf)(comm, " -log_view_gpu_time: log the GPU time for each event (uses GPU event synchronization for accuracy)\n"));
+    PetscCall((*PetscHelpPrintf)(comm, " -log_view_cpu_time Event1[,Event2,...]: log the host time a list of event (without accurately timings elapsed GPU time)\n"));
   #endif
   #if defined(PETSC_HAVE_MPE)
     PetscCall((*PetscHelpPrintf)(comm, " -log_mpe: Also create logfile viewable through Jumpshot\n"));

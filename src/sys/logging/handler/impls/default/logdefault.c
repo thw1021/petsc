@@ -1171,11 +1171,11 @@ static PetscErrorCode PetscLogViewWarnDebugging(MPI_Comm comm, FILE *fd)
 
 static PetscErrorCode PetscLogViewWarnNoGpuAwareMpi(MPI_Comm comm, FILE *fd)
 {
-#if defined(PETSC_HAVE_DEVICE)
   PetscMPIInt size;
   PetscBool   deviceInitialized = PETSC_FALSE;
 
   PetscFunctionBegin;
+  if (!PetscDefined(HAVE_DEVICE)) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCallMPI(MPI_Comm_size(comm, &size));
   for (int i = PETSC_DEVICE_HOST + 1; i < PETSC_DEVICE_MAX; ++i) {
     const PetscDeviceType dtype = PetscDeviceTypeCast(i);
@@ -1200,17 +1200,12 @@ static PetscErrorCode PetscLogViewWarnNoGpuAwareMpi(MPI_Comm comm, FILE *fd)
   PetscCall(PetscFPrintf(comm, fd, "      #                                                        #\n"));
   PetscCall(PetscFPrintf(comm, fd, "      ##########################################################\n\n\n"));
   PetscFunctionReturn(PETSC_SUCCESS);
-#else
-  return PETSC_SUCCESS;
-#endif
 }
 
 static PetscErrorCode PetscLogViewWarnGpuTime(MPI_Comm comm, FILE *fd)
 {
-#if defined(PETSC_HAVE_DEVICE)
-
   PetscFunctionBegin;
-  if (!PetscLogGpuTimeFlag || petsc_gflops == 0) PetscFunctionReturn(PETSC_SUCCESS);
+  if (!PetscDefined(HAVE_DEVICE) || !PetscLogGpuTimeFlag || petsc_gflops == 0) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(PetscFPrintf(comm, fd, "\n\n"));
   PetscCall(PetscFPrintf(comm, fd, "      ##########################################################\n"));
   PetscCall(PetscFPrintf(comm, fd, "      #                                                        #\n"));
@@ -1224,9 +1219,6 @@ static PetscErrorCode PetscLogViewWarnGpuTime(MPI_Comm comm, FILE *fd)
   PetscCall(PetscFPrintf(comm, fd, "      #                                                        #\n"));
   PetscCall(PetscFPrintf(comm, fd, "      ##########################################################\n\n\n"));
   PetscFunctionReturn(PETSC_SUCCESS);
-#else
-  return PETSC_SUCCESS;
-#endif
 }
 
 static PetscErrorCode PetscLogHandlerView_Default_Info(PetscLogHandler handler, PetscViewer viewer)
@@ -1240,26 +1232,21 @@ static PetscErrorCode PetscLogHandlerView_Default_Info(PetscLogHandler handler, 
   PetscLogDouble          fracTime, fracFlops, fracMessages, fracLength, fracReductions, fracMess, fracMessLen, fracRed;
   PetscLogDouble          fracStageTime, fracStageFlops, fracStageMess, fracStageMessLen, fracStageRed;
   PetscLogDouble          min, max, tot, ratio, avg, x, y;
-  PetscLogDouble          minf, maxf, totf, ratf, mint, maxt, tott, ratt, ratC, totm, totml, totr, mal, malmax, emalmax;
-#if defined(PETSC_HAVE_DEVICE)
-  PetscLogEvent  KSP_Solve, SNES_Solve, TS_Step, TAO_Solve; /* These need to be fixed to be some events registered with certain objects */
-  PetscLogDouble cct, gct, csz, gsz, gmaxt, gflops, gflopr, fracgflops;
-#endif
-  PetscMPIInt   minC, maxC;
-  PetscMPIInt   size, rank;
-  PetscBool    *localStageUsed, *stageUsed;
-  PetscBool    *localStageVisible, *stageVisible;
-  PetscInt      numStages, numEvents;
-  int           stage, oclass;
-  PetscLogEvent event;
-  char          version[256];
-  MPI_Comm      comm;
-#if defined(PETSC_HAVE_DEVICE)
-  PetscInt64 nas = 0x7FF0000000000002;
-#endif
-  PetscLogGlobalNames global_stages, global_events;
-  PetscEventPerfInfo  zero_info;
-  PetscLogState       state;
+  char                   *cpu_time_events[100];
+  PetscInt                cpu_list_length = PETSC_STATIC_ARRAY_LENGTH(cpu_time_events);
+  PetscMPIInt             minC, maxC;
+  PetscMPIInt             size, rank;
+  PetscBool              *localStageUsed, *stageUsed;
+  PetscBool              *localStageVisible, *stageVisible;
+  PetscInt                numStages, numEvents;
+  int                     stage, oclass;
+  PetscLogEvent           event;
+  char                    version[256];
+  MPI_Comm                comm;
+  PetscInt64              nas = 0x7FF0000000000002;
+  PetscLogGlobalNames     global_stages, global_events;
+  PetscEventPerfInfo      zero_info;
+  PetscLogState           state;
 
   PetscFunctionBegin;
   PetscCall(PetscLogHandlerGetState(handler, &state));
@@ -1483,14 +1470,14 @@ static PetscErrorCode PetscLogHandlerView_Default_Info(PetscLogHandler handler, 
     PetscCall(PetscFPrintf(comm, fd, "   MMalloc Mbytes: Increase in high water mark of allocated memory (sum over all calls to event). Never negative\n"));
     PetscCall(PetscFPrintf(comm, fd, "   RMI Mbytes: Increase in resident memory (sum over all calls to event)\n"));
   }
-#if defined(PETSC_HAVE_DEVICE)
-  PetscCall(PetscFPrintf(comm, fd, "   GPU Mflop/s: 10e-6 * (sum of flop on GPU over all processors)/(max GPU time over all processors)\n"));
-  PetscCall(PetscFPrintf(comm, fd, "   CpuToGpu Count: total number of CPU to GPU copies per processor\n"));
-  PetscCall(PetscFPrintf(comm, fd, "   CpuToGpu Size (Mbytes): 10e-6 * (total size of CPU to GPU copies per processor)\n"));
-  PetscCall(PetscFPrintf(comm, fd, "   GpuToCpu Count: total number of GPU to CPU copies per processor\n"));
-  PetscCall(PetscFPrintf(comm, fd, "   GpuToCpu Size (Mbytes): 10e-6 * (total size of GPU to CPU copies per processor)\n"));
-  PetscCall(PetscFPrintf(comm, fd, "   GPU %%F: percent flops on GPU in this event\n"));
-#endif
+  if (PetscDefined(HAVE_DEVICE)) {
+    PetscCall(PetscFPrintf(comm, fd, "   GPU Mflop/s: 10e-6 * (sum of flop on GPU over all processors)/(max GPU time over all processors)\n"));
+    PetscCall(PetscFPrintf(comm, fd, "   CpuToGpu Count: total number of CPU to GPU copies per processor\n"));
+    PetscCall(PetscFPrintf(comm, fd, "   CpuToGpu Size (Mbytes): 10e-6 * (total size of CPU to GPU copies per processor)\n"));
+    PetscCall(PetscFPrintf(comm, fd, "   GpuToCpu Count: total number of GPU to CPU copies per processor\n"));
+    PetscCall(PetscFPrintf(comm, fd, "   GpuToCpu Size (Mbytes): 10e-6 * (total size of GPU to CPU copies per processor)\n"));
+    PetscCall(PetscFPrintf(comm, fd, "   GPU %%F: percent flops on GPU in this event\n"));
+  }
   PetscCall(PetscFPrintf(comm, fd, "------------------------------------------------------------------------------------------------------------------------\n"));
 
   PetscCall(PetscLogViewWarnDebugging(comm, fd));
@@ -1498,30 +1485,26 @@ static PetscErrorCode PetscLogHandlerView_Default_Info(PetscLogHandler handler, 
   /* Report events */
   PetscCall(PetscFPrintf(comm, fd, "Event                Count      Time (sec)     Flop                              --- Global ---  --- Stage ----  Total"));
   if (PetscLogMemory) PetscCall(PetscFPrintf(comm, fd, "  Malloc EMalloc MMalloc RMI"));
-#if defined(PETSC_HAVE_DEVICE)
-  PetscCall(PetscFPrintf(comm, fd, "   GPU    - CpuToGpu -   - GpuToCpu - GPU"));
-#endif
+  if (PetscDefined(HAVE_DEVICE)) PetscCall(PetscFPrintf(comm, fd, "   GPU    - CpuToGpu -   - GpuToCpu - GPU"));
   PetscCall(PetscFPrintf(comm, fd, "\n"));
   PetscCall(PetscFPrintf(comm, fd, "                   Max Ratio  Max     Ratio   Max  Ratio  Mess   AvgLen  Reduct  %%T %%F %%M %%L %%R  %%T %%F %%M %%L %%R Mflop/s"));
   if (PetscLogMemory) PetscCall(PetscFPrintf(comm, fd, " Mbytes Mbytes Mbytes Mbytes"));
-#if defined(PETSC_HAVE_DEVICE)
-  PetscCall(PetscFPrintf(comm, fd, " Mflop/s Count   Size   Count   Size  %%F"));
-#endif
+  if (PetscDefined(HAVE_DEVICE)) PetscCall(PetscFPrintf(comm, fd, " Mflop/s Count   Size   Count   Size  %%F"));
   PetscCall(PetscFPrintf(comm, fd, "\n"));
   PetscCall(PetscFPrintf(comm, fd, "------------------------------------------------------------------------------------------------------------------------"));
   if (PetscLogMemory) PetscCall(PetscFPrintf(comm, fd, "-----------------------------"));
-#if defined(PETSC_HAVE_DEVICE)
-  PetscCall(PetscFPrintf(comm, fd, "---------------------------------------"));
-#endif
+  if (PetscDefined(HAVE_DEVICE)) PetscCall(PetscFPrintf(comm, fd, "---------------------------------------"));
   PetscCall(PetscFPrintf(comm, fd, "\n"));
 
-#if defined(PETSC_HAVE_DEVICE)
-  /* this indirect way of accessing these values is needed when PETSc is build with multiple libraries since the symbols are not in libpetscsys */
-  PetscCall(PetscLogStateGetEventFromName(state, "TAOSolve", &TAO_Solve));
-  PetscCall(PetscLogStateGetEventFromName(state, "TSStep", &TS_Step));
-  PetscCall(PetscLogStateGetEventFromName(state, "SNESSolve", &SNES_Solve));
-  PetscCall(PetscLogStateGetEventFromName(state, "KSPSolve", &KSP_Solve));
-#endif
+  if (PetscDefined(HAVE_DEVICE)) {
+    PetscCall(PetscStrallocpy("TaoSolve", &cpu_time_events[0]));
+    PetscCall(PetscStrallocpy("TSStep", &cpu_time_events[1]));
+    PetscCall(PetscStrallocpy("SNESSolve", &cpu_time_events[2]));
+    PetscCall(PetscStrallocpy("KSPSolve", &cpu_time_events[3]));
+    cpu_list_length -= 4;
+    PetscCall(PetscOptionsGetStringArray(NULL, NULL, "-log_view_cpu_time", &cpu_time_events[4], &cpu_list_length, NULL));
+    cpu_list_length += 4;
+  }
 
   for (stage = 0; stage < numStages; stage++) {
     PetscInt            stage_id;
@@ -1553,6 +1536,10 @@ static PetscErrorCode PetscLogHandlerView_Default_Info(PetscLogHandler handler, 
       PetscEventPerfInfo *event_info = &zero_info;
       PetscBool           is_zero    = PETSC_FALSE;
       const char         *event_name;
+      PetscLogDouble      minf, maxf, totf, ratf, mint, maxt, tott, ratt, ratC, totm, totml, totr, mal, malmax, emalmax;
+#if PetscDefined(HAVE_DEVICE)
+      PetscLogDouble cct, gct, csz, gsz, gmaxt, gflops, gflopr, fracgflops;
+#endif
 
       PetscCall(PetscLogGlobalNamesGlobalGetLocal(global_events, event, &event_id));
       PetscCall(PetscLogGlobalNamesGlobalGetName(global_events, event, &event_name));
@@ -1578,6 +1565,11 @@ static PetscErrorCode PetscLogHandlerView_Default_Info(PetscLogHandler handler, 
           PetscCall(MPIU_Allreduce(&event_info->mallocIncrease, &malmax, 1, MPIU_PETSCLOGDOUBLE, MPI_SUM, comm));
           PetscCall(MPIU_Allreduce(&event_info->mallocIncreaseEvent, &emalmax, 1, MPIU_PETSCLOGDOUBLE, MPI_SUM, comm));
         }
+        if (mint < 0.0) {
+          PetscCall(PetscFPrintf(comm, fd, "WARNING!!! Minimum time %g over all processors for %s is negative! This happens\n on some machines whose times cannot handle too rapid calls.!\n artificially changing minimum to zero.\n", mint, event_name));
+          mint = 0;
+        }
+        PetscCheck(minf >= 0.0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Minimum flop %g over all processors for %s is negative! Not possible!", minf, event_name);
 #if defined(PETSC_HAVE_DEVICE)
         PetscCall(MPIU_Allreduce(&event_info->CpuToGpuCount, &cct, 1, MPIU_PETSCLOGDOUBLE, MPI_SUM, comm));
         PetscCall(MPIU_Allreduce(&event_info->GpuToCpuCount, &gct, 1, MPIU_PETSCLOGDOUBLE, MPI_SUM, comm));
@@ -1585,17 +1577,22 @@ static PetscErrorCode PetscLogHandlerView_Default_Info(PetscLogHandler handler, 
         PetscCall(MPIU_Allreduce(&event_info->GpuToCpuSize, &gsz, 1, MPIU_PETSCLOGDOUBLE, MPI_SUM, comm));
         PetscCall(MPIU_Allreduce(&event_info->GpuFlops, &gflops, 1, MPIU_PETSCLOGDOUBLE, MPI_SUM, comm));
         PetscCall(MPIU_Allreduce(&event_info->GpuTime, &gmaxt, 1, MPIU_PETSCLOGDOUBLE, MPI_MAX, comm));
-#endif
-        if (mint < 0.0) {
-          PetscCall(PetscFPrintf(comm, fd, "WARNING!!! Minimum time %g over all processors for %s is negative! This happens\n on some machines whose times cannot handle too rapid calls.!\n artificially changing minimum to zero.\n", mint, event_name));
-          mint = 0;
-        }
-        PetscCheck(minf >= 0.0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Minimum flop %g over all processors for %s is negative! Not possible!", minf, event_name);
-#if defined(PETSC_HAVE_DEVICE)
         /* Put NaN into the time for all events that may not be time accurately since they may happen asynchronously on the GPU */
         if (!PetscLogGpuTimeFlag && petsc_gflops > 0) {
+          PetscBool censor = PETSC_TRUE;
           memcpy(&gmaxt, &nas, sizeof(PetscLogDouble));
-          if (event_id != SNES_Solve && event_id != KSP_Solve && event_id != TS_Step && event_id != TAO_Solve) {
+          for (PetscInt i = 0; i < cpu_list_length; i++) {
+            PetscBool is_wildcard;
+            PetscBool matches;
+
+            PetscCall(PetscStrcmp(cpu_time_events[i], "all", &is_wildcard));
+            PetscCall(PetscStrcmp(cpu_time_events[i], event_name, &matches));
+            if (is_wildcard || matches) {
+              censor = PETSC_FALSE;
+              break;
+            }
+          }
+          if (censor) {
             memcpy(&mint, &nas, sizeof(PetscLogDouble));
             memcpy(&maxt, &nas, sizeof(PetscLogDouble));
           }
@@ -1657,11 +1654,13 @@ static PetscErrorCode PetscLogHandlerView_Default_Info(PetscLogHandler handler, 
   /* Memory usage and object creation */
   PetscCall(PetscFPrintf(comm, fd, "------------------------------------------------------------------------------------------------------------------------"));
   if (PetscLogMemory) PetscCall(PetscFPrintf(comm, fd, "-----------------------------"));
-#if defined(PETSC_HAVE_DEVICE)
-  PetscCall(PetscFPrintf(comm, fd, "---------------------------------------"));
-#endif
+  if (PetscDefined(HAVE_DEVICE)) PetscCall(PetscFPrintf(comm, fd, "---------------------------------------"));
   PetscCall(PetscFPrintf(comm, fd, "\n"));
   PetscCall(PetscFPrintf(comm, fd, "\n"));
+
+  if (PetscDefined(HAVE_DEVICE)) {
+    for (PetscInt i = 0; i < cpu_list_length; i++) PetscCall(PetscFree(cpu_time_events[i]));
+  }
 
   /* Right now, only stages on the first processor are reported here, meaning only objects associated with
      the global communicator, or MPI_COMM_SELF for proc 1. We really should report global stats and then

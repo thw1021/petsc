@@ -1974,6 +1974,7 @@ PetscErrorCode PetscLogMPEDump(const char sname[])
 . -log_view :filename.txt:ascii_flamegraph - Saves logging information in a format suitable for visualising as a Flame Graph (see below for how to view it)
 . -log_view_memory                         - Also display memory usage in each event
 . -log_view_gpu_time                       - Also display time in each event for GPU kernels (Note this may slow the computation)
+. -log_view_cpu_time Event1[,Event2,...]   - Un-censors the time measurements of a list of events when using GPUs (but does not try to accurately time GPU computations)
 . -log_all                                 - Saves a file Log.rank for each MPI rank with details of each step of the computation
 - -log_trace [filename]                    - Displays a trace of what each process is doing
 
@@ -2310,7 +2311,8 @@ M*/
   PetscLogGpuTime - turn on the logging of GPU time for GPU kernels
 
   Options Database Key:
-. -log_view_gpu_time - provide the GPU times in the `-log_view` output
+. -log_view_gpu_time                       - provide the GPU times in the `-log_view` output (but may slow the program down to provide accurate timings)
+. -log_view_cpu_time Event1[,Event2,...]   - Un-censors the time measurements of a list of events when using GPUs (but does not try to accurately time GPU computations)
 
   Level: advanced
 
