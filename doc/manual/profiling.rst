@@ -317,6 +317,35 @@ The additional option `-log_view_memory` causes the display of additional column
 memory was allocated and freed during each logged event. This is useful
 to understand what phases of a computation require the most memory.
 
+.. _sec_ploggpuinfo:
+
+Interpreting ``-log_view`` Output: GPU Performance
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+When PETSc performs computations on a GPU, additional columns are added to the
+output of ``-log_view``.  Efficient usage of GPUs requires that their
+computations be performed *asynchronously* with respect to the host, but PETSc
+must synchronize the host and device in order to record the elapsed time of an
+event.  This means that accurately reporting this time can slow down a program.
+Therefore PETSc does not measure the GPU flop rate and GPU time of events
+unless the ``-log_view_gpu_time`` flag is given.
+
+- ``GPU Mflop/s``: The average flop rate of an event for flops performed on a GPU.
+
+- ``GPU Time (s)``: The presents the total time spent in the event on the GPU clock.
+
+- ``CpuToGpu`` and ``GpuToCpu``: measures the number of memory transfers
+  (``Count``) and total megabytes transfered (``Size``) during an event.
+  The latency of transfering data back and forth can completely
+  negate the computational advantage of a GPU over the host CPU,
+  so monitoring these transfers is important. Lots of
+  data movement can indicate bad assumptions about which
+  data has been offloaded and/or which algorithms are implemented on the GPU.
+
+- ``GPU %F``: The percentage of flops in an event that are performed by
+  the GPU during an event.  If an algorithm or kernel
+  runs entirely on the GPU, you should see ``100`` here.
+
 .. _sec_mpelogs:
 
 Using ``-log_mpe`` with Jumpshot
