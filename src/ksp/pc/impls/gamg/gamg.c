@@ -560,6 +560,19 @@ static PetscErrorCode PCSetUp_GAMG(PC pc)
           PetscCall(PetscLogEventEnd(petsc_gamg_setup_matmat_events[gl][1], 0, 0, 0, 0));
           if (reuse == MAT_INITIAL_MATRIX) mglevels[level]->A = B;
           PetscCall(KSPSetOperators(mglevels[level]->smoothd, B, B));
+          // check for redoing eigen estimates
+          if (pc_gamg->recomputeesteig) {
+            PetscBool ischeb;
+            KSP smoother;
+            PetscCall(PCMGGetSmoother(pc, level+1, &smoother));
+            PetscCall(PetscObjectTypeCompare((PetscObject)smoother, KSPCHEBYSHEV, &ischeb));
+            if (ischeb) {
+              KSP_Chebyshev *cheb = (KSP_Chebyshev *)smoother->data;
+              cheb->emin_provided = 0;
+              cheb->emax_provided = 0;
+            }
+          }
+          // inc
           dB = B;
 #if defined(GAMG_STAGES)
           PetscCall(PetscLogStagePop());
@@ -1657,6 +1670,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_GAMG(PC pc)
   pc_gamg->Nlevels         = PETSC_MG_MAXLEVELS;
   pc_gamg->current_level   = 0; /* don't need to init really */
   pc_gamg->use_sa_esteig   = PETSC_TRUE;
+  pc_gamg->recomputeesteig = PETSC_TRUE;
   pc_gamg->emin            = 0;
   pc_gamg->emax            = 0;
 
