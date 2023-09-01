@@ -563,7 +563,7 @@ static PetscErrorCode PCSetUp_GAMG(PC pc)
           // check for redoing eigen estimates
           if (pc_gamg->recomputeesteig) {
             PetscBool ischeb;
-            KSP smoother;
+            KSP       smoother;
             PetscCall(PCMGGetSmoother(pc, level+1, &smoother));
             PetscCall(PetscObjectTypeCompare((PetscObject)smoother, KSPCHEBYSHEV, &ischeb));
             if (ischeb) {
