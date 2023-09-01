@@ -24,8 +24,8 @@ PC Object: 4 MPI processes
             Neumann matrix attached? TRUE
             shared subdomain KSP between SLEPc and PETSc? TRUE
             coarse correction: BALANCED
-            on process #0, value (+ threshold if available) for selecting deflation vectors: 20
-            grid and operator complexities: 1.04759 1.00226
+            on process #0, value (+ threshold if available) for selecting deflation vectors: 15
+            grid and operator complexities: 1.03569 1.00065
             KSP Object: (fieldsplit_1_pc_hpddm_levels_1_) 4 MPI processes
               type: preonly
               maximum iterations=10000, initial guess is zero
@@ -148,7 +148,7 @@ PC Object: 4 MPI processes
                 linear system matrix = precond matrix:
                 Mat Object: (fieldsplit_1_pc_hpddm_coarse_) 2 MPI processes
                   type: mpisbaij
-                  rows=80, cols=80
+                  rows=60, cols=60
                   total number of mallocs used during MatSetValues calls=0
             linear system matrix = precond matrix:
             Mat Object: (fieldsplit_1_) 4 MPI processes
