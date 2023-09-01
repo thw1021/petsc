@@ -4,10 +4,10 @@ import os
 class Configure(config.package.CMakePackage):
   def __init__(self, framework):
     config.package.CMakePackage.__init__(self, framework)
-    self.gitcommit        = '4.1.00'
+    self.gitcommit        = '2023-08-29/feature-tpl-spadd'
     self.minversion       = '3.7.01'
     self.versionname      = 'KOKKOSKERNELS_VERSION'
-    self.download         = ['git://https://github.com/kokkos/kokkos-kernels.git','https://github.com/kokkos/kokkos-kernels/archive/'+self.gitcommit+'.tar.gz']
+    self.download         = ['git://https://github.com/jczhang07/kokkos-kernels.git','https://github.com/kokkos/kokkos-kernels/archive/'+self.gitcommit+'.tar.gz']
     self.includes         = ['KokkosBlas.hpp','KokkosSparse_CrsMatrix.hpp']
     self.liblist          = [['libkokkoskernels.a']]
     self.functions        = ['']
