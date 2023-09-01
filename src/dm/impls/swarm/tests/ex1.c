@@ -216,7 +216,6 @@ int main(int argc, char **argv)
   # be sent to the process which has the highest rank that has that portion of the domain.
   test:
     suffix: swarm_migrate_hash
-    requires: ctetgen
     nsize: 2
     args: -dm_plex_dim 3 -dm_plex_simplex 0 -dm_distribute_overlap 1 -dm_plex_box_faces 10,10,10\
           -dm_plex_box_lower 0.,0.,0. -dm_plex_box_upper 1.,1.,10. -dm_plex_box_bd none,none,none\
@@ -224,7 +223,6 @@ int main(int argc, char **argv)
     filter: grep -v marker | grep -v atomic | grep -v usage
   test:
     suffix: swarm_migrate_hash_tensor_permutation
-    requires: ctetgen
     nsize: 2
     args: -dm_plex_dim 3 -dm_plex_simplex 0 -dm_distribute_overlap 1 -dm_plex_box_faces 10,10,10\
           -dm_plex_box_lower 0.,0.,0. -dm_plex_box_upper 1.,1.,10. -dm_plex_box_bd none,none,none\
@@ -232,7 +230,6 @@ int main(int argc, char **argv)
     filter: grep -v marker | grep -v atomic | grep -v usage
   test:
     suffix: swarm_migrate_scan
-    requires: ctetgen
     nsize: 2
     args: -dm_plex_dim 3 -dm_plex_simplex 0 -dm_distribute_overlap 1 -dm_plex_box_faces 10,10,10\
           -dm_plex_box_lower 0.,0.,0. -dm_plex_box_upper 1.,1.,10. -dm_plex_box_bd none,none,none\
@@ -240,7 +237,6 @@ int main(int argc, char **argv)
     filter: grep -v marker | grep -v atomic | grep -v usage
   test:
     suffix: swarm_migrate_scan_tensor_permutation
-    requires: ctetgen
     nsize: 2
     args: -dm_plex_dim 3 -dm_plex_simplex 0 -dm_distribute_overlap 1 -dm_plex_box_faces 10,10,10\
           -dm_plex_box_lower 0.,0.,0. -dm_plex_box_upper 1.,1.,10. -dm_plex_box_bd none,none,none\
