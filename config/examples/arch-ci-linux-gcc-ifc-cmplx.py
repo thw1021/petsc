@@ -28,7 +28,7 @@ configure_options = [
   '--download-hdf5',
   '--with-zlib=1',
   '--download-kokkos=1',
-  '--download-kokkos-kernels=1',
+  '--download-kokkos-kernels=https://github.com/jczhang07/kokkos-kernels.git', '--download-kokkos-kernels-commit=2023-08-29/feature-tpl-spadd',
   '--download-fblaslapack=1',
   '--with-strict-petscerrorcode',
   '--with-coverage',

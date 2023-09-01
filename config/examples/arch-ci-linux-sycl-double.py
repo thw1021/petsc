@@ -23,7 +23,7 @@ if __name__ == '__main__':
     # KOKKOS_IMPL_MATH_UNARY_PREDICATE(isinf)
     '--SYCLPPFLAGS=-Wno-tautological-constant-compare',
     '--download-kokkos=1',
-    '--downoad-kokkos-kernels=1',
+    '--download-kokkos-kernels=https://github.com/jczhang07/kokkos-kernels.git', '--download-kokkos-kernels-commit=2023-08-29/feature-tpl-spadd',
     '--with-cuda=0',
     '--with-sycl=1',
     '--with-syclc=icpx', # dpcpp is deprecated by Intel. One should use 'icpx -fsycl' to compile sycl code. petsc handles that automatically.

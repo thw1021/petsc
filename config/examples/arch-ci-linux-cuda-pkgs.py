@@ -39,7 +39,7 @@ if __name__ == '__main__':
     '--download-kblas',
     '--download-h2opus',
     '--download-kokkos',
-    '--download-kokkos-kernels',
+    '--download-kokkos-kernels=https://github.com/jczhang07/kokkos-kernels.git', '--download-kokkos-kernels-commit=2023-08-29/feature-tpl-spadd',
     '--download-hwloc',
     '--download-hypre',
     '--download-raja',

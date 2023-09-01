@@ -25,7 +25,7 @@ if __name__ == '__main__':
     '--with-precision=double',
     '--with-clanguage=c',
     '--download-kokkos',
-    '--download-kokkos-kernels',
+    '--download-kokkos-kernels=https://github.com/jczhang07/kokkos-kernels.git', '--download-kokkos-kernels-commit=2023-08-29/feature-tpl-spadd',
     '--download-hypre',
     '--download-magma',
     '--with-magma-fortran-bindings=0',

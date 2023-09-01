@@ -53,7 +53,7 @@ configure_options = [
   '--download-cams=1',
   '--download-slepc',
   '--download-kokkos',
-  '--download-kokkos-kernels',
+  '--download-kokkos-kernels=https://github.com/jczhang07/kokkos-kernels.git', '--download-kokkos-kernels-commit=2023-08-29/feature-tpl-spadd',
   '--with-dmlandau-3d',
   '--with-strict-petscerrorcode',
   ]

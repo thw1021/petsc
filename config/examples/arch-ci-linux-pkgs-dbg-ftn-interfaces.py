@@ -34,7 +34,7 @@ configure_options = [
   '--download-spai=1',
   '--download-parms=1',
   '--download-kokkos=1',
-  '--download-kokkos-kernels=1',
+  '--download-kokkos-kernels=https://github.com/jczhang07/kokkos-kernels.git', '--download-kokkos-kernels-commit=2023-08-29/feature-tpl-spadd',
   '--with-kokkos-init-warnings=0', # we want to avoid "Kokkos::OpenMP::initialize WARNING: You are likely oversubscribing your CPU cores" in test output
   '--download-chaco=1',
   '--with-strict-petscerrorcode',

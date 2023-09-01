@@ -37,7 +37,7 @@ configure_options = [
   '--download-h2opus=1',
   '--download-thrust=1',
   '--download-kokkos=1',
-  '--download-kokkos-kernels=1',
+  '--download-kokkos-kernels=https://github.com/jczhang07/kokkos-kernels.git', '--download-kokkos-kernels-commit=2023-08-29/feature-tpl-spadd',
   '--with-strict-petscerrorcode',
   '--with-coverage',
   ]

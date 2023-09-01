@@ -54,7 +54,7 @@ configure_options = [
   '--download-mmg=1',
   '--download-parmmg=1',
   '--download-kokkos=1',
-  '--download-kokkos-kernels=1',
+  '--download-kokkos-kernels=https://github.com/jczhang07/kokkos-kernels.git', '--download-kokkos-kernels-commit=2023-08-29/feature-tpl-spadd',
   '--download-htool=1',
   '--with-strict-petscerrorcode',
   ]

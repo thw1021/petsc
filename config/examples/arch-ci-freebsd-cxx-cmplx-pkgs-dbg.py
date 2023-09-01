@@ -35,7 +35,7 @@ configure_options = [
   '--download-p4est=1',
   '--with-mpi-f90module-visibility=0',
   '--download-kokkos=1',
-  '--download-kokkos-kernels=1',
+  '--download-kokkos-kernels=https://github.com/jczhang07/kokkos-kernels.git', '--download-kokkos-kernels-commit=2023-08-29/feature-tpl-spadd',
   '--with-ssl=1',
   '--with-strict-petscerrorcode=0',
   ]
