@@ -564,7 +564,7 @@ static PetscErrorCode PCSetUp_GAMG(PC pc)
           if (pc_gamg->recomputeesteig) {
             PetscBool ischeb;
             KSP       smoother;
-            PetscCall(PCMGGetSmoother(pc, level+1, &smoother));
+            PetscCall(PCMGGetSmoother(pc, level + 1, &smoother));
             PetscCall(PetscObjectTypeCompare((PetscObject)smoother, KSPCHEBYSHEV, &ischeb));
             if (ischeb) {
               KSP_Chebyshev *cheb = (KSP_Chebyshev *)smoother->data;
