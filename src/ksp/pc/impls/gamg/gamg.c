@@ -865,7 +865,7 @@ PetscErrorCode PCDestroy_GAMG(PC pc)
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetRepartition_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetEigenvalues_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetUseSAEstEig_C", NULL));
-  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetRecomputEstEig_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetRecomputeEstEig_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetReuseInterpolation_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGASMSetUseAggs_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetUseParallelCoarseGridSolve_C", NULL));
