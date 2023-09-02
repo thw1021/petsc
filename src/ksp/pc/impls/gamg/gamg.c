@@ -1704,7 +1704,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_GAMG(PC pc)
   pc_gamg->min_eq_proc                     = 50;
   pc_gamg->coarse_eq_limit                 = 50;
   for (int i = 0; i < PETSC_MG_MAXLEVELS; i++) pc_gamg->threshold[i] = -1;
-  pc_gamg->threshold_scale = 1.;
+  pc_gamg->threshold_scale  = 1.;
   pc_gamg->Nlevels          = PETSC_MG_MAXLEVELS;
   pc_gamg->current_level    = 0; /* don't need to init really */
   pc_gamg->use_sa_esteig    = PETSC_TRUE;
