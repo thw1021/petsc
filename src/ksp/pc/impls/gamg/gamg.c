@@ -562,15 +562,9 @@ static PetscErrorCode PCSetUp_GAMG(PC pc)
           PetscCall(KSPSetOperators(mglevels[level]->smoothd, B, B));
           // check for redoing eigen estimates
           if (pc_gamg->recompute_esteig) {
-            PetscBool ischeb;
             KSP       smoother;
             PetscCall(PCMGGetSmoother(pc, level + 1, &smoother));
-            PetscCall(PetscObjectTypeCompare((PetscObject)smoother, KSPCHEBYSHEV, &ischeb));
-            if (ischeb) {
-              KSP_Chebyshev *cheb = (KSP_Chebyshev *)smoother->data;
-              cheb->emin_provided = 0;
-              cheb->emax_provided = 0;
-            }
+            PetscCall(KSPChebyshevSetEigenvalues(smoother, 0, 0));
           }
           // inc
           dB = B;
