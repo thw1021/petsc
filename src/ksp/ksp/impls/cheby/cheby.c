@@ -88,7 +88,6 @@ static PetscErrorCode KSPChebyshevEstEigSet_Chebyshev(KSP ksp, PetscReal a, Pets
       PetscCall(PetscObjectSetOptionsPrefix((PetscObject)cheb->kspest, ((PetscObject)ksp)->prefix));
       PetscCall(PetscObjectAppendOptionsPrefix((PetscObject)cheb->kspest, "esteig_"));
       PetscCall(KSPSetSkipPCSetFromOptions(cheb->kspest, PETSC_TRUE));
-
       PetscCall(KSPSetComputeEigenvalues(cheb->kspest, PETSC_TRUE));
 
       /* We cannot turn off convergence testing because GMRES will break down if you attempt to keep iterating after a zero norm is obtained */
