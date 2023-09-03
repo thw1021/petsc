@@ -10,12 +10,13 @@ static char help[] = "Simple linear problem with events\n"
                      "The following event functions are involved:\n"
                      "- two polynomial event functions on rank-0 and last-rank (with zeros: 1.05, 9.05[terminating])\n"
                      "- one event function on rank = '1%size', equal to sin(pi*t), zeros = 1,...,10\n"
-                     "TimeSpan = [0.01, 0.21, 1.01, ... 9.21] plus the points: {3, 4, 4+D, 5-D, 5, 6-D, 6, 6+D} with user-defined D\n"
+                     "TimeSpan = [0.01, 0.21, 1.01, ..., 6.21, 6.99, 7.21,... 9.21] plus the points: {3, 4, 4+D, 5-D, 5, 6-D, 6, 6+D} with user-defined D\n"
 
                      "Options:\n"
                      "-dir    d : zero-crossing direction for events: 0, 1, -1\n"
                      "-flg      : additional output in Postevent\n"
                      "-restart  : flag for TSRestartStep() in PostEvent\n"
+                     "-term     : flag to terminate at 9.05 event (true by default)\n"
                      "-dtpost x : if x > 0, then on even PostEvent calls dt_postevent = x is set, on odd PostEvent calls dt_postevent = 0 is set,\n"
                      "            if x == 0, nothing happens\n"
                      "-D      z : a small number to define additional TimeSpan points\n";
@@ -32,6 +33,7 @@ typedef struct {
   PetscInt    cnt;              // counter
   PetscBool   flg;              // flag for additional print in PostEvent
   PetscBool   restart;          // flag for TSRestartStep() in PostEvent
+  PetscBool   term;             // flag to terminate at 9.05 event
   PetscReal   dtpost;           // post-event step
   PetscInt    postcnt;          // counter for PostEvent calls
 } AppCtx;
@@ -63,6 +65,7 @@ int main(int argc, char **argv)
   ctx.cnt     = 0;
   ctx.flg     = PETSC_FALSE;
   ctx.restart = PETSC_FALSE;
+  ctx.term    = PETSC_TRUE;
   ctx.dtpost  = 0;
   ctx.postcnt = 0;
 
@@ -108,6 +111,7 @@ int main(int argc, char **argv)
   PetscCall(PetscOptionsGetInt(NULL, NULL, "-dir", &dir0, NULL));             // desired zero-crossing direction
   PetscCall(PetscOptionsHasName(NULL, NULL, "-flg", &ctx.flg));               // flag for additional output
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-restart", &ctx.restart, NULL)); // flag for TSRestartStep()
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-term", &ctx.term, NULL));       // flag to terminate at 9.05 event
   PetscCall(PetscOptionsGetReal(NULL, NULL, "-dtpost", &ctx.dtpost, NULL));   // post-event step
   PetscCall(PetscOptionsGetReal(NULL, NULL, "-D", &D, NULL));                 // small number for tspan
 
@@ -116,9 +120,9 @@ int main(int argc, char **argv)
     dir[n]    = dir0;
     term[n++] = PETSC_FALSE;
   }
-  if (ctx.rank == ctx.size - 1) { // second event (with termination) -- on last rank
+  if (ctx.rank == ctx.size - 1) { // second event (with optional termination) -- on last rank
     dir[n]    = dir0;
-    term[n++] = PETSC_TRUE;
+    term[n++] = ctx.term;
   }
   if (ctx.rank == 1 % ctx.size) { // third event -- on rank = 1%ctx.size
     dir[n]    = dir0;
@@ -277,6 +281,12 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
     output_file: output/ex3span_1single.out
     args: -ts_monitor -ts_adapt_type none -restart -ts_event_dt_min 1e-6
     args: -dtpost 0.1127 -D 0.0015 -dir 0 -ts_max_time 9.8 -ts_dt 0.18
+    nsize: 1
+
+  test:
+    suffix: 2
+    output_file: output/ex3span_2.out
+    args: -ts_event_dt_min 1e-6 -dtpost 1 -term 0 -ts_max_time 9.61
     nsize: 1
 
   test:

@@ -277,6 +277,7 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
     args: -ts_adapt_type basic
     args: -V {{1e2 1e4 1e6 1e8}}
     args: -ts_adapt_dt_min 1e-6
+    args: -change5 {{0 1}}
     nsize: 1
 
   test:
