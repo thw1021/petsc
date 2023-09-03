@@ -148,6 +148,7 @@ Changes: Development
 - Refactor ``PCMPI`` to be a private system used automatically when ``-mpi_linear_solver_server`` is used. The ``KSP`` and ``PC`` objects that solve the system now inherit any prefix provided
   initially with ``KSPSetPrefix()`` and do not require the previously required ``mpi_`` prefix
 - Add option ``-fieldsplit_1_pc_hpddm_schur_precondition`` to use ``PCHPDDM`` on the Schur complements from ``PCFIELDSPLIT``
+- Add ``PCGAMGSetRecomputeEstEig()`` to set flag to have Chebyshev recompute its eigen estimates (default set to true)
 
 .. rubric:: KSP:
 
