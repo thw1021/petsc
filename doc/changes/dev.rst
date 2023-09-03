@@ -180,6 +180,8 @@ Changes: Development
 
 .. rubric:: DMSwarm:
 
+- Add scatter mode to ``DMSwarmProjectFields()`` and no longer create vectors
+
 .. rubric:: DMPlex:
 
 - Add ``DMPlexTransformExtrudeGetPeriodic()`` and ``DMPlexTransformExtrudeSetPeriodic()``
