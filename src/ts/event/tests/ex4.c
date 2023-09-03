@@ -134,27 +134,8 @@ int main(int argc, char **argv)
     PetscCall(PetscMalloc1(ctx.size, &rank_cnt));
     PetscCallMPI(MPI_Allgather(&ctx.cnt, 1, MPIU_INT, rank_cnt, 1, MPIU_INT, PETSC_COMM_WORLD));
 
-    if (ctx.rank == 0) { // rank-0 collects data and prints; this is to ensure no mess takes place in stdout
-      for (PetscInt i = 0; i < ctx.size; i++) {
-        for (PetscInt j = 0; j < rank_cnt[i]; j++) {
-          PetscInt   n;
-          PetscReal  t;
-          MPI_Status stat;
-          if (i == 0) {
-            n = ctx.evnum[j];
-            t = ctx.evres[j];
-          } else {
-            PetscCallMPI(MPI_Recv(&n, 1, MPIU_INT, i, j, PETSC_COMM_WORLD, &stat));
-            PetscCallMPI(MPI_Recv(&t, 1, MPIU_REAL, i, j, PETSC_COMM_WORLD, &stat));
-          }
-          PetscCall(PetscPrintf(PETSC_COMM_SELF, "%" PetscInt_FMT "\t%" PetscInt_FMT "\t%.5g\n", i, n, (double)t));
-        }
-      }
-    } else { // other ranks only send their data
-      for (PetscInt j = 0; j < rank_cnt[ctx.rank]; j++) {
-        PetscCallMPI(MPI_Send(&ctx.evnum[j], 1, MPIU_INT, 0, j, PETSC_COMM_WORLD));
-        PetscCallMPI(MPI_Send(&ctx.evres[j], 1, MPIU_REAL, 0, j, PETSC_COMM_WORLD));
-      }
+    if (ctx.rank == 0) { // only rank-0 prints
+      for (PetscInt j = 0; j < rank_cnt[0]; j++) PetscCall(PetscPrintf(PETSC_COMM_SELF, "0\t%" PetscInt_FMT "\t%.5g\n", ctx.evnum[j], (double)ctx.evres[j]));
     }
     PetscCall(PetscFree(rank_cnt));
   }
@@ -254,6 +235,24 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
     nsize: {{1 4}}
     filter: sort
     filter_output: sort
+
+  test:
+    suffix: F7
+    output_file: output/ex4_F7.out
+    args: -dir 0
+    args: -ts_adapt_dt_min 1e-10 -ts_event_dt_min 1e-6
+    args: -ts_dt 0.4
+    args: -F 7
+    args: -ts_event_tol {{1e-8 1e-15}}
+    args: -ts_adapt_type {{none basic}}
+    args: -ts_type {{beuler rk}}
+    nsize: 1
+
+  test:
+    suffix: F7revisit
+    output_file: output/ex4_F7revisit.out
+    args: -ts_event_monitor -F 7 -ts_dt 0.04 -ts_event_dt_min 0.016
+    nsize: 1
 
   test:
     suffix: pos
