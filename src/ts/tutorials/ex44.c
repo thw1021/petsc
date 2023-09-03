@@ -199,6 +199,11 @@ int main(int argc, char **argv)
       output_file: output/ex44.out
 
     test:
+      suffix: bmf
+      args: -snes_mf_operator -ts_rtol 0 -ts_atol 1e-1 -ts_adapt_type basic -ts_max_time 50
+      output_file: output/ex44.out
+
+    test:
       suffix: 2
       nsize: 2
       args: -ts_rtol 0 -ts_atol 1e-1 -ts_adapt_type basic -ts_max_time 50
