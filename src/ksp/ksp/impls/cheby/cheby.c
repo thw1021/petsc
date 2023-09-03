@@ -65,8 +65,8 @@ static PetscErrorCode KSPChebyshevSetEigenvalues_Chebyshev(KSP ksp, PetscReal em
   KSP_Chebyshev *chebyshevP = (KSP_Chebyshev *)ksp->data;
 
   PetscFunctionBegin;
-  PetscCheck(emax > emin || (emax == 0 && emin == 0), PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_INCOMP, "Maximum eigenvalue must be larger than minimum: max %g min %g", (double)emax, (double)emin);
-  PetscCheck(emax * emin > 0.0, PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_INCOMP, "Both eigenvalues must be of the same sign: max %g min %g", (double)emax, (double)emin);
+  PetscCheck(emax > emin || (emax == 0 && emin == 0) || (emax == -1 && emin == -1), PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_INCOMP, "Maximum eigenvalue must be larger than minimum: max %g min %g", (double)emax, (double)emin);
+  PetscCheck(emax * emin > 0.0 || (emax == 0 && emin == 0), PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_INCOMP, "Both eigenvalues must be of the same sign: max %g min %g", (double)emax, (double)emin);
   chebyshevP->emax = emax;
   chebyshevP->emin = emin;
 
