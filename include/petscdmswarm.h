@@ -118,7 +118,6 @@ PETSC_EXTERN PetscErrorCode DMSwarmSortGetNumberOfPointsPerCell(DM, PetscInt, Pe
 PETSC_EXTERN PetscErrorCode DMSwarmSortGetIsValid(DM, PetscBool *);
 PETSC_EXTERN PetscErrorCode DMSwarmSortGetSizes(DM, PetscInt *, PetscInt *);
 
-PETSC_EXTERN PetscErrorCode DMSwarmProjectFields(DM, PetscInt, const char **, Vec **, PetscBool);
 PETSC_EXTERN PetscErrorCode DMSwarmCreateMassMatrixSquare(DM, DM, Mat *);
 
 PETSC_EXTERN PetscErrorCode DMSwarmGetCellSwarm(DM, PetscInt, DM);
