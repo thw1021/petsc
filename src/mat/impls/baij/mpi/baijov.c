@@ -531,8 +531,16 @@ PetscErrorCode MatCreateSubMatrices_MPIBAIJ(Mat C, PetscInt ismax, const IS isro
   PetscInt     nmax, nstages_local, nstages, i, pos, max_no, N = C->cmap->N, bs = C->rmap->bs;
   Mat_SeqBAIJ *subc;
   Mat_SubSppt *smat;
+  PetscBool    identity = PETSC_FALSE, sbaij;
 
   PetscFunctionBegin;
+  if (ismax == 1) {
+    PetscCall(PetscObjectTypeCompare((PetscObject)C, MATMPISBAIJ, &sbaij));
+    if (sbaij) {
+      PetscCall(ISGetLocalSize(iscol[0], &i));
+      if (i == C->cmap->N) PetscCall(ISIdentity(iscol[0], &identity));
+    }
+  }
   /* The compression and expansion should be avoided. Doesn't point
      out errors, might change the indices, hence buggey */
   PetscCall(PetscMalloc2(ismax, &isrow_block, ismax, &iscol_block));
@@ -573,7 +581,7 @@ PetscErrorCode MatCreateSubMatrices_MPIBAIJ(Mat C, PetscInt ismax, const IS isro
     else if (pos >= ismax) max_no = 0;
     else max_no = ismax - pos;
 
-    PetscCall(MatCreateSubMatrices_MPIBAIJ_local(C, max_no, isrow_block + pos, iscol_block + pos, scall, *submat + pos));
+    PetscCall(MatCreateSubMatrices_MPIBAIJ_local(C, max_no, isrow_block + pos, iscol_block + pos, scall, *submat + pos, identity));
     if (!max_no) {
       if (scall == MAT_INITIAL_MATRIX) { /* submat[pos] is a dummy matrix */
         smat          = (Mat_SubSppt *)(*submat)[pos]->data;
@@ -599,7 +607,7 @@ PetscErrorCode MatCreateSubMatrices_MPIBAIJ(Mat C, PetscInt ismax, const IS isro
 }
 
 /* This code is used for BAIJ and SBAIJ matrices (unfortunate dependency) */
-PetscErrorCode MatCreateSubMatrices_MPIBAIJ_local(Mat C, PetscInt ismax, const IS isrow[], const IS iscol[], MatReuse scall, Mat *submats)
+PetscErrorCode MatCreateSubMatrices_MPIBAIJ_local(Mat C, PetscInt ismax, const IS isrow[], const IS iscol[], MatReuse scall, Mat *submats, PetscBool sym)
 {
   Mat_MPIBAIJ     *c = (Mat_MPIBAIJ *)C->data;
   Mat              A = c->A;
@@ -1126,9 +1134,9 @@ PetscErrorCode MatCreateSubMatrices_MPIBAIJ_local(Mat C, PetscInt ismax, const I
       PetscCall(MatCreate(PETSC_COMM_SELF, submats + i));
       PetscCall(MatSetSizes(submats[i], nrow[i] * bs_tmp, ncol[i] * bs_tmp, PETSC_DETERMINE, PETSC_DETERMINE));
 
-      PetscCall(MatSetType(submats[i], ((PetscObject)A)->type_name));
+      PetscCall(MatSetType(submats[i], sym ? ((PetscObject)A)->type_name : MATSEQBAIJ));
       PetscCall(MatSeqBAIJSetPreallocation(submats[i], bs_tmp, 0, lens[i]));
-      PetscCall(MatSeqSBAIJSetPreallocation(submats[i], bs_tmp, 0, lens[i])); /* this subroutine is used by SBAIJ routines */
+      if (sym) PetscCall(MatSeqSBAIJSetPreallocation(submats[i], bs_tmp, 0, lens[i])); /* this subroutine is used by SBAIJ routines */
 
       /* create struct Mat_SubSppt and attached it to submat */
       PetscCall(PetscNew(&smat_i));
