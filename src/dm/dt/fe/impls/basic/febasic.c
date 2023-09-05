@@ -428,6 +428,7 @@ PetscErrorCode PetscFEIntegrateResidual_Basic(PetscDS ds, PetscFormKey key, Pets
       for (c = 0; c < T[field]->Nc; ++c)
         for (d = 0; d < dim; ++d) f1[(q * T[field]->Nc + c) * dim + d] *= w;
       if (debug) {
+        // LCOV_EXCL_START
         PetscCall(PetscPrintf(PETSC_COMM_SELF, "  quad point %" PetscInt_FMT " wt %g x:", q, (double)quadWeights[q]));
         for (c = 0; c < dE; ++c) PetscCall(PetscPrintf(PETSC_COMM_SELF, " %g", (double)fegeom.v[c]));
         PetscCall(PetscPrintf(PETSC_COMM_SELF, "\n"));
@@ -447,6 +448,7 @@ PetscErrorCode PetscFEIntegrateResidual_Basic(PetscDS ds, PetscFormKey key, Pets
           }
           PetscCall(PetscPrintf(PETSC_COMM_SELF, "\n"));
         }
+        // LCOV_EXCL_STOP
       }
     }
     PetscCall(PetscFEUpdateElementVec_Internal(fe, T[field], 0, basisReal, basisDerReal, e, cgeom, f0, f1, &elemVec[cOffset + fOffset]));
