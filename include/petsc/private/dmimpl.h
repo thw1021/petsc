@@ -37,6 +37,7 @@ typedef struct _DMOps *DMOps;
 struct _DMOps {
   PetscErrorCode (*view)(DM, PetscViewer);
   PetscErrorCode (*load)(DM, PetscViewer);
+  PetscErrorCode (*loadfromfile)(DM, const char[]);
   PetscErrorCode (*clone)(DM, DM *);
   PetscErrorCode (*setfromoptions)(DM, PetscOptionItems *);
   PetscErrorCode (*setup)(DM);

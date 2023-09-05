@@ -178,6 +178,7 @@ Changes: Development
 
 - Add support for ``DMDAGetElements()`` for Fortran
 - Add support for clearing named vectors with ``DMClearNamedGlobalVectors()`` and ``DMClearNamedLocalVectors()``
+- Add ``DMLoadFromFile()``
 
 .. rubric:: DMSwarm:
 

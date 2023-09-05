@@ -3820,6 +3820,43 @@ static void boxToAnnulus(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscI
 
 const char *const DMPlexShapes[] = {"box", "box_surface", "ball", "sphere", "cylinder", "schwarz_p", "gyroid", "doublet", "annulus", "hypercubic", "zbox", "unknown", "DMPlexShape", "DM_SHAPE_", NULL};
 
+PetscErrorCode DMLoad_Plex(DM dm, PetscViewer viewer)
+{
+  PetscBool ishdf5;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
+  PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 2);
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERHDF5, &ishdf5));
+  if (ishdf5) {
+#if defined(PETSC_HAVE_HDF5)
+    PetscViewerFormat format;
+    PetscCall(PetscViewerGetFormat(viewer, &format));
+    if (format == PETSC_VIEWER_HDF5_XDMF || format == PETSC_VIEWER_HDF5_VIZ) {
+      PetscCall(DMPlexLoad_HDF5_Xdmf_Internal(dm, viewer));
+    } else if (format == PETSC_VIEWER_HDF5_PETSC || format == PETSC_VIEWER_DEFAULT || format == PETSC_VIEWER_NATIVE) {
+      PetscCall(DMPlexLoad_HDF5_Internal(dm, viewer));
+    } else SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "PetscViewerFormat %s not supported for HDF5 input.", PetscViewerFormats[format]);
+    PetscFunctionReturn(PETSC_SUCCESS);
+#else
+    SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "HDF5 not supported in this build.\nPlease reconfigure using --download-hdf5");
+#endif
+  } else SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "Viewer type %s not yet supported for DMPlex loading", ((PetscObject)viewer)->type_name);
+}
+
+PetscErrorCode DMLoadFromFile_Plex(DM dm, const char filename[])
+{
+  DM          dmnew;
+  const char *plexname;
+
+  PetscFunctionBegin;
+  PetscCall(PetscObjectGetName((PetscObject)dm, &plexname));
+  PetscCall(DMPlexCreateFromFile(PetscObjectComm((PetscObject)dm), filename, plexname, PETSC_TRUE, &dmnew));
+  PetscCall(DMPlexCopy_Internal(dm, PETSC_FALSE, PETSC_FALSE, dmnew));
+  PetscCall(DMPlexReplace_Internal(dm, &dmnew));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode DMPlexCreateFromOptions_Internal(PetscOptionItems *PetscOptionsObject, PetscBool *useCoordSpace, DM dm)
 {
   DMPlexShape    shape   = DM_SHAPE_BOX;
@@ -3866,17 +3903,23 @@ static PetscErrorCode DMPlexCreateFromOptions_Internal(PetscOptionItems *PetscOp
   }
 
   if (fflg) {
-    DM dmnew;
+    PetscCall(PetscObjectSetName((PetscObject)dm, plexname));
+    PetscCall(DMLoadFromFile(dm, filename));
+    if (!interpolate) {
+      DM udm;
 
-    PetscCall(DMPlexCreateFromFile(PetscObjectComm((PetscObject)dm), filename, plexname, interpolate, &dmnew));
-    PetscCall(DMPlexCopy_Internal(dm, PETSC_FALSE, PETSC_FALSE, dmnew));
-    PetscCall(DMPlexReplace_Internal(dm, &dmnew));
+      PetscCall(DMPlexUninterpolate(dm, &udm));
+      PetscCall(DMPlexReplace_Internal(dm, &udm));
+    }
   } else if (refDomain) {
     PetscCall(DMPlexCreateReferenceCell_Internal(dm, cell));
   } else if (bdfflg) {
     DM bdm, dmnew;
 
-    PetscCall(DMPlexCreateFromFile(PetscObjectComm((PetscObject)dm), bdFilename, plexname, interpolate, &bdm));
+    PetscCall(DMCreate(PetscObjectComm((PetscObject)dm), &bdm));
+    PetscCall(DMSetType(bdm, DMPLEX));
+    PetscCall(PetscObjectSetName((PetscObject)bdm, plexname));
+    PetscCall(DMLoadFromFile(bdm, bdFilename));
     PetscCall(PetscObjectSetOptionsPrefix((PetscObject)bdm, "bd_"));
     PetscCall(DMSetFromOptions(bdm));
     PetscCall(DMPlexGenerate(bdm, NULL, interpolate, &dmnew));
@@ -4494,6 +4537,7 @@ static PetscErrorCode DMInitialize_Plex(DM dm)
   PetscFunctionBegin;
   dm->ops->view                      = DMView_Plex;
   dm->ops->load                      = DMLoad_Plex;
+  dm->ops->loadfromfile              = DMLoadFromFile_Plex;
   dm->ops->setfromoptions            = DMSetFromOptions_Plex;
   dm->ops->clone                     = DMClone_Plex;
   dm->ops->setup                     = DMSetUp_Plex;
@@ -5505,12 +5549,16 @@ PetscErrorCode DMPlexCreateFromFile(MPI_Comm comm, const char filename[], const 
 #undef CheckExtension
 
   if (isGmsh || isGmsh2 || isGmsh4) {
+    // Determines ASCII or BINARY
     PetscCall(DMPlexCreateGmshFromFile(comm, filename, interpolate, dm));
   } else if (isCGNS) {
+    // Calls cg_open()
     PetscCall(DMPlexCreateCGNSFromFile(comm, filename, interpolate, dm));
   } else if (isExodus || isGenesis) {
+    // Calls ex_open() or ex_open_par()
     PetscCall(DMPlexCreateExodusFromFile(comm, filename, interpolate, dm));
   } else if (isFluent) {
+    // ASCII viewer
     PetscCall(DMPlexCreateFluentFromFile(comm, filename, interpolate, dm));
   } else if (isHDF5) {
     PetscViewer viewer;
@@ -5540,10 +5588,13 @@ PetscErrorCode DMPlexCreateFromFile(MPI_Comm comm, const char filename[], const 
       *dm = idm;
     }
   } else if (isMed) {
+    // Calls MEDfileOpen()
     PetscCall(DMPlexCreateMedFromFile(comm, filename, interpolate, dm));
   } else if (isPLY) {
+    // BINARY viewer
     PetscCall(DMPlexCreatePLYFromFile(comm, filename, interpolate, dm));
   } else if (isEGADSLite || isEGADS || isIGES || isSTEP) {
+    // Calls EG_open()
     if (isEGADSLite) PetscCall(DMPlexCreateEGADSLiteFromFile(comm, filename, dm));
     else PetscCall(DMPlexCreateEGADSFromFile(comm, filename, dm));
     if (!interpolate) {
@@ -5554,6 +5605,7 @@ PetscErrorCode DMPlexCreateFromFile(MPI_Comm comm, const char filename[], const 
       *dm = udm;
     }
   } else if (isCV) {
+    // ASCII viewer
     PetscCall(DMPlexCreateCellVertexFromFile(comm, filename, interpolate, dm));
   } else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Cannot load file %s: unrecognized extension", filename);
   PetscCall(PetscStrlen(plexname, &len));

@@ -4096,13 +4096,13 @@ PetscErrorCode DMRegister(const char sname[], PetscErrorCode (*function)(DM))
   Level: intermediate
 
   Notes:
-  The type is determined by the data in the file, any type set into the DM before this call is ignored.
+  The `DM` type is determined by the data in the file, any type set into the `DM` before this call is ignored.
 
   Using `PETSCVIEWERHDF5` type with `PETSC_VIEWER_HDF5_PETSC` format, one can save multiple `DMPLEX`
   meshes in a single HDF5 file. This in turn requires one to name the `DMPLEX` object with `PetscObjectSetName()`
   before saving it with `DMView()` and before loading it with `DMLoad()` for identification of the mesh object.
 
-.seealso: [](ch_dmbase), `DM`, `PetscViewerBinaryOpen()`, `DMView()`, `MatLoad()`, `VecLoad()`
+.seealso: [](ch_dmbase), `DM`, `DMLoadFromFile()`, `PetscViewerBinaryOpen()`, `DMView()`, `MatLoad()`, `VecLoad()`
 @*/
 PetscErrorCode DMLoad(DM newdm, PetscViewer viewer)
 {
@@ -4128,6 +4128,41 @@ PetscErrorCode DMLoad(DM newdm, PetscViewer viewer)
     PetscTryTypeMethod(newdm, load, viewer);
   } else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Invalid viewer; open viewer with PetscViewerBinaryOpen() or PetscViewerHDF5Open()");
   PetscCall(PetscLogEventEnd(DM_Load, viewer, 0, 0, 0));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  DMLoadFromFile - Loads a DM that has been stored in a file.
+
+  Collective
+
+  Input Parameters:
++ newdm    - the newly loaded `DM`, this needs to have been created with `DMCreate()` and have a type
+             from `DMSetType()` before a call to `DMLoadFromEile()`.
+- filename - the filename
+
+  Level: intermediate
+
+  Notes:
+  The user must set the type of the `DM` before calling this function.
+
+  For formats that can save multiple `DM` in a single file, the user can select one using `PetscObjectSetName()`
+  before saving it with `DMView()` and before loading it with `DMLoadFromFile()`.
+
+  This functionality cannot be subsumed under `DMLoad()` because many format do special processing with the file.
+
+.seealso: [](ch_dmbase), `DM`, `DMLoad()`, `PetscViewerBinaryOpen()`, `DMView()`, `MatLoad()`, `VecLoad()`
+@*/
+PetscErrorCode DMLoadFromFile(DM newdm, const char filename[])
+{
+  PetscBool isbinary, ishdf5;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(newdm, DM_CLASSID, 1);
+  PetscAssertPointer(filename, 2);
+  PetscCall(PetscLogEventBegin(DM_Load, 0, 0, 0, 0));
+  PetscUseTypeMethod(newdm, loadfromfile, filename);
+  PetscCall(PetscLogEventEnd(DM_Load, 0, 0, 0, 0));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

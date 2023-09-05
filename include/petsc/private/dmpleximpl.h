@@ -816,6 +816,5 @@ PETSC_INTERN PetscErrorCode DMClone_Plex(DM dm, DM *newdm);
 PETSC_INTERN PetscErrorCode DMSetUp_Plex(DM dm);
 PETSC_INTERN PetscErrorCode DMDestroy_Plex(DM dm);
 PETSC_INTERN PetscErrorCode DMView_Plex(DM dm, PetscViewer viewer);
-PETSC_INTERN PetscErrorCode DMLoad_Plex(DM dm, PetscViewer viewer);
 PETSC_INTERN PetscErrorCode DMCreateSubDM_Plex(DM dm, PetscInt numFields, const PetscInt fields[], IS *is, DM *subdm);
 PETSC_INTERN PetscErrorCode DMCreateSuperDM_Plex(DM dms[], PetscInt len, IS **is, DM *superdm);
