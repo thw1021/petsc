@@ -203,12 +203,13 @@ PetscErrorCode PetscCDPrint(const PetscCoarsenData *ail, MPI_Comm comm)
 
   PetscFunctionBegin;
   PetscCallMPI(MPI_Comm_rank(comm, &rank));
+  PetscCall(PetscSleep(rank));
   for (ii = 0; ii < ail->size; ii++) {
     kk = 0;
     n  = ail->array[ii];
-    if (n) PetscCall(PetscPrintf(comm, "[%d]%s list %" PetscInt_FMT ":\n", rank, PETSC_FUNCTION_NAME, ii));
+    if (n) PetscCall(PetscPrintf(PETSC_COMM_SELF, "[%d]%s list %" PetscInt_FMT ":\n", rank, PETSC_FUNCTION_NAME, ii));
     while (n) {
-      PetscCall(PetscPrintf(comm, "\t[%d] %" PetscInt_FMT ") id %" PetscInt_FMT "\n", rank, ++kk, n->gid));
+      PetscCall(PetscPrintf(PETSC_COMM_SELF, "\t[%d] %" PetscInt_FMT ") id %" PetscInt_FMT "\n", rank, ++kk, n->gid));
       n = n->next;
     }
   }
@@ -519,9 +520,11 @@ static PetscErrorCode MatCoarsenApply_HEM_private(IS perm, Mat a_Gmat, PetscCoar
     for (kk = 0; kk < nloc; kk++) lid_cprowID[kk] = -1;
     /* set index into compressed row 'lid_cprowID' */
     if (matB) {
-      for (ix = 0; ix < matB->compressedrow.nrows; ix++) lid_cprowID[matB->compressedrow.rindex[ix]] = ix;
+      for (ix = 0; ix < matB->compressedrow.nrows; ix++) {
+        PetscInt lid = matB->compressedrow.rindex[ix];
+        if (lid >= 0) lid_cprowID[lid] = ix;
+      }
     }
-
     /* compute 'locMaxEdge' & 'locMaxPE', and create list of edges, count edges' */
     for (nEdges = 0, kk = 0, gid = my0; kk < nloc; kk++, gid++) {
       PetscReal   max_e = 0., tt;
@@ -996,7 +999,7 @@ static PetscErrorCode MatCoarsenApply_HEM_private(IS perm, Mat a_Gmat, PetscCoar
       PetscCall(MatAssemblyBegin(P, MAT_FINAL_ASSEMBLY));
       PetscCall(MatAssemblyEnd(P, MAT_FINAL_ASSEMBLY));
 
-      /* project to make new graph with collapsed edges */
+      /* project to make new graph with colapsed edges */
       PetscCall(MatPtAP(cMat, P, MAT_INITIAL_MATRIX, 1.0, &tMat));
       PetscCall(MatDestroy(&P));
       PetscCall(MatDestroy(&cMat));
