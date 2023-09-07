@@ -8,19 +8,18 @@
 #include <petsc/private/glvisvecimpl.h>
 #include <petscsf.h>
 
-static PetscErrorCode VecResetPreallocationCOO_MPI(Vec v)
+static PetscErrorCode VecCOOStructDestroy_MPI(void *data)
 {
-  Vec_MPI *vmpi = (Vec_MPI *)v->data;
+  VecCOOStruct_MPI *coo_struct = (VecCOOStruct_MPI *)data;
 
   PetscFunctionBegin;
-  if (vmpi) {
-    PetscCall(PetscFree(vmpi->jmap1));
-    PetscCall(PetscFree(vmpi->perm1));
-    PetscCall(PetscFree(vmpi->Cperm));
-    PetscCall(PetscFree4(vmpi->imap2, vmpi->jmap2, vmpi->sendbuf, vmpi->recvbuf));
-    PetscCall(PetscFree(vmpi->perm2));
-    PetscCall(PetscSFDestroy(&vmpi->coo_sf));
-  }
+  PetscCall(PetscFree(coo_struct->jmap1));
+  PetscCall(PetscFree(coo_struct->perm1));
+  PetscCall(PetscFree(coo_struct->Cperm));
+  PetscCall(PetscFree2(coo_struct->imap2, coo_struct->jmap2));
+  PetscCall(PetscFree(coo_struct->perm2));
+  PetscCall(PetscSFDestroy(&coo_struct->coo_sf));
+  PetscCall(PetscFree(coo_struct));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -43,8 +42,9 @@ PetscErrorCode VecDestroy_MPI(Vec v)
   /* Destroy the stashes: note the order - so that the tags are freed properly */
   PetscCall(VecStashDestroy_Private(&v->bstash));
   PetscCall(VecStashDestroy_Private(&v->stash));
+  PetscCall(PetscFree(x->sendbuf));
+  PetscCall(PetscFree(x->recvbuf));
 
-  PetscCall(VecResetPreallocationCOO_MPI(v));
   PetscCall(PetscObjectComposeFunction((PetscObject)v, "PetscMatlabEnginePut_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)v, "PetscMatlabEngineGet_C", NULL));
   PetscCall(PetscFree(v->data));
@@ -994,18 +994,19 @@ PetscErrorCode VecAssemblyEnd_MPI(Vec vec)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode VecSetPreallocationCOO_MPI(Vec x, PetscCount coo_n, const PetscInt coo_i[])
+static PetscErrorCode VecCOOStructCreate_MPI(Vec x, PetscCount coo_n, const PetscInt coo_i[], VecCOOStruct_MPI **coo_struct_)
 {
-  PetscInt    m, M, rstart, rend;
-  Vec_MPI    *vmpi = (Vec_MPI *)x->data;
-  PetscCount  k, p, q, rem; /* Loop variables over coo arrays */
-  PetscMPIInt size;
-  MPI_Comm    comm;
+  PetscInt          m, M, rstart, rend;
+  PetscCount        k, p, q, rem; /* Loop variables over coo arrays */
+  PetscMPIInt       size;
+  MPI_Comm          comm;
+  VecCOOStruct_MPI *coo_struct;
 
   PetscFunctionBegin;
+  PetscCall(PetscNew(coo_struct_));
+  coo_struct = *coo_struct_;
   PetscCall(PetscObjectGetComm((PetscObject)x, &comm));
   PetscCallMPI(MPI_Comm_size(comm, &size));
-  PetscCall(VecResetPreallocationCOO_MPI(x));
 
   PetscCall(PetscLayoutSetUp(x->map));
   PetscCall(VecGetOwnershipRange(x, &rstart, &rend));
@@ -1167,11 +1168,10 @@ PetscErrorCode VecSetPreallocationCOO_MPI(Vec x, PetscCount coo_n, const PetscIn
   /* ---------------------------------------------------------------*/
   /* Sort received COOs along with a permutation array            */
   /* ---------------------------------------------------------------*/
-  PetscCount  *imap2;
-  PetscCount  *jmap2, nnz2;
-  PetscScalar *sendbuf, *recvbuf;
-  PetscInt     old;
-  PetscCount   sendlen = n1 - rem, recvlen = n2;
+  PetscCount *imap2;
+  PetscCount *jmap2, nnz2;
+  PetscInt    old;
+  PetscCount  sendlen = n1 - rem, recvlen = n2;
 
   for (k = 0; k < n2; k++) perm2[k] = k;
   PetscCall(PetscSortIntWithCountArray(n2, i2, perm2));
@@ -1183,7 +1183,7 @@ PetscErrorCode VecSetPreallocationCOO_MPI(Vec x, PetscCount coo_n, const PetscIn
   }
 
   /* Build imap2[] and jmap2[] for each unique entry */
-  PetscCall(PetscMalloc4(nnz2, &imap2, nnz2 + 1, &jmap2, sendlen, &sendbuf, recvlen, &recvbuf));
+  PetscCall(PetscMalloc2(nnz2, &imap2, nnz2 + 1, &jmap2));
   p        = -1;
   old      = -1;
   jmap2[0] = 0;
@@ -1203,21 +1203,37 @@ PetscErrorCode VecSetPreallocationCOO_MPI(Vec x, PetscCount coo_n, const PetscIn
 
   PetscCall(PetscFree(i2));
 
-  vmpi->coo_n = coo_n;
-  vmpi->tot1  = tot1;
-  vmpi->jmap1 = jmap1;
-  vmpi->perm1 = perm1;
-  vmpi->nnz2  = nnz2;
-  vmpi->imap2 = imap2;
-  vmpi->jmap2 = jmap2;
-  vmpi->perm2 = perm2;
+  coo_struct->m       = m;
+  coo_struct->coo_n   = coo_n;
+  coo_struct->tot1    = tot1;
+  coo_struct->jmap1   = jmap1;
+  coo_struct->perm1   = perm1;
+  coo_struct->nnz2    = nnz2;
+  coo_struct->imap2   = imap2;
+  coo_struct->jmap2   = jmap2;
+  coo_struct->perm2   = perm2;
+  coo_struct->Cperm   = Cperm;
+  coo_struct->sendlen = sendlen;
+  coo_struct->recvlen = recvlen;
+  coo_struct->coo_sf  = sf2;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
 
-  vmpi->Cperm   = Cperm;
-  vmpi->sendbuf = sendbuf;
-  vmpi->recvbuf = recvbuf;
-  vmpi->sendlen = sendlen;
-  vmpi->recvlen = recvlen;
-  vmpi->coo_sf  = sf2;
+PetscErrorCode VecSetPreallocationCOO_MPI(Vec x, PetscCount coo_n, const PetscInt coo_i[])
+{
+  Vec_MPI          *vmpi = (Vec_MPI *)x->data;
+  VecCOOStruct_MPI *coo_struct;
+  PetscContainer    container;
+
+  PetscFunctionBegin;
+  PetscCall(PetscFree(vmpi->sendbuf));
+  PetscCall(PetscFree(vmpi->recvbuf));
+  PetscCall(VecCOOStructCreate_MPI(x, coo_n, coo_i, &coo_struct));
+  PetscCall(PetscContainerCreate(PETSC_COMM_SELF, &container));
+  PetscCall(PetscContainerSetPointer(container, coo_struct));
+  PetscCall(PetscContainerSetUserDestroy(container, VecCOOStructDestroy_MPI));
+  PetscCall(PetscObjectCompose((PetscObject)x, "__PETSc_VecCOOStruct_Host", (PetscObject)container));
+  PetscCall(PetscContainerDestroy(&container));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1225,31 +1241,52 @@ PetscErrorCode VecSetValuesCOO_MPI(Vec x, const PetscScalar v[], InsertMode imod
 {
   Vec_MPI          *vmpi = (Vec_MPI *)x->data;
   PetscInt          m;
-  PetscScalar      *a, *sendbuf = vmpi->sendbuf, *recvbuf = vmpi->recvbuf;
-  const PetscCount *jmap1 = vmpi->jmap1;
-  const PetscCount *perm1 = vmpi->perm1;
-  const PetscCount *imap2 = vmpi->imap2;
-  const PetscCount *jmap2 = vmpi->jmap2;
-  const PetscCount *perm2 = vmpi->perm2;
-  const PetscCount *Cperm = vmpi->Cperm;
-  const PetscCount  nnz2  = vmpi->nnz2;
+  PetscScalar      *a, *sendbuf, *recvbuf;
+  const PetscCount *jmap1;
+  const PetscCount *perm1;
+  const PetscCount *imap2;
+  const PetscCount *jmap2;
+  const PetscCount *perm2;
+  const PetscCount *Cperm;
+  PetscSF           coo_sf;
+  PetscCount        nnz2;
+  PetscContainer    container;
+  VecCOOStruct_MPI *coo_struct;
+  PetscCount        sendlen, recvlen;
 
   PetscFunctionBegin;
   PetscCall(VecGetLocalSize(x, &m));
   PetscCall(VecGetArray(x, &a));
+  PetscCall(PetscObjectQuery((PetscObject)x, "__PETSc_VecCOOStruct_Host", (PetscObject *)&container));
+  PetscCheck(container, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Not found VecCOOStruct on this vectors");
+  PetscCall(PetscContainerGetPointer(container, (void **)&coo_struct));
+  jmap1   = coo_struct->jmap1;
+  perm1   = coo_struct->perm1;
+  imap2   = coo_struct->imap2;
+  jmap2   = coo_struct->jmap2;
+  perm2   = coo_struct->perm2;
+  Cperm   = coo_struct->Cperm;
+  nnz2    = coo_struct->nnz2;
+  sendlen = coo_struct->sendlen;
+  recvlen = coo_struct->recvlen;
+  coo_sf  = coo_struct->coo_sf;
+  if (!vmpi->sendbuf) PetscCall(PetscMalloc1(sendlen, &vmpi->sendbuf));
+  if (!vmpi->recvbuf) PetscCall(PetscMalloc1(recvlen, &vmpi->recvbuf));
+  sendbuf = vmpi->sendbuf;
+  recvbuf = vmpi->recvbuf;
 
   /* Pack entries to be sent to remote */
-  for (PetscInt i = 0; i < vmpi->sendlen; i++) sendbuf[i] = v[Cperm[i]];
+  for (PetscCount i = 0; i < sendlen; i++) sendbuf[i] = v[Cperm[i]];
 
   /* Send remote entries to their owner and overlap the communication with local computation */
-  PetscCall(PetscSFReduceWithMemTypeBegin(vmpi->coo_sf, MPIU_SCALAR, PETSC_MEMTYPE_HOST, sendbuf, PETSC_MEMTYPE_HOST, recvbuf, MPI_REPLACE));
+  PetscCall(PetscSFReduceWithMemTypeBegin(coo_sf, MPIU_SCALAR, PETSC_MEMTYPE_HOST, sendbuf, PETSC_MEMTYPE_HOST, recvbuf, MPI_REPLACE));
   /* Add local entries to A and B */
   for (PetscInt i = 0; i < m; i++) { /* All entries in a[] are either zero'ed or added with a value (i.e., initialized) */
     PetscScalar sum = 0.0;           /* Do partial summation first to improve numerical stability */
     for (PetscCount k = jmap1[i]; k < jmap1[i + 1]; k++) sum += v[perm1[k]];
     a[i] = (imode == INSERT_VALUES ? 0.0 : a[i]) + sum;
   }
-  PetscCall(PetscSFReduceEnd(vmpi->coo_sf, MPIU_SCALAR, sendbuf, recvbuf, MPI_REPLACE));
+  PetscCall(PetscSFReduceEnd(coo_sf, MPIU_SCALAR, sendbuf, recvbuf, MPI_REPLACE));
 
   /* Add received remote entries to A and B */
   for (PetscInt i = 0; i < nnz2; i++) {

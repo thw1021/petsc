@@ -125,40 +125,55 @@ static PetscErrorCode VecSetPreallocationCOO_MPIKokkos(Vec x, PetscCount ncoo, c
   PetscFunctionBegin;
   PetscCall(VecGetLocalSize(x, &m));
   PetscCall(VecSetPreallocationCOO_MPI(x, ncoo, coo_i));
-  PetscCall(veckok->SetUpCOO(vecmpi, m));
+  PetscCall(veckok->SetUpCOO(x, vecmpi));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode VecSetValuesCOO_MPIKokkos(Vec x, const PetscScalar v[], InsertMode imode)
 {
-  const auto                  vecmpi  = static_cast<Vec_MPI *>(x->data);
-  const auto                  veckok  = static_cast<Vec_Kokkos *>(x->spptr);
-  const PetscCountKokkosView &jmap1   = veckok->jmap1_d;
-  const PetscCountKokkosView &perm1   = veckok->perm1_d;
-  const PetscCountKokkosView &imap2   = veckok->imap2_d;
-  const PetscCountKokkosView &jmap2   = veckok->jmap2_d;
-  const PetscCountKokkosView &perm2   = veckok->perm2_d;
-  const PetscCountKokkosView &Cperm   = veckok->Cperm_d;
-  PetscScalarKokkosView      &sendbuf = veckok->sendbuf_d;
-  PetscScalarKokkosView      &recvbuf = veckok->recvbuf_d;
-  PetscScalarKokkosView       xv;
-  ConstPetscScalarKokkosView  vv;
-  PetscMemType                memtype;
-  PetscInt                    m;
+  Vec_MPI                   *vecmpi = (Vec_MPI *)x->data;
+  const auto                 veckok = static_cast<Vec_Kokkos *>(x->spptr);
+  PetscScalarKokkosView      xv;
+  ConstPetscScalarKokkosView vv;
+  PetscMemType               memtype;
+  PetscInt                   m;
+  PetscContainer             container;
+  VecCOOStruct_MPIKokkos    *coo_struct;
 
   PetscFunctionBegin;
+  PetscCall(PetscObjectQuery((PetscObject)x, "__PETSc_VecCOOStruct_Device", (PetscObject *)&container));
+  PetscCheck(container, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Not found VecCOOStruct on this vector");
+  PetscCall(PetscContainerGetPointer(container, (void **)&coo_struct));
+  const PetscCountKokkosView &jmap1 = coo_struct->jmap1_d;
+  const PetscCountKokkosView &perm1 = coo_struct->perm1_d;
+  const PetscCountKokkosView &imap2 = coo_struct->imap2_d;
+  const PetscCountKokkosView &jmap2 = coo_struct->jmap2_d;
+  const PetscCountKokkosView &perm2 = coo_struct->perm2_d;
+  const PetscCountKokkosView &Cperm = coo_struct->Cperm_d;
+  if (veckok->sendbuf_d.size() != (size_t)coo_struct->sendlen) {
+    PetscCall(PetscFree(vecmpi->sendbuf));
+    PetscCall(PetscMalloc1(coo_struct->sendlen, &vecmpi->sendbuf));
+    PetscCallCXX(veckok->sendbuf_d = Kokkos::create_mirror_view_and_copy(DefaultMemorySpace(), PetscScalarKokkosViewHost(vecmpi->sendbuf, coo_struct->sendlen)));
+  }
+  if (veckok->recvbuf_d.size() != (size_t)coo_struct->recvlen) {
+    PetscCall(PetscFree(vecmpi->recvbuf));
+    PetscCall(PetscMalloc1(coo_struct->recvlen, &vecmpi->recvbuf));
+    PetscCallCXX(veckok->recvbuf_d = Kokkos::create_mirror_view_and_copy(DefaultMemorySpace(), PetscScalarKokkosViewHost(vecmpi->recvbuf, coo_struct->recvlen)));
+  }
+  PetscScalarKokkosView &sendbuf = veckok->sendbuf_d;
+  PetscScalarKokkosView &recvbuf = veckok->recvbuf_d;
   PetscCall(VecGetLocalSize(x, &m));
   PetscCall(PetscGetMemType(v, &memtype));
   if (PetscMemTypeHost(memtype)) { /* If user gave v[] in host, we might need to copy it to device if any */
-    vv = Kokkos::create_mirror_view_and_copy(DefaultMemorySpace(), ConstPetscScalarKokkosViewHost(v, vecmpi->coo_n));
+    vv = Kokkos::create_mirror_view_and_copy(DefaultMemorySpace(), ConstPetscScalarKokkosViewHost(v, coo_struct->coo_n));
   } else {
-    vv = ConstPetscScalarKokkosView(v, vecmpi->coo_n); /* Directly use v[]'s memory */
+    vv = ConstPetscScalarKokkosView(v, coo_struct->coo_n); /* Directly use v[]'s memory */
   }
 
   /* Pack entries to be sent to remote */
   Kokkos::parallel_for(
-    vecmpi->sendlen, KOKKOS_LAMBDA(const PetscCount i) { sendbuf(i) = vv(Cperm(i)); });
-  PetscCall(PetscSFReduceWithMemTypeBegin(vecmpi->coo_sf, MPIU_SCALAR, PETSC_MEMTYPE_KOKKOS, sendbuf.data(), PETSC_MEMTYPE_KOKKOS, recvbuf.data(), MPI_REPLACE));
+    coo_struct->sendlen, KOKKOS_LAMBDA(const PetscCount i) { sendbuf(i) = vv(Cperm(i)); });
+  PetscCall(PetscSFReduceWithMemTypeBegin(coo_struct->coo_sf, MPIU_SCALAR, PETSC_MEMTYPE_KOKKOS, sendbuf.data(), PETSC_MEMTYPE_KOKKOS, recvbuf.data(), MPI_REPLACE));
 
   if (imode == INSERT_VALUES) PetscCall(VecGetKokkosViewWrite(x, &xv)); /* write vector */
   else PetscCall(VecGetKokkosView(x, &xv));                             /* read & write vector */
@@ -170,11 +185,11 @@ static PetscErrorCode VecSetValuesCOO_MPIKokkos(Vec x, const PetscScalar v[], In
       xv(i) = (imode == INSERT_VALUES ? 0.0 : xv(i)) + sum;
     });
 
-  PetscCall(PetscSFReduceEnd(vecmpi->coo_sf, MPIU_SCALAR, sendbuf.data(), recvbuf.data(), MPI_REPLACE));
+  PetscCall(PetscSFReduceEnd(coo_struct->coo_sf, MPIU_SCALAR, sendbuf.data(), recvbuf.data(), MPI_REPLACE));
 
   /* Add received remote entries */
   Kokkos::parallel_for(
-    vecmpi->nnz2, KOKKOS_LAMBDA(PetscCount i) {
+    coo_struct->nnz2, KOKKOS_LAMBDA(PetscCount i) {
       for (PetscCount k = jmap2(i); k < jmap2(i + 1); k++) xv(imap2(i)) += recvbuf(perm2(k));
     });
 

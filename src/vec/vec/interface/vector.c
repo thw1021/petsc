@@ -199,7 +199,7 @@ PetscErrorCode VecSetPreallocationCOO(Vec x, PetscCount ncoo, const PetscInt coo
     /* The default implementation only supports ncoo within limit of PetscInt */
     PetscCheck(ncoo <= PETSC_MAX_INT, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "ncoo %" PetscCount_FMT " overflowed PetscInt; configure --with-64-bit-indices or request support", ncoo);
     PetscCall(ISCreateGeneral(PETSC_COMM_SELF, ncoo, coo_i, PETSC_COPY_VALUES, &is_coo_i));
-    PetscCall(PetscObjectCompose((PetscObject)x, "__PETSc_coo_i", (PetscObject)is_coo_i));
+    PetscCall(PetscObjectCompose((PetscObject)x, "__PETSc_VecCOOStruct_Host", (PetscObject)is_coo_i));
     PetscCall(ISDestroy(&is_coo_i));
   }
   PetscCall(PetscLogEventEnd(VEC_SetPreallocateCOO, x, 0, 0, 0));
@@ -292,7 +292,7 @@ PetscErrorCode VecSetValuesCOO(Vec x, const PetscScalar coo_v[], InsertMode imod
 
     PetscCall(PetscGetMemType(coo_v, &mtype));
     PetscCheck(mtype == PETSC_MEMTYPE_HOST, PetscObjectComm((PetscObject)x), PETSC_ERR_ARG_WRONG, "The basic VecSetValuesCOO() only supports v[] on host");
-    PetscCall(PetscObjectQuery((PetscObject)x, "__PETSc_coo_i", (PetscObject *)&is_coo_i));
+    PetscCall(PetscObjectQuery((PetscObject)x, "__PETSc_VecCOOStruct_Host", (PetscObject *)&is_coo_i));
     PetscCheck(is_coo_i, PetscObjectComm((PetscObject)x), PETSC_ERR_COR, "Missing coo_i IS");
     PetscCall(ISGetLocalSize(is_coo_i, &ncoo));
     PetscCall(ISGetIndices(is_coo_i, &coo_i));
@@ -536,6 +536,8 @@ PetscErrorCode VecPointwiseMult(Vec w, Vec x, Vec y)
 @*/
 PetscErrorCode VecDuplicate(Vec v, Vec *newv)
 {
+  PetscObject coo_i;
+
   PetscFunctionBegin;
   PetscValidHeaderSpecific(v, VEC_CLASSID, 1);
   PetscAssertPointer(newv, 2);
@@ -547,6 +549,10 @@ PetscErrorCode VecDuplicate(Vec v, Vec *newv)
     PetscCall(VecBindToCPU(*newv, PETSC_TRUE));
   }
 #endif
+  PetscCall(PetscObjectQuery((PetscObject)v, "__PETSc_VecCOOStruct_Host", &coo_i));
+  if (coo_i) PetscCall(PetscObjectCompose((PetscObject)*newv, "__PETSc_VecCOOStruct_Host", coo_i));
+  PetscCall(PetscObjectQuery((PetscObject)v, "__PETSc_VecCOOStruct_Device", &coo_i));
+  if (coo_i) PetscCall(PetscObjectCompose((PetscObject)*newv, "__PETSc_VecCOOStruct_Device", coo_i));
   PetscCall(PetscObjectStateIncrease((PetscObject)(*newv)));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
