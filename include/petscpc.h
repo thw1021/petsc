@@ -339,7 +339,7 @@ PETSC_EXTERN PetscErrorCode PCGAMGRegister(PCGAMGType, PetscErrorCode (*)(PC));
 PETSC_EXTERN PetscErrorCode PCGAMGCreateGraph(PC, Mat, Mat *);
 PETSC_EXTERN PetscErrorCode PCGAMGSetAggressiveSquareGraph(PC, PetscBool);
 PETSC_EXTERN PetscErrorCode PCGAMGSetMinDegreeOrderingMISk(PC, PetscBool);
-PETSC_EXTERN PetscErrorCode PCGAMGSetAggressiveMISk(PC, PetscInt);
+PETSC_EXTERN PetscErrorCode PCGAMGMISkSetAggressive(PC, PetscInt);
 
 PETSC_EXTERN PetscErrorCode PCGAMGClassicalSetType(PC, PCGAMGClassicalType);
 PETSC_EXTERN PetscErrorCode PCGAMGClassicalGetType(PC, PCGAMGClassicalType *);

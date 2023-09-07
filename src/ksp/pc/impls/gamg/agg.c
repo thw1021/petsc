@@ -66,7 +66,7 @@ static PetscErrorCode PCGAMGSetNSmooths_AGG(PC pc, PetscInt n)
 
   Level: intermediate
 
-.seealso: `PCGAMG`, `PCGAMGSetThreshold()`, `PCGAMGSetAggressiveMISk()`, `PCGAMGSetAggressiveSquareGraph()`, `PCGAMGSetMinDegreeOrderingMISk()`, `()`
+.seealso: `PCGAMG`, `PCGAMGSetThreshold()`, `PCGAMGMISkSetAggressive()`, `PCGAMGSetAggressiveSquareGraph()`, `PCGAMGSetMinDegreeOrderingMISk()`, `()`
 @*/
 PetscErrorCode PCGAMGSetAggressiveLevels(PC pc, PetscInt n)
 {
@@ -78,7 +78,7 @@ PetscErrorCode PCGAMGSetAggressiveLevels(PC pc, PetscInt n)
 }
 
 /*@
-  PCGAMGSetAggressiveMISk - Number (k) distance in MIS coarsening (>2 is 'aggressive')
+  PCGAMGMISkSetAggressive - Number (k) distance in MIS coarsening (>2 is 'aggressive')
 
   Logically Collective
 
@@ -93,12 +93,12 @@ PetscErrorCode PCGAMGSetAggressiveLevels(PC pc, PetscInt n)
 
 .seealso: `PCGAMG`, `PCGAMGSetThreshold()`
 @*/
-PetscErrorCode PCGAMGSetAggressiveMISk(PC pc, PetscInt n)
+PetscErrorCode PCGAMGMISkSetAggressive(PC pc, PetscInt n)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
   PetscValidLogicalCollectiveInt(pc, n, 2);
-  PetscTryMethod(pc, "PCGAMGSetAggressiveMISk_C", (PC, PetscInt), (pc, n));
+  PetscTryMethod(pc, "PCGAMGMISkSetAggressive_C", (PC, PetscInt), (pc, n));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -163,7 +163,7 @@ static PetscErrorCode PCGAMGSetAggressiveLevels_AGG(PC pc, PetscInt n)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PCGAMGSetAggressiveMISk_AGG(PC pc, PetscInt n)
+static PetscErrorCode PCGAMGMISkSetAggressive_AGG(PC pc, PetscInt n)
 {
   PC_MG       *mg          = (PC_MG *)pc->data;
   PC_GAMG     *pc_gamg     = (PC_GAMG *)mg->innerctx;
@@ -220,7 +220,7 @@ static PetscErrorCode PCSetFromOptions_GAMG_AGG(PC pc, PetscOptionItems *PetscOp
       PetscCall(PetscOptionsBool("-pc_gamg_use_aggressive_square_graph", "Use square graph (A'A) or MIS-k (k=2) for aggressive coarsening", "PCGAMGSetAggressiveSquareGraph", pc_gamg_agg->use_aggressive_square_graph, &pc_gamg_agg->use_aggressive_square_graph, NULL));
     }
     PetscCall(PetscOptionsBool("-pc_gamg_use_minimum_degree_ordering", "Use minimum degree ordering for greedy MIS", "PCGAMGSetMinDegreeOrderingMISk", pc_gamg_agg->use_minimum_degree_ordering, &pc_gamg_agg->use_minimum_degree_ordering, NULL));
-    PetscCall(PetscOptionsInt("-pc_gamg_aggressive_mis_k", "Number of levels of multigrid to use.", "PCGAMGSetAggressiveMISk", pc_gamg_agg->aggressive_mis_k, &pc_gamg_agg->aggressive_mis_k, NULL));
+    PetscCall(PetscOptionsInt("-pc_gamg_aggressive_mis_k", "Number of levels of multigrid to use.", "PCGAMGMISkSetAggressive", pc_gamg_agg->aggressive_mis_k, &pc_gamg_agg->aggressive_mis_k, NULL));
   }
   PetscOptionsHeadEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -235,7 +235,7 @@ static PetscErrorCode PCDestroy_GAMG_AGG(PC pc)
   PetscCall(PetscFree(pc_gamg->subctx));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetNSmooths_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetAggressiveLevels_C", NULL));
-  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetAggressiveMISk_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGMISkSetAggressive_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetMinDegreeOrderingMISk_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetAggressiveSquareGraph_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCSetCoordinates_C", NULL));
@@ -1309,7 +1309,7 @@ PetscErrorCode PCCreateGAMG_AGG(PC pc)
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetAggressiveLevels_C", PCGAMGSetAggressiveLevels_AGG));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetAggressiveSquareGraph_C", PCGAMGSetAggressiveSquareGraph_AGG));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetMinDegreeOrderingMISk_C", PCGAMGSetMinDegreeOrderingMISk_AGG));
-  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetAggressiveMISk_C", PCGAMGSetAggressiveMISk_AGG));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGMISkSetAggressive_C", PCGAMGMISkSetAggressive_AGG));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCSetCoordinates_C", PCSetCoordinates_AGG));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
