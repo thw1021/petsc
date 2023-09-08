@@ -322,7 +322,7 @@ PETSC_EXTERN PetscErrorCode PCGAMGSetRepartition(PC, PetscBool);
 PETSC_EXTERN PetscErrorCode PCGAMGSetUseSAEstEig(PC, PetscBool);
 PETSC_EXTERN PetscErrorCode PCGAMGSetEigenvalues(PC, PetscReal, PetscReal);
 PETSC_EXTERN PetscErrorCode PCGAMGASMSetUseAggs(PC, PetscBool);
-PETSC_EXTERN PetscErrorCode PCGAMGSetUseParallelCoarseGridSolve(PC, PetscBool);
+PETSC_EXTERN PetscErrorCode PCGAMGSetParallelCoarseGridSolve(PC, PetscBool);
 PETSC_EXTERN PetscErrorCode PCGAMGSetCpuPinCoarseGrids(PC, PetscBool);
 PETSC_EXTERN PetscErrorCode PCGAMGSetCoarseGridLayoutType(PC, PCGAMGLayoutType);
 PETSC_EXTERN PetscErrorCode PCGAMGSetThreshold(PC, PetscReal[], PetscInt);
@@ -338,7 +338,7 @@ PETSC_EXTERN PetscErrorCode PCGAMGInitializePackage(void);
 PETSC_EXTERN PetscErrorCode PCGAMGRegister(PCGAMGType, PetscErrorCode (*)(PC));
 PETSC_EXTERN PetscErrorCode PCGAMGCreateGraph(PC, Mat, Mat *);
 PETSC_EXTERN PetscErrorCode PCGAMGSetAggressiveSquareGraph(PC, PetscBool);
-PETSC_EXTERN PetscErrorCode PCGAMGSetMinDegreeOrderingMISk(PC, PetscBool);
+PETSC_EXTERN PetscErrorCode PCGAMGMISkSetMinDegreeOrdering(PC, PetscBool);
 PETSC_EXTERN PetscErrorCode PCGAMGMISkSetAggressive(PC, PetscInt);
 
 PETSC_EXTERN PetscErrorCode PCGAMGClassicalSetType(PC, PCGAMGClassicalType);

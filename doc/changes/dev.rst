@@ -151,6 +151,7 @@ Changes: Development
 - Add ``PCGAMGSetAggressiveSquareGraph()`` to use square graph method for aggressive coarsening that was the previous default coarsening approach before release 3.19
 - Add ``PCGAMGSetAggressiveMISk()`` to set the number of levels (k) of aggressive MIS-k coarseing (2 is very common)
 - Add ``PCGAMGSetMinDegreeOrderingMISk()`` to use a minimum degree ordering for the (greedy) MIS-k algorithm
+- Change ``PCGAMGSetUseParallelCoarseGridSolve()`` to ``PCGAMGSetParallelCoarseGridSolve()``
 
 .. rubric:: KSP:
 
