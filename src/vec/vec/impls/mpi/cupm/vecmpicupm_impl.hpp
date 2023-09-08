@@ -235,35 +235,24 @@ inline PetscErrorCode VecMPI_CUPM<T>::Min(Vec x, PetscInt *idx, PetscReal *z) no
 template <device::cupm::DeviceType T>
 inline PetscErrorCode VecMPI_CUPM<T>::SetPreallocationCOO(Vec x, PetscCount ncoo, const PetscInt coo_i[]) noexcept
 {
-  PetscDeviceContext dctx;
+  PetscDeviceContext    dctx;
+  PetscContainer        container;
+  VecCOOStruct_MPI     *coo_struct;
+  VecCOOStruct_MPICUPM *coo_cupm;
+  PetscContainer        cupm_container;
 
   PetscFunctionBegin;
   PetscCall(GetHandles_(&dctx));
   PetscCall(VecSetPreallocationCOO_MPI(x, ncoo, coo_i));
-  // both of these must exist for this to work
-  PetscCall(VecCUPMAllocateCheck_(x));
-  {
-    const auto vcu  = VecCUPMCast(x);
-    const auto vmpi = VecIMPLCast(x);
-
-    // clang-format off
-    PetscCall(
-      SetPreallocationCOO_CUPMBase(
-        x, ncoo, coo_i, dctx,
-        util::make_array(
-          make_coo_pair(vcu->imap2_d, vmpi->imap2, vmpi->nnz2),
-          make_coo_pair(vcu->jmap2_d, vmpi->jmap2, vmpi->nnz2 + 1),
-          make_coo_pair(vcu->perm2_d, vmpi->perm2, vmpi->recvlen),
-          make_coo_pair(vcu->Cperm_d, vmpi->Cperm, vmpi->sendlen)
-        ),
-        util::make_array(
-          make_coo_pair(vcu->sendbuf_d, vmpi->sendbuf, vmpi->sendlen),
-          make_coo_pair(vcu->recvbuf_d, vmpi->recvbuf, vmpi->recvlen)
-        )
-      )
-    );
-    // clang-format on
-  }
+  PetscCall(PetscObjectQuery((PetscObject)x, "__PETSc_VecCOOStruct_Host", (PetscObject *)&container));
+  PetscCheck(container, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Not found VecCOOStruct on this vectors");
+  PetscCall(PetscContainerGetPointer(container, (void **)&coo_struct));
+  PetscCall(VecCOOStructCreate_MPICUPM(coo_struct, &coo_cupm));
+  PetscCall(PetscContainerCreate(PETSC_COMM_SELF, &cupm_container));
+  PetscCall(PetscContainerSetPointer(cupm_container, (void *)coo_cupm));
+  PetscCall(PetscContainerSetUserDestroy(cupm_container, VecCOOStructDestroy_MPICUPM));
+  PetscCall(PetscObjectCompose(PetscObjectCast(x), "__PETSc_VecCOOStruct_Device", (PetscObject)cupm_container));
+  PetscCall(PetscContainerDestroy(&cupm_container));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -317,33 +306,41 @@ inline void silence_warning_function_add_remote_coo_values_is_not_needed_and_wil
 template <device::cupm::DeviceType T>
 inline PetscErrorCode VecMPI_CUPM<T>::SetValuesCOO(Vec x, const PetscScalar v[], InsertMode imode) noexcept
 {
-  PetscDeviceContext dctx;
-  PetscMemType       v_memtype;
-  cupmStream_t       stream;
+  PetscDeviceContext    dctx;
+  PetscMemType          v_memtype;
+  cupmStream_t          stream;
+  PetscContainer        container;
+  VecCOOStruct_MPICUPM *coo_struct;
 
   PetscFunctionBegin;
+  PetscCall(PetscObjectQuery((PetscObject)x, "__PETSc_VecCOOStruct_Host", (PetscObject *)&container));
+  PetscCheck(container, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Not found VecCOOStruct on this vectors");
+  PetscCall(PetscContainerGetPointer(container, (void **)&coo_struct));
   PetscCall(GetHandles_(&dctx, &stream));
   PetscCall(PetscGetMemType(v, &v_memtype));
   {
-    const auto vmpi      = VecIMPLCast(x);
-    const auto vcu       = VecCUPMCast(x);
-    const auto sf        = vmpi->coo_sf;
-    const auto sendbuf_d = vcu->sendbuf_d;
-    const auto recvbuf_d = vcu->recvbuf_d;
-    const auto xv        = imode == INSERT_VALUES ? DeviceArrayWrite(dctx, x).data() : DeviceArrayReadWrite(dctx, x).data();
-    auto       vv        = const_cast<PetscScalar *>(v);
+    const auto vmpi = VecIMPLCast(x);
+    const auto vcu  = VecCUPMCast(x);
+    const auto sf   = coo_struct->coo_sf;
+    const auto xv   = imode == INSERT_VALUES ? DeviceArrayWrite(dctx, x).data() : DeviceArrayReadWrite(dctx, x).data();
+    auto       vv   = const_cast<PetscScalar *>(v);
 
     if (PetscMemTypeHost(v_memtype)) {
-      const auto size = vmpi->coo_n;
+      const auto size = coo_struct->coo_n;
 
       /* If user gave v[] in host, we might need to copy it to device if any */
       PetscCall(PetscDeviceMalloc(dctx, PETSC_MEMTYPE_CUPM(), size, &vv));
       PetscCall(PetscCUPMMemcpyAsync(vv, v, size, cupmMemcpyHostToDevice, stream));
     }
 
+    if (!vcu->sendbuf_d) PetscCall(PetscCUPMMallocAsync(&(vcu->sendbuf_d), coo_struct->sendlen, stream));
+    if (!vcu->recvbuf_d) PetscCall(PetscCUPMMallocAsync(&(vcu->recvbuf_d), coo_struct->recvlen, stream));
+    const auto sendbuf_d = vcu->sendbuf_d;
+    const auto recvbuf_d = vcu->recvbuf_d;
+
     /* Pack entries to be sent to remote */
-    if (const auto sendlen = vmpi->sendlen) {
-      PetscCall(PetscCUPMLaunchKernel1D(sendlen, 0, stream, kernels::pack_coo_values, vv, sendlen, vcu->Cperm_d, sendbuf_d));
+    if (const auto sendlen = coo_struct->sendlen) {
+      PetscCall(PetscCUPMLaunchKernel1D(sendlen, 0, stream, kernels::pack_coo_values, vv, sendlen, coo_struct->Cperm_d, sendbuf_d));
       // need to sync up here since we are about to send this to petscsf
       // REVIEW ME: no we dont, sf just needs to learn to use PetscDeviceContext
       PetscCallCUPM(cupmStreamSynchronize(stream));
@@ -351,12 +348,12 @@ inline PetscErrorCode VecMPI_CUPM<T>::SetValuesCOO(Vec x, const PetscScalar v[],
 
     PetscCall(PetscSFReduceWithMemTypeBegin(sf, MPIU_SCALAR, PETSC_MEMTYPE_CUPM(), sendbuf_d, PETSC_MEMTYPE_CUPM(), recvbuf_d, MPI_REPLACE));
 
-    if (const auto n = x->map->n) PetscCall(PetscCUPMLaunchKernel1D(n, 0, stream, kernels::add_coo_values, vv, n, vcu->jmap1_d, vcu->perm1_d, imode, xv));
+    if (const auto n = x->map->n) PetscCall(PetscCUPMLaunchKernel1D(n, 0, stream, kernels::add_coo_values, vv, n, coo_struct->jmap1_d, coo_struct->perm1_d, imode, xv));
 
     PetscCall(PetscSFReduceEnd(sf, MPIU_SCALAR, sendbuf_d, recvbuf_d, MPI_REPLACE));
 
     /* Add received remote entries */
-    if (const auto nnz2 = vmpi->nnz2) PetscCall(PetscCUPMLaunchKernel1D(nnz2, 0, stream, kernels::add_remote_coo_values, recvbuf_d, nnz2, vcu->imap2_d, vcu->jmap2_d, vcu->perm2_d, xv));
+    if (const auto nnz2 = coo_struct->nnz2) PetscCall(PetscCUPMLaunchKernel1D(nnz2, 0, stream, kernels::add_remote_coo_values, recvbuf_d, nnz2, coo_struct->imap2_d, coo_struct->jmap2_d, coo_struct->perm2_d, xv));
 
     if (PetscMemTypeHost(v_memtype)) PetscCall(PetscDeviceFree(dctx, vv));
     PetscCall(PetscDeviceContextSynchronize(dctx));
