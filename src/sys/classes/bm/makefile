@@ -1,9 +1,7 @@
--include ../../../petscdir.mk
+-include ../../../../petscdir.mk
 
-LIBBASE  = libpetscmat
-DIRS     = hpl
-MANSEC   = Mat
+MANSEC	  = Sys
+LIBBASE	  = libpetscsys
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules.doc
-
