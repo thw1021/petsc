@@ -199,20 +199,18 @@ PetscErrorCode PetscCDPrint(const PetscCoarsenData *ail, MPI_Comm comm)
 {
   PetscCDIntNd *n;
   PetscInt      ii, kk;
-  PetscMPIInt   rank;
 
   PetscFunctionBegin;
-  PetscCallMPI(MPI_Comm_rank(comm, &rank));
-  PetscCall(PetscSleep(rank));
   for (ii = 0; ii < ail->size; ii++) {
     kk = 0;
     n  = ail->array[ii];
-    if (n) PetscCall(PetscPrintf(PETSC_COMM_SELF, "[%d]%s list %" PetscInt_FMT ":\n", rank, PETSC_FUNCTION_NAME, ii));
+    if (n) PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "list %" PetscInt_FMT ":\n", ii));
     while (n) {
-      PetscCall(PetscPrintf(PETSC_COMM_SELF, "\t[%d] %" PetscInt_FMT ") id %" PetscInt_FMT "\n", rank, ++kk, n->gid));
+      PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "\t %" PetscInt_FMT ") id %" PetscInt_FMT "\n", ++kk, n->gid));
       n = n->next;
     }
   }
+  PetscCall(PetscSynchronizedFlush(PETSC_COMM_WORLD, PETSC_STDOUT));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
