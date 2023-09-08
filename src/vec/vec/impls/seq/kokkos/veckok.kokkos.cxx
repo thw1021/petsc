@@ -1353,28 +1353,31 @@ static PetscErrorCode VecSetPreallocationCOO_SeqKokkos(Vec x, PetscCount ncoo, c
   PetscFunctionBegin;
   PetscCall(VecSetPreallocationCOO_Seq(x, ncoo, coo_i));
   PetscCall(VecGetLocalSize(x, &m));
-  PetscCall(veckok->SetUpCOO(vecseq, m));
+  PetscCall(veckok->SetUpCOO(x, vecseq));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode VecSetValuesCOO_SeqKokkos(Vec x, const PetscScalar v[], InsertMode imode)
 {
-  Vec_Seq                    *vecseq = static_cast<Vec_Seq *>(x->data);
-  Vec_Kokkos                 *veckok = static_cast<Vec_Kokkos *>(x->spptr);
-  const PetscCountKokkosView &jmap1  = veckok->jmap1_d;
-  const PetscCountKokkosView &perm1  = veckok->perm1_d;
-  PetscScalarKokkosView       xv; /* View for vector x */
-  ConstPetscScalarKokkosView  vv; /* View for array v[] */
-  PetscInt                    m;
-  PetscMemType                memtype;
+  PetscScalarKokkosView      xv; /* View for vector x */
+  ConstPetscScalarKokkosView vv; /* View for array v[] */
+  PetscInt                   m;
+  PetscMemType               memtype;
+  PetscContainer             container;
+  VecCOOStruct_SeqKokkos    *coo_struct;
 
   PetscFunctionBegin;
+  PetscCall(PetscObjectQuery((PetscObject)x, "__PETSc_VecCOOStruct_Device", (PetscObject *)&container));
+  PetscCheck(container, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Not found VecCOOStruct on this vector");
+  PetscCall(PetscContainerGetPointer(container, (void **)&coo_struct));
+  const PetscCountKokkosView &jmap1 = coo_struct->jmap1_d;
+  const PetscCountKokkosView &perm1 = coo_struct->perm1_d;
   PetscCall(VecGetLocalSize(x, &m));
   PetscCall(PetscGetMemType(v, &memtype));
   if (PetscMemTypeHost(memtype)) { /* If user gave v[] in host, we might need to copy it to device if any */
-    PetscCallCXX(vv = Kokkos::create_mirror_view_and_copy(DefaultMemorySpace(), ConstPetscScalarKokkosViewHost(v, vecseq->coo_n)));
+    PetscCallCXX(vv = Kokkos::create_mirror_view_and_copy(DefaultMemorySpace(), ConstPetscScalarKokkosViewHost(v, coo_struct->coo_n)));
   } else {
-    PetscCallCXX(vv = ConstPetscScalarKokkosView(v, vecseq->coo_n)); /* Directly use v[]'s memory */
+    PetscCallCXX(vv = ConstPetscScalarKokkosView(v, coo_struct->coo_n)); /* Directly use v[]'s memory */
   }
 
   if (imode == INSERT_VALUES) PetscCall(VecGetKokkosViewWrite(x, &xv)); /* write vector */

@@ -2159,12 +2159,24 @@ inline PetscErrorCode VecSeq_CUPM<T>::SetRandom(Vec v, PetscRandom rand) noexcep
 template <device::cupm::DeviceType T>
 inline PetscErrorCode VecSeq_CUPM<T>::SetPreallocationCOO(Vec v, PetscCount ncoo, const PetscInt coo_i[]) noexcept
 {
-  PetscDeviceContext dctx;
+  PetscDeviceContext    dctx;
+  PetscContainer        container;
+  VecCOOStruct_Seq     *coo_struct;
+  VecCOOStruct_SeqCUPM *coo_cupm;
+  PetscContainer        cupm_container;
 
   PetscFunctionBegin;
   PetscCall(GetHandles_(&dctx));
   PetscCall(VecSetPreallocationCOO_Seq(v, ncoo, coo_i));
-  PetscCall(SetPreallocationCOO_CUPMBase(v, ncoo, coo_i, dctx));
+  PetscCall(PetscObjectQuery((PetscObject)v, "__PETSc_VecCOOStruct_Host", (PetscObject *)&container));
+  PetscCheck(container, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Not found VecCOOStruct on this vectors");
+  PetscCall(PetscContainerGetPointer(container, (void **)&coo_struct));
+  PetscCall(VecCOOStructCreate_SeqCUPM(coo_struct, &coo_cupm));
+  PetscCall(PetscContainerCreate(PETSC_COMM_SELF, &cupm_container));
+  PetscCall(PetscContainerSetPointer(cupm_container, (void *)coo_cupm));
+  PetscCall(PetscContainerSetUserDestroy(cupm_container, VecCOOStructDestroy_SeqCUPM));
+  PetscCall(PetscObjectCompose(PetscObjectCast(v), "__PETSc_VecCOOStruct_Device", (PetscObject)cupm_container));
+  PetscCall(PetscContainerDestroy(&cupm_container));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -2172,16 +2184,21 @@ inline PetscErrorCode VecSeq_CUPM<T>::SetPreallocationCOO(Vec v, PetscCount ncoo
 template <device::cupm::DeviceType T>
 inline PetscErrorCode VecSeq_CUPM<T>::SetValuesCOO(Vec x, const PetscScalar v[], InsertMode imode) noexcept
 {
-  auto               vv = const_cast<PetscScalar *>(v);
-  PetscMemType       memtype;
-  PetscDeviceContext dctx;
-  cupmStream_t       stream;
+  auto                  vv = const_cast<PetscScalar *>(v);
+  PetscMemType          memtype;
+  PetscDeviceContext    dctx;
+  cupmStream_t          stream;
+  PetscContainer        container;
+  VecCOOStruct_SeqCUPM *coo_struct;
 
   PetscFunctionBegin;
   PetscCall(GetHandles_(&dctx, &stream));
   PetscCall(PetscGetMemType(v, &memtype));
+  PetscCall(PetscObjectQuery((PetscObject)x, "__PETSc_VecCOOStruct_Device", (PetscObject *)&container));
+  PetscCheck(container, PETSC_COMM_SELF, PETSC_ERR_PLIB, "VecCOOStruct not found on this vector");
+  PetscCall(PetscContainerGetPointer(container, (void **)&coo_struct));
   if (PetscMemTypeHost(memtype)) {
-    const auto size = VecIMPLCast(x)->coo_n;
+    const auto size = coo_struct->coo_n;
 
     // If user gave v[] in host, we might need to copy it to device if any
     PetscCall(PetscDeviceMalloc(dctx, PETSC_MEMTYPE_CUPM(), size, &vv));
@@ -2191,7 +2208,7 @@ inline PetscErrorCode VecSeq_CUPM<T>::SetValuesCOO(Vec x, const PetscScalar v[],
   if (const auto n = x->map->n) {
     const auto vcu = VecCUPMCast(x);
 
-    PetscCall(PetscCUPMLaunchKernel1D(n, 0, stream, kernels::add_coo_values, vv, n, vcu->jmap1_d, vcu->perm1_d, imode, imode == INSERT_VALUES ? DeviceArrayWrite(dctx, x).data() : DeviceArrayReadWrite(dctx, x).data()));
+    PetscCall(PetscCUPMLaunchKernel1D(n, 0, stream, kernels::add_coo_values, vv, n, coo_struct->jmap1_d, coo_struct->perm1_d, imode, imode == INSERT_VALUES ? DeviceArrayWrite(dctx, x).data() : DeviceArrayReadWrite(dctx, x).data()));
   } else {
     PetscCall(MaybeIncrementEmptyLocalVec(x));
   }

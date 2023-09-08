@@ -182,7 +182,7 @@ PetscErrorCode VecAssemblyEnd(Vec vec)
 
   The array coo_i[] may be freed immediately after calling this function.
 
-.seealso: [](ch_vectors), `Vec`, `VecSetValuesCOO()`, `VecSetPreallocationCOOLocal()`
+.seealso: [](ch_vectors), `Vec`, `VecSetValuesCOO()`, `VecSetPreallocationCOOLocal()`, `VecDuplicatePreallocationCOO()`
 @*/
 PetscErrorCode VecSetPreallocationCOO(Vec x, PetscCount ncoo, const PetscInt coo_i[])
 {
@@ -199,7 +199,7 @@ PetscErrorCode VecSetPreallocationCOO(Vec x, PetscCount ncoo, const PetscInt coo
     /* The default implementation only supports ncoo within limit of PetscInt */
     PetscCheck(ncoo <= PETSC_MAX_INT, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "ncoo %" PetscCount_FMT " overflowed PetscInt; configure --with-64-bit-indices or request support", ncoo);
     PetscCall(ISCreateGeneral(PETSC_COMM_SELF, ncoo, coo_i, PETSC_COPY_VALUES, &is_coo_i));
-    PetscCall(PetscObjectCompose((PetscObject)x, "__PETSc_coo_i", (PetscObject)is_coo_i));
+    PetscCall(PetscObjectCompose((PetscObject)x, "__PETSc_VecCOOStruct_Host", (PetscObject)is_coo_i));
     PetscCall(ISDestroy(&is_coo_i));
   }
   PetscCall(PetscLogEventEnd(VEC_SetPreallocateCOO, x, 0, 0, 0));
@@ -232,7 +232,7 @@ PetscErrorCode VecSetPreallocationCOO(Vec x, PetscCount ncoo, const PetscInt coo
 
   Entries can be repeated. Negative indices and remote indices might be allowed. see `VecSetPreallocationCOO()`.
 
-.seealso: [](ch_vectors), `Vec`, `VecSetPreallocationCOO()`, `VecSetValuesCOO()`
+.seealso: [](ch_vectors), `Vec`, `VecSetPreallocationCOO()`, `VecSetValuesCOO()`, `VecDuplicatePreallocationCOO()`
 @*/
 PetscErrorCode VecSetPreallocationCOOLocal(Vec x, PetscCount ncoo, PetscInt coo_i[])
 {
@@ -272,7 +272,7 @@ PetscErrorCode VecSetPreallocationCOOLocal(Vec x, PetscCount ncoo, PetscInt coo_
   The imode flag indicates if `coo_v` must be added to the current values of the vector (`ADD_VALUES`) or overwritten (`INSERT_VALUES`).
   `VecAssemblyBegin()` and `VecAssemblyEnd()` do not need to be called after this routine. It automatically handles the assembly process.
 
-.seealso: [](ch_vectors), `Vec`, `VecSetPreallocationCOO()`, `VecSetPreallocationCOOLocal()`, `VecSetValues()`
+.seealso: [](ch_vectors), `Vec`, `VecSetPreallocationCOO()`, `VecSetPreallocationCOOLocal()`, `VecSetValues()`, `VecDuplicatePreallocationCOO()`
 @*/
 PetscErrorCode VecSetValuesCOO(Vec x, const PetscScalar coo_v[], InsertMode imode)
 {
@@ -292,7 +292,7 @@ PetscErrorCode VecSetValuesCOO(Vec x, const PetscScalar coo_v[], InsertMode imod
 
     PetscCall(PetscGetMemType(coo_v, &mtype));
     PetscCheck(mtype == PETSC_MEMTYPE_HOST, PetscObjectComm((PetscObject)x), PETSC_ERR_ARG_WRONG, "The basic VecSetValuesCOO() only supports v[] on host");
-    PetscCall(PetscObjectQuery((PetscObject)x, "__PETSc_coo_i", (PetscObject *)&is_coo_i));
+    PetscCall(PetscObjectQuery((PetscObject)x, "__PETSc_VecCOOStruct_Host", (PetscObject *)&is_coo_i));
     PetscCheck(is_coo_i, PetscObjectComm((PetscObject)x), PETSC_ERR_COR, "Missing coo_i IS");
     PetscCall(ISGetLocalSize(is_coo_i, &ncoo));
     PetscCall(ISGetIndices(is_coo_i, &coo_i));
@@ -513,6 +513,36 @@ PetscErrorCode VecPointwiseMult(Vec w, Vec x, Vec y)
 }
 
 /*@
+  VecDuplicatePreallocationCOO - Duplicate the COO preallocation from one vec in another.
+
+  Logically collective
+
+  Iinput Parameters:
++ vin  - a `Vec` whose COO preallocation should be duplicated
+- wout - a `Vec` with the same shape as `vin` to receive the duplicate COO preallocation
+
+  Level: intermediate
+
+  Notes:
+  `VecDuplicate()` duplicates COO data, `VecDuplicatePreallocationCOO(x, y)` only needs to be called if
+  `y` was not created by `VecDuplicate(x, &y)`.
+
+.seealso: [](ch_vectors), `Vec`, `VecSetPreallocationCOO()`, `VecSetValuesCOO()`, `VecSetPreallocationCOOLocal()`,  `VecDuplicate()`
+@*/
+PetscErrorCode VecDuplicatePreallocationCOO(Vec vin, Vec wout)
+{
+  PetscObject coo;
+
+  PetscFunctionBegin;
+  PetscCall(PetscObjectQuery((PetscObject)vin, "__PETSc_VecCOOStruct_Host", &coo));
+  if (coo) PetscCall(PetscObjectCompose((PetscObject)wout, "__PETSc_VecCOOStruct_Host", coo));
+  PetscCall(PetscObjectQuery((PetscObject)vin, "__PETSc_VecCOOStruct_Device", &coo));
+  if (coo) PetscCall(PetscObjectCompose((PetscObject)wout, "__PETSc_VecCOOStruct_Device", coo));
+  PetscCall(PetscObjectStateIncrease((PetscObject)(wout)));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
   VecDuplicate - Creates a new vector of the same type as an existing vector.
 
   Collective
@@ -547,7 +577,7 @@ PetscErrorCode VecDuplicate(Vec v, Vec *newv)
     PetscCall(VecBindToCPU(*newv, PETSC_TRUE));
   }
 #endif
-  PetscCall(PetscObjectStateIncrease((PetscObject)(*newv)));
+  PetscCall(VecDuplicatePreallocationCOO(v, *newv));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
