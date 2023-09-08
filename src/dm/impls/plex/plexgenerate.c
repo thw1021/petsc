@@ -5,7 +5,7 @@
 
   Input Parameters:
 + cellType - The cell type
-- cone - The incoming cone
+- cone     - The incoming cone
 
   Output Parameter:
 . cone - The inverted cone (in-place)
@@ -66,7 +66,7 @@ PetscErrorCode DMPlexInvertCell(DMPolytopeType cellType, PetscInt cone[])
   DMPlexReorderCell - Flips cell orientations since `DMPLEX` stores some of them internally with outward normals.
 
   Input Parameters:
-+ dm - The `DMPLEX` object
++ dm   - The `DMPLEX` object
 . cell - The cell
 - cone - The incoming cone
 
@@ -92,8 +92,8 @@ PetscErrorCode DMPlexReorderCell(DM dm, PetscInt cell, PetscInt cone[])
 
   Not Collective
 
-  Inputs Parameters:
-+ dm - The `DMPLEX` object
+  Input Parameters:
++ dm   - The `DMPLEX` object
 - opts - The command line options
 
   Level: developer
@@ -106,7 +106,7 @@ PetscErrorCode DMPlexTriangleSetOptions(DM dm, const char *opts)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
-  PetscValidCharPointer(opts, 2);
+  PetscAssertPointer(opts, 2);
   PetscCall(PetscFree(mesh->triangleOpts));
   PetscCall(PetscStrallocpy(opts, &mesh->triangleOpts));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -117,8 +117,8 @@ PetscErrorCode DMPlexTriangleSetOptions(DM dm, const char *opts)
 
   Not Collective
 
-  Inputs Parameters:
-+ dm - The `DMPLEX` object
+  Input Parameters:
++ dm   - The `DMPLEX` object
 - opts - The command line options
 
   Level: developer
@@ -131,7 +131,7 @@ PetscErrorCode DMPlexTetgenSetOptions(DM dm, const char *opts)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
-  PetscValidCharPointer(opts, 2);
+  PetscAssertPointer(opts, 2);
   PetscCall(PetscFree(mesh->tetgenOpts));
   PetscCall(PetscStrallocpy(opts, &mesh->tetgenOpts));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -143,16 +143,16 @@ PetscErrorCode DMPlexTetgenSetOptions(DM dm, const char *opts)
   Not Collective
 
   Input Parameters:
-+ boundary - The `DMPLEX` boundary object
-. name - The mesh generation package name
++ boundary    - The `DMPLEX` boundary object
+. name        - The mesh generation package name
 - interpolate - Flag to create intermediate mesh elements
 
   Output Parameter:
 . mesh - The `DMPLEX` object
 
   Options Database Keys:
-+  -dm_plex_generate <name> - package to generate mesh, for example, triangle, ctetgen or tetgen
--  -dm_generator <name> - package to generate mesh, for example, triangle, ctetgen or tetgen
++ -dm_plex_generate <name> - package to generate mesh, for example, triangle, ctetgen or tetgen
+- -dm_generator <name>     - package to generate mesh, for example, triangle, ctetgen or tetgen
 
   Level: intermediate
 

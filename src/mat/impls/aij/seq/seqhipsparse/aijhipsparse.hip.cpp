@@ -124,20 +124,20 @@ PETSC_INTERN PetscErrorCode MatHIPSPARSESetFormat_SeqAIJHIPSPARSE(Mat A, MatHIPS
 }
 
 /*@
-   MatHIPSPARSESetFormat - Sets the storage format of `MATSEQHIPSPARSE` matrices for a particular
-   operation. Only the `MatMult()` operation can use different GPU storage formats
+  MatHIPSPARSESetFormat - Sets the storage format of `MATSEQHIPSPARSE` matrices for a particular
+  operation. Only the `MatMult()` operation can use different GPU storage formats
 
-   Not Collective
+  Not Collective
 
-   Input Parameters:
-+  A - Matrix of type `MATSEQAIJHIPSPARSE`
-.  op - `MatHIPSPARSEFormatOperation`. `MATSEQAIJHIPSPARSE` matrices support `MAT_HIPSPARSE_MULT` and `MAT_HIPSPARSE_ALL`.
+  Input Parameters:
++ A      - Matrix of type `MATSEQAIJHIPSPARSE`
+. op     - `MatHIPSPARSEFormatOperation`. `MATSEQAIJHIPSPARSE` matrices support `MAT_HIPSPARSE_MULT` and `MAT_HIPSPARSE_ALL`.
          `MATMPIAIJHIPSPARSE` matrices support `MAT_HIPSPARSE_MULT_DIAG`, `MAT_HIPSPARSE_MULT_OFFDIAG`, and `MAT_HIPSPARSE_ALL`.
--  format - `MatHIPSPARSEStorageFormat` (one of `MAT_HIPSPARSE_CSR`, `MAT_HIPSPARSE_ELL`, `MAT_HIPSPARSE_HYB`.)
+- format - `MatHIPSPARSEStorageFormat` (one of `MAT_HIPSPARSE_CSR`, `MAT_HIPSPARSE_ELL`, `MAT_HIPSPARSE_HYB`.)
 
-   Level: intermediate
+  Level: intermediate
 
-.seealso: [](ch_matrices), `Mat`, `Mat`, `MATSEQAIJHIPSPARSE`, `MatHIPSPARSEStorageFormat`, `MatHIPSPARSEFormatOperation`
+.seealso: [](ch_matrices), `Mat`, `MATSEQAIJHIPSPARSE`, `MatHIPSPARSEStorageFormat`, `MatHIPSPARSEFormatOperation`
 @*/
 PetscErrorCode MatHIPSPARSESetFormat(Mat A, MatHIPSPARSEFormatOperation op, MatHIPSPARSEStorageFormat format)
 {
@@ -157,18 +157,18 @@ PETSC_INTERN PetscErrorCode MatHIPSPARSESetUseCPUSolve_SeqAIJHIPSPARSE(Mat A, Pe
 }
 
 /*@
-   MatHIPSPARSESetUseCPUSolve - Sets use CPU `MatSolve()`.
+  MatHIPSPARSESetUseCPUSolve - Sets use CPU `MatSolve()`.
 
-   Input Parameters:
-+  A - Matrix of type `MATSEQAIJHIPSPARSE`
--  use_cpu - set flag for using the built-in CPU `MatSolve()`
+  Input Parameters:
++ A       - Matrix of type `MATSEQAIJHIPSPARSE`
+- use_cpu - set flag for using the built-in CPU `MatSolve()`
 
-   Level: intermediate
+  Level: intermediate
 
-   Notes:
-   The hipSparse LU solver currently computes the factors with the built-in CPU method
-   and moves the factors to the GPU for the solve. We have observed better performance keeping the data on the CPU and computing the solve there.
-   This method to specifies if the solve is done on the CPU or GPU (GPU is the default).
+  Notes:
+  The hipSparse LU solver currently computes the factors with the built-in CPU method
+  and moves the factors to the GPU for the solve. We have observed better performance keeping the data on the CPU and computing the solve there.
+  This method to specifies if the solve is done on the CPU or GPU (GPU is the default).
 
 .seealso: [](ch_matrices), `Mat`, `MatSolve()`, `MATSEQAIJHIPSPARSE`, `MatHIPSPARSEStorageFormat`, `MatHIPSPARSEFormatOperation`
 @*/
@@ -180,7 +180,7 @@ PetscErrorCode MatHIPSPARSESetUseCPUSolve(Mat A, PetscBool use_cpu)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatSetOption_SeqAIJHIPSPARSE(Mat A, MatOption op, PetscBool flg)
+static PetscErrorCode MatSetOption_SeqAIJHIPSPARSE(Mat A, MatOption op, PetscBool flg)
 {
   PetscFunctionBegin;
   switch (op) {
@@ -1258,14 +1258,22 @@ static PetscErrorCode MatSolve_SeqAIJHIPSPARSE_ILU0(Mat fact, Vec b, Vec x)
   /* Solve L*y = b */
   PetscCallHIPSPARSE(hipsparseDnVecSetValues(fs->dnVecDescr_X, (void *)barray));
   PetscCallHIPSPARSE(hipsparseDnVecSetValues(fs->dnVecDescr_Y, fs->Y));
+  #if PETSC_PKG_HIP_VERSION_GE(5, 6, 0)
+  PetscCallHIPSPARSE(hipsparseSpSV_solve(fs->handle, HIPSPARSE_OPERATION_NON_TRANSPOSE, &PETSC_HIPSPARSE_ONE, fs->spMatDescr_L,                   /* L Y = X */
+                                         fs->dnVecDescr_X, fs->dnVecDescr_Y, hipsparse_scalartype, HIPSPARSE_SPSV_ALG_DEFAULT, fs->spsvDescr_L)); // hipsparseSpSV_solve() secretely uses the external buffer used in hipsparseSpSV_analysis()!
+  #else
   PetscCallHIPSPARSE(hipsparseSpSV_solve(fs->handle, HIPSPARSE_OPERATION_NON_TRANSPOSE, &PETSC_HIPSPARSE_ONE, fs->spMatDescr_L,                                     /* L Y = X */
                                          fs->dnVecDescr_X, fs->dnVecDescr_Y, hipsparse_scalartype, HIPSPARSE_SPSV_ALG_DEFAULT, fs->spsvDescr_L, fs->spsvBuffer_L)); // hipsparseSpSV_solve() secretely uses the external buffer used in hipsparseSpSV_analysis()!
-
+  #endif
   /* Solve U*x = y */
   PetscCallHIPSPARSE(hipsparseDnVecSetValues(fs->dnVecDescr_X, xarray));
+  #if PETSC_PKG_HIP_VERSION_GE(5, 6, 0)
   PetscCallHIPSPARSE(hipsparseSpSV_solve(fs->handle, HIPSPARSE_OPERATION_NON_TRANSPOSE, &PETSC_HIPSPARSE_ONE, fs->spMatDescr_U, /* U X = Y */
+                                         fs->dnVecDescr_Y, fs->dnVecDescr_X, hipsparse_scalartype, HIPSPARSE_SPSV_ALG_DEFAULT, fs->spsvDescr_U));
+  #else
+  PetscCallHIPSPARSE(hipsparseSpSV_solve(fs->handle, HIPSPARSE_OPERATION_NON_TRANSPOSE, &PETSC_HIPSPARSE_ONE, fs->spMatDescr_U,                                     /* U X = Y */
                                          fs->dnVecDescr_Y, fs->dnVecDescr_X, hipsparse_scalartype, HIPSPARSE_SPSV_ALG_DEFAULT, fs->spsvDescr_U, fs->spsvBuffer_U));
-
+  #endif
   PetscCall(VecHIPRestoreArrayRead(b, &barray));
   PetscCall(VecHIPRestoreArrayWrite(x, &xarray));
 
@@ -1308,14 +1316,22 @@ static PetscErrorCode MatSolveTranspose_SeqAIJHIPSPARSE_ILU0(Mat fact, Vec b, Ve
   /* Solve Ut*y = b */
   PetscCallHIPSPARSE(hipsparseDnVecSetValues(fs->dnVecDescr_X, (void *)barray));
   PetscCallHIPSPARSE(hipsparseDnVecSetValues(fs->dnVecDescr_Y, fs->Y));
+  #if PETSC_PKG_HIP_VERSION_GE(5, 6, 0)
+  PetscCallHIPSPARSE(hipsparseSpSV_solve(fs->handle, HIPSPARSE_OPERATION_TRANSPOSE, &PETSC_HIPSPARSE_ONE, fs->spMatDescr_U, /* Ut Y = X */
+                                         fs->dnVecDescr_X, fs->dnVecDescr_Y, hipsparse_scalartype, HIPSPARSE_SPSV_ALG_DEFAULT, fs->spsvDescr_Ut));
+  #else
   PetscCallHIPSPARSE(hipsparseSpSV_solve(fs->handle, HIPSPARSE_OPERATION_TRANSPOSE, &PETSC_HIPSPARSE_ONE, fs->spMatDescr_U, /* Ut Y = X */
                                          fs->dnVecDescr_X, fs->dnVecDescr_Y, hipsparse_scalartype, HIPSPARSE_SPSV_ALG_DEFAULT, fs->spsvDescr_Ut, fs->spsvBuffer_Ut));
-
+  #endif
   /* Solve Lt*x = y */
   PetscCallHIPSPARSE(hipsparseDnVecSetValues(fs->dnVecDescr_X, xarray));
+  #if PETSC_PKG_HIP_VERSION_GE(5, 6, 0)
+  PetscCallHIPSPARSE(hipsparseSpSV_solve(fs->handle, HIPSPARSE_OPERATION_TRANSPOSE, &PETSC_HIPSPARSE_ONE, fs->spMatDescr_L, /* Lt X = Y */
+                                         fs->dnVecDescr_Y, fs->dnVecDescr_X, hipsparse_scalartype, HIPSPARSE_SPSV_ALG_DEFAULT, fs->spsvDescr_Lt));
+  #else
   PetscCallHIPSPARSE(hipsparseSpSV_solve(fs->handle, HIPSPARSE_OPERATION_TRANSPOSE, &PETSC_HIPSPARSE_ONE, fs->spMatDescr_L, /* Lt X = Y */
                                          fs->dnVecDescr_Y, fs->dnVecDescr_X, hipsparse_scalartype, HIPSPARSE_SPSV_ALG_DEFAULT, fs->spsvDescr_Lt, fs->spsvBuffer_Lt));
-
+  #endif
   PetscCall(VecHIPRestoreArrayRead(b, &barray));
   PetscCall(VecHIPRestoreArrayWrite(x, &xarray));
   PetscCall(PetscLogGpuTimeEnd());
@@ -1543,14 +1559,22 @@ static PetscErrorCode MatSolve_SeqAIJHIPSPARSE_ICC0(Mat fact, Vec b, Vec x)
   /* Solve L*y = b */
   PetscCallHIPSPARSE(hipsparseDnVecSetValues(fs->dnVecDescr_X, (void *)barray));
   PetscCallHIPSPARSE(hipsparseDnVecSetValues(fs->dnVecDescr_Y, fs->Y));
+  #if PETSC_PKG_HIP_VERSION_GE(5, 6, 0)
+  PetscCallHIPSPARSE(hipsparseSpSV_solve(fs->handle, HIPSPARSE_OPERATION_NON_TRANSPOSE, &PETSC_HIPSPARSE_ONE, fs->spMatDescr_L, /* L Y = X */
+                                         fs->dnVecDescr_X, fs->dnVecDescr_Y, hipsparse_scalartype, HIPSPARSE_SPSV_ALG_DEFAULT, fs->spsvDescr_L));
+  #else
   PetscCallHIPSPARSE(hipsparseSpSV_solve(fs->handle, HIPSPARSE_OPERATION_NON_TRANSPOSE, &PETSC_HIPSPARSE_ONE, fs->spMatDescr_L, /* L Y = X */
                                          fs->dnVecDescr_X, fs->dnVecDescr_Y, hipsparse_scalartype, HIPSPARSE_SPSV_ALG_DEFAULT, fs->spsvDescr_L, fs->spsvBuffer_L));
-
+  #endif
   /* Solve Lt*x = y */
   PetscCallHIPSPARSE(hipsparseDnVecSetValues(fs->dnVecDescr_X, xarray));
+  #if PETSC_PKG_HIP_VERSION_GE(5, 6, 0)
+  PetscCallHIPSPARSE(hipsparseSpSV_solve(fs->handle, HIPSPARSE_OPERATION_TRANSPOSE, &PETSC_HIPSPARSE_ONE, fs->spMatDescr_L, /* Lt X = Y */
+                                         fs->dnVecDescr_Y, fs->dnVecDescr_X, hipsparse_scalartype, HIPSPARSE_SPSV_ALG_DEFAULT, fs->spsvDescr_Lt));
+  #else
   PetscCallHIPSPARSE(hipsparseSpSV_solve(fs->handle, HIPSPARSE_OPERATION_TRANSPOSE, &PETSC_HIPSPARSE_ONE, fs->spMatDescr_L, /* Lt X = Y */
                                          fs->dnVecDescr_Y, fs->dnVecDescr_X, hipsparse_scalartype, HIPSPARSE_SPSV_ALG_DEFAULT, fs->spsvDescr_Lt, fs->spsvBuffer_Lt));
-
+  #endif
   PetscCall(VecHIPRestoreArrayRead(b, &barray));
   PetscCall(VecHIPRestoreArrayWrite(x, &xarray));
 
@@ -1817,7 +1841,7 @@ static PetscErrorCode MatCholeskyFactorSymbolic_SeqAIJHIPSPARSE(Mat B, Mat A, IS
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatFactorGetSolverType_seqaij_hipsparse(Mat A, MatSolverType *type)
+static PetscErrorCode MatFactorGetSolverType_seqaij_hipsparse(Mat A, MatSolverType *type)
 {
   PetscFunctionBegin;
   *type = MATSOLVERHIPSPARSE;
@@ -2732,13 +2756,15 @@ static PetscErrorCode MatProductSymbolic_SeqAIJHIPSPARSE_SeqAIJHIPSPARSE(Mat C)
     Ccsr->values = new THRUSTARRAY(c->nz);
     PetscCallHIP(hipPeekAtLastError()); /* catch out of memory errors */
     /* update matC with the new pointers */
-    PetscCallHIPSPARSE(hipsparseCsrSetPointers(Cmat->matDescr, Ccsr->row_offsets->data().get(), Ccsr->column_indices->data().get(), Ccsr->values->data().get()));
+    if (c->nz) { /* 5.5.1 has a bug with nz = 0, exposed by mat_tests_ex123_2_hypre */
+      PetscCallHIPSPARSE(hipsparseCsrSetPointers(Cmat->matDescr, Ccsr->row_offsets->data().get(), Ccsr->column_indices->data().get(), Ccsr->values->data().get()));
 
-    PetscCallHIPSPARSE(hipsparseSpGEMMreuse_copy(Ccusp->handle, opA, opB, Amat->matDescr, BmatSpDescr, Cmat->matDescr, HIPSPARSE_SPGEMM_DEFAULT, mmdata->spgemmDesc, &bufferSize5, NULL));
-    PetscCallHIP(hipMalloc((void **)&mmdata->dBuffer5, bufferSize5));
-    PetscCallHIPSPARSE(hipsparseSpGEMMreuse_copy(Ccusp->handle, opA, opB, Amat->matDescr, BmatSpDescr, Cmat->matDescr, HIPSPARSE_SPGEMM_DEFAULT, mmdata->spgemmDesc, &bufferSize5, mmdata->dBuffer5));
-    PetscCallHIP(hipFree(dBuffer3));
-    PetscCallHIPSPARSE(hipsparseSpGEMMreuse_compute(Ccusp->handle, opA, opB, Cmat->alpha_one, Amat->matDescr, BmatSpDescr, Cmat->beta_zero, Cmat->matDescr, hipsparse_scalartype, HIPSPARSE_SPGEMM_DEFAULT, mmdata->spgemmDesc));
+      PetscCallHIPSPARSE(hipsparseSpGEMMreuse_copy(Ccusp->handle, opA, opB, Amat->matDescr, BmatSpDescr, Cmat->matDescr, HIPSPARSE_SPGEMM_DEFAULT, mmdata->spgemmDesc, &bufferSize5, NULL));
+      PetscCallHIP(hipMalloc((void **)&mmdata->dBuffer5, bufferSize5));
+      PetscCallHIPSPARSE(hipsparseSpGEMMreuse_copy(Ccusp->handle, opA, opB, Amat->matDescr, BmatSpDescr, Cmat->matDescr, HIPSPARSE_SPGEMM_DEFAULT, mmdata->spgemmDesc, &bufferSize5, mmdata->dBuffer5));
+      PetscCallHIP(hipFree(dBuffer3));
+      PetscCallHIPSPARSE(hipsparseSpGEMMreuse_compute(Ccusp->handle, opA, opB, Cmat->alpha_one, Amat->matDescr, BmatSpDescr, Cmat->beta_zero, Cmat->matDescr, hipsparse_scalartype, HIPSPARSE_SPGEMM_DEFAULT, mmdata->spgemmDesc));
+    }
     PetscCall(PetscInfo(C, "Buffer sizes for type %s, result %" PetscInt_FMT " x %" PetscInt_FMT " (k %" PetscInt_FMT ", nzA %" PetscInt_FMT ", nzB %" PetscInt_FMT ", nzC %" PetscInt_FMT ") are: %ldKB %ldKB\n", MatProductTypes[ptype], m, n, k, a->nz, b->nz, c->nz, bufferSize4 / 1024, bufferSize5 / 1024));
   }
   #else
@@ -3174,37 +3200,37 @@ static PetscErrorCode MatAssemblyEnd_SeqAIJHIPSPARSE(Mat A, MatAssemblyType mode
 }
 
 /*@
-   MatCreateSeqAIJHIPSPARSE - Creates a sparse matrix in `MATAIJHIPSPARSE` (compressed row) format.
-   This matrix will ultimately pushed down to AMD GPUs and use the HIPSPARSE library for calculations.
+  MatCreateSeqAIJHIPSPARSE - Creates a sparse matrix in `MATAIJHIPSPARSE` (compressed row) format.
+  This matrix will ultimately pushed down to AMD GPUs and use the HIPSPARSE library for calculations.
 
-   Collective
+  Collective
 
-   Input Parameters:
-+  comm - MPI communicator, set to `PETSC_COMM_SELF`
-.  m - number of rows
-.  n - number of columns
-.  nz - number of nonzeros per row (same for all rows), ignored if `nnz` is set
--  nnz - array containing the number of nonzeros in the various rows (possibly different for each row) or `NULL`
+  Input Parameters:
++ comm - MPI communicator, set to `PETSC_COMM_SELF`
+. m    - number of rows
+. n    - number of columns
+. nz   - number of nonzeros per row (same for all rows), ignored if `nnz` is set
+- nnz  - array containing the number of nonzeros in the various rows (possibly different for each row) or `NULL`
 
-   Output Parameter:
-.  A - the matrix
+  Output Parameter:
+. A - the matrix
 
-   Level: intermediate
+  Level: intermediate
 
-   Notes:
-   It is recommended that one use the `MatCreate()`, `MatSetType()` and/or `MatSetFromOptions()`,
-   `MatXXXXSetPreallocation()` paradgm instead of this routine directly.
-   [MatXXXXSetPreallocation() is, for example, `MatSeqAIJSetPreallocation`]
+  Notes:
+  It is recommended that one use the `MatCreate()`, `MatSetType()` and/or `MatSetFromOptions()`,
+  `MatXXXXSetPreallocation()` paradgm instead of this routine directly.
+  [MatXXXXSetPreallocation() is, for example, `MatSeqAIJSetPreallocation`]
 
-   The AIJ format (compressed row storage), is fully compatible with standard Fortran
-   storage.  That is, the stored row and column indices can begin at
-   either one (as in Fortran) or zero.
+  The AIJ format (compressed row storage), is fully compatible with standard Fortran
+  storage.  That is, the stored row and column indices can begin at
+  either one (as in Fortran) or zero.
 
-   Specify the preallocated storage with either `nz` or `nnz` (not both).
-   Set `nz` = `PETSC_DEFAULT` and `nnz` = `NULL` for PETSc to control dynamic memory
-   allocation.
+  Specify the preallocated storage with either `nz` or `nnz` (not both).
+  Set `nz` = `PETSC_DEFAULT` and `nnz` = `NULL` for PETSc to control dynamic memory
+  allocation.
 
-.seealso: [](ch_matrices), `Mat`, `MatCreate()`, `MatCreateAIJ()`, `MatSetValues()`, `MatSeqAIJSetColumnIndices()`, `MatCreateSeqAIJWithArrays()`, `MatCreateAIJ()`, `MATSEQAIJHIPSPARSE`, `MATAIJHIPSPARSE`
+.seealso: [](ch_matrices), `Mat`, `MatCreate()`, `MatCreateAIJ()`, `MatSetValues()`, `MatSeqAIJSetColumnIndices()`, `MatCreateSeqAIJWithArrays()`, `MATSEQAIJHIPSPARSE`, `MATAIJHIPSPARSE`
 @*/
 PetscErrorCode MatCreateSeqAIJHIPSPARSE(MPI_Comm comm, PetscInt m, PetscInt n, PetscInt nz, const PetscInt nnz[], Mat *A)
 {
@@ -3683,7 +3709,7 @@ struct IJCompare {
   }
 };
 
-PetscErrorCode MatSeqAIJHIPSPARSEInvalidateTranspose(Mat A, PetscBool destroy)
+static PetscErrorCode MatSeqAIJHIPSPARSEInvalidateTranspose(Mat A, PetscBool destroy)
 {
   Mat_SeqAIJHIPSPARSE *cusp = (Mat_SeqAIJHIPSPARSE *)A->spptr;
 
@@ -3709,7 +3735,7 @@ static PetscErrorCode MatCOOStructDestroy_SeqAIJHIPSPARSE(void *data)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatSetPreallocationCOO_SeqAIJHIPSPARSE(Mat mat, PetscCount coo_n, PetscInt coo_i[], PetscInt coo_j[])
+static PetscErrorCode MatSetPreallocationCOO_SeqAIJHIPSPARSE(Mat mat, PetscCount coo_n, PetscInt coo_i[], PetscInt coo_j[])
 {
   PetscBool            dev_ij = PETSC_FALSE;
   PetscMemType         mtype  = PETSC_MEMTYPE_HOST;
@@ -3764,7 +3790,7 @@ __global__ static void MatAddCOOValues(const PetscScalar kv[], PetscCount nnz, c
   }
 }
 
-PetscErrorCode MatSetValuesCOO_SeqAIJHIPSPARSE(Mat A, const PetscScalar v[], InsertMode imode)
+static PetscErrorCode MatSetValuesCOO_SeqAIJHIPSPARSE(Mat A, const PetscScalar v[], InsertMode imode)
 {
   Mat_SeqAIJ          *seq  = (Mat_SeqAIJ *)A->data;
   Mat_SeqAIJHIPSPARSE *dev  = (Mat_SeqAIJHIPSPARSE *)A->spptr;
@@ -3790,10 +3816,12 @@ PetscErrorCode MatSetValuesCOO_SeqAIJHIPSPARSE(Mat A, const PetscScalar v[], Ins
   if (imode == INSERT_VALUES) PetscCall(MatSeqAIJHIPSPARSEGetArrayWrite(A, &Aa));
   else PetscCall(MatSeqAIJHIPSPARSEGetArray(A, &Aa));
 
+  PetscCall(PetscLogGpuTimeBegin());
   if (Annz) {
     hipLaunchKernelGGL(HIP_KERNEL_NAME(MatAddCOOValues), dim3((Annz + 255) / 256), dim3(256), 0, PetscDefaultHipStream, v1, Annz, coo->jmap, coo->perm, imode, Aa);
     PetscCallHIP(hipPeekAtLastError());
   }
+  PetscCall(PetscLogGpuTimeEnd());
 
   if (imode == INSERT_VALUES) PetscCall(MatSeqAIJHIPSPARSERestoreArrayWrite(A, &Aa));
   else PetscCall(MatSeqAIJHIPSPARSERestoreArray(A, &Aa));
@@ -3803,22 +3831,22 @@ PetscErrorCode MatSetValuesCOO_SeqAIJHIPSPARSE(Mat A, const PetscScalar v[], Ins
 }
 
 /*@C
-    MatSeqAIJHIPSPARSEGetIJ - returns the device row storage `i` and `j` indices for `MATSEQAIJHIPSPARSE` matrices.
+  MatSeqAIJHIPSPARSEGetIJ - returns the device row storage `i` and `j` indices for `MATSEQAIJHIPSPARSE` matrices.
 
-    Not Collective
+  Not Collective
 
-    Input Parameters:
-+   A - the matrix
--   compressed - `PETSC_TRUE` or `PETSC_FALSE` indicating the matrix data structure should be always returned in compressed form
+  Input Parameters:
++ A          - the matrix
+- compressed - `PETSC_TRUE` or `PETSC_FALSE` indicating the matrix data structure should be always returned in compressed form
 
-    Output Parameters:
-+   i - the CSR row pointers
--   j - the CSR column indices
+  Output Parameters:
++ i - the CSR row pointers
+- j - the CSR column indices
 
-    Level: developer
+  Level: developer
 
-    Note:
-      When compressed is true, the CSR structure does not contain empty rows
+  Note:
+  When compressed is true, the CSR structure does not contain empty rows
 
 .seealso: [](ch_matrices), `Mat`, `MatSeqAIJHIPSPARSERestoreIJ()`, `MatSeqAIJHIPSPARSEGetArrayRead()`
 @*/
@@ -3851,17 +3879,17 @@ PetscErrorCode MatSeqAIJHIPSPARSEGetIJ(Mat A, PetscBool compressed, const int **
 }
 
 /*@C
-    MatSeqAIJHIPSPARSERestoreIJ - restore the device row storage `i` and `j` indices obtained with `MatSeqAIJHIPSPARSEGetIJ()`
+  MatSeqAIJHIPSPARSERestoreIJ - restore the device row storage `i` and `j` indices obtained with `MatSeqAIJHIPSPARSEGetIJ()`
 
-    Not Collective
+  Not Collective
 
-    Input Parameters:
-+   A - the matrix
-.   compressed - `PETSC_TRUE` or `PETSC_FALSE` indicating the matrix data structure should be always returned in compressed form
-.   i - the CSR row pointers
--   j - the CSR column indices
+  Input Parameters:
++ A          - the matrix
+. compressed - `PETSC_TRUE` or `PETSC_FALSE` indicating the matrix data structure should be always returned in compressed form
+. i          - the CSR row pointers
+- j          - the CSR column indices
 
-    Level: developer
+  Level: developer
 
 .seealso: [](ch_matrices), `Mat`, `MatSeqAIJHIPSPARSEGetIJ()`
 @*/
@@ -3876,20 +3904,20 @@ PetscErrorCode MatSeqAIJHIPSPARSERestoreIJ(Mat A, PetscBool compressed, const in
 }
 
 /*@C
-   MatSeqAIJHIPSPARSEGetArrayRead - gives read-only access to the array where the device data for a `MATSEQAIJHIPSPARSE` matrix is stored
+  MatSeqAIJHIPSPARSEGetArrayRead - gives read-only access to the array where the device data for a `MATSEQAIJHIPSPARSE` matrix is stored
 
-   Not Collective
+  Not Collective
 
-   Input Parameter:
-.   A - a `MATSEQAIJHIPSPARSE` matrix
+  Input Parameter:
+. A - a `MATSEQAIJHIPSPARSE` matrix
 
-   Output Parameter:
-.   a - pointer to the device data
+  Output Parameter:
+. a - pointer to the device data
 
-   Level: developer
+  Level: developer
 
-   Note:
-   May trigger host-device copies if the up-to-date matrix data is on host
+  Note:
+  May trigger host-device copies if the up-to-date matrix data is on host
 
 .seealso: [](ch_matrices), `Mat`, `MatSeqAIJHIPSPARSEGetArray()`, `MatSeqAIJHIPSPARSEGetArrayWrite()`, `MatSeqAIJHIPSPARSERestoreArrayRead()`
 @*/
@@ -3900,7 +3928,7 @@ PetscErrorCode MatSeqAIJHIPSPARSEGetArrayRead(Mat A, const PetscScalar **a)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
-  PetscValidPointer(a, 2);
+  PetscAssertPointer(a, 2);
   PetscCheckTypeName(A, MATSEQAIJHIPSPARSE);
   PetscCheck(cusp->format != MAT_HIPSPARSE_ELL && cusp->format != MAT_HIPSPARSE_HYB, PETSC_COMM_SELF, PETSC_ERR_SUP, "Not implemented");
   PetscCall(MatSeqAIJHIPSPARSECopyToGPU(A));
@@ -3912,15 +3940,15 @@ PetscErrorCode MatSeqAIJHIPSPARSEGetArrayRead(Mat A, const PetscScalar **a)
 }
 
 /*@C
-   MatSeqAIJHIPSPARSERestoreArrayRead - restore the read-only access array obtained from `MatSeqAIJHIPSPARSEGetArrayRead()`
+  MatSeqAIJHIPSPARSERestoreArrayRead - restore the read-only access array obtained from `MatSeqAIJHIPSPARSEGetArrayRead()`
 
-   Not Collective
+  Not Collective
 
-   Input Parameters:
-+   A - a `MATSEQAIJHIPSPARSE` matrix
--   a - pointer to the device data
+  Input Parameters:
++ A - a `MATSEQAIJHIPSPARSE` matrix
+- a - pointer to the device data
 
-   Level: developer
+  Level: developer
 
 .seealso: [](ch_matrices), `Mat`, `MatSeqAIJHIPSPARSEGetArrayRead()`
 @*/
@@ -3928,27 +3956,27 @@ PetscErrorCode MatSeqAIJHIPSPARSERestoreArrayRead(Mat A, const PetscScalar **a)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
-  PetscValidPointer(a, 2);
+  PetscAssertPointer(a, 2);
   PetscCheckTypeName(A, MATSEQAIJHIPSPARSE);
   *a = NULL;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-   MatSeqAIJHIPSPARSEGetArray - gives read-write access to the array where the device data for a `MATSEQAIJHIPSPARSE` matrix is stored
+  MatSeqAIJHIPSPARSEGetArray - gives read-write access to the array where the device data for a `MATSEQAIJHIPSPARSE` matrix is stored
 
-   Not Collective
+  Not Collective
 
-   Input Parameter:
-.   A - a `MATSEQAIJHIPSPARSE` matrix
+  Input Parameter:
+. A - a `MATSEQAIJHIPSPARSE` matrix
 
-   Output Parameter:
-.   a - pointer to the device data
+  Output Parameter:
+. a - pointer to the device data
 
-   Level: developer
+  Level: developer
 
-   Note:
-   May trigger host-device copies if up-to-date matrix data is on host
+  Note:
+  May trigger host-device copies if up-to-date matrix data is on host
 
 .seealso: [](ch_matrices), `Mat`, `MatSeqAIJHIPSPARSEGetArrayRead()`, `MatSeqAIJHIPSPARSEGetArrayWrite()`, `MatSeqAIJHIPSPARSERestoreArray()`
 @*/
@@ -3959,7 +3987,7 @@ PetscErrorCode MatSeqAIJHIPSPARSEGetArray(Mat A, PetscScalar **a)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
-  PetscValidPointer(a, 2);
+  PetscAssertPointer(a, 2);
   PetscCheckTypeName(A, MATSEQAIJHIPSPARSE);
   PetscCheck(cusp->format != MAT_HIPSPARSE_ELL && cusp->format != MAT_HIPSPARSE_HYB, PETSC_COMM_SELF, PETSC_ERR_SUP, "Not implemented");
   PetscCall(MatSeqAIJHIPSPARSECopyToGPU(A));
@@ -3972,15 +4000,15 @@ PetscErrorCode MatSeqAIJHIPSPARSEGetArray(Mat A, PetscScalar **a)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 /*@C
-   MatSeqAIJHIPSPARSERestoreArray - restore the read-write access array obtained from `MatSeqAIJHIPSPARSEGetArray()`
+  MatSeqAIJHIPSPARSERestoreArray - restore the read-write access array obtained from `MatSeqAIJHIPSPARSEGetArray()`
 
-   Not Collective
+  Not Collective
 
-   Input Parameters:
-+   A - a `MATSEQAIJHIPSPARSE` matrix
--   a - pointer to the device data
+  Input Parameters:
++ A - a `MATSEQAIJHIPSPARSE` matrix
+- a - pointer to the device data
 
-   Level: developer
+  Level: developer
 
 .seealso: [](ch_matrices), `Mat`, `MatSeqAIJHIPSPARSEGetArray()`
 @*/
@@ -3988,7 +4016,7 @@ PetscErrorCode MatSeqAIJHIPSPARSERestoreArray(Mat A, PetscScalar **a)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
-  PetscValidPointer(a, 2);
+  PetscAssertPointer(a, 2);
   PetscCheckTypeName(A, MATSEQAIJHIPSPARSE);
   PetscCall(MatSeqAIJInvalidateDiagonal(A));
   PetscCall(PetscObjectStateIncrease((PetscObject)A));
@@ -3997,20 +4025,20 @@ PetscErrorCode MatSeqAIJHIPSPARSERestoreArray(Mat A, PetscScalar **a)
 }
 
 /*@C
-   MatSeqAIJHIPSPARSEGetArrayWrite - gives write access to the array where the device data for a `MATSEQAIJHIPSPARSE` matrix is stored
+  MatSeqAIJHIPSPARSEGetArrayWrite - gives write access to the array where the device data for a `MATSEQAIJHIPSPARSE` matrix is stored
 
-   Not Collective
+  Not Collective
 
-   Input Parameter:
-.   A - a `MATSEQAIJHIPSPARSE` matrix
+  Input Parameter:
+. A - a `MATSEQAIJHIPSPARSE` matrix
 
-   Output Parameter:
-.   a - pointer to the device data
+  Output Parameter:
+. a - pointer to the device data
 
-   Level: developer
+  Level: developer
 
-   Note:
-   Does not trigger host-device copies and flags data validity on the GPU
+  Note:
+  Does not trigger host-device copies and flags data validity on the GPU
 
 .seealso: [](ch_matrices), `Mat`, `MatSeqAIJHIPSPARSEGetArray()`, `MatSeqAIJHIPSPARSEGetArrayRead()`, `MatSeqAIJHIPSPARSERestoreArrayWrite()`
 @*/
@@ -4021,7 +4049,7 @@ PetscErrorCode MatSeqAIJHIPSPARSEGetArrayWrite(Mat A, PetscScalar **a)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
-  PetscValidPointer(a, 2);
+  PetscAssertPointer(a, 2);
   PetscCheckTypeName(A, MATSEQAIJHIPSPARSE);
   PetscCheck(cusp->format != MAT_HIPSPARSE_ELL && cusp->format != MAT_HIPSPARSE_HYB, PETSC_COMM_SELF, PETSC_ERR_SUP, "Not implemented");
   PetscCheck(cusp->mat, PETSC_COMM_SELF, PETSC_ERR_COR, "Missing Mat_SeqAIJHIPSPARSEMultStruct");
@@ -4034,15 +4062,15 @@ PetscErrorCode MatSeqAIJHIPSPARSEGetArrayWrite(Mat A, PetscScalar **a)
 }
 
 /*@C
-   MatSeqAIJHIPSPARSERestoreArrayWrite - restore the write-only access array obtained from `MatSeqAIJHIPSPARSEGetArrayWrite()`
+  MatSeqAIJHIPSPARSERestoreArrayWrite - restore the write-only access array obtained from `MatSeqAIJHIPSPARSEGetArrayWrite()`
 
-   Not Collective
+  Not Collective
 
-   Input Parameters:
-+   A - a `MATSEQAIJHIPSPARSE` matrix
--   a - pointer to the device data
+  Input Parameters:
++ A - a `MATSEQAIJHIPSPARSE` matrix
+- a - pointer to the device data
 
-   Level: developer
+  Level: developer
 
 .seealso: [](ch_matrices), `Mat`, `MatSeqAIJHIPSPARSEGetArrayWrite()`
 @*/
@@ -4050,7 +4078,7 @@ PetscErrorCode MatSeqAIJHIPSPARSERestoreArrayWrite(Mat A, PetscScalar **a)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
-  PetscValidPointer(a, 2);
+  PetscAssertPointer(a, 2);
   PetscCheckTypeName(A, MATSEQAIJHIPSPARSE);
   PetscCall(MatSeqAIJInvalidateDiagonal(A));
   PetscCall(PetscObjectStateIncrease((PetscObject)A));
@@ -4087,7 +4115,7 @@ PetscErrorCode MatSeqAIJHIPSPARSEMergeMats(Mat A, Mat B, MatReuse reuse, Mat *C)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
   PetscValidHeaderSpecific(B, MAT_CLASSID, 2);
-  PetscValidPointer(C, 4);
+  PetscAssertPointer(C, 4);
   PetscCheckTypeName(A, MATSEQAIJHIPSPARSE);
   PetscCheckTypeName(B, MATSEQAIJHIPSPARSE);
   PetscCheck(A->rmap->n == B->rmap->n, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Invalid number or rows %" PetscInt_FMT " != %" PetscInt_FMT, A->rmap->n, B->rmap->n);

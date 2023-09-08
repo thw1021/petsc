@@ -1,8 +1,7 @@
 /*
       Objects which encapsulate finite element spaces and operations
 */
-#ifndef PETSCFE_H
-#define PETSCFE_H
+#pragma once
 #include <petscdm.h>
 #include <petscdt.h>
 #include <petscfetypes.h>
@@ -42,8 +41,6 @@ typedef struct _n_PetscFEGeom {
 PETSC_EXTERN PetscErrorCode PetscFEInitializePackage(void);
 
 PETSC_EXTERN PetscErrorCode PetscFEGeomCreate(PetscQuadrature, PetscInt, PetscInt, PetscBool, PetscFEGeom **);
-PETSC_EXTERN PetscErrorCode PetscFEGeomGetQuadrature(PetscFEGeom *, PetscQuadrature *);
-PETSC_EXTERN PetscErrorCode PetscFEGeomSetQuadrature(PetscFEGeom *, PetscQuadrature);
 PETSC_EXTERN PetscErrorCode PetscFEGeomGetChunk(PetscFEGeom *, PetscInt, PetscInt, PetscFEGeom **);
 PETSC_EXTERN PetscErrorCode PetscFEGeomRestoreChunk(PetscFEGeom *, PetscInt, PetscInt, PetscFEGeom **);
 PETSC_EXTERN PetscErrorCode PetscFEGeomGetPoint(PetscFEGeom *, PetscInt, PetscInt, const PetscReal[], PetscFEGeom *);
@@ -78,6 +75,7 @@ typedef const char *PetscFEType;
 #define PETSCFEBASIC     "basic"
 #define PETSCFEOPENCL    "opencl"
 #define PETSCFECOMPOSITE "composite"
+#define PETSCFEVECTOR    "vector"
 
 PETSC_EXTERN PetscFunctionList PetscFEList;
 PETSC_EXTERN PetscErrorCode    PetscFECreate(MPI_Comm, PetscFE *);
@@ -88,6 +86,7 @@ PETSC_EXTERN PetscErrorCode    PetscFESetUp(PetscFE);
 PETSC_EXTERN PetscErrorCode    PetscFESetFromOptions(PetscFE);
 PETSC_EXTERN PetscErrorCode    PetscFEViewFromOptions(PetscFE, PetscObject, const char[]);
 PETSC_EXTERN PetscErrorCode    PetscFESetName(PetscFE, const char[]);
+PETSC_EXTERN PetscErrorCode    PetscFECreateVector(PetscFE, PetscInt, PetscBool, PetscBool, PetscFE *);
 
 PETSC_EXTERN PetscErrorCode PetscFEView(PetscFE, PetscViewer);
 PETSC_EXTERN PetscErrorCode PetscFERegister(const char[], PetscErrorCode (*)(PetscFE));
@@ -148,5 +147,3 @@ PETSC_EXTERN PetscErrorCode PetscFECreatePointTrace(PetscFE, PetscInt, PetscFE *
 
 PETSC_EXTERN PetscErrorCode PetscFEOpenCLSetRealType(PetscFE, PetscDataType);
 PETSC_EXTERN PetscErrorCode PetscFEOpenCLGetRealType(PetscFE, PetscDataType *);
-
-#endif

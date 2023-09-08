@@ -4,7 +4,7 @@ class Configure(config.package.Package):
   def __init__(self, framework):
     config.package.Package.__init__(self, framework)
     self.gitcommit              = 'c75d74cc96d728c11b7bf0f291ba71dc369a89f4' # Thu Apr 28, 2022
-    self.download               = ['git://https://github.com/ecrc/h2opus']
+    self.download               = ['git://https://github.com/ecrc/h2opus','https://github.com/ecrc/h2opus/archive/'+self.gitcommit+'.tar.gz']
     self.precisions             = ['single','double']
     self.skippackagewithoptions = 1
     self.buildLanguages         = ['Cxx']
@@ -48,7 +48,7 @@ class Configure(config.package.Package):
 
     self.pushLanguage('Cxx')
     cxx = self.getCompiler()
-    cxxflags = self.getCompilerFlags()
+    cxxflags = self.updatePackageCxxFlags(self.getCompilerFlags())
     cxxflags = cxxflags.replace('-fvisibility=hidden','')
     cxxflags = cxxflags.replace('-std=gnu++14','-std=c++14')
     ldflags = self.setCompilers.LIBS + ' ' + self.setCompilers.LDFLAGS
@@ -64,7 +64,7 @@ class Configure(config.package.Package):
     if with_gpu:
       self.pushLanguage('CUDA')
       nvcc = self.getCompiler()
-      nvopts = self.getCompilerFlags()
+      nvopts = self.updatePackageCUDAFlags(self.getCompilerFlags())
       self.popLanguage()
       self.getExecutable(nvcc,getFullPath=1,resultName='systemNvcc',setMakeMacro=0)
       if hasattr(self,'systemNvcc'):

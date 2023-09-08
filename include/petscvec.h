@@ -3,8 +3,7 @@
   degrees of freedom for finite element/finite difference functions
   on a grid. They have more mathematical structure then simple arrays.
 */
-#ifndef PETSCVEC_H
-#define PETSCVEC_H
+#pragma once
 
 #include <petscsys.h>
 #include <petscsftypes.h> /* for VecScatter, VecScatterType */
@@ -127,12 +126,12 @@ PETSC_EXTERN PetscErrorCode VecInitializePackage(void);
 PETSC_EXTERN PetscErrorCode VecFinalizePackage(void);
 
 PETSC_EXTERN PetscErrorCode VecCreate(MPI_Comm, Vec *);
+PETSC_EXTERN PetscErrorCode VecCreateFromOptions(MPI_Comm, const char *, PetscInt, PetscInt, PetscInt, Vec *);
 PETSC_EXTERN PetscErrorCode VecCreateSeq(MPI_Comm, PetscInt, Vec *);
 PETSC_EXTERN PetscErrorCode VecCreateMPI(MPI_Comm, PetscInt, PetscInt, Vec *);
 PETSC_EXTERN PetscErrorCode VecCreateSeqWithArray(MPI_Comm, PetscInt, PetscInt, const PetscScalar[], Vec *);
 PETSC_EXTERN PetscErrorCode VecCreateMPIWithArray(MPI_Comm, PetscInt, PetscInt, PetscInt, const PetscScalar[], Vec *);
 PETSC_EXTERN PetscErrorCode VecCreateShared(MPI_Comm, PetscInt, PetscInt, Vec *);
-PETSC_EXTERN PetscErrorCode VecCreateNode(MPI_Comm, PetscInt, PetscInt, Vec *);
 
 PETSC_EXTERN PetscErrorCode VecSetFromOptions(Vec);
 PETSC_EXTERN PetscErrorCode VecViewFromOptions(Vec, PetscObject, const char[]);
@@ -313,6 +312,7 @@ PETSC_EXTERN PetscErrorCode VecSwap(Vec, Vec);
 PETSC_EXTERN PetscErrorCode VecAXPY(Vec, PetscScalar, Vec);
 PETSC_EXTERN PetscErrorCode VecAXPBY(Vec, PetscScalar, PetscScalar, Vec);
 PETSC_EXTERN PetscErrorCode VecMAXPY(Vec, PetscInt, const PetscScalar[], Vec[]);
+PETSC_EXTERN PetscErrorCode VecMAXPBY(Vec, PetscInt, const PetscScalar[], PetscScalar, Vec[]);
 PETSC_EXTERN PetscErrorCode VecAYPX(Vec, PetscScalar, Vec);
 PETSC_EXTERN PetscErrorCode VecWAXPY(Vec, PetscScalar, Vec, Vec);
 PETSC_EXTERN PetscErrorCode VecAXPBYPCZ(Vec, PetscScalar, PetscScalar, PetscScalar, Vec, Vec);
@@ -409,6 +409,7 @@ PETSC_EXTERN PetscFunctionList VecList;
 PETSC_EXTERN PetscErrorCode    VecSetType(Vec, VecType);
 PETSC_EXTERN PetscErrorCode    VecGetType(Vec, VecType *);
 PETSC_EXTERN PetscErrorCode    VecRegister(const char[], PetscErrorCode (*)(Vec));
+PETSC_EXTERN PetscErrorCode    VecRegisterAll(void);
 
 PETSC_EXTERN PetscErrorCode VecScatterBegin(VecScatter, Vec, Vec, InsertMode, ScatterMode);
 PETSC_EXTERN PetscErrorCode VecScatterEnd(VecScatter, Vec, Vec, InsertMode, ScatterMode);
@@ -528,7 +529,7 @@ static inline PetscErrorCode VecSetValueLocal(Vec v, PetscInt i, PetscScalar va,
 
 .seealso: [](ch_vectors), `Vec`, `VecSetValues()`, `VecAssemblyBegin()`, `VecAssemblyEnd()`, `MatAssemblyBegin()`, `MatAssemblyEnd()`
 M*/
-#define VecCheckAssembled(v) PetscCheck(v->stash.insertmode == NOT_SET_VALUES, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Not for unassembled vector, did you call VecAssemblyBegin()/VecAssemblyEnd()?");
+#define VecCheckAssembled(v) PetscCheck(v->stash.insertmode == NOT_SET_VALUES, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Not for unassembled vector, did you call VecAssemblyBegin()/VecAssemblyEnd()?")
 
 PETSC_EXTERN PetscErrorCode VecSetValuesBlockedLocal(Vec, PetscInt, const PetscInt[], const PetscScalar[], InsertMode);
 PETSC_EXTERN PetscErrorCode VecGetLocalToGlobalMapping(Vec, ISLocalToGlobalMapping *);
@@ -548,7 +549,7 @@ PETSC_EXTERN PetscErrorCode VecMTDotEnd(Vec, PetscInt, const Vec[], PetscScalar[
 PETSC_EXTERN PetscErrorCode PetscCommSplitReductionBegin(MPI_Comm);
 
 PETSC_EXTERN PetscErrorCode VecBindToCPU(Vec, PetscBool);
-PETSC_DEPRECATED_FUNCTION("Use VecBindToCPU (since v3.13)") static inline PetscErrorCode VecPinToCPU(Vec v, PetscBool flg)
+PETSC_DEPRECATED_FUNCTION(3, 13, 0, "VecBindToCPU()", ) static inline PetscErrorCode VecPinToCPU(Vec v, PetscBool flg)
 {
   return VecBindToCPU(v, flg);
 }
@@ -657,9 +658,9 @@ static inline PetscErrorCode VecSetErrorIfLocked(Vec x, PetscInt arg)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 /* The three are deprecated */
-PETSC_EXTERN PETSC_DEPRECATED_FUNCTION("Use VecLockReadPush() (since version 3.11)") PetscErrorCode VecLockPush(Vec);
-PETSC_EXTERN PETSC_DEPRECATED_FUNCTION("Use VecLockReadPop() (since version 3.11)") PetscErrorCode VecLockPop(Vec);
-  #define VecLocked(x, arg) VecSetErrorIfLocked(x, arg) PETSC_DEPRECATED_MACRO("GCC warning \"Use VecSetErrorIfLocked() (since version 3.11)\"")
+PETSC_EXTERN PETSC_DEPRECATED_FUNCTION(3, 11, 0, "VecLockReadPush()", ) PetscErrorCode VecLockPush(Vec);
+PETSC_EXTERN PETSC_DEPRECATED_FUNCTION(3, 11, 0, "VecLockReadPop()", ) PetscErrorCode VecLockPop(Vec);
+  #define VecLocked(x, arg) VecSetErrorIfLocked(x, arg) PETSC_DEPRECATED_MACRO(3, 11, 0, "VecSetErrorIfLocked()", )
 #else
   #define VecLockReadPush(x)          PETSC_SUCCESS
   #define VecLockReadPop(x)           PETSC_SUCCESS
@@ -772,8 +773,6 @@ PETSC_EXTERN PetscErrorCode VecsDuplicate(Vecs, Vecs *);
 
 #if PetscDefined(HAVE_VIENNACL)
 typedef struct _p_PetscViennaCLIndices *PetscViennaCLIndices;
-PETSC_EXTERN PetscErrorCode             PetscViennaCLIndicesCreate(PetscInt, PetscInt *, PetscInt, PetscInt *, PetscViennaCLIndices *);
-PETSC_EXTERN PetscErrorCode             PetscViennaCLIndicesDestroy(PetscViennaCLIndices *);
 PETSC_EXTERN PetscErrorCode             VecViennaCLCopyToGPUSome_Public(Vec, PetscViennaCLIndices);
 PETSC_EXTERN PetscErrorCode             VecViennaCLCopyFromGPUSome_Public(Vec, PetscViennaCLIndices);
 PETSC_EXTERN PetscErrorCode             VecCreateSeqViennaCL(MPI_Comm, PetscInt, Vec *);
@@ -798,14 +797,18 @@ PETSC_EXTERN PetscErrorCode VecCreateNest(MPI_Comm, PetscInt, IS *, Vec *, Vec *
 PETSC_EXTERN PetscErrorCode VecNestGetSize(Vec, PetscInt *);
 
 PETSC_EXTERN PetscErrorCode PetscOptionsGetVec(PetscOptions, const char[], const char[], Vec, PetscBool *);
-PETSC_EXTERN PetscErrorCode VecChop(Vec, PetscReal);
+PETSC_EXTERN PetscErrorCode VecFilter(Vec, PetscReal);
+PETSC_DEPRECATED_FUNCTION(3, 20, 0, "VecFilter()", ) static inline PetscErrorCode VecChop(Vec v, PetscReal tol)
+{
+  return VecFilter(v, tol);
+}
 
 PETSC_EXTERN PetscErrorCode VecGetLayout(Vec, PetscLayout *);
 PETSC_EXTERN PetscErrorCode VecSetLayout(Vec, PetscLayout);
 
 PETSC_EXTERN PetscErrorCode PetscSectionVecView(PetscSection, Vec, PetscViewer);
 PETSC_EXTERN PetscErrorCode VecGetValuesSection(Vec, PetscSection, PetscInt, PetscScalar **);
-PETSC_EXTERN PetscErrorCode VecSetValuesSection(Vec, PetscSection, PetscInt, PetscScalar[], InsertMode);
+PETSC_EXTERN PetscErrorCode VecSetValuesSection(Vec, PetscSection, PetscInt, const PetscScalar[], InsertMode);
 PETSC_EXTERN PetscErrorCode PetscSectionVecNorm(PetscSection, PetscSection, Vec, NormType, PetscReal[]);
 
 /*S
@@ -846,6 +849,7 @@ typedef const char *VecTaggerType;
 PETSC_EXTERN PetscClassId      VEC_TAGGER_CLASSID;
 PETSC_EXTERN PetscFunctionList VecTaggerList;
 PETSC_EXTERN PetscErrorCode    VecTaggerRegister(const char[], PetscErrorCode (*)(VecTagger));
+PETSC_EXTERN PetscErrorCode    VecTaggerRegisterAll(void);
 
 PETSC_EXTERN PetscErrorCode VecTaggerCreate(MPI_Comm, VecTagger *);
 PETSC_EXTERN PetscErrorCode VecTaggerSetBlockSize(VecTagger, PetscInt);
@@ -998,5 +1002,3 @@ VEC_HIP__DECL_OR_STUB(PetscErrorCode VecHIPResetArray(Vec a), (void)a)
 #undef VEC_CUPM_NOT_CONFIGURED
 #undef VEC_CUDA_DECL_OR_STUB
 #undef VEC_HIP__DECL_OR_STUB
-
-#endif

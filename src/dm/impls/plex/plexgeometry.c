@@ -9,9 +9,9 @@
   Not Collective (provided `DMGetCoordinatesLocalSetUp()` has been already called)
 
   Input Parameters:
-+ dm - The `DMPLEX` object
++ dm          - The `DMPLEX` object
 . coordinates - The `Vec` of coordinates of the sought points
-- eps - The tolerance or `PETSC_DEFAULT`
+- eps         - The tolerance or `PETSC_DEFAULT`
 
   Output Parameter:
 . points - The `IS` of found DAG points or -1
@@ -636,7 +636,7 @@ static PetscErrorCode DMPlexCreateGridHash(DM dm, PetscGridHash *box)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*
+/*@C
   PetscGridHashSetGrid - Divide the grid into boxes
 
   Not Collective
@@ -649,14 +649,14 @@ static PetscErrorCode DMPlexCreateGridHash(DM dm, PetscGridHash *box)
   Level: developer
 
 .seealso: `DMPLEX`, `PetscGridHashCreate()`
-*/
+@*/
 PetscErrorCode PetscGridHashSetGrid(PetscGridHash box, const PetscInt n[], const PetscReal h[])
 {
   PetscInt d;
 
   PetscFunctionBegin;
-  PetscValidIntPointer(n, 2);
-  if (h) PetscValidRealPointer(h, 3);
+  PetscAssertPointer(n, 2);
+  if (h) PetscAssertPointer(h, 3);
   for (d = 0; d < box->dim; ++d) {
     box->extent[d] = box->upper[d] - box->lower[d];
     if (n[d] == PETSC_DETERMINE) {
@@ -671,7 +671,7 @@ PetscErrorCode PetscGridHashSetGrid(PetscGridHash box, const PetscInt n[], const
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*
+/*@C
   PetscGridHashGetEnclosingBox - Find the grid boxes containing each input point
 
   Not Collective
@@ -682,8 +682,8 @@ PetscErrorCode PetscGridHashSetGrid(PetscGridHash box, const PetscInt n[], const
 - points    - The input point coordinates
 
   Output Parameters:
-+ dboxes    - An array of numPoints*dim integers expressing the enclosing box as (i_0, i_1, ..., i_dim)
-- boxes     - An array of numPoints integers expressing the enclosing box as single number, or NULL
++ dboxes - An array of numPoints*dim integers expressing the enclosing box as (i_0, i_1, ..., i_dim)
+- boxes  - An array of numPoints integers expressing the enclosing box as single number, or NULL
 
   Level: developer
 
@@ -691,7 +691,7 @@ PetscErrorCode PetscGridHashSetGrid(PetscGridHash box, const PetscInt n[], const
   This only guarantees that a box contains a point, not that a cell does.
 
 .seealso: `DMPLEX`, `PetscGridHashCreate()`
-*/
+@*/
 PetscErrorCode PetscGridHashGetEnclosingBox(PetscGridHash box, PetscInt numPoints, const PetscScalar points[], PetscInt dboxes[], PetscInt boxes[])
 {
   const PetscReal *lower = box->lower;
@@ -718,9 +718,9 @@ PetscErrorCode PetscGridHashGetEnclosingBox(PetscGridHash box, PetscInt numPoint
 }
 
 /*
- PetscGridHashGetEnclosingBoxQuery - Find the grid boxes containing each input point
+  PetscGridHashGetEnclosingBoxQuery - Find the grid boxes containing each input point
 
- Not Collective
+  Not Collective
 
   Input Parameters:
 + box         - The grid hash object
@@ -740,7 +740,7 @@ PetscErrorCode PetscGridHashGetEnclosingBox(PetscGridHash box, PetscInt numPoint
 
 .seealso: `DMPLEX`, `PetscGridHashGetEnclosingBox()`
 */
-PetscErrorCode PetscGridHashGetEnclosingBoxQuery(PetscGridHash box, PetscSection cellSection, PetscInt numPoints, const PetscScalar points[], PetscInt dboxes[], PetscInt boxes[], PetscBool *found)
+static PetscErrorCode PetscGridHashGetEnclosingBoxQuery(PetscGridHash box, PetscSection cellSection, PetscInt numPoints, const PetscScalar points[], PetscInt dboxes[], PetscInt boxes[], PetscBool *found)
 {
   const PetscReal *lower = box->lower;
   const PetscReal *upper = box->upper;
@@ -813,7 +813,7 @@ PetscErrorCode DMPlexLocatePoint_Internal(DM dm, PetscInt dim, const PetscScalar
 /*
   DMPlexClosestPoint_Internal - Returns the closest point in the cell to the given point
 */
-PetscErrorCode DMPlexClosestPoint_Internal(DM dm, PetscInt dim, const PetscScalar point[], PetscInt cell, PetscReal cpoint[])
+static PetscErrorCode DMPlexClosestPoint_Internal(DM dm, PetscInt dim, const PetscScalar point[], PetscInt cell, PetscReal cpoint[])
 {
   DMPolytopeType ct;
 
@@ -870,7 +870,7 @@ PetscErrorCode DMPlexClosestPoint_Internal(DM dm, PetscInt dim, const PetscScala
 
 .seealso: `DMPLEX`, `PetscGridHashCreate()`, `PetscGridHashGetEnclosingBox()`
 */
-PetscErrorCode DMPlexComputeGridHash_Internal(DM dm, PetscGridHash *localBox)
+static PetscErrorCode DMPlexComputeGridHash_Internal(DM dm, PetscGridHash *localBox)
 {
   PetscInt        debug = ((DM_Plex *)dm->data)->printLocate;
   PetscGridHash   lbox;
@@ -1003,14 +1003,25 @@ PetscErrorCode DMPlexComputeGridHash_Internal(DM dm, PetscGridHash *localBox)
             PetscCall(DMLabelSetValue(lbox->cellsSparse, c, box));
             continue;
           }
-          // If any intersection point is within the box limits, it is in the box
-          //   We need to have tolerances here since intersection point calculations can introduce errors
+          /*
+            If any intersection point is within the box limits, it is in the box
+            We need to have tolerances here since intersection point calculations can introduce errors
+            Initialize a count to track which planes have intersection outside the box.
+            if two adjacent planes have intersection points upper and lower all outside the box, look
+            first at if another plane has intersection points outside the box, if so, it is inside the cell
+            look next if no intersection points exist on the other planes, and check if the planes are on the
+            outside of the intersection points but on opposite ends. If so, the box cuts through the cell.
+          */
+          PetscInt outsideCount[6] = {0, 0, 0, 0, 0, 0};
           for (PetscInt plane = 0; plane < cdim; ++plane) {
             for (PetscInt ip = 0; ip < lowerInt[plane]; ++ip) {
               PetscInt d;
 
               for (d = 0; d < cdim; ++d) {
-                if ((lowerIntPoints[plane][ip * cdim + d] < lp[d] - PETSC_SMALL) || (lowerIntPoints[plane][ip * cdim + d] > up[d] + PETSC_SMALL)) break;
+                if ((lowerIntPoints[plane][ip * cdim + d] < (lp[d] - PETSC_SMALL)) || (lowerIntPoints[plane][ip * cdim + d] > (up[d] + PETSC_SMALL))) {
+                  if (lowerIntPoints[plane][ip * cdim + d] < (lp[d] - PETSC_SMALL)) outsideCount[d]++; // The lower point is to the left of this box, and we count it
+                  break;
+                }
               }
               if (d == cdim) {
                 if (debug) PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Cell %" PetscInt_FMT " intersected lower plane %" PetscInt_FMT " of box %" PetscInt_FMT "\n", c, plane, box));
@@ -1022,13 +1033,74 @@ PetscErrorCode DMPlexComputeGridHash_Internal(DM dm, PetscGridHash *localBox)
               PetscInt d;
 
               for (d = 0; d < cdim; ++d) {
-                if ((upperIntPoints[plane][ip * cdim + d] < lp[d] - PETSC_SMALL) || (upperIntPoints[plane][ip * cdim + d] > up[d] + PETSC_SMALL)) break;
+                if ((upperIntPoints[plane][ip * cdim + d] < (lp[d] - PETSC_SMALL)) || (upperIntPoints[plane][ip * cdim + d] > (up[d] + PETSC_SMALL))) {
+                  if (upperIntPoints[plane][ip * cdim + d] > (up[d] + PETSC_SMALL)) outsideCount[cdim + d]++; // The upper point is to the right of this box, and we count it
+                  break;
+                }
               }
               if (d == cdim) {
                 if (debug) PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Cell %" PetscInt_FMT " intersected upper plane %" PetscInt_FMT " of box %" PetscInt_FMT "\n", c, plane, box));
                 PetscCall(DMLabelSetValue(lbox->cellsSparse, c, box));
                 goto end;
               }
+            }
+          }
+          /*
+             Check the planes with intersections
+             in 2D, check if the square falls in the middle of a cell
+             ie all four planes have intersection points outside of the box
+             You do not want to be doing this, because it means your grid hashing is finer than your grid,
+             but we should still support it I guess
+          */
+          if (cdim == 2) {
+            PetscInt nIntersects = 0;
+            for (PetscInt d = 0; d < cdim; ++d) nIntersects += (outsideCount[d] + outsideCount[d + cdim]);
+            // if the count adds up to 8, that means each plane has 2 external intersections and thus it is in the cell
+            if (nIntersects == 8) {
+              PetscCall(DMLabelSetValue(lbox->cellsSparse, c, box));
+              goto end;
+            }
+          }
+          /*
+             In 3 dimensions, if two adjacent planes have at least 3 intersections outside the cell in the apprpriate direction,
+             we then check the 3rd planar dimension. If a plane falls between intersection points, the cell belongs to that box.
+             If the planes are on opposite sides of the intersection points, the cell belongs to that box and it passes through the cell.
+          */
+          if (cdim == 3) {
+            PetscInt faces[3] = {0, 0, 0}, checkInternalFace = 0;
+            // Find two adjacent planes with at least 3 intersection points in the upper and lower
+            // if the third plane has 3 intersection points or more, a pyramid base is formed on that plane and it is in the cell
+            for (PetscInt d = 0; d < cdim; ++d)
+              if (outsideCount[d] >= 3 && outsideCount[cdim + d] >= 3) {
+                faces[d]++;
+                checkInternalFace++;
+              }
+            if (checkInternalFace == 3) {
+              // All planes have 3 intersection points, add it.
+              PetscCall(DMLabelSetValue(lbox->cellsSparse, c, box));
+              goto end;
+            }
+            // Gross, figure out which adjacent faces have at least 3 points
+            PetscInt nonIntersectingFace = -1;
+            if (faces[0] == faces[1]) nonIntersectingFace = 2;
+            if (faces[0] == faces[2]) nonIntersectingFace = 1;
+            if (faces[1] == faces[2]) nonIntersectingFace = 0;
+            if (nonIntersectingFace >= 0) {
+              for (PetscInt plane = 0; plane < cdim; ++plane) {
+                if (!lowerInt[nonIntersectingFace] && !upperInt[nonIntersectingFace]) continue;
+                // If we have 2 adjacent sides with pyramids of intersection outside of them, and there is a point between the end caps at all, it must be between the two non intersecting ends, and the box is inside the cell.
+                for (PetscInt ip = 0; ip < lowerInt[nonIntersectingFace]; ++ip) {
+                  if (lowerIntPoints[plane][ip * cdim + nonIntersectingFace] > lp[nonIntersectingFace] - PETSC_SMALL || lowerIntPoints[plane][ip * cdim + nonIntersectingFace] < up[nonIntersectingFace] + PETSC_SMALL) goto setpoint;
+                }
+                for (PetscInt ip = 0; ip < upperInt[nonIntersectingFace]; ++ip) {
+                  if (upperIntPoints[plane][ip * cdim + nonIntersectingFace] > lp[nonIntersectingFace] - PETSC_SMALL || upperIntPoints[plane][ip * cdim + nonIntersectingFace] < up[nonIntersectingFace] + PETSC_SMALL) goto setpoint;
+                }
+                goto end;
+              }
+              // The points are within the bonds of the non intersecting planes, add it.
+            setpoint:
+              PetscCall(DMLabelSetValue(lbox->cellsSparse, c, box));
+              goto end;
             }
           }
         end:
@@ -1213,8 +1285,8 @@ PetscErrorCode DMLocatePoints_Plex(DM dm, Vec v, DMPointLocationType ltype, Pets
   if (hash) PetscCall(ISRestoreIndices(mesh->lbox->cells, &boxCells));
   if (ltype == DM_POINTLOCATION_NEAREST && hash && numFound < numPoints) {
     for (p = 0; p < numPoints; p++) {
-      const PetscScalar *point = &a[p * bs];
-      PetscReal          cpoint[3], diff[3], best[3] = {PETSC_MAX_REAL, PETSC_MAX_REAL, PETSC_MAX_REAL}, dist, distMax = PETSC_MAX_REAL;
+      const PetscScalar *point     = &a[p * bs];
+      PetscReal          cpoint[3] = {0, 0, 0}, diff[3], best[3] = {PETSC_MAX_REAL, PETSC_MAX_REAL, PETSC_MAX_REAL}, dist, distMax = PETSC_MAX_REAL;
       PetscInt           dbin[3] = {-1, -1, -1}, bin, cellOffset, d, bestc = -1;
 
       if (cells[p].index < 0) {
@@ -1357,7 +1429,7 @@ PetscErrorCode DMPlexComputeProjection3Dto1D(PetscScalar coords[], PetscReal R[]
 
 /*@
   DMPlexComputeProjection3Dto2D - Rewrite coordinates of 3 or more coplanar 3D points to a common 2D basis for the
-    plane.  The normal is defined by positive orientation of the first 3 points.
+  plane.  The normal is defined by positive orientation of the first 3 points.
 
   Not Collective
 
@@ -1567,7 +1639,7 @@ cg:
   PetscCall(DMGetCoordinateDM(dm, &cdm));
   PetscCall(DMGetCoordinateSection(dm, &cs));
   PetscCall(DMGetCoordinatesLocalNoncollective(dm, &coordinates));
-  PetscCall(DMPlexVecGetClosure(cdm, cs, coordinates, cell, Nc, coords));
+  PetscCall(DMPlexVecGetOrientedClosure_Internal(cdm, cs, PETSC_FALSE, coordinates, cell, 0, Nc, coords));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -2425,7 +2497,7 @@ PetscErrorCode DMPlexComputeCellGeometryFEM(DM dm, PetscInt cell, PetscQuadratur
   PetscFE fe = NULL;
 
   PetscFunctionBegin;
-  PetscValidRealPointer(detJ, 7);
+  PetscAssertPointer(detJ, 7);
   PetscCall(DMGetCoordinateDM(dm, &cdm));
   if (cdm) {
     PetscClassId id;
@@ -2723,9 +2795,9 @@ static PetscErrorCode DMPlexComputeGeometryFVM_3D_Internal(DM dm, PetscInt dim, 
 - cell - the cell
 
   Output Parameters:
-+ volume   - the cell volume
++ vol      - the cell volume
 . centroid - the cell centroid
-- normal - the cell normal, if appropriate
+- normal   - the cell normal, if appropriate
 
   Level: advanced
 
@@ -2794,7 +2866,7 @@ PetscErrorCode DMPlexComputeGeometryFVM(DM dm, Vec *cellgeom, Vec *facegeom)
   PetscCall(DMSetCoordinatesLocal(dmCell, coordinates));
   PetscCall(PetscSectionCreate(PetscObjectComm((PetscObject)dm), &sectionCell));
   PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
-  PetscCall(DMPlexGetGhostCellStratum(dm, &cEndInterior, NULL));
+  PetscCall(DMPlexGetCellTypeStratum(dm, DM_POLYTOPE_FV_GHOST, &cEndInterior, NULL));
   PetscCall(PetscSectionSetChart(sectionCell, cStart, cEnd));
   for (c = cStart; c < cEnd; ++c) PetscCall(PetscSectionSetDof(sectionCell, c, (PetscInt)PetscCeilReal(((PetscReal)sizeof(PetscFVCellGeom)) / sizeof(PetscScalar))));
   PetscCall(PetscSectionSetUp(sectionCell));
@@ -2930,7 +3002,7 @@ PetscErrorCode DMPlexGetMinRadius(DM dm, PetscReal *minradius)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
-  PetscValidRealPointer(minradius, 2);
+  PetscAssertPointer(minradius, 2);
   *minradius = ((DM_Plex *)dm->data)->minradius;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -2941,7 +3013,7 @@ PetscErrorCode DMPlexGetMinRadius(DM dm, PetscReal *minradius)
   Logically Collective
 
   Input Parameters:
-+ dm - the `DMPLEX`
++ dm        - the `DMPLEX`
 - minradius - the minimum cell radius
 
   Level: developer
@@ -2965,7 +3037,7 @@ static PetscErrorCode BuildGradientReconstruction_Internal(DM dm, PetscFV fvm, D
   PetscFunctionBegin;
   PetscCall(DMGetDimension(dm, &dim));
   PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
-  PetscCall(DMPlexGetGhostCellStratum(dm, &cEndInterior, NULL));
+  PetscCall(DMPlexGetCellTypeStratum(dm, DM_POLYTOPE_FV_GHOST, &cEndInterior, NULL));
   cEndInterior = cEndInterior < 0 ? cEnd : cEndInterior;
   PetscCall(DMPlexGetMaxSizes(dm, &maxNumFaces, NULL));
   PetscCall(PetscFVLeastSquaresSetMaxFaces(fvm, maxNumFaces));
@@ -3029,7 +3101,7 @@ static PetscErrorCode BuildGradientReconstruction_Internal_Tree(DM dm, PetscFV f
   PetscFunctionBegin;
   PetscCall(DMGetDimension(dm, &dim));
   PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
-  PetscCall(DMPlexGetGhostCellStratum(dm, &cEndInterior, NULL));
+  PetscCall(DMPlexGetCellTypeStratum(dm, DM_POLYTOPE_FV_GHOST, &cEndInterior, NULL));
   if (cEndInterior < 0) cEndInterior = cEnd;
   PetscCall(PetscSectionCreate(PetscObjectComm((PetscObject)dm), &neighSec));
   PetscCall(PetscSectionSetChart(neighSec, cStart, cEndInterior));
@@ -3134,8 +3206,8 @@ static PetscErrorCode BuildGradientReconstruction_Internal_Tree(DM dm, PetscFV f
   Collective
 
   Input Parameters:
-+ dm  - The `DMPLEX`
-. fvm - The `PetscFV`
++ dm           - The `DMPLEX`
+. fvm          - The `PetscFV`
 - cellGeometry - The face geometry from `DMPlexComputeCellGeometryFVM()`
 
   Input/Output Parameter:
@@ -3160,7 +3232,7 @@ PetscErrorCode DMPlexComputeGradientFVM(DM dm, PetscFV fvm, Vec faceGeometry, Ve
   PetscCall(DMGetDimension(dm, &dim));
   PetscCall(PetscFVGetNumComponents(fvm, &pdim));
   PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
-  PetscCall(DMPlexGetGhostCellStratum(dm, &cEndInterior, NULL));
+  PetscCall(DMPlexGetCellTypeStratum(dm, DM_POLYTOPE_FV_GHOST, &cEndInterior, NULL));
   /* Construct the interpolant corresponding to each face from the least-square solution over the cell neighborhood */
   PetscCall(VecGetDM(faceGeometry, &dmFace));
   PetscCall(VecGetDM(cellGeometry, &dmCell));
@@ -3191,13 +3263,13 @@ PetscErrorCode DMPlexComputeGradientFVM(DM dm, PetscFV fvm, Vec faceGeometry, Ve
   Collective
 
   Input Parameters:
-+ dm  - The `DM`
-- fv  - The `PetscFV`
++ dm - The `DM`
+- fv - The `PetscFV`
 
   Output Parameters:
-+ cellGeometry - The cell geometry
-. faceGeometry - The face geometry
-- gradDM       - The gradient matrices
++ cellgeom - The cell geometry
+. facegeom - The face geometry
+- gradDM   - The gradient matrices
 
   Level: developer
 
@@ -3577,9 +3649,8 @@ static PetscErrorCode DMPlexReferenceToCoordinates_FE(DM dm, PetscFE fe, PetscIn
 }
 
 /*@
-  DMPlexCoordinatesToReference - Pull coordinates back from the mesh to the reference element using a single element
-  map.  This inversion will be accurate inside the reference element, but may be inaccurate for mappings that do not
-  extend uniquely outside the reference cell (e.g, most non-affine maps)
+  DMPlexCoordinatesToReference - Pull coordinates back from the mesh to the reference element
+  using a single element map.
 
   Not Collective
 
@@ -3592,9 +3663,13 @@ static PetscErrorCode DMPlexReferenceToCoordinates_FE(DM dm, PetscFE fe, PetscIn
 - realCoords - (numPoints x coordinate dimension) array of coordinates (see `DMGetCoordinateDim()`)
 
   Output Parameter:
-. refCoords  - (`numPoints` x `dimension`) array of reference coordinates (see `DMGetDimension()`)
+. refCoords - (`numPoints` x `dimension`) array of reference coordinates (see `DMGetDimension()`)
 
   Level: intermediate
+
+  Notes:
+  This inversion will be accurate inside the reference element, but may be inaccurate for
+  mappings that do not extend uniquely outside the reference cell (e.g, most non-affine maps)
 
 .seealso: `DMPLEX`, `DMPlexReferenceToCoordinates()`
 @*/
@@ -3663,17 +3738,17 @@ PetscErrorCode DMPlexCoordinatesToReference(DM dm, PetscInt cell, PetscInt numPo
   Not Collective
 
   Input Parameters:
-+ dm         - The mesh, with coordinate maps defined either by a PetscDS for the coordinate `DM` (see `DMGetCoordinateDM()`) or
++ dm        - The mesh, with coordinate maps defined either by a PetscDS for the coordinate `DM` (see `DMGetCoordinateDM()`) or
                implicitly by the coordinates of the corner vertices of the cell: as an affine map for simplicial elements, or
                as a multilinear map for tensor-product elements
-. cell       - the cell whose map is used.
-. numPoints  - the number of points to locate
-- refCoords  - (numPoints x dimension) array of reference coordinates (see `DMGetDimension()`)
+. cell      - the cell whose map is used.
+. numPoints - the number of points to locate
+- refCoords - (numPoints x dimension) array of reference coordinates (see `DMGetDimension()`)
 
   Output Parameter:
 . realCoords - (numPoints x coordinate dimension) array of coordinates (see `DMGetCoordinateDim()`)
 
-   Level: intermediate
+  Level: intermediate
 
 .seealso: `DMPLEX`, `DMPlexCoordinatesToReference()`
 @*/
@@ -3741,41 +3816,35 @@ PetscErrorCode DMPlexReferenceToCoordinates(DM dm, PetscInt cell, PetscInt numPo
   Not Collective
 
   Input Parameters:
-+ dm      - The `DM`
-. time    - The time
-- func    - The function transforming current coordinates to new coordaintes
++ dm   - The `DM`
+. time - The time
+- func - The function transforming current coordinates to new coordinates
 
-   Calling sequence of `func`:
-.vb
-   void func(PetscInt dim, PetscInt Nf, PetscInt NfAux,
-             const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
-             const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
-             PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f[]);
-.ve
-+  dim          - The spatial dimension
-.  Nf           - The number of input fields (here 1)
-.  NfAux        - The number of input auxiliary fields
-.  uOff         - The offset of the coordinates in u[] (here 0)
-.  uOff_x       - The offset of the coordinates in u_x[] (here 0)
-.  u            - The coordinate values at this point in space
-.  u_t          - The coordinate time derivative at this point in space (here `NULL`)
-.  u_x          - The coordinate derivatives at this point in space
-.  aOff         - The offset of each auxiliary field in u[]
-.  aOff_x       - The offset of each auxiliary field in u_x[]
-.  a            - The auxiliary field values at this point in space
-.  a_t          - The auxiliary field time derivative at this point in space (or `NULL`)
-.  a_x          - The auxiliary field derivatives at this point in space
-.  t            - The current time
-.  x            - The coordinates of this point (here not used)
-.  numConstants - The number of constants
-.  constants    - The value of each constant
--  f            - The new coordinates at this point in space
+  Calling sequence of `func`:
++ dim          - The spatial dimension
+. Nf           - The number of input fields (here 1)
+. NfAux        - The number of input auxiliary fields
+. uOff         - The offset of the coordinates in u[] (here 0)
+. uOff_x       - The offset of the coordinates in u_x[] (here 0)
+. u            - The coordinate values at this point in space
+. u_t          - The coordinate time derivative at this point in space (here `NULL`)
+. u_x          - The coordinate derivatives at this point in space
+. aOff         - The offset of each auxiliary field in u[]
+. aOff_x       - The offset of each auxiliary field in u_x[]
+. a            - The auxiliary field values at this point in space
+. a_t          - The auxiliary field time derivative at this point in space (or `NULL`)
+. a_x          - The auxiliary field derivatives at this point in space
+. t            - The current time
+. x            - The coordinates of this point (here not used)
+. numConstants - The number of constants
+. constants    - The value of each constant
+- f            - The new coordinates at this point in space
 
   Level: intermediate
 
 .seealso: `DMPLEX`, `DMGetCoordinates()`, `DMGetCoordinatesLocal()`, `DMGetCoordinateDM()`, `DMProjectFieldLocal()`, `DMProjectFieldLabelLocal()`
 @*/
-PetscErrorCode DMPlexRemapGeometry(DM dm, PetscReal time, void (*func)(PetscInt, PetscInt, PetscInt, const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]))
+PetscErrorCode DMPlexRemapGeometry(DM dm, PetscReal time, void (*func)(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f[]))
 {
   DM      cdm;
   DMField cf;

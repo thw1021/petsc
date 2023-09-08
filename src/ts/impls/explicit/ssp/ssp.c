@@ -242,19 +242,19 @@ static PetscErrorCode TSDestroy_SSP(TS ts)
 /*------------------------------------------------------------*/
 
 /*@C
-   TSSSPSetType - set the `TSSSP` time integration scheme to use
+  TSSSPSetType - set the `TSSSP` time integration scheme to use
 
-   Logically Collective
+  Logically Collective
 
-   Input Parameters:
-+  ts - time stepping object
--  ssptype - type of scheme to use
+  Input Parameters:
++ ts      - time stepping object
+- ssptype - type of scheme to use
 
-   Options Database Keys:
-+   -ts_ssp_type <rks2>               - Type of `TSSSP` method (one of) rks2 rks3 rk104
--  -ts_ssp_nstages<rks2: 5, rks3: 9> - Number of stages
+  Options Database Keys:
++ -ts_ssp_type <rks2>               - Type of `TSSSP` method (one of) rks2 rks3 rk104
+- -ts_ssp_nstages<rks2: 5, rks3: 9> - Number of stages
 
-   Level: beginner
+  Level: beginner
 
 .seealso: [](ch_ts), `TSSSP`, `TSSSPGetType()`, `TSSSPSetNumStages()`, `TSSSPRKS2`, `TSSSPRKS3`, `TSSSPRK104`
 @*/
@@ -262,23 +262,23 @@ PetscErrorCode TSSSPSetType(TS ts, TSSSPType ssptype)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
-  PetscValidCharPointer(ssptype, 2);
+  PetscAssertPointer(ssptype, 2);
   PetscTryMethod(ts, "TSSSPSetType_C", (TS, TSSSPType), (ts, ssptype));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-   TSSSPGetType - get the `TSSSP` time integration scheme
+  TSSSPGetType - get the `TSSSP` time integration scheme
 
-   Logically Collective
+  Logically Collective
 
-   Input Parameter:
-.  ts - time stepping object
+  Input Parameter:
+. ts - time stepping object
 
-   Output Parameter:
-.  type - type of scheme being used
+  Output Parameter:
+. type - type of scheme being used
 
-   Level: beginner
+  Level: beginner
 
 .seealso: [](ch_ts), `TSSSP`, `TSSSPSettype()`, `TSSSPSetNumStages()`, `TSSSPRKS2`, `TSSSPRKS3`, `TSSSPRK104`
 @*/
@@ -291,22 +291,22 @@ PetscErrorCode TSSSPGetType(TS ts, TSSSPType *type)
 }
 
 /*@
-   TSSSPSetNumStages - set the number of stages to use with the `TSSSP` method. Must be called after
-   `TSSSPSetType()`.
+  TSSSPSetNumStages - set the number of stages to use with the `TSSSP` method. Must be called after
+  `TSSSPSetType()`.
 
-   Logically Collective
+  Logically Collective
 
-   Input Parameters:
-+  ts - time stepping object
--  nstages - number of stages
+  Input Parameters:
++ ts      - time stepping object
+- nstages - number of stages
 
-   Options Database Keys:
-+   -ts_ssp_type <rks2>               - Type of `TSSSP` method (one of) rks2 rks3 rk104
--   -ts_ssp_nstages<rks2: 5, rks3: 9> - Number of stages
+  Options Database Keys:
++ -ts_ssp_type <rks2>               - Type of `TSSSP` method (one of) rks2 rks3 rk104
+- -ts_ssp_nstages<rks2: 5, rks3: 9> - Number of stages
 
-   Level: beginner
+  Level: beginner
 
-.seealso: [](ch_ts), `TSSSP`, `TSSSPGetNumStages()`, `TSSSPSetNumStages()`, `TSSSPRKS2`, `TSSSPRKS3`, `TSSSPRK104`
+.seealso: [](ch_ts), `TSSSP`, `TSSSPGetNumStages()`, `TSSSPRKS2`, `TSSSPRKS3`, `TSSSPRK104`
 @*/
 PetscErrorCode TSSSPSetNumStages(TS ts, PetscInt nstages)
 {
@@ -317,17 +317,17 @@ PetscErrorCode TSSSPSetNumStages(TS ts, PetscInt nstages)
 }
 
 /*@
-   TSSSPGetNumStages - get the number of stages in the `TSSSP` time integration scheme
+  TSSSPGetNumStages - get the number of stages in the `TSSSP` time integration scheme
 
-   Logically Collective
+  Logically Collective
 
-   Input Parameter:
-.  ts - time stepping object
+  Input Parameter:
+. ts - time stepping object
 
-   Output Parameter:
-.  nstages - number of stages
+  Output Parameter:
+. nstages - number of stages
 
-   Level: beginner
+  Level: beginner
 
 .seealso: [](ch_ts), `TSSSP`, `TSSSPGetType()`, `TSSSPSetNumStages()`, `TSSSPRKS2`, `TSSSPRKS3`, `TSSSPRK104`
 @*/

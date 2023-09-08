@@ -21,7 +21,7 @@ cdef class DMComposite(DM):
         cdef MPI_Comm ccomm = def_Comm(comm, PETSC_COMM_DEFAULT)
         cdef PetscDM newdm = NULL
         CHKERR( DMCompositeCreate(ccomm, &newdm) )
-        PetscCLEAR(self.obj); self.dm = newdm
+        CHKERR( PetscCLEAR(self.obj) ); self.dm = newdm
         return self
 
     def addDM(self, DM dm, *args: DM) -> None:
@@ -82,7 +82,7 @@ cdef class DMComposite(DM):
         for i from 0 <= i < n:
             entry = subtype_DM(cdms[i])()
             entry.dm = cdms[i]
-            PetscINCREF(entry.obj)
+            CHKERR( PetscINCREF(entry.obj) )
             entries.append(entry)
         return entries
 
@@ -111,7 +111,7 @@ cdef class DMComposite(DM):
             clvecs[i] = (<Vec?>lvecs[<Py_ssize_t>i]).vec
         CHKERR( DMCompositeScatterArray(self.dm, gvec.vec, clvecs) )
 
-    def gather(self, Vec gvec, imode: InsertMode, lvecs: Sequence[Vec]) -> None:
+    def gather(self, Vec gvec, imode: InsertModeSpec, lvecs: Sequence[Vec]) -> None:
         """Gather split local vectors into a coupled global vector.
 
         Collective.

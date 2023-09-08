@@ -4,7 +4,7 @@ import os
 class Configure(config.package.CMakePackage):
   def __init__(self, framework):
     config.package.CMakePackage.__init__(self, framework)
-    self.gitcommit        = '0f1a896bd056f808a64161cda173e631e3e54be3' # develop jun-1-2023
+    self.gitcommit        = 'f981ff8eba8a45131821893440720556394e2cad' # develop july-20-2023
     self.download         = ['git://https://github.com/MmgTools/ParMmg.git','https://github.com/MmgTools/ParMmg/archive/'+self.gitcommit+'.tar.gz']
     self.versionname      = 'PMMG_VERSION_RELEASE'
     self.includes         = ['parmmg/libparmmg.h']

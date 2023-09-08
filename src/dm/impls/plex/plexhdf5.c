@@ -85,9 +85,9 @@ static PetscErrorCode PetscViewerCheckVersion_Private(PetscViewer viewer, DMPlex
       case 0:
         valid = PETSC_TRUE;
         break;
-      };
+      }
       break;
-    };
+    }
     break;
   case 2:
     switch (version->minor) {
@@ -96,16 +96,16 @@ static PetscErrorCode PetscViewerCheckVersion_Private(PetscViewer viewer, DMPlex
       case 0:
         valid = PETSC_TRUE;
         break;
-      };
+      }
       break;
     case 1:
       switch (version->subminor) {
       case 0:
         valid = PETSC_TRUE;
         break;
-      };
+      }
       break;
-    };
+    }
     break;
   case 3:
     switch (version->minor) {
@@ -114,9 +114,9 @@ static PetscErrorCode PetscViewerCheckVersion_Private(PetscViewer viewer, DMPlex
       case 0:
         valid = PETSC_TRUE;
         break;
-      };
+      }
       break;
-    };
+    }
     break;
   }
   PetscCheck(valid, PetscObjectComm((PetscObject)viewer), PETSC_ERR_SUP, "DMPlexStorageVersion %d.%d.%d not supported", version->major, version->minor, version->subminor);
@@ -136,7 +136,7 @@ PetscErrorCode PetscViewerHDF5GetDMPlexStorageVersionWriting(PetscViewer viewer,
 
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(viewer, PETSC_VIEWER_CLASSID, 1, PETSCVIEWERHDF5);
-  PetscValidPointer(version, 2);
+  PetscAssertPointer(version, 2);
   PetscCall(PetscViewerGetAttachedVersion_Private(viewer, DMPLEX_STORAGE_VERSION_WRITING_KEY, version));
   if (*version) PetscFunctionReturn(PETSC_SUCCESS);
 
@@ -175,7 +175,7 @@ PetscErrorCode PetscViewerHDF5GetDMPlexStorageVersionReading(PetscViewer viewer,
 
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(viewer, PETSC_VIEWER_CLASSID, 1, PETSCVIEWERHDF5);
-  PetscValidPointer(version, 2);
+  PetscAssertPointer(version, 2);
   PetscCall(PetscViewerGetAttachedVersion_Private(viewer, DMPLEX_STORAGE_VERSION_READING_KEY, version));
   if (*version) PetscFunctionReturn(PETSC_SUCCESS);
 

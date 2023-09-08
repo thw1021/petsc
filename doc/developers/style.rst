@@ -280,16 +280,51 @@ C Usage
    !defined``.  Better, use ``PetscDefined()`` (see below). The only exception to this
    rule is for header guards, where the ``#ifndef`` form is preferred (see below).
 
-#. Header guard macros should include the full name and end in ``_FILE_EXTENSION`` of the
-   file and be formed using ``#ifndef``. For example:
+#. Header guard macros should be done using ``#pragma once``. This must be the very first
+   non-comment line of the file. There must be no leading or trailing empty (non-comment)
+   lines in the header. For example, do
 
    ::
 
-       $ cat my_petsc_header_file.h
-       #ifndef MY_PETSC_HEADER_FILE_H
-       #define MY_PETSC_HEADER_FILE_H
+       /*
+         It's OK to have
+
+         comments
+       */
+       // before the guard
+       #pragma once
+
+       // OK, other headers included after the guard
+       #include <petscdm.h>
+       #include <petscdevice.h>
+
+       // OK, other preprocessor symbols defined after the guard
+       #define FOO_BAR_BAZ
+
+       // OK, regular symbols defined after the guard
+       typedef struct _p_PetscFoo *PetscFoo;
        ...
-       #endif // MY_PETSC_HEADER_FILE_H
+
+
+   Do not do
+
+   ::
+
+       // ERROR, empty lines at the beginning of the header
+
+
+
+       // ERROR, included other headers before the guard
+       #include <petscdm.h>
+       #include <petscdevice.h>
+
+       // ERROR, defined other preprocessor symbols before the guard
+       #define FOO_BAR_BAZ
+
+       // ERROR, defined regular symbols before the guard
+       typedef struct _p_PetscFoo *PetscFoo;
+
+       #pragma once
 
 #. Never use system random number generators such as ``rand()`` in PETSc
    code or examples because these can produce different results on
@@ -344,7 +379,7 @@ Usage of PETSc Functions and Macros
        {
          PetscFunctionBegin;
          PetscValidHeaderSpecific(v, VEC_CLASSID, 1);
-         PetscValidScalarPointer(array, 2);
+         PetscAssertPointer(array, 2);
          PetscValidLogicalCollectiveInt(v, collectiveInt, 3);
          ...
          PetscFunctionReturn(PETSC_SUCCESS);
@@ -575,7 +610,6 @@ where noted, add a newline after the section headings.
    .. code-block:: console
 
       Calling sequence of `func()`:
-      $ PetscErrorCode func(PetscInt arg);
       . arg - the integer argument description
 
 #. If documenting a function that interacts with the options database, a
@@ -597,6 +631,10 @@ where noted, add a newline after the section headings.
 #. (If applicable) a ``Developer Note(s):`` section detailing any relevant
    information about the code for developers, for example, why a
    particular algorithm was implemented.
+
+#. (If applicable) references should be indicated inline with \{cite\}\`Bibtex-key\` where
+   Bibtex-key is in the file `doc/petsc.bib`.  Manual pages that have not been updated use ``References:``
+   followed by the list of references and should be updated to the current system.
 
 #. ``.seealso:`` (no newline, no spaces to the left of this text), followed by a list of related manual
    pages. These manual pages should usually also point back to this

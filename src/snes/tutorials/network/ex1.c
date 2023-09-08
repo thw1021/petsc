@@ -6,6 +6,7 @@ static char help[] = "This example demonstrates the use of DMNetwork with subnet
 /*
   Example:
     mpiexec -n 3 ./ex1 -petscpartitioner_type parmetis -dmnetwork_view draw -dmnetwork_view_distributed draw -dmnetwork_view_rank_range 0,1,2
+    mpiexec -n 3 ./ex1 -petscpartitioner_type simple -dmnetwork_view_distributed draw -dmnetwork_view_zoomin_vertices 0 -dmnetwork_view_zoomin_vertices_padding 2 -dmnetwork_view_rank_range 0
     mpiexec -n <n> ./ex1 -monitorIteration -monitorColor -power_snes_max_it 0 -water_snes_max_it 0 -coupled_snes_max_it 10 -draw_pause 5.0
 */
 
@@ -465,9 +466,7 @@ int main(int argc, char **argv)
   PetscBool           ghost, viewJ = PETSC_FALSE, viewX = PETSC_FALSE, test = PETSC_FALSE, distribute = PETSC_TRUE, flg, printCoord = PETSC_FALSE, viewCSV = PETSC_FALSE, monitorIt = PETSC_FALSE;
   UserCtx             user;
   SNESConvergedReason reason;
-#if defined(PETSC_USE_LOG)
-  PetscLogStage stage[4];
-#endif
+  PetscLogStage       stage[4];
 
   /* Power subnetwork */
   UserCtx_Power *appctx_power                    = &user.appctx_power;

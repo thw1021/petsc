@@ -95,7 +95,7 @@ cdef class AO(Object):
                 petsc = iarray_i(petsc, &npetsc, &idxpetsc)
                 assert napp == npetsc, "incompatible array sizes"
             CHKERR( AOCreateBasic(ccomm, napp, idxapp, idxpetsc, &newao) )
-        PetscCLEAR(self.obj); self.ao = newao
+        CHKERR( PetscCLEAR(self.obj) ); self.ao = newao
         return self
 
     def createMemoryScalable(
@@ -148,7 +148,7 @@ cdef class AO(Object):
                 petsc = iarray_i(petsc, &npetsc, &idxpetsc)
                 assert napp == npetsc, "incompatible array sizes"
             CHKERR( AOCreateMemoryScalable(ccomm, napp, idxapp, idxpetsc, &newao) )
-        PetscCLEAR(self.obj); self.ao = newao
+        CHKERR( PetscCLEAR(self.obj) ); self.ao = newao
         return self
 
     def createMapping(
@@ -158,6 +158,8 @@ cdef class AO(Object):
         comm: Comm | None = None,
     ) -> Self:
         """Return an application mapping using two orderings.
+
+        Collective.
 
         The arrays ``app`` and ``petsc`` need NOT contain all the integers
         ``0`` to ``len(app)-1``, that is there CAN be "holes" in the indices.
@@ -193,7 +195,7 @@ cdef class AO(Object):
                 petsc = iarray_i(petsc, &npetsc, &idxpetsc)
                 assert napp == npetsc, "incompatible array sizes"
             CHKERR( AOCreateMapping(ccomm, napp, idxapp, idxpetsc, &newao) )
-        PetscCLEAR(self.obj); self.ao = newao
+        CHKERR( PetscCLEAR(self.obj) ); self.ao = newao
         return self
 
     def getType(self) -> str:

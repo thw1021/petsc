@@ -139,7 +139,7 @@ PetscErrorCode MatDiagonalGetDiagonal(Mat A, Vec *diag)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
-  PetscValidPointer(diag, 2);
+  PetscAssertPointer(diag, 2);
   *diag = NULL;
   PetscUseMethod((PetscObject)A, "MatDiagonalGetDiagonal_C", (Mat, Vec *), (A, diag));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -161,7 +161,7 @@ static PetscErrorCode MatDiagonalGetDiagonal_Diagonal(Mat A, Vec *diag)
   MatDiagonalRestoreDiagonal - Restore the diagonal of a `MATDIAGONAL`
 
   Input Parameters:
-+ A - the `MATDIAGONAL`
++ A    - the `MATDIAGONAL`
 - diag - the `Vec` obtained from `MatDiagonalGetDiagonal()`
 
   Level: developer
@@ -175,7 +175,7 @@ PetscErrorCode MatDiagonalRestoreDiagonal(Mat A, Vec *diag)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
-  PetscValidPointer(diag, 2);
+  PetscAssertPointer(diag, 2);
   PetscUseMethod((PetscObject)A, "MatDiagonalRestoreDiagonal_C", (Mat, Vec *), (A, diag));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -209,7 +209,7 @@ static PetscErrorCode MatDiagonalRestoreDiagonal_Diagonal(Mat A, Vec *diag)
   Level: developer
 
   Note:
-   The user must call
+  The user must call
   `MatDiagonalRestoreInverseDiagonal()` before using the matrix again.
 
   If a matrix is created only to call `MatSolve()` (which happens for `MATLMVMDIAGBROYDEN`),
@@ -222,7 +222,7 @@ PetscErrorCode MatDiagonalGetInverseDiagonal(Mat A, Vec *inv_diag)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
-  PetscValidPointer(inv_diag, 2);
+  PetscAssertPointer(inv_diag, 2);
   *inv_diag = NULL;
   PetscUseMethod((PetscObject)A, "MatDiagonalGetInverseDiagonal_C", (Mat, Vec *), (A, inv_diag));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -244,7 +244,7 @@ static PetscErrorCode MatDiagonalGetInverseDiagonal_Diagonal(Mat A, Vec *inv_dia
   MatDiagonalRestoreInverseDiagonal - Restore the inverse diagonal of a `MATDIAGONAL`
 
   Input Parameters:
-+ A - the `MATDIAGONAL`
++ A        - the `MATDIAGONAL`
 - inv_diag - the `Vec` obtained from `MatDiagonalGetInverseDiagonal()`
 
   Level: developer
@@ -255,7 +255,7 @@ PetscErrorCode MatDiagonalRestoreInverseDiagonal(Mat A, Vec *inv_diag)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
-  PetscValidPointer(inv_diag, 2);
+  PetscAssertPointer(inv_diag, 2);
   PetscUseMethod((PetscObject)A, "MatDiagonalRestoreInverseDiagonal_C", (Mat, Vec *), (A, inv_diag));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -428,7 +428,7 @@ static PetscErrorCode MatZeroEntries_Diagonal(Mat Y)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatSolve_Diagonal(Mat matin, Vec b, Vec x)
+static PetscErrorCode MatSolve_Diagonal(Mat matin, Vec b, Vec x)
 {
   Mat_Diagonal *ctx = (Mat_Diagonal *)matin->data;
 
@@ -438,7 +438,7 @@ PetscErrorCode MatSolve_Diagonal(Mat matin, Vec b, Vec x)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatGetInfo_Diagonal(Mat A, MatInfoType flag, MatInfo *info)
+static PetscErrorCode MatGetInfo_Diagonal(Mat A, MatInfoType flag, MatInfo *info)
 {
   PetscFunctionBegin;
   info->block_size        = 1.0;
@@ -455,23 +455,23 @@ PetscErrorCode MatGetInfo_Diagonal(Mat A, MatInfoType flag, MatInfo *info)
 }
 
 /*@
-   MatCreateDiagonal - Creates a matrix defined by a given vector along its diagonal.
+  MatCreateDiagonal - Creates a matrix defined by a given vector along its diagonal.
 
-   Collective
+  Collective
 
-   Input Parameter:
-.  diag - vector for the diagonal
+  Input Parameter:
+. diag - vector for the diagonal
 
-   Output Parameter:
-.  J - the diagonal matrix
+  Output Parameter:
+. J - the diagonal matrix
 
-   Level: advanced
+  Level: advanced
 
-   Notes:
-    Only supports square matrices with the same number of local rows and columns.
+  Notes:
+  Only supports square matrices with the same number of local rows and columns.
 
-    The input vector `diag` will be referenced internally: any changes to `diag`
-    will affect the matrix `J`.
+  The input vector `diag` will be referenced internally: any changes to `diag`
+  will affect the matrix `J`.
 
 .seealso: [](ch_matrices), `Mat`, `MatDestroy()`, `MATCONSTANTDIAGONAL`, `MatScale()`, `MatShift()`, `MatMult()`, `MatGetDiagonal()`, `MatSolve()`
           `MatDiagonalRestoreInverseDiagonal()`, `MatDiagonalGetDiagonal()`, `MatDiagonalRestoreDiagonal()`, `MatDiagonalGetInverseDiagonal()`

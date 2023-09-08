@@ -179,6 +179,22 @@ static PetscErrorCode TSTheta_SNESSolve(TS ts, Vec b, Vec x)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/* We need to transfer X0 which will be copied into sol_prev */
+static PetscErrorCode TSResizeRegister_Theta(TS ts, PetscBool reg)
+{
+  TS_Theta  *th     = (TS_Theta *)ts->data;
+  const char name[] = "ts:theta:X0";
+
+  PetscFunctionBegin;
+  if (reg && th->vec_sol_prev) {
+    PetscCall(TSResizeRegisterVec(ts, name, th->X0));
+  } else if (!reg) {
+    PetscCall(TSResizeRetrieveVec(ts, name, &th->X0));
+    PetscCall(PetscObjectReference((PetscObject)th->X0));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode TSStep_Theta(TS ts)
 {
   TS_Theta *th         = (TS_Theta *)ts->data;
@@ -203,11 +219,9 @@ static PetscErrorCode TSStep_Theta(TS ts)
       PetscCall(VecZeroEntries(th->Xdot));
       PetscCall(TSComputeIFunction(ts, ts->ptime, th->X0, th->Xdot, th->affine, PETSC_FALSE));
       PetscCall(VecScale(th->affine, (th->Theta - 1) / th->Theta));
-    } else if (th->affine) { /* Just in case th->endpoint is changed between calls to TSStep_Theta() */
-      PetscCall(VecZeroEntries(th->affine));
     }
     PetscCall(TSPreStage(ts, th->stage_time));
-    PetscCall(TSTheta_SNESSolve(ts, th->affine, th->X));
+    PetscCall(TSTheta_SNESSolve(ts, th->endpoint ? th->affine : NULL, th->X));
     PetscCall(TSPostStage(ts, th->stage_time, 0, &th->X));
     PetscCall(TSAdaptCheckStage(ts->adapt, ts, th->stage_time, th->X, &stageok));
     if (!stageok) goto reject_step;
@@ -1229,6 +1243,7 @@ PETSC_EXTERN PetscErrorCode TSCreate_Theta(TS ts)
   ts->ops->interpolate    = TSInterpolate_Theta;
   ts->ops->evaluatewlte   = TSEvaluateWLTE_Theta;
   ts->ops->rollback       = TSRollBack_Theta;
+  ts->ops->resizeregister = TSResizeRegister_Theta;
   ts->ops->setfromoptions = TSSetFromOptions_Theta;
   ts->ops->snesfunction   = SNESTSFormFunction_Theta;
   ts->ops->snesjacobian   = SNESTSFormJacobian_Theta;
@@ -1272,10 +1287,10 @@ PETSC_EXTERN PetscErrorCode TSCreate_Theta(TS ts)
   Not Collective
 
   Input Parameter:
-.  ts - timestepping context
+. ts - timestepping context
 
   Output Parameter:
-.  theta - stage abscissa
+. theta - stage abscissa
 
   Level: advanced
 
@@ -1288,7 +1303,7 @@ PetscErrorCode TSThetaGetTheta(TS ts, PetscReal *theta)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
-  PetscValidRealPointer(theta, 2);
+  PetscAssertPointer(theta, 2);
   PetscUseMethod(ts, "TSThetaGetTheta_C", (TS, PetscReal *), (ts, theta));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1299,11 +1314,11 @@ PetscErrorCode TSThetaGetTheta(TS ts, PetscReal *theta)
   Not Collective
 
   Input Parameters:
-+  ts - timestepping context
--  theta - stage abscissa
++ ts    - timestepping context
+- theta - stage abscissa
 
   Options Database Key:
-.  -ts_theta_theta <theta> - set theta
+. -ts_theta_theta <theta> - set theta
 
   Level: intermediate
 
@@ -1323,10 +1338,10 @@ PetscErrorCode TSThetaSetTheta(TS ts, PetscReal theta)
   Not Collective
 
   Input Parameter:
-.  ts - timestepping context
+. ts - timestepping context
 
   Output Parameter:
-.  endpoint - `PETSC_TRUE` when using the endpoint variant
+. endpoint - `PETSC_TRUE` when using the endpoint variant
 
   Level: advanced
 
@@ -1336,7 +1351,7 @@ PetscErrorCode TSThetaGetEndpoint(TS ts, PetscBool *endpoint)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
-  PetscValidBoolPointer(endpoint, 2);
+  PetscAssertPointer(endpoint, 2);
   PetscUseMethod(ts, "TSThetaGetEndpoint_C", (TS, PetscBool *), (ts, endpoint));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1347,11 +1362,11 @@ PetscErrorCode TSThetaGetEndpoint(TS ts, PetscBool *endpoint)
   Not Collective
 
   Input Parameters:
-+  ts - timestepping context
--  flg - `PETSC_TRUE` to use the endpoint variant
++ ts  - timestepping context
+- flg - `PETSC_TRUE` to use the endpoint variant
 
   Options Database Key:
-.  -ts_theta_endpoint <flg> - use the endpoint variant
+. -ts_theta_endpoint <flg> - use the endpoint variant
 
   Level: intermediate
 

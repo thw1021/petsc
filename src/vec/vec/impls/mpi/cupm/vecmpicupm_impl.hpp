@@ -1,5 +1,4 @@
-#ifndef PETSCVECMPICUPM_IMPL_HPP
-#define PETSCVECMPICUPM_IMPL_HPP
+#pragma once
 
 #include "vecmpicupm.hpp"
 
@@ -40,7 +39,10 @@ inline constexpr VecType VecMPI_CUPM<T>::VECIMPL_() noexcept
 template <device::cupm::DeviceType T>
 inline PetscErrorCode VecMPI_CUPM<T>::VecDestroy_IMPL_(Vec v) noexcept
 {
-  return VecDestroy_MPI(v);
+  PetscFunctionBegin;
+  PetscCall(VecSeq_T::ClearAsyncFunctions(v));
+  PetscCall(VecDestroy_MPI(v));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 template <device::cupm::DeviceType T>
@@ -64,6 +66,7 @@ inline PetscErrorCode VecMPI_CUPM<T>::VecCreate_IMPL_Private_(Vec v, PetscBool *
   // for VecMPI since we always want to either allocate it ourselves with pinned memory or set
   // it in Initialize_CUPMBase()
   PetscCall(VecCreate_MPI_Private(v, PETSC_FALSE, nghost, nullptr));
+  PetscCall(VecSeq_T::InitializeAsyncFunctions(v));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -155,7 +158,6 @@ inline PetscErrorCode VecMPI_CUPM<T>::BindToCPU(Vec v, PetscBool usehost) noexce
   VecSetOp_CUPM(placearray, VecPlaceArray_MPI, base_type::template PlaceArray<PETSC_MEMTYPE_HOST>);
   VecSetOp_CUPM(max, VecMax_MPI, Max);
   VecSetOp_CUPM(min, VecMin_MPI, Min);
-  VecSetOp_CUPM(errorwnorm, nullptr, ErrorWnorm);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -369,5 +371,3 @@ inline PetscErrorCode VecMPI_CUPM<T>::SetValuesCOO(Vec x, const PetscScalar v[],
 } // namespace vec
 
 } // namespace Petsc
-
-#endif // PETSCVECMPICUPM_IMPL_HPP

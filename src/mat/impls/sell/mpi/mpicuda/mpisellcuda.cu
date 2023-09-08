@@ -2,7 +2,7 @@
 #include <petscdevice.h>
 #include <../src/mat/impls/sell/mpi/mpisell.h> /*I "petscmat.h" I*/
 
-PetscErrorCode MatMPISELLSetPreallocation_MPISELLCUDA(Mat B, PetscInt d_rlenmax, const PetscInt d_rlen[], PetscInt o_rlenmax, const PetscInt o_rlen[])
+static PetscErrorCode MatMPISELLSetPreallocation_MPISELLCUDA(Mat B, PetscInt d_rlenmax, const PetscInt d_rlen[], PetscInt o_rlenmax, const PetscInt o_rlen[])
 {
   Mat_MPISELL *b = (Mat_MPISELL *)B->data;
 
@@ -29,7 +29,7 @@ PetscErrorCode MatMPISELLSetPreallocation_MPISELLCUDA(Mat B, PetscInt d_rlenmax,
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatMult_MPISELLCUDA(Mat A, Vec xx, Vec yy)
+static PetscErrorCode MatMult_MPISELLCUDA(Mat A, Vec xx, Vec yy)
 {
   Mat_MPISELL *a = (Mat_MPISELL *)A->data;
   PetscInt     nt;
@@ -44,7 +44,7 @@ PetscErrorCode MatMult_MPISELLCUDA(Mat A, Vec xx, Vec yy)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatZeroEntries_MPISELLCUDA(Mat A)
+static PetscErrorCode MatZeroEntries_MPISELLCUDA(Mat A)
 {
   Mat_MPISELL *l = (Mat_MPISELL *)A->data;
 
@@ -54,7 +54,7 @@ PetscErrorCode MatZeroEntries_MPISELLCUDA(Mat A)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatMultAdd_MPISELLCUDA(Mat A, Vec xx, Vec yy, Vec zz)
+static PetscErrorCode MatMultAdd_MPISELLCUDA(Mat A, Vec xx, Vec yy, Vec zz)
 {
   Mat_MPISELL *a = (Mat_MPISELL *)A->data;
   PetscInt     nt;
@@ -69,7 +69,7 @@ PetscErrorCode MatMultAdd_MPISELLCUDA(Mat A, Vec xx, Vec yy, Vec zz)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatMultTranspose_MPISELLCUDA(Mat A, Vec xx, Vec yy)
+static PetscErrorCode MatMultTranspose_MPISELLCUDA(Mat A, Vec xx, Vec yy)
 {
   Mat_MPISELL *a = (Mat_MPISELL *)A->data;
   PetscInt     nt;
@@ -84,12 +84,12 @@ PetscErrorCode MatMultTranspose_MPISELLCUDA(Mat A, Vec xx, Vec yy)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatSetFromOptions_MPISELLCUDA(Mat, PetscOptionItems *)
+static PetscErrorCode MatSetFromOptions_MPISELLCUDA(Mat, PetscOptionItems *)
 {
   return PETSC_SUCCESS;
 }
 
-PetscErrorCode MatAssemblyEnd_MPISELLCUDA(Mat A, MatAssemblyType mode)
+static PetscErrorCode MatAssemblyEnd_MPISELLCUDA(Mat A, MatAssemblyType mode)
 {
   PetscFunctionBegin;
   PetscCall(MatAssemblyEnd_MPISELL(A, mode));
@@ -97,7 +97,7 @@ PetscErrorCode MatAssemblyEnd_MPISELLCUDA(Mat A, MatAssemblyType mode)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatDestroy_MPISELLCUDA(Mat A)
+static PetscErrorCode MatDestroy_MPISELLCUDA(Mat A)
 {
   PetscFunctionBegin;
   PetscCall(MatDestroy_MPISELL(A));
@@ -147,48 +147,48 @@ PETSC_EXTERN PetscErrorCode MatCreate_MPISELLCUDA(Mat A)
 }
 
 /*@
-   MatCreateSELLCUDA - Creates a sparse matrix in SELL format.
-   This matrix will ultimately pushed down to NVIDIA GPUs.
+  MatCreateSELLCUDA - Creates a sparse matrix in SELL format.
+  This matrix will ultimately pushed down to NVIDIA GPUs.
 
-   Collective
+  Collective
 
-   Input Parameters:
-+  comm - MPI communicator, set to `PETSC_COMM_SELF`
-.  m - number of local rows (or `PETSC_DECIDE` to have calculated if `M` is given)
+  Input Parameters:
++ comm  - MPI communicator, set to `PETSC_COMM_SELF`
+. m     - number of local rows (or `PETSC_DECIDE` to have calculated if `M` is given)
            This value should be the same as the local size used in creating the
            y vector for the matrix-vector product y = Ax.
-.  n - This value should be the same as the local size used in creating the
+. n     - This value should be the same as the local size used in creating the
        x vector for the matrix-vector product y = Ax. (or PETSC_DECIDE to have
        calculated if `N` is given) For square matrices `n` is almost always `m`.
-.  M - number of global rows (or `PETSC_DETERMINE` to have calculated if `m` is given)
-.  N - number of global columns (or `PETSC_DETERMINE` to have calculated if `n` is given)
-.  d_nz  - number of nonzeros per row in DIAGONAL portion of local submatrix
+. M     - number of global rows (or `PETSC_DETERMINE` to have calculated if `m` is given)
+. N     - number of global columns (or `PETSC_DETERMINE` to have calculated if `n` is given)
+. d_nz  - number of nonzeros per row in DIAGONAL portion of local submatrix
            (same value is used for all local rows)
-.  d_nnz - array containing the number of nonzeros in the various rows of the
+. d_nnz - array containing the number of nonzeros in the various rows of the
            DIAGONAL portion of the local submatrix (possibly different for each row)
            or `NULL`, if `d_nz` is used to specify the nonzero structure.
            The size of this array is equal to the number of local rows, i.e `m`.
            For matrices you plan to factor you must leave room for the diagonal entry and
            put in the entry even if it is zero.
-.  o_nz  - number of nonzeros per row in the OFF-DIAGONAL portion of local
+. o_nz  - number of nonzeros per row in the OFF-DIAGONAL portion of local
            submatrix (same value is used for all local rows).
--  o_nnz - array containing the number of nonzeros in the various rows of the
+- o_nnz - array containing the number of nonzeros in the various rows of the
            OFF-DIAGONAL portion of the local submatrix (possibly different for
            each row) or `NULL`, if `o_nz` is used to specify the nonzero
            structure. The size of this array is equal to the number
            of local rows, i.e `m`.
 
-   Output Parameter:
-.  A - the matrix
+  Output Parameter:
+. A - the matrix
 
-   Level: intermediate
+  Level: intermediate
 
-   Notes:
-   If `nnz` is given then `nz` is ignored
+  Notes:
+  If `nnz` is given then `nz` is ignored
 
-   Specify the preallocated storage with either `nz` or `nnz` (not both).
-   Set `nz` = `PETSC_DEFAULT` and `nnz` = `NULL` for PETSc to control dynamic memory
-   allocation.
+  Specify the preallocated storage with either `nz` or `nnz` (not both).
+  Set `nz` = `PETSC_DEFAULT` and `nnz` = `NULL` for PETSc to control dynamic memory
+  allocation.
 
 .seealso: [](ch_matrices), `Mat`, `MatCreate()`, `MatCreateSELL()`, `MatSetValues()`, `MATMPISELLCUDA`, `MATSELLCUDA`
 @*/

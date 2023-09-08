@@ -74,7 +74,7 @@ static PetscErrorCode MatSeqSELLCUDACopyToGPU(Mat A)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-__global__ void matmult_seqsell_basic_kernel(PetscInt nrows, PetscInt sliceheight, const PetscInt *acolidx, const MatScalar *aval, const PetscInt *sliidx, const PetscScalar *x, PetscScalar *y)
+static __global__ void matmult_seqsell_basic_kernel(PetscInt nrows, PetscInt sliceheight, const PetscInt *acolidx, const MatScalar *aval, const PetscInt *sliidx, const PetscScalar *x, PetscScalar *y)
 {
   PetscInt  i, row, slice_id, row_in_slice;
   MatScalar sum;
@@ -89,7 +89,7 @@ __global__ void matmult_seqsell_basic_kernel(PetscInt nrows, PetscInt sliceheigh
   }
 }
 
-__global__ void matmultadd_seqsell_basic_kernel(PetscInt nrows, PetscInt sliceheight, const PetscInt *acolidx, const MatScalar *aval, const PetscInt *sliidx, const PetscScalar *x, const PetscScalar *y, PetscScalar *z)
+static __global__ void matmultadd_seqsell_basic_kernel(PetscInt nrows, PetscInt sliceheight, const PetscInt *acolidx, const MatScalar *aval, const PetscInt *sliidx, const PetscScalar *x, const PetscScalar *y, PetscScalar *z)
 {
   PetscInt  i, row, slice_id, row_in_slice;
   MatScalar sum;
@@ -164,7 +164,7 @@ __global__ void matmultadd_seqsell_tiled_kernel9(PetscInt nrows, PetscInt sliceh
 }
 
 template <int BLOCKY>
-__device__ __forceinline__ bool segment_scan(PetscInt flag[], MatScalar shared[], PetscScalar *val)
+__device__ __forceinline__ static bool segment_scan(PetscInt flag[], MatScalar shared[], PetscScalar *val)
 {
   bool head = true;
   #pragma unroll
@@ -293,7 +293,7 @@ __global__ void matmultadd_seqsell_tiled_kernel8(PetscInt nrows, PetscInt sliceh
 }
 
 /* use 1 warp per slice, suitable for small slice width */
-__global__ void matmult_seqsell_tiled_kernel7(PetscInt nrows, PetscInt sliceheight, const PetscInt *acolidx, const MatScalar *aval, const PetscInt *sliidx, const PetscScalar *x, PetscScalar *y)
+static __global__ void matmult_seqsell_tiled_kernel7(PetscInt nrows, PetscInt sliceheight, const PetscInt *acolidx, const MatScalar *aval, const PetscInt *sliidx, const PetscScalar *x, PetscScalar *y)
 {
   PetscInt i, row, slice_id;
   slice_id = blockIdx.x * blockDim.y + threadIdx.y;
@@ -308,7 +308,7 @@ __global__ void matmult_seqsell_tiled_kernel7(PetscInt nrows, PetscInt sliceheig
 }
 
 /* use 1 warp per slice, suitable for small slice width */
-__global__ void matmultadd_seqsell_tiled_kernel7(PetscInt nrows, PetscInt sliceheight, const PetscInt *acolidx, const MatScalar *aval, const PetscInt *sliidx, const PetscScalar *x, const PetscScalar *y, PetscScalar *z)
+static __global__ void matmultadd_seqsell_tiled_kernel7(PetscInt nrows, PetscInt sliceheight, const PetscInt *acolidx, const MatScalar *aval, const PetscInt *sliidx, const PetscScalar *x, const PetscScalar *y, PetscScalar *z)
 {
   PetscInt i, row, slice_id;
   slice_id = blockIdx.x * blockDim.y + threadIdx.y;
@@ -325,7 +325,7 @@ __global__ void matmultadd_seqsell_tiled_kernel7(PetscInt nrows, PetscInt sliceh
 
 /***********  Kernel 2-6  are tied to slice height 16. They are kept only for performance comparison  **********/
 
-__global__ void matmult_seqsell_tiled_kernel6(PetscInt nrows, const PetscInt *acolidx, const MatScalar *aval, const PetscInt *sliidx, const PetscScalar *x, PetscScalar *y)
+static __global__ void matmult_seqsell_tiled_kernel6(PetscInt nrows, const PetscInt *acolidx, const MatScalar *aval, const PetscInt *sliidx, const PetscScalar *x, PetscScalar *y)
 {
   __shared__ MatScalar shared[512];
   PetscInt             i, row, slice_id, row_in_slice;
@@ -353,7 +353,7 @@ __global__ void matmult_seqsell_tiled_kernel6(PetscInt nrows, const PetscInt *ac
   }
 }
 
-__global__ void matmult_seqsell_tiled_kernel5(PetscInt nrows, const PetscInt *acolidx, const MatScalar *aval, const PetscInt *sliidx, const PetscScalar *x, PetscScalar *y)
+static __global__ void matmult_seqsell_tiled_kernel5(PetscInt nrows, const PetscInt *acolidx, const MatScalar *aval, const PetscInt *sliidx, const PetscScalar *x, PetscScalar *y)
 {
   __shared__ MatScalar shared[512];
   PetscInt             i, row, slice_id, row_in_slice;
@@ -379,7 +379,7 @@ __global__ void matmult_seqsell_tiled_kernel5(PetscInt nrows, const PetscInt *ac
   }
 }
 
-__global__ void matmult_seqsell_tiled_kernel4(PetscInt nrows, const PetscInt *acolidx, const MatScalar *aval, const PetscInt *sliidx, const PetscScalar *x, PetscScalar *y)
+static __global__ void matmult_seqsell_tiled_kernel4(PetscInt nrows, const PetscInt *acolidx, const MatScalar *aval, const PetscInt *sliidx, const PetscScalar *x, PetscScalar *y)
 {
   __shared__ MatScalar shared[512];
   PetscInt             i, row, slice_id, row_in_slice;
@@ -403,7 +403,7 @@ __global__ void matmult_seqsell_tiled_kernel4(PetscInt nrows, const PetscInt *ac
   }
 }
 
-__global__ void matmult_seqsell_tiled_kernel3(PetscInt nrows, const PetscInt *acolidx, const MatScalar *aval, const PetscInt *sliidx, const PetscScalar *x, PetscScalar *y)
+static __global__ void matmult_seqsell_tiled_kernel3(PetscInt nrows, const PetscInt *acolidx, const MatScalar *aval, const PetscInt *sliidx, const PetscScalar *x, PetscScalar *y)
 {
   __shared__ MatScalar shared[512];
   PetscInt             i, row, slice_id, row_in_slice;
@@ -425,7 +425,7 @@ __global__ void matmult_seqsell_tiled_kernel3(PetscInt nrows, const PetscInt *ac
   }
 }
 
-__global__ void matmult_seqsell_tiled_kernel2(PetscInt nrows, const PetscInt *acolidx, const MatScalar *aval, const PetscInt *sliidx, const PetscScalar *x, PetscScalar *y)
+static __global__ void matmult_seqsell_tiled_kernel2(PetscInt nrows, const PetscInt *acolidx, const MatScalar *aval, const PetscInt *sliidx, const PetscScalar *x, PetscScalar *y)
 {
   __shared__ MatScalar shared[512];
   PetscInt             i, row, slice_id, row_in_slice;
@@ -445,7 +445,7 @@ __global__ void matmult_seqsell_tiled_kernel2(PetscInt nrows, const PetscInt *ac
   }
 }
 
-__global__ void matmultadd_seqsell_tiled_kernel6(PetscInt nrows, const PetscInt *acolidx, const MatScalar *aval, const PetscInt *sliidx, const PetscScalar *x, const PetscScalar *y, PetscScalar *z)
+static __global__ void matmultadd_seqsell_tiled_kernel6(PetscInt nrows, const PetscInt *acolidx, const MatScalar *aval, const PetscInt *sliidx, const PetscScalar *x, const PetscScalar *y, PetscScalar *z)
 {
   __shared__ MatScalar shared[512];
   PetscInt             i, row, slice_id, row_in_slice;
@@ -473,7 +473,7 @@ __global__ void matmultadd_seqsell_tiled_kernel6(PetscInt nrows, const PetscInt 
   }
 }
 
-__global__ void matmultadd_seqsell_tiled_kernel5(PetscInt nrows, const PetscInt *acolidx, const MatScalar *aval, const PetscInt *sliidx, const PetscScalar *x, const PetscScalar *y, PetscScalar *z)
+static __global__ void matmultadd_seqsell_tiled_kernel5(PetscInt nrows, const PetscInt *acolidx, const MatScalar *aval, const PetscInt *sliidx, const PetscScalar *x, const PetscScalar *y, PetscScalar *z)
 {
   __shared__ MatScalar shared[512];
   PetscInt             i, row, slice_id, row_in_slice;
@@ -499,7 +499,7 @@ __global__ void matmultadd_seqsell_tiled_kernel5(PetscInt nrows, const PetscInt 
   }
 }
 
-__global__ void matmultadd_seqsell_tiled_kernel4(PetscInt nrows, const PetscInt *acolidx, const MatScalar *aval, const PetscInt *sliidx, const PetscScalar *x, const PetscScalar *y, PetscScalar *z)
+static __global__ void matmultadd_seqsell_tiled_kernel4(PetscInt nrows, const PetscInt *acolidx, const MatScalar *aval, const PetscInt *sliidx, const PetscScalar *x, const PetscScalar *y, PetscScalar *z)
 {
   __shared__ MatScalar shared[512];
   PetscInt             i, row, slice_id, row_in_slice;
@@ -523,7 +523,7 @@ __global__ void matmultadd_seqsell_tiled_kernel4(PetscInt nrows, const PetscInt 
   }
 }
 
-__global__ void matmultadd_seqsell_tiled_kernel3(PetscInt nrows, const PetscInt *acolidx, const MatScalar *aval, const PetscInt *sliidx, const PetscScalar *x, const PetscScalar *y, PetscScalar *z)
+static __global__ void matmultadd_seqsell_tiled_kernel3(PetscInt nrows, const PetscInt *acolidx, const MatScalar *aval, const PetscInt *sliidx, const PetscScalar *x, const PetscScalar *y, PetscScalar *z)
 {
   __shared__ MatScalar shared[512];
   PetscInt             i, row, slice_id, row_in_slice;
@@ -545,7 +545,7 @@ __global__ void matmultadd_seqsell_tiled_kernel3(PetscInt nrows, const PetscInt 
   }
 }
 
-__global__ void matmultadd_seqsell_tiled_kernel2(PetscInt nrows, const PetscInt *acolidx, const MatScalar *aval, const PetscInt *sliidx, const PetscScalar *x, const PetscScalar *y, PetscScalar *z)
+static __global__ void matmultadd_seqsell_tiled_kernel2(PetscInt nrows, const PetscInt *acolidx, const MatScalar *aval, const PetscInt *sliidx, const PetscScalar *x, const PetscScalar *y, PetscScalar *z)
 {
   __shared__ MatScalar shared[512];
   PetscInt             i, row, slice_id, row_in_slice;
@@ -565,20 +565,22 @@ __global__ void matmultadd_seqsell_tiled_kernel2(PetscInt nrows, const PetscInt 
   }
 }
 
-PetscErrorCode MatMult_SeqSELLCUDA(Mat A, Vec xx, Vec yy)
+static PetscErrorCode MatMult_SeqSELLCUDA(Mat A, Vec xx, Vec yy)
 {
   Mat_SeqSELL       *a          = (Mat_SeqSELL *)A->data;
   Mat_SeqSELLCUDA   *cudastruct = (Mat_SeqSELLCUDA *)A->spptr;
   PetscScalar       *y;
   const PetscScalar *x;
   PetscInt           nrows = A->rmap->n, sliceheight = a->sliceheight;
-  PetscInt           chunksperblock, nchunks, *chunk_slice_map;
   MatScalar         *aval;
   PetscInt          *acolidx;
   PetscInt          *sliidx;
   PetscInt           nblocks, blocksize = 512; /* blocksize must be multiple of SLICE_HEIGHT*32 */
   dim3               block2(256, 2), block4(128, 4), block8(64, 8), block16(32, 16), block32(16, 32);
-  PetscReal          maxoveravg;
+#if !defined(PETSC_USE_COMPLEX)
+  PetscInt  chunksperblock, nchunks, *chunk_slice_map;
+  PetscReal maxoveravg;
+#endif
 
   PetscFunctionBegin;
   PetscCheck(32 % sliceheight == 0, PETSC_COMM_SELF, PETSC_ERR_SUP, "The kernel requires a slice height be a divisor of 32, but the input matrix has a slice height of %" PetscInt_FMT, sliceheight);
@@ -705,25 +707,28 @@ PetscErrorCode MatMult_SeqSELLCUDA(Mat A, Vec xx, Vec yy)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatMultAdd_SeqSELLCUDA(Mat A, Vec xx, Vec yy, Vec zz)
+static PetscErrorCode MatMultAdd_SeqSELLCUDA(Mat A, Vec xx, Vec yy, Vec zz)
 {
   Mat_SeqSELL       *a          = (Mat_SeqSELL *)A->data;
   Mat_SeqSELLCUDA   *cudastruct = (Mat_SeqSELLCUDA *)A->spptr;
   PetscScalar       *z;
   const PetscScalar *y, *x;
   PetscInt           nrows = A->rmap->n, sliceheight = a->sliceheight;
-  PetscInt           chunksperblock, nchunks, *chunk_slice_map;
   MatScalar         *aval    = cudastruct->val;
   PetscInt          *acolidx = cudastruct->colidx;
   PetscInt          *sliidx  = cudastruct->sliidx;
-  PetscReal          maxoveravg;
+#if !defined(PETSC_USE_COMPLEX)
+  PetscReal maxoveravg;
+  PetscInt  chunksperblock, nchunks, *chunk_slice_map;
+  PetscInt  blocky = cudastruct->blocky;
+#endif
 
   PetscFunctionBegin;
   PetscCheck(32 % sliceheight == 0, PETSC_COMM_SELF, PETSC_ERR_SUP, "The kernel requires a slice height be a divisor of 32, but the input matrix has a slice height of %" PetscInt_FMT, sliceheight);
   PetscCheck(!(cudastruct->kernelchoice >= 2 && cudastruct->kernelchoice <= 6 && sliceheight != SLICE_HEIGHT), PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Kernel choices {2-6} requires the slice height of the matrix be 16, but the current slice height is %" PetscInt_FMT, sliceheight);
   PetscCall(MatSeqSELLCUDACopyToGPU(A));
   if (a->nz) {
-    PetscInt blocky = cudastruct->blocky, nblocks, blocksize = 512;
+    PetscInt nblocks, blocksize = 512;
     dim3     block2(256, 2), block4(128, 4), block8(64, 8), block16(32, 16), block32(16, 32);
     PetscCall(VecCUDAGetArrayRead(xx, &x));
     PetscCall(VecCUDAGetArrayRead(yy, &y));

@@ -6,6 +6,7 @@ import functools
 # --------------------------------------------------------------------
 
 cdef class Log:
+    """Logging support."""
 
     @classmethod
     def Stage(cls, name):
@@ -52,30 +53,17 @@ cdef class Log:
         return event
 
     @classmethod
-    def begin(cls, all: bool = False):
+    def begin(cls):
         """Turn on logging of objects and events.
 
-        Logically collective.
-
-        Parameters
-        ----------
-        all
-            Whether to enable extensive logging.
-
-        Notes
-        -----
-        If ``all == True`` logging is extensive, which creates large log files and shows the program down.
-
-        If ``all == False``, the default logging functions are used.
-        This logs flop rates and object creation and should not slow programs down too much. This routine may be called more than once.
+        Collective.
 
         See Also
         --------
-        petsc.PetscLogAllBegin, petsc.PetscLogDefaultBegin
+        petsc.PetscLogDefaultBegin
 
         """
-        if all: CHKERR( PetscLogAllBegin() )
-        else:   CHKERR( PetscLogDefaultBegin() )
+        CHKERR( PetscLogDefaultBegin() )
 
     @classmethod
     def view(cls, Viewer viewer=None) -> None:
@@ -86,7 +74,7 @@ cdef class Log:
         Parameters
         ----------
         viewer
-            Viewer instance. If `None` then will default to an instance of `Viewer.Type.ASCII`.
+            A `Viewer` instance or `None` for the default viewer.
 
         See Also
         --------
@@ -100,7 +88,7 @@ cdef class Log:
 
     @classmethod
     def logFlops(cls, flops: float) -> None:
-        """Add floating point operations to the global counter.
+        """Add floating point operations to the current event.
 
         Not collective.
 
@@ -119,7 +107,7 @@ cdef class Log:
 
     @classmethod
     def addFlops(cls, flops: float) -> None:
-        """Add floating point operations to global counter.
+        """Add floating point operations to the current event.
 
         Not collective.
 
@@ -220,6 +208,7 @@ cdef class Log:
 # --------------------------------------------------------------------
 
 cdef class LogStage:
+    """Logging support for different stages."""
 
     cdef readonly PetscLogStage id
 
@@ -241,11 +230,7 @@ cdef class LogStage:
     def push(self) -> None:
         """Push a stage on the logging stack.
 
-        Not collective.
-
-        Notes
-        -----
-        Events started and stopped until LogStage.pop will be associated with the stage.
+        Logically collective.
 
         See Also
         --------
@@ -255,9 +240,9 @@ cdef class LogStage:
         CHKERR( PetscLogStagePush(self.id) )
 
     def pop(self) -> None:
-        """Pop a stage on the logging stack that was pushed.
+        """Pop a stage from the logging stack.
 
-        Not collective.
+        Logically collective.
 
         See Also
         --------
@@ -286,7 +271,7 @@ cdef class LogStage:
     def activate(self) -> None:
         """Activate the stage.
 
-        Not collective.
+        Logically collective.
 
         See Also
         --------
@@ -298,7 +283,7 @@ cdef class LogStage:
     def deactivate(self) -> None:
         """Deactivate the stage.
 
-        Not collective.
+        Logically collective.
 
         See Also
         --------
@@ -324,12 +309,7 @@ cdef class LogStage:
     def setActive(self, flag: bool) -> None:
         """Activate or deactivate the current stage.
 
-        Not collective.
-
-        Parameters
-        ----------
-        flag
-            Log if `True`, disable logging if `False`.
+        Logically collective.
 
         See Also
         --------
@@ -365,7 +345,7 @@ cdef class LogStage:
     def setVisible(self, flag: bool) -> None:
         """Set the visibility of the stage.
 
-        Not collective.
+        Logically collective.
 
         Parameters
         ----------
@@ -485,7 +465,7 @@ cdef class LogEvent:
     def begin(self, *objs) -> None:
         """Log the beginning of a user event.
 
-        Not collective.
+        Collective.
 
         Parameters
         ----------
@@ -504,7 +484,7 @@ cdef class LogEvent:
     def end(self, *objs) -> None:
         """Log the end of a user event.
 
-        Not collective.
+        Collective.
 
         Parameters
         ----------
@@ -538,7 +518,7 @@ cdef class LogEvent:
     def activate(self) -> None:
         """Indicate that the event should be logged.
 
-        Not collective.
+        Logically collective.
 
         See Also
         --------
@@ -550,7 +530,7 @@ cdef class LogEvent:
     def deactivate(self) -> None:
         """Indicate that the event should not be logged.
 
-        Not collective.
+        Logically collective.
 
         See Also
         --------
@@ -566,7 +546,7 @@ cdef class LogEvent:
     def setActive(self, flag: bool) -> None:
         """Indicate whether or not the event should be logged.
 
-        Not collective.
+        Logically collective.
 
         Parameters
         ----------
@@ -596,6 +576,8 @@ cdef class LogEvent:
     def setActiveAll(self, flag: bool) -> None:
         """Turn on logging of all events.
 
+        Logically collective.
+
         Parameters
         ----------
         flag
@@ -620,6 +602,8 @@ cdef class LogEvent:
 
     def getPerfInfo(self, stage: int | None = None) -> dict:
         """Get the performance information about the given event in the given event.
+
+        Not collective.
 
         Parameters
         ----------

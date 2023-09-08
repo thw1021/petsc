@@ -1,5 +1,4 @@
-#ifndef PETSCCUPMINTERFACE_HPP
-#define PETSCCUPMINTERFACE_HPP
+#pragma once
 
 #include <petscdevice_cupm.h>
 
@@ -403,9 +402,9 @@ struct InterfaceImpl<DeviceType::HIP> : InterfaceBase<DeviceType::HIP> {
   PETSC_CUPM_ALIAS_FUNCTION(cupmMemset2D, hipMemset2D)
   PETSC_CUPM_ALIAS_FUNCTION_GOBBLE(cupmMemset2DAsync, hipMemset2DAsync, 1)
 
-    // launch control
-    // HIP appears to only have hipLaunchHostFunc from 5.2.0 onwards
-    // https://github.com/ROCm-Developer-Tools/HIPIFY/blob/master/doc/markdown/CUDA_Runtime_API_functions_supported_by_HIP.md#7-execution-control=
+  // launch control
+  // HIP appears to only have hipLaunchHostFunc from 5.2.0 onwards
+  // https://github.com/ROCm-Developer-Tools/HIPIFY/blob/master/doc/markdown/CUDA_Runtime_API_functions_supported_by_HIP.md#7-execution-control=
   #if PETSC_PKG_HIP_VERSION_GE(5, 2, 0)
   PETSC_CUPM_ALIAS_FUNCTION(cupmLaunchHostFunc, hipLaunchHostFunc)
   #else
@@ -510,6 +509,13 @@ struct InterfaceImpl<DeviceType::HIP> : InterfaceBase<DeviceType::HIP> {
   using ::Petsc::device::cupm::impl::InterfaceImpl<T>::cupmMemset2DAsync; \
   using ::Petsc::device::cupm::impl::InterfaceImpl<T>::cupmLaunchHostFunc
 
+#if PetscHasAttribute(always_inline)
+  // https://gcc.gnu.org/bugzilla//show_bug.cgi?id=109464
+  #define PETSC_GCC_LINKER_UNDEFINED_REFERENCE_BUG_WORKAROUND __attribute__((always_inline))
+#else
+  #define PETSC_GCC_LINKER_UNDEFINED_REFERENCE_BUG_WORKAROUND
+#endif
+
 // The actual interface class
 template <DeviceType T>
 struct Interface : InterfaceImpl<T> {
@@ -522,7 +528,7 @@ public:
   using cupmReal_t   = util::conditional_t<PetscDefined(USE_REAL_SINGLE), float, double>;
   using cupmScalar_t = util::conditional_t<PetscDefined(USE_COMPLEX), cupmComplex_t, cupmReal_t>;
 
-  PETSC_NODISCARD static constexpr cupmScalar_t cupmScalarCast(PetscScalar s) noexcept
+  PETSC_NODISCARD PETSC_GCC_LINKER_UNDEFINED_REFERENCE_BUG_WORKAROUND static constexpr cupmScalar_t cupmScalarCast(PetscScalar s) noexcept
   {
 #if PetscDefined(USE_COMPLEX)
     return cupmComplex_t{PetscRealPart(s), PetscImaginaryPart(s)};
@@ -531,13 +537,13 @@ public:
 #endif
   }
 
-  PETSC_NODISCARD static constexpr const cupmScalar_t *cupmScalarPtrCast(const PetscScalar *s) noexcept { return reinterpret_cast<const cupmScalar_t *>(s); }
+  PETSC_NODISCARD PETSC_GCC_LINKER_UNDEFINED_REFERENCE_BUG_WORKAROUND static constexpr const cupmScalar_t *cupmScalarPtrCast(const PetscScalar *s) noexcept { return reinterpret_cast<const cupmScalar_t *>(s); }
 
-  PETSC_NODISCARD static constexpr cupmScalar_t *cupmScalarPtrCast(PetscScalar *s) noexcept { return reinterpret_cast<cupmScalar_t *>(s); }
+  PETSC_NODISCARD PETSC_GCC_LINKER_UNDEFINED_REFERENCE_BUG_WORKAROUND static constexpr cupmScalar_t *cupmScalarPtrCast(PetscScalar *s) noexcept { return reinterpret_cast<cupmScalar_t *>(s); }
 
-  PETSC_NODISCARD static constexpr const cupmReal_t *cupmRealPtrCast(const PetscReal *s) noexcept { return reinterpret_cast<const cupmReal_t *>(s); }
+  PETSC_NODISCARD PETSC_GCC_LINKER_UNDEFINED_REFERENCE_BUG_WORKAROUND static constexpr const cupmReal_t *cupmRealPtrCast(const PetscReal *s) noexcept { return reinterpret_cast<const cupmReal_t *>(s); }
 
-  PETSC_NODISCARD static constexpr cupmReal_t *cupmRealPtrCast(PetscReal *s) noexcept { return reinterpret_cast<cupmReal_t *>(s); }
+  PETSC_NODISCARD PETSC_GCC_LINKER_UNDEFINED_REFERENCE_BUG_WORKAROUND static constexpr cupmReal_t *cupmRealPtrCast(PetscReal *s) noexcept { return reinterpret_cast<cupmReal_t *>(s); }
 
 #if !defined(PETSC_PKG_CUDA_VERSION_GE)
   #define PETSC_PKG_CUDA_VERSION_GE(...) 0
@@ -549,13 +555,13 @@ public:
     cupmError_t             cerr;
 
     PetscFunctionBegin;
-    if (type) PetscValidPointer(type, 2);
+    if (type) PetscAssertPointer(type, 2);
     if (registered) {
-      PetscValidBoolPointer(registered, 3);
+      PetscAssertPointer(registered, 3);
       *registered = PETSC_FALSE;
     }
     if (managed) {
-      PetscValidBoolPointer(managed, 4);
+      PetscAssertPointer(managed, 4);
       *managed = PETSC_FALSE;
     }
     // Do not check error, instead reset it via GetLastError() since before CUDA 11.0, passing
@@ -604,7 +610,7 @@ public:
     static_assert(!std::is_void<M>::value, "");
 
     PetscFunctionBegin;
-    PetscValidPointer(ptr, 1);
+    PetscAssertPointer(ptr, 1);
     *ptr = nullptr;
     if (n) {
       const auto bytes = n * sizeof(M);
@@ -636,7 +642,7 @@ public:
     static_assert(!std::is_void<M>::value, "");
 
     PetscFunctionBegin;
-    PetscValidPointer(ptr, 1);
+    PetscAssertPointer(ptr, 1);
     *ptr = nullptr;
     if (n) PetscCallCUPM(cupmMallocHost(reinterpret_cast<void **>(ptr), n * sizeof(M), flags));
     PetscFunctionReturn(PETSC_SUCCESS);
@@ -650,7 +656,7 @@ public:
 
     PetscFunctionBegin;
     if (PetscUnlikely(!n)) PetscFunctionReturn(PETSC_SUCCESS);
-    // cannot dereference (i.e. cannot call PetscValidPointer() here)
+    // cannot dereference (i.e. cannot call PetscAssertPointer() here)
     PetscCheck(dest, PETSC_COMM_SELF, PETSC_ERR_POINTER, "Trying to copy to a NULL pointer");
     PetscCheck(src, PETSC_COMM_SELF, PETSC_ERR_POINTER, "Trying to copy from a NULL pointer");
     // do early return after nullptr check since we need to check that they are not both nullptrs
@@ -893,6 +899,8 @@ private:
   }
 };
 
+#undef PETSC_GCC_LINKER_UNDEFINED_REFERENCE_BUG_WORKAROUND
+
 #define PETSC_CUPM_INHERIT_INTERFACE_TYPEDEFS_USING(T) \
   PETSC_CUPM_IMPL_CLASS_HEADER(T); \
   using cupmReal_t   = typename ::Petsc::device::cupm::impl::Interface<T>::cupmReal_t; \
@@ -918,6 +926,14 @@ private:
   using ::Petsc::device::cupm::impl::Interface<T>::PetscCUPMLaunchKernel1D; \
   using ::Petsc::device::cupm::impl::Interface<T>::PetscDeviceCopyModeToCUPMMemcpyKind
 
+#if PetscDefined(HAVE_CUDA)
+extern template struct PETSC_SINGLE_LIBRARY_VISIBILITY_INTERNAL Interface<DeviceType::CUDA>;
+#endif
+
+#if PetscDefined(HAVE_HIP)
+extern template struct PETSC_SINGLE_LIBRARY_VISIBILITY_INTERNAL Interface<DeviceType::HIP>;
+#endif
+
 } // namespace impl
 
 } // namespace cupm
@@ -925,5 +941,3 @@ private:
 } // namespace device
 
 } // namespace Petsc
-
-#endif /* PETSCCUPMINTERFACE_HPP */

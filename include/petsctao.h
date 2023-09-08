@@ -1,5 +1,4 @@
-#ifndef PETSCTAO_H
-#define PETSCTAO_H
+#pragma once
 
 #include <petscsnes.h>
 
@@ -141,6 +140,45 @@ typedef enum {
   TAO_ALMM_PHR
 } TaoALMMType;
 PETSC_EXTERN const char *const TaoALMMTypes[];
+
+/*E
+     TaoBNCGType - Determine the conjugate gradient update formula used in the TAOBNCG algorithm.
+
+$  TAO_BNCG_GD         - basic gradient descent, no CG update
+$  TAO_BNCG_PCGD       - preconditioned/scaled gradient descent
+$  TAO_BNCG_HS         - Hestenes-Stiefel
+$  TAO_BNCG_FR         - Fletcher-Reeves
+$  TAO_BNCG_PRP        - Polak-Ribiere-Polyak (PRP)
+$  TAO_BNCG_PRP_PLUS   - Polak-Ribiere-Polyak "plus" (PRP+)
+$  TAO_BNCG_DY         - Dai-Yuan
+$  TAO_BNCG_HZ         - Hager-Zhang (CG_DESCENT 5.3)
+$  TAO_BNCG_DK         - Dai-Kou (2013)
+$  TAO_BNCG_KD         - Kou-Dai (2015)
+$  TAO_BNCG_SSML_BFGS  - Self-Scaling Memoryless BFGS (Perry-Shanno)
+$  TAO_BNCG_SSML_DFP   - Self-Scaling Memoryless DFP
+$  TAO_BNCG_SSML_BRDN  - Self-Scaling Memoryless (Symmetric) Broyden
+
+  Level: advanced
+
+.seealso: `Tao`, `TAOBNCG`, `TaoBNCGSetType()`, `TaoBNCGGetType()`
+E*/
+
+typedef enum {
+  TAO_BNCG_GD,
+  TAO_BNCG_PCGD,
+  TAO_BNCG_HS,
+  TAO_BNCG_FR,
+  TAO_BNCG_PRP,
+  TAO_BNCG_PRP_PLUS,
+  TAO_BNCG_DY,
+  TAO_BNCG_HZ,
+  TAO_BNCG_DK,
+  TAO_BNCG_KD,
+  TAO_BNCG_SSML_BFGS,
+  TAO_BNCG_SSML_DFP,
+  TAO_BNCG_SSML_BRDN
+} TaoBNCGType;
+PETSC_EXTERN const char *const TaoBNCGTypes[];
 
 /*J
         TaoType - String with the name of a `Tao` method
@@ -286,11 +324,11 @@ PETSC_EXTERN PetscErrorCode TaoGetSolutionStatus(Tao, PetscInt *, PetscReal *, P
 PETSC_EXTERN PetscErrorCode TaoSetConvergedReason(Tao, TaoConvergedReason);
 PETSC_EXTERN PetscErrorCode TaoSetSolution(Tao, Vec);
 PETSC_EXTERN PetscErrorCode TaoGetSolution(Tao, Vec *);
-PETSC_DEPRECATED_FUNCTION("Use TaoSetSolution() (since version 3.17)") static inline PetscErrorCode TaoSetInitialVector(Tao t, Vec v)
+PETSC_DEPRECATED_FUNCTION(3, 17, 0, "TaoSetSolution()", ) static inline PetscErrorCode TaoSetInitialVector(Tao t, Vec v)
 {
   return TaoSetSolution(t, v);
 }
-PETSC_DEPRECATED_FUNCTION("Use TaoGetSolution() (since version 3.17)") static inline PetscErrorCode TaoGetInitialVector(Tao t, Vec *v)
+PETSC_DEPRECATED_FUNCTION(3, 17, 0, "TaoGetSolution()", ) static inline PetscErrorCode TaoGetInitialVector(Tao t, Vec *v)
 {
   return TaoGetSolution(t, v);
 }
@@ -303,23 +341,23 @@ PETSC_EXTERN PetscErrorCode TaoSetObjectiveAndGradient(Tao, Vec, PetscErrorCode 
 PETSC_EXTERN PetscErrorCode TaoGetObjectiveAndGradient(Tao, Vec *, PetscErrorCode (**)(Tao, Vec, PetscReal *, Vec, void *), void **);
 PETSC_EXTERN PetscErrorCode TaoSetHessian(Tao, Mat, Mat, PetscErrorCode (*)(Tao, Vec, Mat, Mat, void *), void *);
 PETSC_EXTERN PetscErrorCode TaoGetHessian(Tao, Mat *, Mat *, PetscErrorCode (**)(Tao, Vec, Mat, Mat, void *), void **);
-PETSC_DEPRECATED_FUNCTION("Use TaoSetObjective() (since version 3.17)") static inline PetscErrorCode TaoSetObjectiveRoutine(Tao t, PetscErrorCode (*f)(Tao, Vec, PetscReal *, void *), void *c)
+PETSC_DEPRECATED_FUNCTION(3, 17, 0, "TaoSetObjective()", ) static inline PetscErrorCode TaoSetObjectiveRoutine(Tao t, PetscErrorCode (*f)(Tao, Vec, PetscReal *, void *), void *c)
 {
   return TaoSetObjective(t, f, c);
 }
-PETSC_DEPRECATED_FUNCTION("Use TaoGetGradient() (since version 3.17)") static inline PetscErrorCode TaoGetGradientVector(Tao t, Vec *v)
+PETSC_DEPRECATED_FUNCTION(3, 17, 0, "TaoGetGradient()", ) static inline PetscErrorCode TaoGetGradientVector(Tao t, Vec *v)
 {
   return TaoGetGradient(t, v, PETSC_NULLPTR, PETSC_NULLPTR);
 }
-PETSC_DEPRECATED_FUNCTION("Use TaoSetGradient() (since version 3.17)") static inline PetscErrorCode TaoSetGradientRoutine(Tao t, PetscErrorCode (*f)(Tao, Vec, Vec, void *), void *c)
+PETSC_DEPRECATED_FUNCTION(3, 17, 0, "TaoSetGradient()", ) static inline PetscErrorCode TaoSetGradientRoutine(Tao t, PetscErrorCode (*f)(Tao, Vec, Vec, void *), void *c)
 {
   return TaoSetGradient(t, PETSC_NULLPTR, f, c);
 }
-PETSC_DEPRECATED_FUNCTION("Use TaoSetObjectiveAndGradient() (since version 3.17)") static inline PetscErrorCode TaoSetObjectiveAndGradientRoutine(Tao t, PetscErrorCode (*f)(Tao, Vec, PetscReal *, Vec, void *), void *c)
+PETSC_DEPRECATED_FUNCTION(3, 17, 0, "TaoSetObjectiveAndGradient()", ) static inline PetscErrorCode TaoSetObjectiveAndGradientRoutine(Tao t, PetscErrorCode (*f)(Tao, Vec, PetscReal *, Vec, void *), void *c)
 {
   return TaoSetObjectiveAndGradient(t, PETSC_NULLPTR, f, c);
 }
-PETSC_DEPRECATED_FUNCTION("Use TaoSetHessian() (since version 3.17)") static inline PetscErrorCode TaoSetHessianRoutine(Tao t, Mat H, Mat P, PetscErrorCode (*f)(Tao, Vec, Mat, Mat, void *), void *c)
+PETSC_DEPRECATED_FUNCTION(3, 17, 0, "TaoSetHessian()", ) static inline PetscErrorCode TaoSetHessianRoutine(Tao t, Mat H, Mat P, PetscErrorCode (*f)(Tao, Vec, Mat, Mat, void *), void *c)
 {
   return TaoSetHessian(t, H, P, f, c);
 }
@@ -353,11 +391,11 @@ PETSC_EXTERN PetscErrorCode TaoShellSetSolve(Tao, PetscErrorCode (*)(Tao));
 PETSC_EXTERN PetscErrorCode TaoShellSetContext(Tao, void *);
 PETSC_EXTERN PetscErrorCode TaoShellGetContext(Tao, void *);
 
-PETSC_DEPRECATED_FUNCTION("Use TaoSetResidualRoutine() (since version 3.11)") static inline PetscErrorCode TaoSetSeparableObjectiveRoutine(Tao tao, Vec res, PetscErrorCode (*func)(Tao, Vec, Vec, void *), void *ctx)
+PETSC_DEPRECATED_FUNCTION(3, 11, 0, "TaoSetResidualRoutine()", ) static inline PetscErrorCode TaoSetSeparableObjectiveRoutine(Tao tao, Vec res, PetscErrorCode (*func)(Tao, Vec, Vec, void *), void *ctx)
 {
   return TaoSetResidualRoutine(tao, res, func, ctx);
 }
-PETSC_DEPRECATED_FUNCTION("Use TaoSetResidualWeights() (since version 3.11)") static inline PetscErrorCode TaoSetSeparableObjectiveWeights(Tao tao, Vec sigma_v, PetscInt n, PetscInt *rows, PetscInt *cols, PetscReal *vals)
+PETSC_DEPRECATED_FUNCTION(3, 11, 0, "TaoSetResidualWeights()", ) static inline PetscErrorCode TaoSetSeparableObjectiveWeights(Tao tao, Vec sigma_v, PetscInt n, PetscInt *rows, PetscInt *cols, PetscReal *vals)
 {
   return TaoSetResidualWeights(tao, sigma_v, n, rows, cols, vals);
 }
@@ -377,7 +415,7 @@ PETSC_EXTERN PetscErrorCode TaoIsObjectiveDefined(Tao, PetscBool *);
 PETSC_EXTERN PetscErrorCode TaoIsGradientDefined(Tao, PetscBool *);
 PETSC_EXTERN PetscErrorCode TaoIsObjectiveAndGradientDefined(Tao, PetscBool *);
 
-PETSC_DEPRECATED_FUNCTION("Use TaoComputeResidual() (since version 3.11)") static inline PetscErrorCode TaoComputeSeparableObjective(Tao tao, Vec X, Vec F)
+PETSC_DEPRECATED_FUNCTION(3, 11, 0, "TaoComputeResidual()", ) static inline PetscErrorCode TaoComputeSeparableObjective(Tao tao, Vec X, Vec F)
 {
   return TaoComputeResidual(tao, X, F);
 }
@@ -441,7 +479,7 @@ PETSC_EXTERN PetscErrorCode TaoGetConvergenceHistory(Tao, PetscReal **, PetscRea
 PETSC_EXTERN PetscErrorCode TaoSetMonitor(Tao, PetscErrorCode (*)(Tao, void *), void *, PetscErrorCode (*)(void **));
 PETSC_EXTERN PetscErrorCode TaoCancelMonitors(Tao);
 PETSC_EXTERN PetscErrorCode TaoMonitorDefault(Tao, void *);
-PETSC_DEPRECATED_FUNCTION("Use TaoMonitorDefault() (since version 3.9)") static inline PetscErrorCode TaoDefaultMonitor(Tao tao, void *ctx)
+PETSC_DEPRECATED_FUNCTION(3, 9, 0, "TaoMonitorDefault()", ) static inline PetscErrorCode TaoDefaultMonitor(Tao tao, void *ctx)
 {
   return TaoMonitorDefault(tao, ctx);
 }
@@ -473,6 +511,8 @@ PETSC_EXTERN PetscErrorCode TaoBRGNSetRegularizerWeight(Tao, PetscReal);
 PETSC_EXTERN PetscErrorCode TaoBRGNSetL1SmoothEpsilon(Tao, PetscReal);
 PETSC_EXTERN PetscErrorCode TaoBRGNSetDictionaryMatrix(Tao, Mat);
 PETSC_EXTERN PetscErrorCode TaoBRGNGetDampingVector(Tao, Vec *);
+PETSC_EXTERN PetscErrorCode TaoBNCGSetType(Tao, TaoBNCGType);
+PETSC_EXTERN PetscErrorCode TaoBNCGGetType(Tao, TaoBNCGType *);
 
 PETSC_EXTERN PetscErrorCode TaoADMMGetMisfitSubsolver(Tao, Tao *);
 PETSC_EXTERN PetscErrorCode TaoADMMGetRegularizationSubsolver(Tao, Tao *);
@@ -505,4 +545,10 @@ PETSC_EXTERN PetscErrorCode TaoALMMGetMultipliers(Tao, Vec *);
 PETSC_EXTERN PetscErrorCode TaoALMMSetMultipliers(Tao, Vec);
 PETSC_EXTERN PetscErrorCode TaoALMMGetPrimalIS(Tao, IS *, IS *);
 PETSC_EXTERN PetscErrorCode TaoALMMGetDualIS(Tao, IS *, IS *);
-#endif
+
+PETSC_EXTERN PetscErrorCode TaoVecGetSubVec(Vec, IS, TaoSubsetType, PetscReal, Vec *);
+PETSC_EXTERN PetscErrorCode TaoMatGetSubMat(Mat, IS, Vec, TaoSubsetType, Mat *);
+PETSC_EXTERN PetscErrorCode TaoGradientNorm(Tao, Vec, NormType, PetscReal *);
+PETSC_EXTERN PetscErrorCode TaoEstimateActiveBounds(Vec, Vec, Vec, Vec, Vec, Vec, PetscReal, PetscReal *, IS *, IS *, IS *, IS *, IS *);
+PETSC_EXTERN PetscErrorCode TaoBoundStep(Vec, Vec, Vec, IS, IS, IS, PetscReal, Vec);
+PETSC_EXTERN PetscErrorCode TaoBoundSolution(Vec, Vec, Vec, PetscReal, PetscInt *, Vec);

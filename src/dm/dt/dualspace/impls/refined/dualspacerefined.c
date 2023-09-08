@@ -6,17 +6,17 @@ typedef struct {
 } PetscDualSpace_Refined;
 
 /*@
-   PetscDualSpaceRefinedSetCellSpaces - Set the dual spaces for the closures of each of the cells
-   in the multicell `DM` of a `PetscDualSpace`
+  PetscDualSpaceRefinedSetCellSpaces - Set the dual spaces for the closures of each of the cells
+  in the multicell `DM` of a `PetscDualSpace`
 
-   Collective
+  Collective
 
-   Input Parameters:
-+  sp - a `PetscDualSpace`
--  cellSpaces - one `PetscDualSpace` for each of the cells.  The reference count of each cell space will be incremented,
+  Input Parameters:
++ sp         - a `PetscDualSpace`
+- cellSpaces - one `PetscDualSpace` for each of the cells.  The reference count of each cell space will be incremented,
                 so the user is still responsible for these spaces afterwards
 
-   Level: intermediate
+  Level: intermediate
 
 .seealso: `PETSCDUALSPACEREFINED`, `PetscDualSpace`, `PetscFERefine()`
 @*/
@@ -24,7 +24,7 @@ PetscErrorCode PetscDualSpaceRefinedSetCellSpaces(PetscDualSpace sp, const Petsc
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCDUALSPACE_CLASSID, 1);
-  PetscValidPointer(cellSpaces, 2);
+  PetscAssertPointer(cellSpaces, 2);
   PetscCheck(!sp->setupcalled, PetscObjectComm((PetscObject)sp), PETSC_ERR_ARG_WRONGSTATE, "Cannot change cell spaces after setup is called");
   PetscTryMethod(sp, "PetscDualSpaceRefinedSetCellSpaces_C", (PetscDualSpace, const PetscDualSpace[]), (sp, cellSpaces));
   PetscFunctionReturn(PETSC_SUCCESS);

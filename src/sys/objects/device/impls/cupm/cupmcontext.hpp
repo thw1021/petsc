@@ -1,5 +1,4 @@
-#ifndef PETSCDEVICECONTEXTCUPM_HPP
-#define PETSCDEVICECONTEXTCUPM_HPP
+#pragma once
 
 #include <petsc/private/deviceimpl.h>
 #include <petsc/private/cupmsolverinterface.hpp>
@@ -47,7 +46,7 @@ public:
   // header, but since we are using the power of templates it must be declared part of
   // this class to have easy access the same typedefs. Technically one can make a
   // templated struct outside the class but it's more code for the same result.
-  struct PetscDeviceContext_IMPLS : memory::PoolAllocated<PetscDeviceContext_IMPLS> {
+  struct PetscDeviceContext_IMPLS {
     stream_type stream{};
     cupmEvent_t event{};
     cupmEvent_t begin{}; // timer-only
@@ -92,9 +91,7 @@ private:
 
     PetscFunctionBegin;
     if (!handle) {
-      PetscLogEvent event;
-
-      PetscCall(PetscLogPauseCurrentEvent_Internal(&event));
+      PetscCall(PetscLogEventsPause());
       PetscCall(PetscLogEventBegin(CUPMBLAS_HANDLE_CREATE(), 0, 0, 0, 0));
       for (auto i = 0; i < 3; ++i) {
         const auto cberr = cupmBlasCreate(handle.ptr_to());
@@ -107,7 +104,7 @@ private:
         PetscCheck(cberr == CUPMBLAS_STATUS_SUCCESS, PETSC_COMM_SELF, PETSC_ERR_GPU_RESOURCE, "Unable to initialize %s", cupmBlasName());
       }
       PetscCall(PetscLogEventEnd(CUPMBLAS_HANDLE_CREATE(), 0, 0, 0, 0));
-      PetscCall(PetscLogEventResume_Internal(event));
+      PetscCall(PetscLogEventsResume());
     }
     PetscCallCUPMBLAS(cupmBlasSetStream(handle, dci->stream.get_stream()));
     dci->blas = handle;
@@ -121,9 +118,7 @@ private:
 
     PetscFunctionBegin;
     if (!handle) {
-      PetscLogEvent event;
-
-      PetscCall(PetscLogPauseCurrentEvent_Internal(&event));
+      PetscCall(PetscLogEventsPause());
       PetscCall(PetscLogEventBegin(CUPMSOLVER_HANDLE_CREATE(), 0, 0, 0, 0));
       for (auto i = 0; i < 3; ++i) {
         const auto cerr = cupmSolverCreate(&handle);
@@ -136,7 +131,7 @@ private:
         PetscCheck(cerr == CUPMSOLVER_STATUS_SUCCESS, PETSC_COMM_SELF, PETSC_ERR_GPU_RESOURCE, "Unable to initialize %s", cupmSolverName());
       }
       PetscCall(PetscLogEventEnd(CUPMSOLVER_HANDLE_CREATE(), 0, 0, 0, 0));
-      PetscCall(PetscLogEventResume_Internal(event));
+      PetscCall(PetscLogEventsResume());
     }
     PetscCallCUPMSOLVER(cupmSolverSetStream(handle, dci->stream.get_stream()));
     dci->solver = handle;
@@ -167,7 +162,6 @@ private:
         handle = nullptr;
       }
     }
-
     for (auto &&handle : solverhandles_) {
       if (handle) {
         PetscCallCUPMSOLVER(cupmSolverDestroy(handle));
@@ -500,7 +494,7 @@ template <DeviceType T>
 inline PetscErrorCode DeviceContext<T>::createEvent(PetscDeviceContext, PetscEvent event) noexcept
 {
   PetscFunctionBegin;
-  PetscCallCXX(event->data = new event_type());
+  PetscCallCXX(event->data = new event_type{});
   event->destroy = [](PetscEvent event) {
     PetscFunctionBegin;
     delete event_cast_(event);
@@ -553,5 +547,3 @@ using CUPMContextHip  = impl::DeviceContext<DeviceType::HIP>;
 } // namespace device
 
 } // namespace Petsc
-
-#endif // PETSCDEVICECONTEXTCUDA_HPP

@@ -102,7 +102,7 @@ cdef class IS(Object):
         cdef MPI_Comm ccomm = def_Comm(comm, PETSC_COMM_DEFAULT)
         cdef PetscIS newiset = NULL
         CHKERR( ISCreate(ccomm, &newiset) )
-        PetscCLEAR(self.obj); self.iset = newiset
+        CHKERR( PetscCLEAR(self.obj) ); self.iset = newiset
         return self
 
     def setType(self, is_type: IS.Type | str) -> None:
@@ -165,7 +165,7 @@ cdef class IS(Object):
         cdef PetscIS newiset = NULL
         indices = iarray_i(indices, &nidx, &idx)
         CHKERR( ISCreateGeneral(ccomm, nidx, idx, cm, &newiset) )
-        PetscCLEAR(self.obj); self.iset = newiset
+        CHKERR( PetscCLEAR(self.obj) ); self.iset = newiset
         return self
 
     def createBlock(
@@ -199,7 +199,7 @@ cdef class IS(Object):
         cdef PetscIS newiset = NULL
         indices = iarray_i(indices, &nidx, &idx)
         CHKERR( ISCreateBlock(ccomm, bs, nidx, idx, cm, &newiset) )
-        PetscCLEAR(self.obj); self.iset = newiset
+        CHKERR( PetscCLEAR(self.obj) ); self.iset = newiset
         return self
 
     def createStride(
@@ -235,7 +235,7 @@ cdef class IS(Object):
         cdef PetscInt cstep  = asInt(step)
         cdef PetscIS newiset = NULL
         CHKERR( ISCreateStride(ccomm, csize, cfirst, cstep, &newiset) )
-        PetscCLEAR(self.obj); self.iset = newiset
+        CHKERR( PetscCLEAR(self.obj) ); self.iset = newiset
         return self
 
     def duplicate(self) -> IS:
@@ -552,7 +552,7 @@ cdef class IS(Object):
     def equal(self, IS iset) -> bool:
         """Return whether the index sets have the same set of indices or not.
 
-        Collective on ``self``.
+        Collective.
 
         Parameters
         ----------
@@ -569,9 +569,9 @@ cdef class IS(Object):
         return toBool(flag)
 
     def sum(self, IS iset) -> IS:
-        """Compute the union of two (sorted) index sets.
+        """Return the union of two (sorted) index sets.
 
-        Sequential only.
+        Collective.
 
         Parameters
         ----------
@@ -588,9 +588,9 @@ cdef class IS(Object):
         return out
 
     def expand(self, IS iset) -> IS:
-        """Compute the union of two (possibly unsorted) index sets.
+        """Return the union of two (possibly unsorted) index sets.
 
-        Collective on ``self``.
+        Collective.
 
         To compute the union, `expand` concatenates the two index sets
         and removes any duplicates.
@@ -614,8 +614,10 @@ cdef class IS(Object):
         CHKERR( ISExpand(self.iset, iset.iset, &out.iset) )
         return out
 
-    def union(self, IS iset) -> IS: # XXX review this
-        """Compute the union of two (possibly unsorted) index sets.
+    def union(self, IS iset) -> IS:
+        """Return the union of two (possibly unsorted) index sets.
+
+        Collective.
 
         This function will call either `petsc.ISSum` or `petsc.ISExpand` depending
         on whether or not the input sets are already sorted.
@@ -648,7 +650,7 @@ cdef class IS(Object):
         return out
 
     def difference(self, IS iset: IS) -> IS:
-        """Compute the difference between two index sets.
+        """Return the difference between two index sets.
 
         Collective.
 
@@ -1217,7 +1219,7 @@ cdef class LGMap(Object):
         indices = iarray_i(indices, &nidx, &idx)
         CHKERR( ISLocalToGlobalMappingCreate(
                 ccomm, bs, nidx, idx, cm, &newlgm) )
-        PetscCLEAR(self.obj); self.lgm = newlgm
+        CHKERR( PetscCLEAR(self.obj) ); self.lgm = newlgm
         return self
 
     def createIS(self, IS iset) -> Self:
@@ -1238,7 +1240,7 @@ cdef class LGMap(Object):
         cdef PetscLGMap newlgm = NULL
         CHKERR( ISLocalToGlobalMappingCreateIS(
             iset.iset, &newlgm) )
-        PetscCLEAR(self.obj); self.lgm = newlgm
+        CHKERR( PetscCLEAR(self.obj) ); self.lgm = newlgm
         return self
 
     def createSF(self, SF sf, start: int) -> Self:
@@ -1261,7 +1263,7 @@ cdef class LGMap(Object):
         cdef PetscLGMap newlgm = NULL
         cdef PetscInt cstart = asInt(start)
         CHKERR( ISLocalToGlobalMappingCreateSF(sf.sf, cstart, &newlgm) )
-        PetscCLEAR(self.obj); self.lgm = newlgm
+        CHKERR( PetscCLEAR(self.obj) ); self.lgm = newlgm
         return self
 
     def getSize(self) -> int:

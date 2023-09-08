@@ -1,14 +1,14 @@
 /*
    Defines the interface functions for the Krylov subspace accelerators.
 */
-#ifndef PETSCKSP_H
-#define PETSCKSP_H
+#pragma once
 
 #include <petscpc.h>
 
 /* SUBMANSEC = KSP */
 
 PETSC_EXTERN PetscErrorCode KSPInitializePackage(void);
+PETSC_EXTERN PetscErrorCode KSPFinalizePackage(void);
 
 /*S
      KSP - Abstract PETSc object that manages all Krylov methods. This is the object that manages the
@@ -45,9 +45,9 @@ typedef const char *KSPType;
 #define KSPNASH       "nash"
 #define KSPSTCG       "stcg"
 #define KSPGLTR       "gltr"
-#define KSPCGNASH     PETSC_DEPRECATED_MACRO("GCC warning \"KSPCGNASH macro is deprecated use KSPNASH (since version 3.11)\"") "nash"
-#define KSPCGSTCG     PETSC_DEPRECATED_MACRO("GCC warning \"KSPCGSTCG macro is deprecated use KSPSTCG (since version 3.11)\"") "stcg"
-#define KSPCGGLTR     PETSC_DEPRECATED_MACRO("GCC warning \"KSPCGGLTR macro is deprecated use KSPSGLTR (since version 3.11)\"") "gltr"
+#define KSPCGNASH     PETSC_DEPRECATED_MACRO(3, 11, 0, "KSPNASH", ) "nash"
+#define KSPCGSTCG     PETSC_DEPRECATED_MACRO(3, 11, 0, "KSPSTCG", ) "stcg"
+#define KSPCGGLTR     PETSC_DEPRECATED_MACRO(3, 11, 0, "KSPSGLTR", ) "gltr"
 #define KSPFCG        "fcg"
 #define KSPPIPEFCG    "pipefcg"
 #define KSPGMRES      "gmres"
@@ -100,12 +100,12 @@ PETSC_EXTERN PetscErrorCode KSPSetUseExplicitTranspose(KSP, PetscBool);
 PETSC_EXTERN PetscErrorCode KSPMatSolve(KSP, Mat, Mat);
 PETSC_EXTERN PetscErrorCode KSPMatSolveTranspose(KSP, Mat, Mat);
 PETSC_EXTERN PetscErrorCode KSPSetMatSolveBatchSize(KSP, PetscInt);
-PETSC_DEPRECATED_FUNCTION("Use KSPSetMatSolveBatchSize() (since version 3.15)") static inline PetscErrorCode KSPSetMatSolveBlockSize(KSP ksp, PetscInt n)
+PETSC_DEPRECATED_FUNCTION(3, 15, 0, "KSPSetMatSolveBatchSize()", ) static inline PetscErrorCode KSPSetMatSolveBlockSize(KSP ksp, PetscInt n)
 {
   return KSPSetMatSolveBatchSize(ksp, n);
 }
 PETSC_EXTERN PetscErrorCode KSPGetMatSolveBatchSize(KSP, PetscInt *);
-PETSC_DEPRECATED_FUNCTION("Use KSPGetMatSolveBatchSize() (since version 3.15)") static inline PetscErrorCode KSPGetMatSolveBlockSize(KSP ksp, PetscInt *n)
+PETSC_DEPRECATED_FUNCTION(3, 15, 0, "KSPGetMatSolveBatchSize()", ) static inline PetscErrorCode KSPGetMatSolveBlockSize(KSP ksp, PetscInt *n)
 {
   return KSPGetMatSolveBatchSize(ksp, n);
 }
@@ -146,7 +146,7 @@ PETSC_EXTERN PetscErrorCode KSPGetResidualNorm(KSP, PetscReal *);
 PETSC_EXTERN PetscErrorCode KSPGetIterationNumber(KSP, PetscInt *);
 PETSC_EXTERN PetscErrorCode KSPGetTotalIterations(KSP, PetscInt *);
 PETSC_EXTERN PetscErrorCode KSPCreateVecs(KSP, PetscInt, Vec **, PetscInt, Vec **);
-PETSC_DEPRECATED_FUNCTION("Use KSPCreateVecs() (since version 3.6)") static inline PetscErrorCode KSPGetVecs(KSP ksp, PetscInt n, Vec **x, PetscInt m, Vec **y)
+PETSC_DEPRECATED_FUNCTION(3, 6, 0, "KSPCreateVecs()", ) static inline PetscErrorCode KSPGetVecs(KSP ksp, PetscInt n, Vec **x, PetscInt m, Vec **y)
 {
   return KSPCreateVecs(ksp, n, x, m, y);
 }
@@ -156,6 +156,8 @@ PETSC_EXTERN PetscErrorCode KSPSetPostSolve(KSP, PetscErrorCode (*)(KSP, Vec, Ve
 
 PETSC_EXTERN PetscErrorCode KSPSetPC(KSP, PC);
 PETSC_EXTERN PetscErrorCode KSPGetPC(KSP, PC *);
+PETSC_EXTERN PetscErrorCode KSPSetNestLevel(KSP, PetscInt);
+PETSC_EXTERN PetscErrorCode KSPGetNestLevel(KSP, PetscInt *);
 
 PETSC_EXTERN PetscErrorCode KSPMonitor(KSP, PetscInt, PetscReal);
 PETSC_EXTERN PetscErrorCode KSPMonitorSet(KSP, PetscErrorCode (*)(KSP, PetscInt, PetscReal, void *), void *, PetscErrorCode (*)(void **));
@@ -266,6 +268,7 @@ PETSC_EXTERN PetscErrorCode KSPPIPEGCRSetTruncationType(KSP, KSPFCDTruncationTyp
 PETSC_EXTERN PetscErrorCode KSPPIPEGCRGetTruncationType(KSP, KSPFCDTruncationType *);
 PETSC_EXTERN PetscErrorCode KSPPIPEGCRSetUnrollW(KSP, PetscBool);
 PETSC_EXTERN PetscErrorCode KSPPIPEGCRGetUnrollW(KSP, PetscBool *);
+PETSC_EXTERN PetscErrorCode KSPPIPEGCRSetModifyPC(KSP, PetscErrorCode (*)(KSP, PetscInt, PetscReal, void *), void *, PetscErrorCode (*)(void *));
 
 PETSC_EXTERN PetscErrorCode KSPGMRESSetRestart(KSP, PetscInt);
 PETSC_EXTERN PetscErrorCode KSPGMRESGetRestart(KSP, PetscInt *);
@@ -299,16 +302,16 @@ PETSC_EXTERN PetscErrorCode KSPFETIDPSetPressureOperator(KSP, Mat);
 PETSC_EXTERN PetscErrorCode KSPHPDDMSetDeflationMat(KSP, Mat);
 PETSC_EXTERN PetscErrorCode KSPHPDDMGetDeflationMat(KSP, Mat *);
 #if PetscDefined(HAVE_HPDDM)
-PETSC_DEPRECATED_FUNCTION("Use KSPHPDDMSetDeflationMat() (since version 3.18)") static inline PetscErrorCode KSPHPDDMSetDeflationSpace(KSP ksp, Mat U)
+PETSC_DEPRECATED_FUNCTION(3, 18, 0, "KSPHPDDMSetDeflationMat()", ) static inline PetscErrorCode KSPHPDDMSetDeflationSpace(KSP ksp, Mat U)
 {
   return KSPHPDDMSetDeflationMat(ksp, U);
 }
-PETSC_DEPRECATED_FUNCTION("Use KSPHPDDMGetDeflationMat() (since version 3.18)") static inline PetscErrorCode KSPHPDDMGetDeflationSpace(KSP ksp, Mat *U)
+PETSC_DEPRECATED_FUNCTION(3, 18, 0, "KSPHPDDMGetDeflationMat()", ) static inline PetscErrorCode KSPHPDDMGetDeflationSpace(KSP ksp, Mat *U)
 {
   return KSPHPDDMGetDeflationMat(ksp, U);
 }
 #endif
-PETSC_DEPRECATED_FUNCTION("Use KSPMatSolve() (since version 3.14)") static inline PetscErrorCode KSPHPDDMMatSolve(KSP ksp, Mat B, Mat X)
+PETSC_DEPRECATED_FUNCTION(3, 14, 0, "KSPMatSolve()", ) static inline PetscErrorCode KSPHPDDMMatSolve(KSP ksp, Mat B, Mat X)
 {
   return KSPMatSolve(ksp, B, X);
 }
@@ -450,7 +453,6 @@ PETSC_EXTERN PetscErrorCode KSPBCGSLSetUsePseudoinverse(KSP, PetscBool);
 
 PETSC_EXTERN PetscErrorCode KSPSetFromOptions(KSP);
 PETSC_EXTERN PetscErrorCode KSPResetFromOptions(KSP);
-PETSC_EXTERN PetscErrorCode KSPAddOptionsChecker(PetscErrorCode (*)(KSP));
 
 PETSC_EXTERN PetscErrorCode KSPMonitorSetFromOptions(KSP, const char[], const char[], void *);
 PETSC_EXTERN PetscErrorCode KSPMonitorLGCreate(MPI_Comm, const char[], const char[], const char[], PetscInt, const char *[], int, int, int, int, PetscDrawLG *);
@@ -475,15 +477,15 @@ PETSC_EXTERN PetscErrorCode KSPMonitorSolutionDrawLG(KSP, PetscInt, PetscReal, P
 PETSC_EXTERN PetscErrorCode KSPMonitorSolutionDrawLGCreate(PetscViewer, PetscViewerFormat, void *, PetscViewerAndFormat **);
 PETSC_EXTERN PetscErrorCode KSPMonitorSingularValue(KSP, PetscInt, PetscReal, PetscViewerAndFormat *);
 PETSC_EXTERN PetscErrorCode KSPMonitorSingularValueCreate(PetscViewer, PetscViewerFormat, void *, PetscViewerAndFormat **);
-PETSC_DEPRECATED_FUNCTION("Use KSPMonitorResidual() (since version 3.15)") static inline PetscErrorCode KSPMonitorDefault(KSP ksp, PetscInt n, PetscReal rnorm, PetscViewerAndFormat *vf)
+PETSC_DEPRECATED_FUNCTION(3, 15, 0, "KSPMonitorResidual()", ) static inline PetscErrorCode KSPMonitorDefault(KSP ksp, PetscInt n, PetscReal rnorm, PetscViewerAndFormat *vf)
 {
   return KSPMonitorResidual(ksp, n, rnorm, vf);
 }
-PETSC_DEPRECATED_FUNCTION("Use KSPMonitorTrueResidual() (since version 3.15)") static inline PetscErrorCode KSPMonitorTrueResidualNorm(KSP ksp, PetscInt n, PetscReal rnorm, PetscViewerAndFormat *vf)
+PETSC_DEPRECATED_FUNCTION(3, 15, 0, "KSPMonitorTrueResidual()", ) static inline PetscErrorCode KSPMonitorTrueResidualNorm(KSP ksp, PetscInt n, PetscReal rnorm, PetscViewerAndFormat *vf)
 {
   return KSPMonitorTrueResidual(ksp, n, rnorm, vf);
 }
-PETSC_DEPRECATED_FUNCTION("Use KSPMonitorTrueResidualMax() (since version 3.15)") static inline PetscErrorCode KSPMonitorTrueResidualMaxNorm(KSP ksp, PetscInt n, PetscReal rnorm, PetscViewerAndFormat *vf)
+PETSC_DEPRECATED_FUNCTION(3, 15, 0, "KSPMonitorTrueResidualMax()", ) static inline PetscErrorCode KSPMonitorTrueResidualMaxNorm(KSP ksp, PetscInt n, PetscReal rnorm, PetscViewerAndFormat *vf)
 {
   return KSPMonitorTrueResidualMax(ksp, n, rnorm, vf);
 }
@@ -521,11 +523,11 @@ PETSC_EXTERN PetscErrorCode KSPConvergedReasonViewFromOptions(KSP);
 PETSC_EXTERN PetscErrorCode KSPConvergedReasonViewCancel(KSP);
 PETSC_EXTERN PetscErrorCode KSPConvergedRateView(KSP, PetscViewer);
 
-PETSC_DEPRECATED_FUNCTION("Use KSPConvergedReasonView() (since version 3.14)") static inline PetscErrorCode KSPReasonView(KSP ksp, PetscViewer v)
+PETSC_DEPRECATED_FUNCTION(3, 14, 0, "KSPConvergedReasonView()", ) static inline PetscErrorCode KSPReasonView(KSP ksp, PetscViewer v)
 {
   return KSPConvergedReasonView(ksp, v);
 }
-PETSC_DEPRECATED_FUNCTION("Use KSPConvergedReasonViewFromOptions() (since version 3.14)") static inline PetscErrorCode KSPReasonViewFromOptions(KSP ksp)
+PETSC_DEPRECATED_FUNCTION(3, 14, 0, "KSPConvergedReasonViewFromOptions()", ) static inline PetscErrorCode KSPReasonViewFromOptions(KSP ksp)
 {
   return KSPConvergedReasonViewFromOptions(ksp);
 }
@@ -623,9 +625,9 @@ PETSC_EXTERN PetscErrorCode KSPSetSupportedNorm(KSP ksp, KSPNormType, PCSide, Pe
 PETSC_EXTERN PetscErrorCode KSPSetCheckNormIteration(KSP, PetscInt);
 PETSC_EXTERN PetscErrorCode KSPSetLagNorm(KSP, PetscBool);
 
-#define KSP_CONVERGED_CG_NEG_CURVE_DEPRECATED   KSP_CONVERGED_CG_NEG_CURVE PETSC_DEPRECATED_ENUM("Use KSP_CONVERGED_NEG_CURVE (since version 3.19)")
-#define KSP_CONVERGED_CG_CONSTRAINED_DEPRECATED KSP_CONVERGED_CG_CONSTRAINED PETSC_DEPRECATED_ENUM("Use KSP_CONVERGED_STEP_LENGTH (since version 3.19)")
-#define KSP_DIVERGED_PCSETUP_FAILED_DEPRECATED  KSP_DIVERGED_PCSETUP_FAILED PETSC_DEPRECATED_ENUM("Use KSP_DIVERGED_PC_FAILED (since version 3.11)")
+#define KSP_CONVERGED_CG_NEG_CURVE_DEPRECATED   KSP_CONVERGED_CG_NEG_CURVE PETSC_DEPRECATED_ENUM(3, 19, 0, "KSP_CONVERGED_NEG_CURVE", )
+#define KSP_CONVERGED_CG_CONSTRAINED_DEPRECATED KSP_CONVERGED_CG_CONSTRAINED PETSC_DEPRECATED_ENUM(3, 19, 0, "KSP_CONVERGED_STEP_LENGTH", )
+#define KSP_DIVERGED_PCSETUP_FAILED_DEPRECATED  KSP_DIVERGED_PCSETUP_FAILED PETSC_DEPRECATED_ENUM(3, 11, 0, "KSP_DIVERGED_PC_FAILED", )
 /*E
     KSPConvergedReason - reason a Krylov method was determined to have converged or diverged
 
@@ -637,7 +639,7 @@ PETSC_EXTERN PetscErrorCode KSPSetLagNorm(KSP, PetscBool);
 .  `KSP_CONVERGED_ITS` - requested number of iterations
 .  `KSP_CONVERGED_NEG_CURVE` - see note below
 .  `KSP_CONVERGED_STEP_LENGTH` - see note below
-.  `KSP_CONVERGED_HAPPY_BREAKDOWN` - happy breakdown (meaning early convergence of the `KSPType` occurred.
+.  `KSP_CONVERGED_HAPPY_BREAKDOWN` - happy breakdown (meaning early convergence of the `KSPType` occurred).
 .  `KSP_DIVERGED_NULL` - breakdown when solving the Hessenberg system within GMRES
 .  `KSP_DIVERGED_ITS` - requested number of iterations
 .  `KSP_DIVERGED_DTOL` - large increase in the residual norm
@@ -652,8 +654,8 @@ PETSC_EXTERN PetscErrorCode KSPSetLagNorm(KSP, PetscBool);
    Level: beginner
 
    Note:
-   The values  `KSP_CONVERGED_NEG_CURVE`, and `KSP_CONVERGED_STEP_LENGTH` are returned only by the special `KSPNASH`,
-   `KSPSTCG`, and `KSPGLTR` solvers which are used by the `SNESNEWTONTR` (trust region) solver.
+   The values `KSP_CONVERGED_NEG_CURVE`, and `KSP_CONVERGED_STEP_LENGTH` are returned only by `KSPCG`, `KSPMINRES` and by
+   the special `KSPNASH`, `KSPSTCG`, and `KSPGLTR` solvers which are used by the `SNESNEWTONTR` (trust region) solver.
 
    Developer Notes:
    This must match the values in petsc/finclude/petscksp.h
@@ -835,33 +837,33 @@ PETSC_EXTERN PetscErrorCode KSPComputeConvergenceRate(KSP, PetscReal *, PetscRea
 PETSC_EXTERN PetscErrorCode KSPSetConvergedNegativeCurvature(KSP, PetscBool);
 PETSC_EXTERN PetscErrorCode KSPGetConvergedNegativeCurvature(KSP, PetscBool *);
 
-PETSC_DEPRECATED_FUNCTION("Use KSPConvergedDefault() (since version 3.5)") static inline void KSPDefaultConverged(void)
+PETSC_DEPRECATED_FUNCTION(3, 5, 0, "KSPConvergedDefault()", ) static inline void KSPDefaultConverged(void)
 { /* never called */
 }
 #define KSPDefaultConverged (KSPDefaultConverged, KSPConvergedDefault)
-PETSC_DEPRECATED_FUNCTION("Use KSPConvergedDefaultDestroy() (since version 3.5)") static inline void KSPDefaultConvergedDestroy(void)
+PETSC_DEPRECATED_FUNCTION(3, 5, 0, "KSPConvergedDefaultDestroy()", ) static inline void KSPDefaultConvergedDestroy(void)
 { /* never called */
 }
 #define KSPDefaultConvergedDestroy (KSPDefaultConvergedDestroy, KSPConvergedDefaultDestroy)
-PETSC_DEPRECATED_FUNCTION("Use KSPConvergedDefaultCreate() (since version 3.5)") static inline void KSPDefaultConvergedCreate(void)
+PETSC_DEPRECATED_FUNCTION(3, 5, 0, "KSPConvergedDefaultCreate()", ) static inline void KSPDefaultConvergedCreate(void)
 { /* never called */
 }
 #define KSPDefaultConvergedCreate (KSPDefaultConvergedCreate, KSPConvergedDefaultCreate)
-PETSC_DEPRECATED_FUNCTION("Use KSPConvergedDefaultSetUIRNorm() (since version 3.5)") static inline void KSPDefaultConvergedSetUIRNorm(void)
+PETSC_DEPRECATED_FUNCTION(3, 5, 0, "KSPConvergedDefaultSetUIRNorm()", ) static inline void KSPDefaultConvergedSetUIRNorm(void)
 { /* never called */
 }
 #define KSPDefaultConvergedSetUIRNorm (KSPDefaultConvergedSetUIRNorm, KSPConvergedDefaultSetUIRNorm)
-PETSC_DEPRECATED_FUNCTION("Use KSPConvergedDefaultSetUMIRNorm() (since version 3.5)") static inline void KSPDefaultConvergedSetUMIRNorm(void)
+PETSC_DEPRECATED_FUNCTION(3, 5, 0, "KSPConvergedDefaultSetUMIRNorm()", ) static inline void KSPDefaultConvergedSetUMIRNorm(void)
 { /* never called */
 }
 #define KSPDefaultConvergedSetUMIRNorm (KSPDefaultConvergedSetUMIRNorm, KSPConvergedDefaultSetUMIRNorm)
-PETSC_DEPRECATED_FUNCTION("Use KSPConvergedSkip() (since version 3.5)") static inline void KSPSkipConverged(void)
+PETSC_DEPRECATED_FUNCTION(3, 5, 0, "KSPConvergedSkip()", ) static inline void KSPSkipConverged(void)
 { /* never called */
 }
 #define KSPSkipConverged (KSPSkipConverged, KSPConvergedSkip)
 
 PETSC_EXTERN PetscErrorCode KSPComputeOperator(KSP, MatType, Mat *);
-PETSC_DEPRECATED_FUNCTION("Use KSPComputeOperator() (since version 3.12)") static inline PetscErrorCode KSPComputeExplicitOperator(KSP A, Mat *B)
+PETSC_DEPRECATED_FUNCTION(3, 12, 0, "KSPComputeOperator()", ) static inline PetscErrorCode KSPComputeExplicitOperator(KSP A, Mat *B)
 {
   return KSPComputeOperator(A, PETSC_NULLPTR, B);
 }
@@ -893,11 +895,11 @@ PETSC_EXTERN PetscErrorCode KSPCGGetObjFcn(KSP, PetscReal *);
 
 PETSC_EXTERN PetscErrorCode KSPGLTRGetMinEig(KSP, PetscReal *);
 PETSC_EXTERN PetscErrorCode KSPGLTRGetLambda(KSP, PetscReal *);
-PETSC_DEPRECATED_FUNCTION("Use KSPGLTRGetMinEig (since v3.12)") static inline PetscErrorCode KSPCGGLTRGetMinEig(KSP ksp, PetscReal *x)
+PETSC_DEPRECATED_FUNCTION(3, 12, 0, "KSPGLTRGetMinEig()", ) static inline PetscErrorCode KSPCGGLTRGetMinEig(KSP ksp, PetscReal *x)
 {
   return KSPGLTRGetMinEig(ksp, x);
 }
-PETSC_DEPRECATED_FUNCTION("Use KSPGLTRGetLambda (since v3.12)") static inline PetscErrorCode KSPCGGLTRGetLambda(KSP ksp, PetscReal *x)
+PETSC_DEPRECATED_FUNCTION(3, 12, 0, "KSPGLTRGetLambda()", ) static inline PetscErrorCode KSPCGGLTRGetLambda(KSP ksp, PetscReal *x)
 {
   return KSPGLTRGetLambda(ksp, x);
 }
@@ -1042,7 +1044,10 @@ PETSC_EXTERN PetscErrorCode DMKSPGetComputeInitialGuess(DM, PetscErrorCode (**)(
 
 PETSC_EXTERN PetscErrorCode DMGlobalToLocalSolve(DM, Vec, Vec);
 PETSC_EXTERN PetscErrorCode DMProjectField(DM, PetscReal, Vec, void (**)(PetscInt, PetscInt, PetscInt, const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]), InsertMode, Vec);
+PETSC_EXTERN PetscErrorCode DMSwarmProjectFields(DM, PetscInt, const char **, Vec[], ScatterMode mode);
 
 PETSC_EXTERN PetscErrorCode DMAdaptInterpolator(DM, DM, Mat, KSP, Mat, Mat, Mat *, void *);
 PETSC_EXTERN PetscErrorCode DMCheckInterpolator(DM, Mat, Mat, Mat, PetscReal);
-#endif
+
+PETSC_EXTERN PetscErrorCode PCBJKOKKOSSetKSP(PC, KSP);
+PETSC_EXTERN PetscErrorCode PCBJKOKKOSGetKSP(PC, KSP *);

@@ -15,6 +15,7 @@ const char QLPCitation[] = "@article{choi2011minres,\n"
 
 typedef struct {
   PetscReal         haptol;
+  PetscReal         nutol;
   PetscBool         qlp;
   PetscReal         maxxnorm;
   PetscReal         TranCond;
@@ -92,13 +93,14 @@ static inline void SymOrtho(PetscReal a, PetscReal b, PetscReal *c, PetscReal *s
 */
 static PetscErrorCode KSPSolve_MINRES(KSP ksp)
 {
+  KSP_MINRES *minres = (KSP_MINRES *)ksp->data;
   Mat         Amat;
   Vec         X, B, R1, R2, R3, V, W, WL, WL2, XL2, RN;
   PetscReal   alpha, beta, beta1, betan, betal;
   PetscBool   diagonalscale;
   PetscReal   zero = 0.0, dbar, dltan = 0.0, dlta, cs = -1.0, sn = 0.0, epln, eplnn = 0.0, gbar, dlta_QLP;
   PetscReal   gamal3 = 0.0, gamal2 = 0.0, gamal = 0.0, gama = 0.0, gama_tmp;
-  PetscReal   taul2 = 0.0, taul = 0.0, tau = 0.0, phi;
+  PetscReal   taul2 = 0.0, taul = 0.0, tau = 0.0, phi, phi0, phir;
   PetscReal   Axnorm, xnorm, xnorm_tmp, xl2norm = 0.0, pnorm, Anorm = 0.0, gmin = 0.0, gminl = 0.0, gminl2 = 0.0;
   PetscReal   Acond = 1.0, Acondl = 0.0, rnorml, rnorm, rootl, relAresl, relres, relresl, Arnorml, Anorml = 0.0, xnorml = 0.0;
   PetscReal   epsx, realmin = PETSC_REAL_MIN, eps = PETSC_MACHINE_EPSILON;
@@ -107,9 +109,7 @@ static PetscErrorCode KSPSolve_MINRES(KSP ksp)
   PetscReal   ul4 = 0.0, ul3 = 0.0, ul2 = 0.0, ul = 0.0, u = 0.0, ul_QLP = 0.0, u_QLP = 0.0;
   PetscReal   vepln_QLP = 0.0, gamal_QLP = 0.0, gama_QLP = 0.0, gamal_tmp, abs_gama;
   PetscInt    flag = -2, flag0 = -2, QLPiter = 0;
-  PetscInt    stored_max_it, eigs;
-  PetscScalar *e = NULL, *d = NULL;
-  KSP_MINRES *minres = (KSP_MINRES *)ksp->data;
+
   PetscFunctionBegin;
   PetscCall(PetscCitationsRegister(QLPCitation, &QLPcite));
   PetscCall(PCGetDiagonalScale(ksp->pc, &diagonalscale));
@@ -167,6 +167,7 @@ static PetscErrorCode KSPSolve_MINRES(KSP ksp)
 
   relres = rnorm / beta1;
   betan  = beta1;
+  phi0   = beta1;
   phi    = beta1;
   betan  = beta1;
   beta   = 0.0;
@@ -227,6 +228,22 @@ static PetscErrorCode KSPSolve_MINRES(KSP ksp)
     gamal2 = gamal;
     gamal  = gama;
     SymOrtho(gbar, betan, &cs, &sn, &gama);
+
+    // Inexactness condition from https://arxiv.org/pdf/2208.07095.pdf
+    rootl = Norm3(gbar, dltan, zero);
+    phir  = PetscSqr(phi0 / phi);
+    if (ksp->its > 2 && minres->nutol > 0.0) {
+      PetscReal tmp;
+
+      phir = PetscSqrtReal(phir - 1.0);
+      tmp  = rootl / phir;
+      PetscCall(PetscInfo(ksp, "it = %" PetscInt_FMT ": inexact check %g (%g / %g)\n", ksp->its - 2, (double)tmp, (double)rootl, (double)phir));
+      if (tmp < minres->nutol) {
+        ksp->its--;
+        ksp->reason = KSP_CONVERGED_RTOL;
+        break;
+      }
+    }
 
     gama_tmp = gama;
     taul2    = taul;
@@ -375,7 +392,6 @@ static PetscErrorCode KSPSolve_MINRES(KSP ksp)
     relresl = relres;
     if (flag != 9) rnorm = phi;
     relres   = rnorm / (Anorm * xnorm + beta1);
-    rootl    = Norm3(gbar, dltan, zero);
     Arnorml  = rnorml * rootl;
     relAresl = rootl / Anorm;
 
@@ -701,23 +717,24 @@ static PetscErrorCode KSPSetFromOptions_MINRES(KSP ksp, PetscOptionItems *PetscO
   PetscCall(PetscOptionsReal("-ksp_minres_radius", "Maximum allowed norm of solution", "KSPMINRESSetRadius", minres->maxxnorm, &minres->maxxnorm, NULL));
   PetscCall(PetscOptionsReal("-ksp_minres_trancond", "Threshold on condition number to dynamically switch to QLP", "None", minres->TranCond, &minres->TranCond, NULL));
   PetscCall(PetscOptionsGetViewer(PetscObjectComm((PetscObject)ksp), PetscOptionsObject->options, PetscOptionsObject->prefix, "-ksp_minres_monitor", &minres->viewer, &minres->viewer_fmt, &minres->monitor));
+  PetscCall(PetscOptionsReal("-ksp_minres_nutol", "Inexactness tolerance", NULL, minres->nutol, &minres->nutol, NULL));
   PetscOptionsHeadEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-    KSPMINRESSetUseQLP - Use the QLP variant of the algorithm.
+  KSPMINRESSetUseQLP - Use the QLP variant of the algorithm.
 
-    Logically Collective
+  Logically Collective
 
-    Input Parameters:
-+   ksp - the iterative context
--   qlp - a Boolean indicating if the QLP variant should be used
+  Input Parameters:
++ ksp - the iterative context
+- qlp - a Boolean indicating if the QLP variant should be used
 
-    Level: beginner
+  Level: beginner
 
-    Note:
-    By default, the QLP variant is not used.
+  Note:
+  By default, the QLP variant is not used.
 
 .seealso: [](ch_ksp), `KSP`, `KSPMINRES`, `KSPMINRESGetUseQLP()`
 @*/
@@ -731,18 +748,18 @@ PetscErrorCode KSPMINRESSetUseQLP(KSP ksp, PetscBool qlp)
 }
 
 /*@
-    KSPMINRESSetRadius - Set the maximum solution norm allowed.
+  KSPMINRESSetRadius - Set the maximum solution norm allowed.
 
-    Logically Collective
+  Logically Collective
 
-    Input Parameters:
-+   ksp - the iterative context
--   radius - the value
+  Input Parameters:
++ ksp    - the iterative context
+- radius - the value
 
-    Level: beginner
+  Level: beginner
 
-    Options Database Key:
-.   -ksp_minres_radius <real> - maximum allowed solution norm
+  Options Database Key:
+. -ksp_minres_radius <real> - maximum allowed solution norm
 
 .seealso: [](ch_ksp), `KSP`, `KSPMINRES`, `KSPMINRESSetUseQLP()`
 @*/
@@ -756,17 +773,17 @@ PetscErrorCode KSPMINRESSetRadius(KSP ksp, PetscReal radius)
 }
 
 /*@
-    KSPMINRESGetUseQLP - Get the flag for the QLP variant.
+  KSPMINRESGetUseQLP - Get the flag for the QLP variant.
 
-    Logically Collective
+  Logically Collective
 
-    Input Parameter:
-.   ksp - the iterative context
+  Input Parameter:
+. ksp - the iterative context
 
-    Output Parameter:
-.   qlp - a Boolean indicating if the QLP variant is used
+  Output Parameter:
+. qlp - a Boolean indicating if the QLP variant is used
 
-    Level: beginner
+  Level: beginner
 
 .seealso: [](ch_ksp), `KSP`, `KSPMINRES`, `KSPMINRESSetUseQLP()`
 @*/
@@ -774,7 +791,7 @@ PetscErrorCode KSPMINRESGetUseQLP(KSP ksp, PetscBool *qlp)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
-  PetscValidBoolPointer(qlp, 2);
+  PetscAssertPointer(qlp, 2);
   PetscUseMethod(ksp, "KSPMINRESGetUseQLP_C", (KSP, PetscBool *), (ksp, qlp));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -786,7 +803,8 @@ PetscErrorCode KSPMINRESGetUseQLP(KSP ksp, PetscBool *qlp)
 +   -ksp_minres_qlp <bool> - activates QLP code
 .   -ksp_minres_radius <real> - maximum allowed solution norm
 .   -ksp_minres_trancond <real> - threshold on condition number to dynamically switch to QLP iterations when QLP has been activated
--   -ksp_minres_monitor - monitors convergence quantities
+.   -ksp_minres_monitor - monitors convergence quantities
+-   -ksp_minres_nutol <real> - inexactness tolerance (see https://arxiv.org/pdf/2208.07095.pdf)
 
    Level: beginner
 
@@ -797,7 +815,8 @@ PetscErrorCode KSPMINRESGetUseQLP(KSP ksp, PetscBool *qlp)
 
    Reference:
 + * - Paige & Saunders, Solution of sparse indefinite systems of linear equations, SIAM J. Numer. Anal. 12, 1975.
-- * - S.-C. T. Choi, C. C. Paige and M. A. Saunders. MINRES-QLP: A Krylov subspace method for indefinite or singular symmetric systems, SIAM J. Sci. Comput. 33:4, 2011.
+. * - S.-C. T. Choi, C. C. Paige and M. A. Saunders. MINRES-QLP: A Krylov subspace method for indefinite or singular symmetric systems, SIAM J. Sci. Comput. 33:4, 2011.
+- * - Y. Liu and F. Roosta. A Newton-MR algorithm with complexity guarantees for nonconvex smooth unconstrained optimization. https://arxiv.org/pdf/2208.07095.pdf
 
    Original MINRES code contributed by: Robert Scheichl: maprs@maths.bath.ac.uk
    QLP variant adapted from: https://stanford.edu/group/SOL/software/minresqlp/minresqlp-matlab/CPS11.zip

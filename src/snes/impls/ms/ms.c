@@ -91,11 +91,11 @@ PetscErrorCode SNESMSRegisterAll(void)
 }
 
 /*@C
-   SNESMSRegisterDestroy - Frees the list of schemes that were registered by `SNESMSRegister()`.
+  SNESMSRegisterDestroy - Frees the list of schemes that were registered by `SNESMSRegister()`.
 
-   Not Collective
+  Not Collective
 
-   Level: developer
+  Level: developer
 
 .seealso: `SNESMSRegister()`, `SNESMSRegisterAll()`
 @*/
@@ -155,29 +155,29 @@ PetscErrorCode SNESMSFinalizePackage(void)
 }
 
 /*@C
-   SNESMSRegister - register a multistage scheme for `SNESMS`
+  SNESMSRegister - register a multistage scheme for `SNESMS`
 
-   Logically Collective
+  Logically Collective
 
-   Input Parameters:
-+  name - identifier for method
-.  nstages - number of stages
-.  nregisters - number of registers used by low-storage implementation
-.  stability - scaled stability region
-.  gamma - coefficients, see Ketcheson's paper
-.  delta - coefficients, see Ketcheson's paper
--  betasub - subdiagonal of Shu-Osher form
+  Input Parameters:
++ name       - identifier for method
+. nstages    - number of stages
+. nregisters - number of registers used by low-storage implementation
+. stability  - scaled stability region
+. gamma      - coefficients, see Ketcheson's paper
+. delta      - coefficients, see Ketcheson's paper
+- betasub    - subdiagonal of Shu-Osher form
 
-   Level: advanced
+  Level: advanced
 
-   Notes:
-   The notation is described in Ketcheson (2010) Runge-Kutta methods with minimum storage implementations.
+  Notes:
+  The notation is described in Ketcheson (2010) Runge-Kutta methods with minimum storage implementations.
 
-   Many multistage schemes are of the form
+  Many multistage schemes are of the form
    $ X_0 = X^{(n)}
    $ X_k = X_0 + \alpha_k * F(X_{k-1}), k = 1,\ldots,s
    $ X^{(n+1)} = X_s
-   These methods can be registered with
+  These methods can be registered with
 .vb
    SNESMSRegister("name",s,1,stability,NULL,NULL,alpha);
 .ve
@@ -190,16 +190,16 @@ PetscErrorCode SNESMSRegister(SNESMSType name, PetscInt nstages, PetscInt nregis
   SNESMSTableau     t;
 
   PetscFunctionBegin;
-  PetscValidCharPointer(name, 1);
+  PetscAssertPointer(name, 1);
   PetscCheck(nstages >= 1, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Must have at least one stage");
   if (gamma || delta) {
     PetscCheck(nregisters == 3, PETSC_COMM_SELF, PETSC_ERR_SUP, "Only support for methods written in 3-register form");
-    PetscValidRealPointer(gamma, 5);
-    PetscValidRealPointer(delta, 6);
+    PetscAssertPointer(gamma, 5);
+    PetscAssertPointer(delta, 6);
   } else {
     PetscCheck(nregisters == 1, PETSC_COMM_SELF, PETSC_ERR_SUP, "Only support for methods written in 1-register form");
   }
-  PetscValidRealPointer(betasub, 7);
+  PetscAssertPointer(betasub, 7);
 
   PetscCall(SNESMSInitializePackage());
   PetscCall(PetscNew(&link));
@@ -471,20 +471,20 @@ static PetscErrorCode SNESMSSetType_MS(SNES snes, SNESMSType mstype)
   Not Collective
 
   Input Parameter:
-.  snes - nonlinear solver context
+. snes - nonlinear solver context
 
   Output Parameter:
-.  mstype - type of multistage method
+. mstype - type of multistage method
 
   Level: advanced
 
-.seealso: `SNESMS`, `SNESMSSetType()`, `SNESMSType`, `SNESMS`
+.seealso: `SNESMS`, `SNESMSSetType()`, `SNESMSType`
 @*/
 PetscErrorCode SNESMSGetType(SNES snes, SNESMSType *mstype)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
-  PetscValidPointer(mstype, 2);
+  PetscAssertPointer(mstype, 2);
   PetscUseMethod(snes, "SNESMSGetType_C", (SNES, SNESMSType *), (snes, mstype));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -495,18 +495,18 @@ PetscErrorCode SNESMSGetType(SNES snes, SNESMSType *mstype)
   Logically Collective
 
   Input Parameters:
-+  snes - nonlinear solver context
--  mstype - type of multistage method
++ snes   - nonlinear solver context
+- mstype - type of multistage method
 
   Level: advanced
 
-.seealso: `SNESMS`, `SNESMSGetType()`, `SNESMSType`, `SNESMS`
+.seealso: `SNESMS`, `SNESMSGetType()`, `SNESMSType`
 @*/
 PetscErrorCode SNESMSSetType(SNES snes, SNESMSType mstype)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
-  PetscValidCharPointer(mstype, 2);
+  PetscAssertPointer(mstype, 2);
   PetscTryMethod(snes, "SNESMSSetType_C", (SNES, SNESMSType), (snes, mstype));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -535,10 +535,10 @@ static PetscErrorCode SNESMSSetDamping_MS(SNES snes, PetscReal damping)
   Not Collective
 
   Input Parameter:
-.  snes - nonlinear solver context
+. snes - nonlinear solver context
 
   Output Parameter:
-.  damping - damping parameter
+. damping - damping parameter
 
   Level: advanced
 
@@ -548,7 +548,7 @@ PetscErrorCode SNESMSGetDamping(SNES snes, PetscReal *damping)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
-  PetscValidRealPointer(damping, 2);
+  PetscAssertPointer(damping, 2);
   PetscUseMethod(snes, "SNESMSGetDamping_C", (SNES, PetscReal *), (snes, damping));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -559,8 +559,8 @@ PetscErrorCode SNESMSGetDamping(SNES snes, PetscReal *damping)
   Logically Collective
 
   Input Parameters:
-+  snes - nonlinear solver context
--  damping - damping parameter
++ snes    - nonlinear solver context
+- damping - damping parameter
 
   Level: advanced
 

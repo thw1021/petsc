@@ -1,5 +1,4 @@
-#ifndef PETSC_PREPROCESSOR_MACROS_H
-#define PETSC_PREPROCESSOR_MACROS_H
+#pragma once
 
 #include <petscconf.h>
 #include <petscconf_poison.h> /* for PetscDefined() error checking */
@@ -65,8 +64,8 @@ void assert_never_put_petsc_headers_inside_an_extern_c(double);
   #define PETSC_RESTRICT restrict
 #endif
 
-#define PETSC_INLINE        PETSC_DEPRECATED_MACRO("GCC warning \"PETSC_INLINE is deprecated (since version 3.17)\"") inline
-#define PETSC_STATIC_INLINE PETSC_DEPRECATED_MACRO("GCC warning \"PETSC_STATIC_INLINE is deprecated (since version 3.17)\"") static inline
+#define PETSC_INLINE        PETSC_DEPRECATED_MACRO(3, 17, 0, "inline", ) inline
+#define PETSC_STATIC_INLINE PETSC_DEPRECATED_MACRO(3, 17, 0, "static inline", ) static inline
 
 #if defined(_WIN32) && defined(PETSC_USE_SHARED_LIBRARIES) /* For Win32 shared libraries */
   #define PETSC_DLLEXPORT __declspec(dllexport)
@@ -454,6 +453,12 @@ M*/
   (but is not required to) be emitted if the value is discarded. It is safe to use this in both
   C and C++ source files.
 
+  In this context "captured" means assigning the return value of a function to a named
+  variable or casting it to `void`. Between the two, assigning to a named variable is the most
+  portable way of silencing any warnings, since `PETSC_NODISCARD` may expand to GCC's
+  `__attribute__((warn_unused_result))` which will still emit warnings when casting results to
+  `void`.
+
   Example Usage:
 .vb
   class Foo
@@ -469,11 +474,17 @@ M*/
     return n <= 1 ? 1 : (n * factorial(n - 1));
   }
 
-  auto x = factorial(10); // OK, capturing return value
   factorial(10);          // Warning: ignoring return value of function declared 'nodiscard'
+  auto x = factorial(10); // OK, capturing return value
+  (void)factorial(10);    // Maybe OK, casting to void
+  auto y = factorial(10); // OK, capturing in y (and casting y to void to silence
+  (void)y;                // set-but-not-used warnings)
 
-  auto f = Foo(x); // OK, capturing constructed object
   Foo(x);          // Warning: Ignoring temporary created by a constructor declared 'nodiscard'
+  auto f = Foo(x); // OK, capturing constructed object
+  (void)Foo(x);    // Maybe OK, casting to void
+  auto g = Foo(x); // OK, capturing in g (and casting g to void to silence set-but-not-used
+  (void)g;         // warnings)
 .ve
 
 .seealso: `PETSC_NULLPTR`, `PETSC_CONSTEXPR_14`
@@ -1159,7 +1170,19 @@ M*/
 
   Level: intermediate
 M*/
-#define PETSC_STATIC_ARRAY_LENGTH(a) (sizeof(a) / sizeof((a)[0]))
+#if PETSC_CPP_VERSION >= 14
+  #include <cstddef>
+  #include <type_traits>
+
+template <typename T>
+static inline constexpr std::size_t PETSC_STATIC_ARRAY_LENGTH(const T &) noexcept
+{
+  static_assert(std::is_array<T>::value, "");
+  return std::extent<T, std::rank<T>::value - 1>::value;
+}
+#else
+  #define PETSC_STATIC_ARRAY_LENGTH(...) (sizeof(__VA_ARGS__) / sizeof(__VA_ARGS__)[0])
+#endif
 
 /*
   These macros allow extracting out the first argument or all but the first argument from a macro __VAR_ARGS__ INSIDE another macro.
@@ -1243,4 +1266,20 @@ M*/
   #define PetscPragmaSIMD
 #endif
 
-#endif /* PETSC_PREPROCESSOR_MACROS_H */
+#include <petsc/private/petscadvancedmacros.h>
+
+#define PetscConcat6_(a, b, c, d, e, f) a##b##c##d##e##f
+#define PetscConcat6(a, b, c, d, e, f)  PetscConcat6_(a, b, c, d, e, f)
+
+#define PETSC_DEPRECATED_IDENTIFIER_(__PETSC_DEPRECATION_MACRO__, __SILENCE_MACRO__, major, minor, subminor, replacement, ...) \
+  PetscIfPetscDefined(__SILENCE_MACRO__, PetscExpandToNothing, \
+                      __PETSC_DEPRECATION_MACRO__)(PetscStringize(Use replacement (since version major.minor.subminor) instead. Silence this warning (as well as all others for this version) by defining PetscConcat_(PETSC_, __SILENCE_MACRO__). __VA_ARGS__))
+
+#define PETSC_DEPRECATED_IDENTIFIER(__PETSC_DEPRECATION_MACRO__, major, minor, subminor, ...) \
+  PETSC_DEPRECATED_IDENTIFIER_(__PETSC_DEPRECATION_MACRO__, PetscConcat6(SILENCE_DEPRECATION_WARNINGS_, major, _, minor, _, subminor), major, minor, subminor, __VA_ARGS__)
+
+#define PETSC_DEPRECATED_OBJECT(major, minor, subminor, replacement, ...)   PETSC_DEPRECATED_IDENTIFIER(PETSC_DEPRECATED_OBJECT_BASE, major, minor, subminor, replacement, __VA_ARGS__)
+#define PETSC_DEPRECATED_FUNCTION(major, minor, subminor, replacement, ...) PETSC_DEPRECATED_IDENTIFIER(PETSC_DEPRECATED_FUNCTION_BASE, major, minor, subminor, replacement, __VA_ARGS__)
+#define PETSC_DEPRECATED_TYPEDEF(major, minor, subminor, replacement, ...)  PETSC_DEPRECATED_IDENTIFIER(PETSC_DEPRECATED_TYPEDEF_BASE, major, minor, subminor, replacement, __VA_ARGS__)
+#define PETSC_DEPRECATED_ENUM(major, minor, subminor, replacement, ...)     PETSC_DEPRECATED_IDENTIFIER(PETSC_DEPRECATED_ENUM_BASE, major, minor, subminor, replacement, __VA_ARGS__)
+#define PETSC_DEPRECATED_MACRO(major, minor, subminor, replacement, ...)    PETSC_DEPRECATED_IDENTIFIER(PETSC_DEPRECATED_MACRO_BASE, major, minor, subminor, replacement, __VA_ARGS__)

@@ -1,5 +1,4 @@
-#ifndef PETSCDMPLEXTRANSFORM_H
-#define PETSCDMPLEXTRANSFORM_H
+#pragma once
 
 #include <petscdmplex.h>
 #include <petscdmplextransformtypes.h>
@@ -38,6 +37,7 @@ PETSC_EXTERN PetscErrorCode DMPlexTransformSetDM(DMPlexTransform, DM);
 PETSC_EXTERN PetscErrorCode DMPlexTransformSetDimensions(DMPlexTransform, DM, DM);
 PETSC_EXTERN PetscErrorCode DMPlexTransformGetChart(DMPlexTransform, PetscInt *, PetscInt *);
 PETSC_EXTERN PetscErrorCode DMPlexTransformGetCellType(DMPlexTransform, PetscInt, DMPolytopeType *);
+PETSC_EXTERN PetscErrorCode DMPlexTransformGetCellTypeStratum(DMPlexTransform, DMPolytopeType, PetscInt *, PetscInt *);
 PETSC_EXTERN PetscErrorCode DMPlexTransformGetDepth(DMPlexTransform, PetscInt *);
 PETSC_EXTERN PetscErrorCode DMPlexTransformGetDepthStratum(DMPlexTransform, PetscInt, PetscInt *, PetscInt *);
 PETSC_EXTERN PetscErrorCode DMPlexTransformGetActive(DMPlexTransform, DMLabel *);
@@ -77,6 +77,4 @@ PETSC_EXTERN PetscErrorCode DMPlexTransformExtrudeSetNormal(DMPlexTransform, con
 PETSC_EXTERN PetscErrorCode DMPlexTransformExtrudeSetNormalFunction(DMPlexTransform, PetscErrorCode (*)(PetscInt, PetscReal, const PetscReal[], PetscInt, PetscScalar[], void *));
 PETSC_EXTERN PetscErrorCode DMPlexTransformExtrudeSetThicknesses(DMPlexTransform, PetscInt, const PetscReal[]);
 
-PETSC_EXTERN PetscErrorCode DMPlexCreateEphemeral(DMPlexTransform, DM *);
-
-#endif
+PETSC_EXTERN PetscErrorCode DMPlexCreateEphemeral(DMPlexTransform, const char[], DM *);

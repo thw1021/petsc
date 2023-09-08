@@ -1,8 +1,7 @@
 /*
       Objects which encapsulate finite volume spaces and operations
 */
-#ifndef PETSCFV_H
-#define PETSCFV_H
+#pragma once
 
 #include <petscdm.h>
 #include <petscdt.h>
@@ -47,6 +46,7 @@ PETSC_EXTERN PetscErrorCode    PetscLimiterRegisterDestroy(void);
 PETSC_EXTERN PetscErrorCode PetscLimiterLimit(PetscLimiter, PetscReal, PetscReal *);
 
 PETSC_EXTERN PetscErrorCode PetscFVInitializePackage(void);
+PETSC_EXTERN PetscErrorCode PetscFVFinalizePackage(void);
 
 PETSC_EXTERN PetscClassId PETSCFV_CLASSID;
 
@@ -99,5 +99,3 @@ PETSC_EXTERN PetscErrorCode PetscFVIntegrateRHSFunction(PetscFV, PetscDS, PetscI
 PETSC_EXTERN PetscErrorCode PetscFVLeastSquaresSetMaxFaces(PetscFV, PetscInt);
 
 PETSC_EXTERN PetscErrorCode PetscDualSpaceApplyFVM(PetscDualSpace, PetscInt, PetscReal, PetscFVCellGeom *, PetscInt, PetscErrorCode (*)(PetscInt, PetscReal, const PetscReal[], PetscInt, PetscScalar *, void *), void *, PetscScalar *);
-
-#endif

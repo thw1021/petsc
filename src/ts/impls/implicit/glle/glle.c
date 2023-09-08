@@ -113,7 +113,7 @@ static PetscErrorCode TSGLLESchemeCreate(PetscInt p, PetscInt q, PetscInt r, Pet
   PetscCheck(p >= 1, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Scheme order must be positive");
   PetscCheck(r >= 1, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "At least one item must be carried between steps");
   PetscCheck(s >= 1, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "At least one stage is required");
-  PetscValidPointer(inscheme, 10);
+  PetscAssertPointer(inscheme, 10);
   *inscheme = NULL;
   PetscCall(PetscNew(&scheme));
   scheme->p = p;
@@ -607,33 +607,30 @@ static PetscErrorCode TSGLLECreate_IRKS(TS ts)
 }
 
 /*@C
-   TSGLLESetType - sets the class of general linear method, `TSGLLE` to use for time-stepping
+  TSGLLESetType - sets the class of general linear method, `TSGLLE` to use for time-stepping
 
-   Collective
+  Collective
 
-   Input Parameters:
-+  ts - the `TS` context
--  type - a method
+  Input Parameters:
++ ts   - the `TS` context
+- type - a method
 
-   Options Database Key:
-.  -ts_gl_type <type> - sets the method, use -help for a list of available method (e.g. irks)
+  Options Database Key:
+. -ts_gl_type <type> - sets the method, use -help for a list of available method (e.g. irks)
 
-   Level: intermediate
+  Level: intermediate
 
-   Notes:
-   See "petsc/include/petscts.h" for available methods (for instance)
+  Notes:
+  See "petsc/include/petscts.h" for available methods (for instance)
 .    TSGLLE_IRKS - Diagonally implicit methods with inherent Runge-Kutta stability (for stiff problems)
 
-   Normally, it is best to use the `TSSetFromOptions()` command and
-   then set the `TSGLLE` type from the options database rather than by using
-   this routine.  Using the options database provides the user with
-   maximum flexibility in evaluating the many different solvers.
-   The `TSGLLESetType()` routine is provided for those situations where it
-   is necessary to set the timestepping solver independently of the
-   command line or options database.  This might be the case, for example,
-   when the choice of solver changes during the execution of the
-   program, and the user's application is taking responsibility for
-   choosing the appropriate method.
+  Normally, it is best to use the `TSSetFromOptions()` command and then set the `TSGLLE` type
+  from the options database rather than by using this routine.  Using the options database
+  provides the user with maximum flexibility in evaluating the many different solvers.  The
+  `TSGLLESetType()` routine is provided for those situations where it is necessary to set the
+  timestepping solver independently of the command line or options database.  This might be the
+  case, for example, when the choice of solver changes during the execution of the program, and
+  the user's application is taking responsibility for choosing the appropriate method.
 
 .seealso: [](ch_ts), `TS`, `TSGLLEType`, `TSGLLE`
 @*/
@@ -641,27 +638,28 @@ PetscErrorCode TSGLLESetType(TS ts, TSGLLEType type)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
-  PetscValidCharPointer(type, 2);
+  PetscAssertPointer(type, 2);
   PetscTryMethod(ts, "TSGLLESetType_C", (TS, TSGLLEType), (ts, type));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-   TSGLLESetAcceptType - sets the acceptance test for `TSGLLE`
+  TSGLLESetAcceptType - sets the acceptance test for `TSGLLE`
 
-   Time integrators that need to control error must have the option to reject a time step based on local error
-   estimates.  This function allows different schemes to be set.
+  Logically Collective
 
-   Logically Collective
+  Input Parameters:
++ ts   - the `TS` context
+- type - the type
 
-   Input Parameters:
-+  ts - the `TS` context
--  type - the type
+  Options Database Key:
+. -ts_gl_accept_type <type> - sets the method used to determine whether to accept or reject a step
 
-   Options Database Key:
-.  -ts_gl_accept_type <type> - sets the method used to determine whether to accept or reject a step
+  Level: intermediate
 
-   Level: intermediate
+  Notes:
+  Time integrators that need to control error must have the option to reject a time step based
+  on local error estimates. This function allows different schemes to be set.
 
 .seealso: [](ch_ts), `TS`, `TSGLLE`, `TSGLLEAcceptRegister()`, `TSGLLEAdapt`
 @*/
@@ -669,27 +667,27 @@ PetscErrorCode TSGLLESetAcceptType(TS ts, TSGLLEAcceptType type)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
-  PetscValidCharPointer(type, 2);
+  PetscAssertPointer(type, 2);
   PetscTryMethod(ts, "TSGLLESetAcceptType_C", (TS, TSGLLEAcceptType), (ts, type));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-   TSGLLEGetAdapt - gets the `TSGLLEAdapt` object from the `TS`
+  TSGLLEGetAdapt - gets the `TSGLLEAdapt` object from the `TS`
 
-   Not Collective
+  Not Collective
 
-   Input Parameter:
-.  ts - the `TS` context
+  Input Parameter:
+. ts - the `TS` context
 
-   Output Parameter:
-.  adapt - the `TSGLLEAdapt` context
+  Output Parameter:
+. adapt - the `TSGLLEAdapt` context
 
-   Level: advanced
+  Level: advanced
 
-   Note:
-   This allows the user set options on the `TSGLLEAdapt` object.  Usually it is better to do this using the options
-   database, so this function is rarely needed.
+  Note:
+  This allows the user set options on the `TSGLLEAdapt` object. Usually it is better to do this
+  using the options database, so this function is rarely needed.
 
 .seealso: [](ch_ts), `TS`, `TSGLLE`, `TSGLLEAdapt`, `TSGLLEAdaptRegister()`
 @*/
@@ -697,7 +695,7 @@ PetscErrorCode TSGLLEGetAdapt(TS ts, TSGLLEAdapt *adapt)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
-  PetscValidPointer(adapt, 2);
+  PetscAssertPointer(adapt, 2);
   PetscUseMethod(ts, "TSGLLEGetAdapt_C", (TS, TSGLLEAdapt *), (ts, adapt));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1196,28 +1194,28 @@ static PetscErrorCode TSView_GLLE(TS ts, PetscViewer viewer)
 }
 
 /*@C
-   TSGLLERegister -  adds a `TSGLLE` implementation
+  TSGLLERegister -  adds a `TSGLLE` implementation
 
-   Not Collective
+  Not Collective
 
-   Input Parameters:
-+  sname - name of user-defined general linear scheme
--  function - routine to create method context
+  Input Parameters:
++ sname    - name of user-defined general linear scheme
+- function - routine to create method context
 
-   Level: advanced
+  Level: advanced
 
-   Note:
-   `TSGLLERegister()` may be called multiple times to add several user-defined families.
+  Note:
+  `TSGLLERegister()` may be called multiple times to add several user-defined families.
 
-   Sample usage:
+  Example Usage:
 .vb
-   TSGLLERegister("my_scheme", MySchemeCreate);
+  TSGLLERegister("my_scheme", MySchemeCreate);
 .ve
 
-   Then, your scheme can be chosen with the procedural interface via
-$     TSGLLESetType(ts, "my_scheme")
-   or at runtime via the option
-$     -ts_gl_type my_scheme
+  Then, your scheme can be chosen with the procedural interface via
+$ TSGLLESetType(ts, "my_scheme")
+  or at runtime via the option
+$ -ts_gl_type my_scheme
 
 .seealso: [](ch_ts), `TSGLLE`, `TSGLLEType`, `TSGLLERegisterAll()`
 @*/
@@ -1230,28 +1228,28 @@ PetscErrorCode TSGLLERegister(const char sname[], PetscErrorCode (*function)(TS)
 }
 
 /*@C
-   TSGLLEAcceptRegister -  adds a `TSGLLE` acceptance scheme
+  TSGLLEAcceptRegister -  adds a `TSGLLE` acceptance scheme
 
-   Not Collective
+  Not Collective
 
-   Input Parameters:
-+  sname - name of user-defined acceptance scheme
--  function - routine to create method context
+  Input Parameters:
++ sname    - name of user-defined acceptance scheme
+- function - routine to create method context
 
-   Level: advanced
+  Level: advanced
 
-   Note:
-   `TSGLLEAcceptRegister()` may be called multiple times to add several user-defined families.
+  Note:
+  `TSGLLEAcceptRegister()` may be called multiple times to add several user-defined families.
 
-   Sample usage:
+  Example Usage:
 .vb
-   TSGLLEAcceptRegister("my_scheme", MySchemeCreate);
+  TSGLLEAcceptRegister("my_scheme", MySchemeCreate);
 .ve
 
-   Then, your scheme can be chosen with the procedural interface via
-$     TSGLLESetAcceptType(ts, "my_scheme")
-   or at runtime via the option
-$     -ts_gl_accept_type my_scheme
+  Then, your scheme can be chosen with the procedural interface via
+$ TSGLLESetAcceptType(ts, "my_scheme")
+  or at runtime via the option
+$ -ts_gl_accept_type my_scheme
 
 .seealso: [](ch_ts), `TSGLLE`, `TSGLLEType`, `TSGLLERegisterAll()`, `TSGLLEAcceptFunction`
 @*/
@@ -1320,14 +1318,7 @@ PetscErrorCode TSGLLEFinalizePackage(void)
 
 /* ------------------------------------------------------------ */
 /*MC
-      TSGLLE - DAE solver using implicit General Linear methods
-
-  These methods contain Runge-Kutta and multistep schemes as special cases.  These special cases have some fundamental
-  limitations.  For example, diagonally implicit Runge-Kutta cannot have stage order greater than 1 which limits their
-  applicability to very stiff systems.  Meanwhile, multistep methods cannot be A-stable for order greater than 2 and BDF
-  are not 0-stable for order greater than 6.  GL methods can be A- and L-stable with arbitrarily high stage order and
-  reliable error estimates for both 1 and 2 orders higher to facilitate adaptive step sizes and adaptive order schemes.
-  All this is possible while preserving a singly diagonally implicit structure.
+  TSGLLE - DAE solver using implicit General Linear methods
 
   Options Database Keys:
 +  -ts_gl_type <type> - the class of general linear method (irks)
@@ -1342,10 +1333,19 @@ PetscErrorCode TSGLLEFinalizePackage(void)
   Level: beginner
 
   Notes:
+  These methods contain Runge-Kutta and multistep schemes as special cases. These special cases
+  have some fundamental limitations. For example, diagonally implicit Runge-Kutta cannot have
+  stage order greater than 1 which limits their applicability to very stiff systems.
+  Meanwhile, multistep methods cannot be A-stable for order greater than 2 and BDF are not
+  0-stable for order greater than 6. GL methods can be A- and L-stable with arbitrarily high
+  stage order and reliable error estimates for both 1 and 2 orders higher to facilitate
+  adaptive step sizes and adaptive order schemes. All this is possible while preserving a
+  singly diagonally implicit structure.
+
   This integrator can be applied to DAE.
 
-  Diagonally implicit general linear (DIGL) methods are a generalization of diagonally implicit Runge-Kutta (DIRK).
-  They are represented by the tableau
+  Diagonally implicit general linear (DIGL) methods are a generalization of diagonally implicit
+  Runge-Kutta (DIRK). They are represented by the tableau
 
 .vb
   A  |  U
@@ -1353,48 +1353,50 @@ PetscErrorCode TSGLLEFinalizePackage(void)
   B  |  V
 .ve
 
-  combined with a vector c of abscissa.  "Diagonally implicit" means that A is lower triangular.
-  A step of the general method reads
+  combined with a vector c of abscissa. "Diagonally implicit" means that A is lower
+  triangular. A step of the general method reads
 
-.vb
+  $$
   [ Y ] = [A  U] [  Y'   ]
   [X^k] = [B  V] [X^{k-1}]
-.ve
+  $$
 
-  where Y is the multivector of stage values, Y' is the multivector of stage derivatives, X^k is the Nordsieck vector of
-  the solution at step k.  The Nordsieck vector consists of the first r moments of the solution, given by
+  where Y is the multivector of stage values, Y' is the multivector of stage derivatives, X^k
+  is the Nordsieck vector of the solution at step k. The Nordsieck vector consists of the first
+  r moments of the solution, given by
 
-.vb
+  $$
   X = [x_0,x_1,...,x_{r-1}] = [x, h x', h^2 x'', ..., h^{r-1} x^{(r-1)} ]
-.ve
+  $$
 
-  If A is lower triangular, we can solve the stages (Y,Y') sequentially
+  If A is lower triangular, we can solve the stages (Y, Y') sequentially
 
-.vb
+  $$
   y_i = h sum_{j=0}^{s-1} (a_ij y'_j) + sum_{j=0}^{r-1} u_ij x_j,    i=0,...,{s-1}
-.ve
+  $$
 
   and then construct the pieces to carry to the next step
 
-.vb
+  $$
   xx_i = h sum_{j=0}^{s-1} b_ij y'_j  + sum_{j=0}^{r-1} v_ij x_j,    i=0,...,{r-1}
-.ve
+  $$
 
-  Note that when the equations are cast in implicit form, we are using the stage equation to define y'_i
-  in terms of y_i and known stuff (y_j for j<i and x_j for all j).
+  Note that when the equations are cast in implicit form, we are using the stage equation to
+  define $y'_i$ in terms of $y_i$ and known stuff (y_j for j<i and x_j for all j).
 
   Error estimation
 
-  At present, the most attractive GL methods for stiff problems are singly diagonally implicit schemes which posses
-  Inherent Runge-Kutta Stability (`TSIRKS`).  These methods have r=s, the number of items passed between steps is equal to
-  the number of stages.  The order and stage-order are one less than the number of stages.  We use the error estimates
-  in the 2007 paper which provide the following estimates
+  At present, the most attractive GL methods for stiff problems are singly diagonally implicit
+  schemes which posses Inherent Runge-Kutta Stability (`TSIRKS`).  These methods have r=s, the
+  number of items passed between steps is equal to the number of stages.  The order and
+  stage-order are one less than the number of stages.  We use the error estimates in the 2007
+  paper which provide the following estimates
 
-.vb
+  $$
   h^{p+1} X^{(p+1)}          = phi_0^T Y' + [0 psi_0^T] Xold
   h^{p+2} X^{(p+2)}          = phi_1^T Y' + [0 psi_1^T] Xold
   h^{p+2} (dx'/dx) X^{(p+1)} = phi_2^T Y' + [0 psi_2^T] Xold
-.ve
+  $$
 
   These estimates are accurate to O(h^{p+3}).
 

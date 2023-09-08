@@ -1,5 +1,4 @@
-#ifndef __SEQAIJKOKKOSIMPL_HPP
-#define __SEQAIJKOKKOSIMPL_HPP
+#pragma once
 
 #include <petsc/private/vecimpl_kokkos.hpp>
 #include <../src/mat/impls/aij/seq/aij.h>
@@ -101,7 +100,7 @@ struct Mat_SeqAIJKokkos {
     MatRowMapKokkosViewHost i_h(const_cast<MatRowMapType *>(i), nrows + 1);
     MatColIdxKokkosViewHost j_h(j, nnz);
 
-    auto a_d = Kokkos::create_mirror_view(DefaultMemorySpace(), a_h);
+    auto a_d = Kokkos::create_mirror_view(Kokkos::WithoutInitializing, DefaultMemorySpace(), a_h);
     auto i_d = Kokkos::create_mirror_view_and_copy(DefaultMemorySpace(), i_h);
     auto j_d = Kokkos::create_mirror_view_and_copy(DefaultMemorySpace(), j_h);
 
@@ -124,7 +123,7 @@ struct Mat_SeqAIJKokkos {
     /* Get a non-const version since I don't want to deal with DualView<const T*>, which is not well defined */
     MatRowMapKokkosView i_d(const_cast<MatRowMapType *>(csr.graph.row_map.data()), csr.graph.row_map.extent(0));
     auto                j_d = csr.graph.entries;
-    auto                a_h = Kokkos::create_mirror_view(Kokkos::HostSpace(), a_d);
+    auto                a_h = Kokkos::create_mirror_view(Kokkos::WithoutInitializing, Kokkos::HostSpace(), a_d);
     auto                i_h = Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), i_d);
     auto                j_h = Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), j_d);
 
@@ -200,4 +199,4 @@ PETSC_INTERN PetscErrorCode MatSeqAIJGetKokkosView(Mat, MatScalarKokkosView *);
 PETSC_INTERN PetscErrorCode MatSeqAIJRestoreKokkosView(Mat, MatScalarKokkosView *);
 PETSC_INTERN PetscErrorCode MatSeqAIJGetKokkosViewWrite(Mat, MatScalarKokkosView *);
 PETSC_INTERN PetscErrorCode MatSeqAIJRestoreKokkosViewWrite(Mat, MatScalarKokkosView *);
-#endif
+PETSC_INTERN PetscErrorCode MatInvertVariableBlockDiagonal_SeqAIJKokkos(Mat, const PetscIntKokkosView &, const PetscIntKokkosView &, const PetscIntKokkosView &, PetscScalarKokkosView &, PetscScalarKokkosView &);

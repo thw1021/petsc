@@ -337,9 +337,16 @@ static PetscErrorCode PCApply_Redistribute(PC pc, Vec b, Vec x)
   const PetscInt    *drows = red->drows;
   PetscScalar       *xwork;
   const PetscScalar *bwork, *diag = red->diag;
+  PetscBool          nonzero_guess;
 
   PetscFunctionBegin;
   if (!red->work) PetscCall(VecDuplicate(b, &red->work));
+  PetscCall(KSPGetInitialGuessNonzero(red->ksp, &nonzero_guess));
+  if (nonzero_guess) {
+    PetscCall(VecScatterBegin(red->scatter, x, red->x, INSERT_VALUES, SCATTER_FORWARD));
+    PetscCall(VecScatterEnd(red->scatter, x, red->x, INSERT_VALUES, SCATTER_FORWARD));
+  }
+
   /* compute the rows of solution that have diagonal entries only */
   PetscCall(VecSet(x, 0.0)); /* x = diag(A)^{-1} b */
   PetscCall(VecGetArray(x, &xwork));
@@ -348,7 +355,7 @@ static PetscErrorCode PCApply_Redistribute(PC pc, Vec b, Vec x)
     for (i = 0; i < dcnt; i++) {
       if (diag[i] == 0.0 && bwork[drows[i]] != 0.0) {
         PetscCheck(!pc->erroriffailure, PETSC_COMM_SELF, PETSC_ERR_CONV_FAILED, "Linear system is inconsistent, zero matrix row but nonzero right hand side");
-        PetscCall(PetscInfo(pc, "Linear system is inconsistent, zero matrix row but nonzero right hand side"));
+        PetscCall(PetscInfo(pc, "Linear system is inconsistent, zero matrix row but nonzero right hand side\n"));
         PetscCall(VecSetInf(x));
         pc->failedreasonrank = PC_INCONSISTENT_RHS;
       }
@@ -409,17 +416,17 @@ static PetscErrorCode PCSetFromOptions_Redistribute(PC pc, PetscOptionItems *Pet
 }
 
 /*@
-   PCRedistributeGetKSP - Gets the `KSP` created by the `PCREDISTRIBUTE`
+  PCRedistributeGetKSP - Gets the `KSP` created by the `PCREDISTRIBUTE`
 
-   Not Collective
+  Not Collective
 
-   Input Parameter:
-.  pc - the preconditioner context
+  Input Parameter:
+. pc - the preconditioner context
 
-   Output Parameter:
-.  innerksp - the inner `KSP`
+  Output Parameter:
+. innerksp - the inner `KSP`
 
-   Level: advanced
+  Level: advanced
 
 .seealso: `KSP`, `PCREDISTRIBUTE`
 @*/
@@ -429,7 +436,7 @@ PetscErrorCode PCRedistributeGetKSP(PC pc, KSP *innerksp)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
-  PetscValidPointer(innerksp, 2);
+  PetscAssertPointer(innerksp, 2);
   *innerksp = red->ksp;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -477,6 +484,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_Redistribute(PC pc)
   pc->ops->view           = PCView_Redistribute;
 
   PetscCall(KSPCreate(PetscObjectComm((PetscObject)pc), &red->ksp));
+  PetscCall(KSPSetNestLevel(red->ksp, pc->kspnestlevel));
   PetscCall(KSPSetErrorIfNotConverged(red->ksp, pc->erroriffailure));
   PetscCall(PetscObjectIncrementTabLevel((PetscObject)red->ksp, (PetscObject)pc, 1));
   PetscCall(PCGetOptionsPrefix(pc, &prefix));

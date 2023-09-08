@@ -1,8 +1,7 @@
 /*
       Objects which encapsulate finite element spaces
 */
-#ifndef PETSCSPACE_H
-#define PETSCSPACE_H
+#pragma once
 #include <petscdm.h>
 #include <petscdt.h>
 
@@ -18,6 +17,7 @@ S*/
 typedef struct _p_PetscSpace *PetscSpace;
 
 PETSC_EXTERN PetscErrorCode PetscFEInitializePackage(void);
+PETSC_EXTERN PetscErrorCode PetscFEFinalizePackage(void);
 
 PETSC_EXTERN PetscClassId PETSCSPACE_CLASSID;
 
@@ -69,12 +69,12 @@ PETSC_EXTERN PetscErrorCode PetscSpaceGetDegree(PetscSpace, PetscInt *, PetscInt
 PETSC_EXTERN PetscErrorCode PetscSpaceEvaluate(PetscSpace, PetscInt, const PetscReal[], PetscReal[], PetscReal[], PetscReal[]);
 PETSC_EXTERN PetscErrorCode PetscSpaceGetHeightSubspace(PetscSpace, PetscInt, PetscSpace *);
 
-static inline PETSC_DEPRECATED_FUNCTION("Property not used (since v3.17)") PetscErrorCode PetscSpacePolynomialSetSymmetric(PetscSpace sp, PetscBool s)
+static inline PETSC_DEPRECATED_FUNCTION(3, 17, 0, "<property not used>", ) PetscErrorCode PetscSpacePolynomialSetSymmetric(PetscSpace sp, PetscBool s)
 {
   PetscCheck(!s, PetscObjectComm((PetscObject)sp), PETSC_ERR_SUP, "PETSCSPACEPOLYNOMIAL does not support symmetric polynomials");
   return PETSC_SUCCESS;
 }
-static inline PETSC_DEPRECATED_FUNCTION("Property not used (since v3.17)") PetscErrorCode PetscSpacePolynomialGetSymmetric(PETSC_UNUSED PetscSpace sp, PetscBool *s)
+static inline PETSC_DEPRECATED_FUNCTION(3, 17, 0, "<property not used>", ) PetscErrorCode PetscSpacePolynomialGetSymmetric(PETSC_UNUSED PetscSpace sp, PetscBool *s)
 {
   *s = PETSC_FALSE;
   return PETSC_SUCCESS;
@@ -96,9 +96,9 @@ PETSC_EXTERN PetscErrorCode PetscSpaceSumSetSubspace(PetscSpace, PetscInt, Petsc
 PETSC_EXTERN PetscErrorCode PetscSpaceSumGetSubspace(PetscSpace, PetscInt, PetscSpace *);
 PETSC_EXTERN PetscErrorCode PetscSpaceSumSetConcatenate(PetscSpace, PetscBool);
 PETSC_EXTERN PetscErrorCode PetscSpaceSumGetConcatenate(PetscSpace, PetscBool *);
-PETSC_EXTERN PetscErrorCode PetscSpaceCreateSum(PetscInt numSubspaces, const PetscSpace subspaces[], PetscBool concatenate, PetscSpace *sumSpace);
+PETSC_EXTERN PetscErrorCode PetscSpaceSumSetInterleave(PetscSpace, PetscBool, PetscBool);
+PETSC_EXTERN PetscErrorCode PetscSpaceSumGetInterleave(PetscSpace, PetscBool *, PetscBool *);
+PETSC_EXTERN PetscErrorCode PetscSpaceCreateSum(PetscInt, const PetscSpace[], PetscBool, PetscSpace *);
 
 PETSC_EXTERN PetscErrorCode PetscSpacePointGetPoints(PetscSpace, PetscQuadrature *);
 PETSC_EXTERN PetscErrorCode PetscSpacePointSetPoints(PetscSpace, PetscQuadrature);
-
-#endif

@@ -1,5 +1,4 @@
-#ifndef PETSCAO_H
-#define PETSCAO_H
+#pragma once
 
 #include <petscis.h>
 
@@ -36,6 +35,7 @@ typedef const char *AOType;
 PETSC_EXTERN PetscClassId AO_CLASSID;
 
 PETSC_EXTERN PetscErrorCode AOInitializePackage(void);
+PETSC_EXTERN PetscErrorCode AOFinalizePackage(void);
 
 PETSC_EXTERN PetscErrorCode AOCreate(MPI_Comm, AO *);
 PETSC_EXTERN PetscErrorCode AOSetIS(AO, IS, IS);
@@ -53,11 +53,11 @@ PETSC_EXTERN PetscErrorCode AOViewFromOptions(AO, PetscObject, const char[]);
 PETSC_EXTERN PetscErrorCode AODestroy(AO *);
 
 /* Dynamic creation and loading functions */
-PETSC_EXTERN PetscFunctionList AOList;
-PETSC_EXTERN PetscErrorCode    AOSetType(AO, AOType);
-PETSC_EXTERN PetscErrorCode    AOGetType(AO, AOType *);
+PETSC_EXTERN PetscErrorCode AOSetType(AO, AOType);
+PETSC_EXTERN PetscErrorCode AOGetType(AO, AOType *);
 
 PETSC_EXTERN PetscErrorCode AORegister(const char[], PetscErrorCode (*)(AO));
+PETSC_EXTERN PetscErrorCode AORegisterAll(void);
 
 PETSC_EXTERN PetscErrorCode AOPetscToApplication(AO, PetscInt, PetscInt[]);
 PETSC_EXTERN PetscErrorCode AOApplicationToPetsc(AO, PetscInt, PetscInt[]);
@@ -71,5 +71,3 @@ PETSC_EXTERN PetscErrorCode AOApplicationToPetscPermuteReal(AO, PetscInt, PetscR
 
 PETSC_EXTERN PetscErrorCode AOMappingHasApplicationIndex(AO, PetscInt, PetscBool *);
 PETSC_EXTERN PetscErrorCode AOMappingHasPetscIndex(AO, PetscInt, PetscBool *);
-
-#endif

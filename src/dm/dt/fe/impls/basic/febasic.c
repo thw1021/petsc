@@ -159,7 +159,7 @@ PETSC_INTERN PetscErrorCode PetscFECreateTabulation_Basic(PetscFE fem, PetscInt 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscFEIntegrate_Basic(PetscDS ds, PetscInt field, PetscInt Ne, PetscFEGeom *cgeom, const PetscScalar coefficients[], PetscDS dsAux, const PetscScalar coefficientsAux[], PetscScalar integral[])
+PETSC_INTERN PetscErrorCode PetscFEIntegrate_Basic(PetscDS ds, PetscInt field, PetscInt Ne, PetscFEGeom *cgeom, const PetscScalar coefficients[], PetscDS dsAux, const PetscScalar coefficientsAux[], PetscScalar integral[])
 {
   const PetscInt     debug = 0;
   PetscFE            fe;
@@ -248,7 +248,7 @@ static PetscErrorCode PetscFEIntegrate_Basic(PetscDS ds, PetscInt field, PetscIn
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscFEIntegrateBd_Basic(PetscDS ds, PetscInt field, PetscBdPointFunc obj_func, PetscInt Ne, PetscFEGeom *fgeom, const PetscScalar coefficients[], PetscDS dsAux, const PetscScalar coefficientsAux[], PetscScalar integral[])
+PETSC_INTERN PetscErrorCode PetscFEIntegrateBd_Basic(PetscDS ds, PetscInt field, PetscBdPointFunc obj_func, PetscInt Ne, PetscFEGeom *fgeom, const PetscScalar coefficients[], PetscDS dsAux, const PetscScalar coefficientsAux[], PetscScalar integral[])
 {
   const PetscInt     debug = 0;
   PetscFE            fe;
@@ -428,15 +428,27 @@ PetscErrorCode PetscFEIntegrateResidual_Basic(PetscDS ds, PetscFormKey key, Pets
       for (c = 0; c < T[field]->Nc; ++c)
         for (d = 0; d < dim; ++d) f1[(q * T[field]->Nc + c) * dim + d] *= w;
       if (debug) {
-        PetscCall(PetscPrintf(PETSC_COMM_SELF, "  quad point %" PetscInt_FMT " wt %g\n", q, (double)quadWeights[q]));
+        // LCOV_EXCL_START
+        PetscCall(PetscPrintf(PETSC_COMM_SELF, "  quad point %" PetscInt_FMT " wt %g x:", q, (double)quadWeights[q]));
+        for (c = 0; c < dE; ++c) PetscCall(PetscPrintf(PETSC_COMM_SELF, " %g", (double)fegeom.v[c]));
+        PetscCall(PetscPrintf(PETSC_COMM_SELF, "\n"));
         if (debug > 2) {
           PetscCall(PetscPrintf(PETSC_COMM_SELF, "  field %" PetscInt_FMT ":", field));
           for (c = 0; c < T[field]->Nc; ++c) PetscCall(PetscPrintf(PETSC_COMM_SELF, " %g", (double)PetscRealPart(u[uOff[field] + c])));
           PetscCall(PetscPrintf(PETSC_COMM_SELF, "\n"));
+          PetscCall(PetscPrintf(PETSC_COMM_SELF, "  field der %" PetscInt_FMT ":", field));
+          for (c = 0; c < T[field]->Nc * dE; ++c) PetscCall(PetscPrintf(PETSC_COMM_SELF, " %g", (double)PetscRealPart(u_x[uOff[field] + c])));
+          PetscCall(PetscPrintf(PETSC_COMM_SELF, "\n"));
           PetscCall(PetscPrintf(PETSC_COMM_SELF, "  resid %" PetscInt_FMT ":", field));
           for (c = 0; c < T[field]->Nc; ++c) PetscCall(PetscPrintf(PETSC_COMM_SELF, " %g", (double)PetscRealPart(f0[q * T[field]->Nc + c])));
           PetscCall(PetscPrintf(PETSC_COMM_SELF, "\n"));
+          PetscCall(PetscPrintf(PETSC_COMM_SELF, "  res der %" PetscInt_FMT ":", field));
+          for (c = 0; c < T[field]->Nc; ++c) {
+            for (d = 0; d < dim; ++d) PetscCall(PetscPrintf(PETSC_COMM_SELF, " %g", (double)PetscRealPart(f1[(q * T[field]->Nc + c) * dim + d])));
+          }
+          PetscCall(PetscPrintf(PETSC_COMM_SELF, "\n"));
         }
+        // LCOV_EXCL_STOP
       }
     }
     PetscCall(PetscFEUpdateElementVec_Internal(fe, T[field], 0, basisReal, basisDerReal, e, cgeom, f0, f1, &elemVec[cOffset + fOffset]));
@@ -556,7 +568,7 @@ PetscErrorCode PetscFEIntegrateBdResidual_Basic(PetscDS ds, PetscWeakForm wf, Pe
     2) We need to assume that the orientation is 0 for both
     3) TODO We need to use a non-square Jacobian for the derivative maps, meaning the embedding dimension has to go to EvaluateFieldJets() and UpdateElementVec()
 */
-static PetscErrorCode PetscFEIntegrateHybridResidual_Basic(PetscDS ds, PetscDS dsIn, PetscFormKey key, PetscInt s, PetscInt Ne, PetscFEGeom *fgeom, const PetscScalar coefficients[], const PetscScalar coefficients_t[], PetscDS dsAux, const PetscScalar coefficientsAux[], PetscReal t, PetscScalar elemVec[])
+PETSC_INTERN PetscErrorCode PetscFEIntegrateHybridResidual_Basic(PetscDS ds, PetscDS dsIn, PetscFormKey key, PetscInt s, PetscInt Ne, PetscFEGeom *fgeom, const PetscScalar coefficients[], const PetscScalar coefficients_t[], PetscDS dsAux, const PetscScalar coefficientsAux[], PetscReal t, PetscScalar elemVec[])
 {
   const PetscInt     debug = 0;
   const PetscInt     field = key.field;
@@ -584,7 +596,7 @@ static PetscErrorCode PetscFEIntegrateHybridResidual_Basic(PetscDS ds, PetscDS d
   PetscCall(PetscDSGetNumFields(ds, &Nf));
   PetscCall(PetscDSGetTotalDimension(ds, &totDim));
   PetscCall(PetscDSGetTotalDimension(dsIn, &totDimIn));
-  PetscCall(PetscDSGetComponentOffsetsCohesive(dsIn, s, &uOff));
+  PetscCall(PetscDSGetComponentOffsetsCohesive(dsIn, 0, &uOff)); // Change 0 to s for one-sided offsets
   PetscCall(PetscDSGetComponentDerivativeOffsetsCohesive(dsIn, s, &uOff_x));
   PetscCall(PetscDSGetFieldOffsetCohesive(ds, field, &fOffset));
   PetscCall(PetscDSGetWeakForm(ds, &wf));
@@ -815,7 +827,7 @@ PetscErrorCode PetscFEIntegrateJacobian_Basic(PetscDS ds, PetscFEJacobianType jt
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscFEIntegrateBdJacobian_Basic(PetscDS ds, PetscWeakForm wf, PetscFormKey key, PetscInt Ne, PetscFEGeom *fgeom, const PetscScalar coefficients[], const PetscScalar coefficients_t[], PetscDS dsAux, const PetscScalar coefficientsAux[], PetscReal t, PetscReal u_tshift, PetscScalar elemMat[])
+PETSC_INTERN PetscErrorCode PetscFEIntegrateBdJacobian_Basic(PetscDS ds, PetscWeakForm wf, PetscFormKey key, PetscInt Ne, PetscFEGeom *fgeom, const PetscScalar coefficients[], const PetscScalar coefficients_t[], PetscDS dsAux, const PetscScalar coefficientsAux[], PetscReal t, PetscReal u_tshift, PetscScalar elemMat[])
 {
   const PetscInt     debug = 0;
   PetscFE            feI, feJ;
@@ -968,7 +980,7 @@ static PetscErrorCode PetscFEIntegrateBdJacobian_Basic(PetscDS ds, PetscWeakForm
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode PetscFEIntegrateHybridJacobian_Basic(PetscDS ds, PetscDS dsIn, PetscFEJacobianType jtype, PetscFormKey key, PetscInt s, PetscInt Ne, PetscFEGeom *fgeom, const PetscScalar coefficients[], const PetscScalar coefficients_t[], PetscDS dsAux, const PetscScalar coefficientsAux[], PetscReal t, PetscReal u_tshift, PetscScalar elemMat[])
+PETSC_INTERN PetscErrorCode PetscFEIntegrateHybridJacobian_Basic(PetscDS ds, PetscDS dsIn, PetscFEJacobianType jtype, PetscFormKey key, PetscInt s, PetscInt Ne, PetscFEGeom *fgeom, const PetscScalar coefficients[], const PetscScalar coefficients_t[], PetscDS dsAux, const PetscScalar coefficientsAux[], PetscReal t, PetscReal u_tshift, PetscScalar elemMat[])
 {
   const PetscInt     debug = 0;
   PetscFE            feI, feJ;
@@ -991,7 +1003,7 @@ PetscErrorCode PetscFEIntegrateHybridJacobian_Basic(PetscDS ds, PetscDS dsIn, Pe
   PetscInt           dim, dimAux, numConstants, Nf, fieldI, fieldJ, NfAux = 0, totDim, totDimAux = 0, e;
   PetscBool          isCohesiveFieldI, isCohesiveFieldJ, auxOnBd = PETSC_FALSE;
   const PetscReal   *quadPoints, *quadWeights;
-  PetscInt           qNc, Nq, q, dE;
+  PetscInt           qNc, Nq, q;
 
   PetscFunctionBegin;
   PetscCall(PetscDSGetNumFields(ds, &Nf));
@@ -1003,7 +1015,7 @@ PetscErrorCode PetscFEIntegrateHybridJacobian_Basic(PetscDS ds, PetscDS dsIn, Pe
   PetscCall(PetscFEGetSpatialDimension(feI, &dim));
   PetscCall(PetscFEGetQuadrature(feI, &quad));
   PetscCall(PetscDSGetTotalDimension(ds, &totDim));
-  PetscCall(PetscDSGetComponentOffsetsCohesive(ds, s, &uOff));
+  PetscCall(PetscDSGetComponentOffsetsCohesive(ds, 0, &uOff)); // Change 0 to s for one-sided offsets
   PetscCall(PetscDSGetComponentDerivativeOffsetsCohesive(ds, s, &uOff_x));
   PetscCall(PetscDSGetWeakForm(ds, &wf));
   switch (jtype) {
@@ -1043,11 +1055,12 @@ PetscErrorCode PetscFEIntegrateHybridJacobian_Basic(PetscDS ds, PetscDS dsIn, Pe
   NcJ = T[fieldJ]->Nc;
   NcS = isCohesiveFieldI ? NcI : 2 * NcI;
   NcT = isCohesiveFieldJ ? NcJ : 2 * NcJ;
-  dE  = fgeom->dimEmbed;
+  // The derivatives are constrained to be along the cell, so there are dim, not dE, components, even though
+  // the coordinates are in dE dimensions
   PetscCall(PetscArrayzero(g0, NcS * NcT));
-  PetscCall(PetscArrayzero(g1, NcS * NcT * dE));
-  PetscCall(PetscArrayzero(g2, NcS * NcT * dE));
-  PetscCall(PetscArrayzero(g3, NcS * NcT * dE * dE));
+  PetscCall(PetscArrayzero(g1, NcS * NcT * dim));
+  PetscCall(PetscArrayzero(g2, NcS * NcT * dim));
+  PetscCall(PetscArrayzero(g3, NcS * NcT * dim * dim));
   PetscCall(PetscQuadratureGetData(quad, NULL, &qNc, &Nq, &quadPoints, &quadWeights));
   PetscCall(PetscQuadratureGetCellType(quad, &ct));
   PetscCheck(qNc == 1, PETSC_COMM_SELF, PETSC_ERR_SUP, "Only supports scalar quadrature, not %" PetscInt_FMT " components", qNc);
@@ -1082,19 +1095,19 @@ PetscErrorCode PetscFEIntegrateHybridJacobian_Basic(PetscDS ds, PetscDS dsIn, Pe
         for (c = 0; c < NcS * NcT; ++c) g0[c] *= w;
       }
       if (n1) {
-        PetscCall(PetscArrayzero(g1, NcS * NcT * dE));
+        PetscCall(PetscArrayzero(g1, NcS * NcT * dim));
         for (i = 0; i < n1; ++i) g1_func[i](dim, Nf, NfAux, uOff, uOff_x, u, u_t, u_x, aOff, aOff_x, a, NULL, a_x, t, u_tshift, fegeom.v, fegeom.n, numConstants, constants, g1);
-        for (c = 0; c < NcS * NcT * dE; ++c) g1[c] *= w;
+        for (c = 0; c < NcS * NcT * dim; ++c) g1[c] *= w;
       }
       if (n2) {
-        PetscCall(PetscArrayzero(g2, NcS * NcT * dE));
+        PetscCall(PetscArrayzero(g2, NcS * NcT * dim));
         for (i = 0; i < n2; ++i) g2_func[i](dim, Nf, NfAux, uOff, uOff_x, u, u_t, u_x, aOff, aOff_x, a, NULL, a_x, t, u_tshift, fegeom.v, fegeom.n, numConstants, constants, g2);
-        for (c = 0; c < NcS * NcT * dE; ++c) g2[c] *= w;
+        for (c = 0; c < NcS * NcT * dim; ++c) g2[c] *= w;
       }
       if (n3) {
-        PetscCall(PetscArrayzero(g3, NcS * NcT * dE * dE));
+        PetscCall(PetscArrayzero(g3, NcS * NcT * dim * dim));
         for (i = 0; i < n3; ++i) g3_func[i](dim, Nf, NfAux, uOff, uOff_x, u, u_t, u_x, aOff, aOff_x, a, NULL, a_x, t, u_tshift, fegeom.v, fegeom.n, numConstants, constants, g3);
-        for (c = 0; c < NcS * NcT * dE * dE; ++c) g3[c] *= w;
+        for (c = 0; c < NcS * NcT * dim * dim; ++c) g3[c] *= w;
       }
 
       if (isCohesiveFieldI) {

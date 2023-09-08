@@ -267,7 +267,7 @@ Quick summary of usage with CUDA:
 
 - The ``MatType`` ``MATSEQAIJCUSPARSE``, ``MATMPIAIJCUSPARSE``, or ``MATAIJCUSPARSE``
   maybe used with ``MatSetType()`` or ``-mat_type seqaijcusparse``, ``mpiaijcusparse``, or
-  ``aijcusparse`` when ``MatSetOptions()`` is used.
+  ``aijcusparse`` when ``MatSetFromOptions()`` is used.
 
 - If you are creating the vectors and matrices with a ``DM``, you can use ``-dm_vec_type
   cuda`` and ``-dm_mat_type aijcusparse``.
@@ -280,7 +280,7 @@ Quick summary of usage with OpenCL (provided by the ViennaCL library):
 
 - The ``MatType`` ``MATSEQAIJVIENNACL``, ``MATMPIAIJVIENNACL``, or ``MATAIJVIENNACL``
   maybe used with ``MatSetType()`` or ``-mat_type seqaijviennacl``, ``mpiaijviennacl``, or
-  ``aijviennacl`` when ``MatSetOptions()`` is used.
+  ``aijviennacl`` when ``MatSetFromOptions()`` is used.
 
 - If you are creating the vectors and matrices with a ``DM``, you can use ``-dm_vec_type
   viennacl`` and ``-dm_mat_type aijviennacl``.
@@ -962,7 +962,7 @@ and in the :ref:`users manual <ch_snes>`:
 .. note::
 
    These are often (but does not need to be) used in combination with
-   ``-snes_mf_operator`` which applies the fresh Jacobian matrix free for every
+   ``-snes_mf_operator`` which applies the fresh Jacobian matrix-free for every
    matrix-vector product. Otherwise the out-of-date matrix vector product, computed with
    the lagged Jacobian will be used.
 
@@ -1306,7 +1306,7 @@ solution or state to your routines.
 
 If it occurs for DAEs, it is important to insure the algebraic constraints are well
 satisfied, which can prevent "breakdown" later. Thus, one can try using a tight tolerance
-for ``SNES``, using a direct solver when possible, and reducing the timestep (or
+for ``SNES``, using a direct linear solver (``PCType`` of ``PCLU``) when possible, and reducing the timestep (or
 tightening ``TS`` tolerances for adaptive time stepping).
 
 Can PETSc work with Hermitian matrices?
@@ -2043,7 +2043,7 @@ use `valgrind <http://valgrind.org>`__. Follow the below instructions:
    .. code-block:: console
 
       $ mpiexec -n NPROC valgrind --tool=memcheck -q --num-callers=20 \
-      --suppressions=$PETSC_DIR/share/petsc/valgrind/petsc-val.supp \
+      --suppressions=$PETSC_DIR/share/petsc/suppressions/valgrind \
       --log-file=valgrind.log.%p PETSCPROGRAMNAME -malloc off PROGRAMOPTIONS
 
 .. note::

@@ -1,5 +1,4 @@
-#ifndef __SNESIMPL_H
-#define __SNESIMPL_H
+#pragma once
 
 #include <petscsnes.h>
 #include <petsc/private/petscimpl.h>
@@ -267,7 +266,6 @@ PETSC_EXTERN PetscErrorCode DMSNESCheck_Internal(SNES, DM, Vec);
 
 PETSC_EXTERN PetscLogEvent SNES_Solve;
 PETSC_EXTERN PetscLogEvent SNES_SetUp;
-PETSC_EXTERN PetscLogEvent SNES_LineSearch;
 PETSC_EXTERN PetscLogEvent SNES_FunctionEval;
 PETSC_EXTERN PetscLogEvent SNES_JacobianEval;
 PETSC_EXTERN PetscLogEvent SNES_NGSEval;
@@ -279,8 +277,8 @@ PETSC_INTERN PetscBool  SNEScite;
 PETSC_INTERN const char SNESCitation[];
 
 /* Used by TAOBNK solvers */
-PETSC_EXTERN PetscErrorCode KSPPostSolve_SNESEW(KSP, Vec, Vec, SNES);
-PETSC_EXTERN PetscErrorCode KSPPreSolve_SNESEW(KSP, Vec, Vec, SNES);
+PETSC_EXTERN PetscErrorCode KSPPostSolve_SNESEW(KSP, Vec, Vec, void *);
+PETSC_EXTERN PetscErrorCode KSPPreSolve_SNESEW(KSP, Vec, Vec, void *);
 PETSC_EXTERN PetscErrorCode SNESEWSetFromOptions_Private(SNESKSPEW *, PetscBool, MPI_Comm, const char *);
 
 /*
@@ -344,5 +342,3 @@ PETSC_EXTERN PetscErrorCode SNESEWSetFromOptions_Private(SNESKSPEW *, PetscBool,
 #define SNESNeedNorm_Private(snes, iter) \
   (((iter) == (snes)->max_its && ((snes)->normschedule == SNES_NORM_FINAL_ONLY || (snes)->normschedule == SNES_NORM_INITIAL_FINAL_ONLY)) || ((iter) == 0 && ((snes)->normschedule == SNES_NORM_INITIAL_ONLY || (snes)->normschedule == SNES_NORM_INITIAL_FINAL_ONLY)) || \
    (snes)->normschedule == SNES_NORM_ALWAYS)
-
-#endif

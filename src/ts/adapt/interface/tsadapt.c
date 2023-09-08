@@ -15,27 +15,27 @@ PETSC_EXTERN PetscErrorCode TSAdaptCreate_GLEE(TSAdapt);
 PETSC_EXTERN PetscErrorCode TSAdaptCreate_History(TSAdapt);
 
 /*@C
-   TSAdaptRegister -  adds a TSAdapt implementation
+  TSAdaptRegister -  adds a TSAdapt implementation
 
-   Not Collective
+  Not Collective
 
-   Input Parameters:
-+  sname - name of user-defined adaptivity scheme
--  function - routine to create method context
+  Input Parameters:
++ sname    - name of user-defined adaptivity scheme
+- function - routine to create method context
 
-   Level: advanced
+  Level: advanced
 
-   Notes:
-   `TSAdaptRegister()` may be called multiple times to add several user-defined families.
+  Notes:
+  `TSAdaptRegister()` may be called multiple times to add several user-defined families.
 
-   Sample usage:
+  Example Usage:
 .vb
    TSAdaptRegister("my_scheme", MySchemeCreate);
 .ve
 
-   Then, your scheme can be chosen with the procedural interface via
+  Then, your scheme can be chosen with the procedural interface via
 $     TSAdaptSetType(ts, "my_scheme")
-   or at runtime via the option
+  or at runtime via the option
 $     -ts_adapt_type my_scheme
 
 .seealso: [](ch_ts), `TSAdaptRegisterAll()`
@@ -114,14 +114,14 @@ PetscErrorCode TSAdaptInitializePackage(void)
 
   Input Parameters:
 + adapt - the `TS` adapter, most likely obtained with `TSGetAdapt()`
-- type - one of the `TSAdaptType`
+- type  - one of the `TSAdaptType`
 
   Options Database Key:
 . -ts_adapt_type <basic or dsp or none> - to set the adapter type
 
   Level: intermediate
 
-.seealso: [](ch_ts), `TSGetAdapt()`, `TSAdaptDestroy()`, `TSAdaptType`, `TSAdaptGetType()`, `TSAdaptType`
+.seealso: [](ch_ts), `TSGetAdapt()`, `TSAdaptDestroy()`, `TSAdaptType`, `TSAdaptGetType()`
 @*/
 PetscErrorCode TSAdaptSetType(TSAdapt adapt, TSAdaptType type)
 {
@@ -130,7 +130,7 @@ PetscErrorCode TSAdaptSetType(TSAdapt adapt, TSAdaptType type)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(adapt, TSADAPT_CLASSID, 1);
-  PetscValidCharPointer(type, 2);
+  PetscAssertPointer(type, 2);
   PetscCall(PetscObjectTypeCompare((PetscObject)adapt, type, &match));
   if (match) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(PetscFunctionListFind(TSAdaptList, type, &r));
@@ -161,7 +161,7 @@ PetscErrorCode TSAdaptGetType(TSAdapt adapt, TSAdaptType *type)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(adapt, TSADAPT_CLASSID, 1);
-  PetscValidPointer(type, 2);
+  PetscAssertPointer(type, 2);
   *type = ((PetscObject)adapt)->type_name;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -180,15 +180,15 @@ PetscErrorCode TSAdaptSetOptionsPrefix(TSAdapt adapt, const char prefix[])
   Collective
 
   Input Parameters:
-+ newdm - the newly loaded `TSAdapt`, this needs to have been created with `TSAdaptCreate()` or
++ adapt  - the newly loaded `TSAdapt`, this needs to have been created with `TSAdaptCreate()` or
            some related function before a call to `TSAdaptLoad()`.
 - viewer - binary file viewer, obtained from `PetscViewerBinaryOpen()` or
            HDF5 file viewer, obtained from `PetscViewerHDF5Open()`
 
-   Level: intermediate
+  Level: intermediate
 
   Note:
-   The type is determined by the data in the file, any type set into the `TSAdapt` before this call is ignored.
+  The type is determined by the data in the file, any type set into the `TSAdapt` before this call is ignored.
 
 .seealso: [](ch_ts), `PetscViewerBinaryOpen()`, `TSAdaptView()`, `MatLoad()`, `VecLoad()`, `TSAdapt`
 @*/
@@ -255,14 +255,14 @@ PetscErrorCode TSAdaptView(TSAdapt adapt, PetscViewer viewer)
 }
 
 /*@
-   TSAdaptReset - Resets a `TSAdapt` context to its defaults
+  TSAdaptReset - Resets a `TSAdapt` context to its defaults
 
-   Collective
+  Collective
 
-   Input Parameter:
-.  adapt - the `TSAdapt` context obtained from `TSGetAdapt()` or `TSAdaptCreate()`
+  Input Parameter:
+. adapt - the `TSAdapt` context obtained from `TSGetAdapt()` or `TSAdaptCreate()`
 
-   Level: developer
+  Level: developer
 
 .seealso: [](ch_ts), `TSGetAdapt()`, `TSAdapt`, `TSAdaptCreate()`, `TSAdaptDestroy()`
 @*/
@@ -293,18 +293,18 @@ PetscErrorCode TSAdaptDestroy(TSAdapt *adapt)
 }
 
 /*@
-   TSAdaptSetMonitor - Monitor the choices made by the adaptive controller
+  TSAdaptSetMonitor - Monitor the choices made by the adaptive controller
 
-   Collective
+  Collective
 
-   Input Parameters:
-+  adapt - adaptive controller context
--  flg - `PETSC_TRUE` to active a monitor, `PETSC_FALSE` to disable
+  Input Parameters:
++ adapt - adaptive controller context
+- flg   - `PETSC_TRUE` to active a monitor, `PETSC_FALSE` to disable
 
-   Options Database Key:
-.  -ts_adapt_monitor - to turn on monitoring
+  Options Database Key:
+. -ts_adapt_monitor - to turn on monitoring
 
-   Level: intermediate
+  Level: intermediate
 
 .seealso: [](ch_ts), `TSAdapt`, `TSGetAdapt()`, `TSAdaptChoose()`
 @*/
@@ -322,25 +322,26 @@ PetscErrorCode TSAdaptSetMonitor(TSAdapt adapt, PetscBool flg)
 }
 
 /*@C
-   TSAdaptSetCheckStage - Set a callback to check convergence for a stage
+  TSAdaptSetCheckStage - Set a callback to check convergence for a stage
 
-   Logically Collective
+  Logically Collective
 
-   Input Parameters:
-+  adapt - adaptive controller context
--  func - stage check function
+  Input Parameters:
++ adapt - adaptive controller context
+- func  - stage check function
 
-  Calling Sequence of `func`:
-$  PetscErrorCode func(TSAdapt adapt,TS ts,PetscBool *accept)
-+  adapt - adaptive controller context
-.  ts - time stepping context
--  accept - pending choice of whether to accept, can be modified by this routine
+  Calling sequence:
++ adapt  - adaptive controller context
+. ts     - time stepping context
+. t      - current time
+. Y      - current solution vector
+- accept - pending choice of whether to accept, can be modified by this routine
 
-   Level: advanced
+  Level: advanced
 
 .seealso: [](ch_ts), `TSAdapt`, `TSGetAdapt()`, `TSAdaptChoose()`
 @*/
-PetscErrorCode TSAdaptSetCheckStage(TSAdapt adapt, PetscErrorCode (*func)(TSAdapt, TS, PetscReal, Vec, PetscBool *))
+PetscErrorCode TSAdaptSetCheckStage(TSAdapt adapt, PetscErrorCode (*func)(TSAdapt adapt, TS ts, PetscReal t, Vec Y, PetscBool *accept))
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(adapt, TSADAPT_CLASSID, 1);
@@ -349,19 +350,19 @@ PetscErrorCode TSAdaptSetCheckStage(TSAdapt adapt, PetscErrorCode (*func)(TSAdap
 }
 
 /*@
-   TSAdaptSetAlwaysAccept - Set whether to always accept steps regardless of
-   any error or stability condition not meeting the prescribed goal.
+  TSAdaptSetAlwaysAccept - Set whether to always accept steps regardless of
+  any error or stability condition not meeting the prescribed goal.
 
-   Logically Collective
+  Logically Collective
 
-   Input Parameters:
-+  adapt - time step adaptivity context, usually gotten with `TSGetAdapt()`
--  flag - whether to always accept steps
+  Input Parameters:
++ adapt - time step adaptivity context, usually gotten with `TSGetAdapt()`
+- flag  - whether to always accept steps
 
-   Options Database Key:
-.  -ts_adapt_always_accept - to always accept steps
+  Options Database Key:
+. -ts_adapt_always_accept - to always accept steps
 
-   Level: intermediate
+  Level: intermediate
 
 .seealso: [](ch_ts), `TSAdapt`, `TSGetAdapt()`, `TSAdaptChoose()`
 @*/
@@ -375,20 +376,20 @@ PetscErrorCode TSAdaptSetAlwaysAccept(TSAdapt adapt, PetscBool flag)
 }
 
 /*@
-   TSAdaptSetSafety - Set safety factors for time step adaptor
+  TSAdaptSetSafety - Set safety factors for time step adaptor
 
-   Logically Collective
+  Logically Collective
 
-   Input Parameters:
-+  adapt - adaptive controller context
-.  safety - safety factor relative to target error/stability goal
--  reject_safety - extra safety factor to apply if the last step was rejected
+  Input Parameters:
++ adapt         - adaptive controller context
+. safety        - safety factor relative to target error/stability goal
+- reject_safety - extra safety factor to apply if the last step was rejected
 
-   Options Database Keys:
-+  -ts_adapt_safety <safety> - to set safety factor
--  -ts_adapt_reject_safety <reject_safety> - to set reject safety factor
+  Options Database Keys:
++ -ts_adapt_safety <safety>               - to set safety factor
+- -ts_adapt_reject_safety <reject_safety> - to set reject safety factor
 
-   Level: intermediate
+  Level: intermediate
 
 .seealso: [](ch_ts), `TSAdapt`, `TSAdaptGetSafety()`, `TSAdaptChoose()`
 @*/
@@ -408,18 +409,18 @@ PetscErrorCode TSAdaptSetSafety(TSAdapt adapt, PetscReal safety, PetscReal rejec
 }
 
 /*@
-   TSAdaptGetSafety - Get safety factors for time step adapter
+  TSAdaptGetSafety - Get safety factors for time step adapter
 
-   Not Collective
+  Not Collective
 
-   Input Parameter:
-.  adapt - adaptive controller context
+  Input Parameter:
+. adapt - adaptive controller context
 
-   Output Parameters:
-.  safety - safety factor relative to target error/stability goal
-+  reject_safety - extra safety factor to apply if the last step was rejected
+  Output Parameters:
++ safety        - safety factor relative to target error/stability goal
+- reject_safety - extra safety factor to apply if the last step was rejected
 
-   Level: intermediate
+  Level: intermediate
 
 .seealso: [](ch_ts), `TSAdapt`, `TSAdaptSetSafety()`, `TSAdaptChoose()`
 @*/
@@ -427,27 +428,27 @@ PetscErrorCode TSAdaptGetSafety(TSAdapt adapt, PetscReal *safety, PetscReal *rej
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(adapt, TSADAPT_CLASSID, 1);
-  if (safety) PetscValidRealPointer(safety, 2);
-  if (reject_safety) PetscValidRealPointer(reject_safety, 3);
+  if (safety) PetscAssertPointer(safety, 2);
+  if (reject_safety) PetscAssertPointer(reject_safety, 3);
   if (safety) *safety = adapt->safety;
   if (reject_safety) *reject_safety = adapt->reject_safety;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   TSAdaptSetMaxIgnore - Set error estimation threshold. Solution components below this threshold value will not be considered when computing error norms
-   for time step adaptivity (in absolute value). A negative value (default) of the threshold leads to considering all solution components.
+  TSAdaptSetMaxIgnore - Set error estimation threshold. Solution components below this threshold value will not be considered when computing error norms
+  for time step adaptivity (in absolute value). A negative value (default) of the threshold leads to considering all solution components.
 
-   Logically Collective
+  Logically Collective
 
-   Input Parameters:
-+  adapt - adaptive controller context
--  max_ignore - threshold for solution components that are ignored during error estimation
+  Input Parameters:
++ adapt      - adaptive controller context
+- max_ignore - threshold for solution components that are ignored during error estimation
 
-   Options Database Key:
-.  -ts_adapt_max_ignore <max_ignore> - to set the threshold
+  Options Database Key:
+. -ts_adapt_max_ignore <max_ignore> - to set the threshold
 
-   Level: intermediate
+  Level: intermediate
 
 .seealso: [](ch_ts), `TSAdapt`, `TSAdaptGetMaxIgnore()`, `TSAdaptChoose()`
 @*/
@@ -461,18 +462,18 @@ PetscErrorCode TSAdaptSetMaxIgnore(TSAdapt adapt, PetscReal max_ignore)
 }
 
 /*@
-   TSAdaptGetMaxIgnore - Get error estimation threshold. Solution components below this threshold value will not be considered when computing error norms
-   for time step adaptivity (in absolute value).
+  TSAdaptGetMaxIgnore - Get error estimation threshold. Solution components below this threshold value will not be considered when computing error norms
+  for time step adaptivity (in absolute value).
 
-   Not Collective
+  Not Collective
 
-   Input Parameter:
-.  adapt - adaptive controller context
+  Input Parameter:
+. adapt - adaptive controller context
 
-   Output Parameter:
-.  max_ignore - threshold for solution components that are ignored during error estimation
+  Output Parameter:
+. max_ignore - threshold for solution components that are ignored during error estimation
 
-   Level: intermediate
+  Level: intermediate
 
 .seealso: [](ch_ts), `TSAdapt`, `TSAdaptSetMaxIgnore()`, `TSAdaptChoose()`
 @*/
@@ -480,25 +481,25 @@ PetscErrorCode TSAdaptGetMaxIgnore(TSAdapt adapt, PetscReal *max_ignore)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(adapt, TSADAPT_CLASSID, 1);
-  PetscValidRealPointer(max_ignore, 2);
+  PetscAssertPointer(max_ignore, 2);
   *max_ignore = adapt->ignore_max;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   TSAdaptSetClip - Sets the admissible decrease/increase factor in step size in the time step adapter
+  TSAdaptSetClip - Sets the admissible decrease/increase factor in step size in the time step adapter
 
-   Logically collective
+  Logically collective
 
-   Input Parameters:
-+  adapt - adaptive controller context
-.  low - admissible decrease factor
--  high - admissible increase factor
+  Input Parameters:
++ adapt - adaptive controller context
+. low   - admissible decrease factor
+- high  - admissible increase factor
 
-   Options Database Key:
-.  -ts_adapt_clip <low>,<high> - to set admissible time step decrease and increase factors
+  Options Database Key:
+. -ts_adapt_clip <low>,<high> - to set admissible time step decrease and increase factors
 
-   Level: intermediate
+  Level: intermediate
 
 .seealso: [](ch_ts), `TSAdapt`, `TSAdaptChoose()`, `TSAdaptGetClip()`, `TSAdaptSetScaleSolveFailed()`
 @*/
@@ -517,18 +518,18 @@ PetscErrorCode TSAdaptSetClip(TSAdapt adapt, PetscReal low, PetscReal high)
 }
 
 /*@
-   TSAdaptGetClip - Gets the admissible decrease/increase factor in step size in the time step adapter
+  TSAdaptGetClip - Gets the admissible decrease/increase factor in step size in the time step adapter
 
-   Not Collective
+  Not Collective
 
-   Input Parameter:
-.  adapt - adaptive controller context
+  Input Parameter:
+. adapt - adaptive controller context
 
-   Output Parameters:
-+  low - optional, admissible decrease factor
--  high - optional, admissible increase factor
+  Output Parameters:
++ low  - optional, admissible decrease factor
+- high - optional, admissible increase factor
 
-   Level: intermediate
+  Level: intermediate
 
 .seealso: [](ch_ts), `TSAdapt`, `TSAdaptChoose()`, `TSAdaptSetClip()`, `TSAdaptSetScaleSolveFailed()`
 @*/
@@ -536,26 +537,26 @@ PetscErrorCode TSAdaptGetClip(TSAdapt adapt, PetscReal *low, PetscReal *high)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(adapt, TSADAPT_CLASSID, 1);
-  if (low) PetscValidRealPointer(low, 2);
-  if (high) PetscValidRealPointer(high, 3);
+  if (low) PetscAssertPointer(low, 2);
+  if (high) PetscAssertPointer(high, 3);
   if (low) *low = adapt->clip[0];
   if (high) *high = adapt->clip[1];
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   TSAdaptSetScaleSolveFailed - Scale step size by this factor if solve fails
+  TSAdaptSetScaleSolveFailed - Scale step size by this factor if solve fails
 
-   Logically Collective
+  Logically Collective
 
-   Input Parameters:
-+  adapt - adaptive controller context
--  scale - scale
+  Input Parameters:
++ adapt - adaptive controller context
+- scale - scale
 
-   Options Database Key:
-.  -ts_adapt_scale_solve_failed <scale> - to set scale step by this factor if solve fails
+  Options Database Key:
+. -ts_adapt_scale_solve_failed <scale> - to set scale step by this factor if solve fails
 
-   Level: intermediate
+  Level: intermediate
 
 .seealso: [](ch_ts), `TSAdapt`, `TSAdaptChoose()`, `TSAdaptGetScaleSolveFailed()`, `TSAdaptGetClip()`
 @*/
@@ -571,17 +572,17 @@ PetscErrorCode TSAdaptSetScaleSolveFailed(TSAdapt adapt, PetscReal scale)
 }
 
 /*@
-   TSAdaptGetScaleSolveFailed - Gets the admissible decrease/increase factor in step size
+  TSAdaptGetScaleSolveFailed - Gets the admissible decrease/increase factor in step size
 
-   Not Collective
+  Not Collective
 
-   Input Parameter:
-.  adapt - adaptive controller context
+  Input Parameter:
+. adapt - adaptive controller context
 
-   Output Parameter:
-.  scale - scale factor
+  Output Parameter:
+. scale - scale factor
 
-   Level: intermediate
+  Level: intermediate
 
 .seealso: [](ch_ts), `TSAdapt`, `TSAdaptChoose()`, `TSAdaptSetScaleSolveFailed()`, `TSAdaptSetClip()`
 @*/
@@ -589,26 +590,26 @@ PetscErrorCode TSAdaptGetScaleSolveFailed(TSAdapt adapt, PetscReal *scale)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(adapt, TSADAPT_CLASSID, 1);
-  if (scale) PetscValidRealPointer(scale, 2);
+  if (scale) PetscAssertPointer(scale, 2);
   if (scale) *scale = adapt->scale_solve_failed;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   TSAdaptSetStepLimits - Set the minimum and maximum step sizes to be considered by the time step controller
+  TSAdaptSetStepLimits - Set the minimum and maximum step sizes to be considered by the time step controller
 
-   Logically Collective
+  Logically Collective
 
-   Input Parameters:
-+  adapt - time step adaptivity context, usually gotten with `TSGetAdapt()`
-.  hmin - minimum time step
--  hmax - maximum time step
+  Input Parameters:
++ adapt - time step adaptivity context, usually gotten with `TSGetAdapt()`
+. hmin  - minimum time step
+- hmax  - maximum time step
 
-   Options Database Keys:
-+  -ts_adapt_dt_min <min> - to set minimum time step
--  -ts_adapt_dt_max <max> - to set maximum time step
+  Options Database Keys:
++ -ts_adapt_dt_min <min> - to set minimum time step
+- -ts_adapt_dt_max <max> - to set maximum time step
 
-   Level: intermediate
+  Level: intermediate
 
 .seealso: [](ch_ts), `TSAdapt`, `TSAdaptGetStepLimits()`, `TSAdaptChoose()`
 @*/
@@ -629,18 +630,18 @@ PetscErrorCode TSAdaptSetStepLimits(TSAdapt adapt, PetscReal hmin, PetscReal hma
 }
 
 /*@
-   TSAdaptGetStepLimits - Get the minimum and maximum step sizes to be considered by the time step controller
+  TSAdaptGetStepLimits - Get the minimum and maximum step sizes to be considered by the time step controller
 
-   Not Collective
+  Not Collective
 
-   Input Parameter:
-.  adapt - time step adaptivity context, usually gotten with `TSGetAdapt()`
+  Input Parameter:
+. adapt - time step adaptivity context, usually gotten with `TSGetAdapt()`
 
-   Output Parameters:
-+  hmin - minimum time step
--  hmax - maximum time step
+  Output Parameters:
++ hmin - minimum time step
+- hmax - maximum time step
 
-   Level: intermediate
+  Level: intermediate
 
 .seealso: [](ch_ts), `TSAdapt`, `TSAdaptSetStepLimits()`, `TSAdaptChoose()`
 @*/
@@ -648,42 +649,42 @@ PetscErrorCode TSAdaptGetStepLimits(TSAdapt adapt, PetscReal *hmin, PetscReal *h
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(adapt, TSADAPT_CLASSID, 1);
-  if (hmin) PetscValidRealPointer(hmin, 2);
-  if (hmax) PetscValidRealPointer(hmax, 3);
+  if (hmin) PetscAssertPointer(hmin, 2);
+  if (hmax) PetscAssertPointer(hmax, 3);
   if (hmin) *hmin = adapt->dt_min;
   if (hmax) *hmax = adapt->dt_max;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*
-   TSAdaptSetFromOptions - Sets various `TSAdapt` parameters from user options.
+/*@C
+  TSAdaptSetFromOptions - Sets various `TSAdapt` parameters from user options.
 
-   Collective
+  Collective
 
-   Input Parameter:
-+  adapt - the `TSAdapt` context
--  PetscOptionsObject - object created by `PetscOptionsBegin()`
+  Input Parameters:
++ adapt              - the `TSAdapt` context
+- PetscOptionsObject - object created by `PetscOptionsBegin()`
 
-   Options Database Keys:
-+  -ts_adapt_type <type> - algorithm to use for adaptivity
-.  -ts_adapt_always_accept - always accept steps regardless of error/stability goals
-.  -ts_adapt_safety <safety> - safety factor relative to target error/stability goal
-.  -ts_adapt_reject_safety <safety> - extra safety factor to apply if the last step was rejected
-.  -ts_adapt_clip <low,high> - admissible time step decrease and increase factors
-.  -ts_adapt_dt_min <min> - minimum timestep to use
-.  -ts_adapt_dt_max <max> - maximum timestep to use
-.  -ts_adapt_scale_solve_failed <scale> - scale timestep by this factor if a solve fails
-.  -ts_adapt_wnormtype <2 or infinity> - type of norm for computing error estimates
--  -ts_adapt_time_step_increase_delay - number of timesteps to delay increasing the time step after it has been decreased due to failed solver
+  Options Database Keys:
++ -ts_adapt_type <type>                - algorithm to use for adaptivity
+. -ts_adapt_always_accept              - always accept steps regardless of error/stability goals
+. -ts_adapt_safety <safety>            - safety factor relative to target error/stability goal
+. -ts_adapt_reject_safety <safety>     - extra safety factor to apply if the last step was rejected
+. -ts_adapt_clip <low,high>            - admissible time step decrease and increase factors
+. -ts_adapt_dt_min <min>               - minimum timestep to use
+. -ts_adapt_dt_max <max>               - maximum timestep to use
+. -ts_adapt_scale_solve_failed <scale> - scale timestep by this factor if a solve fails
+. -ts_adapt_wnormtype <2 or infinity>  - type of norm for computing error estimates
+- -ts_adapt_time_step_increase_delay   - number of timesteps to delay increasing the time step after it has been decreased due to failed solver
 
-   Level: advanced
+  Level: advanced
 
-   Note:
-   This function is automatically called by `TSSetFromOptions()`
+  Note:
+  This function is automatically called by `TSSetFromOptions()`
 
 .seealso: [](ch_ts), `TSAdapt`, `TSGetAdapt()`, `TSAdaptSetType()`, `TSAdaptSetAlwaysAccept()`, `TSAdaptSetSafety()`,
           `TSAdaptSetClip()`, `TSAdaptSetScaleSolveFailed()`, `TSAdaptSetStepLimits()`, `TSAdaptSetMonitor()`
-*/
+@*/
 PetscErrorCode TSAdaptSetFromOptions(TSAdapt adapt, PetscOptionItems *PetscOptionsObject)
 {
   char      type[256] = TSADAPTBASIC;
@@ -741,14 +742,14 @@ PetscErrorCode TSAdaptSetFromOptions(TSAdapt adapt, PetscOptionItems *PetscOptio
 }
 
 /*@
-   TSAdaptCandidatesClear - clear any previously set candidate schemes
+  TSAdaptCandidatesClear - clear any previously set candidate schemes
 
-   Logically Collective
+  Logically Collective
 
-   Input Parameter:
-.  adapt - adaptive controller
+  Input Parameter:
+. adapt - adaptive controller
 
-   Level: developer
+  Level: developer
 
 .seealso: [](ch_ts), `TSAdapt`, `TSAdaptCreate()`, `TSAdaptCandidateAdd()`, `TSAdaptChoose()`
 @*/
@@ -761,20 +762,20 @@ PetscErrorCode TSAdaptCandidatesClear(TSAdapt adapt)
 }
 
 /*@C
-   TSAdaptCandidateAdd - add a candidate scheme for the adaptive controller to select from
+  TSAdaptCandidateAdd - add a candidate scheme for the adaptive controller to select from
 
-   Logically Collective; No Fortran Support
+  Logically Collective; No Fortran Support
 
-   Input Parameters:
-+  adapt - time step adaptivity context, obtained with `TSGetAdapt()` or `TSAdaptCreate()`
-.  name - name of the candidate scheme to add
-.  order - order of the candidate scheme
-.  stageorder - stage order of the candidate scheme
-.  ccfl - stability coefficient relative to explicit Euler, used for CFL constraints
-.  cost - relative measure of the amount of work required for the candidate scheme
--  inuse - indicates that this scheme is the one currently in use, this flag can only be set for one scheme
+  Input Parameters:
++ adapt      - time step adaptivity context, obtained with `TSGetAdapt()` or `TSAdaptCreate()`
+. name       - name of the candidate scheme to add
+. order      - order of the candidate scheme
+. stageorder - stage order of the candidate scheme
+. ccfl       - stability coefficient relative to explicit Euler, used for CFL constraints
+. cost       - relative measure of the amount of work required for the candidate scheme
+- inuse      - indicates that this scheme is the one currently in use, this flag can only be set for one scheme
 
-   Level: developer
+  Level: developer
 
 .seealso: [](ch_ts), `TSAdapt`, `TSAdaptCandidatesClear()`, `TSAdaptChoose()`
 @*/
@@ -802,24 +803,24 @@ PetscErrorCode TSAdaptCandidateAdd(TSAdapt adapt, const char name[], PetscInt or
 }
 
 /*@C
-   TSAdaptCandidatesGet - Get the list of candidate orders of accuracy and cost
+  TSAdaptCandidatesGet - Get the list of candidate orders of accuracy and cost
 
-   Not Collective
+  Not Collective
 
-   Input Parameter:
-.  adapt - time step adaptivity context
+  Input Parameter:
+. adapt - time step adaptivity context
 
-   Output Parameters:
-+  n - number of candidate schemes, always at least 1
-.  order - the order of each candidate scheme
-.  stageorder - the stage order of each candidate scheme
-.  ccfl - the CFL coefficient of each scheme
--  cost - the relative cost of each scheme
+  Output Parameters:
++ n          - number of candidate schemes, always at least 1
+. order      - the order of each candidate scheme
+. stageorder - the stage order of each candidate scheme
+. ccfl       - the CFL coefficient of each scheme
+- cost       - the relative cost of each scheme
 
-   Level: developer
+  Level: developer
 
-   Note:
-   The current scheme is always returned in the first slot
+  Note:
+  The current scheme is always returned in the first slot
 
 .seealso: [](ch_ts), `TSAdapt`, `TSAdaptCandidatesClear()`, `TSAdaptCandidateAdd()`, `TSAdaptChoose()`
 @*/
@@ -836,25 +837,25 @@ PetscErrorCode TSAdaptCandidatesGet(TSAdapt adapt, PetscInt *n, const PetscInt *
 }
 
 /*@C
-   TSAdaptChoose - choose which method and step size to use for the next step
+  TSAdaptChoose - choose which method and step size to use for the next step
 
-   Collective
+  Collective
 
-   Input Parameters:
-+  adapt - adaptive controller
-.  ts - time stepper
--  h - current step size
+  Input Parameters:
++ adapt - adaptive controller
+. ts    - time stepper
+- h     - current step size
 
-   Output Parameters:
-+  next_sc - optional, scheme to use for the next step
-.  next_h - step size to use for the next step
--  accept - `PETSC_TRUE` to accept the current step, `PETSC_FALSE` to repeat the current step with the new step size
+  Output Parameters:
++ next_sc - optional, scheme to use for the next step
+. next_h  - step size to use for the next step
+- accept  - `PETSC_TRUE` to accept the current step, `PETSC_FALSE` to repeat the current step with the new step size
 
-   Level: developer
+  Level: developer
 
-   Note:
-   The input value of parameter accept is retained from the last time step, so it will be `PETSC_FALSE` if the step is
-   being retried after an initial rejection.
+  Note:
+  The input value of parameter accept is retained from the last time step, so it will be `PETSC_FALSE` if the step is
+  being retried after an initial rejection.
 
 .seealso: [](ch_ts), `TSAdapt`, `TSAdaptCandidatesClear()`, `TSAdaptCandidateAdd()`
 @*/
@@ -869,9 +870,9 @@ PetscErrorCode TSAdaptChoose(TSAdapt adapt, TS ts, PetscReal h, PetscInt *next_s
   PetscFunctionBegin;
   PetscValidHeaderSpecific(adapt, TSADAPT_CLASSID, 1);
   PetscValidHeaderSpecific(ts, TS_CLASSID, 2);
-  if (next_sc) PetscValidIntPointer(next_sc, 4);
-  PetscValidRealPointer(next_h, 5);
-  PetscValidBoolPointer(accept, 6);
+  if (next_sc) PetscAssertPointer(next_sc, 4);
+  PetscAssertPointer(next_h, 5);
+  PetscAssertPointer(accept, 6);
   if (next_sc) *next_sc = 0;
 
   /* Do not mess with adaptivity while handling events*/
@@ -927,27 +928,27 @@ PetscErrorCode TSAdaptChoose(TSAdapt adapt, TS ts, PetscReal h, PetscInt *next_s
 }
 
 /*@
-   TSAdaptSetTimeStepIncreaseDelay - The number of timesteps to wait after a decrease in the timestep due to failed solver
-                                     before increasing the time step.
+  TSAdaptSetTimeStepIncreaseDelay - The number of timesteps to wait after a decrease in the timestep due to failed solver
+  before increasing the time step.
 
-   Logicially Collective
+  Logicially Collective
 
-   Input Parameters:
-+  adapt - adaptive controller context
--  cnt - the number of timesteps
+  Input Parameters:
++ adapt - adaptive controller context
+- cnt   - the number of timesteps
 
-   Options Database Key:
-.  -ts_adapt_time_step_increase_delay cnt - number of steps to delay the increase
+  Options Database Key:
+. -ts_adapt_time_step_increase_delay cnt - number of steps to delay the increase
 
-   Level: advanced
+  Level: advanced
 
-   Notes:
-   This is to prevent an adaptor from bouncing back and forth between two nearby timesteps. The default is 0.
+  Notes:
+  This is to prevent an adaptor from bouncing back and forth between two nearby timesteps. The default is 0.
 
-   The successful use of this option is problem dependent
+  The successful use of this option is problem dependent
 
-   Developer Note:
-   There is no theory to support this option
+  Developer Notes:
+  There is no theory to support this option
 
 .seealso: [](ch_ts), `TSAdapt`
 @*/
@@ -959,20 +960,20 @@ PetscErrorCode TSAdaptSetTimeStepIncreaseDelay(TSAdapt adapt, PetscInt cnt)
 }
 
 /*@
-   TSAdaptCheckStage - checks whether to accept a stage, (e.g. reject and change time step size if nonlinear solve fails or solution vector is infeasible)
+  TSAdaptCheckStage - checks whether to accept a stage, (e.g. reject and change time step size if nonlinear solve fails or solution vector is infeasible)
 
-   Collective
+  Collective
 
-   Input Parameters:
-+  adapt - adaptive controller context
-.  ts - time stepper
-.  t - Current simulation time
--  Y - Current solution vector
+  Input Parameters:
++ adapt - adaptive controller context
+. ts    - time stepper
+. t     - Current simulation time
+- Y     - Current solution vector
 
-   Output Parameter:
-.  accept - `PETSC_TRUE` to accept the stage, `PETSC_FALSE` to reject
+  Output Parameter:
+. accept - `PETSC_TRUE` to accept the stage, `PETSC_FALSE` to reject
 
-   Level: developer
+  Level: developer
 
 .seealso: [](ch_ts), `TSAdapt`
 @*/
@@ -984,7 +985,7 @@ PetscErrorCode TSAdaptCheckStage(TSAdapt adapt, TS ts, PetscReal t, Vec Y, Petsc
   PetscFunctionBegin;
   PetscValidHeaderSpecific(adapt, TSADAPT_CLASSID, 1);
   PetscValidHeaderSpecific(ts, TS_CLASSID, 2);
-  PetscValidBoolPointer(accept, 5);
+  PetscAssertPointer(accept, 5);
 
   PetscCall(TSFunctionDomainError(ts, t, Y, &func_accept));
   if (ts->snes) PetscCall(SNESGetConvergedReason(ts->snes, &snesreason));
@@ -1043,7 +1044,7 @@ PetscErrorCode TSAdaptCheckStage(TSAdapt adapt, TS ts, PetscReal t, Vec Y, Petsc
 . comm - The communicator
 
   Output Parameter:
-. adapt - new `TSAdapt` object
+. inadapt - new `TSAdapt` object
 
   Level: developer
 
@@ -1057,7 +1058,7 @@ PetscErrorCode TSAdaptCreate(MPI_Comm comm, TSAdapt *inadapt)
   TSAdapt adapt;
 
   PetscFunctionBegin;
-  PetscValidPointer(inadapt, 2);
+  PetscAssertPointer(inadapt, 2);
   *inadapt = NULL;
   PetscCall(TSAdaptInitializePackage());
 

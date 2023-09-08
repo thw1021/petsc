@@ -1,8 +1,7 @@
 /*
       Objects to manage the interactions between the mesh data structures and the algebraic objects
 */
-#ifndef PETSCDM_H
-#define PETSCDM_H
+#pragma once
 #include <petscmat.h>
 #include <petscdmtypes.h>
 #include <petscfetypes.h>
@@ -65,6 +64,8 @@ PETSC_EXTERN PetscErrorCode DMGetGlobalVector(DM, Vec *);
 PETSC_EXTERN PetscErrorCode DMRestoreGlobalVector(DM, Vec *);
 PETSC_EXTERN PetscErrorCode DMClearGlobalVectors(DM);
 PETSC_EXTERN PetscErrorCode DMClearLocalVectors(DM);
+PETSC_EXTERN PetscErrorCode DMClearNamedGlobalVectors(DM);
+PETSC_EXTERN PetscErrorCode DMClearNamedLocalVectors(DM);
 PETSC_EXTERN PetscErrorCode DMHasNamedGlobalVector(DM, const char *, PetscBool *);
 PETSC_EXTERN PetscErrorCode DMGetNamedGlobalVector(DM, const char *, Vec *);
 PETSC_EXTERN PetscErrorCode DMRestoreNamedGlobalVector(DM, const char *, Vec *);
@@ -116,7 +117,7 @@ PETSC_EXTERN PetscErrorCode DMAdaptMetric(DM, Vec, DMLabel, DMLabel, DM *);
 
 PETSC_EXTERN PetscErrorCode DMSetUp(DM);
 PETSC_EXTERN PetscErrorCode DMCreateInterpolationScale(DM, DM, Mat, Vec *);
-PETSC_EXTERN                PETSC_DEPRECATED_FUNCTION("Use DMDACreateAggregates() or DMCreateRestriction() (since version 3.12)") PetscErrorCode DMCreateAggregates(DM, DM, Mat *);
+PETSC_EXTERN PETSC_DEPRECATED_FUNCTION(3, 12, 0, "DMDACreateAggregates()", ) PetscErrorCode DMCreateAggregates(DM, DM, Mat *);
 PETSC_EXTERN PetscErrorCode DMGlobalToLocalHookAdd(DM, PetscErrorCode (*)(DM, Vec, InsertMode, Vec, void *), PetscErrorCode (*)(DM, Vec, InsertMode, Vec, void *), void *);
 PETSC_EXTERN PetscErrorCode DMLocalToGlobalHookAdd(DM, PetscErrorCode (*)(DM, Vec, InsertMode, Vec, void *), PetscErrorCode (*)(DM, Vec, InsertMode, Vec, void *), void *);
 PETSC_EXTERN PetscErrorCode DMGlobalToLocal(DM, Vec, InsertMode, Vec);
@@ -225,6 +226,7 @@ typedef struct NLF_DAAD *NLF;
 #define DM_FILE_CLASSID 1211221
 
 /* FEM support */
+PETSC_EXTERN PetscErrorCode DMPrintCellIndices(PetscInt, const char[], PetscInt, const PetscInt[]);
 PETSC_EXTERN PetscErrorCode DMPrintCellVector(PetscInt, const char[], PetscInt, const PetscScalar[]);
 PETSC_EXTERN PetscErrorCode DMPrintCellMatrix(PetscInt, const char[], PetscInt, PetscInt, const PetscScalar[]);
 PETSC_EXTERN PetscErrorCode DMPrintLocalVec(DM, const char[], PetscReal, Vec);
@@ -240,19 +242,19 @@ PETSC_EXTERN PetscErrorCode DMGetLocalSection(DM, PetscSection *);
 PETSC_EXTERN PetscErrorCode DMSetLocalSection(DM, PetscSection);
 PETSC_EXTERN PetscErrorCode DMGetGlobalSection(DM, PetscSection *);
 PETSC_EXTERN PetscErrorCode DMSetGlobalSection(DM, PetscSection);
-static inline PETSC_DEPRECATED_FUNCTION("Use DMGetSection() (since v3.9)") PetscErrorCode DMGetDefaultSection(DM dm, PetscSection *s)
+static inline PETSC_DEPRECATED_FUNCTION(3, 9, 0, "DMGetSection()", ) PetscErrorCode DMGetDefaultSection(DM dm, PetscSection *s)
 {
   return DMGetSection(dm, s);
 }
-static inline PETSC_DEPRECATED_FUNCTION("Use DMSetSection() (since v3.9)") PetscErrorCode DMSetDefaultSection(DM dm, PetscSection s)
+static inline PETSC_DEPRECATED_FUNCTION(3, 9, 0, "DMSetSection()", ) PetscErrorCode DMSetDefaultSection(DM dm, PetscSection s)
 {
   return DMSetSection(dm, s);
 }
-static inline PETSC_DEPRECATED_FUNCTION("Use DMGetGlobalSection() (since v3.9)") PetscErrorCode DMGetDefaultGlobalSection(DM dm, PetscSection *s)
+static inline PETSC_DEPRECATED_FUNCTION(3, 9, 0, "DMGetGlobalSection()", ) PetscErrorCode DMGetDefaultGlobalSection(DM dm, PetscSection *s)
 {
   return DMGetGlobalSection(dm, s);
 }
-static inline PETSC_DEPRECATED_FUNCTION("Use DMSetGlobalSection() (since v3.9)") PetscErrorCode DMSetDefaultGlobalSection(DM dm, PetscSection s)
+static inline PETSC_DEPRECATED_FUNCTION(3, 9, 0, "DMSetGlobalSection()", ) PetscErrorCode DMSetDefaultGlobalSection(DM dm, PetscSection s)
 {
   return DMSetGlobalSection(dm, s);
 }
@@ -260,15 +262,15 @@ static inline PETSC_DEPRECATED_FUNCTION("Use DMSetGlobalSection() (since v3.9)")
 PETSC_EXTERN PetscErrorCode DMGetSectionSF(DM, PetscSF *);
 PETSC_EXTERN PetscErrorCode DMSetSectionSF(DM, PetscSF);
 PETSC_EXTERN PetscErrorCode DMCreateSectionSF(DM, PetscSection, PetscSection);
-static inline PETSC_DEPRECATED_FUNCTION("Use DMGetSectionSF() (since v3.12)") PetscErrorCode DMGetDefaultSF(DM dm, PetscSF *s)
+static inline PETSC_DEPRECATED_FUNCTION(3, 12, 0, "DMGetSectionSF()", ) PetscErrorCode DMGetDefaultSF(DM dm, PetscSF *s)
 {
   return DMGetSectionSF(dm, s);
 }
-static inline PETSC_DEPRECATED_FUNCTION("Use DMSetSectionSF() (since v3.12)") PetscErrorCode DMSetDefaultSF(DM dm, PetscSF s)
+static inline PETSC_DEPRECATED_FUNCTION(3, 12, 0, "DMSetSectionSF()", ) PetscErrorCode DMSetDefaultSF(DM dm, PetscSF s)
 {
   return DMSetSectionSF(dm, s);
 }
-static inline PETSC_DEPRECATED_FUNCTION("Use DMCreateSectionSF() (since v3.12)") PetscErrorCode DMCreateDefaultSF(DM dm, PetscSection l, PetscSection g)
+static inline PETSC_DEPRECATED_FUNCTION(3, 12, 0, "DMCreateSectionSF()", ) PetscErrorCode DMCreateDefaultSF(DM dm, PetscSection l, PetscSection g)
 {
   return DMCreateSectionSF(dm, l, g);
 }
@@ -362,6 +364,7 @@ PETSC_EXTERN PetscErrorCode DMInterpolationEvaluate(DMInterpolationInfo, DM, Vec
 PETSC_EXTERN PetscErrorCode DMInterpolationDestroy(DMInterpolationInfo *);
 
 PETSC_EXTERN PetscErrorCode DMCreateLabel(DM, const char[]);
+PETSC_EXTERN PetscErrorCode DMCreateLabelAtIndex(DM, PetscInt, const char[]);
 PETSC_EXTERN PetscErrorCode DMGetLabelValue(DM, const char[], PetscInt, PetscInt *);
 PETSC_EXTERN PetscErrorCode DMSetLabelValue(DM, const char[], PetscInt, PetscInt);
 PETSC_EXTERN PetscErrorCode DMClearLabelValue(DM, const char[], PetscInt, PetscInt);
@@ -1096,7 +1099,3 @@ PETSC_EXTERN PetscErrorCode DMPolytopeMatchVertexOrientation(DMPolytopeType, con
 PETSC_EXTERN PetscErrorCode DMPolytopeGetOrientation(DMPolytopeType, const PetscInt[], const PetscInt[], PetscInt *);
 PETSC_EXTERN PetscErrorCode DMPolytopeGetVertexOrientation(DMPolytopeType, const PetscInt[], const PetscInt[], PetscInt *);
 PETSC_EXTERN PetscErrorCode DMPolytopeInCellTest(DMPolytopeType, const PetscReal[], PetscBool *);
-
-PETSC_EXTERN PetscErrorCode PetscDTComputeFaceQuadPermutation(DMPolytopeType, PetscQuadrature, PetscInt *, IS *[]);
-
-#endif

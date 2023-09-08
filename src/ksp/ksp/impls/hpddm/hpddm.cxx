@@ -297,10 +297,10 @@ static inline PetscErrorCode KSPSolve_HPDDM_Private(KSP ksp, const PetscScalar *
       for (PetscInt i = 0; i < N; ++i) low[1][i] = x[i];
       PetscCall(HPDDM::IterativeMethod::solve(*data->op, low[0], low[1], n, PetscObjectComm((PetscObject)ksp)));
   #if !PetscDefined(USE_COMPLEX)
-      for (PetscInt i = N; i-- > 0;) x[i] = low[1][i];
+      for (PetscInt i = N; i-- > 0;) x[i] = static_cast<PetscScalar>(low[1][i]);
   #else
       x_r = reinterpret_cast<PetscAliasedReal *>(x), low_r = reinterpret_cast<PetscDownscaledReal *>(x_r);
-      for (PetscInt i = 2 * N; i-- > 0;) x_r[i] = low_r[i];
+      for (PetscInt i = 2 * N; i-- > 0;) x_r[i] = static_cast<PetscReal>(low_r[i]);
   #endif
       PetscCall(PetscFree(low[0]));
     } else {
@@ -394,14 +394,14 @@ static PetscErrorCode KSPSolve_HPDDM(KSP ksp)
 }
 
 /*@
-     KSPHPDDMSetDeflationMat - Sets the deflation space used by Krylov methods in `KSPHPDDM` with recycling. This space is viewed as a set of vectors stored in
-     a `MATDENSE` (column major).
+  KSPHPDDMSetDeflationMat - Sets the deflation space used by Krylov methods in `KSPHPDDM` with recycling. This space is viewed as a set of vectors stored in
+  a `MATDENSE` (column major).
 
-   Input Parameters:
-+     ksp - iterative context
--     U - deflation space to be used during KSPSolve()
+  Input Parameters:
++ ksp - iterative context
+- U   - deflation space to be used during KSPSolve()
 
-   Level: intermediate
+  Level: intermediate
 
 .seealso: [](ch_ksp), `KSPHPDDM`, `KSPCreate()`, `KSPType`, `KSPHPDDMGetDeflationMat()`
 @*/
@@ -416,16 +416,18 @@ PetscErrorCode KSPHPDDMSetDeflationMat(KSP ksp, Mat U)
 }
 
 /*@
-     KSPHPDDMGetDeflationMat - Gets the deflation space computed by Krylov methods in `KSPHPDDM`  with recycling or NULL if `KSPSolve()` has not been called yet.
-     This space is viewed as a set of vectors stored in a `MATDENSE` (column major). It is the responsibility of the user to free the returned `Mat`.
+  KSPHPDDMGetDeflationMat - Gets the deflation space computed by Krylov methods in `KSPHPDDM`  with recycling or `NULL` if `KSPSolve()` has not been called yet.
 
-   Input Parameter:
-.     ksp - iterative context
+  Input Parameter:
+. ksp - iterative context
 
-   Output Parameter:
-.     U - deflation space generated during `KSPSolve()`
+  Output Parameter:
+. U - deflation space generated during `KSPSolve()`
 
-   Level: intermediate
+  Level: intermediate
+
+  Note:
+  This space is viewed as a set of vectors stored in a `MATDENSE` (column major). It is the responsibility of the user to free the returned `Mat`.
 
 .seealso: [](ch_ksp), `KSPHPDDM`, `KSPCreate()`, `KSPType`, `KSPHPDDMSetDeflationMat()`
 @*/
@@ -434,7 +436,7 @@ PetscErrorCode KSPHPDDMGetDeflationMat(KSP ksp, Mat *U)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
   if (U) {
-    PetscValidPointer(U, 2);
+    PetscAssertPointer(U, 2);
     PetscUseMethod(ksp, "KSPHPDDMGetDeflationMat_C", (KSP, Mat *), (ksp, U));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -537,20 +539,20 @@ static PetscErrorCode KSPMatSolve_HPDDM(KSP ksp, Mat B, Mat X)
 }
 
 /*@
-     KSPHPDDMSetType - Sets the type of Krylov method used in `KSPHPDDM`.
+  KSPHPDDMSetType - Sets the type of Krylov method used in `KSPHPDDM`.
 
-   Collective
+  Collective
 
-   Input Parameters:
-+     ksp - iterative context
--     type - any of gmres, bgmres, cg, bcg, gcrodr, bgcrodr, bfbcg, or preonly
+  Input Parameters:
++ ksp  - iterative context
+- type - any of gmres, bgmres, cg, bcg, gcrodr, bgcrodr, bfbcg, or preonly
 
-   Level: intermediate
+  Level: intermediate
 
-   Notes:
-     Unlike `KSPReset()`, this function does not destroy any deflation space attached to the `KSP`.
+  Notes:
+  Unlike `KSPReset()`, this function does not destroy any deflation space attached to the `KSP`.
 
-     As an example, in the following sequence:
+  As an example, in the following sequence\:
 .vb
      KSPHPDDMSetType(ksp, KSPGCRODR);
      KSPSolve(ksp, b, x);
@@ -558,7 +560,7 @@ static PetscErrorCode KSPMatSolve_HPDDM(KSP ksp, Mat B, Mat X)
      KSPHPDDMSetType(ksp, KSPGCRODR);
      KSPSolve(ksp, b, x);
 .ve
-    the recycled space is reused in the second `KSPSolve()`.
+  the recycled space is reused in the second `KSPSolve()`.
 
 .seealso: [](ch_ksp), `KSPCreate()`, `KSPType`, `KSPHPDDMType`, `KSPHPDDMGetType()`
 @*/
@@ -572,15 +574,15 @@ PetscErrorCode KSPHPDDMSetType(KSP ksp, KSPHPDDMType type)
 }
 
 /*@
-     KSPHPDDMGetType - Gets the type of Krylov method used in `KSPHPDDM`.
+  KSPHPDDMGetType - Gets the type of Krylov method used in `KSPHPDDM`.
 
-   Input Parameter:
-.     ksp - iterative context
+  Input Parameter:
+. ksp - iterative context
 
-   Output Parameter:
-.     type - any of gmres, bgmres, cg, bcg, gcrodr, bgcrodr, bfbcg, or preonly
+  Output Parameter:
+. type - any of gmres, bgmres, cg, bcg, gcrodr, bgcrodr, bfbcg, or preonly
 
-   Level: intermediate
+  Level: intermediate
 
 .seealso: [](ch_ksp), `KSPCreate()`, `KSPType`, `KSPHPDDMType`, `KSPHPDDMSetType()`
 @*/
@@ -589,7 +591,7 @@ PetscErrorCode KSPHPDDMGetType(KSP ksp, KSPHPDDMType *type)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
   if (type) {
-    PetscValidPointer(type, 2);
+    PetscAssertPointer(type, 2);
     PetscUseMethod(ksp, "KSPHPDDMGetType_C", (KSP, KSPHPDDMType *), (ksp, type));
   }
   PetscFunctionReturn(PETSC_SUCCESS);

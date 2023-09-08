@@ -1,3 +1,4 @@
+#include <petsc_kokkos.hpp>
 #include <petscvec_kokkos.hpp>
 #include <petscpkg_version.h>
 #include <petsc/private/petscimpl.h>
@@ -13,6 +14,8 @@
 #include <KokkosSparse_sptrsv.hpp>
 #include <KokkosSparse_spgemm.hpp>
 #include <KokkosSparse_spadd.hpp>
+#include <KokkosBatched_LU_Decl.hpp>
+#include <KokkosBatched_InverseLU_Decl.hpp>
 
 #include <../src/mat/impls/aij/seq/kokkos/aijkok.hpp>
 
@@ -92,13 +95,15 @@ PETSC_INTERN PetscErrorCode MatSeqAIJKokkosModifyDevice(Mat A)
 static PetscErrorCode MatSeqAIJKokkosSyncHost(Mat A)
 {
   Mat_SeqAIJKokkos *aijkok = static_cast<Mat_SeqAIJKokkos *>(A->spptr);
+  auto             &exec   = PetscGetKokkosExecutionSpace();
 
   PetscFunctionBegin;
   PetscCheckTypeName(A, MATSEQAIJKOKKOS);
   /* We do not expect one needs factors on host  */
   PetscCheck(A->factortype == MAT_FACTOR_NONE, PetscObjectComm((PetscObject)A), PETSC_ERR_PLIB, "Can't sync factorized matrix from device to host");
   PetscCheck(aijkok, PetscObjectComm((PetscObject)A), PETSC_ERR_PLIB, "Missing AIJKOK");
-  aijkok->a_dual.sync_host();
+  PetscCallCXX(aijkok->a_dual.sync_host(exec));
+  PetscCallCXX(exec.fence());
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -113,7 +118,9 @@ static PetscErrorCode MatSeqAIJGetArray_SeqAIJKokkos(Mat A, PetscScalar *array[]
     must have been updated. The stale aijkok will be rebuilt during MatAssemblyEnd.
   */
   if (aijkok && A->nonzerostate == aijkok->nonzerostate) {
-    aijkok->a_dual.sync_host();
+    auto &exec = PetscGetKokkosExecutionSpace();
+    PetscCallCXX(aijkok->a_dual.sync_host(exec));
+    PetscCallCXX(exec.fence());
     *array = aijkok->a_dual.view_host().data();
   } else { /* Happens when calling MatSetValues on a newly created matrix */
     *array = static_cast<Mat_SeqAIJ *>(A->data)->a;
@@ -136,7 +143,9 @@ static PetscErrorCode MatSeqAIJGetArrayRead_SeqAIJKokkos(Mat A, const PetscScala
 
   PetscFunctionBegin;
   if (aijkok && A->nonzerostate == aijkok->nonzerostate) {
-    aijkok->a_dual.sync_host();
+    auto &exec = PetscGetKokkosExecutionSpace();
+    PetscCallCXX(aijkok->a_dual.sync_host(exec));
+    PetscCallCXX(exec.fence());
     *array = aijkok->a_dual.view_host().data();
   } else {
     *array = static_cast<Mat_SeqAIJ *>(A->data)->a;
@@ -260,7 +269,7 @@ PETSC_INTERN PetscErrorCode MatSeqAIJKokkosGenerateTranspose_Private(Mat A, Kokk
 
   PetscFunctionBegin;
   PetscCheck(akok, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Unexpected NULL (Mat_SeqAIJKokkos*)A->spptr");
-  PetscCallCXX(akok->a_dual.sync_device()); // Sync A's valeus since we are going to access them on device
+  PetscCallCXX(akok->a_dual.sync_device()); // Sync A's values since we are going to access them on device
 
   const auto &Aa = akok->a_dual.view_device();
 
@@ -502,7 +511,7 @@ static PetscErrorCode MatMultHermitianTransposeAdd_SeqAIJKokkos(Mat A, Vec xx, V
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatSetOption_SeqAIJKokkos(Mat A, MatOption op, PetscBool flg)
+static PetscErrorCode MatSetOption_SeqAIJKokkos(Mat A, MatOption op, PetscBool flg)
 {
   Mat_SeqAIJKokkos *aijkok = static_cast<Mat_SeqAIJKokkos *>(A->spptr);
 
@@ -670,7 +679,7 @@ PetscErrorCode MatSeqAIJKokkosMergeMats(Mat A, Mat B, MatReuse reuse, Mat *C)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
   PetscValidHeaderSpecific(B, MAT_CLASSID, 2);
-  PetscValidPointer(C, 4);
+  PetscAssertPointer(C, 4);
   PetscCheckTypeName(A, MATSEQAIJKOKKOS);
   PetscCheckTypeName(B, MATSEQAIJKOKKOS);
   PetscCheck(A->rmap->n == B->rmap->n, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Invalid number or rows %" PetscInt_FMT " != %" PetscInt_FMT, A->rmap->n, B->rmap->n);
@@ -1039,7 +1048,7 @@ PetscErrorCode MatSeqAIJGetKokkosView(Mat A, ConstMatScalarKokkosView *kv)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
-  PetscValidPointer(kv, 2);
+  PetscAssertPointer(kv, 2);
   PetscCheckTypeName(A, MATSEQAIJKOKKOS);
   PetscCall(MatSeqAIJKokkosSyncDevice(A));
   aijkok = static_cast<Mat_SeqAIJKokkos *>(A->spptr);
@@ -1051,7 +1060,7 @@ PetscErrorCode MatSeqAIJRestoreKokkosView(Mat A, ConstMatScalarKokkosView *kv)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
-  PetscValidPointer(kv, 2);
+  PetscAssertPointer(kv, 2);
   PetscCheckTypeName(A, MATSEQAIJKOKKOS);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1062,7 +1071,7 @@ PetscErrorCode MatSeqAIJGetKokkosView(Mat A, MatScalarKokkosView *kv)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
-  PetscValidPointer(kv, 2);
+  PetscAssertPointer(kv, 2);
   PetscCheckTypeName(A, MATSEQAIJKOKKOS);
   PetscCall(MatSeqAIJKokkosSyncDevice(A));
   aijkok = static_cast<Mat_SeqAIJKokkos *>(A->spptr);
@@ -1074,7 +1083,7 @@ PetscErrorCode MatSeqAIJRestoreKokkosView(Mat A, MatScalarKokkosView *kv)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
-  PetscValidPointer(kv, 2);
+  PetscAssertPointer(kv, 2);
   PetscCheckTypeName(A, MATSEQAIJKOKKOS);
   PetscCall(MatSeqAIJKokkosModifyDevice(A));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1086,7 +1095,7 @@ PetscErrorCode MatSeqAIJGetKokkosViewWrite(Mat A, MatScalarKokkosView *kv)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
-  PetscValidPointer(kv, 2);
+  PetscAssertPointer(kv, 2);
   PetscCheckTypeName(A, MATSEQAIJKOKKOS);
   aijkok = static_cast<Mat_SeqAIJKokkos *>(A->spptr);
   *kv    = aijkok->a_dual.view_device();
@@ -1097,7 +1106,7 @@ PetscErrorCode MatSeqAIJRestoreKokkosViewWrite(Mat A, MatScalarKokkosView *kv)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
-  PetscValidPointer(kv, 2);
+  PetscAssertPointer(kv, 2);
   PetscCheckTypeName(A, MATSEQAIJKOKKOS);
   PetscCall(MatSeqAIJKokkosModifyDevice(A));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1266,12 +1275,14 @@ static PetscErrorCode MatSetValuesCOO_SeqAIJKokkos(Mat A, const PetscScalar v[],
   if (imode == INSERT_VALUES) PetscCall(MatSeqAIJGetKokkosViewWrite(A, &Aa)); /* write matrix values */
   else PetscCall(MatSeqAIJGetKokkosView(A, &Aa));                             /* read & write matrix values */
 
+  PetscCall(PetscLogGpuTimeBegin());
   Kokkos::parallel_for(
     Annz, KOKKOS_LAMBDA(const PetscCount i) {
       PetscScalar sum = 0.0;
       for (PetscCount k = jmap(i); k < jmap(i + 1); k++) sum += kv(perm(k));
       Aa(i) = (imode == INSERT_VALUES ? 0.0 : Aa(i)) + sum;
     });
+  PetscCall(PetscLogGpuTimeEnd());
 
   if (imode == INSERT_VALUES) PetscCall(MatSeqAIJRestoreKokkosViewWrite(A, &Aa));
   else PetscCall(MatSeqAIJRestoreKokkosView(A, &Aa));
@@ -1325,10 +1336,92 @@ static PetscErrorCode MatSetOps_SeqAIJKokkos(Mat A)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*
+   Extract the (prescribled) diagonal blocks of the matrix and then invert them
+
+  Input Parameters:
++  A       - the MATSEQAIJKOKKOS matrix
+.  bs      - block sizes in 'csr' format, i.e., the i-th block has size bs(i+1) - bs(i)
+.  bs2     - square of block sizes in 'csr' format, i.e., the i-th block should be stored at offset bs2(i) in diagVal[]
+.  blkMap  - map row ids to block ids, i.e., row i belongs to the block blkMap(i)
+-  work    - a pre-allocated work buffer (as big as diagVal) for use by this routine
+
+  Output Parameter:
+.  diagVal - the (pre-allocated) buffer to store the inverted blocks (each block is stored in column-major order)
+*/
+PETSC_INTERN PetscErrorCode MatInvertVariableBlockDiagonal_SeqAIJKokkos(Mat A, const PetscIntKokkosView &bs, const PetscIntKokkosView &bs2, const PetscIntKokkosView &blkMap, PetscScalarKokkosView &work, PetscScalarKokkosView &diagVal)
+{
+  Mat_SeqAIJKokkos *akok    = static_cast<Mat_SeqAIJKokkos *>(A->spptr);
+  PetscInt          N       = A->rmap->n;
+  PetscInt          nblocks = bs.extent(0) - 1;
+
+  PetscFunctionBegin;
+  // Set the diagonal pointer on device if not already
+  if (N && akok->diag_dual.extent(0) == 0) {
+    PetscCall(MatMarkDiagonal_SeqAIJ(A));
+    akok->SetDiagonal(static_cast<Mat_SeqAIJ *>(A->data)->diag);
+  }
+
+  PetscCall(MatSeqAIJKokkosSyncDevice(A)); // Since we'll access A's value on device
+
+  // Pull out the diagonal blocks of the matrix and then invert the blocks
+  auto Aa    = akok->a_dual.view_device();
+  auto Ai    = akok->i_dual.view_device();
+  auto Aj    = akok->j_dual.view_device();
+  auto Adiag = akok->diag_dual.view_device();
+  // TODO: how to tune the team size?
+#if defined(KOKKOS_ENABLE_DEFAULT_DEVICE_TYPE_HOST)
+  auto ts = Kokkos::AUTO();
+#else
+  auto ts         = 16; // improved performance 30% over Kokkos::AUTO() with CUDA, but failed with "Kokkos::abort: Requested Team Size is too large!" on CPUs
+#endif
+  PetscCallCXX(Kokkos::parallel_for(
+    Kokkos::TeamPolicy<>(nblocks, ts), KOKKOS_LAMBDA(const KokkosTeamMemberType &teamMember) {
+      const PetscInt bid    = teamMember.league_rank();                                                   // block id
+      const PetscInt rstart = bs(bid);                                                                    // this block starts from this row
+      const PetscInt m      = bs(bid + 1) - bs(bid);                                                      // size of this block
+      const auto    &B      = Kokkos::View<PetscScalar **, Kokkos::LayoutLeft>(&diagVal(bs2(bid)), m, m); // column-major order
+      const auto    &W      = PetscScalarKokkosView(&work(bs2(bid)), m * m);
+
+      Kokkos::parallel_for(Kokkos::TeamThreadRange(teamMember, m), [=](const PetscInt &r) { // r-th row in B
+        PetscInt i = rstart + r;                                                            // i-th row in A
+
+        if (Ai(i) <= Adiag(i) && Adiag(i) < Ai(i + 1)) { // if the diagonal exists (common case)
+          PetscInt first = Adiag(i) - r;                 // we start to check nonzeros from here along this row
+
+          for (PetscInt c = 0; c < m; c++) {                   // walk n steps to see what column indices we will meet
+            if (first + c < Ai(i) || first + c >= Ai(i + 1)) { // this entry (first+c) is out of range of this row, in other words, its value is zero
+              B(r, c) = 0.0;
+            } else if (Aj(first + c) == rstart + c) { // this entry is right on the (rstart+c) column
+              B(r, c) = Aa(first + c);
+            } else { // this entry does not show up in the CSR
+              B(r, c) = 0.0;
+            }
+          }
+        } else { // rare case that the diagonal does not exist
+          const PetscInt begin = Ai(i);
+          const PetscInt end   = Ai(i + 1);
+          for (PetscInt c = 0; c < m; c++) B(r, c) = 0.0;
+          for (PetscInt j = begin; j < end; j++) { // scan the whole row; could use binary search but this is a rare case so we did not.
+            if (rstart <= Aj(j) && Aj(j) < rstart + m) B(r, Aj(j) - rstart) = Aa(j);
+            else if (Aj(j) >= rstart + m) break;
+          }
+        }
+      });
+
+      // LU-decompose B (w/o pivoting) and then invert B
+      KokkosBatched::TeamLU<KokkosTeamMemberType, KokkosBatched::Algo::LU::Unblocked>::invoke(teamMember, B, 0.0);
+      KokkosBatched::TeamInverseLU<KokkosTeamMemberType, KokkosBatched::Algo::InverseLU::Unblocked>::invoke(teamMember, B, W);
+    }));
+  // PetscLogGpuFlops() is done in the caller PCSetUp_VPBJacobi_Kokkos as we don't want to compute the flops in kernels
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 PETSC_INTERN PetscErrorCode MatSetSeqAIJKokkosWithCSRMatrix(Mat A, Mat_SeqAIJKokkos *akok)
 {
   Mat_SeqAIJ *aseq;
   PetscInt    i, m, n;
+  auto       &exec = PetscGetKokkosExecutionSpace();
 
   PetscFunctionBegin;
   PetscCheck(!A->spptr, PETSC_COMM_SELF, PETSC_ERR_PLIB, "A->spptr is supposed to be empty");
@@ -1342,8 +1435,9 @@ PETSC_INTERN PetscErrorCode MatSetSeqAIJKokkosWithCSRMatrix(Mat A, Mat_SeqAIJKok
   PetscCall(MatSeqAIJSetPreallocation_SeqAIJ(A, MAT_SKIP_ALLOCATION, NULL));
   aseq = (Mat_SeqAIJ *)(A)->data;
 
-  akok->i_dual.sync_host(); /* We always need sync'ed i, j on host */
-  akok->j_dual.sync_host();
+  PetscCallCXX(akok->i_dual.sync_host(exec)); /* We always need sync'ed i, j on host */
+  PetscCallCXX(akok->j_dual.sync_host(exec));
+  PetscCallCXX(exec.fence());
 
   aseq->i            = akok->i_host_data();
   aseq->j            = akok->j_host_data();
@@ -1398,39 +1492,39 @@ PETSC_INTERN PetscErrorCode MatCreateSeqAIJKokkosWithCSRMatrix(MPI_Comm comm, Ma
 }
 
 /*@C
-   MatCreateSeqAIJKokkos - Creates a sparse matrix in `MATSEQAIJKOKKOS` (compressed row) format
-   (the default parallel PETSc format). This matrix will ultimately be handled by
-   Kokkos for calculations.
+  MatCreateSeqAIJKokkos - Creates a sparse matrix in `MATSEQAIJKOKKOS` (compressed row) format
+  (the default parallel PETSc format). This matrix will ultimately be handled by
+  Kokkos for calculations.
 
-   Collective
+  Collective
 
-   Input Parameters:
-+  comm - MPI communicator, set to `PETSC_COMM_SELF`
-.  m - number of rows
-.  n - number of columns
-.  nz - number of nonzeros per row (same for all rows), ignored if `nnz` is provided
--  nnz - array containing the number of nonzeros in the various rows (possibly different for each row) or `NULL`
+  Input Parameters:
++ comm - MPI communicator, set to `PETSC_COMM_SELF`
+. m    - number of rows
+. n    - number of columns
+. nz   - number of nonzeros per row (same for all rows), ignored if `nnz` is provided
+- nnz  - array containing the number of nonzeros in the various rows (possibly different for each row) or `NULL`
 
-   Output Parameter:
-.  A - the matrix
+  Output Parameter:
+. A - the matrix
 
-   Level: intermediate
+  Level: intermediate
 
-   Notes:
-   It is recommended that one use the `MatCreate()`, `MatSetType()` and/or `MatSetFromOptions()`,
-   MatXXXXSetPreallocation() paradgm instead of this routine directly.
-   [MatXXXXSetPreallocation() is, for example, `MatSeqAIJSetPreallocation()`]
+  Notes:
+  It is recommended that one use the `MatCreate()`, `MatSetType()` and/or `MatSetFromOptions()`,
+  MatXXXXSetPreallocation() paradgm instead of this routine directly.
+  [MatXXXXSetPreallocation() is, for example, `MatSeqAIJSetPreallocation()`]
 
-   The AIJ format, also called
-   compressed row storage, is fully compatible with standard Fortran
-   storage.  That is, the stored row and column indices can begin at
-   either one (as in Fortran) or zero.
+  The AIJ format, also called
+  compressed row storage, is fully compatible with standard Fortran
+  storage.  That is, the stored row and column indices can begin at
+  either one (as in Fortran) or zero.
 
-   Specify the preallocated storage with either `nz` or `nnz` (not both).
-   Set `nz` = `PETSC_DEFAULT` and `nnz` = `NULL` for PETSc to control dynamic memory
-   allocation.
+  Specify the preallocated storage with either `nz` or `nnz` (not both).
+  Set `nz` = `PETSC_DEFAULT` and `nnz` = `NULL` for PETSc to control dynamic memory
+  allocation.
 
-.seealso: [](ch_matrices), `Mat`, `MatCreate()`, `MatCreateAIJ()`, `MatSetValues()`, `MatSeqAIJSetColumnIndices()`, `MatCreateSeqAIJWithArrays()`, `MatCreateAIJ()`
+.seealso: [](ch_matrices), `Mat`, `MatCreate()`, `MatCreateAIJ()`, `MatSetValues()`, `MatSeqAIJSetColumnIndices()`, `MatCreateSeqAIJWithArrays()`
 @*/
 PetscErrorCode MatCreateSeqAIJKokkos(MPI_Comm comm, PetscInt m, PetscInt n, PetscInt nz, const PetscInt nnz[], Mat *A)
 {

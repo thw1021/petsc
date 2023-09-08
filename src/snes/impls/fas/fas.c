@@ -407,17 +407,17 @@ static PetscErrorCode SNESFASUpSmooth_Private(SNES snes, Vec B, Vec X, Vec F, Pe
 }
 
 /*@
-   SNESFASCreateCoarseVec - create `Vec` corresponding to a state vector on one level coarser than current level
+  SNESFASCreateCoarseVec - create `Vec` corresponding to a state vector on one level coarser than current level
 
-   Collective
+  Collective
 
-   Input Parameter:
-.  snes - `SNESFAS` object
+  Input Parameter:
+. snes - `SNESFAS` object
 
-   Output Parameter:
-.  Xcoarse - vector on level one coarser than snes
+  Output Parameter:
+. Xcoarse - vector on level one coarser than snes
 
-   Level: developer
+  Level: developer
 
 .seealso: `SNESFASSetRestriction()`, `SNESFASRestrict()`
 @*/
@@ -427,7 +427,7 @@ PetscErrorCode SNESFASCreateCoarseVec(SNES snes, Vec *Xcoarse)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(snes, SNES_CLASSID, 1, SNESFAS);
-  PetscValidPointer(Xcoarse, 2);
+  PetscAssertPointer(Xcoarse, 2);
   fas = (SNES_FAS *)snes->data;
   if (fas->rscale) {
     PetscCall(VecDuplicate(fas->rscale, Xcoarse));
@@ -438,18 +438,18 @@ PetscErrorCode SNESFASCreateCoarseVec(SNES snes, Vec *Xcoarse)
 }
 
 /*@
-   SNESFASRestrict - restrict a `Vec` to the next coarser level
+  SNESFASRestrict - restrict a `Vec` to the next coarser level
 
-   Collective
+  Collective
 
-   Input Parameters:
-+  fine - `SNES` from which to restrict
--  Xfine - vector to restrict
+  Input Parameters:
++ fine  - `SNES` from which to restrict
+- Xfine - vector to restrict
 
-   Output Parameter:
-.  Xcoarse - result of restriction
+  Output Parameter:
+. Xcoarse - result of restriction
 
-   Level: developer
+  Level: developer
 
 .seealso: `SNES`, `SNESFAS`, `SNESFASSetRestriction()`, `SNESFASSetInjection()`
 @*/
@@ -542,7 +542,7 @@ coarse problem: F^c(x^c) = b^c
 b^c = F^c(Rx) - R(F(x) - b)
 
  */
-PetscErrorCode SNESFASCoarseCorrection(SNES snes, Vec X, Vec F, Vec X_new)
+static PetscErrorCode SNESFASCoarseCorrection(SNES snes, Vec X, Vec F, Vec X_new)
 {
   Vec                 X_c, Xo_c, F_c, B_c;
   SNESConvergedReason reason;

@@ -20,6 +20,7 @@ static PetscErrorCode PCBJKOKKOSCreateKSP_BJKOKKOS(PC pc)
 
   PetscFunctionBegin;
   PetscCall(KSPCreate(PetscObjectComm((PetscObject)pc), &jac->ksp));
+  PetscCall(KSPSetNestLevel(jac->ksp, pc->kspnestlevel));
   PetscCall(KSPSetErrorIfNotConverged(jac->ksp, pc->erroriffailure));
   PetscCall(PetscObjectIncrementTabLevel((PetscObject)jac->ksp, (PetscObject)pc, 1));
   PetscCall(PCGetOptionsPrefix(pc, &prefix));
@@ -83,7 +84,7 @@ typedef struct Batch_MetaData_TAG {
 } Batch_MetaData;
 
 // Solve A(BB^-1)x = y with TFQMR. Right preconditioned to get un-preconditioned residual
-KOKKOS_INLINE_FUNCTION PetscErrorCode BJSolve_TFQMR(const team_member team, const PetscInt *glb_Aai, const PetscInt *glb_Aaj, const PetscScalar *glb_Aaa, const PetscInt *r, const PetscInt *ic, PetscScalar *work_space_global, const int stride_global, const int nShareVec, PetscScalar *work_space_shared, const int stride_shared, PetscReal rtol, PetscReal atol, PetscReal dtol, PetscInt maxit, Batch_MetaData *metad, const PetscInt start, const PetscInt end, const PetscScalar glb_idiag[], const PetscScalar *glb_b, PetscScalar *glb_x, bool monitor)
+static KOKKOS_INLINE_FUNCTION PetscErrorCode BJSolve_TFQMR(const team_member team, const PetscInt *glb_Aai, const PetscInt *glb_Aaj, const PetscScalar *glb_Aaa, const PetscInt *r, const PetscInt *ic, PetscScalar *work_space_global, const int stride_global, const int nShareVec, PetscScalar *work_space_shared, const int stride_shared, PetscReal rtol, PetscReal atol, PetscReal dtol, PetscInt maxit, Batch_MetaData *metad, const PetscInt start, const PetscInt end, const PetscScalar glb_idiag[], const PetscScalar *glb_b, PetscScalar *glb_x, bool monitor)
 {
   using Kokkos::parallel_for;
   using Kokkos::parallel_reduce;
@@ -331,7 +332,7 @@ done:
 }
 
 // Solve Ax = y with biCG
-KOKKOS_INLINE_FUNCTION PetscErrorCode BJSolve_BICG(const team_member team, const PetscInt *glb_Aai, const PetscInt *glb_Aaj, const PetscScalar *glb_Aaa, const PetscInt *r, const PetscInt *ic, PetscScalar *work_space_global, const int stride_global, const int nShareVec, PetscScalar *work_space_shared, const int stride_shared, PetscReal rtol, PetscReal atol, PetscReal dtol, PetscInt maxit, Batch_MetaData *metad, const PetscInt start, const PetscInt end, const PetscScalar glb_idiag[], const PetscScalar *glb_b, PetscScalar *glb_x, bool monitor)
+static KOKKOS_INLINE_FUNCTION PetscErrorCode BJSolve_BICG(const team_member team, const PetscInt *glb_Aai, const PetscInt *glb_Aaj, const PetscScalar *glb_Aaa, const PetscInt *r, const PetscInt *ic, PetscScalar *work_space_global, const int stride_global, const int nShareVec, PetscScalar *work_space_shared, const int stride_shared, PetscReal rtol, PetscReal atol, PetscReal dtol, PetscInt maxit, Batch_MetaData *metad, const PetscInt start, const PetscInt end, const PetscScalar glb_idiag[], const PetscScalar *glb_b, PetscScalar *glb_x, bool monitor)
 {
   using Kokkos::parallel_for;
   using Kokkos::parallel_reduce;
@@ -1091,22 +1092,22 @@ static PetscErrorCode PCBJKOKKOSSetKSP_BJKOKKOS(PC pc, KSP ksp)
 }
 
 /*@C
-   PCBJKOKKOSSetKSP - Sets the `KSP` context for `PCBJKOKKOS`
+  PCBJKOKKOSSetKSP - Sets the `KSP` context for `PCBJKOKKOS`
 
-   Collective
+  Collective
 
-   Input Parameters:
-+  pc - the `PCBJKOKKOS` preconditioner context
--  ksp - the `KSP` solver
+  Input Parameters:
++ pc  - the `PCBJKOKKOS` preconditioner context
+- ksp - the `KSP` solver
 
-   Level: advanced
+  Level: advanced
 
-   Notes:
-   The `PC` and the `KSP` must have the same communicator
+  Notes:
+  The `PC` and the `KSP` must have the same communicator
 
-   If the `PC` is not `PCBJKOKKOS` this function returns without doing anything
+  If the `PC` is not `PCBJKOKKOS` this function returns without doing anything
 
-,seealso: `PCBJKOKKOSGetKSP()`, `PCBJKOKKOS`
+  .seealso: `PCBJKOKKOSGetKSP()`, `PCBJKOKKOS`
 @*/
 PetscErrorCode PCBJKOKKOSSetKSP(PC pc, KSP ksp)
 {
@@ -1129,22 +1130,22 @@ static PetscErrorCode PCBJKOKKOSGetKSP_BJKOKKOS(PC pc, KSP *ksp)
 }
 
 /*@C
-   PCBJKOKKOSGetKSP - Gets the `KSP` context for the `PCBJKOKKOS` preconditioner
+  PCBJKOKKOSGetKSP - Gets the `KSP` context for the `PCBJKOKKOS` preconditioner
 
-   Not Collective but `KSP` returned is parallel if `PC` was parallel
+  Not Collective but `KSP` returned is parallel if `PC` was parallel
 
-   Input Parameter:
-.  pc - the preconditioner context
+  Input Parameter:
+. pc - the preconditioner context
 
-   Output Parameter:
-.  ksp - the `KSP` solver
+  Output Parameter:
+. ksp - the `KSP` solver
 
-   Level: advanced
+  Level: advanced
 
-   Notes:
-   You must call `KSPSetUp()` before calling `PCBJKOKKOSGetKSP()`.
+  Notes:
+  You must call `KSPSetUp()` before calling `PCBJKOKKOSGetKSP()`.
 
-   If the `PC` is not a `PCBJKOKKOS` object it raises an error
+  If the `PC` is not a `PCBJKOKKOS` object it raises an error
 
 .seealso: `PCBJKOKKOS`, `PCBJKOKKOSSetKSP()`
 @*/
@@ -1152,7 +1153,7 @@ PetscErrorCode PCBJKOKKOSGetKSP(PC pc, KSP *ksp)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
-  PetscValidPointer(ksp, 2);
+  PetscAssertPointer(ksp, 2);
   PetscUseMethod(pc, "PCBJKOKKOSGetKSP_C", (PC, KSP *), (pc, ksp));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

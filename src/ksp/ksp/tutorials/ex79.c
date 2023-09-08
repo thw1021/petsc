@@ -15,20 +15,17 @@ PetscErrorCode MatApply(PC pc, Mat X, Mat Y)
 
 int main(int argc, char **args)
 {
-  Mat       A, X, B; /* computed solutions and RHS */
-  KSP       ksp;     /* linear solver context */
-  PC        pc;      /* preconditioner context */
-  PetscInt  m = 10;
-  PetscBool flg, transpose = PETSC_FALSE;
-#if defined(PETSC_USE_LOG)
-  PetscLogEvent event;
-#endif
+  Mat                A, X, B; /* computed solutions and RHS */
+  KSP                ksp;     /* linear solver context */
+  PC                 pc;      /* preconditioner context */
+  PetscInt           m = 10;
+  PetscBool          flg, transpose = PETSC_FALSE;
+  PetscLogEvent      event;
   PetscEventPerfInfo info;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &args, NULL, help));
-  PetscCall(PetscLogIsActive(&flg));
-  if (!flg) PetscCall(PetscLogDefaultBegin());
+  PetscCall(PetscLogDefaultBegin());
   PetscCall(PetscOptionsGetInt(NULL, NULL, "-m", &m, NULL));
   PetscCall(MatCreateAIJ(PETSC_COMM_WORLD, m, m, PETSC_DECIDE, PETSC_DECIDE, m, NULL, m, NULL, &A));
   PetscCall(MatSetRandom(A, NULL));
@@ -48,6 +45,12 @@ int main(int argc, char **args)
   if (flg) {
     PetscCall(MatConvert(B, MATDENSECUDA, MAT_INPLACE_MATRIX, &B));
     PetscCall(MatConvert(X, MATDENSECUDA, MAT_INPLACE_MATRIX, &X));
+  } else {
+    PetscCall(PetscObjectTypeCompareAny((PetscObject)A, &flg, MATSEQAIJHIPSPARSE, MATMPIAIJHIPSPARSE, ""));
+    if (flg) {
+      PetscCall(MatConvert(B, MATDENSEHIP, MAT_INPLACE_MATRIX, &B));
+      PetscCall(MatConvert(X, MATDENSEHIP, MAT_INPLACE_MATRIX, &X));
+    }
   }
   PetscCall(KSPCreate(PETSC_COMM_WORLD, &ksp));
   PetscCall(KSPSetOperators(ksp, A, A));
@@ -56,9 +59,11 @@ int main(int argc, char **args)
   PetscCall(PetscObjectTypeCompare((PetscObject)pc, PCHYPRE, &flg));
   if (flg && PetscDefined(HAVE_HYPRE_DEVICE)) {
 #if defined(HYPRE_USING_HIP)
+    PetscCall(MatConvert(A, MATAIJHIPSPARSE, MAT_INPLACE_MATRIX, &A));
     PetscCall(MatConvert(B, MATDENSEHIP, MAT_INPLACE_MATRIX, &B));
     PetscCall(MatConvert(X, MATDENSEHIP, MAT_INPLACE_MATRIX, &X));
 #elif defined(HYPRE_USING_CUDA)
+    PetscCall(MatConvert(A, MATAIJCUSPARSE, MAT_INPLACE_MATRIX, &A));
     PetscCall(MatConvert(B, MATDENSECUDA, MAT_INPLACE_MATRIX, &B));
     PetscCall(MatConvert(X, MATDENSECUDA, MAT_INPLACE_MATRIX, &X));
 #endif

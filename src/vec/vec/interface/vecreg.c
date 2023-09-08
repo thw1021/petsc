@@ -1,8 +1,7 @@
 
 #include <petsc/private/vecimpl.h> /*I "petscvec.h"  I*/
 
-PetscFunctionList VecList              = NULL;
-PetscBool         VecRegisterAllCalled = PETSC_FALSE;
+PetscFunctionList VecList = NULL;
 
 /* compare a vector type against a list of target vector types */
 static inline PetscErrorCode VecTypeCompareAny_Private(VecType srcType, PetscBool *match, const char tgtTypes[], ...)
@@ -11,7 +10,7 @@ static inline PetscErrorCode VecTypeCompareAny_Private(VecType srcType, PetscBoo
   va_list   Argp;
 
   PetscFunctionBegin;
-  PetscValidBoolPointer(match, 2);
+  PetscAssertPointer(match, 2);
   *match = PETSC_FALSE;
   va_start(Argp, tgtTypes);
   while (tgtTypes && tgtTypes[0]) {
@@ -174,20 +173,20 @@ newvec:
   Not Collective
 
   Input Parameter:
-. vec  - The vector
+. vec - The vector
 
   Output Parameter:
 . type - The `VecType` of the vector
 
   Level: intermediate
 
-.seealso: [](ch_vectors), `Vec`, `VecType`, `VecGetType()`, `VecCreate()`, `VecDuplicate()`, `VecDuplicateVecs()`
+.seealso: [](ch_vectors), `Vec`, `VecType`, `VecCreate()`, `VecDuplicate()`, `VecDuplicateVecs()`
 @*/
 PetscErrorCode VecGetType(Vec vec, VecType *type)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(vec, VEC_CLASSID, 1);
-  PetscValidPointer(type, 2);
+  PetscAssertPointer(type, 2);
   PetscCall(VecRegisterAll());
   *type = ((PetscObject)vec)->type_name;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -199,7 +198,7 @@ PetscErrorCode VecGetRootType_Private(Vec vec, VecType *vtype)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(vec, VEC_CLASSID, 1);
-  PetscValidPointer(vtype, 2);
+  PetscAssertPointer(vtype, 2);
   PetscCall(PetscObjectTypeCompareAny((PetscObject)vec, &iscuda, VECCUDA, VECMPICUDA, VECSEQCUDA, ""));
   PetscCall(PetscObjectTypeCompareAny((PetscObject)vec, &iship, VECHIP, VECMPIHIP, VECSEQHIP, ""));
   PetscCall(PetscObjectTypeCompareAny((PetscObject)vec, &iskokkos, VECKOKKOS, VECMPIKOKKOS, VECSEQKOKKOS, ""));
@@ -226,13 +225,13 @@ PetscErrorCode VecGetRootType_Private(Vec vec, VecType *vtype)
   Not Collective
 
   Input Parameters:
-+ sname        - The name of a new user-defined creation routine
++ sname    - The name of a new user-defined creation routine
 - function - The creation routine
 
   Notes:
   `VecRegister()` may be called multiple times to add several user-defined vectors
 
-  Sample usage:
+  Example Usage:
 .vb
     VecRegister("my_vec",MyVectorCreate);
 .ve
@@ -242,7 +241,7 @@ PetscErrorCode VecGetRootType_Private(Vec vec, VecType *vtype)
     VecCreate(MPI_Comm, Vec *);
     VecSetType(Vec,"my_vector_name");
 .ve
-   or at runtime via the option
+  or at runtime via the option
 .vb
     -vec_type my_vector_name
 .ve

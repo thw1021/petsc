@@ -1,5 +1,4 @@
-#ifndef PETSC_VECNESTIMPL_H
-#define PETSC_VECNESTIMPL_H
+#pragma once
 
 #include <petsc/private/vecimpl.h>
 
@@ -41,9 +40,7 @@ typedef struct {
     } while (0)
 #else
 template <typename Tv>
-void VecNestCheckCompatible2(Tv, int, Tv, int);
+extern void VecNestCheckCompatible2(Tv, int, Tv, int);
 template <typename Tv>
-void VecNestCheckCompatible3(Tv, int, Tv, int, Tv, int);
+extern void VecNestCheckCompatible3(Tv, int, Tv, int, Tv, int);
 #endif
-
-#endif // PETSC_VECNESTIMPL_H

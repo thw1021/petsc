@@ -10,16 +10,16 @@
 #include <petscblaslapack.h>
 
 /*@
-      MatDenseGetLocalMatrix - For a `MATMPIDENSE` or `MATSEQDENSE` matrix returns the sequential
-              matrix that represents the operator. For sequential matrices it returns itself.
+  MatDenseGetLocalMatrix - For a `MATMPIDENSE` or `MATSEQDENSE` matrix returns the sequential
+  matrix that represents the operator. For sequential matrices it returns itself.
 
-    Input Parameter:
-.      A - the sequential or MPI `MATDENSE` matrix
+  Input Parameter:
+. A - the sequential or MPI `MATDENSE` matrix
 
-    Output Parameter:
-.      B - the inner matrix
+  Output Parameter:
+. B - the inner matrix
 
-    Level: intermediate
+  Level: intermediate
 
 .seealso: [](ch_matrices), `Mat`, `MATDENSE`, `MATMPIDENSE`, `MATSEQDENSE`
 @*/
@@ -30,7 +30,7 @@ PetscErrorCode MatDenseGetLocalMatrix(Mat A, Mat *B)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
-  PetscValidPointer(B, 2);
+  PetscAssertPointer(B, 2);
   PetscCall(PetscObjectBaseTypeCompare((PetscObject)A, MATMPIDENSE, &flg));
   if (flg) *B = mat->A;
   else {
@@ -41,7 +41,7 @@ PetscErrorCode MatDenseGetLocalMatrix(Mat A, Mat *B)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatCopy_MPIDense(Mat A, Mat B, MatStructure s)
+static PetscErrorCode MatCopy_MPIDense(Mat A, Mat B, MatStructure s)
 {
   Mat_MPIDense *Amat = (Mat_MPIDense *)A->data;
   Mat_MPIDense *Bmat = (Mat_MPIDense *)B->data;
@@ -69,7 +69,7 @@ PetscErrorCode MatShift_MPIDense(Mat A, PetscScalar alpha)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatGetRow_MPIDense(Mat A, PetscInt row, PetscInt *nz, PetscInt **idx, PetscScalar **v)
+static PetscErrorCode MatGetRow_MPIDense(Mat A, PetscInt row, PetscInt *nz, PetscInt **idx, PetscScalar **v)
 {
   Mat_MPIDense *mat = (Mat_MPIDense *)A->data;
   PetscInt      lrow, rstart = A->rmap->rstart, rend = A->rmap->rend;
@@ -81,7 +81,7 @@ PetscErrorCode MatGetRow_MPIDense(Mat A, PetscInt row, PetscInt *nz, PetscInt **
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatRestoreRow_MPIDense(Mat A, PetscInt row, PetscInt *nz, PetscInt **idx, PetscScalar **v)
+static PetscErrorCode MatRestoreRow_MPIDense(Mat A, PetscInt row, PetscInt *nz, PetscInt **idx, PetscScalar **v)
 {
   Mat_MPIDense *mat = (Mat_MPIDense *)A->data;
   PetscInt      lrow, rstart = A->rmap->rstart, rend = A->rmap->rend;
@@ -93,7 +93,7 @@ PetscErrorCode MatRestoreRow_MPIDense(Mat A, PetscInt row, PetscInt *nz, PetscIn
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatGetDiagonalBlock_MPIDense(Mat A, Mat *a)
+static PetscErrorCode MatGetDiagonalBlock_MPIDense(Mat A, Mat *a)
 {
   Mat_MPIDense *mdn = (Mat_MPIDense *)A->data;
   PetscInt      m = A->rmap->n, rstart = A->rmap->rstart;
@@ -128,7 +128,7 @@ PetscErrorCode MatGetDiagonalBlock_MPIDense(Mat A, Mat *a)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatSetValues_MPIDense(Mat mat, PetscInt m, const PetscInt idxm[], PetscInt n, const PetscInt idxn[], const PetscScalar v[], InsertMode addv)
+static PetscErrorCode MatSetValues_MPIDense(Mat mat, PetscInt m, const PetscInt idxm[], PetscInt n, const PetscInt idxn[], const PetscScalar v[], InsertMode addv)
 {
   Mat_MPIDense *A = (Mat_MPIDense *)mat->data;
   PetscInt      i, j, rstart = mat->rmap->rstart, rend = mat->rmap->rend, row;
@@ -161,7 +161,7 @@ PetscErrorCode MatSetValues_MPIDense(Mat mat, PetscInt m, const PetscInt idxm[],
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatGetValues_MPIDense(Mat mat, PetscInt m, const PetscInt idxm[], PetscInt n, const PetscInt idxn[], PetscScalar v[])
+static PetscErrorCode MatGetValues_MPIDense(Mat mat, PetscInt m, const PetscInt idxm[], PetscInt n, const PetscInt idxn[], PetscScalar v[])
 {
   Mat_MPIDense *mdn = (Mat_MPIDense *)mat->data;
   PetscInt      i, j, rstart = mat->rmap->rstart, rend = mat->rmap->rend, row;
@@ -348,7 +348,7 @@ static PetscErrorCode MatCreateSubMatrix_MPIDense(Mat A, IS isrow, IS iscol, Mat
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatDenseRestoreArray_MPIDense(Mat A, PetscScalar **array)
+static PetscErrorCode MatDenseRestoreArray_MPIDense(Mat A, PetscScalar **array)
 {
   Mat_MPIDense *a = (Mat_MPIDense *)A->data;
 
@@ -357,7 +357,7 @@ PetscErrorCode MatDenseRestoreArray_MPIDense(Mat A, PetscScalar **array)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatDenseRestoreArrayRead_MPIDense(Mat A, const PetscScalar **array)
+static PetscErrorCode MatDenseRestoreArrayRead_MPIDense(Mat A, const PetscScalar **array)
 {
   Mat_MPIDense *a = (Mat_MPIDense *)A->data;
 
@@ -366,7 +366,7 @@ PetscErrorCode MatDenseRestoreArrayRead_MPIDense(Mat A, const PetscScalar **arra
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatDenseRestoreArrayWrite_MPIDense(Mat A, PetscScalar **array)
+static PetscErrorCode MatDenseRestoreArrayWrite_MPIDense(Mat A, PetscScalar **array)
 {
   Mat_MPIDense *a = (Mat_MPIDense *)A->data;
 
@@ -375,7 +375,7 @@ PetscErrorCode MatDenseRestoreArrayWrite_MPIDense(Mat A, PetscScalar **array)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatAssemblyBegin_MPIDense(Mat mat, MatAssemblyType mode)
+static PetscErrorCode MatAssemblyBegin_MPIDense(Mat mat, MatAssemblyType mode)
 {
   Mat_MPIDense *mdn = (Mat_MPIDense *)mat->data;
   PetscInt      nstash, reallocs;
@@ -389,7 +389,7 @@ PetscErrorCode MatAssemblyBegin_MPIDense(Mat mat, MatAssemblyType mode)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatAssemblyEnd_MPIDense(Mat mat, MatAssemblyType mode)
+static PetscErrorCode MatAssemblyEnd_MPIDense(Mat mat, MatAssemblyType mode)
 {
   Mat_MPIDense *mdn = (Mat_MPIDense *)mat->data;
   PetscInt      i, *row, *col, flg, j, rstart, ncols;
@@ -423,7 +423,7 @@ PetscErrorCode MatAssemblyEnd_MPIDense(Mat mat, MatAssemblyType mode)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatZeroEntries_MPIDense(Mat A)
+static PetscErrorCode MatZeroEntries_MPIDense(Mat A)
 {
   Mat_MPIDense *l = (Mat_MPIDense *)A->data;
 
@@ -432,7 +432,7 @@ PetscErrorCode MatZeroEntries_MPIDense(Mat A)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatZeroRows_MPIDense(Mat A, PetscInt n, const PetscInt rows[], PetscScalar diag, Vec x, Vec b)
+static PetscErrorCode MatZeroRows_MPIDense(Mat A, PetscInt n, const PetscInt rows[], PetscScalar diag, Vec x, Vec b)
 {
   Mat_MPIDense *l = (Mat_MPIDense *)A->data;
   PetscInt      i, len, *lrows;
@@ -469,7 +469,7 @@ PETSC_INTERN PetscErrorCode MatMultAdd_SeqDense(Mat, Vec, Vec, Vec);
 PETSC_INTERN PetscErrorCode MatMultTranspose_SeqDense(Mat, Vec, Vec);
 PETSC_INTERN PetscErrorCode MatMultTransposeAdd_SeqDense(Mat, Vec, Vec, Vec);
 
-PetscErrorCode MatMult_MPIDense(Mat mat, Vec xx, Vec yy)
+static PetscErrorCode MatMult_MPIDense(Mat mat, Vec xx, Vec yy)
 {
   Mat_MPIDense      *mdn = (Mat_MPIDense *)mat->data;
   const PetscScalar *ax;
@@ -488,7 +488,7 @@ PetscErrorCode MatMult_MPIDense(Mat mat, Vec xx, Vec yy)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatMultAdd_MPIDense(Mat mat, Vec xx, Vec yy, Vec zz)
+static PetscErrorCode MatMultAdd_MPIDense(Mat mat, Vec xx, Vec yy, Vec zz)
 {
   Mat_MPIDense      *mdn = (Mat_MPIDense *)mat->data;
   const PetscScalar *ax;
@@ -507,7 +507,7 @@ PetscErrorCode MatMultAdd_MPIDense(Mat mat, Vec xx, Vec yy, Vec zz)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatMultTranspose_MPIDense(Mat A, Vec xx, Vec yy)
+static PetscErrorCode MatMultTranspose_MPIDense(Mat A, Vec xx, Vec yy)
 {
   Mat_MPIDense      *a = (Mat_MPIDense *)A->data;
   const PetscScalar *ax;
@@ -527,7 +527,7 @@ PetscErrorCode MatMultTranspose_MPIDense(Mat A, Vec xx, Vec yy)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatMultTransposeAdd_MPIDense(Mat A, Vec xx, Vec yy, Vec zz)
+static PetscErrorCode MatMultTransposeAdd_MPIDense(Mat A, Vec xx, Vec yy, Vec zz)
 {
   Mat_MPIDense      *a = (Mat_MPIDense *)A->data;
   const PetscScalar *ax;
@@ -550,33 +550,32 @@ PetscErrorCode MatMultTransposeAdd_MPIDense(Mat A, Vec xx, Vec yy, Vec zz)
 PetscErrorCode MatGetDiagonal_MPIDense(Mat A, Vec v)
 {
   Mat_MPIDense      *a = (Mat_MPIDense *)A->data;
-  PetscInt           lda, len, i, n, m = A->rmap->n, radd;
-  PetscScalar       *x, zero = 0.0;
+  PetscInt           lda, len, i, nl, ng, m = A->rmap->n, radd;
+  PetscScalar       *x;
   const PetscScalar *av;
 
   PetscFunctionBegin;
-  PetscCall(VecSet(v, zero));
   PetscCall(VecGetArray(v, &x));
-  PetscCall(VecGetSize(v, &n));
-  PetscCheck(n == A->rmap->N, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Nonconforming mat and vec");
+  PetscCall(VecGetSize(v, &ng));
+  PetscCheck(ng == A->rmap->N, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Nonconforming mat and vec");
+  PetscCall(VecGetLocalSize(v, &nl));
   len  = PetscMin(a->A->rmap->n, a->A->cmap->n);
   radd = A->rmap->rstart * m;
   PetscCall(MatDenseGetArrayRead(a->A, &av));
   PetscCall(MatDenseGetLDA(a->A, &lda));
   for (i = 0; i < len; i++) x[i] = av[radd + i * lda + i];
   PetscCall(MatDenseRestoreArrayRead(a->A, &av));
+  PetscCall(PetscArrayzero(x + i, nl - i));
   PetscCall(VecRestoreArray(v, &x));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatDestroy_MPIDense(Mat mat)
+static PetscErrorCode MatDestroy_MPIDense(Mat mat)
 {
   Mat_MPIDense *mdn = (Mat_MPIDense *)mat->data;
 
   PetscFunctionBegin;
-#if defined(PETSC_USE_LOG)
   PetscCall(PetscLogObjectState((PetscObject)mat, "Rows=%" PetscInt_FMT ", Cols=%" PetscInt_FMT, mat->rmap->N, mat->cmap->N));
-#endif
   PetscCall(MatStashDestroy_Private(&mat->stash));
   PetscCheck(!mdn->vecinuse, PetscObjectComm((PetscObject)mat), PETSC_ERR_ORDER, "Need to call MatDenseRestoreColumnVec() first");
   PetscCheck(!mdn->matinuse, PetscObjectComm((PetscObject)mat), PETSC_ERR_ORDER, "Need to call MatDenseRestoreSubMatrix() first");
@@ -751,7 +750,7 @@ static PetscErrorCode MatView_MPIDense_ASCIIorDraworSocket(Mat mat, PetscViewer 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatView_MPIDense(Mat mat, PetscViewer viewer)
+static PetscErrorCode MatView_MPIDense(Mat mat, PetscViewer viewer)
 {
   PetscBool iascii, isbinary, isdraw, issocket;
 
@@ -767,7 +766,7 @@ PetscErrorCode MatView_MPIDense(Mat mat, PetscViewer viewer)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatGetInfo_MPIDense(Mat A, MatInfoType flag, MatInfo *info)
+static PetscErrorCode MatGetInfo_MPIDense(Mat A, MatInfoType flag, MatInfo *info)
 {
   Mat_MPIDense  *mat = (Mat_MPIDense *)A->data;
   Mat            mdn = mat->A;
@@ -812,7 +811,7 @@ PetscErrorCode MatGetInfo_MPIDense(Mat A, MatInfoType flag, MatInfo *info)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatSetOption_MPIDense(Mat A, MatOption op, PetscBool flg)
+static PetscErrorCode MatSetOption_MPIDense(Mat A, MatOption op, PetscBool flg)
 {
   Mat_MPIDense *a = (Mat_MPIDense *)A->data;
 
@@ -856,7 +855,7 @@ PetscErrorCode MatSetOption_MPIDense(Mat A, MatOption op, PetscBool flg)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatDiagonalScale_MPIDense(Mat A, Vec ll, Vec rr)
+static PetscErrorCode MatDiagonalScale_MPIDense(Mat A, Vec ll, Vec rr)
 {
   Mat_MPIDense      *mdn = (Mat_MPIDense *)A->data;
   const PetscScalar *l;
@@ -905,7 +904,7 @@ PetscErrorCode MatDiagonalScale_MPIDense(Mat A, Vec ll, Vec rr)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatNorm_MPIDense(Mat A, NormType type, PetscReal *nrm)
+static PetscErrorCode MatNorm_MPIDense(Mat A, NormType type, PetscReal *nrm)
 {
   Mat_MPIDense      *mdn = (Mat_MPIDense *)A->data;
   PetscInt           i, j;
@@ -955,7 +954,7 @@ PetscErrorCode MatNorm_MPIDense(Mat A, NormType type, PetscReal *nrm)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatTranspose_MPIDense(Mat A, MatReuse reuse, Mat *matout)
+static PetscErrorCode MatTranspose_MPIDense(Mat A, MatReuse reuse, Mat *matout)
 {
   Mat_MPIDense *a = (Mat_MPIDense *)A->data;
   Mat           B;
@@ -997,7 +996,7 @@ PetscErrorCode MatTranspose_MPIDense(Mat A, MatReuse reuse, Mat *matout)
 static PetscErrorCode       MatDuplicate_MPIDense(Mat, MatDuplicateOption, Mat *);
 PETSC_INTERN PetscErrorCode MatScale_MPIDense(Mat, PetscScalar);
 
-PetscErrorCode MatSetUp_MPIDense(Mat A)
+static PetscErrorCode MatSetUp_MPIDense(Mat A)
 {
   PetscFunctionBegin;
   PetscCall(PetscLayoutSetUp(A->rmap));
@@ -1006,7 +1005,7 @@ PetscErrorCode MatSetUp_MPIDense(Mat A)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatAXPY_MPIDense(Mat Y, PetscScalar alpha, Mat X, MatStructure str)
+static PetscErrorCode MatAXPY_MPIDense(Mat Y, PetscScalar alpha, Mat X, MatStructure str)
 {
   Mat_MPIDense *A = (Mat_MPIDense *)Y->data, *B = (Mat_MPIDense *)X->data;
 
@@ -1015,7 +1014,7 @@ PetscErrorCode MatAXPY_MPIDense(Mat Y, PetscScalar alpha, Mat X, MatStructure st
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatConjugate_MPIDense(Mat mat)
+static PetscErrorCode MatConjugate_MPIDense(Mat mat)
 {
   Mat_MPIDense *a = (Mat_MPIDense *)mat->data;
 
@@ -1024,7 +1023,7 @@ PetscErrorCode MatConjugate_MPIDense(Mat mat)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatRealPart_MPIDense(Mat A)
+static PetscErrorCode MatRealPart_MPIDense(Mat A)
 {
   Mat_MPIDense *a = (Mat_MPIDense *)A->data;
 
@@ -1033,7 +1032,7 @@ PetscErrorCode MatRealPart_MPIDense(Mat A)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatImaginaryPart_MPIDense(Mat A)
+static PetscErrorCode MatImaginaryPart_MPIDense(Mat A)
 {
   Mat_MPIDense *a = (Mat_MPIDense *)A->data;
 
@@ -1055,7 +1054,7 @@ static PetscErrorCode MatGetColumnVector_MPIDense(Mat A, Vec v, PetscInt col)
 
 PETSC_INTERN PetscErrorCode MatGetColumnReductions_SeqDense(Mat, PetscInt, PetscReal *);
 
-PetscErrorCode MatGetColumnReductions_MPIDense(Mat A, PetscInt type, PetscReal *reductions)
+static PetscErrorCode MatGetColumnReductions_MPIDense(Mat A, PetscInt type, PetscReal *reductions)
 {
   PetscInt      i, m, n;
   Mat_MPIDense *a = (Mat_MPIDense *)A->data;
@@ -1267,7 +1266,7 @@ static struct _MatOps MatOps_Values = {MatSetValues_MPIDense,
                                        /*150*/ NULL,
                                        NULL};
 
-PetscErrorCode MatMPIDenseSetPreallocation_MPIDense(Mat mat, PetscScalar *data)
+static PetscErrorCode MatMPIDenseSetPreallocation_MPIDense(Mat mat, PetscScalar *data)
 {
   Mat_MPIDense *a     = (Mat_MPIDense *)mat->data;
   MatType       mtype = MATSEQDENSE;
@@ -1319,7 +1318,7 @@ PETSC_INTERN PetscErrorCode MatConvert_MPIAIJ_MPIDense(Mat A, MatType newtype, M
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatConvert_MPIDense_MPIAIJ(Mat A, MatType newtype, MatReuse reuse, Mat *newmat)
+static PetscErrorCode MatConvert_MPIDense_MPIAIJ(Mat A, MatType newtype, MatReuse reuse, Mat *newmat)
 {
   Mat B, C;
 
@@ -1516,7 +1515,7 @@ PetscErrorCode MatDenseRestoreColumnVecWrite_MPIDense(Mat A, PetscInt col, Vec *
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatDenseGetSubMatrix_MPIDense(Mat A, PetscInt rbegin, PetscInt rend, PetscInt cbegin, PetscInt cend, Mat *v)
+static PetscErrorCode MatDenseGetSubMatrix_MPIDense(Mat A, PetscInt rbegin, PetscInt rend, PetscInt cbegin, PetscInt cend, Mat *v)
 {
   Mat_MPIDense *a = (Mat_MPIDense *)A->data;
   Mat_MPIDense *c;
@@ -1574,7 +1573,7 @@ PetscErrorCode MatDenseGetSubMatrix_MPIDense(Mat A, PetscInt rbegin, PetscInt re
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatDenseRestoreSubMatrix_MPIDense(Mat A, Mat *v)
+static PetscErrorCode MatDenseRestoreSubMatrix_MPIDense(Mat A, Mat *v)
 {
   Mat_MPIDense *a = (Mat_MPIDense *)A->data;
   Mat_MPIDense *c;
@@ -1687,24 +1686,24 @@ PetscErrorCode MatCreate_MPIDense(Mat mat)
 M*/
 
 /*@C
-   MatMPIDenseSetPreallocation - Sets the array used to store the matrix entries
+  MatMPIDenseSetPreallocation - Sets the array used to store the matrix entries
 
-   Collective
+  Collective
 
-   Input Parameters:
-.  B - the matrix
--  data - optional location of matrix data.  Set to `NULL` for PETSc
+  Input Parameters:
++ B    - the matrix
+- data - optional location of matrix data.  Set to `NULL` for PETSc
    to control all matrix memory allocation.
 
-   Level: intermediate
+  Level: intermediate
 
-   Notes:
-   The dense format is fully compatible with standard Fortran
-   storage by columns.
+  Notes:
+  The dense format is fully compatible with standard Fortran
+  storage by columns.
 
-   The data input variable is intended primarily for Fortran programmers
-   who wish to allocate their own matrix memory space.  Most users should
-   set `data` to `NULL`.
+  The data input variable is intended primarily for Fortran programmers
+  who wish to allocate their own matrix memory space.  Most users should
+  set `data` to `NULL`.
 
 .seealso: [](ch_matrices), `Mat`, `MATMPIDENSE`, `MatCreate()`, `MatCreateSeqDense()`, `MatSetValues()`
 @*/
@@ -1717,21 +1716,21 @@ PetscErrorCode MatMPIDenseSetPreallocation(Mat B, PetscScalar *data)
 }
 
 /*@
-   MatDensePlaceArray - Allows one to replace the array in a `MATDENSE` matrix with an
-   array provided by the user. This is useful to avoid copying an array
-   into a matrix
+  MatDensePlaceArray - Allows one to replace the array in a `MATDENSE` matrix with an
+  array provided by the user. This is useful to avoid copying an array
+  into a matrix
 
-   Not Collective
+  Not Collective
 
-   Input Parameters:
-+  mat - the matrix
--  array - the array in column major order
+  Input Parameters:
++ mat   - the matrix
+- array - the array in column major order
 
-   Level: developer
+  Level: developer
 
-   Note:
-   You can return to the original array with a call to `MatDenseResetArray()`. The user is responsible for freeing this array; it will not be
-   freed when the matrix is destroyed.
+  Note:
+  You can return to the original array with a call to `MatDenseResetArray()`. The user is responsible for freeing this array; it will not be
+  freed when the matrix is destroyed.
 
 .seealso: [](ch_matrices), `Mat`, `MATDENSE`, `MatDenseGetArray()`, `MatDenseResetArray()`, `VecPlaceArray()`, `VecGetArray()`, `VecRestoreArray()`, `VecReplaceArray()`, `VecResetArray()`,
           `MatDenseReplaceArray()`
@@ -1749,17 +1748,17 @@ PetscErrorCode MatDensePlaceArray(Mat mat, const PetscScalar *array)
 }
 
 /*@
-   MatDenseResetArray - Resets the matrix array to that it previously had before the call to `MatDensePlaceArray()`
+  MatDenseResetArray - Resets the matrix array to that it previously had before the call to `MatDensePlaceArray()`
 
-   Not Collective
+  Not Collective
 
-   Input Parameter:
-.  mat - the matrix
+  Input Parameter:
+. mat - the matrix
 
-   Level: developer
+  Level: developer
 
-   Note:
-   You can only call this after a call to `MatDensePlaceArray()`
+  Note:
+  You can only call this after a call to `MatDensePlaceArray()`
 
 .seealso: [](ch_matrices), `Mat`, `MATDENSE`, `MatDenseGetArray()`, `MatDensePlaceArray()`, `VecPlaceArray()`, `VecGetArray()`, `VecRestoreArray()`, `VecReplaceArray()`, `VecResetArray()`
 @*/
@@ -1773,21 +1772,21 @@ PetscErrorCode MatDenseResetArray(Mat mat)
 }
 
 /*@
-   MatDenseReplaceArray - Allows one to replace the array in a dense matrix with an
-   array provided by the user. This is useful to avoid copying an array
-   into a matrix
+  MatDenseReplaceArray - Allows one to replace the array in a dense matrix with an
+  array provided by the user. This is useful to avoid copying an array
+  into a matrix
 
-   Not Collective
+  Not Collective
 
-   Input Parameters:
-+  mat - the matrix
--  array - the array in column major order
+  Input Parameters:
++ mat   - the matrix
+- array - the array in column major order
 
-   Level: developer
+  Level: developer
 
-   Note:
-   The memory passed in MUST be obtained with `PetscMalloc()` and CANNOT be
-   freed by the user. It will be freed when the matrix is destroyed.
+  Note:
+  The memory passed in MUST be obtained with `PetscMalloc()` and CANNOT be
+  freed by the user. It will be freed when the matrix is destroyed.
 
 .seealso: [](ch_matrices), `Mat`, `MatDensePlaceArray()`, `MatDenseGetArray()`, `VecReplaceArray()`
 @*/
@@ -1804,37 +1803,37 @@ PetscErrorCode MatDenseReplaceArray(Mat mat, const PetscScalar *array)
 }
 
 /*@C
-   MatCreateDense - Creates a matrix in `MATDENSE` format.
+  MatCreateDense - Creates a matrix in `MATDENSE` format.
 
-   Collective
+  Collective
 
-   Input Parameters:
-+  comm - MPI communicator
-.  m - number of local rows (or `PETSC_DECIDE` to have calculated if `M` is given)
-.  n - number of local columns (or `PETSC_DECIDE` to have calculated if `N` is given)
-.  M - number of global rows (or `PETSC_DECIDE` to have calculated if `m` is given)
-.  N - number of global columns (or `PETSC_DECIDE` to have calculated if `n` is given)
--  data - optional location of matrix data.  Set data to `NULL` (`PETSC_NULL_SCALAR` for Fortran users) for PETSc
+  Input Parameters:
++ comm - MPI communicator
+. m    - number of local rows (or `PETSC_DECIDE` to have calculated if `M` is given)
+. n    - number of local columns (or `PETSC_DECIDE` to have calculated if `N` is given)
+. M    - number of global rows (or `PETSC_DECIDE` to have calculated if `m` is given)
+. N    - number of global columns (or `PETSC_DECIDE` to have calculated if `n` is given)
+- data - optional location of matrix data.  Set data to `NULL` (`PETSC_NULL_SCALAR` for Fortran users) for PETSc
    to control all matrix memory allocation.
 
-   Output Parameter:
-.  A - the matrix
+  Output Parameter:
+. A - the matrix
 
-   Level: intermediate
+  Level: intermediate
 
-   Notes:
-   The dense format is fully compatible with standard Fortran
-   storage by columns.
+  Notes:
+  The dense format is fully compatible with standard Fortran
+  storage by columns.
 
-   Although local portions of the matrix are stored in column-major
-   order, the matrix is partitioned across MPI ranks by row.
+  Although local portions of the matrix are stored in column-major
+  order, the matrix is partitioned across MPI ranks by row.
 
-   The data input variable is intended primarily for Fortran programmers
-   who wish to allocate their own matrix memory space.  Most users should
-   set `data` to `NULL` (`PETSC_NULL_SCALAR` for Fortran users).
+  The data input variable is intended primarily for Fortran programmers
+  who wish to allocate their own matrix memory space.  Most users should
+  set `data` to `NULL` (`PETSC_NULL_SCALAR` for Fortran users).
 
-   The user MUST specify either the local or global matrix dimensions
-   (possibly both).
+  The user MUST specify either the local or global matrix dimensions
+  (possibly both).
 
 .seealso: [](ch_matrices), `Mat`, `MATDENSE`, `MatCreate()`, `MatCreateSeqDense()`, `MatSetValues()`
 @*/
@@ -1877,7 +1876,7 @@ static PetscErrorCode MatDuplicate_MPIDense(Mat A, MatDuplicateOption cpvalues, 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatLoad_MPIDense(Mat newMat, PetscViewer viewer)
+static PetscErrorCode MatLoad_MPIDense(Mat newMat, PetscViewer viewer)
 {
   PetscBool isbinary;
 #if defined(PETSC_HAVE_HDF5)
@@ -1916,7 +1915,7 @@ static PetscErrorCode MatEqual_MPIDense(Mat A, Mat B, PetscBool *flag)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatDestroy_MatTransMatMult_MPIDense_MPIDense(void *data)
+static PetscErrorCode MatDestroy_MatTransMatMult_MPIDense_MPIDense(void *data)
 {
   Mat_TransMatMultDense *atb = (Mat_TransMatMultDense *)data;
 
@@ -1927,7 +1926,7 @@ PetscErrorCode MatDestroy_MatTransMatMult_MPIDense_MPIDense(void *data)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatDestroy_MatMatTransMult_MPIDense_MPIDense(void *data)
+static PetscErrorCode MatDestroy_MatMatTransMult_MPIDense_MPIDense(void *data)
 {
   Mat_MatTransMultDense *abt = (Mat_MatTransMultDense *)data;
 
@@ -2226,7 +2225,8 @@ static PetscErrorCode MatMatTransposeMultNumeric_MPIDense_MPIDense(Mat A, Mat B,
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatDestroy_MatMatMult_MPIDense_MPIDense(void *data)
+#if defined(PETSC_HAVE_ELEMENTAL)
+static PetscErrorCode MatDestroy_MatMatMult_MPIDense_MPIDense(void *data)
 {
   Mat_MatMultDense *ab = (Mat_MatMultDense *)data;
 
@@ -2238,7 +2238,6 @@ PetscErrorCode MatDestroy_MatMatMult_MPIDense_MPIDense(void *data)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-#if defined(PETSC_HAVE_ELEMENTAL)
 PetscErrorCode MatMatMultNumeric_MPIDense_MPIDense(Mat A, Mat B, Mat C)
 {
   Mat_MatMultDense *ab;

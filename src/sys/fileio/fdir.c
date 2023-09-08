@@ -14,7 +14,7 @@
   #include <unistd.h>
 #endif
 
-PetscErrorCode PetscPathJoin(const char dname[], const char fname[], size_t n, char fullname[])
+static PetscErrorCode PetscPathJoin(const char dname[], const char fname[], size_t n, char fullname[])
 {
   size_t l1, l2;
   PetscFunctionBegin;
@@ -141,7 +141,7 @@ PetscErrorCode PetscRMTree(const char dir[])
   PetscRMTree - delete a directory and all of its children
 
   Input Parameter:
-.  dir - the name of the directory
+. dir - the name of the directory
 
   Level: advanced
 

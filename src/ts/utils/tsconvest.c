@@ -135,21 +135,19 @@ static PetscErrorCode PetscConvEstGetConvRateTS_Spatial_Private(PetscConvEst ce,
   PetscCall(DMGetRefineLevel(ce->idm, &oldlevel));
   PetscCall(PetscMalloc1((Nr + 1), &dm));
   PetscCall(TSGetSolution(ts, &uInitial));
+  PetscCall(PetscObjectReference((PetscObject)uInitial));
+
   /* Loop over meshes */
   dm[0] = ce->idm;
   for (r = 0; r <= Nr; ++r) {
-    Vec u;
-#if defined(PETSC_USE_LOG)
+    Vec           u;
     PetscLogStage stage;
-#endif
-    char        stageName[PETSC_MAX_PATH_LEN];
-    const char *dmname, *uname;
+    char          stageName[PETSC_MAX_PATH_LEN];
+    const char   *dmname, *uname;
 
     PetscCall(PetscSNPrintf(stageName, PETSC_MAX_PATH_LEN - 1, "ConvEst Refinement Level %" PetscInt_FMT, r));
-#if defined(PETSC_USE_LOG)
     PetscCall(PetscLogStageGetId(stageName, &stage));
     if (stage < 0) PetscCall(PetscLogStageRegister(stageName, &stage));
-#endif
     PetscCall(PetscLogStagePush(stage));
     if (r > 0) {
       if (!ce->noRefine) {
@@ -275,6 +273,7 @@ static PetscErrorCode PetscConvEstGetConvRateTS_Spatial_Private(PetscConvEst ce,
   PetscCall(TSSetFromOptions(ts));
   PetscCall(TSSetSolution(ts, uInitial));
   PetscCall(PetscConvEstComputeInitialGuess(ce, 0, NULL, uInitial));
+  PetscCall(VecDestroy(&uInitial));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

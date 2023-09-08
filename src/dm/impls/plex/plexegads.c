@@ -1518,7 +1518,7 @@ PetscErrorCode DMPlexInflateToGeomModel(DM dm)
 - filename - The name of the EGADS, IGES, or STEP file
 
   Output Parameter:
-. dm       - The `DM` object representing the mesh
+. dm - The `DM` object representing the mesh
 
   Level: beginner
 
@@ -1533,7 +1533,7 @@ PetscErrorCode DMPlexCreateEGADSFromFile(MPI_Comm comm, const char filename[], D
   PetscBool printModel = PETSC_FALSE, tessModel = PETSC_FALSE, newModel = PETSC_FALSE;
 
   PetscFunctionBegin;
-  PetscValidCharPointer(filename, 2);
+  PetscAssertPointer(filename, 2);
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-dm_plex_egads_print_model", &printModel, NULL));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-dm_plex_egads_tess_model", &tessModel, NULL));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-dm_plex_egads_new_model", &newModel, NULL));

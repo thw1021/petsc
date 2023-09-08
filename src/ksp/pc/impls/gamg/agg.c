@@ -14,18 +14,18 @@ typedef struct {
 } PC_GAMG_AGG;
 
 /*@
-   PCGAMGSetNSmooths - Set number of smoothing steps (1 is typical) used for multigrid on all the levels
+  PCGAMGSetNSmooths - Set number of smoothing steps (1 is typical) used for multigrid on all the levels
 
-   Logically Collective
+  Logically Collective
 
-   Input Parameters:
-+  pc - the preconditioner context
--  n - the number of smooths
+  Input Parameters:
++ pc - the preconditioner context
+- n  - the number of smooths
 
-   Options Database Key:
-.  -pc_gamg_agg_nsmooths <nsmooth, default=1> - number of smoothing steps to use with smooth aggregation
+  Options Database Key:
+. -pc_gamg_agg_nsmooths <nsmooth, default=1> - number of smoothing steps to use with smooth aggregation
 
-   Level: intermediate
+  Level: intermediate
 
 .seealso: `PCMG`, `PCGAMG`
 @*/
@@ -50,18 +50,18 @@ static PetscErrorCode PCGAMGSetNSmooths_AGG(PC pc, PetscInt n)
 }
 
 /*@
-   PCGAMGSetAggressiveLevels -  Use aggressive coarsening on first n levels
+  PCGAMGSetAggressiveLevels -  Use aggressive coarsening on first n levels
 
-   Logically Collective
+  Logically Collective
 
-   Input Parameters:
-+  pc - the preconditioner context
--  n - 0, 1 or more
+  Input Parameters:
++ pc - the preconditioner context
+- n  - 0, 1 or more
 
-   Options Database Key:
-.  -pc_gamg_aggressive_coarsening <n,default = 1> - Number of levels to square the graph on before aggregating it
+  Options Database Key:
+. -pc_gamg_aggressive_coarsening <n,default = 1> - Number of levels to square the graph on before aggregating it
 
-   Level: intermediate
+  Level: intermediate
 
 .seealso: `PCGAMG`, `PCGAMGSetThreshold()`
 @*/
@@ -129,7 +129,7 @@ static PetscErrorCode PCDestroy_GAMG_AGG(PC pc)
 
    Input Parameter:
    . pc - the preconditioner context
-   . ndm - dimesion of data (used for dof/vertex for Stokes)
+   . ndm - dimension of data (used for dof/vertex for Stokes)
    . a_nloc - number of vertices local
    . coords - [a_nloc][ndm] - interleaved coordinate data: {x_0, y_0, z_0, x_1, y_1, ...}
 */
@@ -592,6 +592,12 @@ static PetscErrorCode PCGAMGProlongator_AGG(PC pc, Mat Amat, Mat Gmat, PetscCoar
   PetscCall(MatSetSizes(Prol, nloc * bs, nLocalSelected * col_bs, PETSC_DETERMINE, PETSC_DETERMINE));
   PetscCall(MatSetBlockSizes(Prol, bs, col_bs));
   PetscCall(MatSetType(Prol, mtype));
+#if PetscDefined(HAVE_DEVICE)
+  PetscBool flg;
+  PetscCall(MatBoundToCPU(Amat, &flg));
+  PetscCall(MatBindToCPU(Prol, flg));
+  if (flg) PetscCall(MatSetBindingPropagates(Prol, PETSC_TRUE));
+#endif
   PetscCall(MatSeqAIJSetPreallocation(Prol, col_bs, NULL));
   PetscCall(MatMPIAIJSetPreallocation(Prol, col_bs, NULL, col_bs, NULL));
 
@@ -719,6 +725,7 @@ static PetscErrorCode PCGAMGOptProlongator_AGG(PC pc, Mat Amat, Mat *a_P)
       PetscCall(KSPSetNoisy_Private(bb));
 
       PetscCall(KSPCreate(comm, &eksp));
+      PetscCall(KSPSetNestLevel(eksp, pc->kspnestlevel));
       PetscCall(PCGetOptionsPrefix(pc, &prefix));
       PetscCall(KSPSetOptionsPrefix(eksp, prefix));
       PetscCall(KSPAppendOptionsPrefix(eksp, "pc_gamg_esteig_"));

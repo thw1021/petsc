@@ -65,6 +65,7 @@ PetscErrorCode VecHIPGetArrays_Private(Vec v, const PetscScalar **host_array, co
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+// PetscClangLinter pragma disable: -fdoc-internal-linkage
 /*@
   VecCreateMPIHIP - Creates a standard, parallel, array-style vector for HIP devices.
 
@@ -93,11 +94,12 @@ PetscErrorCode VecHIPGetArrays_Private(Vec v, const PetscScalar **host_array, co
 PetscErrorCode VecCreateMPIHIP(MPI_Comm comm, PetscInt n, PetscInt N, Vec *v)
 {
   PetscFunctionBegin;
-  PetscValidPointer(v, 4);
+  PetscAssertPointer(v, 4);
   PetscCall(VecCreateMPICUPMAsync<DeviceType::HIP>(comm, n, N, v));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+// PetscClangLinter pragma disable: -fdoc-internal-linkage
 /*@C
   VecCreateMPIHIPWithArrays - Creates a parallel, array-style vector using HIP, where the
   user provides the complete array space to store the vector values.
@@ -132,6 +134,7 @@ PetscErrorCode VecCreateMPIHIPWithArrays(MPI_Comm comm, PetscInt bs, PetscInt n,
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+// PetscClangLinter pragma disable: -fdoc-internal-linkage
 /*@C
   VecCreateMPIHIPWithArray - Creates a parallel, array-style vector using HIP, where the
   user provides the device array space to store the vector values.

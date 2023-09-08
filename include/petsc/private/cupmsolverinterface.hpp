@@ -1,5 +1,4 @@
-#ifndef PETSCCUPMSOLVERINTERFACE_HPP
-#define PETSCCUPMSOLVERINTERFACE_HPP
+#pragma once
 
 #include <petsc/private/cupmblasinterface.hpp>
 #include <petsc/private/petscadvancedmacros.h>
@@ -276,6 +275,14 @@ struct SolverInterface : SolverInterfaceImpl<T> {
   PETSC_CUPMSOLVER_IMPL_CLASS_HEADER(T); \
   using ::Petsc::device::cupm::impl::SolverInterface<T>::cupmSolverName
 
+#if PetscDefined(HAVE_CUDA)
+extern template struct PETSC_SINGLE_LIBRARY_VISIBILITY_INTERNAL SolverInterface<DeviceType::CUDA>;
+#endif
+
+#if PetscDefined(HAVE_HIP)
+extern template struct PETSC_SINGLE_LIBRARY_VISIBILITY_INTERNAL SolverInterface<DeviceType::HIP>;
+#endif
+
 } // namespace impl
 
 } // namespace cupm
@@ -283,5 +290,3 @@ struct SolverInterface : SolverInterfaceImpl<T> {
 } // namespace device
 
 } // namespace Petsc
-
-#endif // PETSCCUPMSOLVERINTERFACE_HPP

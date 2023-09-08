@@ -6,7 +6,7 @@
 #include <KokkosSparse_spadd.hpp>
 #include <KokkosSparse_spgemm.hpp>
 
-PetscErrorCode MatAssemblyEnd_MPIAIJKokkos(Mat A, MatAssemblyType mode)
+static PetscErrorCode MatAssemblyEnd_MPIAIJKokkos(Mat A, MatAssemblyType mode)
 {
   Mat_MPIAIJ *mpiaij = (Mat_MPIAIJ *)A->data;
 
@@ -24,7 +24,7 @@ PetscErrorCode MatAssemblyEnd_MPIAIJKokkos(Mat A, MatAssemblyType mode)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatMPIAIJSetPreallocation_MPIAIJKokkos(Mat mat, PetscInt d_nz, const PetscInt d_nnz[], PetscInt o_nz, const PetscInt o_nnz[])
+static PetscErrorCode MatMPIAIJSetPreallocation_MPIAIJKokkos(Mat mat, PetscInt d_nz, const PetscInt d_nnz[], PetscInt o_nz, const PetscInt o_nnz[])
 {
   Mat_MPIAIJ *mpiaij = (Mat_MPIAIJ *)mat->data;
 
@@ -70,7 +70,7 @@ PetscErrorCode MatMPIAIJSetPreallocation_MPIAIJKokkos(Mat mat, PetscInt d_nz, co
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatMult_MPIAIJKokkos(Mat mat, Vec xx, Vec yy)
+static PetscErrorCode MatMult_MPIAIJKokkos(Mat mat, Vec xx, Vec yy)
 {
   Mat_MPIAIJ *mpiaij = (Mat_MPIAIJ *)mat->data;
   PetscInt    nt;
@@ -85,7 +85,7 @@ PetscErrorCode MatMult_MPIAIJKokkos(Mat mat, Vec xx, Vec yy)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatMultAdd_MPIAIJKokkos(Mat mat, Vec xx, Vec yy, Vec zz)
+static PetscErrorCode MatMultAdd_MPIAIJKokkos(Mat mat, Vec xx, Vec yy, Vec zz)
 {
   Mat_MPIAIJ *mpiaij = (Mat_MPIAIJ *)mat->data;
   PetscInt    nt;
@@ -100,7 +100,7 @@ PetscErrorCode MatMultAdd_MPIAIJKokkos(Mat mat, Vec xx, Vec yy, Vec zz)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatMultTranspose_MPIAIJKokkos(Mat mat, Vec xx, Vec yy)
+static PetscErrorCode MatMultTranspose_MPIAIJKokkos(Mat mat, Vec xx, Vec yy)
 {
   Mat_MPIAIJ *mpiaij = (Mat_MPIAIJ *)mat->data;
   PetscInt    nt;
@@ -119,7 +119,7 @@ PetscErrorCode MatMultTranspose_MPIAIJKokkos(Mat mat, Vec xx, Vec yy)
    A is put before B. C's size would be A->rmap->n by (A->cmap->n + B->cmap->n).
    C still uses local column ids. Their corresponding global column ids are returned in glob.
 */
-PetscErrorCode MatMPIAIJGetLocalMatMerge_MPIAIJKokkos(Mat mat, MatReuse reuse, IS *glob, Mat *C)
+static PetscErrorCode MatMPIAIJGetLocalMatMerge_MPIAIJKokkos(Mat mat, MatReuse reuse, IS *glob, Mat *C)
 {
   Mat             Ad, Ao;
   const PetscInt *cmap;
@@ -1334,7 +1334,7 @@ static PetscErrorCode MatProductNumeric_MPIAIJKokkos_AB(Mat_Product *product, Ma
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatProductNumeric_MPIAIJKokkos(Mat C)
+static PetscErrorCode MatProductNumeric_MPIAIJKokkos(Mat C)
 {
   Mat_MPIAIJ                  *cmpi = static_cast<Mat_MPIAIJ *>(C->data);
   Mat_Product                 *product;
@@ -1372,7 +1372,7 @@ PetscErrorCode MatProductNumeric_MPIAIJKokkos(Mat C)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatProductSymbolic_MPIAIJKokkos(Mat C)
+static PetscErrorCode MatProductSymbolic_MPIAIJKokkos(Mat C)
 {
   Mat                          A, B;
   Mat_Product                 *product;
@@ -1564,8 +1564,8 @@ struct MatCOOStruct_MPIAIJKokkos {
     Bjmap2(Kokkos::create_mirror_view_and_copy(DefaultMemorySpace(), PetscCountKokkosViewHost(coo_h->Bjmap2, coo_h->Bnnz2 + 1))),
     Bperm2(Kokkos::create_mirror_view_and_copy(DefaultMemorySpace(), PetscCountKokkosViewHost(coo_h->Bperm2, coo_h->Btot2))),
     Cperm1(Kokkos::create_mirror_view_and_copy(DefaultMemorySpace(), PetscCountKokkosViewHost(coo_h->Cperm1, coo_h->sendlen))),
-    sendbuf(Kokkos::create_mirror_view(DefaultMemorySpace(), MatScalarKokkosViewHost(coo_h->sendbuf, coo_h->sendlen))),
-    recvbuf(Kokkos::create_mirror_view(DefaultMemorySpace(), MatScalarKokkosViewHost(coo_h->recvbuf, coo_h->recvlen)))
+    sendbuf(Kokkos::create_mirror_view(Kokkos::WithoutInitializing, DefaultMemorySpace(), MatScalarKokkosViewHost(coo_h->sendbuf, coo_h->sendlen))),
+    recvbuf(Kokkos::create_mirror_view(Kokkos::WithoutInitializing, DefaultMemorySpace(), MatScalarKokkosViewHost(coo_h->recvbuf, coo_h->recvlen)))
   {
     PetscCallVoid(PetscObjectReference((PetscObject)sf));
   }
@@ -1655,6 +1655,7 @@ static PetscErrorCode MatSetValuesCOO_MPIAIJKokkos(Mat mat, const PetscScalar v[
     PetscCall(MatSeqAIJGetKokkosView(B, &Ba));
   }
 
+  PetscCall(PetscLogGpuTimeBegin());
   /* Pack entries to be sent to remote */
   Kokkos::parallel_for(
     vsend.extent(0), KOKKOS_LAMBDA(const PetscCount i) { vsend(i) = v1(Cperm1(i)); });
@@ -1686,6 +1687,7 @@ static PetscErrorCode MatSetValuesCOO_MPIAIJKokkos(Mat mat, const PetscScalar v[
         for (PetscCount k = Bjmap2(i); k < Bjmap2(i + 1); k++) Ba(Bimap2(i)) += v2(Bperm2(k));
       }
     });
+  PetscCall(PetscLogGpuTimeEnd());
 
   if (imode == INSERT_VALUES) {
     PetscCall(MatSeqAIJRestoreKokkosViewWrite(A, &Aa)); /* Increase A & B's state etc. */
@@ -1773,54 +1775,54 @@ PETSC_EXTERN PetscErrorCode MatCreate_MPIAIJKokkos(Mat A)
 }
 
 /*@C
-   MatCreateAIJKokkos - Creates a sparse matrix in `MATAIJKOKOS` (compressed row) format
-   (the default parallel PETSc format).  This matrix will ultimately pushed down
-   to Kokkos for calculations.
+  MatCreateAIJKokkos - Creates a sparse matrix in `MATAIJKOKOS` (compressed row) format
+  (the default parallel PETSc format).  This matrix will ultimately pushed down
+  to Kokkos for calculations.
 
-   Collective
+  Collective
 
-   Input Parameters:
-+  comm - MPI communicator, set to `PETSC_COMM_SELF`
-.  m - number of local rows (or `PETSC_DECIDE` to have calculated if `M` is given)
+  Input Parameters:
++ comm  - MPI communicator, set to `PETSC_COMM_SELF`
+. m     - number of local rows (or `PETSC_DECIDE` to have calculated if `M` is given)
            This value should be the same as the local size used in creating the
            y vector for the matrix-vector product y = Ax.
-.  n - This value should be the same as the local size used in creating the
+. n     - This value should be the same as the local size used in creating the
        x vector for the matrix-vector product y = Ax. (or `PETSC_DECIDE` to have
        calculated if N is given) For square matrices n is almost always `m`.
-.  M - number of global rows (or `PETSC_DETERMINE` to have calculated if `m` is given)
-.  N - number of global columns (or `PETSC_DETERMINE` to have calculated if `n` is given)
-.  d_nz  - number of nonzeros per row in DIAGONAL portion of local submatrix
+. M     - number of global rows (or `PETSC_DETERMINE` to have calculated if `m` is given)
+. N     - number of global columns (or `PETSC_DETERMINE` to have calculated if `n` is given)
+. d_nz  - number of nonzeros per row in DIAGONAL portion of local submatrix
            (same value is used for all local rows)
-.  d_nnz - array containing the number of nonzeros in the various rows of the
+. d_nnz - array containing the number of nonzeros in the various rows of the
            DIAGONAL portion of the local submatrix (possibly different for each row)
            or `NULL`, if `d_nz` is used to specify the nonzero structure.
            The size of this array is equal to the number of local rows, i.e `m`.
            For matrices you plan to factor you must leave room for the diagonal entry and
            put in the entry even if it is zero.
-.  o_nz  - number of nonzeros per row in the OFF-DIAGONAL portion of local
+. o_nz  - number of nonzeros per row in the OFF-DIAGONAL portion of local
            submatrix (same value is used for all local rows).
--  o_nnz - array containing the number of nonzeros in the various rows of the
+- o_nnz - array containing the number of nonzeros in the various rows of the
            OFF-DIAGONAL portion of the local submatrix (possibly different for
            each row) or `NULL`, if `o_nz` is used to specify the nonzero
            structure. The size of this array is equal to the number
            of local rows, i.e `m`.
 
-   Output Parameter:
-.  A - the matrix
+  Output Parameter:
+. A - the matrix
 
-   Level: intermediate
+  Level: intermediate
 
-   Notes:
-   It is recommended that one use the `MatCreate()`, `MatSetType()` and/or `MatSetFromOptions()`,
-   MatXXXXSetPreallocation() paradigm instead of this routine directly.
-   [MatXXXXSetPreallocation() is, for example, `MatSeqAIJSetPreallocation()`]
+  Notes:
+  It is recommended that one use the `MatCreate()`, `MatSetType()` and/or `MatSetFromOptions()`,
+  MatXXXXSetPreallocation() paradigm instead of this routine directly.
+  [MatXXXXSetPreallocation() is, for example, `MatSeqAIJSetPreallocation()`]
 
-   The AIJ format, also called compressed row storage), is fully compatible with standard Fortran
-   storage.  That is, the stored row and column indices can begin at
-   either one (as in Fortran) or zero.
+  The AIJ format, also called compressed row storage), is fully compatible with standard Fortran
+  storage.  That is, the stored row and column indices can begin at
+  either one (as in Fortran) or zero.
 
 .seealso: [](ch_matrices), `Mat`, `MATAIJKOKOS`, `MATSEQAIJKOKOS`, `MATMPIAIJKOKOS`, `MatCreate()`, `MatCreateAIJ()`, `MatSetValues()`,
-          `MatSeqAIJSetColumnIndices()`, `MatCreateSeqAIJWithArrays()`, `MatCreateAIJ()`, `MATMPIAIJKOKKOS`, `MATAIJKOKKOS`
+          `MatSeqAIJSetColumnIndices()`, `MatCreateSeqAIJWithArrays()`, `MATMPIAIJKOKKOS`, `MATAIJKOKKOS`
 @*/
 PetscErrorCode MatCreateAIJKokkos(MPI_Comm comm, PetscInt m, PetscInt n, PetscInt M, PetscInt N, PetscInt d_nz, const PetscInt d_nnz[], PetscInt o_nz, const PetscInt o_nnz[], Mat *A)
 {

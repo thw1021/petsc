@@ -2,8 +2,7 @@
    An index set is a generalization of a subset of integers.  Index sets
    are used for defining scatters and gathers.
 */
-#ifndef PETSCIS_H
-#define PETSCIS_H
+#pragma once
 
 #include <petscsys.h>
 #include <petscsftypes.h>
@@ -16,6 +15,7 @@
 PETSC_EXTERN PetscClassId IS_CLASSID;
 
 PETSC_EXTERN PetscErrorCode ISInitializePackage(void);
+PETSC_EXTERN PetscErrorCode ISFinalizePackage(void);
 
 /*J
     ISType - String with the name of a PETSc index set type
@@ -40,6 +40,7 @@ PETSC_EXTERN PetscFunctionList ISList;
 PETSC_EXTERN PetscErrorCode    ISSetType(IS, ISType);
 PETSC_EXTERN PetscErrorCode    ISGetType(IS, ISType *);
 PETSC_EXTERN PetscErrorCode    ISRegister(const char[], PetscErrorCode (*)(IS));
+PETSC_EXTERN PetscErrorCode    ISRegisterAll(void);
 PETSC_EXTERN PetscErrorCode    ISCreate(MPI_Comm, IS *);
 
 PETSC_EXTERN PetscErrorCode ISDestroy(IS *);
@@ -260,7 +261,7 @@ PETSC_EXTERN PetscErrorCode ISPartitioningToNumbering(IS, IS *);
 PETSC_EXTERN PetscErrorCode ISPartitioningCount(IS, PetscInt, PetscInt[]);
 
 PETSC_EXTERN PetscErrorCode ISCompressIndicesGeneral(PetscInt, PetscInt, PetscInt, PetscInt, const IS[], IS[]);
-PETSC_DEPRECATED_FUNCTION("Use ISCompressIndicesGeneral() (since version 3.19)") static inline PetscErrorCode ISCompressIndicesSorted(PetscInt n, PetscInt bs, PetscInt imax, const IS is_in[], IS is_out[])
+PETSC_DEPRECATED_FUNCTION(3, 19, 0, "ISCompressIndicesGeneral()", ) static inline PetscErrorCode ISCompressIndicesSorted(PetscInt n, PetscInt bs, PetscInt imax, const IS is_in[], IS is_out[])
 {
   return ISCompressIndicesGeneral(n, bs, n, imax, is_in, is_out);
 }
@@ -380,5 +381,3 @@ PETSC_EXTERN PetscErrorCode PetscParallelSortInt(PetscLayout, PetscLayout, Petsc
 
 PETSC_EXTERN PetscErrorCode ISGetLayout(IS, PetscLayout *);
 PETSC_EXTERN PetscErrorCode ISSetLayout(IS, PetscLayout);
-
-#endif

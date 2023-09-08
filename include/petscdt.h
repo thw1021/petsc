@@ -1,8 +1,7 @@
 /*
   Common tools for constructing discretizations
 */
-#ifndef PETSCDT_H
-#define PETSCDT_H
+#pragma once
 
 #include <petscsys.h>
 #include <petscdmtypes.h>
@@ -147,6 +146,16 @@ PETSC_EXTERN PetscErrorCode PetscGaussLobattoLegendreElementAdvectionCreate(Pets
 PETSC_EXTERN PetscErrorCode PetscGaussLobattoLegendreElementAdvectionDestroy(PetscInt, PetscReal *, PetscReal *, PetscReal ***);
 PETSC_EXTERN PetscErrorCode PetscGaussLobattoLegendreElementMassCreate(PetscInt, PetscReal *, PetscReal *, PetscReal ***);
 PETSC_EXTERN PetscErrorCode PetscGaussLobattoLegendreElementMassDestroy(PetscInt, PetscReal *, PetscReal *, PetscReal ***);
+
+/*MC
+  PETSC_FORM_DEGREE_UNDEFINED - Indicates that a field does not have
+  a well-defined form degree in exterior calculus.
+
+  Level: advanced
+
+.seealso: `PetscDTAltV`, `PetscDualSpaceGetFormDegree()`
+M*/
+#define PETSC_FORM_DEGREE_UNDEFINED PETSC_INT_MIN
 
 PETSC_EXTERN PetscErrorCode PetscDTAltVApply(PetscInt, PetscInt, const PetscReal *, const PetscReal *, PetscReal *);
 PETSC_EXTERN PetscErrorCode PetscDTAltVWedge(PetscInt, PetscInt, PetscInt, const PetscReal *, const PetscReal *, PetscReal *);
@@ -598,5 +607,3 @@ PETSC_EXTERN PetscErrorCode PetscProbCreateFromOptions(PetscInt, const char[], c
 #include <petscvec.h>
 
 PETSC_EXTERN PetscErrorCode PetscProbComputeKSStatistic(Vec, PetscProbFunc, PetscReal *);
-
-#endif

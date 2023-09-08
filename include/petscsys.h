@@ -4,8 +4,7 @@
    Portions of this code are under:
    Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
 */
-#ifndef PETSCSYS_H
-#define PETSCSYS_H
+#pragma once
 
 /* ========================================================================== */
 /*
@@ -207,7 +206,7 @@ PETSC_EXTERN PetscBool PETSC_RUNNING_ON_VALGRIND;
 .seealso: `PETSC_DECIDE`, `PETSC_DEFAULT`, `PETSC_DETERMINE`
 M*/
 #define PETSC_IGNORE PETSC_NULLPTR
-#define PETSC_NULL   PETSC_DEPRECATED_MACRO("GCC warning \"PETSC_NULL is deprecated, use PETSC_NULLPTR instead (since version 3.19)\"") PETSC_NULLPTR
+#define PETSC_NULL   PETSC_DEPRECATED_MACRO(3, 19, 0, "PETSC_NULLPTR", ) PETSC_NULLPTR
 
 /*MC
     PETSC_DECIDE - standard way of passing in integer or floating point parameter
@@ -839,7 +838,7 @@ M*/
 M*/
 #define PetscNew(b) PetscCalloc1(1, (b))
 
-#define PetscNewLog(o, b) PETSC_DEPRECATED_MACRO("GCC warning \"PetscNewLog is deprecated, use PetscNew() instead (since version 3.18)\"") PetscNew((b))
+#define PetscNewLog(o, b) PETSC_DEPRECATED_MACRO(3, 18, 0, "PetscNew()", ) PetscNew((b))
 
 /*MC
    PetscFree - Frees memory
@@ -1138,6 +1137,7 @@ PETSC_EXTERN PetscErrorCode PetscFreeArguments(char **);
 
 PETSC_EXTERN PetscErrorCode PetscEnd(void);
 PETSC_EXTERN PetscErrorCode PetscSysInitializePackage(void);
+PETSC_EXTERN PetscErrorCode PetscSysFinalizePackage(void);
 
 PETSC_EXTERN PetscErrorCode PetscPythonInitialize(const char[], const char[]);
 PETSC_EXTERN PetscErrorCode PetscPythonFinalize(void);
@@ -1249,6 +1249,8 @@ PETSC_EXTERN PetscErrorCode PetscDemangleSymbol(const char *, char **);
 PETSC_EXTERN PetscErrorCode PetscMallocGetStack(void *, PetscStack **);
 
 PETSC_EXTERN PetscErrorCode PetscObjectsDump(FILE *, PetscBool);
+PETSC_EXTERN PetscErrorCode PetscObjectsView(PetscViewer);
+PETSC_EXTERN PetscErrorCode PetscObjectsGetObject(const char *, PetscObject *, char **);
 PETSC_EXTERN PetscErrorCode PetscObjectListDestroy(PetscObjectList *);
 PETSC_EXTERN PetscErrorCode PetscObjectListFind(PetscObjectList, const char[], PetscObject *);
 PETSC_EXTERN PetscErrorCode PetscObjectListReverseFind(PetscObjectList, PetscObject, char **, PetscBool *);
@@ -1385,7 +1387,6 @@ PETSC_EXTERN PetscErrorCode PetscSynchronizedFPrintf(MPI_Comm, FILE *, const cha
 PETSC_EXTERN PetscErrorCode PetscSynchronizedFlush(MPI_Comm, FILE *);
 PETSC_EXTERN PetscErrorCode PetscSynchronizedFGets(MPI_Comm, FILE *, size_t, char[]);
 PETSC_EXTERN PetscErrorCode PetscStartMatlab(MPI_Comm, const char[], const char[], FILE **);
-PETSC_EXTERN PetscErrorCode PetscStartJava(MPI_Comm, const char[], const char[], FILE **);
 PETSC_EXTERN PetscErrorCode PetscGetPetscDir(const char *[]);
 
 PETSC_EXTERN PetscClassId   PETSC_CONTAINER_CLASSID;
@@ -1918,12 +1919,6 @@ static inline PetscErrorCode PetscIntSumError(PetscInt a, PetscInt b, PetscInt *
   #undef hz
 #endif
 
-#include <limits.h>
-
-/* The number of bits in a byte */
-
-#define PETSC_BITS_PER_BYTE CHAR_BIT
-
 #if defined(PETSC_HAVE_SYS_TYPES_H)
   #include <sys/types.h>
 #endif
@@ -2042,6 +2037,7 @@ typedef const char *PetscRandomType;
 PETSC_EXTERN PetscClassId PETSC_RANDOM_CLASSID;
 
 PETSC_EXTERN PetscErrorCode PetscRandomInitializePackage(void);
+PETSC_EXTERN PetscErrorCode PetscRandomFinalizePackage(void);
 
 /* Dynamic creation and loading functions */
 PETSC_EXTERN PetscFunctionList PetscRandomList;
@@ -2239,18 +2235,17 @@ static inline PetscErrorCode PetscCitationsRegister(const char cit[], PetscBool 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_EXTERN                PETSC_DEPRECATED_FUNCTION("Google has discontinued its URL shortener service") PetscErrorCode PetscURLShorten(const char[], char[], size_t c);
 PETSC_EXTERN PetscErrorCode PetscGoogleDriveAuthorize(MPI_Comm, char[], char[], size_t);
 PETSC_EXTERN PetscErrorCode PetscGoogleDriveRefresh(MPI_Comm, const char[], char[], size_t);
 PETSC_EXTERN PetscErrorCode PetscGoogleDriveUpload(MPI_Comm, const char[], const char[]);
 
 PETSC_EXTERN PetscErrorCode PetscBoxAuthorize(MPI_Comm, char[], char[], size_t);
 PETSC_EXTERN PetscErrorCode PetscBoxRefresh(MPI_Comm, const char[], char[], char[], size_t);
+PETSC_EXTERN PetscErrorCode PetscBoxUpload(MPI_Comm, const char[], const char[]);
 
 PETSC_EXTERN PetscErrorCode PetscGlobusGetTransfers(MPI_Comm, const char[], char[], size_t);
-
-PETSC_EXTERN PetscErrorCode PetscTextBelt(MPI_Comm, const char[], const char[], PetscBool *);
-PETSC_EXTERN PetscErrorCode PetscTellMyCell(MPI_Comm, const char[], const char[], PetscBool *);
+PETSC_EXTERN PetscErrorCode PetscGlobusAuthorize(MPI_Comm, char[], size_t);
+PETSC_EXTERN PetscErrorCode PetscGlobusUpload(MPI_Comm, const char[], const char[]);
 
 PETSC_EXTERN PetscErrorCode PetscPullJSONValue(const char[], const char[], char[], size_t, PetscBool *);
 PETSC_EXTERN PetscErrorCode PetscPushJSONValue(char[], const char[], const char[], size_t);
@@ -2296,9 +2291,8 @@ static inline unsigned int PetscStrHash(const char *str)
 
 .seealso: `MPI_Allreduce()`
 M*/
-  // clang-format off
-#define MPIU_Allreduce(a, b, c, d, e, fcomm) \
-  PetscMacroReturnStandard( \
+  #define MPIU_Allreduce(a, b, c, d, e, fcomm) \
+    PetscMacroReturnStandard( \
     PetscMPIInt a_b1[6], a_b2[6]; \
     int _mpiu_allreduce_c_int = (int)(c); \
     a_b1[0] = -(PetscMPIInt)__LINE__; \
@@ -2313,7 +2307,6 @@ M*/
     PetscCheck(-a_b2[2] == a_b2[3], PETSC_COMM_SELF, PETSC_ERR_PLIB, "MPI_Allreduce() called in different locations (functions) on different processors"); \
     PetscCheck(-a_b2[4] == a_b2[5], PETSC_COMM_SELF, PETSC_ERR_PLIB, "MPI_Allreduce() called with different counts %d on different processors", _mpiu_allreduce_c_int); \
     PetscCallMPI(MPI_Allreduce((a), (b), (c), (d), (e), (fcomm)));)
-// clang-format on
 #else
   #define MPIU_Allreduce(a, b, c, d, e, fcomm) PetscMacroReturnStandard(PetscCallMPI(MPI_Allreduce((a), (b), (c), (d), (e), (fcomm))))
 #endif
@@ -2339,4 +2332,6 @@ PETSC_EXTERN PetscErrorCode PetscHasExternalPackage(const char[], PetscBool *);
 PETSC_EXTERN PetscErrorCode PCMPIServerBegin(void);
 PETSC_EXTERN PetscErrorCode PCMPIServerEnd(void);
 PETSC_EXTERN PetscErrorCode PCMPICommsDestroy(void);
-#endif
+PETSC_EXTERN PetscBool      PCMPIServerActive;
+
+#define PETSC_HAVE_FORTRAN PETSC_DEPRECATED_MACRO(3, 20, 0, "PETSC_USE_FORTRAN_BINDINGS", ) PETSC_USE_FORTRAN_BINDINGS

@@ -17,15 +17,10 @@ int main(int argc, char **args)
   char            dir[PETSC_MAX_PATH_LEN], name[PETSC_MAX_PATH_LEN], type[256];
   PetscBool3      share = PETSC_BOOL3_UNKNOWN;
   PetscBool       flg, set;
-#if defined(PETSC_USE_LOG)
-  PetscLogEvent event;
-#endif
-  PetscEventPerfInfo info1, info2;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &args, NULL, help));
-  PetscCall(PetscLogIsActive(&flg));
-  if (!flg) PetscCall(PetscLogDefaultBegin());
+  PetscCall(PetscLogDefaultBegin());
   PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD, &size));
   PetscCheck(size == 4, PETSC_COMM_WORLD, PETSC_ERR_USER, "This example requires 4 processes");
   PetscCall(PetscOptionsGetInt(NULL, NULL, "-rhs", &N, NULL));
@@ -180,6 +175,9 @@ int main(int argc, char **args)
   if (flg) PetscCall(PCHPDDMGetSTShareSubKSP(pc, &flg));
 #endif
   if (flg && PetscDefined(USE_LOG)) {
+    PetscLogEvent      event;
+    PetscEventPerfInfo info1, info2;
+
     PetscCall(PetscLogEventRegister("MatLUFactorSym", PC_CLASSID, &event));
     PetscCall(PetscLogEventGetPerfInfo(PETSC_DETERMINE, event, &info1));
     PetscCall(PetscLogEventRegister("MatLUFactorNum", PC_CLASSID, &event));
@@ -243,6 +241,25 @@ int main(int argc, char **args)
       PetscCall(MatDestroy(&aux));
     }
   }
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-viewer", &flg, NULL));
+  if (flg) {
+    PetscCall(PetscObjectTypeCompare((PetscObject)pc, PCHPDDM, &flg));
+    if (flg) {
+      PetscCall(PetscStrncpy(dir, "XXXXXX", sizeof(dir)));
+      if (rank == 0) PetscCall(PetscMkdtemp(dir));
+      PetscCallMPI(MPI_Bcast(dir, 6, MPI_CHAR, 0, PETSC_COMM_WORLD));
+      for (PetscInt i = 0; i < 2; ++i) {
+        PetscCall(PetscSNPrintf(name, sizeof(name), "%s/%s", dir, (i == 0 ? "A" : "A.dat")));
+        PetscCall(PetscViewerASCIIOpen(PETSC_COMM_WORLD, name, &viewer));
+        PetscCall(PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_INFO_DETAIL));
+        PetscCall(PCView(pc, viewer));
+        PetscCall(PetscViewerPopFormat(viewer));
+        PetscCall(PetscViewerDestroy(&viewer));
+      }
+      PetscCallMPI(MPI_Barrier(PETSC_COMM_WORLD));
+      if (rank == 0) PetscCall(PetscRMTree(dir));
+    }
+  }
 #endif
   PetscCall(KSPDestroy(&ksp));
   PetscCall(MatDestroy(&A));
@@ -261,7 +278,7 @@ int main(int argc, char **args)
       requires: hpddm slepc datafilespath double !complex !defined(PETSC_USE_64BIT_INDICES) defined(PETSC_HAVE_DYNAMIC_LIBRARIES) defined(PETSC_USE_SHARED_LIBRARIES)
       suffix: define_subdomains
       nsize: 4
-      args: -ksp_rtol 1e-3 -ksp_converged_reason -pc_type {{asm hpddm}shared output} -pc_hpddm_coarse_sub_pc_type lu -sub_pc_type lu -pc_hpddm_define_subdomains -options_left no -load_dir ${DATAFILESPATH}/matrices/hpddm/GENEO
+      args: -ksp_rtol 1e-3 -ksp_converged_reason -pc_type {{asm hpddm}shared output} -pc_hpddm_coarse_sub_pc_type lu -sub_pc_type lu -pc_hpddm_define_subdomains -options_left no -load_dir ${DATAFILESPATH}/matrices/hpddm/GENEO -viewer
 
    testset:
       requires: hpddm slepc datafilespath double !complex !defined(PETSC_USE_64BIT_INDICES) defined(PETSC_HAVE_DYNAMIC_LIBRARIES) defined(PETSC_USE_SHARED_LIBRARIES)
@@ -351,7 +368,7 @@ int main(int argc, char **args)
       test:
         suffix: geneo_mumps_use_omp_threads_2
         output_file: output/ex76_geneo_mumps_use_omp_threads.out
-        args: -pc_hpddm_coarse_mat_type aij -pc_hpddm_levels_1_eps_threshold 0.3 -pc_hpddm_coarse_pc_type cholesky -pc_hpddm_coarse_mat_chop 1e-12
+        args: -pc_hpddm_coarse_mat_type aij -pc_hpddm_levels_1_eps_threshold 0.3 -pc_hpddm_coarse_pc_type cholesky -pc_hpddm_coarse_mat_filter 1e-12
 
    testset: # converge really poorly because of a tiny -pc_hpddm_levels_1_eps_threshold, but needed for proper code coverage where some subdomains don't call EPSSolve()
       requires: hpddm slepc datafilespath double !complex !defined(PETSC_USE_64BIT_INDICES) defined(PETSC_HAVE_DYNAMIC_LIBRARIES) defined(PETSC_USE_SHARED_LIBRARIES)

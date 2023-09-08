@@ -1,5 +1,4 @@
-#ifndef PETSCVECSEQCUPM_HPP
-#define PETSCVECSEQCUPM_HPP
+#pragma once
 
 #include <petsc/private/veccupmimpl.h>
 #include <petsc/private/cpp/utility.hpp> // util::index_sequence
@@ -45,9 +44,11 @@ private:
   static PetscErrorCode MinMax_(TupleFuncT &&, UnaryFuncT &&, Vec, PetscInt *, PetscReal *) noexcept;
   // common core for pointwise binary and pointwise unary thrust functions
   template <typename BinaryFuncT>
-  static PetscErrorCode PointwiseBinary_(BinaryFuncT &&, Vec, Vec, Vec) noexcept;
+  static PetscErrorCode PointwiseBinary_(BinaryFuncT &&, Vec, Vec, Vec, PetscDeviceContext = nullptr) noexcept;
+  template <typename BinaryFuncT>
+  static PetscErrorCode PointwiseBinaryDispatch_(PetscErrorCode (*)(Vec, Vec, Vec), BinaryFuncT &&, Vec, Vec, Vec, PetscDeviceContext = nullptr) noexcept;
   template <typename UnaryFuncT>
-  static PetscErrorCode PointwiseUnary_(UnaryFuncT &&, Vec, Vec /*out*/ = nullptr) noexcept;
+  static PetscErrorCode PointwiseUnary_(UnaryFuncT &&, Vec, Vec, PetscDeviceContext = nullptr) noexcept;
   // mdot dispatchers
   static PetscErrorCode MDot_(/* use complex = */ std::true_type, Vec, PetscInt, const Vec[], PetscScalar *, PetscDeviceContext) noexcept;
   static PetscErrorCode MDot_(/* use complex = */ std::false_type, Vec, PetscInt, const Vec[], PetscScalar *, PetscDeviceContext) noexcept;
@@ -67,28 +68,59 @@ public:
   static PetscErrorCode CreateSeqCUPM(MPI_Comm, PetscInt, PetscInt, Vec *, PetscBool) noexcept;
   static PetscErrorCode CreateSeqCUPMWithBothArrays(MPI_Comm, PetscInt, PetscInt, const PetscScalar[], const PetscScalar[], Vec *) noexcept;
 
+  static PetscErrorCode InitializeAsyncFunctions(Vec) noexcept;
+  static PetscErrorCode ClearAsyncFunctions(Vec) noexcept;
+
   // callable indirectly via function pointers
   static PetscErrorCode Duplicate(Vec, Vec *) noexcept;
   static PetscErrorCode AYPX(Vec, PetscScalar, Vec) noexcept;
+  static PetscErrorCode AYPXAsync(Vec, PetscScalar, Vec, PetscDeviceContext) noexcept;
   static PetscErrorCode AXPY(Vec, PetscScalar, Vec) noexcept;
+  static PetscErrorCode AXPYAsync(Vec, PetscScalar, Vec, PetscDeviceContext) noexcept;
   static PetscErrorCode PointwiseDivide(Vec, Vec, Vec) noexcept;
+  static PetscErrorCode PointwiseDivideAsync(Vec, Vec, Vec, PetscDeviceContext) noexcept;
   static PetscErrorCode PointwiseMult(Vec, Vec, Vec) noexcept;
+  static PetscErrorCode PointwiseMultAsync(Vec, Vec, Vec, PetscDeviceContext) noexcept;
+  static PetscErrorCode PointwiseMax(Vec, Vec, Vec) noexcept;
+  static PetscErrorCode PointwiseMaxAsync(Vec, Vec, Vec, PetscDeviceContext) noexcept;
+  static PetscErrorCode PointwiseMaxAbs(Vec, Vec, Vec) noexcept;
+  static PetscErrorCode PointwiseMaxAbsAsync(Vec, Vec, Vec, PetscDeviceContext) noexcept;
+  static PetscErrorCode PointwiseMin(Vec, Vec, Vec) noexcept;
+  static PetscErrorCode PointwiseMinAsync(Vec, Vec, Vec, PetscDeviceContext) noexcept;
   static PetscErrorCode Reciprocal(Vec) noexcept;
+  static PetscErrorCode ReciprocalAsync(Vec, PetscDeviceContext) noexcept;
+  static PetscErrorCode Abs(Vec) noexcept;
+  static PetscErrorCode AbsAsync(Vec, PetscDeviceContext) noexcept;
+  static PetscErrorCode SqrtAbs(Vec) noexcept;
+  static PetscErrorCode SqrtAbsAsync(Vec, PetscDeviceContext) noexcept;
+  static PetscErrorCode Exp(Vec) noexcept;
+  static PetscErrorCode ExpAsync(Vec, PetscDeviceContext) noexcept;
+  static PetscErrorCode Log(Vec) noexcept;
+  static PetscErrorCode LogAsync(Vec, PetscDeviceContext) noexcept;
   static PetscErrorCode WAXPY(Vec, PetscScalar, Vec, Vec) noexcept;
+  static PetscErrorCode WAXPYAsync(Vec, PetscScalar, Vec, Vec, PetscDeviceContext) noexcept;
   static PetscErrorCode MAXPY(Vec, PetscInt, const PetscScalar[], Vec *) noexcept;
+  static PetscErrorCode MAXPYAsync(Vec, PetscInt, const PetscScalar[], Vec *, PetscDeviceContext) noexcept;
   static PetscErrorCode Dot(Vec, Vec, PetscScalar *) noexcept;
   static PetscErrorCode MDot(Vec, PetscInt, const Vec[], PetscScalar *) noexcept;
   static PetscErrorCode Set(Vec, PetscScalar) noexcept;
+  static PetscErrorCode SetAsync(Vec, PetscScalar, PetscDeviceContext) noexcept;
   static PetscErrorCode Scale(Vec, PetscScalar) noexcept;
+  static PetscErrorCode ScaleAsync(Vec, PetscScalar, PetscDeviceContext) noexcept;
   static PetscErrorCode TDot(Vec, Vec, PetscScalar *) noexcept;
   static PetscErrorCode Copy(Vec, Vec) noexcept;
+  static PetscErrorCode CopyAsync(Vec, Vec, PetscDeviceContext) noexcept;
   static PetscErrorCode Swap(Vec, Vec) noexcept;
+  static PetscErrorCode SwapAsync(Vec, Vec, PetscDeviceContext) noexcept;
   static PetscErrorCode AXPBY(Vec, PetscScalar, PetscScalar, Vec) noexcept;
+  static PetscErrorCode AXPBYAsync(Vec, PetscScalar, PetscScalar, Vec, PetscDeviceContext) noexcept;
   static PetscErrorCode AXPBYPCZ(Vec, PetscScalar, PetscScalar, PetscScalar, Vec, Vec) noexcept;
+  static PetscErrorCode AXPBYPCZAsync(Vec, PetscScalar, PetscScalar, PetscScalar, Vec, Vec, PetscDeviceContext) noexcept;
   static PetscErrorCode Norm(Vec, NormType, PetscReal *) noexcept;
   static PetscErrorCode ErrorWnorm(Vec, Vec, Vec, NormType, PetscReal, Vec, PetscReal, Vec, PetscReal, PetscReal *, PetscInt *, PetscReal *, PetscInt *, PetscReal *, PetscInt *) noexcept;
   static PetscErrorCode DotNorm2(Vec, Vec, PetscScalar *, PetscScalar *) noexcept;
   static PetscErrorCode Conjugate(Vec) noexcept;
+  static PetscErrorCode ConjugateAsync(Vec, PetscDeviceContext) noexcept;
   template <PetscMemoryAccessMode>
   static PetscErrorCode GetLocalVector(Vec, Vec) noexcept;
   template <PetscMemoryAccessMode>
@@ -97,6 +129,7 @@ public:
   static PetscErrorCode Min(Vec, PetscInt *, PetscReal *) noexcept;
   static PetscErrorCode Sum(Vec, PetscScalar *) noexcept;
   static PetscErrorCode Shift(Vec, PetscScalar) noexcept;
+  static PetscErrorCode ShiftAsync(Vec, PetscScalar, PetscDeviceContext) noexcept;
   static PetscErrorCode SetRandom(Vec, PetscRandom) noexcept;
   static PetscErrorCode BindToCPU(Vec, PetscBool) noexcept;
   static PetscErrorCode SetPreallocationCOO(Vec, PetscCount, const PetscInt[]) noexcept;
@@ -168,7 +201,7 @@ template <device::cupm::DeviceType T>
 inline PetscErrorCode VecCreateSeqCUPMAsync(MPI_Comm comm, PetscInt n, Vec *v) noexcept
 {
   PetscFunctionBegin;
-  PetscValidPointer(v, 4);
+  PetscAssertPointer(v, 4);
   PetscCall(impl::VecSeq_CUPM<T>::CreateSeqCUPM(comm, 0, n, v, PETSC_TRUE));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -177,8 +210,8 @@ template <device::cupm::DeviceType T>
 inline PetscErrorCode VecCreateSeqCUPMWithArraysAsync(MPI_Comm comm, PetscInt bs, PetscInt n, const PetscScalar cpuarray[], const PetscScalar gpuarray[], Vec *v) noexcept
 {
   PetscFunctionBegin;
-  if (n && cpuarray) PetscValidScalarPointer(cpuarray, 4);
-  PetscValidPointer(v, 6);
+  if (n && cpuarray) PetscAssertPointer(cpuarray, 4);
+  PetscAssertPointer(v, 6);
   PetscCall(impl::VecSeq_CUPM<T>::CreateSeqCUPMWithBothArrays(comm, bs, n, cpuarray, gpuarray, v));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -188,7 +221,7 @@ inline PetscErrorCode VecCUPMGetArrayAsync_Private(Vec v, PetscScalar **a, Petsc
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(v, VEC_CLASSID, 1);
-  PetscValidPointer(a, 2);
+  PetscAssertPointer(a, 2);
   PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
   PetscCall(impl::VecSeq_CUPM<T>::template GetArray<PETSC_MEMTYPE_DEVICE, mode>(v, a, dctx));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -292,5 +325,3 @@ extern template class PETSC_SINGLE_LIBRARY_VISIBILITY_INTERNAL ::Petsc::vec::cup
 #if PetscDefined(HAVE_HIP)
 extern template class PETSC_SINGLE_LIBRARY_VISIBILITY_INTERNAL ::Petsc::vec::cupm::impl::VecSeq_CUPM<::Petsc::device::cupm::DeviceType::HIP>;
 #endif
-
-#endif // PETSCVECSEQCUPM_HPP

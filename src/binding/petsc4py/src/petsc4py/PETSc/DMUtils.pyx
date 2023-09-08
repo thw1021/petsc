@@ -48,6 +48,8 @@ cdef class DMInterpolation:
     def evaluate(self, DM dm, Vec x, Vec v=None) -> Vec:
         """Calculate interpolated field values at the interpolation points.
 
+        Collective.
+
         Parameters
         ----------
         dm
@@ -84,7 +86,7 @@ cdef class DMInterpolation:
         """
         cdef Vec coords = Vec()
         CHKERR( DMInterpolationGetCoordinates(self.dminterp, &coords.vec) )
-        PetscINCREF(coords.obj)
+        CHKERR( PetscINCREF(coords.obj) )
         return coords
 
     def getDim(self) -> int:

@@ -3,7 +3,7 @@ import config.package
 class Configure(config.package.Package):
   def __init__(self, framework):
     config.package.Package.__init__(self, framework)
-    self.gitcommit              = 'a2e6dffced497e0bb2b62d91121136d8c8448e1d' # main may 9, 2023
+    self.gitcommit              = 'd1770a7bcd8794ead4e61f3d0f8fdd9006d8230c' # main sep-04-2023
     self.download               = ['git://https://gitlab.com/slepc/slepc.git','https://gitlab.com/slepc/slepc/-/archive/'+self.gitcommit+'/slepc-'+self.gitcommit+'.tar.gz']
     self.functions              = []
     self.includes               = []
@@ -73,7 +73,7 @@ class Configure(config.package.Package):
     self.addMakeRule('slepcbuild','', \
                        ['@echo "*** Building SLEPc ***"',\
                         '@${RM} '+os.path.join(self.petscdir.dir,self.arch,'lib','petsc','conf','slepc.errorflg'),\
-                        '@(cd '+self.packageDir+' && \\\n\
+                        '+@(cd '+self.packageDir+' && \\\n\
             '+carg+' '+self.python.pyexe+' ./configure --prefix='+prefix+' '+configargs+' && \\\n\
             '+barg+' ${OMAKE} '+barg+') || \\\n\
             (echo "**************************ERROR*************************************" && \\\n\

@@ -107,6 +107,7 @@
   #define matgetownershiprangecolumn_  MATGETOWNERSHIPRANGECOLUMN
   #define matviewfromoptions_          MATVIEWFROMOPTIONS
   #define matdestroy_                  MATDESTROY
+  #define matcreatefromoptions_        MATCREATEFROMOPTIONS
 #elif !defined(PETSC_HAVE_FORTRAN_UNDERSCORE)
   #define matsetvalues_                matsetvalues
   #define matsetvaluesnnnn_            matsetvaluesnnnn
@@ -210,7 +211,17 @@
   #define matgetownershiprangecolumn_  matgetownershiprangecolumn
   #define matviewfromoptions_          matviewfromoptions
   #define matdestroy_                  matdestroy
+  #define matcreatefromoptions_        matcreatefromoptions
 #endif
+
+PETSC_EXTERN void matcreatefromoptions_(MPI_Fint *comm, char *prefix, PetscInt *bs, PetscInt *m, PetscInt *n, PetscInt *M, PetscInt *N, Mat *A, int *ierr, PETSC_FORTRAN_CHARLEN_T len)
+{
+  char *fprefix;
+  FIXCHAR(prefix, len, fprefix);
+  *ierr = MatCreateFromOptions(MPI_Comm_f2c(*(comm)), fprefix, *bs, *m, *n, *M, *N, A);
+  if (*ierr) return;
+  FREECHAR(prefix, fprefix);
+}
 
 PETSC_EXTERN void matgetvalues_(Mat *mat, PetscInt *m, PetscInt idxm[], PetscInt *n, PetscInt idxn[], PetscScalar v[], int *ierr)
 {
@@ -820,7 +831,7 @@ PETSC_EXTERN void matsetoptionsprefix_(Mat *mat, char *prefix, PetscErrorCode *i
 
 PETSC_EXTERN void matnullspaceremove_(MatNullSpace *sp, Vec *vec, PetscErrorCode *ierr)
 {
-  CHKFORTRANNULLOBJECT(*sp)
+  CHKFORTRANNULLOBJECT(*sp);
   *ierr = MatNullSpaceRemove(*sp, *vec);
 }
 

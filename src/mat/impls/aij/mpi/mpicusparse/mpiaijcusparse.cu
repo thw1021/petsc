@@ -206,6 +206,7 @@ static PetscErrorCode MatSetValuesCOO_MPIAIJCUSPARSE(Mat mat, const PetscScalar 
     PetscCall(MatSeqAIJCUSPARSEGetArray(B, &Ba));
   }
 
+  PetscCall(PetscLogGpuTimeBegin());
   /* Pack entries to be sent to remote */
   if (coo->sendlen) {
     MatPackCOOValues<<<(coo->sendlen + 255) / 256, 256>>>(v1, coo->sendlen, Cperm1, vsend);
@@ -226,6 +227,7 @@ static PetscErrorCode MatSetValuesCOO_MPIAIJCUSPARSE(Mat mat, const PetscScalar 
     MatAddRemoteCOOValues<<<(Annz2 + Bnnz2 + 255) / 256, 256>>>(v2, Annz2, Aimap2, Ajmap2, Aperm2, Aa, Bnnz2, Bimap2, Bjmap2, Bperm2, Ba);
     PetscCallCUDA(cudaPeekAtLastError());
   }
+  PetscCall(PetscLogGpuTimeEnd());
 
   if (imode == INSERT_VALUES) {
     PetscCall(MatSeqAIJCUSPARSERestoreArrayWrite(A, &Aa));
@@ -261,13 +263,17 @@ static PetscErrorCode MatMPIAIJGetLocalMatMerge_MPIAIJCUSPARSE(Mat A, MatReuse s
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatMPIAIJSetPreallocation_MPIAIJCUSPARSE(Mat B, PetscInt d_nz, const PetscInt d_nnz[], PetscInt o_nz, const PetscInt o_nnz[])
+static PetscErrorCode MatMPIAIJSetPreallocation_MPIAIJCUSPARSE(Mat B, PetscInt d_nz, const PetscInt d_nnz[], PetscInt o_nz, const PetscInt o_nnz[])
 {
   Mat_MPIAIJ         *b              = (Mat_MPIAIJ *)B->data;
   Mat_MPIAIJCUSPARSE *cusparseStruct = (Mat_MPIAIJCUSPARSE *)b->spptr;
   PetscInt            i;
 
   PetscFunctionBegin;
+  if (B->hash_active) {
+    B->ops[0]      = b->cops;
+    B->hash_active = PETSC_FALSE;
+  }
   PetscCall(PetscLayoutSetUp(B->rmap));
   PetscCall(PetscLayoutSetUp(B->cmap));
   if (PetscDefined(USE_DEBUG) && d_nnz) {
@@ -304,11 +310,13 @@ PetscErrorCode MatMPIAIJSetPreallocation_MPIAIJCUSPARSE(Mat B, PetscInt d_nz, co
   PetscCall(MatSeqAIJSetPreallocation(b->B, o_nz, o_nnz));
   PetscCall(MatCUSPARSESetFormat(b->A, MAT_CUSPARSE_MULT, cusparseStruct->diagGPUMatFormat));
   PetscCall(MatCUSPARSESetFormat(b->B, MAT_CUSPARSE_MULT, cusparseStruct->offdiagGPUMatFormat));
-  B->preallocated = PETSC_TRUE;
+  B->preallocated  = PETSC_TRUE;
+  B->was_assembled = PETSC_FALSE;
+  B->assembled     = PETSC_FALSE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatMult_MPIAIJCUSPARSE(Mat A, Vec xx, Vec yy)
+static PetscErrorCode MatMult_MPIAIJCUSPARSE(Mat A, Vec xx, Vec yy)
 {
   Mat_MPIAIJ *a = (Mat_MPIAIJ *)A->data;
 
@@ -320,7 +328,7 @@ PetscErrorCode MatMult_MPIAIJCUSPARSE(Mat A, Vec xx, Vec yy)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatZeroEntries_MPIAIJCUSPARSE(Mat A)
+static PetscErrorCode MatZeroEntries_MPIAIJCUSPARSE(Mat A)
 {
   Mat_MPIAIJ *l = (Mat_MPIAIJ *)A->data;
 
@@ -330,7 +338,7 @@ PetscErrorCode MatZeroEntries_MPIAIJCUSPARSE(Mat A)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatMultAdd_MPIAIJCUSPARSE(Mat A, Vec xx, Vec yy, Vec zz)
+static PetscErrorCode MatMultAdd_MPIAIJCUSPARSE(Mat A, Vec xx, Vec yy, Vec zz)
 {
   Mat_MPIAIJ *a = (Mat_MPIAIJ *)A->data;
 
@@ -342,7 +350,7 @@ PetscErrorCode MatMultAdd_MPIAIJCUSPARSE(Mat A, Vec xx, Vec yy, Vec zz)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatMultTranspose_MPIAIJCUSPARSE(Mat A, Vec xx, Vec yy)
+static PetscErrorCode MatMultTranspose_MPIAIJCUSPARSE(Mat A, Vec xx, Vec yy)
 {
   Mat_MPIAIJ *a = (Mat_MPIAIJ *)A->data;
 
@@ -354,7 +362,7 @@ PetscErrorCode MatMultTranspose_MPIAIJCUSPARSE(Mat A, Vec xx, Vec yy)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatCUSPARSESetFormat_MPIAIJCUSPARSE(Mat A, MatCUSPARSEFormatOperation op, MatCUSPARSEStorageFormat format)
+static PetscErrorCode MatCUSPARSESetFormat_MPIAIJCUSPARSE(Mat A, MatCUSPARSEFormatOperation op, MatCUSPARSEStorageFormat format)
 {
   Mat_MPIAIJ         *a              = (Mat_MPIAIJ *)A->data;
   Mat_MPIAIJCUSPARSE *cusparseStruct = (Mat_MPIAIJCUSPARSE *)a->spptr;
@@ -377,7 +385,7 @@ PetscErrorCode MatCUSPARSESetFormat_MPIAIJCUSPARSE(Mat A, MatCUSPARSEFormatOpera
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatSetFromOptions_MPIAIJCUSPARSE(Mat A, PetscOptionItems *PetscOptionsObject)
+static PetscErrorCode MatSetFromOptions_MPIAIJCUSPARSE(Mat A, PetscOptionItems *PetscOptionsObject)
 {
   MatCUSPARSEStorageFormat format;
   PetscBool                flg;
@@ -398,7 +406,7 @@ PetscErrorCode MatSetFromOptions_MPIAIJCUSPARSE(Mat A, PetscOptionItems *PetscOp
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatAssemblyEnd_MPIAIJCUSPARSE(Mat A, MatAssemblyType mode)
+static PetscErrorCode MatAssemblyEnd_MPIAIJCUSPARSE(Mat A, MatAssemblyType mode)
 {
   Mat_MPIAIJ *mpiaij = (Mat_MPIAIJ *)A->data;
 
@@ -408,7 +416,7 @@ PetscErrorCode MatAssemblyEnd_MPIAIJCUSPARSE(Mat A, MatAssemblyType mode)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatDestroy_MPIAIJCUSPARSE(Mat A)
+static PetscErrorCode MatDestroy_MPIAIJCUSPARSE(Mat A)
 {
   Mat_MPIAIJ         *aij            = (Mat_MPIAIJ *)A->data;
   Mat_MPIAIJCUSPARSE *cusparseStruct = (Mat_MPIAIJCUSPARSE *)aij->spptr;
@@ -501,54 +509,54 @@ PETSC_EXTERN PetscErrorCode MatCreate_MPIAIJCUSPARSE(Mat A)
 }
 
 /*@
-   MatCreateAIJCUSPARSE - Creates a sparse matrix in `MATAIJCUSPARSE` (compressed row) format
-   (the default parallel PETSc format).  This matrix will ultimately pushed down
-   to NVIDIA GPUs and use the CuSPARSE library for calculations.
+  MatCreateAIJCUSPARSE - Creates a sparse matrix in `MATAIJCUSPARSE` (compressed row) format
+  (the default parallel PETSc format).  This matrix will ultimately pushed down
+  to NVIDIA GPUs and use the CuSPARSE library for calculations.
 
-   Collective
+  Collective
 
-   Input Parameters:
-+  comm - MPI communicator, set to `PETSC_COMM_SELF`
-.  m - number of local rows (or `PETSC_DECIDE` to have calculated if `M` is given)
+  Input Parameters:
++ comm  - MPI communicator, set to `PETSC_COMM_SELF`
+. m     - number of local rows (or `PETSC_DECIDE` to have calculated if `M` is given)
            This value should be the same as the local size used in creating the
            y vector for the matrix-vector product y = Ax.
-.  n - This value should be the same as the local size used in creating the
+. n     - This value should be the same as the local size used in creating the
        x vector for the matrix-vector product y = Ax. (or PETSC_DECIDE to have
        calculated if `N` is given) For square matrices `n` is almost always `m`.
-.  M - number of global rows (or `PETSC_DETERMINE` to have calculated if `m` is given)
-.  N - number of global columns (or `PETSC_DETERMINE` to have calculated if `n` is given)
-.  d_nz  - number of nonzeros per row in DIAGONAL portion of local submatrix
+. M     - number of global rows (or `PETSC_DETERMINE` to have calculated if `m` is given)
+. N     - number of global columns (or `PETSC_DETERMINE` to have calculated if `n` is given)
+. d_nz  - number of nonzeros per row in DIAGONAL portion of local submatrix
            (same value is used for all local rows)
-.  d_nnz - array containing the number of nonzeros in the various rows of the
+. d_nnz - array containing the number of nonzeros in the various rows of the
            DIAGONAL portion of the local submatrix (possibly different for each row)
            or `NULL`, if `d_nz` is used to specify the nonzero structure.
            The size of this array is equal to the number of local rows, i.e `m`.
            For matrices you plan to factor you must leave room for the diagonal entry and
            put in the entry even if it is zero.
-.  o_nz  - number of nonzeros per row in the OFF-DIAGONAL portion of local
+. o_nz  - number of nonzeros per row in the OFF-DIAGONAL portion of local
            submatrix (same value is used for all local rows).
--  o_nnz - array containing the number of nonzeros in the various rows of the
+- o_nnz - array containing the number of nonzeros in the various rows of the
            OFF-DIAGONAL portion of the local submatrix (possibly different for
            each row) or `NULL`, if `o_nz` is used to specify the nonzero
            structure. The size of this array is equal to the number
            of local rows, i.e `m`.
 
-   Output Parameter:
-.  A - the matrix
+  Output Parameter:
+. A - the matrix
 
-   Level: intermediate
+  Level: intermediate
 
-   Notes:
-   It is recommended that one use the `MatCreate()`, `MatSetType()` and/or `MatSetFromOptions()`,
-   MatXXXXSetPreallocation() paradigm instead of this routine directly.
-   [MatXXXXSetPreallocation() is, for example, `MatSeqAIJSetPreallocation()`]
+  Notes:
+  It is recommended that one use the `MatCreate()`, `MatSetType()` and/or `MatSetFromOptions()`,
+  MatXXXXSetPreallocation() paradigm instead of this routine directly.
+  [MatXXXXSetPreallocation() is, for example, `MatSeqAIJSetPreallocation()`]
 
-   The AIJ format, also called the
-   compressed row storage), is fully compatible with standard Fortran
-   storage.  That is, the stored row and column indices can begin at
-   either one (as in Fortran) or zero.
+  The AIJ format, also called the
+  compressed row storage), is fully compatible with standard Fortran
+  storage.  That is, the stored row and column indices can begin at
+  either one (as in Fortran) or zero.
 
-.seealso: [](ch_matrices), `Mat`, `MATAIJCUSPARSE`, `MatCreate()`, `MatCreateAIJ()`, `MatSetValues()`, `MatSeqAIJSetColumnIndices()`, `MatCreateSeqAIJWithArrays()`, `MatCreateAIJ()`, `MATMPIAIJCUSPARSE`, `MATAIJCUSPARSE`
+.seealso: [](ch_matrices), `Mat`, `MATAIJCUSPARSE`, `MatCreate()`, `MatCreateAIJ()`, `MatSetValues()`, `MatSeqAIJSetColumnIndices()`, `MatCreateSeqAIJWithArrays()`, `MATMPIAIJCUSPARSE`
 @*/
 PetscErrorCode MatCreateAIJCUSPARSE(MPI_Comm comm, PetscInt m, PetscInt n, PetscInt M, PetscInt N, PetscInt d_nz, const PetscInt d_nnz[], PetscInt o_nz, const PetscInt o_nnz[], Mat *A)
 {

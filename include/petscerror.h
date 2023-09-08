@@ -1,8 +1,7 @@
 /*
     Contains all error handling interfaces for PETSc.
 */
-#ifndef PETSCERROR_H
-#define PETSCERROR_H
+#pragma once
 
 #include <petscmacros.h>
 #include <petscsystypes.h>
@@ -13,15 +12,15 @@
 
 /* SUBMANSEC = Sys */
 
-#define SETERRQ1(...) PETSC_DEPRECATED_MACRO("GCC warning \"Use SETERRQ() (since version 3.17)\"") SETERRQ(__VA_ARGS__)
-#define SETERRQ2(...) PETSC_DEPRECATED_MACRO("GCC warning \"Use SETERRQ() (since version 3.17)\"") SETERRQ(__VA_ARGS__)
-#define SETERRQ3(...) PETSC_DEPRECATED_MACRO("GCC warning \"Use SETERRQ() (since version 3.17)\"") SETERRQ(__VA_ARGS__)
-#define SETERRQ4(...) PETSC_DEPRECATED_MACRO("GCC warning \"Use SETERRQ() (since version 3.17)\"") SETERRQ(__VA_ARGS__)
-#define SETERRQ5(...) PETSC_DEPRECATED_MACRO("GCC warning \"Use SETERRQ() (since version 3.17)\"") SETERRQ(__VA_ARGS__)
-#define SETERRQ6(...) PETSC_DEPRECATED_MACRO("GCC warning \"Use SETERRQ() (since version 3.17)\"") SETERRQ(__VA_ARGS__)
-#define SETERRQ7(...) PETSC_DEPRECATED_MACRO("GCC warning \"Use SETERRQ() (since version 3.17)\"") SETERRQ(__VA_ARGS__)
-#define SETERRQ8(...) PETSC_DEPRECATED_MACRO("GCC warning \"Use SETERRQ() (since version 3.17)\"") SETERRQ(__VA_ARGS__)
-#define SETERRQ9(...) PETSC_DEPRECATED_MACRO("GCC warning \"Use SETERRQ() (since version 3.17)\"") SETERRQ(__VA_ARGS__)
+#define SETERRQ1(...) PETSC_DEPRECATED_MACRO(3, 17, 0, "SETERRQ", ) SETERRQ(__VA_ARGS__)
+#define SETERRQ2(...) PETSC_DEPRECATED_MACRO(3, 17, 0, "SETERRQ", ) SETERRQ(__VA_ARGS__)
+#define SETERRQ3(...) PETSC_DEPRECATED_MACRO(3, 17, 0, "SETERRQ", ) SETERRQ(__VA_ARGS__)
+#define SETERRQ4(...) PETSC_DEPRECATED_MACRO(3, 17, 0, "SETERRQ", ) SETERRQ(__VA_ARGS__)
+#define SETERRQ5(...) PETSC_DEPRECATED_MACRO(3, 17, 0, "SETERRQ", ) SETERRQ(__VA_ARGS__)
+#define SETERRQ6(...) PETSC_DEPRECATED_MACRO(3, 17, 0, "SETERRQ", ) SETERRQ(__VA_ARGS__)
+#define SETERRQ7(...) PETSC_DEPRECATED_MACRO(3, 17, 0, "SETERRQ", ) SETERRQ(__VA_ARGS__)
+#define SETERRQ8(...) PETSC_DEPRECATED_MACRO(3, 17, 0, "SETERRQ", ) SETERRQ(__VA_ARGS__)
+#define SETERRQ9(...) PETSC_DEPRECATED_MACRO(3, 17, 0, "SETERRQ", ) SETERRQ(__VA_ARGS__)
 
 /*MC
    SETERRQ - Macro to be called when an error has been detected,
@@ -1137,7 +1136,7 @@ PETSC_EXTERN PetscErrorCode PetscPushSignalHandler(PetscErrorCode (*)(int, void 
 PETSC_EXTERN PetscErrorCode PetscPopSignalHandler(void);
 PETSC_EXTERN PetscErrorCode PetscCheckPointerSetIntensity(PetscInt);
 PETSC_EXTERN void           PetscSignalSegvCheckPointerOrMpi(void);
-PETSC_DEPRECATED_FUNCTION("Use PetscSignalSegvCheckPointerOrMpi() (since version 3.13)") static inline void PetscSignalSegvCheckPointer(void)
+PETSC_DEPRECATED_FUNCTION(3, 13, 0, "PetscSignalSegvCheckPointerOrMpi()", ) static inline void PetscSignalSegvCheckPointer(void)
 {
   PetscSignalSegvCheckPointerOrMpi();
 }
@@ -1394,7 +1393,7 @@ M*/
     do { \
       PetscStackUpdateLine; \
       PetscStackPushNoCheck(funct, 0, PETSC_TRUE); \
-    } while (0);
+    } while (0)
 
   /*MC
    PetscStackPopNoCheck - Pops a function name from the PETSc default stack that tracks where the running program is
@@ -1768,5 +1767,3 @@ M*/
       PetscCheck(ierr_petsc_call_external_ == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in %s(): error code %d", PetscStringize(func), ierr_petsc_call_external_); \
     } while (0)
 #endif /* PETSC_CLANG_STATIC_ANALYZER */
-
-#endif

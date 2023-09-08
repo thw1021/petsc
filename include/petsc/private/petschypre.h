@@ -1,5 +1,4 @@
-#ifndef _PETSCHYPRE_H
-#define _PETSCHYPRE_H
+#pragma once
 
 #include <petscsys.h>
 #include <petscpkg_version.h>
@@ -49,11 +48,12 @@ static inline PetscErrorCode PetscHYPREFinalize_Private(void)
   return PETSC_SUCCESS;
 }
   #define PetscHYPREInitialize() \
-    if (!HYPRE_Initialized()) { \
-      PetscCallExternal(HYPRE_Initialize, ); \
-      PetscCall(PetscRegisterFinalize(PetscHYPREFinalize_Private)); \
-    } \
-    (void)0
+    do { \
+      if (!HYPRE_Initialized()) { \
+        PetscCallExternal(HYPRE_Initialize, ); \
+        PetscCall(PetscRegisterFinalize(PetscHYPREFinalize_Private)); \
+      } \
+    } while (0)
 #else
   #define PetscHYPREInitialize() (void)0
 #endif
@@ -62,5 +62,4 @@ static inline PetscErrorCode PetscHYPREFinalize_Private(void)
 typedef int HYPRE_MemoryLocation;
   #define hypre_IJVectorMemoryLocation(a) 0
   #define hypre_IJMatrixMemoryLocation(a) 0
-#endif
 #endif

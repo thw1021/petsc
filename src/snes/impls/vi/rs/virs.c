@@ -4,16 +4,16 @@
 #include <petsc/private/vecimpl.h>
 
 /*@
-   SNESVIGetInactiveSet - Gets the global indices for the inactive set variables (these correspond to the degrees of freedom the linear
-     system is solved on)
+  SNESVIGetInactiveSet - Gets the global indices for the inactive set variables (these correspond to the degrees of freedom the linear
+  system is solved on)
 
-   Input parameter:
-.  snes - the `SNES` context
+  Input Parameter:
+. snes - the `SNES` context
 
-   Output parameter:
-.  inact - inactive set index set
+  Output Parameter:
+. inact - inactive set index set
 
-   Level: advanced
+  Level: advanced
 
 .seealso: `SNESVINEWTONRSLS`
 @*/
@@ -48,7 +48,7 @@ typedef struct {
 /*
      DMCreateGlobalVector_SNESVI - Creates global vector of the size of the reduced space
 */
-PetscErrorCode DMCreateGlobalVector_SNESVI(DM dm, Vec *vec)
+static PetscErrorCode DMCreateGlobalVector_SNESVI(DM dm, Vec *vec)
 {
   PetscContainer isnes;
   DM_SNESVI     *dmsnesvi;
@@ -65,7 +65,7 @@ PetscErrorCode DMCreateGlobalVector_SNESVI(DM dm, Vec *vec)
 /*
      DMCreateInterpolation_SNESVI - Modifieds the interpolation obtained from the DM by removing all rows and columns associated with active constraints.
 */
-PetscErrorCode DMCreateInterpolation_SNESVI(DM dm1, DM dm2, Mat *mat, Vec *vec)
+static PetscErrorCode DMCreateInterpolation_SNESVI(DM dm1, DM dm2, Mat *mat, Vec *vec)
 {
   PetscContainer isnes;
   DM_SNESVI     *dmsnesvi1, *dmsnesvi2;
@@ -89,7 +89,7 @@ PetscErrorCode DMCreateInterpolation_SNESVI(DM dm1, DM dm2, Mat *mat, Vec *vec)
 /*
      DMCoarsen_SNESVI - Computes the regular coarsened DM then computes additional information about its inactive set
 */
-PetscErrorCode DMCoarsen_SNESVI(DM dm1, MPI_Comm comm, DM *dm2)
+static PetscErrorCode DMCoarsen_SNESVI(DM dm1, MPI_Comm comm, DM *dm2)
 {
   PetscContainer  isnes;
   DM_SNESVI      *dmsnesvi1;
@@ -163,7 +163,7 @@ PetscErrorCode DMCoarsen_SNESVI(DM dm1, MPI_Comm comm, DM *dm2)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode DMDestroy_SNESVI(DM_SNESVI *dmsnesvi)
+static PetscErrorCode DMDestroy_SNESVI(DM_SNESVI *dmsnesvi)
 {
   PetscFunctionBegin;
   /* reset the base methods in the DM object that were changed when the DM_SNESVI was reset */
@@ -182,16 +182,16 @@ PetscErrorCode DMDestroy_SNESVI(DM_SNESVI *dmsnesvi)
 }
 
 /*@
-     DMSetVI - Marks a DM as associated with a VI problem. This causes the interpolation/restriction operators to
-               be restricted to only those variables NOT associated with active constraints.
+  DMSetVI - Marks a DM as associated with a VI problem. This causes the interpolation/restriction operators to
+  be restricted to only those variables NOT associated with active constraints.
 
-    Logically Collective
+  Logically Collective
 
-    Input Parameters:
-+   dm - the `DM` object
--   inactive - an `IS` indicating which points are currently not active
+  Input Parameters:
++ dm       - the `DM` object
+- inactive - an `IS` indicating which points are currently not active
 
-    Level: intermediate
+  Level: intermediate
 
 .seealso: `SNESVINEWTONRSLS`, `SNESVIGetInactiveSet()`
 @*/
@@ -248,16 +248,8 @@ PetscErrorCode DMDestroyVI(DM dm)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode SNESCreateIndexSets_VINEWTONRSLS(SNES snes, Vec X, Vec F, IS *ISact, IS *ISinact)
-{
-  PetscFunctionBegin;
-  PetscCall(SNESVIGetActiveSetIS(snes, X, F, ISact));
-  PetscCall(ISComplement(*ISact, X->map->rstart, X->map->rend, ISinact));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 /* Create active and inactive set vectors. The local size of this vector is set and petsc computes the global size */
-PetscErrorCode SNESCreateSubVectors_VINEWTONRSLS(SNES snes, PetscInt n, Vec *newv)
+static PetscErrorCode SNESCreateSubVectors_VINEWTONRSLS(SNES snes, PetscInt n, Vec *newv)
 {
   Vec v;
 
@@ -270,7 +262,7 @@ PetscErrorCode SNESCreateSubVectors_VINEWTONRSLS(SNES snes, PetscInt n, Vec *new
 }
 
 /* Resets the snes PC and KSP when the active set sizes change */
-PetscErrorCode SNESVIResetPCandKSP(SNES snes, Mat Amat, Mat Pmat)
+static PetscErrorCode SNESVIResetPCandKSP(SNES snes, Mat Amat, Mat Pmat)
 {
   KSP snesksp;
 
@@ -304,7 +296,7 @@ PetscErrorCode SNESVIResetPCandKSP(SNES snes, Mat Amat, Mat Pmat)
 /* Variational Inequality solver using reduce space method. No semismooth algorithm is
    implemented in this algorithm. It basically identifies the active constraints and does
    a linear solve on the other variables (those not associated with the active constraints). */
-PetscErrorCode SNESSolve_VINEWTONRSLS(SNES snes)
+static PetscErrorCode SNESSolve_VINEWTONRSLS(SNES snes)
 {
   SNES_VINEWTONRSLS   *vi = (SNES_VINEWTONRSLS *)snes->data;
   PetscInt             maxits, i, lits;
@@ -588,20 +580,20 @@ PetscErrorCode SNESSolve_VINEWTONRSLS(SNES snes)
 }
 
 /*@C
-   SNESVISetRedundancyCheck - Provide a function to check for any redundancy in the VI active set
+  SNESVISetRedundancyCheck - Provide a function to check for any redundancy in the VI active set
 
-   Logically Collective
+  Logically Collective
 
-   Input Parameters:
-+  snes - the `SNESVINEWTONRSLS` context
-.  func - the function to check of redundancies
--  ctx - optional context used by the function
+  Input Parameters:
++ snes - the `SNESVINEWTONRSLS` context
+. func - the function to check of redundancies
+- ctx  - optional context used by the function
 
-   Level: advanced
+  Level: advanced
 
-   Note:
-   Sometimes the inactive set will result in a non-singular sub-Jacobian problem that needs to be solved, this allows the user,
-   when they know more about their specific problem to provide a function that removes the redundancy that results in the singular linear system
+  Note:
+  Sometimes the inactive set will result in a non-singular sub-Jacobian problem that needs to be solved, this allows the user,
+  when they know more about their specific problem to provide a function that removes the redundancy that results in the singular linear system
 
 .seealso: `SNESVINEWTONRSLS`, `SNESVIGetInactiveSet()`, `DMSetVI()`
  @*/
@@ -635,7 +627,7 @@ PetscErrorCode SNESVIRedundancyCheck_Matlab(SNES snes, IS is_act, IS *is_redact,
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
   PetscValidHeaderSpecific(is_act, IS_CLASSID, 2);
-  PetscValidPointer(is_redact, 3);
+  PetscAssertPointer(is_redact, 3);
   PetscCheckSameComm(snes, 1, is_act, 2);
 
   /* Create IS for reduced active set of size 0, its size and indices will
@@ -675,21 +667,7 @@ PetscErrorCode SNESVISetRedundancyCheckMatlab(SNES snes, const char *func, mxArr
 
 #endif
 
-/*
-   SNESSetUp_VINEWTONRSLS - Sets up the internal data structures for the later use
-   of the SNESVI nonlinear solver.
-
-   Input Parameter:
-.  snes - the SNES context
-
-   Application Interface Routine: SNESSetUp()
-
-   Note:
-   For basic use of the SNES solvers, the user need not explicitly call
-   SNESSetUp(), since these actions will automatically occur during
-   the call to SNESSolve().
- */
-PetscErrorCode SNESSetUp_VINEWTONRSLS(SNES snes)
+static PetscErrorCode SNESSetUp_VINEWTONRSLS(SNES snes)
 {
   SNES_VINEWTONRSLS *vi = (SNES_VINEWTONRSLS *)snes->data;
   PetscInt          *indices;
@@ -716,7 +694,7 @@ PetscErrorCode SNESSetUp_VINEWTONRSLS(SNES snes)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode SNESReset_VINEWTONRSLS(SNES snes)
+static PetscErrorCode SNESReset_VINEWTONRSLS(SNES snes)
 {
   SNES_VINEWTONRSLS *vi = (SNES_VINEWTONRSLS *)snes->data;
 

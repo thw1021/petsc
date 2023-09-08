@@ -7,8 +7,7 @@
     This file is included by petscsys.h and should not be used directly.
 
 */
-#ifndef PETSCMATH_H
-#define PETSCMATH_H
+#pragma once
 
 #include <math.h>
 #include <petscmacros.h>
@@ -210,7 +209,7 @@ M*/
  */
 #if defined(PETSC_HAVE_COMPLEX)
   #if defined(__cplusplus) && !defined(PETSC_USE_REAL___FLOAT128)
-    /* C++ support of complex number */
+  /* C++ support of complex number */
 
     #define PetscRealPartComplex(a)      (static_cast<PetscComplex>(a)).real()
     #define PetscImaginaryPartComplex(a) (static_cast<PetscComplex>(a)).imag()
@@ -234,7 +233,7 @@ M*/
     #define PetscAcoshComplex(a)         petsccomplexlib::acosh(static_cast<PetscComplex>(a))
     #define PetscAtanhComplex(a)         petsccomplexlib::atanh(static_cast<PetscComplex>(a))
 
-    /* TODO: Add configure tests
+  /* TODO: Add configure tests
 
 #if !defined(PETSC_HAVE_CXX_TAN_COMPLEX)
 #undef PetscTanComplex
@@ -416,8 +415,8 @@ static inline PetscComplex PetscCMPLX(PetscReal x, PetscReal y)
   #endif
 }
 
-  #define MPIU_C_COMPLEX        MPI_C_COMPLEX PETSC_DEPRECATED_MACRO("GCC warning \"MPIU_C_COMPLEX macro is deprecated use MPI_C_COMPLEX (since version 3.15)\"")
-  #define MPIU_C_DOUBLE_COMPLEX MPI_C_DOUBLE_COMPLEX PETSC_DEPRECATED_MACRO("GCC warning \"MPIU_C_DOUBLE_COMPLEX macro is deprecated use MPI_C_DOUBLE_COMPLEX (since version 3.15)\"")
+  #define MPIU_C_COMPLEX        MPI_C_COMPLEX PETSC_DEPRECATED_MACRO(3, 15, 0, "MPI_C_COMPLEX", )
+  #define MPIU_C_DOUBLE_COMPLEX MPI_C_DOUBLE_COMPLEX PETSC_DEPRECATED_MACRO(3, 15, 0, "MPI_C_DOUBLE_COMPLEX", )
 
   #if defined(PETSC_HAVE_REAL___FLOAT128) && !defined(PETSC_SKIP_REAL___FLOAT128)
     // if complex is not used, then quadmath.h won't be included by petscsystypes.h
@@ -814,6 +813,31 @@ PETSC_EXTERN PetscBool PetscIsCloseAtTol(PetscReal, PetscReal, PetscReal, PetscR
 PETSC_EXTERN PetscBool PetscEqualReal(PetscReal, PetscReal);
 PETSC_EXTERN PetscBool PetscEqualScalar(PetscScalar, PetscScalar);
 
+/*@C
+  PetscIsCloseAtTolScalar - Like `PetscIsCloseAtTol()` but for `PetscScalar`
+
+  Input Parameters:
++ lhs  - The first number
+. rhs  - The second number
+. rtol - The relative tolerance
+- atol - The absolute tolerance
+
+  Level: beginner
+
+  Note:
+  This routine is equivalent to `PetscIsCloseAtTol()` when PETSc is configured without complex
+  numbers.
+
+.seealso: `PetscIsCloseAtTol()`
+@*/
+static inline PetscBool PetscIsCloseAtTolScalar(PetscScalar lhs, PetscScalar rhs, PetscReal rtol, PetscReal atol)
+{
+  PetscBool close = PetscIsCloseAtTol(PetscRealPart(lhs), PetscRealPart(rhs), rtol, atol);
+
+  if (PetscDefined(USE_COMPLEX)) close = (PetscBool)(close && PetscIsCloseAtTol(PetscImaginaryPart(lhs), PetscImaginaryPart(rhs), rtol, atol));
+  return close;
+}
+
 /*
     These macros are currently hardwired to match the regular data types, so there is no support for a different
     MatScalar from PetscScalar. We left the MatScalar in the source just in case we use it again.
@@ -996,4 +1020,3 @@ M*/
 #define PetscCeilInt64(x, y) ((((PetscInt64)(x)) / ((PetscInt64)(y))) + ((((PetscInt64)(x)) % ((PetscInt64)(y))) ? 1 : 0))
 
 PETSC_EXTERN PetscErrorCode PetscLinearRegression(PetscInt, const PetscReal[], const PetscReal[], PetscReal *, PetscReal *);
-#endif

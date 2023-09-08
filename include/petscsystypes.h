@@ -2,8 +2,7 @@
    Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
 */
 
-#ifndef PETSCSYSTYPES_H
-#define PETSCSYSTYPES_H
+#pragma once
 
 #include <petscconf.h>
 #include <petscconf_poison.h>
@@ -13,7 +12,7 @@
 
 /* SUBMANSEC = Sys */
 
-#include <limits.h> // INT_MIN, INT_MAX
+#include <limits.h> // INT_MIN, INT_MAX, CHAR_BIT
 
 #if defined(__clang__) || (PETSC_CPP_VERSION >= 17)
   // clang allows both [[nodiscard]] and __attribute__((warn_unused_result)) on type
@@ -120,7 +119,8 @@ PETSC_ERROR_CODE_TYPEDEF enum PETSC_ERROR_CODE_NODISCARD {
   PETSC_ERR_GPU            = 97,  /* An error from a GPU call, this may be due to lack of resources on the GPU or a true error in the call */
   PETSC_ERR_MPI            = 98,  /* general MPI error */
   PETSC_ERR_RETURN         = 99,  /* PetscError() incorrectly returned an error code of 0 */
-  PETSC_ERR_MAX_VALUE      = 100, /* this is always the one more than the largest error code */
+  PETSC_ERR_MEM_LEAK       = 100, /* memory alloc/free imbalance */
+  PETSC_ERR_MAX_VALUE      = 101, /* this is always the one more than the largest error code */
 
   /*
     do not use, exist purely to make the enum bounds equal that of a regular int (so conversion
@@ -276,6 +276,10 @@ typedef __int64 PetscInt64;
   #error "cannot determine PetscInt64 type"
 #endif
 
+typedef int32_t PetscInt32;
+#define PETSC_INT32_MIN INT32_MIN
+#define PETSC_INT32_MAX INT32_MAX
+
 #if defined(PETSC_USE_64BIT_INDICES)
 typedef PetscInt64 PetscInt;
 
@@ -309,6 +313,9 @@ enum {
 #else
   #error "cannot determine PetscInt64 type"
 #endif
+
+#define MPIU_INT32     MPI_INT32_T
+#define PetscInt32_FMT PRId32
 
 /*MC
    PetscBLASInt - datatype used to represent 'int' parameters to BLAS/LAPACK functions.
@@ -652,7 +659,7 @@ typedef double PetscLogDouble;
    share/petsc/matlab/PetscBagRead.m and share/petsc/matlab/@PetscOpenSocket/read/write.m
 
    TODO:
-   Add PETSC_INT32 and remove use of improper `PETSC_ENUM`
+   Remove use of improper `PETSC_ENUM`
 
 .seealso: `PetscBinaryRead()`, `PetscBinaryWrite()`, `PetscDataTypeToMPIDataType()`,
           `PetscDataTypeGetSize()`
@@ -676,7 +683,8 @@ typedef enum {
   PETSC_STRUCT           = 15,
   PETSC_INT              = 16,
   PETSC_INT64            = 17,
-  PETSC_COUNT            = 18
+  PETSC_COUNT            = 18,
+  PETSC_INT32            = 19,
 } PetscDataType;
 PETSC_EXTERN const char *const PetscDataTypes[];
 
@@ -1034,4 +1042,33 @@ S*/
 typedef struct _n_PetscSegBuffer *PetscSegBuffer;
 
 typedef struct _n_PetscOptionsHelpPrinted *PetscOptionsHelpPrinted;
-#endif
+
+/*S
+     PetscBT - PETSc bitarrays, efficient storage of arrays of boolean values
+
+     Level: advanced
+
+     Notes:
+     The following routines do not have their own manual pages
+
+.vb
+     PetscBTCreate(m,&bt)         - creates a bit array with enough room to hold m values
+     PetscBTDestroy(&bt)          - destroys the bit array
+     PetscBTMemzero(m,bt)         - zeros the entire bit array (sets all values to false)
+     PetscBTSet(bt,index)         - sets a particular entry as true
+     PetscBTClear(bt,index)       - sets a particular entry as false
+     PetscBTLookup(bt,index)      - returns the value
+     PetscBTLookupSet(bt,index)   - returns the value and then sets it true
+     PetscBTLookupClear(bt,index) - returns the value and then sets it false
+     PetscBTLength(m)             - returns number of bytes in array with m bits
+     PetscBTView(m,bt,viewer)     - prints all the entries in a bit array
+.ve
+
+    PETSc does not check error flags on `PetscBTLookup()`, `PetcBTLookupSet()`, `PetscBTLength()` because error checking
+    would cost hundreds more cycles then the operation.
+
+S*/
+typedef char *PetscBT;
+
+/* The number of bits in a byte */
+#define PETSC_BITS_PER_BYTE CHAR_BIT

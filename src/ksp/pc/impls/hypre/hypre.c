@@ -144,15 +144,6 @@ typedef struct {
   PetscInt          ams_proj_freq;
 } PC_HYPRE;
 
-PetscErrorCode PCHYPREGetSolver(PC pc, HYPRE_Solver *hsolver)
-{
-  PC_HYPRE *jac = (PC_HYPRE *)pc->data;
-
-  PetscFunctionBegin;
-  *hsolver = jac->hsolver;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 /*
   Matrices with AIJ format are created IN PLACE with using (I,J,data) from BoomerAMG. Since the data format in hypre_ParCSRMatrix
   is different from that used in PETSc, the original hypre_ParCSRMatrix can not be used any more after call this routine.
@@ -991,6 +982,13 @@ static PetscErrorCode PCSetFromOptions_HYPRE_BoomerAMG(PC pc, PetscOptionItems *
   PetscCall(PetscOptionsInt("-pc_hypre_boomeramg_restriction_type", "Type of AIR method (distance 1 or 2, 0 means no AIR)", "None", jac->Rtype, &jac->Rtype, NULL));
   PetscCallExternal(HYPRE_BoomerAMGSetRestriction, jac->hsolver, jac->Rtype);
   if (jac->Rtype) {
+    HYPRE_Int **grid_relax_points = hypre_TAlloc(HYPRE_Int *, 4, HYPRE_MEMORY_HOST);
+    char       *prerelax[256];
+    char       *postrelax[256];
+    char        stringF[2] = "F", stringC[2] = "C", stringA[2] = "A";
+    PetscInt    ns_down = 256, ns_up = 256;
+    PetscBool   matchF, matchC, matchA;
+
     jac->interptype = 100; /* no way we can pass this with strings... Set it as default as in MFEM, then users can still customize it back to a different one */
 
     PetscCall(PetscOptionsReal("-pc_hypre_boomeramg_strongthresholdR", "Threshold for R", "None", jac->Rstrongthreshold, &jac->Rstrongthreshold, NULL));
@@ -1004,6 +1002,48 @@ static PetscErrorCode PCSetFromOptions_HYPRE_BoomerAMG(PC pc, PetscOptionItems *
 
     PetscCall(PetscOptionsInt("-pc_hypre_boomeramg_Adroptype", "Drops the entries that are not on the diagonal and smaller than its row norm: type 1: 1-norm, 2: 2-norm, -1: infinity norm", "None", jac->Adroptype, &jac->Adroptype, NULL));
     PetscCallExternal(HYPRE_BoomerAMGSetADropType, jac->hsolver, jac->Adroptype);
+    PetscCall(PetscOptionsStringArray("-pc_hypre_boomeramg_prerelax", "Defines prerelax scheme", "None", prerelax, &ns_down, NULL));
+    PetscCall(PetscOptionsStringArray("-pc_hypre_boomeramg_postrelax", "Defines postrelax scheme", "None", postrelax, &ns_up, NULL));
+    PetscCheck(ns_down == jac->gridsweeps[0], PetscObjectComm((PetscObject)jac), PETSC_ERR_ARG_SIZ, "The number of arguments passed to -pc_hypre_boomeramg_prerelax must match the number passed to -pc_hypre_bomeramg_grid_sweeps_down");
+    PetscCheck(ns_up == jac->gridsweeps[1], PetscObjectComm((PetscObject)jac), PETSC_ERR_ARG_SIZ, "The number of arguments passed to -pc_hypre_boomeramg_postrelax must match the number passed to -pc_hypre_bomeramg_grid_sweeps_up");
+
+    grid_relax_points[0]    = NULL;
+    grid_relax_points[1]    = hypre_TAlloc(HYPRE_Int, ns_down, HYPRE_MEMORY_HOST);
+    grid_relax_points[2]    = hypre_TAlloc(HYPRE_Int, ns_up, HYPRE_MEMORY_HOST);
+    grid_relax_points[3]    = hypre_TAlloc(HYPRE_Int, jac->gridsweeps[2], HYPRE_MEMORY_HOST);
+    grid_relax_points[3][0] = 0;
+
+    // set down relax scheme
+    for (PetscInt i = 0; i < ns_down; i++) {
+      PetscCall(PetscStrcasecmp(prerelax[i], stringF, &matchF));
+      PetscCall(PetscStrcasecmp(prerelax[i], stringC, &matchC));
+      PetscCall(PetscStrcasecmp(prerelax[i], stringA, &matchA));
+      PetscCheck(matchF || matchC || matchA, PetscObjectComm((PetscObject)jac), PETSC_ERR_ARG_WRONG, "Valid argument options for -pc_hypre_boomeramg_prerelax are C, F, and A");
+      if (matchF) grid_relax_points[1][i] = -1;
+      else if (matchC) grid_relax_points[1][i] = 1;
+      else if (matchA) grid_relax_points[1][i] = 0;
+    }
+
+    // set up relax scheme
+    for (PetscInt i = 0; i < ns_up; i++) {
+      PetscCall(PetscStrcasecmp(postrelax[i], stringF, &matchF));
+      PetscCall(PetscStrcasecmp(postrelax[i], stringC, &matchC));
+      PetscCall(PetscStrcasecmp(postrelax[i], stringA, &matchA));
+      PetscCheck(matchF || matchC || matchA, PetscObjectComm((PetscObject)jac), PETSC_ERR_ARG_WRONG, "Valid argument options for -pc_hypre_boomeramg_postrelax are C, F, and A");
+      if (matchF) grid_relax_points[2][i] = -1;
+      else if (matchC) grid_relax_points[2][i] = 1;
+      else if (matchA) grid_relax_points[2][i] = 0;
+    }
+
+    // set coarse relax scheme
+    for (PetscInt i = 0; i < jac->gridsweeps[2]; i++) grid_relax_points[3][i] = 0;
+
+    // Pass relax schemes to hypre
+    PetscCallExternal(HYPRE_BoomerAMGSetGridRelaxPoints, jac->hsolver, grid_relax_points);
+
+    // cleanup memory
+    for (PetscInt i = 0; i < ns_down; i++) PetscCall(PetscFree(prerelax[i]));
+    for (PetscInt i = 0; i < ns_up; i++) PetscCall(PetscFree(postrelax[i]));
   }
 #endif
 
@@ -1114,6 +1154,9 @@ static PetscErrorCode PCView_HYPRE_BoomerAMG(PC pc, PetscViewer viewer)
 
     PetscCall(PetscViewerASCIIPrintf(viewer, "    Relax weight  (all)      %g\n", (double)jac->relaxweight));
     PetscCall(PetscViewerASCIIPrintf(viewer, "    Outer relax weight (all) %g\n", (double)jac->outerrelaxweight));
+
+    PetscCall(PetscViewerASCIIPrintf(viewer, "    Maximum size of coarsest grid %" PetscInt_FMT "\n", jac->maxc));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "    Minimum size of coarsest grid %" PetscInt_FMT "\n", jac->minc));
 
     if (jac->relaxorder) {
       PetscCall(PetscViewerASCIIPrintf(viewer, "    Using CF-relaxation\n"));
@@ -1415,23 +1458,23 @@ static PetscErrorCode PCHYPRESetDiscreteGradient_HYPRE(PC pc, Mat G)
 }
 
 /*@
-   PCHYPRESetDiscreteGradient - Set discrete gradient matrix for `PCHYPRE` type of ams or ads
+  PCHYPRESetDiscreteGradient - Set discrete gradient matrix for `PCHYPRE` type of ams or ads
 
-   Collective
+  Collective
 
-   Input Parameters:
-+  pc - the preconditioning context
--  G - the discrete gradient
+  Input Parameters:
++ pc - the preconditioning context
+- G  - the discrete gradient
 
-   Level: intermediate
+  Level: intermediate
 
-   Notes:
-    G should have as many rows as the number of edges and as many columns as the number of vertices in the mesh
+  Notes:
+  G should have as many rows as the number of edges and as many columns as the number of vertices in the mesh
 
-    Each row of G has 2 nonzeros, with column indexes being the global indexes of edge's endpoints: matrix entries are +1 and -1 depending on edge orientation
+  Each row of G has 2 nonzeros, with column indexes being the global indexes of edge's endpoints: matrix entries are +1 and -1 depending on edge orientation
 
-   Developer Note:
-   This automatically converts the matrix to `MATHYPRE` if it is not already of that type
+  Developer Notes:
+  This automatically converts the matrix to `MATHYPRE` if it is not already of that type
 
 .seealso: `PCHYPRE`, `PCHYPRESetDiscreteCurl()`
 @*/
@@ -1464,25 +1507,25 @@ static PetscErrorCode PCHYPRESetDiscreteCurl_HYPRE(PC pc, Mat C)
 }
 
 /*@
-   PCHYPRESetDiscreteCurl - Set discrete curl matrx for `PCHYPRE` type of ads
+  PCHYPRESetDiscreteCurl - Set discrete curl matrx for `PCHYPRE` type of ads
 
-   Collective
+  Collective
 
-   Input Parameters:
-+  pc - the preconditioning context
--  C - the discrete curl
+  Input Parameters:
++ pc - the preconditioning context
+- C  - the discrete curl
 
-   Level: intermediate
+  Level: intermediate
 
-   Notes:
-    C should have as many rows as the number of faces and as many columns as the number of edges in the mesh
+  Notes:
+  C should have as many rows as the number of faces and as many columns as the number of edges in the mesh
 
-    Each row of G has as many nonzeros as the number of edges of a face, with column indexes being the global indexes of the corresponding edge: matrix entries are +1 and -1 depending on edge orientation with respect to the face orientation
+  Each row of G has as many nonzeros as the number of edges of a face, with column indexes being the global indexes of the corresponding edge: matrix entries are +1 and -1 depending on edge orientation with respect to the face orientation
 
-   Developer Note:
-   This automatically converts the matrix to `MATHYPRE` if it is not already of that type
+  Developer Notes:
+  This automatically converts the matrix to `MATHYPRE` if it is not already of that type
 
-   If this is only for  `PCHYPRE` type of ads it should be called `PCHYPREADSSetDiscreteCurl()`
+  If this is only for  `PCHYPRE` type of ads it should be called `PCHYPREADSSetDiscreteCurl()`
 
 .seealso: `PCHYPRE`, `PCHYPRESetDiscreteGradient()`
 @*/
@@ -1560,27 +1603,27 @@ static PetscErrorCode PCHYPRESetInterpolations_HYPRE(PC pc, PetscInt dim, Mat RT
 }
 
 /*@
-   PCHYPRESetInterpolations - Set interpolation matrices for `PCHYPRE` type of ams or ads
+  PCHYPRESetInterpolations - Set interpolation matrices for `PCHYPRE` type of ams or ads
 
-   Collective
+  Collective
 
-   Input Parameters:
-+  pc - the preconditioning context
-.  dim - the dimension of the problem, only used in AMS
-.  RT_PiFull - Raviart-Thomas interpolation matrix
-.  RT_Pi - x/y/z component of Raviart-Thomas interpolation matrix
-.  ND_PiFull - Nedelec interpolation matrix
--  ND_Pi - x/y/z component of Nedelec interpolation matrix
+  Input Parameters:
++ pc        - the preconditioning context
+. dim       - the dimension of the problem, only used in AMS
+. RT_PiFull - Raviart-Thomas interpolation matrix
+. RT_Pi     - x/y/z component of Raviart-Thomas interpolation matrix
+. ND_PiFull - Nedelec interpolation matrix
+- ND_Pi     - x/y/z component of Nedelec interpolation matrix
 
-   Level: intermediate
+  Level: intermediate
 
-   Notes:
-    For AMS, only Nedelec interpolation matrices are needed, the Raviart-Thomas interpolation matrices can be set to NULL.
+  Notes:
+  For AMS, only Nedelec interpolation matrices are needed, the Raviart-Thomas interpolation matrices can be set to NULL.
 
-    For ADS, both type of interpolation matrices are needed.
+  For ADS, both type of interpolation matrices are needed.
 
-   Developer Note:
-   This automatically converts the matrix to `MATHYPRE` if it is not already of that type
+  Developer Notes:
+  This automatically converts the matrix to `MATHYPRE` if it is not already of that type
 
 .seealso: `PCHYPRE`
 @*/
@@ -1595,7 +1638,7 @@ PetscErrorCode PCHYPRESetInterpolations(PC pc, PetscInt dim, Mat RT_PiFull, Mat 
     PetscCheckSameComm(pc, 1, RT_PiFull, 3);
   }
   if (RT_Pi) {
-    PetscValidPointer(RT_Pi, 4);
+    PetscAssertPointer(RT_Pi, 4);
     for (i = 0; i < dim; ++i) {
       if (RT_Pi[i]) {
         PetscValidHeaderSpecific(RT_Pi[i], MAT_CLASSID, 4);
@@ -1608,7 +1651,7 @@ PetscErrorCode PCHYPRESetInterpolations(PC pc, PetscInt dim, Mat RT_PiFull, Mat 
     PetscCheckSameComm(pc, 1, ND_PiFull, 5);
   }
   if (ND_Pi) {
-    PetscValidPointer(ND_Pi, 6);
+    PetscAssertPointer(ND_Pi, 6);
     for (i = 0; i < dim; ++i) {
       if (ND_Pi[i]) {
         PetscValidHeaderSpecific(ND_Pi[i], MAT_CLASSID, 6);
@@ -1659,23 +1702,23 @@ static PetscErrorCode PCHYPRESetPoissonMatrix_HYPRE(PC pc, Mat A, PetscBool isal
 }
 
 /*@
-   PCHYPRESetAlphaPoissonMatrix - Set vector Poisson matrix for `PCHYPRE` of type ams
+  PCHYPRESetAlphaPoissonMatrix - Set vector Poisson matrix for `PCHYPRE` of type ams
 
-   Collective
+  Collective
 
-   Input Parameters:
-+  pc - the preconditioning context
--  A - the matrix
+  Input Parameters:
++ pc - the preconditioning context
+- A  - the matrix
 
-   Level: intermediate
+  Level: intermediate
 
-   Note:
-    A should be obtained by discretizing the vector valued Poisson problem with linear finite elements
+  Note:
+  A should be obtained by discretizing the vector valued Poisson problem with linear finite elements
 
-   Developer Note:
-   This automatically converts the matrix to `MATHYPRE` if it is not already of that type
+  Developer Notes:
+  This automatically converts the matrix to `MATHYPRE` if it is not already of that type
 
-   If this is only for  `PCHYPRE` type of ams it should be called `PCHYPREAMSSetAlphaPoissonMatrix()`
+  If this is only for  `PCHYPRE` type of ams it should be called `PCHYPREAMSSetAlphaPoissonMatrix()`
 
 .seealso: `PCHYPRE`, `PCHYPRESetDiscreteGradient()`, `PCHYPRESetDiscreteCurl()`, `PCHYPRESetBetaPoissonMatrix()`
 @*/
@@ -1690,23 +1733,23 @@ PetscErrorCode PCHYPRESetAlphaPoissonMatrix(PC pc, Mat A)
 }
 
 /*@
-   PCHYPRESetBetaPoissonMatrix - Set Poisson matrix for `PCHYPRE` of type ams
+  PCHYPRESetBetaPoissonMatrix - Set Poisson matrix for `PCHYPRE` of type ams
 
-   Collective
+  Collective
 
-   Input Parameters:
-+  pc - the preconditioning context
--  A - the matrix, or NULL to turn it off
+  Input Parameters:
++ pc - the preconditioning context
+- A  - the matrix, or NULL to turn it off
 
-   Level: intermediate
+  Level: intermediate
 
-   Note:
-   A should be obtained by discretizing the Poisson problem with linear finite elements.
+  Note:
+  A should be obtained by discretizing the Poisson problem with linear finite elements.
 
-   Developer Note:
-   This automatically converts the matrix to `MATHYPRE` if it is not already of that type
+  Developer Notes:
+  This automatically converts the matrix to `MATHYPRE` if it is not already of that type
 
-   If this is only for  `PCHYPRE` type of ams it should be called `PCHYPREAMSPCHYPRESetBetaPoissonMatrix()`
+  If this is only for  `PCHYPRE` type of ams it should be called `PCHYPREAMSPCHYPRESetBetaPoissonMatrix()`
 
 .seealso: `PCHYPRE`, `PCHYPRESetDiscreteGradient()`, `PCHYPRESetDiscreteCurl()`, `PCHYPRESetAlphaPoissonMatrix()`
 @*/
@@ -1745,20 +1788,20 @@ static PetscErrorCode PCHYPRESetEdgeConstantVectors_HYPRE(PC pc, Vec ozz, Vec zo
 }
 
 /*@
-   PCHYPRESetEdgeConstantVectors - Set the representation of the constant vector fields in the edge element basis for `PCHYPRE` of type ams
+  PCHYPRESetEdgeConstantVectors - Set the representation of the constant vector fields in the edge element basis for `PCHYPRE` of type ams
 
-   Collective
+  Collective
 
-   Input Parameters:
-+  pc - the preconditioning context
-.  ozz - vector representing (1,0,0) (or (1,0) in 2D)
-.  zoz - vector representing (0,1,0) (or (0,1) in 2D)
--  zzo - vector representing (0,0,1) (use NULL in 2D)
+  Input Parameters:
++ pc  - the preconditioning context
+. ozz - vector representing (1,0,0) (or (1,0) in 2D)
+. zoz - vector representing (0,1,0) (or (0,1) in 2D)
+- zzo - vector representing (0,0,1) (use NULL in 2D)
 
-   Level: intermediate
+  Level: intermediate
 
-   Developer Note:
-   If this is only for  `PCHYPRE` type of ams it should be called `PCHYPREAMSSetEdgeConstantVectors()`
+  Developer Notes:
+  If this is only for  `PCHYPRE` type of ams it should be called `PCHYPREAMSSetEdgeConstantVectors()`
 
 .seealso: `PCHYPRE`, `PCHYPRESetDiscreteGradient()`, `PCHYPRESetDiscreteCurl()`, `PCHYPRESetAlphaPoissonMatrix()`
 @*/
@@ -1791,19 +1834,19 @@ static PetscErrorCode PCHYPREAMSSetInteriorNodes_HYPRE(PC pc, Vec interior)
 /*@
   PCHYPREAMSSetInteriorNodes - Set the list of interior nodes to a zero-conductivity region for `PCHYPRE` of type ams
 
-   Collective
+  Collective
 
-   Input Parameters:
-+  pc - the preconditioning context
--  interior - vector. node is interior if its entry in the array is 1.0.
+  Input Parameters:
++ pc       - the preconditioning context
+- interior - vector. node is interior if its entry in the array is 1.0.
 
-   Level: intermediate
+  Level: intermediate
 
-   Note:
-   This calls `HYPRE_AMSSetInteriorNodes()`
+  Note:
+  This calls `HYPRE_AMSSetInteriorNodes()`
 
-   Developer Note:
-   If this is only for  `PCHYPRE` type of ams it should be called `PCHYPREAMSSetInteriorNodes()`
+  Developer Notes:
+  If this is only for  `PCHYPRE` type of ams it should be called `PCHYPREAMSSetInteriorNodes()`
 
 .seealso: `PCHYPRE`, `PCHYPRESetDiscreteGradient()`, `PCHYPRESetDiscreteCurl()`, `PCHYPRESetAlphaPoissonMatrix()`
 @*/
@@ -2160,7 +2203,7 @@ static PetscErrorCode PCHYPRESetType_HYPRE(PC pc, const char name[])
     It only gets here if the HYPRE type has not been set before the call to
    ...SetFromOptions() which actually is most of the time
 */
-PetscErrorCode PCSetFromOptions_HYPRE(PC pc, PetscOptionItems *PetscOptionsObject)
+static PetscErrorCode PCSetFromOptions_HYPRE(PC pc, PetscOptionItems *PetscOptionsObject)
 {
   PetscInt    indx;
   const char *type[] = {"euclid", "pilut", "parasails", "boomeramg", "ams", "ads"};
@@ -2180,16 +2223,16 @@ PetscErrorCode PCSetFromOptions_HYPRE(PC pc, PetscOptionItems *PetscOptionsObjec
 }
 
 /*@C
-     PCHYPRESetType - Sets which hypre preconditioner you wish to use
+  PCHYPRESetType - Sets which hypre preconditioner you wish to use
 
-   Input Parameters:
-+     pc - the preconditioner context
--     name - either  euclid, pilut, parasails, boomeramg, ams, ads
+  Input Parameters:
++ pc   - the preconditioner context
+- name - either  euclid, pilut, parasails, boomeramg, ams, ads
 
-   Options Database Key:
-   -pc_hypre_type - One of euclid, pilut, parasails, boomeramg, ams, ads
+  Options Database Key:
+. pc_hypre_type - One of euclid, pilut, parasails, boomeramg, ams, ads
 
-   Level: intermediate
+  Level: intermediate
 
 .seealso: `PCCreate()`, `PCSetType()`, `PCType`, `PC`, `PCHYPRE`
 @*/
@@ -2197,21 +2240,21 @@ PetscErrorCode PCHYPRESetType(PC pc, const char name[])
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
-  PetscValidCharPointer(name, 2);
+  PetscAssertPointer(name, 2);
   PetscTryMethod(pc, "PCHYPRESetType_C", (PC, const char[]), (pc, name));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-     PCHYPREGetType - Gets which hypre preconditioner you are using
+  PCHYPREGetType - Gets which hypre preconditioner you are using
 
-   Input Parameter:
-.     pc - the preconditioner context
+  Input Parameter:
+. pc - the preconditioner context
 
-   Output Parameter:
-.     name - either  euclid, pilut, parasails, boomeramg, ams, ads
+  Output Parameter:
+. name - either  euclid, pilut, parasails, boomeramg, ams, ads
 
-   Level: intermediate
+  Level: intermediate
 
 .seealso: `PCCreate()`, `PCHYPRESetType()`, `PCType`, `PC`, `PCHYPRE`
 @*/
@@ -2219,27 +2262,27 @@ PetscErrorCode PCHYPREGetType(PC pc, const char *name[])
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
-  PetscValidPointer(name, 2);
+  PetscAssertPointer(name, 2);
   PetscTryMethod(pc, "PCHYPREGetType_C", (PC, const char *[]), (pc, name));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-   PCMGGalerkinSetMatProductAlgorithm - Set type of SpGEMM for hypre to use on GPUs
+  PCMGGalerkinSetMatProductAlgorithm - Set type of SpGEMM for hypre to use on GPUs
 
-   Logically Collective
+  Logically Collective
 
-   Input Parameters:
-+  pc - the hypre context
--  type - one of 'cusparse', 'hypre'
+  Input Parameters:
++ pc   - the hypre context
+- name - one of 'cusparse', 'hypre'
 
-   Options Database Key:
-.  -pc_mg_galerkin_mat_product_algorithm <cusparse,hypre> - Type of SpGEMM to use in hypre
+  Options Database Key:
+. -pc_mg_galerkin_mat_product_algorithm <cusparse,hypre> - Type of SpGEMM to use in hypre
 
-   Level: intermediate
+  Level: intermediate
 
-   Developer Note:
-   How the name starts with `PCMG`, should it not be `PCHYPREBoomerAMG`?
+  Developer Notes:
+  How the name starts with `PCMG`, should it not be `PCHYPREBoomerAMG`?
 
 .seealso: `PCHYPRE`, `PCMGGalerkinGetMatProductAlgorithm()`
 @*/
@@ -2252,17 +2295,17 @@ PetscErrorCode PCMGGalerkinSetMatProductAlgorithm(PC pc, const char name[])
 }
 
 /*@C
-   PCMGGalerkinGetMatProductAlgorithm - Get type of SpGEMM for hypre to use on GPUs
+  PCMGGalerkinGetMatProductAlgorithm - Get type of SpGEMM for hypre to use on GPUs
 
-   Not Collective
+  Not Collective
 
-   Input Parameter:
-.  pc - the multigrid context
+  Input Parameter:
+. pc - the multigrid context
 
-   Output Parameter:
-.  name - one of 'cusparse', 'hypre'
+  Output Parameter:
+. name - one of 'cusparse', 'hypre'
 
-   Level: intermediate
+  Level: intermediate
 
 .seealso: `PCHYPRE`, ``PCMGGalerkinSetMatProductAlgorithm()`
 @*/
@@ -2278,41 +2321,42 @@ PetscErrorCode PCMGGalerkinGetMatProductAlgorithm(PC pc, const char *name[])
      PCHYPRE - Allows you to use the matrix element based preconditioners in the LLNL package hypre as PETSc `PC`
 
    Options Database Keys:
-+   -pc_hypre_type - One of euclid, pilut, parasails, boomeramg, ams, ads
++   -pc_hypre_type - One of `euclid`, `pilut`, `parasails`, `boomeramg`, `ams`, or `ads`
 .   -pc_hypre_boomeramg_nodal_coarsen <n> - where n is from 1 to 6 (see `HYPRE_BOOMERAMGSetNodal()`)
 .   -pc_hypre_boomeramg_vec_interp_variant <v> - where v is from 1 to 3 (see `HYPRE_BoomerAMGSetInterpVecVariant()`)
--   Many others, run with -pc_type hypre -pc_hypre_type XXX -help to see options for the XXX preconditioner
+-   Many others, run with `-pc_type hypre` `-pc_hypre_type XXX` `-help` to see options for the XXX preconditioner
 
    Level: intermediate
 
    Notes:
-    Apart from pc_hypre_type (for which there is `PCHYPRESetType()`),
+    Apart from `-pc_hypre_type` (for which there is `PCHYPRESetType()`),
           the many hypre options can ONLY be set via the options database (e.g. the command line
           or with `PetscOptionsSetValue()`, there are no functions to set them)
 
-          The options -pc_hypre_boomeramg_max_iter and -pc_hypre_boomeramg_tol refer to the number of iterations
-          (V-cycles) and tolerance that boomeramg does EACH time it is called. So for example, if
-          -pc_hypre_boomeramg_max_iter is set to 2 then 2-V-cycles are being used to define the preconditioner
-          (-pc_hypre_boomeramg_tol should be set to 0.0 - the default - to strictly use a fixed number of
-          iterations per hypre call). -ksp_max_it and -ksp_rtol STILL determine the total number of iterations
-          and tolerance for the Krylov solver. For example, if -pc_hypre_boomeramg_max_iter is 2 and -ksp_max_it is 10
-          then AT MOST twenty V-cycles of boomeramg will be called.
+          The options `-pc_hypre_boomeramg_max_iter` and `-pc_hypre_boomeramg_tol` refer to the number of iterations
+          (V-cycles) and tolerance that boomerAMG does EACH time it is called. So for example, if
+          `-pc_hypre_boomeramg_max_iter` is set to 2 then 2-V-cycles are being used to define the preconditioner
+          (`-pc_hypre_boomeramg_tol` should be set to 0.0 - the default - to strictly use a fixed number of
+          iterations per hypre call). `-ksp_max_it` and `-ksp_rtol` STILL determine the total number of iterations
+          and tolerance for the Krylov solver. For example, if `-pc_hypre_boomeramg_max_iter` is 2 and `-ksp_max_it` is 10
+          then AT MOST twenty V-cycles of boomeramg will be used.
 
-           Note that the option -pc_hypre_boomeramg_relax_type_all defaults to symmetric relaxation
+           Note that the option `-pc_hypre_boomeramg_relax_type_all` defaults to symmetric relaxation
            (symmetric-SOR/Jacobi), which is required for Krylov solvers like CG that expect symmetry.
-           Otherwise, you may want to use -pc_hypre_boomeramg_relax_type_all SOR/Jacobi.
-          If you wish to use BoomerAMG WITHOUT a Krylov method use -ksp_type richardson NOT -ksp_type preonly
-          and use -ksp_max_it to control the number of V-cycles.
-          (see the PETSc FAQ.html at the PETSc website under the Documentation tab).
+           Otherwise, you may want to use `-pc_hypre_boomeramg_relax_type_all SOR/Jacobi`.
 
           `MatSetNearNullSpace()` - if you provide a near null space to your matrix it is ignored by hypre UNLESS you also use
-          the following two options: ``-pc_hypre_boomeramg_nodal_coarsen <n> -pc_hypre_boomeramg_vec_interp_variant <v>``
+          the following two options: `-pc_hypre_boomeramg_nodal_coarsen <n> -pc_hypre_boomeramg_vec_interp_variant <v>`
 
           See `PCPFMG`, `PCSMG`, and `PCSYSPFMG` for access to hypre's other (nonalgebraic) multigrid solvers
 
-          For `PCHYPRE` type of ams or ads auxiliary data must be provided to the preconditioner with `PCHYPRESetDiscreteGradient()`,
+          For `PCHYPRE` type of `ams` or `ads` auxiliary data must be provided to the preconditioner with `PCHYPRESetDiscreteGradient()`,
           `PCHYPRESetDiscreteCurl()`, `PCHYPRESetInterpolations()`, `PCHYPRESetAlphaPoissonMatrix()`, `PCHYPRESetBetaPoissonMatrix()`, `PCHYPRESetEdgeConstantVectors()`,
           `PCHYPREAMSSetInteriorNodes()`
+
+  Sometimes people want to try algebraic multigrid as a "standalone" solver, that is not accelerating it with a Krylov method. Though we generally do not recommend this
+  since it is usually slower, one should use a `KSPType` of `KSPRICHARDSON`
+  (or equivalently `-ksp_type richardson`) to achieve this. Using `KSPPREONLY` will not work since it only applies a single cycle of multigrid.
 
    PETSc provides its own geometric and algebraic multigrid solvers `PCMG` and `PCGAMG`, also see `PCHMG` which is useful for certain multicomponent problems
 
@@ -2380,7 +2424,7 @@ typedef struct {
   PetscBool print_statistics;
 } PC_PFMG;
 
-PetscErrorCode PCDestroy_PFMG(PC pc)
+static PetscErrorCode PCDestroy_PFMG(PC pc)
 {
   PC_PFMG *ex = (PC_PFMG *)pc->data;
 
@@ -2394,7 +2438,7 @@ PetscErrorCode PCDestroy_PFMG(PC pc)
 static const char *PFMGRelaxType[] = {"Jacobi", "Weighted-Jacobi", "symmetric-Red/Black-Gauss-Seidel", "Red/Black-Gauss-Seidel"};
 static const char *PFMGRAPType[]   = {"Galerkin", "non-Galerkin"};
 
-PetscErrorCode PCView_PFMG(PC pc, PetscViewer viewer)
+static PetscErrorCode PCView_PFMG(PC pc, PetscViewer viewer)
 {
   PetscBool iascii;
   PC_PFMG  *ex = (PC_PFMG *)pc->data;
@@ -2414,7 +2458,7 @@ PetscErrorCode PCView_PFMG(PC pc, PetscViewer viewer)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode PCSetFromOptions_PFMG(PC pc, PetscOptionItems *PetscOptionsObject)
+static PetscErrorCode PCSetFromOptions_PFMG(PC pc, PetscOptionItems *PetscOptionsObject)
 {
   PC_PFMG *ex = (PC_PFMG *)pc->data;
 
@@ -2443,7 +2487,7 @@ PetscErrorCode PCSetFromOptions_PFMG(PC pc, PetscOptionItems *PetscOptionsObject
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode PCApply_PFMG(PC pc, Vec x, Vec y)
+static PetscErrorCode PCApply_PFMG(PC pc, Vec x, Vec y)
 {
   PC_PFMG           *ex = (PC_PFMG *)pc->data;
   PetscScalar       *yy;
@@ -2501,7 +2545,7 @@ static PetscErrorCode PCApplyRichardson_PFMG(PC pc, Vec b, Vec y, Vec w, PetscRe
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode PCSetUp_PFMG(PC pc)
+static PetscErrorCode PCSetUp_PFMG(PC pc)
 {
   PC_PFMG         *ex = (PC_PFMG *)pc->data;
   Mat_HYPREStruct *mx = (Mat_HYPREStruct *)(pc->pmat->data);
@@ -2604,7 +2648,7 @@ typedef struct {
   PetscInt num_pre_relax, num_post_relax;
 } PC_SysPFMG;
 
-PetscErrorCode PCDestroy_SysPFMG(PC pc)
+static PetscErrorCode PCDestroy_SysPFMG(PC pc)
 {
   PC_SysPFMG *ex = (PC_SysPFMG *)pc->data;
 
@@ -2617,7 +2661,7 @@ PetscErrorCode PCDestroy_SysPFMG(PC pc)
 
 static const char *SysPFMGRelaxType[] = {"Weighted-Jacobi", "Red/Black-Gauss-Seidel"};
 
-PetscErrorCode PCView_SysPFMG(PC pc, PetscViewer viewer)
+static PetscErrorCode PCView_SysPFMG(PC pc, PetscViewer viewer)
 {
   PetscBool   iascii;
   PC_SysPFMG *ex = (PC_SysPFMG *)pc->data;
@@ -2634,7 +2678,7 @@ PetscErrorCode PCView_SysPFMG(PC pc, PetscViewer viewer)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode PCSetFromOptions_SysPFMG(PC pc, PetscOptionItems *PetscOptionsObject)
+static PetscErrorCode PCSetFromOptions_SysPFMG(PC pc, PetscOptionItems *PetscOptionsObject)
 {
   PC_SysPFMG *ex  = (PC_SysPFMG *)pc->data;
   PetscBool   flg = PETSC_FALSE;
@@ -2658,7 +2702,7 @@ PetscErrorCode PCSetFromOptions_SysPFMG(PC pc, PetscOptionItems *PetscOptionsObj
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode PCApply_SysPFMG(PC pc, Vec x, Vec y)
+static PetscErrorCode PCApply_SysPFMG(PC pc, Vec x, Vec y)
 {
   PC_SysPFMG        *ex = (PC_SysPFMG *)pc->data;
   PetscScalar       *yy;
@@ -2754,7 +2798,7 @@ static PetscErrorCode PCApplyRichardson_SysPFMG(PC pc, Vec b, Vec y, Vec w, Pets
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode PCSetUp_SysPFMG(PC pc)
+static PetscErrorCode PCSetUp_SysPFMG(PC pc)
 {
   PC_SysPFMG       *ex = (PC_SysPFMG *)pc->data;
   Mat_HYPRESStruct *mx = (Mat_HYPRESStruct *)(pc->pmat->data);
@@ -2835,7 +2879,7 @@ typedef struct {
   PetscInt           num_pre_relax, num_post_relax;
 } PC_SMG;
 
-PetscErrorCode PCDestroy_SMG(PC pc)
+static PetscErrorCode PCDestroy_SMG(PC pc)
 {
   PC_SMG *ex = (PC_SMG *)pc->data;
 
@@ -2846,7 +2890,7 @@ PetscErrorCode PCDestroy_SMG(PC pc)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode PCView_SMG(PC pc, PetscViewer viewer)
+static PetscErrorCode PCView_SMG(PC pc, PetscViewer viewer)
 {
   PetscBool iascii;
   PC_SMG   *ex = (PC_SMG *)pc->data;
@@ -2862,7 +2906,7 @@ PetscErrorCode PCView_SMG(PC pc, PetscViewer viewer)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode PCSetFromOptions_SMG(PC pc, PetscOptionItems *PetscOptionsObject)
+static PetscErrorCode PCSetFromOptions_SMG(PC pc, PetscOptionItems *PetscOptionsObject)
 {
   PC_SMG *ex = (PC_SMG *)pc->data;
 
@@ -2878,7 +2922,7 @@ PetscErrorCode PCSetFromOptions_SMG(PC pc, PetscOptionItems *PetscOptionsObject)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode PCApply_SMG(PC pc, Vec x, Vec y)
+static PetscErrorCode PCApply_SMG(PC pc, Vec x, Vec y)
 {
   PC_SMG            *ex = (PC_SMG *)pc->data;
   PetscScalar       *yy;
@@ -2936,7 +2980,7 @@ static PetscErrorCode PCApplyRichardson_SMG(PC pc, Vec b, Vec y, Vec w, PetscRea
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode PCSetUp_SMG(PC pc)
+static PetscErrorCode PCSetUp_SMG(PC pc)
 {
   PetscInt         i, dim;
   PC_SMG          *ex = (PC_SMG *)pc->data;

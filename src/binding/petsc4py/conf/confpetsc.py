@@ -68,7 +68,7 @@ except ImportError:
 
 # Cython
 
-CYTHON = '0.29.32'
+CYTHON = '3.0.0'
 
 def cython_req():
     return CYTHON
@@ -778,7 +778,7 @@ def setup(**attrs):
         version = cython_req()
         if not cython_chk(version, verbose=False):
             reqs = attrs.setdefault('setup_requires', [])
-            reqs += ['Cython>='+version]
+            reqs += ['Cython=='+version]
     return _setup(**attrs)
 
 # --------------------------------------------------------------------

@@ -87,12 +87,15 @@ cdef class DM(Object):
         Parameters
         ----------
         viewer
-            Viewer used to display the `DM`, either `Viewer.Type.BINARY` or `Viewer.Type.HDF5`.
+            Viewer used to store the `DM`,
+            like `Viewer.Type.BINARY` or `Viewer.Type.HDF5`.
 
         Notes
         -----
-        When using `Viewer.Type.HDF5` format, one can save multiple `DMPlex` meshes in a single HDF5 files.
-        This in turn requires one to name the `DMPlex` object with `Object.setName` before saving it with `DM.view` and before loading it with `DM.load` for identification of the mesh object.
+        When using `Viewer.Type.HDF5` format, one can save multiple `DMPlex` meshes
+        in a single HDF5 files. This in turn requires one to name the `DMPlex`
+        object with `Object.setName` before saving it with `DM.view` and before
+        loading it with `DM.load` for identification of the mesh object.
 
         See Also
         --------
@@ -133,7 +136,7 @@ cdef class DM(Object):
         cdef MPI_Comm ccomm = def_Comm(comm, PETSC_COMM_DEFAULT)
         cdef PetscDM newdm = NULL
         CHKERR( DMCreate(ccomm, &newdm) )
-        PetscCLEAR(self.obj); self.dm = newdm
+        CHKERR( PetscCLEAR(self.obj) ); self.dm = newdm
         return self
 
     def clone(self) -> DM:
@@ -298,11 +301,6 @@ cdef class DM(Object):
 
         Collective.
 
-        Notes
-        -----
-        Options database is available to set up a specific configuration.
-        For instance, ``-dm_vec_type`` sets the type of vector to create inside of the `DM`.
-
         See Also
         --------
         petsc_options, petsc.DMSetFromOptions
@@ -363,10 +361,10 @@ cdef class DM(Object):
 
         Parameters
         ----------
-        useCone
-            If `True`, the variable influence is set, starting with the cone operation.
-        useClosure
-            If `True`, the variable influence is set using transitive closure.
+        useCone : bool
+            Whether adjacency uses cone information.
+        useClosure : bool
+            Whether adjacency is computed using full closure information.
 
         See Also
         --------
@@ -384,10 +382,10 @@ cdef class DM(Object):
 
         Returns
         -------
-        toBool(uC) : bool
-            This flag provides the variable influence starting with the cone operation if `True`.
-        toBool(uCl) : bool
-            This flag provides the variable influence using transitive closure.
+        useCone : bool
+            Whether adjacency uses cone information.
+        useClosure : bool
+            Whether adjacency is computed using full closure information.
 
         See Also
         --------
@@ -406,12 +404,12 @@ cdef class DM(Object):
 
         Parameters
         ----------
-        field
+        field : int
             The field number.
-        useCone
-            If `True`, the variable influence is set, starting with the cone operation.
-        useClosure
-            If `True`, the variable influence is set using transitive closure.
+        useCone : bool
+            Whether adjacency uses cone information.
+        useClosure : bool
+            Whether adjacency is computed using full closure information.
 
         See Also
         --------
@@ -435,10 +433,10 @@ cdef class DM(Object):
 
         Returns
         -------
-        toBool(uC) : bool
-            This flag provides the variable influence starting with the cone operation if `True`.
-        toBool(uCl) : bool
-            This flag provides the variable influence using transitive closure.
+        useCone : bool
+            Whether adjacency uses cone information.
+        useClosure : bool
+            Whether adjacency is computed using full closure information.
 
         See Also
         --------
@@ -579,7 +577,8 @@ cdef class DM(Object):
         field
             The discretization object.
         label
-            The name of the label indicating the support of the field, or `None` for the entire mesh, currently must be `None`.
+            The name of the label indicating the support of the field,
+            or `None` for the entire mesh.
 
         See Also
         --------
@@ -614,7 +613,7 @@ cdef class DM(Object):
         assert clbl == NULL
         cdef Object field = subtype_Object(cobj)()
         field.obj[0] = cobj
-        PetscINCREF(field.obj)
+        CHKERR( PetscINCREF(field.obj) )
         return (field, None) # TODO REVIEW
 
     def addField(self, Object field, label: str | None = None) -> None:
@@ -627,7 +626,8 @@ cdef class DM(Object):
         field
             The discretization object.
         label
-            The name of the label indicating the support of the field, or `None` for the entire mesh, currently must be `None`.
+            The name of the label indicating the support of the field,
+            or `None` for the entire mesh.
 
         See Also
         --------
@@ -704,7 +704,7 @@ cdef class DM(Object):
         """
         cdef DS ds = DS()
         CHKERR( DMGetDS(self.dm, &ds.ds) )
-        PetscINCREF(ds.obj)
+        CHKERR( PetscINCREF(ds.obj) )
         return ds
 
     def copyDS(self, DM dm) -> None:
@@ -802,7 +802,7 @@ cdef class DM(Object):
     def getGlobalVec(self) -> Vec:
         """Return a global vector.
 
-        Collective on `DM`.
+        Collective.
 
         See Also
         --------
@@ -811,7 +811,7 @@ cdef class DM(Object):
         """
         cdef Vec vg = Vec()
         CHKERR( DMGetGlobalVector(self.dm, &vg.vec) )
-        PetscINCREF(vg.obj)
+        CHKERR( PetscINCREF(vg.obj) )
         return vg
 
     def restoreGlobalVec(self, Vec vg) -> None:
@@ -844,7 +844,7 @@ cdef class DM(Object):
         """
         cdef Vec vl = Vec()
         CHKERR( DMGetLocalVector(self.dm, &vl.vec) )
-        PetscINCREF(vl.obj)
+        CHKERR( PetscINCREF(vl.obj) )
         return vl
 
     def restoreLocalVec(self, Vec vl) -> None:
@@ -865,7 +865,7 @@ cdef class DM(Object):
         CHKERR( PetscObjectDereference(<PetscObject>vl.vec) )
         CHKERR( DMRestoreLocalVector(self.dm, &vl.vec) )
 
-    def globalToLocal(self, Vec vg, Vec vl, addv: InsertMode | None = None) -> None:
+    def globalToLocal(self, Vec vg, Vec vl, addv: InsertModeSpec | None = None) -> None:
         """Update local vectors from global vector.
 
         Neighborwise collective.
@@ -877,7 +877,7 @@ cdef class DM(Object):
         vl
             The local vector.
         addv
-            `InsertMode.INSERT_VALUES` or `InsertMode.ADD_VALUES`.
+            Insertion mode.
 
         See Also
         --------
@@ -888,19 +888,19 @@ cdef class DM(Object):
         CHKERR( DMGlobalToLocalBegin(self.dm, vg.vec, im, vl.vec) )
         CHKERR( DMGlobalToLocalEnd  (self.dm, vg.vec, im, vl.vec) )
 
-    def localToGlobal(self, Vec vl, Vec vg, addv: InsertMode | None = None) -> None:
+    def localToGlobal(self, Vec vl, Vec vg, addv: InsertModeSpec | None = None) -> None:
         """Update global vectors from local vector.
 
         Neighborwise collective.
 
         Parameters
         ----------
-        vg
-            The global vector.
         vl
             The local vector.
+        vg
+            The global vector.
         addv
-            If `InsertMode.INSERT_VALUES`, then no parallel communication is used, while, if `InsertMode.ADD_VALUES`, then all ghost points from the same base point accumulate into that base point.
+            Insertion mode.
 
         See Also
         --------
@@ -911,19 +911,19 @@ cdef class DM(Object):
         CHKERR( DMLocalToGlobalBegin(self.dm, vl.vec, im, vg.vec) )
         CHKERR( DMLocalToGlobalEnd(self.dm, vl.vec, im, vg.vec) )
 
-    def localToLocal(self, Vec vl, Vec vlg, addv: InsertMode | None = None) -> None:
+    def localToLocal(self, Vec vl, Vec vlg, addv: InsertModeSpec | None = None) -> None:
         """Map the values from a local vector to another local vector.
 
         Neighborwise collective.
 
         Parameters
         ----------
-        vg
-            The global vector.
         vl
             The local vector.
+        vlg
+            The global vector.
         addv
-            `InsertMode.INSERT_VALUES` or `InsertMode.ADD_VALUES`.
+            Insertion mode.
 
         See Also
         --------
@@ -946,10 +946,38 @@ cdef class DM(Object):
         """
         cdef LGMap lgm = LGMap()
         CHKERR( DMGetLocalToGlobalMapping(self.dm, &lgm.lgm) )
-        PetscINCREF(lgm.obj)
+        CHKERR( PetscINCREF(lgm.obj) )
         return lgm
 
     #
+
+    def getCoarseDM(self) -> DM:
+        """Return the coarse `DM`.
+
+        Collective.
+
+        See Also
+        --------
+        petsc.DMGetCoarseDM
+
+        """
+        cdef DM cdm = type(self)()
+        CHKERR( DMGetCoarseDM(self.dm, &cdm.dm) )
+        CHKERR( PetscINCREF(cdm.obj) )
+        return cdm
+
+    def setCoarseDM(self, DM dm) -> None:
+        """Set the coarse `DM`.
+
+        Collective.
+
+        See Also
+        --------
+        petsc.DMSetCoarseDM
+
+        """
+        CHKERR( DMSetCoarseDM(self.dm, dm.dm) )
+        return
 
     def getCoordinateDM(self) -> DM:
         """Return the coordinate `DM`.
@@ -963,7 +991,7 @@ cdef class DM(Object):
         """
         cdef DM cdm = type(self)()
         CHKERR( DMGetCoordinateDM(self.dm, &cdm.dm) )
-        PetscINCREF(cdm.obj)
+        CHKERR( PetscINCREF(cdm.obj) )
         return cdm
 
     def getCoordinateSection(self) -> Section:
@@ -978,7 +1006,7 @@ cdef class DM(Object):
         """
         cdef Section sec = Section()
         CHKERR( DMGetCoordinateSection(self.dm, &sec.sec) )
-        PetscINCREF(sec.obj)
+        CHKERR( PetscINCREF(sec.obj) )
         return sec
 
     def setCoordinates(self, Vec c) -> None:
@@ -1010,7 +1038,7 @@ cdef class DM(Object):
         """
         cdef Vec c = Vec()
         CHKERR( DMGetCoordinates(self.dm, &c.vec) )
-        PetscINCREF(c.obj)
+        CHKERR( PetscINCREF(c.obj) )
         return c
 
     def setCoordinatesLocal(self, Vec c) -> None:
@@ -1042,7 +1070,7 @@ cdef class DM(Object):
         """
         cdef Vec c = Vec()
         CHKERR( DMGetCoordinatesLocal(self.dm, &c.vec) )
-        PetscINCREF(c.obj)
+        CHKERR( PetscINCREF(c.obj) )
         return c
 
     def projectCoordinates(self, FE disc) -> Self:
@@ -1472,7 +1500,7 @@ cdef class DM(Object):
         cdef DMLabel dmlabel = DMLabel()
         name = str2bytes(name, &cname)
         CHKERR( DMGetLabel(self.dm, cname, &dmlabel.dmlabel) )
-        PetscINCREF(dmlabel.obj)
+        CHKERR( PetscINCREF(dmlabel.obj) )
         return dmlabel
 
     #
@@ -1497,7 +1525,7 @@ cdef class DM(Object):
         """
         cdef Section sec = Section()
         CHKERR( DMGetLocalSection(self.dm, &sec.sec) )
-        PetscINCREF(sec.obj)
+        CHKERR( PetscINCREF(sec.obj) )
         return sec
 
     def setGlobalSection(self, Section sec) -> None:
@@ -1520,7 +1548,7 @@ cdef class DM(Object):
         """
         cdef Section sec = Section()
         CHKERR( DMGetGlobalSection(self.dm, &sec.sec) )
-        PetscINCREF(sec.obj)
+        CHKERR( PetscINCREF(sec.obj) )
         return sec
 
     setSection = setLocalSection
@@ -1542,8 +1570,8 @@ cdef class DM(Object):
         globalsec
             Describe the global data layout.
 
-        Note
-        ----
+        Notes
+        -----
         Encoding based on the `Section` describing the data layout.
 
         See Also
@@ -1563,7 +1591,7 @@ cdef class DM(Object):
         """
         cdef SF sf = SF()
         CHKERR( DMGetSectionSF(self.dm, &sf.sf) )
-        PetscINCREF(sf.obj)
+        CHKERR( PetscINCREF(sf.obj) )
         return sf
 
     def setSectionSF(self, SF sf) -> None:
@@ -1590,7 +1618,7 @@ cdef class DM(Object):
         """
         cdef SF sf = SF()
         CHKERR( DMGetPointSF(self.dm, &sf.sf) )
-        PetscINCREF(sf.obj)
+        CHKERR( PetscINCREF(sf.obj) )
         return sf
 
     def setPointSF(self, SF sf) -> None:
@@ -1883,7 +1911,7 @@ cdef class DM(Object):
         CHKERR( DMClearLabelStratum(self.dm, cname, cvalue) )
 
     def setLabelOutput(self, name: str, output: bool) -> None:
-        """Set if a given lable should be saved to a view.
+        """Set if a given label should be saved to a view.
 
         Not collective.
 
@@ -1989,7 +2017,7 @@ cdef class DM(Object):
             if cdm != NULL:
                 dm = subtype_DM(cdm[i])()
                 dm.dm = cdm[i]
-                PetscINCREF(dm.obj)
+                CHKERR( PetscINCREF(dm.obj) )
                 dms.append(dm)
             else:
                 dms.append(None)
@@ -2047,7 +2075,7 @@ cdef class DM(Object):
             ) -> None:
         """Set the `SNES` Jacobian evaluation function.
 
-        Not collective
+        Not collective.
 
         Parameters
         ----------

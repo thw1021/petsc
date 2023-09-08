@@ -145,7 +145,7 @@ subdirectories give the possible values for ``$PETSC_ARCH``.
 See :any:`handson` to immediately jump in and run PETSc code.
 
 All PETSc programs use the MPI (Message Passing Interface) standard for
-message-passing communication :cite:`MPI-final`. Thus, to
+message-passing communication :cite:`mpi-final`. Thus, to
 execute PETSc programs, users must know the procedure for beginning MPI
 jobs on their selected computer system(s). For instance, when using the
 `MPICH <https://www.mpich.org/>`__ implementation of MPI and many
@@ -655,7 +655,7 @@ number of threads being used. The default number is often absurdly high for the 
 Users can also put OpenMP pragmas into their own code. However since standard PETSc is not thread-safe, they should not, in general,
 call PETSc routines from inside the parallel regions.
 
-PETSc MPI based linear solvers may be accessed from a sequential or OpenMP program with the ``PCMPI`` solver wrapper, see :any:`sec_pcmpi`.
+PETSc's MPI based linear solvers may be accessed from a sequential or non-MPI OpenMP program, see :any:`sec_pcmpi`.
 
 
 There is an OpenMP thread-safe subset of PETSc that may be configured for using ``--with-threadsafety [--with-openmp or

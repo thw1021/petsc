@@ -98,7 +98,7 @@ PetscErrorCode KSPSetUp_GMRES(KSP ksp)
     On entry, the value in vector VEC_VV(0) should be the initial residual
     (this allows shortcuts where the initial preconditioned residual is 0).
  */
-PetscErrorCode KSPGMRESCycle(PetscInt *itcount, KSP ksp)
+static PetscErrorCode KSPGMRESCycle(PetscInt *itcount, KSP ksp)
 {
   KSP_GMRES *gmres = (KSP_GMRES *)(ksp->data);
   PetscReal  res, hapbnd, tt;
@@ -114,7 +114,7 @@ PetscErrorCode KSPGMRESCycle(PetscInt *itcount, KSP ksp)
   if ((ksp->rnorm > 0.0) && (PetscAbsReal(res - ksp->rnorm) > gmres->breakdowntol * gmres->rnorm0)) {
     PetscCheck(!ksp->errorifnotconverged, PetscObjectComm((PetscObject)ksp), PETSC_ERR_CONV_FAILED, "Residual norm computed by GMRES recursion formula %g is far from the computed residual norm %g at restart, residual norm at start of cycle %g",
                (double)ksp->rnorm, (double)res, (double)gmres->rnorm0);
-    PetscCall(PetscInfo(ksp, "Residual norm computed by GMRES recursion formula %g is far from the computed residual norm %g at restart, residual norm at start of cycle %g", (double)ksp->rnorm, (double)res, (double)gmres->rnorm0));
+    PetscCall(PetscInfo(ksp, "Residual norm computed by GMRES recursion formula %g is far from the computed residual norm %g at restart, residual norm at start of cycle %g\n", (double)ksp->rnorm, (double)res, (double)gmres->rnorm0));
     ksp->reason = KSP_DIVERGED_BREAKDOWN;
     PetscFunctionReturn(PETSC_SUCCESS);
   }
@@ -179,7 +179,7 @@ PetscErrorCode KSPGMRESCycle(PetscInt *itcount, KSP ksp)
       if (ksp->normtype == KSP_NORM_NONE) { /* convergence test was skipped in this case */
         ksp->reason = KSP_CONVERGED_HAPPY_BREAKDOWN;
       } else if (!ksp->reason) {
-        PetscCheck(!ksp->errorifnotconverged, PetscObjectComm((PetscObject)ksp), PETSC_ERR_NOT_CONVERGED, "You reached the happy break down, but convergence was not indicated. Residual norm = %g", (double)res);
+        PetscCheck(!ksp->errorifnotconverged, PetscObjectComm((PetscObject)ksp), PETSC_ERR_NOT_CONVERGED, "Reached happy break down, but convergence was not indicated. Residual norm = %g", (double)res);
         ksp->reason = KSP_DIVERGED_BREAKDOWN;
         break;
       }
@@ -205,7 +205,7 @@ PetscErrorCode KSPGMRESCycle(PetscInt *itcount, KSP ksp)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode KSPSolve_GMRES(KSP ksp)
+static PetscErrorCode KSPSolve_GMRES(KSP ksp)
 {
   PetscInt   its, itcount, i;
   KSP_GMRES *gmres      = (KSP_GMRES *)ksp->data;
@@ -345,8 +345,7 @@ static PetscErrorCode KSPGMRESBuildSoln(PetscScalar *nrs, Vec vs, Vec vdest, KSP
   }
 
   /* Accumulate the correction to the solution of the preconditioned problem in TEMP */
-  PetscCall(VecSet(VEC_TEMP, 0.0));
-  PetscCall(VecMAXPY(VEC_TEMP, it + 1, nrs, &VEC_VV(0)));
+  PetscCall(VecMAXPBY(VEC_TEMP, it + 1, nrs, 0, &VEC_VV(0)));
 
   PetscCall(KSPUnwindPreconditioner(ksp, VEC_TEMP, VEC_TEMP_MATOP));
   /* add solution to previous solution */
@@ -433,7 +432,7 @@ PetscErrorCode KSPGMRESGetNewVectors(KSP ksp, PetscInt it)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode KSPBuildSolution_GMRES(KSP ksp, Vec ptr, Vec *result)
+static PetscErrorCode KSPBuildSolution_GMRES(KSP ksp, Vec ptr, Vec *result)
 {
   KSP_GMRES *gmres = (KSP_GMRES *)ksp->data;
 
@@ -490,23 +489,23 @@ PetscErrorCode KSPView_GMRES(KSP ksp, PetscViewer viewer)
 }
 
 /*@C
-   KSPGMRESMonitorKrylov - Calls `VecView()` for each new direction in the `KSPGMRES` accumulated Krylov space.
+  KSPGMRESMonitorKrylov - Calls `VecView()` for each new direction in the `KSPGMRES` accumulated Krylov space.
 
-   Collective
+  Collective
 
-   Input Parameters:
-+  ksp - the `KSP` context
-.  its - iteration number
-.  fgnorm - 2-norm of residual (or gradient)
--  dummy - a collection of viewers created with `PetscViewersCreate()`
+  Input Parameters:
++ ksp    - the `KSP` context
+. its    - iteration number
+. fgnorm - 2-norm of residual (or gradient)
+- dummy  - a collection of viewers created with `PetscViewersCreate()`
 
-   Options Database Key:
-.   -ksp_gmres_krylov_monitor <bool> - Plot the Krylov directions
+  Options Database Key:
+. -ksp_gmres_krylov_monitor <bool> - Plot the Krylov directions
 
-   Level: intermediate
+  Level: intermediate
 
-   Note:
-    A new `PETSCVIEWERDRAW` is created for each Krylov vector so they can all be simultaneously viewed
+  Note:
+  A new `PETSCVIEWERDRAW` is created for each Krylov vector so they can all be simultaneously viewed
 
 .seealso: [](ch_ksp), `KSPGMRES`, `KSPMonitorSet()`, `KSPMonitorResidual()`, `VecView()`, `PetscViewersCreate()`, `PetscViewersDestroy()`
 @*/
@@ -574,7 +573,7 @@ PetscErrorCode KSPGMRESSetHapTol_GMRES(KSP ksp, PetscReal tol)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode KSPGMRESSetBreakdownTolerance_GMRES(KSP ksp, PetscReal tol)
+static PetscErrorCode KSPGMRESSetBreakdownTolerance_GMRES(KSP ksp, PetscReal tol)
 {
   KSP_GMRES *gmres = (KSP_GMRES *)ksp->data;
 
@@ -657,14 +656,14 @@ PetscErrorCode KSPGMRESGetCGSRefinementType_GMRES(KSP ksp, KSPGMRESCGSRefinement
 }
 
 /*@
-   KSPGMRESSetCGSRefinementType - Sets the type of iterative refinement to use
-         in the classical Gram Schmidt orthogonalization.
+  KSPGMRESSetCGSRefinementType - Sets the type of iterative refinement to use
+  in the classical Gram Schmidt orthogonalization.
 
-   Logically Collective
+  Logically Collective
 
-   Input Parameters:
-+  ksp - the Krylov space context
--  type - the type of refinement
+  Input Parameters:
++ ksp  - the Krylov space context
+- type - the type of refinement
 .vb
   KSP_GMRES_CGS_REFINE_NEVER
   KSP_GMRES_CGS_REFINE_IFNEEDED
@@ -672,9 +671,9 @@ PetscErrorCode KSPGMRESGetCGSRefinementType_GMRES(KSP ksp, KSPGMRESCGSRefinement
 .ve
 
   Options Database Key:
-.  -ksp_gmres_cgs_refinement_type <refine_never,refine_ifneeded,refine_always> - refinement type
+. -ksp_gmres_cgs_refinement_type <refine_never,refine_ifneeded,refine_always> - refinement type
 
-   Level: intermediate
+  Level: intermediate
 
 .seealso: [](ch_ksp), `KSPGMRES`, `KSPGMRESSetOrthogonalization()`, `KSPGMRESCGSRefinementType`, `KSPGMRESClassicalGramSchmidtOrthogonalization()`, `KSPGMRESGetCGSRefinementType()`,
           `KSPGMRESGetOrthogonalization()`
@@ -689,21 +688,21 @@ PetscErrorCode KSPGMRESSetCGSRefinementType(KSP ksp, KSPGMRESCGSRefinementType t
 }
 
 /*@
-   KSPGMRESGetCGSRefinementType - Gets the type of iterative refinement to use
-         in the classical Gram Schmidt orthogonalization.
+  KSPGMRESGetCGSRefinementType - Gets the type of iterative refinement to use
+  in the classical Gram Schmidt orthogonalization.
 
-   Not Collective
+  Not Collective
 
-   Input Parameter:
-.  ksp - the Krylov space context
+  Input Parameter:
+. ksp - the Krylov space context
 
-   Output Parameter:
-.  type - the type of refinement
+  Output Parameter:
+. type - the type of refinement
 
   Options Database Key:
-.  -ksp_gmres_cgs_refinement_type <refine_never,refine_ifneeded,refine_always> - type of refinement
+. -ksp_gmres_cgs_refinement_type <refine_never,refine_ifneeded,refine_always> - type of refinement
 
-   Level: intermediate
+  Level: intermediate
 
 .seealso: [](ch_ksp), `KSPGMRES`, `KSPGMRESSetOrthogonalization()`, `KSPGMRESCGSRefinementType`, `KSPGMRESClassicalGramSchmidtOrthogonalization()`, `KSPGMRESSetCGSRefinementType()`,
           `KSPGMRESGetOrthogonalization()`
@@ -717,21 +716,21 @@ PetscErrorCode KSPGMRESGetCGSRefinementType(KSP ksp, KSPGMRESCGSRefinementType *
 }
 
 /*@
-   KSPGMRESSetRestart - Sets number of iterations at which `KSPGMRES`, `KSPFGMRES` and `KSPLGMRES` restarts.
+  KSPGMRESSetRestart - Sets number of iterations at which `KSPGMRES`, `KSPFGMRES` and `KSPLGMRES` restarts.
 
-   Logically Collective
+  Logically Collective
 
-   Input Parameters:
-+  ksp - the Krylov space context
--  restart - integer restart value
+  Input Parameters:
++ ksp     - the Krylov space context
+- restart - integer restart value
 
   Options Database Key:
-.  -ksp_gmres_restart <positive integer> - integer restart value
+. -ksp_gmres_restart <positive integer> - integer restart value
 
-   Level: intermediate
+  Level: intermediate
 
-    Note:
-    The default value is 30.
+  Note:
+  The default value is 30.
 
 .seealso: [](ch_ksp), `KSPGMRES`, `KSPSetTolerances()`, `KSPGMRESSetOrthogonalization()`, `KSPGMRESSetPreAllocateVectors()`, `KSPGMRESGetRestart()`
 @*/
@@ -745,17 +744,17 @@ PetscErrorCode KSPGMRESSetRestart(KSP ksp, PetscInt restart)
 }
 
 /*@
-   KSPGMRESGetRestart - Gets number of iterations at which `KSPGMRES`, `KSPFGMRES` and `KSPLGMRES` restarts.
+  KSPGMRESGetRestart - Gets number of iterations at which `KSPGMRES`, `KSPFGMRES` and `KSPLGMRES` restarts.
 
-   Not Collective
+  Not Collective
 
-   Input Parameter:
-.  ksp - the Krylov space context
+  Input Parameter:
+. ksp - the Krylov space context
 
-   Output Parameter:
-.   restart - integer restart value
+  Output Parameter:
+. restart - integer restart value
 
-   Level: intermediate
+  Level: intermediate
 
 .seealso: [](ch_ksp), `KSPGMRES`, `KSPSetTolerances()`, `KSPGMRESSetOrthogonalization()`, `KSPGMRESSetPreAllocateVectors()`, `KSPGMRESSetRestart()`
 @*/
@@ -767,23 +766,23 @@ PetscErrorCode KSPGMRESGetRestart(KSP ksp, PetscInt *restart)
 }
 
 /*@
-   KSPGMRESSetHapTol - Sets tolerance for determining happy breakdown in `KSPGMRES`, `KSPFGMRES` and `KSPLGMRES`
+  KSPGMRESSetHapTol - Sets tolerance for determining happy breakdown in `KSPGMRES`, `KSPFGMRES` and `KSPLGMRES`
 
-   Logically Collective
+  Logically Collective
 
-   Input Parameters:
-+  ksp - the Krylov space context
--  tol - the tolerance
+  Input Parameters:
++ ksp - the Krylov space context
+- tol - the tolerance
 
   Options Database Key:
-.  -ksp_gmres_haptol <positive real value> - set tolerance for determining happy breakdown
+. -ksp_gmres_haptol <positive real value> - set tolerance for determining happy breakdown
 
-   Level: intermediate
+  Level: intermediate
 
-   Note:
-   Happy breakdown is the rare case in `KSPGMRES` where an 'exact' solution is obtained after
-   a certain number of iterations. If you attempt more iterations after this point unstable
-   things can happen hence very occasionally you may need to set this value to detect this condition
+  Note:
+  Happy breakdown is the rare case in `KSPGMRES` where an 'exact' solution is obtained after
+  a certain number of iterations. If you attempt more iterations after this point unstable
+  things can happen hence very occasionally you may need to set this value to detect this condition
 
 .seealso: [](ch_ksp), `KSPGMRES`, `KSPSetTolerances()`
 @*/
@@ -796,21 +795,21 @@ PetscErrorCode KSPGMRESSetHapTol(KSP ksp, PetscReal tol)
 }
 
 /*@
-   KSPGMRESSetBreakdownTolerance - Sets tolerance for determining divergence breakdown in `KSPGMRES`.
+  KSPGMRESSetBreakdownTolerance - Sets tolerance for determining divergence breakdown in `KSPGMRES`.
 
-   Logically Collective
+  Logically Collective
 
-   Input Parameters:
-+  ksp - the Krylov space context
--  tol - the tolerance
+  Input Parameters:
++ ksp - the Krylov space context
+- tol - the tolerance
 
   Options Database Key:
-.  -ksp_gmres_breakdown_tolerance <positive real value> - set tolerance for determining divergence breakdown
+. -ksp_gmres_breakdown_tolerance <positive real value> - set tolerance for determining divergence breakdown
 
-   Level: intermediate
+  Level: intermediate
 
-   Note:
-   Divergence breakdown occurs when GMRES residual increases significantly during restart
+  Note:
+  Divergence breakdown occurs when GMRES residual increases significantly during restart
 
 .seealso: [](ch_ksp), `KSPGMRES`, `KSPSetTolerances()`, `KSPGMRESSetHapTol()`
 @*/

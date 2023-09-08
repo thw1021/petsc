@@ -75,34 +75,34 @@ cdef class Vec(Object):
     # binary operations
 
     def __add__(self, other):
-        if isinstance(self, Vec):
-            return vec_add(self, other)
-        else:
-            return vec_radd(other, self)
+        return vec_add(self, other)
+
+    def __radd__(self, other):
+        return vec_radd(self, other)
 
     def __sub__(self, other):
-        if isinstance(self, Vec):
-            return vec_sub(self, other)
-        else:
-            return vec_rsub(other, self)
+        return vec_sub(self, other)
+
+    def __rsub__(self, other):
+        return vec_rsub(self, other)
 
     def __mul__(self, other):
-        if isinstance(self, Vec):
-            return vec_mul(self, other)
-        else:
-            return vec_rmul(other, self)
+        return vec_mul(self, other)
+
+    def __rmul__(self, other):
+        return vec_rmul(self, other)
 
     def __div__(self, other):
-        if isinstance(self, Vec):
-            return vec_div(self, other)
-        else:
-            return vec_rdiv(other, self)
+        return vec_div(self, other)
+
+    def __rdiv__(self, other):
+        return vec_rdiv(self, other)
 
     def __truediv__(self, other):
-        if isinstance(self, Vec):
-            return vec_div(self, other)
-        else:
-            return vec_rdiv(other, self)
+        return vec_div(self, other)
+
+    def __rtruediv__(self, other):
+        return vec_rdiv(self, other)
 
     #
 
@@ -194,7 +194,7 @@ cdef class Vec(Object):
         cdef MPI_Comm ccomm = def_Comm(comm, PETSC_COMM_DEFAULT)
         cdef PetscVec newvec = NULL
         CHKERR( VecCreate(ccomm, &newvec) )
-        PetscCLEAR(self.obj); self.vec = newvec
+        CHKERR( PetscCLEAR(self.obj) ); self.vec = newvec
         return self
 
     def setType(self, vec_type: Type | str) -> None:
@@ -280,7 +280,7 @@ cdef class Vec(Object):
         CHKERR( VecSetSizes(newvec, n, N) )
         CHKERR( VecSetBlockSize(newvec, bs) )
         CHKERR( VecSetType(newvec, VECSEQ) )
-        PetscCLEAR(self.obj); self.vec = newvec
+        CHKERR( PetscCLEAR(self.obj) ); self.vec = newvec
         return self
 
     def createMPI(
@@ -317,7 +317,7 @@ cdef class Vec(Object):
         CHKERR( VecSetSizes(newvec, n, N) )
         CHKERR( VecSetBlockSize(newvec, bs) )
         CHKERR( VecSetType(newvec, VECMPI) )
-        PetscCLEAR(self.obj); self.vec = newvec
+        CHKERR( PetscCLEAR(self.obj) ); self.vec = newvec
         return self
 
     def createWithArray(
@@ -368,7 +368,7 @@ cdef class Vec(Object):
             CHKERR( VecCreateSeqWithArray(ccomm,bs,N,sa,&newvec) )
         else:
             CHKERR( VecCreateMPIWithArray(ccomm,bs,n,N,sa,&newvec) )
-        PetscCLEAR(self.obj); self.vec = newvec
+        CHKERR( PetscCLEAR(self.obj) ); self.vec = newvec
         self.set_attr('__array__', array)
         return self
 
@@ -425,7 +425,7 @@ cdef class Vec(Object):
             CHKERR( VecCreateSeqCUDAWithArrays(ccomm,bs,N,sa,gpuarray,&newvec) )
         else:
             CHKERR( VecCreateMPICUDAWithArrays(ccomm,bs,n,N,sa,gpuarray,&newvec) )
-        PetscCLEAR(self.obj); self.vec = newvec
+        CHKERR( PetscCLEAR(self.obj) ); self.vec = newvec
 
         if cpuarray is not None:
             self.set_attr('__array__', cpuarray)
@@ -484,7 +484,7 @@ cdef class Vec(Object):
             CHKERR( VecCreateSeqHIPWithArrays(ccomm,bs,N,sa,gpuarray,&newvec) )
         else:
             CHKERR( VecCreateMPIHIPWithArrays(ccomm,bs,n,N,sa,gpuarray,&newvec) )
-        PetscCLEAR(self.obj); self.vec = newvec
+        CHKERR( PetscCLEAR(self.obj) ); self.vec = newvec
 
         if cpuarray is not None:
             self.set_attr('__array__', cpuarray)
@@ -543,7 +543,7 @@ cdef class Vec(Object):
             CHKERR( VecCreateSeqViennaCLWithArrays(ccomm,bs,N,sa,vclvec,&newvec) )
         else:
             CHKERR( VecCreateMPIViennaCLWithArrays(ccomm,bs,n,N,sa,vclvec,&newvec) )
-        PetscCLEAR(self.obj); self.vec = newvec
+        CHKERR( PetscCLEAR(self.obj) ); self.vec = newvec
 
         if cpuarray is not None:
             self.set_attr('__array__', cpuarray)
@@ -636,7 +636,7 @@ cdef class Vec(Object):
         else:
             raise TypeError("Device type {} not supported".format(dltype))
 
-        PetscCLEAR(self.obj); self.vec = newvec
+        CHKERR( PetscCLEAR(self.obj) ); self.vec = newvec
         self.set_attr('__array__', dltensor)
         cdef int64_t* shape_arr = NULL
         cdef int64_t* strides_arr = NULL
@@ -867,7 +867,7 @@ cdef class Vec(Object):
         else:
             CHKERR( VecCreateGhostBlock(
                     ccomm, bs, n, N, ng, ig, &newvec) )
-        PetscCLEAR(self.obj); self.vec = newvec
+        CHKERR( PetscCLEAR(self.obj) ); self.vec = newvec
         return self
 
     def createGhostWithArray(
@@ -924,7 +924,7 @@ cdef class Vec(Object):
         else:
             CHKERR( VecCreateGhostBlockWithArray(
                     ccomm, bs, n, N, ng, ig, sa, &newvec) )
-        PetscCLEAR(self.obj); self.vec = newvec
+        CHKERR( PetscCLEAR(self.obj) ); self.vec = newvec
         self.set_attr('__array__', array)
         return self
 
@@ -958,7 +958,7 @@ cdef class Vec(Object):
         Sys_Layout(ccomm, bs, &n, &N)
         cdef PetscVec newvec = NULL
         CHKERR( VecCreateShared(ccomm, n, N, &newvec) )
-        PetscCLEAR(self.obj); self.vec = newvec
+        CHKERR( PetscCLEAR(self.obj) ); self.vec = newvec
         if bs != PETSC_DECIDE:
             CHKERR( VecSetBlockSize(self.vec, bs) )
         return self
@@ -1007,7 +1007,7 @@ cdef class Vec(Object):
             for i from 0 <= i < m: cisets[i] = (<IS?>isets[i]).iset
         cdef PetscVec newvec = NULL
         CHKERR( VecCreateNest(ccomm, n, cisets, cvecs,&newvec) )
-        PetscCLEAR(self.obj); self.vec = newvec
+        CHKERR( PetscCLEAR(self.obj) ); self.vec = newvec
         return self
 
     #
@@ -1133,8 +1133,8 @@ cdef class Vec(Object):
         CHKERR( VecGetLocalSize(self.vec, &n) )
         return toInt(n)
 
-    def getSizes(self) -> tuple[int, int]:
-        """Return the 2-tuple of vector sizes, ``(local, global)``.
+    def getSizes(self) -> LayoutSizeSpec:
+        """Return the vector sizes.
 
         Not collective.
 
@@ -1761,11 +1761,11 @@ cdef class Vec(Object):
 
         See Also
         --------
-        petsc.VecChop
+        petsc.VecFilter
 
         """
         cdef PetscReal rval = asReal(tol)
-        CHKERR( VecChop(self.vec, rval) )
+        CHKERR( VecFilter(self.vec, rval) )
 
     def load(self, Viewer viewer) -> Self:
         """Load a vector.
@@ -1992,6 +1992,8 @@ cdef class Vec(Object):
     ) -> float | tuple[float, float]:
         """Finish computations initiated with `normBegin`.
 
+        Collective.
+
         See Also
         --------
         normBegin, norm, petsc.VecNormEnd
@@ -2004,6 +2006,21 @@ cdef class Vec(Object):
         CHKERR( VecNormEnd(self.vec, ntype, rval) )
         if ntype != norm_1_2: return toReal(rval[0])
         else: return (toReal(rval[0]), toReal(rval[1]))
+
+    def dotNorm2(self, Vec vec) -> tuple[Scalar, float]:
+        """Return the dot product with ``vec`` and its squared norm.
+
+        Collective.
+
+        See Also
+        --------
+        dot, norm, petsc.VecDotNorm2
+
+        """
+        cdef PetscScalar sval = 0
+        cdef PetscReal rval = 0
+        CHKERR( VecDotNorm2(self.vec, vec.vec, &sval, &rval) )
+        return toScalar(sval), toReal(float)
 
     def sum(self) -> Scalar:
         """Return the sum of all the entries of the vector.
@@ -2019,7 +2036,7 @@ cdef class Vec(Object):
         CHKERR( VecSum(self.vec, &sval) )
         return toScalar(sval)
 
-    def min(self) -> tuple[int, Scalar]:
+    def min(self) -> tuple[int, float]:
         """Return the vector entry with minimum real part and its location.
 
         Collective.
@@ -2042,7 +2059,7 @@ cdef class Vec(Object):
         CHKERR( VecMin(self.vec, &ival, &rval) )
         return (toInt(ival), toReal(rval))
 
-    def max(self) -> tuple[int, Scalar]:
+    def max(self) -> tuple[int, float]:
         """Return the vector entry with maximum real part and its location.
 
         Collective.
@@ -2224,6 +2241,8 @@ cdef class Vec(Object):
 
     def isset(self, IS idx, alpha: Scalar) -> None:
         """Set specific elements of the vector to the same value.
+
+        Not collective.
 
         Parameters
         ----------
@@ -2752,7 +2771,7 @@ cdef class Vec(Object):
         """
         cdef LGMap cmap = LGMap()
         CHKERR( VecGetLocalToGlobalMapping(self.vec, &cmap.lgm) )
-        PetscINCREF(cmap.obj)
+        CHKERR( PetscINCREF(cmap.obj) )
         return cmap
 
     def setValueLocal(
@@ -3368,103 +3387,49 @@ cdef class Vec(Object):
     #
 
     property sizes:
-        """The local and global vector sizes.
-
-        See Also
-        --------
-        getSizes, setSizes
-
-        """
-        def __get__(self) -> tuple[int, int]:
+        """The local and global vector sizes."""
+        def __get__(self) -> LayoutSizeSpec:
             return self.getSizes()
         def __set__(self, value):
             self.setSizes(value)
 
     property size:
-        """The global vector size.
-
-        See Also
-        --------
-        getSize
-
-        """
+        """The global vector size."""
         def __get__(self) -> int:
             return self.getSize()
 
     property local_size:
-        """The local vector size.
-
-        See Also
-        --------
-        getLocalSize
-
-        """
+        """The local vector size."""
         def __get__(self) -> int:
             return self.getLocalSize()
 
     property block_size:
-        """The block size.
-
-        See Also
-        --------
-        getBlockSize
-
-        """
+        """The block size."""
         def __get__(self) -> int:
             return self.getBlockSize()
 
     property owner_range:
-        """The locally owned range of indices in the form ``[low, high)``.
-
-        See Also
-        --------
-        getOwnershipRange
-
-        """
+        """The locally owned range of indices in the form ``[low, high)``."""
         def __get__(self) -> tuple[int, int]:
             return self.getOwnershipRange()
 
     property owner_ranges:
-        """The range of indices owned by each process.
-
-        See Also
-        --------
-        getOwnershipRanges
-
-        """
+        """The range of indices owned by each process."""
         def __get__(self) -> ArrayInt:
             return self.getOwnershipRanges()
 
     property buffer_w:
-        """Writeable buffered view of the local portion of the vector.
-
-        See Also
-        --------
-        getBuffer
-
-        """
+        """Writeable buffered view of the local portion of the vector."""
         def __get__(self) -> Any:
             return self.getBuffer()
 
     property buffer_r:
-        """Read-only buffered view of the local portion of the vector.
-
-        See Also
-        --------
-        getBuffer
-
-        """
+        """Read-only buffered view of the local portion of the vector."""
         def __get__(self) -> Any:
             return self.getBuffer(True)
 
     property array_w:
-        """Writeable numpy array containing the local portion of the vector.
-
-        See Also
-        --------
-        getArray
-
-        """
+        """Writeable `ndarray` containing the local portion of the vector."""
         def __get__(self) -> ArrayScalar:
             return self.getArray()
         def __set__(self, value):
@@ -3472,13 +3437,7 @@ cdef class Vec(Object):
             with buf as array: array[:] = value
 
     property array_r:
-        """Read-only numpy array containing the local portion of the vector.
-
-        See Also
-        --------
-        getArray
-
-        """
+        """Read-only `ndarray` containing the local portion of the vector."""
         def __get__(self) -> ArrayScalar:
             return self.getArray(True)
 

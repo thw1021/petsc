@@ -1027,14 +1027,14 @@ PetscErrorCode NonlinearGS(SNES snes, Vec X, Vec B, void *ctx)
    test:
       suffix: superlu_dist_2s
       nsize: 2
-      requires: superlu_dist double !complex
+      requires: superlu_dist defined(PETSC_HAVE_SUPERLU_DIST_SINGLE)
       args: -da_grid_x 20 -da_grid_y 20 -pc_type lu -pc_factor_mat_solver_type superlu_dist -pc_precision single
       output_file: output/ex19_superlu.out
 
    test:
       suffix: superlu_dist_3ds
       nsize: 4
-      requires: superlu_dist !defined(PETSCTEST_VALGRIND)  double !complex
+      requires: superlu_dist !defined(PETSCTEST_VALGRIND) defined(PETSC_HAVE_SUPERLU_DIST_SINGLE)
       filter: grep -v iam | grep -v openMP
       args: -da_grid_x 20 -da_grid_y 20 -pc_type lu -pc_factor_mat_solver_type superlu_dist -mat_superlu_dist_3d -mat_superlu_dist_d 2 -snes_view -snes_monitor -ksp_monitor -pc_precision single
 
@@ -1227,7 +1227,7 @@ PetscErrorCode NonlinearGS(SNES snes, Vec X, Vec B, void *ctx)
       nsize: 1
       requires: !defined(PETSC_USE_64BIT_INDICES) !defined(PETSCTEST_VALGRIND)
       args: -da_refine 100 -petsc_ci_portable_error_output -error_output_stdout
-      filter: grep -E -v "(options_left|memory block|leaked context|not freed before MPI_Finalize|Could be the program crashed)"
+      filter: grep -E -v "(memory block|leaked context|not freed before MPI_Finalize|Could be the program crashed)"
 
    testset:
       requires: hpddm cuda

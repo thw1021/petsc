@@ -1,5 +1,4 @@
-#ifndef PETSCVECMPICUPM_HPP
-#define PETSCVECMPICUPM_HPP
+#pragma once
 
 #include <petsc/private/veccupmimpl.h> /*I <petscvec.h> I*/
 #include <../src/vec/vec/impls/seq/cupm/vecseqcupm.hpp>
@@ -60,7 +59,7 @@ template <device::cupm::DeviceType T>
 inline PetscErrorCode VecCreateMPICUPMAsync(MPI_Comm comm, PetscInt n, PetscInt N, Vec *v) noexcept
 {
   PetscFunctionBegin;
-  PetscValidPointer(v, 4);
+  PetscAssertPointer(v, 4);
   PetscCall(impl::VecMPI_CUPM<T>::CreateMPICUPM(comm, 0, n, N, v, PETSC_TRUE));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -69,8 +68,8 @@ template <device::cupm::DeviceType T>
 inline PetscErrorCode VecCreateMPICUPMWithArrays(MPI_Comm comm, PetscInt bs, PetscInt n, PetscInt N, const PetscScalar cpuarray[], const PetscScalar gpuarray[], Vec *v)
 {
   PetscFunctionBegin;
-  if (n && cpuarray) PetscValidScalarPointer(cpuarray, 5);
-  PetscValidPointer(v, 7);
+  if (n && cpuarray) PetscAssertPointer(cpuarray, 5);
+  PetscAssertPointer(v, 7);
   PetscCall(impl::VecMPI_CUPM<T>::CreateMPICUPMWithArrays(comm, bs, n, N, cpuarray, gpuarray, v));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -96,5 +95,3 @@ extern template class PETSC_SINGLE_LIBRARY_VISIBILITY_INTERNAL ::Petsc::vec::cup
 #if PetscDefined(HAVE_HIP)
 extern template class PETSC_SINGLE_LIBRARY_VISIBILITY_INTERNAL ::Petsc::vec::cupm::impl::VecMPI_CUPM<::Petsc::device::cupm::DeviceType::HIP>;
 #endif
-
-#endif // PETSCVECMPICUPM_HPP

@@ -1,5 +1,4 @@
-#ifndef PETSC_CPP_REGISTER_FINALIZE_HPP
-#define PETSC_CPP_REGISTER_FINALIZE_HPP
+#pragma once
 
 #include <petscsys.h>
 
@@ -17,7 +16,7 @@ inline PetscErrorCode PetscCxxObjectRegisterFinalize(T *obj, MPI_Comm comm = PET
   };
 
   PetscFunctionBegin;
-  PetscValidPointer(obj, 1);
+  PetscAssertPointer(obj, 1);
   PetscCall(PetscContainerCreate(comm, &contain));
   PetscCall(PetscContainerSetPointer(contain, obj));
   PetscCall(PetscContainerSetUserDestroy(contain, std::move(finalizer)));
@@ -203,5 +202,3 @@ inline PetscErrorCode RegisterFinalizeable<D>::register_finalize(Args &&...args)
 }
 
 } // namespace Petsc
-
-#endif // PETSC_CPP_REGISTER_FINALIZE_HPP

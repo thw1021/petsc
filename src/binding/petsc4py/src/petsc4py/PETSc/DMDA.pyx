@@ -137,7 +137,7 @@ cdef class DMDA(DM):
                              btx, bty, btz, stype, swidth,
                              &newda) )
         if setup and ndim > 0: CHKERR( DMSetUp(newda) )
-        PetscCLEAR(self.obj); self.dm = newda
+        CHKERR( PetscCLEAR(self.obj) ); self.dm = newda
         return self
 
     def duplicate(
@@ -618,7 +618,7 @@ cdef class DMDA(DM):
         return toOwnershipRanges(dim, m, n, p, lx, ly, lz)
 
     def getCorners(self) -> tuple[tuple[int, ...], tuple[int, ...]]:
-        """Return the lower left corner and the size of the owned local region in each dimension.
+        """Return the lower left corner and the sizes of the owned local region.
 
         Not collective.
 
@@ -647,7 +647,7 @@ cdef class DMDA(DM):
                 (toInt(m), toInt(n), toInt(p))[:<Py_ssize_t>dim])
 
     def getGhostCorners(self) -> tuple[tuple[int, ...], tuple[int, ...]]:
-        """Return the lower left corner and the size of the local region in each dimension, including ghost points.
+        """Return the lower left corner and the size of the ghosted local region.
 
         Not collective.
 
@@ -921,7 +921,7 @@ cdef class DMDA(DM):
         """
         cdef AO ao = AO()
         CHKERR( DMDAGetAO(self.dm, &ao.ao) )
-        PetscINCREF(ao.obj)
+        CHKERR( PetscINCREF(ao.obj) )
         return ao
 
     def getScatter(self) -> tuple[Scatter, Scatter]:
@@ -937,8 +937,8 @@ cdef class DMDA(DM):
         cdef Scatter l2g = Scatter()
         cdef Scatter g2l = Scatter()
         CHKERR( DMDAGetScatter(self.dm, &l2g.sct, &g2l.sct) )
-        PetscINCREF(l2g.obj)
-        PetscINCREF(g2l.obj)
+        CHKERR( PetscINCREF(l2g.obj) )
+        CHKERR( PetscINCREF(g2l.obj) )
         return (l2g, g2l)
 
     #

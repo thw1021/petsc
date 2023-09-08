@@ -1,6 +1,4 @@
-
-#ifndef __MATIMPL_H
-#define __MATIMPL_H
+#pragma once
 
 #include <petscmat.h>
 #include <petscmatcoarsen.h>
@@ -218,7 +216,7 @@ struct _MatOps {
   PetscErrorCode (*dummy)(Mat);
   /*150*/
   PetscErrorCode (*transposesymbolic)(Mat, Mat *);
-  PetscErrorCode (*eliminatezeros)(Mat);
+  PetscErrorCode (*eliminatezeros)(Mat, PetscBool);
 };
 /*
     If you add MatOps entries above also add them to the MATOP enum
@@ -226,8 +224,6 @@ struct _MatOps {
 */
 
 #include <petscsys.h>
-PETSC_EXTERN PetscErrorCode MatRegisterOp(MPI_Comm, const char[], PetscVoidFunction, const char[], PetscInt, ...);
-PETSC_EXTERN PetscErrorCode MatQueryOp(MPI_Comm, PetscVoidFunction *, const char[], PetscInt, ...);
 
 typedef struct _p_MatRootName *MatRootName;
 struct _p_MatRootName {
@@ -277,9 +273,9 @@ PETSC_INTERN PetscErrorCode MatCreateGraph_Simple_AIJ(Mat, PetscBool, PetscBool,
 
 #if defined(PETSC_CLANG_STATIC_ANALYZER)
 template <typename Tm>
-void MatCheckPreallocated(Tm, int);
+extern void MatCheckPreallocated(Tm, int);
 template <typename Tm>
-void MatCheckProduct(Tm, int);
+extern void MatCheckProduct(Tm, int);
 #else /* PETSC_CLANG_STATIC_ANALYZER */
   #define MatCheckPreallocated(A, arg) \
     do { \
@@ -775,7 +771,7 @@ static inline PetscErrorCode MatPivotCheck_pd(PETSC_UNUSED Mat mat, const MatFac
       sctx->shift_fraction = sctx->shift_hi;
     } else {
       sctx->shift_lo       = sctx->shift_fraction;
-      sctx->shift_fraction = (sctx->shift_hi + sctx->shift_lo) / 2.;
+      sctx->shift_fraction = (sctx->shift_hi + sctx->shift_lo) / (PetscReal)2.;
     }
     sctx->shift_amount = sctx->shift_fraction * sctx->shift_top;
     sctx->nshift++;
@@ -1265,9 +1261,9 @@ static inline PetscErrorCode PetscIncompleteLLClean(PetscInt idx_start, PetscInt
     } while (0)
 #else
 template <typename Tm>
-void MatCheckSameLocalSize(Tm, int, Tm, int);
+extern void MatCheckSameLocalSize(Tm, int, Tm, int);
 template <typename Tm>
-void MatCheckSameSize(Tm, int, Tm, int);
+extern void MatCheckSameSize(Tm, int, Tm, int);
 #endif
 
 #define VecCheckMatCompatible(M, x, ar1, b, ar2) \
@@ -1722,4 +1718,3 @@ PETSC_EXTERN PetscLogEvent MAT_H2Opus_Compress;
 PETSC_EXTERN PetscLogEvent MAT_H2Opus_Orthog;
 PETSC_EXTERN PetscLogEvent MAT_H2Opus_LR;
 PETSC_EXTERN PetscLogEvent MAT_CUDACopyToGPU;
-#endif

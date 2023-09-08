@@ -233,8 +233,9 @@ examples.
 Sometimes a nonlinear solver may produce a step that is not within the domain
 of a given function, for example one with a negative pressure. When this occurs
 one can call ``SNESSetFunctionDomainError()`` or ``SNESSetJacobianDomainError()``
-to indicate to `SNES` the step is not valid. See :any:`sec_vi` for how to
-provide SNES with bounds on the variables to solve (differential) variational inequalities
+to indicate to `SNES` the step is not valid. One must also use ``SNESGetConvergedReason()``
+and check the reason to confirm if the solver succeeded. See :any:`sec_vi` for how to
+provide ``SNES`` with bounds on the variables to solve (differential) variational inequalities
 and how to control properties of the line step computed.
 
 .. _sec_nlsolvers:
@@ -805,7 +806,7 @@ Here :math:`\mathbf{x}_0` is an initial approximation of the solution, and
 By default a constant relative convergence tolerance is used for solving
 the subsidiary linear systems within the Newton-like methods of
 ``SNES``. When solving a system of nonlinear equations, one can instead
-employ the techniques of Eisenstat and Walker :cite:`EW96`
+employ the techniques of Eisenstat and Walker :cite:`ew96`
 to compute :math:`\eta_k` at each step of the nonlinear solver by using
 the option ``-snes_ksp_ew`` . In addition, by adding one’s own
 ``KSP`` convergence test (see :any:`sec_convergencetests`), one can easily create one’s own,
@@ -842,7 +843,7 @@ The default ``SNES``
 matrix-free approximations can also be invoked with the command
 ``-snes_mf``. Or, one can retain the user-provided Jacobian
 preconditioner, but replace the user-provided Jacobian matrix with the
-default matrix free variant with the option ``-snes_mf_operator``.
+default matrix-free variant with the option ``-snes_mf_operator``.
 
 ``MatCreateSNESMF()`` uses
 
@@ -945,7 +946,7 @@ and preconditioning matrices are allowed, as well as both matrix-free
 and application-provided preconditioners. If :any:`ex3.c <snes-ex3>` is run with
 the options ``-snes_mf`` and ``-user_precond`` then it uses a
 matrix-free application of the matrix-vector multiple and a user
-provided matrix free Jacobian.
+provided matrix-free Jacobian.
 
 .. list-table:: Jacobian Options
    :name: tab-jacobians
@@ -1181,7 +1182,7 @@ of the steps selected by `SNES`.
 Nonlinear Preconditioning
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The mathematical framework of nonlinear preconditioning is explained in detail in :cite:`BruneKnepleySmithTu15`.
+The mathematical framework of nonlinear preconditioning is explained in detail in :cite:`bruneknepleysmithtu15`.
 Nonlinear preconditioning in PETSc involves the use of an inner ``SNES``
 instance to define the step for an outer ``SNES`` instance. The inner
 instance may be extracted using
