@@ -2,6 +2,7 @@
 
 #include <../src/vec/vec/impls/mpi/pvecimpl.h>
 #include <petsc/private/vecimpl_kokkos.hpp>
+#include <petscsf.h>
 
 #if defined(PETSC_USE_DEBUG)
   #define VecErrorIfNotKokkos(v) \
@@ -19,17 +20,58 @@
 
 /* Stuff related to Vec_Kokkos */
 
+struct VecCOOStruct_SeqKokkos {
+  PetscInt             m;
+  PetscCount           coo_n;
+  PetscCount           tot1;
+  PetscCountKokkosView jmap1_d;
+  PetscCountKokkosView perm1_d;
+  VecCOOStruct_SeqKokkos(VecCOOStruct_Seq const *coo_host)
+  {
+    m     = coo_host->m;
+    coo_n = coo_host->coo_n;
+    tot1  = coo_host->tot1;
+    PetscCallCXXAbort(PETSC_COMM_SELF, jmap1_d = Kokkos::create_mirror_view_and_copy(DefaultMemorySpace(), PetscCountKokkosViewHost(coo_host->jmap1, coo_host->m + 1)));
+    PetscCallCXXAbort(PETSC_COMM_SELF, perm1_d = Kokkos::create_mirror_view_and_copy(DefaultMemorySpace(), PetscCountKokkosViewHost(coo_host->perm1, coo_host->tot1)));
+  }
+};
+
+struct VecCOOStruct_MPIKokkos {
+  PetscInt             m;
+  PetscCount           coo_n;
+  PetscCount           tot1;
+  PetscCount           nnz2;
+  PetscCount           sendlen, recvlen;
+  PetscCountKokkosView jmap1_d;
+  PetscCountKokkosView perm1_d;
+  PetscCountKokkosView imap2_d;
+  PetscCountKokkosView jmap2_d;
+  PetscCountKokkosView perm2_d;
+  PetscCountKokkosView Cperm_d;
+  PetscSF              coo_sf;
+  VecCOOStruct_MPIKokkos(VecCOOStruct_MPI const *coo_host)
+  {
+    m       = coo_host->m;
+    coo_n   = coo_host->coo_n;
+    tot1    = coo_host->tot1;
+    nnz2    = coo_host->nnz2;
+    sendlen = coo_host->sendlen;
+    recvlen = coo_host->recvlen;
+    PetscCallCXXAbort(PETSC_COMM_SELF, jmap1_d = Kokkos::create_mirror_view_and_copy(DefaultMemorySpace(), PetscCountKokkosViewHost(coo_host->jmap1, m + 1)));
+    PetscCallCXXAbort(PETSC_COMM_SELF, perm1_d = Kokkos::create_mirror_view_and_copy(DefaultMemorySpace(), PetscCountKokkosViewHost(coo_host->perm1, coo_host->tot1)));
+    PetscCallCXXAbort(PETSC_COMM_SELF, imap2_d = Kokkos::create_mirror_view_and_copy(DefaultMemorySpace(), PetscCountKokkosViewHost(coo_host->imap2, coo_host->nnz2)));
+    PetscCallCXXAbort(PETSC_COMM_SELF, jmap2_d = Kokkos::create_mirror_view_and_copy(DefaultMemorySpace(), PetscCountKokkosViewHost(coo_host->jmap2, coo_host->nnz2 + 1)));
+    PetscCallCXXAbort(PETSC_COMM_SELF, perm2_d = Kokkos::create_mirror_view_and_copy(DefaultMemorySpace(), PetscCountKokkosViewHost(coo_host->perm2, coo_host->recvlen)));
+    PetscCallCXXAbort(PETSC_COMM_SELF, Cperm_d = Kokkos::create_mirror_view_and_copy(DefaultMemorySpace(), PetscCountKokkosViewHost(coo_host->Cperm, coo_host->sendlen)));
+    PetscCallAbort(PETSC_COMM_SELF, PetscObjectReference((PetscObject)(coo_host->coo_sf)));
+    coo_sf = coo_host->coo_sf;
+  }
+  ~VecCOOStruct_MPIKokkos() { PetscCallAbort(PETSC_COMM_SELF, PetscSFDestroy(&coo_sf)); }
+};
+
 struct Vec_Kokkos {
   PetscScalarKokkosDualView v_dual;
 
-  /* COO stuff */
-  PetscCountKokkosView jmap1_d; /* [m+1]: i-th entry of the vector has jmap1[i+1]-jmap1[i] repeats in COO arrays */
-  PetscCountKokkosView perm1_d; /* [tot1]: permutation array for local entries */
-
-  PetscCountKokkosView  imap2_d;              /* [nnz2]: i-th unique entry in recvbuf is imap2[i]-th entry in the vector */
-  PetscCountKokkosView  jmap2_d;              /* [nnz2+1] */
-  PetscCountKokkosView  perm2_d;              /* [recvlen] */
-  PetscCountKokkosView  Cperm_d;              /* [sendlen]: permutation array to fill sendbuf[]. 'C' for communication */
   PetscScalarKokkosView sendbuf_d, recvbuf_d; /* Buffers for remote values in VecSetValuesCOO() */
 
   /* Construct Vec_Kokkos with the given array(s). n is the length of the array.
@@ -84,25 +126,63 @@ struct Vec_Kokkos {
     PetscFunctionReturn(PETSC_SUCCESS);
   }
 
-  PetscErrorCode SetUpCOO(const Vec_Seq *vecseq, PetscInt m)
+  static inline PetscErrorCode VecCOOStructDestroy_SeqKokkos(void *data)
   {
+    VecCOOStruct_SeqKokkos *coo_struct = (VecCOOStruct_SeqKokkos *)data;
+
     PetscFunctionBegin;
-    PetscCallCXX(jmap1_d = Kokkos::create_mirror_view_and_copy(DefaultMemorySpace(), PetscCountKokkosViewHost(vecseq->jmap1, m + 1)));
-    PetscCallCXX(perm1_d = Kokkos::create_mirror_view_and_copy(DefaultMemorySpace(), PetscCountKokkosViewHost(vecseq->perm1, vecseq->tot1)));
+    delete coo_struct;
     PetscFunctionReturn(PETSC_SUCCESS);
   }
 
-  PetscErrorCode SetUpCOO(const Vec_MPI *vecmpi, PetscInt m)
+  static inline PetscErrorCode VecCOOStructDestroy_MPIKokkos(void *data)
   {
+    VecCOOStruct_MPIKokkos *coo_struct = (VecCOOStruct_MPIKokkos *)data;
+
     PetscFunctionBegin;
-    PetscCallCXX(jmap1_d = Kokkos::create_mirror_view_and_copy(DefaultMemorySpace(), PetscCountKokkosViewHost(vecmpi->jmap1, m + 1)));
-    PetscCallCXX(perm1_d = Kokkos::create_mirror_view_and_copy(DefaultMemorySpace(), PetscCountKokkosViewHost(vecmpi->perm1, vecmpi->tot1)));
-    PetscCallCXX(imap2_d = Kokkos::create_mirror_view_and_copy(DefaultMemorySpace(), PetscCountKokkosViewHost(vecmpi->imap2, vecmpi->nnz2)));
-    PetscCallCXX(jmap2_d = Kokkos::create_mirror_view_and_copy(DefaultMemorySpace(), PetscCountKokkosViewHost(vecmpi->jmap2, vecmpi->nnz2 + 1)));
-    PetscCallCXX(perm2_d = Kokkos::create_mirror_view_and_copy(DefaultMemorySpace(), PetscCountKokkosViewHost(vecmpi->perm2, vecmpi->recvlen)));
-    PetscCallCXX(Cperm_d = Kokkos::create_mirror_view_and_copy(DefaultMemorySpace(), PetscCountKokkosViewHost(vecmpi->Cperm, vecmpi->sendlen)));
-    PetscCallCXX(sendbuf_d = Kokkos::create_mirror_view_and_copy(DefaultMemorySpace(), PetscScalarKokkosViewHost(vecmpi->sendbuf, vecmpi->sendlen)));
-    PetscCallCXX(recvbuf_d = Kokkos::create_mirror_view_and_copy(DefaultMemorySpace(), PetscScalarKokkosViewHost(vecmpi->recvbuf, vecmpi->recvlen)));
+    delete coo_struct;
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+
+  PetscErrorCode SetUpCOO(Vec vec, const Vec_Seq *vecseq)
+  {
+    VecCOOStruct_SeqKokkos *coo_struct;
+    VecCOOStruct_Seq       *coo_host;
+    PetscCountKokkosView    jmap1_d, perm1_d;
+    PetscContainer          container, kokkos_container;
+
+    PetscFunctionBegin;
+    PetscCall(PetscObjectQuery((PetscObject)vec, "__PETSc_VecCOOStruct_Host", (PetscObject *)&container));
+    PetscCheck(container, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Not found VecCOOStruct on this vectors");
+    PetscCall(PetscContainerGetPointer(container, (void **)&coo_host));
+    PetscCallCXX(coo_struct = new VecCOOStruct_SeqKokkos(coo_host));
+    PetscCall(PetscContainerCreate(PETSC_COMM_SELF, &kokkos_container));
+    PetscCall(PetscContainerSetPointer(kokkos_container, (void *)coo_struct));
+    PetscCall(PetscContainerSetUserDestroy(kokkos_container, VecCOOStructDestroy_SeqKokkos));
+    PetscCall(PetscObjectCompose((PetscObject)vec, "__PETSc_VecCOOStruct_Device", (PetscObject)kokkos_container));
+    PetscCall(PetscObjectDereference((PetscObject)kokkos_container));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+
+  PetscErrorCode SetUpCOO(Vec vec, const Vec_MPI *vecmpi)
+  {
+    VecCOOStruct_MPIKokkos *coo_struct;
+    VecCOOStruct_MPI       *coo_host;
+    PetscCountKokkosView    jmap1_d, perm1_d;
+    PetscContainer          container, kokkos_container;
+
+    PetscFunctionBegin;
+    PetscCall(PetscObjectQuery((PetscObject)vec, "__PETSc_VecCOOStruct_Host", (PetscObject *)&container));
+    PetscCheck(container, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Not found VecCOOStruct on this vectors");
+    PetscCall(PetscContainerGetPointer(container, (void **)&coo_host));
+    PetscCallCXX(coo_struct = new VecCOOStruct_MPIKokkos(coo_host));
+    PetscCall(PetscContainerCreate(PETSC_COMM_SELF, &kokkos_container));
+    PetscCall(PetscContainerSetPointer(kokkos_container, (void *)coo_struct));
+    PetscCall(PetscContainerSetUserDestroy(kokkos_container, VecCOOStructDestroy_MPIKokkos));
+    PetscCall(PetscObjectCompose((PetscObject)vec, "__PETSc_VecCOOStruct_Device", (PetscObject)kokkos_container));
+    PetscCall(PetscObjectDereference((PetscObject)kokkos_container));
+    PetscCallCXX(sendbuf_d = Kokkos::create_mirror_view_and_copy(DefaultMemorySpace(), PetscScalarKokkosViewHost(vecmpi->sendbuf, coo_host->sendlen)));
+    PetscCallCXX(recvbuf_d = Kokkos::create_mirror_view_and_copy(DefaultMemorySpace(), PetscScalarKokkosViewHost(vecmpi->recvbuf, coo_host->recvlen)));
     PetscFunctionReturn(PETSC_SUCCESS);
   }
 };

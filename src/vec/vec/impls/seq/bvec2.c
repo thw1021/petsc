@@ -642,27 +642,27 @@ PetscErrorCode VecSetValuesBlocked_Seq(Vec xin, PetscInt ni, const PetscInt ix[]
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode VecResetPreallocationCOO_Seq(Vec x)
+static PetscErrorCode VecCOOStructDestroy_Seq(void *data)
 {
-  Vec_Seq *vs = (Vec_Seq *)x->data;
+  VecCOOStruct_Seq *coo_struct = (VecCOOStruct_Seq *)data;
 
   PetscFunctionBegin;
-  if (vs) {
-    PetscCall(PetscFree(vs->jmap1)); /* Destroy old stuff */
-    PetscCall(PetscFree(vs->perm1));
-  }
+  PetscCall(PetscFree(coo_struct->jmap1));
+  PetscCall(PetscFree(coo_struct->perm1));
+  PetscCall(PetscFree(coo_struct));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode VecSetPreallocationCOO_Seq(Vec x, PetscCount coo_n, const PetscInt coo_i[])
+static PetscErrorCode VecCOOStructCreate_Seq(Vec x, PetscCount coo_n, const PetscInt coo_i[], VecCOOStruct_Seq **coo_struct_)
 {
-  PetscInt    m, *i;
-  PetscCount  k, nneg;
-  PetscCount *perm1, *jmap1;
-  Vec_Seq    *vs = (Vec_Seq *)x->data;
+  PetscInt          m, *i;
+  PetscCount        k, nneg;
+  PetscCount       *perm1, *jmap1;
+  VecCOOStruct_Seq *coo_struct;
 
   PetscFunctionBegin;
-  PetscCall(VecResetPreallocationCOO_Seq(x)); /* Destroy old stuff */
+  PetscCall(PetscNew(coo_struct_));
+  coo_struct = *coo_struct_;
   PetscCall(PetscMalloc1(coo_n, &i));
   PetscCall(PetscArraycpy(i, coo_i, coo_n)); /* Make a copy since we'll modify it */
   PetscCall(PetscMalloc1(coo_n, &perm1));
@@ -691,21 +691,43 @@ PetscErrorCode VecSetPreallocationCOO_Seq(Vec x, PetscCount coo_n, const PetscIn
   }
 
   /* Record COO fields */
-  vs->coo_n = coo_n;
-  vs->tot1  = coo_n - nneg;
-  vs->jmap1 = jmap1; /* [m+1] */
-  vs->perm1 = perm1; /* [tot] */
+  coo_struct->m     = coo_n - nneg;
+  coo_struct->coo_n = coo_n;
+  coo_struct->tot1  = coo_n - nneg;
+  coo_struct->jmap1 = jmap1; /* [m+1] */
+  coo_struct->perm1 = perm1; /* [tot] */
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode VecSetPreallocationCOO_Seq(Vec x, PetscCount coo_n, const PetscInt coo_i[])
+{
+  VecCOOStruct_Seq *coo_struct;
+  PetscContainer    container;
+
+  PetscFunctionBegin;
+  PetscCall(VecCOOStructCreate_Seq(x, coo_n, coo_i, &coo_struct));
+  PetscCall(PetscContainerCreate(PETSC_COMM_SELF, &container));
+  PetscCall(PetscContainerSetPointer(container, coo_struct));
+  PetscCall(PetscContainerSetUserDestroy(container, VecCOOStructDestroy_Seq));
+  PetscCall(PetscObjectCompose((PetscObject)x, "__PETSc_VecCOOStruct_Host", (PetscObject)container));
+  PetscCall(PetscContainerDestroy(&container));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode VecSetValuesCOO_Seq(Vec x, const PetscScalar coo_v[], InsertMode imode)
 {
-  Vec_Seq          *vs    = (Vec_Seq *)x->data;
-  const PetscCount *perm1 = vs->perm1, *jmap1 = vs->jmap1;
+  const PetscCount *perm1, *jmap1;
   PetscScalar      *xv;
   PetscInt          m;
+  PetscContainer    container;
+  VecCOOStruct_Seq *coo_struct;
 
   PetscFunctionBegin;
+  PetscCall(PetscObjectQuery((PetscObject)x, "__PETSc_VecCOOStruct_Host", (PetscObject *)&container));
+  PetscCheck(container, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Not found VecCOOStruct on this vectors");
+  PetscCall(PetscContainerGetPointer(container, (void **)&coo_struct));
+  perm1 = coo_struct->perm1;
+  jmap1 = coo_struct->jmap1;
   PetscCall(VecGetLocalSize(x, &m));
   PetscCall(VecGetArray(x, &xv));
   for (PetscInt i = 0; i < m; i++) {
@@ -724,7 +746,6 @@ PetscErrorCode VecDestroy_Seq(Vec v)
   PetscFunctionBegin;
   PetscCall(PetscLogObjectState((PetscObject)v, "Length=%" PetscInt_FMT, v->map->n));
   if (vs) PetscCall(PetscFree(vs->array_allocated));
-  PetscCall(VecResetPreallocationCOO_Seq(v));
   PetscCall(PetscObjectComposeFunction((PetscObject)v, "PetscMatlabEnginePut_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)v, "PetscMatlabEngineGet_C", NULL));
   PetscCall(PetscFree(v->data));

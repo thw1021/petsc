@@ -1,7 +1,8 @@
 #pragma once
 
 #include <petsc/private/vecimpl.h>
-#include <../src/vec/vec/impls/dvecimpl.h> // for Vec_Seq
+#include <../src/vec/vec/impls/dvecimpl.h>     // for Vec_Seq
+#include <../src/vec/vec/impls/mpi/pvecimpl.h> // for VecCOOStruct_MPI
 
 #if PetscDefined(HAVE_NVSHMEM)
 PETSC_INTERN PetscErrorCode PetscNvshmemInitializeCheck(void);
@@ -147,20 +148,33 @@ public:
     PetscBool    nvshmem;           // is array allocated in nvshmem? It is used to allocate
                                     // Mvctx->lvec in nvshmem
 
-    // COO stuff
-    PetscCount *jmap1_d; // [m+1]: i-th entry of the vector has jmap1[i+1]-jmap1[i] repeats
-                         // in COO arrays
-    PetscCount *perm1_d; // [tot1]: permutation array for local entries
-    PetscCount *imap2_d; // [nnz2]: i-th unique entry in recvbuf is imap2[i]-th entry in
-                         // the vector
-    PetscCount *jmap2_d; // [nnz2+1]
-    PetscCount *perm2_d; // [recvlen]
-    PetscCount *Cperm_d; // [sendlen]: permutation array to fill sendbuf[]. 'C' for
-                         // communication
-
     // Buffers for remote values in VecSetValuesCOO()
     PetscScalar *sendbuf_d;
     PetscScalar *recvbuf_d;
+  };
+
+  struct VecCOOStruct_SeqCUPM {
+    PetscInt    m;
+    PetscCount  coo_n;
+    PetscCount  tot1;
+    PetscCount *jmap1_d;
+    PetscCount *perm1_d;
+  };
+
+  struct VecCOOStruct_MPICUPM {
+    PetscInt    m;
+    PetscCount  coo_n;
+    PetscCount  tot1;
+    PetscCount *jmap1_d;
+    PetscCount *perm1_d;
+    PetscCount  nnz2;
+    PetscCount *imap2_d;
+    PetscCount *jmap2_d;
+    PetscCount *perm2_d;
+
+    PetscSF     coo_sf;
+    PetscCount  sendlen, recvlen;
+    PetscCount *Cperm_d;
   };
 
   // Cast the Vec to its Vec_CUPM struct, i.e. return the result of (Vec_CUPM *)v->spptr
@@ -237,9 +251,10 @@ public:
   static PetscErrorCode BindToCPU_CUPMBase(Vec, PetscBool, PetscDeviceContext) noexcept;
   static PetscErrorCode GetArrays_CUPMBase(Vec, const PetscScalar **, const PetscScalar **, PetscOffloadMask *, PetscDeviceContext) noexcept;
   static PetscErrorCode ResetPreallocationCOO_CUPMBase(Vec, PetscDeviceContext) noexcept;
-  template <std::size_t NCount = 0, std::size_t NScal = 0>
-  static PetscErrorCode SetPreallocationCOO_CUPMBase(Vec, PetscCount, const PetscInt[], PetscDeviceContext, const std::array<CooPair<PetscCount>, NCount> & = {}, const std::array<CooPair<PetscScalar>, NScal> & = {}) noexcept;
-
+  static PetscErrorCode VecCOOStructDestroy_SeqCUPM(void *) noexcept;
+  static PetscErrorCode VecCOOStructDestroy_MPICUPM(void *) noexcept;
+  static PetscErrorCode VecCOOStructCreate_SeqCUPM(VecCOOStruct_Seq *, VecCOOStruct_SeqCUPM **) noexcept;
+  static PetscErrorCode VecCOOStructCreate_MPICUPM(VecCOOStruct_MPI *, VecCOOStruct_MPICUPM **) noexcept;
   static PetscErrorCode Convert_IMPL_IMPLCUPM(Vec) noexcept;
 };
 
@@ -1068,54 +1083,106 @@ inline PetscErrorCode Vec_CUPMBase<T, D>::ResetPreallocationCOO_CUPMBase(Vec v, 
   PetscFunctionBegin;
   if (const auto vcu = VecCUPMCast(v)) {
     cupmStream_t stream;
-    // clang-format off
-    const auto   cntptrs = util::make_array(
-      std::ref(vcu->jmap1_d),
-      std::ref(vcu->perm1_d),
-      std::ref(vcu->imap2_d),
-      std::ref(vcu->jmap2_d),
-      std::ref(vcu->perm2_d),
-      std::ref(vcu->Cperm_d)
-    );
-    // clang-format on
 
     PetscCall(GetHandlesFrom_(dctx, &stream));
-    for (auto &&ptr : cntptrs) PetscCallCUPM(cupmFreeAsync(ptr.get(), stream));
     for (auto &&ptr : util::make_array(std::ref(vcu->sendbuf_d), std::ref(vcu->recvbuf_d))) PetscCallCUPM(cupmFreeAsync(ptr.get(), stream));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 template <device::cupm::DeviceType T, typename D>
-template <std::size_t NCount, std::size_t NScal>
-inline PetscErrorCode Vec_CUPMBase<T, D>::SetPreallocationCOO_CUPMBase(Vec v, PetscCount, const PetscInt[], PetscDeviceContext dctx, const std::array<CooPair<PetscCount>, NCount> &extra_cntptrs, const std::array<CooPair<PetscScalar>, NScal> &bufptrs) noexcept
+inline PetscErrorCode Vec_CUPMBase<T, D>::VecCOOStructDestroy_SeqCUPM(void *data) noexcept
 {
-  PetscFunctionBegin;
-  PetscCall(ResetPreallocationCOO_CUPMBase(v, dctx));
-  // need to instantiate the private pointer if not already
-  PetscCall(VecCUPMAllocateCheck_(v));
-  {
-    const auto vimpl = VecIMPLCast(v);
-    const auto vcu   = VecCUPMCast(v);
-    // clang-format off
-    const auto cntptrs = util::concat_array(
-      util::make_array(
-        make_coo_pair(vcu->jmap1_d, vimpl->jmap1, v->map->n + 1),
-        make_coo_pair(vcu->perm1_d, vimpl->perm1, vimpl->tot1)
-      ),
-      extra_cntptrs
-    );
-    // clang-format on
-    cupmStream_t stream;
+  PetscDeviceContext    dctx;
+  VecCOOStruct_SeqCUPM *coo_struct = (VecCOOStruct_SeqCUPM *)data;
+  cupmStream_t          stream;
 
-    PetscCall(GetHandlesFrom_(dctx, &stream));
-    // allocate
-    for (auto &elem : cntptrs) PetscCall(PetscCUPMMallocAsync(&elem.device, elem.size, stream));
-    for (auto &elem : bufptrs) PetscCall(PetscCUPMMallocAsync(&elem.device, elem.size, stream));
-    // copy
-    for (const auto &elem : cntptrs) PetscCall(PetscCUPMMemcpyAsync(elem.device, elem.host, elem.size, cupmMemcpyHostToDevice, stream, true));
-    for (const auto &elem : bufptrs) PetscCall(PetscCUPMMemcpyAsync(elem.device, elem.host, elem.size, cupmMemcpyHostToDevice, stream, true));
-  }
+  PetscFunctionBegin;
+  // clang-format off
+  const auto   cntptrs = util::make_array(
+    std::ref(coo_struct->jmap1_d),
+    std::ref(coo_struct->perm1_d)
+  );
+  // clang-format on
+
+  PetscCall(GetHandles_(&dctx, &stream));
+  for (auto &&ptr : cntptrs) PetscCallCUPM(cupmFreeAsync(ptr.get(), stream));
+  PetscCall(PetscFree(coo_struct));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+template <device::cupm::DeviceType T, typename D>
+inline PetscErrorCode Vec_CUPMBase<T, D>::VecCOOStructDestroy_MPICUPM(void *data) noexcept
+{
+  PetscDeviceContext    dctx;
+  VecCOOStruct_MPICUPM *coo_struct = (VecCOOStruct_MPICUPM *)data;
+  cupmStream_t          stream;
+
+  PetscFunctionBegin;
+  // clang-format off
+  const auto   cntptrs = util::make_array(
+    std::ref(coo_struct->jmap1_d),
+    std::ref(coo_struct->perm1_d),
+    std::ref(coo_struct->imap2_d),
+    std::ref(coo_struct->jmap2_d),
+    std::ref(coo_struct->perm2_d),
+    std::ref(coo_struct->Cperm_d)
+  );
+  // clang-format on
+
+  PetscCall(GetHandles_(&dctx, &stream));
+  for (auto &&ptr : cntptrs) PetscCallCUPM(cupmFreeAsync(ptr.get(), stream));
+  PetscCall(PetscSFDestroy(&(coo_struct->coo_sf)));
+  PetscCall(PetscFree(coo_struct));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+template <device::cupm::DeviceType T, typename D>
+inline PetscErrorCode Vec_CUPMBase<T, D>::VecCOOStructCreate_SeqCUPM(VecCOOStruct_Seq *coo_host, VecCOOStruct_SeqCUPM **coo) noexcept
+{
+  VecCOOStruct_SeqCUPM *coo_struct;
+  PetscDeviceContext    dctx;
+  cupmStream_t          stream;
+
+  PetscFunctionBegin;
+  PetscCall(PetscNew(coo));
+  coo_struct         = *coo;
+  coo_struct->m      = coo_host->m;
+  coo_struct->coo_n  = coo_host->coo_n;
+  coo_struct->coo_n  = coo_host->coo_n;
+  const auto cntptrs = util::make_array(make_coo_pair(coo_struct->jmap1_d, coo_host->jmap1, coo_host->m + 1), make_coo_pair(coo_struct->perm1_d, coo_host->perm1, coo_host->tot1));
+
+  PetscCall(GetHandles_(&dctx, &stream));
+  // allocate
+  for (auto &elem : cntptrs) PetscCall(PetscCUPMMallocAsync(&elem.device, elem.size, stream));
+  // copy
+  for (const auto &elem : cntptrs) PetscCall(PetscCUPMMemcpyAsync(elem.device, elem.host, elem.size, cupmMemcpyHostToDevice, stream, true));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+template <device::cupm::DeviceType T, typename D>
+inline PetscErrorCode Vec_CUPMBase<T, D>::VecCOOStructCreate_MPICUPM(VecCOOStruct_MPI *coo_host, VecCOOStruct_MPICUPM **coo) noexcept
+{
+  VecCOOStruct_MPICUPM *coo_struct;
+  PetscDeviceContext    dctx;
+  cupmStream_t          stream;
+
+  PetscFunctionBegin;
+  PetscCall(PetscNew(coo));
+  coo_struct         = *coo;
+  coo_struct->m      = coo_host->m;
+  coo_struct->coo_n  = coo_host->coo_n;
+  coo_struct->coo_n  = coo_host->coo_n;
+  const auto cntptrs = util::make_array(make_coo_pair(coo_struct->jmap1_d, coo_host->jmap1, coo_host->m + 1), make_coo_pair(coo_struct->perm1_d, coo_host->perm1, coo_host->tot1), make_coo_pair(coo_struct->imap2_d, coo_host->imap2, coo_host->nnz2),
+                                        make_coo_pair(coo_struct->jmap2_d, coo_host->jmap2, coo_host->nnz2 + 1), make_coo_pair(coo_struct->perm2_d, coo_host->perm2, coo_host->recvlen), make_coo_pair(coo_struct->Cperm_d, coo_host->Cperm, coo_host->sendlen));
+
+  PetscCall(GetHandles_(&dctx, &stream));
+  // allocate
+  for (auto &elem : cntptrs) PetscCall(PetscCUPMMallocAsync(&elem.device, elem.size, stream));
+  // copy
+  for (const auto &elem : cntptrs) PetscCall(PetscCUPMMemcpyAsync(elem.device, elem.host, elem.size, cupmMemcpyHostToDevice, stream, true));
+  PetscCall(PetscObjectReference((PetscObject)coo_host->coo_sf));
+  coo_struct->coo_sf = coo_host->coo_sf;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1197,9 +1264,15 @@ inline PetscErrorCode Vec_CUPMBase<T, D>::Convert_IMPL_IMPLCUPM(Vec v) noexcept
     using name::HostArrayRead; \
     using name::HostArrayWrite; \
     using name::HostArrayReadWrite; \
+    using name::Convert_IMPL_IMPLCUPM; \
+    /* COO */ \
+    using typename name::VecCOOStruct_SeqCUPM; \
+    using typename name::VecCOOStruct_MPICUPM; \
     using name::ResetPreallocationCOO_CUPMBase; \
-    using name::SetPreallocationCOO_CUPMBase; \
-    using name::Convert_IMPL_IMPLCUPM;
+    using name::VecCOOStructCreate_SeqCUPM; \
+    using name::VecCOOStructCreate_MPICUPM; \
+    using name::VecCOOStructDestroy_SeqCUPM; \
+    using name::VecCOOStructDestroy_MPICUPM;
 
 } // namespace impl
 

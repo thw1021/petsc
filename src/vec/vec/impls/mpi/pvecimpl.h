@@ -18,6 +18,24 @@ typedef struct {
 } VecAssemblyFrame;
 
 typedef struct {
+  /* COO fields, assuming m is the vector's local size */
+  PetscInt    m;
+  PetscCount  coo_n;
+  PetscCount  tot1;  /* Total local entries in COO arrays */
+  PetscCount *jmap1; /* [m+1]: i-th entry of the vector has jmap1[i+1]-jmap1[i] repeats in COO arrays */
+  PetscCount *perm1; /* [tot1]: permutation array for local entries */
+
+  PetscCount  nnz2;  /* Unique entries in recvbuf */
+  PetscCount *imap2; /* [nnz2]: i-th unique entry in recvbuf is imap2[i]-th entry in the vector */
+  PetscCount *jmap2; /* [nnz2+1] */
+  PetscCount *perm2; /* [recvlen] */
+
+  PetscSF     coo_sf;
+  PetscCount  sendlen, recvlen; /* Lengths (in unit of PetscScalar) of send/recvbuf */
+  PetscCount *Cperm;            /* [sendlen]: permutation array to fill sendbuf[]. 'C' for communication */
+} VecCOOStruct_MPI;
+
+typedef struct {
   VECHEADER
   PetscInt   nghost;      /* number of ghost points on this process */
   Vec        localrep;    /* local representation of vector */
@@ -41,20 +59,6 @@ typedef struct {
   PetscBool use_nvshmem; /* Try to use NVSHMEM in communication of, for example, VecNorm */
 #endif
 
-  /* COO fields, assuming m is the vector's local size */
-  PetscCount  coo_n;
-  PetscCount  tot1;  /* Total local entries in COO arrays */
-  PetscCount *jmap1; /* [m+1]: i-th entry of the vector has jmap1[i+1]-jmap1[i] repeats in COO arrays */
-  PetscCount *perm1; /* [tot1]: permutation array for local entries */
-
-  PetscCount  nnz2;  /* Unique entries in recvbuf */
-  PetscCount *imap2; /* [nnz2]: i-th unique entry in recvbuf is imap2[i]-th entry in the vector */
-  PetscCount *jmap2; /* [nnz2+1] */
-  PetscCount *perm2; /* [recvlen] */
-
-  PetscSF      coo_sf;
-  PetscCount   sendlen, recvlen;  /* Lengths (in unit of PetscScalar) of send/recvbuf */
-  PetscCount  *Cperm;             /* [sendlen]: permutation array to fill sendbuf[]. 'C' for communication */
   PetscScalar *sendbuf, *recvbuf; /* Buffers for remote values in VecSetValuesCOO() */
 } Vec_MPI;
 
