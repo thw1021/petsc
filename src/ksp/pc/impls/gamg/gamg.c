@@ -103,7 +103,7 @@ static PetscErrorCode PCGAMGCreateLevel_GAMG(PC pc, Mat Amat_fine, PetscInt cr_b
     PetscCallMPI(MPI_Comm_rank(loccomm, &locrank));
     s_nnodes = !locrank;
     PetscCall(MPIU_Allreduce(&s_nnodes, &r_nnodes, 1, MPIU_INT, MPI_SUM, comm));
-    PetscCheck((size % r_nnodes) == 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "odd number of nodes np=%d nnodes%" PetscInt_FMT, size, r_nnodes);
+    PetscCheck(size == 1 || (size % r_nnodes) == 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "odd number of nodes np=%d nnodes%" PetscInt_FMT, size, r_nnodes);
     devCount = 0;
     cerr     = cudaGetDeviceCount(&devCount);
     cudaGetLastError();                         /* Reset the last error */
@@ -119,7 +119,8 @@ static PetscErrorCode PCGAMGCreateLevel_GAMG(PC pc, Mat Amat_fine, PetscInt cr_b
     SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "should not be here");
 #endif
   } else if (pc_gamg->level_reduction_factors[pc_gamg->current_level] > 0) {
-    PetscCheck(nactive % pc_gamg->level_reduction_factors[pc_gamg->current_level] == 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "odd number of active process %d wrt reduction factor %" PetscInt_FMT, nactive, pc_gamg->level_reduction_factors[pc_gamg->current_level]);
+    PetscCheck(nactive == 1 || nactive % pc_gamg->level_reduction_factors[pc_gamg->current_level] == 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "odd number of active process %d wrt reduction factor %" PetscInt_FMT, nactive,
+               pc_gamg->level_reduction_factors[pc_gamg->current_level]);
     new_size = nactive / pc_gamg->level_reduction_factors[pc_gamg->current_level];
     PetscCall(PetscInfo(pc, "%s: Manually setting reduction to %d active processes (%d/%" PetscInt_FMT ")\n", ((PetscObject)pc)->prefix, new_size, nactive, pc_gamg->level_reduction_factors[pc_gamg->current_level]));
   } else if (is_last && !pc_gamg->use_parallel_coarse_grid_solver) {
