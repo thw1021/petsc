@@ -1,6 +1,5 @@
 #include <petsc/private/kspimpl.h> /*I "petscksp.h" I*/
 #include <petscblaslapack.h>
-PETSC_INTERN PetscErrorCode KSPComputeExtremeSingularValues_MINRES(KSP, PetscReal*, PetscReal *);
 PETSC_INTERN PetscErrorCode KSPComputeExtremeSingularValues_MINRES(KSP, PetscReal *, PetscReal *);
 PETSC_INTERN PetscErrorCode KSPComputeEigenvalues_MINRES(KSP, PetscInt, PetscReal *, PetscReal *, PetscInt *);
 
