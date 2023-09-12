@@ -17,7 +17,7 @@ int main(int argc, char **args)
   PetscReal   norm;
   PetscInt    i, n = 2, col[3], its;
   PetscMPIInt size;
-  PetscScalar one          = 1.0, value[3], shift = 0.0;
+  PetscScalar one = 1.0, value[3], shift = 0.0;
   PetscBool   nonzeroguess = PETSC_FALSE;
 
   PetscFunctionBeginUser;

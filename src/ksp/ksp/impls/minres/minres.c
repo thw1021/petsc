@@ -1,7 +1,8 @@
 #include <petsc/private/kspimpl.h> /*I "petscksp.h" I*/
 #include <petscblaslapack.h>
 PETSC_INTERN PetscErrorCode KSPComputeExtremeSingularValues_MINRES(KSP, PetscReal*, PetscReal *);
-PETSC_INTERN PetscErrorCode KSPComputeEigenvalues_MINRES(KSP, PetscInt, PetscReal*, PetscReal*, PetscInt*);
+PETSC_INTERN PetscErrorCode KSPComputeExtremeSingularValues_MINRES(KSP, PetscReal *, PetscReal *);
+PETSC_INTERN PetscErrorCode KSPComputeEigenvalues_MINRES(KSP, PetscInt, PetscReal *, PetscReal *, PetscInt *);
 
 PetscBool  QLPcite       = PETSC_FALSE;
 const char QLPCitation[] = "@article{choi2011minres,\n"
@@ -37,7 +38,7 @@ static PetscErrorCode KSPSetUp_MINRES(KSP ksp)
   */
   if (ksp->calc_sings) {
     KSP_MINRES *minres = (KSP_MINRES *)ksp->data;
-    PetscInt maxit = ksp->max_it;
+    PetscInt    maxit  = ksp->max_it;
     PetscCall(PetscFree4(minres->e, minres->d, minres->ee, minres->dd));
     PetscCall(PetscMalloc4(maxit, &minres->e, maxit, &minres->d, maxit, &minres->ee, maxit, &minres->dd));
 
@@ -184,8 +185,8 @@ static PetscErrorCode KSPSolve_MINRES(KSP ksp)
     KSPMinresSwap3(R1, R2, R3);
     if (eigs) {
       PetscCheck(ksp->max_it == stored_max_it, PetscObjectComm((PetscObject)ksp), PETSC_ERR_SUP, "Cannot change maxit AND calculate eigenvalues");
-      d[ksp->its-1] = alpha;
-      e[ksp->its-1] = beta;
+      d[ksp->its - 1] = alpha;
+      e[ksp->its - 1] = beta;
     }
 
     PetscCall(KSP_PCApply(ksp, R2, R3));
@@ -499,7 +500,7 @@ static PetscErrorCode KSPSolve_MINRES_OLD(KSP ksp)
 
   PetscCall(PCGetOperators(ksp->pc, &Amat, NULL));
 
-  ksp->its = 0;
+  ksp->its      = 0;
   eigs          = ksp->calc_sings;
   stored_max_it = ksp->max_it;
   if (eigs) {
