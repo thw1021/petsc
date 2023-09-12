@@ -568,6 +568,7 @@ template <device::cupm::DeviceType T>
 inline PetscErrorCode SfInterface<T>::LinkSyncDevice(PetscSFLink link) noexcept
 {
   PetscFunctionBegin;
+  (void)link; /* Avoid compiler warning */
   PetscCallCUPM(cupmDeviceSynchronize());
   PetscFunctionReturn(PETSC_SUCCESS);
 }
