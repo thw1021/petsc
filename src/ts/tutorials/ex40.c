@@ -267,7 +267,8 @@ int main(int argc, char **argv)
     PetscCall(TSAdaptHistoryGetStep(adapt, 0, &t0, &dt));
     /* this example fails with single (or smaller) precision */
 #if defined(PETSC_USE_REAL_SINGLE) || defined(PETSC_USE_REAL___FP16)
-    /* In the first TSSolve() the final time 'tf' is the event location found after a few event handler iterations.
+    /*
+       In the first TSSolve() the final time 'tf' is the event location found after a few event handler iterations.
        If 'tf' is set as the max time for the second run, the TS solver may approach this point by
        slightly different steps, resulting in a slightly different solution and fvalue[] at 'tf',
        so that the event may not be triggered at 'tf' anymore. Fix: apply safety factor 1.05
