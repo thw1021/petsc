@@ -3,9 +3,9 @@ static char help[] = "Single-DOF oscillator formulated as a second-order system.
 #include <petscts.h>
 
 typedef struct {
-  PetscReal Omega;  /* natural frequency */
-  PetscReal Xi;     /* damping coefficient  */
-  PetscReal u0, v0; /* initial conditions */
+  PetscReal Omega;    /* natural frequency */
+  PetscReal Xi;       /* damping coefficient  */
+  PetscReal u0, v0;   /* initial conditions */
   PetscBool use_pred; /* whether to use a predictor callback */
 } UserParams;
 
@@ -203,7 +203,7 @@ int main(int argc, char *argv[])
   PetscCall(VecRestoreArrayWrite(U, &u));
   PetscCall(VecRestoreArrayWrite(V, &v));
 
-  if(user.use_pred) PetscCall(TSAlpha2SetPredictor(ts, Predictor, NULL));
+  if (user.use_pred) PetscCall(TSAlpha2SetPredictor(ts, Predictor, NULL));
 
   PetscCall(TS2SetSolution(ts, U, V));
   PetscCall(TSSetFromOptions(ts));

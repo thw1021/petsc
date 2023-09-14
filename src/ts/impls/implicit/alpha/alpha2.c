@@ -78,7 +78,7 @@ static PetscErrorCode TSAlpha_ApplyPredictor(TS ts, Vec X1)
   TS_Alpha *th = (TS_Alpha *)(ts->data);
 
   PetscFunctionBegin;
-  if(th->predictor) PetscCall(th->predictor(ts, th->X0, th->V0, th->A0, X1, th->predictor_ctx));
+  if (th->predictor) PetscCall(th->predictor(ts, th->X0, th->V0, th->A0, X1, th->predictor_ctx));
   else PetscCall(VecCopy(th->X0, X1));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
