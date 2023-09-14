@@ -1,4 +1,3 @@
-<<<<<<< HEAD
   0 KSP Residual norm 719.386 
   1 KSP Residual norm 212.248 
   2 KSP Residual norm 79.0048 
@@ -17,25 +16,6 @@
  15 KSP Residual norm 0.00807981 
  16 KSP Residual norm 0.00401823 
 Linear solve converged due to CONVERGED_RTOL iterations 16
-=======
-  0 KSP Residual norm 771.822 
-  1 KSP Residual norm 204.863 
-  2 KSP Residual norm 67.9929 
-  3 KSP Residual norm 41.2582 
-  4 KSP Residual norm 14.5589 
-  5 KSP Residual norm 7.38264 
-  6 KSP Residual norm 3.60238 
-  7 KSP Residual norm 2.14095 
-  8 KSP Residual norm 1.05157 
-  9 KSP Residual norm 0.60435 
- 10 KSP Residual norm 0.313691 
- 11 KSP Residual norm 0.131098 
- 12 KSP Residual norm 0.0417432 
- 13 KSP Residual norm 0.0170378 
- 14 KSP Residual norm 0.00978096 
- 15 KSP Residual norm 0.00520133 
-Linear solve converged due to CONVERGED_RTOL iterations 15
->>>>>>> e4f83c95aad (added plumbing)
 KSP Object: 8 MPI processes
   type: cg
   maximum iterations=10000, initial guess is zero
@@ -104,7 +84,6 @@ PC Object: 8 MPI processes
     total number of mallocs used during MatSetValues calls=0
       has attached near null space
       using I-node (on process 0) routines: found 125 nodes, limit used is 5
-<<<<<<< HEAD
   0 KSP Residual norm 0.00719386 
   1 KSP Residual norm 0.00212248 
   2 KSP Residual norm 0.000790048 
@@ -123,25 +102,6 @@ PC Object: 8 MPI processes
  15 KSP Residual norm 8.07981e-08 
  16 KSP Residual norm 4.01823e-08 
 Linear solve converged due to CONVERGED_RTOL iterations 16
-=======
-  0 KSP Residual norm 0.00771822 
-  1 KSP Residual norm 0.00204863 
-  2 KSP Residual norm 0.000679929 
-  3 KSP Residual norm 0.000412582 
-  4 KSP Residual norm 0.000145589 
-  5 KSP Residual norm 7.38264e-05 
-  6 KSP Residual norm 3.60238e-05 
-  7 KSP Residual norm 2.14095e-05 
-  8 KSP Residual norm 1.05157e-05 
-  9 KSP Residual norm 6.0435e-06 
- 10 KSP Residual norm 3.13691e-06 
- 11 KSP Residual norm 1.31098e-06 
- 12 KSP Residual norm 4.17432e-07 
- 13 KSP Residual norm 1.70378e-07 
- 14 KSP Residual norm 9.78096e-08 
- 15 KSP Residual norm 5.20133e-08 
-Linear solve converged due to CONVERGED_RTOL iterations 15
->>>>>>> e4f83c95aad (added plumbing)
 KSP Object: 8 MPI processes
   type: cg
   maximum iterations=10000, initial guess is zero
@@ -186,9 +146,6 @@ PC Object: 8 MPI processes
       type: chebyshev
         Chebyshev polynomial of first kind
         eigenvalue targets used: min 0.636368, max 3.34093
-<<<<<<< HEAD
-        eigenvalues provided (min 0.0755794, max 3.18184) with transform: [0. 0.2; 0. 1.05]
-=======
         eigenvalues estimated via cg: min 0.0755794, max 3.18184
         eigenvalues estimated using cg with transform: [0. 0.2; 0. 1.05]
         KSP Object: (mg_levels_1_esteig_) 8 MPI processes
@@ -198,7 +155,6 @@ PC Object: 8 MPI processes
           left preconditioning
           using PRECONDITIONED norm type for convergence test
         estimating eigenvalues using noisy right hand side
->>>>>>> e4f83c95aad (added plumbing)
       maximum iterations=2, nonzero initial guess
       tolerances:  relative=1e-05, absolute=1e-50, divergence=10000.
       left preconditioning
@@ -223,7 +179,6 @@ PC Object: 8 MPI processes
     total number of mallocs used during MatSetValues calls=0
       has attached near null space
       using I-node (on process 0) routines: found 125 nodes, limit used is 5
-<<<<<<< HEAD
   0 KSP Residual norm 0.00719386 
   1 KSP Residual norm 0.00212248 
   2 KSP Residual norm 0.000790048 
@@ -242,25 +197,6 @@ PC Object: 8 MPI processes
  15 KSP Residual norm 8.07981e-08 
  16 KSP Residual norm 4.01823e-08 
 Linear solve converged due to CONVERGED_RTOL iterations 16
-=======
-  0 KSP Residual norm 0.00771822 
-  1 KSP Residual norm 0.00204863 
-  2 KSP Residual norm 0.000679929 
-  3 KSP Residual norm 0.000412582 
-  4 KSP Residual norm 0.000145589 
-  5 KSP Residual norm 7.38264e-05 
-  6 KSP Residual norm 3.60238e-05 
-  7 KSP Residual norm 2.14095e-05 
-  8 KSP Residual norm 1.05157e-05 
-  9 KSP Residual norm 6.0435e-06 
- 10 KSP Residual norm 3.13691e-06 
- 11 KSP Residual norm 1.31098e-06 
- 12 KSP Residual norm 4.17432e-07 
- 13 KSP Residual norm 1.70378e-07 
- 14 KSP Residual norm 9.78096e-08 
- 15 KSP Residual norm 5.20133e-08 
-Linear solve converged due to CONVERGED_RTOL iterations 15
->>>>>>> e4f83c95aad (added plumbing)
 KSP Object: 8 MPI processes
   type: cg
   maximum iterations=10000, initial guess is zero
@@ -305,9 +241,6 @@ PC Object: 8 MPI processes
       type: chebyshev
         Chebyshev polynomial of first kind
         eigenvalue targets used: min 0.636368, max 3.34093
-<<<<<<< HEAD
-        eigenvalues provided (min 0.0755794, max 3.18184) with transform: [0. 0.2; 0. 1.05]
-=======
         eigenvalues estimated via cg: min 0.0755794, max 3.18184
         eigenvalues estimated using cg with transform: [0. 0.2; 0. 1.05]
         KSP Object: (mg_levels_1_esteig_) 8 MPI processes
@@ -317,7 +250,6 @@ PC Object: 8 MPI processes
           left preconditioning
           using PRECONDITIONED norm type for convergence test
         estimating eigenvalues using noisy right hand side
->>>>>>> e4f83c95aad (added plumbing)
       maximum iterations=2, nonzero initial guess
       tolerances:  relative=1e-05, absolute=1e-50, divergence=10000.
       left preconditioning
@@ -342,8 +274,4 @@ PC Object: 8 MPI processes
     total number of mallocs used during MatSetValues calls=0
       has attached near null space
       using I-node (on process 0) routines: found 125 nodes, limit used is 5
-<<<<<<< HEAD
 [0]main |b-Ax|/|b|=9.429752e-05, |b|=5.391826e+00, emax=9.988419e-01
-=======
-[0]main |b-Ax|/|b|=1.481483e-04, |b|=5.391826e+00, emax=9.932943e-01
->>>>>>> e4f83c95aad (added plumbing)
