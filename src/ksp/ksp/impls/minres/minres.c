@@ -93,22 +93,24 @@ static inline void SymOrtho(PetscReal a, PetscReal b, PetscReal *c, PetscReal *s
 */
 static PetscErrorCode KSPSolve_MINRES(KSP ksp)
 {
-  KSP_MINRES *minres = (KSP_MINRES *)ksp->data;
-  Mat         Amat;
-  Vec         X, B, R1, R2, R3, V, W, WL, WL2, XL2, RN;
-  PetscReal   alpha, beta, beta1, betan, betal;
-  PetscBool   diagonalscale;
-  PetscReal   zero = 0.0, dbar, dltan = 0.0, dlta, cs = -1.0, sn = 0.0, epln, eplnn = 0.0, gbar, dlta_QLP;
-  PetscReal   gamal3 = 0.0, gamal2 = 0.0, gamal = 0.0, gama = 0.0, gama_tmp;
-  PetscReal   taul2 = 0.0, taul = 0.0, tau = 0.0, phi, phi0, phir;
-  PetscReal   Axnorm, xnorm, xnorm_tmp, xl2norm = 0.0, pnorm, Anorm = 0.0, gmin = 0.0, gminl = 0.0, gminl2 = 0.0;
-  PetscReal   Acond = 1.0, Acondl = 0.0, rnorml, rnorm, rootl, relAresl, relres, relresl, Arnorml, Anorml = 0.0, xnorml = 0.0;
-  PetscReal   epsx, realmin = PETSC_REAL_MIN, eps = PETSC_MACHINE_EPSILON;
-  PetscReal   veplnl2 = 0.0, veplnl = 0.0, vepln = 0.0, etal2 = 0.0, etal = 0.0, eta = 0.0;
-  PetscReal   dlta_tmp, sr2 = 0.0, cr2 = -1.0, cr1 = -1.0, sr1 = 0.0;
-  PetscReal   ul4 = 0.0, ul3 = 0.0, ul2 = 0.0, ul = 0.0, u = 0.0, ul_QLP = 0.0, u_QLP = 0.0;
-  PetscReal   vepln_QLP = 0.0, gamal_QLP = 0.0, gama_QLP = 0.0, gamal_tmp, abs_gama;
-  PetscInt    flag = -2, flag0 = -2, QLPiter = 0;
+  KSP_MINRES  *minres = (KSP_MINRES *)ksp->data;
+  Mat          Amat;
+  Vec          X, B, R1, R2, R3, V, W, WL, WL2, XL2, RN;
+  PetscReal    alpha, beta, beta1, betan, betal;
+  PetscBool    diagonalscale;
+  PetscReal    zero = 0.0, dbar, dltan = 0.0, dlta, cs = -1.0, sn = 0.0, epln, eplnn = 0.0, gbar, dlta_QLP;
+  PetscReal    gamal3 = 0.0, gamal2 = 0.0, gamal = 0.0, gama = 0.0, gama_tmp;
+  PetscReal    taul2 = 0.0, taul = 0.0, tau = 0.0, phi, phi0, phir;
+  PetscReal    Axnorm, xnorm, xnorm_tmp, xl2norm = 0.0, pnorm, Anorm = 0.0, gmin = 0.0, gminl = 0.0, gminl2 = 0.0;
+  PetscReal    Acond = 1.0, Acondl = 0.0, rnorml, rnorm, rootl, relAresl, relres, relresl, Arnorml, Anorml = 0.0, xnorml = 0.0;
+  PetscReal    epsx, realmin = PETSC_REAL_MIN, eps = PETSC_MACHINE_EPSILON;
+  PetscReal    veplnl2 = 0.0, veplnl = 0.0, vepln = 0.0, etal2 = 0.0, etal = 0.0, eta = 0.0;
+  PetscReal    dlta_tmp, sr2 = 0.0, cr2 = -1.0, cr1 = -1.0, sr1 = 0.0;
+  PetscReal    ul4 = 0.0, ul3 = 0.0, ul2 = 0.0, ul = 0.0, u = 0.0, ul_QLP = 0.0, u_QLP = 0.0;
+  PetscReal    vepln_QLP = 0.0, gamal_QLP = 0.0, gama_QLP = 0.0, gamal_tmp, abs_gama;
+  PetscInt     flag = -2, flag0 = -2, QLPiter = 0;
+  PetscInt     stored_max_it, eigs;
+  PetscScalar *e = NULL, *d = NULL;
 
   PetscFunctionBegin;
   PetscCall(PetscCitationsRegister(QLPCitation, &QLPcite));
