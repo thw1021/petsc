@@ -1,8 +1,8 @@
 #include <petsc/private/tsimpl.h> /*I  "petscts.h" I*/
 
-/* TSEventCalcSigns() - helper function.
-   Fills array sign[] with signs of array f[]. If abs(f[i]) < vtol[i], the zero sign is taken.
-   All arrays should have length 'nev'
+/*
+  Fills array sign[] with signs of array f[]. If abs(f[i]) < vtol[i], the zero sign is taken.
+  All arrays should have length 'nev'
 */
 static inline void TSEventCalcSigns(PetscInt nev, const PetscReal *f, const PetscReal *vtol, PetscInt *sign)
 {
@@ -26,8 +26,8 @@ PetscErrorCode TSEventInitialize(TSEvent event, TS ts, PetscReal t, Vec U)
   event->iterctr       = 0;
   event->processing    = PETSC_FALSE;
   event->revisit_right = PETSC_FALSE;
-  PetscCall((*event->eventhandler)(ts, t, U, event->fvalue_prev, event->ctx));
-  TSEventCalcSigns(event->nevents, event->fvalue_prev, event->vtol, event->fsign_prev); // by this moment event->vtol should have been defined
+  PetscCall((*event->eventfunction)(ts, t, U, event->fvalue_prev, event->ctx));
+  TSEventCalcSigns(event->nevents, event->fvalue_prev, event->vtol, event->fsign_prev); // by this time event->vtol should have been defined
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -76,8 +76,10 @@ PetscErrorCode TSEventDestroy(TSEvent *event)
 + ts - time integration context
 - dt - post event step
 
-  Options Database Keys:
+  Options Database Key:
 . -ts_event_post_event_step <dt> - time step after the event; zero value - to keep using previous time steps
+
+  Level: advanced
 
   Notes:
   `TSSetPostEventStep()` allows one to set a time step that is used immediately following an event.
@@ -89,20 +91,19 @@ PetscErrorCode TSEventDestroy(TSEvent *event)
   a conservative (small) step should be employed. If not, then a larger time step may be appropriate.
 
   In the latter case, instead of explicitly setting the post-event time step,
-  the user may also choose a special option of keeping the time steps used before the event, which is a sort of 'petsc-decide' strategy.
-  For this, use special value 0. It will signal the TS to directly step to the time point it planned to visit prior to the event detection.
-  E.g. if a step t0 -> t1 was planned originally, and an event 'te' occurred, t0 < te < t1, then after the event the TS will step: te -> t1.
+  the user may also choose a special option of keeping the time steps used before the event, which is a sort of 'petsc-decide'
+  strategy. For this, use special value 0. It will signal the TS to directly step to the time point it planned to visit
+  prior to the event interval detection. E.g. if a step t0 -> t1 was planned originally, and an event 'te' occurred, t0 < te < t1,
+  then after the event the TS will step: te -> t1.
   Moreover, in this situation the originally planned subsequent step t1 -> t2 will also be preserved.
 
-  This function can be called not only in the initial setup, but also inside the postevent callback set with `TSSetEventHandler()`,
+  This function can be called not only in the initial setup, but also inside the `postevent()` callback set with `TSSetEventHandler()`,
   affecting the post-event step for the current event, and the subsequent ones.
   So, the strategy of the post-event time step definition can be adjusted on the fly.
-  If several events have been triggered in the given time point, still a single postevent handler is invoked,
-  and the user is to figure out what post-event time step is more appropriate in this situation.
+  Even if several events have been triggered in the given time point, only a single postevent handler is invoked,
+  and the user is to determine what post-event time step is more appropriate in this situation.
 
   By default (on `TSSetEventHandler()` call), the post-event time step is set equal to the (initial) `TS` time step.
-
-  Level: advanced
 
   .seealso: [](ch_ts), `TS`, `TSEvent`, `TSSetEventHandler()`
 @*/
@@ -122,22 +123,13 @@ PetscErrorCode TSSetPostEventStep(TS ts, PetscReal dt)
 + ts - time integration context
 - dt - post event interval step
 
-  Options Database Keys:
+  Options Database Key:
 . -ts_event_post_eventinterval_step <dt> - time-step after event interval
 
-  Notes:
-  This function is deprecated, and its invocation has no effect. Use `TSSetPostEventStep()`.
-  This (original) manual page is kept for reference, but is effectively irrelevant.
-
-  `TSSetPostEventIntervalStep()` allows one to set a time-step that is used immediately following an event interval.
-
-  This function should be called from the postevent function set with `TSSetEventHandler()`.
-
-  The post event interval time-step should be selected based on the dynamics following the event.
-  If the dynamics are stiff, a conservative (small) step should be used.
-  If not, then a larger time-step can be used.
-
   Level: advanced
+
+  Notes:
+  This function is deprecated, and its invocation will throw a runtime error. Use `TSSetPostEventStep()`.
 
   .seealso: [](ch_ts), `TS`, `TSEvent`, `TSSetEventHandler()`
 @*/
@@ -145,9 +137,11 @@ PetscErrorCode TSSetPostEventIntervalStep(TS ts, PetscReal dt)
 {
   PetscFunctionBegin;
   //ts->event->timestep_posteventinterval = dt;
-  /* This deprecated function does nothing. Attempting to reproduce its original behaviour,
+  /*
+     This deprecated function is set to always throw a runtime error. Attempting to reproduce its original behaviour,
      i.e. setting the second (not the first) step after event, would break the logic of the TSEventHandler new code.
   */
+  PetscCheck(PETSC_FALSE, PetscObjectComm((PetscObject)ts), PETSC_ERR_SUP, "TSSetPostEventIntervalStep() is deprecated --> TSSetPostEventStep() should be used instead");
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -164,15 +158,15 @@ PetscErrorCode TSSetPostEventIntervalStep(TS ts, PetscReal dt)
   Options Database Key:
 . -ts_event_tol <tol> - tolerance for event zero crossing
 
+  Level: beginner
+
   Notes:
   One must call `TSSetEventHandler()` before setting the tolerances.
 
   The size of `vtol` should be equal to the number of events on the given process.
 
-  This function can be also called from the postevent callback set with `TSSetEventHandler()`,
+  This function can be also called from the `postevent()` callback set with `TSSetEventHandler()`,
   to adjust the tolerances on the fly.
-
-  Level: beginner
 
   .seealso: [](ch_ts), `TS`, `TSEvent`, `TSSetEventHandler()`
 @*/
@@ -199,24 +193,23 @@ PetscErrorCode TSSetEventTolerances(TS ts, PetscReal tol, PetscReal vtol[])
 /*@C
   TSSetEventHandler - Sets the functions and parameters used for detecting and handling the events
 
-  Logically Collective on TS
+  Logically Collective
 
   Input Parameters:
-+ ts           - the `TS` context obtained from `TSCreate()`
-. nevents      - number of events managed by the given MPI process
-. direction    - direction of zero crossing to be detected (one for each local event).
-                 `-1` => zero crossing in negative direction,
-                 `+1` => zero crossing in positive direction, `0` => both ways
-. terminate    - flag to indicate whether time stepping should be terminated after
-                 event is detected (one for each local event)
-. eventhandler - event monitoring routine, which defines the event-functions
-. postevent    - [optional] user post-event function; this function can change the solution, ODE etc at the time of the event
-- ctx          - [optional] user-defined context for private data for the
-                 event monitor and post-event routine (use `NULL` if no
-                 context is desired)
++ ts            - the `TS` context obtained from `TSCreate()`
+. nevents       - number of events managed by the given MPI process
+. direction     - direction of zero crossing to be detected (one for each local event).
+                  `-1` => zero crossing in negative direction,
+                  `+1` => zero crossing in positive direction, `0` => both ways
+. terminate     - flag to indicate whether time stepping should be terminated after
+                  event is detected (one for each local event)
+. eventfunction - user routine which defines the event-functions whose zero-crossings mark the events
+. postevent     - [optional] user post-event routine; it can change the solution, ODE etc at the time of the event
+- ctx           - [optional] user-defined context for private data for the
+                  `eventfunction()` and `postevent()` routines (use `NULL` if no
+                  context is desired)
 
-  Calling sequence of `eventhandler`:
-$   PetscErrorCode eventhandler(TS ts, PetscReal t, Vec U, PetscReal fvalue[], void* ctx)
+  Calling sequence of `eventfunction`:
 + ts     - the `TS` context
 . t      - current time
 . U      - current solution
@@ -224,7 +217,6 @@ $   PetscErrorCode eventhandler(TS ts, PetscReal t, Vec U, PetscReal fvalue[], v
 - ctx    - the context passed with `TSSetEventHandler()`
 
   Calling sequence of `postevent`:
-$   PetscErrorCode postevent(TS ts, PetscInt nevents_zero, PetscInt events_zero[], PetscReal t, Vec U, PetscBool forwardsolve, void *ctx)
 + ts           - the `TS` context
 . nevents_zero - number of triggered local events (whose event function is marked as crossing zero, and direction is appropriate)
 . events_zero  - indices of the triggered local events
@@ -240,20 +232,20 @@ $   PetscErrorCode postevent(TS ts, PetscInt nevents_zero, PetscInt events_zero[
 . -ts_event_post_event_step <dt>            - time step after event
 - -ts_event_dt_min <dt>                     - minimum time step considered for TSEvent
 
+  Level: intermediate
+
   Notes:
-  The event-functions should be defined in the `eventhandler` callback using the components of solution `U` and/or time `t`.
+  The event-functions should be defined in the `eventfunction` callback using the components of solution `U` and/or time `t`.
   Note that `U` is `PetscScalar`-valued, and the event-functions are `PetscReal`-valued. It is the user's responsibility to
   properly handle this difference, e.g. by applying `PetscRealPart()` or other appropriate conversion means.
 
   The full set of events is distributed (by the user design) across MPI processes, with each process defining its own local sub-set of events.
-  However, event resolution, and the `postevent` callback invocation are performed synchronously on all processes, including
+  However, the `postevent()` callback invocation is performed synchronously on all processes, including
   those processes which have not currently triggered any events.
-
-  Level: intermediate
 
 .seealso: [](ch_ts), `TSEvent`, `TSCreate()`, `TSSetTimeStep()`, `TSSetConvergedReason()`
 @*/
-PetscErrorCode TSSetEventHandler(TS ts, PetscInt nevents, PetscInt direction[], PetscBool terminate[], PetscErrorCode (*eventhandler)(TS ts, PetscReal t, Vec U, PetscReal fvalue[], void *ctx), PetscErrorCode (*postevent)(TS ts, PetscInt nevents_zero, PetscInt events_zero[], PetscReal t, Vec U, PetscBool forwardsolve, void *ctx), void *ctx)
+PetscErrorCode TSSetEventHandler(TS ts, PetscInt nevents, PetscInt direction[], PetscBool terminate[], PetscErrorCode (*eventfunction)(TS ts, PetscReal t, Vec U, PetscReal fvalue[], void *ctx), PetscErrorCode (*postevent)(TS ts, PetscInt nevents_zero, PetscInt events_zero[], PetscReal t, Vec U, PetscBool forwardsolve, void *ctx), void *ctx)
 {
   TSAdapt   adapt;
   PetscReal hmin;
@@ -298,7 +290,7 @@ PetscErrorCode TSSetEventHandler(TS ts, PetscInt nevents, PetscInt direction[], 
   event->processing         = PETSC_FALSE;
   event->revisit_right      = PETSC_FALSE;
   event->nevents            = nevents;
-  event->eventhandler       = eventhandler;
+  event->eventfunction      = eventfunction;
   event->postevent          = postevent;
   event->ctx                = ctx;
   event->timestep_postevent = ts->time_step;
@@ -379,7 +371,7 @@ static PetscErrorCode TSEventRecorderResize(TSEvent event)
 }
 
 /*
-   Helper routine to handle user postevents and recording
+  Helper routine to handle user postevents and recording
 */
 static PetscErrorCode TSPostEvent(TS ts, PetscReal t, Vec U)
 {
@@ -416,17 +408,18 @@ static PetscErrorCode TSPostEvent(TS ts, PetscReal t, Vec U)
   if (restart) PetscCall(TSRestartStep(ts));
   if (terminate) PetscCall(TSSetConvergedReason(ts, TS_CONVERGED_EVENT));
 
-  /* Recalculate the functions and signs if the state has been changed by the user postevent callback.
-     Note! If the state HAS NOT changed, the existing event->fsign (equal to zero) is kept, which:
-     - might have been defined using the previous (now-possibly-overridden) event->vtol,
-     - might have been set to zero on reaching a small time step rather than using the vtol criterion.
-     This will enforce keeping event->fsign = 0 where the zero-crossings were actually marked,
-     resulting in a more consistent behaviour of fsign's.
+  /*
+    Recalculate the functions and signs if the state has been changed by the user postevent callback.
+    Note! If the state HAS NOT changed, the existing event->fsign (equal to zero) is kept, which:
+    - might have been defined using the previous (now-possibly-overridden) event->vtol,
+    - might have been set to zero on reaching a small time step rather than using the vtol criterion.
+    This will enforce keeping event->fsign = 0 where the zero-crossings were actually marked,
+    resulting in a more consistent behaviour of fsign's.
   */
   if (statechanged) {
     if (event->monitor) PetscCall(PetscPrintf(((PetscObject)ts)->comm, "TSEvent: at time %g the vector state has been changed by PostEvent, recalculating fvalues and signs\n", (double)t));
     PetscCall(VecLockReadPush(U));
-    PetscCall((*event->eventhandler)(ts, t, U, event->fvalue, event->ctx));
+    PetscCall((*event->eventfunction)(ts, t, U, event->fvalue, event->ctx));
     PetscCall(VecLockReadPop(U));
     TSEventCalcSigns(event->nevents, event->fvalue, event->vtol, event->fsign); // note, event->vtol might have been changed by the postevent()
   }
@@ -443,19 +436,21 @@ static PetscErrorCode TSPostEvent(TS ts, PetscReal t, Vec U)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* (modified) Anderson-Bjorck variant of regula falsi method, refines [tleft, t] or [t, tright] based on 'side' (-1 or +1).
-   The scaling parameter is defined based on the 'justrefined' flag, the history of repeats of 'side', and the threshold.
-   To escape certain failure modes, the algorithm may drift towards the bisection rule.
-   The value pointed to by 'side_prev' gets updated.
-   This function returns the new time step.
+// PetscClangLinter pragma disable: -fdoc-sowing-chars
+/*
+  (modified) Anderson-Bjorck variant of regula falsi method, refines [tleft, t] or [t, tright] based on 'side' (-1 or +1).
+  The scaling parameter is defined based on the 'justrefined' flag, the history of repeats of 'side', and the threshold.
+  To escape certain failure modes, the algorithm may drift towards the bisection rule.
+  The value pointed to by 'side_prev' gets updated.
+  This function returns the new time step.
 
-   The underlying pure Anderson-Bjorck algorithm was taken as described in
-   J.M. Fernandez-Diaz, C.O. Menendez-Perez "A common framework for modified Regula Falsi methods and new methods of this kind", 2023.
-   The modifications subsequently introduced have little effect on the behaviour for simple cases requiring only a few iterations
-   (some minor convergence slowdown may take place though), but the effect becomes more pronounced for tough cases requiring many iterations.
-   For the latter situation the speed-up may be order(s) of magnitude compared to the classical Anderson-Bjorck.
-   The modifications (the threshold trick, and the drift towards bisection) were tested and tweaked
-   based on a number of test functions from the mentioned paper.
+  The underlying pure Anderson-Bjorck algorithm was taken as described in
+  J.M. Fernandez-Diaz, C.O. Menendez-Perez "A common framework for modified Regula Falsi methods and new methods of this kind", 2023.
+  The modifications subsequently introduced have little effect on the behaviour for simple cases requiring only a few iterations
+  (some minor convergence slowdown may take place though), but the effect becomes more pronounced for tough cases requiring many iterations.
+  For the latter situation the speed-up may be order(s) of magnitude compared to the classical Anderson-Bjorck.
+  The modifications (the threshold trick, and the drift towards bisection) were tested and tweaked
+  based on a number of test functions from the mentioned paper.
 */
 static inline PetscReal RefineAndersonBjorck(PetscReal tleft, PetscReal t, PetscReal tright, PetscReal fleft, PetscReal f, PetscReal fright, PetscInt side, PetscInt *side_prev, PetscBool justrefined, PetscReal *gamma)
 {
@@ -492,21 +487,23 @@ static inline PetscReal RefineAndersonBjorck(PetscReal tleft, PetscReal t, Petsc
 
   if (side == -1) new_dt = scal * fleft / (scal * fleft - f) * (t - tleft);
   else new_dt = f / (f - scal * fright) * (tright - t);
-  /* In tough cases (e.g. a polynomial of high order), there is a failure mode for the standard Anderson-Bjorck,
-     when the new proposed point jumps from one end-point of the bracket to the other, however the bracket is contracting very slowly.
-     A larger threshold for 'scal' prevents entering this mode.
-     On the other hand, if the iteration gets stuck near one end-point of the bracket, and the 'side' does not switch for a while,
-     the 'scal' drifts towards the bisection approach (via scalB), ensuring stable convergence.
+  /*
+    In tough cases (e.g. a polynomial of high order), there is a failure mode for the standard Anderson-Bjorck,
+    when the new proposed point jumps from one end-point of the bracket to the other, however the bracket
+    is contracting very slowly. A larger threshold for 'scal' prevents entering this mode.
+    On the other hand, if the iteration gets stuck near one end-point of the bracket, and the 'side' does not switch for a while,
+    the 'scal' drifts towards the bisection approach (via scalB), ensuring stable convergence.
   */
   return new_dt;
 }
 
-/* Checks if the current point (t) is the zero-crossing location, based on the event-function signs and direction[]:
-   - using the dt_min criterion,
-   - using the vtol criterion.
-   The situation (fsign_prev, fsign) = (0, 0) is treated as staying in the near-zero-zone of the previous zero-crossing,
-   and is not marked as a new zero-crossing.
-   This function may update event->side[].
+/*
+  Checks if the current point (t) is the zero-crossing location, based on the event-function signs and direction[]:
+  - using the dt_min criterion,
+  - using the vtol criterion.
+  The situation (fsign_prev, fsign) = (0, 0) is treated as staying in the near-zero-zone of the previous zero-crossing,
+  and is not marked as a new zero-crossing.
+  This function may update event->side[].
 */
 static PetscErrorCode TSEventTestZero(TS ts, PetscReal t)
 {
@@ -522,10 +519,11 @@ static PetscErrorCode TSEventTestZero(TS ts, PetscReal t)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* Checks if [fleft, f] or [f, fright] are 'brackets', i.e. intervals with the sign change, satisfying the 'direction'.
-   The right interval is only checked if iterctr > 0 (i.e. Anderson-Bjorck refinement has started).
-   The intervals like [0, x] and [x, 0] are not counted as brackets, i.e. intervals with the sign change.
-   The function returns the 'side' value: -1 (left, or both are brackets), +1 (only right one), +2 (neither).
+/*
+  Checks if [fleft, f] or [f, fright] are 'brackets', i.e. intervals with the sign change, satisfying the 'direction'.
+  The right interval is only checked if iterctr > 0 (i.e. Anderson-Bjorck refinement has started).
+  The intervals like [0, x] and [x, 0] are not counted as brackets, i.e. intervals with the sign change.
+  The function returns the 'side' value: -1 (left, or both are brackets), +1 (only right one), +2 (neither).
 */
 static inline PetscInt TSEventTestBracket(PetscInt fsign_left, PetscInt fsign, PetscInt fsign_right, PetscInt direction, PetscInt iterctr)
 {
@@ -535,12 +533,13 @@ static inline PetscInt TSEventTestBracket(PetscInt fsign_left, PetscInt fsign, P
   return side;
 }
 
-/* A helper function for capping the time steps, accounting for time span points.
-   It uses 'event->timestep_cache' as a time step to calculate the tolerance for tspan points detection. This
-   is done since the event resolution may result in significant time step refinement, and we don't use these small steps for tolerances.
-   To enhance the consistency of tspan points detection, tolerance 'tspan->worktol' is reused later in the TSSolve iteration.
-   If a user-defined step is cut by this function, the input uncut step is saved to adapt->dt_span_cached.
-   Flag 'user_dt' indicates if the step was defined by user.
+/*
+  Caps the time steps, accounting for time span points.
+  It uses 'event->timestep_cache' as a time step to calculate the tolerance for tspan points detection. This
+  is done since the event resolution may result in significant time step refinement, and we don't use these small steps for tolerances.
+  To enhance the consistency of tspan points detection, tolerance 'tspan->worktol' is reused later in the TSSolve iteration.
+  If a user-defined step is cut by this function, the input uncut step is saved to adapt->dt_span_cached.
+  Flag 'user_dt' indicates if the step was defined by user.
 */
 static inline PetscReal TSEvent_dt_cap(TS ts, PetscReal t, PetscReal dt, PetscBool user_dt)
 {
@@ -578,7 +577,8 @@ static inline PetscReal TSEvent_dt_cap(TS ts, PetscReal t, PetscReal dt, PetscBo
   return res;
 }
 
-/* A helper function for updating the left-end values
+/*
+  Updates the left-end values
 */
 static inline void TSEvent_update_left(TSEvent event, PetscReal t)
 {
@@ -589,7 +589,8 @@ static inline void TSEvent_update_left(TSEvent event, PetscReal t)
   event->ptime_prev = t;
 }
 
-/* A helper function for updating the right-end values
+/*
+  Updates the right-end values
 */
 static inline void TSEvent_update_right(TSEvent event, PetscReal t)
 {
@@ -600,7 +601,8 @@ static inline void TSEvent_update_right(TSEvent event, PetscReal t)
   event->ptime_right = t;
 }
 
-/* A helper function for updating the current values from the right-end values
+/*
+  Updates the current values from the right-end values
 */
 static inline PetscReal TSEvent_update_from_right(TSEvent event)
 {
@@ -611,75 +613,90 @@ static inline PetscReal TSEvent_update_from_right(TSEvent event)
   return event->ptime_right;
 }
 
-/* TSEventHandler() - the main function to perform a single iteration of event resolution.
-   Developer notes:
-   1) The 'event->iterctr > 0' is used as an indicator that Anderson-Bjorck refinement has started.
-   2) If event->iterctr == 0, then justrefined_AB[i] is always false.
-   3) The right-end quantities: ptime_right, fvalue_right[i] and fsign_right[i] are only guaranteed to be valid for
-      event->iterctr > 0.
-   4) If event->iterctr > 0, then event->processing is PETSC_TRUE; the opposite may not hold.
-   5) event->side[i] indicates: 0 <=> point t is a zero-crossing for event-function i (via vtol/dt_min criterion);
-     -1/+1 <=> detected a bracket to the left/right of t for event-function i; +2 <=> no brackets/zero-crossings.
-   6) The signs event->fsign[i] (with values 0/-1/+1) are calculated for each new point. Zero sign is set if the function value is
-      smaller than the tolerance. Besides, zero sign is enforced after marking a zero-crossing due to small bracket size criterion.
+// PetscClangLinter pragma disable: -fdoc-section-spacing
+// PetscClangLinter pragma disable: -fdoc-section-header-unknown
+// PetscClangLinter pragma disable: -fdoc-section-header-spelling
+// PetscClangLinter pragma disable: -fdoc-section-header-missing
+// PetscClangLinter pragma disable: -fdoc-section-header-fishy-header
+// PetscClangLinter pragma disable: -fdoc-param-list-func-parameter-documentation
+// PetscClangLinter pragma disable: -fdoc-synopsis-missing-description
+// PetscClangLinter pragma disable: -fdoc-sowing-chars
+/*
+  TSEventHandler - the main function to perform a single iteration of event detection.
 
-   The intervals with the event-function sign change (i.e. containing the potential zero-crossings) are called 'brackets'.
-   To find a zero-crossing, the algorithm first locates a bracket, and then sequentially subdivides it, generating a sequence
-   of brackets whose length tends to zero. The bracket subdivision involves the (modified) Anderson-Bjorck method.
+  Developer notes:
+  a) The 'event->iterctr > 0' is used as an indicator that Anderson-Bjorck refinement has started.
+  b) If event->iterctr == 0, then justrefined_AB[i] is always false.
+  c) The right-end quantities: ptime_right, fvalue_right[i] and fsign_right[i] are only guaranteed to be valid
+  for event->iterctr > 0.
+  d) If event->iterctr > 0, then event->processing is PETSC_TRUE; the opposite may not hold.
+  e) event->side[i] indicates: 0 <=> point t is a zero-crossing for event-function i (via vtol/dt_min criterion);
+  -1/+1 <=> detected a bracket to the left/right of t for event-function i; +2 <=> no brackets/zero-crossings.
+  f) The signs event->fsign[i] (with values 0/-1/+1) are calculated for each new point. Zero sign is set if the function value is
+  smaller than the tolerance. Besides, zero sign is enforced after marking a zero-crossing due to small bracket size criterion.
 
-   Apart from the comments scattered throughout the code to clarify different lines and blocks,
-   a few tricky aspects of the algorithm (and the underlying reasoning) are discussed in detail below:
+  The intervals with the event-function sign change (i.e. containing the potential zero-crossings) are called 'brackets'.
+  To find a zero-crossing, the algorithm first locates a bracket, and then sequentially subdivides it, generating a sequence
+  of brackets whose length tends to zero. The bracket subdivision involves the (modified) Anderson-Bjorck method.
 
-   =Sign tracking=
-   When a zero-crossing is found, the sign variable (event->fsign[i]) is set to zero for the current point t.
-   This happens both for zero-crossings triggered via the vtol criterion, and those triggered via the dt_min
-   criterion. After the event, as the TS steps forward, the current sign values are handed over to event->fsign_prev[i].
-   The recalculation of signs is avoided if possible: e.g. if a 'vtol' criterion resulted in a zero-crossing at point t,
-   but the subsequent call to postevent() handler decreased 'vtol', making the event-function no longer "close to zero"
-   at point t, the fsign[i] will still consistently keep the zero value. This allows avoiding the erroneous duplication
-   of events:
-     E.g. consider a bracket [t0, t2], where f0 < 0, f2 > 0, which resulted in a zero-crossing t1 with f1 < 0, abs(f1) < vtol.
-     Suppose the postevent() handler changes vtol to vtol*, such that abs(f1) > vtol*. The TS makes a step t1 -> t3, where
-     again f1 < 0, f3 > 0, and the event handler will find a new event near t1, which is actually a duplication of the
-     original event at t1. The duplications are avoided by NOT counting the sign progressions 0 -> +1, or 0 -> -1
-     as brackets. Tracking (instead of recalculating) the sign values makes this procedure work more consistently.
-   The sign values are however recalculated if the postevent() callback has changed the current solution vector U
-   (such a change resets everything).
-   The sign value is also set to zero if the dt_min criterion has triggered the event. This allows the algorithm to
-   work more consistently, irrespective of the type of criterion involved (vtol/dt_min).
+  Apart from the comments scattered throughout the code to clarify different lines and blocks,
+  a few tricky aspects of the algorithm (and the underlying reasoning) are discussed in detail below:
 
-   =Event from min bracket=
-   When the event handler ends up with a bracket [t0, t1] with size <= dt_min, a zero crossing is reported at t1,
-   and never at t0. If such a bracket is discovered when TS is staying at t0, one more step forward (to t1) is necessary
-   to mark the found event. This is the situation of revisiting t1, which is described below (see =Revisiting=).
-     Why t0 is not reported as event location? Suppose it is, and let f0 < 0, f1 > 0. Also suppose that the
-     postevent() handler has slightly changed the solution U, so the sign at t0 is recalculated: it equals -1. As the TS steps
-     further: t0 -> t2, with sign0 == -1, and sign2 == +1, the event handler will locate the bracket [t0, t2], eventually
-     resolving a new event near t1, i.e. finding a duplicate event.
-     This situation is avoided by reporting the event at t1 in the first place.
+  =Sign tracking=
+  When a zero-crossing is found, the sign variable (event->fsign[i]) is set to zero for the current point t.
+  This happens both for zero-crossings triggered via the vtol criterion, and those triggered via the dt_min
+  criterion. After the event, as the TS steps forward, the current sign values are handed over to event->fsign_prev[i].
+  The recalculation of signs is avoided if possible: e.g. if a 'vtol' criterion resulted in a zero-crossing at point t,
+  but the subsequent call to postevent() handler decreased 'vtol', making the event-function no longer "close to zero"
+  at point t, the fsign[i] will still consistently keep the zero value. This allows avoiding the erroneous duplication
+  of events:
 
-   =Revisiting=
-   When handling the situation with small bracket size, the TS solver may happen to visit the same point twice,
-   but with different results.
-     E.g. originally it discovered a bracket with sign change [t0, t10], and started resolving the zero-crossing,
-     visiting the points t1,...,t9 : t0 < t1 < ... < t9 < t10. Suppose that at t9 the algorithm discovers
-     that [t9, t10] is a bracket with the sign change it was looking for, and that |t10 - t9| is too small.
-     So point t10 should be revisited and marked as the zero crossing (by the minimum bracket size criterion).
-     On re-visiting t10, via the refined sequence of steps t0,...,t10, the TS solver may arrive at a solution U*
-     different from the solution U it found at t10 originally. Hence, the event-functions at t10 may become different,
-     and the condition of the sign change, which existed originally, may disappear, breaking the logic of the algorithm.
-   To handle such (-=unlikely=-, but possible) situations, two strategies can be considered:
-   1) [not used here] Allow the brackets with sign change to disappear during iterations. The algorithm should be able
-   to cleanly exit the iteration and leave all the objects/variables/caches involved in a valid state.
-   2) [ADOPTED HERE!] On revisiting t10, the event handler reuses the event-functions previously calculated for the
-   original solution U. This U may be less precise than U*, but this trick does not allow the algorithm logic to break down.
-   HOWEVER, the original U is not stored anywhere, it is essentially lost since the TS performed the rollback from it.
-   On revisiting t10, the updated solution U* will inevitably be found and used everywhere EXCEPT the current
-   event-functions calculation, e.g. U* will be used in the postevent() handler call. Since t10 is the event location,
-   the appropriate event-function-signs will be enforced to be 0 (regardless if the solution was U or U*).
-   If the solution is then changed by the postevent(), the event-function-signs will be recalculated.
+  E.g. consider a bracket [t0, t2], where f0 < 0, f2 > 0, which resulted in a zero-crossing t1 with f1 < 0, abs(f1) < vtol.
+  Suppose the postevent() handler changes vtol to vtol*, such that abs(f1) > vtol*. The TS makes a step t1 -> t3, where
+  again f1 < 0, f3 > 0, and the event handler will find a new event near t1, which is actually a duplication of the
+  original event at t1. The duplications are avoided by NOT counting the sign progressions 0 -> +1, or 0 -> -1
+  as brackets. Tracking (instead of recalculating) the sign values makes this procedure work more consistently.
 
-   Whether the algorithm is revisiting a point in the current TSEventHandler() call is flagged by 'event->revisit_right'.
+  The sign values are however recalculated if the postevent() callback has changed the current solution vector U
+  (such a change resets everything).
+  The sign value is also set to zero if the dt_min criterion has triggered the event. This allows the algorithm to
+  work consistently, irrespective of the type of criterion involved (vtol/dt_min).
+
+  =Event from min bracket=
+  When the event handler ends up with a bracket [t0, t1] with size <= dt_min, a zero crossing is reported at t1,
+  and never at t0. If such a bracket is discovered when TS is staying at t0, one more step forward (to t1) is necessary
+  to mark the found event. This is the situation of revisiting t1, which is described below (see Revisiting).
+
+  Why t0 is not reported as event location? Suppose it is, and let f0 < 0, f1 > 0. Also suppose that the
+  postevent() handler has slightly changed the solution U, so the sign at t0 is recalculated: it equals -1. As the TS steps
+  further: t0 -> t2, with sign0 == -1, and sign2 == +1, the event handler will locate the bracket [t0, t2], eventually
+  resolving a new event near t1, i.e. finding a duplicate event.
+  This situation is avoided by reporting the event at t1 in the first place.
+
+  =Revisiting=
+  When handling the situation with small bracket size, the TS solver may happen to visit the same point twice,
+  but with different results.
+
+  E.g. originally it discovered a bracket with sign change [t0, t10], and started resolving the zero-crossing,
+  visiting the points t1,...,t9 : t0 < t1 < ... < t9 < t10. Suppose that at t9 the algorithm discovers
+  that [t9, t10] is a bracket with the sign change it was looking for, and that |t10 - t9| is too small.
+  So point t10 should be revisited and marked as the zero crossing (by the minimum bracket size criterion).
+  On re-visiting t10, via the refined sequence of steps t0,...,t10, the TS solver may arrive at a solution U*
+  different from the solution U it found at t10 originally. Hence, the event-functions at t10 may become different,
+  and the condition of the sign change, which existed originally, may disappear, breaking the logic of the algorithm.
+
+  To handle such (-=unlikely=-, but possible) situations, two strategies can be considered:
+  1) [not used here] Allow the brackets with sign change to disappear during iterations. The algorithm should be able
+  to cleanly exit the iteration and leave all the objects/variables/caches involved in a valid state.
+  2) [ADOPTED HERE!] On revisiting t10, the event handler reuses the event-functions previously calculated for the
+  original solution U. This U may be less precise than U*, but this trick does not allow the algorithm logic to break down.
+  HOWEVER, the original U is not stored anywhere, it is essentially lost since the TS performed the rollback from it.
+  On revisiting t10, the updated solution U* will inevitably be found and used everywhere EXCEPT the current
+  event-functions calculation, e.g. U* will be used in the postevent() handler call. Since t10 is the event location,
+  the appropriate event-function-signs will be enforced to be 0 (regardless if the solution was U or U*).
+  If the solution is then changed by the postevent(), the event-function-signs will be recalculated.
+
+  Whether the algorithm is revisiting a point in the current TSEventHandler() call is flagged by 'event->revisit_right'.
 */
 PetscErrorCode TSEventHandler(TS ts)
 {
@@ -715,7 +732,7 @@ PetscErrorCode TSEventHandler(TS ts)
     PetscCheck(PetscAbsReal(tr - t) < PETSC_SMALL, PetscObjectComm((PetscObject)ts), PETSC_ERR_PLIB, "Inconsistent time value when performing 'revisiting' in TSEventHandler()");
   } else {
     PetscCall(VecLockReadPush(U));
-    PetscCall((*event->eventhandler)(ts, t, U, event->fvalue, event->ctx)); // fill fvalue's at point 't'
+    PetscCall((*event->eventfunction)(ts, t, U, event->fvalue, event->ctx)); // fill fvalue's at point 't'
     PetscCall(VecLockReadPop(U));
     TSEventCalcSigns(event->nevents, event->fvalue, event->vtol, event->fsign); // fill fvalue signs
   }
@@ -726,11 +743,12 @@ PetscErrorCode TSEventHandler(TS ts)
     minsidein = PetscMin(minsidein, event->side[i]);
   }
   PetscCall(MPIU_Allreduce(&minsidein, &minsideout, 1, MPIU_INT, MPI_MIN, PetscObjectComm((PetscObject)ts)));
-  /* minsideout (sync on all ranks) indicates the minimum of the following states:
-     -1 : [ptime_prev, t] is a bracket for some function-i
-     +1 : [t, ptime_right] is a bracket for some function-i
-      0 : t is a zero-crossing for some function-i
-      2 : none of the above
+  /*
+    minsideout (sync on all ranks) indicates the minimum of the following states:
+    -1 : [ptime_prev, t] is a bracket for some function-i
+    +1 : [t, ptime_right] is a bracket for some function-i
+     0 : t is a zero-crossing for some function-i
+     2 : none of the above
   */
   PetscCheck(!event->revisit_right || minsideout == 0, PetscObjectComm((PetscObject)ts), PETSC_ERR_PLIB, "minsideout != 0 when performing 'revisiting' in TSEventHandler()");
 

@@ -41,7 +41,7 @@ typedef struct {
   PetscBool   change5;          // flag to change the state vector at t=5 PostEvent
 } AppCtx;
 
-PetscErrorCode EventHandler(TS ts, PetscReal t, Vec U, PetscReal gval[], void *ctx);
+PetscErrorCode EventFunction(TS ts, PetscReal t, Vec U, PetscReal gval[], void *ctx);
 PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscReal t, Vec U, PetscBool fwd, void *ctx);
 
 int main(int argc, char **argv)
@@ -71,9 +71,7 @@ int main(int argc, char **argv)
   ctx.V       = 1.0;
   ctx.change5 = PETSC_FALSE;
 
-  /* The linear problem has a 2*2 matrix
-     The matrix is const
-   */
+  // The linear problem has a 2*2 matrix. The matrix is constant
   if (ctx.rank == 0) m = 2;
   inds[0] = 0;
   inds[1] = 1;
@@ -108,7 +106,6 @@ int main(int argc, char **argv)
   PetscCall(TSSetExactFinalTime(ts, TS_EXACTFINALTIME_MATCHSTEP));
   PetscCall(TSSetFromOptions(ts));
 
-  // ----------------------
   // Set the event handling
   dir0 = 0;
   PetscCall(PetscOptionsGetInt(NULL, NULL, "-dir", &dir0, NULL));             // desired zero-crossing direction
@@ -134,10 +131,8 @@ int main(int argc, char **argv)
     dir[n]      = dir0;
     term[n++]   = PETSC_FALSE;
   }
-  PetscCall(TSSetEventHandler(ts, n, dir, term, EventHandler, Postevent, &ctx));
+  PetscCall(TSSetEventHandler(ts, n, dir, term, EventFunction, Postevent, &ctx));
   PetscCall(TSSetEventTolerances(ts, tol, ctx.vtol));
-
-  // ----------------------
 
   // Solution
   PetscCall(TSSolve(ts, sol));
@@ -145,37 +140,9 @@ int main(int argc, char **argv)
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "CONVERGED REASON: %" PetscInt_FMT " (TS_CONVERGED_EVENT == %" PetscInt_FMT ")\n", (PetscInt)reason, (PetscInt)TS_CONVERGED_EVENT));
 
   // The 3 columns printed are: [RANK] [num. of events at the given time] [time of event]
-  {
-    PetscInt *rank_cnt; // sync
-    PetscCall(PetscMalloc1(ctx.size, &rank_cnt));
-    PetscCallMPI(MPI_Allgather(&ctx.cnt, 1, MPIU_INT, rank_cnt, 1, MPIU_INT, PETSC_COMM_WORLD));
+  for (PetscInt j = 0; j < ctx.cnt; j++) PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "%d\t%" PetscInt_FMT "\t%g\n", ctx.rank, ctx.evnum[j], (double)ctx.evres[j]));
+  PetscCall(PetscSynchronizedFlush(PETSC_COMM_WORLD, PETSC_STDOUT));
 
-    if (ctx.rank == 0) { // rank-0 collects data and prints; this is to ensure no mess takes place in stdout
-      for (PetscInt i = 0; i < ctx.size; i++) {
-        for (PetscInt j = 0; j < rank_cnt[i]; j++) {
-          PetscInt   n;
-          PetscReal  t;
-          MPI_Status stat;
-          if (i == 0) {
-            n = ctx.evnum[j];
-            t = ctx.evres[j];
-          } else {
-            PetscCallMPI(MPI_Recv(&n, 1, MPIU_INT, i, j, PETSC_COMM_WORLD, &stat));
-            PetscCallMPI(MPI_Recv(&t, 1, MPIU_REAL, i, j, PETSC_COMM_WORLD, &stat));
-          }
-          PetscCall(PetscPrintf(PETSC_COMM_SELF, "%" PetscInt_FMT "\t%" PetscInt_FMT "\t%g\n", i, n, (double)t));
-        }
-      }
-    } else { // other ranks only send their data
-      for (PetscInt j = 0; j < rank_cnt[ctx.rank]; j++) {
-        PetscCallMPI(MPI_Send(&ctx.evnum[j], 1, MPIU_INT, 0, j, PETSC_COMM_WORLD));
-        PetscCallMPI(MPI_Send(&ctx.evres[j], 1, MPIU_REAL, 0, j, PETSC_COMM_WORLD));
-      }
-    }
-    PetscCall(PetscFree(rank_cnt));
-  }
-
-  // Dtors
   PetscCall(MatDestroy(&A));
   PetscCall(TSDestroy(&ts));
   PetscCall(VecDestroy(&sol));
@@ -187,7 +154,7 @@ int main(int argc, char **argv)
 /*
   User callback for defining the event-functions
 */
-PetscErrorCode EventHandler(TS ts, PetscReal t, Vec U, PetscReal gval[], void *ctx)
+PetscErrorCode EventFunction(TS ts, PetscReal t, Vec U, PetscReal gval[], void *ctx)
 {
   PetscInt n   = 0;
   AppCtx  *Ctx = (AppCtx *)ctx;
@@ -222,15 +189,11 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
 
   PetscFunctionBeginUser;
   if (Ctx->flg) {
-    PetscCallBack("EventHandler", EventHandler(ts, t, U, Ctx->fvals, ctx));
-    for (PetscInt i = 0; i < Ctx->size; i++) {
-      if (i == Ctx->rank) {
-        PetscCall(PetscPrintf(PETSC_COMM_SELF, "[%d] At t = %20.16g : %" PetscInt_FMT " events triggered, fvalues =", Ctx->rank, (double)t, nev_zero));
-        for (PetscInt j = 0; j < nev_zero; j++) PetscCall(PetscPrintf(PETSC_COMM_SELF, "\t%g", (double)Ctx->fvals[evs_zero[j]]));
-        PetscCall(PetscPrintf(PETSC_COMM_SELF, "\n"));
-      }
-      PetscCallMPI(MPI_Barrier(PETSC_COMM_WORLD));
-    }
+    PetscCallBack("EventFunction", EventFunction(ts, t, U, Ctx->fvals, ctx));
+    PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "[%d] At t = %20.16g : %" PetscInt_FMT " events triggered, fvalues =", Ctx->rank, (double)t, nev_zero));
+    for (PetscInt j = 0; j < nev_zero; j++) PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "\t%g", (double)Ctx->fvals[evs_zero[j]]));
+    PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "\n"));
+    PetscCall(PetscSynchronizedFlush(PETSC_COMM_WORLD, PETSC_STDOUT));
   }
 
   // change the state vector near t=5.0
