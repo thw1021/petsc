@@ -452,9 +452,9 @@ struct _n_TSEvent {
   PetscReal  timestep_min;                                                                  /* minimum time step */
   PetscBool *justrefined_AB;                                                                /* this flag indicates if the given event function i = [0..nevents) participated in Anderson-Bjorck process in the last iteration of TSEventHandler() */
   PetscReal *gamma_AB;                                                                      /* cumulative scaling factor for the Anderson-Bjorck iteration */
-  PetscErrorCode (*eventhandler)(TS, PetscReal, Vec, PetscReal *, void *);                  /* User event handler function */
-  PetscErrorCode (*postevent)(TS, PetscInt, PetscInt[], PetscReal, Vec, PetscBool, void *); /* User post event function */
-  void       *ctx;                                                                          /* User context for event handler and post event functions */
+  PetscErrorCode (*eventfunction)(TS, PetscReal, Vec, PetscReal *, void *);                 /* User callback to define the event-functions */
+  PetscErrorCode (*postevent)(TS, PetscInt, PetscInt[], PetscReal, Vec, PetscBool, void *); /* User post-event callback */
+  void       *ctx;                                                                          /* User context for eventfunction and postevent callbacks */
   PetscInt   *direction;                                                                    /* zero crossing direction to trigger the event: +1 -> going positive, -1 -> going negative, 0 -> any */
   PetscBool  *terminate;                                                                    /* 1 -> terminate time stepping on event location, 0 -> continue */
   PetscInt    nevents;                                                                      /* number of events (event functions) to handle on the current process*/
