@@ -26,7 +26,7 @@ int main(int argc, char **args)
   PetscCheck(size == 1, PETSC_COMM_WORLD, PETSC_ERR_WRONG_MPI_SIZE, "This is a uniprocessor example only!");
   PetscCall(PetscOptionsGetInt(NULL, NULL, "-n", &n, NULL));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-nonzero_guess", &nonzeroguess, NULL));
-  PetscCall(PetscOptionsGetReal(NULL, NULL, "-shift", &shift, NULL));
+  PetscCall(PetscOptionsGetScalar(NULL, NULL, "-shift", &shift, NULL));
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
          Compute the matrix and right-hand-side vector that define
