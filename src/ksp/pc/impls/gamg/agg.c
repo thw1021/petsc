@@ -144,7 +144,7 @@ PetscErrorCode PCGAMGSetAggressiveSquareGraph(PC pc, PetscBool b)
 
 .seealso: `PCGAMG`, `PCGAMGSetThreshold()`, `PCGAMGSetAggressiveLevels()`, `PCGAMGMISkSetAggressive()`, `PCGAMGSetAggressiveSquareGraph()`, `PCGAMGLowMemoryFilter()`
 @*/
-PetscErrorCode PCGAMGMISkSetMinDegreeOrdering_AGG(PC pc, PetscBool b)
+PetscErrorCode PCGAMGMISkSetMinDegreeOrdering(PC pc, PetscBool b)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
@@ -194,6 +194,17 @@ static PetscErrorCode PCGAMGLowMemoryFilter_AGG(PC pc, PetscBool b)
 
   PetscFunctionBegin;
   pc_gamg_agg->use_low_mem_filter = b;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PCGAMGMISkSetMinDegreeOrdering_AGG(PC pc, PetscBool b)
+{
+  PC_MG       *mg          = (PC_MG *)pc->data;
+  PC_GAMG     *pc_gamg     = (PC_GAMG *)mg->innerctx;
+  PC_GAMG_AGG *pc_gamg_agg = (PC_GAMG_AGG *)pc_gamg->subctx;
+
+  PetscFunctionBegin;
+  pc_gamg_agg->use_minimum_degree_ordering = b;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
