@@ -574,7 +574,7 @@ static PetscErrorCode PCGAMGCreateGraph_AGG(PC pc, Mat Amat, Mat *a_Gmat)
   if (ishem) pc_gamg_agg->aggressive_coarsening_levels = 0; // aggressive and HEM does not make sense
   PetscCall(PetscLogEventEnd(petsc_gamg_setup_events[GAMG_COARSEN], 0, 0, 0, 0));
   PetscCall(PetscLogEventBegin(petsc_gamg_setup_events[GAMG_GRAPH], 0, 0, 0, 0));
-  PetscCall(MatGetInfo(Amat, MAT_LOCAL, &info0));           /* global reduction */
+  PetscCall(MatGetInfo(Amat, MAT_LOCAL, &info0)); /* global reduction */
 
   if (ishem || pc_gamg->use_low_mem_filter) {
     PetscCall(MatCreateGraph(Amat, PETSC_TRUE, (vfilter >= 0 || ishem) ? PETSC_TRUE : PETSC_FALSE, vfilter, a_Gmat));
@@ -582,8 +582,9 @@ static PetscErrorCode PCGAMGCreateGraph_AGG(PC pc, Mat Amat, Mat *a_Gmat)
     // make scalar graph, symetrize if not know to be symetric, scale, but do not filter (expensive)
     PetscCall(MatCreateGraph(Amat, PETSC_TRUE, PETSC_TRUE, -1, a_Gmat));
     if (vfilter >= 0) {
-      PetscInt           Istart, Iend, ncols, nnz0, nnz1, NN, MM, nloc;
-      Mat                tGmat, Gmat = *a_Gmat;;
+      PetscInt Istart, Iend, ncols, nnz0, nnz1, NN, MM, nloc;
+      Mat      tGmat, Gmat = *a_Gmat;
+      ;
       MPI_Comm           comm;
       const PetscScalar *vals;
       const PetscInt    *idx;
