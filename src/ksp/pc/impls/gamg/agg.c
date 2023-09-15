@@ -144,7 +144,7 @@ PetscErrorCode PCGAMGSetAggressiveSquareGraph(PC pc, PetscBool b)
 
 .seealso: `PCGAMG`, `PCGAMGSetThreshold()`, `PCGAMGSetAggressiveLevels()`, `PCGAMGMISkSetAggressive()`, `PCGAMGSetAggressiveSquareGraph()`, `PCGAMGLowMemoryFilter()`
 @*/
-PetscErrorCode PCGAMGMISkSetMinDegreeOrdering(PC pc, PetscBool b)
+PetscErrorCode PCGAMGMISkSetMinDegreeOrdering_AGG(PC pc, PetscBool b)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
@@ -576,7 +576,7 @@ static PetscErrorCode PCGAMGCreateGraph_AGG(PC pc, Mat Amat, Mat *a_Gmat)
   PetscCall(PetscLogEventBegin(petsc_gamg_setup_events[GAMG_GRAPH], 0, 0, 0, 0));
   PetscCall(MatGetInfo(Amat, MAT_LOCAL, &info0)); /* global reduction */
 
-  if (ishem || pc_gamg->use_low_mem_filter) {
+  if (ishem || pc_gamg_agg->use_low_mem_filter) {
     PetscCall(MatCreateGraph(Amat, PETSC_TRUE, (vfilter >= 0 || ishem) ? PETSC_TRUE : PETSC_FALSE, vfilter, a_Gmat));
   } else {
     // make scalar graph, symetrize if not know to be symetric, scale, but do not filter (expensive)
