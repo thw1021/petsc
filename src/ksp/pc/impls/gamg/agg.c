@@ -593,8 +593,8 @@ static PetscErrorCode PCGAMGCreateGraph_AGG(PC pc, Mat Amat, Mat *a_Gmat)
     // make scalar graph, symetrize if not know to be symetric, scale, but do not filter (expensive)
     PetscCall(MatCreateGraph(Amat, PETSC_TRUE, PETSC_TRUE, -1, a_Gmat));
     if (vfilter >= 0) {
-      PetscInt Istart, Iend, ncols, nnz0, nnz1, NN, MM, nloc;
-      Mat      tGmat, Gmat = *a_Gmat;
+      PetscInt           Istart, Iend, ncols, nnz0, nnz1, NN, MM, nloc;
+      Mat                tGmat, Gmat = *a_Gmat;
       MPI_Comm           comm;
       const PetscScalar *vals;
       const PetscInt    *idx;
