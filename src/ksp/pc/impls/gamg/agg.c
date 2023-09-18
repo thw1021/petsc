@@ -67,7 +67,7 @@ static PetscErrorCode PCGAMGSetNSmooths_AGG(PC pc, PetscInt n)
 
   Level: intermediate
 
-.seealso: `PCGAMG`, `PCGAMGSetThreshold()`, `PCGAMGMISkSetAggressive()`, `PCGAMGSetAggressiveSquareGraph()`, `PCGAMGMISkSetMinDegreeOrdering()`, `PCGAMGLowMemoryFilter()`
+.seealso: `PCGAMG`, `PCGAMGSetThreshold()`, `PCGAMGMISkSetAggressive()`, `PCGAMGSetAggressiveSquareGraph()`, `PCGAMGMISkSetMinDegreeOrdering()`, `PCGAMGSetLowMemoryFilter()`
 @*/
 PetscErrorCode PCGAMGSetAggressiveLevels(PC pc, PetscInt n)
 {
@@ -92,7 +92,7 @@ PetscErrorCode PCGAMGSetAggressiveLevels(PC pc, PetscInt n)
 
   Level: intermediate
 
-.seealso: `PCGAMG`, `PCGAMGSetThreshold()`, `PCGAMGSetAggressiveLevels()`, `PCGAMGSetAggressiveSquareGraph()`, `PCGAMGMISkSetMinDegreeOrdering()`, `PCGAMGLowMemoryFilter()`
+.seealso: `PCGAMG`, `PCGAMGSetThreshold()`, `PCGAMGSetAggressiveLevels()`, `PCGAMGSetAggressiveSquareGraph()`, `PCGAMGMISkSetMinDegreeOrdering()`, `PCGAMGSetLowMemoryFilter()`
 @*/
 PetscErrorCode PCGAMGMISkSetAggressive(PC pc, PetscInt n)
 {
@@ -117,7 +117,7 @@ PetscErrorCode PCGAMGMISkSetAggressive(PC pc, PetscInt n)
 
   Level: intermediate
 
-.seealso: `PCGAMG`, `PCGAMGSetThreshold()`, `PCGAMGSetAggressiveLevels()`, `PCGAMGMISkSetAggressive()`, `PCGAMGMISkSetMinDegreeOrdering()`, `PCGAMGLowMemoryFilter()`
+.seealso: `PCGAMG`, `PCGAMGSetThreshold()`, `PCGAMGSetAggressiveLevels()`, `PCGAMGMISkSetAggressive()`, `PCGAMGMISkSetMinDegreeOrdering()`, `PCGAMGSetLowMemoryFilter()`
 @*/
 PetscErrorCode PCGAMGSetAggressiveSquareGraph(PC pc, PetscBool b)
 {
@@ -142,7 +142,7 @@ PetscErrorCode PCGAMGSetAggressiveSquareGraph(PC pc, PetscBool b)
 
   Level: intermediate
 
-.seealso: `PCGAMG`, `PCGAMGSetThreshold()`, `PCGAMGSetAggressiveLevels()`, `PCGAMGMISkSetAggressive()`, `PCGAMGSetAggressiveSquareGraph()`, `PCGAMGLowMemoryFilter()`
+.seealso: `PCGAMG`, `PCGAMGSetThreshold()`, `PCGAMGSetAggressiveLevels()`, `PCGAMGMISkSetAggressive()`, `PCGAMGSetAggressiveSquareGraph()`, `PCGAMGSetLowMemoryFilter()`
 @*/
 PetscErrorCode PCGAMGMISkSetMinDegreeOrdering(PC pc, PetscBool b)
 {
@@ -232,7 +232,7 @@ static PetscErrorCode PCSetFromOptions_GAMG_AGG(PC pc, PetscOptionItems *PetscOp
       PetscCall(PetscOptionsBool("-pc_gamg_aggressive_square_graph", "Use square graph (A'A) or MIS-k (k=2) for aggressive coarsening", "PCGAMGSetAggressiveSquareGraph", pc_gamg_agg->use_aggressive_square_graph, &pc_gamg_agg->use_aggressive_square_graph, NULL));
     }
     PetscCall(PetscOptionsBool("-pc_gamg_mis_k_minimum_degree_ordering", "Use minimum degree ordering for greedy MIS", "PCGAMGMISkSetMinDegreeOrdering", pc_gamg_agg->use_minimum_degree_ordering, &pc_gamg_agg->use_minimum_degree_ordering, NULL));
-    PetscCall(PetscOptionsBool("-pc_gamg_low_memory_threshold_filter", "Use the (built-in) low memory graph/matrix filter", "PCGAMGLowMemoryFilter", pc_gamg_agg->use_low_mem_filter, &pc_gamg_agg->use_low_mem_filter, NULL));
+    PetscCall(PetscOptionsBool("-pc_gamg_low_memory_threshold_filter", "Use the (built-in) low memory graph/matrix filter", "PCGAMGSetLowMemoryFilter", pc_gamg_agg->use_low_mem_filter, &pc_gamg_agg->use_low_mem_filter, NULL));
     PetscCall(PetscOptionsInt("-pc_gamg_aggressive_mis_k", "Number of levels of multigrid to use.", "PCGAMGMISkSetAggressive", pc_gamg_agg->aggressive_mis_k, &pc_gamg_agg->aggressive_mis_k, NULL));
   }
   PetscOptionsHeadEnd();
@@ -673,9 +673,7 @@ static PetscErrorCode PCGAMGCreateGraph_AGG(PC pc, Mat Amat, Mat *a_Gmat)
       PetscCall(MatAssemblyBegin(tGmat, MAT_FINAL_ASSEMBLY));
       PetscCall(MatAssemblyEnd(tGmat, MAT_FINAL_ASSEMBLY));
       PetscCall(MatPropagateSymmetryOptions(Gmat, tGmat)); /* Normal Mat options are not relevant ? */
-
-      PetscCall(PetscInfo(tGmat, "\t %g%% nnz after filtering, with threshold %g, %g nnz ave. (N=%" PetscInt_FMT ", max row size %" PetscInt_FMT "\n", (!nnz0) ? 1. : 100. * (double)nnz1 / (double)nnz0, (double)vfilter, (!nloc) ? 1. : (double)nnz0 / (double)nloc, MM, maxcols));
-
+      PetscCall(PetscInfo(pc, "\t %g%% nnz after filtering, with threshold %g, %g nnz ave. (N=%" PetscInt_FMT ", max row size %" PetscInt_FMT "\n", (!nnz0) ? 1. : 100. * (double)nnz1 / (double)nnz0, (double)vfilter, (!nloc) ? 1. : (double)nnz0 / (double)nloc, MM, maxcols));
       PetscCall(MatViewFromOptions(tGmat, NULL, "-mat_filter_graph_view"));
       PetscCall(MatDestroy(&Gmat));
       *a_Gmat = tGmat;
