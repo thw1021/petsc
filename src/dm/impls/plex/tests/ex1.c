@@ -397,7 +397,7 @@ int main(int argc, char **argv)
     test:
       suffix: exo_3
       requires: exodusii
-      args: -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/blockcylinder-50.exo
+      args: -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/blockcylinder-50.exo -exodusii_check_reserved 0
     test:
       suffix: exo_4
       requires: exodusii
