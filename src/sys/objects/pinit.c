@@ -1106,6 +1106,7 @@ PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char *prog, const char 
   if (flg) PetscCall(PetscPythonInitialize(NULL, NULL));
 
   PetscCall(PetscOptionsHasName(NULL, NULL, "-mpi_linear_solver_server", &flg));
+  if (flg) PetscCall(PetscInfo(NULL, "Running MPI Linear Solver Server\n"));
   if (PetscDefined(USE_SINGLE_LIBRARY) && flg) PetscCall(PCMPIServerBegin());
   else PetscCheck(!flg, PETSC_COMM_WORLD, PETSC_ERR_SUP, "PETSc configured using -with-single-library=0; -mpi_linear_solver_server not supported in that case");
   PetscFunctionReturn(PETSC_SUCCESS);
