@@ -676,9 +676,10 @@ time for PETSc programs that use these macros.
 NVIDIA Nsight Systems profiling
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-When a CUDA executable is preceeded by
-``nsys profile -f true -o filename``, the default event profiling will add annotations to the
-Nsight Systems data that can help the navigation of ``file-name``  with the Nsight Systems GUI
+When a CUDA executable is preceded by, for example,
+``nsys profile -t nvtx,cuda -o ex2_report --stats=true --force-overwrite true ./ex2``, the default event profiling will add annotations to the
+Nsight Systems data that can help the navigation of ``file-name``
+with the Nsight Systems GUI, ``nsys-ui``,
 (https://developer.nvidia.com/nsight-systems). The Nsight Systems GUI
 lets you see a timeline of code performance information like kernels,
 mallocs, CPU-GPU communication, and high-level data like register
@@ -692,12 +693,18 @@ For example one can in a bash script use something like:
 .. code-block:: bash
 
    if [ "$OMPI_COMM_WORLD_RANK" == "0" ]; then
-       nsys profile -f true -o output "$@"
+       nsys profile -t nvtx,cuda -o ex2_report --stats=true --force-overwrite true "$@"
    else
        "$@"
    fi
 
 .. _sec_using_tau:
+
+Note, it is convenient to run the GUI on your local machine but the version of the GUI is sensitive and should be the same as
+that which generated the data.
+One can run ``nsys-ui`` on the compute machine and note the version
+number at the top of the window.
+Confusingly, ``nsys-ui --version`` may not be correct.
 
 Using TAU
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
