@@ -677,7 +677,7 @@ NVIDIA Nsight Systems profiling
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 When a CUDA executable is preceded by, for example,
-``nsys profile -t nvtx,cuda -o ex2_report --stats=true --force-overwrite true ./ex2``, the default event profiling will add annotations to the
+``nsys profile -t nvtx,cuda -o file_name --stats=true --force-overwrite true``, the default event profiling will add annotations to the
 Nsight Systems data that can help the navigation of ``file-name``
 with the Nsight Systems GUI, ``nsys-ui``,
 (https://developer.nvidia.com/nsight-systems). The Nsight Systems GUI
@@ -693,18 +693,18 @@ For example one can in a bash script use something like:
 .. code-block:: bash
 
    if [ "$OMPI_COMM_WORLD_RANK" == "0" ]; then
-       nsys profile -t nvtx,cuda -o ex2_report --stats=true --force-overwrite true "$@"
+       nsys profile -t nvtx,cuda -o file_name --stats=true --force-overwrite true "$@"
    else
        "$@"
    fi
 
 .. _sec_using_tau:
 
-Note, it is convenient to run the GUI on your local machine but the version of the GUI is sensitive and should be the same as
-that which generated the data.
-One can run ``nsys-ui`` on the compute machine and note the version
-number at the top of the window.
-Confusingly, ``nsys-ui --version`` may not be correct.
+Note: one can run  Nsight GUI conveniently on a local machine. However this might not work if there is a
+version mismatch with Nsight installed on the compute node that generated this data.
+
+To check the version of Nsight - run ``nsys-ui`` - its the number listed at the top of the window.
+Confusingly, ``nsys-ui --version`` may be incorrect.
 
 Using TAU
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
