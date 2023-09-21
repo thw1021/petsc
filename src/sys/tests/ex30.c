@@ -227,4 +227,10 @@ int main(int argc, char **argv)
     temporaries: trace.log
     filter: cat trace.log.0
 
+  # test -log_nvtx
+  test:
+    suffix: 10
+    requires: cuda
+    args: -device_enable eager -log_nvtx -info :loghandler
+
  TEST*/
