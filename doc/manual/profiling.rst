@@ -691,15 +691,14 @@ mallocs, CPU-GPU communication, and high-level data like time, sizes
 of memory copies, and more, in a popup window when the mouse
 hovers over the section. The PETSc event name are also displayed as
 well as Kokkos kernel names.
-Note, start ``nsys-ui`` withouit any arguments and then ``Import`` the
+Note, start ``nsys-ui`` without any arguments and then ``Import`` the
 ``.qdstrm`` file.
 This will generate an ``file.nsys-rep``, which can be viewed directly
 with ``nsys-ui`` in the future without the need of an import.
 
 For an MPI parallel job, only one process can call ``nsys``.
-For example one can use a wrapper script like this to only have rank
-zero output nsys data and have all other ranks call the executable
-without ``nsys``:
+For example have rank zero output ``nsys`` data and have all other
+ranks call the executable directly with a batch script like:
 
 .. code-block:: bash
    # Use $PMI_RANK for MPICH and $SLURM_PROCID with srun.
