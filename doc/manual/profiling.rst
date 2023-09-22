@@ -677,8 +677,11 @@ NVIDIA Nsight Systems profiling
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 When a CUDA executable is preceded by, for example,
-``nsys profile -t nvtx,cuda -o file_name --stats=true --force-overwrite true``, the default event profiling will add annotations to the
-Nsight Systems data that can help the navigation of ``file-name``
+
+.. code-block:: bash
+``nsys profile -t nvtx,cuda -o file_name --stats=true --force-overwrite true``, the default event
+
+profiling will add annotations to the Nsight Systems data that can help the navigation of ``file-name``
 with the Nsight Systems GUI, ``nsys-ui``,
 (https://developer.nvidia.com/nsight-systems). The Nsight Systems GUI
 lets you see a timeline of code performance information like kernels,
@@ -688,10 +691,10 @@ hovers over the section. The PETSc events are automatically also
 displayed in Nsight if the option -log_view is also used.
 
 For and MPI parallel job, only one process can call ``nsys``.
-For example one can in a bash script use something like:
+For example one can use a wrapper script like:
 
 .. code-block:: bash
-
+   # Use $PMI_RANK for MPICH and $SLURM_PROCID with srun.
    if [ "$OMPI_COMM_WORLD_RANK" == "0" ]; then
        nsys profile -t nvtx,cuda -o file_name --stats=true --force-overwrite true "$@"
    else
@@ -704,7 +707,6 @@ Note: The Nsight GUI can open profiling reports from elsewhere (for example, a r
 version mismatch with Nsight installed on the compute node that generated the report.
 
 To check the version of Nsight - run ``nsys-ui`` - its the number listed at the top of the window.
-Confusingly, ``nsys-ui --version`` may be incorrect.
 
 Using TAU
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
