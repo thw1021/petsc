@@ -676,25 +676,27 @@ time for PETSc programs that use these macros.
 NVIDIA Nsight Systems profiling
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-When a CUDA executable is preceded by, for example,
+Nsight Systems will generate profiling data with a CUDA executable
+with the command ``nsys``.
+For example, in serial
 
 .. code-block:: bash
 
-``mpiexec $OMPI_COMM_WORLD_SIZE nsys profile -t nvtx,cuda -o file --stats=true --force-overwrite true`` in serial, the default event
+``nsys profile -t nvtx,cuda -o file --stats=true --force-overwrite
+true a.out``
 
-profiling will add annotations to the Nsight Systems data and
-generate a ``file.qdstrm`` file.
+will generate a file ``file.qdstrm`` with performance data that is
+annotated with PETSc events (methods) and Kokkos device kernel names.
 The Nsight Systems GUI, ``nsys-ui``, can be used to navigate this file
 (https://developer.nvidia.com/nsight-systems). The Nsight Systems GUI
 lets you see a timeline of code performance information like kernels,
 mallocs, CPU-GPU communication, and high-level data like time, sizes
 of memory copies, and more, in a popup window when the mouse
-hovers over the section. The PETSc event name are also displayed as
-well as Kokkos kernel names.
-Note, start ``nsys-ui`` without any arguments and then ``Import`` the
-``.qdstrm`` file.
-This will generate an ``file.nsys-rep``, which can be viewed directly
-with ``nsys-ui`` in the future without the need of an import.
+hovers over the section.
+To view the data, start ``nsys-ui`` without any arguments and then ``Import`` the
+``.qdstrm`` file in the GUI.
+A side effect of this viewing process is the generation of a file ``file.nsys-rep``, which can be viewed directly
+with ``nsys-ui`` in the future.
 
 For an MPI parallel job, only one process can call ``nsys``.
 For example have rank zero output ``nsys`` data and have all other
