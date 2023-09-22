@@ -66,7 +66,7 @@ static PetscErrorCode PCGAMGSetNSmooths_AGG(PC pc, PetscInt n)
 
   Level: intermediate
 
-.seealso: `PCGAMG`, `PCGAMGSetThreshold()`, `PCGAMGMISkSetAggressive()`, `PCGAMGSetAggressiveSquareGraph()`, `PCGAMGMISkSetMinDegreeOrdering()`
+.seealso: `PCGAMG`, `PCGAMGSetThreshold()`, `PCGAMGMISkSetAggressive()`, `PCGAMGSetAggressiveSquareGraph()`, `PCGAMGMISSetMinDegreeOrdering()`
 @*/
 PetscErrorCode PCGAMGSetAggressiveLevels(PC pc, PetscInt n)
 {
@@ -91,7 +91,7 @@ PetscErrorCode PCGAMGSetAggressiveLevels(PC pc, PetscInt n)
 
   Level: intermediate
 
-.seealso: `PCGAMG`, `PCGAMGSetThreshold()`, `PCGAMGSetAggressiveLevels()`, `PCGAMGSetAggressiveSquareGraph()`, `PCGAMGMISkSetMinDegreeOrdering()`
+.seealso: `PCGAMG`, `PCGAMGSetThreshold()`, `PCGAMGSetAggressiveLevels()`, `PCGAMGSetAggressiveSquareGraph()`, `PCGAMGMISSetMinDegreeOrdering()`
 @*/
 PetscErrorCode PCGAMGMISkSetAggressive(PC pc, PetscInt n)
 {
@@ -116,7 +116,7 @@ PetscErrorCode PCGAMGMISkSetAggressive(PC pc, PetscInt n)
 
   Level: intermediate
 
-.seealso: `PCGAMG`, `PCGAMGSetThreshold()`, `PCGAMGSetAggressiveLevels()`, `PCGAMGMISkSetAggressive()`, `PCGAMGMISkSetMinDegreeOrdering()`
+.seealso: `PCGAMG`, `PCGAMGSetThreshold()`, `PCGAMGSetAggressiveLevels()`, `PCGAMGMISkSetAggressive()`, `PCGAMGMISSetMinDegreeOrdering()`
 @*/
 PetscErrorCode PCGAMGSetAggressiveSquareGraph(PC pc, PetscBool b)
 {
@@ -128,7 +128,7 @@ PetscErrorCode PCGAMGSetAggressiveSquareGraph(PC pc, PetscBool b)
 }
 
 /*@
-  PCGAMGMISkSetMinDegreeOrdering - Use minimum degree ordering in greedy MIS algorithm
+  PCGAMGMISSetMinDegreeOrdering - Use minimum degree ordering in greedy MIS algorithm
 
   Logically Collective
 
@@ -137,18 +137,18 @@ PetscErrorCode PCGAMGSetAggressiveSquareGraph(PC pc, PetscBool b)
 - b  - default true
 
   Options Database Key:
-. -pc_gamg_mis_k_minimum_degree_ordering <bool,default=true> - Use minimum degree ordering in greedy MIS algorithm
+. -pc_gamg_mis_minimum_degree_ordering <bool,default=true> - Use minimum degree ordering in greedy MIS algorithm
 
   Level: intermediate
 
 .seealso: `PCGAMG`, `PCGAMGSetThreshold()`, `PCGAMGSetAggressiveLevels()`, `PCGAMGMISkSetAggressive()`, `PCGAMGSetAggressiveSquareGraph()`
 @*/
-PetscErrorCode PCGAMGMISkSetMinDegreeOrdering(PC pc, PetscBool b)
+PetscErrorCode PCGAMGMISSetMinDegreeOrdering(PC pc, PetscBool b)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
   PetscValidLogicalCollectiveBool(pc, b, 2);
-  PetscTryMethod(pc, "PCGAMGMISkSetMinDegreeOrdering_C", (PC, PetscBool), (pc, b));
+  PetscTryMethod(pc, "PCGAMGMISSetMinDegreeOrdering_C", (PC, PetscBool), (pc, b));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -185,7 +185,7 @@ static PetscErrorCode PCGAMGSetAggressiveSquareGraph_AGG(PC pc, PetscBool b)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PCGAMGMISkSetMinDegreeOrdering_AGG(PC pc, PetscBool b)
+static PetscErrorCode PCGAMGMISSetMinDegreeOrdering_AGG(PC pc, PetscBool b)
 {
   PC_MG       *mg          = (PC_MG *)pc->data;
   PC_GAMG     *pc_gamg     = (PC_GAMG *)mg->innerctx;
@@ -219,7 +219,7 @@ static PetscErrorCode PCSetFromOptions_GAMG_AGG(PC pc, PetscOptionItems *PetscOp
     if (pc_gamg_agg->aggressive_coarsening_levels > 0) {
       PetscCall(PetscOptionsBool("-pc_gamg_aggressive_square_graph", "Use square graph (A'A) or MIS-k (k=2) for aggressive coarsening", "PCGAMGSetAggressiveSquareGraph", pc_gamg_agg->use_aggressive_square_graph, &pc_gamg_agg->use_aggressive_square_graph, NULL));
     }
-    PetscCall(PetscOptionsBool("-pc_gamg_mis_k_minimum_degree_ordering", "Use minimum degree ordering for greedy MIS", "PCGAMGMISkSetMinDegreeOrdering", pc_gamg_agg->use_minimum_degree_ordering, &pc_gamg_agg->use_minimum_degree_ordering, NULL));
+    PetscCall(PetscOptionsBool("-pc_gamg_mis_minimum_degree_ordering", "Use minimum degree ordering for greedy MIS", "PCGAMGMISSetMinDegreeOrdering", pc_gamg_agg->use_minimum_degree_ordering, &pc_gamg_agg->use_minimum_degree_ordering, NULL));
     PetscCall(PetscOptionsInt("-pc_gamg_aggressive_mis_k", "Number of levels of multigrid to use.", "PCGAMGMISkSetAggressive", pc_gamg_agg->aggressive_mis_k, &pc_gamg_agg->aggressive_mis_k, NULL));
   }
   PetscOptionsHeadEnd();
@@ -236,7 +236,7 @@ static PetscErrorCode PCDestroy_GAMG_AGG(PC pc)
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetNSmooths_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetAggressiveLevels_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGMISkSetAggressive_C", NULL));
-  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGMISkSetMinDegreeOrdering_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGMISSetMinDegreeOrdering_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetAggressiveSquareGraph_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCSetCoordinates_C", NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1307,7 +1307,7 @@ PetscErrorCode PCCreateGAMG_AGG(PC pc)
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetNSmooths_C", PCGAMGSetNSmooths_AGG));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetAggressiveLevels_C", PCGAMGSetAggressiveLevels_AGG));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetAggressiveSquareGraph_C", PCGAMGSetAggressiveSquareGraph_AGG));
-  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGMISkSetMinDegreeOrdering_C", PCGAMGMISkSetMinDegreeOrdering_AGG));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGMISSetMinDegreeOrdering_C", PCGAMGMISSetMinDegreeOrdering_AGG));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGMISkSetAggressive_C", PCGAMGMISkSetAggressive_AGG));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCSetCoordinates_C", PCSetCoordinates_AGG));
   PetscFunctionReturn(PETSC_SUCCESS);
