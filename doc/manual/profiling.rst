@@ -680,23 +680,28 @@ When a CUDA executable is preceded by, for example,
 
 .. code-block:: bash
 
-   nsys profile -t nvtx,cuda -o file_name --stats=true --force-overwrite true
+``nsys profile -t nvtx,cuda -o file --stats=true --force-overwrite true`` in serial, the default event
 
-the default event
-profiling will add annotations to the Nsight Systems data that can help the navigation of ``file-name``
-with the Nsight Systems GUI, ``nsys-ui``,
+profiling will add annotations to the Nsight Systems data and
+generate a ``file.qdstrm`` file.
+The Nsight Systems GUI, ``nsys-ui``, can be used to navigate this file
 (https://developer.nvidia.com/nsight-systems). The Nsight Systems GUI
 lets you see a timeline of code performance information like kernels,
-mallocs, CPU-GPU communication, and high-level data like register
-usage in a kernel, among other things in a popup window when the mouse
-hovers over the section. The PETSc events are automatically also
-displayed in Nsight if the option -log_view is also used.
+mallocs, CPU-GPU communication, and high-level data like time, sizes
+of memory copies, and more, in a popup window when the mouse
+hovers over the section. The PETSc event name are also displayed as
+well as Kokkos kernel names.
+Note, start ``nsys-ui`` withouit any arguments and then ``Import`` the
+``.qdstrm`` file.
+This will generate an ``file.nsys-rep``, which can be viewed directly
+with ``nsys-ui`` in the future without the need of an import.
 
-For and MPI parallel job, only one process can call ``nsys``.
-For example one can use a wrapper script like:
+For an MPI parallel job, only one process can call ``nsys``.
+For example one can use a wrapper script like this to only have rank
+zero output nsys data and have all other ranks call the executable
+without ``nsys``:
 
 .. code-block:: bash
-
    # Use $PMI_RANK for MPICH and $SLURM_PROCID with srun.
    if [ "$OMPI_COMM_WORLD_RANK" == "0" ]; then
        nsys profile -t nvtx,cuda -o file_name --stats=true --force-overwrite true "$@"
@@ -706,10 +711,12 @@ For example one can use a wrapper script like:
 
 .. _sec_using_tau:
 
-Note: The Nsight GUI can open profiling reports from elsewhere (for example, a report from a compute node can be analyzed on your local machine), but this might not work if there is a
-version mismatch with Nsight installed on the compute node that generated the report.
-
-To check the version of Nsight - run ``nsys-ui`` - its the number listed at the top of the window.
+Note: The Nsight GUI can open profiling reports from elsewhere. For
+example, a report from a compute node can be analyzed on your local
+machine, but care should be taken to use the exact same versions of
+Nsight Systems that generated the report.
+To check the version of Nsight on the compute node run ``nsys-ui`` and
+note the version number at the top of the window.
 
 Using TAU
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
