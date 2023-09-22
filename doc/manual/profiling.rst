@@ -679,7 +679,7 @@ NVIDIA Nsight Systems profiling
 When a CUDA executable is preceded by, for example,
 
 .. code-block:: bash
-``nsys profile -t nvtx,cuda -o file_name --stats=true --force-overwrite true``, the default event
+   ``nsys profile -t nvtx,cuda -o file_name --stats=true --force-overwrite true``, the default event
 
 profiling will add annotations to the Nsight Systems data that can help the navigation of ``file-name``
 with the Nsight Systems GUI, ``nsys-ui``,
