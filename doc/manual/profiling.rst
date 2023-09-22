@@ -700,8 +700,8 @@ For example one can in a bash script use something like:
 
 .. _sec_using_tau:
 
-Note: one can run  Nsight GUI conveniently on a local machine. However this might not work if there is a
-version mismatch with Nsight installed on the compute node that generated this data.
+Note: The Nsight GUI can open profiling reports from elsewhere (for example, a report from a compute node can be analyzed on your local machine), but this might not work if there is a
+version mismatch with Nsight installed on the compute node that generated the report.
 
 To check the version of Nsight - run ``nsys-ui`` - its the number listed at the top of the window.
 Confusingly, ``nsys-ui --version`` may be incorrect.
