@@ -680,7 +680,7 @@ When a CUDA executable is preceded by, for example,
 
 .. code-block:: bash
 
-``nsys profile -t nvtx,cuda -o file --stats=true --force-overwrite true`` in serial, the default event
+``mpiexec $OMPI_COMM_WORLD_SIZE nsys profile -t nvtx,cuda -o file --stats=true --force-overwrite true`` in serial, the default event
 
 profiling will add annotations to the Nsight Systems data and
 generate a ``file.qdstrm`` file.
