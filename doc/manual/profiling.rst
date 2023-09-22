@@ -690,7 +690,7 @@ annotated with PETSc events (methods) and Kokkos device kernel names.
 The Nsight Systems GUI, ``nsys-ui``, can be used to navigate this file
 (https://developer.nvidia.com/nsight-systems). The Nsight Systems GUI
 lets you see a timeline of code performance information like kernels,
-mallocs, CPU-GPU communication, and high-level data like time, sizes
+memory mallocs and frees, CPU-GPU communication, and high-level data like time, sizes
 of memory copies, and more, in a popup window when the mouse
 hovers over the section.
 To view the data, start ``nsys-ui`` without any arguments and then ``Import`` the
