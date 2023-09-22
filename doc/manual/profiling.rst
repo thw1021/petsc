@@ -679,8 +679,10 @@ NVIDIA Nsight Systems profiling
 When a CUDA executable is preceded by, for example,
 
 .. code-block:: bash
-   ``nsys profile -t nvtx,cuda -o file_name --stats=true --force-overwrite true``, the default event
 
+   nsys profile -t nvtx,cuda -o file_name --stats=true --force-overwrite true
+
+the default event
 profiling will add annotations to the Nsight Systems data that can help the navigation of ``file-name``
 with the Nsight Systems GUI, ``nsys-ui``,
 (https://developer.nvidia.com/nsight-systems). The Nsight Systems GUI
@@ -694,6 +696,7 @@ For and MPI parallel job, only one process can call ``nsys``.
 For example one can use a wrapper script like:
 
 .. code-block:: bash
+
    # Use $PMI_RANK for MPICH and $SLURM_PROCID with srun.
    if [ "$OMPI_COMM_WORLD_RANK" == "0" ]; then
        nsys profile -t nvtx,cuda -o file_name --stats=true --force-overwrite true "$@"
