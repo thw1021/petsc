@@ -704,9 +704,9 @@ without ``nsys``:
 .. code-block:: bash
    # Use $PMI_RANK for MPICH and $SLURM_PROCID with srun.
    if [ "$OMPI_COMM_WORLD_RANK" == "0" ]; then
-       nsys profile -t nvtx,cuda -o file_name --stats=true --force-overwrite true "$@"
+       mpiexec $OMPI_COMM_WORLD_SIZE nsys profile -t nvtx,cuda -o file_name --stats=true --force-overwrite true "$@"
    else
-       "$@"
+       mpiexec $OMPI_COMM_WORLD_SIZE "$@"
    fi
 
 .. _sec_using_tau:
