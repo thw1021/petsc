@@ -43,6 +43,10 @@ int main(int argc, char **args)
   /* loading matrices and auxiliary data for the diagonal blocks */
   PetscCall(PetscSNPrintf(prefix, sizeof(prefix), "%s/%s", dir, id == 1 ? "B" : "A"));
   PetscCall(MatAndISLoad(prefix, "00", A[0], is[0], aux[0], rank, size));
+  PetscCall(MatSetBlockSize(A[0], 2));
+  PetscCall(MatConvert(A[0], MATBAIJ, MAT_INPLACE_MATRIX, A));
+  PetscCall(ISSetBlockSize(is[0], 2));
+  PetscCall(MatSetBlockSize(aux[0], 2));
   PetscCall(MatAndISLoad(prefix, "11", A[3], is[1], aux[1], rank, size));
   /* loading the off-diagonal block with a coherent row/column layout */
   PetscCall(MatCreate(PETSC_COMM_WORLD, A + 2));
@@ -162,7 +166,7 @@ PetscErrorCode MatAndISLoad(const char *prefix, const char *identifier, Mat A, I
    testset:
       requires: datafilespath
       nsize: 4
-      args: -load_dir ${DATAFILESPATH}/matrices/hpddm/GENEO -ksp_monitor -ksp_rtol 1e-4 -fieldsplit_pc_hpddm_levels_1_eps_nev 10 -fieldsplit_pc_hpddm_levels_1_st_share_sub_ksp -fieldsplit_pc_hpddm_has_neumann -fieldsplit_pc_hpddm_define_subdomains -fieldsplit_1_pc_hpddm_schur_precondition geneo -fieldsplit_pc_hpddm_coarse_pc_type redundant -fieldsplit_pc_hpddm_coarse_redundant_pc_type cholesky -fieldsplit_pc_hpddm_levels_1_sub_pc_type lu -fieldsplit_ksp_type fgmres -ksp_type fgmres -ksp_max_it 10 -fieldsplit_1_pc_hpddm_coarse_correction balanced -fieldsplit_1_pc_hpddm_levels_1_eps_gen_non_hermitian -fieldsplit_1_pc_hpddm_coarse_p 2
+      args: -load_dir ${DATAFILESPATH}/matrices/hpddm/GENEO -ksp_monitor -ksp_rtol 1e-4 -fieldsplit_ksp_max_it 100 -fieldsplit_pc_hpddm_levels_1_eps_nev 10 -fieldsplit_pc_hpddm_levels_1_st_share_sub_ksp -fieldsplit_pc_hpddm_has_neumann -fieldsplit_pc_hpddm_define_subdomains -fieldsplit_1_pc_hpddm_schur_precondition geneo -fieldsplit_pc_hpddm_coarse_pc_type redundant -fieldsplit_pc_hpddm_coarse_redundant_pc_type cholesky -fieldsplit_pc_hpddm_levels_1_sub_pc_type lu -fieldsplit_ksp_type fgmres -ksp_type fgmres -ksp_max_it 10 -fieldsplit_1_pc_hpddm_coarse_correction balanced -fieldsplit_1_pc_hpddm_levels_1_eps_gen_non_hermitian -fieldsplit_1_pc_hpddm_coarse_p 2
       test:
         requires: mumps
         suffix: 1
