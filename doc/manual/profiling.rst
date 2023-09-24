@@ -682,8 +682,7 @@ For example, in serial
 
 .. code-block:: bash
 
-``nsys profile -t nvtx,cuda -o file --stats=true --force-overwrite
-true a.out``
+nsys profile -t nvtx,cuda -o file --stats=true --force-overwrite true a.out
 
 will generate a file ``file.qdstrm`` with performance data that is
 annotated with PETSc events (methods) and Kokkos device kernel names.
