@@ -705,9 +705,9 @@ ranks call the executable directly with a batch script like:
 .. code-block:: bash
    # Use $PMI_RANK for MPICH and $SLURM_PROCID with srun.
    if [ "$OMPI_COMM_WORLD_RANK" == "0" ]; then
-       mpiexec $OMPI_COMM_WORLD_SIZE nsys profile -t nvtx,cuda -o file_name --stats=true --force-overwrite true "$@"
+       mpiexec $OMPI_COMM_WORLD_SIZE nsys profile -t nvtx,cuda -o file_name --stats=true --force-overwrite true a.out
    else
-       mpiexec $OMPI_COMM_WORLD_SIZE "$@"
+       mpiexec $OMPI_COMM_WORLD_SIZE a.out
    fi
 
 .. _sec_using_tau:
