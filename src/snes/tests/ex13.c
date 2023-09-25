@@ -212,7 +212,7 @@ int main(int argc, char **argv)
   testset:
     nsize: 4
     output_file: output/ex13_comparison.out
-    args: -dm_plex_dim 3 -benchmark_it 2 -dm_plex_simplex 0 -dm_plex_box_faces 2,2,1 -dm_refine 2 -petscpartitioner_simple_node_grid 1,1,1 -petscpartitioner_simple_process_grid 2,2,1 -potential_petscspace_degree 2 -petscpartitioner_type simple -snes_type ksponly -dm_view -ksp_type cg -ksp_rtol 1e-12 -snes_lag_jacobian -2 -dm_plex_box_upper 2,2,1 -dm_plex_box_lower 0,0,0 -pc_type gamg -pc_gamg_process_eq_limit 200 -pc_gamg_coarse_eq_limit 1000 -pc_gamg_esteig_ksp_type cg -mg_levels_ksp_chebyshev_esteig 0,0.2,0,1.05 -pc_gamg_reuse_interpolation true -pc_gamg_aggressive_square_graph true -pc_gamg_threshold 0.04 -pc_gamg_threshold_scale .25 -pc_gamg_aggressive_coarsening 2 -pc_gamg_mis_k_minimum_degree_ordering true -ksp_monitor -ksp_norm_type unpreconditioned
+    args: -dm_plex_dim 3 -benchmark_it 2 -dm_plex_simplex 0 -dm_plex_box_faces 2,2,1 -dm_refine 2 -petscpartitioner_simple_node_grid 1,1,1 -petscpartitioner_simple_process_grid 2,2,1 -potential_petscspace_degree 2 -petscpartitioner_type simple -snes_type ksponly -dm_view -ksp_type cg -ksp_rtol 1e-12 -snes_lag_jacobian -2 -dm_plex_box_upper 2,2,1 -dm_plex_box_lower 0,0,0 -pc_type gamg -pc_gamg_process_eq_limit 200 -pc_gamg_coarse_eq_limit 1000 -pc_gamg_esteig_ksp_type cg -mg_levels_ksp_chebyshev_esteig 0,0.2,0,1.05 -pc_gamg_reuse_interpolation true -pc_gamg_aggressive_square_graph true -pc_gamg_threshold 0.04 -pc_gamg_threshold_scale .25 -pc_gamg_aggressive_coarsening 2 -pc_gamg_mis_minimum_degree_ordering true -ksp_monitor -ksp_norm_type unpreconditioned
     test:
       suffix: comparison
     test:
