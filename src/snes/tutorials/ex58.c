@@ -604,6 +604,6 @@ PetscErrorCode ComputeInitialGuess(SNES snes, Vec X, void *dummy)
    test:
       suffix: 2
       args: -snes_type vinewtonssls -pc_type mg -ksp_monitor_short -pc_mg_galerkin pmat -da_refine 5 -snes_vi_monitor -pc_mg_type full -snes_max_it 100 -snes_converged_reason
-      requires: !single
+      requires: !single !__float128
 
 TEST*/
