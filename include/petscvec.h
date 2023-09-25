@@ -366,6 +366,7 @@ PETSC_EXTERN PetscErrorCode VecStashGetInfo(Vec, PetscInt *, PetscInt *, PetscIn
 PETSC_EXTERN PetscErrorCode VecSetPreallocationCOO(Vec, PetscCount, const PetscInt[]);
 PETSC_EXTERN PetscErrorCode VecSetPreallocationCOOLocal(Vec, PetscCount, PetscInt[]);
 PETSC_EXTERN PetscErrorCode VecSetValuesCOO(Vec, const PetscScalar[], InsertMode);
+PETSC_EXTERN PetscErrorCode VecDuplicatePreallocationCOO(Vec, Vec);
 
 /*MC
    VecSetValue - Set a single entry into a vector.

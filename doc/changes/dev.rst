@@ -107,6 +107,7 @@ Changes: Development
 - Add ``VecMAXPBY()``
 - Deprecate ``VecChop()`` in favor of ``VecFilter()``
 - Add ``VecCreateFromOptions()``
+- Add ``VecDuplicatePreallocationCOO()``
 
 .. rubric:: PetscSection:
 
