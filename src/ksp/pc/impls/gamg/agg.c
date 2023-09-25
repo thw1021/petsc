@@ -163,7 +163,7 @@ PetscErrorCode PCGAMGMISSetMinDegreeOrdering(PC pc, PetscBool b)
 - b  - default false
 
   Options Database Key:
-. -pc_gamg_low_memory_threshold_filter <bool,default=false> - Use low memory graph/matrix filter
+. -pc_gamg_low_memory_filter <bool,default=false> - Use low memory graph/matrix filter
 
   Level: intermediate
 
@@ -257,7 +257,7 @@ static PetscErrorCode PCSetFromOptions_GAMG_AGG(PC pc, PetscOptionItems *PetscOp
       PetscCall(PetscOptionsBool("-pc_gamg_aggressive_square_graph", "Use square graph (A'A) or MIS-k (k=2) for aggressive coarsening", "PCGAMGSetAggressiveSquareGraph", pc_gamg_agg->use_aggressive_square_graph, &pc_gamg_agg->use_aggressive_square_graph, NULL));
     }
     PetscCall(PetscOptionsBool("-pc_gamg_mis_minimum_degree_ordering", "Use minimum degree ordering for greedy MIS", "PCGAMGMISSetMinDegreeOrdering", pc_gamg_agg->use_minimum_degree_ordering, &pc_gamg_agg->use_minimum_degree_ordering, NULL));
-    PetscCall(PetscOptionsBool("-pc_gamg_low_memory_threshold_filter", "Use the (built-in) low memory graph/matrix filter", "PCGAMGSetLowMemoryFilter", pc_gamg_agg->use_low_mem_filter, &pc_gamg_agg->use_low_mem_filter, NULL));
+    PetscCall(PetscOptionsBool("-pc_gamg_low_memory_filter", "Use the (built-in) low memory graph/matrix filter", "PCGAMGSetLowMemoryFilter", pc_gamg_agg->use_low_mem_filter, &pc_gamg_agg->use_low_mem_filter, NULL));
     PetscCall(PetscOptionsInt("-pc_gamg_aggressive_mis_k", "Number of levels of multigrid to use.", "PCGAMGMISkSetAggressive", pc_gamg_agg->aggressive_mis_k, &pc_gamg_agg->aggressive_mis_k, NULL));
   }
   PetscOptionsHeadEnd();
