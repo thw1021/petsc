@@ -153,6 +153,31 @@ PetscErrorCode PCGAMGMISkSetMinDegreeOrdering(PC pc, PetscBool b)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@
+  PCGAMGSetLowMemoryFilter - Use low memory graph/matrix filter
+
+  Logically Collective
+
+  Input Parameters:
++ pc - the preconditioner context
+- b  - default false
+
+  Options Database Key:
+. -pc_gamg_low_memory_threshold_filter <bool,default=false> - Use low memory graph/matrix filter
+
+  Level: intermediate
+
+.seealso: `PCGAMG`, `PCGAMGSetThreshold()`, `PCGAMGSetAggressiveLevels()`, `PCGAMGMISkSetAggressive()`, `PCGAMGSetAggressiveSquareGraph()`, `PCGAMGMISkSetMinDegreeOrdering()`
+@*/
+PetscErrorCode PCGAMGSetLowMemoryFilter(PC pc, PetscBool b)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
+  PetscValidLogicalCollectiveBool(pc, b, 2);
+  PetscTryMethod(pc, "PCGAMGSetLowMemoryFilter_C", (PC, PetscBool), (pc, b));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode PCGAMGSetAggressiveLevels_AGG(PC pc, PetscInt n)
 {
   PC_MG       *mg          = (PC_MG *)pc->data;
@@ -1408,7 +1433,7 @@ PetscErrorCode PCCreateGAMG_AGG(PC pc)
 
   pc_gamg_agg->nsmooths                     = 1;
   pc_gamg_agg->aggressive_coarsening_levels = 1;
-  pc_gamg_agg->use_aggressive_square_graph  = PETSC_FALSE;
+  pc_gamg_agg->use_aggressive_square_graph  = PETSC_TRUE;
   pc_gamg_agg->use_minimum_degree_ordering  = PETSC_FALSE;
   pc_gamg_agg->use_low_mem_filter           = PETSC_FALSE;
   pc_gamg_agg->aggressive_mis_k             = 2;
