@@ -305,7 +305,7 @@ int main(int argc, char **args)
     PetscCall(PCSetCoordinates(pc, 3, m / 3, coords));
     PetscCall(PCGAMGSetUseSAEstEig(pc, PETSC_FALSE));
     PetscCall(PCGAMGSetLowMemoryFilter(pc, PETSC_TRUE));
-    PetscCall(PCGAMGMISkSetMinDegreeOrdering(pc, PETSC_TRUE));
+    PetscCall(PCGAMGMISSetMinDegreeOrdering(pc, PETSC_TRUE));
     PetscCall(PCGAMGSetAggressiveSquareGraph(pc, PETSC_FALSE));
   }
 
