@@ -1,4 +1,3 @@
-
         module petscdmdefdummy
         use petscmatdef
 #include <../src/dm/f90-mod/petscdm.h>

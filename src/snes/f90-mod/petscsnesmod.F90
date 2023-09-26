@@ -1,4 +1,3 @@
-
         module petscsnesdefdummy
         use petsckspdef
 #include <../src/snes/f90-mod/petscsnes.h>

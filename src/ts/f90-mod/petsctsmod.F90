@@ -1,4 +1,3 @@
-
         module petsctsdefdummy
         use petscsnesdef
 #include <../src/ts/f90-mod/petscts.h>

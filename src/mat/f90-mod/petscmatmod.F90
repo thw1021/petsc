@@ -1,4 +1,3 @@
-
         module petscmatdefdummy
         use petscvecdef
 #include <../src/mat/f90-mod/petscmat.h>
