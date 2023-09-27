@@ -1,13 +1,12 @@
   0 SNES Function norm 0.146402 
-  1 SNES Function norm 0.00120796 
-  2 SNES Function norm 8.07655e-08 
-  3 SNES Function norm < 1.e-11
+  1 SNES Function norm 0.00120793 
+  2 SNES Function norm 8.06108e-08 
 SNES Object: 1 MPI process
   type: newtonls
   maximum iterations=50, maximum function evaluations=10000
-  tolerances: relative=1e-08, absolute=1e-50, solution=1e-08
-  total number of linear solver iterations=6
-  total number of function evaluations=4
+  tolerances: relative=0.0001, absolute=1e-50, solution=1e-08
+  total number of linear solver iterations=4
+  total number of function evaluations=3
   norm schedule ALWAYS
   Jacobian is built using colored finite differences on a DMDA
   SNESLineSearch Object: 1 MPI process
@@ -61,8 +60,8 @@ SNES Object: 1 MPI process
       KSP Object: (mg_levels_1_) 1 MPI process
         type: chebyshev
           Chebyshev polynomial of first kind
-          eigenvalue targets used: min 0.5, max 1.1
-          eigenvalues estimated via gmres: min 0.38553, max 0.999999
+          eigenvalue targets used: min 0.501018, max 1.10224
+          eigenvalues estimated via gmres: min 0.384848, max 1.00204
           eigenvalues estimated using gmres with transform: [0. 0.5; 0. 1.1]
           KSP Object: (mg_levels_1_esteig_) 1 MPI process
             type: gmres
@@ -95,4 +94,4 @@ SNES Object: 1 MPI process
       total: nonzeros=217, allocated nonzeros=217
       total number of mallocs used during MatSetValues calls=0
         not using I-node routines
-Number of SNES iterations = 3
+Number of SNES iterations = 2

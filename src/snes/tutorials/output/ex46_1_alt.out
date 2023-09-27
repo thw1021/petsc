@@ -1,15 +1,15 @@
   0 SNES Function norm 0.146402 
-  1 SNES Function norm 0.00119047 
-  2 SNES Function norm 7.73027e-07 
+  1 SNES Function norm 0.00120793 
+  2 SNES Function norm 8.06108e-08 
 SNES Object: 1 MPI process
   type: newtonls
   maximum iterations=50, maximum function evaluations=10000
-  tolerances: relative=1e-05, absolute=1e-25, solution=1e-05
-  total number of linear solver iterations=4
+  tolerances: relative=0.0001, absolute=1e-50, solution=1e-08
+  total number of linear solver iterations=5
   total number of function evaluations=3
   norm schedule ALWAYS
   Jacobian is built using colored finite differences on a DMDA
-SNESLineSearch Object: 1 MPI process
+  SNESLineSearch Object: 1 MPI process
     type: bt
       interpolation: cubic
       alpha=1.000000e-04
@@ -21,7 +21,7 @@ SNESLineSearch Object: 1 MPI process
       restart=30, using Classical (unmodified) Gram-Schmidt Orthogonalization with no iterative refinement
       happy breakdown tolerance 1e-30
     maximum iterations=10000, initial guess is zero
-    tolerances:  relative=1e-05, absolute=1e-25, divergence=10000.
+    tolerances:  relative=1e-05, absolute=1e-50, divergence=10000.
     right preconditioning
     using UNPRECONDITIONED norm type for convergence test
   PC Object: 1 MPI process
@@ -32,13 +32,13 @@ SNESLineSearch Object: 1 MPI process
       KSP Object: (mg_coarse_) 1 MPI process
         type: preonly
         maximum iterations=10000, initial guess is zero
-        tolerances:  relative=1e-05, absolute=1e-25, divergence=10000.
+        tolerances:  relative=1e-05, absolute=1e-50, divergence=10000.
         left preconditioning
         using NONE norm type for convergence test
       PC Object: (mg_coarse_) 1 MPI process
         type: lu
           out-of-place factorization
-          tolerance for zero pivot 1.19209e-05
+          tolerance for zero pivot 2.22045e-14
           using diagonal shift on blocks to prevent zero pivot [INBLOCKS]
           matrix ordering: nd
           factor fill ratio given 5., needed 1.875
@@ -60,20 +60,20 @@ SNESLineSearch Object: 1 MPI process
       KSP Object: (mg_levels_1_) 1 MPI process
         type: chebyshev
           Chebyshev polynomial of first kind
-          eigenvalue targets used: min 0.498841, max 1.09745
-          eigenvalues estimated via gmres: min 0.385405, max 0.997681
+          eigenvalue targets used: min 0.501018, max 1.10224
+          eigenvalues estimated via gmres: min 0.384848, max 1.00204
           eigenvalues estimated using gmres with transform: [0. 0.5; 0. 1.1]
           KSP Object: (mg_levels_1_esteig_) 1 MPI process
             type: gmres
               restart=30, using Classical (unmodified) Gram-Schmidt Orthogonalization with no iterative refinement
               happy breakdown tolerance 1e-30
             maximum iterations=10, initial guess is zero
-            tolerances:  relative=1e-12, absolute=1e-25, divergence=10000.
+            tolerances:  relative=1e-12, absolute=1e-50, divergence=10000.
             left preconditioning
             using PRECONDITIONED norm type for convergence test
           estimating eigenvalues using noisy right hand side
         maximum iterations=2, nonzero initial guess
-        tolerances:  relative=1e-05, absolute=1e-25, divergence=10000.
+        tolerances:  relative=1e-05, absolute=1e-50, divergence=10000.
         left preconditioning
         using NONE norm type for convergence test
       PC Object: (mg_levels_1_) 1 MPI process
