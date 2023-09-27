@@ -697,17 +697,14 @@ To view the data, start ``nsys-ui`` without any arguments and then ``Import`` th
 A side effect of this viewing process is the generation of a file ``file.nsys-rep``, which can be viewed directly
 with ``nsys-ui`` in the future.
 
-For an MPI parallel job, only one process can call ``nsys``.
-For example have rank zero output ``nsys`` data and have all other
-ranks call the executable directly with a batch script like:
+For an MPI parallel job, only one process can call ``nsys``,
+say have rank zero output ``nsys`` data and have all other
+ranks call the executable directly. For example with MPICH
+or OpenMPI - we can run a parallel job on 4 MPI tasks as:
 
-.. code-block:: bash
+.. code-block:: console
 
-   if [ "$OMPI_COMM_WORLD_RANK" == "0" ]; then
-       mpiexec $OMPI_COMM_WORLD_SIZE nsys profile -t nvtx,cuda -o file_name --stats=true --force-overwrite true ./a.out
-   else
-       mpiexec $OMPI_COMM_WORLD_SIZE ./a.out
-   fi
+   mpiexec -n 1 nsys profile -t nvtx,cuda -o file_name --stats=true --force-overwrite true ./a.out : -n 3 ./a.out
 
 .. _sec_using_tau:
 
