@@ -1219,8 +1219,9 @@ PetscErrorCode NonlinearGS(SNES snes, Vec X, Vec B, void *ctx)
         output_file: output/ex19_hpddm_cuda_ksp_hpddm_type-gcrodr.out
 
    testset:
-      output_file: output/ex19_cuda_1.out
+      output_file: output/ex19_gamg.out
       args: -snes_monitor -pc_type gamg -pc_gamg_esteig_ksp_max_it 10 -ksp_monitor -mg_levels_ksp_max_it 1 -pc_gamg_mis_minimum_degree_ordering -ksp_norm_type unpreconditioned -ksp_rtol 1e-4 -info :pc
+      filter: isMPI
       test:
         suffix: cuda_1
         nsize: 1
@@ -1242,7 +1243,10 @@ PetscErrorCode NonlinearGS(SNES snes, Vec X, Vec B, void *ctx)
         requires: hip !single
         args: -dm_mat_type mpiaijhipsparse -dm_vec_type mpihip
       test:
-        suffix: gamg
+        suffix: gamg_1
         nsize: 1
+      test:
+        suffix: gamg_2
+        nsize: 3
 
 TEST*/
