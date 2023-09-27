@@ -1205,6 +1205,12 @@ PetscErrorCode NonlinearGS(SNES snes, Vec X, Vec B, void *ctx)
       args: -da_refine 100 -petsc_ci_portable_error_output -error_output_stdout
       filter: grep -E -v "(memory block|leaked context|not freed before MPI_Finalize|Could be the program crashed)"
 
+   test:
+      suffix: cuda_1
+      nsize: 1
+      requires: cuda
+      args: -snes_monitor -dm_mat_type seqaijcusparse -dm_vec_type seqcuda -pc_type gamg -pc_gamg_esteig_ksp_max_it 10 -ksp_monitor -mg_levels_ksp_max_it 3 -pc_gamg_mis_k_minimum_degree_ordering true
+
    testset:
       requires: hpddm cuda
       args: -snes_monitor -ksp_converged_reason -ksp_type hpddm -pc_type jacobi -dm_mat_type aijcusparse -dm_vec_type cuda
@@ -1221,11 +1227,6 @@ PetscErrorCode NonlinearGS(SNES snes, Vec X, Vec B, void *ctx)
    testset:
       args: -snes_monitor -pc_type gamg -pc_gamg_esteig_ksp_max_it 10 -ksp_monitor -mg_levels_ksp_max_it 1 -pc_gamg_mis_minimum_degree_ordering -ksp_norm_type unpreconditioned -ksp_rtol 1e-4
       output_file: output/ex19_gamg.out
-      test:
-        suffix: cuda_1
-        nsize: 1
-        requires: cuda
-        args: -dm_mat_type seqaijcusparse -dm_vec_type seqcuda
       test:
         suffix: cuda_2
         nsize: 3
