@@ -1221,7 +1221,6 @@ PetscErrorCode NonlinearGS(SNES snes, Vec X, Vec B, void *ctx)
    testset:
       output_file: output/ex19_cuda_1.out
       args: -snes_monitor -pc_type gamg -pc_gamg_esteig_ksp_max_it 10 -ksp_monitor -mg_levels_ksp_max_it 1 -pc_gamg_mis_minimum_degree_ordering -ksp_norm_type unpreconditioned -ksp_rtol 1e-4 -info :pc
-      filter: grep -v " MPI process"
       test:
         suffix: cuda_1
         nsize: 1
@@ -1243,7 +1242,7 @@ PetscErrorCode NonlinearGS(SNES snes, Vec X, Vec B, void *ctx)
         requires: hip !single
         args: -dm_mat_type mpiaijhipsparse -dm_vec_type mpihip
       test:
-        suffix: cpu_1
+        suffix: gamg
         nsize: 1
 
 TEST*/
