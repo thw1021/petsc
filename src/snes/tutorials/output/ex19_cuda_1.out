@@ -18,13 +18,14 @@ lid velocity = 0.0625, prandtl # = 1., grashof # = 1.
   because PCMGGetSmoother(pc,nlevels-1,&ksp);KSPSetOperators(ksp,...); was not called.
 [0] <pc:jacobi> PCSetUp(): Setting up PC for first time
 [0] <pc:lu> PCSetUp(): Setting up PC for first time
-    0 KSP Residual norm 2.035843566259e-01 
-    1 KSP Residual norm 5.197465493078e-02 
-    2 KSP Residual norm 7.531601931447e-03 
-    3 KSP Residual norm 4.901032905517e-04 
-    4 KSP Residual norm 7.754088151948e-06 
-    5 KSP Residual norm 2.507764278531e-07 
-  1 SNES Function norm 6.838659701338e-05 
+    0 KSP Residual norm 1.837558478162e-01 
+    1 KSP Residual norm 1.016922141715e-01 
+    2 KSP Residual norm 2.289790219950e-02 
+    3 KSP Residual norm 1.869701167223e-03 
+    4 KSP Residual norm 1.167668058354e-04 
+    5 KSP Residual norm 1.478126305906e-05 
+    6 KSP Residual norm 7.664720963183e-07 
+  1 SNES Function norm 6.779422923405e-05 
 [0] <pc:gamg> PCSetUp(): Setting up PC with same nonzero pattern
 [0] <pc:gamg> PCSetUp_GAMG(): (null): RAP after first solve, reuse matrix level 0
 [0] <pc:gamg> PCSetUp_MG(): Using outer operators to define finest grid operator 
@@ -32,11 +33,11 @@ lid velocity = 0.0625, prandtl # = 1., grashof # = 1.
 [0] <pc:jacobi> PCSetUp(): Setting up PC with same nonzero pattern
 [0] <pc:bjacobi> PCSetUp(): Setting up PC with same nonzero pattern
 [0] <pc:lu> PCSetUp(): Setting up PC with same nonzero pattern
-    0 KSP Residual norm 2.301331097863e-05 
-    1 KSP Residual norm 1.534072241688e-06 
-    2 KSP Residual norm 1.102738223278e-07 
-    3 KSP Residual norm 1.231854985712e-08 
-    4 KSP Residual norm 8.600202216370e-10 
-    5 KSP Residual norm 4.525463898337e-11 
-  2 SNES Function norm 1.856072345150e-10 
+    0 KSP Residual norm 2.698044777887e-05 
+    1 KSP Residual norm 5.022549295477e-06 
+    2 KSP Residual norm 4.465138088049e-07 
+    3 KSP Residual norm 4.147967278748e-08 
+    4 KSP Residual norm 3.384081484911e-09 
+    5 KSP Residual norm 2.202759448948e-10 
+  2 SNES Function norm 2.888699864996e-10 
 Number of SNES iterations = 2
