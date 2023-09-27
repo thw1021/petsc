@@ -1,46 +1,17 @@
 lid velocity = 0.0625, prandtl # = 1., grashof # = 1.
   0 SNES Function norm 2.391552133017e-01 
-  Residual norms for pc_gamg_esteig_ solve.
-  0 KSP Residual norm 5.035036813567e+00 % max 1.000000000000e+00 min 1.000000000000e+00 max/min 1.000000000000e+00
-  1 KSP Residual norm 3.949140277734e+00 % max 1.858651536216e+00 min 1.858651536216e+00 max/min 1.000000000000e+00
-  2 KSP Residual norm 2.076253888235e+00 % max 2.044451838373e+00 min 6.612417393821e-01 max/min 3.091837245912e+00
-  3 KSP Residual norm 1.211299866397e+00 % max 2.062657490778e+00 min 4.718492151917e-01 max/min 4.371433552009e+00
-  4 KSP Residual norm 6.838325426569e-01 % max 2.108207930976e+00 min 3.783146621772e-01 max/min 5.572630780006e+00
-  5 KSP Residual norm 4.057220733289e-01 % max 2.128856908602e+00 min 3.322935089921e-01 max/min 6.406555803811e+00
-  6 KSP Residual norm 2.659672762213e-01 % max 2.139409551435e+00 min 3.078366719537e-01 max/min 6.949820298722e+00
-  7 KSP Residual norm 1.230009263663e-01 % max 2.163461401343e+00 min 2.883708327247e-01 max/min 7.502358615474e+00
-  8 KSP Residual norm 7.269002336036e-02 % max 2.167962747806e+00 min 2.609944896653e-01 max/min 8.306546052315e+00
-  9 KSP Residual norm 2.493204792151e-02 % max 2.183453402346e+00 min 2.415772198539e-01 max/min 9.038324903592e+00
- 10 KSP Residual norm 1.700377774501e-02 % max 2.183943747327e+00 min 2.415285274791e-01 max/min 9.042177212447e+00
     0 KSP Residual norm 2.391552133017e-01 
     1 KSP Residual norm 6.278542602543e-02 
     2 KSP Residual norm 2.371245952590e-02 
     3 KSP Residual norm 1.931376575597e-03 
     4 KSP Residual norm 1.180288730284e-04 
     5 KSP Residual norm 1.533485715351e-05 
-[0] <ksp:gmres> KSPConvergedDefault(): Linear solver has converged. Residual norm 9.737103045886e-07 is less than relative tolerance 1.000000000000e-05 times initial right hand side norm 2.391552133017e-01 at iteration 6
-    6 KSP Residual norm 9.737103045886e-07 
-  1 SNES Function norm 6.795848149698e-05 
-[0] <ksp:chebyshev> KSPChebyshevEstEigSet_Chebyshev(): Created eigen estimator KSP
-        Residual norms for mg_levels_1_esteig_ solve.
-        0 KSP Residual norm 5.034992050125e+00 % max 1.000000000000e+00 min 1.000000000000e+00 max/min 1.000000000000e+00
-        1 KSP Residual norm 3.949083861917e+00 % max 1.858702607944e+00 min 1.858702607944e+00 max/min 1.000000000000e+00
-        2 KSP Residual norm 2.075578302958e+00 % max 2.044476254650e+00 min 6.611845143770e-01 max/min 3.092141770102e+00
-        3 KSP Residual norm 1.211424041475e+00 % max 2.062686319814e+00 min 4.718316513440e-01 max/min 4.371657378090e+00
-        4 KSP Residual norm 6.837275069161e-01 % max 2.108292913718e+00 min 3.782576521462e-01 max/min 5.573695341670e+00
-        5 KSP Residual norm 4.054735979934e-01 % max 2.128972900777e+00 min 3.322841403996e-01 max/min 6.407085508856e+00
-        6 KSP Residual norm 2.658994975416e-01 % max 2.139498517662e+00 min 3.079666196284e-01 max/min 6.947176678573e+00
-        7 KSP Residual norm 1.230164153056e-01 % max 2.163489393026e+00 min 2.884926925755e-01 max/min 7.499286632571e+00
-        8 KSP Residual norm 7.265211353502e-02 % max 2.167906561223e+00 min 2.610451974192e-01 max/min 8.304717277527e+00
-        9 KSP Residual norm 2.486204542243e-02 % max 2.183564840917e+00 min 2.416535950935e-01 max/min 9.035929467851e+00
-       10 KSP Residual norm 1.694470172672e-02 % max 2.184108469263e+00 min 2.416022977834e-01 max/min 9.040098083924e+00
-[0] <ksp:chebyshev> KSPSetUp_Chebyshev(): Eigen estimator ran for prescribed number of iterations
-    0 KSP Residual norm 6.795848149698e-05 
-    1 KSP Residual norm 6.425268578859e-06 
-    2 KSP Residual norm 4.747357959488e-07 
-    3 KSP Residual norm 4.639092211512e-08 
-    4 KSP Residual norm 3.750064773939e-09 
-[0] <ksp:gmres> KSPConvergedDefault(): Linear solver has converged. Residual norm 2.572592605157e-10 is less than relative tolerance 1.000000000000e-05 times initial right hand side norm 6.795848149698e-05 at iteration 5
-    5 KSP Residual norm 2.572592605157e-10 
-  2 SNES Function norm 2.580352845330e-10 
+  1 SNES Function norm 6.735144932414e-05 
+    0 KSP Residual norm 6.735144932414e-05 
+    1 KSP Residual norm 8.392727793720e-06 
+    2 KSP Residual norm 1.067761333911e-06 
+    3 KSP Residual norm 9.185409241187e-08 
+    4 KSP Residual norm 7.814926666812e-09 
+    5 KSP Residual norm 5.622223625177e-10 
+  2 SNES Function norm 5.628278847367e-10 
 Number of SNES iterations = 2
