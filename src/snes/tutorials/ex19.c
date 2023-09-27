@@ -1235,7 +1235,7 @@ PetscErrorCode NonlinearGS(SNES snes, Vec X, Vec B, void *ctx)
       test:
         suffix: hip_1
         nsize: 1
-        requires: hip_1
+        requires: hip
         args: -dm_mat_type mpiaijhipsparse -dm_vec_type seqhip
       test:
         suffix: hip_2
