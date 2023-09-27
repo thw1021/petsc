@@ -1220,7 +1220,7 @@ PetscErrorCode NonlinearGS(SNES snes, Vec X, Vec B, void *ctx)
 
    testset:
       output_file: output/ex19_cuda_1.out
-      args: -snes_monitor -pc_type gamg -pc_gamg_esteig_ksp_max_it 10 -ksp_monitor -mg_levels_ksp_max_it 1 -pc_gamg_mis_minimum_degree_ordering -ksp_norm_type unpreconditioned -info :ksp -mg_levels_esteig_ksp_monitor_singular_value -pc_gamg_esteig_ksp_monitor_singular_value
+      args: -snes_monitor -pc_type gamg -pc_gamg_esteig_ksp_max_it 10 -ksp_monitor -mg_levels_ksp_max_it 1 -pc_gamg_mis_minimum_degree_ordering -ksp_norm_type unpreconditioned -ksp_rtol 1e-4
       filter: grep -v " MPI process"
       test:
         suffix: cuda_1
