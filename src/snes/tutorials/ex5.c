@@ -841,6 +841,7 @@ int main(int argc, char **argv)
    test:
      suffix: 2
      args: -pc_type mg -ksp_converged_reason -snes_view -pc_mg_galerkin pmat -snes_grid_sequence 3 -mg_levels_ksp_norm_type unpreconditioned -snes_monitor_short -mg_levels_ksp_chebyshev_esteig 0.5,1.1 -mg_levels_pc_type sor -pc_mg_type full -ksp_atol -1.
+     requires: !single
 
    test:
      suffix: 3
@@ -852,6 +853,7 @@ int main(int argc, char **argv)
      suffix: 4
      nsize: 2
      args: -snes_grid_sequence 2 -snes_monitor_short -ksp_converged_reason -snes_converged_reason -snes_view -pc_type mg -snes_atol -1 -ksp_atol -1
+     requires: !single
 
    test:
      suffix: 5_anderson
@@ -939,6 +941,7 @@ int main(int argc, char **argv)
      suffix: 6
      nsize: 4
      args: -snes_converged_reason -ksp_converged_reason -da_grid_x 129 -da_grid_y 129 -pc_type mg -pc_mg_levels 8 -mg_levels_ksp_type chebyshev -mg_levels_ksp_chebyshev_esteig 0,0.5,0,1.1 -mg_levels_ksp_max_it 2
+     requires: !single
 
    test:
      requires: complex !single

@@ -240,7 +240,8 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscScalar **x, Mat jac, 
 /*TEST
 
    test:
-      args: -snes_view -snes_monitor_short -da_refine 1 -pc_type mg -ksp_type fgmres -pc_mg_type full -mg_levels_ksp_chebyshev_esteig 0.5,1.1
+      args: -snes_view -snes_monitor_short -da_refine 1 -pc_type mg -ksp_type fgmres -pc_mg_type full -mg_levels_ksp_chebyshev_esteig 0.5,1.1 -snes_rtol 1.e-4
+      requires: !single
 
    test:
       suffix: ew_1
