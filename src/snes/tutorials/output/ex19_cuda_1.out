@@ -1,23 +1,5 @@
 lid velocity = 0.0625, prandtl # = 1., grashof # = 1.
   0 SNES Function norm 2.391552133017e-01 
-[0] <pc:gamg> PCSetUp(): Setting up PC for first time
-[0] <pc:gamg> PCSetUp_GAMG(): (null): level 0) N=64, n data rows=4, n data cols=4, nnz/row (ave)=16, np=1
-[0] <pc:gamg> PCGAMGCreateGraph_AGG(): Filtering left 100. % edges in graph (1.024000e+03 6.400000e+01)
-[0] <pc:gamg> PCGAMGSquareGraph_GAMG(): (null): Square Graph on level 1
-[0] <pc:gamg> fixAggregatesWithSquare(): isMPI = no
-[0] <pc:gamg> PCGAMGProlongator_AGG(): (null): New grid 4 nodes
-[0] <pc:jacobi> PCSetUp(): Setting up PC for first time
-[0] <pc:gamg> PCGAMGOptProlongator_AGG(): (null): Smooth P0: max eigen=2.183944e+00 min=2.415285e-01 PC=jacobi
-[0] <pc:gamg> PCGAMGOptProlongator_AGG(): (null): Smooth P0: level 0, cache spectra 0.241529 2.18394
-[0] <pc:gamg> PCGAMGCreateLevel_GAMG(): (null): Force coarsest grid reduction to 1 active processes
-[0] <pc:gamg> PCSetUp_GAMG(): (null): 1) N=16, n data cols=4, nnz/row (ave)=16, 1 active pes
-[0] <pc:gamg> PCSetUp_GAMG(): (null): 2 levels, operator complexity = 1.25
-[0] <pc:bjacobi> PCSetUp(): Setting up PC for first time
-[0] <pc:gamg> PCSetUp_GAMG(): (null): PCSetUp_GAMG: call KSPChebyshevSetEigenvalues on level 0 (N=64) with emax = 2.18394 emin = 0.241529
-[0] <pc:gamg> PCSetUp_MG(): Using outer operators to define finest grid operator 
-  because PCMGGetSmoother(pc,nlevels-1,&ksp);KSPSetOperators(ksp,...); was not called.
-[0] <pc:jacobi> PCSetUp(): Setting up PC for first time
-[0] <pc:lu> PCSetUp(): Setting up PC for first time
     0 KSP Residual norm 1.837558478162e-01 
     1 KSP Residual norm 1.016922141715e-01 
     2 KSP Residual norm 2.289790219950e-02 
@@ -26,13 +8,6 @@ lid velocity = 0.0625, prandtl # = 1., grashof # = 1.
     5 KSP Residual norm 1.478126305906e-05 
     6 KSP Residual norm 7.664720963183e-07 
   1 SNES Function norm 6.779422923405e-05 
-[0] <pc:gamg> PCSetUp(): Setting up PC with same nonzero pattern
-[0] <pc:gamg> PCSetUp_GAMG(): (null): RAP after first solve, reuse matrix level 0
-[0] <pc:gamg> PCSetUp_MG(): Using outer operators to define finest grid operator 
-  because PCMGGetSmoother(pc,nlevels-1,&ksp);KSPSetOperators(ksp,...); was not called.
-[0] <pc:jacobi> PCSetUp(): Setting up PC with same nonzero pattern
-[0] <pc:bjacobi> PCSetUp(): Setting up PC with same nonzero pattern
-[0] <pc:lu> PCSetUp(): Setting up PC with same nonzero pattern
     0 KSP Residual norm 2.698044777887e-05 
     1 KSP Residual norm 5.022549295477e-06 
     2 KSP Residual norm 4.465138088049e-07 
