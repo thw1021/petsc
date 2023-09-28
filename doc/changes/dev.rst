@@ -156,6 +156,7 @@ Changes: Development
 - Add ``PCGAMGSetMinDegreeOrderingMISk()`` to use a minimum degree ordering for the (greedy) MIS-k algorithm
 - Change ``PCGAMGSetUseParallelCoarseGridSolve()`` to ``PCGAMGSetParallelCoarseGridSolve()``
 - Add ``PCGAMGSetRecomputeEstEig()`` to set flag to have Chebyshev recompute its eigen estimates (default set to true)
+- Add ``PCGAMGSetLowMemoryFilter()`` Use the system ``MatFilter`` graph/matrix filter, without a temporary copy of the graph, otherwise use method that can be faster
 
 .. rubric:: KSP:
 
