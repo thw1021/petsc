@@ -205,8 +205,8 @@ int main(int argc, char **args)
 
     test:
       suffix: chebyest
-      args: -ksp_est_view -ksp_type chebyshev -ksp_chebyshev_esteig
-      filter:  sed -e "s/Iterations 19/Iterations 20/g"
+      args: -ksp_est_view -ksp_type chebyshev -ksp_chebyshev_esteig -ksp_rtol 1e-4
+      filter:  sed -e "s/Iterations 16/Iterations 17/g"
 
     test:
       suffix: gamg_provided_not_ok

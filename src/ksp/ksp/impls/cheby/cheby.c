@@ -17,22 +17,8 @@ static PetscErrorCode KSPReset_Chebyshev(KSP ksp)
  */
 static PetscErrorCode KSPChebyshevComputeExtremeEigenvalues_Private(KSP kspest, PetscReal *emin, PetscReal *emax)
 {
-  PetscInt   n, neig;
-  PetscReal *re, *im, min, max;
-
   PetscFunctionBegin;
-  PetscCall(KSPGetIterationNumber(kspest, &n));
-  PetscCall(PetscMalloc2(n, &re, n, &im));
-  PetscCall(KSPComputeEigenvalues(kspest, n, re, im, &neig));
-  min = PETSC_MAX_REAL;
-  max = PETSC_MIN_REAL;
-  for (n = 0; n < neig; n++) {
-    min = PetscMin(min, re[n]);
-    max = PetscMax(max, re[n]);
-  }
-  PetscCall(PetscFree2(re, im));
-  *emax = max;
-  *emin = min;
+  PetscCall(KSPComputeExtremeSingularValues(kspest, emax, emin));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
