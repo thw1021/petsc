@@ -102,7 +102,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscScalar **t, PetscScal
 
    test:
       args: -pc_type mg -da_refine 1 -ksp_type fgmres
-      filter:  sed -e "s/Number of Linear iterations 21/Number of Linear iterations = 22/g"
+      filter:  sed -e "s/Number of Linear iterations = 21/Number of Linear iterations = 22/g"
 
    test:
       suffix: 2
