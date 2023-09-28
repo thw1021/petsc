@@ -1128,35 +1128,11 @@ PetscErrorCode NonlinearGS(SNES snes, Vec X, Vec B, void *ctx)
       filter_output: head -n 2
 
    test:
-      suffix: cuda_1
-      nsize: 1
-      requires: cuda
-      args: -snes_monitor -dm_mat_type seqaijcusparse -dm_vec_type seqcuda -pc_type gamg -pc_gamg_esteig_ksp_max_it 10 -ksp_monitor -mg_levels_ksp_max_it 3 -pc_gamg_mis_k_minimum_degree_ordering true
-
-   test:
-      suffix: cuda_2
-      nsize: 3
-      requires: cuda !single
-      args: -snes_monitor -dm_mat_type mpiaijcusparse -dm_vec_type mpicuda -pc_type gamg -pc_gamg_esteig_ksp_max_it 10 -ksp_monitor  -mg_levels_ksp_max_it 3 -pc_gamg_mis_k_minimum_degree_ordering true
-
-   test:
       suffix: cuda_dm_bind_below
       nsize: 2
       requires: cuda defined(PETSC_USE_LOG)
       args: -dm_mat_type aijcusparse -dm_vec_type cuda -da_refine 3 -pc_type mg -mg_levels_ksp_type chebyshev -mg_levels_pc_type jacobi -log_view -pc_mg_log -dm_bind_below 10000
       filter: awk "/Level/ {print \$NF}"
-
-   test:
-      suffix: hip_1
-      nsize: 1
-      requires: hip
-      args: -snes_monitor -dm_mat_type mpiaijhipsparse -dm_vec_type hip -pc_type gamg -pc_gamg_esteig_ksp_max_it 10 -ksp_monitor -mg_levels_ksp_max_it 3
-
-   test:
-      suffix: hip_2
-      nsize: 3
-      requires: hip !single
-      args: -snes_monitor -dm_mat_type mpiaijhipsparse -dm_vec_type mpihip -pc_type gamg -pc_gamg_esteig_ksp_max_it 10 -ksp_monitor  -mg_levels_ksp_max_it 3
 
    test:
       suffix: hip_dm_bind_below
@@ -1229,6 +1205,18 @@ PetscErrorCode NonlinearGS(SNES snes, Vec X, Vec B, void *ctx)
       args: -da_refine 100 -petsc_ci_portable_error_output -error_output_stdout
       filter: grep -E -v "(memory block|leaked context|not freed before MPI_Finalize|Could be the program crashed)"
 
+   test:
+      suffix: cuda_1
+      nsize: 1
+      requires: cuda
+      args: -snes_monitor -dm_mat_type seqaijcusparse -dm_vec_type seqcuda -pc_type gamg -pc_gamg_esteig_ksp_max_it 10 -ksp_monitor -mg_levels_ksp_max_it 1 -pc_gamg_mis_minimum_degree_ordering true -info :pc
+
+   test:
+      suffix: cpu_1
+      nsize: 1
+      args: -snes_monitor -pc_type gamg -pc_gamg_esteig_ksp_max_it 10 -ksp_monitor -mg_levels_ksp_max_it 1 -pc_gamg_mis_minimum_degree_ordering true -info :pc
+      output_file: output/ex19_cuda_1.out
+
    testset:
       requires: hpddm cuda
       args: -snes_monitor -ksp_converged_reason -ksp_type hpddm -pc_type jacobi -dm_mat_type aijcusparse -dm_vec_type cuda
@@ -1241,5 +1229,30 @@ PetscErrorCode NonlinearGS(SNES snes, Vec X, Vec B, void *ctx)
         filter: sed -e "s/Linear solve converged due to CONVERGED_RTOL iterations 15/Linear solve converged due to CONVERGED_RTOL iterations 14/g"
         args: -ksp_hpddm_type gcrodr -ksp_pc_side right
         output_file: output/ex19_hpddm_cuda_ksp_hpddm_type-gcrodr.out
+
+   testset:
+      args: -snes_monitor -pc_type gamg -pc_gamg_esteig_ksp_max_it 10 -ksp_monitor -mg_levels_ksp_max_it 1 -pc_gamg_mis_minimum_degree_ordering -ksp_norm_type unpreconditioned -ksp_rtol 1e-4
+      output_file: output/ex19_gamg.out
+      test:
+        suffix: cuda_2
+        nsize: 3
+        requires: cuda !single
+        args: -dm_mat_type mpiaijcusparse -dm_vec_type mpicuda
+      test:
+        suffix: hip_1
+        nsize: 1
+        requires: hip
+        args: -dm_mat_type mpiaijhipsparse -dm_vec_type seqhip
+      test:
+        suffix: hip_2
+        nsize: 3
+        requires: hip !single
+        args: -dm_mat_type mpiaijhipsparse -dm_vec_type mpihip
+      test:
+        suffix: gamg_1
+        nsize: 1
+      test:
+        suffix: gamg_2
+        nsize: 3
 
 TEST*/
