@@ -4,22 +4,22 @@
         Linear solve converged due to CONVERGED_RTOL iterations 3
         2 SNES Function norm 0.00668678 
         Linear solve converged due to CONVERGED_RTOL iterations 2
-        3 SNES Function norm 4.61502e-06 
+        3 SNES Function norm 4.61514e-06 
         Linear solve converged due to CONVERGED_RTOL iterations 2
-        4 SNES Function norm 1.568e-11 
+        4 SNES Function norm 3.650e-11 
       0 SNES Function norm 0.0763997 
       Linear solve converged due to CONVERGED_RTOL iterations 2
-      1 SNES Function norm 2.67906e-05 
+      1 SNES Function norm 2.67908e-05 
       Linear solve converged due to CONVERGED_RTOL iterations 2
-      2 SNES Function norm 9.312e-11 
+      2 SNES Function norm 9.321e-11 
     0 SNES Function norm 0.0408394 
     Linear solve converged due to CONVERGED_RTOL iterations 2
-    1 SNES Function norm 9.10598e-07 
+    1 SNES Function norm 9.10613e-07 
     Linear solve converged due to CONVERGED_RTOL iterations 2
     2 SNES Function norm < 1.e-11
   0 SNES Function norm 0.021012 
   Linear solve converged due to CONVERGED_RTOL iterations 2
-  1 SNES Function norm 3.84069e-08 
+  1 SNES Function norm 3.84167e-08 
   Linear solve converged due to CONVERGED_RTOL iterations 2
   2 SNES Function norm < 1.e-11
 SNES Object: 1 MPI process
@@ -82,8 +82,8 @@ SNES Object: 1 MPI process
       KSP Object: (mg_levels_1_) 1 MPI process
         type: chebyshev
           Chebyshev polynomial of first kind
-          eigenvalue targets used: min 0.49992, max 1.09982
-          eigenvalues estimated via gmres: min 0.38164, max 0.999839
+          eigenvalue targets used: min 0.501072, max 1.10236
+          eigenvalues estimated via gmres: min 0.380726, max 1.00214
           eigenvalues estimated using gmres with transform: [0. 0.5; 0. 1.1]
           KSP Object: (mg_levels_1_esteig_) 1 MPI process
             type: gmres
@@ -113,8 +113,8 @@ SNES Object: 1 MPI process
       KSP Object: (mg_levels_2_) 1 MPI process
         type: chebyshev
           Chebyshev polynomial of first kind
-          eigenvalue targets used: min 0.498238, max 1.09612
-          eigenvalues estimated via gmres: min 0.11325, max 0.996475
+          eigenvalue targets used: min 0.498415, max 1.09651
+          eigenvalues estimated via gmres: min 0.113229, max 0.996831
           eigenvalues estimated using gmres with transform: [0. 0.5; 0. 1.1]
           KSP Object: (mg_levels_2_esteig_) 1 MPI process
             type: gmres
@@ -144,8 +144,8 @@ SNES Object: 1 MPI process
       KSP Object: (mg_levels_3_) 1 MPI process
         type: chebyshev
           Chebyshev polynomial of first kind
-          eigenvalue targets used: min 0.498868, max 1.09751
-          eigenvalues estimated via gmres: min 0.0267868, max 0.997736
+          eigenvalue targets used: min 0.49891, max 1.0976
+          eigenvalues estimated via gmres: min 0.033857, max 0.99782
           eigenvalues estimated using gmres with transform: [0. 0.5; 0. 1.1]
           KSP Object: (mg_levels_3_esteig_) 1 MPI process
             type: gmres
