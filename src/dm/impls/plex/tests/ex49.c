@@ -42,9 +42,13 @@ static PetscErrorCode SetupDiscretization(DM dm, AppCtx *user)
   PetscFunctionBeginUser;
   PetscCall(DMGetDimension(dm, &dim));
   if (user->useFE) {
-    PetscFE fe;
+    PetscFE        fe;
+    DMPolytopeType ct;
+    PetscInt       cStart;
 
-    PetscCall(PetscFECreateDefault(PETSC_COMM_SELF, dim, 1, PETSC_FALSE, NULL, -1, &fe));
+    PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, NULL));
+    PetscCall(DMPlexGetCellType(dm, cStart, &ct));
+    PetscCall(PetscFECreateByCell(PETSC_COMM_SELF, dim, 1, ct, NULL, -1, &fe));
     PetscCall(PetscObjectSetName((PetscObject)fe, "scalar"));
     PetscCall(DMSetField(dm, 0, NULL, (PetscObject)fe));
     PetscCall(DMSetField(dm, 1, NULL, (PetscObject)fe));
@@ -60,7 +64,6 @@ static PetscErrorCode SetupDiscretization(DM dm, AppCtx *user)
     PetscCall(PetscFVSetUp(fv));
     PetscCall(PetscObjectSetName((PetscObject)fv, "vector"));
     PetscCall(DMSetField(dm, 0, NULL, (PetscObject)fv));
-    PetscCall(DMSetField(dm, 1, NULL, (PetscObject)fv));
     PetscCall(PetscFVDestroy(&fv));
   }
   PetscCall(DMCreateDS(dm));
