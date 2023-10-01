@@ -133,7 +133,7 @@ typedef struct {
   to check the min/max limits on the state variable VR. A non windup limiter is used for
   the VR limits.
 */
-PetscErrorCode EventFunction(TS ts, PetscReal t, Vec X, PetscScalar *fvalue, void *ctx)
+PetscErrorCode EventFunction(TS ts, PetscReal t, Vec X, PetscReal *fvalue, void *ctx)
 {
   Userctx           *user = (Userctx *)ctx;
   Vec                Xgen, Xnet;
@@ -164,14 +164,14 @@ PetscErrorCode EventFunction(TS ts, PetscReal t, Vec X, PetscScalar *fvalue, voi
     Vm = PetscSqrtScalar(Vr * Vr + Vi * Vi);
 
     if (!VRatmax[i]) {
-      fvalue[2 + 2 * i] = VRMAX[i] - VR;
+      fvalue[2 + 2 * i] = PetscRealPart(VRMAX[i] - VR);
     } else {
-      fvalue[2 + 2 * i] = (VR - KA[i] * RF + KA[i] * KF[i] * Efd / TF[i] - KA[i] * (Vref[i] - Vm)) / TA[i];
+      fvalue[2 + 2 * i] = PetscRealPart((VR - KA[i] * RF + KA[i] * KF[i] * Efd / TF[i] - KA[i] * (Vref[i] - Vm)) / TA[i]);
     }
     if (!VRatmin[i]) {
-      fvalue[2 + 2 * i + 1] = VRMIN[i] - VR;
+      fvalue[2 + 2 * i + 1] = PetscRealPart(VRMIN[i] - VR);
     } else {
-      fvalue[2 + 2 * i + 1] = (VR - KA[i] * RF + KA[i] * KF[i] * Efd / TF[i] - KA[i] * (Vref[i] - Vm)) / TA[i];
+      fvalue[2 + 2 * i + 1] = PetscRealPart((VR - KA[i] * RF + KA[i] * KF[i] * Efd / TF[i] - KA[i] * (Vref[i] - Vm)) / TA[i]);
     }
     idx = idx + 9;
   }
@@ -1301,18 +1301,18 @@ int main(int argc, char **argv)
 
    test:
       suffix: implicit
-      args: -ts_monitor -snes_monitor_short
+      args: -ts_monitor -snes_monitor_short -ts_event_post_event_step 0
       localrunfiles: petscoptions X.bin Ybus.bin
 
    test:
       suffix: semiexplicit
-      args: -ts_monitor -snes_monitor_short -dae_semiexplicit -ts_rk_type 2a
+      args: -ts_monitor -snes_monitor_short -dae_semiexplicit -ts_rk_type 2a -ts_event_post_event_step 0
       localrunfiles: petscoptions X.bin Ybus.bin
 
    test:
       suffix: steprestart
       # needs ARKIMEX methods with all implicit stages since the mass matrix is not the identity
-      args: -ts_monitor -snes_monitor_short -ts_type arkimex -ts_arkimex_type prssp2
+      args: -ts_monitor -snes_monitor_short -ts_type arkimex -ts_arkimex_type prssp2 -ts_event_post_event_step 0
       localrunfiles: petscoptions X.bin Ybus.bin
 
 TEST*/
