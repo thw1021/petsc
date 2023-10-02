@@ -567,7 +567,7 @@ int main(int argc, char **args)
 
     test:
       suffix: kokkos
-      requires: kokkos_kernels
+      requires: kokkos_kernels !cuda
       args: -dm_mat_type aijkokkos -dm_vec_type kokkos
   # Don't run AIJMKL caes with complex scalars because of convergence issues.
   # Note that we need to test both single and multiple MPI rank cases, because these use different sparse MKL routines to implement the PtAP operation.
