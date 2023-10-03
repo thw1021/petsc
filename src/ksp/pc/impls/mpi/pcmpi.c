@@ -39,7 +39,7 @@ static MPI_Comm      PCMPIComms[PC_MPI_MAX_RANKS];
 static PetscBool     PCMPICommSet = PETSC_FALSE;
 static PetscInt      PCMPISolveCounts[PC_MPI_MAX_RANKS], PCMPIKSPCounts[PC_MPI_MAX_RANKS], PCMPIMatCounts[PC_MPI_MAX_RANKS], PCMPISolveCountsSeq = 0, PCMPIKSPCountsSeq = 0;
 static PetscInt      PCMPIIterations[PC_MPI_MAX_RANKS], PCMPISizes[PC_MPI_MAX_RANKS], PCMPIIterationsSeq = 0, PCMPISizesSeq = 0;
-static PetscLogEvent EventServerDist;
+static PetscLogEvent EventServerDist,  EventServerDistMPI;
 
 static PetscErrorCode PCMPICommsCreate(void)
 {
@@ -227,9 +227,11 @@ static PetscErrorCode PCMPISetMat(PC pc)
   PetscCallMPI(MPI_Scatter(NZ, 1, MPI_INT, &nz, 1, MPI_INT, 0, comm));
 
   PetscCall(PetscMalloc3(n + 1, &ia, nz, &ja, nz, &a));
+  PetscCall(PetscLogEventBegin(EventServerDistMPI,NULL,NULL,NULL,NULL));
   PetscCallMPI(MPI_Scatterv(IA, sendcounti, displi, MPIU_INT, ia, n + 1, MPIU_INT, 0, comm));
   PetscCallMPI(MPI_Scatterv(JA, NZ, NZdispl, MPIU_INT, ja, nz, MPIU_INT, 0, comm));
   PetscCallMPI(MPI_Scatterv(sa, NZ, NZdispl, MPIU_SCALAR, a, nz, MPIU_SCALAR, 0, comm));
+  PetscCall(PetscLogEventEnd(EventServerDistMPI,NULL,NULL,NULL,NULL));
 
   if (pc) {
     PetscCall(MatSeqAIJRestoreArrayRead(sA, &sa));
@@ -302,7 +304,9 @@ static PetscErrorCode PCMPIUpdateMatValues(PC pc)
   PetscCall(KSPGetOperators(ksp, NULL, &A));
   PetscCall(MatMPIAIJGetNumberNonzeros(A, &nz));
   PetscCall(PetscMalloc1(nz, &a));
+  PetscCall(PetscLogEventBegin(EventServerDistMPI,NULL,NULL,NULL,NULL));
   PetscCallMPI(MPI_Scatterv(sa, pc ? km->NZ : NULL, pc ? km->NZdispl : NULL, MPIU_SCALAR, a, nz, MPIU_SCALAR, 0, comm));
+  PetscCall(PetscLogEventEnd(EventServerDistMPI,NULL,NULL,NULL,NULL));
   if (pc) {
     PetscBool isset, issymmetric, ishermitian, isspd, isstructurallysymmetric;
 
@@ -357,7 +361,9 @@ static PetscErrorCode PCMPISolve(PC pc, Vec B, Vec X)
   }
   PetscCall(VecGetLocalSize(ksp->vec_rhs, &n));
   PetscCall(VecGetArray(ksp->vec_rhs, &b));
+  PetscCall(PetscLogEventBegin(EventServerDistMPI,NULL,NULL,NULL,NULL));
   PetscCallMPI(MPI_Scatterv(sb, pc ? km->sendcount : NULL, pc ? km->displ : NULL, MPIU_SCALAR, b, n, MPIU_SCALAR, 0, comm));
+  PetscCall(PetscLogEventEnd(EventServerDistMPI,NULL,NULL,NULL,NULL));
   PetscCall(VecRestoreArray(ksp->vec_rhs, &b));
   if (pc) PetscCall(VecRestoreArrayRead(B, &sb));
 
@@ -372,7 +378,9 @@ static PetscErrorCode PCMPISolve(PC pc, Vec B, Vec X)
   /* gather solution */
   PetscCall(VecGetArrayRead(ksp->vec_sol, &x));
   if (pc) PetscCall(VecGetArray(X, &sx));
+  PetscCall(PetscLogEventBegin(EventServerDistMPI,NULL,NULL,NULL,NULL));
   PetscCallMPI(MPI_Gatherv(x, n, MPIU_SCALAR, sx, pc ? km->sendcount : NULL, pc ? km->displ : NULL, MPIU_SCALAR, 0, comm));
+  PetscCall(PetscLogEventEnd(EventServerDistMPI,NULL,NULL,NULL,NULL));
   if (pc) PetscCall(VecRestoreArray(X, &sx));
   PetscCall(VecRestoreArrayRead(ksp->vec_sol, &x));
   PetscCall(PetscLogEventEnd(EventServerDist, NULL, NULL, NULL, NULL));
@@ -450,6 +458,7 @@ PetscErrorCode PCMPIServerBegin(void)
     PetscCall(TaoInitializePackage());
   }
   PetscCall(PetscLogEventRegister("ServerDist", PC_CLASSID, &EventServerDist));
+  PetscCall(PetscLogEventRegister("ServerDistMPI", PC_CLASSID, &EventServerDistMPI));
 
   PetscCallMPI(MPI_Comm_rank(PC_MPI_COMM_WORLD, &rank));
   if (rank == 0) {

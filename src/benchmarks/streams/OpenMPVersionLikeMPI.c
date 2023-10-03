@@ -12,10 +12,10 @@
 #include <omp.h>
 #include <petscsys.h>
 
-#define NTIMESINNER 50
-//#define N 2*4*20000000
+#define NTIMESINNER 1
+#define N 2*4*20000000
 //#define N 1200000
-#define N 120000
+//#define N 120000
 #define NTIMES       50
 #define OFFSET       0
 
