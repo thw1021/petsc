@@ -373,7 +373,7 @@ static PetscErrorCode MatSolve_CHOLMOD(Mat F, Vec B, Vec X)
   cholmod_dense cholB, cholX, *X_handle, *Y_handle = NULL, *E_handle = NULL;
 
   PetscFunctionBegin;
-  if (!A->rmap->n) PetscFunctionReturn(PETSC_SUCCESS);
+  if (!F->rmap->n) PetscFunctionReturn(PETSC_SUCCESS);
   static_F = F;
   PetscCall(VecWrapCholmod(B, GET_ARRAY_READ, &cholB));
   PetscCall(VecWrapCholmod(X, GET_ARRAY_WRITE, &cholX));
