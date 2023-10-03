@@ -10,9 +10,9 @@
 #include <stdlib.h>
 #include <petscsys.h>
 
-//#define N 2*4*20000000
+#define N 2*4*20000000
 //#define N 1200000
-#define N 120000
+//#define N 120000
 #define NTIMES       50
 #define OFFSET       0
 
