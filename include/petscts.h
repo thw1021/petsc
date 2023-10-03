@@ -1341,7 +1341,7 @@ PETSC_EXTERN PetscErrorCode TSAlpha2GetParams(TS, PetscReal *, PetscReal *, Pets
   Level: intermediate
 
   .seealso: [](ch_ts), `TS`, `TSAlpha2SetPredictor()`
-  S*/
+S*/
 PETSC_EXTERN_TYPEDEF typedef PetscErrorCode (*TSAlpha2Predictor)(TS ts, Vec X0, Vec V0, Vec A0, Vec X1, void *ctx);
 PETSC_EXTERN PetscErrorCode TSAlpha2SetPredictor(TS, TSAlpha2Predictor, void *ctx);
 

@@ -43,7 +43,7 @@ typedef struct {
   void             *predictor_ctx;
 } TS_Alpha;
 
-/*@
+/*@C
   TSAlpha2SetPredictor - sets the callback for computing a predictor (i.e., initial guess
   for the nonlinear solver).
 
@@ -61,8 +61,8 @@ typedef struct {
   for the previous velocity or acceleration.
 
   .seealso: [](ch_ts), `TS`, `TSALPHA2`, `TSAlpha2Predictor`
-  @*/
-PETSC_EXTERN PetscErrorCode TSAlpha2SetPredictor(TS ts, TSAlpha2Predictor predictor, void *ctx)
+@*/
+PetscErrorCode TSAlpha2SetPredictor(TS ts, TSAlpha2Predictor predictor, void *ctx)
 {
   TS_Alpha *th = (TS_Alpha *)(ts->data);
 
