@@ -393,12 +393,12 @@ around 13 percent and grows rapidly at around 20 MPI processes to 30 percent. At
 
   GAMG Solver percent time in distribution  with  linear solver server
 
-For this application, at the given scale, we can conclude that there is no benefit to using more than around 20 MPI processes. But the improvement in run time from one to ten MPI processes is excallent.
+For this application, at the given scale, we can conclude that there is no benefit to using more than around 20 MPI processes. But the improvement in run time from one to ten MPI processes is excellent.
 
 .. rubric:: Footnotes
 
-.. [#achievable_footnote] Achievable [#achievable_footnote]_ memory bandwidth is the actual bandwidth one can obtain
-                          as opposed to the theoretical peak that is calculated using the hardware specification.
+.. [#achievable_footnote] Achievable memory bandwidth is the actual bandwidth one can obtain
+   as opposed to the theoretical peak that is calculated using the hardware specification.
 
 .. [#memorymigration_footnote] Data can also be migrated among different memory sockets during a computation by the OS, but we ignore this possibility in the discussion.
 
