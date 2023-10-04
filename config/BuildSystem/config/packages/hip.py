@@ -8,8 +8,8 @@ class Configure(config.package.Package):
   def __init__(self, framework):
     config.package.Package.__init__(self, framework)
 
-    self.minversion       = '4.1'
-    self.versionname      = 'HIP_VERSION_MAJOR.HIP_VERSION_MINOR'
+    self.minversion       = '4.1.0'
+    self.versionname      = 'HIP_VERSION'
     self.versioninclude   = 'hip/hip_version.h'
     self.requiresversion  = 1
     self.functionsCxx     = [1,'', 'rocblas_create']
@@ -82,6 +82,18 @@ class Configure(config.package.Package):
     # be added to HIP_INCLUDE.  Other compilers, ex. CC or CXX, might need this path for compilation.
     yield os.path.dirname(os.path.dirname(self.fullPathHIPC)) # yield /opt/rocm from /opt/rocm/bin/hipcc
     yield ''
+
+  def versionToStandardForm(self,ver):
+    '''Converts, for example, from (5*10000000+6*100000+31061) notation to standard notation 5.6.0'''
+    # In /opt/rocm-5.6.0/include/hip/hip_version.h
+      #define HIP_VERSION_MAJOR 5
+      #define HIP_VERSION_MINOR 6
+      #define HIP_VERSION_PATCH 31061
+      #define HIP_VERSION    (HIP_VERSION_MAJOR * 10000000 + HIP_VERSION_MINOR * 100000 + HIP_VERSION_PATCH)
+    # We have to do the weird int(ver)%10-1 to get a patch number matching with AMD releases.
+    # Though the rule is not stated, I found it is true so far for rocm releases on Frontier@OLCF.
+    intver = eval(ver) # ver might be '(5*10000000+6*100000+31061)', so we evaluate it first
+    return ".".join(map(str,[intver//10000000, intver//100000%10, intver%10-1]))
 
   def configureLibrary(self):
     self.setFullPathHIPC()
