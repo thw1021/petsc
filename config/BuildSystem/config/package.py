@@ -1241,20 +1241,19 @@ char     *ver = "petscpkgver(" PetscXstr_({y}) ")";
       return
     self.popLanguage()
     setattr(self.compilers, flagsArg,oldFlags)
-    #strip #lines
-    output = re.sub('#.*\n','\n',output)
-    #strip newlines,spaces,quotes
-    output = re.sub('[\n "]*','',output)
-    #strip backslash. Mumps' version macro already has "" around it, giving output: char *ver = petscpkgver(" "\"5.4.1\"" ")";
-    output = output.replace('\\','')
-    #now split over ';'
-    loutput = output.split(';')
+    # the preprocessor output might be very long, but the petscpkgver line should be at the end. Therefore, we partition it backwards
+    [mid, right] = output.rpartition('petscpkgver')[1:]
+    verLine = right.splitlines()[0]
     version = ''
-    for i in loutput:
-      if i.find('petscpkgver') >=0:
-        self.log.write('Found version string: ' + i +'\n')
-        version = i.split('(')[1].split(')')[0]
-        break
+    if mid: # if mid is not empty, then it should be 'petscpkgver', meaning we found the version string
+      self.log.write('Found the raw version string: ' + verLine +'\n')
+      # strip spaces and quotes
+      verLine = re.sub('[ "]*','',verLine)
+      # strip backslash. Mumps' version macro already has "" around it, giving output: (" "\"5.4.1\"" ")";
+      verLine = verLine.replace('\\','')
+      # get the string between the outer ()
+      version = verLine.split('(', 1)[-1].rsplit(')',1)[0]
+      self.log.write('This is the processed version string: ' + version +'\n')
     if not version:
       self.log.write('For '+self.package+' unable to find version information: output below, skipping version check\n')
       self.log.write(output)
