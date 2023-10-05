@@ -1245,7 +1245,7 @@ const char *ver = "petscpkgver(" PetscXstr_({y}) ")";
     [mid, right] = output.rpartition('petscpkgver')[1:]
     version = ''
     if mid: # if mid is not empty, then it should be 'petscpkgver', meaning we found the version string
-      verLine = right.splitlines()[0]
+      verLine = right.split(';',1)[0] # get the string before the first ';'. Preprocessor might dump multiline result.
       self.log.write('Found the raw version string: ' + verLine +'\n')
       # strip spaces and quotes
       verLine = re.sub('[ "]*','',verLine)
