@@ -1433,7 +1433,7 @@ PetscErrorCode PCCreateGAMG_AGG(PC pc)
 
   pc_gamg_agg->nsmooths                     = 1;
   pc_gamg_agg->aggressive_coarsening_levels = 1;
-  pc_gamg_agg->use_aggressive_square_graph  = PETSC_FALSE;
+  pc_gamg_agg->use_aggressive_square_graph  = PETSC_TRUE;
   pc_gamg_agg->use_minimum_degree_ordering  = PETSC_FALSE;
   pc_gamg_agg->use_low_mem_filter           = PETSC_FALSE;
   pc_gamg_agg->aggressive_mis_k             = 2;
