@@ -180,7 +180,9 @@ static inline PetscErrorCode MatSeqXAIJFreeAIJ(Mat AA, MatScalar **a, PetscInt *
 
   PetscFunctionBegin;
   if (A->singlemalloc) {
-    PetscCall(PetscFree3(*a, *j, *i));
+    PetscCall(PCMPIServerDeallocateArray((void **)&A->a));
+    PetscCall(PCMPIServerDeallocateArray((void **)&A->i));
+    PetscCall(PCMPIServerDeallocateArray((void **)&A->j));
   } else {
     if (A->free_a) PetscCall(PetscFree(*a));
     if (A->free_ij) PetscCall(PetscFree(*j));

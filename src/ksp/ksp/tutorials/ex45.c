@@ -64,6 +64,10 @@ int main(int argc, char **argv)
   PetscCall(VecNorm(r, NORM_2, &norm));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Residual norm %g\n", (double)norm));
 
+  //  PetscCall(PetscObjectReference((PetscObject)A));
+  // PetscCall(KSPSolve(ksp, NULL, NULL));
+  //  PetscCall(PetscObjectDereference((PetscObject)A));
+
   PetscCall(VecDestroy(&r));
   PetscCall(KSPDestroy(&ksp));
   PetscCall(PetscLogEventEnd(usertime, NULL, NULL, NULL, NULL));
