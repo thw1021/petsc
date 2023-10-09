@@ -69,6 +69,7 @@ int main(int argc, char **args)
   PetscCall(PetscOptionsGetInt(NULL, NULL, "-m", &m, NULL));
 
   PetscCall(MatCreateAIJ(PETSC_COMM_WORLD, PETSC_DECIDE, PETSC_DECIDE, m, m, 7, NULL, 6, NULL, &Aij));
+  PetscCall(MatSetFromOptions(Aij));
   PetscCall(MatSetRandom(Aij, NULL));
   PetscCall(MatSetOption(Aij, MAT_NEW_NONZERO_LOCATION_ERR, PETSC_FALSE));
 
@@ -98,7 +99,15 @@ int main(int argc, char **args)
 
 /*TEST
 
+  testset:
+    nsize: {{1 2 3 4}}
+    output_file: output/empty.out
+
     test:
-      nsize: {{1 2 3 4}}
+
+    test:
+      suffix: kok
+      requires: kokkos_kernels
+      args: -mat_type aijkokkos
 
 TEST*/
