@@ -692,19 +692,19 @@ PetscErrorCode VecCreateGhostWithArray(MPI_Comm comm, PetscInt n, PetscInt N, Pe
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*
-   VecGhostGetGhostIS - Return ghosting indices of a ghost vector
+/*@
+  VecGhostGetGhostIS - Return ghosting indices of a ghost vector
 
-   Input Parameters:
-.  X - ghost vector context
+  Input Parameters:
+. X - ghost vector context
 
-   Output Parameter:
-.  ghost - ghosting indices
+  Output Parameter:
+. ghost - ghosting indices
 
   Level: beginner
 
-.seealso: VecCreateGhostWithArray(), VecCreateMPIWithArray()
-*/
+.seealso: `VecCreateGhostWithArray()`, `VecCreateMPIWithArray()`
+@*/
 PetscErrorCode VecGhostGetGhostIS(Vec X, IS *ghost)
 {
   Vec_MPI  *w;
