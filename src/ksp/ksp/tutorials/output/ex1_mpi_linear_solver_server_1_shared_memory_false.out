@@ -146,4 +146,4 @@ row 9: (8, -1.)  (9, 4.)
 MPI linear solver server statistics:
     Ranks        KSPSolve()s     Mats        KSPs       Avg. Size      Avg. Its
      2               3            3           2            10            4
-MPI linear solver server  using shared memory
+MPI linear solver server  not  using shared memory
