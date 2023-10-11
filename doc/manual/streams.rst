@@ -38,10 +38,10 @@ increases rapidly with more cores initially but then less so as more cores are u
 more cores. This is due to the complex inter-connect between the cores and their various levels of caches as well as how the threads or processes are assigned to cores.
 
 .. figure:: /images/manual/gcc_streams.svg
-  :alt: STREAMS benchmark with gcc
+  :alt: STREAMS benchmark gcc
   :name: fig_gcc_streams
 
-  STREAMS benchmark with gcc
+  STREAMS benchmark gcc
 
 The STREAMS benchmark is intentionally embarrassingly parallel, that is, each thread or process works on its own data, completely independently of other threads or processes data.
 Though real simulations have more complex memory access patterns, most computations for PDEs have large sections of private data and share only data along ghost (halo) regions. Thus the completely
@@ -114,7 +114,7 @@ used are GNU 12.2, Intel(R) oneAPI Compiler 2023.0.0 with both icc and icx, and 
 
 - nvc -O3 -march=native
 
-We first run the STREAMS benchmark with large double precision arrays of length :math:`1.6\times10^8`; the size was selected to be large enough to eliminate cache affects.
+We first run the STREAMS benchmark with large double precision arrays of length :math:`1.6\times10^8`; the size was selected to be large enough to eliminate cache effects.
 Fig. :any:`fig_streams` shows the achieved bandwidth for gcc, icc, icx, and nvc using MPI and OpenMP with their default bindings and with the MPI binding of ``--bind-to core --map-by numa``
 and the OpenMP binding of ``OMP_PROC_BIND=spread``.
 
@@ -137,24 +137,24 @@ Using the exact thread placement that icc uses with gcc using the OpenMP ``OMP_P
 Thus we conclude that on this system the ``spread`` option does not always give the best thread placement with gcc.
 
 .. figure:: /images/manual/icc_streams.svg
-  :alt: STREAMS benchmark with icc
+  :alt: STREAMS benchmark icc
   :name: fig_icc_streams
 
-  STREAMS benchmark with icc
+  STREAMS benchmark icc
 
 Fig. :any:`fig_icx_streams` shows the performance with the icx compiler.
 
 .. figure:: /images/manual/icx_streams.svg
-  :alt: STREAMS benchmark with icx
+  :alt: STREAMS benchmark icx
   :name: fig_icx_streams
 
-  STREAMS benchmark with icx
+  STREAMS benchmark icx
 
 .. figure:: /images/manual/nvc_streams.svg
-  :alt: STREAMS benchmark with nvc
+  :alt: STREAMS benchmark nvc
   :name: fig_nvc_streams
 
-  STREAMS benchmark with nvc
+  STREAMS benchmark nvc
 
 Observations:
 
@@ -177,22 +177,22 @@ plots to those given above.
   Comprehensive small STREAMS performance on Intel system
 
 .. figure:: /images/manual/gcc_smallstreams.svg
-  :alt: SmallSTREAMS benchmark with gcc
+  :alt: SmallSTREAMS benchmark gcc
   :name: fig_gcc_smallstreams
 
-  Small STREAMS benchmark with gcc
+  Small STREAMS benchmark gcc
 
 .. figure:: /images/manual/icc_smallstreams.svg
-  :alt: SmallSTREAMS benchmark with icc
+  :alt: SmallSTREAMS benchmark icc
   :name: fig_icc_smallstreams
 
-  Small STREAMS benchmark with icc
+  Small STREAMS benchmark icc
 
 .. figure:: /images/manual/icx_smallstreams.svg
-  :alt: SmallSTREAMS benchmark with icx
+  :alt: SmallSTREAMS benchmark icx
   :name: fig_icx_smallstreams
 
-  Small STREAMS benchmark with icx
+  Small STREAMS benchmark icx
 
 In Fig. :any:`fig_gcc_openmp_smallstreams` we plot only the results for OpenMP with gcc. Note that the explicit binding makes no difference and the results are much poorer than icc
 (Fig. :any:`fig_icc_smallstreams` ) and icx (Fig. :any:`fig_icx_smallstreams` ), but both explicit binding and no binding results decrease sharply after 32 cores; much like the icc and
@@ -207,10 +207,10 @@ much worse than the MPI version for such small arrays**.
 
 
 .. figure:: /images/manual/gcc_openmp_smallstreams.svg
-  :alt: SmallSTREAMS benchmark with gcc, only OpenMP
+  :alt: SmallSTREAMS benchmark gcc, only OpenMP
   :name: fig_gcc_openmp_smallstreams
 
-  Small STREAMS benchmark with gcc, only OpenMP
+  Small STREAMS benchmark gcc, only OpenMP
 
 
 To understand better the poor scaling of the OpenMP STREAMS for small arrays we have created `a new benchmark code <PETSC_DOC_OUT_ROOT_PLACEHOLDER/src/benchmarks/streams/OpenMPVersionLikeMPI.c.html>`__.
@@ -236,28 +236,28 @@ For larger thread counts both the OpenMP and MPI versions with the inner loop co
 dramatically different, we have no explanation for the difference.
 
 .. figure:: /images/manual/gcc_inner_smallstreams.svg
-  :alt: Small STREAMS benchmark with gcc and inner loop
+  :alt: Small STREAMS benchmark gcc and inner loop
   :name: fig_gcc_inner_smallstreams
 
-  Small STREAMS benchmark with gcc and inner loop
+  Small STREAMS benchmark gcc and inner loop
 
 .. figure:: /images/manual/icc_inner_smallstreams.svg
-  :alt: Small STREAMS benchmark with icc and inner loop
+  :alt: Small STREAMS benchmark icc and inner loop
   :name: fig_icc_inner_smallstreams
 
-  Small STREAMS benchmark with icc and inner loop
+  Small STREAMS benchmark icc and inner loop
 
 .. figure:: /images/manual/icx_inner_smallstreams.svg
-  :alt: Small STREAMS benchmark with icx and inner loop
+  :alt: Small STREAMS benchmark icx and inner loop
   :name: fig_icx_inner_smallstreams
 
-  Small STREAMS benchmark with icx and inner loop
+  Small STREAMS benchmark icx and inner loop
 
 .. figure:: /images/manual/nvc_inner_smallstreams.svg
-  :alt: Small STREAMS benchmark with nvc and inner loop
+  :alt: Small STREAMS benchmark nvc and inner loop
   :name: fig_nvc_inner_smallstreams
 
-  Small STREAMS benchmark with nvc and inner loop
+  Small STREAMS benchmark nvc and inner loop
 
 Detailed STREAMS study for medium size arrays
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -271,28 +271,28 @@ We next examine the performance for arrays of size 1,200,000 and produce similar
   Comprehensive medium STREAMS performance on Intel system
 
 .. figure:: /images/manual/gcc_inner_mediumstreams.svg
-  :alt: Medium STREAMS benchmark with gcc and inner loop
+  :alt: Medium STREAMS benchmark gcc and inner loop
   :name: fig_gcc_inner_mediumstreams
 
-  Medium STREAMS benchmark with gcc and inner loop
+  Medium STREAMS benchmark gcc and inner loop
 
 .. figure:: /images/manual/icc_inner_mediumstreams.svg
-  :alt: Medium STREAMS benchmark with icc and inner loop
+  :alt: Medium STREAMS benchmark icc and inner loop
   :name: fig_icc_inner_mediumstreams
 
-  Medium STREAMS benchmark with icc and inner loop
+  Medium STREAMS benchmark icc and inner loop
 
 .. figure:: /images/manual/icx_inner_mediumstreams.svg
-  :alt: Medium STREAMS benchmark with icx and inner loop
+  :alt: Medium STREAMS benchmark icx and inner loop
   :name: fig_icx_inner_mediumstreams
 
-  Medium STREAMS benchmark with icx and inner loop
+  Medium STREAMS benchmark icx and inner loop
 
 .. figure:: /images/manual/nvc_inner_mediumstreams.svg
-  :alt: Medium STREAMS benchmark with nvc and inner loop
+  :alt: Medium STREAMS benchmark nvc and inner loop
   :name: fig_nvc_inner_mediumstreams
 
-  Medium STREAMS benchmark with nvc and inner loop
+  Medium STREAMS benchmark nvc and inner loop
 
 .. table:: Maximum bandwidths; small, medium, and large
    :name: tab-1
@@ -331,35 +331,11 @@ Detailed study with simple application
 We now move on to a `PETSc application <PETSC_DOC_OUT_ROOT_PLACEHOLDER/src/ksp/ksp/tutorials/ex45.c.html>`__ which solves a three dimensional Poisson problem on a unit squire discretized with
 finite differences whose linear system is solved with the PETSc algebraic multigrid, `PCGAMG`. To match the STREAMS benchmark, strong scaling is used measuring the time to construct the preconditioner,
 the time to solve the linear system with the preconditioner, and the time for all the matrix-vector products. These are displayed in Fig. :any:`fig_gamg`. The runtime options were
-``-da_refine 6 -pc_type gamg -log_view ``. In this study there was no attempt to tune the default ``PCGAMG`` parameters.
+``-da_refine 6 -pc_type gamg -log_view``. In this study there was no attempt to tune the default ``PCGAMG`` parameters.
 Note the similar speedups for all the
-different compilers. Also note the solver and matrix-vector multiplication (which is part of the solver) have **speedup results remarkably close to the large STREAMS benchmarks**, but without the slower
+different compilers. Also note the solver and matrix-vector multiplication (which is part of the solver) have **speedup results remarkably close to the large STREAMS benchmark**, but without the slower
 growth in speedup between 32 and 48 cores exhibited by STREAMS. Even the icc compiler version produces speedups in the 25 range while for the STREAMS benchmark it is around 17;
 we conclude that this is because none of the PETSc code has the same "extra" performance from icc that the benchmark has.
-
-To understand the disparity in the STREAMS performance with icc we reran it with the highest optimization level that produced the same results as gcc and icx: ``-O1`` without ``-march=native``.
-The results are displayed in Fig. :any:`fig_icc_O1_streams`, sure enough the results now match that of gcc and icx.
-
-.. figure:: /images/manual/icc_O1_streams.svg
-  :alt: STREAMS benchmark with icc -O1
-  :name: fig_icc_O1_streams
-
-  STREAMS benchmark with icc and -O1
-
-Next we reran the simple application with the lower optimization. The results are in Fig. :any:`fig_gamg_O1` and exhibit the same behavior as the code with full optimization indicating the extra
-optimization effects the STREAMS benchmark but not the application code.
-
-.. figure:: /images/manual/gamg_O1.svg
-  :alt: GAMG solver speedup with -O1 icc
-  :name: fig_gamg_O1
-
-  GAMG Solver Speedup with -O1 iccx
-
-The speed ups for the ``PC`` setup times are higher than for the solver and the benchmark, this is not surprising since the ``PCGAMG`` setup is not as bandwidth limited as the solve. Also the
-setup time continues to have improved speedup well passed 32 cores while the solver time has nearly saturated at 32 cores. Since the setup time dominates this application using as many cores
-as possible will result in a measurably smaller compute time. We have no particular explanation for the dips in the performance at certain core counts but note it is consistent between compilers
-and likely results from the amount of MPI communication required, the communication pattern, and also differences in the performance of ``PCGAMG`` which does vary for different core counts
-since the algorithms used produce "slightly" different preconditioners.
 
 .. figure:: /images/manual/gamg.svg
   :alt: GAMG solver speedup
@@ -367,6 +343,29 @@ since the algorithms used produce "slightly" different preconditioners.
 
   GAMG Solver Speedup
 
+To understand the disparity in the STREAMS performance with icc we reran it with the highest optimization level that produced the same results as gcc and icx: ``-O1`` without ``-march=native``.
+The results are displayed in Fig. :any:`fig_icc_O1_streams`, sure enough the results now match that of gcc and icx.
+
+.. figure:: /images/manual/icc_O1_streams.svg
+  :alt: STREAMS benchmark icc -O1
+  :name: fig_icc_O1_streams
+
+  STREAMS benchmark icc -O1
+
+Next we reran the simple application with the lower icc optimization. The results are in Fig. :any:`fig_gamg_O1` and exhibit the same behavior as the code with full optimization indicating the extra
+optimization effects the STREAMS benchmark but not the application code.
+
+.. figure:: /images/manual/gamg_O1.svg
+  :alt: GAMG solver speedup icc -O1
+  :name: fig_gamg_O1
+
+  GAMG Solver Speedup icc -O1
+
+The speed ups for the ``PC`` setup times are higher than for the solver and the benchmark, this is not surprising since the ``PCGAMG`` setup is not as bandwidth limited as the solve. Also the
+setup time continues to have improved speedup well passed 32 cores while the solver time has nearly saturated at 32 cores. Since the setup time dominates this application, using as many cores
+as possible will result in a measurably smaller compute time. We have no particular explanation for the dips in the performance at certain core counts but note it is consistent between compilers
+and likely results from the amount of MPI communication required, the communication pattern, and also differences in the performance of ``PCGAMG`` which does vary for different core counts
+since the algorithms used produce "slightly" different preconditioners.
 
 This example demonstrates the utility of the STREAMS benchmark to predict the speedup of a memory bandwidth limited application on a shared memory system.
 
@@ -375,11 +374,13 @@ This example demonstrates the utility of the STREAMS benchmark to predict the sp
 Simple application with the MPI linear solver server
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-We now run the same PETSc application but with MPI linear solver server mode; set with ``-mpi_linear_solver_server``.  In Fig. :any:`fig_gamg_server` we
-plot the time to solution (both time to distribute the system, the setup and the solve time) was well as, seperately the time needed to distribute the system.
+We now run the same PETSc application but with MPI linear solver server mode; set using the ``-mpi_linear_solver_server`` option.  In Fig. :any:`fig_gamg_server` we
+plot the time to solution (both time to distribute the system, the setup and the solve time) was well as, separately the time needed to distribute the system.
 All compilers deliver largely the same performance. Note that performance improvement
 begins to tail off at around 20 MPI processes. In  Fig. :any:`fig_gamg_server_percent` we plot the percentage of the solver time needed for the matrix (and vector) distributions. It begins at
-around 13 percent and grows rapidly at around 20 MPI processes to 30 percent. At 64 MPI processes it is one-half the solution time.
+around 13 percent and grows rapidly at around 20 MPI processes to 30 percent. At 64 MPI processes it is one-half the solution time. Finally we plot the speedup in Fig. :any:`fig_gamg_server_speedup`
+and not that it is disappointingly fair below the parallel solve without the server.
+
 
 .. figure:: /images/manual/gamg_server.svg
   :alt: GAMG solver time  with linear solver server
@@ -393,7 +394,38 @@ around 13 percent and grows rapidly at around 20 MPI processes to 30 percent. At
 
   GAMG Solver percent time in distribution  with  linear solver server
 
-For this application, at the given scale, we can conclude that there is no benefit to using more than around 20 MPI processes. But the improvement in run time from one to ten MPI processes is excellent.
+.. figure:: /images/manual/gamg_server_speedup.svg
+  :alt: GAMG solver speedup  with linear solver server
+  :name: fig_gamg_server_speedup
+
+  GAMG Solver speedup  with  linear solver server 
+
+The initial implementation of ``PCMPI``, benchmarked above, used ``MPI_Scatterv()`` to communicate the matrix and vector entries from the initial compute process to all of the
+server processes. Unfortunately ``MPI_Scatterv()`` does not scale with more MPI processes hence the solution time is limited by the ``MPI_Scatterv()``. To remove this limitation
+we implemented an alternative communication mechanism where the MPI processes used ``MPI_Win_allocate_shared()`` to allocate a common pool of memory from which all the MPI processes in the server
+can access their portion of the matrices and vectors. There is still an extra server processing overhead since the initial data storage of the sequential matrix (in ``MATSEQAIJ`` storage)
+still needs to be converted to ``MATMPIAIJ`` storage. Fortunately this conversion scales well as seen in Fig. :any:`fig_gamg_server_shared_percent` remaining at around ten percent
+of the solution time. ``VecPlaceArray()`` is used to convert the sequential vector to an MPI vector so there is
+no overhead, not even a copy, for this operation. Again we plot the speedup in Fig. :any:`fig_gamg_server_shared_speedup`
+and note that it is significantly higher than with the ``MPI_Scatterv()`` based server though still below the parallel solver without the server.
+
+.. figure:: /images/manual/gamg_server_shared.svg
+  :alt: GAMG solver time  with linear solver server and shared memory distribution
+  :name: fig_gamg_server_shared
+
+  GAMG Solver time with linear solver server and shared memory distribution
+
+.. figure:: /images/manual/gamg_server_shared_percent.svg
+  :alt: GAMG solver percent time in distribution  with linear solver server
+  :name: fig_gamg_server_shared_percent
+
+  GAMG Solver percent time in distribution  with  linear solver server and shared memory distribution
+
+.. figure:: /images/manual/gamg_server_shared_speedup.svg
+  :alt: GAMG solver speedup  with linear solver server and shared memory distribution
+  :name: fig_gamg_server_shared_speedup
+
+  GAMG Solver speedup  with  linear solver server and shared memory distribution
 
 .. rubric:: Footnotes
 
