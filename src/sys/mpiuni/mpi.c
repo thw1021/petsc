@@ -441,7 +441,7 @@ int MPI_Win_free(MPI_Win *win)
   return MPI_SUCCESS;
 }
 
-int MPI_Win_allocate_shared(size_t sz,size_t asz, MPI_Info info, MPI_Comm comm, void **addr, MPI_Win *win)
+int MPI_Win_allocate_shared(size_t sz, size_t asz, MPI_Info info, MPI_Comm comm, void **addr, MPI_Win *win)
 {
   *win = *addr = malloc(sz);
   return MPI_SUCCESS;
