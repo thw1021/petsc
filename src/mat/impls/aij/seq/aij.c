@@ -549,7 +549,9 @@ PetscErrorCode MatSeqAIJSetTotalPreallocation(Mat A, PetscInt nztotal)
     PetscCall(PetscMalloc1(nztotal, &a->j));
     PetscCall(PetscMalloc1(A->rmap->n + 1, &a->i));
   } else {
-    PetscCall(PetscMalloc3(nztotal, &a->a, nztotal, &a->j, A->rmap->n + 1, &a->i));
+    PetscCall(PCMPIServerAllocateArray(nztotal, sizeof(PetscScalar), (void **)&a->a));
+    PetscCall(PCMPIServerAllocateArray(A->rmap->n + 1, sizeof(PetscInt), (void **)&a->i));
+    PetscCall(PCMPIServerAllocateArray(nztotal, sizeof(PetscInt), (void **)&a->j));
   }
   a->i[0] = 0;
   if (A->structure_only) {
@@ -3997,7 +3999,9 @@ PetscErrorCode MatSeqAIJSetPreallocation_SeqAIJ(Mat B, PetscInt nz, const PetscI
       PetscCall(PetscMalloc1(nz, &b->j));
       PetscCall(PetscMalloc1(B->rmap->n + 1, &b->i));
     } else {
-      PetscCall(PetscMalloc3(nz, &b->a, nz, &b->j, B->rmap->n + 1, &b->i));
+      PetscCall(PCMPIServerAllocateArray(nz, sizeof(PetscScalar), (void **)&b->a));
+      PetscCall(PCMPIServerAllocateArray(nz, sizeof(PetscInt), (void **)&b->j));
+      PetscCall(PCMPIServerAllocateArray(B->rmap->n + 1, sizeof(PetscInt), (void **)&b->i));
     }
     b->i[0] = 0;
     for (i = 1; i < B->rmap->n + 1; i++) b->i[i] = b->i[i - 1] + b->imax[i - 1];
