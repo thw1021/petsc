@@ -1054,6 +1054,7 @@ PetscErrorCode PetscObjectContainerCompose(PetscObject obj, const char *name, vo
 PetscErrorCode PetscObjectContainerQuery(PetscObject obj, const char *name, void **pointer)
 {
   PetscContainer container;
+
   PetscFunctionBegin;
   PetscCall(PetscObjectQuery((PetscObject)obj, name, (PetscObject *)&container));
   if (container) PetscCall(PetscContainerGetPointer(container, pointer));
