@@ -162,3 +162,33 @@
           PetscErrorCode    :: ierr
         End Subroutine
       End Interface
+
+      Interface PetscShmgetAllocateArrayScalar
+        Subroutine PetscShmgetAllocateArrayScalar(start, len, d1, ierr)
+          PetscInt :: start, len
+          PetscScalar, pointer :: d1(:)
+          PetscErrorCode ierr
+        End Subroutine
+      End Interface
+
+      Interface PetscShmgetDeallocateArrayScalar
+        Subroutine PetscShmgetDeallocateArrayScalar(d1, ierr)
+          PetscScalar, pointer :: d1(:)
+          PetscErrorCode ierr
+        End Subroutine
+      End Interface
+
+      Interface PetscShmgetAllocateArrayInt
+        Subroutine PetscShmgetAllocateArrayInt(start, len, d1, ierr)
+          PetscInt :: start, len
+          PetscInt, pointer :: d1(:)
+          PetscErrorCode ierr
+        End Subroutine
+      End Interface
+
+      Interface PetscShmgetDeallocateArrayInt
+        Subroutine PetscShmgetDeallocateArrayInt(d1, ierr)
+          PetscInt, pointer :: d1(:)
+          PetscErrorCode ierr
+        End Subroutine
+      End Interface

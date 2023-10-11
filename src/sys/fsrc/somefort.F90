@@ -25,7 +25,7 @@
       subroutine PetscFortranPrintToUnit(unit,str,ierr)
       implicit none
       character(*) str
-      PetscInt unit
+      integer unit
       PetscErrorCode ierr
       write(unit=unit, fmt="(A)", advance='no') str
       ierr = 0
