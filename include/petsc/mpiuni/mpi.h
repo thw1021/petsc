@@ -189,6 +189,9 @@ typedef int MPI_Comm;
 #define MPI_COMM_WORLD       2
 #define MPI_COMM_TYPE_SHARED 1
 
+typedef void* MPI_Win;
+typedef int MPI_Info;
+
 typedef int MPI_Info;
 #define MPI_INFO_NULL 0
 
@@ -343,6 +346,8 @@ typedef int(MPI_Delete_function)(MPI_Comm, int, void *, void *);
 #define MPI_Type_get_contents Petsc_MPI_Type_get_contents
 #define MPI_Add_error_class   Petsc_MPI_Add_error_class
 #define MPI_Add_error_code    Petsc_MPI_Add_error_code
+#define MPI_Win_free          Petsc_MPI_Win_free
+#define MPI_Win_allocate_shared Petsc_MPI_Win_allocate_shared
 
 /* identical C bindings */
 #define MPI_Comm_copy_attr_function   MPI_Copy_function
@@ -376,6 +381,13 @@ MPIUni_PETSC_EXTERN int    MPI_Finalized(int *);
 MPIUni_PETSC_EXTERN int    MPI_Comm_size(MPI_Comm, int *);
 MPIUni_PETSC_EXTERN int    MPI_Comm_rank(MPI_Comm, int *);
 MPIUni_PETSC_EXTERN double MPI_Wtime(void);
+
+MPIUni_PETSC_EXTERN int MPI_Win_free(MPI_Win*);
+MPIUni_PETSC_EXTERN int MPI_Win_allocate_shared(size_t sz,size_t asz, MPI_Info, MPI_Comm, void **addr, MPI_Win*);
+
+#define MPI_Info_create(info) (MPIUNI_ARG(info),MPI_SUCCESS)
+#define MPI_Info_set(info,a,b) (MPIUNI_ARG(info),MPIUNI_ARG(a),MPIUNI_ARG(b),MPI_SUCCESS)
+#define MPI_Info_free(info)   (MPIUNI_ARG(info),MPI_SUCCESS)
 
 MPIUni_PETSC_EXTERN int MPI_Type_get_envelope(MPI_Datatype, int *, int *, int *, int *);
 MPIUni_PETSC_EXTERN int MPI_Type_get_contents(MPI_Datatype, int, int, int, int *, MPI_Aint *, MPI_Datatype *);
