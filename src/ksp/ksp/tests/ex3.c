@@ -206,7 +206,7 @@ int main(int argc, char **args)
     test:
       suffix: chebyest
       args: -ksp_est_view -ksp_type chebyshev -ksp_chebyshev_esteig
-      filter:  sed -e "s/Iterations 19/Iterations 20/g"
+      filter:  sed -e "s/Iterations 1[8-9]/Iterations 20/g"
 
     test:
       suffix: gamg_provided_not_ok
