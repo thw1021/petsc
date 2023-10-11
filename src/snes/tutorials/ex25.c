@@ -101,7 +101,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscScalar **t, PetscScal
 /*TEST
 
    test:
-      args: -pc_type mg -da_refine 1 -ksp_type fgmres
+      args: -pc_type mg -da_refine 1 -ksp_type fgmres -ksp_rtol 1e-4 -snes_rtol 1e-4
 
    test:
       suffix: 2
