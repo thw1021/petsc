@@ -9,9 +9,9 @@ class Configure(config.package.Package):
     config.package.Package.__init__(self, framework)
 
     self.minversion       = '5.0.0'
-    # Use ROCM version to determine HIP's, as HIP_VERSION_PATCH (e.g., 31061) is not necessarily the AMD advertised patch version, e.g., in 5.6.0
+    # Check version from rocm-core here, as HIP_VERSION_PATCH (e.g., 31061 from rocm_version.h) is not necessarily the AMD advertised patch version, e.g., in 5.6.0
     self.versionname      = 'ROCM_VERSION_MAJOR.ROCM_VERSION_MINOR.ROCM_VERSION_PATCH'
-    self.versioninclude   = 'include/rocm_version.h'
+    self.versioninclude   = 'rocm_version.h'
     self.requiresversion  = 1
     self.functionsCxx     = [1,'', 'rocblas_create']
     self.includes         = ['hip/hip_runtime.h']
