@@ -48,9 +48,9 @@ typedef struct {
   for the nonlinear solver).
 
   Input Parameters:
-  + ts        - timestepping context
-  . predictor - callback to set the predictor in each step
-  - ctx       - the application context, which may be set to `NULL` if not used
++ ts        - timestepping context
+. predictor - callback to set the predictor in each step
+- ctx       - the application context, which may be set to `NULL` if not used
 
   Level: intermediate
 
@@ -60,7 +60,7 @@ typedef struct {
   the initial guess will be the converged solution from the previous time step, without regard
   for the previous velocity or acceleration.
 
-  .seealso: [](ch_ts), `TS`, `TSALPHA2`, `TSAlpha2Predictor`
+.seealso: [](ch_ts), `TS`, `TSALPHA2`, `TSAlpha2Predictor`
 @*/
 PetscErrorCode TSAlpha2SetPredictor(TS ts, TSAlpha2Predictor predictor, void *ctx)
 {
