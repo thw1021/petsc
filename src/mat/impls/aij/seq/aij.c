@@ -549,15 +549,15 @@ PetscErrorCode MatSeqAIJSetTotalPreallocation(Mat A, PetscInt nztotal)
     PetscCall(PetscMalloc1(nztotal, &a->j));
     PetscCall(PetscMalloc1(A->rmap->n + 1, &a->i));
   } else {
-    PetscCall(PetscMalloc3(nztotal, &a->a, nztotal, &a->j, A->rmap->n + 1, &a->i));
+    PetscCall(PCMPIServerAllocateArray(nztotal, sizeof(PetscScalar), (void **)&a->a));
+    PetscCall(PCMPIServerAllocateArray(A->rmap->n + 1, sizeof(PetscInt), (void **)&a->i));
+    PetscCall(PCMPIServerAllocateArray(nztotal, sizeof(PetscInt), (void **)&a->j));
   }
   a->i[0] = 0;
   if (A->structure_only) {
-    a->singlemalloc = PETSC_FALSE;
-    a->free_a       = PETSC_FALSE;
+    a->free_a = PETSC_FALSE;
   } else {
-    a->singlemalloc = PETSC_TRUE;
-    a->free_a       = PETSC_TRUE;
+    a->free_a = PETSC_TRUE;
   }
   a->free_ij        = PETSC_TRUE;
   A->ops->setvalues = MatSetValues_SeqAIJ_SortedFullNoPreallocation;
@@ -1736,7 +1736,7 @@ static PetscErrorCode MatShift_SeqAIJ(Mat A, PetscScalar v)
   } else {
     PetscScalar *olda = a->a; /* preserve pointers to current matrix nonzeros structure and values */
     PetscInt    *oldj = a->j, *oldi = a->i;
-    PetscBool    singlemalloc = a->singlemalloc, free_a = a->free_a, free_ij = a->free_ij;
+    PetscBool    free_a = a->free_a, free_ij = a->free_ij;
 
     a->a = NULL;
     a->j = NULL;
@@ -1752,13 +1752,9 @@ static PetscErrorCode MatShift_SeqAIJ(Mat A, PetscScalar v)
     }
     PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
     PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
-    if (singlemalloc) {
-      PetscCall(PetscFree3(olda, oldj, oldi));
-    } else {
-      if (free_a) PetscCall(PetscFree(olda));
-      if (free_ij) PetscCall(PetscFree(oldj));
-      if (free_ij) PetscCall(PetscFree(oldi));
-    }
+    if (free_a) PetscCall(PCMPIServerDeallocateArray((void **)&olda));
+    if (free_ij) PetscCall(PCMPIServerDeallocateArray((void **)&oldj));
+    if (free_ij) PetscCall(PCMPIServerDeallocateArray((void **)&oldi));
   }
   PetscCall(PetscFree(mdiag));
   a->diagonaldense = PETSC_TRUE;
@@ -3991,24 +3987,18 @@ PetscErrorCode MatSeqAIJSetPreallocation_SeqAIJ(Mat B, PetscInt nz, const PetscI
     }
 
     /* allocate the matrix space */
-    /* FIXME: should B's old memory be unlogged? */
     PetscCall(MatSeqXAIJFreeAIJ(B, &b->a, &b->j, &b->i));
+    PetscCall(PCMPIServerAllocateArray(nz, sizeof(PetscInt), (void **)&b->j));
+    PetscCall(PCMPIServerAllocateArray(B->rmap->n + 1, sizeof(PetscInt), (void **)&b->i));
+    b->free_ij = PETSC_TRUE;
     if (B->structure_only) {
-      PetscCall(PetscMalloc1(nz, &b->j));
-      PetscCall(PetscMalloc1(B->rmap->n + 1, &b->i));
+      b->free_a = PETSC_FALSE;
     } else {
-      PetscCall(PetscMalloc3(nz, &b->a, nz, &b->j, B->rmap->n + 1, &b->i));
+      PetscCall(PCMPIServerAllocateArray(nz, sizeof(PetscScalar), (void **)&b->a));
+      b->free_a = PETSC_TRUE;
     }
     b->i[0] = 0;
     for (i = 1; i < B->rmap->n + 1; i++) b->i[i] = b->i[i - 1] + b->imax[i - 1];
-    if (B->structure_only) {
-      b->singlemalloc = PETSC_FALSE;
-      b->free_a       = PETSC_FALSE;
-    } else {
-      b->singlemalloc = PETSC_TRUE;
-      b->free_a       = PETSC_TRUE;
-    }
-    b->free_ij = PETSC_TRUE;
   } else {
     b->free_a  = PETSC_FALSE;
     b->free_ij = PETSC_FALSE;
@@ -4740,7 +4730,6 @@ PetscErrorCode MatSetPreallocationCOO_SeqAIJ(Mat mat, PetscCount coo_n, PetscInt
   PetscCall(PetscCalloc1(nnz, &Aa)); /* Zero the matrix */
   PetscCall(MatSetSeqAIJWithArrays_private(PETSC_COMM_SELF, M, N, Ai, Aj, Aa, rtype, mat));
 
-  seqaij->singlemalloc = PETSC_FALSE;            /* Ai, Aj and Aa are not allocated in one big malloc */
   seqaij->free_a = seqaij->free_ij = PETSC_TRUE; /* Let newmat own Ai, Aj and Aa */
 
   // Put the COO struct in a container and then attach that to the matrix
@@ -4919,11 +4908,12 @@ PetscErrorCode MatDuplicateNoCreate_SeqAIJ(Mat C, Mat A, MatDuplicateOption cpva
 
       /* allocate the matrix space */
       if (mallocmatspace) {
-        PetscCall(PetscMalloc3(a->i[m], &c->a, a->i[m], &c->j, m + 1, &c->i));
-
-        c->singlemalloc = PETSC_TRUE;
-
+        PetscCall(PCMPIServerAllocateArray(a->i[m], sizeof(PetscScalar), (void **)&c->a));
+        PetscCall(PCMPIServerAllocateArray(a->i[m], sizeof(PetscInt), (void **)&c->j));
+        PetscCall(PCMPIServerAllocateArray(m + 1, sizeof(PetscInt), (void **)&c->i));
         PetscCall(PetscArraycpy(c->i, a->i, m + 1));
+        c->free_a  = PETSC_TRUE;
+        c->free_ij = PETSC_TRUE;
         if (m > 0) {
           PetscCall(PetscArraycpy(c->j, a->j, a->i[m]));
           if (cpvalues == MAT_COPY_VALUES) {
@@ -4956,8 +4946,6 @@ PetscErrorCode MatDuplicateNoCreate_SeqAIJ(Mat C, Mat A, MatDuplicateOption cpva
     c->idiag              = NULL;
     c->ssor_work          = NULL;
     c->keepnonzeropattern = a->keepnonzeropattern;
-    c->free_a             = PETSC_TRUE;
-    c->free_ij            = PETSC_TRUE;
 
     c->rmax  = a->rmax;
     c->nz    = a->nz;
@@ -5180,13 +5168,12 @@ PetscErrorCode MatCreateSeqAIJWithArrays(MPI_Comm comm, PetscInt m, PetscInt n, 
   PetscCall(PetscMalloc1(m, &aij->imax));
   PetscCall(PetscMalloc1(m, &aij->ilen));
 
-  aij->i            = i;
-  aij->j            = j;
-  aij->a            = a;
-  aij->singlemalloc = PETSC_FALSE;
-  aij->nonew        = -1; /*this indicates that inserting a new value in the matrix that generates a new nonzero is an error*/
-  aij->free_a       = PETSC_FALSE;
-  aij->free_ij      = PETSC_FALSE;
+  aij->i       = i;
+  aij->j       = j;
+  aij->a       = a;
+  aij->nonew   = -1; /*this indicates that inserting a new value in the matrix that generates a new nonzero is an error*/
+  aij->free_a  = PETSC_FALSE;
+  aij->free_ij = PETSC_FALSE;
 
   for (ii = 0, aij->nonzerorowcnt = 0, aij->rmax = 0; ii < m; ii++) {
     aij->ilen[ii] = aij->imax[ii] = i[ii + 1] - i[ii];

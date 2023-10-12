@@ -2331,7 +2331,10 @@ PETSC_EXTERN PetscErrorCode PetscHasExternalPackage(const char[], PetscBool *);
 /* this cannot go here because it may be in a different shared library */
 PETSC_EXTERN PetscErrorCode PCMPIServerBegin(void);
 PETSC_EXTERN PetscErrorCode PCMPIServerEnd(void);
-PETSC_EXTERN PetscErrorCode PCMPICommsDestroy(void);
 PETSC_EXTERN PetscBool      PCMPIServerActive;
+PETSC_EXTERN PetscBool      PCMPIServerInSolve;
+PETSC_EXTERN PetscErrorCode PCMPIServerAllocateArray(size_t, size_t, void **);
+PETSC_EXTERN PetscErrorCode PCMPIServerDeallocateArray(void **);
+PETSC_EXTERN PetscErrorCode PCMPIServerScatterAddress(MPI_Comm, const void *, const void **);
 
 #define PETSC_HAVE_FORTRAN PETSC_DEPRECATED_MACRO(3, 20, 0, "PETSC_USE_FORTRAN_BINDINGS", ) PETSC_USE_FORTRAN_BINDINGS
