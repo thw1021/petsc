@@ -628,8 +628,7 @@ static PetscErrorCode PCReset_ASM(PC pc)
 
   PetscFunctionBegin;
   if (osm->ksp) {
-    for (i = 0; i < osm->n_local_true; i++) PetscCall(KSPDestroy(&osm->ksp[i]));
-    PetscCall(PetscFree(osm->ksp));
+    for (i = 0; i < osm->n_local_true; i++) PetscCall(KSPReset(osm->ksp[i]));
   }
   if (osm->pmat) {
     if (osm->n_local_true > 0) PetscCall(MatDestroySubMatrices(osm->n_local_true, &osm->pmat));
@@ -743,6 +742,11 @@ static PetscErrorCode PCASMSetLocalSubdomains_ASM(PC pc, PetscInt n, IS is[], IS
       for (i = 0; i < n; i++) PetscCall(PetscObjectReference((PetscObject)is_local[i]));
     }
     PetscCall(PCASMDestroySubdomains(osm->n_local_true, osm->is, osm->is_local));
+
+    if (osm->ksp && osm->n_local_true != n) {
+      for (i = 0; i < osm->n_local_true; i++) PetscCall(KSPDestroy(&osm->ksp[i]));
+      PetscCall(PetscFree(osm->ksp));
+    }
 
     osm->n_local_true = n;
     osm->is           = NULL;
