@@ -2335,7 +2335,8 @@ PETSC_EXTERN PetscBool      PCMPIServerActive;
 PETSC_EXTERN PetscBool      PCMPIServerInSolve;
 PETSC_EXTERN PetscErrorCode PCMPIServerAllocateArray(size_t, size_t, void **);
 PETSC_EXTERN PetscErrorCode PCMPIServerDeallocateArray(void **);
-PETSC_EXTERN PetscErrorCode PCMPIServerScatterAddress(MPI_Comm, const void *, const void **);
+PETSC_EXTERN PetscErrorCode PCMPIServerMapAddresses(MPI_Comm, PetscInt, const void **, void **);
+PETSC_EXTERN PetscErrorCode PCMPIServerUnmapAddresses(MPI_Comm, PetscInt, void **);
 
 #define PETSC_HAVE_FORTRAN PETSC_DEPRECATED_MACRO(3, 20, 0, "PETSC_USE_FORTRAN_BINDINGS", ) PETSC_USE_FORTRAN_BINDINGS
 

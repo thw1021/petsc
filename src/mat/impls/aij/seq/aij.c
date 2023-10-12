@@ -545,21 +545,16 @@ PetscErrorCode MatSeqAIJSetTotalPreallocation(Mat A, PetscInt nztotal)
   }
 
   /* allocate the matrix space */
-  if (A->structure_only) {
-    PetscCall(PetscMalloc1(nztotal, &a->j));
-    PetscCall(PetscMalloc1(A->rmap->n + 1, &a->i));
-  } else {
-    PetscCall(PCMPIServerAllocateArray(nztotal, sizeof(PetscScalar), (void **)&a->a));
-    PetscCall(PCMPIServerAllocateArray(A->rmap->n + 1, sizeof(PetscInt), (void **)&a->i));
-    PetscCall(PCMPIServerAllocateArray(nztotal, sizeof(PetscInt), (void **)&a->j));
-  }
-  a->i[0] = 0;
+  PetscCall(PCMPIServerAllocateArray(A->rmap->n + 1, sizeof(PetscInt), (void **)&a->i));
+  PetscCall(PCMPIServerAllocateArray(nztotal, sizeof(PetscInt), (void **)&a->j));
+  a->free_ij        = PETSC_TRUE;
   if (A->structure_only) {
     a->free_a = PETSC_FALSE;
   } else {
-    a->free_a = PETSC_TRUE;
+    PetscCall(PCMPIServerAllocateArray(nztotal, sizeof(PetscScalar), (void **)&a->a));
+    a->free_a = PETSC_FALSE;
   }
-  a->free_ij        = PETSC_TRUE;
+  a->i[0] = 0;
   A->ops->setvalues = MatSetValues_SeqAIJ_SortedFullNoPreallocation;
   A->preallocated   = PETSC_TRUE;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -3961,7 +3956,7 @@ PetscErrorCode MatSeqAIJSetPreallocation_SeqAIJ(Mat B, PetscInt nz, const PetscI
 
   if (nz == PETSC_DEFAULT || nz == PETSC_DECIDE) nz = 5;
   PetscCheck(nz >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "nz cannot be less than 0: value %" PetscInt_FMT, nz);
-  if (PetscUnlikelyDebug(nnz)) {
+  if (nnz) {
     for (i = 0; i < B->rmap->n; i++) {
       PetscCheck(nnz[i] >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "nnz cannot be less than 0: local row %" PetscInt_FMT " value %" PetscInt_FMT, i, nnz[i]);
       PetscCheck(nnz[i] <= B->cmap->n, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "nnz cannot be greater than row length: local row %" PetscInt_FMT " value %" PetscInt_FMT " rowlength %" PetscInt_FMT, i, nnz[i], B->cmap->n);
@@ -3984,17 +3979,21 @@ PetscErrorCode MatSeqAIJSetPreallocation_SeqAIJ(Mat B, PetscInt nz, const PetscI
       nz = PetscMin(nz, B->cmap->n);
       for (i = 0; i < B->rmap->n; i++) b->imax[i] = nz;
       nz = nz * B->rmap->n;
+          printf("if loop nz %" PetscInt_FMT "\n",(int)nz);
     } else {
       PetscInt64 nz64 = 0;
       for (i = 0; i < B->rmap->n; i++) {
         b->imax[i] = nnz[i];
         nz64 += nnz[i];
+        printf(" i %" PetscInt_FMT " nnz[i] %" PetscInt_FMT "\n",i,nnz[i]);
       }
       PetscCall(PetscIntCast(nz64, &nz));
+          printf("else loop nz %" PetscInt_FMT "\n",(int)nz);
     }
 
     /* allocate the matrix space */
     PetscCall(MatSeqXAIJFreeAIJ(B, &b->a, &b->j, &b->i));
+    printf("nz %" PetscInt_FMT "\n",(int)nz);
     PetscCall(PCMPIServerAllocateArray(nz, sizeof(PetscInt), (void **)&b->j));
     PetscCall(PCMPIServerAllocateArray(B->rmap->n + 1, sizeof(PetscInt), (void **)&b->i));
     b->free_ij = PETSC_TRUE;
