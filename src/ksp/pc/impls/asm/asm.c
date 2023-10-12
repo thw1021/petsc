@@ -628,7 +628,8 @@ static PetscErrorCode PCReset_ASM(PC pc)
 
   PetscFunctionBegin;
   if (osm->ksp) {
-    for (i = 0; i < osm->n_local_true; i++) PetscCall(KSPReset(osm->ksp[i]));
+    for (i = 0; i < osm->n_local_true; i++) PetscCall(KSPDestroy(&osm->ksp[i]));
+    PetscCall(PetscFree(osm->ksp));
   }
   if (osm->pmat) {
     if (osm->n_local_true > 0) PetscCall(MatDestroySubMatrices(osm->n_local_true, &osm->pmat));
