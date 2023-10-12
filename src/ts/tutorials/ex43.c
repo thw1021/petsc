@@ -52,7 +52,7 @@ PetscErrorCode Solution(TS ts, PetscReal t, Vec X, void *ctx)
 
 PetscErrorCode Predictor(TS ts, Vec X0, Vec V0, Vec A0, Vec X1, void *ctx)
 {
-  PetscScalar dt, accel_fac;
+  PetscReal dt, accel_fac;
 
   PetscFunctionBeginUser;
   PetscCall(TSGetTimeStep(ts, &dt));
