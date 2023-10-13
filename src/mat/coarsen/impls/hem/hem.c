@@ -405,13 +405,13 @@ static int gamg_hem_compare(const void *a, const void *b)
   Output Parameter:
    . a_locals_llist - array of list of local nodes rooted at local node
 */
-static PetscErrorCode MatCoarsenApply_HEM_private(IS perm, Mat a_Gmat, PetscCoarsenData **a_locals_llist)
+static PetscErrorCode MatCoarsenApply_HEM_private(IS perm, Mat a_Gmat, const PetscInt n_iter, PetscCoarsenData **a_locals_llist)
 {
   PetscBool         isMPI;
   MPI_Comm          comm;
   PetscInt          sub_it, kk, n, ix, *idx, *ii, iter, Iend, my0;
   PetscMPIInt       rank, size;
-  const PetscInt    nloc = a_Gmat->rmap->n, n_iter = 4; /* need to figure out how to stop this */
+  const PetscInt    nloc = a_Gmat->rmap->n;
   PetscInt         *lid_cprowID, *lid_gid;
   PetscBool        *lid_matched;
   Mat_SeqAIJ       *matA, *matB = NULL;
@@ -423,6 +423,7 @@ static PetscErrorCode MatCoarsenApply_HEM_private(IS perm, Mat a_Gmat, PetscCoar
   PetscMPIInt       tag1, tag2;
 
   PetscFunctionBegin;
+  PetscCall(PetscInfo(a_Gmat, "%" PetscInt_FMT " iterations of HEM.\n", n_iter));
   PetscCall(PetscObjectGetComm((PetscObject)a_Gmat, &comm));
   PetscCallMPI(MPI_Comm_rank(comm, &rank));
   PetscCallMPI(MPI_Comm_size(comm, &size));
@@ -1062,10 +1063,10 @@ static PetscErrorCode MatCoarsenApply_HEM(MatCoarsen coarse)
 
     PetscCall(MatGetLocalSize(mat, &m, &n));
     PetscCall(ISCreateStride(PetscObjectComm((PetscObject)mat), m, 0, 1, &perm));
-    PetscCall(MatCoarsenApply_HEM_private(perm, mat, &coarse->agg_lists));
+    PetscCall(MatCoarsenApply_HEM_private(perm, mat, coarse->max_it, &coarse->agg_lists));
     PetscCall(ISDestroy(&perm));
   } else {
-    PetscCall(MatCoarsenApply_HEM_private(coarse->perm, mat, &coarse->agg_lists));
+    PetscCall(MatCoarsenApply_HEM_private(coarse->perm, mat, coarse->max_it, &coarse->agg_lists));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1087,18 +1088,21 @@ static PetscErrorCode MatCoarsenView_HEM(MatCoarsen coarse, PetscViewer viewer)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*MC
-   MATCOARSENHEM - A coarsener that uses HEM a simple greedy coarsener
+/*@C
+  MatCoarsenCreate_HEM - A coarsener that uses HEM a simple greedy coarsener
 
-   Level: beginner
+  Input Parameter:
+. coarse - coarsener object
+
+  Level: advanced
 
 .seealso: `MatCoarsen`, `MatCoarsenSetType()`, `MatCoarsenGetData()`, `MatCoarsenType`, `MatCoarsenCreate()`
-M*/
-
+@*/
 PETSC_EXTERN PetscErrorCode MatCoarsenCreate_HEM(MatCoarsen coarse)
 {
   PetscFunctionBegin;
   coarse->ops->apply = MatCoarsenApply_HEM;
   coarse->ops->view  = MatCoarsenView_HEM;
+  coarse->max_it     = 4;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
