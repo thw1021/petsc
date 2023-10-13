@@ -261,7 +261,7 @@ PetscErrorCode MatCoarsenView(MatCoarsen agg, PetscViewer viewer)
 @*/
 PetscErrorCode MatCoarsenSetType(MatCoarsen coarser, MatCoarsenType type)
 {
-  PetscBool      match;
+  PetscBool match;
   PetscErrorCode (*r)(MatCoarsen);
 
   PetscFunctionBegin;
