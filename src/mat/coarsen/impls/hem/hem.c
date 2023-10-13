@@ -1088,7 +1088,7 @@ static PetscErrorCode MatCoarsenView_HEM(MatCoarsen coarse, PetscViewer viewer)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@
+/*@C
   MatCoarsenCreate_HEM - A coarsener that uses HEM a simple greedy coarsener
 
   Input Parameter:
