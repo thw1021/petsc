@@ -92,3 +92,4 @@ PETSC_EXTERN PetscErrorCode PetscCDGetASMBlocks(const PetscCoarsenData *, const 
 
 PETSC_EXTERN PetscErrorCode MatCoarsenMISKSetDistance(MatCoarsen, PetscInt);
 PETSC_EXTERN PetscErrorCode MatCoarsenMISKGetDistance(MatCoarsen, PetscInt *);
+PETSC_EXTERN PetscErrorCode MatCoarsenSetMaxIt(MatCoarsen, PetscInt);
