@@ -11179,14 +11179,14 @@ PetscErrorCode MatSetInf(Mat A)
 
 .seealso: [](ch_matrices), `Mat`, `MatCreate()`, `PCGAMG`
 @*/
-PetscErrorCode MatCreateGraph(Mat A, PetscBool sym, PetscBool scale, PetscReal filter, Mat *graph)
+PetscErrorCode MatCreateGraph(Mat A, PetscBool sym, PetscBool scale, PetscReal filter, PetscInt index, Mat *graph)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
   PetscValidType(A, 1);
   PetscValidLogicalCollectiveBool(A, scale, 3);
   PetscAssertPointer(graph, 5);
-  PetscUseTypeMethod(A, creategraph, sym, scale, filter, graph);
+  PetscUseTypeMethod(A, creategraph, sym, scale, filter, index, graph);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
