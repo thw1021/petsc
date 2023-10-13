@@ -594,7 +594,7 @@ static PetscErrorCode PCGAMGCreateGraph_AGG(PC pc, Mat Amat, Mat *a_Gmat)
   PetscBool       ishem;
   const char     *prefix;
   MatInfo         info0, info1;
-  PetscInt        bs;
+  PetscInt        bs, index = -1;
 
   PetscFunctionBegin;
   PetscCall(PetscLogEventBegin(petsc_gamg_setup_events[GAMG_COARSEN], 0, 0, 0, 0));
@@ -611,10 +611,10 @@ static PetscErrorCode PCGAMGCreateGraph_AGG(PC pc, Mat Amat, Mat *a_Gmat)
   PetscCall(MatGetInfo(Amat, MAT_LOCAL, &info0)); /* global reduction */
 
   if (ishem || pc_gamg_agg->use_low_mem_filter) {
-    PetscCall(MatCreateGraph(Amat, PETSC_TRUE, (vfilter >= 0 || ishem) ? PETSC_TRUE : PETSC_FALSE, vfilter, a_Gmat));
+    PetscCall(MatCreateGraph(Amat, PETSC_TRUE, (vfilter >= 0 || ishem) ? PETSC_TRUE : PETSC_FALSE, vfilter, index, a_Gmat));
   } else {
     // make scalar graph, symetrize if not know to be symetric, scale, but do not filter (expensive)
-    PetscCall(MatCreateGraph(Amat, PETSC_TRUE, PETSC_TRUE, -1, a_Gmat));
+    PetscCall(MatCreateGraph(Amat, PETSC_TRUE, PETSC_TRUE, -1, index, a_Gmat));
     if (vfilter >= 0) {
       PetscInt           Istart, Iend, ncols, nnz0, nnz1, NN, MM, nloc;
       Mat                tGmat, Gmat = *a_Gmat;
