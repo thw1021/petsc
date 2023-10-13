@@ -387,7 +387,7 @@ PetscErrorCode MatCoarsenSetFromOptions(MatCoarsen coarser)
 
   Input Parameters:
 + coarse - the coarsen context
-- b  - default 4
+- b      - number of HEM iterations
 
   Options Database Key:
 . -mat_coarsen_max_it <int,default=4> - Max HEM iterations
