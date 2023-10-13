@@ -570,6 +570,7 @@ struct _p_MatCoarsen {
   PetscBool         strict_aggs;
   IS                perm;
   PetscCoarsenData *agg_lists;
+  PetscInt          max_it; /* number of iterations in HEM */
 };
 
 PETSC_EXTERN PetscErrorCode MatCoarsenMISKSetDistance(MatCoarsen, PetscInt);
