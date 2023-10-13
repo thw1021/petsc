@@ -399,7 +399,7 @@ PetscErrorCode MatCoarsenSetFromOptions(MatCoarsen coarser)
 PetscErrorCode MatCoarsenSetMaxIt(MatCoarsen coarse, PetscInt b)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(coarse, MATCOARSEN_CLASSID, 1);
+  PetscValidHeaderSpecific(coarse, MAT_COARSEN_CLASSID, 1);
   PetscValidLogicalCollectiveInt(coarse, b, 2);
   PetscTryMethod(coarse, "MatCoarsenSetMaxIt_C", (MatCoarsen, PetscInt), (coarse, b));
   PetscFunctionReturn(PETSC_SUCCESS);
