@@ -5280,7 +5280,7 @@ PetscErrorCode MatMPIAIJGetLocalMatMerge(Mat A, MatReuse scall, IS *glob, Mat *A
   Mat             Ao, Ad;
   const PetscInt *cmap;
   PetscMPIInt     size;
-  PetscErrorCode (*f)(Mat, MatReuse, IS *, Mat *);
+  PetscErrorCode  (*f)(Mat, MatReuse, IS *, Mat *);
 
   PetscFunctionBegin;
   PetscCall(MatMPIAIJGetSeqAIJ(A, &Ad, &Ao, &cmap));
@@ -7802,9 +7802,9 @@ PETSC_INTERN PetscErrorCode MatCreateGraph_Simple_AIJ(Mat Amat, PetscBool symmet
             }
           } else { // use (index,index) value if provided
             int ii = index;
-            aa = aseq->a + ai[brow + ii] + k;
+            aa     = aseq->a + ai[brow + ii] + k;
             int jj = index;
-            val = PetscAbs(PetscRealPart(aa[jj]));
+            val    = PetscAbs(PetscRealPart(aa[jj]));
           }
           PetscAssert(k / bs < nmax, comm, PETSC_ERR_USER, "k / bs (%d) >= nmax (%d)", (int)(k / bs), (int)nmax);
           AA[k / bs] = val;
