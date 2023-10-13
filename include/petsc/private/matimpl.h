@@ -212,7 +212,7 @@ struct _MatOps {
   PetscErrorCode (*destroysubmatrices)(PetscInt, Mat *[]);
   PetscErrorCode (*mattransposesolve)(Mat, Mat, Mat);
   PetscErrorCode (*getvalueslocal)(Mat, PetscInt, const PetscInt[], PetscInt, const PetscInt[], PetscScalar[]);
-  PetscErrorCode (*creategraph)(Mat, PetscBool, PetscBool, PetscReal, Mat *);
+  PetscErrorCode (*creategraph)(Mat, PetscBool, PetscBool, PetscReal, PetscInt, Mat *);
   PetscErrorCode (*dummy)(Mat);
   /*150*/
   PetscErrorCode (*transposesymbolic)(Mat, Mat *);
@@ -269,7 +269,7 @@ PETSC_INTERN PetscErrorCode MatProductCreate_Private(Mat, Mat, Mat, Mat);
 PETSC_INTERN PetscErrorCode MatProductSymbolic_ABC_Basic(Mat);
 
 /* CreateGraph is common to AIJ seq and mpi */
-PETSC_INTERN PetscErrorCode MatCreateGraph_Simple_AIJ(Mat, PetscBool, PetscBool, PetscReal, Mat *);
+PETSC_INTERN PetscErrorCode MatCreateGraph_Simple_AIJ(Mat, PetscBool, PetscBool, PetscReal, PetscInt, Mat *);
 
 #if defined(PETSC_CLANG_STATIC_ANALYZER)
 template <typename Tm>
