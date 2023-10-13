@@ -5280,7 +5280,7 @@ PetscErrorCode MatMPIAIJGetLocalMatMerge(Mat A, MatReuse scall, IS *glob, Mat *A
   Mat             Ao, Ad;
   const PetscInt *cmap;
   PetscMPIInt     size;
-  PetscErrorCode  (*f)(Mat, MatReuse, IS *, Mat *);
+  PetscErrorCode (*f)(Mat, MatReuse, IS *, Mat *);
 
   PetscFunctionBegin;
   PetscCall(MatMPIAIJGetSeqAIJ(A, &Ad, &Ao, &cmap));
