@@ -165,7 +165,7 @@ PetscErrorCode MatCoarsenDestroy(MatCoarsen *agg)
 
   if ((*agg)->ops->destroy) PetscCall((*(*agg)->ops->destroy)((*agg)));
   if ((*agg)->agg_lists) PetscCall(PetscCDDestroy((*agg)->agg_lists));
-  PetscCall(PetscObjectComposeFunction((PetscObject)(*agg), "MatCoarsenSetMaxIt_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)(*agg), "MatCoarsenSetMaximumIterations_C", NULL));
 
   PetscCall(PetscHeaderDestroy(agg));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -367,7 +367,7 @@ PetscErrorCode MatCoarsenSetFromOptions(MatCoarsen coarser)
   PetscCall(PetscOptionsFList("-mat_coarsen_type", "Type of aggregator", "MatCoarsenSetType", MatCoarsenList, def, type, 256, &flag));
   if (flag) PetscCall(MatCoarsenSetType(coarser, type));
 
-  PetscCall(PetscOptionsInt("-mat_coarsen_max_it", "Number of iterations (for HEM)", "MatCoarsenSetMaxIt", coarser->max_it, &coarser->max_it, NULL));
+  PetscCall(PetscOptionsInt("-mat_coarsen_max_it", "Number of iterations (for HEM)", "MatCoarsenSetMaximumIterations", coarser->max_it, &coarser->max_it, NULL));
 
   /*
    Set the type if it was never set.
@@ -381,7 +381,7 @@ PetscErrorCode MatCoarsenSetFromOptions(MatCoarsen coarser)
 }
 
 /*@
-  MatCoarsenSetMaxIt - Max HEM iterations
+  MatCoarsenSetMaximumIterations - Max HEM iterations
 
   Logically Collective
 
@@ -396,16 +396,16 @@ PetscErrorCode MatCoarsenSetFromOptions(MatCoarsen coarser)
 
 .seealso: `MatCoarsen`, `MatCoarsenType`, `MatCoarsenApply()`, `MatCoarsenCreate()`, `MatCoarsenSetType()`
 @*/
-PetscErrorCode MatCoarsenSetMaxIt(MatCoarsen coarse, PetscInt b)
+PetscErrorCode MatCoarsenSetMaximumIterations(MatCoarsen coarse, PetscInt b)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(coarse, MAT_COARSEN_CLASSID, 1);
   PetscValidLogicalCollectiveInt(coarse, b, 2);
-  PetscTryMethod(coarse, "MatCoarsenSetMaxIt_C", (MatCoarsen, PetscInt), (coarse, b));
+  PetscTryMethod(coarse, "MatCoarsenSetMaximumIterations_C", (MatCoarsen, PetscInt), (coarse, b));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatCoarsenSetMaxIt_MATCOARSEN(MatCoarsen coarse, PetscInt b)
+static PetscErrorCode MatCoarsenSetMaximumIterations_MATCOARSEN(MatCoarsen coarse, PetscInt b)
 {
   PetscFunctionBegin;
   coarse->max_it = b;
@@ -438,7 +438,7 @@ PetscErrorCode MatCoarsenCreate(MPI_Comm comm, MatCoarsen *newcrs)
 
   PetscCall(MatInitializePackage());
   PetscCall(PetscHeaderCreate(agg, MAT_COARSEN_CLASSID, "MatCoarsen", "Matrix/graph coarsen", "MatCoarsen", comm, MatCoarsenDestroy, MatCoarsenView));
-  PetscCall(PetscObjectComposeFunction((PetscObject)agg, "MatCoarsenSetMaxIt_C", MatCoarsenSetMaxIt_MATCOARSEN));
+  PetscCall(PetscObjectComposeFunction((PetscObject)agg, "MatCoarsenSetMaximumIterations_C", MatCoarsenSetMaximumIterations_MATCOARSEN));
 
   *newcrs = agg;
   PetscFunctionReturn(PETSC_SUCCESS);
