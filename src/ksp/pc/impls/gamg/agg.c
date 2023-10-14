@@ -606,7 +606,7 @@ static PetscErrorCode PCGAMGCreateGraph_AGG(PC pc, Mat Amat, Mat *a_Gmat)
   PetscCall(MatCoarsenSetFromOptions(pc_gamg_agg->crs));
   PetscCall(PetscObjectTypeCompare((PetscObject)pc_gamg_agg->crs, MATCOARSENHEM, &ishem));
   if (ishem) {
-    pc_gamg_agg->aggressive_coarsening_levels = 0;                             // aggressive and HEM does not make sense
+    pc_gamg_agg->aggressive_coarsening_levels = 0;                                         // aggressive and HEM does not make sense
     PetscCall(MatCoarsenSetMaximumIterations(pc_gamg_agg->crs, pc_gamg_agg->crs->max_it)); // for code coverage
   }
   PetscCall(PetscLogEventEnd(petsc_gamg_setup_events[GAMG_COARSEN], 0, 0, 0, 0));
