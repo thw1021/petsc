@@ -1281,6 +1281,7 @@ static PetscErrorCode PCGAMGProlongator_AGG(PC pc, Mat Amat, Mat Gmat, PetscCoar
   PetscCall(PetscFree(flid_fgid));
 
   *a_P_out = Prol; /* out */
+  PetscCall(MatViewFromOptions(Prol, NULL, "-view_P"));
 
   PetscCall(PetscLogEventEnd(petsc_gamg_setup_events[GAMG_PROL], 0, 0, 0, 0));
   PetscFunctionReturn(PETSC_SUCCESS);
