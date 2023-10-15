@@ -455,10 +455,10 @@ static PetscErrorCode MatCoarsenApply_HEM_private(IS perm, Mat a_Gmat, const Pet
     PetscBool      *cpcol_matched;
     PetscMPIInt    *cpcol_pe, proc;
     Vec             locMaxEdge, locMaxPE, ghostMaxEdge, ghostMaxPE;
-    PetscInt        nEdges, n_nz_row, jj;
+    PetscInt        nEdges, nEdges0, n_nz_row, jj;
     Edge           *Edges;
     PetscInt        gid;
-    const PetscInt *perm_ix, n_sub_its = 120;
+    const PetscInt *perm_ix, n_sub_its = 15;
 
     /* get submatrices of cMat */
     if (isMPI) {
@@ -513,6 +513,8 @@ static PetscErrorCode MatCoarsenApply_HEM_private(IS perm, Mat a_Gmat, const Pet
       PetscCall(PetscMalloc1(n, &cpcol_matched));
       for (kk = 0; kk < n; kk++) cpcol_matched[kk] = PETSC_FALSE;
     }
+    /* clear matched flags */
+    for (kk = 0; kk < nloc; kk++) lid_matched[kk] = PETSC_FALSE;
 
     /* need an inverse map - locals */
     for (kk = 0; kk < nloc; kk++) lid_cprowID[kk] = -1;
@@ -524,7 +526,7 @@ static PetscErrorCode MatCoarsenApply_HEM_private(IS perm, Mat a_Gmat, const Pet
       }
     }
     /* compute 'locMaxEdge' & 'locMaxPE', and create list of edges, count edges' */
-    for (nEdges = 0, kk = 0, gid = my0; kk < nloc; kk++, gid++) {
+    for (nEdges0 = 0, kk = 0, gid = my0; kk < nloc; kk++, gid++) {
       PetscReal   max_e = 0., tt;
       PetscScalar vval;
       PetscInt    lid    = kk;
@@ -537,7 +539,7 @@ static PetscErrorCode MatCoarsenApply_HEM_private(IS perm, Mat a_Gmat, const Pet
       for (jj = 0; jj < n; jj++) {
         PetscInt lidj = idx[jj];
         if (lidj != lid && PetscRealPart(ap[jj]) > max_e) max_e = PetscRealPart(ap[jj]);
-        if (lidj > lid) nEdges++;
+        if (lidj > lid && PetscRealPart(ap[jj]) > 0) nEdges0++;
       }
       if ((ix = lid_cprowID[lid]) != -1) { /* if I have any ghost neighbors */
         ii  = matB->compressedrow.i;
@@ -546,7 +548,7 @@ static PetscErrorCode MatCoarsenApply_HEM_private(IS perm, Mat a_Gmat, const Pet
         idx = matB->j + ii[ix];
         for (jj = 0; jj < n; jj++) {
           if ((tt = PetscRealPart(ap[jj])) > max_e) max_e = tt;
-          nEdges++;
+          if (tt > 0) nEdges0++;
           if ((pe = cpcol_pe[idx[jj]]) > max_pe) max_pe = pe;
         }
       }
@@ -575,22 +577,26 @@ static PetscErrorCode MatCoarsenApply_HEM_private(IS perm, Mat a_Gmat, const Pet
     }
 
     /* setup sorted list of edges */
-    PetscCall(PetscMalloc1(nEdges, &Edges));
+    PetscCall(PetscMalloc1(nEdges0, &Edges));
     PetscCall(ISGetIndices(perm, &perm_ix));
     for (nEdges = n_nz_row = kk = 0; kk < nloc; kk++) {
-      PetscInt nn, lid = perm_ix[kk];
+      PetscInt lid = perm_ix[kk], nloc_edges = 0;
+      PetscReal tt;
       ii = matA->i;
-      nn = n = ii[lid + 1] - ii[lid];
+      n = ii[lid + 1] - ii[lid];
       idx    = matA->j + ii[lid];
       ap     = matA->a + ii[lid];
       for (jj = 0; jj < n; jj++) {
         PetscInt lidj = idx[jj];
-        if (lidj > lid) {
-          Edges[nEdges].lid0   = lid;
-          Edges[nEdges].gid1   = lidj + my0;
-          Edges[nEdges].cpid1  = -1;
-          Edges[nEdges].weight = PetscRealPart(ap[jj]);
-          nEdges++;
+        if ((tt=PetscRealPart(ap[jj])) > 0) {
+          if (lidj != lid) nloc_edges++;
+          if (lidj > lid) {
+            Edges[nEdges].lid0   = lid;
+            Edges[nEdges].gid1   = lidj + my0;
+            Edges[nEdges].cpid1  = -1;
+            Edges[nEdges].weight = tt;
+            nEdges++;
+          }
         }
       }
       if ((ix = lid_cprowID[lid]) != -1) { /* if I have any ghost neighbors */
@@ -598,21 +604,25 @@ static PetscErrorCode MatCoarsenApply_HEM_private(IS perm, Mat a_Gmat, const Pet
         n   = ii[ix + 1] - ii[ix];
         ap  = matB->a + ii[ix];
         idx = matB->j + ii[ix];
-        nn += n;
         for (jj = 0; jj < n; jj++) {
-          Edges[nEdges].lid0   = lid;
-          Edges[nEdges].gid1   = (PetscInt)PetscRealPart(cpcol_gid[idx[jj]]);
-          Edges[nEdges].cpid1  = idx[jj];
-          Edges[nEdges].weight = PetscRealPart(ap[jj]);
-          nEdges++;
+          if ((tt=PetscRealPart(ap[jj])) > 0) {
+            Edges[nEdges].lid0   = lid;
+            Edges[nEdges].gid1   = (PetscInt)PetscRealPart(cpcol_gid[idx[jj]]);
+            Edges[nEdges].cpid1  = idx[jj];
+            Edges[nEdges].weight = tt;
+            nEdges++;
+            nloc_edges++;
+          }
         }
       }
-      if (nn > 1) n_nz_row++;
+      if (nloc_edges > 0) n_nz_row++;
       else if (iter == 1) {
         /* should select this because it is technically in the MIS but lets not */
         PetscCall(PetscCDRemoveAll(agg_llists, lid));
+        lid_matched[lid] = PETSC_TRUE;
       }
     }
+    PetscCheck(nEdges == nEdges0, PETSC_COMM_SELF, PETSC_ERR_SUP, "nEdges != nEdges0: %d %d", nEdges0, nEdges);
     PetscCall(ISRestoreIndices(perm, &perm_ix));
 
     qsort(Edges, nEdges, sizeof(Edge), gamg_hem_compare);
@@ -620,8 +630,6 @@ static PetscErrorCode MatCoarsenApply_HEM_private(IS perm, Mat a_Gmat, const Pet
     /* projection matrix */
     PetscCall(MatCreateAIJ(comm, nloc, nloc, PETSC_DETERMINE, PETSC_DETERMINE, 1, NULL, 1, NULL, &P));
 
-    /* clear matched flags */
-    for (kk = 0; kk < nloc; kk++) lid_matched[kk] = PETSC_FALSE;
     /* process - communicate - process */
     for (sub_it = 0; sub_it < n_sub_its; sub_it++) {
       PetscInt nactive_edges;
@@ -635,9 +643,12 @@ static PetscErrorCode MatCoarsenApply_HEM_private(IS perm, Mat a_Gmat, const Pet
 
         /* skip if either (local) vertex is done already */
         if (lid_matched[lid0] || (gid1 >= my0 && gid1 < Iend && lid_matched[gid1 - my0])) continue;
-
         /* skip if ghost vertex is done */
         if (cpid1 != -1 && cpcol_matched[cpid1]) continue;
+       // See if I have an equal edge on bigger proc
+        if (PetscRealPart(lid_max_ew[lid0]) == e->weight && cpid1 != -1 && (PetscMPIInt)PetscRealPart(cpcol_max_pe[cpid1]) > rank) {
+          continue;
+        }
 
         nactive_edges++;
         /* skip if I have a bigger edge someplace (lid_max_ew gets updated) */
@@ -654,7 +665,7 @@ static PetscErrorCode MatCoarsenApply_HEM_private(IS perm, Mat a_Gmat, const Pet
             continue;
           }
         }
-
+        PetscCheck(isOK, PETSC_COMM_SELF, PETSC_ERR_SUP, "1) not isOK");
         /* check ghost for v0 */
         if (isOK) {
           PetscReal max_e, ew;
@@ -672,7 +683,6 @@ static PetscErrorCode MatCoarsenApply_HEM_private(IS perm, Mat a_Gmat, const Pet
               if (ew > max_e - PETSC_SMALL && ew > PetscRealPart(lid_max_ew[lid0]) - PETSC_SMALL && (PetscMPIInt)PetscRealPart(cpcol_max_pe[lidj]) > rank) isOK = PETSC_FALSE;
             }
           }
-
           /* for v1 */
           if (cpid1 == -1 && isOK) {
             if ((ix = lid_cprowID[lid1]) != -1) { /* if I have any ghost neighbors */
@@ -691,7 +701,7 @@ static PetscErrorCode MatCoarsenApply_HEM_private(IS perm, Mat a_Gmat, const Pet
             }
           }
         }
-
+        //PetscCheck(isOK, PETSC_COMM_SELF, PETSC_ERR_SUP, "2) not OK");
         /* do it */
         if (isOK) {
           if (cpid1 == -1) {
