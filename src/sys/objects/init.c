@@ -511,7 +511,6 @@ PETSC_INTERN PetscErrorCode PetscOptionsCheckInitial_Private(const char help[])
     if (PetscDefined(HAVE_TAU_PERFSTUBS)) {
       char     *tau_exec_path       = getenv("TAU_EXEC_PATH");
       PetscBool start_log_perfstubs = (tau_exec_path != NULL) ? PETSC_TRUE : PETSC_FALSE;
-      flg1                          = PETSC_FALSE;
 
       if (tau_exec_path && !PetscGlobalRank) PetscCall(PetscInfo(NULL, "Detected tau_exec path %s\n", tau_exec_path));
       PetscCall(PetscOptionsGetBool(NULL, NULL, "-log_perfstubs", &start_log_perfstubs, NULL));
