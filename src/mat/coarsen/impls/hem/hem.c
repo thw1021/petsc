@@ -580,15 +580,15 @@ static PetscErrorCode MatCoarsenApply_HEM_private(IS perm, Mat a_Gmat, const Pet
     PetscCall(PetscMalloc1(nEdges0, &Edges));
     PetscCall(ISGetIndices(perm, &perm_ix));
     for (nEdges = n_nz_row = kk = 0; kk < nloc; kk++) {
-      PetscInt lid = perm_ix[kk], nloc_edges = 0;
+      PetscInt  lid = perm_ix[kk], nloc_edges = 0;
       PetscReal tt;
-      ii = matA->i;
-      n = ii[lid + 1] - ii[lid];
-      idx    = matA->j + ii[lid];
-      ap     = matA->a + ii[lid];
+      ii  = matA->i;
+      n   = ii[lid + 1] - ii[lid];
+      idx = matA->j + ii[lid];
+      ap  = matA->a + ii[lid];
       for (jj = 0; jj < n; jj++) {
         PetscInt lidj = idx[jj];
-        if ((tt=PetscRealPart(ap[jj])) > 0) {
+        if ((tt = PetscRealPart(ap[jj])) > 0) {
           if (lidj != lid) nloc_edges++;
           if (lidj > lid) {
             Edges[nEdges].lid0   = lid;
@@ -605,7 +605,7 @@ static PetscErrorCode MatCoarsenApply_HEM_private(IS perm, Mat a_Gmat, const Pet
         ap  = matB->a + ii[ix];
         idx = matB->j + ii[ix];
         for (jj = 0; jj < n; jj++) {
-          if ((tt=PetscRealPart(ap[jj])) > 0) {
+          if ((tt = PetscRealPart(ap[jj])) > 0) {
             Edges[nEdges].lid0   = lid;
             Edges[nEdges].gid1   = (PetscInt)PetscRealPart(cpcol_gid[idx[jj]]);
             Edges[nEdges].cpid1  = idx[jj];
@@ -645,10 +645,8 @@ static PetscErrorCode MatCoarsenApply_HEM_private(IS perm, Mat a_Gmat, const Pet
         if (lid_matched[lid0] || (gid1 >= my0 && gid1 < Iend && lid_matched[gid1 - my0])) continue;
         /* skip if ghost vertex is done */
         if (cpid1 != -1 && cpcol_matched[cpid1]) continue;
-       // See if I have an equal edge on bigger proc
-        if (PetscRealPart(lid_max_ew[lid0]) == e->weight && cpid1 != -1 && (PetscMPIInt)PetscRealPart(cpcol_max_pe[cpid1]) > rank) {
-          continue;
-        }
+        // See if I have an equal edge on bigger proc
+        if (PetscRealPart(lid_max_ew[lid0]) == e->weight && cpid1 != -1 && (PetscMPIInt)PetscRealPart(cpcol_max_pe[cpid1]) > rank) { continue; }
 
         nactive_edges++;
         /* skip if I have a bigger edge someplace (lid_max_ew gets updated) */
