@@ -605,7 +605,10 @@ static PetscErrorCode PCGAMGCreateGraph_AGG(PC pc, Mat Amat, Mat *a_Gmat)
   PetscCall(PetscObjectSetOptionsPrefix((PetscObject)pc_gamg_agg->crs, prefix));
   PetscCall(MatCoarsenSetFromOptions(pc_gamg_agg->crs));
   PetscCall(PetscObjectTypeCompare((PetscObject)pc_gamg_agg->crs, MATCOARSENHEM, &ishem));
-  if (ishem) pc_gamg_agg->aggressive_coarsening_levels = 0; // aggressive and HEM does not make sense
+  if (ishem) {
+    pc_gamg_agg->aggressive_coarsening_levels = 0;                                         // aggressive and HEM does not make sense
+    PetscCall(MatCoarsenSetMaximumIterations(pc_gamg_agg->crs, pc_gamg_agg->crs->max_it)); // for code coverage
+  }
   PetscCall(PetscLogEventEnd(petsc_gamg_setup_events[GAMG_COARSEN], 0, 0, 0, 0));
   PetscCall(PetscLogEventBegin(petsc_gamg_setup_events[GAMG_GRAPH], 0, 0, 0, 0));
   PetscCall(MatGetInfo(Amat, MAT_LOCAL, &info0)); /* global reduction */
@@ -1278,6 +1281,7 @@ static PetscErrorCode PCGAMGProlongator_AGG(PC pc, Mat Amat, Mat Gmat, PetscCoar
   PetscCall(PetscFree(flid_fgid));
 
   *a_P_out = Prol; /* out */
+  PetscCall(MatViewFromOptions(Prol, NULL, "-view_P"));
 
   PetscCall(PetscLogEventEnd(petsc_gamg_setup_events[GAMG_PROL], 0, 0, 0, 0));
   PetscFunctionReturn(PETSC_SUCCESS);
