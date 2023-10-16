@@ -622,7 +622,7 @@ static PetscErrorCode MatCoarsenApply_HEM_private(IS perm, Mat a_Gmat, const Pet
         lid_matched[lid] = PETSC_TRUE;
       }
     }
-    PetscCheck(nEdges == nEdges0, PETSC_COMM_SELF, PETSC_ERR_SUP, "nEdges != nEdges0: %d %d", nEdges0, nEdges);
+    PetscCheck(nEdges == nEdges0, PETSC_COMM_SELF, PETSC_ERR_SUP, "nEdges != nEdges0: %d %d", (int)nEdges0, (int)nEdges);
     PetscCall(ISRestoreIndices(perm, &perm_ix));
 
     qsort(Edges, nEdges, sizeof(Edge), gamg_hem_compare);
@@ -789,7 +789,7 @@ static PetscErrorCode MatCoarsenApply_HEM_private(IS perm, Mat a_Gmat, const Pet
           PetscCallMPI(MPI_Iprobe(MPI_ANY_SOURCE, tag1, comm, &flag, &status));
           if (!flag) break;
           PetscCallMPI(MPI_Get_count(&status, MPIU_INT, &count));
-          PetscCheck(count <= BF_SZ, PETSC_COMM_SELF, PETSC_ERR_SUP, "buffer too small for receive: %d", count);
+          PetscCheck(count <= BF_SZ, PETSC_COMM_SELF, PETSC_ERR_SUP, "buffer too small for receive: %d", (int)count);
           proc = status.MPI_SOURCE;
           /* receive request tag1 [n, proc, n*[gid1,lid0] ] */
           PetscCallMPI(MPI_Recv(rbuff, count, MPIU_INT, proc, tag1, comm, &status));
