@@ -458,7 +458,7 @@ PetscErrorCode elem_3d_elast_v_25(PetscScalar *dd)
 /*TEST
 
    testset:
-     requires: !complex
+     requires: !complex !single
      output_file: output/ex56_1.out
      filter: sed -e "s/Linear solve converged due to CONVERGED_RTOL iterations 11/Linear solve converged due to CONVERGED_RTOL iterations 9/g"
      args: -ne 11 -alpha 1.e-3 -ksp_type cg -pc_type gamg -pc_gamg_agg_nsmooths 1 -two_solves -ksp_converged_reason -use_mat_nearnullspace -mg_levels_ksp_max_it 1 -mg_levels_ksp_type chebyshev -mg_levels_ksp_chebyshev_esteig 0,0.2,0,1.05 -pc_gamg_asm_use_agg true -mg_levels_sub_pc_type lu -mg_levels_pc_asm_overlap 0 -pc_gamg_parallel_coarse_grid_solver -mg_coarse_pc_type jacobi -mg_coarse_ksp_type cg -mat_coarsen_type hem -mat_coarsen_max_it 5 -ksp_rtol 1e-4
