@@ -317,7 +317,7 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
   SNES_NEWTONTR            *neP = (SNES_NEWTONTR *)snes->data;
   Vec                       X, F, Y, G, W, GradF, YU;
   PetscInt                  maxits, lits;
-  PetscReal                 rho, fnorm, gnorm = 0.0, xnorm = 0.0, delta, ynorm;
+  PetscReal                 rho, fnorm, gnorm = 0.0, xnorm = 0.0, delta, ynorm, lam = neP->lammax;
   PetscReal                 deltaM, fk, fkp1, deltaqm, gTy, yTHy;
   PetscReal                 auk, gfnorm, ycnorm, gTBg, objmin = 0.0;
   KSP                       ksp;
@@ -440,14 +440,23 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
     objmin = -neP->kmdc * gnorm * PetscMin(gnorm, delta);
     PetscCall(KSPCGSetObjectiveTarget(snes->ksp, objmin));
 
+    /* add regularization */
+    PetscCall(MatShift(snes->jacobian, lam));
+    if (snes->jacobian != snes->jacobian_pre) PetscCall(MatShift(snes->jacobian_pre, lam));
+
     /* don't specify radius if not looking for Newton step only */
     PetscCall(KSPCGSetRadius(snes->ksp, neP->fallback == SNES_TR_FALLBACK_NEWTON ? delta : 0.0));
-
     PetscCall(KSPSetOperators(snes->ksp, snes->jacobian, snes->jacobian_pre));
     PetscCall(KSPSolve(snes->ksp, F, Y));
     SNESCheckKSPSolve(snes);
     PetscCall(KSPGetIterationNumber(snes->ksp, &lits));
     PetscCall(PetscInfo(snes, "iter=%" PetscInt_FMT ", linear solve iterations=%" PetscInt_FMT "\n", snes->iter, lits));
+
+    /* remove regularization */
+    if (lam) {
+      PetscCall(MatShift(snes->jacobian, -lam));
+      if (snes->jacobian != snes->jacobian_pre) PetscCall(MatShift(snes->jacobian_pre, -lam));
+    }
 
     /* decide what to do when the update is outside of trust region */
     PetscCall(VecNorm(Y, NORM_2, &ynorm));
@@ -539,11 +548,16 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
 
     if (deltaqm > 0.0) rho = (fk - fkp1) / deltaqm; /* actual improvement over predicted improvement */
     else rho = -1.0;                                /*  no reduction in quadratic model, step must be rejected */
-    PetscCall(PetscInfo(snes, "rho=%g, delta=%g, fk=%g, fkp1=%g, deltaqm=%g, gTy=%g, yTHy=%g\n", (double)rho, (double)delta, (double)fk, (double)fkp1, (double)deltaqm, (double)gTy, (double)yTHy));
+    PetscCall(PetscInfo(snes, "rho=%g, delta=%g, fk=%g, fkp1=%g, deltaqm=%g, gTy=%g, yTHy=%g, lambda=%g\n", (double)rho, (double)delta, (double)fk, (double)fkp1, (double)deltaqm, (double)gTy, (double)yTHy, (double)lam));
 
     if (rho < neP->eta2) delta *= neP->t1;      /* shrink the region */
     else if (rho > neP->eta3) delta *= neP->t2; /* expand the region */
     delta = PetscMin(delta, deltaM);            /* but not greater than deltaM */
+
+    /* update regularization */
+    if (rho < neP->eta2) lam = (lam == 0 ? neP->lammin : PetscMax(neP->lamup * lam, neP->lammax));
+    else if (rho > neP->eta3) lam *= neP->lamdown;
+    if (lam < neP->lammin) lam = 0.0;
 
     neP->delta = delta;
     if (rho >= neP->eta1) {
@@ -624,6 +638,10 @@ static PetscErrorCode SNESSetFromOptions_NEWTONTR(SNES snes, PetscOptionItems *P
   PetscCall(PetscOptionsReal("-snes_tr_deltaM", "deltaM", "None", ctx->deltaM, &ctx->deltaM, NULL));
   PetscCall(PetscOptionsReal("-snes_tr_delta0", "delta0", "None", ctx->delta0, &ctx->delta0, NULL));
   PetscCall(PetscOptionsReal("-snes_tr_kmdc", "sufficient decrease parameter", "None", ctx->kmdc, &ctx->kmdc, NULL));
+  PetscCall(PetscOptionsReal("-snes_tr_lambda_max", "Maximum allowed regularization factor", "None", ctx->lammax, &ctx->lammax, NULL));
+  PetscCall(PetscOptionsReal("-snes_tr_lambda_min", "Minimum allowed regularization factor", "None", ctx->lammin, &ctx->lammin, NULL));
+  PetscCall(PetscOptionsReal("-snes_tr_lambda_upfactor", "Uphill factor for regularization", "None", ctx->lamup, &ctx->lamup, NULL));
+  PetscCall(PetscOptionsReal("-snes_tr_lambda_downfactor", "Downhill factor for regularization", "None", ctx->lamdown, &ctx->lamdown, NULL));
   PetscCall(PetscOptionsEnum("-snes_tr_fallback_type", "Type of fallback if subproblem solution is outside of the trust region", "SNESNewtonTRSetFallbackType", SNESNewtonTRFallbackTypes, (PetscEnum)ctx->fallback, (PetscEnum *)&ctx->fallback, NULL));
   PetscOptionsHeadEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -640,6 +658,7 @@ static PetscErrorCode SNESView_NEWTONTR(SNES snes, PetscViewer viewer)
     PetscCall(PetscViewerASCIIPrintf(viewer, "  Trust region tolerance %g\n", (double)snes->deltatol));
     PetscCall(PetscViewerASCIIPrintf(viewer, "  eta1=%g, eta2=%g, eta3=%g\n", (double)tr->eta1, (double)tr->eta2, (double)tr->eta3));
     PetscCall(PetscViewerASCIIPrintf(viewer, "  delta0=%g, t1=%g, t2=%g, deltaM=%g\n", (double)tr->delta0, (double)tr->t1, (double)tr->t2, (double)tr->deltaM));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  lambda_min=%g, lambda_max=%g, lambda_up=%g, lambda_down=%g\n", (double)tr->lammin, (double)tr->lammax, (double)tr->lamup, (double)tr->lamdown));
     PetscCall(PetscViewerASCIIPrintf(viewer, "  kmdc=%g\n", (double)tr->kmdc));
     PetscCall(PetscViewerASCIIPrintf(viewer, "  fallback=%s\n", SNESNewtonTRFallbackTypes[tr->fallback]));
   }
@@ -658,6 +677,10 @@ static PetscErrorCode SNESView_NEWTONTR(SNES snes, PetscViewer viewer)
 .   -snes_tr_t2 <t2> - trust region parameter, expanding factor of trust region (default: 2.0)
 .   -snes_tr_deltaM <deltaM> - trust region parameter, max size of trust region (default: MAX_REAL)
 .   -snes_tr_delta0 <delta0> - trust region parameter, initial size of trust region (default: 0.2)
+.   -snes_tr_lambda_max - maximum allowed regularization factor (default: 0.0)
+.   -snes_tr_lambda_min - minimum allowed regularization factor (default: 0.0)
+.   -snes_tr_lambda_upfactor - uphill factor for regularization (default: 2.0)
+.   -snes_tr_lambda_downfactor - downhill factor for regularization (default: 0.5)
 -   -snes_tr_fallback_type <newton,cauchy,dogleg> - Solution strategy to test reduction when step is outside of trust region. Can use scaled Newton direction, Cauchy point (Steepest Descent direction) or dogleg method.
 
     Reference:
@@ -697,6 +720,8 @@ PETSC_EXTERN PetscErrorCode SNESCreate_NEWTONTR(SNES snes)
   neP->t1       = 0.25;
   neP->t2       = 2.0;
   neP->deltaM   = 1.e10;
+  neP->lamup    = 2.0;
+  neP->lamdown  = 0.5;
   neP->fallback = SNES_TR_FALLBACK_NEWTON;
   neP->kmdc     = 0.0; /* by default do not use sufficient decrease */
   PetscFunctionReturn(PETSC_SUCCESS);
