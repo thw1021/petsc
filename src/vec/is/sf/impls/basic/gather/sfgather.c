@@ -10,7 +10,7 @@ PETSC_INTERN PetscErrorCode PetscSFBcastBegin_Gather(PetscSF sf, MPI_Datatype un
   PetscMPIInt  sendcount;
   MPI_Comm     comm;
   void        *rootbuf = NULL, *leafbuf = NULL;
-  MPI_Request *req;
+  MPI_Request *req = NULL;
 
   PetscFunctionBegin;
   PetscCall(PetscSFLinkCreate(sf, unit, rootmtype, rootdata, leafmtype, leafdata, op, PETSCSF_BCAST, &link));
@@ -30,7 +30,7 @@ static PetscErrorCode PetscSFReduceBegin_Gather(PetscSF sf, MPI_Datatype unit, P
   PetscMPIInt  recvcount;
   MPI_Comm     comm;
   void        *rootbuf = NULL, *leafbuf = NULL;
-  MPI_Request *req;
+  MPI_Request *req = NULL;
 
   PetscFunctionBegin;
   PetscCall(PetscSFLinkCreate(sf, unit, rootmtype, rootdata, leafmtype, leafdata, op, PETSCSF_REDUCE, &link));
