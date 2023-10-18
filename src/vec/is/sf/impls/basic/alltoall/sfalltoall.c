@@ -35,7 +35,7 @@ static PetscErrorCode PetscSFBcastBegin_Alltoall(PetscSF sf, MPI_Datatype unit, 
   PetscSFLink  link;
   MPI_Comm     comm;
   void        *rootbuf = NULL, *leafbuf = NULL; /* buffer used by MPI */
-  MPI_Request *req;
+  MPI_Request *req = NULL;
 
   PetscFunctionBegin;
   PetscCall(PetscSFLinkCreate(sf, unit, rootmtype, rootdata, leafmtype, leafdata, op, PETSCSF_BCAST, &link));
@@ -53,7 +53,7 @@ static PetscErrorCode PetscSFReduceBegin_Alltoall(PetscSF sf, MPI_Datatype unit,
   PetscSFLink  link;
   MPI_Comm     comm;
   void        *rootbuf = NULL, *leafbuf = NULL; /* buffer used by MPI */
-  MPI_Request *req;
+  MPI_Request *req = NULL;
 
   PetscFunctionBegin;
   PetscCall(PetscSFLinkCreate(sf, unit, rootmtype, rootdata, leafmtype, leafdata, op, PETSCSF_REDUCE, &link));
