@@ -38,12 +38,13 @@ The example also shows how to handle AMR in a time-dependent TS solver.
 F*/
 #include <petscdmplex.h>
 #include <petscdmforest.h>
+#include <petscdmceed.h>
 #include <petscds.h>
 #include <petscts.h>
 
 #define DIM 2 /* Geometric dimension */
 
-static PetscFunctionList PhysicsList, PhysicsRiemannList_SW;
+static PetscFunctionList PhysicsList, PhysicsRiemannList_SW, PhysicsRiemannList_Euler;
 
 /* Represents continuum physical equations. */
 typedef struct _n_Physics *Physics;
@@ -101,6 +102,7 @@ struct _n_Model {
   PetscReal        bounds[2 * DIM];
   PetscErrorCode (*errorIndicator)(PetscInt, PetscReal, PetscInt, const PetscScalar[], const PetscScalar[], PetscReal *, void *);
   void *errorCtx;
+  PetscErrorCode (*setupCEED)(DM, Physics);
 };
 
 struct _n_User {
@@ -376,7 +378,6 @@ static PetscErrorCode PhysicsCreate_Advect(Model mod, Physics phys, PetscOptionI
 /******************* Shallow Water ********************/
 typedef struct {
   PetscReal gravity;
-  PetscReal boundaryHeight;
   struct {
     PetscInt Height;
     PetscInt Speed;
@@ -512,7 +513,87 @@ static void PhysicsRiemann_SW_Rusanov(PetscInt dim, PetscInt Nf, const PetscReal
   cR    = PetscSqrtReal(sw->gravity * uR->h); /* gravity wave speed */
   speed = PetscMax(PetscAbsReal(Dot2Real(uL->uh, nn) / uL->h) + cL, PetscAbsReal(Dot2Real(uR->uh, nn) / uR->h) + cR);
   for (i = 0; i < 1 + dim; i++) flux[i] = (0.5 * (fL.vals[i] + fR.vals[i]) + 0.5 * speed * (xL[i] - xR[i])) * Norm2Real(n);
+#if 0
+  PetscPrintf(PETSC_COMM_SELF, "Rusanov Flux (%g)\n", sw->gravity);
+  for (PetscInt j = 0; j < 3; ++j) {
+    PetscPrintf(PETSC_COMM_SELF, "  | %g |\n", flux[j]);
+  }
+#endif
 }
+
+#ifdef PETSC_HAVE_LIBCEED
+CEED_QFUNCTION(PhysicsRiemann_SW_Rusanov_CEED)(void *ctx, CeedInt Q, const CeedScalar *const in[], CeedScalar *const out[])
+{
+  const CeedScalar *xL = in[0], *xR = in[1], *geom = in[2];
+  CeedScalar       *cL = out[0], *cR = out[1];
+  const Physics_SW *sw = (Physics_SW *)ctx;
+  struct _n_Physics phys;
+
+  phys.data = (void *)sw;
+  CeedPragmaSIMD for (CeedInt i = 0; i < Q; ++i)
+  {
+    const CeedScalar qL[3] = {xL[i + Q * 0], xL[i + Q * 1], xL[i + Q * 2]};
+    const CeedScalar qR[3] = {xR[i + Q * 0], xR[i + Q * 1], xR[i + Q * 2]};
+    const CeedScalar n[2]  = {geom[i + Q * 0], geom[i + Q * 1]};
+    CeedScalar       flux[3];
+
+  #if 0
+    PetscPrintf(PETSC_COMM_SELF, "Cell %d Normal\n", 0);
+    for (CeedInt j = 0; j < DIM; ++j) {
+      PetscPrintf(PETSC_COMM_SELF, "  | %g |\n", n[j]);
+    }
+    PetscPrintf(PETSC_COMM_SELF, "Cell %d Element Residual: left state\n", 0);
+    for (CeedInt j = 0; j < DIM + 1; ++j) {
+      PetscPrintf(PETSC_COMM_SELF, "  | %g |\n", qL[j]);
+    }
+    PetscPrintf(PETSC_COMM_SELF, "Cell %d Element Residual: right state\n", 0);
+    for (CeedInt j = 0; j < DIM + 1; ++j) {
+      PetscPrintf(PETSC_COMM_SELF, "  | %g |\n", qR[j]);
+    }
+  #endif
+    PhysicsRiemann_SW_Rusanov(DIM, DIM + 1, NULL, n, qL, qR, 0, NULL, flux, &phys);
+    for (CeedInt j = 0; j < 3; ++j) {
+      cL[i + Q * j] = -flux[j] / geom[i + Q * 2];
+      cR[i + Q * j] = flux[j] / geom[i + Q * 3];
+    }
+  #if 0
+    PetscPrintf(PETSC_COMM_SELF, "Cell %d Element Residual: left flux\n", 0);
+    for (CeedInt j = 0; j < DIM + 1; ++j) {
+      PetscPrintf(PETSC_COMM_SELF, "  | %g | (%g)\n", cL[i + Q * j], geom[i + Q * 2]);
+    }
+    PetscPrintf(PETSC_COMM_SELF, "Cell %d Element Residual: right flux\n", 0);
+    for (CeedInt j = 0; j < DIM + 1; ++j) {
+      PetscPrintf(PETSC_COMM_SELF, "  | %g | (%g)\n", cR[i + Q * j], geom[i + Q * 3]);
+    }
+  #endif
+  }
+  return CEED_ERROR_SUCCESS;
+}
+
+// Free a plain data context that was allocated using PETSc; returning libCEED error codes
+static int FreeContextPetsc(void *data)
+{
+  if (PetscFree(data)) return CeedError(NULL, CEED_ERROR_ACCESS, "PetscFree failed");
+  return CEED_ERROR_SUCCESS;
+}
+
+static PetscErrorCode CreateQFunctionContext_SW(Physics phys, Ceed ceed, CeedQFunctionContext *qfCtx)
+{
+  Physics_SW *in = (Physics_SW *)phys->data;
+  Physics_SW *sw;
+
+  PetscFunctionBeginUser;
+  PetscCall(PetscCalloc1(1, &sw));
+
+  sw->gravity = in->gravity;
+
+  PetscCallCEED(CeedQFunctionContextCreate(ceed, qfCtx));
+  PetscCallCEED(CeedQFunctionContextSetData(*qfCtx, CEED_MEM_HOST, CEED_USE_POINTER, sizeof(*sw), sw));
+  PetscCallCEED(CeedQFunctionContextSetDataDestroy(*qfCtx, CEED_MEM_HOST, FreeContextPetsc));
+  PetscCallCEED(CeedQFunctionContextRegisterDouble(*qfCtx, "gravity", offsetof(Physics_SW, gravity), 1, "Accelaration due to gravity"));
+  PetscFunctionReturn(0);
+}
+#endif
 
 static PetscErrorCode PhysicsSolution_SW(Model mod, PetscReal time, const PetscReal *x, PetscScalar *u, void *ctx)
 {
@@ -558,6 +639,23 @@ static PetscErrorCode SetUpBC_SW(DM dm, PetscDS prob, Physics phys)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode SetupCEED_SW(DM dm, Physics physics)
+{
+#ifdef PETSC_HAVE_LIBCEED
+  Ceed                 ceed;
+  CeedQFunctionContext qfCtx;
+#endif
+
+  PetscFunctionBegin;
+#ifdef PETSC_HAVE_LIBCEED
+  PetscCall(DMGetCeed(dm, &ceed));
+  PetscCall(CreateQFunctionContext_SW(physics, ceed, &qfCtx));
+  PetscCall(DMCeedCreateFVM(dm, PETSC_TRUE, PhysicsRiemann_SW_Rusanov_CEED, PhysicsRiemann_SW_Rusanov_CEED_loc, qfCtx));
+  PetscCallCEED(CeedQFunctionContextDestroy(&qfCtx));
+#endif
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode PhysicsCreate_SW(Model mod, Physics phys, PetscOptionItems *PetscOptionsObject)
 {
   Physics_SW *sw;
@@ -566,11 +664,15 @@ static PetscErrorCode PhysicsCreate_SW(Model mod, Physics phys, PetscOptionItems
   PetscFunctionBeginUser;
   phys->field_desc = PhysicsFields_SW;
   PetscCall(PetscNew(&sw));
-  phys->data   = sw;
-  mod->setupbc = SetUpBC_SW;
+  phys->data     = sw;
+  mod->setupbc   = SetUpBC_SW;
+  mod->setupCEED = SetupCEED_SW;
 
   PetscCall(PetscFunctionListAdd(&PhysicsRiemannList_SW, "rusanov", PhysicsRiemann_SW_Rusanov));
   PetscCall(PetscFunctionListAdd(&PhysicsRiemannList_SW, "hll", PhysicsRiemann_SW_HLL));
+#ifdef PETSC_HAVE_LIBCEED
+  PetscCall(PetscFunctionListAdd(&PhysicsRiemannList_SW, "rusanov_ceed", PhysicsRiemann_SW_Rusanov_CEED));
+#endif
 
   PetscOptionsHeadBegin(PetscOptionsObject, "SW options");
   {
@@ -597,13 +699,6 @@ static PetscErrorCode PhysicsCreate_SW(Model mod, Physics phys, PetscOptionItems
 /* Ravi Samtaney and D. I. Pullin */
 /* Phys. Fluids 8, 2650 (1996); http://dx.doi.org/10.1063/1.869050 */
 typedef enum {
-  EULER_PAR_GAMMA,
-  EULER_PAR_RHOR,
-  EULER_PAR_AMACH,
-  EULER_PAR_ITANA,
-  EULER_PAR_SIZE
-} EulerParamIdx;
-typedef enum {
   EULER_IV_SHOCK,
   EULER_SS_SHOCK,
   EULER_SHOCK_TUBE,
@@ -619,11 +714,12 @@ typedef union
   EulerNode eulernode;
   PetscReal vals[DIM + 2];
 } EulerNodeUnion;
-typedef PetscErrorCode (*EquationOfState)(const PetscReal *, const EulerNode *, PetscReal *);
 typedef struct {
-  EulerType       type;
-  PetscReal       pars[EULER_PAR_SIZE];
-  EquationOfState sound;
+  PetscReal gamma;
+  PetscReal rhoR;
+  PetscReal amach;
+  PetscReal itana;
+  EulerType type;
   struct {
     PetscInt Density;
     PetscInt Momentum;
@@ -640,6 +736,47 @@ static const struct FieldDescription PhysicsFields_Euler[] = {
   {NULL,       0  }
 };
 
+#ifdef PETSC_HAVE_LIBCEED
+static PetscErrorCode CreateQFunctionContext_Euler(Physics phys, Ceed ceed, CeedQFunctionContext *qfCtx)
+{
+  Physics_Euler *in = (Physics_Euler *)phys->data;
+  Physics_Euler *eu;
+
+  PetscFunctionBeginUser;
+  PetscCall(PetscCalloc1(1, &eu));
+
+  eu->gamma = in->gamma;
+
+  PetscCallCEED(CeedQFunctionContextCreate(ceed, qfCtx));
+  PetscCallCEED(CeedQFunctionContextSetData(*qfCtx, CEED_MEM_HOST, CEED_USE_POINTER, sizeof(*eu), eu));
+  PetscCallCEED(CeedQFunctionContextSetDataDestroy(*qfCtx, CEED_MEM_HOST, FreeContextPetsc));
+  PetscCallCEED(CeedQFunctionContextRegisterDouble(*qfCtx, "gamma", offsetof(Physics_Euler, gamma), 1, "Heat capacity ratio"));
+  PetscFunctionReturn(0);
+}
+#endif
+
+static PetscErrorCode Pressure_PG(const PetscReal gamma, const EulerNode *x, PetscReal *p)
+{
+  PetscReal ru2;
+
+  PetscFunctionBeginUser;
+  ru2  = DotDIMReal(x->ru, x->ru);
+  (*p) = (x->E - 0.5 * ru2 / x->r) * (gamma - 1.0); /* (E - rho V^2/2)(gamma-1) = e rho (gamma-1) */
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode SpeedOfSound_PG(const PetscReal gamma, const EulerNode *x, PetscReal *c)
+{
+  PetscReal p;
+
+  PetscFunctionBeginUser;
+  PetscCall(Pressure_PG(gamma, x, &p));
+  PetscCheck(p >= 0., PETSC_COMM_WORLD, PETSC_ERR_SUP, "negative pressure time %g -- NEED TO FIX!!!!!!", (double)p);
+  /* gamma = heat capacity ratio */
+  (*c) = PetscSqrtReal(gamma * p / x->r);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /* initial condition */
 int                   initLinearWave(EulerNode *ux, const PetscReal gamma, const PetscReal coord[], const PetscReal Lx);
 static PetscErrorCode PhysicsSolution_Euler(Model mod, PetscReal time, const PetscReal *x, PetscScalar *u, void *ctx)
@@ -654,7 +791,7 @@ static PetscErrorCode PhysicsSolution_Euler(Model mod, PetscReal time, const Pet
 
   for (i = 0; i < DIM; i++) uu->ru[i] = 0.0; /* zero out initial velocity */
   /* set E and rho */
-  gamma = eu->pars[EULER_PAR_GAMMA];
+  gamma = eu->gamma;
 
   if (eu->type == EULER_IV_SHOCK || eu->type == EULER_SS_SHOCK) {
     /******************* Euler Density Shock ********************/
@@ -663,10 +800,10 @@ static PetscErrorCode PhysicsSolution_Euler(Model mod, PetscReal time, const Pet
     /* Phys. Fluids 8, 2650 (1996); http://dx.doi.org/10.1063/1.869050 */
     /* initial conditions 1: left of shock, 0: left of discontinuity 2: right of discontinuity,  */
     p0 = 1.;
-    if (x[0] < 0.0 + x[1] * eu->pars[EULER_PAR_ITANA]) {
+    if (x[0] < 0.0 + x[1] * eu->itana) {
       if (x[0] < mod->bounds[0] * 0.5) { /* left of shock (1) */
         PetscReal amach, rho, press, gas1, p1;
-        amach     = eu->pars[EULER_PAR_AMACH];
+        amach     = eu->amach;
         rho       = 1.;
         press     = p0;
         p1        = press * (1.0 + 2.0 * gamma / (gamma + 1.0) * (amach * amach - 1.0));
@@ -679,7 +816,7 @@ static PetscErrorCode PhysicsSolution_Euler(Model mod, PetscReal time, const Pet
         uu->E = p0 / (gamma - 1.0);
       }
     } else { /* right of discontinuity (2) */
-      uu->r = eu->pars[EULER_PAR_RHOR];
+      uu->r = eu->rhoR;
       uu->E = p0 / (gamma - 1.0);
     }
   } else if (eu->type == EULER_SHOCK_TUBE) {
@@ -696,32 +833,10 @@ static PetscErrorCode PhysicsSolution_Euler(Model mod, PetscReal time, const Pet
   } else SETERRQ(mod->comm, PETSC_ERR_SUP, "Unknown type %d", eu->type);
 
   /* set phys->maxspeed: (mod->maxspeed = phys->maxspeed) in main; */
-  PetscCall(eu->sound(&gamma, uu, &c));
+  PetscCall(SpeedOfSound_PG(gamma, uu, &c));
   c = (uu->ru[0] / uu->r) + c;
   if (c > phys->maxspeed) phys->maxspeed = c;
 
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode Pressure_PG(const PetscReal gamma, const EulerNode *x, PetscReal *p)
-{
-  PetscReal ru2;
-
-  PetscFunctionBeginUser;
-  ru2  = DotDIMReal(x->ru, x->ru);
-  (*p) = (x->E - 0.5 * ru2 / x->r) * (gamma - 1.0); /* (E - rho V^2/2)(gamma-1) = e rho (gamma-1) */
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode SpeedOfSound_PG(const PetscReal *gamma, const EulerNode *x, PetscReal *c)
-{
-  PetscReal p;
-
-  PetscFunctionBeginUser;
-  PetscCall(Pressure_PG(*gamma, x, &p));
-  PetscCheck(p >= 0., PETSC_COMM_WORLD, PETSC_ERR_SUP, "negative pressure time %g -- NEED TO FIX!!!!!!", (double)p);
-  /* pars[EULER_PAR_GAMMA] = heat capacity ratio */
-  (*c) = PetscSqrtReal(*gamma * p / x->r);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -739,7 +854,7 @@ static PetscErrorCode EulerFlux(Physics phys, const PetscReal *n, const EulerNod
   PetscInt       i;
 
   PetscFunctionBeginUser;
-  PetscCall(Pressure_PG(eu->pars[EULER_PAR_GAMMA], x, &p));
+  PetscCall(Pressure_PG(eu->gamma, x, &p));
   nu   = DotDIMReal(x->ru, n);
   f->r = nu;                                                     /* A rho u */
   nu /= x->r;                                                    /* A u */
@@ -772,14 +887,15 @@ static PetscErrorCode PhysicsBoundary_Euler_Wall(PetscReal time, const PetscReal
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-int godunovflux(const PetscScalar *ul, const PetscScalar *ur, PetscScalar *flux, const PetscReal *nn, const int *ndim, const PetscReal *gamma);
+int godunovflux(const PetscScalar *ul, const PetscScalar *ur, PetscScalar *flux, const PetscReal *nn, int ndim, PetscReal gamma);
 /* PetscReal* => EulerNode* conversion */
 static void PhysicsRiemann_Euler_Godunov(PetscInt dim, PetscInt Nf, const PetscReal *qp, const PetscReal *n, const PetscScalar *xL, const PetscScalar *xR, PetscInt numConstants, const PetscScalar constants[], PetscScalar *flux, Physics phys)
 {
-  Physics_Euler *eu = (Physics_Euler *)phys->data;
-  PetscReal      cL, cR, speed, velL, velR, nn[DIM], s2;
-  PetscInt       i;
-  PetscErrorCode ierr;
+  Physics_Euler  *eu    = (Physics_Euler *)phys->data;
+  const PetscReal gamma = eu->gamma;
+  PetscReal       cL, cR, speed, velL, velR, nn[DIM], s2;
+  PetscInt        i;
+  PetscErrorCode  ierr;
 
   PetscFunctionBeginUser;
   for (i = 0, s2 = 0.; i < DIM; i++) {
@@ -793,22 +909,71 @@ static void PhysicsRiemann_Euler_Godunov(PetscInt dim, PetscInt Nf, const PetscR
     EulerNodeUnion   fL, fR;
     PetscCallAbort(PETSC_COMM_SELF, EulerFlux(phys, nn, uL, &(fL.eulernode)));
     PetscCallAbort(PETSC_COMM_SELF, EulerFlux(phys, nn, uR, &(fR.eulernode)));
-    ierr = eu->sound(&eu->pars[EULER_PAR_GAMMA], uL, &cL);
+    ierr = SpeedOfSound_PG(gamma, uL, &cL);
     if (ierr) exit(13);
-    ierr = eu->sound(&eu->pars[EULER_PAR_GAMMA], uR, &cR);
+    ierr = SpeedOfSound_PG(gamma, uR, &cR);
     if (ierr) exit(14);
     velL  = DotDIMReal(uL->ru, nn) / uL->r;
     velR  = DotDIMReal(uR->ru, nn) / uR->r;
     speed = PetscMax(velR + cR, velL + cL);
     for (i = 0; i < 2 + dim; i++) flux[i] = 0.5 * ((fL.vals[i] + fR.vals[i]) + speed * (xL[i] - xR[i])) * s2;
   } else {
-    int dim = DIM;
     /* int iwave =  */
-    godunovflux(xL, xR, flux, nn, &dim, &eu->pars[EULER_PAR_GAMMA]);
+    godunovflux(xL, xR, flux, nn, DIM, gamma);
     for (i = 0; i < 2 + dim; i++) flux[i] *= s2;
   }
   PetscFunctionReturnVoid();
 }
+
+#ifdef PETSC_HAVE_LIBCEED
+CEED_QFUNCTION(PhysicsRiemann_Euler_Godunov_CEED)(void *ctx, CeedInt Q, const CeedScalar *const in[], CeedScalar *const out[])
+{
+  const CeedScalar    *xL = in[0], *xR = in[1], *geom = in[2];
+  CeedScalar          *cL = out[0], *cR = out[1];
+  const Physics_Euler *eu = (Physics_Euler *)ctx;
+  struct _n_Physics    phys;
+
+  phys.data = (void *)eu;
+  CeedPragmaSIMD for (CeedInt i = 0; i < Q; ++i)
+  {
+    const CeedScalar qL[DIM + 2] = {xL[i + Q * 0], xL[i + Q * 1], xL[i + Q * 2], xL[i + Q * 3]};
+    const CeedScalar qR[DIM + 2] = {xR[i + Q * 0], xR[i + Q * 1], xR[i + Q * 2], xR[i + Q * 3]};
+    const CeedScalar n[DIM]      = {geom[i + Q * 0], geom[i + Q * 1]};
+    CeedScalar       flux[DIM + 2];
+
+  #if 0
+    PetscPrintf(PETSC_COMM_SELF, "Cell %d Normal\n", 0);
+    for (CeedInt j = 0; j < DIM; ++j) {
+      PetscPrintf(PETSC_COMM_SELF, "  | %g |\n", n[j]);
+    }
+    PetscPrintf(PETSC_COMM_SELF, "Cell %d Element Residual: left state\n", 0);
+    for (CeedInt j = 0; j < DIM + 2; ++j) {
+      PetscPrintf(PETSC_COMM_SELF, "  | %g |\n", qL[j]);
+    }
+    PetscPrintf(PETSC_COMM_SELF, "Cell %d Element Residual: right state\n", 0);
+    for (CeedInt j = 0; j < DIM + 2; ++j) {
+      PetscPrintf(PETSC_COMM_SELF, "  | %g |\n", qR[j]);
+    }
+  #endif
+    PhysicsRiemann_Euler_Godunov(DIM, DIM + 2, NULL, n, qL, qR, 0, NULL, flux, &phys);
+    for (CeedInt j = 0; j < DIM + 2; ++j) {
+      cL[i + Q * j] = -flux[j] / geom[i + Q * 2];
+      cR[i + Q * j] = flux[j] / geom[i + Q * 3];
+    }
+  #if 0
+    PetscPrintf(PETSC_COMM_SELF, "Cell %d Element Residual: left flux\n", 0);
+    for (CeedInt j = 0; j < DIM + 2; ++j) {
+      PetscPrintf(PETSC_COMM_SELF, "  | %g | (%g)\n", cL[i + Q * j], geom[i + Q * 2]);
+    }
+    PetscPrintf(PETSC_COMM_SELF, "Cell %d Element Residual: right flux\n", 0);
+    for (CeedInt j = 0; j < DIM + 2; ++j) {
+      PetscPrintf(PETSC_COMM_SELF, "  | %g | (%g)\n", cR[i + Q * j], geom[i + Q * 3]);
+    }
+  #endif
+  }
+  return CEED_ERROR_SUCCESS;
+}
+#endif
 
 static PetscErrorCode PhysicsFunctional_Euler(Model mod, PetscReal time, const PetscReal *coord, const PetscScalar *xx, PetscReal *f, void *ctx)
 {
@@ -822,7 +987,7 @@ static PetscErrorCode PhysicsFunctional_Euler(Model mod, PetscReal time, const P
   f[eu->monitor.Momentum] = NormDIM(x->ru);
   f[eu->monitor.Energy]   = x->E;
   f[eu->monitor.Speed]    = NormDIM(x->ru) / x->r;
-  PetscCall(Pressure_PG(eu->pars[EULER_PAR_GAMMA], x, &p));
+  PetscCall(Pressure_PG(eu->gamma, x, &p));
   f[eu->monitor.Pressure] = p;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -844,6 +1009,23 @@ static PetscErrorCode SetUpBC_Euler(DM dm, PetscDS prob, Physics phys)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode SetupCEED_Euler(DM dm, Physics physics)
+{
+#ifdef PETSC_HAVE_LIBCEED
+  Ceed                 ceed;
+  CeedQFunctionContext qfCtx;
+#endif
+
+  PetscFunctionBegin;
+#ifdef PETSC_HAVE_LIBCEED
+  PetscCall(DMGetCeed(dm, &ceed));
+  PetscCall(CreateQFunctionContext_Euler(physics, ceed, &qfCtx));
+  PetscCall(DMCeedCreateFVM(dm, PETSC_TRUE, PhysicsRiemann_Euler_Godunov_CEED, PhysicsRiemann_Euler_Godunov_CEED_loc, qfCtx));
+  PetscCallCEED(CeedQFunctionContextDestroy(&qfCtx));
+#endif
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode PhysicsCreate_Euler(Model mod, Physics phys, PetscOptionItems *PetscOptionsObject)
 {
   Physics_Euler *eu;
@@ -852,24 +1034,36 @@ static PetscErrorCode PhysicsCreate_Euler(Model mod, Physics phys, PetscOptionIt
   phys->field_desc = PhysicsFields_Euler;
   phys->riemann    = (PetscRiemannFunc)PhysicsRiemann_Euler_Godunov;
   PetscCall(PetscNew(&eu));
-  phys->data   = eu;
-  mod->setupbc = SetUpBC_Euler;
+  phys->data     = eu;
+  mod->setupbc   = SetUpBC_Euler;
+  mod->setupCEED = SetupCEED_Euler;
+
+  PetscCall(PetscFunctionListAdd(&PhysicsRiemannList_Euler, "godunov", PhysicsRiemann_Euler_Godunov));
+#ifdef PETSC_HAVE_LIBCEED
+  PetscCall(PetscFunctionListAdd(&PhysicsRiemannList_Euler, "godunov_ceed", PhysicsRiemann_Euler_Godunov_CEED));
+#endif
+
   PetscOptionsHeadBegin(PetscOptionsObject, "Euler options");
   {
+    void (*PhysicsRiemann_Euler)(PetscInt, PetscInt, const PetscReal *, const PetscReal *, const PetscScalar *, const PetscScalar *, PetscInt, const PetscScalar, PetscScalar *, Physics);
     PetscReal alpha;
-    char      type[64] = "linear_wave";
+    char      type[64]       = "linear_wave";
+    char      eu_riemann[64] = "godunov";
     PetscBool is;
-    eu->pars[EULER_PAR_GAMMA] = 1.4;
-    eu->pars[EULER_PAR_AMACH] = 2.02;
-    eu->pars[EULER_PAR_RHOR]  = 3.0;
-    eu->pars[EULER_PAR_ITANA] = 0.57735026918963; /* angle of Euler self similar (SS) shock */
-    PetscCall(PetscOptionsReal("-eu_gamma", "Heat capacity ratio", "", eu->pars[EULER_PAR_GAMMA], &eu->pars[EULER_PAR_GAMMA], NULL));
-    PetscCall(PetscOptionsReal("-eu_amach", "Shock speed (Mach)", "", eu->pars[EULER_PAR_AMACH], &eu->pars[EULER_PAR_AMACH], NULL));
-    PetscCall(PetscOptionsReal("-eu_rho2", "Density right of discontinuity", "", eu->pars[EULER_PAR_RHOR], &eu->pars[EULER_PAR_RHOR], NULL));
+    eu->gamma = 1.4;
+    eu->amach = 2.02;
+    eu->rhoR  = 3.0;
+    eu->itana = 0.57735026918963; /* angle of Euler self similar (SS) shock */
+    PetscCall(PetscOptionsFList("-eu_riemann", "Riemann solver", "", PhysicsRiemannList_Euler, eu_riemann, eu_riemann, sizeof eu_riemann, NULL));
+    PetscCall(PetscFunctionListFind(PhysicsRiemannList_Euler, eu_riemann, &PhysicsRiemann_Euler));
+    phys->riemann = (PetscRiemannFunc)PhysicsRiemann_Euler;
+    PetscCall(PetscOptionsReal("-eu_gamma", "Heat capacity ratio", "", eu->gamma, &eu->gamma, NULL));
+    PetscCall(PetscOptionsReal("-eu_amach", "Shock speed (Mach)", "", eu->amach, &eu->amach, NULL));
+    PetscCall(PetscOptionsReal("-eu_rho2", "Density right of discontinuity", "", eu->rhoR, &eu->rhoR, NULL));
     alpha = 60.;
     PetscCall(PetscOptionsReal("-eu_alpha", "Angle of discontinuity", "", alpha, &alpha, NULL));
     PetscCheck(alpha > 0. && alpha <= 90., PETSC_COMM_WORLD, PETSC_ERR_SUP, "Alpha bust be > 0 and <= 90 (%g)", (double)alpha);
-    eu->pars[EULER_PAR_ITANA] = 1. / PetscTanReal(alpha * PETSC_PI / 180.0);
+    eu->itana = 1. / PetscTanReal(alpha * PETSC_PI / 180.0);
     PetscCall(PetscOptionsString("-eu_type", "Type of Euler test", "", type, type, sizeof(type), NULL));
     PetscCall(PetscStrcmp(type, "linear_wave", &is));
     if (is) {
@@ -897,7 +1091,6 @@ static PetscErrorCode PhysicsCreate_Euler(Model mod, Physics phys, PetscOptionIt
     }
   }
   PetscOptionsHeadEnd();
-  eu->sound      = SpeedOfSound_PG;
   phys->maxspeed = 0.; /* will get set in solution */
   PetscCall(ModelSolutionSetDefault(mod, PhysicsSolution_Euler, phys));
   PetscCall(ModelFunctionalRegister(mod, "Speed", &eu->monitor.Speed, PhysicsFunctional_Euler, phys));
@@ -1272,13 +1465,17 @@ static PetscErrorCode MonitorVTK(TS ts, PetscInt stepnum, PetscReal time, Vec X,
 
 static PetscErrorCode initializeTS(DM dm, User user, TS *ts)
 {
+  PetscBool useCeed;
+
   PetscFunctionBeginUser;
   PetscCall(TSCreate(PetscObjectComm((PetscObject)dm), ts));
   PetscCall(TSSetType(*ts, TSSSP));
   PetscCall(TSSetDM(*ts, dm));
   if (user->vtkmon) PetscCall(TSMonitorSet(*ts, MonitorVTK, user, NULL));
+  PetscCall(DMPlexGetUseCeed(dm, &useCeed));
   PetscCall(DMTSSetBoundaryLocal(dm, DMPlexTSComputeBoundary, user));
-  PetscCall(DMTSSetRHSFunctionLocal(dm, DMPlexTSComputeRHSFunctionFVM, user));
+  if (useCeed) PetscCall(DMTSSetRHSFunctionLocal(dm, DMPlexTSComputeRHSFunctionFVMCEED, user));
+  else PetscCall(DMTSSetRHSFunctionLocal(dm, DMPlexTSComputeRHSFunctionFVM, user));
   PetscCall(TSSetMaxTime(*ts, 2.0));
   PetscCall(TSSetExactFinalTime(*ts, TS_EXACTFINALTIME_STEPOVER));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1650,6 +1847,13 @@ int main(int argc, char **argv)
       }
     }
   }
+#ifdef PETSC_HAVE_LIBCEED
+  {
+    PetscBool useCeed;
+    PetscCall(DMPlexGetUseCeed(dm, &useCeed));
+    if (useCeed) PetscCall((*user->model->setupCEED)(dm, user->model->physics));
+  }
+#endif
 
   PetscCall(initializeTS(dm, user, &ts));
 
@@ -1740,6 +1944,7 @@ int main(int argc, char **argv)
   PetscCall(VecTaggerDestroy(&coarsenTag));
   PetscCall(PetscFunctionListDestroy(&PhysicsList));
   PetscCall(PetscFunctionListDestroy(&PhysicsRiemannList_SW));
+  PetscCall(PetscFunctionListDestroy(&PhysicsRiemannList_Euler));
   PetscCall(FunctionalLinkDestroy(&user->model->functionalRegistry));
   PetscCall(PetscFree(user->model->functionalMonitored));
   PetscCall(PetscFree(user->model->functionalCall));
@@ -2052,7 +2257,7 @@ int riemannsolver(PetscScalar *xcen, PetscScalar *xp, PetscScalar *dtt, PetscSca
   }
   return iwave;
 }
-int godunovflux(const PetscScalar *ul, const PetscScalar *ur, PetscScalar *flux, const PetscReal *nn, const int *ndim, const PetscReal *gamma)
+int godunovflux(const PetscScalar *ul, const PetscScalar *ur, PetscScalar *flux, const PetscReal *nn, int ndim, PetscReal gamma)
 {
   /* System generated locals */
   int         i__1, iwave;
@@ -2065,13 +2270,13 @@ int godunovflux(const PetscScalar *ul, const PetscScalar *ur, PetscScalar *flux,
   /* Function Body */
   xcen = 0.;
   xp   = 0.;
-  i__1 = *ndim;
+  i__1 = ndim;
   for (k = 1; k <= i__1; ++k) {
     tg[k - 1] = 0.;
     bn[k - 1] = 0.;
   }
   dtt = 1.;
-  if (*ndim == 3) {
+  if (ndim == 3) {
     if (nn[0] == 0. && nn[1] == 0.) {
       tg[0] = 1.;
     } else {
@@ -2090,9 +2295,9 @@ int godunovflux(const PetscScalar *ul, const PetscScalar *ur, PetscScalar *flux,
     /* Computing 2nd power */
     d__3 = bn[2];
     tmp  = PetscSqrtScalar(d__1 * d__1 + d__2 * d__2 + d__3 * d__3);
-    i__1 = *ndim;
+    i__1 = ndim;
     for (k = 1; k <= i__1; ++k) bn[k - 1] /= tmp;
-  } else if (*ndim == 2) {
+  } else if (ndim == 2) {
     tg[0] = -nn[1];
     tg[1] = nn[0];
     /*           tmp=dsqrt(tg(1)**2+tg(2)**2) */
@@ -2109,7 +2314,7 @@ int godunovflux(const PetscScalar *ul, const PetscScalar *ur, PetscScalar *flux,
   utr  = 0.;
   ubl  = 0.;
   ubr  = 0.;
-  i__1 = *ndim;
+  i__1 = ndim;
   for (k = 1; k <= i__1; ++k) {
     uxl += ul[k] * nn[k - 1];
     uxr += ur[k] * nn[k - 1];
@@ -2125,22 +2330,22 @@ int godunovflux(const PetscScalar *ul, const PetscScalar *ur, PetscScalar *flux,
   ubl /= rl;
   ubr /= rr;
 
-  gaml = *gamma;
-  gamr = *gamma;
+  gaml = gamma;
+  gamr = gamma;
   /* Computing 2nd power */
   d__1 = uxl;
   /* Computing 2nd power */
   d__2 = utl;
   /* Computing 2nd power */
   d__3 = ubl;
-  pl   = (*gamma - 1.) * (ul[*ndim + 1] - rl * .5 * (d__1 * d__1 + d__2 * d__2 + d__3 * d__3));
+  pl   = (gamma - 1.) * (ul[ndim + 1] - rl * .5 * (d__1 * d__1 + d__2 * d__2 + d__3 * d__3));
   /* Computing 2nd power */
   d__1 = uxr;
   /* Computing 2nd power */
   d__2 = utr;
   /* Computing 2nd power */
   d__3  = ubr;
-  pr    = (*gamma - 1.) * (ur[*ndim + 1] - rr * .5 * (d__1 * d__1 + d__2 * d__2 + d__3 * d__3));
+  pr    = (gamma - 1.) * (ur[ndim + 1] - rr * .5 * (d__1 * d__1 + d__2 * d__2 + d__3 * d__3));
   rho1l = rl;
   rho1r = rr;
 
@@ -2155,8 +2360,8 @@ int godunovflux(const PetscScalar *ul, const PetscScalar *ur, PetscScalar *flux,
   flux[2] = fn * nn[1] + ft * tg[1];
   /*           flux(2)=rhom*unm*(unm)+pm */
   /*           flux(3)=rhom*(unm)*utm */
-  if (*ndim == 3) flux[3] = rhom * unm * ubm;
-  flux[*ndim + 1] = (rhom * .5 * (unm * unm + utm * utm + ubm * ubm) + gamm / (gamm - 1.) * pm) * unm;
+  if (ndim == 3) flux[3] = rhom * unm * ubm;
+  flux[ndim + 1] = (rhom * .5 * (unm * unm + utm * utm + ubm * ubm) + gamm / (gamm - 1.) * pm) * unm;
   return iwave;
 } /* godunovflux_ */
 
@@ -2364,6 +2569,14 @@ int initLinearWave(EulerNode *ux, const PetscReal gamma, const PetscReal coord[]
             -monitor height,energy
 
     test:
+      suffix: sw_ceed
+      requires: exodusii libceed
+      args: -sw_riemann rusanov_ceed -bc_wall 100,101 -ufv_cfl 5 -petsclimiter_type sin \
+            -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/annulus-20.exo -dm_plex_use_ceed \
+            -ts_max_time 1 -ts_ssp_type rks2 -ts_ssp_nstages 10 \
+            -monitor height,energy
+
+    test:
       suffix: sw_1
       nsize: 2
       args: -bc_wall 1,3 -ufv_cfl 5 -petsclimiter_type sin \
@@ -2377,6 +2590,18 @@ int initLinearWave(EulerNode *ux, const PetscReal gamma, const PetscReal coord[]
             -grid_bounds 0,5,0,5 -dm_plex_simplex 0 -dm_plex_box_faces 25,25 \
             -ts_max_steps 5 -ts_ssp_type rks2 -ts_ssp_nstages 10 \
             -monitor height,energy
+
+  # 2D Euler
+  testset:
+    args: -physics euler -eu_type linear_wave -eu_gamma 1.4 -dm_plex_adj_cone -dm_plex_adj_closure 0 \
+          -ufv_vtk_interval 0 -ufv_vtk_basename ${wPETSC_DIR}/ex11 -monitor density,energy
+
+    test:
+      suffix: euler_ceed
+      requires: exodusii libceed
+      args: -eu_riemann godunov_ceed -bc_wall 100,101 -ufv_cfl 5 -petsclimiter_type sin \
+            -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/annulus-20.exo -dm_plex_use_ceed \
+            -ts_max_time 1 -ts_ssp_type rks2 -ts_ssp_nstages 10
 
   testset:
     args: -dm_plex_adj_cone -dm_plex_adj_closure 0 -dm_plex_simplex 0 -dm_plex_box_faces 1,1,1
