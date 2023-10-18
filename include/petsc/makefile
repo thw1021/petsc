@@ -1,12 +1,4 @@
--include ../../../../../petscdir.mk
-
-LIBBASE	 = libpetscmat
-MANSEC	 = Mat
+-include ../../petscdir.mk
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules.doc
-
-
-
-
-
