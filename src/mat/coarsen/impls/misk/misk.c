@@ -320,7 +320,7 @@ static PetscErrorCode MatCoarsenApply_MISK_private(IS perm, const PetscInt misk,
 
     /* make fake matrix, get largest */
     for (int lid = 0; lid < nloc; lid++) {
-      PetscCall(PetscCDSizeAt(agg_lists, lid, &jj));
+      PetscCall(PetscCDCountAt(agg_lists, lid, &jj));
       if (jj > max_osz) max_osz = jj;
     }
     PetscCall(MatGetSize(Gmat, &MM, &NN));

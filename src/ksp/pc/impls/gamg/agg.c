@@ -467,7 +467,7 @@ static PetscErrorCode formProl0(PetscCoarsenData *agg_llists, PetscInt bs, Petsc
   /* count selected -- same as number of cols of P */
   for (nSelected = mm = 0; mm < nloc; mm++) {
     PetscBool ise;
-    PetscCall(PetscCDEmptyAt(agg_llists, mm, &ise));
+    PetscCall(PetscCDIsEmptyAt(agg_llists, mm, &ise));
     if (!ise) nSelected++;
   }
   PetscCall(MatGetOwnershipRangeColumn(a_Prol, &ii, &jj));
@@ -484,7 +484,7 @@ static PetscErrorCode formProl0(PetscCoarsenData *agg_llists, PetscInt bs, Petsc
   /* find points and set prolongation */
   minsz = 100;
   for (mm = clid = 0; mm < nloc; mm++) {
-    PetscCall(PetscCDSizeAt(agg_llists, mm, &jj));
+    PetscCall(PetscCDCountAt(agg_llists, mm, &jj));
     if (jj > 0) {
       const PetscInt lid = mm, cgid = my0crs + clid;
       PetscInt       cids[100]; /* max bs */
@@ -1183,7 +1183,7 @@ static PetscErrorCode PCGAMGProlongator_AGG(PC pc, Mat Amat, Mat Gmat, PetscCoar
   for (ii = 0, nLocalSelected = 0; ii < nloc; ii++) {
     PetscBool ise;
     /* filter out singletons 0 or 1? */
-    PetscCall(PetscCDEmptyAt(agg_lists, ii, &ise));
+    PetscCall(PetscCDIsEmptyAt(agg_lists, ii, &ise));
     if (!ise) nLocalSelected++;
   }
 
