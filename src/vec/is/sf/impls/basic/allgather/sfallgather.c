@@ -36,7 +36,7 @@ static PetscErrorCode PetscSFBcastBegin_Allgather(PetscSF sf, MPI_Datatype unit,
   PetscMPIInt  sendcount;
   MPI_Comm     comm;
   void        *rootbuf = NULL, *leafbuf = NULL; /* buffer seen by MPI */
-  MPI_Request *req;
+  MPI_Request *req = NULL;
 
   PetscFunctionBegin;
   PetscCall(PetscSFLinkCreate(sf, unit, rootmtype, rootdata, leafmtype, leafdata, op, PETSCSF_BCAST, &link));
@@ -58,7 +58,7 @@ static PetscErrorCode PetscSFReduceBegin_Allgather(PetscSF sf, MPI_Datatype unit
   PetscMPIInt        rank, count, recvcount;
   void              *rootbuf = NULL, *leafbuf = NULL; /* buffer seen by MPI */
   PetscSF_Allgather *dat = (PetscSF_Allgather *)sf->data;
-  MPI_Request       *req;
+  MPI_Request       *req = NULL;
 
   PetscFunctionBegin;
   PetscCall(PetscSFLinkCreate(sf, unit, rootmtype, rootdata, leafmtype, leafdata, op, PETSCSF_REDUCE, &link));
