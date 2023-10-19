@@ -1,0 +1,7 @@
+  0  time        0  |x|    2.972        Height [         1,   2.97161] int   28.12971        Energy [       0.5,  4.415232] int   17.12186
+  1  time   0.2217  |x|    2.045        Height [         1,  2.045014] int   28.12971        Energy [       0.5,  2.137827] int    17.3861
+  2  time   0.4435  |x|     1.93        Height [         1,  1.929981] int   28.12971        Energy [       0.5,  1.865104] int   17.22548
+  3  time   0.6652  |x|     1.68        Height [         1,  1.679873] int   28.12971        Energy [       0.5,  1.430507] int   17.00885
+  4  time    0.887  |x|    1.566        Height [ 0.9305829,  1.565987] int   28.12971        Energy [ 0.4479128,  1.257951] int    16.8467
+  5  time    1.109  |x|    1.536        Height [ 0.8124059,  1.535898] int   28.12971        Energy [  0.332055,  1.208857] int    16.7106
+CONVERGED_TIME at time 1.10872 after 5 steps
