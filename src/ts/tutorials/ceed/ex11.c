@@ -38,20 +38,12 @@ The example also shows how to handle AMR in a time-dependent TS solver.
 F*/
 #include <petscdmplex.h>
 #include <petscdmforest.h>
-#include <petscdmceed.h>
 #include <petscds.h>
 #include <petscts.h>
 
-#define DIM 2 /* Geometric dimension */
+#include "ex11.h"
 
 static PetscFunctionList PhysicsList, PhysicsRiemannList_SW, PhysicsRiemannList_Euler;
-
-/* Represents continuum physical equations. */
-typedef struct _n_Physics *Physics;
-
-/* Physical model includes boundary conditions, initial conditions, and functionals of interest. It is
- * discretization-independent, but its members depend on the scenario being solved. */
-typedef struct _n_Model *Model;
 
 /* 'User' implements a discretization of a continuous model. */
 typedef struct _n_User *User;
@@ -63,11 +55,6 @@ static PetscErrorCode ModelSolutionSetDefault(Model, SolutionFunction, void *);
 static PetscErrorCode ModelFunctionalRegister(Model, const char *, PetscInt *, FunctionalFunction, void *);
 static PetscErrorCode OutputVTK(DM, const char *, PetscViewer *);
 
-struct FieldDescription {
-  const char *name;
-  PetscInt    dof;
-};
-
 typedef struct _n_FunctionalLink *FunctionalLink;
 struct _n_FunctionalLink {
   char              *name;
@@ -75,15 +62,6 @@ struct _n_FunctionalLink {
   void              *ctx;
   PetscInt           offset;
   FunctionalLink     next;
-};
-
-struct _n_Physics {
-  PetscRiemannFunc               riemann;
-  PetscInt                       dof;      /* number of degrees of freedom per cell */
-  PetscReal                      maxspeed; /* kludge to pick initial time step, need to add monitoring and step control */
-  void                          *data;
-  PetscInt                       nfields;
-  const struct FieldDescription *field_desc;
 };
 
 struct _n_Model {
@@ -113,43 +91,14 @@ struct _n_User {
   PetscBool vtkmon;
 };
 
-static inline PetscReal DotDIMReal(const PetscReal *x, const PetscReal *y)
+#ifdef PETSC_HAVE_LIBCEED
+// Free a plain data context that was allocated using PETSc; returning libCEED error codes
+static int FreeContextPetsc(void *data)
 {
-  PetscInt  i;
-  PetscReal prod = 0.0;
-
-  for (i = 0; i < DIM; i++) prod += x[i] * y[i];
-  return prod;
+  if (PetscFree(data)) return CeedError(NULL, CEED_ERROR_ACCESS, "PetscFree failed");
+  return CEED_ERROR_SUCCESS;
 }
-static inline PetscReal NormDIM(const PetscReal *x)
-{
-  return PetscSqrtReal(PetscAbsReal(DotDIMReal(x, x)));
-}
-
-static inline PetscReal Dot2Real(const PetscReal *x, const PetscReal *y)
-{
-  return x[0] * y[0] + x[1] * y[1];
-}
-static inline PetscReal Norm2Real(const PetscReal *x)
-{
-  return PetscSqrtReal(PetscAbsReal(Dot2Real(x, x)));
-}
-static inline void Normalize2Real(PetscReal *x)
-{
-  PetscReal a = 1. / Norm2Real(x);
-  x[0] *= a;
-  x[1] *= a;
-}
-static inline void Waxpy2Real(PetscReal a, const PetscReal *x, const PetscReal *y, PetscReal *w)
-{
-  w[0] = a * x[0] + y[0];
-  w[1] = a * x[1] + y[1];
-}
-static inline void Scale2Real(PetscReal a, const PetscReal *x, PetscReal *y)
-{
-  y[0] = a * x[0];
-  y[1] = a * x[1];
-}
+#endif
 
 /******************* Advect ********************/
 typedef enum {
@@ -376,48 +325,11 @@ static PetscErrorCode PhysicsCreate_Advect(Model mod, Physics phys, PetscOptionI
 }
 
 /******************* Shallow Water ********************/
-typedef struct {
-  PetscReal gravity;
-  struct {
-    PetscInt Height;
-    PetscInt Speed;
-    PetscInt Energy;
-  } functional;
-} Physics_SW;
-typedef struct {
-  PetscReal h;
-  PetscReal uh[DIM];
-} SWNode;
-typedef union
-{
-  SWNode    swnode;
-  PetscReal vals[DIM + 1];
-} SWNodeUnion;
-
 static const struct FieldDescription PhysicsFields_SW[] = {
   {"Height",   1  },
   {"Momentum", DIM},
   {NULL,       0  }
 };
-
-/*
- * h_t + div(uh) = 0
- * (uh)_t + div (u\otimes uh + g h^2 / 2 I) = 0
- *
- * */
-static PetscErrorCode SWFlux(Physics phys, const PetscReal *n, const SWNode *x, SWNode *f)
-{
-  Physics_SW *sw = (Physics_SW *)phys->data;
-  PetscReal   uhn, u[DIM];
-  PetscInt    i;
-
-  PetscFunctionBeginUser;
-  Scale2Real(1. / x->h, x->uh, u);
-  uhn  = x->uh[0] * n[0] + x->uh[1] * n[1];
-  f->h = uhn;
-  for (i = 0; i < DIM; i++) f->uh[i] = u[i] * uhn + sw->gravity * PetscSqr(x->h) * n[i];
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
 
 static PetscErrorCode PhysicsBoundary_SW_Wall(PetscReal time, const PetscReal *c, const PetscReal *n, const PetscScalar *xI, PetscScalar *xG, void *ctx)
 {
@@ -427,173 +339,6 @@ static PetscErrorCode PhysicsBoundary_SW_Wall(PetscReal time, const PetscReal *c
   xG[2] = -xI[2];
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-
-static void PhysicsRiemann_SW_HLL(PetscInt dim, PetscInt Nf, const PetscReal *qp, const PetscReal *n, const PetscScalar *xL, const PetscScalar *xR, PetscInt numConstants, const PetscScalar constants[], PetscScalar *flux, Physics phys)
-{
-  Physics_SW *sw = (Physics_SW *)phys->data;
-  PetscReal   aL, aR;
-  PetscReal   nn[DIM];
-#if !defined(PETSC_USE_COMPLEX)
-  const SWNode *uL = (const SWNode *)xL, *uR = (const SWNode *)xR;
-#else
-  SWNodeUnion   uLreal, uRreal;
-  const SWNode *uL = &uLreal.swnode;
-  const SWNode *uR = &uRreal.swnode;
-#endif
-  SWNodeUnion fL, fR;
-  PetscInt    i;
-  PetscReal   zero = 0.;
-
-#if defined(PETSC_USE_COMPLEX)
-  uLreal.swnode.h = 0;
-  uRreal.swnode.h = 0;
-  for (i = 0; i < 1 + dim; i++) uLreal.vals[i] = PetscRealPart(xL[i]);
-  for (i = 0; i < 1 + dim; i++) uRreal.vals[i] = PetscRealPart(xR[i]);
-#endif
-  if (uL->h <= 0 || uR->h <= 0) {
-    for (i = 0; i < 1 + dim; i++) flux[i] = zero;
-    return;
-  } /* SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Reconstructed thickness is negative"); */
-  nn[0] = n[0];
-  nn[1] = n[1];
-  Normalize2Real(nn);
-  PetscCallAbort(PETSC_COMM_SELF, SWFlux(phys, nn, uL, &(fL.swnode)));
-  PetscCallAbort(PETSC_COMM_SELF, SWFlux(phys, nn, uR, &(fR.swnode)));
-  /* gravity wave speed */
-  aL = PetscSqrtReal(sw->gravity * uL->h);
-  aR = PetscSqrtReal(sw->gravity * uR->h);
-  // Defining u_tilda and v_tilda as u and v
-  PetscReal u_L, u_R;
-  u_L = Dot2Real(uL->uh, nn) / uL->h;
-  u_R = Dot2Real(uR->uh, nn) / uR->h;
-  PetscReal sL, sR;
-  sL = PetscMin(u_L - aL, u_R - aR);
-  sR = PetscMax(u_L + aL, u_R + aR);
-  if (sL > zero) {
-    for (i = 0; i < dim + 1; i++) flux[i] = fL.vals[i] * Norm2Real(n);
-  } else if (sR < zero) {
-    for (i = 0; i < dim + 1; i++) flux[i] = fR.vals[i] * Norm2Real(n);
-  } else {
-    for (i = 0; i < dim + 1; i++) flux[i] = ((sR * fL.vals[i] - sL * fR.vals[i] + sR * sL * (xR[i] - xL[i])) / (sR - sL)) * Norm2Real(n);
-  }
-}
-
-static void PhysicsRiemann_SW_Rusanov(PetscInt dim, PetscInt Nf, const PetscReal *qp, const PetscReal *n, const PetscScalar *xL, const PetscScalar *xR, PetscInt numConstants, const PetscScalar constants[], PetscScalar *flux, Physics phys)
-{
-  Physics_SW *sw = (Physics_SW *)phys->data;
-  PetscReal   cL, cR, speed;
-  PetscReal   nn[DIM];
-#if !defined(PETSC_USE_COMPLEX)
-  const SWNode *uL = (const SWNode *)xL, *uR = (const SWNode *)xR;
-#else
-  SWNodeUnion   uLreal, uRreal;
-  const SWNode *uL = &uLreal.swnode;
-  const SWNode *uR = &uRreal.swnode;
-#endif
-  SWNodeUnion fL, fR;
-  PetscInt    i;
-  PetscReal   zero = 0.;
-
-#if defined(PETSC_USE_COMPLEX)
-  uLreal.swnode.h = 0;
-  uRreal.swnode.h = 0;
-  for (i = 0; i < 1 + dim; i++) uLreal.vals[i] = PetscRealPart(xL[i]);
-  for (i = 0; i < 1 + dim; i++) uRreal.vals[i] = PetscRealPart(xR[i]);
-#endif
-  if (uL->h < 0 || uR->h < 0) {
-    for (i = 0; i < 1 + dim; i++) flux[i] = zero / zero;
-    return;
-  } /* reconstructed thickness is negative */
-  nn[0] = n[0];
-  nn[1] = n[1];
-  Normalize2Real(nn);
-  PetscCallAbort(PETSC_COMM_SELF, SWFlux(phys, nn, uL, &(fL.swnode)));
-  PetscCallAbort(PETSC_COMM_SELF, SWFlux(phys, nn, uR, &(fR.swnode)));
-  cL    = PetscSqrtReal(sw->gravity * uL->h);
-  cR    = PetscSqrtReal(sw->gravity * uR->h); /* gravity wave speed */
-  speed = PetscMax(PetscAbsReal(Dot2Real(uL->uh, nn) / uL->h) + cL, PetscAbsReal(Dot2Real(uR->uh, nn) / uR->h) + cR);
-  for (i = 0; i < 1 + dim; i++) flux[i] = (0.5 * (fL.vals[i] + fR.vals[i]) + 0.5 * speed * (xL[i] - xR[i])) * Norm2Real(n);
-#if 0
-  PetscPrintf(PETSC_COMM_SELF, "Rusanov Flux (%g)\n", sw->gravity);
-  for (PetscInt j = 0; j < 3; ++j) {
-    PetscPrintf(PETSC_COMM_SELF, "  | %g |\n", flux[j]);
-  }
-#endif
-}
-
-#ifdef PETSC_HAVE_LIBCEED
-CEED_QFUNCTION(PhysicsRiemann_SW_Rusanov_CEED)(void *ctx, CeedInt Q, const CeedScalar *const in[], CeedScalar *const out[])
-{
-  const CeedScalar *xL = in[0], *xR = in[1], *geom = in[2];
-  CeedScalar       *cL = out[0], *cR = out[1];
-  const Physics_SW *sw = (Physics_SW *)ctx;
-  struct _n_Physics phys;
-
-  phys.data = (void *)sw;
-  CeedPragmaSIMD for (CeedInt i = 0; i < Q; ++i)
-  {
-    const CeedScalar qL[3] = {xL[i + Q * 0], xL[i + Q * 1], xL[i + Q * 2]};
-    const CeedScalar qR[3] = {xR[i + Q * 0], xR[i + Q * 1], xR[i + Q * 2]};
-    const CeedScalar n[2]  = {geom[i + Q * 0], geom[i + Q * 1]};
-    CeedScalar       flux[3];
-
-  #if 0
-    PetscPrintf(PETSC_COMM_SELF, "Cell %d Normal\n", 0);
-    for (CeedInt j = 0; j < DIM; ++j) {
-      PetscPrintf(PETSC_COMM_SELF, "  | %g |\n", n[j]);
-    }
-    PetscPrintf(PETSC_COMM_SELF, "Cell %d Element Residual: left state\n", 0);
-    for (CeedInt j = 0; j < DIM + 1; ++j) {
-      PetscPrintf(PETSC_COMM_SELF, "  | %g |\n", qL[j]);
-    }
-    PetscPrintf(PETSC_COMM_SELF, "Cell %d Element Residual: right state\n", 0);
-    for (CeedInt j = 0; j < DIM + 1; ++j) {
-      PetscPrintf(PETSC_COMM_SELF, "  | %g |\n", qR[j]);
-    }
-  #endif
-    PhysicsRiemann_SW_Rusanov(DIM, DIM + 1, NULL, n, qL, qR, 0, NULL, flux, &phys);
-    for (CeedInt j = 0; j < 3; ++j) {
-      cL[i + Q * j] = -flux[j] / geom[i + Q * 2];
-      cR[i + Q * j] = flux[j] / geom[i + Q * 3];
-    }
-  #if 0
-    PetscPrintf(PETSC_COMM_SELF, "Cell %d Element Residual: left flux\n", 0);
-    for (CeedInt j = 0; j < DIM + 1; ++j) {
-      PetscPrintf(PETSC_COMM_SELF, "  | %g | (%g)\n", cL[i + Q * j], geom[i + Q * 2]);
-    }
-    PetscPrintf(PETSC_COMM_SELF, "Cell %d Element Residual: right flux\n", 0);
-    for (CeedInt j = 0; j < DIM + 1; ++j) {
-      PetscPrintf(PETSC_COMM_SELF, "  | %g | (%g)\n", cR[i + Q * j], geom[i + Q * 3]);
-    }
-  #endif
-  }
-  return CEED_ERROR_SUCCESS;
-}
-
-// Free a plain data context that was allocated using PETSc; returning libCEED error codes
-static int FreeContextPetsc(void *data)
-{
-  if (PetscFree(data)) return CeedError(NULL, CEED_ERROR_ACCESS, "PetscFree failed");
-  return CEED_ERROR_SUCCESS;
-}
-
-static PetscErrorCode CreateQFunctionContext_SW(Physics phys, Ceed ceed, CeedQFunctionContext *qfCtx)
-{
-  Physics_SW *in = (Physics_SW *)phys->data;
-  Physics_SW *sw;
-
-  PetscFunctionBeginUser;
-  PetscCall(PetscCalloc1(1, &sw));
-
-  sw->gravity = in->gravity;
-
-  PetscCallCEED(CeedQFunctionContextCreate(ceed, qfCtx));
-  PetscCallCEED(CeedQFunctionContextSetData(*qfCtx, CEED_MEM_HOST, CEED_USE_POINTER, sizeof(*sw), sw));
-  PetscCallCEED(CeedQFunctionContextSetDataDestroy(*qfCtx, CEED_MEM_HOST, FreeContextPetsc));
-  PetscCallCEED(CeedQFunctionContextRegisterDouble(*qfCtx, "gravity", offsetof(Physics_SW, gravity), 1, "Accelaration due to gravity"));
-  PetscFunctionReturn(0);
-}
-#endif
 
 static PetscErrorCode PhysicsSolution_SW(Model mod, PetscReal time, const PetscReal *x, PetscScalar *u, void *ctx)
 {
@@ -638,6 +383,25 @@ static PetscErrorCode SetUpBC_SW(DM dm, PetscDS prob, Physics phys)
   PetscCall(PetscDSAddBoundary(prob, DM_BC_NATURAL_RIEMANN, "wall", label, PETSC_STATIC_ARRAY_LENGTH(wallids), wallids, 0, 0, NULL, (void (*)(void))PhysicsBoundary_SW_Wall, NULL, phys, NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
+#ifdef PETSC_HAVE_LIBCEED
+static PetscErrorCode CreateQFunctionContext_SW(Physics phys, Ceed ceed, CeedQFunctionContext *qfCtx)
+{
+  Physics_SW *in = (Physics_SW *)phys->data;
+  Physics_SW *sw;
+
+  PetscFunctionBeginUser;
+  PetscCall(PetscCalloc1(1, &sw));
+
+  sw->gravity = in->gravity;
+
+  PetscCallCEED(CeedQFunctionContextCreate(ceed, qfCtx));
+  PetscCallCEED(CeedQFunctionContextSetData(*qfCtx, CEED_MEM_HOST, CEED_USE_POINTER, sizeof(*sw), sw));
+  PetscCallCEED(CeedQFunctionContextSetDataDestroy(*qfCtx, CEED_MEM_HOST, FreeContextPetsc));
+  PetscCallCEED(CeedQFunctionContextRegisterDouble(*qfCtx, "gravity", offsetof(Physics_SW, gravity), 1, "Accelaration due to gravity"));
+  PetscFunctionReturn(0);
+}
+#endif
 
 static PetscErrorCode SetupCEED_SW(DM dm, Physics physics)
 {
@@ -698,84 +462,12 @@ static PetscErrorCode PhysicsCreate_SW(Model mod, Physics phys, PetscOptionItems
 /* An initial-value and self-similar solutions of the compressible Euler equations */
 /* Ravi Samtaney and D. I. Pullin */
 /* Phys. Fluids 8, 2650 (1996); http://dx.doi.org/10.1063/1.869050 */
-typedef enum {
-  EULER_IV_SHOCK,
-  EULER_SS_SHOCK,
-  EULER_SHOCK_TUBE,
-  EULER_LINEAR_WAVE
-} EulerType;
-typedef struct {
-  PetscReal r;
-  PetscReal ru[DIM];
-  PetscReal E;
-} EulerNode;
-typedef union
-{
-  EulerNode eulernode;
-  PetscReal vals[DIM + 2];
-} EulerNodeUnion;
-typedef struct {
-  PetscReal gamma;
-  PetscReal rhoR;
-  PetscReal amach;
-  PetscReal itana;
-  EulerType type;
-  struct {
-    PetscInt Density;
-    PetscInt Momentum;
-    PetscInt Energy;
-    PetscInt Pressure;
-    PetscInt Speed;
-  } monitor;
-} Physics_Euler;
-
 static const struct FieldDescription PhysicsFields_Euler[] = {
   {"Density",  1  },
   {"Momentum", DIM},
   {"Energy",   1  },
   {NULL,       0  }
 };
-
-#ifdef PETSC_HAVE_LIBCEED
-static PetscErrorCode CreateQFunctionContext_Euler(Physics phys, Ceed ceed, CeedQFunctionContext *qfCtx)
-{
-  Physics_Euler *in = (Physics_Euler *)phys->data;
-  Physics_Euler *eu;
-
-  PetscFunctionBeginUser;
-  PetscCall(PetscCalloc1(1, &eu));
-
-  eu->gamma = in->gamma;
-
-  PetscCallCEED(CeedQFunctionContextCreate(ceed, qfCtx));
-  PetscCallCEED(CeedQFunctionContextSetData(*qfCtx, CEED_MEM_HOST, CEED_USE_POINTER, sizeof(*eu), eu));
-  PetscCallCEED(CeedQFunctionContextSetDataDestroy(*qfCtx, CEED_MEM_HOST, FreeContextPetsc));
-  PetscCallCEED(CeedQFunctionContextRegisterDouble(*qfCtx, "gamma", offsetof(Physics_Euler, gamma), 1, "Heat capacity ratio"));
-  PetscFunctionReturn(0);
-}
-#endif
-
-static PetscErrorCode Pressure_PG(const PetscReal gamma, const EulerNode *x, PetscReal *p)
-{
-  PetscReal ru2;
-
-  PetscFunctionBeginUser;
-  ru2  = DotDIMReal(x->ru, x->ru);
-  (*p) = (x->E - 0.5 * ru2 / x->r) * (gamma - 1.0); /* (E - rho V^2/2)(gamma-1) = e rho (gamma-1) */
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode SpeedOfSound_PG(const PetscReal gamma, const EulerNode *x, PetscReal *c)
-{
-  PetscReal p;
-
-  PetscFunctionBeginUser;
-  PetscCall(Pressure_PG(gamma, x, &p));
-  PetscCheck(p >= 0., PETSC_COMM_WORLD, PETSC_ERR_SUP, "negative pressure time %g -- NEED TO FIX!!!!!!", (double)p);
-  /* gamma = heat capacity ratio */
-  (*c) = PetscSqrtReal(gamma * p / x->r);
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
 
 /* initial condition */
 int                   initLinearWave(EulerNode *ux, const PetscReal gamma, const PetscReal coord[], const PetscReal Lx);
@@ -785,7 +477,7 @@ static PetscErrorCode PhysicsSolution_Euler(Model mod, PetscReal time, const Pet
   Physics        phys = (Physics)ctx;
   Physics_Euler *eu   = (Physics_Euler *)phys->data;
   EulerNode     *uu   = (EulerNode *)u;
-  PetscReal      p0, gamma, c = 0.0;
+  PetscReal      p0, gamma, c;
   PetscFunctionBeginUser;
   PetscCheck(time == 0.0, mod->comm, PETSC_ERR_SUP, "No solution known for time %g", (double)time);
 
@@ -840,29 +532,6 @@ static PetscErrorCode PhysicsSolution_Euler(Model mod, PetscReal time, const Pet
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*
- * x = (rho,rho*(u_1),...,rho*e)^T
- * x_t+div(f_1(x))+...+div(f_DIM(x)) = 0
- *
- * f_i(x) = u_i*x+(0,0,...,p,...,p*u_i)^T
- *
- */
-static PetscErrorCode EulerFlux(Physics phys, const PetscReal *n, const EulerNode *x, EulerNode *f)
-{
-  Physics_Euler *eu = (Physics_Euler *)phys->data;
-  PetscReal      nu, p;
-  PetscInt       i;
-
-  PetscFunctionBeginUser;
-  PetscCall(Pressure_PG(eu->gamma, x, &p));
-  nu   = DotDIMReal(x->ru, n);
-  f->r = nu;                                                     /* A rho u */
-  nu /= x->r;                                                    /* A u */
-  for (i = 0; i < DIM; i++) f->ru[i] = nu * x->ru[i] + n[i] * p; /* r u^2 + p */
-  f->E = nu * (x->E + p);                                        /* u(e+p) */
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 /* PetscReal* => EulerNode* conversion */
 static PetscErrorCode PhysicsBoundary_Euler_Wall(PetscReal time, const PetscReal *c, const PetscReal *n, const PetscScalar *a_xI, PetscScalar *a_xG, void *ctx)
 {
@@ -887,93 +556,6 @@ static PetscErrorCode PhysicsBoundary_Euler_Wall(PetscReal time, const PetscReal
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-int godunovflux(const PetscScalar *ul, const PetscScalar *ur, PetscScalar *flux, const PetscReal *nn, int ndim, PetscReal gamma);
-/* PetscReal* => EulerNode* conversion */
-static void PhysicsRiemann_Euler_Godunov(PetscInt dim, PetscInt Nf, const PetscReal *qp, const PetscReal *n, const PetscScalar *xL, const PetscScalar *xR, PetscInt numConstants, const PetscScalar constants[], PetscScalar *flux, Physics phys)
-{
-  Physics_Euler  *eu    = (Physics_Euler *)phys->data;
-  const PetscReal gamma = eu->gamma;
-  PetscReal       cL, cR, speed, velL, velR, nn[DIM], s2;
-  PetscInt        i;
-  PetscErrorCode  ierr;
-
-  PetscFunctionBeginUser;
-  for (i = 0, s2 = 0.; i < DIM; i++) {
-    nn[i] = n[i];
-    s2 += nn[i] * nn[i];
-  }
-  s2 = PetscSqrtReal(s2); /* |n|_2 = sum(n^2)^1/2 */
-  for (i = 0.; i < DIM; i++) nn[i] /= s2;
-  if (0) { /* Rusanov */
-    const EulerNode *uL = (const EulerNode *)xL, *uR = (const EulerNode *)xR;
-    EulerNodeUnion   fL, fR;
-    PetscCallAbort(PETSC_COMM_SELF, EulerFlux(phys, nn, uL, &(fL.eulernode)));
-    PetscCallAbort(PETSC_COMM_SELF, EulerFlux(phys, nn, uR, &(fR.eulernode)));
-    ierr = SpeedOfSound_PG(gamma, uL, &cL);
-    if (ierr) exit(13);
-    ierr = SpeedOfSound_PG(gamma, uR, &cR);
-    if (ierr) exit(14);
-    velL  = DotDIMReal(uL->ru, nn) / uL->r;
-    velR  = DotDIMReal(uR->ru, nn) / uR->r;
-    speed = PetscMax(velR + cR, velL + cL);
-    for (i = 0; i < 2 + dim; i++) flux[i] = 0.5 * ((fL.vals[i] + fR.vals[i]) + speed * (xL[i] - xR[i])) * s2;
-  } else {
-    /* int iwave =  */
-    godunovflux(xL, xR, flux, nn, DIM, gamma);
-    for (i = 0; i < 2 + dim; i++) flux[i] *= s2;
-  }
-  PetscFunctionReturnVoid();
-}
-
-#ifdef PETSC_HAVE_LIBCEED
-CEED_QFUNCTION(PhysicsRiemann_Euler_Godunov_CEED)(void *ctx, CeedInt Q, const CeedScalar *const in[], CeedScalar *const out[])
-{
-  const CeedScalar    *xL = in[0], *xR = in[1], *geom = in[2];
-  CeedScalar          *cL = out[0], *cR = out[1];
-  const Physics_Euler *eu = (Physics_Euler *)ctx;
-  struct _n_Physics    phys;
-
-  phys.data = (void *)eu;
-  CeedPragmaSIMD for (CeedInt i = 0; i < Q; ++i)
-  {
-    const CeedScalar qL[DIM + 2] = {xL[i + Q * 0], xL[i + Q * 1], xL[i + Q * 2], xL[i + Q * 3]};
-    const CeedScalar qR[DIM + 2] = {xR[i + Q * 0], xR[i + Q * 1], xR[i + Q * 2], xR[i + Q * 3]};
-    const CeedScalar n[DIM]      = {geom[i + Q * 0], geom[i + Q * 1]};
-    CeedScalar       flux[DIM + 2];
-
-  #if 0
-    PetscPrintf(PETSC_COMM_SELF, "Cell %d Normal\n", 0);
-    for (CeedInt j = 0; j < DIM; ++j) {
-      PetscPrintf(PETSC_COMM_SELF, "  | %g |\n", n[j]);
-    }
-    PetscPrintf(PETSC_COMM_SELF, "Cell %d Element Residual: left state\n", 0);
-    for (CeedInt j = 0; j < DIM + 2; ++j) {
-      PetscPrintf(PETSC_COMM_SELF, "  | %g |\n", qL[j]);
-    }
-    PetscPrintf(PETSC_COMM_SELF, "Cell %d Element Residual: right state\n", 0);
-    for (CeedInt j = 0; j < DIM + 2; ++j) {
-      PetscPrintf(PETSC_COMM_SELF, "  | %g |\n", qR[j]);
-    }
-  #endif
-    PhysicsRiemann_Euler_Godunov(DIM, DIM + 2, NULL, n, qL, qR, 0, NULL, flux, &phys);
-    for (CeedInt j = 0; j < DIM + 2; ++j) {
-      cL[i + Q * j] = -flux[j] / geom[i + Q * 2];
-      cR[i + Q * j] = flux[j] / geom[i + Q * 3];
-    }
-  #if 0
-    PetscPrintf(PETSC_COMM_SELF, "Cell %d Element Residual: left flux\n", 0);
-    for (CeedInt j = 0; j < DIM + 2; ++j) {
-      PetscPrintf(PETSC_COMM_SELF, "  | %g | (%g)\n", cL[i + Q * j], geom[i + Q * 2]);
-    }
-    PetscPrintf(PETSC_COMM_SELF, "Cell %d Element Residual: right flux\n", 0);
-    for (CeedInt j = 0; j < DIM + 2; ++j) {
-      PetscPrintf(PETSC_COMM_SELF, "  | %g | (%g)\n", cR[i + Q * j], geom[i + Q * 3]);
-    }
-  #endif
-  }
-  return CEED_ERROR_SUCCESS;
-}
-#endif
 
 static PetscErrorCode PhysicsFunctional_Euler(Model mod, PetscReal time, const PetscReal *coord, const PetscScalar *xx, PetscReal *f, void *ctx)
 {
@@ -1008,6 +590,25 @@ static PetscErrorCode SetUpBC_Euler(DM dm, PetscDS prob, Physics phys)
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
+#ifdef PETSC_HAVE_LIBCEED
+static PetscErrorCode CreateQFunctionContext_Euler(Physics phys, Ceed ceed, CeedQFunctionContext *qfCtx)
+{
+  Physics_Euler *in = (Physics_Euler *)phys->data;
+  Physics_Euler *eu;
+
+  PetscFunctionBeginUser;
+  PetscCall(PetscCalloc1(1, &eu));
+
+  eu->gamma = in->gamma;
+
+  PetscCallCEED(CeedQFunctionContextCreate(ceed, qfCtx));
+  PetscCallCEED(CeedQFunctionContextSetData(*qfCtx, CEED_MEM_HOST, CEED_USE_POINTER, sizeof(*eu), eu));
+  PetscCallCEED(CeedQFunctionContextSetDataDestroy(*qfCtx, CEED_MEM_HOST, FreeContextPetsc));
+  PetscCallCEED(CeedQFunctionContextRegisterDouble(*qfCtx, "gamma", offsetof(Physics_Euler, gamma), 1, "Heat capacity ratio"));
+  PetscFunctionReturn(0);
+}
+#endif
 
 static PetscErrorCode SetupCEED_Euler(DM dm, Physics physics)
 {
@@ -1960,411 +1561,6 @@ int main(int argc, char **argv)
   return 0;
 }
 
-/* Godunov fluxs */
-PetscScalar cvmgp_(PetscScalar *a, PetscScalar *b, PetscScalar *test)
-{
-  /* System generated locals */
-  PetscScalar ret_val;
-
-  if (PetscRealPart(*test) > 0.) goto L10;
-  ret_val = *b;
-  return ret_val;
-L10:
-  ret_val = *a;
-  return ret_val;
-} /* cvmgp_ */
-
-PetscScalar cvmgm_(PetscScalar *a, PetscScalar *b, PetscScalar *test)
-{
-  /* System generated locals */
-  PetscScalar ret_val;
-
-  if (PetscRealPart(*test) < 0.) goto L10;
-  ret_val = *b;
-  return ret_val;
-L10:
-  ret_val = *a;
-  return ret_val;
-} /* cvmgm_ */
-
-int riem1mdt(PetscScalar *gaml, PetscScalar *gamr, PetscScalar *rl, PetscScalar *pl, PetscScalar *uxl, PetscScalar *rr, PetscScalar *pr, PetscScalar *uxr, PetscScalar *rstarl, PetscScalar *rstarr, PetscScalar *pstar, PetscScalar *ustar)
-{
-  /* Initialized data */
-
-  static PetscScalar smallp = 1e-8;
-
-  /* System generated locals */
-  int         i__1;
-  PetscScalar d__1, d__2;
-
-  /* Local variables */
-  static int         i0;
-  static PetscScalar cl, cr, wl, zl, wr, zr, pst, durl, skpr1, skpr2;
-  static int         iwave;
-  static PetscScalar gascl4, gascr4, cstarl, dpstar, cstarr;
-  /* static PetscScalar csqrl, csqrr, gascl1, gascl2, gascl3, gascr1, gascr2, gascr3; */
-  static int         iterno;
-  static PetscScalar ustarl, ustarr, rarepr1, rarepr2;
-
-  /* gascl1 = *gaml - 1.; */
-  /* gascl2 = (*gaml + 1.) * .5; */
-  /* gascl3 = gascl2 / *gaml; */
-  gascl4 = 1. / (*gaml - 1.);
-
-  /* gascr1 = *gamr - 1.; */
-  /* gascr2 = (*gamr + 1.) * .5; */
-  /* gascr3 = gascr2 / *gamr; */
-  gascr4 = 1. / (*gamr - 1.);
-  iterno = 10;
-  /*        find pstar: */
-  cl = PetscSqrtScalar(*gaml * *pl / *rl);
-  cr = PetscSqrtScalar(*gamr * *pr / *rr);
-  wl = *rl * cl;
-  wr = *rr * cr;
-  /* csqrl = wl * wl; */
-  /* csqrr = wr * wr; */
-  *pstar  = (wl * *pr + wr * *pl) / (wl + wr);
-  *pstar  = PetscMax(PetscRealPart(*pstar), PetscRealPart(smallp));
-  pst     = *pl / *pr;
-  skpr1   = cr * (pst - 1.) * PetscSqrtScalar(2. / (*gamr * (*gamr - 1. + (*gamr + 1.) * pst)));
-  d__1    = (*gamr - 1.) / (*gamr * 2.);
-  rarepr2 = gascr4 * 2. * cr * (1. - PetscPowScalar(pst, d__1));
-  pst     = *pr / *pl;
-  skpr2   = cl * (pst - 1.) * PetscSqrtScalar(2. / (*gaml * (*gaml - 1. + (*gaml + 1.) * pst)));
-  d__1    = (*gaml - 1.) / (*gaml * 2.);
-  rarepr1 = gascl4 * 2. * cl * (1. - PetscPowScalar(pst, d__1));
-  durl    = *uxr - *uxl;
-  if (PetscRealPart(*pr) < PetscRealPart(*pl)) {
-    if (PetscRealPart(durl) >= PetscRealPart(rarepr1)) {
-      iwave = 100;
-    } else if (PetscRealPart(durl) <= PetscRealPart(-skpr1)) {
-      iwave = 300;
-    } else {
-      iwave = 400;
-    }
-  } else {
-    if (PetscRealPart(durl) >= PetscRealPart(rarepr2)) {
-      iwave = 100;
-    } else if (PetscRealPart(durl) <= PetscRealPart(-skpr2)) {
-      iwave = 300;
-    } else {
-      iwave = 200;
-    }
-  }
-  if (iwave == 100) {
-    /*     1-wave: rarefaction wave, 3-wave: rarefaction wave */
-    /*     case (100) */
-    i__1 = iterno;
-    for (i0 = 1; i0 <= i__1; ++i0) {
-      d__1    = *pstar / *pl;
-      d__2    = 1. / *gaml;
-      *rstarl = *rl * PetscPowScalar(d__1, d__2);
-      cstarl  = PetscSqrtScalar(*gaml * *pstar / *rstarl);
-      ustarl  = *uxl - gascl4 * 2. * (cstarl - cl);
-      zl      = *rstarl * cstarl;
-      d__1    = *pstar / *pr;
-      d__2    = 1. / *gamr;
-      *rstarr = *rr * PetscPowScalar(d__1, d__2);
-      cstarr  = PetscSqrtScalar(*gamr * *pstar / *rstarr);
-      ustarr  = *uxr + gascr4 * 2. * (cstarr - cr);
-      zr      = *rstarr * cstarr;
-      dpstar  = zl * zr * (ustarr - ustarl) / (zl + zr);
-      *pstar -= dpstar;
-      *pstar = PetscMax(PetscRealPart(*pstar), PetscRealPart(smallp));
-      if (PetscAbsScalar(dpstar) / PetscRealPart(*pstar) <= 1e-8) {
-#if 0
-        break;
-#endif
-      }
-    }
-    /*     1-wave: shock wave, 3-wave: rarefaction wave */
-  } else if (iwave == 200) {
-    /*     case (200) */
-    i__1 = iterno;
-    for (i0 = 1; i0 <= i__1; ++i0) {
-      pst     = *pstar / *pl;
-      ustarl  = *uxl - (pst - 1.) * cl * PetscSqrtScalar(2. / (*gaml * (*gaml - 1. + (*gaml + 1.) * pst)));
-      zl      = *pl / cl * PetscSqrtScalar(*gaml * 2. * (*gaml - 1. + (*gaml + 1.) * pst)) * (*gaml - 1. + (*gaml + 1.) * pst) / (*gaml * 3. - 1. + (*gaml + 1.) * pst);
-      d__1    = *pstar / *pr;
-      d__2    = 1. / *gamr;
-      *rstarr = *rr * PetscPowScalar(d__1, d__2);
-      cstarr  = PetscSqrtScalar(*gamr * *pstar / *rstarr);
-      zr      = *rstarr * cstarr;
-      ustarr  = *uxr + gascr4 * 2. * (cstarr - cr);
-      dpstar  = zl * zr * (ustarr - ustarl) / (zl + zr);
-      *pstar -= dpstar;
-      *pstar = PetscMax(PetscRealPart(*pstar), PetscRealPart(smallp));
-      if (PetscAbsScalar(dpstar) / PetscRealPart(*pstar) <= 1e-8) {
-#if 0
-        break;
-#endif
-      }
-    }
-    /*     1-wave: shock wave, 3-wave: shock */
-  } else if (iwave == 300) {
-    /*     case (300) */
-    i__1 = iterno;
-    for (i0 = 1; i0 <= i__1; ++i0) {
-      pst    = *pstar / *pl;
-      ustarl = *uxl - (pst - 1.) * cl * PetscSqrtScalar(2. / (*gaml * (*gaml - 1. + (*gaml + 1.) * pst)));
-      zl     = *pl / cl * PetscSqrtScalar(*gaml * 2. * (*gaml - 1. + (*gaml + 1.) * pst)) * (*gaml - 1. + (*gaml + 1.) * pst) / (*gaml * 3. - 1. + (*gaml + 1.) * pst);
-      pst    = *pstar / *pr;
-      ustarr = *uxr + (pst - 1.) * cr * PetscSqrtScalar(2. / (*gamr * (*gamr - 1. + (*gamr + 1.) * pst)));
-      zr     = *pr / cr * PetscSqrtScalar(*gamr * 2. * (*gamr - 1. + (*gamr + 1.) * pst)) * (*gamr - 1. + (*gamr + 1.) * pst) / (*gamr * 3. - 1. + (*gamr + 1.) * pst);
-      dpstar = zl * zr * (ustarr - ustarl) / (zl + zr);
-      *pstar -= dpstar;
-      *pstar = PetscMax(PetscRealPart(*pstar), PetscRealPart(smallp));
-      if (PetscAbsScalar(dpstar) / PetscRealPart(*pstar) <= 1e-8) {
-#if 0
-        break;
-#endif
-      }
-    }
-    /*     1-wave: rarefaction wave, 3-wave: shock */
-  } else if (iwave == 400) {
-    /*     case (400) */
-    i__1 = iterno;
-    for (i0 = 1; i0 <= i__1; ++i0) {
-      d__1    = *pstar / *pl;
-      d__2    = 1. / *gaml;
-      *rstarl = *rl * PetscPowScalar(d__1, d__2);
-      cstarl  = PetscSqrtScalar(*gaml * *pstar / *rstarl);
-      ustarl  = *uxl - gascl4 * 2. * (cstarl - cl);
-      zl      = *rstarl * cstarl;
-      pst     = *pstar / *pr;
-      ustarr  = *uxr + (pst - 1.) * cr * PetscSqrtScalar(2. / (*gamr * (*gamr - 1. + (*gamr + 1.) * pst)));
-      zr      = *pr / cr * PetscSqrtScalar(*gamr * 2. * (*gamr - 1. + (*gamr + 1.) * pst)) * (*gamr - 1. + (*gamr + 1.) * pst) / (*gamr * 3. - 1. + (*gamr + 1.) * pst);
-      dpstar  = zl * zr * (ustarr - ustarl) / (zl + zr);
-      *pstar -= dpstar;
-      *pstar = PetscMax(PetscRealPart(*pstar), PetscRealPart(smallp));
-      if (PetscAbsScalar(dpstar) / PetscRealPart(*pstar) <= 1e-8) {
-#if 0
-              break;
-#endif
-      }
-    }
-  }
-
-  *ustar = (zl * ustarr + zr * ustarl) / (zl + zr);
-  if (PetscRealPart(*pstar) > PetscRealPart(*pl)) {
-    pst     = *pstar / *pl;
-    *rstarl = ((*gaml + 1.) * pst + *gaml - 1.) / ((*gaml - 1.) * pst + *gaml + 1.) * *rl;
-  }
-  if (PetscRealPart(*pstar) > PetscRealPart(*pr)) {
-    pst     = *pstar / *pr;
-    *rstarr = ((*gamr + 1.) * pst + *gamr - 1.) / ((*gamr - 1.) * pst + *gamr + 1.) * *rr;
-  }
-  return iwave;
-}
-
-PetscScalar sign(PetscScalar x)
-{
-  if (PetscRealPart(x) > 0) return 1.0;
-  if (PetscRealPart(x) < 0) return -1.0;
-  return 0.0;
-}
-/*        Riemann Solver */
-/* -------------------------------------------------------------------- */
-int riemannsolver(PetscScalar *xcen, PetscScalar *xp, PetscScalar *dtt, PetscScalar *rl, PetscScalar *uxl, PetscScalar *pl, PetscScalar *utl, PetscScalar *ubl, PetscScalar *gaml, PetscScalar *rho1l, PetscScalar *rr, PetscScalar *uxr, PetscScalar *pr, PetscScalar *utr, PetscScalar *ubr, PetscScalar *gamr, PetscScalar *rho1r, PetscScalar *rx, PetscScalar *uxm, PetscScalar *px, PetscScalar *utx, PetscScalar *ubx, PetscScalar *gam, PetscScalar *rho1)
-{
-  /* System generated locals */
-  PetscScalar d__1, d__2;
-
-  /* Local variables */
-  static PetscScalar s, c0, p0, r0, u0, w0, x0, x2, ri, cx, sgn0, wsp0, gasc1, gasc2, gasc3, gasc4;
-  static PetscScalar cstar, pstar, rstar, ustar, xstar, wspst, ushock, streng, rstarl, rstarr, rstars;
-  int                iwave;
-
-  if (*rl == *rr && *pr == *pl && *uxl == *uxr && *gaml == *gamr) {
-    *rx  = *rl;
-    *px  = *pl;
-    *uxm = *uxl;
-    *gam = *gaml;
-    x2   = *xcen + *uxm * *dtt;
-
-    if (PetscRealPart(*xp) >= PetscRealPart(x2)) {
-      *utx  = *utr;
-      *ubx  = *ubr;
-      *rho1 = *rho1r;
-    } else {
-      *utx  = *utl;
-      *ubx  = *ubl;
-      *rho1 = *rho1l;
-    }
-    return 0;
-  }
-  iwave = riem1mdt(gaml, gamr, rl, pl, uxl, rr, pr, uxr, &rstarl, &rstarr, &pstar, &ustar);
-
-  x2   = *xcen + ustar * *dtt;
-  d__1 = *xp - x2;
-  sgn0 = sign(d__1);
-  /*            x is in 3-wave if sgn0 = 1 */
-  /*            x is in 1-wave if sgn0 = -1 */
-  r0     = cvmgm_(rl, rr, &sgn0);
-  p0     = cvmgm_(pl, pr, &sgn0);
-  u0     = cvmgm_(uxl, uxr, &sgn0);
-  *gam   = cvmgm_(gaml, gamr, &sgn0);
-  gasc1  = *gam - 1.;
-  gasc2  = (*gam + 1.) * .5;
-  gasc3  = gasc2 / *gam;
-  gasc4  = 1. / (*gam - 1.);
-  c0     = PetscSqrtScalar(*gam * p0 / r0);
-  streng = pstar - p0;
-  w0     = *gam * r0 * p0 * (gasc3 * streng / p0 + 1.);
-  rstars = r0 / (1. - r0 * streng / w0);
-  d__1   = p0 / pstar;
-  d__2   = -1. / *gam;
-  rstarr = r0 * PetscPowScalar(d__1, d__2);
-  rstar  = cvmgm_(&rstarr, &rstars, &streng);
-  w0     = PetscSqrtScalar(w0);
-  cstar  = PetscSqrtScalar(*gam * pstar / rstar);
-  wsp0   = u0 + sgn0 * c0;
-  wspst  = ustar + sgn0 * cstar;
-  ushock = ustar + sgn0 * w0 / rstar;
-  wspst  = cvmgp_(&ushock, &wspst, &streng);
-  wsp0   = cvmgp_(&ushock, &wsp0, &streng);
-  x0     = *xcen + wsp0 * *dtt;
-  xstar  = *xcen + wspst * *dtt;
-  /*           using gas formula to evaluate rarefaction wave */
-  /*            ri : reiman invariant */
-  ri   = u0 - sgn0 * 2. * gasc4 * c0;
-  cx   = sgn0 * .5 * gasc1 / gasc2 * ((*xp - *xcen) / *dtt - ri);
-  *uxm = ri + sgn0 * 2. * gasc4 * cx;
-  s    = p0 / PetscPowScalar(r0, *gam);
-  d__1 = cx * cx / (*gam * s);
-  *rx  = PetscPowScalar(d__1, gasc4);
-  *px  = cx * cx * *rx / *gam;
-  d__1 = sgn0 * (x0 - *xp);
-  *rx  = cvmgp_(rx, &r0, &d__1);
-  d__1 = sgn0 * (x0 - *xp);
-  *px  = cvmgp_(px, &p0, &d__1);
-  d__1 = sgn0 * (x0 - *xp);
-  *uxm = cvmgp_(uxm, &u0, &d__1);
-  d__1 = sgn0 * (xstar - *xp);
-  *rx  = cvmgm_(rx, &rstar, &d__1);
-  d__1 = sgn0 * (xstar - *xp);
-  *px  = cvmgm_(px, &pstar, &d__1);
-  d__1 = sgn0 * (xstar - *xp);
-  *uxm = cvmgm_(uxm, &ustar, &d__1);
-  if (PetscRealPart(*xp) >= PetscRealPart(x2)) {
-    *utx  = *utr;
-    *ubx  = *ubr;
-    *rho1 = *rho1r;
-  } else {
-    *utx  = *utl;
-    *ubx  = *ubl;
-    *rho1 = *rho1l;
-  }
-  return iwave;
-}
-int godunovflux(const PetscScalar *ul, const PetscScalar *ur, PetscScalar *flux, const PetscReal *nn, int ndim, PetscReal gamma)
-{
-  /* System generated locals */
-  int         i__1, iwave;
-  PetscScalar d__1, d__2, d__3;
-
-  /* Local variables */
-  static int         k;
-  static PetscScalar bn[3], fn, ft, tg[3], pl, rl, pm, pr, rr, xp, ubl, ubm, ubr, dtt, unm, tmp, utl, utm, uxl, utr, uxr, gaml, gamm, gamr, xcen, rhom, rho1l, rho1m, rho1r;
-
-  /* Function Body */
-  xcen = 0.;
-  xp   = 0.;
-  i__1 = ndim;
-  for (k = 1; k <= i__1; ++k) {
-    tg[k - 1] = 0.;
-    bn[k - 1] = 0.;
-  }
-  dtt = 1.;
-  if (ndim == 3) {
-    if (nn[0] == 0. && nn[1] == 0.) {
-      tg[0] = 1.;
-    } else {
-      tg[0] = -nn[1];
-      tg[1] = nn[0];
-    }
-    /*           tmp=dsqrt(tg(1)**2+tg(2)**2) */
-    /*           tg=tg/tmp */
-    bn[0] = -nn[2] * tg[1];
-    bn[1] = nn[2] * tg[0];
-    bn[2] = nn[0] * tg[1] - nn[1] * tg[0];
-    /* Computing 2nd power */
-    d__1 = bn[0];
-    /* Computing 2nd power */
-    d__2 = bn[1];
-    /* Computing 2nd power */
-    d__3 = bn[2];
-    tmp  = PetscSqrtScalar(d__1 * d__1 + d__2 * d__2 + d__3 * d__3);
-    i__1 = ndim;
-    for (k = 1; k <= i__1; ++k) bn[k - 1] /= tmp;
-  } else if (ndim == 2) {
-    tg[0] = -nn[1];
-    tg[1] = nn[0];
-    /*           tmp=dsqrt(tg(1)**2+tg(2)**2) */
-    /*           tg=tg/tmp */
-    bn[0] = 0.;
-    bn[1] = 0.;
-    bn[2] = 1.;
-  }
-  rl   = ul[0];
-  rr   = ur[0];
-  uxl  = 0.;
-  uxr  = 0.;
-  utl  = 0.;
-  utr  = 0.;
-  ubl  = 0.;
-  ubr  = 0.;
-  i__1 = ndim;
-  for (k = 1; k <= i__1; ++k) {
-    uxl += ul[k] * nn[k - 1];
-    uxr += ur[k] * nn[k - 1];
-    utl += ul[k] * tg[k - 1];
-    utr += ur[k] * tg[k - 1];
-    ubl += ul[k] * bn[k - 1];
-    ubr += ur[k] * bn[k - 1];
-  }
-  uxl /= rl;
-  uxr /= rr;
-  utl /= rl;
-  utr /= rr;
-  ubl /= rl;
-  ubr /= rr;
-
-  gaml = gamma;
-  gamr = gamma;
-  /* Computing 2nd power */
-  d__1 = uxl;
-  /* Computing 2nd power */
-  d__2 = utl;
-  /* Computing 2nd power */
-  d__3 = ubl;
-  pl   = (gamma - 1.) * (ul[ndim + 1] - rl * .5 * (d__1 * d__1 + d__2 * d__2 + d__3 * d__3));
-  /* Computing 2nd power */
-  d__1 = uxr;
-  /* Computing 2nd power */
-  d__2 = utr;
-  /* Computing 2nd power */
-  d__3  = ubr;
-  pr    = (gamma - 1.) * (ur[ndim + 1] - rr * .5 * (d__1 * d__1 + d__2 * d__2 + d__3 * d__3));
-  rho1l = rl;
-  rho1r = rr;
-
-  iwave = riemannsolver(&xcen, &xp, &dtt, &rl, &uxl, &pl, &utl, &ubl, &gaml, &rho1l, &rr, &uxr, &pr, &utr, &ubr, &gamr, &rho1r, &rhom, &unm, &pm, &utm, &ubm, &gamm, &rho1m);
-
-  flux[0] = rhom * unm;
-  fn      = rhom * unm * unm + pm;
-  ft      = rhom * unm * utm;
-  /*           flux(2)=fn*nn(1)+ft*nn(2) */
-  /*           flux(3)=fn*tg(1)+ft*tg(2) */
-  flux[1] = fn * nn[0] + ft * tg[0];
-  flux[2] = fn * nn[1] + ft * tg[1];
-  /*           flux(2)=rhom*unm*(unm)+pm */
-  /*           flux(3)=rhom*(unm)*utm */
-  if (ndim == 3) flux[3] = rhom * unm * ubm;
-  flux[ndim + 1] = (rhom * .5 * (unm * unm + utm * utm + ubm * ubm) + gamm / (gamm - 1.) * pm) * unm;
-  return iwave;
-} /* godunovflux_ */
-
 /* Subroutine to set up the initial conditions for the */
 /* Shock Interface interaction or linear wave (Ravi Samtaney,Mark Adams). */
 /* ----------------------------------------------------------------------- */
@@ -2458,104 +1654,6 @@ int initLinearWave(EulerNode *ux, const PetscReal gamma, const PetscReal coord[]
 
 /*TEST
 
-  testset:
-    args: -dm_plex_adj_cone -dm_plex_adj_closure 0
-
-    test:
-      suffix: adv_2d_tri_0
-      requires: triangle
-      TODO: how did this ever get in main when there is no support for this
-      args: -ufv_vtk_interval 0 -simplex -dm_refine 3 -dm_plex_faces 1,1 -dm_plex_separate_marker -bc_inflow 1,2,4 -bc_outflow 3
-
-    test:
-      suffix: adv_2d_tri_1
-      requires: triangle
-      TODO: how did this ever get in main when there is no support for this
-      args: -ufv_vtk_interval 0 -simplex -dm_refine 5 -dm_plex_faces 1,1 -dm_plex_separate_marker -grid_bounds -0.5,0.5,-0.5,0.5 -bc_inflow 1,2,4 -bc_outflow 3 -advect_sol_type bump -advect_bump_center 0.25,0 -advect_bump_radius 0.1
-
-    test:
-      suffix: tut_1
-      requires: exodusii
-      nsize: 1
-      args: -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/sevenside.exo -exodusii_check_reserved 0
-
-    test:
-      suffix: tut_2
-      requires: exodusii
-      nsize: 1
-      args: -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/sevenside.exo -exodusii_check_reserved 0 -ts_type rosw
-
-    test:
-      suffix: tut_3
-      requires: exodusii
-      nsize: 4
-      args: -dm_distribute_overlap 1 -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/annulus-20.exo -monitor Error -advect_sol_type bump -petscfv_type leastsquares -petsclimiter_type sin
-
-    test:
-      suffix: tut_4
-      requires: exodusii
-      nsize: 4
-      args: -dm_distribute_overlap 1 -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/annulus-20.exo -physics sw -monitor Height,Energy -petscfv_type leastsquares -petsclimiter_type minmod
-
-  testset:
-    args: -dm_plex_adj_cone -dm_plex_adj_closure 0 -dm_plex_simplex 0 -dm_plex_box_faces 1,1,1
-
-    # 2D Advection 0-10
-    test:
-      suffix: 0
-      requires: exodusii
-      args: -ufv_vtk_interval 0 -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/sevenside.exo -exodusii_check_reserved 0
-
-    test:
-      suffix: 1
-      requires: exodusii
-      args: -ufv_vtk_interval 0 -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/sevenside-quad-15.exo
-
-    test:
-      suffix: 2
-      requires: exodusii
-      nsize: 2
-      args: -dm_distribute_overlap 1 -ufv_vtk_interval 0 -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/sevenside.exo -exodusii_check_reserved 0
-
-    test:
-      suffix: 3
-      requires: exodusii
-      nsize: 2
-      args: -dm_distribute_overlap 1 -ufv_vtk_interval 0 -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/sevenside-quad-15.exo
-
-    test:
-      suffix: 4
-      requires: exodusii
-      nsize: 4
-      args: -dm_distribute_overlap 1 -ufv_vtk_interval 0 -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/sevenside-quad.exo -petscpartitioner_type simple
-
-    test:
-      suffix: 5
-      requires: exodusii
-      args: -ufv_vtk_interval 0 -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/sevenside.exo -exodusii_check_reserved 0 -ts_type rosw -ts_adapt_reject_safety 1
-
-    test:
-      suffix: 7
-      requires: exodusii
-      args: -ufv_vtk_interval 0 -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/sevenside-quad-15.exo -dm_refine 1
-
-    test:
-      suffix: 8
-      requires: exodusii
-      nsize: 2
-      args: -dm_distribute_overlap 1 -ufv_vtk_interval 0 -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/sevenside-quad-15.exo -dm_refine 1
-
-    test:
-      suffix: 9
-      requires: exodusii
-      nsize: 8
-      args: -dm_distribute_overlap 1 -ufv_vtk_interval 0 -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/sevenside-quad-15.exo -dm_refine 1
-
-    test:
-      suffix: 10
-      requires: exodusii
-      args: -ufv_vtk_interval 0 -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/sevenside-quad.exo
-
   # 2D Shallow water
   testset:
     args: -physics sw -ufv_vtk_interval 0 -dm_plex_adj_cone -dm_plex_adj_closure 0
@@ -2602,71 +1700,5 @@ int initLinearWave(EulerNode *ux, const PetscReal gamma, const PetscReal coord[]
       args: -eu_riemann godunov_ceed -bc_wall 100,101 -ufv_cfl 5 -petsclimiter_type sin \
             -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/annulus-20.exo -dm_plex_use_ceed \
             -ts_max_time 1 -ts_ssp_type rks2 -ts_ssp_nstages 10
-
-  testset:
-    args: -dm_plex_adj_cone -dm_plex_adj_closure 0 -dm_plex_simplex 0 -dm_plex_box_faces 1,1,1
-
-    # 2D Advection: p4est
-    test:
-      suffix: p4est_advec_2d
-      requires: p4est
-      args: -ufv_vtk_interval 0 -dm_type p4est -dm_forest_minimum_refinement 1 -dm_forest_initial_refinement 2 -dm_p4est_refine_pattern hash   -dm_forest_maximum_refinement 5
-
-    # Advection in a box
-    test:
-      suffix: adv_2d_quad_0
-      args: -ufv_vtk_interval 0 -dm_refine 3 -dm_plex_separate_marker -bc_inflow 1,2,4 -bc_outflow 3
-
-    test:
-      suffix: adv_2d_quad_1
-      args: -ufv_vtk_interval 0 -dm_refine 3 -dm_plex_separate_marker -grid_bounds -0.5,0.5,-0.5,0.5 -bc_inflow 1,2,4 -bc_outflow 3 -advect_sol_type bump -advect_bump_center 0.25,0 -advect_bump_radius 0.1
-      timeoutfactor: 3
-
-    test:
-      suffix: adv_2d_quad_p4est_0
-      requires: p4est
-      args: -ufv_vtk_interval 0 -dm_refine 5 -dm_type p4est -dm_plex_separate_marker -bc_inflow 1,2,4 -bc_outflow 3
-
-    test:
-      suffix: adv_2d_quad_p4est_1
-      requires: p4est
-      args: -ufv_vtk_interval 0 -dm_refine 5 -dm_type p4est -dm_plex_separate_marker -grid_bounds -0.5,0.5,-0.5,0.5 -bc_inflow 1,2,4 -bc_outflow   3 -advect_sol_type bump -advect_bump_center 0.25,0 -advect_bump_radius 0.1
-      timeoutfactor: 3
-
-    test:
-      suffix: adv_2d_quad_p4est_adapt_0
-      requires: p4est !__float128 #broken for quad precision
-      args: -ufv_vtk_interval 0 -dm_refine 3 -dm_type p4est -dm_plex_separate_marker -grid_bounds -0.5,0.5,-0.5,0.5 -bc_inflow 1,2,4 -bc_outflow   3 -advect_sol_type bump -advect_bump_center 0.25,0 -advect_bump_radius 0.1 -ufv_use_amr -refine_vec_tagger_box 0.005,inf -coarsen_vec_tagger_box   0,1.e-5 -petscfv_type leastsquares -ts_max_time 0.01
-      timeoutfactor: 3
-
-    test:
-      suffix: adv_0
-      requires: exodusii
-      args: -ufv_vtk_interval 0 -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/blockcylinder-50.exo -exodusii_check_reserved 0 -bc_inflow 100,101,200 -bc_outflow 201
-
-    test:
-      suffix: shock_0
-      requires: p4est !single !complex
-      args: -dm_plex_box_faces 2,1 -grid_bounds -1,1.,0.,1 -grid_skew_60 \
-      -dm_type p4est -dm_forest_partition_overlap 1 -dm_forest_maximum_refinement 6 -dm_forest_minimum_refinement 2 -dm_forest_initial_refinement 2 \
-      -ufv_use_amr -refine_vec_tagger_box 0.5,inf -coarsen_vec_tagger_box 0,1.e-2 -refine_tag_view -coarsen_tag_view \
-      -bc_wall 1,2,3,4 -physics euler -eu_type iv_shock -ufv_cfl 10 -eu_alpha 60. -eu_gamma 1.4 -eu_amach 2.02 -eu_rho2 3. \
-      -petscfv_type leastsquares -petsclimiter_type minmod -petscfv_compute_gradients 0 \
-      -ts_max_time 0.5 -ts_ssp_type rks2 -ts_ssp_nstages 10 \
-      -ufv_vtk_basename ${wPETSC_DIR}/ex11 -ufv_vtk_interval 0 -monitor density,energy
-      timeoutfactor: 3
-
-    # Test GLVis visualization of PetscFV fields
-    test:
-      suffix: glvis_adv_2d_tet
-      args: -ufv_vtk_interval 0 -ufv_vtk_monitor 0 \
-            -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/square_periodic.msh -dm_plex_gmsh_periodic 0 \
-            -ts_monitor_solution glvis: -ts_max_steps 0
-
-    test:
-      suffix: glvis_adv_2d_quad
-      args: -ufv_vtk_interval 0 -ufv_vtk_monitor 0 -bc_inflow 1,2,4 -bc_outflow 3 \
-            -dm_refine 5 -dm_plex_separate_marker \
-            -ts_monitor_solution glvis: -ts_max_steps 0
 
 TEST*/
