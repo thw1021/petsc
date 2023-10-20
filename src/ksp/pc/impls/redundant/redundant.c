@@ -55,6 +55,7 @@ static PetscErrorCode PCView_Redundant(PC pc, PetscViewer viewer)
         PetscCall(PetscViewerASCIIPopTab(subviewer));
       }
       PetscCall(PetscViewerRestoreSubViewer(viewer, ((PetscObject)red->pc)->comm, &subviewer));
+      PetscCall(PetscViewerFlush(viewer));
     }
   } else if (isstring) {
     PetscCall(PetscViewerStringSPrintf(viewer, " Redundant solver preconditioner"));
