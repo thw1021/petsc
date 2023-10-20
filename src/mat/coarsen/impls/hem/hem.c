@@ -1125,13 +1125,6 @@ static PetscErrorCode MatCoarsenView_HEM(MatCoarsen coarse, PetscViewer viewer)
 
 /*
   MatCoarsenCreate_HEM - A coarsener that uses HEM a simple greedy coarsener
-
-  Input Parameter:
-. coarse - coarsener object
-
-  Level: advanced
-
-.seealso: `MatCoarsen`, `MatCoarsenSetType()`, `MatCoarsenGetData()`, `MatCoarsenType`, `MatCoarsenCreate()`
 */
 PETSC_EXTERN PetscErrorCode MatCoarsenCreate_HEM(MatCoarsen coarse)
 {
