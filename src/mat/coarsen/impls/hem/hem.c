@@ -673,7 +673,7 @@ static PetscErrorCode MatCoarsenApply_HEM_private(Mat a_Gmat, const PetscInt n_i
     PetscCall(MatCreateAIJ(comm, nloc, nloc, PETSC_DETERMINE, PETSC_DETERMINE, 1, NULL, 1, NULL, &P));
     /* process - communicate - process */
     for (int sub_it = 0; /* sub_it < n_sub_its */; /* sub_it++ */) {
-      PetscInt    nactive_edges = 0, n_act_n[3], gn_act_n[3], ndelghost;
+      PetscInt    nactive_edges = 0, n_act_n[3], gn_act_n[3];
       PetscMPIInt tag1, tag2;
       PetscCall(VecGetArray(locMaxEdge, &lid_max_ew));
       if (isMPI) {
@@ -791,7 +791,6 @@ static PetscErrorCode MatCoarsenApply_HEM_private(Mat a_Gmat, const PetscInt n_i
       else n_act_n[2] = 0;
       PetscCall(PetscCDCount(agg_llists, &n_act_n[1]));
       PetscCall(MPIU_Allreduce(n_act_n, gn_act_n, 3, MPIU_INT, MPI_SUM, comm));
-      ndelghost = gn_act_n[2];
       PetscCall(PetscInfo(info_is, "[%d] %d.%d) nactive edges=%" PetscInt_FMT ", ncomm_procs=%d, nEdges=%d, %" PetscInt_FMT " deleted ghosts, N=%" PetscInt_FMT "\n", rank, iter, sub_it, gn_act_n[0], (int)ncomm_procs, (int)nEdges, gn_act_n[2], gn_act_n[1]));
       PetscCall(PetscSynchronizedFlush(PETSC_COMM_WORLD, PETSC_STDOUT));
       /* deal with deleted ghost */
