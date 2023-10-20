@@ -18,8 +18,15 @@ static constexpr auto VecMPI_HIP = impl::VecMPI_CUPM<DeviceType::HIP>{};
   Level: beginner
 
 .seealso: `VecCreate()`, `VecSetType()`, `VecSetFromOptions()`, `VecCreateMPIWithArray()`, `VECSEQHIP`,
-`VECMPIHIP`, `VECSTANDARD`, `VecType`, `VecCreateMPI()`, `VecSetPinnedMemoryMin()`
+`VECMPIHIP`, `VECSTANDARD`, `VecType`, `VecCreateMPI()`, `VecSetPinnedMemoryMin()`, `VECCUDA`
 M*/
+
+PetscErrorCode VecCreate_HIP(Vec v)
+{
+  PetscFunctionBegin;
+  PetscCall(VecMPI_HIP.Create_CUPM(v));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
 
 /*MC
   VECMPIHIP - VECMPIHIP = "mpihip" - The basic parallel vector, modified to use HIP
@@ -32,13 +39,6 @@ M*/
 .seealso: `VecCreate()`, `VecSetType()`, `VecSetFromOptions()`, `VecCreateMPIWithArray()`, `VECMPI`,
 `VecType`, `VecCreateMPI()`, `VecSetPinnedMemoryMin()`
 M*/
-
-PetscErrorCode VecCreate_HIP(Vec v)
-{
-  PetscFunctionBegin;
-  PetscCall(VecMPI_HIP.Create_CUPM(v));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
 
 PetscErrorCode VecCreate_MPIHIP(Vec v)
 {
