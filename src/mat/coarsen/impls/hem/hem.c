@@ -836,7 +836,7 @@ static PetscErrorCode MatCoarsenApply_HEM_private(Mat a_Gmat, const PetscInt n_i
         }
         /* receive deleted, send back partial aggregates, clear lists */
         for (int proc_idx = 0; proc_idx < ncomm_procs; proc_idx++) {
-          PetscCallMPI(MPI_Probe(comm_procs[proc_idx]/* MPI_ANY_SOURCE */, tag1, comm, &status));
+          PetscCallMPI(MPI_Probe(comm_procs[proc_idx] /* MPI_ANY_SOURCE */, tag1, comm, &status));
           {
 #define BF_SZ 10000
             PetscInt          rbuff[BF_SZ], *pt, *pt2, *pt3, *sbuff, tmp;
@@ -1124,7 +1124,7 @@ static PetscErrorCode MatCoarsenView_HEM(MatCoarsen coarse, PetscViewer viewer)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*
   MatCoarsenCreate_HEM - A coarsener that uses HEM a simple greedy coarsener
 
   Input Parameter:
@@ -1133,7 +1133,7 @@ static PetscErrorCode MatCoarsenView_HEM(MatCoarsen coarse, PetscViewer viewer)
   Level: advanced
 
 .seealso: `MatCoarsen`, `MatCoarsenSetType()`, `MatCoarsenGetData()`, `MatCoarsenType`, `MatCoarsenCreate()`
-@*/
+*/
 PETSC_EXTERN PetscErrorCode MatCoarsenCreate_HEM(MatCoarsen coarse)
 {
   PetscFunctionBegin;
