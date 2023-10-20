@@ -244,7 +244,6 @@ PETSC_INTERN PetscErrorCode PetscSFSetUp_Basic(PetscSF sf)
 
   sf->nleafreqs  = nRemoteRootRanks;
   bas->nrootreqs = nRemoteLeafRanks;
-  sf->persistent = PETSC_TRUE;
 
   /* Setup fields related to packing, such as rootbuflen[] */
   PetscCall(PetscSFSetUpPackFields(sf));
@@ -619,6 +618,9 @@ PETSC_EXTERN PetscErrorCode PetscSFCreate_Basic(PetscSF sf)
   sf->ops->GetLeafRanks         = PetscSFGetLeafRanks_Basic;
   sf->ops->CreateEmbeddedRootSF = PetscSFCreateEmbeddedRootSF_Basic;
   sf->ops->SetCommunicationOps  = PetscSFSetCommunicationOps_Basic;
+
+  sf->persistent = PETSC_TRUE; // currently SFBASIC always uses persistent send/recv
+  sf->collective = PETSC_FALSE;
 
   PetscCall(PetscNew(&dat));
   sf->data = (void *)dat;
