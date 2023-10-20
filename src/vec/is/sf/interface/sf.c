@@ -39,12 +39,13 @@ const char *const PetscSFConcatenateRootModes[] = {"local", "shared", "global", 
 . sf - new star forest context
 
   Options Database Key:
-. -sf_type type - value of type may be
++ -sf_type type           -value of type may be
 .vb
     basic     -Use MPI persistent Isend/Irecv for communication (Default)
     window    -Use MPI-3 one-sided window for communication
     neighbor  -Use MPI-3 neighborhood collectives for communication
 .ve
+- -sf_neighbor_persistent -Use MPI-4 persistent neighborhood collectives for communication
 
   Level: intermediate
 

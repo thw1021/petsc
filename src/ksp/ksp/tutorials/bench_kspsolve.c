@@ -512,6 +512,11 @@ int main(int argc, char **argv)
       suffix: ksp
 
     test:
+      suffix: nbr
+      requires: defined(PETSC_HAVE_MPI_PERSISTENT_NEIGHBORHOOD_COLLECTIVES)
+      args: -sf_type neighbor -sf_neighbor_persistent
+
+    test:
       suffix: hip_ksp
       requires: hip
       args: -mat_type aijhipsparse
@@ -525,4 +530,10 @@ int main(int argc, char **argv)
       suffix: kok_ksp
       requires: kokkos_kernels
       args: -mat_type aijkokkos
+
+    test:
+      suffix: kok_nbr
+      requires: kokkos_kernels defined(PETSC_HAVE_MPI_PERSISTENT_NEIGHBORHOOD_COLLECTIVES)
+      args: -mat_type aijkokkos -sf_type neighbor -sf_neighbor_persistent {{0 1}}
+
 TEST*/
