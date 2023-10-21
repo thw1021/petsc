@@ -424,11 +424,12 @@ static int gamg_hem_compare(const void *a, const void *b)
   Input Parameter:
    . a_Gmat - global matrix of the graph
    . n_iter - number of matching iterations
+   . threshold - threshold for filtering graphs
 
   Output Parameter:
    . a_locals_llist - array of list of local nodes rooted at local node
 */
-static PetscErrorCode MatCoarsenApply_HEM_private(Mat a_Gmat, const PetscInt n_iter, PetscCoarsenData **a_locals_llist)
+static PetscErrorCode MatCoarsenApply_HEM_private(Mat a_Gmat, const PetscInt n_iter, const PetscReal threshold, PetscCoarsenData **a_locals_llist)
 {
 #define REQ_BF_SIZE 100
   PetscBool         isMPI;
@@ -575,7 +576,7 @@ static PetscErrorCode MatCoarsenApply_HEM_private(Mat a_Gmat, const PetscInt n_i
       ap = matA->a + ii[lid];
       for (int jj = 0; jj < n; jj++) {
         PetscInt lidj = aj[jj];
-        if ((tt = PetscRealPart(ap[jj])) > 0 && lidj != lid) {
+        if ((tt = PetscRealPart(ap[jj])) > threshold && lidj != lid) {
           if (tt > max_e) max_e = tt;
           if (lidj > lid) nEdges0++;
         }
@@ -586,8 +587,8 @@ static PetscErrorCode MatCoarsenApply_HEM_private(Mat a_Gmat, const PetscInt n_i
         ap = matB->a + ii[ix];
         aj = matB->j + ii[ix];
         for (int jj = 0; jj < n; jj++) {
-          if ((tt = PetscRealPart(ap[jj])) > max_e) max_e = tt;
-          if (tt > 0) {
+          if ((tt = PetscRealPart(ap[jj])) > threshold) {
+            if (tt > max_e) max_e = tt;
             nEdges0++;
             if ((pe = lghost_pe[aj[jj]]) > max_pe) max_pe = pe;
           }
@@ -597,7 +598,7 @@ static PetscErrorCode MatCoarsenApply_HEM_private(Mat a_Gmat, const PetscInt n_i
       PetscCall(VecSetValues(locMaxEdge, 1, &gid, &vval, INSERT_VALUES));
       vval = (PetscScalar)max_pe;
       PetscCall(VecSetValues(locMaxPE, 1, &gid, &vval, INSERT_VALUES));
-      if (iter == 0 && max_e == 0) {
+      if (iter == 0 && max_e <= MY_MEPS) {
         lid_matched[lid] = PETSC_TRUE;
         /* should select this because it is technically in the MIS but lets not */
         PetscCall(PetscCDRemoveAllAt(agg_llists, lid));
@@ -631,17 +632,16 @@ static PetscErrorCode MatCoarsenApply_HEM_private(Mat a_Gmat, const PetscInt n_i
     /* setup sorted list of edges, and make 'Edges' */
     PetscCall(PetscMalloc1(nEdges0, &Edges));
     nEdges = 0;
-    for (int kk = 0, nn, jj, n; kk < nloc; kk++) {
+    for (int kk = 0, n; kk < nloc; kk++) {
       const PetscInt lid = kk;
       PetscReal      tt;
       ii = matA->i;
       n  = ii[lid + 1] - ii[lid];
       aj = matA->j + ii[lid];
       ap = matA->a + ii[lid];
-      for (jj = 0, nn = 0; jj < n; jj++) {
+      for (int jj = 0; jj < n; jj++) {
         PetscInt lidj = aj[jj];
-        if ((tt = PetscRealPart(ap[jj])) > 0 && lidj != lid) {
-          nn++;
+        if ((tt = PetscRealPart(ap[jj])) > threshold && lidj != lid) {
           if (lidj > lid) {
             Edges[nEdges].lid0       = lid;
             Edges[nEdges].gid1       = lidj + my0;
@@ -656,14 +656,13 @@ static PetscErrorCode MatCoarsenApply_HEM_private(Mat a_Gmat, const PetscInt n_i
         n  = ii[ix + 1] - ii[ix];
         ap = matB->a + ii[ix];
         aj = matB->j + ii[ix];
-        for (jj = 0; jj < n; jj++) {
-          if ((tt = PetscRealPart(ap[jj])) > 0) {
+        for (int jj = 0; jj < n; jj++) {
+          if ((tt = PetscRealPart(ap[jj])) > threshold) {
             Edges[nEdges].lid0       = lid;
             Edges[nEdges].gid1       = lghost_gid[aj[jj]];
             Edges[nEdges].ghost1_idx = aj[jj];
             Edges[nEdges].weight     = tt;
             nEdges++;
-            nn++;
           }
         }
       }
@@ -735,6 +734,7 @@ static PetscErrorCode MatCoarsenApply_HEM_private(Mat a_Gmat, const PetscInt n_i
               PetscInt lidj = aj[jj];
               if (lghost_matched[lidj]) continue;
               ew    = PetscRealPart(ap[jj]);
+              if (ew <= threshold) continue;
               max_e = PetscRealPart(lghost_max_ew[lidj]);
               /* check for max_e == to this edge and larger processor that will deal with this */
               if (ew >= max_e - MY_MEPS && ew >= PetscRealPart(lid_max_ew[lid0]) - MY_MEPS && lghost_pe[lidj] > rank) isOK = PETSC_FALSE;
@@ -754,6 +754,7 @@ static PetscErrorCode MatCoarsenApply_HEM_private(Mat a_Gmat, const PetscInt n_i
                 PetscInt lidj = aj[jj];
                 if (lghost_matched[lidj]) continue;
                 ew    = PetscRealPart(ap[jj]);
+                if (ew <= threshold) continue;
                 max_e = PetscRealPart(lghost_max_ew[lidj]);
                 /* check for max_e == to this edge and larger processor that will deal with this */
                 if (ew >= max_e - MY_MEPS && ew >= PetscRealPart(lid_max_ew[lid1]) - MY_MEPS && lghost_pe[lidj] > rank) isOK = PETSC_FALSE;
@@ -1105,7 +1106,7 @@ static PetscErrorCode MatCoarsenApply_HEM(MatCoarsen coarse)
   Mat mat = coarse->graph;
 
   PetscFunctionBegin;
-  PetscCall(MatCoarsenApply_HEM_private(mat, coarse->max_it, &coarse->agg_lists));
+  PetscCall(MatCoarsenApply_HEM_private(mat, coarse->max_it, coarse->threshold, &coarse->agg_lists));
 
   PetscFunctionReturn(PETSC_SUCCESS);
 }

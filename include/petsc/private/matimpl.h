@@ -571,6 +571,7 @@ struct _p_MatCoarsen {
   IS                perm;
   PetscCoarsenData *agg_lists;
   PetscInt          max_it; /* number of iterations in HEM */
+  PetscReal         threshold; /* HEM can filter interim graphs */
 };
 
 PETSC_EXTERN PetscErrorCode MatCoarsenMISKSetDistance(MatCoarsen, PetscInt);

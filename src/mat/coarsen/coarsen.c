@@ -166,6 +166,7 @@ PetscErrorCode MatCoarsenDestroy(MatCoarsen *agg)
   if ((*agg)->ops->destroy) PetscCall((*(*agg)->ops->destroy)((*agg)));
   if ((*agg)->agg_lists) PetscCall(PetscCDDestroy((*agg)->agg_lists));
   PetscCall(PetscObjectComposeFunction((PetscObject)(*agg), "MatCoarsenSetMaximumIterations_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)(*agg), "MatCoarsenSetThreshold_C", NULL));
 
   PetscCall(PetscHeaderDestroy(agg));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -368,6 +369,7 @@ PetscErrorCode MatCoarsenSetFromOptions(MatCoarsen coarser)
   if (flag) PetscCall(MatCoarsenSetType(coarser, type));
 
   PetscCall(PetscOptionsInt("-mat_coarsen_max_it", "Number of iterations (for HEM)", "MatCoarsenSetMaximumIterations", coarser->max_it, &coarser->max_it, NULL));
+  PetscCall(PetscOptionsInt("-mat_coarsen_threshold", "Threshold (for HEM)", "MatCoarsenSetThreshold", coarser->max_it, &coarser->max_it, NULL));
 
   /*
    Set the type if it was never set.
@@ -390,7 +392,7 @@ PetscErrorCode MatCoarsenSetFromOptions(MatCoarsen coarser)
 - b      - number of HEM iterations
 
   Options Database Key:
-. -mat_coarsen_max_it <int,default=4> - Max HEM iterations
+. -mat_coarsen_max_it <default=4> - Max HEM iterations
 
   Level: intermediate
 
@@ -409,6 +411,38 @@ static PetscErrorCode MatCoarsenSetMaximumIterations_MATCOARSEN(MatCoarsen coars
 {
   PetscFunctionBegin;
   coarse->max_it = b;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  MatCoarsenSetThreshold - Max HEM iterations
+
+  Logically Collective
+
+  Input Parameters:
++ coarse - the coarsen context
+- b      - threshold value
+
+  Options Database Key:
+. -mat_coarsen_threshold <-1> - Max HEM iterations
+
+  Level: intermediate
+
+.seealso: `MatCoarsen`, `MatCoarsenType`, `MatCoarsenApply()`, `MatCoarsenCreate()`, `MatCoarsenSetType()`
+@*/
+PetscErrorCode MatCoarsenSetThreshold(MatCoarsen coarse, PetscReal b)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(coarse, MAT_COARSEN_CLASSID, 1);
+  PetscValidLogicalCollectiveInt(coarse, b, 2);
+  PetscTryMethod(coarse, "MatCoarsenSetThreshold_C", (MatCoarsen, PetscReal), (coarse, b));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatCoarsenSetThreshold_MATCOARSEN(MatCoarsen coarse, PetscReal b)
+{
+  PetscFunctionBegin;
+  coarse->threshold = b;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -439,6 +473,7 @@ PetscErrorCode MatCoarsenCreate(MPI_Comm comm, MatCoarsen *newcrs)
   PetscCall(MatInitializePackage());
   PetscCall(PetscHeaderCreate(agg, MAT_COARSEN_CLASSID, "MatCoarsen", "Matrix/graph coarsen", "MatCoarsen", comm, MatCoarsenDestroy, MatCoarsenView));
   PetscCall(PetscObjectComposeFunction((PetscObject)agg, "MatCoarsenSetMaximumIterations_C", MatCoarsenSetMaximumIterations_MATCOARSEN));
+  PetscCall(PetscObjectComposeFunction((PetscObject)agg, "MatCoarsenSetThreshold_C", MatCoarsenSetThreshold_MATCOARSEN));
 
   *newcrs = agg;
   PetscFunctionReturn(PETSC_SUCCESS);
