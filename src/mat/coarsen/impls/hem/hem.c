@@ -734,7 +734,7 @@ static PetscErrorCode MatCoarsenApply_HEM_private(Mat a_Gmat, const PetscInt n_i
               max_e = PetscRealPart(lghost_max_ew[lidj]);
               /* check for max_e == to this edge and larger processor that will deal with this */
               if (ew > max_e - MY_MEPS && ew > PetscRealPart(lid_max_ew[lid0]) - MY_MEPS && lghost_pe[lidj] > rank) isOK = PETSC_FALSE;
-              PetscCheck(ew <= max_e + MY_MEPS, PETSC_COMM_SELF, PETSC_ERR_SUP, "edge weight %e > max %e", PetscRealPart(ew), PetscRealPart(max_e));
+              PetscCheck(ew <= max_e + MY_MEPS, PETSC_COMM_SELF, PETSC_ERR_SUP, "edge weight %e > max %e", (double)PetscRealPart(ew), (double)PetscRealPart(max_e));
               /* if (!isOK) PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD,"\t\t\t[%d] e0: SKIPPING with big ghost adj max %20.14e w= %20.14e edge (%d %d), diff = %10.4e\n", rank, max_e, ew, (int)gid0, (int)lghost_gid[lidj], max_e - ew)); */
             }
           }
@@ -753,7 +753,7 @@ static PetscErrorCode MatCoarsenApply_HEM_private(Mat a_Gmat, const PetscInt n_i
                 max_e = PetscRealPart(lghost_max_ew[lidj]);
                 /* check for max_e == to this edge and larger processor that will deal with this */
                 if (ew > max_e - MY_MEPS && ew > PetscRealPart(lid_max_ew[lid1]) - MY_MEPS && lghost_pe[lidj] > rank) isOK = PETSC_FALSE;
-                PetscCheck(ew < max_e + MY_MEPS, PETSC_COMM_SELF, PETSC_ERR_SUP, "edge weight %e > max %e", PetscRealPart(ew), PetscRealPart(max_e));
+                PetscCheck(ew < max_e + MY_MEPS, PETSC_COMM_SELF, PETSC_ERR_SUP, "edge weight %e > max %e", (double)PetscRealPart(ew), (double)PetscRealPart(max_e));
                 /* if (!isOK) PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD,"\t\t\t\t[%d] e1: SKIPPING with big ghost adj max %20.14e w= %20.14e edge (%d %d), diff = %10.4e\n", rank, max_e, ew, (int)gid0, (int)lghost_gid[lidj], max_e - ew)); */
               }
             }
