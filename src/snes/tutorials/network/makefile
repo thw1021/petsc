@@ -1,7 +1,6 @@
 -include ../../../../petscdir.mk
 #requiresdefine   'PETSC_HAVE_ATTRIBUTEALIGNED'
 
-DIRS     = power water
 MANSEC   = SNES
 
 OBJECTS_EX1 = ex1.o power/PFReadData.o power/pffunctions.o water/waterreaddata.o water/waterfunctions.o
