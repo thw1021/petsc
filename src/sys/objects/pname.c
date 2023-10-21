@@ -15,7 +15,7 @@
   Level: advanced
 
   Note:
-  If this routine is not called then `obj` may end up being name by `PetscObjectName()`.
+  If this routine is not called then `obj` may end up being named by `PetscObjectName()`.
 
 .seealso: `PetscObjectGetName()`, `PetscObjectName()`
 @*/
