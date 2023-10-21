@@ -1,4 +1,26 @@
-Linear solve converged due to CONVERGED_RTOL iterations 13
-Linear solve converged due to CONVERGED_RTOL iterations 13
-Linear solve converged due to CONVERGED_RTOL iterations 13
-[0]main |b-Ax|/|b|=1.326629e-04, |b|=4.969822e+00, emax=1.001972e+00
+MatCoarsen Object: 8 MPI processes
+  type: hem
+    [0] HEM aggregator
+    [1] HEM aggregator
+    [2] HEM aggregator
+    [3] HEM aggregator
+    [4] HEM aggregator
+    [5] HEM aggregator
+    [6] HEM aggregator
+    [7] HEM aggregator
+  5 matching steps with threshold = 0.01
+MatCoarsen Object: 8 MPI processes
+  type: hem
+    [0] HEM aggregator
+    [1] HEM aggregator
+    [2] HEM aggregator
+    [3] HEM aggregator
+    [4] HEM aggregator
+    [5] HEM aggregator
+    [6] HEM aggregator
+    [7] HEM aggregator
+  5 matching steps with threshold = 0.01
+Linear solve converged due to CONVERGED_RTOL iterations 11
+Linear solve converged due to CONVERGED_RTOL iterations 11
+Linear solve converged due to CONVERGED_RTOL iterations 11
+[0]main |b-Ax|/|b|=8.641543e-05, |b|=4.969822e+00, emax=9.962925e-01
