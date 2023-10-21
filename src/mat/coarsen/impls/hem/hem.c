@@ -1124,6 +1124,7 @@ static PetscErrorCode MatCoarsenView_HEM(MatCoarsen coarse, PetscViewer viewer)
     PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "  [%d] HEM aggregator\n", rank));
     PetscCall(PetscViewerFlush(viewer));
     PetscCall(PetscViewerASCIIPopSynchronized(viewer));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "%d matching steps with threshold = %g\n", (int)coarse->max_it, coarse->threshold));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
