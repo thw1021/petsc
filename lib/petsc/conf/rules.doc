@@ -37,13 +37,19 @@ foo:
 
 # Performs the specified action on all directories
 tree: ${ACTION}
-	-@for dir in `ls -d ${DIRS} | grep -v "\."` ; do (cd $$dir ; ${OMAKE} ACTION=${ACTION} PETSC_ARCH=${PETSC_ARCH} LOC=${LOC} tree);  done
+	-@for dir in `ls -d */ 2> /dev/null` foo ; do \
+            if [[ -f $${dir}makefile ]]; then \
+              (cd $$dir ; ${OMAKE} ACTION=${ACTION} PETSC_ARCH=${PETSC_ARCH} LOC=${LOC} tree); \
+            fi; \
+          done
 
 # Performs the specified action on all source/include directories except tutorial and test
 tree_src: ${ACTION}
-	-@for dir in `ls -d ${DIRS} | grep -v "\."` ;  do \
-           if [[ $$dir != "tests" && $$dir != "tutorials" && $$dir != "doc" ]]; then \
-	      (cd $$dir ; ${OMAKE} ACTION=${ACTION} PETSC_ARCH=${PETSC_ARCH}  LOC=${LOC} tree_src) ; \
+	-@for dir in `ls -d */ 2> /dev/null` foo ;  do \
+            if [[ $${dir} != "tests/" && $${dir} != "tutorials/" && $${dir} != "doc/" && $${dir} != "output/" ]]; then \
+              if [[ -f $${dir}makefile ]]; then \
+	        (cd $$dir ; ${OMAKE} ACTION=${ACTION} PETSC_ARCH=${PETSC_ARCH}  LOC=${LOC} tree_src) ; \
+              fi; \
            fi; \
 	 done
 
@@ -127,7 +133,7 @@ html:
               fi; \
             done ;\
           else \
-            for file in ${DIRS} foo; do \
+            for file in `ls -d */ 2> /dev/null` foo; do \
               if [ -d $$file ]; then \
                 echo "<a href=\"$${file}/\">$${file}/</a><br>" >> $${loc}/index.html; \
               fi; \
