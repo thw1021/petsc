@@ -1001,7 +1001,6 @@ static PetscErrorCode MatCoarsenApply_HEM_private(Mat a_Gmat, const PetscInt n_i
         PetscCall(VecScatterEnd(mpimat->Mvctx, locMaxEdge, ghostMaxEdge, INSERT_VALUES, SCATTER_FORWARD));
         PetscCall(VecScatterBegin(mpimat->Mvctx, locMaxPE, ghostMaxPE, INSERT_VALUES, SCATTER_FORWARD));
         PetscCall(VecScatterEnd(mpimat->Mvctx, locMaxPE, ghostMaxPE, INSERT_VALUES, SCATTER_FORWARD));
-
         PetscCall(VecGetArray(ghostMaxPE, &buf));
         for (int kk = 0; kk < num_ghosts; kk++) {
           lghost_max_pe[kk] = (PetscMPIInt)PetscRealPart(buf[kk]); // the MAX proc of the ghost now
@@ -1032,15 +1031,16 @@ static PetscErrorCode MatCoarsenApply_HEM_private(Mat a_Gmat, const PetscInt n_i
     {
       Vec diag;
       /* add identity for unmatched vertices so they stay alive */
-      for (PetscInt kk = 0, n, gid = my0; kk < nloc; kk++, gid++) {
+      for (PetscInt kk = 0, gid1, gid = my0; kk < nloc; kk++, gid++) {
         if (!lid_matched[kk]) {
-          gid = kk + my0;
-          PetscCall(MatGetRow(cMat, gid, &n, NULL, NULL));
-          if (n > 1) {
-            PetscCall(MatSetValues(P, 1, &gid, 1, &gid, &one, INSERT_VALUES));
-            PetscCall(PetscInfo(info_is, "[%d] Singleton %d with %d nnz\n", rank, (int)gid, (int)n));
-          }
-          PetscCall(MatRestoreRow(cMat, gid, &n, NULL, NULL));
+          const PetscInt lid = kk;
+          PetscCDIntNd *pos;
+          PetscCall(PetscCDGetHeadPos(agg_llists, lid, &pos));
+          PetscCheck(pos, PETSC_COMM_SELF, PETSC_ERR_PLIB, "empty list in singleton: %d", (int)gid);
+          PetscCall(PetscCDIntNdGetID(pos, &gid1));
+          PetscCheck(gid1 == gid, PETSC_COMM_SELF, PETSC_ERR_PLIB, "first in list (%d) in singleton not %d", (int)gid1, (int)gid);
+          PetscCall(MatSetValues(P, 1, &gid, 1, &gid, &one, INSERT_VALUES));
+          PetscCall(PetscInfo(info_is, "[%d] Singleton %d\n", rank, (int)gid));
         }
       }
       PetscCall(MatAssemblyBegin(P, MAT_FINAL_ASSEMBLY));
@@ -1059,7 +1059,8 @@ static PetscErrorCode MatCoarsenApply_HEM_private(Mat a_Gmat, const PetscInt n_i
       PetscCall(VecDestroy(&diag));
     }
   } /* coarsen iterator */
-  /* make next fake matrix */
+  /* PetscCall(PetscCDPrint(agg_llists, my0, comm)); */
+  /* make next fake matrix of non-locals for square graph */
   if (size > 1) {
     Mat           mat;
     PetscCDIntNd *pos;
@@ -1071,17 +1072,14 @@ static PetscErrorCode MatCoarsenApply_HEM_private(Mat a_Gmat, const PetscInt n_i
     }
     PetscCall(MatGetSize(a_Gmat, &MM, &NN));
     if (mxsz > MM - nloc) mxsz = MM - nloc;
-
+    /* matrix of ghost adj for square graph */
     PetscCall(MatCreateAIJ(comm, nloc, nloc, PETSC_DETERMINE, PETSC_DETERMINE, 0, NULL, mxsz, NULL, &mat));
-
     for (PetscInt lid = 0, gid = my0; lid < nloc; lid++, gid++) {
-      /* for (pos=PetscCDGetHeadPos(agg_llists,lid) ; pos ; pos=PetscCDGetNextPos(agg_llists,lid,pos)) { */
       PetscCall(PetscCDGetHeadPos(agg_llists, lid, &pos));
       while (pos) {
         PetscInt gid1;
         PetscCall(PetscCDIntNdGetID(pos, &gid1));
         PetscCall(PetscCDGetNextPos(agg_llists, lid, &pos));
-
         if (gid1 < my0 || gid1 >= my0 + nloc) PetscCall(MatSetValues(mat, 1, &gid, 1, &gid1, &one, ADD_VALUES));
       }
     }
@@ -1090,6 +1088,7 @@ static PetscErrorCode MatCoarsenApply_HEM_private(Mat a_Gmat, const PetscInt n_i
     PetscCall(PetscCDSetMat(agg_llists, mat));
     PetscCall(PetscCDDestroy(ghost_deleted_list));
   }
+  // cleanup
   PetscCall(MatDestroy(&cMat));
   PetscCall(PetscFree(lid_cprowID));
   PetscCall(PetscFree(lid_max_pe));
@@ -1120,11 +1119,22 @@ static PetscErrorCode MatCoarsenView_HEM(MatCoarsen coarse, PetscViewer viewer)
   PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)coarse), &rank));
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
   if (iascii) {
+    PetscCDIntNd *pos, *pos2;
+    PetscCall(PetscViewerASCIIPrintf(viewer, "%d matching steps with threshold = %g\n", (int)coarse->max_it, (double)coarse->threshold));
     PetscCall(PetscViewerASCIIPushSynchronized(viewer));
-    PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "  [%d] HEM aggregator\n", rank));
+    for (PetscInt kk = 0; kk < coarse->agg_lists->size; kk++) {
+      PetscCall(PetscCDGetHeadPos(coarse->agg_lists, kk, &pos));
+      if ((pos2 = pos)) PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "selected local %d: ", (int)kk));
+      while (pos) {
+        PetscInt gid1;
+        PetscCall(PetscCDIntNdGetID(pos, &gid1));
+        PetscCall(PetscCDGetNextPos(coarse->agg_lists, kk, &pos));
+        PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, " %d ", (int)gid1));
+      }
+      if (pos2) PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "\n"));
+    }
     PetscCall(PetscViewerFlush(viewer));
     PetscCall(PetscViewerASCIIPopSynchronized(viewer));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "%d matching steps with threshold = %g\n", (int)coarse->max_it, (double)coarse->threshold));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
