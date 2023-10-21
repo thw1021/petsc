@@ -2,7 +2,7 @@
 #requirespackage    'PETSC_HAVE_MPIUNI'
 
 SCRIPTS  = ../../../../lib/petsc/bin/petsc-mpiexec.uni
-LIBBASE	 = libpetscsys
+LIBBASE  = libpetscsys
 MANSEC   = Sys
 
 include ${PETSC_DIR}/lib/petsc/conf/variables

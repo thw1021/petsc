@@ -1,6 +1,6 @@
 -include ../../../../petscdir.mk
 
-DIRS	  = interface impls  tests
+DIRS      = interface impls  tests
 MANSEC    = Vec
 SUBMANSEC = AO
 

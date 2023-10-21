@@ -1,7 +1,7 @@
 -include ../../../../petscdir.mk
 
-LIBBASE	  = libpetscvec
-DIRS	    = interface
+LIBBASE   = libpetscvec
+DIRS      = interface
 MANSEC    = Vec
 SUBMANSEC = PetscSection
 
