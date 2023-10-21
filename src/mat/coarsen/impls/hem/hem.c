@@ -413,6 +413,10 @@ static int gamg_hem_compare(const void *a, const void *b)
   PetscReal va = ((Edge *)a)->weight, vb = ((Edge *)b)->weight;
   return (va <= vb - MY_MEPS) ? 1 : (va > vb + MY_MEPS) ? -1 : 0; /* 0 for equal */
 }
+/* static int gamg_hem_compare3(const void *a, const void *b, void *ctx) */
+/* { */
+/*   return gamg_hem_compare(a, b); */
+/* } */
 
 /*
   MatCoarsenApply_HEM_private - parallel heavy edge matching
@@ -666,6 +670,7 @@ static PetscErrorCode MatCoarsenApply_HEM_private(Mat a_Gmat, const PetscInt n_i
     }
     PetscCheck(nEdges == nEdges0, PETSC_COMM_SELF, PETSC_ERR_SUP, "nEdges != nEdges0: %d %d", (int)nEdges0, (int)nEdges);
     qsort(Edges, nEdges, sizeof(Edge), gamg_hem_compare);
+    /* PetscCall(PetscTimSort(nEdges, Edges, sizeof(Edge), gamg_hem_compare3, NULL)); */
 
     PetscCall(PetscInfo(info_is, "[%d] start HEM iteration %d with number edges=%d\n", rank, iter, (int)nEdges));
 
