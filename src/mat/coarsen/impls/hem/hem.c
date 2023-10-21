@@ -733,7 +733,7 @@ static PetscErrorCode MatCoarsenApply_HEM_private(Mat a_Gmat, const PetscInt n_i
             for (int jj = 0; jj < n && isOK; jj++) {
               PetscInt lidj = aj[jj];
               if (lghost_matched[lidj]) continue;
-              ew    = PetscRealPart(ap[jj]);
+              ew = PetscRealPart(ap[jj]);
               if (ew <= threshold) continue;
               max_e = PetscRealPart(lghost_max_ew[lidj]);
               /* check for max_e == to this edge and larger processor that will deal with this */
@@ -753,7 +753,7 @@ static PetscErrorCode MatCoarsenApply_HEM_private(Mat a_Gmat, const PetscInt n_i
               for (int jj = 0; jj < n && isOK; jj++) {
                 PetscInt lidj = aj[jj];
                 if (lghost_matched[lidj]) continue;
-                ew    = PetscRealPart(ap[jj]);
+                ew = PetscRealPart(ap[jj]);
                 if (ew <= threshold) continue;
                 max_e = PetscRealPart(lghost_max_ew[lidj]);
                 /* check for max_e == to this edge and larger processor that will deal with this */
