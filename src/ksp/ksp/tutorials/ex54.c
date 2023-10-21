@@ -219,7 +219,7 @@ int main(int argc, char **args)
 
    test:
       nsize: 4
-      args: -ne 19 -alpha 1.e-3 -ksp_type cg -pc_type gamg -mg_levels_ksp_max_it 2 -ksp_monitor -ksp_converged_reason -pc_gamg_esteig_ksp_max_it 5 -pc_gamg_esteig_ksp_type cg -mg_levels_ksp_chebyshev_esteig 0,0.25,0,1.1 -pc_gamg_aggressive_coarsening 0
+      args: -ne 19 -alpha 1.e-3 -ksp_type cg -pc_type gamg -mg_levels_ksp_max_it 2 -ksp_monitor -ksp_converged_reason -pc_gamg_esteig_ksp_max_it 5 -pc_gamg_esteig_ksp_type cg -mg_levels_ksp_chebyshev_esteig 0,0.25,0,1.1 -pc_gamg_aggressive_coarsening 0 
 
    test:
       suffix: seqaijmkl
@@ -243,5 +243,5 @@ int main(int argc, char **args)
       requires: !single !__float128
       nsize: 4
       suffix: hem
-      args: -ne 39 -ksp_type cg -pc_type gamg -pc_gamg_type agg -ksp_rtol 1e-4 -pc_gamg_aggressive_square_graph false -ksp_monitor_short -ksp_norm_type unpreconditioned -mat_coarsen_type hem -ksp_monitor_short -pc_gamg_aggressive_coarsening 0
+      args: -ne 39 -ksp_type cg -pc_type gamg -pc_gamg_type agg -ksp_rtol 1e-4 -ksp_monitor_short -ksp_norm_type unpreconditioned -mat_coarsen_type hem -ksp_converged_reason -pc_gamg_aggressive_coarsening 0
 TEST*/
