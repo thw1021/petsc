@@ -407,7 +407,7 @@ typedef struct edge_tag {
   PetscInt  lid0, gid1, ghost1_idx;
 } Edge;
 
-#define MY_MEPS     (PETSC_MACHINE_EPSILON * 10)
+#define MY_MEPS (PETSC_MACHINE_EPSILON * 10)
 static int gamg_hem_compare(const void *a, const void *b)
 {
   PetscReal va = ((Edge *)a)->weight, vb = ((Edge *)b)->weight;
