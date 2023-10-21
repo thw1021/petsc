@@ -1,4 +1,12 @@
+MatCoarsen Object: 1 MPI process
+  type: hem
+    [0] HEM aggregator
+  5 matching steps with threshold = 0.01
+MatCoarsen Object: 1 MPI process
+  type: hem
+    [0] HEM aggregator
+  5 matching steps with threshold = 0.01
 Linear solve converged due to CONVERGED_RTOL iterations 14
 Linear solve converged due to CONVERGED_RTOL iterations 14
 Linear solve converged due to CONVERGED_RTOL iterations 14
-[0]main |b-Ax|/|b|=5.085447e-05, |b|=4.969822e+00, emax=1.000562e+00
+[0]main |b-Ax|/|b|=9.081303e-05, |b|=4.969822e+00, emax=9.982432e-01
