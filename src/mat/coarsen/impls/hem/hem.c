@@ -1034,7 +1034,7 @@ static PetscErrorCode MatCoarsenApply_HEM_private(Mat a_Gmat, const PetscInt n_i
       for (PetscInt kk = 0, gid1, gid = my0; kk < nloc; kk++, gid++) {
         if (!lid_matched[kk]) {
           const PetscInt lid = kk;
-          PetscCDIntNd *pos;
+          PetscCDIntNd  *pos;
           PetscCall(PetscCDGetHeadPos(agg_llists, lid, &pos));
           PetscCheck(pos, PETSC_COMM_SELF, PETSC_ERR_PLIB, "empty list in singleton: %d", (int)gid);
           PetscCall(PetscCDIntNdGetID(pos, &gid1));
