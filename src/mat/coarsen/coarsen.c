@@ -434,7 +434,7 @@ PetscErrorCode MatCoarsenSetThreshold(MatCoarsen coarse, PetscReal b)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(coarse, MAT_COARSEN_CLASSID, 1);
-  PetscValidLogicalCollectiveInt(coarse, b, 2);
+  PetscValidLogicalCollectiveReal(coarse, b, 2);
   PetscTryMethod(coarse, "MatCoarsenSetThreshold_C", (MatCoarsen, PetscReal), (coarse, b));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
