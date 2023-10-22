@@ -1,6 +1,6 @@
 -include ../../../petscdir.mk
 
-DIRS      = viewer draw matlabengine random bag
+DIRS      = viewer draw matlabengine random bag bm
 MANSEC    = Sys
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
