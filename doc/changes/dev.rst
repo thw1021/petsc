@@ -31,6 +31,8 @@ Changes: Development
 
 .. rubric:: Vec:
 
+- Add ``VecGhostGetGhostIS`` to get the ghost indices of a ghosted vector
+
 .. rubric:: PetscSection:
 
 .. rubric:: PetscPartitioner:
