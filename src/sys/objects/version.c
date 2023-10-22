@@ -79,7 +79,7 @@ PetscInt PetscNumBLASThreads = 1;
   Level: intermediate
 
   Notes:
-  The environmental variables ``BLIS_NUM_THREADS``, ``MKL_NUM_THREADS``, or ``OPENBLAS_NUM_THREADS``, ``OMP_NUM_THREADS``
+  The environmental variables `BLIS_NUM_THREADS`, `MKL_NUM_THREADS`, or `OPENBLAS_NUM_THREADS`, `OMP_NUM_THREADS`
   may also affect the number of threads used depending on the BLAS libraries being used. A call to this function
   overwrites those values.
 
