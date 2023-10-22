@@ -56,8 +56,8 @@ class Configure(config.package.Package):
     cflags += ' '+self.headers.toString('.')
     cflags += ' -fPIC'
 
-    g.write('CC             = '+self.getCompiler()+'\n')
-    g.write('CFLAGS         = '+cflags+'\n')
+    g.write('CC               = '+self.getCompiler()+'\n')
+    g.write('CFLAGS           = '+cflags+'\n')
     self.popLanguage()
     g.write('clean:\n')
     g.write('	${RM} -f *.o\n')
