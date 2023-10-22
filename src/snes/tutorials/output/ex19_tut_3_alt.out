@@ -1,0 +1,7 @@
+lid velocity = 0.000106281, prandtl # = 1., grashof # = 1.
+  0 SNES Function norm 1.036007954337e-02 
+  1 SNES Function norm 3.201130805699e-06 
+  2 SNES Function norm 2.503925134257e-10 
+  3 SNES Function norm 1.051652477437e-14 
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+Number of SNES iterations = 3
