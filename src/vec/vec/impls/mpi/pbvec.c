@@ -696,7 +696,7 @@ PetscErrorCode VecCreateGhostWithArray(MPI_Comm comm, PetscInt n, PetscInt N, Pe
   VecGhostGetGhostIS - Return ghosting indices of a ghost vector
 
   Input Parameters:
-. X - ghost vector context
+. X - ghost vector
 
   Output Parameter:
 . ghost - ghosting indices
