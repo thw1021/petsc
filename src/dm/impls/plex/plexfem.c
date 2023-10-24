@@ -2132,14 +2132,15 @@ PetscErrorCode DMPlexComputeGradientClementInterpolant(DM dm, Vec locX, Vec locC
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode DMPlexComputeIntegral_Internal(DM dm, Vec X, PetscInt cStart, PetscInt cEnd, PetscScalar *cintegral, void *user)
+static PetscErrorCode DMPlexComputeIntegral_Internal(DM dm, Vec X, IS cellIS, PetscScalar *cintegral, void *user)
 {
-  DM           dmAux = NULL;
-  PetscDS      prob, probAux = NULL;
-  PetscSection section, sectionAux;
-  Vec          locX, locA;
-  PetscInt     dim, numCells = cEnd - cStart, c, f;
-  PetscBool    useFVM = PETSC_FALSE;
+  DM              dmAux = NULL;
+  PetscDS         prob, probAux = NULL;
+  PetscSection    section, sectionAux;
+  Vec             locX, locA;
+  PetscInt        dim, numCells, c, cStart, cEnd, f;
+  const PetscInt *cells;
+  PetscBool       useFVM = PETSC_FALSE;
   /* DS */
   PetscInt           Nf, totDim, *uOff, *uOff_x, numConstants;
   PetscInt           NfAux, totDimAux, *aOff;
@@ -2154,10 +2155,12 @@ static PetscErrorCode DMPlexComputeIntegral_Internal(DM dm, Vec X, PetscInt cSta
   const PetscScalar *lgrad;
   PetscInt           maxDegree;
   DMField            coordField;
-  IS                 cellIS;
 
   PetscFunctionBegin;
-  PetscCall(DMGetDS(dm, &prob));
+  if (!cellIS) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCall(ISGetPointRange(cellIS, &cStart, &cEnd, &cells));
+  numCells = cEnd - cStart;
+  PetscCall(DMGetCellDS(dm, cells ? cells[cStart] : cStart, &prob, NULL));
   PetscCall(DMGetDimension(dm, &dim));
   PetscCall(DMGetLocalSection(dm, &section));
   PetscCall(DMGetNumFields(dm, &Nf));
@@ -2179,7 +2182,6 @@ static PetscErrorCode DMPlexComputeIntegral_Internal(DM dm, Vec X, PetscInt cSta
   PetscCall(PetscDSGetTotalDimension(prob, &totDim));
   PetscCall(PetscDSGetComponentOffsets(prob, &uOff));
   PetscCall(PetscDSGetComponentDerivativeOffsets(prob, &uOff_x));
-  PetscCall(ISCreateStride(PETSC_COMM_SELF, numCells, cStart, 1, &cellIS));
   PetscCall(PetscDSGetConstants(prob, &numConstants, &constants));
   /* Read Auxiliary DS information */
   PetscCall(DMGetAuxiliaryVec(dm, NULL, 0, 0, &locA));
@@ -2239,16 +2241,18 @@ static PetscErrorCode DMPlexComputeIntegral_Internal(DM dm, Vec X, PetscInt cSta
   }
   /* Read out data from inputs */
   for (c = cStart; c < cEnd; ++c) {
-    PetscScalar *x = NULL;
-    PetscInt     i;
+    const PetscInt cell = cells ? cells[c] : c;
+    const PetscInt cind = c - cStart;
+    PetscScalar   *x    = NULL;
+    PetscInt       i;
 
-    PetscCall(DMPlexVecGetClosure(dm, section, locX, c, NULL, &x));
-    for (i = 0; i < totDim; ++i) u[c * totDim + i] = x[i];
-    PetscCall(DMPlexVecRestoreClosure(dm, section, locX, c, NULL, &x));
+    PetscCall(DMPlexVecGetClosure(dm, section, locX, cell, NULL, &x));
+    for (i = 0; i < totDim; ++i) u[cind * totDim + i] = x[i];
+    PetscCall(DMPlexVecRestoreClosure(dm, section, locX, cell, NULL, &x));
     if (dmAux) {
-      PetscCall(DMPlexVecGetClosure(dmAux, sectionAux, locA, c, NULL, &x));
-      for (i = 0; i < totDimAux; ++i) a[c * totDimAux + i] = x[i];
-      PetscCall(DMPlexVecRestoreClosure(dmAux, sectionAux, locA, c, NULL, &x));
+      PetscCall(DMPlexVecGetClosure(dmAux, sectionAux, locA, cell, NULL, &x));
+      for (i = 0; i < totDimAux; ++i) a[cind * totDimAux + i] = x[i];
+      PetscCall(DMPlexVecRestoreClosure(dmAux, sectionAux, locA, cell, NULL, &x));
     }
   }
   /* Do integration for each field */
@@ -2301,6 +2305,7 @@ static PetscErrorCode DMPlexComputeIntegral_Internal(DM dm, Vec X, PetscInt cSta
       }
     } else SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONG, "Unknown discretization type for field %" PetscInt_FMT, f);
   }
+  PetscCall(ISRestorePointRange(cellIS, &cStart, &cEnd, &cells));
   /* Cleanup data arrays */
   if (useFVM) {
     PetscCall(VecRestoreArrayRead(locGrad, &lgrad));
@@ -2315,7 +2320,6 @@ static PetscErrorCode DMPlexComputeIntegral_Internal(DM dm, Vec X, PetscInt cSta
   /* Cleanup */
   if (affineQuad) PetscCall(PetscFEGeomDestroy(&cgeomFEM));
   PetscCall(PetscQuadratureDestroy(&affineQuad));
-  PetscCall(ISDestroy(&cellIS));
   PetscCall(DMRestoreLocalVector(dm, &locX));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -2339,7 +2343,8 @@ PetscErrorCode DMPlexComputeIntegralFEM(DM dm, Vec X, PetscScalar *integral, voi
 {
   DM_Plex     *mesh = (DM_Plex *)dm->data;
   PetscScalar *cintegral, *lintegral;
-  PetscInt     Nf, f, cellHeight, cStart, cEnd, cell;
+  PetscInt     Nf, f, cellHeight, cStart, cEnd, cell, numCells;
+  IS           cellIS;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -2350,8 +2355,11 @@ PetscErrorCode DMPlexComputeIntegralFEM(DM dm, Vec X, PetscScalar *integral, voi
   PetscCall(DMPlexGetVTKCellHeight(dm, &cellHeight));
   PetscCall(DMPlexGetSimplexOrBoxCells(dm, cellHeight, &cStart, &cEnd));
   /* TODO Introduce a loop over large chunks (right now this is a single chunk) */
-  PetscCall(PetscCalloc2(Nf, &lintegral, (cEnd - cStart) * Nf, &cintegral));
-  PetscCall(DMPlexComputeIntegral_Internal(dm, X, cStart, cEnd, cintegral, user));
+  numCells = cEnd - cStart;
+  PetscCall(PetscCalloc2(Nf, &lintegral, numCells * Nf, &cintegral));
+  PetscCall(ISCreateStride(PETSC_COMM_SELF, numCells, cStart, 1, &cellIS));
+  PetscCall(DMPlexComputeIntegral_Internal(dm, X, cellIS, cintegral, user));
+  PetscCall(ISDestroy(&cellIS));
   /* Sum up values */
   for (cell = cStart; cell < cEnd; ++cell) {
     const PetscInt c = cell - cStart;
@@ -2391,7 +2399,8 @@ PetscErrorCode DMPlexComputeCellwiseIntegralFEM(DM dm, Vec X, Vec F, void *user)
   DM           dmF;
   PetscSection sectionF;
   PetscScalar *cintegral, *af;
-  PetscInt     Nf, f, cellHeight, cStart, cEnd, cell;
+  PetscInt     Nf, f, cellHeight, cStart, cEnd, cell, numCells;
+  IS           cellIS;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -2402,8 +2411,11 @@ PetscErrorCode DMPlexComputeCellwiseIntegralFEM(DM dm, Vec X, Vec F, void *user)
   PetscCall(DMPlexGetVTKCellHeight(dm, &cellHeight));
   PetscCall(DMPlexGetSimplexOrBoxCells(dm, cellHeight, &cStart, &cEnd));
   /* TODO Introduce a loop over large chunks (right now this is a single chunk) */
-  PetscCall(PetscCalloc1((cEnd - cStart) * Nf, &cintegral));
-  PetscCall(DMPlexComputeIntegral_Internal(dm, X, cStart, cEnd, cintegral, user));
+  numCells = cEnd - cStart;
+  PetscCall(PetscCalloc1(numCells * Nf, &cintegral));
+  PetscCall(ISCreateStride(PETSC_COMM_SELF, numCells, cStart, 1, &cellIS));
+  PetscCall(DMPlexComputeIntegral_Internal(dm, X, cellIS, cintegral, user));
+  PetscCall(ISDestroy(&cellIS));
   /* Put values in F*/
   PetscCall(VecGetDM(F, &dmF));
   PetscCall(DMGetLocalSection(dmF, &sectionF));
