@@ -1,6 +1,11 @@
 from . import PETSc
-import torch
+from unittest.mock import MagicMock, patch
+try:
+    import torch
+except ModuleNotFoundError:
+    torch = MagicMock()
 
+@patch.dict("sys.modules", torch=torch)
 class TAOtorch(torch.optim.Optimizer):
     r"""PyTorch.Optimizer() wrapper for TAO solvers.
 
@@ -62,7 +67,6 @@ class TAOtorch(torch.optim.Optimizer):
                             flatpar[-1][:] = 0.0
         return torch.cat(flatpar, 0)
 
-    @torch.no_grad()
     def _setParams(self, flatpar):
         begin = 0
         for group in self.param_groups:
@@ -148,7 +152,8 @@ class TAOtorch(torch.optim.Optimizer):
         # trigger the tao solution (for 1 iteration)
         self.tao.solve()
         # write the updated solution to NN parameters
-        self._setParams(self.flatpar)
+        with torch.no_grad():
+            self._setParams(self.flatpar)
 
     def destroy(self):
         self.tao.destroy()
