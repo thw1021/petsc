@@ -327,7 +327,8 @@ PetscErrorCode DMRefine_Plex(DM dm, MPI_Comm comm, DM *rdm)
     PetscCall(DMCopyDisc(dm, *rdm));
     PetscCall(DMGetCoordinateDM(dm, &cdm));
     PetscCall(DMGetCoordinateDM(*rdm, &rcdm));
-    PetscCall(DMCopyDisc(cdm, rcdm));
+    PetscCall(DMPlexCreateCoordinateSpace(*rdm, 1, PETSC_TRUE, NULL));
+    PetscCall(DMGetCoordinateDM(*rdm, &rcdm));
     PetscCall(DMPlexGetUseCeed(cdm, &useCeed));
     PetscCall(DMPlexSetUseCeed(rcdm, useCeed));
     if (useCeed) {
