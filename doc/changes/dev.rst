@@ -56,6 +56,8 @@ Changes: Development
 
 .. rubric:: TAO:
 
+- Add in petsc4py an experimental class ``torchbridge.TAOtorch`` to mimic PyTorch.Optimizer objects by using customized TAO optimizers. The feature is demonstrated on a canonical MNIST classification problem.
+
 .. rubric:: DM/DA:
 
 .. rubric:: DMSwarm:
