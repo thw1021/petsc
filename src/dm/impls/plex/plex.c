@@ -5556,7 +5556,7 @@ static PetscErrorCode PetscSectionFieldGetTensorDegree_Private(DM dm, PetscSecti
 {
   PetscObject  obj;
   PetscClassId id;
-  PetscFE fe = NULL;
+  PetscFE      fe = NULL;
 
   PetscFunctionBeginHot;
   PetscCall(PetscSectionGetFieldComponents(section, field, Nc));
@@ -5705,11 +5705,11 @@ PetscErrorCode DMPlexSetClosurePermutationTensor(DM dm, PetscInt point, PetscSec
          We want              [ vtx0; edge of length k-1; vtx1 ]
          */
         if (continuous) {
-        for (c = 0; c < Nc; c++, offset++) perm[offset] = (k - 1) * Nc + c + foffset;
-        for (i = 0; i < k - 1; i++)
-          for (c = 0; c < Nc; c++, offset++) perm[offset] = i * Nc + c + foffset;
-        for (c = 0; c < Nc; c++, offset++) perm[offset] = k * Nc + c + foffset;
-        foffset = offset;
+          for (c = 0; c < Nc; c++, offset++) perm[offset] = (k - 1) * Nc + c + foffset;
+          for (i = 0; i < k - 1; i++)
+            for (c = 0; c < Nc; c++, offset++) perm[offset] = i * Nc + c + foffset;
+          for (c = 0; c < Nc; c++, offset++) perm[offset] = k * Nc + c + foffset;
+          foffset = offset;
         }
         break;
       case 2:

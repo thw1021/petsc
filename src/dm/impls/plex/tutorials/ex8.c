@@ -56,7 +56,7 @@ int main(int argc, char **argv)
   PetscCall(DMViewFromOptions(dm, NULL, "-dm_view"));
   PetscCall(DMGetDimension(dm, &dim));
 
-   if (Nf == 1) {
+  if (Nf == 1) {
     PetscCall(PetscFECreateDefault(PETSC_COMM_SELF, dim, 1, PETSC_FALSE, NULL, PETSC_DETERMINE, &fe));
     PetscCall(DMAddField(dm, NULL, (PetscObject)fe));
     PetscCall(PetscFEDestroy(&fe));
