@@ -5552,19 +5552,36 @@ PetscErrorCode DMPlexGetAllCells_Internal(DM plex, IS *cellIS)
  Returns number of components and tensor degree for the field.  For interpolated meshes, line should be a point
  representing a line in the section.
 */
-static PetscErrorCode PetscSectionFieldGetTensorDegree_Private(PetscSection section, PetscInt field, PetscInt line, PetscBool vertexchart, PetscInt *Nc, PetscInt *k)
+static PetscErrorCode PetscSectionFieldGetTensorDegree_Private(DM dm, PetscSection section, PetscInt field, PetscInt line, PetscBool vertexchart, PetscInt *Nc, PetscInt *k)
 {
+  PetscObject  obj;
+  PetscClassId id;
+  PetscFE fe = NULL;
+
   PetscFunctionBeginHot;
   PetscCall(PetscSectionGetFieldComponents(section, field, Nc));
-  if (line < 0) {
-    *k  = 0;
-    *Nc = 0;
-  } else if (vertexchart) { /* If we only have a vertex chart, we must have degree k=1 */
-    *k = 1;
-  } else { /* Assume the full interpolated mesh is in the chart; lines in particular */
-    /* An order k SEM disc has k-1 dofs on an edge */
-    PetscCall(PetscSectionGetFieldDof(section, line, field, k));
-    *k = *k / *Nc + 1;
+  PetscCall(DMGetField(dm, field, NULL, &obj));
+  PetscCall(PetscObjectGetClassId(obj, &id));
+  if (id == PETSCFE_CLASSID) fe = (PetscFE)obj;
+
+  if (!fe) {
+    if (line < 0) {
+      *k  = 0;
+      *Nc = 0;
+    } else if (vertexchart) { /* If we only have a vertex chart, we must have degree k=1 */
+      *k = 1;
+    } else { /* Assume the full interpolated mesh is in the chart; lines in particular */
+      /* An order k SEM disc has k-1 dofs on an edge */
+      PetscCall(PetscSectionGetFieldDof(section, line, field, k));
+      *k = *k / *Nc + 1;
+    }
+  } else {
+    PetscInt       dual_space_size, dim;
+    PetscDualSpace dual_space;
+    PetscCall(DMGetDimension(dm, &dim));
+    PetscCall(PetscFEGetDualSpace(fe, &dual_space));
+    PetscCall(PetscDualSpaceGetDimension(dual_space, &dual_space_size));
+    *k = (PetscInt)round(PetscPowReal(dual_space_size / *Nc, 1.0 / dim)) - 1;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -5674,14 +5691,14 @@ PetscErrorCode DMPlexSetClosurePermutationTensor(DM dm, PetscInt point, PetscSec
     PetscInt *perm;
 
     for (f = 0; f < Nf; ++f) {
-      PetscCall(PetscSectionFieldGetTensorDegree_Private(section, f, eStart, vertexchart, &Nc, &k));
+      PetscCall(PetscSectionFieldGetTensorDegree_Private(dm, section, f, eStart, vertexchart, &Nc, &k));
       size += PetscPowInt(k + 1, d) * Nc;
     }
     PetscCall(PetscMalloc1(size, &perm));
     for (f = 0; f < Nf; ++f) {
       switch (d) {
       case 1:
-        PetscCall(PetscSectionFieldGetTensorDegree_Private(section, f, eStart, vertexchart, &Nc, &k));
+        PetscCall(PetscSectionFieldGetTensorDegree_Private(dm, section, f, eStart, vertexchart, &Nc, &k));
         /*
          Original ordering is [ edge of length k-1; vtx0; vtx1 ]
          We want              [ vtx0; edge of length k-1; vtx1 ]
@@ -5694,7 +5711,7 @@ PetscErrorCode DMPlexSetClosurePermutationTensor(DM dm, PetscInt point, PetscSec
         break;
       case 2:
         /* The original quad closure is oriented clockwise, {f, e_b, e_r, e_t, e_l, v_lb, v_rb, v_tr, v_tl} */
-        PetscCall(PetscSectionFieldGetTensorDegree_Private(section, f, eStart, vertexchart, &Nc, &k));
+        PetscCall(PetscSectionFieldGetTensorDegree_Private(dm, section, f, eStart, vertexchart, &Nc, &k));
         /* The SEM order is
 
          v_lb, {e_b}, v_rb,
@@ -5741,7 +5758,7 @@ PetscErrorCode DMPlexSetClosurePermutationTensor(DM dm, PetscInt point, PetscSec
          e_bl, e_bb, e_br, e_bf,  e_tf, e_tr, e_tb, e_tl,  e_rf, e_lf, e_lb, e_rb,
          v_blf, v_blb, v_brb, v_brf, v_tlf, v_trf, v_trb, v_tlb}
          */
-        PetscCall(PetscSectionFieldGetTensorDegree_Private(section, f, eStart, vertexchart, &Nc, &k));
+        PetscCall(PetscSectionFieldGetTensorDegree_Private(dm, section, f, eStart, vertexchart, &Nc, &k));
         /* The SEM order is
          Bottom Slice
          v_blf, {e^{(k-1)-n}_bf}, v_brf,
