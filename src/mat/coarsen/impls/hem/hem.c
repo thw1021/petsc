@@ -561,9 +561,7 @@ static PetscErrorCode MatCoarsenApply_HEM_private(Mat a_Gmat, const PetscInt n_i
       PetscMPIInt proc = lghost_pe[ix], idx = -1;
       for (int k = 0; k < ncomm_procs && idx == -1; k++)
         if (comm_procs[k] == proc) idx = k;
-      if (idx == -1) {
-        comm_procs[ncomm_procs++] = proc;
-      }
+      if (idx == -1) { comm_procs[ncomm_procs++] = proc; }
       PetscCheck(ncomm_procs != REQ_BF_SIZE, PETSC_COMM_SELF, PETSC_ERR_SUP, "Receive request array too small: %d", (int)ncomm_procs);
     }
     /* count edges, compute initial 'locMaxEdge', 'locMaxPE' */
