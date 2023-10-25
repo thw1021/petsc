@@ -699,7 +699,8 @@ static PetscErrorCode MatCoarsenApply_HEM_private(Mat a_Gmat, const PetscInt n_i
         // smaller edge, lid_max_ew get updated - e0
         if (PetscRealPart(lid_max_ew[lid0]) > e->weight + MY_MEPS) {
           if (print)
-            PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "\t\t[%d] 1) e0 SKIPPING small edge %20.14e edge (%d %d), diff = %10.4e to proc %d. max = %20.14e, w = %20.14e\n", rank, e->weight, (int)gid0, (int)gid1, (double)(PetscRealPart(lid_max_ew[lid0]) - e->weight), ghost1_idx != -1 ? (int)lghost_pe[ghost1_idx] : rank,  (double)PetscRealPart(lid_max_ew[lid0]), (double)e->weight));
+            PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "\t\t[%d] 1) e0 SKIPPING small edge %20.14e edge (%d %d), diff = %10.4e to proc %d. max = %20.14e, w = %20.14e\n", rank, e->weight, (int)gid0, (int)gid1, (double)(PetscRealPart(lid_max_ew[lid0]) - e->weight), ghost1_idx != -1 ? (int)lghost_pe[ghost1_idx] : rank, (double)PetscRealPart(lid_max_ew[lid0]),
+                                              (double)e->weight));
           continue; // we are basically filter edges here
         }
         // e1 - local
