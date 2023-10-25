@@ -292,6 +292,24 @@ PetscErrorCode DMPlexGetRefinementFunction(DM dm, PetscErrorCode (**refinementFu
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode DMGetCoordinateDegree_Internal(DM dm, PetscInt *degree)
+{
+  DM           cdm;
+  PetscFE      fe;
+  PetscSpace   sp;
+  PetscClassId id;
+
+  PetscFunctionBegin;
+  *degree = 1;
+  PetscCall(DMGetCoordinateDM(dm, &cdm));
+  PetscCall(DMGetField(cdm, 0, NULL, (PetscObject *)&fe));
+  PetscCall(PetscObjectGetClassId((PetscObject)fe, &id));
+  if (id != PETSCFE_CLASSID) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCall(PetscFEGetBasisSpace(fe, &sp));
+  PetscCall(PetscSpaceGetDegree(sp, degree, NULL));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 PetscErrorCode DMRefine_Plex(DM dm, MPI_Comm comm, DM *rdm)
 {
   PetscBool isUniform;
@@ -305,6 +323,7 @@ PetscErrorCode DMRefine_Plex(DM dm, MPI_Comm comm, DM *rdm)
     DMPlexTransformType trType;
     const char         *prefix;
     PetscOptions        options;
+    PetscInt            cDegree;
     PetscBool           useCeed;
 
     PetscCall(DMPlexTransformCreate(PetscObjectComm((PetscObject)dm), &tr));
@@ -327,7 +346,13 @@ PetscErrorCode DMRefine_Plex(DM dm, MPI_Comm comm, DM *rdm)
     PetscCall(DMCopyDisc(dm, *rdm));
     PetscCall(DMGetCoordinateDM(dm, &cdm));
     PetscCall(DMGetCoordinateDM(*rdm, &rcdm));
-    PetscCall(DMCopyDisc(cdm, rcdm));
+    PetscCall(DMGetCoordinateDegree_Internal(dm, &cDegree));
+    if (cDegree <= 1) {
+      PetscCall(DMCopyDisc(cdm, rcdm));
+    } else {
+      PetscCall(DMPlexCreateCoordinateSpace(*rdm, 1, PETSC_TRUE, NULL));
+      PetscCall(DMGetCoordinateDM(*rdm, &rcdm));
+    }
     PetscCall(DMPlexGetUseCeed(cdm, &useCeed));
     PetscCall(DMPlexSetUseCeed(rcdm, useCeed));
     if (useCeed) {
