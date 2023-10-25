@@ -696,7 +696,7 @@ static PetscErrorCode MatCoarsenApply_HEM_private(Mat a_Gmat, const PetscInt n_i
         if (lid_matched[lid0] || (ghost1_idx != -1 && lghost_matched[ghost1_idx]) || (ghost1_idx == -1 && lid_matched[lid1])) continue;
 
         nactive_edges++;
-        PetscCheck(PetscRealPart(lid_max_ew[lid0]) >= e->weight - MY_MEPS, PETSC_COMM_SELF, PETSC_ERR_SUP, "edge weight %e > max %e", (double)e->weight, (double)lid_max_ew[lid0]);
+        PetscCheck(PetscRealPart(lid_max_ew[lid0]) >= e->weight - MY_MEPS, PETSC_COMM_SELF, PETSC_ERR_SUP, "edge weight %e > max %e", (double)e->weight, (double)PetscRealPart(lid_max_ew[lid0]));
         //if (print) PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD,"\t[%d] active edge (%d %d), diff0 = %10.4e\n", rank, (int)gid0, (int)gid1, lid_max_ew[lid0] - e->weight));
         // smaller edge, lid_max_ew get updated - e0
         if (PetscRealPart(lid_max_ew[lid0]) > e->weight + MY_MEPS) {
