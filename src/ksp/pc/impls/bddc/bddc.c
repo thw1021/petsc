@@ -256,7 +256,6 @@ static PetscErrorCode PCView_BDDC(PC pc, PetscViewer viewer)
     }
     PetscCall(PetscViewerRestoreSubViewer(viewer, PetscObjectComm((PetscObject)pcbddc->ksp_D), &subviewer));
     PetscCall(PetscViewerFlush(viewer));
-
     /* the coarse problem can be handled by a different communicator */
     if (pcbddc->coarse_ksp) color = 1;
     else color = 0;
