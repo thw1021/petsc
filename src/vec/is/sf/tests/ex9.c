@@ -485,7 +485,7 @@ int main(int argc, char **argv)
      args: -world2sub -sf_type neighbor
      output_file: output/ex9_1.out
      # segfaults with NECMPI
-     requires: defined(PETSC_HAVE_MPI_NEIGHBORHOOD_COLLECTIVES) !defined(PETSC_HAVE_NECMPI)
+     requires: defined(PETSC_HAVE_MPI_NEIGHBORHOOD_COLLECTIVES) !defined(PETSC_HAVE_NECMPI) !defined(PETSC_HAVE_MPICH_NUMVERSION)
 
      test:
        suffix: 71
