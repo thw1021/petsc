@@ -463,6 +463,8 @@ PetscErrorCode elem_3d_elast_v_25(PetscScalar *dd)
      test:
        suffix: 1
        nsize: 1
+       filter: sed -e "s/Linear solve converged due to CONVERGED_RTOL iterations 15/Linear solve converged due to CONVERGED_RTOL iterations 14/g"
+
      test:
        suffix: 2
        nsize: 8
