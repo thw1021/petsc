@@ -5773,8 +5773,7 @@ PetscErrorCode DMPlexSetClosurePermutationTensor(DM dm, PetscInt point, PetscSec
           foffset = offset;
         } else {
           for (i = offset; i < size; i++) perm[i] = i - offset + foffset;
-          offset += (size - offset);
-          foffset = offset;
+          foffset = offset = size;
         }
         break;
       case 2:
