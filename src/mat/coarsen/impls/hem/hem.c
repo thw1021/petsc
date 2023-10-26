@@ -651,7 +651,7 @@ static PetscErrorCode MatCoarsenApply_HEM_private(Mat a_Gmat, const PetscInt n_i
           }
         }
       }
-      if ((ix = lid_cprowID[lid]) != -1) { /* if I have any ghost neighbors */
+      if ((ix = lid_cprowID[lid]) != -1) { /* if I have any ghost neighbor */
         ii = matB->compressedrow.i;
         n  = ii[ix + 1] - ii[ix];
         ap = matB->a + ii[ix];
