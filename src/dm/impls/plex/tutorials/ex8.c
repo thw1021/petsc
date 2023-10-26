@@ -129,6 +129,9 @@ int main(int argc, char **argv)
     suffix: 2d_q1_q1_discontinuous
     args: -dm_plex_dim 2 -num_fields 2 -f0_petscspace_degree 1 -f1_petscspace_degree 1 -dm_plex_simplex 0 -dm_plex_box_faces 2,1 -f1_petscdualspace_lagrange_continuity 0
   test:
+    suffix: 2d_q2_p0_discontinuous
+    args: -dm_plex_dim 2 -num_fields 2 -f0_petscspace_degree 2 -f1_petscspace_degree 0 -dm_plex_simplex 0 -dm_plex_box_faces 2,1 -f1_petscdualspace_lagrange_continuity 0
+  test:
     suffix: 2d_q2
     args: -dm_plex_dim 2 -petscspace_degree 2 -dm_plex_simplex 0 -dm_plex_box_faces 2,2
   test:
