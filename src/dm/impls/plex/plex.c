@@ -5772,7 +5772,8 @@ PetscErrorCode DMPlexSetClosurePermutationTensor(DM dm, PetscInt point, PetscSec
           for (c = 0; c < Nc; c++, offset++) perm[offset] = k * Nc + c + foffset;
           foffset = offset;
         } else {
-          for (i = offset; i < size; ++i, ++offset) perm[i] = 1;
+          for (i = offset; i < size; i++) perm[i] = i - offset;
+          offset += size;
           foffset = offset;
         }
         break;
@@ -5816,7 +5817,8 @@ PetscErrorCode DMPlexSetClosurePermutationTensor(DM dm, PetscInt point, PetscSec
           for (c = 0; c < Nc; ++c, ++offset) perm[offset] = ovrt * Nc + c + foffset;
           foffset = offset;
         } else {
-          for (i = offset; i < size; ++i, ++offset) perm[i] = 1;
+          for (i = offset; i < size; i++) perm[i] = i - offset;
+          offset += size;
           foffset = offset;
         }
         break;
@@ -5938,7 +5940,8 @@ PetscErrorCode DMPlexSetClosurePermutationTensor(DM dm, PetscInt point, PetscSec
 
           foffset = offset;
         } else {
-          for (i = offset; i < size; ++i, ++offset) perm[i] = 1;
+          for (i = offset; i < size; i++) perm[i] = i - offset;
+          offset += size;
           foffset = offset;
         }
         break;
