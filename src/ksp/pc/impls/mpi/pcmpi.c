@@ -56,6 +56,10 @@ struct _PCMPIServerAllocation {
 };
 static PCMPIServerAllocation allocations = NULL;
 
+typedef struct  {
+  PetscInt n;
+  void     *addr[3];
+} PCMPIServerAddresses;
 
 /*@C
   PCMPIServerMapAddresses - given shared address on the first MPI process determines the
@@ -88,7 +92,6 @@ PetscErrorCode PCMPIServerMapAddresses(MPI_Comm comm, PetscInt n, const void **b
           PetscCallMPI(MPI_Bcast(&allocation->shmkey, 1, MPI_INT, 0, comm));
           PetscCallMPI(MPI_Bcast(&allocation->sz, 1, MPIU_SIZE_T, 0, comm)); // TODO combine broadcasts
           addres[i] = (void*) baseaddres[i];
-          {int size; MPI_Comm_size(comm,&size);printf("[%d] top size %d\n",PetscGlobalRank,size);fflush(stdout);}                    PetscCallMPI(MPI_Barrier(comm));
           break;
         }
         allocation = allocation->next;
@@ -108,7 +111,7 @@ PetscErrorCode PCMPIServerMapAddresses(MPI_Comm comm, PetscInt n, const void **b
           addres[i] = (void*)next->addr;
         }
         next     = next->next;
-      } 
+      }
       if (!next) {
         PCMPIServerAllocation allocation;
         PetscCall(PetscCalloc(sizeof(struct _PCMPIServerAllocation), &allocation));
@@ -120,8 +123,6 @@ PetscErrorCode PCMPIServerMapAddresses(MPI_Comm comm, PetscInt n, const void **b
         PetscCheck(allocation->addr,PETSC_COMM_SELF, PETSC_ERR_SYS, "Unable to map shared memory key %d",allocation->shmkey);
         addres[i] = allocation->addr;
       }
-          {int size; MPI_Comm_size(comm,&size);printf("[%d] bottom size %d\n",PetscGlobalRank,size);fflush(stdout);}
-              PetscCallMPI(MPI_Barrier(comm));
     }
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -149,7 +150,7 @@ PetscErrorCode PCMPIServerUnmapAddresses(MPI_Comm comm,PetscInt n, void **addres
       PCMPIServerAllocation next = allocations;
       while (next) {
         if (next->addr == addres[i]) {
-          //          PetscCheck(!shmdt(allocation->addr,PETSC_COMM_SELF,PETSC_ERR_SYS,"Unable to unmap shared memory location");
+          //          PetscCheck(!shmdt(allocation->addr,PETSC_COMM_SELF,PETSC_ERR_SYS,"Unable to shmd() location %s",strerror(errno));
           // TODO remove link in list
                      continue; 
         }
@@ -351,6 +352,19 @@ static PetscErrorCode PCMPISetMat(PC pc)
     PetscCall(MatSeqAIJGetArrayRead(sA, &sa));
   }
   PetscCall(PetscLayoutDestroy(&layout));
+
+  PetscCall(PetscLogStagePush(PCMPIStage));
+  PetscCall(MatCreate(comm, &A));
+  if (matproperties[7] > 0) {
+    if (!pc) PetscCall(PetscMalloc1(matproperties[7] + 1, &cprefix));
+    PetscCallMPI(MPI_Bcast(cprefix, matproperties[7] + 1, MPI_CHAR, 0, comm));
+    PetscCall(MatSetOptionsPrefix(A, cprefix));
+    PetscCall(PetscFree(cprefix));
+  }
+  PetscCall(MatAppendOptionsPrefix(A, "mpi_linear_solver_server_"));
+  PetscCall(MatSetSizes(A, m, n, matproperties[0], matproperties[1]));
+  PetscCall(MatSetType(A, MATMPIAIJ));
+
   //  if (PetscDefined(USE_PCMPI_SCATTER)) {
     PetscCallMPI(MPI_Scatter(NZ, 1, MPI_INT, &nz, 1, MPI_INT, 0, comm));
     PetscCall(PetscMalloc3(n + 1, &ia, nz, &ja, nz, &a));
@@ -358,17 +372,15 @@ static PetscErrorCode PCMPISetMat(PC pc)
     PetscCallMPI(MPI_Scatterv(JA, NZ, NZdispl, MPIU_INT, ja, nz, MPIU_INT, 0, comm));
     PetscCallMPI(MPI_Scatterv(sa, NZ, NZdispl, MPIU_SCALAR, a, nz, MPIU_SCALAR, 0, comm));
     //  } else {
-    {int size; MPI_Comm_size(comm,&size);printf("[%d] before address mapsize %d\n",PetscGlobalRank,size);fflush(stdout);}
-                        PetscCallMPI(MPI_Barrier(comm));
-    PetscCall(PCMPIServerMapAddresses(comm, 1, (const void**)&IA, (void **)&iia));
-    {int size; MPI_Comm_size(comm,&size);printf("[%d] after address map size %d\n",PetscGlobalRank,size);fflush(stdout);}
-    PetscCallMPI(MPI_Barrier(comm));
-    iia += rstart;
-    PetscCall(PCMPIServerMapAddresses(comm, 1, (const void**)&JA, (void **)&jja));
-    jja += iia[0];
-    PetscCall(PCMPIServerMapAddresses(comm, 1, (const void**)&sa, (void **)&aa));
-        aa += iia[0];
-
+    const void *addr[3] = {(const void**)IA,(const void**)JA,(const void**)sa};
+    PCMPIServerAddresses *addresses;
+    PetscCall(PetscNew(&addresses));
+    addresses->n = 3;
+    PetscCall(PCMPIServerMapAddresses(comm, addresses->n, addr, addresses->addr));
+    iia = rstart + (PetscInt*)addresses->addr[0];
+    jja = iia[0] + (PetscInt*)addresses->addr[1];
+    aa = iia[0] + (PetscScalar*) addresses->addr[2];
+    PetscCall(PetscObjectContainerCompose((PetscObject)A,"PCMPIServerAddresses",(void*)addresses,PetscContainerUserDestroyDefault));
 
     if (PetscGlobalRank == 0) PetscIntView(matproperties[0],IA,PETSC_VIEWER_STDOUT_SELF);
     PetscIntView(5,ia,PETSC_VIEWER_STDOUT_(comm));
@@ -382,7 +394,6 @@ static PetscErrorCode PCMPISetMat(PC pc)
           PetscCheck(jja[j] == ja[j],PETSC_COMM_SELF,PETSC_ERR_PLIB,"jja is wrong  i %d j %d jja %d ja %d\n",i,j, jja[j],ja[j]);
         }
       }
-    
     //  }
   if (pc) {
     PetscCall(MatSeqAIJRestoreArrayRead(sA, &sa));
@@ -391,16 +402,6 @@ static PetscErrorCode PCMPISetMat(PC pc)
   PetscCall(PetscLogEventEnd(EventServerDistMPI, NULL, NULL, NULL, NULL));
 
   PetscCall(PetscLogStagePush(PCMPIStage));
-  PetscCall(MatCreate(comm, &A));
-  if (matproperties[7] > 0) {
-    if (!pc) PetscCall(PetscMalloc1(matproperties[7] + 1, &cprefix));
-    PetscCallMPI(MPI_Bcast(cprefix, matproperties[7] + 1, MPI_CHAR, 0, comm));
-    PetscCall(MatSetOptionsPrefix(A, cprefix));
-    PetscCall(PetscFree(cprefix));
-  }
-  PetscCall(MatAppendOptionsPrefix(A, "mpi_linear_solver_server_"));
-  PetscCall(MatSetSizes(A, m, n, matproperties[0], matproperties[1]));
-  PetscCall(MatSetType(A, MATMPIAIJ));
   PetscCall(MatMPIAIJSetPreallocationCSR(A, iia, jja, aa));
   PetscCall(MatSetBlockSize(A, matproperties[2]));
 
@@ -465,10 +466,11 @@ static PetscErrorCode PCMPIUpdateMatValues(PC pc)
     PetscCallMPI(MPI_Scatterv(sa, pc ? km->NZ : NULL, pc ? km->NZdispl : NULL, MPIU_SCALAR, a, nz, MPIU_SCALAR, 0, comm));
     //  } else {
     PetscCall(MatGetOwnershipRange(A, &rstart, NULL));
-    PetscCall(PCMPIServerMapAddresses(comm, 1, (const void **)&IA, (void **)&iia));
-    iia += rstart;
-    PetscCall(PCMPIServerMapAddresses(comm, 1, (const void **)&sa, (void **)&aa));
-    aa += iia[0];
+     PCMPIServerAddresses *addresses;
+     PetscCall(PetscObjectContainerQuery((PetscObject)A,"PCMPIServerAddresses",(void**)&addresses));
+     iia = rstart + (PetscInt*)addresses->addr[0];
+     aa = iia[0] + (PetscScalar*) addresses->addr[2];
+
     //  }
   PetscCall(PetscLogEventEnd(EventServerDistMPI, NULL, NULL, NULL, NULL));
   if (pc) {
@@ -509,6 +511,7 @@ static PetscErrorCode PCMPISolve(PC pc, Vec B, Vec X)
   PetscScalar       *b, *sx = NULL;
   PetscInt           its, n;
   PetscMPIInt        size;
+  void               *addr[2];
 
   PetscFunctionBegin;
   PetscCallMPI(MPI_Scatter(pc ? km->ksps : &ksp, 1, MPI_AINT, &ksp, 1, MPI_AINT, 0, comm));
@@ -537,15 +540,18 @@ static PetscErrorCode PCMPISolve(PC pc, Vec B, Vec X)
     PetscCall(VecRestoreArray(ksp->vec_rhs, &b));
     // TODO: scatter initial guess if needed
   } else {
-    const PetscScalar *a;
     PetscInt           rstart;
-    PetscCall(VecGetOwnershipRange(ksp->vec_rhs, &rstart, NULL));
-    PetscCall(PCMPIServerMapAddresses(comm, 1, (const void**)&sb, (void **)&a));
-    PetscCall(VecPlaceArray(ksp->vec_rhs, a + rstart));
+
+    if (pc) PetscCall(VecGetArrayRead(B, &sb));
     if (pc) PetscCall(VecGetArray(X, &sx));
-    PetscCall(PCMPIServerMapAddresses(comm, 1, (const void**)&sx, (void **)&a));
-    PetscCall(VecPlaceArray(ksp->vec_sol, a + rstart));
+    const void *inaddr[2] = {(const void**)sb,(const void**)sx};
     if (pc) PetscCall(VecRestoreArray(X, &sx));
+    if (pc) PetscCall(VecRestoreArrayRead(B, &sb));
+
+    PetscCall(PCMPIServerMapAddresses(comm, 2, inaddr, addr));
+    PetscCall(VecGetOwnershipRange(ksp->vec_rhs, &rstart, NULL));
+    PetscCall(VecPlaceArray(ksp->vec_rhs, rstart + (PetscScalar *)addr[0]));
+    PetscCall(VecPlaceArray(ksp->vec_sol, rstart + (PetscScalar *)addr[1]));
   }
   PetscCall(PetscLogEventEnd(EventServerDistMPI, NULL, NULL, NULL, NULL));
 
