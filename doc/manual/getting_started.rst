@@ -592,7 +592,7 @@ creation are:
    VecCreate(MPI_Comm comm,Vec *x);
    KSPCreate(MPI_Comm comm,KSP *ksp);
 
-The creation routines are collective over all processors in the
+The creation routines are collective on all processors in the
 communicator; thus, all processors in the communicator *must* call the
 creation routine. In addition, if a sequence of collective routines is
 being used, they *must* be called in the same order on each processor.
