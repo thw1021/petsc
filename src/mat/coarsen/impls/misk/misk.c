@@ -45,13 +45,16 @@ static PetscErrorCode PetscCoarsenDataView_private(PetscCoarsenData *agg_lists, 
 */
 static PetscErrorCode MatCoarsenApply_MISK_private(IS perm, const PetscInt misk, Mat Gmat, PetscCoarsenData **a_locals_llist)
 {
-  PetscBool   isMPI;
-  MPI_Comm    comm;
-  PetscMPIInt rank, size;
-  Mat         cMat, Prols[5], Rtot;
-  PetscScalar one = 1;
-  IS          info_is;
-  PetscInt    nrm_tot = 0;
+  PetscBool      isMPI;
+  MPI_Comm       comm;
+  PetscMPIInt    rank, size;
+  Mat            cMat, Prols[5], Rtot;
+  PetscScalar    one = 1;
+  IS             info_is;
+  PetscInt       nrm_tot = 0;
+  PetscBool     *lid_removed, isOK;
+  const PetscInt nloc = Gmat->rmap->n;
+
   PetscFunctionBegin;
   PetscValidHeaderSpecific(perm, IS_CLASSID, 1);
   PetscValidHeaderSpecific(Gmat, MAT_CLASSID, 3);
@@ -63,6 +66,8 @@ static PetscErrorCode MatCoarsenApply_MISK_private(IS perm, const PetscInt misk,
   PetscCallMPI(MPI_Comm_size(comm, &size));
   PetscCall(ISCreate(comm, &info_is));
   PetscCall(PetscInfo(info_is, "mis-k k = %d\n", (int)misk));
+  PetscCall(PetscMalloc1(nloc, &lid_removed)); /* explicit array needed */
+  for (int kk = 0; kk < nloc; kk++) lid_removed[kk] = PETSC_FALSE;
   /* make a copy of the graph, this gets destroyed in iterates */
   if (misk > 1) PetscCall(MatDuplicate(Gmat, MAT_COPY_VALUES, &cMat));
   else cMat = Gmat;
@@ -70,13 +75,12 @@ static PetscErrorCode MatCoarsenApply_MISK_private(IS perm, const PetscInt misk,
     Mat_SeqAIJ       *matA, *matB = NULL;
     Mat_MPIAIJ       *mpimat = NULL;
     const PetscInt   *perm_ix;
-    const PetscInt    nloc = cMat->rmap->n;
     PetscCoarsenData *agg_lists;
-    PetscInt         *cpcol_gid = NULL, *cpcol_state, *lid_cprowID, *lid_state, *lid_parent_gid = NULL;
-    PetscInt          num_fine_ghosts, kk, n, ix, j, *idx, *ai, Iend, my0, nremoved, gid, lid, cpid, lidj, sgid, t1, t2, slid, nDone, nselected = 0, state;
-    PetscBool        *lid_removed, isOK;
+    PetscInt         *cpcol_gid = NULL, *cpcol_state, *lid_cprowID, *lid_state, *lid_parent_gid = NULL, Iend_inner, my0_inner;
+    PetscInt          num_fine_ghosts, kk, n, ix, j, *idx, *ai, nremoved, gid, lid, cpid, lidj, sgid, t1, t2, slid, nDone, nselected = 0, state;
     PetscLayout       layout;
     PetscSF           sf;
+    const PetscInt    nloc_inner = cMat->rmap->n; // inner nloc
 
     if (isMPI) {
       mpimat = (Mat_MPIAIJ *)cMat->data;
@@ -90,11 +94,11 @@ static PetscErrorCode MatCoarsenApply_MISK_private(IS perm, const PetscInt misk,
       PetscCheck(isAIJ, PETSC_COMM_SELF, PETSC_ERR_SUP, "Require AIJ matrix.");
       matA = (Mat_SeqAIJ *)cMat->data;
     }
-    PetscCall(MatGetOwnershipRange(cMat, &my0, &Iend));
+    PetscCall(MatGetOwnershipRange(cMat, &my0_inner, &Iend_inner));
     if (mpimat) {
       PetscInt *lid_gid;
-      PetscCall(PetscMalloc1(nloc, &lid_gid)); /* explicit array needed */
-      for (kk = 0, gid = my0; kk < nloc; kk++, gid++) lid_gid[kk] = gid;
+      PetscCall(PetscMalloc1(nloc_inner, &lid_gid)); /* explicit array needed */
+      for (kk = 0, gid = my0_inner; kk < nloc_inner; kk++, gid++) lid_gid[kk] = gid;
       PetscCall(VecGetLocalSize(mpimat->lvec, &num_fine_ghosts));
       PetscCall(PetscMalloc1(num_fine_ghosts, &cpcol_gid));
       PetscCall(PetscMalloc1(num_fine_ghosts, &cpcol_state));
@@ -107,17 +111,15 @@ static PetscErrorCode MatCoarsenApply_MISK_private(IS perm, const PetscInt misk,
       PetscCall(PetscFree(lid_gid));
     } else num_fine_ghosts = 0;
 
-    PetscCall(PetscMalloc1(nloc, &lid_cprowID));
-    PetscCall(PetscMalloc1(nloc, &lid_removed)); /* explicit array needed */
-    PetscCall(PetscMalloc1(nloc, &lid_parent_gid));
-    PetscCall(PetscMalloc1(nloc, &lid_state));
+    PetscCall(PetscMalloc1(nloc_inner, &lid_cprowID));
+    PetscCall(PetscMalloc1(nloc_inner, &lid_parent_gid));
+    PetscCall(PetscMalloc1(nloc_inner, &lid_state));
 
     /* the data structure */
-    PetscCall(PetscCDCreate(nloc, &agg_lists));
+    PetscCall(PetscCDCreate(nloc_inner, &agg_lists));
     /* need an inverse map - locals */
-    for (kk = 0; kk < nloc; kk++) {
+    for (kk = 0; kk < nloc_inner; kk++) {
       lid_cprowID[kk]    = -1;
-      lid_removed[kk]    = PETSC_FALSE;
       lid_parent_gid[kk] = -1.0;
       lid_state[kk]      = MIS_NOT_DONE;
     }
@@ -132,9 +134,9 @@ static PetscErrorCode MatCoarsenApply_MISK_private(IS perm, const PetscInt misk,
     nremoved = nDone = 0;
     if (!iterIdx) PetscCall(ISGetIndices(perm, &perm_ix)); // use permutation on first MIS
     else perm_ix = NULL;
-    while (nDone < nloc || PETSC_TRUE) { /* asynchronous not implemented */
+    while (nDone < nloc_inner || PETSC_TRUE) { /* asynchronous not implemented */
       /* check all vertices */
-      for (kk = 0; kk < nloc; kk++) {
+      for (kk = 0; kk < nloc_inner; kk++) {
         lid   = perm_ix ? perm_ix[kk] : kk;
         state = lid_state[lid];
         if (lid_removed[lid]) continue;
@@ -149,8 +151,8 @@ static PetscErrorCode MatCoarsenApply_MISK_private(IS perm, const PetscInt misk,
             for (j = 0; j < n; j++) {
               cpid = idx[j]; /* compressed row ID in B mat */
               gid  = cpcol_gid[cpid];
-              if (cpcol_state[cpid] == MIS_NOT_DONE && gid >= Iend) { /* or pe>rank */
-                isOK = PETSC_FALSE;                                   /* can not delete */
+              if (cpcol_state[cpid] == MIS_NOT_DONE && gid >= Iend_inner) { /* or pe>rank */
+                isOK = PETSC_FALSE;                                         /* can not delete */
                 break;
               }
             }
@@ -164,22 +166,25 @@ static PetscErrorCode MatCoarsenApply_MISK_private(IS perm, const PetscInt misk,
               /* if I have any ghost adj then not a singleton */
               ix = lid_cprowID[lid];
               if (ix == -1 || !(matB->compressedrow.i[ix + 1] - matB->compressedrow.i[ix])) {
-                nremoved++; /* one local adj (me) and no ghost - singleton */
-                lid_removed[lid] = PETSC_TRUE;
+                if (iterIdx == 0) {
+                  nremoved++; /* one local adj (me) and no ghost - singleton */
+                  lid_removed[lid] = PETSC_TRUE;
+                }
+                continue; // add to special list later
                 // lid_state[lidj] = MIS_REMOVED; add singleton to MIS (can cause low rank with elasticity on fine grid)
               }
             }
             /* SELECTED state encoded with global index */
             lid_state[lid] = nselected; // >= 0  is selected, cache for ordering coarse grid
             nselected++;
-            PetscCall(PetscCDAppendID(agg_lists, lid, lid + my0));
+            PetscCall(PetscCDAppendID(agg_lists, lid, lid + my0_inner));
             /* delete local adj */
             idx = matA->j + ai[lid];
             for (j = 0; j < n; j++) {
               lidj = idx[j];
               if (lid_state[lidj] == MIS_NOT_DONE) {
                 nDone++;
-                PetscCall(PetscCDAppendID(agg_lists, lid, lidj + my0));
+                PetscCall(PetscCDAppendID(agg_lists, lid, lidj + my0_inner));
                 lid_state[lidj] = MIS_DELETED; /* delete this */
               }
             }
@@ -213,13 +218,13 @@ static PetscErrorCode MatCoarsenApply_MISK_private(IS perm, const PetscInt misk,
           }
         }
         /* all done? */
-        t1 = nloc - nDone;
+        t1 = nloc_inner - nDone;
         PetscCall(MPIU_Allreduce(&t1, &t2, 1, MPIU_INT, MPI_SUM, comm)); /* synchronous version */
         if (!t2) break;
       } else break; /* no mpi - all done */
     }               /* outer parallel MIS loop */
     if (!iterIdx) PetscCall(ISRestoreIndices(perm, &perm_ix));
-    PetscCall(PetscInfo(info_is, "Removed %" PetscInt_FMT " of %" PetscInt_FMT " vertices.  %" PetscInt_FMT " selected.\n", nremoved, nloc, nselected));
+    PetscCall(PetscInfo(info_is, "Removed %" PetscInt_FMT " of %" PetscInt_FMT " vertices.  %" PetscInt_FMT " selected.\n", nremoved, nloc_inner, nselected));
     nrm_tot += nremoved;
     /* tell adj who my lid_parent_gid vertices belong to - fill in agg_lists selected ghost lists */
     if (matB) {
@@ -234,8 +239,8 @@ static PetscErrorCode MatCoarsenApply_MISK_private(IS perm, const PetscInt misk,
       for (cpid = 0; cpid < num_fine_ghosts; cpid++) {
         sgid = cpcol_sel_gid[cpid];
         gid  = icpcol_gid[cpid];
-        if (sgid >= my0 && sgid < Iend) { /* I own this deleted */
-          slid = sgid - my0;
+        if (sgid >= my0_inner && sgid < Iend_inner) { /* I own this deleted */
+          slid = sgid - my0_inner;
           PetscCall(PetscCDAppendID(agg_lists, slid, gid));
         }
       }
@@ -249,14 +254,13 @@ static PetscErrorCode MatCoarsenApply_MISK_private(IS perm, const PetscInt misk,
     PetscCall(PetscFree(lid_cprowID));
     PetscCall(PetscFree(lid_parent_gid));
     PetscCall(PetscFree(lid_state));
-    PetscCall(PetscFree(lid_removed));
 
     /* MIS done - make projection matrix - P */
     MatType jtype;
     PetscCall(MatGetType(Gmat, &jtype));
     PetscCall(MatCreate(comm, &Prols[iterIdx]));
     PetscCall(MatSetType(Prols[iterIdx], jtype));
-    PetscCall(MatSetSizes(Prols[iterIdx], nloc, nselected, PETSC_DETERMINE, PETSC_DETERMINE));
+    PetscCall(MatSetSizes(Prols[iterIdx], nloc_inner, nselected, PETSC_DETERMINE, PETSC_DETERMINE));
     PetscCall(MatSeqAIJSetPreallocation(Prols[iterIdx], 1, NULL));
     PetscCall(MatMPIAIJSetPreallocation(Prols[iterIdx], 1, NULL, 1, NULL));
     {
@@ -300,7 +304,6 @@ static PetscErrorCode MatCoarsenApply_MISK_private(IS perm, const PetscInt misk,
   /* make aggregates with Rtot - could use Rtot directly in theory but have to go through the aggregate list data structure */
   {
     PetscInt          Istart, Iend, ncols, jj = 0, MM, max_osz = 0;
-    const PetscInt    nloc = Gmat->rmap->n;
     PetscCoarsenData *agg_lists;
     Mat               mat;
     PetscCall(MatGetSize(Gmat, &MM, NULL));
@@ -341,12 +344,20 @@ static PetscErrorCode MatCoarsenApply_MISK_private(IS perm, const PetscInt misk,
     PetscCall(MatAssemblyBegin(mat, MAT_FINAL_ASSEMBLY));
     PetscCall(MatAssemblyEnd(mat, MAT_FINAL_ASSEMBLY));
     PetscCall(PetscCDSetMat(agg_lists, mat));
+    // move singletons into some node
+    for (int kk = 0, bc_id = -1; kk < nloc; kk++) {
+      if (lid_removed[kk]) {
+        if (bc_id == -1) bc_id = kk;
+        PetscCall(PetscCDAppendID(agg_lists, bc_id, kk + Istart));
+      }
+    }
+    PetscCall(PetscFree(lid_removed));
     {
       PetscInt aa[2] = {0, nrm_tot}, bb[2];
       // check sizes -- all vertices must get in graph
       PetscCall(PetscCDCount(agg_lists, &aa[0]));
       PetscCall(MPIU_Allreduce(aa, bb, 2, MPIU_INT, MPI_SUM, comm));
-      PetscCheck(MM == bb[0], comm, PETSC_ERR_PLIB, "lost %d equations ?. N = %d, sum of aggregates %d, %d removed", (int)(MM - bb[0]), (int)MM, (int)bb[0], (int)bb[1]);
+      PetscCheck(MM == bb[0], comm, PETSC_ERR_PLIB, "lost %d equations ?. N = %d, sum of aggregates %d, %d removed total", (int)(MM - bb[0]), (int)MM, (int)bb[0], (int)bb[1]);
     }
   }
   PetscCall(ISDestroy(&info_is));
