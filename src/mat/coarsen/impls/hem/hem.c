@@ -348,40 +348,18 @@ PetscErrorCode PetscCDSetMat(PetscCoarsenData *ail, Mat a_mat)
 
 /* PetscCDGetASMBlocks - get IS of aggregates for ASM smoothers
  */
-PetscErrorCode PetscCDGetASMBlocks(const PetscCoarsenData *ail, const PetscInt a_bs, Mat mat, PetscInt *a_sz, IS **a_local_is)
+PetscErrorCode PetscCDGetASMBlocks(const PetscCoarsenData *ail, const PetscInt a_bs, PetscInt *a_sz, IS **a_local_is)
 {
   PetscCDIntNd *n;
-  PetscInt      lsz, ii, kk, *idxs, jj, s, e, gid;
-  IS           *is_loc, is_bcs;
+  PetscInt      lsz, ii, kk, *idxs, jj, gid;
+  IS           *is_loc = NULL;
 
   PetscFunctionBegin;
   for (ii = kk = 0; ii < ail->size; ii++) {
     if (ail->array[ii]) kk++;
   }
-  /* count BCs */
-  PetscCall(MatGetOwnershipRange(mat, &s, &e));
-  for (gid = s, lsz = 0; gid < e; gid++) {
-    PetscCall(MatGetRow(mat, gid, &jj, NULL, NULL));
-    if (jj < 2) lsz++;
-    PetscCall(MatRestoreRow(mat, gid, &jj, NULL, NULL));
-  }
-  if (lsz) {
-    PetscCall(PetscMalloc1(a_bs * lsz, &idxs));
-    for (gid = s, lsz = 0; gid < e; gid++) {
-      PetscCall(MatGetRow(mat, gid, &jj, NULL, NULL));
-      if (jj < 2) {
-        for (jj = 0; jj < a_bs; lsz++, jj++) idxs[lsz] = a_bs * gid + jj;
-      }
-      PetscCall(MatRestoreRow(mat, gid, &jj, NULL, NULL));
-    }
-    PetscCall(ISCreateGeneral(PETSC_COMM_SELF, lsz, idxs, PETSC_OWN_POINTER, &is_bcs));
-    *a_sz = kk + 1; /* out */
-  } else {
-    is_bcs = NULL;
-    *a_sz  = kk; /* out */
-  }
-  PetscCall(PetscMalloc1(*a_sz, &is_loc));
-
+  *a_sz = kk;
+  PetscCall(PetscMalloc1(kk, &is_loc));
   for (ii = kk = 0; ii < ail->size; ii++) {
     for (lsz = 0, n = ail->array[ii]; n; lsz++, n = n->next) /* void */
       ;
@@ -394,7 +372,6 @@ PetscErrorCode PetscCDGetASMBlocks(const PetscCoarsenData *ail, const PetscInt a
       PetscCall(ISCreateGeneral(PETSC_COMM_SELF, lsz, idxs, PETSC_OWN_POINTER, &is_loc[kk++]));
     }
   }
-  if (is_bcs) is_loc[kk++] = is_bcs;
   PetscCheck(*a_sz == kk, PETSC_COMM_SELF, PETSC_ERR_PLIB, "*a_sz %" PetscInt_FMT " != kk %" PetscInt_FMT, *a_sz, kk);
   *a_local_is = is_loc; /* out */
 
@@ -434,7 +411,7 @@ static PetscErrorCode MatCoarsenApply_HEM_private(Mat a_Gmat, const PetscInt n_i
 #define REQ_BF_SIZE 100
   PetscBool         isMPI;
   MPI_Comm          comm;
-  PetscInt          ix, *ii, *aj, Iend, my0, ncomm_procs;
+  PetscInt          ix, *ii, *aj, Iend, my0, ncomm_procs, bc_agg = -1;
   PetscMPIInt       rank, size, comm_procs[REQ_BF_SIZE], *lid_max_pe;
   const PetscInt    nloc = a_Gmat->rmap->n, request_size = PetscCeilReal((PetscReal)sizeof(MPI_Request) / (PetscReal)sizeof(PetscInt));
   PetscInt         *lid_cprowID;
@@ -442,18 +419,18 @@ static PetscErrorCode MatCoarsenApply_HEM_private(Mat a_Gmat, const PetscInt n_i
   Mat_SeqAIJ       *matA, *matB = NULL;
   Mat_MPIAIJ       *mpimat     = NULL;
   PetscScalar       one        = 1.;
-  PetscCoarsenData *agg_llists = NULL, *ghost_deleted_list = NULL;
+  PetscCoarsenData *agg_llists = NULL, *ghost_deleted_list = NULL, *bc_list = NULL;
   Mat               cMat, tMat, P;
   MatScalar        *ap;
   IS                info_is;
 
   PetscFunctionBegin;
-  PetscCall(ISCreate(PETSC_COMM_WORLD, &info_is));
-  PetscCall(PetscInfo(info_is, "%" PetscInt_FMT " iterations of HEM.\n", n_iter));
   PetscCall(PetscObjectGetComm((PetscObject)a_Gmat, &comm));
   PetscCallMPI(MPI_Comm_rank(comm, &rank));
   PetscCallMPI(MPI_Comm_size(comm, &size));
   PetscCall(MatGetOwnershipRange(a_Gmat, &my0, &Iend));
+  PetscCall(ISCreate(comm, &info_is));
+  PetscCall(PetscInfo(info_is, "%" PetscInt_FMT " iterations of HEM.\n", n_iter));
 
   PetscCall(PetscMalloc1(nloc, &lid_matched));
   PetscCall(PetscMalloc1(nloc, &lid_cprowID));
@@ -598,10 +575,14 @@ static PetscErrorCode MatCoarsenApply_HEM_private(Mat a_Gmat, const PetscInt n_i
       PetscCall(VecSetValues(locMaxEdge, 1, &gid, &vval, INSERT_VALUES));
       vval = (PetscScalar)max_pe;
       PetscCall(VecSetValues(locMaxPE, 1, &gid, &vval, INSERT_VALUES));
-      if (iter == 0 && max_e <= MY_MEPS) {
+      if (iter == 0 && max_e <= MY_MEPS) { // add BCs to fake aggregate
         lid_matched[lid] = PETSC_TRUE;
-        /* should select this because it is technically in the MIS but lets not */
+        if (bc_agg == -1) {
+          bc_agg = lid;
+          PetscCall(PetscCDCreate(1, &bc_list));
+        }
         PetscCall(PetscCDRemoveAllAt(agg_llists, lid));
+        PetscCall(PetscCDAppendID(bc_list, 0, my0 + lid));
       }
     }
     PetscCall(VecAssemblyBegin(locMaxEdge));
@@ -1052,7 +1033,6 @@ static PetscErrorCode MatCoarsenApply_HEM_private(Mat a_Gmat, const PetscInt n_i
           PetscCall(PetscCDIntNdGetID(pos, &gid1));
           PetscCheck(gid1 == gid, PETSC_COMM_SELF, PETSC_ERR_PLIB, "first in list (%d) in singleton not %d", (int)gid1, (int)gid);
           PetscCall(MatSetValues(P, 1, &gid, 1, &gid, &one, INSERT_VALUES));
-          PetscCall(PetscInfo(info_is, "[%d] Singleton %d\n", rank, (int)gid));
         }
       }
       PetscCall(MatAssemblyBegin(P, MAT_FINAL_ASSEMBLY));
@@ -1071,8 +1051,8 @@ static PetscErrorCode MatCoarsenApply_HEM_private(Mat a_Gmat, const PetscInt n_i
       PetscCall(VecDestroy(&diag));
     }
   } /* coarsen iterator */
-  /* PetscCall(PetscCDPrint(agg_llists, my0, comm)); */
-  /* make next fake matrix of non-locals for square graph */
+
+  /* make fake matrix with Mat->B only for smoothed agg QR. Need this if we make an aux graph (ie, PtAP) with k > 1 */
   if (size > 1) {
     Mat           mat;
     PetscCDIntNd *pos;
@@ -1100,12 +1080,34 @@ static PetscErrorCode MatCoarsenApply_HEM_private(Mat a_Gmat, const PetscInt n_i
     PetscCall(PetscCDSetMat(agg_llists, mat));
     PetscCall(PetscCDDestroy(ghost_deleted_list));
   }
+  // move BCs into some node
+  if (bc_list) {
+    PetscCDIntNd *pos;
+    PetscCall(PetscCDGetHeadPos(bc_list, 0, &pos));
+    while (pos) {
+      PetscInt gid1;
+      PetscCall(PetscCDIntNdGetID(pos, &gid1));
+      PetscCall(PetscCDGetNextPos(bc_list, 0, &pos));
+      PetscCall(PetscCDAppendID(agg_llists, bc_agg, gid1));
+    }
+    PetscCall(PetscCDRemoveAllAt(bc_list, 0));
+    PetscCall(PetscCDDestroy(bc_list));
+  }
+  {
+    // check sizes -- all vertices must get in graph
+    PetscInt sz, globalsz, MM;
+    PetscCall(MatGetSize(a_Gmat, &MM, NULL));
+    PetscCall(PetscCDCount(agg_llists, &sz));
+    PetscCall(MPIU_Allreduce(&sz, &globalsz, 1, MPIU_INT, MPI_SUM, comm));
+    PetscCheck(MM == globalsz, comm, PETSC_ERR_SUP, "lost %d equations ?", (int)(MM - globalsz));
+  }
   // cleanup
   PetscCall(MatDestroy(&cMat));
   PetscCall(PetscFree(lid_cprowID));
   PetscCall(PetscFree(lid_max_pe));
   PetscCall(PetscFree(lid_matched));
   PetscCall(ISDestroy(&info_is));
+
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

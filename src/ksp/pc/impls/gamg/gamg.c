@@ -641,7 +641,7 @@ static PetscErrorCode PCSetUp_GAMG(PC pc)
       Mat               Prol11;
 
       PetscCall(PCGAMGCreateGraph(pc, Aarr[level], &Gmat));
-      PetscCall(pc_gamg->ops->coarsen(pc, &Gmat, &agg_lists));
+      PetscCall(pc_gamg->ops->coarsen(pc, &Gmat, &agg_lists)); // Gmat may have ghosts for QR aggregates not in matrix
       PetscCall(pc_gamg->ops->prolongator(pc, Aarr[level], Gmat, agg_lists, &Prol11));
 
       /* could have failed to create new level */
@@ -658,9 +658,11 @@ static PetscErrorCode PCSetUp_GAMG(PC pc)
         }
 
         if (pc_gamg->use_aggs_in_asm) {
-          PetscInt bs;
+          PetscInt bs, Istart;
           PetscCall(MatGetBlockSizes(Prol11, &bs, NULL)); // not timed directly, ugly, could remove, but good ASM method
-          PetscCall(PetscCDGetASMBlocks(agg_lists, bs, Gmat, &nASMBlocksArr[level], &ASMLocalIDsArr[level]));
+          PetscCall(MatGetOwnershipRange(Prol11, &Istart, NULL));
+          PetscCall(PetscCDGetASMBlocks(agg_lists, bs, &nASMBlocksArr[level], &ASMLocalIDsArr[level]));
+          PetscCall(PetscInfo(pc, "%d: %" PetscInt_FMT " ASM local domains,  bs = %d\n", (int)level, nASMBlocksArr[level], (int)bs));
         }
 
         PetscCall(PCGetOptionsPrefix(pc, &prefix));
