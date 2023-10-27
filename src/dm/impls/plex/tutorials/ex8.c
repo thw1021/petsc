@@ -63,7 +63,7 @@ int main(int argc, char **argv)
   } else {
     for (PetscInt f = 0; f < Nf; ++f) {
       char prefix[16];
-      PetscCall(PetscSNPrintf(prefix, 16, "f%d_", f));
+      PetscCall(PetscSNPrintf(prefix, 16, "f%" PetscInt_FMT "_", f));
       PetscCall(PetscFECreateDefault(PETSC_COMM_SELF, dim, 1, PETSC_FALSE, prefix, PETSC_DETERMINE, &fe));
       PetscCall(DMAddField(dm, NULL, (PetscObject)fe));
       PetscCall(PetscFEDestroy(&fe));
