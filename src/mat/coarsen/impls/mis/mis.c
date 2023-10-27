@@ -26,7 +26,7 @@ static PetscErrorCode MatCoarsenApply_MIS_private(IS perm, Mat Gmat, PetscBool s
   Mat_MPIAIJ       *mpimat = NULL;
   MPI_Comm          comm;
   PetscInt          num_fine_ghosts, kk, n, ix, j, *idx, *ii, Iend, my0, nremoved, gid, lid, cpid, lidj, sgid, t1, t2, slid, nDone, nselected = 0, state, statej;
-  PetscInt         *cpcol_gid, *cpcol_state, *lid_cprowID, *lid_gid, *cpcol_sel_gid, *icpcol_gid, *lid_state, *lid_parent_gid = NULL;
+  PetscInt         *cpcol_gid, *cpcol_state, *lid_cprowID, *lid_gid, *cpcol_sel_gid, *icpcol_gid, *lid_state, *lid_parent_gid = NULL, nrm_tot = 0;
   PetscBool        *lid_removed;
   PetscBool         isMPI, isAIJ, isOK;
   const PetscInt   *perm_ix;
@@ -127,12 +127,14 @@ static PetscErrorCode MatCoarsenApply_MIS_private(IS perm, Mat Gmat, PetscBool s
             ix = lid_cprowID[lid];
             if (ix == -1 || !(matB->compressedrow.i[ix + 1] - matB->compressedrow.i[ix])) {
               nremoved++;
+              nrm_tot++;
               lid_removed[lid] = PETSC_TRUE;
+              continue; // add to special list later
               // lid_state[lidj] = MIS_REMOVED; add singleton to MIS (can cause low rank with elasticity on fine grid)
             }
           }
           /* SELECTED state encoded with global index */
-          lid_state[lid] = lid + my0; /* needed???? */
+          lid_state[lid] = lid + my0;
           nselected++;
           if (strict_aggs) {
             PetscCall(PetscCDAppendID(agg_lists, lid, lid + my0));
@@ -237,7 +239,7 @@ static PetscErrorCode MatCoarsenApply_MIS_private(IS perm, Mat Gmat, PetscBool s
     PetscCall(PetscFree(cpcol_gid));
     PetscCall(PetscFree(cpcol_state));
   }
-  // move BCs into some node
+  // move singletons into some node
   for (int kk = 0, bc_id = -1; kk < nloc; kk++) {
     if (lid_removed[kk]) {
       if (bc_id == -1) bc_id = kk;
@@ -251,11 +253,17 @@ static PetscErrorCode MatCoarsenApply_MIS_private(IS perm, Mat Gmat, PetscBool s
   PetscCall(PetscFree(lid_state));
   {
     // check sizes -- all vertices must get in graph
-    PetscInt sz, globalsz, MM;
+    /* PetscInt sz, globalsz, MM; */
+    /* PetscCall(MatGetSize(Gmat, &MM, NULL)); */
+    /* PetscCall(PetscCDCount(agg_lists, &sz)); */
+    /* PetscCall(MPIU_Allreduce(&sz, &globalsz, 1, MPIU_INT, MPI_SUM, comm)); */
+    /* PetscCheck(MM == globalsz, comm, PETSC_ERR_PLIB, "lost %d equations ?", (int)(MM - globalsz)); */
+    PetscInt aa[2] = {0, nrm_tot}, bb[2], MM;
     PetscCall(MatGetSize(Gmat, &MM, NULL));
-    PetscCall(PetscCDCount(agg_lists, &sz));
-    PetscCall(MPIU_Allreduce(&sz, &globalsz, 1, MPIU_INT, MPI_SUM, comm));
-    PetscCheck(MM == globalsz, comm, PETSC_ERR_PLIB, "lost %d equations ?", (int)(MM - globalsz));
+    // check sizes -- all vertices must get in graph
+    PetscCall(PetscCDCount(agg_lists, &aa[0]));
+    PetscCall(MPIU_Allreduce(aa, bb, 2, MPIU_INT, MPI_SUM, comm));
+    PetscCheck(MM == bb[0], comm, PETSC_ERR_PLIB, "lost %d equations ?. N = %d, sum of aggregates %d, %d removed total", (int)(MM - bb[0]), (int)MM, (int)bb[0], (int)bb[1]);
   }
   PetscCall(ISDestroy(&info_is));
 
