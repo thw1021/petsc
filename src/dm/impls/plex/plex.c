@@ -5642,7 +5642,7 @@ static PetscErrorCode PetscSectionFieldGetTensorDegree_Private(DM dm, PetscSecti
     PetscCall(DMGetDimension(dm, &dim));
     PetscCall(PetscFEGetDualSpace(fe, &dual_space));
     PetscCall(PetscDualSpaceGetDimension(dual_space, &dual_space_size));
-    *k = (PetscInt)round(PetscPowReal(dual_space_size / *Nc, 1.0 / dim)) - 1;
+    *k = (PetscInt)PetscCeilReal(PetscPowReal(dual_space_size / *Nc, 1.0 / dim)) - 1;
     PetscCall(PetscDualSpaceLagrangeGetContinuity(dual_space, continuous));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
