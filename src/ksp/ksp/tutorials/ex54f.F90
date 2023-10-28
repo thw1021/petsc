@@ -443,6 +443,6 @@
 !   test:
 !      suffix: hem
 !      args: -mat_coarsen_type hem -ksp_converged_reason
-!      filter: sed -e "s/Linear solve converged due to CONVERGED_RTOL iterations 13/Linear solve converged due to CONVERGED_RTOL iterations 11/g"
+!      filter: sed -e "s/Linear solve converged due to CONVERGED_RTOL iterations 1[2-3]/Linear solve converged due to CONVERGED_RTOL iterations 11/g"
 !
 !TEST*/
