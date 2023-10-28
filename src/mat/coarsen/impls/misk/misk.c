@@ -134,7 +134,7 @@ static PetscErrorCode MatCoarsenApply_MISK_private(IS perm, const PetscInt misk,
       /* check all vertices */
       for (kk = 0; kk < nloc_inner; kk++) {
         const PetscInt lid = perm_ix ? perm_ix[kk] : kk;
-        state = lid_state[lid];
+        state              = lid_state[lid];
         if (iterIdx == 0 && lid_removed[lid]) continue;
         if (state == MIS_NOT_DONE) {
           /* parallel test, delete if selected ghost */
