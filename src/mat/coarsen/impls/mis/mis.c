@@ -253,11 +253,6 @@ static PetscErrorCode MatCoarsenApply_MIS_private(IS perm, Mat Gmat, PetscBool s
   PetscCall(PetscFree(lid_state));
   {
     // check sizes -- all vertices must get in graph
-    /* PetscInt sz, globalsz, MM; */
-    /* PetscCall(MatGetSize(Gmat, &MM, NULL)); */
-    /* PetscCall(PetscCDCount(agg_lists, &sz)); */
-    /* PetscCall(MPIU_Allreduce(&sz, &globalsz, 1, MPIU_INT, MPI_SUM, comm)); */
-    /* PetscCheck(MM == globalsz, comm, PETSC_ERR_PLIB, "lost %d equations ?", (int)(MM - globalsz)); */
     PetscInt aa[2] = {0, nrm_tot}, bb[2], MM;
     PetscCall(MatGetSize(Gmat, &MM, NULL));
     // check sizes -- all vertices must get in graph
