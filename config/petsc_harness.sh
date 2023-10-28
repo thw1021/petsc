@@ -40,8 +40,7 @@ OPTIONS
   -n <integer> ...... Override the number of processors to use
   -j ................ Pass -j to petscdiff (just use diff)
   -J <arg> .......... Pass -J to petscdiff (just use diff with arg)
-  -m ................ Update results using petscdiff
-  -M ................ Update alt files using petscdiff
+  -m ................ add new alt file if no output file matches
   -o <arg> .......... Output format: 'interactive', 'err_only'
   -p ................ Print command:  Print first command and exit
   -t ................ Override the default timeout (default=$TIMEOUT sec)
@@ -65,6 +64,7 @@ printcmd=false
 mpiexec_function=false
 force=false
 diff_flags=""
+add_alt_file=false
 while getopts "a:cCde:fhjJ:mMn:o:pt:UvV" arg
 do
   case $arg in
@@ -78,8 +78,7 @@ do
     n ) nsize="$OPTARG"      ;;  
     j ) diff_flags=$diff_flags" -j"      ;;  
     J ) diff_flags=$diff_flags" -J $OPTARG" ;;  
-    m ) diff_flags=$diff_flags" -m"      ;;  
-    M ) diff_flags=$diff_flags" -M"      ;;  
+    m ) add_alt_file=true    ;;  
     o ) output_fmt=$OPTARG   ;;  
     p ) printcmd=true        ;;
     t ) TIMEOUT=$OPTARG      ;;  
@@ -166,15 +165,16 @@ function printcmd() {
      # Have to expand valgrind/cudamemchk
      modcmd=`eval "$modcmd"`
   fi
-  printf "${modcmd}\n" 
+  printf "${modcmd}\n"
   exit
 }
 
 function petsc_testrun() {
-  # First arg = Basic command
-  # Second arg = stdout file
-  # Third arg = stderr file
-  # Fourth arg = label for reporting
+  # $1 = command to run, include all arguments inside " "
+  # $2 = stdout file to put output
+  # $3 = stderr file to put output
+  # $4 = label for reporting
+  # $5 = not clear what this is for or when it is used
   rmfiles="${rmfiles} $2 $3"
   tlabel=$4
   error=$5

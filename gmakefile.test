@@ -67,14 +67,11 @@ endif
 ifeq ($(DEBUG),1)
   TESTFLAGS += -d    # Launch test in debugger
 endif
-ifeq ($(REPLACE),1)
-  TESTFLAGS += -m    # Replace results by passing -m to petscdiff
+ifeq ($(ADD),1)
+  TESTFLAGS += -m    # add alt file by passing -m to petscdiff
 endif
 ifeq ($(OUTPUT),1)
   TESTFLAGS += -o 'err_only'    # Show only the errors on stdout
-endif
-ifeq ($(ALT),1)
-  TESTFLAGS += -M    # Replace alt files by passing -M to petscdiff
 endif
 PRINTONLY ?= 0
 ifeq ($(PRINTONLY),1)
@@ -485,9 +482,8 @@ help-test:
 	-@echo
 	-@echo "Options:"
 	-@echo "  NO_RM=1           Do not remove the executables after running"
-	-@echo "  REPLACE=1         Replace the output in PETSC_DIR source tree (-m to test scripts)"
+	-@echo "  ADD=1             Add a new alt output file in PETSC_DIR source tree if no output file matches (-m to test scripts)"
 	-@echo "  OUTPUT=1          Show only the errors on stdout"
-	-@echo "  ALT=1             Replace 'alt' output in PETSC_DIR source tree (-M to test scripts)"
 	-@echo "  DIFF_NUMBERS=1    Diff the numbers in the output (-j to test scripts and petscdiff)"
 	-@echo "  CUDAMEMCHECK=1    Execute the tests using cuda-memcheck (-U to test scripts)"
 	-@echo "                    Use PETSC_CUDAMEMCHECK_COMMAND to change the executable to run and"
