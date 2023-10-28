@@ -13,6 +13,9 @@
 #include <petsc/private/pcimpl.h>
 #include <petsc/private/kspimpl.h>
 #include <petsc.h>
+#include <sys/shm.h>
+#include <sys/mman.h>
+#include <sys/errno.h>
 
 #define PC_MPI_MAX_RANKS  256
 #define PC_MPI_COMM_WORLD MPI_COMM_WORLD
@@ -21,7 +24,7 @@ typedef struct {
   KSP         ksps[PC_MPI_MAX_RANKS];                               /* The addresses of the MPI parallel KSP on each rank, NULL when not on a rank. */
   PetscMPIInt sendcount[PC_MPI_MAX_RANKS], displ[PC_MPI_MAX_RANKS]; /* For scatter/gather of rhs/solution */
   PetscMPIInt NZ[PC_MPI_MAX_RANKS], NZdispl[PC_MPI_MAX_RANKS];      /* For scatter of nonzero values in matrix (and nonzero column indices initially */
-  PetscInt    mincntperrank;                                        /* minimum number of desired nonzeros per active rank in MPI parallel KSP solve */
+  PetscInt    mincntperrank;                                        /* minimum number of desired matrix rows per active rank in MPI parallel KSP solve */
   PetscBool   alwaysuseserver;                                      /* for debugging use the server infrastructure even if only one MPI rank is used for the solve */
 } PC_MPI;
 
@@ -32,13 +35,30 @@ typedef enum {
   PCMPI_UPDATE_MAT_VALUES, /* update current matrix with new nonzero values */
   PCMPI_SOLVE,
   PCMPI_VIEW,
-  PCMPI_DESTROY /* destroy a KSP that is no longer needed */
+  PCMPI_DESTROY /* destroy a PC that is no longer needed */
 } PCMPICommand;
 
-static MPI_Comm  PCMPIComms[PC_MPI_MAX_RANKS];
-static PetscBool PCMPICommSet = PETSC_FALSE;
-static PetscInt  PCMPISolveCounts[PC_MPI_MAX_RANKS], PCMPIKSPCounts[PC_MPI_MAX_RANKS], PCMPIMatCounts[PC_MPI_MAX_RANKS], PCMPISolveCountsSeq = 0, PCMPIKSPCountsSeq = 0;
-static PetscInt  PCMPIIterations[PC_MPI_MAX_RANKS], PCMPISizes[PC_MPI_MAX_RANKS], PCMPIIterationsSeq = 0, PCMPISizesSeq = 0;
+static MPI_Comm      PCMPIComms[PC_MPI_MAX_RANKS];
+static PetscBool     PCMPICommSet = PETSC_FALSE;
+static PetscInt      PCMPISolveCounts[PC_MPI_MAX_RANKS], PCMPIKSPCounts[PC_MPI_MAX_RANKS], PCMPIMatCounts[PC_MPI_MAX_RANKS], PCMPISolveCountsSeq = 0, PCMPIKSPCountsSeq = 0;
+static PetscInt      PCMPIIterations[PC_MPI_MAX_RANKS], PCMPISizes[PC_MPI_MAX_RANKS], PCMPIIterationsSeq = 0, PCMPISizesSeq = 0;
+static PetscLogEvent EventServerDist, EventServerDistMPI;
+
+PetscBool PCMPIServerActive  = PETSC_FALSE; // PETSc is running in server mode
+PetscBool PCMPIServerInSolve = PETSC_FALSE; // A parallel server solve is occuring
+
+typedef struct {
+  PetscInt n;
+  void    *addr[3];
+} PCMPIServerAddresses;
+
+PETSC_EXTERN PetscErrorCode PCMPIServerAddressesDestroy(PCMPIServerAddresses *addresses)
+{
+  PetscFunctionBegin;
+  PetscCall(PCMPIServerUnmapAddresses(addresses->n, addresses->addr));
+  PetscCall(PetscFree(addresses));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
 
 static PetscErrorCode PCMPICommsCreate(void)
 {
@@ -62,7 +82,7 @@ static PetscErrorCode PCMPICommsCreate(void)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode PCMPICommsDestroy(void)
+static PetscErrorCode PCMPICommsDestroy(void)
 {
   MPI_Comm    comm = PC_MPI_COMM_WORLD;
   PetscMPIInt size, rank, i;
@@ -90,6 +110,7 @@ static PetscErrorCode PCMPICreate(PC pc)
   PetscMPIInt len     = 0;
 
   PetscFunctionBegin;
+  PCMPIServerInSolve = PETSC_TRUE;
   if (!PCMPICommSet) PetscCall(PCMPICommsCreate());
   PetscCallMPI(MPI_Comm_size(comm, &size));
   if (pc) {
@@ -104,7 +125,8 @@ static PetscErrorCode PCMPICreate(PC pc)
   PetscCallMPI(MPI_Bcast(&mincntperrank, 1, MPI_INT, 0, comm));
   comm = PCMPIComms[PetscMin(size, PetscMax(1, N[0] / mincntperrank)) - 1];
   if (comm == MPI_COMM_NULL) {
-    ksp = NULL;
+    ksp                = NULL;
+    PCMPIServerInSolve = PETSC_FALSE;
     PetscFunctionReturn(PETSC_SUCCESS);
   }
   PetscCall(PetscLogStagePush(PCMPIStage));
@@ -137,6 +159,7 @@ static PetscErrorCode PCMPICreate(PC pc)
     PetscCall(KSPSetOptionsPrefix(ksp, cprefix));
   }
   PetscCall(PetscFree(cprefix));
+  PCMPIServerInSolve = PETSC_FALSE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -149,17 +172,19 @@ static PetscErrorCode PCMPISetMat(PC pc)
   MPI_Comm           comm = PC_MPI_COMM_WORLD;
   KSP                ksp;
   PetscLayout        layout;
-  const PetscInt    *IA = NULL, *JA = NULL;
+  const PetscInt    *IA = NULL, *JA = NULL, *iia, *jja;
   const PetscInt    *range;
   PetscMPIInt       *NZ = NULL, sendcounti[PC_MPI_MAX_RANKS], displi[PC_MPI_MAX_RANKS], *NZdispl = NULL, nz, size, i;
   PetscScalar       *a;
-  const PetscScalar *sa               = NULL;
-  PetscInt           matproperties[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+  const PetscScalar *sa               = NULL, *aa;
+  PetscInt           matproperties[8] = {0, 0, 0, 0, 0, 0, 0, 0}, rstart, rend;
   char              *cprefix;
 
   PetscFunctionBegin;
   PetscCallMPI(MPI_Scatter(pc ? km->ksps : NULL, 1, MPI_AINT, &ksp, 1, MPI_AINT, 0, comm));
   if (!ksp) PetscFunctionReturn(PETSC_SUCCESS);
+  PCMPIServerInSolve = PETSC_TRUE;
+  PetscCall(PetscLogEventBegin(EventServerDist, NULL, NULL, NULL, NULL));
   PetscCall(PetscObjectGetComm((PetscObject)ksp, &comm));
   if (pc) {
     PetscBool   isset, issymmetric, ishermitian, isspd, isstructurallysymmetric;
@@ -202,13 +227,16 @@ static PetscErrorCode PCMPISetMat(PC pc)
   PetscCall(PetscLayoutSetSize(layout, matproperties[0]));
   PetscCall(PetscLayoutSetUp(layout));
   PetscCall(PetscLayoutGetLocalSize(layout, &m));
+  PetscCall(PetscLayoutGetRange(layout, &rstart, &rend));
 
+  PetscCall(PetscLogEventBegin(EventServerDistMPI, NULL, NULL, NULL, NULL));
   /* copy over the matrix nonzero structure and values */
   if (pc) {
+    PetscCall(MatGetRowIJ(sA, 0, PETSC_FALSE, PETSC_FALSE, NULL, &IA, &JA, NULL));
+    //    if (PetscDefined(USE_PCMPI_SCATTER)) {
     NZ      = km->NZ;
     NZdispl = km->NZdispl;
     PetscCall(PetscLayoutGetRanges(layout, &range));
-    PetscCall(MatGetRowIJ(sA, 0, PETSC_FALSE, PETSC_FALSE, NULL, &IA, &JA, NULL));
     for (i = 0; i < size; i++) {
       sendcounti[i] = (PetscMPIInt)(1 + range[i + 1] - range[i]);
       NZ[i]         = (PetscMPIInt)(IA[range[i + 1]] - IA[range[i]]);
@@ -219,23 +247,11 @@ static PetscErrorCode PCMPISetMat(PC pc)
       displi[j]  = displi[j - 1] + sendcounti[j - 1] - 1;
       NZdispl[j] = NZdispl[j - 1] + NZ[j - 1];
     }
+    //    }
     PetscCall(MatSeqAIJGetArrayRead(sA, &sa));
   }
   PetscCall(PetscLayoutDestroy(&layout));
-  PetscCallMPI(MPI_Scatter(NZ, 1, MPI_INT, &nz, 1, MPI_INT, 0, comm));
 
-  PetscCall(PetscMalloc3(n + 1, &ia, nz, &ja, nz, &a));
-  PetscCallMPI(MPI_Scatterv(IA, sendcounti, displi, MPIU_INT, ia, n + 1, MPIU_INT, 0, comm));
-  PetscCallMPI(MPI_Scatterv(JA, NZ, NZdispl, MPIU_INT, ja, nz, MPIU_INT, 0, comm));
-  PetscCallMPI(MPI_Scatterv(sa, NZ, NZdispl, MPIU_SCALAR, a, nz, MPIU_SCALAR, 0, comm));
-
-  if (pc) {
-    PetscCall(MatSeqAIJRestoreArrayRead(sA, &sa));
-    PetscCall(MatRestoreRowIJ(sA, 0, PETSC_FALSE, PETSC_FALSE, NULL, &IA, &JA, NULL));
-  }
-
-  for (j = 1; j < n + 1; j++) ia[j] -= ia[0];
-  ia[0] = 0;
   PetscCall(PetscLogStagePush(PCMPIStage));
   PetscCall(MatCreate(comm, &A));
   if (matproperties[7] > 0) {
@@ -247,7 +263,43 @@ static PetscErrorCode PCMPISetMat(PC pc)
   PetscCall(MatAppendOptionsPrefix(A, "mpi_linear_solver_server_"));
   PetscCall(MatSetSizes(A, m, n, matproperties[0], matproperties[1]));
   PetscCall(MatSetType(A, MATMPIAIJ));
-  PetscCall(MatMPIAIJSetPreallocationCSR(A, ia, ja, a));
+
+  if (PetscDefined(USE_PCMPI_SCATTER)) {
+    PetscCallMPI(MPI_Scatter(NZ, 1, MPI_INT, &nz, 1, MPI_INT, 0, comm));
+    PetscCall(PetscMalloc3(n + 1, &ia, nz, &ja, nz, &a));
+    PetscCallMPI(MPI_Scatterv(IA, sendcounti, displi, MPIU_INT, ia, n + 1, MPIU_INT, 0, comm));
+    PetscCallMPI(MPI_Scatterv(JA, NZ, NZdispl, MPIU_INT, ja, nz, MPIU_INT, 0, comm));
+    PetscCallMPI(MPI_Scatterv(sa, NZ, NZdispl, MPIU_SCALAR, a, nz, MPIU_SCALAR, 0, comm));
+  } else {
+    const void           *addr[3] = {(const void **)IA, (const void **)JA, (const void **)sa};
+    PCMPIServerAddresses *addresses;
+    PetscCall(PetscNew(&addresses));
+    addresses->n = 3;
+    PetscCall(PCMPIServerMapAddresses(comm, addresses->n, addr, addresses->addr));
+    iia = rstart + (PetscInt *)addresses->addr[0];
+    jja = iia[0] + (PetscInt *)addresses->addr[1];
+    aa  = iia[0] + (PetscScalar *)addresses->addr[2];
+    PetscCall(PetscObjectContainerCompose((PetscObject)A, "PCMPIServerAddresses", (void *)addresses, (PetscErrorCode(*)(void *))PCMPIServerAddressesDestroy));
+
+    /*
+      check if MPI_Scatterv() and PCMPIServerScatterAddress() produce same results
+
+    for (PetscInt i=0; i<rend-rstart; i++) {
+      PetscCheck(iia[i] == ia[i],PETSC_COMM_SELF,PETSC_ERR_PLIB,"iia is wrong i %d iia %d ia %d rstart %d",i,iia[i],ia[i],rstart);
+      for (PetscInt j=iia[i]-iia[0]; j<iia[i+1]-iia[0]; j++){
+        PetscCheck(jja[j] == ja[j],PETSC_COMM_SELF,PETSC_ERR_PLIB,"jja is wrong  i %d j %d jja %d ja %d\n",i,j, jja[j],ja[j]);
+      }
+    }
+    */
+  }
+  if (pc) {
+    PetscCall(MatSeqAIJRestoreArrayRead(sA, &sa));
+    PetscCall(MatRestoreRowIJ(sA, 0, PETSC_FALSE, PETSC_FALSE, NULL, &IA, &JA, NULL));
+  }
+  PetscCall(PetscLogEventEnd(EventServerDistMPI, NULL, NULL, NULL, NULL));
+
+  PetscCall(PetscLogStagePush(PCMPIStage));
+  PetscCall(MatMPIAIJSetPreallocationCSR(A, iia, jja, aa));
   PetscCall(MatSetBlockSize(A, matproperties[2]));
 
   if (matproperties[3]) PetscCall(MatSetOption(A, MAT_SYMMETRIC, matproperties[3] == 1 ? PETSC_TRUE : PETSC_FALSE));
@@ -255,11 +307,11 @@ static PetscErrorCode PCMPISetMat(PC pc)
   if (matproperties[5]) PetscCall(MatSetOption(A, MAT_SPD, matproperties[5] == 1 ? PETSC_TRUE : PETSC_FALSE));
   if (matproperties[6]) PetscCall(MatSetOption(A, MAT_STRUCTURALLY_SYMMETRIC, matproperties[6] == 1 ? PETSC_TRUE : PETSC_FALSE));
 
-  PetscCall(PetscFree3(ia, ja, a));
+  if (PetscDefined(USE_PCMPI_SCATTER)) PetscCall(PetscFree3(ia, ja, a));
   PetscCall(KSPSetOperators(ksp, A, A));
   if (!ksp->vec_sol) PetscCall(MatCreateVecs(A, &ksp->vec_sol, &ksp->vec_rhs));
   PetscCall(PetscLogStagePop());
-  if (pc) { /* needed for scatterv/gatherv of rhs and solution */
+  if (pc && PetscDefined(USE_PCMPI_SCATTER)) { /* needed for scatterv/gatherv of rhs and solution */
     const PetscInt *range;
 
     PetscCall(VecGetOwnershipRanges(ksp->vec_sol, &range));
@@ -269,7 +321,9 @@ static PetscErrorCode PCMPISetMat(PC pc)
     }
   }
   PetscCall(MatDestroy(&A));
+  PetscCall(PetscLogEventEnd(EventServerDist, NULL, NULL, NULL, NULL));
   PetscCall(KSPSetFromOptions(ksp));
+  PCMPIServerInSolve = PETSC_FALSE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -280,29 +334,45 @@ static PetscErrorCode PCMPIUpdateMatValues(PC pc)
   Mat                sA, A;
   MPI_Comm           comm = PC_MPI_COMM_WORLD;
   PetscScalar       *a;
+  const PetscInt    *iia, *IA;
+  const PetscScalar *aa;
   PetscCount         nz;
   const PetscScalar *sa = NULL;
   PetscMPIInt        size;
-  PetscInt           matproperties[4] = {0, 0, 0, 0};
+  PetscInt           rstart, matproperties[4] = {0, 0, 0, 0};
 
   PetscFunctionBegin;
   if (pc) {
     PetscCall(PCGetOperators(pc, &sA, &sA));
     PetscCall(MatSeqAIJGetArrayRead(sA, &sa));
+    PetscCall(MatGetRowIJ(sA, 0, PETSC_FALSE, PETSC_FALSE, NULL, &IA, NULL, NULL));
   }
   PetscCallMPI(MPI_Scatter(pc ? km->ksps : NULL, 1, MPI_AINT, &ksp, 1, MPI_AINT, 0, comm));
   if (!ksp) PetscFunctionReturn(PETSC_SUCCESS);
+  PCMPIServerInSolve = PETSC_TRUE;
+  PetscCall(PetscLogEventBegin(EventServerDist, NULL, NULL, NULL, NULL));
   PetscCall(PetscObjectGetComm((PetscObject)ksp, &comm));
   PetscCallMPI(MPI_Comm_size(comm, &size));
   PCMPIMatCounts[size - 1]++;
   PetscCall(KSPGetOperators(ksp, NULL, &A));
-  PetscCall(MatMPIAIJGetNumberNonzeros(A, &nz));
-  PetscCall(PetscMalloc1(nz, &a));
-  PetscCallMPI(MPI_Scatterv(sa, pc ? km->NZ : NULL, pc ? km->NZdispl : NULL, MPIU_SCALAR, a, nz, MPIU_SCALAR, 0, comm));
+  PetscCall(PetscLogEventBegin(EventServerDistMPI, NULL, NULL, NULL, NULL));
+  if (PetscDefined(USE_PCMPI_SCATTER)) {
+    PetscCall(MatMPIAIJGetNumberNonzeros(A, &nz));
+    PetscCall(PetscMalloc1(nz, &a));
+    PetscCallMPI(MPI_Scatterv(sa, pc ? km->NZ : NULL, pc ? km->NZdispl : NULL, MPIU_SCALAR, a, nz, MPIU_SCALAR, 0, comm));
+  } else {
+    PetscCall(MatGetOwnershipRange(A, &rstart, NULL));
+    PCMPIServerAddresses *addresses;
+    PetscCall(PetscObjectContainerQuery((PetscObject)A, "PCMPIServerAddresses", (void **)&addresses));
+    iia = rstart + (PetscInt *)addresses->addr[0];
+    aa  = iia[0] + (PetscScalar *)addresses->addr[2];
+  }
+  PetscCall(PetscLogEventEnd(EventServerDistMPI, NULL, NULL, NULL, NULL));
   if (pc) {
     PetscBool isset, issymmetric, ishermitian, isspd, isstructurallysymmetric;
 
     PetscCall(MatSeqAIJRestoreArrayRead(sA, &sa));
+    PetscCall(MatRestoreRowIJ(sA, 0, PETSC_FALSE, PETSC_FALSE, NULL, &IA, NULL, NULL));
 
     PetscCall(MatIsSymmetricKnown(sA, &isset, &issymmetric));
     matproperties[0] = !isset ? 0 : (issymmetric ? 1 : 2);
@@ -313,14 +383,16 @@ static PetscErrorCode PCMPIUpdateMatValues(PC pc)
     PetscCall(MatIsStructurallySymmetricKnown(sA, &isset, &isstructurallysymmetric));
     matproperties[3] = !isset ? 0 : (isstructurallysymmetric ? 1 : 2);
   }
-  PetscCall(MatUpdateMPIAIJWithArray(A, a));
-  PetscCall(PetscFree(a));
+  PetscCall(MatUpdateMPIAIJWithArray(A, aa));
+  if (PetscDefined(USE_PCMPI_SCATTER)) PetscCall(PetscFree(a));
   PetscCallMPI(MPI_Bcast(matproperties, 4, MPIU_INT, 0, comm));
   /* if any of these properties was previously set and is now not set this will result in incorrect properties in A since there is no way to unset a property */
   if (matproperties[0]) PetscCall(MatSetOption(A, MAT_SYMMETRIC, matproperties[0] == 1 ? PETSC_TRUE : PETSC_FALSE));
   if (matproperties[1]) PetscCall(MatSetOption(A, MAT_HERMITIAN, matproperties[1] == 1 ? PETSC_TRUE : PETSC_FALSE));
   if (matproperties[2]) PetscCall(MatSetOption(A, MAT_SPD, matproperties[2] == 1 ? PETSC_TRUE : PETSC_FALSE));
   if (matproperties[3]) PetscCall(MatSetOption(A, MAT_STRUCTURALLY_SYMMETRIC, matproperties[3] == 1 ? PETSC_TRUE : PETSC_FALSE));
+  PetscCall(PetscLogEventEnd(EventServerDist, NULL, NULL, NULL, NULL));
+  PCMPIServerInSolve = PETSC_FALSE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -333,13 +405,14 @@ static PetscErrorCode PCMPISolve(PC pc, Vec B, Vec X)
   PetscScalar       *b, *sx = NULL;
   PetscInt           its, n;
   PetscMPIInt        size;
+  void              *addr[2];
 
   PetscFunctionBegin;
   PetscCallMPI(MPI_Scatter(pc ? km->ksps : &ksp, 1, MPI_AINT, &ksp, 1, MPI_AINT, 0, comm));
   if (!ksp) PetscFunctionReturn(PETSC_SUCCESS);
+  PCMPIServerInSolve = PETSC_TRUE;
+  PetscCall(PetscLogEventBegin(EventServerDist, NULL, NULL, NULL, NULL));
   PetscCall(PetscObjectGetComm((PetscObject)ksp, &comm));
-
-  /* TODO: optimize code to not require building counts/displ every time */
 
   /* scatterv rhs */
   PetscCallMPI(MPI_Comm_size(comm, &size));
@@ -349,26 +422,58 @@ static PetscErrorCode PCMPISolve(PC pc, Vec B, Vec X)
     PCMPISolveCounts[size - 1]++;
     PetscCall(MatGetSize(pc->pmat, &N, NULL));
     PCMPISizes[size - 1] += N;
-    PetscCall(VecGetArrayRead(B, &sb));
   }
   PetscCall(VecGetLocalSize(ksp->vec_rhs, &n));
-  PetscCall(VecGetArray(ksp->vec_rhs, &b));
-  PetscCallMPI(MPI_Scatterv(sb, pc ? km->sendcount : NULL, pc ? km->displ : NULL, MPIU_SCALAR, b, n, MPIU_SCALAR, 0, comm));
-  PetscCall(VecRestoreArray(ksp->vec_rhs, &b));
-  if (pc) PetscCall(VecRestoreArrayRead(B, &sb));
+  PetscCall(PetscLogEventBegin(EventServerDistMPI, NULL, NULL, NULL, NULL));
+  if (PetscDefined(USE_PCMPI_SCATTER)) {
+    PetscCall(VecGetArray(ksp->vec_rhs, &b));
+    if (pc) PetscCall(VecGetArrayRead(B, &sb));
+    PetscCallMPI(MPI_Scatterv(sb, pc ? km->sendcount : NULL, pc ? km->displ : NULL, MPIU_SCALAR, b, n, MPIU_SCALAR, 0, comm));
+    if (pc) PetscCall(VecRestoreArrayRead(B, &sb));
+    PetscCall(VecRestoreArray(ksp->vec_rhs, &b));
+    // TODO: scatter initial guess if needed
+  } else {
+    PetscInt rstart;
 
+    if (pc) PetscCall(VecGetArrayRead(B, &sb));
+    if (pc) PetscCall(VecGetArray(X, &sx));
+    const void *inaddr[2] = {(const void **)sb, (const void **)sx};
+    if (pc) PetscCall(VecRestoreArray(X, &sx));
+    if (pc) PetscCall(VecRestoreArrayRead(B, &sb));
+
+    PetscCall(PCMPIServerMapAddresses(comm, 2, inaddr, addr));
+    PetscCall(VecGetOwnershipRange(ksp->vec_rhs, &rstart, NULL));
+    PetscCall(VecPlaceArray(ksp->vec_rhs, rstart + (PetscScalar *)addr[0]));
+    PetscCall(VecPlaceArray(ksp->vec_sol, rstart + (PetscScalar *)addr[1]));
+  }
+  PetscCall(PetscLogEventEnd(EventServerDistMPI, NULL, NULL, NULL, NULL));
+
+  PetscCall(PetscLogEventEnd(EventServerDist, NULL, NULL, NULL, NULL));
   PetscCall(PetscLogStagePush(PCMPIStage));
   PetscCall(KSPSolve(ksp, NULL, NULL));
   PetscCall(PetscLogStagePop());
+  PetscCall(PetscLogEventBegin(EventServerDist, NULL, NULL, NULL, NULL));
   PetscCall(KSPGetIterationNumber(ksp, &its));
   PCMPIIterations[size - 1] += its;
+  // TODO: send iterations up to outer KSP
+
+  if (!PetscDefined(USE_PCMPI_SCATTER)) PetscCall(PCMPIServerUnmapAddresses(2, addr));
 
   /* gather solution */
-  PetscCall(VecGetArrayRead(ksp->vec_sol, &x));
-  if (pc) PetscCall(VecGetArray(X, &sx));
-  PetscCallMPI(MPI_Gatherv(x, n, MPIU_SCALAR, sx, pc ? km->sendcount : NULL, pc ? km->displ : NULL, MPIU_SCALAR, 0, comm));
-  if (pc) PetscCall(VecRestoreArray(X, &sx));
-  PetscCall(VecRestoreArrayRead(ksp->vec_sol, &x));
+  PetscCall(PetscLogEventBegin(EventServerDistMPI, NULL, NULL, NULL, NULL));
+  if (PetscDefined(USE_PCMPI_SCATTER)) {
+    PetscCall(VecGetArrayRead(ksp->vec_sol, &x));
+    if (pc) PetscCall(VecGetArray(X, &sx));
+    PetscCallMPI(MPI_Gatherv(x, n, MPIU_SCALAR, sx, pc ? km->sendcount : NULL, pc ? km->displ : NULL, MPIU_SCALAR, 0, comm));
+    if (pc) PetscCall(VecRestoreArray(X, &sx));
+    PetscCall(VecRestoreArrayRead(ksp->vec_sol, &x));
+  } else {
+    PetscCall(VecResetArray(ksp->vec_rhs));
+    PetscCall(VecResetArray(ksp->vec_sol));
+  }
+  PetscCall(PetscLogEventEnd(EventServerDistMPI, NULL, NULL, NULL, NULL));
+  PetscCall(PetscLogEventEnd(EventServerDist, NULL, NULL, NULL, NULL));
+  PCMPIServerInSolve = PETSC_FALSE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -381,11 +486,11 @@ static PetscErrorCode PCMPIDestroy(PC pc)
   PetscFunctionBegin;
   PetscCallMPI(MPI_Scatter(pc ? km->ksps : NULL, 1, MPI_AINT, &ksp, 1, MPI_AINT, 0, comm));
   if (!ksp) PetscFunctionReturn(PETSC_SUCCESS);
+  PCMPIServerInSolve = PETSC_TRUE;
   PetscCall(KSPDestroy(&ksp));
+  PCMPIServerInSolve = PETSC_FALSE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-
-PetscBool PCMPIServerActive = PETSC_FALSE;
 
 /*@C
   PCMPIServerBegin - starts a server that runs on the `rank != 0` MPI processes waiting to process requests for
@@ -442,6 +547,8 @@ PetscErrorCode PCMPIServerBegin(void)
     PetscCall(TSInitializePackage());
     PetscCall(TaoInitializePackage());
   }
+  PetscCall(PetscLogEventRegister("ServerDist", PC_CLASSID, &EventServerDist));
+  PetscCall(PetscLogEventRegister("ServerDistMPI", PC_CLASSID, &EventServerDistMPI));
 
   PetscCallMPI(MPI_Comm_rank(PC_MPI_COMM_WORLD, &rank));
   if (rank == 0) {
@@ -452,6 +559,7 @@ PetscErrorCode PCMPIServerBegin(void)
 
   while (PETSC_TRUE) {
     PCMPICommand request = PCMPI_CREATE;
+    // TODO: can we broadcast the number of active ranks here so only the correct subset of proccesses waits on the later scatters?
     PetscCallMPI(MPI_Bcast(&request, 1, MPIU_ENUM, 0, PC_MPI_COMM_WORLD));
     switch (request) {
     case PCMPI_CREATE:
@@ -483,6 +591,201 @@ PetscErrorCode PCMPIServerBegin(void)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+typedef struct _PCMPIServerAllocation *PCMPIServerAllocation;
+struct _PCMPIServerAllocation {
+  void                 *addr; // address on this process; points to same physical address on all processes
+  int                   shmkey, shmid;
+  size_t                sz;
+  PCMPIServerAllocation next;
+};
+static PCMPIServerAllocation allocations = NULL;
+
+/*@C
+  PCMPIServerMapAddresses - given shared address on the first MPI process determines the
+  addresses on the other MPI processes that map to the same physical memory
+
+  Input Parameters:
++ comm     - the `MPI_Comm` to scatter the address
+. n - the number of addresses, each obtained on MPI process zero by `PCMPIServerAllocateArray()`
+- baseaddres - the addresses on the first MPI process, ignored on all but first process
+
+  Output Parameter:
+. addres - the addresses on each MPI process, the array of void * must already be allocated
+
+  Level: developer
+
+.seealso: `PCMPIServerDeallocateArray()`, `PCMPIServerAllocateArray()`, `PCMPIServerUnmapAddresses()`
+@*/
+PetscErrorCode PCMPIServerMapAddresses(MPI_Comm comm, PetscInt n, const void **baseaddres, void **addres)
+{
+  PetscFunctionBegin;
+  if (PetscGlobalRank == 0) {
+    for (PetscInt i = 0; i < n; i++) {
+      PCMPIServerAllocation allocation = allocations;
+
+      while (allocation) {
+        if (allocation->addr == baseaddres[i]) {
+          PetscCallMPI(MPI_Bcast(&allocation->shmkey, 1, MPI_INT, 0, comm));
+          PetscCallMPI(MPI_Bcast(&allocation->sz, 1, MPIU_SIZE_T, 0, comm)); // TODO combine broadcasts
+          addres[i] = (void *)baseaddres[i];
+          break;
+        }
+        allocation = allocation->next;
+      }
+      PetscCheck(allocation, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Unable to locate allocated shared address %p", baseaddres[i]);
+    }
+  } else {
+    int    shmkey;
+    size_t sz;
+
+    for (PetscInt i = 0; i < n; i++) {
+      PCMPIServerAllocation next = allocations, previous = NULL;
+      PetscCallMPI(MPI_Bcast(&shmkey, 1, MPI_INT, 0, comm));
+      PetscCallMPI(MPI_Bcast(&sz, 1, MPIU_SIZE_T, 0, comm)); // TODO combine broadcasts
+      while (next) {
+        if (next->shmkey == shmkey) { addres[i] = (void *)next->addr; }
+        previous = next;
+        next     = next->next;
+      }
+      if (!next) {
+        PCMPIServerAllocation allocation;
+        PetscCall(PetscCalloc(sizeof(struct _PCMPIServerAllocation), &allocation));
+        allocation->shmkey = shmkey;
+        allocation->sz     = sz;
+        allocation->shmid  = shmget(allocation->shmkey, allocation->sz, 0666);
+        PetscCheck(allocation->shmid != -1, PETSC_COMM_SELF, PETSC_ERR_SYS, "Unable to map shared memory key %d of size %d", allocation->shmkey, (int)allocation->sz);
+        allocation->addr = shmat(allocation->shmid, (void *)0, 0);
+        PetscCheck(allocation->addr, PETSC_COMM_SELF, PETSC_ERR_SYS, "Unable to map shared memory key %d", allocation->shmkey);
+        addres[i] = allocation->addr;
+        if (previous) previous->next = allocation;
+        else allocations = allocation;
+        // printf("[%d] Mapping address from key %d %p\n",PetscGlobalRank,allocation->shmkey,allocation->addr);
+      }
+    }
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  PCMPIServerUnmapAddresses - given shared addresses on a MPI process unlink it
+
+  Input Parameters:
+. n - the number of addresses, each obtained on MPI process zero by `PCMPIServerAllocateArray()`
+- addres - the addresses
+
+  Level: developer
+
+.seealso: `PCMPIServerDeallocateArray()`, `PCMPIServerAllocateArray()`
+@*/
+PetscErrorCode PCMPIServerUnmapAddresses(PetscInt n, void **addres)
+{
+  PetscFunctionBegin;
+  if (PetscGlobalRank > 0) {
+    for (PetscInt i = 0; i < n; i++) {
+      PCMPIServerAllocation next = allocations, previous = NULL;
+      PetscBool             found = PETSC_FALSE;
+
+      while (next) {
+        if (next->addr == addres[i]) {
+          // printf("[%d] Unmapping key %d shmid %d %p\n",PetscGlobalRank,next->shmkey,next->shmid,next->addr);
+          PetscCheck(!shmdt(next->addr), PETSC_COMM_SELF, PETSC_ERR_SYS, "Unable to shmdt() location %s", strerror(errno));
+          if (previous) previous->next = next->next;
+          else allocations = next->next;
+          PetscCall(PetscFree(next));
+          found = PETSC_TRUE;
+          break;
+        }
+        previous = next;
+        next     = next->next;
+      }
+      PetscCheck(found, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Unable to find address %p to unmap", addres[i]);
+    }
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  PCMPIServerAllocateArray - allocates shared memory accessable by all MPI processes in the server
+
+  Not Collective, only called on the first MPI process
+
+  Input Parameters:
++ sz  - the am
+- asz - the size of an entry in the array, for example `sizeof(PetscScalar)`
+
+  Output Parameters:
+. addr - the address of the memory
+
+  Level: developer
+
+.seealso: [](sec_pcmpi), `PCMPIServerBegin()`, `PCMPI`, `KSPCheckPCMPI()`, `PCMPIServerDeallocateArray()`
+@*/
+PetscErrorCode PCMPIServerAllocateArray(size_t sz, size_t asz, void **addr)
+{
+  PetscFunctionBegin;
+  if (!PCMPIServerActive || PCMPIServerInSolve) PetscCall(PetscMalloc(sz * asz, addr));
+  else {
+    PCMPIServerAllocation allocation;
+    static int            shmkeys = 10;
+
+    PetscCall(PetscCalloc(sizeof(struct _PCMPIServerAllocation), &allocation));
+    allocation->shmkey = shmkeys++;
+    allocation->sz     = sz * asz;
+    allocation->shmid  = shmget(allocation->shmkey, allocation->sz, 0666 | IPC_CREAT);
+    PetscCheck(allocation->shmid != -1, PETSC_COMM_SELF, PETSC_ERR_LIB, "Unable to schmget() of size %d with key %d %s", (int)allocation->sz, allocation->shmkey, strerror(errno));
+    allocation->addr = shmat(allocation->shmid, (void *)0, 0);
+    PetscCheck(allocation->addr, PETSC_COMM_SELF, PETSC_ERR_LIB, "Unable to shmat() of shmid %d %s", (int)allocation->shmid, strerror(errno));
+
+    if (!allocations) allocations = allocation;
+    else {
+      PCMPIServerAllocation next = allocations;
+      while (next->next) next = next->next;
+      next->next = allocation;
+    }
+    *addr = allocation->addr;
+    // printf("[0] Allocating key %d shmid %d length %d %p\n",allocation->shmkey,allocation->shmid,(int)sz,*addr);
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  PCMPIServerDeallocateArray - deallocates shared memory accessable by all MPI processes in the server
+
+  Not Collective, only called on the first MPI process
+
+  Input Parameter:
+. addr - the address of array
+
+  Level: developer
+
+.seealso: [](sec_pcmpi), `PCMPIServerBegin()`, `PCMPI`, `KSPCheckPCMPI()`, `PCMPIServerAllocateArray()`
+@*/
+PetscErrorCode PCMPIServerDeallocateArray(void **addr)
+{
+  PetscFunctionBegin;
+  if (!*addr) PetscFunctionReturn(PETSC_SUCCESS);
+  if (!PCMPIServerActive || PCMPIServerInSolve) PetscCall(PetscFree(*addr));
+  else {
+    PCMPIServerAllocation next = allocations, previous = NULL;
+
+    while (next) {
+      if (next->addr == *addr) {
+        // printf("[0] Deallocating key %d shmid %d array %p\n",next->shmkey, next->shmid,next->addr);
+        PetscCheck(!shmctl(next->shmid, IPC_RMID, NULL), PETSC_COMM_SELF, PETSC_ERR_SYS, "Unable to free shared memory addr %p key %d shmid %d %s", *addr, next->shmkey, next->shmid, strerror(errno));
+        *addr = NULL;
+        if (previous) previous->next = next->next;
+        else allocations = next->next;
+        PetscCall(PetscFree(next));
+        PetscFunctionReturn(PETSC_SUCCESS);
+      }
+      previous = next;
+      next     = next->next;
+    }
+    SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Unable to locate allocated address %p", *addr);
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*@C
   PCMPIServerEnd - ends a server that runs on the rank != 0 MPI processes waiting to process requests for
   parallel KSP solves and management of parallel `KSP` objects.
@@ -492,7 +795,7 @@ PetscErrorCode PCMPIServerBegin(void)
   Level: developer
 
   Note:
-  This is normally ended automatically in `PetscFinalize()` when the option is provided
+  This is normally called automatically in `PetscFinalize()` when the option is provided
 
 .seealso: [](sec_pcmpi), `PCMPIServerBegin()`, `PCMPI`, `KSPCheckPCMPI()`
 @*/
@@ -550,6 +853,7 @@ static PetscErrorCode PCSetUp_Seq(PC pc)
   char       *found = NULL, *cprefix;
 
   PetscFunctionBegin;
+  PCMPIServerInSolve = PETSC_TRUE;
   PetscCall(PCGetOperators(pc, NULL, &sA));
   PetscCall(PCGetOptionsPrefix(pc, &prefix));
   PetscCall(KSPCreate(PETSC_COMM_SELF, &km->ksps[0]));
@@ -571,6 +875,7 @@ static PetscErrorCode PCSetUp_Seq(PC pc)
   PetscCall(KSPSetUp(km->ksps[0]));
   PetscCall(PetscInfo((PetscObject)pc, "MPI parallel linear solver system is being solved directly on rank 0 due to its small size\n"));
   PCMPIKSPCountsSeq++;
+  PCMPIServerInSolve = PETSC_FALSE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -581,6 +886,7 @@ static PetscErrorCode PCApply_Seq(PC pc, Vec b, Vec x)
   Mat      A;
 
   PetscFunctionBegin;
+  PCMPIServerInSolve = PETSC_TRUE;
   PetscCall(KSPSolve(km->ksps[0], b, x));
   PetscCall(KSPGetIterationNumber(km->ksps[0], &its));
   PCMPISolveCountsSeq++;
@@ -588,6 +894,7 @@ static PetscErrorCode PCApply_Seq(PC pc, Vec b, Vec x)
   PetscCall(KSPGetOperators(km->ksps[0], NULL, &A));
   PetscCall(MatGetSize(A, &n, NULL));
   PCMPISizesSeq += n;
+  PCMPIServerInSolve = PETSC_FALSE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -605,10 +912,26 @@ static PetscErrorCode PCView_Seq(PC pc, PetscViewer viewer)
 static PetscErrorCode PCDestroy_Seq(PC pc)
 {
   PC_MPI *km = (PC_MPI *)pc->data;
+  Mat     A, B;
+  Vec     x, b;
 
   PetscFunctionBegin;
+  PCMPIServerInSolve = PETSC_TRUE;
+  /* since matrices and vectors are shared with outer KSP we need to ensure they are not destroyed with PetscFree() */
+  PetscCall(KSPGetOperators(km->ksps[0], &A, &B));
+  PetscCall(PetscObjectReference((PetscObject)A));
+  PetscCall(PetscObjectReference((PetscObject)B));
+  PetscCall(KSPGetSolution(km->ksps[0], &x));
+  PetscCall(PetscObjectReference((PetscObject)x));
+  PetscCall(KSPGetRhs(km->ksps[0], &b));
+  PetscCall(PetscObjectReference((PetscObject)b));
   PetscCall(KSPDestroy(&km->ksps[0]));
   PetscCall(PetscFree(pc->data));
+  PCMPIServerInSolve = PETSC_FALSE;
+  PetscCall(MatDestroy(&A));
+  PetscCall(MatDestroy(&B));
+  PetscCall(VecDestroy(&x));
+  PetscCall(VecDestroy(&b));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -688,7 +1011,7 @@ static PetscErrorCode PCDestroy_MPI(PC pc)
 }
 
 /*
-     PCView_MPI - Cannot call view on the MPI parallel KSP because other ranks do not have access to the viewer
+     PCView_MPI - Cannot call view on the MPI parallel KSP because other ranks do not have access to the viewer, use options database
 */
 static PetscErrorCode PCView_MPI(PC pc, PetscViewer viewer)
 {
@@ -700,8 +1023,8 @@ static PetscErrorCode PCView_MPI(PC pc, PetscViewer viewer)
   PetscCall(PetscObjectGetComm((PetscObject)km->ksps[0], &comm));
   PetscCallMPI(MPI_Comm_size(comm, &size));
   PetscCall(PetscViewerASCIIPrintf(viewer, "Size of MPI communicator used for MPI parallel KSP solve %d\n", size));
-  PetscCall(PetscViewerASCIIPrintf(viewer, "Desired minimum number of nonzeros per rank for MPI parallel solve %d\n", (int)km->mincntperrank));
-  PetscCall(PetscViewerASCIIPrintf(viewer, "*** Use -mpi_linear_solver_server_view to statistics on all the solves ***\n"));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "Desired minimum number of matrix rows on each MPI process for MPI parallel solve %d\n", (int)km->mincntperrank));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "*** Use -mpi_linear_solver_server_view to view statistics on all the solves ***\n"));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
