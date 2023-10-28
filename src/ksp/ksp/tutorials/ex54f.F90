@@ -440,7 +440,6 @@
 !   test:
 !      suffix: mis
 !      args: -mat_coarsen_type mis
-!
 !   test:
 !      suffix: hem
 !      args: -mat_coarsen_type hem
