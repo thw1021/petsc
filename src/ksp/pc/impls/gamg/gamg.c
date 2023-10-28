@@ -625,7 +625,7 @@ static PetscErrorCode PCSetUp_GAMG(PC pc)
   /* Get A_i and R_i */
   for (level = 0, Aarr[0] = Pmat, nactivepe = size; level < (pc_gamg->Nlevels - 1) && (!level || M > pc_gamg->coarse_eq_limit); level++) {
     pc_gamg->current_level = level;
-    PetscCheck(level < PETSC_MG_MAXLEVELS, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Too many levels %" PetscInt_FMT, level);
+    PetscCheck(level < PETSC_MG_MAXLEVELS - 2, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Too many levels %" PetscInt_FMT, level + 1);
     level1 = level + 1;
 #if defined(GAMG_STAGES)
     if (!gamg_stages[level]) {
@@ -1581,6 +1581,8 @@ static PetscErrorCode PCSetFromOptions_GAMG(PC pc, PetscOptionItems *PetscOption
       pc_gamg->threshold[i] = pc_gamg->threshold[i - 1] * pc_gamg->threshold_scale;
     } while (++i < PETSC_MG_MAXLEVELS);
   }
+  PetscCall(PetscOptionsInt("-pc_mg_levels", "Set number of MG levels (should get from base class)", "PCGAMGSetNlevels", pc_gamg->Nlevels, &pc_gamg->Nlevels, NULL));
+  PetscCheck(pc_gamg->Nlevels <= PETSC_MG_MAXLEVELS, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_INCOMP, "-pc_mg_levels (%d) >= PETSC_MG_MAXLEVELS (%d)",(int)pc_gamg->Nlevels,(int)PETSC_MG_MAXLEVELS);
   n = PETSC_MG_MAXLEVELS;
   PetscCall(PetscOptionsIntArray("-pc_gamg_rank_reduction_factors", "Manual schedule of coarse grid reduction factors that overrides internal heuristics (0 for first reduction puts one process/device)", "PCGAMGSetRankReductionFactors", pc_gamg->level_reduction_factors, &n, &flag));
   if (!flag) i = 0;
@@ -1588,7 +1590,6 @@ static PetscErrorCode PCSetFromOptions_GAMG(PC pc, PetscOptionItems *PetscOption
   do {
     pc_gamg->level_reduction_factors[i] = -1;
   } while (++i < PETSC_MG_MAXLEVELS);
-  PetscCall(PetscOptionsInt("-pc_mg_levels", "Set number of MG levels", "PCGAMGSetNlevels", pc_gamg->Nlevels, &pc_gamg->Nlevels, NULL));
   {
     PetscReal eminmax[2] = {0., 0.};
     n                    = 2;
@@ -1598,6 +1599,7 @@ static PetscErrorCode PCSetFromOptions_GAMG(PC pc, PetscOptionItems *PetscOption
       PetscCall(PCGAMGSetEigenvalues(pc, eminmax[1], eminmax[0]));
     }
   }
+
   /* set options for subtype */
   PetscCall((*pc_gamg->ops->setfromoptions)(pc, PetscOptionsObject));
 
