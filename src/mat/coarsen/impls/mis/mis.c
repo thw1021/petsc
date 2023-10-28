@@ -252,7 +252,7 @@ static PetscErrorCode MatCoarsenApply_MIS_private(IS perm, Mat Gmat, PetscBool s
     // check sizes -- all vertices must get in graph
     PetscCall(PetscCDCount(agg_lists, &aa[0]));
     PetscCall(MPIU_Allreduce(aa, bb, 2, MPIU_INT, MPI_SUM, comm));
-    if (MM != bb[0]) PetscCall(PetscInfo(info_is, "Warning: N = %" PetscInt_FMT ", sum of aggregates %" PetscInt_FMT ", %" PetscInt_FMT " removed total", MM, bb[0], bb[1]));
+    if (MM != bb[0]) PetscCall(PetscInfo(info_is, "Warning: N = %" PetscInt_FMT ", sum of aggregates %" PetscInt_FMT ", %" PetscInt_FMT " removed total\n", MM, bb[0], bb[1]));
     PetscCheck(MM >= bb[0], PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Sum of aggs too big");
   }
   PetscCall(ISDestroy(&info_is));
