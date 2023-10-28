@@ -437,10 +437,11 @@
 !   test:
 !      suffix: misk
 !      args: -mat_coarsen_type misk -pc_gamg_aggressive_coarsening 0
-!      output_file: output/ex54f_mis.out
 !   test:
 !      suffix: mis
 !      args: -mat_coarsen_type mis
-!      output_file: output/ex54f_mis.out
+!   test:
+!      suffix: hem
+!      args: -mat_coarsen_type hem
 !
 !TEST*/
