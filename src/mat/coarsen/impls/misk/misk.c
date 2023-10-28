@@ -71,7 +71,7 @@ static PetscErrorCode MatCoarsenApply_MISK_private(IS perm, const PetscInt misk,
     const PetscInt    nloc_inner = cMat->rmap->n;
     PetscCoarsenData *agg_lists;
     PetscInt         *cpcol_gid = NULL, *cpcol_state, *lid_cprowID, *lid_state, *lid_parent_gid = NULL;
-    PetscInt          num_fine_ghosts, kk, n, ix, j, *idx, *ai, Iend, my0, nremoved, gid, lid, cpid, lidj, sgid, t1, t2, slid, nDone, nselected = 0, state;
+    PetscInt          num_fine_ghosts, kk, n, ix, j, *idx, *ai, Iend, my0, nremoved, gid, cpid, lidj, sgid, t1, t2, slid, nDone, nselected = 0, state;
     PetscBool        *lid_removed, isOK;
     PetscLayout       layout;
     PetscSF           sf;
@@ -122,7 +122,7 @@ static PetscErrorCode MatCoarsenApply_MISK_private(IS perm, const PetscInt misk,
     /* set index into cmpressed row 'lid_cprowID' */
     if (matB) {
       for (ix = 0; ix < matB->compressedrow.nrows; ix++) {
-        lid = matB->compressedrow.rindex[ix];
+        const PetscInt lid = matB->compressedrow.rindex[ix];
         if (lid >= 0) lid_cprowID[lid] = ix;
       }
     }
@@ -133,9 +133,9 @@ static PetscErrorCode MatCoarsenApply_MISK_private(IS perm, const PetscInt misk,
     while (nDone < nloc_inner || PETSC_TRUE) { /* asynchronous not implemented */
       /* check all vertices */
       for (kk = 0; kk < nloc_inner; kk++) {
-        lid   = perm_ix ? perm_ix[kk] : kk;
+        const PetscInt lid = perm_ix ? perm_ix[kk] : kk;
         state = lid_state[lid];
-        if (lid_removed[lid]) continue;
+        if (iterIdx == 0 && lid_removed[lid]) continue;
         if (state == MIS_NOT_DONE) {
           /* parallel test, delete if selected ghost */
           isOK = PETSC_TRUE;
@@ -162,8 +162,12 @@ static PetscErrorCode MatCoarsenApply_MISK_private(IS perm, const PetscInt misk,
               /* if I have any ghost adj then not a singleton */
               ix = lid_cprowID[lid];
               if (ix == -1 || !(matB->compressedrow.i[ix + 1] - matB->compressedrow.i[ix])) {
-                nremoved++;
-                lid_removed[lid] = PETSC_TRUE;
+                if (iterIdx == 0) {
+                  lid_removed[lid] = PETSC_TRUE;
+                  nremoved++; // let it get selected
+                }
+                // PetscCall(PetscCDAppendID(agg_lists, lid, lid + my0));
+                // lid_state[lid] = nselected; // >= 0  is selected, cache for ordering coarse grid
                 /* should select this because it is technically in the MIS but lets not */
                 continue; /* one local adj (me) and no ghost - singleton */
               }
@@ -193,8 +197,8 @@ static PetscErrorCode MatCoarsenApply_MISK_private(IS perm, const PetscInt misk,
         PetscCall(PetscSFBcastEnd(sf, MPIU_INT, lid_state, cpcol_state, MPI_REPLACE));
         ai = matB->compressedrow.i;
         for (ix = 0; ix < matB->compressedrow.nrows; ix++) {
-          lid   = matB->compressedrow.rindex[ix]; /* local boundary node */
-          state = lid_state[lid];
+          const int lidj = matB->compressedrow.rindex[ix]; /* local boundary node */
+          state          = lid_state[lidj];
           if (state == MIS_NOT_DONE) {
             /* look at ghosts */
             n   = ai[ix + 1] - ai[ix];
@@ -203,9 +207,9 @@ static PetscErrorCode MatCoarsenApply_MISK_private(IS perm, const PetscInt misk,
               cpid = idx[j];                            /* compressed row ID in B mat */
               if (MIS_IS_SELECTED(cpcol_state[cpid])) { /* lid is now deleted by ghost */
                 nDone++;
-                lid_state[lid]      = MIS_DELETED; /* delete this */
-                sgid                = cpcol_gid[cpid];
-                lid_parent_gid[lid] = sgid; /* keep track of proc that I belong to */
+                lid_state[lidj]      = MIS_DELETED; /* delete this */
+                sgid                 = cpcol_gid[cpid];
+                lid_parent_gid[lidj] = sgid; /* keep track of proc that I belong to */
                 break;
               }
             }
