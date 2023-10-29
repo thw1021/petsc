@@ -57,7 +57,7 @@ PETSC_EXTERN void matdensegetarrayf90_(Mat *mat, F90Array2d *ptr, int *ierr PETS
   *ierr = MatDenseGetLDA(*mat, &lda);
   if (*ierr) return;
   if (m != lda) { // TODO: add F90Array2dLDACreate()
-    *ierr = PetscError(((PetscObject)*mat)->comm, __LINE__, PETSC_FUNCTION_NAME, __FILE__, PETSC_ERR_ARG_BADPTR, PETSC_ERROR_INITIAL, "Array lda %" PetscInt_FMT " must match number local rows %" PetscInt_FMT "",lda,m);
+    *ierr = PetscError(((PetscObject)*mat)->comm, __LINE__, PETSC_FUNCTION_NAME, __FILE__, PETSC_ERR_ARG_BADPTR, PETSC_ERROR_INITIAL, "Array lda %" PetscInt_FMT " must match number of local rows %" PetscInt_FMT, lda, m);
     return;
   }
   *ierr = F90Array2dCreate(fa, MPIU_SCALAR, 1, m, 1, N, ptr PETSC_F90_2PTR_PARAM(ptrd));
@@ -84,7 +84,7 @@ PETSC_EXTERN void matdensegetarrayreadf90_(Mat *mat, F90Array2d *ptr, int *ierr 
   *ierr = MatDenseGetLDA(*mat, &lda);
   if (*ierr) return;
   if (m != lda) { // TODO: add F90Array2dLDACreate()
-    *ierr = PetscError(((PetscObject)*mat)->comm, __LINE__, PETSC_FUNCTION_NAME, __FILE__, PETSC_ERR_ARG_BADPTR, PETSC_ERROR_INITIAL, "Array lda %" PetscInt_FMT " must match number local rows %" PetscInt_FMT "",lda,m);
+    *ierr = PetscError(((PetscObject)*mat)->comm, __LINE__, PETSC_FUNCTION_NAME, __FILE__, PETSC_ERR_ARG_BADPTR, PETSC_ERROR_INITIAL, "Array lda %" PetscInt_FMT " must match number of local rows %" PetscInt_FMT, lda, m);
     return;
   }
   *ierr = F90Array2dCreate((void **)fa, MPIU_SCALAR, 1, m, 1, N, ptr PETSC_F90_2PTR_PARAM(ptrd));
@@ -111,7 +111,7 @@ PETSC_EXTERN void matdensegetarraywritef90_(Mat *mat, F90Array2d *ptr, int *ierr
   *ierr = MatDenseGetLDA(*mat, &lda);
   if (*ierr) return;
   if (m != lda) { // TODO: add F90Array2dLDACreate()
-    *ierr = PetscError(((PetscObject)*mat)->comm, __LINE__, PETSC_FUNCTION_NAME, __FILE__, PETSC_ERR_ARG_BADPTR, PETSC_ERROR_INITIAL, "Array lda %" PetscInt_FMT " must match number local rows %" PetscInt_FMT "",lda,m);
+    *ierr = PetscError(((PetscObject)*mat)->comm, __LINE__, PETSC_FUNCTION_NAME, __FILE__, PETSC_ERR_ARG_BADPTR, PETSC_ERROR_INITIAL, "Array lda %" PetscInt_FMT " must match number of local rows %" PetscInt_FMT, lda, m);
     return;
   }
   *ierr = F90Array2dCreate(fa, MPIU_SCALAR, 1, m, 1, N, ptr PETSC_F90_2PTR_PARAM(ptrd));
