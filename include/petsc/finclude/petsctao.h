@@ -8,10 +8,15 @@
 #define TaoConvergedReason PetscEnum
 #define TaoType character*(80)
 #define TaoLineSearchType character*(80)
+#define TaoRegularizerType character*(80)
+#define TaoProxType character*(80)
 #define TaoADMMUpdateType PetscEnum
 #define TaoADMMRegularizerType PetscEnum
 #define TaoALMMType PetscEnum
 #define TaoBNCGType PetscEnum
+
+#define TAOPROX_L1 'prox_l1'
+#define TAOPROX_SIMPLEX 'prox_simplex'
 
 #define TAOLMVM     'lmvm'
 #define TAONLS      'nls'
@@ -45,6 +50,7 @@
 #define TAOSHELL    'shell'
 #define TAOADMM     'admm'
 #define TAOALMM     'almm'
+#define TAOPROX     'prox'
 #define TAOPYTHON   'python'
 #define TAOSNES     'snes'
 

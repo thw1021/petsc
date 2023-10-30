@@ -2,6 +2,7 @@
 
 #include <petsctao.h>
 #include <petsctaolinesearch.h>
+#include <petsctaoregularizer.h>
 #include <petsc/private/petscimpl.h>
 
 PETSC_EXTERN PetscBool      TaoRegisterAllCalled;
@@ -30,6 +31,8 @@ struct _TaoOps {
   PetscErrorCode (*convergencetest)(Tao, void *);
   PetscErrorCode (*convergencedestroy)(void *);
 
+  PetscErrorCode (*applyproximalmap)(Tao, PetscReal, Vec, Vec, void *);
+
   /* Methods set by solver */
   PetscErrorCode (*computedual)(Tao, Vec, Vec);
   PetscErrorCode (*setup)(Tao);
@@ -40,6 +43,17 @@ struct _TaoOps {
 };
 
 #define MAXTAOMONITORS 10
+
+typedef struct {
+  PETSCHEADER(struct _TaoOps);
+  void     *orig_objP;
+  void     *orig_objgradP;
+  void     *orig_gradP;
+  void     *orig_hessP;
+  Vec       g, y, workvec;
+  Mat       H, H_pre, H_work;
+  PetscReal stepsize;
+} MoreauRegularizer;
 
 struct _p_Tao {
   PETSCHEADER(struct _TaoOps);
@@ -60,6 +74,7 @@ struct _p_Tao {
   void *user_jac_designP;
   void *user_boundsP;
   void *user_update;
+  void *user_proxP;
 
   PetscErrorCode (*monitor[MAXTAOMONITORS])(Tao, void *);
   PetscErrorCode (*monitordestroy[MAXTAOMONITORS])(void **);
@@ -70,6 +85,8 @@ struct _p_Tao {
 
   PetscBool setupcalled;
   void     *data;
+
+  TaoRegularizer reg;
 
   Vec        solution;
   Vec        gradient;
@@ -195,6 +212,10 @@ PETSC_EXTERN PetscLogEvent TAO_ObjGradEval;
 PETSC_EXTERN PetscLogEvent TAO_HessianEval;
 PETSC_EXTERN PetscLogEvent TAO_ConstraintsEval;
 PETSC_EXTERN PetscLogEvent TAO_JacobianEval;
+
+PetscErrorCode TaoApplyProximalMap_L1(Tao, PetscReal, Vec, Vec, void *);
+PetscErrorCode TaoApplyProximalMap_Simplex(Tao, PetscReal, Vec, Vec, void *);
+PetscErrorCode TaoApplyProximalMap_Affine(Tao, PetscReal, Vec, Vec, void *);
 
 static inline PetscErrorCode TaoLogConvergenceHistory(Tao tao, PetscReal obj, PetscReal resid, PetscReal cnorm, PetscInt totits)
 {
