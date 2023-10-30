@@ -13,11 +13,16 @@ Changes: Development
 
 .. rubric:: Configure/Build:
 
+- Change ``make test REPLACE=1`` to ``make test ADD=1`` to add a new alt file if no currently output file matches
+- Remove ``make test ALT=1``
+
 .. rubric:: Sys:
 
 .. rubric:: Event Logging:
 
 .. rubric:: PetscViewer:
+
+- Change ``PetscViewerRestoreSubViewer()`` to no longer need a call to ``PetscViewerFlush()`` after it
 
 .. rubric:: PetscDraw:
 
