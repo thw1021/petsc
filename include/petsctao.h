@@ -235,6 +235,12 @@ typedef const char *TaoType;
 #define TAOALMM     "almm"
 #define TAOPYTHON   "python"
 #define TAOSNES     "snes"
+#define TAOPROX     "prox"
+
+typedef const char *TaoProxType;
+#define TAOPROX_L1      "prox_l1"
+#define TAOPROX_AFFINE  "prox_affine"
+#define TAOPROX_SIMPLEX "prox_simplex"
 
 PETSC_EXTERN PetscClassId      TAO_CLASSID;
 PETSC_EXTERN PetscFunctionList TaoList;
@@ -470,6 +476,8 @@ PETSC_EXTERN PetscErrorCode TaoGetKSP(Tao, KSP *);
 PETSC_EXTERN PetscErrorCode TaoGetLinearSolveIterations(Tao, PetscInt *);
 PETSC_EXTERN PetscErrorCode TaoKSPSetUseEW(Tao, PetscBool);
 
+#include <petsctaoregularizer.h>
+
 #include <petsctaolinesearch.h>
 
 PETSC_EXTERN PetscErrorCode TaoGetLineSearch(Tao, TaoLineSearch *);
@@ -552,3 +560,28 @@ PETSC_EXTERN PetscErrorCode TaoGradientNorm(Tao, Vec, NormType, PetscReal *);
 PETSC_EXTERN PetscErrorCode TaoEstimateActiveBounds(Vec, Vec, Vec, Vec, Vec, Vec, PetscReal, PetscReal *, IS *, IS *, IS *, IS *, IS *);
 PETSC_EXTERN PetscErrorCode TaoBoundStep(Vec, Vec, Vec, IS, IS, IS, PetscReal, Vec);
 PETSC_EXTERN PetscErrorCode TaoBoundSolution(Vec, Vec, Vec, PetscReal, PetscInt *, Vec);
+
+PETSC_EXTERN PetscErrorCode TaoProxSetType(Tao, TaoProxType);
+PETSC_EXTERN PetscErrorCode TaoProxGetType(Tao, TaoProxType *);
+
+PETSC_EXTERN PetscErrorCode TaoProxGetSubsolver(Tao, Tao *);
+PETSC_EXTERN PetscErrorCode TaoProxSetStepSize(Tao, PetscReal);
+PETSC_EXTERN PetscErrorCode TaoProxGetStepSize(Tao, PetscReal *);
+PETSC_EXTERN PetscErrorCode TaoProxSetVM(Tao, Mat);
+PETSC_EXTERN PetscErrorCode TaoProxGetVM(Tao, Mat *);
+PETSC_EXTERN PetscErrorCode TaoProxSetSoftThreshold(Tao, PetscReal, PetscReal);
+PETSC_EXTERN PetscErrorCode TaoProxSetInitialVector(Tao, Vec);
+PETSC_EXTERN PetscErrorCode TaoProxGetInitialVector(Tao, Vec *);
+PETSC_EXTERN PetscErrorCode TaoGetProxParentTao(Tao, Tao *);
+
+PETSC_EXTERN PetscErrorCode TaoProxSetSoftThresholdContext(Tao, PetscReal, PetscReal);
+PETSC_EXTERN PetscErrorCode TaoProxSetAffineContext(Tao, Vec);
+
+PETSC_EXTERN PetscErrorCode TaoProxInitializePackage(void);
+PETSC_EXTERN PetscErrorCode TaoProxFinalizePackage(void);
+
+PETSC_EXTERN PetscErrorCode TaoProxRegister(TaoProxType, PetscErrorCode (*)(Tao, PetscReal, Vec, Vec, void *));
+
+PETSC_EXTERN PetscErrorCode TaoApplyProximalMap(Tao, PetscReal, Vec, Vec);
+//                                                                  x    f(x)         grad  lambda       y
+PETSC_EXTERN PetscErrorCode TaoComputeObjectiveAndGradient_Reg(Tao, Vec, PetscReal *, Vec, PetscReal *, Vec);
