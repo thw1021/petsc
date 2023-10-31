@@ -2337,7 +2337,7 @@ static PetscErrorCode DMPlexCreateSphereMesh_Internal(DM dm, PetscInt dim, Petsc
   Vec            coordinates;
   PetscScalar   *coords;
   PetscReal     *coordsIn;
-  PetscInt       numCells, numEdges, numVerts = 0, firstVertex = 0, v, firstEdge, coordSize, d, c, e;
+  PetscInt       numCells, numEdges, numVerts = 0, firstVertex = 0, v, firstEdge, coordSize, d, e;
   PetscMPIInt    rank;
 
   PetscFunctionBegin;
@@ -2420,10 +2420,10 @@ static PetscErrorCode DMPlexCreateSphereMesh_Internal(DM dm, PetscInt dim, Petsc
       }
       /* Build Topology */
       PetscCall(DMPlexSetChart(dm, 0, numCells + numVerts));
-      for (c = 0; c < numCells; c++) PetscCall(DMPlexSetConeSize(dm, c, embedDim));
+      for (PetscInt c = 0; c < numCells; c++) PetscCall(DMPlexSetConeSize(dm, c, embedDim));
       PetscCall(DMSetUp(dm)); /* Allocate space for cones */
       /* Cells */
-      for (i = 0, c = 0; i < numVerts; ++i) {
+      for (PetscInt i = 0, c = 0; i < numVerts; ++i) {
         for (j = 0; j < i; ++j) {
           for (k = 0; k < j; ++k) {
             if (graph[i * numVerts + j] && graph[j * numVerts + k] && graph[k * numVerts + i]) {
@@ -2489,7 +2489,7 @@ static PetscErrorCode DMPlexCreateSphereMesh_Internal(DM dm, PetscInt dim, Petsc
       firstEdge   = numCells + numVerts;
       /* Build Topology */
       PetscCall(DMPlexSetChart(dm, 0, numCells + numEdges + numVerts));
-      for (c = 0; c < numCells; c++) PetscCall(DMPlexSetConeSize(dm, c, 4));
+      for (PetscInt c = 0; c < numCells; c++) PetscCall(DMPlexSetConeSize(dm, c, 4));
       for (e = firstEdge; e < firstEdge + numEdges; ++e) PetscCall(DMPlexSetConeSize(dm, e, 2));
       PetscCall(DMSetUp(dm)); /* Allocate space for cones */
       if (rank == 0) {
@@ -2728,11 +2728,11 @@ static PetscErrorCode DMPlexCreateSphereMesh_Internal(DM dm, PetscInt dim, Petsc
       }
       /* Build Topology */
       PetscCall(DMPlexSetChart(dm, 0, numCells + numVerts));
-      for (c = 0; c < numCells; c++) PetscCall(DMPlexSetConeSize(dm, c, embedDim));
+      for (PetscInt c = 0; c < numCells; c++) PetscCall(DMPlexSetConeSize(dm, c, embedDim));
       PetscCall(DMSetUp(dm)); /* Allocate space for cones */
       /* Cells */
       if (rank == 0) {
-        for (i = 0, c = 0; i < numVerts; ++i) {
+        for (PetscInt i = 0, c = 0; i < numVerts; ++i) {
           for (j = 0; j < i; ++j) {
             for (k = 0; k < j; ++k) {
               for (l = 0; l < k; ++l) {
