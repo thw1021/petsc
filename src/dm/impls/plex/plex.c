@@ -5613,7 +5613,7 @@ PetscErrorCode DMPlexGetAllFaces_Internal(DM plex, IS *faceIS)
  Returns number of components and tensor degree for the field.  For interpolated meshes, line should be a point
  representing a line in the section.
 */
-static PetscErrorCode PetscSectionFieldGetTensorDegree_Private(DM dm, PetscSection section, PetscInt field, PetscInt line, PetscBool vertexchart, PetscInt *Nc, PetscInt *k, PetscBool *continuous)
+static PetscErrorCode PetscSectionFieldGetTensorDegree_Private(DM dm, PetscSection section, PetscInt field, PetscInt line, PetscInt *Nc, PetscInt *k, PetscBool *continuous)
 {
   PetscObject  obj;
   PetscClassId id;
@@ -5706,7 +5706,7 @@ PetscErrorCode DMPlexSetClosurePermutationTensor(DM dm, PetscInt point, PetscSec
 {
   DMLabel   label;
   PetscInt  dim, depth = -1, eStart = -1, Nf;
-  PetscBool vertexchart, continuous = PETSC_TRUE;
+  PetscBool continuous = PETSC_TRUE;
 
   PetscFunctionBegin;
   PetscCall(DMGetDimension(dm, &dim));
@@ -5733,28 +5733,21 @@ PetscErrorCode DMPlexSetClosurePermutationTensor(DM dm, PetscInt point, PetscSec
       eStart = cone2[0];
     } else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Point %" PetscInt_FMT " of depth %" PetscInt_FMT " cannot be used to bootstrap spectral ordering for dim %" PetscInt_FMT, point, depth, dim);
   } else PetscCheck(depth < 0, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Point %" PetscInt_FMT " of depth %" PetscInt_FMT " cannot be used to bootstrap spectral ordering for dim %" PetscInt_FMT, point, depth, dim);
-  { /* Determine whether the chart covers all points or just vertices. */
-    PetscInt pStart, pEnd, cStart, cEnd;
-    PetscCall(DMPlexGetDepthStratum(dm, 0, &pStart, &pEnd));
-    PetscCall(PetscSectionGetChart(section, &cStart, &cEnd));
-    if (pStart == cStart && pEnd == cEnd) vertexchart = PETSC_TRUE;      /* Only vertices are in the chart */
-    else if (cStart <= point && point < cEnd) vertexchart = PETSC_FALSE; /* Some interpolated points exist in the chart */
-    else vertexchart = PETSC_TRUE;                                       /* Some interpolated points are not in chart; assume dofs only at cells and vertices */
-  }
+
   PetscCall(PetscSectionGetNumFields(section, &Nf));
   for (PetscInt d = 1; d <= dim; d++) {
     PetscInt  k, f, Nc, c, i, j, size = 0, offset = 0, foffset = 0;
     PetscInt *perm;
 
     for (f = 0; f < Nf; ++f) {
-      PetscCall(PetscSectionFieldGetTensorDegree_Private(dm, section, f, eStart, vertexchart, &Nc, &k, &continuous));
+      PetscCall(PetscSectionFieldGetTensorDegree_Private(dm, section, f, eStart, &Nc, &k, &continuous));
       size += PetscPowInt(k + 1, d) * Nc;
     }
     PetscCall(PetscMalloc1(size, &perm));
     for (f = 0; f < Nf; ++f) {
       switch (d) {
       case 1:
-        PetscCall(PetscSectionFieldGetTensorDegree_Private(dm, section, f, eStart, vertexchart, &Nc, &k, &continuous));
+        PetscCall(PetscSectionFieldGetTensorDegree_Private(dm, section, f, eStart, &Nc, &k, &continuous));
         /*
          Original ordering is [ edge of length k-1; vtx0; vtx1 ]
          We want              [ vtx0; edge of length k-1; vtx1 ]
@@ -5772,7 +5765,7 @@ PetscErrorCode DMPlexSetClosurePermutationTensor(DM dm, PetscInt point, PetscSec
         break;
       case 2:
         /* The original quad closure is oriented clockwise, {f, e_b, e_r, e_t, e_l, v_lb, v_rb, v_tr, v_tl} */
-        PetscCall(PetscSectionFieldGetTensorDegree_Private(dm, section, f, eStart, vertexchart, &Nc, &k, &continuous));
+        PetscCall(PetscSectionFieldGetTensorDegree_Private(dm, section, f, eStart, &Nc, &k, &continuous));
         /* The SEM order is
 
          v_lb, {e_b}, v_rb,
@@ -5822,7 +5815,7 @@ PetscErrorCode DMPlexSetClosurePermutationTensor(DM dm, PetscInt point, PetscSec
          e_bl, e_bb, e_br, e_bf,  e_tf, e_tr, e_tb, e_tl,  e_rf, e_lf, e_lb, e_rb,
          v_blf, v_blb, v_brb, v_brf, v_tlf, v_trf, v_trb, v_tlb}
          */
-        PetscCall(PetscSectionFieldGetTensorDegree_Private(dm, section, f, eStart, vertexchart, &Nc, &k, &continuous));
+        PetscCall(PetscSectionFieldGetTensorDegree_Private(dm, section, f, eStart, &Nc, &k, &continuous));
         /* The SEM order is
          Bottom Slice
          v_blf, {e^{(k-1)-n}_bf}, v_brf,
