@@ -444,7 +444,7 @@ static PetscErrorCode MatCoarsenApply_HEM_private(Mat a_Gmat, const PetscInt n_i
   /* make a copy of the graph, this gets destroyed in iterates */
   PetscCall(MatDuplicate(a_Gmat, MAT_COPY_VALUES, &cMat));
   PetscCall(MatConvert(cMat, MATAIJ, MAT_INPLACE_MATRIX, &cMat));
-  isMPI = (size > 1);
+  isMPI = (PetscBool)(size > 1);
   if (isMPI) {
     /* list of deleted ghosts, should compress this */
     PetscCall(PetscCDCreate(size, &ghost_deleted_list));
