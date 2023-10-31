@@ -5626,16 +5626,10 @@ static PetscErrorCode PetscSectionFieldGetTensorDegree_Private(DM dm, PetscSecti
   if (id == PETSCFE_CLASSID) fe = (PetscFE)obj;
 
   if (!fe) {
-    if (line < 0) {
-      *k  = 0;
-      *Nc = 0;
-    } else if (vertexchart) { /* If we only have a vertex chart, we must have degree k=1 */
-      *k = 1;
-    } else { /* Assume the full interpolated mesh is in the chart; lines in particular */
-      /* An order k SEM disc has k-1 dofs on an edge */
-      PetscCall(PetscSectionGetFieldDof(section, line, field, k));
-      *k = *k / *Nc + 1;
-    }
+    /* Assume the full interpolated mesh is in the chart; lines in particular */
+    /* An order k SEM disc has k-1 dofs on an edge */
+    PetscCall(PetscSectionGetFieldDof(section, line, field, k));
+    *k = *k / *Nc + 1;
   } else {
     PetscInt       dual_space_size, dim;
     PetscDualSpace dual_space;
