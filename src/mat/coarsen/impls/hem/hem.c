@@ -443,14 +443,15 @@ static PetscErrorCode MatCoarsenApply_HEM_private(Mat a_Gmat, const PetscInt n_i
   for (int kk = 0; kk < nloc; kk++) PetscCall(PetscCDAppendID(agg_llists, kk, my0 + kk));
   /* make a copy of the graph, this gets destroyed in iterates */
   PetscCall(MatDuplicate(a_Gmat, MAT_COPY_VALUES, &cMat));
-  PetscCall(PetscObjectTypeCompare((PetscObject)a_Gmat, MATMPIAIJ, &isMPI));
+  PetscCall(MatConvert(cMat, MATAIJ, MAT_INPLACE_MATRIX, &cMat));
+  isMPI = (size > 1);
   if (isMPI) {
     /* list of deleted ghosts, should compress this */
     PetscCall(PetscCDCreate(size, &ghost_deleted_list));
     PetscCall(PetscCDSetChunkSize(ghost_deleted_list, 100));
   }
   for (int iter = 0; iter < n_iter; iter++) {
-    PetscScalar *lghost_max_ew, *lid_max_ew;
+    const PetscScalar *lghost_max_ew, *lid_max_ew;
     PetscBool   *lghost_matched;
     PetscMPIInt *lghost_pe, *lghost_max_pe;
     Vec          locMaxEdge, ghostMaxEdge, ghostMaxPE, locMaxPE;
@@ -487,8 +488,9 @@ static PetscErrorCode MatCoarsenApply_HEM_private(Mat a_Gmat, const PetscInt n_i
     PetscCall(MatCreateVecs(cMat, &locMaxPE, NULL));
     /* get 'lghost_pe' & 'lghost_gid' & init. 'lghost_matched' using 'mpimat->lvec' */
     if (isMPI) {
-      Vec         vec;
-      PetscScalar vval, *buf;
+      Vec                vec;
+      PetscScalar        vval;
+      const PetscScalar *buf;
       PetscCall(MatCreateVecs(cMat, &vec, NULL));
       PetscCall(VecGetLocalSize(mpimat->lvec, &num_ghosts));
       /* lghost_matched */
@@ -500,12 +502,12 @@ static PetscErrorCode MatCoarsenApply_HEM_private(Mat a_Gmat, const PetscInt n_i
       PetscCall(VecAssemblyEnd(vec));
       PetscCall(VecScatterBegin(mpimat->Mvctx, vec, mpimat->lvec, INSERT_VALUES, SCATTER_FORWARD));
       PetscCall(VecScatterEnd(mpimat->Mvctx, vec, mpimat->lvec, INSERT_VALUES, SCATTER_FORWARD));
-      PetscCall(VecGetArray(mpimat->lvec, &buf)); /* get proc ID in 'buf' */
+      PetscCall(VecGetArrayRead(mpimat->lvec, &buf)); /* get proc ID in 'buf' */
       PetscCall(PetscMalloc1(num_ghosts, &lghost_matched));
       for (int kk = 0; kk < num_ghosts; kk++) {
         lghost_matched[kk] = (PetscBool)(PetscRealPart(buf[kk]) != 0); // the proc of the ghost for now
       }
-      PetscCall(VecRestoreArray(mpimat->lvec, &buf));
+      PetscCall(VecRestoreArrayRead(mpimat->lvec, &buf));
       /* lghost_pe */
       vval = (PetscScalar)(rank);
       for (PetscInt kk = 0, gid = my0; kk < nloc; kk++, gid++) PetscCall(VecSetValues(vec, 1, &gid, &vval, INSERT_VALUES)); /* set with GID */
@@ -513,10 +515,10 @@ static PetscErrorCode MatCoarsenApply_HEM_private(Mat a_Gmat, const PetscInt n_i
       PetscCall(VecAssemblyEnd(vec));
       PetscCall(VecScatterBegin(mpimat->Mvctx, vec, mpimat->lvec, INSERT_VALUES, SCATTER_FORWARD));
       PetscCall(VecScatterEnd(mpimat->Mvctx, vec, mpimat->lvec, INSERT_VALUES, SCATTER_FORWARD));
-      PetscCall(VecGetArray(mpimat->lvec, &buf)); /* get proc ID in 'buf' */
+      PetscCall(VecGetArrayRead(mpimat->lvec, &buf)); /* get proc ID in 'buf' */
       PetscCall(PetscMalloc1(num_ghosts, &lghost_pe));
       for (int kk = 0; kk < num_ghosts; kk++) lghost_pe[kk] = (PetscMPIInt)PetscRealPart(buf[kk]); // the proc of the ghost for now
-      PetscCall(VecRestoreArray(mpimat->lvec, &buf));
+      PetscCall(VecRestoreArrayRead(mpimat->lvec, &buf));
       /* lghost_gid */
       for (PetscInt kk = 0, gid = my0; kk < nloc; kk++, gid++) {
         vval = (PetscScalar)(gid);
@@ -527,10 +529,10 @@ static PetscErrorCode MatCoarsenApply_HEM_private(Mat a_Gmat, const PetscInt n_i
       PetscCall(VecScatterBegin(mpimat->Mvctx, vec, mpimat->lvec, INSERT_VALUES, SCATTER_FORWARD));
       PetscCall(VecScatterEnd(mpimat->Mvctx, vec, mpimat->lvec, INSERT_VALUES, SCATTER_FORWARD));
       PetscCall(VecDestroy(&vec));
-      PetscCall(VecGetArray(mpimat->lvec, &buf)); /* get proc ID in 'lghost_gid' */
+      PetscCall(VecGetArrayRead(mpimat->lvec, &buf)); /* get proc ID in 'lghost_gid' */
       PetscCall(PetscMalloc1(num_ghosts, &lghost_gid));
       for (int kk = 0; kk < num_ghosts; kk++) lghost_gid[kk] = (PetscInt)PetscRealPart(buf[kk]);
-      PetscCall(VecRestoreArray(mpimat->lvec, &buf));
+      PetscCall(VecRestoreArrayRead(mpimat->lvec, &buf));
     }
     // get 'comm_procs' (could hoist)
     for (int kk = 0; kk < REQ_BF_SIZE; kk++) comm_procs[kk] = -1;
@@ -591,7 +593,7 @@ static PetscErrorCode MatCoarsenApply_HEM_private(Mat a_Gmat, const PetscInt n_i
     PetscCall(VecAssemblyEnd(locMaxPE));
     /* make 'ghostMaxEdge_max_ew', 'lghost_max_pe' */
     if (mpimat) {
-      PetscScalar *buf;
+      const PetscScalar *buf;
       PetscCall(VecDuplicate(mpimat->lvec, &ghostMaxEdge));
       PetscCall(VecScatterBegin(mpimat->Mvctx, locMaxEdge, ghostMaxEdge, INSERT_VALUES, SCATTER_FORWARD));
       PetscCall(VecScatterEnd(mpimat->Mvctx, locMaxEdge, ghostMaxEdge, INSERT_VALUES, SCATTER_FORWARD));
@@ -599,16 +601,16 @@ static PetscErrorCode MatCoarsenApply_HEM_private(Mat a_Gmat, const PetscInt n_i
       PetscCall(VecDuplicate(mpimat->lvec, &ghostMaxPE));
       PetscCall(VecScatterBegin(mpimat->Mvctx, locMaxPE, ghostMaxPE, INSERT_VALUES, SCATTER_FORWARD));
       PetscCall(VecScatterEnd(mpimat->Mvctx, locMaxPE, ghostMaxPE, INSERT_VALUES, SCATTER_FORWARD));
-      PetscCall(VecGetArray(ghostMaxPE, &buf));
+      PetscCall(VecGetArrayRead(ghostMaxPE, &buf));
       PetscCall(PetscMalloc1(num_ghosts, &lghost_max_pe));
       for (int kk = 0; kk < num_ghosts; kk++) lghost_max_pe[kk] = (PetscMPIInt)PetscRealPart(buf[kk]); // the MAX proc of the ghost now
-      PetscCall(VecRestoreArray(ghostMaxPE, &buf));
+      PetscCall(VecRestoreArrayRead(ghostMaxPE, &buf));
     }
     { // make lid_max_pe
-      PetscScalar *buf;
-      PetscCall(VecGetArray(locMaxPE, &buf));
+      const PetscScalar *buf;
+      PetscCall(VecGetArrayRead(locMaxPE, &buf));
       for (int kk = 0; kk < nloc; kk++) lid_max_pe[kk] = (PetscMPIInt)PetscRealPart(buf[kk]); // the MAX proc of the ghost now
-      PetscCall(VecRestoreArray(locMaxPE, &buf));
+      PetscCall(VecRestoreArrayRead(locMaxPE, &buf));
     }
     /* setup sorted list of edges, and make 'Edges' */
     PetscCall(PetscMalloc1(nEdges0, &Edges));
@@ -654,14 +656,19 @@ static PetscErrorCode MatCoarsenApply_HEM_private(Mat a_Gmat, const PetscInt n_i
     PetscCall(PetscInfo(info_is, "[%d] start HEM iteration %d with number edges=%d\n", rank, iter, (int)nEdges));
 
     /* projection matrix */
-    PetscCall(MatCreateAIJ(comm, nloc, nloc, PETSC_DETERMINE, PETSC_DETERMINE, 1, NULL, 1, NULL, &P));
+    PetscCall(MatCreate(comm, &P));
+    PetscCall(MatSetType(P, MATAIJ));
+    PetscCall(MatSetSizes(P, nloc, nloc, PETSC_DETERMINE, PETSC_DETERMINE));
+    PetscCall(MatMPIAIJSetPreallocation(P, 1, NULL, 1, NULL));
+    PetscCall(MatSeqAIJSetPreallocation(P, 1, NULL));
+    PetscCall(MatSetUp(P));
     /* process - communicate - process */
     for (int sub_it = 0; /* sub_it < n_sub_its */; /* sub_it++ */) {
       PetscInt    nactive_edges = 0, n_act_n[3], gn_act_n[3];
       PetscMPIInt tag1, tag2;
-      PetscCall(VecGetArray(locMaxEdge, &lid_max_ew));
+      PetscCall(VecGetArrayRead(locMaxEdge, &lid_max_ew));
       if (isMPI) {
-        PetscCall(VecGetArray(ghostMaxEdge, &lghost_max_ew));
+        PetscCall(VecGetArrayRead(ghostMaxEdge, &lghost_max_ew));
         PetscCall(PetscCommGetNewTag(comm, &tag1));
         PetscCall(PetscCommGetNewTag(comm, &tag2));
       }
@@ -783,8 +790,8 @@ static PetscErrorCode MatCoarsenApply_HEM_private(Mat a_Gmat, const PetscInt n_i
         } /* matched */
       }   /* edge loop */
       PetscCall(PetscSynchronizedFlush(PETSC_COMM_WORLD, PETSC_STDOUT));
-      if (isMPI) PetscCall(VecRestoreArray(ghostMaxEdge, &lghost_max_ew));
-      PetscCall(VecRestoreArray(locMaxEdge, &lid_max_ew));
+      if (isMPI) PetscCall(VecRestoreArrayRead(ghostMaxEdge, &lghost_max_ew));
+      PetscCall(VecRestoreArrayRead(locMaxEdge, &lid_max_ew));
       // count active for test, latter, update deleted ghosts
       n_act_n[0] = nactive_edges;
       if (ghost_deleted_list) PetscCall(PetscCDCount(ghost_deleted_list, &n_act_n[2]));
@@ -928,7 +935,7 @@ static PetscErrorCode MatCoarsenApply_HEM_private(Mat a_Gmat, const PetscInt n_i
       } /* MPI */
       /* set 'lghost_matched' - use locMaxEdge, ghostMaxEdge (recomputed next) */
       if (isMPI) {
-        PetscScalar *sbuff;
+        const PetscScalar *sbuff;
         for (PetscInt kk = 0, gid = my0; kk < nloc; kk++, gid++) {
           PetscScalar vval = lid_matched[kk] ? 1.0 : 0.0;
           PetscCall(VecSetValues(locMaxEdge, 1, &gid, &vval, INSERT_VALUES)); /* set with GID */
@@ -937,9 +944,9 @@ static PetscErrorCode MatCoarsenApply_HEM_private(Mat a_Gmat, const PetscInt n_i
         PetscCall(VecAssemblyEnd(locMaxEdge));
         PetscCall(VecScatterBegin(mpimat->Mvctx, locMaxEdge, ghostMaxEdge, INSERT_VALUES, SCATTER_FORWARD));
         PetscCall(VecScatterEnd(mpimat->Mvctx, locMaxEdge, ghostMaxEdge, INSERT_VALUES, SCATTER_FORWARD));
-        PetscCall(VecGetArray(ghostMaxEdge, &sbuff));
+        PetscCall(VecGetArrayRead(ghostMaxEdge, &sbuff));
         for (int kk = 0; kk < num_ghosts; kk++) { lghost_matched[kk] = (PetscBool)(PetscRealPart(sbuff[kk]) != 0.0); }
-        PetscCall(VecRestoreArray(ghostMaxEdge, &sbuff));
+        PetscCall(VecRestoreArrayRead(ghostMaxEdge, &sbuff));
       }
       /* compute 'locMaxEdge' inside sub iteration b/c max weight can drop as neighbors are matched */
       for (PetscInt kk = 0, gid = my0; kk < nloc; kk++, gid++) {
@@ -990,16 +997,16 @@ static PetscErrorCode MatCoarsenApply_HEM_private(Mat a_Gmat, const PetscInt n_i
       PetscCall(VecAssemblyEnd(locMaxPE));
       /* compute 'lghost_max_ew' and 'lghost_max_pe' to get ready for next iteration*/
       if (isMPI) {
-        PetscScalar *buf;
+        const PetscScalar *buf;
         PetscCall(VecScatterBegin(mpimat->Mvctx, locMaxEdge, ghostMaxEdge, INSERT_VALUES, SCATTER_FORWARD));
         PetscCall(VecScatterEnd(mpimat->Mvctx, locMaxEdge, ghostMaxEdge, INSERT_VALUES, SCATTER_FORWARD));
         PetscCall(VecScatterBegin(mpimat->Mvctx, locMaxPE, ghostMaxPE, INSERT_VALUES, SCATTER_FORWARD));
         PetscCall(VecScatterEnd(mpimat->Mvctx, locMaxPE, ghostMaxPE, INSERT_VALUES, SCATTER_FORWARD));
-        PetscCall(VecGetArray(ghostMaxPE, &buf));
+        PetscCall(VecGetArrayRead(ghostMaxPE, &buf));
         for (int kk = 0; kk < num_ghosts; kk++) {
           lghost_max_pe[kk] = (PetscMPIInt)PetscRealPart(buf[kk]); // the MAX proc of the ghost now
         }
-        PetscCall(VecRestoreArray(ghostMaxPE, &buf));
+        PetscCall(VecRestoreArrayRead(ghostMaxPE, &buf));
       }
       // if no active edges, stop
       if (gn_act_n[0] < 1) break;
@@ -1010,7 +1017,7 @@ static PetscErrorCode MatCoarsenApply_HEM_private(Mat a_Gmat, const PetscInt n_i
     /* clean up iteration */
     PetscCall(PetscFree(Edges));
     if (mpimat) { // can be hoisted
-      PetscCall(VecRestoreArray(ghostMaxEdge, &lghost_max_ew));
+      PetscCall(VecRestoreArrayRead(ghostMaxEdge, &lghost_max_ew));
       PetscCall(VecDestroy(&ghostMaxEdge));
       PetscCall(VecDestroy(&ghostMaxPE));
       PetscCall(PetscFree(lghost_pe));
