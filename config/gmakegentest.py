@@ -198,18 +198,20 @@ class generateExamples(Petsc):
     return langReq
 
   def _getAltList(self,output_file,srcdir):
-    ''' Calculate AltList based on output file-- see
-       src/snes/tutorials/output/ex22*.out
+    ''' Calculate AltList based on output file-- see src/snes/tutorials/output/ex22*.out
+        The final entry in the list is the name of the next alt file that would be needed
     '''
     altlist=[output_file]
     basefile = getlangsplit(output_file)
-    for i in range(1,9):
+    for i in range(1,20):
       altroot=basefile+"_alt"
       if i > 1: altroot=altroot+"_"+str(i)
       af=altroot+".out"
       srcaf=os.path.join(srcdir,af)
       fullaf=os.path.join(self.petsc_dir,srcaf)
-      if os.path.isfile(fullaf): altlist.append(srcaf)
+      altlist.append(srcaf)
+      if not os.path.isfile(fullaf):
+        break
 
     return altlist
 
@@ -464,28 +466,34 @@ class generateExamples(Petsc):
         print("Warning: "+subst['output_file']+" not found.")
     altlist=self._getAltList(subst['output_file'], subst['srcdir'])
 
-    # altlist always has output_file
-    if len(altlist)==1:
-      cmd=diffindnt+self._substVars(subst,example_template.difftest)
-    else:
-      if debug: print("Found alt files: ",altlist)
-      # Have to do it by hand a bit because of variable number of alt files
-      rf=subst['redirect_file']
-      cmd=diffindnt+example_template.difftest.split('@')[0]
-      for i in range(len(altlist)):
-        af=altlist[i]
-        cmd+=af+' '+rf
-        if i!=len(altlist)-1:
-          cmd+=' > diff-${testname}-'+str(i)+'.out 2> diff-${testname}-'+str(i)+'.out'
-          cmd+=' || ${diff_exe} '
-        else:
-          cmd+='" diff-${testname}.out diff-${testname}.out diff-${label}'
-          cmd+=subst['label_suffix']+' ""'  # Quotes are painful
-    cmdLines+=cmd+"\n"
+    if debug: print("Found alt files: ",altlist)
+    rf=subst['redirect_file']
+    cmd1=diffindnt+example_template.difftest.split('@')[0]
+    for i in range(len(altlist)-2):
+      af=altlist[i]
+      cmd1+=af+' '+rf
+      cmd1+=' > diff-${testname}-'+str(i)+'.out 2> diff-${testname}-'+str(i)+'.out'
+      cmd1+=' || ${diff_exe} '
+
+    i = len(altlist) - 2
+    af=altlist[i]
+    cmd1+=af+' '+rf
+    cmdLines+='if test -n "$filter"; then\naltcpy=$filter\nelse\naltcpy=cat\nfi\n'
+    cmd_alt = '|| (echo Creating new alt file ' + altlist[i+1] + ' && $altcpy ' + rf + ' > ' + altlist[i+1] + ' && false) '
+    cmd2 = '" diff-${testname}.out diff-${testname}.out diff-${label}'
+    cmd2+=subst['label_suffix']+' ""'  # Quotes are painful
+
+    cmdLines+=cmdindnt+cmdindnt+'if $add_alt_file; then\n'
+    cmdLines+=cmdindnt+cmdindnt+cmdindnt+cmd1 + cmd_alt+cmd2 + "\n"
+    cmdLines+=cmdindnt+cmdindnt+'else\n'
+    cmdLines+=cmdindnt+cmdindnt+cmdindnt+cmd1 + cmd2 + "\n"
+    cmdLines+=cmdindnt+cmdindnt+'fi\n'
+
     cmdLines+=cmdindnt+'else\n'
     cmdLines+=diffindnt+'petsc_report_tapoutput "" ${label} "SKIP Command failed so no diff"\n'
     cmdLines+=cmdindnt+'fi\n'
     return cmdLines
+
 
   def _writeTodoSkip(self,fh,tors,reasons,footer):
     """

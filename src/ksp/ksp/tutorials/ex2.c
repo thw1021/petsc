@@ -395,4 +395,9 @@ int main(int argc, char **args)
       nsize: 1
       args: -ksp_monitor -help -petsc_ci_portable_error_output -error_output_stdout
 
+   test:
+      suffix: redundant
+      nsize: 2
+      args: -ksp_view -pc_type redundant -redundant_pc_type redundant -redundant_redundant_pc_type redundant -redundant_redundant_redundant_pc_type redundant -redundant_redundant_redundant_redundant_pc_type redundant
+
  TEST*/
