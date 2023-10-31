@@ -5,6 +5,7 @@ SNES Object: 1 MPI process
     delta0=0.2, t1=0.25, t2=2., deltaM=1e+10
     kmdc=0.
     fallback=DOGLEG
+    scaling=NONE
   maximum iterations=50, maximum function evaluations=10000
   tolerances: relative=1e-08, absolute=1e-50, solution=0.
   total number of linear solver iterations=23
