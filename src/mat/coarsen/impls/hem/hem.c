@@ -452,12 +452,12 @@ static PetscErrorCode MatCoarsenApply_HEM_private(Mat a_Gmat, const PetscInt n_i
   }
   for (int iter = 0; iter < n_iter; iter++) {
     const PetscScalar *lghost_max_ew, *lid_max_ew;
-    PetscBool   *lghost_matched;
-    PetscMPIInt *lghost_pe, *lghost_max_pe;
-    Vec          locMaxEdge, ghostMaxEdge, ghostMaxPE, locMaxPE;
-    PetscInt    *lghost_gid, nEdges, nEdges0, num_ghosts = 0;
-    Edge        *Edges;
-    const int    n_sub_its = 2500; // in case of a bug, stop at some point
+    PetscBool         *lghost_matched;
+    PetscMPIInt       *lghost_pe, *lghost_max_pe;
+    Vec                locMaxEdge, ghostMaxEdge, ghostMaxPE, locMaxPE;
+    PetscInt          *lghost_gid, nEdges, nEdges0, num_ghosts = 0;
+    Edge              *Edges;
+    const int          n_sub_its = 2500; // in case of a bug, stop at some point
     /* get submatrices of cMat */
     for (int kk = 0; kk < nloc; kk++) lid_cprowID[kk] = -1;
     if (isMPI) {
