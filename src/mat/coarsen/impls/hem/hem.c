@@ -411,7 +411,7 @@ static PetscErrorCode MatCoarsenApply_HEM_private(Mat a_Gmat, const PetscInt n_i
 #define REQ_BF_SIZE 100
   PetscBool         isMPI;
   MPI_Comm          comm;
-  PetscInt          ix, *ii, *aj, Iend, my0, ncomm_procs, bc_agg = -1;
+  PetscInt          ix, *ii, *aj, Iend, my0, ncomm_procs, bc_agg = -1, *rbuff = NULL, rbuff_sz = 0;
   PetscMPIInt       rank, size, comm_procs[REQ_BF_SIZE], *lid_max_pe;
   const PetscInt    nloc = a_Gmat->rmap->n, request_size = PetscCeilReal((PetscReal)sizeof(MPI_Request) / (PetscReal)sizeof(PetscInt));
   PetscInt         *lid_cprowID;
@@ -843,13 +843,16 @@ static PetscErrorCode MatCoarsenApply_HEM_private(Mat a_Gmat, const PetscInt n_i
         for (int proc_idx = 0; proc_idx < ncomm_procs; proc_idx++) {
           PetscCallMPI(MPI_Probe(comm_procs[proc_idx] /* MPI_ANY_SOURCE */, tag1, comm, &status));
           {
-#define BF_SZ 10000
-            PetscInt          rbuff[BF_SZ] = {0, 0}, *pt, *pt2, *pt3, *sbuff, tmp;
+            PetscInt         *pt, *pt2, *pt3, *sbuff, tmp;
             MPI_Request      *request;
             int               rcount, scount, ndel;
             const PetscMPIInt proc = status.MPI_SOURCE;
             PetscCallMPI(MPI_Get_count(&status, MPIU_INT, &rcount));
-            PetscCheck(rcount <= BF_SZ, PETSC_COMM_SELF, PETSC_ERR_SUP, "buffer too small for receive: %d", rcount);
+            if (rcount > rbuff_sz) {
+              if (rbuff) PetscCall(PetscFree(rbuff));
+              PetscCall(PetscMalloc1(rcount, &rbuff));
+              rbuff_sz = rcount;
+            }
             /* MPI_Recv: tag1 [ndel, proc, ndel*[gid1,gid0] ] */
             PetscCallMPI(MPI_Recv(rbuff, rcount, MPIU_INT, proc, tag1, comm, &status));
             /* read and count sends *[lid0, n, n*[gid] ] */
@@ -901,23 +904,27 @@ static PetscErrorCode MatCoarsenApply_HEM_private(Mat a_Gmat, const PetscInt n_i
         /* receive tag2 *[gid0, n, n*[gid] ] */
         for (int proc_idx = 0; proc_idx < ncomm_procs; proc_idx++) {
           PetscMPIInt proc;
-          PetscInt    rbuff[BF_SZ], *pt;
-          int         count;
+          PetscInt   *pt;
+          int         rcount;
           PetscCallMPI(MPI_Probe(comm_procs[proc_idx] /* MPI_ANY_SOURCE */, tag2, comm, &status));
-          PetscCallMPI(MPI_Get_count(&status, MPIU_INT, &count));
-          PetscCheck(count <= BF_SZ, PETSC_COMM_SELF, PETSC_ERR_SUP, "buffer too small ????? for receive: %d", (int)count);
+          PetscCallMPI(MPI_Get_count(&status, MPIU_INT, &rcount));
+          if (rcount > rbuff_sz) {
+            if (rbuff) PetscCall(PetscFree(rbuff));
+            PetscCall(PetscMalloc1(rcount, &rbuff));
+            rbuff_sz = rcount;
+          }
           proc = status.MPI_SOURCE;
           /* MPI_Recv:  tag1 [n, proc, n*[gid1,lid0] ] */
-          PetscCallMPI(MPI_Recv(rbuff, count, MPIU_INT, proc, tag2, comm, &status));
+          PetscCallMPI(MPI_Recv(rbuff, rcount, MPIU_INT, proc, tag2, comm, &status));
           pt = rbuff;
-          while (pt - rbuff < count) {
+          while (pt - rbuff < rcount) {
             PetscInt gid0 = *pt++, n = *pt++;
             while (n--) {
               PetscInt gid1 = *pt++;
               PetscCall(PetscCDAppendID(agg_llists, gid0 - my0, gid1));
             }
           }
-          PetscCheck((pt - rbuff) == count, PETSC_COMM_SELF, PETSC_ERR_SUP, "recv buffer size != num read: %d %d", (int)(pt - rbuff), (int)count);
+          PetscCheck((pt - rbuff) == rcount, PETSC_COMM_SELF, PETSC_ERR_SUP, "recv buffer size != num read: %d %d", (int)(pt - rbuff), (int)rcount);
         }
         /* wait for tag1 isends */
         for (int proc_idx = 0; proc_idx < ncomm_procs; proc_idx++) {
@@ -1086,6 +1093,7 @@ static PetscErrorCode MatCoarsenApply_HEM_private(Mat a_Gmat, const PetscInt n_i
     PetscCall(MatAssemblyEnd(mat, MAT_FINAL_ASSEMBLY));
     PetscCall(PetscCDSetMat(agg_llists, mat));
     PetscCall(PetscCDDestroy(ghost_deleted_list));
+    if (rbuff_sz) PetscCall(PetscFree(rbuff)); // always true
   }
   // move BCs into some node
   if (bc_list) {
