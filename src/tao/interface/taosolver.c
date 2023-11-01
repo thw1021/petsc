@@ -1,5 +1,6 @@
 #include <petsc/private/taoimpl.h> /*I "petsctao.h" I*/
 #include <petsc/private/snesimpl.h>
+#include <petsc/private/hashmap.h>
 
 PetscBool         TaoRegisterAllCalled = PETSC_FALSE;
 PetscFunctionList TaoList              = NULL;
@@ -93,6 +94,10 @@ PetscErrorCode TaoCreate(MPI_Comm comm, Tao *newtao)
   PetscAssertPointer(newtao, 2);
   PetscCall(TaoInitializePackage());
   PetscCall(TaoLineSearchInitializePackage());
+  PetscCall(TaoRegularizerInitializePackage());
+#if !defined(PETSC_HAVE_COMPLEX)
+  PetscCall(TaoProxInitializePackage());
+#endif
   PetscCall(PetscHeaderCreate(tao, TAO_CLASSID, "Tao", "Optimization solver", "Tao", comm, TaoDestroy, TaoView));
 
   /* Set non-NULL defaults */
@@ -239,6 +244,7 @@ PetscErrorCode TaoDestroy(Tao *tao)
   PetscCall(KSPDestroy(&(*tao)->ksp));
   PetscCall(SNESDestroy(&(*tao)->snes_ewdummy));
   PetscCall(TaoLineSearchDestroy(&(*tao)->linesearch));
+  PetscCall(TaoRegularizerDestroy(&(*tao)->reg));
 
   if ((*tao)->ops->convergencedestroy) {
     PetscCall((*(*tao)->ops->convergencedestroy)((*tao)->cnvP));
