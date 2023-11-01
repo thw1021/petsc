@@ -1167,7 +1167,7 @@ static PetscErrorCode TestAssembly(DM dm, AppCtx *user)
   /* Test projection to fault mesh */
     PetscCall(DMPlexCreateCohesiveSubmesh(dm, PETSC_FALSE, NULL, 0, &dmFault));
     PetscCall(DMPlexOrient(dmFault));
-    PetscCall(PetscFECreateDefault(PETSC_COMM_SELF, dim, dim, user->cellSimplex, "fault_field_", PETSC_DETERMINE, &fe));
+    PetscCall(PetscFECreateDefault(PETSC_COMM_SELF, dim - 1, dim, user->cellSimplex, "fault_field_", PETSC_DETERMINE, &fe));
     PetscCall(PetscFESetName(fe, "fault_field"));
     PetscCall(DMAddField(dmFault, NULL, (PetscObject)fe));
     PetscCall(PetscFEDestroy(&fe));
@@ -1186,6 +1186,8 @@ static PetscErrorCode TestAssembly(DM dm, AppCtx *user)
   faultFuncs[0] = normal_field;
   PetscCall(DMProjectBdFieldLabelLocal(dmFault, 0.0, fault, 1, &id, PETSC_DETERMINE, NULL, locX, faultFuncs, INSERT_VALUES, locW));
   PetscCall(VecViewFromOptions(locW, NULL, "-local_projection_view"));
+  PetscCall(DMRestoreLocalVector(dmFault, &locW));
+  PetscCall(DMDestroy(&dmFault));
 
   PetscCall(DMGetCellDS(dm, cMax, &probh, NULL));
   PetscCall(PetscDSGetWeakForm(probh, &wf));
