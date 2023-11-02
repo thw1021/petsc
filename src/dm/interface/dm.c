@@ -215,7 +215,7 @@ PetscErrorCode DMClone(DM dm, DM *newdm)
   Logically Collective
 
   Input Parameters:
-+ da    - initial distributed array
++ dm    - initial distributed array
 - ctype - the vector type, for example `VECSTANDARD`, `VECCUDA`, or `VECVIENNACL`
 
   Options Database Key:
@@ -226,12 +226,17 @@ PetscErrorCode DMClone(DM dm, DM *newdm)
 .seealso: [](ch_dmbase), `DM`, `DMCreate()`, `DMDestroy()`, `DMDAInterpolationType`, `VecType`, `DMGetVecType()`, `DMSetMatType()`, `DMGetMatType()`,
           `VECSTANDARD`, `VECCUDA`, `VECVIENNACL`, `DMCreateLocalVector()`, `DMCreateGlobalVector()`
 @*/
-PetscErrorCode DMSetVecType(DM da, VecType ctype)
+PetscErrorCode DMSetVecType(DM dm, VecType ctype)
 {
+  size_t len;
+
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, DM_CLASSID, 1);
-  PetscCall(PetscFree(da->vectype));
-  PetscCall(PetscStrallocpy(ctype, (char **)&da->vectype));
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
+  PetscAssertPointer(ctype, 2);
+  PetscCall(PetscFree(dm->vectype));
+  PetscCall(PetscStrlen(ctype, &len));
+  PetscCheck(len > 0, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONG, "Empty string is not a valid vector type");
+  PetscCall(PetscStrallocpy(ctype, (char **)&dm->vectype));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
