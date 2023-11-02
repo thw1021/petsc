@@ -1396,6 +1396,8 @@ PETSC_EXTERN PetscErrorCode PetscContainerDestroy(PetscContainer *);
 PETSC_EXTERN PetscErrorCode PetscContainerCreate(MPI_Comm, PetscContainer *);
 PETSC_EXTERN PetscErrorCode PetscContainerSetUserDestroy(PetscContainer, PetscErrorCode (*)(void *));
 PETSC_EXTERN PetscErrorCode PetscContainerUserDestroyDefault(void *);
+PETSC_EXTERN PetscErrorCode PetscObjectContainerCompose(PetscObject, const char *name, void *, PetscErrorCode (*)(void *));
+PETSC_EXTERN PetscErrorCode PetscObjectContainerQuery(PetscObject, const char *, void **);
 
 /*
    For use in debuggers
@@ -2331,7 +2333,16 @@ PETSC_EXTERN PetscErrorCode PetscHasExternalPackage(const char[], PetscBool *);
 /* this cannot go here because it may be in a different shared library */
 PETSC_EXTERN PetscErrorCode PCMPIServerBegin(void);
 PETSC_EXTERN PetscErrorCode PCMPIServerEnd(void);
-PETSC_EXTERN PetscErrorCode PCMPICommsDestroy(void);
 PETSC_EXTERN PetscBool      PCMPIServerActive;
+PETSC_EXTERN PetscBool      PCMPIServerInSolve;
+PETSC_EXTERN PetscErrorCode PCMPIServerAllocateArray(size_t, size_t, void **);
+PETSC_EXTERN PetscErrorCode PCMPIServerDeallocateArray(void **);
+PETSC_EXTERN PetscErrorCode PCMPIServerMapAddresses(MPI_Comm, PetscInt, const void **, void **);
+PETSC_EXTERN PetscErrorCode PCMPIServerUnmapAddresses(PetscInt, void **);
+typedef struct {
+  PetscInt n;
+  void    *addr[3];
+} PCMPIServerAddresses;
+PETSC_EXTERN PetscErrorCode PCMPIServerAddressesDestroy(PCMPIServerAddresses *);
 
 #define PETSC_HAVE_FORTRAN PETSC_DEPRECATED_MACRO(3, 20, 0, "PETSC_USE_FORTRAN_BINDINGS", ) PETSC_USE_FORTRAN_BINDINGS

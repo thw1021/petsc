@@ -15,6 +15,8 @@ Changes: Development
 
 .. rubric:: Sys:
 
+- Add ``PetscObjectContainerCompose()`` and ``PetscObjectContainerQuery()``
+
 .. rubric:: Event Logging:
 
 .. rubric:: PetscViewer:
