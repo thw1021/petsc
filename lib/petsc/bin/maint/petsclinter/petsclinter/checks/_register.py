@@ -184,6 +184,7 @@ def __register_all_classids() -> None:
     "_p_TSTrajectory *"           : "TSTRAJECTORY_CLASSID",
     "_p_Tao *"                    : "TAO_CLASSID",
     "_p_TaoLineSearch *"          : "TAOLINESEARCH_CLASSID",
+    "_p_TaoRegularizer *"         : "TAOREGULARIZER_CLASSID",
     "_p_Vec *"                    : "VEC_CLASSID",
     "_p_VecTagger *"              : "VEC_TAGGER_CLASSID",
   }
