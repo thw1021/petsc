@@ -11170,11 +11170,12 @@ PetscErrorCode MatSetInf(Mat A)
   Collective
 
   Input Parameters:
-+ A      - the matrix
-. sym    - `PETSC_TRUE` indicates that the graph should be symmetrized
-. scale  - `PETSC_TRUE` indicates that the graph edge weights should be symmetrically scaled with the diagonal entry
-. filter - filter value - < 0: does nothing; == 0: removes only 0.0 entries; otherwise: removes entries with abs(entries) <= value
-- index  - block index to use for graph strength of connection weight: < 0: use full norm of block; otherwise: | b[index,index] |
++ A       - the matrix
+. sym     - `PETSC_TRUE` indicates that the graph should be symmetrized
+. scale   - `PETSC_TRUE` indicates that the graph edge weights should be symmetrically scaled with the diagonal entry
+. filter  - filter value - < 0: does nothing; == 0: removes only 0.0 entries; otherwise: removes entries with abs(entries) <= value
+. num_idx - size of 'index' array
+- index   - array of block indices to use for graph strength of connection weight
 
   Output Parameter:
 . graph - the resulting graph

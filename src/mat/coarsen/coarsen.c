@@ -346,7 +346,7 @@ PetscErrorCode MatCoarsenGetData(MatCoarsen coarser, PetscCoarsenData **llist)
 . coarser - the coarsen context.
 
   Options Database Key:
-. -mat_coarsen_type  <type> - (for instance, mis), use -help for a list of available methods
+. -mat_coarsen_type  <type> - mis, misk, hem
 
   Level: advanced
 
@@ -393,7 +393,7 @@ PetscErrorCode MatCoarsenSetFromOptions(MatCoarsen coarser)
 
   Input Parameters:
 + coarse - the coarsen context
-- b      - number of HEM iterations
+- n      - number of HEM iterations
 
   Options Database Key:
 . -mat_coarsen_max_it <default=4> - Max HEM iterations
@@ -425,11 +425,12 @@ static PetscErrorCode MatCoarsenSetMaximumIterations_MATCOARSEN(MatCoarsen coars
   Logically Collective
 
   Input Parameters:
-+ coarse - the coarsen context
-- n  - -1 for full (original) strenth measure; [0,bs-1] index to use for simple norm of bs x bs blocks
+  + coarse - the coarsen context
+  . n  - number of indices
+  - idx - array of indices
 
   Options Database Key:
-. -mat_coarsen_strength_index <n,default = -1>
+. -mat_coarsen_strength_index - array of subset of variables per vertex to use for strength norm, -1 for using all (default)
 
   Level: intermediate
 
@@ -439,7 +440,7 @@ PetscErrorCode MatCoarsenSetStrengthIndex(MatCoarsen coarse, PetscInt n, PetscIn
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(coarse, MAT_COARSEN_CLASSID, 1);
-  PetscValidLogicalCollectiveInt(coarse, n, 3);
+  PetscValidLogicalCollectiveInt(coarse, n, 2);
   PetscTryMethod(coarse, "MatCoarsenSetStrengthIndex_C", (MatCoarsen, PetscInt, PetscInt[]), (coarse, n, idx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
