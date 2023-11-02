@@ -7800,11 +7800,11 @@ PETSC_INTERN PetscErrorCode MatCreateGraph_Simple_AIJ(Mat Amat, PetscBool symmet
                 val += PetscAbs(PetscRealPart(aa[jj])); // a sort of norm
               }
             }
-          } else { // use (index,index) value if provided
+          } else {                                       // use (index,index) value if provided
             for (int iii = 0; iii < index_size; iii++) { // rows in block
               int ii = index[iii];
               aa     = aseq->a + ai[brow + ii] + k;
-              for (int jjj = 0; jjj < index_size; jjj++) {         // columns in block
+              for (int jjj = 0; jjj < index_size; jjj++) { // columns in block
                 int jj = index[jjj];
                 val    = PetscAbs(PetscRealPart(aa[jj]));
               }
@@ -7842,7 +7842,7 @@ PETSC_INTERN PetscErrorCode MatCreateGraph_Simple_AIJ(Mat Amat, PetscBool symmet
               }
               PetscCall(MatRestoreRow(b, brow + ii, &ncols, &cols, &vals));
             }
-          } else { // use (index,index) value if provided
+          } else {                                       // use (index,index) value if provided
             for (int iii = 0; iii < index_size; iii++) { // rows in block
               int ii = index[iii];
               PetscCall(MatGetRow(b, brow + ii, &ncols, &cols, &vals));
