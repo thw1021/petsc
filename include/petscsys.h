@@ -2335,6 +2335,7 @@ PETSC_EXTERN PetscErrorCode PCMPIServerBegin(void);
 PETSC_EXTERN PetscErrorCode PCMPIServerEnd(void);
 PETSC_EXTERN PetscBool      PCMPIServerActive;
 PETSC_EXTERN PetscBool      PCMPIServerInSolve;
+PETSC_EXTERN PetscBool      PCMPIServerUseSharedMemory;
 PETSC_EXTERN PetscErrorCode PCMPIServerAllocateArray(size_t, size_t, void **);
 PETSC_EXTERN PetscErrorCode PCMPIServerDeallocateArray(void **);
 PETSC_EXTERN PetscErrorCode PCMPIServerMapAddresses(MPI_Comm, PetscInt, const void **, void **);

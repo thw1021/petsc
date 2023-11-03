@@ -2,20 +2,15 @@
     Code for allocating Unix shared memory on MPI rank 0 and later accessing it from other MPI processes
 */
 #include <petscsys.h>
-#include <sys/shm.h>
-#include <sys/mman.h>
-#include <errno.h>
 
-PetscBool PCMPIServerActive  = PETSC_FALSE; // PETSc is running in server mode
-PetscBool PCMPIServerInSolve = PETSC_FALSE; // A parallel server solve is occuring
+PetscBool PCMPIServerActive          = PETSC_FALSE; // PETSc is running in server mode
+PetscBool PCMPIServerInSolve         = PETSC_FALSE; // A parallel server solve is occuring
+PetscBool PCMPIServerUseSharedMemory = PETSC_TRUE;  // Use Unix shared memory for distributing objects
 
-PetscErrorCode PCMPIServerAddressesDestroy(PCMPIServerAddresses *addresses)
-{
-  PetscFunctionBegin;
-  PetscCall(PCMPIServerUnmapAddresses(addresses->n, addresses->addr));
-  PetscCall(PetscFree(addresses));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
+#if defined(PETSC_HAVE_SHARED_MEMORY)
+  #include <sys/shm.h>
+  #include <sys/mman.h>
+  #include <errno.h>
 
 typedef struct _PCMPIServerAllocation *PCMPIServerAllocation;
 struct _PCMPIServerAllocation {
@@ -31,6 +26,18 @@ typedef struct {
   size_t sz[3];
 } BcastInfo;
 
+#endif
+
+PetscErrorCode PCMPIServerAddressesDestroy(PCMPIServerAddresses *addresses)
+{
+  PetscFunctionBegin;
+#if defined(PETSC_HAVE_SHARED_MEMORY)
+  PetscCall(PCMPIServerUnmapAddresses(addresses->n, addresses->addr));
+  PetscCall(PetscFree(addresses));
+#endif
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*@C
   PCMPIServerMapAddresses - given shared address on the first MPI process determines the
   addresses on the other MPI processes that map to the same physical memory
@@ -45,21 +52,24 @@ typedef struct {
 
   Level: developer
 
+  Note:
+  This routine does nothing if `PETSC_HAVE_SHARED_MEMORY` is not defined
+
 .seealso: `PCMPIServerDeallocateArray()`, `PCMPIServerAllocateArray()`, `PCMPIServerUnmapAddresses()`
 @*/
 PetscErrorCode PCMPIServerMapAddresses(MPI_Comm comm, PetscInt n, const void **baseaddres, void **addres)
 {
-  BcastInfo bcastinfo;
-
   PetscFunctionBegin;
+#if defined(PETSC_HAVE_SHARED_MEMORY)
   if (PetscGlobalRank == 0) {
+    BcastInfo bcastinfo;
     for (PetscInt i = 0; i < n; i++) {
       PCMPIServerAllocation allocation = allocations;
 
       while (allocation) {
         if (allocation->addr == baseaddres[i]) {
           bcastinfo.shmkey[i] = allocation->shmkey;
-          bcastinfo.sz[i] = allocation->sz;
+          bcastinfo.sz[i]     = allocation->sz;
           // PetscCallMPI(MPI_Bcast(&allocation->shmkey, 1, MPI_INT, 0, comm));
           // PetscCallMPI(MPI_Bcast(&allocation->sz, 1, MPIU_SIZE_T, 0, comm)); // TODO combine broadcasts
           addres[i] = (void *)baseaddres[i];
@@ -69,18 +79,22 @@ PetscErrorCode PCMPIServerMapAddresses(MPI_Comm comm, PetscInt n, const void **b
       }
       PetscCheck(allocation, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Unable to locate allocated shared address %p", baseaddres[i]);
     }
-    PetscCallMPI(MPI_Bcast(&bcastinfo, 2*n, MPIU_SIZE_T, 0, comm));
+    PetscCallMPI(MPI_Bcast(&bcastinfo, 2 * n, MPIU_SIZE_T, 0, comm));
   } else {
+    BcastInfo bcastinfo = {
+      {0, 0, 0},
+      {0, 0, 0}
+    };
     int    shmkey = 0;
     size_t sz     = 0;
 
-    PetscCallMPI(MPI_Bcast(&bcastinfo, 2*n, MPIU_SIZE_T, 0, comm));
+    PetscCallMPI(MPI_Bcast(&bcastinfo, 2 * n, MPIU_SIZE_T, 0, comm));
     for (PetscInt i = 0; i < n; i++) {
       PCMPIServerAllocation next = allocations, previous = NULL;
       // PetscCallMPI(MPI_Bcast(&shmkey, 1, MPI_INT, 0, comm));
       // PetscCallMPI(MPI_Bcast(&sz, 1, MPIU_SIZE_T, 0, comm));
-      shmkey = (int) bcastinfo.shmkey[i];
-      sz = bcastinfo.sz[i];
+      shmkey = (int)bcastinfo.shmkey[i];
+      sz     = bcastinfo.sz[i];
       while (next) {
         if (next->shmkey == shmkey) { addres[i] = (void *)next->addr; }
         previous = next;
@@ -102,6 +116,7 @@ PetscErrorCode PCMPIServerMapAddresses(MPI_Comm comm, PetscInt n, const void **b
       }
     }
   }
+#endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -114,11 +129,15 @@ PetscErrorCode PCMPIServerMapAddresses(MPI_Comm comm, PetscInt n, const void **b
 
   Level: developer
 
-.seealso: `PCMPIServerDeallocateArray()`, `PCMPIServerAllocateArray()`
+  Note:
+  This routine does nothing if `PETSC_HAVE_SHARED_MEMORY` is not defined
+
+.seealso: `PCMPIServerDeallocateArray()`, `PCMPIServerAllocateArray()`, `PCMPIServerMapAddresses()`
 @*/
 PetscErrorCode PCMPIServerUnmapAddresses(PetscInt n, void **addres)
 {
   PetscFunctionBegin;
+#if defined(PETSC_HAVE_SHARED_MEMORY)
   if (PetscGlobalRank > 0) {
     for (PetscInt i = 0; i < n; i++) {
       PCMPIServerAllocation next = allocations, previous = NULL;
@@ -140,6 +159,7 @@ PetscErrorCode PCMPIServerUnmapAddresses(PetscInt n, void **addres)
       PetscCheck(found, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Unable to find address %p to unmap", addres[i]);
     }
   }
+#endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -157,12 +177,16 @@ PetscErrorCode PCMPIServerUnmapAddresses(PetscInt n, void **addres)
 
   Level: developer
 
+  Note:
+  Uses `PetscMalloc()` if `PETSC_HAVE_SHARED_MEMORY` is not defined or the MPI linear solver server is not running
+
 .seealso: [](sec_pcmpi), `PCMPIServerBegin()`, `PCMPI`, `KSPCheckPCMPI()`, `PCMPIServerDeallocateArray()`
 @*/
 PetscErrorCode PCMPIServerAllocateArray(size_t sz, size_t asz, void **addr)
 {
   PetscFunctionBegin;
-  if (!PCMPIServerActive || PCMPIServerInSolve) PetscCall(PetscMalloc(sz * asz, addr));
+  if (!PCMPIServerUseSharedMemory || !PCMPIServerActive || PCMPIServerInSolve) PetscCall(PetscMalloc(sz * asz, addr));
+#if defined(PETSC_HAVE_SHARED_MEMORY)
   else {
     PCMPIServerAllocation allocation;
     static int            shmkeys = 10;
@@ -184,6 +208,7 @@ PetscErrorCode PCMPIServerAllocateArray(size_t sz, size_t asz, void **addr)
     *addr = allocation->addr;
     // printf("[0] Allocating key %d shmid %d length %d %p\n",allocation->shmkey,allocation->shmid,(int)sz,*addr);
   }
+#endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -197,13 +222,17 @@ PetscErrorCode PCMPIServerAllocateArray(size_t sz, size_t asz, void **addr)
 
   Level: developer
 
+  Note:
+  Uses `PetscFree()` if `PETSC_HAVE_SHARED_MEMORY` is not defined or the MPI linear solver server is not running
+
 .seealso: [](sec_pcmpi), `PCMPIServerBegin()`, `PCMPI`, `KSPCheckPCMPI()`, `PCMPIServerAllocateArray()`
 @*/
 PetscErrorCode PCMPIServerDeallocateArray(void **addr)
 {
   PetscFunctionBegin;
   if (!*addr) PetscFunctionReturn(PETSC_SUCCESS);
-  if (!PCMPIServerActive || PCMPIServerInSolve) PetscCall(PetscFree(*addr));
+  if (!PCMPIServerUseSharedMemory || !PCMPIServerActive || PCMPIServerInSolve) PetscCall(PetscFree(*addr));
+#if defined(PETSC_HAVE_SHARED_MEMORY)
   else {
     PCMPIServerAllocation next = allocations, previous = NULL;
 
@@ -222,5 +251,6 @@ PetscErrorCode PCMPIServerDeallocateArray(void **addr)
     }
     SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Unable to locate allocated address %p", *addr);
   }
+#endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
