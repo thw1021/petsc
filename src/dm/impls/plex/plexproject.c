@@ -884,7 +884,16 @@ static PetscErrorCode DMProjectLocal_Generic_Plex(DM dm, PetscReal time, Vec loc
             PetscCall(PetscDualSpaceGetAllPointsUnion(Nf, sp, isCohesive ? dim - htInc - 1 : dim - htInc, funcs, &quad));
           }
         }
-        PetscCall(DMFieldCreateFEGeom(coordField, isectIS, quad, (htInc && h == minHeight) ? PETSC_TRUE : PETSC_FALSE, &fegeom));
+        PetscBool computeFaceGeom = htInc && h == minHeight ? PETSC_TRUE : PETSC_FALSE;
+
+        if (n) {
+          PetscInt depth, dep;
+
+          PetscCall(DMPlexGetDepth(dm, &depth));
+          PetscCall(DMPlexGetPointDepth(dm, points[0], &dep));
+          if (dep < depth && h == minHeight) computeFaceGeom = PETSC_TRUE;
+        }
+        PetscCall(DMFieldCreateFEGeom(coordField, isectIS, quad, computeFaceGeom, &fegeom));
         for (p = 0; p < n; ++p) {
           const PetscInt point = points[p];
 
