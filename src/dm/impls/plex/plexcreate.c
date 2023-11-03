@@ -181,12 +181,19 @@ static PetscErrorCode DMPlexSwap_Static(DM dmA, DM dmB)
 
 PetscErrorCode DMPlexInterpolateInPlace_Internal(DM dm)
 {
-  DM idm;
+  DM      idm;
+  VecType vecType;
 
   PetscFunctionBegin;
+  PetscCall(DMGetVecType(dm, &vecType));
+  PetscCall(PetscPrintf(PETSC_COMM_SELF, "Interp 1: vecType %s\n", vecType));
   PetscCall(DMPlexInterpolate(dm, &idm));
+  PetscCall(DMGetVecType(idm, &vecType));
+  PetscCall(PetscPrintf(PETSC_COMM_SELF, "Interp 2: vecType %s\n", vecType));
   PetscCall(DMPlexCopyCoordinates(dm, idm));
   PetscCall(DMPlexReplace_Internal(dm, &idm));
+  PetscCall(DMGetVecType(dm, &vecType));
+  PetscCall(PetscPrintf(PETSC_COMM_SELF, "Interp 3: vecType %s\n", vecType));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
