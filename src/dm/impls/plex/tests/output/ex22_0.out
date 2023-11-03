@@ -1,0 +1,10 @@
+dim 1 dimC 1 simplex 0 vecType standard
+dim 1 dimC 1 simplex 1 vecType standard
+dim 1 dimC 2 simplex 0 vecType standard
+dim 1 dimC 2 simplex 1 vecType standard
+dim 2 dimC 2 simplex 0 vecType standard
+dim 2 dimC 2 simplex 1 vecType standard
+dim 2 dimC 3 simplex 0 vecType standard
+dim 2 dimC 3 simplex 1 vecType standard
+dim 3 dimC 3 simplex 0 vecType standard
+dim 3 dimC 3 simplex 1 vecType standard
