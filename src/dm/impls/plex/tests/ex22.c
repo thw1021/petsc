@@ -129,8 +129,11 @@ int main(int argc, char **argv)
           PetscScalar *coordArray;
           PetscReal    noise;
           PetscInt     i, n, order = 1;
+          VecType      vecType;
 
           PetscCall(DMPlexCreateReferenceCell(PETSC_COMM_SELF, DMPolytopeTypeSimpleShape(dim, isSimplex ? PETSC_TRUE : PETSC_FALSE), &dm));
+          PetscCall(DMGetVecType(dm, &vecType));
+          PetscCall(PetscPrintf(PETSC_COMM_SELF, "dim %" PetscInt_FMT " dimC %" PetscInt_FMT " simplex %" PetscInt_FMT " vecType %s\n", dim, dimC, isSimplex, vecType));
           if (isFE) {
             DM         dmCoord;
             PetscSpace sp;
@@ -144,6 +147,8 @@ int main(int argc, char **argv)
             PetscCall(PetscSpaceGetDegree(sp, &order, NULL));
             PetscCall(DMSetField(dm, 0, NULL, (PetscObject)fe));
             PetscCall(DMCreateDS(dm));
+            PetscCall(DMGetVecType(dm, &vecType));
+            PetscCall(PetscPrintf(PETSC_COMM_SELF, "dim %" PetscInt_FMT " dimC %" PetscInt_FMT " simplex %" PetscInt_FMT " vecType %s\n", dim, dimC, isSimplex, vecType));
             PetscCall(DMCreateLocalVector(dm, &localCoords));
             PetscCall(DMProjectFunctionLocal(dm, 0, funcs, ctxs, INSERT_VALUES, localCoords));
             PetscCall(VecSetDM(localCoords, NULL)); /* This is necessary to prevent a reference loop */

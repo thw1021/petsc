@@ -1447,6 +1447,18 @@ PetscErrorCode DMPlexInterpolatePointSF(DM dm, PetscSF pointSF)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode CheckVecType(DM dm)
+{
+  VecType vecType;
+  size_t  len;
+
+  PetscFunctionBegin;
+  PetscCall(DMGetVecType(dm, &vecType));
+  PetscCall(PetscStrlen(vecType, &len));
+  PetscCheck(len > 0, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONG, "Empty string is not valid for vector type");
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*@
   DMPlexInterpolate - Take in a cell-vertex mesh and return one with all intermediate faces, edges, etc.
 
@@ -1481,6 +1493,7 @@ PetscErrorCode DMPlexInterpolate(DM dm, DM *dmInt)
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscAssertPointer(dmInt, 2);
   PetscCall(PetscLogEventBegin(DMPLEX_Interpolate, dm, 0, 0, 0));
+  PetscCall(CheckVecType(dm));
   PetscCall(DMPlexGetDepth(dm, &depth));
   PetscCall(DMGetDimension(dm, &dim));
   PetscCall(DMPlexIsInterpolated(dm, &interpolated));
@@ -1490,6 +1503,7 @@ PetscErrorCode DMPlexInterpolate(DM dm, DM *dmInt)
     idm = dm;
   } else {
     for (d = 1; d < dim; ++d) {
+      PetscCall(CheckVecType(dm));
       /* Create interpolated mesh */
       PetscCall(DMCreate(PetscObjectComm((PetscObject)dm), &idm));
       PetscCall(DMSetType(idm, DMPLEX));
@@ -1506,6 +1520,8 @@ PetscErrorCode DMPlexInterpolate(DM dm, DM *dmInt)
         }
       }
       if (odm != dm) PetscCall(DMDestroy(&odm));
+      PetscCall(CheckVecType(dm));
+      PetscCall(CheckVecType(idm));
       odm = idm;
     }
     PetscCall(PetscObjectGetName((PetscObject)dm, &name));
@@ -1520,7 +1536,9 @@ PetscErrorCode DMPlexInterpolate(DM dm, DM *dmInt)
     DM_Plex *plex      = (DM_Plex *)idm->data;
     plex->interpolated = plex->interpolatedCollective = DMPLEX_INTERPOLATED_FULL;
   }
+  PetscCall(CheckVecType(dm));
   PetscCall(DMPlexCopy_Internal(dm, PETSC_TRUE, PETSC_TRUE, idm));
+  PetscCall(CheckVecType(idm));
   *dmInt = idm;
   PetscCall(PetscLogEventEnd(DMPLEX_Interpolate, dm, 0, 0, 0));
   PetscFunctionReturn(PETSC_SUCCESS);
