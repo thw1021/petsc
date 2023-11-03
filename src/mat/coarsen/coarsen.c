@@ -425,9 +425,9 @@ static PetscErrorCode MatCoarsenSetMaximumIterations_MATCOARSEN(MatCoarsen coars
   Logically Collective
 
   Input Parameters:
-  + coarse - the coarsen context
-  . n  - number of indices
-  - idx - array of indices
++ coarse - the coarsen context
+. n      - number of indices
+- idx    - array of indices
 
   Options Database Key:
 . -mat_coarsen_strength_index - array of subset of variables per vertex to use for strength norm, -1 for using all (default)
