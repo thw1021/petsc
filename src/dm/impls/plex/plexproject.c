@@ -315,7 +315,7 @@ static PetscErrorCode DMProjectPoint_Field_Private(DM dm, PetscDS ds, DM dmIn, D
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode DMProjectPoint_BdField_Private(DM dm, PetscDS ds, DM dmIn, PetscDS dsIn, DM dmAux, DMEnclosureType encAux, PetscDS dsAux, PetscReal time, Vec localU, Vec localA, PetscFEGeom *fgeom, PetscDualSpace sp[], PetscInt p, PetscTabulation *T, PetscTabulation *TAux, void (**funcs)(PetscInt, PetscInt, PetscInt, const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], PetscReal, const PetscReal[], const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]), void **ctxs, PetscScalar values[])
+static PetscErrorCode DMProjectPoint_BdField_Private(DM dm, PetscDS ds, DM dmIn, DMEnclosureType encIn, PetscDS dsIn, DM dmAux, DMEnclosureType encAux, PetscDS dsAux, PetscReal time, Vec localU, Vec localA, PetscFEGeom *fgeom, PetscDualSpace sp[], PetscInt p, PetscTabulation *T, PetscTabulation *TAux, void (**funcs)(PetscInt, PetscInt, PetscInt, const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], PetscReal, const PetscReal[], const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]), void **ctxs, PetscScalar values[])
 {
   PetscSection       section, sectionAux = NULL;
   PetscScalar       *u, *u_t = NULL, *u_x, *a = NULL, *a_t = NULL, *a_x = NULL, *bc;
@@ -326,20 +326,21 @@ static PetscErrorCode DMProjectPoint_BdField_Private(DM dm, PetscDS ds, DM dmIn,
   PetscInt          *uOff, *uOff_x, *aOff = NULL, *aOff_x = NULL, *Nc;
   PetscFEGeom        fegeom, cgeom;
   const PetscInt     dE = fgeom->dimEmbed;
-  PetscInt           numConstants, Nf, NfAux = 0, f, spDim, d, v, tp = 0;
+  PetscInt           numConstants, Nf, NfIn, NfAux = 0, f, spDim, d, v, inp, tp = 0;
   PetscBool          isAffine;
 
   PetscFunctionBeginHot;
-  PetscCheck(dm == dmIn, PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "Not yet upgraded to use different input DM");
   PetscCall(PetscDSGetNumFields(ds, &Nf));
   PetscCall(PetscDSGetComponents(ds, &Nc));
-  PetscCall(PetscDSGetComponentOffsets(ds, &uOff));
-  PetscCall(PetscDSGetComponentDerivativeOffsets(ds, &uOff_x));
-  PetscCall(PetscDSGetEvaluationArrays(ds, &u, &bc /*&u_t*/, &u_x));
-  PetscCall(PetscDSGetWorkspace(ds, &x, NULL, NULL, NULL, NULL));
-  PetscCall(PetscDSGetConstants(ds, &numConstants, &constants));
-  PetscCall(DMGetLocalSection(dm, &section));
-  PetscCall(DMPlexVecGetClosure(dmIn, section, localU, p, NULL, &coefficients));
+  PetscCall(PetscDSGetNumFields(dsIn, &NfIn));
+  PetscCall(PetscDSGetComponentOffsets(dsIn, &uOff));
+  PetscCall(PetscDSGetComponentDerivativeOffsets(dsIn, &uOff_x));
+  PetscCall(PetscDSGetEvaluationArrays(dsIn, &u, &bc /*&u_t*/, &u_x));
+  PetscCall(PetscDSGetWorkspace(dsIn, &x, NULL, NULL, NULL, NULL));
+  PetscCall(PetscDSGetConstants(dsIn, &numConstants, &constants));
+  PetscCall(DMGetLocalSection(dmIn, &section));
+  PetscCall(DMGetEnclosurePoint(dmIn, dm, encIn, p, &inp));
+  if (localU) PetscCall(DMPlexVecGetClosure(dmIn, section, localU, inp, NULL, &coefficients));
   if (dmAux) {
     PetscInt subp;
 
@@ -403,15 +404,15 @@ static PetscErrorCode DMProjectPoint_BdField_Private(DM dm, PetscDS ds, DM dmIn,
         cgeom.detJ = &fgeom->suppDetJ[0][tp];
       }
       /* TODO We should use cgeom here, instead of fegeom, however the geometry coming in through fgeom does not have the support cell geometry */
-      PetscCall(PetscFEEvaluateFieldJets_Internal(ds, Nf, 0, tp, T, &cgeom, coefficients, coefficients_t, u, u_x, u_t));
+      PetscCall(PetscFEEvaluateFieldJets_Internal(dsIn, NfIn, 0, tp, T, &cgeom, coefficients, coefficients_t, u, u_x, u_t));
       if (dsAux) PetscCall(PetscFEEvaluateFieldJets_Internal(dsAux, NfAux, 0, tp, TAux, &cgeom, coefficientsAux, coefficientsAux_t, a, a_x, a_t));
-      (*funcs[f])(dE, Nf, NfAux, uOff, uOff_x, u, u_t, u_x, aOff, aOff_x, a, a_t, a_x, time, fegeom.v, fegeom.n, numConstants, constants, &pointEval[Nc[f] * q]);
+      (*funcs[f])(dE, NfIn, NfAux, uOff, uOff_x, u, u_t, u_x, aOff, aOff_x, a, a_t, a_x, time, fegeom.v, fegeom.n, numConstants, constants, &pointEval[Nc[f] * q]);
     }
     PetscCall(PetscDualSpaceApplyAll(sp[f], pointEval, &values[v]));
     PetscCall(DMRestoreWorkArray(dm, numPoints * Nc[f], MPIU_SCALAR, &pointEval));
     v += spDim;
   }
-  PetscCall(DMPlexVecRestoreClosure(dmIn, section, localU, p, NULL, &coefficients));
+  if (localU) PetscCall(DMPlexVecRestoreClosure(dmIn, section, localU, inp, NULL, &coefficients));
   if (dmAux) PetscCall(DMPlexVecRestoreClosure(dmAux, sectionAux, localA, p, NULL, &coefficientsAux));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -435,7 +436,7 @@ static PetscErrorCode DMProjectPoint_Private(DM dm, PetscDS ds, DM dmIn, DMEnclo
     PetscCall(DMProjectPoint_Field_Private(dm, ds, dmIn, encIn, dsIn, dmAux, encAux, dsAux, time, localU, localA, fegeom, sp, p, T, TAux, (void (**)(PetscInt, PetscInt, PetscInt, const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]))funcs, ctxs, values));
     break;
   case DM_BC_ESSENTIAL_BD_FIELD:
-    PetscCall(DMProjectPoint_BdField_Private(dm, ds, dmIn, dsIn, dmAux, encAux, dsAux, time, localU, localA, fegeom, sp, p, T, TAux, (void (**)(PetscInt, PetscInt, PetscInt, const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], PetscReal, const PetscReal[], const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]))funcs, ctxs, values));
+    PetscCall(DMProjectPoint_BdField_Private(dm, ds, dmIn, encIn, dsIn, dmAux, encAux, dsAux, time, localU, localA, fegeom, sp, p, T, TAux, (void (**)(PetscInt, PetscInt, PetscInt, const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], PetscReal, const PetscReal[], const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]))funcs, ctxs, values));
     break;
   default:
     SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONG, "Unknown boundary condition type: %d", (int)type);
