@@ -49,11 +49,14 @@ PETSC_INTERN PetscErrorCode PCGetDefaultType_Private(PC pc, const char *type[])
       }
     }
   } else {
+    *type = NULL;
+#if 0
     if (size == 1) {
       *type = PCILU;
     } else {
       *type = PCBJACOBI;
     }
+#endif
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
