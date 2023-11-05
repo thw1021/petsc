@@ -172,6 +172,30 @@ typedef enum {
 
 PETSC_EXTERN const char *const SNESNewtonTRFallbackTypes[];
 
+/*E
+    SNESNewtonTRScalingType - type of ellipsoidal trust region scaling
+
+   Values:
++  `SNES_TR_SCALING_NONE` - No ellipsoidal scaling
+.  `SNES_TR_SCALING_MAXGI` - See https://arxiv.org/abs/2203.01757
+.  `SNES_TR_SCALING_ADAGRAD` - See https://arxiv.org/abs/2203.01757
+.  `SNES_TR_SCALING_RMSPROP` - See https://arxiv.org/abs/1905.09201
+-  `SNES_TR_SCALING_CUSTOM` - User defined scaling
+
+   Level: intermediate
+
+.seealso: [](ch_snes), `SNES`, `SNESNEWTONTR`
+E*/
+typedef enum {
+  SNES_TR_SCALING_NONE,
+  SNES_TR_SCALING_MAXGI,
+  SNES_TR_SCALING_ADAGRAD,
+  SNES_TR_SCALING_RMSPROP,
+  SNES_TR_SCALING_CUSTOM,
+} SNESNewtonTRScalingType;
+
+PETSC_EXTERN const char *const SNESNewtonTRScalingTypes[];
+
 PETSC_EXTERN PetscErrorCode SNESNewtonTRSetPreCheck(SNES, PetscErrorCode (*)(SNES, Vec, Vec, PetscBool *, void *), void *ctx);
 PETSC_EXTERN PetscErrorCode SNESNewtonTRGetPreCheck(SNES, PetscErrorCode (**)(SNES, Vec, Vec, PetscBool *, void *), void **ctx);
 PETSC_EXTERN PetscErrorCode SNESNewtonTRSetPostCheck(SNES, PetscErrorCode (*)(SNES, Vec, Vec, Vec, PetscBool *, PetscBool *, void *), void *ctx);
@@ -179,6 +203,8 @@ PETSC_EXTERN PetscErrorCode SNESNewtonTRGetPostCheck(SNES, PetscErrorCode (**)(S
 PETSC_EXTERN PetscErrorCode SNESNewtonTRSetFallbackType(SNES, SNESNewtonTRFallbackType);
 PETSC_EXTERN PetscErrorCode SNESNewtonTRPreCheck(SNES, Vec, Vec, PetscBool *);
 PETSC_EXTERN PetscErrorCode SNESNewtonTRPostCheck(SNES, Vec, Vec, Vec, PetscBool *, PetscBool *);
+PETSC_EXTERN PetscErrorCode SNESNewtonTRSetScaling(SNES, SNESNewtonTRScalingType, PetscErrorCode (*)(SNES, Vec, void *), PetscErrorCode (*)(SNES, Vec, Mat, Mat, Mat *, Mat *, void *), PetscErrorCode (*)(void *), void *);
+PETSC_EXTERN PetscErrorCode SNESNewtonTRSetUseQNModel(SNES, PetscBool);
 
 /* TRDC API, to be removed after 3.19 */
 PETSC_EXTERN PetscErrorCode SNESNewtonTRDCGetRhoFlag(SNES, PetscBool *);
