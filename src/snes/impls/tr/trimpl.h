@@ -33,6 +33,10 @@ typedef struct {
   PetscReal t1;
   PetscReal t2;
 
+  /* Use Quasi-Newton model */
+  PetscBool qn;
+  Mat       qnB;
+
   /* The type of norm for the trust region */
   NormType norm;
 

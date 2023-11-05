@@ -10,6 +10,20 @@ typedef struct {
 const char *const SNESNewtonTRFallbackTypes[] = {"NEWTON", "CAUCHY", "DOGLEG", "SNESNewtonTRFallbackType", "SNES_TR_FALLBACK_", NULL};
 const char *const SNESNewtonTRScalingTypes[]  = {"NONE", "MAXGI", "ADAGRAD", "RMSPROP", "CUSTOM", "SNESNewtonTRScalingType", "SNES_TR_SCALING_", NULL};
 
+static PetscErrorCode SNESComputeJacobianLMVM(SNES snes, Vec X, Mat J, Mat B, void *dummy)
+{
+  PetscFunctionBegin;
+  // PetscCall(MatLMVMSymBroydenSetDelta(B, delta));
+  PetscCall(MatLMVMUpdate(B, X, snes->vec_func));
+  PetscCall(MatAssemblyBegin(B, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(B, MAT_FINAL_ASSEMBLY));
+  if (J != B) {
+    PetscCall(MatAssemblyBegin(J, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(J, MAT_FINAL_ASSEMBLY));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode SNESTR_KSPConverged_Private(KSP ksp, PetscInt n, PetscReal rnorm, KSPConvergedReason *reason, void *cctx)
 {
   SNES_TR_KSPConverged_Ctx *ctx  = (SNES_TR_KSPConverged_Ctx *)cctx;
@@ -53,6 +67,36 @@ static PetscErrorCode SNESTR_Converged_Private(SNES snes, PetscInt it, PetscReal
   } else if (snes->nfuncs >= snes->max_funcs && snes->max_funcs >= 0) {
     PetscCall(PetscInfo(snes, "Exceeded maximum number of function evaluations: %" PetscInt_FMT "\n", snes->max_funcs));
     *reason = SNES_DIVERGED_FUNCTION_COUNT;
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  SNESNewtonTRSetUseQNModel - Use a Quasi-Newton model.
+
+  Input Parameters:
++ snes  - the nonlinear solver object
+- use - whether or not to use the Quasi-Newton approximation.
+
+  Level: intermediate
+
+  Notes:
+  Options for the approximation can be set with the snes_tr_ prefix.
+
+.seealso: `SNESNEWTONTR`, `MATLMVM`
+@*/
+PetscErrorCode SNESNewtonTRSetUseQNModel(SNES snes, PetscBool use)
+{
+  SNES_NEWTONTR *tr = (SNES_NEWTONTR *)snes->data;
+  PetscBool      flg;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
+  PetscValidLogicalCollectiveBool(snes, use, 2);
+  PetscCall(PetscObjectTypeCompare((PetscObject)snes, SNESNEWTONTR, &flg));
+  if (flg) {
+    if (!use) PetscCall(MatDestroy(&tr->qnB));
+    tr->qn = use;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -548,7 +592,7 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
   PetscReal                 rho, fnorm, gnorm = 0.0, xnorm = 0.0, delta, ynorm, lam = neP->lammax;
   PetscReal                 deltaM, fk, fkp1, deltaqm = 0.0, gTy = 0.0, yTHy = 0.0;
   PetscReal                 auk, tauk, gfnorm, gfnorm_k, ycnorm, gTBg, objmin = 0.0, beta_k = 1.0;
-  KSP                       ksp;
+  PC                        pc;
   Mat                       J, Jp;
   PetscBool                 already_done = PETSC_FALSE;
   PetscBool                 clear_converged_test, rho_satisfied, has_objective;
@@ -580,14 +624,14 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
 
   /* Set the linear stopping criteria to use the More' trick if needed */
   clear_converged_test = PETSC_FALSE;
-  PetscCall(SNESGetKSP(snes, &ksp));
-  PetscCall(KSPGetConvergenceTest(ksp, &convtest, &convctx, &convdestroy));
+  PetscCall(SNESGetKSP(snes, &snes->ksp));
+  PetscCall(KSPGetConvergenceTest(snes->ksp, &convtest, &convctx, &convdestroy));
   if (convtest != SNESTR_KSPConverged_Private) {
     clear_converged_test = PETSC_TRUE;
     PetscCall(PetscNew(&ctx));
     ctx->snes = snes;
-    PetscCall(KSPGetAndClearConvergenceTest(ksp, &ctx->convtest, &ctx->convctx, &ctx->convdestroy));
-    PetscCall(KSPSetConvergenceTest(ksp, SNESTR_KSPConverged_Private, ctx, SNESTR_KSPConverged_Destroy));
+    PetscCall(KSPGetAndClearConvergenceTest(snes->ksp, &ctx->convtest, &ctx->convctx, &ctx->convdestroy));
+    PetscCall(KSPSetConvergenceTest(snes->ksp, SNESTR_KSPConverged_Private, ctx, SNESTR_KSPConverged_Destroy));
     PetscCall(PetscInfo(snes, "Using Krylov convergence test SNESTR_KSPConverged_Private\n"));
   }
 
@@ -618,6 +662,10 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
 
   if (neP->kmdc) PetscCall(KSPSetComputeEigenvalues(snes->ksp, PETSC_TRUE));
 
+  /* hook state vector to BFGS preconditioner */
+  PetscCall(KSPGetPC(snes->ksp, &pc));
+  PetscCall(PCLMVMSetUpdateVec(pc, X));
+
   while (snes->iter < maxits) {
     /* calculating Jacobian and GradF of minimization function only once */
     if (!already_done) {
@@ -644,12 +692,28 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
       }
 
       /* Jacobian */
-      PetscCall(SNESComputeJacobian(snes, X, snes->jacobian, snes->jacobian_pre));
+      J  = NULL;
+      Jp = NULL;
+      if (!neP->qn) {
+        PetscCall(SNESComputeJacobian(snes, X, snes->jacobian, snes->jacobian_pre));
+        J  = snes->jacobian;
+        Jp = snes->jacobian_pre;
+      }
       SNESCheckJacobianDomainerror(snes);
 
       /* scaling */
       PetscCall(SNESTRUpdateScaling(snes, F));
-      PetscCall(SNESTRApplyScaling(snes, F, snes->jacobian, snes->jacobian_pre, &J, &Jp));
+      PetscCall(SNESTRApplyScaling(snes, F, J, Jp, &J, &Jp));
+
+      /* QN model */
+      if (neP->qn) {
+        PetscCall(SNESComputeJacobianLMVM(snes, X, neP->qnB, neP->qnB, NULL));
+        PetscCall(PetscObjectReference((PetscObject)neP->qnB));
+        PetscCall(PetscObjectReference((PetscObject)neP->qnB));
+        J  = neP->qnB;
+        Jp = neP->qnB;
+      }
+
       /* objective function */
       PetscCall(VecNorm(F, NORM_2, &fnorm));
       if (has_objective) PetscCall(SNESComputeObjective(snes, X, &fk));
@@ -836,31 +900,56 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
   PetscCall(MatDestroy(&J));
   PetscCall(MatDestroy(&Jp));
   if (clear_converged_test) {
-    PetscCall(KSPGetAndClearConvergenceTest(ksp, &ctx->convtest, &ctx->convctx, &ctx->convdestroy));
+    PetscCall(KSPGetAndClearConvergenceTest(snes->ksp, &ctx->convtest, &ctx->convctx, &ctx->convdestroy));
     PetscCall(PetscFree(ctx));
-    PetscCall(KSPSetConvergenceTest(ksp, convtest, convctx, convdestroy));
+    PetscCall(KSPSetConvergenceTest(snes->ksp, convtest, convctx, convdestroy));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode SNESSetUp_NEWTONTR(SNES snes)
 {
+  SNES_NEWTONTR *tr = (SNES_NEWTONTR *)snes->data;
+
   PetscFunctionBegin;
   PetscCall(SNESSetWorkVecs(snes, 5));
+  if (tr->qn) {
+    PetscInt    n, N;
+    const char *optionsprefix;
+    Mat         B;
+
+    PetscCall(MatDestroy(&tr->qnB));
+    PetscCall(MatCreate(PetscObjectComm((PetscObject)snes), &B));
+    PetscCall(SNESGetOptionsPrefix(snes, &optionsprefix));
+    PetscCall(MatSetOptionsPrefix(B, "snes_tr_"));
+    PetscCall(MatAppendOptionsPrefix(B, optionsprefix));
+    PetscCall(MatSetType(B, MATLMVMBFGS));
+    PetscCall(VecGetLocalSize(snes->vec_sol, &n));
+    PetscCall(VecGetSize(snes->vec_sol, &N));
+    PetscCall(MatSetSizes(B, n, n, N, N));
+    PetscCall(MatSetUp(B));
+    PetscCall(MatSetFromOptions(B));
+    PetscCall(MatLMVMAllocate(B, snes->vec_sol, snes->vec_func));
+    tr->qnB = B;
+  }
   PetscCall(SNESSetUpMatrices(snes));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode SNESReset_NEWTONTR(SNES snes)
 {
+  SNES_NEWTONTR *tr = (SNES_NEWTONTR *)snes->data;
+
   PetscFunctionBegin;
   PetscCall(SNESTRDestroyScaling(snes));
+  PetscCall(MatDestroy(&tr->qnB));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode SNESDestroy_NEWTONTR(SNES snes)
 {
   PetscFunctionBegin;
+  PetscCall(SNESReset_NEWTONTR(snes));
   PetscCall(PetscFree(snes->data));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -887,6 +976,9 @@ static PetscErrorCode SNESSetFromOptions_NEWTONTR(SNES snes, PetscOptionItems *P
   PetscCall(PetscOptionsReal("-snes_tr_lambda_upfactor", "Uphill factor for regularization", "None", ctx->lamup, &ctx->lamup, NULL));
   PetscCall(PetscOptionsReal("-snes_tr_lambda_downfactor", "Downhill factor for regularization", "None", ctx->lamdown, &ctx->lamdown, NULL));
   PetscCall(PetscOptionsEnum("-snes_tr_fallback_type", "Type of fallback if subproblem solution is outside of the trust region", "SNESNewtonTRSetFallbackType", SNESNewtonTRFallbackTypes, (PetscEnum)ctx->fallback, (PetscEnum *)&ctx->fallback, NULL));
+  flg = ctx->qn;
+  PetscCall(PetscOptionsBool("-snes_tr_qn", "Use a Quasi-Newton approximation for the model", "SNESNewtonTRSetUseQNModel", flg, &flg, NULL));
+  if (flg != ctx->qn) PetscCall(SNESNewtonTRSetUseQNModel(snes, flg));
   PetscCall(PetscOptionsEnum("-snes_tr_norm_type", "Type of norm for trust region bounds", "XXX", NormTypes, (PetscEnum)ctx->norm, (PetscEnum *)&ctx->norm, NULL));
   PetscCall(PetscOptionsEnum("-snes_tr_scaling_type", "Type of trust region scaling", "SNESNewtonTRSetScaling", SNESNewtonTRScalingTypes, (PetscEnum)ctx->scaling, (PetscEnum *)&scaling, &flg));
   if (flg && scaling != ctx->scaling) { PetscCall(SNESNewtonTRSetScaling(snes, scaling, NULL, NULL, NULL, NULL)); }
@@ -929,7 +1021,8 @@ static PetscErrorCode SNESView_NEWTONTR(SNES snes, PetscViewer viewer)
 .   -snes_tr_lambda_min - minimum allowed regularization factor (default: 0.0)
 .   -snes_tr_lambda_upfactor - uphill factor for regularization (default: 2.0)
 .   -snes_tr_lambda_downfactor - downhill factor for regularization (default: 0.5)
--   -snes_tr_fallback_type <newton,cauchy,dogleg> - solution strategy to test reduction when step is outside of trust region. Can use scaled Newton direction, Cauchy point (Steepest Descent direction) or dogleg method.
+.   -snes_tr_fallback_type <newton,cauchy,dogleg> - solution strategy to test reduction when step is outside of trust region. Can use scaled Newton direction, Cauchy point (Steepest Descent direction) or dogleg method.
+.   -snes_tr_qn - use a Quasi-Newton approximation of the model.
 -   -snes_tr_scaling_type <none,maxgi,adagrad,rmsprop> - trust region scaling strategy
 
     Reference:
@@ -937,7 +1030,7 @@ static PetscErrorCode SNESView_NEWTONTR(SNES snes, PetscViewer viewer)
 
 .seealso: `SNESCreate()`, `SNES`, `SNESSetType()`, `SNESNEWTONLS`, `SNESSetTrustRegionTolerance()`,
           `SNESNewtonTRPreCheck()`, `SNESNewtonTRGetPreCheck()`, `SNESNewtonTRSetPostCheck()`, `SNESNewtonTRGetPostCheck()`,
-          `SNESNewtonTRSetPreCheck()`, `SNESNewtonTRSetFallbackType()`
+          `SNESNewtonTRSetPreCheck()`, `SNESNewtonTRSetFallbackType()`, `SNESNewtonTRSetUseQNModel()`
 M*/
 PETSC_EXTERN PetscErrorCode SNESCreate_NEWTONTR(SNES snes)
 {

@@ -204,6 +204,7 @@ PETSC_EXTERN PetscErrorCode SNESNewtonTRSetFallbackType(SNES, SNESNewtonTRFallba
 PETSC_EXTERN PetscErrorCode SNESNewtonTRPreCheck(SNES, Vec, Vec, PetscBool *);
 PETSC_EXTERN PetscErrorCode SNESNewtonTRPostCheck(SNES, Vec, Vec, Vec, PetscBool *, PetscBool *);
 PETSC_EXTERN PetscErrorCode SNESNewtonTRSetScaling(SNES, SNESNewtonTRScalingType, PetscErrorCode (*)(SNES, Vec, void *), PetscErrorCode (*)(SNES, Vec, Mat, Mat, Mat *, Mat *, void *), PetscErrorCode (*)(void *), void *);
+PETSC_EXTERN PetscErrorCode SNESNewtonTRSetUseQNModel(SNES, PetscBool);
 
 /* TRDC API, to be removed after 3.19 */
 PETSC_EXTERN PetscErrorCode SNESNewtonTRDCGetRhoFlag(SNES, PetscBool *);
