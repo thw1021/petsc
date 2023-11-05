@@ -101,7 +101,7 @@ PetscErrorCode PCGetType(PC pc, PCType *type)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-extern PetscErrorCode PCGetDefaultType_Private(PC, const char *[]);
+PETSC_INTERN PetscErrorCode PCGetDefaultType_Private(PC, const char *[]);
 
 /*@
   PCSetFromOptions - Sets `PC` options from the options database.
