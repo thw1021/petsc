@@ -3565,6 +3565,7 @@ PetscErrorCode MatDuplicateNoCreate_SeqBAIJ(Mat C, Mat A, MatDuplicateOption cpv
   if (mallocmatspace) {
     if (cpvalues == MAT_SHARE_NONZERO_PATTERN) {
       PetscCall(PCMPIServerAllocateArray(bs2 * nz, sizeof(PetscScalar), (void **)&c->a));
+      PetscCall(PetscArrayzero(c->a, bs2 * nz));
       c->free_a       = PETSC_TRUE;
       c->i            = a->i;
       c->j            = a->j;

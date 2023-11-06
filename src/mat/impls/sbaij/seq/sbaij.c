@@ -2125,6 +2125,7 @@ PetscErrorCode MatDuplicate_SeqSBAIJ(Mat A, MatDuplicateOption cpvalues, Mat *B)
   PetscCall(PCMPIServerAllocateArray(bs2 * nz, sizeof(PetscScalar), (void **)&c->a));
   c->free_a = PETSC_TRUE;
   if (cpvalues == MAT_SHARE_NONZERO_PATTERN) {
+    PetscCall(PetscArrayzero(c->a, bs2 * nz));
     c->i       = a->i;
     c->j       = a->j;
     c->free_ij = PETSC_FALSE;
