@@ -81,9 +81,12 @@ PetscErrorCode PCMPIServerMapAddresses(MPI_Comm comm, PetscInt n, const void **b
     }
     PetscCallMPI(MPI_Bcast(&bcastinfo, 2 * n, MPIU_SIZE_T, 0, comm));
   } else {
-    BcastInfo bcastinfo;
-    int       shmkey = 0;
-    size_t    sz     = 0;
+    BcastInfo bcastinfo = {
+      {0, 0, 0},
+      {0, 0, 0}
+    };
+    int    shmkey = 0;
+    size_t sz     = 0;
 
     PetscCallMPI(MPI_Bcast(&bcastinfo, 2 * n, MPIU_SIZE_T, 0, comm));
     for (PetscInt i = 0; i < n; i++) {
