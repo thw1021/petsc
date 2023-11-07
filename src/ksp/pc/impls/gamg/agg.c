@@ -595,8 +595,10 @@ static PetscErrorCode PCGAMGCreateGraph_AGG(PC pc, Mat Amat, Mat *a_Gmat)
   const char     *prefix;
   MatInfo         info0, info1;
   PetscInt        bs;
+  PetscContainer  container;
 
   PetscFunctionBegin;
+  // Do some prep work for coarsening here.
   PetscCall(PetscLogEventBegin(petsc_gamg_setup_events[GAMG_COARSEN], 0, 0, 0, 0));
   /* Note: depending on the algorithm that will be used for computing the coarse grid points this should pass PETSC_TRUE or PETSC_FALSE as the first argument */
   /* MATCOARSENHEM requires numerical weights for edges so ensure they are computed */
@@ -609,6 +611,7 @@ static PetscErrorCode PCGAMGCreateGraph_AGG(PC pc, Mat Amat, Mat *a_Gmat)
   for (int ii = 0; ii < pc_gamg_agg->crs->strength_index_size; ii++) {
     PetscCheck(pc_gamg_agg->crs->strength_index[ii] >= 0 && pc_gamg_agg->crs->strength_index[ii] < bs, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONG, "Indices (%d) must be non-negative and < block size (%d)", (int)pc_gamg_agg->crs->strength_index[ii], (int)bs);
   }
+  // change some parameters for HEM and not HEM
   PetscCall(PetscObjectTypeCompare((PetscObject)pc_gamg_agg->crs, MATCOARSENHEM, &ishem));
   if (ishem) {
     if (pc_gamg_agg->aggressive_coarsening_levels) PetscCall(PetscInfo(pc, "HEM and aggressive coarsening ignored: HEM using %d iterations\n", (int)pc_gamg_agg->crs->max_it));
@@ -623,10 +626,118 @@ static PetscErrorCode PCGAMGCreateGraph_AGG(PC pc, Mat Amat, Mat *a_Gmat)
     }
   }
   PetscCall(PetscLogEventEnd(petsc_gamg_setup_events[GAMG_COARSEN], 0, 0, 0, 0));
+  // make the graph
   PetscCall(PetscLogEventBegin(petsc_gamg_setup_events[GAMG_GRAPH], 0, 0, 0, 0));
   PetscCall(MatGetInfo(Amat, MAT_LOCAL, &info0)); /* global reduction */
-
-  if (ishem || pc_gamg_agg->use_low_mem_filter) {
+  PetscCall(PetscObjectQuery((PetscObject)Amat, "Mass", (PetscObject *)&container));
+  if (container) { // use mass matrix to get better graph -- only works on fine grid -- do Pt M P -- TODO
+    Mat       mass, Id, matTrans, RR, XX, ZZ, BB;
+    Vec       BB_m_idiag, A_idiag_ssqrt;
+    PetscInt  m, M, bs, max_it = 2;
+    PetscReal scale = 1, dt = 100;
+    PetscCall(PetscInfo(pc, "Have mass matrix, use ODE based strength of connections. dt = %g, %d iterations of Jacobi for M^-1A\n", (double)dt, (int)max_it));
+    PetscCall(MatGetBlockSize(Amat, &bs));
+    // get mass matrix and setup objects for iteration
+    PetscCall(PetscContainerGetPointer(container, (void **)&mass));
+    PetscCall(MatCreateVecs(mass, &A_idiag_ssqrt, &BB_m_idiag));
+    PetscCall(MatGetDiagonal(mass, BB_m_idiag));
+    PetscCall(VecReciprocal(BB_m_idiag)); // preconditioner B
+    PetscCall(MatGetDiagonal(Amat, A_idiag_ssqrt));
+    PetscCall(VecReciprocal(A_idiag_ssqrt)); // preconditioner B
+    PetscCall(VecSqrtAbs(A_idiag_ssqrt));
+    // R = B (A) - A (M) x = B (A)
+    PetscCall(MatDuplicate(Amat, MAT_COPY_VALUES, &RR));
+    PetscCall(MatDiagonalScale(RR, A_idiag_ssqrt, A_idiag_ssqrt));
+    PetscCall(MatDuplicate(RR, MAT_COPY_VALUES, &BB));          // scaled RHS to make invariant to scaling
+    PetscCall(MatDuplicate(Amat, MAT_DO_NOT_COPY_VALUES, &XX)); // solution, X = 0
+    PetscCall(MatZeroEntries(XX));
+    PetscCall(MatDuplicate(Amat, MAT_DO_NOT_COPY_VALUES, &ZZ)); // solution, X = 0
+    // S^k+1 = S^k + D^-1 (A - M S^k)
+    for (int ii = 0; ii < max_it; ii++) {
+      PetscCall(MatCopy(RR, ZZ, DIFFERENT_NONZERO_PATTERN));
+      PetscCall(MatDiagonalScale(ZZ, BB_m_idiag, NULL));            // z <- B r
+      PetscCall(MatAXPY(XX, scale, ZZ, DIFFERENT_NONZERO_PATTERN)); // x <- x + scale z
+      if (ii < max_it - 1) {
+        PetscCall(MatDestroy(&RR));
+        PetscCall(MatMatMult(mass, XX, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &RR));
+        PetscCall(MatAYPX(RR, -1., BB, DIFFERENT_NONZERO_PATTERN)); // A - M S^k
+      }
+    }
+    PetscCall(MatGetSize(Amat, &M, NULL));
+    PetscCall(MatGetLocalSize(Amat, &m, NULL));
+    if (0) { // debug, 1 proc
+      Vec                x, b;
+      KSP                ksp;
+      PetscInt           ncols;
+      const PetscScalar *vals;
+      const PetscInt    *idx;
+      PetscCall(MatCreateVecs(mass, &b, &x));
+      PetscCall(MatGetRow(Amat, M / 2, &ncols, &idx, &vals));
+      PetscCall(VecSetValues(b, ncols, idx, vals, INSERT_VALUES));
+      PetscCall(MatRestoreRow(Amat, M / 2, &ncols, &idx, &vals));
+      PetscCall(VecAssemblyBegin(b));
+      PetscCall(VecAssemblyEnd(b));
+      /* solve linear system */
+      PetscCall(KSPCreate(PETSC_COMM_WORLD, &ksp));
+      PetscCall(KSPSetOperators(ksp, mass, mass));
+      PetscCall(KSPSolve(ksp, b, x));
+      PetscCall(VecView(x, PETSC_VIEWER_STDOUT_WORLD));
+      PetscCall(VecDestroy(&x));
+      PetscCall(VecDestroy(&b));
+      PetscCall(KSPDestroy(&ksp));
+    }
+    // forward Euler: G = I + dt * M^-1 A
+    PetscCall(MatCreateConstantDiagonal(PetscObjectComm((PetscObject)pc), m, m, M, M, 1.0, &Id));
+    PetscCall(MatAYPX(XX, dt, Id, DIFFERENT_NONZERO_PATTERN));
+    // absolute value MiA & scalarize
+    {
+      Mat                A;
+      PetscInt           Istart, Iend, ncols;
+      const PetscScalar *vals;
+      const PetscInt    *idx;
+      if (bs == 1) {
+        PetscCall(MatDuplicate(XX, MAT_DO_NOT_COPY_VALUES, &A));
+      } else {
+        PetscCall(MatCreate(PetscObjectComm((PetscObject)pc), &A));
+        PetscCall(MatSetSizes(A, m / bs, m / bs, M / bs, M / bs));
+        PetscCall(MatSetFromOptions(A));
+      }
+      PetscCall(MatGetOwnershipRange(A, &Istart, &Iend));
+      for (PetscInt src_i = bs * Istart, dest_i = Istart; dest_i < Iend; dest_i++) {
+        for (int kk = 0; kk < bs; kk++, src_i++) {
+          PetscCall(MatGetRow(XX, src_i + kk, &ncols, &idx, &vals));
+          for (int jj = 0; jj < ncols; jj++) {
+            PetscInt    dest_col = idx[jj] / bs;
+            PetscScalar v        = PetscAbsScalar(vals[jj]);
+            if (v >= vfilter) { PetscCall(MatSetValues(A, 1, &dest_i, 1, &dest_col, &v, INSERT_VALUES)); }
+          }
+          PetscCall(MatRestoreRow(XX, src_i, &ncols, &idx, &vals));
+        }
+      }
+      PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
+      PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
+      PetscCall(MatDestroy(&XX));
+      XX = A;
+    }
+    // symmetrize
+    PetscCall(MatTranspose(XX, MAT_INITIAL_MATRIX, &matTrans));
+    PetscCall(MatAXPY(XX, 1.0, matTrans, DIFFERENT_NONZERO_PATTERN)); // mass can be different
+    PetscCall(MatDestroy(&matTrans));
+    // scale
+    PetscCall(MatGetDiagonal(XX, BB_m_idiag));
+    PetscCall(VecReciprocal(BB_m_idiag));
+    PetscCall(VecSqrtAbs(BB_m_idiag));
+    PetscCall(MatDiagonalScale(XX, BB_m_idiag, BB_m_idiag));
+    //
+    PetscCall(VecDestroy(&BB_m_idiag));
+    PetscCall(VecDestroy(&A_idiag_ssqrt));
+    PetscCall(MatDestroy(&Id));
+    PetscCall(MatDestroy(&RR));
+    PetscCall(MatDestroy(&ZZ));
+    PetscCall(MatDestroy(&BB));
+    /* PetscCall(MatView(XX, PETSC_VIEWER_STDOUT_WORLD)); */
+    *a_Gmat = XX;
+  } else if (pc_gamg_agg->use_low_mem_filter) {
     PetscCall(MatCreateGraph(Amat, PETSC_TRUE, (vfilter >= 0 || ishem) ? PETSC_TRUE : PETSC_FALSE, vfilter, pc_gamg_agg->crs->strength_index_size, pc_gamg_agg->crs->strength_index, a_Gmat));
   } else {
     // make scalar graph, symetrize if not know to be symetric, scale, but do not filter (expensive)
@@ -722,6 +833,13 @@ static PetscErrorCode PCGAMGCreateGraph_AGG(PC pc, Mat Amat, Mat *a_Gmat)
   PetscCall(MatGetInfo(*a_Gmat, MAT_LOCAL, &info1)); /* global reduction */
   if (info0.nz_used > 0) PetscCall(PetscInfo(pc, "Filtering left %g %% edges in graph (%e %e)\n", 100.0 * info1.nz_used * (double)(bs * bs) / info0.nz_used, info0.nz_used, info1.nz_used));
   PetscCall(PetscLogEventEnd(petsc_gamg_setup_events[GAMG_GRAPH], 0, 0, 0, 0));
+
+  if (1) { // give the graph the DM for aggregate viz
+    DM dm;
+    PetscCall(MatGetDM(Amat, &dm));
+    if (dm) { PetscCall(MatSetDM(*a_Gmat, dm)); }
+  }
+
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1071,8 +1189,9 @@ static PetscErrorCode PCGAMGCoarsen_AGG(PC a_pc, Mat *a_Gmat1, PetscCoarsenData 
   PetscInt     iSwapIndex;
   PetscRandom  random;
   MPI_Comm     comm;
-
+  DM           dm;
   PetscFunctionBegin;
+  PetscCall(MatGetDM(*a_Gmat1, &dm));
   PetscCall(PetscObjectGetComm((PetscObject)Gmat1, &comm));
   PetscCall(PetscLogEventBegin(petsc_gamg_setup_events[GAMG_COARSEN], 0, 0, 0, 0));
   PetscCall(MatGetLocalSize(Gmat1, &nn, NULL));
@@ -1113,6 +1232,7 @@ static PetscErrorCode PCGAMGCoarsen_AGG(PC a_pc, Mat *a_Gmat1, PetscCoarsenData 
   // square graph
   if (pc_gamg->current_level < pc_gamg_agg->aggressive_coarsening_levels && pc_gamg_agg->use_aggressive_square_graph) {
     PetscCall(PCGAMGSquareGraph_GAMG(a_pc, Gmat1, &Gmat2));
+    PetscCall(MatSetDM(Gmat2, dm)); // pass DM along for aggregate vize
   } else Gmat2 = Gmat1;
   // switch to old MIS-1 for square graph
   if (pc_gamg->current_level < pc_gamg_agg->aggressive_coarsening_levels) {
