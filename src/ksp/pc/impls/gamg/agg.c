@@ -709,7 +709,7 @@ static PetscErrorCode PCGAMGCreateGraph_AGG(PC pc, Mat Amat, Mat *a_Gmat)
           for (int jj = 0; jj < ncols; jj++) {
             PetscInt    dest_col = idx[jj] / bs;
             PetscScalar v        = PetscAbsScalar(vals[jj]);
-            if (v >= vfilter) { PetscCall(MatSetValues(A, 1, &dest_i, 1, &dest_col, &v, INSERT_VALUES)); }
+            if (PetscRealPart(v) >= vfilter) { PetscCall(MatSetValues(A, 1, &dest_i, 1, &dest_col, &v, INSERT_VALUES)); }
           }
           PetscCall(MatRestoreRow(XX, src_i, &ncols, &idx, &vals));
         }
