@@ -514,10 +514,14 @@ PetscErrorCode TaoSoftThreshold(Vec in, PetscReal lb, PetscReal ub, Vec out)
   PetscFunctionBegin;
   PetscCall(VecGetArrayPair(in, out, &inarray, &outarray));
   PetscCall(VecGetLocalSize(in, &nlocal));
-  PetscCall(VecGetLocalSize(in, &mlocal));
+  PetscCall(VecGetLocalSize(out, &mlocal));
 
   PetscCheck(nlocal == mlocal, PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Input and output vectors need to be of same size.");
   PetscCheck(lb < ub, PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Lower bound needs to be lower than upper bound.");
+  if (lb == ub) {
+    PetscCall(VecRestoreArrayPair(in, out, &inarray, &outarray));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
 
   if (ub >= 0 && lb < 0) {
     for (i = 0; i < nlocal; i++) outarray[i] = ST_InternalPN(inarray[i], lb, ub);
