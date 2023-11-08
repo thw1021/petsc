@@ -88,7 +88,6 @@ PetscErrorCode MatCoarsenGetType(MatCoarsen coarsen, MatCoarsenType *type)
 @*/
 PetscErrorCode MatCoarsenApply(MatCoarsen coarser)
 {
-  Mat mat = coarser->graph;
   PetscFunctionBegin;
   PetscValidHeaderSpecific(coarser, MAT_COARSEN_CLASSID, 1);
   PetscAssertPointer(coarser, 1);
@@ -98,6 +97,7 @@ PetscErrorCode MatCoarsenApply(MatCoarsen coarser)
   PetscUseTypeMethod(coarser, apply);
   PetscCall(PetscLogEventEnd(MAT_Coarsen, coarser, 0, 0, 0));
 #if 0
+  Mat mat = coarser->graph;
   DM  dm;
   PetscCall(MatGetDM(mat, &dm)); // for aggregate vize
   if (dm) {
