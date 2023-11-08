@@ -495,7 +495,7 @@ PetscErrorCode PCGAMGSquareGraph_GAMG(PC a_pc, Mat Gmat1, Mat *Gmat2)
 
 static PetscErrorCode checkVizBlocks(Mat mat, PetscInt bs, PetscInt nis, IS asm_iss[])
 {
-  DM  dm;
+  DM dm;
 
   PetscFunctionBegin;
   PetscCall(MatGetDM(mat, &dm)); // for aggregate vize
