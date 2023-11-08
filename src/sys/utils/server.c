@@ -62,7 +62,10 @@ PetscErrorCode PCMPIServerMapAddresses(MPI_Comm comm, PetscInt n, const void **b
   PetscFunctionBegin;
 #if defined(PETSC_HAVE_SHARED_MEMORY)
   if (PetscGlobalRank == 0) {
-    BcastInfo bcastinfo;
+    BcastInfo bcastinfo = {
+      {0, 0, 0},
+      {0, 0, 0}
+    };
     for (PetscInt i = 0; i < n; i++) {
       PCMPIServerAllocation allocation = allocations;
 
@@ -79,7 +82,7 @@ PetscErrorCode PCMPIServerMapAddresses(MPI_Comm comm, PetscInt n, const void **b
       }
       PetscCheck(allocation, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Unable to locate allocated shared address %p", baseaddres[i]);
     }
-    PetscCallMPI(MPI_Bcast(&bcastinfo, 2 * n, MPIU_SIZE_T, 0, comm));
+    PetscCallMPI(MPI_Bcast(&bcastinfo, 6, MPIU_SIZE_T, 0, comm));
   } else {
     BcastInfo bcastinfo = {
       {0, 0, 0},
@@ -88,7 +91,7 @@ PetscErrorCode PCMPIServerMapAddresses(MPI_Comm comm, PetscInt n, const void **b
     int    shmkey = 0;
     size_t sz     = 0;
 
-    PetscCallMPI(MPI_Bcast(&bcastinfo, 2 * n, MPIU_SIZE_T, 0, comm));
+    PetscCallMPI(MPI_Bcast(&bcastinfo, 6, MPIU_SIZE_T, 0, comm));
     for (PetscInt i = 0; i < n; i++) {
       PCMPIServerAllocation next = allocations, previous = NULL;
       // PetscCallMPI(MPI_Bcast(&shmkey, 1, MPI_INT, 0, comm));
