@@ -834,12 +834,6 @@ static PetscErrorCode PCGAMGCreateGraph_AGG(PC pc, Mat Amat, Mat *a_Gmat)
   if (info0.nz_used > 0) PetscCall(PetscInfo(pc, "Filtering left %g %% edges in graph (%e %e)\n", 100.0 * info1.nz_used * (double)(bs * bs) / info0.nz_used, info0.nz_used, info1.nz_used));
   PetscCall(PetscLogEventEnd(petsc_gamg_setup_events[GAMG_GRAPH], 0, 0, 0, 0));
 
-  if (1) { // give the graph the DM for aggregate viz
-    DM dm;
-    PetscCall(MatGetDM(Amat, &dm));
-    if (dm) { PetscCall(MatSetDM(*a_Gmat, dm)); }
-  }
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1189,9 +1183,8 @@ static PetscErrorCode PCGAMGCoarsen_AGG(PC a_pc, Mat *a_Gmat1, PetscCoarsenData 
   PetscInt     iSwapIndex;
   PetscRandom  random;
   MPI_Comm     comm;
-  DM           dm;
+
   PetscFunctionBegin;
-  PetscCall(MatGetDM(*a_Gmat1, &dm));
   PetscCall(PetscObjectGetComm((PetscObject)Gmat1, &comm));
   PetscCall(PetscLogEventBegin(petsc_gamg_setup_events[GAMG_COARSEN], 0, 0, 0, 0));
   PetscCall(MatGetLocalSize(Gmat1, &nn, NULL));
@@ -1232,7 +1225,6 @@ static PetscErrorCode PCGAMGCoarsen_AGG(PC a_pc, Mat *a_Gmat1, PetscCoarsenData 
   // square graph
   if (pc_gamg->current_level < pc_gamg_agg->aggressive_coarsening_levels && pc_gamg_agg->use_aggressive_square_graph) {
     PetscCall(PCGAMGSquareGraph_GAMG(a_pc, Gmat1, &Gmat2));
-    PetscCall(MatSetDM(Gmat2, dm)); // pass DM along for aggregate vize
   } else Gmat2 = Gmat1;
   // switch to old MIS-1 for square graph
   if (pc_gamg->current_level < pc_gamg_agg->aggressive_coarsening_levels) {
