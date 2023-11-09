@@ -3977,7 +3977,7 @@ PetscErrorCode MatSolveAdd(Mat mat, Vec b, Vec y, Vec x)
 }
 
 /*@
-  MatSolveTranspose - Solves A^T x = b, given a factored matrix.
+  MatSolveTranspose - Solves `A^T x = b`, given a factored matrix.
 
   Neighbor-wise Collective
 
@@ -5217,7 +5217,7 @@ PetscErrorCode MatTransposeSetPrecursor(Mat mat, Mat B)
   If you use `MAT_INPLACE_MATRIX` then you must pass in `&mat` for `B`
 
   `MAT_REUSE_MATRIX` uses the `B` matrix obtained from a previous call to this function with `MAT_INITIAL_MATRIX`. If you already have a matrix to contain the
-  transpose, call `MatTransposeSetPrecursor`(`mat`,`B`) before calling this routine.
+  transpose, call `MatTransposeSetPrecursor(mat, B)` before calling this routine.
 
   If the nonzero structure of mat changed from the previous call to this function with the same matrices an error will be generated for some matrix types.
 
@@ -8552,7 +8552,7 @@ PetscErrorCode MatStashSetInitialSize(Mat mat, PetscInt size, PetscInt bsize)
 }
 
 /*@
-  MatInterpolateAdd - w = y + A*x or A^T*x depending on the shape of
+  MatInterpolateAdd - `w = y + A*x` or `A^T*x` depending on the shape of
   the matrix
 
   Neighbor-wise Collective
@@ -8634,7 +8634,7 @@ PetscErrorCode MatInterpolate(Mat A, Vec x, Vec y)
 }
 
 /*@
-  MatRestrict - y = A*x or A^T*x
+  MatRestrict - `y = A*x` or `A^T*x`
 
   Neighbor-wise Collective
 
@@ -8672,7 +8672,7 @@ PetscErrorCode MatRestrict(Mat A, Vec x, Vec y)
 }
 
 /*@
-  MatMatInterpolateAdd - `Y = W + A*X or W + A^T*X` depending on the shape of `A`
+  MatMatInterpolateAdd - `Y = W + A*X` or `W + A^T*X` depending on the shape of `A`
 
   Neighbor-wise Collective
 
