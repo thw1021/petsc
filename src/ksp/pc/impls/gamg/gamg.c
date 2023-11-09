@@ -493,75 +493,6 @@ PetscErrorCode PCGAMGSquareGraph_GAMG(PC a_pc, Mat Gmat1, Mat *Gmat2)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode checkVizBlocks(Mat mat, PetscInt bs, PetscInt nis, IS asm_iss[])
-{
-  DM dm;
-
-  PetscFunctionBegin;
-  PetscCall(MatGetDM(mat, &dm)); // for aggregate vize
-  if (dm) {
-    PetscInt        color;
-    Vec             u;
-    static PetscInt counter = 0;
-    PetscCall(DMCreateGlobalVector(dm, &u));
-    char argstr1[256] = "-asm_0";
-    char argstr2[256] = "-asm_0";
-    argstr1[5] += counter;
-    argstr2[5] += counter++;
-    PetscCall(PetscStrcat(argstr1, "_dm_view"));
-    PetscCall(PetscStrcat(argstr2, "_vec_view"));
-    if (1) {
-      PetscReal   vv;
-      PetscRandom rnd;
-      PetscCall(PetscRandomCreate(PETSC_COMM_SELF, &rnd));
-      PetscCall(PetscRandomSetInterval(rnd, 0, 10.));
-      PetscCall(PetscRandomSetFromOptions(rnd));
-      for (PetscInt bidx = 0, nn; bidx < nis; bidx++) {
-        IS              is = asm_iss[bidx];
-        const PetscInt *points;
-        PetscCall(ISGetLocalSize(is, &nn));
-        PetscCall(ISGetIndices(is, &points));
-        PetscCall(PetscRandomGetValueReal(rnd, &vv));
-        color = (PetscInt)vv;
-        for (int jj = 0; jj < nn; jj++) {
-          int         gidx    = points[jj];
-          PetscScalar blk_idx = (PetscScalar)(color);
-          PetscCall(VecSetValue(u, gidx, blk_idx, INSERT_VALUES));
-        }
-        PetscCall(ISRestoreIndices(is, &points));
-      }
-      PetscCall(PetscRandomDestroy(&rnd));
-    } else {
-      PetscInt mstarts, inis, irnis, nn, my0_blk;
-      PetscCall(MatGetOwnershipRange(mat, &mstarts, NULL));
-      /* PetscCall(PCASMGetLocalSubdomains(subpc, &nis, &asm_iss, NULL)); */
-      inis = nis;
-      PetscCallMPI(MPI_Scan(&inis, &irnis, 1, MPI_INT, MPI_SUM, PETSC_COMM_WORLD));
-      my0_blk = irnis - inis;
-      for (PetscInt bidx = 0; bidx < nis; bidx++) {
-        IS              is = asm_iss[bidx];
-        const PetscInt *points;
-        PetscCall(ISGetLocalSize(is, &nn));
-        PetscCall(ISGetIndices(is, &points));
-        for (int jj = 0; jj < nn; jj++) {
-          int         gidx    = points[jj];
-          PetscScalar blk_idx = (PetscScalar)((my0_blk + bidx + 1) % 10);
-          PetscCall(VecSetValue(u, gidx, blk_idx, INSERT_VALUES));
-        }
-        PetscCall(ISRestoreIndices(is, &points));
-      }
-    }
-    PetscCall(VecAssemblyBegin(u));
-    PetscCall(VecAssemblyEnd(u));
-    /* PetscCall(VecView(u, PETSC_VIEWER_STDOUT_WORLD)); */
-    PetscCall(DMSetOutputSequenceNumber(dm, 0, 0));
-    PetscCall(PetscObjectSetName((PetscObject)u, "aggs"));
-    PetscCall(DMViewFromOptions(dm, NULL, argstr1));
-    PetscCall(VecViewFromOptions(u, NULL, argstr2));
-    PetscCall(VecDestroy(&u));
-  }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
 /*
    PCSetUp_GAMG - Prepares for the use of the GAMG preconditioner
                     by setting data structures and options.
@@ -732,7 +663,6 @@ static PetscErrorCode PCSetUp_GAMG(PC pc)
           PetscCall(MatGetOwnershipRange(Prol11, &Istart, NULL));
           PetscCall(PetscCDGetASMBlocks(agg_lists, bs, &nASMBlocksArr[level], &ASMLocalIDsArr[level]));
           PetscCall(PetscInfo(pc, "%d: %" PetscInt_FMT " ASM local domains,  bs = %d\n", (int)level, nASMBlocksArr[level], (int)bs));
-          PetscCall(checkVizBlocks(Aarr[level], bs, nASMBlocksArr[level], ASMLocalIDsArr[level])); // this needs to do some work even if not asked for viz, so hide here
         }
 
         PetscCall(PCGetOptionsPrefix(pc, &prefix));
