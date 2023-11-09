@@ -19,6 +19,7 @@ Changes: Development
 .. rubric:: Sys:
 
 - Add ``PetscBench`` an object class for managing benchmarks in PETSc
+- Add ``PetscObjectContainerCompose()`` and ``PetscObjectContainerQuery()``
 
 .. rubric:: Event Logging:
 
