@@ -626,6 +626,7 @@ static PetscErrorCode PCGAMGCreateGraph_AGG(PC pc, Mat Amat, Mat *a_Gmat)
     }
   }
   PetscCall(PetscLogEventEnd(petsc_gamg_setup_events[GAMG_COARSEN], 0, 0, 0, 0));
+
   // make the graph
   PetscCall(PetscLogEventBegin(petsc_gamg_setup_events[GAMG_GRAPH], 0, 0, 0, 0));
   PetscCall(MatGetInfo(Amat, MAT_LOCAL, &info0)); /* global reduction */
@@ -633,7 +634,7 @@ static PetscErrorCode PCGAMGCreateGraph_AGG(PC pc, Mat Amat, Mat *a_Gmat)
   if (container) { // use mass matrix to get better graph -- only works on fine grid -- do Pt M P -- TODO
     Mat       mass, Id, matTrans, RR, XX, ZZ, BB;
     Vec       BB_m_idiag, A_idiag_ssqrt;
-    PetscInt  m, M, bs, max_it = 2;
+    PetscInt  m, M, bs, max_it = 1;
     PetscReal scale = 1, dt = 100;
     PetscCall(PetscInfo(pc, "Have mass matrix, use ODE based strength of connections. dt = %g, %d iterations of Jacobi for M^-1A\n", (double)dt, (int)max_it));
     PetscCall(MatGetBlockSize(Amat, &bs));
@@ -833,7 +834,6 @@ static PetscErrorCode PCGAMGCreateGraph_AGG(PC pc, Mat Amat, Mat *a_Gmat)
   PetscCall(MatGetInfo(*a_Gmat, MAT_LOCAL, &info1)); /* global reduction */
   if (info0.nz_used > 0) PetscCall(PetscInfo(pc, "Filtering left %g %% edges in graph (%e %e)\n", 100.0 * info1.nz_used * (double)(bs * bs) / info0.nz_used, info0.nz_used, info1.nz_used));
   PetscCall(PetscLogEventEnd(petsc_gamg_setup_events[GAMG_GRAPH], 0, 0, 0, 0));
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
