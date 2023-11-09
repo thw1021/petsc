@@ -232,7 +232,6 @@ static PetscErrorCode PCMPISetMat(PC pc)
   }
   PetscCall(PetscLayoutDestroy(&layout));
 
-  PetscCall(PetscLogStagePush(PCMPIStage));
   PetscCall(MatCreate(comm, &A));
   if (matproperties[7] > 0) {
     if (!pc) PetscCall(PetscMalloc1(matproperties[7] + 1, &cprefix));
