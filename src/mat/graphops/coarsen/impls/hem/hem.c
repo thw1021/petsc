@@ -708,7 +708,7 @@ static PetscErrorCode MatCoarsenApply_HEM_private(Mat a_Gmat, const PetscInt n_i
           if (g_max_e1 > e->weight + MY_MEPS) {
             /* PetscCall(PetscSynchronizedPrintf(comm,"\t\t\t\t[%d] 3) ghost e1 SKIPPING small edge (%d %d), diff = %10.4e from proc %d with max pe %d. max = %20.14e, w = %20.14e\n", rank, (int)gid0, (int)gid1, g_max_e1 - e->weight, (int)lghost_pe[ghost1_idx], lghost_max_pe[ghost1_idx], g_max_e1, e->weight )); */
             continue;
-          } else if (g_max_e1 >= e->weight - MY_MEPS && lghost_max_pe[ghost1_idx] > rank) {
+          } else if (g_max_e1 >= e->weight - MY_MEPS && lghost_pe[ghost1_idx] > rank) { // is 'lghost_max_pe[ghost1_idx] > rank' needed?
             /* check for max_ea == to this edge and larger processor that will deal with this */
             if (print)
               PetscCall(PetscSynchronizedPrintf(comm, "\t\t\t[%d] ghost e1 SKIPPING EQUAL (%d %d), diff = %10.4e from larger proc %d with max pe %d. max = %20.14e, w = %20.14e\n", rank, (int)gid0, (int)gid1,
