@@ -8,7 +8,7 @@ include ./lib/petsc/conf/variables
 OBJDIR := $(PETSC_ARCH)/obj
 LIBDIR := $(PETSC_ARCH)/lib
 
-pkgs := sys vec mat dm ksp snes ts tao
+pkgs := sys vec mat dm ksp snes ts tao ml
 
 # $(call SONAME_FUNCTION,libfoo,abiversion)
 SONAME_FUNCTION ?= $(1).$(SL_LINKER_SUFFIX).$(2)
@@ -164,6 +164,7 @@ $(call libname_function,$(LIBDIR)/libpetscksp)  : libdep := $(call libpkg,dm mat
 $(call libname_function,$(LIBDIR)/libpetscsnes) : libdep := $(call libpkg,ksp dm mat vec sys)
 $(call libname_function,$(LIBDIR)/libpetscts)   : libdep := $(call libpkg,snes ksp dm mat vec sys)
 $(call libname_function,$(LIBDIR)/libpetsctao)  : libdep := $(call libpkg,snes ksp dm mat vec sys)
+$(call libname_function,$(LIBDIR)/libpetscml)   : libdep := $(call libpkg,tao snes ksp dm mat vec sys)
 
 # The package libraries technically depend on each other (not just in an order-only way), but only
 # ABI changes like new or removed symbols requires relinking the dependent libraries.  ABI should

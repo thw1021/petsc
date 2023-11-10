@@ -206,6 +206,7 @@ include "petscpartitioner.pxi"
 include "petscspace.pxi"
 include "petscdmutils.pxi"
 include "petscpyappctx.pxi"
+include "petscregressor.pxi"
 
 # --------------------------------------------------------------------
 
@@ -250,6 +251,7 @@ include "DMSwarm.pyx"
 include "Partitioner.pyx"
 include "Space.pyx"
 include "DMUtils.pyx"
+include "Regressor.pyx"
 
 # --------------------------------------------------------------------
 
@@ -513,6 +515,7 @@ cdef extern from * nogil:
     PetscClassId PETSC_DUALSPACE_CLASSID        "PETSCDUALSPACE_CLASSID"
     PetscClassId PETSC_DEVICE_CLASSID           "PETSC_DEVICE_CLASSID"
     PetscClassId PETSC_DEVICE_CONTEXT_CLASSID   "PETSC_DEVICE_CONTEXT_CLASSID"
+    PetscClassId PETSC_REGRESSOR_CLASSID        "PETSCREGRESSOR_CLASSID"
 
 cdef bint registercalled = 0
 
@@ -567,6 +570,7 @@ cdef int register() except -1:
     PyPetscType_Register(PETSC_DMLABEL_CLASSID,          DMLabel)
     PyPetscType_Register(PETSC_SPACE_CLASSID,            Space)
     PyPetscType_Register(PETSC_DUALSPACE_CLASSID,        DualSpace)
+    PyPetscType_Register(PETSC_REGRESSOR_CLASSID,        Regressor)
     return 0 # and we are done, enjoy !!
 
 # --------------------------------------------------------------------
