@@ -943,14 +943,14 @@ algorithm.
     +--------------------------+----------------+--------------------+-------------------------+
     | Name                     | Value          | Default            | Description             |
     +==========================+================+====================+=========================+
-    | ``-tao_nls_ksp_type``    | cg, nash,      | stcg               | Type of Krylov          |
-    |                          | stcg, gltr,    |                    | subspace                |
-    |                          | gmres, ...     |                    | method to use           |
+    | ``-tao_nls_ksp_type``    | cg, nash, ...  | stcg               | Type of Krylov          |
+    |                          |                |                    | subspace                |
+    |                          |                |                    | method to use           |
     |                          |                |                    | when solving            |
     |                          |                |                    | linear system           |
     +--------------------------+----------------+--------------------+-------------------------+
     | ``-tao_nls_pc_type``     | none, jacobi,  | lmvm               | Type of                 |
-    |                          | icc, ilu, lmvm |                    | preconditioner          |
+    |                          | ...            |                    | preconditioner          |
     |                          |                |                    | to use when             |
     |                          |                |                    | solving linear          |
     |                          |                |                    | system                  |
@@ -1016,8 +1016,8 @@ algorithm.
     |                          |                |                    | perturbation            |
     +--------------------------+----------------+--------------------+-------------------------+
     | ``-tao_nls_init_type``   | constant,      | interpolation      | Method used to          |
-    |                          | direction,     |                    | initialize              |
-    |                          | interpolation  |                    | trust-region            |
+    |                          | direction, ... |                    | initialize              |
+    |                          |                |                    | trust-region            |
     |                          |                |                    | radius when             |
     |                          |                |                    | using                   |
     |                          |                |                    | ``nash``,               |
@@ -1060,8 +1060,8 @@ algorithm.
     |                          |                |                    | init                    |
     +--------------------------+----------------+--------------------+-------------------------+
     | ``-tao_nls_update_type`` | step,          | step               | Method used to          |
-    |                          | reduction,     |                    | update                  |
-    |                          | interpolation  |                    | trust-region            |
+    |                          | reduction, ... |                    | update                  |
+    |                          |                |                    | trust-region            |
     |                          |                |                    | radius when             |
     |                          |                |                    | using                   |
     |                          |                |                    | ``nash``,               |
