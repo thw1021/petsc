@@ -386,7 +386,7 @@ PetscErrorCode MatXAIJSetPreallocation(Mat A, PetscInt bs, const PetscInt dnnz[]
 }
 
 /*@C
-  MatHeaderMerge -  Merges some information from `C`s header to `A`; the `C` object is then destroyed
+  MatHeaderMerge - Merges some information from the header of `C` to `A`; the `C` object is then destroyed
 
   Collective, No Fortran Support
 
@@ -470,7 +470,7 @@ PetscErrorCode MatHeaderMerge(Mat A, Mat *C)
 }
 
 /*@
-  MatHeaderReplace - replaces the internal data of matrix `A` by the internal data of matrix `C` while deleting the outter wrapper of `C`
+  MatHeaderReplace - Replaces the internal data of matrix `A` by the internal data of matrix `C` while deleting the outer wrapper of `C`
 
   Input Parameters:
 +  A - a `Mat` whose internal data is to be replaced
@@ -481,8 +481,8 @@ PetscErrorCode MatHeaderMerge(Mat A, Mat *C)
   Example Usage\:
 .vb
   Mat C;
-  MatCreateSeqAIJWithArrays(...,&C);
-  MatHeaderReplace(A,&C);
+  MatCreateSeqAIJWithArrays(..., &C);
+  MatHeaderReplace(A, &C);
   // C has been destroyed and A contains the matrix entries of C
 .ve
 
