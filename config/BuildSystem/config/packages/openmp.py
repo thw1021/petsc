@@ -28,6 +28,7 @@ class Configure(config.package.Package):
               "-mp",      # Portland Group
               "-Qopenmp", # Intel windows
               "-openmp",  # Intel
+              "-qopenmp", # Intel
               "-xopenmp", # Sun
               "+Oopenmp", # HP
               "/openmp"   # Microsoft Visual Studio
