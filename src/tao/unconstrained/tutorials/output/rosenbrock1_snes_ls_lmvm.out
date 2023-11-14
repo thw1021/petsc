@@ -1,0 +1,78 @@
+    0 SNES Function norm 2.000000000000e+00, Update norm 0.000000000000e+00, Objective 1.000000000000e+00
+    1 SNES Function norm 2.427265127664e+00, Update norm 9.999999999978e-01, Objective 8.199000000003e-01
+    2 SNES Function norm 5.648607478898e+00, Update norm 3.101107176717e-01, Objective 6.375187830026e-01
+    3 SNES Function norm 2.705361012042e+00, Update norm 1.434774338473e-01, Objective 4.191688557731e-01
+    4 SNES Function norm 8.268703173096e+00, Update norm 2.248148653861e-01, Objective 3.032241375234e-01
+    5 SNES Function norm 8.689142211984e-01, Update norm 1.201310615757e-01, Objective 1.569518143709e-01
+    6 SNES Function norm 4.232778327053e+00, Update norm 3.399970942774e-01, Objective 1.005460972642e-01
+    7 SNES Function norm 1.895406106153e+00, Update norm 1.466569987526e-01, Objective 4.733034177008e-02
+    8 SNES Function norm 3.461414993684e+00, Update norm 1.834323598561e-01, Objective 2.111589759369e-02
+    9 SNES Function norm 5.659961749058e-01, Update norm 9.081888895732e-02, Objective 5.620668574486e-03
+   10 SNES Function norm 1.291850608697e+00, Update norm 1.174765124858e-01, Objective 1.237383123092e-03
+   11 SNES Function norm 4.434581159943e-02, Update norm 2.759772740146e-02, Objective 4.752413564459e-05
+   12 SNES Function norm 1.904436487375e-02, Update norm 1.481407270830e-02, Objective 2.167235013806e-07
+   13 SNES Function norm 9.599134362689e-06, Update norm 4.086828676170e-04, Objective 2.114420642441e-12
+Tao Object: 1 MPI process
+  type: snes
+  SNES Object: 1 MPI process
+    type: newtonls
+    maximum iterations=50, maximum function evaluations=10000
+    tolerances: relative=1e-08, absolute=0.0001, solution=1e-08
+    total number of linear solver iterations=25
+    total number of function evaluations=14
+    norm schedule ALWAYS
+    SNESLineSearch Object: 1 MPI process
+      type: bt
+        interpolation: cubic
+        alpha=1.000000e-04
+      maxstep=1.000000e+08, minlambda=1.000000e-12
+      tolerances: relative=1.000000e-08, absolute=1.000000e-15, lambda=1.000000e-08
+      maximum iterations=40
+    KSP Object: 1 MPI process
+      type: gmres
+        restart=30, using Classical (unmodified) Gram-Schmidt Orthogonalization with no iterative refinement
+        happy breakdown tolerance 1e-30
+      maximum iterations=10000, initial guess is zero
+      tolerances:  relative=1e-05, absolute=1e-50, divergence=10000.
+      left preconditioning
+      using PRECONDITIONED norm type for convergence test
+    PC Object: 1 MPI process
+      type: lmvm
+      Mat Object: (pc_lmvm_) 1 MPI process
+        type: lmvmbfgs
+        rows=2, cols=2
+          Scale type: DIAGONAL
+          Scale history: 1
+          Scale params: alpha=1., beta=0.5, rho=1.
+          Convex factors: phi=0., theta=0.125
+          Max. storage: 5
+          Used storage: 5
+          Number of updates: 12
+          Number of rejects: 0
+          Number of resets: 0
+          Mat Object: (pc_lmvm_J0_) 1 MPI process
+            type: lmvmdiagbroyden
+            rows=2, cols=2
+              Scale history: 1
+              Scale params: alpha=1., beta=0.5, rho=1.
+              Convex factor: theta=0.125
+              Max. storage: 1
+              Used storage: 1
+              Number of updates: 12
+              Number of rejects: 0
+              Number of resets: 0
+      linear system matrix = precond matrix:
+      Mat Object: 1 MPI process
+        type: mffd
+        rows=2, cols=2
+          Matrix-free approximation:
+            err=1.49012e-08 (relative error in function evaluation)
+            Using wp compute h routine
+                Does not compute normU
+  convergence tolerances: gatol=1e-08,   steptol=0.,   gttol=0.
+  Residual in Function/Gradient:=9.59913e-06
+  Objective value=2.11442e-12
+  total number of iterations=13,                          (max: 2000)
+  total number of function/gradient evaluations=109,      (max: 4000)
+  total number of Hessian evaluations=13
+  Solution converged:    User Terminated
