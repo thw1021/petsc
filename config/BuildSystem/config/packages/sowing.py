@@ -1,5 +1,5 @@
 import config.package
-import os
+import os,sys
 
 def noCheck(command, status, output, error):
   ''' Do no check result'''
@@ -144,9 +144,13 @@ and run configure again\n')
         self.logPrintBox('Batch build that could not generate bfort, skipping generating Fortran stubs\n \
                           you will need to copy them from some other system (src/fortran/auto)')
       else:
+        # delete any outdated Fortran stubs in the source tree
+        try:
+          (output, error, status) = config.base.Configure.executeShellCommand('find src -type d -name ftn-auto* | xargs rm -rf')
+        except:
+          pass
         self.logPrintBox('Running '+self.bfort+' to generate Fortran stubs')
         try:
-          import os,sys
           sys.path.insert(0, os.path.abspath(os.path.join('lib','petsc','bin','maint')))
           import generatefortranstubs
           del sys.path[0]
