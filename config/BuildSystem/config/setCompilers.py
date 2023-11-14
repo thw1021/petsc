@@ -919,7 +919,7 @@ class Configure(config.base.Configure):
         }
         std::tuple<double, int, char> foobar()
         {
-          return {3.8, 0, 'z'};
+          return {3.8, 0, 'x'};
         }
         """
       )))
