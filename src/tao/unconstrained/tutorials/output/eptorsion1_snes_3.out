@@ -1,0 +1,60 @@
+
+---- Elastic-Plastic Torsion Problem -----
+mx: 10     my: 10   
+
+    0 SNES Function norm 7.289612254942e-01, Update norm 0.000000000000e+00, Objective -3.305785123967e-01
+    1 SNES Function norm 3.862092655363e-01, Update norm 1.663728687496e-01, Objective -3.912181973763e-01
+    2 SNES Function norm 2.711114325130e-06, Update norm 2.431376732617e-01, Objective -4.277449739425e-01
+SNES Object: 1 MPI process
+  type: newtontr
+    Trust region tolerance 1e-12
+    eta1=0.001, eta2=0.25, eta3=0.75
+    delta0=0.2, t1=0.25, t2=2., deltaM=1e+10
+    kmdc=0.
+    fallback=CAUCHY
+  maximum iterations=50, maximum function evaluations=10000
+  tolerances: relative=1e-08, absolute=0.0005, solution=0.
+  total number of linear solver iterations=15
+  total number of function evaluations=3
+  norm schedule ALWAYS
+  KSP Object: 1 MPI process
+    type: gmres
+      restart=30, using Classical (unmodified) Gram-Schmidt Orthogonalization with no iterative refinement
+      happy breakdown tolerance 1e-30
+    maximum iterations=10000, initial guess is zero
+    tolerances:  relative=1e-05, absolute=1e-50, divergence=10000.
+    left preconditioning
+    using PRECONDITIONED norm type for convergence test
+  PC Object: 1 MPI process
+    type: lmvm
+    Mat Object: (pc_lmvm_) 1 MPI process
+      type: lmvmbfgs
+      rows=100, cols=100
+        Scale type: DIAGONAL
+        Scale history: 1
+        Scale params: alpha=1., beta=0.5, rho=1.
+        Convex factors: phi=0., theta=0.125
+        Max. storage: 5
+        Used storage: 1
+        Number of updates: 1
+        Number of rejects: 0
+        Number of resets: 0
+        Mat Object: (pc_lmvm_J0_) 1 MPI process
+          type: lmvmdiagbroyden
+          rows=100, cols=100
+            Scale history: 1
+            Scale params: alpha=1., beta=0.5, rho=1.
+            Convex factor: theta=0.125
+            Max. storage: 1
+            Used storage: 1
+            Number of updates: 1
+            Number of rejects: 0
+            Number of resets: 0
+    linear system matrix = precond matrix:
+    Mat Object: 1 MPI process
+      type: mffd
+      rows=100, cols=100
+        Matrix-free approximation:
+          err=1.49012e-08 (relative error in function evaluation)
+          Using wp compute h routine
+              Does not compute normU
