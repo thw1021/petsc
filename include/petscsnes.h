@@ -180,6 +180,28 @@ PETSC_EXTERN PetscErrorCode SNESNewtonTRSetFallbackType(SNES, SNESNewtonTRFallba
 PETSC_EXTERN PetscErrorCode SNESNewtonTRPreCheck(SNES, Vec, Vec, PetscBool *);
 PETSC_EXTERN PetscErrorCode SNESNewtonTRPostCheck(SNES, Vec, Vec, Vec, PetscBool *, PetscBool *);
 
+/*E
+    SNESNewtonTRQNType - type of quasi-Newton model to use
+
+   Values:
++  `SNES_TR_QN_NONE` - do not use a quasi-Newton model
+.  `SNES_TR_QN_SAME` - use the same quasi-Newton model for matrix and preconditioner
+-  `SNES_TR_QN_DIFFERENT` - use different quasi-Newton models for matrix and preconditioner
+
+   Level: intermediate
+
+.seealso: [](ch_snes), `SNES`, `SNESNEWTONTR`
+E*/
+typedef enum {
+  SNES_TR_QN_NONE,
+  SNES_TR_QN_SAME,
+  SNES_TR_QN_DIFFERENT,
+} SNESNewtonTRQNType;
+
+PETSC_EXTERN const char *const SNESNewtonTRQNTypes[];
+
+PETSC_EXTERN PetscErrorCode SNESNewtonTRSetQNType(SNES, SNESNewtonTRQNType);
+
 /* TRDC API, to be removed after 3.19 */
 PETSC_EXTERN PetscErrorCode SNESNewtonTRDCGetRhoFlag(SNES, PetscBool *);
 PETSC_EXTERN PetscErrorCode SNESNewtonTRDCSetPreCheck(SNES, PetscErrorCode (*)(SNES, Vec, Vec, PetscBool *, void *), void *ctx);
