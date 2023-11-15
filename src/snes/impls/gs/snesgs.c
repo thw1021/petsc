@@ -251,17 +251,21 @@ static PetscErrorCode SNESSolve_NGS(SNES snes)
   /* Call general purpose update function */
   PetscTryTypeMethod(snes, update, snes->iter);
 
-  for (i = 0; i < snes->max_its; i++) {
+  for (i = 1; i < snes->max_its + 1; i++) {
+    PetscCall(SNESSetIterationNumber(snes, i));
+
+    /* Call general purpose update function */
+    PetscTryTypeMethod(snes, update, snes->iter);
+
     PetscCall(SNESComputeNGS(snes, B, X));
     /* only compute norms if requested or about to exit due to maximum iterations */
-    if (normschedule == SNES_NORM_ALWAYS || ((i == snes->max_its - 1) && (normschedule == SNES_NORM_INITIAL_FINAL_ONLY || normschedule == SNES_NORM_FINAL_ONLY))) {
+    if (normschedule == SNES_NORM_ALWAYS || ((i == snes->max_its) && (normschedule == SNES_NORM_INITIAL_FINAL_ONLY || normschedule == SNES_NORM_FINAL_ONLY))) {
       PetscCall(SNESComputeFunction(snes, X, F));
       PetscCall(VecNorm(F, NORM_2, &fnorm)); /* fnorm <- ||F||  */
       SNESCheckFunctionNorm(snes, fnorm);
     }
     /* Monitor convergence */
     PetscCall(PetscObjectSAWsTakeAccess((PetscObject)snes));
-    snes->iter = i + 1;
     snes->norm = fnorm;
     PetscCall(PetscObjectSAWsGrantAccess((PetscObject)snes));
     PetscCall(SNESLogConvergenceHistory(snes, snes->norm, snes->iter));
@@ -269,8 +273,6 @@ static PetscErrorCode SNESSolve_NGS(SNES snes)
     PetscCall(SNESConverged(snes, snes->iter, 0.0, 0.0, fnorm));
     PetscCall(SNESMonitor(snes, snes->iter, snes->norm));
     if (snes->reason) PetscFunctionReturn(PETSC_SUCCESS);
-    /* Call general purpose update function */
-    PetscTryTypeMethod(snes, update, snes->iter);
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }

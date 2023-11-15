@@ -868,7 +868,9 @@ static PetscErrorCode SNESSolve_FAS(SNES snes)
     }
   }
 
-  for (i = 0; i < snes->max_its; i++) {
+  for (i = 1; i < snes->max_its + 1; i++) {
+    PetscCall(SNESSetIterationNumber(snes, i));
+
     /* Call general purpose update function */
     PetscTryTypeMethod(snes, update, snes->iter);
 
@@ -887,7 +889,6 @@ static PetscErrorCode SNESSolve_FAS(SNES snes)
 
     /* Monitor convergence */
     PetscCall(PetscObjectSAWsTakeAccess((PetscObject)snes));
-    snes->iter = i + 1;
     PetscCall(PetscObjectSAWsGrantAccess((PetscObject)snes));
     PetscCall(SNESLogConvergenceHistory(snes, snes->norm, 0));
     PetscCall(SNESConverged(snes, snes->iter, 0.0, 0.0, snes->norm));

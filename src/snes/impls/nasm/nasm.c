@@ -759,21 +759,23 @@ static PetscErrorCode SNESSolve_NASM(SNES snes)
     PetscCall(SNESMonitor(snes, snes->iter, snes->norm));
   }
 
-  /* Call general purpose update function */
-  PetscTryTypeMethod(snes, update, snes->iter);
   /* copy the initial solution over for later */
   if (nasm->fjtype == 2) PetscCall(VecCopy(X, nasm->xinit));
 
-  for (i = 0; i < snes->max_its; i++) {
+  for (i = 1; i < snes->max_its + 1; i++) {
+    PetscCall(SNESSetIterationNumber(snes, i));
+
+    /* Call general purpose update function */
+    PetscTryTypeMethod(snes, update, snes->iter);
+
     PetscCall(SNESNASMSolveLocal_Private(snes, B, Y, X));
-    if (normschedule == SNES_NORM_ALWAYS || ((i == snes->max_its - 1) && (normschedule == SNES_NORM_INITIAL_FINAL_ONLY || normschedule == SNES_NORM_FINAL_ONLY))) {
+    if (normschedule == SNES_NORM_ALWAYS || ((i == snes->max_its) && (normschedule == SNES_NORM_INITIAL_FINAL_ONLY || normschedule == SNES_NORM_FINAL_ONLY))) {
       PetscCall(SNESComputeFunction(snes, X, F));
       PetscCall(VecNorm(F, NORM_2, &fnorm)); /* fnorm <- ||F||  */
       SNESCheckFunctionNorm(snes, fnorm);
     }
     /* Monitor convergence */
     PetscCall(PetscObjectSAWsTakeAccess((PetscObject)snes));
-    snes->iter = i + 1;
     snes->norm = fnorm;
     PetscCall(PetscObjectSAWsGrantAccess((PetscObject)snes));
     PetscCall(SNESLogConvergenceHistory(snes, snes->norm, 0));
@@ -781,8 +783,6 @@ static PetscErrorCode SNESSolve_NASM(SNES snes)
     PetscCall(SNESConverged(snes, snes->iter, 0.0, 0.0, fnorm));
     PetscCall(SNESMonitor(snes, snes->iter, snes->norm));
     if (snes->reason) break;
-    /* Call general purpose update function */
-    PetscTryTypeMethod(snes, update, snes->iter);
   }
   if (nasm->finaljacobian) {
     PetscCall(SNESNASMComputeFinalJacobian_Private(snes, X));

@@ -386,14 +386,16 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
   else fk = 0.5 * PetscSqr(fnorm); /* obj(x) = 0.5 * ||F(x)||^2 */
 
   while (snes->iter < maxits) {
+    ++snes->iter;
+
+    /* Call general purpose update function */
+    PetscTryTypeMethod(snes, update, snes->iter);
+
     PetscBool changed_y;
     PetscBool changed_w;
 
     /* calculating Jacobian and GradF of minimization function only once */
     if (!already_done) {
-      /* Call general purpose update function */
-      PetscTryTypeMethod(snes, update, snes->iter);
-
       /* apply the nonlinear preconditioner */
       if (snes->npc && snes->npcside == PC_RIGHT) {
         SNESConvergedReason reason;
@@ -571,7 +573,6 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
 
       /* Monitor convergence */
       PetscCall(PetscObjectSAWsTakeAccess((PetscObject)snes));
-      snes->iter++;
       snes->norm  = fnorm;
       snes->xnorm = xnorm;
       snes->ynorm = ynorm;

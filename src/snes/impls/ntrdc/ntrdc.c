@@ -352,7 +352,12 @@ static PetscErrorCode SNESSolve_NEWTONTRDC(SNES snes)
   PetscUseTypeMethod(snes, converged, snes->iter, 0.0, 0.0, fnorm, &snes->reason, snes->cnvP);
   if (snes->reason) PetscFunctionReturn(PETSC_SUCCESS);
 
-  for (i = 0; i < maxits; i++) {
+  for (i = 1; i < maxits + 1; i++) {
+    PetscCall(SNESSetIterationNumber(snes, i));
+
+    /* Call general purpose update function */
+    PetscTryTypeMethod(snes, update, snes->iter);
+
     PetscBool changed_y;
     PetscBool changed_w;
 
@@ -379,7 +384,7 @@ static PetscErrorCode SNESSolve_NEWTONTRDC(SNES snes)
         PetscCall(VecStrideScale(X, j, 1.0 / inorms[j]));
       }
       PetscCall(VecNorm(X, NORM_2, &xnorm));
-      if (i == 0) {
+      if (i == 1) {
         delta = neP->delta0 * xnorm;
       } else {
         delta = neP->delta * xnorm;
@@ -512,12 +517,12 @@ static PetscErrorCode SNESSolve_NEWTONTRDC(SNES snes)
       if (reason) {
         if (reason < 0) {
           /* We're not progressing, so return with the current iterate */
-          PetscCall(SNESMonitor(snes, i + 1, fnorm));
+          PetscCall(SNESMonitor(snes, i, fnorm));
           breakout = PETSC_TRUE;
           break;
         } else if (reason > 0) {
           /* We're converged, so return with the current iterate and update solution */
-          PetscCall(SNESMonitor(snes, i + 1, fnorm));
+          PetscCall(SNESMonitor(snes, i, fnorm));
           breakout = PETSC_FALSE;
           break;
         }
@@ -531,7 +536,6 @@ static PetscErrorCode SNESSolve_NEWTONTRDC(SNES snes)
       PetscCall(VecCopy(W, X));
       /* Monitor convergence */
       PetscCall(PetscObjectSAWsTakeAccess((PetscObject)snes));
-      snes->iter  = i + 1;
       snes->norm  = fnorm;
       snes->xnorm = xnorm;
       snes->ynorm = ynorm;

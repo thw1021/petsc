@@ -334,11 +334,13 @@ static PetscErrorCode SNESSolve_MS(SNES snes)
   PetscCall(SNESMSStep_Norms(snes, 0, F));
   if (snes->reason) PetscFunctionReturn(PETSC_SUCCESS);
 
-  for (i = 0; i < snes->max_its; i++) {
+  for (i = 1; i < snes->max_its + 1; i++) {
+    PetscCall(SNESSetIterationNumber(snes, i));
+
     /* Call general purpose update function */
     PetscTryTypeMethod(snes, update, snes->iter);
 
-    if (i == 0 && snes->jacobian) {
+    if (i == 1 && snes->jacobian) {
       /* This method does not require a Jacobian, but it is usually preconditioned by PBJacobi */
       PetscCall(SNESComputeJacobian(snes, snes->vec_sol, snes->jacobian, snes->jacobian_pre));
       SNESCheckJacobianDomainerror(snes);
@@ -347,9 +349,9 @@ static PetscErrorCode SNESSolve_MS(SNES snes)
 
     PetscCall(SNESMSStep_Step(snes, X, F));
 
-    if (i < snes->max_its - 1 || SNESNeedNorm_Private(snes, i + 1)) PetscCall(SNESComputeFunction(snes, X, F));
+    if (i < snes->max_its || SNESNeedNorm_Private(snes, i)) PetscCall(SNESComputeFunction(snes, X, F));
 
-    PetscCall(SNESMSStep_Norms(snes, i + 1, F));
+    PetscCall(SNESMSStep_Norms(snes, i, F));
     if (snes->reason) PetscFunctionReturn(PETSC_SUCCESS);
   }
   PetscFunctionReturn(PETSC_SUCCESS);

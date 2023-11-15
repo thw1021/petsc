@@ -92,6 +92,8 @@ static PetscErrorCode SNESSolve_Anderson(SNES snes)
   l         = 0;
   ivec      = 0;
   for (k = 1; k < snes->max_its + 1; k++) {
+    PetscCall(SNESSetIterationNumber(snes, k));
+
     /* Call general purpose update function */
     PetscTryTypeMethod(snes, update, snes->iter);
 
@@ -155,7 +157,6 @@ static PetscErrorCode SNESSolve_Anderson(SNES snes)
     PetscCall(VecCopy(FA, F));
 
     PetscCall(PetscObjectSAWsTakeAccess((PetscObject)snes));
-    snes->iter  = k;
     snes->norm  = fnorm;
     snes->xnorm = xnorm;
     snes->ynorm = ynorm;

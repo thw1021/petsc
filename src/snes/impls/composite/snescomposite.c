@@ -737,7 +737,9 @@ static PetscErrorCode SNESSolve_Composite(SNES snes)
     PetscCall(SNESMonitor(snes, 0, snes->norm));
   }
 
-  for (i = 0; i < snes->max_its; i++) {
+  for (i = 1; i < snes->max_its + 1; i++) {
+    PetscCall(SNESSetIterationNumber(snes, i));
+
     /* Call general purpose update function */
     PetscTryTypeMethod(snes, update, snes->iter);
 
@@ -757,7 +759,7 @@ static PetscErrorCode SNESSolve_Composite(SNES snes)
     /* Compute the solution update for convergence testing */
     PetscCall(VecAYPX(Y, -1.0, X));
 
-    if ((i == snes->max_its - 1) && (normtype == SNES_NORM_INITIAL_FINAL_ONLY || normtype == SNES_NORM_FINAL_ONLY)) {
+    if ((i == snes->max_its) && (normtype == SNES_NORM_INITIAL_FINAL_ONLY || normtype == SNES_NORM_FINAL_ONLY)) {
       PetscCall(SNESComputeFunction(snes, X, F));
 
       if (snes->xl && snes->xu) {
@@ -784,7 +786,6 @@ static PetscErrorCode SNESSolve_Composite(SNES snes)
     }
     /* Monitor convergence */
     PetscCall(PetscObjectSAWsTakeAccess((PetscObject)snes));
-    snes->iter  = i + 1;
     snes->norm  = fnorm;
     snes->xnorm = xnorm;
     snes->ynorm = snorm;
