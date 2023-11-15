@@ -419,11 +419,13 @@ PetscErrorCode Parameter_settings(AppCtx *user)
 
    test:
       args: -ts_max_steps 2
+      requires: x
       localrunfiles: petscopt_ex7
 
    test:
       suffix: 2
       args: -ts_max_steps 2 -snes_mf_operator
+      requires: x
       output_file: output/ex7_1.out
       localrunfiles: petscopt_ex7
       timeoutfactor: 2
@@ -431,6 +433,7 @@ PetscErrorCode Parameter_settings(AppCtx *user)
    test:
       suffix: 3
       args: -ts_max_steps 2 -snes_mf -pc_type none
+      requires: x
       output_file: output/ex7_1.out
       localrunfiles: petscopt_ex7
       timeoutfactor: 2

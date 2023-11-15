@@ -547,7 +547,7 @@ int main(int argc, char **argv)
 
 /*TEST
    build:
-     requires: double !complex
+     requires: double !complex x
    test:
      suffix: 1
      args: -particles_per_cell 1 -output_step 10 -ts_type euler -dm_plex_dim 1 -dm_plex_box_faces 200 -dm_plex_box_lower -10 -dm_plex_box_upper 10 -dm_view -monitorsp

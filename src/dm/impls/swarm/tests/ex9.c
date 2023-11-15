@@ -2079,6 +2079,7 @@ int main(int argc, char **argv)
            -dm_plex_box_bd periodic,none -periodic -ts_type basicsymplectic -ts_basicsymplectic_type 1\
            -dm_view -output_step 50 -sigma 1.0e-8 -timeScale 2.0e-14\
            -ts_monitor_sp_swarm -ts_monitor_sp_swarm_retain 0 -ts_monitor_sp_swarm_phase 0
+     requires: x
      test:
        suffix: none_1d
        args: -em_type none -error

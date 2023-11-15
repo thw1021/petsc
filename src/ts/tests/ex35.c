@@ -173,10 +173,12 @@ int main(int argc, char **argv)
 /*TEST
    test:
      suffix: 1D
+     requires: x
      args: -Np 50\
      -dim 1
    test:
      suffix: 2D
+     requires: x
      args: -Np 50\
      -dim 2
 TEST*/
