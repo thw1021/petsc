@@ -22,13 +22,13 @@ class Configure(config.package.Package):
     ''' Note it may be different for the C, C++, and FC compilers'''
     ''' Needs to check if OpenMP actually exists and works '''
     self.found = 0
-    oflags = ["-fopenmp", # Gnu
+    oflags = ["-qopenmp", # Intel (must come before -fopenmp for icx)
+              "-fopenmp", # Gnu
               "-qsmp=omp",# IBM XL C/C++
               "-h omp",   # Cray. Must come after XL because XL interprets this option as meaning "-soname omp"
               "-mp",      # Portland Group
               "-Qopenmp", # Intel windows
               "-openmp",  # Intel
-              "-qopenmp", # Intel
               "-xopenmp", # Sun
               "+Oopenmp", # HP
               "/openmp"   # Microsoft Visual Studio
