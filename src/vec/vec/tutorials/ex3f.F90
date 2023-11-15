@@ -78,5 +78,6 @@
 !
 !     test:
 !       nsize: 2
+!       requires: x
 !
 !TEST*/

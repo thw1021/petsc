@@ -319,6 +319,7 @@ int main(int argc, char **argv)
   test:
     suffix: 1d_extruded
     args: -dm_plex_dim 1 -dm_plex_box_faces 5 -dm_extrude 3 -dm_plex_check_all -dm_view draw
+    requires: x
 
   test:
     # This test needs a non-tensor prism so we can make a coordinate space
