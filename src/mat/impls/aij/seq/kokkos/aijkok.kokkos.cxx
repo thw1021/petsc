@@ -1014,7 +1014,10 @@ static PetscErrorCode MatShift_SeqAIJKokkos(Mat A, PetscScalar a)
     PetscCall(PetscLogGpuFlops(n));
     PetscCall(PetscLogGpuTimeEnd());
   } else { // need reassembly, very slow!
+    PetscInt oldVal = aijseq->nonew;
+    aijseq->nonew   = 0; // don't error on new nonzero locations
     PetscCall(MatShift_Basic(A, a));
+    aijseq->nonew = oldVal;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
