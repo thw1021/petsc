@@ -224,7 +224,7 @@ PetscErrorCode PetscRegressorPredict(PetscRegressor regressor, Mat X, Vec y)
 }
 
 /*@
-   PetscRegressorReset - Resets a PetscRegressor context to the setupcalled = 0 state and remoecs any allocated Vecs and Mats
+   PetscRegressorReset - Resets a PetscRegressor context to the setupcalled = 0 state and removes any allocated Vecs and Mats
 
    Collective on PetscRegressor
 
@@ -243,6 +243,7 @@ PetscErrorCode PetscRegressorReset(PetscRegressor regressor)
   // TODO: Finish putting all of the Reset, Destroy, and free calls needed here!
   PetscCall(MatDestroy(&regressor->training));
   PetscCall(VecDestroy(&regressor->target));
+  PetscCall(TaoDestroy(&regressor->tao));
   regressor->setupcalled = PETSC_FALSE;
   PetscFunctionReturn(0);
 }
@@ -345,5 +346,46 @@ PetscErrorCode PetscRegressorView(PetscRegressor regressor, PetscViewer viewer)
 {
   PetscFunctionBegin;
   // TODO: Complete this when I have a good idea of what bits of the PetscRegressor should be shown!
+  PetscFunctionReturn(0);
+}
+
+/*@
+   PetscRegressorGetTao - Returns the Tao context for a PetscRegressor object.
+
+   Not Collective, but if the PetscRegressor is parallel, then the Tao object is parallel
+
+   Input Parameter:
+.  regressor - the regressor context
+
+   Output Parameter:
+.  tao - the `Tao` context
+
+   Notes:
+
+   The `Tao` object will be created if it does not yet exist.
+
+   The user can directly manipulate the `TAO` context to set various
+   options, etc.  Likewise, the user can then extract and manipulate the
+   child contexts such as `KSP` or `TaoLineSearch`as well.
+
+   Depending on the type of the regressor and the options that are set, the regressor may use not use a Tao object.
+
+   Level: beginner
+
+.seealso: PetscRegressorLinearGetKSP()
+@*/
+PetscErrorCode PetscRegressorGetTao(PetscRegressor regressor, Tao *tao)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(regressor, PETSCREGRESSOR_CLASSID, 1);
+  PetscAssertPointer(tao, 2);
+  /* Analogous to how SNESGetKSP() operates, this routine should create the TAO if it doesn't exist.
+   * TODO: Follow what SNESGetKSP() does when setting this up. */
+  if (!regressor->tao) {
+    PetscCall(TaoCreate(PetscObjectComm((PetscObject)regressor), &regressor->tao));
+    PetscCall(PetscObjectIncrementTabLevel((PetscObject)regressor->tao, (PetscObject)regressor, 1));
+    PetscCall(PetscObjectSetOptions((PetscObject)regressor->tao, ((PetscObject)regressor)->options));
+  }
+  *tao = regressor->tao;
   PetscFunctionReturn(0);
 }
