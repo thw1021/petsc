@@ -73,8 +73,7 @@ PetscErrorCode PetscRegressorSetUp_Linear(PetscRegressor regressor)
     PetscCall(KSPSetOperators(ksp, linear->X, linear->XtX));
     PetscCall(KSPSetFromOptions(ksp)); // TODO: Does this have the right option prefixes set?
   } else {                             /* Use TAO */
-    if (!linear->tao) { PetscCall(PetscRegressorLinearGetTao(regressor, &linear->tao)); }
-    tao = linear->tao;
+    if (!regressor->tao) { PetscCall(PetscRegressorGetTao(regressor, &tao)); }
 
     PetscCall(MatCreateVecs(linear->X, &linear->coefficients, &linear->residual));
     /* Set up the TAO object to solve the (regularized) least squares problem (without solving for intercept, which is done separately) using TAOBRGN. */
@@ -99,7 +98,6 @@ PetscErrorCode PetscRegressorReset_Linear(PetscRegressor regressor)
   PetscCall(MatDestroy(&linear->XtX));
   PetscCall(MatDestroy(&linear->C));
   PetscCall(KSPDestroy(&linear->ksp));
-  PetscCall(TaoDestroy(&linear->tao));
   PetscCall(VecDestroy(&linear->coefficients));
   PetscCall(VecDestroy(&linear->rhs));
   PetscCall(VecDestroy(&linear->residual));
@@ -198,7 +196,7 @@ PetscErrorCode PetscRegressorView_Linear(PetscRegressor regressor, PetscViewer v
 
    Level: beginner
 
-.seealso: PetscRegressorLinearGetTao()
+.seealso: PetscRegressorGetTao()
 @*/
 PetscErrorCode PetscRegressorLinearGetKSP(PetscRegressor regressor, KSP *ksp)
 {
@@ -214,41 +212,7 @@ PetscErrorCode PetscRegressorLinearGetKSP(PetscRegressor regressor, KSP *ksp)
     PetscCall(PetscObjectIncrementTabLevel((PetscObject)linear->ksp, (PetscObject)regressor, 1));
     PetscCall(PetscObjectSetOptions((PetscObject)linear->ksp, ((PetscObject)regressor)->options));
   }
-  PetscFunctionReturn(0);
-}
-
-/*@
-   PetscRegressorLinearGetTao - Returns the Tao context for a PETSCREGRESSORLINEAR object.
-
-   Not Collective, but if the PetscRegressor is parallel, then the Tao object is parallel
-
-   Input Parameter:
-.  regressor - the regressor context
-
-   Output Parameter:
-.  tao - the Tao context
-
-   Notes:
-   Depending on the type of the linear regressor and the options that are set, the regressor may use a KSP instead of a Tao object.
-
-   Level: beginner
-
-.seealso: PetscRegressorLinearGetKSP()
-@*/
-PetscErrorCode PetscRegressorLinearGetTao(PetscRegressor regressor, Tao *tao)
-{
-  PETSCREGRESSOR_LINEAR *linear = (PETSCREGRESSOR_LINEAR *)regressor->data;
-
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(regressor, PETSCREGRESSOR_CLASSID, 1);
-  PetscAssertPointer(tao, 2);
-  /* Analogous to how SNESGetKSP() operates, this routine should create the TAO if it doesn't exist.
-   * TODO: Follow what SNESGetKSP() does when setting this up. */
-  if (!linear->tao) {
-    PetscCall(TaoCreate(PetscObjectComm((PetscObject)regressor), &linear->tao));
-    PetscCall(PetscObjectIncrementTabLevel((PetscObject)linear->tao, (PetscObject)regressor, 1));
-    PetscCall(PetscObjectSetOptions((PetscObject)linear->tao, ((PetscObject)regressor)->options));
-  }
+  *ksp = linear->ksp;
   PetscFunctionReturn(0);
 }
 
@@ -318,7 +282,7 @@ PetscErrorCode PetscRegressorFit_Linear(PetscRegressor regressor)
   if (linear->use_ksp) {
     PetscCall(KSPSolve(ksp, linear->rhs, linear->coefficients));
   } else {
-    PetscCall(TaoSolve(linear->tao));
+    PetscCall(TaoSolve(regressor->tao));
   }
 
   /* Calculate the intercept. */

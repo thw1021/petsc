@@ -23,7 +23,6 @@ typedef struct {
   REGRESSOR_LINEAR_HEADER;
 
   KSP ksp;
-  Tao tao;
   Mat XtX; /* Normal matrix formed from X */
 
 } PETSCREGRESSOR_LINEAR;
