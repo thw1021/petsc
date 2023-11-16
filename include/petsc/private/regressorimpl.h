@@ -28,6 +28,7 @@ struct _p_PetscRegressor {
   void     *data;        /* Implementation-specific data */
   Mat       training;    /* Matrix holding the training data set */
   Vec       target;      /* Targets for training data (response variables or labels) */
+  Tao       tao;         /* Tao optimizer used by many regressor implementations */
 };
 
 PETSC_EXTERN PetscLogEvent PetscRegressor_SetUp;
