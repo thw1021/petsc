@@ -7,6 +7,7 @@
 
   /* We define this header, since it serves as a "base" for all linear models. */
   #define REGRESSOR_LINEAR_HEADER \
+    PetscRegressorLinearType type; \
     /* Parameters of the fitted regression model */ \
     Vec         coefficients; \
     PetscScalar intercept; \

@@ -7,7 +7,7 @@ PetscErrorCode PetscRegressorRegisterAll(void)
   PetscFunctionBegin;
   if (PetscRegressorRegisterAllCalled) PetscFunctionReturn(0);
   PetscRegressorRegisterAllCalled = PETSC_TRUE;
-  // TODO: Register all of the sub-types
+  // Register all of the types of PetscRegressor
   PetscCall(PetscRegressorRegister(PETSCREGRESSORLINEAR, PetscRegressorCreate_Linear));
   PetscFunctionReturn(0);
 }
