@@ -207,7 +207,7 @@ PetscErrorCode VecNorm(Vec x, NormType type, PetscReal *val)
 
   PetscCall(VecNormAvailable(x, type, &flg, val));
   // check that all MPI processes call this routine together and have same availability
-  if (PetscDefined(USE_DEBUGGING)) {
+  if (PetscDefined(USE_DEBUG)) {
     PetscBool minflg;
 
     PetscCall(MPIU_Allreduce(&flg, &minflg, 1, MPIU_BOOL, MPI_LAND, PetscObjectComm((PetscObject)(x))));
