@@ -1091,7 +1091,6 @@ cdef class DM(Object):
 
         """
         CHKERR( DMSetCellCoordinateDM(self.dm, dm.dm) )
-        return
 
     def getCellCoordinateDM(self) -> DM:
         """Return the cell coordinate `DM`.
