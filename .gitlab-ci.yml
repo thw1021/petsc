@@ -345,6 +345,7 @@ pause-for-approval:
     MAKE_CFLAGS: -Werror
     MAKE_CXXFLAGS: -Werror
     MAKE_FFLAGS: -Werror
+    PETSC_OPTIONS: -nox -nox_warning
   before_script:
     - date
     - hostname
@@ -360,6 +361,7 @@ pause-for-approval:
     MAKE_CFLAGS: -Werror
     MAKE_CXXFLAGS: -Werror
     MAKE_FFLAGS: -Werror
+    PETSC_OPTIONS: -nox -nox_warning
   before_script:
     - date
     - hostname
@@ -399,7 +401,7 @@ osx-arm:
     - os:macos-arm
   variables:
     TEST_ARCH: arch-ci-osx-arm
-    PETSC_OPTIONS: -check_pointer_intensity 0 -error_output_stdout -nox -nox_warning -malloc_dump
+    PETSC_OPTIONS: -check_pointer_intensity 0 -error_output_stdout -malloc_dump -nox -nox_warning
     INIT_SCRIPT: .zprofile
 
 freebsd-cxx-cmplx-64idx-dbg:
@@ -492,7 +494,7 @@ freebsd-cxx-pkgs-opt:
   tags:
     - os:fbsd
   variables:
-    PETSC_OPTIONS: -vecscatter_mpi1 false -options_left false
+    PETSC_OPTIONS: -vecscatter_mpi1 false -options_left false -nox -nox_warning
     TEST_ARCH: arch-ci-freebsd-cxx-pkgs-opt
 
 freebsd-pkgs-opt:
@@ -998,7 +1000,7 @@ osx-cxx-pkgs-opt-arm:
   tags:
     - os:macos-arm
   variables:
-    PETSC_OPTIONS: -vecscatter_mpi1 false -options_left false
+    PETSC_OPTIONS: -vecscatter_mpi1 false -options_left false -nox -nox_warning
     TEST_ARCH: arch-ci-osx-cxx-pkgs-opt-arm
     MAKE_CXXFLAGS: -Werror -Wno-pass-failed
     INIT_SCRIPT: .zprofile
