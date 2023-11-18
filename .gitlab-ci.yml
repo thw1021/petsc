@@ -410,6 +410,7 @@ freebsd-cxx-cmplx-64idx-dbg:
     - os:fbsd
   variables:
     TEST_ARCH: arch-ci-freebsd-cxx-cmplx-64idx-dbg
+    PETSC_OPTIONS: -nox -nox_warning
 
 freebsd-c-single-opt:
   extends:
@@ -419,6 +420,7 @@ freebsd-c-single-opt:
     - os:fbsd
   variables:
     TEST_ARCH: arch-ci-freebsd-c-single-opt
+    PETSC_OPTIONS: -nox -nox_warning
 
 mswin-opt-impi:
   extends:
