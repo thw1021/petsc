@@ -67,8 +67,6 @@ def main(stage,outdir):
         with open(os.path.join(petsc_dir,petsc_arch,'lib','petsc','conf','petscvariables')) as f:
           doctext = [line for line in f if line.find('DOCTEXT ') > -1]
           doctext = re.sub('[ ]*DOCTEXT[ ]*=[ ]*','',doctext[0]).strip('\n').strip()
-      else:
-        pass
       if not mapnames:
         with open(os.path.join(petsc_dir,petsc_arch,'lib','petsc','conf','petscvariables')) as f:
           mapnames = [line for line in f if line.find('MAPNAMES ') > -1]
