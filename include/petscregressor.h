@@ -35,6 +35,7 @@ PETSC_EXTERN PetscErrorCode PetscRegressorCreate(MPI_Comm, PetscRegressor *);
 PETSC_EXTERN PetscErrorCode PetscRegressorReset(PetscRegressor);
 PETSC_EXTERN PetscErrorCode PetscRegressorDestroy(PetscRegressor *);
 PETSC_EXTERN PetscErrorCode PetscRegressorSetType(PetscRegressor, PetscRegressorType);
+PETSC_EXTERN PetscErrorCode PetscRegressorSetRegularizerWeight(PetscRegressor, PetscReal);
 PETSC_EXTERN PetscErrorCode PetscRegressorSetUp(PetscRegressor);
 PETSC_EXTERN PetscErrorCode PetscRegressorSetFromOptions(PetscRegressor);
 PETSC_EXTERN PetscErrorCode PetscRegressorView(PetscRegressor, PetscViewer);
