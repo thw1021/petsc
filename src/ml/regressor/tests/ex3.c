@@ -54,7 +54,7 @@ int main(int argc, char **args)
   PetscCall(PetscRegressorCreate(PETSC_COMM_WORLD, &regressor));
   PetscCall(PetscRegressorSetType(regressor, PETSCREGRESSORLINEAR));
   PetscCall(PetscRegressorLinearSetFitIntercept(regressor, PETSC_FALSE));
-  PetscRegressorSetFromOptions(regressor);
+  PetscCall(PetscRegressorSetFromOptions(regressor));
   PetscCall(PetscRegressorFit(regressor, X, y));
   PetscCall(PetscRegressorPredict(regressor, X, y_predicted));
   PetscCall(PetscRegressorLinearGetIntercept(regressor, &intercept));

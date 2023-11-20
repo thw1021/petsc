@@ -86,16 +86,22 @@ PetscErrorCode PetscRegressorSetUp_Linear(PetscRegressor regressor)
     /* Set up the TAO object to solve the (regularized) least squares problem (without solving for intercept, which is done separately) using TAOBRGN. */
     PetscCall(TaoSetType(tao, TAOBRGN));
     PetscCall(TaoSetSolution(tao, linear->coefficients));
-    // Note: Above will need to come the below when I rebase over a more recent PETSc:
-    // PetscCall(TaoSetSolution(tao,linear->coefficients));
     PetscCall(TaoSetResidualRoutine(tao, linear->residual, EvaluateResidual, linear));
     PetscCall(TaoSetJacobianResidualRoutine(tao, linear->X, linear->X, EvaluateJacobian, linear));
-    // Set the regularization type for the BRGN solver if linear->type dictates it:
+    // Set the regularization type and weight for the BRGN as linear->type dictates:
+    PetscCall(PetscStrcmp(linear->type, PETSCREGRESSORLINEAROLS, &flg));
+    if (flg && !linear->use_ksp) PetscCall(TaoBRGNSetRegularizerWeight(tao, 0.0));
     PetscCall(PetscStrcmp(linear->type, PETSCREGRESSORLINEARLASSO, &flg));
-    if (flg) PetscCall(PetscOptionsSetValue(NULL, "-tao_brgn_regularization_type", "l1dict"));
-    else {
-      PetscCall(PetscStrcmp(linear->type, PETSCREGRESSORLINEARRIDGE, &flg));
-      if (flg) PetscCall(PetscOptionsSetValue(NULL, "-tao_brgn_regularization_type", "l2pure"));
+    if (flg) {
+      PetscCall(PetscOptionsSetValue(NULL, "-tao_brgn_regularization_type", "l1dict"));
+      if (regressor->regularizer_weight_is_set) PetscCall(TaoBRGNSetRegularizerWeight(tao, regressor->regularizer_weight));
+      else PetscCall(TaoBRGNSetRegularizerWeight(tao, 1.0));  // Set the default regularization weight to 1.0, the default for LASSO in SciKit-learn
+    }
+    PetscCall(PetscStrcmp(linear->type, PETSCREGRESSORLINEARRIDGE, &flg));
+    if (flg) {
+      PetscCall(PetscOptionsSetValue(NULL, "-tao_brgn_regularization_type", "l2pure"));
+      if (regressor->regularizer_weight_is_set) PetscCall(TaoBRGNSetRegularizerWeight(tao, regressor->regularizer_weight));
+      else PetscCall(TaoBRGNSetRegularizerWeight(tao, 1.0));  // Set the default regularization weight to 1.0, the default for ridge regression in SciKit-learn
     }
     PetscCall(TaoSetFromOptions(tao));
   }
