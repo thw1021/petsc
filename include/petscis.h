@@ -282,7 +282,7 @@ struct _n_PetscLayout {
 };
 
 /*@C
-     PetscLayoutFindOwner - Find the owning process for a global index
+     PetscLayoutFindOwner - Find the owning MPI process for a global index
 
     Not Collective; No Fortran Support
 
