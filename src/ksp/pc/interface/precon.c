@@ -11,15 +11,16 @@ PetscLogEvent PC_ApplySymmetricRight, PC_ModifySubMatrices, PC_ApplyOnBlocks, PC
 PetscInt      PetscMGLevelId;
 PetscLogStage PCMPIStage;
 
-PetscErrorCode PCGetDefaultType_Private(PC pc, const char *type[])
+PETSC_INTERN PetscErrorCode PCGetDefaultType_Private(PC pc, const char *type[])
 {
   PetscMPIInt size;
-  PetscBool   hasop, flg1, flg2, set, flg3, isnormal;
+  PetscBool   hasopblock, hasopsolve, flg1, flg2, set, flg3, isnormal;
 
   PetscFunctionBegin;
   PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)pc), &size));
   if (pc->pmat) {
-    PetscCall(MatHasOperation(pc->pmat, MATOP_GET_DIAGONAL_BLOCK, &hasop));
+    PetscCall(MatHasOperation(pc->pmat, MATOP_GET_DIAGONAL_BLOCK, &hasopblock));
+    PetscCall(MatHasOperation(pc->pmat, MATOP_SOLVE, &hasopsolve));
     if (size == 1) {
       PetscCall(MatGetFactorAvailable(pc->pmat, "petsc", MAT_FACTOR_ICC, &flg1));
       PetscCall(MatGetFactorAvailable(pc->pmat, "petsc", MAT_FACTOR_ILU, &flg2));
@@ -31,25 +32,23 @@ PetscErrorCode PCGetDefaultType_Private(PC pc, const char *type[])
         *type = PCILU;
       } else if (isnormal) {
         *type = PCNONE;
-      } else if (hasop) { /* likely is a parallel matrix run on one processor */
+      } else if (hasopblock) { /* likely is a parallel matrix run on one processor */
         *type = PCBJACOBI;
+      } else if (hasopsolve) {
+        *type = PCMAT;
       } else {
         *type = PCNONE;
       }
     } else {
-      if (hasop) {
+      if (hasopblock) {
         *type = PCBJACOBI;
+      } else if (hasopsolve) {
+        *type = PCMAT;
       } else {
         *type = PCNONE;
       }
     }
-  } else {
-    if (size == 1) {
-      *type = PCILU;
-    } else {
-      *type = PCBJACOBI;
-    }
-  }
+  } else *type = NULL;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1037,7 +1036,7 @@ PetscErrorCode PCSetUp(PC pc)
   PetscCall(PetscObjectStateGet((PetscObject)pc->pmat, &matstate));
   PetscCall(MatGetNonzeroState(pc->pmat, &matnonzerostate));
   if (!pc->setupcalled) {
-    PetscCall(PetscInfo(pc, "Setting up PC for first time\n"));
+    //PetscCall(PetscInfo(pc, "Setting up PC for first time\n"));
     pc->flag = DIFFERENT_NONZERO_PATTERN;
   } else if (matstate == pc->matstate) PetscFunctionReturn(PETSC_SUCCESS);
   else {
@@ -1045,7 +1044,7 @@ PetscErrorCode PCSetUp(PC pc)
       PetscCall(PetscInfo(pc, "Setting up PC with different nonzero pattern\n"));
       pc->flag = DIFFERENT_NONZERO_PATTERN;
     } else {
-      PetscCall(PetscInfo(pc, "Setting up PC with same nonzero pattern\n"));
+      //PetscCall(PetscInfo(pc, "Setting up PC with same nonzero pattern\n"));
       pc->flag = SAME_NONZERO_PATTERN;
     }
   }

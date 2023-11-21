@@ -391,8 +391,14 @@ int main(int argc, char **args)
 
    test:
       suffix: help
-      requires: !hpddm !complex !kokkos_kernels !amgx !ml !spai !hypre !viennacl !parms !h2opus !metis !parmetis !superlu_dist !mkl_sparse_optimize !mkl_sparse !mkl_pardiso !mkl_cpardiso !cuda !hip defined(PETSC_USE_LOG) defined(PETSC_USE_INFO) cxx
+      requires: !openblas !blis !mkl !hpddm !complex !kokkos_kernels !amgx !ml !spai !hypre !viennacl !parms !h2opus !metis !parmetis !superlu_dist !mkl_sparse_optimize !mkl_sparse !mkl_pardiso !mkl_cpardiso !cuda !hip defined(PETSC_USE_LOG) defined(PETSC_USE_INFO) cxx
       nsize: 1
+      filter: grep -v -e "BLAS options" -e "blas_view" -e "^\-\-\-"
       args: -ksp_monitor -help -petsc_ci_portable_error_output -error_output_stdout
+
+   test:
+      suffix: redundant
+      nsize: 2
+      args: -ksp_view -pc_type redundant -redundant_pc_type redundant -redundant_redundant_pc_type redundant -redundant_redundant_redundant_pc_type redundant -redundant_redundant_redundant_redundant_pc_type redundant
 
  TEST*/

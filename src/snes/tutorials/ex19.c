@@ -1131,13 +1131,13 @@ PetscErrorCode NonlinearGS(SNES snes, Vec X, Vec B, void *ctx)
       suffix: cuda_1
       nsize: 1
       requires: cuda
-      args: -snes_monitor -dm_mat_type seqaijcusparse -dm_vec_type seqcuda -pc_type gamg -pc_gamg_esteig_ksp_max_it 10 -ksp_monitor -mg_levels_ksp_max_it 3 -pc_gamg_mis_k_minimum_degree_ordering true
+      args: -snes_monitor -dm_mat_type seqaijcusparse -dm_vec_type seqcuda -pc_type gamg -ksp_monitor -mg_levels_ksp_max_it 1
 
    test:
       suffix: cuda_2
       nsize: 3
       requires: cuda !single
-      args: -snes_monitor -dm_mat_type mpiaijcusparse -dm_vec_type mpicuda -pc_type gamg -pc_gamg_esteig_ksp_max_it 10 -ksp_monitor  -mg_levels_ksp_max_it 3 -pc_gamg_mis_k_minimum_degree_ordering true
+      args: -snes_monitor -dm_mat_type mpiaijcusparse -dm_vec_type mpicuda -pc_type gamg -ksp_monitor  -mg_levels_ksp_max_it 1
 
    test:
       suffix: cuda_dm_bind_below
@@ -1150,13 +1150,13 @@ PetscErrorCode NonlinearGS(SNES snes, Vec X, Vec B, void *ctx)
       suffix: hip_1
       nsize: 1
       requires: hip
-      args: -snes_monitor -dm_mat_type mpiaijhipsparse -dm_vec_type hip -pc_type gamg -pc_gamg_esteig_ksp_max_it 10 -ksp_monitor -mg_levels_ksp_max_it 3
+      args: -snes_monitor -dm_mat_type mpiaijhipsparse -dm_vec_type hip -pc_type gamg -ksp_monitor -mg_levels_ksp_max_it 1
 
    test:
       suffix: hip_2
       nsize: 3
       requires: hip !single
-      args: -snes_monitor -dm_mat_type mpiaijhipsparse -dm_vec_type mpihip -pc_type gamg -pc_gamg_esteig_ksp_max_it 10 -ksp_monitor  -mg_levels_ksp_max_it 3
+      args: -snes_monitor -dm_mat_type mpiaijhipsparse -dm_vec_type mpihip -pc_type gamg -ksp_monitor  -mg_levels_ksp_max_it 1
 
    test:
       suffix: hip_dm_bind_below
@@ -1225,7 +1225,8 @@ PetscErrorCode NonlinearGS(SNES snes, Vec X, Vec B, void *ctx)
    test:
       suffix: failure_size
       nsize: 1
-      requires: !defined(PETSC_USE_64BIT_INDICES) !defined(PETSCTEST_VALGRIND)
+      # see https://github.com/open-mpi/ompi/issues/12035
+      requires: !defined(PETSC_USE_64BIT_INDICES) !defined(PETSCTEST_VALGRIND) !defined(PETSC_HAVE_OPENMPI)
       args: -da_refine 100 -petsc_ci_portable_error_output -error_output_stdout
       filter: grep -E -v "(memory block|leaked context|not freed before MPI_Finalize|Could be the program crashed)"
 

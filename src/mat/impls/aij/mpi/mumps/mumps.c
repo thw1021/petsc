@@ -1013,6 +1013,46 @@ static PetscErrorCode MatConvertToTriples_diagonal_xaij(Mat A, PetscInt shift, M
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode MatConvertToTriples_dense_xaij(Mat A, PetscInt shift, MatReuse reuse, Mat_MUMPS *mumps)
+{
+  PetscScalar   *v;
+  const PetscInt m = A->rmap->n, N = A->cmap->N;
+  PetscInt       lda;
+  PetscInt64     i, j;
+  PetscMUMPSInt *row, *col;
+
+  PetscFunctionBegin;
+  PetscCall(MatDenseGetArray(A, &v));
+  PetscCall(MatDenseGetLDA(A, &lda));
+  if (reuse == MAT_INITIAL_MATRIX) {
+    PetscCall(PetscMalloc2(m * N, &row, m * N, &col));
+    for (i = 0; i < m; i++) {
+      col[i] = 0;
+      PetscCall(PetscMUMPSIntCast(i + A->rmap->rstart, &row[i]));
+    }
+    for (j = 1; j < N; j++) {
+      for (i = 0; i < m; i++) PetscCall(PetscMUMPSIntCast(j, col + i + m * j));
+      PetscCall(PetscArraycpy(row + m * j, row + m * (j - 1), m));
+    }
+    if (lda == m) mumps->val = v;
+    else {
+      PetscCall(PetscMalloc1(m * N, &mumps->val));
+      mumps->val_alloc = mumps->val;
+      for (j = 0; j < N; j++) PetscCall(PetscArraycpy(mumps->val + m * j, v + lda * j, m));
+    }
+    mumps->irn = row;
+    mumps->jcn = col;
+    mumps->nnz = m * N;
+  } else {
+    if (lda == m && !mumps->nest_vals) mumps->val = v;
+    else {
+      for (j = 0; j < N; j++) PetscCall(PetscArraycpy(mumps->val + m * j, v + lda * j, m));
+    }
+  }
+  PetscCall(MatDenseRestoreArray(A, &v));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode MatConvertToTriples_nest_xaij(Mat A, PetscInt shift, MatReuse reuse, Mat_MUMPS *mumps)
 {
   Mat     **mats;
@@ -1040,7 +1080,7 @@ static PetscErrorCode MatConvertToTriples_nest_xaij(Mat A, PetscInt shift, MatRe
         if (chol && c < r) continue; /* skip lower-triangular block for Cholesky */
         if (sub) {
           PetscErrorCode (*convert_to_triples)(Mat, PetscInt, MatReuse, Mat_MUMPS *) = NULL;
-          PetscBool isSeqAIJ, isMPIAIJ, isSeqBAIJ, isMPIBAIJ, isSeqSBAIJ, isMPISBAIJ, isTrans, isHTrans = PETSC_FALSE, isDiag;
+          PetscBool isSeqAIJ, isMPIAIJ, isSeqBAIJ, isMPIBAIJ, isSeqSBAIJ, isMPISBAIJ, isTrans, isHTrans = PETSC_FALSE, isDiag, isDense;
           MatInfo   info;
 
           PetscCall(PetscObjectTypeCompare((PetscObject)sub, MATTRANSPOSEVIRTUAL, &isTrans));
@@ -1056,6 +1096,7 @@ static PetscErrorCode MatConvertToTriples_nest_xaij(Mat A, PetscInt shift, MatRe
           PetscCall(PetscObjectBaseTypeCompare((PetscObject)sub, MATSEQSBAIJ, &isSeqSBAIJ));
           PetscCall(PetscObjectBaseTypeCompare((PetscObject)sub, MATMPISBAIJ, &isMPISBAIJ));
           PetscCall(PetscObjectTypeCompare((PetscObject)sub, MATDIAGONAL, &isDiag));
+          PetscCall(PetscObjectTypeCompareAny((PetscObject)sub, &isDense, MATSEQDENSE, MATMPIDENSE, NULL));
 
           if (chol) {
             if (r == c) {
@@ -1064,12 +1105,14 @@ static PetscErrorCode MatConvertToTriples_nest_xaij(Mat A, PetscInt shift, MatRe
               else if (isSeqSBAIJ) convert_to_triples = MatConvertToTriples_seqsbaij_seqsbaij;
               else if (isMPISBAIJ) convert_to_triples = MatConvertToTriples_mpisbaij_mpisbaij;
               else if (isDiag) convert_to_triples = MatConvertToTriples_diagonal_xaij;
+              else if (isDense) convert_to_triples = MatConvertToTriples_dense_xaij;
             } else {
               if (isSeqAIJ) convert_to_triples = MatConvertToTriples_seqaij_seqaij;
               else if (isMPIAIJ) convert_to_triples = MatConvertToTriples_mpiaij_mpiaij;
               else if (isSeqBAIJ) convert_to_triples = MatConvertToTriples_seqbaij_seqaij;
               else if (isMPIBAIJ) convert_to_triples = MatConvertToTriples_mpibaij_mpiaij;
               else if (isDiag) convert_to_triples = MatConvertToTriples_diagonal_xaij;
+              else if (isDense) convert_to_triples = MatConvertToTriples_dense_xaij;
             }
           } else {
             if (isSeqAIJ) convert_to_triples = MatConvertToTriples_seqaij_seqaij;
@@ -1077,6 +1120,7 @@ static PetscErrorCode MatConvertToTriples_nest_xaij(Mat A, PetscInt shift, MatRe
             else if (isSeqBAIJ) convert_to_triples = MatConvertToTriples_seqbaij_seqaij;
             else if (isMPIBAIJ) convert_to_triples = MatConvertToTriples_mpibaij_mpiaij;
             else if (isDiag) convert_to_triples = MatConvertToTriples_diagonal_xaij;
+            else if (isDense) convert_to_triples = MatConvertToTriples_dense_xaij;
           }
           PetscCheck(convert_to_triples, PetscObjectComm((PetscObject)sub), PETSC_ERR_SUP, "Not for block of type %s", ((PetscObject)sub)->type_name);
           mumps->nest_convert_to_triples[r * nc + c] = convert_to_triples;
@@ -2176,12 +2220,14 @@ static PetscErrorCode MatSetFromOptions_MUMPS(Mat F, Mat A)
      and a petsc-maint mailing list thread with subject 'MUMPS segfaults in parallel because of ...'
      This bug was fixed by https://github.com/pmodels/mpich/pull/4149. But the fix brought a new bug,
      see https://github.com/pmodels/mpich/issues/5589. This bug was fixed by https://github.com/pmodels/mpich/pull/5590.
-     In short, we could not use distributed RHS with MPICH until v4.0b1.
+     In short, we could not use distributed RHS until with MPICH v4.0b1 or we enabled a workaround in mumps-5.6.2+
    */
-#if PETSC_PKG_MUMPS_VERSION_LT(5, 3, 0) || (defined(PETSC_HAVE_MPICH_NUMVERSION) && (PETSC_HAVE_MPICH_NUMVERSION < 40000101))
-  mumps->ICNTL20 = 0; /* Centralized dense RHS*/
+#if PETSC_PKG_MUMPS_VERSION_GE(5, 6, 2) && defined(PETSC_HAVE_MUMPS_AVOID_MPI_IN_PLACE)
+  mumps->ICNTL20 = 10;
+#elif PETSC_PKG_MUMPS_VERSION_LT(5, 3, 0) || (defined(PETSC_HAVE_MPICH_NUMVERSION) && (PETSC_HAVE_MPICH_NUMVERSION < 40000101))
+  mumps->ICNTL20     = 0; /* Centralized dense RHS*/
 #else
-  mumps->ICNTL20     = 10; /* Distributed dense RHS*/
+  mumps->ICNTL20 = 10; /* Distributed dense RHS*/
 #endif
   PetscCall(PetscOptionsMUMPSInt("-mat_mumps_icntl_20", "ICNTL(20): give mumps centralized (0) or distributed (10) dense right-hand sides", "None", mumps->ICNTL20, &mumps->ICNTL20, &flg));
   PetscCheck(!flg || mumps->ICNTL20 == 10 || mumps->ICNTL20 == 0, PETSC_COMM_SELF, PETSC_ERR_SUP, "ICNTL(20)=%d is not supported by the PETSc/MUMPS interface. Allowed values are 0, 10", (int)mumps->ICNTL20);
@@ -3358,7 +3404,7 @@ static PetscErrorCode MatGetFactor_aij_mumps(Mat A, MatFactorType ftype, Mat *F)
 {
   Mat         B;
   Mat_MUMPS  *mumps;
-  PetscBool   isSeqAIJ, isDiag;
+  PetscBool   isSeqAIJ, isDiag, isDense;
   PetscMPIInt size;
 
   PetscFunctionBegin;
@@ -3372,6 +3418,7 @@ static PetscErrorCode MatGetFactor_aij_mumps(Mat A, MatFactorType ftype, Mat *F)
   /* Create the factorization matrix */
   PetscCall(PetscObjectBaseTypeCompare((PetscObject)A, MATSEQAIJ, &isSeqAIJ));
   PetscCall(PetscObjectBaseTypeCompare((PetscObject)A, MATDIAGONAL, &isDiag));
+  PetscCall(PetscObjectTypeCompareAny((PetscObject)A, &isDense, MATSEQDENSE, MATMPIDENSE, NULL));
   PetscCall(MatCreate(PetscObjectComm((PetscObject)A), &B));
   PetscCall(MatSetSizes(B, A->rmap->n, A->cmap->n, A->rmap->N, A->cmap->N));
   PetscCall(PetscStrallocpy("mumps", &((PetscObject)B)->type_name));
@@ -3402,6 +3449,7 @@ static PetscErrorCode MatGetFactor_aij_mumps(Mat A, MatFactorType ftype, Mat *F)
     B->factortype            = MAT_FACTOR_LU;
     if (isSeqAIJ) mumps->ConvertToTriples = MatConvertToTriples_seqaij_seqaij;
     else if (isDiag) mumps->ConvertToTriples = MatConvertToTriples_diagonal_xaij;
+    else if (isDense) mumps->ConvertToTriples = MatConvertToTriples_dense_xaij;
     else mumps->ConvertToTriples = MatConvertToTriples_mpiaij_mpiaij;
     PetscCall(PetscStrallocpy(MATORDERINGEXTERNAL, (char **)&B->preferredordering[MAT_FACTOR_LU]));
     mumps->sym = 0;
@@ -3410,6 +3458,7 @@ static PetscErrorCode MatGetFactor_aij_mumps(Mat A, MatFactorType ftype, Mat *F)
     B->factortype                  = MAT_FACTOR_CHOLESKY;
     if (isSeqAIJ) mumps->ConvertToTriples = MatConvertToTriples_seqaij_seqsbaij;
     else if (isDiag) mumps->ConvertToTriples = MatConvertToTriples_diagonal_xaij;
+    else if (isDense) mumps->ConvertToTriples = MatConvertToTriples_dense_xaij;
     else mumps->ConvertToTriples = MatConvertToTriples_mpiaij_mpisbaij;
     PetscCall(PetscStrallocpy(MATORDERINGEXTERNAL, (char **)&B->preferredordering[MAT_FACTOR_CHOLESKY]));
 #if defined(PETSC_USE_COMPLEX)
@@ -3689,7 +3738,7 @@ static PetscErrorCode MatGetFactor_nest_mumps(Mat A, MatFactorType ftype, Mat *F
   for (PetscInt r = 0; r < nr; r++) {
     for (PetscInt c = 0; c < nc; c++) {
       Mat       sub = mats[r][c];
-      PetscBool isSeqAIJ, isMPIAIJ, isSeqBAIJ, isMPIBAIJ, isSeqSBAIJ, isMPISBAIJ, isTrans, isDiag;
+      PetscBool isSeqAIJ, isMPIAIJ, isSeqBAIJ, isMPIBAIJ, isSeqSBAIJ, isMPISBAIJ, isTrans, isDiag, isDense;
 
       if (!sub || (ftype == MAT_FACTOR_CHOLESKY && c < r)) continue;
       PetscCall(PetscObjectTypeCompare((PetscObject)sub, MATTRANSPOSEVIRTUAL, &isTrans));
@@ -3705,17 +3754,18 @@ static PetscErrorCode MatGetFactor_nest_mumps(Mat A, MatFactorType ftype, Mat *F
       PetscCall(PetscObjectBaseTypeCompare((PetscObject)sub, MATSEQSBAIJ, &isSeqSBAIJ));
       PetscCall(PetscObjectBaseTypeCompare((PetscObject)sub, MATMPISBAIJ, &isMPISBAIJ));
       PetscCall(PetscObjectTypeCompare((PetscObject)sub, MATDIAGONAL, &isDiag));
+      PetscCall(PetscObjectTypeCompareAny((PetscObject)sub, &isDense, MATSEQDENSE, MATMPIDENSE, NULL));
       if (ftype == MAT_FACTOR_CHOLESKY) {
         if (r == c) {
-          if (!isSeqAIJ && !isMPIAIJ && !isSeqBAIJ && !isMPIBAIJ && !isSeqSBAIJ && !isMPISBAIJ && !isDiag) {
-            PetscCall(PetscInfo(sub, "MAT_CHOLESKY_FACTOR not supported for diagonal block of type %s.\n", ((PetscObject)sub)->type_name));
+          if (!isSeqAIJ && !isMPIAIJ && !isSeqBAIJ && !isMPIBAIJ && !isSeqSBAIJ && !isMPISBAIJ && !isDiag && !isDense) {
+            PetscCall(PetscInfo(sub, "MAT_FACTOR_CHOLESKY not supported for diagonal block of type %s.\n", ((PetscObject)sub)->type_name));
             flg = PETSC_FALSE;
           }
-        } else if (!isSeqAIJ && !isMPIAIJ && !isSeqBAIJ && !isMPIBAIJ && !isDiag) {
-          PetscCall(PetscInfo(sub, "MAT_CHOLESKY_FACTOR not supported for off-diagonal block of type %s.\n", ((PetscObject)sub)->type_name));
+        } else if (!isSeqAIJ && !isMPIAIJ && !isSeqBAIJ && !isMPIBAIJ && !isDiag && !isDense) {
+          PetscCall(PetscInfo(sub, "MAT_FACTOR_CHOLESKY not supported for off-diagonal block of type %s.\n", ((PetscObject)sub)->type_name));
           flg = PETSC_FALSE;
         }
-      } else if (!isSeqAIJ && !isMPIAIJ && !isSeqBAIJ && !isMPIBAIJ && !isDiag) {
+      } else if (!isSeqAIJ && !isMPIAIJ && !isSeqBAIJ && !isMPIBAIJ && !isDiag && !isDense) {
         PetscCall(PetscInfo(sub, "MAT_LU_FACTOR not supported for block of type %s.\n", ((PetscObject)sub)->type_name));
         flg = PETSC_FALSE;
       }
@@ -3802,6 +3852,10 @@ PETSC_EXTERN PetscErrorCode MatSolverTypeRegister_MUMPS(void)
   PetscCall(MatSolverTypeRegister(MATSOLVERMUMPS, MATSEQSELL, MAT_FACTOR_LU, MatGetFactor_sell_mumps));
   PetscCall(MatSolverTypeRegister(MATSOLVERMUMPS, MATDIAGONAL, MAT_FACTOR_LU, MatGetFactor_aij_mumps));
   PetscCall(MatSolverTypeRegister(MATSOLVERMUMPS, MATDIAGONAL, MAT_FACTOR_CHOLESKY, MatGetFactor_aij_mumps));
+  PetscCall(MatSolverTypeRegister(MATSOLVERMUMPS, MATSEQDENSE, MAT_FACTOR_LU, MatGetFactor_aij_mumps));
+  PetscCall(MatSolverTypeRegister(MATSOLVERMUMPS, MATSEQDENSE, MAT_FACTOR_CHOLESKY, MatGetFactor_aij_mumps));
+  PetscCall(MatSolverTypeRegister(MATSOLVERMUMPS, MATMPIDENSE, MAT_FACTOR_LU, MatGetFactor_aij_mumps));
+  PetscCall(MatSolverTypeRegister(MATSOLVERMUMPS, MATMPIDENSE, MAT_FACTOR_CHOLESKY, MatGetFactor_aij_mumps));
   PetscCall(MatSolverTypeRegister(MATSOLVERMUMPS, MATNEST, MAT_FACTOR_LU, MatGetFactor_nest_mumps));
   PetscCall(MatSolverTypeRegister(MATSOLVERMUMPS, MATNEST, MAT_FACTOR_CHOLESKY, MatGetFactor_nest_mumps));
   PetscFunctionReturn(PETSC_SUCCESS);
