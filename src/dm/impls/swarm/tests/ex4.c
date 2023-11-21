@@ -8,7 +8,7 @@ static char help[] = "Testing integrators on the simple harmonic oscillator\n";
   To look at the long time behavior for different integrators, we can use the nergy monitor. Below we see that Euler is almost 100 times worse at conserving energy than the symplectic integrator of the same order.
 
     make -f ./gmakefile test search="dm_impls_swarm_tests-ex4_bsi_1"
-      EXTRA_OPTIONS="-ts_max_steps 10000 -ts_max_time 10.0 -output_step 1000 -ts_type euler" | grep error
+      PETSC_TEST_EXTRA_OPTIONS="-ts_max_steps 10000 -ts_max_time 10.0 -output_step 1000 -ts_type euler" | grep error
 
       energy/exact energy 398.236 / 396.608 (0.4104399231)
       energy/exact energy 1579.52 / 1573.06 (0.4104399231)
@@ -18,7 +18,7 @@ static char help[] = "Testing integrators on the simple harmonic oscillator\n";
       energy/exact energy 1574.68 / 1573.06 (0.1024524454)
 
     make -f ./gmakefile test search="dm_impls_swarm_tests-ex4_bsi_1"
-      EXTRA_OPTIONS="-ts_max_steps 10000 -ts_max_time 10.0 -output_step 1000" | grep error
+      PETSC_TEST_EXTRA_OPTIONS="-ts_max_steps 10000 -ts_max_time 10.0 -output_step 1000" | grep error
 
       energy/exact energy 396.579 / 396.608 (0.0074080434)
       energy/exact energy 1572.95 / 1573.06 (0.0074080434)
@@ -30,7 +30,7 @@ static char help[] = "Testing integrators on the simple harmonic oscillator\n";
   We can look at third order integrators in the same way, but we need to use more steps.
 
     make -f ./gmakefile test search="dm_impls_swarm_tests-ex4_bsi_1"
-      EXTRA_OPTIONS="-ts_max_steps 1000000 -ts_max_time 1000.0 -output_step 100000 -ts_type rk -ts_adapt_type none" | grep error
+      PETSC_TEST_EXTRA_OPTIONS="-ts_max_steps 1000000 -ts_max_time 1000.0 -output_step 100000 -ts_type rk -ts_adapt_type none" | grep error
 
       energy/exact energy 396.608 / 396.608 (0.0000013981)
       energy/exact energy 1573.06 / 1573.06 (0.0000013981)
@@ -40,7 +40,7 @@ static char help[] = "Testing integrators on the simple harmonic oscillator\n";
       energy/exact energy 1573.06 / 1573.06 (0.0000000218)
 
     make -f ./gmakefile test search="dm_impls_swarm_tests-ex4_bsi_3"
-      EXTRA_OPTIONS="-ts_max_steps 1000000 -ts_max_time 1000.0 -output_step 100000 -ts_adapt_type none" | grep error
+      PETSC_TEST_EXTRA_OPTIONS="-ts_max_steps 1000000 -ts_max_time 1000.0 -output_step 100000 -ts_adapt_type none" | grep error
 
       energy/exact energy 396.608 / 396.608 (0.0000000007)
       energy/exact energy 1573.06 / 1573.06 (0.0000000007)
