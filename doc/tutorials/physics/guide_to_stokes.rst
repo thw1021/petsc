@@ -224,8 +224,8 @@ In order to look at the convergence of some harder problems, we will examine ``S
 
 .. code-block:: console
 
-  $ make -f ./gmakefile test globsearch="snes_tutorials-ex69_p2p1" EXTRA_OPTIONS="-dm_refine 5 -dm_view hdf5:$PETSC_DIR/sol.h5 -snes_view_solution hdf5:$PETSC_DIR/sol.h5::append -exact_vec_view hdf5:$PETSC_DIR/sol.h5::append -m 2 -n 2 -B 1"
-  $ make -f ./gmakefile test globsearch="snes_tutorials-ex69_p2p1" EXTRA_OPTIONS="-dm_refine 5 -dm_view hdf5:$PETSC_DIR/sol.h5 -snes_view_solution hdf5:$PETSC_DIR/sol.h5::append -exact_vec_view hdf5:$PETSC_DIR/sol.h5::append -m 2 -n 2 -B 3.75"
+  $ make -f ./gmakefile test globsearch="snes_tutorials-ex69_p2p1" PETSC_TEST_EXTRA_OPTIONS="-dm_refine 5 -dm_view hdf5:$PETSC_DIR/sol.h5 -snes_view_solution hdf5:$PETSC_DIR/sol.h5::append -exact_vec_view hdf5:$PETSC_DIR/sol.h5::append -m 2 -n 2 -B 1"
+  $ make -f ./gmakefile test globsearch="snes_tutorials-ex69_p2p1" PETSC_TEST_EXTRA_OPTIONS="-dm_refine 5 -dm_view hdf5:$PETSC_DIR/sol.h5 -snes_view_solution hdf5:$PETSC_DIR/sol.h5::append -exact_vec_view hdf5:$PETSC_DIR/sol.h5::append -m 2 -n 2 -B 3.75"
 
 which are show in the figure below.
 
@@ -285,7 +285,7 @@ When we run, we get a failure of the nonlinear solver. Our checking reveals that
 
 .. code-block:: console
 
-  $ make -f ./gmakefile test globsearch="snes_tutorials-ex69_p2p1" EXTRA_OPTIONS="-snes_monitor -ksp_monitor_true_residual -ksp_converged_reason"
+  $ make -f ./gmakefile test globsearch="snes_tutorials-ex69_p2p1" PETSC_TEST_EXTRA_OPTIONS="-snes_monitor -ksp_monitor_true_residual -ksp_converged_reason"
   L_2 Error: [0.000439127, 0.0376629]
   L_2 Residual: 0.0453958
   Taylor approximation converging at order 1.00
@@ -302,7 +302,7 @@ In order to track down the error, we can use ``-snes_test_jacobian`` which compu
 
 .. code-block:: console
 
-  $ make -f ./gmakefile test globsearch="snes_tutorials-ex69_p2p1" EXTRA_OPTIONS="-snes_monitor -ksp_monitor_true_residual -ksp_converged_reason -snes_test_jacobian"
+  $ make -f ./gmakefile test globsearch="snes_tutorials-ex69_p2p1" PETSC_TEST_EXTRA_OPTIONS="-snes_monitor -ksp_monitor_true_residual -ksp_converged_reason -snes_test_jacobian"
   L_2 Error: [0.000439127, 0.0376629]
   L_2 Residual: 0.0453958
     ---------- Testing Jacobian -------------
@@ -331,7 +331,7 @@ At this point, we could just go back and check the code. However, PETSc will als
 
 .. code-block:: console
 
-  $ make -f ./gmakefile test globsearch="snes_tutorials-ex69_p2p1" EXTRA_OPTIONS="-snes_monitor -ksp_monitor_true_residual -ksp_converged_reason -snes_test_jacobian"
+  $ make -f ./gmakefile test globsearch="snes_tutorials-ex69_p2p1" PETSC_TEST_EXTRA_OPTIONS="-snes_monitor -ksp_monitor_true_residual -ksp_converged_reason -snes_test_jacobian"
   	  Hand-coded minus finite-difference Jacobian with tolerance 1e-05 ----------
   Mat Object: 1 MPI process
     type: seqaij
@@ -391,7 +391,7 @@ In order to see exactly what solver we have employed, we can use the ``-snes_vie
 
 .. code-block:: console
 
-   $ make -f ./gmakefile test globsearch="snes_tutorials-ex69_p2p1" EXTRA_OPTIONS="-snes_view"
+   $ make -f ./gmakefile test globsearch="snes_tutorials-ex69_p2p1" PETSC_TEST_EXTRA_OPTIONS="-snes_view"
    SNES Object: 1 MPI process
      type: newtonls
      maximum iterations=50, maximum function evaluations=10000
@@ -532,7 +532,7 @@ Going through this piece-by-piece, we can see all the parts of our solver. At th
 
 .. code-block:: console
 
-   $ make -f ./gmakefile test globsearch="snes_tutorials-ex69_p2p1" EXTRA_OPTIONS="-snes_view"
+   $ make -f ./gmakefile test globsearch="snes_tutorials-ex69_p2p1" PETSC_TEST_EXTRA_OPTIONS="-snes_view"
    SNES Object: 1 MPI process
      type: newtonls
      maximum iterations=50, maximum function evaluations=10000
@@ -552,7 +552,7 @@ For each nonlinear step, we use ``KSPGMRES`` to solve the Newton equation, preco
 
 .. code-block:: console
 
-   $ make -f ./gmakefile test globsearch="snes_tutorials-ex69_p2p1" EXTRA_OPTIONS="-snes_view"
+   $ make -f ./gmakefile test globsearch="snes_tutorials-ex69_p2p1" PETSC_TEST_EXTRA_OPTIONS="-snes_view"
      KSP Object: 1 MPI process
        type: gmres
          restart=30, using Classical (unmodified) Gram-Schmidt Orthogonalization with no iterative refinement
@@ -579,7 +579,7 @@ The solver for the first block, representing the velocity, is GMRES/LU. Note tha
 
 .. code-block:: console
 
-   $ make -f ./gmakefile test globsearch="snes_tutorials-ex69_p2p1" EXTRA_OPTIONS="-snes_view"
+   $ make -f ./gmakefile test globsearch="snes_tutorials-ex69_p2p1" PETSC_TEST_EXTRA_OPTIONS="-snes_view"
          KSP solver for A00 block
            KSP Object: (fieldsplit_velocity_) 1 MPI process
              type: gmres
@@ -620,7 +620,7 @@ The solver for the second block, with prefix ``fieldsplit_pressure_``, is also G
 
 .. code-block:: console
 
-   $ make -f ./gmakefile test globsearch="snes_tutorials-ex69_p2p1" EXTRA_OPTIONS="-snes_view"
+   $ make -f ./gmakefile test globsearch="snes_tutorials-ex69_p2p1" PETSC_TEST_EXTRA_OPTIONS="-snes_view"
          KSP solver for S = A11 - A10 inv(A00) A01
            KSP Object: (fieldsplit_pressure_) 1 MPI process
              type: gmres
@@ -717,7 +717,7 @@ Finally, the SNES viewer reports the system matrix and preconditioning matrix
 
 .. code-block:: console
 
-   $ make -f ./gmakefile test globsearch="snes_tutorials-ex69_p2p1" EXTRA_OPTIONS="-snes_view"
+   $ make -f ./gmakefile test globsearch="snes_tutorials-ex69_p2p1" PETSC_TEST_EXTRA_OPTIONS="-snes_view"
        linear system matrix followed by preconditioner matrix:
        Mat Object: 1 MPI process
          type: seqaij
@@ -737,7 +737,7 @@ We see that they have the same nonzero pattern, even though the preconditioning 
 
 .. code-block:: console
 
-   $ make -f ./gmakefile test globsearch="snes_tutorials-ex69_p2p1" EXTRA_OPTIONS="-snes_view -dm_preallocate_only -prec_mat_ignore_zero_entries"
+   $ make -f ./gmakefile test globsearch="snes_tutorials-ex69_p2p1" PETSC_TEST_EXTRA_OPTIONS="-snes_view -dm_preallocate_only -prec_mat_ignore_zero_entries"
        linear system matrix followed by preconditioner matrix:
        Mat Object: 1 MPI process
          type: seqaij
@@ -757,9 +757,9 @@ We can see a sparsity portrait of the system and preconditioning matrices if the
 
 .. code-block:: console
 
-   $ make -f ./gmakefile test globsearch="snes_tutorials-ex69_p2p1" EXTRA_OPTIONS="-ksp_view_mat draw -prec_mat_view draw -draw_pause -1"
-   $ make -f ./gmakefile test globsearch="snes_tutorials-ex69_p2p1" EXTRA_OPTIONS="-ksp_view_mat draw -prec_mat_view draw -draw_save $PETSC_DIR/mat.png"
-   $ make -f ./gmakefile test globsearch="snes_tutorials-ex69_p2p1" EXTRA_OPTIONS="-dm_preallocate_only -mat_ignore_zero_entries -prec_mat_ignore_zero_entries -ksp_view_mat draw -prec_mat_view draw -draw_save $PETSC_DIR/mat_sparse.png"
+   $ make -f ./gmakefile test globsearch="snes_tutorials-ex69_p2p1" PETSC_TEST_EXTRA_OPTIONS="-ksp_view_mat draw -prec_mat_view draw -draw_pause -1"
+   $ make -f ./gmakefile test globsearch="snes_tutorials-ex69_p2p1" PETSC_TEST_EXTRA_OPTIONS="-ksp_view_mat draw -prec_mat_view draw -draw_save $PETSC_DIR/mat.png"
+   $ make -f ./gmakefile test globsearch="snes_tutorials-ex69_p2p1" PETSC_TEST_EXTRA_OPTIONS="-dm_preallocate_only -mat_ignore_zero_entries -prec_mat_ignore_zero_entries -ksp_view_mat draw -prec_mat_view draw -draw_save $PETSC_DIR/mat_sparse.png"
 
 
 .. list-table::
@@ -784,7 +784,7 @@ If we want to check the convergence of the solver, we can also do that using opt
 
 .. code-block:: console
 
-  $ make -f ./gmakefile test globsearch="snes_tutorials-ex69_p2p1" EXTRA_OPTIONS="-snes_monitor -ksp_monitor_true_residual -ksp_converged_reason -fieldsplit_pressure_ksp_converged_reason"
+  $ make -f ./gmakefile test globsearch="snes_tutorials-ex69_p2p1" PETSC_TEST_EXTRA_OPTIONS="-snes_monitor -ksp_monitor_true_residual -ksp_converged_reason -fieldsplit_pressure_ksp_converged_reason"
   0 SNES Function norm 1.170604545948e-01
     Linear fieldsplit_pressure_ solve converged due to CONVERGED_RTOL iterations 7
     0 KSP preconditioned resid norm 4.965098891419e-01 true resid norm 1.170604545948e-01 ||r(i)||/||b|| 1.000000000000e+00
@@ -797,7 +797,7 @@ We can look at the scalability of the solve by refining the mesh. We see that th
 
 .. code-block:: console
 
-  $ make -f ./gmakefile test globsearch="snes_tutorials-ex69_p2p1" EXTRA_OPTIONS="-dm_refine 2 -snes_monitor -ksp_monitor_true_residual -ksp_converged_reason -fieldsplit_pressure_ksp_converged_reason"
+  $ make -f ./gmakefile test globsearch="snes_tutorials-ex69_p2p1" PETSC_TEST_EXTRA_OPTIONS="-dm_refine 2 -snes_monitor -ksp_monitor_true_residual -ksp_converged_reason -fieldsplit_pressure_ksp_converged_reason"
   0 SNES Function norm 3.503062983054e-02
     Linear fieldsplit_pressure_ solve converged due to CONVERGED_RTOL iterations 8
     0 KSP preconditioned resid norm 9.943095979973e-01 true resid norm 3.503062983054e-02 ||r(i)||/||b|| 1.000000000000e+00
@@ -805,7 +805,7 @@ We can look at the scalability of the solve by refining the mesh. We see that th
     1 KSP preconditioned resid norm 1.148772629230e-10 true resid norm 2.693482255004e-13 ||r(i)||/||b|| 7.688934706664e-12
   Linear solve converged due to CONVERGED_RTOL iterations 1
   1 SNES Function norm 2.693649920420e-13
-  $ make -f ./gmakefile test globsearch="snes_tutorials-ex69_p2p1" EXTRA_OPTIONS="-dm_refine 4 -snes_monitor -ksp_monitor_true_residual -ksp_converged_reason -fieldsplit_pressure_ksp_converged_reason"
+  $ make -f ./gmakefile test globsearch="snes_tutorials-ex69_p2p1" PETSC_TEST_EXTRA_OPTIONS="-dm_refine 4 -snes_monitor -ksp_monitor_true_residual -ksp_converged_reason -fieldsplit_pressure_ksp_converged_reason"
   0 SNES Function norm 8.969202737759e-03
     Linear fieldsplit_pressure_ solve converged due to CONVERGED_RTOL iterations 6
     0 KSP preconditioned resid norm 3.322375727167e+00 true resid norm 8.969202737759e-03 ||r(i)||/||b|| 1.000000000000e+00
@@ -818,7 +818,7 @@ Starting off with an exact solver allows us to check that the discretization, eq
 
 .. code-block:: console
 
-  $ make -f ./gmakefile test globsearch="snes_tutorials-ex69_p2p1" EXTRA_OPTIONS="-dm_refine 2 -snes_monitor -ksp_monitor_true_residual -ksp_converged_reason -fieldsplit_pressure_ksp_converged_reason -fieldsplit_velocity_pc_type gamg -fieldsplit_velocity_ksp_converged_reason"
+  $ make -f ./gmakefile test globsearch="snes_tutorials-ex69_p2p1" PETSC_TEST_EXTRA_OPTIONS="-dm_refine 2 -snes_monitor -ksp_monitor_true_residual -ksp_converged_reason -fieldsplit_pressure_ksp_converged_reason -fieldsplit_velocity_pc_type gamg -fieldsplit_velocity_ksp_converged_reason"
   0 SNES Function norm 3.503062983054e-02
     Linear fieldsplit_velocity_ solve converged due to CONVERGED_RTOL iterations 8
     Linear fieldsplit_velocity_ solve converged due to CONVERGED_RTOL iterations 9
@@ -872,7 +872,7 @@ This behaves well for the initial mesh,
 
 .. code-block:: console
 
-  $ make -f ./gmakefile test globsearch="snes_tutorials-ex69_p2p1_gmg" EXTRA_OPTIONS="-dm_refine_hierarchy 2 -snes_monitor -ksp_monitor_true_residual -ksp_converged_reason -fieldsplit_pressure_ksp_converged_reason -fieldsplit_velocity_ksp_converged_reason"
+  $ make -f ./gmakefile test globsearch="snes_tutorials-ex69_p2p1_gmg" PETSC_TEST_EXTRA_OPTIONS="-dm_refine_hierarchy 2 -snes_monitor -ksp_monitor_true_residual -ksp_converged_reason -fieldsplit_pressure_ksp_converged_reason -fieldsplit_velocity_ksp_converged_reason"
   0 SNES Function norm 3.503062983054e-02
     0 KSP unpreconditioned resid norm 3.503062983054e-02 true resid norm 3.503062983054e-02 ||r(i)||/||b|| 1.000000000000e+00
     Linear fieldsplit_velocity_ solve converged due to CONVERGED_RTOL iterations 4
@@ -907,7 +907,7 @@ and is also stable under refinement
 
 .. code-block:: console
 
-  $ make -f ./gmakefile test globsearch="snes_tutorials-ex69_p2p1_gmg" EXTRA_OPTIONS="-dm_refine_hierarchy 4 -snes_monitor -ksp_monitor_true_residual -ksp_converged_reason -fieldsplit_pressure_ksp_converged_reason -fieldsplit_velocity_ksp_converged_reason"
+  $ make -f ./gmakefile test globsearch="snes_tutorials-ex69_p2p1_gmg" PETSC_TEST_EXTRA_OPTIONS="-dm_refine_hierarchy 4 -snes_monitor -ksp_monitor_true_residual -ksp_converged_reason -fieldsplit_pressure_ksp_converged_reason -fieldsplit_velocity_ksp_converged_reason"
   0 SNES Function norm 3.503062983054e-02
     0 KSP unpreconditioned resid norm 3.503062983054e-02 true resid norm 3.503062983054e-02 ||r(i)||/||b|| 1.000000000000e+00
     Linear fieldsplit_velocity_ solve converged due to CONVERGED_RTOL iterations 4
@@ -942,7 +942,7 @@ Finally, we can back off the pressure solve. ``ILU(0)`` is good enough to mainta
 
 .. code-block:: console
 
-  $ make -f ./gmakefile test globsearch="snes_tutorials-ex69_p2p1_gmg" EXTRA_OPTIONS="-dm_refine_hierarchy 2 -snes_monitor -ksp_monitor_true_residual -ksp_converged_reason -fieldsplit_pressure_ksp_converged_reason -fieldsplit_pressure_pc_type ilu"
+  $ make -f ./gmakefile test globsearch="snes_tutorials-ex69_p2p1_gmg" PETSC_TEST_EXTRA_OPTIONS="-dm_refine_hierarchy 2 -snes_monitor -ksp_monitor_true_residual -ksp_converged_reason -fieldsplit_pressure_ksp_converged_reason -fieldsplit_pressure_pc_type ilu"
   0 SNES Function norm 3.503062983054e-02
     0 KSP unpreconditioned resid norm 3.503062983054e-02 true resid norm 3.503062983054e-02 ||r(i)||/||b|| 1.000000000000e+00
     Linear fieldsplit_pressure_ solve converged due to CONVERGED_RTOL iterations 10
@@ -951,7 +951,7 @@ Finally, we can back off the pressure solve. ``ILU(0)`` is good enough to mainta
     2 KSP unpreconditioned resid norm 1.521944777036e-11 true resid norm 1.521942998859e-11 ||r(i)||/||b|| 4.344606437913e-10
   Linear solve converged due to CONVERGED_ATOL iterations 2
   1 SNES Function norm 1.521943449163e-11
-  $ make -f ./gmakefile test globsearch="snes_tutorials-ex69_p2p1_gmg" EXTRA_OPTIONS="-dm_refine_hierarchy 4 -snes_monitor -ksp_monitor_true_residual -ksp_converged_reason -fieldsplit_pressure_ksp_converged_reason -fieldsplit_pressure_pc_type ilu"
+  $ make -f ./gmakefile test globsearch="snes_tutorials-ex69_p2p1_gmg" PETSC_TEST_EXTRA_OPTIONS="-dm_refine_hierarchy 4 -snes_monitor -ksp_monitor_true_residual -ksp_converged_reason -fieldsplit_pressure_ksp_converged_reason -fieldsplit_pressure_pc_type ilu"
   0 SNES Function norm 8.969202737759e-03
     0 KSP unpreconditioned resid norm 8.969202737759e-03 true resid norm 8.969202737759e-03 ||r(i)||/||b|| 1.000000000000e+00
     Linear fieldsplit_pressure_ solve converged due to CONVERGED_RTOL iterations 10
@@ -962,7 +962,7 @@ Finally, we can back off the pressure solve. ``ILU(0)`` is good enough to mainta
     3 KSP unpreconditioned resid norm 1.461086575333e-15 true resid norm 2.284323415523e-15 ||r(i)||/||b|| 2.546852247977e-13
   Linear solve converged due to CONVERGED_ATOL iterations 3
   1 SNES Function norm 2.317901194143e-15
-  $ make -f ./gmakefile test globsearch="snes_tutorials-ex69_p2p1_gmg" EXTRA_OPTIONS="-dm_refine_hierarchy 6 -snes_monitor -ksp_monitor_true_residual -ksp_converged_reason -fieldsplit_pressure_ksp_converged_reason -fieldsplit_pressure_pc_type ilu"
+  $ make -f ./gmakefile test globsearch="snes_tutorials-ex69_p2p1_gmg" PETSC_TEST_EXTRA_OPTIONS="-dm_refine_hierarchy 6 -snes_monitor -ksp_monitor_true_residual -ksp_converged_reason -fieldsplit_pressure_ksp_converged_reason -fieldsplit_pressure_pc_type ilu"
   0 SNES Function norm 2.252260693635e-03
     0 KSP unpreconditioned resid norm 2.252260693635e-03 true resid norm 2.252260693635e-03 ||r(i)||/||b|| 1.000000000000e+00
     Linear fieldsplit_pressure_ solve converged due to CONVERGED_RTOL iterations 9
@@ -978,7 +978,7 @@ We can make the problem harder by increasing the wave number and size of the vis
 
 .. code-block:: console
 
-  $ make -f ./gmakefile test globsearch="snes_tutorials-ex69_p2p1_gmg" EXTRA_OPTIONS="-dm_refine_hierarchy 2 -snes_monitor -ksp_monitor_true_residual -ksp_converged_reason -fieldsplit_pressure_ksp_converged_reason -fieldsplit_pressure_pc_type ilu -m 2 -n 2 -B 6.9"
+  $ make -f ./gmakefile test globsearch="snes_tutorials-ex69_p2p1_gmg" PETSC_TEST_EXTRA_OPTIONS="-dm_refine_hierarchy 2 -snes_monitor -ksp_monitor_true_residual -ksp_converged_reason -fieldsplit_pressure_ksp_converged_reason -fieldsplit_pressure_pc_type ilu -m 2 -n 2 -B 6.9"
   L_2 Error: [4.07817e-06, 0.0104694]
   L_2 Residual: 0.0145403
   Taylor approximation converging at order 1.00
@@ -992,7 +992,7 @@ We can make the problem harder by increasing the wave number and size of the vis
     3 KSP unpreconditioned resid norm 1.954355290546e-15 true resid norm 1.954135246291e-15 ||r(i)||/||b|| 5.711729786858e-14
   Linear solve converged due to CONVERGED_ATOL iterations 3
   1 SNES Function norm 1.946196473520e-15
-  $ make -f ./gmakefile test globsearch="snes_tutorials-ex69_p2p1_gmg" EXTRA_OPTIONS="-dm_refine_hierarchy 6 -snes_monitor -ksp_monitor_true_residual -ksp_converged_reason -fieldsplit_pressure_ksp_converged_reason -fieldsplit_pressure_pc_type ilu -m 2 -n 2 -B 6.9"
+  $ make -f ./gmakefile test globsearch="snes_tutorials-ex69_p2p1_gmg" PETSC_TEST_EXTRA_OPTIONS="-dm_refine_hierarchy 6 -snes_monitor -ksp_monitor_true_residual -ksp_converged_reason -fieldsplit_pressure_ksp_converged_reason -fieldsplit_pressure_pc_type ilu -m 2 -n 2 -B 6.9"
   L_2 Error: [1.52905e-09, 4.72606e-05]
   L_2 Residual: 7.18836e-06
   Taylor approximation converging at order 1.00

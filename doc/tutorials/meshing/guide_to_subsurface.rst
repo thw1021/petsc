@@ -24,7 +24,7 @@ We can regularly refine the surface before extrusion using `-dm_refine <k>`, whe
 
 .. code-block:: console
 
-  $ make -f ./gmakefile test globsearch="dm_impls_plex_tutorials-ex10_1" EXTRA_OPTIONS="-srf_dm_refine 2 -srf_dm_view draw -draw_save $PETSC_DIR/surface.png -draw_save_single_file"
+  $ make -f ./gmakefile test globsearch="dm_impls_plex_tutorials-ex10_1" PETSC_TEST_EXTRA_OPTIONS="-srf_dm_refine 2 -srf_dm_view draw -draw_save $PETSC_DIR/surface.png -draw_save_single_file"
 
 which produces the following surface
 
@@ -37,7 +37,7 @@ and the extruded mesh can be visualized using VTK. Here I make the image using P
 
 .. code-block:: console
 
-  $ make -f ./gmakefile test globsearch="dm_impls_plex_tutorials-ex10_1" EXTRA_OPTIONS="-dm_view hdf5:$PETSC_DIR/mesh.h5 -dm_extrude 3"
+  $ make -f ./gmakefile test globsearch="dm_impls_plex_tutorials-ex10_1" PETSC_TEST_EXTRA_OPTIONS="-dm_view hdf5:$PETSC_DIR/mesh.h5 -dm_extrude 3"
   $ $PETSC_DIR/lib/petsc/bin/petsc_gen_xmdf.py mesh.h5
 
 .. figure:: /images/tutorials/meshing/extrusion.png
@@ -49,7 +49,7 @@ We can similarly look at this in parallel. Test 2 uses three refinements and thr
 
 .. code-block:: console
 
-  $ make -f ./gmakefile test globsearch="dm_impls_plex_tutorials-ex10_2" EXTRA_OPTIONS="-dm_view hdf5:$PETSC_DIR/mesh.h5 -dm_partition_view -petscpartitioner_type parmetis"
+  $ make -f ./gmakefile test globsearch="dm_impls_plex_tutorials-ex10_2" PETSC_TEST_EXTRA_OPTIONS="-dm_view hdf5:$PETSC_DIR/mesh.h5 -dm_partition_view -petscpartitioner_type parmetis"
   $ $PETSC_DIR/lib/petsc/bin/petsc_gen_xmdf.py mesh.h5
 
 .. figure:: /images/tutorials/meshing/extrusionParallel.png
@@ -85,7 +85,7 @@ We can look at a parallel run using extra options for the test system
 
 .. code-block:: console
 
-  $ make -f ./gmakefile test globsearch="dm_impls_plex_tutorials-ex10_3" EXTRA_OPTIONS="-dm_view hdf5:$PETSC_DIR/mesh.h5 -dm_partition_view -petscpartitioner_type parmetis" NP=5
+  $ make -f ./gmakefile test globsearch="dm_impls_plex_tutorials-ex10_3" PETSC_TEST_EXTRA_OPTIONS="-dm_view hdf5:$PETSC_DIR/mesh.h5 -dm_partition_view -petscpartitioner_type parmetis" NP=5
   $ $PETSC_DIR/lib/petsc/bin/petsc_gen_xmdf.py mesh.h5
 
 .. figure:: /images/tutorials/meshing/extrusionAdaptiveParallel.png
@@ -97,7 +97,7 @@ By turning on `PetscInfo`, we can see what decisions the refiner is making
 
 .. code-block:: console
 
-  $ make -f ./gmakefile test globsearch="dm_impls_plex_tutorials-ex10_3" EXTRA_OPTIONS="-info :dm"
+  $ make -f ./gmakefile test globsearch="dm_impls_plex_tutorials-ex10_3" PETSC_TEST_EXTRA_OPTIONS="-info :dm"
   #       > [0] AdaptMesh(): Adapted mesh, marking 12 cells for refinement, and 0 cells for coarsening
   #       > [0] AdaptMesh(): Adapted mesh, marking 29 cells for refinement, and 0 cells for coarsening
   #       > [0] AdaptMesh(): Adapted mesh, marking 84 cells for refinement, and 0 cells for coarsening
