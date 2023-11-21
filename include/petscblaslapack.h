@@ -30,7 +30,7 @@
 /* SUBMANSEC = Sys */
 
 /*MC
-    PetscCallBLAS - Calls a BLAS or LAPACK routine so that the stack trace returned from any signal received is includes the name of the BLAS/LAPACK routine
+    PetscCallBLAS - Calls a BLAS or LAPACK routine so that the stack trace returned from any signal received includes the name of the BLAS/LAPACK routine
 
     Synopsis:
    #include <petscsys.h>
