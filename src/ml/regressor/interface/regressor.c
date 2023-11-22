@@ -245,7 +245,6 @@ PetscErrorCode PetscRegressorReset(PetscRegressor regressor)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(regressor, PETSCREGRESSOR_CLASSID, 1);
   if (regressor->ops->reset) { PetscCall((*regressor->ops->reset)(regressor)); }
-  // TODO: Finish putting all of the Reset, Destroy, and free calls needed here!
   PetscCall(MatDestroy(&regressor->training));
   PetscCall(VecDestroy(&regressor->target));
   PetscCall(TaoDestroy(&regressor->tao));
