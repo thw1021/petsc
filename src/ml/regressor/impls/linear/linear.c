@@ -121,9 +121,6 @@ PetscErrorCode PetscRegressorReset_Linear(PetscRegressor regressor)
   PetscCall(VecDestroy(&linear->coefficients));
   PetscCall(VecDestroy(&linear->rhs));
   PetscCall(VecDestroy(&linear->residual));
-
-  /* Reset options/parameters to the setupcalled = 0 state. */
-  /* TODO: Add the reset code once the linear regressor is fleshed out enough to need resetting! */
   PetscFunctionReturn(0);
 }
 
