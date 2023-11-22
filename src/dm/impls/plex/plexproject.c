@@ -426,8 +426,9 @@ static PetscErrorCode DMProjectPoint_BdField_Private(DM dm, PetscDS ds, DM dmIn,
       PetscInt qpt[2];
 
       if (isCohesiveIn) {
-        PetscCall(PetscDSPermuteQuadPoint(dsIn, ornt[0], f, q, &qpt[0]));
-        PetscCall(PetscDSPermuteQuadPoint(dsIn, DMPolytopeTypeComposeOrientationInv(qct, ornt[1], 0), f, q, &qpt[1]));
+        // Just use field 0 since all quadratures should match
+        PetscCall(PetscDSPermuteQuadPoint(dsIn, ornt[0], 0, q, &qpt[0]));
+        PetscCall(PetscDSPermuteQuadPoint(dsIn, DMPolytopeTypeComposeOrientationInv(qct, ornt[1], 0), 0, q, &qpt[1]));
       }
       if (isAffine) {
         CoordinatesRefToReal(dE, fgeom->dim, fegeom.xi, fgeom->v, fegeom.J, &points[q * dim], x);
