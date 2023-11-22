@@ -975,14 +975,6 @@ typedef enum {
 } MatSchurComplementAinvType;
 PETSC_EXTERN const char *const MatSchurComplementAinvTypes[];
 
-typedef enum {
-  MAT_LMVM_SYMBROYDEN_SCALE_NONE     = 0,
-  MAT_LMVM_SYMBROYDEN_SCALE_SCALAR   = 1,
-  MAT_LMVM_SYMBROYDEN_SCALE_DIAGONAL = 2,
-  MAT_LMVM_SYMBROYDEN_SCALE_USER     = 3
-} MatLMVMSymBroydenScaleType;
-PETSC_EXTERN const char *const MatLMVMSymBroydenScaleTypes[];
-
 PETSC_EXTERN PetscErrorCode MatCreateSchurComplement(Mat, Mat, Mat, Mat, Mat, Mat *);
 PETSC_EXTERN PetscErrorCode MatSchurComplementGetKSP(Mat, KSP *);
 PETSC_EXTERN PetscErrorCode MatSchurComplementSetKSP(Mat, KSP);
@@ -1025,6 +1017,15 @@ PETSC_EXTERN PetscErrorCode MatLMVMSetHistorySize(Mat, PetscInt);
 PETSC_EXTERN PetscErrorCode MatLMVMGetUpdateCount(Mat, PetscInt *);
 PETSC_EXTERN PetscErrorCode MatLMVMGetRejectCount(Mat, PetscInt *);
 PETSC_EXTERN PetscErrorCode MatLMVMSymBroydenSetDelta(Mat, PetscScalar);
+
+typedef enum {
+  MAT_LMVM_SYMBROYDEN_SCALE_NONE     = 0,
+  MAT_LMVM_SYMBROYDEN_SCALE_SCALAR   = 1,
+  MAT_LMVM_SYMBROYDEN_SCALE_DIAGONAL = 2,
+  MAT_LMVM_SYMBROYDEN_SCALE_USER     = 3
+} MatLMVMSymBroydenScaleType;
+PETSC_EXTERN const char *const MatLMVMSymBroydenScaleTypes[];
+
 PETSC_EXTERN PetscErrorCode MatLMVMSymBroydenSetScaleType(Mat, MatLMVMSymBroydenScaleType);
 
 PETSC_EXTERN PetscErrorCode KSPSetDM(KSP, DM);
