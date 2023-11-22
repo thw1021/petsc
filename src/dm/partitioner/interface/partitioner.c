@@ -259,8 +259,8 @@ PetscErrorCode PetscPartitionerDestroy(PetscPartitioner *part)
 
   PetscCall(PetscPartitionerReset(*part));
 
-  PetscCall(PetscViewerDestroy(&(*part)->viewer));
-  PetscCall(PetscViewerDestroy(&(*part)->viewerGraph));
+  PetscCall(PetscOptionsRestoreViewer(&(*part)->viewer));
+  PetscCall(PetscOptionsRestoreViewer(&(*part)->viewerGraph));
   PetscTryTypeMethod((*part), destroy);
   PetscCall(PetscHeaderDestroy(part));
   PetscFunctionReturn(PETSC_SUCCESS);
