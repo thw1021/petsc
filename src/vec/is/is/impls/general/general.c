@@ -621,7 +621,7 @@ PetscErrorCode ISGeneralSetIndicesFromMask(IS is, PetscInt rstart, PetscInt rend
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(is, IS_CLASSID, 1);
-  PetscCheck(rstart <= rend, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "rstart %" PetscInt_FMT " must be less than or equal rend %" PetscInt_FMT, rstart, rend);
+  PetscCheck(rstart <= rend, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "rstart %" PetscInt_FMT " must be less than or equal to rend %" PetscInt_FMT, rstart, rend);
   if (rend - rstart) PetscAssertPointer(mask, 4);
   PetscCall(ISClearInfoCache(is, PETSC_FALSE));
   PetscUseMethod(is, "ISGeneralSetIndicesFromMask_C", (IS, PetscInt, PetscInt, const PetscBool[]), (is, rstart, rend, mask));
@@ -682,7 +682,7 @@ PetscErrorCode ISGeneralFilter(IS is, PetscInt start, PetscInt end)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(is, IS_CLASSID, 1);
-  PetscCheck(start <= end, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "start %" PetscInt_FMT " must be less than or equal end %" PetscInt_FMT, start, end);
+  PetscCheck(start <= end, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "start %" PetscInt_FMT " must be less than or equal to end %" PetscInt_FMT, start, end);
   PetscCall(ISClearInfoCache(is, PETSC_FALSE));
   PetscUseMethod(is, "ISGeneralFilter_C", (IS, PetscInt, PetscInt), (is, start, end));
   PetscFunctionReturn(PETSC_SUCCESS);

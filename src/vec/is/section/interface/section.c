@@ -1764,7 +1764,6 @@ PetscErrorCode PetscSectionSetOffset(PetscSection s, PetscInt point, PetscInt of
   PetscFunctionBegin;
   PetscValidHeaderSpecific(s, PETSC_SECTION_CLASSID, 1);
   PetscCheck(!(point < s->pStart) && !(point >= s->pEnd), PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Section point %" PetscInt_FMT " should be in [%" PetscInt_FMT ", %" PetscInt_FMT ")", point, s->pStart, s->pEnd);
-  PetscCheck(offset >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "offset %" PetscInt_FMT " should not be negative", offset);
   s->atlasOff[point - s->pStart] = offset;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
