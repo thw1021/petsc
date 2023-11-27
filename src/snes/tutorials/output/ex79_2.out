@@ -1,0 +1,2602 @@
+
+------------------------
+ SNES Type: newtonls
+------------------------
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 0.
+    - MySNESMonitor called! SNES iteration 0.
+
+
+ -> Update called! SNES iteration 1.
+  + FormJacobian2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+    MySNESLineSearchPreCheck called!
+  + FormFunction2 called!
+    - MyLineSearchMonitor called!
+    MySNESLineSearchPostCheck called!
+ -> ConvergenceTest called! SNES iteration 1.
+    - MySNESMonitor called! SNES iteration 1.
+
+
+ -> Update called! SNES iteration 2.
+  + FormJacobian2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    MyKSPPostSolve called!
+    MySNESLineSearchPreCheck called!
+  + FormFunction2 called!
+    - MyLineSearchMonitor called!
+  + FormFunction2 called!
+    MySNESLineSearchPostCheck called!
+ -> ConvergenceTest called! SNES iteration 2.
+    - MySNESMonitor called! SNES iteration 2.
+
+
+ -> Update called! SNES iteration 3.
+  + FormJacobian2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    MyKSPPostSolve called!
+    MySNESLineSearchPreCheck called!
+  + FormFunction2 called!
+    - MyLineSearchMonitor called!
+  + FormFunction2 called!
+  + FormFunction2 called!
+  + FormFunction2 called!
+  + FormFunction2 called!
+  + FormFunction2 called!
+    MySNESLineSearchPostCheck called!
+ -> ConvergenceTest called! SNES iteration 3.
+    - MySNESMonitor called! SNES iteration 3.
+
+
+ -> Update called! SNES iteration 4.
+  + FormJacobian2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    MyKSPPostSolve called!
+    MySNESLineSearchPreCheck called!
+  + FormFunction2 called!
+    - MyLineSearchMonitor called!
+  + FormFunction2 called!
+  + FormFunction2 called!
+    MySNESLineSearchPostCheck called!
+ -> ConvergenceTest called! SNES iteration 4.
+    - MySNESMonitor called! SNES iteration 4.
+
+
+ -> Update called! SNES iteration 5.
+  + FormJacobian2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    MyKSPPostSolve called!
+    MySNESLineSearchPreCheck called!
+  + FormFunction2 called!
+    - MyLineSearchMonitor called!
+    MySNESLineSearchPostCheck called!
+ -> ConvergenceTest called! SNES iteration 5.
+    - MySNESMonitor called! SNES iteration 5.
+
+
+ -> Update called! SNES iteration 6.
+  + FormJacobian2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    MyKSPPostSolve called!
+    MySNESLineSearchPreCheck called!
+  + FormFunction2 called!
+    - MyLineSearchMonitor called!
+    MySNESLineSearchPostCheck called!
+ -> ConvergenceTest called! SNES iteration 6.
+    - MySNESMonitor called! SNES iteration 6.
+Vec Object: 1 MPI process
+  type: seq
+-2.58086e-13
+-3.87421e-16
+Vec Object: 1 MPI process
+  type: seq
+-1.03234e-12
+-3.87421e-16
+
+------------------------
+ SNES Type: newtontr
+------------------------
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 0.
+    - MySNESMonitor called! SNES iteration 0.
+
+
+ -> Update called! SNES iteration 1.
+  + FormFunction2 called!
+  + FormJacobian2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 1.
+    - MySNESMonitor called! SNES iteration 1.
+
+
+ -> Update called! SNES iteration 2.
+  + FormFunction2 called!
+  + FormJacobian2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 2.
+    - MySNESMonitor called! SNES iteration 2.
+
+
+ -> Update called! SNES iteration 3.
+  + FormFunction2 called!
+  + FormJacobian2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 3.
+    - MySNESMonitor called! SNES iteration 3.
+
+
+ -> Update called! SNES iteration 4.
+  + FormFunction2 called!
+  + FormJacobian2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 4.
+    - MySNESMonitor called! SNES iteration 4.
+
+
+ -> Update called! SNES iteration 5.
+  + FormFunction2 called!
+  + FormJacobian2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 5.
+    - MySNESMonitor called! SNES iteration 5.
+
+
+ -> Update called! SNES iteration 6.
+  + FormFunction2 called!
+  + FormJacobian2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 6.
+
+
+ -> Update called! SNES iteration 7.
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 7.
+
+
+ -> Update called! SNES iteration 8.
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 8.
+    - MySNESMonitor called! SNES iteration 8.
+
+
+ -> Update called! SNES iteration 9.
+  + FormFunction2 called!
+  + FormJacobian2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 9.
+
+
+ -> Update called! SNES iteration 10.
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 10.
+    - MySNESMonitor called! SNES iteration 10.
+
+
+ -> Update called! SNES iteration 11.
+  + FormFunction2 called!
+  + FormJacobian2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 11.
+
+
+ -> Update called! SNES iteration 12.
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 12.
+    - MySNESMonitor called! SNES iteration 12.
+
+
+ -> Update called! SNES iteration 13.
+  + FormFunction2 called!
+  + FormJacobian2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 13.
+
+
+ -> Update called! SNES iteration 14.
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 14.
+
+
+ -> Update called! SNES iteration 15.
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 15.
+
+
+ -> Update called! SNES iteration 16.
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 16.
+    - MySNESMonitor called! SNES iteration 16.
+
+
+ -> Update called! SNES iteration 17.
+  + FormFunction2 called!
+  + FormJacobian2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 17.
+
+
+ -> Update called! SNES iteration 18.
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 18.
+    - MySNESMonitor called! SNES iteration 18.
+
+
+ -> Update called! SNES iteration 19.
+  + FormFunction2 called!
+  + FormJacobian2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 19.
+
+
+ -> Update called! SNES iteration 20.
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 20.
+
+
+ -> Update called! SNES iteration 21.
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 21.
+    - MySNESMonitor called! SNES iteration 21.
+
+
+ -> Update called! SNES iteration 22.
+  + FormFunction2 called!
+  + FormJacobian2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 22.
+
+
+ -> Update called! SNES iteration 23.
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 23.
+
+
+ -> Update called! SNES iteration 24.
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 24.
+    - MySNESMonitor called! SNES iteration 24.
+
+
+ -> Update called! SNES iteration 25.
+  + FormFunction2 called!
+  + FormJacobian2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 25.
+
+
+ -> Update called! SNES iteration 26.
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 26.
+    - MySNESMonitor called! SNES iteration 26.
+
+
+ -> Update called! SNES iteration 27.
+  + FormFunction2 called!
+  + FormJacobian2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 27.
+    - MySNESMonitor called! SNES iteration 27.
+
+
+ -> Update called! SNES iteration 28.
+  + FormFunction2 called!
+  + FormJacobian2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 28.
+
+
+ -> Update called! SNES iteration 29.
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 29.
+
+
+ -> Update called! SNES iteration 30.
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 30.
+
+
+ -> Update called! SNES iteration 31.
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 31.
+    - MySNESMonitor called! SNES iteration 31.
+
+
+ -> Update called! SNES iteration 32.
+  + FormFunction2 called!
+  + FormJacobian2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 32.
+
+
+ -> Update called! SNES iteration 33.
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 33.
+
+
+ -> Update called! SNES iteration 34.
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 34.
+
+
+ -> Update called! SNES iteration 35.
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 35.
+
+
+ -> Update called! SNES iteration 36.
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+Vec Object: 1 MPI process
+  type: seq
+1.45752
+2.20901e-17
+Vec Object: 1 MPI process
+  type: seq
+0.514708
+2.20901e-17
+
+------------------------
+ SNES Type: nrichardson
+------------------------
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 0.
+    - MySNESMonitor called! SNES iteration 0.
+ -> ConvergenceTest called! SNES iteration 0.
+
+
+ -> Update called! SNES iteration 1.
+    MySNESLineSearchPreCheck called!
+  + FormFunction2 called!
+  + FormFunction2 called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 1.
+    - MySNESMonitor called! SNES iteration 1.
+
+
+ -> Update called! SNES iteration 2.
+    MySNESLineSearchPreCheck called!
+  + FormFunction2 called!
+  + FormFunction2 called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 2.
+    - MySNESMonitor called! SNES iteration 2.
+
+
+ -> Update called! SNES iteration 3.
+    MySNESLineSearchPreCheck called!
+  + FormFunction2 called!
+  + FormFunction2 called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 3.
+    - MySNESMonitor called! SNES iteration 3.
+
+
+ -> Update called! SNES iteration 4.
+    MySNESLineSearchPreCheck called!
+  + FormFunction2 called!
+  + FormFunction2 called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 4.
+    - MySNESMonitor called! SNES iteration 4.
+
+
+ -> Update called! SNES iteration 5.
+    MySNESLineSearchPreCheck called!
+  + FormFunction2 called!
+  + FormFunction2 called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 5.
+    - MySNESMonitor called! SNES iteration 5.
+
+
+ -> Update called! SNES iteration 6.
+    MySNESLineSearchPreCheck called!
+  + FormFunction2 called!
+  + FormFunction2 called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 6.
+    - MySNESMonitor called! SNES iteration 6.
+
+
+ -> Update called! SNES iteration 7.
+    MySNESLineSearchPreCheck called!
+  + FormFunction2 called!
+  + FormFunction2 called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 7.
+    - MySNESMonitor called! SNES iteration 7.
+
+
+ -> Update called! SNES iteration 8.
+    MySNESLineSearchPreCheck called!
+  + FormFunction2 called!
+  + FormFunction2 called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 8.
+    - MySNESMonitor called! SNES iteration 8.
+
+
+ -> Update called! SNES iteration 9.
+    MySNESLineSearchPreCheck called!
+  + FormFunction2 called!
+  + FormFunction2 called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 9.
+    - MySNESMonitor called! SNES iteration 9.
+
+
+ -> Update called! SNES iteration 10.
+    MySNESLineSearchPreCheck called!
+  + FormFunction2 called!
+  + FormFunction2 called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 10.
+    - MySNESMonitor called! SNES iteration 10.
+
+
+ -> Update called! SNES iteration 11.
+    MySNESLineSearchPreCheck called!
+  + FormFunction2 called!
+  + FormFunction2 called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 11.
+    - MySNESMonitor called! SNES iteration 11.
+
+
+ -> Update called! SNES iteration 12.
+    MySNESLineSearchPreCheck called!
+  + FormFunction2 called!
+  + FormFunction2 called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 12.
+    - MySNESMonitor called! SNES iteration 12.
+
+
+ -> Update called! SNES iteration 13.
+    MySNESLineSearchPreCheck called!
+  + FormFunction2 called!
+  + FormFunction2 called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 13.
+    - MySNESMonitor called! SNES iteration 13.
+Vec Object: 1 MPI process
+  type: seq
+5.07357e-09
+4.19465e-09
+Vec Object: 1 MPI process
+  type: seq
+2.02943e-08
+4.19465e-09
+
+------------------------
+ SNES Type: ncg
+------------------------
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 0.
+    - MySNESMonitor called! SNES iteration 0.
+
+
+ -> Update called! SNES iteration 1.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 1.
+    - MySNESMonitor called! SNES iteration 1.
+
+
+ -> Update called! SNES iteration 2.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 2.
+    - MySNESMonitor called! SNES iteration 2.
+
+
+ -> Update called! SNES iteration 3.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 3.
+    - MySNESMonitor called! SNES iteration 3.
+
+
+ -> Update called! SNES iteration 4.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 4.
+    - MySNESMonitor called! SNES iteration 4.
+
+
+ -> Update called! SNES iteration 5.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 5.
+    - MySNESMonitor called! SNES iteration 5.
+
+
+ -> Update called! SNES iteration 6.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 6.
+    - MySNESMonitor called! SNES iteration 6.
+
+
+ -> Update called! SNES iteration 7.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 7.
+    - MySNESMonitor called! SNES iteration 7.
+
+
+ -> Update called! SNES iteration 8.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 8.
+    - MySNESMonitor called! SNES iteration 8.
+
+
+ -> Update called! SNES iteration 9.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 9.
+    - MySNESMonitor called! SNES iteration 9.
+
+
+ -> Update called! SNES iteration 10.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 10.
+    - MySNESMonitor called! SNES iteration 10.
+
+
+ -> Update called! SNES iteration 11.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 11.
+    - MySNESMonitor called! SNES iteration 11.
+
+
+ -> Update called! SNES iteration 12.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 12.
+    - MySNESMonitor called! SNES iteration 12.
+
+
+ -> Update called! SNES iteration 13.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 13.
+    - MySNESMonitor called! SNES iteration 13.
+Vec Object: 1 MPI process
+  type: seq
+-5.07526e+06
+0.
+Vec Object: 1 MPI process
+  type: seq
+-5.07527e+06
+0.
+
+------------------------
+ SNES Type: ngmres
+------------------------
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 0.
+    - MySNESMonitor called! SNES iteration 0.
+
+
+ -> Update called! SNES iteration 1.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 1.
+    - MySNESMonitor called! SNES iteration 1.
+
+
+ -> Update called! SNES iteration 2.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 2.
+    - MySNESMonitor called! SNES iteration 2.
+
+
+ -> Update called! SNES iteration 3.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 3.
+    - MySNESMonitor called! SNES iteration 3.
+
+
+ -> Update called! SNES iteration 4.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 4.
+    - MySNESMonitor called! SNES iteration 4.
+
+
+ -> Update called! SNES iteration 5.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 5.
+    - MySNESMonitor called! SNES iteration 5.
+
+
+ -> Update called! SNES iteration 6.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 6.
+    - MySNESMonitor called! SNES iteration 6.
+
+
+ -> Update called! SNES iteration 7.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 7.
+    - MySNESMonitor called! SNES iteration 7.
+
+
+ -> Update called! SNES iteration 8.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 8.
+    - MySNESMonitor called! SNES iteration 8.
+
+
+ -> Update called! SNES iteration 9.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 9.
+    - MySNESMonitor called! SNES iteration 9.
+
+
+ -> Update called! SNES iteration 10.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 10.
+    - MySNESMonitor called! SNES iteration 10.
+
+
+ -> Update called! SNES iteration 11.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 11.
+    - MySNESMonitor called! SNES iteration 11.
+
+
+ -> Update called! SNES iteration 12.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 12.
+    - MySNESMonitor called! SNES iteration 12.
+
+
+ -> Update called! SNES iteration 13.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 13.
+    - MySNESMonitor called! SNES iteration 13.
+
+
+ -> Update called! SNES iteration 14.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 14.
+    - MySNESMonitor called! SNES iteration 14.
+
+
+ -> Update called! SNES iteration 15.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 15.
+    - MySNESMonitor called! SNES iteration 15.
+
+
+ -> Update called! SNES iteration 16.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 16.
+    - MySNESMonitor called! SNES iteration 16.
+
+
+ -> Update called! SNES iteration 17.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 17.
+    - MySNESMonitor called! SNES iteration 17.
+
+
+ -> Update called! SNES iteration 18.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 18.
+    - MySNESMonitor called! SNES iteration 18.
+Vec Object: 1 MPI process
+  type: seq
+8.06054e-10
+0.
+Vec Object: 1 MPI process
+  type: seq
+3.22422e-09
+0.
+
+------------------------
+ SNES Type: qn
+------------------------
+  + FormFunction2 called!
+    - MySNESMonitor called! SNES iteration 0.
+ -> ConvergenceTest called! SNES iteration 0.
+
+
+ -> Update called! SNES iteration 1.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 1.
+    - MySNESMonitor called! SNES iteration 1.
+
+
+ -> Update called! SNES iteration 2.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 2.
+    - MySNESMonitor called! SNES iteration 2.
+
+
+ -> Update called! SNES iteration 3.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 3.
+    - MySNESMonitor called! SNES iteration 3.
+
+
+ -> Update called! SNES iteration 4.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 4.
+    - MySNESMonitor called! SNES iteration 4.
+
+
+ -> Update called! SNES iteration 5.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 5.
+    - MySNESMonitor called! SNES iteration 5.
+
+
+ -> Update called! SNES iteration 6.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 6.
+    - MySNESMonitor called! SNES iteration 6.
+
+
+ -> Update called! SNES iteration 7.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 7.
+    - MySNESMonitor called! SNES iteration 7.
+
+
+ -> Update called! SNES iteration 8.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 8.
+    - MySNESMonitor called! SNES iteration 8.
+
+
+ -> Update called! SNES iteration 9.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 9.
+    - MySNESMonitor called! SNES iteration 9.
+
+
+ -> Update called! SNES iteration 10.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 10.
+    - MySNESMonitor called! SNES iteration 10.
+
+
+ -> Update called! SNES iteration 11.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 11.
+    - MySNESMonitor called! SNES iteration 11.
+
+
+ -> Update called! SNES iteration 12.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 12.
+    - MySNESMonitor called! SNES iteration 12.
+
+
+ -> Update called! SNES iteration 13.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 13.
+    - MySNESMonitor called! SNES iteration 13.
+Vec Object: 1 MPI process
+  type: seq
+2.49881e-10
+1.20781e-09
+Vec Object: 1 MPI process
+  type: seq
+9.99524e-10
+1.20781e-09
+
+------------------------
+ SNES Type: fas
+------------------------
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 0.
+    - MySNESMonitor called! SNES iteration 0.
+
+
+ -> Update called! SNES iteration 1.
+  + FormJacobian2 called!
+    MySNESLineSearchPreCheck called!
+  + FormFunction2 called!
+    MySNESLineSearchPostCheck called!
+  + FormJacobian2 called!
+    MySNESLineSearchPreCheck called!
+  + FormFunction2 called!
+  + FormFunction2 called!
+    MySNESLineSearchPostCheck called!
+  + FormJacobian2 called!
+    MySNESLineSearchPreCheck called!
+  + FormFunction2 called!
+  + FormFunction2 called!
+  + FormFunction2 called!
+  + FormFunction2 called!
+  + FormFunction2 called!
+  + FormFunction2 called!
+    MySNESLineSearchPostCheck called!
+  + FormJacobian2 called!
+    MySNESLineSearchPreCheck called!
+  + FormFunction2 called!
+  + FormFunction2 called!
+  + FormFunction2 called!
+    MySNESLineSearchPostCheck called!
+  + FormJacobian2 called!
+    MySNESLineSearchPreCheck called!
+  + FormFunction2 called!
+    MySNESLineSearchPostCheck called!
+  + FormJacobian2 called!
+    MySNESLineSearchPreCheck called!
+  + FormFunction2 called!
+    MySNESLineSearchPostCheck called!
+ -> ConvergenceTest called! SNES iteration 1.
+    - MySNESMonitor called! SNES iteration 1.
+Vec Object: 1 MPI process
+  type: seq
+-2.58086e-13
+0.
+Vec Object: 1 MPI process
+  type: seq
+-1.03234e-12
+0.
+
+------------------------
+ SNES Type: anderson
+------------------------
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 0.
+    - MySNESMonitor called! SNES iteration 0.
+
+
+ -> Update called! SNES iteration 1.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 1.
+    - MySNESMonitor called! SNES iteration 1.
+
+
+ -> Update called! SNES iteration 2.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 2.
+    - MySNESMonitor called! SNES iteration 2.
+
+
+ -> Update called! SNES iteration 3.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 3.
+    - MySNESMonitor called! SNES iteration 3.
+
+
+ -> Update called! SNES iteration 4.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 4.
+    - MySNESMonitor called! SNES iteration 4.
+
+
+ -> Update called! SNES iteration 5.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 5.
+    - MySNESMonitor called! SNES iteration 5.
+
+
+ -> Update called! SNES iteration 6.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 6.
+    - MySNESMonitor called! SNES iteration 6.
+
+
+ -> Update called! SNES iteration 7.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 7.
+    - MySNESMonitor called! SNES iteration 7.
+
+
+ -> Update called! SNES iteration 8.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 8.
+    - MySNESMonitor called! SNES iteration 8.
+
+
+ -> Update called! SNES iteration 9.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 9.
+    - MySNESMonitor called! SNES iteration 9.
+
+
+ -> Update called! SNES iteration 10.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 10.
+    - MySNESMonitor called! SNES iteration 10.
+
+
+ -> Update called! SNES iteration 11.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 11.
+    - MySNESMonitor called! SNES iteration 11.
+
+
+ -> Update called! SNES iteration 12.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 12.
+    - MySNESMonitor called! SNES iteration 12.
+
+
+ -> Update called! SNES iteration 13.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 13.
+    - MySNESMonitor called! SNES iteration 13.
+
+
+ -> Update called! SNES iteration 14.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 14.
+    - MySNESMonitor called! SNES iteration 14.
+
+
+ -> Update called! SNES iteration 15.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 15.
+    - MySNESMonitor called! SNES iteration 15.
+
+
+ -> Update called! SNES iteration 16.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 16.
+    - MySNESMonitor called! SNES iteration 16.
+
+
+ -> Update called! SNES iteration 17.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 17.
+    - MySNESMonitor called! SNES iteration 17.
+
+
+ -> Update called! SNES iteration 18.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 18.
+    - MySNESMonitor called! SNES iteration 18.
+
+
+ -> Update called! SNES iteration 19.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 19.
+    - MySNESMonitor called! SNES iteration 19.
+
+
+ -> Update called! SNES iteration 20.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 20.
+    - MySNESMonitor called! SNES iteration 20.
+
+
+ -> Update called! SNES iteration 21.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 21.
+    - MySNESMonitor called! SNES iteration 21.
+
+
+ -> Update called! SNES iteration 22.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 22.
+    - MySNESMonitor called! SNES iteration 22.
+
+
+ -> Update called! SNES iteration 23.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 23.
+    - MySNESMonitor called! SNES iteration 23.
+
+
+ -> Update called! SNES iteration 24.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 24.
+    - MySNESMonitor called! SNES iteration 24.
+
+
+ -> Update called! SNES iteration 25.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 25.
+    - MySNESMonitor called! SNES iteration 25.
+
+
+ -> Update called! SNES iteration 26.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 26.
+    - MySNESMonitor called! SNES iteration 26.
+
+
+ -> Update called! SNES iteration 27.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 27.
+    - MySNESMonitor called! SNES iteration 27.
+
+
+ -> Update called! SNES iteration 28.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 28.
+    - MySNESMonitor called! SNES iteration 28.
+
+
+ -> Update called! SNES iteration 29.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 29.
+    - MySNESMonitor called! SNES iteration 29.
+
+
+ -> Update called! SNES iteration 30.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 30.
+    - MySNESMonitor called! SNES iteration 30.
+
+
+ -> Update called! SNES iteration 31.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 31.
+    - MySNESMonitor called! SNES iteration 31.
+
+
+ -> Update called! SNES iteration 32.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 32.
+    - MySNESMonitor called! SNES iteration 32.
+
+
+ -> Update called! SNES iteration 33.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 33.
+    - MySNESMonitor called! SNES iteration 33.
+
+
+ -> Update called! SNES iteration 34.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 34.
+    - MySNESMonitor called! SNES iteration 34.
+
+
+ -> Update called! SNES iteration 35.
+    MySNESLineSearchPreCheck called!
+    MySNESLineSearchPostCheck called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 35.
+    - MySNESMonitor called! SNES iteration 35.
+Vec Object: 1 MPI process
+  type: seq
+-1.09795e-09
+0.
+Vec Object: 1 MPI process
+  type: seq
+-4.3918e-09
+0.
+
+------------------------
+ SNES Type: ms
+------------------------
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 0.
+    - MySNESMonitor called! SNES iteration 0.
+
+
+ -> Update called! SNES iteration 1.
+  + FormJacobian2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 1.
+    - MySNESMonitor called! SNES iteration 1.
+
+
+ -> Update called! SNES iteration 2.
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 2.
+    - MySNESMonitor called! SNES iteration 2.
+
+
+ -> Update called! SNES iteration 3.
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 3.
+    - MySNESMonitor called! SNES iteration 3.
+
+
+ -> Update called! SNES iteration 4.
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 4.
+    - MySNESMonitor called! SNES iteration 4.
+
+
+ -> Update called! SNES iteration 5.
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 5.
+    - MySNESMonitor called! SNES iteration 5.
+
+
+ -> Update called! SNES iteration 6.
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 6.
+    - MySNESMonitor called! SNES iteration 6.
+
+
+ -> Update called! SNES iteration 7.
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 7.
+    - MySNESMonitor called! SNES iteration 7.
+
+
+ -> Update called! SNES iteration 8.
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 8.
+    - MySNESMonitor called! SNES iteration 8.
+
+
+ -> Update called! SNES iteration 9.
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 9.
+    - MySNESMonitor called! SNES iteration 9.
+
+
+ -> Update called! SNES iteration 10.
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 10.
+    - MySNESMonitor called! SNES iteration 10.
+
+
+ -> Update called! SNES iteration 11.
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 11.
+    - MySNESMonitor called! SNES iteration 11.
+
+
+ -> Update called! SNES iteration 12.
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 12.
+    - MySNESMonitor called! SNES iteration 12.
+
+
+ -> Update called! SNES iteration 13.
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 13.
+    - MySNESMonitor called! SNES iteration 13.
+
+
+ -> Update called! SNES iteration 14.
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 14.
+    - MySNESMonitor called! SNES iteration 14.
+
+
+ -> Update called! SNES iteration 15.
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 15.
+    - MySNESMonitor called! SNES iteration 15.
+
+
+ -> Update called! SNES iteration 16.
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 16.
+    - MySNESMonitor called! SNES iteration 16.
+
+
+ -> Update called! SNES iteration 17.
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 17.
+    - MySNESMonitor called! SNES iteration 17.
+
+
+ -> Update called! SNES iteration 18.
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 18.
+    - MySNESMonitor called! SNES iteration 18.
+
+
+ -> Update called! SNES iteration 19.
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 19.
+    - MySNESMonitor called! SNES iteration 19.
+
+
+ -> Update called! SNES iteration 20.
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 20.
+    - MySNESMonitor called! SNES iteration 20.
+
+
+ -> Update called! SNES iteration 21.
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 21.
+    - MySNESMonitor called! SNES iteration 21.
+
+
+ -> Update called! SNES iteration 22.
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 22.
+    - MySNESMonitor called! SNES iteration 22.
+
+
+ -> Update called! SNES iteration 23.
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 23.
+    - MySNESMonitor called! SNES iteration 23.
+
+
+ -> Update called! SNES iteration 24.
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 24.
+    - MySNESMonitor called! SNES iteration 24.
+
+
+ -> Update called! SNES iteration 25.
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 25.
+    - MySNESMonitor called! SNES iteration 25.
+
+
+ -> Update called! SNES iteration 26.
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 26.
+    - MySNESMonitor called! SNES iteration 26.
+
+
+ -> Update called! SNES iteration 27.
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 27.
+    - MySNESMonitor called! SNES iteration 27.
+
+
+ -> Update called! SNES iteration 28.
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+    MyKSPPreSolve called!
+    - MyKSPMonitor called! KSP iteration 0.
+    - MyKSPMonitor called! KSP iteration 1.
+    - MyKSPMonitor called! KSP iteration 2.
+    MyKSPPostSolve called!
+  + FormFunction2 called!
+ -> ConvergenceTest called! SNES iteration 28.
+    - MySNESMonitor called! SNES iteration 28.
+Vec Object: 1 MPI process
+  type: seq
+3.58246e-09
+5.57098e-11
+Vec Object: 1 MPI process
+  type: seq
+1.43298e-08
+5.57098e-11
