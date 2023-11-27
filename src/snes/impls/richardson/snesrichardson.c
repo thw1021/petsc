@@ -100,9 +100,6 @@ static PetscErrorCode SNESSolve_NRichardson(SNES snes)
   PetscCall(SNESMonitor(snes, 0, fnorm));
   if (snes->reason) PetscFunctionReturn(PETSC_SUCCESS);
 
-  /* Call general purpose update function */
-  PetscTryTypeMethod(snes, update, snes->iter);
-
   /* set parameter for default relative tolerance convergence test */
   snes->ttol = fnorm * snes->rtol;
   /* test convergence */
@@ -110,6 +107,11 @@ static PetscErrorCode SNESSolve_NRichardson(SNES snes)
   if (snes->reason) PetscFunctionReturn(PETSC_SUCCESS);
 
   for (i = 1; i < maxits + 1; i++) {
+    PetscCall(SNESSetIterationNumber(snes, i));
+
+    /* Call general purpose update function */
+    PetscTryTypeMethod(snes, update, snes->iter);
+
     PetscCall(SNESLineSearchApply(snes->linesearch, X, F, &fnorm, Y));
     PetscCall(SNESLineSearchGetReason(snes->linesearch, &lsresult));
     PetscCall(SNESLineSearchGetNorms(snes->linesearch, &xnorm, &fnorm, &ynorm));
@@ -126,7 +128,6 @@ static PetscErrorCode SNESSolve_NRichardson(SNES snes)
 
     /* Monitor convergence */
     PetscCall(PetscObjectSAWsTakeAccess((PetscObject)snes));
-    snes->iter  = i;
     snes->norm  = fnorm;
     snes->xnorm = xnorm;
     snes->ynorm = ynorm;
@@ -136,9 +137,6 @@ static PetscErrorCode SNESSolve_NRichardson(SNES snes)
     PetscCall(SNESConverged(snes, snes->iter, xnorm, ynorm, fnorm));
     PetscCall(SNESMonitor(snes, snes->iter, snes->norm));
     if (snes->reason) break;
-
-    /* Call general purpose update function */
-    PetscTryTypeMethod(snes, update, snes->iter);
 
     if (snes->npc) {
       if (snes->functype == SNES_FUNCTION_PRECONDITIONED) {

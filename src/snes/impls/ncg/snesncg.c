@@ -255,12 +255,14 @@ static PetscErrorCode SNESSolve_NCG(SNES snes)
   PetscCall(SNESMonitor(snes, 0, fnorm));
   if (snes->reason) PetscFunctionReturn(PETSC_SUCCESS);
 
-  /* Call general purpose update function */
-  PetscTryTypeMethod(snes, update, snes->iter);
-
   /* first update -- just use the (preconditioned) residual direction for the initial conjugate direction */
 
   for (i = 1; i < maxits + 1; i++) {
+    PetscCall(SNESSetIterationNumber(snes, i));
+
+    /* Call general purpose update function */
+    PetscTryTypeMethod(snes, update, snes->iter);
+
     /* some update types require the old update direction or conjugate direction */
     if (ncg->type != SNES_NCG_FR) PetscCall(VecCopy(dX, dXold));
     PetscCall(SNESLineSearchApply(linesearch, X, F, &fnorm, lX));
@@ -278,7 +280,6 @@ static PetscErrorCode SNESSolve_NCG(SNES snes)
     }
     /* Monitor convergence */
     PetscCall(PetscObjectSAWsTakeAccess((PetscObject)snes));
-    snes->iter  = i;
     snes->norm  = fnorm;
     snes->xnorm = xnorm;
     snes->ynorm = ynorm;
@@ -290,8 +291,6 @@ static PetscErrorCode SNESSolve_NCG(SNES snes)
     PetscCall(SNESMonitor(snes, snes->iter, snes->norm));
     if (snes->reason) PetscFunctionReturn(PETSC_SUCCESS);
 
-    /* Call general purpose update function */
-    PetscTryTypeMethod(snes, update, snes->iter);
     if (snes->npc) {
       if (snes->functype == SNES_FUNCTION_PRECONDITIONED) {
         PetscCall(SNESApplyNPC(snes, X, NULL, dX));

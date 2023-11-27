@@ -181,7 +181,9 @@ static PetscErrorCode SNESSolve_NEWTONLS(SNES snes)
   PetscCall(SNESMonitor(snes, 0, fnorm));
   if (snes->reason) PetscFunctionReturn(PETSC_SUCCESS);
 
-  for (i = 0; i < maxits; i++) {
+  for (i = 1; i < maxits + 1; i++) {
+    PetscCall(SNESSetIterationNumber(snes, i));
+
     /* Call general purpose update function */
     PetscTryTypeMethod(snes, update, snes->iter);
 
@@ -253,7 +255,6 @@ static PetscErrorCode SNESSolve_NEWTONLS(SNES snes)
     }
     /* Monitor convergence */
     PetscCall(PetscObjectSAWsTakeAccess((PetscObject)snes));
-    snes->iter  = i + 1;
     snes->norm  = fnorm;
     snes->ynorm = ynorm;
     snes->xnorm = xnorm;

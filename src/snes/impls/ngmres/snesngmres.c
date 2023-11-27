@@ -220,6 +220,8 @@ static PetscErrorCode SNESSolve_NGMRES(SNES snes)
   l         = 1;
   ivec      = 0;
   for (k = 1; k < snes->max_its + 1; k++) {
+    PetscCall(SNESSetIterationNumber(snes, k));
+
     /* Call general purpose update function */
     PetscTryTypeMethod(snes, update, snes->iter);
 
@@ -316,7 +318,6 @@ static PetscErrorCode SNESSolve_NGMRES(SNES snes)
     }
 
     PetscCall(PetscObjectSAWsTakeAccess((PetscObject)snes));
-    snes->iter = k;
     snes->norm = fnorm;
     PetscCall(PetscObjectSAWsGrantAccess((PetscObject)snes));
     PetscCall(SNESLogConvergenceHistory(snes, snes->norm, snes->iter));

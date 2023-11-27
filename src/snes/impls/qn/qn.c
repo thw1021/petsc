@@ -109,9 +109,6 @@ static PetscErrorCode SNESSolve_QN(SNES snes)
     PetscCall(VecCopy(F, D));
   }
 
-  /* general purpose update */
-  PetscTryTypeMethod(snes, update, snes->iter);
-
   /* scale the initial update */
   if (qn->scale_type == SNES_QN_SCALE_JACOBIAN) {
     PetscCall(SNESComputeJacobian(snes, X, snes->jacobian, snes->jacobian_pre));
@@ -121,6 +118,11 @@ static PetscErrorCode SNESSolve_QN(SNES snes)
   }
 
   for (i = 0, i_r = 0; i < snes->max_its; i++, i_r++) {
+    PetscCall(SNESSetIterationNumber(snes, i + 1));
+
+    /* Call general purpose update function */
+    PetscTryTypeMethod(snes, update, snes->iter);
+
     /* update QN approx and calculate step */
     PetscCall(MatLMVMUpdate(qn->B, X, D));
     PetscCall(MatSolve(qn->B, D, Y));
@@ -160,7 +162,6 @@ static PetscErrorCode SNESSolve_QN(SNES snes)
       PetscCall(SNESGetNPCFunction(snes, F, &fnorm));
     }
 
-    PetscCall(SNESSetIterationNumber(snes, i + 1));
     snes->norm  = fnorm;
     snes->xnorm = xnorm;
     snes->ynorm = ynorm;
@@ -181,9 +182,6 @@ static PetscErrorCode SNESSolve_QN(SNES snes)
     } else {
       PetscCall(VecCopy(F, D));
     }
-
-    /* general purpose update */
-    PetscTryTypeMethod(snes, update, snes->iter);
 
     /* restart conditions */
     powell = PETSC_FALSE;

@@ -484,9 +484,12 @@ static PetscErrorCode SNESSolve_Multiblock(SNES snes)
   PetscCall(SNESMonitor(snes, 0, fnorm));
   if (snes->reason) PetscFunctionReturn(PETSC_SUCCESS);
 
-  for (i = 0; i < maxits; i++) {
+  for (i = 1; i < maxits + 1; i++) {
+    PetscCall(SNESSetIterationNumber(snes, i));
+
     /* Call general purpose update function */
     PetscTryTypeMethod(snes, update, snes->iter);
+
     /* Compute X^{new} from subsolves */
     if (mb->type == PC_COMPOSITE_ADDITIVE) {
       BlockDesc blocks = mb->blocks;
@@ -522,7 +525,6 @@ static PetscErrorCode SNESSolve_Multiblock(SNES snes)
 
     /* Monitor convergence */
     PetscCall(PetscObjectSAWsTakeAccess((PetscObject)snes));
-    snes->iter = i + 1;
     snes->norm = fnorm;
     PetscCall(PetscObjectSAWsGrantAccess((PetscObject)snes));
     PetscCall(SNESLogConvergenceHistory(snes, snes->norm, 0));
