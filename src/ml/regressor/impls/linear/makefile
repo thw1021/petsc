@@ -6,6 +6,7 @@ SOURCEH  = linearimpl.h
 LIBBASE  = libpetscml
 DIRS     =
 MANSEC   = ML
+SUBMANSEC = Regressor
 LOCDIR   = src/ml/regressor/impls/linear
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
