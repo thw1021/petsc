@@ -49,6 +49,9 @@ PetscErrorCode SNESNGMRESFormCombinedSolution_Private(SNES snes, PetscInt ivec, 
   PetscBool    changed_y, changed_w;
 
   PetscFunctionBegin;
+
+  PetscCall(SNESLineSearchPreCheck(snes->linesearch, X, Y, &changed_y));
+
   nu = fMnorm * fMnorm;
 
   /* construct the right hand side and xi factors */
