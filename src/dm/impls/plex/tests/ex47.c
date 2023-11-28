@@ -485,9 +485,20 @@ int main(int argc, char **argv)
   PetscCall(DMRestoreGlobalVector(dm, &lNatVec));
   PetscCall(DMRestoreGlobalVector(ddm, &lGlobalVec));
 
-  IS lISNoCellSansOvl = 0;
+  const PetscBool lUseCone    = PETSC_FALSE;
+  const PetscBool lUseClosure = PETSC_TRUE;
+  PetscCall(DMSetBasicAdjacency(ddm, lUseCone, lUseClosure));
+  const PetscInt lNbCellsInOverlap = 1;
+  PetscSF        lSFMigrationOvl;
+  DM             ddm_with_overlap;
+
+  PetscCall(DMPlexDistributeOverlap(ddm, lNbCellsInOverlap, &lSFMigrationOvl, &ddm_with_overlap));
+
+  IS lISCellWithOvl = 0;
   /* This is the buggy call with prisms since commit 5ae96e2b862 */
-  PetscCall(DMPlexGetCellNumbering(dm, &lISNoCellSansOvl));
+  PetscCall(DMPlexGetCellNumbering(ddm_with_overlap, &lISCellWithOvl));
+  /* Here, we can see the elements in the overlap within the IS: they are the ones with negative indices */
+  PetscCall(ISView(lISCellWithOvl, PETSC_VIEWER_STDOUT_WORLD));
 
   PetscCall(PetscSFDestroy(&sfMig));
   PetscCall(PetscSFDestroy(&sfPart));
