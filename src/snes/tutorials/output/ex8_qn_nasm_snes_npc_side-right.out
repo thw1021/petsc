@@ -1,0 +1,12 @@
+  0 SNES Function norm 0.604851 
+  1 SNES Function norm 0.254095 
+  2 SNES Function norm 0.0988972 
+  3 SNES Function norm 0.0207515 
+  4 SNES Function norm 0.00456552 
+  5 SNES Function norm 0.00114836 
+  6 SNES Function norm 0.000280909 
+  7 SNES Function norm 5.44442e-06 
+  8 SNES Function norm 5.46354e-07 
+  9 SNES Function norm 3.91413e-08 
+ 10 SNES Function norm 2.66285e-09 
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 10
