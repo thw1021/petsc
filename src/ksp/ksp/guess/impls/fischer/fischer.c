@@ -435,7 +435,7 @@ static PetscErrorCode KSPGuessFischerSetModel_Fischer(KSPGuess guess, PetscInt m
     Level: intermediate
 
     Notes:
-    the algorithm is different from Fischer's paper because we do not CHANGE the right hand side of the new
+    The algorithm is different from Fischer's paper because we do not CHANGE the right hand side of the new
     problem and solve the problem with an initial guess of zero, rather we solve the original problem
     with a nonzero initial guess (this is done so that the linear solver convergence tests are based on
     the original RHS). We use the $xtilde = x - xguess$ as the new direction so that it is not
@@ -463,7 +463,7 @@ static PetscErrorCode KSPGuessFischerSetModel_Fischer(KSPGuess guess, PetscInt m
     The option `-ksp_fischer_guess <int,int>` is still available for backward compatibility
 
   References:
-. * - https://ntrs.nasa.gov/archive/nasa/casi.ntrs.nasa.gov/19940020363_1994020363.pdf
+. * - Fischer, Projection techniques for iterative solution of Ax=b with successive right-hand sides, 1993, https://ntrs.nasa.gov/api/citations/19940020363/downloads/19940020363.pdf
 
 .seealso: [](ch_ksp), `KSPGuess`, `KSPGuessType`, `KSP`
 M*/

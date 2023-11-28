@@ -338,7 +338,7 @@ PetscErrorCode KSPBCGSLSetXRes(KSP ksp, PetscReal delta)
 - use_pinv - set to `PETSC_TRUE` when using pseudoinverse
 
   Options Database Key:
-. -ksp_bcgsl_pinv - <true,false> use pseudoinverse
+. -ksp_bcgsl_pinv <true,false> - use pseudoinverse
 
   Level: intermediate
 

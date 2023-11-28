@@ -569,7 +569,7 @@ PETSC_EXTERN PetscErrorCode TSCreate_Alpha2(TS ts)
 
   $$
   \begin{align*}
-  \alpha_m = (2-\rho)/(1+\rho)
+  \alpha_m = (2-\rho)/(1+\rho) \\
   \alpha_f = 1/(1+\rho)
   \end{align*}
   $$
@@ -611,7 +611,7 @@ PetscErrorCode TSAlpha2SetRadius(TS ts, PetscReal radius)
 
   $$
   \begin{align*}
-  \gamma = 1/2 + \alpha_m - \alpha_f
+  \gamma = 1/2 + \alpha_m - \alpha_f \\
   \beta  = 1/4 (1 + \alpha_m - \alpha_f)^2.
   \end{align*}
   $$

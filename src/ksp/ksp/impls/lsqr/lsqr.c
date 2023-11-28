@@ -617,7 +617,7 @@ PetscErrorCode KSPLSQRConvergedDefault(KSP ksp, PetscInt n, PetscReal rnorm, KSP
 
    Supports only left preconditioning.
 
-   For least squares problems with nonzero residual A*x - b, there are additional convergence tests for the residual of the normal equations, A'*(b - Ax), see `KSPLSQRConvergedDefault()`.
+   For least squares problems with nonzero residual $A*x - b$, there are additional convergence tests for the residual of the normal equations, $A^T*(b - Ax)$, see `KSPLSQRConvergedDefault()`.
 
    In exact arithmetic the LSQR method (with no preconditioning) is identical to the `KSPCG` algorithm applied to the normal equations.
    The preconditioned variant was implemented by Bas van't Hof and is essentially a left preconditioning for the Normal Equations.

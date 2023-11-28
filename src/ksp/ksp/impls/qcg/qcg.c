@@ -395,7 +395,7 @@ static PetscErrorCode KSPSetFromOptions_QCG(KSP ksp, PetscOptionItems *PetscOpti
 
    `KSPConvergedReason` may include
 +  `KSP_CONVERGED_NEG_CURVE` - if convergence is reached along a negative curvature direction,
--   `KSP_CONVERGED_STEP_LENGTH` - if convergence is reached along a constrained step,
+-  `KSP_CONVERGED_STEP_LENGTH` - if convergence is reached along a constrained step,
 
   Note:
   Allows symmetric preconditioning with the following scaling matrices:

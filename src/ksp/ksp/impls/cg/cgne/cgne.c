@@ -193,7 +193,7 @@ static PetscErrorCode KSPSolve_CGNE(KSP ksp)
 
    `KSPCGNE` is a general-purpose non-symmetric method. It works well when the singular values are much better behaved than
    eigenvalues. A unitary matrix is a classic example where `KSPCGNE` converges in one iteration, but `KSPGMRES` and `KSPCGS` need N
-   iterations, see [1]. If you intend to solve least squares problems, use `KSPLSQR`.
+   iterations, see {cite}`nachtigal90`. If you intend to solve least squares problems, use `KSPLSQR`.
 
    This is NOT a different algorithm than used with `KSPCG`, it merely uses that algorithm with the
    matrix defined by $A^T*A$ and preconditioner defined by $B^T*B$ where $B$ is the preconditioner for $A$.
@@ -206,9 +206,6 @@ static PetscErrorCode KSPSolve_CGNE(KSP ksp)
 
    Developer Note:
    This object is subclassed off of `KSPCG`, see the source code in src/ksp/ksp/impls/cg for comments on the structure of the code
-
-   Reference:
-.   [1] -  Nachtigal, Reddy, and Trefethen, "How fast are nonsymmetric matrix iterations", 1992
 
 .seealso: [](ch_ksp), `KSPCreate()`, `KSPSetType()`, `KSPType`, `KSP`, 'KSPCG', `KSPLSQR', 'KSPCGLS`,
           `KSPCGSetType()`, `KSPBICG`, `KSPSetComputeEigenvalues()`, `KSPComputeEigenvalues()`

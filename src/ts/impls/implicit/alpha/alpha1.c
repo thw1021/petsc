@@ -515,7 +515,7 @@ PETSC_EXTERN PetscErrorCode TSCreate_Alpha(TS ts)
   \begin{align*}
   \alpha_m = 0.5*(3-\rho)/(1+\rho) \\
   \alpha_f = 1/(1+\rho)
-  \end{align*}.
+  \end{align*}
   $$
 
 .seealso: [](ch_ts), `TS`, `TSALPHA`, `TSAlphaSetParams()`, `TSAlphaGetParams()`

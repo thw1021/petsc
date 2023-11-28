@@ -349,7 +349,7 @@ PetscErrorCode KSPFCGSetMmax(KSP ksp, PetscInt mmax)
   Level: intermediate
 
   Note:
-  `SKPFCG` stores `mmax`+1 directions at most (`mmax` previous ones, and one current one)
+  `KSPFCG` stores `mmax`+1 directions at most (`mmax` previous ones, and one current one)
 
 .seealso: [](ch_ksp), `KSPFCG`, `KSPFCGGetTruncationType()`, `KSPFCGGetNprealloc()`, `KSPFCGSetMmax()`
 @*/

@@ -71,7 +71,7 @@ PetscErrorCode KSPCGUseSingleReduction(KSP ksp, PetscBool flg)
 }
 
 /*@
-  KSPCGSetRadius - Sets the radius of the trust region used by the `KSPPCG` when the solver is used inside `SNESNEWTONTR`
+  KSPCGSetRadius - Sets the radius of the trust region used by the `KSPCG` when the solver is used inside `SNESNEWTONTR`
 
   Logically Collective
 

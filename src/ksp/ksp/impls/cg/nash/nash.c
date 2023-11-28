@@ -609,7 +609,7 @@ static PetscErrorCode KSPCGSetFromOptions_NASH(KSP ksp, PetscOptionItems *PetscO
    The preconditioner supplied should be symmetric and positive definite.
 
    Reference:
-   Nash, Stephen G. Newton-type minimization via the Lanczos method. SIAM Journal on Numerical Analysis 21, no. 4 (1984): 770-788.
+   * - Nash, Stephen G. Newton-type minimization via the Lanczos method. SIAM Journal on Numerical Analysis 21, no. 4 (1984): 770-788.
 
 .seealso: [](ch_ksp), `KSPQCG`, `KSPGLTR`, `KSPSTCG`, `KSPCreate()`, `KSPSetType()`, `KSPType`, `KSP`, `KSPCGSetRadius()`, `KSPCGGetNormD()`, `KSPCGGetObjFcn()`
 M*/
