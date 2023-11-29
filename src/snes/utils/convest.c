@@ -463,7 +463,7 @@ PetscErrorCode PetscConvEstGetConvRate(PetscConvEst ce, PetscReal alpha[])
 }
 
 /*@
-  PetscConvEstRateView - Displays the convergence rate to a `PetscViewer` obtained from `PetscConvEstGetConvRate()`
+  PetscConvEstRateView - Displays the convergence rate obtained from `PetscConvEstGetConvRate()` using a `PetscViewer`
 
   Collective
 
