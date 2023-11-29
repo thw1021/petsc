@@ -387,7 +387,7 @@ static PetscErrorCode SNESSetFromOptions_VINEWTONSSLS(SNES snes, PetscOptionItem
    Level: beginner
 
    Notes:
-   This family of algorithm is much like an interior point method.
+   This family of algorithms is much like an interior point method.
 
    The reduced space active set solvers `SNESVINEWTONRSLS` provide an alternative approach that does not result in extremely ill-conditioned linear systems
 
