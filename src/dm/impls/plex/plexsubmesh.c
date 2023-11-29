@@ -47,11 +47,11 @@ static PetscErrorCode DMPlexGetTensorPrismBounds_Internal(DM dm, PetscInt dim, P
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode DMPlexMarkBoundaryFaces_Internal(DM dm, PetscInt val, PetscInt cellHeight, DMLabel label)
+PetscErrorCode DMPlexMarkBoundaryFaces_Internal(DM dm, PetscInt val, PetscInt cellHeight, DMLabel label, PetscBool missing_only)
 {
   PetscSF         sf;
   const PetscInt *rootdegree, *leaves;
-  PetscInt        overlap, Nr = -1, Nl, pStart, fStart, fEnd;
+  PetscInt        overlap, Nr = -1, Nl, pStart, fStart, fEnd, defval;
 
   PetscFunctionBegin;
   PetscCall(DMGetPointSF(dm, &sf));
@@ -61,6 +61,7 @@ static PetscErrorCode DMPlexMarkBoundaryFaces_Internal(DM dm, PetscInt val, Pets
     PetscCall(PetscSFComputeDegreeBegin(sf, &rootdegree));
     PetscCall(PetscSFComputeDegreeEnd(sf, &rootdegree));
   } else rootdegree = NULL;
+  PetscCall(DMLabelGetDefaultValue(label, &defval));
   PetscCall(DMPlexGetChart(dm, &pStart, NULL));
   PetscCall(DMPlexGetHeightStratum(dm, cellHeight + 1, &fStart, &fEnd));
   for (PetscInt f = fStart; f < fEnd; ++f) {
@@ -69,7 +70,7 @@ static PetscErrorCode DMPlexMarkBoundaryFaces_Internal(DM dm, PetscInt val, Pets
     PetscCall(DMPlexGetSupportSize(dm, f, &supportSize));
     if (supportSize == 1) {
       /* Do not mark faces which are shared, meaning
-           they are  present in the pointSF, or
+           they are present in the pointSF, or
            they have rootdegree > 0
          since they presumably have cells on the other side */
       if (Nr > 0) {
@@ -80,6 +81,7 @@ static PetscErrorCode DMPlexMarkBoundaryFaces_Internal(DM dm, PetscInt val, Pets
         PetscInt *closure = NULL;
         PetscInt  clSize, cl, cval;
 
+        PetscAssert(!missing_only, PETSC_COMM_SELF, PETSC_ERR_SUP, "Not implemented");
         PetscCall(DMPlexGetTransitiveClosure(dm, f, PETSC_TRUE, &clSize, &closure));
         for (cl = 0; cl < clSize * 2; cl += 2) {
           PetscCall(DMLabelGetValue(label, closure[cl], &cval));
@@ -90,7 +92,14 @@ static PetscErrorCode DMPlexMarkBoundaryFaces_Internal(DM dm, PetscInt val, Pets
         if (cl == clSize * 2) PetscCall(DMLabelSetValue(label, f, 1));
         PetscCall(DMPlexRestoreTransitiveClosure(dm, f, PETSC_TRUE, &clSize, &closure));
       } else {
-        PetscCall(DMLabelSetValue(label, f, val));
+        if (missing_only) {
+          PetscInt fval;
+          PetscCall(DMLabelGetValue(label, f, &fval));
+          if (fval != defval) PetscCall(DMLabelClearValue(label, f, fval));
+          else PetscCall(DMLabelSetValue(label, f, val));
+        } else {
+          PetscCall(DMLabelSetValue(label, f, val));
+        }
       }
     }
   }
@@ -124,7 +133,7 @@ PetscErrorCode DMPlexMarkBoundaryFaces(DM dm, PetscInt val, DMLabel label)
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscCall(DMPlexIsInterpolated(dm, &flg));
   PetscCheck(flg == DMPLEX_INTERPOLATED_FULL, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "DM is not fully interpolated on this rank");
-  PetscCall(DMPlexMarkBoundaryFaces_Internal(dm, val, 0, label));
+  PetscCall(DMPlexMarkBoundaryFaces_Internal(dm, val, 0, label, PETSC_FALSE));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
