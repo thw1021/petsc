@@ -17,7 +17,7 @@
 
   Level: beginner
 
-.seealso: `DMPlexCreateFromFile()`, `DMPlexCreateMedFromFile()`, `DMPlexCreateGmsh()`, `DMPlexCreate()`
+.seealso: `DMPlexCreateFromFile()`, `DMPlexCreateGmsh()`, `DMPlexCreate()`
 @*/
 PetscErrorCode DMPlexCreatePLYFromFile(MPI_Comm comm, const char filename[], PetscBool interpolate, DM *dm)
 {
