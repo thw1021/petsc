@@ -517,13 +517,16 @@ int main(int argc, char **argv)
     test:
       suffix: 0
       args: -quadsmesh
+      output_file: output/test47_0.out
 
     test:
       suffix: 1
       args: -box -dm_plex_simplex 0 -dm_plex_box_faces 2,5 -dm_distribute
+      output_file: output/test47_1.out
 
     test:
       suffix: 2
       args: -prismsmesh
+      output_file: output/test47_2.out
 
 TEST*/
