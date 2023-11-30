@@ -343,8 +343,8 @@ PetscErrorCode KSPLSQRGetStandardErrorVec(KSP ksp, Vec *se)
 . ksp - iterative context
 
   Output Parameters:
-+ arnorm - good estimate of $||(A*Pmat^{-1})^T*r||, where $r = A*x - b$, used in specific stopping criterion
-- anorm  - poor estimate of $||A*Pmat^{-1}^T||_{frobenius} used in specific stopping criterion
++ arnorm - good estimate of $\|(A*Pmat^{-T})*r\|$, where $r = A*x - b$, used in specific stopping criterion
+- anorm  - poor estimate of $\|A*Pmat^{-T}\|_{frobenius}$ used in specific stopping criterion
 
   Level: intermediate
 
