@@ -45,16 +45,16 @@ program newnonzero
    write(6,*) PetscRealPart(v)
  end if
 
- PetscCallA(ISCreateStride(PETSC_COMM_WORLD,nl2-nl1,nl1,1,is,ierr))
+ PetscCallA(ISCreateStride(PETSC_COMM_WORLD,nl2-nl1,nl1,one,is,ierr))
  PetscCallA(ISLocalToGlobalMappingCreateIS(is,ismap,ierr))
  PetscCallA(MatSetLocalToGlobalMapping(A,ismap,ismap,ierr))
  PetscCallA(ISLocalToGlobalMappingDestroy(ismap,ierr))
  PetscCallA(ISDestroy(is,ierr))
- PetscCallA(MatGetValuesLocal(A,1,zero,1,zero,value,ierr))
- PetscCallA(MatGetValuesLocal(A,1,zero,1,zero,values,ierr))
+ PetscCallA(MatGetValuesLocal(A,one,zero,one,zero,value,ierr))
+ PetscCallA(MatGetValuesLocal(A,one,zero,one,zero,values,ierr))
  idxn(1) = 0
- PetscCallA(MatGetValuesLocal(A,1,idxn,1,zero,values,ierr))
- PetscCallA(MatGetValuesLocal(A,1,idxn,1,idxn,values,ierr))
+ PetscCallA(MatGetValuesLocal(A,one,idxn,one,zero,values,ierr))
+ PetscCallA(MatGetValuesLocal(A,one,idxn,one,idxn,values,ierr))
 
  PetscCallA(MatDestroy(A,ierr))
  PetscCallA(PetscFinalize(ierr))
