@@ -800,12 +800,19 @@ static PetscErrorCode DMView_Stag(DM dm, PetscViewer viewer)
   PetscBool      isascii, viewAllRanks;
   PetscMPIInt    rank, size;
   PetscInt       dim, maxRanksToView, i;
+#if defined(PETSC_HAVE_CGNS)
+  PetscBool iscgns;
+#endif
 
   PetscFunctionBegin;
   PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)dm), &rank));
   PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)dm), &size));
   PetscCall(DMGetDimension(dm, &dim));
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
+#if defined(PETSC_HAVE_CGNS)
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERCGNS, &iscgns));
+#endif
+
   if (isascii) {
     PetscCall(PetscViewerASCIIPrintf(viewer, "Dimension: %" PetscInt_FMT "\n", dim));
     switch (dim) {
@@ -864,6 +871,10 @@ static PetscErrorCode DMView_Stag(DM dm, PetscViewer viewer)
     } else {
       PetscCall(PetscViewerASCIIPrintf(viewer, "(Per-rank information omitted since >%" PetscInt_FMT " ranks used)\n", maxRanksToView));
     }
+#if defined(PETSC_HAVE_CGNS)
+  } else if (iscgns) {
+    PetscCall(DMView_StagCGNS(dm, viewer));
+#endif
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }

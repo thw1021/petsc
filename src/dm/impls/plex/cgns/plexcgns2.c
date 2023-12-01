@@ -796,10 +796,10 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
     cgv->zone            = zone;
     cgv->node_l2g        = node_l2g;
     cgv->num_local_nodes = num_local_nodes;
-    cgv->nStart          = nStart;
-    cgv->nEnd            = nEnd;
-    cgv->eStart          = e_start;
-    cgv->eEnd            = e_start + e_owned;
+    cgv->nStart[0]       = nStart;
+    cgv->nEnd[0]         = nEnd;
+    cgv->eStart[0]       = e_start;
+    cgv->eEnd[0]         = e_start + e_owned;
     if (1) {
       PetscMPIInt rank;
       int        *efield;
@@ -863,7 +863,7 @@ PetscErrorCode VecView_Plex_Local_CGNS(Vec V, PetscViewer viewer)
   PetscFunctionBegin;
   PetscCall(VecGetDM(V, &dm));
   if (!cgv->node_l2g) PetscCall(DMView(dm, viewer));
-  if (!cgv->nodal_field) PetscCall(PetscMalloc1(PetscMax(cgv->nEnd - cgv->nStart, cgv->eEnd - cgv->eStart), &cgv->nodal_field));
+  if (!cgv->nodal_field) PetscCall(PetscMalloc1(PetscMax(cgv->nEnd[0] - cgv->nStart[0], cgv->eEnd[0] - cgv->eStart[0]), &cgv->nodal_field));
   if (!cgv->output_times) PetscCall(PetscSegBufferCreate(sizeof(PetscReal), 20, &cgv->output_times));
   if (!cgv->output_steps) PetscCall(PetscSegBufferCreate(sizeof(size_t), 20, &cgv->output_steps));
 
@@ -910,8 +910,8 @@ PetscErrorCode VecView_Plex_Local_CGNS(Vec V, PetscViewer viewer)
           switch (grid_loc) {
           case CGNS_ENUMV(Vertex): {
             PetscInt gn = cgv->node_l2g[n];
-            if (gn < cgv->nStart || cgv->nEnd <= gn) continue;
-            cgv->nodal_field[gn - cgv->nStart] = v[off + c];
+            if (gn < cgv->nStart[0] || cgv->nEnd[0] <= gn) continue;
+            cgv->nodal_field[gn - cgv->nStart[0]] = v[off + c];
           } break;
           case CGNS_ENUMV(CellCenter): {
             cgv->nodal_field[n] = v[off + c];
@@ -922,10 +922,10 @@ PetscErrorCode VecView_Plex_Local_CGNS(Vec V, PetscViewer viewer)
         }
       }
       // CGNS nodes use 1-based indexing
-      cgsize_t start = cgv->nStart + 1, end = cgv->nEnd;
+      cgsize_t start = cgv->nStart[0] + 1, end = cgv->nEnd[0];
       if (grid_loc == CGNS_ENUMV(CellCenter)) {
-        start = cgv->eStart + 1;
-        end   = cgv->eEnd;
+        start = cgv->eStart[0] + 1;
+        end   = cgv->eEnd[0];
       }
       PetscCallCGNS(cgp_field_write_data(cgv->file_num, cgv->base, cgv->zone, sol, cgfield, &start, &end, cgv->nodal_field));
     }
