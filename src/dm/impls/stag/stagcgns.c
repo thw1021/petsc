@@ -228,5 +228,37 @@ PetscErrorCode DMView_StagCGNS(DM dm, PetscViewer viewer)
     cgv->eStart[d] = eStart[d];
     cgv->eEnd[d]   = eEnd[d];
   }
+
+  {
+    int         sol, field;
+    PetscMPIInt rank;
+    int        *x;
+    PetscInt    i;
+
+    PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)dm), &rank));
+    PetscCallCGNS(cg_sol_write(cgv->file_num, base, zone, "CellInfo", CGNS_ENUMV(CellCenter), &sol));
+
+    PetscCall(PetscMalloc1(num_local_elems, &x));
+    // CGNS nodes use 1-based indexing
+    for (d = 0; d < coord_dim; ++d) {
+      start[d] = eStart[d] + 1;
+      end[d]   = eEnd[d];
+    }
+
+    for (i = 0; i < num_local_elems; ++i) x[i] = rank;
+    PetscCallCGNS(cgp_field_write(cgv->file_num, base, zone, sol, CGNS_ENUMV(Integer), "Rank", &field));
+    PetscCallCGNS(cgp_field_write_data(cgv->file_num, base, zone, sol, field, start, end, x));
+
+    for (d = 0; d < coord_dim; ++d) {
+      char field_name[64];
+      for (i = 0; i < num_local_elems; ++i) x[i] = stag->rank[d];
+      PetscCall(PetscSNPrintf(field_name, sizeof field_name, "Rank%c", 'I' + (int)d));
+      PetscCallCGNS(cgp_field_write(cgv->file_num, base, zone, sol, CGNS_ENUMV(Integer), field_name, &field));
+      PetscCallCGNS(cgp_field_write_data(cgv->file_num, base, zone, sol, field, start, end, x));
+    }
+
+    PetscCall(PetscFree(x));
+  }
+
   PetscFunctionReturn(PETSC_SUCCESS);
 }
