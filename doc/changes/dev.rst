@@ -96,6 +96,8 @@ Changes: Development
 
 .. rubric:: DMStag:
 
+- Add CGNS viewer support for DMStag
+
 .. rubric:: DT:
 
 .. rubric:: Fortran:

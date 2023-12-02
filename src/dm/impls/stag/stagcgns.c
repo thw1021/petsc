@@ -92,6 +92,7 @@ PetscErrorCode DMView_StagCGNS(DM dm, PetscViewer viewer)
   // When `-dm_view` option exists, the DM is viewed in DMSetUp() but the coordinate is not set up at that point.
   // In order not to struggle with such error, simply return success here and view nothing if the DM is not set up.
   if (!dm->setupcalled) PetscFunctionReturn(PETSC_SUCCESS);
+  if (cgv->dmviewed) PetscFunctionReturn(PETSC_SUCCESS);
 
   PetscCheck(stag->coordinateDMType, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONGSTATE, "Must call DMStagSetCoordinateDMType() before calling DMView()");
 
@@ -259,6 +260,6 @@ PetscErrorCode DMView_StagCGNS(DM dm, PetscViewer viewer)
 
     PetscCall(PetscFree(x));
   }
-
+  cgv->dmviewed = PETSC_TRUE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
