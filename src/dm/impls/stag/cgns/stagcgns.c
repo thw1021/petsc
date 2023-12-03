@@ -92,7 +92,7 @@ PetscErrorCode DMView_StagCGNS(DM dm, PetscViewer viewer)
   // When `-dm_view` option exists, the DM is viewed in DMSetUp() but the coordinate is not set up at that point.
   // In order not to struggle with such error, simply return success here and view nothing if the DM is not set up.
   if (!dm->setupcalled) PetscFunctionReturn(PETSC_SUCCESS);
-  if (cgv->dmviewed) PetscFunctionReturn(PETSC_SUCCESS);
+  if (cgv->base) PetscFunctionReturn(PETSC_SUCCESS);
 
   PetscCheck(stag->coordinateDMType, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONGSTATE, "Must call DMStagSetCoordinateDMType() before calling DMView()");
 
@@ -260,7 +260,6 @@ PetscErrorCode DMView_StagCGNS(DM dm, PetscViewer viewer)
 
     PetscCall(PetscFree(x));
   }
-  cgv->dmviewed = PETSC_TRUE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -330,12 +329,12 @@ PetscErrorCode VecView_Stag_Local_CGNS(Vec v, PetscViewer viewer)
   for (d = 0; d < dim; ++d) PetscCheck(dof[d] == 0, PETSC_COMM_SELF, PETSC_ERR_SUP, "Only elements dof is supported");
   if (dof[d] == 0) PetscFunctionReturn(PETSC_SUCCESS);
 
-  if (cgv->dmviewed) {
+  if (cgv->base) {
     PetscCall(DMStagGetLocalSizes(dm, &n[0], &n[1], &n[2]));
     for (d = 0; d < dim; ++d) PetscCheck(n[d] == cgv->eEnd[d] - cgv->eStart[d], PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "The DM viewed previously is not compatible with the DM associated with the vector");
   }
 
-  if (!cgv->dmviewed) PetscCall(DMView(dm, viewer));
+  if (!cgv->base) PetscCall(DMView(dm, viewer));
   if (!cgv->output_times) PetscCall(PetscSegBufferCreate(sizeof(PetscReal), 20, &cgv->output_times));
   if (!cgv->output_steps) PetscCall(PetscSegBufferCreate(sizeof(size_t), 20, &cgv->output_steps));
 

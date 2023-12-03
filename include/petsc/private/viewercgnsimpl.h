@@ -20,7 +20,6 @@ typedef struct {
   PetscSegBuffer output_steps;
   PetscSegBuffer output_times;
   PetscInt       batch_size;
-  PetscBool      dmviewed;
 } PetscViewer_CGNS;
 
 #define PetscCallCGNS(ierr) \

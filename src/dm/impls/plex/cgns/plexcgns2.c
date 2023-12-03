@@ -664,7 +664,7 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
   cgsize_t          isize[3];
 
   PetscFunctionBegin;
-  if (cgv->dmviewed) PetscFunctionReturn(PETSC_SUCCESS);
+  if (cgv->base) PetscFunctionReturn(PETSC_SUCCESS);
   if (!cgv->file_num) {
     PetscInt time_step;
     PetscCall(DMGetOutputSequenceNumber(dm, &time_step, NULL));
@@ -827,7 +827,6 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
     }
   }
   PetscCall(DMDestroy(&colloc_dm));
-  cgv->dmviewed = PETSC_TRUE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -864,7 +863,7 @@ PetscErrorCode VecView_Plex_Local_CGNS(Vec V, PetscViewer viewer)
 
   PetscFunctionBegin;
   PetscCall(VecGetDM(V, &dm));
-  if (!cgv->dmviewed) PetscCall(DMView(dm, viewer));
+  if (!cgv->base) PetscCall(DMView(dm, viewer));
   if (!cgv->nodal_field) PetscCall(PetscMalloc1(PetscMax(cgv->nEnd[0] - cgv->nStart[0], cgv->eEnd[0] - cgv->eStart[0]), &cgv->nodal_field));
   if (!cgv->output_times) PetscCall(PetscSegBufferCreate(sizeof(PetscReal), 20, &cgv->output_times));
   if (!cgv->output_steps) PetscCall(PetscSegBufferCreate(sizeof(size_t), 20, &cgv->output_steps));
