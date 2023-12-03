@@ -45,17 +45,17 @@ int main(int argc, char **argv)
 
    test:
       suffix: 1
-      requires: !complex cgns
+      requires: cgns
       args: -vec_view cgns:vec.cgns
 
    test:
       suffix: 2
-      requires: !complex cgns
+      requires: cgns
       args: -vec_view cgns:vec.cgns -stag_dof_3 3
 
    test:
       suffix: 3
-      requires: !complex cgns
+      requires: cgns
       nsize: 4
       args: -vec_view cgns:vec.cgns -stag_grid_x 4 -stag_grid_y 5 -stag_grid_z 6
 
