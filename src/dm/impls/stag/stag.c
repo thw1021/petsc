@@ -8,6 +8,8 @@
 #include <petscsf.h>
 #include <petsc/private/vecimpl.h>
 
+PETSC_EXTERN PetscErrorCode VecView_MPI(Vec, PetscViewer);
+
 PetscErrorCode VecView_Stag_Local(Vec v, PetscViewer viewer)
 {
   DM        dm;
