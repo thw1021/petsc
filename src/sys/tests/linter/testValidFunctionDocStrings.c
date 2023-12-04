@@ -21,9 +21,6 @@ typedef int testType;
   Notes:
   Lorem ipsum dolor sit amet, for example\:
 
-  References:
-  Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-
 .seealso: `testIllFormedFunctionDocString()`, `testType`
 C@*/
 PetscErrorCode testWellFormedFunctionDocString(PetscViewer viewer, PetscInt x, PetscViewer viewer2, PetscScalar *y)
@@ -68,8 +65,6 @@ PetscErrorCode testWellFormedFunctionDocString(PetscViewer viewer, PetscInt x, P
   labore et dolore magna aliqua. Excepteur sint occaecat cupidatat non proident, sunt in culpa
   qui officia deserunt mollit anim id est laborum instance:
 
-  References: Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-
 .seealso:                                                  testNonExistentFunction(), testNonExistentType,
 testIllFormedFunctionDocString(), `testNonExistentFunction()`, testIllFormedMinimalDocString()
 @*/
@@ -88,8 +83,6 @@ PetscErrorCode testIllFormedFunctionDocString(PetscViewer viewer, PetscInt x, Pe
   Output params:
 + bar -
 
-  References:
-  Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
    .seealso: testNonExistentFunction(), testNonExistentType,`testNonExistentFunction()
 */
 PetscErrorCode testIllFormedMinimalDocString(void)
@@ -584,8 +577,6 @@ PetscErrorCode testFunctionParmsSameNameInOut(int *tao, double res, PetscErrorCo
   Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut
   labore et dolore magna aliqua. Excepteur sint occaecat cupidatat non proident, sunt in culpa
   qui officia deserunt mollit anim id est laborum instance:
-
-  References: Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
 
 .seealso:                                                  testNonExistentFunction(), testNonExistentType,
 testIllFormedFunctionDocString(), `testNonExistentFunction()`, testIllFormedMinimalDocString()

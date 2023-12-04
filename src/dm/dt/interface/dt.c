@@ -1829,8 +1829,8 @@ PetscErrorCode PetscDTGaussLobattoJacobiQuadrature(PetscInt npoints, PetscReal a
 
   Level: intermediate
 
-  References:
-.  * - Golub and Welsch, Calculation of Quadrature Rules, Math. Comp. 23(106), 1969.
+  Note:
+  See {cite}`golub1969calculation`
 
 .seealso: `PetscDTLegendreEval()`, `PetscDTGaussJacobiQuadrature()`
 @*/
@@ -1976,7 +1976,7 @@ PetscErrorCode PetscDTGaussTensorQuadrature(PetscInt dim, PetscInt Nc, PetscInt 
 }
 
 /*@
-  PetscDTStroudConicalQuadrature - create Stroud conical quadrature for a simplex
+  PetscDTStroudConicalQuadrature - create Stroud conical quadrature for a simplex {cite}`karniadakis2005spectral`
 
   Not Collective
 
@@ -1994,9 +1994,6 @@ PetscErrorCode PetscDTGaussTensorQuadrature(PetscInt dim, PetscInt Nc, PetscInt 
 
   Note:
   For `dim` == 1, this is Gauss-Legendre quadrature
-
-  References:
-. * - Karniadakis and Sherwin.  FIAT
 
 .seealso: `PetscDTGaussTensorQuadrature()`, `PetscDTGaussQuadrature()`
 @*/
