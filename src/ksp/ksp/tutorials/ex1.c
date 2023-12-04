@@ -217,6 +217,20 @@ int main(int argc, char **args)
       args: -prefix_test_mpi_linear_solver_server_mat_view -prefix_test_ksp_monitor -prefix_test_mpi_linear_solver_server_minimum_count_per_rank 5
 
    test:
+      requires: defined(PETSC_USE_SINGLE_LIBRARY)
+      suffix: mpi_linear_solver_server_1_shared_memory_false
+      nsize: 3
+      filter: sed 's?ATOL?RTOL?g' | grep -v HERMITIAN
+      # use the MPI Linear Solver Server
+      args: -mpi_linear_solver_server -mpi_linear_solver_server_view  -mpi_linear_solver_server_use_shared_memory false
+      # controls for the use of PCMPI on a particular system
+      args: -mpi_linear_solver_server_minimum_count_per_rank 5 -mpi_linear_solver_server_ksp_view -mpi_linear_solver_server_mat_view
+      # the usual options for the linear solver (in this case using the server)
+      args: -ksp_monitor -ksp_converged_reason -mat_view -ksp_view  -ksp_type cg -pc_type none
+      # the options for the prefixed objects
+      args: -prefix_test_mpi_linear_solver_server_mat_view -prefix_test_ksp_monitor -prefix_test_mpi_linear_solver_server_minimum_count_per_rank 5
+
+   test:
       requires: !__float128
       suffix: minit
       args: -ksp_monitor -pc_type none -ksp_min_it 8
