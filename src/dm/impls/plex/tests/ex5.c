@@ -824,8 +824,6 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
   PetscCall(PetscObjectSetOptionsPrefix((PetscObject)*dm, "orig_"));
   PetscCall(DMPlexDistributeSetDefault(*dm, PETSC_FALSE));
   PetscCall(DMSetFromOptions(*dm));
-  PetscCall(DMGetLabel(*dm, "material", &matLabel));
-  if (matLabel) PetscCall(DMPlexLabelComplete(*dm, matLabel));
   PetscCall(DMViewFromOptions(*dm, NULL, "-dm_view"));
   PetscCall(DMHasLabel(*dm, "fault", &hasFault));
   if (hasFault) {
@@ -972,6 +970,8 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
     PetscCall(PetscPartitionerShellSetPartition(part, size, sizes, points));
     PetscCall(PetscFree2(sizes, points));
   }
+  PetscCall(DMGetLabel(*dm, "material", &matLabel));
+  if (matLabel) PetscCall(DMPlexLabelComplete(*dm, matLabel));
   {
     DM pdm = NULL;
 
@@ -1059,6 +1059,20 @@ static PetscErrorCode phi(PetscInt dim, PetscReal time, const PetscReal x[], Pet
   return PETSC_SUCCESS;
 }
 
+static void add_fields(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], const PetscReal n[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f[])
+{
+  PetscInt       d;
+  const PetscInt offN = 0;
+  const PetscInt offP = dim;
+  for (d = 0; d < dim; ++d) f[d] = u[offN + d] + u[offP + d];
+}
+
+static void normal_field(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], const PetscReal n[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f[])
+{
+  PetscInt d;
+  for (d = 0; d < dim; ++d) f[d] = n[d];
+}
+
 /* \lambda \cdot (\psi_u^- - \psi_u^+) */
 static void f0_bd_u_neg(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], const PetscReal n[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f0[])
 {
@@ -1107,10 +1121,12 @@ static void g0_bd_lu(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt u
 static PetscErrorCode TestAssembly(DM dm, AppCtx *user)
 {
   Mat           J;
-  Vec           locX, locF;
+  Vec           locX, locF, locW;
   PetscDS       probh;
   DMLabel       fault, material;
+  DM            dmFault;
   IS            cohesiveCells;
+  PetscFE       fe;
   PetscWeakForm wf;
   PetscFormKey  keys[3];
   PetscErrorCode (*initialGuess[2])(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nc, PetscScalar u[], void *ctx);
@@ -1146,6 +1162,35 @@ static PetscErrorCode TestAssembly(DM dm, AppCtx *user)
   initialGuess[1] = phi;
   PetscCall(DMProjectFunctionLabelLocal(dm, 0.0, fault, 1, &id, PETSC_DETERMINE, NULL, initialGuess, NULL, INSERT_VALUES, locX));
   PetscCall(VecViewFromOptions(locX, NULL, "-local_solution_view"));
+
+  /* Test projection to fault mesh */
+  PetscCall(DMPlexCreateCohesiveSubmesh(dm, PETSC_FALSE, NULL, 0, &dmFault));
+  PetscCall(DMPlexOrient(dmFault));
+  PetscCall(PetscFECreateDefault(PETSC_COMM_SELF, dim - 1, dim, user->cellSimplex, "fault_field_", PETSC_DETERMINE, &fe));
+  PetscCall(PetscFESetName(fe, "fault_field"));
+  PetscCall(DMAddField(dmFault, NULL, (PetscObject)fe));
+  PetscCall(PetscFEDestroy(&fe));
+  PetscCall(DMCreateDS(dmFault));
+  PetscCall(DMGetLocalVector(dmFault, &locW));
+  PetscCall(DMViewFromOptions(dmFault, NULL, "-cohesive_view"));
+  void (*faultFuncs[1])(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], const PetscReal n[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f[]);
+
+  DMLabel  depthLabel;
+  PetscInt depth;
+  PetscCall(DMPlexGetDepthLabel(dmFault, &depthLabel));
+  PetscCall(DMPlexGetDepth(dmFault, &depth));
+  id = depth - 1;
+  /* w = r + rp1 */
+  faultFuncs[0] = add_fields;
+  PetscCall(DMProjectBdFieldLabelLocal(dmFault, 0.0, depthLabel, 1, &id, PETSC_DETERMINE, NULL, locX, faultFuncs, INSERT_VALUES, locW));
+  PetscCall(VecViewFromOptions(locW, NULL, "-local_projection_view"));
+
+  /* w = fault_normal */
+  faultFuncs[0] = normal_field;
+  PetscCall(DMProjectBdFieldLabelLocal(dmFault, 0.0, depthLabel, 1, &id, PETSC_DETERMINE, NULL, locX, faultFuncs, INSERT_VALUES, locW));
+  PetscCall(VecViewFromOptions(locW, NULL, "-local_projection_view"));
+  PetscCall(DMRestoreLocalVector(dmFault, &locW));
+  PetscCall(DMDestroy(&dmFault));
 
   PetscCall(DMGetCellDS(dm, cMax, &probh, NULL));
   PetscCall(PetscDSGetWeakForm(probh, &wf));
