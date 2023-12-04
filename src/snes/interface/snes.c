@@ -5132,12 +5132,9 @@ PetscErrorCode SNESTestLocalMin(SNES snes)
   Note:
   The default is to use a constant relative tolerance for
   the inner linear solvers.  Alternatively, one can use the
-  Eisenstat-Walker method, where the relative convergence tolerance
+  Eisenstat-Walker method {cite}`ew96`, where the relative convergence tolerance
   is reset at each Newton iteration according progress of the nonlinear
   solver.
-
-  References:
-.  - * S. C. Eisenstat and H. F. Walker, "Choosing the forcing terms in an inexact Newton method", SISC 17 (1), pp.16-32, 1996.
 
 .seealso: [](ch_snes), `KSP`, `SNES`, `SNESKSPGetUseEW()`, `SNESKSPGetParametersEW()`, `SNESKSPSetParametersEW()`
 @*/
