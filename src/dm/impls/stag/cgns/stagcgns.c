@@ -16,7 +16,7 @@
   #define CGNS_ENUMV(a) a
 #endif
 
-static PetscErrorCode PetscCGNSDataType(PetscDataType pd, CGNS_ENUMT(DataType_t) * cd)
+static PetscErrorCode PetscCGNSDataType_Private(PetscDataType pd, CGNS_ENUMT(DataType_t) * cd)
 {
   PetscFunctionBegin;
   switch (pd) {
@@ -35,7 +35,7 @@ static PetscErrorCode PetscCGNSDataType(PetscDataType pd, CGNS_ENUMT(DataType_t)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode DMStagGetLocalNodeCoordinate1d(DM dm, PetscInt nStart[], PetscInt nEnd[], PetscScalar *x)
+static PetscErrorCode DMStagGetLocalNodeCoordinate1d_Private(DM dm, PetscInt nStart[], PetscInt nEnd[], PetscScalar *x)
 {
   DM            cdm;
   Vec           coord;
@@ -52,7 +52,7 @@ static PetscErrorCode DMStagGetLocalNodeCoordinate1d(DM dm, PetscInt nStart[], P
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode DMStagGetLocalNodeCoordinate2d(DM dm, PetscInt nStart[], PetscInt nEnd[], PetscInt d, PetscScalar *x)
+static PetscErrorCode DMStagGetLocalNodeCoordinate2d_Private(DM dm, PetscInt nStart[], PetscInt nEnd[], PetscInt d, PetscScalar *x)
 {
   DM             cdm;
   Vec            coord;
@@ -70,7 +70,7 @@ static PetscErrorCode DMStagGetLocalNodeCoordinate2d(DM dm, PetscInt nStart[], P
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode DMStagGetLocalNodeCoordinate3d(DM dm, PetscInt nStart[], PetscInt nEnd[], PetscInt d, PetscScalar *x)
+static PetscErrorCode DMStagGetLocalNodeCoordinate3d_Private(DM dm, PetscInt nStart[], PetscInt nEnd[], PetscInt d, PetscScalar *x)
 {
   DM              cdm;
   Vec             coord;
@@ -175,7 +175,7 @@ PetscErrorCode DMView_StagCGNS(DM dm, PetscViewer viewer)
   } else SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "Unsupported coordinate DM type %s", stag->coordinateDMType);
   PetscCallCGNS(cg_zone_write(cgv->file_num, base, "Zone", isize, CGNS_ENUMV(Structured), &zone));
 
-  PetscCall(PetscCGNSDataType(PETSC_SCALAR, &datatype));
+  PetscCall(PetscCGNSDataType_Private(PETSC_SCALAR, &datatype));
   for (d = 0; d < coord_dim; ++d) {
     const double exponents[] = {0, 1, 0, 0, 0};
     char         coord_name[64];
@@ -199,13 +199,13 @@ PetscErrorCode DMView_StagCGNS(DM dm, PetscViewer viewer)
     for (d = 0; d < coord_dim; ++d) {
       switch (coord_dim) {
       case 1:
-        PetscCall(DMStagGetLocalNodeCoordinate1d(dm, nStart, nEnd, x));
+        PetscCall(DMStagGetLocalNodeCoordinate1d_Private(dm, nStart, nEnd, x));
         break;
       case 2:
-        PetscCall(DMStagGetLocalNodeCoordinate2d(dm, nStart, nEnd, d, x));
+        PetscCall(DMStagGetLocalNodeCoordinate2d_Private(dm, nStart, nEnd, d, x));
         break;
       case 3:
-        PetscCall(DMStagGetLocalNodeCoordinate3d(dm, nStart, nEnd, d, x));
+        PetscCall(DMStagGetLocalNodeCoordinate3d_Private(dm, nStart, nEnd, d, x));
         break;
       default:
         SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Unsupported dimension %" PetscInt_FMT, coord_dim);
@@ -284,7 +284,7 @@ PetscErrorCode DMView_StagCGNS(DM dm, PetscViewer viewer)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode DMStagGetLocalElementVector1d(DM dm, Vec v, PetscInt eStart[], PetscInt eEnd[], PetscInt c, PetscScalar *x)
+static PetscErrorCode DMStagGetLocalElementVector1d_Private(DM dm, Vec v, PetscInt eStart[], PetscInt eEnd[], PetscInt c, PetscScalar *x)
 {
   PetscScalar **arr;
   PetscInt      ielem, i, cnt = 0;
@@ -297,7 +297,7 @@ static PetscErrorCode DMStagGetLocalElementVector1d(DM dm, Vec v, PetscInt eStar
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode DMStagGetLocalElementVector2d(DM dm, Vec v, PetscInt eStart[], PetscInt eEnd[], PetscInt c, PetscScalar *x)
+static PetscErrorCode DMStagGetLocalElementVector2d_Private(DM dm, Vec v, PetscInt eStart[], PetscInt eEnd[], PetscInt c, PetscScalar *x)
 {
   PetscScalar ***arr;
   PetscInt       ielem, i, j, cnt = 0;
@@ -311,7 +311,7 @@ static PetscErrorCode DMStagGetLocalElementVector2d(DM dm, Vec v, PetscInt eStar
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode DMStagGetLocalElementVector3d(DM dm, Vec v, PetscInt eStart[], PetscInt eEnd[], PetscInt c, PetscScalar *x)
+static PetscErrorCode DMStagGetLocalElementVector3d_Private(DM dm, Vec v, PetscInt eStart[], PetscInt eEnd[], PetscInt c, PetscScalar *x)
 {
   PetscScalar ****arr;
   PetscInt        ielem, i, j, k, cnt = 0;
@@ -382,7 +382,7 @@ PetscErrorCode VecView_Stag_Local_CGNS(Vec v, PetscViewer viewer)
     num_local_elems *= cgv->eEnd[d] - cgv->eStart[d];
   }
   PetscCall(PetscMalloc1(num_local_elems, &x));
-  PetscCall(PetscCGNSDataType(PETSC_SCALAR, &datatype));
+  PetscCall(PetscCGNSDataType_Private(PETSC_SCALAR, &datatype));
   for (c = 0; c < dof[dim]; ++c) {
     int  field;
     char field_name[32]; // CGNS max field name length is 32
@@ -392,13 +392,13 @@ PetscErrorCode VecView_Stag_Local_CGNS(Vec v, PetscViewer viewer)
     PetscCallCGNS(cgp_field_write(cgv->file_num, cgv->base, cgv->zone, sol, datatype, field_name, &field));
     switch (dim) {
     case 1:
-      PetscCall(DMStagGetLocalElementVector1d(dm, v, cgv->eStart, cgv->eEnd, c, x));
+      PetscCall(DMStagGetLocalElementVector1d_Private(dm, v, cgv->eStart, cgv->eEnd, c, x));
       break;
     case 2:
-      PetscCall(DMStagGetLocalElementVector2d(dm, v, cgv->eStart, cgv->eEnd, c, x));
+      PetscCall(DMStagGetLocalElementVector2d_Private(dm, v, cgv->eStart, cgv->eEnd, c, x));
       break;
     case 3:
-      PetscCall(DMStagGetLocalElementVector3d(dm, v, cgv->eStart, cgv->eEnd, c, x));
+      PetscCall(DMStagGetLocalElementVector3d_Private(dm, v, cgv->eStart, cgv->eEnd, c, x));
       break;
     default:
       SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Unsupported dimension %" PetscInt_FMT, dim);
