@@ -891,6 +891,13 @@ static PetscErrorCode DMFieldComputeFaceData_DS(DMField field, IS pointIS, Petsc
         const PetscInt *cone, *orient;
 
         PetscCall(DMPlexGetConeSize(dm, cell, &numCone));
+        // When we extract submeshes, we hang cells from the side that are not fully realized. We ignore these
+        if (numCone == 1) {
+          co[p][s][0] = -1;
+          co[p][s][1] = -1;
+          co[p][s][2] = -1;
+          continue;
+        }
         PetscCheck(numCone == coneSize, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Support point does not match reference element");
         PetscCall(DMPlexGetCone(dm, cell, &cone));
         PetscCall(DMPlexGetConeOrientation(dm, cell, &orient));
