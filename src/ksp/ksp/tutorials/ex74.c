@@ -369,9 +369,10 @@ static PetscErrorCode Assemble_AdvDiff(MPI_Comm comm, UserContext *user, Mat *J)
 
 /*TEST
  testset:
-   suffix: 1
    args: -a 0.1 -dt .125 -niter 5 -imax 40 -ksp_monitor_short -pc_type pbjacobi -irk_type gauss -irk_nstages 2
    test:
+     suffix: 1
+     requires: !single
      args: -ksp_atol 1e-6
    test:
      requires: hpddm !single
