@@ -43,6 +43,7 @@ Changes: Development
 .. rubric:: Vec:
 
 - Add ``VecGhostGetGhostIS()`` to get the ghost indices of a ghosted vector
+- Add ``-vec_mdot_use_gemv`` to allow ``VecMDot()`` to use BLAS 2 ``gemv()`` instead of custom unrolled kernel
 
 .. rubric:: PetscSection:
 
@@ -59,7 +60,7 @@ Changes: Development
 .. rubric:: PC:
 
 - Add ``PCGAMGSetLowMemoryFilter()`` with corresponding option ``-pc_gamg_low_memory_threshold_filter``. Use the system ``MatFilter`` graph/matrix filter, without a temporary copy of the graph, otherwise use method that can be faster
-- ``PCMAT`` use ``MatSolve()`` if implemented by the matrix type 
+- ``PCMAT`` use ``MatSolve()`` if implemented by the matrix type
 
 .. rubric:: KSP:
 
