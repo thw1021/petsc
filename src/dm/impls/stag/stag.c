@@ -8,8 +8,6 @@
 #include <petscsf.h>
 #include <petsc/private/vecimpl.h>
 
-PETSC_EXTERN PetscErrorCode VecView_MPI(Vec, PetscViewer);
-
 PetscErrorCode VecView_Stag_Local(Vec v, PetscViewer viewer)
 {
   DM        dm;
@@ -27,10 +25,7 @@ PetscErrorCode VecView_Stag_Local(Vec v, PetscViewer viewer)
     PetscCall(VecView_Stag_Local_CGNS(v, viewer));
 #endif
   } else {
-    PetscBool isseq;
-    PetscCall(PetscObjectTypeCompare((PetscObject)v, VECSEQ, &isseq));
-    if (isseq) PetscCall(VecView_Seq(v, viewer));
-    else PetscCall(VecView_MPI(v, viewer));
+    PetscCall(VecViewNative(v, viewer));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -58,10 +53,7 @@ PetscErrorCode VecView_Stag(Vec v, PetscViewer viewer)
     PetscCall(VecView_Stag_Local(locv, viewer));
     PetscCall(DMRestoreLocalVector(dm, &locv));
   } else {
-    PetscBool isseq;
-    PetscCall(PetscObjectTypeCompare((PetscObject)v, VECSEQ, &isseq));
-    if (isseq) PetscCall(VecView_Seq(v, viewer));
-    else PetscCall(VecView_MPI(v, viewer));
+    PetscCall(VecViewNative(v, viewer));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
