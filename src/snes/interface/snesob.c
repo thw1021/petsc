@@ -109,6 +109,12 @@ PetscErrorCode SNESComputeObjective(SNES snes, Vec X, PetscReal *ob)
   PetscCall(PetscLogEventBegin(SNES_ObjectiveEval, snes, X, 0, 0));
   PetscCall((sdm->ops->computeobjective)(snes, X, ob, sdm->objectivectx));
   PetscCall(PetscLogEventEnd(SNES_ObjectiveEval, snes, X, 0, 0));
+  if (snes->vec_rhs) {
+    PetscScalar dot;
+
+    PetscCall(VecDot(snes->vec_rhs, X, &dot));
+    *ob -= PetscRealPart(dot);
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
