@@ -1463,12 +1463,17 @@ PetscErrorCode VecSetFromOptions(Vec vec)
 @*/
 PetscErrorCode VecSetSizes(Vec v, PetscInt n, PetscInt N)
 {
+  PetscMPIInt size;
+
   PetscFunctionBegin;
   PetscValidHeaderSpecific(v, VEC_CLASSID, 1);
   if (N >= 0) {
     PetscValidLogicalCollectiveInt(v, N, 3);
     PetscCheck(n <= N, PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Local size %" PetscInt_FMT " cannot be larger than global size %" PetscInt_FMT, n, N);
   }
+  PetscCheck(n >= 0 || N >= 0, PETSC_COMM_SELF, PETSC_ERR_SUP, "Cannot set both local and global sizes to be decided");
+  PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)v), &size));
+  if (size == 1) { n = (N = PetscMax(n, N)); }
   PetscCheck(!(v->map->n >= 0 || v->map->N >= 0) || !(v->map->n != n || v->map->N != N), PETSC_COMM_SELF, PETSC_ERR_SUP, "Cannot change/reset vector sizes to %" PetscInt_FMT " local %" PetscInt_FMT " global after previously setting them to %" PetscInt_FMT " local %" PetscInt_FMT " global", n, N,
              v->map->n, v->map->N);
   v->map->n = n;
