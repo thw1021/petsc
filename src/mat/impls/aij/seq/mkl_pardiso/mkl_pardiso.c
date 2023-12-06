@@ -279,7 +279,7 @@ static PetscErrorCode MatMKLPardisoSolveSchur_Private(Mat F, PetscScalar *B, Pet
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatFactorSetSchurIS_MKL_PARDISO(Mat F, IS is)
+static PetscErrorCode MatFactorSetSchurIS_MKLPARDISO(Mat F, IS is)
 {
   Mat_MKL_PARDISO   *mpardiso = (Mat_MKL_PARDISO *)F->data;
   const PetscScalar *arr;
@@ -318,7 +318,7 @@ static PetscErrorCode MatFactorSetSchurIS_MKL_PARDISO(Mat F, IS is)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatDestroy_MKL_PARDISO(Mat A)
+static PetscErrorCode MatDestroy_MKLPARDISO(Mat A)
 {
   Mat_MKL_PARDISO *mat_mkl_pardiso = (Mat_MKL_PARDISO *)A->data;
 
@@ -368,7 +368,7 @@ static PetscErrorCode MatMKLPardisoScatterSchur_Private(Mat_MKL_PARDISO *mpardis
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatSolve_MKL_PARDISO(Mat A, Vec b, Vec x)
+static PetscErrorCode MatSolve_MKLPARDISO(Mat A, Vec b, Vec x)
 {
   Mat_MKL_PARDISO   *mat_mkl_pardiso = (Mat_MKL_PARDISO *)A->data;
   PetscScalar       *xarray;
@@ -434,7 +434,7 @@ static PetscErrorCode MatSolve_MKL_PARDISO(Mat A, Vec b, Vec x)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatSolveTranspose_MKL_PARDISO(Mat A, Vec b, Vec x)
+static PetscErrorCode MatSolveTranspose_MKLPARDISO(Mat A, Vec b, Vec x)
 {
   Mat_MKL_PARDISO *mat_mkl_pardiso = (Mat_MKL_PARDISO *)A->data;
   PetscInt         oiparm12;
@@ -442,12 +442,12 @@ static PetscErrorCode MatSolveTranspose_MKL_PARDISO(Mat A, Vec b, Vec x)
   PetscFunctionBegin;
   oiparm12                       = mat_mkl_pardiso->iparm[12 - 1];
   mat_mkl_pardiso->iparm[12 - 1] = 2;
-  PetscCall(MatSolve_MKL_PARDISO(A, b, x));
+  PetscCall(MatSolve_MKLPARDISO(A, b, x));
   mat_mkl_pardiso->iparm[12 - 1] = oiparm12;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatMatSolve_MKL_PARDISO(Mat A, Mat B, Mat X)
+static PetscErrorCode MatMatSolve_MKLPARDISO(Mat A, Mat B, Mat X)
 {
   Mat_MKL_PARDISO   *mat_mkl_pardiso = (Mat_MKL_PARDISO *)(A)->data;
   const PetscScalar *barray;
@@ -526,7 +526,7 @@ static PetscErrorCode MatMatSolve_MKL_PARDISO(Mat A, Mat B, Mat X)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatFactorNumeric_MKL_PARDISO(Mat F, Mat A, const MatFactorInfo *info)
+static PetscErrorCode MatFactorNumeric_MKLPARDISO(Mat F, Mat A, const MatFactorInfo *info)
 {
   Mat_MKL_PARDISO *mat_mkl_pardiso = (Mat_MKL_PARDISO *)(F)->data;
 
@@ -554,7 +554,7 @@ static PetscErrorCode MatFactorNumeric_MKL_PARDISO(Mat F, Mat A, const MatFactor
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatSetFromOptions_MKL_PARDISO(Mat F, Mat A)
+static PetscErrorCode MatSetFromOptions_MKLPARDISO(Mat F, Mat A)
 {
   Mat_MKL_PARDISO *mat_mkl_pardiso = (Mat_MKL_PARDISO *)F->data;
   PetscInt         icntl, bs, threads = 1;
@@ -720,7 +720,7 @@ static PetscErrorCode MatFactorSymbolic_AIJMKL_PARDISO_Private(Mat F, Mat A, con
 
   PetscFunctionBegin;
   mat_mkl_pardiso->matstruc = DIFFERENT_NONZERO_PATTERN;
-  PetscCall(MatSetFromOptions_MKL_PARDISO(F, A));
+  PetscCall(MatSetFromOptions_MKLPARDISO(F, A));
   /* throw away any previously computed structure */
   if (mat_mkl_pardiso->freeaij) {
     PetscCall(PetscFree2(mat_mkl_pardiso->ia, mat_mkl_pardiso->ja));
@@ -741,12 +741,12 @@ static PetscErrorCode MatFactorSymbolic_AIJMKL_PARDISO_Private(Mat F, Mat A, con
 
   mat_mkl_pardiso->CleanUp = PETSC_TRUE;
 
-  if (F->factortype == MAT_FACTOR_LU) F->ops->lufactornumeric = MatFactorNumeric_MKL_PARDISO;
-  else F->ops->choleskyfactornumeric = MatFactorNumeric_MKL_PARDISO;
+  if (F->factortype == MAT_FACTOR_LU) F->ops->lufactornumeric = MatFactorNumeric_MKLPARDISO;
+  else F->ops->choleskyfactornumeric = MatFactorNumeric_MKLPARDISO;
 
-  F->ops->solve          = MatSolve_MKL_PARDISO;
-  F->ops->solvetranspose = MatSolveTranspose_MKL_PARDISO;
-  F->ops->matsolve       = MatMatSolve_MKL_PARDISO;
+  F->ops->solve          = MatSolve_MKLPARDISO;
+  F->ops->solvetranspose = MatSolveTranspose_MKLPARDISO;
+  F->ops->matsolve       = MatMatSolve_MKLPARDISO;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -758,7 +758,7 @@ static PetscErrorCode MatLUFactorSymbolic_AIJMKL_PARDISO(Mat F, Mat A, IS r, IS 
 }
 
 #if !defined(PETSC_USE_COMPLEX)
-static PetscErrorCode MatGetInertia_MKL_PARDISO(Mat F, PetscInt *nneg, PetscInt *nzero, PetscInt *npos)
+static PetscErrorCode MatGetInertia_MKLPARDISO(Mat F, PetscInt *nneg, PetscInt *nzero, PetscInt *npos)
 {
   Mat_MKL_PARDISO *mat_mkl_pardiso = (Mat_MKL_PARDISO *)F->data;
 
@@ -776,12 +776,12 @@ static PetscErrorCode MatCholeskyFactorSymbolic_AIJMKL_PARDISO(Mat F, Mat A, IS 
   PetscCall(MatFactorSymbolic_AIJMKL_PARDISO_Private(F, A, info));
   F->ops->getinertia = NULL;
 #if !defined(PETSC_USE_COMPLEX)
-  F->ops->getinertia = MatGetInertia_MKL_PARDISO;
+  F->ops->getinertia = MatGetInertia_MKLPARDISO;
 #endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatView_MKL_PARDISO(Mat A, PetscViewer viewer)
+static PetscErrorCode MatView_MKLPARDISO(Mat A, PetscViewer viewer)
 {
   PetscBool         iascii;
   PetscViewerFormat format;
@@ -809,7 +809,7 @@ static PetscErrorCode MatView_MKL_PARDISO(Mat A, PetscViewer viewer)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatGetInfo_MKL_PARDISO(Mat A, MatInfoType flag, MatInfo *info)
+static PetscErrorCode MatGetInfo_MKLPARDISO(Mat A, MatInfoType flag, MatInfo *info)
 {
   Mat_MKL_PARDISO *mat_mkl_pardiso = (Mat_MKL_PARDISO *)A->data;
 
@@ -985,9 +985,9 @@ PETSC_EXTERN PetscErrorCode MatGetFactor_aij_mkl_pardiso(Mat A, MatFactorType ft
     PetscCheck(A->hermitian != PETSC_BOOL3_TRUE, PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "No support for PARDISO CHOLESKY with Hermitian matrices! Use MAT_FACTOR_LU instead");
 #endif
   }
-  B->ops->destroy = MatDestroy_MKL_PARDISO;
-  B->ops->view    = MatView_MKL_PARDISO;
-  B->ops->getinfo = MatGetInfo_MKL_PARDISO;
+  B->ops->destroy = MatDestroy_MKLPARDISO;
+  B->ops->view    = MatView_MKLPARDISO;
+  B->ops->getinfo = MatGetInfo_MKLPARDISO;
   B->factortype   = ftype;
   B->assembled    = PETSC_TRUE;
 
@@ -1002,7 +1002,7 @@ PETSC_EXTERN PetscErrorCode MatGetFactor_aij_mkl_pardiso(Mat A, MatFactorType ft
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_EXTERN PetscErrorCode MatSolverTypeRegister_MKL_Pardiso(void)
+PETSC_EXTERN PetscErrorCode MatSolverTypeRegister_MKLPARDISO(void)
 {
   PetscFunctionBegin;
   PetscCall(MatSolverTypeRegister(MATSOLVERMKL_PARDISO, MATSEQAIJ, MAT_FACTOR_LU, MatGetFactor_aij_mkl_pardiso));
