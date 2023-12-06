@@ -887,12 +887,12 @@ PetscErrorCode KSPComputeEigenvalues_MINRES(KSP ksp, PetscInt nmax, PetscReal *r
   /* copy tridiagonal matrix to work space */
   for (PetscInt j = 0; j < n; j++) {
     r[j]  = PetscRealPart(d[j]);
-    ee[j] = PetscRealPart(e[j]);
+    ee[j] = PetscRealPart(e[j + 1]);
   }
 
   PetscCall(PetscBLASIntCast(n, &bn));
   PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
-  PetscCallBLAS("LAPACKREALstev", LAPACKREALstev_("N", &bn, r, &ee[1], NULL, &ldz, NULL, &lierr));
+  PetscCallBLAS("LAPACKREALstev", LAPACKREALstev_("N", &bn, r, ee, NULL, &ldz, NULL, &lierr));
   PetscCheck(!lierr, PETSC_COMM_SELF, PETSC_ERR_PLIB, "xSTEV error");
   PetscCall(PetscFPTrapPop());
   PetscCall(PetscSortReal(n, r));
@@ -920,12 +920,12 @@ PetscErrorCode KSPComputeExtremeSingularValues_MINRES(KSP ksp, PetscReal *emax, 
   /* copy tridiagonal matrix to work space */
   for (PetscInt j = 0; j < n; j++) {
     dd[j] = PetscRealPart(d[j]);
-    ee[j] = PetscRealPart(e[j]);
+    ee[j] = PetscRealPart(e[j + 1]);
   }
 
   PetscCall(PetscBLASIntCast(n, &bn));
   PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
-  PetscCallBLAS("LAPACKREALstev", LAPACKREALstev_("N", &bn, dd, &ee[1], NULL, &ldz, NULL, &lierr));
+  PetscCallBLAS("LAPACKREALstev", LAPACKREALstev_("N", &bn, dd, ee, NULL, &ldz, NULL, &lierr));
   PetscCheck(!lierr, PETSC_COMM_SELF, PETSC_ERR_PLIB, "xSTEV error");
   PetscCall(PetscFPTrapPop());
   for (PetscInt j = 0; j < n; j++) dd[j] = PetscAbsReal(dd[j]);
