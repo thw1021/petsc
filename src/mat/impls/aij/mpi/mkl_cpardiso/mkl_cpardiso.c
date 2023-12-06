@@ -347,7 +347,7 @@ static PetscErrorCode MatConvertToTriples_mpisbaij_mpisbaij_MKL_CPARDISO(Mat A, 
 /*
  * Free memory for Mat_MKL_CPARDISO structure and pointers to objects.
  */
-static PetscErrorCode MatDestroy_MKL_CPARDISO(Mat A)
+static PetscErrorCode MatDestroy_MKLCPARDISO(Mat A)
 {
   Mat_MKL_CPARDISO *mat_mkl_cpardiso = (Mat_MKL_CPARDISO *)A->data;
   MPI_Comm          comm;
@@ -375,7 +375,7 @@ static PetscErrorCode MatDestroy_MKL_CPARDISO(Mat A)
 /*
  * Computes Ax = b
  */
-static PetscErrorCode MatSolve_MKL_CPARDISO(Mat A, Vec b, Vec x)
+static PetscErrorCode MatSolve_MKLCPARDISO(Mat A, Vec b, Vec x)
 {
   Mat_MKL_CPARDISO  *mat_mkl_cpardiso = (Mat_MKL_CPARDISO *)(A)->data;
   PetscScalar       *xarray;
@@ -399,7 +399,7 @@ static PetscErrorCode MatSolve_MKL_CPARDISO(Mat A, Vec b, Vec x)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatSolveTranspose_MKL_CPARDISO(Mat A, Vec b, Vec x)
+static PetscErrorCode MatSolveTranspose_MKLCPARDISO(Mat A, Vec b, Vec x)
 {
   Mat_MKL_CPARDISO *mat_mkl_cpardiso = (Mat_MKL_CPARDISO *)A->data;
 
@@ -409,12 +409,12 @@ static PetscErrorCode MatSolveTranspose_MKL_CPARDISO(Mat A, Vec b, Vec x)
 #else
   mat_mkl_cpardiso->iparm[12 - 1] = 2;
 #endif
-  PetscCall(MatSolve_MKL_CPARDISO(A, b, x));
+  PetscCall(MatSolve_MKLCPARDISO(A, b, x));
   mat_mkl_cpardiso->iparm[12 - 1] = 0;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatMatSolve_MKL_CPARDISO(Mat A, Mat B, Mat X)
+static PetscErrorCode MatMatSolve_MKLCPARDISO(Mat A, Mat B, Mat X)
 {
   Mat_MKL_CPARDISO  *mat_mkl_cpardiso = (Mat_MKL_CPARDISO *)(A)->data;
   PetscScalar       *xarray;
@@ -444,7 +444,7 @@ static PetscErrorCode MatMatSolve_MKL_CPARDISO(Mat A, Mat B, Mat X)
 /*
  * LU Decomposition
  */
-static PetscErrorCode MatFactorNumeric_MKL_CPARDISO(Mat F, Mat A, const MatFactorInfo *info)
+static PetscErrorCode MatFactorNumeric_MKLCPARDISO(Mat F, Mat A, const MatFactorInfo *info)
 {
   Mat_MKL_CPARDISO *mat_mkl_cpardiso = (Mat_MKL_CPARDISO *)(F)->data;
 
@@ -463,7 +463,7 @@ static PetscErrorCode MatFactorNumeric_MKL_CPARDISO(Mat F, Mat A, const MatFacto
 }
 
 /* Sets mkl_cpardiso options from the options database */
-static PetscErrorCode MatSetFromOptions_MKL_CPARDISO(Mat F, Mat A)
+static PetscErrorCode MatSetFromOptions_MKLCPARDISO(Mat F, Mat A)
 {
   Mat_MKL_CPARDISO *mat_mkl_cpardiso = (Mat_MKL_CPARDISO *)F->data;
   PetscInt          icntl, threads;
@@ -547,7 +547,7 @@ static PetscErrorCode MatSetFromOptions_MKL_CPARDISO(Mat F, Mat A)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscInitialize_MKL_CPARDISO(Mat A, Mat_MKL_CPARDISO *mat_mkl_cpardiso)
+static PetscErrorCode PetscInitialize_MKLCPARDISO(Mat A, Mat_MKL_CPARDISO *mat_mkl_cpardiso)
 {
   PetscInt    bs;
   PetscBool   match;
@@ -626,7 +626,7 @@ static PetscErrorCode MatLUFactorSymbolic_AIJMKL_CPARDISO(Mat F, Mat A, IS r, IS
   mat_mkl_cpardiso->matstruc = DIFFERENT_NONZERO_PATTERN;
 
   /* Set MKL_CPARDISO options from the options database */
-  PetscCall(MatSetFromOptions_MKL_CPARDISO(F, A));
+  PetscCall(MatSetFromOptions_MKLCPARDISO(F, A));
   PetscCall((*mat_mkl_cpardiso->ConvertToTriples)(A, MAT_INITIAL_MATRIX, &mat_mkl_cpardiso->nz, &mat_mkl_cpardiso->ia, &mat_mkl_cpardiso->ja, &mat_mkl_cpardiso->a));
 
   mat_mkl_cpardiso->n = A->rmap->N;
@@ -641,10 +641,10 @@ static PetscErrorCode MatLUFactorSymbolic_AIJMKL_CPARDISO(Mat F, Mat A, IS r, IS
   PetscCheck(mat_mkl_cpardiso->err >= 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error reported by MKL_CPARDISO: err=%d, msg = \"%s\".Check manual", mat_mkl_cpardiso->err, Err_MSG_CPardiso(mat_mkl_cpardiso->err));
 
   mat_mkl_cpardiso->CleanUp = PETSC_TRUE;
-  F->ops->lufactornumeric   = MatFactorNumeric_MKL_CPARDISO;
-  F->ops->solve             = MatSolve_MKL_CPARDISO;
-  F->ops->solvetranspose    = MatSolveTranspose_MKL_CPARDISO;
-  F->ops->matsolve          = MatMatSolve_MKL_CPARDISO;
+  F->ops->lufactornumeric   = MatFactorNumeric_MKLCPARDISO;
+  F->ops->solve             = MatSolve_MKLCPARDISO;
+  F->ops->solvetranspose    = MatSolveTranspose_MKLCPARDISO;
+  F->ops->matsolve          = MatMatSolve_MKLCPARDISO;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -656,7 +656,7 @@ static PetscErrorCode MatCholeskyFactorSymbolic_AIJMKL_CPARDISO(Mat F, Mat A, IS
   mat_mkl_cpardiso->matstruc = DIFFERENT_NONZERO_PATTERN;
 
   /* Set MKL_CPARDISO options from the options database */
-  PetscCall(MatSetFromOptions_MKL_CPARDISO(F, A));
+  PetscCall(MatSetFromOptions_MKLCPARDISO(F, A));
   PetscCall((*mat_mkl_cpardiso->ConvertToTriples)(A, MAT_INITIAL_MATRIX, &mat_mkl_cpardiso->nz, &mat_mkl_cpardiso->ia, &mat_mkl_cpardiso->ja, &mat_mkl_cpardiso->a));
 
   mat_mkl_cpardiso->n = A->rmap->N;
@@ -674,14 +674,14 @@ static PetscErrorCode MatCholeskyFactorSymbolic_AIJMKL_CPARDISO(Mat F, Mat A, IS
   PetscCheck(mat_mkl_cpardiso->err >= 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error reported by MKL_CPARDISO: err=%d, msg = \"%s\".Check manual", mat_mkl_cpardiso->err, Err_MSG_CPardiso(mat_mkl_cpardiso->err));
 
   mat_mkl_cpardiso->CleanUp     = PETSC_TRUE;
-  F->ops->choleskyfactornumeric = MatFactorNumeric_MKL_CPARDISO;
-  F->ops->solve                 = MatSolve_MKL_CPARDISO;
-  F->ops->solvetranspose        = MatSolveTranspose_MKL_CPARDISO;
-  F->ops->matsolve              = MatMatSolve_MKL_CPARDISO;
+  F->ops->choleskyfactornumeric = MatFactorNumeric_MKLCPARDISO;
+  F->ops->solve                 = MatSolve_MKLCPARDISO;
+  F->ops->solvetranspose        = MatSolveTranspose_MKLCPARDISO;
+  F->ops->matsolve              = MatMatSolve_MKLCPARDISO;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatView_MKL_CPARDISO(Mat A, PetscViewer viewer)
+static PetscErrorCode MatView_MKLCPARDISO(Mat A, PetscViewer viewer)
 {
   PetscBool         iascii;
   PetscViewerFormat format;
@@ -710,7 +710,7 @@ static PetscErrorCode MatView_MKL_CPARDISO(Mat A, PetscViewer viewer)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatGetInfo_MKL_CPARDISO(Mat A, MatInfoType flag, MatInfo *info)
+static PetscErrorCode MatGetInfo_MKLCPARDISO(Mat A, MatInfoType flag, MatInfo *info)
 {
   Mat_MKL_CPARDISO *mat_mkl_cpardiso = (Mat_MKL_CPARDISO *)A->data;
 
@@ -853,10 +853,10 @@ static PetscErrorCode MatGetFactor_mpiaij_mkl_cpardiso(Mat A, MatFactorType ftyp
 
   if (ftype == MAT_FACTOR_LU) B->ops->lufactorsymbolic = MatLUFactorSymbolic_AIJMKL_CPARDISO;
   else B->ops->choleskyfactorsymbolic = MatCholeskyFactorSymbolic_AIJMKL_CPARDISO;
-  B->ops->destroy = MatDestroy_MKL_CPARDISO;
+  B->ops->destroy = MatDestroy_MKLCPARDISO;
 
-  B->ops->view    = MatView_MKL_CPARDISO;
-  B->ops->getinfo = MatGetInfo_MKL_CPARDISO;
+  B->ops->view    = MatView_MKLCPARDISO;
+  B->ops->getinfo = MatGetInfo_MKLCPARDISO;
 
   B->factortype = ftype;
   B->assembled  = PETSC_TRUE; /* required by -ksp_view */
@@ -869,13 +869,13 @@ static PetscErrorCode MatGetFactor_mpiaij_mkl_cpardiso(Mat A, MatFactorType ftyp
 
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatFactorGetSolverType_C", MatFactorGetSolverType_mkl_cpardiso));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatMkl_CPardisoSetCntl_C", MatMkl_CPardisoSetCntl_MKL_CPARDISO));
-  PetscCall(PetscInitialize_MKL_CPARDISO(A, mat_mkl_cpardiso));
+  PetscCall(PetscInitialize_MKLCPARDISO(A, mat_mkl_cpardiso));
 
   *F = B;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_EXTERN PetscErrorCode MatSolverTypeRegister_MKL_CPardiso(void)
+PETSC_EXTERN PetscErrorCode MatSolverTypeRegister_MKLCPARDISO(void)
 {
   PetscFunctionBegin;
   PetscCall(MatSolverTypeRegister(MATSOLVERMKL_CPARDISO, MATMPIAIJ, MAT_FACTOR_LU, MatGetFactor_mpiaij_mkl_cpardiso));

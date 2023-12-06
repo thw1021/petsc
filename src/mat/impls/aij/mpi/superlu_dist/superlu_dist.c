@@ -182,7 +182,7 @@ static PetscErrorCode Petsc_Superlu_dist_keyval_free(void)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatDestroy_SuperLU_DIST(Mat A)
+static PetscErrorCode MatDestroy_SuperLUDIST(Mat A)
 {
   Mat_SuperLU_DIST *lu = (Mat_SuperLU_DIST *)A->data;
 
@@ -276,7 +276,7 @@ static PetscErrorCode MatDestroy_SuperLU_DIST(Mat A)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatSolve_SuperLU_DIST(Mat A, Vec b_mpi, Vec x)
+static PetscErrorCode MatSolve_SuperLUDIST(Mat A, Vec b_mpi, Vec x)
 {
   Mat_SuperLU_DIST *lu = (Mat_SuperLU_DIST *)A->data;
   PetscInt          m  = A->rmap->n;
@@ -349,7 +349,7 @@ static PetscErrorCode MatSolve_SuperLU_DIST(Mat A, Vec b_mpi, Vec x)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatMatSolve_SuperLU_DIST(Mat A, Mat B_mpi, Mat X)
+static PetscErrorCode MatMatSolve_SuperLUDIST(Mat A, Mat B_mpi, Mat X)
 {
   Mat_SuperLU_DIST *lu = (Mat_SuperLU_DIST *)A->data;
   PetscInt          m  = A->rmap->n, nrhs;
@@ -410,7 +410,7 @@ static PetscErrorCode MatMatSolve_SuperLU_DIST(Mat A, Mat B_mpi, Mat X)
    nzero:    total number of zero pivots
    npos:     (global dimension of F) - nneg - nzero
 */
-static PetscErrorCode MatGetInertia_SuperLU_DIST(Mat F, PetscInt *nneg, PetscInt *nzero, PetscInt *npos)
+static PetscErrorCode MatGetInertia_SuperLUDIST(Mat F, PetscInt *nneg, PetscInt *nzero, PetscInt *npos)
 {
   Mat_SuperLU_DIST *lu    = (Mat_SuperLU_DIST *)F->data;
   PetscScalar      *diagU = NULL;
@@ -448,7 +448,7 @@ static PetscErrorCode MatGetInertia_SuperLU_DIST(Mat F, PetscInt *nneg, PetscInt
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatLUFactorNumeric_SuperLU_DIST(Mat F, Mat A, const MatFactorInfo *info)
+static PetscErrorCode MatLUFactorNumeric_SuperLUDIST(Mat F, Mat A, const MatFactorInfo *info)
 {
   Mat_SuperLU_DIST  *lu = (Mat_SuperLU_DIST *)F->data;
   Mat                Aloc;
@@ -604,7 +604,7 @@ static PetscErrorCode MatLUFactorNumeric_SuperLU_DIST(Mat F, Mat A, const MatFac
 }
 
 /* Note the Petsc r and c permutations are ignored */
-static PetscErrorCode MatLUFactorSymbolic_SuperLU_DIST(Mat F, Mat A, IS r, IS c, const MatFactorInfo *info)
+static PetscErrorCode MatLUFactorSymbolic_SuperLUDIST(Mat F, Mat A, IS r, IS c, const MatFactorInfo *info)
 {
   Mat_SuperLU_DIST  *lu = (Mat_SuperLU_DIST *)F->data;
   PetscInt           M = A->rmap->N, N = A->cmap->N, indx;
@@ -801,21 +801,21 @@ static PetscErrorCode MatLUFactorSymbolic_SuperLU_DIST(Mat F, Mat A, IS r, IS c,
     PetscStackCallExternalVoid("SuperLU_DIST:ScalePermstructInit", ScalePermstructInit(M, N, &lu->ScalePermstruct));
     PetscStackCallExternalVoid("SuperLU_DIST:LUstructInit", LUstructInit(N, &lu->LUstruct));
   }
-  F->ops->lufactornumeric = MatLUFactorNumeric_SuperLU_DIST;
-  F->ops->solve           = MatSolve_SuperLU_DIST;
-  F->ops->matsolve        = MatMatSolve_SuperLU_DIST;
+  F->ops->lufactornumeric = MatLUFactorNumeric_SuperLUDIST;
+  F->ops->solve           = MatSolve_SuperLUDIST;
+  F->ops->matsolve        = MatMatSolve_SuperLUDIST;
   F->ops->getinertia      = NULL;
 
-  if (A->symmetric == PETSC_BOOL3_TRUE || A->hermitian == PETSC_BOOL3_TRUE) F->ops->getinertia = MatGetInertia_SuperLU_DIST;
+  if (A->symmetric == PETSC_BOOL3_TRUE || A->hermitian == PETSC_BOOL3_TRUE) F->ops->getinertia = MatGetInertia_SuperLUDIST;
   lu->CleanUpSuperLU_Dist = PETSC_TRUE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatCholeskyFactorSymbolic_SuperLU_DIST(Mat F, Mat A, IS r, const MatFactorInfo *info)
+static PetscErrorCode MatCholeskyFactorSymbolic_SuperLUDIST(Mat F, Mat A, IS r, const MatFactorInfo *info)
 {
   PetscFunctionBegin;
-  PetscCall(MatLUFactorSymbolic_SuperLU_DIST(F, A, r, r, info));
-  F->ops->choleskyfactornumeric = MatLUFactorNumeric_SuperLU_DIST;
+  PetscCall(MatLUFactorSymbolic_SuperLUDIST(F, A, r, r, info));
+  F->ops->choleskyfactornumeric = MatLUFactorNumeric_SuperLUDIST;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -902,7 +902,7 @@ static PetscErrorCode MatView_Info_SuperLU_DIST(Mat A, PetscViewer viewer)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatView_SuperLU_DIST(Mat A, PetscViewer viewer)
+static PetscErrorCode MatView_SuperLUDIST(Mat A, PetscViewer viewer)
 {
   PetscBool         iascii;
   PetscViewerFormat format;
@@ -933,8 +933,8 @@ static PetscErrorCode MatGetFactor_aij_superlu_dist(Mat A, MatFactorType ftype, 
   PetscCall(PetscStrallocpy("superlu_dist", &((PetscObject)B)->type_name));
   PetscCall(MatSetUp(B));
   B->ops->getinfo = MatGetInfo_External;
-  B->ops->view    = MatView_SuperLU_DIST;
-  B->ops->destroy = MatDestroy_SuperLU_DIST;
+  B->ops->view    = MatView_SuperLUDIST;
+  B->ops->destroy = MatDestroy_SuperLUDIST;
 
   /* Set the default input options:
      options.Fact              = DOFACT;
@@ -955,10 +955,10 @@ static PetscErrorCode MatGetFactor_aij_superlu_dist(Mat A, MatFactorType ftype, 
   B->trivialsymbolic = PETSC_TRUE;
   if (ftype == MAT_FACTOR_LU) {
     B->factortype            = MAT_FACTOR_LU;
-    B->ops->lufactorsymbolic = MatLUFactorSymbolic_SuperLU_DIST;
+    B->ops->lufactorsymbolic = MatLUFactorSymbolic_SuperLUDIST;
   } else {
     B->factortype                  = MAT_FACTOR_CHOLESKY;
-    B->ops->choleskyfactorsymbolic = MatCholeskyFactorSymbolic_SuperLU_DIST;
+    B->ops->choleskyfactorsymbolic = MatCholeskyFactorSymbolic_SuperLUDIST;
     options.SymPattern             = YES;
   }
 
@@ -991,7 +991,7 @@ static PetscErrorCode MatGetFactor_aij_superlu_dist(Mat A, MatFactorType ftype, 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_EXTERN PetscErrorCode MatSolverTypeRegister_SuperLU_DIST(void)
+PETSC_EXTERN PetscErrorCode MatSolverTypeRegister_SuperLUDIST(void)
 {
   PetscFunctionBegin;
   PetscCall(MatSolverTypeRegister(MATSOLVERSUPERLU_DIST, MATMPIAIJ, MAT_FACTOR_LU, MatGetFactor_aij_superlu_dist));
