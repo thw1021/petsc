@@ -102,13 +102,13 @@ PETSC_EXTERN PetscErrorCode MatSolverTypeRegister_STRUMPACK(void);
 PETSC_EXTERN PetscErrorCode MatSolverTypeRegister_Pastix(void);
 #endif
 #if defined(PETSC_HAVE_SUPERLU_DIST)
-PETSC_EXTERN PetscErrorCode MatSolverTypeRegister_SuperLU_DIST(void);
+PETSC_EXTERN PetscErrorCode MatSolverTypeRegister_SuperLUDIST(void);
 #endif
 #if defined(PETSC_HAVE_MKL_PARDISO)
-PETSC_EXTERN PetscErrorCode MatSolverTypeRegister_MKL_Pardiso(void);
+PETSC_EXTERN PetscErrorCode MatSolverTypeRegister_MKLPARDISO(void);
 #endif
 #if defined(PETSC_HAVE_MKL_CPARDISO)
-PETSC_EXTERN PetscErrorCode MatSolverTypeRegister_MKL_CPardiso(void);
+PETSC_EXTERN PetscErrorCode MatSolverTypeRegister_MKLCPARDISO(void);
 #endif
 #if defined(PETSC_HAVE_SUITESPARSE)
 PETSC_EXTERN PetscErrorCode MatSolverTypeRegister_SuiteSparse(void);
@@ -410,13 +410,13 @@ PetscErrorCode MatInitializePackage(void)
   PetscCall(MatSolverTypeRegister_Pastix());
 #endif
 #if defined(PETSC_HAVE_SUPERLU_DIST)
-  PetscCall(MatSolverTypeRegister_SuperLU_DIST());
+  PetscCall(MatSolverTypeRegister_SuperLUDIST());
 #endif
 #if defined(PETSC_HAVE_MKL_PARDISO)
-  PetscCall(MatSolverTypeRegister_MKL_Pardiso());
+  PetscCall(MatSolverTypeRegister_MKLPARDISO());
 #endif
 #if defined(PETSC_HAVE_MKL_CPARDISO)
-  PetscCall(MatSolverTypeRegister_MKL_CPardiso());
+  PetscCall(MatSolverTypeRegister_MKLCPARDISO());
 #endif
 #if defined(PETSC_HAVE_SUITESPARSE)
   PetscCall(MatSolverTypeRegister_SuiteSparse());
