@@ -1,0 +1,22 @@
+----------------------------
+Simulation parameters:
+  r    : 0.1
+  eps  : 0.001
+  alpha: 0.75
+  gamma: 0.75
+  D    : 0.01
+  c    : 5.
+  IC   : 0
+  S    : 0
+  x0   : (0.25,0.25)
+----------------------------
+  ---------- Testing Jacobian -------------
+  Run with -snes_test_jacobian_view and optionally -snes_test_jacobian <threshold> to show difference
+    of hand-coded and finite difference Jacobian entries greater than <threshold>.
+  Testing hand-coded Jacobian, if (for double precision runs) ||J - Jfd||_F/||J||_F is
+    O(1.e-8), the hand-coded Jacobian is probably correct.
+  ||J - Jfd||_F/||J||_F = 5.45404e-14, ||J - Jfd||_F = 9.40552e-13
+0 TS: time 0., energy 1.29684
+    ---------- Testing Jacobian -------------
+    ||J - Jfd||_F/||J||_F = 3.56171e-07, ||J - Jfd||_F = 6.16172e-06
+1 TS: time 0.1, energy 1.24867
