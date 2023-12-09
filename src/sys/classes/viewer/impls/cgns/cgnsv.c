@@ -63,6 +63,8 @@ static PetscErrorCode PetscViewerFileClose_CGNS(PetscViewer viewer)
   if (cgv->file_num) PetscCallCGNS(cg_close(cgv->file_num));
 #endif
   cgv->file_num = 0;
+  cgv->base     = 0;
+  cgv->zone     = 0;
   PetscCall(PetscFree(cgv->node_l2g));
   PetscCall(PetscFree(cgv->nodal_field));
   PetscFunctionReturn(PETSC_SUCCESS);
