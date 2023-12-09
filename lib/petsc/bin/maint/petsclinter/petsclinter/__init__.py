@@ -16,7 +16,7 @@ if sys.version_info < __MIN_PYTHON_VERSION__:
 del __MIN_PYTHON_VERSION__
 
 try:
-  import clang.cindex # type: ignore[import]
+  import clang.cindex # type: ignore[import-untyped]
 except ModuleNotFoundError as mnfe:
   if mnfe.name == 'clang':
     raise RuntimeError('Must run e.g. \'python3 -m pip install clang\' to use linter') from mnfe

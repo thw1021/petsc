@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 import itertools
-import clang.cindex as clx # type: ignore[import]
+import clang.cindex as clx # type: ignore[import-untyped]
 
 from .._typing import *
 from .._error  import ParsingError, ClassidNotRegisteredError

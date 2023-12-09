@@ -10,7 +10,7 @@ import enum
 import difflib
 import textwrap
 import collections
-import clang.cindex as clx # type: ignore[import]
+import clang.cindex as clx # type: ignore[import-untyped]
 
 from ..._typing     import *
 from ...__version__ import py_version_lt
@@ -335,7 +335,7 @@ class SectionManager:
       whether the line is a heading
     """
     def handle_header_with_colon(text: str) -> Verdict:
-      if text.endswith('\:'):
+      if text.endswith(r'\:'):
         return Verdict.NOT_HEADING
 
       textlo = text.casefold()
@@ -1102,7 +1102,7 @@ class PetscDocString(DocBase):
           # we could not find a suitable section for it
           assert not line.endswith(r'\:')
           eloc = self.make_source_range(':', line, lineno, offset=line.rfind(':'))
-          mess = f'Sowing treats all lines ending with \':\' as header, are you sure \'{textwrap.shorten(stripped, width=35)}\' qualifies? Use \'\:\' to escape the colon if not'
+          mess = r'Sowing treats all lines ending with \':\' as header, are you sure \'{textwrap.shorten(stripped, width=35)}\' qualifies? Use \'\:\' to escape the colon if not'
           self.add_diagnostic_from_source_range(
             Diagnostic.Kind.ERROR, self.diags.section_header_fishy_header, mess, eloc
           )

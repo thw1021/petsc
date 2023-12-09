@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from .._typing import *
 
-import clang.cindex as clx # type: ignore[import]
+import clang.cindex as clx # type: ignore[import-untyped]
 
 _T = TypeVar('_T')
 _U = TypeVar('_U')

@@ -109,7 +109,7 @@ class WorkerPoolBase(abc.ABC):
       the `WorkerPool` instance
     """
     if clang_lib is None:
-      import clang.cindex as clx # type: ignore[import]
+      import clang.cindex as clx # type: ignore[import-untyped]
       assert clx.conf.loaded, 'Must initialize libClang first'
       clang_lib = clx.conf.get_filename()
 

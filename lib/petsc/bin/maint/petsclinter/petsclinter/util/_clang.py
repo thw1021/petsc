@@ -9,7 +9,7 @@ from .._typing import *
 
 import enum
 import ctypes
-import clang.cindex as clx # type: ignore[import]
+import clang.cindex as clx # type: ignore[import-untyped]
 
 class CXTranslationUnit(enum.IntFlag):
   """
