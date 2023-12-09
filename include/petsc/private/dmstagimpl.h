@@ -69,3 +69,9 @@ PETSC_INTERN PetscErrorCode DMStagSetUniformCoordinatesExplicit_1d(DM, PetscReal
 PETSC_INTERN PetscErrorCode DMStagSetUniformCoordinatesExplicit_2d(DM, PetscReal, PetscReal, PetscReal, PetscReal);
 PETSC_INTERN PetscErrorCode DMStagSetUniformCoordinatesExplicit_3d(DM, PetscReal, PetscReal, PetscReal, PetscReal, PetscReal, PetscReal);
 PETSC_INTERN PetscErrorCode DMStagStencilLocationCanonicalize(DMStagStencilLocation, DMStagStencilLocation *);
+PETSC_EXTERN PetscErrorCode VecView_Stag(Vec, PetscViewer);
+PETSC_EXTERN PetscErrorCode VecView_Stag_Local(Vec, PetscViewer);
+#if defined(PETSC_HAVE_CGNS)
+PETSC_INTERN PetscErrorCode DMView_StagCGNS(DM, PetscViewer);
+PETSC_INTERN PetscErrorCode VecView_Stag_Local_CGNS(Vec, PetscViewer);
+#endif
