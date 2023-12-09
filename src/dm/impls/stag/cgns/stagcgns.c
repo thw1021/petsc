@@ -406,5 +406,6 @@ PetscErrorCode VecView_Stag_Local_CGNS(Vec v, PetscViewer viewer)
     PetscCallCGNS(cgp_field_write_data(cgv->file_num, cgv->base, cgv->zone, sol, field, start, end, x));
   }
   PetscCall(PetscFree(x));
+  PetscCall(PetscViewerCGNSCheckBatch_Internal(viewer));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
