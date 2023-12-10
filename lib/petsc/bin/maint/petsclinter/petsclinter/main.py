@@ -558,7 +558,7 @@ def command_line_main() -> int:
       pl.sync_print('Running with --pm flag, setting number of workers to 1')
     args.workers = 1
     try:
-      import ipdb as py_db # type: ignore[import]
+      import ipdb as py_db # type: ignore[import-not-found]
     except ModuleNotFoundError:
       import pdb as py_db # LINT IGNORE
 

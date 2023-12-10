@@ -49,7 +49,7 @@ class IndentLevel(int):
     return IndentLevel(super().__add__(inc))
 
 def check_valid_type(t: clx.Type) -> bool:
-  import clang.cindex as clx # type: ignore[import]
+  import clang.cindex as clx # type: ignore[import-untyped]
 
   return not t.kind == clx.TypeKind.INVALID
 

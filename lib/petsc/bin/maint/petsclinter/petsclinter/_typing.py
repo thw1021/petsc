@@ -31,7 +31,7 @@ if TYPE_CHECKING:
   import re
   import pathlib
   import weakref
-  import clang.cindex as clx # type: ignore[import]
+  import clang.cindex as clx # type: ignore[import-untyped]
 
   from typing import Any, NoReturn, ClassVar, SupportsInt
 

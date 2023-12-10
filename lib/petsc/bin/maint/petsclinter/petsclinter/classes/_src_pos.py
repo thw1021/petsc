@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import weakref
 import functools
-import clang.cindex as clx # type: ignore[import]
+import clang.cindex as clx # type: ignore[import-untyped]
 
 from .._typing import *
 

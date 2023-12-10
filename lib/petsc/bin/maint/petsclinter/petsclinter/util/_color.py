@@ -5,7 +5,7 @@
 """
 class Color:
   try:
-    import colorama # type: ignore[import]
+    import colorama # type: ignore[import-untyped]
 
     __COLOR_BRIGHT_RED__: str    = colorama.Fore.RED + colorama.Style.BRIGHT
     __COLOR_BRIGHT_YELLOW__: str = colorama.Fore.YELLOW + colorama.Style.BRIGHT
