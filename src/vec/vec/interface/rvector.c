@@ -211,7 +211,7 @@ PetscErrorCode VecNorm(Vec x, NormType type, PetscReal *val)
     PetscBool minflg;
 
     PetscCall(MPIU_Allreduce(&flg, &minflg, 1, MPIU_BOOL, MPI_LAND, PetscObjectComm((PetscObject)x)));
-    PetscCheck(flg == minflg, PetscObjectComm((PetscObject)(x)), PETSC_ERR_ARG_WRONGSTATE, "Some MPI processes have cached norm, others do not. This may happen when some MPI processes call VecGetArray() and some others do not.");
+    PetscCheck(flg == minflg, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Some MPI processes have cached norm, others do not. This may happen when some MPI processes call VecGetArray() and some others do not.");
   }
   if (flg) PetscFunctionReturn(PETSC_SUCCESS);
 
