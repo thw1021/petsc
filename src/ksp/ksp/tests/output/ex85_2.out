@@ -1,0 +1,36 @@
+  0 KSP Residual norm 57.8448 
+  1 KSP Residual norm 0.913119 
+  2 KSP Residual norm 0.0909636 
+  3 KSP Residual norm 0.0022566 
+  4 KSP Residual norm 7.70606e-05 
+  5 KSP Residual norm 3.36407e-06 
+  6 KSP Residual norm 9.11142e-09 
+  7 KSP Residual norm < 1.e-11
+Linear solve converged due to CONVERGED_RTOL iterations 7
+Iteratively computed eigenvalues
+0.910826 + 0.i
+0.920744 + 0.i
+0.998558 + 0.i
+1.01848 + 0.i
+1.01949 + 0.i
+1.03529 + 0.i
+1.13203 + 0.i
+Iteratively computed extreme singular values: max 1.13203 min 0.910826 max/min 1.24286
+KSP Object: 1 MPI process
+  type: fcg
+    m_max=30
+    preallocated 10 directions
+    Using Notay's truncation strategy
+  maximum iterations=10000, initial guess is zero
+  tolerances:  relative=1e-15, absolute=1e-15, divergence=10000.
+  left preconditioning
+  using PRECONDITIONED norm type for convergence test
+PC Object: 1 MPI process
+  type: jacobi
+    type DIAGONAL
+  linear system matrix = precond matrix:
+  Mat Object: 1 MPI process
+    type: seqdense
+    rows=10, cols=10
+    total: nonzeros=100, allocated nonzeros=100
+    total number of mallocs used during MatSetValues calls=0

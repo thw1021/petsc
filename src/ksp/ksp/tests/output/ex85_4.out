@@ -1,0 +1,35 @@
+  0 KSP Residual norm 57.8448 
+  1 KSP Residual norm 0.9097 
+  2 KSP Residual norm 0.0847139 
+  3 KSP Residual norm 0.00221743 
+  4 KSP Residual norm 7.0759e-05 
+  5 KSP Residual norm 3.1978e-06 
+  6 KSP Residual norm 9.00452e-09 
+  7 KSP Residual norm < 1.e-11
+Linear solve converged due to CONVERGED_RTOL iterations 7
+Iteratively computed eigenvalues
+0.910826 + 0.i
+0.920744 + 0.i
+0.998558 + 0.i
+1.01848 + 0.i
+1.01949 + 0.i
+1.03529 + 0.i
+1.13203 + 0.i
+Iteratively computed extreme singular values: max 1.13962 min 0.91056 max/min 1.25156
+KSP Object: 1 MPI process
+  type: gmres
+    restart=30, using Classical (unmodified) Gram-Schmidt Orthogonalization with no iterative refinement
+    happy breakdown tolerance 1e-30
+  maximum iterations=10000, initial guess is zero
+  tolerances:  relative=1e-15, absolute=1e-15, divergence=10000.
+  left preconditioning
+  using PRECONDITIONED norm type for convergence test
+PC Object: 1 MPI process
+  type: jacobi
+    type DIAGONAL
+  linear system matrix = precond matrix:
+  Mat Object: 1 MPI process
+    type: seqdense
+    rows=10, cols=10
+    total: nonzeros=100, allocated nonzeros=100
+    total number of mallocs used during MatSetValues calls=0
