@@ -342,7 +342,7 @@ PETSC_INTERN PetscErrorCode PetscOptionsCheckInitial_Private(const char help[])
     PetscCall((*PetscHelpPrintf)(comm, "%s", PETSC_AUTHOR_INFO));
     PetscCall((*PetscHelpPrintf)(comm, "See https://petsc.org/release/changes for recent updates.\n"));
     PetscCall((*PetscHelpPrintf)(comm, "See https://petsc.org/release/faq for problems.\n"));
-    PetscCall((*PetscHelpPrintf)(comm, "See https://petsc.org/release/manualpages for help. \n"));
+    PetscCall((*PetscHelpPrintf)(comm, "See https://petsc.org/release/manualpages for help.\n"));
     if (!PetscCIEnabledPortableErrorOutput) PetscCall((*PetscHelpPrintf)(comm, "Libraries linked from %s\n", PETSC_LIB_DIR));
     PetscCall((*PetscHelpPrintf)(comm, "----------------------------------------\n"));
   }
@@ -509,9 +509,12 @@ PETSC_INTERN PetscErrorCode PetscOptionsCheckInitial_Private(const char help[])
       if (flg1) PetscCall(PetscLogMPEBegin());
     }
     if (PetscDefined(HAVE_TAU_PERFSTUBS)) {
-      flg1 = PETSC_FALSE;
-      PetscCall(PetscOptionsHasName(NULL, NULL, "-log_perfstubs", &flg1));
-      if (flg1) PetscCall(PetscLogPerfstubsBegin());
+      char     *tau_exec_path       = getenv("TAU_EXEC_PATH");
+      PetscBool start_log_perfstubs = (tau_exec_path != NULL) ? PETSC_TRUE : PETSC_FALSE;
+
+      if (tau_exec_path && !PetscGlobalRank) PetscCall(PetscInfo(NULL, "Detected tau_exec path %s\n", tau_exec_path));
+      PetscCall(PetscOptionsGetBool(NULL, NULL, "-log_perfstubs", &start_log_perfstubs, NULL));
+      if (start_log_perfstubs) PetscCall(PetscLogPerfstubsBegin());
     }
     if (PetscDefined(USE_LOG) && PetscDefined(HAVE_CUDA)) {
       char     *nsys_profiling_session_id = getenv("NSYS_PROFILING_SESSION_ID");

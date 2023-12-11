@@ -910,7 +910,6 @@ static PetscErrorCode TestExpandPoints(DM dm, AppCtx *user)
     }
   }
   PetscCall(PetscViewerRestoreSubViewer(viewer, PETSC_COMM_SELF, &sviewer));
-  PetscCall(PetscViewerFlush(viewer));
   PetscCall(DMPlexRestoreConeRecursive(dm, is, &depth, &iss, &sects));
   PetscCall(ISDestroy(&is));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -995,7 +994,7 @@ static PetscErrorCode DMLabelViewFromOptionsOnComm_Private(DMLabel label, const 
     CHKERRQI(incall, PetscViewerPushFormat(viewer, format));
     CHKERRQI(incall, DMLabelView(label, viewer));
     CHKERRQI(incall, PetscViewerPopFormat(viewer));
-    CHKERRQI(incall, PetscViewerDestroy(&viewer));
+    CHKERRQI(incall, PetscOptionsRestoreViewer(&viewer));
   }
   incall = PETSC_FALSE;
   PetscFunctionReturn(PETSC_SUCCESS);

@@ -1096,7 +1096,7 @@ PetscErrorCode MatAssemblyEnd_SeqAIJ(Mat A, MatAssemblyType mode)
 {
   Mat_SeqAIJ *a      = (Mat_SeqAIJ *)A->data;
   PetscInt    fshift = 0, i, *ai = a->i, *aj = a->j, *imax = a->imax;
-  PetscInt    m = A->rmap->n, *ip, N, *ailen = a->ilen, rmax = 0;
+  PetscInt    m = A->rmap->n, *ip, N, *ailen = a->ilen, rmax = 0, n;
   MatScalar  *aa    = a->a, *ap;
   PetscReal   ratio = 0.6;
 
@@ -1140,8 +1140,15 @@ PetscErrorCode MatAssemblyEnd_SeqAIJ(Mat A, MatAssemblyType mode)
   }
   a->nz = ai[m];
   PetscCheck(!fshift || a->nounused != -1, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Unused space detected in matrix: %" PetscInt_FMT " X %" PetscInt_FMT ", %" PetscInt_FMT " unneeded", m, A->cmap->n, fshift);
-
-  PetscCall(MatMarkDiagonal_SeqAIJ(A));
+  PetscCall(MatMarkDiagonal_SeqAIJ(A)); // since diagonal info is used a lot, it is helpful to set them up at the end of assembly
+  a->diagonaldense = PETSC_TRUE;
+  n                = PetscMin(A->rmap->n, A->cmap->n);
+  for (i = 0; i < n; i++) {
+    if (a->diag[i] >= ai[i + 1]) {
+      a->diagonaldense = PETSC_FALSE;
+      break;
+    }
+  }
   PetscCall(PetscInfo(A, "Matrix size: %" PetscInt_FMT " X %" PetscInt_FMT "; storage space: %" PetscInt_FMT " unneeded,%" PetscInt_FMT " used\n", m, A->cmap->n, fshift, a->nz));
   PetscCall(PetscInfo(A, "Number of mallocs during MatSetValues() is %" PetscInt_FMT "\n", a->reallocs));
   PetscCall(PetscInfo(A, "Maximum nonzeros in any row is %" PetscInt_FMT "\n", rmax));
@@ -1734,9 +1741,13 @@ static PetscErrorCode MatShift_SeqAIJ(Mat A, PetscScalar v)
   if (!cnt) {
     PetscCall(MatShift_Basic(A, v));
   } else {
-    PetscScalar *olda = a->a; /* preserve pointers to current matrix nonzeros structure and values */
-    PetscInt    *oldj = a->j, *oldi = a->i;
-    PetscBool    singlemalloc = a->singlemalloc, free_a = a->free_a, free_ij = a->free_ij;
+    PetscScalar       *olda = a->a; /* preserve pointers to current matrix nonzeros structure and values */
+    PetscInt          *oldj = a->j, *oldi = a->i;
+    PetscBool          singlemalloc = a->singlemalloc, free_a = a->free_a, free_ij = a->free_ij;
+    const PetscScalar *Aa;
+
+    PetscCall(MatSeqAIJGetArrayRead(A, &Aa)); // sync the host
+    PetscCall(MatSeqAIJRestoreArrayRead(A, &Aa));
 
     a->a = NULL;
     a->j = NULL;
@@ -4899,11 +4910,12 @@ PetscErrorCode MatDuplicateNoCreate_SeqAIJ(Mat C, Mat A, MatDuplicateOption cpva
   PetscFunctionBegin;
   PetscCheck(A->assembled || cpvalues == MAT_DO_NOT_COPY_VALUES, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Cannot duplicate unassembled matrix");
 
-  C->factortype = A->factortype;
-  c->row        = NULL;
-  c->col        = NULL;
-  c->icol       = NULL;
-  c->reallocs   = 0;
+  C->factortype    = A->factortype;
+  c->row           = NULL;
+  c->col           = NULL;
+  c->icol          = NULL;
+  c->reallocs      = 0;
+  c->diagonaldense = a->diagonaldense;
 
   C->assembled = A->assembled;
 

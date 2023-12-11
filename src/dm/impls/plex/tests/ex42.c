@@ -241,7 +241,7 @@ static PetscErrorCode SetupDiscretization(DM dm)
   PetscCall(DMPlexSetClosurePermutationTensor(dm, PETSC_DETERMINE, NULL));
   PetscCall(DMGetCoordinateDim(dm, &cnc));
   PetscCall(PetscFECreateDefault(PETSC_COMM_SELF, dim, cnc, simplex, NULL, PETSC_DETERMINE, &cfe));
-  PetscCall(DMProjectCoordinates(dm, cfe));
+  PetscCall(DMSetCoordinateDisc(dm, cfe, PETSC_TRUE));
   PetscCall(PetscFEDestroy(&cfe));
   PetscCall(DMGetCoordinateDM(dm, &cdm));
   PetscCall(DMPlexSetClosurePermutationTensor(cdm, PETSC_DETERMINE, NULL));
@@ -284,7 +284,7 @@ static PetscErrorCode LibCeedSetupByDegree(DM dm, AppCtx *ctx, CeedData *data)
   PetscCall(DMPlexGetCeedRestriction(dm, NULL, 0, 0, 0, &Erestrictu));
   PetscCall(CeedBasisGetNumQuadraturePoints(basisu, &nqpts));
   PetscCall(CeedBasisGetNumQuadraturePoints(basisx, &nqptsx));
-  PetscCheck(nqptsx == nqpts, PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Number of qpoints for u %" PetscInt_FMT " != %" PetscInt_FMT " Number of qpoints for x", nqpts, nqptsx);
+  PetscCheck(nqptsx == nqpts, PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Number of qpoints for u %" CeedInt_FMT " != %" CeedInt_FMT " Number of qpoints for x", nqpts, nqptsx);
   PetscCall(CeedElemRestrictionCreateStrided(ceed, Ncell, nqpts, Nqdata, Nqdata * Ncell * nqpts, CEED_STRIDES_BACKEND, &Erestrictq));
 
   PetscCall(DMGetCoordinatesLocal(dm, &coords));

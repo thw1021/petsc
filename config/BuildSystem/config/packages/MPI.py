@@ -48,15 +48,11 @@ class Configure(config.package.Package):
     self.usingMPIUni      = 0
     self.shared           = 0
     # local state
-    self.commf2c          = 0
-    self.commc2f          = 0
     self.needBatchMPI     = 1
     self.alternativedownload = 'mpich'
     self.haveReduceLocal  = 0
     # support MPI-3 process shared memory
     self.support_mpi3_shm = 0
-    # support MPI-3 non-blocking collectives
-    self.support_mpi3_nbc = 0
     self.mpi_pkg_version  = ''
     self.mpi_pkg          = '' # mpich,mpich2,mpich3,openmpi,intel,intel2,intel3
 
@@ -253,10 +249,13 @@ shared libraries and run with --known-mpi-shared-libraries=1')
       # Support for spaces and () in executable names; also needs to handle optional arguments at the end
       # TODO: This support for spaces and () should be moved to core BuildSystem
       self.mpiexec = self.mpiexec.replace(' ', r'\\ ').replace('(', r'\\(').replace(')', r'\\)').replace(r'\ -',' -')
-      if (hasattr(self, 'ompi_major_version') and int(self.ompi_major_version) >= 3):
-        (out, err, ret) = Configure.executeShellCommand(self.mpiexec+' -help all', checkCommand = noCheck, timeout = 60, log = self.log, threads = 1)
-        if out.find('--oversubscribe') >=0:
-          mpiexecargs += ' --oversubscribe'
+      if hasattr(self, 'ompi_major_version'):
+        if int(self.ompi_major_version) >= 5:
+          mpiexecargs += ' --oversubscribe' # alias to --map-by :OVERSUBSCRIBE
+        elif int(self.ompi_major_version) >= 3:
+          (out, err, ret) = Configure.executeShellCommand(self.mpiexec+' -help all', checkCommand = noCheck, timeout = 60, log = self.log, threads = 1)
+          if out.find('--oversubscribe') >=0:
+            mpiexecargs += ' --oversubscribe'
 
     self.getExecutable(self.mpiexec, getFullPath=1, resultName='mpiexecExecutable',setMakeMacro=0)
 
@@ -414,21 +413,12 @@ Unable to run hostname to check the network')
     '''):
       raise RuntimeError('PETSc requires some of the MPI-2.0 (1997), MPI-2.1 (2008) functions - they are not available with the specified MPI library')
 
-    if self.checkLink('#include <mpi.h>\n', 'int count=2; int blocklens[2]={0,1}; MPI_Aint indices[2]={0,1}; MPI_Datatype old_types[2]={MPI_INT,MPI_DOUBLE}; MPI_Datatype *newtype = 0;\n \
+    if not self.checkLink('#include <mpi.h>\n', 'int count=2; int blocklens[2]={0,1}; MPI_Aint indices[2]={0,1}; MPI_Datatype old_types[2]={MPI_INT,MPI_DOUBLE}; MPI_Datatype *newtype = 0;\n \
                                              if (MPI_Type_create_struct(count, blocklens, indices, old_types, newtype)) { }\n'):
-      self.haveTypeCreateStruct = 1
-    else:
-      self.haveTypeCreateStruct = 0
       self.framework.addDefine('MPI_Type_create_struct(count,lens,displs,types,newtype)', 'MPI_Type_struct((count),(lens),(displs),(types),(newtype))')
-    if self.checkLink('#include <mpi.h>\n', 'MPI_Comm_errhandler_fn * p_err_fun = 0; MPI_Errhandler * p_errhandler = 0; if (MPI_Comm_create_errhandler(p_err_fun,p_errhandler)) { }\n'):
-      self.haveCommCreateErrhandler = 1
-    else:
-      self.haveCommCreateErrhandler = 0
+    if not self.checkLink('#include <mpi.h>\n', 'MPI_Comm_errhandler_fn * p_err_fun = 0; MPI_Errhandler * p_errhandler = 0; if (MPI_Comm_create_errhandler(p_err_fun,p_errhandler)) { }\n'):
       self.framework.addDefine('MPI_Comm_create_errhandler(p_err_fun,p_errhandler)', 'MPI_Errhandler_create((p_err_fun),(p_errhandler))')
-    if self.checkLink('#include <mpi.h>\n', 'if (MPI_Comm_set_errhandler(MPI_COMM_WORLD,MPI_ERRORS_RETURN)) { }\n'):
-      self.haveCommSetErrhandler = 1
-    else:
-      self.haveCommSetErrhandler = 0
+    if not self.checkLink('#include <mpi.h>\n', 'if (MPI_Comm_set_errhandler(MPI_COMM_WORLD,MPI_ERRORS_RETURN)) { }\n'):
       self.framework.addDefine('MPI_Comm_set_errhandler(comm,p_errhandler)', 'MPI_Errhandler_set((comm),(p_errhandler))')
     if self.checkLink('#include <mpi.h>\n', 'if (MPI_Reduce_local(0, 0, 0, MPI_INT, MPI_SUM)) { }\n'): # MPI_Reduce_local is in MPI-2.2
       self.haveReduceLocal = 1
@@ -500,7 +490,6 @@ Unable to run hostname to check the network')
                         if (MPI_Ibarrier(MPI_COMM_WORLD,&req)) return 0;
                       '''):
       self.addDefine('HAVE_MPI_NONBLOCKING_COLLECTIVES', 1)
-      self.support_mpi3_nbc = 1
     if self.checkLink('#include <mpi.h>\n',
                       'MPI_Comm distcomm; \n\
                        MPI_Request req; \n\
@@ -554,6 +543,14 @@ Unable to run hostname to check the network')
       if (MPI_Ineighbor_alltoallv_c(0,0,0,MPI_INT,0,0,0,MPI_INT,MPI_COMM_WORLD,&req)) return 1;
     ''' + ('if (MPI_Reduce_local_c(0,0,0,MPI_INT,MPI_SUM)) return 1;\n' if self.haveReduceLocal == 1 else '')):
       self.addDefine('HAVE_MPI_LARGE_COUNT', 1)
+
+    if self.checkLink('#include <mpi.h>\n',
+    '''
+      MPI_Request req;
+      MPI_Info    info;
+      if (MPI_Neighbor_alltoallv_init(0,0,0,MPI_INT,0,0,0,MPI_INT,MPI_COMM_WORLD,info,&req)) return 1;
+    '''):
+      self.addDefine('HAVE_MPI_PERSISTENT_NEIGHBORHOOD_COLLECTIVES', 1)
 
     self.compilers.CPPFLAGS = oldFlags
     self.compilers.LIBS = oldLibs
@@ -636,8 +633,6 @@ Unable to run hostname to check the network')
     self.framework.addDefine('MPI_Comm_create_errhandler(p_err_fun,p_errhandler)', 'MPI_Errhandler_create((p_err_fun),(p_errhandler))')
     self.framework.addDefine('MPI_Comm_set_errhandler(comm,p_errhandler)', 'MPI_Errhandler_set((comm),(p_errhandler))')
     self.logWrite(self.framework.restoreLog())
-    self.commf2c = 1
-    self.commc2f = 1
     self.usingMPIUni = 1
     self.found = 1
     self.version = 'PETSc MPIUNI uniprocessor MPI replacement'
@@ -694,7 +689,6 @@ Unable to run hostname to check the network')
     if self.fortran.fortranIsF90:
       self.log.write('Checking for mpi.mod\n')
       if self.libraries.check(self.lib,'', call = '       use mpi\n       integer(kind=selected_int_kind(5)) ierr,rank\n       call mpi_init(ierr)\n       call mpi_comm_rank(MPI_COMM_WORLD,rank,ierr)\n'):
-        self.havef90module = 1
         self.addDefine('HAVE_MPI_F90MODULE', 1)
     self.compilers.FPPFLAGS = oldFlags
     self.libraries.popLanguage()
