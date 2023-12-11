@@ -36,4 +36,6 @@ class Configure(config.package.CMakePackage):
   def formCMakeConfigureArgs(self):
     args = config.package.CMakePackage.formCMakeConfigureArgs(self)
     args.append("-DSUITESPARSE_ENABLE_PROJECTS='suitesparse_config;amd;camd;btf;colamd;ccolamd;cholmod;klu;umfpack;spqr'")
+    args.append('-DTPL_BLAS_LIBRARIES="'+self.libraries.toString(self.blasLapack.dlib)+'"')
+    args.append('-DTPL_LAPACK_LIBRARIES="'+self.libraries.toString(self.blasLapack.dlib)+'"')
     return args
