@@ -947,6 +947,7 @@ mswin-intel-cxx-cmplx:
     - mswin-stage3
   variables:
     TEST_ARCH: arch-ci-mswin-intel-cxx-cmplx
+    TIMEOUT: 150
 
 mswin-uni:
   extends:
