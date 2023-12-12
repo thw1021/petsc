@@ -663,12 +663,11 @@ static PetscErrorCode PCSetUp_GAMG(PC pc)
           PetscCall(PetscCDGetASMBlocks(agg_lists, bs, &nASMBlocksArr[level], &ASMLocalIDsArr[level]));
           PetscCall(PetscInfo(pc, "%d: %" PetscInt_FMT " ASM local domains,  bs = %d\n", (int)level, nASMBlocksArr[level], (int)bs));
         } else if (pc_gamg->asm_hem_aggs) {
-          const PetscReal vfilter = pc_gamg->threshold[level];
           MatCoarsen      crs;
           const char     *prefix;
           PetscInt        bs;
           PetscCall(PetscCDDestroy(agg_lists));
-          PetscCall(PetscInfo(pc, "HEM ASM passes = %d, use coarsening filter %g Gmat = %p\n", (int)pc_gamg->asm_hem_aggs, (double)vfilter, Gmat));
+          PetscCall(PetscInfo(pc, "HEM ASM passes = %d\n", (int)pc_gamg->asm_hem_aggs));
           PetscCall(MatCoarsenCreate(PetscObjectComm((PetscObject)pc), &crs));
           PetscCall(PetscObjectGetOptionsPrefix((PetscObject)pc, &prefix));
           PetscCall(PetscObjectSetOptionsPrefix((PetscObject)crs, prefix));
