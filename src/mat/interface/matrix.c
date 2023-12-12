@@ -4729,7 +4729,7 @@ PetscErrorCode MatFactorGetPreferredOrdering(Mat mat, MatFactorType ftype, MatOr
 
   Input Parameters:
 + mat   - the matrix
-. type  - name of solver type, for example, superlu, petsc (to use PETSc's default), if this is 'NULL' then the first result that satisfies
+. type  - name of solver type, for example, superlu, petsc (to use PETSc's solver if it is available), if this is 'NULL' then the first result that satisfies
           the other criteria is returned
 - ftype - factor type, `MAT_FACTOR_LU`, `MAT_FACTOR_CHOLESKY`, `MAT_FACTOR_ICC`, `MAT_FACTOR_ILU`, `MAT_FACTOR_QR`
 
@@ -4750,7 +4750,7 @@ PetscErrorCode MatFactorGetPreferredOrdering(Mat mat, MatFactorType ftype, MatOr
   Users usually access the factorization solvers via `KSP`
 
   Some PETSc matrix formats have alternative solvers available that are contained in alternative packages
-  such as pastix, superlu, mumps etc. PETSc must have been ./configure to use the external solver, using the option --download-package
+  such as pastix, superlu, mumps etc. PETSc must have been ./configure to use the external solver, using the option --download-package or --with-package-dir
 
   When `type` is `NULL` the available results are searched for based on the order of the calls to `MatSolverTypeRegister()` in `MatInitializePackage()`.
   Since different PETSc configurations may have different external solvers, seemingly identical runs with different PETSc configurations may use a different solver.
