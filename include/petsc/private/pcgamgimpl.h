@@ -26,6 +26,7 @@ typedef struct gamg_TAG {
   PCGAMGLayoutType layout_type;
   PetscBool        cpu_pin_coarse_grids;
   PetscInt         min_eq_proc;
+  PetscInt         asm_hem_aggs;
   PetscInt         coarse_eq_limit;
   PetscReal        threshold_scale;
   PetscReal        threshold[PETSC_MG_MAXLEVELS]; /* common quatity to many AMG methods so keep it up here */
