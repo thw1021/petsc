@@ -668,7 +668,7 @@ static PetscErrorCode PCSetUp_GAMG(PC pc)
           const char     *prefix;
           PetscInt        bs;
           PetscCall(PetscCDDestroy(agg_lists));
-          PetscCall(PetscInfo(pc, "HEM ASM passes = %d, use coarsening filter %g Gmat = %p\n", (int)pc_gamg->asm_hem_aggs, vfilter, Gmat));
+          PetscCall(PetscInfo(pc, "HEM ASM passes = %d, use coarsening filter %g Gmat = %p\n", (int)pc_gamg->asm_hem_aggs, (double)vfilter, Gmat));
           PetscCall(MatCoarsenCreate(PetscObjectComm((PetscObject)pc), &crs));
           PetscCall(PetscObjectGetOptionsPrefix((PetscObject)pc, &prefix));
           PetscCall(PetscObjectSetOptionsPrefix((PetscObject)crs, prefix));
