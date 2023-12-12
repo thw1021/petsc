@@ -2376,7 +2376,7 @@ static PetscErrorCode DMPlexComputeIntegral_Internal(DM dm, Vec X, PetscInt cSta
 @*/
 PetscErrorCode DMPlexComputeIntegralFEM(DM dm, Vec X, PetscScalar *integral, void *user)
 {
-  PetscBool    printFEM = PETSC_FALSE;
+  PetscInt     printFEM;
   PetscScalar *cintegral, *lintegral;
   PetscInt     Nf, f, cellHeight, cStart, cEnd, cell;
 
@@ -2429,7 +2429,7 @@ PetscErrorCode DMPlexComputeIntegralFEM(DM dm, Vec X, PetscScalar *integral, voi
 @*/
 PetscErrorCode DMPlexComputeCellwiseIntegralFEM(DM dm, Vec X, Vec F, void *user)
 {
-  PetscBool    printFEM = PETSC_FALSE;
+  PetscInt     printFEM;
   DM           dmF;
   PetscSection sectionF;
   PetscScalar *cintegral, *af;
