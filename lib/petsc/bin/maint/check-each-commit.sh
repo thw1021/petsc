@@ -1,0 +1,19 @@
+#!/bin/bash -ex
+
+dest=`lib/petsc/bin/maint/check-merge-branch.sh`
+for commit in $(git log --reverse --format=format:%H $dest..HEAD)
+do
+  git checkout $commit
+  git show -q
+  ./configure --with-clanguage=cxx
+  make vermin
+  make checkclangformat
+  make checkbadSource
+  make checkbadFileChange
+  make -f gmakefile check_output
+  make check_petsc4py_rst
+  make CFLAGS=-Werror CXXFLAGS=-Werror FFLAGS=-Werror all
+  make CFLAGS=-Werror CXXFLAGS=-Werror FFLAGS=-Werror check
+  make CFLAGS=-Werror CXXFLAGS=-Werror FFLAGS=-Werror allgtests-tap gmakesearch=snes_tutorials-ex48%
+done
+

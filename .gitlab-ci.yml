@@ -817,6 +817,20 @@ linux-xsdk-dbg:
     TEST_ARCH: arch-ci-linux-xsdk-dbg
     LOAD_MODULES: gcc/12.1.0
 
+check-each-commit:
+  extends:
+    - .stage-2
+    - .linux_test
+    - .coverage-disable
+  tags:
+    - gce-u22-stage2
+  script:
+    - export PATH=/nfs/gce/projects/petsc/soft/clang+llvm-16.0.0-x86_64-linux-gnu-ubuntu-18.04/bin:$PATH
+    - lib/petsc/bin/maint/check-each-commit.sh
+  except:
+    variables:
+      - $PETSC_CI_SCHEDULED =~ /yes/
+
 linux-analyzer:
   extends:
     - .stage-2
@@ -947,6 +961,7 @@ mswin-intel-cxx-cmplx:
     - mswin-stage3
   variables:
     TEST_ARCH: arch-ci-mswin-intel-cxx-cmplx
+    TIMEOUT: 150
 
 mswin-uni:
   extends:
