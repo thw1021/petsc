@@ -629,7 +629,7 @@ static PetscErrorCode MonitorEnergy(TS ts, PetscInt steps, PetscReal time, Vec u
   PetscCall(DMGetDS(dm, &ds));
   PetscCall(PetscDSSetObjective(ds, C_FIELD_ID, energy));
   PetscCall(DMPlexComputeIntegralFEM(dm, u, vals, NULL));
-  PetscCall(PetscPrintf(PetscObjectComm((PetscObject)ts), "%" PetscInt_FMT " TS: time %g, energy %g\n", steps, time, vals[0]));
+  PetscCall(PetscPrintf(PetscObjectComm((PetscObject)ts), "%" PetscInt_FMT " TS: time %g, energy %g\n", steps, (double)time, (double)PetscRealPart(vals[0])));
   PetscCall(PetscDSSetObjective(ds, C_FIELD_ID, NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
