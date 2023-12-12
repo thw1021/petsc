@@ -781,7 +781,6 @@ static PetscErrorCode VecDuplicateVecs_Seq_GEMV(Vec w, PetscInt m, Vec *V[])
     // But replacearray of others is ok, as they don't own their array.
     if (m > 1) (*V)[0]->ops->replacearray = NULL;
   }
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

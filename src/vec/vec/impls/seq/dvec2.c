@@ -552,8 +552,12 @@ static PetscErrorCode VecMultiDot_Seq_GEMV(PetscBool conjugate, Vec xin, PetscIn
     // we found m vectors yin[i..j)
     m = j - i;
     if (m > 1) {
-      PetscBLASInt ione = 1, lda2 = (PetscBLASInt)lda;
+      PetscBLASInt ione = 1, lda2;
+      PetscInt     tmp;
       PetscScalar  one = 1, zero = 0;
+
+      PetscCall(PetscIntCast(lda, &tmp));
+      PetscCall(PetscBLASIntCast(tmp, &lda2));
       PetscCallBLAS("BLASgemv", BLASgemv_(trans, &n, &m, &one, yarray, &lda2, xarray, &ione, &zero, z + i, &ione));
       PetscCall(PetscLogFlops(PetscMax(m * (2.0 * n - 1), 0.0)));
     } else {

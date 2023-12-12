@@ -60,8 +60,6 @@ static PetscErrorCode VecDuplicateVecs_MPI_GEMV(Vec w, PetscInt m, Vec *V[])
   Vec_MPI *wmpi = (Vec_MPI *)w->data;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(w, VEC_CLASSID, 1);
-  PetscAssertPointer(V, 3);
   // Currently only do GEMV for vectors without ghosts. Note w might be a VECMPI subclass object.
   // This routine relies on the duplicate operation being VecDuplicate_MPI. If not, bail out to the default.
   if (wmpi->nghost || w->ops->duplicate != VecDuplicate_MPI) {

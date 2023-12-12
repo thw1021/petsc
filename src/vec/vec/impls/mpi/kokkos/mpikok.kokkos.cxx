@@ -283,13 +283,11 @@ static PetscErrorCode VecDuplicateVecs_MPIKokkos_GEMV(Vec w, PetscInt m, Vec *V[
 
   PetscFunctionBegin;
   PetscCall(PetscKokkosInitializeCheck()); // as we'll call kokkos_malloc()
-  PetscValidHeaderSpecific(w, VEC_CLASSID, 1);
-  PetscAssertPointer(V, 3);
-  PetscCall(PetscMalloc1(m, V));
-  if (wmpi->nghost) { // currently only do GEMV optimiation for vectors without ghosts
+  if (wmpi->nghost) {                      // currently only do GEMV optimiation for vectors without ghosts
     w->ops->duplicatevecs = VecDuplicateVecs_Default;
     PetscCall(VecDuplicateVecs(w, m, V));
   } else {
+    PetscCall(PetscMalloc1(m, V));
     PetscCall(VecGetLayout(w, &map));
     lda = ((map->n + 31) / 32) * 32; // make every vector 32-byte aligned
 
