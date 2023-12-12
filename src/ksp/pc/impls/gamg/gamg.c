@@ -663,9 +663,9 @@ static PetscErrorCode PCSetUp_GAMG(PC pc)
           PetscCall(PetscCDGetASMBlocks(agg_lists, bs, &nASMBlocksArr[level], &ASMLocalIDsArr[level]));
           PetscCall(PetscInfo(pc, "%d: %" PetscInt_FMT " ASM local domains,  bs = %d\n", (int)level, nASMBlocksArr[level], (int)bs));
         } else if (pc_gamg->asm_hem_aggs) {
-          MatCoarsen      crs;
-          const char     *prefix;
-          PetscInt        bs;
+          MatCoarsen  crs;
+          const char *prefix;
+          PetscInt    bs;
           PetscCall(PetscCDDestroy(agg_lists));
           PetscCall(PetscInfo(pc, "HEM ASM passes = %d\n", (int)pc_gamg->asm_hem_aggs));
           PetscCall(MatCoarsenCreate(PetscObjectComm((PetscObject)pc), &crs));
