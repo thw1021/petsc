@@ -911,7 +911,7 @@ PetscErrorCode VecCreate_Seq_Private(Vec v, const PetscScalar array[])
   PetscCall(PetscNew(&s));
   v->ops[0] = DvOps;
 
-  PetscCall(PetscOptionsGetBool(NULL, NULL, "-vec_mdot_use_gemv", &use_gemv, NULL));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-vec_multiop_use_gemv", &use_gemv, NULL));
   if (use_gemv) {
     v->ops[0].duplicatevecs = VecDuplicateVecs_Seq_GEMV;
     v->ops[0].mdot          = VecMDot_Seq_GEMV;

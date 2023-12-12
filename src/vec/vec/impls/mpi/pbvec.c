@@ -541,7 +541,7 @@ PetscErrorCode VecCreate_MPI_Private(Vec v, PetscBool alloc, PetscInt nghost, co
   v->data   = (void *)s;
   v->ops[0] = DvOps;
 
-  PetscCall(PetscOptionsGetBool(NULL, NULL, "-vec_mdot_use_gemv", &use_gemv, NULL));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-vec_multiop_use_gemv", &use_gemv, NULL));
   if (use_gemv) {
     v->ops[0].duplicatevecs = VecDuplicateVecs_MPI_GEMV;
     v->ops[0].mdot          = VecMDot_MPI_GEMV;

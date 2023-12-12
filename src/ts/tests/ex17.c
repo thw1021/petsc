@@ -165,7 +165,7 @@ int main(int argc, char **argv)
 /*TEST
   testset:
     # using gemv gives larger error which failed error checking
-    args: -vec_mdot_use_gemv 0
+    args: -vec_multiop_use_gemv 0
 
     test:
       suffix: bdf

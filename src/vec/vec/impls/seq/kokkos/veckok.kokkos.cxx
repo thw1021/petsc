@@ -1877,7 +1877,7 @@ PetscErrorCode VecCreate_SeqKokkos(Vec v)
   vecseq = static_cast<Vec_Seq *>(v->data);
   PetscCallCXX(v->spptr = new Vec_Kokkos(v->map->n, vecseq->array, NULL)); // Let host claim it has the latest data (zero)
   v->offloadmask = PETSC_OFFLOAD_KOKKOS;
-  PetscCall(PetscOptionsGetBool(NULL, NULL, "-vec_mdot_use_gemv", &use_gemv, NULL));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-vec_multiop_use_gemv", &use_gemv, NULL));
   if (use_gemv) {
     v->ops[0].duplicatevecs = VecDuplicateVecs_SeqKokkos_GEMV; // allocate the multiple vectors together
     v->ops[0].mdot          = VecMDot_SeqKokkos_GEMV;
