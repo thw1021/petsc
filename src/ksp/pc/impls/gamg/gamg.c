@@ -642,9 +642,9 @@ static PetscErrorCode PCSetUp_GAMG(PC pc)
 
       PetscCall(PCGAMGCreateGraph(pc, Aarr[level], &Gmat));
       PetscCall(pc_gamg->ops->coarsen(pc, &Gmat, &agg_lists)); // Gmat may have ghosts for QR aggregates not in matrix
-      PetscCall(pc_gamg->ops->prolongator(pc, Aarr[level], agg_lists, &Prol11));
       PetscCall(PetscCDGetMat(agg_lists, &mat));
-      if (mat == Gmat) PetscCall(PetscCDClearMat(agg_lists)); // take the Mat away from the list (yuck)
+      if (!mat) PetscCall(PetscCDSetMat(agg_lists, Gmat));
+      PetscCall(pc_gamg->ops->prolongator(pc, Aarr[level], agg_lists, &Prol11));
       /* could have failed to create new level */
       if (Prol11) {
         const char *prefix;
@@ -667,6 +667,8 @@ static PetscErrorCode PCSetUp_GAMG(PC pc)
           MatCoarsen  crs;
           const char *prefix;
           PetscInt    bs;
+          PetscCall(PetscCDGetMat(agg_lists, &mat));
+          if (mat == Gmat) PetscCall(PetscCDClearMat(agg_lists)); // take the Mat away from the list (yuck)
           PetscCall(PetscCDDestroy(agg_lists));
           PetscCall(PetscInfo(pc, "HEM ASM passes = %d\n", (int)pc_gamg->asm_hem_aggs));
           PetscCall(MatCoarsenCreate(PetscObjectComm((PetscObject)pc), &crs));
@@ -685,7 +687,6 @@ static PetscErrorCode PCSetUp_GAMG(PC pc)
           PetscCall(MatGetBlockSizes(Aarr[level], &bs, NULL)); // row block size
           PetscCall(PetscCDGetASMBlocks(agg_lists, bs, &nASMBlocksArr[level], &ASMLocalIDsArr[level]));
         }
-
         PetscCall(PCGetOptionsPrefix(pc, &prefix));
         PetscCall(MatSetOptionsPrefix(Prol11, prefix));
         PetscCall(PetscSNPrintf(addp, sizeof(addp), "pc_gamg_prolongator_%d_", (int)level));
@@ -696,7 +697,8 @@ static PetscErrorCode PCSetUp_GAMG(PC pc)
         PetscCall(MatSetFromOptions(Prol11));
         Parr[level1] = Prol11;
       } else Parr[level1] = NULL; /* failed to coarsen */
-
+      PetscCall(PetscCDGetMat(agg_lists, &mat));
+      if (mat == Gmat) PetscCall(PetscCDClearMat(agg_lists)); // take the Mat away from the list (yuck)
       PetscCall(MatDestroy(&Gmat));
       PetscCall(PetscCDDestroy(agg_lists));
     }                           /* construct prolongator scope */
