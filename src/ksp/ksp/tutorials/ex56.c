@@ -467,7 +467,7 @@ PetscErrorCode elem_3d_elast_v_25(PetscScalar *dd)
      test:
        suffix: 2
        nsize: 8
-       filter: sed -e "s/Linear solve converged due to CONVERGED_RTOL iterations 13/Linear solve converged due to CONVERGED_RTOL iterations 14/g"
+       filter: sed -e "s/Linear solve converged due to CONVERGED_RTOL iterations 14/Linear solve converged due to CONVERGED_RTOL iterations 15/g"
 
    test:
       suffix: latebs
