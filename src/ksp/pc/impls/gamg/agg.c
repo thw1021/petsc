@@ -1140,8 +1140,8 @@ static PetscErrorCode PCGAMGCoarsen_AGG(PC a_pc, Mat *a_Gmat1, PetscCoarsenData 
     PetscCoarsenData *llist = *agg_lists;
     PetscCall(fixAggregatesWithSquare(a_pc, Gmat2, Gmat1, *agg_lists));
     PetscCall(MatDestroy(&Gmat1));
-    *a_Gmat1 = Gmat2; /* output */
-    PetscCall(PetscCDSetMat(llist, *a_Gmat1)); // Need a graph with ghosts here
+    *a_Gmat1 = Gmat2;                          /* output */
+    PetscCall(PetscCDSetMat(llist, *a_Gmat1)); /* Need a graph with ghosts here */
   }
   PetscCall(PetscLogEventEnd(petsc_gamg_setup_events[GAMG_COARSEN], 0, 0, 0, 0));
   PetscFunctionReturn(PETSC_SUCCESS);
