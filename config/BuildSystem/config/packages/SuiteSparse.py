@@ -1,3 +1,5 @@
+import os
+
 import config.package
 
 class Configure(config.package.CMakePackage):
@@ -13,8 +15,13 @@ class Configure(config.package.CMakePackage):
                              ['libspqr.a','libumfpack.a','libklu.a','libcholmod.a','libbtf.a','libccolamd.a','libcolamd.a','libcamd.a','libamd.a','libsuitesparseconfig.a','librt.a'],
                              ['libspqr.a','libumfpack.a','libklu.a','libcholmod.a','libbtf.a','libccolamd.a','libcolamd.a','libcamd.a','libamd.a','libmetis.a','libsuitesparseconfig.a'],
                              ['libspqr.a','libumfpack.a','libklu.a','libcholmod.a','libbtf.a','libccolamd.a','libcolamd.a','libcamd.a','libamd.a','libmetis.a','libsuitesparseconfig.a','librt.a']]
-    self.functions         = ['umfpack_dl_wsolve','cholmod_l_solve','klu_l_solve','SuiteSparseQR_C_solve']
-    self.includes          = ['suitesparse/umfpack.h','suitesparse/cholmod.h','suitesparse/klu.h','suitesparse/SuiteSparseQR_C.h','suitesparse/amd.h']
+    self.functions        = ['umfpack_dl_wsolve','cholmod_l_solve','klu_l_solve','SuiteSparseQR_C_solve']
+    self.includes         = ['umfpack.h','cholmod.h','klu.h','SuiteSparseQR_C.h','amd.h']
+    version_major         = int(self.version.split('.')[0])
+    version_minor         = int(self.version.split('.')[1])
+    if version_major > 7 or (version_major == 7 and version_minor >= 4):
+        self.includes       = ['suitesparse/'+include for include in self.includes]
+        self.includedir     = os.path.join('include', 'suitesparse')
     self.hastests          = 1
     self.buildLanguages    = ['Cxx']
     self.hastestsdatafiles = 1
