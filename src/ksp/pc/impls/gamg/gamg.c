@@ -636,14 +636,15 @@ static PetscErrorCode PCSetUp_GAMG(PC pc)
     PetscCall(PetscLogStagePush(gamg_stages[level]));
 #endif
     { /* construct prolongator */
-      Mat               Gmat;
+      Mat               Gmat, mat;
       PetscCoarsenData *agg_lists;
       Mat               Prol11;
 
       PetscCall(PCGAMGCreateGraph(pc, Aarr[level], &Gmat));
       PetscCall(pc_gamg->ops->coarsen(pc, &Gmat, &agg_lists)); // Gmat may have ghosts for QR aggregates not in matrix
-      PetscCall(pc_gamg->ops->prolongator(pc, Aarr[level], Gmat, agg_lists, &Prol11));
-
+      PetscCall(pc_gamg->ops->prolongator(pc, Aarr[level], agg_lists, &Prol11));
+      PetscCall(PetscCDGetMat(agg_lists, &mat));
+      if (mat == Gmat) PetscCall(PetscCDClearMat(agg_lists)); // take the Mat away from the list (yuck)
       /* could have failed to create new level */
       if (Prol11) {
         const char *prefix;
@@ -1613,6 +1614,7 @@ static PetscErrorCode PCSetFromOptions_GAMG(PC pc, PetscOptionItems *PetscOption
   PetscInt           i, n;
   const char        *pcpre;
   static const char *LayoutTypes[] = {"compact", "spread", "PCGAMGLayoutType", "PC_GAMG_LAYOUT", NULL};
+
   PetscFunctionBegin;
   PetscCall(PetscObjectGetComm((PetscObject)pc, &comm));
   PetscOptionsHeadBegin(PetscOptionsObject, "GAMG options");

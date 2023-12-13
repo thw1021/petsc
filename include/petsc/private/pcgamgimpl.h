@@ -7,7 +7,7 @@
 struct _PCGAMGOps {
   PetscErrorCode (*creategraph)(PC, Mat, Mat *);
   PetscErrorCode (*coarsen)(PC, Mat *, PetscCoarsenData **);
-  PetscErrorCode (*prolongator)(PC, Mat, Mat, PetscCoarsenData *, Mat *);
+  PetscErrorCode (*prolongator)(PC, Mat, PetscCoarsenData *, Mat *);
   PetscErrorCode (*optprolongator)(PC, Mat, Mat *);
   PetscErrorCode (*createlevel)(PC, Mat, PetscInt, Mat *, Mat *, PetscMPIInt *, IS *, PetscBool);
   PetscErrorCode (*createdefaultdata)(PC, Mat); /* for data methods that have a default (SA) */
