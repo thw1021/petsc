@@ -5,7 +5,7 @@ C/Fortran API
   `MPI Documentation <https://www.open-mpi.org/doc/current/>`__
 
 The manual pages are split into four categories; we recommend
-begining with basic functionality and then gradually exploring more
+beginning with basic functionality and then gradually exploring more
 sophisticated library features.
 See :any:`ch_fortran` for API differences.
 

@@ -126,7 +126,7 @@ provided by ``DMDAGetCorners()``.
 Setting Routines and Contexts
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Some PETSc functions take as arguments user functions and contexts for the function. For example
+Some PETSc functions take as arguments user-functions and contexts for the function. For example
 
 .. code-block:: fortran
 
@@ -145,7 +145,7 @@ where ``func`` has the calling sequence
    Vec x,f
    PetscErrorCode ierr
 
-and ``ctx`` can be almost anything (represented as ``void *`` in C.
+and ``ctx`` can be almost anything (represented as ``void *`` in C).
 
 It can be a Fortran derived type as in
 
@@ -204,7 +204,7 @@ When a function pointer (declared as external in Fortran) is passed as an argume
 it is assumed that this
 function references a routine written in the same language as the PETSc
 interface function that was called. For instance, if
-``SNESSetFunction()`` is called from C, the unction must be a C function. Likewise, if it is called from Fortran, the
+``SNESSetFunction()`` is called from C, the function must be a C function. Likewise, if it is called from Fortran, the
 function must be (a subroutine) written in Fortran.
 
 .. _sec_fortcompile:
