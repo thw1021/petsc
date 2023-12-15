@@ -459,7 +459,7 @@ int main(int argc, char **args)
     timeoutfactor: 2
     test:
       suffix: 0
-      args: -run_type 1 -max_conv_its 3 -mat_coarsen_type hem -mat_coarsen_max_it 5  -pc_gamg_asm_hem_aggs 4
+      args: -run_type 1 -max_conv_its 3 -mat_coarsen_type hem -mat_coarsen_max_it 5  -pc_gamg_asm_hem_aggs 4 -ksp_rtol 1.e-6
       filter: sed -e "s/Linear solve converged due to CONVERGED_RTOL iterations 17/Linear solve converged due to CONVERGED_RTOL iterations 16/g"
     test:
       suffix: 1
