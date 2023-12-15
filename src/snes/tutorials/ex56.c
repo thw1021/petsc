@@ -460,7 +460,7 @@ int main(int argc, char **args)
     test:
       suffix: 0
       args: -run_type 1 -max_conv_its 3 -mat_coarsen_type hem -mat_coarsen_max_it 5  -pc_gamg_asm_hem_aggs 4
-      filter: sed -e "s/Linear solve converged due to CONVERGED_RTOL iterations 13/Linear solve converged due to CONVERGED_RTOL iterations 12/g"
+      filter: sed -e "s/Linear solve converged due to CONVERGED_RTOL iterations 17/Linear solve converged due to CONVERGED_RTOL iterations 16/g"
     test:
       suffix: 1
       args: -run_type 2 -max_conv_its 2
