@@ -39,6 +39,18 @@ class Configure(config.package.CMakePackage):
   def formCMakeConfigureArgs(self):
     args = config.package.CMakePackage.formCMakeConfigureArgs(self)
     args.append('-DSUITESPARSE_ENABLE_PROJECTS="suitesparse_config;amd;camd;btf;colamd;ccolamd;cholmod;klu;umfpack;spqr"')
+
     args.append('-DBLA_VENDOR=Generic')
     args.append('-DBLAS_LIB="'+self.libraries.toString(self.blasLapack.dlib)+'"')
+
+    if self.cuda.found and False:
+      args.append('-DENABLE_CUDA=ON')
+    else:
+      args.append('-DENABLE_CUDA=OFF')
+
+    if self.openmp.found:
+      args.append('-DNOPENMP=OFF')
+    else:
+      args.append('-DNOPENMP=ON')
+
     return args
