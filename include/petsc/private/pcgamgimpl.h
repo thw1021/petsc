@@ -3,7 +3,7 @@
 #include <petsc/private/pcimpl.h>
 #include <petsc/private/pcmgimpl.h> /*I "petscksp.h" I*/
 #include <petsc/private/matimpl.h>
-#include <petscmatcoarsen.h>        /*I "petscmatcoarsen.h" I*/
+#include <petscmatcoarsen.h> /*I "petscmatcoarsen.h" I*/
 
 struct _PCGAMGOps {
   PetscErrorCode (*creategraph)(PC, Mat, Mat *);
