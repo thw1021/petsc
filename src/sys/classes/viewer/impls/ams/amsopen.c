@@ -44,7 +44,7 @@ PetscErrorCode PetscViewerSAWsOpen(MPI_Comm comm, PetscViewer *lab)
   Collective
 
   Input Parameters:
-+ obj    - the `PetscObject` variable. Thus must be cast with a (`PetscObject`), for example, `PetscObjectSetName`((`PetscObject`)mat,name);
++ obj    - the `PetscObject` variable. It must be cast with a (`PetscObject`), for example, `PetscObjectSetName`((`PetscObject`)mat,name);
 - viewer - the SAWs viewer
 
   Level: advanced
