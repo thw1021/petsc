@@ -562,6 +562,30 @@ struct _MatCoarsenOps {
   PetscErrorCode (*view)(MatCoarsen, PetscViewer);
 };
 
+/* linked list for aggregates */
+typedef struct _PetscCDIntNd {
+  struct _PetscCDIntNd *next;
+  PetscInt              gid;
+} PetscCDIntNd;
+
+/* only used by node pool */
+typedef struct _PetscCDArrNd {
+  struct _PetscCDArrNd *next;
+  struct _PetscCDIntNd *array;
+} PetscCDArrNd;
+
+/* linked list data structure that encodes aggregates and C-F points with array[idx] == NULL for F point and array of indices in an aggregate or C point (first index is always global index my0 + idx */
+typedef struct _PetscCoarsenData {
+  PetscCDArrNd   pool_list; /* node pool */
+  PetscCDIntNd  *new_node;
+  PetscInt       new_left;
+  PetscInt       chk_sz; /* chunk size */
+  PetscCDIntNd  *extra_nodes;
+  PetscCDIntNd **array; /* Array of lists */
+  PetscInt       size;  /* size of 'array' */
+  Mat            mat;   /* cache a Mat for communication data */
+} PetscCoarsenData;
+
 #define MAT_COARSEN_STRENGTH_INDEX_SIZE 3
 struct _p_MatCoarsen {
   PETSCHEADER(struct _MatCoarsenOps);
@@ -1611,6 +1635,43 @@ static inline PetscErrorCode PetscLLCondensedDestroy_fast(PetscInt *lnk)
 {
   return PetscFree(lnk);
 }
+
+PETSC_EXTERN PetscErrorCode MatCoarsenCreate(MPI_Comm, MatCoarsen *);
+PETSC_EXTERN PetscErrorCode MatCoarsenSetType(MatCoarsen, MatCoarsenType);
+PETSC_EXTERN PetscErrorCode MatCoarsenSetAdjacency(MatCoarsen, Mat);
+PETSC_EXTERN PetscErrorCode MatCoarsenSetGreedyOrdering(MatCoarsen, const IS);
+PETSC_EXTERN PetscErrorCode MatCoarsenSetStrictAggs(MatCoarsen, PetscBool);
+PETSC_EXTERN PetscErrorCode MatCoarsenGetData(MatCoarsen, PetscCoarsenData **);
+PETSC_EXTERN PetscErrorCode MatCoarsenApply(MatCoarsen);
+PETSC_EXTERN PetscErrorCode MatCoarsenDestroy(MatCoarsen *);
+PETSC_EXTERN PetscErrorCode MatCoarsenRegister(const char[], PetscErrorCode (*)(MatCoarsen));
+PETSC_EXTERN PetscErrorCode MatCoarsenView(MatCoarsen, PetscViewer);
+PETSC_EXTERN PetscErrorCode MatCoarsenSetFromOptions(MatCoarsen);
+PETSC_EXTERN PetscErrorCode MatCoarsenGetType(MatCoarsen, MatCoarsenType *);
+PETSC_EXTERN PetscErrorCode MatCoarsenViewFromOptions(MatCoarsen, PetscObject, const char[]);
+
+PETSC_EXTERN PetscErrorCode PetscCDCreate(PetscInt, PetscCoarsenData **);
+PETSC_EXTERN PetscErrorCode PetscCDDestroy(PetscCoarsenData *);
+PETSC_EXTERN PetscErrorCode PetscCDIntNdSetID(PetscCDIntNd *, PetscInt);
+PETSC_EXTERN PetscErrorCode PetscCDIntNdGetID(const PetscCDIntNd *, PetscInt *);
+PETSC_EXTERN PetscErrorCode PetscCDAppendID(PetscCoarsenData *, PetscInt, PetscInt);
+PETSC_EXTERN PetscErrorCode PetscCDMoveAppend(PetscCoarsenData *, PetscInt, PetscInt);
+PETSC_EXTERN PetscErrorCode PetscCDAppendNode(PetscCoarsenData *, PetscInt, PetscCDIntNd *);
+PETSC_EXTERN PetscErrorCode PetscCDRemoveNextNode(PetscCoarsenData *, PetscInt, PetscCDIntNd *);
+PETSC_EXTERN PetscErrorCode PetscCDCountAt(const PetscCoarsenData *, PetscInt, PetscInt *);
+PETSC_EXTERN PetscErrorCode PetscCDIsEmptyAt(const PetscCoarsenData *, PetscInt, PetscBool *);
+PETSC_EXTERN PetscErrorCode PetscCDSetChunkSize(PetscCoarsenData *, PetscInt);
+PETSC_EXTERN PetscErrorCode PetscCDPrint(const PetscCoarsenData *, PetscInt, MPI_Comm);
+PETSC_EXTERN PetscErrorCode PetscCDGetNonemptyIS(PetscCoarsenData *, IS *);
+PETSC_EXTERN PetscErrorCode PetscCDGetMat(PetscCoarsenData *, Mat *);
+PETSC_EXTERN PetscErrorCode PetscCDSetMat(PetscCoarsenData *, Mat);
+PETSC_EXTERN PetscErrorCode PetscCDClearMat(PetscCoarsenData *);
+PETSC_EXTERN PetscErrorCode PetscCDRemoveAllAt(PetscCoarsenData *, PetscInt);
+PETSC_EXTERN PetscErrorCode PetscCDCount(const PetscCoarsenData *, PetscInt *_sz);
+
+PETSC_EXTERN PetscErrorCode PetscCDGetHeadPos(const PetscCoarsenData *, PetscInt, PetscCDIntNd **);
+PETSC_EXTERN PetscErrorCode PetscCDGetNextPos(const PetscCoarsenData *, PetscInt, PetscCDIntNd **);
+PETSC_EXTERN PetscErrorCode PetscCDGetASMBlocks(const PetscCoarsenData *, const PetscInt, PetscInt *, IS **);
 
 /* this is extern because it is used in MatFDColoringUseDM() which is in the DM library */
 PETSC_EXTERN PetscErrorCode MatFDColoringApply_AIJ(Mat, MatFDColoring, Vec, void *);
