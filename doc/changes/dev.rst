@@ -43,6 +43,7 @@ Changes: Development
 .. rubric:: Vec:
 
 - Add ``VecGhostGetGhostIS()`` to get the ghost indices of a ghosted vector
+- Add ``-vec_multiop_use_gemv`` to let ``VecMDot()``, ``VecMAXPY()`` etc use BLAS2 ``gemv()`` instead of custom unrolled kernel. Default is on
 
 .. rubric:: PetscSection:
 
