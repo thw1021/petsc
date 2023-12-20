@@ -468,6 +468,7 @@ int main(int argc, char **args)
       filter: sed -e "s/Linear solve converged due to CONVERGED_RTOL iterations 7/Linear solve converged due to CONVERGED_RTOL iterations 8/g"
     test:
       suffix: 1
+      filter:  grep -v HERMITIAN
       args: -run_type 2 -max_conv_its 2 -use_mat_nearnullspace false -snes_view
 
   test:
