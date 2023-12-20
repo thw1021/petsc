@@ -32,8 +32,7 @@ class Configure(config.package.CMakePackage):
     self.deps       = [self.blasLapack,self.mathlib]
     self.cuda       = framework.require('config.packages.cuda',self)
     self.openmp     = framework.require('config.packages.openmp',self)
-    self.metis      = framework.require('config.packages.metis',self)
-    self.odeps      = [self.openmp,self.cuda,self.metis]
+    self.odeps      = [self.openmp,self.cuda]
     return
 
   def formCMakeConfigureArgs(self):
