@@ -56,7 +56,7 @@ PetscErrorCode PetscViewerSAWsOpen(MPI_Comm comm, PetscViewer *lab)
   Developer Notes:
   Currently this is called only on MPI rank 0 of `PETSC_COMM_WORLD`
 
-.seealso: [](sec_viewers), `PetscViewer`, `PetscObject`, `PetscObjectSetName()`, `PetscObjectSAWsViewOff()`
+.seealso: [](sec_viewers), `PetscViewer`, `PetscObject`, `PetscObjectSetName()`
 @*/
 PetscErrorCode PetscObjectViewSAWs(PetscObject obj, PetscViewer viewer)
 {

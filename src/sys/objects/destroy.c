@@ -34,7 +34,7 @@ PetscErrorCode PetscComposedQuantitiesDestroy(PetscObject obj)
   Collective
 
   Input Parameter:
-. obj - any PETSc object, for example a `Vec`, `Mat` or `KSP`.It must be cast with a (`PetscObject`*), for example,
+. obj - any PETSc object, for example a `Vec`, `Mat` or `KSP`. It must be cast with a (`PetscObject`*), for example,
         `PetscObjectDestroy`((`PetscObject`*)&mat);
 
   Level: beginner

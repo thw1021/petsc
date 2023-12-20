@@ -98,7 +98,7 @@ PetscErrorCode PetscObjectGetTabLevel(PetscObject obj, PetscInt *tab)
   Notes:
   this is used to manage the output from options that are embedded in other objects. For example
   the `KSP` object inside a `SNES` object. By indenting each lower level further the hierarchy of objects
-  is vclear.
+  is clear.
 
   `PetscObjectIncrementTabLevel()` is the preferred API
 

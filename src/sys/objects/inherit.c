@@ -336,7 +336,7 @@ PetscErrorCode PetscObjectGetFortranCallback(PetscObject obj, PetscFortranCallba
   Level: advanced
 
   Note:
-  On MPI rank 0 of `PETSC_COMM_WORLD` prints the values
+  Only MPI rank 0 of `PETSC_COMM_WORLD` prints the values
 
 .seealso: `PetscObject`
 @*/
@@ -434,7 +434,6 @@ PetscErrorCode PetscObjectsGetObject(const char *name, PetscObject *obj, char **
 
   PetscFunctionBegin;
   PetscAssertPointer(name, 1);
-  PetscAssertPointer(obj, 2);
   if (obj) *obj = NULL;
   for (i = 0; i < PetscObjectsMaxCounts; i++) {
     if ((h = PetscObjects[i])) {
