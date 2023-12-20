@@ -500,6 +500,8 @@ int main(int argc, char **argv)
   /* Here, we can see the elements in the overlap within the IS: they are the ones with negative indices */
   PetscCall(ISView(lISCellWithOvl, PETSC_VIEWER_STDOUT_WORLD));
 
+  PetscCall(PetscSFDestroy(&lSFMigrationOvl));
+  PetscCall(DMDestroy(&ddm_with_overlap));
   PetscCall(PetscSFDestroy(&sfMig));
   PetscCall(PetscSFDestroy(&sfPart));
   PetscCall(DMDestroy(&dm));
