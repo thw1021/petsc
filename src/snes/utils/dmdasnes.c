@@ -305,7 +305,7 @@ PetscErrorCode DMDASNESSetFunctionLocalVec(DM dm, InsertMode imode, PetscErrorCo
   Level: beginner
 
   Note:
-  The `J` (and `M`) matrix are created internally by `DMCreateMatrix()`
+  The `J` and `M` matrices are created internally by `DMCreateMatrix()`
 
 .seealso: [](ch_snes), `DMDA`, `DMDASNESSetFunctionLocal()`, `DMSNESSetJacobian()`, `DMDACreate1d()`, `DMDACreate2d()`, `DMDACreate3d()`
 @*/
