@@ -1,7 +1,7 @@
 -include ../../../../petscdir.mk
 
 LIBBASE  = libpetscksp
-DIRS     = lmvm schurm
+DIRS     = lmvm schurm dm
 MANSEC   = KSP
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
