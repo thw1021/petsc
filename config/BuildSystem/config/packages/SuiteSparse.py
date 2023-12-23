@@ -40,10 +40,10 @@ class Configure(config.package.CMakePackage):
     args.append('-DSUITESPARSE_ENABLE_PROJECTS="suitesparse_config;amd;camd;btf;colamd;ccolamd;cholmod;klu;umfpack;spqr"')
     args.append('-DCMAKE_INSTALL_RPATH_USE_LINK_PATH:BOOL=ON')
 
-    args.append('-DBLA_VENDOR=Generic')
-    args.append('-DBLAS_LIB="'+self.libraries.toString(self.blasLapack.dlib)+'"')
+    args.append('-DBLA_VENDOR:STRING=Generic')
+    args.append('-DBLAS_LIB:STRING="'+self.libraries.toString(self.blasLapack.dlib)+'"')
 
-    args.append('-DSUITESPARSE_USE_CUDA='+('ON' if self.cuda.found else 'OFF'))
-    args.append('-DSUITESPARSE_USE_OPENMP='+('ON' if self.openmp.found else 'OFF'))
+    args.append('-DSUITESPARSE_USE_CUDA:BOOL='+('ON' if self.cuda.found else 'OFF'))
+    args.append('-DSUITESPARSE_USE_OPENMP:BOOL='+('ON' if self.openmp.found else 'OFF'))
 
     return args
