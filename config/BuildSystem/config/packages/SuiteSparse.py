@@ -6,9 +6,9 @@ class Configure(config.package.CMakePackage):
   def __init__(self, framework):
     config.package.CMakePackage.__init__(self, framework)
     self.minversion        = '7.4.0'
-    self.version           = '7.4.0.beta4'
+    self.version           = '7.4.0.beta7'
     self.versioninclude    = 'SuiteSparse_config.h'
-    self.versionname       = 'SUITESPARSE_MAJOR_VERSION.SUITESPARSE_MINOR_VERSION.SUITESPARSE_PATCH_VERSION'
+    self.versionname       = 'SUITESPARSE_MAIN_VERSION.SUITESPARSE_SUB_VERSION.SUITESPARSE_SUBSUB_VERSION'
     self.gitcommit         = 'v'+self.version
     self.download          = ['git://https://github.com/DrTimothyAldenDavis/SuiteSparse','https://github.com/DrTimothyAldenDavis/SuiteSparse/archive/'+self.gitcommit+'.tar.gz']
     self.liblist           = [['libspqr.a','libumfpack.a','libklu.a','libcholmod.a','libbtf.a','libccolamd.a','libcolamd.a','libcamd.a','libamd.a','libsuitesparseconfig.a'],
@@ -43,14 +43,7 @@ class Configure(config.package.CMakePackage):
     args.append('-DBLA_VENDOR=Generic')
     args.append('-DBLAS_LIB="'+self.libraries.toString(self.blasLapack.dlib)+'"')
 
-    if self.cuda.found:
-      args.append('-DENABLE_CUDA=ON')
-    else:
-      args.append('-DENABLE_CUDA=OFF')
-
-    if self.openmp.found:
-      args.append('-DNOPENMP=OFF')
-    else:
-      args.append('-DNOPENMP=ON')
+    args.append('-DSUITESPARSE_USE_CUDA='+('ON' if self.cuda.found else 'OFF'))
+    args.append('-DSUITESPARSE_USE_OPENMP='+('ON' if self.openmp.found else 'OFF'))
 
     return args
