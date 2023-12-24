@@ -1610,7 +1610,7 @@ PetscErrorCode VecGetSubVector(Vec X, IS is, Vec *Y)
         PetscCall(VecSetType(Z, ((PetscObject)X)->type_name));
         PetscCall(VecSetSizes(Z, n, N));
         PetscCall(VecSetBlockSize(Z, bs));
-        PetscCall(VecPlaceArray(Z, x ? x + start : NULL));
+        PetscCall(VecPlaceArray(Z, PetscSafePointerPlusOffset(x, start)));
         PetscCall(VecRestoreArrayRead(X, &x));
       }
 

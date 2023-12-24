@@ -2103,8 +2103,8 @@ PetscErrorCode MatGetValues_SeqBAIJ(Mat A, PetscInt m, const PetscInt im[], Pets
       continue;
     } /* negative row */
     PetscCheck(row < A->rmap->N, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Row %" PetscInt_FMT " too large", row);
-    rp   = aj ? aj + ai[brow] : NULL;       /* mustn't add to NULL, that is UB */
-    ap   = aa ? aa + bs2 * ai[brow] : NULL; /* mustn't add to NULL, that is UB */
+    rp   = PetscSafePointerPlusOffset(aj, ai[brow]);
+    ap   = PetscSafePointerPlusOffset(aa, bs2 * ai[brow]);
     nrow = ailen[brow];
     for (l = 0; l < n; l++) { /* loop over columns */
       if (in[l] < 0) {
