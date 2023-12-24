@@ -1460,8 +1460,8 @@ PetscErrorCode MatCreateSubMatrices_MPIAIJ_SingleIS_Local(Mat C, PetscInt ismax,
         nzA    = ai[row + 1] - ai[row];
         nzB    = bi[row + 1] - bi[row];
         ncols  = nzA + nzB;
-        cworkA = aj + ai[row];
-        cworkB = bj ? bj + bi[row] : NULL;
+        cworkA = PetscSafePointerPlusOffset(aj, ai[row]);
+        cworkB = PetscSafePointerPlusOffset(bj, bi[row]);
 
         /* load the column indices for this row into cols*/
         cols = sbuf_aj_i + ct2;
@@ -1532,7 +1532,7 @@ PetscErrorCode MatCreateSubMatrices_MPIAIJ_SingleIS_Local(Mat C, PetscInt ismax,
 
         /* off-diagonal part B = c->B */
         ncols = bi[row - rstart + 1] - bi[row - rstart];
-        cols  = bj ? bj + bi[row - rstart] : NULL;
+        cols  = PetscSafePointerPlusOffset(bj, bi[row - rstart]);
         if (!allcolumns) {
           for (k = 0; k < ncols; k++) {
 #if defined(PETSC_USE_CTABLE)
@@ -1725,9 +1725,9 @@ PetscErrorCode MatCreateSubMatrices_MPIAIJ_SingleIS_Local(Mat C, PetscInt ismax,
       nzA    = ai[row + 1] - ai[row];
       nzB    = bi[row + 1] - bi[row];
       ncols  = nzA + nzB;
-      cworkB = bj ? bj + bi[row] : NULL;
+      cworkB = PetscSafePointerPlusOffset(bj, bi[row]);
       vworkA = a_a + ai[row];
-      vworkB = b_a ? b_a + bi[row] : NULL;
+      vworkB = PetscSafePointerPlusOffset(b_a, bi[row]);
 
       /* load the column values for this row into vals*/
       vals = sbuf_aa_i + ct2;
@@ -1798,8 +1798,8 @@ PetscErrorCode MatCreateSubMatrices_MPIAIJ_SingleIS_Local(Mat C, PetscInt ismax,
 
         /* off-diagonal part B = c->B */
         ncols = bi[Crow + 1] - bi[Crow];
-        cols  = bj ? bj + bi[Crow] : NULL;
-        vals  = b_a ? b_a + bi[Crow] : NULL;
+        cols  = PetscSafePointerPlusOffset(bj, bi[Crow]);
+        vals  = PetscSafePointerPlusOffset(b_a, bi[Crow]);
         for (k = 0; k < ncols; k++) {
           PetscCall(PetscHMapIGetWithDefault(cmap, bmap[cols[k]] + 1, 0, &tcol));
           if (tcol) {
@@ -2375,7 +2375,7 @@ PetscErrorCode MatCreateSubMatrices_MPIAIJ_Local(Mat C, PetscInt ismax, const IS
             nzB    = b_i[row + 1] - b_i[row];
             ncols  = nzA + nzB;
             cworkA = a_j + a_i[row];
-            cworkB = b_j ? b_j + b_i[row] : NULL;
+            cworkB = PetscSafePointerPlusOffset(b_j, b_i[row]);
 
             /* load the column indices for this row into cols */
             cols = sbuf_aj_i + ct2;
@@ -2656,9 +2656,9 @@ PetscErrorCode MatCreateSubMatrices_MPIAIJ_Local(Mat C, PetscInt ismax, const IS
           nzA    = a_i[row + 1] - a_i[row];
           nzB    = b_i[row + 1] - b_i[row];
           ncols  = nzA + nzB;
-          cworkB = b_j ? b_j + b_i[row] : NULL;
+          cworkB = PetscSafePointerPlusOffset(b_j, b_i[row]);
           vworkA = a_a + a_i[row];
-          vworkB = b_a ? b_a + b_i[row] : NULL;
+          vworkB = PetscSafePointerPlusOffset(b_a, b_i[row]);
 
           /* load the column values for this row into vals*/
           vals = sbuf_aa_i + ct2;
@@ -2768,8 +2768,8 @@ PetscErrorCode MatCreateSubMatrices_MPIAIJ_Local(Mat C, PetscInt ismax, const IS
 #endif
         ilen  = imat_ilen[row];
         mat_i = imat_i[row];
-        mat_a = imat_a ? imat_a + mat_i : NULL;
-        mat_j = imat_j ? imat_j + mat_i : NULL;
+        mat_a = PetscSafePointerPlusOffset(imat_a, mat_i);
+        mat_j = PetscSafePointerPlusOffset(imat_j, mat_i);
         max2  = rbuf2_i[ct1];
         if (!allcolumns[is_no]) {
           for (l = 0; l < max2; l++, ct2++) {

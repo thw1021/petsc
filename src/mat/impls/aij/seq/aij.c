@@ -2256,7 +2256,7 @@ PetscErrorCode MatGetRow_SeqAIJ(Mat A, PetscInt row, PetscInt *nz, PetscInt **id
   PetscFunctionBegin;
   PetscCall(MatSeqAIJGetArrayRead(A, &aa));
   *nz = a->i[row + 1] - a->i[row];
-  if (v) *v = aa ? (PetscScalar *)(aa + a->i[row]) : NULL;
+  if (v) *v = PetscSafePointerPlusOffset((PetscScalar *)aa, a->i[row]);
   if (idx) {
     if (*nz && a->j) *idx = a->j + a->i[row];
     else *idx = NULL;
@@ -2609,8 +2609,8 @@ PetscErrorCode MatCreateSubMatrix_SeqAIJ(Mat A, IS isrow, IS iscol, PetscInt csi
       kstart   = ai[row];
       kend     = kstart + a->ilen[row];
       mat_i    = c->i[i];
-      mat_j    = c->j + mat_i;
-      mat_a    = c_a + mat_i;
+      mat_j    = PetscSafePointerPlusOffset(c->j, mat_i);
+      mat_a    = PetscSafePointerPlusOffset(c_a, mat_i);
       mat_ilen = c->ilen + i;
       for (k = kstart; k < kend; k++) {
         if ((tcol = smap[a->j[k]])) {
@@ -2630,8 +2630,8 @@ PetscErrorCode MatCreateSubMatrix_SeqAIJ(Mat A, IS isrow, IS iscol, PetscInt csi
       PetscInt ilen;
 
       mat_i = c->i[i];
-      mat_j = c->j + mat_i;
-      mat_a = c_a + mat_i;
+      mat_j = PetscSafePointerPlusOffset(c->j, mat_i);
+      mat_a = PetscSafePointerPlusOffset(c_a, mat_i);
       ilen  = c->ilen[i];
       PetscCall(PetscSortIntWithScalarArray(ilen, mat_j, mat_a));
     }
@@ -4134,7 +4134,7 @@ static PetscErrorCode MatSeqAIJSetPreallocationCSR_SeqAIJ(Mat B, const PetscInt 
   PetscCall(MatSeqAIJSetPreallocation(B, 0, nnz));
   PetscCall(PetscFree(nnz));
 
-  for (i = 0; i < m; i++) PetscCall(MatSetValues_SeqAIJ(B, 1, &i, Ii[i + 1] - Ii[i], J + Ii[i], v ? v + Ii[i] : NULL, INSERT_VALUES));
+  for (i = 0; i < m; i++) PetscCall(MatSetValues_SeqAIJ(B, 1, &i, Ii[i + 1] - Ii[i], J + Ii[i], PetscSafePointerPlusOffset(v, Ii[i]), INSERT_VALUES));
 
   PetscCall(MatAssemblyBegin(B, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(B, MAT_FINAL_ASSEMBLY));

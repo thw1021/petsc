@@ -711,8 +711,8 @@ PetscErrorCode MatMatMultNumeric_MPIAIJ_MPIAIJ(Mat A, Mat P, Mat C)
 
     /* off-diagonal portion of A */
     anz = aoi[i + 1] - aoi[i];
-    aoj = ao->j + aoi[i];
-    aoa = ao->a + aoi[i];
+    aoj = PetscSafePointerPlusOffset(ao->j, aoi[i]);
+    aoa = PetscSafePointerPlusOffset(ao->a, aoi[i]);
     for (j = 0; j < anz; j++) {
       row = aoj[j];
       pnz = pi_oth[row + 1] - pi_oth[row];
