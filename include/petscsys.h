@@ -2350,3 +2350,13 @@ PETSC_EXTERN PetscBool      PCMPIServerActive;
 
 PETSC_EXTERN PetscErrorCode PetscBLASSetNumThreads(PetscInt);
 PETSC_EXTERN PetscErrorCode PetscBLASGetNumThreads(PetscInt *);
+
+/*MC
+   PetscSafePointerPlusOffset - Checks that a pointer is not `NULL` before applying an offset
+
+   Level: beginner
+
+   Notes:
+   This is needed to avoid errors with undefined-behavior sanitizers
+M*/
+#define PetscSafePointerPlusOffset(ptr, offset) ((ptr) ? (ptr) + (offset) : NULL)
