@@ -48,8 +48,6 @@ class Configure(config.package.Package):
   def configureLibrary(self):
     import os
     config.package.Package.configureLibrary(self)
-    if self.foundoptionalincludes:
-      self.checkVersion()
     if self.found:
       # TODO: Use openblas_get_config() or openblas_config.h to determine use of OpenMP and 64-bit indices for prebuilt OpenBLAS libraries
       if not hasattr(self,'usesopenmp'): self.usesopenmp = 'unknown'
