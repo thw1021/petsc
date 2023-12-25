@@ -3260,6 +3260,14 @@ PETSC_INTERN PetscErrorCode DMStagPopulateLocalToGlobalInjective_3d(DM dm)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+PETSC_INTERN PetscErrorCode DMStagPopulateLocalToLocal3d_Internal(DM dm) {
+  DM_Stag *const stag = (DM_Stag *)dm->data;
+
+  PetscFunctionBegin;
+
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 PETSC_INTERN PetscErrorCode DMCreateMatrix_Stag_3D_AIJ_Assemble(DM dm, Mat A)
 {
   PetscInt          dof[DMSTAG_MAX_STRATA], epe, stencil_width, N[3], start[3], n[3], n_extra[3];
