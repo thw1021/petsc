@@ -63,7 +63,7 @@ static PetscErrorCode PetscSFGetDistComm_Neighbor(PetscSF sf, PetscSFDirection d
     indegree     = nrootranks - ndrootranks;
     outdegree    = nleafranks - ndleafranks;
     sources      = rootranks + ndrootranks;
-    destinations = leafranks + ndleafranks;
+    destinations = PetscSafePointerPlusOffset(leafranks, ndleafranks);
     PetscCall(PetscObjectGetComm((PetscObject)sf, &comm));
     if (direction == PETSCSF_LEAF2ROOT) {
       PetscCallMPI(MPI_Dist_graph_create_adjacent(comm, indegree, sources, dat->rootweights, outdegree, destinations, dat->leafweights, MPI_INFO_NULL, 1 /*reorder*/, mycomm));

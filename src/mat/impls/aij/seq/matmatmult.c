@@ -1541,8 +1541,8 @@ PETSC_INTERN PetscErrorCode MatMatMultNumericAdd_SeqAIJ_SeqDense(Mat A, Mat B, M
     for (i = 0; i < am; i++) {                  /* over rows of A in those columns */
       r1 = r2 = r3 = r4 = 0.0;
       n                 = a->i[i + 1] - a->i[i];
-      aj                = a->j ? a->j + a->i[i] : NULL;
-      aa                = av ? av + a->i[i] : NULL;
+      aj                = PetscSafePointerPlusOffset(a->j, a->i[i]);
+      aa                = PetscSafePointerPlusOffset(av, a->i[i]);
       for (j = 0; j < n; j++) {
         const PetscScalar aatmp = aa[j];
         const PetscInt    ajtmp = aj[j];
@@ -1612,8 +1612,8 @@ PETSC_INTERN PetscErrorCode MatMatMultNumericAdd_SeqAIJ_SeqDense(Mat A, Mat B, M
       for (i = 0; i < am; i++) {
         r1 = r2 = r3 = 0.0;
         n            = a->i[i + 1] - a->i[i];
-        aj           = a->j ? a->j + a->i[i] : NULL;
-        aa           = av ? av + a->i[i] : NULL;
+        aj           = PetscSafePointerPlusOffset(a->j, a->i[i]);
+        aa           = PetscSafePointerPlusOffset(av, a->i[i]);
         for (j = 0; j < n; j++) {
           const PetscScalar aatmp = aa[j];
           const PetscInt    ajtmp = aj[j];

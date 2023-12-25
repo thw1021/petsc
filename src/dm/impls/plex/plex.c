@@ -3472,8 +3472,8 @@ PetscErrorCode DMPlexGetOrientedCone(DM dm, PetscInt p, const PetscInt *cone[], 
       }
     }
     PetscCall(PetscSectionGetOffset(mesh->coneSection, p, &off));
-    if (cone) *cone = mesh->cones ? mesh->cones + off : NULL; // NULL + 0 is UB
-    if (ornt) *ornt = mesh->coneOrientations ? mesh->coneOrientations + off : NULL;
+    if (cone) *cone = PetscSafePointerPlusOffset(mesh->cones, off);
+    if (ornt) *ornt = PetscSafePointerPlusOffset(mesh->coneOrientations, off);
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -3597,7 +3597,7 @@ PetscErrorCode DMPlexGetSupport(DM dm, PetscInt p, const PetscInt *support[])
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscAssertPointer(support, 3);
   PetscCall(PetscSectionGetOffset(mesh->supportSection, p, &off));
-  *support = mesh->supports ? mesh->supports + off : NULL; //NULL + 0 is UB
+  *support = PetscSafePointerPlusOffset(mesh->supports, off);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
