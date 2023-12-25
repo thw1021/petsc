@@ -1241,6 +1241,50 @@ PETSC_INTERN PetscErrorCode DMStagPopulateLocalToGlobalInjective_2d(DM dm)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+PETSC_INTERN PetscErrorCode DMStagPopulateLocalToLocal2d_Internal(DM dm)
+{
+  DM_Stag *const stag = (DM_Stag *)dm->data;
+  PetscInt      *idxRemap;
+  PetscBool      dummyEnd[2];
+  PetscInt       i, j, d, count, leftGhostEntries, downGhostElements, entiresPerElementRowNonDummy, entriesPerElementRowGhost, iOffset, jOffset;
+
+  PetscFunctionBegin;
+  PetscCall(VecScatterCopy(stag->gtol, &stag->ltol));
+  PetscCall(PetscMalloc1(stag->entries, &idxRemap));
+
+  for (d = 0; d < 2; ++d) dummyEnd[d] = (PetscBool)(stag->lastRank[d] && stag->boundaryType[d] != DM_BOUNDARY_PERIODIC);
+  leftGhostEntries             = (stag->start[0] - stag->startGhost[0]) * stag->entriesPerElement;
+  downGhostElements            = stag->start[1] - stag->startGhost[1];
+  entiresPerElementRowNonDummy = stag->n[0] * stag->entriesPerElement;
+  entriesPerElementRowGhost    = stag->nGhost[0] * stag->entriesPerElement;
+
+  count = 0;
+  for (j = 0; j < stag->n[1]; ++j) {
+    jOffset = entriesPerElementRowGhost * (downGhostElements + j);
+    for (i = 0; i < entiresPerElementRowNonDummy; ++i) idxRemap[count++] = jOffset + leftGhostEntries + i;
+    if (dummyEnd[0]) {
+      for (d = 0; d < stag->dof[0]; ++d) idxRemap[count++] = jOffset + leftGhostEntries + entiresPerElementRowNonDummy + d;
+      for (d = 0; d < stag->dof[1]; ++d) idxRemap[count++] = jOffset + leftGhostEntries + entiresPerElementRowNonDummy + stag->dof[0] + stag->dof[1] + d;
+    }
+  }
+  if (dummyEnd[1]) {
+    jOffset = entriesPerElementRowGhost * (downGhostElements + stag->n[1]);
+    for (i = 0; i < stag->n[0]; ++i) {
+      iOffset = leftGhostEntries + stag->entriesPerElement * i;
+      for (d = 0; d < stag->dof[0]; ++d) idxRemap[count++] = jOffset + iOffset + d;
+      for (d = 0; d < stag->dof[1]; ++d) idxRemap[count++] = jOffset + iOffset + stag->dof[0] + d;
+    }
+    if (dummyEnd[0])
+      for (d = 0; d < stag->dof[0]; ++d) idxRemap[count++] = jOffset + leftGhostEntries + entiresPerElementRowNonDummy + d;
+  }
+
+  PetscCheck(count == stag->entries, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Number of entries computed in ltol (%" PetscInt_FMT ") is not as expected (%" PetscInt_FMT ")", count, stag->entries);
+
+  PetscCall(VecScatterRemap(stag->ltol, idxRemap, NULL));
+  PetscCall(PetscFree(idxRemap));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 PETSC_INTERN PetscErrorCode DMCreateMatrix_Stag_2D_AIJ_Assemble(DM dm, Mat A)
 {
   PetscInt          entries, dof[DMSTAG_MAX_STRATA], epe, stencil_width, N[2], start[2], n[2], n_extra[2];
