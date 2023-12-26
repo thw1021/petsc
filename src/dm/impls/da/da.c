@@ -249,7 +249,7 @@ PetscErrorCode DMDAGetNumLocalSubDomains(DM da, PetscInt *Nsub)
 }
 
 /*@
-  DMDASetNumLocalSubDomains - Sets the number of local subdomains to create decomposition with `DMCreateDomainDecomposition()`
+  DMDASetNumLocalSubDomains - Sets the number of local subdomains to create when decomposing with `DMCreateDomainDecomposition()`
 
   Not Collective
 
@@ -807,9 +807,9 @@ PetscErrorCode DMDAGetRefinementFactor(DM da, PetscInt *refine_x, PetscInt *refi
 
   Level: developer
 
-  Note:
+  Notes:
   If the function is not provided a default function is used that uses the `DMDAStencilType`, `DMBoundaryType`, and value of `DMDASetStencilWidth()`
-  to constructure the matrix.
+  to construct the matrix.
 
   See `DMDASetBlockFills()` that provides a simple way to provide the nonzero structure for
   the diagonal and off-diagonal blocks of the matrix without providing a custom function

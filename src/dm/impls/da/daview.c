@@ -134,7 +134,7 @@ PetscErrorCode DMView_DA_VTK(DM da, PetscViewer viewer)
   Level: beginner
 
   Note:
-  Use `NULL` (PETSC_NULL_INTEGER` in Fortran) in place of any output parameter that is not of interest.
+  Use `NULL` (`PETSC_NULL_INTEGER` in Fortran) in place of any output parameter that is not of interest.
 
 .seealso: [](sec_struct), `DM`, `DMDA`, `DMView()`, `DMDAGetCorners()`, `DMDAGetLocalInfo()`
 @*/
