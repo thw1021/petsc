@@ -1246,36 +1246,49 @@ PETSC_INTERN PetscErrorCode DMStagPopulateLocalToLocal2d_Internal(DM dm)
   DM_Stag *const stag = (DM_Stag *)dm->data;
   PetscInt      *idxRemap;
   PetscBool      dummyEnd[2];
-  PetscInt       i, j, d, count, leftGhostEntries, downGhostElements, entiresPerElementRowNonDummy, entriesPerElementRowGhost, iOffset, jOffset;
+  PetscInt       i, j, d, count, leftGhostElements, downGhostElements, entriesPerRowGhost, iOffset, jOffset;
+  PetscInt       dOffset[4] = {0};
 
   PetscFunctionBegin;
   PetscCall(VecScatterCopy(stag->gtol, &stag->ltol));
   PetscCall(PetscMalloc1(stag->entries, &idxRemap));
 
   for (d = 0; d < 2; ++d) dummyEnd[d] = (PetscBool)(stag->lastRank[d] && stag->boundaryType[d] != DM_BOUNDARY_PERIODIC);
-  leftGhostEntries             = (stag->start[0] - stag->startGhost[0]) * stag->entriesPerElement;
-  downGhostElements            = stag->start[1] - stag->startGhost[1];
-  entiresPerElementRowNonDummy = stag->n[0] * stag->entriesPerElement;
-  entriesPerElementRowGhost    = stag->nGhost[0] * stag->entriesPerElement;
+  leftGhostElements  = stag->start[0] - stag->startGhost[0];
+  downGhostElements  = stag->start[1] - stag->startGhost[1];
+  entriesPerRowGhost = stag->nGhost[0] * stag->entriesPerElement;
+  dOffset[1]         = dOffset[0] + stag->dof[0];
+  dOffset[2]         = dOffset[1] + stag->dof[1];
+  dOffset[3]         = dOffset[2] + stag->dof[1];
 
   count = 0;
   for (j = 0; j < stag->n[1]; ++j) {
-    jOffset = entriesPerElementRowGhost * (downGhostElements + j);
-    for (i = 0; i < entiresPerElementRowNonDummy; ++i) idxRemap[count++] = jOffset + leftGhostEntries + i;
+    jOffset = entriesPerRowGhost * (downGhostElements + j);
+    for (i = 0; i < stag->n[0]; ++i) {
+      iOffset = stag->entriesPerElement * (leftGhostElements + i);
+      // all
+      for (d = 0; d < stag->entriesPerElement; ++d) idxRemap[count++] = jOffset + iOffset + d;
+    }
     if (dummyEnd[0]) {
-      for (d = 0; d < stag->dof[0]; ++d) idxRemap[count++] = jOffset + leftGhostEntries + entiresPerElementRowNonDummy + d;
-      for (d = 0; d < stag->dof[1]; ++d) idxRemap[count++] = jOffset + leftGhostEntries + entiresPerElementRowNonDummy + stag->dof[0] + stag->dof[1] + d;
+      iOffset = stag->entriesPerElement * (leftGhostElements + stag->n[0]);
+      // down left, left
+      for (d = 0; d < stag->dof[0]; ++d) idxRemap[count++] = jOffset + iOffset + dOffset[0] + d;
+      for (d = 0; d < stag->dof[1]; ++d) idxRemap[count++] = jOffset + iOffset + dOffset[2] + d;
     }
   }
   if (dummyEnd[1]) {
-    jOffset = entriesPerElementRowGhost * (downGhostElements + stag->n[1]);
+    jOffset = entriesPerRowGhost * (downGhostElements + stag->n[1]);
     for (i = 0; i < stag->n[0]; ++i) {
-      iOffset = leftGhostEntries + stag->entriesPerElement * i;
-      for (d = 0; d < stag->dof[0]; ++d) idxRemap[count++] = jOffset + iOffset + d;
-      for (d = 0; d < stag->dof[1]; ++d) idxRemap[count++] = jOffset + iOffset + stag->dof[0] + d;
+      iOffset = stag->entriesPerElement * (leftGhostElements + i);
+      // down left, down
+      for (d = 0; d < stag->dof[0]; ++d) idxRemap[count++] = jOffset + iOffset + dOffset[0] + d;
+      for (d = 0; d < stag->dof[1]; ++d) idxRemap[count++] = jOffset + iOffset + dOffset[1] + d;
     }
-    if (dummyEnd[0])
-      for (d = 0; d < stag->dof[0]; ++d) idxRemap[count++] = jOffset + leftGhostEntries + entiresPerElementRowNonDummy + d;
+    if (dummyEnd[0]) {
+      iOffset = stag->entriesPerElement * (leftGhostElements + stag->n[0]);
+      // down left
+      for (d = 0; d < stag->dof[0]; ++d) idxRemap[count++] = jOffset + iOffset + dOffset[0] + d;
+    }
   }
 
   PetscCheck(count == stag->entries, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Number of entries computed in ltol (%" PetscInt_FMT ") is not as expected (%" PetscInt_FMT ")", count, stag->entries);
