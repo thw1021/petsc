@@ -37,6 +37,17 @@
       return
       end
 
+      subroutine mymatmulthermitiantranspose(A, x, y, ierr)
+      use petscmat
+      implicit none
+      Mat A
+      Vec x, y
+      PetscErrorCode ierr
+
+      print*, 'Called MatMultHermitianTranspose'
+      return
+      end
+
       subroutine mymatmulttransposeadd(A, x, y, z, ierr)
       use petscmat
       implicit none
@@ -179,6 +190,7 @@
       external mymatmult
       external mymatmultadd
       external mymatmulttranspose
+      external mymatmulthermitiantranspose
       external mymatmulttransposeadd
       external mymattranspose
       external mymatgetdiagonal
@@ -210,6 +222,8 @@
       PetscCallA(MatShellSetOperation(m, op, mymatmultadd, ierr))
       op = MATOP_MULT_TRANSPOSE
       PetscCallA(MatShellSetOperation(m, op, mymatmulttranspose, ierr))
+      op = MATOP_MULT_HERMITIAN_TRANSPOSE
+      PetscCallA(MatShellSetOperation(m, op, mymatmulthermitiantranspose, ierr))
       op = MATOP_MULT_TRANSPOSE_ADD
       PetscCallA(MatShellSetOperation(m, op, mymatmulttransposeadd, ierr))
       op = MATOP_TRANSPOSE
@@ -236,6 +250,7 @@
       PetscCallA(MatMult(m, x, y, ierr))
       PetscCallA(MatMultAdd(m, x, y, z, ierr))
       PetscCallA(MatMultTranspose(m, x, y, ierr))
+      PetscCallA(MatMultHermitianTranspose(m, x, y, ierr))
       PetscCallA(MatMultTransposeAdd(m, x, y, z, ierr))
       PetscCallA(MatTranspose(m, MAT_INITIAL_MATRIX, mt, ierr))
       PetscCallA(MatGetDiagonal(m, x, ierr))
@@ -258,9 +273,16 @@
 
 !/*TEST
 !
-!   test:
+!   testset:
 !     args: -malloc_dump
 !     filter: sort -b
 !     filter_output: sort -b
+!     test:
+!       suffix: 1
+!       requires: !complex
+!     test:
+!       suffix: 2
+!       requires: complex
+!
 !
 !TEST*/
