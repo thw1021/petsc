@@ -12,14 +12,14 @@ Linear ptof_ solve converged due to CONVERGED_RTOL iterations 4
   0) species 2: density= 3.0102050483760e-04, x-momentum=-2.6183540021672e-20, y-momentum= 2.4323188195111e-20, z-momentum= 4.6764138071584e-21, energy=  2.1574077533957e-02
 	  0) Total: charge density= -9.6778488001270e-13, x-momentum= -6.3947757259586e-16, y-momentum=  1.7204766554326e-16, z-momentum=  1.3029563428642e-15, energy=  6.4723030842727e+04 (m_i[0]/m_e = 3670.94, 8 cells)
 0 TS dt 0.1 time 0.
-    0 SNES Function norm 6.059355371583e-01 
-    1 SNES Function norm 2.922521170885e-02 
-    2 SNES Function norm 4.455137176714e-03 
-    3 SNES Function norm 6.378063655134e-04 
-    4 SNES Function norm 9.153643920438e-05 
-    5 SNES Function norm 1.313512267926e-05 
-    6 SNES Function norm 1.884909420810e-06 
-    7 SNES Function norm 2.704860004090e-07 
+    0 SNES Function norm 6.059355371583e-01
+    1 SNES Function norm 2.922521170885e-02
+    2 SNES Function norm 4.455137176714e-03
+    3 SNES Function norm 6.378063655134e-04
+    4 SNES Function norm 9.153643920438e-05
+    5 SNES Function norm 1.313512267926e-05
+    6 SNES Function norm 1.884909420810e-06
+    7 SNES Function norm 2.704860004090e-07
   Nonlinear solve converged due to CONVERGED_SNORM_RELATIVE iterations 7
 1 TS dt 0.1 time 0.1
   1) species 0: density=-1.6723662400372e+01, x-momentum=-9.8575103801159e-17, y-momentum= 5.8741989096181e-17, z-momentum= 3.4071539185151e-17, energy=  4.3154403661780e+04

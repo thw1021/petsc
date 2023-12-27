@@ -1,16 +1,16 @@
-  0 KSP Residual norm 812.231 
-  1 KSP Residual norm 197.161 
-  2 KSP Residual norm 76.2475 
-  3 KSP Residual norm 28.4689 
-  4 KSP Residual norm 7.62913 
-  5 KSP Residual norm 3.94312 
-  6 KSP Residual norm 1.72213 
-  7 KSP Residual norm 0.743203 
-  8 KSP Residual norm 0.28132 
-  9 KSP Residual norm 0.0877174 
- 10 KSP Residual norm 0.0357948 
- 11 KSP Residual norm 0.0180276 
- 12 KSP Residual norm 0.00705683 
+  0 KSP Residual norm 812.231
+  1 KSP Residual norm 197.161
+  2 KSP Residual norm 76.2475
+  3 KSP Residual norm 28.4689
+  4 KSP Residual norm 7.62913
+  5 KSP Residual norm 3.94312
+  6 KSP Residual norm 1.72213
+  7 KSP Residual norm 0.743203
+  8 KSP Residual norm 0.28132
+  9 KSP Residual norm 0.0877174
+ 10 KSP Residual norm 0.0357948
+ 11 KSP Residual norm 0.0180276
+ 12 KSP Residual norm 0.00705683
 Linear solve converged due to CONVERGED_RTOL iterations 12
 KSP Object: 8 MPI processes
   type: cg
@@ -79,19 +79,19 @@ PC Object: 8 MPI processes
     total number of mallocs used during MatSetValues calls=0
       has attached near null space
       using I-node (on process 0) routines: found 125 nodes, limit used is 5
-  0 KSP Residual norm 0.00812231 
-  1 KSP Residual norm 0.00197161 
-  2 KSP Residual norm 0.000762475 
-  3 KSP Residual norm 0.000284689 
-  4 KSP Residual norm 7.62913e-05 
-  5 KSP Residual norm 3.94312e-05 
-  6 KSP Residual norm 1.72213e-05 
-  7 KSP Residual norm 7.43203e-06 
-  8 KSP Residual norm 2.8132e-06 
-  9 KSP Residual norm 8.77174e-07 
- 10 KSP Residual norm 3.57948e-07 
- 11 KSP Residual norm 1.80276e-07 
- 12 KSP Residual norm 7.05683e-08 
+  0 KSP Residual norm 0.00812231
+  1 KSP Residual norm 0.00197161
+  2 KSP Residual norm 0.000762475
+  3 KSP Residual norm 0.000284689
+  4 KSP Residual norm 7.62913e-05
+  5 KSP Residual norm 3.94312e-05
+  6 KSP Residual norm 1.72213e-05
+  7 KSP Residual norm 7.43203e-06
+  8 KSP Residual norm 2.8132e-06
+  9 KSP Residual norm 8.77174e-07
+ 10 KSP Residual norm 3.57948e-07
+ 11 KSP Residual norm 1.80276e-07
+ 12 KSP Residual norm 7.05683e-08
 Linear solve converged due to CONVERGED_RTOL iterations 12
 KSP Object: 8 MPI processes
   type: cg
@@ -169,19 +169,19 @@ PC Object: 8 MPI processes
     total number of mallocs used during MatSetValues calls=0
       has attached near null space
       using I-node (on process 0) routines: found 125 nodes, limit used is 5
-  0 KSP Residual norm 0.00812231 
-  1 KSP Residual norm 0.00197161 
-  2 KSP Residual norm 0.000762475 
-  3 KSP Residual norm 0.000284689 
-  4 KSP Residual norm 7.62913e-05 
-  5 KSP Residual norm 3.94312e-05 
-  6 KSP Residual norm 1.72213e-05 
-  7 KSP Residual norm 7.43203e-06 
-  8 KSP Residual norm 2.8132e-06 
-  9 KSP Residual norm 8.77174e-07 
- 10 KSP Residual norm 3.57948e-07 
- 11 KSP Residual norm 1.80276e-07 
- 12 KSP Residual norm 7.05683e-08 
+  0 KSP Residual norm 0.00812231
+  1 KSP Residual norm 0.00197161
+  2 KSP Residual norm 0.000762475
+  3 KSP Residual norm 0.000284689
+  4 KSP Residual norm 7.62913e-05
+  5 KSP Residual norm 3.94312e-05
+  6 KSP Residual norm 1.72213e-05
+  7 KSP Residual norm 7.43203e-06
+  8 KSP Residual norm 2.8132e-06
+  9 KSP Residual norm 8.77174e-07
+ 10 KSP Residual norm 3.57948e-07
+ 11 KSP Residual norm 1.80276e-07
+ 12 KSP Residual norm 7.05683e-08
 Linear solve converged due to CONVERGED_RTOL iterations 12
 KSP Object: 8 MPI processes
   type: cg
