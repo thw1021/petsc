@@ -1,9 +1,9 @@
-  0 KSP Residual norm 230.817 
-  1 KSP Residual norm 18.3775 
-  2 KSP Residual norm 2.17553 
-  3 KSP Residual norm 0.152776 
-  4 KSP Residual norm 0.0125378 
-  5 KSP Residual norm 0.00101888 
+  0 KSP Residual norm 230.817
+  1 KSP Residual norm 18.3775
+  2 KSP Residual norm 2.17553
+  3 KSP Residual norm 0.152776
+  4 KSP Residual norm 0.0125378
+  5 KSP Residual norm 0.00101888
 KSP Object: 8 MPI processes
   type: gmres
     restart=30, using Classical (unmodified) Gram-Schmidt Orthogonalization with no iterative refinement
