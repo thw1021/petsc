@@ -302,7 +302,7 @@ static PetscErrorCode MatFactorNumeric_PaStiX(Mat F, Mat A, const MatFactorInfo 
     if ((flg && icntl >= 0) || PetscLogPrintInfo) lu->iparm[IPARM_VERBOSE] = icntl;
     icntl = -1;
     PetscCall(PetscOptionsInt("-mat_pastix_threadnbr", "iparm[IPARM_THREAD_NBR] : Number of thread by MPI node", "None", lu->iparm[IPARM_THREAD_NBR], &icntl, &flg));
-    if ((flg && icntl > 0)) lu->iparm[IPARM_THREAD_NBR] = icntl;
+    if (flg && icntl > 0) lu->iparm[IPARM_THREAD_NBR] = icntl;
     PetscOptionsEnd();
     valOnly = PETSC_FALSE;
   } else {

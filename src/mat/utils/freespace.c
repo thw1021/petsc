@@ -29,7 +29,7 @@ PetscErrorCode PetscFreeSpaceContiguous(PetscFreeSpaceList *head, PetscInt *spac
   PetscFreeSpaceList a;
 
   PetscFunctionBegin;
-  while ((*head)) {
+  while (*head) {
     a = (*head)->more_space;
     PetscCall(PetscArraycpy(space, (*head)->array_head, (*head)->local_used));
     space += (*head)->local_used;
@@ -68,7 +68,7 @@ PetscErrorCode PetscFreeSpaceContiguous_LU(PetscFreeSpaceList *head, PetscInt *s
   row     = 0;
   total   = 0;
   nnzL    = bdiag[0];
-  while ((*head)) {
+  while (*head) {
     total += (*head)->local_used;
     array = (*head)->array_head;
 
@@ -169,7 +169,7 @@ PetscErrorCode PetscFreeSpaceDestroy(PetscFreeSpaceList head)
   PetscFreeSpaceList a;
 
   PetscFunctionBegin;
-  while ((head)) {
+  while (head) {
     a = (head)->more_space;
     PetscCall(PetscFree((head)->array_head));
     PetscCall(PetscFree(head));
