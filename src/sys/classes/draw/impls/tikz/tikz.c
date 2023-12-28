@@ -173,8 +173,8 @@ static PetscErrorCode PetscDrawStringBoxed_TikZ(PetscDraw draw, PetscReal xl, Pe
 static PetscErrorCode PetscDrawStringGetSize_TikZ(PetscDraw draw, PetscReal *x, PetscReal *y)
 {
   PetscFunctionBegin;
-  if (x) *x = .014 * (draw->coor_xr - draw->coor_xl) / ((draw->port_xr - draw->port_xl));
-  if (y) *y = .05 * (draw->coor_yr - draw->coor_yl) / ((draw->port_yr - draw->port_yl));
+  if (x) *x = .014 * (draw->coor_xr - draw->coor_xl) / (draw->port_xr - draw->port_xl);
+  if (y) *y = .05 * (draw->coor_yr - draw->coor_yl) / (draw->port_yr - draw->port_yl);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

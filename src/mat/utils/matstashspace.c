@@ -32,7 +32,7 @@ PetscErrorCode PetscMatStashSpaceContiguous(PetscInt bs2, PetscMatStashSpace *sp
   PetscMatStashSpace a;
 
   PetscFunctionBegin;
-  while ((*space)) {
+  while (*space) {
     a = (*space)->next;
     PetscCall(PetscArraycpy(val, (*space)->val, (*space)->local_used * bs2));
     val += bs2 * (*space)->local_used;
