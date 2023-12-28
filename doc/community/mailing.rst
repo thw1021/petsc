@@ -7,8 +7,8 @@ Use any of
 
 - petsc-users@mcs.anl.gov (public mailing list with public archives)
 - petsc-maint@mcs.anl.gov (private maintenance mailing list without archives). Installation
-  issues generally require sending the files ``configure.log`` and ``make.log`` i.e uncompressed large
-  attachments - petsc-maint@mcs.anl.gov is preferable.
+  issues generally require sending the files ``configure.log`` and ``make.log``, i.e., uncompressed large
+  attachments, petsc-maint@mcs.anl.gov is preferable.
 - `PETSc on Discord <https://discord.gg/Fqm8r6Gcyb>`__
 - `PETSc GitLab Issues <https://gitlab.com/petsc/petsc/-/issues>`__
 
@@ -22,7 +22,7 @@ Topics can include:
 
 .. important::
 
-   Please `do not send e-mail requests to the individual PETSc authors`; all list e-mail
+   Please `do not send email requests to the individual PETSc authors`; all list email
    is automatically distributed to all of the PETSc authors, so our response time here
    will be fastest.
 
@@ -49,7 +49,7 @@ the problem. We suggest providing the following information:
    :class: yellow
 
    - Please do **not** send winmail.dat Microsoft email attachments.
-   - Please do **not** send screen-shots, use cut-and-paste from terminal windows to send text.
+   - Please do **not** send screenshots, use cut-and-paste from terminal windows to send text.
    - Please do **not** put huge files like ``configure.log`` DIRECTLY into the email
      message. Instead, include them as attachments.
    - Please do NOT paste **entire** programs DIRECTLY into the email message. Instead,
@@ -59,7 +59,7 @@ the problem. We suggest providing the following information:
 
    - Detailed steps to recreate the problem if possible.
    - Copy of the **complete** error message using cut-and-paste, if feasible, otherwise include the full error
-     message as a **text** attachment, not a screen-shot.
+     message as a **text** attachment, not a screenshot.
    - If the problem involves installation, send the entire ``configure.log`` and
      ``make.log`` files as attachments.
 
@@ -71,13 +71,13 @@ the problem. We suggest providing the following information:
      - ``make.log`` can be found in the same places as listed above, however note that
        there is no ``make.log.bkp`` so be sure to not overwrite your ``make.log`` with
        additional build attempts.
-   - Machine type: (e.g. HPC, laptop, etc.)
-   - OS Version and Type: (run uname -a to get the version number)
-   - PETSc Version: (run PETSc program with -version, or look in
-     ``$PETSC_DIR/include/petscversion.h``)
-   - MPI implementation: (e.g. MPICH, LAM, IBM, Intel)
-   - Compiler and version: (e.g. Gnu, Clang, Intel etc)
-   - Probable PETSc component: (e.g. ``Mat``, ``Vec``, ``DM``, ``KSP``, etc.)
+   - Machine type: HPC, laptop, etc.
+   - OS version and type: run ``uname -a`` to get the version number
+   - PETSc version: run any PETSc program with the additional command-line option ``-version``, or look in
+     ``$PETSC_DIR/include/petscversion.h``
+   - MPI implementation: MPICH, OpenMPI, IBM, Intel, etc.
+   - Compiler and version: GNU, Clang, Intel, etc.
+   - Probable PETSc component: ``Mat``, ``Vec``, ``DM``, ``KSP``, etc.
 
 .. _doc_mail:
 
