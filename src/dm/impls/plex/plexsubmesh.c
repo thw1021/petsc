@@ -339,12 +339,13 @@ PetscErrorCode DMPlexLabelAddCells(DM dm, DMLabel label)
     for (p = 0; p < numPoints; ++p) {
       const PetscInt point   = points[p];
       PetscInt      *closure = NULL;
-      PetscInt       closureSize, cl, h, pStart, pEnd, cStart, cEnd;
+      PetscInt       closureSize, cl, h, cStart, cEnd;
+      DMPolytopeType ct;
 
       // If the point is a hybrid, allow hybrid cells
+      PetscCall(DMPlexGetCellType(dm, point, &ct));
       PetscCall(DMPlexGetPointHeight(dm, point, &h));
-      PetscCall(DMPlexGetSimplexOrBoxCells(dm, h, &pStart, &pEnd));
-      if (point >= pStart && point < pEnd) {
+      if (DMPolytopeTypeIsHybrid(ct)) {
         cStart = csStart;
         cEnd   = csEnd;
       } else {
