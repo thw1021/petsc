@@ -72,40 +72,48 @@ int main(int argc, char **argv)
       suffix: 2
       nsize: 3
       args: -dim 1 -stag_boundary_type_x none
+      output_file: output/ex53_1.out
 
    test:
       suffix: 3
       nsize: 4
       args: -dim 1 -stag_boundary_type_x periodic
+      output_file: output/ex53_1.out
 
    test:
       suffix: 4
       nsize: 4
       args: -dim 2
+      output_file: output/ex53_1.out
 
    test:
       suffix: 5
       nsize: 4
       args: -dim 2 -stag_boundary_type_x none -stag_stencil_type star
+      output_file: output/ex53_1.out
 
    test:
       suffix: 6
       nsize: 6
       args: -dim 2 -stag_boundary_type_y periodic -stag_stencil_width 2 -stag_dof_0 0 -stag_dof_1 1 -stag_dof_2 0
+      output_file: output/ex53_1.out
 
    test:
       suffix: 7
       nsize: 8
       args: -dim 3
+      output_file: output/ex53_1.out
 
    test:
       suffix: 8
       nsize: 8
       args: -dim 3 -stag_boundary_type_x none -stag_boundary_type_y periodic
+      output_file: output/ex53_1.out
 
    test:
       suffix: 9
       nsize: 12
       args: -dim 3 -stag_boundary_type_x none -stag_boundary_type_y none -stag_boundary_type_z none -stag_stencil_type star -stag_dof_0 0 -stag_dof_1 0 -stag_dof_2 0 -stag_dof_3 1
+      output_file: output/ex53_1.out
 
 TEST*/
