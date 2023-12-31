@@ -32,7 +32,6 @@ class Configure(config.base.Configure):
           (o5, e5, s5) = self.executeShellCommand([self.sourceControl.git, 'status', '--short', '-uno'],checkCommand = noCheck, log = self.log, cwd=self.petscdir.dir)
           if s2 or s3 or s4:
             self.logPrintWarning('Git branch check is giving errors! Checking the repo with "git status"')
-            (o5, e5, s5) = self.executeShellCommand([self.sourceControl.git, 'status'],checkCommand = noCheck, log = self.log, cwd=self.petscdir.dir)
             self.logPrint(e5)
           else:
             if not o1: o1 = o2
