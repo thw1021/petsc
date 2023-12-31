@@ -726,7 +726,7 @@ PetscErrorCode LandauKokkosJacobian(DM plex[], const PetscInt Nq, const PetscInt
           }
         }
       } // scope with 'grid'
-    };
+    }
   #if defined(PETSC_HAVE_HIP)
     const int lbound2 = 1;
   #else

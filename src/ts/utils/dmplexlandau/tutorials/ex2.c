@@ -220,7 +220,7 @@ static PetscErrorCode testSpitzer(TS ts, Vec X, PetscInt stepi, PetscReal time, 
   }
 
   ratio = E / J / spit_eta;
-  if (stepi > 10 && !rectx->use_spitzer_eta && ((old_ratio - ratio < 1.e-6))) {
+  if (stepi > 10 && !rectx->use_spitzer_eta && (old_ratio - ratio < 1.e-6)) {
     rectx->pulse_start     = time + 0.98 * dt;
     rectx->use_spitzer_eta = PETSC_TRUE;
   }

@@ -1449,8 +1449,8 @@ PetscErrorCode KSPDestroy(KSP *ksp)
 
   PetscFunctionBegin;
   if (!*ksp) PetscFunctionReturn(PETSC_SUCCESS);
-  PetscValidHeaderSpecific((*ksp), KSP_CLASSID, 1);
-  if (--((PetscObject)(*ksp))->refct > 0) {
+  PetscValidHeaderSpecific(*ksp, KSP_CLASSID, 1);
+  if (--((PetscObject)*ksp)->refct > 0) {
     *ksp = NULL;
     PetscFunctionReturn(PETSC_SUCCESS);
   }
@@ -1464,10 +1464,10 @@ PetscErrorCode KSPDestroy(KSP *ksp)
    */
   pc         = (*ksp)->pc;
   (*ksp)->pc = NULL;
-  PetscCall(KSPReset((*ksp)));
+  PetscCall(KSPReset(*ksp));
   PetscCall(KSPResetViewers(*ksp));
   (*ksp)->pc = pc;
-  PetscTryTypeMethod((*ksp), destroy);
+  PetscTryTypeMethod(*ksp, destroy);
 
   if ((*ksp)->transpose.use_explicittranspose) {
     PetscCall(MatDestroy(&(*ksp)->transpose.AT));
@@ -1481,8 +1481,8 @@ PetscErrorCode KSPDestroy(KSP *ksp)
   PetscCall(PetscFree((*ksp)->res_hist_alloc));
   PetscCall(PetscFree((*ksp)->err_hist_alloc));
   if ((*ksp)->convergeddestroy) PetscCall((*(*ksp)->convergeddestroy)((*ksp)->cnvP));
-  PetscCall(KSPMonitorCancel((*ksp)));
-  PetscCall(KSPConvergedReasonViewCancel((*ksp)));
+  PetscCall(KSPMonitorCancel(*ksp));
+  PetscCall(KSPConvergedReasonViewCancel(*ksp));
   PetscCall(PetscHeaderDestroy(ksp));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

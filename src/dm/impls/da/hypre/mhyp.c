@@ -291,7 +291,7 @@ static PetscErrorCode MatDestroy_HYPREStruct(Mat mat)
   PetscCallExternal(HYPRE_StructVectorDestroy, ex->hx);
   PetscCallExternal(HYPRE_StructVectorDestroy, ex->hb);
   PetscCall(PetscObjectDereference((PetscObject)ex->da));
-  PetscCallMPI(MPI_Comm_free(&(ex->hcomm)));
+  PetscCallMPI(MPI_Comm_free(&ex->hcomm));
   PetscCall(PetscFree(ex));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -316,7 +316,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_HYPREStruct(Mat B)
 
   ex->needsinitialization = PETSC_TRUE;
 
-  PetscCallMPI(MPI_Comm_dup(PetscObjectComm((PetscObject)B), &(ex->hcomm)));
+  PetscCallMPI(MPI_Comm_dup(PetscObjectComm((PetscObject)B), &ex->hcomm));
   PetscCall(PetscObjectChangeTypeName((PetscObject)B, MATHYPRESTRUCT));
   PetscHYPREInitialize();
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -643,7 +643,7 @@ static PetscErrorCode MatSetUp_HYPRESStruct(Mat mat)
   }
 
   /* create the HYPRE graph */
-  PetscCallExternal(HYPRE_SStructGraphCreate, ex->hcomm, ex->ss_grid, &(ex->ss_graph));
+  PetscCallExternal(HYPRE_SStructGraphCreate, ex->hcomm, ex->ss_grid, &ex->ss_graph);
 
   /* set the stencil graph. Note that each variable has the same graph. This means that each
      variable couples to all the other variable and with the same stencil pattern. */
@@ -804,7 +804,7 @@ static PetscErrorCode MatDestroy_HYPRESStruct(Mat mat)
   PetscCallExternal(HYPRE_SStructVectorDestroy, ex->ss_x);
   PetscCallExternal(HYPRE_SStructVectorDestroy, ex->ss_b);
   PetscCall(PetscObjectDereference((PetscObject)ex->da));
-  PetscCallMPI(MPI_Comm_free(&(ex->hcomm)));
+  PetscCallMPI(MPI_Comm_free(&ex->hcomm));
   PetscCall(PetscFree(ex));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -829,7 +829,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_HYPRESStruct(Mat B)
 
   ex->needsinitialization = PETSC_TRUE;
 
-  PetscCallMPI(MPI_Comm_dup(PetscObjectComm((PetscObject)B), &(ex->hcomm)));
+  PetscCallMPI(MPI_Comm_dup(PetscObjectComm((PetscObject)B), &ex->hcomm));
   PetscCall(PetscObjectChangeTypeName((PetscObject)B, MATHYPRESSTRUCT));
   PetscHYPREInitialize();
   PetscFunctionReturn(PETSC_SUCCESS);

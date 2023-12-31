@@ -162,8 +162,8 @@ static void PhysicsRiemann_SW_Rusanov(PetscInt dim, PetscInt Nf, const PetscReal
   nn[0] = n[0];
   nn[1] = n[1];
   Normalize2Real(nn);
-  PetscCallAbort(PETSC_COMM_SELF, SWFlux(phys, nn, uL, &(fL.swnode)));
-  PetscCallAbort(PETSC_COMM_SELF, SWFlux(phys, nn, uR, &(fR.swnode)));
+  PetscCallAbort(PETSC_COMM_SELF, SWFlux(phys, nn, uL, &fL.swnode));
+  PetscCallAbort(PETSC_COMM_SELF, SWFlux(phys, nn, uR, &fR.swnode));
   cL    = PetscSqrtReal(sw->gravity * uL->h);
   cR    = PetscSqrtReal(sw->gravity * uR->h); /* gravity wave speed */
   speed = PetscMax(PetscAbsReal(Dot2Real(uL->uh, nn) / uL->h) + cL, PetscAbsReal(Dot2Real(uR->uh, nn) / uR->h) + cR);
@@ -255,8 +255,8 @@ static void PhysicsRiemann_SW_HLL(PetscInt dim, PetscInt Nf, const PetscReal *qp
   nn[0] = n[0];
   nn[1] = n[1];
   Normalize2Real(nn);
-  PetscCallAbort(PETSC_COMM_SELF, SWFlux(phys, nn, uL, &(fL.swnode)));
-  PetscCallAbort(PETSC_COMM_SELF, SWFlux(phys, nn, uR, &(fR.swnode)));
+  PetscCallAbort(PETSC_COMM_SELF, SWFlux(phys, nn, uL, &fL.swnode));
+  PetscCallAbort(PETSC_COMM_SELF, SWFlux(phys, nn, uR, &fR.swnode));
   /* gravity wave speed */
   aL = PetscSqrtReal(sw->gravity * uL->h);
   aR = PetscSqrtReal(sw->gravity * uR->h);
@@ -745,8 +745,8 @@ static void PhysicsRiemann_Euler_Godunov(PetscInt dim, PetscInt Nf, const PetscR
   if (0) { /* Rusanov */
     const EulerNode *uL = (const EulerNode *)xL, *uR = (const EulerNode *)xR;
     EulerNodeUnion   fL, fR;
-    PetscCallAbort(PETSC_COMM_SELF, EulerFlux(phys, nn, uL, &(fL.eulernode)));
-    PetscCallAbort(PETSC_COMM_SELF, EulerFlux(phys, nn, uR, &(fR.eulernode)));
+    PetscCallAbort(PETSC_COMM_SELF, EulerFlux(phys, nn, uL, &fL.eulernode));
+    PetscCallAbort(PETSC_COMM_SELF, EulerFlux(phys, nn, uR, &fR.eulernode));
     ierr = SpeedOfSound_PG(gamma, uL, &cL);
     if (ierr) exit(13);
     ierr = SpeedOfSound_PG(gamma, uR, &cR);

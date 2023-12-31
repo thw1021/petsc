@@ -275,10 +275,10 @@ static PetscErrorCode PCGASMSetHierarchicalPartitioning(PC pc)
   PetscCall(ISGetLocalSize(fromrows, &fromrows_localsize));
   PetscCall(MatPartitioningDestroy(&part));
   PetscCall(MatCreateVecs(pc->pmat, &outervec, NULL));
-  PetscCall(VecCreateMPI(comm, fromrows_localsize, PETSC_DETERMINE, &(osm->pcx)));
-  PetscCall(VecDuplicate(osm->pcx, &(osm->pcy)));
-  PetscCall(VecScatterCreate(osm->pcx, NULL, outervec, fromrows, &(osm->pctoouter)));
-  PetscCall(MatCreateSubMatrix(pc->pmat, fromrows, fromrows, MAT_INITIAL_MATRIX, &(osm->permutationP)));
+  PetscCall(VecCreateMPI(comm, fromrows_localsize, PETSC_DETERMINE, &osm->pcx));
+  PetscCall(VecDuplicate(osm->pcx, &osm->pcy));
+  PetscCall(VecScatterCreate(osm->pcx, NULL, outervec, fromrows, &osm->pctoouter));
+  PetscCall(MatCreateSubMatrix(pc->pmat, fromrows, fromrows, MAT_INITIAL_MATRIX, &osm->permutationP));
   PetscCall(PetscObjectReference((PetscObject)fromrows));
   osm->permutationIS = fromrows;
   osm->pcmat         = pc->pmat;
@@ -428,7 +428,7 @@ static PetscErrorCode PCSetUp_GASM(PC pc)
     PetscCall(VecGetOwnershipRange(osm->gx, &gostart, NULL));
     PetscCall(ISCreateStride(PetscObjectComm((PetscObject)pc), on, gostart, 1, &goid));
     /* gois might indices not on local */
-    PetscCall(VecScatterCreate(x, gois, osm->gx, goid, &(osm->gorestriction)));
+    PetscCall(VecScatterCreate(x, gois, osm->gx, goid, &osm->gorestriction));
     PetscCall(PetscMalloc1(osm->n, &numbering));
     PetscCall(PetscObjectsListGetGlobalNumbering(PetscObjectComm((PetscObject)pc), osm->n, (PetscObject *)osm->ois, NULL, numbering));
     PetscCall(VecDestroy(&x));
@@ -825,11 +825,11 @@ static PetscErrorCode PCReset_GASM(PC pc)
     osm->N    = PETSC_DETERMINE;
     osm->nmax = PETSC_DETERMINE;
   }
-  if (osm->pctoouter) PetscCall(VecScatterDestroy(&(osm->pctoouter)));
-  if (osm->permutationIS) PetscCall(ISDestroy(&(osm->permutationIS)));
-  if (osm->pcx) PetscCall(VecDestroy(&(osm->pcx)));
-  if (osm->pcy) PetscCall(VecDestroy(&(osm->pcy)));
-  if (osm->permutationP) PetscCall(MatDestroy(&(osm->permutationP)));
+  if (osm->pctoouter) PetscCall(VecScatterDestroy(&osm->pctoouter));
+  if (osm->permutationIS) PetscCall(ISDestroy(&osm->permutationIS));
+  if (osm->pcx) PetscCall(VecDestroy(&osm->pcx));
+  if (osm->pcy) PetscCall(VecDestroy(&osm->pcy));
+  if (osm->permutationP) PetscCall(MatDestroy(&osm->permutationP));
   if (osm->pcmat) PetscCall(MatDestroy(&osm->pcmat));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1532,7 +1532,7 @@ PetscErrorCode PCGASMDestroySubdomains(PetscInt n, IS **iis, IS **ois)
     if (*ois) {
       PetscAssertPointer(*ois, 3);
       for (i = 0; i < n; i++) PetscCall(ISDestroy(&(*ois)[i]));
-      PetscCall(PetscFree((*ois)));
+      PetscCall(PetscFree(*ois));
     }
   }
   if (iis) {
@@ -1540,7 +1540,7 @@ PetscErrorCode PCGASMDestroySubdomains(PetscInt n, IS **iis, IS **ois)
     if (*iis) {
       PetscAssertPointer(*iis, 2);
       for (i = 0; i < n; i++) PetscCall(ISDestroy(&(*iis)[i]));
-      PetscCall(PetscFree((*iis)));
+      PetscCall(PetscFree(*iis));
     }
   }
   PetscFunctionReturn(PETSC_SUCCESS);

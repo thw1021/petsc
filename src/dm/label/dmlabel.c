@@ -529,8 +529,8 @@ PetscErrorCode DMLabelDestroy(DMLabel *label)
 {
   PetscFunctionBegin;
   if (!*label) PetscFunctionReturn(PETSC_SUCCESS);
-  PetscValidHeaderSpecific((*label), DMLABEL_CLASSID, 1);
-  if (--((PetscObject)(*label))->refct > 0) {
+  PetscValidHeaderSpecific(*label, DMLABEL_CLASSID, 1);
+  if (--((PetscObject)*label)->refct > 0) {
     *label = NULL;
     PetscFunctionReturn(PETSC_SUCCESS);
   }
@@ -545,7 +545,7 @@ static PetscErrorCode DMLabelDuplicate_Concrete(DMLabel label, DMLabel *labelnew
   PetscFunctionBegin;
   for (PetscInt v = 0; v < label->numStrata; ++v) {
     PetscCall(PetscHSetICreate(&(*labelnew)->ht[v]));
-    PetscCall(PetscObjectReference((PetscObject)(label->points[v])));
+    PetscCall(PetscObjectReference((PetscObject)label->points[v]));
     (*labelnew)->points[v] = label->points[v];
   }
   PetscCall(PetscHMapIDestroy(&(*labelnew)->hmap));
