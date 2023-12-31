@@ -173,7 +173,7 @@ static PetscErrorCode MatSeqBAIJMKL_create_mkl_handle(Mat A)
     if (PetscSeqBAIJSupportsZeroBased()) {
       aj = a->j;
       ai = a->i;
-      PetscCallMKL(mkl_sparse_x_create_bsr(&(baijmkl->bsrA), SPARSE_INDEX_BASE_ZERO, SPARSE_LAYOUT_COLUMN_MAJOR, (MKL_INT)mbs, (MKL_INT)nbs, (MKL_INT)bs, (MKL_INT *)ai, (MKL_INT *)(ai + 1), (MKL_INT *)aj, aa));
+      PetscCallMKL(mkl_sparse_x_create_bsr(&baijmkl->bsrA, SPARSE_INDEX_BASE_ZERO, SPARSE_LAYOUT_COLUMN_MAJOR, (MKL_INT)mbs, (MKL_INT)nbs, (MKL_INT)bs, (MKL_INT *)ai, (MKL_INT *)(ai + 1), (MKL_INT *)aj, aa));
     } else {
       PetscCall(PetscMalloc2(mbs + 1, &ai, nz, &aj));
       for (i = 0; i < mbs + 1; i++) ai[i] = a->i[i] + 1;

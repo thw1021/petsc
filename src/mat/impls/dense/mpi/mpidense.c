@@ -2091,7 +2091,7 @@ static PetscErrorCode MatMatTransposeMultSymbolic_MPIDense_MPIDense(Mat A, Mat B
     break;
   default: /* alg: "allgatherv" */
     PetscCall(PetscMalloc2(B->rmap->n * B->cmap->N, &(abt->buf[0]), B->rmap->N * B->cmap->N, &(abt->buf[1])));
-    PetscCall(PetscMalloc2(size, &(abt->recvcounts), size + 1, &(abt->recvdispls)));
+    PetscCall(PetscMalloc2(size, &abt->recvcounts, size + 1, &abt->recvdispls));
     for (i = 0; i <= size; i++) abt->recvdispls[i] = B->rmap->range[i] * A->cmap->N;
     for (i = 0; i < size; i++) abt->recvcounts[i] = abt->recvdispls[i + 1] - abt->recvdispls[i];
     break;

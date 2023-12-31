@@ -674,8 +674,8 @@ PetscErrorCode ISLocalToGlobalMappingDestroy(ISLocalToGlobalMapping *mapping)
 {
   PetscFunctionBegin;
   if (!*mapping) PetscFunctionReturn(PETSC_SUCCESS);
-  PetscValidHeaderSpecific((*mapping), IS_LTOGM_CLASSID, 1);
-  if (--((PetscObject)(*mapping))->refct > 0) {
+  PetscValidHeaderSpecific(*mapping, IS_LTOGM_CLASSID, 1);
+  if (--((PetscObject)*mapping)->refct > 0) {
     *mapping = NULL;
     PetscFunctionReturn(PETSC_SUCCESS);
   }

@@ -407,7 +407,7 @@ PetscErrorCode DMForestSetAdaptivityForest(DM dm, DM adapt)
   switch (forest->adaptPurpose) {
   case DM_ADAPT_DETERMINE:
     PetscCall(PetscObjectReference((PetscObject)adapt));
-    PetscCall(DMDestroy(&(forest->adapt)));
+    PetscCall(DMDestroy(&forest->adapt));
     forest->adapt = adapt;
     break;
   case DM_ADAPT_REFINE:

@@ -823,7 +823,7 @@ PETSC_INTERN PetscErrorCode MatConvert_Nest_IS(Mat A, MatType type, MatReuse reu
     PetscBool ismatis, isnest;
 
     PetscCall(PetscObjectTypeCompare((PetscObject)*newmat, MATIS, &ismatis));
-    PetscCheck(ismatis, PetscObjectComm((PetscObject)*newmat), PETSC_ERR_USER, "Cannot reuse matrix of type %s", ((PetscObject)(*newmat))->type_name);
+    PetscCheck(ismatis, PetscObjectComm((PetscObject)*newmat), PETSC_ERR_USER, "Cannot reuse matrix of type %s", ((PetscObject)*newmat)->type_name);
     PetscCall(MatISGetLocalMat(*newmat, &lA));
     PetscCall(PetscObjectTypeCompare((PetscObject)lA, MATNEST, &isnest));
     if (isnest) {
@@ -1117,10 +1117,10 @@ PETSC_INTERN PetscErrorCode MatConvert_Nest_IS(Mat A, MatType type, MatReuse reu
     }
     lf->nr = nr;
     lf->nc = nc;
-    PetscCall(PetscContainerCreate(PetscObjectComm((PetscObject)(*newmat)), &c));
+    PetscCall(PetscContainerCreate(PetscObjectComm((PetscObject)*newmat), &c));
     PetscCall(PetscContainerSetPointer(c, lf));
     PetscCall(PetscContainerSetUserDestroy(c, MatISContainerDestroyFields_Private));
-    PetscCall(PetscObjectCompose((PetscObject)(*newmat), "_convert_nest_lfields", (PetscObject)c));
+    PetscCall(PetscObjectCompose((PetscObject)*newmat, "_convert_nest_lfields", (PetscObject)c));
     PetscCall(PetscContainerDestroy(&c));
   }
 
@@ -1901,8 +1901,8 @@ PETSC_INTERN PetscErrorCode MatConvert_IS_XAIJ(Mat mat, MatType mtype, MatReuse 
         icols = irows;
       }
     } else {
-      PetscCall(PetscObjectQuery((PetscObject)(*M), "_MatIS_IS_XAIJ_irows", (PetscObject *)&irows));
-      PetscCall(PetscObjectQuery((PetscObject)(*M), "_MatIS_IS_XAIJ_icols", (PetscObject *)&icols));
+      PetscCall(PetscObjectQuery((PetscObject)*M, "_MatIS_IS_XAIJ_irows", (PetscObject *)&irows));
+      PetscCall(PetscObjectQuery((PetscObject)*M, "_MatIS_IS_XAIJ_icols", (PetscObject *)&icols));
       if (irows) PetscCall(PetscObjectReference((PetscObject)irows));
       if (icols) PetscCall(PetscObjectReference((PetscObject)icols));
     }
@@ -1914,8 +1914,8 @@ PETSC_INTERN PetscErrorCode MatConvert_IS_XAIJ(Mat mat, MatType mtype, MatReuse 
     PetscCall(MatConvert(matis->A, mtype, MAT_INITIAL_MATRIX, &B));
     if (reuse != MAT_INPLACE_MATRIX) {
       PetscCall(MatCreateSubMatrix(B, irows, icols, reuse, M));
-      PetscCall(PetscObjectCompose((PetscObject)(*M), "_MatIS_IS_XAIJ_irows", (PetscObject)irows));
-      PetscCall(PetscObjectCompose((PetscObject)(*M), "_MatIS_IS_XAIJ_icols", (PetscObject)icols));
+      PetscCall(PetscObjectCompose((PetscObject)*M, "_MatIS_IS_XAIJ_irows", (PetscObject)irows));
+      PetscCall(PetscObjectCompose((PetscObject)*M, "_MatIS_IS_XAIJ_icols", (PetscObject)icols));
     } else {
       Mat C;
 

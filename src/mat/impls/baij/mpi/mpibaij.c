@@ -937,7 +937,7 @@ static PetscErrorCode MatAssemblyEnd_MPIBAIJ(Mat mat, MatAssemblyType mode)
     baij->roworiented = PETSC_FALSE;
     a->roworiented    = PETSC_FALSE;
 
-    (((Mat_SeqBAIJ *)baij->B->data))->roworiented = PETSC_FALSE; /* b->roworiented */
+    ((Mat_SeqBAIJ *)baij->B->data)->roworiented = PETSC_FALSE; /* b->roworiented */
     while (1) {
       PetscCall(MatStashScatterGetMesg_Private(&mat->bstash, &n, &row, &col, &val, &flg));
       if (!flg) break;

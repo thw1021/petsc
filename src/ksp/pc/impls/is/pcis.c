@@ -162,7 +162,7 @@ PetscErrorCode PCISSetUp(PC pc, PetscBool computematrices, PetscBool computesolv
     PetscCall(ISLocalToGlobalMappingDestroy(&pcis->mapping));
     pcis->mapping = matis->rmapping;
     PetscCall(ISLocalToGlobalMappingGetSize(pcis->mapping, &pcis->n));
-    PetscCall(ISLocalToGlobalMappingGetInfo(pcis->mapping, &(pcis->n_neigh), &(pcis->neigh), &(pcis->n_shared), &(pcis->shared)));
+    PetscCall(ISLocalToGlobalMappingGetInfo(pcis->mapping, &pcis->n_neigh, &pcis->neigh, &pcis->n_shared, &pcis->shared));
 
     /* Identifying interior and interface nodes, in local numbering */
     PetscCall(PetscBTCreate(pcis->n, &bt));
@@ -454,7 +454,7 @@ PetscErrorCode PCISReset(PC pc)
   PetscCall(VecScatterDestroy(&pcis->N_to_D));
   PetscCall(VecScatterDestroy(&pcis->global_to_B));
   PetscCall(PetscFree(pcis->work_N));
-  if (pcis->n_neigh > -1) PetscCall(ISLocalToGlobalMappingRestoreInfo(pcis->mapping, &(pcis->n_neigh), &(pcis->neigh), &(pcis->n_shared), &(pcis->shared)));
+  if (pcis->n_neigh > -1) PetscCall(ISLocalToGlobalMappingRestoreInfo(pcis->mapping, &pcis->n_neigh, &pcis->neigh, &pcis->n_shared, &pcis->shared));
   PetscCall(ISLocalToGlobalMappingDestroy(&pcis->mapping));
   PetscCall(ISLocalToGlobalMappingDestroy(&pcis->BtoNmap));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCISSetUseStiffnessScaling_C", NULL));

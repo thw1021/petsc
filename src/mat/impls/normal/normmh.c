@@ -409,11 +409,11 @@ PetscErrorCode MatCreateNormalHermitian(Mat A, Mat *N)
   (*N)->assembled              = PETSC_TRUE;
   (*N)->preallocated           = PETSC_TRUE;
 
-  PetscCall(PetscObjectComposeFunction((PetscObject)(*N), "MatNormalHermitianGetMat_C", MatNormalHermitianGetMat_NormalHermitian));
-  PetscCall(PetscObjectComposeFunction((PetscObject)(*N), "MatConvert_normalh_seqaij_C", MatConvert_NormalHermitian_AIJ));
-  PetscCall(PetscObjectComposeFunction((PetscObject)(*N), "MatConvert_normalh_mpiaij_C", MatConvert_NormalHermitian_AIJ));
+  PetscCall(PetscObjectComposeFunction((PetscObject)*N, "MatNormalHermitianGetMat_C", MatNormalHermitianGetMat_NormalHermitian));
+  PetscCall(PetscObjectComposeFunction((PetscObject)*N, "MatConvert_normalh_seqaij_C", MatConvert_NormalHermitian_AIJ));
+  PetscCall(PetscObjectComposeFunction((PetscObject)*N, "MatConvert_normalh_mpiaij_C", MatConvert_NormalHermitian_AIJ));
 #if defined(PETSC_HAVE_HYPRE)
-  PetscCall(PetscObjectComposeFunction((PetscObject)(*N), "MatConvert_normalh_hypre_C", MatConvert_NormalHermitian_HYPRE));
+  PetscCall(PetscObjectComposeFunction((PetscObject)*N, "MatConvert_normalh_hypre_C", MatConvert_NormalHermitian_HYPRE));
 #endif
   PetscCall(MatSetOption(*N, MAT_HERMITIAN, PETSC_TRUE));
   PetscCall(MatGetVecType(A, &vtype));

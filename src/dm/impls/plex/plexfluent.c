@@ -103,7 +103,7 @@ static PetscErrorCode DMPlexCreateFluent_ReadSection(PetscViewer viewer, FluentS
   /* Fast-forward to next section and derive its index */
   PetscCall(DMPlexCreateFluent_ReadString(viewer, buffer, '('));
   PetscCall(DMPlexCreateFluent_ReadString(viewer, buffer, ' '));
-  snum = sscanf(buffer, "%d", &(s->index));
+  snum = sscanf(buffer, "%d", &s->index);
   /* If we can't match an index return -1 to signal end-of-file */
   if (snum < 1) {
     s->index = -1;
@@ -115,12 +115,12 @@ static PetscErrorCode DMPlexCreateFluent_ReadSection(PetscViewer viewer, FluentS
 
   } else if (s->index == 2) { /* Dimension */
     PetscCall(DMPlexCreateFluent_ReadString(viewer, buffer, ')'));
-    snum = sscanf(buffer, "%d", &(s->nd));
+    snum = sscanf(buffer, "%d", &s->nd);
     PetscCheck(snum == 1, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "File is not a valid Fluent file");
 
   } else if (s->index == 10 || s->index == 2010) { /* Vertices */
     PetscCall(DMPlexCreateFluent_ReadString(viewer, buffer, ')'));
-    snum = sscanf(buffer, "(%x %x %x %d %d)", &(s->zoneID), &(s->first), &(s->last), &(s->type), &(s->nd));
+    snum = sscanf(buffer, "(%x %x %x %d %d)", &s->zoneID, &s->first, &s->last, &s->type, &s->nd);
     PetscCheck(snum == 5, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "File is not a valid Fluent file");
     if (s->zoneID > 0) {
       PetscInt numCoords = s->last - s->first + 1;
@@ -133,13 +133,13 @@ static PetscErrorCode DMPlexCreateFluent_ReadSection(PetscViewer viewer, FluentS
 
   } else if (s->index == 12 || s->index == 2012) { /* Cells */
     PetscCall(DMPlexCreateFluent_ReadString(viewer, buffer, ')'));
-    snum = sscanf(buffer, "(%x", &(s->zoneID));
+    snum = sscanf(buffer, "(%x", &s->zoneID);
     PetscCheck(snum == 1, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "File is not a valid Fluent file");
     if (s->zoneID == 0) { /* Header section */
-      snum = sscanf(buffer, "(%x %x %x %d)", &(s->zoneID), &(s->first), &(s->last), &(s->nd));
+      snum = sscanf(buffer, "(%x %x %x %d)", &s->zoneID, &s->first, &s->last, &s->nd);
       PetscCheck(snum == 4, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "File is not a valid Fluent file");
     } else { /* Data section */
-      snum = sscanf(buffer, "(%x %x %x %d %d)", &(s->zoneID), &(s->first), &(s->last), &(s->type), &(s->nd));
+      snum = sscanf(buffer, "(%x %x %x %d %d)", &s->zoneID, &s->first, &s->last, &s->type, &s->nd);
       PetscCheck(snum == 5, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "File is not a valid Fluent file");
       if (s->nd == 0) {
         /* Read cell type definitions for mixed cells */
@@ -155,14 +155,14 @@ static PetscErrorCode DMPlexCreateFluent_ReadSection(PetscViewer viewer, FluentS
 
   } else if (s->index == 13 || s->index == 2013) { /* Faces */
     PetscCall(DMPlexCreateFluent_ReadString(viewer, buffer, ')'));
-    snum = sscanf(buffer, "(%x", &(s->zoneID));
+    snum = sscanf(buffer, "(%x", &s->zoneID);
     PetscCheck(snum == 1, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "File is not a valid Fluent file");
     if (s->zoneID == 0) { /* Header section */
-      snum = sscanf(buffer, "(%x %x %x %d)", &(s->zoneID), &(s->first), &(s->last), &(s->nd));
+      snum = sscanf(buffer, "(%x %x %x %d)", &s->zoneID, &s->first, &s->last, &s->nd);
       PetscCheck(snum == 4, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "File is not a valid Fluent file");
     } else { /* Data section */
       PetscInt f, numEntries, numFaces;
-      snum = sscanf(buffer, "(%x %x %x %d %d)", &(s->zoneID), &(s->first), &(s->last), &(s->type), &(s->nd));
+      snum = sscanf(buffer, "(%x %x %x %d %d)", &s->zoneID, &s->first, &s->last, &s->type, &s->nd);
       PetscCheck(snum == 5, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "File is not a valid Fluent file");
       PetscCall(DMPlexCreateFluent_ReadString(viewer, buffer, '('));
       switch (s->nd) {

@@ -730,7 +730,7 @@ PetscErrorCode PetscBagView(PetscBag bag, PetscViewer view)
       PetscCall(PetscViewerBinaryWrite(view, nitem->help, PETSC_BAG_HELP_LENGTH, PETSC_CHAR));
       PetscCall(PetscViewerBinaryWrite(view, &nitem->msize, 1, PETSC_INT));
       /* some Fortran compilers use -1 as boolean */
-      if (dtype == PETSC_BOOL && ((*(int *)(((char *)bag) + nitem->offset) == -1))) *(int *)(((char *)bag) + nitem->offset) = PETSC_TRUE;
+      if (dtype == PETSC_BOOL && (*(int *)(((char *)bag) + nitem->offset) == -1)) *(int *)(((char *)bag) + nitem->offset) = PETSC_TRUE;
 
       PetscCall(PetscViewerBinaryWrite(view, (((char *)bag) + nitem->offset), nitem->msize, nitem->dtype));
       if (dtype == PETSC_ENUM) PetscCall(PetscViewerBinaryWriteStringArray(view, (const char *const *)nitem->list));
@@ -1013,7 +1013,7 @@ PetscErrorCode PetscBagSetOptionsPrefix(PetscBag bag, const char pre[])
     PetscAssertPointer(pre, 2);
     PetscCheck(pre[0] != '-', PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Options prefix should not begin with a hyphen");
     PetscCall(PetscFree(bag->bagprefix));
-    PetscCall(PetscStrallocpy(pre, &(bag->bagprefix)));
+    PetscCall(PetscStrallocpy(pre, &bag->bagprefix));
   } else PetscCall(PetscFree(bag->bagprefix));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

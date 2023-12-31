@@ -1264,7 +1264,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_FFTW(Mat A)
   fftw->ndim_fftw   = (ptrdiff_t)ndim; /* This is dimension of fft */
   fftw->partial_dim = partial_dim;
 
-  PetscCall(PetscMalloc1(ndim, &(fftw->dim_fftw)));
+  PetscCall(PetscMalloc1(ndim, &fftw->dim_fftw));
   if (size == 1) {
 #if defined(PETSC_USE_64BIT_INDICES)
     fftw->iodims = (fftw_iodim64 *)malloc(sizeof(fftw_iodim64) * ndim);

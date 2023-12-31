@@ -326,10 +326,10 @@ PetscErrorCode MatCreateHermitianTranspose(Mat A, Mat *N)
   (*N)->ops->convert     = MatConvert_HT;
   (*N)->assembled        = PETSC_TRUE;
 
-  PetscCall(PetscObjectComposeFunction((PetscObject)(*N), "MatHermitianTransposeGetMat_C", MatHermitianTransposeGetMat_HT));
-  PetscCall(PetscObjectComposeFunction((PetscObject)(*N), "MatProductSetFromOptions_anytype_C", MatProductSetFromOptions_HermitianTranspose));
+  PetscCall(PetscObjectComposeFunction((PetscObject)*N, "MatHermitianTransposeGetMat_C", MatHermitianTransposeGetMat_HT));
+  PetscCall(PetscObjectComposeFunction((PetscObject)*N, "MatProductSetFromOptions_anytype_C", MatProductSetFromOptions_HermitianTranspose));
 #if !defined(PETSC_USE_COMPLEX)
-  PetscCall(PetscObjectComposeFunction((PetscObject)(*N), "MatTransposeGetMat_C", MatHermitianTransposeGetMat_HT));
+  PetscCall(PetscObjectComposeFunction((PetscObject)*N, "MatTransposeGetMat_C", MatHermitianTransposeGetMat_HT));
 #endif
   PetscCall(MatSetBlockSizes(*N, PetscAbs(A->cmap->bs), PetscAbs(A->rmap->bs)));
   PetscCall(MatGetVecType(A, &vtype));

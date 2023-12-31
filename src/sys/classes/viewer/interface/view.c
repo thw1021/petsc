@@ -92,7 +92,7 @@ PetscErrorCode PetscViewerDestroy(PetscViewer *viewer)
   PetscValidHeaderSpecific(*viewer, PETSC_VIEWER_CLASSID, 1);
 
   PetscCall(PetscViewerFlush(*viewer));
-  if (--((PetscObject)(*viewer))->refct > 0) {
+  if (--((PetscObject)*viewer)->refct > 0) {
     *viewer = NULL;
     PetscFunctionReturn(PETSC_SUCCESS);
   }

@@ -134,7 +134,7 @@ static PetscErrorCode PCBDDCComputeNedelecChangeEdge(Mat lG, IS edge, IS extrow,
       PetscCall(PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_MATLAB));
       PetscCall(PetscObjectSetName((PetscObject)GEc, "GEc"));
       PetscCall(MatView(GEc, viewer));
-      PetscCall(PetscObjectSetName((PetscObject)(*GKins), "GK"));
+      PetscCall(PetscObjectSetName((PetscObject)*GKins, "GK"));
       PetscCall(MatView(*GKins, viewer));
       PetscCall(PetscObjectSetName((PetscObject)GEd, "Gproj"));
       PetscCall(MatView(GEd, viewer));
@@ -1826,7 +1826,7 @@ PetscErrorCode PCBDDCConsistencyCheckIS(PC pc, MPI_Op mop, IS *is)
   }
   for (i = 0, nnd = 0; i < n; i++)
     if (matis->sf_leafdata[i]) nidxs[nnd++] = i;
-  PetscCall(ISCreateGeneral(PetscObjectComm((PetscObject)(*is)), nnd, nidxs, PETSC_OWN_POINTER, &nis));
+  PetscCall(ISCreateGeneral(PetscObjectComm((PetscObject)*is), nnd, nidxs, PETSC_OWN_POINTER, &nis));
   PetscCall(ISDestroy(is));
   *is = nis;
   PetscFunctionReturn(PETSC_SUCCESS);

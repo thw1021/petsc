@@ -500,7 +500,7 @@ static inline int PetscMPIParallelComm(MPI_Comm comm)
     #define MPI_Startall_isend(count, datatype, number, requests) \
       (PetscAddLogDouble(&petsc_isend_ct, &petsc_isend_ct_th, number) || PetscMPITypeSize((count), (datatype), &(petsc_isend_len), &(petsc_isend_len_th)) || ((number) && MPI_Startall((number), (requests))))
 
-    #define MPI_Start_isend(count, datatype, requests) (PetscAddLogDouble(&petsc_isend_ct, &petsc_isend_ct_th, 1) || PetscMPITypeSize((count), (datatype), (&petsc_isend_len), (&petsc_isend_len_th)) || MPI_Start((requests)))
+    #define MPI_Start_isend(count, datatype, requests) (PetscAddLogDouble(&petsc_isend_ct, &petsc_isend_ct_th, 1) || PetscMPITypeSize((count), (datatype), (&petsc_isend_len), (&petsc_isend_len_th)) || MPI_Start(requests))
 
     #define MPI_Recv(buf, count, datatype, source, tag, comm, status) \
       (PetscAddLogDouble(&petsc_recv_ct, &petsc_recv_ct_th, 1) || PetscMPITypeSize((count), (datatype), (&petsc_recv_len), (&petsc_recv_len_th)) || MPI_Recv((buf), (count), (datatype), (source), (tag), (comm), (status)))
@@ -601,7 +601,7 @@ static inline int PetscMPIParallelComm(MPI_Comm comm)
 
     #define MPI_Startall_isend(count, datatype, number, requests) ((number) && MPI_Startall((number), (requests)))
 
-    #define MPI_Start_isend(count, datatype, requests) (MPI_Start((requests)))
+    #define MPI_Start_isend(count, datatype, requests) (MPI_Start(requests))
 
   #endif /* !MPIUNI_H && ! PETSC_HAVE_BROKEN_RECURSIVE_MACRO */
 

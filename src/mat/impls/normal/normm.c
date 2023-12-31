@@ -535,15 +535,15 @@ PetscErrorCode MatCreateNormal(Mat A, Mat *N)
   (*N)->assembled              = PETSC_TRUE;
   (*N)->preallocated           = PETSC_TRUE;
 
-  PetscCall(PetscObjectComposeFunction((PetscObject)(*N), "MatNormalGetMat_C", MatNormalGetMat_Normal));
-  PetscCall(PetscObjectComposeFunction((PetscObject)(*N), "MatConvert_normal_seqaij_C", MatConvert_Normal_AIJ));
-  PetscCall(PetscObjectComposeFunction((PetscObject)(*N), "MatConvert_normal_mpiaij_C", MatConvert_Normal_AIJ));
+  PetscCall(PetscObjectComposeFunction((PetscObject)*N, "MatNormalGetMat_C", MatNormalGetMat_Normal));
+  PetscCall(PetscObjectComposeFunction((PetscObject)*N, "MatConvert_normal_seqaij_C", MatConvert_Normal_AIJ));
+  PetscCall(PetscObjectComposeFunction((PetscObject)*N, "MatConvert_normal_mpiaij_C", MatConvert_Normal_AIJ));
 #if defined(PETSC_HAVE_HYPRE)
-  PetscCall(PetscObjectComposeFunction((PetscObject)(*N), "MatConvert_normal_hypre_C", MatConvert_Normal_HYPRE));
+  PetscCall(PetscObjectComposeFunction((PetscObject)*N, "MatConvert_normal_hypre_C", MatConvert_Normal_HYPRE));
 #endif
-  PetscCall(PetscObjectComposeFunction((PetscObject)(*N), "MatProductSetFromOptions_normal_seqdense_C", MatProductSetFromOptions_Normal_Dense));
-  PetscCall(PetscObjectComposeFunction((PetscObject)(*N), "MatProductSetFromOptions_normal_mpidense_C", MatProductSetFromOptions_Normal_Dense));
-  PetscCall(PetscObjectComposeFunction((PetscObject)(*N), "MatProductSetFromOptions_normal_dense_C", MatProductSetFromOptions_Normal_Dense));
+  PetscCall(PetscObjectComposeFunction((PetscObject)*N, "MatProductSetFromOptions_normal_seqdense_C", MatProductSetFromOptions_Normal_Dense));
+  PetscCall(PetscObjectComposeFunction((PetscObject)*N, "MatProductSetFromOptions_normal_mpidense_C", MatProductSetFromOptions_Normal_Dense));
+  PetscCall(PetscObjectComposeFunction((PetscObject)*N, "MatProductSetFromOptions_normal_dense_C", MatProductSetFromOptions_Normal_Dense));
   PetscCall(MatSetOption(*N, MAT_SYMMETRIC, PETSC_TRUE));
   PetscCall(MatGetVecType(A, &vtype));
   PetscCall(MatSetVecType(*N, vtype));

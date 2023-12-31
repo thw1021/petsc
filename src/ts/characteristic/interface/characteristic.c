@@ -38,7 +38,7 @@ PetscErrorCode CharacteristicDestroy(Characteristic *c)
   PetscFunctionBegin;
   if (!*c) PetscFunctionReturn(PETSC_SUCCESS);
   PetscValidHeaderSpecific(*c, CHARACTERISTIC_CLASSID, 1);
-  if (--((PetscObject)(*c))->refct > 0) PetscFunctionReturn(PETSC_SUCCESS);
+  if (--((PetscObject)*c)->refct > 0) PetscFunctionReturn(PETSC_SUCCESS);
 
   if ((*c)->ops->destroy) PetscCall((*(*c)->ops->destroy)((*c)));
   PetscCallMPI(MPI_Type_free(&(*c)->itemType));
@@ -359,7 +359,7 @@ PetscErrorCode CharacteristicSolve(Characteristic c, PetscReal dt, Vec solution)
       Qi.proc = DMDAGetNeighborRelative(da, Qi.x, Qi.y);
 
       /* Check for Periodic boundaries and move all periodic points back onto the domain */
-      PetscCall(DMDAMapCoordsToPeriodicDomain(da, &(Qi.x), &(Qi.y)));
+      PetscCall(DMDAMapCoordsToPeriodicDomain(da, &Qi.x, &Qi.y));
       PetscCall(CharacteristicAddPoint(c, &Qi));
     }
   }
@@ -441,7 +441,7 @@ PetscErrorCode CharacteristicSolve(Characteristic c, PetscReal dt, Vec solution)
     Qi.proc = DMDAGetNeighborRelative(da, Qi.x, Qi.y);
 
     /* Check for Periodic boundaries and move all periodic points back onto the domain */
-    PetscCall(DMDAMapCoordsToPeriodicDomain(da, &(Qi.x), &(Qi.y)));
+    PetscCall(DMDAMapCoordsToPeriodicDomain(da, &Qi.x, &Qi.y));
 
     c->queue[n] = Qi;
   }
