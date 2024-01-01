@@ -1094,7 +1094,7 @@ PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char *prog, const char 
 #if defined(__VALGRIND_H)
   PETSC_RUNNING_ON_VALGRIND = RUNNING_ON_VALGRIND ? PETSC_TRUE : PETSC_FALSE;
   #if defined(PETSC_USING_DARWIN) && defined(PETSC_BLASLAPACK_SDOT_RETURNS_DOUBLE)
-  if (PETSC_RUNNING_ON_VALGRIND) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "WARNING: Running valgrind with the MacOS native BLAS and LAPACK can fail. If it fails suggest configuring with --download-fblaslapack or --download-f2cblaslapack"));
+  if (PETSC_RUNNING_ON_VALGRIND) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "WARNING: Running valgrind with the macOS native BLAS and LAPACK can fail. If it fails suggest configuring with --download-fblaslapack or --download-f2cblaslapack"));
   #endif
 #endif
   /*
