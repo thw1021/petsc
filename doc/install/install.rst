@@ -333,7 +333,7 @@ MPI
 The Message Passing Interface (MPI) provides the parallel functionality for PETSc.
 
 MPI might already be installed. IBM, Intel, NVIDIA, and Cray provide their own and Linux and macOS package
-managers also provide open source versions called MPICH and OpenMPI. If MPI is not already installed use
+managers also provide open-source versions called MPICH and OpenMPI. If MPI is not already installed use
 the following options to let PETSc's ``configure`` download and install MPI.
 
 - For `MPICH`_:
@@ -436,8 +436,8 @@ the following options to let PETSc's ``configure`` download and install MPI.
      set by certain modules. So one must be careful to ensure they are using the desired compilers.
 
 
-Installing With Open MPI With Shared MPI Libraries
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Installing With OpenMPI With Shared MPI Libraries
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 `OpenMPI`_ defaults to building shared libraries for MPI. However, the binaries generated
 by MPI compiler wrappers ``mpicc``/``mpif90`` etc. require ``$LD_LIBRARY_PATH`` to be set to the
@@ -608,7 +608,7 @@ If not provided ``configure`` will generate a unique value automatically (for in
    $ ./configure --with-debugging=0
    $ make
 
-Produces the directories (on an Apple MacOS machine) ``$PETSC_DIR/arch-darwin-c-debug`` and
+Produces the directories (on an Apple macOS machine) ``$PETSC_DIR/arch-darwin-c-debug`` and
 ``$PETSC_DIR/arch-darwin-c-opt``.
 
 Installing On Machine Requiring Cross Compiler Or A Job Scheduler

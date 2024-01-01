@@ -631,10 +631,10 @@ class Configure(config.base.Configure):
         try:
           v = tuple([int(a) for a in platform.mac_ver()[0].split('.')])
           if v >= (10,15,0):
-            if log: log.write('Detected Darwin/MacOSX Catalina OS\n')
+            if log: log.write('Detected Darwin/macOS Catalina OS\n')
             isDarwinCatalina_value = True
         except:
-          if log: log.write('MacOS version detecton failed!\n')
+          if log: log.write('macOS version detecton failed!\n')
           pass
       if output.find('freebsd') >= 0:
         if log: log.write('Detected FreeBSD')
@@ -1449,7 +1449,7 @@ class Configure(config.base.Configure):
       pass
     else:
       if self.isDarwin(self.log) and self.isARM(self.log) and output.find('x86_64-apple-darwin') > -1:
-        raise RuntimeError('Running on a macOS arm system but your compilers are configured for Intel processors\n' + output + '\n')
+        raise RuntimeError('Running on a macOS ARM system but your compilers are configured for Intel processors\n' + output + '\n')
 
     (output, error, status) = config.base.Configure.executeShellCommand(self.CC+' -v | head -n 20', log = self.log)
     output = output + error

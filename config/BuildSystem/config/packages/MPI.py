@@ -350,7 +350,7 @@ shared libraries and run with --known-mpi-shared-libraries=1')
                 self.logPrint("Exception: while running ping skipping ping check\n")
 
               if not hostnameworks:
-                # Note: host may not work on MacOS, this is normal
+                # Note: host may not work on macOS, this is normal
                 self.getExecutable('host')
                 if hasattr(self,'host'):
                   try:
