@@ -652,7 +652,7 @@ Spelling and Capitalization
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 #. Proper nouns, including Unix, Linux, X Windows, and Microsoft Windows, should be fully written and capitalized. This includes all operating systems.
-   The Apple computer operator system is written as macOS.
+   The Apple computer operating system is written as macOS.
 
 #. Company names and product names should be capitalized.
 
