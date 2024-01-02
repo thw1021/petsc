@@ -98,4 +98,16 @@
 !       # the usual options for the linear solver (in this case using the server)
 !       args: -ksp_monitor -ksp_converged_reason -ksp_view
 !
+!     test:
+!       suffix: 2
+!       requires: defined(PETSC_USE_SINGLE_LIBRARY)
+!       nsize: 3
+!       filter: sed 's?ATOL?RTOL?g' | grep -v HERMITIAN | grep -v "shared memory"
+!       # use the MPI Linear Solver Server
+!       args: -n 20 -mpi_linear_solver_server -mpi_linear_solver_server_view
+!       # controls for the use of PCMPI on a particular system
+!       args: -mpi_linear_solver_server_ksp_view
+!       # the usual options for the linear solver (in this case using the server)
+!       args: -ksp_monitor -ksp_converged_reason -ksp_view
+!
 !TEST*/

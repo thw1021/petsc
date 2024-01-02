@@ -678,6 +678,12 @@ static PetscErrorCode PCApply_Seq(PC pc, Vec b, Vec x)
   PetscCall(MatGetSize(A, &n, NULL));
   PCMPISizesSeq += n;
   PCMPIServerInSolve = PETSC_FALSE;
+  /*
+    do not keep reference to previous rhs and solution since destroying them in the next KSPSolve()
+    my use PetscFree() instead of PCMPIArrayDeallocate()
+  */
+  PetscCall(VecDestroy(&km->ksps[0]->vec_rhs));
+  PetscCall(VecDestroy(&km->ksps[0]->vec_sol));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
