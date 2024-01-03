@@ -2402,7 +2402,7 @@ PetscErrorCode PCFieldSplitSchurGetSubKSP(PC pc, PetscInt *n, KSP *subksp[])
 }
 
 /*@
-  PCFieldSplitSetSchurPre -  Indicates from what operator the preconditioner is constructucted for the Schur complement.
+  PCFieldSplitSetSchurPre -  Indicates from what operator the preconditioner is constructed for the Schur complement.
   The default is the A11 matrix.
 
   Collective
