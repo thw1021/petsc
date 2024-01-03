@@ -214,6 +214,71 @@ static void maxwellian(PetscInt dim, const PetscReal x[], PetscReal kt_m, PetscR
 }
 
 #define MAX_NUM_THRDS 12
+//
+PetscErrorCode gridToParticles_private(DM grid_dm[], DM globSwarmArray[], const PetscInt dim, const PetscInt b_target, const PetscInt numthreads, const PetscInt NUserV, const PetscInt global_batch_id, Mat globMpArray[], Mat g_Mass[], Vec t_fhat[][MAX_NUM_THRDS], PetscReal moments_1[], Vec globXArray[], PetscReal *final_rho, LandauCtx *ctx)
+{
+  PetscErrorCode ierr = 0; // used for inside thread loops
+  PetscInt       glb_b_id;
+
+  PetscFunctionBeginUser;
+  // map back to particles
+  for (PetscInt b_id_0 = 0; b_id_0 < ctx->batch_sz; b_id_0 += numthreads) {
+    PetscCall(PetscInfo(grid_dm[0], "g2p: global batch %" PetscInt_FMT " of %" PetscInt_FMT ", Landau batch %" PetscInt_FMT " of %" PetscInt_FMT ": map back to particles\n", global_batch_id + 1, NUserV, b_id_0 + 1, ctx->batch_sz));
+    PetscPragmaOMP(parallel for)
+    for (int tid = 0; tid < numthreads; tid++) {
+      const PetscInt b_id = b_id_0 + tid;
+      if ((glb_b_id = global_batch_id + b_id) < NUserV) {
+        for (PetscInt grid = 0; grid < ctx->num_grids; grid++) { // add same particels for all grids
+          PetscErrorCode ierr_t;
+          ierr_t = PetscInfo(grid_dm[0], "gridToParticles: global batch %" PetscInt_FMT ", local batch b=%" PetscInt_FMT ", grid g=%" PetscInt_FMT ", index(b,g) %" PetscInt_FMT "\n", global_batch_id, b_id, grid, LAND_PACK_IDX(b_id, grid));
+          ierr_t = gridToParticles(grid_dm[grid], globSwarmArray[LAND_PACK_IDX(b_id, grid)], globXArray[LAND_PACK_IDX(b_id, grid)], t_fhat[grid][tid], globMpArray[LAND_PACK_IDX(b_id, grid)], g_Mass[grid]);
+          if (ierr_t) ierr = ierr_t;
+        }
+      }
+    }
+    PetscCheck(!ierr, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Error in OMP loop. ierr = %d", (int)ierr);
+    /* Cleanup, and get data */
+    PetscCall(PetscInfo(grid_dm[0], "Cleanup batches %" PetscInt_FMT " to %" PetscInt_FMT "\n", b_id_0, b_id_0 + numthreads));
+    for (int tid = 0; tid < numthreads; tid++) {
+      const PetscInt b_id = b_id_0 + tid;
+      if ((glb_b_id = global_batch_id + b_id) < NUserV) {
+        for (PetscInt grid = 0; grid < ctx->num_grids; grid++) {
+          PetscDataType dtype;
+          PetscReal    *wp, *coords;
+          DM            sw = globSwarmArray[LAND_PACK_IDX(b_id, grid)];
+          PetscInt      npoints, bs = 1;
+          PetscCall(DMSwarmGetField(sw, "w_q", &bs, &dtype, (void **)&wp)); // take data out here
+          if (glb_b_id == b_target) {
+            PetscCall(DMSwarmGetField(sw, "DMSwarmPIC_coor", &bs, &dtype, (void **)&coords));
+            PetscCall(DMSwarmGetLocalSize(sw, &npoints));
+            for (int p = 0; p < npoints; p++) {
+              PetscReal v2 = 0, fact = dim == 2 ? 2.0 * PETSC_PI * coords[p * dim + 0] : 1;
+              for (int i = 0; i < dim; ++i) v2 += PetscSqr(coords[p * dim + i]);
+              moments_1[0] += fact * wp[p] * ctx->n_0 * ctx->masses[ctx->species_offset[grid]];
+              moments_1[1] += fact * wp[p] * ctx->n_0 * ctx->v_0 * ctx->masses[ctx->species_offset[grid]] * coords[p * dim + 1]; // z-momentum
+              moments_1[2] += fact * wp[p] * ctx->n_0 * ctx->v_0 * ctx->v_0 * ctx->masses[ctx->species_offset[grid]] * v2;
+            }
+            if (grid == 0) {                            // entropy for electrons
+              const PetscReal N_inv = 1 / moments_1[0]; // same as moments_0[0]
+              for (int p = 0; p < npoints; p++) {
+                const PetscReal fact = dim == 2 ? 2.0 * PETSC_PI * coords[p * dim + 0] : 1, w = fact * wp[p], ww = w * ctx->n_0 * ctx->masses[ctx->species_offset[grid]] * N_inv;
+                if (ww > PETSC_REAL_MIN) {
+                  moments_1[3] -= ww * PetscLogReal(ww);
+                  *final_rho += ww;
+                }
+                //else if (ww < -10*PETSC_MACHINE_EPSILON) printf("NaN: %d) ww = %g, w = %g N = %g, factor = %g\n", p, ww, w, moments_0[0], ctx->n_0 * ctx->masses[ctx->species_offset[grid]] * N_inv);
+              }
+            }
+            PetscCall(DMSwarmRestoreField(sw, "DMSwarmPIC_coor", &bs, &dtype, (void **)&coords));
+          }
+          PetscCall(DMSwarmRestoreField(sw, "w_q", &bs, &dtype, (void **)&wp));
+        }
+      }
+    } // thread batch
+  }   // batch
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 PetscErrorCode go(TS ts, Vec X, const PetscInt NUserV, const PetscInt a_Np, const PetscInt dim, const PetscInt b_target, const PetscInt g_target, PetscReal shift, PetscBool coarse_graining_only)
 {
   DM             pack, *globSwarmArray, grid_dm[LANDAU_MAX_GRIDS];
@@ -229,7 +294,7 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt NUserV, const PetscInt a_Np, cons
 #endif
   LandauCtx *ctx;
   Vec       *globXArray;
-  PetscReal  moments_0[4], moments_1[4], dt_init, final_rho = 0;
+  PetscReal  moments_0[4], moments_1a[4], moments_1b[4], dt_init, final_rho = 0;
 
   PetscFunctionBeginUser;
   PetscCheck(numthreads <= MAX_NUM_THRDS, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Too many threads %" PetscInt_FMT " > %d", numthreads, MAX_NUM_THRDS);
@@ -265,7 +330,7 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt NUserV, const PetscInt a_Np, cons
   }
   PetscCall(DMCompositeRestoreAccessArray(pack, X, nDMs, NULL, globXArray));
   // create particle raw data. could use OMP with a thread safe malloc, but this is just the fake user
-  for (int i = 0; i < 4; i++) moments_0[i] = moments_1[i] = 0;
+  for (int i = 0; i < 4; i++) moments_0[i] = moments_1a[i] = moments_1b[i] = 0;
   PetscCall(TSGetTimeStep(ts, &dt_init)); // we could have an adaptive time stepper
   for (PetscInt global_batch_id = 0; global_batch_id < NUserV; global_batch_id += ctx->batch_sz) {
     PetscCall(TSSetTime(ts, 0));
@@ -399,76 +464,41 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt NUserV, const PetscInt a_Np, cons
       PetscCall(DMSetOutputSequenceNumber(ctx->plex[g_target], 0, 0.0));
       PetscCall(VecViewFromOptions(globXArray[LAND_PACK_IDX(b_target % ctx->batch_sz, g_target)], NULL, "-ex30_vec_view"));
     }
+    // particles to grid, compute moments and entropy, w/o Landau
+    final_rho = 0;
+    PetscCall(gridToParticles_private(grid_dm, globSwarmArray, dim, b_target, numthreads, NUserV, global_batch_id, globMpArray, g_Mass, t_fhat, moments_1a, globXArray, &final_rho, ctx));
+    // restore vector
     PetscCall(DMCompositeRestoreAccessArray(pack, X, nDMs, NULL, globXArray));
+    // view
     PetscCall(DMPlexLandauPrintNorms(X, 0));
     // advance
     PetscCall(TSSetSolution(ts, X));
     PetscCall(PetscInfo(pack, "Advance vertex %" PetscInt_FMT " to %" PetscInt_FMT " (with padding)\n", global_batch_id, global_batch_id + ctx->batch_sz));
     if (!coarse_graining_only) PetscCall(TSSolve(ts, X));
+    // view
     PetscCall(DMPlexLandauPrintNorms(X, 1));
     PetscCall(DMCompositeGetAccessArray(pack, X, nDMs, NULL, globXArray));
     if (b_target >= global_batch_id && b_target < global_batch_id + ctx->batch_sz) {
       PetscCall(DMSetOutputSequenceNumber(ctx->plex[g_target], 1, dt_init));
       PetscCall(VecViewFromOptions(globXArray[LAND_PACK_IDX(b_target % ctx->batch_sz, g_target)], NULL, "-ex30_vec_view"));
     }
-    // map back to particles
+    // particles to grid, compute moments and entropy
+    final_rho = 0;
+    PetscCall(gridToParticles_private(grid_dm, globSwarmArray, dim, b_target, numthreads, NUserV, global_batch_id, globMpArray, g_Mass, t_fhat, moments_1b, globXArray, &final_rho, ctx));
+    // restore vector
+    PetscCall(DMCompositeRestoreAccessArray(pack, X, nDMs, NULL, globXArray));
+    // cleanup
     for (PetscInt b_id_0 = 0; b_id_0 < ctx->batch_sz; b_id_0 += numthreads) {
-      PetscCall(PetscInfo(pack, "g2p: global batch %" PetscInt_FMT " of %" PetscInt_FMT ", Landau batch %" PetscInt_FMT " of %" PetscInt_FMT ": map back to particles\n", global_batch_id + 1, NUserV, b_id_0 + 1, ctx->batch_sz));
-      PetscPragmaOMP(parallel for)
-      for (int tid = 0; tid < numthreads; tid++) {
-        const PetscInt b_id = b_id_0 + tid;
-        if ((glb_b_id = global_batch_id + b_id) < NUserV) {
-          for (PetscInt grid = 0; grid < ctx->num_grids; grid++) { // add same particels for all grids
-            PetscErrorCode ierr_t;
-            ierr_t = PetscInfo(pack, "gridToParticles: global batch %" PetscInt_FMT ", local batch b=%" PetscInt_FMT ", grid g=%" PetscInt_FMT ", index(b,g) %" PetscInt_FMT "\n", global_batch_id, b_id, grid, LAND_PACK_IDX(b_id, grid));
-            ierr_t = gridToParticles(grid_dm[grid], globSwarmArray[LAND_PACK_IDX(b_id, grid)], globXArray[LAND_PACK_IDX(b_id, grid)], t_fhat[grid][tid], globMpArray[LAND_PACK_IDX(b_id, grid)], g_Mass[grid]);
-            if (ierr_t) ierr = ierr_t;
-          }
-        }
-      }
-      PetscCheck(!ierr, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Error in OMP loop. ierr = %d", (int)ierr);
-      /* Cleanup, and get data */
-      PetscCall(PetscInfo(pack, "Cleanup batches %" PetscInt_FMT " to %" PetscInt_FMT "\n", b_id_0, b_id_0 + numthreads));
       for (int tid = 0; tid < numthreads; tid++) {
         const PetscInt b_id = b_id_0 + tid;
         if ((glb_b_id = global_batch_id + b_id) < NUserV) {
           for (PetscInt grid = 0; grid < ctx->num_grids; grid++) {
-            PetscDataType dtype;
-            PetscReal    *wp, *coords;
-            DM            sw = globSwarmArray[LAND_PACK_IDX(b_id, grid)];
-            PetscInt      npoints, bs = 1;
-            PetscCall(DMSwarmGetField(sw, "w_q", &bs, &dtype, (void **)&wp)); // take data out here
-            if (glb_b_id == b_target) {
-              PetscCall(DMSwarmGetField(sw, "DMSwarmPIC_coor", &bs, &dtype, (void **)&coords));
-              PetscCall(DMSwarmGetLocalSize(sw, &npoints));
-              for (int p = 0; p < npoints; p++) {
-                PetscReal v2 = 0, fact = dim == 2 ? 2.0 * PETSC_PI * coords[p * dim + 0] : 1;
-                for (int i = 0; i < dim; ++i) v2 += PetscSqr(coords[p * dim + i]);
-                moments_1[0] += fact * wp[p] * ctx->n_0 * ctx->masses[ctx->species_offset[grid]];
-                moments_1[1] += fact * wp[p] * ctx->n_0 * ctx->v_0 * ctx->masses[ctx->species_offset[grid]] * coords[p * dim + 1]; // z-momentum
-                moments_1[2] += fact * wp[p] * ctx->n_0 * ctx->v_0 * ctx->v_0 * ctx->masses[ctx->species_offset[grid]] * v2;
-              }
-              if (grid == 0) {                            // entropy for electrons
-                const PetscReal N_inv = 1 / moments_1[0]; // same as moments_0[0]
-                for (int p = 0; p < npoints; p++) {
-                  const PetscReal fact = dim == 2 ? 2.0 * PETSC_PI * coords[p * dim + 0] : 1, w = fact * wp[p], ww = w * ctx->n_0 * ctx->masses[ctx->species_offset[grid]] * N_inv;
-                  if (ww > PETSC_REAL_MIN) {
-                    moments_1[3] -= ww * PetscLogReal(ww);
-                    final_rho += ww;
-                  }
-                  //else if (ww < -10*PETSC_MACHINE_EPSILON) printf("NaN: %d) ww = %g, w = %g N = %g, factor = %g\n", p, ww, w, moments_0[0], ctx->n_0 * ctx->masses[ctx->species_offset[grid]] * N_inv);
-                }
-              }
-              PetscCall(DMSwarmRestoreField(sw, "DMSwarmPIC_coor", &bs, &dtype, (void **)&coords));
-            }
-            PetscCall(DMSwarmRestoreField(sw, "w_q", &bs, &dtype, (void **)&wp));
             PetscCall(DMDestroy(&globSwarmArray[LAND_PACK_IDX(b_id, grid)]));
             PetscCall(MatDestroy(&globMpArray[LAND_PACK_IDX(b_id, grid)]));
           }
         }
-      } // thread batch
-    }   // batch
-    PetscCall(DMCompositeRestoreAccessArray(pack, X, nDMs, NULL, globXArray));
+      }
+    }
   } // user batch
   /* Cleanup */
   PetscCall(PetscFree(globXArray));
@@ -483,10 +513,8 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt NUserV, const PetscInt a_Np, cons
     }
   }
   {
-    PetscReal relerr = PetscAbsReal((moments_1[2] - moments_0[2]) / moments_0[2]), logEerr = PetscLog10Real(relerr);
-    PetscCall(PetscInfo(X, "Total number density: %18.12e (%18.12e); x-momentum = %19.12e (%19.12e); energy = %18.12e (%18.12e) rerr = %e (log10(rerr) = %e, %" PetscInt_FMT "), %" PetscInt_FMT " particles. Use %" PetscInt_FMT " threads. Entropy: initial= %e final= %e generated= %e final rho %18.12e %s\n",
-                        (double)moments_1[0], (double)moments_0[0], (double)moments_1[1], (double)moments_0[1], (double)moments_1[2], (double)moments_0[2], (double)relerr, (double)logEerr, -((-(PetscInt)logEerr + 1) / 2) * 2, nTargetP, numthreads, moments_0[3], moments_1[3], moments_1[3] - moments_0[3], final_rho,
-                        coarse_graining_only ? "coarse-graining" : "Landau"));
+    PetscReal relerr = PetscAbsReal((moments_1b[2] - moments_0[2]) / moments_0[2]), logEerr = PetscLog10Real(relerr);
+    PetscCall(PetscInfo(X, "Total number density: %18.12e (%18.12e); x-momentum = %19.12e (%19.12e); energy = %18.12e (%18.12e) rerr = %e (log10(rerr) = %e, %" PetscInt_FMT "), %" PetscInt_FMT " particles. Use %" PetscInt_FMT " threads. Entropy: initial= %e coarse graining= %e Landau= %e final rho %18.12e %s\n", (double)moments_1b[0], (double)moments_0[0], (double)moments_1b[1], (double)moments_0[1], (double)moments_1b[2], (double)moments_0[2], (double)relerr, (double)logEerr, -((-(PetscInt)logEerr + 1) / 2) * 2, nTargetP, numthreads, moments_0[3], moments_1a[3] - moments_0[3], moments_1b[3] - moments_0[3], final_rho, coarse_graining_only ? "coarse-graining" : "Landau"));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -499,7 +527,7 @@ int main(int argc, char **argv)
   TS         ts;
   Mat        J;
   LandauCtx *ctx;
-  PetscReal  shift = 0;
+  PetscReal  shift                = 0;
   PetscBool  coarse_graining_only = PETSC_FALSE;
 
   PetscFunctionBeginUser;
