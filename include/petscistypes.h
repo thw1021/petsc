@@ -33,7 +33,7 @@ S*/
 typedef struct _p_ISLocalToGlobalMapping *ISLocalToGlobalMapping;
 
 /*S
-   ISColoring - sets of `IS`'s that define a coloring of something, such as a graph defined by a sparse matrix
+   ISColoring - sets of `IS`s that define a coloring of something, such as a graph defined by a sparse matrix
 
    Level: intermediate
 

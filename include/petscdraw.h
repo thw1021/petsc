@@ -139,7 +139,7 @@ PETSC_EXTERN PetscErrorCode PetscDrawLineGetWidth(PetscDraw, PetscReal *);
 
    Level: intermediate
 
-.seealso: `PetscDraw``, `PetscDrawMarker()`, `PetscDrawSetMarkerType()`
+.seealso: `PetscDraw`, `PetscDrawMarker()`, `PetscDrawSetMarkerType()`
 E*/
 typedef enum {
   PETSC_DRAW_MARKER_CROSS,

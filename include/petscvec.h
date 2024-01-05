@@ -14,7 +14,7 @@
 /* SUBMANSEC = Vec */
 
 /*S
-   Vec - Abstract PETSc vector object. Used for holding solutions and right hand sides for (non) linear systems and integrators
+   Vec - Abstract PETSc vector object. Used for holding solutions and right-hand sides for (non) linear systems and integrators
 
    Level: beginner
 

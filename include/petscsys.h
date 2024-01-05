@@ -256,7 +256,7 @@ M*/
    communicator, call it, say comm, and set `PETSC_COMM_WORLD` = comm BEFORE calling
    `PetscInitialize()`, but after `MPI_Init()` has been called.
 
-   The value of `PETSC_COMM_WORLD` should never be USED/accessed before `PetscInitialize()`
+   The value of `PETSC_COMM_WORLD` should never be used or accessed before `PetscInitialize()`
    is called because it may not have a valid value yet.
 
 .seealso: `PETSC_COMM_SELF`
@@ -1715,7 +1715,7 @@ static inline PetscErrorCode PetscHipBLASIntCast(PetscInt a, PetscHipBLASInt *b)
 }
 
 /*@C
-   PetscMPIIntCast - casts a `PetscInt` (which may be 64-bits in size) to a PetscMPIInt (which may be 32-bits in size), generates an
+   PetscMPIIntCast - casts a `PetscInt` (which may be 64-bits in size) to a `PetscMPIInt` (which may be 32-bits in size), generates an
    error if the `PetscMPIInt` is not large enough to hold the number.
 
    Not Collective; No Fortran Support
@@ -1786,7 +1786,7 @@ static inline PetscInt PetscRealIntMultTruncate(PetscReal a, PetscInt b)
    Not Collective; No Fortran Support
 
    Input Parameters:
-+  a - the PetscInt value
++  a - the `PetscInt` value
 -  b - the second value
 
    Returns:
