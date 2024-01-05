@@ -35,7 +35,7 @@ PETSC_EXTERN PetscLogDouble petsc_BaseTime;
    Level: developer
 
    Note:
-   Since the PETSc libraries incorporate timing of phases and operations, we do not recommend ever using `PetscTime()`
+   Since the PETSc libraries incorporate timing of phases and operations, we do not recommend ever using `PetscTime()`.
    The options database command  `-log_view` activates PETSc library timing.
    See `PetscLogStageRegister()`, `PetscLogEventRegister()`, `PetscLogEventBegin()`, `PetscLogEventEnd()` for how to register
    stages and events in application codes.

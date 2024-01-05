@@ -384,7 +384,7 @@ PETSC_EXTERN PetscFunctionList MatPartitioningList;
 
    Note:
    Certain matrix operations (such as `MatAXPY()`) can run much faster if the sparsity pattern of the matrices are the same. But actually determining if
-   the patterns of the same may be constly. This provides a way for users who know something about the sparsity patterns to provide this information
+   the patterns are the same may be costly. This provides a way for users who know something about the sparsity patterns to provide this information
    to certain PETSc routines.
 
 .seealso: [](ch_matrices), `Mat`, `MatCopy()`, `MatAXPY()`, `MatAYPX()`

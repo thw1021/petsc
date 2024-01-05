@@ -187,7 +187,7 @@ PETSC_EXTERN const char *const NormTypes[];
 #define NORM_MAX NORM_INFINITY
 
 /*MC
-   NORM_1 - the one norm, $||v|| = \sum_i | v_i |$. $||A|| = \max_j || v_*j ||$, maximum column sum
+   NORM_1 - the one norm, $||v|| = \sum_i | v_i |$. $||A|| = \max_j || v_{*,j} ||$, maximum column sum
 
    Level: beginner
 
@@ -196,7 +196,7 @@ PETSC_EXTERN const char *const NormTypes[];
 M*/
 
 /*MC
-   NORM_2 - the two norm, $||v|| = \sqrt(\sum_i |v_i|^2)$ (vectors only)
+   NORM_2 - the two norm, $||v|| = \sqrt{\sum_i |v_i|^2}$ (vectors only)
 
    Level: beginner
 
@@ -205,7 +205,7 @@ M*/
 M*/
 
 /*MC
-   NORM_FROBENIUS - $||A|| = \sqrt(\sum_ij |A_ij|^2)$, same as `NORM_2` for vectors
+   NORM_FROBENIUS - $||A|| = \sqrt{\sum_{i,j} |A_{i,j}|^2}$, same as `NORM_2` for vectors
 
    Level: beginner
 
@@ -214,7 +214,7 @@ M*/
 M*/
 
 /*MC
-   NORM_INFINITY - $||v|| = \max_i |v_i|$. $||A|| = \max_i || v_i* ||$, maximum row sum
+   NORM_INFINITY - $||v|| = \max_i |v_i|$. $||A|| = \max_i || v_{i,*} ||$, maximum row sum
 
    Level: beginner
 

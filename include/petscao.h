@@ -24,7 +24,7 @@ typedef struct _p_AO *AO;
 
    Level: beginner
 
-.seealso: `AOSetType()`, `AO`,  `AOApplicationToPetsc()`, `AOCreateBasic()`, `AOCreate()`
+.seealso: `AOSetType()`, `AO`, `AOApplicationToPetsc()`, `AOCreateBasic()`, `AOCreate()`
 J*/
 typedef const char *AOType;
 #define AOBASIC          "basic"

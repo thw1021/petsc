@@ -455,7 +455,7 @@ PetscErrorCode PCCompositeGetType(PC pc, PCCompositeType *type)
 
 /*@
   PCCompositeSpecialSetAlpha - Sets alpha for the special composite preconditioner, `PC_COMPOSITE_SPECIAL`,
-  for $\alphaI + R + S$
+  for $\alpha I + R + S$
 
   Logically Collective
 
