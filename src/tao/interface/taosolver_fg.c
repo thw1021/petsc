@@ -138,11 +138,23 @@ PetscErrorCode TaoComputeGradient(Tao tao, Vec X, Vec G)
   if (tao->ops->computegradient) {
     PetscCall(PetscLogEventBegin(TAO_GradientEval, tao, X, G, NULL));
     PetscCallBack("Tao callback gradient", (*tao->ops->computegradient)(tao, X, G, tao->user_gradP));
+    if (tao->reg) {
+      DMTao tdm;
+      PetscCall(DMGetDMTao(tao->reg, &tdm));
+      PetscCall(DMTaoComputeGradient(tao->reg, X, tdm->workvec));
+      PetscCall(VecAXPY(G, tdm->scale, tdm->workvec));
+    }
     PetscCall(PetscLogEventEnd(TAO_GradientEval, tao, X, G, NULL));
     tao->ngrads++;
   } else if (tao->ops->computeobjectiveandgradient) {
     PetscCall(PetscLogEventBegin(TAO_ObjGradEval, tao, X, G, NULL));
     PetscCallBack("Tao callback objective/gradient", (*tao->ops->computeobjectiveandgradient)(tao, X, &dummy, G, tao->user_objgradP));
+    if (tao->reg) {
+      DMTao tdm;
+      PetscCall(DMGetDMTao(tao->reg, &tdm));
+      PetscCall(DMTaoComputeGradient(tao->reg, X, tdm->workvec));
+      PetscCall(VecAXPY(G, tdm->scale, tdm->workvec));
+    }
     PetscCall(PetscLogEventEnd(TAO_ObjGradEval, tao, X, G, NULL));
     tao->nfuncgrads++;
   } else SETERRQ(PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_WRONGSTATE, "TaoSetGradient() has not been called");
@@ -184,6 +196,13 @@ PetscErrorCode TaoComputeObjective(Tao tao, Vec X, PetscReal *f)
   if (tao->ops->computeobjective) {
     PetscCall(PetscLogEventBegin(TAO_ObjectiveEval, tao, X, NULL, NULL));
     PetscCallBack("Tao callback objective", (*tao->ops->computeobjective)(tao, X, f, tao->user_objP));
+    if (tao->reg) {
+      PetscReal obj_temp;
+      DMTao     tdm;
+      PetscCall(DMGetDMTao(tao->reg, &tdm));
+      PetscCall(DMTaoComputeObjective(tao->reg, X, &obj_temp));
+      *f += (tdm->scale) * obj_temp;
+    }
     PetscCall(PetscLogEventEnd(TAO_ObjectiveEval, tao, X, NULL, NULL));
     tao->nfuncs++;
   } else if (tao->ops->computeobjectiveandgradient) {
@@ -191,6 +210,13 @@ PetscErrorCode TaoComputeObjective(Tao tao, Vec X, PetscReal *f)
     PetscCall(VecDuplicate(X, &temp));
     PetscCall(PetscLogEventBegin(TAO_ObjGradEval, tao, X, NULL, NULL));
     PetscCallBack("Tao callback objective/gradient", (*tao->ops->computeobjectiveandgradient)(tao, X, f, temp, tao->user_objgradP));
+    if (tao->reg) {
+      PetscReal obj_temp;
+      DMTao     tdm;
+      PetscCall(DMGetDMTao(tao->reg, &tdm));
+      PetscCall(DMTaoComputeObjective(tao->reg, X, &obj_temp));
+      *f += (tdm->scale) * obj_temp;
+    }
     PetscCall(PetscLogEventEnd(TAO_ObjGradEval, tao, X, NULL, NULL));
     PetscCall(VecDestroy(&temp));
     tao->nfuncgrads++;
@@ -233,9 +259,21 @@ PetscErrorCode TaoComputeObjectiveAndGradient(Tao tao, Vec X, PetscReal *f, Vec 
   if (tao->ops->computeobjectiveandgradient) {
     PetscCall(PetscLogEventBegin(TAO_ObjGradEval, tao, X, G, NULL));
     if (tao->ops->computegradient == TaoDefaultComputeGradient) {
-      PetscCall(TaoComputeObjective(tao, X, f));
-      PetscCall(TaoDefaultComputeGradient(tao, X, G, NULL));
+      if (tao->reg) {
+        SETERRQ(PetscObjectComm((PetscObject)tao), PETSC_ERR_SUP, "TaoRegularizer DM does not support DefaultComputeGradient. Need to explicitly set gradient routine.");
+      } else {
+        PetscCall(TaoComputeObjective(tao, X, f));
+        PetscCall(TaoDefaultComputeGradient(tao, X, G, NULL));
+      }
     } else PetscCallBack("Tao callback objective/gradient", (*tao->ops->computeobjectiveandgradient)(tao, X, f, G, tao->user_objgradP));
+    if (tao->reg) {
+      PetscReal temp;
+      DMTao     tdm;
+      PetscCall(DMGetDMTao(tao->reg, &tdm));
+      PetscCall(DMTaoComputeObjectiveAndGradient(tao->reg, X, &temp, tdm->workvec));
+      *f += (tdm->scale) * temp;
+      PetscCall(VecAXPY(G, tdm->scale, tdm->workvec));
+    }
     PetscCall(PetscLogEventEnd(TAO_ObjGradEval, tao, X, G, NULL));
     tao->nfuncgrads++;
   } else if (tao->ops->computeobjective && tao->ops->computegradient) {
@@ -245,6 +283,14 @@ PetscErrorCode TaoComputeObjectiveAndGradient(Tao tao, Vec X, PetscReal *f, Vec 
     tao->nfuncs++;
     PetscCall(PetscLogEventBegin(TAO_GradientEval, tao, X, G, NULL));
     PetscCallBack("Tao callback gradient", (*tao->ops->computegradient)(tao, X, G, tao->user_gradP));
+    if (tao->reg) {
+      PetscReal temp;
+      DMTao     tdm;
+      PetscCall(DMGetDMTao(tao->reg, &tdm));
+      PetscCall(DMTaoComputeObjectiveAndGradient(tao->reg, X, &temp, tdm->workvec));
+      *f += (tdm->scale) * temp;
+      PetscCall(VecAXPY(G, tdm->scale, tdm->workvec));
+    }
     PetscCall(PetscLogEventEnd(TAO_GradientEval, tao, X, G, NULL));
     tao->ngrads++;
   } else SETERRQ(PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_WRONGSTATE, "TaoSetObjective() or TaoSetGradient() not set");

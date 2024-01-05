@@ -5,7 +5,45 @@
 #include <petsc/private/petscimpl.h>
 
 PETSC_EXTERN PetscBool      TaoRegisterAllCalled;
+PETSC_EXTERN PetscBool      DMTaoRegisterAllCalled;
 PETSC_EXTERN PetscErrorCode TaoRegisterAll(void);
+PETSC_EXTERN PetscErrorCode DMTaoRegisterAll(void);
+
+typedef struct _DMTaoOps *DMTaoOps;
+struct _DMTaoOps {
+  PetscErrorCode (*computeobjective)(DM, Vec, PetscReal *, void *);
+  PetscErrorCode (*computegradient)(DM, Vec, Vec, void *);
+  PetscErrorCode (*computeobjectiveandgradient)(DM, Vec, PetscReal *, Vec, void *);
+  PetscErrorCode (*setup)(DMTao);
+  PetscErrorCode (*destroy)(DMTao);
+  PetscErrorCode (*duplicate)(DMTao, DMTao);
+  PetscErrorCode (*applyproximalmap)(DMTao, DMTao, PetscReal, Vec, Vec, void *);
+  PetscErrorCode (*setfromoptions)(DMTao, PetscOptionItems *);
+};
+
+struct _p_DMTao {
+  PETSCHEADER(struct _DMTaoOps);
+  void *userctx_func;
+  void *userctx_grad;
+  void *userctx_funcgrad;
+  void *data;
+  DM    originaldm;
+
+  PetscViewer viewer;
+  PetscBool   usemonitor;
+  PetscBool   setupcalled;
+  PetscBool   usetaoroutines;
+  PetscBool   hasobjective;
+  PetscBool   hasgradient;
+  PetscBool   hasobjectiveandgradient;
+
+  PetscReal scale;
+
+  Tao dm_subtao;
+  Mat vm;
+
+  Vec y, workvec;
+};
 
 typedef struct _TaoOps *TaoOps;
 
@@ -29,6 +67,8 @@ struct _TaoOps {
   PetscErrorCode (*update)(Tao, PetscInt, void *);
   PetscErrorCode (*convergencetest)(Tao, void *);
   PetscErrorCode (*convergencedestroy)(void *);
+
+  PetscErrorCode (*applyproximalmap)(Tao, PetscReal, Vec, Vec, void *);
 
   /* Methods set by solver */
   PetscErrorCode (*computedual)(Tao, Vec, Vec);
@@ -70,6 +110,14 @@ struct _p_Tao {
 
   PetscBool setupcalled;
   void     *data;
+
+  DM  dm;
+  DM *dms;
+  DM  reg;
+
+  PetscInt num_terms;
+
+  PetscBool is_child_dm;
 
   Vec        solution;
   Vec        gradient;
@@ -188,6 +236,10 @@ struct _p_Tao {
   PetscBool     hist_malloc;
 };
 
+PETSC_EXTERN PetscErrorCode DMGetDMTao(DM, DMTao *);
+PETSC_EXTERN PetscErrorCode DMTaoGetParentDM(DMTao, DM *);
+PETSC_EXTERN PetscErrorCode DMGetDMTaoWrite(DM, DMTao *);
+
 PETSC_EXTERN PetscLogEvent TAO_Solve;
 PETSC_EXTERN PetscLogEvent TAO_ObjectiveEval;
 PETSC_EXTERN PetscLogEvent TAO_GradientEval;
@@ -195,6 +247,10 @@ PETSC_EXTERN PetscLogEvent TAO_ObjGradEval;
 PETSC_EXTERN PetscLogEvent TAO_HessianEval;
 PETSC_EXTERN PetscLogEvent TAO_ConstraintsEval;
 PETSC_EXTERN PetscLogEvent TAO_JacobianEval;
+PETSC_EXTERN PetscLogEvent DMTAO_Eval;
+
+PetscErrorCode TaoApplyProximalMap_L1(Tao, PetscReal, Vec, Vec, void *);
+PetscErrorCode TaoApplyProximalMap_Simplex(Tao, PetscReal, Vec, Vec, void *);
 
 static inline PetscErrorCode TaoLogConvergenceHistory(Tao tao, PetscReal obj, PetscReal resid, PetscReal cnorm, PetscInt totits)
 {

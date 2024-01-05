@@ -41,6 +41,15 @@ PETSC_EXTERN const char *const TaoSubsetTypes[];
 S*/
 typedef struct _p_Tao *Tao;
 
+/*S
+     DMTao - Abstract PETSc object that manages data for Tao object.
+
+   Level: advanced
+
+.seealso: [](ch_tao), `DMTaoCreate()`, `DMTaoDestroy()`, `DMTaoSetType()`, `DMTaoType`
+S*/
+typedef struct _p_DMTao *DMTao;
+
 /*E
      TaoADMMUpdateType - Determine spectral penalty update routine for Lagrange augmented term for `TAOADMM`.
 
@@ -237,9 +246,19 @@ typedef const char *TaoType;
 #define TAOALMM     "almm"
 #define TAOPYTHON   "python"
 #define TAOSNES     "snes"
+#define TAOPROX     "prox"
+
+typedef const char *DMTaoType;
+#define DMTAOL1      "l1"
+#define DMTAOL2      "l2"
+#define DMTAOKL      "kl"
+#define DMTAOSIMPLEX "simplex"
+#define DMTAOSHELL   "shell"
 
 PETSC_EXTERN PetscClassId      TAO_CLASSID;
+PETSC_EXTERN PetscClassId      DMTAO_CLASSID;
 PETSC_EXTERN PetscFunctionList TaoList;
+PETSC_EXTERN PetscFunctionList DMTaoList;
 
 /*E
     TaoConvergedReason - reason a `Tao` optimizer was said to have converged or diverged
@@ -312,6 +331,9 @@ PETSC_EXTERN PetscErrorCode TaoSetApplicationContext(Tao, void *);
 PETSC_EXTERN PetscErrorCode TaoGetApplicationContext(Tao, void *);
 PETSC_EXTERN PetscErrorCode TaoDestroy(Tao *);
 
+PETSC_EXTERN PetscErrorCode DMTaoInitializePackage(void);
+PETSC_EXTERN PetscErrorCode DMTaoFinalizePackage(void);
+
 PETSC_EXTERN PetscErrorCode TaoSetOptionsPrefix(Tao, const char[]);
 PETSC_EXTERN PetscErrorCode TaoView(Tao, PetscViewer);
 PETSC_EXTERN PetscErrorCode TaoViewFromOptions(Tao, PetscObject, const char[]);
@@ -320,6 +342,9 @@ PETSC_EXTERN PetscErrorCode TaoSolve(Tao);
 
 PETSC_EXTERN PetscErrorCode TaoRegister(const char[], PetscErrorCode (*)(Tao));
 PETSC_EXTERN PetscErrorCode TaoRegisterDestroy(void);
+
+PETSC_EXTERN PetscErrorCode DMTaoRegister(const char[], PetscErrorCode (*)(DM));
+PETSC_EXTERN PetscErrorCode DMTaoRegisterDestroy(void);
 
 PETSC_EXTERN PetscErrorCode TaoGetConvergedReason(Tao, TaoConvergedReason *);
 PETSC_EXTERN PetscErrorCode TaoGetSolutionStatus(Tao, PetscInt *, PetscReal *, PetscReal *, PetscReal *, PetscReal *, TaoConvergedReason *);
@@ -554,3 +579,54 @@ PETSC_EXTERN PetscErrorCode TaoGradientNorm(Tao, Vec, NormType, PetscReal *);
 PETSC_EXTERN PetscErrorCode TaoEstimateActiveBounds(Vec, Vec, Vec, Vec, Vec, Vec, PetscReal, PetscReal *, IS *, IS *, IS *, IS *, IS *);
 PETSC_EXTERN PetscErrorCode TaoBoundStep(Vec, Vec, Vec, IS, IS, IS, PetscReal, Vec);
 PETSC_EXTERN PetscErrorCode TaoBoundSolution(Vec, Vec, Vec, PetscReal, PetscInt *, Vec);
+
+PETSC_EXTERN PetscErrorCode TaoSetRegularizer(Tao, DM);
+PETSC_EXTERN PetscErrorCode TaoGetRegularizer(Tao, DM *);
+
+PETSC_EXTERN PetscErrorCode TaoSetDM(Tao, DM, PetscInt);
+PETSC_EXTERN PetscErrorCode TaoGetDM(Tao, DM *, PetscInt);
+
+PETSC_EXTERN PetscErrorCode DMCopyDMTao(DM, DM);
+
+PETSC_EXTERN PetscErrorCode DMTaoInitializePackage(void);
+
+PETSC_EXTERN PetscErrorCode DMTaoSetFromOptions(DM);
+PETSC_EXTERN PetscErrorCode DMTaoSetUp(DM);
+PETSC_EXTERN PetscErrorCode DMTaoView(DM, PetscViewer);
+PETSC_EXTERN PetscErrorCode DMTaoViewFromOptions(DM, PetscObject, const char[]);
+
+/* TODO DMTao Options Prefix ? */
+PETSC_EXTERN PetscErrorCode DMTaoGetCentralVector(DM, Vec *);
+PETSC_EXTERN PetscErrorCode DMTaoSetCentralVector(DM, Vec);
+
+PETSC_EXTERN PetscErrorCode DMTaoGetType(DM, DMTaoType *);
+PETSC_EXTERN PetscErrorCode DMTaoSetType(DM, DMTaoType);
+
+PETSC_EXTERN PetscErrorCode DMTaoSetScale(DM, PetscReal);
+PETSC_EXTERN PetscErrorCode DMTaoGetScale(DM, PetscReal *);
+
+PETSC_EXTERN PetscErrorCode DMTaoSetVM(DM, Mat);
+PETSC_EXTERN PetscErrorCode DMTaoGetVM(DM, Mat *);
+
+PETSC_EXTERN PetscErrorCode DMTaoApplyProximalMap(DM, DM, PetscReal, Vec, Vec, void *);
+
+PETSC_EXTERN PetscErrorCode DMTaoIsUsingTaoRoutines(DM, PetscBool *);
+
+PETSC_EXTERN PetscErrorCode DMTaoSetObjective(DM, PetscErrorCode (*)(DM, Vec, PetscReal *, void *), void *);
+PETSC_EXTERN PetscErrorCode DMTaoSetGradient(DM, PetscErrorCode (*)(DM, Vec, Vec, void *), void *);
+PETSC_EXTERN PetscErrorCode DMTaoSetObjectiveAndGradient(DM, PetscErrorCode (*)(DM, Vec, PetscReal *, Vec, void *), void *);
+PETSC_EXTERN PetscErrorCode DMTaoUseTaoRoutines(DM, Tao);
+
+PETSC_EXTERN PetscErrorCode DMTaoComputeObjective(DM, Vec, PetscReal *);
+PETSC_EXTERN PetscErrorCode DMTaoComputeObjectiveAndGradient(DM, Vec, PetscReal *, Vec);
+PETSC_EXTERN PetscErrorCode DMTaoComputeGradient(DM, Vec, Vec);
+
+PETSC_EXTERN PetscErrorCode TaoSetDMSize(Tao, PetscInt);
+PETSC_EXTERN PetscErrorCode TaoGetDMSize(Tao, PetscInt *);
+
+PETSC_EXTERN PetscErrorCode DMTaoCreate_Simplex(MPI_Comm, DM *, Mat, Vec, PetscReal, PetscReal);
+PETSC_EXTERN PetscErrorCode DMTaoCreate_L2(MPI_Comm, DM *, Mat, Vec);
+PETSC_EXTERN PetscErrorCode DMTaoCreate_L1(MPI_Comm, DM *, Mat, Vec, PetscReal, PetscReal);
+
+PETSC_EXTERN PetscErrorCode DMTaoSimplexSetContext(DM, PetscReal, PetscReal);
+PETSC_EXTERN PetscErrorCode DMTaoL1SetContext(DM, PetscReal, PetscReal);
