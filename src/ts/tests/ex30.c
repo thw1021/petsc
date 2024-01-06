@@ -235,7 +235,7 @@ PetscErrorCode gridToParticles_private(DM grid_dm[], DM globSwarmArray[], const 
   // map back to particles
   for (PetscInt v_id_0 = 0; v_id_0 < ctx->batch_sz; v_id_0 += numthreads) {
     PetscCall(PetscInfo(grid_dm[0], "g2p: global batch %" PetscInt_FMT " of %" PetscInt_FMT ", Landau batch %" PetscInt_FMT " of %" PetscInt_FMT ": map back to particles\n", global_vertex_id + 1, num_vertices, v_id_0 + 1, ctx->batch_sz));
-    PetscPragmaOMP(parallel for)
+    //PetscPragmaOMP(parallel for)
     for (int tid = 0; tid < numthreads; tid++) {
       const PetscInt v_id = v_id_0 + tid, glb_v_id = global_vertex_id + v_id;
       if (glb_v_id < num_vertices) {
@@ -723,9 +723,9 @@ int main(int argc, char **argv)
           -dm_landau_amr_post_refine 1 -number_particles_per_dimension 10 -dm_plex_hash_location \
           -dm_landau_batch_size 4 -number_spatial_vertices 5 -dm_landau_batch_view_idx 1 -vertex_view_target 2 -grid_view_target 1 \
           -dm_landau_n 1.000018,1,1e-6 -dm_landau_thermal_temps 2,1,1 -dm_landau_ion_masses 2,180 -dm_landau_ion_charges 1,18 \
-          -ftop_ksp_converged_reason -ftop_ksp_rtol 1e-10 -ftop_ksp_type lsqr -ftop_pc_type bjacobi -ftop_sub_pc_factor_shift_type nonzero -ftop_sub_pc_type lu \
+          -ftop_ksp_rtol 1e-10 -ftop_ksp_type lsqr -ftop_pc_type bjacobi -ftop_sub_pc_factor_shift_type nonzero -ftop_sub_pc_type lu \
           -ksp_type preonly -pc_type lu -dm_landau_verbose 4 \
-          -ptof_ksp_type cg -ptof_pc_type jacobi -ptof_ksp_converged_reason -ptof_ksp_rtol 1e-12\
+          -ptof_ksp_type cg -ptof_pc_type jacobi -ptof_ksp_rtol 1e-12\
           -snes_converged_reason -snes_monitor -snes_rtol 1e-14 -snes_stol 1e-14\
           -ts_dt 0.01 -ts_rtol 1e-1 -ts_exact_final_time stepover -ts_max_snes_failures -1 -ts_max_steps 1 -ts_monitor -ts_type beuler -info :vec
 
@@ -745,9 +745,9 @@ int main(int argc, char **argv)
           -dm_landau_amr_post_refine 0 -number_particles_per_dimension 5 -dm_plex_hash_location \
           -dm_landau_batch_size 1 -number_spatial_vertices 1 -dm_landau_batch_view_idx 0 -vertex_view_target 0 -grid_view_target 0 \
           -dm_landau_n 1.000018,1,1e-6 -dm_landau_thermal_temps 2,1,1 -dm_landau_ion_masses 2,180 -dm_landau_ion_charges 1,18 \
-          -ftop_ksp_converged_reason -ftop_ksp_rtol 1e-12 -ftop_ksp_type cg -ftop_pc_type jacobi \
+          -ftop_ksp_rtol 1e-12 -ftop_ksp_type cg -ftop_pc_type jacobi \
           -ksp_type preonly -pc_type lu \
-          -ptof_ksp_type cg -ptof_pc_type jacobi -ptof_ksp_converged_reason -ptof_ksp_rtol 1e-12\
+          -ptof_ksp_type cg -ptof_pc_type jacobi -ptof_ksp_rtol 1e-12\
           -snes_converged_reason -snes_monitor -snes_rtol 1e-12 -snes_stol 1e-12\
           -ts_dt 0.1 -ts_exact_final_time stepover -ts_max_snes_failures -1 -ts_max_steps 1 -ts_monitor -ts_type beuler -info :vec
 
