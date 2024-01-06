@@ -4,34 +4,34 @@ n:             e:  1.000e+00                           i:  1.000e+00  1.000e-06
 thermal T (K): e= 2.321e+07 i= 1.160e+07  1.160e+07. Normalization grid 0: v_0= 1.876e+07 ( 6.256e-02c) n_0= 1.000e+20 t_0= 1.909e-05 1 batched, view batch 0
 Domain radius (AMR levels) grid 0: par= 5.000e+00 perp= 5.000e+00 (0) , 1: par= 5.835e-02 perp= 5.835e-02 (0) , 2: par= 6.151e-03 perp= 6.151e-03 (0) 
 0) FormLandau 648 IPs, 24 cells total, Nb=27, Nq=27, dim=3, Tab: Nb=27 Nf=3 Np=27 cdim=3 N=375
-  0) species 0: density=-1.6723662400369e+01, x-momentum=-1.6834233000318e-17, y-momentum= 5.8018828382787e-17, z-momentum= 4.1741784784592e-17, energy=  4.3148931734720e+04
-  0) species 1: density= 1.6723361379865e+01, x-momentum=-5.4195174228479e-16, y-momentum= 1.5462964390911e-15, z-momentum= 2.2364859226784e-15, energy=  2.1574077533963e+04
-  0) species 2: density= 3.0102050483756e-04, x-momentum=-1.0870291065002e-20, y-momentum= 1.8785905699583e-20, z-momentum=-2.1375807262050e-21, energy=  2.1574077533962e-02
-	  0) Total: charge density=  6.3800456888072e-13, x-momentum= -5.5879684557617e-16, y-momentum=  1.6043340533796e-15, z-momentum=  2.2782255698822e-15, energy=  6.4723030842760e+04 (m_i[0]/m_e = 3670.94, 8 cells)
-[0] <vec:seq> PostStep():    0) time 0.000000e+00, Landau moments: 3.491648217616e-07 -7.222111395942e-15 1.294460616855e+05 2.013728e+00
+  0) species 0: density=-1.6723662400371e+01, x-momentum=-5.6631782424310e-17, y-momentum= 2.7183729767415e-17, z-momentum= 3.4261220683746e-17, energy=  4.3148931734697e+04
+  0) species 1: density= 1.6723361379863e+01, x-momentum=-1.6584947295265e-15, y-momentum= 2.0719284300398e-15, z-momentum= 1.4014586459836e-15, energy=  2.1574077533965e+04
+  0) species 2: density= 3.0102050483754e-04, x-momentum=-4.0001212019734e-20, y-momentum= 3.8841227939643e-20, z-momentum= 8.7545968308738e-21, energy=  2.1574077533962e-02
+	  0) Total: charge density= -3.1989488098391e-12, x-momentum= -1.7151665131628e-15, y-momentum=  2.0991510010352e-15, z-momentum=  1.4357286212642e-15, energy=  6.4723030842740e+04 (m_i[0]/m_e = 3670.94, 8 cells)
+[0] <vec:seqkokkos> PostStep():    0) time 0.000000e+00, Landau moments: 3.491648217615e-07 -6.729098419266e-15 1.294460616855e+05 2.013728e+00
 0 TS dt 0.1 time 0.
     0 SNES Function norm 6.060618887732e-01 
-    1 SNES Function norm 2.922410071473e-02 
-    2 SNES Function norm 4.454946629570e-03 
-    3 SNES Function norm 6.377787502632e-04 
-    4 SNES Function norm 9.153243706535e-05 
-    5 SNES Function norm 1.313454283991e-05 
-    6 SNES Function norm 1.884825423085e-06 
-    7 SNES Function norm 2.704738270987e-07 
-    8 SNES Function norm 3.881323225810e-08 
-    9 SNES Function norm 5.569731131595e-09 
-   10 SNES Function norm 7.992591371957e-10 
-   11 SNES Function norm 1.146926296031e-10 
+    1 SNES Function norm 2.922429838367e-02 
+    2 SNES Function norm 4.454962917174e-03 
+    3 SNES Function norm 6.377787267818e-04 
+    4 SNES Function norm 9.153202625964e-05 
+    5 SNES Function norm 1.313441500017e-05 
+    6 SNES Function norm 1.884797539048e-06 
+    7 SNES Function norm 2.704684492255e-07 
+    8 SNES Function norm 3.881226242849e-08 
+    9 SNES Function norm 5.569563339132e-09 
+   10 SNES Function norm 7.992320402391e-10 
+   11 SNES Function norm 1.146901883762e-10 
   Nonlinear solve converged due to CONVERGED_SNORM_RELATIVE iterations 11
-[0] <vec:seq> PostStep():    1) time 1.000000e-01, Landau moments: 3.491648217616e-07 -7.274060644797e-15 1.294460616865e+05 2.017853e+00
+[0] <vec:seqkokkos> PostStep():    1) time 1.000000e-01, Landau moments: 3.491648217615e-07 -6.692164569856e-15 1.294460616864e+05 2.017853e+00
 1 TS dt 0.1 time 0.1
-  1) species 0: density=-1.6723662400369e+01, x-momentum=-1.7023914498913e-17, y-momentum= 5.7011145421500e-17, z-momentum= 4.0698536542319e-17, energy=  4.3154409485951e+04
-  1) species 1: density= 1.6723361379865e+01, x-momentum=-5.5895148325984e-16, y-momentum= 1.5510563665641e-15, z-momentum= 2.2058863889233e-15, energy=  2.1568602025282e+04
-  1) species 2: density= 3.0102050483756e-04, x-momentum=-1.0089672847582e-20, y-momentum= 1.8275220884449e-20, z-momentum=-2.1667627156413e-21, energy=  1.9332001674587e-02
-	  1) Total: charge density=  6.3800462309083e-13, x-momentum= -5.7598548743161e-16, y-momentum=  1.6080857872065e-15, z-momentum=  2.2465827587029e-15, energy=  6.4723030843235e+04 (m_i[0]/m_e = 3670.94, 8 cells)
-[0] <vec:seq> go(): Moments:	         number density      x-momentum          energy             entropy : # OMP threads 1.
-[0] <vec:seq> go(): 	Initial:         3.491648217616e-07  9.951427608460e-18 1.294460616855e+05 2.013728e+00
-[0] <vec:seq> go(): 	Coarse-graining: 3.491648217616e-07 -7.222111395942e-15 1.294460616855e+05 2.013728e+00
-[0] <vec:seq> go(): 	Landau:          3.491648217616e-07 -7.274060644797e-15 1.294460616865e+05 2.017853e+00
-[0] <vec:seq> go(): Coarse-graining entropy generation = 1.056932e-13 ; Landau entropy generation = 4.124405e-03
-[0] <vec:seq> go(): (relative) energy conservation: Coarse-graining = 1.093816e-13 ; Landau = 7.436823e-12
+  1) species 0: density=-1.6723662400371e+01, x-momentum=-5.6619927330648e-17, y-momentum= 2.7444541827984e-17, z-momentum= 3.4498322556990e-17, energy=  4.3154409485928e+04
+  1) species 1: density= 1.6723361379863e+01, x-momentum=-1.6639346466385e-15, y-momentum= 2.0637685543718e-15, z-momentum= 1.4034986149006e-15, energy=  2.1568602025284e+04
+  1) species 2: density= 3.0102050483754e-04, x-momentum=-3.8666136003026e-20, y-momentum= 3.7652061870116e-20, z-momentum= 8.5940958889744e-21, energy=  1.9332001674587e-02
+	  1) Total: charge density= -3.1882906688027e-12, x-momentum= -1.7205932401051e-15, y-momentum=  2.0912507482617e-15, z-momentum=  1.4380055315535e-15, energy=  6.4723030843214e+04 (m_i[0]/m_e = 3670.94, 8 cells)
+[0] <vec:seqkokkos> go(): Moments:	         number density      x-momentum          energy             entropy : # OMP threads 1.
+[0] <vec:seqkokkos> go(): 	Initial:         3.491648217616e-07  9.951427608460e-18 1.294460616855e+05 2.013728e+00
+[0] <vec:seqkokkos> go(): 	Coarse-graining: 3.491648217615e-07 -6.729098419266e-15 1.294460616855e+05 2.013728e+00
+[0] <vec:seqkokkos> go(): 	Landau:          3.491648217615e-07 -6.692164569856e-15 1.294460616864e+05 2.017853e+00
+[0] <vec:seqkokkos> go(): Coarse-graining entropy generation = 2.953193e-13 ; Landau entropy generation = 4.124405e-03
+[0] <vec:seqkokkos> go(): (relative) energy conservation: Coarse-graining = -1.875113e-13 ; Landau = 7.119695e-12
