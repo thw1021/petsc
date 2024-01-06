@@ -8,7 +8,6 @@ Domain radius (AMR levels) grid 0: par= 5.000e+00 perp= 5.000e+00 (0) , 1: par= 
   0) species 1: density= 1.6723361379863e+01, x-momentum=-1.6584947295265e-15, y-momentum= 2.0719284300398e-15, z-momentum= 1.4014586459836e-15, energy=  2.1574077533965e+04
   0) species 2: density= 3.0102050483754e-04, x-momentum=-4.0001212019734e-20, y-momentum= 3.8841227939643e-20, z-momentum= 8.7545968308738e-21, energy=  2.1574077533962e-02
 	  0) Total: charge density= -3.1989488098391e-12, x-momentum= -1.7151665131628e-15, y-momentum=  2.0991510010352e-15, z-momentum=  1.4357286212642e-15, energy=  6.4723030842740e+04 (m_i[0]/m_e = 3670.94, 8 cells)
-[0] <vec:seqkokkos> PostStep():    0) time 0.000000e+00, Landau moments: 3.491648217615e-07 -6.729098419266e-15 1.294460616855e+05 2.013728e+00
 0 TS dt 0.1 time 0.
     0 SNES Function norm 6.060618887732e-01 
     1 SNES Function norm 2.922429838367e-02 
@@ -23,15 +22,8 @@ Domain radius (AMR levels) grid 0: par= 5.000e+00 perp= 5.000e+00 (0) , 1: par= 
    10 SNES Function norm 7.992320402391e-10 
    11 SNES Function norm 1.146901883762e-10 
   Nonlinear solve converged due to CONVERGED_SNORM_RELATIVE iterations 11
-[0] <vec:seqkokkos> PostStep():    1) time 1.000000e-01, Landau moments: 3.491648217615e-07 -6.692164569856e-15 1.294460616864e+05 2.017853e+00
 1 TS dt 0.1 time 0.1
   1) species 0: density=-1.6723662400371e+01, x-momentum=-5.6619927330648e-17, y-momentum= 2.7444541827984e-17, z-momentum= 3.4498322556990e-17, energy=  4.3154409485928e+04
   1) species 1: density= 1.6723361379863e+01, x-momentum=-1.6639346466385e-15, y-momentum= 2.0637685543718e-15, z-momentum= 1.4034986149006e-15, energy=  2.1568602025284e+04
   1) species 2: density= 3.0102050483754e-04, x-momentum=-3.8666136003026e-20, y-momentum= 3.7652061870116e-20, z-momentum= 8.5940958889744e-21, energy=  1.9332001674587e-02
 	  1) Total: charge density= -3.1882906688027e-12, x-momentum= -1.7205932401051e-15, y-momentum=  2.0912507482617e-15, z-momentum=  1.4380055315535e-15, energy=  6.4723030843214e+04 (m_i[0]/m_e = 3670.94, 8 cells)
-[0] <vec:seqkokkos> go(): Moments:	         number density      x-momentum          energy             entropy : # OMP threads 1.
-[0] <vec:seqkokkos> go(): 	Initial:         3.491648217616e-07  9.951427608460e-18 1.294460616855e+05 2.013728e+00
-[0] <vec:seqkokkos> go(): 	Coarse-graining: 3.491648217615e-07 -6.729098419266e-15 1.294460616855e+05 2.013728e+00
-[0] <vec:seqkokkos> go(): 	Landau:          3.491648217615e-07 -6.692164569856e-15 1.294460616864e+05 2.017853e+00
-[0] <vec:seqkokkos> go(): Coarse-graining entropy generation = 2.953193e-13 ; Landau entropy generation = 4.124405e-03
-[0] <vec:seqkokkos> go(): (relative) energy conservation: Coarse-graining = -1.875113e-13 ; Landau = 7.119695e-12
