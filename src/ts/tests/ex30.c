@@ -746,7 +746,7 @@ int main(int argc, char **argv)
       args: -dm_landau_device_type cpu
     test:
       suffix: kokkos
-      requires: kokkos_kernels
+      requires: kokkos_kernels !openmp
       args: -dm_landau_device_type kokkos -dm_mat_type aijkokkos -dm_vec_type kokkos -pc_type bjkokkos -pc_bjkokkos_ksp_type tfqmr -pc_bjkokkos_pc_type jacobi
 
   testset:
@@ -767,7 +767,7 @@ int main(int argc, char **argv)
       args: -dm_landau_device_type cpu
     test:
       suffix: kokkos_3d
-      requires: kokkos_kernels
+      requires: kokkos_kernels !openmp
       args: -dm_landau_device_type kokkos -dm_mat_type aijkokkos -dm_vec_type kokkos -pc_type bjkokkos -pc_bjkokkos_ksp_type tfqmr -pc_bjkokkos_pc_type jacobi
 
   testset:
