@@ -731,7 +731,6 @@ int main(int argc, char **argv)
   testset:
     requires: double defined(PETSC_USE_DMLANDAU_2D)
     output_file: output/ex30_0.out
-    filter: grep -v "<vec:"
     args: -dim 2 -petscspace_degree 3 -dm_landau_num_species_grid 1,1,1 -dm_landau_amr_levels_max 0,0,0 \
           -dm_landau_amr_post_refine 1 -number_particles_per_dimension 10 -dm_plex_hash_location \
           -dm_landau_batch_size 4 -number_spatial_vertices 5 -dm_landau_batch_view_idx 1 -vertex_view_target 2 -grid_view_target 1 \
@@ -740,7 +739,7 @@ int main(int argc, char **argv)
           -ksp_type preonly -pc_type lu -dm_landau_verbose 4 \
           -ptof_ksp_type cg -ptof_pc_type jacobi -ptof_ksp_rtol 1e-12\
           -snes_converged_reason -snes_monitor -snes_rtol 1e-14 -snes_stol 1e-14\
-          -ts_dt 0.01 -ts_rtol 1e-1 -ts_exact_final_time stepover -ts_max_snes_failures -1 -ts_max_steps 1 -ts_monitor -ts_type beuler -info :vec
+          -ts_dt 0.01 -ts_rtol 1e-1 -ts_exact_final_time stepover -ts_max_snes_failures -1 -ts_max_steps 1 -ts_monitor -ts_type beuler
 
     test:
       suffix: cpu
@@ -753,7 +752,6 @@ int main(int argc, char **argv)
   testset:
     requires: double !defined(PETSC_USE_DMLANDAU_2D)
     output_file: output/ex30_3d.out
-    filter: grep -v "<vec:"
     args: -dim 3 -petscspace_degree 2 -dm_landau_num_species_grid 1,1,1 -dm_landau_amr_levels_max 0,0,0 \
           -dm_landau_amr_post_refine 0 -number_particles_per_dimension 5 -dm_plex_hash_location \
           -dm_landau_batch_size 1 -number_spatial_vertices 1 -dm_landau_batch_view_idx 0 -vertex_view_target 0 -grid_view_target 0 \
@@ -762,7 +760,7 @@ int main(int argc, char **argv)
           -ksp_type preonly -pc_type lu \
           -ptof_ksp_type cg -ptof_pc_type jacobi -ptof_ksp_rtol 1e-12\
           -snes_converged_reason -snes_monitor -snes_rtol 1e-12 -snes_stol 1e-12\
-          -ts_dt 0.1 -ts_exact_final_time stepover -ts_max_snes_failures -1 -ts_max_steps 1 -ts_monitor -ts_type beuler -info :vec
+          -ts_dt 0.1 -ts_exact_final_time stepover -ts_max_snes_failures -1 -ts_max_steps 1 -ts_monitor -ts_type beuler
 
     test:
       suffix: cpu_3d
@@ -774,8 +772,7 @@ int main(int argc, char **argv)
 
   testset:
     requires: !complex double defined(PETSC_USE_DMLANDAU_2D) !cuda
-    args: -dm_landau_domain_radius 6 -dm_refine 2 -dm_landau_num_species_grid 1 -dm_landau_thermal_temps 1 -petscspace_degree 3 -snes_converged_reason -ts_type beuler -ts_dt 1 -ts_max_steps 1 -ksp_type preonly -pc_type lu -snes_rtol 1e-12 -snes_stol 1e-12 -dm_landau_device_type cpu -number_particles_per_dimension 30 -e_shift 3 -info :vec -ftop_ksp_rtol 1e-12 -ptof_ksp_rtol 1e-12 -dm_landau_batch_size 4 -number_spatial_vertices 4 -grid_view_target 0 -vertex_view_target 1
-    filter: grep -v "<vec:"
+    args: -dm_landau_domain_radius 6 -dm_refine 2 -dm_landau_num_species_grid 1 -dm_landau_thermal_temps 1 -petscspace_degree 3 -snes_converged_reason -ts_type beuler -ts_dt 1 -ts_max_steps 1 -ksp_type preonly -pc_type lu -snes_rtol 1e-12 -snes_stol 1e-12 -dm_landau_device_type cpu -number_particles_per_dimension 30 -e_shift 3 -ftop_ksp_rtol 1e-12 -ptof_ksp_rtol 1e-12 -dm_landau_batch_size 4 -number_spatial_vertices 4 -grid_view_target 0 -vertex_view_target 1
     test:
       suffix: simple
       args:  -ex30_dm_view
