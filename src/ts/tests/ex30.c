@@ -541,10 +541,10 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
         if (glb_v_id < num_vertices) {
           for (PetscInt grid = 0; grid < ctx->num_grids; grid++) { // add same particels for all grids
             PetscErrorCode ierr_t;
-            DM             dm   = grid_dm[grid];
-            DM             sw   = globSwarmArray[LAND_PACK_IDX(v_id, grid)];
-            ierr_t = PetscInfo(pack, "createMp %" PetscInt_FMT ".%" PetscInt_FMT ") for batch %" PetscInt_FMT "\n", global_vertex_id_0, grid, LAND_PACK_IDX(v_id, grid));
-            ierr_t = createMp(dm, sw, Np_t[grid][tid], tid, dim, xx_t[grid][tid], yy_t[grid][tid], zz_t[grid][tid], &globMpArray[LAND_PACK_IDX(v_id, grid)]);
+            DM             dm = grid_dm[grid];
+            DM             sw = globSwarmArray[LAND_PACK_IDX(v_id, grid)];
+            ierr_t            = PetscInfo(pack, "createMp %" PetscInt_FMT ".%" PetscInt_FMT ") for batch %" PetscInt_FMT "\n", global_vertex_id_0, grid, LAND_PACK_IDX(v_id, grid));
+            ierr_t            = createMp(dm, sw, Np_t[grid][tid], tid, dim, xx_t[grid][tid], yy_t[grid][tid], zz_t[grid][tid], &globMpArray[LAND_PACK_IDX(v_id, grid)]);
             if (ierr_t) ierr = ierr_t;
           }
         }
