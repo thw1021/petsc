@@ -29,7 +29,7 @@ Domain radius (AMR levels) grid 0: par= 5.000e+00 perp= 5.000e+00 (0) , 1: par= 
   1) species 1: density= 1.6723361379865e+01, x-momentum=-5.5895148325984e-16, y-momentum= 1.5510563665641e-15, z-momentum= 2.2058863889233e-15, energy=  2.1568602025282e+04
   1) species 2: density= 3.0102050483756e-04, x-momentum=-1.0089672847582e-20, y-momentum= 1.8275220884449e-20, z-momentum=-2.1667627156413e-21, energy=  1.9332001674587e-02
 	  1) Total: charge density=  6.3800462309083e-13, x-momentum= -5.7598548743161e-16, y-momentum=  1.6080857872065e-15, z-momentum=  2.2465827587029e-15, energy=  6.4723030843235e+04 (m_i[0]/m_e = 3670.94, 8 cells)
-[0] <vec:seq> go(): Moments:	         number density      x-momentum          energy             entropy
+[0] <vec:seq> go(): Moments:	         number density      x-momentum          energy             entropy : # OMP threads 1.
 [0] <vec:seq> go(): 	Initial:         3.491648217616e-07  9.951427608460e-18 1.294460616855e+05 2.013728e+00
 [0] <vec:seq> go(): 	Coarse-graining: 3.491648217616e-07 -7.222111395942e-15 1.294460616855e+05 2.013728e+00
 [0] <vec:seq> go(): 	Landau:          3.491648217616e-07 -7.274060644797e-15 1.294460616865e+05 2.017853e+00

@@ -22,7 +22,7 @@ Field e:
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 22
 [0] <vec:seq> PostStep():    1) time 1.000000e+00, Landau moments: 1.823516982199e-10  3.619828415593e-03 2.397135396052e+05 6.232815e+00
   1) species-0: charge density= -3.2076282995155e+01 z-momentum=  3.6202229170723e-03 energy=  1.1986646780195e+05 -- 32 cells
-[0] <vec:seq> go(): Moments:	         number density      x-momentum          energy             entropy
+[0] <vec:seq> go(): Moments:	         number density      x-momentum          energy             entropy : # OMP threads 1.
 [0] <vec:seq> go(): 	Initial:         1.823516982199e-10  3.619828415592e-03 2.397135396052e+05 6.172805e+00
 [0] <vec:seq> go(): 	Coarse-graining: 1.823516982199e-10  3.619828415591e-03 2.397135396052e+05 6.174827e+00
 [0] <vec:seq> go(): 	Landau:          1.823516982199e-10  3.619828415593e-03 2.397135396052e+05 6.232815e+00

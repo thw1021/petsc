@@ -121,13 +121,11 @@ static PetscErrorCode particlesToGrid(const DM dm, DM sw, const PetscInt Np, con
   PetscCall(DMSwarmGetField(sw, "w_q", &bs, &dtype, (void **)&wq));
   for (p = 0; p < Np; p++) wq[p] = a_wp[p];
   PetscCall(DMSwarmRestoreField(sw, "w_q", &bs, &dtype, (void **)&wq));
-
   PetscCall(PetscObjectSetName((PetscObject)rho, "rho"));
   PetscCall(DMSwarmCreateGlobalVectorFromField(sw, "w_q", &ff));
   PetscCall(PetscObjectSetName((PetscObject)ff, "weights"));
   PetscCall(MatMultTranspose(M_p, ff, rho));
   PetscCall(DMSwarmDestroyGlobalVectorFromField(sw, "w_q", &ff));
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -536,8 +534,24 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
       }   // threads
       PetscCheck(ierr != 9999, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Only support one species per grid");
       PetscCheck(!ierr, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Error in OMP loop. ierr = %d", (int)ierr);
-      // p --> g: make globMpArray & set X
-      // PetscPragmaOMP(parallel for) -- no longer thread safe
+      // make globMpArray
+      //PetscPragmaOMP(parallel for)
+      for (int tid = 0; tid < numthreads; tid++) {
+        const PetscInt v_id = v_id_0 + tid, glb_v_id = global_vertex_id_0 + v_id;
+        if (glb_v_id < num_vertices) {
+          for (PetscInt grid = 0; grid < ctx->num_grids; grid++) { // add same particels for all grids
+            PetscErrorCode ierr_t;
+            DM             dm   = grid_dm[grid];
+            DM             sw   = globSwarmArray[LAND_PACK_IDX(v_id, grid)];
+            ierr_t = PetscInfo(pack, "createMp %" PetscInt_FMT ".%" PetscInt_FMT ") for batch %" PetscInt_FMT "\n", global_vertex_id_0, grid, LAND_PACK_IDX(v_id, grid));
+            ierr_t = createMp(dm, sw, Np_t[grid][tid], tid, dim, xx_t[grid][tid], yy_t[grid][tid], zz_t[grid][tid], &globMpArray[LAND_PACK_IDX(v_id, grid)]);
+            if (ierr_t) ierr = ierr_t;
+          }
+        }
+      }
+      PetscCheck(!ierr, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Error in OMP loop. ierr = %d", (int)ierr);
+      // p --> g: set X
+      //PetscPragmaOMP(parallel for)
       for (int tid = 0; tid < numthreads; tid++) {
         const PetscInt v_id = v_id_0 + tid, glb_v_id = global_vertex_id_0 + v_id;
         if (glb_v_id < num_vertices) {
@@ -546,8 +560,7 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
             DM             dm   = grid_dm[grid];
             DM             sw   = globSwarmArray[LAND_PACK_IDX(v_id, grid)];
             Vec            subX = globXArray[LAND_PACK_IDX(v_id, grid)], work = t_fhat[grid][tid];
-            ierr_t = PetscInfo(pack, "particlesToGrid %" PetscInt_FMT ".%" PetscInt_FMT ") particlesToGrid for local batch %" PetscInt_FMT "\n", global_vertex_id_0, grid, LAND_PACK_IDX(v_id, grid));
-            ierr_t = createMp(dm, sw, Np_t[grid][tid], tid, dim, xx_t[grid][tid], yy_t[grid][tid], zz_t[grid][tid], &globMpArray[LAND_PACK_IDX(v_id, grid)]);
+            ierr_t = PetscInfo(pack, "particlesToGrid %" PetscInt_FMT ".%" PetscInt_FMT ") for local batch %" PetscInt_FMT "\n", global_vertex_id_0, grid, LAND_PACK_IDX(v_id, grid));
             ierr_t = particlesToGrid(dm, sw, Np_t[grid][tid], tid, dim, wp_t[grid][tid], subX, globMpArray[LAND_PACK_IDX(v_id, grid)]);
             if (ierr_t) ierr = ierr_t;
             // u = M^_1 f_w
@@ -652,7 +665,7 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
       PetscCall(KSPDestroy(&t_ksp[grid][tid]));
     }
   }
-  PetscCall(PetscInfo(X, "Moments:\t         number density      x-momentum          energy             entropy\n"));
+  PetscCall(PetscInfo(X, "Moments:\t         number density      x-momentum          energy             entropy : # OMP threads %g\n", (double)numthreads));
   PetscCall(PetscInfo(X, "\tInitial:         %18.12e %19.12e %18.12e %e\n", (double)moments_0[0], (double)moments_0[1], (double)moments_0[2], (double)moments_0[3]));
   PetscCall(PetscInfo(X, "\tCoarse-graining: %18.12e %19.12e %18.12e %e\n", (double)moments_1a[0], (double)moments_1a[1], (double)moments_1a[2], (double)moments_1a[3]));
   PetscCall(PetscInfo(X, "\tLandau:          %18.12e %19.12e %18.12e %e\n", (double)moments_1b[0], (double)moments_1b[1], (double)moments_1b[2], (double)moments_1b[3]));
