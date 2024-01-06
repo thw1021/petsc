@@ -75,7 +75,6 @@ int main(int argc, char **argv)
 
   PetscCall(TaoCreate(PETSC_COMM_SELF, &tao));
   PetscCall(TaoSetType(tao, TAOPROX));
-  PetscCall(TaoSetDMSize(tao, 2));
   PetscCall(TaoSetSolution(tao, x));
 
   switch (user.problem) {
@@ -121,8 +120,8 @@ int main(int argc, char **argv)
     SETERRQ(PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "Unsupported problem type!");
   }
 
-  PetscCall(TaoSetDM(tao, dm0, 0));
-  PetscCall(TaoSetDM(tao, dm1, 1));
+  PetscCall(TaoSetDM(tao, dm0));
+  PetscCall(TaoSetDM(tao, dm1));
   PetscCall(TaoSetFromOptions(tao));
 
   switch (user.solve) {

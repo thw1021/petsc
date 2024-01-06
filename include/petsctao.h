@@ -583,7 +583,7 @@ PETSC_EXTERN PetscErrorCode TaoBoundSolution(Vec, Vec, Vec, PetscReal, PetscInt 
 PETSC_EXTERN PetscErrorCode TaoSetRegularizer(Tao, DM);
 PETSC_EXTERN PetscErrorCode TaoGetRegularizer(Tao, DM *);
 
-PETSC_EXTERN PetscErrorCode TaoSetDM(Tao, DM, PetscInt);
+PETSC_EXTERN PetscErrorCode TaoSetDM(Tao, DM);
 PETSC_EXTERN PetscErrorCode TaoGetDM(Tao, DM *, PetscInt);
 
 PETSC_EXTERN PetscErrorCode DMCopyDMTao(DM, DM);
@@ -608,6 +608,8 @@ PETSC_EXTERN PetscErrorCode DMTaoGetScale(DM, PetscReal *);
 PETSC_EXTERN PetscErrorCode DMTaoSetVM(DM, Mat);
 PETSC_EXTERN PetscErrorCode DMTaoGetVM(DM, Mat *);
 
+PETSC_EXTERN PetscErrorCode TaoGetDMSize(Tao, PetscInt *);
+
 PETSC_EXTERN PetscErrorCode DMTaoApplyProximalMap(DM, DM, PetscReal, Vec, Vec, void *);
 
 PETSC_EXTERN PetscErrorCode DMTaoIsUsingTaoRoutines(DM, PetscBool *);
@@ -621,8 +623,6 @@ PETSC_EXTERN PetscErrorCode DMTaoComputeObjective(DM, Vec, PetscReal *);
 PETSC_EXTERN PetscErrorCode DMTaoComputeObjectiveAndGradient(DM, Vec, PetscReal *, Vec);
 PETSC_EXTERN PetscErrorCode DMTaoComputeGradient(DM, Vec, Vec);
 
-PETSC_EXTERN PetscErrorCode TaoSetDMSize(Tao, PetscInt);
-PETSC_EXTERN PetscErrorCode TaoGetDMSize(Tao, PetscInt *);
 
 PETSC_EXTERN PetscErrorCode DMTaoCreate_Simplex(MPI_Comm, DM *, Mat, Vec, PetscReal, PetscReal);
 PETSC_EXTERN PetscErrorCode DMTaoCreate_L2(MPI_Comm, DM *, Mat, Vec);

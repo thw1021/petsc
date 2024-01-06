@@ -2751,29 +2751,6 @@ PetscErrorCode TaoMonitorDrawCtxDestroy(TaoMonitorDrawCtx *ictx)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
-  TaoSetDMSize - Sets the total number of DMTao to be stored. Must be called before `TaoSetDM()`.
-
-  Collective
-
-  Input Parameter:
-+ tao  - the Tao context
-- size - the total number of DMTao to store.
-
-  Level: intermediate
-
-.seealso: [](ch_tao), `Tao`, `DMTao`, `TaoSetDM()`
-@*/
-PetscErrorCode TaoSetDMSize(Tao tao, PetscInt size)
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  PetscCheck(size >= 0, PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "Number of DMTao cannot be negative.");
-  tao->num_terms = size;
-  PetscCall(PetscCalloc1(size, &tao->dms));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 /*@
   TaoGetDMSize - Gets the number DMTao for a `Tao` solver.
 
@@ -2796,55 +2773,36 @@ PetscErrorCode TaoGetDMSize(Tao tao, PetscInt *num)
 }
 
 /*@
-  TaoSetDM - Sets an DM to Tao object at desired index.
+  TaoSetDM - Sets an DM to Tao object.
 
   Input Parameters:
 + tao - Tao solver context
-. dm  - DM context
-- i   - The index of DM
+- dm  - DM context
 
   Level: advanced
 
 .seealso: `DMTao`
 @*/
-PetscErrorCode TaoSetDM(Tao tao, DM dm, PetscInt i)
+PetscErrorCode TaoSetDM(Tao tao, DM dm)
 {
-  DMTao tdm;
+  PetscInt i;
+  DMTao    tdm;
+  DM       *newdms;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
   PetscValidHeaderSpecific(dm, DM_CLASSID, 2);
   PetscCall(PetscObjectReference((PetscObject)dm));
   PetscCheckSameComm(tao, 1, dm, 2);
-  PetscCheck(i >= 0, PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "Index cannot be negative.");
-  /* TODO is total size okay wording? */
-  PetscCheck(i <= tao->num_terms - 1, PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "Index has to be smaller than total size.");
-  tao->dms[i] = dm;
+  /* First copy existing DMs */
+  PetscCall(PetscCalloc1(tao->num_terms + 1, &newdms));
+  for (i = 0; i < tao->num_terms; i++) { newdms[i] = tao->dms[i];}
+  newdms[tao->num_terms] = dm;
+  /* Delete old ones */
+  PetscCall(PetscFree(tao->dms));
+  tao->dms = newdms;
+  tao->num_terms++;
   PetscCall(DMGetDMTao(dm, &tdm));
   if (!tdm->workvec) { PetscCall(VecDuplicate(tao->solution, &tdm->workvec)); }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@
-  TaoGetDM - Gets an DM to Tao object at desired index.
-
-  Input Parameters:
-+ tao - Tao solver context
-- i   - The index of DM
-
-  Output Parameter:
-. dm - the DM object
-
-  Level: advanced
-
-.seealso: `DMTao`
-@*/
-PetscErrorCode TaoGetDM(Tao tao, DM *dm, PetscInt i)
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  PetscCheck(i >= 0, PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "Index cannot be negative.");
-  PetscCheck(i <= tao->num_terms - 1, PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "Index has to be smaller than total size."); //TODO total size? better word?
-  dm = &tao->dms[i];
   PetscFunctionReturn(PETSC_SUCCESS);
 }

@@ -360,8 +360,8 @@ int main(int argc, char **argv)
   }
 
   if (user.sketch) {
-    PetscCall(TaoSetDMSize(tao, 1));
-    PetscCall(TaoSetDM(tao, dm_master, 0));
+//    PetscCall(DMTaoSetType(dm_master, DMTAOSHELL));//TODO actually doesnt do anything...
+    PetscCall(TaoSetDM(tao, dm_master));
   }
 
   /* Create DM, g(x,y) = 0.5 \|x-y\|_2^2
