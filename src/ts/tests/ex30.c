@@ -444,6 +444,7 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
       PetscCall(PetscObjectSetName((PetscObject)globXArray[LAND_PACK_IDX(v_target % ctx->batch_sz, g_target)], "rho"));
       printCtx->print = PETSC_TRUE;
     } else printCtx->print = PETSC_FALSE;
+    if (printCtx->print) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Print vertex %d, make particles\n", (int)v_target));
     // create fake particles in batches with threads
     for (PetscInt v_id_0 = 0; v_id_0 < ctx->batch_sz; v_id_0 += numthreads) {
       PetscReal *xx_t[LANDAU_MAX_GRIDS][EX30_MAX_NUM_THRDS], *yy_t[LANDAU_MAX_GRIDS][EX30_MAX_NUM_THRDS], *zz_t[LANDAU_MAX_GRIDS][EX30_MAX_NUM_THRDS], *wp_t[LANDAU_MAX_GRIDS][EX30_MAX_NUM_THRDS];
@@ -510,6 +511,7 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
           }   // grid
         }     // active
       }       // threads
+      if (printCtx->print) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Create particle swarm, %d threads\n", (int)numthreads));
       /* Create particle swarm */
       PetscPragmaOMP(parallel for)
       for (int tid = 0; tid < numthreads; tid++) {
@@ -582,6 +584,7 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
         } // active
       }   // threads
     }     // (fake) particle loop
+    if (printCtx->print) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "coarse graining\n"));
     // standard view of initial conditions
     if (v_target >= global_vertex_id_0 && v_target < global_vertex_id_0 + ctx->batch_sz) {
       PetscCall(DMSetOutputSequenceNumber(ctx->plex[g_target], 0, 0.0));
@@ -590,6 +593,7 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
     // coarse graining moments
     if (v_target >= global_vertex_id_0 && v_target < global_vertex_id_0 + ctx->batch_sz) {
       const PetscInt v_id = v_target % ctx->batch_sz;
+      if (printCtx->print) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "coarse graining\n"));
       for (PetscInt grid = 0; grid < ctx->num_grids; grid++) {
         PetscDataType dtype;
         PetscReal    *wp, *coords;
@@ -623,6 +627,7 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
     // view
     PetscCall(DMPlexLandauPrintNorms(X, 0));
     // advance
+    if (printCtx->print) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "call TSSolve\n"));
     PetscCall(TSSetSolution(ts, X));
     PetscCall(PetscInfo(pack, "Advance vertex %" PetscInt_FMT " to %" PetscInt_FMT " (with padding)\n", global_vertex_id_0, global_vertex_id_0 + ctx->batch_sz));
     PetscCall(TSSetPostStep(ts, PostStep));
@@ -635,6 +640,7 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
       PetscCall(DMSetOutputSequenceNumber(ctx->plex[g_target], 1, dt_init));
       PetscCall(VecViewFromOptions(globXArray[LAND_PACK_IDX(v_target % ctx->batch_sz, g_target)], NULL, "-ex30_vec_view"));
     }
+    if (printCtx->print) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "call gridToParticles\n"));
     // particles to grid, compute moments and entropy
     PetscCall(gridToParticles_private(grid_dm, globSwarmArray, dim, v_target, numthreads, num_vertices, global_vertex_id_0, globMpArray, g_Mass, t_fhat, moments_1b, globXArray, ctx));
     // restore vector
