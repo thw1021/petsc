@@ -80,6 +80,21 @@ int main(int argc, char **argv)
     PetscCall(PetscIntView(numindices, indices, PETSC_VIEWER_STDOUT_SELF));
     PetscCall(DMPlexRestoreClosureIndices(dm, section, section, c, PETSC_TRUE, &numindices, &indices, NULL, NULL));
   }
+  {
+    DMLabel domain_label;
+
+    PetscCall(DMGetLabel(dm, "Face Sets", &domain_label));
+    for (PetscInt j = 1; j < 2 * dim + 1; ++j) {
+      PetscInt *elem_restr_offsets_face;
+      PetscInt  num_elem, elem_size, num_comp, num_dof;
+
+      PetscCall(DMPlexGetLocalOffsets(dm, domain_label, j, 1, 0, &num_elem, &elem_size, &num_comp, &num_dof, &elem_restr_offsets_face));
+      PetscCall(PetscPrintf(PETSC_COMM_SELF, "=========Face restriction; face:%" PetscInt_FMT "========\n", j));
+      PetscCall(PetscPrintf(PETSC_COMM_SELF, "num_elem: %" PetscInt_FMT ", elem_size: %" PetscInt_FMT ", num_dof:  %" PetscInt_FMT "\n", num_elem, elem_size, num_dof));
+      for (PetscInt c = 0; c < num_elem; c++) PetscCall(PetscIntView(elem_size, &elem_restr_offsets_face[c * elem_size], PETSC_VIEWER_STDOUT_SELF));
+      PetscCall(PetscFree(elem_restr_offsets_face));
+    }
+  }
   if (view_coord) {
     DM       cdm;
     Vec      X;
@@ -137,6 +152,12 @@ int main(int argc, char **argv)
   test:
     suffix: 2d_q3
     args: -dm_plex_dim 2 -petscspace_degree 3 -dm_plex_simplex 0 -dm_plex_box_faces 1,1
+  test:
+    suffix: 2d_q2_q1d
+    args: -dm_plex_dim 2 -dm_plex_simplex 0 -dm_plex_box_faces 2,1 -num_fields 2 \
+            -f0_petscspace_degree 2 \
+            -f1_petscspace_degree 1 -f1_petscdualspace_lagrange_continuity 0
+
   test:
     suffix: 3d_q1
     args: -dm_plex_dim 3 -petscspace_degree 1 -dm_plex_simplex 0 -dm_plex_box_faces 1,1,1
