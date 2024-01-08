@@ -17,7 +17,7 @@ class Configure(config.package.CMakePackage):
                               ['libspqr.a','libumfpack.a','libklu.a','libcholmod.a','libbtf.a','libccolamd.a','libcolamd.a','libcamd.a','libamd.a','libmetis.a','libsuitesparseconfig.a','librt.a']]
     self.functions         = ['umfpack_dl_wsolve','cholmod_l_solve','klu_l_solve','SuiteSparseQR_C_solve']
     self.includes          = ['umfpack.h','cholmod.h','klu.h','SuiteSparseQR_C.h','amd.h']
-    self.includedir        = os.path.join('include', 'suitesparse')
+    self.includedir        = [os.path.join('include', 'suitesparse'),'include']
     self.hastests          = 1
     self.buildLanguages    = ['Cxx']
     self.hastestsdatafiles = 1
@@ -42,8 +42,10 @@ class Configure(config.package.CMakePackage):
 
     args.append('-DBLA_VENDOR:STRING=Generic')
     args.append('-DBLAS_LIBRARIES:STRING="'+self.libraries.toString(self.blasLapack.dlib)+'"')
+    args.append('-DLAPACK_LIBRARIES:STRING=""')
 
     args.append('-DSUITESPARSE_USE_CUDA:BOOL='+('ON' if self.cuda.found else 'OFF'))
     args.append('-DSUITESPARSE_USE_OPENMP:BOOL='+('ON' if self.openmp.found else 'OFF'))
+    args.append('-DSUITESPARSE_USE_64BIT_BLAS:BOOL='+('ON' if self.blasLapack.has64bitindices else 'OFF'))
 
     return args
