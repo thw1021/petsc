@@ -18,10 +18,7 @@ Labels:
 Field e:
   adjacency FEM
 Print vertex 1, make particles
-Create particle swarm, 1 threads
-Create particle swarm, 1 threads
-Create particle swarm, 1 threads
-Create particle swarm, 1 threads
+Create particle swarm, 1. threads
 coarse graining
 coarse graining
   0) species-0: charge density= -3.2076282995155e+01 z-momentum=  3.6202229170723e-03 energy=  1.1986646780190e+05 -- 32 cells

@@ -15,45 +15,42 @@ lambda[i][j]:
  8.485122002e+00 7.445248257e+00 8.225848404e+00
 0) FormLandau 96 IPs, 6 cells total, Nb=16, Nq=16, dim=2, Tab: Nb=16 Nf=3 Np=16 cdim=2 N=336
 Print vertex 2, make particles
-Create particle swarm, 1 threads
-Create particle swarm, 1 threads
-Create particle swarm, 1 threads
-Create particle swarm, 1 threads
+Create particle swarm, 1. threads
 coarse graining
 coarse graining
-  0) species-0: charge density= -1.6162729305798e+01 z-momentum= -8.5356674367811e-19 energy=  4.8199770808869e+04
-  0) species-1: charge density=  1.6162438381907e+01 z-momentum=  9.2478590904305e-17 energy=  2.4099451614306e+04
-  0) species-2: charge density=  2.9092389087432e-04 z-momentum=  5.8363978872492e-23 energy=  2.4099451614306e-02
-	  0) Total: charge density=  5.0569357729069e-15, momentum=  9.1625082524606e-17, energy=  7.2299246522627e+04 (m_i[0]/m_e = 3670.94, 2 cells on electron grid)
+  0) species-0: charge density= -1.6162729305798e+01 z-momentum=  9.4840749297567e-20 energy=  4.8199770808869e+04
+  0) species-1: charge density=  1.6162438381907e+01 z-momentum=  1.1967817646439e-16 energy=  2.4099451614306e+04
+  0) species-2: charge density=  2.9092389087432e-04 z-momentum= -1.1672795774498e-22 energy=  2.4099451614305e-02
+	  0) Total: charge density=  1.5714480498114e-14, momentum=  1.1977290048573e-16, energy=  7.2299246522626e+04 (m_i[0]/m_e = 3670.94, 2 cells on electron grid)
 call TSSolve
 0 TS dt 0.01 time 0.
     0 SNES Function norm 4.646942453111e-01 
-    1 SNES Function norm 1.402540408639e-03 
-    2 SNES Function norm 4.551653180282e-06 
-    3 SNES Function norm 1.263799588047e-08 
-    4 SNES Function norm 4.413203382303e-11 
-    5 SNES Function norm 1.217221442116e-13 
+    1 SNES Function norm 1.402496361217e-03 
+    2 SNES Function norm 4.551191325716e-06 
+    3 SNES Function norm 1.263692992364e-08 
+    4 SNES Function norm 4.413124948398e-11 
+    5 SNES Function norm 1.225261420896e-13 
   Nonlinear solve converged due to CONVERGED_SNORM_RELATIVE iterations 5
 1 TS dt 0.01 time 0.01
-  1) species-0: charge density= -1.6162729305798e+01 z-momentum= -9.4840749297567e-19 energy=  4.8199803403197e+04
-  1) species-1: charge density=  1.6162438381907e+01 z-momentum=  9.7918508016323e-17 energy=  2.4099419043535e+04
-  1) species-2: charge density=  2.9092389087432e-04 z-momentum=  0.0000000000000e+00 energy=  2.4075895282989e-02
-	  1) Total: charge density=  1.5042220941064e-15, momentum=  9.6970100523347e-17, energy=  7.2299246522626e+04 (m_i[0]/m_e = 3670.94, 2 cells on electron grid)
+  1) species-0: charge density= -1.6162729305798e+01 z-momentum=  9.4840749297567e-20 energy=  4.8199803403196e+04
+  1) species-1: charge density=  1.6162438381907e+01 z-momentum=  1.1423825935238e-16 energy=  2.4099419043535e+04
+  1) species-2: charge density=  2.9092389087432e-04 z-momentum= -1.7509193661748e-22 energy=  2.4075895282989e-02
+	  1) Total: charge density=  2.9925281003207e-14, momentum=  1.1433292500974e-16, energy=  7.2299246522626e+04 (m_i[0]/m_e = 3670.94, 2 cells on electron grid)
 call gridToParticles
-  0) species-0: charge density= -1.6162729305798e+01 z-momentum= -9.4840749297567e-19 energy=  4.8199803403197e+04
-  0) species-1: charge density=  1.6162438381907e+01 z-momentum=  9.7918508016323e-17 energy=  2.4099419043535e+04
-  0) species-2: charge density=  2.9092389087432e-04 z-momentum=  0.0000000000000e+00 energy=  2.4075895282989e-02
-	  0) Total: charge density=  1.5042220941064e-15, momentum=  9.6970100523347e-17, energy=  7.2299246522626e+04 (m_i[0]/m_e = 3670.94, 2 cells on electron grid)
+  0) species-0: charge density= -1.6162729305798e+01 z-momentum=  9.4840749297567e-20 energy=  4.8199803403196e+04
+  0) species-1: charge density=  1.6162438381907e+01 z-momentum=  1.1423825935238e-16 energy=  2.4099419043535e+04
+  0) species-2: charge density=  2.9092389087432e-04 z-momentum= -1.7509193661748e-22 energy=  2.4075895282989e-02
+	  0) Total: charge density=  2.9925281003207e-14, momentum=  1.1433292500974e-16, energy=  7.2299246522626e+04 (m_i[0]/m_e = 3670.94, 2 cells on electron grid)
 0 TS dt 0.01 time 0.
     0 SNES Function norm 4.508911696663e-01 
-    1 SNES Function norm 1.162708568403e-03 
-    2 SNES Function norm 3.786816241670e-06 
-    3 SNES Function norm 1.043504905779e-08 
-    4 SNES Function norm 3.672278835130e-11 
-    5 SNES Function norm 1.000213043949e-13 
+    1 SNES Function norm 1.162672382943e-03 
+    2 SNES Function norm 3.786558917353e-06 
+    3 SNES Function norm 1.043495467834e-08 
+    4 SNES Function norm 3.672869170885e-11 
+    5 SNES Function norm 1.023901378563e-13 
   Nonlinear solve converged due to CONVERGED_SNORM_RELATIVE iterations 5
 1 TS dt 0.01 time 0.01
-  1) species-0: charge density= -1.6162729305798e+01 z-momentum= -7.5872599438054e-19 energy=  4.8199835912116e+04
-  1) species-1: charge density=  1.6162438381907e+01 z-momentum=  9.7918508016323e-17 energy=  2.4099386558012e+04
-  1) species-2: charge density=  2.9092389087432e-04 z-momentum=  3.5018387323495e-22 energy=  2.4052498108152e-02
-	  1) Total: charge density= -5.6013136837119e-15, momentum=  9.7160132205816e-17, energy=  7.2299246522626e+04 (m_i[0]/m_e = 3670.94, 2 cells on electron grid)
+  1) species-0: charge density= -1.6162729305798e+01 z-momentum= -1.8968149859513e-19 energy=  4.8199835912116e+04
+  1) species-1: charge density=  1.6162438381907e+01 z-momentum=  1.0879834224036e-16 energy=  2.4099386558012e+04
+  1) species-2: charge density=  2.9092389087432e-04 z-momentum= -1.7509193661748e-22 energy=  2.4052498108152e-02
+	  1) Total: charge density=  1.2161712609204e-14, momentum=  1.0860848564983e-16, energy=  7.2299246522626e+04 (m_i[0]/m_e = 3670.94, 2 cells on electron grid)

@@ -511,7 +511,7 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
           }   // grid
         }     // active
       }       // threads
-      if (printCtx->print) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Create particle swarm, %d threads\n", (int)numthreads));
+      if (printCtx->print && v_id_0 == 0) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Create particle swarm, %g threads\n", (double)numthreads));
       /* Create particle swarm */
       PetscPragmaOMP(parallel for)
       for (int tid = 0; tid < numthreads; tid++) {
