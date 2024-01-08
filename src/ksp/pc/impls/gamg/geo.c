@@ -280,7 +280,7 @@ static PetscErrorCode triangulateAndFormProl(IS selected_2, PetscInt data_stride
     /* find points and set prolongation */
     for (mm = clid = 0; mm < nFineLoc; mm++) {
       PetscBool ise;
-      PetscCall(PetscCDEmptyAt(agg_lists_1, mm, &ise));
+      PetscCall(PetscCDIsEmptyAt(agg_lists_1, mm, &ise));
       if (!ise) {
         const PetscInt lid = mm;
         PetscScalar    AA[3][3];
@@ -522,7 +522,7 @@ static PetscErrorCode PCGAMGCreateGraph_GEO(PC pc, Mat Amat, Mat *a_Gmat)
   const PetscReal vfilter = pc_gamg->threshold[0];
 
   PetscFunctionBegin;
-  PetscCall(MatCreateGraph(Amat, PETSC_TRUE, PETSC_TRUE, vfilter, a_Gmat));
+  PetscCall(MatCreateGraph(Amat, PETSC_TRUE, PETSC_TRUE, vfilter, 0, NULL, a_Gmat));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -578,7 +578,7 @@ static PetscErrorCode PCGAMGCoarsen_GEO(PC a_pc, Mat *a_Gmat, PetscCoarsenData *
     PetscCall(PetscFree(bIndexSet));
   }
   /* only sort locals */
-  qsort(gnodes, nloc, sizeof(GAMGNode), petsc_geo_mg_compare);
+  if (gnodes) qsort(gnodes, nloc, sizeof(GAMGNode), petsc_geo_mg_compare);
   /* create IS of permutation */
   for (kk = 0; kk < nloc; kk++) permute[kk] = gnodes[kk].lid; /* locals only */
   PetscCall(PetscFree(gnodes));
@@ -600,13 +600,13 @@ static PetscErrorCode PCGAMGCoarsen_GEO(PC a_pc, Mat *a_Gmat, PetscCoarsenData *
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PCGAMGProlongator_GEO(PC pc, Mat Amat, Mat Gmat, PetscCoarsenData *agg_lists, Mat *a_P_out)
+static PetscErrorCode PCGAMGProlongator_GEO(PC pc, Mat Amat, PetscCoarsenData *agg_lists, Mat *a_P_out)
 {
   PC_MG          *mg      = (PC_MG *)pc->data;
   PC_GAMG        *pc_gamg = (PC_GAMG *)mg->innerctx;
   const PetscInt  dim = pc_gamg->data_cell_cols, data_cols = pc_gamg->data_cell_cols;
   PetscInt        Istart, Iend, nloc, my0, jj, kk, ncols, nLocalSelected, bs, *clid_flid;
-  Mat             Prol;
+  Mat             Prol, Gmat;
   PetscMPIInt     rank, size;
   MPI_Comm        comm;
   IS              selected_2, selected_1;
@@ -625,7 +625,8 @@ static PetscErrorCode PCGAMGProlongator_GEO(PC pc, Mat Amat, Mat Gmat, PetscCoar
   PetscCheck((Iend - Istart) % bs == 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "(Iend %" PetscInt_FMT " - Istart %" PetscInt_FMT ") %% bs %" PetscInt_FMT, Iend, Istart, bs);
 
   /* get 'nLocalSelected' */
-  PetscCall(PetscCDGetMIS(agg_lists, &selected_1));
+  PetscCall(PetscCDGetMat(agg_lists, &Gmat)); // get auxilary matrix for ghost edges
+  PetscCall(PetscCDGetNonemptyIS(agg_lists, &selected_1));
   PetscCall(ISGetSize(selected_1, &jj));
   PetscCall(PetscMalloc1(jj, &clid_flid));
   PetscCall(ISGetIndices(selected_1, &selected_idx));
@@ -678,7 +679,6 @@ static PetscErrorCode PCGAMGProlongator_GEO(PC pc, Mat Amat, Mat Gmat, PetscCoar
       data_stride = pc_gamg->data_sz / pc_gamg->data_cell_cols;
     }
     PetscCall(MatDestroy(&Gmat2));
-
     /* triangulate */
     {
       PetscReal metric, tm;

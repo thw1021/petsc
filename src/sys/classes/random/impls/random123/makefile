@@ -2,9 +2,8 @@
 #requirespackage 'PETSC_HAVE_RANDOM123'
 
 CFLAGS   = ${RANDOM123_INCLUDE}
-LIBBASE  = libpetscsys
-MANSEC	 = Sys
+MANSEC   = Sys
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
-include ${PETSC_DIR}/lib/petsc/conf/rules.doc
+include ${PETSC_DIR}/lib/petsc/conf/rules_doc.mk
 

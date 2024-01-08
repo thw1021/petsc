@@ -143,8 +143,8 @@ PetscErrorCode MatCreateColmap_MPIBAIJ_Private(Mat mat)
 #define MatSetValues_SeqBAIJ_A_Private(row, col, value, addv, orow, ocol) \
   do { \
     brow = row / bs; \
-    rp   = aj + ai[brow]; \
-    ap   = aa + bs2 * ai[brow]; \
+    rp   = PetscSafePointerPlusOffset(aj, ai[brow]); \
+    ap   = PetscSafePointerPlusOffset(aa, bs2 * ai[brow]); \
     rmax = aimax[brow]; \
     nrow = ailen[brow]; \
     bcol = col / bs; \
@@ -183,8 +183,8 @@ PetscErrorCode MatCreateColmap_MPIBAIJ_Private(Mat mat)
 #define MatSetValues_SeqBAIJ_B_Private(row, col, value, addv, orow, ocol) \
   do { \
     brow = row / bs; \
-    rp   = bj + bi[brow]; \
-    ap   = ba + bs2 * bi[brow]; \
+    rp   = PetscSafePointerPlusOffset(bj, bi[brow]); \
+    ap   = PetscSafePointerPlusOffset(ba, bs2 * bi[brow]); \
     rmax = bimax[brow]; \
     nrow = bilen[brow]; \
     bcol = col / bs; \
@@ -1124,7 +1124,6 @@ static PetscErrorCode MatView_MPIBAIJ_ASCIIorDraworSocket(Mat mat, PetscViewer v
       PetscCall(MatView_SeqBAIJ(((Mat_MPIBAIJ *)(A->data))->A, sviewer));
     }
     PetscCall(PetscViewerRestoreSubViewer(viewer, PETSC_COMM_SELF, &sviewer));
-    PetscCall(PetscViewerFlush(viewer));
     PetscCall(MatDestroy(&A));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -2032,9 +2031,9 @@ PetscErrorCode MatCreateSubMatrix_MPIBAIJ_Private(Mat mat, IS isrow, IS iscol, P
     row   = rstart / bs + i;
     nz    = ii[i + 1] - ii[i];
     cwork = jj;
-    jj += nz;
+    jj    = PetscSafePointerPlusOffset(jj, nz);
     vwork = aa;
-    aa += nz * bs * bs;
+    aa    = PetscSafePointerPlusOffset(aa, nz * bs * bs);
     PetscCall(MatSetValuesBlocked_MPIBAIJ(M, 1, &row, nz, cwork, vwork, INSERT_VALUES));
   }
 

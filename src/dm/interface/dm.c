@@ -23,8 +23,9 @@ PetscLogEvent DM_Convert, DM_GlobalToLocal, DM_LocalToGlobal, DM_LocalToLocal, D
 const char *const DMBoundaryTypes[]          = {"NONE", "GHOSTED", "MIRROR", "PERIODIC", "TWIST", "DMBoundaryType", "DM_BOUNDARY_", NULL};
 const char *const DMBoundaryConditionTypes[] = {"INVALID", "ESSENTIAL", "NATURAL", "INVALID", "INVALID", "ESSENTIAL_FIELD", "NATURAL_FIELD", "INVALID", "INVALID", "ESSENTIAL_BD_FIELD", "NATURAL_RIEMANN", "DMBoundaryConditionType", "DM_BC_", NULL};
 const char *const DMBlockingTypes[]          = {"TOPOLOGICAL_POINT", "FIELD_NODE", "DMBlockingType", "DM_BLOCKING_", NULL};
-const char *const DMPolytopeTypes[]   = {"vertex",  "segment",       "tensor_segment",      "triangle", "quadrilateral", "tensor_quad",    "tetrahedron",  "hexahedron", "triangular_prism", "tensor_triangular_prism", "tensor_quadrilateral_prism",
-                                         "pyramid", "FV_ghost_cell", "interior_ghost_cell", "unknown",  "invalid",       "DMPolytopeType", "DM_POLYTOPE_", NULL};
+const char *const DMPolytopeTypes[] =
+  {"vertex",  "segment",      "tensor_segment", "triangle", "quadrilateral",  "tensor_quad",  "tetrahedron", "hexahedron", "triangular_prism", "tensor_triangular_prism", "tensor_quadrilateral_prism", "pyramid", "FV_ghost_cell", "interior_ghost_cell",
+   "unknown", "unknown_cell", "unknown_face",   "invalid",  "DMPolytopeType", "DM_POLYTOPE_", NULL};
 const char *const DMCopyLabelsModes[] = {"replace", "keep", "fail", "DMCopyLabelsMode", "DM_COPY_LABELS_", NULL};
 
 /*@
@@ -215,7 +216,7 @@ PetscErrorCode DMClone(DM dm, DM *newdm)
   Logically Collective
 
   Input Parameters:
-+ da    - initial distributed array
++ dm    - initial distributed array
 - ctype - the vector type, for example `VECSTANDARD`, `VECCUDA`, or `VECVIENNACL`
 
   Options Database Key:
@@ -226,12 +227,16 @@ PetscErrorCode DMClone(DM dm, DM *newdm)
 .seealso: [](ch_dmbase), `DM`, `DMCreate()`, `DMDestroy()`, `DMDAInterpolationType`, `VecType`, `DMGetVecType()`, `DMSetMatType()`, `DMGetMatType()`,
           `VECSTANDARD`, `VECCUDA`, `VECVIENNACL`, `DMCreateLocalVector()`, `DMCreateGlobalVector()`
 @*/
-PetscErrorCode DMSetVecType(DM da, VecType ctype)
+PetscErrorCode DMSetVecType(DM dm, VecType ctype)
 {
+  char *tmp;
+
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, DM_CLASSID, 1);
-  PetscCall(PetscFree(da->vectype));
-  PetscCall(PetscStrallocpy(ctype, (char **)&da->vectype));
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
+  PetscAssertPointer(ctype, 2);
+  tmp = (char *)dm->vectype;
+  PetscCall(PetscStrallocpy(ctype, (char **)&dm->vectype));
+  PetscCall(PetscFree(tmp));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -382,10 +387,14 @@ PetscErrorCode DMGetISColoringType(DM dm, ISColoringType *ctype)
 @*/
 PetscErrorCode DMSetMatType(DM dm, MatType ctype)
 {
+  char *tmp;
+
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
-  PetscCall(PetscFree(dm->mattype));
+  PetscAssertPointer(ctype, 2);
+  tmp = (char *)dm->mattype;
   PetscCall(PetscStrallocpy(ctype, (char **)&dm->mattype));
+  PetscCall(PetscFree(tmp));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -738,10 +747,8 @@ PetscErrorCode DMDestroy(DM *dm)
   PetscCall(MatDestroy(&(*dm)->defaultConstraint.mat));
   PetscCall(PetscSFDestroy(&(*dm)->sf));
   PetscCall(PetscSFDestroy(&(*dm)->sectionSF));
-  if ((*dm)->useNatural) {
-    if ((*dm)->sfNatural) PetscCall(PetscSFDestroy(&(*dm)->sfNatural));
-    PetscCall(PetscObjectDereference((PetscObject)(*dm)->sfMigration));
-  }
+  if ((*dm)->sfNatural) PetscCall(PetscSFDestroy(&(*dm)->sfNatural));
+  PetscCall(PetscObjectDereference((PetscObject)(*dm)->sfMigration));
   {
     Vec     *auxData;
     PetscInt n, i, off = 0;
@@ -4156,6 +4163,16 @@ PetscErrorCode DMPrintCellVector(PetscInt c, const char name[], PetscInt len, co
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+PetscErrorCode DMPrintCellVectorReal(PetscInt c, const char name[], PetscInt len, const PetscReal x[])
+{
+  PetscInt f;
+
+  PetscFunctionBegin;
+  PetscCall(PetscPrintf(PETSC_COMM_SELF, "Cell %" PetscInt_FMT " Element %s\n", c, name));
+  for (f = 0; f < len; ++f) PetscCall(PetscPrintf(PETSC_COMM_SELF, "  | %g |\n", (double)x[f]));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 PetscErrorCode DMPrintCellMatrix(PetscInt c, const char name[], PetscInt rows, PetscInt cols, const PetscScalar A[])
 {
   PetscInt f, g;
@@ -4270,7 +4287,7 @@ PetscErrorCode DMGetLocalSection(DM dm, PetscSection *section)
       if (flg) {
         PetscCall(PetscViewerFlush(viewer));
         PetscCall(PetscViewerPopFormat(viewer));
-        PetscCall(PetscViewerDestroy(&viewer));
+        PetscCall(PetscOptionsRestoreViewer(&viewer));
       }
     }
     PetscUseTypeMethod(dm, createlocalsection);
@@ -8842,7 +8859,7 @@ PetscErrorCode DMMonitorSetFromOptions(DM dm, const char name[], const char help
     PetscViewerAndFormat *vf;
 
     PetscCall(PetscViewerAndFormatCreate(viewer, format, &vf));
-    PetscCall(PetscObjectDereference((PetscObject)viewer));
+    PetscCall(PetscOptionsRestoreViewer(&viewer));
     if (monitorsetup) PetscCall((*monitorsetup)(dm, vf));
     PetscCall(DMMonitorSet(dm, (PetscErrorCode(*)(DM, void *))monitor, vf, (PetscErrorCode(*)(void **))PetscViewerAndFormatDestroy));
   }
@@ -9151,7 +9168,7 @@ PetscErrorCode DMCopyAuxiliaryVec(DM dm, DM dmNew)
   Note:
   An arrangement is a face order combined with an orientation for each face
 
-  Each orientation (transformation) is labeled with an integer from negative `DMPolytopeTypeGetNumArrangments(ct)`/2 to `DMPolytopeTypeGetNumArrangments(ct)`/2
+  Each orientation (transformation) is labeled with an integer from negative `DMPolytopeTypeGetNumArrangements(ct)`/2 to `DMPolytopeTypeGetNumArrangements(ct)`/2
   that labels each arrangement (face ordering plus orientation for each face).
 
   See `DMPolytopeMatchVertexOrientation()` to find a new vertex orientation that takes the source vertex arrangement to the target vertex arrangement
@@ -9161,7 +9178,7 @@ PetscErrorCode DMCopyAuxiliaryVec(DM dm, DM dmNew)
 PetscErrorCode DMPolytopeMatchOrientation(DMPolytopeType ct, const PetscInt sourceCone[], const PetscInt targetCone[], PetscInt *ornt, PetscBool *found)
 {
   const PetscInt cS = DMPolytopeTypeGetConeSize(ct);
-  const PetscInt nO = DMPolytopeTypeGetNumArrangments(ct) / 2;
+  const PetscInt nO = DMPolytopeTypeGetNumArrangements(ct) / 2;
   PetscInt       o, c;
 
   PetscFunctionBegin;
@@ -9171,7 +9188,7 @@ PetscErrorCode DMPolytopeMatchOrientation(DMPolytopeType ct, const PetscInt sour
     PetscFunctionReturn(PETSC_SUCCESS);
   }
   for (o = -nO; o < nO; ++o) {
-    const PetscInt *arr = DMPolytopeTypeGetArrangment(ct, o);
+    const PetscInt *arr = DMPolytopeTypeGetArrangement(ct, o);
 
     for (c = 0; c < cS; ++c)
       if (sourceCone[arr[c * 2]] != targetCone[c]) break;
@@ -9236,17 +9253,17 @@ PetscErrorCode DMPolytopeGetOrientation(DMPolytopeType ct, const PetscInt source
   Note:
   An arrangement is a vertex order
 
-  Each orientation (transformation) is labeled with an integer from negative `DMPolytopeTypeGetNumArrangments(ct)`/2 to `DMPolytopeTypeGetNumArrangments(ct)`/2
+  Each orientation (transformation) is labeled with an integer from negative `DMPolytopeTypeGetNumArrangements(ct)`/2 to `DMPolytopeTypeGetNumArrangements(ct)`/2
   that labels each arrangement (vertex ordering).
 
   See `DMPolytopeMatchOrientation()` to find a new face orientation that takes the source face arrangement to the target face arrangement
 
-.seealso: [](ch_dmbase), `DM`, `DMPolytopeType`, `DMPolytopeGetOrientation()`, `DMPolytopeMatchOrientation()`, `DMPolytopeTypeGetNumVertices()`, `DMPolytopeTypeGetVertexArrangment()`
+.seealso: [](ch_dmbase), `DM`, `DMPolytopeType`, `DMPolytopeGetOrientation()`, `DMPolytopeMatchOrientation()`, `DMPolytopeTypeGetNumVertices()`, `DMPolytopeTypeGetVertexArrangement()`
 @*/
 PetscErrorCode DMPolytopeMatchVertexOrientation(DMPolytopeType ct, const PetscInt sourceVert[], const PetscInt targetVert[], PetscInt *ornt, PetscBool *found)
 {
   const PetscInt cS = DMPolytopeTypeGetNumVertices(ct);
-  const PetscInt nO = DMPolytopeTypeGetNumArrangments(ct) / 2;
+  const PetscInt nO = DMPolytopeTypeGetNumArrangements(ct) / 2;
   PetscInt       o, c;
 
   PetscFunctionBegin;
@@ -9256,7 +9273,7 @@ PetscErrorCode DMPolytopeMatchVertexOrientation(DMPolytopeType ct, const PetscIn
     PetscFunctionReturn(PETSC_SUCCESS);
   }
   for (o = -nO; o < nO; ++o) {
-    const PetscInt *arr = DMPolytopeTypeGetVertexArrangment(ct, o);
+    const PetscInt *arr = DMPolytopeTypeGetVertexArrangement(ct, o);
 
     for (c = 0; c < cS; ++c)
       if (sourceVert[arr[c]] != targetVert[c]) break;

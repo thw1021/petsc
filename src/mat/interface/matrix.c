@@ -4826,8 +4826,10 @@ PetscErrorCode MatGetFactorAvailable(Mat mat, MatSolverType type, MatFactorType 
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
-  PetscValidType(mat, 1);
   PetscAssertPointer(flg, 4);
+
+  *flg = PETSC_FALSE;
+  if (!((PetscObject)mat)->type_name) PetscFunctionReturn(PETSC_SUCCESS);
 
   PetscCheck(!mat->factortype, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_WRONGSTATE, "Not for factored matrix");
   MatCheckPreallocated(mat, 1);
@@ -11175,10 +11177,12 @@ PetscErrorCode MatSetInf(Mat A)
   Collective
 
   Input Parameters:
-+ A      - the matrix
-. sym    - `PETSC_TRUE` indicates that the graph should be symmetrized
-. scale  - `PETSC_TRUE` indicates that the graph edge weights should be symmetrically scaled with the diagonal entry
-- filter - filter value - < 0: does nothing; == 0: removes only 0.0 entries; otherwise: removes entries with abs(entries) <= value
++ A       - the matrix
+. sym     - `PETSC_TRUE` indicates that the graph should be symmetrized
+. scale   - `PETSC_TRUE` indicates that the graph edge weights should be symmetrically scaled with the diagonal entry
+. filter  - filter value - < 0: does nothing; == 0: removes only 0.0 entries; otherwise: removes entries with abs(entries) <= value
+. num_idx - size of 'index' array
+- index   - array of block indices to use for graph strength of connection weight
 
   Output Parameter:
 . graph - the resulting graph
@@ -11187,14 +11191,14 @@ PetscErrorCode MatSetInf(Mat A)
 
 .seealso: [](ch_matrices), `Mat`, `MatCreate()`, `PCGAMG`
 @*/
-PetscErrorCode MatCreateGraph(Mat A, PetscBool sym, PetscBool scale, PetscReal filter, Mat *graph)
+PetscErrorCode MatCreateGraph(Mat A, PetscBool sym, PetscBool scale, PetscReal filter, PetscInt num_idx, PetscInt index[], Mat *graph)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
   PetscValidType(A, 1);
   PetscValidLogicalCollectiveBool(A, scale, 3);
-  PetscAssertPointer(graph, 5);
-  PetscUseTypeMethod(A, creategraph, sym, scale, filter, graph);
+  PetscAssertPointer(graph, 7);
+  PetscUseTypeMethod(A, creategraph, sym, scale, filter, num_idx, index, graph);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

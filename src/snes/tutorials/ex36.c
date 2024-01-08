@@ -250,7 +250,7 @@ static PetscErrorCode CompareView(Vec u)
     PetscCall(DMPlexVecView1D(dm, 2, lv, viewer));
     for (i = 0; i < 2; ++i) PetscCall(DMRestoreLocalVector(dm, &lv[i]));
     PetscCall(DMRestoreGlobalVector(dm, &exact));
-    PetscCall(PetscViewerDestroy(&viewer));
+    PetscCall(PetscOptionsRestoreViewer(&viewer));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -493,7 +493,7 @@ int main(int argc, char **argv)
   PetscCall(DMCreateGlobalVector(dm, &u));
   PetscCall(VecSet(u, 0.0));
   PetscCall(PetscObjectSetName((PetscObject)u, "potential"));
-  PetscCall(DMPlexSetSNESLocalFEM(dm, &user, &user, &user));
+  PetscCall(DMPlexSetSNESLocalFEM(dm, PETSC_FALSE, &user));
   PetscCall(SNESSetFromOptions(snes));
   PetscCall(DMSNESCheckFromOptions(snes, u));
   PetscCall(SNESSolve(snes, NULL, u));

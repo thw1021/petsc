@@ -42,6 +42,8 @@ class DMPolytopeType(object):
     FV_GHOST           = DM_POLYTOPE_FV_GHOST
     INTERIOR_GHOST     = DM_POLYTOPE_INTERIOR_GHOST
     UNKNOWN            = DM_POLYTOPE_UNKNOWN
+    UNKNOWN_CELL       = DM_POLYTOPE_UNKNOWN_CELL
+    UNKNOWN_FACE       = DM_POLYTOPE_UNKNOWN_FACE
 
 # --------------------------------------------------------------------
 
@@ -1073,7 +1075,138 @@ cdef class DM(Object):
         CHKERR( PetscINCREF(c.obj) )
         return c
 
-    def projectCoordinates(self, FE disc) -> Self:
+    def setCellCoordinateDM(self, DM dm) -> None:
+        """Set the cell coordinate `DM`.
+
+        Collective.
+
+        Parameters
+        ----------
+        dm
+            The cell coordinate `DM`.
+
+        See Also
+        --------
+        petsc.DMSetCellCoordinateDM
+
+        """
+        CHKERR( DMSetCellCoordinateDM(self.dm, dm.dm) )
+
+    def getCellCoordinateDM(self) -> DM:
+        """Return the cell coordinate `DM`.
+
+        Collective.
+
+        See Also
+        --------
+        petsc.DMGetCellCoordinateDM
+
+        """
+        cdef DM cdm = type(self)()
+        CHKERR( DMGetCellCoordinateDM(self.dm, &cdm.dm) )
+        CHKERR( PetscINCREF(cdm.obj) )
+        return cdm
+
+    def setCellCoordinateSection(self, dim: int, Section sec) -> None:
+        """Set the cell coordinate layout over the `DM`.
+
+        Collective.
+
+        Parameters
+        ----------
+        dim
+            The embedding dimension, or `DETERMINE`.
+        sec
+            The cell coordinate `Section`.
+
+        See Also
+        --------
+        petsc.DMSetCellCoordinateSection
+
+        """
+        cdef PetscInt cdim = asInt(dim)
+        CHKERR( DMSetCellCoordinateSection(self.dm, cdim, sec.sec) )
+
+    def getCellCoordinateSection(self) -> Section:
+        """Return the cell coordinate layout over the `DM`.
+
+        Collective.
+
+        See Also
+        --------
+        petsc.DMGetCellCoordinateSection
+
+        """
+        cdef Section sec = Section()
+        CHKERR( DMGetCellCoordinateSection(self.dm, &sec.sec) )
+        CHKERR( PetscINCREF(sec.obj) )
+        return sec
+
+    def setCellCoordinates(self, Vec c) -> None:
+        """Set a global vector with the cellwise coordinates.
+
+        Collective.
+
+        Parameters
+        ----------
+        c
+            The global cell coordinate vector.
+
+        See Also
+        --------
+        petsc.DMSetCellCoordinates
+
+        """
+        CHKERR( DMSetCellCoordinates(self.dm, c.vec) )
+
+    def getCellCoordinates(self) -> Vec:
+        """Return a global vector with the cellwise coordinates.
+
+        Collective.
+
+        See Also
+        --------
+        petsc.DMGetCellCoordinates
+
+        """
+        cdef Vec c = Vec()
+        CHKERR( DMGetCellCoordinates(self.dm, &c.vec) )
+        CHKERR( PetscINCREF(c.obj) )
+        return c
+
+    def setCellCoordinatesLocal(self, Vec c) -> None:
+        """Set a local vector with the cellwise coordinates.
+
+        Not collective.
+
+        Parameters
+        ----------
+        c
+            The local cell coordinate vector.
+
+        See Also
+        --------
+        petsc.DMSetCellCoordinatesLocal
+
+        """
+        CHKERR( DMSetCellCoordinatesLocal(self.dm, c.vec) )
+
+    def getCellCoordinatesLocal(self) -> Vec:
+        """Return a local vector with the cellwise coordinates.
+
+        Collective.
+
+        See Also
+        --------
+        petsc.DMGetCellCoordinatesLocal
+
+        """
+        cdef Vec c = Vec()
+        CHKERR( DMGetCellCoordinatesLocal(self.dm, &c.vec) )
+        CHKERR( PetscINCREF(c.obj) )
+        return c
+
+    def setCoordinateDisc(self, FE disc, project: bool) -> Self:
         """Project coordinates to a different space.
 
         Parameters
@@ -1083,11 +1216,26 @@ cdef class DM(Object):
 
         See Also
         --------
-        petsc.DMProjectCoordinates
+        petsc.DMSetCoordinateDisc
 
         """
-        CHKERR( DMProjectCoordinates(self.dm, disc.fe))
+        cdef PetscBool pr = project
+        CHKERR( DMSetCoordinateDisc(self.dm, disc.fe, pr))
         return self
+
+    def getCoordinatesLocalized(self) -> bool:
+        """Check if the coordinates have been localized for cells.
+
+        Collective.
+
+        See Also
+        --------
+        petsc.DMGetCoordinatesLocalized
+
+        """
+        cdef PetscBool flag = PETSC_FALSE
+        CHKERR( DMGetCoordinatesLocalized(self.dm, &flag) )
+        return toBool(flag)
 
     def getBoundingBox(self) -> tuple[tuple[float, float], ...]:
         """Return the dimension of embedding space for coordinates values.

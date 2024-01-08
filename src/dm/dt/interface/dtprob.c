@@ -749,7 +749,7 @@ PetscErrorCode PetscProbComputeKSStatistic(Vec v, PetscProbFunc cdf, PetscReal *
   if (viewer) {
     PetscCall(PetscViewerFlush(viewer));
     PetscCall(PetscViewerPopFormat(viewer));
-    PetscCall(PetscViewerDestroy(&viewer));
+    PetscCall(PetscOptionsRestoreViewer(&viewer));
   }
   *alpha = KSfbar((int)n, (double)Dn);
   PetscFunctionReturn(PETSC_SUCCESS);

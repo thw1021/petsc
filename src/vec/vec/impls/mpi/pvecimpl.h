@@ -20,6 +20,7 @@ typedef struct {
 typedef struct {
   VECHEADER
   PetscInt   nghost;      /* number of ghost points on this process */
+  IS         ghost;       /* global indices of ghost values */
   Vec        localrep;    /* local representation of vector */
   VecScatter localupdate; /* scatter to update ghost values */
 
@@ -73,6 +74,8 @@ PETSC_INTERN PetscErrorCode VecAssemblyBegin_MPI(Vec);
 PETSC_INTERN PetscErrorCode VecAssemblyEnd_MPI(Vec);
 PETSC_INTERN PetscErrorCode VecAssemblyReset_MPI(Vec);
 PETSC_EXTERN PetscErrorCode VecCreate_MPI(Vec);
+PETSC_INTERN PetscErrorCode VecMDot_MPI_GEMV(Vec, PetscInt, const Vec[], PetscScalar *);
+PETSC_INTERN PetscErrorCode VecMTDot_MPI_GEMV(Vec, PetscInt, const Vec[], PetscScalar *);
 
 PETSC_INTERN PetscErrorCode VecDuplicate_MPI(Vec, Vec *);
 PETSC_INTERN PetscErrorCode VecSetPreallocationCOO_MPI(Vec, PetscCount, const PetscInt[]);

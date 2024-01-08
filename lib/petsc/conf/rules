@@ -201,6 +201,7 @@ endif
 
 # Why do we filter out -fvisibility=hidden? See comments in gmakefile.test on PETSC_COMPILE.kokkos.cxx
 PETSC_KOKKOSCOMPILE_SINGLE = $(filter-out -fvisibility=hidden,$(subst -Xcompiler -fvisibility=hidden ,,$(strip $(KOKKOS_COMPILE_SINGLE))))
+LINK.kokkos.cxx := $(filter-out -fvisibility=hidden,$(subst -Xcompiler -fvisibility=hidden ,,$(strip $(LINK.kokkos.cxx))))
 
 LINK.hip.cpp = $(HIPC) $(HIPC_FLAGS) $(HIPPP_FLAGS) $(HIPOPTFLAGS) $(CXXFLAGS) $(CXXCPPFLAGS) $(LDFLAGS) $(MPICXX_INCLUDES) $(MPICXX_LIBS)
 
@@ -264,4 +265,4 @@ help-applications:
 	-@echo "make libs - rebuilds any needed changes to the PETSc libraries"
 	-@echo ""
 
-include ${PETSC_DIR}/lib/petsc/conf/rules.doc
+include ${PETSC_DIR}/lib/petsc/conf/rules_doc.mk

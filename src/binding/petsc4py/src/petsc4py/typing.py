@@ -63,7 +63,7 @@ __all__ = [
     "TSMonitorFunction",
     "TSPreStepFunction",
     "TSPostStepFunction",
-    "TSEventHandlerFunction",
+    "TSIndicatorFunction",
     "TSPostEventFunction",
     "TSPreStepFunction",
     "TSPostStepFunction",
@@ -348,11 +348,11 @@ TSPreStepFunction = Callable[[TS], None]
 TSPostStepFunction = Callable[[TS], None]
 """`TS` post-step callback."""
 
-TSEventHandlerFunction = Callable[[TS, float, Vec, NDArray[Scalar]], None]
-"""`TS` event handler callback."""
+TSIndicatorFunction = Callable[[TS, float, Vec, NDArray[float]], None]
+"""`TS` event indicator callback."""
 
 TSPostEventFunction = Callable[[TS, NDArray[int], float, Vec, bool], None]
-"""`TS` post-event handler callback."""
+"""`TS` post-event callback."""
 
 # --- TAO ---
 

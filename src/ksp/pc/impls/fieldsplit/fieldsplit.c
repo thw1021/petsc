@@ -222,13 +222,13 @@ static PetscErrorCode PCView_FieldSplit_Schur(PC pc, PetscViewer viewer)
     } else PetscCall(PetscViewerASCIIPrintf(viewer, "  not yet available\n"));
     PetscCall(PetscViewerASCIIPopTab(viewer));
     if (jac->head && jac->kspupper != jac->head->ksp) {
-      PetscCall(PetscViewerASCIIPrintf(viewer, "KSP solver for upper A00 in upper triangular factor \n"));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "KSP solver for upper A00 in upper triangular factor\n"));
       PetscCall(PetscViewerASCIIPushTab(viewer));
       if (jac->kspupper) PetscCall(KSPView(jac->kspupper, viewer));
       else PetscCall(PetscViewerASCIIPrintf(viewer, "  not yet available\n"));
       PetscCall(PetscViewerASCIIPopTab(viewer));
     }
-    PetscCall(PetscViewerASCIIPrintf(viewer, "KSP solver for S = A11 - A10 inv(A00) A01 \n"));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "KSP solver for S = A11 - A10 inv(A00) A01\n"));
     PetscCall(PetscViewerASCIIPushTab(viewer));
     if (jac->kspschur) {
       PetscCall(KSPView(jac->kspschur, viewer));
@@ -575,7 +575,7 @@ static PetscErrorCode MatGolubKahanComputeExplicitOperator(Mat A, Mat B, Mat C, 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_EXTERN PetscErrorCode PetscOptionsFindPairPrefix_Private(PetscOptions, const char pre[], const char name[], const char *value[], PetscBool *flg);
+PETSC_EXTERN PetscErrorCode PetscOptionsFindPairPrefix_Private(PetscOptions, const char pre[], const char name[], const char *option[], const char *value[], PetscBool *flg);
 
 static PetscErrorCode PCSetUp_FieldSplit(PC pc)
 {
@@ -898,7 +898,7 @@ static PetscErrorCode PCSetUp_FieldSplit(PC pc)
       if (sp) PetscCall(MatSetNullSpace(jac->schur, sp));
 
       PetscCall(PetscSNPrintf(schurtestoption, sizeof(schurtestoption), "-fieldsplit_%s_inner_", ilink->splitname));
-      PetscCall(PetscOptionsFindPairPrefix_Private(((PetscObject)pc)->options, ((PetscObject)pc)->prefix, schurtestoption, NULL, &flg));
+      PetscCall(PetscOptionsFindPairPrefix_Private(((PetscObject)pc)->options, ((PetscObject)pc)->prefix, schurtestoption, NULL, NULL, &flg));
       if (flg) {
         DM  dmInner;
         KSP kspInner;
@@ -952,7 +952,7 @@ static PetscErrorCode PCSetUp_FieldSplit(PC pc)
         }
       }
       PetscCall(PetscSNPrintf(schurtestoption, sizeof(schurtestoption), "-fieldsplit_%s_upper_", ilink->splitname));
-      PetscCall(PetscOptionsFindPairPrefix_Private(((PetscObject)pc)->options, ((PetscObject)pc)->prefix, schurtestoption, NULL, &flg));
+      PetscCall(PetscOptionsFindPairPrefix_Private(((PetscObject)pc)->options, ((PetscObject)pc)->prefix, schurtestoption, NULL, NULL, &flg));
       if (flg) {
         DM dmInner;
 

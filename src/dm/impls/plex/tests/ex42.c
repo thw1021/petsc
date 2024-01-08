@@ -241,7 +241,7 @@ static PetscErrorCode SetupDiscretization(DM dm)
   PetscCall(DMPlexSetClosurePermutationTensor(dm, PETSC_DETERMINE, NULL));
   PetscCall(DMGetCoordinateDim(dm, &cnc));
   PetscCall(PetscFECreateDefault(PETSC_COMM_SELF, dim, cnc, simplex, NULL, PETSC_DETERMINE, &cfe));
-  PetscCall(DMProjectCoordinates(dm, cfe));
+  PetscCall(DMSetCoordinateDisc(dm, cfe, PETSC_TRUE));
   PetscCall(PetscFEDestroy(&cfe));
   PetscCall(DMGetCoordinateDM(dm, &cdm));
   PetscCall(DMPlexSetClosurePermutationTensor(cdm, PETSC_DETERMINE, NULL));
@@ -284,7 +284,7 @@ static PetscErrorCode LibCeedSetupByDegree(DM dm, AppCtx *ctx, CeedData *data)
   PetscCall(DMPlexGetCeedRestriction(dm, NULL, 0, 0, 0, &Erestrictu));
   PetscCall(CeedBasisGetNumQuadraturePoints(basisu, &nqpts));
   PetscCall(CeedBasisGetNumQuadraturePoints(basisx, &nqptsx));
-  PetscCheck(nqptsx == nqpts, PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Number of qpoints for u %" PetscInt_FMT " != %" PetscInt_FMT " Number of qpoints for x", nqpts, nqptsx);
+  PetscCheck(nqptsx == nqpts, PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Number of qpoints for u %" CeedInt_FMT " != %" CeedInt_FMT " Number of qpoints for x", nqpts, nqptsx);
   PetscCall(CeedElemRestrictionCreateStrided(ceed, Ncell, nqpts, Nqdata, Nqdata * Ncell * nqpts, CEED_STRIDES_BACKEND, &Erestrictq));
 
   PetscCall(DMGetCoordinatesLocal(dm, &coords));
@@ -316,12 +316,12 @@ static PetscErrorCode LibCeedSetupByDegree(DM dm, AppCtx *ctx, CeedData *data)
   PetscCall(CeedOperatorSetField(op_setupgeo, "x", Erestrictx, basisx, CEED_VECTOR_ACTIVE));
   PetscCall(CeedOperatorSetField(op_setupgeo, "dx", Erestrictx, basisx, CEED_VECTOR_ACTIVE));
   PetscCall(CeedOperatorSetField(op_setupgeo, "weight", CEED_ELEMRESTRICTION_NONE, basisx, CEED_VECTOR_NONE));
-  PetscCall(CeedOperatorSetField(op_setupgeo, "qdata", Erestrictq, CEED_BASIS_COLLOCATED, CEED_VECTOR_ACTIVE));
+  PetscCall(CeedOperatorSetField(op_setupgeo, "qdata", Erestrictq, CEED_BASIS_NONE, CEED_VECTOR_ACTIVE));
 
   // Create the mass operator
   PetscCall(CeedOperatorCreate(ceed, data->qf_apply, CEED_QFUNCTION_NONE, CEED_QFUNCTION_NONE, &data->op_apply));
   PetscCall(CeedOperatorSetField(data->op_apply, "u", Erestrictu, basisu, CEED_VECTOR_ACTIVE));
-  PetscCall(CeedOperatorSetField(data->op_apply, "qdata", Erestrictq, CEED_BASIS_COLLOCATED, data->qdata));
+  PetscCall(CeedOperatorSetField(data->op_apply, "qdata", Erestrictq, CEED_BASIS_NONE, data->qdata));
   PetscCall(CeedOperatorSetField(data->op_apply, "v", Erestrictu, basisu, CEED_VECTOR_ACTIVE));
 
   // Setup qdata

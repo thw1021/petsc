@@ -178,7 +178,7 @@ static PetscErrorCode PCGAMGCoarsen_Classical(PC pc, Mat *G, PetscCoarsenData **
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PCGAMGProlongator_Classical_Direct(PC pc, Mat A, Mat G, PetscCoarsenData *agg_lists, Mat *P)
+static PetscErrorCode PCGAMGProlongator_Classical_Direct(PC pc, Mat A, PetscCoarsenData *agg_lists, Mat *P)
 {
   PC_MG             *mg   = (PC_MG *)pc->data;
   PC_GAMG           *gamg = (PC_GAMG *)mg->innerctx;
@@ -223,7 +223,7 @@ static PetscErrorCode PCGAMGProlongator_Classical_Direct(PC pc, Mat A, Mat G, Pe
   cn = 0;
   for (i = 0; i < fn; i++) {
     /* filter out singletons */
-    PetscCall(PetscCDEmptyAt(agg_lists, i, &iscoarse));
+    PetscCall(PetscCDIsEmptyAt(agg_lists, i, &iscoarse));
     lcid[i] = -1;
     if (!iscoarse) cn++;
   }
@@ -234,7 +234,7 @@ static PetscErrorCode PCGAMGProlongator_Classical_Direct(PC pc, Mat A, Mat G, Pe
 
   cn = 0;
   for (i = 0; i < fn; i++) {
-    PetscCall(PetscCDEmptyAt(agg_lists, i, &iscoarse));
+    PetscCall(PetscCDIsEmptyAt(agg_lists, i, &iscoarse));
     if (!iscoarse) {
       lcid[i] = cs + cn;
       cn++;
@@ -292,7 +292,7 @@ static PetscErrorCode PCGAMGProlongator_Classical_Direct(PC pc, Mat A, Mat G, Pe
 
   /* preallocate and create the prolongator */
   PetscCall(MatCreate(PetscObjectComm((PetscObject)A), P));
-  PetscCall(MatGetType(G, &mtype));
+  PetscCall(MatGetType(A, &mtype));
   PetscCall(MatSetType(*P, mtype));
   PetscCall(MatSetSizes(*P, fn, cn, PETSC_DETERMINE, PETSC_DETERMINE));
   PetscCall(MatMPIAIJSetPreallocation(*P, 0, lsparse, 0, gsparse));
@@ -549,7 +549,7 @@ static PetscErrorCode PCGAMGTruncateProlongator_Private(PC pc, Mat *P)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PCGAMGProlongator_Classical_Standard(PC pc, Mat A, Mat G, PetscCoarsenData *agg_lists, Mat *P)
+static PetscErrorCode PCGAMGProlongator_Classical_Standard(PC pc, Mat A, PetscCoarsenData *agg_lists, Mat *P)
 {
   Mat                lA, *lAs;
   MatType            mtype;
@@ -596,7 +596,7 @@ static PetscErrorCode PCGAMGProlongator_Classical_Standard(PC pc, Mat A, Mat G, 
   /* create coarse vector */
   cn = 0;
   for (i = 0; i < fn; i++) {
-    PetscCall(PetscCDEmptyAt(agg_lists, i, &iscoarse));
+    PetscCall(PetscCDIsEmptyAt(agg_lists, i, &iscoarse));
     if (!iscoarse) cn++;
   }
   PetscCall(PetscMalloc1(fn, &gcid));
@@ -604,7 +604,7 @@ static PetscErrorCode PCGAMGProlongator_Classical_Standard(PC pc, Mat A, Mat G, 
   PetscCall(VecGetOwnershipRange(cv, &cs, &ce));
   cn = 0;
   for (i = 0; i < fn; i++) {
-    PetscCall(PetscCDEmptyAt(agg_lists, i, &iscoarse));
+    PetscCall(PetscCDIsEmptyAt(agg_lists, i, &iscoarse));
     if (!iscoarse) {
       gcid[i] = cs + cn;
       cn++;
@@ -847,9 +847,9 @@ static PetscErrorCode PCGAMGOptProlongator_Classical_Jacobi(PC pc, Mat A, Mat *P
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PCGAMGProlongator_Classical(PC pc, Mat A, Mat G, PetscCoarsenData *agg_lists, Mat *P)
+static PetscErrorCode PCGAMGProlongator_Classical(PC pc, Mat A, PetscCoarsenData *agg_lists, Mat *P)
 {
-  PetscErrorCode (*f)(PC, Mat, Mat, PetscCoarsenData *, Mat *);
+  PetscErrorCode (*f)(PC, Mat, PetscCoarsenData *, Mat *);
   PC_MG             *mg      = (PC_MG *)pc->data;
   PC_GAMG           *pc_gamg = (PC_GAMG *)mg->innerctx;
   PC_GAMG_Classical *cls     = (PC_GAMG_Classical *)pc_gamg->subctx;
@@ -857,7 +857,7 @@ static PetscErrorCode PCGAMGProlongator_Classical(PC pc, Mat A, Mat G, PetscCoar
   PetscFunctionBegin;
   PetscCall(PetscFunctionListFind(PCGAMGClassicalProlongatorList, cls->prolongtype, &f));
   PetscCheck(f, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONGSTATE, "Cannot find PCGAMG Classical prolongator type");
-  PetscCall((*f)(pc, A, G, agg_lists, P));
+  PetscCall((*f)(pc, A, agg_lists, P));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

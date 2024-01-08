@@ -110,7 +110,7 @@ static PetscErrorCode SNESSolve_Anderson(SNES snes)
         PetscFunctionReturn(PETSC_SUCCESS);
       }
       PetscCall(SNESGetNPCFunction(snes, FM, &fMnorm));
-      if (ngmres->andersonBeta != 1.0) PetscCall(VecAXPBY(XM, (1.0 - ngmres->andersonBeta), ngmres->andersonBeta, X));
+      PetscCall(VecAXPBY(XM, 1.0 - ngmres->andersonBeta, ngmres->andersonBeta, X));
     } else {
       PetscCall(VecCopy(F, FM));
       PetscCall(VecCopy(X, XM));
@@ -122,7 +122,7 @@ static PetscErrorCode SNESSolve_Anderson(SNES snes)
     ivec = k_restart % ngmres->msize;
     if (ngmres->restart_type == SNES_NGMRES_RESTART_DIFFERENCE) {
       PetscCall(SNESNGMRESNorms_Private(snes, l, X, F, XM, FM, XA, FA, D, &dnorm, &dminnorm, NULL, NULL, NULL, &xnorm, &fAnorm, &ynorm));
-      PetscCall(SNESNGMRESSelectRestart_Private(snes, l, fMnorm, fnorm, dnorm, fminnorm, dminnorm, &selectRestart));
+      PetscCall(SNESNGMRESSelectRestart_Private(snes, l, snes->norm, fMnorm, fnorm, dnorm, fminnorm, dminnorm, &selectRestart));
       /* if the restart conditions persist for more than restart_it iterations, restart. */
       if (selectRestart) restart_count++;
       else restart_count = 0;

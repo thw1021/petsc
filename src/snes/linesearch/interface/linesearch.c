@@ -389,7 +389,8 @@ PetscErrorCode SNESLineSearchGetPreCheck(SNESLineSearch linesearch, PetscErrorCo
   Level: intermediate
 
   Notes:
-  Use `SNESLineSearchSetPreCheck()` to change the step before the line search is complete.
+  Use `SNESLineSearchSetPreCheck()` to change the step before the line search is completed.
+  The calling sequence of the callback does not contain the current scaling factor. To access the value, use `SNESLineSearchGetLambda()`.
 
   Use `SNESVISetVariableBounds()` and `SNESVISetComputeVariableBounds()` to cause `SNES` to automatically control the ranges of variables allowed.
 
@@ -472,7 +473,7 @@ PetscErrorCode SNESLineSearchPreCheck(SNESLineSearch linesearch, Vec X, Vec Y, P
 + linesearch - The line search context
 . X          - The last solution
 . Y          - The step direction
-- W          - The updated solution, $ W = X + lambda*Y $ for some lambda
+- W          - The updated solution, `W = X - lambda * Y` for some lambda
 
   Output Parameters:
 + changed_Y - Indicator if the direction `Y` has been changed.
@@ -588,14 +589,14 @@ PetscErrorCode SNESLineSearchPreCheckPicard(SNESLineSearch linesearch, Vec X, Ve
 
   Collective
 
-  Input Parameters:
-+ linesearch - The line search context
-- Y          - The search direction
+  Input Parameter:
+. linesearch - The line search context
 
   Input/Output Parameters:
 + X     - The current solution, on output the new solution
 . F     - The current function value, on output the new function value at the solution value `X`
-- fnorm - The current norm of `F`, on output the new norm of `F`
+. fnorm - The current norm of `F`, on output the new norm of `F`
+- Y     - The current search direction, on output the direction determined by the linesearch, i.e. Xnew = Xold - lambda*Y
 
   Options Database Keys:
 + -snes_linesearch_type                - basic (or equivalently none), bt, l2, cp, nleqerr, shell
@@ -615,7 +616,7 @@ PetscErrorCode SNESLineSearchPreCheckPicard(SNESLineSearch linesearch, Vec X, Ve
   application of the line search may invoke `SNESComputeFunction()` several times, and
   therefore may be fairly expensive.
 
-.seealso: [](ch_snes), `SNES`, `SNESLineSearch`, `SNESGetLineSearch()`, `SNESLineSearchCreate()`, `SNESLineSearchPreCheck()`, `SNESLineSearchPostCheck()`, `SNESSolve()`, `SNESComputeFunction()`, `SNESLineSearchSetComputeNorms()`,
+.seealso: [](ch_snes), `SNES`, `SNESLineSearch`, `SNESGetLineSearch()`, `SNESLineSearchCreate()`, `SNESLineSearchGetLambda()`, `SNESLineSearchPreCheck()`, `SNESLineSearchPostCheck()`, `SNESSolve()`, `SNESComputeFunction()`, `SNESLineSearchSetComputeNorms()`,
           `SNESLineSearchType`, `SNESLineSearchSetType()`
 @*/
 PetscErrorCode SNESLineSearchApply(SNESLineSearch linesearch, Vec X, Vec F, PetscReal *fnorm, Vec Y)
@@ -676,7 +677,7 @@ PetscErrorCode SNESLineSearchDestroy(SNESLineSearch *linesearch)
   PetscCall(PetscObjectSAWsViewOff((PetscObject)*linesearch));
   PetscCall(SNESLineSearchReset(*linesearch));
   PetscTryTypeMethod(*linesearch, destroy);
-  PetscCall(PetscViewerDestroy(&(*linesearch)->monitor));
+  PetscCall(PetscOptionsRestoreViewer(&(*linesearch)->monitor));
   PetscCall(SNESLineSearchMonitorCancel((*linesearch)));
   PetscCall(PetscHeaderDestroy(linesearch));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -707,8 +708,7 @@ PetscErrorCode SNESLineSearchDestroy(SNESLineSearch *linesearch)
 PetscErrorCode SNESLineSearchSetDefaultMonitor(SNESLineSearch linesearch, PetscViewer viewer)
 {
   PetscFunctionBegin;
-  if (viewer) PetscCall(PetscObjectReference((PetscObject)viewer));
-  PetscCall(PetscViewerDestroy(&linesearch->monitor));
+  PetscCall(PetscOptionsRestoreViewer(&linesearch->monitor));
   linesearch->monitor = viewer;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -778,7 +778,7 @@ PetscErrorCode SNESLineSearchMonitorSetFromOptions(SNESLineSearch ls, const char
   if (flg) {
     PetscViewerAndFormat *vf;
     PetscCall(PetscViewerAndFormatCreate(viewer, format, &vf));
-    PetscCall(PetscObjectDereference((PetscObject)viewer));
+    PetscCall(PetscOptionsRestoreViewer(&viewer));
     if (monitorsetup) PetscCall((*monitorsetup)(ls, vf));
     PetscCall(SNESLineSearchMonitorSet(ls, (PetscErrorCode(*)(SNESLineSearch, void *))monitor, vf, (PetscErrorCode(*)(void **))PetscViewerAndFormatDestroy));
   }
@@ -837,7 +837,7 @@ PetscErrorCode SNESLineSearchSetFromOptions(SNESLineSearch linesearch)
   PetscCall(PetscOptionsGetViewer(PetscObjectComm((PetscObject)linesearch), ((PetscObject)linesearch)->options, ((PetscObject)linesearch)->prefix, "-snes_linesearch_monitor", &viewer, NULL, &set));
   if (set) {
     PetscCall(SNESLineSearchSetDefaultMonitor(linesearch, viewer));
-    PetscCall(PetscViewerDestroy(&viewer));
+    PetscCall(PetscOptionsRestoreViewer(&viewer));
   }
   PetscCall(SNESLineSearchMonitorSetFromOptions(linesearch, "-snes_linesearch_monitor_solution_update", "View correction at each iteration", "SNESLineSearchMonitorSolutionUpdate", SNESLineSearchMonitorSolutionUpdate, NULL));
 
@@ -1335,7 +1335,7 @@ PetscErrorCode SNESLineSearchSetOrder(SNESLineSearch linesearch, PetscInt order)
   Output Parameters:
 + xnorm - The norm of the current solution
 . fnorm - The norm of the current function, this is the `norm(function(X))` where `X` is the current solution.
-- ynorm - The norm of the current update
+- ynorm - The norm of the current update (after scaling by the linesearch computed lambda)
 
   Level: developer
 
@@ -1358,7 +1358,7 @@ PetscErrorCode SNESLineSearchGetNorms(SNESLineSearch linesearch, PetscReal *xnor
 }
 
 /*@
-  SNESLineSearchSetNorms - Gets the computed norms for the current solution `X`, the current update `Y`, and the current function value `F`.
+  SNESLineSearchSetNorms - Sets the computed norms for the current solution `X`, the current update `Y`, and the current function value `F`.
 
   Collective
 
@@ -1366,7 +1366,7 @@ PetscErrorCode SNESLineSearchGetNorms(SNESLineSearch linesearch, PetscReal *xnor
 + linesearch - the line search context
 . xnorm      - The norm of the current solution
 . fnorm      - The norm of the current function, this is the `norm(function(X))` where `X` is the current solution
-- ynorm      - The norm of the current update
+- ynorm      - The norm of the current update (after scaling by the linesearch computed lambda)
 
   Level: developer
 

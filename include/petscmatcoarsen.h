@@ -69,26 +69,8 @@ PETSC_EXTERN PetscErrorCode MatCoarsenSetFromOptions(MatCoarsen);
 PETSC_EXTERN PetscErrorCode MatCoarsenGetType(MatCoarsen, MatCoarsenType *);
 PETSC_EXTERN PetscErrorCode MatCoarsenViewFromOptions(MatCoarsen, PetscObject, const char[]);
 
-PETSC_EXTERN PetscErrorCode PetscCDCreate(PetscInt, PetscCoarsenData **);
-PETSC_EXTERN PetscErrorCode PetscCDDestroy(PetscCoarsenData *);
-PETSC_EXTERN PetscErrorCode PetscCDIntNdSetID(PetscCDIntNd *, PetscInt);
-PETSC_EXTERN PetscErrorCode PetscCDIntNdGetID(const PetscCDIntNd *, PetscInt *);
-PETSC_EXTERN PetscErrorCode PetscCDAppendID(PetscCoarsenData *, PetscInt, PetscInt);
-PETSC_EXTERN PetscErrorCode PetscCDAppendRemove(PetscCoarsenData *, PetscInt, PetscInt);
-PETSC_EXTERN PetscErrorCode PetscCDAppendNode(PetscCoarsenData *, PetscInt, PetscCDIntNd *);
-PETSC_EXTERN PetscErrorCode PetscCDRemoveNextNode(PetscCoarsenData *, PetscInt, PetscCDIntNd *);
-PETSC_EXTERN PetscErrorCode PetscCDSizeAt(const PetscCoarsenData *, PetscInt, PetscInt *);
-PETSC_EXTERN PetscErrorCode PetscCDEmptyAt(const PetscCoarsenData *, PetscInt, PetscBool *);
-PETSC_EXTERN PetscErrorCode PetscCDSetChuckSize(PetscCoarsenData *, PetscInt);
-PETSC_EXTERN PetscErrorCode PetscCDPrint(const PetscCoarsenData *, MPI_Comm);
-PETSC_EXTERN PetscErrorCode PetscCDGetMIS(PetscCoarsenData *, IS *);
-PETSC_EXTERN PetscErrorCode PetscCDGetMat(PetscCoarsenData *, Mat *);
-PETSC_EXTERN PetscErrorCode PetscCDSetMat(PetscCoarsenData *, Mat);
-PETSC_EXTERN PetscErrorCode PetscCDRemoveAll(PetscCoarsenData *, PetscInt);
-
-PETSC_EXTERN PetscErrorCode PetscCDGetHeadPos(const PetscCoarsenData *, PetscInt, PetscCDIntNd **);
-PETSC_EXTERN PetscErrorCode PetscCDGetNextPos(const PetscCoarsenData *, PetscInt, PetscCDIntNd **);
-PETSC_EXTERN PetscErrorCode PetscCDGetASMBlocks(const PetscCoarsenData *, const PetscInt, Mat, PetscInt *, IS **);
-
 PETSC_EXTERN PetscErrorCode MatCoarsenMISKSetDistance(MatCoarsen, PetscInt);
 PETSC_EXTERN PetscErrorCode MatCoarsenMISKGetDistance(MatCoarsen, PetscInt *);
+PETSC_EXTERN PetscErrorCode MatCoarsenSetMaximumIterations(MatCoarsen, PetscInt);
+PETSC_EXTERN PetscErrorCode MatCoarsenSetThreshold(MatCoarsen, PetscReal);
+PETSC_EXTERN PetscErrorCode MatCoarsenSetStrengthIndex(MatCoarsen, PetscInt, PetscInt[]);

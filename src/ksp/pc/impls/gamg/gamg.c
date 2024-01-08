@@ -1,7 +1,6 @@
 /*
  GAMG geometric-algebric multigrid PC - Mark Adams 2011
  */
-#include <petsc/private/matimpl.h>
 #include <../src/ksp/pc/impls/gamg/gamg.h>            /*I "petscpc.h" I*/
 #include <../src/ksp/ksp/impls/cheby/chebyshevimpl.h> /*I "petscksp.h" I*/
 
@@ -550,9 +549,9 @@ static PetscErrorCode PCSetUp_GAMG(PC pc)
           }
           if (reuse == MAT_INITIAL_MATRIX) PetscCall(MatDestroy(&mglevels[level]->A));
           if (reuse == MAT_REUSE_MATRIX) {
-            PetscCall(PetscInfo(pc, "%s: RAP after first solve, reuse matrix level %" PetscInt_FMT "\n", ((PetscObject)pc)->prefix, level));
+            PetscCall(PetscInfo(pc, "%s: RAP after initial setup, reuse matrix level %" PetscInt_FMT "\n", ((PetscObject)pc)->prefix, level));
           } else {
-            PetscCall(PetscInfo(pc, "%s: RAP after first solve, new matrix level %" PetscInt_FMT "\n", ((PetscObject)pc)->prefix, level));
+            PetscCall(PetscInfo(pc, "%s: RAP after initial setup, with repartitioning (new matrix) level %" PetscInt_FMT "\n", ((PetscObject)pc)->prefix, level));
           }
           PetscCall(PetscLogEventBegin(petsc_gamg_setup_matmat_events[gl][1], 0, 0, 0, 0));
           PetscCall(MatPtAP(dB, mglevels[level + 1]->interpolate, reuse, PETSC_DEFAULT, &B));
@@ -625,7 +624,7 @@ static PetscErrorCode PCSetUp_GAMG(PC pc)
   /* Get A_i and R_i */
   for (level = 0, Aarr[0] = Pmat, nactivepe = size; level < (pc_gamg->Nlevels - 1) && (!level || M > pc_gamg->coarse_eq_limit); level++) {
     pc_gamg->current_level = level;
-    PetscCheck(level < PETSC_MG_MAXLEVELS, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Too many levels %" PetscInt_FMT, level);
+    PetscCheck(level < PETSC_MG_MAXLEVELS - 2, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Too many levels %" PetscInt_FMT, level + 1);
     level1 = level + 1;
 #if defined(GAMG_STAGES)
     if (!gamg_stages[level]) {
@@ -636,21 +635,22 @@ static PetscErrorCode PCSetUp_GAMG(PC pc)
     PetscCall(PetscLogStagePush(gamg_stages[level]));
 #endif
     { /* construct prolongator */
-      Mat               Gmat;
+      Mat               Gmat, mat;
       PetscCoarsenData *agg_lists;
       Mat               Prol11;
 
       PetscCall(PCGAMGCreateGraph(pc, Aarr[level], &Gmat));
-      PetscCall(pc_gamg->ops->coarsen(pc, &Gmat, &agg_lists));
-      PetscCall(pc_gamg->ops->prolongator(pc, Aarr[level], Gmat, agg_lists, &Prol11));
-
+      PetscCall(pc_gamg->ops->coarsen(pc, &Gmat, &agg_lists)); // Gmat may have ghosts for QR aggregates not in matrix
+      PetscCall(PetscCDGetMat(agg_lists, &mat));
+      if (!mat) PetscCall(PetscCDSetMat(agg_lists, Gmat));
+      PetscCall(pc_gamg->ops->prolongator(pc, Aarr[level], agg_lists, &Prol11));
       /* could have failed to create new level */
       if (Prol11) {
         const char *prefix;
         char        addp[32];
 
         /* get new block size of coarse matrices */
-        PetscCall(MatGetBlockSizes(Prol11, NULL, &bs));
+        PetscCall(MatGetBlockSizes(Prol11, NULL, &bs)); // column size
 
         if (pc_gamg->ops->optprolongator) {
           /* smooth */
@@ -659,10 +659,33 @@ static PetscErrorCode PCSetUp_GAMG(PC pc)
 
         if (pc_gamg->use_aggs_in_asm) {
           PetscInt bs;
-          PetscCall(MatGetBlockSizes(Prol11, &bs, NULL)); // not timed directly, ugly, could remove, but good ASM method
-          PetscCall(PetscCDGetASMBlocks(agg_lists, bs, Gmat, &nASMBlocksArr[level], &ASMLocalIDsArr[level]));
+          PetscCall(MatGetBlockSizes(Prol11, &bs, NULL)); // row block size
+          PetscCall(PetscCDGetASMBlocks(agg_lists, bs, &nASMBlocksArr[level], &ASMLocalIDsArr[level]));
+          PetscCall(PetscInfo(pc, "%d: %" PetscInt_FMT " ASM local domains,  bs = %d\n", (int)level, nASMBlocksArr[level], (int)bs));
+        } else if (pc_gamg->asm_hem_aggs) {
+          MatCoarsen  crs;
+          const char *prefix;
+          PetscInt    bs;
+          PetscCall(PetscCDGetMat(agg_lists, &mat));
+          if (mat == Gmat) PetscCall(PetscCDClearMat(agg_lists)); // take the Mat away from the list (yuck)
+          PetscCall(PetscCDDestroy(agg_lists));
+          PetscCall(PetscInfo(pc, "HEM ASM passes = %d\n", (int)pc_gamg->asm_hem_aggs));
+          PetscCall(MatCoarsenCreate(PetscObjectComm((PetscObject)pc), &crs));
+          PetscCall(PetscObjectGetOptionsPrefix((PetscObject)pc, &prefix));
+          PetscCall(PetscObjectSetOptionsPrefix((PetscObject)crs, prefix));
+          PetscCall(MatCoarsenSetFromOptions(crs)); // get strength args
+          PetscCall(MatCoarsenSetType(crs, MATCOARSENHEM));
+          PetscCall(MatCoarsenSetMaximumIterations(crs, pc_gamg->asm_hem_aggs));
+          PetscCall(MatCoarsenSetAdjacency(crs, Gmat));
+          PetscCall(MatCoarsenSetStrictAggs(crs, PETSC_TRUE));
+          PetscCall(MatCoarsenApply(crs));
+          PetscCall(MatCoarsenViewFromOptions(crs, NULL, "-agg_hem_mat_coarsen_view"));
+          PetscCall(MatCoarsenGetData(crs, &agg_lists)); /* output */
+          PetscCall(MatCoarsenDestroy(&crs));
+          // create aggregates
+          PetscCall(MatGetBlockSizes(Aarr[level], &bs, NULL)); // row block size
+          PetscCall(PetscCDGetASMBlocks(agg_lists, bs, &nASMBlocksArr[level], &ASMLocalIDsArr[level]));
         }
-
         PetscCall(PCGetOptionsPrefix(pc, &prefix));
         PetscCall(MatSetOptionsPrefix(Prol11, prefix));
         PetscCall(PetscSNPrintf(addp, sizeof(addp), "pc_gamg_prolongator_%d_", (int)level));
@@ -673,7 +696,8 @@ static PetscErrorCode PCSetUp_GAMG(PC pc)
         PetscCall(MatSetFromOptions(Prol11));
         Parr[level1] = Prol11;
       } else Parr[level1] = NULL; /* failed to coarsen */
-
+      PetscCall(PetscCDGetMat(agg_lists, &mat));
+      if (mat == Gmat) PetscCall(PetscCDClearMat(agg_lists)); // take the Mat away from the list (yuck)
       PetscCall(MatDestroy(&Gmat));
       PetscCall(PetscCDDestroy(agg_lists));
     }                           /* construct prolongator scope */
@@ -736,7 +760,7 @@ static PetscErrorCode PCSetUp_GAMG(PC pc)
       PetscCall(KSPSetType(smoother, KSPCHEBYSHEV));
 
       /* set blocks for ASM smoother that uses the 'aggregates' */
-      if (pc_gamg->use_aggs_in_asm) {
+      if (pc_gamg->use_aggs_in_asm || pc_gamg->asm_hem_aggs) {
         PetscInt sz;
         IS      *iss;
 
@@ -877,6 +901,7 @@ PetscErrorCode PCDestroy_GAMG(PC pc)
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetType_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGGetType_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetNlevels_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGASMSetHEM_C", NULL));
   PetscCall(PCDestroy_MG(pc));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1285,7 +1310,7 @@ static PetscErrorCode PCGAMGSetCoarseGridLayoutType_GAMG(PC pc, PCGAMGLayoutType
 /*@
   PCGAMGSetNlevels -  Sets the maximum number of levels `PCGAMG` will use
 
-  Not Collective
+  Collective
 
   Input Parameters:
 + pc - the preconditioner
@@ -1316,6 +1341,43 @@ static PetscErrorCode PCGAMGSetNlevels_GAMG(PC pc, PetscInt n)
 
   PetscFunctionBegin;
   pc_gamg->Nlevels = n;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PCGAMGASMSetHEM -  Sets the number of HEM matching passed
+
+  Collective
+
+  Input Parameters:
++ pc - the preconditioner
+- n  - number of HEM matching passed to construct ASM subdomains
+
+  Options Database Key:
+. -pc_gamg_asm_hem <n> - set the number of HEM matching passed
+
+  Level: intermediate
+
+  Developer Notes:
+  Should be called `PCGAMGSetMaximumNumberlevels()` and possible be shared with `PCMG`
+
+.seealso: [](ch_ksp), `PCGAMG`
+@*/
+PetscErrorCode PCGAMGASMSetHEM(PC pc, PetscInt n)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
+  PetscTryMethod(pc, "PCGAMGASMSetHEM_C", (PC, PetscInt), (pc, n));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PCGAMGASMSetHEM_GAMG(PC pc, PetscInt n)
+{
+  PC_MG   *mg      = (PC_MG *)pc->data;
+  PC_GAMG *pc_gamg = (PC_GAMG *)mg->innerctx;
+
+  PetscFunctionBegin;
+  pc_gamg->asm_hem_aggs = n;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1535,7 +1597,8 @@ static PetscErrorCode PCView_GAMG(PC pc, PetscViewer viewer)
   for (PetscInt i = 0; i < mg->nlevels; i++) PetscCall(PetscViewerASCIIPrintf(viewer, " %g", (double)pc_gamg->threshold[i]));
   PetscCall(PetscViewerASCIIPrintf(viewer, "\n"));
   PetscCall(PetscViewerASCIIPrintf(viewer, "      Threshold scaling factor for each level not specified = %g\n", (double)pc_gamg->threshold_scale));
-  if (pc_gamg->use_aggs_in_asm) PetscCall(PetscViewerASCIIPrintf(viewer, "      Using aggregates from coarsening process to define subdomains for PCASM\n"));
+  if (pc_gamg->use_aggs_in_asm) PetscCall(PetscViewerASCIIPrintf(viewer, "      Using aggregates from coarsening process to define subdomains for PCASM\n")); // this take presedence
+  else if (pc_gamg->asm_hem_aggs) PetscCall(PetscViewerASCIIPrintf(viewer, "      Using aggregates made with %d applications of heavy edge matching (HEM) to define subdomains for PCASM\n", (int)pc_gamg->asm_hem_aggs));
   if (pc_gamg->use_parallel_coarse_grid_solver) PetscCall(PetscViewerASCIIPrintf(viewer, "      Using parallel coarse grid solver (all coarse grid equations not put on one process)\n"));
   if (pc_gamg->ops->view) PetscCall((*pc_gamg->ops->view)(pc, viewer));
   PetscCall(PCMGGetGridComplexity(pc, &gc, &oc));
@@ -1553,6 +1616,7 @@ static PetscErrorCode PCSetFromOptions_GAMG(PC pc, PetscOptionItems *PetscOption
   PetscInt           i, n;
   const char        *pcpre;
   static const char *LayoutTypes[] = {"compact", "spread", "PCGAMGLayoutType", "PC_GAMG_LAYOUT", NULL};
+
   PetscFunctionBegin;
   PetscCall(PetscObjectGetComm((PetscObject)pc, &comm));
   PetscOptionsHeadBegin(PetscOptionsObject, "GAMG options");
@@ -1569,6 +1633,7 @@ static PetscErrorCode PCSetFromOptions_GAMG(PC pc, PetscOptionItems *PetscOption
                              (PetscEnum)pc_gamg->layout_type, (PetscEnum *)&pc_gamg->layout_type, NULL));
   PetscCall(PetscOptionsInt("-pc_gamg_process_eq_limit", "Limit (goal) on number of equations per process on coarse grids", "PCGAMGSetProcEqLim", pc_gamg->min_eq_proc, &pc_gamg->min_eq_proc, NULL));
   PetscCall(PetscOptionsInt("-pc_gamg_coarse_eq_limit", "Limit on number of equations for the coarse grid", "PCGAMGSetCoarseEqLim", pc_gamg->coarse_eq_limit, &pc_gamg->coarse_eq_limit, NULL));
+  PetscCall(PetscOptionsInt("-pc_gamg_asm_hem_aggs", "Number of HEM matching passed in aggregates for ASM smoother", "PCGAMGASMSetHEM", pc_gamg->asm_hem_aggs, &pc_gamg->asm_hem_aggs, NULL));
   PetscCall(PetscOptionsReal("-pc_gamg_threshold_scale", "Scaling of threshold for each level not specified", "PCGAMGSetThresholdScale", pc_gamg->threshold_scale, &pc_gamg->threshold_scale, NULL));
   n = PETSC_MG_MAXLEVELS;
   PetscCall(PetscOptionsRealArray("-pc_gamg_threshold", "Relative threshold to use for dropping edges in aggregation graph", "PCGAMGSetThreshold", pc_gamg->threshold, &n, &flag));
@@ -1579,6 +1644,8 @@ static PetscErrorCode PCSetFromOptions_GAMG(PC pc, PetscOptionItems *PetscOption
       pc_gamg->threshold[i] = pc_gamg->threshold[i - 1] * pc_gamg->threshold_scale;
     } while (++i < PETSC_MG_MAXLEVELS);
   }
+  PetscCall(PetscOptionsInt("-pc_mg_levels", "Set number of MG levels (should get from base class)", "PCGAMGSetNlevels", pc_gamg->Nlevels, &pc_gamg->Nlevels, NULL));
+  PetscCheck(pc_gamg->Nlevels <= PETSC_MG_MAXLEVELS, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_INCOMP, "-pc_mg_levels (%d) >= PETSC_MG_MAXLEVELS (%d)", (int)pc_gamg->Nlevels, (int)PETSC_MG_MAXLEVELS);
   n = PETSC_MG_MAXLEVELS;
   PetscCall(PetscOptionsIntArray("-pc_gamg_rank_reduction_factors", "Manual schedule of coarse grid reduction factors that overrides internal heuristics (0 for first reduction puts one process/device)", "PCGAMGSetRankReductionFactors", pc_gamg->level_reduction_factors, &n, &flag));
   if (!flag) i = 0;
@@ -1586,7 +1653,6 @@ static PetscErrorCode PCSetFromOptions_GAMG(PC pc, PetscOptionItems *PetscOption
   do {
     pc_gamg->level_reduction_factors[i] = -1;
   } while (++i < PETSC_MG_MAXLEVELS);
-  PetscCall(PetscOptionsInt("-pc_mg_levels", "Set number of MG levels", "PCGAMGSetNlevels", pc_gamg->Nlevels, &pc_gamg->Nlevels, NULL));
   {
     PetscReal eminmax[2] = {0., 0.};
     n                    = 2;
@@ -1596,6 +1662,7 @@ static PetscErrorCode PCSetFromOptions_GAMG(PC pc, PetscOptionItems *PetscOption
       PetscCall(PCGAMGSetEigenvalues(pc, eminmax[1], eminmax[0]));
     }
   }
+
   /* set options for subtype */
   PetscCall((*pc_gamg->ops->setfromoptions)(pc, PetscOptionsObject));
 
@@ -1624,6 +1691,7 @@ static PetscErrorCode PCSetFromOptions_GAMG(PC pc, PetscOptionItems *PetscOption
 . -pc_gamg_aggressive_coarsening <n,default=1> - number of aggressive coarsening (MIS-2) levels from finest.
 . -pc_gamg_aggressive_square_graph <bool,default=false> - Use square graph (A'A) or MIS-k (k=2) for aggressive coarsening
 . -pc_gamg_mis_k_minimum_degree_ordering <bool,default=true> - Use minimum degree ordering in greedy MIS algorithm
+. -pc_gamg_pc_gamg_asm_hem_aggs <n,default=0> - Number of HEM aggregation steps for ASM smoother
 - -pc_gamg_aggressive_mis_k <n,default=2> - Number (k) distance in MIS coarsening (>2 is 'aggressive')
 
   Options Database Keys for Multigrid:
@@ -1695,6 +1763,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_GAMG(PC pc)
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetType_C", PCGAMGSetType_GAMG));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGGetType_C", PCGAMGGetType_GAMG));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetNlevels_C", PCGAMGSetNlevels_GAMG));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGASMSetHEM_C", PCGAMGASMSetHEM_GAMG));
   pc_gamg->repart                          = PETSC_FALSE;
   pc_gamg->reuse_prol                      = PETSC_TRUE;
   pc_gamg->use_aggs_in_asm                 = PETSC_FALSE;
@@ -1702,6 +1771,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_GAMG(PC pc)
   pc_gamg->cpu_pin_coarse_grids            = PETSC_FALSE;
   pc_gamg->layout_type                     = PCGAMG_LAYOUT_SPREAD;
   pc_gamg->min_eq_proc                     = 50;
+  pc_gamg->asm_hem_aggs                    = 0;
   pc_gamg->coarse_eq_limit                 = 50;
   for (int i = 0; i < PETSC_MG_MAXLEVELS; i++) pc_gamg->threshold[i] = -1;
   pc_gamg->threshold_scale  = 1.;

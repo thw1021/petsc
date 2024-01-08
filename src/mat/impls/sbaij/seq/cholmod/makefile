@@ -2,9 +2,8 @@
 #requirespackage    'PETSC_HAVE_SUITESPARSE'
 #requiresprecision  double
 
-CFLAGS	 = ${SUITESPARSE_INCLUDE}
-LIBBASE	 = libpetscmat
-MANSEC	 = Mat
+CFLAGS   = ${SUITESPARSE_INCLUDE}
+MANSEC   = Mat
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
-include ${PETSC_DIR}/lib/petsc/conf/rules.doc
+include ${PETSC_DIR}/lib/petsc/conf/rules_doc.mk

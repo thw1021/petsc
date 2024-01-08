@@ -42,6 +42,8 @@ cdef extern from * nogil:
         DM_POLYTOPE_FV_GHOST
         DM_POLYTOPE_INTERIOR_GHOST
         DM_POLYTOPE_UNKNOWN
+        DM_POLYTOPE_UNKNOWN_CELL
+        DM_POLYTOPE_UNKNOWN_FACE
         DM_NUM_POLYTOPES
 
     ctypedef PetscErrorCode (*PetscDMCoarsenHook)(PetscDM,
@@ -109,7 +111,16 @@ cdef extern from * nogil:
     PetscErrorCode DMGetCoordinateDim(PetscDM,PetscInt*)
     PetscErrorCode DMSetCoordinateDim(PetscDM,PetscInt)
     PetscErrorCode DMLocalizeCoordinates(PetscDM)
-    PetscErrorCode DMProjectCoordinates(PetscDM, PetscFE)
+    PetscErrorCode DMSetCoordinateDisc(PetscDM,PetscFE,PetscBool)
+    PetscErrorCode DMSetCellCoordinateDM(PetscDM,PetscDM)
+    PetscErrorCode DMGetCellCoordinateDM(PetscDM,PetscDM*)
+    PetscErrorCode DMSetCellCoordinateSection(PetscDM,PetscInt,PetscSection)
+    PetscErrorCode DMGetCellCoordinateSection(PetscDM,PetscSection*)
+    PetscErrorCode DMSetCellCoordinates(PetscDM,PetscVec)
+    PetscErrorCode DMGetCellCoordinates(PetscDM,PetscVec*)
+    PetscErrorCode DMSetCellCoordinatesLocal(PetscDM,PetscVec)
+    PetscErrorCode DMGetCellCoordinatesLocal(PetscDM,PetscVec*)
+    PetscErrorCode DMGetCoordinatesLocalized(PetscDM,PetscBool*)
 
     PetscErrorCode DMCreateInterpolation(PetscDM,PetscDM,PetscMat*,PetscVec*)
     PetscErrorCode DMCreateInjection(PetscDM,PetscDM,PetscMat*)

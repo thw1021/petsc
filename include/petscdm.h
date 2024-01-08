@@ -166,7 +166,7 @@ PETSC_EXTERN PetscErrorCode DMGetCoordinateField(DM, DMField *);
 PETSC_EXTERN PetscErrorCode DMSetCoordinateField(DM, DMField);
 PETSC_EXTERN PetscErrorCode DMGetLocalBoundingBox(DM, PetscReal[], PetscReal[]);
 PETSC_EXTERN PetscErrorCode DMGetBoundingBox(DM, PetscReal[], PetscReal[]);
-PETSC_EXTERN PetscErrorCode DMProjectCoordinates(DM, PetscFE);
+PETSC_EXTERN PetscErrorCode DMSetCoordinateDisc(DM, PetscFE, PetscBool);
 PETSC_EXTERN PetscErrorCode DMLocatePoints(DM, Vec, DMPointLocationType, PetscSF *);
 
 /* Periodicity support */
@@ -228,6 +228,7 @@ typedef struct NLF_DAAD *NLF;
 /* FEM support */
 PETSC_EXTERN PetscErrorCode DMPrintCellIndices(PetscInt, const char[], PetscInt, const PetscInt[]);
 PETSC_EXTERN PetscErrorCode DMPrintCellVector(PetscInt, const char[], PetscInt, const PetscScalar[]);
+PETSC_EXTERN PetscErrorCode DMPrintCellVectorReal(PetscInt, const char[], PetscInt, const PetscReal[]);
 PETSC_EXTERN PetscErrorCode DMPrintCellMatrix(PetscInt, const char[], PetscInt, PetscInt, const PetscScalar[]);
 PETSC_EXTERN PetscErrorCode DMPrintLocalVec(DM, const char[], PetscReal, Vec);
 
@@ -435,6 +436,19 @@ PETSC_EXTERN PetscErrorCode DMMonitorCancel(DM);
 PETSC_EXTERN PetscErrorCode DMMonitorSetFromOptions(DM, const char[], const char[], const char[], PetscErrorCode (*)(DM, void *), PetscErrorCode (*)(DM, PetscViewerAndFormat *), PetscBool *);
 PETSC_EXTERN PetscErrorCode DMMonitor(DM);
 
+static inline PetscBool DMPolytopeTypeIsHybrid(DMPolytopeType ct)
+{
+  switch (ct) {
+  case DM_POLYTOPE_POINT_PRISM_TENSOR:
+  case DM_POLYTOPE_SEG_PRISM_TENSOR:
+  case DM_POLYTOPE_TRI_PRISM_TENSOR:
+  case DM_POLYTOPE_QUAD_PRISM_TENSOR:
+    return PETSC_TRUE;
+  default:
+    return PETSC_FALSE;
+  }
+}
+
 static inline PetscInt DMPolytopeTypeGetDim(DMPolytopeType ct)
 {
   switch (ct) {
@@ -446,6 +460,7 @@ static inline PetscInt DMPolytopeTypeGetDim(DMPolytopeType ct)
   case DM_POLYTOPE_TRIANGLE:
   case DM_POLYTOPE_QUADRILATERAL:
   case DM_POLYTOPE_SEG_PRISM_TENSOR:
+  case DM_POLYTOPE_UNKNOWN_FACE:
     return 2;
   case DM_POLYTOPE_TETRAHEDRON:
   case DM_POLYTOPE_HEXAHEDRON:
@@ -453,6 +468,7 @@ static inline PetscInt DMPolytopeTypeGetDim(DMPolytopeType ct)
   case DM_POLYTOPE_TRI_PRISM_TENSOR:
   case DM_POLYTOPE_QUAD_PRISM_TENSOR:
   case DM_POLYTOPE_PYRAMID:
+  case DM_POLYTOPE_UNKNOWN_CELL:
     return 3;
   default:
     return -1;
@@ -528,7 +544,7 @@ static inline DMPolytopeType DMPolytopeTypeSimpleShape(PetscInt dim, PetscBool s
   return dim == 0 ? DM_POLYTOPE_POINT : (dim == 1 ? DM_POLYTOPE_SEGMENT : (dim == 2 ? (simplex ? DM_POLYTOPE_TRIANGLE : DM_POLYTOPE_QUADRILATERAL) : (dim == 3 ? (simplex ? DM_POLYTOPE_TETRAHEDRON : DM_POLYTOPE_HEXAHEDRON) : DM_POLYTOPE_UNKNOWN)));
 }
 
-static inline PetscInt DMPolytopeTypeGetNumArrangments(DMPolytopeType ct)
+static inline PetscInt DMPolytopeTypeGetNumArrangements(DMPolytopeType ct)
 {
   switch (ct) {
   case DM_POLYTOPE_POINT:
@@ -561,7 +577,7 @@ static inline PetscInt DMPolytopeTypeGetNumArrangments(DMPolytopeType ct)
 }
 
 /* An arrangement is a face order combined with an orientation for each face */
-static inline const PetscInt *DMPolytopeTypeGetArrangment(DMPolytopeType ct, PetscInt o)
+static inline const PetscInt *DMPolytopeTypeGetArrangement(DMPolytopeType ct, PetscInt o)
 {
   static const PetscInt pntArr[1 * 2] = {0, 0};
   /* a: swap */
@@ -764,7 +780,7 @@ static inline const PetscInt *DMPolytopeTypeGetArrangment(DMPolytopeType ct, Pet
 }
 
 /* A vertex arrangement is a vertex order */
-static inline const PetscInt *DMPolytopeTypeGetVertexArrangment(DMPolytopeType ct, PetscInt o)
+static inline const PetscInt *DMPolytopeTypeGetVertexArrangement(DMPolytopeType ct, PetscInt o)
 {
   static const PetscInt pntVerts[1]      = {0};
   static const PetscInt segVerts[2 * 2]  = {1, 0, 0, 1};

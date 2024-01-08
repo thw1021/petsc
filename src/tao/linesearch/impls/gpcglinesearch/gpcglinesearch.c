@@ -181,7 +181,7 @@ static PetscErrorCode TaoLineSearchApply_GPCG(TaoLineSearch ls, Vec x, PetscReal
 
    Level: developer
 
-  .seealso: `TAOGPCG`, `TaoLineSearch`, `Tao`
+.seealso: `TAOGPCG`, `TaoLineSearch`, `Tao`
 M*/
 PETSC_EXTERN PetscErrorCode TaoLineSearchCreate_GPCG(TaoLineSearch ls)
 {

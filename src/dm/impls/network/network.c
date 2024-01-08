@@ -586,9 +586,7 @@ static PetscErrorCode GetEdgelist_Coupling(DM dm, PetscInt *edges, PetscInt *nme
       }
     }
   }
-#if defined(PETSC_USE_DEBUG)
-  PetscCheck(i == network->cloneshared->nVertices, PETSC_COMM_SELF, PETSC_ERR_ARG_NULL, "%" PetscInt_FMT " != %" PetscInt_FMT " nVertices", i, network->cloneshared->nVertices);
-#endif
+  PetscAssert(i == network->cloneshared->nVertices, PETSC_COMM_SELF, PETSC_ERR_ARG_NULL, "%" PetscInt_FMT " != %" PetscInt_FMT " nVertices", i, network->cloneshared->nVertices);
 
   /* (2.3) Shared vertices in the subnetworks are merged, update global NVertices: np = sum(local nmerged) */
   PetscCall(MPIU_Allreduce(&nmerged, &np, 1, MPIU_INT, MPI_SUM, comm));
@@ -723,10 +721,10 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
   network->cloneshared->subnetvtx  = subnetvtx;
   for (j = 0; j < Nsubnet; j++) {
     network->cloneshared->subnet[j].edges = subnetedge;
-    subnetedge += network->cloneshared->subnet[j].nedge;
+    subnetedge                            = PetscSafePointerPlusOffset(subnetedge, network->cloneshared->subnet[j].nedge);
 
     network->cloneshared->subnet[j].vertices = subnetvtx;
-    subnetvtx += network->cloneshared->subnet[j].nvtx;
+    subnetvtx                                = PetscSafePointerPlusOffset(subnetvtx, network->cloneshared->subnet[j].nvtx);
   }
   network->cloneshared->svertices = subnetvtx;
 

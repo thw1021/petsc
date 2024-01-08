@@ -25,7 +25,7 @@ petscconf      := $(PETSC_DIR)/$(PETSC_ARCH)/include/petscconf.h
 petscvariables := $(PETSC_DIR)/$(PETSC_ARCH)/lib/petsc/conf/petscvariables
 generatedtest  := $(TESTDIR)/testfiles
 
-.SECONDEXPANSION:		# to expand $$(@D)/.DIR
+.SECONDEXPANSION:	# to expand $$(@D)/.DIR
 
 TESTFLAGS :=             # Initialize as simple variable
 
@@ -45,11 +45,11 @@ ifeq ($(V),)  # Default
   quiet_HELP := "Use \"$(MAKE) V=1\" to see verbose compile lines, \"$(MAKE) V=0\" to suppress.\n"
   quiet = @printf $(quiet_HELP)$(eval quiet_HELP:=)" %10s %s\n" "$1$2" "$@"; $($1)
   quiettest = @printf " %10s %s\n" "TEST" "$(@:$(TESTDIR)/counts/%.counts=%)";
-else ifeq ($(V),0)		# Suppress entire command
+else ifeq ($(V),0)	# Suppress entire command
   quiet = @$($1)
   quiettest = @
   TESTFLAGS += -o err_only
-else				# Show the full command line
+else      # Show the full command line
   quiet = $($1)
   quiettest =
   TESTFLAGS += -v
@@ -144,6 +144,7 @@ endif
 # The solution is not ideal in the sense we have to duplicate the same workaround to any external libraries
 # using C++17 inline static variables. We have to wait for GNU to clarify this issue.
 PETSC_COMPILE.kokkos.cxx = $(filter-out -fvisibility=hidden,$(subst -Xcompiler -fvisibility=hidden ,,$(strip $(KOKKOS_COMPILE))))
+KOKKOS_LINKER = $(filter-out -fvisibility=hidden,$(subst -Xcompiler -fvisibility=hidden ,,$(strip $(CLINKER))))
 
 ifneq ($(RAJA_USE_CUDA_COMPILER),)
   PETSC_COMPILE.raja.cxx  = ${CUDAC} $(MPICXX_INCLUDES) ${CUDAC_FLAGS} -x cu -Xcudafe "--display_error_number" -c --compiler-options="${PETSC_CXXCPPFLAGS} ${PETSC_CC_INCLUDES} ${CUDA_CXXFLAGS}" --expt-extended-lambda --expt-relaxed-constexpr
@@ -279,7 +280,7 @@ $(testexe.hip.cpp) : $(TESTDIR)/% : $(TESTDIR)/%.o $$^ $(libpetscall)
 	-$(call macos-firewall-register,$@)
 
 $(testexe.kokkos.cxx) : $(TESTDIR)/% : $(TESTDIR)/%.o $$^ $(libpetscall)
-	$(call quiet,CLINKER) $(EXEFLAGS) -o $@ $^ $(PETSC_TEST_LIB)
+	$(call quiet,KOKKOS_LINKER) $(EXEFLAGS) -o $@ $^ $(PETSC_TEST_LIB)
 	-$(call macos-firewall-register,$@)
 
 $(testexe.raja.cxx) : $(TESTDIR)/% : $(TESTDIR)/%.o $$^ $(libpetscall)

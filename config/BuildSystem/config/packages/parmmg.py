@@ -4,7 +4,7 @@ import os
 class Configure(config.package.CMakePackage):
   def __init__(self, framework):
     config.package.CMakePackage.__init__(self, framework)
-    self.gitcommit        = 'f981ff8eba8a45131821893440720556394e2cad' # develop july-20-2023
+    self.gitcommit        = 'eaebcbe53488f11ce68325502c9f760ed250e0b3' # develop dec-08-2023
     self.download         = ['git://https://github.com/MmgTools/ParMmg.git','https://github.com/MmgTools/ParMmg/archive/'+self.gitcommit+'.tar.gz']
     self.versionname      = 'PMMG_VERSION_RELEASE'
     self.includes         = ['parmmg/libparmmg.h']
@@ -29,6 +29,7 @@ class Configure(config.package.CMakePackage):
     args = config.package.CMakePackage.formCMakeConfigureArgs(self)
     args.append('-DDOWNLOAD_MMG=OFF')
     args.append('-DDOWNLOAD_METIS=OFF')
+    args.append('-DUSE_HDF5=OFF')
     args.append('-DUSE_VTK=OFF')
     args.append('-DSCOTCH_DIR:STRING="'+self.ptscotch.directory+'"')
     args.append('-DMETIS_DIR:STRING="'+self.metis.directory+'"')

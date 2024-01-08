@@ -47,39 +47,96 @@ static PetscErrorCode DMPlexGetTensorPrismBounds_Internal(DM dm, PetscInt dim, P
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode DMPlexMarkBoundaryFaces_Internal(DM dm, PetscInt val, PetscInt cellHeight, DMLabel label)
+PetscErrorCode DMPlexMarkBoundaryFaces_Internal(DM dm, PetscInt val, PetscInt cellHeight, DMLabel label, PetscBool missing_only)
 {
-  PetscSF         sf;
-  const PetscInt *rootdegree, *leaves;
-  PetscInt        overlap, Nr = -1, Nl, pStart, fStart, fEnd;
+  PetscInt           depth, pStart, pEnd, fStart, fEnd, f, supportSize, nroots = -1, nleaves = -1, defval;
+  PetscSF            sf;
+  const PetscSFNode *iremote = NULL;
+  const PetscInt    *ilocal  = NULL;
+  PetscInt          *leafData;
 
   PetscFunctionBegin;
+  PetscCall(DMPlexGetChart(dm, &pStart, &pEnd));
+  PetscCall(DMPlexGetDepth(dm, &depth));
+  if (depth >= cellHeight + 1) {
+    PetscCall(DMPlexGetHeightStratum(dm, cellHeight + 1, &fStart, &fEnd));
+  } else {
+    /* Note DMPlexGetHeightStratum() returns fStart, fEnd = pStart, pEnd */
+    /* if height > depth, which is not what we want here.                */
+    fStart = 0;
+    fEnd   = 0;
+  }
+  PetscCall(DMLabelGetDefaultValue(label, &defval));
+  PetscCall(PetscCalloc1(pEnd - pStart, &leafData));
+  leafData = PetscSafePointerPlusOffset(leafData, -pStart);
   PetscCall(DMGetPointSF(dm, &sf));
-  PetscCall(DMPlexGetOverlap(dm, &overlap));
-  if (sf && !overlap) PetscCall(PetscSFGetGraph(sf, &Nr, &Nl, &leaves, NULL));
-  if (Nr > 0) {
-    PetscCall(PetscSFComputeDegreeBegin(sf, &rootdegree));
-    PetscCall(PetscSFComputeDegreeEnd(sf, &rootdegree));
-  } else rootdegree = NULL;
-  PetscCall(DMPlexGetChart(dm, &pStart, NULL));
-  PetscCall(DMPlexGetHeightStratum(dm, cellHeight + 1, &fStart, &fEnd));
-  for (PetscInt f = fStart; f < fEnd; ++f) {
-    PetscInt supportSize, loc = -1;
+  if (sf) PetscCall(PetscSFGetGraph(sf, &nroots, &nleaves, &ilocal, &iremote));
+  if (sf && nroots >= 0) {
+    PetscInt        cStart, cEnd, c, i;
+    PetscInt       *rootData, *rootData1, *cellOwners, hasTwoSupportCells = -2;
+    const PetscInt *support;
+    PetscMPIInt     rank;
 
-    PetscCall(DMPlexGetSupportSize(dm, f, &supportSize));
-    if (supportSize == 1) {
-      /* Do not mark faces which are shared, meaning
-           they are  present in the pointSF, or
-           they have rootdegree > 0
-         since they presumably have cells on the other side */
-      if (Nr > 0) {
-        PetscCall(PetscFindInt(f, Nl, leaves, &loc));
-        if (rootdegree[f - pStart] || loc >= 0) continue;
+    PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)dm), &rank));
+    PetscCall(DMPlexGetHeightStratum(dm, cellHeight, &cStart, &cEnd));
+    PetscCall(PetscCalloc3(pEnd - pStart, &rootData, pEnd - pStart, &rootData1, cEnd - cStart, &cellOwners));
+    rootData -= pStart;
+    rootData1 -= pStart;
+    for (c = cStart; c < cEnd; ++c) cellOwners[c - cStart] = (PetscInt)rank;
+    for (i = 0; i < nleaves; ++i) {
+      c = ilocal ? ilocal[i] : i;
+      if (c >= cStart && c < cEnd) cellOwners[c - cStart] = iremote[i].rank;
+    }
+    for (f = fStart; f < fEnd; ++f) {
+      PetscCall(DMPlexGetSupportSize(dm, f, &supportSize));
+      if (supportSize == 1) {
+        PetscCall(DMPlexGetSupport(dm, f, &support));
+        leafData[f] = cellOwners[support[0] - cStart];
+      } else {
+        /* TODO: When using DMForest, we could have a parent facet (a coarse facet)     */
+        /*       supportSize of which alone does not tell us if it is an interior       */
+        /*       facet or an exterior facet. Those facets can be identified by checking */
+        /*       if they are in the parent tree. We should probably skip those parent   */
+        /*       facets here, which will allow for including the following check, and   */
+        /*       see if they are exterior facets or not afterwards by checking if the   */
+        /*       children are exterior or not.                                          */
+        /* PetscCheck(supportSize == 2, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Invalid facet support size (%" PetscInt_FMT ") on facet (%" PetscInt_FMT ")", supportSize, f); */
+        leafData[f] = hasTwoSupportCells; /* some negative PetscInt */
       }
+      rootData[f]  = leafData[f];
+      rootData1[f] = leafData[f];
+    }
+    PetscCall(PetscSFReduceBegin(sf, MPIU_INT, leafData, rootData, MPI_MIN));
+    PetscCall(PetscSFReduceBegin(sf, MPIU_INT, leafData, rootData1, MPI_MAX));
+    PetscCall(PetscSFReduceEnd(sf, MPIU_INT, leafData, rootData, MPI_MIN));
+    PetscCall(PetscSFReduceEnd(sf, MPIU_INT, leafData, rootData1, MPI_MAX));
+    for (f = fStart; f < fEnd; ++f) {
+      /* Store global support size of f.                                                    */
+      /* Facet f is an interior facet if and only if one of the following two is satisfied: */
+      /* 1. supportSize is 2 on some rank.                                                  */
+      /* 2. supportSize is 1 on any rank that can see f, but f is on a partition boundary;  */
+      /*    i.e., rootData[f] < rootData1[f].                                               */
+      rootData[f] = (rootData[f] == hasTwoSupportCells || (rootData[f] < rootData1[f])) ? 2 : 1;
+      leafData[f] = rootData[f];
+    }
+    PetscCall(PetscSFBcastBegin(sf, MPIU_INT, rootData, leafData, MPI_REPLACE));
+    PetscCall(PetscSFBcastEnd(sf, MPIU_INT, rootData, leafData, MPI_REPLACE));
+    rootData += pStart;
+    rootData1 += pStart;
+    PetscCall(PetscFree3(rootData, rootData1, cellOwners));
+  } else {
+    for (f = fStart; f < fEnd; ++f) {
+      PetscCall(DMPlexGetSupportSize(dm, f, &supportSize));
+      leafData[f] = supportSize;
+    }
+  }
+  for (f = fStart; f < fEnd; ++f) {
+    if (leafData[f] == 1) {
       if (val < 0) {
         PetscInt *closure = NULL;
         PetscInt  clSize, cl, cval;
 
+        PetscAssert(!missing_only, PETSC_COMM_SELF, PETSC_ERR_SUP, "Not implemented");
         PetscCall(DMPlexGetTransitiveClosure(dm, f, PETSC_TRUE, &clSize, &closure));
         for (cl = 0; cl < clSize * 2; cl += 2) {
           PetscCall(DMLabelGetValue(label, closure[cl], &cval));
@@ -90,17 +147,29 @@ static PetscErrorCode DMPlexMarkBoundaryFaces_Internal(DM dm, PetscInt val, Pets
         if (cl == clSize * 2) PetscCall(DMLabelSetValue(label, f, 1));
         PetscCall(DMPlexRestoreTransitiveClosure(dm, f, PETSC_TRUE, &clSize, &closure));
       } else {
-        PetscCall(DMLabelSetValue(label, f, val));
+        if (missing_only) {
+          PetscInt fval;
+          PetscCall(DMLabelGetValue(label, f, &fval));
+          if (fval != defval) PetscCall(DMLabelClearValue(label, f, fval));
+          else PetscCall(DMLabelSetValue(label, f, val));
+        } else {
+          PetscCall(DMLabelSetValue(label, f, val));
+        }
       }
+    } else {
+      /* TODO: See the above comment on DMForest */
+      /* PetscCheck(leafData[f] == 2, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Invalid facet support size (%" PetscInt_FMT ") on facet (%" PetscInt_FMT ")", leafData[f], f); */
     }
   }
+  leafData = PetscSafePointerPlusOffset(leafData, pStart);
+  PetscCall(PetscFree(leafData));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
   DMPlexMarkBoundaryFaces - Mark all faces on the boundary
 
-  Not Collective
+  Collective
 
   Input Parameters:
 + dm  - The original `DM`
@@ -112,7 +181,9 @@ static PetscErrorCode DMPlexMarkBoundaryFaces_Internal(DM dm, PetscInt val, Pets
   Level: developer
 
   Note:
-  This function will use the point `PetscSF` from the input `DM` to exclude points on the partition boundary from being marked, unless the partition overlap is greater than zero. If you also wish to mark the partition boundary, you can use `DMSetPointSF()` to temporarily set it to `NULL`, and then reset it to the original object after the call.
+  This function will use the point `PetscSF` from the input `DM` and the ownership of the support cells to exclude points on the partition boundary from being marked. If you also wish to mark the partition boundary, you can use `DMSetPointSF()` to temporarily set it to `NULL`, and then reset it to the original object after the call.
+
+  In DMForest there can be facets support sizes of which alone can not determine whether they are on the boundary. Currently, this function is not guaranteed to produce the correct result in such case.
 
 .seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMLabelCreate()`, `DMCreateLabel()`
 @*/
@@ -124,7 +195,7 @@ PetscErrorCode DMPlexMarkBoundaryFaces(DM dm, PetscInt val, DMLabel label)
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscCall(DMPlexIsInterpolated(dm, &flg));
   PetscCheck(flg == DMPLEX_INTERPOLATED_FULL, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "DM is not fully interpolated on this rank");
-  PetscCall(DMPlexMarkBoundaryFaces_Internal(dm, val, 0, label));
+  PetscCall(DMPlexMarkBoundaryFaces_Internal(dm, val, 0, label, PETSC_FALSE));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -268,17 +339,18 @@ PetscErrorCode DMPlexLabelAddCells(DM dm, DMLabel label)
     for (p = 0; p < numPoints; ++p) {
       const PetscInt point   = points[p];
       PetscInt      *closure = NULL;
-      PetscInt       closureSize, cl, h, pStart, pEnd, cStart, cEnd;
+      PetscInt       closureSize, cl, h, cStart, cEnd;
+      DMPolytopeType ct;
 
       // If the point is a hybrid, allow hybrid cells
+      PetscCall(DMPlexGetCellType(dm, point, &ct));
       PetscCall(DMPlexGetPointHeight(dm, point, &h));
-      PetscCall(DMPlexGetSimplexOrBoxCells(dm, h, &pStart, &pEnd));
-      if (point >= pStart && point < pEnd) {
-        cStart = csStart;
-        cEnd   = csEnd;
-      } else {
+      if (DMPolytopeTypeIsHybrid(ct)) {
         cStart = chStart;
         cEnd   = chEnd;
+      } else {
+        cStart = csStart;
+        cEnd   = csEnd;
       }
 
       PetscCall(DMPlexGetTransitiveClosure(dm, points[p], PETSC_FALSE, &closureSize, &closure));
@@ -1501,10 +1573,10 @@ static PetscErrorCode DMPlexConstructCohesiveCells_Internal(DM dm, DMLabel label
         }
         /* Cohesive cell:    Old and new split face, then new cohesive faces */
         {
-          const PetscInt No = DMPolytopeTypeGetNumArrangments(ct) / 2;
+          const PetscInt No = DMPolytopeTypeGetNumArrangements(ct) / 2;
           PetscCheck((coneONew[0] >= -No) && (coneONew[0] < No), PETSC_COMM_SELF, PETSC_ERR_PLIB, "Invalid %s orientation %" PetscInt_FMT, DMPolytopeTypes[ct], coneONew[0]);
         }
-        const PetscInt *arr = DMPolytopeTypeGetArrangment(ct, coneONew[0]);
+        const PetscInt *arr = DMPolytopeTypeGetArrangement(ct, coneONew[0]);
 
         coneNew[0]  = newp; /* Extracted negative side orientation above */
         coneNew[1]  = splitp;

@@ -643,7 +643,7 @@ static PetscErrorCode SetupParameters(MPI_Comm comm, AppCtx *ctx)
       PetscCall(PetscBagView(bag, viewer));
       PetscCall(PetscViewerFlush(viewer));
       PetscCall(PetscViewerPopFormat(viewer));
-      PetscCall(PetscViewerDestroy(&viewer));
+      PetscCall(PetscOptionsRestoreViewer(&viewer));
     }
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -782,7 +782,7 @@ static PetscErrorCode CreatePoisson(DM dm, AppCtx *user)
   PetscCall(SNESCreate(PetscObjectComm((PetscObject)dm), &snes));
   PetscCall(SNESSetOptionsPrefix(snes, "em_"));
   PetscCall(SNESSetDM(snes, dm));
-  PetscCall(DMPlexSetSNESLocalFEM(dm, user, user, user));
+  PetscCall(DMPlexSetSNESLocalFEM(dm, PETSC_FALSE, user));
   PetscCall(SNESSetFromOptions(snes));
 
   PetscCall(DMCreateMatrix(dm, &J));

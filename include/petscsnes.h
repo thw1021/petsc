@@ -179,6 +179,29 @@ PETSC_EXTERN PetscErrorCode SNESNewtonTRGetPostCheck(SNES, PetscErrorCode (**)(S
 PETSC_EXTERN PetscErrorCode SNESNewtonTRSetFallbackType(SNES, SNESNewtonTRFallbackType);
 PETSC_EXTERN PetscErrorCode SNESNewtonTRPreCheck(SNES, Vec, Vec, PetscBool *);
 PETSC_EXTERN PetscErrorCode SNESNewtonTRPostCheck(SNES, Vec, Vec, Vec, PetscBool *, PetscBool *);
+PETSC_EXTERN PetscErrorCode SNESNewtonTRSetNormType(SNES, NormType);
+
+/*E
+    SNESNewtonTRQNType - type of quasi-Newton model to use
+
+   Values:
++  `SNES_TR_QN_NONE` - do not use a quasi-Newton model
+.  `SNES_TR_QN_SAME` - use the same quasi-Newton model for matrix and preconditioner
+-  `SNES_TR_QN_DIFFERENT` - use different quasi-Newton models for matrix and preconditioner
+
+   Level: intermediate
+
+.seealso: [](ch_snes), `SNES`, `SNESNEWTONTR`
+E*/
+typedef enum {
+  SNES_TR_QN_NONE,
+  SNES_TR_QN_SAME,
+  SNES_TR_QN_DIFFERENT,
+} SNESNewtonTRQNType;
+
+PETSC_EXTERN const char *const SNESNewtonTRQNTypes[];
+
+PETSC_EXTERN PetscErrorCode SNESNewtonTRSetQNType(SNES, SNESNewtonTRQNType);
 
 /* TRDC API, to be removed after 3.19 */
 PETSC_EXTERN PetscErrorCode SNESNewtonTRDCGetRhoFlag(SNES, PetscBool *);
@@ -753,6 +776,7 @@ PETSC_EXTERN PetscErrorCode SNESTestLocalMin(SNES);
 /* Should this routine be private? */
 PETSC_EXTERN PetscErrorCode SNESComputeJacobian(SNES, Vec, Mat, Mat);
 PETSC_EXTERN PetscErrorCode SNESTestJacobian(SNES);
+PETSC_EXTERN PetscErrorCode SNESTestFunction(SNES);
 
 PETSC_EXTERN PetscErrorCode SNESSetDM(SNES, DM);
 PETSC_EXTERN PetscErrorCode SNESGetDM(SNES, DM *);
@@ -810,9 +834,11 @@ PETSC_EXTERN PetscErrorCode DMDASNESSetJacobianLocalVec(DM, DMDASNESJacobianVec,
 PETSC_EXTERN PetscErrorCode DMDASNESSetObjectiveLocalVec(DM, DMDASNESObjectiveVec, void *);
 
 PETSC_EXTERN PetscErrorCode DMSNESSetBoundaryLocal(DM, PetscErrorCode (*)(DM, Vec, void *), void *);
+PETSC_EXTERN PetscErrorCode DMSNESSetObjectiveLocal(DM, PetscErrorCode (*)(DM, Vec, PetscReal *, void *), void *);
 PETSC_EXTERN PetscErrorCode DMSNESSetFunctionLocal(DM, PetscErrorCode (*)(DM, Vec, Vec, void *), void *);
 PETSC_EXTERN PetscErrorCode DMSNESSetJacobianLocal(DM, PetscErrorCode (*)(DM, Vec, Mat, Mat, void *), void *);
 PETSC_EXTERN PetscErrorCode DMSNESGetBoundaryLocal(DM, PetscErrorCode (**)(DM, Vec, void *), void **);
+PETSC_EXTERN PetscErrorCode DMSNESGetObjectiveLocal(DM, PetscErrorCode (**)(DM, Vec, PetscReal *, void *), void **);
 PETSC_EXTERN PetscErrorCode DMSNESGetFunctionLocal(DM, PetscErrorCode (**)(DM, Vec, Vec, void *), void **);
 PETSC_EXTERN PetscErrorCode DMSNESGetJacobianLocal(DM, PetscErrorCode (**)(DM, Vec, Mat, Mat, void *), void **);
 
