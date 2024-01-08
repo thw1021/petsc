@@ -3966,8 +3966,8 @@ static PetscErrorCode MatMPIAIJSetPreallocationCSR_MPIAIJ(Mat B, const PetscInt 
 
   You can update the matrix with new numerical values using `MatUpdateMPIAIJWithArrays()` after this call if the column indices in `j` are sorted.
 
-  If you do **not** use `MatUpdateMPIAIJWithArrays()` the column indices in `j` do not need to be sorted. If you will use
-  `MatUpdateMPIAIJWithArrays()` the column indices **must** be sorted.
+  If you do **not** use `MatUpdateMPIAIJWithArrays()`, the column indices in `j` do not need to be sorted. If you will use
+  `MatUpdateMPIAIJWithArrays()`, the column indices **must** be sorted.
 
   The format which is used for the sparse matrix input, is equivalent to a
   row-major ordering.. i.e for the following matrix, the input data expected is
@@ -4166,8 +4166,8 @@ PetscErrorCode MatMPIAIJSetPreallocation(Mat B, PetscInt d_nz, const PetscInt d_
 
   Once you have created the matrix you can update it with new numerical values using `MatUpdateMPIAIJWithArrays()`
 
-  If you do **not** use `MatUpdateMPIAIJWithArrays()` the column indices in `j` do not need to be sorted. If you will use
-  `MatUpdateMPIAIJWithArrays()` the column indices **must** be sorted.
+  If you do **not** use `MatUpdateMPIAIJWithArrays()`, the column indices in `j` do not need to be sorted. If you will use
+  `MatUpdateMPIAIJWithArrays()`, the column indices **must** be sorted.
 
   The format which is used for the sparse matrix input, is equivalent to a
   row-major ordering.. i.e for the following matrix, the input data expected is
