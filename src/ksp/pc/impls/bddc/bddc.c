@@ -1,24 +1,3 @@
-/* TODOLIST
-
-   Solvers
-   - Add support for cholesky for coarse solver (similar to local solvers)
-   - Propagate ksp prefixes for solvers to mat objects?
-
-   User interface
-   - ** DM attached to pc?
-
-   Debugging output
-   - * Better management of verbosity levels of debugging output
-
-   Extra
-   - *** Is it possible to work with PCBDDCGraph on boundary indices only (less memory consumed)?
-   - BDDC with MG framework?
-
-   MATIS related operations contained in BDDC code
-   - Provide general case for subassembling
-
-*/
-
 #include <petsc/private/pcbddcimpl.h> /*I "petscpc.h" I*/ /* header file for Fortran wrappers */
 #include <petsc/private/pcbddcprivateimpl.h>
 #include <petscblaslapack.h>
