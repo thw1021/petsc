@@ -545,10 +545,10 @@ static PetscErrorCode PetscLogHandlerEventBegin_Default(PetscLogHandler h, Petsc
     if (PetscUnlikely(o3)) PetscValidHeader(o3, 5);
     if (PetscUnlikely(o4)) PetscValidHeader(o4, 6);
     if (event_info.collective && o1) {
-      PetscLogEvent gevent;
+      PetscInt64 oidx;
 
-      PetscCallMPI(MPIU_Allreduce(&event,&gevent,1,MPI_INT,MPI_MAX,PetscObjectComm(o1)));
-      PetscCheck(event == gevent, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Collective event %s not called collectively", event_info.name);
+      PetscCallMPI(MPIU_Allreduce(&o1->cidx, &oidx, 1, MPIU_INT64, MPI_MAX, PetscObjectComm(o1)));
+      PetscCheck(o1->cidx == oidx, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Collective event %s not called collectively", event_info.name);
     }
   }
   /* Synchronization */
@@ -608,15 +608,15 @@ static PetscErrorCode PetscLogHandlerEventEnd_Default(PetscLogHandler h, PetscLo
     if (PetscUnlikely(o3)) PetscValidHeader(o3, 5);
     if (PetscUnlikely(o4)) PetscValidHeader(o4, 6);
     if (event_info.collective && o1) {
-      PetscLogEvent gevent;
+      PetscInt64 oidx;
 
-      PetscCallMPI(MPIU_Allreduce(&event,&gevent,1,MPI_INT,MPI_MAX,PetscObjectComm(o1)));
-      PetscCheck(event == gevent, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Collective event %s not called collectively", event_info.name);
+      PetscCallMPI(MPIU_Allreduce(&o1->cidx, &oidx, 1, MPIU_INT64, MPI_MAX, PetscObjectComm(o1)));
+      PetscCheck(o1->cidx == oidx, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Collective event %s not called collectively", event_info.name);
     }
   }
   if (def->petsc_logActions) {
-    PetscLogDouble    curTime;
-    Action            new_action;
+    PetscLogDouble curTime;
+    Action         new_action;
 
     PetscCall(PetscLogStateEventGetInfo(state, event, &event_info));
     PetscCall(PetscTime(&curTime));
