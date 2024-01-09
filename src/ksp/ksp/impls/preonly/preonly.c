@@ -14,12 +14,6 @@ static PetscErrorCode KSPSolve_PREONLY(KSP ksp)
   PetscFunctionBegin;
   PetscCall(PCGetDiagonalScale(ksp->pc, &diagonalscale));
   PetscCheck(!diagonalscale, PetscObjectComm((PetscObject)ksp), PETSC_ERR_SUP, "Krylov method %s does not support diagonal scaling", ((PetscObject)ksp)->type_name);
-  if (!ksp->guess_zero) {
-    PetscBool red;
-    PetscCall(PetscObjectTypeCompare((PetscObject)ksp->pc, PCREDISTRIBUTE, &red));
-    PetscCheck(red, PetscObjectComm((PetscObject)ksp), PETSC_ERR_USER, "KSP of type preonly (application of preconditioner only) doesn't make sense with nonzero initial guess\n\
-                you probably want a KSP of type Richardson");
-  }
   ksp->its = 0;
   PetscCall(KSP_PCApply(ksp, ksp->vec_rhs, ksp->vec_sol));
 
@@ -60,8 +54,6 @@ static PetscErrorCode KSPMatSolve_PREONLY(KSP ksp, Mat B, Mat X)
   PetscFunctionBegin;
   PetscCall(PCGetDiagonalScale(ksp->pc, &diagonalscale));
   PetscCheck(!diagonalscale, PetscObjectComm((PetscObject)ksp), PETSC_ERR_SUP, "Krylov method %s does not support diagonal scaling", ((PetscObject)ksp)->type_name);
-  PetscCheck(ksp->guess_zero, PetscObjectComm((PetscObject)ksp), PETSC_ERR_USER, "Running KSP of preonly doesn't make sense with nonzero initial guess\n\
-               you probably want a KSP type of Richardson");
   ksp->its = 0;
   PetscCall(KSP_PCMatApply(ksp, B, X));
   PetscCall(PCGetFailedReason(ksp->pc, &pcreason));
@@ -110,11 +102,8 @@ M*/
 
    To apply multiple preconditioners in a simple iteration use `KSPRICHARDSON`
 
-   This `KSPType` cannot be used with the flag `-ksp_initial_guess_nonzero` or the call `KSPSetInitialGuessNonzero()` since it simply applies
-   the preconditioner to the given right-hand side during `KSPSolve()`. Except when the
-   `PCType` is `PCREDISTRIBUTE`; in that situation pass the nonzero initial guess flag with `-ksp_initial_guess_nonzero` or `KSPSetInitialGuessNonzero()`
-   both to the outer `KSP` (which is `KSPPREONLY`) and the inner `KSP` object obtained with `KSPGetPC()` followed by `PCRedistributedGetKSP()`
-   followed by `KSPSetInitialGuessNonzero()` or the option  `-redistribute_ksp_initial_guess_nonzero`.
+   This `KSPType` ignores flag `-ksp_initial_guess_nonzero` or the call `KSPSetInitialGuessNonzero()` since it simply applies
+   the preconditioner to the given right-hand side during `KSPSolve()`.
 
    Developer Note:
    Even though this method does not use any norms, the user is allowed to set the `KSPNormType` to any value.
