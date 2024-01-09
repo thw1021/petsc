@@ -429,8 +429,6 @@ PetscErrorCode VecTDot(Vec x, Vec y, PetscScalar *val)
 
 PetscErrorCode VecScaleAsync_Private(Vec x, PetscScalar alpha, PetscDeviceContext dctx)
 {
-  PetscReal   norms[4];
-  PetscBool   flgs[4];
   PetscScalar one = 1.0;
 
   PetscFunctionBegin;
@@ -438,28 +436,18 @@ PetscErrorCode VecScaleAsync_Private(Vec x, PetscScalar alpha, PetscDeviceContex
   PetscValidType(x, 1);
   VecCheckAssembled(x);
   PetscCall(VecSetErrorIfLocked(x, 1));
-  if (alpha == one) PetscFunctionReturn(PETSC_SUCCESS);
-
-  /* get current stashed norms */
-  for (PetscInt i = 0; i < 4; i++) PetscCall(PetscObjectComposedDataGetReal((PetscObject)x, NormIds[i], norms[i], flgs[i]));
 
   PetscCall(PetscLogEventBegin(VEC_Scale, x, 0, 0, 0));
-  VecMethodDispatch(x, dctx, VecAsyncFnName(Scale), scale, (Vec, PetscScalar, PetscDeviceContext), alpha);
+  if (alpha != one) VecMethodDispatch(x, dctx, VecAsyncFnName(Scale), scale, (Vec, PetscScalar, PetscDeviceContext), alpha);
   PetscCall(PetscLogEventEnd(VEC_Scale, x, 0, 0, 0));
-
   PetscCall(PetscObjectStateIncrease((PetscObject)x));
-  /* put the scaled stashed norms back into the Vec */
-  for (PetscInt i = 0; i < 4; i++) {
-    PetscReal ar = PetscAbsScalar(alpha);
-    if (flgs[i]) PetscCall(PetscObjectComposedDataSetReal((PetscObject)x, NormIds[i], ar * norms[i]));
-  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
   VecScale - Scales a vector.
 
-  Not Collective
+  Logically Collective
 
   Input Parameters:
 + x     - the vector
@@ -467,8 +455,11 @@ PetscErrorCode VecScaleAsync_Private(Vec x, PetscScalar alpha, PetscDeviceContex
 
   Level: intermediate
 
-  Note:
+  Notes:
   For a vector with n components, `VecScale()` computes  x[i] = alpha * x[i], for i=1,...,n.
+
+  This function must be called by all processes sharing the vector, but the value can be
+  different among processes.
 
 .seealso: [](ch_vectors), `Vec`, `VecSet()`
 @*/
@@ -488,39 +479,10 @@ PetscErrorCode VecSetAsync_Private(Vec x, PetscScalar alpha, PetscDeviceContext 
   PetscValidLogicalCollectiveScalar(x, alpha, 2);
   PetscCall(VecSetErrorIfLocked(x, 1));
 
-  if (alpha == 0) {
-    PetscReal norm;
-    PetscBool set;
-
-    PetscCall(VecNormAvailable(x, NORM_2, &set, &norm));
-    if (set == PETSC_TRUE && norm == 0) PetscFunctionReturn(PETSC_SUCCESS);
-  }
   PetscCall(PetscLogEventBegin(VEC_Set, x, 0, 0, 0));
   VecMethodDispatch(x, dctx, VecAsyncFnName(Set), set, (Vec, PetscScalar, PetscDeviceContext), alpha);
   PetscCall(PetscLogEventEnd(VEC_Set, x, 0, 0, 0));
   PetscCall(PetscObjectStateIncrease((PetscObject)x));
-
-  /*  norms can be simply set (if |alpha|*N not too large) */
-
-  {
-    PetscReal      val = PetscAbsScalar(alpha);
-    const PetscInt N   = x->map->N;
-
-    if (N == 0) {
-      PetscCall(PetscObjectComposedDataSetReal((PetscObject)x, NormIds[NORM_1], 0.0l));
-      PetscCall(PetscObjectComposedDataSetReal((PetscObject)x, NormIds[NORM_INFINITY], 0.0));
-      PetscCall(PetscObjectComposedDataSetReal((PetscObject)x, NormIds[NORM_2], 0.0));
-      PetscCall(PetscObjectComposedDataSetReal((PetscObject)x, NormIds[NORM_FROBENIUS], 0.0));
-    } else if (val > PETSC_MAX_REAL / N) {
-      PetscCall(PetscObjectComposedDataSetReal((PetscObject)x, NormIds[NORM_INFINITY], val));
-    } else {
-      PetscCall(PetscObjectComposedDataSetReal((PetscObject)x, NormIds[NORM_1], N * val));
-      PetscCall(PetscObjectComposedDataSetReal((PetscObject)x, NormIds[NORM_INFINITY], val));
-      val *= PetscSqrtReal((PetscReal)N);
-      PetscCall(PetscObjectComposedDataSetReal((PetscObject)x, NormIds[NORM_2], val));
-      PetscCall(PetscObjectComposedDataSetReal((PetscObject)x, NormIds[NORM_FROBENIUS], val));
-    }
-  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -545,6 +507,9 @@ PetscErrorCode VecSetAsync_Private(Vec x, PetscScalar alpha, PetscDeviceContext 
   `VecAssemblyBegin()`
 
   If `alpha` is zero and the norm of the vector is known to be zero then this skips the unneeded zeroing process
+
+  This function must be called by all processes sharing the vector, but the value can be
+  different among processes.
 
 .seealso: [](ch_vectors), `Vec`, `VecSetValues()`, `VecSetValuesBlocked()`, `VecSetRandom()`
 @*/
