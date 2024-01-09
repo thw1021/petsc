@@ -22,7 +22,7 @@ class Configure(config.package.CMakePackage):
     self.buildLanguages    = ['Cxx']
     self.hastestsdatafiles = 1
     self.precisions        = ['double']
-    self.minCmakeVersion   = (3,20,0)
+    self.minCmakeVersion   = (3,22,0)
     return
 
   def setupDependencies(self, framework):
