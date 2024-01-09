@@ -486,7 +486,7 @@ static PetscErrorCode PetscLogHandlerEventSync_Default(PetscLogHandler h, PetscL
   PetscLogDouble      time = 0.0;
 
   PetscFunctionBegin;
-  if (!(PetscLogSyncOn) || comm == MPI_COMM_NULL) PetscFunctionReturn(PETSC_SUCCESS);
+  if (!PetscLogSyncOn || comm == MPI_COMM_NULL) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(PetscLogHandlerGetState(h, &state));
   PetscCall(PetscLogStateEventGetInfo(state, event, &event_info));
   if (!event_info.collective) PetscFunctionReturn(PETSC_SUCCESS);
@@ -537,6 +537,12 @@ static PetscErrorCode PetscLogHandlerEventBegin_Default(PetscLogHandler h, Petsc
   PetscLogStage           stage;
 
   PetscFunctionBegin;
+  if (PetscDefined(USE_DEBUG)) {
+    if (PetscUnlikely(o1)) PetscValidHeader(o1, 3);
+    if (PetscUnlikely(o2)) PetscValidHeader(o2, 4);
+    if (PetscUnlikely(o3)) PetscValidHeader(o3, 5);
+    if (PetscUnlikely(o4)) PetscValidHeader(o4, 6);
+  }
   PetscCall(PetscLogHandlerGetState(h, &state));
   /* Synchronization */
   PetscCall(PetscLogHandlerEventSync_Default(h, event, PetscObjectComm(o1)));
@@ -586,6 +592,12 @@ static PetscErrorCode PetscLogHandlerEventEnd_Default(PetscLogHandler h, PetscLo
   int                     stage;
 
   PetscFunctionBegin;
+  if (PetscDefined(USE_DEBUG)) {
+    if (PetscUnlikely(o1)) PetscValidHeader(o1, 3);
+    if (PetscUnlikely(o2)) PetscValidHeader(o2, 4);
+    if (PetscUnlikely(o3)) PetscValidHeader(o3, 5);
+    if (PetscUnlikely(o4)) PetscValidHeader(o4, 6);
+  }
   PetscCall(PetscLogHandlerGetState(h, &state));
   if (def->petsc_logActions) {
     PetscLogEventInfo event_info;
