@@ -537,13 +537,20 @@ static PetscErrorCode PetscLogHandlerEventBegin_Default(PetscLogHandler h, Petsc
   PetscLogStage           stage;
 
   PetscFunctionBegin;
+  PetscCall(PetscLogHandlerGetState(h, &state));
   if (PetscDefined(USE_DEBUG)) {
+    PetscCall(PetscLogStateEventGetInfo(state, event, &event_info));
     if (PetscUnlikely(o1)) PetscValidHeader(o1, 3);
     if (PetscUnlikely(o2)) PetscValidHeader(o2, 4);
     if (PetscUnlikely(o3)) PetscValidHeader(o3, 5);
     if (PetscUnlikely(o4)) PetscValidHeader(o4, 6);
+    if (event_info.collective && o1) {
+      PetscLogEvent gevent;
+
+      PetscCallMPI(MPIU_Allreduce(&event,&gevent,1,MPI_INT,MPI_MAX,PetscObjectComm(o1)));
+      PetscCheck(event == gevent, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Collective event %s not called collectively", event_info.name);
+    }
   }
-  PetscCall(PetscLogHandlerGetState(h, &state));
   /* Synchronization */
   PetscCall(PetscLogHandlerEventSync_Default(h, event, PetscObjectComm(o1)));
   PetscCall(PetscLogStateGetCurrentStage(state, &stage));
@@ -590,17 +597,24 @@ static PetscErrorCode PetscLogHandlerEventEnd_Default(PetscLogHandler h, PetscLo
   PetscLogDouble          time;
   PetscLogState           state;
   int                     stage;
+  PetscLogEventInfo       event_info;
 
   PetscFunctionBegin;
+  PetscCall(PetscLogHandlerGetState(h, &state));
   if (PetscDefined(USE_DEBUG)) {
+    PetscCall(PetscLogStateEventGetInfo(state, event, &event_info));
     if (PetscUnlikely(o1)) PetscValidHeader(o1, 3);
     if (PetscUnlikely(o2)) PetscValidHeader(o2, 4);
     if (PetscUnlikely(o3)) PetscValidHeader(o3, 5);
     if (PetscUnlikely(o4)) PetscValidHeader(o4, 6);
+    if (event_info.collective && o1) {
+      PetscLogEvent gevent;
+
+      PetscCallMPI(MPIU_Allreduce(&event,&gevent,1,MPI_INT,MPI_MAX,PetscObjectComm(o1)));
+      PetscCheck(event == gevent, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Collective event %s not called collectively", event_info.name);
+    }
   }
-  PetscCall(PetscLogHandlerGetState(h, &state));
   if (def->petsc_logActions) {
-    PetscLogEventInfo event_info;
     PetscLogDouble    curTime;
     Action            new_action;
 
