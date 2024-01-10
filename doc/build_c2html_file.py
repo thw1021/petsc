@@ -44,6 +44,9 @@ def main(petsc_dir,git_sha,c2html,mapnames,rel_dir,file):
           line = linenumber+'#include <A href="'+os.path.relpath(os.path.join(rel_dot,includename))+'.html">&lt;'+includename+'&gt;</A>'
     ntxt = ntxt + line + '\n'
 
+  print('loc '+loc)
+  print('rel_dir '+rel_dir)
+  print('file ' +file)
   with open(os.path.join(loc,rel_dir,file+'.html'), "w") as fdw:
     fdw.write('<center><a href="https://gitlab.com/petsc/petsc/-/blob/'+git_sha+'/'+rel_dir+'/'+file+'">Actual source code: '+file+'</a></center><br>\n')
     fdw.write(ntxt)
