@@ -583,10 +583,10 @@ PetscErrorCode TSComputeRHSJacobian(TS ts, PetscReal t, Vec U, Mat A, Mat B)
 
   PetscCheck(ts->rhsjacobian.shift == 0.0 || !ts->rhsjacobian.reuse, PetscObjectComm((PetscObject)ts), PETSC_ERR_USER, "Should not call TSComputeRHSJacobian() on a shifted matrix (shift=%lf) when RHSJacobian is reusable.", (double)ts->rhsjacobian.shift);
   if (rhsjacobianfunc) {
-    PetscCall(PetscLogEventBegin(TS_JacobianEval, ts, U, A, B));
+    PetscCall(PetscLogEventBegin(TS_JacobianEval, U, ts, A, B));
     PetscCallBack("TS callback Jacobian", (*rhsjacobianfunc)(ts, t, U, A, B, ctx));
     ts->rhsjacs++;
-    PetscCall(PetscLogEventEnd(TS_JacobianEval, ts, U, A, B));
+    PetscCall(PetscLogEventEnd(TS_JacobianEval, U, ts, A, B));
   } else {
     PetscCall(MatZeroEntries(A));
     if (B && A != B) PetscCall(MatZeroEntries(B));
@@ -638,12 +638,12 @@ PetscErrorCode TSComputeRHSFunction(TS ts, PetscReal t, Vec U, Vec y)
   PetscCheck(rhsfunction || ifunction, PetscObjectComm((PetscObject)ts), PETSC_ERR_USER, "Must call TSSetRHSFunction() and / or TSSetIFunction()");
 
   if (rhsfunction) {
-    PetscCall(PetscLogEventBegin(TS_FunctionEval, ts, U, y, 0));
+    PetscCall(PetscLogEventBegin(TS_FunctionEval, U, ts, y, 0));
     PetscCall(VecLockReadPush(U));
     PetscCallBack("TS callback right-hand-side", (*rhsfunction)(ts, t, U, y, ctx));
     PetscCall(VecLockReadPop(U));
     ts->rhsfuncs++;
-    PetscCall(PetscLogEventEnd(TS_FunctionEval, ts, U, y, 0));
+    PetscCall(PetscLogEventEnd(TS_FunctionEval, U, ts, y, 0));
   } else PetscCall(VecZeroEntries(y));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -816,7 +816,7 @@ PetscErrorCode TSComputeIFunction(TS ts, PetscReal t, Vec U, Vec Udot, Vec Y, Pe
 
   PetscCheck(rhsfunction || ifunction, PetscObjectComm((PetscObject)ts), PETSC_ERR_USER, "Must call TSSetRHSFunction() and / or TSSetIFunction()");
 
-  PetscCall(PetscLogEventBegin(TS_FunctionEval, ts, U, Udot, Y));
+  PetscCall(PetscLogEventBegin(TS_FunctionEval, U, ts, Udot, Y));
   if (ifunction) {
     PetscCallBack("TS callback implicit function", (*ifunction)(ts, t, U, Udot, Y, ctx));
     ts->ifuncs++;
@@ -834,7 +834,7 @@ PetscErrorCode TSComputeIFunction(TS ts, PetscReal t, Vec U, Vec Udot, Vec Y, Pe
       PetscCall(VecAYPX(Y, -1, Udot));
     }
   }
-  PetscCall(PetscLogEventEnd(TS_FunctionEval, ts, U, Udot, Y));
+  PetscCall(PetscLogEventEnd(TS_FunctionEval, U, ts, Udot, Y));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -912,7 +912,7 @@ PetscErrorCode TSComputeIJacobian(TS ts, PetscReal t, Vec U, Vec Udot, PetscReal
 
   PetscCheck(rhsjacobian || ijacobian, PetscObjectComm((PetscObject)ts), PETSC_ERR_USER, "Must call TSSetRHSJacobian() and / or TSSetIJacobian()");
 
-  PetscCall(PetscLogEventBegin(TS_JacobianEval, ts, U, A, B));
+  PetscCall(PetscLogEventBegin(TS_JacobianEval, U, ts, A, B));
   if (ijacobian) {
     PetscCallBack("TS callback implicit Jacobian", (*ijacobian)(ts, t, U, Udot, shift, A, B, ctx));
     ts->ijacs++;
@@ -999,7 +999,7 @@ PetscErrorCode TSComputeIJacobian(TS ts, PetscReal t, Vec U, Vec Udot, PetscReal
       if (A != B) PetscCall(MatAXPY(B, -1, Brhs, ts->axpy_pattern));
     }
   }
-  PetscCall(PetscLogEventEnd(TS_JacobianEval, ts, U, A, B));
+  PetscCall(PetscLogEventEnd(TS_JacobianEval, U, ts, A, B));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1541,7 +1541,7 @@ PetscErrorCode TSComputeI2Function(TS ts, PetscReal t, Vec U, Vec V, Vec A, Vec 
     PetscFunctionReturn(PETSC_SUCCESS);
   }
 
-  PetscCall(PetscLogEventBegin(TS_FunctionEval, ts, U, V, F));
+  PetscCall(PetscLogEventBegin(TS_FunctionEval, U, ts, V, F));
 
   PetscCallBack("TS callback implicit function", I2Function(ts, t, U, V, A, F, ctx));
 
@@ -1552,7 +1552,7 @@ PetscErrorCode TSComputeI2Function(TS ts, PetscReal t, Vec U, Vec V, Vec A, Vec 
     PetscCall(VecAXPY(F, -1, Frhs));
   }
 
-  PetscCall(PetscLogEventEnd(TS_FunctionEval, ts, U, V, F));
+  PetscCall(PetscLogEventEnd(TS_FunctionEval, U, ts, V, F));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1610,7 +1610,7 @@ PetscErrorCode TSComputeI2Jacobian(TS ts, PetscReal t, Vec U, Vec V, Vec A, Pets
     PetscFunctionReturn(PETSC_SUCCESS);
   }
 
-  PetscCall(PetscLogEventBegin(TS_JacobianEval, ts, U, J, P));
+  PetscCall(PetscLogEventBegin(TS_JacobianEval, U, ts, J, P));
   PetscCallBack("TS callback implicit Jacobian", I2Jacobian(ts, t, U, V, A, shiftV, shiftA, J, P, ctx));
   if (rhsjacobian) {
     Mat Jrhs, Prhs;
@@ -1620,7 +1620,7 @@ PetscErrorCode TSComputeI2Jacobian(TS ts, PetscReal t, Vec U, Vec V, Vec A, Pets
     if (P != J) PetscCall(MatAXPY(P, -1, Prhs, ts->axpy_pattern));
   }
 
-  PetscCall(PetscLogEventEnd(TS_JacobianEval, ts, U, J, P));
+  PetscCall(PetscLogEventEnd(TS_JacobianEval, U, ts, J, P));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -4403,7 +4403,8 @@ PetscErrorCode SNESTSFormFunction(SNES snes, Vec U, Vec F, void *ctx)
   PetscValidHeaderSpecific(U, VEC_CLASSID, 2);
   PetscValidHeaderSpecific(F, VEC_CLASSID, 3);
   PetscValidHeaderSpecific(ts, TS_CLASSID, 4);
-  PetscCall((ts->ops->snesfunction)(snes, U, F, ts));
+  PetscCheck(ts->ops->snesfunction, PetscObjectComm((PetscObject)ts), PETSC_ERR_SUP, "No method snesfunction for TS of type %s", ((PetscObject)ts)->type_name);
+  PetscCall((*ts->ops->snesfunction)(snes, U, F, ts));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -4438,7 +4439,8 @@ PetscErrorCode SNESTSFormJacobian(SNES snes, Vec U, Mat A, Mat B, void *ctx)
   PetscValidHeaderSpecific(A, MAT_CLASSID, 3);
   PetscValidHeaderSpecific(B, MAT_CLASSID, 4);
   PetscValidHeaderSpecific(ts, TS_CLASSID, 5);
-  PetscCall((ts->ops->snesjacobian)(snes, U, A, B, ts));
+  PetscCheck(ts->ops->snesjacobian, PetscObjectComm((PetscObject)ts), PETSC_ERR_SUP, "No method snesjacobian for TS of type %s", ((PetscObject)ts)->type_name);
+  PetscCall((*ts->ops->snesjacobian)(snes, U, A, B, ts));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -5357,7 +5359,7 @@ PetscErrorCode TSComputeIJacobianDefaultColor(TS ts, PetscReal t, Vec U, Vec Udo
 + ts     - the `TS` context
 . time   - the current time (of the stage)
 . state  - the state to check if it is valid
-- reject - (output parameter) `PETSC_FALSE` if the state is acceptable, `PETSC_TRUE` if not acceptable
+- accept - (output parameter) `PETSC_FALSE` if the state is not acceptable, `PETSC_TRUE` if acceptable
 
   Level: intermediate
 
@@ -5373,7 +5375,7 @@ PetscErrorCode TSComputeIJacobianDefaultColor(TS ts, PetscReal t, Vec U, Vec Udo
 
 .seealso: [](ch_ts), `TSAdaptCheckStage()`, `TSFunctionDomainError()`, `SNESSetFunctionDomainError()`, `TSGetSNES()`
 @*/
-PetscErrorCode TSSetFunctionDomainError(TS ts, PetscErrorCode (*func)(TS ts, PetscReal time, Vec state, PetscBool *reject))
+PetscErrorCode TSSetFunctionDomainError(TS ts, PetscErrorCode (*func)(TS ts, PetscReal time, Vec state, PetscBool *accept))
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts, TS_CLASSID, 1);

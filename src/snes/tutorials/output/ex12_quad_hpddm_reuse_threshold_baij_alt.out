@@ -1,0 +1,188 @@
+  0 SNES Function norm 10.2781 
+    0 KSP Residual norm 10.1624 
+    1 KSP Residual norm 2.58941 
+    2 KSP Residual norm 1.5642 
+    3 KSP Residual norm 0.741666 
+  Linear solve converged due to CONVERGED_RTOL iterations 3
+  1 SNES Function norm 0.909122 
+    0 KSP Residual norm 0.741666 
+    1 KSP Residual norm 0.627966 
+    2 KSP Residual norm 0.467777 
+    3 KSP Residual norm 0.17014 
+    4 KSP Residual norm 0.0619986 
+  Linear solve converged due to CONVERGED_RTOL iterations 4
+  2 SNES Function norm 0.0838999 
+    0 KSP Residual norm 0.0619986 
+    1 KSP Residual norm 0.0550668 
+    2 KSP Residual norm 0.0351036 
+    3 KSP Residual norm 0.0129071 
+    4 KSP Residual norm 0.0058548 
+  Linear solve converged due to CONVERGED_RTOL iterations 4
+  3 SNES Function norm 0.00816774 
+    0 KSP Residual norm 0.0058548 
+    1 KSP Residual norm 0.00407367 
+    2 KSP Residual norm 0.00255521 
+    3 KSP Residual norm 0.00116861 
+    4 KSP Residual norm 0.000701053 
+    5 KSP Residual norm 0.00029976 
+  Linear solve converged due to CONVERGED_RTOL iterations 5
+  4 SNES Function norm 0.000434672 
+    0 KSP Residual norm 0.00029976 
+    1 KSP Residual norm 0.000174081 
+    2 KSP Residual norm 0.000100484 
+    3 KSP Residual norm 5.34766e-05 
+    4 KSP Residual norm 3.16936e-05 
+    5 KSP Residual norm 1.60165e-05 
+  Linear solve converged due to CONVERGED_RTOL iterations 5
+  5 SNES Function norm 2.00763e-05 
+    0 KSP Residual norm 1.60165e-05 
+    1 KSP Residual norm 1.17309e-05 
+    2 KSP Residual norm 9.20547e-06 
+    3 KSP Residual norm 3.38582e-06 
+    4 KSP Residual norm 1.92672e-06 
+    5 KSP Residual norm 1.14746e-06 
+  Linear solve converged due to CONVERGED_RTOL iterations 5
+  6 SNES Function norm 1.53677e-06 
+    0 KSP Residual norm 1.14746e-06 
+    1 KSP Residual norm 5.90894e-07 
+    2 KSP Residual norm 3.59732e-07 
+    3 KSP Residual norm 2.36329e-07 
+    4 KSP Residual norm 1.29279e-07 
+    5 KSP Residual norm 4.70463e-08 
+  Linear solve converged due to CONVERGED_RTOL iterations 5
+  7 SNES Function norm 5.75292e-08 
+L_2 Error: 0.000629247
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 7
+SNES Object: 4 MPI processes
+  type: newtonls
+  maximum iterations=50, maximum function evaluations=10000
+  tolerances: relative=1e-08, absolute=1e-50, solution=1e-08
+  total number of linear solver iterations=31
+  total number of function evaluations=8
+  norm schedule ALWAYS
+  SNESLineSearch Object: 4 MPI processes
+    type: bt
+      interpolation: cubic
+      alpha=1.000000e-04
+    maxstep=1.000000e+08, minlambda=1.000000e-12
+    tolerances: relative=1.000000e-08, absolute=1.000000e-15, lambda=1.000000e-08
+    maximum iterations=40
+  KSP Object: 4 MPI processes
+    type: gmres
+      restart=100, using Classical (unmodified) Gram-Schmidt Orthogonalization with no iterative refinement
+      happy breakdown tolerance 1e-30
+    maximum iterations=10000, initial guess is zero
+    tolerances:  relative=0.1, absolute=1e-50, divergence=10000.
+    left preconditioning
+    using PRECONDITIONED norm type for convergence test
+  PC Object: 4 MPI processes
+    type: hpddm
+    levels: 2
+    Neumann matrix attached? TRUE
+    shared subdomain KSP between SLEPc and PETSc? FALSE
+    coarse correction: DEFLATED
+    on process #0, value (+ threshold if available) for selecting deflation vectors: 0 (0.1)
+    grid and operator complexities: 1.0039 1.00069
+    KSP Object: (pc_hpddm_levels_1_) 4 MPI processes
+      type: preonly
+      maximum iterations=10000, initial guess is zero
+      tolerances:  relative=1e-05, absolute=1e-50, divergence=10000.
+      left preconditioning
+      using NONE norm type for convergence test
+    PC Object: (pc_hpddm_levels_1_) 4 MPI processes
+      type: shell
+        no name
+      linear system matrix = precond matrix:
+      Mat Object: 4 MPI processes
+        type: mpiaij
+        rows=513, cols=513
+        total: nonzeros=4345, allocated nonzeros=4345
+        total number of mallocs used during MatSetValues calls=0
+          not using I-node (on process 0) routines
+    PC Object: (pc_hpddm_levels_1_) 4 MPI processes
+      type: bjacobi
+        number of blocks = 4
+        Local solver information for first block is in the following KSP and PC objects on rank 0:
+        Use -pc_hpddm_levels_1_ksp_view ::ascii_info_detail to display information for all blocks
+        KSP Object: (pc_hpddm_levels_1_sub_) 1 MPI process
+          type: preonly
+          maximum iterations=10000, initial guess is zero
+          tolerances:  relative=1e-05, absolute=1e-50, divergence=10000.
+          left preconditioning
+          using NONE norm type for convergence test
+        PC Object: (pc_hpddm_levels_1_sub_) 1 MPI process
+          type: lu
+            out-of-place factorization
+            tolerance for zero pivot 2.22045e-14
+            matrix ordering: nd
+            factor fill ratio given 5., needed 1.9272
+              Factored matrix follows:
+                Mat Object: (pc_hpddm_levels_1_sub_) 1 MPI process
+                  type: seqaij
+                  rows=109, cols=109
+                  package used to perform factorization: petsc
+                  total: nonzeros=1509, allocated nonzeros=1509
+                    not using I-node routines
+          linear system matrix = precond matrix:
+          Mat Object: (pc_hpddm_levels_1_sub_) 1 MPI process
+            type: seqaij
+            rows=109, cols=109
+            total: nonzeros=783, allocated nonzeros=783
+            total number of mallocs used during MatSetValues calls=0
+              not using I-node routines
+      linear system matrix = precond matrix:
+      Mat Object: 4 MPI processes
+        type: mpiaij
+        rows=513, cols=513
+        total: nonzeros=4345, allocated nonzeros=4345
+        total number of mallocs used during MatSetValues calls=0
+          not using I-node (on process 0) routines
+      KSP Object: (pc_hpddm_coarse_) 2 MPI processes
+        type: preonly
+        maximum iterations=10000, initial guess is zero
+        tolerances:  relative=1e-05, absolute=1e-50, divergence=10000.
+        left preconditioning
+        using NONE norm type for convergence test
+      PC Object: (pc_hpddm_coarse_) 2 MPI processes
+        type: redundant
+          First (color=0) of 2 PCs follows
+          KSP Object: (pc_hpddm_coarse_redundant_) 1 MPI process
+            type: preonly
+            maximum iterations=10000, initial guess is zero
+            tolerances:  relative=1e-05, absolute=1e-50, divergence=10000.
+            left preconditioning
+            using NONE norm type for convergence test
+          PC Object: (pc_hpddm_coarse_redundant_) 1 MPI process
+            type: lu
+              out-of-place factorization
+              tolerance for zero pivot 2.22045e-14
+              matrix ordering: nd
+              factor fill ratio given 5., needed 1.
+                Factored matrix follows:
+                  Mat Object: (pc_hpddm_coarse_redundant_) 1 MPI process
+                    type: seqaij
+                    rows=2, cols=2
+                    package used to perform factorization: petsc
+                    total: nonzeros=3, allocated nonzeros=3
+                      not using I-node routines
+            linear system matrix = precond matrix:
+            Mat Object: 1 MPI process
+              type: seqaij
+              rows=2, cols=2
+              total: nonzeros=3, allocated nonzeros=3
+              total number of mallocs used during MatSetValues calls=0
+                not using I-node routines
+        linear system matrix = precond matrix:
+        Mat Object: (pc_hpddm_coarse_) 2 MPI processes
+          type: mpiaij
+          rows=2, cols=2
+          total: nonzeros=3, allocated nonzeros=3
+          total number of mallocs used during MatSetValues calls=0
+            not using I-node (on process 0) routines
+    linear system matrix = precond matrix:
+    Mat Object: 4 MPI processes
+      type: mpiaij
+      rows=513, cols=513
+      total: nonzeros=4345, allocated nonzeros=4345
+      total number of mallocs used during MatSetValues calls=0
+        not using I-node (on process 0) routines
