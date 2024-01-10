@@ -45,6 +45,7 @@ Changes: Development
 - Add ``VecGhostGetGhostIS()`` to get the ghost indices of a ghosted vector
 - Add ``-vec_mdot_use_gemv`` to let ``VecMDot()``, ``VecMTDot()``  use BLAS2 ``gemv()`` instead of custom unrolled kernel. Default is on
 - Add ``-vec_maxpy_use_gemv`` to let ``VecMAXPY()`` use BLAS2 ``gemv()`` instead of custom unrolled kernel. Default is off
+- Add ``VecISShift()`` to shift a part of the vector
 
 .. rubric:: PetscSection:
 
