@@ -45,7 +45,7 @@ of many application codes simpler than “rolling them” yourself.
    the performance. Certainly all parts of a
    previously sequential code need not be parallelized but the matrix
    generation portion must be parallelized to expect true scalability
-   to large numbers of MPI processes. See `PCMPI` for details on how to
+   to large numbers of MPI processes. See ``PCMPI`` for details on how to
    utilize the PETSc MPI linear solver server.
 
 Since PETSc is under continued development, small changes in usage and
