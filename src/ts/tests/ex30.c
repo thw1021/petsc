@@ -82,15 +82,13 @@ PetscErrorCode createSwarm(const DM dm, PetscInt dim, DM *sw)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode createMp(const DM dm, DM sw, const PetscInt Np, const PetscInt a_tid, const PetscInt dim, const PetscReal xx[], const PetscReal yy[], const PetscReal zz[], Mat *Mp_out)
+static PetscErrorCode makeSwarm(DM sw, const PetscInt dim, const PetscInt Np, const PetscReal xx[], const PetscReal yy[], const PetscReal zz[])
 {
-  PetscBool     removePoints = PETSC_TRUE;
   PetscReal    *coords;
   PetscDataType dtype;
-  Mat           M_p;
   PetscInt      bs, p, zero = 0;
-
   PetscFunctionBeginUser;
+
   PetscCall(DMSwarmSetLocalSizes(sw, Np, zero));
   PetscCall(DMSwarmGetField(sw, "DMSwarmPIC_coor", &bs, &dtype, (void **)&coords));
   for (p = 0; p < Np; p++) {
@@ -99,6 +97,14 @@ static PetscErrorCode createMp(const DM dm, DM sw, const PetscInt Np, const Pets
     if (dim == 3) coords[p * dim + 2] = zz[p];
   }
   PetscCall(DMSwarmRestoreField(sw, "DMSwarmPIC_coor", &bs, &dtype, (void **)&coords));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode createMp(const DM dm, DM sw, Mat *Mp_out)
+{
+  PetscBool removePoints = PETSC_TRUE;
+  Mat       M_p;
+  PetscFunctionBeginUser;
   // migrate after coords are set
   PetscCall(DMSwarmMigrate(sw, removePoints));
   PetscCall(PetscObjectSetName((PetscObject)sw, "Particle Grid"));
@@ -511,7 +517,6 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
         }     // active
       }       // threads
       /* Create particle swarm */
-      //PetscPragmaOMP(parallel for)
       for (int tid = 0; tid < numthreads; tid++) {
         const PetscInt v_id = v_id_0 + tid, glb_v_id = global_vertex_id_0 + v_id;
         if (glb_v_id < num_vertices) {                             // the ragged edge of the last batch
@@ -535,6 +540,19 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
       PetscCheck(ierr != 9999, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Only support one species per grid");
       PetscCheck(!ierr, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Error in OMP loop. ierr = %d", (int)ierr);
       // make globMpArray
+      PetscPragmaOMP(parallel for)
+      for (int tid = 0; tid < numthreads; tid++) {
+        const PetscInt v_id = v_id_0 + tid, glb_v_id = global_vertex_id_0 + v_id;
+        if (glb_v_id < num_vertices) {
+          for (PetscInt grid = 0; grid < ctx->num_grids; grid++) { // add same particels for all grids
+            PetscErrorCode ierr_t;
+            DM             sw = globSwarmArray[LAND_PACK_IDX(v_id, grid)];
+            ierr_t            = PetscInfo(pack, "makeSwarm %" PetscInt_FMT ".%" PetscInt_FMT ") for batch %" PetscInt_FMT "\n", global_vertex_id_0, grid, LAND_PACK_IDX(v_id, grid));
+            ierr_t            = makeSwarm(sw, dim, Np_t[grid][tid], xx_t[grid][tid], yy_t[grid][tid], zz_t[grid][tid]);
+            if (ierr_t) ierr = ierr_t;
+          }
+        }
+      }
       //PetscPragmaOMP(parallel for)
       for (int tid = 0; tid < numthreads; tid++) {
         const PetscInt v_id = v_id_0 + tid, glb_v_id = global_vertex_id_0 + v_id;
@@ -544,14 +562,14 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
             DM             dm = grid_dm[grid];
             DM             sw = globSwarmArray[LAND_PACK_IDX(v_id, grid)];
             ierr_t            = PetscInfo(pack, "createMp %" PetscInt_FMT ".%" PetscInt_FMT ") for batch %" PetscInt_FMT "\n", global_vertex_id_0, grid, LAND_PACK_IDX(v_id, grid));
-            ierr_t            = createMp(dm, sw, Np_t[grid][tid], tid, dim, xx_t[grid][tid], yy_t[grid][tid], zz_t[grid][tid], &globMpArray[LAND_PACK_IDX(v_id, grid)]);
+            ierr_t            = createMp(dm, sw, &globMpArray[LAND_PACK_IDX(v_id, grid)]);
             if (ierr_t) ierr = ierr_t;
           }
         }
       }
       PetscCheck(!ierr, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Error in OMP loop. ierr = %d", (int)ierr);
       // p --> g: set X
-      //PetscPragmaOMP(parallel for)
+      PetscPragmaOMP(parallel for)
       for (int tid = 0; tid < numthreads; tid++) {
         const PetscInt v_id = v_id_0 + tid, glb_v_id = global_vertex_id_0 + v_id;
         if (glb_v_id < num_vertices) {
