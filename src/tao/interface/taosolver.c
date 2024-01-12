@@ -514,6 +514,8 @@ PetscErrorCode TaoSetFromOptions(Tao tao)
   if (tao->ksp) {
     PetscCall(PetscOptionsBool("-tao_ksp_ew", "Use Eisentat-Walker linear system convergence test", "TaoKSPSetUseEW", tao->ksp_ewconv, &tao->ksp_ewconv, NULL));
     PetscCall(TaoKSPSetUseEW(tao, tao->ksp_ewconv));
+
+    PetscCall(KSPSetFromOptions(tao->ksp));
   }
 
   PetscTryTypeMethod(tao, setfromoptions, PetscOptionsObject);
