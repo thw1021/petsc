@@ -773,10 +773,10 @@ int main(int argc, char **argv)
     args: -dm_landau_domain_radius 6 -dm_refine 2 -dm_landau_num_species_grid 1 -dm_landau_thermal_temps 1 -petscspace_degree 3 -snes_converged_reason -ts_type beuler -ts_dt 1 -ts_max_steps 1 -ksp_type preonly -pc_type lu -snes_rtol 1e-12 -snes_stol 1e-12 -dm_landau_device_type cpu -number_particles_per_dimension 30 -e_shift 3 -ftop_ksp_rtol 1e-12 -ptof_ksp_rtol 1e-12 -dm_landau_batch_size 4 -number_spatial_vertices 4 -grid_view_target 0 -vertex_view_target 1
     test:
       suffix: simple
-      args:  -ex30_dm_view
+      args: -ex30_dm_view
     test:
       requires: hdf5
       suffix: simple_hdf5
-      args:  -ex30_dm_view hdf5:sol_e.h5 -ex30_vec_view hdf5:sol_e.h5::append
+      args: -ex30_dm_view hdf5:sol_e.h5 -ex30_vec_view hdf5:sol_e.h5::append
 
 TEST*/
