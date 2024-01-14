@@ -110,7 +110,7 @@ Running PETSc Programs
 ~~~~~~~~~~~~~~~~~~~~~~
 
 Before using PETSc, the user must first set the environmental variable
-``PETSC_DIR`` indicates the full path of the PETSc home directory. For
+``PETSC_DIR`` to indicate the full path of the PETSc home directory. For
 example, under the Unix bash shell, a command of the form
 
 .. code-block:: console
@@ -813,11 +813,11 @@ To develop an application program that uses PETSc, we suggest the following:
 
    #. Make a directory for your source code: for example, ``mkdir $HOME/application``
 
-   #. Change to that directory for
+   #. Change to that directory, for
       example, ``cd $HOME/application``
 
    #. Copy an example in the directory that corresponds to the
-      problems of interest into your directory for
+      problems of interest into your directory, for
       example, ``cp $PETSC_DIR/src/snes/tutorials/ex19.c app.c``
 
    #. Select an application build process. The ``PETSC_DIR`` (and ``PETSC_ARCH`` if the ``--prefix=directoryname``
@@ -825,7 +825,7 @@ To develop an application program that uses PETSc, we suggest the following:
       set for any of these approaches.
 
       * make (recommended). It uses the `pkg-config <https://en.wikipedia.org/wiki/Pkg-config>`__ tool
-        and is the recommended approach.. Copy $PETSC_DIR/share/petsc/Makefile.user or $PETSC_DIR/share/petsc/Makefile.basic.user
+        and is the recommended approach. Copy $PETSC_DIR/share/petsc/Makefile.user or $PETSC_DIR/share/petsc/Makefile.basic.user
         to your directory, for example, ``cp $PETSC_DIR/share/petsc/Makefile.user makefile``
 
         Examine the comments in this makefile.
@@ -896,7 +896,7 @@ To develop an application program that uses PETSc, we suggest the following:
    #. Rebuild your application and ensure it still runs correctly.
 
    #. Add a ``PetscInitialize()`` near the beginning of your code and ``PetscFinalize()`` near the end with appropriate include commands
-      (and use states in Fortran).
+      (and use statements in Fortran).
 
    #. Rebuild your application and ensure it still runs correctly.
 
