@@ -333,7 +333,7 @@ PetscErrorCode TSMonitorLGCtxCreate(MPI_Comm comm, const char host[], const char
 + ts     - the time integrator
 . step   - the current time step
 . ptime  - the current time
-. u      - the current state
+. v      - the current state
 - monctx - the monitor context obtained with `TSMonitorLGCtxCreate()`
 
   Level: advanced
