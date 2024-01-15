@@ -46,7 +46,7 @@ def main(stage,outdir):
       else:
         command.append('--with-fc=0')
         c2html = shutil.which('c2html')
-        if c2html: command.append('--with-c2html')
+        if False and c2html: command.append('--with-c2html')
         else:  command.append('--download-c2html')
         doctext = shutil.which('doctext')
         if doctext: command.append('--with-sowing')
@@ -98,7 +98,7 @@ def main(stage,outdir):
     else:
       if not os.path.isfile(os.path.join(petsc_dir, "configure.log")): raise Exception("Expected PETSc configuration not found")
       c2html = shutil.which('c2html')
-      if not c2html:
+      if True or not c2html:
         with open(os.path.join(petsc_dir,petsc_arch,'lib','petsc','conf','petscvariables')) as f:
           c2html = [line for line in f if line.find('C2HTML ') > -1]
           c2html = re.sub('[ ]*C2HTML[ ]*=[ ]*','',c2html[0]).strip('\n').strip()
