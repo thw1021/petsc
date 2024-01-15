@@ -302,7 +302,7 @@ PETSC_INTERN PetscErrorCode KSPCheckPCMPI(KSP);
 . -ksp_converged_maxits                                                   - see `KSPConvergedDefaultSetConvergedMaxits()`
 . -ksp_norm_type <none,preconditioned,unpreconditioned,natural>           - see `KSPSetNormType()`
 . -ksp_check_norm_iteration it                                            - do not compute residual norm until iteration number it (does compute at 0th iteration)
-                                                                            works only for `KSPBCGS`, `KSPIBCGS` and and `KSPCG`
+                                                                            works only for `KSPBCGS`, `KSPIBCGS`, and `KSPCG`
 . -ksp_lag_norm                                                           - compute the norm of the residual for the ith iteration on the i+1 iteration;
                                                                             this means that one can use the norm of the residual for convergence test WITHOUT
                                                                             an extra `MPI_Allreduce()` limiting global synchronizations.
@@ -330,7 +330,7 @@ PETSC_INTERN PetscErrorCode KSPCheckPCMPI(KSP);
   Level: beginner
 
   Note:
-  To see all options, run your program with the -help option or consult [](ch_ksp)
+  To see all options, run your program with the `-help` option or consult [](ch_ksp)
 
 .seealso: [](ch_ksp), `KSP`, `KSPSetOptionsPrefix()`, `KSPResetFromOptions()`, `KSPSetUseFischerGuess()`
 @*/

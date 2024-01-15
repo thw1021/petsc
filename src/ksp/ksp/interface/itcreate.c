@@ -249,9 +249,9 @@ PetscErrorCode KSPViewFromOptions(KSP A, PetscObject obj, const char name[])
                                Note that certain algorithms such as `KSPGMRES` ALWAYS require the norm calculation,
                                for these methods the norms are still computed, they are just not used in
                                the convergence test.
-   KSP_NORM_PRECONDITIONED   - the default for left preconditioned solves, uses the l2 norm
+   KSP_NORM_PRECONDITIONED   - the default for left-preconditioned solves, uses the l2 norm
                                of the preconditioned residual $ P^{-1}(b - A x)$
-   KSP_NORM_UNPRECONDITIONED - uses the l2 norm of the true b - Ax residual.
+   KSP_NORM_UNPRECONDITIONED - uses the l2 norm of the true $ b - Ax$ residual.
    KSP_NORM_NATURAL          - supported by `KSPCG`, `KSPCR`, `KSPCGNE`, `KSPCGS`
 .ve
 
@@ -873,7 +873,7 @@ PetscErrorCode KSPGetType(KSP ksp, KSPType *type)
 
   Then, your solver can be chosen with the procedural interface via
 .vb
-  KSPSetType`(ksp, "my_solver")
+  KSPSetType(ksp, "my_solver")
 .ve
   or at runtime via the option `-ksp_type my_solver`
 
