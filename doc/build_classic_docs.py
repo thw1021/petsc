@@ -46,7 +46,7 @@ def main(stage,outdir):
       else:
         command.append('--with-fc=0')
         c2html = shutil.which('c2html')
-        if c2html: command.append('--with-c2html')
+        if False and c2html: command.append('--with-c2html')
         else:  command.append('--download-c2html')
         doctext = shutil.which('doctext')
         if doctext: command.append('--with-sowing')
