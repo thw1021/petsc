@@ -1040,7 +1040,7 @@ static PetscErrorCode KSPSolve_Private(KSP ksp, Vec b, Vec x)
   If you provide a matrix that has a `MatSetNullSpace()` and `MatSetTransposeNullSpace()` this will use that information to solve singular systems
   in the least squares sense with a norm minimizing solution.
 
-  $A x = b $  where $b = b_p + b_t$ where $b_t$ is not in the range of A (and hence by the fundamental theorem of linear algebra is in the nullspace(A') see `MatSetNullSpace()`
+  $A x = b $  where $b = b_p + b_t$ where $b_t$ is not in the range of A (and hence by the fundamental theorem of linear algebra is in the nullspace(A'), see `MatSetNullSpace()`).
 
   `KSP` first removes b_t producing the linear system  A x = b_p (which has multiple solutions) and solves this to find the ||x|| minimizing solution (and hence
   it finds the solution x orthogonal to the nullspace(A). The algorithm is simply in each iteration of the Krylov method we remove the nullspace(A) from the search
