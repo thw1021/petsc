@@ -108,6 +108,7 @@ Changes: Development
 - Replace ``DMProjectCoordinates()`` with ``DMSetCoordinateDisc()``
 - Add argument to ``DMPlexCreateCoordinateSpace()``
 - Add ``DMPlexReorderSectionGetDefault()`` and ``DMPlexReorderSectionSetDefault()`` to allow point permutations when sections are built automatically
+- Add boolean argument to ``DMPlexPartitionLabelCreateSF()`` to sort ranks
 
 .. rubric:: FE/FV:
 
