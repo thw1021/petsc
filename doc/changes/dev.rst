@@ -105,6 +105,7 @@ Changes: Development
 - Change protototype of ``DMPlexSetSNESLocalFEM()``. Now it accepts a single context and a Boolean indicating to use the objective function callback
 - Replace ``DMProjectCoordinates()`` with ``DMSetCoordinateDisc()``
 - Add argument to ``DMPlexCreateCoordinateSpace()``
+- Add boolean argument to ``DMPlexPartitionLabelCreateSF()`` to sort ranks
 
 .. rubric:: FE/FV:
 
