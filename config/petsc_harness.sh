@@ -68,28 +68,28 @@ diff_flags=""
 while getopts "a:cCde:fhjJ:mMn:o:pt:UvV" arg
 do
   case $arg in
-    a ) args="$OPTARG"       ;;  
-    c ) cleanup=true         ;;  
-    C ) compile=true         ;;  
-    d ) debugger=true        ;;  
-    e ) extra_args="$OPTARG" ;;  
+    a ) args="$OPTARG"       ;;
+    c ) cleanup=true         ;;
+    C ) compile=true         ;;
+    d ) debugger=true        ;;
+    e ) extra_args="$OPTARG" ;;
     f ) force=true           ;;
-    h ) print_usage; exit    ;;  
-    n ) nsize="$OPTARG"      ;;  
-    j ) diff_flags=$diff_flags" -j"      ;;  
-    J ) diff_flags=$diff_flags" -J $OPTARG" ;;  
-    m ) diff_flags=$diff_flags" -m"      ;;  
-    M ) diff_flags=$diff_flags" -M"      ;;  
-    o ) output_fmt=$OPTARG   ;;  
+    h ) print_usage; exit    ;;
+    n ) nsize="$OPTARG"      ;;
+    j ) diff_flags=$diff_flags" -j"      ;;
+    J ) diff_flags=$diff_flags" -J $OPTARG" ;;
+    m ) diff_flags=$diff_flags" -m"      ;;
+    M ) diff_flags=$diff_flags" -M"      ;;
+    o ) output_fmt=$OPTARG   ;;
     p ) printcmd=true        ;;
-    t ) TIMEOUT=$OPTARG      ;;  
-    U ) mpiexec="petsc_mpiexec_cudamemcheck $mpiexec" 
+    t ) TIMEOUT=$OPTARG      ;;
+    U ) mpiexec="petsc_mpiexec_cudamemcheck $mpiexec"
         mpiexec_function=true
-        ;;  
+        ;;
     V ) mpiexec="petsc_mpiexec_valgrind $mpiexec"
         mpiexec_function=true
-        ;;  
-    v ) verbose=true         ;;  
+        ;;
+    v ) verbose=true         ;;
     *)  # To take care of any extra args
       if test -n "$OPTARG"; then
         eval $arg=\"$OPTARG\"
@@ -147,12 +147,12 @@ function petsc_report_tapoutput() {
 
   # Log messages
   printf "${tap_message}\n" >> ${testlogtapfile}
-  
+
   if test ${output_fmt} == "err_only"; then
-     if test -n "${notornot}"; then 
+     if test -n "${notornot}"; then
         printf "${tap_message}\n" | tee -a ${testlogerrfile}
      fi
-  else 
+  else
      printf "${tap_message}\n"
   fi
 }
@@ -166,7 +166,7 @@ function printcmd() {
      # Have to expand valgrind/cudamemchk
      modcmd=`eval "$modcmd"`
   fi
-  printf "${modcmd}\n" 
+  printf "${modcmd}\n"
   exit
 }
 
@@ -310,8 +310,9 @@ function petsc_mpiexec_cudamemcheck() {
   # marks the end of the options to mpiexec, and hence where we should insert the
   # cuda-memcheck command
   re=".*${petsc_arch}.*"
+  rempi=".*${petsc_arch}/bin/mpiexec"
   for i in "$@"; do
-    if [[ $i =~ ${re} ]]; then
+    if [[ $i =~ ${re} ]] && [[ ! $i =~ ${rempi} ]]; then
       # found it, put cuda memcheck command in
       pre_args+=("${memcheck_cmd} ${memcheck_args}")
       break
@@ -337,20 +338,22 @@ function petsc_mpiexec_cudamemcheck() {
 }
 
 function petsc_mpiexec_valgrind() {
-  # some systems set $1 to be the function name
-  if [[ $1 == 'petsc_mpiexec_valgrind' ]]; then
+  valgrind="valgrind -q --tool=memcheck --leak-check=yes --num-callers=20 --track-origins=yes --suppressions=$PETSC_DIR/share/petsc/suppressions/valgrind --error-exitcode=10"
+  pre_args=()
+  re=".*${petsc_arch}.*"
+  rempi=".*${petsc_arch}/bin/mpiexec"
+  for i in "$@"; do
+    if [[ $i =~ ${re} ]] && [[ ! $i =~ ${rempi} ]]; then
+      pre_args+=("${valgrind}")
+      break
+    fi
+    pre_args+=("$i")
     shift
-  fi
-  _mpiexec=$1;shift
-  npopt=$1;shift
-  np=$1;shift
-
-  valgrind="valgrind -q --tool=memcheck --leak-check=yes --num-callers=20 --track-origins=yes --keep-debuginfo=yes --suppressions=$PETSC_DIR/share/petsc/suppressions/valgrind --error-exitcode=10"
-
-  if $printcmd; then
-     echo $_mpiexec $npopt $np $valgrind "$@"
+  done
+  if ${printcmd}; then
+    echo ${pre_args[@]} $*
   else
-     $_mpiexec $npopt $np $valgrind "$@"
+    ${pre_args[@]} $*
   fi
 }
 export LC_ALL=C
