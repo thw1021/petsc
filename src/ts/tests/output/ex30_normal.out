@@ -17,6 +17,6 @@ Labels:
   Face Sets: 4 strata with value/size (4 (14), 2 (14), 1 (7), 3 (7))
 Field e:
   adjacency FEM
-  0) species-0: charge density= -1.6040522218240e+01 z-momentum= -8.4272133054978e-17 energy=  2.4040958521460e+04 -- 32 cells
-  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 6
-  1) species-0: charge density= -1.6040522218240e+01 z-momentum= -8.4422892781623e-17 energy=  2.4040958521460e+04 -- 32 cells
+  0) species-0: charge density= -8.4120484494441e+01 z-momentum=  3.1627629716589e-04 energy=  1.2878743908988e+05 -- 32 cells
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 8
+  1) species-0: charge density= -8.4120484494441e+01 z-momentum=  3.1627629716591e-04 energy=  1.2878743908988e+05 -- 32 cells
