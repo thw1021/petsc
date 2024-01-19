@@ -145,7 +145,7 @@ PetscErrorCode gridToParticles(const DM dm, DM sw, const Vec rhs, Vec work, Mat 
   Vec          ff;
   PetscInt     N, M, nzl;
   MatShellCtx *matshellctx;
-  PC pc;
+  PC           pc;
 
   PetscFunctionBeginUser;
   // (Mp Mp)^-1 M
