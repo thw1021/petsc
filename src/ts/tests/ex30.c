@@ -451,8 +451,12 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
     PetscCall(DMGetLocalSection(dm, &s));
     PetscCall(DMPlexCreateClosureIndex(dm, s));
     for (int tid = 0; tid < numthreads; tid++) {
+      PC pc;
       PetscCall(VecDuplicate(subX, &t_fhat[grid][tid]));
       PetscCall(KSPCreate(PETSC_COMM_SELF, &t_ksp[grid][tid]));
+      PetscCall(KSPSetType(t_ksp[grid][tid], KSPCG));
+      PetscCall(KSPGetPC(t_ksp[grid][tid], &pc));
+      PetscCall(PCSetType(pc, PCJACOBI));
       PetscCall(KSPSetOptionsPrefix(t_ksp[grid][tid], "ptof_"));
       PetscCall(KSPSetOperators(t_ksp[grid][tid], g_Mass[grid], g_Mass[grid]));
       PetscCall(KSPSetFromOptions(t_ksp[grid][tid]));
@@ -522,7 +526,7 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
                     PetscReal mag       = sigma * PetscSqrtReal(-2.0 * PetscLogReal(u1));
                     xx_t[grid][tid][pp] = mag * PetscCosReal(2.0 * PETSC_PI * u2); // + shift;
                     yy_t[grid][tid][pp] = mag * PetscSinReal(2.0 * PETSC_PI * u2); //
-                    if (xx_t[grid][tid][pp] < lo[0]) xx_t[grid][tid][pp] = -xx_t[grid][tid][pp];
+                    if (dim == 2 && xx_t[grid][tid][pp] < lo[0]) xx_t[grid][tid][pp] = -xx_t[grid][tid][pp];
                     if (dim == 3) zz_t[grid][tid][pp] = lo[2] + hp[2] / 2.0 + pk * hp[2];
                     wp_t[grid][tid][pp] = ctx->n[grid] / NN * PetscSqrtReal(ctx->masses[ctx->species_offset[grid]] / ctx->masses[0]);
                   }
@@ -847,8 +851,7 @@ int main(int argc, char **argv)
     args: -dim 3 -petscspace_degree 2 -dm_landau_num_species_grid 1,1,1 -dm_refine 0 -number_particles_per_dimension 5 -dm_plex_hash_location \
           -dm_landau_batch_size 1 -number_spatial_vertices 1 -dm_landau_batch_view_idx 0 -vertex_view_target 0 -grid_view_target 0 \
           -dm_landau_n 1.000018,1,1e-6 -dm_landau_thermal_temps 2,1,1 -dm_landau_ion_masses 2,180 -dm_landau_ion_charges 1,18 \
-          -ftop_ksp_rtol 1e-12 -ftop_ksp_type cg -ftop_pc_type jacobi \
-          -ksp_type preonly -pc_type lu \
+          -ftop_ksp_rtol 1e-12 -ksp_type preonly -pc_type lu \
           -ptof_ksp_type cg -ptof_pc_type jacobi -ptof_ksp_rtol 1e-12\
           -snes_converged_reason -snes_monitor -snes_rtol 1e-12 -snes_stol 1e-12\
           -ts_dt 0.1 -ts_exact_final_time stepover -ts_max_snes_failures -1 -ts_max_steps 1 -ts_monitor -ts_type beuler
@@ -863,7 +866,7 @@ int main(int argc, char **argv)
 
   testset:
     requires: !complex double defined(PETSC_USE_DMLANDAU_2D) !cuda
-    args: -dm_refine 2 -dm_landau_num_species_grid 1 -dm_landau_thermal_temps 1 -petscspace_degree 3 -snes_converged_reason -ts_type beuler -ts_dt .01 -ts_max_steps 1 -ksp_type preonly -pc_type lu -snes_rtol 1e-12 -snes_stol 1e-12 -dm_landau_device_type cpu -number_particles_per_dimension 30 -ftop_ksp_rtol 1e-12 -ptof_ksp_rtol 1e-12 -dm_landau_batch_size 4 -number_spatial_vertices 4 -grid_view_target 0 -vertex_view_target 1 -ftop_ksp_type lsqr -ftop_pc_type bjacobi -ftop_sub_pc_factor_shift_type nonzero -ftop_sub_pc_type lu -ptof_ksp_type cg -ptof_pc_type jacobi
+    args: -dm_refine 2 -dm_landau_num_species_grid 1 -dm_landau_thermal_temps 1 -petscspace_degree 3 -snes_converged_reason -ts_type beuler -ts_dt .01 -ts_max_steps 1 -ksp_type preonly -pc_type lu -snes_rtol 1e-12 -snes_stol 1e-12 -dm_landau_device_type cpu -number_particles_per_dimension 30 -ftop_ksp_rtol 1e-12 -ptof_ksp_rtol 1e-12 -dm_landau_batch_size 4 -number_spatial_vertices 4 -grid_view_target 0 -vertex_view_target 1
     test:
       suffix: simple
       args: -ex30_dm_view
@@ -874,6 +877,6 @@ int main(int argc, char **argv)
     test:
       requires: hdf5
       suffix: normal
-      args: -ex30_dm_view -use_uniform_particle_grid false -number_particles_per_dimension 30
+      args: -ex30_dm_view -use_uniform_particle_grid false
 
 TEST*/
