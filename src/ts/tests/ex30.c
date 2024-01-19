@@ -20,7 +20,6 @@ static char help[] = "Grid based Landau collision operator with PIC interface wi
 #endif
 #include <petsclandau.h>
 #include <petscdmcomposite.h>
-#include <petscviewerhdf5.h>
 
 typedef struct {
   Mat MpTrans;
@@ -146,23 +145,26 @@ PetscErrorCode gridToParticles(const DM dm, DM sw, const Vec rhs, Vec work, Mat 
   Vec          ff;
   PetscInt     N, M, nzl;
   MatShellCtx *matshellctx;
+  PC pc;
 
   PetscFunctionBeginUser;
+  // (Mp Mp)^-1 M
   PetscCall(MatMult(Mass, rhs, work));
   // pseudo-inverse
   PetscCall(KSPCreate(PETSC_COMM_SELF, &ksp));
+  PetscCall(KSPSetType(ksp, KSPCG));
+  PetscCall(KSPGetPC(ksp, &pc));
+  PetscCall(PCSetType(pc, PCJACOBI));
   PetscCall(KSPSetOptionsPrefix(ksp, "ftop_"));
   PetscCall(KSPSetFromOptions(ksp));
   PetscCall(PetscObjectTypeCompare((PetscObject)ksp, KSPLSQR, &is_lsqr));
   if (!is_lsqr) {
     PetscCall(MatGetLocalSize(M_p, &M, &N));
     if (N > M) {
-      PC pc;
-      PetscCall(PetscInfo(ksp, " M (%" PetscInt_FMT ") < M (%" PetscInt_FMT ") -- skip revert to lsqr\n", M, N));
+      PetscCall(PetscInfo(ksp, " M (%" PetscInt_FMT ") < M (%" PetscInt_FMT ") more vertices than particles: revert to lsqr\n", M, N));
       is_lsqr = PETSC_TRUE;
       PetscCall(KSPSetType(ksp, KSPLSQR));
-      PetscCall(KSPGetPC(ksp, &pc));
-      PetscCall(PCSetType(pc, PCNONE)); // could put in better solver -ftop_pc_type bjacobi -ftop_sub_pc_type lu -ftop_sub_pc_factor_shift_type nonzero
+      PetscCall(PCSetType(pc, PCNONE)); // should not happen, but could solve stable (Mp Mp^T), move projection Mp before solve
     } else {
       PetscCall(PetscNew(&matshellctx));
       PetscCall(MatCreateShell(PetscObjectComm((PetscObject)dm), N, N, PETSC_DECIDE, PETSC_DECIDE, matshellctx, &MtM));
@@ -643,7 +645,6 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
     }     // (fake) particle loop
     // standard view of initial conditions
     if (v_target >= global_vertex_id_0 && v_target < global_vertex_id_0 + ctx->batch_sz) {
-      DM sw = globSwarmArray[LAND_PACK_IDX(v_target % ctx->batch_sz, g_target)];
       PetscCall(DMSetOutputSequenceNumber(ctx->plex[g_target], 0, 0.0));
       PetscCall(VecViewFromOptions(globXArray[LAND_PACK_IDX(v_target % ctx->batch_sz, g_target)], NULL, "-ex30_vec_view"));
     }
