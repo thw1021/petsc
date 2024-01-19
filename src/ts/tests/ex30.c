@@ -20,6 +20,7 @@ static char help[] = "Grid based Landau collision operator with PIC interface wi
 #endif
 #include <petsclandau.h>
 #include <petscdmcomposite.h>
+#include <petscviewerhdf5.h>
 
 typedef struct {
   Mat MpTrans;
@@ -32,8 +33,6 @@ typedef struct {
   PetscInt   v_target;
   DM        *globSwarmArray;
   LandauCtx *ctx;
-  PetscInt  *nTargetP;
-  PetscReal  N_inv;
   DM        *grid_dm;
   Mat       *g_Mass;
   Mat       *globMpArray;
@@ -116,15 +115,16 @@ static PetscErrorCode createMp(const DM dm, DM sw, Mat *Mp_out)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode particlesToGrid(const DM dm, DM sw, const PetscInt Np, const PetscInt a_tid, const PetscInt dim, const PetscReal a_wp[], Vec rho, Mat M_p)
+static PetscErrorCode particlesToGrid(const DM dm, DM sw, const PetscInt a_tid, const PetscInt dim, const PetscReal a_wp[], Vec rho, Mat M_p)
 {
   PetscReal    *wq;
   PetscDataType dtype;
   Vec           ff;
-  PetscInt      bs, p;
+  PetscInt      bs, p, Np;
 
   PetscFunctionBeginUser;
   PetscCall(DMSwarmGetField(sw, "w_q", &bs, &dtype, (void **)&wq));
+  PetscCall(DMSwarmGetLocalSize(sw, &Np));
   for (p = 0; p < Np; p++) wq[p] = a_wp[p];
   PetscCall(DMSwarmRestoreField(sw, "w_q", &bs, &dtype, (void **)&wq));
   PetscCall(PetscObjectSetName((PetscObject)rho, "rho"));
@@ -179,7 +179,7 @@ PetscErrorCode gridToParticles(const DM dm, DM sw, const Vec rhs, Vec work, Mat 
         PetscScalar        dot = 0;
         PetscCall(MatGetRow(matshellctx->MpTrans, i, &nzl, &cols, &vals));
         for (int ii = 0; ii < nzl; ii++) dot += PetscSqr(vals[ii]);
-        PetscCheck(dot != 0.0, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Row %d is empty", i);
+        if (dot == 0.0) dot = 1; // empty rows
         PetscCall(MatSetValue(D, i, i, dot, INSERT_VALUES));
       }
       PetscCall(MatAssemblyBegin(D, MAT_FINAL_ASSEMBLY));
@@ -218,8 +218,6 @@ PetscErrorCode gridToParticles(const DM dm, DM sw, const Vec rhs, Vec work, Mat 
     PetscCall(KSPSolveTranspose(ksp, work, ff));
   }
   PetscCall(KSPDestroy(&ksp));
-  /* Visualize particle field */
-  PetscCall(VecViewFromOptions(ff, NULL, "-weights_view"));
   PetscCall(MatDestroy(&PM_p));
   PetscCall(DMSwarmDestroyGlobalVectorFromField(sw, "w_q", &ff));
 
@@ -267,15 +265,18 @@ PetscErrorCode gridToParticles_private(DM grid_dm[], DM globSwarmArray[], const 
           PetscCall(DMSwarmGetLocalSize(sw, &npoints));
           for (int p = 0; p < npoints; p++) {
             PetscReal v2 = 0, fact = (dim == 2) ? 2.0 * PETSC_PI * coords[p * dim + 0] : 1, w = fact * wp[p] * ctx->n_0 * ctx->masses[ctx->species_offset[grid]];
-            for (int i = 0; i < dim; ++i) v2 += PetscSqr(coords[p * dim + i]);
-            moments[0] += w;
-            moments[1] += w * ctx->v_0 * coords[p * dim + 1]; // z-momentum
-            moments[2] += w * ctx->v_0 * ctx->v_0 * v2;
+            if (w > PETSC_REAL_MIN) {
+              for (int i = 0; i < dim; ++i) v2 += PetscSqr(coords[p * dim + i]);
+              moments[0] += w;
+              moments[1] += w * ctx->v_0 * coords[p * dim + 1]; // z-momentum
+              moments[2] += w * ctx->v_0 * ctx->v_0 * v2;
+            }
           }
           PetscCall(DMSwarmRestoreField(sw, "w_q", &bs, &dtype, (void **)&wp));
           PetscCall(DMSwarmRestoreField(sw, "DMSwarmPIC_coor", &bs, &dtype, (void **)&coords));
         }
         const PetscReal N_inv = 1 / moments[0];
+        PetscCall(PetscInfo(grid_dm[0], "gridToParticles_private [%" PetscInt_FMT "], n = %g\n", v_id, (double)moments[0]));
         for (PetscInt grid = 0; grid < ctx->num_grids; grid++) {
           PetscDataType dtype;
           PetscReal    *wp, *coords;
@@ -286,7 +287,7 @@ PetscErrorCode gridToParticles_private(DM grid_dm[], DM globSwarmArray[], const 
           PetscCall(DMSwarmGetLocalSize(sw, &npoints));
           for (int p = 0; p < npoints; p++) {
             const PetscReal fact = dim == 2 ? 2.0 * PETSC_PI * coords[p * dim + 0] : 1, w = fact * wp[p] * ctx->n_0 * ctx->masses[ctx->species_offset[grid]], ww = w * N_inv;
-            if (ww > PETSC_REAL_MIN) {
+            if (w > PETSC_REAL_MIN) {
               moments[3] -= ww * PetscLogReal(ww);
               PetscCheck(ww < 1 - PETSC_MACHINE_EPSILON, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "ww (%g) > 1", (double)ww);
             }
@@ -348,21 +349,41 @@ static PetscErrorCode PostStep(TS ts)
     PetscReal    *wp, *coords;
     DM            sw = printCtx->globSwarmArray[LAND_PACK_IDX(v_id, grid)];
     Vec           work, subX = printCtx->globXArray[LAND_PACK_IDX(v_id, grid)];
-    PetscInt      bs, NN     = printCtx->nTargetP[grid];
+    PetscInt      bs, NN;
     // C-G moments
     PetscCall(VecDuplicate(subX, &work));
     PetscCall(gridToParticles(printCtx->grid_dm[grid], sw, subX, work, printCtx->globMpArray[LAND_PACK_IDX(v_id, grid)], printCtx->g_Mass[grid]));
     PetscCall(VecDestroy(&work));
     // moments
     PetscCall(DMSwarmGetField(sw, "DMSwarmPIC_coor", &bs, &dtype, (void **)&coords));
-    PetscCall(DMSwarmGetField(sw, "w_q", &bs, &dtype, (void **)&wp)); // could get NN from sw - todo
+    PetscCall(DMSwarmGetLocalSize(sw, &NN));
+    PetscCall(DMSwarmGetField(sw, "w_q", &bs, &dtype, (void **)&wp));
     for (int pp = 0; pp < NN; pp++) {
-      PetscReal v2 = 0, fact = (dim == 2) ? 2.0 * PETSC_PI * coords[pp * dim + 0] : 1, w = fact * wp[pp] * ctx->n_0 * ctx->masses[ctx->species_offset[grid]], ww = w * printCtx->N_inv;
-      for (int i = 0; i < dim; ++i) v2 += PetscSqr(coords[pp * dim + i]);
-      moments[0] += w;
-      moments[1] += w * ctx->v_0 * coords[pp * dim + 1]; // z-momentum
-      moments[2] += w * ctx->v_0 * ctx->v_0 * v2;
-      if (ww > PETSC_REAL_MIN) {
+      PetscReal v2 = 0, fact = (dim == 2) ? 2.0 * PETSC_PI * coords[pp * dim + 0] : 1, w = fact * wp[pp] * ctx->n_0 * ctx->masses[ctx->species_offset[grid]];
+      if (w > PETSC_REAL_MIN) {
+        for (int i = 0; i < dim; ++i) v2 += PetscSqr(coords[pp * dim + i]);
+        moments[0] += w;
+        moments[1] += w * ctx->v_0 * coords[pp * dim + 1]; // z-momentum
+        moments[2] += w * ctx->v_0 * ctx->v_0 * v2;
+      }
+    }
+    PetscCall(DMSwarmRestoreField(sw, "DMSwarmPIC_coor", &bs, &dtype, (void **)&coords));
+    PetscCall(DMSwarmRestoreField(sw, "w_q", &bs, &dtype, (void **)&wp));
+  }
+  PetscCall(DMCompositeRestoreAccessArray(pack, X, nDMs, NULL, printCtx->globXArray));
+  // entropy
+  const PetscReal N_inv = 1 / moments[0];
+  for (PetscInt grid = 0; grid < ctx->num_grids; grid++) {
+    PetscDataType dtype;
+    PetscReal    *wp, *coords;
+    DM            sw = printCtx->globSwarmArray[LAND_PACK_IDX(v_id, grid)];
+    PetscInt      bs, NN;
+    PetscCall(DMSwarmGetField(sw, "DMSwarmPIC_coor", &bs, &dtype, (void **)&coords));
+    PetscCall(DMSwarmGetLocalSize(sw, &NN));
+    PetscCall(DMSwarmGetField(sw, "w_q", &bs, &dtype, (void **)&wp));
+    for (int pp = 0; pp < NN; pp++) {
+      PetscReal fact = (dim == 2) ? 2.0 * PETSC_PI * coords[pp * dim + 0] : 1, w = fact * wp[pp] * ctx->n_0 * ctx->masses[ctx->species_offset[grid]], ww = w * N_inv;
+      if (w > PETSC_REAL_MIN) {
         moments[3] -= ww * PetscLogReal(ww);
         PetscCheck(ww < 1 - PETSC_MACHINE_EPSILON, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "ww (%g) > 1", (double)ww);
       }
@@ -370,18 +391,17 @@ static PetscErrorCode PostStep(TS ts)
     PetscCall(DMSwarmRestoreField(sw, "DMSwarmPIC_coor", &bs, &dtype, (void **)&coords));
     PetscCall(DMSwarmRestoreField(sw, "w_q", &bs, &dtype, (void **)&wp));
   }
-  PetscCall(DMCompositeRestoreAccessArray(pack, X, nDMs, NULL, printCtx->globXArray));
   PetscCall(PetscInfo(X, "%4d) time %e, Landau moments: %18.12e %19.12e %18.12e %e\n", (int)n, (double)t, (double)moments[0], (double)moments[1], (double)moments[2], (double)moments[3]));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np, const PetscInt dim, const PetscInt v_target, const PetscInt g_target, PetscReal shift)
+PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np, const PetscInt dim, const PetscInt v_target, const PetscInt g_target, PetscReal shift, PetscBool use_uniform_particle_grid)
 {
   DM             pack, *globSwarmArray, grid_dm[LANDAU_MAX_GRIDS];
   Mat           *globMpArray, g_Mass[LANDAU_MAX_GRIDS];
   KSP            t_ksp[LANDAU_MAX_GRIDS][EX30_MAX_NUM_THRDS];
   Vec            t_fhat[LANDAU_MAX_GRIDS][EX30_MAX_NUM_THRDS];
-  PetscInt       nDMs, nTargetP[LANDAU_MAX_GRIDS];
+  PetscInt       nDMs;
   PetscErrorCode ierr = (PetscErrorCode)0; // used for inside thread loops
 #if defined(PETSC_HAVE_OPENMP) && defined(PETSC_HAVE_THREADSAFETY)
   PetscInt numthreads = PetscNumOMPThreads;
@@ -409,7 +429,6 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
   PetscCall(TSSetApplicationContext(ts, printCtx));
   printCtx->v_target       = v_target;
   printCtx->ctx            = ctx;
-  printCtx->nTargetP       = nTargetP;
   printCtx->globSwarmArray = globSwarmArray;
   printCtx->grid_dm        = grid_dm;
   printCtx->globMpArray    = globMpArray;
@@ -458,16 +477,21 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
       for (int tid = 0; tid < numthreads; tid++) {
         const PetscInt v_id = v_id_0 + tid, glb_v_id = global_vertex_id_0 + v_id;
         if (glb_v_id < num_vertices) {                                                                                                                                            // the ragged edge (in last batch)
-          PetscInt Npp0 = a_Np + (glb_v_id % (a_Np / 10 + 1)), NN;                                                                                                                // number of particels in each dimension with add some load imbalance
+          PetscInt Npp0 = a_Np + (glb_v_id % (a_Np / 10 + 1)), nTargetP[LANDAU_MAX_GRIDS];                                                                                        // n of particels in each dim with load imbalance
           for (PetscInt grid = 0; grid < ctx->num_grids; grid++) {                                                                                                                // add same particels for all grids
             const PetscReal kT_m  = ctx->k * ctx->thermal_temps[ctx->species_offset[grid]] / ctx->masses[ctx->species_offset[grid]] / (ctx->v_0 * ctx->v_0);                      /* theta = 2kT/mc^2 per species */
             PetscReal       lo[3] = {-ctx->radius[grid], -ctx->radius[grid], -ctx->radius[grid]}, hi[3] = {ctx->radius[grid], ctx->radius[grid], ctx->radius[grid]}, hp[3], vole; // would be nice to get box from DM
             PetscInt        Npi = Npp0, Npj = 2 * Npp0, Npk = 1;
+            PetscRandom     rand;
+            PetscReal       sigma = ctx->thermal_speed[grid] / ctx->thermal_speed[0];
+            PetscCall(PetscRandomCreate(PETSC_COMM_SELF, &rand));
+            PetscCall(PetscRandomSetInterval(rand, 0., 1.));
+            PetscCall(PetscRandomSetFromOptions(rand));
             if (dim == 2) lo[0] = 0; // Landau coordinate (r,z)
             else Npi = Npj = Npk = Npp0;
             // User: use glb_v_id to index into your data
-            NN              = Npi * Npj * Npk; // make a regular grid of particles Npp x Npp
-            Np_t[grid][tid] = NN;
+            const PetscInt NN = Npi * Npj * Npk; // make a regular grid of particles Npp x Npp
+            Np_t[grid][tid]   = NN;
             if (glb_v_id == v_target) nTargetP[grid] = NN;
             PetscCall(PetscMalloc4(NN, &xx_t[grid][tid], NN, &yy_t[grid][tid], NN, &wp_t[grid][tid], dim == 2 ? 1 : NN, &zz_t[grid][tid]));
             hp[0] = (hi[0] - lo[0]) / Npi;
@@ -480,40 +504,58 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
             for (int pj = 0, pp = 0; pj < Npj; pj++) {
               for (int pk = 0; pk < Npk; pk++) {
                 for (int pi = 0; pi < Npi; pi++, pp++) {
-                  xx_t[grid][tid][pp] = lo[0] + hp[0] / 2.0 + pi * hp[0];
-                  yy_t[grid][tid][pp] = lo[1] + hp[1] / 2.0 + pj * hp[1];
-                  if (dim == 3) zz_t[grid][tid][pp] = lo[2] + hp[2] / 2.0 + pk * hp[2];
-                  {
+                  if (use_uniform_particle_grid) {
+                    xx_t[grid][tid][pp] = lo[0] + hp[0] / 2.0 + pi * hp[0];
+                    yy_t[grid][tid][pp] = lo[1] + hp[1] / 2.0 + pj * hp[1];
+                    if (dim == 3) zz_t[grid][tid][pp] = lo[2] + hp[2] / 2.0 + pk * hp[2];
                     PetscReal x[] = {xx_t[grid][tid][pp], yy_t[grid][tid][pp], dim == 2 ? 0 : zz_t[grid][tid][pp]};
-                    maxwellian(dim, x, kT_m, vole, shift, &wp_t[grid][tid][pp]);
-                    // PetscCall(PetscInfo(pack,"%" PetscInt_FMT ") x = %14.7e, %14.7e, %14.7e, n = %14.7e, w = %14.7e\n", pp, x[0], x[1], dim==2 ? 0 : x[2], ctx->n[grid], wp_t[grid][tid][pp])); // temp
+                    maxwellian(dim, x, kT_m, vole, grid == 0 ? shift : -shift, &wp_t[grid][tid][pp]);
+                  } else {
+                    PetscReal u1, u2;
+                    do {
+                      PetscCall(PetscRandomGetValueReal(rand, &u1));
+                    } while (u1 == 0);
+                    PetscCall(PetscRandomGetValueReal(rand, &u2));
+                    //compute z0 and z1
+                    PetscReal mag       = sigma * PetscSqrtReal(-2.0 * PetscLogReal(u1));
+                    xx_t[grid][tid][pp] = mag * PetscCosReal(2.0 * PETSC_PI * u2); // + shift;
+                    yy_t[grid][tid][pp] = mag * PetscSinReal(2.0 * PETSC_PI * u2); //
+                    if (xx_t[grid][tid][pp] < lo[0]) xx_t[grid][tid][pp] = -xx_t[grid][tid][pp];
+                    if (dim == 3) zz_t[grid][tid][pp] = lo[2] + hp[2] / 2.0 + pk * hp[2];
+                    wp_t[grid][tid][pp] = ctx->n[grid] / NN * PetscSqrtReal(ctx->masses[ctx->species_offset[grid]] / ctx->masses[0]);
+                  }
+                  {
                     if (glb_v_id == v_target) {
+                      PetscReal x[] = {xx_t[grid][tid][pp], yy_t[grid][tid][pp], dim == 2 ? 0 : zz_t[grid][tid][pp]};
                       PetscReal v2 = 0, fact = dim == 2 ? 2.0 * PETSC_PI * x[0] : 1, w = fact * wp_t[grid][tid][pp] * ctx->n_0 * ctx->masses[ctx->species_offset[grid]];
-                      for (int i = 0; i < dim; ++i) v2 += PetscSqr(x[i]);
-                      moments_0[0] += w;                   // not thread safe
-                      moments_0[1] += w * ctx->v_0 * x[1]; // z-momentum
-                      moments_0[2] += w * ctx->v_0 * ctx->v_0 * v2;
+                      if (w > PETSC_REAL_MIN) {
+                        for (int i = 0; i < dim; ++i) v2 += PetscSqr(x[i]);
+                        moments_0[0] += w;                   // not thread safe
+                        moments_0[1] += w * ctx->v_0 * x[1]; // z-momentum
+                        moments_0[2] += w * ctx->v_0 * ctx->v_0 * v2;
+                      }
                     }
                   }
                 }
               }
             }
+            PetscCall(PetscRandomDestroy(&rand));
           }
-          // entropy
+          // entropy init, need global n
           if (glb_v_id == v_target) {
-            printCtx->N_inv = 1 / moments_0[0];
+            const PetscReal N_inv = 1 / moments_0[0];
             PetscCall(PetscInfo(pack, "Target %" PetscInt_FMT " with %" PetscInt_FMT " particels\n", glb_v_id, nTargetP[0]));
             for (PetscInt grid = 0; grid < ctx->num_grids; grid++) {
-              NN = nTargetP[grid];
+              const PetscInt NN = nTargetP[grid];
               for (int pp = 0; pp < NN; pp++) {
-                const PetscReal fact = dim == 2 ? 2.0 * PETSC_PI * xx_t[grid][tid][pp] : 1, w = fact * ctx->n_0 * ctx->masses[ctx->species_offset[grid]] * wp_t[grid][tid][pp], ww = w * printCtx->N_inv;
-                if (ww > PETSC_REAL_MIN) {
+                const PetscReal fact = dim == 2 ? 2.0 * PETSC_PI * xx_t[grid][tid][pp] : 1, w = fact * ctx->n_0 * ctx->masses[ctx->species_offset[grid]] * wp_t[grid][tid][pp], ww = w * N_inv;
+                if (w > PETSC_REAL_MIN) {
                   moments_0[3] -= ww * PetscLogReal(ww);
                   PetscCheck(ww < 1 - PETSC_MACHINE_EPSILON, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "ww (%g) > 1", (double)ww);
                 }
               }
-            } // diagnostics
-          }   // grid
+            } // grid
+          }   // target
         }     // active
       }       // threads
       /* Create particle swarm */
@@ -530,7 +572,7 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
             if (Nf != 1) ierr_t = (PetscErrorCode)9999;
             else {
               ierr_t = DMViewFromOptions(dm, NULL, "-dm_view");
-              ierr_t = PetscInfo(pack, "call createSwarm [%" PetscInt_FMT ".%" PetscInt_FMT "] local batch index %" PetscInt_FMT "\n", v_id, grid, LAND_PACK_IDX(v_id, grid));
+              ierr_t = PetscInfo(pack, "call createSwarm [%" PetscInt_FMT ".%" PetscInt_FMT "] local block index %" PetscInt_FMT "\n", v_id, grid, LAND_PACK_IDX(v_id, grid));
               ierr_t = createSwarm(dm, dim, &globSwarmArray[LAND_PACK_IDX(v_id, grid)]);
             }
             if (ierr_t) ierr = ierr_t;
@@ -547,7 +589,7 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
           for (PetscInt grid = 0; grid < ctx->num_grids; grid++) { // add same particels for all grids
             PetscErrorCode ierr_t;
             DM             sw = globSwarmArray[LAND_PACK_IDX(v_id, grid)];
-            ierr_t            = PetscInfo(pack, "makeSwarm %" PetscInt_FMT ".%" PetscInt_FMT ") for batch %" PetscInt_FMT "\n", global_vertex_id_0, grid, LAND_PACK_IDX(v_id, grid));
+            ierr_t            = PetscInfo(pack, "makeSwarm %" PetscInt_FMT ".%" PetscInt_FMT ") for block %" PetscInt_FMT "\n", v_id, grid, LAND_PACK_IDX(v_id, grid));
             ierr_t            = makeSwarm(sw, dim, Np_t[grid][tid], xx_t[grid][tid], yy_t[grid][tid], zz_t[grid][tid]);
             if (ierr_t) ierr = ierr_t;
           }
@@ -561,7 +603,7 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
             PetscErrorCode ierr_t;
             DM             dm = grid_dm[grid];
             DM             sw = globSwarmArray[LAND_PACK_IDX(v_id, grid)];
-            ierr_t            = PetscInfo(pack, "createMp %" PetscInt_FMT ".%" PetscInt_FMT ") for batch %" PetscInt_FMT "\n", global_vertex_id_0, grid, LAND_PACK_IDX(v_id, grid));
+            ierr_t            = PetscInfo(pack, "createMp %" PetscInt_FMT ".%" PetscInt_FMT ") for block %" PetscInt_FMT "\n", v_id, grid, LAND_PACK_IDX(v_id, grid));
             ierr_t            = createMp(dm, sw, &globMpArray[LAND_PACK_IDX(v_id, grid)]);
             if (ierr_t) ierr = ierr_t;
           }
@@ -578,8 +620,8 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
             DM             dm   = grid_dm[grid];
             DM             sw   = globSwarmArray[LAND_PACK_IDX(v_id, grid)];
             Vec            subX = globXArray[LAND_PACK_IDX(v_id, grid)], work = t_fhat[grid][tid];
-            ierr_t = PetscInfo(pack, "particlesToGrid %" PetscInt_FMT ".%" PetscInt_FMT ") for local batch %" PetscInt_FMT "\n", global_vertex_id_0, grid, LAND_PACK_IDX(v_id, grid));
-            ierr_t = particlesToGrid(dm, sw, Np_t[grid][tid], tid, dim, wp_t[grid][tid], subX, globMpArray[LAND_PACK_IDX(v_id, grid)]);
+            ierr_t = PetscInfo(pack, "particlesToGrid %" PetscInt_FMT ".%" PetscInt_FMT ") for block %" PetscInt_FMT "\n", v_id, grid, LAND_PACK_IDX(v_id, grid));
+            ierr_t = particlesToGrid(dm, sw, tid, dim, wp_t[grid][tid], subX, globMpArray[LAND_PACK_IDX(v_id, grid)]);
             if (ierr_t) ierr = ierr_t;
             // u = M^_1 f_w
             ierr_t = VecCopy(subX, work);
@@ -593,7 +635,6 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
       for (int tid = 0; tid < numthreads; tid++) {
         const PetscInt v_id = v_id_0 + tid, glb_v_id = global_vertex_id_0 + v_id;
         if (glb_v_id < num_vertices) {
-          PetscCall(PetscInfo(pack, "Free for global batch %" PetscInt_FMT " of %" PetscInt_FMT "\n", glb_v_id + 1, num_vertices));
           for (PetscInt grid = 0; grid < ctx->num_grids; grid++) { // add same particels for all grids
             PetscCall(PetscFree4(xx_t[grid][tid], yy_t[grid][tid], wp_t[grid][tid], zz_t[grid][tid]));
           }
@@ -602,6 +643,7 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
     }     // (fake) particle loop
     // standard view of initial conditions
     if (v_target >= global_vertex_id_0 && v_target < global_vertex_id_0 + ctx->batch_sz) {
+      DM sw = globSwarmArray[LAND_PACK_IDX(v_target % ctx->batch_sz, g_target)];
       PetscCall(DMSetOutputSequenceNumber(ctx->plex[g_target], 0, 0.0));
       PetscCall(VecViewFromOptions(globXArray[LAND_PACK_IDX(v_target % ctx->batch_sz, g_target)], NULL, "-ex30_vec_view"));
     }
@@ -613,27 +655,47 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
         PetscReal    *wp, *coords;
         DM            sw = globSwarmArray[LAND_PACK_IDX(v_id, grid)];
         Vec           work, subX = globXArray[LAND_PACK_IDX(v_id, grid)];
-        PetscInt      bs, NN     = nTargetP[grid];
+        PetscInt      bs, NN;
         // C-G moments
         PetscCall(VecDuplicate(subX, &work));
         PetscCall(gridToParticles(grid_dm[grid], sw, subX, work, globMpArray[LAND_PACK_IDX(v_id, grid)], g_Mass[grid]));
         PetscCall(VecDestroy(&work));
         // moments
         PetscCall(DMSwarmGetField(sw, "DMSwarmPIC_coor", &bs, &dtype, (void **)&coords));
-        PetscCall(DMSwarmGetField(sw, "w_q", &bs, &dtype, (void **)&wp)); // could get NN from sw - todo
+        PetscCall(DMSwarmGetLocalSize(sw, &NN));
+        PetscCall(DMSwarmGetField(sw, "w_q", &bs, &dtype, (void **)&wp));
         for (int pp = 0; pp < NN; pp++) {
-          PetscReal v2 = 0, fact = (dim == 2) ? 2.0 * PETSC_PI * coords[pp * dim + 0] : 1, w = fact * wp[pp] * ctx->n_0 * ctx->masses[ctx->species_offset[grid]], ww = w * printCtx->N_inv;
-          for (int i = 0; i < dim; ++i) v2 += PetscSqr(coords[pp * dim + i]);
-          moments_1a[0] += w;
-          moments_1a[1] += w * ctx->v_0 * coords[pp * dim + 1]; // z-momentum
-          moments_1a[2] += w * ctx->v_0 * ctx->v_0 * v2;
-          if (ww > PETSC_REAL_MIN) {
-            moments_1a[3] -= ww * PetscLogReal(ww);
-            PetscCheck(ww < 1 - PETSC_MACHINE_EPSILON, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "ww (%g) > 1", (double)ww);
+          PetscReal v2 = 0, fact = (dim == 2) ? 2.0 * PETSC_PI * coords[pp * dim + 0] : 1, w = fact * wp[pp] * ctx->n_0 * ctx->masses[ctx->species_offset[grid]];
+          if (w > PETSC_REAL_MIN) {
+            for (int i = 0; i < dim; ++i) v2 += PetscSqr(coords[pp * dim + i]);
+            moments_1a[0] += w;
+            moments_1a[1] += w * ctx->v_0 * coords[pp * dim + 1]; // z-momentum
+            moments_1a[2] += w * ctx->v_0 * ctx->v_0 * v2;
           }
         }
         PetscCall(DMSwarmRestoreField(sw, "DMSwarmPIC_coor", &bs, &dtype, (void **)&coords));
         PetscCall(DMSwarmRestoreField(sw, "w_q", &bs, &dtype, (void **)&wp));
+      }
+      // entropy
+      const PetscReal N_inv = 1 / moments_1a[0];
+      PetscCall(PetscInfo(pack, "Entropy batch %" PetscInt_FMT " of %" PetscInt_FMT ", n = %g\n", v_target, num_vertices, (double)(1 / N_inv)));
+      for (PetscInt grid = 0; grid < ctx->num_grids; grid++) {
+        PetscDataType dtype;
+        PetscReal    *wp, *coords;
+        DM            sw = globSwarmArray[LAND_PACK_IDX(v_id, grid)];
+        PetscInt      bs, NN;
+        PetscCall(DMSwarmGetLocalSize(sw, &NN));
+        PetscCall(DMSwarmGetField(sw, "w_q", &bs, &dtype, (void **)&wp));
+        PetscCall(DMSwarmGetField(sw, "DMSwarmPIC_coor", &bs, &dtype, (void **)&coords));
+        for (int pp = 0; pp < NN; pp++) {
+          PetscReal fact = (dim == 2) ? 2.0 * PETSC_PI * coords[pp * dim + 0] : 1, w = fact * wp[pp] * ctx->n_0 * ctx->masses[ctx->species_offset[grid]], ww = w * N_inv;
+          if (w > PETSC_REAL_MIN) {
+            moments_1a[3] -= ww * PetscLogReal(ww);
+            PetscCheck(ww < 1 - PETSC_MACHINE_EPSILON, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "ww (%g) > 1", (double)ww);
+          }
+        }
+        PetscCall(DMSwarmRestoreField(sw, "w_q", &bs, &dtype, (void **)&wp));
+        PetscCall(DMSwarmRestoreField(sw, "DMSwarmPIC_coor", &bs, &dtype, (void **)&coords));
       }
     }
     // restore vector
@@ -642,7 +704,7 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
     PetscCall(DMPlexLandauPrintNorms(X, 0));
     // advance
     PetscCall(TSSetSolution(ts, X));
-    PetscCall(PetscInfo(pack, "Advance vertex %" PetscInt_FMT " to %" PetscInt_FMT " (with padding)\n", global_vertex_id_0, global_vertex_id_0 + ctx->batch_sz));
+    PetscCall(PetscInfo(pack, "Advance vertex %" PetscInt_FMT " to %" PetscInt_FMT "\n", global_vertex_id_0, global_vertex_id_0 + ctx->batch_sz));
     PetscCall(TSSetPostStep(ts, PostStep));
     PetscCall(PostStep(ts));
     PetscCall(TSSolve(ts, X));
@@ -650,8 +712,18 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
     PetscCall(DMPlexLandauPrintNorms(X, 1));
     PetscCall(DMCompositeGetAccessArray(pack, X, nDMs, NULL, globXArray));
     if (v_target >= global_vertex_id_0 && v_target < global_vertex_id_0 + ctx->batch_sz) {
+      DM sw = globSwarmArray[LAND_PACK_IDX(v_target % ctx->batch_sz, g_target)];
       PetscCall(DMSetOutputSequenceNumber(ctx->plex[g_target], 1, dt_init));
       PetscCall(VecViewFromOptions(globXArray[LAND_PACK_IDX(v_target % ctx->batch_sz, g_target)], NULL, "-ex30_vec_view"));
+      /* Visualize particle field */
+      Vec f;
+      PetscCall(DMSetOutputSequenceNumber(sw, 0, 0.0));
+      PetscCall(DMViewFromOptions(grid_dm[g_target], NULL, "-weights_dm_view"));
+      PetscCall(DMViewFromOptions(sw, NULL, "-weights_sw_view"));
+      PetscCall(DMSwarmCreateGlobalVectorFromField(sw, "w_q", &f));
+      PetscCall(PetscObjectSetName((PetscObject)f, "weights"));
+      PetscCall(VecViewFromOptions(f, NULL, "-weights_vec_view"));
+      PetscCall(DMSwarmDestroyGlobalVectorFromField(sw, "w_q", &f));
     }
     // particles to grid, compute moments and entropy
     PetscCall(gridToParticles_private(grid_dm, globSwarmArray, dim, v_target, numthreads, num_vertices, global_vertex_id_0, globMpArray, g_Mass, t_fhat, moments_1b, globXArray, ctx));
@@ -701,15 +773,17 @@ int main(int argc, char **argv)
   TS         ts;
   Mat        J;
   LandauCtx *ctx;
-  PetscReal  shift = 0;
+  PetscReal  shift                     = 0;
+  PetscBool  use_uniform_particle_grid = PETSC_TRUE;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
   // process args
   PetscOptionsBegin(PETSC_COMM_SELF, "", "Collision Options", "DMPLEX");
-  PetscCall(PetscOptionsInt("-number_spatial_vertices", "Number of user spatial vertices to be batched for Landau", "ex30.c", num_vertices, &num_vertices, NULL));
   PetscCall(PetscOptionsInt("-dim", "Velocity space dimension", "ex30.c", dim, &dim, NULL));
+  PetscCall(PetscOptionsInt("-number_spatial_vertices", "Number of user spatial vertices to be batched for Landau", "ex30.c", num_vertices, &num_vertices, NULL));
   PetscCall(PetscOptionsInt("-number_particles_per_dimension", "Number of particles per grid, with slight modification per spatial vertex, in each dimension of base Cartesian grid", "ex30.c", Np, &Np, NULL));
+  PetscCall(PetscOptionsBool("-use_uniform_particle_grid", "Use uniform particle grid", "ex30.c", use_uniform_particle_grid, &use_uniform_particle_grid, NULL));
   PetscCall(PetscOptionsInt("-vertex_view_target", "Vertex to view with diagnostics", "ex30.c", v_target, &v_target, NULL));
   PetscCall(PetscOptionsReal("-e_shift", "Bim-Maxwellian shift", "ex30.c", shift, &shift, NULL));
   PetscCheck(v_target < num_vertices, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Batch to view %" PetscInt_FMT " should be < number of vertices %" PetscInt_FMT, v_target, num_vertices);
@@ -731,7 +805,7 @@ int main(int argc, char **argv)
   PetscCall(TSSetFromOptions(ts));
   PetscCall(PetscObjectSetName((PetscObject)X, "X"));
   // do particle advance
-  PetscCall(go(ts, X, num_vertices, Np, dim, v_target, gtarget, shift));
+  PetscCall(go(ts, X, num_vertices, Np, dim, v_target, gtarget, shift, use_uniform_particle_grid));
   PetscCall(MatZeroEntries(J)); // need to zero out so as to not reuse it in Landau's logic
   /* clean up */
   PetscCall(DMPlexLandauDestroyVelocitySpace(&pack));
@@ -788,7 +862,7 @@ int main(int argc, char **argv)
 
   testset:
     requires: !complex double defined(PETSC_USE_DMLANDAU_2D) !cuda
-    args: -dm_landau_domain_radius 6 -dm_refine 2 -dm_landau_num_species_grid 1 -dm_landau_thermal_temps 1 -petscspace_degree 3 -snes_converged_reason -ts_type beuler -ts_dt 1 -ts_max_steps 1 -ksp_type preonly -pc_type lu -snes_rtol 1e-12 -snes_stol 1e-12 -dm_landau_device_type cpu -number_particles_per_dimension 30 -e_shift 3 -ftop_ksp_rtol 1e-12 -ptof_ksp_rtol 1e-12 -dm_landau_batch_size 4 -number_spatial_vertices 4 -grid_view_target 0 -vertex_view_target 1
+    args: -dm_refine 2 -dm_landau_num_species_grid 1 -dm_landau_thermal_temps 1 -petscspace_degree 3 -snes_converged_reason -ts_type beuler -ts_dt .01 -ts_max_steps 1 -ksp_type preonly -pc_type lu -snes_rtol 1e-12 -snes_stol 1e-12 -dm_landau_device_type cpu -number_particles_per_dimension 30 -ftop_ksp_rtol 1e-12 -ptof_ksp_rtol 1e-12 -dm_landau_batch_size 4 -number_spatial_vertices 4 -grid_view_target 0 -vertex_view_target 1 -ftop_ksp_type lsqr -ftop_pc_type bjacobi -ftop_sub_pc_factor_shift_type nonzero -ftop_sub_pc_type lu -ptof_ksp_type cg -ptof_pc_type jacobi
     test:
       suffix: simple
       args: -ex30_dm_view
@@ -796,5 +870,9 @@ int main(int argc, char **argv)
       requires: hdf5
       suffix: simple_hdf5
       args: -ex30_dm_view hdf5:sol_e.h5 -ex30_vec_view hdf5:sol_e.h5::append
+    test:
+      requires: hdf5
+      suffix: normal
+      args: -ex30_dm_view -use_uniform_particle_grid false -number_particles_per_dimension 30
 
 TEST*/
