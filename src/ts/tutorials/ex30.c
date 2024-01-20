@@ -267,8 +267,8 @@ static void energy(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOf
   obj[0] = t0 + t1 + t2;
 }
 
-/* functionals to be integrated: ellipticity */
-static void ellipticity(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar obj[])
+/* functionals to be integrated: ellipticity_fail */
+static void ellipticity_fail(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar obj[])
 {
   const PetscReal r   = PetscRealPart(constants[R_ID]);
   const PetscReal C00 = PetscRealPart(u[uOff[C_FIELD_ID]] + r);
@@ -277,7 +277,7 @@ static void ellipticity(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscIn
 
   PetscReal eigs[2];
   QuadraticRoots(1, -(C00 + C11), C00 * C11 - PetscSqr(C01), eigs);
-  if (eigs[0] < -PETSC_SMALL || eigs[1] < -PETSC_SMALL || PetscIsInfOrNanReal(eigs[0])) obj[0] = 1.0;
+  if (eigs[0] < 0 || eigs[1] < 0) obj[0] = -PetscMin(eigs[0], eigs[1]);
   else obj[0] = 0.0;
 }
 
@@ -366,6 +366,7 @@ typedef struct {
   char      save_filename[PETSC_MAX_PATH_LEN];
   PetscInt  save_every;
   PetscBool test_restart;
+  PetscBool ellipticity;
 } AppCtx;
 
 /* process command line options */
@@ -388,6 +389,7 @@ static PetscErrorCode ProcessOptions(AppCtx *options)
   options->save         = PETSC_FALSE;
   options->save_every   = -1;
   options->test_restart = PETSC_FALSE;
+  options->ellipticity  = PETSC_FALSE;
 
   PetscOptionsBegin(PETSC_COMM_WORLD, "", __FILE__, "DMPLEX");
   PetscCall(PetscOptionsReal("-alpha", "alpha", __FILE__, options->alpha, &options->alpha, NULL));
@@ -405,6 +407,7 @@ static PetscErrorCode ProcessOptions(AppCtx *options)
     PetscCall(PetscOptionsString("-save", "filename with data to be saved for restarting", __FILE__, options->save_filename, options->save_filename, PETSC_MAX_PATH_LEN, &options->save));
     if (options->save) PetscCall(PetscOptionsInt("-save_every", "save every n timestep (-1 saves only the last)", __FILE__, options->save_every, &options->save_every, NULL));
   }
+  PetscCall(PetscOptionsBool("-monitor_ellipticity", "Dump locations of ellipticity violation", __FILE__, options->ellipticity, &options->ellipticity, NULL));
   PetscOptionsEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -842,9 +845,13 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, DM *dm, AppCtx *ctx)
     PetscInt  refine = 0;
     PetscBool isHierarchy;
     DM       *dms;
+    char      typeName[256];
+    PetscBool flg;
 
     PetscCall(LoadFromFile(comm, ctx->load_filename, dm));
     PetscOptionsBegin(comm, "", "Additional mesh options", "DMPLEX");
+    PetscCall(PetscOptionsFList("-dm_mat_type", "Matrix type used for created matrices", "DMSetMatType", MatList, MATAIJ, typeName, sizeof(typeName), &flg));
+    if (flg) PetscCall(DMSetMatType(*dm, typeName));
     PetscCall(PetscOptionsBoundedInt("-dm_refine", "The number of uniform refinements", "DMCreate", refine, &refine, NULL, 0));
     PetscCall(PetscOptionsBoundedInt("-dm_refine_hierarchy", "The number of uniform refinements", "DMCreate", refine, &refine, &isHierarchy, 0));
     PetscOptionsEnd();
@@ -1030,13 +1037,14 @@ static PetscErrorCode SetInitialConditionsAndTolerances(TS ts, AppCtx *ctx)
 }
 
 /* Monitor relevant functionals */
-static PetscErrorCode Monitor(TS ts, PetscInt steps, PetscReal time, Vec u, void *ctx)
+static PetscErrorCode Monitor(TS ts, PetscInt steps, PetscReal time, Vec u, void *vctx)
 {
   PetscScalar vals[2 * NUM_FIELDS];
   DM          dm;
   PetscDS     ds;
   SNES        snes;
   PetscInt    nits, lits;
+  AppCtx     *ctx = (AppCtx *)vctx;
 
   PetscFunctionBeginUser;
   PetscCall(TSGetDM(ts, &dm));
@@ -1047,9 +1055,22 @@ static PetscErrorCode Monitor(TS ts, PetscInt steps, PetscReal time, Vec u, void
   PetscCall(DMPlexComputeIntegralFEM(dm, u, vals, NULL));
   PetscCall(PetscDSSetObjective(ds, P_FIELD_ID, NULL));
 
-  /* monitor ellipticity */
-  PetscCall(PetscDSSetObjective(ds, C_FIELD_ID, ellipticity));
+  /* monitor ellipticity_fail */
+  PetscCall(PetscDSSetObjective(ds, C_FIELD_ID, ellipticity_fail));
   PetscCall(DMPlexComputeIntegralFEM(dm, u, vals + NUM_FIELDS, NULL));
+  //if (PetscRealPart(vals[NUM_FIELDS + C_FIELD_ID] > 0) && ctx->ellipticity) {
+  if (ctx->ellipticity) {
+    void (*funcs[NUM_FIELDS])(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f[]);
+    Vec ellVec;
+
+    funcs[P_FIELD_ID] = ellipticity_fail;
+    funcs[C_FIELD_ID] = NULL;
+
+    PetscCall(DMGetGlobalVector(dm, &ellVec));
+    PetscCall(DMProjectField(dm, 0, u, funcs, INSERT_VALUES, ellVec));
+    PetscCall(TSMonitorSolutionVTK(ts, steps, time, ellVec, (void *)"ellipticity_fail-\%03d.vtu"));
+    PetscCall(DMRestoreGlobalVector(dm, &ellVec));
+  }
   PetscCall(PetscDSSetObjective(ds, C_FIELD_ID, energy));
 
   /* monitor linear and nonlinear iterations */
@@ -1187,7 +1208,7 @@ static PetscErrorCode Run(MPI_Comm comm, AppCtx *ctx)
   if (ctx->test_restart) PetscCall(TSSetMaxSteps(ts, 1));
   PetscCall(TSSetMaxTime(ts, 10.0));
   PetscCall(TSSetExactFinalTime(ts, TS_EXACTFINALTIME_STEPOVER));
-  if (!ctx->test_restart) PetscCall(TSMonitorSet(ts, Monitor, NULL, NULL));
+  if (!ctx->test_restart) PetscCall(TSMonitorSet(ts, Monitor, ctx, NULL));
   PetscCall(TSMonitorSet(ts, MonitorSave, ctx, NULL));
   PetscCall(TSSetPostStage(ts, PostStage));
   PetscCall(TSSetMaxSNESFailures(ts, -1));
