@@ -167,6 +167,7 @@ struct _p_TS {
   TSEvent     event;
 
   /* ---------------- Resize ---------------------*/
+  PetscBool       resizerollback;
   PetscObjectList resizetransferobjs;
 
   /* ---------------- User (or PETSc) Provided stuff ---------------------*/
