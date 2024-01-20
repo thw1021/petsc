@@ -393,12 +393,6 @@ static PetscErrorCode DMForestDestroy_pforest(DM dm)
   if (pforest->forest) PetscCallP4est(p4est_destroy, (pforest->forest));
   pforest->forest = NULL;
   PetscCall(DMFTopologyDestroy_pforest(&pforest->topo));
-  PetscCall(PetscObjectComposeFunction((PetscObject)dm, PetscStringize(DMConvert_plex_pforest) "_C", NULL));
-  PetscCall(PetscObjectComposeFunction((PetscObject)dm, PetscStringize(DMConvert_pforest_plex) "_C", NULL));
-  PetscCall(PetscObjectComposeFunction((PetscObject)dm, "DMSetUpGLVisViewer_C", NULL));
-  PetscCall(PetscObjectComposeFunction((PetscObject)dm, "DMCreateNeumannOverlap_C", NULL));
-  PetscCall(PetscObjectComposeFunction((PetscObject)dm, "DMPlexGetOverlap_C", NULL));
-  PetscCall(PetscObjectComposeFunction((PetscObject)dm, "MatComputeNeumannOverlap_C", NULL));
   PetscCall(PetscFree(pforest->ghostName));
   PetscCall(DMDestroy(&pforest->plex));
   PetscCall(PetscSFDestroy(&pforest->pointAdaptToSelfSF));
@@ -518,6 +512,9 @@ static PetscErrorCode DMPforestComputeLocalCellTransferSF_loop(p4est_t *p4estFro
   PetscInt       toFineLeaves = 0, fromFineLeaves = 0;
 
   PetscFunctionBegin;
+  /* -Wmaybe-uninitialized */
+  *toFineLeavesCount   = 0;
+  *fromFineLeavesCount = 0;
   for (t = flt; t <= llt; t++) { /* count roots and leaves */
     p4est_tree_t     *treeFrom  = &(((p4est_tree_t *)p4estFrom->trees->array)[t]);
     p4est_tree_t     *treeTo    = &(((p4est_tree_t *)p4estTo->trees->array)[t]);

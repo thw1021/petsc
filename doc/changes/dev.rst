@@ -46,6 +46,7 @@ Changes: Development
 - Add ``-vec_mdot_use_gemv`` to let ``VecMDot()``, ``VecMTDot()``  use BLAS2 ``gemv()`` instead of custom unrolled kernel. Default is on
 - Add ``-vec_maxpy_use_gemv`` to let ``VecMAXPY()`` use BLAS2 ``gemv()`` instead of custom unrolled kernel. Default is off
 - ``VecScale()`` is now a logically collective operation
+- Add ``VecISShift()`` to shift a part of the vector
 
 .. rubric:: PetscSection:
 
@@ -87,6 +88,7 @@ Changes: Development
 - Rename ``TSSetPostEventIntervalStep()`` to ``TSSetPostEventSecondStep()``, controlling the second step after event
 - Rename option ``-ts_event_post_eventinterval_step`` to ``-ts_event_post_event_second_step``
 - Change the (event) indicator functions type from ``PetscScalar[]`` to ``PetscReal[]`` in the user ``indicator()`` callback set by ``TSSetEventHandler()``
+- Add boolean flag to ``TSSetResize()`` to control when to resize
 
 .. rubric:: TAO:
 
@@ -104,6 +106,7 @@ Changes: Development
 - Change protototype of ``DMPlexSetSNESLocalFEM()``. Now it accepts a single context and a Boolean indicating to use the objective function callback
 - Replace ``DMProjectCoordinates()`` with ``DMSetCoordinateDisc()``
 - Add argument to ``DMPlexCreateCoordinateSpace()``
+- Add boolean argument to ``DMPlexPartitionLabelCreateSF()`` to sort ranks
 
 .. rubric:: FE/FV:
 
