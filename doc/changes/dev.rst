@@ -92,6 +92,7 @@ Changes: Development
 - Rename ``TSSetPostEventIntervalStep()`` to ``TSSetPostEventSecondStep()``, controlling the second step after event
 - Rename option ``-ts_event_post_eventinterval_step`` to ``-ts_event_post_event_second_step``
 - Change the (event) indicator functions type from ``PetscScalar[]`` to ``PetscReal[]`` in the user ``indicator()`` callback set by ``TSSetEventHandler()``
+- Add boolean flag to ``TSSetResize()`` to control when to resize
 
 .. rubric:: TAO:
 
