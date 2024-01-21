@@ -452,7 +452,11 @@ PetscErrorCode DMPlexCreateSectionPermutation_Internal(DM dm, IS *permutation, P
   for (PetscInt p = pStart; p < pEnd; ++p) {
     const PetscInt *supp, *cone;
     PetscInt        suppSize;
+    DMPolytopeType  ct;
 
+    PetscCall(DMPlexGetCellType(dm, p, &ct));
+    // Do not order tensor cells until they appear below
+    if (ct == DM_POLYTOPE_POINT_PRISM_TENSOR || ct == DM_POLYTOPE_SEG_PRISM_TENSOR || ct == DM_POLYTOPE_TRI_PRISM_TENSOR || ct == DM_POLYTOPE_QUAD_PRISM_TENSOR) continue;
     if (PetscBTLookupSet(bt, p)) continue;
     PetscCall(PetscBTSet(blst, p));
     perm[i++] = p;
@@ -460,11 +464,11 @@ PetscErrorCode DMPlexCreateSectionPermutation_Internal(DM dm, IS *permutation, P
     PetscCall(DMPlexGetSupport(dm, p, &supp));
     PetscCall(DMPlexGetSupportSize(dm, p, &suppSize));
     for (PetscInt s = 0; s < suppSize; ++s) {
-      DMPolytopeType ct;
+      DMPolytopeType sct;
       PetscInt       q, qq;
 
-      PetscCall(DMPlexGetCellType(dm, supp[s], &ct));
-      switch (ct) {
+      PetscCall(DMPlexGetCellType(dm, supp[s], &sct));
+      switch (sct) {
       case DM_POLYTOPE_POINT_PRISM_TENSOR:
       case DM_POLYTOPE_SEG_PRISM_TENSOR:
       case DM_POLYTOPE_TRI_PRISM_TENSOR:
