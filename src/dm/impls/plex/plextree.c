@@ -2656,6 +2656,9 @@ PetscErrorCode DMPlexComputeInterpolatorTree(DM coarse, DM fine, PetscSF coarseT
     PetscCall(PetscFree2(dnnz, onnz));
 
     PetscCall(DMPlexGetReferenceTree(fine, &refTree));
+    PetscCall(DMCopyDisc(fine, refTree));
+    PetscCall(DMSetLocalSection(refTree, NULL));
+    PetscCall(DMSetDefaultConstraints(refTree, NULL, NULL, NULL));
     PetscCall(DMPlexReferenceTreeGetChildrenMatrices(refTree, &refPointFieldMats, &refPointFieldN));
     PetscCall(DMGetDefaultConstraints(refTree, &refConSec, NULL, NULL));
     PetscCall(DMPlexGetAnchors(refTree, &refAnSec, NULL));
@@ -4058,7 +4061,6 @@ static PetscErrorCode DMPlexTransferVecTree_Inject(DM fine, Vec vecFine, DM coar
   PetscScalar ***childrenMats = NULL; /* gcc -O gives 'may be used uninitialized' warning'. Initializing to suppress this warning */
 
   PetscFunctionBegin;
-
   /* get the templates for the fine-to-coarse injection from the reference tree */
   PetscCall(VecSetOption(vecFine, VEC_IGNORE_NEGATIVE_INDICES, PETSC_TRUE));
   PetscCall(VecSetOption(vecCoarse, VEC_IGNORE_NEGATIVE_INDICES, PETSC_TRUE));
