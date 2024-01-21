@@ -120,6 +120,7 @@ native    MatFactorType
 native    MatFactorError
 native    MatFactorShiftType
 native    MatProductType
+native    MatProductAlgorithm
 native    MatFactorSchurStatus
 native    MatSORType
 native    MatInfoType
