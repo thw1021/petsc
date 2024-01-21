@@ -1154,7 +1154,7 @@ static PetscErrorCode MatNestGetSubMats_Nest(Mat A, PetscInt *M, PetscInt *N, Ma
   Output Parameters:
 + M   - number of rows in the nest matrix
 . N   - number of cols in the nest matrix
-- mat - 2d array of matrices
+- mat - array of matrices
 
   Level: developer
 
@@ -1165,6 +1165,8 @@ static PetscErrorCode MatNestGetSubMats_Nest(Mat A, PetscInt *M, PetscInt *N, Ma
   This routine has a calling sequence
 $   call MatNestGetSubMats(A, M, N, mat, ierr)
   where the space allocated for the optional argument `mat` is assumed large enough (if provided).
+
+  Matrices in array `mat` are returned in row-major order.
 
 .seealso: [](ch_matrices), `Mat`, `MATNEST`, `MatNestGetSize()`, `MatNestGetSubMat()`, `MatNestGetLocalISs()`, `MatCreateNest()`,
           `MatNestSetSubMats()`, `MatNestGetISs()`, `MatNestSetSubMat()`
@@ -1430,6 +1432,9 @@ static PetscErrorCode MatNestSetSubMats_Nest(Mat A, PetscInt nr, const IS is_row
 
   Note:
   This always resets any submatrix information previously set
+
+  Fortran Note:
+  Matrices in array `a` must be given in row-major order.
 
 .seealso: [](ch_matrices), `Mat`, `MATNEST`, `MatCreateNest()`, `MatNestSetSubMat()`, `MatNestGetSubMat()`, `MatNestGetSubMats()`
 @*/
@@ -1715,6 +1720,9 @@ static PetscErrorCode MatSetUp_NestIS_Private(Mat A, PetscInt nr, const IS is_ro
 
   Output Parameter:
 . B - new matrix
+
+  Fortran Note:
+  Matrices in array `mat` must be given in row-major order.
 
   Level: advanced
 
