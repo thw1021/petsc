@@ -370,24 +370,24 @@ struct _p_TSAdapt {
 typedef struct _p_DMTS  *DMTS;
 typedef struct _DMTSOps *DMTSOps;
 struct _DMTSOps {
-  TSRHSFunction rhsfunction;
-  TSRHSJacobian rhsjacobian;
+  TSRHSFunction_Fn *rhsfunction;
+  TSRHSJacobian_Fn *rhsjacobian;
 
-  TSIFunction ifunction;
+  TSIFunction_Fn *ifunction;
   PetscErrorCode (*ifunctionview)(void *, PetscViewer);
   PetscErrorCode (*ifunctionload)(void **, PetscViewer);
 
-  TSIJacobian ijacobian;
+  TSIJacobian_Fn *ijacobian;
   PetscErrorCode (*ijacobianview)(void *, PetscViewer);
   PetscErrorCode (*ijacobianload)(void **, PetscViewer);
 
-  TSI2Function i2function;
-  TSI2Jacobian i2jacobian;
+  TSI2Function_Fn *i2function;
+  TSI2Jacobian_Fn *i2jacobian;
 
-  TSTransientVariable transientvar;
+  TSTransientVariable_Fn *transientvar;
 
-  TSSolutionFunction solution;
-  TSForcingFunction  forcing;
+  TSSolution_Fn *solution;
+  TSForcing_Fn  *forcing;
 
   PetscErrorCode (*destroy)(DMTS);
   PetscErrorCode (*duplicate)(DMTS, DMTS);
@@ -536,8 +536,8 @@ struct _n_TSMonitorEnvelopeCtx {
 */
 static inline PetscErrorCode TSCheckImplicitTerm(TS ts)
 {
-  TSIFunction ifunction;
-  DM          dm;
+  TSIFunction_Fn *ifunction;
+  DM              dm;
 
   PetscFunctionBegin;
   PetscCall(TSGetDM(ts, &dm));
