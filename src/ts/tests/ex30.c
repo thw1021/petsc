@@ -37,6 +37,7 @@ typedef struct {
   Mat       *globMpArray;
   Vec       *globXArray;
   PetscBool  print;
+  PetscBool  print_entropy;
 } PrintCtx;
 
 PetscErrorCode MatMultMtM_SeqAIJ(Mat MtM, Vec xx, Vec yy)
@@ -308,15 +309,16 @@ static void maxwellian(PetscInt dim, const PetscReal x[], PetscReal kt_m, PetscR
   PetscInt  i;
   PetscReal v2 = 0, theta = 2.0 * kt_m; /* theta = 2kT/mc^2 */
 
-  /* compute the exponents, v^2 */
-  for (i = 0; i < dim; ++i) v2 += x[i] * x[i];
-  /* evaluate the Maxwellian */
-  u[0] = n * PetscPowReal(PETSC_PI * theta, -1.5) * (PetscExpReal(-v2 / theta));
   if (shift != 0.) {
     v2 = 0;
     for (i = 0; i < dim - 1; ++i) v2 += x[i] * x[i];
     v2 += (x[dim - 1] - shift) * (x[dim - 1] - shift);
     /* evaluate the shifted Maxwellian */
+    u[0] += n * PetscPowReal(PETSC_PI * theta, -1.5) * (PetscExpReal(-v2 / theta));
+  } else {
+    /* compute the exponents, v^2 */
+    for (i = 0; i < dim; ++i) v2 += x[i] * x[i];
+    /* evaluate the Maxwellian */
     u[0] += n * PetscPowReal(PETSC_PI * theta, -1.5) * (PetscExpReal(-v2 / theta));
   }
 }
@@ -333,7 +335,7 @@ static PetscErrorCode PostStep(TS ts)
 
   PetscFunctionBeginUser;
   PetscCall(TSGetApplicationContext(ts, &printCtx));
-  if (!printCtx->print) PetscFunctionReturn(PETSC_SUCCESS);
+  if (!printCtx->print || !printCtx->print_entropy) PetscFunctionReturn(PETSC_SUCCESS);
 
   for (int i = 0; i < 4; i++) moments[i] = 0;
   ctx = printCtx->ctx;
@@ -436,8 +438,15 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
   printCtx->globMpArray    = globMpArray;
   printCtx->g_Mass         = g_Mass;
   printCtx->globXArray     = globXArray;
+  printCtx->print_entropy = PETSC_FALSE;
+  PetscOptionsBegin(PETSC_COMM_SELF, "", "Print Options Options", "DMPLEX");
+  PetscCall(PetscOptionsBool("-print_entropy", "Print entropy and moments at each time step", "ex30.c", printCtx->print_entropy, &printCtx->print_entropy, NULL));
+  PetscOptionsEnd();
   // view
   PetscCall(DMViewFromOptions(ctx->plex[g_target], NULL, "-ex30_dm_view"));
+  if (ctx->num_grids > g_target + 1) {
+    PetscCall(DMViewFromOptions(ctx->plex[g_target+1], NULL, "-ex30_dm_view2"));
+  }
   // create mesh mass matrices
   PetscCall(VecZeroEntries(X));
   PetscCall(DMCompositeGetAccessArray(pack, X, nDMs, NULL, globXArray)); // just to duplicate
@@ -489,7 +498,7 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
             PetscReal       lo[3] = {-ctx->radius[grid], -ctx->radius[grid], -ctx->radius[grid]}, hi[3] = {ctx->radius[grid], ctx->radius[grid], ctx->radius[grid]}, hp[3], vole; // would be nice to get box from DM
             PetscInt        Npi = Npp0, Npj = 2 * Npp0, Npk = 1;
             PetscRandom     rand;
-            PetscReal       sigma = ctx->thermal_speed[grid] / ctx->thermal_speed[0];
+            PetscReal       sigma = ctx->thermal_speed[grid] / ctx->thermal_speed[0], p2_shift = grid == 0 ? shift : -shift;
             PetscCall(PetscRandomCreate(PETSC_COMM_SELF, &rand));
             PetscCall(PetscRandomSetInterval(rand, 0., 1.));
             PetscCall(PetscRandomSetFromOptions(rand));
@@ -510,25 +519,40 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
             for (int pj = 0, pp = 0; pj < Npj; pj++) {
               for (int pk = 0; pk < Npk; pk++) {
                 for (int pi = 0; pi < Npi; pi++, pp++) {
+                  PetscReal p_shift = p2_shift;
+                  wp_t[grid][tid][pp] = 0;
                   if (use_uniform_particle_grid) {
                     xx_t[grid][tid][pp] = lo[0] + hp[0] / 2.0 + pi * hp[0];
                     yy_t[grid][tid][pp] = lo[1] + hp[1] / 2.0 + pj * hp[1];
                     if (dim == 3) zz_t[grid][tid][pp] = lo[2] + hp[2] / 2.0 + pk * hp[2];
                     PetscReal x[] = {xx_t[grid][tid][pp], yy_t[grid][tid][pp], dim == 2 ? 0 : zz_t[grid][tid][pp]};
-                    maxwellian(dim, x, kT_m, vole, grid == 0 ? shift : -shift, &wp_t[grid][tid][pp]);
+                    p_shift *= ctx->thermal_speed[grid] / ctx->v_0;
+                    maxwellian(dim, x, kT_m, vole, p_shift, &wp_t[grid][tid][pp]);
+                    if (ctx->num_grids == 1 && shift != 0) { // bi-maxwellian, electron plasma
+                      maxwellian(dim, x, kT_m, vole, -p_shift, &wp_t[grid][tid][pp]);
+                    }
+                    wp_t[grid][tid][pp] *= 5; // 5 fix to scale to Gaussian version
                   } else {
                     PetscReal u1, u2;
                     do {
-                      PetscCall(PetscRandomGetValueReal(rand, &u1));
-                    } while (u1 == 0);
-                    PetscCall(PetscRandomGetValueReal(rand, &u2));
-                    //compute z0 and z1
-                    PetscReal mag       = sigma * PetscSqrtReal(-2.0 * PetscLogReal(u1));
-                    xx_t[grid][tid][pp] = mag * PetscCosReal(2.0 * PETSC_PI * u2); // + shift;
-                    yy_t[grid][tid][pp] = mag * PetscSinReal(2.0 * PETSC_PI * u2); //
-                    if (dim == 2 && xx_t[grid][tid][pp] < lo[0]) xx_t[grid][tid][pp] = -xx_t[grid][tid][pp];
-                    if (dim == 3) zz_t[grid][tid][pp] = lo[2] + hp[2] / 2.0 + pk * hp[2];
-                    wp_t[grid][tid][pp] = ctx->n[grid] / NN * PetscSqrtReal(ctx->masses[ctx->species_offset[grid]] / ctx->masses[0]);
+                      do {
+                        PetscCall(PetscRandomGetValueReal(rand, &u1));
+                      } while (u1 == 0);
+                      PetscCall(PetscRandomGetValueReal(rand, &u2));
+                      //compute z0 and z1
+                      PetscReal mag       = sigma * PetscSqrtReal(-2.0 * PetscLogReal(u1));
+                      xx_t[grid][tid][pp] = mag * PetscCosReal(2.0 * PETSC_PI * u2);
+                      yy_t[grid][tid][pp] = mag * PetscSinReal(2.0 * PETSC_PI * u2);
+                      if (dim == 2 && xx_t[grid][tid][pp] < lo[0]) xx_t[grid][tid][pp] = -xx_t[grid][tid][pp];
+                      if (dim == 3) zz_t[grid][tid][pp] = lo[2] + hp[2] / 2.0 + pk * hp[2];
+                      if (ctx->num_grids == 1 && pp%2 == 0) p_shift = 0; // one species, split bi-max
+                      p_shift *= ctx->thermal_speed[grid] / ctx->v_0;
+                      if (dim == 3) zz_t[grid][tid][pp] += p_shift;
+                      else yy_t[grid][tid][pp] += p_shift;
+                      wp_t[grid][tid][pp] += ctx->n[grid] / NN * PetscSqrtReal(ctx->masses[ctx->species_offset[grid]] / ctx->masses[0]);
+                      if (p_shift <= 0) break;    // add bi-max for electron plasma only
+                      p_shift = -p_shift;
+                    } while(ctx->num_grids == 1); // add bi-max for electron plasma only
                   }
                   {
                     if (glb_v_id == v_target) {
@@ -651,6 +675,10 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
     if (v_target >= global_vertex_id_0 && v_target < global_vertex_id_0 + ctx->batch_sz) {
       PetscCall(DMSetOutputSequenceNumber(ctx->plex[g_target], 0, 0.0));
       PetscCall(VecViewFromOptions(globXArray[LAND_PACK_IDX(v_target % ctx->batch_sz, g_target)], NULL, "-ex30_vec_view"));
+      if (ctx->num_grids > g_target + 1) {
+        PetscCall(DMSetOutputSequenceNumber(ctx->plex[g_target+1], 0, 0.0));
+        PetscCall(VecViewFromOptions(globXArray[LAND_PACK_IDX(v_target % ctx->batch_sz, g_target + 1)], NULL, "-ex30_vec_view2"));
+      }
     }
     // coarse graining moments
     if (v_target >= global_vertex_id_0 && v_target < global_vertex_id_0 + ctx->batch_sz) {
@@ -720,6 +748,10 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
       DM sw = globSwarmArray[LAND_PACK_IDX(v_target % ctx->batch_sz, g_target)];
       PetscCall(DMSetOutputSequenceNumber(ctx->plex[g_target], 1, dt_init));
       PetscCall(VecViewFromOptions(globXArray[LAND_PACK_IDX(v_target % ctx->batch_sz, g_target)], NULL, "-ex30_vec_view"));
+      if (ctx->num_grids > g_target + 1) {
+        PetscCall(DMSetOutputSequenceNumber(ctx->plex[g_target+1], 1, 0.0));
+        PetscCall(VecViewFromOptions(globXArray[LAND_PACK_IDX(v_target % ctx->batch_sz, g_target + 1)], NULL, "-ex30_vec_view2"));
+      }
       /* Visualize particle field */
       Vec f;
       PetscCall(DMSetOutputSequenceNumber(sw, 0, 0.0));
