@@ -697,20 +697,20 @@ int main(int argc, char **argv)
   default:
     SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_USER, "Unknown MMS type %" PetscInt_FMT, MMS);
   }
-  PetscCall(DMDASNESSetFunctionLocal(da, INSERT_VALUES, (DMDASNESFunction)FormFunctionLocal, &user));
+  PetscCall(DMDASNESSetFunctionLocal(da, INSERT_VALUES, (DMDASNESFunction_Fn *)FormFunctionLocal, &user));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-fd", &flg, NULL));
-  if (!flg) PetscCall(DMDASNESSetJacobianLocal(da, (DMDASNESJacobian)FormJacobianLocal, &user));
+  if (!flg) PetscCall(DMDASNESSetJacobianLocal(da, (DMDASNESJacobian_Fn *)FormJacobianLocal, &user));
 
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-obj", &flg, NULL));
-  if (flg) PetscCall(DMDASNESSetObjectiveLocal(da, (DMDASNESObjective)FormObjectiveLocal, &user));
+  if (flg) PetscCall(DMDASNESSetObjectiveLocal(da, ((DMDASNESObjective_Fn *)FormObjectiveLocal, &user));
 
   if (PetscDefined(HAVE_MATLAB)) {
-    PetscBool matlab_function = PETSC_FALSE;
-    PetscCall(PetscOptionsGetBool(NULL, NULL, "-matlab_function", &matlab_function, 0));
-    if (matlab_function) {
-      PetscCall(VecDuplicate(x, &r));
-      PetscCall(SNESSetFunction(snes, r, FormFunctionMatlab, &user));
-    }
+      PetscBool matlab_function = PETSC_FALSE;
+      PetscCall(PetscOptionsGetBool(NULL, NULL, "-matlab_function", &matlab_function, 0));
+      if (matlab_function) {
+        PetscCall(VecDuplicate(x, &r));
+        PetscCall(SNESSetFunction(snes, r, FormFunctionMatlab, &user));
+      }
   }
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -737,23 +737,23 @@ int main(int argc, char **argv)
      If using MMS, check the l_2 error
    - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
   if (setMMS) {
-    Vec       e;
-    PetscReal errorl2, errorinf;
-    PetscInt  N;
+      Vec       e;
+      PetscReal errorl2, errorinf;
+      PetscInt  N;
 
-    PetscCall(VecDuplicate(x, &e));
-    PetscCall(PetscObjectViewFromOptions((PetscObject)x, NULL, "-sol_view"));
-    PetscCall(FormExactSolution(da, &user, e));
-    PetscCall(PetscObjectViewFromOptions((PetscObject)e, NULL, "-exact_view"));
-    PetscCall(VecAXPY(e, -1.0, x));
-    PetscCall(PetscObjectViewFromOptions((PetscObject)e, NULL, "-error_view"));
-    PetscCall(VecNorm(e, NORM_2, &errorl2));
-    PetscCall(VecNorm(e, NORM_INFINITY, &errorinf));
-    PetscCall(VecGetSize(e, &N));
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "N: %" PetscInt_FMT " error L2 %g inf %g\n", N, (double)(errorl2 / PetscSqrtReal((PetscReal)N)), (double)errorinf));
-    PetscCall(VecDestroy(&e));
-    PetscCall(PetscLogEventSetDof(SNES_Solve, 0, N));
-    PetscCall(PetscLogEventSetError(SNES_Solve, 0, errorl2 / PetscSqrtReal(N)));
+      PetscCall(VecDuplicate(x, &e));
+      PetscCall(PetscObjectViewFromOptions((PetscObject)x, NULL, "-sol_view"));
+      PetscCall(FormExactSolution(da, &user, e));
+      PetscCall(PetscObjectViewFromOptions((PetscObject)e, NULL, "-exact_view"));
+      PetscCall(VecAXPY(e, -1.0, x));
+      PetscCall(PetscObjectViewFromOptions((PetscObject)e, NULL, "-error_view"));
+      PetscCall(VecNorm(e, NORM_2, &errorl2));
+      PetscCall(VecNorm(e, NORM_INFINITY, &errorinf));
+      PetscCall(VecGetSize(e, &N));
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "N: %" PetscInt_FMT " error L2 %g inf %g\n", N, (double)(errorl2 / PetscSqrtReal((PetscReal)N)), (double)errorinf));
+      PetscCall(VecDestroy(&e));
+      PetscCall(PetscLogEventSetDof(SNES_Solve, 0, N));
+      PetscCall(PetscLogEventSetError(SNES_Solve, 0, errorl2 / PetscSqrtReal(N)));
   }
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

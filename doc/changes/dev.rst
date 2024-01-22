@@ -19,6 +19,8 @@ Changes: Development
 .. rubric:: Sys:
 
 - Add ``PetscBench`` an object class for managing benchmarks in PETSc
+- Deprecate ``PetscVoidFunction``, ``PetscVoidStarFunction``, and ``PetscErrorCodeFunction`` typedefs in favor of
+  ``PetscVoid_Fn`` and ``PetscErrorCode_Fn``
 
 .. rubric:: Event Logging:
 
@@ -78,8 +80,13 @@ Changes: Development
 - Add support for Quasi-Newton models in ``SNESNEWTONTR`` via ``SNESNewtonTRSetQNType``
 - Add support for trust region norm customization in ``SNESNEWTONTR`` via ``SNESNewtonTRSetNormType``
 - Remove default of ``KSPPREONLY`` and ``PCLU`` for ``SNESNASM`` subdomain solves: for ``SNESASPIN`` use ``-npc_sub_ksp_type preonly -npc_sub_pc_type lu``
+- Add function typedefs ``SNESInitialGuess_Fn``, ``SNESFunction_Fn``, ``SNESObjective_Fn``, ``SNESJacobian_Fn``, and ``SNESNGS_Fn``
+- Deprecate ``DMDASNESFunction``, ``DMDASNESJacobian``, ``DMDASNESObjective``, ``DMDASNESFunctionVec``, ``DMDASNESJacobianVec``, and ``DMDASNESObjectiveVec``
+  in favor of ``DMDASNESFunction_Fn``, ``DMDASNESJacobian_Fn``, ``DMDASNESObjective_Fn``, ``DMDASNESFunctionVec_Fn``, ``DMDASNESJacobianVec_Fn``, and ``DMDASNESObjectiveVec_Fn``
 
 .. rubric:: SNESLineSearch:
+
+- Deprecate ``SNESLineSearchShellSetUserFunc()`` and ``SNESLineSearchShellGetUserFunc`` in favor of ``SNESLineSearchShellSetApply()`` and ``SNESLineSearchShellGetApply``
 
 .. rubric:: TS:
 
@@ -96,7 +103,8 @@ Changes: Development
 
 .. rubric:: DM/DA:
 
-- Add MPI reduction inside ``SNESComputeObjective_DMDA()``. No need to call reduction into local callback
+- Add MPI reduction inside ``SNESComputeObjective_DMDA()``. No need to call reduction in local callback
+- Deprecate `PetscSimplePointFunc` in favor of `PetscSimplePoint_Fn`
 
 .. rubric:: DMSwarm:
 
