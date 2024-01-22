@@ -163,11 +163,11 @@ PETSC_EXTERN_TYPEDEF typedef PetscObjectDestroy_Fn *PetscObjectDestroyFunction;
   Level: beginner
 
   Note:
-  The deprecated `PetscObjectViewFunction` works as a replacement for `PetscObjectDestroy_Fn` *.
+  The deprecated `PetscObjectViewFunction` works as a replacement for `PetscObjectView_Fn` *.
 
 .seealso: `PetscObject`, `PetscObjectDestroy()`, `PetscViewer`, `PetscObjectView()`
 S*/
-PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(PetscObjectView_Fn)(PetscObject, PetscViewer);
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(PetscObjectView_Fn)(PetscObject obj, PetscViewer v);
 
 PETSC_EXTERN_TYPEDEF typedef PetscObjectView_Fn *PetscObjectViewFunction;
 
