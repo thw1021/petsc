@@ -745,7 +745,9 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
     // restore vector
     PetscCall(DMCompositeRestoreAccessArray(pack, X, nDMs, NULL, globXArray));
     // view
-    PetscCall(DMPlexLandauPrintNorms(X, 0));
+    if (v_target >= global_vertex_id_0 && v_target < global_vertex_id_0 + ctx->batch_sz) {
+      PetscCall(DMPlexLandauPrintNorms(X, 0));
+    }
     // advance
     PetscCall(TSSetSolution(ts, X));
     PetscCall(PetscInfo(pack, "Advance vertex %" PetscInt_FMT " to %" PetscInt_FMT "\n", global_vertex_id_0, global_vertex_id_0 + ctx->batch_sz));
@@ -753,12 +755,12 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
     PetscCall(PostStep(ts));
     PetscCall(TSSolve(ts, X));
     // view
-    PetscCall(DMPlexLandauPrintNorms(X, 1));
     PetscCall(DMCompositeGetAccessArray(pack, X, nDMs, NULL, globXArray));
     if (v_target >= global_vertex_id_0 && v_target < global_vertex_id_0 + ctx->batch_sz) {
       DM        sw = globSwarmArray[LAND_PACK_IDX(v_target % ctx->batch_sz, g_target)];
       PetscInt  id;
       PetscReal t;
+      PetscCall(DMPlexLandauPrintNorms(X, 1));
       PetscCall(TSGetTime(ts, &t));
       PetscCall(DMGetOutputSequenceNumber(ctx->plex[g_target], &id, NULL));
       PetscCall(DMSetOutputSequenceNumber(ctx->plex[g_target], id + 1, t));
