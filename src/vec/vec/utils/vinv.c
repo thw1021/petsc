@@ -1627,7 +1627,7 @@ PetscErrorCode VecShiftAsync_Private(Vec v, PetscScalar shift, PetscDeviceContex
 
   Level: intermediate
 
-.seealso: `Vec`
+.seealso: `Vec`, `VecISShift()`
 @*/
 PetscErrorCode VecShift(Vec v, PetscScalar shift)
 {
