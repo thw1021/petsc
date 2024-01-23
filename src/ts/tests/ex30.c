@@ -745,9 +745,7 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
     // restore vector
     PetscCall(DMCompositeRestoreAccessArray(pack, X, nDMs, NULL, globXArray));
     // view
-    if (v_target >= global_vertex_id_0 && v_target < global_vertex_id_0 + ctx->batch_sz) {
-      PetscCall(DMPlexLandauPrintNorms(X, 0));
-    }
+    if (v_target >= global_vertex_id_0 && v_target < global_vertex_id_0 + ctx->batch_sz) { PetscCall(DMPlexLandauPrintNorms(X, 0)); }
     // advance
     PetscCall(TSSetSolution(ts, X));
     PetscCall(PetscInfo(pack, "Advance vertex %" PetscInt_FMT " to %" PetscInt_FMT "\n", global_vertex_id_0, global_vertex_id_0 + ctx->batch_sz));
