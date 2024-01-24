@@ -583,7 +583,8 @@ PETSC_EXTERN PetscErrorCode TaoBoundSolution(Vec, Vec, Vec, PetscReal, PetscInt 
 PETSC_EXTERN PetscErrorCode TaoSetRegularizer(Tao, DM);
 PETSC_EXTERN PetscErrorCode TaoGetRegularizer(Tao, DM *);
 
-PETSC_EXTERN PetscErrorCode TaoSetDM(Tao, DM);
+PETSC_EXTERN PetscErrorCode TaoAddDM(Tao, DM, PetscReal);
+PETSC_EXTERN PetscErrorCode TaoSetDM(Tao, DM, PetscReal, PetscInt);
 PETSC_EXTERN PetscErrorCode TaoGetDM(Tao, DM *, PetscInt);
 
 PETSC_EXTERN PetscErrorCode DMCopyDMTao(DM, DM);
@@ -602,8 +603,10 @@ PETSC_EXTERN PetscErrorCode DMTaoSetCentralVector(DM, Vec);
 PETSC_EXTERN PetscErrorCode DMTaoGetType(DM, DMTaoType *);
 PETSC_EXTERN PetscErrorCode DMTaoSetType(DM, DMTaoType);
 
-PETSC_EXTERN PetscErrorCode DMTaoSetScale(DM, PetscReal);
-PETSC_EXTERN PetscErrorCode DMTaoGetScale(DM, PetscReal *);
+PETSC_EXTERN PetscErrorCode TaoSetDMTaoScale(Tao, DM, PetscReal);
+PETSC_EXTERN PetscErrorCode TaoGetDMTaoScale(Tao, DM, PetscReal *);
+
+PETSC_EXTERN PetscErrorCode TaoGetDMTaoIndex(Tao, DM, PetscInt *);
 
 PETSC_EXTERN PetscErrorCode DMTaoSetVM(DM, Mat);
 PETSC_EXTERN PetscErrorCode DMTaoGetVM(DM, Mat *);

@@ -120,8 +120,9 @@ int main(int argc, char **argv)
     SETERRQ(PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "Unsupported problem type!");
   }
 
-  PetscCall(TaoSetDM(tao, dm0));
-  PetscCall(TaoSetDM(tao, dm1));
+  /* TODO. for TaoSolve of TAOPROX, setting which DM to be first is important */
+  PetscCall(TaoSetDM(tao, dm0, 1., 1));
+  PetscCall(TaoAddDM(tao, dm1, 1.));
   PetscCall(TaoSetFromOptions(tao));
 
   switch (user.solve) {

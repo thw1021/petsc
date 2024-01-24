@@ -115,6 +115,8 @@ struct _p_Tao {
   DM *dms;
   DM  reg;
 
+  PetscReal *dm_scales;
+
   PetscInt num_terms;
 
   PetscBool is_child_dm;

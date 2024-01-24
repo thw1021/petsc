@@ -337,7 +337,7 @@ int main(int argc, char **argv)
    *
    * 0: f: ObjGrad
    * 1: f: Obj and Grad
-   * 2: Set f via TaoSetDM */
+   * 2: Set f via TaoAddDM */
   switch (user.problem) {
   case 0:
     if (user.sketch) {
@@ -361,7 +361,7 @@ int main(int argc, char **argv)
 
   if (user.sketch) {
 //    PetscCall(DMTaoSetType(dm_master, DMTAOSHELL));//TODO actually doesnt do anything...
-    PetscCall(TaoSetDM(tao, dm_master));
+    PetscCall(TaoAddDM(tao, dm_master, user.stepsize));
   }
 
   /* Create DM, g(x,y) = 0.5 \|x-y\|_2^2
@@ -402,7 +402,6 @@ int main(int argc, char **argv)
 
   /* Solve full version */
   /* Solve Regularizer version */
-  PetscCall(DMTaoSetScale(dm, user.stepsize));
   if (user.y_bool) { PetscCall(DMTaoSetCentralVector(dm, user.y)); }
   PetscCall(TaoSetRegularizer(tao, dm));
   PetscCall(TaoSolve(tao));

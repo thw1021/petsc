@@ -2762,7 +2762,7 @@ PetscErrorCode TaoMonitorDrawCtxDestroy(TaoMonitorDrawCtx *ictx)
 
   Level: intermediate
 
-.seealso: [](ch_tao), `Tao`, `TaoSetDMSize()`
+.seealso: [](ch_tao), `Tao`, `TaoSetDM()`
 @*/
 PetscErrorCode TaoGetDMSize(Tao tao, PetscInt *num)
 {
@@ -2773,36 +2773,71 @@ PetscErrorCode TaoGetDMSize(Tao tao, PetscInt *num)
 }
 
 /*@
-  TaoSetDM - Sets an DM to Tao object.
+  TaoAddDM - Sets an DM to Tao object.
 
   Input Parameters:
-+ tao - Tao solver context
-- dm  - DM context
++ tao   - Tao solver context
+- dm    - DM context
+. scale - scale for DMTao
 
   Level: advanced
 
 .seealso: `DMTao`
 @*/
-PetscErrorCode TaoSetDM(Tao tao, DM dm)
+PetscErrorCode TaoAddDM(Tao tao, DM dm, PetscReal scale)
 {
-  PetscInt i;
-  DMTao    tdm;
-  DM       *newdms;
+  PetscInt  i;
+  DMTao     tdm;
+  DM        *newdms;
+  PetscReal *newscales;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
   PetscValidHeaderSpecific(dm, DM_CLASSID, 2);
+  /* TODO should be check whether DM is of DMTao here? */
   PetscCall(PetscObjectReference((PetscObject)dm));
   PetscCheckSameComm(tao, 1, dm, 2);
   /* First copy existing DMs */
   PetscCall(PetscCalloc1(tao->num_terms + 1, &newdms));
-  for (i = 0; i < tao->num_terms; i++) { newdms[i] = tao->dms[i];}
-  newdms[tao->num_terms] = dm;
+  PetscCall(PetscCalloc1(tao->num_terms + 1, &newscales));
+  for (i = 0; i < tao->num_terms; i++) {
+    newdms[i]    = tao->dms[i];
+    newscales[i] = tao->dm_scales[i];
+  }
+  newdms[tao->num_terms]    = dm;
+  newscales[tao->num_terms] = scale;
   /* Delete old ones */
   PetscCall(PetscFree(tao->dms));
-  tao->dms = newdms;
+  PetscCall(PetscFree(tao->dm_scales));
+  tao->dms       = newdms;
+  tao->dm_scales = newscales;
   tao->num_terms++;
   PetscCall(DMGetDMTao(dm, &tdm));
   if (!tdm->workvec) { PetscCall(VecDuplicate(tao->solution, &tdm->workvec)); }
+  /* Store DM's index TODO how? need to compose depending on two things... */
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoGetDMTaoIndex - Gets the index number DMTao for a `Tao` solver.
+
+  Logically Collective
+
+  Input Parameters:
++ tao - the `Tao` context
+- num - number of terms
+
+  Output Parameters:
+. idx - the index of DMTao for a given Tao object.
+
+  Level: intermediate
+
+.seealso: [](ch_tao), `Tao`, `TaoSetDM()`, `TaoAddDM()`
+@*/
+PetscErrorCode TaoGetDMTaoIndex(Tao tao, DM dm, PetscInt *idx)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
+  /* TODO  Check whether DM is of DMTao */
   PetscFunctionReturn(PETSC_SUCCESS);
 }
