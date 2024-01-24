@@ -1,4 +1,4 @@
-#include <petsc/private/matimpl.h> /*I "petscmat.h" I*/
+#include <../src/mat/impls/shell/shell.h> /*I "petscmat.h" I*/
 
 PETSC_INTERN PetscErrorCode MatProductSetFromOptions_HT(Mat D)
 {
@@ -236,20 +236,6 @@ static PetscErrorCode MatConvert_HT(Mat N, MatType newtype, MatReuse reuse, Mat 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatShellSetContext_HT(Mat mat, void *ctx)
-{
-  PetscFunctionBegin;
-  SETERRQ(PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_WRONGSTATE, "Cannot set the MATSHELL context for a MATHERMITIANTRANSPOSEVIRTUAL, it is used by the MATHERMITIANTRANSPOSEVIRTUAL");
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode MatShellSetContextDestroy_HT(Mat mat, void (*f)(void))
-{
-  PetscFunctionBegin;
-  SETERRQ(PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_WRONGSTATE, "Cannot set the MATSHELL context destroy for a MATHERMITIANTRANSPOSEVIRTUAL, it is used by the MATHERMITIANTRANSPOSEVIRTUAL");
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 /*MC
    MATHERMITIANTRANSPOSEVIRTUAL - "hermitiantranspose" - A matrix type that represents a virtual transpose of a matrix
 
@@ -320,8 +306,9 @@ PetscErrorCode MatCreateHermitianTranspose(Mat A, Mat *N)
   PetscCall(PetscObjectComposeFunction((PetscObject)*N, "MatTransposeGetMat_C", MatHermitianTransposeGetMat_HT));
 #endif
   PetscCall(PetscObjectComposeFunction((PetscObject)*N, "MatProductSetFromOptions_anytype_C", MatProductSetFromOptions_HT));
-  PetscCall(PetscObjectComposeFunction((PetscObject)*N, "MatShellSetContext_C", MatShellSetContext_HT));
-  PetscCall(PetscObjectComposeFunction((PetscObject)*N, "MatShellSetContextDestroy_C", MatShellSetContextDestroy_HT));
+  PetscCall(PetscObjectComposeFunction((PetscObject)*N, "MatShellSetContext_C", MatShellSetContext_Immutable));
+  PetscCall(PetscObjectComposeFunction((PetscObject)*N, "MatShellSetContextDestroy_C", MatShellSetContextDestroy_Immutable));
+  PetscCall(PetscObjectComposeFunction((PetscObject)*N, "MatShellSetManageScalingShifts_C", MatShellSetManageScalingShifts_Immutable));
   PetscCall(PetscObjectChangeTypeName((PetscObject)*N, MATHERMITIANTRANSPOSEVIRTUAL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
