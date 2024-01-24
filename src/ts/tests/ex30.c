@@ -395,7 +395,8 @@ static PetscErrorCode PostStep(TS ts)
       PetscCall(DMSwarmRestoreField(sw, "w_q", &bs, &dtype, (void **)&wp));
     }
     PetscCall(PetscInfo(X, "%4d) time %e, Landau particle moments: 0: %18.12e 1: %19.12e 2: %18.12e entropy: %e loss %e. energy = %e + %e + %e\n", (int)n, (double)t, (double)moments[0], (double)moments[1], (double)moments[2], (double)moments[3], (double)moments[4], (double)e_grid[0], (double)e_grid[1], (double)e_grid[2]));
-  } else if (printCtx->print && printCtx->g_target >= 0) {
+  }
+  if (printCtx->print && printCtx->g_target >= 0) {
     PetscInt         grid   = printCtx->g_target, id;
     static PetscReal last_t = -100000, period = .5;
     if (last_t == -100000) last_t = -period + t;
