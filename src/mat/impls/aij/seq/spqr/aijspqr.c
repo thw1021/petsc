@@ -1,6 +1,7 @@
 #include <petscsys.h>
 #include <../src/mat/impls/aij/seq/aij.h>
 #include <../src/mat/impls/sbaij/seq/cholmod/cholmodimpl.h>
+#include <../src/mat/impls/shell/shell.h>
 
 EXTERN_C_BEGIN
 #include <SuiteSparseQR_C.h>
@@ -10,7 +11,7 @@ static PetscErrorCode MatWrapCholmod_SPQR_seqaij(Mat A, PetscBool values, cholmo
 {
   Mat_SeqAIJ        *aij;
   Mat                AT;
-  const PetscScalar *aa;
+  const PetscScalar *aa, *L = NULL;
   PetscScalar       *ca;
   const PetscInt    *ai, *aj;
   PetscInt           n = A->cmap->n, i, j, k, nz;
@@ -24,6 +25,21 @@ static PetscErrorCode MatWrapCholmod_SPQR_seqaij(Mat A, PetscBool values, cholmo
   } else if (!PetscDefined(USE_COMPLEX)) {
     PetscCall(PetscObjectTypeCompare((PetscObject)A, MATNORMAL, &flg));
     if (flg) PetscCall(MatNormalGetMat(A, &A));
+  }
+  if (flg) {
+    PetscCheck(!((Mat_Shell *)A->data)->zrows && !((Mat_Shell *)A->data)->zcols, PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "Cannot call SuiteSparseQR if MatZeroRows() or MatZeroRowsColumns() has been called on the input Mat"); // TODO FIXME
+    PetscCheck(!((Mat_Shell *)A->data)->axpy, PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "Cannot call SuiteSparseQR if MatAXPY() has been called on the input Mat");                                                                // TODO FIXME
+    PetscCheck(((Mat_Shell *)A->data)->left == ((Mat_Shell *)A->data)->right, PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "Cannot call SuiteSparseQR if MatDiagonalScale() has been called on the input Mat with L != R");           // TODO FIXME
+    if (((Mat_Shell *)A->data)->left) {
+      PetscCall(VecGetArrayRead(((Mat_Shell *)A->data)->left, &L));
+#if PetscDefined(USE_COMPLEX)
+      for (j = 0; j < n; j++)
+        PetscCheck(PetscAbsReal(PetscImaginaryPart(L[j])) < PETSC_MACHINE_EPSILON, PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "Cannot call SuiteSparseQR if MatDiagonalScale() has been called on the input Mat with a complex Vec");
+#endif
+    }
+    PetscCheck(!((Mat_Shell *)A->data)->dshift, PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "Cannot call SuiteSparseQR if MatDiagonalSet() has been called on the input Mat"); // TODO FIXME
+    PetscCheck(!((Mat_Shell *)A->data)->vshift, PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "Cannot call SuiteSparseQR if MatShift() has been called on the input Mat");       // TODO FIXME
+    PetscCheck(!((Mat_Shell *)A->data)->vscale, PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "Cannot call SuiteSparseQR if MatScale() has been called on the input Mat");       // TODO FIXME
   }
   /* cholmod_sparse is compressed sparse column */
   PetscCall(MatIsSymmetric(A, 0.0, &flg));
@@ -47,13 +63,19 @@ static PetscErrorCode MatWrapCholmod_SPQR_seqaij(Mat A, PetscBool values, cholmo
     cj[j] = k;
     for (i = aj[j]; i < aj[j + 1]; i++, k++) {
       ci[k] = ai[i];
-      if (values) ca[k] = aa[i];
+      if (values) {
+        ca[k] = aa[i];
+        if (L) ca[k] *= L[j];
+      }
     }
   }
   cj[j]     = k;
   *aijalloc = PETSC_TRUE;
   *valloc   = vain;
-  if (values) PetscCall(MatSeqAIJRestoreArrayRead(AT, &aa));
+  if (values) {
+    PetscCall(MatSeqAIJRestoreArrayRead(AT, &aa));
+    if (L) PetscCall(VecRestoreArrayRead(((Mat_Shell *)A->data)->left, &L));
+  }
 
   PetscCall(PetscMemzero(C, sizeof(*C)));
 
