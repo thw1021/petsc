@@ -4633,7 +4633,7 @@ PetscErrorCode MatSetPreallocationCOO_SeqAIJ(Mat mat, PetscCount coo_n, PetscInt
 {
   MPI_Comm             comm;
   PetscInt            *i, *j;
-  PetscInt             M, N, row;
+  PetscInt             M, N, row, iprev;
   PetscCount           k, p, q, nneg, nnz, start, end; /* Index the coo array, so use PetscCount as their type */
   PetscInt            *Ai;                             /* Change to PetscCount once we use it for row pointers */
   PetscInt            *Aj;
@@ -4643,6 +4643,7 @@ PetscErrorCode MatSetPreallocationCOO_SeqAIJ(Mat mat, PetscCount coo_n, PetscInt
   PetscCount          *perm, *jmap;
   PetscContainer       container;
   MatCOOStruct_SeqAIJ *coo;
+  PetscBool            sorted;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectGetComm((PetscObject)mat, &comm));
@@ -4650,13 +4651,21 @@ PetscErrorCode MatSetPreallocationCOO_SeqAIJ(Mat mat, PetscCount coo_n, PetscInt
   i = coo_i;
   j = coo_j;
   PetscCall(PetscMalloc1(coo_n, &perm));
-  for (k = 0; k < coo_n; k++) { /* Ignore entries with negative row or col indices */
+
+  /* Ignore entries with negative row or col indices; at the same time, check if i[] is already sorted (e.g., MatConvert_AlJ_HYPRE results in this case) */
+  sorted = PETSC_TRUE;
+  iprev  = PETSC_INT_MIN;
+  for (k = 0; k < coo_n; k++) {
     if (j[k] < 0) i[k] = -1;
+    if (sorted) {
+      if (i[k] < iprev) sorted = PETSC_FALSE;
+      else iprev = i[k];
+    }
     perm[k] = k;
   }
 
-  /* Sort by row */
-  PetscCall(PetscSortIntWithIntCountArrayPair(coo_n, i, j, perm));
+  /* Sort by row if not already */
+  if (!sorted) PetscCall(PetscSortIntWithIntCountArrayPair(coo_n, i, j, perm));
 
   /* Advance k to the first row with a non-negative index */
   for (k = 0; k < coo_n; k++)
@@ -4679,26 +4688,52 @@ PetscErrorCode MatSetPreallocationCOO_SeqAIJ(Mat mat, PetscCount coo_n, PetscInt
   Ai++;  /* Inc by 1 for convenience */
   q = 0; /* q-th unique nonzero, with q starting from 0 */
   while (k < coo_n) {
-    row   = i[k];
-    start = k; /* [start,end) indices for this row */
-    while (k < coo_n && i[k] == row) k++;
+    PetscBool strictly_sorted;
+    PetscInt  jprev;
+
+    /* get [start,end) indices for this row; also check if cols in this row are strictly sorted */
+    row             = i[k];
+    start           = k;
+    jprev           = PETSC_INT_MIN;
+    strictly_sorted = PETSC_TRUE;
+    while (k < coo_n && i[k] == row) {
+      if (strictly_sorted) {
+        if (j[k] <= jprev) strictly_sorted = PETSC_FALSE;
+        else jprev = j[k];
+      }
+      k++;
+    }
     end = k;
+
     /* hack for HYPRE: swap min column to diag so that diagonal values will go first */
     if (hypre) {
-      PetscInt  minj    = PETSC_MAX_INT;
-      PetscBool hasdiag = PETSC_FALSE;
+      PetscInt   minj    = PETSC_MAX_INT;
+      PetscBool  hasdiag = PETSC_FALSE;
+      PetscCount p1 = -1, p2 = -1;
       for (p = start; p < end; p++) {
         hasdiag = (PetscBool)(hasdiag || (j[p] == row));
         minj    = PetscMin(minj, j[p]);
       }
       if (hasdiag) {
         for (p = start; p < end; p++) {
-          if (j[p] == minj) j[p] = row;
-          else if (j[p] == row) j[p] = minj;
+          if (j[p] == minj) {
+            j[p] = row;
+            p1   = p; // minj entry position
+          } else if (j[p] == row) {
+            j[p] = minj;
+            p2   = p; // diag entry position
+          }
         }
       }
+      // if strictly sorted, and the minj, diag entries exist, swap them in perm[] to save the call to PetscSortIntWithCountArray
+      if (strictly_sorted && p1 != -1 && p2 != -1) {
+        PetscCount tmp;
+        tmp      = perm[p1];
+        perm[p1] = perm[p2];
+        perm[p2] = tmp;
+      }
     }
-    PetscCall(PetscSortIntWithCountArray(end - start, j + start, perm + start));
+    if (!strictly_sorted) PetscCall(PetscSortIntWithCountArray(end - start, j + start, perm + start));
 
     /* Find number of unique col entries in this row */
     Aj[q]   = j[start]; /* Log the first nonzero in this row */
