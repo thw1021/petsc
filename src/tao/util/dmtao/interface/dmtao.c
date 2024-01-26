@@ -444,7 +444,7 @@ PetscErrorCode DMTaoSetFromOptions(DM dm)
   }
   PetscCall(DMGetDMTaoWrite(dm, &tdm));
 
-  PetscCall(PetscOptionsReal("-dm_tao_scale", "DMTao scale", "DMTaoSetScale", tdm->scale, &tdm->scale, NULL));
+//  PetscCall(PetscOptionsReal("-dm_tao_scale", "DMTao scale", "DMTaoSetScale", tdm->scale, &tdm->scale, NULL));
   PetscTryTypeMethod(dm, setfromoptions, PetscOptionsObject);
   PetscOptionsEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -713,59 +713,6 @@ PetscErrorCode DMTaoGetCentralVector(DM dm, Vec *y)
 }
 
 /*@
-  DMTaoSetScale - Sets scale for the dm.
-  If this value is not set then 1.0 is assumed.
-
-  Logically Collective
-
-  Input Parameters:
-+ dm - the `DM` context
-- s  - the scale
-
-  Level: intermediate
-
-.seealso: [](ch_tao), `Tao`, `DMTao`, `DMTaoGetScale()`
-@*/
-PetscErrorCode DMTaoSetScale(DM dm, PetscReal s)
-{
-  DMTao tdm;
-
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
-  PetscValidLogicalCollectiveReal(dm, s, 2);
-  PetscCall(DMGetDMTaoWrite(dm, &tdm));
-  tdm->scale = s;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@
-  DMTaoGetScale - Get scale of DMTao.
-
-  Not Collective
-
-  Input Parameter:
-. dm - the `DM` context
-
-  Output Parameter:
-. s - the current scale
-
-  Level: intermediate
-
-.seealso: [](ch_tao), `Tao`, `DMTao`
-@*/
-PetscErrorCode DMTaoGetScale(DM dm, PetscReal *s)
-{
-  DMTao tdm;
-
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
-  PetscAssertPointer(s, 2);
-  PetscCall(DMGetDMTao(dm, &tdm));
-  *s = tdm->scale;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@
   DMTaoSetVM - Sets VM matrix for the DM.
 
   Logically Collective
@@ -830,7 +777,7 @@ PetscErrorCode DMTaoGetVM(DM dm, Mat *vm)
 
 .seealso: `TaoGetRegularizer()`
 @*/
-PetscErrorCode TaoSetRegularizer(Tao tao, DM dm)
+PetscErrorCode TaoSetRegularizer(Tao tao, DM dm, PetscReal scale)
 {
   DMTao tdm;
 
@@ -840,6 +787,7 @@ PetscErrorCode TaoSetRegularizer(Tao tao, DM dm)
   PetscCall(DMGetDMTao(dm, &tdm));
   PetscCheck(tdm, PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "DMTao has not been set for DM.");
   tao->reg = dm;
+  tao->reg_scale = scale;
   PetscCheck(tao->solution, PetscObjectComm((PetscObject)dm), PETSC_ERR_USER, "TaoSetSolution needs to be called first.");
   if (!tdm->workvec) { PetscCall(VecDuplicate(tao->solution, &tdm->workvec)); }
   PetscFunctionReturn(PETSC_SUCCESS);

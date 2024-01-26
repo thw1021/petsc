@@ -151,7 +151,7 @@ PetscErrorCode L2_ObjGrad_Tao(Tao tao, Vec X, PetscReal *f, Vec G, void *ptr)
 
   PetscFunctionBegin;
   PetscCall(VecCopy(X, G));
-  /* Note: PDScale part will be done internally */
+  /* Note: Scale part will be done internally */
   if (user->y_bool) {
     Vec y;
     DM  reg;
@@ -403,7 +403,8 @@ int main(int argc, char **argv)
   /* Solve full version */
   /* Solve Regularizer version */
   if (user.y_bool) { PetscCall(DMTaoSetCentralVector(dm, user.y)); }
-  PetscCall(TaoSetRegularizer(tao, dm));
+  PetscCall(TaoSetRegularizer(tao, dm, user.stepsize));
+  //TODO do TaoAddDM, or TaoSetDM? How does this work in sketch?
   PetscCall(TaoSolve(tao));
   PetscCall(TaoSolve(tao_full));
 

@@ -147,13 +147,13 @@ PetscErrorCode TaoComputeGradient(Tao tao, Vec X, Vec G)
       DMTao tdm;
       PetscCall(DMGetDMTao(tao->dms[i], &tdm));
       PetscCall(DMTaoComputeGradient(tao->dms[i], X, tdm->workvec));
-      PetscCall(VecAXPY(G, tdm->scale, tdm->workvec));
+      PetscCall(VecAXPY(G, tao->dm_scales[i], tdm->workvec));
     }
     if (tao->reg) {
       DMTao tdm;
       PetscCall(DMGetDMTao(tao->reg, &tdm));
       PetscCall(DMTaoComputeGradient(tao->reg, X, tdm->workvec));
-      PetscCall(VecAXPY(G, tdm->scale, tdm->workvec));
+      PetscCall(VecAXPY(G, tao->reg_scale, tdm->workvec));
     }
     PetscCall(PetscLogEventEnd(TAO_GradientEval, tao, X, G, NULL));
     tao->ngrads++;
@@ -168,13 +168,13 @@ PetscErrorCode TaoComputeGradient(Tao tao, Vec X, Vec G)
       DMTao tdm;
       PetscCall(DMGetDMTao(tao->dms[i], &tdm));
       PetscCall(DMTaoComputeGradient(tao->dms[i], X, tdm->workvec));
-      PetscCall(VecAXPY(G, tdm->scale, tdm->workvec));
+      PetscCall(VecAXPY(G, tao->dm_scales[i], tdm->workvec));
     }
     if (tao->reg) {
       DMTao tdm;
       PetscCall(DMGetDMTao(tao->reg, &tdm));
       PetscCall(DMTaoComputeGradient(tao->reg, X, tdm->workvec));
-      PetscCall(VecAXPY(G, tdm->scale, tdm->workvec));
+      PetscCall(VecAXPY(G, tao->reg_scale, tdm->workvec));
     }
     PetscCall(PetscLogEventEnd(TAO_ObjGradEval, tao, X, G, NULL));
     tao->nfuncgrads++;
@@ -227,14 +227,14 @@ PetscErrorCode TaoComputeObjective(Tao tao, Vec X, PetscReal *f)
       DMTao     tdm;
       PetscCall(DMGetDMTao(tao->dms[i], &tdm));
       PetscCall(DMTaoComputeObjective(tao->dms[i], X, &obj_temp));
-      *f += (tdm->scale) * obj_temp;
+      *f += (tao->dm_scales[i]) * obj_temp;
     }
     if (tao->reg) {
       PetscReal obj_temp;
       DMTao     tdm;
       PetscCall(DMGetDMTao(tao->reg, &tdm));
       PetscCall(DMTaoComputeObjective(tao->reg, X, &obj_temp));
-      *f += (tdm->scale) * obj_temp;
+      *f += (tao->reg_scale) * obj_temp;
     }
     PetscCall(PetscLogEventEnd(TAO_ObjectiveEval, tao, X, NULL, NULL));
     tao->nfuncs++;
@@ -252,14 +252,14 @@ PetscErrorCode TaoComputeObjective(Tao tao, Vec X, PetscReal *f)
       DMTao     tdm;
       PetscCall(DMGetDMTao(tao->dms[i], &tdm));
       PetscCall(DMTaoComputeObjective(tao->dms[i], X, &obj_temp));
-      *f += (tdm->scale) * obj_temp;
+      *f += (tao->dm_scales[i]) * obj_temp;
     }
     if (tao->reg) {
       PetscReal obj_temp;
       DMTao     tdm;
       PetscCall(DMGetDMTao(tao->reg, &tdm));
       PetscCall(DMTaoComputeObjective(tao->reg, X, &obj_temp));
-      *f += (tdm->scale) * obj_temp;
+      *f += (tao->reg_scale) * obj_temp;
     }
     PetscCall(PetscLogEventEnd(TAO_ObjGradEval, tao, X, NULL, NULL));
     PetscCall(VecDestroy(&temp));
@@ -323,17 +323,17 @@ PetscErrorCode TaoComputeObjectiveAndGradient(Tao tao, Vec X, PetscReal *f, Vec 
       DMTao     tdm;
       PetscCall(DMGetDMTao(tao->dms[i], &tdm));
       PetscCall(DMTaoComputeObjectiveAndGradient(tao->dms[i], X, &temp, tdm->workvec));
-      *f += (tdm->scale) * temp;
+      *f += (tao->dm_scales[i]) * temp;
       //TODO wrong. since G may be "null" if tao->ops is not set...
-      PetscCall(VecAXPY(G, tdm->scale, tdm->workvec));
+      PetscCall(VecAXPY(G, tao->dm_scales[i], tdm->workvec));
     }
     if (tao->reg) {
       PetscReal temp;
       DMTao     tdm;
       PetscCall(DMGetDMTao(tao->reg, &tdm));
       PetscCall(DMTaoComputeObjectiveAndGradient(tao->reg, X, &temp, tdm->workvec));
-      *f += (tdm->scale) * temp;
-      PetscCall(VecAXPY(G, tdm->scale, tdm->workvec));
+      *f += (tao->reg_scale) * temp;
+      PetscCall(VecAXPY(G, tao->reg_scale, tdm->workvec));
     }
     PetscCall(PetscLogEventEnd(TAO_ObjGradEval, tao, X, G, NULL));
     tao->nfuncgrads++;
@@ -357,16 +357,16 @@ PetscErrorCode TaoComputeObjectiveAndGradient(Tao tao, Vec X, PetscReal *f, Vec 
       DMTao     tdm;
       PetscCall(DMGetDMTao(tao->dms[i], &tdm));
       PetscCall(DMTaoComputeObjectiveAndGradient(tao->dms[i], X, &temp, tdm->workvec));
-      *f += (tdm->scale) * temp;
-      PetscCall(VecAXPY(G, tdm->scale, tdm->workvec));
+      *f += (tao->dm_scales[i]) * temp;
+      PetscCall(VecAXPY(G, tao->dm_scales[i], tdm->workvec));
     }
     if (tao->reg) {
       PetscReal temp;
       DMTao     tdm;
       PetscCall(DMGetDMTao(tao->reg, &tdm));
       PetscCall(DMTaoComputeObjectiveAndGradient(tao->reg, X, &temp, tdm->workvec));
-      *f += (tdm->scale) * temp;
-      PetscCall(VecAXPY(G, tdm->scale, tdm->workvec));
+      *f += (tao->reg_scale) * temp;
+      PetscCall(VecAXPY(G, tao->reg_scale, tdm->workvec));
     }
     PetscCall(PetscLogEventEnd(TAO_GradientEval, tao, X, G, NULL));
     tao->ngrads++;

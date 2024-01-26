@@ -68,6 +68,28 @@ static PetscErrorCode TaoSetUpEW_Private(Tao tao)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode TaoDMTaoEnlarge_Static(Tao tao, PetscInt NfNew)
+{
+  DM        *tmpr;
+  PetscReal *s_tmpr;
+  PetscInt   Nf = tao->num_terms, f;
+
+  PetscFunctionBegin;
+  if (Nf >= NfNew) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCall(PetscMalloc1(NfNew, &tmpr));
+  PetscCall(PetscCalloc1(NfNew, &s_tmpr));
+  for (f = 0; f < Nf; f++) {
+    tmpr[f]   = tao->dms[f];
+    s_tmpr[f] = tao->dm_scales[f];
+  }
+  PetscCall(PetscFree(tao->dms));
+  PetscCall(PetscFree(tao->dm_scales));
+  tao->num_terms = NfNew;;
+  tao->dms       = tmpr;
+  tao->dm_scales = s_tmpr;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*@
   TaoCreate - Creates a Tao solver
 
@@ -246,6 +268,7 @@ PetscErrorCode TaoDestroy(Tao *tao)
   PetscCall(TaoLineSearchDestroy(&(*tao)->linesearch));
   for (i = 0; i < (*tao)->num_terms; i++) { PetscCall(DMDestroy(&(*tao)->dms[i])); }
   PetscCall(PetscFree((*tao)->dms));
+  PetscCall(PetscFree((*tao)->dm_scales));
   /* TODO child dm bool ? */
   if ((*tao)->is_child_dm) { PetscCall(PetscObjectCompose((PetscObject)*tao, "TaoGetParentDM", NULL)); }
   if ((*tao)->ops->convergencedestroy) {
@@ -2752,13 +2775,13 @@ PetscErrorCode TaoMonitorDrawCtxDestroy(TaoMonitorDrawCtx *ictx)
 }
 
 /*@
-  TaoGetDMSize - Gets the number DMTao for a `Tao` solver.
+  TaoGetDMSize - Gets the number `DM` for a `Tao` solver.
 
   Logically Collective
 
   Input Parameters:
 + tao - the `Tao` context
-- num - number of terms
+- num - the number of `DM` terms
 
   Level: intermediate
 
@@ -2769,6 +2792,30 @@ PetscErrorCode TaoGetDMSize(Tao tao, PetscInt *num)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
   *num = tao->num_terms;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoSetDMSize - Sets the number `DM` for a `Tao` solver.
+
+  Logically Collective
+
+  Input Parameters:
+. tao - the `Tao` context
+
+  Output Parameters:
+. num - The number of `DM`
+
+  Level: intermediate
+
+.seealso: [](ch_tao), `Tao`, `TaoSetDM()`
+@*/
+PetscErrorCode TaoSetDMSize(Tao tao, PetscInt num)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
+  tao->num_terms = num;
+  //TODO sett setdmlabel thing? should i do Enlarge_Static here?
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -2786,58 +2833,103 @@ PetscErrorCode TaoGetDMSize(Tao tao, PetscInt *num)
 @*/
 PetscErrorCode TaoAddDM(Tao tao, DM dm, PetscReal scale)
 {
-  PetscInt  i;
   DMTao     tdm;
-  DM        *newdms;
-  PetscReal *newscales;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
   PetscValidHeaderSpecific(dm, DM_CLASSID, 2);
+  PetscValidLogicalCollectiveReal(tao, scale, 3);
   /* TODO should be check whether DM is of DMTao here? */
   PetscCall(PetscObjectReference((PetscObject)dm));
-  PetscCheckSameComm(tao, 1, dm, 2);
-  /* First copy existing DMs */
-  PetscCall(PetscCalloc1(tao->num_terms + 1, &newdms));
-  PetscCall(PetscCalloc1(tao->num_terms + 1, &newscales));
-  for (i = 0; i < tao->num_terms; i++) {
-    newdms[i]    = tao->dms[i];
-    newscales[i] = tao->dm_scales[i];
-  }
-  newdms[tao->num_terms]    = dm;
-  newscales[tao->num_terms] = scale;
-  /* Delete old ones */
-  PetscCall(PetscFree(tao->dms));
-  PetscCall(PetscFree(tao->dm_scales));
-  tao->dms       = newdms;
-  tao->dm_scales = newscales;
-  tao->num_terms++;
+  PetscCall(TaoDMTaoEnlarge_Static(tao, tao->num_terms + 1));
+  /* Subtracting by one as it is incremented in above func */
+  tao->dms[tao->num_terms-1]       = dm;
+  tao->dm_scales[tao->num_terms-1] = scale;
   PetscCall(DMGetDMTao(dm, &tdm));
   if (!tdm->workvec) { PetscCall(VecDuplicate(tao->solution, &tdm->workvec)); }
-  /* Store DM's index TODO how? need to compose depending on two things... */
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  TaoGetDMTaoIndex - Gets the index number DMTao for a `Tao` solver.
+  TaoSetDM - Sets an DM to Tao object, at a given index.
+
+  Input Parameters:
++ tao   - Tao solver context
+- dm    - DM context
+- idx   - The index at which to place DM
+. scale - scale for DMTao
+
+  Level: advanced
+
+.seealso: `DMTao`
+@*/
+PetscErrorCode TaoSetDM(Tao tao, DM dm, PetscInt idx, PetscReal scale)
+{
+  DMTao     tdm;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 2);
+  PetscValidLogicalCollectiveReal(tao, scale, 4);
+  PetscCheck(idx >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Index number %" PetscInt_FMT " must be non-negative", idx);
+  /* TODO should be check whether DM is of DMTao here? */
+  PetscCall(PetscObjectReference((PetscObject)dm));
+  PetscCall(TaoDMTaoEnlarge_Static(tao, idx + 1));
+  if(!tao->dms[idx]) PetscCall(DMDestroy(&tao->dms[idx]));
+  tao->dms[idx]       = dm;
+  tao->dm_scales[idx] = scale;
+  PetscCall(DMGetDMTao(dm, &tdm));
+  if (!tdm->workvec) { PetscCall(VecDuplicate(tao->solution, &tdm->workvec)); }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoClearDM - Remove all `DM` from `Tao`
 
   Logically Collective
 
   Input Parameters:
-+ tao - the `Tao` context
-- num - number of terms
-
-  Output Parameters:
-. idx - the index of DMTao for a given Tao object.
+. tao   - Tao solver context
 
   Level: intermediate
 
-.seealso: [](ch_tao), `Tao`, `TaoSetDM()`, `TaoAddDM()`
+.seealso: `DMTao`, `Tao`
 @*/
-PetscErrorCode TaoGetDMTaoIndex(Tao tao, DM dm, PetscInt *idx)
+PetscErrorCode TaoClearDM(Tao tao)
+{
+  PetscInt i;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
+  for (i = 0; i < tao->num_terms; i++) PetscCall(DMDestroy(&tao->dms[i]));
+  PetscCall(PetscFree(tao->dms));
+  tao->num_terms = 0;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoGetDM - Return the `DM` for a given index.
+
+  Not Collective
+
+  Input Parameters:
++ tao - Tao solver context
+- idx - The index number
+
+  Output Parameters:
++ DM    - The `DM` at desired index.
+- scale - The according scale parameter for the `DM`
+
+  Level: intermediate
+
+.seealso: `DMTao`, `Tao`
+@*/
+PetscErrorCode TaoGetDM(Tao tao, PetscInt idx, DM *dm, PetscReal *scale)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  /* TODO  Check whether DM is of DMTao */
+  PetscCheck((idx >= 0) && (idx < tao->num_terms), PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Index number %" PetscInt_FMT " must be in [0, %" PetscInt_FMT ")", idx, tao->num_terms);
+  *dm    = tao->dms[idx];
+  *scale = tao->dm_scales[idx];
   PetscFunctionReturn(PETSC_SUCCESS);
 }

@@ -580,12 +580,15 @@ PETSC_EXTERN PetscErrorCode TaoEstimateActiveBounds(Vec, Vec, Vec, Vec, Vec, Vec
 PETSC_EXTERN PetscErrorCode TaoBoundStep(Vec, Vec, Vec, IS, IS, IS, PetscReal, Vec);
 PETSC_EXTERN PetscErrorCode TaoBoundSolution(Vec, Vec, Vec, PetscReal, PetscInt *, Vec);
 
-PETSC_EXTERN PetscErrorCode TaoSetRegularizer(Tao, DM);
+PETSC_EXTERN PetscErrorCode TaoSetRegularizer(Tao, DM, PetscReal);
 PETSC_EXTERN PetscErrorCode TaoGetRegularizer(Tao, DM *);
 
 PETSC_EXTERN PetscErrorCode TaoAddDM(Tao, DM, PetscReal);
-PETSC_EXTERN PetscErrorCode TaoSetDM(Tao, DM, PetscReal, PetscInt);
-PETSC_EXTERN PetscErrorCode TaoGetDM(Tao, DM *, PetscInt);
+PETSC_EXTERN PetscErrorCode TaoSetDM(Tao, DM, PetscInt, PetscReal);
+PETSC_EXTERN PetscErrorCode TaoGetDM(Tao, PetscInt, DM *, PetscReal *);
+PETSC_EXTERN PetscErrorCode TaoGetDMSize(Tao, PetscInt *);
+PETSC_EXTERN PetscErrorCode TaoSetDMSize(Tao, PetscInt);
+PETSC_EXTERN PetscErrorCode TaoClearDM(Tao);
 
 PETSC_EXTERN PetscErrorCode DMCopyDMTao(DM, DM);
 
@@ -603,15 +606,10 @@ PETSC_EXTERN PetscErrorCode DMTaoSetCentralVector(DM, Vec);
 PETSC_EXTERN PetscErrorCode DMTaoGetType(DM, DMTaoType *);
 PETSC_EXTERN PetscErrorCode DMTaoSetType(DM, DMTaoType);
 
-PETSC_EXTERN PetscErrorCode TaoSetDMTaoScale(Tao, DM, PetscReal);
-PETSC_EXTERN PetscErrorCode TaoGetDMTaoScale(Tao, DM, PetscReal *);
-
-PETSC_EXTERN PetscErrorCode TaoGetDMTaoIndex(Tao, DM, PetscInt *);
-
 PETSC_EXTERN PetscErrorCode DMTaoSetVM(DM, Mat);
 PETSC_EXTERN PetscErrorCode DMTaoGetVM(DM, Mat *);
 
-PETSC_EXTERN PetscErrorCode TaoGetDMSize(Tao, PetscInt *);
+PETSC_EXTERN PetscErrorCode TaoClearDMTaos(Tao);
 
 PETSC_EXTERN PetscErrorCode DMTaoApplyProximalMap(DM, DM, PetscReal, Vec, Vec, void *);
 
@@ -625,7 +623,6 @@ PETSC_EXTERN PetscErrorCode DMTaoUseTaoRoutines(DM, Tao);
 PETSC_EXTERN PetscErrorCode DMTaoComputeObjective(DM, Vec, PetscReal *);
 PETSC_EXTERN PetscErrorCode DMTaoComputeObjectiveAndGradient(DM, Vec, PetscReal *, Vec);
 PETSC_EXTERN PetscErrorCode DMTaoComputeGradient(DM, Vec, Vec);
-
 
 PETSC_EXTERN PetscErrorCode DMTaoCreate_Simplex(MPI_Comm, DM *, Mat, Vec, PetscReal, PetscReal);
 PETSC_EXTERN PetscErrorCode DMTaoCreate_L2(MPI_Comm, DM *, Mat, Vec);

@@ -16,7 +16,7 @@ static PetscErrorCode TaoSolve_Prox(Tao tao)
   dm1 = tao->dms[1];
 
   PetscCall(DMTaoGetCentralVector(dm1, &y));
-  PetscCall(DMTaoGetScale(dm1, &step));
+  step = tao->dm_scales[1];
 
   while (tao->reason == TAO_CONTINUE_ITERATING) {
     /* Call general purpose update function */

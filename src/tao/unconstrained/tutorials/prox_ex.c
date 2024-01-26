@@ -121,8 +121,8 @@ int main(int argc, char **argv)
   }
 
   /* TODO. for TaoSolve of TAOPROX, setting which DM to be first is important */
-  PetscCall(TaoSetDM(tao, dm0, 1., 1));
-  PetscCall(TaoAddDM(tao, dm1, 1.));
+  PetscCall(TaoSetDM(tao, dm0, 0, 1.));
+  PetscCall(TaoAddDM(tao, dm1, user.stepsize));
   PetscCall(TaoSetFromOptions(tao));
 
   switch (user.solve) {
