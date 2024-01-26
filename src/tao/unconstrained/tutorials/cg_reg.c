@@ -360,7 +360,7 @@ int main(int argc, char **argv)
   }
 
   if (user.sketch) {
-//    PetscCall(DMTaoSetType(dm_master, DMTAOSHELL));//TODO actually doesnt do anything...
+    //    PetscCall(DMTaoSetType(dm_master, DMTAOSHELL));//TODO actually doesnt do anything...
     PetscCall(TaoAddDM(tao, dm_master, user.stepsize));
   }
 

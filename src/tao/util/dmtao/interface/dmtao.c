@@ -444,7 +444,7 @@ PetscErrorCode DMTaoSetFromOptions(DM dm)
   }
   PetscCall(DMGetDMTaoWrite(dm, &tdm));
 
-//  PetscCall(PetscOptionsReal("-dm_tao_scale", "DMTao scale", "DMTaoSetScale", tdm->scale, &tdm->scale, NULL));
+  //  PetscCall(PetscOptionsReal("-dm_tao_scale", "DMTao scale", "DMTaoSetScale", tdm->scale, &tdm->scale, NULL));
   PetscTryTypeMethod(dm, setfromoptions, PetscOptionsObject);
   PetscOptionsEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -786,7 +786,7 @@ PetscErrorCode TaoSetRegularizer(Tao tao, DM dm, PetscReal scale)
   if (dm) PetscValidHeaderSpecific(dm, DM_CLASSID, 2);
   PetscCall(DMGetDMTao(dm, &tdm));
   PetscCheck(tdm, PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "DMTao has not been set for DM.");
-  tao->reg = dm;
+  tao->reg       = dm;
   tao->reg_scale = scale;
   PetscCheck(tao->solution, PetscObjectComm((PetscObject)dm), PETSC_ERR_USER, "TaoSetSolution needs to be called first.");
   if (!tdm->workvec) { PetscCall(VecDuplicate(tao->solution, &tdm->workvec)); }

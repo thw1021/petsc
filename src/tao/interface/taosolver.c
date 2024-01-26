@@ -84,7 +84,7 @@ static PetscErrorCode TaoDMTaoEnlarge_Static(Tao tao, PetscInt NfNew)
   }
   PetscCall(PetscFree(tao->dms));
   PetscCall(PetscFree(tao->dm_scales));
-  tao->num_terms = NfNew;;
+  tao->num_terms = NfNew;
   tao->dms       = tmpr;
   tao->dm_scales = s_tmpr;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -2833,7 +2833,7 @@ PetscErrorCode TaoSetDMSize(Tao tao, PetscInt num)
 @*/
 PetscErrorCode TaoAddDM(Tao tao, DM dm, PetscReal scale)
 {
-  DMTao     tdm;
+  DMTao tdm;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
@@ -2843,8 +2843,8 @@ PetscErrorCode TaoAddDM(Tao tao, DM dm, PetscReal scale)
   PetscCall(PetscObjectReference((PetscObject)dm));
   PetscCall(TaoDMTaoEnlarge_Static(tao, tao->num_terms + 1));
   /* Subtracting by one as it is incremented in above func */
-  tao->dms[tao->num_terms-1]       = dm;
-  tao->dm_scales[tao->num_terms-1] = scale;
+  tao->dms[tao->num_terms - 1]       = dm;
+  tao->dm_scales[tao->num_terms - 1] = scale;
   PetscCall(DMGetDMTao(dm, &tdm));
   if (!tdm->workvec) { PetscCall(VecDuplicate(tao->solution, &tdm->workvec)); }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -2865,7 +2865,7 @@ PetscErrorCode TaoAddDM(Tao tao, DM dm, PetscReal scale)
 @*/
 PetscErrorCode TaoSetDM(Tao tao, DM dm, PetscInt idx, PetscReal scale)
 {
-  DMTao     tdm;
+  DMTao tdm;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
@@ -2875,7 +2875,7 @@ PetscErrorCode TaoSetDM(Tao tao, DM dm, PetscInt idx, PetscReal scale)
   /* TODO should be check whether DM is of DMTao here? */
   PetscCall(PetscObjectReference((PetscObject)dm));
   PetscCall(TaoDMTaoEnlarge_Static(tao, idx + 1));
-  if(!tao->dms[idx]) PetscCall(DMDestroy(&tao->dms[idx]));
+  if (!tao->dms[idx]) PetscCall(DMDestroy(&tao->dms[idx]));
   tao->dms[idx]       = dm;
   tao->dm_scales[idx] = scale;
   PetscCall(DMGetDMTao(dm, &tdm));

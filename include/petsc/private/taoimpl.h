@@ -116,7 +116,7 @@ struct _p_Tao {
   DM  reg;
 
   PetscReal *dm_scales;
-  PetscReal reg_scale;
+  PetscReal  reg_scale;
 
   PetscInt num_terms;
 

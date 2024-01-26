@@ -136,14 +136,14 @@ PetscErrorCode TaoComputeGradient(Tao tao, Vec X, Vec G)
   PetscCheckSameComm(tao, 1, X, 2);
   PetscCheckSameComm(tao, 1, G, 3);
   PetscCall(VecLockReadPush(X));
-  if (tao->ops->computegradient || (tao->num_terms>0)) {
+  if (tao->ops->computegradient || (tao->num_terms > 0)) {
     PetscCall(PetscLogEventBegin(TAO_GradientEval, tao, X, G, NULL));
     if (tao->ops->computegradient) {
       PetscCallBack("Tao callback gradient", (*tao->ops->computegradient)(tao, X, G, tao->user_gradP));
     } else {
-      PetscCall(VecSet(G,0));
+      PetscCall(VecSet(G, 0));
     }
-    for (i = 0; i< tao->num_terms; i++) {
+    for (i = 0; i < tao->num_terms; i++) {
       DMTao tdm;
       PetscCall(DMGetDMTao(tao->dms[i], &tdm));
       PetscCall(DMTaoComputeGradient(tao->dms[i], X, tdm->workvec));
@@ -157,14 +157,14 @@ PetscErrorCode TaoComputeGradient(Tao tao, Vec X, Vec G)
     }
     PetscCall(PetscLogEventEnd(TAO_GradientEval, tao, X, G, NULL));
     tao->ngrads++;
-  } else if (tao->ops->computeobjectiveandgradient || (tao->num_terms>0)) {
+  } else if (tao->ops->computeobjectiveandgradient || (tao->num_terms > 0)) {
     PetscCall(PetscLogEventBegin(TAO_ObjGradEval, tao, X, G, NULL));
     if (tao->ops->computeobjectiveandgradient) {
       PetscCallBack("Tao callback objective/gradient", (*tao->ops->computeobjectiveandgradient)(tao, X, &dummy, G, tao->user_objgradP));
     } else {
-      PetscCall(VecSet(G,0));
+      PetscCall(VecSet(G, 0));
     }
-    for (i = 0; i< tao->num_terms; i++) {
+    for (i = 0; i < tao->num_terms; i++) {
       DMTao tdm;
       PetscCall(DMGetDMTao(tao->dms[i], &tdm));
       PetscCall(DMTaoComputeGradient(tao->dms[i], X, tdm->workvec));
@@ -215,14 +215,14 @@ PetscErrorCode TaoComputeObjective(Tao tao, Vec X, PetscReal *f)
   PetscValidHeaderSpecific(X, VEC_CLASSID, 2);
   PetscCheckSameComm(tao, 1, X, 2);
   PetscCall(VecLockReadPush(X));
-  if (tao->ops->computeobjective || (tao->num_terms>0)) {
+  if (tao->ops->computeobjective || (tao->num_terms > 0)) {
     PetscCall(PetscLogEventBegin(TAO_ObjectiveEval, tao, X, NULL, NULL));
     if (tao->ops->computeobjective) {
       PetscCallBack("Tao callback objective", (*tao->ops->computeobjective)(tao, X, f, tao->user_objP));
     } else {
       *f = 0;
     }
-    for (i=0; i < tao->num_terms; i++) {
+    for (i = 0; i < tao->num_terms; i++) {
       PetscReal obj_temp;
       DMTao     tdm;
       PetscCall(DMGetDMTao(tao->dms[i], &tdm));
@@ -238,7 +238,7 @@ PetscErrorCode TaoComputeObjective(Tao tao, Vec X, PetscReal *f)
     }
     PetscCall(PetscLogEventEnd(TAO_ObjectiveEval, tao, X, NULL, NULL));
     tao->nfuncs++;
-  } else if (tao->ops->computeobjectiveandgradient || (tao->num_terms>0)) {
+  } else if (tao->ops->computeobjectiveandgradient || (tao->num_terms > 0)) {
     PetscCall(PetscInfo(tao, "Duplicating variable vector in order to call func/grad routine\n"));
     PetscCall(VecDuplicate(X, &temp));
     PetscCall(PetscLogEventBegin(TAO_ObjGradEval, tao, X, NULL, NULL));
@@ -247,7 +247,7 @@ PetscErrorCode TaoComputeObjective(Tao tao, Vec X, PetscReal *f)
     } else {
       *f = 0;
     }
-    for (i=0; i < tao->num_terms; i++) {
+    for (i = 0; i < tao->num_terms; i++) {
       PetscReal obj_temp;
       DMTao     tdm;
       PetscCall(DMGetDMTao(tao->dms[i], &tdm));
@@ -302,7 +302,7 @@ PetscErrorCode TaoComputeObjectiveAndGradient(Tao tao, Vec X, PetscReal *f, Vec 
   PetscCheckSameComm(tao, 1, X, 2);
   PetscCheckSameComm(tao, 1, G, 4);
   PetscCall(VecLockReadPush(X));
-  if (tao->ops->computeobjectiveandgradient || (tao->num_terms >0)) {
+  if (tao->ops->computeobjectiveandgradient || (tao->num_terms > 0)) {
     PetscCall(PetscLogEventBegin(TAO_ObjGradEval, tao, X, G, NULL));
     if (tao->ops->computegradient == TaoDefaultComputeGradient) {
       /* TODO make DMTao support DefaultComputeGradient */
@@ -318,7 +318,7 @@ PetscErrorCode TaoComputeObjectiveAndGradient(Tao tao, Vec X, PetscReal *f, Vec 
       PetscCall(VecSet(G, 0));
       *f = 0;
     }
-    for (i=0; i<tao->num_terms; i++) {
+    for (i = 0; i < tao->num_terms; i++) {
       PetscReal temp;
       DMTao     tdm;
       PetscCall(DMGetDMTao(tao->dms[i], &tdm));
@@ -350,9 +350,9 @@ PetscErrorCode TaoComputeObjectiveAndGradient(Tao tao, Vec X, PetscReal *f, Vec 
     if (tao->ops->computegradient) {
       PetscCallBack("Tao callback gradient", (*tao->ops->computegradient)(tao, X, G, tao->user_gradP));
     } else {
-      PetscCall(VecSet(G,0));
+      PetscCall(VecSet(G, 0));
     }
-    for (i=0; i<tao->num_terms; i++) {
+    for (i = 0; i < tao->num_terms; i++) {
       PetscReal temp;
       DMTao     tdm;
       PetscCall(DMGetDMTao(tao->dms[i], &tdm));
