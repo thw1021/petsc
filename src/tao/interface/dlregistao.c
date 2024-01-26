@@ -15,6 +15,7 @@ PetscErrorCode TaoFinalizePackage(void)
   PetscFunctionBegin;
   PetscCall(PetscFunctionListDestroy(&TaoList));
   TaoPackageInitialized = PETSC_FALSE;
+  TaoRegisterAllCalled  = PETSC_FALSE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

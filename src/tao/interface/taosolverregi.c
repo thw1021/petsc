@@ -33,6 +33,7 @@ PETSC_EXTERN PetscErrorCode TaoCreate_ADMM(Tao);
 PETSC_EXTERN PetscErrorCode TaoCreate_ALMM(Tao);
 PETSC_EXTERN PetscErrorCode TaoCreate_Shell(Tao);
 PETSC_EXTERN PetscErrorCode TaoCreate_SNES(Tao);
+PETSC_EXTERN PetscErrorCode TaoCreate_Prox(Tao);
 
 /*
    Offset the convergence reasons so negative number represent diverged and
@@ -111,6 +112,7 @@ PetscErrorCode TaoRegisterAll(void)
   PetscCall(TaoRegister(TAOADMM, TaoCreate_ADMM));
   PetscCall(TaoRegister(TAOALMM, TaoCreate_ALMM));
   PetscCall(TaoRegister(TAOSNES, TaoCreate_SNES));
+  PetscCall(TaoRegister(TAOPROX, TaoCreate_Prox));
 #endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
