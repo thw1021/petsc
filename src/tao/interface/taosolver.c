@@ -2824,8 +2824,8 @@ PetscErrorCode TaoSetDMSize(Tao tao, PetscInt num)
 
   Input Parameters:
 + tao   - Tao solver context
-- dm    - DM context
-. scale - scale for DMTao
+. dm    - DM context
+- scale - scale for DMTao
 
   Level: advanced
 
@@ -2855,9 +2855,9 @@ PetscErrorCode TaoAddDM(Tao tao, DM dm, PetscReal scale)
 
   Input Parameters:
 + tao   - Tao solver context
-- dm    - DM context
-- idx   - The index at which to place DM
-. scale - scale for DMTao
+. dm    - DM context
+. idx   - The index at which to place DM
+- scale - scale for DMTao
 
   Level: advanced
 
@@ -2889,7 +2889,7 @@ PetscErrorCode TaoSetDM(Tao tao, DM dm, PetscInt idx, PetscReal scale)
   Logically Collective
 
   Input Parameters:
-. tao   - Tao solver context
+. tao - Tao solver context
 
   Level: intermediate
 
@@ -2917,7 +2917,7 @@ PetscErrorCode TaoClearDM(Tao tao)
 - idx - The index number
 
   Output Parameters:
-+ DM    - The `DM` at desired index.
++ dm    - The `DM` at desired index.
 - scale - The according scale parameter for the `DM`
 
   Level: intermediate

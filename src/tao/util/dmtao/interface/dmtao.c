@@ -770,8 +770,9 @@ PetscErrorCode DMTaoGetVM(DM dm, Mat *vm)
   TaoSetSolution needs to be called before this routine.
 
   Input Parameters:
-+ tao - Tao solver context
-- dm  - DMTao context
++ tao   - Tao solver context
+. dm    - DM context
+- scale - The scale of DM
 
   Level: advanced
 
