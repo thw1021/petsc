@@ -4315,6 +4315,8 @@ static PetscErrorCode DMConvert_pforest_plex(DM dm, DMType newtype, DM *plex)
       PetscCall(DMGetCellCoordinatesLocal(newPlex, &coords));
       if (coords) PetscCall(DMSetCellCoordinatesLocal(dm, coords));
     }
+  } else {
+    PetscCall(DMCopyLabels(dm, pforest->plex, PETSC_OWN_POINTER, PETSC_FALSE, DM_COPY_LABELS_REPLACE));
   }
   newPlex = pforest->plex;
   if (plex) {
@@ -5068,7 +5070,9 @@ static PetscErrorCode DMCreateNeumannOverlap_pforest(DM dm, IS *ovl, Mat *J, Pet
 
   PetscFunctionBegin;
   PetscCall(DMPforestGetPlex(dm, &plex));
+  PetscCall(DMCopyAuxiliaryVec(dm, plex));
   PetscCall(DMCreateNeumannOverlap_Plex(plex, ovl, J, setup, setup_ctx));
+  PetscCall(DMClearAuxiliaryVec(plex));
   if (!*setup) {
     PetscCall(PetscObjectQueryFunction((PetscObject)dm, "MatComputeNeumannOverlap_C", setup));
     if (*setup) PetscCall(PetscObjectCompose((PetscObject)*ovl, "_DM_Original_HPDDM", (PetscObject)dm));
@@ -5083,7 +5087,9 @@ static PetscErrorCode DMCreateDomainDecomposition_pforest(DM dm, PetscInt *nsub,
 
   PetscFunctionBegin;
   PetscCall(DMPforestGetPlex(dm, &plex));
+  PetscCall(DMCopyAuxiliaryVec(dm, plex));
   PetscCall(DMCreateDomainDecomposition(plex, nsub, names, innerises, outerises, dms));
+  PetscCall(DMClearAuxiliaryVec(plex));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -5094,6 +5100,7 @@ static PetscErrorCode DMCreateDomainDecompositionScatters_pforest(DM dm, PetscIn
 
   PetscFunctionBegin;
   PetscCall(DMPforestGetPlex(dm, &plex));
+  PetscCall(DMCopyAuxiliaryVec(dm, plex));
   PetscCall(DMCreateDomainDecompositionScatters(plex, n, subdms, iscat, oscat, lscat));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
