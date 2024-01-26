@@ -612,7 +612,7 @@ static PetscErrorCode PCSetUp_GAMG(PC pc)
 
   /* get basic dims */
   PetscCall(MatGetBlockSize(Pmat, &bs));
-  PetscCall(MatGetSize(Pmat, &M, &N));
+  PetscCall(MatGetSize(Pmat, &M, NULL));
 
 #if defined(PETSC_USE_INFO)
   PetscCall(MatGetInfo(Pmat, MAT_GLOBAL_SUM, &info)); /* global reduction */
@@ -646,7 +646,7 @@ static PetscErrorCode PCSetUp_GAMG(PC pc)
       PetscCall(MatGetType(Pmat, &mtype));
       PetscCall(MatCreate(PetscObjectComm((PetscObject)pc), &Prol));
       PetscCall(MatSetBlockSizes(Prol, bs, pc_gamg->injection_index_size));
-      PetscCall(MatSetSizes(Prol, M, Prol_N, prol_m, prol_n));
+      PetscCall(MatSetSizes(Prol, prol_m, prol_n, M, Prol_N));
       PetscCall(MatSetType(Prol, mtype));
 #if PetscDefined(HAVE_DEVICE)
       PetscBool flg;
@@ -1656,7 +1656,7 @@ static PetscErrorCode PCView_GAMG(PC pc, PetscViewer viewer)
   else if (pc_gamg->asm_hem_aggs) PetscCall(PetscViewerASCIIPrintf(viewer, "      Using aggregates made with %d applications of heavy edge matching (HEM) to define subdomains for PCASM\n", (int)pc_gamg->asm_hem_aggs));
   if (pc_gamg->use_parallel_coarse_grid_solver) PetscCall(PetscViewerASCIIPrintf(viewer, "      Using parallel coarse grid solver (all coarse grid equations not put on one process)\n"));
   if (pc_gamg->injection_index_size) {
-    PetscCall(PetscViewerASCIIPrintf(viewer, "      Using injection restriction/prolongation on first level:"));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "      Using injection restriction/prolongation on first level, dofs:"));
     for (int i = 0; i < pc_gamg->injection_index_size; i++) PetscCall(PetscViewerASCIIPrintf(viewer, " %d", (int)pc_gamg->injection_index[i]));
     PetscCall(PetscViewerASCIIPrintf(viewer, "\n"));
   }
