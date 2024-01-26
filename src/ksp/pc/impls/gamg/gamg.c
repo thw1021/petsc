@@ -679,10 +679,8 @@ static PetscErrorCode PCSetUp_GAMG(PC pc)
         PetscCall(PetscMalloc1(pc_gamg->data_sz, &pc_gamg->data));
         for (row = nn = 0; row < prol_n; row += pc_gamg->injection_index_size) {
           for (int jj = 0; jj < pc_gamg->injection_index_size; jj++) {
-            int idx            = row * pc_gamg->injection_index_size + jj * pc_gamg->injection_index_size;
-            for (int kk = 0; kk < pc_gamg->injection_index_size; kk++, nn++) {
-              pc_gamg->data[idx + kk] = (jj == kk) ? 1 : 0;
-            }
+            int idx = row * pc_gamg->injection_index_size + jj * pc_gamg->injection_index_size;
+            for (int kk = 0; kk < pc_gamg->injection_index_size; kk++, nn++) { pc_gamg->data[idx + kk] = (jj == kk) ? 1 : 0; }
           }
         }
         PetscCheck(nn == pc_gamg->data_sz, PETSC_COMM_SELF, PETSC_ERR_PLIB, "nn != pc_gamg->data_sz %d" PetscInt_FMT " %" PetscInt_FMT, pc_gamg->data_sz, nn);
