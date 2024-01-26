@@ -4,9 +4,11 @@
 #include "petsc/finclude/petscts.h"
 
 #define Tao type(tTao)
+#define DMTao type(tDMTao)
 #define TaoLineSearch PetscFortranAddr
 #define TaoConvergedReason PetscEnum
 #define TaoType character*(80)
+#define DMTaoType character*(80)
 #define TaoLineSearchType character*(80)
 #define TaoADMMUpdateType PetscEnum
 #define TaoADMMRegularizerType PetscEnum
@@ -47,5 +49,6 @@
 #define TAOALMM     'almm'
 #define TAOPYTHON   'python'
 #define TAOSNES     'snes'
+#define TAOPROX     'prox'
 
 #endif
