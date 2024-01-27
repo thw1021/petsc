@@ -657,9 +657,9 @@ static PetscErrorCode PCSetUp_GAMG(PC pc)
       PetscCall(MatSeqAIJSetPreallocation(Prol, pc_gamg->injection_index_size, NULL));
       PetscCall(MatMPIAIJSetPreallocation(Prol, pc_gamg->injection_index_size, NULL, 0, NULL));
       // set I \kron [1, 1, ... ]^T
-      for (int ii = Istart, col = (Istart / bs) * pc_gamg->injection_index_size; ii < Iend; ii += bs) {
-        const PetscReal one = 1;
-        for (int jj = 0; jj < pc_gamg->injection_index_size; jj++, col++) {
+      for (PetscInt ii = Istart, col = (Istart / bs) * pc_gamg->injection_index_size; ii < Iend; ii += bs) {
+        const PetscScalar one = 1;
+        for (PetscInt jj = 0; jj < pc_gamg->injection_index_size; jj++, col++) {
           PetscInt row = ii + pc_gamg->injection_index[jj];
           PetscCall(MatSetValues(Prol, 1, &row, 1, &col, &one, INSERT_VALUES));
         }
@@ -683,7 +683,7 @@ static PetscErrorCode PCSetUp_GAMG(PC pc)
             for (int kk = 0; kk < pc_gamg->injection_index_size; kk++, nn++) { pc_gamg->data[idx + kk] = (jj == kk) ? 1 : 0; }
           }
         }
-        PetscCheck(nn == pc_gamg->data_sz, PETSC_COMM_SELF, PETSC_ERR_PLIB, "nn != pc_gamg->data_sz %d" PetscInt_FMT " %" PetscInt_FMT, pc_gamg->data_sz, nn);
+        PetscCheck(nn == pc_gamg->data_sz, PETSC_COMM_SELF, PETSC_ERR_PLIB, "nn != pc_gamg->data_sz %" PetscInt_FMT " %d", pc_gamg->data_sz, nn);
       }
     } else { /* construct prolongator - Parr[level1] */
       Mat               Gmat, mat;
