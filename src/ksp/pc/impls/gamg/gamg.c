@@ -683,7 +683,7 @@ static PetscErrorCode PCSetUp_GAMG(PC pc)
             for (int kk = 0; kk < pc_gamg->injection_index_size; kk++, nn++) { pc_gamg->data[idx + kk] = (jj == kk) ? 1 : 0; }
           }
         }
-        PetscCheck(nn == pc_gamg->data_sz, PETSC_COMM_SELF, PETSC_ERR_PLIB, "nn != pc_gamg->data_sz %" PetscInt_FMT " %d", pc_gamg->data_sz, nn);
+        PetscCheck(nn == pc_gamg->data_sz, PETSC_COMM_SELF, PETSC_ERR_PLIB, "nn != pc_gamg->data_sz %" PetscInt_FMT " %" PetscInt_FMT, pc_gamg->data_sz, nn);
       }
     } else { /* construct prolongator - Parr[level1] */
       Mat               Gmat, mat;
