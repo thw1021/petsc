@@ -654,8 +654,8 @@ static PetscErrorCode PCSetUp_GAMG(PC pc)
       PetscCall(MatBindToCPU(Prol, flg));
       if (flg) PetscCall(MatSetBindingPropagates(Prol, PETSC_TRUE));
 #endif
-      PetscCall(MatSeqAIJSetPreallocation(Prol, pc_gamg->injection_index_size, NULL));
-      PetscCall(MatMPIAIJSetPreallocation(Prol, pc_gamg->injection_index_size, NULL, 0, NULL));
+      PetscCall(MatSeqAIJSetPreallocation(Prol, 1, NULL));
+      PetscCall(MatMPIAIJSetPreallocation(Prol, 1, NULL, 0, NULL));
       // set I \kron [1, 1, ... ]^T
       for (PetscInt ii = Istart, col = (Istart / bs) * pc_gamg->injection_index_size; ii < Iend; ii += bs) {
         const PetscScalar one = 1;
