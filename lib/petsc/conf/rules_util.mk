@@ -134,7 +134,7 @@ checkbadSource:
 	-@echo "----- Using PetscInfo() without carriage return --------------------" >> checkbadSource.out
 	-@git --no-pager grep -n -P 'PetscCall\(PetscInfo\(' -- ${GITSRC} | grep -v '\\n' >> checkbadSource.out;true
 	-@echo "----- Using Petsc(Assert|Check)() with carriage return -------------" >> checkbadSource.out
-	-@git --no-pager grep -n -P -E 'Petsc(Assert|Check)\(.*\\\n\"[,)]' -- ${GITSRC} >> checkbadSource.out;true
+	-@git --no-pager grep -n -P -E 'Petsc(Assert|Check)\(.*[^\]\\\n' -- ${GITSRC} >> checkbadSource.out;true
 	-@echo "----- Extra \"\" after format specifier ending a string --------------" >> checkbadSource.out
 	-@git --no-pager grep -n -P -E '_FMT \"\",' -- ${GITSRC} >> checkbadSource.out;true
 	-@echo "----- First blank line ---------------------------------------------" >> checkbadSource.out
