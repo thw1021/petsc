@@ -1,7 +1,7 @@
   0 KSP Residual norm 0.840742 
-  1 KSP Residual norm 1.16633 
-  2 KSP Residual norm 0.713247 
-  3 KSP Residual norm 0.331132 
+  1 KSP Residual norm 0.682019 
+  2 KSP Residual norm 0.49293 
+  3 KSP Residual norm 0.27487 
   4 KSP Residual norm < 1.e-11
 Linear solve converged due to CONVERGED_ATOL iterations 4
 Iteratively computed eigenvalues
@@ -11,7 +11,9 @@ Iteratively computed eigenvalues
 27. + 0.i
 Iteratively computed extreme singular values: max 27. min 1. max/min 27.
 KSP Object: 1 MPI process
-  type: cg
+  type: gmres
+    restart=30, using Classical (unmodified) Gram-Schmidt Orthogonalization with no iterative refinement
+    happy breakdown tolerance 1e-30
   maximum iterations=10000, initial guess is zero
   tolerances:  relative=1e-14, absolute=1e-14, divergence=10000.
   left preconditioning

@@ -13,20 +13,9 @@ int main(int argc, char **args)
   Mat         A;    /* linear system matrix */
   KSP         ksp;  /* linear solver context */
   PC          pc;   /* preconditioner context */
-  PetscInt    n = 10;
+  PetscInt    n = 6, i, j, col[2];
+  PetscScalar value[4];
   PetscMPIInt size;
-  PetscScalar data[100] = {0.01900677733082856,    0.0006930942519647015,   -0.00044241746554721565, 0.0002103712786878531,  0.0006930942519647825,   0.0006140114285409819,  -0.00046851475217568475, -0.00044241746554723034, -0.00046851475217569636,
-                           0.00021037127868786035, 0.000693094251964701,    0.059270340414212176,    0.0011762392616009715,  -0.000442417465547234,   -0.0013280848558196233, -0.003216261971328536,   0.0007214671628728421,   0.000721467162872908,
-                           0.0016802345162577742,  -0.00046851475217570595, -0.00044241746554721554, 0.0011762392616009706,  0.059270340414212135,    0.0006930942519647157,  0.0007214671628728805,   -0.003216261971328582,   -0.001328084855819515,
-                           0.001680234516257721,   0.0007214671628728718,   -0.00046851475217569397, 0.00021037127868785333, -0.00044241746554723397, 0.000693094251964717,   0.01900677733082846,     -0.0004685147521757005,  0.000614011428541031,
-                           0.0006930942519647617,  -0.000468514752175688,   -0.0004424174655472671,  0.0002103712786878798,  0.0006930942519647826,   -0.0013280848558196211, 0.0007214671628728808,   -0.0004685147521757,     0.05927034041421214,
-                           -0.003216261971328475,  0.0016802345162577302,   0.001176239261600886,    0.0007214671628729087,  -0.00044241746554721283, 0.0006140114285409821,  -0.003216261971328536,   -0.0032162619713285816,  0.0006140114285410324,
-                           -0.0032162619713284766, 0.10579258903720012,     -0.0032162619713285135,  -0.003216261971328439,  -0.003216261971328572,   0.000614011428540997,   -0.00046851475217568475, 0.0007214671628728421,   -0.0013280848558195133,
-                           0.000693094251964762,   0.001680234516257731,    -0.0032162619713285118,  0.059270340414212246,   0.0007214671628728379,   0.0011762392616010023,  -0.00044241746554726395, -0.0004424174655472301,  0.0007214671628729061,
-                           0.0016802345162577207,  -0.0004685147521756878,  0.0011762392616008856,   -0.0032162619713284354, 0.0007214671628728359,   0.05927034041421215,    -0.0013280848558195365,  0.0006930942519647073,   -0.0004685147521756969,
-                           0.001680234516257775,   0.0007214671628728721,   -0.0004424174655472671,  0.0007214671628729094,  -0.003216261971328571,   0.0011762392616010058,  -0.0013280848558195398,  0.05927034041421213,     0.0006930942519648116,
-                           0.0002103712786878602,  -0.00046851475217570617, -0.0004685147521756934,  0.00021037127868787982, -0.0004424174655472142,  0.000614011428540997,   -0.00044241746554726417, 0.0006930942519647065,   0.0006930942519648106,
-                           0.019006777330828416};
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &args, (char *)0, help));
   PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD, &size));
@@ -55,9 +44,26 @@ int main(int argc, char **args)
      preallocation of matrix memory is crucial for attaining good
      performance. See the matrix chapter of the users manual for details.
   */
-  PetscCall(MatCreateDense(PETSC_COMM_WORLD, PETSC_DECIDE, PETSC_DECIDE, n, n, data, &A));
+  PetscCall(MatCreate(PETSC_COMM_WORLD, &A));
+  PetscCall(MatSetSizes(A, PETSC_DECIDE, PETSC_DECIDE, n, n));
   PetscCall(MatSetFromOptions(A));
   PetscCall(MatSetUp(A));
+  
+  /*
+     Assemble matrix
+  */
+  value[0] = 2.0;
+  value[1] = -1.0;
+  value[2] = -1.0;
+  value[3] = 2.0;
+  for (i = 0; 2 * i < n; i++) {
+    col[0] = 2 * i;  
+    col[1] = 2 * i + 1;  
+    PetscCall(MatSetValues(A, 2, col, 2, col, value, INSERT_VALUES));
+    for (j = 0; j < 4; j++) value[j] *= 3.0;
+  }
+  PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
 
   /*
      Set random right-hand-side vector.
@@ -89,7 +95,7 @@ int main(int argc, char **args)
   */
   PetscCall(KSPGetPC(ksp, &pc));
   PetscCall(PCSetType(pc, PCJACOBI));
-  PetscCall(KSPSetTolerances(ksp, 1.e-15, 1.e-15, PETSC_DEFAULT, PETSC_DEFAULT));
+  PetscCall(KSPSetTolerances(ksp, 1.e-14, 1.e-14, PETSC_DEFAULT, PETSC_DEFAULT));
 
   /*
     Set runtime options, e.g.,
@@ -137,26 +143,46 @@ int main(int argc, char **args)
 
    test:
       suffix: 1
-      args: -ksp_type cg -pc_type jacobi -ksp_view_eigenvalues -ksp_view_singularvalues -ksp_monitor_short -ksp_converged_reason
+      args: -ksp_type cg -pc_type none -ksp_view_eigenvalues -ksp_view_singularvalues -ksp_monitor_short -ksp_converged_reason
 
    test:
       suffix: 2
-      args: -ksp_type fcg -pc_type jacobi -ksp_view_eigenvalues -ksp_view_singularvalues -ksp_monitor_short -ksp_converged_reason
+      args: -ksp_type cg -pc_type jacobi -ksp_view_eigenvalues -ksp_view_singularvalues -ksp_monitor_short -ksp_converged_reason
 
    test:
       suffix: 3
-      args: -ksp_type minres -pc_type jacobi -ksp_view_eigenvalues -ksp_view_singularvalues -ksp_monitor_short -ksp_converged_reason
+      args: -ksp_type fcg -pc_type none -ksp_view_eigenvalues -ksp_view_singularvalues -ksp_monitor_short -ksp_converged_reason
 
    test:
       suffix: 4
-      args: -ksp_type gmres -ksp_pc_side left -pc_type jacobi -ksp_view_eigenvalues -ksp_view_singularvalues -ksp_monitor_short -ksp_converged_reason
+      args: -ksp_type fcg -pc_type jacobi -ksp_view_eigenvalues -ksp_view_singularvalues -ksp_monitor_short -ksp_converged_reason
 
    test:
       suffix: 5
-      args: -ksp_type gmres -ksp_pc_side right -pc_type jacobi -ksp_view_eigenvalues -ksp_view_singularvalues -ksp_monitor_short -ksp_converged_reason
+      args: -ksp_type minres -pc_type none -ksp_view_eigenvalues -ksp_view_singularvalues -ksp_monitor_short -ksp_converged_reason
 
    test:
       suffix: 6
+      args: -ksp_type minres -pc_type jacobi -ksp_view_eigenvalues -ksp_view_singularvalues -ksp_monitor_short -ksp_converged_reason
+
+   test:
+      suffix: 7
+      args: -ksp_type gmres -pc_type none -ksp_view_eigenvalues -ksp_view_singularvalues -ksp_monitor_short -ksp_converged_reason
+
+   test:
+      suffix: 8
+      args: -ksp_type gmres -ksp_pc_side left -pc_type jacobi -ksp_view_eigenvalues -ksp_view_singularvalues -ksp_monitor_short -ksp_converged_reason
+
+   test:
+      suffix: 9
+      args: -ksp_type gmres -ksp_pc_side right -pc_type jacobi -ksp_view_eigenvalues -ksp_view_singularvalues -ksp_monitor_short -ksp_converged_reason
+
+   test:
+      suffix: 10
+      args: -ksp_type fgmres -pc_type none -ksp_view_eigenvalues -ksp_view_singularvalues -ksp_monitor_short -ksp_converged_reason
+   
+   test:
+      suffix: 11
       args: -ksp_type fgmres -pc_type jacobi -ksp_view_eigenvalues -ksp_view_singularvalues -ksp_monitor_short -ksp_converged_reason
 
 TEST*/
