@@ -96,6 +96,63 @@ MPI and OpenMP provide ways to bind and map processes and cores. They also provi
 
 Providing appropriate values may be crucial to high performance; the defaults may produce poor results. The best bindings for the STREAMS benchmark are often the best bindings for large PETSc applications. The Linux commands lscpu and numactl -H provide useful information about the hardware configuration.
 
+It is possible that the MPI initialization (including the use of ``mpiexec``) can change the default OpenMP binding/mapping behavior and thus seriously affect the application runtime.
+The `C <PETSC_DOC_OUT_ROOT_PLACEHOLDER/src/sys/tests/ex69.c.html>`__ and `Fortran <PETSC_DOC_OUT_ROOT_PLACEHOLDER/src/sys/tests/ex69f.F90.html>`__ examples demonstrate this.
+
+We run
+``ex69f`` with four OpenMP threads without ``mpiexec`` and see almost perfect scaling.
+The CPU time of the process, which is summed over the four threads in process, is the same as the wall clock time indicating that each thread is run on a different core as desired.
+
+.. code-block::
+
+   $ OMP_NUM_THREADS=4  ./ex69f
+     CPU time reported by cpu_time()               6.1660000000000006E-002
+     Wall clock time reported by system_clock()    1.8335562000000000E-002
+     Wall clock time reported by omp_get_wtime()   1.8330062011955306E-002
+     Number of threads set
+
+Running under ``mpiexec`` gives a very different wall clock time, seemingly to indicate that all four threads ran on the same core.
+
+.. code-block::
+
+   $ OMP_NUM_THREADS=4 mpiexec -n 1  ./ex69f
+     CPU time reported by cpu_time()               7.2290999999999994E-002
+     Wall clock time reported by system_clock()    7.2356641999999999E-002
+     Wall clock time reported by omp_get_wtime()   7.2353694995399565E-002
+     Number of threads set
+
+If we add some binding/mapping options to ``mpiexec`` we obtain
+
+.. code-block::
+
+   $ OMP_NUM_THREADS=4 mpiexec --bind-to numa -n 1 --map-by core ./ex69f
+     CPU time reported by cpu_time()               7.0021000000000000E-002
+     Wall clock time reported by system_clock()    1.8489282999999999E-002
+     Wall clock time reported by omp_get_wtime()   1.8486462999135256E-002
+     Number of threads set           4
+
+Thus we conclude that this ``mpiexec`` implementation is by default binding the process (including all of its threads) to a single core.
+Consider also the ``mpiexec`` option ``--map-by socket:pe=$OMP_NUM_THREADS`` to ensure each thread gets is own core for computation.
+
+Note that setting
+``OMP_PROC_BIND=spread`` alone does not resolve the problem as indicate by the output below.
+
+.. code-block::
+
+   $ OMP_PROC_BIND=spread OMP_NUM_THREADS=4 mpiexec -n 1  ./ex69f
+     CPU time reported by cpu_time()               7.2841999999999990E-002
+     Wall clock time reported by system_clock()    7.2946015000000003E-002
+     Wall clock time reported by omp_get_wtime()   7.2942997998325154E-002
+     Number of threads set
+
+The Fortran routine ``cpu_time()`` can produce misleading results sometimes when is run with multiple threads. Consider again the
+`Fortran <PETSC_DOC_OUT_ROOT_PLACEHOLDER/src/sys/tests/ex69f.F90.html>`__ example. For an OpenMP parallel loop with enough available cores and the proper binding of threads
+to cores one expects the CPU time for the process to roughly the number of threads times the wall clock time. But for a loop that is not parallelized (like the second
+loop in the Fortran example) the CPU time one would expect would match the wall clock time. However, this may not be the case, for example we have run the Fortran example
+on an Intel system with the Intel ifort compiler and observed the recorded CPU for the second loop to be roughly the number of threads times the wall clock time even
+though only a single thread is computing the loop. Thus we conclude that comparing the CPU time to the wall clock time of a computation with OpenMP does not give you
+a good measure of the speedup produced by OpenMP. 
+
 Detailed STREAMS study for large arrays
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
