@@ -198,7 +198,7 @@ static PetscErrorCode KSPSolve_FCG(KSP ksp)
     PetscCall(VecXDot(Pcurr, R, &beta)); /*  beta <- pi'*r       */
     KSPCheckDot(ksp, beta);
     if ((i > 0) && (PetscAbsScalar(beta * betaold) < 0.0)) {
-      PetscCheck(!ksp->errorifnotconverged, PetscObjectComm((PetscObject)ksp), PETSC_ERR_NOT_CONVERGED, "Diverged due to indefinite preconditioner, beta %g, betaold %g", (double)beta, (double)betaold);
+      PetscCheck(!ksp->errorifnotconverged, PetscObjectComm((PetscObject)ksp), PETSC_ERR_NOT_CONVERGED, "Diverged due to indefinite preconditioner, beta %g, betaold %g", (double)PetscRealPart(beta), (double)PetscRealPart(betaold));
       ksp->reason = KSP_DIVERGED_INDEFINITE_PC;
       PetscCall(PetscInfo(ksp, "diverging due to indefinite preconditioner\n"));
       break;
