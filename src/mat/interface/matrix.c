@@ -194,15 +194,16 @@ PetscErrorCode MatFactorClearError(Mat mat)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode MatFindNonzeroRowsOrCols_Basic(Mat mat, PetscBool cols, PetscReal tol, IS *nonzero)
+PetscErrorCode MatFindNonzeroRowsOrCols_Basic(Mat mat, PetscBool cols, PetscReal tol, IS *nonzero)
 {
   Vec                r, l;
   const PetscScalar *al;
-  PetscInt           i, nz, gnz, N, n;
+  PetscInt           i, nz, gnz, N, n, st;
 
   PetscFunctionBegin;
   PetscCall(MatCreateVecs(mat, &r, &l));
   if (!cols) { /* nonzero rows */
+    PetscCall(MatGetOwnershipRange(mat, &st, NULL));
     PetscCall(MatGetSize(mat, &N, NULL));
     PetscCall(MatGetLocalSize(mat, &n, NULL));
     PetscCall(VecSet(l, 0.0));
@@ -210,6 +211,7 @@ PETSC_INTERN PetscErrorCode MatFindNonzeroRowsOrCols_Basic(Mat mat, PetscBool co
     PetscCall(MatMult(mat, r, l));
     PetscCall(VecGetArrayRead(l, &al));
   } else { /* nonzero columns */
+    PetscCall(MatGetOwnershipRangeColumn(mat, &st, NULL));
     PetscCall(MatGetSize(mat, NULL, &N));
     PetscCall(MatGetLocalSize(mat, NULL, &n));
     PetscCall(VecSet(r, 0.0));
@@ -231,10 +233,10 @@ PETSC_INTERN PetscErrorCode MatFindNonzeroRowsOrCols_Basic(Mat mat, PetscBool co
     if (nz) {
       if (tol < 0) {
         for (i = 0, nz = 0; i < n; i++)
-          if (al[i] != 0.0) nzr[nz++] = i;
+          if (al[i] != 0.0) nzr[nz++] = i + st;
       } else {
         for (i = 0, nz = 0; i < n; i++)
-          if (PetscAbsScalar(al[i]) > tol) nzr[nz++] = i;
+          if (PetscAbsScalar(al[i]) > tol) nzr[nz++] = i + st;
       }
     }
     PetscCall(ISCreateGeneral(PetscObjectComm((PetscObject)mat), nz, nzr, PETSC_OWN_POINTER, nonzero));
@@ -1205,9 +1207,7 @@ PETSC_UNUSED static int TV_display_type(const struct _p_Mat *mat)
             or some related function before a call to `MatLoad()`
 - viewer - `PETSCVIEWERBINARY`/`PETSCVIEWERHDF5` file viewer
 
-  Options Database Keys:
-   Used with block matrix formats (`MATSEQBAIJ`,  ...) to specify
-   block size
+  Options Database Key:
 . -matload_block_size <bs> - set block size
 
   Level: beginner
@@ -1307,8 +1307,7 @@ $    save example.mat A b -v7.3
   unless the matrix is marked as SPD or symmetric
   (see `MatSetOption()`, `MAT_SPD`, `MAT_SYMMETRIC`).
 
-  References:
-.  * - MATLAB(R) Documentation, manual page of save(), https://www.mathworks.com/help/matlab/ref/save.html#btox10b-1-version
+  See MATLAB Documentation on `save()`, <https://www.mathworks.com/help/matlab/ref/save.html#btox10b-1-version>
 
 .seealso: [](ch_matrices), `Mat`, `PetscViewerBinaryOpen()`, `PetscViewerSetType()`, `MatView()`, `VecLoad()`
  @*/
@@ -4508,7 +4507,8 @@ static MatSolverTypeHolder MatSolverTypeHolders = NULL;
 
   Level: developer
 
-.seealso: [](ch_matrices), `Mat`, [Matrix Factorization](sec_matfactor), `MatFactorGetSolverType()`, `MatCopy()`, `MatDuplicate()`, `MatGetFactorAvailable()`, `MatGetFactor()`
+.seealso: [](ch_matrices), `Mat`, [Matrix Factorization](sec_matfactor), `MatFactorGetSolverType()`, `MatCopy()`, `MatDuplicate()`, `MatGetFactorAvailable()`,
+  `MatGetFactor()`
 @*/
 PetscErrorCode MatSolverTypeRegister(MatSolverType package, MatType mtype, MatFactorType ftype, PetscErrorCode (*createfactor)(Mat, MatFactorType, Mat *))
 {
@@ -4560,7 +4560,7 @@ PetscErrorCode MatSolverTypeRegister(MatSolverType package, MatType mtype, MatFa
   MatSolverTypeGet - Gets the function that creates the factor matrix if it exist
 
   Input Parameters:
-+ type  - name of the package, for example petsc or superlu
++ type  - name of the package, for example petsc or superlu, if this is 'NULL' then the first result that satisfies the other criteria is returned
 . ftype - the type of factorization supported by the type
 - mtype - the matrix type that works with this type
 
@@ -4569,11 +4569,22 @@ PetscErrorCode MatSolverTypeRegister(MatSolverType package, MatType mtype, MatFa
 . foundmtype   - `PETSC_TRUE` if the type supports the requested mtype
 - createfactor - routine that will create the factored matrix ready to be used or `NULL` if not found
 
+  Calling sequence of `createfactor`:
++ A     - the matrix providing the factor matrix
+. mtype - the `MatType` of the factor requested
+- B     - the new factor matrix that responds to MatXXFactorSymbolic,Numeric() functions, such as `MatLUFactorSymbolic()`
+
   Level: developer
 
-.seealso: [](ch_matrices), `Mat`, `MatFactorType`, `MatType`, `MatCopy()`, `MatDuplicate()`, `MatGetFactorAvailable()`, `MatSolverTypeRegister()`, `MatGetFactor()`
+  Note:
+  When `type` is `NULL` the available functions are searched for based on the order of the calls to `MatSolverTypeRegister()` in `MatInitializePackage()`.
+  Since different PETSc configurations may have different external solvers, seemingly identical runs with different PETSc configurations may use a different solver.
+  For example if one configuration had --download-mumps while a different one had --download-superlu_dist.
+
+.seealso: [](ch_matrices), `Mat`, `MatFactorType`, `MatType`, `MatCopy()`, `MatDuplicate()`, `MatGetFactorAvailable()`, `MatSolverTypeRegister()`, `MatGetFactor()`,
+          `MatInitializePackage()`
 @*/
-PetscErrorCode MatSolverTypeGet(MatSolverType type, MatType mtype, MatFactorType ftype, PetscBool *foundtype, PetscBool *foundmtype, PetscErrorCode (**createfactor)(Mat, MatFactorType, Mat *))
+PetscErrorCode MatSolverTypeGet(MatSolverType type, MatType mtype, MatFactorType ftype, PetscBool *foundtype, PetscBool *foundmtype, PetscErrorCode (**createfactor)(Mat A, MatFactorType mtype, Mat *B))
 {
   MatSolverTypeHolder         next = MatSolverTypeHolders;
   PetscBool                   flg;
@@ -4711,21 +4722,23 @@ PetscErrorCode MatFactorGetPreferredOrdering(Mat mat, MatFactorType ftype, MatOr
 }
 
 /*@C
-  MatGetFactor - Returns a matrix suitable to calls to MatXXFactorSymbolic()
+  MatGetFactor - Returns a matrix suitable to calls to MatXXFactorSymbolic,Numeric()
 
   Collective
 
   Input Parameters:
 + mat   - the matrix
-. type  - name of solver type, for example, superlu, petsc (to use PETSc's default)
+. type  - name of solver type, for example, superlu, petsc (to use PETSc's solver if it is available), if this is 'NULL' then the first result that satisfies
+          the other criteria is returned
 - ftype - factor type, `MAT_FACTOR_LU`, `MAT_FACTOR_CHOLESKY`, `MAT_FACTOR_ICC`, `MAT_FACTOR_ILU`, `MAT_FACTOR_QR`
 
   Output Parameter:
-. f - the factor matrix used with MatXXFactorSymbolic() calls. Can be `NULL` in some cases, see notes below.
+. f - the factor matrix used with MatXXFactorSymbolic,Numeric() calls. Can be `NULL` in some cases, see notes below.
 
-  Options Database Key:
-. -mat_factor_bind_factorization <host, device> - Where to do matrix factorization? Default is device (might consume more device memory.
-                                  One can choose host to save device memory). Currently only supported with `MATSEQAIJCUSPARSE` matrices.
+  Options Database Keys:
++ -pc_factor_mat_solver_type <type>             - choose the type at run time. When using `KSP` solvers
+- -mat_factor_bind_factorization <host, device> - Where to do matrix factorization? Default is device (might consume more device memory.
+                                                  One can choose host to save device memory). Currently only supported with `MATSEQAIJCUSPARSE` matrices.
 
   Level: intermediate
 
@@ -4736,9 +4749,11 @@ PetscErrorCode MatFactorGetPreferredOrdering(Mat mat, MatFactorType ftype, MatOr
   Users usually access the factorization solvers via `KSP`
 
   Some PETSc matrix formats have alternative solvers available that are contained in alternative packages
-  such as pastix, superlu, mumps etc.
+  such as pastix, superlu, mumps etc. PETSc must have been ./configure to use the external solver, using the option --download-package or --with-package-dir
 
-  PETSc must have been ./configure to use the external solver, using the option --download-package
+  When `type` is `NULL` the available results are searched for based on the order of the calls to `MatSolverTypeRegister()` in `MatInitializePackage()`.
+  Since different PETSc configurations may have different external solvers, seemingly identical runs with different PETSc configurations may use a different solver.
+  For example if one configuration had --download-mumps while a different one had --download-superlu_dist.
 
   Some of the packages have options for controlling the factorization, these are in the form -prefix_mat_packagename_packageoption
   where prefix is normally obtained from the calling `KSP`/`PC`. If `MatGetFactor()` is called directly one can set
@@ -4747,8 +4762,9 @@ PetscErrorCode MatFactorGetPreferredOrdering(Mat mat, MatFactorType ftype, MatOr
   Developer Note:
   This should actually be called `MatCreateFactor()` since it creates a new factor object
 
-.seealso: [](ch_matrices), `Mat`, [Matrix Factorization](sec_matfactor), `KSP`, `MatSolverType`, `MatFactorType`, `MatCopy()`, `MatDuplicate()`, `MatGetFactorAvailable()`, `MatFactorGetCanUseOrdering()`, `MatSolverTypeRegister()`,
-          `MAT_FACTOR_LU`, `MAT_FACTOR_CHOLESKY`, `MAT_FACTOR_ICC`, `MAT_FACTOR_ILU`, `MAT_FACTOR_QR`
+.seealso: [](ch_matrices), `Mat`, [Matrix Factorization](sec_matfactor), `KSP`, `MatSolverType`, `MatFactorType`, `MatCopy()`, `MatDuplicate()`,
+          `MatGetFactorAvailable()`, `MatFactorGetCanUseOrdering()`, `MatSolverTypeRegister()`, `MatSolverTypeGet()`
+          `MAT_FACTOR_LU`, `MAT_FACTOR_CHOLESKY`, `MAT_FACTOR_ICC`, `MAT_FACTOR_ILU`, `MAT_FACTOR_QR`, `MatInitializePackage()`
 @*/
 PetscErrorCode MatGetFactor(Mat mat, MatSolverType type, MatFactorType ftype, Mat *f)
 {
@@ -4804,7 +4820,7 @@ PetscErrorCode MatGetFactor(Mat mat, MatSolverType type, MatFactorType ftype, Ma
   This should actually be called `MatCreateFactorAvailable()` since `MatGetFactor()` creates a new factor object
 
 .seealso: [](ch_matrices), `Mat`, [Matrix Factorization](sec_matfactor), `MatSolverType`, `MatFactorType`, `MatGetFactor()`, `MatCopy()`, `MatDuplicate()`, `MatSolverTypeRegister()`,
-          `MAT_FACTOR_LU`, `MAT_FACTOR_CHOLESKY`, `MAT_FACTOR_ICC`, `MAT_FACTOR_ILU`, `MAT_FACTOR_QR`
+          `MAT_FACTOR_LU`, `MAT_FACTOR_CHOLESKY`, `MAT_FACTOR_ICC`, `MAT_FACTOR_ILU`, `MAT_FACTOR_QR`, `MatSolverTypeGet()`
 @*/
 PetscErrorCode MatGetFactorAvailable(Mat mat, MatSolverType type, MatFactorType ftype, PetscBool *flg)
 {
@@ -6904,14 +6920,11 @@ PetscErrorCode MatGetOwnershipIS(Mat A, IS *rows, IS *cols)
   instead of working directly with matrix algebra routines such as this.
   See, e.g., `KSPCreate()`.
 
-  Uses the definition of level of fill as in Y. Saad, 2003
+  Uses the definition of level of fill as in Y. Saad, {cite}`saad2003`
 
   Developer Note:
   The Fortran interface is not autogenerated as the
   interface definition cannot be generated correctly [due to `MatFactorInfo`]
-
-  References:
-.  * - Y. Saad, Iterative methods for sparse linear systems Philadelphia: Society for Industrial and Applied Mathematics, 2003
 
 .seealso: [](ch_matrices), `Mat`, [Matrix Factorization](sec_matfactor), `MatGetFactor()`, `MatLUFactorSymbolic()`, `MatLUFactorNumeric()`, `MatCholeskyFactor()`
           `MatGetOrdering()`, `MatFactorInfo`
@@ -6961,14 +6974,11 @@ PetscErrorCode MatILUFactorSymbolic(Mat fact, Mat mat, IS row, IS col, const Mat
   instead of working directly with matrix algebra routines such as this.
   See, e.g., `KSPCreate()`.
 
-  This uses the definition of level of fill as in Y. Saad, 2003
+  This uses the definition of level of fill as in Y. Saad {cite}`saad2003`
 
   Developer Note:
   The Fortran interface is not autogenerated as the
   interface definition cannot be generated correctly [due to `MatFactorInfo`]
-
-  References:
-.  * - Y. Saad, Iterative methods for sparse linear systems Philadelphia: Society for Industrial and Applied Mathematics, 2003
 
 .seealso: [](ch_matrices), `Mat`, `MatGetFactor()`, `MatCholeskyFactorNumeric()`, `MatCholeskyFactor()`, `MatFactorInfo`
 @*/
@@ -8358,6 +8368,9 @@ M*/
   the input matrix.
 
   If `iscol` is `NULL` then all columns are obtained (not supported in Fortran).
+
+  If `isrow` and `iscol` have a nontrivial block-size then the resulting matrix has this block-size as well. This feature
+  is used by `PCFIELDSPLIT` to allow easy nesting of its use.
 
   Example usage:
   Consider the following 8x8 matrix with 34 non-zero values, that is

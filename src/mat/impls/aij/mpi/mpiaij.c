@@ -2962,10 +2962,9 @@ PetscErrorCode MatDuplicate_MPIAIJ(Mat matin, MatDuplicateOption cpvalues, Mat *
   PetscCall(MatSetType(mat, ((PetscObject)matin)->type_name));
   a = (Mat_MPIAIJ *)mat->data;
 
-  mat->factortype   = matin->factortype;
-  mat->assembled    = matin->assembled;
-  mat->insertmode   = NOT_SET_VALUES;
-  mat->preallocated = matin->preallocated;
+  mat->factortype = matin->factortype;
+  mat->assembled  = matin->assembled;
+  mat->insertmode = NOT_SET_VALUES;
 
   a->size         = oldmat->size;
   a->rank         = oldmat->rank;
@@ -2977,29 +2976,33 @@ PetscErrorCode MatDuplicate_MPIAIJ(Mat matin, MatDuplicateOption cpvalues, Mat *
 
   PetscCall(PetscLayoutReference(matin->rmap, &mat->rmap));
   PetscCall(PetscLayoutReference(matin->cmap, &mat->cmap));
-
-  if (oldmat->colmap) {
+  if (matin->hash_active) {
+    PetscCall(MatSetUp(mat));
+  } else {
+    mat->preallocated = matin->preallocated;
+    if (oldmat->colmap) {
 #if defined(PETSC_USE_CTABLE)
-    PetscCall(PetscHMapIDuplicate(oldmat->colmap, &a->colmap));
+      PetscCall(PetscHMapIDuplicate(oldmat->colmap, &a->colmap));
 #else
-    PetscCall(PetscMalloc1(mat->cmap->N, &a->colmap));
-    PetscCall(PetscArraycpy(a->colmap, oldmat->colmap, mat->cmap->N));
+      PetscCall(PetscMalloc1(mat->cmap->N, &a->colmap));
+      PetscCall(PetscArraycpy(a->colmap, oldmat->colmap, mat->cmap->N));
 #endif
-  } else a->colmap = NULL;
-  if (oldmat->garray) {
-    PetscInt len;
-    len = oldmat->B->cmap->n;
-    PetscCall(PetscMalloc1(len + 1, &a->garray));
-    if (len) PetscCall(PetscArraycpy(a->garray, oldmat->garray, len));
-  } else a->garray = NULL;
+    } else a->colmap = NULL;
+    if (oldmat->garray) {
+      PetscInt len;
+      len = oldmat->B->cmap->n;
+      PetscCall(PetscMalloc1(len + 1, &a->garray));
+      if (len) PetscCall(PetscArraycpy(a->garray, oldmat->garray, len));
+    } else a->garray = NULL;
 
-  /* It may happen MatDuplicate is called with a non-assembled matrix
-     In fact, MatDuplicate only requires the matrix to be preallocated
-     This may happen inside a DMCreateMatrix_Shell */
-  if (oldmat->lvec) PetscCall(VecDuplicate(oldmat->lvec, &a->lvec));
-  if (oldmat->Mvctx) PetscCall(VecScatterCopy(oldmat->Mvctx, &a->Mvctx));
-  PetscCall(MatDuplicate(oldmat->A, cpvalues, &a->A));
-  PetscCall(MatDuplicate(oldmat->B, cpvalues, &a->B));
+    /* It may happen MatDuplicate is called with a non-assembled matrix
+      In fact, MatDuplicate only requires the matrix to be preallocated
+      This may happen inside a DMCreateMatrix_Shell */
+    if (oldmat->lvec) PetscCall(VecDuplicate(oldmat->lvec, &a->lvec));
+    if (oldmat->Mvctx) PetscCall(VecScatterCopy(oldmat->Mvctx, &a->Mvctx));
+    PetscCall(MatDuplicate(oldmat->A, cpvalues, &a->A));
+    PetscCall(MatDuplicate(oldmat->B, cpvalues, &a->B));
+  }
   PetscCall(PetscFunctionListDuplicate(((PetscObject)matin)->qlist, &((PetscObject)mat)->qlist));
   *newmat = mat;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -3959,10 +3962,16 @@ static PetscErrorCode MatMPIAIJSetPreallocationCSR_MPIAIJ(Mat B, const PetscInt 
 
   The `i` and `j` indices are 0 based, and `i` indices are indices corresponding to the local `j` array.
 
+  A convenience routine for this functionality is `MatCreateMPIAIJWithArrays()`.
+
+  You can update the matrix with new numerical values using `MatUpdateMPIAIJWithArrays()` after this call if the column indices in `j` are sorted.
+
+  If you do **not** use `MatUpdateMPIAIJWithArrays()`, the column indices in `j` do not need to be sorted. If you will use
+  `MatUpdateMPIAIJWithArrays()`, the column indices **must** be sorted.
+
   The format which is used for the sparse matrix input, is equivalent to a
   row-major ordering.. i.e for the following matrix, the input data expected is
   as shown
-
 .vb
         1 0 0
         2 0 3     P0
@@ -3981,7 +3990,7 @@ static PetscErrorCode MatMPIAIJSetPreallocationCSR_MPIAIJ(Mat B, const PetscInt 
 .ve
 
 .seealso: [](ch_matrices), `Mat`, `MATMPIAIJ`, `MatCreate()`, `MatCreateSeqAIJ()`, `MatSetValues()`, `MatMPIAIJSetPreallocation()`, `MatCreateAIJ()`,
-          `MatCreateSeqAIJWithArrays()`, `MatCreateMPIAIJWithSplitArrays()`
+          `MatCreateSeqAIJWithArrays()`, `MatCreateMPIAIJWithSplitArrays()`, `MatCreateMPIAIJWithArrays()`, `MatSetPreallocationCOO()`, `MatSetValuesCOO()`
 @*/
 PetscErrorCode MatMPIAIJSetPreallocationCSR(Mat B, const PetscInt i[], const PetscInt j[], const PetscScalar v[])
 {
@@ -4114,7 +4123,7 @@ PetscErrorCode MatMPIAIJSetPreallocationCSR(Mat B, const PetscInt i[], const Pet
   malloc in them to see if additional memory allocation was needed.
 
 .seealso: [](ch_matrices), `Mat`, [Sparse Matrices](sec_matsparse), `MATMPIAIJ`, `MATAIJ`, `MatCreate()`, `MatCreateSeqAIJ()`, `MatSetValues()`, `MatCreateAIJ()`, `MatMPIAIJSetPreallocationCSR()`,
-          `MatGetInfo()`, `PetscSplitOwnership()`
+          `MatGetInfo()`, `PetscSplitOwnership()`, `MatSetPreallocationCOO()`, `MatSetValuesCOO()`
 @*/
 PetscErrorCode MatMPIAIJSetPreallocation(Mat B, PetscInt d_nz, const PetscInt d_nnz[], PetscInt o_nz, const PetscInt o_nnz[])
 {
@@ -4155,11 +4164,14 @@ PetscErrorCode MatMPIAIJSetPreallocation(Mat B, PetscInt d_nz, const PetscInt d_
 
   The `i` and `j` indices are 0 based, and `i` indices are indices corresponding to the local `j` array.
 
+  Once you have created the matrix you can update it with new numerical values using `MatUpdateMPIAIJWithArrays()`
+
+  If you do **not** use `MatUpdateMPIAIJWithArrays()`, the column indices in `j` do not need to be sorted. If you will use
+  `MatUpdateMPIAIJWithArrays()`, the column indices **must** be sorted.
+
   The format which is used for the sparse matrix input, is equivalent to a
   row-major ordering.. i.e for the following matrix, the input data expected is
   as shown
-
-  Once you have created the matrix you can update it with new numerical values using MatUpdateMPIAIJWithArrays
 .vb
         1 0 0
         2 0 3     P0
@@ -4178,7 +4190,7 @@ PetscErrorCode MatMPIAIJSetPreallocation(Mat B, PetscInt d_nz, const PetscInt d_
 .ve
 
 .seealso: [](ch_matrices), `Mat`, `MATMPIAIK`, `MatCreate()`, `MatCreateSeqAIJ()`, `MatSetValues()`, `MatMPIAIJSetPreallocation()`, `MatMPIAIJSetPreallocationCSR()`,
-          `MATMPIAIJ`, `MatCreateAIJ()`, `MatCreateMPIAIJWithSplitArrays()`, `MatUpdateMPIAIJWithArrays()`
+          `MATMPIAIJ`, `MatCreateAIJ()`, `MatCreateMPIAIJWithSplitArrays()`, `MatUpdateMPIAIJWithArrays()`, `MatSetPreallocationCOO()`, `MatSetValuesCOO()`
 @*/
 PetscErrorCode MatCreateMPIAIJWithArrays(MPI_Comm comm, PetscInt m, PetscInt n, PetscInt M, PetscInt N, const PetscInt i[], const PetscInt j[], const PetscScalar a[], Mat *mat)
 {
@@ -4217,7 +4229,7 @@ PetscErrorCode MatCreateMPIAIJWithArrays(MPI_Comm comm, PetscInt m, PetscInt n, 
   Level: deprecated
 
 .seealso: [](ch_matrices), `Mat`, `MATMPIAIJ`, `MatCreate()`, `MatCreateSeqAIJ()`, `MatSetValues()`, `MatMPIAIJSetPreallocation()`, `MatMPIAIJSetPreallocationCSR()`,
-          `MatCreateAIJ()`, `MatCreateMPIAIJWithSplitArrays()`, `MatUpdateMPIAIJWithArray()`
+          `MatCreateAIJ()`, `MatCreateMPIAIJWithSplitArrays()`, `MatUpdateMPIAIJWithArray()`, `MatSetPreallocationCOO()`, `MatSetValuesCOO()`
 @*/
 PetscErrorCode MatUpdateMPIAIJWithArrays(Mat mat, PetscInt m, PetscInt n, PetscInt M, PetscInt N, const PetscInt Ii[], const PetscInt J[], const PetscScalar v[])
 {
@@ -4240,6 +4252,12 @@ PetscErrorCode MatUpdateMPIAIJWithArrays(Mat mat, PetscInt m, PetscInt n, PetscI
   PetscCall(MatSeqAIJGetArrayWrite(Aij->B, &ao));
 
   for (i = 0; i < m; i++) {
+    if (PetscDefined(USE_DEBUG)) {
+      for (PetscInt j = Ii[i] + 1; j < Ii[i + 1]; ++j) {
+        PetscCheck(J[j] >= J[j - 1], PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Column entry number %" PetscInt_FMT " (actual column %" PetscInt_FMT ") in row %" PetscInt_FMT " is not sorted", j - Ii[i], J[j], i);
+        PetscCheck(J[j] != J[j - 1], PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Column entry number %" PetscInt_FMT " (actual column %" PetscInt_FMT ") in row %" PetscInt_FMT " is identical to previous entry", j - Ii[i], J[j], i);
+      }
+    }
     nnz = Ii[i + 1] - Ii[i];
     Iii = Ii[i];
     ldi = ld[i];
@@ -4274,11 +4292,13 @@ PetscErrorCode MatUpdateMPIAIJWithArrays(Mat mat, PetscInt m, PetscInt n, PetscI
 
   Level: intermediate
 
-  Note:
+  Notes:
   The matrix must have been obtained with `MatCreateMPIAIJWithArrays()` or `MatMPIAIJSetPreallocationCSR()`
 
+  The column indices in the call to `MatCreateMPIAIJWithArrays()` or `MatMPIAIJSetPreallocationCSR()` must have been sorted for this call to work correctly
+
 .seealso: [](ch_matrices), `Mat`, `MatCreate()`, `MatCreateSeqAIJ()`, `MatSetValues()`, `MatMPIAIJSetPreallocation()`, `MatMPIAIJSetPreallocationCSR()`,
-          `MATMPIAIJ`, `MatCreateAIJ()`, `MatCreateMPIAIJWithSplitArrays()`, `MatUpdateMPIAIJWithArrays()`
+          `MATMPIAIJ`, `MatCreateAIJ()`, `MatCreateMPIAIJWithSplitArrays()`, `MatUpdateMPIAIJWithArrays()`, `MatSetPreallocationCOO()`, `MatSetValuesCOO()`
 @*/
 PetscErrorCode MatUpdateMPIAIJWithArray(Mat mat, const PetscScalar v[])
 {

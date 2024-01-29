@@ -238,7 +238,7 @@ PetscErrorCode PetscSFDestroy(PetscSF *sf)
   PetscTryTypeMethod((*sf), Destroy);
   PetscCall(PetscSFDestroy(&(*sf)->vscat.lsf));
   if ((*sf)->vscat.bs > 1) PetscCallMPI(MPI_Type_free(&(*sf)->vscat.unit));
-#if defined(PETSC_HAVE_MPIX_STREAM)
+#if defined(PETSC_HAVE_CUDA) && defined(PETSC_HAVE_MPIX_STREAM)
   if ((*sf)->use_stream_aware_mpi) {
     PetscCallMPI(MPIX_Stream_free(&(*sf)->mpi_stream));
     PetscCallMPI(MPI_Comm_free(&(*sf)->stream_comm));
@@ -1300,11 +1300,11 @@ PetscErrorCode PetscSFCreateEmbeddedRootSF(PetscSF sf, PetscInt nselected, const
   PetscCall(PetscObjectGetComm((PetscObject)sf, &comm));
   PetscCall(PetscSFGetGraph(sf, &nroots, &nleaves, &ilocal, &iremote));
 
-  if (PetscDefined(USE_DEBUG)) { /* Error out if selected[] has dups or  out of range indices */
+  if (PetscDefined(USE_DEBUG)) { /* Error out if selected[] has dups or out of range indices */
     PetscBool dups;
     PetscCall(PetscCheckDupsInt(nselected, selected, &dups));
     PetscCheck(!dups, comm, PETSC_ERR_ARG_WRONG, "selected[] has dups");
-    for (i = 0; i < nselected; i++) PetscCheck(selected[i] >= 0 && selected[i] < nroots, comm, PETSC_ERR_ARG_OUTOFRANGE, "selected root indice %" PetscInt_FMT " is out of [0,%" PetscInt_FMT ")", selected[i], nroots);
+    for (i = 0; i < nselected; i++) PetscCheck(selected[i] >= 0 && selected[i] < nroots, comm, PETSC_ERR_ARG_OUTOFRANGE, "selected root index %" PetscInt_FMT " is out of [0,%" PetscInt_FMT ")", selected[i], nroots);
   }
 
   if (sf->ops->CreateEmbeddedRootSF) PetscUseTypeMethod(sf, CreateEmbeddedRootSF, nselected, selected, esf);
