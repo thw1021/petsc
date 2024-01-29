@@ -673,6 +673,11 @@ Now rerun configure''' % (self.installDirProvider.dir, '--download-'+self.packag
       if self.includes:
         msg += ' and \n'+'--with-'+self.package+'-include='+str(self.argDB['with-'+self.package+'-include'])
       msg += ' did not work'
+      versionnumber = False
+      for l in libs:
+        if len(l) and l[len(l)-1] in '0123456789': versionnumber = True
+      if versionnumber:
+        msg += '\nList libraries without the version number suffix'
       raise RuntimeError(msg)
 
     for d in self.getSearchDirectories():
