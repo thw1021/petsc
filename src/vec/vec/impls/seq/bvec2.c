@@ -751,8 +751,8 @@ PetscErrorCode VecDuplicate_Seq(Vec win, Vec *V)
 PetscErrorCode VecReplaceArray_Default_GEMV_Error(Vec v, const PetscScalar *a)
 {
   PetscFunctionBegin;
-  PetscCheck(PETSC_FALSE, PetscObjectComm((PetscObject)v), PETSC_ERR_SUP, "VecReplaceArray() is not supported on the very first Vec got from VecDuplicateVecs(). \
-You could either 1) use -vec_mdot_use_gemv 0 -vec_maxpy_use_gemv 0 to turn off an optimization to get the code work; or 2) use VecDuplicate() to dup the Vecs.");
+  PetscCheck(PETSC_FALSE, PetscObjectComm((PetscObject)v), PETSC_ERR_SUP, "VecReplaceArray() is not supported on the first Vec obtained from VecDuplicateVecs(). \
+You could either 1) use -vec_mdot_use_gemv 0 -vec_maxpy_use_gemv 0 to turn off an optimization to allow your current code to work or 2) use VecDuplicate() to duplicate the vector.");
   (void)a;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
