@@ -48,7 +48,7 @@ int main(int argc, char **args)
   PetscCall(MatSetSizes(A, PETSC_DECIDE, PETSC_DECIDE, n, n));
   PetscCall(MatSetFromOptions(A));
   PetscCall(MatSetUp(A));
-  
+
   /*
      Assemble matrix
   */
@@ -57,8 +57,8 @@ int main(int argc, char **args)
   value[2] = -1.0;
   value[3] = 2.0;
   for (i = 0; 2 * i < n; i++) {
-    col[0] = 2 * i;  
-    col[1] = 2 * i + 1;  
+    col[0] = 2 * i;
+    col[1] = 2 * i + 1;
     PetscCall(MatSetValues(A, 2, col, 2, col, value, INSERT_VALUES));
     for (j = 0; j < 4; j++) value[j] *= 3.0;
   }
@@ -180,7 +180,7 @@ int main(int argc, char **args)
    test:
       suffix: 10
       args: -ksp_type fgmres -pc_type none -ksp_view_eigenvalues -ksp_view_singularvalues -ksp_monitor_short -ksp_converged_reason
-   
+
    test:
       suffix: 11
       args: -ksp_type fgmres -pc_type jacobi -ksp_view_eigenvalues -ksp_view_singularvalues -ksp_monitor_short -ksp_converged_reason
