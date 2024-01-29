@@ -158,7 +158,7 @@ check_build:
         fi;
 	+@if [ "${MPI_IS_MPIUNI}" = "" ]; then \
           cd src/snes/tutorials >/dev/null; \
-          if [ "`grep -E '^#define PETSC_USE_KOKKOS_KERNELS 1' ${PETSCCONF_H}`" = "#define PETSC_USE_KOKKOS_KERNELS 1" ]  &&  [ "${PETSC_SCALAR}" = "real" ] && [ "${PETSC_PRECISION}" = "double" ]; then \
+          if [ "`grep -E '^#define PETSC_HAVE_KOKKOS_KERNELS 1' ${PETSCCONF_H}`" = "#define PETSC_HAVE_KOKKOS_KERNELS 1" ] && [ "${PETSC_SCALAR}" = "real" ] && [ "${PETSC_PRECISION}" = "double" ]; then \
             ${RUN_TEST} runex3k_kokkos; \
           fi;\
           if [ "`grep -E '^#define PETSC_HAVE_MUMPS 1' ${PETSCCONF_H}`" = "#define PETSC_HAVE_MUMPS 1" ]; then \
