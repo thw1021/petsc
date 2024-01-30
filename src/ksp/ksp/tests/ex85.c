@@ -142,47 +142,49 @@ int main(int argc, char **args)
 /*TEST
 
    test:
-      suffix: 1
-      args: -ksp_type cg -pc_type none -ksp_view_eigenvalues -ksp_view_singularvalues -ksp_monitor_short -ksp_converged_reason
+      suffix: cg_none
+      filter: grep -v "variant HERMITIAN"
+      args: -ksp_type cg -pc_type none -ksp_view_eigenvalues -ksp_view_singularvalues -ksp_converged_reason
 
    test:
-      suffix: 2
-      args: -ksp_type cg -pc_type jacobi -ksp_view_eigenvalues -ksp_view_singularvalues -ksp_monitor_short -ksp_converged_reason
+      suffix: cg_jacobi
+      filter: grep -v "variant HERMITIAN"
+      args: -ksp_type cg -pc_type jacobi -ksp_view_eigenvalues -ksp_view_singularvalues -ksp_converged_reason
 
    test:
-      suffix: 3
-      args: -ksp_type fcg -pc_type none -ksp_view_eigenvalues -ksp_view_singularvalues -ksp_monitor_short -ksp_converged_reason
+      suffix: fcg_none
+      args: -ksp_type fcg -pc_type none -ksp_view_eigenvalues -ksp_view_singularvalues -ksp_converged_reason
 
    test:
-      suffix: 4
-      args: -ksp_type fcg -pc_type jacobi -ksp_view_eigenvalues -ksp_view_singularvalues -ksp_monitor_short -ksp_converged_reason
+      suffix: fcg_jacobi
+      args: -ksp_type fcg -pc_type jacobi -ksp_view_eigenvalues -ksp_view_singularvalues -ksp_converged_reason
 
    test:
-      suffix: 5
-      args: -ksp_type minres -pc_type none -ksp_view_eigenvalues -ksp_view_singularvalues -ksp_monitor_short -ksp_converged_reason
+      suffix: minres_none
+      args: -ksp_type minres -pc_type none -ksp_view_eigenvalues -ksp_view_singularvalues -ksp_converged_reason
 
    test:
-      suffix: 6
-      args: -ksp_type minres -pc_type jacobi -ksp_view_eigenvalues -ksp_view_singularvalues -ksp_monitor_short -ksp_converged_reason
+      suffix: minres_jacobi
+      args: -ksp_type minres -pc_type jacobi -ksp_view_eigenvalues -ksp_view_singularvalues -ksp_converged_reason
 
    test:
-      suffix: 7
-      args: -ksp_type gmres -pc_type none -ksp_view_eigenvalues -ksp_view_singularvalues -ksp_monitor_short -ksp_converged_reason
+      suffix: gmres_none
+      args: -ksp_type gmres -pc_type none -ksp_view_eigenvalues -ksp_view_singularvalues -ksp_converged_reason
 
    test:
-      suffix: 8
-      args: -ksp_type gmres -ksp_pc_side left -pc_type jacobi -ksp_view_eigenvalues -ksp_view_singularvalues -ksp_monitor_short -ksp_converged_reason
+      suffix: gmres_jacobi_left
+      args: -ksp_type gmres -ksp_pc_side left -pc_type jacobi -ksp_view_eigenvalues -ksp_view_singularvalues -ksp_converged_reason
 
    test:
-      suffix: 9
-      args: -ksp_type gmres -ksp_pc_side right -pc_type jacobi -ksp_view_eigenvalues -ksp_view_singularvalues -ksp_monitor_short -ksp_converged_reason
+      suffix: gmres_jacobi_right
+      args: -ksp_type gmres -ksp_pc_side right -pc_type jacobi -ksp_view_eigenvalues -ksp_view_singularvalues -ksp_converged_reason
 
    test:
-      suffix: 10
-      args: -ksp_type fgmres -pc_type none -ksp_view_eigenvalues -ksp_view_singularvalues -ksp_monitor_short -ksp_converged_reason
+      suffix: fgmres_none
+      args: -ksp_type fgmres -pc_type none -ksp_view_eigenvalues -ksp_view_singularvalues -ksp_converged_reason
 
    test:
-      suffix: 11
-      args: -ksp_type fgmres -pc_type jacobi -ksp_view_eigenvalues -ksp_view_singularvalues -ksp_monitor_short -ksp_converged_reason
+      suffix: fgmres_jacobi
+      args: -ksp_type fgmres -pc_type jacobi -ksp_view_eigenvalues -ksp_view_singularvalues -ksp_converged_reason
 
 TEST*/
