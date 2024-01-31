@@ -212,7 +212,7 @@ int main(int argc, char **argv)
   test:
     suffix: bench
     nsize: 4
-    args: -dm_plex_dim 3 -dm_plex_simplex 0 -dm_plex_box_faces 2,2,1 -dm_refine 2 -dm_view -ksp_monitor \
+    args: -dm_plex_dim 3 -dm_plex_simplex 0 -dm_plex_box_faces 2,2,1 -dm_refine 2 -dm_view \
        -benchmark_it 1 -dm_plex_box_upper 2,2,1 -dm_plex_box_lower 0,0,0 -dm_plex_dim 3 -ksp_converged_reason \
        -ksp_norm_type unpreconditioned -ksp_rtol 1.e-6 -ksp_type cg -mg_levels_ksp_chebyshev_esteig 0,0.2,0,1.1 \
        -mg_levels_ksp_max_it 1 -mg_levels_ksp_type chebyshev  -mg_levels_pc_type jacobi -pc_gamg_coarse_eq_limit 200 \
