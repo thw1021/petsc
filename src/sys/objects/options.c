@@ -2751,7 +2751,7 @@ PetscErrorCode PetscOptionsGetString(PetscOptions options, const char pre[], con
 - name    - the option one is seeking
 
   Output Parameters:
-+ dvalue - the boolean values to return
++ dvalue - the Boolean values to return
 . nmax   - On input maximum number of values to retrieve, on output the actual number of values retrieved
 - set    - `PETSC_TRUE` if found, else `PETSC_FALSE`
 
