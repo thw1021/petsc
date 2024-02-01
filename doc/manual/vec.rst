@@ -91,8 +91,8 @@ object called the ``DM`` to help manage the vectors and matrices needed for such
 
    DMCreateGlobalVector(DM dm,Vec *v)
 
-The ``DM`` object, see :any:`sec_struct`, :any:`sec_stag`, and :any:`ch_unstructured` for more details on ``DM`` for structured grids, staggered
-structured grids, and for unstructured grids,
+The ``DM`` object (see :any:`sec_struct`, :any:`sec_stag`, and :any:`ch_unstructured` for more details on ``DM`` for structured grids, staggered
+structured grids, and for unstructured grids)
 manages creating the correctly sized parallel vectors efficiently. One controls the type of vector that ``DM`` creates by calling
 
 .. code-block::
@@ -106,7 +106,7 @@ or by calling ``DMSetFromOptions(DM dm)`` and using the option ``-dm_vec_type <s
 DMDA - Creating vectors for structured grids
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Each ``DM`` type is suitable for a family of problems. The first of these, ``DMDA``
+Each ``DM`` type is suitable for a family of problems. The first of these, ``DMDA``,
 are intended for use with *logically structured rectangular grids*
 when communication of nonlocal data is needed before certain local
 computations can occur. ``DMDA``is designed only for
@@ -135,7 +135,7 @@ contains  parallel data layout information and communication
 information and is used to create vectors and matrices with
 the proper layout.
 
-One creates a ``DMDA`` two
+One creates a ``DMDA`` in two
 dimensions with the convenience routine
 
 .. code-block::
@@ -194,7 +194,7 @@ in one and three dimensions are analogous:
 The routines to create a ``DM`` are collective so that all
 processes in the communicator ``comm`` must call the same creation routines in the same order.
 
-A `DM` may be created, and its type set with
+A ``DM`` may be created, and its type set with
 
 .. code-block::
 
@@ -202,7 +202,7 @@ A `DM` may be created, and its type set with
    DMSetType(dm,"Typename");  // for example, "DMDA"
 
 Then ``DMType`` specific operations can be performed to provide information from which the specifics of the
-``DM`` will be provided. For example,
+``DM`` will be set. For example,
 
 .. code-block::
 
@@ -600,7 +600,7 @@ When either type of stencil is used, ``DMDA_STENCIL_STAR`` or
 ``DMDA_STENCIL_BOX``, the local vectors (with the ghost points)
 represent rectangular arrays, including the extra corner elements in the
 ``DMDA_STENCIL_STAR`` case. This configuration provides simple access to
-the elements by employing two- (or three--) dimensional indexing. The
+the elements by employing two- (or three-) dimensional indexing. The
 only difference between the two cases is that when ``DMDA_STENCIL_STAR``
 is used, the extra corner components are *not* scattered between the
 processes and thus contain undefined values that should *not* be used.
@@ -1070,7 +1070,7 @@ When working with a global representation of a vector
 (usually on a vector obtained with ``DMCreateGlobalVector()``) and a local
 representation of the same vector that includes ghost points required
 for local computation (obtained with ``DMCreateLocalVector()``). PETSc provides routines to help map indices from
-a local numbering scheme to the PETSc global numbering scheme, recall their use above for the routine ``VecSetValuesLocal()`` introduced above.
+a local numbering scheme to the PETSc global numbering scheme, recall their use for the routine ``VecSetValuesLocal()`` introduced above.
 This is done via the following routines
 
 .. code-block::
