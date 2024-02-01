@@ -127,11 +127,11 @@ PetscErrorCode DMBF_XD_IterateSetUpCells(DM dm, DM_BF_Cell *cells, const DM_BF_S
   ierr = DMBFGetGhost(dm, &ghost);
   CHKERRQ(ierr);
   if (p4est->local_num_quadrants) {
-    if (cells && p4est->user_data_pool) SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONGSTATE, "Unclear which cell data allocation should be used");
-    if (!cells && !p4est->user_data_pool) SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONGSTATE, "Cell data allocations do not exist");
-    if (!cells && cellMemoryShape->size != p4est->data_size) SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_SIZ, "p4est data size mismatch: is %d, should be %d", (int)p4est->data_size, (int)cellMemoryShape->size);
+    PetscCheck(cells || p4est->user_data_pool, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONGSTATE, "Cell data allocations do not exist");
+    PetscCheck(!cells || !p4est->user_data_pool, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONGSTATE, "Unclear which cell data allocation should be used");
+    PetscCheck(cells || cellMemoryShape->size == p4est->data_size, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_SIZ, "p4est data size mismatch: is %d, should be %d", (int)p4est->data_size, (int)cellMemoryShape->size);
   } else {
-    if (cells) SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONGSTATE, "Cell data allocations exist but should not");
+    PetscCheck(!cells, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONGSTATE, "Cell data allocations exist but should not");
   }
   #if defined(P4_TO_P8)
   PetscCallP4est(p4est_iterate, (p4est, ghost, &iterCtx, _p_iterSetUp, NULL, NULL, NULL));
@@ -176,8 +176,8 @@ PetscErrorCode DMBF_XD_IterateCopyP4estCells(DM dm, DM_BF_Cell *cells, const DM_
   CHKERRQ(ierr);
   ierr = DMBFGetGhost(dm, &ghost);
   CHKERRQ(ierr);
-  if (!p4est->user_data_pool) SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONGSTATE, "p4est has no user data memory");
-  if (p4est->data_size != cellMemoryShape->size) SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_SIZ, "p4est data size mismatch: is %d, should be %d", (int)p4est->data_size, (int)cellMemoryShape->size);
+  PetscCheck(p4est->user_data_pool, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONGSTATE, "p4est has no user data memory");
+  PetscCheck(p4est->data_size == cellMemoryShape->size, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_SIZ, "p4est data size mismatch: is %d, should be %d", (int)p4est->data_size, (int)cellMemoryShape->size);
   #if defined(P4_TO_P8)
   PetscCallP4est(p4est_iterate, (p4est, ghost, &iterCtx, _p_iterCopy, NULL, NULL, NULL));
   #else

@@ -99,7 +99,7 @@ static PetscErrorCode DMBFGetVTKVertexCoordinates(DM dm, PetscVTUReal *point_dat
                 eta_y = intsize * y + intsize * hy * (1. + (yi * 2 - 1) * scale);
                 for (xi = 0; xi < 2; ++xi) {
 #if defined(PETSC_USE_DEBUG)
-                  if (!(0 <= l && l < P4EST_CHILDREN)) { SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Index out of bounds: %i, bounds=[0,%i)", (int)l, P4EST_CHILDREN); }
+                  PetscCheck(0 <= l && l < P4EST_CHILDREN, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Index out of bounds: %i, bounds=[0,%i)", (int)l, P4EST_CHILDREN);
 #endif
                   eta_x = intsize * x + intsize * hx * (1. + (xi * 2 - 1) * scale);
                   for (m = 0; m < 3 /* 3 not P4EST_DIM */; ++m) {
@@ -123,7 +123,7 @@ static PetscErrorCode DMBFGetVTKVertexCoordinates(DM dm, PetscVTUReal *point_dat
 #endif
     }
   }
-  if ((P4EST_CHILDREN * quad_count) != nPoints) { SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Counts mismatch: %i != %i (nPoints)", (int)(P4EST_CHILDREN * quad_count), (int)nPoints); }
+  PetscCheck((P4EST_CHILDREN * quad_count) == nPoints, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Counts mismatch: %i != %i (nPoints)", (int)(P4EST_CHILDREN * quad_count), (int)nPoints);
   PetscFunctionReturn(0);
 }
 
@@ -509,12 +509,12 @@ static PetscErrorCode DMBFVTKWritePiece_VTU(DM dm, PetscViewer viewer)
 
       bytes     = PetscVTKIntCast(sizeof(PetscVTUReal) * nCells);
       write_ret = fwrite(&bytes, sizeof(PetscVTKInt), 1, f);
-      if (write_ret != 1) { SETERRQ(PETSC_COMM_SELF, PETSC_ERR_FILE_WRITE, "VTK write failed"); }
+      PetscCheck(write_ret == 1, PETSC_COMM_SELF, PETSC_ERR_FILE_WRITE, "VTK write failed");
 
       ierr = VecGetArrayRead(v, &vec_data);
       CHKERRQ(ierr);
       write_ret = fwrite(vec_data, sizeof(PetscVTUReal), nCells, f);
-      if (write_ret != nCells) { SETERRQ(PETSC_COMM_SELF, PETSC_ERR_FILE_WRITE, "Vec write to VTU failed"); }
+      PetscCheck(write_ret == nCells, PETSC_COMM_SELF, PETSC_ERR_FILE_WRITE, "Vec write to VTU failed");
 
       ierr = VecRestoreArrayRead(v, &vec_data);
       CHKERRQ(ierr);
@@ -523,7 +523,7 @@ static PetscErrorCode DMBFVTKWritePiece_VTU(DM dm, PetscViewer viewer)
       bytes     = PetscVTKIntCast(3 * sizeof(PetscVTUReal) * nCells);
       write_ret = fwrite(&bytes, sizeof(PetscVTKInt), 1, f);
 
-      if (write_ret != 1) { SETERRQ(PETSC_COMM_SELF, PETSC_ERR_FILE_WRITE, "VTK write failed"); }
+      PetscCheck(write_ret == 1, PETSC_COMM_SELF, PETSC_ERR_FILE_WRITE, "VTK write failed");
 
       ierr = VecGetArrayRead(v, &vec_data);
       CHKERRQ(ierr);
@@ -542,7 +542,7 @@ static PetscErrorCode DMBFVTKWritePiece_VTU(DM dm, PetscViewer viewer)
         CHKERRQ(ierr);
       }
 
-      if (write_ret != 3 * nCells) { SETERRQ(PETSC_COMM_SELF, PETSC_ERR_FILE_WRITE, "Vec write to VTU failed"); }
+      PetscCheck(write_ret == 3 * nCells, PETSC_COMM_SELF, PETSC_ERR_FILE_WRITE, "Vec write to VTU failed");
     }
   }
 

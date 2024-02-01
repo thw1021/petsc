@@ -29,7 +29,7 @@ static PetscErrorCode DMBF_3D_ConnectivityCreate(DM dm, p4est_connectivity_t **c
 
   /* get topology name */
   PetscCall(DMForestGetTopology(dm, &topologyName));
-  if (!topologyName) SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONGSTATE, "DMBF needs a topology");
+  PetscCheck(topologyName, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONGSTATE, "DMBF needs a topology");
   PetscCall(PetscStrcmp((const char *)topologyName, "brick", &isBrick));
 
   if (isBrick && dm->setfromoptionscalled) { /* if brick topology with given uptions */

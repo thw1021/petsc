@@ -114,12 +114,12 @@ static PetscErrorCode DMBFCheck(DM dm)
   PetscFunctionBegin;
   /* check type of DM */
   CHKERRQ(PetscObjectTypeCompare((PetscObject)dm, DMBF, &isCorrectDM));
-  if (!isCorrectDM) SETERRQ(_p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Type of DM is %s, but has to be %s", ((PetscObject)dm)->type_name, DMBF);
+  PetscCheck(isCorrectDM, _p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Type of DM is %s, but has to be %s", ((PetscObject)dm)->type_name, DMBF);
   /* check cells */
   bf = _p_getBF(dm);
-  if (!bf->cells && _p_nCells(dm)) SETERRQ(_p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Cells do not exist");
-  if (!bf->ownedCellsSetUpCalled) SETERRQ(_p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Owned cells not set up");
-  if (!bf->ghostCellsSetUpCalled) SETERRQ(_p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Ghost cells not set up");
+  PetscCheck(bf->cells || !_p_nCells(dm), _p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Cells do not exist");
+  PetscCheck(bf->ownedCellsSetUpCalled, _p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Owned cells not set up");
+  PetscCheck(bf->ghostCellsSetUpCalled, _p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Ghost cells not set up");
   PetscFunctionReturn(0);
 }
 
@@ -299,7 +299,7 @@ static PetscErrorCode DMBF_CellsSetUpOwned(DM dm)
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMBF);
   bf = _p_getBF(dm);
-  if (!bf->cells && _p_nCells(dm)) SETERRQ(_p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Cells do not exist");
+  PetscCheck(bf->cells || !_p_nCells(dm), _p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Cells do not exist");
   /* set data of all owned cells */
   switch (_p_dim(dm)) {
   case 2:
@@ -327,7 +327,7 @@ static PetscErrorCode DMBF_CellsSetUpGhost(DM dm)
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMBF);
   bf = _p_getBF(dm);
-  if (!bf->cells && _p_nCells(dm)) SETERRQ(_p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Cells do not exist");
+  PetscCheck(bf->cells || !_p_nCells(dm), _p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Cells do not exist");
   /* set data pointers of all ghost cells */
   ierr = DMBFGetInfo(dm, &dim, &offset_cells, PETSC_NULLPTR, &ng_cells);
   CHKERRQ(ierr);
@@ -441,11 +441,11 @@ static PetscErrorCode DMSetUp_BF(DM dm)
   bf   = _p_getBF(dm);
   ierr = DMGetDimension(dm, &dim);
   CHKERRQ(ierr);
-  if (dim == PETSC_DETERMINE) SETERRQ(_p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Topological dimension has to be set before setup");
-  if (dim < 2 || 3 < dim) SETERRQ(_p_comm(dm), PETSC_ERR_SUP, "DM does not support %" PetscInt_FMT " dimensional domains", dim);
-  if (bf->ftTopology) SETERRQ(_p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Topology exists already");
-  if (bf->ftCells) SETERRQ(_p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Cells exist already");
-  if (bf->ftNodes) SETERRQ(_p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Nodes exist already");
+  PetscCheck(dim != PETSC_DETERMINE, _p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Topological dimension has to be set before setup");
+  PetscCheck(2 <= dim && dim <= 3, _p_comm(dm), PETSC_ERR_SUP, "DM does not support %" PetscInt_FMT " dimensional domains", dim);
+  PetscCheck(!bf->ftTopology, _p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Topology exists already");
+  PetscCheck(!bf->ftCells, _p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Cells exist already");
+  PetscCheck(!bf->ftNodes, _p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Nodes exist already");
   /* create forest-of-tree topology */
   switch (dim) {
   case 2:
@@ -459,7 +459,7 @@ static PetscErrorCode DMSetUp_BF(DM dm)
   default:
     _p_SETERRQ_UNREACHABLE(dm);
   }
-  if (!bf->ftTopology) SETERRQ(_p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Topology does not exist");
+  PetscCheck(bf->ftTopology, _p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Topology does not exist");
   /* create forest-of-tree cells */
   switch (dim) {
   case 2:
@@ -473,7 +473,7 @@ static PetscErrorCode DMSetUp_BF(DM dm)
   default:
     _p_SETERRQ_UNREACHABLE(dm);
   }
-  if (!bf->ftCells) SETERRQ(_p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Cells do not exist");
+  PetscCheck(bf->ftCells, _p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Cells do not exist");
   /* create forest-of-tree nodes */
   //TODO create nodes
   /* create and setup DMBF cells */
@@ -571,7 +571,7 @@ PetscErrorCode DMBFSetCellDataShape(DM dm, const PetscInt *shapeElements, PetscI
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMBF);
   PetscAssertPointer(shapeElements, 2);
-  if (dm->setupcalled) SETERRQ(_p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Cannot change cell data after setup");
+  PetscCheck(!dm->setupcalled, _p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Cannot change cell data after setup");
   bf = _p_getBF(dm);
   /* set settings */
   if (0 < n && 0 < dim) {
@@ -618,7 +618,7 @@ PetscErrorCode DMBFSetCellDataVSize(DM dm, size_t size)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMBF);
-  if (dm->setupcalled) SETERRQ(_p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Cannot change cell data after setup");
+  PetscCheck(!dm->setupcalled, _p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Cannot change cell data after setup");
   bf = _p_getBF(dm);
   /* set setting */
   if (0 < size) {
@@ -666,10 +666,10 @@ PetscErrorCode DMBFSetBlockSize(DM dm, PetscInt *blockSize)
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMBF);
   PetscAssertPointer(blockSize, 2);
-  if (dm->setupcalled) SETERRQ(_p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Cannot change the block refinement after setup");
+  PetscCheck(!dm->setupcalled, _p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Cannot change the block refinement after setup");
   ierr = DMGetDimension(dm, &dim);
   CHKERRQ(ierr);
-  if (dim == PETSC_DETERMINE) SETERRQ(_p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Cannot set block refinement before topological dimension");
+  PetscCheck(dim != PETSC_DETERMINE, _p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Cannot set block refinement before topological dimension");
   bf = _p_getBF(dm);
   for (i = 0; i < dim; i++) { bf->blockSize[i] = (1 <= blockSize[i] ? blockSize[i] : 1); }
   PetscFunctionReturn(0);
@@ -699,7 +699,7 @@ PetscErrorCode DMBFGetBlockSize(DM dm, PetscInt *blockSize)
   PetscAssertPointer(blockSize, 2);
   ierr = DMGetDimension(dm, &dim);
   CHKERRQ(ierr);
-  if (dim == PETSC_DETERMINE) SETERRQ(_p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Topological dimension has to be set for block refinement");
+  PetscCheck(dim != PETSC_DETERMINE, _p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Topological dimension has to be set for block refinement");
   bf = _p_getBF(dm);
   for (i = 0; i < dim; i++) { blockSize[i] = bf->blockSize[i]; }
   PetscFunctionReturn(0);
@@ -715,7 +715,7 @@ PetscErrorCode DMBFSetCellDataSize(DM dm, PetscInt *valsPerElemRead, PetscInt nV
   PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMBF);
   PetscAssertPointer(valsPerElemRead, 2);
   PetscAssertPointer(valsPerElemReadWrite, 4);
-  if (dm->setupcalled) SETERRQ(_p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Cannot change cell data after setup");
+  PetscCheck(!dm->setupcalled, _p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Cannot change cell data after setup");
   bf = _p_getBF(dm);
   /* reset exising settings */
   if (!bf->valsPerElemRead) {
@@ -1096,7 +1096,7 @@ static PetscErrorCode DMBFCloneInit(DM dm, DM *newdm)
   CHKERRQ(ierr);
   /* check BF object */
   newbf = _p_getBF(*newdm);
-  if (!newbf) SETERRQ(_p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "BF object does not exist");
+  PetscCheck(newbf, _p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "BF object does not exist");
   /* copy operators */
   ierr = PetscMemcpy((*newdm)->ops, dm->ops, sizeof(*(dm->ops)));
   CHKERRQ(ierr);
@@ -1386,7 +1386,7 @@ PetscErrorCode DMBFGetInfo(DM dm, PetscInt *dim, PetscInt *nLocal, PetscInt *nGl
   PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMBF);
   PetscAssertPointer(dim, 2);
   bf = _p_getBF(dm);
-  if (!bf->ftCells) SETERRQ(_p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Forest-of-tree cells do not exist");
+  PetscCheck(bf->ftCells, _p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Forest-of-tree cells do not exist");
   ierr = DMGetDimension(dm, dim);
   CHKERRQ(ierr);
   switch (*dim) {
@@ -1498,7 +1498,7 @@ PetscErrorCode DMBFGetConnectivity(DM dm, void *connectivity)
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMBF);
   bf = _p_getBF(dm);
-  if (!bf->ftTopology) SETERRQ(_p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Topology does not exist");
+  PetscCheck(bf->ftTopology, _p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Topology does not exist");
   ierr = DMGetDimension(dm, &dim);
   CHKERRQ(ierr);
   switch (dim) {
@@ -1525,7 +1525,7 @@ PetscErrorCode DMBFGetP4est(DM dm, void *p4est)
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMBF);
   bf = _p_getBF(dm);
-  if (!bf->ftCells) SETERRQ(_p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Cells do not exist");
+  PetscCheck(bf->ftCells, _p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Cells do not exist");
   ierr = DMGetDimension(dm, &dim);
   CHKERRQ(ierr);
   switch (dim) {
@@ -1552,7 +1552,7 @@ PetscErrorCode DMBFGetGhost(DM dm, void *ghost)
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMBF);
   bf = _p_getBF(dm);
-  if (!bf->ftCells) SETERRQ(_p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Cells do not exist");
+  PetscCheck(bf->ftCells, _p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Cells do not exist");
   ierr = DMGetDimension(dm, &dim);
   CHKERRQ(ierr);
   switch (dim) {
@@ -1592,7 +1592,7 @@ static PetscErrorCode DMCoarsen_BF(DM dm, MPI_Comm comm, DM *coarseDm)
 
     ierr = MPI_Comm_compare(comm, dmcomm, &mpiComparison);
     CHKERRQ(ierr);
-    if (mpiComparison != MPI_IDENT && mpiComparison != MPI_CONGRUENT) SETERRQ(dmcomm, PETSC_ERR_SUP, "No support for different communicators");
+    PetscCheck(mpiComparison == MPI_IDENT || mpiComparison == MPI_CONGRUENT, dmcomm, PETSC_ERR_SUP, "No support for different communicators");
   }
   ierr = DMBFCloneInit(dm, coarseDm);
   CHKERRQ(ierr);
@@ -1642,7 +1642,7 @@ static PetscErrorCode DMRefine_BF(DM dm, MPI_Comm comm, DM *fineDm)
 
     ierr = MPI_Comm_compare(comm, dmcomm, &mpiComparison);
     CHKERRQ(ierr);
-    if (mpiComparison != MPI_IDENT && mpiComparison != MPI_CONGRUENT) SETERRQ(dmcomm, PETSC_ERR_SUP, "No support for different communicators");
+    PetscCheck(mpiComparison == MPI_IDENT || mpiComparison == MPI_CONGRUENT, dmcomm, PETSC_ERR_SUP, "No support for different communicators");
   }
   ierr = DMBFCloneInit(dm, fineDm);
   CHKERRQ(ierr);
@@ -1696,7 +1696,7 @@ PetscErrorCode DMBFAMRFlag(DM dm)
   PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMBF);
   CHKERRQ(DMBFCheck(dm));
   bf = _p_getBF(dm);
-  if (!bf->amrOps) SETERRQ(_p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "AMR operators do not exist");
+  PetscCheck(bf->amrOps, _p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "AMR operators do not exist");
   /* set data pointers of all ghost cells */
   ierr = DMBFGetInfo(dm, &dim, &n_cells, PETSC_NULLPTR, PETSC_NULLPTR);
   CHKERRQ(ierr);
@@ -1730,7 +1730,7 @@ PetscErrorCode DMBFAMRAdapt(DM dm, DM *adaptedDm)
   bf        = _p_getBF(dm);
   adaptedbf = _p_getBF(*adaptedDm);
   /* adapt and partition forest-of-tree cells */
-  if (!bf->amrOps) SETERRQ(_p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "AMR operators do not exist");
+  PetscCheck(bf->amrOps, _p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "AMR operators do not exist");
   switch (dim) {
   case 2:
     ierr = DMBF_2D_TopologyClone((DM_BF_2D_Topology *)bf->ftTopology, (DM_BF_2D_Topology **)&adaptedbf->ftTopology, *adaptedDm);
@@ -1798,8 +1798,8 @@ PetscErrorCode DMBFIterateOverCellsVectors(DM dm, PetscErrorCode (*iterCell)(DM,
   if (nVecsRead) PetscAssertPointer(vecRead, 4);
   if (nVecsReadWrite) PetscAssertPointer(vecReadWrite, 6);
   bf = _p_getBF(dm);
-  if (!bf->cells && _p_nCells(dm)) SETERRQ(_p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Cells do not exist");
-  if (!bf->ownedCellsSetUpCalled) SETERRQ(_p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Owned cells not set up");
+  PetscCheck(bf->cells || !_p_nCells(dm), _p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Cells do not exist");
+  PetscCheck(bf->ownedCellsSetUpCalled, _p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Owned cells not set up");
   /* iterate */
   switch (_p_dim(dm)) {
   case 2:
@@ -1832,9 +1832,9 @@ PetscErrorCode DMBFIterateOverFaces(DM dm, PetscErrorCode (*iterFace)(DM, DM_BF_
   PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMBF);
   PetscValidFunction(iterFace, 2);
   bf = _p_getBF(dm);
-  if (!bf->cells && _p_nCells(dm)) SETERRQ(_p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Cells do not exist");
-  if (!bf->ownedCellsSetUpCalled) SETERRQ(_p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Owned cells not set up");
-  if (!bf->ghostCellsSetUpCalled) SETERRQ(_p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Ghost cells not set up");
+  PetscCheck(bf->cells || !_p_nCells(dm), _p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Cells do not exist");
+  PetscCheck(bf->ownedCellsSetUpCalled, _p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Owned cells not set up");
+  PetscCheck(bf->ghostCellsSetUpCalled, _p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Ghost cells not set up");
   /* iterate */
   switch (_p_dim(dm)) {
   case 2:
@@ -1864,8 +1864,8 @@ PetscErrorCode DMBFSetCellData(DM dm, Vec *vecRead, Vec *vecReadWrite)
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMBF);
   bf = _p_getBF(dm);
-  if (!bf->cells) SETERRQ(_p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Cells do not exist");
-  if (!bf->ownedCellsSetUpCalled) SETERRQ(_p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Owned cells not set up");
+  PetscCheck(bf->cells, _p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Cells do not exist");
+  PetscCheck(bf->ownedCellsSetUpCalled, _p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Owned cells not set up");
   if (vecRead && bf->nValsPerElemRead) PetscAssertPointer(vecRead, 2);
   if (vecReadWrite && bf->nValsPerElemReadWrite) PetscAssertPointer(vecReadWrite, 3);
   ierr = DMGetDimension(dm, &dim);
@@ -1894,8 +1894,8 @@ PetscErrorCode DMBFSetCellFields(DM dm, Vec *vecRead, Vec *vecReadWrite, PetscIn
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMBF);
   bf = _p_getBF(dm);
-  if (!bf->cells) SETERRQ(_p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Cells do not exist");
-  if (!bf->ownedCellsSetUpCalled) SETERRQ(_p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Owned cells not set up");
+  PetscCheck(bf->cells, _p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Cells do not exist");
+  PetscCheck(bf->ownedCellsSetUpCalled, _p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Owned cells not set up");
   if (vecRead && bf->nValsPerElemRead) PetscAssertPointer(vecRead, 2);
   if (vecReadWrite && bf->nValsPerElemReadWrite) PetscAssertPointer(vecReadWrite, 3);
   ierr = DMGetDimension(dm, &dim);
@@ -1924,8 +1924,8 @@ PetscErrorCode DMBFGetCellData(DM dm, Vec *vecRead, Vec *vecReadWrite)
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMBF);
   bf = _p_getBF(dm);
-  if (!bf->cells) SETERRQ(_p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Cells do not exist");
-  if (!bf->ownedCellsSetUpCalled) SETERRQ(_p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Owned cells not set up");
+  PetscCheck(bf->cells, _p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Cells do not exist");
+  PetscCheck(bf->ownedCellsSetUpCalled, _p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Owned cells not set up");
   if (vecRead && bf->nValsPerElemRead) PetscAssertPointer(vecRead, 2);
   if (vecReadWrite && bf->nValsPerElemReadWrite) PetscAssertPointer(vecReadWrite, 3);
   ierr = DMGetDimension(dm, &dim);
@@ -1954,8 +1954,8 @@ PetscErrorCode DMBFGetCellFields(DM dm, Vec *vecRead, Vec *vecReadWrite, PetscIn
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMBF);
   bf = _p_getBF(dm);
-  if (!bf->cells) SETERRQ(_p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Cells do not exist");
-  if (!bf->ownedCellsSetUpCalled) SETERRQ(_p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Owned cells not set up");
+  PetscCheck(bf->cells, _p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Cells do not exist");
+  PetscCheck(bf->ownedCellsSetUpCalled, _p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Owned cells not set up");
   if (vecRead && bf->nValsPerElemRead) PetscAssertPointer(vecRead, 2);
   if (vecReadWrite && bf->nValsPerElemReadWrite) PetscAssertPointer(vecReadWrite, 3);
   ierr = DMGetDimension(dm, &dim);
@@ -1984,8 +1984,8 @@ PetscErrorCode DMBFCommunicateGhostCells(DM dm)
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMBF);
   bf = _p_getBF(dm);
-  if (!bf->cells && _p_nCells(dm)) SETERRQ(_p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Cells do not exist");
-  if (!bf->ownedCellsSetUpCalled) SETERRQ(_p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Owned cells not set up");
+  PetscCheck(bf->cells || !_p_nCells(dm), _p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Cells do not exist");
+  PetscCheck(bf->ownedCellsSetUpCalled, _p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Owned cells not set up");
   /* run ghost exchange */
   ierr = DMGetDimension(dm, &dim);
   CHKERRQ(ierr);
@@ -2091,7 +2091,7 @@ PetscErrorCode VecView_BF(Vec v, PetscViewer viewer)
   PetscFunctionBegin;
   ierr = VecGetDM(v, &dm);
   CHKERRQ(ierr);
-  if (!dm) SETERRQ(_p_comm(v), PETSC_ERR_ARG_WRONG, "Vector not generated from a DM");
+  PetscCheck(dm, _p_comm(v), PETSC_ERR_ARG_WRONG, "Vector not generated from a DM");
   ierr = PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERVTK, &isvtk);
   CHKERRQ(ierr);
   ierr = PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERHDF5, &ishdf5);

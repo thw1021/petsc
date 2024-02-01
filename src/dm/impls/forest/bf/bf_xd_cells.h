@@ -13,7 +13,7 @@ static PetscErrorCode DMBF_XD_P4estCreate(DM dm, p4est_connectivity_t *connectiv
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  if (!connectivity) SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONGSTATE, "Connectivity does not exist");
+  PetscCheck(connectivity, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONGSTATE, "Connectivity does not exist");
   ierr = DMForestGetInitialRefinement(dm, &initLevel);
   CHKERRQ(ierr);
   PetscCallP4estReturn(*p4est, p4est_new_ext,
@@ -31,7 +31,7 @@ static PetscErrorCode DMBF_XD_P4estDestroy(DM dm, p4est_t *p4est)
 {
   PetscFunctionBegin;
   p4est->data_size = 0; /* avoid that p4est destroys quadrant data */
-  if (p4est->user_data_pool) SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONGSTATE, "p4est should not allocate user data memory");
+  PetscCheck(p4est->user_data_pool, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONGSTATE, "p4est should not allocate user data memory");
   PetscCallP4est(p4est_destroy, (p4est));
   PetscFunctionReturn(0);
 }

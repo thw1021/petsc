@@ -141,14 +141,14 @@ PetscErrorCode DMBF_XD_AmrAdaptData(p4est_t *orig_p4est, p4est_t *adap_p4est, DM
 
   PetscFunctionBegin;
   /* check input */
-  if (orig_p4est->data_size != adap_p4est->data_size) SETERRQ(orig_p4est->mpicomm, PETSC_ERR_ARG_SIZ, "p4est data size mismatch: original %d, adapted %d", (int)orig_p4est->data_size, (int)adap_p4est->data_size);
-  if (!amrOps->projectToCoarse) SETERRQ(orig_p4est->mpicomm, PETSC_ERR_ARG_NULL, "Project function to coarse is not given");
-  if (!amrOps->projectToFine) SETERRQ(orig_p4est->mpicomm, PETSC_ERR_ARG_NULL, "Project function to fine is not given");
+  PetscCheck(orig_p4est->data_size == adap_p4est->data_size, orig_p4est->mpicomm, PETSC_ERR_ARG_SIZ, "p4est data size mismatch: original %d, adapted %d", (int)orig_p4est->data_size, (int)adap_p4est->data_size);
+  PetscCheck(amrOps->projectToCoarse, orig_p4est->mpicomm, PETSC_ERR_ARG_NULL, "Project function to coarse is not given");
+  PetscCheck(amrOps->projectToFine, orig_p4est->mpicomm, PETSC_ERR_ARG_NULL, "Project function to fine is not given");
   /* loop over all p4est quadrants */
   orig_quadid = 0;
   adap_quadid = 0;
   while (orig_quadid < orig_n_quads) {
-    if (adap_n_quads <= adap_quadid) SETERRQ(orig_p4est->mpicomm, PETSC_ERR_PLIB, "Quadrant id %d is larger than the number of quadrants %d", (int)adap_quadid, (int)adap_n_quads);
+    PetscCheck(adap_quadid < adap_n_quads, orig_p4est->mpicomm, PETSC_ERR_PLIB, "Quadrant id %d is larger than the number of quadrants %d", (int)adap_quadid, (int)adap_n_quads);
     PetscCallP4estReturn(orig_quad, p4est_find_quadrant_cumulative, (orig_p4est, orig_quadid, NULL, NULL));
     PetscCallP4estReturn(adap_quad, p4est_find_quadrant_cumulative, (adap_p4est, adap_quadid, NULL, NULL));
     orig_level = orig_quad->level;
@@ -188,8 +188,8 @@ PetscErrorCode DMBF_XD_AmrAdaptData(p4est_t *orig_p4est, p4est_t *adap_p4est, DM
     }
   }
   /* check final quadrant id's */
-  if (orig_quadid != orig_n_quads) SETERRQ(orig_p4est->mpicomm, PETSC_ERR_PLIB, "Original quadrant id %d did not reach number of quadrants %d", (int)orig_quadid, (int)orig_n_quads);
-  if (adap_quadid != adap_n_quads) SETERRQ(orig_p4est->mpicomm, PETSC_ERR_PLIB, "Adapted quadrant id %d did not reach number of quadrants %d", (int)adap_quadid, (int)adap_n_quads);
+  PetscCheck(orig_quadid == orig_n_quads, orig_p4est->mpicomm, PETSC_ERR_PLIB, "Original quadrant id %d did not reach number of quadrants %d", (int)orig_quadid, (int)orig_n_quads);
+  PetscCheck(adap_quadid == adap_n_quads, orig_p4est->mpicomm, PETSC_ERR_PLIB, "Adapted quadrant id %d did not reach number of quadrants %d", (int)adap_quadid, (int)adap_n_quads);
   PetscFunctionReturn(0);
 }
 

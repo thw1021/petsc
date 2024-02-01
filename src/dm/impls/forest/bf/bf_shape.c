@@ -38,7 +38,7 @@ PetscErrorCode DMBFShapeClear(DM_BF_Shape *shape)
 
   PetscFunctionBegin;
   PetscAssertPointer(shape, 1);
-  if (shape->list && !shape->list[0]) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Shape list is not been properly initialized");
+  PetscCheck(!shape->list || shape->list[0], PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Shape list is not been properly initialized");
   if (shape->list && shape->list[0]) {
     ierr = PetscFree(shape->list[0]);
     CHKERRQ(ierr);
@@ -111,7 +111,7 @@ PetscErrorCode DMBFShapeCheckSetUp(const DM_BF_Shape *shape)
 
   PetscFunctionBegin;
   CHKERRQ(DMBFShapeIsSetUp(shape, &isSetUp));
-  if (!isSetUp) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Shape is not set up");
+  PetscCheck(isSetUp, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Shape is not set up");
   PetscFunctionReturn(0);
 }
 
@@ -121,7 +121,7 @@ PetscErrorCode DMBFShapeCheckValid(const DM_BF_Shape *shape)
 
   PetscFunctionBegin;
   CHKERRQ(DMBFShapeIsValid(shape, &isValid));
-  if (!isValid) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Shape is invalid");
+  PetscCheck(isValid, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Shape is invalid");
   PetscFunctionReturn(0);
 }
 
@@ -159,16 +159,16 @@ PetscErrorCode DMBFShapeCopy(DM_BF_Shape *trgShape, const DM_BF_Shape *srcShape)
   PetscAssertPointer(srcShape, 2);
   ierr = DMBFShapeIsSetUp(srcShape, &isOK);
   CHKERRQ(ierr);
-  if (!isOK) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Source shape was not set up");
+  PetscCheck(isOK, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Source shape was not set up");
   ierr = DMBFShapeIsValid(srcShape, &isOK);
   CHKERRQ(ierr);
-  if (!isOK) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Source shape is invalid");
+  PetscCheck(isOK, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Source shape is invalid");
   ierr = DMBFShapeIsSetUp(trgShape, &isOK);
   CHKERRQ(ierr);
-  if (!isOK) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Target shape was not set up");
+  PetscCheck(isOK, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Target shape was not set up");
   ierr = DMBFShapeCompare(trgShape, srcShape, &isOK);
   CHKERRQ(ierr);
-  if (!isOK) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Target and source shapes are not similar");
+  PetscCheck(isOK, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Target and source shapes are not similar");
   /* copy */
   ierr = PetscArraycpy(trgShape->list[0], srcShape->list[0], _p_DMBFShapeNElements(srcShape));
   CHKERRQ(ierr);
@@ -178,7 +178,7 @@ PetscErrorCode DMBFShapeCopy(DM_BF_Shape *trgShape, const DM_BF_Shape *srcShape)
   /* check output */
   ierr = DMBFShapeIsValid(trgShape, &isOK);
   CHKERRQ(ierr);
-  if (!isOK) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Target shape is invalid");
+  PetscCheck(isOK, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Target shape is invalid");
   PetscFunctionReturn(0);
 }
 
