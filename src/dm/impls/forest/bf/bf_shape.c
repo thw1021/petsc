@@ -38,7 +38,7 @@ PetscErrorCode DMBFShapeClear(DM_BF_Shape *shape)
 
   PetscFunctionBegin;
   PetscAssertPointer(shape, 1);
-  PetscCheck(!shape->list || shape->list[0], PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Shape list is not been properly initialized");
+  PetscCheck(!shape->list || shape->list[0], PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Shape list was not properly initialized");
   if (shape->list && shape->list[0]) {
     ierr = PetscFree(shape->list[0]);
     CHKERRQ(ierr);
