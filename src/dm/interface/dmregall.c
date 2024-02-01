@@ -57,7 +57,7 @@ PetscErrorCode DMRegisterAll(void)
 #if defined(PETSC_HAVE_P4EST)
   PetscCall(DMRegister(DMP4EST, DMCreate_p4est));
   PetscCall(DMRegister(DMP8EST, DMCreate_p8est));
-  PetscCall(DMRegister(DMBF,    DMCreate_BF));
+  PetscCall(DMRegister(DMBF, DMCreate_BF));
 #endif
   PetscCall(DMRegister(DMPRODUCT, DMCreate_Product));
   PetscCall(DMRegister(DMSTAG, DMCreate_Stag));
