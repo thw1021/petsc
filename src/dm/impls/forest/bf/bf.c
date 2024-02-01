@@ -1010,7 +1010,7 @@ PetscErrorCode DMBFSetUpUserFnAfterP4estNodes(DM dm, PetscErrorCode (*fn)(DM, vo
  * CREATE/DESTROY
  **************************************/
 
-static PetscErrorCode DMInitialize_BF(DM dm)
+static PetscErrorCode DMBFSetOps(DM dm)
 {
   PetscFunctionBegin;
   dm->ops->setup          = DMSetUp_BF;
@@ -1058,7 +1058,7 @@ PetscErrorCode DMCreate_BF(DM dm)
     forest->destroy = DMForestDestroy_BF;
   }
   /* set operators */
-  ierr = DMInitialize_BF(dm);
+  ierr = DMBFSetOps(dm);
   CHKERRQ(ierr);
   /* set default options */
   ierr = DMBFSetDefaultOptions(dm);
@@ -1097,8 +1097,8 @@ static PetscErrorCode DMBFCloneInit(DM dm, DM *newdm)
   /* check BF object */
   newbf = _p_getBF(*newdm);
   PetscCheck(newbf, _p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "BF object does not exist");
-  /* copy operators */
-  ierr = PetscMemcpy((*newdm)->ops, dm->ops, sizeof(*(dm->ops)));
+  /* set operators */
+  ierr = DMBFSetOps(*newdm);
   CHKERRQ(ierr);
   /* copy options */
   ierr = DMBFCopyOptions(dm, *newdm);
