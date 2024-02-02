@@ -101,7 +101,7 @@ PetscErrorCode DMBFShapeIsValid(const DM_BF_Shape *shape, PetscBool *isValid)
   *isValid = PETSC_TRUE;
   CHKERRQ(DMBFShapeIsSetUp(shape, isValid));
   if (!(*isValid)) { PetscFunctionReturn(0); }
-  *isValid = (shape->size == _p_DMBFShapeSize(shape));
+  *isValid = (PetscBool)(shape->size == _p_DMBFShapeSize(shape));
   PetscFunctionReturn(0);
 }
 
@@ -138,7 +138,7 @@ PetscErrorCode DMBFShapeCompare(const DM_BF_Shape *refShape, const DM_BF_Shape *
   CHKERRQ(ierr);
   ierr = DMBFShapeIsSetUp(chkShape, &chkSetUp);
   CHKERRQ(ierr);
-  *similar = (refSetUp && chkSetUp && refShape->n == chkShape->n && refShape->dim == chkShape->dim);
+  *similar = (PetscBool)(refSetUp && chkSetUp && refShape->n == chkShape->n && refShape->dim == chkShape->dim);
   //{ //###DEV###
   //  PetscPrintf(PETSC_COMM_SELF,"DMBFShapeCompare: refSetUp=%i chkSetUp=%i refValid=%i chkValid=%i "
   //              "refShape->(n,dim)=(%i,%i) chkShape->(n,dim)=(%i,%i)\n",
@@ -211,8 +211,9 @@ PetscErrorCode DMBFShapeGet(const DM_BF_Shape *shape, size_t **elements, size_t 
   /* check */
   PetscAssertPointer(shape, 1);
   PetscAssertPointer(elements, 2);
-  PetscAssertPointer(n, 3);
-  PetscAssertPointer(dim, 4);
+  PetscAssertPointer(pad, 3);
+  PetscAssertPointer(n, 4);
+  PetscAssertPointer(dim, 5);
   ierr = DMBFShapeCheckSetUp(shape);
   CHKERRQ(ierr);
   /* get */
