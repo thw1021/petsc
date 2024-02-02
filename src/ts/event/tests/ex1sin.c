@@ -198,7 +198,6 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
     args: -dir 0
     args: -restart 0
     args: -dtpost {{0 0.25}}
-    args: -ts_event_post_event_step -1
     args: -ts_type {{beuler rk}}
     args: -ts_adapt_type {{none basic}}
     nsize: 1
@@ -235,7 +234,7 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
     suffix: 0single
     requires: single
     output_file: output/ex1sin_0.out
-    args: -dir 0 -ts_event_dt_min 1e-6 -errtol 5e-5
+    args: -dir 0 -errtol 1e-4
     args: -restart 1
     args: -dtpost {{0 0.25}}
     args: -ts_event_post_event_step {{-1 0.31}}
@@ -249,7 +248,7 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
     suffix: psingle
     requires: single
     output_file: output/ex1sin_p.out
-    args: -dir 1 -ts_event_dt_min 1e-6 -errtol 5e-5
+    args: -dir 1 -errtol 1e-4
     args: -restart 0
     args: -dtpost {{0 0.31}}
     args: -ts_event_post_event_step 0.25
@@ -261,10 +260,9 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
     suffix: nsingle
     requires: single
     output_file: output/ex1sin_n.out
-    args: -dir -1 -ts_event_dt_min 1e-6 -errtol 5e-5
+    args: -dir -1 -errtol 1e-4
     args: -restart 1
     args: -dtpost {{0 0.25}}
-    args: -ts_event_post_event_step -1
     args: -ts_type {{beuler rk}}
     args: -ts_adapt_type {{none basic}}
     nsize: 2

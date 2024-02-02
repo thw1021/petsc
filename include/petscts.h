@@ -427,69 +427,6 @@ PETSC_EXTERN PetscErrorCode TSSetMaxTime(TS, PetscReal);
 PETSC_EXTERN PetscErrorCode TSGetMaxTime(TS, PetscReal *);
 PETSC_EXTERN PetscErrorCode TSSetExactFinalTime(TS, TSExactFinalTimeOption);
 PETSC_EXTERN PetscErrorCode TSGetExactFinalTime(TS, TSExactFinalTimeOption *);
-PETSC_EXTERN PetscErrorCode TSSetEvaluationTimes(TS, PetscInt, PetscReal[]);
-PETSC_EXTERN PetscErrorCode TSGetEvaluationTimes(TS, PetscInt *, const PetscReal *[]);
-PETSC_EXTERN PetscErrorCode TSGetEvaluationSolutions(TS, PetscInt *, const PetscReal *[], Vec *[]);
-PETSC_EXTERN PetscErrorCode TSSetTimeSpan(TS, PetscInt, PetscReal[]);
-
-/*@
-  TSGetTimeSpan - gets the time span set with `TSSetTimeSpan()`
-
-  Not Collective
-
-  Input Parameter:
-. ts - the time-stepper
-
-  Output Parameters:
-+ n          - number of the time points (>=2)
-- span_times - array of the time points. The first element and the last element are the initial time and the final time respectively.
-
-  Level: deprecated
-
-  Note:
-  Deprecated, use `TSGetEvaluationTimes()`.
-
-  The values obtained are valid until the `TS` object is destroyed.
-
-  Both `n` and `span_times` can be `NULL`.
-
-.seealso: [](ch_ts), `TS`, `TSGetEvaluationTimes()`, `TSSetTimeSpan()`, `TSSetEvaluationTimes()`, `TSGetEvaluationSolutions()`
- @*/
-PETSC_DEPRECATED_FUNCTION(3, 23, 0, "TSGetEvaluationTimes()", ) static inline PetscErrorCode TSGetTimeSpan(TS ts, PetscInt *n, const PetscReal *span_times[])
-{
-  return TSGetEvaluationTimes(ts, n, span_times);
-}
-
-/*@
-  TSGetTimeSpanSolutions - Get the number of solutions and the solutions at the time points specified by the time span.
-
-  Not Collective
-
-  Input Parameter:
-. ts - the `TS` context obtained from `TSCreate()`
-
-  Output Parameters:
-+ nsol - the number of solutions
-- Sols - the solution vectors
-
-  Level: deprecated
-
-  Notes:
-  Deprecated, use `TSGetEvaluationSolutions()`.
-
-  Both `nsol` and `Sols` can be `NULL`.
-
-  Some time points in the time span may be skipped by `TS` so that `nsol` is less than the number of points specified by `TSSetTimeSpan()`.
-  For example, manipulating the step size, especially with a reduced precision, may cause `TS` to step over certain points in the span.
-  This issue is alleviated in `TSGetEvaluationSolutions()` by returning the solution times that `Sols` were recorded at.
-
-.seealso: [](ch_ts), `TS`, `TSGetEvaluationSolutions()`, `TSSetTimeSpan()`, `TSGetEvaluationTimes()`, `TSSetEvaluationTimes()`
- @*/
-PETSC_DEPRECATED_FUNCTION(3, 23, 0, "TSGetEvaluationSolutions()", ) static inline PetscErrorCode TSGetTimeSpanSolutions(TS ts, PetscInt *nsol, Vec **Sols)
-{
-  return TSGetEvaluationSolutions(ts, nsol, NULL, Sols);
-}
-
 PETSC_EXTERN PETSC_DEPRECATED_FUNCTION(3, 8, 0, "TSSetTime()", ) PetscErrorCode TSSetInitialTimeStep(TS, PetscReal, PetscReal);
 PETSC_EXTERN PETSC_DEPRECATED_FUNCTION(3, 8, 0, "TSSetMax()", ) PetscErrorCode TSSetDuration(TS, PetscInt, PetscReal);
 PETSC_EXTERN PETSC_DEPRECATED_FUNCTION(3, 8, 0, "TSGetMax()", ) PetscErrorCode TSGetDuration(TS, PetscInt *, PetscReal *);
@@ -1160,12 +1097,13 @@ PETSC_EXTERN PetscErrorCode       TSMonitorHGSwarmSolution(TS, PetscInt, PetscRe
   TSEvent - Abstract object that handles the `TS` events
 
   Options Database Keys:
-+ -ts_event_tol <tol>                       - tolerance for event (indicator function) zero crossing
-. -ts_event_post_event_step <dt1>           - first time step after the event
-. -ts_event_post_event_second_step <dt2>    - second time step after the event
-. -ts_event_monitor                         - print choices made by event handler
-. -ts_event_recorder_initial_size <recsize> - initial size of event recorder
-- -ts_event_dt_min <dt>                     - minimum time step allowed in TSEvent iterations (default = 2 * ts_adapt_dt_min)   TODO!
++ -ts_event_tol tol                       - tolerance for event (indicator function) zero crossing
+. -ts_event_post_event_step dt1           - first time step after the event
+. -ts_event_post_event_second_step dt2    - second time step after the event
+. -ts_event_monitor                       - print choices made by event handler
+. -ts_event_recorder_initial_size recsize - initial size of event recorder
+. -ts_event_dt_min_rel dt_rel             - (relative) minimum time step allowed in TSEvent iterations (default = 2 * ts_adapt_dt_min_rel)
+- -ts_event_dt_min_abs dt_abs             - (absolute) minimum time step allowed in TSEvent iterations (default = 2 * ts_adapt_dt_min_abs)
 
   Level: intermediate
 
@@ -1175,34 +1113,39 @@ PETSC_EXTERN PetscErrorCode       TSMonitorHGSwarmSolution(TS, PetscInt, PetscRe
   by changing the solution vector or the equations, or simply perform some monitoring.
 
   The exact locations of the event time points are defined by zero-crossings of a real-valued
-  `indicator function`. Several indicator functions may be used at a time, all of them should be evaluated
-  in the user `indicator()` callback based on the current time `t` and the current solution vector.
+  indicator function. Several indicator functions may be used at a time, all of them should be evaluated
+  in the user `indicator()` callback based on the current time t and the current solution vector.
   The indicator functions are assumed to be continuous (as functions of time).
 
-  Under the hood, resolution of the event locations (the zeros) engages an iterative `bracket refinement` process,
+  Under the hood, resolution of the event locations (the zeros) engages an iterative bracket refinement process,
   and involves time step refinement and occasionally step rollbacks, one can examine the details of these with `-ts_monitor`,
   `-ts_event_monitor`. Two criteria are used for finishing the iteration, i.e. accepting a point as a zero crossing\:
 
-  1. Function zero value criterion, as defined by tolerances. The tolerances can be adjusted individually for each indicator
-  function, via `TSSetEventTolerances()`. Make sure the tolerances are not too large. Otherwise, too many time points will be
-  seen as zeros of the indicator function. If the time stepper makes a direct move from one such zero (t1) to another zero (t2),
+  1. Function zero value criterion, as defined by the function tolerances. The tolerances can be adjusted individually for each
+  indicator function, via `TSSetEventTolerances()`. Make sure the tolerances are not too large. Otherwise, too many time points will
+  be seen as zeros of the indicator function. If the time stepper makes a direct move from one such zero (t1) to another zero (t2),
   the point t2 is not treated as an event location. In fact, at point t2 the event handler still thinks it has not left
   the vicinity of the first zero t1.
 
-  2. Minimum time step criterion (`-ts_event_dt_min`). This criterion is triggered when the interval (bracket) with the     TODO!-start
-  indicator function sign change (i.e. containing a zero crossing) becomes too small. Note that `-ts_event_dt_min`
-  is actually not the precise minimum step allowed during the event resolution. Algorithmically, the minimum step
+  2. Minimum time step criterion, as defined by the time step tolerance dt_min
+  (ultimately, by `-ts_event_dt_min_abs`, `-ts_event_dt_min_rel` and current time t)\:
+.vb
+  dt_min = Max {ts_event_dt_min_abs, ts_event_dt_min_rel * |t|}
+.ve
+  This criterion is triggered when the interval (bracket) with the indicator function
+  sign change (i.e. containing a zero crossing) becomes too small. Note that dt_min is actually
+  not the precise minimum step allowed during the event resolution. Algorithmically, the minimum step
   may become as small as half of that value, to finalize the current iteration.
-  If the initial bracket size happens to be smaller than `-ts_event_dt_min`, an event is triggered immediately.             TODO!-end
+  If the initial bracket size happens to be smaller than dt_min, an event is triggered immediately.
 
   The user may also specify to trigger events only at those zeros of the indicator function where the function
   is increasing (zero-crossing in positive direction), or decreasing (zero-crossing in negative direction), by supplying
   the appropriate argument `direction` in `TSSetEventHandler()`.
 
-  The [optional] `postevent()` callback defines the user actions taking place after hitting the event.
+  The [optional] `postevent()` callback defines the user actions taking place after hitting an event.
   Note that the full set of events is distributed (by the user design) across MPI processes, with each process
-  defining its own local sub-set of events. However, the `postevent()` callback invocation is performed
-  synchronously on all processes, including those processes which have not currently triggered any events.
+  defining its own local sub-set of events. However, the event (zero crossing) resolution  and `postevent()` callback invocation
+  is performed synchronously on all processes, including those processes which have not currently triggered any events.
   If the `postevent()` involves the change of equations, the user must call `TSRestartStep()`.
 
   The basic procedure for using the `TS` events is as follows\:
@@ -1249,7 +1192,7 @@ PETSC_EXTERN PetscErrorCode       TSMonitorHGSwarmSolution(TS, PetscInt, PetscRe
   The first post-event step will always be accepted. In this situation, it is the user's responsibility to make sure the step size
   is appropriate! In cases 4 and 1a, however, `TSAdapt` will analyse the first post-event step, and is allowed to reject/truncate it.
 
-  If the first/second post-event steps are given numerical values, these values are allowed to be less than `-ts_adapt_dt_min`.     TODO!
+  If the first/second post-event steps are given numerical values, these values are allowed to be less than dt_min imposed by `TSAdapt`.
   In this case the time stepper will adhere to the small post-event steps.
 
 .seealso: [](ch_ts), `TS`, `TSSetEventHandler()`, `TSSetPostEventStep()`, `TSSetPostEventSecondStep()`, `TSSetEventTolerances()`, `TSRestartStep()`
@@ -1265,6 +1208,162 @@ PETSC_DEPRECATED_FUNCTION(3, 21, 0, "TSSetPostEventSecondStep()", ) static inlin
 }
 PETSC_EXTERN PetscErrorCode TSSetEventTolerances(TS, PetscReal, PetscReal[]);
 PETSC_EXTERN PetscErrorCode TSGetNumEvents(TS, PetscInt *);
+
+/*MC
+  TSEvaluationTimes - Abstract object that manages the evaluation time points
+
+  Options Database Keys:
++ -ts_time_span t1,...tn       - solutions will be saved at the time points listed (schedule 'default' is added); will use t1 and tn as initial and max TS times
+. -ts_eval_times t1,...tn      - solutions will be saved at the time points listed (schedule 'default' is added)
+- -ts_eval_times_uniform x,y,n - solutions will be saved at n evenly spaced time points in [x,y] (schedule 'default' is added)
+
+  Level: intermediate
+
+  Notes:
+  An elementary set of points where the time stepper `TS` stops and saves the solution vectors to an array
+  is managed internally by a `TSEvaluationTimesSchedule` object. Multiple such schedules can be added.
+  The resulting collection of schedules is controlled by `TSEvaluationTimes` object, which is in turn managed by `TS`.
+
+.vb
+    TSEvaluationTimes
+  |...................| - schedule_1
+  | . . . . . . . . . | - schedule_2
+  |..  ..  ..  ..  .. | - schedule_3
+  |.   .     . .  ..  | - schedule_4
+ t0                  tmax
+.ve
+
+  A basic workflow for using the evaluation time points involves the following.
+.vb
+  (0) Set TS_EXACTFINALTIME_MATCHSTEP for the TS.
+  (A) Add/remove TSEvaluationTimesSchedule(s) to TSEvaluationTimes (which is initially NULL), using TSEvaluationTimesAddArray().
+  (B) Set up the data structures by TSEvaluationTimesSetUp().
+  (C) Run TSSolve() one or multiple times.
+  (D) Retrieve the saved vectors by TSEvaluationTimesGetSolutions() + TSEvaluationTimesRestoreSolutions().
+.ve
+
+  Options `-ts_time_span` or `-ts_eval_times` are equivalent to adding/overriding a schedule named "default", adopting
+  callback `TSEvaluationTimesDefaultHandler()`, and the time points listed. Option `-ts_eval_times_uniform` does the same
+  for the evenly spaced points in the given range. The initial and max times for `TS` are overridden
+  by `-ts_time_span`, but not by the other two options. In an application, the options are activated via `TSSetFromOptions()`.
+
+  `TSEvaluationTimes` object can be in one of the three working states, as follows.
+  (0) TSEvaluationTimes == NULL, no schedules.
+  (1) TSEvaluationTimes with time points, but no saved vectors so far.
+  (2) TSEvaluationTimes with time points, recorded vectors and updated inner counters.
+  The transition between the states takes place as shown in the diagram below.
+.vb
+                 {any state} -->
+                                \
+                      <--- TSEvaluationTimesAddArray() * N ---->
+   TSCreate() --->   /       + TSEvaluationTimesSetUp()         \   ----->       TSSolve()      ----->
+                  \ /                                            \ /                                  \
+                  (0)                                            (1)                                  (2)
+                    \                                              \                                  /
+                     <---- TSEvaluationTimesDestroy()               <--- TSEvaluationTimesReset() <---
+                                       \
+                                        <-- {any state}
+.ve
+  `TSSolve()` called in state (0) does not deal with the evaluation time points, and does not change `TSEvaluationTimes`.
+
+  While each schedule defines its own set of time points (as indexed by `iprivate`, see `TSEvaluationTimesAddArray()`
+  for notation), the `TS` stops at the union of all points over all schedules (as indexed by `iunion`). However,
+  callback `handler()` of each `TSEvaluationTimesSchedule` is only invoked at its own private points `schedtimes`.
+  The time points contributed from different schedules are allowed to be duplicate, meaning that
+  at such duplicate points several different handlers will be invoked.
+  (The duplicate points are even allowed within a single schedule, though it may not have
+  much practical sense: they will save the same repeating vector).
+
+  In the union of evaluation time points, the minimal allowed distance between points is defined
+  identically to `TSAdapt` minimum step, using the tolerances `-ts_adapt_dt_min_rel`, `-ts_adapt_dt_min_abs`,
+  see `TSAdaptSetMinStep()` for reference. The points having a smaller distance are merged into a single point.
+  Near t0 and tmax, similar merging takes place, moving the time points towards t0 and tmax respectively.
+  All the resulting evaluation time points between t0 and tmax are to be visited by the time stepper.
+
+  The merging is relevant for the union of evaluation time points, it allows avoiding too small steps during time stepping.
+  However, each `TSEvaluationTimesSchedule` treats all its points (even the complete duplicates) as distinct, with no merging,
+  and reports them respectively in `TSEvaluationTimesGetSolutions()`. The scheme below shows an example
+  where points t1, t2, t3 have been merged into a single point t1 at the union scale, so the `TS` will only visit t1.
+  The `TSEvaluationTimesSchedule` keeps tracking t1, t2, t3 as distinct slots, invoking `handler()` callback for all of them,
+  but saving the same vector three times.
+.vb
+  t_union   t_schedule  vec_schedule
+  ...       ...         ...
+  t1        t1          vec1
+  t1        t2          vec1
+  t1        t3          vec1
+  ...       ..          ..
+.ve
+
+  If `TSSolve()` is called consecutively multiple times without manually changing 't' between them,
+  and a solve-1 stops (meaning that the subsequent solve-2 starts) in an evaluation point e1,
+  then solve-2 will not override the vectors saved by solve-1 in e1, so each point 'e1' is only processed once.
+  However, if 't' has been changed (decreased) between the solves, then on re-visiting the old evaluation time points,
+  the previously saved vectors will be overriden.
+
+  See below an example scheme with three consecutive solves. Solve-2 seamlessly follows solve-1, and doesn't save vectors in point 2.
+  Solve-3 starts from a decremented time, and overrides the vectors saved in points 2, 3.
+.vb
+  t0                                      tmax
+  0---------1-------2---3-----------4-------- time axis with eval time pts 0,1,2,3,4
+  *---------*-------*                         solve-1, * = save
+                    i---*-------              solve-2, * = save, i = ignore
+                 ---w---w-----------*-------- solve-3, * = save, w = override
+.ve
+
+  If an event (see `TSEvent`) is triggered at an evaluation time point, and the solution gets modified by the `postevent()`,
+  the `TSEvaluationTimes` will only deal with the modified version of the solution at the given point.
+
+  When using `TSEvaluationTimes` in a parallel application, all the data (e.g. time points) and the function calls involved
+  should be identical over the MPI processes. However, the vectors handled/saved may be parallel and have arbitrary MPI layout.
+
+.seealso: [](ch_ts), `TS`, `TSEvaluationTimesSchedule`, `TSEvent`, `TSEvaluationTimesAddArray()`, `TSEvaluationTimesDefaultHandler()`, `TSEvaluationTimesSetUp()`, `TSEvaluationTimesGetSolutions()`, `TSEvaluationTimesDestroy()`
+M*/
+typedef struct _n_TSEvaluationTimes *TSEvaluationTimes;
+
+/*MC
+  TSEvaluationTimesSchedule - Abstract object that manages a private list of evaluation time points, and stores the resulting vectors
+
+  Level: intermediate
+
+  Notes:
+  A schedule can be added (or replaced, deleted) by `TSEvaluationTimesAddArray()`, `TSEvaluationTimesAddUniform()`.
+  Each `TSEvaluationTimesSchedule` has a unique reference `name`, which can subsequently be used to retrieve the saved vectors
+  via `TSEvaluationTimesGetSolutions()`.
+
+  By means of `TSEvaluationTimesAddArray()`, each schedule is provided with a user callback `handler()` which is invoked
+  each time before saving the solution vector. This callback can be used to transform the actual solution vector `full` to a
+  vector `sub` saved to the array. Vector `sub` can be e.g. a smaller sub-vector to help reduce the memory demand.
+
+  In general, `handler()` callback can be used for (1) simply printing messages, (2) writing data to the disk,
+  (3) defining the vector `sub` to be saved to array. In the latter case the vector `sub` must be CREATED and defined
+  by user in the `handler()` code. (Destruction of the vectors saved to the array is done automatically when necessary).
+  If there is no need to save `sub`, it should be left equal to `NULL`.
+
+  The minimal `handler()` is an empty function (with only `PetscFunctionBeginUser`, `PetscFunctionReturn()`), it will result in
+  stopping at the evaluation time points, but not saving any solutions.
+  Providing `TSEvaluationTimesDefaultHandler()` as the callback will result in saving the (copies of the) full solution vectors.
+  If `NULL` is provided as the callback, the `TSEvaluationTimesSchedule` with the given `name` is removed from the
+  `TSEvaluationTimes` collection. Providing nprivate <= 0 or schedtimes == NULL has the same effect.
+
+.seealso: [](ch_ts), `TS`, `TSEvaluationTimes`, `TSEvaluationTimesAddArray()`, `TSEvaluationTimesAddUniform()`, `TSEvaluationTimesDefaultHandler()`, `TSEvaluationTimesGetSolutions()`, `TSEvaluationTimesRestoreSolutions()`
+M*/
+typedef struct _n_TSEvaluationTimesSchedule *TSEvaluationTimesSchedule;
+
+PETSC_EXTERN PetscErrorCode TSEvaluationTimesReset(TS);
+PETSC_EXTERN PetscErrorCode TSEvaluationTimesDestroy(TS);
+PETSC_EXTERN PetscErrorCode TSEvaluationTimesAddArray(TS, const char *, PetscInt, const PetscReal *, PetscErrorCode (*)(TS, PetscInt, PetscInt, PetscReal, Vec, Vec *, void *), void *);
+PETSC_EXTERN PetscErrorCode TSEvaluationTimesAddUniform(TS, const char *, PetscInt, PetscReal, PetscReal, PetscErrorCode (*)(TS, PetscInt, PetscInt, PetscReal, Vec, Vec *, void *), void *);
+PETSC_EXTERN PetscErrorCode TSEvaluationTimesDefaultHandler(TS, PetscInt, PetscInt, PetscReal, Vec, Vec *, void *);
+PETSC_EXTERN PetscErrorCode TSEvaluationTimesSetUp(TS, PetscBool);
+PETSC_EXTERN PETSC_DEPRECATED_FUNCTION(3, 26, 0, "TSEvaluationTimesAddArray()", ) PetscErrorCode TSSetTimeSpan(TS, PetscInt, PetscReal *);
+PETSC_EXTERN PETSC_DEPRECATED_FUNCTION(3, 26, 0, "TSEvaluationTimesAddArray()", ) PetscErrorCode TSSetEvaluationTimes(TS, PetscInt, PetscReal *);
+PETSC_EXTERN PetscErrorCode TSEvaluationTimesGetSolutions(TS, const char *, PetscInt *, PetscInt *, PetscInt *, PetscReal **, Vec **);
+PETSC_EXTERN PetscErrorCode TSEvaluationTimesRestoreSolutions(TS, const char *, PetscInt *, PetscInt *, PetscInt *, PetscReal **, Vec **);
+PETSC_EXTERN PETSC_DEPRECATED_FUNCTION(3, 23, 0, "TSEvaluationTimesGetSolutions()", ) PetscErrorCode TSGetTimeSpan(TS, PetscInt *, const PetscReal **);
+PETSC_EXTERN PETSC_DEPRECATED_FUNCTION(3, 26, 0, "TSEvaluationTimesGetSolutions()", ) PetscErrorCode TSGetEvaluationTimes(TS, PetscInt *, const PetscReal **);
+PETSC_EXTERN PETSC_DEPRECATED_FUNCTION(3, 23, 0, "TSEvaluationTimesGetSolutions()", ) PetscErrorCode TSGetTimeSpanSolutions(TS, PetscInt *, Vec **);
+PETSC_EXTERN PETSC_DEPRECATED_FUNCTION(3, 26, 0, "TSEvaluationTimesGetSolutions()", ) PetscErrorCode TSGetEvaluationSolutions(TS, PetscInt *, const PetscReal **, Vec **);
 
 /*J
    TSSSPType - string with the name of a `TSSSP` scheme.
@@ -1340,6 +1439,8 @@ PETSC_EXTERN PetscErrorCode TSAdaptSetScaleSolveFailed(TSAdapt, PetscReal);
 PETSC_EXTERN PetscErrorCode TSAdaptGetScaleSolveFailed(TSAdapt, PetscReal *);
 PETSC_EXTERN PetscErrorCode TSAdaptSetStepLimits(TSAdapt, PetscReal, PetscReal);
 PETSC_EXTERN PetscErrorCode TSAdaptGetStepLimits(TSAdapt, PetscReal *, PetscReal *);
+PETSC_EXTERN PetscErrorCode TSAdaptSetMinStep(TSAdapt, PetscReal, PetscReal);
+PETSC_EXTERN PetscErrorCode TSAdaptGetMinStep(TSAdapt, PetscReal *, PetscReal *);
 PETSC_EXTERN PetscErrorCode TSAdaptSetCheckStage(TSAdapt, PetscErrorCode (*)(TSAdapt, TS, PetscReal, Vec, PetscBool *));
 PETSC_EXTERN PetscErrorCode TSAdaptHistorySetHistory(TSAdapt, PetscInt, PetscReal[], PetscBool);
 PETSC_EXTERN PetscErrorCode TSAdaptHistorySetTrajectory(TSAdapt, TSTrajectory, PetscBool);

@@ -1,0 +1,143 @@
+### Check 'user' before SetUp: start -1, end -1
+### Check 'user' before Solve: start -1, end -1
+>> Schedule '   user' before Solve: 28 point(s)
+>> Schedule 'default' before Solve: 0 point(s) <empty>
+>> Schedule '  range' before Solve: 0 point(s) <empty>
+0 TS dt 0.01 time 0.
+ETS 'user ' point 0.01, union index    0, private index    0
+1 TS dt 0.2 time 0.01
+ETS 'user ' point 0.21, union index    1, private index    1
+2 TS dt 0.8 time 0.21
+2 TS dt 0.761 time 0.21 (r)
+3 TS dt 0.0289913 time 0.971
+4 TS dt 9.07368e-06 time 0.999991
+5 TS dt 0.01 time 1.
+ETS 'user ' point 1.01, union index    2, private index    2
+6 TS dt 0.2 time 1.01
+6 TS dt 0.0813513 time 1.01 (r)
+6 TS dt 0.0368034 time 1.01 (r)
+7 TS dt 0.00398344 time 1.0468
+7 TS dt 0.00321033 time 1.0468 (r)
+7 TS dt 0.00319657 time 1.0468 (r)
+8 TS dt 0.16 time 1.05
+ETS 'user ' point 1.21, union index    3, private index    3
+9 TS dt 0.8 time 1.21
+9 TS dt 0.761 time 1.21 (r)
+10 TS dt 0.0289913 time 1.971
+11 TS dt 9.07368e-06 time 1.99999
+12 TS dt 0.01 time 2.
+ETS 'user ' point 2.01, union index    4, private index    4
+13 TS dt 0.2 time 2.01
+ETS 'user ' point 2.21, union index    5, private index    5
+14 TS dt 0.79 time 2.21
+ETS 'user ' point 3., union index    6, private index    6
+15 TS dt 0.01 time 3.
+ETS 'user ' point 3.01, union index    7, private index    7
+16 TS dt 0.2 time 3.01
+ETS 'user ' point 3.21, union index    8, private index    8
+17 TS dt 0.79 time 3.21
+18 TS dt 0.01 time 4.
+ETS 'user ' point 4.01, union index   10, private index   10
+19 TS dt 0.01 time 4.01
+ETS 'user ' point 4.02, union index   11, private index   11
+20 TS dt 0.19 time 4.02
+ETS 'user ' point 4.21, union index   12, private index   12
+21 TS dt 0.77 time 4.21
+ETS 'user ' point 4.98, union index   13, private index   13
+22 TS dt 0.02 time 4.98
+ETS 'user ' point 5., union index   14, private index   14
+23 TS dt 0.01 time 5.
+ETS 'user ' point 5.01, union index   15, private index   15
+24 TS dt 0.2 time 5.01
+ETS 'user ' point 5.21, union index   16, private index   16
+25 TS dt 0.77 time 5.21
+ETS 'user ' point 5.98, union index   17, private index   17
+26 TS dt 0.02 time 5.98
+ETS 'user ' point 6., union index   18, private index   18
+27 TS dt 0.01 time 6.
+ETS 'user ' point 6.01, union index   19, private index   19
+28 TS dt 0.01 time 6.01
+ETS 'user ' point 6.02, union index   20, private index   20
+29 TS dt 0.19 time 6.02
+ETS 'user ' point 6.21, union index   21, private index   21
+30 TS dt 0.78 time 6.21
+ETS 'user ' point 6.99, union index   22, private index   22
+31 TS dt 0.22 time 6.99
+31 TS dt 0.0107251 time 6.99 (r)
+31 TS dt 0.00999737 time 6.99 (r)
+32 TS dt 2.63242e-06 time 7.
+33 TS dt 0.21 time 7.
+ETS 'user ' point 7.21, union index   23, private index   23
+34 TS dt 0.8 time 7.21
+34 TS dt 0.761 time 7.21 (r)
+35 TS dt 0.0289913 time 7.971
+36 TS dt 9.07368e-06 time 7.99999
+37 TS dt 0.01 time 8.
+ETS 'user ' point 8.01, union index   24, private index   24
+38 TS dt 0.2 time 8.01
+ETS 'user ' point 8.21, union index   25, private index   25
+39 TS dt 0.8 time 8.21
+39 TS dt 0.761 time 8.21 (r)
+40 TS dt 0.0289913 time 8.971
+41 TS dt 9.07368e-06 time 8.99999
+42 TS dt 0.01 time 9.
+ETS 'user ' point 9.01, union index   26, private index   26
+43 TS dt 0.2 time 9.01
+43 TS dt 0.0145507 time 9.01 (r)
+44 TS dt 0.00948519 time 9.02455
+45 TS dt 0.0166696 time 9.03404
+45 TS dt 0.0159001 time 9.03404 (r)
+46 TS dt 6.37473e-05 time 9.04994
+47 TS dt 0.16 time 9.05
+### Check 'user' after Solve: start 0, end 27
+== CONVERGED_EVENT ==
+0	1.	4.32965e-09	pass
+0	1.05	4.11981e-10	pass
+0	2.	4.32965e-09	pass
+0	3.	0.	pass
+0	4.	0.	pass
+0	5.	0.	pass
+0	6.	0.	pass
+0	7.	2.26841e-12	pass
+0	8.	4.32965e-09	pass
+0	9.	4.32965e-09	pass
+0	9.05	2.47957e-07	pass
+---
+Evaluation times schedule 'user': 28 point(s), visited subrange: [0, 27)
+0.01	1.	pass
+0.21	1.	pass
+1.01	1.	pass
+1.21	1.	pass
+2.01	1.	pass
+2.21	1.	pass
+3.	1.	pass
+3.01	1.	pass
+3.21	1.	pass
+4.	0.	***
+4.01	1.	pass
+4.02	1.	pass
+4.21	1.	pass
+4.98	1.	pass
+5.	1.	pass
+5.01	1.	pass
+5.21	1.	pass
+5.98	1.	pass
+6.	1.	pass
+6.01	1.	pass
+6.02	1.	pass
+6.21	1.	pass
+6.99	1.	pass
+7.21	1.	pass
+8.01	1.	pass
+8.21	1.	pass
+9.01	1.	pass
+9.21	0.	***
+---
+Evaluation times schedule 'default' not found
+---
+Evaluation times schedule 'range' not found
+Initial time = 0., final time reached = 9.05, max time = 1.79769e+308, pass
+Initial time step = 10., final time step = 0.16, adapt == none, NO-match
+========================
+Illustrate how evaluation times can be used for defining an arbitrary schedule of time steps; the initial dt is large enough
+========================

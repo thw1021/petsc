@@ -24,8 +24,9 @@ TS Object: 1 MPI process
     extra safety factor after step rejection 1.
     clip fastest increase 2.
     clip fastest decrease 0.1
-    maximum allowed timestep 1e+20
-    minimum allowed timestep 1e-20
+    maximum allowed timestep 1.79769e+308
+    (relative) minimum allowed timestep 2.22045e-15
+    (absolute) minimum allowed timestep 1.49167e-154
     maximum solution absolute value to be ignored -1.
     filter parameters kBeta=[0.6,-0.2,0.] Alpha=[0.,0.]
   SNES Object: 1 MPI process

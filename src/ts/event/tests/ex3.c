@@ -15,7 +15,7 @@ static char help[] = "Simple linear problem with events\n"
                      "Options:\n"
                      "-dir    d : zero-crossing direction for events: 0, 1, -1\n"
                      "-flg      : additional output in Postevent\n"
-                     "-errtol e : error tolerance, for printing 'pass/fail' for located events (1e-5 by default)\n"
+                     "-errtol e : error tolerance, for printing 'pass/fail' for located events (1e-4 by default)\n"
                      "-restart  : flag for TSRestartStep() in PostEvent\n"
                      "-dtpost x : if x > 0, then on even PostEvent calls 1st-post-event-step = x is set,\n"
                      "                            on odd PostEvent calls 1st-post-event-step = PETSC_DECIDE is set,\n"
@@ -36,7 +36,7 @@ typedef struct {
   PetscInt    cnt;              // counter
   PetscInt    cntref;           // actual length of 'ref' on the given rank
   PetscBool   flg;              // flag for additional print in PostEvent
-  PetscReal   errtol;           // error tolerance, for printing 'pass/fail' for located events (1e-5 by default)
+  PetscReal   errtol;           // error tolerance, for printing 'pass/fail' for located events (1e-4 by default)
   PetscBool   restart;          // flag for TSRestartStep() in PostEvent
   PetscReal   dtpost;           // post-event step
   PetscInt    postcnt;          // counter for PostEvent calls
@@ -70,7 +70,7 @@ int main(int argc, char **argv)
   ctx.cnt     = 0;
   ctx.cntref  = 0;
   ctx.flg     = PETSC_FALSE;
-  ctx.errtol  = 1e-5;
+  ctx.errtol  = 1e-4;
   ctx.restart = PETSC_FALSE;
   ctx.dtpost  = 0;
   ctx.postcnt = 0;
@@ -263,7 +263,6 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
     args: -ts_type beuler
     args: -ts_adapt_type basic
     args: -v {{1e2 1e5 1e8}}
-    args: -ts_adapt_dt_min 1e-6
     args: -change5 {{0 1}}
     nsize: 1
 
@@ -272,7 +271,6 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
     output_file: output/ex3_neu1.out
     args: -dir 0
     args: -v 1e5
-    args: -ts_adapt_dt_min 1e-6
     args: -restart 1
     args: -dtpost 0.24
     args: -ts_event_post_event_step 0.31
@@ -285,7 +283,6 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
     output_file: output/ex3_neu2.out
     args: -dir 0
     args: -v 1e5
-    args: -ts_adapt_dt_min 1e-6
     args: -restart 1
     args: -dtpost 0
     args: -ts_event_post_event_step {{-1 0.31}}
@@ -300,7 +297,6 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
     output_file: output/ex3_neu4.out
     args: -dir 0
     args: -v 1e5
-    args: -ts_adapt_dt_min 1e-6
     args: -restart {{0 1}}
     args: -dtpost 0.24
     args: -ts_event_post_event_step 0.21
@@ -315,7 +311,6 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
     output_file: output/ex3_pos1.out
     args: -dir 1
     args: -v 1e5
-    args: -ts_adapt_dt_min 1e-6
     args: -restart 0
     args: -dtpost 0.24
     args: -ts_type {{beuler rk}}
@@ -327,7 +322,6 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
     output_file: output/ex3_pos2.out
     args: -dir 1
     args: -v 1e5
-    args: -ts_adapt_dt_min 1e-6
     args: -restart 1
     args: -dtpost {{0 0.24}}
     args: -ts_type rk
@@ -341,7 +335,6 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
     output_file: output/ex3_pos4.out
     args: -dir 1
     args: -v 1e9
-    args: -ts_adapt_dt_min 1e-6
     args: -restart 0
     args: -dtpost 0
     args: -ts_event_post_event_step {{-1 0.32}}
@@ -357,7 +350,6 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
     output_file: output/ex3_neg1.out
     args: -dir -1
     args: -v 1e5
-    args: -ts_adapt_dt_min 1e-6
     args: -restart 1
     args: -dtpost {{0 0.24}}
     args: -ts_type {{beuler rk}}
@@ -369,7 +361,6 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
     output_file: output/ex3_neg2.out
     args: -dir -1
     args: -v 1e5
-    args: -ts_adapt_dt_min 1e-6
     args: -restart 0
     args: -dtpost {{0 0.24}}
     args: -ts_type rk
@@ -383,7 +374,6 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
     output_file: output/ex3_neg4.out
     args: -dir -1
     args: -v 1e5
-    args: -ts_adapt_dt_min 1e-6
     args: -restart 0
     args: -dtpost {{0 0.24}}
     args: -ts_event_post_event_step 0.3

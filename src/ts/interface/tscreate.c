@@ -33,7 +33,6 @@ PetscErrorCode TSCreate(MPI_Comm comm, TS *ts)
   PetscFunctionBegin;
   PetscAssertPointer(ts, 2);
   PetscCall(TSInitializePackage());
-
   PetscCall(PetscHeaderCreate(t, TS_CLASSID, "TS", "Time stepping", "TS", comm, TSDestroy, TSView));
 
   /* General TS description */

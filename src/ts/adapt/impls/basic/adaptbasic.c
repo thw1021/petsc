@@ -9,12 +9,13 @@ static PetscErrorCode TSAdaptChoose_Basic(TSAdapt adapt, TS ts, PetscReal h, Pet
   PetscReal enorm = -1;
   PetscReal enorma, enormr;
   PetscReal safety = adapt->safety;
-  PetscReal hfac_lte, h_lte;
+  PetscReal hfac_lte, h_lte, adapt_dt_min;
 
   PetscFunctionBegin;
-  *next_sc = 0;  /* Reuse the same order scheme */
-  *wltea   = -1; /* Weighted absolute local truncation error is not used */
-  *wlter   = -1; /* Weighted relative local truncation error is not used */
+  *next_sc     = 0;  /* Reuse the same order scheme */
+  *wltea       = -1; /* Weighted absolute local truncation error is not used */
+  *wlter       = -1; /* Weighted relative local truncation error is not used */
+  adapt_dt_min = PetscMax(adapt->dt_min_abs, adapt->dt_min_rel * PetscAbsReal(ts->ptime));
 
   if (ts->ops->evaluatewlte) {
     PetscCall(TSEvaluateWLTE(ts, adapt->wnormtype, &order, &enorm));
@@ -40,7 +41,7 @@ static PetscErrorCode TSAdaptChoose_Basic(TSAdapt adapt, TS ts, PetscReal h, Pet
   /* Determine whether the step is accepted of rejected */
   if (enorm > 1) {
     if (!*accept) safety *= adapt->reject_safety; /* The last attempt also failed, shorten more aggressively */
-    if (h < (1 + PETSC_SQRT_MACHINE_EPSILON) * adapt->dt_min) {
+    if (h < (1 + PETSC_SQRT_MACHINE_EPSILON) * adapt_dt_min) {
       PetscCall(PetscInfo(adapt, "Estimated scaled local truncation error %g, accepting because step size %g is at minimum\n", (double)enorm, (double)h));
       *accept = PETSC_TRUE;
     } else if (adapt->always_accept) {
@@ -64,7 +65,7 @@ static PetscErrorCode TSAdaptChoose_Basic(TSAdapt adapt, TS ts, PetscReal h, Pet
   }
   h_lte = h * PetscClipInterval(hfac_lte, adapt->clip[0], adapt->clip[1]);
 
-  *next_h = PetscClipInterval(h_lte, adapt->dt_min, adapt->dt_max);
+  *next_h = PetscClipInterval(h_lte, adapt_dt_min, adapt->dt_max);
   *wlte   = enorm;
   PetscFunctionReturn(PETSC_SUCCESS);
 }

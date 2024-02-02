@@ -86,6 +86,7 @@ __all__ = [
     'TSPostStepFunction',
     'TSIndicatorFunction',
     'TSPostEventFunction',
+    'TSEvaluationTimesHandlerFunction',
     'TAOObjectiveFunction',
     'TAOGradientFunction',
     'TAOObjectiveGradientFunction',
@@ -439,6 +440,9 @@ TSIndicatorFunction = Callable[[TS, float, Vec, ArrayReal], None]
 
 TSPostEventFunction = Callable[[TS, ArrayInt, float, Vec, bool], None]
 """`TS` post-event callback."""
+
+TSEvaluationTimesHandlerFunction = Callable[[TS, int, int, float, Vec], Vec]
+"""`TS` evaluation times handler callback."""
 
 # --- TAO ---
 

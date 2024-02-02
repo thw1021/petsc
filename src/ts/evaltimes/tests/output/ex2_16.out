@@ -1,0 +1,56 @@
+### Check 'user' before SetUp: not found
+### Check 'user' before Solve: not found
+>> Schedule '   user' before Solve: 0 point(s) <empty>
+>> Schedule 'default' before Solve: 2 point(s)
+>> Schedule '  range' before Solve: 11 point(s)
+0 TS dt 2e-11 time -2e-11
+ETS 'Range' point 0., union index    1, private index    0
+1 TS dt 2e-11 time 0.
+ETS 'Range' point 2e-11, union index    2, private index    1
+2 TS dt 2e-11 time 2e-11
+ETS 'Range' point 4e-11, union index    3, private index    2
+3 TS dt 2e-11 time 4e-11
+ETS 'Range' point 6e-11, union index    4, private index    3
+4 TS dt 2e-11 time 6e-11
+ETS 'Range' point 8e-11, union index    5, private index    4
+5 TS dt 2e-11 time 8e-11
+ETS 'Range' point 1e-10, union index    6, private index    5
+6 TS dt 2e-11 time 1e-10
+ETS 'Range' point 1.2e-10, union index    7, private index    6
+7 TS dt 2e-11 time 1.2e-10
+ETS 'Range' point 1.4e-10, union index    8, private index    7
+8 TS dt 2e-11 time 1.4e-10
+ETS 'Range' point 1.6e-10, union index    9, private index    8
+9 TS dt 2e-11 time 1.6e-10
+ETS 'Range' point 1.8e-10, union index   10, private index    9
+10 TS dt 2e-11 time 1.8e-10
+ETS 'Range' point 2e-10, union index   11, private index   10
+11 TS dt 2e-11 time 2e-10
+12 TS dt 0.099 time 2.2e-10
+### Check 'user' after Solve: not found
+== CONVERGED_TIME ==
+0	0.	0.	pass
+---
+Evaluation times schedule 'user' not found
+---
+Evaluation times schedule 'default': 2 point(s), visited subrange: [0, 2)
+-2e-11	-2e-11	pass
+2.2e-10	2.2e-10	pass
+---
+Evaluation times schedule 'range': 11 point(s), visited subrange: [0, 11)
+0.	0.	***
+2e-11	0.	***
+4e-11	0.	***
+6e-11	0.	***
+8e-11	0.	***
+1e-10	0.	***
+1.2e-10	0.	***
+1.4e-10	0.	***
+1.6e-10	0.	***
+1.8e-10	0.	***
+2e-10	0.	***
+Initial time = -2e-11, final time reached = 2.2e-10, max time = 2.2e-10, pass
+Initial time step = 0.099, final time step = 0.099, adapt == none, match
+========================
+Points are not merged
+========================

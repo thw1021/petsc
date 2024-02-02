@@ -1,0 +1,72 @@
+### Check 'user' before SetUp: start -1, end -1
+### Check 'user' before Solve: start -1, end -1
+>> Schedule '   user' before Solve: 28 point(s)
+>> Schedule 'default' before Solve: 0 point(s) <empty>
+>> Schedule '  range' before Solve: 5 point(s)
+ETS 'user ' point 4.01, union index   13, private index   11
+ETS 'user ' point 4.21, union index   14, private index   12
+ETS 'user ' point 5., union index   15, private index   13
+ETS 'user ' point 5., union index   15, private index   14
+ETS 'user ' point 5.01, union index   16, private index   15
+ETS 'user ' point 5.21, union index   17, private index   16
+ETS 'Range' point 5.75, union index   18, private index    3
+ETS 'user ' point 6., union index   19, private index   17
+ETS 'user ' point 6., union index   19, private index   18
+ETS 'user ' point 6., union index   19, private index   19
+ETS 'user ' point 6.01, union index   20, private index   20
+ETS 'user ' point 6.21, union index   21, private index   21
+ETS 'user ' point 6.99, union index   22, private index   22
+ETS 'user ' point 7.21, union index   23, private index   23
+ETS 'Range' point 8., union index   24, private index    4
+ETS 'user ' point 8.01, union index   25, private index   24
+ETS 'user ' point 8.21, union index   26, private index   25
+ETS 'user ' point 9.01, union index   27, private index   26
+### Check 'user' after Solve: start 9, end 27
+== CONVERGED_EVENT ==
+0	5.	0.	pass
+0	6.	0.	pass
+0	7.	1.72058e-07	pass
+0	8.	0.	pass
+0	9.	3.94024e-09	pass
+0	9.05	9.26033e-11	pass
+---
+Evaluation times schedule 'user': 28 point(s), visited subrange: [9, 27)
+0.01	0.	***
+0.21	0.	***
+1.01	0.	***
+1.21	0.	***
+2.01	0.	***
+2.21	0.	***
+3.	0.	***
+3.01	0.	***
+3.21	0.	***
+4.	0.	***
+4.	0.	***
+4.01	0.999998	pass
+4.21	0.9997	pass
+5.	0.998142	pass
+5.	0.998142	pass
+5.01	0.99814	pass
+5.21	0.997842	pass
+6.	0.996431	pass
+6.	0.996431	pass
+6.	0.996431	pass
+6.01	0.996429	pass
+6.21	0.996132	pass
+6.99	0.994618	pass
+7.21	0.994312	pass
+8.01	0.992761	pass
+8.21	0.992465	pass
+9.01	0.991008	pass
+9.21	0.	***
+---
+Evaluation times schedule 'default' not found
+---
+Evaluation times schedule 'range': 5 point(s), visited subrange: [3, 5)
+-1.	0.	***
+1.25	0.	***
+3.5	0.	***
+5.75	0.	***
+8.	0.	***
+Initial time = 4., final time reached = 9.05, max time = 10., pass
+Initial time step = 0.099, final time step = 0.059, adapt == none, NO-match

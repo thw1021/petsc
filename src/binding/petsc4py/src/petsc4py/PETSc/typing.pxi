@@ -81,6 +81,7 @@ cdef TSI2Jacobian
 cdef TSMonitorFunction
 cdef TSIndicatorFunction
 cdef TSPostEventFunction
+cdef TSEvaluationTimesHandlerFunction
 cdef TSPreStepFunction
 cdef TSPostStepFunction
 

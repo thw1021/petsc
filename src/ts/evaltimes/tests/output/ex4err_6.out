@@ -1,0 +1,20 @@
+### Check 'user' before SetUp: start -1, end -1
+[0]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
+[0]PETSC ERROR: Corrupted PETSc object
+[0]PETSC ERROR: TSEvaluationTimesSchedule 'default' is locked for modification; missing TSEvaluationTimesRestoreSolutions()?
+[0]PETSC ERROR: See https://petsc.org/release/faq/ for trouble shooting.
+[0]PETSC ERROR: #1 TSEvaluationTimesSchedule_Destroy() at tsevaltimes.c:0
+[0]PETSC ERROR: #2 PetscContainerDestroy() at inherit.c:0
+[0]PETSC ERROR: #3 PetscObjectDereference() at inherit.c:0
+[0]PETSC ERROR: #4 PetscObjectListAdd() at olist.c:0
+[0]PETSC ERROR: #5 TSEvaluationTimes_Add() at tsevaltimes.c:0
+[0]PETSC ERROR: #6 TSEvaluationTimesAddUniform() at tsevaltimes.c:0
+[0]PETSC ERROR: #7 TSEvaluationTimesSetDefaultSchedule() at tsevaltimes.c:0
+[0]PETSC ERROR: #8 TSEvaluationTimesSetFromOptions() at tsevaltimes.c:0
+[0]PETSC ERROR: #9 TSSetFromOptions() at ts.c:0
+[0]PETSC ERROR: #10 main() at ex4err.c:0
+[0]PETSC ERROR: PETSc Option Table entries:
+[0]PETSC ERROR: -err 6 (source: command line)
+[0]PETSC ERROR: -msg Override a locked =default= schedule (source: command line)
+[0]PETSC ERROR: -ts_eval_times_uniform 0,10,11 (source: command line)
+[0]PETSC ERROR: ----------------End of Error Message -------send entire error message to petsc-maint@mcs.anl.gov----------
