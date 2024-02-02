@@ -1,0 +1,19 @@
+[3D-DMBF] Begin
+[3D-DMBF] Create DM
+[3D-DMBF] DM type = bf
+[3D-DMBF] Set cell data shape
+[3D-DMBF] Shape elements dim=(4,3)
+[3D-DMBF]   0: 16 1 0 
+[3D-DMBF]   1: 16 1 0 
+[3D-DMBF]   2: 16 1 0 
+[3D-DMBF]   3: 16 16 16 
+[3D-DMBF] Set up DM
+[3D-DMBF] Info about the DM
+[3D-DMBF] - dimension              = 3
+[3D-DMBF] - number of local cells  = 64
+[3D-DMBF] - number of global cells = 64
+[3D-DMBF] - number of ghost cells  = 0
+[3D-DMBF] Create vectors
+[3D-DMBF] Create matrices
+[3D-DMBF] Destroy
+[3D-DMBF] End
