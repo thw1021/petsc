@@ -649,13 +649,11 @@ PetscErrorCode DMBFGetCellDataVSize(DM dm, size_t *size)
 
   Input Parameters:
 + dm        - the DMBF object
-
-  Output Parameters:
-+ blockSize - levels of uniform block refinement of each cell in each dimension
+- blockSize - levels of uniform block refinement of each cell in each dimension
 
   Level: intermediate
 
-.seealso: DMBFGetBlockSize(), DMGetDimension()
+.seealso: `DMBFGetBlockSize()`, `DMGetDimension()`
 @*/
 PetscErrorCode DMBFSetBlockSize(DM dm, PetscInt *blockSize)
 {
@@ -686,7 +684,7 @@ PetscErrorCode DMBFSetBlockSize(DM dm, PetscInt *blockSize)
 
   Level: intermediate
 
-.seealso: DMBFSetBlockSize(), DMGetDimension()
+.seealso: `DMBFSetBlockSize()`, `DMGetDimension()`
 @*/
 PetscErrorCode DMBFGetBlockSize(DM dm, PetscInt *blockSize)
 {
@@ -947,7 +945,7 @@ static PetscErrorCode DMSetFromOptions_BF(DM dm, PetscOptionItems *PetscOptionsO
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecificType(dm, DM_CLASSID, 2, DMBF);
+  PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMBF);
   ierr = DMSetFromOptions_Forest(dm, PetscOptionsObject);
   CHKERRQ(ierr);
   /* block_size */
@@ -1364,13 +1362,13 @@ static PetscErrorCode DMLocalToGlobalEnd_BF(DM dm, Vec loc, InsertMode mode, Vec
   Not Collective
 
   Input Parameter:
-+ dm      - the DMBF object
+. dm - the DMBF object
 
   Output Parameters:
 + dim     - spatial dimension (2 or 3)
 . nLocal  - number of local cells
 . nGlobal - number of global cells
-. nGhost  - number of ghost cells
+- nGhost  - number of ghost cells
 
   Level: beginner
 
@@ -1413,14 +1411,14 @@ PetscErrorCode DMBFGetInfo(DM dm, PetscInt *dim, PetscInt *nLocal, PetscInt *nGl
   Not Collective
 
   Input Parameters:
-+ dm      - the DMBF object
+. dm - the DMBF object
 
   Output Parameters:
-+ nLocal  - number of local cells (does not count ghost cells)
+. nLocal - number of local cells (does not count ghost cells)
 
   Level: beginner
 
-.seealso: DMBFGetInfo(), DMBFGetGlobalSize(), DMBFGetGhostSize()
+.seealso: `DMBFGetInfo()`, `DMBFGetGlobalSize()`, `DMBFGetGhostSize()`
 @*/
 PetscErrorCode DMBFGetLocalSize(DM dm, PetscInt *nLocal)
 {
@@ -1439,14 +1437,14 @@ PetscErrorCode DMBFGetLocalSize(DM dm, PetscInt *nLocal)
   Logically collective on DM
 
   Input Parameters:
-+ dm      - the DMBF object
+. dm - the DMBF object
 
   Output Parameters:
-+ nGlobal - number of global cells
+. nGlobal - number of global cells
 
   Level: beginner
 
-.seealso: DMBFGetInfo(), DMBFGetLocalSize(), DMBFGetGhostSize()
+.seealso: `DMBFGetInfo()`, `DMBFGetLocalSize()`, `DMBFGetGhostSize()`
 @*/
 PetscErrorCode DMBFGetGlobalSize(DM dm, PetscInt *nGlobal)
 {
@@ -1465,14 +1463,14 @@ PetscErrorCode DMBFGetGlobalSize(DM dm, PetscInt *nGlobal)
   Not Collective
 
   Input Parameters:
-+ dm      - the DMBF object
+. dm - the DMBF object
 
   Output Parameters:
-+ nGhost  - number of ghost cells
+. nGhost - number of ghost cells
 
   Level: beginner
 
-.seealso: DMBFGetInfo(), DMBFGetLocalSize(), DMBFGetGlobalSize()
+.seealso: `DMBFGetInfo()`, `DMBFGetLocalSize()`, `DMBFGetGlobalSize()`
 @*/
 PetscErrorCode DMBFGetGhostSize(DM dm, PetscInt *nGhost)
 {
@@ -1489,7 +1487,7 @@ PetscErrorCode DMBFGetGhostSize(DM dm, PetscInt *nGhost)
  * P4EST
  **************************************/
 
-PetscErrorCode DMBFGetConnectivity(DM dm, void *connectivity)
+static PetscErrorCode DMBFGetConnectivity(DM dm, void *connectivity)
 {
   DM_BF         *bf;
   PetscInt       dim;
@@ -2043,7 +2041,7 @@ PetscErrorCode DMBFFVMatAssemble(DM dm, Mat mat, PetscErrorCode (*iterFace)(DM, 
  * VIEWER
  ***************/
 
-PetscErrorCode DMView_BF(DM dm, PetscViewer viewer)
+static PetscErrorCode DMView_BF(DM dm, PetscViewer viewer)
 {
   PetscBool      isvtk, ishdf5, isdraw, isglvis;
   PetscErrorCode ierr;
@@ -2077,7 +2075,7 @@ PetscErrorCode DMView_BF(DM dm, PetscViewer viewer)
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode VecView_BF(Vec v, PetscViewer viewer)
+static PetscErrorCode VecView_BF(Vec v, PetscViewer viewer)
 {
   DM                      dm;
   PetscBool               isvtk, ishdf5, isdraw, isglvis;
