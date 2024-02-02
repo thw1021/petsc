@@ -7,6 +7,11 @@
     #include "bf_3d_amr.h"
   #endif
 
+/* default definitions, to be overwritten if this files is included */
+  #if !defined(DM_BF_XD_Cells)
+typedef struct _p_DM_BF_XD_Cells DM_BF_XD_Cells;
+  #endif
+
 static PetscErrorCode DMBF_XD_P4estCreate(DM dm, p4est_connectivity_t *connectivity, p4est_t **p4est)
 {
   PetscInt       initLevel;

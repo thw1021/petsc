@@ -2,6 +2,11 @@
 
   #include "bf_xd.h"
 
+/* default definitions, to be overwritten if this files is included */
+  #if !defined(DM_BF_XD_Topology)
+typedef struct _p_DM_BF_XD_Topology DM_BF_XD_Topology;
+  #endif
+
 /* declare "virtual" functions that need to be implemented */
 static PetscErrorCode DMBF_XD_ConnectivityCreate(DM, p4est_connectivity_t **);
 
