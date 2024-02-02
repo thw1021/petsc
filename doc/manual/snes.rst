@@ -1232,5 +1232,81 @@ and accessed with
 
    SNESCompositeGetSNES(SNES,PetscInt,SNES *);
 
+.. _sec_sasnes:
+
+Performing sensitivity analysis with the SNES nonlinear Solvers
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ``SNES`` library provides an API for computing sensitivities (derivatives)
+on parameters in nonlinear equations. See :any:`section_sa` for a similar
+API for ODEs and DAEs.
+
+Consider the nonlinear equation
+
+.. math:: F(x(p),p) = 0.
+
+It's derivative with respect to p is zero and can be written as
+
+.. math:: J(x)  \frac{\partial x}{\partial p} + \frac{\partial F}{\partial p} = 0.
+
+Solving for :math:`\frac{\partial x}{\partial p}` gives use
+
+
+.. math:: \frac{\partial x}{\partial p}  = - J(x)^{-1} \frac{\partial F}{\partial p}.
+
+This form is not commonly needed in practice, rather one wishes to compute
+
+.. math::
+
+   \frac{df}{dp}f(x(p),p) =  \frac{\partial f}{\partial x} \frac{\partial x}{\partial p} + \frac{\partial f}{\partial p} \\
+   = - \frac{\partial f}{\partial x} J(x)^{-1} \frac{\partial F}{\partial p}  + \frac{\partial f}{\partial p}.
+
+But this form requires a linear solve with :math:`J(x)^{-1}` for each parameter in :math:`p`. To reduce to a single linear solve
+it can be rewritten as
+
+.. math::
+
+   \frac{df}{dp}f(x(p),p) = (J(x)^{-T} \frac{\partial f}{\partial x})^T  \frac{\partial F}{\partial p}  + \frac{\partial f}{\partial p}.
+
+Thus four values are needed for the computation: :math:`J(x,p)`, :math:`Jp(x,p) = \frac{\partial F}{\partial p}`,  :math:`\frac{\partial f}{\partial x}`, and
+:math:`\frac{\partial f}{\partial p}` all evaluated at :math:`x = x*` and :math:`p` where :math:`F(x*,p) = 0`.
+
+The user code (and matrix to hold the result) to compute $J(x(p),p)$ has already been provided with ``SNESSetJacobian()``. The user code (and matrix to hold the result)
+to compute $Jp(x,p)$ is provided with ``SNESSetJacobianP()`` and the gradients are provided with ``SNESSetCostGradients()``.
+
+.. code-block::
+
+   SNESCreate(PETSC_COMM_WORLD, &snes;
+   SNESSetFunction(snes, NULL, evaluateFunction, &user;
+   SNESSetJacobian(snes, J, J, evaluateJacobian, &user;
+   SNESSetJacobianP(snes, Jp, evaluateJacobianP, &user;
+   SNESSetCostGradients(snes, 1 ,Lambda, Mu;
+   SNESSetFromOptions(snes);
+   SNESSolve(snes, U, NULL);
+   // evaluate the gradients into Lambda and Mu
+   SNESAdjointSolve(snes);
+
+A full example
+demonstrating the process within a Tao optimization process is show in :ref:`exadj.c <snes-ex-adjoint>`. The problem to be solved is
+
+.. math::
+
+   \min_{p,q} f(x,y,p,q) = x^2 + y^2 + p^2 + q^2
+
+such that
+
+.. math::
+
+     x^2 + xy + p^3 = 0 \\
+     xy + y^2 + q^3 = 0
+
+
+.. _snes-ex-adjoint:
+.. admonition:: Listing: ``src/snes/tutorials/exadj.c``
+
+   .. literalinclude:: /../src/snes/tutorials/exadj.c
+      :end-before: /*TEST
+
+
 .. bibliography:: /petsc.bib
    :filter: docname in docnames
