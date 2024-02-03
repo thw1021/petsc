@@ -1494,7 +1494,7 @@ PetscErrorCode TSAdjointStep(TS ts)
 }
 
 /*@
-  TSAdjointSolve - Solves the discrete ajoint problem for an ODE/DAE
+  TSAdjointSolve - Solves the discrete adjoint problem for an ODE/DAE
 
   Collective
   `
@@ -1793,7 +1793,7 @@ PetscErrorCode TSForwardSetSensitivities(TS ts, PetscInt nump, Mat Smat)
 /*@
   TSForwardGetSensitivities - Returns the trajectory sensitivities
 
-  Not Collective, but Smat returned is parallel if ts is parallel
+  Not Collective, but `Smat` returned is parallel if `ts` is parallel
 
   Output Parameters:
 + ts   - the `TS` context obtained from `TSCreate()`
@@ -1957,7 +1957,7 @@ PetscErrorCode TSGetQuadratureTS(TS ts, PetscBool *fwd, TS *quadts)
 
   Output Parameters:
 + J    - Jacobian matrix
-- Jpre - preconditioning matrix for J (may be same as J)
+- Jpre - preconditioning matrix for `J` (may be same as `J`)
 
   Level: developer
 
