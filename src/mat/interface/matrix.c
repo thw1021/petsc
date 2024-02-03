@@ -5163,13 +5163,13 @@ PetscErrorCode MatGetRowMaxAbs(Mat mat, Vec v, PetscInt idx[])
 . mat - the matrix
 
   Output Parameters:
-. v   - the vector for storing the sum
+. v - the vector for storing the sum
 
   Level: intermediate
 
   This code is only implemented for a couple of matrix formats.
 
-.seealso: [](ch_matrices), `Mat`, `MatGetDiagonal()`, `MatCreateSubMatrices()`, `MatCreateSubMatrix()`, `MatGetRowMax()`, `MatGetRowMin()`, `MatGetRowMinAbs()`, `MatGetRowSumAbs()`
+.seealso: [](ch_matrices), `Mat`, `MatGetDiagonal()`, `MatCreateSubMatrices()`, `MatCreateSubMatrix()`, `MatGetRowMax()`, `MatGetRowMin()`, `MatGetRowMinAbs()`
 @*/
 PetscErrorCode MatGetRowSumAbs(Mat mat, Vec v)
 {
@@ -5205,7 +5205,7 @@ PetscErrorCode MatGetRowSumAbs(Mat mat, Vec v)
   Note:
   This code is slow since it is not currently specialized for different formats
 
-.seealso: [](ch_matrices), `Mat`, `MatGetDiagonal()`, `MatCreateSubMatrices()`, `MatCreateSubMatrix()`, `MatGetRowMax()`, `MatGetRowMin()`, `MatGetRowMaxAbs()`, `MatGetRowMinAbs()`
+.seealso: [](ch_matrices), `Mat`, `MatGetDiagonal()`, `MatCreateSubMatrices()`, `MatCreateSubMatrix()`, `MatGetRowMax()`, `MatGetRowMin()`, `MatGetRowMaxAbs()`, `MatGetRowMinAbs()`, `MatGetRowSumAbs()`
 @*/
 PetscErrorCode MatGetRowSum(Mat mat, Vec v)
 {

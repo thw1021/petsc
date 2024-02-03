@@ -120,7 +120,7 @@ int main(int argc, char **args)
     if (!test_late_bs) PetscCall(MatSetBlockSize(Amat, 3));
     PetscCall(MatSetType(Amat, MATAIJ));
     PetscCall(MatSetOption(Amat, MAT_SPD, PETSC_TRUE));
-    PetscCall(MatSetOption(Amat, MAT_SPD_ETERNAL, PETSC_TRUE));
+    //PetscCall(MatSetOption(Amat, MAT_SPD_ETERNAL, PETSC_TRUE));
     PetscCall(MatSetFromOptions(Amat));
     PetscCall(MatSeqAIJSetPreallocation(Amat, 0, d_nnz));
     PetscCall(MatMPIAIJSetPreallocation(Amat, 0, d_nnz, 0, o_nnz));
@@ -343,7 +343,7 @@ int main(int argc, char **args)
     /* PC setup basically */
     PetscCall(MatScale(Amat, -100000.0));
     PetscCall(MatSetOption(Amat, MAT_SPD, PETSC_FALSE));
-    PetscCall(MatSetOption(Amat, MAT_SPD_ETERNAL, PETSC_FALSE));
+    //PetscCall(MatSetOption(Amat, MAT_SPD_ETERNAL, PETSC_FALSE));
     PetscCall(KSPSetOperators(ksp, Amat, Amat));
     PetscCall(KSPSetUp(ksp));
 
@@ -477,6 +477,7 @@ PetscErrorCode elem_3d_elast_v_25(PetscScalar *dd)
      nsize: 8
      args: -ne 15 -alpha 1.e-3 -ksp_type cg -ksp_converged_reason -use_mat_nearnullspace -ksp_rtol 1e-4 -ksp_norm_type unpreconditioned -two_solves
      test:
+       requires: hypre
        suffix: hypre
        args: -pc_type hypre -pc_hypre_boomeramg_relax_type_all l1scaled-Jacobi
      test:
