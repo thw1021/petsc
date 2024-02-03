@@ -445,7 +445,8 @@ static PetscErrorCode PCView_Jacobi(PC pc, PetscViewer viewer)
     PetscCall(PCJacobiGetUseAbs(pc, &useAbs));
     PetscCall(PCJacobiGetFixDiagonal(pc, &fixdiag));
     PetscCall(PCJacobiGetScale(pc, &scale));
-    if (jac->userowl1) PetscCall(PetscViewerASCIIPrintf(viewer, "  type %s%s%s (L1 off-diagonal scaling %e)\n", PCJacobiTypes[type], useAbs ? ", using absolute value of entries" : "", !fixdiag ? ", not checking null diagonal entries" : "", (double)scale));
+    if (jac->userowl1)
+      PetscCall(PetscViewerASCIIPrintf(viewer, "  type %s%s%s (L1 off-diagonal scaling %e)\n", PCJacobiTypes[type], useAbs ? ", using absolute value of entries" : "", !fixdiag ? ", not checking null diagonal entries" : "", (double)scale));
     else PetscCall(PetscViewerASCIIPrintf(viewer, "  type %s%s%s\n", PCJacobiTypes[type], useAbs ? ", using absolute value of entries" : "", !fixdiag ? ", not checking null diagonal entries" : ""));
     PetscCall(PetscViewerGetFormat(viewer, &format));
     if (format == PETSC_VIEWER_ASCII_INFO_DETAIL && jac->diag) PetscCall(VecView(jac->diag, viewer));
