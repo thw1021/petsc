@@ -133,14 +133,14 @@ PETSC_EXTERN PetscErrorCode PCJacobiSetUseAbs(PC, PetscBool);
 PETSC_EXTERN PetscErrorCode PCJacobiGetUseAbs(PC, PetscBool *);
 PETSC_EXTERN PetscErrorCode PCJacobiSetFixDiagonal(PC, PetscBool);
 PETSC_EXTERN PetscErrorCode PCJacobiGetFixDiagonal(PC, PetscBool *);
+PETSC_EXTERN PetscErrorCode PCJacobiSetScale(PC, PetscReal);
+PETSC_EXTERN PetscErrorCode PCJacobiGetScale(PC, PetscReal *);
 PETSC_EXTERN PetscErrorCode PCSORSetSymmetric(PC, MatSORType);
 PETSC_EXTERN PetscErrorCode PCSORGetSymmetric(PC, MatSORType *);
 PETSC_EXTERN PetscErrorCode PCSORSetOmega(PC, PetscReal);
 PETSC_EXTERN PetscErrorCode PCSORGetOmega(PC, PetscReal *);
 PETSC_EXTERN PetscErrorCode PCSORSetIterations(PC, PetscInt, PetscInt);
 PETSC_EXTERN PetscErrorCode PCSORGetIterations(PC, PetscInt *, PetscInt *);
-PETSC_EXTERN PetscErrorCode PCSORSetScale(PC, PetscReal);
-PETSC_EXTERN PetscErrorCode PCSORGetScale(PC, PetscReal *);
 
 PETSC_EXTERN PetscErrorCode PCEisenstatSetOmega(PC, PetscReal);
 PETSC_EXTERN PetscErrorCode PCEisenstatGetOmega(PC, PetscReal *);
