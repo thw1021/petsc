@@ -602,8 +602,8 @@ PetscErrorCode PCJacobiGetUseAbs(PC pc, PetscBool *flg)
   Logically Collective
 
   Input Parameters:
-  + pc    - the preconditioner context
-  - scale - scaling
++ pc    - the preconditioner context
+- scale - scaling
 
   Options Database Key:
 . -pc_jacobi_rowl1_scale <real> - use absolute values
