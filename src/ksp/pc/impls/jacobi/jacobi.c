@@ -226,7 +226,7 @@ static PetscErrorCode PCSetUp_Jacobi(PC pc)
         if (jac->userowl1) PetscCall(VecGetArray(true_diag, &x)); // to make more general -todo
         else x = x2;
         for (i = 0; i < n; i++) {
-          if (x[i] < 0.0) {
+          if (PetscRealPart(x[i]) < 0.0) {
             x2[i]   = -x2[i]; // flip sign to keep DA > 0
             negflag = PETSC_TRUE;
           }
