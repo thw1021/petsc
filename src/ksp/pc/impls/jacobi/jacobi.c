@@ -423,7 +423,7 @@ static PetscErrorCode PCSetFromOptions_Jacobi(PC pc, PetscOptionItems *PetscOpti
   PetscCall(PetscOptionsBool("-pc_jacobi_abs", "Use absolute values of diagonal entries", "PCJacobiSetUseAbs", jac->useabs, &jac->useabs, NULL));
   PetscCall(PetscOptionsBool("-pc_jacobi_fixdiagonal", "Fix null terms on diagonal", "PCJacobiSetFixDiagonal", jac->fixdiag, &jac->fixdiag, NULL));
   PetscCall(PetscOptionsReal("-pc_jacobi_rowl1_scale", "scaling of off-diagonal elements in L1", "PCJacobiSetScale", jac->scale, &jac->scale, NULL));
-  PetscCheck(jac->scale >= 0 && jac->scale <= 1, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_INCOMP, "Invalid L1 scaling %e",jac->scale);
+  PetscCheck(jac->scale >= 0 && jac->scale <= 1, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_INCOMP, "Invalid L1 scaling %e", jac->scale);
   PetscOptionsHeadEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
 }
