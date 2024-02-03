@@ -477,7 +477,7 @@ PetscErrorCode elem_3d_elast_v_25(PetscScalar *dd)
      nsize: 8
      args: -ne 15 -alpha 1.e-3 -ksp_type cg -ksp_converged_reason -use_mat_nearnullspace -ksp_rtol 1e-4 -ksp_norm_type unpreconditioned -two_solves
      test:
-       requires: hypre
+       requires: hypre !complex !defined(PETSC_HAVE_HYPRE_DEVICE)
        suffix: hypre
        args: -pc_type hypre -pc_hypre_boomeramg_relax_type_all l1scaled-Jacobi
      test:
