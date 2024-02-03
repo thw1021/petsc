@@ -423,7 +423,7 @@ static PetscErrorCode PCSetFromOptions_Jacobi(PC pc, PetscOptionItems *PetscOpti
   PetscCall(PetscOptionsBool("-pc_jacobi_abs", "Use absolute values of diagonal entries", "PCJacobiSetUseAbs", jac->useabs, &jac->useabs, NULL));
   PetscCall(PetscOptionsBool("-pc_jacobi_fixdiagonal", "Fix null terms on diagonal", "PCJacobiSetFixDiagonal", jac->fixdiag, &jac->fixdiag, NULL));
   PetscCall(PetscOptionsReal("-pc_jacobi_rowl1_scale", "scaling of off-diagonal elements in L1", "PCJacobiSetScale", jac->scale, &jac->scale, NULL));
-  PetscCheck(jac->scale >= 0 && jac->scale <= 1, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_INCOMP, "Invalid L1 scaling %e", jac->scale);
+  PetscCheck(jac->scale >= 0 && jac->scale <= 1, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_INCOMP, "Invalid L1 scaling %e", (double)jac->scale);
   PetscOptionsHeadEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -445,7 +445,7 @@ static PetscErrorCode PCView_Jacobi(PC pc, PetscViewer viewer)
     PetscCall(PCJacobiGetUseAbs(pc, &useAbs));
     PetscCall(PCJacobiGetFixDiagonal(pc, &fixdiag));
     PetscCall(PCJacobiGetScale(pc, &scale));
-    if (jac->userowl1) PetscCall(PetscViewerASCIIPrintf(viewer, "  type %s%s%s (L1 off-diagonal scaling %e)\n", PCJacobiTypes[type], useAbs ? ", using absolute value of entries" : "", !fixdiag ? ", not checking null diagonal entries" : "", scale));
+    if (jac->userowl1) PetscCall(PetscViewerASCIIPrintf(viewer, "  type %s%s%s (L1 off-diagonal scaling %e)\n", PCJacobiTypes[type], useAbs ? ", using absolute value of entries" : "", !fixdiag ? ", not checking null diagonal entries" : "", (double)scale));
     else PetscCall(PetscViewerASCIIPrintf(viewer, "  type %s%s%s\n", PCJacobiTypes[type], useAbs ? ", using absolute value of entries" : "", !fixdiag ? ", not checking null diagonal entries" : ""));
     PetscCall(PetscViewerGetFormat(viewer, &format));
     if (format == PETSC_VIEWER_ASCII_INFO_DETAIL && jac->diag) PetscCall(VecView(jac->diag, viewer));
@@ -601,8 +601,8 @@ PetscErrorCode PCJacobiGetUseAbs(PC pc, PetscBool *flg)
   Logically Collective
 
   Input Parameters:
-+ pc  - the preconditioner context
-- scale - scaling
+  + pc    - the preconditioner context
+  - scale - scaling
 
   Options Database Key:
 . -pc_jacobi_rowl1_scale <real> - use absolute values
