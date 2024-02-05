@@ -120,7 +120,7 @@ int main(int argc, char **args)
     if (!test_late_bs) PetscCall(MatSetBlockSize(Amat, 3));
     PetscCall(MatSetType(Amat, MATAIJ));
     PetscCall(MatSetOption(Amat, MAT_SPD, PETSC_TRUE));
-    //PetscCall(MatSetOption(Amat, MAT_SPD_ETERNAL, PETSC_TRUE));
+    PetscCall(MatSetOption(Amat, MAT_SPD_ETERNAL, PETSC_TRUE));
     PetscCall(MatSetFromOptions(Amat));
     PetscCall(MatSeqAIJSetPreallocation(Amat, 0, d_nnz));
     PetscCall(MatMPIAIJSetPreallocation(Amat, 0, d_nnz, 0, o_nnz));
@@ -483,6 +483,10 @@ PetscErrorCode elem_3d_elast_v_25(PetscScalar *dd)
      test:
        suffix: gamg
        args: -pc_type gamg -mg_levels_ksp_type richardson -mg_levels_pc_type jacobi -mg_levels_pc_jacobi_type rowl1 -mg_levels_pc_jacobi_rowl1_scale .5 -mg_levels_pc_jacobi_fixdiagonal
+     test:
+       nsize: 1
+       suffix: baij
+       args: -pc_type jacobi -pc_jacobi_type rowl1 -ksp_type cg -mat_type baij -ksp_view
 
    test:
       suffix: latebs
