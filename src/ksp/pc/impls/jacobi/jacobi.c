@@ -218,7 +218,7 @@ static PetscErrorCode PCSetUp_Jacobi(PC pc)
         }
         PetscCall(VecRestoreArray(true_diag, &x));
         PetscCall(VecRestoreArray(diag, &x2));
-        PetscCheck(!jac->useabs || !negflag, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_INCOMP, "Jacobi use_abs and L1 not compatible with negative diagonal");
+        PetscCheck(!jac->useabs || !negflag, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_INCOMP, "Jacobi use_abs and l1 not compatible with negative diagonal");
         PetscCall(VecDestroy(&true_diag));
       }
       if (jac->scale != 1.0) {
@@ -418,8 +418,8 @@ static PetscErrorCode PCSetFromOptions_Jacobi(PC pc, PetscOptionItems *PetscOpti
   if (flg) PetscCall(PCJacobiSetType(pc, type));
   PetscCall(PetscOptionsBool("-pc_jacobi_abs", "Use absolute values of diagonal entries", "PCJacobiSetUseAbs", jac->useabs, &jac->useabs, NULL));
   PetscCall(PetscOptionsBool("-pc_jacobi_fixdiagonal", "Fix null terms on diagonal", "PCJacobiSetFixDiagonal", jac->fixdiag, &jac->fixdiag, NULL));
-  PetscCall(PetscOptionsReal("-pc_jacobi_rowl1_scale", "scaling of off-diagonal elements in L1", "PCJacobiSetScale", jac->scale, &jac->scale, NULL));
-  PetscCheck(jac->scale >= 0 && jac->scale <= 1, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_INCOMP, "Invalid L1 scaling %e", (double)jac->scale);
+  PetscCall(PetscOptionsReal("-pc_jacobi_rowl1_scale", "scaling of off-diagonal elements for rowl1", "PCJacobiSetScale", jac->scale, &jac->scale, NULL));
+  PetscCheck(jac->scale >= 0 && jac->scale <= 1, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_INCOMP, "Invalid l1 scaling %e", (double)jac->scale);
   PetscOptionsHeadEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -442,7 +442,7 @@ static PetscErrorCode PCView_Jacobi(PC pc, PetscViewer viewer)
     PetscCall(PCJacobiGetFixDiagonal(pc, &fixdiag));
     PetscCall(PCJacobiGetScale(pc, &scale));
     if (type == PC_JACOBI_ROWL1)
-      PetscCall(PetscViewerASCIIPrintf(viewer, "  type %s%s%s (L1 off-diagonal scaling %e)\n", PCJacobiTypes[type], useAbs ? ", using absolute value of entries" : "", !fixdiag ? ", not checking null diagonal entries" : "", (double)scale));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "  type %s%s%s (l1-norm off-diagonal scaling %e)\n", PCJacobiTypes[type], useAbs ? ", using absolute value of entries" : "", !fixdiag ? ", not checking null diagonal entries" : "", (double)scale));
     else PetscCall(PetscViewerASCIIPrintf(viewer, "  type %s%s%s\n", PCJacobiTypes[type], useAbs ? ", using absolute value of entries" : "", !fixdiag ? ", not checking null diagonal entries" : ""));
     PetscCall(PetscViewerGetFormat(viewer, &format));
     if (format == PETSC_VIEWER_ASCII_INFO_DETAIL && jac->diag) PetscCall(VecView(jac->diag, viewer));
@@ -591,7 +591,7 @@ PetscErrorCode PCJacobiGetUseAbs(PC pc, PetscBool *flg)
 }
 
 /*@
-  PCJacobiSetScale - Set scaling of off-diagonal elements summed into L1 diagonal
+  PCJacobiSetScale - Set scaling of off-diagonal elements summed into l1-norm diagonal
 
   Logically Collective
 
@@ -615,7 +615,7 @@ PetscErrorCode PCJacobiSetScale(PC pc, PetscReal scale)
 }
 
 /*@
-  PCJacobiGetScale - Get scaling of off-diagonal elements summed into L1 diagonal
+  PCJacobiGetScale - Get scaling of off-diagonal elements summed into l1-norm diagonal
 
   Logically Collective
 
