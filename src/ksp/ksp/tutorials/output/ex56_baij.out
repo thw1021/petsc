@@ -7,7 +7,7 @@ KSP Object: 1 MPI process
   using UNPRECONDITIONED norm type for convergence test
 PC Object: 1 MPI process
   type: jacobi
-    type ROWL1 (L1 off-diagonal scaling 1.000000e+00)
+    type ROWL1 (l1-norm off-diagonal scaling 1.000000e+00)
   linear system matrix = precond matrix:
   Mat Object: 1 MPI process
     type: seqbaij
@@ -25,7 +25,7 @@ KSP Object: 1 MPI process
   using UNPRECONDITIONED norm type for convergence test
 PC Object: 1 MPI process
   type: jacobi
-    type ROWL1 (L1 off-diagonal scaling 1.000000e+00)
+    type ROWL1 (l1-norm off-diagonal scaling 1.000000e+00)
   linear system matrix = precond matrix:
   Mat Object: 1 MPI process
     type: seqbaij
@@ -43,7 +43,7 @@ KSP Object: 1 MPI process
   using UNPRECONDITIONED norm type for convergence test
 PC Object: 1 MPI process
   type: jacobi
-    type ROWL1 (L1 off-diagonal scaling 1.000000e+00)
+    type ROWL1 (l1-norm off-diagonal scaling 1.000000e+00)
   linear system matrix = precond matrix:
   Mat Object: 1 MPI process
     type: seqbaij
