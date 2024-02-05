@@ -1,9 +1,9 @@
-  0 KSP Residual norm 230.826 
-  1 KSP Residual norm 18.3741 
-  2 KSP Residual norm 2.17625 
-  3 KSP Residual norm 0.152983 
-  4 KSP Residual norm 0.0125829 
-  5 KSP Residual norm 0.00102327 
+  0 KSP Residual norm 230.849 
+  1 KSP Residual norm 18.3653 
+  2 KSP Residual norm 2.17815 
+  3 KSP Residual norm 0.153527 
+  4 KSP Residual norm 0.0126957 
+  5 KSP Residual norm 0.001034 
 KSP Object: 8 MPI processes
   type: gmres
     restart=30, using Classical (unmodified) Gram-Schmidt Orthogonalization with no iterative refinement
@@ -66,13 +66,11 @@ PC Object: 8 MPI processes
     KSP Object: (mg_levels_1_) 8 MPI processes
       type: chebyshev
         Chebyshev polynomial of first kind
-        eigenvalue targets used: min 0.200436, max 2.20479
-        eigenvalues estimated via gmres: min 0.0707498, max 2.00436
-        eigenvalues estimated using gmres with transform: [0. 0.1; 0. 1.1]
+        eigenvalue targets used: min 0.199958, max 2.19953
+        eigenvalues estimated via cg: min 0.0791763, max 1.99958
+        eigenvalues estimated using cg with transform: [0. 0.1; 0. 1.1]
         KSP Object: (mg_levels_1_esteig_) 8 MPI processes
-          type: gmres
-            restart=30, using Classical (unmodified) Gram-Schmidt Orthogonalization with no iterative refinement
-            happy breakdown tolerance 1e-30
+          type: cg
           maximum iterations=10, initial guess is zero
           tolerances:  relative=1e-12, absolute=1e-50, divergence=10000.
           left preconditioning

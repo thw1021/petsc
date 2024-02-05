@@ -53,16 +53,14 @@ const char *const PCJacobiTypes[] = {"DIAGONAL", "ROWL1", "ROWMAX", "ROWSUM", "P
    Private context (data structure) for the Jacobi preconditioner.
 */
 typedef struct {
-  Vec       diag;      /* vector containing the reciprocals of the diagonal elements of the preconditioner matrix */
-  Vec       diagsqrt;  /* vector containing the reciprocals of the square roots of
+  Vec          diag;     /* vector containing the reciprocals of the diagonal elements of the preconditioner matrix */
+  Vec          diagsqrt; /* vector containing the reciprocals of the square roots of
                                     the diagonal elements of the preconditioner matrix (used
                                     only for symmetric preconditioner application) */
-  PetscBool userowl1;  /* set with PCJacobiSetType() */
-  PetscBool userowmax; /* set with PCJacobiSetType() */
-  PetscBool userowsum;
-  PetscBool useabs;  /* use the absolute values of the diagonal entries */
-  PetscBool fixdiag; /* fix zero diagonal terms */
-  PetscReal scale;   /* for scaling rowl1 off-diagonals */
+  PCJacobiType type;
+  PetscBool    useabs;  /* use the absolute values of the diagonal entries */
+  PetscBool    fixdiag; /* fix zero diagonal terms */
+  PetscReal    scale;   /* for scaling rowl1 off-diagonals */
 } PC_Jacobi;
 
 static PetscErrorCode PCReset_Jacobi(PC);
@@ -76,33 +74,16 @@ static PetscErrorCode PCJacobiSetType_Jacobi(PC pc, PCJacobiType type)
   PetscCall(PCJacobiGetType(pc, &old_type));
   if (old_type == type) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(PCReset_Jacobi(pc));
-  j->userowl1  = PETSC_FALSE;
-  j->userowmax = PETSC_FALSE;
-  j->userowsum = PETSC_FALSE;
-  if (type == PC_JACOBI_ROWMAX) {
-    j->userowmax = PETSC_TRUE;
-  } else if (type == PC_JACOBI_ROWL1) {
-    j->userowl1 = PETSC_TRUE;
-  } else if (type == PC_JACOBI_ROWSUM) {
-    j->userowsum = PETSC_TRUE;
-  }
+  j->type = type;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PCJacobiGetType_Jacobi(PC pc, PCJacobiType *type)
+static PetscErrorCode PCJacobiGetUseAbs_Jacobi(PC pc, PetscBool *flg)
 {
   PC_Jacobi *j = (PC_Jacobi *)pc->data;
 
   PetscFunctionBegin;
-  if (j->userowmax) {
-    *type = PC_JACOBI_ROWMAX;
-  } else if (j->userowl1) {
-    *type = PC_JACOBI_ROWL1;
-  } else if (j->userowsum) {
-    *type = PC_JACOBI_ROWSUM;
-  } else {
-    *type = PC_JACOBI_DIAGONAL;
-  }
+  *flg = j->useabs;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -115,12 +96,12 @@ static PetscErrorCode PCJacobiSetUseAbs_Jacobi(PC pc, PetscBool flg)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PCJacobiGetUseAbs_Jacobi(PC pc, PetscBool *flg)
+static PetscErrorCode PCJacobiGetType_Jacobi(PC pc, PCJacobiType *type)
 {
   PC_Jacobi *j = (PC_Jacobi *)pc->data;
 
   PetscFunctionBegin;
-  *flg = j->useabs;
+  *type = j->type;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -208,11 +189,14 @@ static PetscErrorCode PCSetUp_Jacobi(PC pc)
   if (diag) {
     PetscBool isset, isspd;
 
-    if (jac->userowmax) {
+    switch (jac->type) {
+    case PC_JACOBI_DIAGONAL:
+      PetscCall(MatGetDiagonal(pc->pmat, diag));
+      break;
+    case PC_JACOBI_ROWMAX:
       PetscCall(MatGetRowMaxAbs(pc->pmat, diag, NULL));
-    } else if (jac->userowsum) {
-      PetscCall(MatGetRowSum(pc->pmat, diag));
-    } else if (jac->userowl1) {
+      break;
+    case PC_JACOBI_ROWL1:
       PetscCall(MatGetRowSumAbs(pc->pmat, diag));
       // fix negative rows (eg, negative definite) -- this could be done for all, not needed for userowmax
       PetscCall(MatIsSPDKnown(pc->pmat, &isset, &isspd));
@@ -223,7 +207,8 @@ static PetscErrorCode PCSetUp_Jacobi(PC pc)
         PetscCall(MatGetDiagonal(pc->pmat, true_diag));
         PetscCall(VecGetLocalSize(diag, &n));
         PetscCall(VecGetArray(diag, &x2));
-        if (jac->userowl1) PetscCall(VecGetArray(true_diag, &x)); // to make more general -todo
+        PetscCall(VecGetArray(true_diag, &x));                                   // to make more general -todo
+        if (jac->type == PC_JACOBI_ROWL1) PetscCall(VecGetArray(true_diag, &x)); // to make more general -todo
         else x = x2;
         for (i = 0; i < n; i++) {
           if (PetscRealPart(x[i]) < 0.0) {
@@ -231,7 +216,7 @@ static PetscErrorCode PCSetUp_Jacobi(PC pc)
             negflag = PETSC_TRUE;
           }
         }
-        if (jac->userowl1) PetscCall(VecRestoreArray(true_diag, &x));
+        PetscCall(VecRestoreArray(true_diag, &x));
         PetscCall(VecRestoreArray(diag, &x2));
         PetscCheck(!jac->useabs || !negflag, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_INCOMP, "Jacobi use_abs and L1 not compatible with negative diagonal");
         PetscCall(VecDestroy(&true_diag));
@@ -245,8 +230,12 @@ static PetscErrorCode PCSetUp_Jacobi(PC pc)
         PetscCall(VecAXPY(diag, 1, true_diag));  // add diag back in
         PetscCall(VecDestroy(&true_diag));
       }
-    } else {
-      PetscCall(MatGetDiagonal(pc->pmat, diag));
+      break;
+    case PC_JACOBI_ROWSUM:
+      PetscCall(MatGetRowSum(pc->pmat, diag));
+      break;
+    default:
+      SETERRQ(PetscObjectComm((PetscObject)pc), PETSC_ERR_PLIB, "No type %d", (int)jac->type);
     }
     PetscCall(VecReciprocal(diag));
     if (jac->useabs) PetscCall(VecAbs(diag));
@@ -264,14 +253,21 @@ static PetscErrorCode PCSetUp_Jacobi(PC pc)
     }
   }
   if (diagsqrt) {
-    if (jac->userowmax) {
-      PetscCall(MatGetRowMaxAbs(pc->pmat, diagsqrt, NULL));
-    } else if (jac->userowl1) {
-      PetscCall(MatGetRowSumAbs(pc->pmat, diagsqrt));
-    } else if (jac->userowsum) {
-      PetscCall(MatGetRowSum(pc->pmat, diagsqrt));
-    } else {
+    switch (jac->type) {
+    case PC_JACOBI_DIAGONAL:
       PetscCall(MatGetDiagonal(pc->pmat, diagsqrt));
+      break;
+    case PC_JACOBI_ROWMAX:
+      PetscCall(MatGetRowMaxAbs(pc->pmat, diagsqrt, NULL));
+      break;
+    case PC_JACOBI_ROWL1:
+      PetscCall(MatGetRowSumAbs(pc->pmat, diagsqrt));
+      break;
+    case PC_JACOBI_ROWSUM:
+      PetscCall(MatGetRowSum(pc->pmat, diagsqrt));
+      break;
+    default:
+      SETERRQ(PetscObjectComm((PetscObject)pc), PETSC_ERR_PLIB, "No type %d", (int)jac->type);
     }
     PetscCall(VecGetLocalSize(diagsqrt, &n));
     PetscCall(VecGetArray(diagsqrt, &x));
@@ -445,7 +441,7 @@ static PetscErrorCode PCView_Jacobi(PC pc, PetscViewer viewer)
     PetscCall(PCJacobiGetUseAbs(pc, &useAbs));
     PetscCall(PCJacobiGetFixDiagonal(pc, &fixdiag));
     PetscCall(PCJacobiGetScale(pc, &scale));
-    if (jac->userowl1)
+    if (type == PC_JACOBI_ROWL1)
       PetscCall(PetscViewerASCIIPrintf(viewer, "  type %s%s%s (L1 off-diagonal scaling %e)\n", PCJacobiTypes[type], useAbs ? ", using absolute value of entries" : "", !fixdiag ? ", not checking null diagonal entries" : "", (double)scale));
     else PetscCall(PetscViewerASCIIPrintf(viewer, "  type %s%s%s\n", PCJacobiTypes[type], useAbs ? ", using absolute value of entries" : "", !fixdiag ? ", not checking null diagonal entries" : ""));
     PetscCall(PetscViewerGetFormat(viewer, &format));
@@ -506,14 +502,12 @@ PETSC_EXTERN PetscErrorCode PCCreate_Jacobi(PC pc)
      Initialize the pointers to vectors to ZERO; these will be used to store
      diagonal entries of the matrix for fast preconditioner application.
   */
-  jac->diag      = NULL;
-  jac->diagsqrt  = NULL;
-  jac->userowl1  = PETSC_FALSE;
-  jac->userowmax = PETSC_FALSE;
-  jac->userowsum = PETSC_FALSE;
-  jac->useabs    = PETSC_FALSE;
-  jac->fixdiag   = PETSC_TRUE;
-  jac->scale     = 1.0;
+  jac->diag     = NULL;
+  jac->diagsqrt = NULL;
+  jac->type     = PC_JACOBI_DIAGONAL;
+  jac->useabs   = PETSC_FALSE;
+  jac->fixdiag  = PETSC_TRUE;
+  jac->scale    = 1.0;
 
   /*
       Set the pointers for the functions that are provided above.

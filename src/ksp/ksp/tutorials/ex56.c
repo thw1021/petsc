@@ -120,7 +120,7 @@ int main(int argc, char **args)
     if (!test_late_bs) PetscCall(MatSetBlockSize(Amat, 3));
     PetscCall(MatSetType(Amat, MATAIJ));
     PetscCall(MatSetOption(Amat, MAT_SPD, PETSC_TRUE));
-    PetscCall(MatSetOption(Amat, MAT_SPD_ETERNAL, PETSC_TRUE));
+    PetscCall(MatSetOption(Amat, MAT_SPD_ETERNAL, PETSC_TRUE)); // this keeps CG after switch to negative
     PetscCall(MatSetFromOptions(Amat));
     PetscCall(MatSeqAIJSetPreallocation(Amat, 0, d_nnz));
     PetscCall(MatMPIAIJSetPreallocation(Amat, 0, d_nnz, 0, o_nnz));
