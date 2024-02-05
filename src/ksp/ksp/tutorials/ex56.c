@@ -485,6 +485,7 @@ PetscErrorCode elem_3d_elast_v_25(PetscScalar *dd)
      test:
        nsize: 1
        suffix: baij
+       filter: grep -v variant
        args: -pc_type jacobi -pc_jacobi_type rowl1 -ksp_type cg -mat_type baij -ksp_view -ksp_rtol 1e-1
 
    test:
