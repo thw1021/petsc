@@ -645,6 +645,8 @@ PetscErrorCode TaoIsGradientDefined(Tao tao, PetscBool *flg)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+#include <petsc/private/taoimpl.h>
+
 /*@
   TaoIsObjectiveAndGradientDefined - Checks to see if the user has
   declared a joint objective/gradient routine.  Useful for determining when
@@ -669,5 +671,167 @@ PetscErrorCode TaoIsObjectiveAndGradientDefined(Tao tao, PetscBool *flg)
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
   if (tao->ops->computeobjectiveandgradient == NULL) *flg = PETSC_FALSE;
   else *flg = PETSC_TRUE;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoSNESObjectiveAndGradient(Tao tao, Vec p, PetscReal *obj, Vec grad, void *ctx)
+{
+  TaoSNES             taosnes = (TaoSNES)ctx;
+  Vec                 u;
+  SNESConvergedReason reason;
+
+  PetscFunctionBegin;
+  if (!taosnes->lambda) {
+    Mat Jp;
+    PetscCall(SNESGetJacobianP(taosnes->snes, &Jp, NULL, NULL));
+    PetscCall(MatCreateVecs(Jp, &taosnes->mu, &taosnes->lambda));
+  }
+  PetscCall(SNESInputParameters(taosnes->snes, p));
+  PetscCall(SNESSolve(taosnes->snes, NULL, NULL));
+  PetscCall(SNESGetConvergedReason(taosnes->snes, &reason));
+  PetscCheck(reason > 0, PetscObjectComm((PetscObject)tao), PETSC_ERR_CONV_FAILED, "Nonlinear solve failed");
+  PetscCall(SNESGetSolution(taosnes->snes, &u));
+  PetscCallBack("TaoSNES callback compute objective and gradients", (*taosnes->grads)(tao, taosnes->snes, u, p, obj, taosnes->lambda, taosnes->mu, taosnes->ctx));
+  PetscCall(SNESSetCostGradients(taosnes->snes, 1, &taosnes->lambda, &taosnes->mu));
+  PetscCall(SNESAdjointSolve(taosnes->snes));
+  PetscCall(VecCopy(taosnes->mu, grad));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoSNESObjectiveAndGradientsContextDestroy(void *ctx)
+{
+  TaoSNES taosnes = (TaoSNES)ctx;
+
+  PetscFunctionBegin;
+  PetscCall(VecDestroy(&taosnes->lambda));
+  PetscCall(VecDestroy(&taosnes->mu));
+  PetscCall(PetscFree(ctx));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  TaoSNESSetObjectiveAndGradients - Sets a combined objective function and gradient evaluation routines for the function to be optimized that is
+  constrained by a `SNES`
+
+  Logically Collective
+
+  Input Parameters:
++ tao  - the `Tao` context
+. snes - the 'SNES` context that provides the constraint
+. func - the objective and gradient function, see `TaoSNESObjectiveAndGradientsFn` for calling sequence
+- ctx  - [optional] user-defined context for private data for the gradient evaluation routine (may be `NULL`)
+
+  Level: beginner
+
+  Note:
+  One must call `SNESSetJacobianP()` and `SNESSetJacobian()` for this functionality.
+
+.seealso: [](ch_tao), `Tao`, `TaoSolve()`, `TaoSetObjective()`, `TaoSetHessian()`, `TaoSetGradient()`, `TaoGetObjectiveAndGradient()`, `SNESSetJacobianP()`, `SNESSetJacobian()`
+@*/
+PetscErrorCode TaoSNESSetObjectiveAndGradients(Tao tao, SNES snes, TaoSNESObjectiveAndGradientsFn func, void *ctx)
+{
+  TaoSNES        taosnes;
+  PetscContainer container;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
+  PetscValidHeaderSpecific(snes, SNES_CLASSID, 2);
+
+  PetscCall(PetscCalloc(sizeof(struct _n_TaoSNES), &taosnes));
+  taosnes->snes  = snes;
+  taosnes->grads = func;
+  taosnes->ctx   = ctx;
+  PetscCall(TaoSetObjectiveAndGradient(tao, NULL, TaoSNESObjectiveAndGradient, taosnes));
+  // Since the TaoSetObjectiveAndGradient does not have a context destroy, attach taosnes to tao
+  PetscCall(PetscContainerCreate(PetscObjectComm((PetscObject)tao), &container));
+  PetscCall(PetscContainerSetPointer(container, taosnes));
+  PetscCall(PetscContainerSetUserDestroy(container, TaoSNESObjectiveAndGradientsContextDestroy));
+  PetscCall(PetscObjectCompose((PetscObject)tao, "TaoSNESSetObjectiveAndGradients", (PetscObject)container));
+  PetscCall(PetscContainerDestroy(&container));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoTSObjectiveAndGradient(Tao tao, Vec P, PetscReal *obj, Vec grad, void *ctx)
+{
+  TaoTS             taots = (TaoTS)ctx;
+  Vec               U;
+  Mat               Jp;
+  TSConvergedReason reason;
+
+  PetscFunctionBegin;
+  if (!taots->lambda) {
+    Mat Jp;
+    PetscCall(TSGetRHSJacobianP(taots->ts, &Jp, NULL, NULL));
+    PetscCall(MatCreateVecs(Jp, &taots->mu, &taots->lambda));
+  }
+  PetscCall(TSInputParameters(taots->ts, P));
+  PetscCall(TSSetTime(taots->ts, 0.0));
+  PetscCall(TSSetStepNumber(taots->ts, 0));
+  PetscCall(TSGetSolution(taots->ts, &U));
+  PetscCall(TSComputeInitialCondition(taots->ts, U));
+  PetscCall(TSSolve(taots->ts, NULL));
+  PetscCall(TSGetConvergedReason(taots->ts, &reason));
+  PetscCheck(reason > 0, PetscObjectComm((PetscObject)tao), PETSC_ERR_CONV_FAILED, "Nonlinear solve failed");
+  PetscCallBack("TaoTS callback compute objective and gradients", (*taots->grads)(tao, taots->ts, U, P, obj, taots->lambda, taots->mu, taots->ctx));
+  PetscCall(TSSetCostGradients(taots->ts, 1, &taots->lambda, &taots->mu));
+  PetscCall(TSAdjointSolve(taots->ts));
+  PetscCall(TSComputeICJacobianP(taots->ts));
+  PetscCall(TSGetICJacobianP(taots->ts, &Jp, NULL, NULL));
+  PetscCall(MatMultTransposeAdd(Jp, taots->lambda, taots->mu, grad));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoTSObjectiveAndGradientsContextDestroy(void *ctx)
+{
+  TaoTS taots = (TaoTS)ctx;
+
+  PetscFunctionBegin;
+  PetscCall(VecDestroy(&taots->lambda));
+  PetscCall(VecDestroy(&taots->mu));
+  PetscCall(PetscFree(ctx));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  TaoTSSetObjectiveAndGradients - Sets a combined objective function and gradient evaluation routines for the function to be optimized that is
+  constrained by a `TS`
+
+  Logically Collective
+
+  Input Parameters:
++ tao  - the `Tao` context
+. ts   - the 'TS` context that provides the constraint
+. func - the objective and gradient function, see `TaoTSObjectiveAndGradientsFn` for calling sequence
+- ctx  - [optional] user-defined context for private data for the gradient evaluation routine (may be `NULL`)
+
+  Level: beginner
+
+  Note:
+  One must call `TSSetJacobianP()` and `TSSetJacobian()` for this functionality.
+
+.seealso: [](ch_tao), `Tao`, `TaoSolve()`, `TaoSetObjective()`, `TaoSetHessian()`, `TaoSetGradient()`, `TaoGetObjectiveAndGradient()`, `TSSetJacobianP()`, `TSSetJacobian()`
+@*/
+PetscErrorCode TaoTSSetObjectiveAndGradients(Tao tao, TS ts, TaoTSObjectiveAndGradientsFn func, void *ctx)
+{
+  TaoTS          taots;
+  PetscContainer container;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
+  PetscValidHeaderSpecific(ts, TS_CLASSID, 2);
+
+  PetscCall(PetscCalloc(sizeof(struct _n_TaoTS), &taots));
+  taots->ts    = ts;
+  taots->grads = func;
+  taots->ctx   = ctx;
+  PetscCall(TaoSetObjectiveAndGradient(tao, NULL, TaoTSObjectiveAndGradient, taots));
+  // Since the TaoSetObjectiveAndGradient does not have a context destroy, attach taots to tao
+  PetscCall(PetscContainerCreate(PetscObjectComm((PetscObject)tao), &container));
+  PetscCall(PetscContainerSetPointer(container, taots));
+  PetscCall(PetscContainerSetUserDestroy(container, TaoTSObjectiveAndGradientsContextDestroy));
+  PetscCall(PetscObjectCompose((PetscObject)tao, "TaoTSSetObjectiveAndGradients", (PetscObject)container));
+  PetscCall(PetscContainerDestroy(&container));
+
+  PetscCall(TSSetSaveTrajectory(taots->ts));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
