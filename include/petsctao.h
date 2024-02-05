@@ -557,3 +557,65 @@ PETSC_EXTERN PetscErrorCode TaoGradientNorm(Tao, Vec, NormType, PetscReal *);
 PETSC_EXTERN PetscErrorCode TaoEstimateActiveBounds(Vec, Vec, Vec, Vec, Vec, Vec, PetscReal, PetscReal *, IS *, IS *, IS *, IS *, IS *);
 PETSC_EXTERN PetscErrorCode TaoBoundStep(Vec, Vec, Vec, IS, IS, IS, PetscReal, Vec);
 PETSC_EXTERN PetscErrorCode TaoBoundSolution(Vec, Vec, Vec, PetscReal, PetscInt *, Vec);
+
+/*S
+  TaoSNESObjectiveAndGradientsFn - A prototype of a `Tao` evaluation function that would be passed to `TaoSNESSetObjectiveAndGradients()`
+
+  Calling Sequence:
++ tao    - the `Tao` context
+. snes   - `SNES` context
+. u      - solution vector for `SNES`
+. p      - input paramters for `Tao`
+. obj    - value of the objective function f()
+. lambda - vector to hold gradient of f() w.r.t u, the nonlinear solver solution
+. mu     - vector to hold gradient of f() w.r.t p, the optimization parameters
+- ctx    - [optional] user-defined function context
+
+  Level: beginner
+
+.seealso: [](ch_tao), [](ch_snes), `Tao`, `SNES`, `SNESSetFunction()`, `SNESSetFunction()`, `SNESSetJacobian()`, `SNESSetJacobianP()`, `TaoSNESSetObjectiveAndGradients()`
+S*/
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(TaoSNESObjectiveAndGradientsFn)(Tao tao, SNES snes, Vec u, Vec p, PetscReal *obj, Vec lambda, Vec mu, void *ctx);
+
+/*S
+   TaoSNES - PETSc object that manages `SNES` constrained optimizations
+
+   Level: developer
+
+.seealso: [](doc_taosolve), [](ch_tao), `TaoCreate()`, `TaoSNESSetObjectiveAndGradients()`, `TaoTS`, `TaoTSSetObjectiveAndGradients()`
+S*/
+typedef struct _n_TaoSNES *TaoSNES;
+
+PETSC_EXTERN PetscErrorCode TaoSNESSetObjectiveAndGradients(Tao, SNES, TaoSNESObjectiveAndGradientsFn *, void *);
+
+#include <petscts.h>
+
+/*S
+  TaoTSObjectiveAndGradientsFn - A prototype of a `Tao` evaluation function that would be passed to `TaoTSSetObjectiveAndGradients()`
+
+  Calling Sequence:
++ tao    - the `Tao` context
+. ts     - `TS` context
+. u      - solution vector for `TS`
+. p      - input paramters for `Tao`
+. obj    - value of the objective function f()
+. lambda - vector to hold gradient of f() w.r.t u, the solution
+. mu     - vector to hold gradient of f() w.r.t p, the optimization parameters
+- ctx    - [optional] user-defined function context
+
+  Level: beginner
+
+.seealso: [](ch_tao), [](ch_snes), `Tao`, `TS`, `TaoSNESSetObjectiveAndGradients()`, `TaoSNESObjectiveAndGradientsFn`
+S*/
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(TaoTSObjectiveAndGradientsFn)(Tao tao, TS snes, Vec u, Vec p, PetscReal *obj, Vec lambda, Vec mu, void *ctx);
+
+/*S
+   TaoTS - PETSc object that manages `TS` constrained optimizations
+
+   Level: developer
+
+.seealso: [](doc_taosolve), [](ch_tao), `TaoCreate()`, `TaoTSSetObjectiveAndGradients()`, `TaoSNES`, `TaoSNESSetObjectiveAndGradients()`
+S*/
+typedef struct _n_TaoTS *TaoTS;
+
+PETSC_EXTERN PetscErrorCode TaoTSSetObjectiveAndGradients(Tao, TS, TaoTSObjectiveAndGradientsFn *, void *);

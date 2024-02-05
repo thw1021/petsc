@@ -41,6 +41,20 @@ struct _TaoOps {
 
 #define MAXTAOMONITORS 10
 
+struct _n_TaoSNES {
+  SNES                            snes;
+  Vec                             lambda, mu;
+  void                           *ctx;
+  TaoSNESObjectiveAndGradientsFn *grads;
+};
+
+struct _n_TaoTS {
+  TS                            ts;
+  Vec                           lambda, mu;
+  void                         *ctx;
+  TaoTSObjectiveAndGradientsFn *grads;
+};
+
 struct _p_Tao {
   PETSCHEADER(struct _TaoOps);
   void *user;
