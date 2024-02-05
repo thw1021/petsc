@@ -343,7 +343,6 @@ int main(int argc, char **args)
     /* PC setup basically */
     PetscCall(MatScale(Amat, -100000.0));
     PetscCall(MatSetOption(Amat, MAT_SPD, PETSC_FALSE));
-    //PetscCall(MatSetOption(Amat, MAT_SPD_ETERNAL, PETSC_FALSE));
     PetscCall(KSPSetOperators(ksp, Amat, Amat));
     PetscCall(KSPSetUp(ksp));
 
