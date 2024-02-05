@@ -557,3 +557,31 @@ PETSC_EXTERN PetscErrorCode TaoGradientNorm(Tao, Vec, NormType, PetscReal *);
 PETSC_EXTERN PetscErrorCode TaoEstimateActiveBounds(Vec, Vec, Vec, Vec, Vec, Vec, PetscReal, PetscReal *, IS *, IS *, IS *, IS *, IS *);
 PETSC_EXTERN PetscErrorCode TaoBoundStep(Vec, Vec, Vec, IS, IS, IS, PetscReal, Vec);
 PETSC_EXTERN PetscErrorCode TaoBoundSolution(Vec, Vec, Vec, PetscReal, PetscInt *, Vec);
+
+/*S
+  TaoSNESObjectiveAndGradientsFn - A prototype of a `Tao` evaluation function that would be passed to `TaoSNESSetFunctionAndGradients()`
+
+  Calling Sequence:
++ tao    - the `Tao` context
++ snes   - `SNES` context
+. lambda - vector to hold gradient of f() w.r.t u, the nonlinear solver solution
+. mu     - vector to hold gradient of f() w.r.t u, the optimization parameters
+. func   - function to compute the objective and two gradients
+- ctx    - [optional] user-defined function context
+
+  Level: beginner
+
+.seealso: [](ch_tao), [](ch_snes), `Tao`, `SNES`, `SNESSetFunction()`, `SNESSetFunction()`, `SNESSetJacobian()`, `SNESSetJacobianP()`
+S*/
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(TaoSNESObjectiveAndGradientsFn)(Tao tao, SNES snes, Vec lambda, Vec mu, void *ctx);
+
+/*S
+   TaoSNES - PETSc object that manages `SNES` constrained optimizations
+
+   Level: developer
+
+.seealso: [](doc_taosolve), [](ch_tao), `TaoCreate()`, `TaoSNESSetObjectiveAndGradients()`
+S*/
+typedef struct _p_TaoSNES *TaoSNES;
+
+PETSC_EXTERN PetscErrorCode TaoSNESSetObjectiveAndGradients(Tao, SNES, Vec, Vec, TaoSNESObjectiveAndGradientsFn *, void *);
