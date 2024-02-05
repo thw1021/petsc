@@ -341,7 +341,8 @@ int main(int argc, char **args)
 
     PetscCall(MaybeLogStagePush(stage[2]));
     /* PC setup basically */
-    PetscCall(MatScale(Amat, 100000.0));
+    PetscCall(MatScale(Amat, -100000.0));
+    PetscCall(MatSetOption(Amat, MAT_SPD, PETSC_FALSE));
     PetscCall(KSPSetOperators(ksp, Amat, Amat));
     PetscCall(KSPSetUp(ksp));
 
@@ -470,6 +471,21 @@ PetscErrorCode elem_3d_elast_v_25(PetscScalar *dd)
        suffix: 2
        nsize: 8
        filter: sed -e "s/Linear solve converged due to CONVERGED_RTOL iterations 1[3|4]/Linear solve converged due to CONVERGED_RTOL iterations 15/g"
+
+   testset:
+     nsize: 8
+     args: -ne 15 -alpha 1.e-3 -ksp_type cg -ksp_converged_reason -use_mat_nearnullspace -ksp_rtol 1e-4 -ksp_norm_type unpreconditioned -two_solves
+     test:
+       requires: hypre !complex !defined(PETSC_HAVE_HYPRE_DEVICE)
+       suffix: hypre
+       args: -pc_type hypre -pc_hypre_boomeramg_relax_type_all l1scaled-Jacobi
+     test:
+       suffix: gamg
+       args: -pc_type gamg -mg_levels_ksp_type richardson -mg_levels_pc_type jacobi -mg_levels_pc_jacobi_type rowl1 -mg_levels_pc_jacobi_rowl1_scale .5 -mg_levels_pc_jacobi_fixdiagonal
+     test:
+       nsize: 1
+       suffix: baij
+       args: -pc_type jacobi -pc_jacobi_type rowl1 -ksp_type cg -mat_type baij -ksp_view
 
    test:
       suffix: latebs
