@@ -220,20 +220,25 @@ int main(int argc, char **args)
   flg = PETSC_FALSE;
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-check_scaling", &flg, NULL));
   if (flg) {
-    Vec       max, min;
+    Vec       max, min, l1;
     PetscInt  idx;
     PetscReal val;
 
     PetscCall(VecDuplicate(x, &max));
     PetscCall(VecDuplicate(x, &min));
+    PetscCall(VecDuplicate(x, &l1));
     PetscCall(MatGetRowMaxAbs(A, max, NULL));
     PetscCall(MatGetRowMinAbs(A, min, NULL));
+    PetscCall(MatGetRowSumAbs(A, l1));
     {
       PetscCall(PetscViewerASCIIOpen(PETSC_COMM_WORLD, "max.data", &viewer));
       PetscCall(VecView(max, viewer));
       PetscCall(PetscViewerDestroy(&viewer));
       PetscCall(PetscViewerASCIIOpen(PETSC_COMM_WORLD, "min.data", &viewer));
       PetscCall(VecView(min, viewer));
+      PetscCall(PetscViewerDestroy(&viewer));
+      PetscCall(PetscViewerASCIIOpen(PETSC_COMM_WORLD, "l1.data", &viewer));
+      PetscCall(VecView(l1, viewer));
       PetscCall(PetscViewerDestroy(&viewer));
     }
     PetscCall(VecView(max, PETSC_VIEWER_DRAW_WORLD));
@@ -250,6 +255,7 @@ int main(int argc, char **args)
     PetscCall(VecView(max, PETSC_VIEWER_DRAW_WORLD));
     PetscCall(VecDestroy(&max));
     PetscCall(VecDestroy(&min));
+    PetscCall(VecDestroy(&l1));
   }
 
   /*  PetscCall(MatView(A,PETSC_VIEWER_STDOUT_WORLD)); */
