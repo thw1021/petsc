@@ -309,6 +309,7 @@ int main(int argc, char **args)
     PetscCall(PCGAMGMISkSetMinDegreeOrdering(pc, PETSC_TRUE));
     PetscCall(PCGAMGSetAggressiveSquareGraph(pc, PETSC_FALSE));
     PetscCall(PCGAMGSetInjectionIndex(pc, 2, idx)); // code coverage, same as command line
+    PetscCall(PCJacobiSetScale(pc, 0.5));
   }
 
   PetscCall(MaybeLogStagePush(stage[0]));
