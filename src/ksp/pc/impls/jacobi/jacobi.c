@@ -585,7 +585,8 @@ PetscErrorCode PCJacobiGetUseAbs(PC pc, PetscBool *flg)
 }
 
 /*@
-  PCJacobiSetScale - Set scaling of off-diagonal elements summed into l1-norm diagonal
+  PCJacobiSetScale - Set scaling of off-diagonal of matrix for l1-norm, eg, Remark 6.1 with
+  0.5 scaling in "Multigrid Smoothers for Ultraparallel Computing", Baker, et al, SISC, 2011
 
   Logically Collective
 
