@@ -586,7 +586,7 @@ PetscErrorCode PCJacobiGetUseAbs(PC pc, PetscBool *flg)
 
 /*@
   PCJacobiSetScale - Set scaling of off-diagonal of operator when computing l1 row norms, eg,
-   Remark 6.1 in "Multigrid Smoothers for Ultraparallel Computing", Baker et al, with 0.5 scaling
+  Remark 6.1 in "Multigrid Smoothers for Ultraparallel Computing", Baker et al, with 0.5 scaling
 
   Logically Collective
 
