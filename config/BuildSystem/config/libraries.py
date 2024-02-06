@@ -144,7 +144,7 @@ class Configure(config.base.Configure):
       # remove duplicate -L, -Wl,-rpath options - and only consecutive -l options
       if j in newldflags and any([j.startswith(flg) for flg in dupflags]): continue
       if newlibs and j == newlibs[-1]: continue
-      if list(filter(j.startswith,['-l'])) or list(filter(j.endswith,['.lib','.a','.so','.o'])) or j in ['-Bstatic','-Bdynamic','-Wl,-Bstatic','-Wl,-Bdynamic','-Wl,--start-group','-Wl,--end-group']:
+      if list(filter(j.startswith,['-l'])) or list(filter(j.endswith,['.lib','.a','.so','.o'])) or j in ['-Wl,-Bstatic','-Wl,-Bdynamic','-Wl,--start-group','-Wl,--end-group']:
         newlibs.append(j)
       else:
         newldflags.append(j)

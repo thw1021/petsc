@@ -246,10 +246,6 @@ class Configure(config.base.Configure):
         # Intel 11 has a bogus -long_double option
         if arg == '-long_double':
           continue
-        if arg in ['-Bstatic','-Bdynamic']:
-          clibs.append(arg)
-          continue
-
         # if options of type -L foobar
         if arg == '-lto_library':
           lib = next(argIter)
@@ -580,9 +576,6 @@ class Configure(config.base.Configure):
           arg = arg[:-1]
         # Intel 11 has a bogus -long_double option
         if arg == '-long_double':
-          continue
-        if arg in ['-Bstatic','-Bdynamic']:
-          cxxlibs.append(arg)
           continue
 
         # if options of type -L foobar
@@ -998,9 +991,6 @@ Otherwise you need a different combination of C, C++, and Fortran compilers")
         # has a stray " at the end
         if arg.endswith('"') and arg[:-1].find('"') == -1:
           arg = arg[:-1]
-        if arg in ['-Bstatic','-Bdynamic']:
-          flibs.append(arg)
-          continue
 
         if arg == '-lto_library':
           lib = next(argIter)
