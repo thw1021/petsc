@@ -2215,11 +2215,7 @@ static PetscErrorCode MatGetRowSumAbs_MPIAIJ(Mat A, Vec v)
   PetscCall(MatGetRowSumAbs(a->B, vB));
   PetscCall(VecAXPY(vA, 1.0, vB));
   PetscCall(VecDestroy(&vB));
-  PetscCall(VecGetArrayRead(vA, &va));
-  PetscCall(VecGetArrayWrite(v, &vv));
-  for (int i = 0; i < m; i++) vv[i] = va[i];
-  PetscCall(VecRestoreArrayWrite(v, &vv));
-  PetscCall(VecRestoreArrayRead(vA, &va));
+  PetscCall(VecCopy(vA, v));
   PetscCall(VecDestroy(&vA));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
