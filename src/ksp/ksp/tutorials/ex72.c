@@ -253,6 +253,12 @@ int main(int argc, char **args)
     PetscCall(VecMax(max, &idx, &val));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Largest row ratio %g at row %" PetscInt_FMT "\n", (double)val, idx));
     PetscCall(VecView(max, PETSC_VIEWER_DRAW_WORLD));
+    PetscCall(VecMax(max, &idx, &val));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Largest row ratio %g at row %" PetscInt_FMT "\n", (double)val, idx));
+    PetscCall(VecView(max, PETSC_VIEWER_DRAW_WORLD));
+    PetscCall(VecView(max, PETSC_VIEWER_DRAW_WORLD));
+    PetscCall(VecMax(l1, &idx, &val));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Largest l1 row element %g at row %" PetscInt_FMT "\n", (double)val, idx));
     PetscCall(VecDestroy(&max));
     PetscCall(VecDestroy(&min));
     PetscCall(VecDestroy(&l1));
@@ -694,7 +700,7 @@ int main(int argc, char **args)
       args: -ksp_monitor_short -ksp_view
       test:
          suffix: xxt
-         args: -f0 ${DATAFILESPATH}/matrices/poisson1 -check_symmetry -ksp_type cg -pc_type tfs
+         args: -f0 ${DATAFILESPATH}/matrices/poisson1 -check_symmetry -check_scaling -ksp_type cg -pc_type tfs
       test:
          suffix: xyt
          args: -f0 ${DATAFILESPATH}/matrices/medium -ksp_type gmres -pc_type tfs
