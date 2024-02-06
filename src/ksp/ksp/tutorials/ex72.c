@@ -230,7 +230,7 @@ int main(int argc, char **args)
     PetscCall(MatGetRowMaxAbs(A, max, NULL));
     PetscCall(MatGetRowMinAbs(A, min, NULL));
     PetscCall(MatGetRowSumAbs(A, l1));
-    {
+    if (PETSC_FALSE) {
       PetscCall(PetscViewerASCIIOpen(PETSC_COMM_WORLD, "max.data", &viewer));
       PetscCall(VecView(max, viewer));
       PetscCall(PetscViewerDestroy(&viewer));
