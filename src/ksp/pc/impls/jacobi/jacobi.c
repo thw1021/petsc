@@ -208,8 +208,7 @@ static PetscErrorCode PCSetUp_Jacobi(PC pc)
         PetscCall(VecGetLocalSize(diag, &n));
         PetscCall(VecGetArray(diag, &x2));
         PetscCall(VecGetArray(true_diag, &x));                                   // to make more general -todo
-        if (jac->type == PC_JACOBI_ROWL1) PetscCall(VecGetArray(true_diag, &x)); // to make more general -todo
-        else x = x2;
+        PetscCall(VecGetArray(true_diag, &x)); // to make more general -todo
         for (i = 0; i < n; i++) {
           if (PetscRealPart(x[i]) < 0.0) {
             x2[i]   = -x2[i]; // flip sign to keep DA > 0
@@ -234,8 +233,6 @@ static PetscErrorCode PCSetUp_Jacobi(PC pc)
     case PC_JACOBI_ROWSUM:
       PetscCall(MatGetRowSum(pc->pmat, diag));
       break;
-    default:
-      SETERRQ(PetscObjectComm((PetscObject)pc), PETSC_ERR_PLIB, "No type %d", (int)jac->type);
     }
     PetscCall(VecReciprocal(diag));
     if (jac->useabs) PetscCall(VecAbs(diag));
@@ -266,8 +263,6 @@ static PetscErrorCode PCSetUp_Jacobi(PC pc)
     case PC_JACOBI_ROWSUM:
       PetscCall(MatGetRowSum(pc->pmat, diagsqrt));
       break;
-    default:
-      SETERRQ(PetscObjectComm((PetscObject)pc), PETSC_ERR_PLIB, "No type %d", (int)jac->type);
     }
     PetscCall(VecGetLocalSize(diagsqrt, &n));
     PetscCall(VecGetArray(diagsqrt, &x));
@@ -280,7 +275,6 @@ static PetscErrorCode PCSetUp_Jacobi(PC pc)
     }
     PetscCall(VecRestoreArray(diagsqrt, &x));
   }
-  if (zeroflag) PetscCall(PetscInfo(pc, "Zero detected in diagonal of matrix, using 1 at those locations\n"));
   if (zeroflag) PetscCall(PetscInfo(pc, "Zero detected in diagonal of matrix, using 1 at those locations\n"));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
