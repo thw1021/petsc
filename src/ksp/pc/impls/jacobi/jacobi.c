@@ -207,7 +207,7 @@ static PetscErrorCode PCSetUp_Jacobi(PC pc)
         PetscCall(MatGetDiagonal(pc->pmat, true_diag));
         PetscCall(VecGetLocalSize(diag, &n));
         PetscCall(VecGetArray(diag, &x2));
-        PetscCall(VecGetArray(true_diag, &x));                                   // to make more general -todo
+        PetscCall(VecGetArray(true_diag, &x)); // to make more general -todo
         PetscCall(VecGetArray(true_diag, &x)); // to make more general -todo
         for (i = 0; i < n; i++) {
           if (PetscRealPart(x[i]) < 0.0) {
