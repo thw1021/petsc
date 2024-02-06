@@ -2202,11 +2202,9 @@ static PetscErrorCode MatGetRowMaxAbs_MPIAIJ(Mat A, Vec v, PetscInt idx[])
 
 static PetscErrorCode MatGetRowSumAbs_MPIAIJ(Mat A, Vec v)
 {
-  Mat_MPIAIJ        *a = (Mat_MPIAIJ *)A->data;
-  PetscInt           m = A->rmap->n;
-  Vec                vB, vA;
-  const PetscScalar *va;
-  PetscScalar       *vv;
+  Mat_MPIAIJ *a = (Mat_MPIAIJ *)A->data;
+  PetscInt    m = A->rmap->n;
+  Vec         vB, vA;
 
   PetscFunctionBegin;
   PetscCall(VecCreateSeq(PETSC_COMM_SELF, m, &vA));
