@@ -157,14 +157,15 @@ static
 
   PetscFunctionBegin;
   /* check input */
-  PetscCheck(orig_p4est->data_size == adap_p4est->data_size, PetscObjectComm((PetscObject)(dm)), PETSC_ERR_ARG_SIZ, "p4est data size mismatch: original %d, adapted %d", (PetscInt)(orig_p4est->data_size), (PetscInt)(adap_p4est->data_size));
+  PetscCheck(orig_p4est->data_size == adap_p4est->data_size, PetscObjectComm((PetscObject)(dm)), PETSC_ERR_ARG_SIZ, "p4est data size mismatch: original %" PetscInt_FMT ", adapted %" PetscInt_FMT, (PetscInt)(orig_p4est->data_size),
+             (PetscInt)(adap_p4est->data_size));
   PetscCheck(amrOps->projectToCoarse, PetscObjectComm((PetscObject)(dm)), PETSC_ERR_ARG_NULL, "Project function to coarse is not given");
   PetscCheck(amrOps->projectToFine, PetscObjectComm((PetscObject)(dm)), PETSC_ERR_ARG_NULL, "Project function to fine is not given");
   /* loop over all p4est quadrants */
   orig_quadid = 0;
   adap_quadid = 0;
   while (orig_quadid < orig_n_quads) {
-    PetscCheck(adap_quadid < adap_n_quads, PetscObjectComm((PetscObject)(dm)), PETSC_ERR_PLIB, "Quadrant id %d is larger than the number of quadrants %d", (PetscInt)adap_quadid, (PetscInt)adap_n_quads);
+    PetscCheck(adap_quadid < adap_n_quads, PetscObjectComm((PetscObject)(dm)), PETSC_ERR_PLIB, "Quadrant id %" PetscInt_FMT " is larger than the number of quadrants %" PetscInt_FMT, (PetscInt)adap_quadid, (PetscInt)adap_n_quads);
     PetscCallP4estReturn(orig_quad, p4est_find_quadrant_cumulative, (orig_p4est, orig_quadid, NULL, NULL));
     PetscCallP4estReturn(adap_quad, p4est_find_quadrant_cumulative, (adap_p4est, adap_quadid, NULL, NULL));
     orig_level = orig_quad->level;
@@ -204,8 +205,8 @@ static
     }
   }
   /* check final quadrant id's */
-  PetscCheck(orig_quadid == orig_n_quads, PetscObjectComm((PetscObject)(dm)), PETSC_ERR_PLIB, "Original quadrant id %d did not reach number of quadrants %d", (PetscInt)orig_quadid, (PetscInt)orig_n_quads);
-  PetscCheck(adap_quadid == adap_n_quads, PetscObjectComm((PetscObject)(dm)), PETSC_ERR_PLIB, "Adapted quadrant id %d did not reach number of quadrants %d", (PetscInt)adap_quadid, (PetscInt)adap_n_quads);
+  PetscCheck(orig_quadid == orig_n_quads, PetscObjectComm((PetscObject)(dm)), PETSC_ERR_PLIB, "Original quadrant id %" PetscInt_FMT " did not reach number of quadrants %" PetscInt_FMT, (PetscInt)orig_quadid, (PetscInt)orig_n_quads);
+  PetscCheck(adap_quadid == adap_n_quads, PetscObjectComm((PetscObject)(dm)), PETSC_ERR_PLIB, "Adapted quadrant id %" PetscInt_FMT " did not reach number of quadrants %" PetscInt_FMT, (PetscInt)adap_quadid, (PetscInt)adap_n_quads);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

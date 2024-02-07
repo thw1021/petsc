@@ -14,6 +14,6 @@ PETSC_EXTERN PetscErrorCode DMBF_3D_IterateGhostExchange(DM, DM_BF_Cell *, size_
 
 PETSC_EXTERN PetscErrorCode DMBF_3D_IterateOverCellsVectors(DM, DM_BF_Cell *, size_t, PetscErrorCode (*)(DM, DM_BF_Cell *, void *), void *, Vec *, PetscInt, Vec *, PetscInt);
 PETSC_EXTERN PetscErrorCode DMBF_3D_IterateOverFaces(DM, DM_BF_Cell *, size_t, PetscErrorCode (*)(DM, DM_BF_Face *, void *), void *);
-PETSC_EXTERN PetscErrorCode DMBF_3D_IterateFVMatAssembly(DM, DM_BF_Cell *, size_t, Mat, PetscErrorCode (*)(DM, DM_BF_Face *, PetscReal *, void *), void *);
+PETSC_EXTERN PetscErrorCode DMBF_3D_IterateFVMatAssembly(DM, DM_BF_Cell *, size_t, Mat, PetscErrorCode (*)(DM, DM_BF_Face *, PetscScalar *, void *), void *);
 
 #endif /* defined(PETSCDMBF_3D_ITERATE_H) */

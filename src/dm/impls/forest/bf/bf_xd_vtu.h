@@ -209,8 +209,7 @@ static PetscErrorCode DMBFGetVTKMPIRank(DM dm, PetscVTKInt *mpirank, PetscInt nC
 
   PetscFunctionBegin;
 
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD, &rank);
-  CHKERRQ(ierr);
+  PetscCallMPI(MPI_Comm_rank(PETSC_COMM_WORLD, &rank));
   for (il = 0; il < nCells; il++) { mpirank[il] = (PetscVTKInt)rank; }
 
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -288,8 +287,7 @@ static PetscErrorCode DMBFVTKWritePiece_VTU(DM dm, PetscViewer viewer)
 
   ierr = PetscStrncpy(noext, vtk->filename, n + 1);
   CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD, &rank);
-  CHKERRQ(ierr);
+  PetscCallMPI(MPI_Comm_rank(PETSC_COMM_WORLD, &rank));
   ierr = PetscSNPrintf(lfname, sizeof(lfname), "%s_%04d.vtu", noext, rank);
   CHKERRQ(ierr);
   ierr = PetscFOpen(PETSC_COMM_SELF, lfname, "wb", &f);
@@ -495,9 +493,9 @@ static PetscErrorCode DMBFVTKWritePiece_VTU(DM dm, PetscViewer viewer)
   fwrite(int_data, sizeof(PetscVTKInt), nCells, f);
 
   for (link = vtk->link; link; link = link->next) {
-    const char         *vecname = "";
-    Vec                 v       = (Vec)link->vec;
-    const PetscVTUReal *vec_data;
+    const char        *vecname = "";
+    Vec                v       = (Vec)link->vec;
+    const PetscScalar *vec_data;
 
     if ((link->ft != PETSC_VTK_CELL_FIELD) && (link->ft != PETSC_VTK_CELL_VECTOR_FIELD)) continue;
     if (((PetscObject)v)->name || link != vtk->link) { /* If the object is already named, use it. If it is past the first link, name it to disambiguate. */
@@ -519,9 +517,9 @@ static PetscErrorCode DMBFVTKWritePiece_VTU(DM dm, PetscViewer viewer)
 
       ierr = VecGetArrayRead(v, &vec_data);
       CHKERRQ(ierr);
-      write_ret = fwrite(vec_data, sizeof(PetscVTUReal), nCells, f);
-      PetscCheck(write_ret == nCells, PETSC_COMM_SELF, PETSC_ERR_FILE_WRITE, "Vec write to VTU failed");
-
+      for (PetscInt i = 0; i < nCells; i++) { float_data[i] = PetscRealPart(vec_data[i]); }
+      write_ret = fwrite(float_data, sizeof(PetscVTUReal), nCells, f);
+      PetscCheck(write_ret == (size_t)nCells, PETSC_COMM_SELF, PETSC_ERR_FILE_WRITE, "Vec write to VTU failed");
       ierr = VecRestoreArrayRead(v, &vec_data);
       CHKERRQ(ierr);
 
@@ -535,20 +533,22 @@ static PetscErrorCode DMBFVTKWritePiece_VTU(DM dm, PetscViewer viewer)
       CHKERRQ(ierr);
       if (P4EST_DIM == 2) {
         for (PetscInt i = 0; i < nCells; i++) {
-          float_data[3 * i + 0] = vec_data[2 * i + 0];
-          float_data[3 * i + 1] = vec_data[2 * i + 1];
+          float_data[3 * i + 0] = PetscRealPart(vec_data[2 * i + 0]);
+          float_data[3 * i + 1] = PetscRealPart(vec_data[2 * i + 1]);
           float_data[3 * i + 2] = 0.0;
         }
-        ierr = VecRestoreArrayRead(v, &vec_data);
-        CHKERRQ(ierr);
-        write_ret = fwrite(float_data, sizeof(PetscVTUReal), 3 * nCells, f);
       } else {
-        write_ret = fwrite(vec_data, sizeof(PetscVTUReal), 3 * nCells, f);
-        ierr      = VecRestoreArrayRead(v, &vec_data);
-        CHKERRQ(ierr);
+        for (PetscInt i = 0; i < nCells; i++) {
+          float_data[3 * i + 0] = PetscRealPart(vec_data[2 * i + 0]);
+          float_data[3 * i + 1] = PetscRealPart(vec_data[2 * i + 1]);
+          float_data[3 * i + 2] = PetscRealPart(vec_data[2 * i + 2]);
+        }
       }
+      write_ret = fwrite(float_data, sizeof(PetscVTUReal), 3 * nCells, f);
+      ierr      = VecRestoreArrayRead(v, &vec_data);
+      CHKERRQ(ierr);
 
-      PetscCheck(write_ret == 3 * nCells, PETSC_COMM_SELF, PETSC_ERR_FILE_WRITE, "Vec write to VTU failed");
+      PetscCheck(write_ret == (size_t)(3 * nCells), PETSC_COMM_SELF, PETSC_ERR_FILE_WRITE, "Vec write to VTU failed");
     }
   }
 
@@ -586,10 +586,8 @@ static
   ierr = DMBFVTKWritePiece_VTU(dm, viewer);
   CHKERRQ(ierr);
 
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD, &rank);
-  CHKERRQ(ierr);
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD, &size);
-  CHKERRQ(ierr);
+  PetscCallMPI(MPI_Comm_rank(PETSC_COMM_WORLD, &rank));
+  PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD, &size));
 
   if (!rank) {
     for (n = 0; n < PETSC_MAX_PATH_LEN; n++) { /* remove filename extension */

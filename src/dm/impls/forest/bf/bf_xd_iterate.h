@@ -81,7 +81,7 @@ typedef struct _p_DM_BF_SetUpCtx {
 
 static void _p_iterSetUp(p4est_iter_volume_info_t *info, void *ctx)
 {
-  DM_BF_SetUpCtx *iterCtx = ctx;
+  DM_BF_SetUpCtx *iterCtx = (DM_BF_SetUpCtx *)ctx;
   DM_BF_Cell     *cell    = PETSC_NULLPTR;
 
   /* get cell */
@@ -90,7 +90,7 @@ static void _p_iterSetUp(p4est_iter_volume_info_t *info, void *ctx)
     cell = _p_getCellPtr(iterCtx->cells, iterCtx->memory->size, info->p4est, info->treeid, info->quadid, 0 /*!ghost*/);
     break;
   case SET_P4EST_CELLS:
-    cell = info->quad->p.user_data;
+    cell = (DM_BF_Cell *)info->quad->p.user_data;
     break;
   }
   /* get cell info */
@@ -159,7 +159,7 @@ static
 
 static void _p_iterCopy(p4est_iter_volume_info_t *info, void *ctx)
 {
-  DM_BF_SetUpCtx *iterCtx = ctx;
+  DM_BF_SetUpCtx *iterCtx = (DM_BF_SetUpCtx *)ctx;
   DM_BF_Cell     *cell    = _p_getCellPtr(iterCtx->cells, iterCtx->memory->size, info->p4est, info->treeid, info->quadid, 0 /*!ghost*/);
 
   CHKERRV(PetscMemcpy(cell, info->quad->p.user_data, iterCtx->memory->size));
@@ -216,7 +216,7 @@ typedef struct _p_DM_BF_SetCellDataIterCtx {
 
 static void _p_iterSetCellData(p4est_iter_volume_info_t *info, void *ctx)
 {
-  DM_BF_SetCellDataIterCtx *iterCtx = ctx;
+  DM_BF_SetCellDataIterCtx *iterCtx = (DM_BF_SetCellDataIterCtx *)ctx;
   DM_BF_Cell               *cell    = _p_getCellPtr(iterCtx->cells, iterCtx->cellSize, info->p4est, info->treeid, info->quadid, 0 /*!ghost*/);
   PetscScalar              *data;
   PetscInt                  i, j, di;
@@ -335,7 +335,7 @@ typedef struct _p_DM_BF_SetCellFieldsIterCtx {
 
 static void _p_iterSetCellFields(p4est_iter_volume_info_t *info, void *ctx)
 {
-  DM_BF_SetCellFieldsIterCtx *iterCtx = ctx;
+  DM_BF_SetCellFieldsIterCtx *iterCtx = (DM_BF_SetCellFieldsIterCtx *)ctx;
   DM_BF_Cell                 *cell    = _p_getCellPtr(iterCtx->cells, iterCtx->cellSize, info->p4est, info->treeid, info->quadid, 0 /*!ghost*/);
   PetscScalar                *data;
   PetscInt                    i, di, fn;
@@ -465,7 +465,7 @@ typedef struct _p_DM_BF_GetCellDataIterCtx {
 
 static void _p_iterGetCellData(p4est_iter_volume_info_t *info, void *ctx)
 {
-  DM_BF_GetCellDataIterCtx *iterCtx = ctx;
+  DM_BF_GetCellDataIterCtx *iterCtx = (DM_BF_GetCellDataIterCtx *)ctx;
   DM_BF_Cell               *cell    = _p_getCellPtr(iterCtx->cells, iterCtx->cellSize, info->p4est, info->treeid, info->quadid, 0 /*!ghost*/);
   const PetscScalar        *data;
   PetscInt                  i, j, di;
@@ -584,7 +584,7 @@ typedef struct _p_DM_BF_GetCellFieldsIterCtx {
 
 static void _p_iterGetCellFields(p4est_iter_volume_info_t *info, void *ctx)
 {
-  DM_BF_GetCellFieldsIterCtx *iterCtx = ctx;
+  DM_BF_GetCellFieldsIterCtx *iterCtx = (DM_BF_GetCellFieldsIterCtx *)ctx;
   DM_BF_Cell                 *cell    = _p_getCellPtr(iterCtx->cells, iterCtx->cellSize, info->p4est, info->treeid, info->quadid, 0 /*!ghost*/);
   PetscScalar                *data;
   PetscInt                    i, di, fn;
@@ -747,7 +747,7 @@ typedef struct _p_DM_BF_CellIterCtx {
 
 static void _p_iterVolume(p4est_iter_volume_info_t *info, void *ctx)
 {
-  DM_BF_CellIterCtx *iterCtx = ctx;
+  DM_BF_CellIterCtx *iterCtx = (DM_BF_CellIterCtx *)ctx;
   DM_BF_Cell        *cell    = _p_getCellPtr(iterCtx->cells, iterCtx->cellSize, info->p4est, info->treeid, info->quadid, 0 /*!ghost*/);
   PetscErrorCode     ierr;
 
@@ -868,9 +868,9 @@ typedef struct _p_DM_BF_FaceIterCtx {
 
 static void _p_iterFace(p4est_iter_face_info_t *info, void *ctx)
 {
-  DM_BF_FaceIterCtx *iterCtx    = ctx;
+  DM_BF_FaceIterCtx *iterCtx    = (DM_BF_FaceIterCtx *)ctx;
   DM_BF_Face        *face       = &iterCtx->face;
-  const PetscBool    isBoundary = (1 == info->sides.elem_count);
+  const PetscBool    isBoundary = (PetscBool)(1 == info->sides.elem_count);
   PetscInt           i;
 
   #if defined(PETSC_USE_DEBUG)
@@ -965,20 +965,20 @@ typedef struct _p_DM_BF_FVMatAssemblyIterCtx {
   DM_BF_Cell *cells;
   size_t      cellSize;
   /* iterator-specific info */
-  PetscErrorCode (*iterFace)(DM, DM_BF_Face *, PetscReal *, void *);
-  PetscReal *cellCoeff;
-  PetscInt  *rowIndices;
-  PetscInt  *colIndices;
-  Mat        M;
-  void      *userIterCtx;
-  DM_BF_Face face;
+  PetscErrorCode (*iterFace)(DM, DM_BF_Face *, PetscScalar *, void *);
+  PetscScalar *cellCoeff;
+  PetscInt    *rowIndices;
+  PetscInt    *colIndices;
+  Mat          M;
+  void        *userIterCtx;
+  DM_BF_Face   face;
 } DM_BF_FVMatAssemblyIterCtx;
 
 static void _p_iterFVMatAssembly(p4est_iter_face_info_t *info, void *ctx)
 {
-  DM_BF_FVMatAssemblyIterCtx *iterCtx      = ctx;
+  DM_BF_FVMatAssemblyIterCtx *iterCtx      = (DM_BF_FVMatAssemblyIterCtx *)ctx;
   DM_BF_Face                 *face         = &iterCtx->face;
-  const PetscBool             isBoundary   = (1 == info->sides.elem_count);
+  const PetscBool             isBoundary   = (PetscBool)(1 == info->sides.elem_count);
   PetscInt                    blockSize[3] = {1, 1, 1};
   PetscInt                    i, j, k = 0, len = 0, bs, idx;
 
@@ -1099,7 +1099,7 @@ static void _p_iterFVMatAssembly(p4est_iter_face_info_t *info, void *ctx)
 static
   #endif
   PetscErrorCode
-  DMBF_XD_IterateFVMatAssembly(DM dm, DM_BF_Cell *cells, size_t cellSize, Mat M, PetscErrorCode (*iterFace)(DM, DM_BF_Face *, PetscReal *, void *), void *userIterCtx)
+  DMBF_XD_IterateFVMatAssembly(DM dm, DM_BF_Cell *cells, size_t cellSize, Mat M, PetscErrorCode (*iterFace)(DM, DM_BF_Face *, PetscScalar *, void *), void *userIterCtx)
 {
   DM_BF_FVMatAssemblyIterCtx iterCtx;
   PetscErrorCode             ierr;

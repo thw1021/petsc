@@ -83,7 +83,7 @@ PETSC_EXTERN PetscErrorCode DMBFIterateOverFaces(DM, PetscErrorCode (*)(DM, DM_B
 PETSC_EXTERN PetscErrorCode DMBFSetCellData(DM, Vec *, Vec *);
 PETSC_EXTERN PetscErrorCode DMBFSetCellFields(DM, Vec *, Vec *, PetscInt, PetscInt *, PetscInt, PetscInt *);
 
-PETSC_EXTERN PetscErrorCode DMBFFVMatAssemble(DM, Mat, PetscErrorCode (*)(DM, DM_BF_Face *, PetscReal *, void *), void *);
+PETSC_EXTERN PetscErrorCode DMBFFVMatAssemble(DM, Mat, PetscErrorCode (*)(DM, DM_BF_Face *, PetscScalar *, void *), void *);
 
 PETSC_EXTERN PetscErrorCode DMBFGetCellData(DM, Vec *, Vec *);
 PETSC_EXTERN PetscErrorCode DMBFGetCellFields(DM, Vec *, Vec *, PetscInt, PetscInt *, PetscInt, PetscInt *);

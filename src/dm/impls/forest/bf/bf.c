@@ -1587,8 +1587,7 @@ static PetscErrorCode DMCoarsen_BF(DM dm, MPI_Comm comm, DM *coarseDm)
     PetscMPIInt mpiComparison;
     MPI_Comm    dmcomm = _p_comm(dm);
 
-    ierr = MPI_Comm_compare(comm, dmcomm, &mpiComparison);
-    CHKERRQ(ierr);
+    PetscCallMPI(MPI_Comm_compare(comm, dmcomm, &mpiComparison));
     PetscCheck(mpiComparison == MPI_IDENT || mpiComparison == MPI_CONGRUENT, dmcomm, PETSC_ERR_SUP, "No support for different communicators");
   }
   ierr = DMBFCloneInit(dm, coarseDm);
@@ -1637,8 +1636,7 @@ static PetscErrorCode DMRefine_BF(DM dm, MPI_Comm comm, DM *fineDm)
     PetscMPIInt mpiComparison;
     MPI_Comm    dmcomm = _p_comm(dm);
 
-    ierr = MPI_Comm_compare(comm, dmcomm, &mpiComparison);
-    CHKERRQ(ierr);
+    PetscCallMPI(MPI_Comm_compare(comm, dmcomm, &mpiComparison));
     PetscCheck(mpiComparison == MPI_IDENT || mpiComparison == MPI_CONGRUENT, dmcomm, PETSC_ERR_SUP, "No support for different communicators");
   }
   ierr = DMBFCloneInit(dm, fineDm);
@@ -2005,7 +2003,7 @@ PetscErrorCode DMBFCommunicateGhostCells(DM dm)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode DMBFFVMatAssemble(DM dm, Mat mat, PetscErrorCode (*iterFace)(DM, DM_BF_Face *, PetscReal *, void *), void *userIterCtx)
+PetscErrorCode DMBFFVMatAssemble(DM dm, Mat mat, PetscErrorCode (*iterFace)(DM, DM_BF_Face *, PetscScalar *, void *), void *userIterCtx)
 {
   DM_BF         *bf;
   PetscErrorCode ierr;

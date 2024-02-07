@@ -118,5 +118,5 @@ static inline PetscErrorCode DMBFCellInitialize(DM_BF_Cell *cell, const DM_BF_Sh
   cell->dataV            = _p_cellGetDataV(cell, memory);
   cell->data             = _p_cellGetPointers(cell, memory);
   for (k = 0; k < (memory->n - DMBF_CELLMEMIDX_DATA); k++) { cell->data[k] = _p_cellGetData(cell, memory, k); }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

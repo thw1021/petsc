@@ -6,6 +6,7 @@
   #endif
 
   #include <petscdmbf.h> /*I "petscdmbf.h" I*/
+
   #include "bf_xd.h"
 
 PETSC_EXTERN PetscErrorCode DMBF_2D_AmrCoarsenUniformly(p4est_t *, PetscInt);
