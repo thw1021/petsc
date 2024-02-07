@@ -1,0 +1,18 @@
+[2D-DMBF] Begin
+[2D-DMBF] Create DM
+[2D-DMBF] DM type = bf
+[2D-DMBF] Set cell data shape
+[2D-DMBF] Shape elements dim=(3,2)
+[2D-DMBF]   0: 16 1 
+[2D-DMBF]   1: 16 1 
+[2D-DMBF]   2: 16 16 
+[2D-DMBF] Set up DM
+[2D-DMBF] Info about the DM
+[2D-DMBF] - dimension              = 2
+[2D-DMBF] - number of local cells  = 20
+[2D-DMBF] - number of global cells = 20
+[2D-DMBF] - number of ghost cells  = 0
+[2D-DMBF] Create vectors
+[2D-DMBF] Create matrices
+[2D-DMBF] Destroy
+[2D-DMBF] End
