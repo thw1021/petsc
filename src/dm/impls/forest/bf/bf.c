@@ -120,7 +120,7 @@ static PetscErrorCode DMBFCheck(DM dm)
   PetscCheck(bf->cells || !_p_nCells(dm), _p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Cells do not exist");
   PetscCheck(bf->ownedCellsSetUpCalled, _p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Owned cells not set up");
   PetscCheck(bf->ghostCellsSetUpCalled, _p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Ghost cells not set up");
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 #if defined(PETSC_USE_DEBUG)
@@ -226,7 +226,7 @@ static PetscErrorCode DMBF_CellMemoryShapeSetUp(DM dm)
   CHKERRQ(ierr);
   ierr = PetscFree(pad);
   CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static inline size_t _p_cellSize(DM_BF *bf)
@@ -269,7 +269,7 @@ static PetscErrorCode DMBF_CellsCreate(DM dm)
   } else {
     bf->cells = PETSC_NULLPTR;
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode DMBF_CellsDestroy(DM dm)
@@ -288,7 +288,7 @@ static PetscErrorCode DMBF_CellsDestroy(DM dm)
   /* destroy cell memory shape */
   ierr = DMBFShapeClear(&bf->cellMemoryShape);
   CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode DMBF_CellsSetUpOwned(DM dm)
@@ -314,7 +314,7 @@ static PetscErrorCode DMBF_CellsSetUpOwned(DM dm)
     _p_SETERRQ_UNREACHABLE(dm);
   }
   bf->ownedCellsSetUpCalled = PETSC_TRUE;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode DMBF_CellsSetUpGhost(DM dm)
@@ -337,7 +337,7 @@ static PetscErrorCode DMBF_CellsSetUpGhost(DM dm)
     CHKERRQ(ierr);
   }
   bf->ghostCellsSetUpCalled = PETSC_TRUE;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode DMBF_LocalToGlobalScatterCreate(DM dm, VecScatter *ltog)
@@ -411,7 +411,7 @@ static PetscErrorCode DMBF_LocalToGlobalScatterCreate(DM dm, VecScatter *ltog)
   CHKERRQ(ierr);
   ierr = VecDestroy(&vglo);
   CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode DMBF_LocalToGlobalScatterDestroy(DM dm, VecScatter *ltog)
@@ -424,7 +424,7 @@ static PetscErrorCode DMBF_LocalToGlobalScatterDestroy(DM dm, VecScatter *ltog)
     ierr = VecScatterDestroy(ltog);
     CHKERRQ(ierr);
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode DMSetUp_BF(DM dm)
@@ -486,7 +486,7 @@ static PetscErrorCode DMSetUp_BF(DM dm)
   /* create local-to-global vector scattering info */
   ierr = DMBF_LocalToGlobalScatterCreate(dm, &bf->ltog);
   CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode DMBFClear(DM dm)
@@ -556,7 +556,7 @@ static PetscErrorCode DMBFClear(DM dm)
   /* destroy local-to-global vector scattering info */
   ierr = DMBF_LocalToGlobalScatterDestroy(dm, &bf->ltog);
   CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /***************************************
@@ -583,7 +583,7 @@ PetscErrorCode DMBFSetCellDataShape(DM dm, const PetscInt *shapeElements, PetscI
     ierr = DMBFShapeClear(&bf->cellDataShape);
     CHKERRQ(ierr);
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode DMBFGetCellDataShape(DM dm, PetscInt **shapeElements, PetscInt *n, PetscInt *dim)
@@ -609,7 +609,7 @@ PetscErrorCode DMBFGetCellDataShape(DM dm, PetscInt **shapeElements, PetscInt *n
     *n             = 0;
     *dim           = 0;
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode DMBFSetCellDataVSize(DM dm, size_t size)
@@ -626,7 +626,7 @@ PetscErrorCode DMBFSetCellDataVSize(DM dm, size_t size)
   } else {
     bf->cellDataVSize = 0;
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode DMBFGetCellDataVSize(DM dm, size_t *size)
@@ -639,7 +639,7 @@ PetscErrorCode DMBFGetCellDataVSize(DM dm, size_t *size)
   bf = _p_getBF(dm);
   /* get setting */
   *size = bf->cellDataVSize;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
@@ -670,7 +670,7 @@ PetscErrorCode DMBFSetBlockSize(DM dm, PetscInt *blockSize)
   PetscCheck(dim != PETSC_DETERMINE, _p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Cannot set block refinement before topological dimension");
   bf = _p_getBF(dm);
   for (i = 0; i < dim; i++) { bf->blockSize[i] = (1 <= blockSize[i] ? blockSize[i] : 1); }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
@@ -700,7 +700,7 @@ PetscErrorCode DMBFGetBlockSize(DM dm, PetscInt *blockSize)
   PetscCheck(dim != PETSC_DETERMINE, _p_comm(dm), PETSC_ERR_ARG_WRONGSTATE, "Topological dimension has to be set for block refinement");
   bf = _p_getBF(dm);
   for (i = 0; i < dim; i++) { blockSize[i] = bf->blockSize[i]; }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode DMBFSetCellDataSize(DM dm, PetscInt *valsPerElemRead, PetscInt nValsPerElemRead, PetscInt *valsPerElemReadWrite, PetscInt nValsPerElemReadWrite)
@@ -749,7 +749,7 @@ PetscErrorCode DMBFSetCellDataSize(DM dm, PetscInt *valsPerElemRead, PetscInt nV
       bf->valsPerElemReadWriteTotal += valsPerElemReadWrite[i];
     }
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode DMBFGetCellDataSize(DM dm, PetscInt **valsPerElemRead, PetscInt *nValsPerElemRead, PetscInt **valsPerElemReadWrite, PetscInt *nValsPerElemReadWrite)
@@ -775,7 +775,7 @@ PetscErrorCode DMBFGetCellDataSize(DM dm, PetscInt **valsPerElemRead, PetscInt *
     CHKERRQ(ierr);
     for (i = 0; i < bf->nValsPerElemReadWrite; i++) { (*valsPerElemReadWrite)[i] = bf->valsPerElemReadWrite[i]; }
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode DMBFSetDefaultOptions(DM dm)
@@ -841,7 +841,7 @@ static PetscErrorCode DMBFSetDefaultOptions(DM dm)
   bf->setUpUserFnAfterP4estNodes    = PETSC_NULLPTR;
 
   bf->amrOps = PETSC_NULLPTR;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode DMBFCopyOptions(DM srcdm, DM trgdm)
@@ -935,7 +935,7 @@ static PetscErrorCode DMBFCopyOptions(DM srcdm, DM trgdm)
   trgbf->setUpUserFnAfterP4estNodes    = srcbf->setUpUserFnAfterP4estNodes;
 
   trgbf->amrOps = srcbf->amrOps;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode DMSetFromOptions_BF(DM dm, PetscOptionItems *PetscOptionsObject)
@@ -968,7 +968,7 @@ static PetscErrorCode DMSetFromOptions_BF(DM dm, PetscOptionItems *PetscOptionsO
   //  ierr = PetscFree(pforest->ghostName);CHKERRQ(ierr);
   //  ierr = PetscStrallocpy(stringBuffer,&pforest->ghostName);CHKERRQ(ierr);
   //}
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode DMBFSetUpUserFnAfterP4estTopology(DM dm, PetscErrorCode (*fn)(DM, void *))
@@ -979,7 +979,7 @@ PetscErrorCode DMBFSetUpUserFnAfterP4estTopology(DM dm, PetscErrorCode (*fn)(DM,
   PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMBF);
   bf                                = _p_getBF(dm);
   bf->setUpUserFnAfterP4estTopology = fn;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode DMBFSetUpUserFnAfterP4estCells(DM dm, PetscErrorCode (*fn)(DM, void *))
@@ -990,7 +990,7 @@ PetscErrorCode DMBFSetUpUserFnAfterP4estCells(DM dm, PetscErrorCode (*fn)(DM, vo
   PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMBF);
   bf                             = _p_getBF(dm);
   bf->setUpUserFnAfterP4estCells = fn;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode DMBFSetUpUserFnAfterP4estNodes(DM dm, PetscErrorCode (*fn)(DM, void *))
@@ -1001,7 +1001,7 @@ PetscErrorCode DMBFSetUpUserFnAfterP4estNodes(DM dm, PetscErrorCode (*fn)(DM, vo
   PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMBF);
   bf                             = _p_getBF(dm);
   bf->setUpUserFnAfterP4estNodes = fn;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /***************************************
@@ -1027,7 +1027,7 @@ static PetscErrorCode DMBFSetOps(DM dm)
   dm->ops->globaltolocalend   = DMGlobalToLocalEnd_BF;
   dm->ops->localtoglobalbegin = DMLocalToGlobalBegin_BF;
   dm->ops->localtoglobalend   = DMLocalToGlobalEnd_BF;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode DMCreate_BF(DM dm)
@@ -1061,7 +1061,7 @@ PetscErrorCode DMCreate_BF(DM dm)
   /* set default options */
   ierr = DMBFSetDefaultOptions(dm);
   CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode DMForestDestroy_BF(DM dm)
@@ -1080,7 +1080,7 @@ static PetscErrorCode DMForestDestroy_BF(DM dm)
   bf   = _p_getBF(dm);
   ierr = PetscFree(bf);
   CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode DMBFCloneInit(DM dm, DM *newdm)
@@ -1101,7 +1101,7 @@ static PetscErrorCode DMBFCloneInit(DM dm, DM *newdm)
   /* copy options */
   ierr = DMBFCopyOptions(dm, *newdm);
   CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode DMBFCloneForestOfTrees(DM dm, DM newdm)
@@ -1133,7 +1133,7 @@ static PetscErrorCode DMBFCloneForestOfTrees(DM dm, DM newdm)
   default:
     _p_SETERRQ_UNREACHABLE(dm);
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode DMBFCloneFinalize(DM newdm)
@@ -1153,7 +1153,7 @@ static PetscErrorCode DMBFCloneFinalize(DM newdm)
   newbf = _p_getBF(newdm);
   ierr  = DMBF_LocalToGlobalScatterCreate(newdm, &newbf->ltog);
   CHKERRQ(ierr); //TODO create a clone fnc instead?
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode DMClone_BF(DM dm, DM *newdm)
@@ -1171,7 +1171,7 @@ static PetscErrorCode DMClone_BF(DM dm, DM *newdm)
   CHKERRQ(ierr);
   ierr = DMBFCloneFinalize(*newdm);
   CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 //TODO need to use DMGetVecType and; add DMSetVecType -> STANDARD to be default for the DM
@@ -1197,7 +1197,7 @@ static PetscErrorCode DMCreateLocalVector_BF(DM dm, Vec *vec)
   CHKERRQ(ierr);
   ierr = VecSetDM(*vec, dm);
   CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 //TODO need to use DMGetVecType and; add DMSetVecType -> STANDARD to be default for the DM
@@ -1232,7 +1232,7 @@ static PetscErrorCode DMCreateGlobalVector_BF(DM dm, Vec *vec)
   //ierr = VecSetOperation(*g,VECOP_LOAD,(void (*)(void))VecLoad_Default_DA);CHKERRQ(ierr);
   //ierr = VecSetOperation(*vec, VECOP_LOADNATIVE, (void (*)(void))VecLoad_pforest_Native);CHKERRQ(ierr);
   //ierr = VecSetOperation(*g,VECOP_DUPLICATE,(void (*)(void))VecDuplicate_MPI_DA);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode DMCreateMatrix_BF(DM dm, Mat *mat)
@@ -1273,7 +1273,8 @@ static PetscErrorCode DMCreateMatrix_BF(DM dm, Mat *mat)
   /* set context */
   ierr = MatSetDM(*mat, dm);
   CHKERRQ(ierr);
-  PetscStrcmp(mattype, MATSHELL, &match);
+  ierr = PetscStrcmp(mattype, MATSHELL, &match);
+  CHKERRQ(ierr);
   if (match) {
     void *appctx;
     ierr = DMGetApplicationContext(dm, &appctx);
@@ -1284,7 +1285,7 @@ static PetscErrorCode DMCreateMatrix_BF(DM dm, Mat *mat)
   ierr = MatSetUp(*mat);
   CHKERRQ(ierr);
   //TODO set null space?
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /* take global vector and return local version */
@@ -1301,7 +1302,7 @@ static PetscErrorCode DMGlobalToLocalBegin_BF(DM dm, Vec glo, InsertMode mode, V
   bf   = _p_getBF(dm);
   ierr = VecScatterBegin(bf->ltog, glo, loc, mode, SCATTER_REVERSE);
   CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode DMGlobalToLocalEnd_BF(DM dm, Vec glo, InsertMode mode, Vec loc)
@@ -1317,7 +1318,7 @@ static PetscErrorCode DMGlobalToLocalEnd_BF(DM dm, Vec glo, InsertMode mode, Vec
   bf   = _p_getBF(dm);
   ierr = VecScatterEnd(bf->ltog, glo, loc, mode, SCATTER_REVERSE);
   CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode DMLocalToGlobalBegin_BF(DM dm, Vec loc, InsertMode mode, Vec glo)
@@ -1333,7 +1334,7 @@ static PetscErrorCode DMLocalToGlobalBegin_BF(DM dm, Vec loc, InsertMode mode, V
   bf   = _p_getBF(dm);
   ierr = VecScatterBegin(bf->ltog, loc, glo, mode, SCATTER_FORWARD);
   CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode DMLocalToGlobalEnd_BF(DM dm, Vec loc, InsertMode mode, Vec glo)
@@ -1349,7 +1350,7 @@ static PetscErrorCode DMLocalToGlobalEnd_BF(DM dm, Vec loc, InsertMode mode, Vec
   bf   = _p_getBF(dm);
   ierr = VecScatterEnd(bf->ltog, loc, glo, mode, SCATTER_FORWARD);
   CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /***************************************
@@ -1402,7 +1403,7 @@ PetscErrorCode DMBFGetInfo(DM dm, PetscInt *dim, PetscInt *nLocal, PetscInt *nGl
   if (nLocal) *nLocal = n;
   if (nGlobal) *nGlobal = N;
   if (nGhost) *nGhost = ng;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
@@ -1428,7 +1429,7 @@ PetscErrorCode DMBFGetLocalSize(DM dm, PetscInt *nLocal)
   PetscFunctionBegin;
   ierr = DMBFGetInfo(dm, &dim, nLocal, PETSC_NULLPTR, PETSC_NULLPTR);
   CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
@@ -1454,7 +1455,7 @@ PetscErrorCode DMBFGetGlobalSize(DM dm, PetscInt *nGlobal)
   PetscFunctionBegin;
   ierr = DMBFGetInfo(dm, &dim, PETSC_NULLPTR, nGlobal, PETSC_NULLPTR);
   CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
@@ -1480,14 +1481,14 @@ PetscErrorCode DMBFGetGhostSize(DM dm, PetscInt *nGhost)
   PetscFunctionBegin;
   ierr = DMBFGetInfo(dm, &dim, PETSC_NULLPTR, PETSC_NULLPTR, nGhost);
   CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /***************************************
  * P4EST
  **************************************/
 
-static PetscErrorCode DMBFGetConnectivity(DM dm, void *connectivity)
+PetscErrorCode DMBFGetConnectivity(DM dm, void *connectivity)
 {
   DM_BF         *bf;
   PetscInt       dim;
@@ -1511,7 +1512,7 @@ static PetscErrorCode DMBFGetConnectivity(DM dm, void *connectivity)
   default:
     _p_SETERRQ_UNREACHABLE(dm);
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode DMBFGetP4est(DM dm, void *p4est)
@@ -1538,7 +1539,7 @@ PetscErrorCode DMBFGetP4est(DM dm, void *p4est)
   default:
     _p_SETERRQ_UNREACHABLE(dm);
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode DMBFGetGhost(DM dm, void *ghost)
@@ -1565,7 +1566,7 @@ PetscErrorCode DMBFGetGhost(DM dm, void *ghost)
   default:
     _p_SETERRQ_UNREACHABLE(dm);
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /***************************************
@@ -1619,7 +1620,7 @@ static PetscErrorCode DMCoarsen_BF(DM dm, MPI_Comm comm, DM *coarseDm)
   ierr = DMBFCloneFinalize(*coarseDm);
   CHKERRQ(ierr);
   CHKERRQ(DMBFCheck(*coarseDm));
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode DMRefine_BF(DM dm, MPI_Comm comm, DM *fineDm)
@@ -1669,7 +1670,7 @@ static PetscErrorCode DMRefine_BF(DM dm, MPI_Comm comm, DM *fineDm)
   ierr = DMBFCloneFinalize(*fineDm);
   CHKERRQ(ierr);
   CHKERRQ(DMBFCheck(*fineDm));
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode DMBFAMRSetOperators(DM dm, DM_BF_AmrOps *amrOps)
@@ -1680,7 +1681,7 @@ PetscErrorCode DMBFAMRSetOperators(DM dm, DM_BF_AmrOps *amrOps)
   PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMBF);
   bf         = _p_getBF(dm);
   bf->amrOps = amrOps;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode DMBFAMRFlag(DM dm)
@@ -1703,7 +1704,7 @@ PetscErrorCode DMBFAMRFlag(DM dm)
     ierr = bf->amrOps->setAmrFlag(dm, cell, bf->amrOps->setAmrFlagCtx);
     CHKERRQ(ierr);
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode DMBFAMRAdapt(DM dm, DM *adaptedDm)
@@ -1778,7 +1779,7 @@ PetscErrorCode DMBFAMRAdapt(DM dm, DM *adaptedDm)
   CHKERRQ(DMBFCheck(*adaptedDm));
   /* mark that adapted DM is set up */
   (*adaptedDm)->setupcalled = PETSC_TRUE;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /***************************************
@@ -1811,14 +1812,14 @@ PetscErrorCode DMBFIterateOverCellsVectors(DM dm, PetscErrorCode (*iterCell)(DM,
   default:
     _p_SETERRQ_UNREACHABLE(dm);
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode DMBFIterateOverCells(DM dm, PetscErrorCode (*iterCell)(DM, DM_BF_Cell *, void *), void *userIterCtx)
 {
   PetscFunctionBegin;
   CHKERRQ(DMBFIterateOverCellsVectors(dm, iterCell, userIterCtx, PETSC_NULLPTR, 0, PETSC_NULLPTR, 0));
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode DMBFIterateOverFaces(DM dm, PetscErrorCode (*iterFace)(DM, DM_BF_Face *, void *), void *userIterCtx)
@@ -1846,7 +1847,7 @@ PetscErrorCode DMBFIterateOverFaces(DM dm, PetscErrorCode (*iterFace)(DM, DM_BF_
   default:
     _p_SETERRQ_UNREACHABLE(dm);
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 //TODO deprecated
@@ -1880,7 +1881,7 @@ PetscErrorCode DMBFSetCellData(DM dm, Vec *vecRead, Vec *vecReadWrite)
   default:
     _p_SETERRQ_UNREACHABLE(dm);
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode DMBFSetCellFields(DM dm, Vec *vecRead, Vec *vecReadWrite, PetscInt nFieldsRead, PetscInt *fieldsRead, PetscInt nFieldsReadWrite, PetscInt *fieldsReadWrite)
@@ -1910,7 +1911,7 @@ PetscErrorCode DMBFSetCellFields(DM dm, Vec *vecRead, Vec *vecReadWrite, PetscIn
   default:
     _p_SETERRQ_UNREACHABLE(dm);
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode DMBFGetCellData(DM dm, Vec *vecRead, Vec *vecReadWrite)
@@ -1940,7 +1941,7 @@ PetscErrorCode DMBFGetCellData(DM dm, Vec *vecRead, Vec *vecReadWrite)
   default:
     _p_SETERRQ_UNREACHABLE(dm);
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode DMBFGetCellFields(DM dm, Vec *vecRead, Vec *vecReadWrite, PetscInt nFieldsRead, PetscInt *fieldsRead, PetscInt nFieldsReadWrite, PetscInt *fieldsReadWrite)
@@ -1970,7 +1971,7 @@ PetscErrorCode DMBFGetCellFields(DM dm, Vec *vecRead, Vec *vecReadWrite, PetscIn
   default:
     _p_SETERRQ_UNREACHABLE(dm);
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode DMBFCommunicateGhostCells(DM dm)
@@ -2003,7 +2004,7 @@ PetscErrorCode DMBFCommunicateGhostCells(DM dm)
   bf->ghostCellsSetUpCalled = PETSC_FALSE;
   ierr                      = DMBF_CellsSetUpGhost(dm);
   CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode DMBFFVMatAssemble(DM dm, Mat mat, PetscErrorCode (*iterFace)(DM, DM_BF_Face *, PetscReal *, void *), void *userIterCtx)
@@ -2034,7 +2035,7 @@ PetscErrorCode DMBFFVMatAssemble(DM dm, Mat mat, PetscErrorCode (*iterFace)(DM, 
   CHKERRQ(ierr);
   ierr = MatAssemblyEnd(mat, MAT_FINAL_ASSEMBLY);
   CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /***************
@@ -2072,7 +2073,7 @@ static PetscErrorCode DMView_BF(DM dm, PetscViewer viewer)
   } else if (ishdf5 || isdraw || isglvis) {
     SETERRQ(_p_comm(dm), PETSC_ERR_SUP, "non-VTK viewer currently not supported by BF");
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode VecView_BF(Vec v, PetscViewer viewer)
@@ -2141,5 +2142,5 @@ static PetscErrorCode VecView_BF(Vec v, PetscViewer viewer)
   } else if (ishdf5 || isdraw || isglvis) {
     SETERRQ(_p_comm(dm), PETSC_ERR_SUP, "non-VTK viewer currently not supported by BF");
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

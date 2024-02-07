@@ -13,7 +13,7 @@ PetscErrorCode DMBFShapeSetUp(DM_BF_Shape *shape, size_t n, size_t dim)
   CHKERRQ(ierr);
   //TODO no need to destroy if list dimensions stay the same
   /* return if nothing to do */
-  if (!(0 < n && 0 < dim)) { PetscFunctionReturn(0); }
+  if (!(0 < n && 0 < dim)) { PetscFunctionReturn(PETSC_SUCCESS); }
   /* allocate and setup elements of shape object */
   ierr = PetscMalloc1(n + 1, &shape->list);
   CHKERRQ(ierr);
@@ -29,7 +29,7 @@ PetscErrorCode DMBFShapeSetUp(DM_BF_Shape *shape, size_t n, size_t dim)
   shape->n    = n;
   shape->dim  = dim;
   shape->size = 0;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode DMBFShapeClear(DM_BF_Shape *shape)
@@ -54,7 +54,7 @@ PetscErrorCode DMBFShapeClear(DM_BF_Shape *shape)
   shape->n    = 0;
   shape->dim  = 0;
   shape->size = 0;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static inline size_t _p_DMBFShapeNElements(const DM_BF_Shape *shape)
@@ -90,7 +90,7 @@ PetscErrorCode DMBFShapeIsSetUp(const DM_BF_Shape *shape, PetscBool *isSetUp)
   } else {
     *isSetUp = PETSC_FALSE;
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode DMBFShapeIsValid(const DM_BF_Shape *shape, PetscBool *isValid)
@@ -100,9 +100,9 @@ PetscErrorCode DMBFShapeIsValid(const DM_BF_Shape *shape, PetscBool *isValid)
   PetscAssertPointer(isValid, 2);
   *isValid = PETSC_TRUE;
   CHKERRQ(DMBFShapeIsSetUp(shape, isValid));
-  if (!(*isValid)) { PetscFunctionReturn(0); }
+  if (!(*isValid)) { PetscFunctionReturn(PETSC_SUCCESS); }
   *isValid = (PetscBool)(shape->size == _p_DMBFShapeSize(shape));
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode DMBFShapeCheckSetUp(const DM_BF_Shape *shape)
@@ -112,7 +112,7 @@ PetscErrorCode DMBFShapeCheckSetUp(const DM_BF_Shape *shape)
   PetscFunctionBegin;
   CHKERRQ(DMBFShapeIsSetUp(shape, &isSetUp));
   PetscCheck(isSetUp, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Shape is not set up");
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode DMBFShapeCheckValid(const DM_BF_Shape *shape)
@@ -122,7 +122,7 @@ PetscErrorCode DMBFShapeCheckValid(const DM_BF_Shape *shape)
   PetscFunctionBegin;
   CHKERRQ(DMBFShapeIsValid(shape, &isValid));
   PetscCheck(isValid, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Shape is invalid");
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode DMBFShapeCompare(const DM_BF_Shape *refShape, const DM_BF_Shape *chkShape, PetscBool *similar)
@@ -145,7 +145,7 @@ PetscErrorCode DMBFShapeCompare(const DM_BF_Shape *refShape, const DM_BF_Shape *
   //              refSetUp,chkSetUp,refValid,chkValid,
   //              refShape->n,refShape->dim,chkShape->n,chkShape->dim);
   //}
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode DMBFShapeCopy(DM_BF_Shape *trgShape, const DM_BF_Shape *srcShape)
@@ -179,7 +179,7 @@ PetscErrorCode DMBFShapeCopy(DM_BF_Shape *trgShape, const DM_BF_Shape *srcShape)
   ierr = DMBFShapeIsValid(trgShape, &isOK);
   CHKERRQ(ierr);
   PetscCheck(isOK, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Target shape is invalid");
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode DMBFShapeSet(DM_BF_Shape *shape, const size_t *elements, const size_t *pad)
@@ -200,7 +200,7 @@ PetscErrorCode DMBFShapeSet(DM_BF_Shape *shape, const size_t *elements, const si
   shape->size = _p_DMBFShapeSize(shape);
   ierr        = DMBFShapeCheckValid(shape);
   CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode DMBFShapeGet(const DM_BF_Shape *shape, size_t **elements, size_t **pad, size_t *n, size_t *dim)
@@ -227,7 +227,7 @@ PetscErrorCode DMBFShapeGet(const DM_BF_Shape *shape, size_t **elements, size_t 
   CHKERRQ(ierr);
   *n   = shape->n;
   *dim = shape->dim;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode DMBFShapeSetFromInt(DM_BF_Shape *shape, const PetscInt *elements)
@@ -247,7 +247,7 @@ PetscErrorCode DMBFShapeSetFromInt(DM_BF_Shape *shape, const PetscInt *elements)
   shape->size = _p_DMBFShapeSize(shape);
   ierr        = DMBFShapeCheckValid(shape);
   CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode DMBFShapeGetToInt(const DM_BF_Shape *shape, PetscInt **elements, PetscInt *n, PetscInt *dim)
@@ -269,5 +269,5 @@ PetscErrorCode DMBFShapeGetToInt(const DM_BF_Shape *shape, PetscInt **elements, 
   for (k = 0; k < shape->n * shape->dim; k++) { (*elements)[k] = (PetscInt)shape->list[0][k]; }
   *n   = shape->n;
   *dim = shape->dim;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

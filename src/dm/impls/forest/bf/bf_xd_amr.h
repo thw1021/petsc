@@ -13,7 +13,7 @@ typedef struct _p_DM_BF_AmrCtx {
 
 static int _p_coarsen_uniformly(p4est_t *p4est, p4est_topidx_t which_tree, p4est_quadrant_t *quadrants[])
 {
-  DM_BF_AmrCtx *amrCtx = p4est->user_pointer;
+  DM_BF_AmrCtx *amrCtx = (DM_BF_AmrCtx *)p4est->user_pointer;
 
   //SC_CHECK_ABORT (p4est_quadrant_is_familypv (quadrants), "Coarsen invocation");
   return (0 <= amrCtx->minLevel && amrCtx->minLevel < quadrants[0]->level);
@@ -21,7 +21,7 @@ static int _p_coarsen_uniformly(p4est_t *p4est, p4est_topidx_t which_tree, p4est
 
 static int _p_refine_uniformly(p4est_t *p4est, p4est_topidx_t which_tree, p4est_quadrant_t *quadrant)
 {
-  DM_BF_AmrCtx *amrCtx = p4est->user_pointer;
+  DM_BF_AmrCtx *amrCtx = (DM_BF_AmrCtx *)p4est->user_pointer;
 
   return (0 <= amrCtx->maxLevel && quadrant->level < amrCtx->maxLevel);
 }
@@ -46,7 +46,7 @@ static
   /* balance and partition */
   PetscCallP4est(p4est_balance, (p4est, P4EST_CONNECT_FULL, NULL /*init_fn*/));
   PetscCallP4est(p4est_partition_ext, (p4est, 1 /*partition_for_coarsening*/, NULL /*weight_fn*/));
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
   #if !defined(DMBF_XD_AmrRefineUniformly)
@@ -69,7 +69,7 @@ static
   /* balance and partition */
   //PetscCallP4est(p4est_balance,(p4est,P4EST_CONNECT_FULL,NULL/*init_fn*/));
   PetscCallP4est(p4est_partition_ext, (p4est, 1 /*partition_for_coarsening*/, NULL /*weight_fn*/));
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /***************************************
@@ -93,12 +93,12 @@ _p_flag_is_valid (DMAdaptFlag flag)
 
 static int _p_coarsen_via_flag(p4est_t *p4est, p4est_topidx_t tree, p4est_quadrant_t *quadrants[])
 {
-  DM_BF_AmrCtx *amrCtx = p4est->user_pointer;
+  DM_BF_AmrCtx *amrCtx = (DM_BF_AmrCtx *)p4est->user_pointer;
   int           k;
 
   //SC_CHECK_ABORT (p4est_quadrant_is_familypv (quadrants), "Coarsen invocation");
   for (k = 0; k < P4EST_CHILDREN; k++) {
-    DM_BF_Cell *cell = quadrants[k]->p.user_data;
+    DM_BF_Cell *cell = (DM_BF_Cell *)quadrants[k]->p.user_data;
     if (!cell) { return 0; }
     /* if at least one child is not flagged for coarsening */
     if (DM_ADAPT_COARSEN != cell->adaptFlag) { return 0; }
@@ -109,8 +109,8 @@ static int _p_coarsen_via_flag(p4est_t *p4est, p4est_topidx_t tree, p4est_quadra
 
 static int _p_refine_via_flag(p4est_t *p4est, p4est_topidx_t tree, p4est_quadrant_t *quadrant)
 {
-  DM_BF_AmrCtx *amrCtx = p4est->user_pointer;
-  DM_BF_Cell   *cell   = quadrant->p.user_data;
+  DM_BF_AmrCtx *amrCtx = (DM_BF_AmrCtx *)p4est->user_pointer;
+  DM_BF_Cell   *cell   = (DM_BF_Cell *)quadrant->p.user_data;
   if (!cell) { return 0; }
   /* if this quadrant is flagged for refinement */
   return (DM_ADAPT_REFINE == cell->adaptFlag) && (0 <= amrCtx->maxLevel && quadrant->level < amrCtx->maxLevel);
@@ -136,7 +136,7 @@ static
   p4est->user_pointer = user_pointer;
   /* balance */
   PetscCallP4est(p4est_balance, (p4est, P4EST_CONNECT_FULL, NULL /*init_fn*/));
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
   #if !defined(DMBF_XD_AmrAdaptData)
@@ -157,14 +157,14 @@ static
 
   PetscFunctionBegin;
   /* check input */
-  PetscCheck(orig_p4est->data_size == adap_p4est->data_size, orig_p4est->mpicomm, PETSC_ERR_ARG_SIZ, "p4est data size mismatch: original %d, adapted %d", (int)orig_p4est->data_size, (int)adap_p4est->data_size);
-  PetscCheck(amrOps->projectToCoarse, orig_p4est->mpicomm, PETSC_ERR_ARG_NULL, "Project function to coarse is not given");
-  PetscCheck(amrOps->projectToFine, orig_p4est->mpicomm, PETSC_ERR_ARG_NULL, "Project function to fine is not given");
+  PetscCheck(orig_p4est->data_size == adap_p4est->data_size, PetscObjectComm((PetscObject)(dm)), PETSC_ERR_ARG_SIZ, "p4est data size mismatch: original %d, adapted %d", (PetscInt)(orig_p4est->data_size), (PetscInt)(adap_p4est->data_size));
+  PetscCheck(amrOps->projectToCoarse, PetscObjectComm((PetscObject)(dm)), PETSC_ERR_ARG_NULL, "Project function to coarse is not given");
+  PetscCheck(amrOps->projectToFine, PetscObjectComm((PetscObject)(dm)), PETSC_ERR_ARG_NULL, "Project function to fine is not given");
   /* loop over all p4est quadrants */
   orig_quadid = 0;
   adap_quadid = 0;
   while (orig_quadid < orig_n_quads) {
-    PetscCheck(adap_quadid < adap_n_quads, orig_p4est->mpicomm, PETSC_ERR_PLIB, "Quadrant id %d is larger than the number of quadrants %d", (int)adap_quadid, (int)adap_n_quads);
+    PetscCheck(adap_quadid < adap_n_quads, PetscObjectComm((PetscObject)(dm)), PETSC_ERR_PLIB, "Quadrant id %d is larger than the number of quadrants %d", (PetscInt)adap_quadid, (PetscInt)adap_n_quads);
     PetscCallP4estReturn(orig_quad, p4est_find_quadrant_cumulative, (orig_p4est, orig_quadid, NULL, NULL));
     PetscCallP4estReturn(adap_quad, p4est_find_quadrant_cumulative, (adap_p4est, adap_quadid, NULL, NULL));
     orig_level = orig_quad->level;
@@ -204,9 +204,9 @@ static
     }
   }
   /* check final quadrant id's */
-  PetscCheck(orig_quadid == orig_n_quads, orig_p4est->mpicomm, PETSC_ERR_PLIB, "Original quadrant id %d did not reach number of quadrants %d", (int)orig_quadid, (int)orig_n_quads);
-  PetscCheck(adap_quadid == adap_n_quads, orig_p4est->mpicomm, PETSC_ERR_PLIB, "Adapted quadrant id %d did not reach number of quadrants %d", (int)adap_quadid, (int)adap_n_quads);
-  PetscFunctionReturn(0);
+  PetscCheck(orig_quadid == orig_n_quads, PetscObjectComm((PetscObject)(dm)), PETSC_ERR_PLIB, "Original quadrant id %d did not reach number of quadrants %d", (PetscInt)orig_quadid, (PetscInt)orig_n_quads);
+  PetscCheck(adap_quadid == adap_n_quads, PetscObjectComm((PetscObject)(dm)), PETSC_ERR_PLIB, "Adapted quadrant id %d did not reach number of quadrants %d", (PetscInt)adap_quadid, (PetscInt)adap_n_quads);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
   #if !defined(DMBF_XD_AmrPartition)
@@ -217,7 +217,7 @@ static
 {
   PetscFunctionBegin;
   PetscCallP4est(p4est_partition_ext, (p4est, 1 /*partition_for_coarsening*/, NULL /*weight_fn*/));
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 #endif /* defined(PETSC_HAVE_P4EST) */

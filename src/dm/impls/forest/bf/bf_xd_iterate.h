@@ -143,7 +143,7 @@ static
   PetscCallP4est(p4est_iterate, (p4est, ghost, &iterCtx, _p_iterSetUp, NULL, NULL));
   #endif
   p4est->data_size = cellMemoryShape->size;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
   #if !defined(DMBF_XD_IterateSetUpP4estCells)
@@ -155,7 +155,7 @@ static
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMBF);
   CHKERRQ(DMBF_XD_IterateSetUpCells(dm, PETSC_NULLPTR, cellMemoryShape));
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static void _p_iterCopy(p4est_iter_volume_info_t *info, void *ctx)
@@ -195,7 +195,7 @@ static
   #else
   PetscCallP4est(p4est_iterate, (p4est, ghost, &iterCtx, _p_iterCopy, NULL, NULL));
   #endif
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /***************************************
@@ -317,7 +317,7 @@ static
     ierr = PetscFree(iterCtx.vecViewReadWrite);
     CHKERRQ(ierr);
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 typedef struct _p_DM_BF_SetCellFieldsIterCtx {
@@ -450,7 +450,7 @@ static
     ierr = PetscFree(iterCtx.cellOffsetsReadWrite);
     CHKERRQ(ierr);
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 typedef struct _p_DM_BF_GetCellDataIterCtx {
@@ -566,7 +566,7 @@ static
     ierr = PetscFree(iterCtx.vecViewReadWrite);
     CHKERRQ(ierr);
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 typedef struct _p_DM_BF_GetCellFieldsIterCtx {
@@ -699,7 +699,7 @@ static
     ierr = PetscFree(iterCtx.cellOffsetsReadWrite);
     CHKERRQ(ierr);
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /***************************************
@@ -725,7 +725,7 @@ static
   CHKERRQ(ierr);
   ghostCells = _p_getCellPtr(cells, cellSize, p4est, -1 /*no tree id*/, 0 /*quadid*/, 1 /*ghost*/);
   PetscCallP4est(p4est_ghost_exchange_data, (p4est, ghost, ghostCells));
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /***************************************
@@ -849,7 +849,7 @@ static
     ierr = PetscFree(iterCtx.cellVecViewReadWrite);
     CHKERRQ(ierr);
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /***************************************
@@ -957,7 +957,7 @@ static
   #else
   PetscCallP4est(p4est_iterate, (p4est, ghost, &iterCtx, NULL, _p_iterFace, NULL));
   #endif
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 typedef struct _p_DM_BF_FVMatAssemblyIterCtx {
@@ -1121,12 +1121,12 @@ static
 
   ierr = DMBFGetBlockSize(dm, blockSize);
   CHKERRQ(ierr);
-  bs = blockSize[0] * blockSize[1] * blockSize[2];
-  PetscMalloc1(bs * bs * 3 * 3, &iterCtx.cellCoeff);
+  bs   = blockSize[0] * blockSize[1] * blockSize[2];
+  ierr = PetscMalloc1(bs * bs * 3 * 3, &iterCtx.cellCoeff);
   CHKERRQ(ierr); /* TODO In 3D, 3 should be 5 */
-  PetscMalloc1(bs * 3, &iterCtx.rowIndices);
+  ierr = PetscMalloc1(bs * 3, &iterCtx.rowIndices);
   CHKERRQ(ierr);
-  PetscMalloc1(bs * 3, &iterCtx.colIndices);
+  ierr = PetscMalloc1(bs * 3, &iterCtx.colIndices);
   CHKERRQ(ierr);
 
   /* run iterator */
@@ -1147,7 +1147,7 @@ static
   CHKERRQ(ierr);
   ierr = PetscFree(iterCtx.colIndices);
   CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 #endif /* defined(PETSC_HAVE_P4EST) */

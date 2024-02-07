@@ -29,7 +29,7 @@ static PetscErrorCode DMBF_XD_P4estCreate(DM dm, p4est_connectivity_t *connectiv
                         NULL,                                              /* quadrant init function */
                         (void *)dm)                                        /* this DM is the user context */
   );
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode DMBF_XD_P4estDestroy(DM dm, p4est_t *p4est)
@@ -38,7 +38,7 @@ static PetscErrorCode DMBF_XD_P4estDestroy(DM dm, p4est_t *p4est)
   p4est->data_size = 0; /* avoid that p4est destroys quadrant data */
   PetscCheck(!p4est->user_data_pool, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONGSTATE, "p4est should not allocate user data memory");
   PetscCallP4est(p4est_destroy, (p4est));
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode DMBF_XD_GhostCreate(p4est_t *p4est, p4est_ghost_t **ghost)
@@ -46,14 +46,14 @@ static PetscErrorCode DMBF_XD_GhostCreate(p4est_t *p4est, p4est_ghost_t **ghost)
   PetscFunctionBegin;
   PetscCallP4estReturn(*ghost, p4est_ghost_new, (p4est, P4EST_CONNECT_FULL));
   //TODO which connect flag, P4EST_CONNECT_FULL, P4EST_CONNECT_FACE, ...?
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode DMBF_XD_GhostDestroy(p4est_ghost_t *ghost)
 {
   PetscFunctionBegin;
   PetscCallP4est(p4est_ghost_destroy, (ghost));
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode DMBF_XD_P4estMeshCreate(p4est_t *p4est, p4est_ghost_t *ghost, p4est_mesh_t **mesh)
@@ -61,14 +61,14 @@ static PetscErrorCode DMBF_XD_P4estMeshCreate(p4est_t *p4est, p4est_ghost_t *gho
   PetscFunctionBegin;
   PetscCallP4estReturn(*mesh, p4est_mesh_new, (p4est, ghost, P4EST_CONNECT_FULL));
   //TODO which connect flag, P4EST_CONNECT_FULL, P4EST_CONNECT_FACE, ...?
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode DMBF_XD_P4estMeshDestroy(p4est_mesh_t *mesh)
 {
   PetscFunctionBegin;
   PetscCallP4est(p4est_mesh_destroy, (mesh));
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 struct _p_DM_BF_XD_Cells {
@@ -100,7 +100,7 @@ static
   ierr = DMBF_XD_GhostCreate((*cells)->p4est, &(*cells)->ghost);
   CHKERRQ(ierr);
   //ierr = DMBF_XD_P4estMeshCreate((*cells)->p4est,(*cells)->ghost,&(*cells)->mesh);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
   #if !defined(DMBF_XD_CellsDestroy)
@@ -124,7 +124,7 @@ static
   CHKERRQ(ierr);
   ierr = PetscFree(cells);
   CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
   #if !defined(DMBF_XD_CellsClone)
@@ -144,7 +144,7 @@ static
   ierr = DMBF_XD_GhostCreate((*clonedCells)->p4est, &(*clonedCells)->ghost);
   CHKERRQ(ierr);
   //ierr = DMBF_XD_P4estMeshCreate((*clonedCells)->p4est,(*clonedCells)->ghost,&(*clonedCells)->mesh);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
   #if !defined(DMBF_XD_CellsCoarsen)
@@ -167,7 +167,7 @@ static
   ierr = DMBF_XD_GhostCreate((*coarseCells)->p4est, &(*coarseCells)->ghost);
   CHKERRQ(ierr);
   //ierr = DMBF_XD_P4estMeshCreate((*coarseCells)->p4est,(*coarseCells)->ghost,&(*coarseCells)->mesh);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
   #if !defined(DMBF_XD_CellsRefine)
@@ -190,7 +190,7 @@ static
   ierr = DMBF_XD_GhostCreate((*fineCells)->p4est, &(*fineCells)->ghost);
   CHKERRQ(ierr);
   //ierr = DMBF_XD_P4estMeshCreate((*fineCells)->p4est,(*fineCells)->ghost,&(*fineCells)->mesh);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
   #if !defined(DMBF_XD_CellsAmrAdapt)
@@ -222,7 +222,7 @@ static
   /* adapt cell data */
   ierr = DMBF_XD_AmrAdaptData(orig_p4est, adap_p4est, adapDm, amrOps);
   CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
   #if !defined(DMBF_XD_CellsAmrPartition)
@@ -235,7 +235,7 @@ static
   CHKERRQ(DMBF_XD_AmrPartition(cells->p4est));
   CHKERRQ(DMBF_XD_GhostCreate(cells->p4est, &cells->ghost));
   //CHKERRQ( DMBF_XD_P4estMeshCreate(cells->p4est,cells->ghost,&cells->mesh) );
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
   #if !defined(DMBF_XD_CellsAmrFinalize)
@@ -248,7 +248,7 @@ static
   PetscFunctionBegin;
   CHKERRQ(DMBF_XD_IterateCopyP4estCells(dm, bfCells, cellMemoryShape));
   PetscCallP4est(p4est_reset_data, (cells->p4est, 0 /*data_size*/, NULL /*init_fn*/, cells->p4est->user_pointer));
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
   #if !defined(DMBF_XD_GetSizes)
@@ -265,7 +265,7 @@ static
   *nGlobal = (PetscInt)(cells->p4est->global_num_quadrants);
   if (cells->ghost) *nGhost = (PetscInt)(cells->ghost->ghosts.elem_count);
   else *nGhost = 0;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
   #if !defined(DMBF_XD_GetLocalToGlobalIndices)
@@ -331,7 +331,7 @@ static
       break;
     }
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
   #if !defined(DMBF_XD_CellsGetP4est)
@@ -342,7 +342,7 @@ static
 {
   PetscFunctionBegin;
   *(void **)p4est = cells->p4est;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
   #if !defined(DMBF_XD_CellsGetGhost)
@@ -359,7 +359,7 @@ static
     CHKERRQ(ierr);
   }
   *(void **)ghost = cells->ghost;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
   #if !defined(DMBF_XD_CellsGetP4estMesh)
@@ -380,7 +380,7 @@ static
     CHKERRQ(ierr);
   }
   *(void **)mesh = cells->mesh;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 #endif /* defined(PETSC_HAVE_P4EST) */

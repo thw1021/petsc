@@ -14,7 +14,7 @@ static PetscErrorCode DMBF_XD_ConnectivityDestroy(DM dm, p4est_connectivity_t *c
 {
   PetscFunctionBegin;
   PetscCallP4est(p4est_connectivity_destroy, (connectivity));
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 struct _p_DM_BF_XD_Topology {
@@ -40,7 +40,7 @@ static
     CHKERRQ(ierr);
   }
   (*topology)->refct = 1;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
   #if !defined(DMBF_XD_TopologyDestroy)
@@ -59,7 +59,7 @@ static
     ierr = PetscFree(topology);
     CHKERRQ(ierr);
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
   #if !defined(DMBF_XD_TopologyClone)
@@ -71,7 +71,7 @@ static
   PetscFunctionBegin;
   (*trgTopology) = srcTopology;
   (*trgTopology)->refct += 1;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
   #if !defined(DMBF_XD_TopologyGetConnectivity)
@@ -82,7 +82,7 @@ static
 {
   PetscFunctionBegin;
   *(void **)connectivity = topology->connectivity;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 #endif /* defined(PETSC_HAVE_P4EST) */

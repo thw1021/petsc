@@ -2,10 +2,9 @@
   #define PETSCDMBF_XD_H
 
   #include <petsc/private/dmforestimpl.h> /*I "petscdmforest.h" I*/
+  #include "../p4est/petsc_p4est_package.h"
 
   #if defined(PETSC_HAVE_P4EST)
-    #include "../p4est/petsc_p4est_package.h"
-
     #if !defined(P4_TO_P8)
       #include <p4est.h>
       #include <p4est_extended.h>
@@ -23,7 +22,6 @@
       #include <p8est_mesh.h>
       #include <p8est_search.h>
     #endif /* !defined(P4_TO_P8) */
-
-  #endif /* defined(PETSC_HAVE_P4EST) */
+  #endif   /* defined(PETSC_HAVE_P4EST) */
 
 #endif /* defined(PETSCDMBF_XD_H) */

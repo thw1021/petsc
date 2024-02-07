@@ -124,7 +124,7 @@ static PetscErrorCode DMBFGetVTKVertexCoordinates(DM dm, PetscVTUReal *point_dat
     }
   }
   PetscCheck((P4EST_CHILDREN * quad_count) == nPoints, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Counts mismatch: %i != %i (nPoints)", (int)(P4EST_CHILDREN * quad_count), (int)nPoints);
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode DMBFGetVTKConnectivity(DM dm, PetscVTKInt *conn_data, PetscInt nPoints)
@@ -133,7 +133,7 @@ static PetscErrorCode DMBFGetVTKConnectivity(DM dm, PetscVTKInt *conn_data, Pets
 
   PetscFunctionBegin;
   for (il = 0; il < nPoints; il++) { conn_data[il] = (PetscVTKInt)il; }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode DMBFGetVTKCellOffsets(DM dm, PetscVTKInt *offset_data, PetscInt nCells)
@@ -144,7 +144,7 @@ static PetscErrorCode DMBFGetVTKCellOffsets(DM dm, PetscVTKInt *offset_data, Pet
 
   for (il = 1; il <= nCells; ++il) { offset_data[il - 1] = (PetscVTKInt)P4EST_CHILDREN * il; /* offsets */ }
 
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode DMBFGetVTKCellTypes(DM dm, PetscVTKType *type_data, PetscInt nCells)
@@ -161,7 +161,7 @@ static PetscErrorCode DMBFGetVTKCellTypes(DM dm, PetscVTKType *type_data, PetscI
 #endif
   }
 
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode DMBFGetVTKTreeIDs(DM dm, PetscVTKInt *treeids, PetscInt nCells)
@@ -198,7 +198,7 @@ static PetscErrorCode DMBFGetVTKTreeIDs(DM dm, PetscVTKInt *treeids, PetscInt nC
     for (zz = 0; zz < num_quads * bs; ++zz, ++il) { treeids[il] = (PetscVTKInt)jt; }
   }
 
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode DMBFGetVTKMPIRank(DM dm, PetscVTKInt *mpirank, PetscInt nCells)
@@ -213,7 +213,7 @@ static PetscErrorCode DMBFGetVTKMPIRank(DM dm, PetscVTKInt *mpirank, PetscInt nC
   CHKERRQ(ierr);
   for (il = 0; il < nCells; il++) { mpirank[il] = (PetscVTKInt)rank; }
 
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode DMBFGetVTKQuadRefinementLevel(DM dm, PetscVTKInt *quadlevel, PetscInt nCells)
@@ -253,7 +253,7 @@ static PetscErrorCode DMBFGetVTKQuadRefinementLevel(DM dm, PetscVTKInt *quadleve
     }
   }
 
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*
@@ -365,10 +365,11 @@ static PetscErrorCode DMBFVTKWritePiece_VTU(DM dm, PetscViewer viewer)
 
   /* Cell types. Right now VTK_PIXEL (orthogonal quad, x, y aligned).*/
 
-  PetscFPrintf(PETSC_COMM_SELF, f,
-               "        <DataArray type=\"UInt8\" Name=\"types\""
-               " format=\"%s\" offset=\"%" PetscInt_FMT "\" />\n",
-               "appended", offset); // might need to change
+  ierr = PetscFPrintf(PETSC_COMM_SELF, f,
+                      "        <DataArray type=\"UInt8\" Name=\"types\""
+                      " format=\"%s\" offset=\"%" PetscInt_FMT "\" />\n",
+                      "appended", offset); // might need to change
+  CHKERRQ(ierr);
 
   offset += 4;
   offset += sizeof(PetscVTKType) * nCells;
@@ -434,12 +435,17 @@ static PetscErrorCode DMBFVTKWritePiece_VTU(DM dm, PetscViewer viewer)
     }
   }
 
-  PetscFPrintf(PETSC_COMM_SELF, f, "      </CellData>\n");
-  PetscFPrintf(PETSC_COMM_SELF, f, "    </Piece>\n");
-  PetscFPrintf(PETSC_COMM_SELF, f, "  </UnstructuredGrid>\n");
-  PetscFPrintf(PETSC_COMM_SELF, f, "  <AppendedData encoding=\"raw\">\n");
+  ierr = PetscFPrintf(PETSC_COMM_SELF, f, "      </CellData>\n");
+  CHKERRQ(ierr);
+  ierr = PetscFPrintf(PETSC_COMM_SELF, f, "    </Piece>\n");
+  CHKERRQ(ierr);
+  ierr = PetscFPrintf(PETSC_COMM_SELF, f, "  </UnstructuredGrid>\n");
+  CHKERRQ(ierr);
+  ierr = PetscFPrintf(PETSC_COMM_SELF, f, "  <AppendedData encoding=\"raw\">\n");
+  CHKERRQ(ierr);
 
-  PetscFPrintf(PETSC_COMM_SELF, f, "_");
+  ierr = PetscFPrintf(PETSC_COMM_SELF, f, "_");
+  CHKERRQ(ierr);
 
   // allocate workspace
   ierr = PetscMalloc1(3 * nPoints * sizeof(PetscVTUReal), &float_data);
@@ -555,7 +561,7 @@ static PetscErrorCode DMBFVTKWritePiece_VTU(DM dm, PetscViewer viewer)
   ierr = PetscFree(float_data);
   ierr = PetscFree(int_data);
   ierr = PetscFree(type_data);
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 #if !defined(DMBF_XD_VTKWriteAll)
@@ -577,7 +583,8 @@ static
 
   PetscFunctionBegin;
 
-  DMBFVTKWritePiece_VTU(dm, viewer);
+  ierr = DMBFVTKWritePiece_VTU(dm, viewer);
+  CHKERRQ(ierr);
 
   ierr = MPI_Comm_rank(PETSC_COMM_WORLD, &rank);
   CHKERRQ(ierr);
@@ -645,5 +652,5 @@ static
     ierr = PetscFPrintf(PETSC_COMM_SELF, f, "</VTKFile>");
   }
 
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
