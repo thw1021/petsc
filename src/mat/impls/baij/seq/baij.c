@@ -2697,7 +2697,7 @@ static PetscErrorCode MatGetRowSumAbs_SeqBAIJ(Mat A, Vec v)
   mbs = a->mbs;
 
   PetscCall(VecSet(v, zero));
-  PetscCall(VecGetArray(v, &x));
+  PetscCall(VecGetArrayWrite(v, &x));
   PetscCall(VecGetLocalSize(v, &n));
   PetscCheck(n == A->rmap->N, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Nonconforming matrix and vector");
   for (i = 0; i < mbs; i++) {
@@ -2715,7 +2715,7 @@ static PetscErrorCode MatGetRowSumAbs_SeqBAIJ(Mat A, Vec v)
       }
     }
   }
-  PetscCall(VecRestoreArray(v, &x));
+  PetscCall(VecRestoreArrayWrite(v, &x));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

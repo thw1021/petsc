@@ -5162,7 +5162,7 @@ PetscErrorCode MatGetRowMaxAbs(Mat mat, Vec v, PetscInt idx[])
   Input Parameter:
 . mat - the matrix
 
-  Output Parameters:
+  Output Parameter:
 . v - the vector for storing the sum
 
   Level: intermediate

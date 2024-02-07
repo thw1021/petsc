@@ -206,17 +206,16 @@ static PetscErrorCode PCSetUp_Jacobi(PC pc)
         PetscCall(VecDuplicate(diag, &true_diag));
         PetscCall(MatGetDiagonal(pc->pmat, true_diag));
         PetscCall(VecGetLocalSize(diag, &n));
-        PetscCall(VecGetArray(diag, &x2));
-        PetscCall(VecGetArray(true_diag, &x)); // to make more general -todo
-        PetscCall(VecGetArray(true_diag, &x)); // to make more general -todo
+        PetscCall(VecGetArrayWrite(diag, &x2));
+        PetscCall(VecGetArrayRead(true_diag, &x)); // to make more general -todo
         for (i = 0; i < n; i++) {
           if (PetscRealPart(x[i]) < 0.0) {
             x2[i]   = -x2[i]; // flip sign to keep DA > 0
             negflag = PETSC_TRUE;
           }
         }
-        PetscCall(VecRestoreArray(true_diag, &x));
-        PetscCall(VecRestoreArray(diag, &x2));
+        PetscCall(VecRestoreArrayRead(true_diag, &x));
+        PetscCall(VecRestoreArrayWrite(diag, &x2));
         PetscCheck(!jac->useabs || !negflag, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_INCOMP, "Jacobi use_abs and l1 not compatible with negative diagonal");
         PetscCall(VecDestroy(&true_diag));
       }
@@ -412,8 +411,7 @@ static PetscErrorCode PCSetFromOptions_Jacobi(PC pc, PetscOptionItems *PetscOpti
   if (flg) PetscCall(PCJacobiSetType(pc, type));
   PetscCall(PetscOptionsBool("-pc_jacobi_abs", "Use absolute values of diagonal entries", "PCJacobiSetUseAbs", jac->useabs, &jac->useabs, NULL));
   PetscCall(PetscOptionsBool("-pc_jacobi_fixdiagonal", "Fix null terms on diagonal", "PCJacobiSetFixDiagonal", jac->fixdiag, &jac->fixdiag, NULL));
-  PetscCall(PetscOptionsReal("-pc_jacobi_rowl1_scale", "scaling of off-diagonal elements for rowl1", "PCJacobiSetScale", jac->scale, &jac->scale, NULL));
-  PetscCheck(jac->scale >= 0 && jac->scale <= 1, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_INCOMP, "Invalid l1 scaling %e", (double)jac->scale);
+  PetscCall(PetscOptionsRangeReal("-pc_jacobi_rowl1_scale", "scaling of off-diagonal elements for rowl1", "PCJacobiSetScale", jac->scale, &jac->scale, NULL, 0.0, 1.0));
   PetscOptionsHeadEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -622,7 +620,7 @@ PetscErrorCode PCJacobiSetScale(PC pc, PetscReal scale)
 
   Level: intermediate
 
-.seealso: [](ch_ksp), `PCJACOBI`, `PCJacobiaSetType()`, `PCJacobiSetScale()`, `PCJacobiGetType()`
+.seealso: [](ch_ksp), `PCJACOBI`, `PCJacobiSetType()`, `PCJacobiSetScale()`, `PCJacobiGetType()`
 @*/
 PetscErrorCode PCJacobiGetScale(PC pc, PetscReal *scale)
 {
