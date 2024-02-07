@@ -133,7 +133,7 @@ PETSC_EXTERN PetscErrorCode PCJacobiSetUseAbs(PC, PetscBool);
 PETSC_EXTERN PetscErrorCode PCJacobiGetUseAbs(PC, PetscBool *);
 PETSC_EXTERN PetscErrorCode PCJacobiSetFixDiagonal(PC, PetscBool);
 PETSC_EXTERN PetscErrorCode PCJacobiGetFixDiagonal(PC, PetscBool *);
-PETSC_EXTERN PetscErrorCode PCJacobiSetScale(PC, PetscReal);
+PETSC_EXTERN PetscErrorCode PCJacobiSetRowl1Scale(PC, PetscReal);
 PETSC_EXTERN PetscErrorCode PCJacobiGetScale(PC, PetscReal *);
 PETSC_EXTERN PetscErrorCode PCSORSetSymmetric(PC, MatSORType);
 PETSC_EXTERN PetscErrorCode PCSORGetSymmetric(PC, MatSORType *);

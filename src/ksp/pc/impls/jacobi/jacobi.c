@@ -105,7 +105,7 @@ static PetscErrorCode PCJacobiGetType_Jacobi(PC pc, PCJacobiType *type)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PCJacobiSetScale_Jacobi(PC pc, PetscReal flg)
+static PetscErrorCode PCJacobiSetRowl1Scale_Jacobi(PC pc, PetscReal flg)
 {
   PC_Jacobi *j = (PC_Jacobi *)pc->data;
 
@@ -389,7 +389,7 @@ static PetscErrorCode PCDestroy_Jacobi(PC pc)
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCJacobiGetType_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCJacobiSetUseAbs_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCJacobiGetUseAbs_C", NULL));
-  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCJacobiSetScale_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCJacobiSetRowl1Scale_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCJacobiGetScale_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCJacobiSetFixDiagonal_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCJacobiGetFixDiagonal_C", NULL));
@@ -414,7 +414,7 @@ static PetscErrorCode PCSetFromOptions_Jacobi(PC pc, PetscOptionItems *PetscOpti
   if (flg) PetscCall(PCJacobiSetType(pc, type));
   PetscCall(PetscOptionsBool("-pc_jacobi_abs", "Use absolute values of diagonal entries", "PCJacobiSetUseAbs", jac->useabs, &jac->useabs, NULL));
   PetscCall(PetscOptionsBool("-pc_jacobi_fixdiagonal", "Fix null terms on diagonal", "PCJacobiSetFixDiagonal", jac->fixdiag, &jac->fixdiag, NULL));
-  PetscCall(PetscOptionsRangeReal("-pc_jacobi_rowl1_scale", "scaling of off-diagonal elements for rowl1", "PCJacobiSetScale", jac->scale, &jac->scale, NULL, 0.0, 1.0));
+  PetscCall(PetscOptionsRangeReal("-pc_jacobi_rowl1_scale", "scaling of off-diagonal elements for rowl1", "PCJacobiSetRowl1Scale", jac->scale, &jac->scale, NULL, 0.0, 1.0));
   PetscOptionsHeadEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -524,7 +524,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_Jacobi(PC pc)
 
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCJacobiSetType_C", PCJacobiSetType_Jacobi));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCJacobiGetType_C", PCJacobiGetType_Jacobi));
-  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCJacobiSetScale_C", PCJacobiSetScale_Jacobi));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCJacobiSetRowl1Scale_C", PCJacobiSetRowl1Scale_Jacobi));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCJacobiGetScale_C", PCJacobiGetScale_Jacobi));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCJacobiSetUseAbs_C", PCJacobiSetUseAbs_Jacobi));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCJacobiGetUseAbs_C", PCJacobiGetUseAbs_Jacobi));
@@ -551,7 +551,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_Jacobi(PC pc)
 
   Level: intermediate
 
-.seealso: [](ch_ksp), `PCJACOBI`, `PCJacobiaSetType()`, `PCJacobiGetUseAbs()`
+.seealso: [](ch_ksp), `PCJACOBI`, `PCJacobiSetType()`, `PCJacobiGetUseAbs()`
 @*/
 PetscErrorCode PCJacobiSetUseAbs(PC pc, PetscBool flg)
 {
@@ -575,7 +575,7 @@ PetscErrorCode PCJacobiSetUseAbs(PC pc, PetscBool flg)
 
   Level: intermediate
 
-.seealso: [](ch_ksp), `PCJACOBI`, `PCJacobiaSetType()`, `PCJacobiSetUseAbs()`, `PCJacobiGetType()`
+.seealso: [](ch_ksp), `PCJACOBI`, `PCJacobiSetType()`, `PCJacobiSetUseAbs()`, `PCJacobiGetType()`
 @*/
 PetscErrorCode PCJacobiGetUseAbs(PC pc, PetscBool *flg)
 {
@@ -586,7 +586,7 @@ PetscErrorCode PCJacobiGetUseAbs(PC pc, PetscBool *flg)
 }
 
 /*@
-  PCJacobiSetScale - Set scaling of off-diagonal of operator when computing l1 row norms, eg,
+  PCJacobiSetRowl1Scale - Set scaling of off-diagonal of operator when computing l1 row norms, eg,
   Remark 6.1 in "Multigrid Smoothers for Ultraparallel Computing", Baker et al, with 0.5 scaling
 
   Logically Collective
@@ -600,13 +600,13 @@ PetscErrorCode PCJacobiGetUseAbs(PC pc, PetscBool *flg)
 
   Level: intermediate
 
-.seealso: [](ch_ksp), `PCJACOBI`, `PCJacobiaSetType()`, `PCJacobiGetScale()`
+.seealso: [](ch_ksp), `PCJACOBI`, `PCJacobiSetType()`, `PCJacobiGetScale()`
 @*/
-PetscErrorCode PCJacobiSetScale(PC pc, PetscReal scale)
+PetscErrorCode PCJacobiSetRowl1Scale(PC pc, PetscReal scale)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
-  PetscTryMethod(pc, "PCJacobiSetScale_C", (PC, PetscReal), (pc, scale));
+  PetscTryMethod(pc, "PCJacobiSetRowl1Scale_C", (PC, PetscReal), (pc, scale));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -623,7 +623,7 @@ PetscErrorCode PCJacobiSetScale(PC pc, PetscReal scale)
 
   Level: intermediate
 
-.seealso: [](ch_ksp), `PCJACOBI`, `PCJacobiSetType()`, `PCJacobiSetScale()`, `PCJacobiGetType()`
+.seealso: [](ch_ksp), `PCJACOBI`, `PCJacobiSetType()`, `PCJacobiSetRowl1Scale()`, `PCJacobiGetType()`
 @*/
 PetscErrorCode PCJacobiGetScale(PC pc, PetscReal *scale)
 {

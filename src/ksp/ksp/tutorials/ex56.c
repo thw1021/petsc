@@ -300,7 +300,7 @@ int main(int argc, char **args)
     PetscCall(MatNullSpaceDestroy(&matnull));
     PetscCall(VecDestroy(&vec_coords));
     PetscCall(KSPGetPC(ksp, &pc));
-    PetscCall(PCJacobiSetScale(pc, 0.5));
+    PetscCall(PCJacobiSetRowl1Scale(pc, 0.5));
   } else {
     PC       pc;
     PetscInt idx[] = {1, 2};
