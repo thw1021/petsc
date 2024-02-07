@@ -156,11 +156,10 @@ static PetscErrorCode PCJacobiGetFixDiagonal_Jacobi(PC pc, PetscBool *flg)
 */
 static PetscErrorCode PCSetUp_Jacobi(PC pc)
 {
-  PC_Jacobi   *jac = (PC_Jacobi *)pc->data;
-  Vec          diag, diagsqrt;
-  PetscInt     n, i;
-  PetscScalar *x;
-  PetscBool    zeroflag = PETSC_FALSE, negflag = PETSC_FALSE;
+  PC_Jacobi *jac = (PC_Jacobi *)pc->data;
+  Vec        diag, diagsqrt;
+  PetscInt   n, i;
+  PetscBool  zeroflag = PETSC_FALSE, negflag = PETSC_FALSE;
 
   PetscFunctionBegin;
   /*
@@ -201,8 +200,9 @@ static PetscErrorCode PCSetUp_Jacobi(PC pc)
       // fix negative rows (eg, negative definite) -- this could be done for all, not needed for userowmax
       PetscCall(MatIsSPDKnown(pc->pmat, &isset, &isspd));
       if (jac->fixdiag && (!isset || !isspd)) {
-        PetscScalar *x2;
-        Vec          true_diag;
+        PetscScalar       *x2;
+        const PetscScalar *x;
+        Vec                true_diag;
         PetscCall(VecDuplicate(diag, &true_diag));
         PetscCall(MatGetDiagonal(pc->pmat, true_diag));
         PetscCall(VecGetLocalSize(diag, &n));
@@ -237,6 +237,7 @@ static PetscErrorCode PCSetUp_Jacobi(PC pc)
     if (jac->useabs) PetscCall(VecAbs(diag));
     PetscCall(MatIsSPDKnown(pc->pmat, &isset, &isspd));
     if (jac->fixdiag && (!isset || !isspd)) {
+      PetscScalar *x;
       PetscCall(VecGetLocalSize(diag, &n));
       PetscCall(VecGetArray(diag, &x));
       for (i = 0; i < n; i++) {
@@ -249,6 +250,7 @@ static PetscErrorCode PCSetUp_Jacobi(PC pc)
     }
   }
   if (diagsqrt) {
+    PetscScalar *x;
     switch (jac->type) {
     case PC_JACOBI_DIAGONAL:
       PetscCall(MatGetDiagonal(pc->pmat, diagsqrt));
@@ -266,7 +268,8 @@ static PetscErrorCode PCSetUp_Jacobi(PC pc)
     PetscCall(VecGetLocalSize(diagsqrt, &n));
     PetscCall(VecGetArray(diagsqrt, &x));
     for (i = 0; i < n; i++) {
-      if (x[i] != 0.0) x[i] = 1.0 / PetscSqrtReal(PetscAbsScalar(x[i]));
+      if (PetscRealPart(x[i]) < 0.0) x[i] = 1.0 / PetscSqrtReal(PetscAbsScalar(-x[i]));
+      else if (PetscRealPart(x[i]) > 0.0) x[i] = 1.0 / PetscSqrtReal(PetscAbsScalar(x[i]));
       else {
         x[i]     = 1.0;
         zeroflag = PETSC_TRUE;
