@@ -216,10 +216,10 @@ PetscErrorCode PetscPythonInitialize(const char pyexe[], const char pylib[])
     if (sys_path) {
       PetscCall(PetscStrreplace(PETSC_COMM_SELF, "${PETSC_LIB_DIR}", path, sizeof(path)));
       Py_DecRef(PyObject_CallMethod(sys_path, "insert", "is", (int)0, (char *)path));
-#if defined(PETSC_PETSC4PY_INSTALL_PATH)
+#if defined(PETSC_PETSC4PY_PYTHONPATH)
       {
         char *rpath;
-        PetscCall(PetscStrallocpy(PETSC_PETSC4PY_INSTALL_PATH, &rpath));
+        PetscCall(PetscStrallocpy(PETSC_PETSC4PY_PYTHONPATH, &rpath));
         Py_DecRef(PyObject_CallMethod(sys_path, "insert", "is", (int)0, rpath));
         PetscCall(PetscFree(rpath));
       }
