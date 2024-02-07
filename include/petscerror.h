@@ -407,7 +407,7 @@ M*/
 
   Synopsis:
   #include <petscerror.h>
-  void PetscCall(PetscFunction(args))
+  void PetscCallVoid(PetscFunction(args))
 
   Not Collective; No Fortran Support
 
@@ -423,7 +423,7 @@ M*/
     PetscFunctionBeginUser;
     // OK, properly handles PETSc error codes
     PetscCallVoid(KSPCreate(PETSC_COMM_WORLD, &ksp));
-    PetscFunctionReturn(PETSC_SUCCESS);
+    PetscFunctionReturnVoid();
   }
 
   PetscErrorCode bar()
@@ -451,7 +451,7 @@ M*/
   that the routine returned early due to an error. `PetscCallAbort()` at least ensures that the
   program crashes gracefully.
 
-.seealso: `PetscCall()`, `PetscErrorCode`
+.seealso: `PetscCall()`, `PetscErrorCode`, `PetscCallAbort()`
 M*/
 #if defined(PETSC_CLANG_STATIC_ANALYZER)
 void PetscCall(PetscErrorCode);
