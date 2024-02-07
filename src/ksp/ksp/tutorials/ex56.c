@@ -287,7 +287,7 @@ int main(int argc, char **args)
     MatNullSpace matnull;
     Vec          vec_coords;
     PetscScalar *c;
-
+    PC           pc;
     PetscCall(VecCreate(MPI_COMM_WORLD, &vec_coords));
     PetscCall(VecSetBlockSize(vec_coords, 3));
     PetscCall(VecSetSizes(vec_coords, m, PETSC_DECIDE));
@@ -299,6 +299,8 @@ int main(int argc, char **args)
     PetscCall(MatSetNearNullSpace(Amat, matnull));
     PetscCall(MatNullSpaceDestroy(&matnull));
     PetscCall(VecDestroy(&vec_coords));
+    PetscCall(KSPGetPC(ksp, &pc));
+    PetscCall(PCJacobiSetScale(pc, 0.5));
   } else {
     PC       pc;
     PetscInt idx[] = {1, 2};
@@ -309,7 +311,6 @@ int main(int argc, char **args)
     PetscCall(PCGAMGMISkSetMinDegreeOrdering(pc, PETSC_TRUE));
     PetscCall(PCGAMGSetAggressiveSquareGraph(pc, PETSC_FALSE));
     PetscCall(PCGAMGSetInjectionIndex(pc, 2, idx)); // code coverage, same as command line
-    PetscCall(PCJacobiSetScale(pc, 0.5));
   }
 
   PetscCall(MaybeLogStagePush(stage[0]));
