@@ -81,7 +81,7 @@ Changes: Development
 - Add ``PCLMVMSetUpdateVec()`` for the automatic update of the LMVM preconditioner inside a SNES solve
 - Add ``PCGAMGSetInjectionIndex()`` with corresponding option ``-pc_gamg_injection_index i,j,k...``. Inject provided indices of fine grid operator as first coarse grid restriction (sort of p-multigrid for C1 elements)
 - Add ``ROWL1`` Jacobi type to use (scaled) l1 row norms for diagonal approximation with scaling of off-diagonal elements
-- Add ``PCJacobiSetRowl1Scale`` and ``-pc_jacobi_rowl1_scale scale`` to access new scale member of PC_Jacobi class, for new row l1 Jacobi
+- Add ``PCJacobiSetRowl1Scale()`` and ``-pc_jacobi_rowl1_scale scale`` to access new scale member of PC_Jacobi class, for new row l1 Jacobi
 
 .. rubric:: KSP:
 

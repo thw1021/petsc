@@ -114,7 +114,7 @@ static PetscErrorCode PCJacobiSetRowl1Scale_Jacobi(PC pc, PetscReal flg)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PCJacobiGetScale_Jacobi(PC pc, PetscReal *flg)
+static PetscErrorCode PCJacobiGetRowl1Scale_Jacobi(PC pc, PetscReal *flg)
 {
   PC_Jacobi *j = (PC_Jacobi *)pc->data;
 
@@ -390,7 +390,7 @@ static PetscErrorCode PCDestroy_Jacobi(PC pc)
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCJacobiSetUseAbs_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCJacobiGetUseAbs_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCJacobiSetRowl1Scale_C", NULL));
-  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCJacobiGetScale_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCJacobiGetRowl1Scale_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCJacobiSetFixDiagonal_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCJacobiGetFixDiagonal_C", NULL));
 
@@ -525,7 +525,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_Jacobi(PC pc)
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCJacobiSetType_C", PCJacobiSetType_Jacobi));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCJacobiGetType_C", PCJacobiGetType_Jacobi));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCJacobiSetRowl1Scale_C", PCJacobiSetRowl1Scale_Jacobi));
-  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCJacobiGetScale_C", PCJacobiGetScale_Jacobi));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCJacobiGetRowl1Scale_C", PCJacobiGetScale_Jacobi));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCJacobiSetUseAbs_C", PCJacobiSetUseAbs_Jacobi));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCJacobiGetUseAbs_C", PCJacobiGetUseAbs_Jacobi));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCJacobiSetFixDiagonal_C", PCJacobiSetFixDiagonal_Jacobi));
@@ -611,7 +611,7 @@ PetscErrorCode PCJacobiSetRowl1Scale(PC pc, PetscReal scale)
 }
 
 /*@
-  PCJacobiGetScale - Get scaling of off-diagonal elements summed into l1-norm diagonal
+  PCJacobiGetRowl1Scale - Get scaling of off-diagonal elements summed into l1-norm diagonal
 
   Logically Collective
 
@@ -625,11 +625,11 @@ PetscErrorCode PCJacobiSetRowl1Scale(PC pc, PetscReal scale)
 
 .seealso: [](ch_ksp), `PCJACOBI`, `PCJacobiSetType()`, `PCJacobiSetRowl1Scale()`, `PCJacobiGetType()`
 @*/
-PetscErrorCode PCJacobiGetScale(PC pc, PetscReal *scale)
+PetscErrorCode PCJacobiGetRowl1Scale(PC pc, PetscReal *scale)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
-  PetscUseMethod(pc, "PCJacobiGetScale_C", (PC, PetscReal *), (pc, scale));
+  PetscUseMethod(pc, "PCJacobiGetRowl1Scale_C", (PC, PetscReal *), (pc, scale));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
