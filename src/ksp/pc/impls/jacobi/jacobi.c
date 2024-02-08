@@ -525,7 +525,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_Jacobi(PC pc)
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCJacobiSetType_C", PCJacobiSetType_Jacobi));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCJacobiGetType_C", PCJacobiGetType_Jacobi));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCJacobiSetRowl1Scale_C", PCJacobiSetRowl1Scale_Jacobi));
-  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCJacobiGetRowl1Scale_C", PCJacobiGetScale_Jacobi));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCJacobiGetRowl1Scale_C", PCJacobiGetRowl1Scale_Jacobi));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCJacobiSetUseAbs_C", PCJacobiSetUseAbs_Jacobi));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCJacobiGetUseAbs_C", PCJacobiGetUseAbs_Jacobi));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCJacobiSetFixDiagonal_C", PCJacobiSetFixDiagonal_Jacobi));
