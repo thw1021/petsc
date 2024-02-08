@@ -435,7 +435,7 @@ static PetscErrorCode PCView_Jacobi(PC pc, PetscViewer viewer)
     PetscCall(PCJacobiGetType(pc, &type));
     PetscCall(PCJacobiGetUseAbs(pc, &useAbs));
     PetscCall(PCJacobiGetFixDiagonal(pc, &fixdiag));
-    PetscCall(PCJacobiGetScale(pc, &scale));
+    PetscCall(PCJacobiGetRowl1Scale(pc, &scale));
     if (type == PC_JACOBI_ROWL1)
       PetscCall(PetscViewerASCIIPrintf(viewer, "  type %s%s%s (l1-norm off-diagonal scaling %e)\n", PCJacobiTypes[type], useAbs ? ", using absolute value of entries" : "", !fixdiag ? ", not checking null diagonal entries" : "", (double)scale));
     else PetscCall(PetscViewerASCIIPrintf(viewer, "  type %s%s%s\n", PCJacobiTypes[type], useAbs ? ", using absolute value of entries" : "", !fixdiag ? ", not checking null diagonal entries" : ""));
@@ -600,7 +600,7 @@ PetscErrorCode PCJacobiGetUseAbs(PC pc, PetscBool *flg)
 
   Level: intermediate
 
-.seealso: [](ch_ksp), `PCJACOBI`, `PCJacobiSetType()`, `PCJacobiGetScale()`
+.seealso: [](ch_ksp), `PCJACOBI`, `PCJacobiSetType()`, `PCJacobiGetRowl1Scale()`
 @*/
 PetscErrorCode PCJacobiSetRowl1Scale(PC pc, PetscReal scale)
 {
