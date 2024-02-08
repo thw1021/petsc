@@ -4148,7 +4148,7 @@ PetscErrorCode MatMPIAIJSetPreallocation(Mat B, PetscInt d_nz, const PetscInt d_
        calculated if N is given) For square matrices n is almost always m.
 . M    - number of global rows (or `PETSC_DETERMINE` to have calculated if m is given)
 . N    - number of global columns (or `PETSC_DETERMINE` to have calculated if n is given)
-. i    - row indices (of length m); that is i[0] = 0, i[row] = i[row-1] + number of elements in that row of the matrix
+. i    - row indices (of length m+1); that is i[0] = 0, i[row] = i[row-1] + number of elements in that row of the matrix
 . j    - global column indices
 - a    - optional matrix values
 
