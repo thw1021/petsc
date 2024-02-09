@@ -43,7 +43,7 @@ int main(int argc, char **argv)
     PetscCall(PetscTime(&tstart));
     for (i = 0; i < n; i++) { PetscCallCXX(Kokkos::parallel_for(policy, KOKKOS_LAMBDA(const PetscInt &i){})); }
     PetscCall(PetscTime(&tend));
-    exec.fence();
+    PetscCallCXX(exec.fence());
     time = (tend - tstart) * 1e6 / n;
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Average asynchronous device kernel launch time = %.2f microseconds\n", time));
 
