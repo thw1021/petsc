@@ -66,6 +66,8 @@ struct _TSOps {
   PetscErrorCode (*initcondition)(TS, Vec);
   PetscErrorCode (*exacterror)(TS, Vec, Vec);
   PetscErrorCode (*resizeregister)(TS, PetscBool);
+  TSInputParametersFn *inputparameters;
+  TSICJacobianPFn     *icjacobianp;
 };
 
 /*
@@ -329,6 +331,10 @@ struct _p_TS {
 
   /* ---------------------- Time span support ---------------------------------*/
   TSTimeSpan tspan;
+
+  void *inputparametersctx; /* context for TSSetInputParameters() callback */
+  void *icjacobianpctx;     /* context for TSSetICJacobianP() callback */
+  Mat   icjacp;             /* the initial condition Jacobian */
 };
 
 struct _TSAdaptOps {

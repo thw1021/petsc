@@ -1282,6 +1282,9 @@ Examples include:
 -  discrete adjoint sensitivity using the Crank-Nicolson methods for a PDE problem
    `TS Advection-Diffusion-Reaction Tutorial ex5adj <PETSC_DOC_OUT_ROOT_PLACEHOLDER/src/ts/tutorials/advection-diffusion-reaction/ex5adj.c.html>`__.
 
+Note that ``Tao`` provides a
+high level API, introduced in :any:`sec_tao_snes_ts` that simplifies the process even further for optimizations involving ODE/DAE constraints.
+
 Checkpointing
 `````````````
 
