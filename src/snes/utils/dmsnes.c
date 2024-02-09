@@ -418,14 +418,14 @@ PetscErrorCode DMSNESGetFunction(DM dm, SNESFunctionFn **f, void **ctx)
 }
 
 /*@C
-  DMSNESSetObjective - set `SNES` objective evaluation function into a `DMSNES` object
+  DMSNESSetObjective - Sets the objective function minimized by some of the `SNES` linesearch methods, used instead of the 2-norm of the residual into a `DMSNES` object
 
   Not Collective
 
   Input Parameters:
 + dm  - `DM` to be used with `SNES`
-. obj - objective evaluation function; see `SNESObjectiveFn` for calling sequence
-- ctx - context for residual evaluation
+. obj - objective evaluation routine; see `SNESObjectiveFunction` for details
+- ctx - [optional] user-defined context for private data for the function evaluation routine (may be `NULL`)
 
   Level: developer
 
@@ -444,7 +444,7 @@ PetscErrorCode DMSNESSetObjective(DM dm, SNESObjectiveFn *obj, void *ctx)
 }
 
 /*@C
-  DMSNESGetObjective - get `SNES` objective evaluation function from a `DMSNES` object
+  DMSNESGetObjective - Returns the objective function set with `DMSNESSetObjective()`
 
   Not Collective
 
@@ -452,8 +452,8 @@ PetscErrorCode DMSNESSetObjective(DM dm, SNESObjectiveFn *obj, void *ctx)
 . dm - `DM` to be used with `SNES`
 
   Output Parameters:
-+ obj - residual evaluation function; see `SNESObjectiveFn` for calling sequence
-- ctx - context for residual evaluation
++ obj - objective evaluation routine (or `NULL`); see `SNESObjectiveFunction` for details
+- ctx - the function context (or `NULL`)
 
   Level: developer
 
