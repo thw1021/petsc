@@ -3039,6 +3039,66 @@ of every new ``TaoSolve()``.
 
 The option flag has no effect on other TAO solvers.
 
+.. _sec_tao_snes_ts:
+
+SNES and TS Constrained Optimization
+------------------------------------
+
+``Tao`` provides a simple API for optimizing functions whose parameters are constrained by either a nonlinear system or an ODE/DAE.
+These API's are built on the adjoint capabilities of ``SNES`` and ``TS`` discussed in :any:`sec_sasnes` and :any:`section_sa`.
+
+
+Since ``Tao`` and other systems may store the (differential) parameters in a ``Vec`` a user callback provided with
+
+.. code-block::
+
+   SNESSetInputParameters(SNES snes, SNESInputParametersFn *fn, void *ctx);
+
+where
+
+.. code-block::
+
+   PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(SNESInputParametersFn)(SNES snes, Vec p, void *ctx);
+
+allows the user to provide a routine that copies the parameter values into their own private data structure from a `Vec`.
+
+.. code-block::
+
+   SNESInputParameters(SNES snes,Vec p)
+
+is used by ``Tao`` to call the user callback and update the users parameter values before ``SNESSolve()`` is called.
+
+This is demonstrated
+in  :ref:`extaosnes.c <snes-ex-taosnes>` which solves the problem
+
+
+.. math::
+
+   \min_{p,q} f(x,y,p,q) = x^2 + y^2 + p^2 + q^2
+
+such that
+
+.. math::
+
+     x^2 + xy + p^3 = 0 \\
+     xy + y^2 + q^3 = 0
+
+(see also :any:`sec_sasnes`)
+
+.. _snes-ex-taosnes:
+.. admonition:: Listing: ``src/tao/tutorials/extaosnes.c``
+
+   .. literalinclude:: /../src/tao/tutorials/extaosnes.c
+      :end-before: /*TEST
+
+For ``TS`` the example :ref:`extaots.c <snes-ex-taots>` demonstrates the high-level API.
+
+.. _snes-ex-taots:
+.. admonition:: Listing: ``src/tao/tutorials/extaosts.c``
+
+   .. literalinclude:: /../src/tao/tutorials/extaots.c
+      :end-before: /*TEST
+
 .. _sec_tao_addsolver:
 
 Adding a Solver

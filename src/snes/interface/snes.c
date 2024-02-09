@@ -3081,7 +3081,7 @@ PetscErrorCode SNESComputeJacobian(SNES snes, Vec X, Mat A, Mat B)
 + snes - the `SNES` context
 . Amat - the matrix that defines the (approximate) Jacobian
 . Pmat - the matrix to be used in constructing the preconditioner, usually the same as `Amat`.
-. J    - Jacobian evaluation routine (if `NULL` then `SNES` retains any previously set value), see `SNESJacobianFn` for details
+. J    - Jacobian evaluation routine (if `NULL` then `SNES` retains any previously set value), see `SNESJacobianFn` for the calling sequence
 - ctx  - [optional] user-defined context for private data for the
          Jacobian evaluation routine (may be `NULL`) (if `NULL` then `SNES` retains any previously set value)
 
@@ -3349,6 +3349,7 @@ PetscErrorCode SNESReset(SNES snes)
   PetscCall(VecDestroy(&snes->vec_func));
   PetscCall(MatDestroy(&snes->jacobian));
   PetscCall(MatDestroy(&snes->jacobian_pre));
+  PetscCall(MatDestroy(&snes->jacP));
   PetscCall(MatDestroy(&snes->picard));
   PetscCall(VecDestroyVecs(snes->nwork, &snes->work));
   PetscCall(VecDestroyVecs(snes->nvwork, &snes->vwork));
@@ -5795,5 +5796,255 @@ PetscErrorCode SNESGetLineSearch(SNES snes, SNESLineSearch *linesearch)
     PetscCall(PetscObjectIncrementTabLevel((PetscObject)snes->linesearch, (PetscObject)snes, 1));
   }
   *linesearch = snes->linesearch;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  SNESSetJacobianP - Sets the function that computes the Jacobian $ \frac{\partial F(x,p)}{\partial p} $, as well as the matrix to hold the Jacobian
+
+  Logically Collective
+
+  Input Parameters:
++ snes - `SNES` context obtained from `SNESCreate()`
+. A    - matrix to hold tje Jacobian
+. func - function, see `SNESJacobianPFn` for the calling sequence
+- ctx  - [optional] user-defined function context
+
+  Level: intermediate
+
+  Note:
+  `A` has the same number of rows and the same row parallel layout as `x`, `A` has the same number of columns and parallel layout as `p`
+
+.seealso: [](ch_snes), , [](sec_sasnes), `SNES`, `SNESJacobianPFn`, `SNESGetJacobianP()`, `SNESSetJacobian()`
+@*/
+PetscErrorCode SNESSetJacobianP(SNES snes, Mat A, SNESJacobianPFn *func, void *ctx)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
+  PetscValidHeaderSpecific(A, MAT_CLASSID, 2);
+
+  snes->ops->jacobianp = func;
+  snes->jacobianpctx   = ctx;
+  if (A) {
+    PetscCall(PetscObjectReference((PetscObject)A));
+    PetscCall(MatDestroy(&snes->jacP));
+    snes->jacP = A;
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  SNESGetJacobianP - Gets the function that computes the Jacobian $ \frac{\partial F(x,p)}{\partial p} $, as well as the matrix to hold the Jacobian
+
+  Logically Collective
+
+  Input Parameter:
+. snes - `SNES` context obtained from `SNESCreate()`
+
+  Output Parameters:
++ A    - matrix to hold the Jacobian
+. func - function, see `SNESJacobianPFn` for the calling sequence
+- ctx  - [optional] user-defined function context
+
+  Level: intermediate
+
+.seealso: [](ch_snes), [](sec_sasnes), `SNES`, `SNESJacobianPFn`, `SNESSetJacobianP()`, `SNESSetCostGradients()`, `SNESComputeDuDp()`, `SNESdjointSolve()`
+@*/
+PetscErrorCode SNESGetJacobianP(SNES snes, Mat *A, SNESJacobianPFn **func, void **ctx)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
+
+  if (func) *func = *snes->ops->jacobianp;
+  if (ctx) *ctx = snes->jacobianpctx;
+  if (A) *A = snes->jacP;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  SNESSetCostGradients - For `numcost` cost functions of the form $ f_i(x,p) $ input $ \frac{\partial f_i(x,p)}{\partial x}$ and
+  $ \frac{\partial f_i(x,p)}{\partial p}$ for use by the `SNESAdjointSolve()` routine.
+
+  Logically Collective
+
+  Input Parameters:
++ snes    - the `SNES` context obtained from `SNESCreate()`
+. numcost - number of gradients to be computed, this is the number of cost functions
+. lambda  - $ \frac{\partial f_i(x,p)}{\partial x}$
+- mu      - $ \frac{\partial f_i(x,p)}{\partial p}$
+
+  Level: intermediate
+
+  Note:
+  After `SNESAdjointSolve()` is called ` `mu` contains $ \frac{d f_i(x(p),p)}{d p} $
+
+  Developer Note:
+  Should this be called `SNESSetObjectiveGradients()`? Support both?
+
+.seealso: [](ch_snes), [](sec_sasnes), `SNESAdjointSolve()`, `SNESGetCostGradients()`, `SNESSetJacobianP()`,
+@*/
+PetscErrorCode SNESSetCostGradients(SNES snes, PetscInt numcost, Vec *lambda, Vec *mu)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
+  PetscAssertPointer(lambda, 3);
+  snes->vecs_lambda = lambda;
+  snes->vecs_mu     = mu;
+  snes->numcost     = numcost;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  SNESGetCostGradients - After `SNESAdjointSolve()` provides the gradients of the cost functions $ f_i(x(p),p) $, $ \frac{d f_i(x(p),p)}{d p}$.
+
+  Logically Collective
+
+  Input Parameter:
+. snes - the `SNES` context obtained from `SNESCreate()`
+
+  Output Parameters:
++ numcost - number of gradients computed, this is the number of cost functions
+. lambda  - don't know
+- mu      - $ \frac{d f_i(x(p),p)}{d p} $
+
+  Level: intermediate
+
+.seealso: [](ch_snes), [](sec_sasnes), `SNESAdjointSolve()`, `SNESSetCostGradients()`
+@*/
+PetscErrorCode SNESGetCostGradients(SNES snes, PetscInt *numcost, Vec **lambda, Vec **mu)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
+  PetscAssertPointer(lambda, 3);
+  if (lambda) *lambda = snes->vecs_lambda;
+  if (mu) *mu = snes->vecs_mu;
+  if (numcost) *numcost = snes->numcost;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  SNESAdjointSolve - Solves the adjoint problem for a nonlinear system. That is, computes $ \frac{d f_i(x(p),p)}{d p}$ for $x(p)$ and $p$ satisfying $ F(x(p),p) = 0$.
+
+  Collective
+  `
+
+  Input Parameter:
+. snes - the `SNES` context obtained from `SNESCreate()`
+
+  Level: intermediate
+
+  Notes:
+  This must be called after a call to `SNESSolve()` that solves the nonlinear problem, a call to `SNESSetJacobianP()`,
+  and after the `lambda` and `mu` arguments to `SNESSetCostGradients()` have been provided.
+
+  The computed results $ \frac{d f_i(x(p),p)}{d p}$  are contained in `mu` returned from `SNESGetCostGradients()`
+
+  Developer Note:
+  Should this be called something like `SNESComputeObjectiveGradient()`, seems that is what it does. Or support both?
+
+.seealso: [](ch_snes), [](sec_sasnes), `SNESSolve()`, `SNESSetCostGradients()`, `SNESSetJacobianP()`, `SNESComputeDuDp()`
+@*/
+PetscErrorCode SNESAdjointSolve(SNES snes)
+{
+  Vec tmp;
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
+  PetscCall(SNESComputeJacobian(snes, snes->vec_sol, snes->jacobian, snes->jacobian_pre));
+  PetscCallBack("SNES callback compute JacobianP", (*snes->ops->jacobianp)(snes, snes->vec_sol, snes->jacP, snes->jacobianpctx));
+  PetscCall(VecDuplicate(snes->vecs_mu[0], &tmp));
+
+  for (PetscInt nadj = 0; nadj < snes->numcost; nadj++) {
+    PetscCall(KSPSolveTranspose(snes->ksp, snes->vecs_lambda[nadj], snes->vecs_lambda[nadj]));
+    PetscCall(MatMultTranspose(snes->jacP, snes->vecs_lambda[nadj], tmp));
+    PetscCall(VecAXPY(snes->vecs_mu[nadj], 1, tmp));
+  }
+  PetscCall(VecDestroy(&tmp));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  SNESComputeDuDp - Computes the derivate of the solution to a nonlinear equation w.r.t. some user parameters
+
+  Collective
+  `
+
+  Input Parameters:
++ snes  - the `SNES` context obtained from `SNESCreate()`
+- reuse - either `MAT_INITIAL_MATRIX` or `MAT_REUSE_MATRIX`
+
+  Output Parameter:
+. DuDp - the derivative, must be supplied as a dense matrix if `reuse` is `MAT_REUSE_MATRIX`
+
+  Level: intermediate
+
+  Notes:
+  This must be called after a call to `SNESSolve()` that solves the nonlinear problem and a call to `SNESSetJacobianP()`.
+
+  The matrix passed to `SNESSetJacobianP()` must be dense.
+
+.seealso: [](ch_snes), [](sec_sasnes), `SNESSolve()`, `SNESSetCostGradients()`, `SNESSetJacobianP()`, `SNESAdjointSolve()`
+@*/
+PetscErrorCode SNESComputeDuDp(SNES snes, MatReuse reuse, Mat *DuDp)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
+  PetscCall(SNESComputeJacobian(snes, snes->vec_sol, snes->jacobian, snes->jacobian_pre));
+  PetscCallBack("SNES callback compute JacobianP", (*snes->ops->jacobianp)(snes, snes->vec_sol, snes->jacP, snes->jacobianpctx));
+  if (reuse == MAT_INITIAL_MATRIX) PetscCall(MatDuplicate(snes->jacP, MAT_DO_NOT_COPY_VALUES, DuDp));
+  else PetscCheck(reuse == MAT_REUSE_MATRIX, PetscObjectComm((PetscObject)snes), PETSC_ERR_ARG_OUTOFRANGE, "Only MAT_INITIAL_MATRIX or MAT_REUSE_MATRIX are supported");
+  PetscCall(KSPMatSolve(snes->ksp, snes->jacP, *DuDp));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  SNESInputParameters - Takes a vector of parameters and sets them in the user's `SNES` context
+
+  Logically Collective
+
+  Input Parameters:
++ snes - `SNES` context obtained from `SNESCreate()`
+- p    - the parameters
+
+  Level: intermediate
+
+.seealso: [](ch_snes), , [](sec_sasnes), `SNES`, `SNESJacobianPFn`, `SNESGetJacobianP()`, `SNESSetJacobian()`, `SNESSetInputParameters()`
+@*/
+PetscErrorCode SNESInputParameters(SNES snes, Vec p)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
+  PetscValidHeaderSpecific(p, VEC_CLASSID, 2);
+
+  PetscCallBack("SNES callback input parameters", (*snes->ops->inputparameters)(snes, p, snes->inputparametersctx));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  SNESSetInputParameters - Sets the user function that moves (differentiable) function parameters to the `SNES` context so they may be used by other `SNES` callbacks
+
+  Logically Collective
+
+  Input Parameters:
++ snes - `SNES` context obtained from `SNESCreate()`
+. func - function, see `SNESInputParametersFn` for the calling sequence
+- ctx  - [optional] user-defined function context
+
+  Level: intermediate
+
+  Note:
+  The current model of (differentiable) parameters to the `SNES` function and Jacobian routines are that they are managed completely by
+  the user in the `SNES` user contexts or any other way they like. In order to work with `Tao` or other systems where the parameters are provided
+  in a `Vec` this callback is provided so that users may provide a way to transfer the values of the parameters into their own data structures
+  from a `Vec`. `SNESInputParameters()` may be called in `Tao` or other systems as needed before calls to `SNESSolve()` etc.
+
+.seealso: [](ch_snes), , [](sec_sasnes), `SNES`, `SNESJacobianPFn`, `SNESGetJacobianP()`, `SNESSetJacobian()`, `SNESInputParameters()`
+@*/
+PetscErrorCode SNESSetInputParameters(SNES snes, SNESInputParametersFn *func, void *ctx)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
+
+  snes->ops->inputparameters = func;
+  snes->inputparametersctx   = ctx;
   PetscFunctionReturn(PETSC_SUCCESS);
 }

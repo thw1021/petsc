@@ -1510,3 +1510,39 @@ PETSC_EXTERN PetscErrorCode TSComputeExactError(TS, Vec, Vec);
 PETSC_EXTERN PetscErrorCode PetscConvEstUseTS(PetscConvEst, PetscBool);
 
 PETSC_EXTERN PetscErrorCode TSSetMatStructure(TS, MatStructure);
+
+/*S
+  TSICJacobianPFn - A prototype of a function that computes the Jacobian of the initial conditions w.r.t. the parameters P where
+  as well as the location to store the matrix that would be passed to `TSSetICJacobianP()`
+
+  Calling Sequence:
++ ts  - the `TS` context
+. A   - output matrix
+- ctx - [optional] user-defined function context
+
+  Level: beginner
+
+.seealso: [](ch_ts), `TS`, `TSSetRHSJacobianP()`, `TSGetRHSJacobianP()`
+S*/
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(TSICJacobianPFn)(TS ts, Mat A, void *ctx);
+
+PETSC_EXTERN PetscErrorCode TSSetICJacobianP(TS, Mat, TSICJacobianPFn *, void *);
+PETSC_EXTERN PetscErrorCode TSGetICJacobianP(TS, Mat *, TSICJacobianPFn **, void **);
+PETSC_EXTERN PetscErrorCode TSComputeICJacobianP(TS);
+
+/*S
+  TSInputParametersFn - A prototype of a function that would be passed to `TSSetInputParameters()`
+
+  Calling Sequence:
++ ts - `TS` context
+. p    - the parameters to be input into the `TS` context
+- ctx  - [optional] user-defined function context
+
+  Level: beginner
+
+.seealso: [](ch_tao), [](ch_ts), `TS`, `TSSetIFunction()`, `TSSetIJacobian()`, `TSSetJacobianP()`, `TaoTSSetObjectiveAndGradients()`
+S*/
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(TSInputParametersFn)(TS ts, Vec p, void *ctx);
+
+PETSC_EXTERN PetscErrorCode TSSetInputParameters(TS, TSInputParametersFn *, void *);
+PETSC_EXTERN PetscErrorCode TSInputParameters(TS, Vec);

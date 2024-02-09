@@ -5836,3 +5836,56 @@ PetscErrorCode TSPruneIJacobianColor(TS ts, Mat J, Mat B)
   PetscCall(ISColoringDestroy(&iscoloring));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
+/*@
+  TSInputParameters - Takes a vector of parameters and sets them in the user's `TS` context
+
+  Logically Collective
+
+  Input Parameters:
++ ts - `TS` context obtained from `TSCreate()`
+- p  - the parameters
+
+  Level: intermediate
+
+.seealso: [](ch_snes), , [](section_sa), `TS`, `TSJacobianPFn`, `TSGetJacobianP()`, `TSSetRHSJacobian()`, `TSSetInputParameters()`
+@*/
+PetscErrorCode TSInputParameters(TS ts, Vec p)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
+  PetscValidHeaderSpecific(p, VEC_CLASSID, 2);
+
+  PetscCallBack("TS callback input parameters", (*ts->ops->inputparameters)(ts, p, ts->inputparametersctx));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  TSSetInputParameters - Sets the user function that moves (differentiable) function parameters to the `TS` context so they may be used by other `TS` callbacks
+
+  Logically Collective
+
+  Input Parameters:
++ ts   - `TS` context obtained from `TSCreate()`
+. func - function, see `TSInputParametersFn` for the calling sequence
+- ctx  - [optional] user-defined function context
+
+  Level: intermediate
+
+  Note:
+  The current model of (differentiable) parameters to the `TS` function and Jacobian routines are that they are managed completely by
+  the user in the `TS` user contexts or any other way they like. In order to work with `Tao` or other systems where the parameters are provided
+  in a `Vec` this callback is provided so that users may provide a way to transfer the values of the parameters into their own data structures
+  from a `Vec`. `TSInputParameters()` may be called in `Tao` or other systems as needed before calls to `TSSolve()` etc.
+
+.seealso: [](ch_ts), , [](section_sa), `TS`, `TSJacobianPFn`, `TSGetJacobianP()`, `TSSetJacobian()`, `TSInputParameters()`
+@*/
+PetscErrorCode TSSetInputParameters(TS ts, TSInputParametersFn *func, void *ctx)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
+
+  ts->ops->inputparameters = func;
+  ts->inputparametersctx   = ctx;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}

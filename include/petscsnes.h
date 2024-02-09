@@ -71,6 +71,8 @@ PETSC_EXTERN PetscErrorCode SNESSetConvergenceHistory(SNES, PetscReal[], PetscIn
 PETSC_EXTERN PetscErrorCode SNESGetConvergenceHistory(SNES, PetscReal *[], PetscInt *[], PetscInt *);
 PETSC_EXTERN PetscErrorCode SNESSetUp(SNES);
 PETSC_EXTERN PetscErrorCode SNESSolve(SNES, Vec, Vec);
+PETSC_EXTERN PetscErrorCode SNESAdjointSolve(SNES);
+PETSC_EXTERN PetscErrorCode SNESComputeDuDp(SNES, MatReuse, Mat *);
 PETSC_EXTERN PetscErrorCode SNESSetErrorIfNotConverged(SNES, PetscBool);
 PETSC_EXTERN PetscErrorCode SNESGetErrorIfNotConverged(SNES, PetscBool *);
 PETSC_EXTERN PetscErrorCode SNESConverged(SNES, PetscInt, PetscReal, PetscReal, PetscReal);
@@ -491,6 +493,22 @@ S*/
 PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(SNESJacobianFn)(SNES snes, Vec u, Mat Amat, Mat Pmat, void *ctx);
 
 /*S
+  SNESJacobianPFn - A prototype of a function that computes the Jacobian of F w.r.t. the parameters P where
+  F(U,P), as well as the location to store the matrix that would be passed to `SNESSetJacobianP()`
+
+  Calling Sequence:
++ snes - the `SNES` context
+. U    - the solution to the nonlinear system
+. A    - the Jacobian
+- ctx - [optional] user-defined function context
+
+  Level: beginner
+
+.seealso: [](ch_snes), [](sec_sasnes), `SNES`, `SNESetJacobianP()`
+S*/
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(SNESJacobianPFn)(SNES snes, Vec U, Mat A, void *ctx);
+
+/*S
   SNESNGSFn - A prototype of a `SNES` nonlinear Gauss-Seidel function that would be passed to `SNESSetNGS()`
 
   Calling Sequence:
@@ -514,6 +532,12 @@ PETSC_EXTERN PetscErrorCode SNESSetInitialFunction(SNES, Vec);
 
 PETSC_EXTERN PetscErrorCode SNESSetJacobian(SNES, Mat, Mat, SNESJacobianFn *, void *);
 PETSC_EXTERN PetscErrorCode SNESGetJacobian(SNES, Mat *, Mat *, SNESJacobianFn **, void **);
+
+PETSC_EXTERN PetscErrorCode SNESSetJacobianP(SNES, Mat, SNESJacobianPFn *, void *);
+PETSC_EXTERN PetscErrorCode SNESGetJacobianP(SNES, Mat *, SNESJacobianPFn **, void **);
+PETSC_EXTERN PetscErrorCode SNESSetCostGradients(SNES, PetscInt, Vec *, Vec *);
+PETSC_EXTERN PetscErrorCode SNESGetCostGradients(SNES, PetscInt *, Vec **, Vec **);
+
 PETSC_EXTERN SNESFunctionFn SNESObjectiveComputeFunctionDefaultFD;
 PETSC_EXTERN SNESJacobianFn SNESComputeJacobianDefault;
 PETSC_EXTERN SNESJacobianFn SNESComputeJacobianDefaultColor;
@@ -528,6 +552,23 @@ PETSC_EXTERN SNESJacobianFn SNESPicardComputeJacobian;
 PETSC_EXTERN PetscErrorCode SNESSetObjective(SNES, SNESObjectiveFn *, void *);
 PETSC_EXTERN PetscErrorCode SNESGetObjective(SNES, SNESObjectiveFn **, void **);
 PETSC_EXTERN PetscErrorCode SNESComputeObjective(SNES, Vec, PetscReal *);
+
+/*S
+  SNESInputParametersFn - A prototype of a function that would be passed to `SNESSetInputParameters()`
+
+  Calling Sequence:
++ snes - `SNES` context
+. p    - the parameters to be input into the `SNES` context
+- ctx  - [optional] user-defined function context
+
+  Level: beginner
+
+.seealso: [](ch_tao), [](ch_snes), `SNES`, `SNESSetFunction()`, `SNESSetFunction()`, `SNESSetJacobian()`, `SNESSetJacobianP()`, `TaoSNESSetObjectiveAndGradients()`
+S*/
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(SNESInputParametersFn)(SNES snes, Vec p, void *ctx);
+
+PETSC_EXTERN PetscErrorCode SNESSetInputParameters(SNES, SNESInputParametersFn *, void *);
+PETSC_EXTERN PetscErrorCode SNESInputParameters(SNES, Vec);
 
 /*E
    SNESNormSchedule - Frequency with which the norm is computed during a nonliner solve

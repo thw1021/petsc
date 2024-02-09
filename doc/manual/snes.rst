@@ -1232,5 +1232,97 @@ and accessed with
 
    SNESCompositeGetSNES(SNES,PetscInt,SNES *);
 
+.. _sec_sasnes:
+
+Performing sensitivity analysis with the SNES nonlinear Solvers
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ``SNES`` library provides an API for computing sensitivities (derivatives)
+on parameters in nonlinear equations. See :any:`section_sa` for a similar
+API for ODEs and DAEs. Given an optimization problem
+
+.. math:: \min_{p} f(x(p),p) \ni F(x(p),p) = 0
+
+the adjoint method is a way to compute :math:`\frac{df}{dp}f(x(p),p)` efficiently, which can then be used,
+for example, in a gradient-based optimization scheme.
+
+Since
+
+.. math:: F(x(p),p) = 0,
+
+it's full derivative with respect to :math:`p` is zero and can be written as
+
+.. math:: \frac{df(x(p),p)}{dp} = J(x) \frac{\partial x}{\partial p} + \frac{\partial F}{\partial p} = 0.
+
+Solving for :math:`\frac{\partial x}{\partial p}` gives
+
+.. math:: \frac{\partial x}{\partial p}  = - J(x)^{-1} \frac{\partial F}{\partial p}.
+
+Using this equation gives us
+
+.. math::
+
+   \frac{df(x(p),p) }{dp}=  \frac{\partial f}{\partial x} \frac{\partial x}{\partial p} + \frac{\partial f}{\partial p} \\
+   = - \frac{\partial f}{\partial x} J(x)^{-1} \frac{\partial F}{\partial p}  + \frac{\partial f}{\partial p}.
+
+But this form as written requires a linear solve with :math:`J(x)^{-1}` for each parameter in :math:`p`. To reduce to a single linear solve
+it can be rewritten as
+
+.. math::
+
+   \frac{df(x(p),p)}{dp} = (J(x)^{-T} \frac{\partial f}{\partial x})^T  \frac{\partial F}{\partial p}  + \frac{\partial f}{\partial p}.
+
+Thus four terms are needed for the computation: :math:`J(x,p)`, :math:`Jp(x,p) = \frac{\partial F}{\partial p}`,  :math:`\frac{\partial f}{\partial x}`, and
+:math:`\frac{\partial f}{\partial p}` all evaluated at :math:`x = x*` and :math:`p` where :math:`F(x*,p) = 0`.
+
+If :math:` \frac{\partial x}{\partial p}` is needed directly, without the entire optimization process, it can be computed via ``SNESComputeDuDp()``.
+An example of its use is given
+in  :ref:`exdudp.c <snes-ex-dudp>`
+
+.. _snes-ex-dudp:
+.. admonition:: Listing: ``src/snes/tutorials/exdudp.c``
+
+   .. literalinclude:: /../src/snes/tutorials/exdudp.c
+      :end-before: /*TEST
+
+The user code (and matrix to hold the result) to compute :math:`J(x(p),p)` has already been provided with ``SNESSetJacobian()``. The user code (and matrix to hold the result)
+to compute :math"`Jp(x,p)` is provided with ``SNESSetJacobianP()`` and the partial derivative gradients of :math:`f(x,p)` are provided with ``SNESSetCostGradients()``.
+
+.. code-block::
+
+   SNESCreate(PETSC_COMM_WORLD, &snes);
+   SNESSetFunction(snes, NULL, evaluateFunction, &user);
+   SNESSetJacobian(snes, J, J, evaluateJacobian, &user);
+   SNESSetJacobianP(snes, Jp, evaluateJacobianP, &user);
+   SNESSetCostGradients(snes, 1 ,Lambda, Mu);
+   SNESSetFromOptions(snes));
+   SNESSolve(snes, U, NULL));
+   // evaluate the gradients into Lambda and Mu
+   SNESAdjointSolve(snes));
+
+A full example
+demonstrating the process using a ``Tao`` optimization process is show in :ref:`exadj.c <snes-ex-adjoint>`. Note that ``Tao`` provides a
+high level API, introduced in :any:`sec_tao_snes_ts` that simplifies the process for nonlinear equation constraints even further. The problem to be solved is
+
+.. math::
+
+   \min_{p,q} f(x,y,p,q) = x^2 + y^2 + p^2 + q^2
+
+such that
+
+.. math::
+
+     x^2 + xy + p^3 = 0 \\
+     xy + y^2 + q^3 = 0
+
+
+.. _snes-ex-adjoint:
+.. admonition:: Listing: ``src/snes/tutorials/exadj.c``
+
+   .. literalinclude:: /../src/snes/tutorials/exadj.c
+      :end-before: /*TEST
+
+
+
 .. bibliography:: /petsc.bib
    :filter: docname in docnames

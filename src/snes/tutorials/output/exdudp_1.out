@@ -1,0 +1,20 @@
+    0 KSP Residual norm 3.465229068907e+00 
+    1 KSP Residual norm 7.931158767552e-16 
+    0 KSP Residual norm 1.449418395794e+00 
+    1 KSP Residual norm 1.799115334952e-16 
+    0 KSP Residual norm 3.984087858245e-01 
+    1 KSP Residual norm 4.423226072353e-17 
+    0 KSP Residual norm 3.568692501139e-02 
+    1 KSP Residual norm 0.000000000000e+00 
+    0 KSP Residual norm 2.956784104281e-04 
+    1 KSP Residual norm 3.670158761328e-20 
+    0 KSP Residual norm 2.038241219155e-08 
+    1 KSP Residual norm 2.530001719555e-24 
+    0 KSP Residual norm 2.283497011293e-01 
+    1 KSP Residual norm 3.585301436858e-17 
+    0 KSP Residual norm 1.735014976284e-01 
+    1 KSP Residual norm 1.985536737594e-17 
+Mat Object: 1 MPI process
+  type: seqdense
+2.1189224529264955e-01 -4.1654031125905461e-02 
+-8.5119107083372045e-02 1.6842716933518295e-01 

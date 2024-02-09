@@ -1494,7 +1494,7 @@ PetscErrorCode TSAdjointStep(TS ts)
 }
 
 /*@
-  TSAdjointSolve - Solves the discrete ajoint problem for an ODE/DAE
+  TSAdjointSolve - Solves the discrete adjoint problem for an ODE/DAE
 
   Collective
   `
@@ -1793,7 +1793,7 @@ PetscErrorCode TSForwardSetSensitivities(TS ts, PetscInt nump, Mat Smat)
 /*@
   TSForwardGetSensitivities - Returns the trajectory sensitivities
 
-  Not Collective, but Smat returned is parallel if ts is parallel
+  Not Collective, but `Smat` returned is parallel if `ts` is parallel
 
   Output Parameters:
 + ts   - the `TS` context obtained from `TSCreate()`
@@ -1957,7 +1957,7 @@ PetscErrorCode TSGetQuadratureTS(TS ts, PetscBool *fwd, TS *quadts)
 
   Output Parameters:
 + J    - Jacobian matrix
-- Jpre - preconditioning matrix for J (may be same as J)
+- Jpre - preconditioning matrix for `J` (may be same as `J`)
 
   Level: developer
 
@@ -1987,5 +1987,89 @@ PetscErrorCode TSComputeSNESJacobian(TS ts, Vec x, Mat J, Mat Jpre)
     PetscCall(SNESComputeFunction(snes, x, f));
   }
   PetscCall(SNESComputeJacobian(snes, x, J, Jpre));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  TSSetICJacobianP - Sets the function that computes the Jacobian of the initial conditions w.r.t. the parameters P
+
+  Logically Collective
+
+  Input Parameters:
++ ts   - `TS` context obtained from `TSCreate()`
+. Jp   - JacobianP matrix
+. func - function, see `TSICJacobianPFn` for the calling sequence
+- ctx  - [optional] user-defined function context
+
+  Level: intermediate
+
+  Note:
+  Jp has the same number of rows and the same row parallel layout as u, J has the same number of columns and parallel layout as p
+
+.seealso: [](ch_ts), `TSSetRHSJacobianP()`, `TS`
+@*/
+PetscErrorCode TSSetICJacobianP(TS ts, Mat Jp, TSICJacobianPFn func, void *ctx)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
+  PetscValidHeaderSpecific(Jp, MAT_CLASSID, 2);
+
+  ts->ops->icjacobianp = func;
+  ts->icjacobianpctx   = ctx;
+  if (Jp) {
+    PetscCall(PetscObjectReference((PetscObject)Jp));
+    PetscCall(MatDestroy(&ts->icjacp));
+    ts->icjacp = Jp;
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  TSGetICJacobianP - Gets the function that computes the Jacobian of the initial conditions w.r.t. the parameters P
+
+  Logically Collective
+
+  Input Parameter:
+. ts - `TS` context obtained from `TSCreate()`
+
+  Output Parameters:
++ Jp   - JacobianP matrix or `NULL`
+. func - function, see `TSICJacobianPFn` for the calling sequence, or `NULL`
+- ctx  - [optional] user-defined function context, or `NULL`
+
+  Level: intermediate
+
+.seealso: [](ch_ts), `TSSetICJacobianP()`, `TS`
+@*/
+PetscErrorCode TSGetICJacobianP(TS ts, Mat *Jp, TSICJacobianPFn **func, void **ctx)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
+
+  if (func) *func = ts->ops->icjacobianp;
+  if (ctx) *ctx = ts->icjacobianpctx;
+  if (Jp) *Jp = ts->icjacp;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  TSComputeICJacobianP - Computes the Jacobian of the initial conditions w.r.t. the parameters P
+
+  Logically Collective
+
+  Input Parameters:
+. ts - `TS` context obtained from `TSCreate()`
+
+  Level: advanced
+
+.seealso: [](ch_ts), `TSSetRHSJacobianP()`, `TS`
+@*/
+PetscErrorCode TSComputeICJacobianP(TS ts)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
+
+  PetscFunctionBegin;
+  PetscCallBack("TS callback compute Jacobian of initial conditions", (*ts->ops->icjacobianp)(ts, ts->icjacp, ts->icjacobianpctx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

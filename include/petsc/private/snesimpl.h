@@ -27,6 +27,8 @@ struct _SNESOps {
   PetscErrorCode (*computevariablebounds)(SNES, Vec, Vec); /* user provided routine to set box constrained variable bounds */
   PetscErrorCode (*computepfunction)(SNES, Vec, Vec, void *);
   PetscErrorCode (*computepjacobian)(SNES, Vec, Mat, Mat, void *);
+  SNESJacobianPFn       *jacobianp; /* routine to compute the Jacobian of F w.r.t. parameters */
+  SNESInputParametersFn *inputparameters;
   PetscErrorCode (*load)(SNES, PetscViewer);
 };
 
@@ -172,6 +174,13 @@ struct _p_SNES {
                                              * solution and put it in vec_func?  Used inside SNESSolve_FAS to determine
                                              * if the final residual must be computed before restricting or prolonging
                                              * it. */
+
+  void    *jacobianpctx;       /* context for routine */
+  Mat      jacP;               /* matrix to contain computed Jacobian */
+  PetscInt numcost;            /* number of cost functions */
+  Vec     *vecs_lambda;        /* gradient of cost function w.r.t the unknowns */
+  Vec     *vecs_mu;            /* gradient of cost function w.r.t. parameters */
+  void    *inputparametersctx; /* context for SNESSetInputParameters() callback */
 };
 
 typedef struct _p_DMSNES  *DMSNES;
