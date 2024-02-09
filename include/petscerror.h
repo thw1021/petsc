@@ -423,7 +423,7 @@ M*/
     PetscFunctionBeginUser;
     // OK, properly handles PETSc error codes
     PetscCallVoid(KSPCreate(PETSC_COMM_WORLD, &ksp));
-    PetscFunctionReturnVoid;
+    PetscFunctionReturnVoid();
   }
 
   PetscErrorCode bar()
