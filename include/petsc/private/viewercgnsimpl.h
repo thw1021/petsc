@@ -24,5 +24,21 @@ typedef struct {
     PetscCheck(!_cgns_ier, PETSC_COMM_SELF, PETSC_ERR_LIB, "CGNS error %d %s", _cgns_ier, cg_get_error()); \
   } while (0)
 
+#if CG_SIZEOF_SIZE == 32
+  // cgsize_t is defined as int
+  #define MPIU_CGSIZE     MPI_INT
+  #define PetscCGSize_FMT "d"
+#else
+  #if defined(_WIN32)
+    // cgsize_t is defined as __int64, which is synonymous with long long
+    #define MPIU_CGSIZE     MPI_LONG_LONG
+    #define PetscCGSize_FMT "lld"
+  #else
+    // cgsize_t is defined as long
+    #define MPIU_CGSIZE     MPI_LONG
+    #define PetscCGSize_FMT "ld"
+  #endif
+#endif
+
 PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscViewerCGNSCheckBatch_Internal(PetscViewer);
 PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscViewerCGNSFileOpen_Internal(PetscViewer, PetscInt);
