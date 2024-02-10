@@ -487,7 +487,6 @@ static PetscErrorCode ComputeFieldAtParticles(SNES snes, DM sw, PetscReal E[])
   default:
     SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "No solver for electrostatic model %s", EMTypes[ctx->em]);
   }
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

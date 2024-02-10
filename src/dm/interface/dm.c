@@ -4520,6 +4520,7 @@ static PetscErrorCode DMDefaultSectionCheckConsistency_Internal(DM dm, PetscSect
 static PetscErrorCode DMGetIsoperiodicPointSF_Internal(DM dm, PetscSF *sf)
 {
   PetscErrorCode (*f)(DM, PetscSF *);
+
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscAssertPointer(sf, 2);
