@@ -185,6 +185,7 @@ Changes: Development
 - Add support for ``DMLocalToLocalBegin()`` and ``DMLocalToLocalEnd()``
 - Add ``DMStagSetRefinementFactor()`` and ``DMStagGetRefinementFactor()`` to set and get the refinement ratio
 - Add support for arbitrary refinement ratio and degree of freedom in interpolation and restriction
+- Add ``PETSCVIEWERCGNS`` viewer support for ``DMSTAG``
 
 .. rubric:: DT:
 
