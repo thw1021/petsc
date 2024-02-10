@@ -1088,6 +1088,7 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
   cgsize_t          isize[3];
 
   PetscFunctionBegin;
+  if (cgv->base) PetscFunctionReturn(PETSC_SUCCESS);
   if (!cgv->file_num) {
     PetscInt time_step;
     PetscCall(DMGetOutputSequenceNumber(dm, &time_step, NULL));
@@ -1236,10 +1237,10 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
     cgv->zone            = zone;
     cgv->node_l2g        = node_l2g;
     cgv->num_local_nodes = num_local_nodes;
-    cgv->nStart          = nStart;
-    cgv->nEnd            = nEnd;
-    cgv->eStart          = e_start;
-    cgv->eEnd            = e_start + e_owned;
+    cgv->nStart[0]       = nStart;
+    cgv->nEnd[0]         = nEnd;
+    cgv->eStart[0]       = e_start;
+    cgv->eEnd[0]         = e_start + e_owned;
     if (1) {
       PetscMPIInt rank;
       int        *efield;
@@ -1308,10 +1309,10 @@ PetscErrorCode VecView_Plex_Local_CGNS(Vec V, PetscViewer viewer)
   if (!cgv->nodal_field) {
     switch (cgv->grid_loc) {
     case CGNS_ENUMV(Vertex): {
-      PetscCall(PetscMalloc1(cgv->nEnd - cgv->nStart, &cgv->nodal_field));
+      PetscCall(PetscMalloc1(cgv->nEnd[0] - cgv->nStart[0], &cgv->nodal_field));
     } break;
     case CGNS_ENUMV(CellCenter): {
-      PetscCall(PetscMalloc1(cgv->eEnd - cgv->eStart, &cgv->nodal_field));
+      PetscCall(PetscMalloc1(cgv->eEnd[0] - cgv->eStart[0], &cgv->nodal_field));
     } break;
     default:
       SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "Can only write for Vertex and CellCenter grid locations");
@@ -1358,8 +1359,8 @@ PetscErrorCode VecView_Plex_Local_CGNS(Vec V, PetscViewer viewer)
           switch (cgv->grid_loc) {
           case CGNS_ENUMV(Vertex): {
             PetscInt gn = cgv->node_l2g[n];
-            if (gn < cgv->nStart || cgv->nEnd <= gn) continue;
-            cgv->nodal_field[gn - cgv->nStart] = v[off + c];
+            if (gn < cgv->nStart[0] || cgv->nEnd[0] <= gn) continue;
+            cgv->nodal_field[gn - cgv->nStart[0]] = v[off + c];
           } break;
           case CGNS_ENUMV(CellCenter): {
             cgv->nodal_field[n] = v[off + c];
@@ -1373,12 +1374,12 @@ PetscErrorCode VecView_Plex_Local_CGNS(Vec V, PetscViewer viewer)
       cgsize_t start, end;
       switch (cgv->grid_loc) {
       case CGNS_ENUMV(Vertex): {
-        start = cgv->nStart + 1;
-        end   = cgv->nEnd;
+        start = cgv->nStart[0] + 1;
+        end   = cgv->nEnd[0];
       } break;
       case CGNS_ENUMV(CellCenter): {
-        start = cgv->eStart + 1;
-        end   = cgv->eEnd;
+        start = cgv->eStart[0] + 1;
+        end   = cgv->eEnd[0];
       } break;
       default:
         SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "Can only write for Vertex and CellCenter grid locations");

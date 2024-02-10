@@ -109,6 +109,8 @@ Changes: Development
 
 .. rubric:: DMStag:
 
+- Add ``PETSCVIEWERCGNS`` viewer support for ``DMSTAG``
+
 .. rubric:: DT:
 
 .. rubric:: Fortran:
