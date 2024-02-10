@@ -101,7 +101,7 @@ PetscErrorCode DMView_Stag_CGNS(DM dm, PetscViewer viewer)
   DM                cdm;
   PetscBool         is_last_rank[3];
   PetscBool         isstag, isproduct;
-  cgsize_t          isize[9];
+  cgsize_t          isize[9] = {0};
   CGNS_ENUMT(DataType_t) datatype;
   int          coord_ids[3];
   cgsize_t     start[3], end[3];
@@ -238,7 +238,7 @@ PetscErrorCode DMView_Stag_CGNS(DM dm, PetscViewer viewer)
       PetscCallCGNS(cgp_coord_write_data(cgv->file_num, base, zone, coord_ids[d], start, end, x));
     }
     PetscCall(DMStagRestoreProductCoordinateArraysRead(dm, &arr[0], &arr[1], &arr[2]));
-  }
+  } else SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "Unsupported coordinate DM type %s", stag->coordinateDMType);
   PetscCall(PetscFree(x));
 
   cgv->base            = base;
@@ -280,6 +280,312 @@ PetscErrorCode DMView_Stag_CGNS(DM dm, PetscViewer viewer)
     }
 
     PetscCall(PetscFree(x));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode DMStagGetLocalEntries1d_Private(DM dm, Vec v, DMStagStencilLocation loc, PetscInt d, PetscScalar *e)
+{
+  PetscInt      x, m, nExtrax;
+  PetscBool     isLastRankx;
+  PetscScalar **arr;
+  PetscInt      iloc, i, cnt = 0;
+
+  PetscFunctionBegin;
+  PetscCall(DMStagGetCorners(dm, &x, NULL, NULL, &m, NULL, NULL, NULL, NULL, NULL));
+  PetscCall(DMStagGetIsLastRank(dm, &isLastRankx, NULL, NULL));
+  nExtrax = (loc == DMSTAG_LEFT && isLastRankx) ? 1 : 0;
+  PetscCall(DMStagVecGetArrayRead(dm, v, &arr));
+  PetscCall(DMStagGetLocationSlot(dm, loc, d, &iloc));
+  for (i = x; i < x + m + nExtrax; ++i) e[cnt++] = arr[i][iloc];
+  PetscCall(DMStagVecRestoreArrayRead(dm, v, &arr));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode DMStagGetLocalEntries2d_Private(DM dm, Vec v, DMStagStencilLocation loc, PetscInt d, PetscScalar *e)
+{
+  PetscInt       x, y, m, n, nExtrax, nExtray;
+  PetscBool      isLastRankx, isLastRanky;
+  PetscScalar ***arr;
+  PetscInt       iloc, i, j, cnt = 0;
+
+  PetscFunctionBegin;
+  PetscCall(DMStagGetCorners(dm, &x, &y, NULL, &m, &n, NULL, NULL, NULL, NULL));
+  PetscCall(DMStagGetIsLastRank(dm, &isLastRankx, &isLastRanky, NULL));
+  nExtrax = ((loc == DMSTAG_DOWN_LEFT || loc == DMSTAG_LEFT) && isLastRankx) ? 1 : 0;
+  nExtray = ((loc == DMSTAG_DOWN_LEFT || loc == DMSTAG_DOWN) && isLastRanky) ? 1 : 0;
+  PetscCall(DMStagVecGetArrayRead(dm, v, &arr));
+  PetscCall(DMStagGetLocationSlot(dm, loc, d, &iloc));
+  for (j = y; j < y + n + nExtray; ++j)
+    for (i = x; i < x + m + nExtrax; ++i) e[cnt++] = arr[j][i][iloc];
+  PetscCall(DMStagVecRestoreArrayRead(dm, v, &arr));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode DMStagGetLocalEntries3d_Private(DM dm, Vec v, DMStagStencilLocation loc, PetscInt d, PetscScalar *e)
+{
+  PetscInt        x, y, z, m, n, p, nExtrax, nExtray, nExtraz;
+  PetscBool       isLastRankx, isLastRanky, isLastRankz;
+  PetscScalar ****arr;
+  PetscInt        iloc, i, j, k, cnt = 0;
+
+  PetscFunctionBegin;
+  PetscCall(DMStagGetCorners(dm, &x, &y, &z, &m, &n, &p, NULL, NULL, NULL));
+  PetscCall(DMStagGetIsLastRank(dm, &isLastRankx, &isLastRanky, &isLastRankz));
+  nExtrax = ((loc == DMSTAG_BACK_DOWN_LEFT || loc == DMSTAG_LEFT) && isLastRankx) ? 1 : 0;
+  nExtray = ((loc == DMSTAG_BACK_DOWN_LEFT || loc == DMSTAG_DOWN) && isLastRanky) ? 1 : 0;
+  nExtraz = ((loc == DMSTAG_BACK_DOWN_LEFT || loc == DMSTAG_BACK) && isLastRankz) ? 1 : 0;
+  PetscCall(DMStagVecGetArrayRead(dm, v, &arr));
+  PetscCall(DMStagGetLocationSlot(dm, loc, d, &iloc));
+  for (k = z; k < z + p + nExtraz; ++k)
+    for (j = y; j < y + n + nExtray; ++j)
+      for (i = x; i < x + m + nExtrax; ++i) e[cnt++] = arr[k][j][i][iloc];
+  PetscCall(DMStagVecRestoreArrayRead(dm, v, &arr));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode VecView_Stag_Local_CGNS(Vec v, PetscViewer viewer)
+{
+  PetscViewer_CGNS *cgv = (PetscViewer_CGNS *)viewer->data;
+  DM                dm;
+  PetscInt          dim, dof[4], num_local_entries;
+  const char       *vec_name;
+  PetscInt          time_step;
+  PetscReal         time;
+  char              solution_name[PETSC_MAX_PATH_LEN];
+  CGNS_ENUMT(DataType_t) datatype;
+  PetscScalar *e;
+  cgsize_t     start[3], end[3];
+  PetscInt     d;
+
+  PetscFunctionBegin;
+  PetscCall(VecGetDM(v, &dm));
+  PetscCall(DMGetDimension(dm, &dim));
+  PetscCall(DMStagGetDOF(dm, &dof[0], &dof[1], &dof[2], &dof[3]));
+  // Edge data is not supported in 3D
+  PetscCheck(dim < 3 || dof[1] == 0, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Edge data is not supported");
+
+  if (cgv->base) {
+    PetscInt n[3];
+
+    PetscCall(DMStagGetLocalSizes(dm, &n[0], &n[1], &n[2]));
+    for (d = 0; d < dim; ++d) PetscCheck(n[d] == cgv->eEnd[d] - cgv->eStart[d], PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "The DM viewed previously is not compatible with the DM associated with the vector");
+  }
+
+  PetscCall(PetscObjectGetName((PetscObject)v, &vec_name));
+  PetscCall(DMGetOutputSequenceNumber(dm, &time_step, &time));
+  if (time_step < 0) {
+    time_step = 0;
+    time      = 0.;
+  }
+
+  if (cgv->last_step != time_step) {
+    PetscReal *time_slot;
+    size_t    *step_slot;
+
+    PetscCall(PetscViewerCGNSCheckBatch_Internal(viewer));
+    cgv->solVertex      = 0;
+    cgv->solCellCenter  = 0;
+    cgv->solIFaceCenter = 0;
+    cgv->solJFaceCenter = 0;
+    cgv->solKFaceCenter = 0;
+    if (!cgv->base) PetscCall(DMView(dm, viewer));
+    if (!cgv->output_times) PetscCall(PetscSegBufferCreate(sizeof(PetscReal), 20, &cgv->output_times));
+    if (!cgv->output_steps) PetscCall(PetscSegBufferCreate(sizeof(size_t), 20, &cgv->output_steps));
+
+    PetscCall(PetscSegBufferGet(cgv->output_times, 1, &time_slot));
+    *time_slot = time;
+    PetscCall(PetscSegBufferGet(cgv->output_steps, 1, &step_slot));
+    *step_slot     = time_step;
+    cgv->last_step = time_step;
+  }
+
+  PetscCall(PetscCGNSDataType_Private(PETSC_SCALAR, &datatype));
+
+  if (dof[0] > 0) {
+    if (!cgv->solVertex) {
+      PetscCall(PetscSNPrintf(solution_name, sizeof solution_name, "FlowSolution%" PetscInt_FMT, time_step));
+      PetscCallCGNS(cg_sol_write(cgv->file_num, cgv->base, cgv->zone, solution_name, CGNS_ENUMV(Vertex), &cgv->solVertex));
+    }
+
+    num_local_entries = 1;
+    // CGNS nodes use 1-based indexing
+    for (d = 0; d < dim; ++d) {
+      start[d] = cgv->nStart[d] + 1;
+      end[d]   = cgv->nEnd[d];
+      num_local_entries *= end[d] - start[d] + 1;
+    }
+    PetscCall(PetscMalloc1(num_local_entries, &e));
+    for (d = 0; d < dof[0]; ++d) {
+      int  field;
+      char field_name[32]; // CGNS max field name length is 32
+
+      if (dof[0] == 1) PetscCall(PetscSNPrintf(field_name, sizeof field_name, "%s", vec_name));
+      else PetscCall(PetscSNPrintf(field_name, sizeof field_name, "%s.%" PetscInt_FMT, vec_name, d));
+      PetscCallCGNS(cgp_field_write(cgv->file_num, cgv->base, cgv->zone, cgv->solVertex, datatype, field_name, &field));
+      switch (dim) {
+      case 1:
+        PetscCall(DMStagGetLocalEntries1d_Private(dm, v, DMSTAG_LEFT, d, e));
+        break;
+      case 2:
+        PetscCall(DMStagGetLocalEntries2d_Private(dm, v, DMSTAG_DOWN_LEFT, d, e));
+        break;
+      case 3:
+        PetscCall(DMStagGetLocalEntries3d_Private(dm, v, DMSTAG_BACK_DOWN_LEFT, d, e));
+        break;
+      default:
+        SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Unsupported dimension %" PetscInt_FMT, dim);
+      }
+      PetscCallCGNS(cgp_field_write_data(cgv->file_num, cgv->base, cgv->zone, cgv->solVertex, field, start, end, e));
+    }
+    PetscCall(PetscFree(e));
+  }
+
+  if (dof[dim] > 0) {
+    if (!cgv->solCellCenter) {
+      if (dof[0] == 0) PetscCall(PetscSNPrintf(solution_name, sizeof solution_name, "FlowSolution%" PetscInt_FMT, time_step));
+      else PetscCall(PetscSNPrintf(solution_name, sizeof solution_name, "FlowSolutionCellCenter%" PetscInt_FMT, time_step));
+      PetscCallCGNS(cg_sol_write(cgv->file_num, cgv->base, cgv->zone, solution_name, CGNS_ENUMV(CellCenter), &cgv->solCellCenter));
+    }
+
+    num_local_entries = 1;
+    // CGNS nodes use 1-based indexing
+    for (d = 0; d < dim; ++d) {
+      start[d] = cgv->eStart[d] + 1;
+      end[d]   = cgv->eEnd[d];
+      num_local_entries *= end[d] - start[d] + 1;
+    }
+    PetscCall(PetscMalloc1(num_local_entries, &e));
+    for (d = 0; d < dof[dim]; ++d) {
+      int  field;
+      char field_name[32]; // CGNS max field name length is 32
+
+      if (dof[dim] == 1) PetscCall(PetscSNPrintf(field_name, sizeof field_name, "%s", vec_name));
+      else PetscCall(PetscSNPrintf(field_name, sizeof field_name, "%s.%" PetscInt_FMT, vec_name, d));
+      PetscCallCGNS(cgp_field_write(cgv->file_num, cgv->base, cgv->zone, cgv->solCellCenter, datatype, field_name, &field));
+      switch (dim) {
+      case 1:
+        PetscCall(DMStagGetLocalEntries1d_Private(dm, v, DMSTAG_ELEMENT, d, e));
+        break;
+      case 2:
+        PetscCall(DMStagGetLocalEntries2d_Private(dm, v, DMSTAG_ELEMENT, d, e));
+        break;
+      case 3:
+        PetscCall(DMStagGetLocalEntries3d_Private(dm, v, DMSTAG_ELEMENT, d, e));
+        break;
+      default:
+        SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Unsupported dimension %" PetscInt_FMT, dim);
+      }
+      PetscCallCGNS(cgp_field_write_data(cgv->file_num, cgv->base, cgv->zone, cgv->solCellCenter, field, start, end, e));
+    }
+    PetscCall(PetscFree(e));
+  }
+
+  if (dim > 1 && dof[dim - 1] > 0) {
+    if (!cgv->solIFaceCenter) {
+      PetscCall(PetscSNPrintf(solution_name, sizeof solution_name, "FlowSolutionIFaceCenter%" PetscInt_FMT, time_step));
+      PetscCallCGNS(cg_sol_write(cgv->file_num, cgv->base, cgv->zone, solution_name, CGNS_ENUMV(IFaceCenter), &cgv->solIFaceCenter));
+    }
+    PetscCheck(cgv->solIFaceCenter, PETSC_COMM_SELF, PETSC_ERR_LIB, "IFaceCenter solution is missing");
+
+    num_local_entries = 1;
+    // CGNS nodes use 1-based indexing
+    for (d = 0; d < dim; ++d) {
+      start[d] = (d == 0 ? cgv->nStart[d] : cgv->eStart[d]) + 1;
+      end[d]   = d == 0 ? cgv->nEnd[d] : cgv->eEnd[d];
+      num_local_entries *= end[d] - start[d] + 1;
+    }
+    PetscCall(PetscMalloc1(num_local_entries, &e));
+    for (d = 0; d < dof[dim - 1]; ++d) {
+      int  field;
+      char field_name[32]; // CGNS max field name length is 32
+
+      if (dof[dim - 1] == 1) PetscCall(PetscSNPrintf(field_name, sizeof field_name, "%s", vec_name));
+      else PetscCall(PetscSNPrintf(field_name, sizeof field_name, "%s.%" PetscInt_FMT, vec_name, d));
+      PetscCallCGNS(cgp_field_write(cgv->file_num, cgv->base, cgv->zone, cgv->solIFaceCenter, datatype, field_name, &field));
+      switch (dim) {
+      case 2:
+        PetscCall(DMStagGetLocalEntries2d_Private(dm, v, DMSTAG_LEFT, d, e));
+        break;
+      case 3:
+        PetscCall(DMStagGetLocalEntries3d_Private(dm, v, DMSTAG_LEFT, d, e));
+        break;
+      default:
+        SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Unsupported dimension %" PetscInt_FMT, dim);
+      }
+      PetscCallCGNS(cgp_field_write_data(cgv->file_num, cgv->base, cgv->zone, cgv->solIFaceCenter, field, start, end, e));
+    }
+    PetscCall(PetscFree(e));
+
+    if (!cgv->solJFaceCenter) {
+      PetscCall(PetscSNPrintf(solution_name, sizeof solution_name, "FlowSolutionJFaceCenter%" PetscInt_FMT, time_step));
+      PetscCallCGNS(cg_sol_write(cgv->file_num, cgv->base, cgv->zone, solution_name, CGNS_ENUMV(JFaceCenter), &cgv->solJFaceCenter));
+    }
+
+    num_local_entries = 1;
+    // CGNS nodes use 1-based indexing
+    for (d = 0; d < dim; ++d) {
+      start[d] = (d == 1 ? cgv->nStart[d] : cgv->eStart[d]) + 1;
+      end[d]   = d == 1 ? cgv->nEnd[d] : cgv->eEnd[d];
+      num_local_entries *= end[d] - start[d] + 1;
+    }
+    PetscCall(PetscMalloc1(num_local_entries, &e));
+    for (d = 0; d < dof[dim - 1]; ++d) {
+      int  field;
+      char field_name[32]; // CGNS max field name length is 32
+
+      if (dof[dim - 1] == 1) PetscCall(PetscSNPrintf(field_name, sizeof field_name, "%s", vec_name));
+      else PetscCall(PetscSNPrintf(field_name, sizeof field_name, "%s.%" PetscInt_FMT, vec_name, d));
+      PetscCallCGNS(cgp_field_write(cgv->file_num, cgv->base, cgv->zone, cgv->solJFaceCenter, datatype, field_name, &field));
+      switch (dim) {
+      case 2:
+        PetscCall(DMStagGetLocalEntries2d_Private(dm, v, DMSTAG_DOWN, d, e));
+        break;
+      case 3:
+        PetscCall(DMStagGetLocalEntries3d_Private(dm, v, DMSTAG_DOWN, d, e));
+        break;
+      default:
+        SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Unsupported dimension %" PetscInt_FMT, dim);
+      }
+      PetscCallCGNS(cgp_field_write_data(cgv->file_num, cgv->base, cgv->zone, cgv->solJFaceCenter, field, start, end, e));
+    }
+    PetscCall(PetscFree(e));
+
+    if (dim > 2) {
+      if (!cgv->solKFaceCenter) {
+        PetscCall(PetscSNPrintf(solution_name, sizeof solution_name, "FlowSolutionKFaceCenter%" PetscInt_FMT, time_step));
+        PetscCallCGNS(cg_sol_write(cgv->file_num, cgv->base, cgv->zone, solution_name, CGNS_ENUMV(KFaceCenter), &cgv->solKFaceCenter));
+      }
+
+      num_local_entries = 1;
+      // CGNS nodes use 1-based indexing
+      for (d = 0; d < dim; ++d) {
+        start[d] = (d == 2 ? cgv->nStart[d] : cgv->eStart[d]) + 1;
+        end[d]   = d == 2 ? cgv->nEnd[d] : cgv->eEnd[d];
+        num_local_entries *= end[d] - start[d] + 1;
+      }
+      PetscCall(PetscMalloc1(num_local_entries, &e));
+      for (d = 0; d < dof[dim - 1]; ++d) {
+        int  field;
+        char field_name[32]; // CGNS max field name length is 32
+
+        if (dof[dim - 1] == 1) PetscCall(PetscSNPrintf(field_name, sizeof field_name, "%s", vec_name));
+        else PetscCall(PetscSNPrintf(field_name, sizeof field_name, "%s.%" PetscInt_FMT, vec_name, d));
+        PetscCallCGNS(cgp_field_write(cgv->file_num, cgv->base, cgv->zone, cgv->solKFaceCenter, datatype, field_name, &field));
+        switch (dim) {
+        case 2:
+          PetscCall(DMStagGetLocalEntries2d_Private(dm, v, DMSTAG_BACK, d, e));
+          break;
+        case 3:
+          PetscCall(DMStagGetLocalEntries3d_Private(dm, v, DMSTAG_BACK, d, e));
+          break;
+        default:
+          SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Unsupported dimension %" PetscInt_FMT, dim);
+        }
+        PetscCallCGNS(cgp_field_write_data(cgv->file_num, cgv->base, cgv->zone, cgv->solKFaceCenter, field, start, end, e));
+      }
+      PetscCall(PetscFree(e));
+    }
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
