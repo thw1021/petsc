@@ -23,7 +23,11 @@ typedef struct {
   PetscScalar   *nodal_field;
   PetscSegBuffer output_steps;
   PetscSegBuffer output_times;
+  PetscInt       last_step;
   PetscInt       batch_size;
+
+  // Solution writing information
+  int sol_vertex, sol_cell_center; // Flow solution indices in the current zone
 
   // Solution reading information
   PetscInt solution_index;              // User set solution index
