@@ -279,7 +279,6 @@ static PetscErrorCode SetupPrimalProblem(DM dm, AppCtx *user)
   default:
     SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Invalid solution type: %d", user->solType);
   }
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -383,7 +382,6 @@ static PetscErrorCode CreateSwarm(DM dm, AppCtx *user, DM *sw)
   PetscCall(DMSetApplicationContext(*sw, user));
   PetscCall(PetscObjectSetName((PetscObject)*sw, "Particles"));
   PetscCall(DMViewFromOptions(*sw, NULL, "-sw_view"));
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
