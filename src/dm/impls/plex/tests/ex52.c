@@ -5,10 +5,10 @@ const char help[] = "Test clearing stale AMR data (example contributed by Berend
 
 PetscErrorCode CloneDMWithNewSection(DM OriginalDM, DM *NewDM, PetscInt NFields)
 {
-  PetscFunctionBegin;
-
   PetscSection section;
   PetscInt    *NumComp, *NumDof;
+
+  PetscFunctionBegin;
   PetscCall(DMClone(OriginalDM, NewDM));
   PetscCall(DMPlexDistributeSetDefault(*NewDM, PETSC_FALSE));
   PetscCall(DMClearDS(*NewDM));
@@ -26,13 +26,11 @@ PetscErrorCode CloneDMWithNewSection(DM OriginalDM, DM *NewDM, PetscInt NFields)
   PetscCall(DMSetField(*NewDM, 0, NULL, (PetscObject)fe));
   PetscCall(PetscFEDestroy(&fe));
   PetscCall(DMCreateDS(*NewDM));
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 int main(int argc, char **argv)
 {
-  PetscCall(PetscInitialize(&argc, &argv, NULL, help));
   MPI_Comm       comm            = PETSC_COMM_WORLD;
   PetscInt       dim             = 2;
   PetscInt       cells_per_dir[] = {1, 1};
@@ -43,6 +41,8 @@ int main(int argc, char **argv)
   DM             NewDM;
   Vec            NewDMVecGlobal, NewDMVecLocal;
 
+  PetscFunctionBeginUser;
+  PetscCall(PetscInitialize(&argc, &argv, NULL, help));
   PetscCall(DMCreate(comm, &forest));
   PetscCall(DMSetType(forest, DMP4EST));
   {
