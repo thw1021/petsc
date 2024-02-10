@@ -31,10 +31,12 @@ static PetscErrorCode PetscViewerFileClose_CGNS(PetscViewer viewer)
 
   PetscFunctionBegin;
   if (cgv->output_times) {
-    size_t     size, width = 32, *steps;
-    char      *solnames;
-    PetscReal *times;
-    cgsize_t   num_times;
+    size_t       size, *steps;
+    char        *solnames;
+    PetscReal   *times;
+    cgsize_t     num_times;
+    const size_t width = 32;
+
     PetscCall(PetscSegBufferGetSize(cgv->output_times, &size));
     PetscCall(PetscSegBufferExtractInPlace(cgv->output_times, &times));
     num_times = size;
@@ -46,15 +48,42 @@ static PetscErrorCode PetscViewerFileClose_CGNS(PetscViewer viewer)
     PetscCallCGNS(cg_goto(cgv->file_num, cgv->base, "Zone_t", cgv->zone, "ZoneIterativeData_t", 1, NULL));
     PetscCall(PetscMalloc(size * width + 1, &solnames));
     PetscCall(PetscSegBufferExtractInPlace(cgv->output_steps, &steps));
-    for (size_t i = 0; i < size; i++) PetscCall(PetscSNPrintf(&solnames[i * width], width + 1, "FlowSolution%-20zu", steps[i]));
-    PetscCall(PetscSegBufferDestroy(&cgv->output_steps));
     cgsize_t shape[2] = {(cgsize_t)width, (cgsize_t)size};
-    PetscCallCGNS(cg_array_write("FlowSolutionPointers", CGNS_ENUMV(Character), 2, shape, solnames));
-    // The VTK reader looks for names like FlowSolution*Pointers.
+
+    // The VTK reader looks for "FlowSolutionPointers" to determine if the solution is time-dependent so at least one
+    // DataArray_t should have the name "FlowSolutionPointers". If "FlowSolutionPointers" exists, the VTK reader will
+    // look for other names which starts with "FlowSolution" and ends with "Pointers".
+    if (cgv->solVertex) {
+      for (size_t i = 0; i < size; i++) PetscCall(PetscSNPrintf(&solnames[i * width], width + 1, "FlowSolution%-20zu", steps[i]));
+      PetscCallCGNS(cg_array_write("FlowSolutionPointers", CGNS_ENUMV(Character), 2, shape, solnames));
+    }
+    if (cgv->solCellCenter) {
+      if (!cgv->solVertex) {
+        for (size_t i = 0; i < size; i++) PetscCall(PetscSNPrintf(&solnames[i * width], width + 1, "FlowSolution%-20zu", steps[i]));
+        PetscCallCGNS(cg_array_write("FlowSolutionPointers", CGNS_ENUMV(Character), 2, shape, solnames));
+      } else {
+        for (size_t i = 0; i < size; i++) PetscCall(PetscSNPrintf(&solnames[i * width], width + 1, "FlowSolutionCellCenter%-10zu", steps[i]));
+        PetscCallCGNS(cg_array_write("FlowSolutionCellCenterPointers", CGNS_ENUMV(Character), 2, shape, solnames));
+      }
+    }
+    if (cgv->solIFaceCenter) {
+      for (size_t i = 0; i < size; i++) PetscCall(PetscSNPrintf(&solnames[i * width], width + 1, "FlowSolutionIFaceCenter%-9zu", steps[i]));
+      if (!cgv->solVertex && !cgv->solCellCenter) PetscCallCGNS(cg_array_write("FlowSolutionPointers", CGNS_ENUMV(Character), 2, shape, solnames));
+      else PetscCallCGNS(cg_array_write("FlowSolutionIFaceCenterPointers", CGNS_ENUMV(Character), 2, shape, solnames));
+    }
+    if (cgv->solJFaceCenter) {
+      for (size_t i = 0; i < size; i++) PetscCall(PetscSNPrintf(&solnames[i * width], width + 1, "FlowSolutionJFaceCenter%-9zu", steps[i]));
+      PetscCallCGNS(cg_array_write("FlowSolutionJFaceCenterPointers", CGNS_ENUMV(Character), 2, shape, solnames));
+    }
+    if (cgv->solKFaceCenter) {
+      for (size_t i = 0; i < size; i++) PetscCall(PetscSNPrintf(&solnames[i * width], width + 1, "FlowSolutionKFaceCenter%-9zu", steps[i]));
+      PetscCallCGNS(cg_array_write("FlowSolutionKFaceCenterPointers", CGNS_ENUMV(Character), 2, shape, solnames));
+    }
+    PetscCall(PetscSegBufferDestroy(&cgv->output_steps));
     for (size_t i = 0; i < size; i++) PetscCall(PetscSNPrintf(&solnames[i * width], width + 1, "%-32s", "CellInfo"));
     PetscCallCGNS(cg_array_write("FlowSolutionCellInfoPointers", CGNS_ENUMV(Character), 2, shape, solnames));
-    PetscCall(PetscFree(solnames));
 
+    PetscCall(PetscFree(solnames));
     PetscCallCGNS(cg_simulation_type_write(cgv->file_num, cgv->base, CGNS_ENUMV(TimeAccurate)));
   }
   PetscCall(PetscFree(cgv->filename));
@@ -63,9 +92,14 @@ static PetscErrorCode PetscViewerFileClose_CGNS(PetscViewer viewer)
 #else
   if (cgv->file_num) PetscCallCGNS(cg_close(cgv->file_num));
 #endif
-  cgv->file_num = 0;
-  cgv->base     = 0;
-  cgv->zone     = 0;
+  cgv->file_num       = 0;
+  cgv->base           = 0;
+  cgv->zone           = 0;
+  cgv->solVertex      = 0;
+  cgv->solCellCenter  = 0;
+  cgv->solIFaceCenter = 0;
+  cgv->solJFaceCenter = 0;
+  cgv->solKFaceCenter = 0;
   PetscCall(PetscFree(cgv->node_l2g));
   PetscCall(PetscFree(cgv->nodal_field));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -111,6 +145,7 @@ PetscErrorCode PetscViewerCGNSCheckBatch_Internal(PetscViewer viewer)
 
   PetscFunctionBegin;
   if (!cgv->filename_template) PetscFunctionReturn(PETSC_SUCCESS); // Batches are closed when viewer is destroyed
+  if (!cgv->output_times) PetscFunctionReturn(PETSC_SUCCESS);      // Not time-dependent solution
   PetscCall(PetscSegBufferGetSize(cgv->output_times, &num_steps));
   if (num_steps >= cgv->batch_size) PetscCall(PetscViewerFileClose_CGNS(viewer));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -207,6 +242,7 @@ PETSC_EXTERN PetscErrorCode PetscViewerCreate_CGNS(PetscViewer v)
   cgv->btype             = FILE_MODE_UNDEFINED;
   cgv->filename          = NULL;
   cgv->batch_size        = 20;
+  cgv->last_step         = -1;
 
   PetscCall(PetscObjectComposeFunction((PetscObject)v, "PetscViewerFileSetName_C", PetscViewerFileSetName_CGNS));
   PetscCall(PetscObjectComposeFunction((PetscObject)v, "PetscViewerFileGetName_C", PetscViewerFileGetName_CGNS));
