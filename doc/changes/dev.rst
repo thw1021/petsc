@@ -56,6 +56,7 @@ Changes: Development
 .. rubric:: PetscSection:
 
 - Add ``PetscSectionGetBlockStarts()`` and ``PetscSectionSetBlockStarts()``
+- Add ``PetscSectionCreateComponentSubsection()``
 
 .. rubric:: PetscPartitioner:
 
