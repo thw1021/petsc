@@ -380,6 +380,16 @@ static PetscErrorCode MatProductSetFromOptions_Normal_Dense(Mat C)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode MatProductSetFromOptions_Normal_Dense_Foo(Mat C)
+{
+  Mat_Product *product = C->product;
+
+  PetscFunctionBegin;
+  printf("foo!\n");
+  if (product->type == MATPRODUCT_AB) PetscCall(MatProductSetFromOptions_Normal_Dense_AB(C));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*MC
   MATNORMAL - a matrix that behaves like A'*A for `MatMult()` while only containing A
 
@@ -449,7 +459,7 @@ PetscErrorCode MatCreateNormal(Mat A, Mat *N)
 #endif
   PetscCall(PetscObjectComposeFunction((PetscObject)*N, "MatProductSetFromOptions_normal_seqdense_C", MatProductSetFromOptions_Normal_Dense));
   PetscCall(PetscObjectComposeFunction((PetscObject)*N, "MatProductSetFromOptions_normal_mpidense_C", MatProductSetFromOptions_Normal_Dense));
-  PetscCall(PetscObjectComposeFunction((PetscObject)*N, "MatProductSetFromOptions_normal_dense_C", MatProductSetFromOptions_Normal_Dense));
+  PetscCall(PetscObjectComposeFunction((PetscObject)*N, "MatProductSetFromOptions_normal_dense_C", MatProductSetFromOptions_Normal_Dense_Foo));
   PetscCall(PetscObjectComposeFunction((PetscObject)*N, "MatShellSetContext_C", MatShellSetContext_Immutable));
   PetscCall(PetscObjectComposeFunction((PetscObject)*N, "MatShellSetContextDestroy_C", MatShellSetContextDestroy_Immutable));
   PetscCall(PetscObjectComposeFunction((PetscObject)*N, "MatShellSetManageScalingShifts_C", MatShellSetManageScalingShifts_Immutable));

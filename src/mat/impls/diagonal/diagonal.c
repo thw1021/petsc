@@ -612,6 +612,16 @@ static PetscErrorCode MatProductSetFromOptions_Diagonal_Dense(Mat C)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode MatProductSetFromOptions_Diagonal_Dense_Foo(Mat C)
+{
+  Mat_Product *product = C->product;
+
+  PetscFunctionBegin;
+  printf("foo!\n");
+  if (product->type == MATPRODUCT_AB || product->type == MATPRODUCT_AtB) PetscCall(MatProductSetFromOptions_Diagonal_Dense_AB(C));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*MC
    MATDIAGONAL - MATDIAGONAL = "diagonal" - A diagonal matrix type with the diagonal implemented as a `Vec`.  Useful for
    cases where `VecPointwiseMult()` or `VecPointwiseDivide()` should be thought of as the actions of a linear operator.
@@ -662,7 +672,7 @@ PETSC_INTERN PetscErrorCode MatCreate_Diagonal(Mat A)
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatDiagonalRestoreInverseDiagonal_C", MatDiagonalRestoreInverseDiagonal_Diagonal));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatProductSetFromOptions_diagonal_seqdense_C", MatProductSetFromOptions_Diagonal_Dense));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatProductSetFromOptions_diagonal_mpidense_C", MatProductSetFromOptions_Diagonal_Dense));
-  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatProductSetFromOptions_diagonal_dense_C", MatProductSetFromOptions_Diagonal_Dense));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatProductSetFromOptions_diagonal_dense_C", MatProductSetFromOptions_Diagonal_Dense_Foo));
   PetscCall(PetscObjectChangeTypeName((PetscObject)A, MATDIAGONAL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

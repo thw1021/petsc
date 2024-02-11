@@ -264,6 +264,16 @@ static PetscErrorCode MatProductSetFromOptions_Nest_Dense(Mat C)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode MatProductSetFromOptions_Nest_Dense_Foo(Mat C)
+{
+  Mat_Product *product = C->product;
+
+  PetscFunctionBegin;
+  printf("foo!\n");
+  if (product->type == MATPRODUCT_AB) PetscCall(MatProductSetFromOptions_Nest_Dense_AB(C));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode MatMultTransposeKernel_Nest(Mat A, Vec x, Vec y, PetscBool herm)
 {
   Mat_Nest *bA = (Mat_Nest *)A->data;
@@ -2317,7 +2327,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_Nest(Mat A)
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatConvert_nest_seqdense_C", MatConvert_Nest_Dense));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatProductSetFromOptions_nest_seqdense_C", MatProductSetFromOptions_Nest_Dense));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatProductSetFromOptions_nest_mpidense_C", MatProductSetFromOptions_Nest_Dense));
-  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatProductSetFromOptions_nest_dense_C", MatProductSetFromOptions_Nest_Dense));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatProductSetFromOptions_nest_dense_C", MatProductSetFromOptions_Nest_Dense_Foo));
 
   PetscCall(PetscObjectChangeTypeName((PetscObject)A, MATNEST));
   PetscFunctionReturn(PETSC_SUCCESS);
