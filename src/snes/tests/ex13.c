@@ -77,9 +77,9 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
   { // perturb to get general coordinates
     Vec          coordinates;
     PetscScalar *coords;
-    PetscInt nloc, v;
-    PetscRandom   rnd;
-    PetscReal del;
+    PetscInt     nloc, v;
+    PetscRandom  rnd;
+    PetscReal    del;
     PetscCall(PetscRandomCreate(PETSC_COMM_SELF, &rnd));
     PetscCall(PetscRandomSetInterval(rnd, -PETSC_SQRT_MACHINE_EPSILON, PETSC_SQRT_MACHINE_EPSILON));
     PetscCall(PetscRandomSetFromOptions(rnd));
