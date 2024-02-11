@@ -335,7 +335,7 @@ PetscErrorCode DMRefine_Plex(DM dm, MPI_Comm comm, DM *rdm)
     PetscCall(DMPlexSetRegularRefinement(*rdm, PETSC_TRUE));
     PetscCall(DMPlexGetUseCeed(dm, &useCeed));
     PetscCall(DMPlexSetUseCeed(*rdm, useCeed));
-    PetscCall(DMSetMatType((*rdm), dm->mattype));
+    PetscCall(DMSetMatType(*rdm, dm->mattype));
     PetscCall(DMCopyDisc(dm, *rdm));
     PetscCall(DMGetCoordinateDM(dm, &cdm));
     PetscCall(DMGetCoordinateDM(*rdm, &rcdm));

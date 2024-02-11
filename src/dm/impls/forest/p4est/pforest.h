@@ -410,7 +410,7 @@ static PetscErrorCode DMForestTemplate_pforest(DM dm, DM tdm)
 
   PetscFunctionBegin;
   if (pforest->topo) pforest->topo->refct++;
-  PetscCall(DMFTopologyDestroy_pforest(&(tpforest->topo)));
+  PetscCall(DMFTopologyDestroy_pforest(&tpforest->topo));
   tpforest->topo = pforest->topo;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -2138,11 +2138,11 @@ static PetscErrorCode DMShareDiscretization(DM dmA, DM dmB)
   if (dmB->localSection != dmA->localSection || dmB->globalSection != dmA->globalSection) {
     PetscCall(DMClearLocalVectors(dmB));
     PetscCall(PetscObjectReference((PetscObject)dmA->localSection));
-    PetscCall(PetscSectionDestroy(&(dmB->localSection)));
+    PetscCall(PetscSectionDestroy(&dmB->localSection));
     dmB->localSection = dmA->localSection;
     PetscCall(DMClearGlobalVectors(dmB));
     PetscCall(PetscObjectReference((PetscObject)dmA->globalSection));
-    PetscCall(PetscSectionDestroy(&(dmB->globalSection)));
+    PetscCall(PetscSectionDestroy(&dmB->globalSection));
     dmB->globalSection = dmA->globalSection;
     PetscCall(PetscObjectReference((PetscObject)dmA->defaultConstraint.section));
     PetscCall(PetscSectionDestroy(&(dmB->defaultConstraint.section)));
@@ -2203,7 +2203,7 @@ static PetscErrorCode DMPforestGetCellCoveringSF(MPI_Comm comm, p4est_t *p4estC,
 
     /* locate myFineStart in (or before) a cell */
     if (treeStart->quadrants.elem_count) {
-      PetscCallP4estReturn(overlapIndex, sc_array_bsearch, (&(treeStart->quadrants), myFineStart, p4est_quadrant_disjoint));
+      PetscCallP4estReturn(overlapIndex, sc_array_bsearch, (&treeStart->quadrants, myFineStart, p4est_quadrant_disjoint));
       if (overlapIndex < 0) {
         firstCell = 0;
       } else {
@@ -2213,7 +2213,7 @@ static PetscErrorCode DMPforestGetCellCoveringSF(MPI_Comm comm, p4est_t *p4estC,
       firstCell = 0;
     }
     if (treeEnd && treeEnd->quadrants.elem_count) {
-      PetscCallP4estReturn(overlapIndex, sc_array_bsearch, (&(treeEnd->quadrants), myFineEnd, p4est_quadrant_disjoint));
+      PetscCallP4estReturn(overlapIndex, sc_array_bsearch, (&treeEnd->quadrants, myFineEnd, p4est_quadrant_disjoint));
       if (overlapIndex < 0) { /* all of this local section is overlapped */
         lastCell = p4estC->local_num_quadrants;
       } else {
@@ -2373,7 +2373,7 @@ static PetscErrorCode DMPforestGetTransferSF_Point(DM coarse, DM fine, PetscSF *
     PetscCall(DMForestGetAdaptivityForest(fine, &adaptFine));
     if (adaptCoarse && adaptCoarse->data == fine->data) { /* coarse is adapted from fine */
       if (pforestC->pointSelfToAdaptSF) {
-        PetscCall(PetscObjectReference((PetscObject)(pforestC->pointSelfToAdaptSF)));
+        PetscCall(PetscObjectReference((PetscObject)pforestC->pointSelfToAdaptSF));
         *sf = pforestC->pointSelfToAdaptSF;
         if (childIds) {
           PetscCall(PetscMalloc1(pEndF - pStartF, &cids));
@@ -2387,7 +2387,7 @@ static PetscErrorCode DMPforestGetTransferSF_Point(DM coarse, DM fine, PetscSF *
       }
     } else if (adaptFine && adaptFine->data == coarse->data) { /* fine is adapted from coarse */
       if (pforestF->pointAdaptToSelfSF) {
-        PetscCall(PetscObjectReference((PetscObject)(pforestF->pointAdaptToSelfSF)));
+        PetscCall(PetscObjectReference((PetscObject)pforestF->pointAdaptToSelfSF));
         *sf = pforestF->pointAdaptToSelfSF;
         if (childIds) {
           PetscCall(PetscMalloc1(pEndF - pStartF, &cids));
@@ -4098,8 +4098,8 @@ static PetscErrorCode DMForestClearAdaptivityForest_pforest(DM dm)
   PetscFunctionBegin;
   forest  = (DM_Forest *)dm->data;
   pforest = (DM_Forest_pforest *)forest->data;
-  PetscCall(PetscSFDestroy(&(pforest->pointAdaptToSelfSF)));
-  PetscCall(PetscSFDestroy(&(pforest->pointSelfToAdaptSF)));
+  PetscCall(PetscSFDestroy(&pforest->pointAdaptToSelfSF));
+  PetscCall(PetscSFDestroy(&pforest->pointSelfToAdaptSF));
   PetscCall(PetscFree(pforest->pointAdaptToSelfCids));
   PetscCall(PetscFree(pforest->pointSelfToAdaptCids));
   PetscFunctionReturn(PETSC_SUCCESS);

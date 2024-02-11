@@ -33,9 +33,9 @@
     a->num_entries = 0; \
     a->max_entries = max_init; \
     if (constructor) { \
-      PetscCall(PetscMalloc1(max_init, &(a->array))); \
+      PetscCall(PetscMalloc1(max_init, &a->array)); \
     } else { \
-      PetscCall(PetscCalloc1(max_init, &(a->array))); \
+      PetscCall(PetscCalloc1(max_init, &a->array)); \
     } \
     PetscFunctionReturn(PETSC_SUCCESS); \
   } \

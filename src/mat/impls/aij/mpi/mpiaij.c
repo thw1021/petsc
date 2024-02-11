@@ -3734,17 +3734,17 @@ PetscErrorCode MatCreateSubMatrix_MPIAIJ_SameRowDist(Mat mat, IS isrow, IS iscol
   /* save Msub, iscol_sub and iscmap used in processor for next request */
   if (call == MAT_INITIAL_MATRIX) {
     *newmat = M;
-    PetscCall(PetscObjectCompose((PetscObject)(*newmat), "SubMatrix", (PetscObject)Msub));
+    PetscCall(PetscObjectCompose((PetscObject)*newmat, "SubMatrix", (PetscObject)Msub));
     PetscCall(MatDestroy(&Msub));
 
-    PetscCall(PetscObjectCompose((PetscObject)(*newmat), "SubIScol", (PetscObject)iscol_sub));
+    PetscCall(PetscObjectCompose((PetscObject)*newmat, "SubIScol", (PetscObject)iscol_sub));
     PetscCall(ISDestroy(&iscol_sub));
 
-    PetscCall(PetscObjectCompose((PetscObject)(*newmat), "Subcmap", (PetscObject)iscmap));
+    PetscCall(PetscObjectCompose((PetscObject)*newmat, "Subcmap", (PetscObject)iscmap));
     PetscCall(ISDestroy(&iscmap));
 
     if (iscol_local) {
-      PetscCall(PetscObjectCompose((PetscObject)(*newmat), "ISAllGather", (PetscObject)iscol_local));
+      PetscCall(PetscObjectCompose((PetscObject)*newmat, "ISAllGather", (PetscObject)iscol_local));
       PetscCall(ISDestroy(&iscol_local));
     }
   }

@@ -108,7 +108,7 @@ PetscErrorCode MatTranspose_SeqAIJ(Mat A, MatReuse reuse, Mat *B)
   }
   PetscCall(PetscFree(atfill));
   PetscCall(MatSeqAIJRestoreArrayRead(A, &av));
-  if (reuse == MAT_REUSE_MATRIX) PetscCall(PetscObjectStateIncrease((PetscObject)(*B)));
+  if (reuse == MAT_REUSE_MATRIX) PetscCall(PetscObjectStateIncrease((PetscObject)*B));
 
   if (reuse == MAT_INITIAL_MATRIX || reuse == MAT_INPLACE_MATRIX || nonzerochange) {
     PetscCall(MatCreateSeqAIJWithArrays(PetscObjectComm((PetscObject)A), an, am, ati, atj, ata, &At));

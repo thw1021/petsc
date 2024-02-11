@@ -274,7 +274,7 @@ PetscErrorCode PetscDrawDestroy(PetscDraw *draw)
   PetscFunctionBegin;
   if (!*draw) PetscFunctionReturn(PETSC_SUCCESS);
   PetscValidHeaderSpecific(*draw, PETSC_DRAW_CLASSID, 1);
-  if (--((PetscObject)(*draw))->refct > 0) PetscFunctionReturn(PETSC_SUCCESS);
+  if (--((PetscObject)*draw)->refct > 0) PetscFunctionReturn(PETSC_SUCCESS);
 
   if ((*draw)->pause == -2) {
     (*draw)->pause = -1;
