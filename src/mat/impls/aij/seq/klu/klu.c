@@ -76,7 +76,7 @@
 #endif
 
 EXTERN_C_BEGIN
-#include <klu.h>
+#include <suitesparse/klu.h>
 EXTERN_C_END
 
 static const char *KluOrderingTypes[] = {"AMD", "COLAMD"};

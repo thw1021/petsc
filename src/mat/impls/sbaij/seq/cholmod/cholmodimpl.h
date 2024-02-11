@@ -40,8 +40,8 @@
 #endif
 
 EXTERN_C_BEGIN
-#include <cholmod.h>
-#include <SuiteSparseQR_C.h>
+#include <suitesparse/cholmod.h>
+#include <suitesparse/SuiteSparseQR_C.h>
 EXTERN_C_END
 
 typedef struct {

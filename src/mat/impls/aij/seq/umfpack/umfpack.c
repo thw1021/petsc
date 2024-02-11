@@ -72,7 +72,7 @@
 #endif
 
 EXTERN_C_BEGIN
-#include <umfpack.h>
+#include <suitesparse/umfpack.h>
 EXTERN_C_END
 
 static const char *const UmfpackOrderingTypes[] = {"CHOLMOD", "AMD", "GIVEN", "METIS", "BEST", "NONE", "USER", "UmfpackOrderingTypes", "UMFPACK_ORDERING_", 0};
