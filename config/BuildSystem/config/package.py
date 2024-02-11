@@ -554,6 +554,9 @@ Now rerun configure''' % (self.installDirProvider.dir, '--download-'+self.packag
     alllibs = []
     if not directory:  # compiler default path - so also check compiler default libs.
       alllibs.insert(0,[])
+    elif directory in self.libraries.sysDirs:
+      self.logPrint('generateLibList: systemDir detected! skipping: '+str(directory))
+      directory = ''
     for libSet in liblist:
       libs = []
       # add full path only to the first library in the list

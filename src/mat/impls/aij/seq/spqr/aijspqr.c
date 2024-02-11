@@ -4,7 +4,7 @@
 #include <../src/mat/impls/shell/shell.h>
 
 EXTERN_C_BEGIN
-#include <SuiteSparseQR_C.h>
+#include <suitesparse/SuiteSparseQR_C.h>
 EXTERN_C_END
 
 static PetscErrorCode MatWrapCholmod_SPQR_seqaij(Mat A, PetscBool values, cholmod_sparse *C, PetscBool *aijalloc, PetscBool *valloc)

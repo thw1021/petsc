@@ -17,8 +17,7 @@ class Configure(config.package.CMakePackage):
                               ['libspqr.a','libumfpack.a','libklu.a','libcholmod.a','libbtf.a','libccolamd.a','libcolamd.a','libcamd.a','libamd.a','libmetis.a','libsuitesparseconfig.a'], # < 6.0.0
                               ['libspqr.a','libumfpack.a','libklu.a','libcholmod.a','libbtf.a','libccolamd.a','libcolamd.a','libcamd.a','libamd.a','libmetis.a','libsuitesparseconfig.a','librt.a']] # < 6.0.0
     self.functions         = ['umfpack_dl_wsolve','cholmod_l_solve','klu_l_solve','SuiteSparseQR_C_solve','amd_info']
-    self.includes          = ['umfpack.h','cholmod.h','klu.h','SuiteSparseQR_C.h','amd.h']
-    self.includedir        = [os.path.join('include', 'suitesparse'),'include']
+    self.includes          = ['suitesparse/umfpack.h','suitesparse/cholmod.h','suitesparse/klu.h','suitesparse/SuiteSparseQR_C.h','suitesparse/amd.h']
     self.hastests          = 1
     self.buildLanguages    = ['Cxx']
     self.hastestsdatafiles = 1
