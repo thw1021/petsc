@@ -1,6 +1,6 @@
 #include <petscmat.h>
 #include <petsc/private/matorderimpl.h>
-#include <amd.h>
+#include <suitesparse/amd.h>
 
 #if defined(PETSC_USE_64BIT_INDICES)
   #define amd_AMD_defaults amd_l_defaults
