@@ -772,7 +772,7 @@ PetscErrorCode TSGetRHSMats_Private(TS ts, Mat *Arhs, Mat *Brhs)
 }
 
 /*@
-  TSComputeIFunction - Evaluates the DAE residual written in the implicit form F(t,U,Udot)=0
+  TSComputeIFunction - Evaluates the DAE residual written in the implicit form $ F(t,U,\dot{U})=0 $
 
   Collective
 
@@ -781,7 +781,7 @@ PetscErrorCode TSGetRHSMats_Private(TS ts, Mat *Arhs, Mat *Brhs)
 . t    - current time
 . U    - state vector
 . Udot - time derivative of state vector
-- imex - flag indicates if the method is `TSIMEX` so that the RHSFunction should be kept separate
+- imex - flag indicates if the method is `TSARKIMEX` so that the RHSFunction should be kept separate
 
   Output Parameter:
 . Y - right hand side
@@ -874,7 +874,7 @@ static PetscErrorCode TSRecoverRHSJacobian(TS ts, Mat A, Mat B)
 . U     - state vector
 . Udot  - time derivative of state vector
 . shift - shift to apply, see note below
-- imex  - flag indicates if the method is `TSIMEX` so that the RHSJacobian should be kept separate
+- imex  - flag indicates if the method is `TSARKIMEX` so that the RHSJacobian should be kept separate
 
   Output Parameters:
 + A - Jacobian matrix
@@ -883,14 +883,16 @@ static PetscErrorCode TSRecoverRHSJacobian(TS ts, Mat A, Mat B)
   Level: developer
 
   Notes:
-  If F(t,U,Udot)=0 is the DAE, the required Jacobian is
-.vb
-   dF/dU + shift*dF/dUdot
-.ve
+  If $ F(t,U,\dot{U})=0 $ is the DAE, the required Jacobian is
+
+  $$
+  dF/dU + shift*dF/d\dot{U}
+  $$
+
   Most users should not need to explicitly call this routine, as it
   is used internally within the nonlinear solvers.
 
-.seealso: [](ch_ts), `TS`, `TSSetIJacobian()`
+.seealso: [](ch_ts), `TS`, `TSSetIJacobian()`, `TSARKIMEX`
 @*/
 PetscErrorCode TSComputeIJacobian(TS ts, PetscReal t, Vec U, Vec Udot, PetscReal shift, Mat A, Mat B, PetscBool imex)
 {
@@ -1005,14 +1007,14 @@ PetscErrorCode TSComputeIJacobian(TS ts, PetscReal t, Vec U, Vec Udot, PetscReal
 
 /*@C
   TSSetRHSFunction - Sets the routine for evaluating the function,
-  where U_t = G(t,u).
+  where $ U_t = G(t,u) $.
 
   Logically Collective
 
   Input Parameters:
 + ts  - the `TS` context obtained from `TSCreate()`
 . r   - vector to put the computed right hand side (or `NULL` to have it created)
-. f   - routine for evaluating the right-hand-side function
+. f   - routine for evaluating the right-hand-side function, see `TSRHSFunctionFn` for the calling sequence
 - ctx - [optional] user-defined context for private data for the function evaluation routine (may be `NULL`)
 
   Level: beginner
@@ -1051,7 +1053,7 @@ PetscErrorCode TSSetRHSFunction(TS ts, Vec r, TSRHSFunctionFn *f, void *ctx)
 
   Input Parameters:
 + ts  - the `TS` context obtained from `TSCreate()`
-. f   - routine for evaluating the solution
+. f   - routine for evaluating the solution, see `TSSolutionFn` for the calling sequence
 - ctx - [optional] user-defined context for private data for the
           function evaluation routine (may be `NULL`)
 
@@ -1088,7 +1090,7 @@ PetscErrorCode TSSetSolutionFunction(TS ts, TSSolutionFn *f, void *ctx)
 
   Input Parameters:
 + ts   - the `TS` context obtained from `TSCreate()`
-. func - routine for evaluating the forcing function
+. func - routine for evaluating the forcing function, see `TSForcingFn` for the calling sequence
 - ctx  - [optional] user-defined context for private data for the function evaluation routine
          (may be `NULL`)
 
@@ -1099,10 +1101,10 @@ PetscErrorCode TSSetSolutionFunction(TS ts, TSSolutionFn *f, void *ctx)
   create closed-form solutions with a non-physical forcing term. It allows you to use the Method of Manufactored Solution without directly editing the
   definition of the problem you are solving and hence possibly introducing bugs.
 
-  This replaces the ODE F(u,u_t,t) = 0 the `TS` is solving with F(u,u_t,t) - func(t) = 0
+  This replaces the ODE $ F(u,u_t,t) = 0 $ the `TS` is solving with $ F(u,u_t,t) - func(t) = 0 $
 
   This forcing function does not depend on the solution to the equations, it can only depend on spatial location, time, and possibly parameters, the
-  parameters can be passed in the ctx variable.
+  parameters can be passed in the `ctx` variable.
 
   For low-dimensional problems solved in serial, such as small discrete systems, `TSMonitorLGError()` can be used to monitor the error history.
 
@@ -1122,7 +1124,7 @@ PetscErrorCode TSSetForcingFunction(TS ts, TSForcingFn *func, void *ctx)
 
 /*@C
   TSSetRHSJacobian - Sets the function to compute the Jacobian of G,
-  where U_t = G(U,t), as well as the location to store the matrix.
+  where $ U_t = G(U,t) $, as well as the location to store the matrix.
 
   Logically Collective
 
@@ -1130,7 +1132,7 @@ PetscErrorCode TSSetForcingFunction(TS ts, TSForcingFn *func, void *ctx)
 + ts   - the `TS` context obtained from `TSCreate()`
 . Amat - (approximate) location to store Jacobian matrix entries computed by `f`
 . Pmat - matrix from which preconditioner is to be constructed (usually the same as `Amat`)
-. f    - the Jacobian evaluation routine
+. f    - the Jacobian evaluation routine, see `TSRHSJacobianFn` for the calling sequence
 - ctx  - [optional] user-defined context for private data for the Jacobian evaluation routine (may be `NULL`)
 
   Level: beginner
@@ -1176,14 +1178,14 @@ PetscErrorCode TSSetRHSJacobian(TS ts, Mat Amat, Mat Pmat, TSRHSJacobianFn *f, v
 }
 
 /*@C
-  TSSetIFunction - Set the function to compute F(t,U,U_t) where F() = 0 is the DAE to be solved.
+  TSSetIFunction - Set the function to compute $ F(t,U,U_t) $ where $F() = 0 $ is the DAE to be solved.
 
   Logically Collective
 
   Input Parameters:
 + ts  - the `TS` context obtained from `TSCreate()`
 . r   - vector to hold the residual (or `NULL` to have it created internally)
-. f   - the function evaluation routine
+. f   - the function evaluation routine, see `TSIFunctionFn` for the calling sequence
 - ctx - user-defined context for private data for the function evaluation routine (may be `NULL`)
 
   Level: beginner
@@ -1227,12 +1229,12 @@ PetscErrorCode TSSetIFunction(TS ts, Vec r, TSIFunctionFn *f, void *ctx)
 
   Output Parameters:
 + r    - vector to hold residual (or `NULL`)
-. func - the function to compute residual (or `NULL`)
+. func - the function to compute residual (or `NULL`), see `TSIFunctionFn` for the calling sequence
 - ctx  - the function context (or `NULL`)
 
   Level: advanced
 
-.seealso: [](ch_ts), `TS`, `TSSetIFunction()`, `SNESGetFunction()`
+.seealso: [](ch_ts), `TS`, `TSSetIFunction()`, `SNESGetFunction()`, `TSIFunctionFn`
 @*/
 PetscErrorCode TSGetIFunction(TS ts, Vec *r, TSIFunctionFn **func, void **ctx)
 {
@@ -1258,12 +1260,12 @@ PetscErrorCode TSGetIFunction(TS ts, Vec *r, TSIFunctionFn **func, void **ctx)
 
   Output Parameters:
 + r    - vector to hold computed right hand side (or `NULL`)
-. func - the function to compute right hand side (or `NULL`)
+. func - the function to compute right hand side (or `NULL`), see `TSRHSFunctionFn` for the calling sequence
 - ctx  - the function context (or `NULL`)
 
   Level: advanced
 
-.seealso: [](ch_ts), `TS`, `TSSetRHSFunction()`, `SNESGetFunction()`
+.seealso: [](ch_ts), `TS`, `TSSetRHSFunction()`, `SNESGetFunction()`, `TSRHSFunctionFn`
 @*/
 PetscErrorCode TSGetRHSFunction(TS ts, Vec *r, TSRHSFunctionFn **func, void **ctx)
 {
@@ -1280,7 +1282,7 @@ PetscErrorCode TSGetRHSFunction(TS ts, Vec *r, TSRHSFunctionFn **func, void **ct
 }
 
 /*@C
-  TSSetIJacobian - Set the function to compute the matrix dF/dU + a*dF/dU_t where F(t,U,U_t) is the function
+  TSSetIJacobian - Set the function to compute the matrix $ dF/dU + a*dF/dU_t $ where $ F(t,U,U_t) $ is the function
   provided with `TSSetIFunction()`.
 
   Logically Collective
@@ -1289,7 +1291,7 @@ PetscErrorCode TSGetRHSFunction(TS ts, Vec *r, TSRHSFunctionFn **func, void **ct
 + ts   - the `TS` context obtained from `TSCreate()`
 . Amat - (approximate) matrix to store Jacobian entries computed by `f`
 . Pmat - matrix used to compute preconditioner (usually the same as `Amat`)
-. f    - the Jacobian evaluation routine
+. f    - the Jacobian evaluation routine, see `TSIJacobianFn` for the calling sequence
 - ctx  - user-defined context for private data for the Jacobian evaluation routine (may be `NULL`)
 
   Level: beginner
@@ -1297,19 +1299,19 @@ PetscErrorCode TSGetRHSFunction(TS ts, Vec *r, TSRHSFunctionFn **func, void **ct
   Notes:
   The matrices `Amat` and `Pmat` are exactly the matrices that are used by `SNES` for the nonlinear solve.
 
-  If you know the operator Amat has a null space you can use `MatSetNullSpace()` and `MatSetTransposeNullSpace()` to supply the null
+  If you know the operator `Amat` has a null space you can use `MatSetNullSpace()` and `MatSetTransposeNullSpace()` to supply the null
   space to `Amat` and the `KSP` solvers will automatically use that null space as needed during the solution process.
 
-  The matrix dF/dU + a*dF/dU_t you provide turns out to be
-  the Jacobian of F(t,U,W+a*U) where F(t,U,U_t) = 0 is the DAE to be solved.
-  The time integrator internally approximates U_t by W+a*U where the positive "shift"
-  a and vector W depend on the integration method, step size, and past states. For example with
-  the backward Euler method a = 1/dt and W = -a*U(previous timestep) so
-  W + a*U = a*(U - U(previous timestep)) = (U - U(previous timestep))/dt
+  The matrix $dF/dU + a*dF/dU_t $ you provide turns out to be
+  the Jacobian of $ F(t,U,W+a*U)$ where $F(t,U,U_t) = 0 $is the DAE to be solved.
+  The time integrator internally approximates $ U_t $ by $ W+a*U $ where the positive "shift"
+  $a$ and vector $W$ depend on the integration method, step size, and past states. For example with
+  the backward Euler method $a = 1/dt$ and $W = -a*U(previous timestep)$ so
+  $W + a*U = a*(U - U(previous timestep)) = (U - U(previous timestep))/dt$
 
   You must set all the diagonal entries of the matrices, if they are zero you must still set them with a zero value
 
-  The TS solver may modify the nonzero structure and the entries of the matrices `Amat` and `Pmat` between the calls to `f`
+  The `TS` solver may modify the nonzero structure and the entries of the matrices `Amat` and `Pmat` between the calls to `f`
   You should not assume the values are the same in the next call to `f` as you set them in the previous call.
 
 .seealso: [](ch_ts), `TS`, `TSIJacobianFn`, `TSSetIFunction()`, `TSSetRHSJacobian()`,
@@ -1342,7 +1344,7 @@ PetscErrorCode TSSetIJacobian(TS ts, Mat Amat, Mat Pmat, TSIJacobianFn *f, void 
 
   Input Parameters:
 + ts    - `TS` context obtained from `TSCreate()`
-- reuse - `PETSC_TRUE` if the RHS Jacobian
+- reuse - `PETSC_TRUE` to restore RHS Jacobian
 
   Level: intermediate
 
@@ -1362,14 +1364,14 @@ PetscErrorCode TSRHSJacobianSetReuse(TS ts, PetscBool reuse)
 }
 
 /*@C
-  TSSetI2Function - Set the function to compute F(t,U,U_t,U_tt) where F = 0 is the DAE to be solved.
+  TSSetI2Function - Set the function to compute $ F(t,U,U_t,U_{tt}) $ where $F = 0$ is the DAE to be solved.
 
   Logically Collective
 
   Input Parameters:
 + ts  - the `TS` context obtained from `TSCreate()`
 . F   - vector to hold the residual (or `NULL` to have it created internally)
-. fun - the function evaluation routine
+. fun - the function evaluation routine, see `TSI2FunctionFn` for the calling sequence
 - ctx - user-defined context for private data for the function evaluation routine (may be `NULL`)
 
   Level: beginner
@@ -1400,12 +1402,12 @@ PetscErrorCode TSSetI2Function(TS ts, Vec F, TSI2FunctionFn *fun, void *ctx)
 
   Output Parameters:
 + r   - vector to hold residual (or `NULL`)
-. fun - the function to compute residual (or `NULL`)
+. fun - the function to compute residual (or `NULL`), see `TSI2FunctionFn` for the calling sequence
 - ctx - the function context (or `NULL`)
 
   Level: advanced
 
-.seealso: [](ch_ts), `TS`, `TSSetIFunction()`, `SNESGetFunction()`, `TSCreate()`
+.seealso: [](ch_ts), `TS`, `TSSetIFunction()`, `SNESGetFunction()`, `TSCreate()`, `TSI2FunctionFn`
 @*/
 PetscErrorCode TSGetI2Function(TS ts, Vec *r, TSI2FunctionFn **fun, void **ctx)
 {
@@ -1422,8 +1424,8 @@ PetscErrorCode TSGetI2Function(TS ts, Vec *r, TSI2FunctionFn **fun, void **ctx)
 }
 
 /*@C
-  TSSetI2Jacobian - Set the function to compute the matrix dF/dU + v*dF/dU_t  + a*dF/dU_tt
-  where F(t,U,U_t,U_tt) is the function you provided with `TSSetI2Function()`.
+  TSSetI2Jacobian - Set the function to compute the matrix $dF/dU + v*dF/dU_t  + a*dF/dU_{tt} $
+  where $F(t,U,U_t,U_{tt}) $ is the function provided with `TSSetI2Function()`.
 
   Logically Collective
 
@@ -1439,10 +1441,10 @@ PetscErrorCode TSGetI2Function(TS ts, Vec *r, TSI2FunctionFn **fun, void **ctx)
   Notes:
   The matrices `J` and `P` are exactly the matrices that are used by `SNES` for the nonlinear solve.
 
-  The matrix dF/dU + v*dF/dU_t + a*dF/dU_tt you provide turns out to be
-  the Jacobian of G(U) = F(t,U,W+v*U,W'+a*U) where F(t,U,U_t,U_tt) = 0 is the DAE to be solved.
-  The time integrator internally approximates U_t by W+v*U and U_tt by W'+a*U  where the positive "shift"
-  parameters 'v' and 'a' and vectors W, W' depend on the integration method, step size, and past states.
+  The matrix $dF/dU + v*dF/dU_t + a*dF/dU_{tt} $ is
+  the Jacobian of $G(U) = F(t,U,W+v*U,W'+a*U) $ where $F(t,U,U_t,U_{tt}) = 0  $is the DAE to be solved.
+  The time integrator internally approximates $U_t$ by $W+v*U $ and $U_{tt}$ by $W'+a*U$  where the positive "shift"
+  parameters $v$ and $a$ and vectors $W$, $W'$ depend on the integration method, step size, and past states.
 
 .seealso: [](ch_ts), `TS`, `TSI2JacobianFn`, `TSSetI2Function()`, `TSGetI2Jacobian()`
 @*/
@@ -1469,9 +1471,9 @@ PetscErrorCode TSSetI2Jacobian(TS ts, Mat J, Mat P, TSI2JacobianFn *jac, void *c
 . ts - The `TS` context obtained from `TSCreate()`
 
   Output Parameters:
-+ J   - The (approximate) Jacobian of F(t,U,U_t,U_tt)
++ J   - The (approximate) Jacobian of $F(t,U,U_t,U_{tt})$
 . P   - The matrix from which the preconditioner is constructed, often the same as `J`
-. jac - The function to compute the Jacobian matrices
+. jac - The function to compute the Jacobian matrices, see `TSI2JacobianFn` for the calling sequence
 - ctx - User-defined context for Jacobian evaluation routine
 
   Level: advanced
@@ -1479,7 +1481,7 @@ PetscErrorCode TSSetI2Jacobian(TS ts, Mat J, Mat P, TSI2JacobianFn *jac, void *c
   Note:
   You can pass in `NULL` for any return argument you do not need.
 
-.seealso: [](ch_ts), `TS`, `TSGetTimeStep()`, `TSGetMatrices()`, `TSGetTime()`, `TSGetStepNumber()`, `TSSetI2Jacobian()`, `TSGetI2Function()`, `TSCreate()`
+.seealso: [](ch_ts), `TS`, `TSGetTimeStep()`, `TSGetTime()`, `TSGetStepNumber()`, `TSSetI2Jacobian()`, `TSGetI2Function()`, `TSCreate()`, `TSI2JacobianFn`
 @*/
 PetscErrorCode TSGetI2Jacobian(TS ts, Mat *J, Mat *P, TSI2JacobianFn **jac, void **ctx)
 {
@@ -1496,7 +1498,7 @@ PetscErrorCode TSGetI2Jacobian(TS ts, Mat *J, Mat *P, TSI2JacobianFn **jac, void
 }
 
 /*@
-  TSComputeI2Function - Evaluates the DAE residual written in implicit form F(t,U,U_t,U_tt) = 0
+  TSComputeI2Function - Evaluates the DAE residual written in implicit form $F(t,U,U_t,U_{tt}) = 0 $
 
   Collective
 
@@ -1504,8 +1506,8 @@ PetscErrorCode TSGetI2Jacobian(TS ts, Mat *J, Mat *P, TSI2JacobianFn **jac, void
 + ts - the `TS` context
 . t  - current time
 . U  - state vector
-. V  - time derivative of state vector (U_t)
-- A  - second time derivative of state vector (U_tt)
+. V  - time derivative of state vector ($U_t$)
+- A  - second time derivative of state vector ($U_{tt}$)
 
   Output Parameter:
 . F - the residual vector
@@ -1577,9 +1579,11 @@ PetscErrorCode TSComputeI2Function(TS ts, PetscReal t, Vec U, Vec V, Vec A, Vec 
   Level: developer
 
   Notes:
-  If F(t,U,V,A)=0 is the DAE, the required Jacobian is
+  If $F(t,U,V,A)=0 $is the DAE, the required Jacobian is
 
+  $$
   dF/dU + shiftV*dF/dV + shiftA*dF/dA
+  $$
 
   Most users should not need to explicitly call this routine, as it
   is used internally within the nonlinear solvers.
@@ -1642,9 +1646,10 @@ PetscErrorCode TSComputeI2Jacobian(TS ts, PetscReal t, Vec U, Vec V, Vec A, Pets
   well-conditioned formulations even in limiting cases such as low-Mach or zero porosity).  The transient variable is
   C(P), specified by calling this function.  An IFunction thus receives arguments (P, Cdot) and the IJacobian must be
   evaluated via the chain rule, as in
-.vb
-     dF/dP + shift * dF/dCdot dC/dP.
-.ve
+
+  $$
+  dF/dP + shift * dF/dCdot dC/dP.
+  $$
 
 .seealso: [](ch_ts), `TS`, `TSBDF`, `TSTransientVariableFn`, `DMTSSetTransientVariable()`, `DMTSGetTransientVariable()`, `TSSetIFunction()`, `TSSetIJacobian()`
 @*/
@@ -1674,7 +1679,7 @@ PetscErrorCode TSSetTransientVariable(TS ts, TSTransientVariableFn *tvar, void *
   Level: developer
 
   Developer Notes:
-  If `DMTSSetTransientVariable()` has not been called, then C is not modified in this routine and C = `NULL` is allowed.
+  If `DMTSSetTransientVariable()` has not been called, then `C` is not modified in this routine and `C` = `NULL` is allowed.
   This makes it safe to call without a guard.  One can use `TSHasTransientVariable()` to check if transient variables are
   being used.
 
@@ -2157,7 +2162,7 @@ PetscErrorCode TSSetTimeStep(TS ts, PetscReal time_step)
 .vb
   TS_EXACTFINALTIME_STEPOVER    - Don't do anything if final time is exceeded
   TS_EXACTFINALTIME_INTERPOLATE - Interpolate back to final time
-  TS_EXACTFINALTIME_MATCHSTEP - Adapt final time step to match the final time
+  TS_EXACTFINALTIME_MATCHSTEP   - Adapt final time step to match the final time
 .ve
 
   Options Database Key:
@@ -2245,7 +2250,7 @@ PetscErrorCode TSGetTimeStep(TS ts, PetscReal *dt)
   Level: intermediate
 
   Note:
-  If you used `TSSetExactFinalTime`(ts,`TS_EXACTFINALTIME_MATCHSTEP`); this does not return the solution at the requested
+  If you used `TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP)`; this does not return the solution at the requested
   final time. It returns the solution at the next timestep.
 
 .seealso: [](ch_ts), `TS`, `TSGetTimeStep()`, `TSGetTime()`, `TSGetSolveTime()`, `TSGetSolutionComponents()`, `TSSetSolutionFunction()`
@@ -2271,7 +2276,7 @@ PetscErrorCode TSGetSolution(TS ts, Vec *v)
 + ts - the `TS` context obtained from `TSCreate()` (input parameter).
 . n  - If v is `NULL`, then the number of solution components is
        returned through n, else the n-th solution component is
-       returned in v.
+       returned in `v`.
 - v  - the vector containing the n-th solution component
        (may be `NULL` to use this function to find out
         the number of solutions components).
@@ -2316,7 +2321,7 @@ PetscErrorCode TSGetAuxSolution(TS ts, Vec *v)
   TSGetTimeError - Returns the estimated error vector, if the chosen
   `TSType` has an error estimation functionality and `TSSetTimeError()` was called
 
-  Not Collective, but v returned is parallel if ts is parallel
+  Not Collective, but `v` returned is parallel if `ts` is parallel
 
   Input Parameters:
 + ts - the `TS` context obtained from `TSCreate()` (input parameter).
@@ -2344,7 +2349,7 @@ PetscErrorCode TSGetTimeError(TS ts, PetscInt n, Vec *v)
   `TSType` has an error estimation functionality. This can be used
   to restart such a time integrator with a given error vector.
 
-  Not Collective, but v returned is parallel if ts is parallel
+  Not Collective, but `v` returned is parallel if `ts` is parallel
 
   Input Parameters:
 + ts - the `TS` context obtained from `TSCreate()` (input parameter).
@@ -2661,7 +2666,7 @@ PetscErrorCode TSDestroy(TS *ts)
   TSGetSNES - Returns the `SNES` (nonlinear solver) associated with
   a `TS` (timestepper) context. Valid only for nonlinear problems.
 
-  Not Collective, but snes is parallel if ts is parallel
+  Not Collective, but `snes` is parallel if `ts` is parallel
 
   Input Parameter:
 . ts - the `TS` context obtained from `TSCreate()`
@@ -3886,7 +3891,7 @@ PetscErrorCode TSResize(TS ts)
 
   Input Parameters:
 + ts - the `TS` context obtained from `TSCreate()`
-- u  - the solution vector  (can be null if `TSSetSolution()` was used and `TSSetExactFinalTime`(ts,`TS_EXACTFINALTIME_MATCHSTEP`) was not used,
+- u  - the solution vector  (can be `NULL` if `TSSetSolution()` was used and `TSSetExactFinalTime`(ts,`TS_EXACTFINALTIME_MATCHSTEP`) was not used,
                              otherwise must contain the initial conditions and will contain the solution at the final requested time
 
   Level: beginner
@@ -4237,7 +4242,7 @@ PetscErrorCode TSGetOptionsPrefix(TS ts, const char *prefix[])
 . ts - The `TS` context obtained from `TSCreate()`
 
   Output Parameters:
-+ Amat - The (approximate) Jacobian J of G, where U_t = G(U,t)  (or `NULL`)
++ Amat - The (approximate) Jacobian J of G, where $U_t = G(U,t)$  (or `NULL`)
 . Pmat - The matrix from which the preconditioner is constructed, usually the same as `Amat`  (or `NULL`)
 . func - Function to compute the Jacobian of the RHS  (or `NULL`)
 - ctx  - User-defined context for Jacobian evaluation routine  (or `NULL`)
@@ -4247,7 +4252,7 @@ PetscErrorCode TSGetOptionsPrefix(TS ts, const char *prefix[])
   Note:
   You can pass in `NULL` for any return argument you do not need.
 
-.seealso: [](ch_ts), `TS`, `TSGetTimeStep()`, `TSGetMatrices()`, `TSGetTime()`, `TSGetStepNumber()`
+.seealso: [](ch_ts), `TS`, `TSGetTimeStep()`, `TSGetTime()`, `TSGetStepNumber()`
 
 @*/
 PetscErrorCode TSGetRHSJacobian(TS ts, Mat *Amat, Mat *Pmat, TSRHSJacobianFn **func, void **ctx)
@@ -4275,9 +4280,9 @@ PetscErrorCode TSGetRHSJacobian(TS ts, Mat *Amat, Mat *Pmat, TSRHSJacobianFn **f
 . ts - The `TS` context obtained from `TSCreate()`
 
   Output Parameters:
-+ Amat - The (approximate) Jacobian of F(t,U,U_t)
++ Amat - The (approximate) Jacobian of $F(t,U,U_t)$
 . Pmat - The matrix from which the preconditioner is constructed, often the same as `Amat`
-. f    - The function to compute the matrices
+. f    - The function to compute the matrices, see `TSIJacobianFn` for the calling sequence
 - ctx  - User-defined context for Jacobian evaluation routine
 
   Level: advanced
@@ -4285,7 +4290,7 @@ PetscErrorCode TSGetRHSJacobian(TS ts, Mat *Amat, Mat *Pmat, TSRHSJacobianFn **f
   Note:
   You can pass in `NULL` for any return argument you do not need.
 
-.seealso: [](ch_ts), `TS`, `TSGetTimeStep()`, `TSGetRHSJacobian()`, `TSGetMatrices()`, `TSGetTime()`, `TSGetStepNumber()`
+.seealso: [](ch_ts), `TS`, `TSGetTimeStep()`, `TSGetRHSJacobian()`, `TSGetTime()`, `TSGetStepNumber()`, `TSIJacobianFn`
 @*/
 PetscErrorCode TSGetIJacobian(TS ts, Mat *Amat, Mat *Pmat, TSIJacobianFn **f, void **ctx)
 {
@@ -4421,7 +4426,7 @@ PetscErrorCode SNESTSFormFunction(SNES snes, Vec U, Vec F, void *ctx)
 
   Output Parameters:
 + A - the Jacobian
-- B - the preconditioning matrix (may be the same as A)
+- B - the preconditioning matrix (may be the same as `A`)
 
   Level: developer
 
@@ -4446,7 +4451,7 @@ PetscErrorCode SNESTSFormJacobian(SNES snes, Vec U, Mat A, Mat B, void *ctx)
 }
 
 /*@C
-  TSComputeRHSFunctionLinear - Evaluate the right hand side via the user-provided Jacobian, for linear problems Udot = A U only
+  TSComputeRHSFunctionLinear - Evaluate the right hand side via the user-provided Jacobian, for linear problems $ \dot{U} = A U $ only
 
   Collective
 
@@ -4526,12 +4531,12 @@ PetscErrorCode TSComputeRHSJacobianConstant(TS ts, PetscReal t, Vec U, Mat A, Ma
   Level: intermediate
 
   Notes:
-  The assumption here is that the left hand side is of the form A*Udot (and not A*Udot + B*U). For other cases, the
+  The assumption here is that the left hand side is of the form $ A*\dot{U} $ (and not $A*\dot{U} + B*U$). For other cases, the
   user is required to write their own `TSComputeIFunction()`.
   This function is intended to be passed to `TSSetIFunction()` to evaluate the left hand side for linear problems.
   The matrix (and optionally the evaluation context) should be passed to `TSSetIJacobian()`.
 
-  Note that using this function is NOT equivalent to using `TSComputeRHSFunctionLinear()` since that solves Udot = A U
+  Note that using this function is NOT equivalent to using `TSComputeRHSFunctionLinear()` since that solves $ \dot{U} = A U $
 
 .seealso: [](ch_ts), `TS`, `TSSetIFunction()`, `TSSetIJacobian()`, `TSComputeIJacobianConstant()`, `TSComputeRHSFunctionLinear()`
 @*/
@@ -5291,9 +5296,11 @@ PetscErrorCode TSGetStages(TS ts, PetscInt *ns, Vec **Y)
   Level: intermediate
 
   Notes:
-  If F(t,U,Udot)=0 is the DAE, the required Jacobian is
+  If $F(t,U,\dot{U})=0 $ is the DAE, the required Jacobian is
 
-  dF/dU + shift*dF/dUdot
+  $$
+  dF/dU + shift*dF/d\dot{U}
+  $$
 
   Most users should not need to explicitly call this routine, as it
   is used internally within the nonlinear solvers.
@@ -5879,7 +5886,7 @@ PetscErrorCode TSInputParameters(TS ts, Vec p)
   in a `Vec` this callback is provided so that users may provide a way to transfer the values of the parameters into their own data structures
   from a `Vec`. `TSInputParameters()` may be called in `Tao` or other systems as needed before calls to `TSSolve()` etc.
 
-.seealso: [](ch_ts), , [](section_sa), `TS`, `TSJacobianPFn`, `TSGetJacobianP()`, `TSSetJacobian()`, `TSInputParameters()`
+.seealso: [](ch_ts), , [](section_sa), `TS`, `TSJacobianPFn`, `TSGetJacobianP()`, `TSSetJacobian()`, `TSInputParameters()`, `TSInputParametersFn`
 @*/
 PetscErrorCode TSSetInputParameters(TS ts, TSInputParametersFn *func, void *ctx)
 {

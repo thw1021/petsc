@@ -95,27 +95,29 @@ PetscErrorCode TSEventDestroy(TSEvent *event)
   the originally planned trajectory, and is assumed by default.
 
   To describe the way `PETSC_DECIDE` affects the post-event steps, consider a trajectory of time points t1 -> t2 -> t3 -> t4.
-  Suppose the TS has reached and calculated the solution at point t3, and has planned the next move: t3 -> t4.
-  At this moment, an event between t2 and t3 is detected, and after a few iterations it is resolved at point `te`, t2 < te < t3.
-  After event `te`, two post-event steps can be specified: the first one dt1 (`TSSetPostEventStep()`),
+  Suppose the `TS` has reached and calculated the solution at point t3, and has planned the next move: t3 -> t4.
+  At this moment, an event between t2 and t3 is detected, and after a few iterations it is resolved at point te, t2 < te < t3.
+  After event te, two post-event steps can be specified: the first one dt1 (`TSSetPostEventStep()`),
   and the second one dt2 (`TSSetPostEventSecondStep()`). Both post-event steps can be either `PETSC_DECIDE`, or a number.
   Four different combinations are possible\:
+.vb
+  1. dt1 = PETSC_DECIDE, dt2 = PETSC_DECIDE. Then, after te TS goes to t3, and then to t4. This is the all-default behaviour.
 
-  1. dt1 = `PETSC_DECIDE`, dt2 = `PETSC_DECIDE`. Then, after `te` TS goes to t3, and then to t4. This is the all-default behaviour.
+  2. dt1 = PETSC_DECIDE, dt2 = x2 (numerical). Then, after te TS goes to t3, and then to t3+x2.
 
-  2. dt1 = `PETSC_DECIDE`, dt2 = x2 (numerical). Then, after `te` TS goes to t3, and then to t3+x2.
+  3. dt1 = x1 (numerical), dt2 = x2 (numerical). Then, after te TS goes to te+x1, and then to te+x1+x2.
 
-  3. dt1 = x1 (numerical), dt2 = x2 (numerical). Then, after `te` TS goes to te+x1, and then to te+x1+x2.
+  4. dt1 = x1 (numerical), dt2 = PETSC_DECIDE. Then, after te TS goes to te+x1, and event handler does not interfere to the subsequent steps.
+.ve
 
-  4. dt1 = x1 (numerical), dt2 = `PETSC_DECIDE`. Then, after `te` TS goes to te+x1, and event handler does not interfere to the subsequent steps.
+  In the special case when te == t3 with a good precision, the post-event step te -> t3 is not performed, so behaviour of (1) and (2) becomes\:
+.vb
+  1a. After te TS goes to t4, and event handler does not interfere to the subsequent steps.
 
-  In the special case when `te` == t3 with a good precision, the post-event step te -> t3 is not performed, so behaviour of (1) and (2) becomes\:
+  2a. After te TS goes to t4, and then to t4+x2.
+.ve
 
-  1a. After `te` TS goes to t4, and event handler does not interfere to the subsequent steps.
-
-  2a. After `te` TS goes to t4, and then to t4+x2.
-
-  Warning! When the second post-event step (either PETSC_DECIDE or a numerical value) is managed by the event handler, i.e. in cases 1, 2, 3 and 2a,
+  Warning! When the second post-event step (either `PETSC_DECIDE` or a numerical value) is managed by the event handler, i.e. in cases 1, 2, 3 and 2a,
   `TSAdapt` will never analyse (and never do a reasonable rejection of) the first post-event step. The first post-event step will always be accepted.
   In this situation, it is the user's responsibility to make sure the step size is appropriate!
   In cases 4 and 1a, however, `TSAdapt` will analyse the first post-event step, and is allowed to reject it.
@@ -132,7 +134,7 @@ PetscErrorCode TSEventDestroy(TSEvent *event)
   Event processing starts after visiting point t3, which means ts->adapt->dt_span_cached has been set to whatever value is required
   when planning the step t3 -> t4.
 
-.seealso: [](ch_ts), `TS`, `TSEvent`, `TSSetEventHandler()`, `TSSetPostEventSecondStep()`
+.seealso: [](ch_ts), `TS`, `TSSetEventHandler()`, `TSSetPostEventSecondStep()`
 @*/
 PetscErrorCode TSSetPostEventStep(TS ts, PetscReal dt1)
 {
@@ -167,25 +169,25 @@ PetscErrorCode TSSetPostEventStep(TS ts, PetscReal dt1)
 
   To describe the way `PETSC_DECIDE` affects the post-event steps, consider a trajectory of time points t1 -> t2 -> t3 -> t4.
   Suppose the TS has reached and calculated the solution at point t3, and has planned the next move: t3 -> t4.
-  At this moment, an event between t2 and t3 is detected, and after a few iterations it is resolved at point `te`, t2 < te < t3.
-  After event `te`, two post-event steps can be specified: the first one dt1 (`TSSetPostEventStep()`),
+  At this moment, an event between t2 and t3 is detected, and after a few iterations it is resolved at point te, t2 < te < t3.
+  After event te, two post-event steps can be specified: the first one dt1 (`TSSetPostEventStep()`),
   and the second one dt2 (`TSSetPostEventSecondStep()`). Both post-event steps can be either `PETSC_DECIDE`, or a number.
   Four different combinations are possible\:
+.vb
+  1. dt1 = PETSC_DECIDE, dt2 = PETSC_DECIDE. Then, after te TS goes to t3, and then to t4. This is the all-default behaviour.
 
-  1. dt1 = `PETSC_DECIDE`, dt2 = `PETSC_DECIDE`. Then, after `te` TS goes to t3, and then to t4. This is the all-default behaviour.
+  2. dt1 = PETSC_DECIDE, dt2 = x2 (numerical). Then, after te TS goes to t3, and then to t3+x2.
 
-  2. dt1 = `PETSC_DECIDE`, dt2 = x2 (numerical). Then, after `te` TS goes to t3, and then to t3+x2.
+  3. dt1 = x1 (numerical), dt2 = x2 (numerical). Then, after te TS goes to te+x1, and then to te+x1+x2.
 
-  3. dt1 = x1 (numerical), dt2 = x2 (numerical). Then, after `te` TS goes to te+x1, and then to te+x1+x2.
+  4. dt1 = x1 (numerical), dt2 = PETSC_DECIDE. Then, after te TS goes to te+x1, and event handler does not interfere to the subsequent steps.
+.ve
+  In the special case when te == t3 with a good precision, the post-event step te -> t3 is not performed, so behaviour of (1) and (2) becomes\:
+.vb
+  1a. After te TS goes to t4, and event handler does not interfere to the subsequent steps.
 
-  4. dt1 = x1 (numerical), dt2 = `PETSC_DECIDE`. Then, after `te` TS goes to te+x1, and event handler does not interfere to the subsequent steps.
-
-  In the special case when `te` == t3 with a good precision, the post-event step te -> t3 is not performed, so behaviour of (1) and (2) becomes\:
-
-  1a. After `te` TS goes to t4, and event handler does not interfere to the subsequent steps.
-
-  2a. After `te` TS goes to t4, and then to t4+x2.
-
+  2a. After te TS goes to t4, and then to t4+x2.
+.ve
   Warning! When the second post-event step (either PETSC_DECIDE or a numerical value) is managed by the event handler, i.e. in cases 1, 2, 3 and 2a,
   `TSAdapt` will never analyse (and never do a reasonable rejection of) the first post-event step. The first post-event step will always be accepted.
   In this situation, it is the user's responsibility to make sure the step size is appropriate!
@@ -196,7 +198,7 @@ PetscErrorCode TSSetPostEventStep(TS ts, PetscReal dt1)
 
   The default value is `PETSC_DECIDE`.
 
-.seealso: [](ch_ts), `TS`, `TSEvent`, `TSSetEventHandler()`, `TSSetPostEventStep()`
+.seealso: [](ch_ts), `TS`, `TSSetEventHandler()`, `TSSetPostEventStep()`
 @*/
 PetscErrorCode TSSetPostEventSecondStep(TS ts, PetscReal dt2)
 {
@@ -228,7 +230,7 @@ PetscErrorCode TSSetPostEventSecondStep(TS ts, PetscReal dt2)
   This function can be also called from the `postevent()` callback set with `TSSetEventHandler()`,
   to adjust the tolerances on the fly.
 
-.seealso: [](ch_ts), `TS`, `TSEvent`, `TSSetEventHandler()`
+.seealso: [](ch_ts), `TS`, `TSSetEventHandler()`
 @*/
 PetscErrorCode TSSetEventTolerances(TS ts, PetscReal tol, PetscReal vtol[])
 {
@@ -304,7 +306,7 @@ PetscErrorCode TSSetEventTolerances(TS ts, PetscReal tol, PetscReal vtol[])
   However, the `postevent()` callback invocation is performed synchronously on all processes, including
   those processes which have not currently triggered any events.
 
-.seealso: [](ch_ts), `TSEvent`, `TSCreate()`, `TSSetTimeStep()`, `TSSetConvergedReason()`
+.seealso: [](ch_ts), `TSCreate()`, `TSSetTimeStep()`, `TSSetConvergedReason()`
 @*/
 PetscErrorCode TSSetEventHandler(TS ts, PetscInt nevents, PetscInt direction[], PetscBool terminate[], PetscErrorCode (*indicator)(TS ts, PetscReal t, Vec U, PetscReal fvalue[], void *ctx), PetscErrorCode (*postevent)(TS ts, PetscInt nevents_zero, PetscInt events_zero[], PetscReal t, Vec U, PetscBool forwardsolve, void *ctx), void *ctx)
 {
@@ -692,20 +694,23 @@ static inline PetscBool Not_PETSC_DECIDE(PetscReal dt)
 /*
   TSEventHandler - the main function to perform a single iteration of event detection.
 
+  Input Parameter:
+. ts - the `TS` context
+
   Developer notes:
-  A) The 'event->iterctr > 0' is used as an indicator that Anderson-Bjorck refinement has started.
-  B) If event->iterctr == 0, then justrefined_AB[i] is always false.
-  C) The right-end quantities: ptime_right, fvalue_right[i] and fsign_right[i] are only guaranteed to be valid
++  A - The 'event->iterctr > 0' is used as an indicator that Anderson-Bjorck refinement has started.
+.  B - If event->iterctr == 0, then justrefined_AB[i] is always false.
+.  C - The right-end quantities: ptime_right, fvalue_right[i] and fsign_right[i] are only guaranteed to be valid
   for event->iterctr > 0.
-  D) If event->iterctr > 0, then event->processing is PETSC_TRUE; the opposite may not hold.
-  E) When event->processing == PETSC_TRUE and event->iterctr == 0, the event handler iterations are complete, but
+.  D - If event->iterctr > 0, then event->processing is `PETSC_TRUE`; the opposite may not hold.
+.  E - When event->processing == `PETSC_TRUE` and event->iterctr == 0, the event handler iterations are complete, but
   the event handler continues managing the 1st and 2nd post-event steps. In this case the 1st post-event step
   proposed by the event handler is not checked by TSAdapt, and is always accepted (beware!).
-  However, if the 2nd post-event step is not managed by the event handler (e.g. 1st = numerical, 2nd = PETSC_DECIDE),
+  However, if the 2nd post-event step is not managed by the event handler (e.g. 1st = numerical, 2nd = `PETSC_DECIDE`),
   condition "E" does not hold, and TSAdapt may reject/adjust the 1st post-event step.
-  F) event->side[i] may take values: 0 <=> point t is a zero-crossing for indicator function i (via vtol/dt_min criterion);
+.  F - event->side[i] may take values: 0 <=> point t is a zero-crossing for indicator function i (via vtol/dt_min criterion);
   -1/+1 <=> detected a bracket to the left/right of t for indicator function i; +2 <=> no brackets/zero-crossings.
-  G) The signs event->fsign[i] (with values 0/-1/+1) are calculated for each new point. Zero sign is set if the function value is
+-  G - The signs event->fsign[i] (with values 0/-1/+1) are calculated for each new point. Zero sign is set if the function value is
   smaller than the tolerance. Besides, zero sign is enforced after marking a zero-crossing due to small bracket size criterion.
 
   The intervals with the indicator function sign change (i.e. containing the potential zero-crossings) are called 'brackets'.
@@ -718,7 +723,7 @@ static inline PetscBool Not_PETSC_DECIDE(PetscReal dt)
   =Sign tracking=
   When a zero-crossing is found, the sign variable (event->fsign[i]) is set to zero for the current point t.
   This happens both for zero-crossings triggered via the vtol criterion, and those triggered via the dt_min
-  criterion. After the event, as the TS steps forward, the current sign values are handed over to event->fsign_prev[i].
+  criterion. After the event, as the `TS` steps forward, the current sign values are handed over to event->fsign_prev[i].
   The recalculation of signs is avoided if possible: e.g. if a 'vtol' criterion resulted in a zero-crossing at point t,
   but the subsequent call to postevent() handler decreased 'vtol', making the indicator function no longer "close to zero"
   at point t, the fsign[i] will still consistently keep the zero value. This allows avoiding the erroneous duplication
@@ -747,7 +752,7 @@ static inline PetscBool Not_PETSC_DECIDE(PetscReal dt)
   This situation is avoided by reporting the event at t1 in the first place.
 
   =Revisiting=
-  When handling the situation with small bracket size, the TS solver may happen to visit the same point twice,
+  When handling the situation with small bracket size, the `TS` solver may happen to visit the same point twice,
   but with different results.
 
   E.g. originally it discovered a bracket with sign change [t0, t10], and started resolving the zero-crossing,
@@ -759,11 +764,11 @@ static inline PetscBool Not_PETSC_DECIDE(PetscReal dt)
   and the condition of the sign change, which existed originally, may disappear, breaking the logic of the algorithm.
 
   To handle such (-=unlikely=-, but possible) situations, two strategies can be considered:
-  1) [not used here] Allow the brackets with sign change to disappear during iterations. The algorithm should be able
++  1 - [not used here] Allow the brackets with sign change to disappear during iterations. The algorithm should be able
   to cleanly exit the iteration and leave all the objects/variables/caches involved in a valid state.
-  2) [ADOPTED HERE!] On revisiting t10, the event handler reuses the indicator functions previously calculated for the
+-  2 - [ADOPTED HERE!] On revisiting t10, the event handler reuses the indicator functions previously calculated for the
   original solution U. This U may be less precise than U*, but this trick does not allow the algorithm logic to break down.
-  HOWEVER, the original U is not stored anywhere, it is essentially lost since the TS performed the rollback from it.
+  HOWEVER, the original U is not stored anywhere, it is essentially lost since the `TS` performed the rollback from it.
   On revisiting t10, the updated solution U* will inevitably be found and used everywhere EXCEPT the current
   indicator functions calculation, e.g. U* will be used in the postevent() handler call. Since t10 is the event location,
   the appropriate indicator-function-signs will be enforced to be 0 (regardless if the solution was U or U*).
@@ -966,17 +971,17 @@ PetscErrorCode TSAdjointEventHandler(TS ts)
 /*@
   TSGetNumEvents - Get the number of events defined on the given MPI process
 
-  Logically Collective
+  Not Collective
 
   Input Parameter:
 . ts - the `TS` context
 
   Output Parameter:
-. nevents - the number of local events on each MPI process
+. nevents - the number of local events on each MPI process, may be different for different MPI processes
 
   Level: intermediate
 
-.seealso: [](ch_ts), `TSEvent`, `TSSetEventHandler()`
+.seealso: [](ch_ts), `TSSetEventHandler()`
 @*/
 PetscErrorCode TSGetNumEvents(TS ts, PetscInt *nevents)
 {
