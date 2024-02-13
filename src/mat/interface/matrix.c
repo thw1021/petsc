@@ -8892,6 +8892,70 @@ PetscErrorCode MatGetNullSpace(Mat mat, MatNullSpace *nullsp)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@C
+  MatGetNullSpaces - gets the null space and near null spaces from an array of matrices
+
+  Logically Collective
+
+  Input Parameters:
++ n   - the number of matrices
+- mat - the array of matrices
+
+  Output Parameters:
+. nullsp - an array of null spaces, `NULL` for each matrix that does not have a null space
+
+  Level: developer
+
+  Note:
+  Call `MatRestoreNullspaces()` to provide these to another array of matrices
+
+.seealso: [](ch_matrices), `Mat`, `MatCreate()`, `MatNullSpaceCreate()`, `MatSetNearNullSpace()`, `MatGetNullSpace()`, `MatSetTransposeNullSpace()`, `MatGetTransposeNullSpace()`,
+          `MatNullSpaceRemove()`, `MatRestoreNullSpaces()`
+@*/
+PetscErrorCode MatGetNullSpaces(PetscInt n, Mat mat[], MatNullSpace *nullsp[])
+{
+  PetscFunctionBegin;
+  PetscCall(PetscCalloc1(2 * n, nullsp));
+
+  for (PetscInt i = 0; i < n; i++) {
+    (*nullsp)[i] = mat[i]->nullsp;
+    if ((*nullsp)[i]) PetscCall(PetscObjectReference((PetscObject)(*nullsp)[i]));
+    (*nullsp)[n + i] = mat[i]->nearnullsp;
+    if ((*nullsp)[n + i]) PetscCall(PetscObjectReference((PetscObject)(*nullsp)[n + i]));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  MatRestoreNullSpaces - sets the null space and near null spaces obtained with `MatGetNullSpaces()` for an array of matrices
+
+  Logically Collective
+
+  Input Parameters:
++ n      - the number of matrices
+. mat    - the array of matrices
+- nullsp - an array of null spaces, `NULL` if the null space does not exist
+
+  Level: developer
+
+  Note:
+  Call `MatGetNullspaces()` to create `nullsp`
+
+.seealso: [](ch_matrices), `Mat`, `MatCreate()`, `MatNullSpaceCreate()`, `MatSetNearNullSpace()`, `MatGetNullSpace()`, `MatSetTransposeNullSpace()`, `MatGetTransposeNullSpace()`,
+          `MatNullSpaceRemove()`, `MatGetNullSpaces()`
+@*/
+PetscErrorCode MatRestoreNullSpaces(PetscInt n, Mat mat[], MatNullSpace *nullsp[])
+{
+  PetscFunctionBegin;
+
+  for (PetscInt i = 0; i < n; i++) {
+    mat[i]->nullsp     = (*nullsp)[i];
+    mat[i]->nearnullsp = (*nullsp)[n + i];
+  }
+  PetscCall(PetscFree(*nullsp));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*@
   MatSetNullSpace - attaches a null space to a matrix.
 
