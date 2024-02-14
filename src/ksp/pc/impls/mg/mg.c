@@ -329,7 +329,7 @@ static PetscErrorCode CreateCR_Private(PC pc, PetscInt l, PC *cr)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_EXTERN PetscErrorCode PetscOptionsFindPairPrefix_Private(PetscOptions, const char pre[], const char name[], const char *option[], const char *value[], PetscBool *flg);
+PETSC_EXTERN PetscErrorCode PetscOptionsFindPairPrefix_Private(PetscOptions, const char[], const char[], const char *[], const char *[], PetscBool *);
 
 PetscErrorCode PCMGSetLevels_MG(PC pc, PetscInt levels, MPI_Comm *comms)
 {
@@ -461,7 +461,7 @@ PetscErrorCode PCMGSetLevels_MG(PC pc, PetscInt levels, MPI_Comm *comms)
 
   Notes:
   If the number of levels is one then the multigrid uses the `-mg_levels` prefix
-  for setting the level options rather than the `-mg_coarse` or `mg_fine` prefix.
+  for setting the level options rather than the `-mg_coarse` or `-mg_fine` prefix.
 
   You can free the information in comms after this routine is called.
 
