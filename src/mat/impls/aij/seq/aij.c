@@ -4674,7 +4674,7 @@ PetscErrorCode MatSetPreallocationCOO_SeqAIJ(Mat mat, PetscCount coo_n, PetscInt
   PetscCount          *perm, *jmap;
   PetscContainer       container;
   MatCOOStruct_SeqAIJ *coo;
-  PetscBool            isorted, all_rows_strictly_sorted = PETSC_TRUE;
+  PetscBool            isorted;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectGetComm((PetscObject)mat, &comm));
@@ -4734,8 +4734,7 @@ PetscErrorCode MatSetPreallocationCOO_SeqAIJ(Mat mat, PetscCount coo_n, PetscInt
       }
       k++;
     }
-    end                      = k;
-    all_rows_strictly_sorted = (PetscBool)(all_rows_strictly_sorted && strictly_sorted);
+    end = k;
 
     /* hack for HYPRE: swap min column to diag so that diagonal values will go first */
     if (hypre) {
@@ -4802,13 +4801,9 @@ PetscErrorCode MatSetPreallocationCOO_SeqAIJ(Mat mat, PetscCount coo_n, PetscInt
 
   Ai--; /* Back to the beginning of Ai[] */
   for (k = 0; k < M; k++) Ai[k + 1] += Ai[k];
-  jmap--;                         // Back to the beginning of jmap[]
-  if (all_rows_strictly_sorted) { // all rows are already strictly sorted
-    for (k = 0; k < nnz + 1; k++) jmap[k] = k;
-  } else {
-    jmap[0] = 0;
-    for (k = 0; k < nnz; k++) jmap[k + 1] += jmap[k];
-  }
+  jmap--; // Back to the beginning of jmap[]
+  jmap[0] = 0;
+  for (k = 0; k < nnz; k++) jmap[k + 1] += jmap[k];
 
   if (nnz < coo_n - nneg) { /* Realloc with actual number of unique nonzeros */
     PetscCount *jmap_new;
