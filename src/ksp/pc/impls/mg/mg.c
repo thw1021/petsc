@@ -416,8 +416,6 @@ PetscErrorCode PCMGSetLevels_MG(PC pc, PetscInt levels, MPI_Comm *comms)
 
         if (i == levels - 1 && levels > 1) { // replace 'mg_finegrid_' with 'mg_levels_X_'
           PetscBool set;
-          char      lev_str[] = "mg_levels_X";
-          lev_str[10]         = '0' + levels - 1;
           PetscCall(PetscOptionsFindPairPrefix_Private(((PetscObject)mglevels[i]->smoothd)->options, ((PetscObject)mglevels[i]->smoothd)->prefix, "-mg_fine_", NULL, NULL, &set));
           if (set) {
             if (prefix) PetscCall(PetscSNPrintf(tprefix, 128, "%smg_fine_", prefix));
