@@ -535,7 +535,6 @@ PetscErrorCode MatProductSetFromOptions(Mat mat)
   MatCheckProduct(mat, 1);
   PetscCheck(!mat->product->data, PetscObjectComm((PetscObject)mat), PETSC_ERR_ORDER, "Cannot call MatProductSetFromOptions with already present data");
   mat->ops->productsetfromoptions = MatProductSetFromOptions;
-
   PetscObjectOptionsBegin((PetscObject)mat);
   PetscCall(PetscOptionsBool("-mat_product_clear", "Clear intermediate data structures after MatProductNumeric() has been called", "MatProductClear", mat->product->clear, &mat->product->clear, NULL));
   PetscCall(PetscOptionsDeprecated("-mat_freeintermediatedatastructures", "-mat_product_clear", "3.13", "Or call MatProductClear() after MatProductNumeric()"));
