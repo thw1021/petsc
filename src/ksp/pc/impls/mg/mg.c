@@ -329,6 +329,8 @@ static PetscErrorCode CreateCR_Private(PC pc, PetscInt l, PC *cr)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+PETSC_EXTERN PetscErrorCode PetscOptionsFindPairPrefix_Private(PetscOptions, const char pre[], const char name[], const char *option[], const char *value[], PetscBool *flg);
+
 PetscErrorCode PCMGSetLevels_MG(PC pc, PetscInt levels, MPI_Comm *comms)
 {
   PC_MG         *mg = (PC_MG *)pc->data;
