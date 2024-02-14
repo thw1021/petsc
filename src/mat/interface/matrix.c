@@ -8893,7 +8893,7 @@ PetscErrorCode MatGetNullSpace(Mat mat, MatNullSpace *nullsp)
 }
 
 /*@C
-  MatGetNullSpaces - gets the null space and near null spaces from an array of matrices
+  MatGetNullSpaces - gets the null spaces and near null spaces from an array of matrices
 
   Logically Collective
 
@@ -8927,7 +8927,7 @@ PetscErrorCode MatGetNullSpaces(PetscInt n, Mat mat[], MatNullSpace *nullsp[])
 }
 
 /*@C
-  MatRestoreNullSpaces - sets the null space and near null spaces obtained with `MatGetNullSpaces()` for an array of matrices
+  MatRestoreNullSpaces - sets the null spaces and near null spaces obtained with `MatGetNullSpaces()` for an array of matrices
 
   Logically Collective
 
@@ -8939,7 +8939,7 @@ PetscErrorCode MatGetNullSpaces(PetscInt n, Mat mat[], MatNullSpace *nullsp[])
   Level: developer
 
   Note:
-  Call `MatGetNullspaces()` to create `nullsp`
+  Call `MatGetNullSpaces()` to create `nullsp`
 
 .seealso: [](ch_matrices), `Mat`, `MatCreate()`, `MatNullSpaceCreate()`, `MatSetNearNullSpace()`, `MatGetNullSpace()`, `MatSetTransposeNullSpace()`, `MatGetTransposeNullSpace()`,
           `MatNullSpaceRemove()`, `MatGetNullSpaces()`

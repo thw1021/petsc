@@ -298,7 +298,6 @@ static PetscErrorCode PCSetUp_ASM(PC pc)
     PetscCall(PetscObjectGetOptionsPrefix((PetscObject)pc->pmat, &pprefix));
     for (i = 0; i < osm->n_local_true; i++) PetscCall(PetscObjectSetOptionsPrefix((PetscObject)osm->pmat[i], pprefix));
     if (nullsp) PetscCall(MatRestoreNullSpaces(osm->n_local_true, osm->pmat, &nullsp));
-    nullsp = NULL;
   }
 
   /* Convert the types of the submatrices (if needbe) */

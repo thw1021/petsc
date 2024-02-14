@@ -1,4 +1,4 @@
-static char help[] = "Loosing nullspaces in fieldsplit after zeroing rows.\n";
+static char help[] = "Loosing nullspaces in PCFIELDSPLIT after zeroing rows.\n";
 
 // Contributed by Jeremy Theler
 
@@ -19,7 +19,7 @@ int main(int argc, char **args)
   char            datafilespath[PETSC_MAX_PATH_LEN], datafile[PETSC_MAX_PATH_LEN];
 
   PetscFunctionBeginUser;
-  PetscCall(PetscInitialize(&argc, &args, (char *)0, help));
+  PetscCall(PetscInitialize(&argc, &args, NULL, help));
   PetscCall(PetscOptionsGetString(NULL, NULL, "-datafilespath", datafilespath, sizeof(datafilespath), NULL));
 
   PetscCall(PetscStrcpy(datafile, datafilespath));
@@ -59,7 +59,6 @@ int main(int argc, char **args)
   PetscCall(KSPSetOperators(ksp, A, A));
 
   PetscCall(KSPSetType(ksp, KSPPREONLY));
-  PetscCall(KSPSetTolerances(ksp, 1e-6, PETSC_DEFAULT, PETSC_DEFAULT, PETSC_DEFAULT));
 
   PetscCall(KSPGetPC(ksp, &pc));
   PetscCall(PCSetType(pc, PCFIELDSPLIT));

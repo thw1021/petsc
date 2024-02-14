@@ -82,7 +82,7 @@ Changes: Development
 - Add ``PCGAMGSetInjectionIndex()`` with corresponding option ``-pc_gamg_injection_index i,j,k...``. Inject provided indices of fine grid operator as first coarse grid restriction (sort of p-multigrid for C1 elements)
 - Add ``PC_JACOBI_ROWL1`` to ``PCJacobiType`` to use (scaled) l1 row norms for diagonal approximation with scaling of off-diagonal elements
 - Add ``PCJacobiSetRowl1Scale()`` and ``-pc_jacobi_rowl1_scale scale`` to access new scale member of PC_Jacobi class, for new row l1 Jacobi
-- The generated sub-matrices in ``PCFIELDSPLIT``, ``PCASM``, and ``PCBJACOBI`` now retain any null spaces or near null spaces attached to them even if the non-zero structure of the outer matrix changes
+- The generated sub-matrices in ``PCFIELDSPLIT``, ``PCASM``, and ``PCBJACOBI`` now retain any null space or near null space attached to them even if the non-zero structure of the outer matrix changes
 
 .. rubric:: KSP:
 
