@@ -966,7 +966,7 @@ PetscErrorCode MatProductCreate_Private(Mat A, Mat B, Mat C, Mat D)
   product->Dwork                 = NULL;
   product->api_user              = PETSC_FALSE;
   product->clear                 = PETSC_FALSE;
-  product->setfromoptions_called = PETSC_FALSE;
+  product->setfromoptionscalled = PETSC_FALSE;
   D->product                     = product;
 
   PetscCall(MatProductSetAlgorithm(D, MATPRODUCTALGORITHMDEFAULT));
