@@ -959,15 +959,15 @@ PetscErrorCode MatProductCreate_Private(Mat A, Mat B, Mat C, Mat D)
   PetscValidHeaderSpecific(D, MAT_CLASSID, 4);
   PetscCheck(!D->product, PetscObjectComm((PetscObject)D), PETSC_ERR_PLIB, "Product already present");
   PetscCall(PetscNew(&product));
-  product->A        = A;
-  product->B        = B;
-  product->C        = C;
-  product->type     = MATPRODUCT_UNSPECIFIED;
-  product->Dwork    = NULL;
-  product->api_user = PETSC_FALSE;
-  product->clear    = PETSC_FALSE;
+  product->A                     = A;
+  product->B                     = B;
+  product->C                     = C;
+  product->type                  = MATPRODUCT_UNSPECIFIED;
+  product->Dwork                 = NULL;
+  product->api_user              = PETSC_FALSE;
+  product->clear                 = PETSC_FALSE;
   product->setfromoptions_called = PETSC_FALSE;
-  D->product        = product;
+  D->product                     = product;
 
   PetscCall(MatProductSetAlgorithm(D, MATPRODUCTALGORITHMDEFAULT));
   PetscCall(MatProductSetFill(D, PETSC_DEFAULT));
