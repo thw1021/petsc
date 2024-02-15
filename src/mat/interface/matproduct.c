@@ -805,7 +805,7 @@ PetscErrorCode MatProductSymbolic(Mat mat)
     } else {
       PetscCall(PetscSNPrintf(errstr, 256, "%s with A %s, B %s", MatProductTypes[mat->product->type], ((PetscObject)mat->product->A)->type_name, ((PetscObject)mat->product->B)->type_name));
     }
-    PetscCheck(mat->product->setfromoptions_called, PetscObjectComm((PetscObject)mat), PETSC_ERR_PLIB, "Unspecified symbolic phase for product %s. Call MatProductSetFromOptions() first", errstr);
+    PetscCheck(mat->product->setfromoptionscalled, PetscObjectComm((PetscObject)mat), PETSC_ERR_PLIB, "Unspecified symbolic phase for product %s. Call MatProductSetFromOptions() first", errstr);
     PetscCheck(!missing, PetscObjectComm((PetscObject)mat), PETSC_ERR_SUP, "Unspecified symbolic phase for product %s. The product is not supported", errstr);
     PetscCheck(mat->product, PetscObjectComm((PetscObject)mat), PETSC_ERR_PLIB, "Missing struct after symbolic phase for product %s", errstr);
   }
@@ -959,15 +959,15 @@ PetscErrorCode MatProductCreate_Private(Mat A, Mat B, Mat C, Mat D)
   PetscValidHeaderSpecific(D, MAT_CLASSID, 4);
   PetscCheck(!D->product, PetscObjectComm((PetscObject)D), PETSC_ERR_PLIB, "Product already present");
   PetscCall(PetscNew(&product));
-  product->A                     = A;
-  product->B                     = B;
-  product->C                     = C;
-  product->type                  = MATPRODUCT_UNSPECIFIED;
-  product->Dwork                 = NULL;
-  product->api_user              = PETSC_FALSE;
-  product->clear                 = PETSC_FALSE;
+  product->A                    = A;
+  product->B                    = B;
+  product->C                    = C;
+  product->type                 = MATPRODUCT_UNSPECIFIED;
+  product->Dwork                = NULL;
+  product->api_user             = PETSC_FALSE;
+  product->clear                = PETSC_FALSE;
   product->setfromoptionscalled = PETSC_FALSE;
-  D->product                     = product;
+  D->product                    = product;
 
   PetscCall(MatProductSetAlgorithm(D, MATPRODUCTALGORITHMDEFAULT));
   PetscCall(MatProductSetFill(D, PETSC_DEFAULT));
