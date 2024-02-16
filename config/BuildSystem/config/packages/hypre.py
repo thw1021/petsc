@@ -4,13 +4,13 @@ import os
 class Configure(config.package.GNUPackage):
   def __init__(self, framework):
     config.package.GNUPackage.__init__(self, framework)
-    self.version         = '2.30.0'
+    self.version         = '2.31.0'
     self.minversion      = '2.14'
     self.versionname     = 'HYPRE_RELEASE_VERSION'
     self.versioninclude  = 'HYPRE_config.h'
     self.requiresversion = 1
-    self.gitcommit       = 'v'+self.version
-    # self.gitcommit       = '5e0bf05b42d856022d0a4d5c9294dfbe64cd5675' # master, june-20-2023
+    #self.gitcommit       = 'v'+self.version
+    self.gitcommit       = 'b7c4c6a3b5125bc2aa526a66bb8225c2e63fa336' # master+balay/fix-recursive-make feb-150-2025
     self.download        = ['git://https://github.com/hypre-space/hypre','https://github.com/hypre-space/hypre/archive/'+self.gitcommit+'.tar.gz']
     self.functions       = ['HYPRE_IJMatrixCreate']
     self.includes        = ['HYPRE.h']
