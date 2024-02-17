@@ -257,21 +257,26 @@ static PetscErrorCode ComputeFieldAtParticles_Coulomb(SNES snes, DM sw, PetscRea
 
 static PetscErrorCode ComputeFieldAtParticles_Primal(SNES snes, DM sw, PetscReal E[])
 {
-  DM         dm;
-  PetscDS    ds;
-  PetscFE    fe;
-  Mat        M_p;
-  Vec        phi, locPhi, rho, f;
-  PetscReal *coords, chargeTol = 1e-13;
-  PetscInt   dim, d, cStart, cEnd, c, Np;
+  DM          dm;
+  PetscDS     ds;
+  PetscFE     fe;
+  Mat         M_p;
+  Vec         phi, locPhi, rho, f;
+  PetscReal  *coords, chargeTol = 1e-13;
+  PetscInt    dim, d, cStart, cEnd, c, Np;
+  const char *oldField;
 
   PetscFunctionBegin;
   PetscCall(DMGetDimension(sw, &dim));
   PetscCall(DMSwarmGetLocalSize(sw, &Np));
+  PetscCall(SNESGetDM(snes, &dm));
+
+  PetscCall(DMSwarmVectorGetField(sw, &oldField));
+  PetscCall(DMSwarmVectorDefineField(sw, "w_q"));
+  PetscCall(DMCreateMassMatrix(sw, dm, &M_p));
+  PetscCall(DMSwarmVectorDefineField(sw, oldField));
 
   /* Create the charges rho */
-  PetscCall(SNESGetDM(snes, &dm));
-  PetscCall(DMCreateMassMatrix(sw, dm, &M_p));
   PetscCall(DMGetGlobalVector(dm, &rho));
   PetscCall(PetscObjectSetName((PetscObject)rho, "rho"));
   PetscCall(DMSwarmCreateGlobalVectorFromField(sw, "w_q", &f));
@@ -363,6 +368,7 @@ static PetscErrorCode ComputeFieldAtParticles_Mixed(SNES snes, DM sw, PetscReal 
   PetscQuadrature q;
   PetscReal      *coords, chargeTol = 1e-13;
   PetscInt        dim, d, cStart, cEnd, c, Np, fields = 1;
+  const char     *oldField;
 
   PetscFunctionBegin;
   PetscCall(DMGetDimension(sw, &dim));
@@ -372,9 +378,13 @@ static PetscErrorCode ComputeFieldAtParticles_Mixed(SNES snes, DM sw, PetscReal 
   PetscCall(SNESGetDM(snes, &dm));
   PetscCall(DMGetGlobalVector(dm, &rho));
   PetscCall(PetscObjectSetName((PetscObject)rho, "rho"));
-
   PetscCall(DMCreateSubDM(dm, 1, &fields, &potential_IS, &potential_dm));
+
+  PetscCall(DMSwarmVectorGetField(sw, &oldField));
+  PetscCall(DMSwarmVectorDefineField(sw, "w_q"));
   PetscCall(DMCreateMassMatrix(sw, potential_dm, &M_p));
+  PetscCall(DMSwarmVectorDefineField(sw, oldField));
+
   PetscCall(MatViewFromOptions(M_p, NULL, "-mp_view"));
   PetscCall(DMGetGlobalVector(potential_dm, &temp_rho));
   PetscCall(DMSwarmCreateGlobalVectorFromField(sw, "w_q", &f));
