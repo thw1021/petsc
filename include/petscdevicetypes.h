@@ -301,7 +301,7 @@ typedef struct _n_PetscDevice *PetscDevice;
 + `PETSC_STREAM_DEFAULT`                  - Same as the default stream in CUDA or HIP. Stream of this type may or may not synchronize implicitly with other streams. It does not block the host.
 . `PETSC_STREAM_NONBLOCKING`              - Same as the nonblokcing stream in CUDA or HIP. Stream of this type is truly asyncrhonous, and is blocked by nothing. It does not block the host.
 . `PETSC_STREAM_DEFAULT_WITH_BARRIER`     - Same as the default stream in CUDA or HIP with explicit barriers. Stream of this type may or may not synchronize implicitly with other streams. Barriers (stream synchronization) are placed in PETSc async functions as a safeguard, making these functions synchronous to the host.
-. `PETSC_STREAM_NONBLOCKING_WITH_BARRIER` - Same as the nonblokcing stream in CUDA or HIP with explicit barriers. Stream of this type is truly asynchronous, and is blocked by nothing. Barriers (stream synchronization) are placed in PETSc async functions as a safeguard, making these functions synchronous to the host.
+. `PETSC_STREAM_NONBLOCKING_WITH_BARRIER` - Same as the nonblocking stream in CUDA or HIP with explicit barriers. Streams of this type are truly asynchronous and are blocked by nothing. Barriers (stream synchronization) are placed in PETSc async functions as a safeguard, making these functions synchronous to the host.
 - `PETSC_STREAM_MAX`                - Always 1 greater than the largest `PetscStreamType`, do not use
 
   Level: intermediate
