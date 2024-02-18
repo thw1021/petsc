@@ -918,7 +918,7 @@ static PetscErrorCode adaptToleranceFEM(PetscFE fem, Vec sol, PetscInt type, Pet
       PetscReal tt, v0[LANDAU_MAX_NQND * 3], detJ[LANDAU_MAX_NQND];
       PetscCall(DMPlexComputeCellGeometryFEM(plex, c, quad, v0, NULL, NULL, detJ));
       for (qj = 0; qj < Nq; ++qj) {
-        tt = PetscSqr(v0[dim * qj + 0]) + PetscSqr(v0[dim * qj + 1]) + PetscSqr(((dim == 3) ? v0[dim * qj + 2] : 0));
+        tt = PetscSqr(v0[dim * qj + 0]) + PetscSqr(v0[dim * qj + 1]) + PetscSqr((dim == 3) ? v0[dim * qj + 2] : 0);
         r  = PetscSqrtReal(tt);
         if (r < minRad - PETSC_SQRT_MACHINE_EPSILON * 10.) {
           minRad         = r;
@@ -2648,7 +2648,7 @@ PetscErrorCode DMPlexLandauIJacobian(TS ts, PetscReal time_dummy, Vec X, Vec U_t
 #endif
   PetscCheck(shift != 0.0, ctx->comm, PETSC_ERR_PLIB, "zero shift");
   PetscCall(PetscObjectStateGet((PetscObject)ctx->J, &state));
-  PetscCheck(state == ctx->norm_state, ctx->comm, PETSC_ERR_PLIB, "wrong state, %" PetscInt64_FMT " %" PetscInt64_FMT "", ctx->norm_state, state);
+  PetscCheck(state == ctx->norm_state, ctx->comm, PETSC_ERR_PLIB, "wrong state, %" PetscInt64_FMT " %" PetscInt64_FMT, ctx->norm_state, state);
   if (!ctx->use_matrix_mass) {
     PetscCall(LandauFormJacobian_Internal(X, ctx->J, dim, shift, (void *)ctx));
   } else { /* add mass */

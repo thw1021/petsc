@@ -783,7 +783,7 @@ PETSC_EXTERN PetscErrorCode PetscFECreate_OpenCL(PetscFE fem)
   PetscCheck(num_devices, PetscObjectComm((PetscObject)fem), PETSC_ERR_SUP, "No OpenCL device found.");
   ocl->dev_id = device_ids[0];
   /* Create context with one command queue */
-  ocl->ctx_id = clCreateContext(0, 1, &(ocl->dev_id), NULL, NULL, &err);
+  ocl->ctx_id = clCreateContext(0, 1, &ocl->dev_id, NULL, NULL, &err);
   PetscCall(err);
   ocl->queue_id = clCreateCommandQueue(ocl->ctx_id, ocl->dev_id, CL_QUEUE_PROFILING_ENABLE, &err);
   PetscCall(err);

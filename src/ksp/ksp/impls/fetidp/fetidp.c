@@ -1104,7 +1104,7 @@ static PetscErrorCode KSPSetUp_FETIDP(KSP ksp)
     PetscCall(KSPSetPC(fetidp->innerksp, D));
     PetscCall(PetscObjectIncrementTabLevel((PetscObject)D, (PetscObject)fetidp->innerksp, 0));
     PetscCall(KSPSetFromOptions(fetidp->innerksp));
-    PetscCall(MatCreateVecs(F, &(fetidp->innerksp)->vec_rhs, &(fetidp->innerksp)->vec_sol));
+    PetscCall(MatCreateVecs(F, &fetidp->innerksp->vec_rhs, &fetidp->innerksp->vec_sol));
     PetscCall(MatDestroy(&F));
     PetscCall(PCDestroy(&D));
     if (fetidp->check) {

@@ -71,7 +71,7 @@
 
 /* define isnan and isinf for ANSI C, if in C99 or above, isnan and isinf has been defined in math.h */
 #ifndef isinf
-  #define isinf(d) (isnan((d - d)) && !isnan(d))
+  #define isinf(d) (isnan(d - d) && !isnan(d))
 #endif
 #ifndef isnan
   #define isnan(d) (d != d)
@@ -438,7 +438,7 @@ static void update_offset(printbuffer *const buffer)
 static cJSON_bool compare_double(double a, double b)
 {
   double maxVal = fabs(a) > fabs(b) ? fabs(a) : fabs(b);
-  return (fabs(a - b) <= maxVal * DBL_EPSILON);
+  return fabs(a - b) <= maxVal * DBL_EPSILON;
 }
 
 /* Render the number nicely from the given item into a string. */
@@ -543,7 +543,7 @@ static unsigned char utf16_literal_to_utf8(const unsigned char *const input_poin
   first_code = parse_hex4(first_sequence + 2);
 
   /* check that the code is valid */
-  if (((first_code >= 0xDC00) && (first_code <= 0xDFFF))) { goto fail; }
+  if ((first_code >= 0xDC00) && (first_code <= 0xDFFF)) { goto fail; }
 
   /* UTF16 surrogate pair */
   if ((first_code >= 0xD800) && (first_code <= 0xDBFF)) {
@@ -1172,7 +1172,7 @@ static cJSON_bool parse_array(cJSON *const item, parse_buffer *const input_buffe
   /* loop through the comma separated array elements */
   do {
     /* allocate next item */
-    cJSON *new_item = cJSON_New_Item(&(input_buffer->hooks));
+    cJSON *new_item = cJSON_New_Item(&input_buffer->hooks);
     if (new_item == NULL) { goto fail; /* allocation failure */ }
 
     /* attach next item to list */
@@ -1281,7 +1281,7 @@ static cJSON_bool parse_object(cJSON *const item, parse_buffer *const input_buff
   /* loop through the comma separated array elements */
   do {
     /* allocate next item */
-    cJSON *new_item = cJSON_New_Item(&(input_buffer->hooks));
+    cJSON *new_item = cJSON_New_Item(&input_buffer->hooks);
     if (new_item == NULL) { goto fail; /* allocation failure */ }
 
     /* attach next item to list */

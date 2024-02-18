@@ -459,7 +459,7 @@ static PetscErrorCode KSPSolve_AGMRES(KSP ksp)
 
       agmres->matvecs += 1;
     }
-    PetscCall(VecNormalize(VEC_V(0), &(ksp->rnorm)));
+    PetscCall(VecNormalize(VEC_V(0), &ksp->rnorm));
     KSPCheckNorm(ksp, ksp->rnorm);
     res_old = ksp->rnorm; /* Record the residual norm to test if deflation is needed */
 

@@ -4493,7 +4493,7 @@ static PetscErrorCode DMSetFromOptions_Plex(DM dm, PetscOptionItems *PetscOption
     DMPlexCoordMap map     = DM_COORD_MAP_NONE;
     PetscPointFunc mapFunc = NULL;
     PetscScalar    params[16];
-    PetscInt       Np = sizeof(params) / sizeof(params[0]), cdim;
+    PetscInt       Np = PETSC_STATIC_ARRAY_LENGTH(params), cdim;
     MPI_Comm       comm;
 
     PetscCall(PetscObjectGetComm((PetscObject)dm, &comm));
@@ -4989,7 +4989,7 @@ PetscErrorCode DMPlexBuildFromCellListParallel(DM dm, PetscInt numCells, PetscIn
   }
   PetscCall(DMSetPointSF(dm, sfPoint));
   PetscCall(PetscSFDestroy(&sfPoint));
-  if (vertexSF) PetscCall(PetscObjectSetName((PetscObject)(*vertexSF), "Vertex Ownership SF"));
+  if (vertexSF) PetscCall(PetscObjectSetName((PetscObject)*vertexSF, "Vertex Ownership SF"));
   /* Fill in the rest of the topology structure */
   PetscCall(DMPlexSymmetrize(dm));
   PetscCall(DMPlexStratify(dm));
@@ -5718,7 +5718,7 @@ PetscErrorCode DMPlexCreateFromFile(MPI_Comm comm, const char filename[], const 
     PetscCall(PetscViewerFileSetName(viewer, filename));
 
     PetscCall(DMCreate(comm, dm));
-    PetscCall(PetscObjectSetName((PetscObject)(*dm), plexname));
+    PetscCall(PetscObjectSetName((PetscObject)*dm, plexname));
     PetscCall(DMSetType(*dm, DMPLEX));
     if (isXDMFHDF5) PetscCall(PetscViewerPushFormat(viewer, PETSC_VIEWER_HDF5_XDMF));
     PetscCall(DMLoad(*dm, viewer));
@@ -5748,7 +5748,7 @@ PetscErrorCode DMPlexCreateFromFile(MPI_Comm comm, const char filename[], const 
     PetscCall(DMPlexCreateCellVertexFromFile(comm, filename, interpolate, dm));
   } else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Cannot load file %s: unrecognized extension", filename);
   PetscCall(PetscStrlen(plexname, &len));
-  if (len) PetscCall(PetscObjectSetName((PetscObject)(*dm), plexname));
+  if (len) PetscCall(PetscObjectSetName((PetscObject)*dm, plexname));
   PetscCall(PetscLogEventEnd(DMPLEX_CreateFromFile, 0, 0, 0, 0));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

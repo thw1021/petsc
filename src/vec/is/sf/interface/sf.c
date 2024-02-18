@@ -227,13 +227,13 @@ PetscErrorCode PetscSFDestroy(PetscSF *sf)
 {
   PetscFunctionBegin;
   if (!*sf) PetscFunctionReturn(PETSC_SUCCESS);
-  PetscValidHeaderSpecific((*sf), PETSCSF_CLASSID, 1);
-  if (--((PetscObject)(*sf))->refct > 0) {
+  PetscValidHeaderSpecific(*sf, PETSCSF_CLASSID, 1);
+  if (--((PetscObject)*sf)->refct > 0) {
     *sf = NULL;
     PetscFunctionReturn(PETSC_SUCCESS);
   }
   PetscCall(PetscSFReset(*sf));
-  PetscTryTypeMethod((*sf), Destroy);
+  PetscTryTypeMethod(*sf, Destroy);
   PetscCall(PetscSFDestroy(&(*sf)->vscat.lsf));
   if ((*sf)->vscat.bs > 1) PetscCallMPI(MPI_Type_free(&(*sf)->vscat.unit));
 #if defined(PETSC_HAVE_CUDA) && defined(PETSC_HAVE_MPIX_STREAM)

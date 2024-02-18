@@ -211,7 +211,7 @@ int main(int argc, char **argv)
      Solve nonlinear system
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
   PetscCall(TSSolve(ts, user.x));
-  PetscCall(TSGetSolveTime(ts, &(user.ftime)));
+  PetscCall(TSGetSolveTime(ts, &user.ftime));
   PetscCall(TSGetStepNumber(ts, &user.steps));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "mu %g, steps %" PetscInt_FMT ", ftime %g\n", (double)user.mu, user.steps, (double)user.ftime));
 

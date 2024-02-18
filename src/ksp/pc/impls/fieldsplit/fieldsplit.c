@@ -2929,7 +2929,7 @@ static PetscErrorCode PCSetCoordinates_FieldSplit(PC pc, PetscInt dim, PetscInt 
     PetscCall(ISGetIndices(is_coords, &block_dofs_enumeration));
 
     // Allocate coordinates vector and set it directly
-    PetscCall(PetscMalloc1(ndofs_block * dim, &(ilink_current->coords)));
+    PetscCall(PetscMalloc1(ndofs_block * dim, &ilink_current->coords));
     for (PetscInt dof = 0; dof < ndofs_block; ++dof) {
       for (PetscInt d = 0; d < dim; ++d) (ilink_current->coords)[dim * dof + d] = coords[dim * block_dofs_enumeration[dof] + d];
     }

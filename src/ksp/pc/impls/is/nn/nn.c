@@ -303,10 +303,10 @@ PetscErrorCode PCNNCreateCoarseMatrix(PC pc)
     PetscMPIInt size;
     PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)pc), &size));
     /* Create the global coarse vectors (rhs and solution). */
-    PetscCall(VecCreateMPI(PetscObjectComm((PetscObject)pc), 1, size, &(pcnn->coarse_b)));
-    PetscCall(VecDuplicate(pcnn->coarse_b, &(pcnn->coarse_x)));
+    PetscCall(VecCreateMPI(PetscObjectComm((PetscObject)pc), 1, size, &pcnn->coarse_b));
+    PetscCall(VecDuplicate(pcnn->coarse_b, &pcnn->coarse_x));
     /* Create and set the global coarse AIJ matrix. */
-    PetscCall(MatCreate(PetscObjectComm((PetscObject)pc), &(pcnn->coarse_mat)));
+    PetscCall(MatCreate(PetscObjectComm((PetscObject)pc), &pcnn->coarse_mat));
     PetscCall(MatSetSizes(pcnn->coarse_mat, 1, 1, size, size));
     PetscCall(MatSetType(pcnn->coarse_mat, MATAIJ));
     PetscCall(MatSeqAIJSetPreallocation(pcnn->coarse_mat, 1, NULL));
