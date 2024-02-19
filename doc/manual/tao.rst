@@ -2549,7 +2549,7 @@ on a common interpolation set :math:`\{y_1, \cdots , y_{l_k}\}` of size
 :math:`l_k\in[n+1,`\ ``npmax``\ :math:`]`.
 
 The gradients and Hessians of the models in
-(:any:`eq_models`) are then used to construct the main
+:any:`eq_models` are then used to construct the main
 model,
 
 .. math::

@@ -1208,7 +1208,7 @@ or
 
 .. code-block::
 
-   MatSetOption(mat,MAT_STRUCTURAL_SYMMETRY_ETERNAL,PETSC_TRUE (or PETSC_FALSE)).\
+   MatSetOption(mat,MAT_STRUCTURAL_SYMMETRY_ETERNAL,PETSC_TRUE (or PETSC_FALSE)).
 
 Using this information allows the algorithm to skip the unnecessary computations.
 
