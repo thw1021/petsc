@@ -10,19 +10,17 @@ PetscErrorCode MyISView(IS *rowis, IS *colis, PetscInt gs, PetscInt ss, PetscVie
 
   PetscFunctionBeginUser;
   PetscCall(PetscViewerASCIIPrintf(viewer, "Row IS %" PetscInt_FMT "\n", gs));
+  PetscCall(PetscViewerGetSubViewer(viewer, PetscObjectComm((PetscObject)rowis[ss]), &subviewer));
   if (ss > -1) {
-    PetscCall(PetscViewerGetSubViewer(viewer, PetscObjectComm((PetscObject)rowis[ss]), &subviewer));
     PetscCall(ISView(rowis[ss], subviewer));
-    PetscCall(PetscViewerRestoreSubViewer(viewer, PetscObjectComm((PetscObject)rowis[ss]), &subviewer));
   }
-  PetscCall(PetscViewerFlush(viewer));
+  PetscCall(PetscViewerRestoreSubViewer(viewer, PetscObjectComm((PetscObject)rowis[ss]), &subviewer));
   PetscCall(PetscViewerASCIIPrintf(viewer, "Col IS %" PetscInt_FMT "\n", gs));
+  PetscCall(PetscViewerGetSubViewer(viewer, PetscObjectComm((PetscObject)rowis[ss]), &subviewer));
   if (ss > -1) {
-    PetscCall(PetscViewerGetSubViewer(viewer, PetscObjectComm((PetscObject)rowis[ss]), &subviewer));
     PetscCall(ISView(colis[ss], subviewer));
-    PetscCall(PetscViewerRestoreSubViewer(viewer, PetscObjectComm((PetscObject)rowis[ss]), &subviewer));
   }
-  PetscCall(PetscViewerFlush(viewer));
+  PetscCall(PetscViewerRestoreSubViewer(viewer, PetscObjectComm((PetscObject)rowis[ss]), &subviewer));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
