@@ -374,7 +374,10 @@ class generateExamples(Petsc):
     subst['label_suffix']=''
     subst['comments']="\n#".join(subst['comments'].split("\n"))
     if subst['comments']: subst['comments']="#"+subst['comments']
-    subst['exec']=os.path.join(runscript_dir,subst['execname'])
+    if os.path.exists('/usr/bin/cygcheck.exe'):
+      subst['exec']="../"+subst['execname']
+    else:
+      subst['exec']=os.path.join(runscript_dir,subst['execname'])
     subst['testroot']=self.testroot_dir
     subst['testname']=testname
     dp = self.conf.get('DATAFILESPATH','')
