@@ -184,7 +184,7 @@ do the following.
 Debugger
 ^^^^^^^^
 
-Running PETSc probrams with ``-start_in_debugger`` is not supported on this platform, so debuggers will need to be initiated manually. Make sure your environment is properly configured to use the appropriate debugger for your compiler. The debuggers can be initiated using Microsoft Visual Studio:
+Running PETSc programs with ``-start_in_debugger`` is not supported on this platform, so debuggers will need to be initiated manually. Make sure your environment is properly configured to use the appropriate debugger for your compiler. The debuggers can be initiated using Microsoft Visual Studio:
 
 .. code-block:: console
 
