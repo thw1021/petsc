@@ -7,33 +7,9 @@ Installing PETSc On Microsoft Windows
 .. admonition:: Are You Sure?
    :class: yellow
 
-   Are you sure you want to use Microsoft Windows? We recommend using Linux if possible
+   Are you sure you want to use Microsoft Windows?
+   We recommend using ``Linux`` or ``Linux on Windows`` if possible
    (and minimize troubleshooting Microsoft Windows related issues).
-
-Recommended Installation Methods
-================================
-
-The following configurations are much like regular Unix-like systems. Our regular
-(Unix-like) instructions should work with them. Most :ref:`external packages
-<doc_externalsoftware>` will also work. However for example, the ``configure`` option ``--download-mpich``
-does not work with ``Cygwin GNU compilers``. And some of these systems **do not** support native compilers (Microsoft/Intel)
-nor native libraries (MS-MPI, Intel-MPI).
-
-- `Cygwin <https://www.cygwin.com/>`__ Unix emulator for Microsoft Windows. See the
-  instructions below for installing Cygwin for PETSc.
-
-  .. note::
-
-     Be sure to install the GNU compilers, and commons components, **do not** use the
-     ``win32fe`` [#win32]_ script:
-
-     - python3
-     - make
-     - gcc-core gcc-g++ gcc-fortran
-     - liblapack-devel
-     - openmpi libopenmpi-devel libhwloc-devel libevent-devel zlib-devel
-
-- `MSYS2 <https://www.msys2.org>`__. See more details below.
 
 - Microsoft Windows Subsystem for Linux 2 (`WLS2
   <https://docs.microsoft.com/en-us/windows/wsl/install-win10>`__). Largely untested, let
@@ -46,8 +22,32 @@ nor native libraries (MS-MPI, Intel-MPI).
   tutorial is at https://www.psychocats.net/ubuntu/virtualbox. Google can provide more
   tutorials. Untested, let us know your experience.
 
-Installation With Microsoft/Intel Windows Compilers
-===================================================
+Recommended Windows Installation Methods
+================================
+
+The following configurations on Windows are much like regular Unix-like systems. Our regular
+(Unix-like) instructions should work here with ``GNU Compilers`` (*only*).
+Most :ref:`external packages <doc_externalsoftware>` are likely to work.
+However ``configure`` option ``--download-mpich`` does not work.
+
+- `Cygwin <https://www.cygwin.com/>`__ Unix emulator for Microsoft Windows. See the
+  instructions below for installing Cygwin for PETSc.
+
+     Be sure to install the following additional Cygwin components:
+     - python3
+     - make
+     - gcc-core gcc-g++ gcc-fortran
+     - liblapack-devel
+     - openmpi libopenmpi-devel libhwloc-devel libevent-devel zlib-devel
+
+  .. note::
+
+     Native libraries like MS-MPI, Intel MPI cannot be used from Cygwin/GNU compilers.
+
+- `MSYS2 <https://www.msys2.org>`__. See more details below.
+
+Installation With Native Microsoft/Intel Windows Compilers
+==========================================================
 
 Microsoft Windows does not provide the same Unix shell environment as the other OSes. Also
 the default Microsoft/Intel compilers behave differently than other Unix compilers. So to
@@ -58,18 +58,13 @@ interface to Microsoft/Intel compilers).
 #. Install Cygwin:
 
    Download and install Cygwin from http://www.cygwin.com and make sure the
-   following components are installed:
+   following Cygwin components are installed:
+   - python3
+   - make
+   - (default selection should already have diff and other tools)
 
-   .. note::
-
-      Make sure the following Cygwin components are installed:
-
-      - python3
-      - make
-      - (default selection should already have diff and other tools)
-
-      Additional Cygwin components like git and CMake can be useful for installing
-      :ref:`external packages <doc_externalsoftware>`.
+   Additional Cygwin components like git and CMake can be useful for installing
+   :ref:`external packages <doc_externalsoftware>`.
 
 #. Remove Cygwin link.exe:
 
@@ -152,8 +147,8 @@ For example usages, check ``$PETSC_DIR/config/examples/arch-mswin*.py``
 External Packages
 ^^^^^^^^^^^^^^^^^
 
-The ``--download-package`` option works with many :ref:`external packages
-<doc_externalsoftware>` on Microsoft Windows, but there may be some portability issues with others.
+The ``--download-package`` option works with some :ref:`external packages
+<doc_externalsoftware>` on Microsoft Windows, there may be some portability issues with others.
 Let us know your experience and we will either try to fix them or report them upstream.
 
 Project Files
