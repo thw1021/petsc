@@ -775,6 +775,7 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
       PetscCall(DMSwarmDestroyGlobalVectorFromField(sw, "w_q", &f));
       //
       PetscCall(DMPlexLandauPrintNorms(X, 1));
+      PetscCall(DMSwarmViewXDMF(sw, "initial_swarm.xmf"));
     }
     if (!use_uniform_particle_grid) { // resample to uniform grid
       for (PetscInt v_id_0 = 0; v_id_0 < ctx->batch_sz; v_id_0 += numthreads) {
@@ -899,6 +900,7 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
         PetscCall(PetscObjectSetName((PetscObject)f, "resampled_weights"));
         PetscCall(VecViewFromOptions(f, NULL, "-resampled_weights_vec_view"));
         PetscCall(DMSwarmDestroyGlobalVectorFromField(sw, "w_q", &f));
+        PetscCall(DMSwarmViewXDMF(sw, "resampled.xmf"));
       }
     } // !uniform
     // particles to grid, compute moments and entropy
@@ -1004,8 +1006,8 @@ int main(int argc, char **argv)
     args: -dim 2 -petscspace_degree 3 -dm_landau_num_species_grid 1,1,1 -dm_refine 1 -number_particles_per_dimension 10 -dm_plex_hash_location \
           -dm_landau_batch_size 4 -number_spatial_vertices 6 -vertex_view_target 5 -grid_view_target 1 -dm_landau_batch_view_idx 1 \
           -dm_landau_n 1.000018,1,1e-6 -dm_landau_thermal_temps 2,1,1 -dm_landau_ion_masses 2,180 -dm_landau_ion_charges 1,18 \
-          -ftop_ksp_rtol 1e-10 -ftop_ksp_type lsqr -ftop_pc_type bjacobi -ftop_sub_pc_factor_shift_type nonzero -ftop_sub_pc_type lu \
-          -ksp_type preonly -pc_type lu -dm_landau_verbose 4 -print_entropy \
+          -ftop_ksp_rtol 1e-10 -ftop_ksp_type lsqr -ftop_pc_type bjacobi -ftop_sub_pc_factor_shift_type nonzero -ftop_sub_pc_type lu -ftop_ksp_error_if_not_converged \
+          -ksp_type cg -pc_type jacobi -ksp_error_if_not_converged -dm_landau_verbose 4 -print_entropy \
           -ptof_ksp_type cg -ptof_pc_type jacobi -ptof_ksp_rtol 1e-12\
           -snes_converged_reason -snes_monitor -snes_rtol 1e-14 -snes_stol 1e-14 \
           -ts_dt 0.01 -ts_rtol 1e-1 -ts_exact_final_time stepover -ts_max_snes_failures -1 -ts_max_steps 1 -ts_monitor -ts_type beuler
@@ -1024,7 +1026,7 @@ int main(int argc, char **argv)
     args: -dim 3 -petscspace_degree 2 -dm_landau_num_species_grid 1,1,1 -dm_refine 0 -number_particles_per_dimension 10 -dm_plex_hash_location \
           -dm_landau_batch_size 1 -number_spatial_vertices 1 -vertex_view_target 0 -grid_view_target 0 -dm_landau_batch_view_idx 0 \
           -dm_landau_n 1.000018,1,1e-6 -dm_landau_thermal_temps 2,1,1 -dm_landau_ion_masses 2,180 -dm_landau_ion_charges 1,18 \
-          -ftop_ksp_rtol 1e-12 -ksp_type preonly -pc_type lu \
+          -ftop_ksp_rtol 1e-12 -ftop_ksp_error_if_not_converged -ksp_type cg -pc_type jacobi -ksp_error_if_not_converged \
           -ptof_ksp_type cg -ptof_pc_type jacobi -ptof_ksp_rtol 1e-12\
           -snes_converged_reason -snes_monitor -snes_rtol 1e-12 -snes_stol 1e-12\
           -ts_dt 0.1 -ts_exact_final_time stepover -ts_max_snes_failures -1 -ts_max_steps 1 -ts_monitor -ts_type beuler -print_entropy
@@ -1040,7 +1042,7 @@ int main(int argc, char **argv)
   testset:
     requires: !complex double defined(PETSC_USE_DMLANDAU_2D) !cuda
     args: -dm_refine 1 -dm_landau_num_species_grid 1 -dm_landau_thermal_temps 1 -petscspace_degree 3 -snes_converged_reason -ts_type beuler -ts_dt .1 \
-          -ts_max_steps 1 -ksp_type preonly -pc_type lu -snes_rtol 1e-12 -snes_stol 1e-12 -dm_landau_device_type cpu -number_particles_per_dimension 40 \
+          -ts_max_steps 1 -ksp_type cg -pc_type jacobi -ksp_error_if_not_converged -snes_rtol 1e-12 -snes_stol 1e-12 -dm_landau_device_type cpu -number_particles_per_dimension 40 \
           -ptof_ksp_rtol 1e-12 -dm_landau_batch_size 4 -number_spatial_vertices 4 -grid_view_target 0 \
           -vertex_view_target 3 -dm_landau_batch_view_idx 3
     test:
