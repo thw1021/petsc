@@ -7,33 +7,9 @@ Installing PETSc On Microsoft Windows
 .. admonition:: Are You Sure?
    :class: yellow
 
-   Are you sure you want to use Microsoft Windows? We recommend using Linux if possible
+   Are you sure you want to use Microsoft Windows?
+   We recommend using ``Linux`` or ``Linux on Windows`` if possible
    (and minimize troubleshooting Microsoft Windows related issues).
-
-Recommended Installation Methods
-================================
-
-The following configurations are much like regular Unix-like systems. Our regular
-(Unix-like) instructions should work with them. Most :ref:`external packages
-<doc_externalsoftware>` will also work. The ``configure`` option ``--download-mpich``
-should work for these systems. Note however that these **do not** support Microsoft/Intel
-Windows compilers; nor can you use MS-MPI, Intel-MPI or MPICH2).
-
-- `Cygwin <https://www.cygwin.com/>`__ Unix emulator for Microsoft Windows. See the
-  instructions below for installing Cygwin for PETSc.
-
-  .. note::
-
-     Be sure to install the GNU compilers, and commons components, **do not** use the
-     ``win32fe`` [#win32]_ script:
-
-     - python3
-     - make
-     - gcc-core gcc-g++ gcc-fortran
-     - liblapack-devel
-     - openmpi libopenmpi-devel libhwloc-devel libevent-devel zlib-devel
-
-- `MSYS2 <https://www.msys2.org>`__. See more details below.
 
 - Microsoft Windows Subsystem for Linux 2 (`WLS2
   <https://docs.microsoft.com/en-us/windows/wsl/install-win10>`__). Largely untested, let
@@ -42,12 +18,35 @@ Windows compilers; nor can you use MS-MPI, Intel-MPI or MPICH2).
 - `Docker <https://docs.docker.com/docker-for-windows/>`__ for Microsoft
   Windows. Untested, let us know your experience.
 
-- Linux virtual machine via `VirtualBox <https://www.virtualbox.org/>`__. One sample
+- Linux virtual machine via `VirtualBox <https://www.virtualbox.org/>`__ or similar. One sample
   tutorial is at https://www.psychocats.net/ubuntu/virtualbox. Google can provide more
   tutorials. Untested, let us know your experience.
 
-Installation With Microsoft/Intel Windows Compilers
-===================================================
+Recommended Windows Installation Methods
+========================================
+
+The following configurations on Windows are much like regular Unix-like systems. Our regular
+(Unix-like) instructions should work here with ``GNU Compilers`` (*only*).
+Most :ref:`external packages <doc_externalsoftware>` are likely to work,
+however ``configure`` option ``--download-mpich`` does not work.
+
+- `Cygwin <https://www.cygwin.com/>`__ Unix emulator for Microsoft Windows.
+   Download and install Cygwin from http://www.cygwin.com and make sure the following Cygwin components are installed:
+
+   - python3
+   - make
+   - gcc-core gcc-g++ gcc-fortran
+   - liblapack-devel
+   - openmpi libopenmpi-devel libhwloc-devel libevent-devel zlib-devel
+
+  .. note::
+
+     Native libraries like MS-MPI, Intel MPI cannot be used from Cygwin/GNU compilers.
+
+- `MSYS2 <https://www.msys2.org>`__ Tools for building native windows software. See more details below.
+
+Installation With Native Microsoft/Intel Windows Compilers
+==========================================================
 
 Microsoft Windows does not provide the same Unix shell environment as the other OSes. Also
 the default Microsoft/Intel compilers behave differently than other Unix compilers. So to
@@ -58,18 +57,14 @@ interface to Microsoft/Intel compilers).
 #. Install Cygwin:
 
    Download and install Cygwin from http://www.cygwin.com and make sure the
-   following components are installed:
+   following Cygwin components are installed:
 
-   .. note::
+   - python3
+   - make
+   - (default selection should already have diff and other tools)
 
-      Make sure the following Cygwin components are installed:
-
-      - python3
-      - make
-      - (default selection should already have diff and other tools)
-
-      Additional Cygwin components like git and CMake can be useful for installing
-      :ref:`external packages <doc_externalsoftware>`.
+   Additional Cygwin components like git and CMake can be useful for installing
+   :ref:`external packages <doc_externalsoftware>`.
 
 #. Remove Cygwin link.exe:
 
@@ -83,18 +78,17 @@ interface to Microsoft/Intel compilers).
 #. Setup Cygwin terminal/bash-shell with Working Compilers:
 
    We require the compilers to be setup properly in a Cygwin bash command shell, so that
-   ``cl foo.c`` or ``ifort foo.f`` works from this shell. For example - if using VS2005 C
-   and Intel 10 Fortran one can do:
+   ``cl foo.c`` or ``ifort foo.F`` works from this shell. For example - if using ``Visual Studio 2022 C``
+   and ``Intel OneAPI 2022 Fortran``, one can do:
 
-   #. Start > Programs > Intel Software Development Tools > Intel Fortran
-      Compiler 10 > Visual Fortran Build Environment (32-bit or 64-bit depending on
-      your usage). This should start a "dos cmd" shell.
+   #. ``Start`` > ``Programs`` > ``Intel OneAPI 2022`` -> ``Intel OneAPI command prompt for Intel 64 for Visual Studio 2022``.
+      This should start a ``DOS Command shell`` with working compilers.
 
    #. Within this shell - run Cygwin terminal/bash-shell ``mintty.exe`` as:
 
       .. code-block:: console
 
-         $ C:\cygwin\bin\mintty.exe
+         $ C:\cygwin64\bin\mintty.exe -
 
    #. Verify if the compilers are usable (by running cl, ifort in this Cygwin
       terminal/bash-shell).
@@ -105,7 +99,7 @@ interface to Microsoft/Intel compilers).
 Example Configure Usage With Microsoft Windows Compilers
 --------------------------------------------------------
 
-Use ``configure`` with VC2005 C and Intel Fortran 10 (without MPI):
+Use ``configure`` with ``Visual Studio 2022 C`` and ``Intel OneAPI 2022 Fortran`` (without MPI):
 
 .. code-block:: console
 
@@ -120,8 +114,8 @@ If fortran, c++ usage is not required, use:
 Using MPI
 ^^^^^^^^^
 
-We support both MS-MPI [64-bit] and Intel MPI on Microsoft Windows (MPICH2 does not work,
-do not use it). For example usages, check ``$PETSC_DIR/config/examples/arch-mswin*.py``
+We support both MS-MPI [64-bit] and Intel MPI on Microsoft Windows.
+For example usages, check ``$PETSC_DIR/config/examples/arch-mswin*.py``
 
 .. warning::
 
@@ -153,8 +147,8 @@ do not use it). For example usages, check ``$PETSC_DIR/config/examples/arch-mswi
 External Packages
 ^^^^^^^^^^^^^^^^^
 
-The ``--download-package`` option works with many :ref:`external packages
-<doc_externalsoftware>` on Microsoft Windows, but there may be some portability issues with others.
+The ``--download-package`` option works with some :ref:`external packages
+<doc_externalsoftware>` on Microsoft Windows, there may be some portability issues with others.
 Let us know your experience and we will either try to fix them or report them upstream.
 
 Project Files
@@ -185,13 +179,7 @@ do the following.
 Debugger
 ^^^^^^^^
 
-Running PETSc probrams with ``-start_in_debugger`` is not supported on this platform, so debuggers will need to be initiated manually. Make sure your environment is properly configured to use the appropriate debugger for your compiler. The debuggers can be initiated using Microsoft Visual Studio 6:
-
-.. code-block:: console
-
-   $ msdev ex1.exe
-
-Microsoft Visual Studio .NET:
+Running PETSc programs with ``-start_in_debugger`` is not supported on this platform, so debuggers will need to be initiated manually. Make sure your environment is properly configured to use the appropriate debugger for your compiler. The debuggers can be initiated using Microsoft Visual Studio:
 
 .. code-block:: console
 
@@ -270,7 +258,7 @@ applications that are compatible with the Microsoft and Intel compilers.
 
 .. rubric:: Footnotes
 
-.. [#win32] PETSc win32 front end (``win32fe``): This tool is used as a wrapper to Microsoft
+.. [#win32] `PETSc Win32 Development Tool Front End <https://bitbucket.org/petsc/win32fe>`__ (``win32fe``): This tool is used as a wrapper to Microsoft
        and Intel compilers and associated tools - to enable building PETSc libraries using
        Cygwin make and other Unix tools. For additional info, run
        ``${PETSC_DIR}/lib/petsc/bin/win32/win32fe`` without any options.
