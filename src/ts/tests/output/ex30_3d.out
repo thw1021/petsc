@@ -22,9 +22,9 @@ Domain radius (AMR levels) grid 0: par= 5.000e+00 perp= 5.000e+00 (0) , 1: par= 
   1) species 1: density= 1.6021989363948e+01, x-momentum=-2.5839606282085e-16, y-momentum= 1.7135738902857e-16, z-momentum= 1.3858188842866e-15, energy=  2.4032863583165e+04
   1) species 2: density= 2.8839580855106e-04, x-momentum=-1.8253334392372e-20, y-momentum= 2.5709332693333e-20, z-momentum= 1.8413835334271e-20, energy=  2.3944974655924e-02
 	  1) Total: charge density= -9.1091251295389e-14, x-momentum= -2.6690256321738e-16, y-momentum=  1.8736376461790e-16, z-momentum=  1.3928792237573e-15, energy=  7.2098366940007e+04 (m_i[0]/m_e = 3670.94, 8 cells)
-Particle Moments:	 number density      momentum (par)     energy             entropy      loss : # OMP threads 1.
-	Initial:         3.345209694066e-07  6.874545861581e-18 7.209836694046e+04 4.260241e+00 0.000000e+00
-	Coarse-graining: 3.345209694066e-07  1.756801056932e-16 7.209836694043e+04 5.162487e+00 4.757279e-08
-	Landau:          3.345209694066e-07  1.672917451059e-16 7.209836694001e+04 5.162155e+00 4.752809e-08
+Particle Moments:	 number density      momentum (par)     energy             entropy            negative weights : # OMP threads 1.
+	Initial:         3.345209694066e-07  6.874545861581e-18 7.209836694046e+04 4.260241447633e+00 0.000000e+00
+	Coarse-graining: 3.345209694066e-07  1.756801056932e-16 7.209836694043e+04 5.162486616657e+00 4.757279e-08
+	Landau:          3.345209694066e-07  1.672917451059e-16 7.209836694001e+04 5.162154736686e+00 4.752809e-08
 Coarse-graining entropy generation = 9.022452e-01 ; Landau entropy generation = 9.019133e-01
 (relative) energy conservation: Coarse-graining = -4.311178e-13 ; Landau = -6.278052e-12
