@@ -18,5 +18,5 @@ Labels:
 Field e:
   adjacency FEM
   0) species-0: charge density= -1.6030969008341e+01 z-momentum= -4.1243460231091e-18 energy=  2.4036205511445e+04 -- 8 cells
-  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 6
-  1) species-0: charge density= -1.6030969008341e+01 z-momentum= -3.9022013694254e-18 energy=  2.4036205511445e+04 -- 8 cells
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 9
+  1) species-0: charge density= -1.6030969008341e+01 z-momentum= -4.1159632059889e-18 energy=  2.4036205511445e+04 -- 8 cells
