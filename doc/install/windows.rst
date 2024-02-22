@@ -83,18 +83,17 @@ interface to Microsoft/Intel compilers).
 #. Setup Cygwin terminal/bash-shell with Working Compilers:
 
    We require the compilers to be setup properly in a Cygwin bash command shell, so that
-   ``cl foo.c`` or ``ifort foo.f`` works from this shell. For example - if using VS2005 C
-   and Intel 10 Fortran one can do:
+   ``cl foo.c`` or ``ifort foo.F`` works from this shell. For example - if using Visual Studio 2022 C
+   and Intel OneAPI 2022 Fortran, one can do:
 
-   #. Start > Programs > Intel Software Development Tools > Intel Fortran
-      Compiler 10 > Visual Fortran Build Environment (32-bit or 64-bit depending on
-      your usage). This should start a "dos cmd" shell.
+   #. Start > Programs > Intel OneAPI 2022 -> Intel OneAPI command prompt for Intel 64 for Visual Studio 2022.
+      This should start a "DOS Command shell" with working compilers.
 
    #. Within this shell - run Cygwin terminal/bash-shell ``mintty.exe`` as:
 
       .. code-block:: console
 
-         $ C:\cygwin\bin\mintty.exe
+         $ C:\cygwin64\bin\mintty.exe -e /bin/bash --login
 
    #. Verify if the compilers are useable (by running cl, ifort in this Cygwin
       terminal/bash-shell).
