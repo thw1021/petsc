@@ -94,7 +94,7 @@ interface to Microsoft/Intel compilers).
 
       .. code-block:: console
 
-         $ C:\cygwin\bin\mintty.exe
+         $ C:\cygwin64\bin\mintty.exe -e /bin/bash --login
 
    #. Verify if the compilers are useable (by running cl, ifort in this Cygwin
       terminal/bash-shell).
