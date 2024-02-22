@@ -30,15 +30,13 @@ The following configurations on Windows are much like regular Unix-like systems.
 Most :ref:`external packages <doc_externalsoftware>` are likely to work,
 however ``configure`` option ``--download-mpich`` does not work.
 
-- `Cygwin <https://www.cygwin.com/>`__ Unix emulator for Microsoft Windows. See the
-  instructions below for installing Cygwin for PETSc.
-
-     Be sure to install the following additional Cygwin components:
-     - python3
-     - make
-     - gcc-core gcc-g++ gcc-fortran
-     - liblapack-devel
-     - openmpi libopenmpi-devel libhwloc-devel libevent-devel zlib-devel
+- `Cygwin <https://www.cygwin.com/>`__ Unix emulator for Microsoft Windows.
+   Download and install Cygwin from http://www.cygwin.com and make sure the following Cygwin components are installed:
+   - python3
+   - make
+   - gcc-core gcc-g++ gcc-fortran
+   - liblapack-devel
+   - openmpi libopenmpi-devel libhwloc-devel libevent-devel zlib-devel
 
   .. note::
 
