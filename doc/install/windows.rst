@@ -23,12 +23,12 @@ Installing PETSc On Microsoft Windows
   tutorials. Untested, let us know your experience.
 
 Recommended Windows Installation Methods
-================================
+========================================
 
 The following configurations on Windows are much like regular Unix-like systems. Our regular
 (Unix-like) instructions should work here with ``GNU Compilers`` (*only*).
-Most :ref:`external packages <doc_externalsoftware>` are likely to work.
-However ``configure`` option ``--download-mpich`` does not work.
+Most :ref:`external packages <doc_externalsoftware>` are likely to work,
+however ``configure`` option ``--download-mpich`` does not work.
 
 - `Cygwin <https://www.cygwin.com/>`__ Unix emulator for Microsoft Windows. See the
   instructions below for installing Cygwin for PETSc.
