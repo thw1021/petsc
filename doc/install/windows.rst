@@ -32,6 +32,7 @@ however ``configure`` option ``--download-mpich`` does not work.
 
 - `Cygwin <https://www.cygwin.com/>`__ Unix emulator for Microsoft Windows.
    Download and install Cygwin from http://www.cygwin.com and make sure the following Cygwin components are installed:
+
    - python3
    - make
    - gcc-core gcc-g++ gcc-fortran
@@ -42,7 +43,7 @@ however ``configure`` option ``--download-mpich`` does not work.
 
      Native libraries like MS-MPI, Intel MPI cannot be used from Cygwin/GNU compilers.
 
-- `MSYS2 <https://www.msys2.org>`__. See more details below.
+- `MSYS2 <https://www.msys2.org>`__ Tools for building native windows software. See more details below.
 
 Installation With Native Microsoft/Intel Windows Compilers
 ==========================================================
@@ -57,6 +58,7 @@ interface to Microsoft/Intel compilers).
 
    Download and install Cygwin from http://www.cygwin.com and make sure the
    following Cygwin components are installed:
+
    - python3
    - make
    - (default selection should already have diff and other tools)
