@@ -10,14 +10,14 @@ Installing PETSc On Microsoft Windows
    Are you sure you want to use Microsoft Windows?
 
    Developing HPC software is more difficult on Microsoft Windows than Linux and macOS systems.
-   We recommend using a Microsoft Windows system for PETSc only when neccessary.
+   We recommend using a Microsoft Windows system for PETSc only when necessary.
 
 
 There are many ways to install PETSc on Microsoft Windows's systems.
 
 -  :any:`sec_linux_on_windows`
 
--  :any:`sec_gnu_on_windows`
+-  :any:`sec_cygwin_gnu_on_windows`
 
 -  :any:`sec_native_compilers_on_windows`
 
@@ -42,19 +42,13 @@ Linux on Microsoft Windows
 
 ----
 
-.. _sec_gnu_on_windows:
+.. _sec_cygwin_gnu_on_windows:
 
-GNU compilers on Microsoft Windows
-===================================
+Cygwin/GNU compilers on Microsoft Windows
+=========================================
 
-These allow building standalone Microsoft Windows libraries and
-applications that are **not** compatible with the Microsoft and Intel compilers.
-
-Most :ref:`external packages <doc_externalsoftware>` are likely to work,
-however the ``configure`` option ``--download-mpich`` does not work.
-
-Microsoft Windows does not provide a Unix shell environment. So to
-install PETSc on Microsoft Windows with the **GNU** compilers one has to first install Cygwin.
+Cygwin/GNU compilers allow building standalone PETSc libraries and binaries
+that work on Microsoft Windows, with Cygwin pre-built libraries for Blas, Lapack, OpenMPI.
 
 #. Install Cygwin:
 
@@ -67,11 +61,22 @@ install PETSc on Microsoft Windows with the **GNU** compilers one has to first i
    - liblapack-devel
    - openmpi libopenmpi-devel libhwloc-devel libevent-devel zlib-devel
 
-#. Follow the Unix instructions for configuing and building
+#. To build with Cygwin installed Blas, Lapack, OpenMPI (from default locations) use:
 
-.. note::
+.. code-block:: console
 
-   Native libraries like MS-MPI, Intel MPI cannot be used from Cygwin/GNU compilers.
+   $ ./configure
+
+#. Follow the Unix instructions for any additional configuration or build options.
+
+.. notes::
+
+   Libraries built with Cygwin/GNU compilers are **not** compatible and cannot be linked  with  Microsoft or Intel Compilers.
+
+   Native libraries like MS-MPI, Intel-MPI cannot be used from Cygwin/GNU compilers.
+
+   Most :ref:`external packages <doc_externalsoftware>` are likely to work,
+   however the ``configure`` option ``--download-mpich`` does not work.
 
 ----
 
@@ -80,12 +85,10 @@ install PETSc on Microsoft Windows with the **GNU** compilers one has to first i
 Native Microsoft/Intel Windows Compilers
 ========================================
 
-The ``--download-package`` option works with some :ref:`external packages <doc_externalsoftware>`.
-
 Microsoft Windows does not provide a Unix shell environment. Also
-the native Microsoft/Intel compilers behave differently than other compilers. So to
+the native Microsoft/Intel compilers behave differently than other (Unix) compilers. So to
 install PETSc on Microsoft Windows with Microsoft or Intel compilers one has to install Cygwin (for the Unix environment)
-and use ``win32fe`` [#win32]_ (located at ``$PETSC_DIR/lib/petsc/bin/win32fe``), to
+and use ``win32fe`` [#win32]_ (located at ``$PETSC_DIR/lib/petsc/bin/win32fe``) compiler wrapper, to
 use the  Microsoft/Intel compilers).
 
 #. Install Cygwin:
@@ -136,18 +139,22 @@ Use ``configure`` with ``Visual Studio 2022 C`` and ``Intel OneAPI 2022 Fortran`
 
 .. code-block:: console
 
-   $ ./configure --with-cc='win32fe_cl' --with-fc='win32fe_ifort' --with-cxx='win32fe_cl' --with-mpi=0 --download-fblaslapack
+   $ ./configure --with-cc='win_cl' --with-fc='win_ifort' --with-cxx='win_cl' --with-mpi=0 --download-fblaslapack
 
 If Fortran or C++ usage is not required, use:
 
 .. code-block:: console
 
-   $ ./configure --with-cc='win32fe_cl' --with-fc=0 --with-cxx=0 --download-f2cblaslapack
+   $ ./configure --with-cc='win_cl' --with-fc=0 --with-cxx=0 --download-f2cblaslapack
 
-Using MPI
----------
+.. note::
 
-We support both MS-MPI [64-bit] and Intel MPI on Microsoft Windows.
+   The ``--download-package`` option may work with some :ref:`external packages <doc_externalsoftware>` and fail with most packages.
+
+Using MPI, MKL
+--------------
+
+We support both MS-MPI [64-bit] and Intel MPI on Microsoft Windows. We also support using Intel MKL for BlasLapack.
 For example usages, check ``$PETSC_DIR/config/examples/arch-mswin*.py``
 
 .. warning::
@@ -170,7 +177,7 @@ For example usages, check ``$PETSC_DIR/config/examples/arch-mswin*.py``
 
    .. code-block:: console
 
-      $ ./configure --with-cc='win32fe_cl' --with-fc='win32fe_ifort' --with-cxx='win32fe_cl' \
+      $ ./configure --with-cc='win_cl' --with-fc='win_ifort' --with-cxx='win_cl' \
       --with-shared-libraries=0 \
       --with-mpi-include='[/cygdrive/c/PROGRA~2/MICROS~2/MPI/Include,/cygdrive/c/PROGRA~2/MICROS~2/MPI/Include/x64]' \
       --with-mpi-lib='-L/cygdrive/c/PROGRA~2/MICROS~2/MPI/lib/x64 msmpifec.lib msmpi.lib' \
@@ -206,8 +213,8 @@ do the following.
 
 .. _sec_msys2_mingw_compilers_on_windows:
 
-MSYS2 and MinGW Compilers on Microsoft Windows
-==============================================
+MSYS2/MinGW (GNU) Compilers on Microsoft Windows
+================================================
 
 These allow building standalone Microsoft Windows libraries and
 applications that are compatible with the Microsoft and Intel compilers.
