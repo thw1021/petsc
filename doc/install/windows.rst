@@ -121,9 +121,9 @@ and use ``win32fe`` [#win32]_ compiler wrapper, to use the  Microsoft/Intel comp
 
    #. Within this shell - run ``Cygwin64 Terminal`` i.e ``mintty.exe`` as:
 
-      .. code-block:: console
+      .. code-block:: powershell
 
-         C:\> C:\cygwin64\bin\mintty.exe -
+         C:\cygwin64\bin\mintty.exe -
 
    #. Verify if the compilers are usable (by running cl and ifort in this ``Cygwin64 Terminal``).
 
