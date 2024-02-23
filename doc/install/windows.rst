@@ -8,51 +8,53 @@ Installing PETSc On Microsoft Windows
    :class: yellow
 
    Are you sure you want to use Microsoft Windows?
-   We recommend using ``Linux`` or ``Linux on Windows`` if possible
-   (and minimize troubleshooting Microsoft Windows related issues).
+
+   Developing HPC software is more difficult on Microsoft Windows than Linux and macOS systems.
+   We recommend using a Microsoft Windows system for PETSc only when neccessary.
+
+
+There are many ways to install PETSc on Microsoft Windows's systems.
+
+-  :any:`sec_linux_on_windows`
+
+-  :any:`sec_gnu_on_windows`
+
+-  :any:`sec_native_compilers_on_windows`
+
+-  :any:`sec_msys2_mingw_compilers_on_windows`
+
+----
+
+.. _sec_linux_on_windows:
+
+Linux on Microsoft Windows
+==========================
 
 - Microsoft Windows Subsystem for Linux 2 (`WLS2
-  <https://docs.microsoft.com/en-us/windows/wsl/install-win10>`__). Largely untested, let
-  us know your experience. Be sure to use WSL2 vs WSL1 for best performance.
+  <https://docs.microsoft.com/en-us/windows/wsl/install-win10>`__). Be sure to use WSL2 vs WSL1 for best performance.
 
 - `Docker <https://docs.docker.com/docker-for-windows/>`__ for Microsoft
-  Windows. Untested, let us know your experience.
+  Windows.
 
 - Linux virtual machine via `VirtualBox <https://www.virtualbox.org/>`__ or similar. One sample
   tutorial is at https://www.psychocats.net/ubuntu/virtualbox. Google can provide more
-  tutorials. Untested, let us know your experience.
+  tutorials.
 
-Recommended Windows Installation Methods
-========================================
+----
 
-The following configurations on Windows are much like regular Unix-like systems. Our regular
-(Unix-like) instructions should work here with ``GNU Compilers`` (*only*).
+.. _sec_gnu_on_windows:
+
+GNU compilers on Microsoft Windows
+===================================
+
+These allow building standalone Microsoft Windows libraries and
+applications that are **not** compatible with the Microsoft and Intel compilers.
+
 Most :ref:`external packages <doc_externalsoftware>` are likely to work,
-however ``configure`` option ``--download-mpich`` does not work.
+however the ``configure`` option ``--download-mpich`` does not work.
 
-- `Cygwin <https://www.cygwin.com/>`__ Unix emulator for Microsoft Windows.
-   Download and install Cygwin from http://www.cygwin.com and make sure the following Cygwin components are installed:
-
-   - python3
-   - make
-   - gcc-core gcc-g++ gcc-fortran
-   - liblapack-devel
-   - openmpi libopenmpi-devel libhwloc-devel libevent-devel zlib-devel
-
-  .. note::
-
-     Native libraries like MS-MPI, Intel MPI cannot be used from Cygwin/GNU compilers.
-
-- `MSYS2 <https://www.msys2.org>`__ Tools for building native windows software. See more details below.
-
-Installation With Native Microsoft/Intel Windows Compilers
-==========================================================
-
-Microsoft Windows does not provide the same Unix shell environment as the other OSes. Also
-the default Microsoft/Intel compilers behave differently than other Unix compilers. So to
-install PETSc on Microsoft Windows - one has to install Cygwin (for the Unix environment)
-and use ``win32fe`` [#win32]_ (located at ``$PETSC_DIR/lib/petsc/bin/win32fe``, to
-interface to Microsoft/Intel compilers).
+Microsoft Windows does not provide a Unix shell environment. So to
+install PETSc on Microsoft Windows with the **GNU** compilers one has to first install Cygwin.
 
 #. Install Cygwin:
 
@@ -61,7 +63,38 @@ interface to Microsoft/Intel compilers).
 
    - python3
    - make
-   - (default selection should already have diff and other tools)
+   - gcc-core gcc-g++ gcc-fortran
+   - liblapack-devel
+   - openmpi libopenmpi-devel libhwloc-devel libevent-devel zlib-devel
+
+#. Follow the Unix instructions for configuing and building
+
+.. note::
+
+   Native libraries like MS-MPI, Intel MPI cannot be used from Cygwin/GNU compilers.
+
+----
+
+.. _sec_native_compilers_on_windows:
+
+Native Microsoft/Intel Windows Compilers
+========================================
+
+The ``--download-package`` option works with some :ref:`external packages <doc_externalsoftware>`.
+
+Microsoft Windows does not provide a Unix shell environment. Also
+the native Microsoft/Intel compilers behave differently than other compilers. So to
+install PETSc on Microsoft Windows with Microsoft or Intel compilers one has to install Cygwin (for the Unix environment)
+and use ``win32fe`` [#win32]_ (located at ``$PETSC_DIR/lib/petsc/bin/win32fe``), to
+use the  Microsoft/Intel compilers).
+
+#. Install Cygwin:
+
+   Download and install Cygwin from http://www.cygwin.com and make sure the
+   following Cygwin components are installed:
+
+   - python3
+   - make
 
    Additional Cygwin components like git and CMake can be useful for installing
    :ref:`external packages <doc_externalsoftware>`.
@@ -75,7 +108,7 @@ interface to Microsoft/Intel compilers).
 
       $ mv /usr/bin/link.exe /usr/bin/link-cygwin.exe
 
-#. Setup Cygwin terminal/bash-shell with Working Compilers:
+#. Setup Cygwin terminal/bash-shell with working compilers:
 
    We require the compilers to be setup properly in a Cygwin bash command shell, so that
    ``cl foo.c`` or ``ifort foo.F`` works from this shell. For example - if using ``Visual Studio 2022 C``
@@ -90,7 +123,7 @@ interface to Microsoft/Intel compilers).
 
          $ C:\cygwin64\bin\mintty.exe -
 
-   #. Verify if the compilers are usable (by running cl, ifort in this Cygwin
+   #. Verify if the compilers are usable (by running cl and ifort in this Cygwin
       terminal/bash-shell).
 
    #. Now run ``configure`` with ``win32fe`` [#win32]_ and then build the libraries with
@@ -103,16 +136,16 @@ Use ``configure`` with ``Visual Studio 2022 C`` and ``Intel OneAPI 2022 Fortran`
 
 .. code-block:: console
 
-   $ ./configure --with-cc='win32fe cl' --with-fc='win32fe ifort' --with-cxx='win32fe cl' --with-mpi=0 --download-fblaslapack
+   $ ./configure --with-cc='win32fe_cl' --with-fc='win32fe_ifort' --with-cxx='win32fe_cl' --with-mpi=0 --download-fblaslapack
 
-If fortran, c++ usage is not required, use:
+If Fortran or C++ usage is not required, use:
 
 .. code-block:: console
 
-   $ ./configure --with-cc='win32fe cl' --with-fc=0 --with-cxx=0 --download-f2cblaslapack
+   $ ./configure --with-cc='win32fe_cl' --with-fc=0 --with-cxx=0 --download-f2cblaslapack
 
 Using MPI
-^^^^^^^^^
+---------
 
 We support both MS-MPI [64-bit] and Intel MPI on Microsoft Windows.
 For example usages, check ``$PETSC_DIR/config/examples/arch-mswin*.py``
@@ -123,7 +156,7 @@ For example usages, check ``$PETSC_DIR/config/examples/arch-mswin*.py``
 
    Its best to avoid spaces or similar special chars when specifying ``configure`` options. On
    Microsoft Windows - this usually affects specifying MPI or MKL. Microsoft Windows
-   supports dos short form for dir names - so its best to use this notation. Cygwin
+   supports DOS short form for directory names - so its best to use this notation. Cygwin
    tool ``cygpath`` can be used to get paths in this notation. For example:
 
    .. code-block:: console
@@ -137,22 +170,15 @@ For example usages, check ``$PETSC_DIR/config/examples/arch-mswin*.py``
 
    .. code-block:: console
 
-      $ ./configure --with-cc='win32fe cl' --with-fc='win32fe ifort' --with-cxx='win32fe cl' \
+      $ ./configure --with-cc='win32fe_cl' --with-fc='win32fe_ifort' --with-cxx='win32fe_cl' \
       --with-shared-libraries=0 \
       --with-mpi-include='[/cygdrive/c/PROGRA~2/MICROS~2/MPI/Include,/cygdrive/c/PROGRA~2/MICROS~2/MPI/Include/x64]' \
       --with-mpi-lib='-L/cygdrive/c/PROGRA~2/MICROS~2/MPI/lib/x64 msmpifec.lib msmpi.lib' \
       --with-mpiexec=/cygdrive/c/PROGRA~1/MICROS~2/Bin/mpiexec \
       --with-blaslapack-lib='-L/cygdrive/c/PROGRA~2/INTELS~1/COMPIL~2/windows/mkl/lib/intel64 mkl_intel_lp64_dll.lib mkl_sequential_dll.lib mkl_core_dll.lib'
 
-External Packages
-^^^^^^^^^^^^^^^^^
-
-The ``--download-package`` option works with some :ref:`external packages
-<doc_externalsoftware>` on Microsoft Windows, there may be some portability issues with others.
-Let us know your experience and we will either try to fix them or report them upstream.
-
 Project Files
-^^^^^^^^^^^^^
+-------------
 
 We cannot provide Microsoft Visual Studio project files for users as they are specific to
 the ``configure`` options, location of :ref:`external packages <doc_externalsoftware>`,
@@ -163,7 +189,7 @@ do the following.
 #. Create an empty project file with one of the examples say
    ``$PETSC_DIR/src/ksp/ksp/tutorials/ex2.c``
 
-#. Try compiling the example from Cygwin bash shell - using makefile - i.e.:
+#. Try compiling the example from Cygwin bash shell - using make - i.e.:
 
    .. code-block:: console
 
@@ -174,51 +200,22 @@ do the following.
    are also present in the project file in the correct notation.
 
 #. If errors - redo the above step. If all the options are correctly specified, the
-   example should compile from MSDev.
+   example should compile from Microsoft Visual Studio.
 
-Debugger
-^^^^^^^^
+----
 
-Running PETSc programs with ``-start_in_debugger`` is not supported on this platform, so debuggers will need to be initiated manually. Make sure your environment is properly configured to use the appropriate debugger for your compiler. The debuggers can be initiated using Microsoft Visual Studio:
+.. _sec_msys2_mingw_compilers_on_windows:
 
-.. code-block:: console
+MSYS2 and MinGW Compilers on Microsoft Windows
+==============================================
 
-   $ devenv ex1.exe
-
-Intel Enhanced Debugger:
-
-.. code-block:: console
-
-   $ edb ex1.exe
-
-or GNU Debugger
-
-.. code-block:: console
-
-   $ gdb ex1.exe
-
-Notes On Using Other Systems Besides Cygwin To Compile With Microsoft/Intel Compilers
--------------------------------------------------------------------------------------
-
-For any alternate system, we would have to redo ``win32fe`` [#win32]_ functionality for
-that system. This includes:
-
-- Marshal Unix type compiler options to Cl (Microsoft compiler).
-- Convert paths in some of these options from this system (for example Cygwin paths) to
-  Microsoft Windows paths.
-- Have python that works with system path notation.
-- Have the ability equivalent to Microsoft Windows process spawning; Cygwin process
-  spawning produces Microsoft Windows processes. WSL1 lacked this.
-
-Installation With MSYS2 and MinGW Compilers
-===========================================
-
-This allows one to build standalone Microsoft Windows libraries and
+These allow building standalone Microsoft Windows libraries and
 applications that are compatible with the Microsoft and Intel compilers.
 
 #. Install MSYS2 and MS-MPI:
 
-   Download and install MSYS2 from https://www.msys2.org. If you want to use MPI, we recommend you use MS-MPI from https://learn.microsoft.com/en-us/message-passing-interface/microsoft-mpi.
+   Download and install MSYS2 from https://www.msys2.org.
+   If you want to use MPI, we recommend you use MS-MPI from https://learn.microsoft.com/en-us/message-passing-interface/microsoft-mpi.
 
 #. Update MSYS2 and install base packages:
 
@@ -249,12 +246,36 @@ applications that are compatible with the Microsoft and Intel compilers.
 
 #. Configuring:
 
-   The two difficulties here are: 1) make sure PETSc configure picks up the proper Python installation, as there are more than one available in a MSYS2 MinGW shell and 2) tell PETSc where is MS-MPI ``mpiexec``. We also recommend not to use shared libraries as it is easier to create standalone binaries that way.
+   The two difficulties here are: 1) make sure PETSc configure picks up the proper Python installation, as there are more than one available in a MSYS2 MinGW shell and 2) tell PETSc where MS-MPI ``mpiexec`` is. We recommend not using shared libraries as it is easier to create standalone binaries that way.
 
    .. code-block:: console
 
       $  /usr/bin/python ./configure --with-mpiexec='/C/Program\ Files/Microsoft\ MPI/Bin/mpiexec' \
       --with-shared-libraries=0
+
+Debugging on Microsoft Windows
+------------------------------
+
+Running PETSc programs with ``-start_in_debugger`` is not supported on Microsoft Windows. Debuggers need to be initiated manually.
+Make sure your environment is properly configured to use the appropriate debugger for your compiler.
+The debuggers can be initiated using Microsoft Visual Studio:
+
+.. code-block:: console
+
+   $ devenv ex1.exe
+
+Intel Enhanced Debugger:
+
+.. code-block:: console
+
+   $ edb ex1.exe
+
+or GNU Debugger
+
+.. code-block:: console
+
+   $ gdb ex1.exe
+
 
 .. rubric:: Footnotes
 
