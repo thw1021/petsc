@@ -286,7 +286,7 @@ PETSC_INTERN PetscErrorCode MatSeqAIJKokkosGenerateTranspose_Private(Mat A, Kokk
         auto       &Ta   = T.values;
 
         PetscCallCXX(Kokkos::parallel_for(
-          Kokkos::RangePolicy(PetscGetKokkosExecutionSpace(), 0, nz), KOKKOS_LAMBDA(const PetscInt i) { Ta(i) = Aa(perm(i)); }));
+          Kokkos::RangePolicy<>(PetscGetKokkosExecutionSpace(), 0, nz), KOKKOS_LAMBDA(const PetscInt i) { Ta(i) = Aa(perm(i)); }));
       }
     } else { // Generate T of size n x m for the first time
       MatRowMapKokkosView perm;
@@ -294,7 +294,7 @@ PETSC_INTERN PetscErrorCode MatSeqAIJKokkosGenerateTranspose_Private(Mat A, Kokk
       PetscCall(MatSeqAIJKokkosGenerateTransposeStructure(A, perm, T));
       akok->transpose_perm = perm; // cache the perm in this matrix for reuse
       PetscCallCXX(Kokkos::parallel_for(
-        Kokkos::RangePolicy(PetscGetKokkosExecutionSpace(), 0, nz), KOKKOS_LAMBDA(const PetscInt i) { T.values(i) = Aa(perm(i)); }));
+        Kokkos::RangePolicy<>(PetscGetKokkosExecutionSpace(), 0, nz), KOKKOS_LAMBDA(const PetscInt i) { T.values(i) = Aa(perm(i)); }));
     }
     akok->transpose_updated = PETSC_TRUE;
     *csrmatT                = akok->csrmatT;
@@ -326,7 +326,7 @@ static PetscErrorCode MatSeqAIJKokkosGenerateHermitian_Private(Mat A, KokkosCsrM
         auto       &Ta   = T.values;
 
         PetscCallCXX(Kokkos::parallel_for(
-          Kokkos::RangePolicy(PetscGetKokkosExecutionSpace(), 0, nz), KOKKOS_LAMBDA(const PetscInt i) { Ta(i) = PetscConj(Aa(perm(i))); }));
+          Kokkos::RangePolicy<>(PetscGetKokkosExecutionSpace(), 0, nz), KOKKOS_LAMBDA(const PetscInt i) { Ta(i) = PetscConj(Aa(perm(i))); }));
       }
     } else { // Generate T of size n x m for the first time
       MatRowMapKokkosView perm;
@@ -334,7 +334,7 @@ static PetscErrorCode MatSeqAIJKokkosGenerateHermitian_Private(Mat A, KokkosCsrM
       PetscCall(MatSeqAIJKokkosGenerateTransposeStructure(A, perm, T));
       akok->transpose_perm = perm; // cache the perm in this matrix for reuse
       PetscCallCXX(Kokkos::parallel_for(
-        Kokkos::RangePolicy(PetscGetKokkosExecutionSpace(), 0, nz), KOKKOS_LAMBDA(const PetscInt i) { T.values(i) = PetscConj(Aa(perm(i))); }));
+        Kokkos::RangePolicy<>(PetscGetKokkosExecutionSpace(), 0, nz), KOKKOS_LAMBDA(const PetscInt i) { T.values(i) = PetscConj(Aa(perm(i))); }));
     }
     akok->hermitian_updated = PETSC_TRUE;
     *csrmatH                = akok->csrmatH;
@@ -1009,7 +1009,7 @@ static PetscErrorCode MatShift_SeqAIJKokkos(Mat A, PetscScalar a)
     const auto &Aa     = aijkok->a_dual.view_device();
     const auto &Adiag  = aijkok->diag_dual.view_device();
     PetscCallCXX(Kokkos::parallel_for(
-      Kokkos::RangePolicy(PetscGetKokkosExecutionSpace(), 0, n), KOKKOS_LAMBDA(const PetscInt i) { Aa(Adiag(i)) += a; }));
+      Kokkos::RangePolicy<>(PetscGetKokkosExecutionSpace(), 0, n), KOKKOS_LAMBDA(const PetscInt i) { Aa(Adiag(i)) += a; }));
     PetscCall(MatSeqAIJKokkosModifyDevice(A));
     PetscCall(PetscLogGpuFlops(n));
     PetscCall(PetscLogGpuTimeEnd());
@@ -1039,7 +1039,7 @@ static PetscErrorCode MatDiagonalSet_SeqAIJKokkos(Mat Y, Vec D, InsertMode is)
     const auto &Aa     = aijkok->a_dual.view_device();
     const auto &Adiag  = aijkok->diag_dual.view_device();
     PetscCallCXX(Kokkos::parallel_for(
-      Kokkos::RangePolicy(PetscGetKokkosExecutionSpace(), 0, n), KOKKOS_LAMBDA(const PetscInt i) {
+      Kokkos::RangePolicy<>(PetscGetKokkosExecutionSpace(), 0, n), KOKKOS_LAMBDA(const PetscInt i) {
         if (is == INSERT_VALUES) Aa(Adiag(i)) = dv(i);
         else Aa(Adiag(i)) += dv(i);
       }));
@@ -1085,7 +1085,7 @@ static PetscErrorCode MatDiagonalScale_SeqAIJKokkos(Mat A, Vec ll, Vec rr)
     PetscCheck(n == A->cmap->n, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Right scaling vector wrong length");
     PetscCall(VecGetKokkosView(rr, &rv));
     PetscCallCXX(Kokkos::parallel_for( // for each nonzero
-      Kokkos::RangePolicy(PetscGetKokkosExecutionSpace(), 0, nz), KOKKOS_LAMBDA(const PetscInt k) { Aa(k) *= rv(Aj(k)); }));
+      Kokkos::RangePolicy<>(PetscGetKokkosExecutionSpace(), 0, nz), KOKKOS_LAMBDA(const PetscInt k) { Aa(k) *= rv(Aj(k)); }));
     PetscCall(VecRestoreKokkosView(rr, &lv));
     PetscCall(PetscLogGpuFlops(nz));
   }
@@ -1129,7 +1129,7 @@ static PetscErrorCode MatGetDiagonal_SeqAIJKokkos(Mat A, Vec x)
 
   PetscCall(VecGetKokkosViewWrite(x, &xv));
   Kokkos::parallel_for(
-    Kokkos::RangePolicy(PetscGetKokkosExecutionSpace(), 0, n), KOKKOS_LAMBDA(const PetscInt i) {
+    Kokkos::RangePolicy<>(PetscGetKokkosExecutionSpace(), 0, n), KOKKOS_LAMBDA(const PetscInt i) {
       if (Adiag(i) < Ai(i + 1)) xv(i) = Aa(Adiag(i));
       else xv(i) = 0;
     });
@@ -1374,7 +1374,7 @@ static PetscErrorCode MatSetValuesCOO_SeqAIJKokkos(Mat A, const PetscScalar v[],
 
   PetscCall(PetscLogGpuTimeBegin());
   Kokkos::parallel_for(
-    Kokkos::RangePolicy(PetscGetKokkosExecutionSpace(), 0, Annz), KOKKOS_LAMBDA(const PetscCount i) {
+    Kokkos::RangePolicy<>(PetscGetKokkosExecutionSpace(), 0, Annz), KOKKOS_LAMBDA(const PetscCount i) {
       PetscScalar sum = 0.0;
       for (PetscCount k = jmap(i); k < jmap(i + 1); k++) sum += kv(perm(k));
       Aa(i) = (imode == INSERT_VALUES ? 0.0 : Aa(i)) + sum;

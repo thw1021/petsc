@@ -106,7 +106,7 @@ static PetscErrorCode PCApplyOrTranspose_VPBJacobi_Kokkos(PC pc, Vec x, Vec y)
     }));
 #else
   PetscCallCXX(Kokkos::parallel_for(
-    label, Kokkos::RangePolicy(PetscGetKokkosExecutionSpace(), 0, pckok->n), KOKKOS_LAMBDA(PetscInt row) {
+    label, Kokkos::RangePolicy<>(PetscGetKokkosExecutionSpace(), 0, pckok->n), KOKKOS_LAMBDA(PetscInt row) {
       const PetscScalar *Bp, *xp;
       PetscScalar       *yp;
       PetscInt           i, j, k, m;

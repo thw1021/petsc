@@ -141,7 +141,7 @@ PetscErrorCode VecReciprocal_SeqKokkos(Vec xin)
   PetscCall(PetscLogGpuTimeBegin());
   PetscCall(VecGetKokkosView(xin, &xv));
   PetscCallCXX(Kokkos::parallel_for(
-    "VecReciprocal", Kokkos::RangePolicy(PetscGetKokkosExecutionSpace(), 0, xin->map->n), KOKKOS_LAMBDA(const PetscInt &i) {
+    "VecReciprocal", Kokkos::RangePolicy<>(PetscGetKokkosExecutionSpace(), 0, xin->map->n), KOKKOS_LAMBDA(const PetscInt &i) {
       if (xv(i) != (PetscScalar)0.0) xv(i) = (PetscScalar)1.0 / xv(i);
     }));
   PetscCall(VecRestoreKokkosView(xin, &xv));
@@ -158,7 +158,7 @@ PetscErrorCode VecMin_SeqKokkos(Vec xin, PetscInt *p, PetscReal *val)
   PetscCall(PetscLogGpuTimeBegin());
   PetscCall(VecGetKokkosView(xin, &xv));
   PetscCallCXX(Kokkos::parallel_reduce(
-    "VecMin", Kokkos::RangePolicy(PetscGetKokkosExecutionSpace(), 0, xin->map->n),
+    "VecMin", Kokkos::RangePolicy<>(PetscGetKokkosExecutionSpace(), 0, xin->map->n),
     KOKKOS_LAMBDA(const PetscInt &i, Kokkos::MinLoc<PetscReal, PetscInt>::value_type &lupdate) {
       if (PetscRealPart(xv(i)) < lupdate.val) {
         lupdate.val = PetscRealPart(xv(i));
@@ -182,7 +182,7 @@ PetscErrorCode VecMax_SeqKokkos(Vec xin, PetscInt *p, PetscReal *val)
   PetscCall(PetscLogGpuTimeBegin());
   PetscCall(VecGetKokkosView(xin, &xv));
   PetscCallCXX(Kokkos::parallel_reduce(
-    "VecMax", Kokkos::RangePolicy(PetscGetKokkosExecutionSpace(), 0, xin->map->n),
+    "VecMax", Kokkos::RangePolicy<>(PetscGetKokkosExecutionSpace(), 0, xin->map->n),
     KOKKOS_LAMBDA(const PetscInt &i, Kokkos::MaxLoc<PetscReal, PetscInt>::value_type &lupdate) {
       if (PetscRealPart(xv(i)) > lupdate.val) {
         lupdate.val = PetscRealPart(xv(i));
@@ -218,7 +218,7 @@ PetscErrorCode VecShift_SeqKokkos(Vec xin, PetscScalar shift)
   PetscCall(PetscLogGpuTimeBegin());
   PetscCall(VecGetKokkosView(xin, &xv));
   PetscCallCXX(Kokkos::parallel_for(
-                 "VecShift", Kokkos::RangePolicy(PetscGetKokkosExecutionSpace(), 0, xin->map->n), KOKKOS_LAMBDA(const PetscInt &i) { xv(i) += shift; });
+                 "VecShift", Kokkos::RangePolicy<>(PetscGetKokkosExecutionSpace(), 0, xin->map->n), KOKKOS_LAMBDA(const PetscInt &i) { xv(i) += shift; });
                PetscCall(VecRestoreKokkosView(xin, &xv)));
   PetscCall(PetscLogGpuTimeEnd());
   PetscCall(PetscLogGpuFlops(xin->map->n));
@@ -276,7 +276,7 @@ PetscErrorCode VecTDot_SeqKokkos(Vec xin, Vec yin, PetscScalar *z)
   PetscCall(VecGetKokkosView(yin, &yv));
   // Kokkos always overwrites z, so no need to init it
   PetscCallCXX(Kokkos::parallel_reduce(
-    "VecTDot", Kokkos::RangePolicy(PetscGetKokkosExecutionSpace(), 0, xin->map->n), KOKKOS_LAMBDA(const PetscInt &i, PetscScalar &update) { update += yv(i) * xv(i); }, *z));
+    "VecTDot", Kokkos::RangePolicy<>(PetscGetKokkosExecutionSpace(), 0, xin->map->n), KOKKOS_LAMBDA(const PetscInt &i, PetscScalar &update) { update += yv(i) * xv(i); }, *z));
   PetscCall(VecRestoreKokkosView(yin, &yv));
   PetscCall(VecRestoreKokkosView(xin, &xv));
   PetscCall(PetscLogGpuTimeEnd());
@@ -390,7 +390,7 @@ static PetscErrorCode VecMultiDot_Verbose(Vec xin, PetscInt nv, const Vec yin[],
   ConstPetscScalarKokkosView xv, y0, y1, y2, y3, y4, y5, y6, y7;
   PetscScalar               *zp = z;
   const Vec                 *yp = yin;
-  Kokkos::RangePolicy        policy(PetscGetKokkosExecutionSpace(), 0, N);
+  Kokkos::RangePolicy<>      policy(PetscGetKokkosExecutionSpace(), 0, N);
 
   // clang-format off
   PetscFunctionBegin;
@@ -710,7 +710,7 @@ PetscErrorCode VecSwap_SeqKokkos(Vec xin, Vec yin)
     PetscCall(VecGetKokkosView(xin, &xv));
     PetscCall(VecGetKokkosView(yin, &yv));
     PetscCallCXX(Kokkos::parallel_for(
-      Kokkos::RangePolicy(PetscGetKokkosExecutionSpace(), 0, xin->map->n), KOKKOS_LAMBDA(const PetscInt &i) {
+      Kokkos::RangePolicy<>(PetscGetKokkosExecutionSpace(), 0, xin->map->n), KOKKOS_LAMBDA(const PetscInt &i) {
         PetscScalar tmp = xv(i);
         xv(i)           = yv(i);
         yv(i)           = tmp;
@@ -737,7 +737,7 @@ PetscErrorCode VecWAXPY_SeqKokkos(Vec win, PetscScalar alpha, Vec xin, Vec yin)
     PetscCall(VecGetKokkosView(xin, &xv));
     PetscCall(VecGetKokkosView(yin, &yv));
     PetscCallCXX(Kokkos::parallel_for(
-      Kokkos::RangePolicy(PetscGetKokkosExecutionSpace(), 0, win->map->n), KOKKOS_LAMBDA(const PetscInt &i) { wv(i) = alpha * xv(i) + yv(i); }));
+      Kokkos::RangePolicy<>(PetscGetKokkosExecutionSpace(), 0, win->map->n), KOKKOS_LAMBDA(const PetscInt &i) { wv(i) = alpha * xv(i) + yv(i); }));
     PetscCall(VecRestoreKokkosView(xin, &xv));
     PetscCall(VecRestoreKokkosView(yin, &yv));
     PetscCall(VecRestoreKokkosViewWrite(win, &wv));
@@ -790,7 +790,7 @@ PetscErrorCode VecMAXPY_SeqKokkos(Vec yin, PetscInt nv, const PetscScalar *alpha
   PetscScalarKokkosView      yv;
   PetscScalar                a[8];
   ConstPetscScalarKokkosView xv[8];
-  Kokkos::RangePolicy        policy(PetscGetKokkosExecutionSpace(), 0, N);
+  Kokkos::RangePolicy<>      policy(PetscGetKokkosExecutionSpace(), 0, N);
 
   PetscFunctionBegin;
   PetscCall(PetscLogGpuTimeBegin());
@@ -933,7 +933,7 @@ PetscErrorCode VecAXPBYPCZ_SeqKokkos(Vec zin, PetscScalar alpha, PetscScalar bet
 {
   ConstPetscScalarKokkosView xv, yv;
   PetscScalarKokkosView      zv;
-  Kokkos::RangePolicy        policy(PetscGetKokkosExecutionSpace(), 0, zin->map->n);
+  Kokkos::RangePolicy<>      policy(PetscGetKokkosExecutionSpace(), 0, zin->map->n);
 
   PetscFunctionBegin;
   PetscCall(PetscLogGpuTimeBegin());
@@ -992,7 +992,7 @@ PetscErrorCode VecPointwiseMult_SeqKokkos(Vec win, Vec xin, Vec yin)
     PetscCall(VecGetKokkosView(xin, &xv));
     PetscCall(VecGetKokkosView(yin, &yv));
     PetscCallCXX(Kokkos::parallel_for(
-      Kokkos::RangePolicy(PetscGetKokkosExecutionSpace(), 0, n), KOKKOS_LAMBDA(const PetscInt &i) { wv(i) = xv(i) * yv(i); }));
+      Kokkos::RangePolicy<>(PetscGetKokkosExecutionSpace(), 0, n), KOKKOS_LAMBDA(const PetscInt &i) { wv(i) = xv(i) * yv(i); }));
     PetscCall(VecRestoreKokkosView(yin, &yv));
     PetscCall(VecRestoreKokkosView(xin, &xv));
     PetscCall(VecRestoreKokkosViewWrite(win, &wv));
@@ -1035,7 +1035,7 @@ PetscErrorCode VecPointwiseDivide_SeqKokkos(Vec win, Vec xin, Vec yin)
     PetscCall(VecGetKokkosView(xin, &xv));
     PetscCall(VecGetKokkosView(yin, &yv));
     PetscCallCXX(Kokkos::parallel_for(
-      Kokkos::RangePolicy(PetscGetKokkosExecutionSpace(), 0, n), KOKKOS_LAMBDA(const PetscInt &i) {
+      Kokkos::RangePolicy<>(PetscGetKokkosExecutionSpace(), 0, n), KOKKOS_LAMBDA(const PetscInt &i) {
         if (yv(i) != 0.0) wv(i) = xv(i) / yv(i);
         else wv(i) = 0.0;
       }));
@@ -1102,7 +1102,7 @@ PetscErrorCode VecErrorWeightedNorms_SeqKokkos(Vec U, Vec Y, Vec E, NormType wno
 
   if (wnormtype == NORM_INFINITY) {
     PetscCallCXX(Kokkos::parallel_reduce(
-      "VecErrorWeightedNorms_INFINITY", Kokkos::RangePolicy(PetscGetKokkosExecutionSpace(), 0, n),
+      "VecErrorWeightedNorms_INFINITY", Kokkos::RangePolicy<>(PetscGetKokkosExecutionSpace(), 0, n),
       KOKKOS_LAMBDA(const PetscInt &i, PetscReal &l_nrm, PetscReal &l_nrma, PetscReal &l_nrmr, PetscInt &l_n_loc, PetscInt &l_na_loc, PetscInt &l_nr_loc) {
         PetscReal err, tol, tola, tolr, l_atol, l_rtol;
         if (PetscAbsScalar(y(i)) >= ignore_max && PetscAbsScalar(u(i)) >= ignore_max) {
@@ -1129,7 +1129,7 @@ PetscErrorCode VecErrorWeightedNorms_SeqKokkos(Vec U, Vec Y, Vec E, NormType wno
       Kokkos::Max<PetscReal>(nrm), Kokkos::Max<PetscReal>(nrma), Kokkos::Max<PetscReal>(nrmr), n_loc, na_loc, nr_loc));
   } else {
     PetscCallCXX(Kokkos::parallel_reduce(
-      "VecErrorWeightedNorms_NORM_2", Kokkos::RangePolicy(PetscGetKokkosExecutionSpace(), 0, n),
+      "VecErrorWeightedNorms_NORM_2", Kokkos::RangePolicy<>(PetscGetKokkosExecutionSpace(), 0, n),
       KOKKOS_LAMBDA(const PetscInt &i, PetscReal &l_nrm, PetscReal &l_nrma, PetscReal &l_nrmr, PetscInt &l_n_loc, PetscInt &l_na_loc, PetscInt &l_nr_loc) {
         PetscReal err, tol, tola, tolr, l_atol, l_rtol;
         if (PetscAbsScalar(y(i)) >= ignore_max && PetscAbsScalar(u(i)) >= ignore_max) {
@@ -1217,7 +1217,7 @@ PetscErrorCode VecDotNorm2_SeqKokkos(Vec xin, Vec yin, PetscScalar *dp, PetscSca
   PetscCall(VecGetKokkosView(xin, &xv));
   PetscCall(VecGetKokkosView(yin, &yv));
   DotNorm2 dn(xv, yv);
-  PetscCallCXX(Kokkos::parallel_reduce(Kokkos::RangePolicy(PetscGetKokkosExecutionSpace(), 0, xin->map->n), dn, result));
+  PetscCallCXX(Kokkos::parallel_reduce(Kokkos::RangePolicy<>(PetscGetKokkosExecutionSpace(), 0, xin->map->n), dn, result));
   *dp = result[0];
   *nm = result[1];
   PetscCall(VecRestoreKokkosView(yin, &yv));
@@ -1236,7 +1236,7 @@ PetscErrorCode VecConjugate_SeqKokkos(Vec xin)
   PetscCall(PetscLogGpuTimeBegin());
   PetscCall(VecGetKokkosView(xin, &xv));
   PetscCallCXX(Kokkos::parallel_for(
-    Kokkos::RangePolicy(PetscGetKokkosExecutionSpace(), 0, xin->map->n), KOKKOS_LAMBDA(const PetscInt &i) { xv(i) = PetscConj(xv(i)); }));
+    Kokkos::RangePolicy<>(PetscGetKokkosExecutionSpace(), 0, xin->map->n), KOKKOS_LAMBDA(const PetscInt &i) { xv(i) = PetscConj(xv(i)); }));
   PetscCall(VecRestoreKokkosView(xin, &xv));
   PetscCall(PetscLogGpuTimeEnd());
 #else
@@ -1546,7 +1546,7 @@ static PetscErrorCode VecSetValuesCOO_SeqKokkos(Vec x, const PetscScalar v[], In
   else PetscCall(VecGetKokkosView(x, &xv));                             /* read & write vector */
 
   PetscCallCXX(Kokkos::parallel_for(
-    Kokkos::RangePolicy(PetscGetKokkosExecutionSpace(), 0, m), KOKKOS_LAMBDA(const PetscInt &i) {
+    Kokkos::RangePolicy<>(PetscGetKokkosExecutionSpace(), 0, m), KOKKOS_LAMBDA(const PetscInt &i) {
       PetscScalar sum = 0.0;
       for (PetscCount k = jmap1(i); k < jmap1(i + 1); k++) sum += vv(perm1(k));
       xv(i) = (imode == INSERT_VALUES ? 0.0 : xv(i)) + sum;
