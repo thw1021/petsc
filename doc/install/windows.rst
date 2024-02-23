@@ -61,7 +61,7 @@ that work on Microsoft Windows, with Cygwin pre-built libraries for Blas, Lapack
    - liblapack-devel
    - openmpi libopenmpi-devel libhwloc-devel libevent-devel zlib-devel
 
-#. To build with Cygwin installed Blas, Lapack, OpenMPI (from default locations) use:
+#. To build with Cygwin installed Blas, Lapack, OpenMPI (from default locations) - do (from ``Cygwin64 Terminal``):
 
    .. code-block:: console
 
@@ -105,13 +105,13 @@ use the  Microsoft/Intel compilers).
 #. Remove Cygwin link.exe:
 
    Cygwin link.exe can conflict with Intel ifort compiler. If you are using ifort -
-   do (from Cygwin terminal/bash-shell):
+   do (from ``Cygwin64 Terminal``):
 
    .. code-block:: console
 
       $ mv /usr/bin/link.exe /usr/bin/link-cygwin.exe
 
-#. Setup Cygwin terminal/bash-shell with working compilers:
+#. Setup ``Cygwin64 Terminal`` with working compilers:
 
    We require the compilers to be setup properly in a Cygwin bash command shell, so that
    ``cl foo.c`` or ``ifort foo.F`` works from this shell. For example - if using ``Visual Studio 2022 C``
@@ -120,14 +120,13 @@ use the  Microsoft/Intel compilers).
    #. ``Start`` -> ``Programs`` -> ``Intel OneAPI 2022`` -> ``Intel OneAPI command prompt for Intel 64 for Visual Studio 2022``.
       This should start a ``DOS Command shell`` with working compilers.
 
-   #. Within this shell - run Cygwin terminal/bash-shell ``mintty.exe`` as:
+   #. Within this shell - run ``Cygwin64 Terminal`` i.e ``mintty.exe`` as:
 
       .. code-block:: console
 
          $ C:\cygwin64\bin\mintty.exe -
 
-   #. Verify if the compilers are usable (by running cl and ifort in this Cygwin
-      terminal/bash-shell).
+   #. Verify if the compilers are usable (by running cl and ifort in this ``Cygwin64 Terminal``).
 
    #. Now run ``configure`` with ``win32fe`` [#win32]_ and then build the libraries with
       ``make`` (as per the usual instructions)
