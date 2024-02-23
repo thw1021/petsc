@@ -63,20 +63,20 @@ that work on Microsoft Windows, with Cygwin pre-built libraries for Blas, Lapack
 
 #. To build with Cygwin installed Blas, Lapack, OpenMPI (from default locations) use:
 
-.. code-block:: console
+   .. code-block:: console
 
-   $ ./configure
+      $ ./configure
 
 #. Follow the Unix instructions for any additional configuration or build options.
 
 .. note::
 
-   Libraries built with Cygwin/GNU compilers are **not** compatible and cannot be linked  with  Microsoft or Intel Compilers.
+   - Libraries built with Cygwin/GNU compilers are **not** compatible and cannot be linked  with  Microsoft or Intel Compilers.
 
-   Native libraries like MS-MPI, Intel-MPI cannot be used from Cygwin/GNU compilers.
+   - Native libraries like MS-MPI, Intel-MPI cannot be used from Cygwin/GNU compilers.
 
-   Most :ref:`external packages <doc_externalsoftware>` are likely to work,
-   however the ``configure`` option ``--download-mpich`` does not work.
+   - Most :ref:`external packages <doc_externalsoftware>` are likely to work,
+     however the ``configure`` option ``--download-mpich`` does not work.
 
 ----
 
@@ -130,7 +130,7 @@ use the  Microsoft/Intel compilers).
       terminal/bash-shell).
 
    #. Now run ``configure`` with ``win32fe`` [#win32]_ and then build the libraries with
-      make (as per the usual instructions)
+      ``make`` (as per the usual instructions)
 
 Example Configure Usage With Microsoft Windows Compilers
 --------------------------------------------------------
