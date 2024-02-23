@@ -88,8 +88,7 @@ Native Microsoft/Intel Windows Compilers
 Microsoft Windows does not provide a Unix shell environment. Also
 the native Microsoft/Intel compilers behave differently than other (Unix) compilers. So to
 install PETSc on Microsoft Windows with Microsoft or Intel compilers one has to install Cygwin (for the Unix environment)
-and use ``win32fe`` [#win32]_ (located at ``${PETSC_DIR}/lib/petsc/bin/win32fe/win32fe.exe``) compiler wrapper, to
-use the  Microsoft/Intel compilers).
+and use ``win32fe`` [#win32]_ compiler wrapper, to use the  Microsoft/Intel compilers).
 
 #. Install Cygwin:
 
