@@ -69,7 +69,7 @@ that work on Microsoft Windows, with Cygwin pre-built libraries for Blas, Lapack
 
 #. Follow the Unix instructions for any additional configuration or build options.
 
-.. notes::
+.. note::
 
    Libraries built with Cygwin/GNU compilers are **not** compatible and cannot be linked  with  Microsoft or Intel Compilers.
 
