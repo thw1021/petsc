@@ -225,6 +225,8 @@ static PetscErrorCode MatDestroy_SuperLU_DIST(Mat A)
       else
   #endif
         PetscStackCallExternalVoid("SuperLU_DIST:Destroy_A3d_gathered_on_2d", Destroy_A3d_gathered_on_2d(&lu->SOLVEstruct, &lu->grid3d));
+      PetscStackCallExternalVoid("SuperLU_DIST:ScalePermstructFree", ScalePermstructFree(&lu->ScalePermstruct));
+      PetscStackCallExternalVoid("SuperLU_DIST:LUstructFree", LUstructFree(&lu->LUstruct));
     } else
 #endif
 #if defined(PETSC_HAVE_SUPERLU_DIST_SINGLE)
