@@ -124,7 +124,7 @@ use the  Microsoft/Intel compilers).
 
       .. code-block:: console
 
-         $ C:\cygwin64\bin\mintty.exe -
+         C:\> C:\cygwin64\bin\mintty.exe -
 
    #. Verify if the compilers are usable (by running cl and ifort in this ``Cygwin64 Terminal``).
 
