@@ -258,6 +258,10 @@ applications that are compatible with the Microsoft and Intel compilers.
       $  /usr/bin/python ./configure --with-mpiexec='/C/Program\ Files/Microsoft\ MPI/Bin/mpiexec' \
       --with-shared-libraries=0
 
+.. note::
+
+   ``MinGW`` (GNU) compiler can also be installed/used via ``Cygwin`` [not just MSYS2]. We didn't have a strong need to support or recommend this mode.
+
 Debugging on Microsoft Windows
 ------------------------------
 
