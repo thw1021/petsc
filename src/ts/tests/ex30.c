@@ -565,8 +565,10 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
                       yy_t[grid][tid][pp] = mag * PetscSinReal(2.0 * PETSC_PI * u2);
                       if (dim == 2 && xx_t[grid][tid][pp] < lo[0]) xx_t[grid][tid][pp] = -xx_t[grid][tid][pp];
                       if (dim == 3) zz_t[grid][tid][pp] = lo[2] + hp[2] / 2.0 + pk * hp[2];
-                      while (PetscAbsReal(xx_t[grid][tid][pp]) > hi[0]) xx_t[grid][tid][pp] /= 2;
-                      while (PetscAbsReal(yy_t[grid][tid][pp]) > hi[1]) yy_t[grid][tid][pp] /= 2;
+                      while (PetscSqrtReal(PetscSqr(xx_t[grid][tid][pp]) + PetscSqr(yy_t[grid][tid][pp])) > 0.95 * hi[0]) {
+                        xx_t[grid][tid][pp] /= 2;
+                        yy_t[grid][tid][pp] /= 2;
+                      }
                       if (ctx->num_grids == 1 && pp % 2 == 0) p_shift = 0; // one species, split bi-max
                       p_shift *= ctx->thermal_speed[grid] / ctx->v_0;
                       if (dim == 3) zz_t[grid][tid][pp] += p_shift;
@@ -646,21 +648,17 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
           }
         }
       }
-      //PetscPragmaOMP(parallel for)
       for (int tid = 0; tid < numthreads; tid++) {
         const PetscInt v_id = v_id_0 + tid, glb_v_id = global_vertex_id_0 + v_id;
         if (glb_v_id < num_vertices) {
           for (PetscInt grid = 0; grid < ctx->num_grids; grid++) { // add same particels for all grids
-            PetscErrorCode ierr_t;
             DM             dm = grid_dm[grid];
             DM             sw = globSwarmArray[LAND_PACK_IDX(v_id, grid)];
-            ierr_t            = PetscInfo(pack, "createMp %" PetscInt_FMT ".%" PetscInt_FMT ") for block %" PetscInt_FMT "\n", v_id, grid, LAND_PACK_IDX(v_id, grid));
-            ierr_t            = createMp(dm, sw, &globMpArray[LAND_PACK_IDX(v_id, grid)]);
-            if (ierr_t) ierr = ierr_t;
+            PetscCall(PetscInfo(pack, "createMp %" PetscInt_FMT ".%" PetscInt_FMT ") for block %" PetscInt_FMT "\n", v_id, grid, LAND_PACK_IDX(v_id, grid)));
+            PetscCall(createMp(dm, sw, &globMpArray[LAND_PACK_IDX(v_id, grid)]));
           }
         }
       }
-      PetscCheck(!ierr, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Error in OMP loop. ierr = %d", (int)ierr);
       // p --> g: set X
       // PetscPragmaOMP(parallel for)
       for (int tid = 0; tid < numthreads; tid++) {
@@ -971,9 +969,9 @@ int main(int argc, char **argv)
   PetscOptionsEnd();
   /* Create a mesh */
   PetscCall(DMPlexLandauCreateVelocitySpace(PETSC_COMM_SELF, dim, "", &X, &J, &pack));
+  PetscCall(DMGetApplicationContext(pack, &ctx));
   PetscCall(DMSetUp(pack));
   PetscCall(DMSetOutputSequenceNumber(pack, 0, 0.0));
-  PetscCall(DMGetApplicationContext(pack, &ctx));
   PetscCheck(g_target < ctx->num_grids, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Grid to view %" PetscInt_FMT " should be < number of grids %" PetscInt_FMT, g_target, ctx->num_grids);
   PetscCheck(ctx->batch_view_idx == v_target % ctx->batch_sz, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Global view index %" PetscInt_FMT " mode batch size %" PetscInt_FMT " != ctx->batch_view_idx %" PetscInt_FMT, v_target, ctx->batch_sz, ctx->batch_view_idx);
   /* Create timestepping solver context */
