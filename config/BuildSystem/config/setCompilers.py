@@ -473,7 +473,7 @@ class Configure(config.base.Configure):
     try:
       (output, error, status) = config.base.Configure.executeShellCommand(compiler+' --help | head -n 20', log = log)
       output = output + error
-      if 'Intel' in output:
+      if 'Intel(R)' in output:
         if log: log.write('Detected Intel compiler\n')
         return 1
     except RuntimeError:
