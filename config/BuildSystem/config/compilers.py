@@ -625,6 +625,9 @@ class Configure(config.base.Configure):
             elif arg == '-lLTO' and self.setCompilers.isDarwin(self.log):
               self.logPrint('Skipping -lTO')
               continue
+            elif arg.find('-libpath:')>=0:
+              self.logPrint('Skipping win32 ifort option: '+arg)
+              continue
             elif iscray and (arg == '-lsci_cray_mpi' or arg == '-lsci_cray' or arg == '-lsci_cray_mp'):
               self.logPrint('Skipping CRAY LIBSCI library: '+arg, 4, 'compilers')
               continue
@@ -1078,6 +1081,9 @@ Otherwise you need a different combination of C, C++, and Fortran compilers")
               continue
             elif arg == '-lLTO' and self.setCompilers.isDarwin(self.log):
               self.logPrint('Skipping -lTO')
+            elif arg.find('-libpath:')>=0:
+              self.logPrint('Skipping win32 ifort option: '+arg)
+              continue
             elif iscray and (arg == '-lsci_cray_mpi' or arg == '-lsci_cray' or arg == '-lsci_cray_mp'):
               self.logPrint('Skipping CRAY LIBSCI library: '+arg, 4, 'compilers')
               continue
