@@ -471,9 +471,9 @@ class Configure(config.base.Configure):
   def isIntel(compiler, log):
     '''Returns true if the compiler is a Intel compiler'''
     try:
-      (output, error, status) = config.base.Configure.executeShellCommand(compiler+' --help | head -n 20', log = log)
+      (output, error, status) = config.base.Configure.executeShellCommand(compiler+' --help | head -n 80', log = log)
       output = output + error
-      if 'Intel' in output:
+      if 'Intel(R)' in output:
         if log: log.write('Detected Intel compiler\n')
         return 1
     except RuntimeError:
@@ -563,7 +563,7 @@ class Configure(config.base.Configure):
     '''Returns true if the compiler is a Windows compiler'''
     if cls.isCygwin(log):
       compiler = os.path.basename(compiler)
-      if compiler.startswith('win_'):
+      if compiler.startswith('win32fe'):
         if log: log.write('Detected Windows compiler\n')
         return 1
     if log: log.write('Detected Non-Windows compiler\n')
@@ -1412,8 +1412,8 @@ class Configure(config.base.Configure):
       yield 'cc'
       yield 'xlc'
       path = os.path.join(os.getcwd(),'lib','petsc','win32fe','bin')
-      yield os.path.join(path,'win_icl')
-      yield os.path.join(path,'win_cl')
+      yield os.path.join(path,'win32fe_icl')
+      yield os.path.join(path,'win32fe_cl')
       yield 'pgcc'
     return
 
@@ -1725,9 +1725,9 @@ class Configure(config.base.Configure):
         yield 'mpxlC'
       else:
         #attempt to match c++ compiler with c compiler
-        if self.CC.find('win_cl') >= 0:
+        if self.CC.find('win32fe_cl') >= 0:
           yield self.CC
-        elif self.CC.find('win_icl') >= 0:
+        elif self.CC.find('win32fe_icl') >= 0:
           yield self.CC
         elif self.CC == 'gcc':
           yield 'g++'
@@ -1749,8 +1749,8 @@ class Configure(config.base.Configure):
         yield 'xlC'
         yield 'ccpc'
         path = os.path.join(os.getcwd(),'lib','petsc','win32fe','bin')
-        yield os.path.join(path,'win_icl')
-        yield os.path.join(path,'win_cl')
+        yield os.path.join(path,'win32fe_icl')
+        yield os.path.join(path,'win32fe_cl')
         yield 'pgCC'
         yield 'CC'
     return
@@ -1868,15 +1868,15 @@ class Configure(config.base.Configure):
           yield 'xlf'
         elif self.CC == 'ncc':
           yield 'nfort'
-        elif self.CC.find('win_icl') >= 0:
-          yield os.path.join(path,'win_ifort')
+        elif self.CC.find('win32fe_icl') >= 0:
+          yield os.path.join(path,'win32fe_ifort')
         yield 'gfortran'
         yield 'g95'
         yield 'xlf90'
         yield 'xlf'
         yield 'f90'
         yield 'lf95'
-        yield os.path.join(path,'win_ifort')
+        yield os.path.join(path,'win32fe_ifort')
         yield 'ifort'
         yield 'ifc'
         yield 'pgf90'
@@ -2194,18 +2194,18 @@ class Configure(config.base.Configure):
     if defaultRanlib:
       yield ('ar',self.getArchiverFlags('ar'),defaultRanlib)
       path = os.path.join(os.getcwd(),'lib','petsc','bin')
-      war  = os.path.join(path,'win_lib')
+      war  = os.path.join(path,'win32fe_lib')
       yield (war,self.getArchiverFlags(war),defaultRanlib)
       raise RuntimeError('You set --with-ranlib="'+defaultRanlib+'", but '+defaultRanlib+' cannot be used\n')
     if envRanlib:
       yield ('ar',self.getArchiverFlags('ar'),envRanlib)
       path = os.path.join(os.getcwd(),'lib','petsc','bin')
-      war  = os.path.join(path,'win_lib')
+      war  = os.path.join(path,'win32fe_lib')
       yield (war,self.getArchiverFlags('war'),envRanlib)
       raise RuntimeError('You set -RANLIB="'+envRanlib+'" (perhaps in your environment), but '+defaultRanlib+' cannot be used\n')
     if config.setCompilers.Configure.isWindows(self.getCompiler(), self.log):
       path = os.path.join(os.getcwd(),'lib','petsc','bin')
-      war  = os.path.join(path,'win_lib')
+      war  = os.path.join(path,'win32fe_lib')
       yield (war,self.getArchiverFlags(war),'true')
     yield ('ar',self.getArchiverFlags('ar'),'ranlib -c')
     yield ('ar',self.getArchiverFlags('ar'),'ranlib')
