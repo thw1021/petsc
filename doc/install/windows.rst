@@ -31,7 +31,7 @@ Linux on Microsoft Windows
 ==========================
 
 - Microsoft Windows Subsystem for Linux 2 (`WLS2
-  <https://docs.microsoft.com/en-us/windows/wsl/install-win10>`__). Be sure to use WSL2 vs WSL1 for best performance.
+  <https://docs.microsoft.com/en-us/windows/wsl/install-win10>`__). Be sure to use WSL2 for best performance.
 
 - `Docker <https://docs.docker.com/docker-for-windows/>`__ for Microsoft
   Windows.
@@ -48,7 +48,7 @@ Cygwin/GNU compilers on Microsoft Windows
 =========================================
 
 Cygwin/GNU compilers allow building standalone PETSc libraries and binaries
-that work on Microsoft Windows, with Cygwin pre-built libraries for BLAS, LAPACK, OpenMPI.
+that work on Microsoft Windows, with Cygwin pre-built libraries for BLAS, LAPACK, and Open MPI.
 
 #. Install Cygwin:
 
@@ -61,7 +61,7 @@ that work on Microsoft Windows, with Cygwin pre-built libraries for BLAS, LAPACK
    - liblapack-devel
    - openmpi libopenmpi-devel libhwloc-devel libevent-devel zlib-devel
 
-#. To build with Cygwin installed BLAS, LAPACK, OpenMPI (from default locations) - do (from ``Cygwin64 Terminal``):
+#. To build with Cygwin installed BLAS, LAPACK, and Open MPI (from default locations), do (from ``Cygwin64 Terminal``):
 
    .. code-block:: console
 
@@ -71,9 +71,9 @@ that work on Microsoft Windows, with Cygwin pre-built libraries for BLAS, LAPACK
 
 .. note::
 
-   - Libraries built with Cygwin/GNU compilers are **not** compatible and cannot be linked  with  Microsoft or Intel Compilers.
+   - Libraries built with Cygwin/GNU compilers are **not** compatible and cannot be linked with Microsoft or Intel compilers.
 
-   - Native libraries like MS-MPI, Intel-MPI cannot be used from Cygwin/GNU compilers.
+   - Native libraries like MS-MPI, Intel MPI cannot be used from Cygwin/GNU compilers.
 
    - Most :ref:`external packages <doc_externalsoftware>` are likely to work,
      however the ``configure`` option ``--download-mpich`` does not work.
@@ -119,13 +119,13 @@ and use ``win32fe`` [#win32]_ compiler wrapper, to use the  Microsoft/Intel comp
    #. ``Start`` -> ``Programs`` -> ``Intel OneAPI 2022`` -> ``Intel OneAPI command prompt for Intel 64 for Visual Studio 2022``.
       This should start a ``DOS Command shell`` with working compilers.
 
-   #. Within this ``DOS Command shell`` - run ``Cygwin64 Terminal`` i.e ``mintty.exe`` as:
+   #. Within this ``DOS Command shell`` - run ``Cygwin64 Terminal``, i.e., ``mintty.exe`` as:
 
       .. code-block:: powershell
 
          C:\cygwin64\bin\mintty.exe -
 
-   #. Verify if the compilers are usable (by running cl and ifort in this ``Cygwin64 Terminal``).
+   #. Verify if the compilers are usable (by running ``cl`` and ``ifort`` in this ``Cygwin64 Terminal``).
 
    #. Now run ``configure`` with ``win32fe`` [#win32]_ and then build the libraries with
       ``make`` (as per the usual instructions)
@@ -152,7 +152,7 @@ If Fortran or C++ usage is not required, use:
 Using MPI, MKL
 --------------
 
-We support both MS-MPI [64-bit] and Intel MPI on Microsoft Windows. We also support using Intel MKL for BlasLapack.
+We support both MS-MPI (64-bit) and Intel MPI on Microsoft Windows. We also support using Intel MKL as BLAS and LAPACK implementations.
 For example usages, check ``$PETSC_DIR/config/examples/arch-mswin*.py``
 
 .. warning::
@@ -260,7 +260,7 @@ applications that are compatible with the Microsoft and Intel compilers.
 
 .. note::
 
-   ``MinGW`` (GNU) compilers can also be installed/used via ``Cygwin`` [not just MSYS2].
+   ``MinGW`` (GNU) compilers can also be installed/used via ``Cygwin`` (not just MSYS2).
 
 Debugging on Microsoft Windows
 ------------------------------
