@@ -1961,6 +1961,7 @@ class Configure(config.base.Configure):
                   'unrecognized option','unrecognised option','not recognized',
                   'not recognised','unknown option','unknown warning option',
                   'unknown flag','unknown switch','ignoring option','ignored','argument unused',
+                  'unsupported command line options encountered',
                   'not supported','is unsupported and will be skipped','illegal option',
                   'invalid option','invalid suboption','bad ',' option','petsc error',
                   'unbekannte option','linker input file unused because linking not done',
@@ -1973,7 +1974,7 @@ class Configure(config.base.Configure):
     '''If the output contains evidence that an invalid flag was used, return True'''
     substrings = ('unknown argument', 'ignoring unsupported linker flag', 'unrecognized command line option','unrecognised command line option',
                   'unrecognized option','unrecognised option','unknown option',
-                  'unknown flag',
+                  'unknown flag','unsupported command line options encountered',
                   'not supported','is unsupported and will be skipped','illegal option',
                   'invalid option','invalid suboption',
                   'unbekannte option',
@@ -2509,8 +2510,11 @@ class Configure(config.base.Configure):
     for language in languages:
       flag = '-L'
       self.pushLanguage(language)
+      if Configure.isCygwin(self.log):
+        self.logPrint('Cygwin detected! disabling -rpath test.')
+        testFlags = []
       # test '-R' before '-rpath' as sun compilers [c,fortran] don't give proper errors with wrong options.
-      if not Configure.isDarwin(self.log):
+      elif not Configure.isDarwin(self.log):
         testFlags = ['-Wl,-rpath,', '-R','-rpath ' , '-Wl,-R,']
       else:
         testFlags = ['-Wl,-rpath,']
