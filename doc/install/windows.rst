@@ -88,7 +88,7 @@ Native Microsoft/Intel Windows Compilers
 Microsoft Windows does not provide a Unix shell environment. Also
 the native Microsoft/Intel compilers behave differently than other (Unix) compilers. So to
 install PETSc on Microsoft Windows with Microsoft or Intel compilers one has to install Cygwin (for the Unix environment)
-and use ``win32fe`` [#win32]_ compiler wrapper, to use the  Microsoft/Intel compilers).
+and use ``win32fe`` [#win32]_ compiler wrapper, to use the  Microsoft/Intel compilers.
 
 #. Install Cygwin:
 
@@ -128,7 +128,7 @@ and use ``win32fe`` [#win32]_ compiler wrapper, to use the  Microsoft/Intel comp
    #. Verify if the compilers are usable (by running ``cl`` and ``ifort`` in this ``Cygwin64 Terminal``).
 
    #. Now run ``configure`` with ``win32fe`` [#win32]_ and then build the libraries with
-      ``make`` (as per the usual instructions)
+      ``make`` (as per the usual instructions).
 
 Example Configure Usage With Microsoft Windows Compilers
 --------------------------------------------------------
@@ -159,9 +159,9 @@ For example usages, check ``$PETSC_DIR/config/examples/arch-mswin*.py``
 
    **Avoid spaces in $PATH**
 
-   Its best to avoid spaces or similar special chars when specifying ``configure`` options. On
+   It is better to avoid spaces or similar special chars when specifying ``configure`` options. On
    Microsoft Windows - this usually affects specifying MPI or MKL. Microsoft Windows
-   supports DOS short form for directory names - so its best to use this notation. Cygwin
+   supports DOS short form for directory names - so it is better to use this notation. Cygwin
    tool ``cygpath`` can be used to get paths in this notation. For example:
 
    .. code-block:: console
@@ -191,7 +191,7 @@ compiler versions etc. used for any given build of PETSc, so they are potentiall
 different for each build of PETSc. So if you need a project file for use with PETSc -
 do the following.
 
-#. Create an empty project file with one of the examples say
+#. Create an empty project file with one of the examples, say
    ``$PETSC_DIR/src/ksp/ksp/tutorials/ex2.c``
 
 #. Try compiling the example from Cygwin bash shell - using ``make`` - i.e.:
