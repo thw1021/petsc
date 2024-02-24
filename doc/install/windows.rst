@@ -44,7 +44,7 @@ Linux on Microsoft Windows
 
 .. _sec_cygwin_gnu_on_windows:
 
-Cygwin/GNU compilers on Microsoft Windows
+Cygwin/GNU Compilers on Microsoft Windows
 =========================================
 
 Cygwin/GNU compilers allow building standalone PETSc libraries and binaries
