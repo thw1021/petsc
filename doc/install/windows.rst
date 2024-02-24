@@ -137,17 +137,23 @@ Use ``configure`` with ``Visual Studio 2022 C`` and ``Intel OneAPI 2022 Fortran`
 
 .. code-block:: console
 
-   $ ./configure --with-cc='win_cl' --with-fc='win_ifort' --with-cxx='win_cl' --with-mpi=0 --download-fblaslapack
+   $ ./configure --with-cc='win32fe_cl' --with-fc='win32fe_ifort' --with-cxx='win32fe_cl' --with-mpi=0 --download-fblaslapack
 
 If Fortran or C++ usage is not required, use:
 
 .. code-block:: console
 
-   $ ./configure --with-cc='win_cl' --with-fc=0 --with-cxx=0 --download-f2cblaslapack
+   $ ./configure --with-cc='win32fe_cl' --with-fc=0 --with-cxx=0 --download-f2cblaslapack
 
 .. note::
 
-   The ``--download-package`` option may work with some :ref:`external packages <doc_externalsoftware>` and fail with most packages.
+   - One can use Intel OneAPI C/C++ compiler ``icl`` or ``icx`` instead of Microsoft ``cl``, for ex: ``--with-cc=win32fe_icl --with-cxx=win32fe_icl``.
+
+   - OneAPI ``ifx`` currently works with ``--with-shared-libraries=0`` only, ``ifort`` is recommended for default shared library build.
+
+   - The ``--download-package`` option may work with some :ref:`external packages <doc_externalsoftware>` and fail with most packages.
+
+
 
 Using MPI, MKL
 --------------
@@ -175,7 +181,7 @@ For example usages, check ``$PETSC_DIR/config/examples/arch-mswin*.py``
 
    .. code-block:: console
 
-      $ ./configure --with-cc='win_cl' --with-fc='win_ifort' --with-cxx='win_cl' \
+      $ ./configure --with-cc='win32fe_cl' --with-fc='win32fe_ifort' --with-cxx='win32fe_cl' \
       --with-shared-libraries=0 \
       --with-mpi-include='[/cygdrive/c/PROGRA~2/MICROS~2/MPI/Include,/cygdrive/c/PROGRA~2/MICROS~2/MPI/Include/x64]' \
       --with-mpi-lib='-L/cygdrive/c/PROGRA~2/MICROS~2/MPI/lib/x64 msmpifec.lib msmpi.lib' \
