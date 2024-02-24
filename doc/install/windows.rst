@@ -260,7 +260,7 @@ applications that are compatible with the Microsoft and Intel compilers.
 
 .. note::
 
-   ``MinGW`` (GNU) compiler can also be installed/used via ``Cygwin`` [not just MSYS2].
+   ``MinGW`` (GNU) compilers can also be installed/used via ``Cygwin`` [not just MSYS2].
 
 Debugging on Microsoft Windows
 ------------------------------
