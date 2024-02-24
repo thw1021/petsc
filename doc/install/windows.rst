@@ -119,7 +119,7 @@ and use ``win32fe`` [#win32]_ compiler wrapper, to use the  Microsoft/Intel comp
    #. ``Start`` -> ``Programs`` -> ``Intel OneAPI 2022`` -> ``Intel OneAPI command prompt for Intel 64 for Visual Studio 2022``.
       This should start a ``DOS Command shell`` with working compilers.
 
-   #. Within this ``Dos Command shell`` - run ``Cygwin64 Terminal`` i.e ``mintty.exe`` as:
+   #. Within this ``DOS Command shell`` - run ``Cygwin64 Terminal`` i.e ``mintty.exe`` as:
 
       .. code-block:: powershell
 
