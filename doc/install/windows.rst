@@ -48,7 +48,7 @@ Cygwin/GNU compilers on Microsoft Windows
 =========================================
 
 Cygwin/GNU compilers allow building standalone PETSc libraries and binaries
-that work on Microsoft Windows, with Cygwin pre-built libraries for Blas, Lapack, OpenMPI.
+that work on Microsoft Windows, with Cygwin pre-built libraries for BLAS, LAPACK, OpenMPI.
 
 #. Install Cygwin:
 
@@ -61,7 +61,7 @@ that work on Microsoft Windows, with Cygwin pre-built libraries for Blas, Lapack
    - liblapack-devel
    - openmpi libopenmpi-devel libhwloc-devel libevent-devel zlib-devel
 
-#. To build with Cygwin installed Blas, Lapack, OpenMPI (from default locations) - do (from ``Cygwin64 Terminal``):
+#. To build with Cygwin installed BLAS, LAPACK, OpenMPI (from default locations) - do (from ``Cygwin64 Terminal``):
 
    .. code-block:: console
 
@@ -260,7 +260,7 @@ applications that are compatible with the Microsoft and Intel compilers.
 
 .. note::
 
-   ``MinGW`` (GNU) compiler can also be installed/used via ``Cygwin`` [not just MSYS2]. We didn't have a strong need to support or recommend this mode.
+   ``MinGW`` (GNU) compiler can also be installed/used via ``Cygwin`` [not just MSYS2].
 
 Debugging on Microsoft Windows
 ------------------------------
