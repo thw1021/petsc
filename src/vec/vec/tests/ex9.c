@@ -4,12 +4,13 @@ static char help[] = "Scatters from a parallel vector to a sequential vector.\n\
 
 int main(int argc, char **argv)
 {
-  PetscInt    n = 5, i, idx2[3] = {0, 2, 3}, idx1[3] = {0, 1, 2};
-  PetscMPIInt size, rank;
-  PetscScalar value;
-  Vec         x, y;
-  IS          is1, is2;
-  VecScatter  ctx = 0;
+  PetscInt         n = 5, i, idx2[3] = {0, 2, 3}, idx1[3] = {0, 1, 2};
+  PetscMPIInt      size, rank;
+  PetscScalar      value;
+  Vec              x, y;
+  IS               is1, is2;
+  VecScatter       ctx = 0;
+  PetscObjectState ystate, newystate;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, (char *)0, help));
@@ -41,6 +42,14 @@ int main(int argc, char **argv)
   PetscCall(VecScatterCreate(x, is1, y, is2, &ctx));
   PetscCall(VecScatterBegin(ctx, x, y, INSERT_VALUES, SCATTER_FORWARD));
   PetscCall(VecScatterEnd(ctx, x, y, INSERT_VALUES, SCATTER_FORWARD));
+
+  // verify that unneeded repeat scatter is ignored
+  PetscCall(PetscObjectStateGet((PetscObject)y, &ystate));
+  PetscCall(VecScatterBegin(ctx, x, y, INSERT_VALUES, SCATTER_FORWARD));
+  PetscCall(VecScatterEnd(ctx, x, y, INSERT_VALUES, SCATTER_FORWARD));
+  PetscCall(PetscObjectStateGet((PetscObject)y, &newystate));
+  PetscCheck(ystate == newystate, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Did not optimize (skip) unneeded scatter");
+
   PetscCall(VecScatterDestroy(&ctx));
 
   if (rank == 0) {

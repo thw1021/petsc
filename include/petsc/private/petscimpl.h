@@ -1012,7 +1012,6 @@ M*/
 M*/
 #define PetscObjectStateIncrease(obj) ((obj)->state++, PETSC_SUCCESS)
 
-PETSC_EXTERN PetscErrorCode PetscObjectStateGet(PetscObject, PetscObjectState *);
 PETSC_EXTERN PetscErrorCode PetscObjectStateSet(PetscObject, PetscObjectState);
 PETSC_EXTERN PetscErrorCode PetscObjectComposedDataRegister(PetscInt *);
 PETSC_EXTERN PetscErrorCode PetscObjectComposedDataIncreaseInt(PetscObject);

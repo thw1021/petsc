@@ -152,6 +152,11 @@ typedef struct {
   PetscInt    *bowners;
 } VecStash;
 
+typedef struct {
+  PetscObjectId    scatterid, partnerid;
+  PetscObjectState partnerstate, mystate;
+} VecScatterCache;
+
 struct _p_Vec {
   PETSCHEADER(struct _VecOps);
   PetscLayout map;
@@ -171,7 +176,8 @@ struct _p_Vec {
   size_t    minimum_bytes_pinned_memory; /* minimum data size in bytes for which pinned memory will be allocated */
   PetscBool pinned_memory;               /* PETSC_TRUE if the current host allocation has been made from pinned memory. */
 #endif
-  char *defaultrandtype;
+  char           *defaultrandtype;
+  VecScatterCache scattercache;
 };
 
 PETSC_EXTERN PetscLogEvent VEC_SetRandom;

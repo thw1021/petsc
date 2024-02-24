@@ -35,6 +35,12 @@ functionend:
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+#define VecScatterSkip(sf, x, y, addv) \
+  if (addv == INSERT_VALUES) { \
+    if (y->scattercache.partnerstate == ((PetscObject)x)->state && y->scattercache.mystate == ((PetscObject)y)->state && y->scattercache.partnerid == ((PetscObject)x)->id && y->scattercache.scatterid == ((PetscObject)sf)->id) \
+      PetscFunctionReturn(PETSC_SUCCESS); \
+  }
+
 static PetscErrorCode VecScatterBegin_Internal(VecScatter sf, Vec x, Vec y, InsertMode addv, ScatterMode mode)
 {
   PetscSF      wsf = NULL; /* either sf or its local part */
@@ -43,6 +49,7 @@ static PetscErrorCode VecScatterBegin_Internal(VecScatter sf, Vec x, Vec y, Inse
   PetscMemType xmtype = PETSC_MEMTYPE_HOST, ymtype = PETSC_MEMTYPE_HOST;
 
   PetscFunctionBegin;
+  VecScatterSkip(sf, x, y, addv);
   if (x != y) PetscCall(VecLockReadPush(x));
   PetscCall(VecGetArrayReadAndMemType(x, &sf->vscat.xdata, &xmtype));
   PetscCall(VecGetArrayAndMemType(y, &sf->vscat.ydata, &ymtype));
@@ -79,6 +86,8 @@ static PetscErrorCode VecScatterEnd_Internal(VecScatter sf, Vec x, Vec y, Insert
   PetscMPIInt size;
 
   PetscFunctionBegin;
+  VecScatterSkip(sf, x, y, addv);
+
   /* SCATTER_FORWARD_LOCAL indicates ignoring inter-process communication */
   PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)sf), &size));
   wsf = ((mode & SCATTER_FORWARD_LOCAL) && size > 1) ? sf->vscat.lsf : sf;
@@ -99,6 +108,10 @@ static PetscErrorCode VecScatterEnd_Internal(VecScatter sf, Vec x, Vec y, Insert
   if (x != y) PetscCall(VecLockReadPop(x));
   PetscCall(VecRestoreArrayAndMemType(y, &sf->vscat.ydata));
   PetscCall(VecLockWriteSet(y, PETSC_FALSE));
+  y->scattercache.partnerstate = ((PetscObject)x)->state;
+  y->scattercache.mystate      = ((PetscObject)y)->state;
+  y->scattercache.partnerid    = ((PetscObject)x)->id;
+  y->scattercache.scatterid    = ((PetscObject)sf)->id;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
