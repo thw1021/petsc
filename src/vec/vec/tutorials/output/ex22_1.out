@@ -1,0 +1,48 @@
+0 0.
+1 1.
+2 2.
+3 3.
+4 4.
+5 5.
+6 11.
+7 6.
+0 6.
+1 7.
+2 8.
+3 9.
+4 10.
+5 11.
+6 0.
+7 5.
+Vec Object: 2 MPI processes
+  type: mpi
+Process [0]
+4.
+1.
+2.
+3.
+4.
+9.
+Process [1]
+14.
+7.
+8.
+9.
+10.
+19.
+Vec Object: 2 MPI processes
+  type: mpi
+Process [0]
+4.
+1.
+2.
+3.
+4.
+9.
+Process [1]
+54.
+7.
+8.
+9.
+10.
+19.

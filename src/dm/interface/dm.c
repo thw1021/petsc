@@ -296,6 +296,43 @@ PetscErrorCode VecGetDM(Vec v, DM *dm)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode VecLocalFormUpdateRead_DM(Vec g, Vec l)
+{
+  DM dm;
+
+  PetscFunctionBegin;
+  PetscCall(VecGetDM(g, &dm));
+  PetscCall(DMGlobalToLocal(dm, g, INSERT_VALUES, l));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode VecLocalFormUpdateWrite_DM(Vec g, InsertMode imode, Vec l)
+{
+  DM dm;
+
+  PetscFunctionBegin;
+  PetscCall(VecGetDM(g, &dm));
+  // currently g and l are disjoint so need to zero g; when DMPLEX is ghosted it will not need to be zeroed
+  PetscCall(VecZeroEntries(g));
+  PetscCall(DMLocalToGlobal(dm, l, imode, g));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode VecLocalFormCreate_DM(Vec g, Vec *l)
+{
+  DM dm;
+
+  PetscFunctionBegin;
+  PetscCall(VecGetDM(g, &dm));
+  // PetscCall(PetscObjectQuery((PetscObject)g, "__PETSc_dm", (PetscObject *)&dm));
+  PetscCall(DMCreateLocalVector(dm, l));
+  // local vector cannot have reference to DM because it introduces a circular dependency
+  PetscCall(VecSetDM(*l, NULL));
+  PetscCall(VecLocalFormSetUpdateRead(g, VecLocalFormUpdateRead_DM));
+  PetscCall(VecLocalFormSetUpdateWrite(g, VecLocalFormUpdateWrite_DM));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*@
   VecSetDM - Sets the `DM` defining the data layout of the vector.
 
@@ -320,6 +357,8 @@ PetscErrorCode VecSetDM(Vec v, DM dm)
   PetscValidHeaderSpecific(v, VEC_CLASSID, 1);
   if (dm) PetscValidHeaderSpecific(dm, DM_CLASSID, 2);
   PetscCall(PetscObjectCompose((PetscObject)v, "__PETSc_dm", (PetscObject)dm));
+  if (dm) PetscCall(PetscObjectComposeFunction((PetscObject)v, "VecLocalFormCreate_C", VecLocalFormCreate_DM));
+  else PetscCall(PetscObjectComposeFunction((PetscObject)v, "VecLocalFormCreate_C", NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

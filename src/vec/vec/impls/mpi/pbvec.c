@@ -731,6 +731,8 @@ PetscErrorCode VecCreateMPIWithArray(MPI_Comm comm, PetscInt bs, PetscInt n, Pet
 
   This also automatically sets the `ISLocalToGlobalMapping()` for this vector.
 
+  Deprecated. See `VecLocalFormSetIS()`
+
 .seealso: [](ch_vectors), `Vec`, `VecType`, `VecCreate()`, `VecGhostGetLocalForm()`, `VecGhostRestoreLocalForm()`,
           `VecCreateGhost()`, `VecCreateSeqWithArray()`, `VecCreateMPIWithArray()`,
           `VecCreateGhostBlock()`, `VecCreateGhostBlockWithArray()`, `VecMPISetGhost()`
@@ -782,6 +784,8 @@ PetscErrorCode VecCreateGhostWithArray(MPI_Comm comm, PetscInt n, PetscInt N, Pe
 
   Level: beginner
 
+  Deprecated.
+
 .seealso: `VecCreateGhostWithArray()`, `VecCreateMPIWithArray()`
 @*/
 PetscErrorCode VecGhostGetGhostIS(Vec X, IS *ghost)
@@ -822,6 +826,8 @@ PetscErrorCode VecGhostGetGhostIS(Vec X, IS *ghost)
 
   This also automatically sets the `ISLocalToGlobalMapping()` for this vector.
 
+  Deprecated. See `VecLocalFormSetIS()`
+
 .seealso: [](ch_vectors), `Vec`, `VecType`, `VecCreateSeq()`, `VecCreate()`, `VecDuplicate()`, `VecDuplicateVecs()`, `VecCreateMPI()`,
           `VecGhostGetLocalForm()`, `VecGhostRestoreLocalForm()`, `VecGhostUpdateBegin()`,
           `VecCreateGhostWithArray()`, `VecCreateMPIWithArray()`, `VecGhostUpdateEnd()`,
@@ -854,6 +860,8 @@ PetscErrorCode VecCreateGhost(MPI_Comm comm, PetscInt n, PetscInt N, PetscInt ng
   This also automatically sets the `ISLocalToGlobalMapping()` for this vector.
 
   You must call this AFTER you have set the type of the vector (with` VecSetType()`) and the size (with `VecSetSizes()`).
+
+  Deprecated. See `VecLocalFormSetIS()`
 
 .seealso: [](ch_vectors), `Vec`, `VecType`, `VecCreateSeq()`, `VecCreate()`, `VecDuplicate()`, `VecDuplicateVecs()`, `VecCreateMPI()`,
           `VecGhostGetLocalForm()`, `VecGhostRestoreLocalForm()`, `VecGhostUpdateBegin()`,
@@ -928,9 +936,11 @@ PetscErrorCode VecMPISetGhost(Vec vv, PetscInt nghost, const PetscInt ghosts[])
   Use `VecGhostGetLocalForm()` to access the local, ghosted representation
   of the vector.
 
-  n is the local vector size (total local size not the number of blocks) while nghost
+  `n` is the local vector size (total local size not the number of blocks) while `nghost`
   is the number of blocks in the ghost portion, i.e. the number of elements in the ghost
-  portion is bs*nghost
+  portion is `bs*nghost`
+
+  Deprecated. See `VecLocalFormSetIS()`
 
 .seealso: [](ch_vectors), `Vec`, `VecType`, `VecCreate()`, `VecGhostGetLocalForm()`, `VecGhostRestoreLocalForm()`,
           `VecCreateGhost()`, `VecCreateSeqWithArray()`, `VecCreateMPIWithArray()`,
@@ -1013,6 +1023,8 @@ PetscErrorCode VecCreateGhostBlockWithArray(MPI_Comm comm, PetscInt bs, PetscInt
   `n` is the local vector size (total local size not the number of blocks) while `nghost`
   is the number of blocks in the ghost portion, i.e. the number of elements in the ghost
   portion is `bs*nghost`
+
+  Deprecated. See `VecLocalFormSetIS()`
 
 .seealso: [](ch_vectors), `Vec`, `VecType`, `VecCreateSeq()`, `VecCreate()`, `VecDuplicate()`, `VecDuplicateVecs()`, `VecCreateMPI()`,
           `VecGhostGetLocalForm()`, `VecGhostRestoreLocalForm()`,

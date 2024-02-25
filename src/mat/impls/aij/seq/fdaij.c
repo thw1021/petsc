@@ -294,7 +294,7 @@ PetscErrorCode MatFDColoringSetUp_SeqXAIJ(Mat mat, ISColoring iscoloring, MatFDC
   PetscCall(PetscFree(valaddrhit));
   PetscCall(ISColoringRestoreIS(iscoloring, PETSC_OWN_POINTER, &c->isa));
 
-  PetscCall(VecCreateGhost(PetscObjectComm((PetscObject)mat), mat->rmap->n, PETSC_DETERMINE, 0, NULL, &c->vscale));
+  PetscCall(VecLocalFormCreate(PetscObjectComm((PetscObject)mat), mat->rmap->n, PETSC_DETERMINE, NULL, &c->vscale));
   PetscCall(PetscInfo(c, "ncolors %" PetscInt_FMT ", brows %" PetscInt_FMT " and bcols %" PetscInt_FMT " are used.\n", c->ncolors, c->brows, c->bcols));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
