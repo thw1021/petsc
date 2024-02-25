@@ -127,7 +127,7 @@ and use ``win32fe`` [#win32]_ compiler wrapper, to use the  Microsoft/Intel comp
 
    #. Verify if the compilers are usable (by running ``cl`` and ``ifort`` in this ``Cygwin64 Terminal``).
 
-   #. Now run ``configure`` with ``win32fe`` [#win32]_ and then build the libraries with
+   #. Now run ``configure`` with compiler wrapper script ``win32fe_cl`` that uses ``win32fe`` [#win32]_ and then build the libraries with
       ``make`` (as per the usual instructions).
 
 Example Configure Usage With Microsoft Windows Compilers
@@ -148,6 +148,8 @@ If Fortran or C++ usage is not required, use:
 .. note::
 
    - One can use Intel OneAPI C/C++ compiler ``icl`` or ``icx`` instead of Microsoft ``cl``, for ex: ``--with-cc=win32fe_icl --with-cxx=win32fe_icl``.
+
+   - A shorter form ``--with-cc=cl`` that translates to ``--with-cc=win32fe_cl`` is also supported. Similarly for ``icl``, ``icx``, ``ifort``, ``ifx``.
 
    - OneAPI ``ifx`` currently works with ``--with-shared-libraries=0`` only, ``ifort`` is recommended for default shared library build.
 
