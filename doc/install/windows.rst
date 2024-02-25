@@ -151,7 +151,7 @@ If Fortran or C++ usage is not required, use:
 
    - A shorter form ``--with-cc=cl`` that translates to ``--with-cc=win32fe_cl`` is also supported. Similarly for ``icl``, ``icx``, ``ifort``, ``ifx``.
 
-   - oneAPI ``ifx`` currently works with ``--with-shared-libraries=0`` only, ``ifort`` is recommended for default shared library build.
+   - Intel oneAPI ``ifx`` currently works with ``--with-shared-libraries=0`` only, ``ifort`` is recommended for default shared library build.
 
    - The ``--download-package`` option may work with some :ref:`external packages <doc_externalsoftware>` and fail with most packages.
 
