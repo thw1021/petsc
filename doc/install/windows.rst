@@ -114,7 +114,7 @@ and use ``win32fe`` [#win32]_ compiler wrapper, to use the  Microsoft/Intel comp
 
    We require the compilers to be setup properly in a Cygwin bash command shell, so that
    ``cl foo.c`` or ``ifort foo.F`` works from this shell. For example - if using ``Visual Studio 2022 C``
-   and ``Intel OneAPI 2022 Fortran``, one can do:
+   and ``Intel oneAPI 2022 Fortran``, one can do:
 
    #. ``Start`` -> ``Programs`` -> ``Intel oneAPI 2022`` -> ``Intel oneAPI command prompt for Intel 64 for Visual Studio 2022``.
       This should start a ``DOS Command shell`` with working compilers.
@@ -133,7 +133,7 @@ and use ``win32fe`` [#win32]_ compiler wrapper, to use the  Microsoft/Intel comp
 Example Configure Usage With Microsoft Windows Compilers
 --------------------------------------------------------
 
-Use ``configure`` with ``Visual Studio 2022 C`` and ``Intel OneAPI 2022 Fortran`` (without MPI):
+Use ``configure`` with ``Visual Studio 2022 C`` and ``Intel oneAPI 2022 Fortran`` (without MPI):
 
 .. code-block:: console
 
