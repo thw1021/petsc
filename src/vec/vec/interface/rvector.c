@@ -3886,6 +3886,310 @@ PetscErrorCode VecRestoreArray4dRead(Vec x, PetscInt m, PetscInt n, PetscInt p, 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@
+  VecLocalFormSetVec - Sets the vector to be used for the local form vector in the global vector
+
+  Logically Collective
+
+  Input Parameters:
++ g - the global vector
+- l - the local vector
+
+  Level: developer
+
+  Note:
+  Does not increase the reference count of `l`.
+
+.seealso: [](ch_vectors), `Vec`, `VecType`, `VecLocalFormRestoreRead()`, `VecLocalFormGetWrite()`, `VecLocalFormRestoreWrite()`
+@*/
+PetscErrorCode VecLocalFormSetVec(Vec g, Vec l)
+{
+  PetscFunctionBegin;
+  g->localform.vec = l;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  VecLocalFormSetUpdateRead - Sets the operation to be used to update the local form vector from the global vector
+
+  Logically Collective
+
+  Input Parameters:
++ g      - the global vector
+- update - the update function
+
+  Calling sequence of `update`:
++ g - the global vector
+- l - the local vector
+
+  Level: developer
+
+.seealso: [](ch_vectors), `Vec`, `VecType`, `VecLocalFormGetRead()`, `VecLocalFormRestoreRead()`, `VecLocalFormGetWrite()`,
+          `VecLocalFormRestoreWrite()`, `VecLocalFormSetUpdateWrite()`
+@*/
+PetscErrorCode VecLocalFormSetUpdateRead(Vec g, PetscErrorCode (*update)(Vec g, Vec l))
+{
+  PetscFunctionBegin;
+  g->localform.updateread = update;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  VecLocalFormSetUpdateWrite - Sets the operation to be used to update the global vector from the local vector
+
+  Logically Collective
+
+  Input Parameters:
++ g      - the global vector
+- update - the update function
+
+  Calling sequence of `update`:
++ g - the global vector
+- l - the local vector
+
+  Level: developer
+
+  Note:
+  The function should ensure that `g` is zeroed and then the `l` values are added into `g`
+
+.seealso: [](ch_vectors), `Vec`, `VecType`, `VecLocalFormGetRead()`, `VecLocalFormRestoreRead()`, `VecLocalFormGetWrite()`,
+          `VecLocalFormRestoreWrite()`, `VecLocalFormSetUpdateRead()`
+@*/
+PetscErrorCode VecLocalFormSetUpdateWrite(Vec g, PetscErrorCode (*update)(Vec g, Vec l))
+{
+  PetscFunctionBegin;
+  g->localform.updatewrite = update;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  VecLocalFormGetRead - Obtains the local ghosted representation of
+  a parallel vector with the correct ghost values.
+
+  Logically Collective
+
+  Input Parameter:
+. g - the global vector
+
+  Output Parameter:
+. l - the local (ghosted) representation
+
+  Level: beginner
+
+  Notes:
+  This routine updates the local vector entries on if needed.
+
+.seealso: [](ch_vectors), `Vec`, `VecType`, `VecLocalFormRestoreRead()`, `VecLocalFormGetWrite()`, `VecLocalFormRestoreWrite()`
+@*/
+PetscErrorCode VecLocalFormGetRead(Vec g, Vec *l)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(g, VEC_CLASSID, 1);
+  PetscAssertPointer(l, 2);
+  if (!g->localform.vec) PetscUseMethod(g, "VecLocalFormCreate_C", (Vec, Vec *), (g, &g->localform.vec));
+  *l = g->localform.vec;
+  if (g != *l && (((PetscObject)g)->state != g->localform.state || ((PetscObject)*l)->state != (*l)->localform.state)) PetscCall((*g->localform.updateread)(g, *l));
+  (*l)->localform.state = ((PetscObject)*l)->state;
+  g->localform.state    = ((PetscObject)g)->state;
+  PetscCall(VecLockReadPush(g));
+  PetscCall(VecLockReadPush(*l));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  VecLocalFormRestoreRead - Returns the local ghosted representation of
+  a parallel vector with the correct ghost values when it is no longer needed
+
+  Logically Collective
+
+  Input Parameters:
++ g - the global vector
+- l - the local (ghosted) representation, must have been obtained with `VecLocalFormGetRead()`
+
+  Level: beginner
+
+.seealso: [](ch_vectors), `Vec`, `VecType`, `VecLocalFormGetRead()`, `VecLocalFormGetWrite()`, `VecLocalFormRestoreWrite()`
+@*/
+PetscErrorCode VecLocalFormRestoreRead(Vec g, Vec *l)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(g, VEC_CLASSID, 1);
+  PetscAssertPointer(l, 2);
+  PetscValidHeaderSpecific(*l, VEC_CLASSID, 2);
+  PetscCheck(g->localform.vec == *l, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Local vector not obtained form global vector with VecLocalFormGetRead()");
+  PetscCall(VecLockReadPop(g));
+  PetscCall(VecLockReadPop(*l));
+  *l = NULL;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  VecLocalFormGetWrite - Obtains the local ghosted representation of
+  a parallel vector without defined entries
+
+  Logically Collective
+
+  Input Parameter:
+. g - the global vector
+
+  Output Parameter:
+. l - the local (ghosted) representation
+
+  Level: beginner
+
+  Notes:
+  This routine updates the local vector entries on if needed.
+
+.seealso: [](ch_vectors), `Vec`, `VecType`, `VecLocalFormRestoreRead()`, `VecLocalFormGetRead()`, `VecLocalFormRestoreWrite()`
+@*/
+PetscErrorCode VecLocalFormGetWrite(Vec g, Vec *l)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(g, VEC_CLASSID, 1);
+  PetscAssertPointer(l, 2);
+  if (!g->localform.vec) PetscUseMethod(g, "VecLocalFormCreate_C", (Vec, Vec *), (g, &g->localform.vec));
+  *l = g->localform.vec;
+  PetscCall(VecLockReadPush(g));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  VecLocalFormRestoreWrite - Returns the local ghosted representation of
+  a parallel vector with the correct ghost values obtained with `VecLocalFormGetWrite()` after appropriate values have been entered
+
+  Collective
+
+  Input Parameters:
++ g - the global vector
+- l - the local (ghosted) representation, must have been obtained with `VecLocalFormGetWrite()`
+
+  Level: beginner
+
+  Note:
+  `g` is zeroed and the values in `l` are added to the 'g' vector.
+
+.seealso: [](ch_vectors), `Vec`, `VecType`, `VecLocalFormGetRead()`, `VecLocalFormGetWrite()`, `VecLocalFormRestoreRead()`
+@*/
+PetscErrorCode VecLocalFormRestoreWrite(Vec g, Vec *l)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(g, VEC_CLASSID, 1);
+  PetscAssertPointer(l, 2);
+  PetscValidHeaderSpecific(*l, VEC_CLASSID, 2);
+  PetscCheck(g->localform.vec == *l, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Local vector not obtained form global vector with VecLocalFormGetWrite()");
+  PetscCall(VecLockReadPop(g));
+  if (g != *l) PetscCall((*g->localform.updatewrite)(g, *l));
+  *l = NULL;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode VecGetLocalToGlobalMapping_SharedArray(Vec X, ISLocalToGlobalMapping *ltg)
+{
+  PetscInt       *indices, n, nghost, rstart, i;
+  const PetscInt *ghostidx;
+  MPI_Comm        comm;
+
+  PetscFunctionBegin;
+  if (X->map->mapping) {
+    *ltg = X->map->mapping;
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+  PetscCall(ISGetLocalSize(X->localform.is, &nghost));
+  PetscCall(VecGetLocalSize(X, &n));
+  PetscCall(ISGetIndices(X->localform.is, &ghostidx));
+  /* set local to global mapping for ghosted vector */
+  PetscCall(PetscMalloc1(n + nghost, &indices));
+  PetscCall(VecGetOwnershipRange(X, &rstart, NULL));
+  for (i = 0; i < n; i++) { indices[i] = rstart + i; }
+  for (i = 0; i < nghost; i++) { indices[n + i] = ghostidx[i]; }
+  PetscCall(ISRestoreIndices(X->localform.is, &ghostidx));
+  PetscCall(PetscObjectGetComm((PetscObject)X, &comm));
+  PetscCall(ISLocalToGlobalMappingCreate(comm, 1, n + nghost, indices, PETSC_OWN_POINTER, &X->map->mapping));
+  *ltg = X->map->mapping;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode VecLocalFormUpdateRead_SharedArray(Vec g, Vec l)
+{
+  PetscFunctionBegin;
+  PetscCall(VecScatterBegin(g->localform.scatter, g, l, INSERT_VALUES, SCATTER_FORWARD));
+  PetscCall(VecScatterEnd(g->localform.scatter, g, l, INSERT_VALUES, SCATTER_FORWARD));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode VecLocalFormUpdateWrite_SharedArray(Vec g, Vec l)
+{
+  PetscFunctionBegin;
+  PetscCall(VecScatterBegin(g->localform.scatter, l, g, ADD_VALUES, SCATTER_REVERSE));
+  PetscCall(VecScatterEnd(g->localform.scatter, l, g, ADD_VALUES, SCATTER_REVERSE));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecCreate_MPI_Private(Vec, PetscBool, PetscInt, const PetscScalar[]);
+
+/*@
+  VecLocalFormSetIS -  Sets the ghost points for the local representation of a vector
+
+  Collective
+
+  Input Parameters:
++ g  - the vector to add the local form
+- is - is providing the global indices of the ghost points in the local representation
+
+  Level: intermediate
+
+  Notes:
+  The vector cannot already have a local representation
+
+  Use `VecLocalFormGetRead()` or `VecLocalFormGetWrite()` to access the local, ghosted representation of the vector.
+
+  This also automatically sets the `ISLocalToGlobalMapping()` for this vector.
+
+  You must call this AFTER you have set the type of the vector (with` VecSetType()`) and the size (with `VecSetSizes()`).
+
+.seealso: [](ch_vectors), `Vec`, `VecType`, `VecCreateSeq()`, `VecLocalFormGetRead()`, `VecLocalFormGetWrite()`
+@*/
+PetscErrorCode VecLocalFormSetIS(Vec g, IS is)
+{
+  PetscInt     n, N, nghost;
+  PetscScalar *larray;
+  IS           to;
+  MPI_Comm     comm;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(g, VEC_CLASSID, 1);
+  PetscCheck(g->localform.vec == NULL, PetscObjectComm((PetscObject)g), PETSC_ERR_ARG_WRONGSTATE, "Vector already has local form");
+
+  PetscCall(PetscObjectGetComm((PetscObject)g, &comm));
+  PetscCall(ISGetLocalSize(is, &nghost));
+  n = g->map->n;
+  N = g->map->N;
+  PetscUseTypeMethod(g, destroy);
+  PetscCall(VecSetSizes(g, n, N));
+
+  // this will not work for non-CPU vectors as written
+  PetscCall(VecCreate_MPI_Private(g, PETSC_TRUE, nghost, NULL));
+
+  /* Create local representation */
+  PetscCall(VecGetArray(g, &larray));
+  PetscCall(VecCreateSeqWithArray(PETSC_COMM_SELF, 1, n + nghost, larray, &g->localform.vec));
+  PetscCall(VecRestoreArray(g, &larray));
+
+  /*
+   Create scatter context for scattering (updating) ghost values
+  */
+  PetscCall(ISCreateStride(PETSC_COMM_SELF, nghost, n, 1, &to));
+  PetscCall(VecScatterCreate(g, is, g->localform.vec, to, &g->localform.scatter));
+  PetscCall(ISDestroy(&to));
+  g->localform.is = is;
+  PetscCall(PetscObjectReference((PetscObject)is));
+  g->ops->getlocaltoglobalmapping = VecGetLocalToGlobalMapping_SharedArray;
+
+  PetscCall(VecLocalFormSetUpdateRead(g, VecLocalFormUpdateRead_SharedArray));
+  PetscCall(VecLocalFormSetUpdateWrite(g, VecLocalFormUpdateWrite_SharedArray));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 #if defined(PETSC_USE_DEBUG)
 
 /*@

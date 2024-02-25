@@ -53,6 +53,8 @@ Changes: Development
 - ``VecScale()`` is now a logically collective operation
 - Add ``VecISShift()`` to shift a part of the vector
 - ``VecISSet()`` does no longer accept NULL as index set
+- Add ``VecLocalFormGetRead()``, ``VecLocalFormRestoreRead()``, ``VecLocalFormGetWrite()``, ``VecLocalFormRestoreWrite()``, ``VecLocalFormSetVec()``, ``VecLocalFormSetIS()``, ``VecLocalFormSetUpdateRead()``, and ``VecLocalFormSetUpdateWrite()``
+- Deprecate ``VecGhostGetGhostIS()``, ``VecGhostGetLocalForm()``, ``VecGhostRestoreLocalForm()``, ``VecGhostIsLocalForm()``, ``VecGhostUpdateBegin()``, ``VecGhostUpdateEnd()``, ``VecCreateGhost()``, ``VecCreateGhostWithArray()``, ``VecCreateGhostBlock()``, and ``VecCreateGhostBlockWithArray()``
 
 .. rubric:: PetscSection:
 
