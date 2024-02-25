@@ -116,7 +116,7 @@ and use ``win32fe`` [#win32]_ compiler wrapper, to use the  Microsoft/Intel comp
    ``cl foo.c`` or ``ifort foo.F`` works from this shell. For example - if using ``Visual Studio 2022 C``
    and ``Intel OneAPI 2022 Fortran``, one can do:
 
-   #. ``Start`` -> ``Programs`` -> ``Intel OneAPI 2022`` -> ``Intel OneAPI command prompt for Intel 64 for Visual Studio 2022``.
+   #. ``Start`` -> ``Programs`` -> ``Intel oneAPI 2022`` -> ``Intel oneAPI command prompt for Intel 64 for Visual Studio 2022``.
       This should start a ``DOS Command shell`` with working compilers.
 
    #. Within this ``DOS Command shell`` - run ``Cygwin64 Terminal``, i.e., ``mintty.exe`` as:
@@ -147,11 +147,11 @@ If Fortran or C++ usage is not required, use:
 
 .. note::
 
-   - One can use Intel OneAPI C/C++ compiler ``icl`` or ``icx`` instead of Microsoft ``cl``, for ex: ``--with-cc=win32fe_icl --with-cxx=win32fe_icl``.
+   - One can use Intel oneAPI C/C++ compiler ``icl`` or ``icx`` instead of Microsoft ``cl``, for ex: ``--with-cc=win32fe_icl --with-cxx=win32fe_icl``.
 
    - A shorter form ``--with-cc=cl`` that translates to ``--with-cc=win32fe_cl`` is also supported. Similarly for ``icl``, ``icx``, ``ifort``, ``ifx``.
 
-   - OneAPI ``ifx`` currently works with ``--with-shared-libraries=0`` only, ``ifort`` is recommended for default shared library build.
+   - oneAPI ``ifx`` currently works with ``--with-shared-libraries=0`` only, ``ifort`` is recommended for default shared library build.
 
    - The ``--download-package`` option may work with some :ref:`external packages <doc_externalsoftware>` and fail with most packages.
 
