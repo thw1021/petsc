@@ -215,7 +215,7 @@ static PetscErrorCode PCView_GASM(PC pc, PetscViewer viewer)
           PetscCall(PetscViewerASCIIPushTab(sviewer));
           if (view_subdomains) PetscCall(PCGASMSubdomainView_Private(pc, d, sviewer));
           if (!pc->setupcalled) {
-            PetscCall(PetscViewerASCIIPrintf(sviewer, "  Solver not set up yet: PCSetUp() not yet called\n"));
+            PetscCall(PetscViewerASCIISynchronizedPrintf(sviewer, "  Solver not set up yet: PCSetUp() not yet called\n"));
           } else {
             PetscCall(KSPView(osm->ksp[d], sviewer));
           }

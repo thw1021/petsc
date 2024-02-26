@@ -53,7 +53,7 @@ int main(int argc, char **argv)
 
   PetscCall(PetscViewerASCIIPushSynchronized(PETSC_VIEWER_STDOUT_WORLD));
   PetscCall(PetscViewerGetSubViewer(PETSC_VIEWER_STDOUT_WORLD, PETSC_COMM_SELF, &viewer));
-  PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "\nLocal Vector: processor %d\n", rank));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "\nLocal Vector: processor %d\n", rank));
   PetscCall(VecView(local, viewer));
   PetscCall(PetscViewerRestoreSubViewer(PETSC_VIEWER_STDOUT_WORLD, PETSC_COMM_SELF, &viewer));
   PetscCall(PetscViewerASCIIPopSynchronized(PETSC_VIEWER_STDOUT_WORLD));
@@ -70,7 +70,7 @@ int main(int argc, char **argv)
 
   PetscCall(PetscViewerASCIIPushSynchronized(PETSC_VIEWER_STDOUT_WORLD));
   PetscCall(PetscViewerGetSubViewer(PETSC_VIEWER_STDOUT_WORLD, PETSC_COMM_SELF, &viewer));
-  PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "\nLocal Vector: processor %d\n", rank));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "\nLocal Vector: processor %d\n", rank));
   PetscCall(VecView(buffer, viewer));
   PetscCall(PetscViewerRestoreSubViewer(PETSC_VIEWER_STDOUT_WORLD, PETSC_COMM_SELF, &viewer));
   PetscCall(PetscViewerASCIIPopSynchronized(PETSC_VIEWER_STDOUT_WORLD));
