@@ -9,7 +9,7 @@ PetscErrorCode MyISView(IS *rowis, IS *colis, PetscInt gs, PetscInt ss, PetscVie
   PetscViewer subviewer = NULL;
 
   PetscFunctionBeginUser;
-  PetscCheck(ss <= 1, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE,"ss must be less than or equal 1");
+  PetscCheck(ss <= 1, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "ss must be less than or equal to 1");
   PetscCall(PetscViewerASCIIPrintf(viewer, "Row IS %" PetscInt_FMT "\n", gs));
   PetscCall(PetscViewerGetSubViewer(viewer, ss > -1 ? PetscObjectComm((PetscObject)rowis[ss]) : PETSC_COMM_SELF, &subviewer));
   if (ss > -1) PetscCall(ISView(rowis[ss], subviewer));
