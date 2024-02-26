@@ -202,7 +202,6 @@ static PetscErrorCode PCView_BJacobi(PC pc, PetscViewer viewer)
           PetscCall(KSPView(jac->ksp[0], sviewer));
           PetscCall(PetscViewerASCIIPopTab(viewer));
         }
-        PetscCall(PetscViewerFlush(sviewer));
         PetscCall(PetscViewerRestoreSubViewer(viewer, PETSC_COMM_SELF, &sviewer));
         /*  extra call needed because of the two calls to PetscViewerASCIIPushSynchronized() in PetscViewerGetSubViewer() */
         PetscCall(PetscViewerASCIIPopSynchronized(viewer));
@@ -213,21 +212,18 @@ static PetscErrorCode PCView_BJacobi(PC pc, PetscViewer viewer)
           PetscCall(KSPView(*(jac->ksp), sviewer));
           PetscCall(PetscViewerASCIIPopTab(viewer));
         }
-        PetscCall(PetscViewerFlush(sviewer));
         PetscCall(PetscViewerRestoreSubViewer(viewer, mpjac->psubcomm->child, &sviewer));
         /*  extra call needed because of the two calls to PetscViewerASCIIPushSynchronized() in PetscViewerGetSubViewer() */
         PetscCall(PetscViewerASCIIPopSynchronized(viewer));
-      } else {
-        PetscCall(PetscViewerFlush(viewer));
       }
     } else {
       PetscInt n_global;
       PetscCall(MPIU_Allreduce(&jac->n_local, &n_global, 1, MPIU_INT, MPI_MAX, PetscObjectComm((PetscObject)pc)));
       PetscCall(PetscViewerASCIIPushSynchronized(viewer));
       PetscCall(PetscViewerASCIIPrintf(viewer, "  Local solver information for each block is in the following KSP and PC objects:\n"));
-      PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "[%d] number of local blocks = %" PetscInt_FMT ", first local block number = %" PetscInt_FMT "\n", rank, jac->n_local, jac->first_local));
       PetscCall(PetscViewerASCIIPushTab(viewer));
       PetscCall(PetscViewerGetSubViewer(viewer, PETSC_COMM_SELF, &sviewer));
+      PetscCall(PetscViewerASCIISynchronizedPrintf(sviewer, "[%d] number of local blocks = %" PetscInt_FMT ", first local block number = %" PetscInt_FMT "\n", rank, jac->n_local, jac->first_local));
       for (i = 0; i < jac->n_local; i++) {
         PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "[%d] local block number %" PetscInt_FMT "\n", rank, i));
         PetscCall(KSPView(jac->ksp[i], sviewer));
@@ -235,7 +231,6 @@ static PetscErrorCode PCView_BJacobi(PC pc, PetscViewer viewer)
       }
       PetscCall(PetscViewerRestoreSubViewer(viewer, PETSC_COMM_SELF, &sviewer));
       PetscCall(PetscViewerASCIIPopTab(viewer));
-      PetscCall(PetscViewerFlush(viewer));
       PetscCall(PetscViewerASCIIPopSynchronized(viewer));
     }
   } else if (isstring) {
