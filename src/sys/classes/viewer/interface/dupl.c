@@ -8,7 +8,7 @@
 
   Input Parameters:
 + viewer - the `PetscViewer` to be reproduced
-- comm   - the sub communicators to use
+- comm   - the sub communicator to use
 
   Output Parameter:
 . outviewer - new `PetscViewer`
@@ -50,7 +50,7 @@
   the calls to `PetscViewerGetSubViewer()` and `PetscViewerRestoreSubViewer()`. If the user does there
   could be errors in the viewing that go undetected or crash the code.
 
-  Complex use of this functionality with `PETSCVIEWERASCII` can result in output in unexpected order. This seems unavoidable
+  Complex use of this functionality with `PETSCVIEWERASCII` can result in output in unexpected order. This seems unavoidable.
 
 .seealso: [](sec_viewers), `PetscViewer`, `PetscViewerSocketOpen()`, `PetscViewerASCIIOpen()`, `PetscViewerDrawOpen()`,
           `PetscViewerFlush()`, `PetscViewerRestoreSubViewer()`
