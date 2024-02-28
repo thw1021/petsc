@@ -540,7 +540,7 @@ static PetscErrorCode MatUpdate_LMVMCDQN(Mat B, Vec X, Vec F)
         PetscScalar sTy = curvature;
 
         PetscCall(VecDot(lmvm->Fprev, lmvm->Fprev, &yTy));
-        diagctx->sigma = sTy / yTy;
+        diagctx->sigma = PetscRealPart(sTy) / PetscRealPart(yTy);
       } else if (lqn->scale_type == MAT_LMVM_SYMBROYDEN_SCALE_DIAGONAL) {
         PetscBool   forward = PETSC_TRUE;
         PetscScalar sTy     = curvature;
@@ -548,7 +548,7 @@ static PetscErrorCode MatUpdate_LMVMCDQN(Mat B, Vec X, Vec F)
 
         if (!diagctx->invD) {
           PetscCall(VecDuplicate(lmvm->Fprev, &diagctx->invD));
-          PetscCall(VecSetAsync_Private(diagctx->invD, sTy / yTy, dctx));
+          PetscCall(VecSetAsync_Private(diagctx->invD, PetscRealPart(sTy) / PetscRealPart(yTy), dctx));
         }
         if (!diagctx->U) PetscCall(VecDuplicate(lmvm->Fprev, &diagctx->U));
         if (!diagctx->V) PetscCall(VecDuplicate(lmvm->Fprev, &diagctx->V));
@@ -564,18 +564,18 @@ static PetscErrorCode MatUpdate_LMVMCDQN(Mat B, Vec X, Vec F)
           PetscCall(VecAXPYAsync_Private(diagctx->invD, 1.0 / sTy, diagctx->U, dctx));
           PetscCall(VecDot(diagctx->V, lmvm->Xprev, &sTDs));
           PetscCall(VecPointwiseMultAsync_Private(diagctx->V, diagctx->V, diagctx->V, dctx));
-          PetscCall(VecAXPYAsync_Private(diagctx->invD, -1.0 / PetscMax(sTDs, diagctx->tol), diagctx->V, dctx));
+          PetscCall(VecAXPYAsync_Private(diagctx->invD, -1.0 / PetscMax(PetscRealPart(sTDs), diagctx->tol), diagctx->V, dctx));
           PetscCall(VecReciprocalAsync_Private(diagctx->invD, dctx));
           PetscCall(VecAbsAsync_Private(diagctx->invD, dctx));
           PetscCall(VecDot(diagctx->U, diagctx->invD, &yTDy));
-          PetscCall(VecScaleAsync_Private(diagctx->invD, sTy / yTDy, dctx));
+          PetscCall(VecScaleAsync_Private(diagctx->invD, PetscRealPart(sTy) / PetscRealPart(yTDy), dctx));
         } else {
           PetscScalar sTs;
           PetscCall(VecDot(lmvm->Xprev, lmvm->Xprev, &sTs));
 
-          PetscCall(VecSetAsync_Private(diagctx->V, sTy / yTy, dctx));
+          PetscCall(VecSetAsync_Private(diagctx->V, PetscRealPart(sTy) / PetscRealPart(yTy), dctx));
           PetscCall(VecPointwiseMinAsync_Private(diagctx->V, diagctx->V, diagctx->invD, dctx)); /* lower bound = min(invD, sTy / yTy) */
-          PetscCall(VecSetAsync_Private(diagctx->W, sTs / sTy, dctx));
+          PetscCall(VecSetAsync_Private(diagctx->W, PetscRealPart(sTs) / PetscRealPart(sTy), dctx));
           PetscCall(VecPointwiseMaxAsync_Private(diagctx->W, diagctx->W, diagctx->invD, dctx)); /* lower bound = max(invD, sTs / sTy) */
 
           PetscCall(VecPointwiseMultAsync_Private(diagctx->U, lmvm->Fprev, lmvm->Xprev, dctx));
