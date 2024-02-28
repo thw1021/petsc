@@ -11,6 +11,7 @@ configure_options = [
   '--download-mpich',
   '--download-mpich-device=ch3:sock',
   '--download-superlu_dist',
+  '--download-superlu_dist-commit=master',
   '--download-metis',
   '--download-parmetis',
   '--download-cmake',  # needed by metis/parmetis
