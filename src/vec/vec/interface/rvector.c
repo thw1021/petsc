@@ -4134,7 +4134,7 @@ PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecCreate_MPI_Private(Vec, PetscBool,
 
   Input Parameters:
 + g  - the vector to add the local form
-- is - is providing the global indices of the ghost points in the local representation
+- is - is providing the global indices of the ghost points in the local representation, can be `NULL`
 
   Level: intermediate
 
@@ -4161,6 +4161,8 @@ PetscErrorCode VecLocalFormSetIS(Vec g, IS is)
   PetscCheck(g->localform.vec == NULL, PetscObjectComm((PetscObject)g), PETSC_ERR_ARG_WRONGSTATE, "Vector already has local form");
 
   PetscCall(PetscObjectGetComm((PetscObject)g, &comm));
+  PetscCall(PetscObjectReference((PetscObject)is));
+  if (!is) PetscCall(ISCreateGeneral(PETSC_COMM_SELF, 0, NULL, PETSC_COPY_VALUES, &is));
   PetscCall(ISGetLocalSize(is, &nghost));
   n = g->map->n;
   N = g->map->N;
@@ -4181,12 +4183,47 @@ PetscErrorCode VecLocalFormSetIS(Vec g, IS is)
   PetscCall(ISCreateStride(PETSC_COMM_SELF, nghost, n, 1, &to));
   PetscCall(VecScatterCreate(g, is, g->localform.vec, to, &g->localform.scatter));
   PetscCall(ISDestroy(&to));
-  g->localform.is = is;
-  PetscCall(PetscObjectReference((PetscObject)is));
+  g->localform.is                 = is;
   g->ops->getlocaltoglobalmapping = VecGetLocalToGlobalMapping_SharedArray;
 
   PetscCall(VecLocalFormSetUpdateRead(g, VecLocalFormUpdateRead_SharedArray));
   PetscCall(VecLocalFormSetUpdateWrite(g, VecLocalFormUpdateWrite_SharedArray));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  VecLocalFormCreate - Creates a parallel vector with ghost padding on each processor.
+
+  Collective
+
+  Input Parameters:
++ comm   - the MPI communicator to use
+. n      - local vector length
+. N      - global vector length (or `PETSC_DETERMINE` to have calculated if `n` is given)
+- is     - `IS` that indicates the global location of all ghost points, see `VecLocalFormSetIS()`
+
+  Output Parameter:
+. g - the global vector representation (without ghost points as part of vector)
+
+  Level: advanced
+
+  Notes:
+  Use `VecLocalFormGetRead()` or `VecLocalFormGetWrite()` to access the local, ghosted representation
+  of the vector.
+
+  This also automatically sets the `ISLocalToGlobalMapping()` for this vector.
+
+.seealso: [](ch_vectors), `Vec`, `VecType`, `VecCreateSeq()`, `VecCreate()`, `VecLocalFormGetRead()`, `VecLocalFormGetWrite()`,
+          `VecLocalFormRestoreRead()` or `VecLocalFormRestoreWrite()`, `VecLocalFormSetIS()`
+
+@*/
+PetscErrorCode VecLocalFormCreate(MPI_Comm comm, PetscInt n, PetscInt N, IS is, Vec *g)
+{
+  PetscFunctionBegin;
+  PetscCall(VecCreate(comm, g));
+  PetscCall(VecSetSizes(*g, n, N));
+  PetscCall(VecSetType(*g, VECMPI));
+  PetscCall(VecLocalFormSetIS(*g, is));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

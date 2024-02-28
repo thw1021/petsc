@@ -736,6 +736,7 @@ PETSC_EXTERN PetscErrorCode VecLocalFormSetUpdateRead(Vec, PetscErrorCode (*)(Ve
 PETSC_EXTERN PetscErrorCode VecLocalFormGetWrite(Vec, Vec *);
 PETSC_EXTERN PetscErrorCode VecLocalFormRestoreWrite(Vec, Vec *);
 PETSC_EXTERN PetscErrorCode VecLocalFormSetUpdateWrite(Vec, PetscErrorCode (*)(Vec, Vec));
+PETSC_EXTERN PetscErrorCode VecLocalFormCreate(MPI_Comm, PetscInt, PetscInt, IS, Vec *);
 
 PETSC_EXTERN PetscErrorCode VecConjugate(Vec);
 PETSC_EXTERN PetscErrorCode VecImaginaryPart(Vec);
