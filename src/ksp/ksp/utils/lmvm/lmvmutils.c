@@ -1,4 +1,10 @@
+#include <petscdevice.h>
 #include <../src/ksp/ksp/utils/lmvm/lmvm.h> /*I "petscksp.h" I*/
+#include <petsc/private/deviceimpl.h>
+
+PetscLogEvent LMVM_Update;
+PetscLogEvent LMVM_J0Fwd;
+PetscLogEvent LMVM_J0Inv;
 
 /*@
   MatLMVMUpdate - Adds (X-Xprev) and (F-Fprev) updates to an `MATLMVM` matrix.
@@ -40,7 +46,9 @@ PetscErrorCode MatLMVMUpdate(Mat B, Vec X, Vec F)
     PetscCall(PetscObjectBaseTypeCompare((PetscObject)lmvm->J0, MATLMVM, &same));
     if (same) PetscCall(MatLMVMUpdate(lmvm->J0, X, F));
   }
+  PetscCall(PetscLogEventBegin(LMVM_Update, (PetscObject)B, NULL, NULL, NULL));
   PetscCall((*lmvm->ops->update)(B, X, F));
+  PetscCall(PetscLogEventEnd(LMVM_Update, (PetscObject)B, NULL, NULL, NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -362,9 +370,10 @@ PetscErrorCode MatLMVMGetJ0KSP(Mat B, KSP *J0ksp)
 @*/
 PetscErrorCode MatLMVMApplyJ0Fwd(Mat B, Vec X, Vec Y)
 {
-  Mat_LMVM *lmvm;
-  PetscBool same, hasMult;
-  Mat       Amat, Pmat;
+  Mat_LMVM          *lmvm = (Mat_LMVM *)B->data;
+  PetscBool          same, hasMult;
+  Mat                Amat, Pmat;
+  PetscDeviceContext dctx;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(B, MAT_CLASSID, 1);
@@ -372,9 +381,10 @@ PetscErrorCode MatLMVMApplyJ0Fwd(Mat B, Vec X, Vec Y)
   PetscValidHeaderSpecific(Y, VEC_CLASSID, 3);
   PetscCall(PetscObjectBaseTypeCompare((PetscObject)B, MATLMVM, &same));
   PetscCheck(same, PetscObjectComm((PetscObject)B), PETSC_ERR_ARG_WRONG, "Matrix must be an LMVM-type.");
-  lmvm = (Mat_LMVM *)B->data;
   PetscCheck(lmvm->allocated, PetscObjectComm((PetscObject)B), PETSC_ERR_ORDER, "LMVM matrix must be allocated first");
   VecCheckMatCompatible(B, X, 2, Y, 3);
+  PetscCall(PetscLogEventBegin(LMVM_J0Fwd, (PetscObject)B, NULL, NULL, NULL));
+  PetscCall(PetscDeviceContextGetCurrentContext(&dctx));
   if (lmvm->user_pc || lmvm->user_ksp || lmvm->J0) {
     /* User may have defined a PC or KSP for J0^{-1} so let's try to use its operators. */
     if (lmvm->user_pc) {
@@ -390,20 +400,21 @@ PetscErrorCode MatLMVMApplyJ0Fwd(Mat B, Vec X, Vec Y)
       PetscCall(MatMult(Amat, X, Y));
     } else {
       /* there's no product, so treat J0 as identity */
-      PetscCall(VecCopy(X, Y));
+      PetscCall(VecCopyAsync_Private(X, Y, dctx));
     }
   } else if (lmvm->user_scale) {
     if (lmvm->J0diag) {
       /* User has defined a diagonal vector for J0 */
-      PetscCall(VecPointwiseMult(X, lmvm->J0diag, Y));
+      PetscCall(VecPointwiseMultAsync_Private(X, lmvm->J0diag, Y, dctx));
     } else {
       /* User has defined a scalar value for J0 */
-      PetscCall(VecAXPBY(Y, lmvm->J0scalar, 0.0, X));
+      PetscCall(VecAXPBYAsync_Private(Y, lmvm->J0scalar, 0.0, X, dctx));
     }
   } else {
     /* There is no J0 representation so just apply an identity matrix */
-    PetscCall(VecCopy(X, Y));
+    PetscCall(VecCopyAsync_Private(X, Y, dctx));
   }
+  PetscCall(PetscLogEventEnd(LMVM_J0Fwd, (PetscObject)B, NULL, NULL, NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -432,8 +443,9 @@ PetscErrorCode MatLMVMApplyJ0Fwd(Mat B, Vec X, Vec Y)
 @*/
 PetscErrorCode MatLMVMApplyJ0Inv(Mat B, Vec X, Vec Y)
 {
-  Mat_LMVM *lmvm;
-  PetscBool same, hasSolve;
+  Mat_LMVM          *lmvm = (Mat_LMVM *)B->data;
+  PetscBool          same, hasSolve;
+  PetscDeviceContext dctx;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(B, MAT_CLASSID, 1);
@@ -445,6 +457,8 @@ PetscErrorCode MatLMVMApplyJ0Inv(Mat B, Vec X, Vec Y)
   PetscCheck(lmvm->allocated, PetscObjectComm((PetscObject)B), PETSC_ERR_ORDER, "LMVM matrix must be allocated first");
   VecCheckMatCompatible(B, X, 2, Y, 3);
 
+  PetscCall(PetscLogEventBegin(LMVM_J0Inv, (PetscObject)B, NULL, NULL, NULL));
+  PetscCall(PetscDeviceContextGetCurrentContext(&dctx));
   /* Invert the initial Jacobian onto q (or apply scaling) */
   if (lmvm->user_pc) {
     /* User has defined a J0 inverse so we can directly apply it as a preconditioner */
@@ -461,14 +475,15 @@ PetscErrorCode MatLMVMApplyJ0Inv(Mat B, Vec X, Vec Y)
     }
   } else if (lmvm->user_scale) {
     if (lmvm->J0diag) {
-      PetscCall(VecPointwiseDivide(X, Y, lmvm->J0diag));
+      PetscCall(VecPointwiseDivideAsync_Private(X, Y, lmvm->J0diag, dctx));
     } else {
-      PetscCall(VecAXPBY(Y, 1.0 / lmvm->J0scalar, 0.0, X));
+      PetscCall(VecAXPBYAsync_Private(Y, 1.0 / lmvm->J0scalar, 0.0, X, dctx));
     }
   } else {
     /* There is no J0 representation so just apply an identity matrix */
-    PetscCall(VecCopy(X, Y));
+    PetscCall(VecCopyAsync_Private(X, Y, dctx));
   }
+  PetscCall(PetscLogEventEnd(LMVM_J0Inv, (PetscObject)B, NULL, NULL, NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -618,26 +633,44 @@ PetscErrorCode MatLMVMReset(Mat B, PetscBool destructive)
 @*/
 PetscErrorCode MatLMVMSetHistorySize(Mat B, PetscInt hist_size)
 {
-  Mat_LMVM *lmvm;
+  Mat_LMVM *lmvm = (Mat_LMVM *)B->data;
   PetscBool same;
-  Vec       X, F;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(B, MAT_CLASSID, 1);
   PetscCall(PetscObjectBaseTypeCompare((PetscObject)B, MATLMVM, &same));
   if (!same) PetscFunctionReturn(PETSC_SUCCESS);
-  lmvm = (Mat_LMVM *)B->data;
-  if (hist_size > 0) {
-    lmvm->m = hist_size;
-    if (lmvm->allocated && lmvm->m != lmvm->m_old) {
+  PetscCheck(hist_size >= 0, PetscObjectComm((PetscObject)B), PETSC_ERR_ARG_WRONG, "QN history size must be a non-negative integer.");
+  {
+    PetscBool reallocate = PETSC_FALSE;
+    Vec       X = NULL, F = NULL;
+    //lmvm->m = hist_size;
+    if (lmvm->allocated && hist_size != lmvm->m) {
       PetscCall(VecDuplicate(lmvm->Xprev, &X));
       PetscCall(VecDuplicate(lmvm->Fprev, &F));
       PetscCall(MatLMVMReset(B, PETSC_TRUE));
+      reallocate = PETSC_TRUE;
+    }
+    lmvm->m = hist_size;
+    if (reallocate) {
       PetscCall(MatLMVMAllocate(B, X, F));
       PetscCall(VecDestroy(&X));
       PetscCall(VecDestroy(&F));
     }
-  } else PetscCheck(hist_size >= 0, PetscObjectComm((PetscObject)B), PETSC_ERR_ARG_WRONG, "QN history size must be a non-negative integer.");
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode MatLMVMGetHistorySize(Mat B, PetscInt *hist_size)
+{
+  Mat_LMVM *lmvm = (Mat_LMVM *)B->data;
+  PetscBool same;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(B, MAT_CLASSID, 1);
+  PetscCall(PetscObjectBaseTypeCompare((PetscObject)B, MATLMVM, &same));
+  if (!same) PetscFunctionReturn(PETSC_SUCCESS);
+  *hist_size = lmvm->m;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
