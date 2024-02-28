@@ -643,6 +643,7 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
           }
           // entropy init, need global n
           if (glb_v_id == v_target) {
+            if (dim == 3) PetscCall(PetscPrintf(PETSC_COMM_SELF, " moments_0[0] = %g\n", (double)moments_0[0]));
             const PetscReal N_inv = 1 / moments_0[0];
             PetscCall(PetscInfo(pack, "Target %" PetscInt_FMT " with %" PetscInt_FMT " particels\n", glb_v_id, nTargetP[0]));
             for (PetscInt grid = 0; grid < ctx->num_grids; grid++) {
