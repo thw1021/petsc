@@ -10,7 +10,7 @@ configure_options = [
   '--with-debugging=0',
   '--download-mpich',
   '--download-mpich-device=ch3:sock',
-  '--download-superlu_dist',
+  '--download-superlu_dist=https://github.com/xiaoyeli/superlu_dist.git',
   '--download-metis',
   '--download-parmetis',
   '--download-cmake',  # needed by metis/parmetis
