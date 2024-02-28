@@ -1058,10 +1058,10 @@ inline PetscErrorCode MatDense_Seq_CUPM<T>::BindToCPU(Mat A, PetscBool to_host) 
   MatComposeOp_CUPM(to_host, pobj, "MatDenseGetSubMatrix_C", MatDenseGetSubMatrix_SeqDense, GetSubMatrix);
   MatComposeOp_CUPM(to_host, pobj, "MatDenseRestoreSubMatrix_C", MatDenseRestoreSubMatrix_SeqDense, RestoreSubMatrix);
   MatComposeOp_CUPM(to_host, pobj, "MatQRFactor_C", MatQRFactor_SeqDense, SolveQR::Factor);
-  MatComposeOp_CUPM(to_host, pobj, "MatMultColumnRange_C", MatMultColumnRange_SeqDense, MatMultColumnRange_Dispatch_</* transpose */ false>);
-  MatComposeOp_CUPM(to_host, pobj, "MatMultAddColumnRange_C", MatMultColumnRange_SeqDense, MatMultAddColumnRange_Dispatch_</* transpose */ false>);
-  MatComposeOp_CUPM(to_host, pobj, "MatMultTransposeColumnRange_C", MatMultColumnRange_SeqDense, MatMultColumnRange_Dispatch_</* transpose */ true>);
-  MatComposeOp_CUPM(to_host, pobj, "MatMultTransposeAddColumnRange_C", MatMultColumnRange_SeqDense, MatMultAddColumnRange_Dispatch_</* transpose */ true>);
+  MatComposeOp_CUPM(to_host, pobj, "MatMultColumnRange_C", MatMultColumnRange_SeqDense, MatMultColumnRange_Dispatch_</* transpose */ false, /* hermitian */ false>);
+  MatComposeOp_CUPM(to_host, pobj, "MatMultAddColumnRange_C", MatMultColumnRange_SeqDense, MatMultAddColumnRange_Dispatch_</* transpose */ false, /* hermitian */ false>);
+  MatComposeOp_CUPM(to_host, pobj, "MatMultTransposeColumnRange_C", MatMultColumnRange_SeqDense, MatMultColumnRange_Dispatch_</* transpose */ true, /* hermitian */ false>);
+  MatComposeOp_CUPM(to_host, pobj, "MatMultTransposeAddColumnRange_C", MatMultColumnRange_SeqDense, MatMultAddColumnRange_Dispatch_</* transpose */ true, /* hermitian */ false>);
   // always the same
   PetscCall(PetscObjectComposeFunction(pobj, "MatDenseSetLDA_C", MatDenseSetLDA_SeqDense));
 
