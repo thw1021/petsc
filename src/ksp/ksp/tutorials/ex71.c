@@ -706,6 +706,7 @@ int main(int argc, char **args)
      args: -sub_0_pc_bddc_interface_ext_type dirichlet
      suffix: composite_bddc_dirichlet
 
+# GDSW tests
  testset:
    nsize: 8
    filter: grep -v "variant HERMITIAN"
@@ -728,5 +729,11 @@ int main(int argc, char **args)
      requires: mumps !complex
      suffix: gdsw_elast_adaptive
      args: -pde_type Elasticity -mg_levels_gdsw_tolerance 0.01 -ksp_monitor_singular_value -mg_levels_gdsw_userdefined {{0 1}separate output}
+
+# Multi-Element tests
+ testset:
+   nsize: {{1 2 3}}
+   suffix: bddc_multi_element
+   args: -cells 3,3,3 -dim 3 -ksp_error_if_not_converged -multi_element -pde_type {{Poisson Elasticity}} -ksp_converged_reason
 
 TEST*/
