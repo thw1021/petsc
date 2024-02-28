@@ -144,14 +144,14 @@ PetscErrorCode gridToParticles(const DM dm, DM sw, const Vec rhs, Vec work_ferhs
 {
   PetscBool    is_lsqr;
   KSP          ksp;
-  Mat          PM_p = NULL, MtM, D;
+  Mat          PM_p = NULL, MtM, D = NULL;
   Vec          ff;
   PetscInt     N, M, nzl;
-  MatShellCtx *matshellctx;
+  MatShellCtx *matshellctx = NULL;
   PC           pc;
 
   PetscFunctionBeginUser;
-  // (Mp Mp)^-1 M
+  // (Mp' Mp)^-1 M
   PetscCall(MatMult(Mass, rhs, work_ferhs));
   // pseudo-inverse
   PetscCall(KSPCreate(PETSC_COMM_SELF, &ksp));
@@ -167,49 +167,56 @@ PetscErrorCode gridToParticles(const DM dm, DM sw, const Vec rhs, Vec work_ferhs
       PetscCall(PetscInfo(ksp, " M (%" PetscInt_FMT ") < M (%" PetscInt_FMT ") more vertices than particles: revert to lsqr\n", M, N));
       is_lsqr = PETSC_TRUE;
       PetscCall(KSPSetType(ksp, KSPLSQR));
-      PetscCall(PCSetType(pc, PCNONE)); // should not happen, but could solve stable (Mp Mp^T), move projection Mp before solve
+      PetscCall(PCSetType(pc, PCNONE)); // should not happen, but could solve stable (Mp^T Mp), move projection Mp before solve
     } else {
       PetscCall(PetscNew(&matshellctx));
-      PetscCall(MatCreateShell(PetscObjectComm((PetscObject)dm), N, N, PETSC_DECIDE, PETSC_DECIDE, matshellctx, &MtM));
-      PetscCall(MatTranspose(M_p, MAT_INITIAL_MATRIX, &matshellctx->MpTrans));
-      matshellctx->Mp = M_p;
-      PetscCall(MatShellSetOperation(MtM, MATOP_MULT, (void (*)(void))MatMultMtM_SeqAIJ));
-      PetscCall(MatShellSetOperation(MtM, MATOP_MULT_ADD, (void (*)(void))MatMultAddMtM_SeqAIJ));
       PetscCall(MatCreateVecs(M_p, &matshellctx->uu, &matshellctx->ff));
-      PetscCall(MatCreateSeqAIJ(PETSC_COMM_SELF, N, N, 1, NULL, &D));
-      PetscCall(MatViewFromOptions(matshellctx->MpTrans, NULL, "-ftop2_Mp_mat_view"));
-      for (int i = 0; i < N; i++) {
-        const PetscScalar *vals;
-        const PetscInt    *cols;
-        PetscScalar        dot = 0;
-        PetscCall(MatGetRow(matshellctx->MpTrans, i, &nzl, &cols, &vals));
-        for (int ii = 0; ii < nzl; ii++) dot += PetscSqr(vals[ii]);
-        if (dot == 0.0) {
-          PetscCall(PetscInfo(ksp, "empty row in pseudo-inverse %d\n", i));
-          is_lsqr = PETSC_TRUE; // empty rows
-          PetscCall(KSPSetType(ksp, KSPLSQR));
-          PetscCall(PCSetType(pc, PCNONE)); // should not happen, but could solve stable (Mp Mp^T), move projection Mp before solve
-          // clean up
-          PetscCall(MatDestroy(&matshellctx->MpTrans));
-          PetscCall(VecDestroy(&matshellctx->ff));
-          PetscCall(VecDestroy(&matshellctx->uu));
-          PetscCall(MatDestroy(&D));
-          PetscCall(MatDestroy(&MtM));
-          PetscCall(PetscFree(matshellctx));
-          D = NULL;
-          break;
-        }
-        PetscCall(MatSetValue(D, i, i, dot, INSERT_VALUES));
-      }
-      if (D) {
-        PetscCall(MatAssemblyBegin(D, MAT_FINAL_ASSEMBLY));
-        PetscCall(MatAssemblyEnd(D, MAT_FINAL_ASSEMBLY));
-        PetscCall(PetscInfo(M_p, "createMtMKSP Have %" PetscInt_FMT " eqs, nzl = %" PetscInt_FMT "\n", N, nzl));
-        PetscCall(KSPSetOperators(ksp, MtM, D));
-        PetscCall(MatViewFromOptions(D, NULL, "-ftop2_D_mat_view"));
-        PetscCall(MatViewFromOptions(M_p, NULL, "-ftop2_Mp_mat_view"));
-        PetscCall(MatViewFromOptions(matshellctx->MpTrans, NULL, "-ftop2_MpTranspose_mat_view"));
+      if (0) {
+        PetscCall(MatTransposeMatMult(M_p, M_p, MAT_INITIAL_MATRIX, 4, &MtM));
+        PetscCall(KSPSetOperators(ksp, MtM, MtM));
+        PetscCall(PetscInfo(M_p, "createMtM KSP with explicit Mp'Mp\n"));
         PetscCall(MatViewFromOptions(MtM, NULL, "-ftop2_MtM_mat_view"));
+      } else {
+        PetscCall(MatCreateShell(PetscObjectComm((PetscObject)dm), N, N, PETSC_DECIDE, PETSC_DECIDE, matshellctx, &MtM));
+        PetscCall(MatTranspose(M_p, MAT_INITIAL_MATRIX, &matshellctx->MpTrans));
+        matshellctx->Mp = M_p;
+        PetscCall(MatShellSetOperation(MtM, MATOP_MULT, (void (*)(void))MatMultMtM_SeqAIJ));
+        PetscCall(MatShellSetOperation(MtM, MATOP_MULT_ADD, (void (*)(void))MatMultAddMtM_SeqAIJ));
+        PetscCall(MatCreateSeqAIJ(PETSC_COMM_SELF, N, N, 1, NULL, &D));
+        PetscCall(MatViewFromOptions(matshellctx->MpTrans, NULL, "-ftop2_Mp_mat_view"));
+        for (int i = 0; i < N; i++) {
+          const PetscScalar *vals;
+          const PetscInt    *cols;
+          PetscScalar        dot = 0;
+          PetscCall(MatGetRow(matshellctx->MpTrans, i, &nzl, &cols, &vals));
+          for (int ii = 0; ii < nzl; ii++) dot += PetscSqr(vals[ii]);
+          if (dot < PETSC_MACHINE_EPSILON) {
+            PetscCall(PetscInfo(ksp, "empty row in pseudo-inverse %d\n", i));
+            is_lsqr = PETSC_TRUE; // empty rows
+            PetscCall(KSPSetType(ksp, KSPLSQR));
+            PetscCall(PCSetType(pc, PCNONE)); // should not happen, but could solve stable (Mp Mp^T), move projection Mp before solve
+            // clean up
+            PetscCall(MatDestroy(&matshellctx->MpTrans));
+            PetscCall(VecDestroy(&matshellctx->ff));
+            PetscCall(VecDestroy(&matshellctx->uu));
+            PetscCall(MatDestroy(&D));
+            PetscCall(MatDestroy(&MtM));
+            PetscCall(PetscFree(matshellctx));
+            D = NULL;
+            break;
+          }
+          PetscCall(MatSetValue(D, i, i, dot, INSERT_VALUES));
+        }
+        if (D) {
+          PetscCall(MatAssemblyBegin(D, MAT_FINAL_ASSEMBLY));
+          PetscCall(MatAssemblyEnd(D, MAT_FINAL_ASSEMBLY));
+          PetscCall(PetscInfo(M_p, "createMtMKSP Have %" PetscInt_FMT " eqs, nzl = %" PetscInt_FMT "\n", N, nzl));
+          PetscCall(KSPSetOperators(ksp, MtM, D));
+          PetscCall(MatViewFromOptions(D, NULL, "-ftop2_D_mat_view"));
+          PetscCall(MatViewFromOptions(M_p, NULL, "-ftop2_Mp_mat_view"));
+          PetscCall(MatViewFromOptions(matshellctx->MpTrans, NULL, "-ftop2_MpTranspose_mat_view"));
+          PetscCall(MatViewFromOptions(MtM, NULL, "-ftop2_MtM_mat_view"));
+        }
       }
     }
   }
@@ -251,11 +258,11 @@ PetscErrorCode gridToParticles(const DM dm, DM sw, const Vec rhs, Vec work_ferhs
       ierr = KSPSolveTranspose(ksp, work_ferhs, ff);
       if (ierr) { PetscCheck(!ierr, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "backup LSQR solver failed - need to add N_v > N_p Moore-Penrose pseudo-inverse"); }
     }
-    PetscCall(MatDestroy(&matshellctx->MpTrans));
+    if (D) PetscCall(MatDestroy(&D));
+    PetscCall(MatDestroy(&MtM));
+    if (matshellctx->MpTrans) PetscCall(MatDestroy(&matshellctx->MpTrans));
     PetscCall(VecDestroy(&matshellctx->ff));
     PetscCall(VecDestroy(&matshellctx->uu));
-    PetscCall(MatDestroy(&D));
-    PetscCall(MatDestroy(&MtM));
     PetscCall(PetscFree(matshellctx));
   } else {
     PetscErrorCode ierr;
@@ -555,7 +562,7 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
             PetscReal       lo[3] = {-ctx->radius[grid], -ctx->radius[grid], -ctx->radius[grid]}, hi[3] = {ctx->radius[grid], ctx->radius[grid], ctx->radius[grid]}, hp[3], vole; // would be nice to get box from DM
             PetscInt        Npi = Npp0, Npj = 2 * Npp0, Npk = 1;
             PetscRandom     rand;
-            PetscReal       sigma = ctx->thermal_speed[grid] / ctx->thermal_speed[0], p2_shift = grid == 0 ? shift : -shift;
+            PetscReal       sigma = ctx->thermal_speed[grid] / ctx->thermal_speed[0], p2_shift = grid == 0 ? shift : -shift; // symmetric shift of e vs ions
             PetscCall(PetscRandomCreate(PETSC_COMM_SELF, &rand));
             PetscCall(PetscRandomSetInterval(rand, 0., 1.));
             PetscCall(PetscRandomSetFromOptions(rand));
@@ -585,8 +592,8 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
                     PetscReal x[] = {xx_t[grid][tid][pp], yy_t[grid][tid][pp], dim == 2 ? 0 : zz_t[grid][tid][pp]};
                     p_shift *= ctx->thermal_speed[grid] / ctx->v_0;
                     maxwellian(dim, x, kT_m, vole, p_shift, &wp_t[grid][tid][pp]);
-                    if (ctx->num_grids == 1 && shift != 0) { // bi-maxwellian, electron plasma
-                      maxwellian(dim, x, kT_m, vole, -p_shift, &wp_t[grid][tid][pp]);
+                    if (ctx->num_grids == 1 && shift != 0) {                          // bi-maxwellian, electron plasma
+                      maxwellian(dim, x, kT_m, vole, -p_shift, &wp_t[grid][tid][pp]); // symmetric shift of electron plasma
                     }
                   } else {
                     PetscReal u1, u2;
@@ -601,9 +608,18 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
                       yy_t[grid][tid][pp] = mag * PetscSinReal(2.0 * PETSC_PI * u2);
                       if (dim == 2 && xx_t[grid][tid][pp] < lo[0]) xx_t[grid][tid][pp] = -xx_t[grid][tid][pp];
                       if (dim == 3) zz_t[grid][tid][pp] = lo[2] + hp[2] / 2.0 + pk * hp[2];
-                      while (PetscSqrtReal(PetscSqr(xx_t[grid][tid][pp]) + PetscSqr(yy_t[grid][tid][pp])) > 0.95 * hi[0]) {
-                        xx_t[grid][tid][pp] /= 2;
-                        yy_t[grid][tid][pp] /= 2;
+                      if (!ctx->sphere) {
+                        if (dim == 2 && xx_t[grid][tid][pp] < 0) xx_t[grid][tid][pp] = -xx_t[grid][tid][pp]; // ???
+                        else if (dim == 3) {
+                          while (zz_t[grid][tid][pp] >= hi[2] || zz_t[grid][tid][pp] <= lo[2]) zz_t[grid][tid][pp] *= .9;
+                        }
+                        while (xx_t[grid][tid][pp] >= hi[0] || xx_t[grid][tid][pp] <= lo[0]) xx_t[grid][tid][pp] *= .9;
+                        while (yy_t[grid][tid][pp] >= hi[1] || yy_t[grid][tid][pp] <= lo[1]) yy_t[grid][tid][pp] *= .9;
+                      } else { // 2D
+                        while (PetscSqrtReal(PetscSqr(xx_t[grid][tid][pp]) + PetscSqr(yy_t[grid][tid][pp])) > 0.95 * hi[0]) {
+                          xx_t[grid][tid][pp] *= .9;
+                          yy_t[grid][tid][pp] *= .9;
+                        }
                       }
                       if (ctx->num_grids == 1 && pp % 2 == 0) p_shift = 0; // one species, split bi-max
                       p_shift *= ctx->thermal_speed[grid] / ctx->v_0;
@@ -638,12 +654,20 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
               wp_t[grid][tid][pp]   = 0;
               xx_t[grid][tid][pp]   = 0;
               yy_t[grid][tid][pp++] = lo[1];
+            } else {
+              const int p0 = NN - 6;
+              for (int pj = 0; pj < 6; pj++) { xx_t[grid][tid][p0 + pj] = yy_t[grid][tid][p0 + pj] = zz_t[grid][tid][p0 + pj] = wp_t[grid][tid][p0 + pj] = 0; }
+              xx_t[grid][tid][p0 + 0] = lo[0];
+              xx_t[grid][tid][p0 + 1] = hi[0];
+              yy_t[grid][tid][p0 + 2] = lo[1];
+              yy_t[grid][tid][p0 + 3] = hi[1];
+              zz_t[grid][tid][p0 + 4] = lo[2];
+              zz_t[grid][tid][p0 + 5] = hi[2];
             }
             PetscCall(PetscRandomDestroy(&rand));
           }
           // entropy init, need global n
           if (glb_v_id == v_target) {
-            if (dim == 3) PetscCall(PetscPrintf(PETSC_COMM_SELF, " moments_0[0] = %g\n", (double)moments_0[0]));
             const PetscReal N_inv = 1 / moments_0[0];
             PetscCall(PetscInfo(pack, "Target %" PetscInt_FMT " with %" PetscInt_FMT " particels\n", glb_v_id, nTargetP[0]));
             for (PetscInt grid = 0; grid < ctx->num_grids; grid++) {
@@ -1050,8 +1074,8 @@ int main(int argc, char **argv)
           -dm_landau_batch_size 4 -number_spatial_vertices 6 -vertex_view_target 5 -grid_view_target 1 -dm_landau_batch_view_idx 1 \
           -dm_landau_n 1.000018,1,1e-6 -dm_landau_thermal_temps 2,1,1 -dm_landau_ion_masses 2,180 -dm_landau_ion_charges 1,18 \
           -ftop_ksp_rtol 1e-10 -ftop_ksp_type lsqr -ftop_pc_type bjacobi -ftop_sub_pc_factor_shift_type nonzero -ftop_sub_pc_type lu -ftop_ksp_error_if_not_converged \
-          -ksp_type gmres -ksp_error_if_not_converged -dm_landau_verbose 4 -print_entropy -ptof_ksp_error_if_not_converged \
-          -ptof_ksp_type cg -ptof_pc_type jacobi -ptof_ksp_rtol 1e-12\
+          -ksp_type gmres -ksp_error_if_not_converged -dm_landau_verbose 4 -print_entropy \
+          -ptof_ksp_type cg -ptof_pc_type jacobi -ptof_ksp_rtol 1e-12 -ptof_ksp_error_if_not_converged\
           -snes_converged_reason -snes_monitor -snes_rtol 1e-12 -snes_stol 1e-12 \
           -ts_dt 0.01 -ts_rtol 1e-1 -ts_exact_final_time stepover -ts_max_snes_failures -1 -ts_max_steps 1 -ts_monitor -ts_type beuler
 
@@ -1069,8 +1093,8 @@ int main(int argc, char **argv)
     args: -dim 3 -petscspace_degree 2 -dm_landau_num_species_grid 1,1,1 -dm_refine 0 -number_particles_per_dimension 20 -dm_plex_hash_location \
           -dm_landau_batch_size 1 -number_spatial_vertices 1 -vertex_view_target 0 -grid_view_target 0 -dm_landau_batch_view_idx 0 \
           -dm_landau_n 1.000018,1,1e-6 -dm_landau_thermal_temps 2,1,1 -dm_landau_ion_masses 2,180 -dm_landau_ion_charges 1,18 \
-          -ftop_ksp_rtol 1e-12 -ftop_ksp_error_if_not_converged -ptof_ksp_error_if_not_converged -ksp_type cg -pc_type jacobi -ksp_error_if_not_converged \
-          -ptof_ksp_type cg -ptof_pc_type jacobi -ptof_ksp_rtol 1e-12\
+          -ftop_ksp_type cg -ftop_pc_type jacobi -ftop_ksp_rtol 1e-12 -ftop_ksp_error_if_not_converged -ksp_type preonly -pc_type lu -ksp_error_if_not_converged \
+          -ptof_ksp_type cg -ptof_pc_type jacobi -ptof_ksp_rtol 1e-12 -ptof_ksp_error_if_not_converged \
           -snes_converged_reason -snes_monitor -snes_rtol 1e-12 -snes_stol 1e-12\
           -ts_dt 0.1 -ts_exact_final_time stepover -ts_max_snes_failures -1 -ts_max_steps 1 -ts_monitor -ts_type beuler -print_entropy
 
@@ -1086,7 +1110,7 @@ int main(int argc, char **argv)
     requires: !complex double defined(PETSC_USE_DMLANDAU_2D) !cuda
     args: -dm_refine 1 -dm_landau_num_species_grid 1 -dm_landau_thermal_temps 1 -petscspace_degree 3 -snes_converged_reason -ts_type beuler -ts_dt .1 \
           -ts_max_steps 1 -ksp_type gmres -pc_type jacobi -ksp_error_if_not_converged -snes_rtol 1e-12 -snes_stol 1e-12 -dm_landau_device_type cpu -number_particles_per_dimension 20 \
-          -ptof_ksp_rtol 1e-12 -dm_landau_batch_size 4 -number_spatial_vertices 4 -grid_view_target 0 \
+          -ptof_ksp_type cg -ptof_pc_type jacobi -ptof_ksp_rtol 1e-12 -ptof_ksp_error_if_not_converged -dm_landau_batch_size 4 -number_spatial_vertices 4 -grid_view_target 0 \
           -vertex_view_target 3 -dm_landau_batch_view_idx 3
     test:
       suffix: simple
