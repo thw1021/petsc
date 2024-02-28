@@ -829,6 +829,5 @@ PetscErrorCode MatSymBrdnComputeJ0Scalar(Mat B)
     }
   }
   lsb->sigma = lsb->rho * signew + (1.0 - lsb->rho) * lsb->sigma;
-  PetscCall(PetscPrintf(PetscObjectComm((PetscObject)B), "%g\n", (double)PetscRealPart(lsb->sigma)));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

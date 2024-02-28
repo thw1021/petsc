@@ -166,6 +166,30 @@ int main(int argc, char **argv)
     suffix: test_cdbfgs
     nsize: {{1 2 3}}
     output_file: output/rosenbrock1_14.out
-    args: -mat_type aijcusparse -n 10 -tao_type bqnktr -test_lmvm -tao_max_it 10 -tao_bqnk_mat_type lmvmcdbfgs -tao_bqnk_mat_lbfgs_type {{cd_inplace cd_reorder}}
+    args: -mat_type aijcusparse -n 10 -tao_type bqnktr -test_lmvm -tao_max_it 10 -tao_bqnk_mat_type lmvmcdbfgs -tao_bqnk_mat_lmvm_scale_type none -tao_bqnk_mat_lbfgs_type {{inplace reorder}}
+
+  test:
+    suffix: test_cddfp
+    nsize: {{1 2 3}}
+    output_file: output/rosenbrock1_14.out
+    args: -n 10 -tao_type bqnktr -test_lmvm -tao_max_it 10 -tao_bqnk_mat_type lmvmcddfp -tao_bqnk_mat_lmvm_scale_type none -tao_bqnk_mat_ldfp_type {{inplace reorder}}
+
+  test:
+    suffix: test_cdqn_1
+    nsize: 1
+    output_file: output/rosenbrock1_29.out
+    args: -n 10 -tao_type bqnktr -test_lmvm -tao_max_it 10 -tao_bqnk_mat_type lmvmcdqn -tao_bqnk_mat_lmvm_scale_type none -tao_bqnk_mat_lqn_type {{inplace reorder}}
+
+  test:
+    suffix: test_cdqn_2
+    nsize: 2
+    output_file: output/rosenbrock1_30.out
+    args: -n 10 -tao_type bqnktr -test_lmvm -tao_max_it 10 -tao_bqnk_mat_type lmvmcdqn -tao_bqnk_mat_lmvm_scale_type none -tao_bqnk_mat_lqn_type {{inplace reorder}}
+
+  test:
+    suffix: test_cdqn_3
+    nsize: 3
+    output_file: output/rosenbrock1_31.out
+    args: -n 10 -tao_type bqnktr -test_lmvm -tao_max_it 10 -tao_bqnk_mat_type lmvmcdqn -tao_bqnk_mat_lmvm_scale_type none -tao_bqnk_mat_lqn_type {{inplace reorder}}
 
 TEST*/

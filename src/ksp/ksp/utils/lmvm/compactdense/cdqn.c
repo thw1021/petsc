@@ -47,7 +47,7 @@ static inline PetscInt oldest_update(PetscInt m, PetscInt idx)
 
 /*------------------------------------------------------------*/
 
-PetscErrorCode MatView_LMVMCDQN(Mat B, PetscViewer pv)
+static PetscErrorCode MatView_LMVMCDQN(Mat B, PetscViewer pv)
 {
   Mat_LMVM *lmvm = (Mat_LMVM *)B->data;
   Mat_CDQN *ldfp = (Mat_CDQN *)lmvm->ctx;
@@ -714,29 +714,29 @@ PetscErrorCode MatCreate_LMVMCDQN(Mat B)
 }
 
 /*@
-   MatCreateLMVMCDQN - Creates a compact dense representation of the limited-memory
-   Quasi-Newton approximation to a Hessian. This compact dense representation uses
-   Davidon-Fletcher-Powell (DFP) for MatMult, and Broyden-Fletcher-Goldfarb-Shanno (BFGS)
-   for MatSolve. This implementation results in avoiding costly Cholesky factorization,
-   at the cost of duality cap. Please refer to MatLMVMCDDFP and MatLMVMCDBFGS for more
-   information.
+  MatCreateLMVMCDQN - Creates a compact dense representation of the limited-memory
+  Quasi-Newton approximation to a Hessian. This compact dense representation uses
+  Davidon-Fletcher-Powell (DFP) for MatMult, and Broyden-Fletcher-Goldfarb-Shanno (BFGS)
+  for MatSolve. This implementation results in avoiding costly Cholesky factorization,
+  at the cost of duality cap. Please refer to MatLMVMCDDFP and MatLMVMCDBFGS for more
+  information.
 
-   Collective
+  Collective
 
-   Input Parameters:
-+  comm - MPI communicator, set to PETSC_COMM_SELF
-.  n - number of local rows for storage vectors
--  N - global size of the storage vectors
+  Input Parameters:
++ comm - MPI communicator, set to PETSC_COMM_SELF
+. n    - number of local rows for storage vectors
+- N    - global size of the storage vectors
 
-   Output Parameter:
-.  B - the matrix
+  Output Parameter:
+. B - the matrix
 
-   It is recommended that one use the MatCreate(), MatSetType() and/or MatSetFromOptions()
-   paradigm instead of this routine directly.
+  It is recommended that one use the MatCreate(), MatSetType() and/or MatSetFromOptions()
+  paradigm instead of this routine directly.
 
-   Level: advanced
+  Level: advanced
 
-.seealso: MatCreate(), MATLMVM, MATLMVMCDDFP, MatCreateLMVMDFP()
+.seealso: `MatCreate()`, `MATLMVM`, `MATLMVMCDBFGS`, `MATLMVMCDDFP`, `MatCreateLMVMCDDFP()`, `MatCreateLMVMCDBFGS()`
 @*/
 PetscErrorCode MatCreateLMVMCDQN(MPI_Comm comm, PetscInt n, PetscInt N, Mat *B)
 {
@@ -750,7 +750,7 @@ PetscErrorCode MatCreateLMVMCDQN(MPI_Comm comm, PetscInt n, PetscInt N, Mat *B)
 
 /*------------------------------------------------------------*/
 
-PetscErrorCode MatCDQNApplyJ0Fwd(Mat B, Vec X, Vec Z)
+static PetscErrorCode MatCDQNApplyJ0Fwd(Mat B, Vec X, Vec Z)
 {
   Mat_LMVM *lmvm = (Mat_LMVM *)B->data;
   Mat_CDQN *lqn  = (Mat_CDQN *)lmvm->ctx;
@@ -785,7 +785,7 @@ PetscErrorCode MatCDQNApplyJ0Fwd(Mat B, Vec X, Vec Z)
 
 /*------------------------------------------------------------*/
 
-PetscErrorCode MatCDQNApplyJ0Inv(Mat B, Vec F, Vec dX)
+static PetscErrorCode MatCDQNApplyJ0Inv(Mat B, Vec F, Vec dX)
 {
   Mat_LMVM *lmvm = (Mat_LMVM *)B->data;
   Mat_CDQN *lqn  = (Mat_CDQN *)lmvm->ctx;
@@ -1154,30 +1154,29 @@ PetscErrorCode MatCreate_LMVMCDBFGS(Mat B)
 /*------------------------------------------------------------*/
 
 /*@
-   MatCreateLMVMCDBFGS - Creates a compact dense representation of the limited-memory
-   Broyden-Fletcher-Goldfarb-Shanno (BFGS) approximation to a Hessian. This compact
-   dense representation reduces the L-BFGS update to a series of matrix-vector products
-   with compact dense matrices in lieu of the conventional matrix-free two-loop
-   algorithm. For most problems on CPUs, this compact dense representation is not as
-   fast as the matrix-free two-loop implementation provided via MATLMVMBFGS. However,
-   it may be faster on GPUs for large enough problems (note: requires CUDA/HIP/KOKKOS).
+  MatCreateLMVMCDBFGS - Creates a compact dense (CD) representation of the limited-memory
+  Broyden-Fletcher-Goldfarb-Shanno (BFGS) approximation to a Hessian. This CD representation
+  reduces the L-BFGS update to a series of matrix-vector products with CD matrices 
+  in lieu of the conventional matrix-free two-loop algorithm. For most problems on CPUs,
+  this representation is not as fast as the regular implementation provided via MATLMVMBFGS.
+  However, it may be faster on GPUs for large enough problems (note: requires CUDA/HIP/KOKKOS).
 
-   Collective
+  Collective
 
-   Input Parameters:
-+  comm - MPI communicator, set to PETSC_COMM_SELF
-.  n - number of local rows for storage vectors
--  N - global size of the storage vectors
+  Input Parameters:
++ comm - MPI communicator, set to PETSC_COMM_SELF
+. n    - number of local rows for storage vectors
+- N    - global size of the storage vectors
 
-   Output Parameter:
-.  B - the matrix
+  Output Parameter:
+. B - the matrix
 
-   It is recommended that one use the MatCreate(), MatSetType() and/or MatSetFromOptions()
-   paradigm instead of this routine directly.
+  It is recommended that one use the MatCreate(), MatSetType() and/or MatSetFromOptions()
+  paradigm instead of this routine directly.
 
-   Level: advanced
+  Level: advanced
 
-.seealso: MatCreate(), MATLMVM, MATLMVMCDBFGS, MatCreateLMVMBFGS()
+.seealso: `MatCreate()`, `MATLMVM`, `MATLMVMCDBFGS`, `MatCreateLMVMBFGS()`
 @*/
 PetscErrorCode MatCreateLMVMCDBFGS(MPI_Comm comm, PetscInt n, PetscInt N, Mat *B)
 {
@@ -1534,30 +1533,29 @@ PetscErrorCode MatCreate_LMVMCDDFP(Mat B)
 /*------------------------------------------------------------*/
 
 /*@
-   MatCreateLMVMCDDFP - Creates a compact dense representation of the limited-memory
-   Davidon-Fletcher-Powell (DFP) approximation to a Hessian. This compact
-   dense representation reduces the L-DFP update to a series of matrix-vector products
-   with compact dense matrices in lieu of the conventional matrix-free two-loop
-   algorithm. For most problems on CPUs, this compact dense representation is not as
-   fast as the matrix-free two-loop implementation provided via MATLMVMDFP. However,
-   it may be faster on GPUs for large enough problems (note: requires CUDA/HIP/KOKKOS).
+  MatCreateLMVMCDDFP - Creates a compact dense (CD) representation of the limited-memory
+  Davidon-Fletcher-Powell (DFP) approximation to a Hessian. This CD representation
+  reduces the L-DFP update to a series of matrix-vector products with CD matrices 
+  in lieu of the conventional matrix-free two-loop algorithm. For most problems on CPUs,
+  this representation is not as fast as the regular implementation provided via MATLMVMDFP.
+  However, it may be faster on GPUs for large enough problems (note: requires CUDA/HIP/KOKKOS).
 
-   Collective
+  Collective
 
-   Input Parameters:
-+  comm - MPI communicator, set to PETSC_COMM_SELF
-.  n - number of local rows for storage vectors
--  N - global size of the storage vectors
+  Input Parameters:
++ comm - MPI communicator, set to PETSC_COMM_SELF
+. n    - number of local rows for storage vectors
+- N    - global size of the storage vectors
 
-   Output Parameter:
-.  B - the matrix
+  Output Parameter:
+. B - the matrix
 
-   It is recommended that one use the MatCreate(), MatSetType() and/or MatSetFromOptions()
-   paradigm instead of this routine directly.
+  It is recommended that one use the MatCreate(), MatSetType() and/or MatSetFromOptions()
+  paradigm instead of this routine directly.
 
-   Level: advanced
+  Level: advanced
 
-.seealso: MatCreate(), MATLMVM, MATLMVMCDDFP, MatCreateLMVMDFP()
+.seealso: `MatCreate()`, `MATLMVM`, `MATLMVMCDDFP`, `MatCreateLMVMDFP()`
 @*/
 PetscErrorCode MatCreateLMVMCDDFP(MPI_Comm comm, PetscInt n, PetscInt N, Mat *B)
 {

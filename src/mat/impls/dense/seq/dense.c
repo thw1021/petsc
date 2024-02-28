@@ -1053,7 +1053,7 @@ static PetscErrorCode MatSOR_SeqDense(Mat A, Vec bb, PetscReal omega, MatSORType
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatMultColumnRangeKernel_SeqDense(Mat A, Vec xx, Vec yy, PetscInt c_start, PetscInt c_end, PetscBool trans, PetscBool herm)
+static PetscErrorCode MatMultColumnRangeKernel_SeqDense(Mat A, Vec xx, Vec yy, PetscInt c_start, PetscInt c_end, PetscBool trans, PetscBool herm)
 {
   Mat_SeqDense      *mat = (Mat_SeqDense *)A->data;
   PetscScalar       *y, _DOne = 1.0, _DZero = 0.0;
@@ -1100,8 +1100,6 @@ PetscErrorCode MatMultTransposeColumnRange_SeqDense(Mat A, Vec xx, Vec yy, Petsc
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-//TODO HermitianTranspose?
-
 PetscErrorCode MatMult_SeqDense(Mat A, Vec xx, Vec yy)
 {
   PetscFunctionBegin;
@@ -1116,13 +1114,6 @@ PetscErrorCode MatMultTranspose_SeqDense(Mat A, Vec xx, Vec yy)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatMultHermitian_SeqDense(Mat A, Vec xx, Vec yy)
-{
-  PetscFunctionBegin;
-  PetscCall(MatMultColumnRangeKernel_SeqDense(A, xx, yy, 0, A->cmap->n, PETSC_FALSE, PETSC_TRUE));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 PetscErrorCode MatMultHermitianTranspose_SeqDense(Mat A, Vec xx, Vec yy)
 {
   PetscFunctionBegin;
@@ -1130,7 +1121,7 @@ PetscErrorCode MatMultHermitianTranspose_SeqDense(Mat A, Vec xx, Vec yy)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatMultAddColumnRangeKernel_SeqDense(Mat A, Vec xx, Vec zz, Vec yy, PetscInt c_start, PetscInt c_end, PetscBool trans, PetscBool herm)
+static PetscErrorCode MatMultAddColumnRangeKernel_SeqDense(Mat A, Vec xx, Vec zz, Vec yy, PetscInt c_start, PetscInt c_end, PetscBool trans, PetscBool herm)
 {
   Mat_SeqDense      *mat = (Mat_SeqDense *)A->data;
   const PetscScalar *v   = mat->v, *x;
@@ -1172,8 +1163,6 @@ PetscErrorCode MatMultTransposeAddColumnRange_SeqDense(Mat A, Vec xx, Vec zz, Ve
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-//TODO Hermitian?
-
 PetscErrorCode MatMultAdd_SeqDense(Mat A, Vec xx, Vec zz, Vec yy)
 {
   PetscFunctionBegin;
@@ -1182,13 +1171,6 @@ PetscErrorCode MatMultAdd_SeqDense(Mat A, Vec xx, Vec zz, Vec yy)
 }
 
 PetscErrorCode MatMultTransposeAdd_SeqDense(Mat A, Vec xx, Vec zz, Vec yy)
-{
-  PetscFunctionBegin;
-  PetscCall(MatMultAddColumnRangeKernel_SeqDense(A, xx, zz, yy, 0, A->cmap->n, PETSC_TRUE, PETSC_FALSE));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-PetscErrorCode MatMultHermitianAdd_SeqDense(Mat A, Vec xx, Vec zz, Vec yy)
 {
   PetscFunctionBegin;
   PetscCall(MatMultAddColumnRangeKernel_SeqDense(A, xx, zz, yy, 0, A->cmap->n, PETSC_TRUE, PETSC_FALSE));

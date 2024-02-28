@@ -1,6 +1,7 @@
 const char help[] = "Profile the performance of MATLMVM MatSolve() in a loop";
 
 #include <petscksp.h>
+#include <petscmath.h>
 
 int main(int argc, char **argv)
 {
@@ -45,7 +46,7 @@ int main(int argc, char **argv)
     PetscCall(VecSetRandom(x, rand));
     PetscCall(VecSetRandom(g, rand));
     xscale = 1.0;
-    fscale = absdot / dot;
+    fscale = absdot / PetscRealPart(dot);
     PetscCall(MatLMVMGetHistorySize(B, &history_size));
 
     PetscCall(MatLMVMUpdate(B, x, g));
