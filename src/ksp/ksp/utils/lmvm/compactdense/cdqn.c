@@ -1156,7 +1156,7 @@ PetscErrorCode MatCreate_LMVMCDBFGS(Mat B)
 /*@
   MatCreateLMVMCDBFGS - Creates a compact dense (CD) representation of the limited-memory
   Broyden-Fletcher-Goldfarb-Shanno (BFGS) approximation to a Hessian. This CD representation
-  reduces the L-BFGS update to a series of matrix-vector products with CD matrices 
+  reduces the L-BFGS update to a series of matrix-vector products with CD matrices
   in lieu of the conventional matrix-free two-loop algorithm. For most problems on CPUs,
   this representation is not as fast as the regular implementation provided via MATLMVMBFGS.
   However, it may be faster on GPUs for large enough problems (note: requires CUDA/HIP/KOKKOS).
@@ -1535,7 +1535,7 @@ PetscErrorCode MatCreate_LMVMCDDFP(Mat B)
 /*@
   MatCreateLMVMCDDFP - Creates a compact dense (CD) representation of the limited-memory
   Davidon-Fletcher-Powell (DFP) approximation to a Hessian. This CD representation
-  reduces the L-DFP update to a series of matrix-vector products with CD matrices 
+  reduces the L-DFP update to a series of matrix-vector products with CD matrices
   in lieu of the conventional matrix-free two-loop algorithm. For most problems on CPUs,
   this representation is not as fast as the regular implementation provided via MATLMVMDFP.
   However, it may be faster on GPUs for large enough problems (note: requires CUDA/HIP/KOKKOS).
