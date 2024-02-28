@@ -19,54 +19,54 @@ int main(int argc, char **argv)
   test:
     suffix: 1
     nsize: {{1 2 3}}
-    args: -tao_smonitor -tao_type nls -tao_gatol 1.e-4
+    args: -tao_monitor_short -tao_type nls -tao_gatol 1.e-4
     requires: !single
     output_file: output/rosenbrock1_1.out
 
   test:
     suffix: 2
-    args: -tao_smonitor -tao_type lmvm -tao_gatol 1.e-3
+    args: -tao_monitor_short -tao_type lmvm -tao_gatol 1.e-3
     output_file: output/rosenbrock1_2.out
 
   test:
     suffix: 3
-    args: -tao_smonitor -tao_type ntr -tao_gatol 1.e-4
+    args: -tao_monitor_short -tao_type ntr -tao_gatol 1.e-4
     requires: !single
     output_file: output/rosenbrock1_3.out
 
   test:
     suffix: 4
-    args: -tao_smonitor -tao_type ntr -tao_mf_hessian -tao_ntr_pc_type none -tao_gatol 1.e-4
+    args: -tao_monitor_short -tao_type ntr -tao_mf_hessian -tao_ntr_pc_type none -tao_gatol 1.e-4
     output_file: output/rosenbrock1_4.out
 
   test:
     suffix: 5
-    args: -tao_smonitor -tao_type bntr -tao_gatol 1.e-4
+    args: -tao_monitor_short -tao_type bntr -tao_gatol 1.e-4
     output_file: output/rosenbrock1_5.out
 
   test:
     suffix: 6
-    args: -tao_smonitor -tao_type bntl -tao_gatol 1.e-4
+    args: -tao_monitor_short -tao_type bntl -tao_gatol 1.e-4
     output_file: output/rosenbrock1_6.out
 
   test:
     suffix: 7
-    args: -tao_smonitor -tao_type bnls -tao_gatol 1.e-4
+    args: -tao_monitor_short -tao_type bnls -tao_gatol 1.e-4
     output_file: output/rosenbrock1_7.out
 
   test:
     suffix: 8
-    args: -tao_smonitor -tao_type bntr -tao_bnk_max_cg_its 3 -tao_gatol 1.e-4
+    args: -tao_monitor_short -tao_type bntr -tao_bnk_max_cg_its 3 -tao_gatol 1.e-4
     output_file: output/rosenbrock1_8.out
 
   test:
     suffix: 9
-    args: -tao_smonitor -tao_type bntl -tao_bnk_max_cg_its 3 -tao_gatol 1.e-4
+    args: -tao_monitor_short -tao_type bntl -tao_bnk_max_cg_its 3 -tao_gatol 1.e-4
     output_file: output/rosenbrock1_9.out
 
   test:
     suffix: 10
-    args: -tao_smonitor -tao_type bnls -tao_bnk_max_cg_its 3 -tao_gatol 1.e-4
+    args: -tao_monitor_short -tao_type bnls -tao_bnk_max_cg_its 3 -tao_gatol 1.e-4
     output_file: output/rosenbrock1_10.out
 
   test:
@@ -101,17 +101,17 @@ int main(int argc, char **argv)
 
   test:
     suffix: 17
-    args: -tao_smonitor -tao_gatol 1e-4 -tao_type bqnls
+    args: -tao_monitor_short -tao_gatol 1e-4 -tao_type bqnls
     output_file: output/rosenbrock1_17.out
 
   test:
     suffix: 18
-    args: -tao_smonitor -tao_gatol 1e-4 -tao_type blmvm
+    args: -tao_monitor_short -tao_gatol 1e-4 -tao_type blmvm
     output_file: output/rosenbrock1_18.out
 
   test:
     suffix: 19
-    args: -tao_smonitor -tao_gatol 1e-4 -tao_type bqnktr -tao_bqnk_mat_type lmvmsr1
+    args: -tao_monitor_short -tao_gatol 1e-4 -tao_type bqnktr -tao_bqnk_mat_type lmvmsr1
     output_file: output/rosenbrock1_19.out
 
   test:
