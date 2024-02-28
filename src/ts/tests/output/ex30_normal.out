@@ -17,12 +17,12 @@ Labels:
   Face Sets: 4 strata with value/size (4 (6), 2 (6), 1 (3), 3 (3))
 Field e:
   adjacency FEM
-  0) species-0: charge density= -1.3609185194293e+02 z-momentum=  4.7078562227002e-04 energy=  5.3830536643248e+05 -- 8 cells
-  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 11
-  1) species-0: charge density= -1.3609185194293e+02 z-momentum=  4.7078562227030e-04 energy=  5.3830536643252e+05 -- 8 cells
-Particle Moments:	 number density      momentum (par)     energy             entropy            negative weights : # OMP threads 1.
-	Initial:         7.737566338403e-10  4.707856222701e-04 5.383053664325e+05 7.947672339070e+00 0.000000e+00
-	Coarse-graining: 7.737566338403e-10  4.707856222700e-04 5.383053664325e+05 7.947672339070e+00 0.000000e+00
-	Landau:          7.737566338405e-10  4.707856222709e-04 5.383053664333e+05 6.163676499087e+00 4.710424e-13
-Coarse-graining entropy generation = -1.243450e-14 ; Landau entropy generation = -1.783996e+00
-(relative) energy conservation: Coarse-graining = -1.516001e-13 ; Landau = 1.360508e-12
+  0) species-0: charge density= -8.3896344890402e+01 z-momentum=  2.5384695294631e-04 energy=  1.2632481045035e+05 -- 8 cells
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 16
+  1) species-0: charge density= -8.3896344890402e+01 z-momentum=  2.5384695294639e-04 energy=  1.2632481045036e+05 -- 8 cells
+Particle Moments:	 number density      momentum (par)     energy             entropy            negative weights  : # OMP threads 1.
+	Initial:         4.769966202028e-10  2.538469529463e-04 1.263248104504e+05 6.425664221309e+00 0. %
+	Coarse-graining: 4.769966202025e-10  2.538469529419e-04 1.263248104502e+05 6.425664221309e+00 8.65374e-13 %
+	Landau:          4.769966202027e-10  2.538469529504e-04 1.263248104505e+05 3.908636231921e+00 3.13918 %
+Coarse-graining entropy generation = 6.235013e-13 ; Landau entropy generation = -2.517028e+00
+(relative) energy conservation: Coarse-graining = -1.1812e-10 %; Landau = 1.20574e-10 %
