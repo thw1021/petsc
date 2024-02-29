@@ -97,11 +97,11 @@ int main(int argc, char **argv)
     PetscCall(VecAXPY(out2, -1.0, in));
     PetscCall(VecNorm(out2, NORM_2, &mult_solve_dist));
     if (mult_solve_dist < 1.e-11) {
-      PetscCall(PetscPrintf(PetscObjectComm((PetscObject)tao), "error between LMVM MatMult and MatSolve: < 1.e-11\n"));
+      PetscCall(PetscPrintf(PetscObjectComm((PetscObject)tao), "Inverse error of LMVM MatMult and MatSolve: < 1.e-11\n"));
     } else if (mult_solve_dist < 1.e-6) {
-      PetscCall(PetscPrintf(PetscObjectComm((PetscObject)tao), "error between LMVM MatMult and MatSolve: < 1.e-6\n"));
+      PetscCall(PetscPrintf(PetscObjectComm((PetscObject)tao), "Inverse error of LMVM MatMult and MatSolve: < 1.e-6\n"));
     } else {
-      PetscCall(PetscPrintf(PetscObjectComm((PetscObject)tao), "error between LMVM MatMult and MatSolve: %e\n", (double)mult_solve_dist));
+      PetscCall(PetscPrintf(PetscObjectComm((PetscObject)tao), "Inverse error of LMVM MatMult and MatSolve is not small: %e\n", (double)mult_solve_dist));
     }
     PetscCall(VecDestroy(&in));
     PetscCall(VecDestroy(&out));
