@@ -1,5 +1,8 @@
 #include <petsctaolinesearch.h>
 #include <../src/tao/unconstrained/impls/lmvm/lmvm.h>
+#include <petsc/private/vecimpl.h>
+#include <petsc/private/taolinesearchimpl.h>
+#include <petsc/private/deviceimpl.h>
 
 #define LMVM_STEP_BFGS 0
 #define LMVM_STEP_GRAD 1
@@ -11,8 +14,10 @@ static PetscErrorCode TaoSolve_LMVM(Tao tao)
   PetscReal                    step      = 1.0;
   PetscInt                     stepType  = LMVM_STEP_GRAD, nupdates;
   TaoLineSearchConvergedReason ls_status = TAOLINESEARCH_CONTINUE_ITERATING;
+  PetscDeviceContext           dctx;
 
   PetscFunctionBegin;
+  PetscCall(PetscDeviceContextGetCurrentContext(&dctx));
 
   if (tao->XL || tao->XU || tao->ops->computebounds) PetscCall(PetscInfo(tao, "WARNING: Variable bounds have been set but will be ignored by lmvm algorithm\n"));
 
@@ -70,12 +75,12 @@ static PetscErrorCode TaoSolve_LMVM(Tao tao)
          scaled gradient step.  No need to check for this condition. */
       stepType = LMVM_STEP_GRAD;
     }
-    PetscCall(VecScale(lmP->D, -1.0));
+    PetscCall(VecScaleAsync_Private(lmP->D, -1.0, dctx));
 
     /*  Perform the linesearch */
     fold = f;
-    PetscCall(VecCopy(tao->solution, lmP->Xold));
-    PetscCall(VecCopy(tao->gradient, lmP->Gold));
+    PetscCall(VecCopyAsync_Private(tao->solution, lmP->Xold, dctx));
+    PetscCall(VecCopyAsync_Private(tao->gradient, lmP->Gold, dctx));
 
     PetscCall(TaoLineSearchApply(tao->linesearch, tao->solution, &f, tao->gradient, lmP->D, &step, &ls_status));
     PetscCall(TaoAddLineSearchCounts(tao));
@@ -83,8 +88,8 @@ static PetscErrorCode TaoSolve_LMVM(Tao tao)
     if (ls_status != TAOLINESEARCH_SUCCESS && ls_status != TAOLINESEARCH_SUCCESS_USER && (stepType != LMVM_STEP_GRAD)) {
       /*  Reset factors and use scaled gradient step */
       f = fold;
-      PetscCall(VecCopy(lmP->Xold, tao->solution));
-      PetscCall(VecCopy(lmP->Gold, tao->gradient));
+      PetscCall(VecCopyAsync_Private(lmP->Xold, tao->solution, dctx));
+      PetscCall(VecCopyAsync_Private(lmP->Gold, tao->gradient, dctx));
 
       /*  Failed to obtain acceptable iterate with BFGS step */
       /*  Attempt to use the scaled gradient direction */
@@ -107,8 +112,8 @@ static PetscErrorCode TaoSolve_LMVM(Tao tao)
     if (ls_status != TAOLINESEARCH_SUCCESS && ls_status != TAOLINESEARCH_SUCCESS_USER) {
       /*  Failed to find an improving point */
       f = fold;
-      PetscCall(VecCopy(lmP->Xold, tao->solution));
-      PetscCall(VecCopy(lmP->Gold, tao->gradient));
+      PetscCall(VecCopyAsync_Private(lmP->Xold, tao->solution, dctx));
+      PetscCall(VecCopyAsync_Private(lmP->Gold, tao->gradient, dctx));
       step        = 0.0;
       tao->reason = TAO_DIVERGED_LS_FAILURE;
     } else {
@@ -204,12 +209,18 @@ static PetscErrorCode TaoView_LMVM(Tao tao, PetscViewer viewer)
   PetscFunctionBegin;
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
   if (isascii) {
-    PetscCall(PetscViewerASCIIPrintf(viewer, "  Gradient steps: %" PetscInt_FMT "\n", lm->grad));
+    PetscCall(PetscViewerASCIIPushTab(viewer));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "Gradient steps: %" PetscInt_FMT "\n", lm->grad));
     if (lm->recycle) {
-      PetscCall(PetscViewerASCIIPrintf(viewer, "  Recycle: on\n"));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "Recycle: on\n"));
       recycled_its = lm->bfgs + lm->grad;
-      PetscCall(PetscViewerASCIIPrintf(viewer, "  Total recycled iterations: %" PetscInt_FMT "\n", recycled_its));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "Total recycled iterations: %" PetscInt_FMT "\n", recycled_its));
     }
+    PetscCall(PetscViewerASCIIPrintf(viewer, "LMVM Matrix:\n"));
+    PetscCall(PetscViewerASCIIPushTab(viewer));
+    PetscCall(MatView(lm->M, viewer));
+    PetscCall(PetscViewerASCIIPopTab(viewer));
+    PetscCall(PetscViewerASCIIPopTab(viewer));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
