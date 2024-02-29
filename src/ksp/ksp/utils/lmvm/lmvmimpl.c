@@ -1,4 +1,6 @@
+#include <petscdevice.h>
 #include <../src/ksp/ksp/utils/lmvm/lmvm.h> /*I "petscksp.h" I*/
+#include <petsc/private/deviceimpl.h>
 
 PetscErrorCode MatReset_LMVM(Mat B, PetscBool destructive)
 {
@@ -64,11 +66,13 @@ PetscErrorCode MatAllocate_LMVM(Mat B, Vec X, Vec F)
 
 PetscErrorCode MatUpdateKernel_LMVM(Mat B, Vec S, Vec Y)
 {
-  Mat_LMVM *lmvm = (Mat_LMVM *)B->data;
-  PetscInt  i;
-  Vec       Stmp, Ytmp;
+  Mat_LMVM          *lmvm = (Mat_LMVM *)B->data;
+  PetscInt           i;
+  Vec                Stmp, Ytmp;
+  PetscDeviceContext dctx;
 
   PetscFunctionBegin;
+  PetscCall(PetscDeviceContextGetCurrentContext(&dctx));
   if (lmvm->k == lmvm->m - 1) {
     /* We hit the memory limit, so shift all the vectors back one spot
        and shift the oldest to the front to receive the latest update. */
@@ -84,8 +88,8 @@ PetscErrorCode MatUpdateKernel_LMVM(Mat B, Vec S, Vec Y)
     ++lmvm->k;
   }
   /* Put the precomputed update into the last vector */
-  PetscCall(VecCopy(S, lmvm->S[lmvm->k]));
-  PetscCall(VecCopy(Y, lmvm->Y[lmvm->k]));
+  PetscCall(VecCopyAsync_Private(S, lmvm->S[lmvm->k], dctx));
+  PetscCall(VecCopyAsync_Private(Y, lmvm->Y[lmvm->k], dctx));
   ++lmvm->nupdates;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -121,14 +125,29 @@ static PetscErrorCode MatMultAdd_LMVM(Mat B, Vec X, Vec Y, Vec Z)
 
 static PetscErrorCode MatMult_LMVM(Mat B, Vec X, Vec Y)
 {
-  Mat_LMVM *lmvm = (Mat_LMVM *)B->data;
+  Mat_LMVM          *lmvm = (Mat_LMVM *)B->data;
+  PetscDeviceContext dctx;
 
   PetscFunctionBegin;
   VecCheckSameSize(X, 2, Y, 3);
   VecCheckMatCompatible(B, X, 2, Y, 3);
   PetscCheck(lmvm->allocated, PetscObjectComm((PetscObject)B), PETSC_ERR_ORDER, "LMVM matrix must be allocated first");
   PetscCall((*lmvm->ops->mult)(B, X, Y));
-  PetscCall(VecAXPY(Y, lmvm->shift, X));
+  PetscCall(PetscDeviceContextGetCurrentContext(&dctx));
+  if (lmvm->shift) PetscCall(VecAXPYAsync_Private(Y, lmvm->shift, X, dctx));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatSolve_LMVM(Mat B, Vec F, Vec dX)
+{
+  Mat_LMVM *lmvm = (Mat_LMVM *)B->data;
+
+  PetscFunctionBegin;
+  VecCheckSameSize(F, 2, dX, 3);
+  VecCheckMatCompatible(B, F, 2, dX, 3);
+  PetscCheck(lmvm->allocated, PetscObjectComm((PetscObject)B), PETSC_ERR_ORDER, "LMVM matrix must be allocated first");
+  PetscCheck(*lmvm->ops->solve, PetscObjectComm((PetscObject)B), PETSC_ERR_ARG_INCOMP, "LMVM matrix does not have a solution or inversion implementation");
+  PetscCall((*lmvm->ops->solve)(B, F, dX));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -239,19 +258,16 @@ PetscErrorCode MatView_LMVM(Mat B, PetscViewer pv)
 
 PetscErrorCode MatSetFromOptions_LMVM(Mat B, PetscOptionItems *PetscOptionsObject)
 {
-  Mat_LMVM *lmvm = (Mat_LMVM *)B->data;
-  PetscInt  m    = lmvm->m;
-  PetscBool allocated;
+  Mat_LMVM *lmvm  = (Mat_LMVM *)B->data;
+  PetscInt  m_new = lmvm->m;
 
   PetscFunctionBegin;
-  PetscCall(MatLMVMIsAllocated(B, &allocated));
   PetscOptionsHeadBegin(PetscOptionsObject, "Limited-memory Variable Metric matrix for approximating Jacobians");
-  PetscCall(PetscOptionsInt("-mat_lmvm_hist_size", "number of past updates kept in memory for the approximation", "", lmvm->m, &m, NULL));
-  if (m != lmvm->m && allocated) PetscCall(MatLMVMReset(B, PETSC_TRUE));
-  lmvm->m = m;
+  PetscCall(PetscOptionsInt("-mat_lmvm_hist_size", "number of past updates kept in memory for the approximation", "", m_new, &m_new, NULL));
   PetscCall(PetscOptionsInt("-mat_lmvm_ksp_its", "(developer) fixed number of KSP iterations to take when inverting J0", "", lmvm->ksp_max_it, &lmvm->ksp_max_it, NULL));
   PetscCall(PetscOptionsReal("-mat_lmvm_eps", "(developer) machine zero definition", "", lmvm->eps, &lmvm->eps, NULL));
   PetscOptionsHeadEnd();
+  if (m_new != lmvm->m) PetscCall(MatLMVMSetHistorySize(B, m_new));
   PetscCall(KSPSetFromOptions(lmvm->J0ksp));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -341,6 +357,7 @@ PetscErrorCode MatCreate_LMVM(Mat B)
   B->ops->duplicate      = MatDuplicate_LMVM;
   B->ops->mult           = MatMult_LMVM;
   B->ops->multadd        = MatMultAdd_LMVM;
+  B->ops->solve          = MatSolve_LMVM;
   B->ops->copy           = MatCopy_LMVM;
 
   lmvm->ops->update   = MatUpdate_LMVM;

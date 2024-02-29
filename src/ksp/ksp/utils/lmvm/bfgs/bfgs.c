@@ -1,5 +1,7 @@
 #include <../src/ksp/ksp/utils/lmvm/symbrdn/symbrdn.h> /*I "petscksp.h" I*/
 #include <../src/ksp/ksp/utils/lmvm/diagbrdn/diagbrdn.h>
+#include <petsc/private/vecimpl.h>
+#include <petscdevice.h>
 
 /*
   Limited-memory Broyden-Fletcher-Goldfarb-Shano method for approximating both
@@ -31,25 +33,27 @@
 */
 PetscErrorCode MatSolve_LMVMBFGS(Mat B, Vec F, Vec dX)
 {
-  Mat_LMVM    *lmvm  = (Mat_LMVM *)B->data;
-  Mat_SymBrdn *lbfgs = (Mat_SymBrdn *)lmvm->ctx;
-  PetscInt     i;
-  PetscReal   *alpha, beta;
-  PetscScalar  stf, ytx;
+  Mat_LMVM          *lmvm  = (Mat_LMVM *)B->data;
+  Mat_SymBrdn       *lbfgs = (Mat_SymBrdn *)lmvm->ctx;
+  PetscInt           i;
+  PetscReal         *alpha, beta;
+  PetscScalar        stf, ytx;
+  PetscDeviceContext dctx;
 
   PetscFunctionBegin;
   VecCheckSameSize(F, 2, dX, 3);
   VecCheckMatCompatible(B, dX, 3, F, 2);
+  PetscCall(PetscDeviceContextGetCurrentContext(&dctx));
 
   /* Copy the function into the work vector for the first loop */
-  PetscCall(VecCopy(F, lbfgs->work));
+  PetscCall(VecCopyAsync_Private(F, lbfgs->work, dctx));
 
   /* Start the first loop */
   PetscCall(PetscMalloc1(lmvm->k + 1, &alpha));
   for (i = lmvm->k; i >= 0; --i) {
     PetscCall(VecDot(lmvm->S[i], lbfgs->work, &stf));
     alpha[i] = PetscRealPart(stf) / lbfgs->yts[i];
-    PetscCall(VecAXPY(lbfgs->work, -alpha[i], lmvm->Y[i]));
+    PetscCall(VecAXPYAsync_Private(lbfgs->work, -alpha[i], lmvm->Y[i], dctx));
   }
 
   /* Invert the initial Jacobian onto the work vector (or apply scaling) */
@@ -57,9 +61,10 @@ PetscErrorCode MatSolve_LMVMBFGS(Mat B, Vec F, Vec dX)
 
   /* Start the second loop */
   for (i = 0; i <= lmvm->k; ++i) {
+    // dot product performed on default blocking stream, last write to lbfgs->work completes before dot product starts
     PetscCall(VecDot(lmvm->Y[i], dX, &ytx));
     beta = PetscRealPart(ytx) / lbfgs->yts[i];
-    PetscCall(VecAXPY(dX, alpha[i] - beta, lmvm->S[i]));
+    PetscCall(VecAXPYAsync_Private(dX, alpha[i] - beta, lmvm->S[i], dctx));
   }
   PetscCall(PetscFree(alpha));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -137,20 +142,22 @@ PetscErrorCode MatMult_LMVMBFGS(Mat B, Vec X, Vec Z)
 
 static PetscErrorCode MatUpdate_LMVMBFGS(Mat B, Vec X, Vec F)
 {
-  Mat_LMVM     *lmvm  = (Mat_LMVM *)B->data;
-  Mat_SymBrdn  *lbfgs = (Mat_SymBrdn *)lmvm->ctx;
-  Mat_LMVM     *dbase;
-  Mat_DiagBrdn *dctx;
-  PetscInt      old_k, i;
-  PetscReal     curvtol, ststmp;
-  PetscScalar   curvature, ytytmp;
+  Mat_LMVM          *lmvm  = (Mat_LMVM *)B->data;
+  Mat_SymBrdn       *lbfgs = (Mat_SymBrdn *)lmvm->ctx;
+  Mat_LMVM          *dbase;
+  Mat_DiagBrdn      *diagctx;
+  PetscInt           old_k, i;
+  PetscReal          curvtol, ststmp;
+  PetscScalar        curvature, ytytmp;
+  PetscDeviceContext dctx;
 
   PetscFunctionBegin;
   if (!lmvm->m) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCall(PetscDeviceContextGetCurrentContext(&dctx));
   if (lmvm->prev_set) {
     /* Compute the new (S = X - Xprev) and (Y = F - Fprev) vectors */
-    PetscCall(VecAYPX(lmvm->Xprev, -1.0, X));
-    PetscCall(VecAYPX(lmvm->Fprev, -1.0, F));
+    PetscCall(VecAYPXAsync_Private(lmvm->Xprev, -1.0, X, dctx));
+    PetscCall(VecAYPXAsync_Private(lmvm->Fprev, -1.0, F, dctx));
 
     /* Test if the updates can be accepted */
     PetscCall(VecDotNorm2(lmvm->Xprev, lmvm->Fprev, &curvature, &ststmp));
@@ -172,12 +179,14 @@ static PetscErrorCode MatUpdate_LMVMBFGS(Mat B, Vec X, Vec F)
         }
       }
       /* Update history of useful scalars */
-      PetscCall(VecDot(lmvm->Y[lmvm->k], lmvm->Y[lmvm->k], &ytytmp));
       lbfgs->yts[lmvm->k] = PetscRealPart(curvature);
-      lbfgs->yty[lmvm->k] = PetscRealPart(ytytmp);
       lbfgs->sts[lmvm->k] = ststmp;
       /* Compute the scalar scale if necessary */
-      if (lbfgs->scale_type == MAT_LMVM_SYMBROYDEN_SCALE_SCALAR) PetscCall(MatSymBrdnComputeJ0Scalar(B));
+      if (lbfgs->scale_type == MAT_LMVM_SYMBROYDEN_SCALE_SCALAR) {
+        PetscCall(VecDot(lmvm->Y[lmvm->k], lmvm->Y[lmvm->k], &ytytmp));
+        lbfgs->yty[lmvm->k] = PetscRealPart(ytytmp);
+        PetscCall(MatSymBrdnComputeJ0Scalar(B));
+      }
     } else {
       /* Update is bad, skip it */
       ++lmvm->nrejects;
@@ -186,9 +195,9 @@ static PetscErrorCode MatUpdate_LMVMBFGS(Mat B, Vec X, Vec F)
   } else {
     switch (lbfgs->scale_type) {
     case MAT_LMVM_SYMBROYDEN_SCALE_DIAGONAL:
-      dbase = (Mat_LMVM *)lbfgs->D->data;
-      dctx  = (Mat_DiagBrdn *)dbase->ctx;
-      PetscCall(VecSet(dctx->invD, lbfgs->delta));
+      dbase   = (Mat_LMVM *)lbfgs->D->data;
+      diagctx = (Mat_DiagBrdn *)dbase->ctx;
+      PetscCall(VecSetAsync_Private(diagctx->invD, lbfgs->delta, dctx));
       break;
     case MAT_LMVM_SYMBROYDEN_SCALE_SCALAR:
       lbfgs->sigma = lbfgs->delta;
@@ -210,8 +219,8 @@ static PetscErrorCode MatUpdate_LMVMBFGS(Mat B, Vec X, Vec F)
   }
 
   /* Save the solution and function to be used in the next update */
-  PetscCall(VecCopy(X, lmvm->Xprev));
-  PetscCall(VecCopy(F, lmvm->Fprev));
+  PetscCall(VecCopyAsync_Private(X, lmvm->Xprev, dctx));
+  PetscCall(VecCopyAsync_Private(F, lmvm->Fprev, dctx));
   lmvm->prev_set = PETSC_TRUE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -391,13 +400,13 @@ PetscErrorCode MatCreate_LMVMBFGS(Mat B)
   B->ops->setup          = MatSetUp_LMVMBFGS;
   B->ops->destroy        = MatDestroy_LMVMBFGS;
   B->ops->setfromoptions = MatSetFromOptions_LMVMBFGS;
-  B->ops->solve          = MatSolve_LMVMBFGS;
 
   lmvm                = (Mat_LMVM *)B->data;
   lmvm->ops->allocate = MatAllocate_LMVMBFGS;
   lmvm->ops->reset    = MatReset_LMVMBFGS;
   lmvm->ops->update   = MatUpdate_LMVMBFGS;
   lmvm->ops->mult     = MatMult_LMVMBFGS;
+  lmvm->ops->solve    = MatSolve_LMVMBFGS;
   lmvm->ops->copy     = MatCopy_LMVMBFGS;
 
   lbfgs        = (Mat_SymBrdn *)lmvm->ctx;
