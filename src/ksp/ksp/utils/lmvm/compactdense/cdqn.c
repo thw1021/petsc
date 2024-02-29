@@ -673,8 +673,12 @@ static PetscErrorCode MatSolve_LMVMCDQN(Mat H, Vec F, Vec dX)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*------------------------------------------------------------*/
-
+/*
+  This compact dense representation uses Davidon-Fletcher-Powell (DFP) for MatMult,
+  and Broyden-Fletcher-Goldfarb-Shanno (BFGS) for MatSolve. This implementation
+  results in avoiding costly Cholesky factorization, at the cost of duality cap.
+  Please refer to MatLMVMCDDFP and MatLMVMCDBFGS for more information.
+*/
 PetscErrorCode MatCreate_LMVMCDQN(Mat B)
 {
   Mat_LMVM *lmvm;
@@ -715,11 +719,7 @@ PetscErrorCode MatCreate_LMVMCDQN(Mat B)
 
 /*@
   MatCreateLMVMCDQN - Creates a compact dense representation of the limited-memory
-  Quasi-Newton approximation to a Hessian. This compact dense representation uses
-  Davidon-Fletcher-Powell (DFP) for MatMult, and Broyden-Fletcher-Goldfarb-Shanno (BFGS)
-  for MatSolve. This implementation results in avoiding costly Cholesky factorization,
-  at the cost of duality cap. Please refer to MatLMVMCDDFP and MatLMVMCDBFGS for more
-  information.
+  Quasi-Newton approximation to a Hessian. 
 
   Collective
 
@@ -1111,8 +1111,13 @@ static PetscErrorCode MatMult_LMVMCDBFGS(Mat B, Vec X, Vec Z)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*------------------------------------------------------------*/
-
+/*
+  This compact-dense  representation  reduces the L-BFGS update to a series of
+  matrix-vector products with CD matrices in lieu of the conventional matrix-free
+  two-loop algorithm. For most problems on CPUs, this representation is not as fast
+  as the regular implementation provided via MATLMVMBFGS. However, it may be faster
+  on GPUs for large enough problems (note: requires CUDA/HIP/KOKKOS).
+*/
 PetscErrorCode MatCreate_LMVMCDBFGS(Mat B)
 {
   Mat_LMVM *lmvm;
@@ -1155,11 +1160,7 @@ PetscErrorCode MatCreate_LMVMCDBFGS(Mat B)
 
 /*@
   MatCreateLMVMCDBFGS - Creates a compact dense (CD) representation of the limited-memory
-  Broyden-Fletcher-Goldfarb-Shanno (BFGS) approximation to a Hessian. This CD representation
-  reduces the L-BFGS update to a series of matrix-vector products with CD matrices
-  in lieu of the conventional matrix-free two-loop algorithm. For most problems on CPUs,
-  this representation is not as fast as the regular implementation provided via MATLMVMBFGS.
-  However, it may be faster on GPUs for large enough problems (note: requires CUDA/HIP/KOKKOS).
+  Broyden-Fletcher-Goldfarb-Shanno (BFGS) approximation to a Hessian.
 
   Collective
 
@@ -1490,8 +1491,13 @@ static PetscErrorCode MatMult_LMVMCDDFP(Mat B, Vec X, Vec Z)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*------------------------------------------------------------*/
-
+/*
+  This compact-dense  representation  reduces the L-DFP update to a series of
+  matrix-vector products with CD matrices in lieu of the conventional matrix-free
+  two-loop algorithm. For most problems on CPUs, this representation is not as fast
+  as the regular implementation provided via MATLMVMDFP. However, it may be faster
+  on GPUs for large enough problems (note: requires CUDA/HIP/KOKKOS).
+*/
 PetscErrorCode MatCreate_LMVMCDDFP(Mat B)
 {
   Mat_LMVM *lmvm;
@@ -1534,11 +1540,7 @@ PetscErrorCode MatCreate_LMVMCDDFP(Mat B)
 
 /*@
   MatCreateLMVMCDDFP - Creates a compact dense (CD) representation of the limited-memory
-  Davidon-Fletcher-Powell (DFP) approximation to a Hessian. This CD representation
-  reduces the L-DFP update to a series of matrix-vector products with CD matrices
-  in lieu of the conventional matrix-free two-loop algorithm. For most problems on CPUs,
-  this representation is not as fast as the regular implementation provided via MATLMVMDFP.
-  However, it may be faster on GPUs for large enough problems (note: requires CUDA/HIP/KOKKOS).
+  Davidon-Fletcher-Powell (DFP) approximation to a Hessian.
 
   Collective
 

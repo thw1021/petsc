@@ -1,5 +1,5 @@
 #include "cdqn.h"
-#include "petsc/private/cupminterface.hpp"
+#include <petsc/private/cupminterface.hpp>
 #include <petsc/private/cupmobject.hpp>
 
 namespace Petsc
