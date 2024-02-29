@@ -4360,6 +4360,7 @@ PetscErrorCode DMSetLocalSection(DM dm, PetscSection section)
      in the next call to DMGetGlobalSection() and DMGetSectionSF(). */
   PetscCall(PetscSectionDestroy(&dm->globalSection));
   PetscCall(PetscSFDestroy(&dm->sectionSF));
+  PetscCall(PetscSFCreate(PetscObjectComm((PetscObject)dm), &dm->sectionSF));
 
   /* Clear scratch vectors */
   PetscCall(DMClearGlobalVectors(dm));
@@ -4635,6 +4636,7 @@ PetscErrorCode DMSetGlobalSection(DM dm, PetscSection section)
 #endif
   /* Clear global scratch vectors and sectionSF */
   PetscCall(PetscSFDestroy(&dm->sectionSF));
+  PetscCall(PetscSFCreate(PetscObjectComm((PetscObject)dm), &dm->sectionSF));
   PetscCall(DMClearGlobalVectors(dm));
   PetscCall(DMClearNamedGlobalVectors(dm));
   PetscFunctionReturn(PETSC_SUCCESS);
