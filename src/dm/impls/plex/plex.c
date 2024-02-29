@@ -8,6 +8,7 @@
 #include <petscdraw.h>
 #include <petscdmfield.h>
 #include <petscdmplextransform.h>
+#include <petscblaslapack.h>
 
 /* Logging support */
 PetscLogEvent DMPLEX_Interpolate, DMPLEX_Partition, DMPLEX_Distribute, DMPLEX_DistributeCones, DMPLEX_DistributeLabels, DMPLEX_DistributeSF, DMPLEX_DistributeOverlap, DMPLEX_DistributeField, DMPLEX_DistributeData, DMPLEX_Migrate, DMPLEX_InterpolateSF, DMPLEX_GlobalToNaturalBegin, DMPLEX_GlobalToNaturalEnd, DMPLEX_NaturalToGlobalBegin, DMPLEX_NaturalToGlobalEnd, DMPLEX_Stratify, DMPLEX_Symmetrize, DMPLEX_Preallocate, DMPLEX_ResidualFEM, DMPLEX_JacobianFEM, DMPLEX_InterpolatorFEM, DMPLEX_InjectorFEM, DMPLEX_IntegralFEM, DMPLEX_CreateGmsh, DMPLEX_RebalanceSharedPoints, DMPLEX_PartSelf, DMPLEX_PartLabelInvert, DMPLEX_PartLabelCreateSF, DMPLEX_PartStratSF, DMPLEX_CreatePointSF, DMPLEX_LocatePoints, DMPLEX_TopologyView, DMPLEX_LabelsView, DMPLEX_CoordinatesView, DMPLEX_SectionView, DMPLEX_GlobalVectorView, DMPLEX_LocalVectorView, DMPLEX_TopologyLoad, DMPLEX_LabelsLoad, DMPLEX_CoordinatesLoad, DMPLEX_SectionLoad, DMPLEX_GlobalVectorLoad, DMPLEX_LocalVectorLoad;
@@ -7505,7 +7506,7 @@ static PetscErrorCode DMPlexAnchorsGetSubMatIndices(PetscInt nPoints, const Pets
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode DMPlexAnchorsGetSubMatModification(DM dm, PetscSection section, PetscInt numPoints, PetscInt numIndices, const PetscInt points[], const PetscInt ***perms, PetscInt *outNumPoints, PetscInt *outNumIndices, PetscInt *outPoints[], PetscInt offsets[], PetscScalar *outMat[])
+PETSC_INTERN PetscErrorCode DMPlexAnchorsGetSubMatModification(DM dm, PetscSection section, PetscInt numPoints, PetscInt numIndices, const PetscInt points[], const PetscInt ***perms, PetscInt *outNumPoints, PetscInt *outNumIndices, PetscInt *outPoints[], PetscInt offsets[], PetscScalar *outMat[])
 {
   Mat             cMat;
   PetscSection    aSec, cSec;
@@ -7717,459 +7718,37 @@ PetscErrorCode DMPlexAnchorsModifyMat(DM dm, PetscSection section, PetscInt numP
   PetscScalar    *pointMat[32];
   PetscScalar    *newValues      = NULL, *tmpValues;
   PetscBool       anyConstrained = PETSC_FALSE;
+  PetscScalar    *modMat = NULL;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
-  PetscValidHeaderSpecific(section, PETSC_SECTION_CLASSID, 2);
-  PetscCall(PetscSectionGetNumFields(section, &numFields));
-
-  PetscCall(DMPlexGetAnchors(dm, &aSec, &aIS));
-  /* if there are point-to-point constraints */
-  if (aSec) {
-    PetscCall(PetscArrayzero(newOffsets, 32));
-    PetscCall(ISGetIndices(aIS, &anchors));
-    PetscCall(PetscSectionGetChart(aSec, &aStart, &aEnd));
-    PetscCall(PetscSectionGetChart(section, &sStart, &sEnd));
-    /* figure out how many points are going to be in the new element matrix
-     * (we allow double counting, because it's all just going to be summed
-     * into the global matrix anyway) */
-    for (p = 0; p < 2 * numPoints; p += 2) {
-      PetscInt b    = points[p];
-      PetscInt bDof = 0, bSecDof = 0;
-
-      if (b >= sStart && b < sEnd) PetscCall(PetscSectionGetDof(section, b, &bSecDof));
-      if (!bSecDof) continue;
-      if (b >= aStart && b < aEnd) PetscCall(PetscSectionGetDof(aSec, b, &bDof));
-      if (bDof) {
-        /* this point is constrained */
-        /* it is going to be replaced by its anchors */
-        PetscInt bOff, q;
-
-        anyConstrained = PETSC_TRUE;
-        newNumPoints += bDof;
-        PetscCall(PetscSectionGetOffset(aSec, b, &bOff));
-        for (q = 0; q < bDof; q++) {
-          PetscInt a    = anchors[bOff + q];
-          PetscInt aDof = 0;
-
-          if (a >= sStart && a < sEnd) PetscCall(PetscSectionGetDof(section, a, &aDof));
-          newNumIndices += aDof;
-          for (f = 0; f < numFields; ++f) {
-            PetscInt fDof = 0;
-
-            if (a >= sStart && a < sEnd) PetscCall(PetscSectionGetFieldDof(section, a, f, &fDof));
-            newOffsets[f + 1] += fDof;
-          }
-        }
-      } else {
-        /* this point is not constrained */
-        newNumPoints++;
-        newNumIndices += bSecDof;
-        for (f = 0; f < numFields; ++f) {
-          PetscInt fDof;
-
-          PetscCall(PetscSectionGetFieldDof(section, b, f, &fDof));
-          newOffsets[f + 1] += fDof;
-        }
-      }
-    }
-  }
-  if (!anyConstrained) {
-    if (outNumPoints) *outNumPoints = 0;
-    if (outNumIndices) *outNumIndices = 0;
-    if (outPoints) *outPoints = NULL;
-    if (outValues) *outValues = NULL;
-    if (aSec) PetscCall(ISRestoreIndices(aIS, &anchors));
-    PetscFunctionReturn(PETSC_SUCCESS);
-  }
-
-  if (outNumPoints) *outNumPoints = newNumPoints;
-  if (outNumIndices) *outNumIndices = newNumIndices;
-
-  for (f = 0; f < numFields; ++f) newOffsets[f + 1] += newOffsets[f];
-
-  if (!outPoints && !outValues) {
-    if (offsets) {
-      for (f = 0; f <= numFields; f++) offsets[f] = newOffsets[f];
-    }
-    if (aSec) PetscCall(ISRestoreIndices(aIS, &anchors));
-    PetscFunctionReturn(PETSC_SUCCESS);
-  }
-
-  PetscCheck(!numFields || newOffsets[numFields] == newNumIndices, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Invalid size for closure %" PetscInt_FMT " should be %" PetscInt_FMT, newOffsets[numFields], newNumIndices);
-
-  PetscCall(DMGetDefaultConstraints(dm, &cSec, &cMat, NULL));
-  PetscCall(PetscSectionGetChart(cSec, &cStart, &cEnd));
-
-  /* workspaces */
-  if (numFields) {
-    for (f = 0; f < numFields; f++) {
-      PetscCall(DMGetWorkArray(dm, numPoints + 1, MPIU_INT, &pointMatOffsets[f]));
-      PetscCall(DMGetWorkArray(dm, numPoints + 1, MPIU_INT, &newPointOffsets[f]));
-    }
-  } else {
-    PetscCall(DMGetWorkArray(dm, numPoints + 1, MPIU_INT, &pointMatOffsets[0]));
-    PetscCall(DMGetWorkArray(dm, numPoints, MPIU_INT, &newPointOffsets[0]));
-  }
-
-  /* get workspaces for the point-to-point matrices */
-  if (numFields) {
-    PetscInt totalOffset, totalMatOffset;
-
-    for (p = 0; p < numPoints; p++) {
-      PetscInt b    = points[2 * p];
-      PetscInt bDof = 0, bSecDof = 0;
-
-      if (b >= sStart && b < sEnd) PetscCall(PetscSectionGetDof(section, b, &bSecDof));
-      if (!bSecDof) {
-        for (f = 0; f < numFields; f++) {
-          newPointOffsets[f][p + 1] = 0;
-          pointMatOffsets[f][p + 1] = 0;
-        }
-        continue;
-      }
-      if (b >= aStart && b < aEnd) PetscCall(PetscSectionGetDof(aSec, b, &bDof));
-      if (bDof) {
-        for (f = 0; f < numFields; f++) {
-          PetscInt fDof, q, bOff, allFDof = 0;
-
-          PetscCall(PetscSectionGetFieldDof(section, b, f, &fDof));
-          PetscCall(PetscSectionGetOffset(aSec, b, &bOff));
-          for (q = 0; q < bDof; q++) {
-            PetscInt a     = anchors[bOff + q];
-            PetscInt aFDof = 0;
-
-            if (a >= sStart && a < sEnd) PetscCall(PetscSectionGetFieldDof(section, a, f, &aFDof));
-            allFDof += aFDof;
-          }
-          newPointOffsets[f][p + 1] = allFDof;
-          pointMatOffsets[f][p + 1] = fDof * allFDof;
-        }
-      } else {
-        for (f = 0; f < numFields; f++) {
-          PetscInt fDof;
-
-          PetscCall(PetscSectionGetFieldDof(section, b, f, &fDof));
-          newPointOffsets[f][p + 1] = fDof;
-          pointMatOffsets[f][p + 1] = 0;
-        }
-      }
-    }
-    for (f = 0, totalOffset = 0, totalMatOffset = 0; f < numFields; f++) {
-      newPointOffsets[f][0] = totalOffset;
-      pointMatOffsets[f][0] = totalMatOffset;
-      for (p = 0; p < numPoints; p++) {
-        newPointOffsets[f][p + 1] += newPointOffsets[f][p];
-        pointMatOffsets[f][p + 1] += pointMatOffsets[f][p];
-      }
-      totalOffset    = newPointOffsets[f][numPoints];
-      totalMatOffset = pointMatOffsets[f][numPoints];
-      PetscCall(DMGetWorkArray(dm, pointMatOffsets[f][numPoints], MPIU_SCALAR, &pointMat[f]));
-    }
-  } else {
-    for (p = 0; p < numPoints; p++) {
-      PetscInt b    = points[2 * p];
-      PetscInt bDof = 0, bSecDof = 0;
-
-      if (b >= sStart && b < sEnd) PetscCall(PetscSectionGetDof(section, b, &bSecDof));
-      if (!bSecDof) {
-        newPointOffsets[0][p + 1] = 0;
-        pointMatOffsets[0][p + 1] = 0;
-        continue;
-      }
-      if (b >= aStart && b < aEnd) PetscCall(PetscSectionGetDof(aSec, b, &bDof));
-      if (bDof) {
-        PetscInt bOff, q, allDof = 0;
-
-        PetscCall(PetscSectionGetOffset(aSec, b, &bOff));
-        for (q = 0; q < bDof; q++) {
-          PetscInt a = anchors[bOff + q], aDof = 0;
-
-          if (a >= sStart && a < sEnd) PetscCall(PetscSectionGetDof(section, a, &aDof));
-          allDof += aDof;
-        }
-        newPointOffsets[0][p + 1] = allDof;
-        pointMatOffsets[0][p + 1] = bSecDof * allDof;
-      } else {
-        newPointOffsets[0][p + 1] = bSecDof;
-        pointMatOffsets[0][p + 1] = 0;
-      }
-    }
-    newPointOffsets[0][0] = 0;
-    pointMatOffsets[0][0] = 0;
-    for (p = 0; p < numPoints; p++) {
-      newPointOffsets[0][p + 1] += newPointOffsets[0][p];
-      pointMatOffsets[0][p + 1] += pointMatOffsets[0][p];
-    }
-    PetscCall(DMGetWorkArray(dm, pointMatOffsets[0][numPoints], MPIU_SCALAR, &pointMat[0]));
-  }
-
-  /* output arrays */
-  PetscCall(DMGetWorkArray(dm, 2 * newNumPoints, MPIU_INT, &newPoints));
-
-  /* get the point-to-point matrices; construct newPoints */
-  PetscCall(PetscSectionGetMaxDof(aSec, &maxAnchor));
-  PetscCall(PetscSectionGetMaxDof(section, &maxDof));
-  PetscCall(DMGetWorkArray(dm, maxDof, MPIU_INT, &indices));
-  PetscCall(DMGetWorkArray(dm, maxAnchor * maxDof, MPIU_INT, &newIndices));
-  if (numFields) {
-    for (p = 0, newP = 0; p < numPoints; p++) {
-      PetscInt b    = points[2 * p];
-      PetscInt o    = points[2 * p + 1];
-      PetscInt bDof = 0, bSecDof = 0;
-
-      if (b >= sStart && b < sEnd) PetscCall(PetscSectionGetDof(section, b, &bSecDof));
-      if (!bSecDof) continue;
-      if (b >= aStart && b < aEnd) PetscCall(PetscSectionGetDof(aSec, b, &bDof));
-      if (bDof) {
-        PetscInt fStart[32], fEnd[32], fAnchorStart[32], fAnchorEnd[32], bOff, q;
-
-        fStart[0] = 0;
-        fEnd[0]   = 0;
-        for (f = 0; f < numFields; f++) {
-          PetscInt fDof = 0;
-
-          if (b >= cStart && b < cEnd) PetscCall(PetscSectionGetFieldDof(cSec, b, f, &fDof));
-          fStart[f + 1] = fStart[f] + fDof;
-          fEnd[f + 1]   = fStart[f + 1];
-        }
-        if (b >= cStart && b < cEnd) {
-          PetscCall(PetscSectionGetOffset(cSec, b, &bOff));
-          PetscCall(DMPlexGetIndicesPointFields_Internal(cSec, PETSC_TRUE, b, bOff, fEnd, PETSC_TRUE, perms, p, NULL, indices));
-        }
-
-        fAnchorStart[0] = 0;
-        fAnchorEnd[0]   = 0;
-        for (f = 0; f < numFields; f++) {
-          PetscInt fDof = newPointOffsets[f][p + 1] - newPointOffsets[f][p];
-
-          fAnchorStart[f + 1] = fAnchorStart[f] + fDof;
-          fAnchorEnd[f + 1]   = fAnchorStart[f + 1];
-        }
-        PetscCall(PetscSectionGetOffset(aSec, b, &bOff));
-        for (q = 0; q < bDof; q++) {
-          PetscInt a = anchors[bOff + q], aOff = -1;
-
-          /* we take the orientation of ap into account in the order that we constructed the indices above: the newly added points have no orientation */
-          newPoints[2 * (newP + q)]     = a;
-          newPoints[2 * (newP + q) + 1] = 0;
-          if (a >= sStart && a < sEnd) {
-            PetscCall(PetscSectionGetOffset(section, a, &aOff));
-            PetscCall(DMPlexGetIndicesPointFields_Internal(section, PETSC_TRUE, a, aOff, fAnchorEnd, PETSC_TRUE, NULL, -1, NULL, newIndices));
-          }
-        }
-        newP += bDof;
-
-        if (outValues) {
-          /* get the point-to-point submatrix */
-          for (f = 0; f < numFields; f++) {
-            if (fEnd[f] - fStart[f] > 0) PetscCall(MatGetValues(cMat, fEnd[f] - fStart[f], indices + fStart[f], fAnchorEnd[f] - fAnchorStart[f], newIndices + fAnchorStart[f], pointMat[f] + pointMatOffsets[f][p]));
-          }
-        }
-      } else {
-        newPoints[2 * newP]     = b;
-        newPoints[2 * newP + 1] = o;
-        newP++;
-      }
-    }
-  } else {
-    for (p = 0; p < numPoints; p++) {
-      PetscInt b    = points[2 * p];
-      PetscInt o    = points[2 * p + 1];
-      PetscInt bDof = 0, bSecDof = 0;
-
-      if (b >= sStart && b < sEnd) PetscCall(PetscSectionGetDof(section, b, &bSecDof));
-      if (!bSecDof) continue;
-      if (b >= aStart && b < aEnd) PetscCall(PetscSectionGetDof(aSec, b, &bDof));
-      if (bDof) {
-        PetscInt bEnd = 0, bAnchorEnd = 0, bOff;
-
-        if (b >= cStart && b < cEnd) {
-          PetscCall(PetscSectionGetOffset(cSec, b, &bOff));
-          PetscCall(DMPlexGetIndicesPoint_Internal(cSec, PETSC_TRUE, b, bOff, &bEnd, PETSC_TRUE, (perms && perms[0]) ? perms[0][p] : NULL, NULL, indices));
-        }
-
-        PetscCall(PetscSectionGetOffset(aSec, b, &bOff));
-        for (q = 0; q < bDof; q++) {
-          PetscInt a = anchors[bOff + q], aOff;
-
-          /* we take the orientation of ap into account in the order that we constructed the indices above: the newly added points have no orientation */
-
-          newPoints[2 * (newP + q)]     = a;
-          newPoints[2 * (newP + q) + 1] = 0;
-          if (a >= sStart && a < sEnd) {
-            PetscCall(PetscSectionGetOffset(section, a, &aOff));
-            PetscCall(DMPlexGetIndicesPoint_Internal(section, PETSC_TRUE, a, aOff, &bAnchorEnd, PETSC_TRUE, NULL, NULL, newIndices));
-          }
-        }
-        newP += bDof;
-
-        /* get the point-to-point submatrix */
-        if (outValues) PetscCall(MatGetValues(cMat, bEnd, indices, bAnchorEnd, newIndices, pointMat[0] + pointMatOffsets[0][p]));
-      } else {
-        newPoints[2 * newP]     = b;
-        newPoints[2 * newP + 1] = o;
-        newP++;
-      }
-    }
-  }
-
+  /* If M is the matrix represented by values, get the matrix C such that we will add M * C (or, if multiplyLeft, C^T * M * C) into the global matrix.
+     modMat is that matrix C */
+  PetscCall(DMPlexAnchorsGetSubMatModification(dm, section, numPoints, numIndices, points, perms, outNumPoints, outNumIndices, outPoints, offsets, outValues ? &modMat : NULL));
   if (outValues) {
-    PetscCall(DMGetWorkArray(dm, newNumIndices * numIndices, MPIU_SCALAR, &tmpValues));
-    PetscCall(PetscArrayzero(tmpValues, newNumIndices * numIndices));
-    /* multiply constraints on the right */
-    if (numFields) {
-      for (f = 0; f < numFields; f++) {
-        PetscInt oldOff = offsets[f];
+    PetscScalar *newValues = NULL;
+    PetscBLASInt M = newNumIndices;
+    PetscBLASInt N = numIndices;
+    PetscBLASInt K = numIndices;
+    PetscScalar  a = 1.0, b = 0.0;
 
-        for (p = 0; p < numPoints; p++) {
-          PetscInt cStart = newPointOffsets[f][p];
-          PetscInt b      = points[2 * p];
-          PetscInt c, r, k;
-          PetscInt dof = 0;
-
-          if (b >= sStart && b < sEnd) PetscCall(PetscSectionGetFieldDof(section, b, f, &dof));
-          if (!dof) continue;
-          if (pointMatOffsets[f][p] < pointMatOffsets[f][p + 1]) {
-            PetscInt           nCols = newPointOffsets[f][p + 1] - cStart;
-            const PetscScalar *mat   = pointMat[f] + pointMatOffsets[f][p];
-
-            for (r = 0; r < numIndices; r++) {
-              for (c = 0; c < nCols; c++) {
-                for (k = 0; k < dof; k++) tmpValues[r * newNumIndices + cStart + c] += values[r * numIndices + oldOff + k] * mat[k * nCols + c];
-              }
-            }
-          } else {
-            /* copy this column as is */
-            for (r = 0; r < numIndices; r++) {
-              for (c = 0; c < dof; c++) tmpValues[r * newNumIndices + cStart + c] = values[r * numIndices + oldOff + c];
-            }
-          }
-          oldOff += dof;
-        }
-      }
-    } else {
-      PetscInt oldOff = 0;
-      for (p = 0; p < numPoints; p++) {
-        PetscInt cStart = newPointOffsets[0][p];
-        PetscInt b      = points[2 * p];
-        PetscInt c, r, k;
-        PetscInt dof = 0;
-
-        if (b >= sStart && b < sEnd) PetscCall(PetscSectionGetDof(section, b, &dof));
-        if (!dof) continue;
-        if (pointMatOffsets[0][p] < pointMatOffsets[0][p + 1]) {
-          PetscInt           nCols = newPointOffsets[0][p + 1] - cStart;
-          const PetscScalar *mat   = pointMat[0] + pointMatOffsets[0][p];
-
-          for (r = 0; r < numIndices; r++) {
-            for (c = 0; c < nCols; c++) {
-              for (k = 0; k < dof; k++) tmpValues[r * newNumIndices + cStart + c] += mat[k * nCols + c] * values[r * numIndices + oldOff + k];
-            }
-          }
-        } else {
-          /* copy this column as is */
-          for (r = 0; r < numIndices; r++) {
-            for (c = 0; c < dof; c++) tmpValues[r * newNumIndices + cStart + c] = values[r * numIndices + oldOff + c];
-          }
-        }
-        oldOff += dof;
-      }
-    }
+    PetscCall(DMGetWorkArray(dm, newNumIndices * numIndices, PETSC_SCALAR, &newValues));
+    PetscCallBLAS("BLASgemm", BLASgemm_("N", "N", &M, &N, &K, &a, modMat, &M, values, &K, &b, newValues, &M));
 
     if (multiplyLeft) {
-      PetscCall(DMGetWorkArray(dm, newNumIndices * newNumIndices, MPIU_SCALAR, &newValues));
-      PetscCall(PetscArrayzero(newValues, newNumIndices * newNumIndices));
-      /* multiply constraints transpose on the left */
-      if (numFields) {
-        for (f = 0; f < numFields; f++) {
-          PetscInt oldOff = offsets[f];
+      PetscScalar *newNewValues = NULL;
+      PetscBLASInt M = newNumIndices;
+      PetscBLASInt N = newNumIndices;
+      PetscBLASInt K = numIndices;
+      PetscScalar  a = 1.0, b = 0.0;
 
-          for (p = 0; p < numPoints; p++) {
-            PetscInt rStart = newPointOffsets[f][p];
-            PetscInt b      = points[2 * p];
-            PetscInt c, r, k;
-            PetscInt dof = 0;
-
-            if (b >= sStart && b < sEnd) PetscCall(PetscSectionGetFieldDof(section, b, f, &dof));
-            if (pointMatOffsets[f][p] < pointMatOffsets[f][p + 1]) {
-              PetscInt                          nRows = newPointOffsets[f][p + 1] - rStart;
-              const PetscScalar *PETSC_RESTRICT mat   = pointMat[f] + pointMatOffsets[f][p];
-
-              for (r = 0; r < nRows; r++) {
-                for (c = 0; c < newNumIndices; c++) {
-                  for (k = 0; k < dof; k++) newValues[(rStart + r) * newNumIndices + c] += mat[k * nRows + r] * tmpValues[(oldOff + k) * newNumIndices + c];
-                }
-              }
-            } else {
-              /* copy this row as is */
-              for (r = 0; r < dof; r++) {
-                for (c = 0; c < newNumIndices; c++) newValues[(rStart + r) * newNumIndices + c] = tmpValues[(oldOff + r) * newNumIndices + c];
-              }
-            }
-            oldOff += dof;
-          }
-        }
-      } else {
-        PetscInt oldOff = 0;
-
-        for (p = 0; p < numPoints; p++) {
-          PetscInt rStart = newPointOffsets[0][p];
-          PetscInt b      = points[2 * p];
-          PetscInt c, r, k;
-          PetscInt dof = 0;
-
-          if (b >= sStart && b < sEnd) PetscCall(PetscSectionGetDof(section, b, &dof));
-          if (pointMatOffsets[0][p] < pointMatOffsets[0][p + 1]) {
-            PetscInt                          nRows = newPointOffsets[0][p + 1] - rStart;
-            const PetscScalar *PETSC_RESTRICT mat   = pointMat[0] + pointMatOffsets[0][p];
-
-            for (r = 0; r < nRows; r++) {
-              for (c = 0; c < newNumIndices; c++) {
-                for (k = 0; k < dof; k++) newValues[(rStart + r) * newNumIndices + c] += mat[k * nRows + r] * tmpValues[(oldOff + k) * newNumIndices + c];
-              }
-            }
-          } else {
-            /* copy this row as is */
-            for (r = 0; r < dof; r++) {
-              for (c = 0; c < newNumIndices; c++) newValues[(rStart + r) * newNumIndices + c] = tmpValues[(oldOff + r) * newNumIndices + c];
-            }
-          }
-          oldOff += dof;
-        }
-      }
-
-      PetscCall(DMRestoreWorkArray(dm, newNumIndices * numIndices, MPIU_SCALAR, &tmpValues));
-    } else {
-      newValues = tmpValues;
+      PetscCall(DMGetWorkArray(dm, newNumIndices * numIndices, PETSC_SCALAR, &newNewValues));
+      PetscCallBLAS("BLASgemm", BLASgemm_("N", "T", &M, &N, &K, &a, newValues, &M, modMat, &N, &b, newValues, &M));
+      PetscCall(DMRestoreWorkArray(dm, numIndices * newNumIndices, PETSC_SCALAR, &newValues));
+      newValues = newNewValues;
     }
+    *outValues = newValues;
+    PetscCall(DMRestoreWorkArray(dm, numIndices * newNumIndices, PETSC_SCALAR, &modMat));
   }
-
-  /* clean up */
-  PetscCall(DMRestoreWorkArray(dm, maxDof, MPIU_INT, &indices));
-  PetscCall(DMRestoreWorkArray(dm, maxAnchor * maxDof, MPIU_INT, &newIndices));
-
-  if (numFields) {
-    for (f = 0; f < numFields; f++) {
-      PetscCall(DMRestoreWorkArray(dm, pointMatOffsets[f][numPoints], MPIU_SCALAR, &pointMat[f]));
-      PetscCall(DMRestoreWorkArray(dm, numPoints + 1, MPIU_INT, &pointMatOffsets[f]));
-      PetscCall(DMRestoreWorkArray(dm, numPoints + 1, MPIU_INT, &newPointOffsets[f]));
-    }
-  } else {
-    PetscCall(DMRestoreWorkArray(dm, pointMatOffsets[0][numPoints], MPIU_SCALAR, &pointMat[0]));
-    PetscCall(DMRestoreWorkArray(dm, numPoints + 1, MPIU_INT, &pointMatOffsets[0]));
-    PetscCall(DMRestoreWorkArray(dm, numPoints + 1, MPIU_INT, &newPointOffsets[0]));
-  }
-  PetscCall(ISRestoreIndices(aIS, &anchors));
-
-  /* output */
-  if (outPoints) {
-    *outPoints = newPoints;
-  } else {
-    PetscCall(DMRestoreWorkArray(dm, 2 * newNumPoints, MPIU_INT, &newPoints));
-  }
-  if (outValues) *outValues = newValues;
-  for (f = 0; f <= numFields; f++) offsets[f] = newOffsets[f];
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
