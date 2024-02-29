@@ -719,7 +719,7 @@ PetscErrorCode MatCreate_LMVMCDQN(Mat B)
 
 /*@
   MatCreateLMVMCDQN - Creates a compact dense representation of the limited-memory
-  Quasi-Newton approximation to a Hessian. 
+  Quasi-Newton approximation to a Hessian.
 
   Collective
 
