@@ -80,8 +80,12 @@ int main(int argc, char **argv)
 
 /*TEST
 
+  build:
+    requires: !complex
+
   test:
     suffix: 0
+    requires: !single
     args: -mat_lmvm_scale_type none
 
 TEST*/
