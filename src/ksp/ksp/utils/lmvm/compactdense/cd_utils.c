@@ -143,7 +143,9 @@ PETSC_INTERN PetscErrorCode MatUpperTriangularSolveInPlace_Internal(MatLMVMCompa
       PetscCallBLAS("BLAStrsv", BLAStrsv_("U", hermitian_transpose ? "C" : "N", "NotUnitTriangular", &n, A, &lda_blas, x, &one));
       PetscCall(PetscLogFlops(1.0 * n * n));
     } else if (PetscMemTypeDevice(memtype)) {
+#if defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_HIP)
       PetscCall(MatUpperTriangularSolveInPlace_CUPM(hermitian_transpose, N, A, lda, x, 1));
+#endif
     } else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "Unsupported memtype");
     break;
   case MAT_LMVM_CD_INPLACE:
@@ -165,7 +167,9 @@ PETSC_INTERN PetscErrorCode MatUpperTriangularSolveInPlace_Internal(MatLMVMCompa
       }
       PetscCall(PetscLogFlops(1.0 * N * N));
     } else if (PetscMemTypeDevice(memtype)) {
+#if defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_HIP)
       PetscCall(MatUpperTriangularSolveInPlaceCyclic_CUPM(hermitian_transpose, N, oldest_index, A, lda, x, stride));
+#endif
     } else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "Unsupported memtype");
     break;
   default:
