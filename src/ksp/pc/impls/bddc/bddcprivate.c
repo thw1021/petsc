@@ -7102,8 +7102,8 @@ static PetscErrorCode PCBDDCMatISGetSubassemblingPattern(Mat mat, PetscInt *n_su
     PetscCall(PetscFree(procs_candidates));
     PetscFunctionReturn(PETSC_SUCCESS);
   }
-  PetscCall(PetscOptionsGetBool(NULL, NULL, "-matis_partitioning_use_vwgt", &use_vwgt, NULL));
-  PetscCall(PetscOptionsGetInt(NULL, NULL, "-matis_partitioning_threshold", &threshold, NULL));
+  PetscCall(PetscOptionsGetBool(NULL, ((PetscObject)A)->prefix, "-mat_is_partitioning_use_vwgt", &use_vwgt, NULL));
+  PetscCall(PetscOptionsGetInt(NULL, ((PetscObject)A)->prefix, "-mat_is_partitioning_threshold", &threshold, NULL));
   threshold = PetscMax(threshold, 2);
 
   /* Get info on mapping */
