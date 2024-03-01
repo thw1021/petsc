@@ -29,7 +29,7 @@ struct _PCBDDCGraph {
   PetscBool              has_dirichlet;
   IS                     dirdofs;
   IS                     dirdofsB;
-  PetscInt               commsizelimit;
+  PetscBool              seq_graph;
   PetscInt               maxcount;
   /* data for connected components */
   PetscInt  ncc;
@@ -42,9 +42,6 @@ struct _PCBDDCGraph {
   PetscInt **subset_idxs;
   PetscInt  *subset_ncc;
   PetscInt  *subset_ref_node;
-  /* data for periodic dofs */
-  PetscInt  *mirrors;
-  PetscInt **mirrors_set;
   /* placeholders for connectivity relation between dofs */
   PetscInt  nvtxs_csr;
   PetscInt *xadj;
