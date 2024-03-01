@@ -6,6 +6,6 @@ Mat Object: 1 MPI process
   Convex factors: phi=0., theta=0.125
   Max. storage: 5
   Used storage: 0
-  Number of updates: 100
+  Number of updates: 165
   Number of rejects: 0
-  Number of resets: 11
+  Number of resets: 12
