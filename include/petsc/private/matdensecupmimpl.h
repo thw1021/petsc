@@ -453,13 +453,13 @@ inline PetscErrorCode MatDense_CUPM<T, D>::GetDiagonal(Mat A, Vec v) noexcept
     auto da       = D::DeviceArrayRead(dctx, A);
     auto diagonal = detail::MakeDiagonalIterator(da.data(), rstart, rend, gcols, lda);
     // We must have this cast outside of THRUST_CALL(). Without it, GCC 6.4 - 7.5, and 11.3.0
-    // +    // throw spurious warnings:
-    // +    //
-    // +    // warning: 'MatDense_CUPM<...>::GetDiagonal(Mat, Vec)::<lambda()>' declared with greater
-    // +    // visibility than the type of its field 'MatDense_CUPM<...>::GetDiagonal(Mat,
-    // +    // Vec)::<lambda()>::<dv capture>' [-Wattributes]
-    // +    // 460 |     PetscCallThrust(
-    // +    //     |     ^~~~~~~~~~~~~~~~   
+    // throw spurious warnings:
+    // 
+    // warning: 'MatDense_CUPM<...>::GetDiagonal(Mat, Vec)::<lambda()>' declared with greater
+    // visibility than the type of its field 'MatDense_CUPM<...>::GetDiagonal(Mat,
+    // Vec)::<lambda()>::<dv capture>' [-Wattributes]
+    // 460 |     PetscCallThrust(
+    //     |     ^~~~~~~~~~~~~~~~
     auto         dvp = thrust::device_pointer_cast(dv.data());
     cupmStream_t stream;
 
