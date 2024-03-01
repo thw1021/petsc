@@ -7631,7 +7631,7 @@ PETSC_INTERN PetscErrorCode DMPlexAnchorsGetSubMatModification(DM dm, PetscSecti
 
   // get the new Points
   for (PetscInt p = 0, newP = 0; p < numPoints; p++) {
-    PetscInt b = points[2 * p];
+    PetscInt b    = points[2 * p];
     PetscInt bDof = 0, bSecDof = 0, bOff;
 
     if (b >= sStart && b < sEnd) PetscCall(PetscSectionGetDof(section, b, &bSecDof));
@@ -7644,13 +7644,13 @@ PETSC_INTERN PetscErrorCode DMPlexAnchorsGetSubMatModification(DM dm, PetscSecti
 
         if (a >= sStart && a < sEnd) PetscCall(PetscSectionGetDof(section, a, &aDof));
         if (aDof) {
-          newPoints[2 * newP] = a;
+          newPoints[2 * newP]     = a;
           newPoints[2 * newP + 1] = 0; // orientatons are accounted for in constructing the matrix, newly added points are in default orientation
           newP++;
         }
       }
     } else {
-      newPoints[2 * newP] = b;
+      newPoints[2 * newP]     = b;
       newPoints[2 * newP + 1] = 0;
     }
   }
@@ -7699,7 +7699,7 @@ PETSC_INTERN PetscErrorCode DMPlexAnchorsGetSubMatModification(DM dm, PetscSecti
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode DMPlexAnchorsModifyMat(DM dm, PetscSection section, PetscInt numPoints, PetscInt numIndices, const PetscInt points[], const PetscInt ***perms, const PetscScalar values[], PetscInt *outNumPoints, PetscInt *outNumIndices, PetscInt *outPoints[], PetscScalar *outValues[], PetscInt offsets[], PetscBool multiplyLeft)
+PETSC_INTERN PetscErrorCode DMPlexAnchorsModifyMat_Internal(DM dm, PetscSection section, PetscInt numPoints, PetscInt numIndices, const PetscInt points[], const PetscInt ***perms, PetscInt numRows, PetscInt numCols, const PetscScalar values[], PetscInt *outNumPoints, PetscInt *outNumIndices, PetscInt *outPoints[], PetscScalar *outValues[], PetscInt offsets[], PetscBool multiplyRight, PetscBool multiplyLeft)
 {
   Mat             cMat;
   PetscSection    aSec, cSec;
@@ -7718,73 +7718,61 @@ PetscErrorCode DMPlexAnchorsModifyMat(DM dm, PetscSection section, PetscInt numP
   PetscScalar    *pointMat[32];
   PetscScalar    *newValues      = NULL, *tmpValues;
   PetscBool       anyConstrained = PETSC_FALSE;
-  PetscScalar    *modMat = NULL;
+  PetscScalar    *modMat         = NULL;
 
   PetscFunctionBegin;
   /* If M is the matrix represented by values, get the matrix C such that we will add M * C (or, if multiplyLeft, C^T * M * C) into the global matrix.
      modMat is that matrix C */
   PetscCall(DMPlexAnchorsGetSubMatModification(dm, section, numPoints, numIndices, points, perms, outNumPoints, outNumIndices, outPoints, offsets, outValues ? &modMat : NULL));
   if (outValues) {
-    PetscScalar *newValues = NULL;
-    PetscBLASInt M = newNumIndices;
-    PetscBLASInt N = numIndices;
-    PetscBLASInt K = numIndices;
-    PetscScalar  a = 1.0, b = 0.0;
+    const PetscScalar *newValues = values;
 
-    PetscCall(DMGetWorkArray(dm, newNumIndices * numIndices, PETSC_SCALAR, &newValues));
-    PetscCallBLAS("BLASgemm", BLASgemm_("N", "N", &M, &N, &K, &a, modMat, &M, values, &K, &b, newValues, &M));
+    if (multiplyRight) {
+      PetscScalar *newNewValues = NULL;
+      PetscBLASInt M            = newNumIndices;
+      PetscBLASInt N            = numRows;
+      PetscBLASInt K            = numIndices;
+      PetscScalar  a = 1.0, b = 0.0;
+
+      PetscCheck(numCols == numIndices, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_SIZ, "values matrix has the wrong number of columns: %d, expected %d\n", (int)numCols, (int)numIndices);
+
+      PetscCall(DMGetWorkArray(dm, numRows * newNumIndices, PETSC_SCALAR, &newNewValues));
+      // row-major to column-major conversion, right multiplication becomes left multiplication
+      PetscCallBLAS("BLASgemm", BLASgemm_("N", "N", &M, &N, &K, &a, modMat, &M, newValues, &K, &b, newNewValues, &M));
+
+      numCols   = newNumIndices;
+      newValues = newNewValues;
+    }
 
     if (multiplyLeft) {
       PetscScalar *newNewValues = NULL;
-      PetscBLASInt M = newNumIndices;
-      PetscBLASInt N = newNumIndices;
-      PetscBLASInt K = numIndices;
+      PetscBLASInt M            = numCols;
+      PetscBLASInt N            = newNumIndices;
+      PetscBLASInt K            = numIndices;
       PetscScalar  a = 1.0, b = 0.0;
 
-      PetscCall(DMGetWorkArray(dm, newNumIndices * numIndices, PETSC_SCALAR, &newNewValues));
-      PetscCallBLAS("BLASgemm", BLASgemm_("N", "T", &M, &N, &K, &a, newValues, &M, modMat, &N, &b, newValues, &M));
-      PetscCall(DMRestoreWorkArray(dm, numIndices * newNumIndices, PETSC_SCALAR, &newValues));
+      PetscCheck(numRows == numIndices, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_SIZ, "values matrix has the wrong number of rows: %d, expected %d\n", (int)numRows, (int)numIndices);
+
+      PetscCall(DMGetWorkArray(dm, newNumIndices * numCols, PETSC_SCALAR, &newNewValues));
+      // row-major to column-major conversion, left multiplication becomes right multiplication
+      PetscCallBLAS("BLASgemm", BLASgemm_("N", "T", &M, &N, &K, &a, newValues, &M, modMat, &N, &b, newNewValues, &M));
+      if (newValues != values) PetscCall(DMRestoreWorkArray(dm, numIndices * newNumIndices, PETSC_SCALAR, &newValues));
       newValues = newNewValues;
     }
-    *outValues = newValues;
+    *outValues = (PetscScalar *)newValues;
     PetscCall(DMRestoreWorkArray(dm, numIndices * newNumIndices, PETSC_SCALAR, &modMat));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
-  DMPlexGetClosureIndices - Gets the global dof indices associated with the closure of the given point within the provided sections.
+PETSC_INTERN PetscErrorCode DMPlexAnchorsModifyMat(DM dm, PetscSection section, PetscInt numPoints, PetscInt numIndices, const PetscInt points[], const PetscInt ***perms, const PetscScalar values[], PetscInt *outNumPoints, PetscInt *outNumIndices, PetscInt *outPoints[], PetscScalar *outValues[], PetscInt offsets[], PetscBool multiplyLeft)
+{
+  PetscFunctionBegin;
+  PetscCall(DMPlexAnchorsModifyMat_Internal(dm, section, numPoints, numIndices, points, perms, numIndices, numIndices, values, outNumPoints, outNumIndices, outPoints, outValues, offsets, PETSC_TRUE, multiplyLeft));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
 
-  Not collective
-
-  Input Parameters:
-+ dm         - The `DM`
-. section    - The `PetscSection` describing the points (a local section)
-. idxSection - The `PetscSection` from which to obtain indices (may be local or global)
-. point      - The point defining the closure
-- useClPerm  - Use the closure point permutation if available
-
-  Output Parameters:
-+ numIndices - The number of dof indices in the closure of point with the input sections
-. indices    - The dof indices
-. outOffsets - Array to write the field offsets into, or `NULL`
-- values     - The input values, which may be modified if sign flips are induced by the point symmetries, or `NULL`
-
-  Level: advanced
-
-  Notes:
-  Must call `DMPlexRestoreClosureIndices()` to free allocated memory
-
-  If `idxSection` is global, any constrained dofs (see `DMAddBoundary()`, for example) will get negative indices.  The value
-  of those indices is not significant.  If `idxSection` is local, the constrained dofs will yield the involution -(idx+1)
-  of their index in a local vector.  A caller who does not wish to distinguish those points may recover the nonnegative
-  indices via involution, -(-(idx+1)+1)==idx.  Local indices are provided when `idxSection` == section, otherwise global
-  indices (with the above semantics) are implied.
-
-.seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMPlexRestoreClosureIndices()`, `DMPlexVecGetClosure()`, `DMPlexMatSetClosure()`, `DMGetLocalSection()`,
-          `PetscSection`, `DMGetGlobalSection()`
-@*/
-PetscErrorCode DMPlexGetClosureIndices(DM dm, PetscSection section, PetscSection idxSection, PetscInt point, PetscBool useClPerm, PetscInt *numIndices, PetscInt *indices[], PetscInt outOffsets[], PetscScalar *values[])
+static PetscErrorCode DMPlexGetClosureIndices_Internal(DM dm, PetscSection section, PetscSection idxSection, PetscInt point, PetscBool useClPerm, PetscInt *numRows, PetscInt *numCols, PetscInt *indices[], PetscInt outOffsets[], PetscScalar *values[], PetscBool multiplyRight, PetscBool multiplyLeft)
 {
   /* Closure ordering */
   PetscSection    clSection;
@@ -7805,12 +7793,14 @@ PetscErrorCode DMPlexGetClosureIndices(DM dm, PetscSection section, PetscSection
   PetscInt  Nf, Ncl, Ni = 0, offsets[32], p, f;
   PetscBool isLocal = (section == idxSection) ? PETSC_TRUE : PETSC_FALSE;
   PetscInt  idxStart, idxEnd;
+  PetscInt  nRows, nCols;
 
   PetscFunctionBeginHot;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscValidHeaderSpecific(section, PETSC_SECTION_CLASSID, 2);
   PetscValidHeaderSpecific(idxSection, PETSC_SECTION_CLASSID, 3);
-  if (numIndices) PetscAssertPointer(numIndices, 6);
+  PetscAssertPointer(numRows, 6);
+  PetscAssertPointer(numCols, 6);
   if (indices) PetscAssertPointer(indices, 7);
   if (outOffsets) PetscAssertPointer(outOffsets, 8);
   if (values) PetscAssertPointer(values, 9);
@@ -7840,9 +7830,15 @@ PetscErrorCode DMPlexGetClosureIndices(DM dm, PetscSection section, PetscSection
     }
     Ni += dof;
   }
+  if (*numRows == -1) *numRows = Ni;
+  if (*numCols == -1) *numCols = Ni;
+  nRows = *numRows;
+  nCols = *numCols;
   for (f = 1; f < Nf; ++f) offsets[f + 1] += offsets[f];
   PetscCheck(!Nf || offsets[Nf] == Ni, PetscObjectComm((PetscObject)dm), PETSC_ERR_PLIB, "Invalid size for closure %" PetscInt_FMT " should be %" PetscInt_FMT, offsets[Nf], Ni);
   /* 3) Get symmetries and sign flips. Apply sign flips to values if passed in (only works for square values matrix) */
+  if (multiplyRight) PetscCheck(nCols == Ni, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_SIZ, "Expected %d columns, got %d\n", (int)Ni, nCols);
+  if (multiplyLeft) PetscCheck(nRows == Ni, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_SIZ, "Expected %d rows, got %d\n", (int)Ni, nRows);
   for (f = 0; f < PetscMax(1, Nf); ++f) {
     if (Nf) PetscCall(PetscSectionGetFieldPointSyms(section, f, Ncl, points, &perms[f], &flips[f]));
     else PetscCall(PetscSectionGetPointSyms(section, Ncl, points, &perms[f], &flips[f]));
@@ -7867,9 +7863,11 @@ PetscErrorCode DMPlexGetClosureIndices(DM dm, PetscSection section, PetscSection
           for (i = 0; i < fdof; ++i) {
             PetscScalar fval = flip[i];
 
-            for (k = 0; k < Ni; ++k) {
-              valCopy[Ni * (foffset + i) + k] *= fval;
-              valCopy[Ni * k + (foffset + i)] *= fval;
+            if (multiplyRight) {
+              for (k = 0; k < nRows; ++k) { valCopy[Ni * k + (foffset + i)] *= fval; }
+            }
+            if (multiplyLeft) {
+              for (k = 0; k < nCols; ++k) { valCopy[nCols * (foffset + i) + k] *= fval; }
             }
           }
         }
@@ -7878,7 +7876,9 @@ PetscErrorCode DMPlexGetClosureIndices(DM dm, PetscSection section, PetscSection
     }
   }
   /* 4) Apply hanging node constraints. Get new symmetries and replace all storage with constrained storage */
-  PetscCall(DMPlexAnchorsModifyMat(dm, section, Ncl, Ni, points, perms, values ? *values : NULL, &NclC, &NiC, &pointsC, values ? &valuesC : NULL, offsets, PETSC_TRUE));
+  PetscCall(DMPlexAnchorsModifyMat_Internal(dm, section, Ncl, Ni, points, perms, nRows, nCols, values ? *values : NULL, &NclC, &NiC, &pointsC, values ? &valuesC : NULL, offsets, multiplyRight, multiplyLeft));
+  if (multiplyRight) { *numCols = nCols = NiC; }
+  if (multiplyLeft) { *numRows = nRows = NiC; }
   if (NclC) {
     if (valCopy) PetscCall(DMRestoreWorkArray(dm, Ni * Ni, MPIU_SCALAR, &valCopy));
     for (f = 0; f < PetscMax(1, Nf); ++f) {
@@ -7949,8 +7949,48 @@ PetscErrorCode DMPlexGetClosureIndices(DM dm, PetscSection section, PetscSection
     PetscCall(DMPlexRestoreCompressedClosure(dm, section, point, &Ncl, &points, &clSection, &clPoints, &clp));
   }
 
-  if (numIndices) *numIndices = Ni;
   if (indices) *indices = idx;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  DMPlexGetClosureIndices - Gets the global dof indices associated with the closure of the given point within the provided sections.
+
+  Not collective
+
+  Input Parameters:
++ dm         - The `DM`
+. section    - The `PetscSection` describing the points (a local section)
+. idxSection - The `PetscSection` from which to obtain indices (may be local or global)
+. point      - The point defining the closure
+- useClPerm  - Use the closure point permutation if available
+
+  Output Parameters:
++ numIndices - The number of dof indices in the closure of point with the input sections
+. indices    - The dof indices
+. outOffsets - Array to write the field offsets into, or `NULL`
+- values     - The input values, which may be modified if sign flips are induced by the point symmetries, or `NULL`
+
+  Level: advanced
+
+  Notes:
+  Must call `DMPlexRestoreClosureIndices()` to free allocated memory
+
+  If `idxSection` is global, any constrained dofs (see `DMAddBoundary()`, for example) will get negative indices.  The value
+  of those indices is not significant.  If `idxSection` is local, the constrained dofs will yield the involution -(idx+1)
+  of their index in a local vector.  A caller who does not wish to distinguish those points may recover the nonnegative
+  indices via involution, -(-(idx+1)+1)==idx.  Local indices are provided when `idxSection` == section, otherwise global
+  indices (with the above semantics) are implied.
+
+.seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMPlexRestoreClosureIndices()`, `DMPlexVecGetClosure()`, `DMPlexMatSetClosure()`, `DMGetLocalSection()`,
+          `PetscSection`, `DMGetGlobalSection()`
+@*/
+PetscErrorCode DMPlexGetClosureIndices(DM dm, PetscSection section, PetscSection idxSection, PetscInt point, PetscBool useClPerm, PetscInt *numIndices, PetscInt *indices[], PetscInt outOffsets[], PetscScalar *values[])
+{
+  PetscInt numRows = -1, numCols = -1;
+
+  PetscFunctionBeginHot;
+  PetscCall(DMPlexGetClosureIndices_Internal(dm, section, idxSection, point, useClPerm, &numRows, &numCols, indices, outOffsets, values, PETSC_TRUE, PETSC_TRUE));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -8089,9 +8129,10 @@ PetscErrorCode DMPlexMatSetClosureGeneral(DM dmRow, PetscSection sectionRow, Pet
 {
   DM_Plex           *mesh = (DM_Plex *)dmRow->data;
   PetscInt          *indicesRow, *indicesCol;
-  PetscInt           numIndicesRow, numIndicesCol;
+  PetscInt           numIndicesRow = -1, numIndicesCol = -1;
   const PetscScalar *valuesV0 = values, *valuesV1, *valuesV2;
-  PetscErrorCode     ierr;
+
+  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dmRow, DM_CLASSID, 1);
@@ -8107,9 +8148,9 @@ PetscErrorCode DMPlexMatSetClosureGeneral(DM dmRow, PetscSection sectionRow, Pet
   PetscValidHeaderSpecific(A, MAT_CLASSID, 9);
 
   valuesV1 = valuesV0;
-  PetscCall(DMPlexGetClosureIndices(dmRow, sectionRow, globalSectionRow, point, useRowPerm, &numIndicesRow, &indicesRow, NULL, (PetscScalar **)&valuesV1));
+  PetscCall(DMPlexGetClosureIndices_Internal(dmRow, sectionRow, globalSectionRow, point, useRowPerm, &numIndicesRow, &numIndicesCol, &indicesRow, NULL, (PetscScalar **)&valuesV1, PETSC_FALSE, PETSC_TRUE));
   valuesV2 = valuesV1;
-  PetscCall(DMPlexGetClosureIndices(dmCol, sectionCol, globalSectionCol, point, useColPerm, &numIndicesCol, &indicesCol, NULL, (PetscScalar **)&valuesV2));
+  PetscCall(DMPlexGetClosureIndices_Internal(dmRow, sectionRow, globalSectionRow, point, useRowPerm, &numIndicesRow, &numIndicesCol, &indicesRow, NULL, (PetscScalar **)&valuesV2, PETSC_FALSE, PETSC_TRUE));
 
   if (mesh->printSetValues) PetscCall(DMPlexPrintMatSetValues(PETSC_VIEWER_STDOUT_SELF, A, point, numIndicesRow, indicesRow, numIndicesCol, indicesCol, valuesV2));
   /* TODO: fix this code to not use error codes as handle-able exceptions! */
