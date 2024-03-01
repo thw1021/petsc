@@ -3655,7 +3655,7 @@ PetscErrorCode PCBDDCAdaptiveSelection(PC pc)
 
 PetscErrorCode PCBDDCSetUpSolvers(PC pc)
 {
-  PetscScalar *coarse_submat_vals;
+  Mat coarse_submat;
 
   PetscFunctionBegin;
   /* Setup local scatters R_to_B and (optionally) R_to_D */
@@ -3670,13 +3670,11 @@ PetscErrorCode PCBDDCSetUpSolvers(PC pc)
      Setup local correction and local part of coarse basis.
      Gives back the dense local part of the coarse matrix in column major ordering
   */
-  PetscCall(PCBDDCSetUpCorrection(pc, &coarse_submat_vals));
+  PetscCall(PCBDDCSetUpCorrection(pc, &coarse_submat));
 
   /* Compute total number of coarse nodes and setup coarse solver */
-  PetscCall(PCBDDCSetUpCoarseSolver(pc, coarse_submat_vals));
-
-  /* free */
-  PetscCall(PetscFree(coarse_submat_vals));
+  PetscCall(PCBDDCSetUpCoarseSolver(pc, coarse_submat));
+  PetscCall(MatDestroy(&coarse_submat));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -3816,7 +3814,7 @@ PetscErrorCode PCBDDCSetUpLocalWorkVectors(PC pc)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode PCBDDCSetUpCorrection(PC pc, PetscScalar **coarse_submat_vals_n)
+PetscErrorCode PCBDDCSetUpCorrection(PC pc, Mat *coarse_submat)
 {
   /* pointers to pcis and pcbddc */
   PC_IS          *pcis       = (PC_IS *)pc->data;
@@ -3857,7 +3855,8 @@ PetscErrorCode PCBDDCSetUpCorrection(PC pc, PetscScalar **coarse_submat_vals_n)
   PetscCheck(i == n_vertices, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Error in boundary numbering for BDDC vertices! %" PetscInt_FMT " != %" PetscInt_FMT, n_vertices, i);
 
   /* Subdomain contribution (Non-overlapping) to coarse matrix  */
-  PetscCall(PetscCalloc1(pcbddc->local_primal_size * pcbddc->local_primal_size, &coarse_submat_vals));
+  PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, pcbddc->local_primal_size, pcbddc->local_primal_size, NULL, coarse_submat));
+  PetscCall(MatDenseGetArray(*coarse_submat, &coarse_submat_vals));
   PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, n_vertices, n_vertices, coarse_submat_vals, &S_VV));
   PetscCall(MatDenseSetLDA(S_VV, pcbddc->local_primal_size));
   PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, n_constraints, n_vertices, PetscSafePointerPlusOffset(coarse_submat_vals, n_vertices), &S_CV));
@@ -4636,7 +4635,6 @@ PetscErrorCode PCBDDCSetUpCorrection(PC pc, PetscScalar **coarse_submat_vals_n)
   /* Symmetric case     : It should be \Phi^{(j)^T} A^{(j)} \Phi^{(j)}=coarse_sub_mat */
   /* Non-symmetric case : It should be \Psi^{(j)^T} A^{(j)} \Phi^{(j)}=coarse_sub_mat */
   if (pcbddc->dbg_flag) {
-    Mat       coarse_sub_mat;
     Mat       AUXMAT, TM1, TM2, TM3, TM4;
     Mat       coarse_phi_D, coarse_phi_B;
     Mat       coarse_psi_D, coarse_psi_B;
@@ -4667,8 +4665,6 @@ PetscErrorCode PCBDDCSetUpCorrection(PC pc, PetscScalar **coarse_submat_vals_n)
       PetscCall(MatConvert(pcbddc->coarse_psi_D, checkmattype, MAT_INITIAL_MATRIX, &coarse_psi_D));
       PetscCall(MatConvert(pcbddc->coarse_psi_B, checkmattype, MAT_INITIAL_MATRIX, &coarse_psi_B));
     }
-    PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, pcbddc->local_primal_size, pcbddc->local_primal_size, coarse_submat_vals, &coarse_sub_mat));
-
     PetscCall(PetscViewerASCIIPrintf(pcbddc->dbg_viewer, "--------------------------------------------------\n"));
     PetscCall(PetscViewerASCIIPrintf(pcbddc->dbg_viewer, "Check coarse sub mat computation (symmetric %d)\n", pcbddc->symmetric_primal));
     PetscCall(PetscViewerFlush(pcbddc->dbg_viewer));
@@ -4731,8 +4727,8 @@ PetscErrorCode PCBDDCSetUpCorrection(PC pc, PetscScalar **coarse_submat_vals_n)
     PetscCall(PetscSNPrintf(filename, PETSC_STATIC_ARRAY_LENGTH(filename), "details_local_coarse_mat%d_level%d.m",PetscGlobalRank,pcbddc->current_level));
     PetscCall(PetscViewerASCIIOpen(PETSC_COMM_SELF,filename,&viewer));
     PetscCall(PetscViewerPushFormat(viewer,PETSC_VIEWER_ASCII_MATLAB));
-    PetscCall(PetscObjectSetName((PetscObject)coarse_sub_mat,"computed"));
-    PetscCall(MatView(coarse_sub_mat,viewer));
+    PetscCall(PetscObjectSetName((PetscObject)*coarse_submat,"computed"));
+    PetscCall(MatView(*coarse_submat,viewer));
     PetscCall(PetscObjectSetName((PetscObject)TM1,"projected"));
     PetscCall(MatView(TM1,viewer));
     if (pcbddc->coarse_phi_B) {
@@ -4764,7 +4760,7 @@ PetscErrorCode PCBDDCSetUpCorrection(PC pc, PetscScalar **coarse_submat_vals_n)
     PetscCall(PetscOptionsRestoreViewer(&viewer));
   }
 #endif
-    PetscCall(MatAXPY(TM1, m_one, coarse_sub_mat, DIFFERENT_NONZERO_PATTERN));
+    PetscCall(MatAXPY(TM1, m_one, *coarse_submat, DIFFERENT_NONZERO_PATTERN));
     PetscCall(MatNorm(TM1, NORM_FROBENIUS, &real_value));
     PetscCall(PetscViewerASCIIPushSynchronized(pcbddc->dbg_viewer));
     PetscCall(PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer, "Subdomain %04d          matrix error % 1.14e\n", PetscGlobalRank, (double)real_value));
@@ -4814,7 +4810,6 @@ PetscErrorCode PCBDDCSetUpCorrection(PC pc, PetscScalar **coarse_submat_vals_n)
       PetscCall(MatDestroy(&coarse_psi_D));
       PetscCall(MatDestroy(&coarse_psi_B));
     }
-    PetscCall(MatDestroy(&coarse_sub_mat));
   }
   /* FINAL CUDA support (we cannot currently mix viennacl and cuda vectors */
   {
@@ -4830,8 +4825,6 @@ PetscErrorCode PCBDDCSetUpCorrection(PC pc, PetscScalar **coarse_submat_vals_n)
       if (pcbddc->coarse_psi_D) PetscCall(MatConvert(pcbddc->coarse_psi_D, MATSEQDENSECUDA, MAT_INPLACE_MATRIX, &pcbddc->coarse_psi_D));
     }
   }
-  /* get back data */
-  *coarse_submat_vals_n = coarse_submat_vals;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -7102,8 +7095,8 @@ static PetscErrorCode PCBDDCMatISGetSubassemblingPattern(Mat mat, PetscInt *n_su
     PetscCall(PetscFree(procs_candidates));
     PetscFunctionReturn(PETSC_SUCCESS);
   }
-  PetscCall(PetscOptionsGetBool(NULL, NULL, "-matis_partitioning_use_vwgt", &use_vwgt, NULL));
-  PetscCall(PetscOptionsGetInt(NULL, NULL, "-matis_partitioning_threshold", &threshold, NULL));
+  PetscCall(PetscOptionsGetBool(NULL, ((PetscObject)A)->prefix, "-mat_is_partitioning_use_vwgt", &use_vwgt, NULL));
+  PetscCall(PetscOptionsGetInt(NULL, ((PetscObject)A)->prefix, "-mat_is_partitioning_threshold", &threshold, NULL));
   threshold = PetscMax(threshold, 2);
 
   /* Get info on mapping */
@@ -7826,11 +7819,11 @@ static PetscErrorCode PCBDDCMatISSubassemble(Mat mat, IS is_sends, PetscInt n_su
 /* temporary hack into ksp private data structure */
 #include <petsc/private/kspimpl.h>
 
-PetscErrorCode PCBDDCSetUpCoarseSolver(PC pc, PetscScalar *coarse_submat_vals)
+PetscErrorCode PCBDDCSetUpCoarseSolver(PC pc, Mat coarse_submat)
 {
   PC_BDDC               *pcbddc = (PC_BDDC *)pc->data;
   PC_IS                 *pcis   = (PC_IS *)pc->data;
-  Mat                    coarse_mat, coarse_mat_is, coarse_submat_dense;
+  Mat                    coarse_mat, coarse_mat_is;
   Mat                    coarsedivudotp = NULL;
   Mat                    coarseG, t_coarse_mat_is;
   MatNullSpace           CoarseNullSpace = NULL;
@@ -7892,13 +7885,15 @@ PetscErrorCode PCBDDCSetUpCoarseSolver(PC pc, PetscScalar *coarse_submat_vals)
   PetscCall(ISCreateGeneral(PetscObjectComm((PetscObject)pc), pcbddc->local_primal_size, pcbddc->global_primal_indices, PETSC_COPY_VALUES, &coarse_is));
   PetscCall(ISLocalToGlobalMappingCreateIS(coarse_is, &coarse_islg));
 
-  /* creates temporary MATIS object for coarse matrix */
-  PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, pcbddc->local_primal_size, pcbddc->local_primal_size, coarse_submat_vals, &coarse_submat_dense));
-  PetscCall(MatCreateIS(PetscObjectComm((PetscObject)pc), 1, PETSC_DECIDE, PETSC_DECIDE, pcbddc->coarse_size, pcbddc->coarse_size, coarse_islg, coarse_islg, &t_coarse_mat_is));
-  PetscCall(MatISSetLocalMat(t_coarse_mat_is, coarse_submat_dense));
+  /* creates MATIS object for coarse matrix */
+  PetscCall(MatCreate(PetscObjectComm((PetscObject)pc), &t_coarse_mat_is));
+  PetscCall(MatSetType(t_coarse_mat_is, MATIS));
+  PetscCall(MatSetSizes(t_coarse_mat_is, PETSC_DECIDE, PETSC_DECIDE, pcbddc->coarse_size, pcbddc->coarse_size));
+  PetscCall(MatISSetAllowRepeated(t_coarse_mat_is, PETSC_TRUE));
+  PetscCall(MatSetLocalToGlobalMapping(t_coarse_mat_is, coarse_islg, coarse_islg));
+  PetscCall(MatISSetLocalMat(t_coarse_mat_is, coarse_submat));
   PetscCall(MatAssemblyBegin(t_coarse_mat_is, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(t_coarse_mat_is, MAT_FINAL_ASSEMBLY));
-  PetscCall(MatDestroy(&coarse_submat_dense));
 
   /* count "active" (i.e. with positive local size) and "void" processes */
   im_active = !!(pcis->n);
