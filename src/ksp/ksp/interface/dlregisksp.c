@@ -79,6 +79,23 @@ PetscErrorCode PCInitializePackage(void)
   PetscCall(PetscLogEventRegister("PCPATCHApply", PC_CLASSID, &PC_Patch_Apply));
   PetscCall(PetscLogEventRegister("PCPATCHPrealloc", PC_CLASSID, &PC_Patch_Prealloc));
 
+  PetscCall(PetscLogEventRegister("MatLMVMUpdate", MAT_CLASSID, &LMVM_Update));
+  PetscCall(PetscLogEventRegister("MatLMVMJ0Fwd", MAT_CLASSID, &LMVM_J0Fwd));
+  PetscCall(PetscLogEventRegister("MatLMVMJ0Inv", MAT_CLASSID, &LMVM_J0Inv));
+
+  /* TODO For logging. Delete later */
+  PetscCall(PetscLogEventRegister("CDQNJ0Inv", MAT_CLASSID, &CDQN_J0Inv));
+  PetscCall(PetscLogEventRegister("CDQNJ0Fwd", MAT_CLASSID, &CDQN_J0Fwd));
+
+  PetscCall(PetscLogEventRegister("CDQNMatMult", MAT_CLASSID, &CDQN_MatMult));
+  PetscCall(PetscLogEventRegister("CDQNMatSolve", MAT_CLASSID, &CDQN_MatSolve));
+
+  PetscCall(PetscLogEventRegister("CDBFGSMatMult", MAT_CLASSID, &CDBFGS_MatMult));
+  PetscCall(PetscLogEventRegister("CDBFGSMatSolve", MAT_CLASSID, &CDBFGS_MatSolve));
+
+  PetscCall(PetscLogEventRegister("CDDFPMatMult", MAT_CLASSID, &CDDFP_MatMult));
+  PetscCall(PetscLogEventRegister("CDDFPMatSolve", MAT_CLASSID, &CDDFP_MatSolve));
+
   PetscCall(PetscLogEventRegister("KSPSolve_FS_0", KSP_CLASSID, &KSP_Solve_FS_0));
   PetscCall(PetscLogEventRegister("KSPSolve_FS_1", KSP_CLASSID, &KSP_Solve_FS_1));
   PetscCall(PetscLogEventRegister("KSPSolve_FS_2", KSP_CLASSID, &KSP_Solve_FS_2));
