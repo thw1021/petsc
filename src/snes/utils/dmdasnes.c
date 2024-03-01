@@ -68,9 +68,7 @@ static PetscErrorCode SNESComputeFunction_DMDA(SNES snes, Vec X, Vec F, void *ct
   PetscValidHeaderSpecific(F, VEC_CLASSID, 3);
   PetscCheck(dmdasnes->residuallocal || dmdasnes->residuallocalvec, PetscObjectComm((PetscObject)snes), PETSC_ERR_PLIB, "Corrupt context");
   PetscCall(SNESGetDM(snes, &dm));
-  PetscCall(DMGetLocalVector(dm, &Xloc));
-  PetscCall(DMGlobalToLocalBegin(dm, X, INSERT_VALUES, Xloc));
-  PetscCall(DMGlobalToLocalEnd(dm, X, INSERT_VALUES, Xloc));
+  PetscCall(VecLocalFormGetRead(X, &Xloc));
   PetscCall(DMDAGetLocalInfo(dm, &info));
   rctx = dmdasnes->residuallocalctx ? dmdasnes->residuallocalctx : snes->user;
   switch (dmdasnes->residuallocalimode) {
@@ -78,10 +76,10 @@ static PetscErrorCode SNESComputeFunction_DMDA(SNES snes, Vec X, Vec F, void *ct
     PetscCall(PetscLogEventBegin(SNES_FunctionEval, snes, X, F, 0));
     if (dmdasnes->residuallocalvec) PetscCallBack("SNES DMDA local callback function", (*dmdasnes->residuallocalvec)(&info, Xloc, F, rctx));
     else {
-      PetscCall(DMDAVecGetArray(dm, Xloc, &x));
+      PetscCall(DMDAVecGetArrayRead(dm, Xloc, &x));
       PetscCall(DMDAVecGetArray(dm, F, &f));
       PetscCallBack("SNES DMDA local callback function", (*dmdasnes->residuallocal)(&info, x, f, rctx));
-      PetscCall(DMDAVecRestoreArray(dm, Xloc, &x));
+      PetscCall(DMDAVecRestoreArrayRead(dm, Xloc, &x));
       PetscCall(DMDAVecRestoreArray(dm, F, &f));
     }
     PetscCall(PetscLogEventEnd(SNES_FunctionEval, snes, X, F, 0));
@@ -93,10 +91,10 @@ static PetscErrorCode SNESComputeFunction_DMDA(SNES snes, Vec X, Vec F, void *ct
     PetscCall(PetscLogEventBegin(SNES_FunctionEval, snes, X, F, 0));
     if (dmdasnes->residuallocalvec) PetscCallBack("SNES DMDA local callback function", (*dmdasnes->residuallocalvec)(&info, Xloc, Floc, rctx));
     else {
-      PetscCall(DMDAVecGetArray(dm, Xloc, &x));
+      PetscCall(DMDAVecGetArrayRead(dm, Xloc, &x));
       PetscCall(DMDAVecGetArray(dm, Floc, &f));
       PetscCallBack("SNES DMDA local callback function", (*dmdasnes->residuallocal)(&info, x, f, rctx));
-      PetscCall(DMDAVecRestoreArray(dm, Xloc, &x));
+      PetscCall(DMDAVecRestoreArrayRead(dm, Xloc, &x));
       PetscCall(DMDAVecRestoreArray(dm, Floc, &f));
     }
     PetscCall(PetscLogEventEnd(SNES_FunctionEval, snes, X, F, 0));
@@ -108,7 +106,7 @@ static PetscErrorCode SNESComputeFunction_DMDA(SNES snes, Vec X, Vec F, void *ct
   default:
     SETERRQ(PetscObjectComm((PetscObject)snes), PETSC_ERR_ARG_INCOMP, "Cannot use imode=%d", (int)dmdasnes->residuallocalimode);
   }
-  PetscCall(DMRestoreLocalVector(dm, &Xloc));
+  PetscCall(VecLocalFormRestoreRead(X, &Xloc));
   if (snes->domainerror) PetscCall(VecSetInf(F));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -127,18 +125,16 @@ static PetscErrorCode SNESComputeObjective_DMDA(SNES snes, Vec X, PetscReal *ob,
   PetscAssertPointer(ob, 3);
   PetscCheck(dmdasnes->objectivelocal || dmdasnes->objectivelocalvec, PetscObjectComm((PetscObject)snes), PETSC_ERR_PLIB, "Corrupt context");
   PetscCall(SNESGetDM(snes, &dm));
-  PetscCall(DMGetLocalVector(dm, &Xloc));
-  PetscCall(DMGlobalToLocalBegin(dm, X, INSERT_VALUES, Xloc));
-  PetscCall(DMGlobalToLocalEnd(dm, X, INSERT_VALUES, Xloc));
+  PetscCall(VecLocalFormGetRead(X, &Xloc));
   PetscCall(DMDAGetLocalInfo(dm, &info));
   octx = dmdasnes->objectivelocalctx ? dmdasnes->objectivelocalctx : snes->user;
   if (dmdasnes->objectivelocalvec) PetscCallBack("SNES DMDA local callback objective", (*dmdasnes->objectivelocalvec)(&info, Xloc, ob, octx));
   else {
-    PetscCall(DMDAVecGetArray(dm, Xloc, &x));
+    PetscCall(DMDAVecGetArrayRead(dm, Xloc, &x));
     PetscCallBack("SNES DMDA local callback objective", (*dmdasnes->objectivelocal)(&info, x, ob, octx));
-    PetscCall(DMDAVecRestoreArray(dm, Xloc, &x));
+    PetscCall(DMDAVecRestoreArrayRead(dm, Xloc, &x));
   }
-  PetscCall(DMRestoreLocalVector(dm, &Xloc));
+  PetscCall(VecLocalFormRestoreRead(X, &Xloc));
   PetscCall(MPIU_Allreduce(MPI_IN_PLACE, ob, 1, MPIU_REAL, MPIU_SUM, PetscObjectComm((PetscObject)snes)));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -157,17 +153,15 @@ PETSC_EXTERN PetscErrorCode SNESComputeJacobian_DMDA(SNES snes, Vec X, Mat A, Ma
   PetscCall(SNESGetDM(snes, &dm));
   jctx = dmdasnes->jacobianlocalctx ? dmdasnes->jacobianlocalctx : snes->user;
   if (dmdasnes->jacobianlocal || dmdasnes->jacobianlocalvec) {
-    PetscCall(DMGetLocalVector(dm, &Xloc));
-    PetscCall(DMGlobalToLocalBegin(dm, X, INSERT_VALUES, Xloc));
-    PetscCall(DMGlobalToLocalEnd(dm, X, INSERT_VALUES, Xloc));
+    PetscCall(VecLocalFormGetRead(X, &Xloc));
     PetscCall(DMDAGetLocalInfo(dm, &info));
     if (dmdasnes->jacobianlocalvec) PetscCallBack("SNES DMDA local callback Jacobian", (*dmdasnes->jacobianlocalvec)(&info, Xloc, A, B, jctx));
     else {
-      PetscCall(DMDAVecGetArray(dm, Xloc, &x));
+      PetscCall(DMDAVecGetArrayRead(dm, Xloc, &x));
       PetscCallBack("SNES DMDA local callback Jacobian", (*dmdasnes->jacobianlocal)(&info, x, A, B, jctx));
-      PetscCall(DMDAVecRestoreArray(dm, Xloc, &x));
+      PetscCall(DMDAVecRestoreArrayRead(dm, Xloc, &x));
     }
-    PetscCall(DMRestoreLocalVector(dm, &Xloc));
+    PetscCall(VecLocalFormRestoreRead(X, &Xloc));
   } else {
     MatFDColoring fdcoloring;
     PetscCall(PetscObjectQuery((PetscObject)dm, "DMDASNES_FDCOLORING", (PetscObject *)&fdcoloring));
@@ -459,11 +453,9 @@ static PetscErrorCode SNESComputePicard_DMDA(SNES snes, Vec X, Vec F, void *ctx)
   PetscValidHeaderSpecific(F, VEC_CLASSID, 3);
   PetscCheck(dmdasnes->rhsplocal, PetscObjectComm((PetscObject)snes), PETSC_ERR_PLIB, "Corrupt context");
   PetscCall(SNESGetDM(snes, &dm));
-  PetscCall(DMGetLocalVector(dm, &Xloc));
-  PetscCall(DMGlobalToLocalBegin(dm, X, INSERT_VALUES, Xloc));
-  PetscCall(DMGlobalToLocalEnd(dm, X, INSERT_VALUES, Xloc));
+  PetscCall(VecLocalFormGetRead(X, &Xloc));
   PetscCall(DMDAGetLocalInfo(dm, &info));
-  PetscCall(DMDAVecGetArray(dm, Xloc, &x));
+  PetscCall(DMDAVecGetArrayRead(dm, Xloc, &x));
   switch (dmdasnes->residuallocalimode) {
   case INSERT_VALUES: {
     PetscCall(DMDAVecGetArray(dm, F, &f));
@@ -486,7 +478,7 @@ static PetscErrorCode SNESComputePicard_DMDA(SNES snes, Vec X, Vec F, void *ctx)
     SETERRQ(PetscObjectComm((PetscObject)snes), PETSC_ERR_ARG_INCOMP, "Cannot use imode=%d", (int)dmdasnes->residuallocalimode);
   }
   PetscCall(DMDAVecRestoreArray(dm, Xloc, &x));
-  PetscCall(DMRestoreLocalVector(dm, &Xloc));
+  PetscCall(VecLocalFormRestoreRead(X, &Xloc));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -502,14 +494,12 @@ static PetscErrorCode SNESComputePicardJacobian_DMDA(SNES snes, Vec X, Mat A, Ma
   PetscCheck(dmdasnes->jacobianplocal, PetscObjectComm((PetscObject)snes), PETSC_ERR_PLIB, "Corrupt context");
   PetscCall(SNESGetDM(snes, &dm));
 
-  PetscCall(DMGetLocalVector(dm, &Xloc));
-  PetscCall(DMGlobalToLocalBegin(dm, X, INSERT_VALUES, Xloc));
-  PetscCall(DMGlobalToLocalEnd(dm, X, INSERT_VALUES, Xloc));
+  PetscCall(VecLocalFormGetRead(X, &Xloc));
   PetscCall(DMDAGetLocalInfo(dm, &info));
-  PetscCall(DMDAVecGetArray(dm, Xloc, &x));
+  PetscCall(DMDAVecGetArrayRead(dm, Xloc, &x));
   PetscCallBack("SNES Picard DMDA local callback Jacobian", (*dmdasnes->jacobianplocal)(&info, x, A, B, dmdasnes->picardlocalctx));
-  PetscCall(DMDAVecRestoreArray(dm, Xloc, &x));
-  PetscCall(DMRestoreLocalVector(dm, &Xloc));
+  PetscCall(DMDAVecRestoreArrayRead(dm, Xloc, &x));
+  PetscCall(VecLocalFormRestoreRead(X, &Xloc));
   if (A != B) {
     PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
     PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));

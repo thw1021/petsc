@@ -709,21 +709,34 @@ typedef enum {
 } VecOperation;
 PETSC_EXTERN PetscErrorCode VecSetOperation(Vec, VecOperation, void (*)(void));
 
+// #define PETSC_DEPRECATE_FUNCTION_USER_ONLY PETSC_DEPRECATED_FUNCTION(3, 21, 0, "VecLocalFormSetIS()", )
+#define PETSC_DEPRECATE_FUNCTION_USER_ONLY
+
 /*
      Routines for dealing with ghosted vectors:
   vectors with ghost elements at the end of the array.
 */
-PETSC_EXTERN PetscErrorCode VecMPISetGhost(Vec, PetscInt, const PetscInt[]);
-PETSC_EXTERN PetscErrorCode VecCreateGhost(MPI_Comm, PetscInt, PetscInt, PetscInt, const PetscInt[], Vec *);
-PETSC_EXTERN PetscErrorCode VecCreateGhostWithArray(MPI_Comm, PetscInt, PetscInt, PetscInt, const PetscInt[], const PetscScalar[], Vec *);
-PETSC_EXTERN PetscErrorCode VecCreateGhostBlock(MPI_Comm, PetscInt, PetscInt, PetscInt, PetscInt, const PetscInt[], Vec *);
-PETSC_EXTERN PetscErrorCode VecCreateGhostBlockWithArray(MPI_Comm, PetscInt, PetscInt, PetscInt, PetscInt, const PetscInt[], const PetscScalar[], Vec *);
-PETSC_EXTERN PetscErrorCode VecGhostGetGhostIS(Vec, IS *);
-PETSC_EXTERN PetscErrorCode VecGhostGetLocalForm(Vec, Vec *);
-PETSC_EXTERN PetscErrorCode VecGhostRestoreLocalForm(Vec, Vec *);
-PETSC_EXTERN PetscErrorCode VecGhostIsLocalForm(Vec, Vec, PetscBool *);
-PETSC_EXTERN PetscErrorCode VecGhostUpdateBegin(Vec, InsertMode, ScatterMode);
-PETSC_EXTERN PetscErrorCode VecGhostUpdateEnd(Vec, InsertMode, ScatterMode);
+PETSC_EXTERN PetscErrorCode PETSC_DEPRECATE_FUNCTION_USER_ONLY VecMPISetGhost(Vec, PetscInt, const PetscInt[]);
+PETSC_EXTERN PetscErrorCode PETSC_DEPRECATE_FUNCTION_USER_ONLY VecCreateGhost(MPI_Comm, PetscInt, PetscInt, PetscInt, const PetscInt[], Vec *);
+PETSC_EXTERN PetscErrorCode PETSC_DEPRECATE_FUNCTION_USER_ONLY VecCreateGhostWithArray(MPI_Comm, PetscInt, PetscInt, PetscInt, const PetscInt[], const PetscScalar[], Vec *);
+PETSC_EXTERN PetscErrorCode PETSC_DEPRECATE_FUNCTION_USER_ONLY VecCreateGhostBlock(MPI_Comm, PetscInt, PetscInt, PetscInt, PetscInt, const PetscInt[], Vec *);
+PETSC_EXTERN PetscErrorCode PETSC_DEPRECATE_FUNCTION_USER_ONLY VecCreateGhostBlockWithArray(MPI_Comm, PetscInt, PetscInt, PetscInt, PetscInt, const PetscInt[], const PetscScalar[], Vec *);
+PETSC_EXTERN PetscErrorCode PETSC_DEPRECATE_FUNCTION_USER_ONLY VecGhostGetGhostIS(Vec, IS *);
+PETSC_EXTERN PetscErrorCode PETSC_DEPRECATE_FUNCTION_USER_ONLY VecGhostGetLocalForm(Vec, Vec *);
+PETSC_EXTERN PetscErrorCode PETSC_DEPRECATE_FUNCTION_USER_ONLY VecGhostRestoreLocalForm(Vec, Vec *);
+PETSC_EXTERN PetscErrorCode PETSC_DEPRECATE_FUNCTION_USER_ONLY VecGhostIsLocalForm(Vec, Vec, PetscBool *);
+PETSC_EXTERN PetscErrorCode PETSC_DEPRECATE_FUNCTION_USER_ONLY VecGhostUpdateBegin(Vec, InsertMode, ScatterMode);
+PETSC_EXTERN PetscErrorCode PETSC_DEPRECATE_FUNCTION_USER_ONLY VecGhostUpdateEnd(Vec, InsertMode, ScatterMode);
+
+PETSC_EXTERN PetscErrorCode VecLocalFormSetVec(Vec, Vec);
+PETSC_EXTERN PetscErrorCode VecLocalFormSetIS(Vec, IS);
+PETSC_EXTERN PetscErrorCode VecLocalFormGetRead(Vec, Vec *);
+PETSC_EXTERN PetscErrorCode VecLocalFormRestoreRead(Vec, Vec *);
+PETSC_EXTERN PetscErrorCode VecLocalFormSetUpdateRead(Vec, PetscErrorCode (*)(Vec, Vec));
+PETSC_EXTERN PetscErrorCode VecLocalFormGetWrite(Vec, Vec *);
+PETSC_EXTERN PetscErrorCode VecLocalFormRestoreWrite(Vec, Vec *);
+PETSC_EXTERN PetscErrorCode VecLocalFormSetUpdateWrite(Vec, PetscErrorCode (*)(Vec, Vec));
+PETSC_EXTERN PetscErrorCode VecLocalFormCreate(MPI_Comm, PetscInt, PetscInt, IS, Vec *);
 
 PETSC_EXTERN PetscErrorCode VecConjugate(Vec);
 PETSC_EXTERN PetscErrorCode VecImaginaryPart(Vec);
