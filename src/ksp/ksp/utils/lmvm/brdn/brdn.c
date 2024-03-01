@@ -240,6 +240,7 @@ PetscErrorCode MatCreate_LMVMBrdn(Mat B)
   lmvm->ops->reset    = MatReset_LMVMBrdn;
   lmvm->ops->mult     = MatMult_LMVMBrdn;
   lmvm->ops->update   = MatUpdate_LMVMBrdn;
+  lmvm->ops->solve    = MatSolve_LMVMBrdn;
   lmvm->ops->copy     = MatCopy_LMVMBrdn;
 
   PetscCall(PetscNew(&lbrdn));
