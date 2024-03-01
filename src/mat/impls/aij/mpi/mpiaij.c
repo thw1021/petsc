@@ -6551,10 +6551,12 @@ PetscErrorCode MatSetPreallocationCOO_MPIAIJ(Mat mat, PetscCount coo_n, PetscInt
   PetscInt    n2 = nroots, *i2, *j2; /* Buffers for received COOs from other ranks, along with a permutation array */
   PetscCount *perm2;                 /* Though PetscInt is enough for remote entries, we use PetscCount here as we want to reuse MatSplitEntries_Internal() */
   PetscCall(PetscMalloc3(n2, &i2, n2, &j2, n2, &perm2));
-  PetscCall(PetscSFReduceWithMemTypeBegin(sf2, MPIU_INT, PETSC_MEMTYPE_HOST, i1 + rem, PETSC_MEMTYPE_HOST, i2, MPI_REPLACE));
-  PetscCall(PetscSFReduceEnd(sf2, MPIU_INT, i1 + rem, i2, MPI_REPLACE));
-  PetscCall(PetscSFReduceWithMemTypeBegin(sf2, MPIU_INT, PETSC_MEMTYPE_HOST, j1 + rem, PETSC_MEMTYPE_HOST, j2, MPI_REPLACE));
-  PetscCall(PetscSFReduceEnd(sf2, MPIU_INT, j1 + rem, j2, MPI_REPLACE));
+  PetscInt *i1prem = i1 ? i1 + rem : NULL; /* silence ubsan warnings about pointer arithmetic on null pointer */
+  PetscInt *j1prem = j1 ? j1 + rem : NULL;
+  PetscCall(PetscSFReduceWithMemTypeBegin(sf2, MPIU_INT, PETSC_MEMTYPE_HOST, i1prem, PETSC_MEMTYPE_HOST, i2, MPI_REPLACE));
+  PetscCall(PetscSFReduceEnd(sf2, MPIU_INT, i1prem, i2, MPI_REPLACE));
+  PetscCall(PetscSFReduceWithMemTypeBegin(sf2, MPIU_INT, PETSC_MEMTYPE_HOST, j1prem, PETSC_MEMTYPE_HOST, j2, MPI_REPLACE));
+  PetscCall(PetscSFReduceEnd(sf2, MPIU_INT, j1prem, j2, MPI_REPLACE));
 
   PetscCall(PetscFree(offsets));
   PetscCall(PetscFree2(sendto, nentries));
@@ -6565,8 +6567,9 @@ PetscErrorCode MatSetPreallocationCOO_MPIAIJ(Mat mat, PetscCount coo_n, PetscInt
 
   /* sf2 only sends contiguous leafdata to contiguous rootdata. We record the permutation which will be used to fill leafdata */
   PetscCount *Cperm1;
+  PetscCount *perm1prem = perm1 ? perm1 + rem : NULL;
   PetscCall(PetscMalloc1(nleaves, &Cperm1));
-  PetscCall(PetscArraycpy(Cperm1, perm1 + rem, nleaves));
+  PetscCall(PetscArraycpy(Cperm1, perm1prem, nleaves));
 
   /* Support for HYPRE matrices, kind of a hack.
      Swap min column with diagonal so that diagonal values will go first */

@@ -674,7 +674,7 @@ PetscErrorCode MatGetDiagonal_MPIDense(Mat A, Vec v)
   PetscCall(MatDenseGetLDA(a->A, &lda));
   for (i = 0; i < len; i++) x[i] = av[radd + i * lda + i];
   PetscCall(MatDenseRestoreArrayRead(a->A, &av));
-  PetscCall(PetscArrayzero(x + i, nl - i));
+  if (nl - i > 0) PetscCall(PetscArrayzero(x + i, nl - i));
   PetscCall(VecRestoreArray(v, &x));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
