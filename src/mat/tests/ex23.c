@@ -928,12 +928,12 @@ PetscErrorCode TestMatZeroRows(Mat A, Mat Afull, PetscBool squaretest, IS is, Pe
    test:
       suffix: 2
       nsize: 4
-      args: -matis_convert_local_nest -nr 3 -nc 4
+      args: -mat_is_convert_local_nest -nr 3 -nc 4
 
    test:
       suffix: 3
       nsize: 5
-      args: -m 11 -n 10 -matis_convert_local_nest -nr 2 -nc 1
+      args: -m 11 -n 10 -mat_is_convert_local_nest -nr 2 -nc 1
 
    test:
       suffix: 4
@@ -976,7 +976,7 @@ PetscErrorCode TestMatZeroRows(Mat A, Mat Afull, PetscBool squaretest, IS is, Pe
    test:
       suffix: 12
       nsize: 3
-      args: -m 12 -n 12 -symmetric -matis_localmat_type sbaij -test_trans -nr 2 -nc 3
+      args: -m 12 -n 12 -symmetric -mat_is_localmat_type sbaij -test_trans -nr 2 -nc 3
 
    testset:
       output_file: output/ex23_13.out
@@ -985,15 +985,15 @@ PetscErrorCode TestMatZeroRows(Mat A, Mat Afull, PetscBool squaretest, IS is, Pe
       filter: grep -v "type:"
       test:
         suffix: baij
-        args: -matis_localmat_type baij
+        args: -mat_is_localmat_type baij
       test:
         requires: viennacl
         suffix: viennacl
-        args: -matis_localmat_type aijviennacl
+        args: -mat_is_localmat_type aijviennacl
       test:
         requires: cuda
         suffix: cusparse
-        args: -matis_localmat_type aijcusparse
+        args: -mat_is_localmat_type aijcusparse
 
    test:
       suffix: negrep
