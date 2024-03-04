@@ -736,7 +736,6 @@ PetscErrorCode MatSymBrdnApplyJ0Fwd(Mat B, Vec X, Vec Z)
     PetscCall(MatLMVMApplyJ0Fwd(B, X, Z));
   } else {
     PetscCall(PetscDeviceContextGetCurrentContext(&dctx));
-    PetscCall(PetscLogEventBegin(LMVM_J0Fwd, (PetscObject)B, NULL, NULL, NULL));
     switch (lsb->scale_type) {
     case MAT_LMVM_SYMBROYDEN_SCALE_SCALAR:
       PetscCall(VecAXPBYAsync_Private(Z, 1.0 / lsb->sigma, 0.0, X, dctx));
@@ -749,7 +748,6 @@ PetscErrorCode MatSymBrdnApplyJ0Fwd(Mat B, Vec X, Vec Z)
       PetscCall(VecCopyAsync_Private(X, Z, dctx));
       break;
     }
-    PetscCall(PetscLogEventEnd(LMVM_J0Fwd, (PetscObject)B, NULL, NULL, NULL));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -765,7 +763,6 @@ PetscErrorCode MatSymBrdnApplyJ0Inv(Mat B, Vec F, Vec dX)
     lsb->scale_type = MAT_LMVM_SYMBROYDEN_SCALE_USER;
     PetscCall(MatLMVMApplyJ0Inv(B, F, dX));
   } else {
-    PetscCall(PetscLogEventBegin(LMVM_J0Inv, (PetscObject)B, NULL, NULL, NULL));
     PetscCall(PetscDeviceContextGetCurrentContext(&dctx));
     switch (lsb->scale_type) {
     case MAT_LMVM_SYMBROYDEN_SCALE_SCALAR:
@@ -779,7 +776,6 @@ PetscErrorCode MatSymBrdnApplyJ0Inv(Mat B, Vec F, Vec dX)
       PetscCall(VecCopyAsync_Private(F, dX, dctx));
       break;
     }
-    PetscCall(PetscLogEventEnd(LMVM_J0Inv, (PetscObject)B, NULL, NULL, NULL));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }

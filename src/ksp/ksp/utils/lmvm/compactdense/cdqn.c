@@ -14,15 +14,6 @@
   #include <cuda_profiler_api.h>
 #endif
 
-PetscLogEvent CDDFP_MatMult;
-PetscLogEvent CDDFP_MatSolve;
-PetscLogEvent CDQN_MatMult;
-PetscLogEvent CDQN_MatSolve;
-PetscLogEvent CDBFGS_MatMult;
-PetscLogEvent CDBFGS_MatSolve;
-PetscLogEvent CDQN_J0Inv;
-PetscLogEvent CDQN_J0Fwd;
-
 static PetscErrorCode MatMult_LMVMCDQN(Mat, Vec, Vec);
 static PetscErrorCode MatMult_LMVMCDBFGS(Mat, Vec, Vec);
 static PetscErrorCode MatMult_LMVMCDDFP(Mat, Vec, Vec);
@@ -756,7 +747,6 @@ static PetscErrorCode MatCDQNApplyJ0Fwd(Mat B, Vec X, Vec Z)
   Mat_CDQN *lqn  = (Mat_CDQN *)lmvm->ctx;
 
   PetscFunctionBegin;
-  PetscCall(PetscLogEventBegin(CDQN_J0Fwd, B, X, Z, 0));
   if (lmvm->J0 || lmvm->user_pc || lmvm->user_ksp || lmvm->user_scale) {
     lqn->scale_type = MAT_LMVM_SYMBROYDEN_SCALE_USER;
     PetscCall(MatLMVMApplyJ0Fwd(B, X, Z));
@@ -779,7 +769,6 @@ static PetscErrorCode MatCDQNApplyJ0Fwd(Mat B, Vec X, Vec Z)
       break;
     }
   }
-  PetscCall(PetscLogEventEnd(CDQN_J0Fwd, B, X, Z, 0));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -791,7 +780,6 @@ static PetscErrorCode MatCDQNApplyJ0Inv(Mat B, Vec F, Vec dX)
   Mat_CDQN *lqn  = (Mat_CDQN *)lmvm->ctx;
 
   PetscFunctionBegin;
-  PetscCall(PetscLogEventBegin(CDQN_J0Inv, B, F, dX, 0));
   if (lmvm->J0 || lmvm->user_pc || lmvm->user_ksp || lmvm->user_scale) {
     lqn->scale_type = MAT_LMVM_SYMBROYDEN_SCALE_USER;
     PetscCall(MatLMVMApplyJ0Inv(B, F, dX));
@@ -814,7 +802,6 @@ static PetscErrorCode MatCDQNApplyJ0Inv(Mat B, Vec F, Vec dX)
       break;
     }
   }
-  PetscCall(PetscLogEventEnd(CDQN_J0Inv, B, F, dX, 0));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -957,14 +944,12 @@ static PetscErrorCode MatSolve_LMVMCDBFGS(Mat H, Vec F, Vec dX)
   PetscObjectState   Fstate;
 
   PetscFunctionBegin;
-  PetscCall(PetscLogEventBegin(CDBFGS_MatSolve, H, F, dX, 0));
   VecCheckSameSize(F, 2, dX, 3);
   VecCheckMatCompatible(H, dX, 3, F, 2);
 
   /* Block Version */
   if (!lbfgs->num_updates) {
     PetscCall(MatCDQNApplyJ0Inv(H, F, dX));
-    PetscCall(PetscLogEventEnd(CDBFGS_MatSolve, H, F, dX, 0));
     PetscFunctionReturn(PETSC_SUCCESS); /* No updates stored yet */
   }
 
@@ -1001,7 +986,6 @@ static PetscErrorCode MatSolve_LMVMCDBFGS(Mat H, Vec F, Vec dX)
 
   PetscCall(MatMultAddColumnRange(lbfgs->Sfull, rwork1, dX, dX, 0, h));
   lbfgs->S_count++;
-  PetscCall(PetscLogEventEnd(CDBFGS_MatSolve, H, F, dX, 0));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1050,7 +1034,6 @@ static PetscErrorCode MatMult_LMVMCDBFGS(Mat B, Vec X, Vec Z)
   PetscDeviceContext dctx;
 
   PetscFunctionBegin;
-  PetscCall(PetscLogEventBegin(CDBFGS_MatMult, B, X, Z, 0));
   VecCheckSameSize(X, 2, Z, 3);
   VecCheckMatCompatible(B, X, 2, Z, 3);
 
@@ -1058,7 +1041,6 @@ static PetscErrorCode MatMult_LMVMCDBFGS(Mat B, Vec X, Vec Z)
   /* Start with the B0 term */
   PetscCall(MatCDQNApplyJ0Fwd(B, X, Z));
   if (!lbfgs->num_updates) {
-    PetscCall(PetscLogEventEnd(CDBFGS_MatMult, B, X, Z, 0));
     PetscFunctionReturn(PETSC_SUCCESS); /* No updates stored yet */
   }
 
@@ -1107,7 +1089,6 @@ static PetscErrorCode MatMult_LMVMCDBFGS(Mat B, Vec X, Vec Z)
   lbfgs->Y_count++;
   PetscCall(MatMultAddColumnRange(lbfgs->BS, lbfgs->rwork3, Z, Z, 0, h));
   lbfgs->S_count++;
-  PetscCall(PetscLogEventEnd(CDBFGS_MatMult, B, X, Z, 0));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1353,7 +1334,6 @@ static PetscErrorCode MatSolve_LMVMCDDFP(Mat H, Vec F, Vec dX)
   PetscDeviceContext dctx;
 
   PetscFunctionBegin;
-  PetscCall(PetscLogEventBegin(CDDFP_MatSolve, H, F, dX, 0));
   VecCheckSameSize(F, 2, dX, 3);
   VecCheckMatCompatible(H, dX, 3, F, 2);
 
@@ -1361,7 +1341,6 @@ static PetscErrorCode MatSolve_LMVMCDDFP(Mat H, Vec F, Vec dX)
   /* Start with the B0 term */
   PetscCall(MatCDQNApplyJ0Inv(H, F, dX));
   if (!ldfp->num_updates) {
-    PetscCall(PetscLogEventEnd(CDDFP_MatSolve, H, F, dX, 0));
     PetscFunctionReturn(PETSC_SUCCESS); /* No updates stored yet */
   }
 
@@ -1409,7 +1388,6 @@ static PetscErrorCode MatSolve_LMVMCDDFP(Mat H, Vec F, Vec dX)
   ldfp->S_count++;
   PetscCall(MatMultAddColumnRange(ldfp->HY, ldfp->rwork3, dX, dX, 0, h));
   ldfp->Y_count++;
-  PetscCall(PetscLogEventEnd(CDDFP_MatSolve, H, F, dX, 0));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1442,7 +1420,6 @@ static PetscErrorCode MatMult_LMVMCDDFP(Mat B, Vec X, Vec Z)
   PetscObjectState   Xstate;
 
   PetscFunctionBegin;
-  PetscCall(PetscLogEventBegin(CDDFP_MatMult, B, X, Z, 0));
   VecCheckSameSize(X, 2, Z, 3);
   VecCheckMatCompatible(B, X, 2, Z, 3);
 
@@ -1450,7 +1427,6 @@ static PetscErrorCode MatMult_LMVMCDDFP(Mat B, Vec X, Vec Z)
   /* Block Version */
   if (!ldfp->num_updates) {
     PetscCall(MatCDQNApplyJ0Fwd(B, X, Z));
-    PetscCall(PetscLogEventEnd(CDDFP_MatMult, B, X, Z, 0));
     PetscFunctionReturn(PETSC_SUCCESS); /* No updates stored yet */
   }
 
@@ -1487,7 +1463,6 @@ static PetscErrorCode MatMult_LMVMCDDFP(Mat B, Vec X, Vec Z)
 
   PetscCall(MatMultAddColumnRange(ldfp->Yfull, rwork1, Z, Z, 0, h));
   ldfp->Y_count++;
-  PetscCall(PetscLogEventEnd(CDDFP_MatMult, B, X, Z, 0));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
