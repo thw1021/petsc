@@ -931,7 +931,7 @@ PetscErrorCode PCBDDCGraphSetUp(PCBDDCGraph graph, PetscInt custom_minimal_size,
       for (j = 0, c = 0; j < graph->nodes[i].count; j++) {
         if (graph->nodes[i].neighbours_set[j] == rank) c++;
       }
-      PetscCheck(c == indegree[idxs[i]], PETSC_COMM_SELF, PETSC_ERR_PLIB, "%d != %d", c, indegree[idxs[i]]);
+      PetscCheck(c == indegree[idxs[i]], PETSC_COMM_SELF, PETSC_ERR_PLIB, "%" PetscInt_FMT " != %" PetscInt_FMT, c, indegree[idxs[i]]);
       PetscCall(PetscMalloc1(c, &graph->nodes[i].local_groups));
       for (j = 0; j < c; j++) graph->nodes[i].local_groups[j] = multi_root_subs[start[gid] + j];
       PetscCall(PetscSortInt(c, graph->nodes[i].local_groups));
