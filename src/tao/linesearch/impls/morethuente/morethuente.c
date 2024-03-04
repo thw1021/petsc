@@ -1,5 +1,7 @@
 #include <petsc/private/taolinesearchimpl.h>
 #include <../src/tao/linesearch/impls/morethuente/morethuente.h>
+#include <petsc/private/vecimpl.h>
+#include <petscdevice.h>
 
 /*
    This algorithm is taken from More' and Thuente, "Line search algorithms
@@ -38,16 +40,18 @@ static PetscErrorCode TaoLineSearchMonitor_MT(TaoLineSearch ls)
 
 static PetscErrorCode TaoLineSearchApply_MT(TaoLineSearch ls, Vec x, PetscReal *f, Vec g, Vec s)
 {
-  TaoLineSearch_MT *mt     = (TaoLineSearch_MT *)(ls->data);
-  PetscReal         xtrapf = 4.0;
-  PetscReal         finit, width, width1, dginit, fm, fxm, fym, dgm, dgxm, dgym;
-  PetscReal         dgx, dgy, dg, dg2, fx, fy, stx, sty, dgtest;
-  PetscReal         ftest1 = 0.0, ftest2 = 0.0;
-  PetscInt          i, stage1, n1, n2, nn1, nn2;
-  PetscReal         bstepmin1, bstepmin2, bstepmax, ostepmin, ostepmax;
-  PetscBool         g_computed = PETSC_FALSE; /* to prevent extra gradient computation */
+  TaoLineSearch_MT  *mt     = (TaoLineSearch_MT *)(ls->data);
+  PetscReal          xtrapf = 4.0;
+  PetscReal          finit, width, width1, dginit, fm, fxm, fym, dgm, dgxm, dgym;
+  PetscReal          dgx, dgy, dg, dg2, fx, fy, stx, sty, dgtest;
+  PetscReal          ftest1 = 0.0, ftest2 = 0.0;
+  PetscInt           i, stage1, n1, n2, nn1, nn2;
+  PetscReal          bstepmin1, bstepmin2, bstepmax, ostepmin, ostepmax;
+  PetscBool          g_computed = PETSC_FALSE; /* to prevent extra gradient computation */
+  PetscDeviceContext dctx;
 
   PetscFunctionBegin;
+  PetscCall(PetscDeviceContextGetCurrentContext(&dctx));
   ls->reason = TAOLINESEARCH_CONTINUE_ITERATING;
   PetscCall(TaoLineSearchMonitor(ls, 0, *f, 0.0));
   /* Check work vector */
@@ -75,9 +79,9 @@ static PetscErrorCode TaoLineSearchApply_MT(TaoLineSearch ls, Vec x, PetscReal *
     PetscCall(VecGetSize(ls->upper, &nn1));
     PetscCall(VecGetSize(mt->x, &nn2));
     PetscCheck(n1 == n2 && nn1 == nn2, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Variable vector not compatible with bounds vector");
-    PetscCall(VecScale(s, -1.0));
+    PetscCall(VecScaleAsync_Private(s, -1.0, dctx));
     PetscCall(VecBoundGradientProjection(s, x, ls->lower, ls->upper, s));
-    PetscCall(VecScale(s, -1.0));
+    PetscCall(VecScaleAsync_Private(s, -1.0, dctx));
     PetscCall(VecStepBoundInfo(x, s, ls->lower, ls->upper, &bstepmin1, &bstepmin2, &bstepmax));
     ls->stepmax = PetscMin(bstepmax, ls->stepmax);
   }
@@ -101,7 +105,6 @@ static PetscErrorCode TaoLineSearchApply_MT(TaoLineSearch ls, Vec x, PetscReal *
   dgtest      = ls->ftol * dginit;
   width       = ls->stepmax - ls->stepmin;
   width1      = width * 2.0;
-  PetscCall(VecCopy(x, mt->work));
   /* Variable dictionary:
    stx, fx, dgx - the step, function, and derivative at the best step
    sty, fy, dgy - the step, function, and derivative at the other endpoint
@@ -135,7 +138,7 @@ static PetscErrorCode TaoLineSearchApply_MT(TaoLineSearch ls, Vec x, PetscReal *
     if (stx != 0 && ((mt->bracket && (ls->step <= ls->stepmin || ls->step >= ls->stepmax)) || (mt->bracket && (ls->stepmax - ls->stepmin <= ls->rtol * ls->stepmax)) || (ls->nfeval + ls->nfgeval >= ls->max_funcs - 1) || mt->infoc == 0))
       ls->step = stx;
 
-    PetscCall(VecWAXPY(mt->work, ls->step, s, x)); /* W = X + step*S */
+    PetscCall(VecWAXPYAsync_Private(mt->work, ls->step, s, x, dctx)); /* W = X + step*S */
 
     if (ls->step == 0.0) {
       PetscCall(PetscInfo(ls, "Step size is zero.\n"));
@@ -266,7 +269,7 @@ static PetscErrorCode TaoLineSearchApply_MT(TaoLineSearch ls, Vec x, PetscReal *
   PetscCall(PetscInfo(ls, "%" PetscInt_FMT " function evals in line search, step = %g\n", ls->nfeval + ls->nfgeval, (double)ls->step));
 
   /* Set new solution vector and compute gradient if needed */
-  PetscCall(VecCopy(mt->work, x));
+  if (ls->max_funcs > 0) PetscCall(VecCopyAsync_Private(mt->work, x, dctx));
   if (!g_computed) PetscCall(TaoLineSearchComputeGradient(ls, mt->work, g));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
