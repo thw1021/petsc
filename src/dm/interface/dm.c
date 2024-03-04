@@ -652,17 +652,17 @@ PetscErrorCode DMDestroy(DM *dm)
 
   PetscFunctionBegin;
   if (!*dm) PetscFunctionReturn(PETSC_SUCCESS);
-  PetscValidHeaderSpecific((*dm), DM_CLASSID, 1);
+  PetscValidHeaderSpecific(*dm, DM_CLASSID, 1);
 
   /* count all non-cyclic references in the doubly-linked list of coarse<->fine meshes */
   PetscCall(DMCountNonCyclicReferences_Internal(*dm, PETSC_TRUE, PETSC_TRUE, &cnt));
-  --((PetscObject)(*dm))->refct;
+  --((PetscObject)*dm)->refct;
   if (--cnt > 0) {
     *dm = NULL;
     PetscFunctionReturn(PETSC_SUCCESS);
   }
-  if (((PetscObject)(*dm))->refct < 0) PetscFunctionReturn(PETSC_SUCCESS);
-  ((PetscObject)(*dm))->refct = 0;
+  if (((PetscObject)*dm)->refct < 0) PetscFunctionReturn(PETSC_SUCCESS);
+  ((PetscObject)*dm)->refct = 0;
 
   PetscCall(DMClearGlobalVectors(*dm));
   PetscCall(DMClearLocalVectors(*dm));
@@ -2140,7 +2140,7 @@ PetscErrorCode DMCreateSuperDM(DM dms[], PetscInt n, IS **is, DM *superdm)
   PetscCheck(n >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of DMs must be nonnegative: %" PetscInt_FMT, n);
   if (n) {
     DM dm = dms[0];
-    PetscCheck(dm->ops->createsuperdm, PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "No method createsuperdm for DM of type %s\n", ((PetscObject)dm)->type_name);
+    PetscCheck(dm->ops->createsuperdm, PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "No method createsuperdm for DM of type %s", ((PetscObject)dm)->type_name);
     PetscCall((*dm->ops->createsuperdm)(dms, n, is, superdm));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -7982,7 +7982,7 @@ static PetscErrorCode DMPopulateBoundary(DM dm)
     dm->boundary = NULL;
   }
 
-  lastnext = &(dm->boundary);
+  lastnext = &dm->boundary;
   while (dsbound) {
     DMBoundary dmbound;
 
@@ -7991,7 +7991,7 @@ static PetscErrorCode DMPopulateBoundary(DM dm)
     dmbound->label      = dsbound->label;
     /* push on the back instead of the front so that it is in the same order as in the PetscDS */
     *lastnext = dmbound;
-    lastnext  = &(dmbound->next);
+    lastnext  = &dmbound->next;
     dsbound   = dsbound->next;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
