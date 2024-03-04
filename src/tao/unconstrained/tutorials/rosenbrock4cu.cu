@@ -22,7 +22,7 @@ int main(int argc, char **argv)
 /*TEST
 
   build:
-    requires: !complex cuda
+    requires: !complex cuda !single !__float128 !defined(PETSC_USE_65BIT_INDICES)
 
   test:
     suffix: 1

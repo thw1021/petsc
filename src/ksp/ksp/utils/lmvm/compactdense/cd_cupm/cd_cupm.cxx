@@ -2,6 +2,7 @@
 #include <petsc/private/cupminterface.hpp>
 #include <petsc/private/cupmobject.hpp>
 
+#if !defined(PETSC_USE_COMPLEX)
 namespace Petsc
 {
 
@@ -144,3 +145,4 @@ PETSC_INTERN PetscErrorCode MatUpperTriangularSolveInPlaceCyclic_CUPM(PetscBool 
 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+#endif
