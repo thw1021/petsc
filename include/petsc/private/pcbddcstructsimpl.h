@@ -34,6 +34,7 @@ struct _PCBDDCGraph {
   PetscBool              twodim;
   PetscBool              twodimset;
   PetscBool              has_dirichlet;
+  PetscInt               n_groups;
   IS                     dirdofs;
   IS                     dirdofsB;
   PetscBool              seq_graph;

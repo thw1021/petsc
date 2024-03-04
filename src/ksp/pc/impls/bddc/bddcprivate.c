@@ -4510,13 +4510,14 @@ PetscErrorCode PCBDDCSetUpCorrection(PC pc, Mat *coarse_submat)
     PetscCall(MatCreateSubMatrix(pcbddc->benign_B0, is_dummy, pcis->is_B_local, MAT_INITIAL_MATRIX, &B0_B));
     PetscCall(ISDestroy(&is_dummy));
     PetscCall(MatMatMult(B0_B, pcbddc->coarse_phi_B, MAT_INITIAL_MATRIX, 1.0, &B0_BPHI));
+    /* TODO: improve? */
     PetscCall(MatConvert(B0_BPHI, MATSEQDENSE, MAT_INPLACE_MATRIX, &B0_BPHI));
     PetscCall(MatDenseGetArrayRead(B0_BPHI, &data));
     for (j = 0; j < pcbddc->benign_n; j++) {
       PetscInt primal_idx = pcbddc->local_primal_size - pcbddc->benign_n + j;
       for (i = 0; i < pcbddc->local_primal_size; i++) {
-        coarse_submat_vals[primal_idx * pcbddc->local_primal_size + i] = data[i * pcbddc->benign_n + j];
-        coarse_submat_vals[i * pcbddc->local_primal_size + primal_idx] = data[i * pcbddc->benign_n + j];
+        PetscCall(MatSetValue(*coarse_submat, primal_idx, i, data[i * pcbddc->benign_n + j],INSERT_VALUES));
+        PetscCall(MatSetValue(*coarse_submat, i, primal_idx, data[i * pcbddc->benign_n + j],INSERT_VALUES));
       }
     }
     PetscCall(MatDenseRestoreArrayRead(B0_BPHI, &data));
