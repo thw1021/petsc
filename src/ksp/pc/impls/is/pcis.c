@@ -153,27 +153,22 @@ PetscErrorCode PCISSetUp(PC pc, PetscBool computematrices, PetscBool computesolv
   /* first time creation, get info on substructuring */
   if (!pc->setupcalled) {
     PetscInt  n_I;
-    PetscInt *idx_I_local, *idx_B_local, *idx_I_global, *idx_B_global;
-    PetscBT   bt;
-    PetscInt  i, j;
+    PetscInt *idx_I_local, *idx_B_local, *idx_I_global, *idx_B_global, *count;
+    PetscInt  i;
 
     /* get info on mapping */
     PetscCall(PetscObjectReference((PetscObject)matis->rmapping));
     PetscCall(ISLocalToGlobalMappingDestroy(&pcis->mapping));
     pcis->mapping = matis->rmapping;
     PetscCall(ISLocalToGlobalMappingGetSize(pcis->mapping, &pcis->n));
-    PetscCall(ISLocalToGlobalMappingGetInfo(pcis->mapping, &(pcis->n_neigh), &(pcis->neigh), &(pcis->n_shared), &(pcis->shared)));
+    PetscCall(ISLocalToGlobalMappingGetInfo(pcis->mapping, &pcis->n_neigh, &pcis->neigh, &pcis->n_shared, &pcis->shared));
 
     /* Identifying interior and interface nodes, in local numbering */
-    PetscCall(PetscBTCreate(pcis->n, &bt));
-    for (i = 0; i < pcis->n_neigh; i++)
-      for (j = 0; j < pcis->n_shared[i]; j++) PetscCall(PetscBTSet(bt, pcis->shared[i][j]));
-
-    /* Creating local and global index sets for interior and interface nodes. */
+    PetscCall(ISLocalToGlobalMappingGetNodeInfo(pcis->mapping, NULL, &count, NULL));
     PetscCall(PetscMalloc1(pcis->n, &idx_I_local));
     PetscCall(PetscMalloc1(pcis->n, &idx_B_local));
     for (i = 0, pcis->n_B = 0, n_I = 0; i < pcis->n; i++) {
-      if (!PetscBTLookup(bt, i)) {
+      if (count[i] < 2) {
         idx_I_local[n_I] = i;
         n_I++;
       } else {
@@ -181,6 +176,7 @@ PetscErrorCode PCISSetUp(PC pc, PetscBool computematrices, PetscBool computesolv
         pcis->n_B++;
       }
     }
+    PetscCall(ISLocalToGlobalMappingRestoreNodeInfo(pcis->mapping, NULL, &count, NULL));
 
     /* Getting the global numbering */
     idx_B_global = PetscSafePointerPlusOffset(idx_I_local, n_I); /* Just avoiding allocating extra memory, since we have vacant space */
@@ -197,7 +193,6 @@ PetscErrorCode PCISSetUp(PC pc, PetscBool computematrices, PetscBool computesolv
     /* Freeing memory */
     PetscCall(PetscFree(idx_B_local));
     PetscCall(PetscFree(idx_I_local));
-    PetscCall(PetscBTDestroy(&bt));
 
     /* Creating work vectors and arrays */
     PetscCall(VecDuplicate(matis->x, &pcis->vec1_N));
@@ -454,7 +449,7 @@ PetscErrorCode PCISReset(PC pc)
   PetscCall(VecScatterDestroy(&pcis->N_to_D));
   PetscCall(VecScatterDestroy(&pcis->global_to_B));
   PetscCall(PetscFree(pcis->work_N));
-  if (pcis->n_neigh > -1) PetscCall(ISLocalToGlobalMappingRestoreInfo(pcis->mapping, &(pcis->n_neigh), &(pcis->neigh), &(pcis->n_shared), &(pcis->shared)));
+  if (pcis->n_neigh > -1) PetscCall(ISLocalToGlobalMappingRestoreInfo(pcis->mapping, &pcis->n_neigh, &pcis->neigh, &pcis->n_shared, &pcis->shared));
   PetscCall(ISLocalToGlobalMappingDestroy(&pcis->mapping));
   PetscCall(ISLocalToGlobalMappingDestroy(&pcis->BtoNmap));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCISSetUseStiffnessScaling_C", NULL));
