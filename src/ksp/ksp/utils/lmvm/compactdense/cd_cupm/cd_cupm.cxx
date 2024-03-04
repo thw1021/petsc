@@ -74,13 +74,13 @@ PetscErrorCode UpperTriangular<T>::SolveInPlaceCyclic(PetscDeviceContext dctx, P
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-#if PetscDefined(HAVE_CUDA)
+  #if PetscDefined(HAVE_CUDA)
 template struct UpperTriangular<DeviceType::CUDA>;
-#endif
+  #endif
 
-#if PetscDefined(HAVE_HIP)
+  #if PetscDefined(HAVE_HIP)
 template struct UpperTriangular<DeviceType::HIP>;
-#endif
+  #endif
 
 } // namespace impl
 
@@ -101,16 +101,16 @@ PETSC_INTERN PetscErrorCode MatUpperTriangularSolveInPlace_CUPM(PetscBool hermit
   PetscCall(PetscDeviceContextGetCurrentContext(&dctx));
   PetscCall(PetscDeviceContextGetDeviceType(dctx, &device_type));
   switch (device_type) {
-#if PetscDefined(HAVE_CUDA)
+  #if PetscDefined(HAVE_CUDA)
   case PETSC_DEVICE_CUDA:
     PetscCall(UpperTriangular<DeviceType::CUDA>::SolveInPlace(dctx, hermitian_transpose, n, A, lda, x, stride));
     break;
-#endif
-#if PetscDefined(HAVE_HIP)
+  #endif
+  #if PetscDefined(HAVE_HIP)
   case PETSC_DEVICE_HIP:
     PetscCall(UpperTriangular<DeviceType::HIP>::SolveInPlace(dctx, hermitian_transpose, n, A, lda, x, stride));
     break;
-#endif
+  #endif
   default:
     SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "Unsupported device type %s", PetscDeviceTypes[device_type]);
   }
@@ -129,16 +129,16 @@ PETSC_INTERN PetscErrorCode MatUpperTriangularSolveInPlaceCyclic_CUPM(PetscBool 
   PetscCall(PetscDeviceContextGetCurrentContext(&dctx));
   PetscCall(PetscDeviceContextGetDeviceType(dctx, &device_type));
   switch (device_type) {
-#if PetscDefined(HAVE_CUDA)
+  #if PetscDefined(HAVE_CUDA)
   case PETSC_DEVICE_CUDA:
     PetscCall(UpperTriangular<DeviceType::CUDA>::SolveInPlaceCyclic(dctx, hermitian_transpose, n, oldest_index, A, lda, x, stride));
     break;
-#endif
-#if PetscDefined(HAVE_HIP)
+  #endif
+  #if PetscDefined(HAVE_HIP)
   case PETSC_DEVICE_HIP:
     PetscCall(UpperTriangular<DeviceType::HIP>::SolveInPlaceCyclic(dctx, hermitian_transpose, n, oldest_index, A, lda, x, stride));
     break;
-#endif
+  #endif
   default:
     SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "Unsupported device type %s", PetscDeviceTypes[device_type]);
   }
