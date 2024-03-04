@@ -1040,9 +1040,7 @@ static PetscErrorCode MatMult_LMVMCDBFGS(Mat B, Vec X, Vec Z)
   /* Cholesky Version */
   /* Start with the B0 term */
   PetscCall(MatCDQNApplyJ0Fwd(B, X, Z));
-  if (!lbfgs->num_updates) {
-    PetscFunctionReturn(PETSC_SUCCESS); /* No updates stored yet */
-  }
+  if (!lbfgs->num_updates) { PetscFunctionReturn(PETSC_SUCCESS); /* No updates stored yet */ }
 
   PetscCall(PetscDeviceContextGetCurrentContext(&dctx));
 
@@ -1340,9 +1338,7 @@ static PetscErrorCode MatSolve_LMVMCDDFP(Mat H, Vec F, Vec dX)
   /* Cholesky Version */
   /* Start with the B0 term */
   PetscCall(MatCDQNApplyJ0Inv(H, F, dX));
-  if (!ldfp->num_updates) {
-    PetscFunctionReturn(PETSC_SUCCESS); /* No updates stored yet */
-  }
+  if (!ldfp->num_updates) { PetscFunctionReturn(PETSC_SUCCESS); /* No updates stored yet */ }
 
   PetscCall(PetscDeviceContextGetCurrentContext(&dctx));
   PetscCall(MatLMVMCDDFPUpdateSolveData(H));
