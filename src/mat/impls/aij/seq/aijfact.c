@@ -308,8 +308,16 @@ PetscErrorCode MatLUFactorSymbolic_SeqAIJ(Mat B, Mat A, IS isrow, IS iscol, cons
   PetscCall(MatMissingDiagonal(A, &missing, &i));
   PetscCheck(!missing, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Matrix is missing diagonal entry %" PetscInt_FMT, i);
 
-  PetscCall(ISInvertPermutation(iscol, PETSC_DECIDE, &isicol));
+  if (!isrow) PetscCall(ISCreateStride(PETSC_COMM_SELF, n, 0, 1, &isrow));
+  else PetscCall(PetscObjectReference((PetscObject)isrow));
   PetscCall(ISGetIndices(isrow, &r));
+  if (iscol) {
+    PetscCall(PetscObjectReference((PetscObject)iscol));
+    PetscCall(ISInvertPermutation(iscol, PETSC_DECIDE, &isicol));
+  } else {
+    PetscCall(ISCreateStride(PETSC_COMM_SELF, n, 0, 1, &iscol));
+    PetscCall(ISCreateStride(PETSC_COMM_SELF, n, 0, 1, &isicol));
+  }
   PetscCall(ISGetIndices(isicol, &ic));
 
   /* get new row and diagonal pointers, must be allocated separately because they will be given to the Mat_SeqAIJ and freed separately */
@@ -402,8 +410,6 @@ PetscErrorCode MatLUFactorSymbolic_SeqAIJ(Mat B, Mat A, IS isrow, IS iscol, cons
   b->imax = NULL;
   b->row  = isrow;
   b->col  = iscol;
-  PetscCall(PetscObjectReference((PetscObject)isrow));
-  PetscCall(PetscObjectReference((PetscObject)iscol));
   b->icol = isicol;
   PetscCall(PetscMalloc1(n + 1, &b->solve_work));
 
