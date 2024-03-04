@@ -1044,7 +1044,7 @@ PetscErrorCode MatMPIAdjToSeqRankZero(Mat A, Mat *B)
   You must NOT free the `i`, `values` and `j` arrays yourself. PETSc will free them
   when the matrix is destroyed; you must allocate them with `PetscMalloc()`.
 
-  You should not include the matrix diagonals.
+  You should not include the matrix diagonal elements.
 
   If you already have a matrix, you can create its adjacency matrix by a call
   to `MatConvert()`, specifying a type of `MATMPIADJ`.
