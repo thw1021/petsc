@@ -4516,8 +4516,8 @@ PetscErrorCode PCBDDCSetUpCorrection(PC pc, Mat *coarse_submat)
     for (j = 0; j < pcbddc->benign_n; j++) {
       PetscInt primal_idx = pcbddc->local_primal_size - pcbddc->benign_n + j;
       for (i = 0; i < pcbddc->local_primal_size; i++) {
-        PetscCall(MatSetValue(*coarse_submat, primal_idx, i, data[i * pcbddc->benign_n + j],INSERT_VALUES));
-        PetscCall(MatSetValue(*coarse_submat, i, primal_idx, data[i * pcbddc->benign_n + j],INSERT_VALUES));
+        PetscCall(MatSetValue(*coarse_submat, primal_idx, i, data[i * pcbddc->benign_n + j], INSERT_VALUES));
+        PetscCall(MatSetValue(*coarse_submat, i, primal_idx, data[i * pcbddc->benign_n + j], INSERT_VALUES));
       }
     }
     PetscCall(MatDenseRestoreArrayRead(B0_BPHI, &data));
