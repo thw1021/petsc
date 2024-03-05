@@ -315,4 +315,24 @@ int main(int argc, char **args)
       args: -m 32 -mat_type sellcuda -vec_type cuda -mat_sell_spmv_cuda_kernel {{0 7 9}} -mat_sell_spmv_cuda_blocky {{2 4 8 16 32}}
       output_file: output/ex5_57.out
       requires: cuda !complex !single
+
+   test:
+      suffix: sell_8
+      nsize: 3
+      args: -mat_type sellhip -vec_type hip -test_diagonalscale -test_zeroentries
+      output_file: output/ex5_55.out
+      requires: hip !complex
+
+   test:
+      suffix: sell_9
+      nsize: 3
+      args: -mat_type sellhip -vec_type hip -mat_sell_spmv_hip_kernel {{1 2 3 4 5 6}}
+      output_file: output/ex5_56.out
+      requires: hip !complex
+
+   test:
+      suffix: sell_10
+      args: -m 32 -mat_type sellhip -vec_type hip -mat_sell_spmv_hip_kernel {{0 7 9}} -mat_sell_spmv_hip_blocky {{2 4 8 16 32}}
+      output_file: output/ex5_57.out
+      requires: hip !complex !single
 TEST*/
