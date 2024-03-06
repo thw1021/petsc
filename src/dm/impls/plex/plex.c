@@ -7714,7 +7714,7 @@ PETSC_INTERN PetscErrorCode DMPlexAnchorsModifyMat_Internal(DM dm, PetscSection 
 
       PetscCheck(numCols == numIndices, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_SIZ, "values matrix has the wrong number of columns: %" PetscInt_FMT ", expected %" PetscInt_FMT, numCols, numIndices);
 
-      PetscCall(DMGetWorkArray(dm, numRows * newNumIndices, PETSC_SCALAR, &newNewValues));
+      PetscCall(DMGetWorkArray(dm, numRows * newNumIndices, MPIU_SCALAR, &newNewValues));
       // row-major to column-major conversion, right multiplication becomes left multiplication
       PetscCallBLAS("BLASgemm", BLASgemm_("N", "N", &M, &N, &K, &a, modMat, &M, newValues, &K, &b, newNewValues, &M));
 
@@ -7731,14 +7731,14 @@ PETSC_INTERN PetscErrorCode DMPlexAnchorsModifyMat_Internal(DM dm, PetscSection 
 
       PetscCheck(numRows == numIndices, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_SIZ, "values matrix has the wrong number of rows: %" PetscInt_FMT ", expected %" PetscInt_FMT, numRows, numIndices);
 
-      PetscCall(DMGetWorkArray(dm, newNumIndices * numCols, PETSC_SCALAR, &newNewValues));
+      PetscCall(DMGetWorkArray(dm, newNumIndices * numCols, MPIU_SCALAR, &newNewValues));
       // row-major to column-major conversion, left multiplication becomes right multiplication
       PetscCallBLAS("BLASgemm", BLASgemm_("N", "T", &M, &N, &K, &a, newValues, &M, modMat, &N, &b, newNewValues, &M));
-      if (newValues != values) PetscCall(DMRestoreWorkArray(dm, numIndices * newNumIndices, PETSC_SCALAR, &newValues));
+      if (newValues != values) PetscCall(DMRestoreWorkArray(dm, numIndices * newNumIndices, MPIU_SCALAR, &newValues));
       newValues = newNewValues;
     }
     *outValues = (PetscScalar *)newValues;
-    PetscCall(DMRestoreWorkArray(dm, numIndices * newNumIndices, PETSC_SCALAR, &modMat));
+    PetscCall(DMRestoreWorkArray(dm, numIndices * newNumIndices, MPIU_SCALAR, &modMat));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
