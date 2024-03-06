@@ -171,6 +171,14 @@ struct _p_Vec {
   size_t    minimum_bytes_pinned_memory; /* minimum data size in bytes for which pinned memory will be allocated */
   PetscBool pinned_memory;               /* PETSC_TRUE if the current host allocation has been made from pinned memory. */
 #endif
+  struct {
+    Vec              vec;
+    PetscObjectState state;
+    IS               is;
+    VecScatter       scatter;
+    PetscErrorCode (*updateread)(Vec, Vec);
+    PetscErrorCode (*updatewrite)(Vec, InsertMode, Vec);
+  } localform;
   char *defaultrandtype;
 };
 
