@@ -7734,7 +7734,7 @@ PETSC_INTERN PetscErrorCode DMPlexAnchorsModifyMat_Internal(DM dm, PetscSection 
       PetscBLASInt K            = numIndices;
       PetscScalar  a = 1.0, b = 0.0;
 
-      PetscCheck(numCols == numIndices, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_SIZ, "values matrix has the wrong number of columns: %d, expected %d\n", (int)numCols, (int)numIndices);
+      PetscCheck(numCols == numIndices, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_SIZ, "values matrix has the wrong number of columns: %" PetscInt_FMT ", expected %" PetscInt_FMT, numCols, numIndices);
 
       PetscCall(DMGetWorkArray(dm, numRows * newNumIndices, PETSC_SCALAR, &newNewValues));
       // row-major to column-major conversion, right multiplication becomes left multiplication
@@ -7751,7 +7751,7 @@ PETSC_INTERN PetscErrorCode DMPlexAnchorsModifyMat_Internal(DM dm, PetscSection 
       PetscBLASInt K            = numIndices;
       PetscScalar  a = 1.0, b = 0.0;
 
-      PetscCheck(numRows == numIndices, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_SIZ, "values matrix has the wrong number of rows: %d, expected %d\n", (int)numRows, (int)numIndices);
+      PetscCheck(numRows == numIndices, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_SIZ, "values matrix has the wrong number of rows: %" PetscInt_FMT ", expected %" PetscInt_FMT, numRows, numIndices);
 
       PetscCall(DMGetWorkArray(dm, newNumIndices * numCols, PETSC_SCALAR, &newNewValues));
       // row-major to column-major conversion, left multiplication becomes right multiplication
@@ -7837,8 +7837,8 @@ static PetscErrorCode DMPlexGetClosureIndices_Internal(DM dm, PetscSection secti
   for (f = 1; f < Nf; ++f) offsets[f + 1] += offsets[f];
   PetscCheck(!Nf || offsets[Nf] == Ni, PetscObjectComm((PetscObject)dm), PETSC_ERR_PLIB, "Invalid size for closure %" PetscInt_FMT " should be %" PetscInt_FMT, offsets[Nf], Ni);
   /* 3) Get symmetries and sign flips. Apply sign flips to values if passed in (only works for square values matrix) */
-  if (multiplyRight) PetscCheck(nCols == Ni, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_SIZ, "Expected %d columns, got %d\n", (int)Ni, nCols);
-  if (multiplyLeft) PetscCheck(nRows == Ni, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_SIZ, "Expected %d rows, got %d\n", (int)Ni, nRows);
+  if (multiplyRight) PetscCheck(nCols == Ni, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_SIZ, "Expected %" PetscInt_FMT " columns, got %" PetscInt_FMT, Ni, nCols);
+  if (multiplyLeft) PetscCheck(nRows == Ni, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_SIZ, "Expected %" PetscInt_FMT " rows, got %" PetscInt_FMT, Ni, nRows);
   for (f = 0; f < PetscMax(1, Nf); ++f) {
     if (Nf) PetscCall(PetscSectionGetFieldPointSyms(section, f, Ncl, points, &perms[f], &flips[f]));
     else PetscCall(PetscSectionGetPointSyms(section, Ncl, points, &perms[f], &flips[f]));
