@@ -7514,18 +7514,13 @@ PETSC_INTERN PetscErrorCode DMPlexAnchorsGetSubMatModification(DM dm, PetscSecti
   PetscInt        sStart = -1, sEnd = -1;
   PetscInt        cStart = -1, cEnd = -1;
   const PetscInt *anchors;
-  PetscInt        numFields, f, p, q, newP = 0;
+  PetscInt        numFields, f, p;
   PetscInt        newNumPoints = 0, newNumIndices = 0;
   PetscInt       *newPoints, *indices, *newIndices, *tmpIndices, *tmpNewIndices;
-  PetscInt        maxAnchor, maxDof;
   PetscInt        oldOffsets[32];
   PetscInt        newOffsets[32];
   PetscInt        oldOffsetsCopy[32];
   PetscInt        newOffsetsCopy[32];
-  PetscInt       *pointMatOffsets[32];
-  PetscInt       *newPointOffsets[32];
-  PetscInt       *oldPointOffsets[32];
-  PetscScalar    *pointMat[32];
   PetscScalar    *modMat         = NULL;
   PetscBool       anyConstrained = PETSC_FALSE;
 
@@ -7700,24 +7695,8 @@ PETSC_INTERN PetscErrorCode DMPlexAnchorsGetSubMatModification(DM dm, PetscSecti
 
 PETSC_INTERN PetscErrorCode DMPlexAnchorsModifyMat_Internal(DM dm, PetscSection section, PetscInt numPoints, PetscInt numIndices, const PetscInt points[], const PetscInt ***perms, PetscInt numRows, PetscInt numCols, const PetscScalar values[], PetscInt *outNumPoints, PetscInt *outNumIndices, PetscInt *outPoints[], PetscScalar *outValues[], PetscInt offsets[], PetscBool multiplyRight, PetscBool multiplyLeft)
 {
-  Mat             cMat;
-  PetscSection    aSec, cSec;
-  IS              aIS;
-  PetscInt        aStart = -1, aEnd = -1;
-  PetscInt        sStart = -1, sEnd = -1;
-  PetscInt        cStart = -1, cEnd = -1;
-  const PetscInt *anchors;
-  PetscInt        numFields, f, p, q, newP = 0;
-  PetscInt        newNumPoints = 0, newNumIndices = 0;
-  PetscInt       *newPoints, *indices, *newIndices;
-  PetscInt        maxAnchor, maxDof;
-  PetscInt        newOffsets[32];
-  PetscInt       *pointMatOffsets[32];
-  PetscInt       *newPointOffsets[32];
-  PetscScalar    *pointMat[32];
-  PetscScalar    *newValues      = NULL, *tmpValues;
-  PetscBool       anyConstrained = PETSC_FALSE;
-  PetscScalar    *modMat         = NULL;
+  PetscInt     newNumIndices = 0;
+  PetscScalar *modMat        = NULL;
 
   PetscFunctionBegin;
   /* If M is the matrix represented by values, get the matrix C such that we will add M * C (or, if multiplyLeft, C^T * M * C) into the global matrix.
