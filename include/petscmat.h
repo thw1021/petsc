@@ -915,6 +915,7 @@ PETSC_EXTERN PetscErrorCode MatShift(Mat, PetscScalar);
 
 PETSC_EXTERN PetscErrorCode MatSetLocalToGlobalMapping(Mat, ISLocalToGlobalMapping, ISLocalToGlobalMapping);
 PETSC_EXTERN PetscErrorCode MatGetLocalToGlobalMapping(Mat, ISLocalToGlobalMapping *, ISLocalToGlobalMapping *);
+PETSC_EXTERN PetscErrorCode MatCreateFromISLocalToGlobalMapping(ISLocalToGlobalMapping, Mat, PetscBool, PetscBool, MatType, Mat *);
 PETSC_EXTERN PetscErrorCode MatGetLayouts(Mat, PetscLayout *, PetscLayout *);
 PETSC_EXTERN PetscErrorCode MatSetLayouts(Mat, PetscLayout, PetscLayout);
 PETSC_EXTERN PetscErrorCode MatZeroRowsLocal(Mat, PetscInt, const PetscInt[], PetscScalar, Vec, Vec);
