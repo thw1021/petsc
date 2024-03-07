@@ -7463,10 +7463,10 @@ static PetscErrorCode DMPlexAnchorsGetSubMatIndices(PetscInt nPoints, const Pets
 {
   PetscInt numFields, sStart, sEnd, cStart, cEnd;
 
+  PetscFunctionBegin;
   PetscCall(PetscSectionGetNumFields(section, &numFields));
   PetscCall(PetscSectionGetChart(section, &sStart, &sEnd));
   PetscCall(PetscSectionGetChart(cSec, &cStart, &cEnd));
-  PetscFunctionBegin;
   for (PetscInt p = 0; p < nPoints; p++) {
     PetscInt b       = pnts[2 * p];
     PetscInt bSecDof = 0, bOff;
@@ -7501,7 +7501,6 @@ static PetscErrorCode DMPlexAnchorsGetSubMatIndices(PetscInt nPoints, const Pets
       for (PetscInt i = 0; i < bEnd; i++) indices[fieldOffsets[0]++] = tmpIndices[i];
     }
   }
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -7702,7 +7701,7 @@ PETSC_INTERN PetscErrorCode DMPlexAnchorsModifyMat_Internal(DM dm, PetscSection 
   /* If M is the matrix represented by values, get the matrix C such that we will add M * C (or, if multiplyLeft, C^T * M * C) into the global matrix.
      modMat is that matrix C */
   PetscCall(DMPlexAnchorsGetSubMatModification(dm, section, numPoints, numIndices, points, perms, outNumPoints, outNumIndices, outPoints, offsets, outValues ? &modMat : NULL));
-  if (outValues) {
+  if (modMat) {
     const PetscScalar *newValues = values;
 
     if (multiplyRight) {
@@ -7855,9 +7854,9 @@ static PetscErrorCode DMPlexGetClosureIndices_Internal(DM dm, PetscSection secti
   }
   /* 4) Apply hanging node constraints. Get new symmetries and replace all storage with constrained storage */
   PetscCall(DMPlexAnchorsModifyMat_Internal(dm, section, Ncl, Ni, points, perms, nRows, nCols, values ? *values : NULL, &NclC, &NiC, &pointsC, values ? &valuesC : NULL, offsets, multiplyRight, multiplyLeft));
-  if (multiplyRight) { *numCols = nCols = NiC; }
-  if (multiplyLeft) { *numRows = nRows = NiC; }
   if (NclC) {
+    if (multiplyRight) { *numCols = nCols = NiC; }
+    if (multiplyLeft) { *numRows = nRows = NiC; }
     if (valCopy) PetscCall(DMRestoreWorkArray(dm, Ni * Ni, MPIU_SCALAR, &valCopy));
     for (f = 0; f < PetscMax(1, Nf); ++f) {
       if (Nf) PetscCall(PetscSectionRestoreFieldPointSyms(section, f, Ncl, points, &perms[f], &flips[f]));
@@ -7969,6 +7968,8 @@ PetscErrorCode DMPlexGetClosureIndices(DM dm, PetscSection section, PetscSection
 
   PetscFunctionBeginHot;
   PetscCall(DMPlexGetClosureIndices_Internal(dm, section, idxSection, point, useClPerm, &numRows, &numCols, indices, outOffsets, values, PETSC_TRUE, PETSC_TRUE));
+  PetscCheck(numRows == numCols, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Symmetric matrix transformation produces rectangular dimensions (%" PetscInt_FMT ", %" PetscInt_FMT ")", numRows, numCols);
+  *numIndices = numRows;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
