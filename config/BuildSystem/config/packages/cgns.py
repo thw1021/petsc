@@ -27,6 +27,21 @@ class Configure(config.package.CMakePackage):
     if not self.mpi.usingMPIUni:
       args.append('-DCGNS_ENABLE_PARALLEL:BOOL=ON')
       args.append('-DHDF5_NEED_MPI:BOOL=ON')
+    if self.getDefaultIndexSize() == 64:
+      args.append('-DCGNS_ENABLE_64BIT:BOOL=ON')
     if self.hdf5.directory:
       args.append('-DHDF5_ROOT:PATH={}'.format(self.hdf5.directory))
     return args
+
+  def configureLibrary(self):
+    config.package.Package.configureLibrary(self)
+    oldFlags = self.compilers.CPPFLAGS
+    self.compilers.CPPFLAGS += ' '+self.headers.toString(self.include)
+    if not self.checkCompile('#include "cgnslib.h"', '#if (CG_SIZEOF_SIZE != '+str(self.getDefaultIndexSize())+')\n#error incompatible CG_SIZEOF_SIZE\n#endif\n'):
+      if self.getDefaultIndexSize() == 64:
+        msg = '--with-64-bit-indices option requires CGNS built with CGNS_ENABLE_64BIT.\n'
+      else:
+        msg = 'CGNS_ENABLE_64BIT build appears to be specified for a default 32-bit-indices build of PETSc.\n'
+      raise RuntimeError('CGNS specified is incompatible!\n'+msg+'Suggest using --download-cgns for a compatible CGNS')
+    self.compilers.CPPFLAGS = oldFlags
+    return
