@@ -7468,12 +7468,15 @@ static PetscErrorCode DMPlexAnchorsGetSubMatIndices(PetscInt nPoints, const Pets
   PetscCall(PetscSectionGetChart(section, &sStart, &sEnd));
   PetscCall(PetscSectionGetChart(cSec, &cStart, &cEnd));
   for (PetscInt p = 0; p < nPoints; p++) {
-    PetscInt b       = pnts[2 * p];
-    PetscInt bSecDof = 0, bOff;
+    PetscInt     b       = pnts[2 * p];
+    PetscInt     bSecDof = 0, bOff;
+    PetscInt     cSecDof = 0;
+    PetscSection indices_section;
 
     if (b >= sStart && b < sEnd) PetscCall(PetscSectionGetDof(section, b, &bSecDof));
     if (!bSecDof) continue;
-    if (b < cStart || b >= cEnd) continue;
+    if (b >= cStart && b < cEnd) PetscCall(PetscSectionGetDof(cSec, b, &cSecDof));
+    indices_section = cSecDof > 0 ? cSec : section;
     if (numFields) {
       PetscInt fStart[32], fEnd[32];
 
@@ -7482,23 +7485,23 @@ static PetscErrorCode DMPlexAnchorsGetSubMatIndices(PetscInt nPoints, const Pets
       for (PetscInt f = 0; f < numFields; f++) {
         PetscInt fDof = 0;
 
-        PetscCall(PetscSectionGetFieldDof(cSec, b, f, &fDof));
+        PetscCall(PetscSectionGetFieldDof(indices_section, b, f, &fDof));
         fStart[f + 1] = fStart[f] + fDof;
         fEnd[f + 1]   = fStart[f + 1];
       }
-      PetscCall(PetscSectionGetOffset(cSec, b, &bOff));
+      PetscCall(PetscSectionGetOffset(indices_section, b, &bOff));
       // only apply permutations on one side
-      PetscCall(DMPlexGetIndicesPointFields_Internal(cSec, PETSC_TRUE, b, bOff, fEnd, PETSC_TRUE, perms, perms ? p : -1, NULL, tmpIndices));
+      PetscCall(DMPlexGetIndicesPointFields_Internal(indices_section, PETSC_TRUE, b, bOff, fEnd, PETSC_TRUE, perms, perms ? p : -1, NULL, tmpIndices));
       for (PetscInt f = 0; f < numFields; f++) {
-        for (PetscInt i = fStart[f]; i < fEnd[f]; i++) { indices[fieldOffsets[f]++] = tmpIndices[i]; }
+        for (PetscInt i = fStart[f]; i < fEnd[f]; i++) { indices[fieldOffsets[f]++] = (cSecDof > 0) ? tmpIndices[i] : -(tmpIndices[i] + 1); }
       }
     } else {
       PetscInt bEnd = 0;
 
-      PetscCall(PetscSectionGetOffset(cSec, b, &bOff));
-      PetscCall(DMPlexGetIndicesPoint_Internal(cSec, PETSC_TRUE, b, bOff, &bEnd, PETSC_TRUE, (perms && perms[0]) ? perms[0][p] : NULL, NULL, tmpIndices));
+      PetscCall(PetscSectionGetOffset(indices_section, b, &bOff));
+      PetscCall(DMPlexGetIndicesPoint_Internal(indices_section, PETSC_TRUE, b, bOff, &bEnd, PETSC_TRUE, (perms && perms[0]) ? perms[0][p] : NULL, NULL, tmpIndices));
 
-      for (PetscInt i = 0; i < bEnd; i++) indices[fieldOffsets[0]++] = tmpIndices[i];
+      for (PetscInt i = 0; i < bEnd; i++) indices[fieldOffsets[0]++] = (cSecDof > 0) ? tmpIndices[i] : -(tmpIndices[i] + 1);
     }
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -7644,7 +7647,8 @@ PETSC_INTERN PetscErrorCode DMPlexAnchorsGetSubMatModification(DM dm, PetscSecti
       }
     } else {
       newPoints[2 * newP]     = b;
-      newPoints[2 * newP + 1] = 0;
+      newPoints[2 * newP + 1] = points[2 * p + 1];
+      newP++;
     }
   }
 
@@ -7657,19 +7661,26 @@ PETSC_INTERN PetscErrorCode DMPlexAnchorsGetSubMatModification(DM dm, PetscSecti
     PetscCall(DMGetWorkArray(dm, newNumIndices, MPIU_INT, &newIndices));
     PetscCall(DMGetWorkArray(dm, newNumIndices, MPIU_INT, &tmpNewIndices));
 
+    for (PetscInt i = 0; i < numIndices; i++) indices[i] = -1;
+    for (PetscInt i = 0; i < newNumIndices; i++) newIndices[i] = -1;
+
     PetscCall(DMPlexAnchorsGetSubMatIndices(numPoints, points, section, cSec, tmpIndices, oldOffsetsCopy, indices, perms));
     PetscCall(DMPlexAnchorsGetSubMatIndices(newNumPoints, newPoints, section, section, tmpNewIndices, newOffsetsCopy, newIndices, perms));
 
     PetscCall(DMGetWorkArray(dm, numIndices * newNumIndices, MPIU_SCALAR, &modMat));
     PetscCall(PetscArrayzero(modMat, newNumIndices * numIndices));
-    PetscCall(MatGetValues(cMat, numIndices, indices, newNumIndices, indices, modMat));
+    PetscCall(MatGetValues(cMat, numIndices, indices, newNumIndices, newIndices, modMat));
 
-    // We have to add an identity component to the values from cMat
-    PetscCall(PetscArraycpy(oldOffsetsCopy, oldOffsets, 32));
-    PetscCall(DMPlexAnchorsGetSubMatIndices(numPoints, points, section, section, tmpIndices, oldOffsetsCopy, indices, perms));
     for (PetscInt i = 0; i < numIndices; i++) {
+      PetscInt l;
+
+      if (indices[i] > 0) continue;
+      l = -(indices[i] + 1);
       for (PetscInt j = 0; j < newNumIndices; j++) {
-        if (indices[i] == newIndices[j]) modMat[i * newNumIndices + j] += 1;
+        if (newIndices[j] == l) {
+          modMat[i * newNumIndices + j] += 1;
+          break;
+        }
       }
     }
 
@@ -7694,15 +7705,15 @@ PETSC_INTERN PetscErrorCode DMPlexAnchorsGetSubMatModification(DM dm, PetscSecti
 
 PETSC_INTERN PetscErrorCode DMPlexAnchorsModifyMat_Internal(DM dm, PetscSection section, PetscInt numPoints, PetscInt numIndices, const PetscInt points[], const PetscInt ***perms, PetscInt numRows, PetscInt numCols, const PetscScalar values[], PetscInt *outNumPoints, PetscInt *outNumIndices, PetscInt *outPoints[], PetscScalar *outValues[], PetscInt offsets[], PetscBool multiplyRight, PetscBool multiplyLeft)
 {
-  PetscInt     newNumIndices = 0;
-  PetscScalar *modMat        = NULL;
+  PetscScalar *modMat = NULL;
 
   PetscFunctionBegin;
   /* If M is the matrix represented by values, get the matrix C such that we will add M * C (or, if multiplyLeft, C^T * M * C) into the global matrix.
      modMat is that matrix C */
   PetscCall(DMPlexAnchorsGetSubMatModification(dm, section, numPoints, numIndices, points, perms, outNumPoints, outNumIndices, outPoints, offsets, outValues ? &modMat : NULL));
   if (modMat) {
-    const PetscScalar *newValues = values;
+    const PetscScalar *newValues     = values;
+    PetscInt           newNumIndices = *outNumIndices;
 
     if (multiplyRight) {
       PetscScalar *newNewValues = NULL;
