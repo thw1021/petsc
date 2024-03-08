@@ -1978,7 +1978,9 @@ class Configure(config.base.Configure):
                   'not supported','is unsupported and will be skipped','illegal option',
                   'invalid option','invalid suboption',
                   'unbekannte option',
-                  'no se reconoce la opci','non reconnue','warning: unsupported linker arg:','ignoring unknown option')
+                  'no se reconoce la opci','non reconnue','warning: unsupported linker arg:','ignoring unknown option',
+                  'warning: -commons use_dylibs is no longer supported, using error treatment instead',
+                  'warning: -bind_at_load is deprecated on macOS')
     outlo = output.lower()
     return any(sub.lower() in outlo for sub in substrings)
 
@@ -2469,6 +2471,9 @@ class Configure(config.base.Configure):
           val = getattr(self,linker_flag_var)
           val.append(testFlag)
           setattr(self,linker_flag_var,val)
+          self.logPrint('Accepted macOS linker flag ' + testFlag)
+        else:
+          self.logPrint('Rejected macOS linker flag ' + testFlag)
       self.popLanguage()
     return
 
