@@ -7795,6 +7795,28 @@ PETSC_INTERN PetscErrorCode DMPlexAnchorsModifyMat(DM dm, PetscSection section, 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode DMPlexGetClosureIndicesSize_Internal(DM dm, PetscSection section, PetscInt point, PetscInt *closureSize)
+{
+  /* Closure ordering */
+  PetscSection    clSection;
+  IS              clPoints;
+  const PetscInt *clp;
+  PetscInt       *points;
+  PetscInt        Ncl, Ni = 0;
+
+  PetscFunctionBeginHot;
+  PetscCall(DMPlexGetCompressedClosure(dm, section, point, 0, &Ncl, &points, &clSection, &clPoints, &clp));
+  for (PetscInt p = 0; p < Ncl * 2; p += 2) {
+    PetscInt dof;
+
+    PetscCall(PetscSectionGetDof(section, points[p], &dof));
+    Ni += dof;
+  }
+  PetscCall(DMPlexRestoreCompressedClosure(dm, section, point, &Ncl, &points, &clSection, &clPoints, &clp));
+  *closureSize = Ni;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode DMPlexGetClosureIndices_Internal(DM dm, PetscSection section, PetscSection idxSection, PetscInt point, PetscBool useClPerm, PetscInt *numRows, PetscInt *numCols, PetscInt *indices[], PetscInt outOffsets[], PetscScalar *values[], PetscBool multiplyRight, PetscBool multiplyLeft)
 {
   /* Closure ordering */
@@ -8172,10 +8194,12 @@ PetscErrorCode DMPlexMatSetClosureGeneral(DM dmRow, PetscSection sectionRow, Pet
   PetscValidHeaderSpecific(globalSectionCol, PETSC_SECTION_CLASSID, 7);
   PetscValidHeaderSpecific(A, MAT_CLASSID, 9);
 
+  PetscCall(DMPlexGetClosureIndicesSize_Internal(dmRow, sectionRow, point, &numIndicesRow));
+  PetscCall(DMPlexGetClosureIndicesSize_Internal(dmCol, sectionCol, point, &numIndicesCol));
   valuesV1 = valuesV0;
   PetscCall(DMPlexGetClosureIndices_Internal(dmRow, sectionRow, globalSectionRow, point, useRowPerm, &numIndicesRow, &numIndicesCol, &indicesRow, NULL, (PetscScalar **)&valuesV1, PETSC_FALSE, PETSC_TRUE));
   valuesV2 = valuesV1;
-  PetscCall(DMPlexGetClosureIndices_Internal(dmRow, sectionRow, globalSectionRow, point, useRowPerm, &numIndicesRow, &numIndicesCol, &indicesRow, NULL, (PetscScalar **)&valuesV2, PETSC_FALSE, PETSC_TRUE));
+  PetscCall(DMPlexGetClosureIndices_Internal(dmCol, sectionCol, globalSectionCol, point, useColPerm, &numIndicesRow, &numIndicesCol, &indicesCol, NULL, (PetscScalar **)&valuesV2, PETSC_TRUE, PETSC_FALSE));
 
   if (mesh->printSetValues) PetscCall(DMPlexPrintMatSetValues(PETSC_VIEWER_STDOUT_SELF, A, point, numIndicesRow, indicesRow, numIndicesCol, indicesCol, valuesV2));
   /* TODO: fix this code to not use error codes as handle-able exceptions! */
