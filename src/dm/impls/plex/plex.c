@@ -7823,10 +7823,10 @@ static PetscErrorCode DMPlexGetClosureIndices_Internal(DM dm, PetscSection secti
   PetscValidHeaderSpecific(section, PETSC_SECTION_CLASSID, 2);
   PetscValidHeaderSpecific(idxSection, PETSC_SECTION_CLASSID, 3);
   PetscAssertPointer(numRows, 6);
-  PetscAssertPointer(numCols, 6);
-  if (indices) PetscAssertPointer(indices, 7);
-  if (outOffsets) PetscAssertPointer(outOffsets, 8);
-  if (values) PetscAssertPointer(values, 9);
+  PetscAssertPointer(numCols, 7);
+  if (indices) PetscAssertPointer(indices, 8);
+  if (outOffsets) PetscAssertPointer(outOffsets, 9);
+  if (values) PetscAssertPointer(values, 10);
   PetscCall(PetscSectionGetNumFields(section, &Nf));
   PetscCheck(Nf <= 31, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Number of fields %" PetscInt_FMT " limited to 31", Nf);
   PetscCall(PetscArrayzero(offsets, 32));
