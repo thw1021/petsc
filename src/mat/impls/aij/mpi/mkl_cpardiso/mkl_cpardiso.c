@@ -399,6 +399,56 @@ static PetscErrorCode MatSolve_MKL_CPARDISO(Mat A, Vec b, Vec x)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode MatForwardSolve_MKL_CPARDISO(Mat A, Vec b, Vec x)
+{
+  Mat_MKL_CPARDISO  *mat_mkl_cpardiso = (Mat_MKL_CPARDISO *)(A)->data;
+  PetscScalar       *xarray;
+  const PetscScalar *barray;
+
+  PetscFunctionBegin;
+  mat_mkl_cpardiso->nrhs = 1;
+  PetscCall(VecGetArray(x, &xarray));
+  PetscCall(VecGetArrayRead(b, &barray));
+
+  /* solve phase */
+  mat_mkl_cpardiso->phase = JOB_SOLVE_FORWARD_SUBSTITUTION;
+  cluster_sparse_solver(mat_mkl_cpardiso->pt, &mat_mkl_cpardiso->maxfct, &mat_mkl_cpardiso->mnum, &mat_mkl_cpardiso->mtype, &mat_mkl_cpardiso->phase, &mat_mkl_cpardiso->n, mat_mkl_cpardiso->a, mat_mkl_cpardiso->ia, mat_mkl_cpardiso->ja,
+                        mat_mkl_cpardiso->perm, &mat_mkl_cpardiso->nrhs, mat_mkl_cpardiso->iparm, &mat_mkl_cpardiso->msglvl, (void *)barray, (void *)xarray, &mat_mkl_cpardiso->comm_mkl_cpardiso, (PetscInt *)&mat_mkl_cpardiso->err);
+
+  PetscCheck(mat_mkl_cpardiso->err >= 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error reported by MKL Cluster PARDISO: err=%d, msg = \"%s\". Please check manual", mat_mkl_cpardiso->err, Err_MSG_CPardiso(mat_mkl_cpardiso->err));
+
+  PetscCall(VecRestoreArray(x, &xarray));
+  PetscCall(VecRestoreArrayRead(b, &barray));
+  mat_mkl_cpardiso->CleanUp = PETSC_TRUE;
+
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatBackwardSolve_MKL_CPARDISO(Mat A, Vec b, Vec x)
+{
+  Mat_MKL_CPARDISO  *mat_mkl_cpardiso = (Mat_MKL_CPARDISO *)(A)->data;
+  PetscScalar       *xarray;
+  const PetscScalar *barray;
+
+  PetscFunctionBegin;
+  mat_mkl_cpardiso->nrhs = 1;
+  PetscCall(VecGetArray(x, &xarray));
+  PetscCall(VecGetArrayRead(b, &barray));
+
+  /* solve phase */
+  mat_mkl_cpardiso->phase = JOB_SOLVE_BACKWARD_SUBSTITUTION;
+  cluster_sparse_solver(mat_mkl_cpardiso->pt, &mat_mkl_cpardiso->maxfct, &mat_mkl_cpardiso->mnum, &mat_mkl_cpardiso->mtype, &mat_mkl_cpardiso->phase, &mat_mkl_cpardiso->n, mat_mkl_cpardiso->a, mat_mkl_cpardiso->ia, mat_mkl_cpardiso->ja,
+                        mat_mkl_cpardiso->perm, &mat_mkl_cpardiso->nrhs, mat_mkl_cpardiso->iparm, &mat_mkl_cpardiso->msglvl, (void *)barray, (void *)xarray, &mat_mkl_cpardiso->comm_mkl_cpardiso, (PetscInt *)&mat_mkl_cpardiso->err);
+
+  PetscCheck(mat_mkl_cpardiso->err >= 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error reported by MKL Cluster PARDISO: err=%d, msg = \"%s\". Please check manual", mat_mkl_cpardiso->err, Err_MSG_CPardiso(mat_mkl_cpardiso->err));
+
+  PetscCall(VecRestoreArray(x, &xarray));
+  PetscCall(VecRestoreArrayRead(b, &barray));
+  mat_mkl_cpardiso->CleanUp = PETSC_TRUE;
+
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode MatSolveTranspose_MKL_CPARDISO(Mat A, Vec b, Vec x)
 {
   Mat_MKL_CPARDISO *mat_mkl_cpardiso = (Mat_MKL_CPARDISO *)A->data;
@@ -643,6 +693,8 @@ static PetscErrorCode MatLUFactorSymbolic_AIJMKL_CPARDISO(Mat F, Mat A, IS r, IS
   mat_mkl_cpardiso->CleanUp = PETSC_TRUE;
   F->ops->lufactornumeric   = MatFactorNumeric_MKL_CPARDISO;
   F->ops->solve             = MatSolve_MKL_CPARDISO;
+  F->ops->forwardsolve      = MatForwardSolve_MKL_CPARDISO;
+  F->ops->backwardsolve     = MatBackwardSolve_MKL_CPARDISO;
   F->ops->solvetranspose    = MatSolveTranspose_MKL_CPARDISO;
   F->ops->matsolve          = MatMatSolve_MKL_CPARDISO;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -676,6 +728,8 @@ static PetscErrorCode MatCholeskyFactorSymbolic_AIJMKL_CPARDISO(Mat F, Mat A, IS
   mat_mkl_cpardiso->CleanUp     = PETSC_TRUE;
   F->ops->choleskyfactornumeric = MatFactorNumeric_MKL_CPARDISO;
   F->ops->solve                 = MatSolve_MKL_CPARDISO;
+  F->ops->forwardsolve          = MatForwardSolve_MKL_CPARDISO;
+  F->ops->backwardsolve         = MatBackwardSolve_MKL_CPARDISO;
   F->ops->solvetranspose        = MatSolveTranspose_MKL_CPARDISO;
   F->ops->matsolve              = MatMatSolve_MKL_CPARDISO;
   PetscFunctionReturn(PETSC_SUCCESS);
