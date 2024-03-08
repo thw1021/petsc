@@ -2592,6 +2592,8 @@ static PetscErrorCode MatSetLocalToGlobalMapping_IS(Mat A, ISLocalToGlobalMappin
   }
 
   /* Clean up */
+  PetscCall(MatDestroy(&is->dA));
+  PetscCall(MatDestroy(&is->assembledA));
   PetscCall(MatDestroy(&is->A));
   if (is->csf != is->sf) {
     PetscCall(PetscSFDestroy(&is->csf));
