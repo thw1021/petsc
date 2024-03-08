@@ -692,7 +692,6 @@ static inline PetscErrorCode PCBDDCGraphComputeCC_Private(PCBDDCGraph graph, Pet
 {
   PetscInt  i, j, n;
   PetscInt *xadj = graph->xadj, *adjncy = graph->adjncy;
-  PetscBT   touched  = graph->touched;
   PetscBool havecsr  = (PetscBool)(!!xadj);
   PetscBool havesubs = (PetscBool)(!!graph->n_local_subs);
 
@@ -705,8 +704,8 @@ static inline PetscErrorCode PCBDDCGraphComputeCC_Private(PCBDDCGraph graph, Pet
       if (xadj[start_dof + 1] - xadj[start_dof] == 1 && adjncy[xadj[start_dof]] < 0) {
         for (j = 0; j < graph->subset_size[pid - 1]; j++) { /* pid \in [1,graph->n_subsets] */
           PetscInt dof = graph->subset_idxs[pid - 1][j];
-          if (!PetscBTLookup(touched, dof) && graph->nodes[dof].subset == pid) {
-            PetscCall(PetscBTSet(touched, dof));
+          if (!graph->nodes[dof].touched && graph->nodes[dof].subset == pid) {
+            graph->nodes[dof].touched = PETSC_TRUE;
             queue_tip[n] = dof;
             n++;
           }
@@ -714,8 +713,8 @@ static inline PetscErrorCode PCBDDCGraphComputeCC_Private(PCBDDCGraph graph, Pet
       } else {
         for (j = xadj[start_dof]; j < xadj[start_dof + 1]; j++) {
           PetscInt dof = adjncy[j];
-          if (!PetscBTLookup(touched, dof) && graph->nodes[dof].subset == pid) {
-            PetscCall(PetscBTSet(touched, dof));
+          if (!graph->nodes[dof].touched && graph->nodes[dof].subset == pid) {
+            graph->nodes[dof].touched = PETSC_TRUE;
             queue_tip[n] = dof;
             n++;
           }
@@ -730,8 +729,8 @@ static inline PetscErrorCode PCBDDCGraphComputeCC_Private(PCBDDCGraph graph, Pet
       if (xadj[start_dof + 1] - xadj[start_dof] == 1 && adjncy[xadj[start_dof]] < 0) {
         for (j = 0; j < graph->subset_size[pid - 1]; j++) { /* pid \in [1,graph->n_subsets] */
           PetscInt dof = graph->subset_idxs[pid - 1][j];
-          if (!PetscBTLookup(touched, dof) && graph->nodes[dof].subset == pid && graph->local_subs[dof] == sid) {
-            PetscCall(PetscBTSet(touched, dof));
+          if (!graph->nodes[dof].touched && graph->nodes[dof].subset == pid && graph->local_subs[dof] == sid) {
+            graph->nodes[dof].touched = PETSC_TRUE;
             queue_tip[n] = dof;
             n++;
           }
@@ -739,8 +738,8 @@ static inline PetscErrorCode PCBDDCGraphComputeCC_Private(PCBDDCGraph graph, Pet
       } else {
         for (j = xadj[start_dof]; j < xadj[start_dof + 1]; j++) {
           PetscInt dof = adjncy[j];
-          if (!PetscBTLookup(touched, dof) && graph->nodes[dof].subset == pid && graph->local_subs[dof] == sid) {
-            PetscCall(PetscBTSet(touched, dof));
+          if (!graph->nodes[dof].touched && graph->nodes[dof].subset == pid && graph->local_subs[dof] == sid) {
+            graph->nodes[dof].touched = PETSC_TRUE;
             queue_tip[n] = dof;
             n++;
           }
@@ -751,8 +750,8 @@ static inline PetscErrorCode PCBDDCGraphComputeCC_Private(PCBDDCGraph graph, Pet
     PetscInt sid = graph->local_subs[queue_tip[-n_prev]];
     for (j = 0; j < graph->subset_size[pid - 1]; j++) { /* pid \in [1,graph->n_subsets] */
       PetscInt dof = graph->subset_idxs[pid - 1][j];
-      if (!PetscBTLookup(touched, dof) && graph->nodes[dof].subset == pid && graph->local_subs[dof] == sid) {
-        PetscCall(PetscBTSet(touched, dof));
+      if (!graph->nodes[dof].touched && graph->nodes[dof].subset == pid && graph->local_subs[dof] == sid) {
+        graph->nodes[dof].touched = PETSC_TRUE;
         queue_tip[n] = dof;
         n++;
       }
@@ -760,8 +759,8 @@ static inline PetscErrorCode PCBDDCGraphComputeCC_Private(PCBDDCGraph graph, Pet
   } else {
     for (j = 0; j < graph->subset_size[pid - 1]; j++) { /* pid \in [1,graph->n_subsets] */
       PetscInt dof = graph->subset_idxs[pid - 1][j];
-      if (!PetscBTLookup(touched, dof) && graph->nodes[dof].subset == pid) {
-        PetscCall(PetscBTSet(touched, dof));
+      if (!graph->nodes[dof].touched && graph->nodes[dof].subset == pid) {
+        graph->nodes[dof].touched = PETSC_TRUE;
         queue_tip[n] = dof;
         n++;
       }
@@ -773,8 +772,7 @@ static inline PetscErrorCode PCBDDCGraphComputeCC_Private(PCBDDCGraph graph, Pet
 
 PetscErrorCode PCBDDCGraphComputeConnectedComponentsLocal(PCBDDCGraph graph)
 {
-  PetscInt    ncc, cum_queue, n;
-  PetscMPIInt size;
+  PetscInt ncc, cum_queue;
 
   PetscFunctionBegin;
   PetscCheck(graph->setupcalled, PetscObjectComm((PetscObject)graph->l2gmap), PETSC_ERR_ORDER, "PCBDDCGraphSetUp should be called first");
@@ -782,29 +780,29 @@ PetscErrorCode PCBDDCGraphComputeConnectedComponentsLocal(PCBDDCGraph graph)
   if (!graph->xadj && !graph->n_local_subs) PetscFunctionReturn(PETSC_SUCCESS);
 
   /* reset any previous search of connected components */
-  PetscCall(PetscBTMemzero(graph->nvtxs, graph->touched));
-  PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)graph->l2gmap), &size));
+  for (PetscInt i = 0; i < graph->nvtxs; i++) graph->nodes[i].touched = PETSC_FALSE;
   if (!graph->seq_graph) {
-    PetscInt i;
-    for (i = 0; i < graph->nvtxs; i++) {
-      if (graph->nodes[i].special_dof == PCBDDCGRAPH_DIRICHLET_MARK || graph->nodes[i].count < 2) PetscCall(PetscBTSet(graph->touched, i));
+    for (PetscInt i = 0; i < graph->nvtxs; i++) {
+      if (graph->nodes[i].special_dof == PCBDDCGRAPH_DIRICHLET_MARK || graph->nodes[i].count < 2) graph->nodes[i].touched = PETSC_TRUE;
     }
   }
 
   /* begin search for connected components */
   cum_queue = 0;
   ncc       = 0;
-  for (n = 0; n < graph->n_subsets; n++) {
+  for (PetscInt n = 0; n < graph->n_subsets; n++) {
+    const PetscInt* subset_idxs = graph->subset_idxs[n];
     PetscInt pid   = n + 1; /* partition labeled by 0 is discarded */
     PetscInt found = 0, prev = 0, first = 0, ncc_pid = 0;
+
     while (found != graph->subset_size[n]) {
       PetscInt added = 0;
       if (!prev) { /* search for new starting dof */
-        while (PetscBTLookup(graph->touched, graph->subset_idxs[n][first])) first++;
-        PetscCall(PetscBTSet(graph->touched, graph->subset_idxs[n][first]));
-        graph->queue[cum_queue] = graph->subset_idxs[n][first];
-        graph->cptr[ncc]        = cum_queue;
-        prev                    = 1;
+        while (graph->nodes[subset_idxs[first]].touched) first++;
+        graph->nodes[subset_idxs[first]].touched = PETSC_TRUE;
+        graph->queue[cum_queue]                  = subset_idxs[first];
+        graph->cptr[ncc]                         = cum_queue;
+        prev                                     = 1;
         cum_queue++;
         found++;
         ncc_pid++;
@@ -860,7 +858,7 @@ PetscErrorCode PCBDDCGraphSetUp(PCBDDCGraph graph, PetscInt custom_minimal_size,
     PetscValidHeaderSpecific(custom_primal_vertices, IS_CLASSID, 7);
     PetscCheckSameComm(graph->l2gmap, 1, custom_primal_vertices, 7);
   }
-  PetscCall(PetscBTMemzero(graph->nvtxs, graph->touched));
+  for (i = 0; i < graph->nvtxs; i++) graph->nodes[i].touched = PETSC_FALSE;
 
   PetscCall(PetscObjectGetComm((PetscObject)graph->l2gmap, &comm));
   PetscCallMPI(MPI_Comm_size(comm, &size));
@@ -994,7 +992,7 @@ PetscErrorCode PCBDDCGraphSetUp(PCBDDCGraph graph, PetscInt custom_minimal_size,
     for (i = 0; i < is_size; i++) {
       if (is_indices[i] > -1 && is_indices[i] < graph->nvtxs) { /* out of bounds indices (if any) are skipped */
         if (!graph->seq_graph) {                                /* dirichlet nodes treated as internal */
-          PetscCall(PetscBTSet(graph->touched, is_indices[i]));
+          graph->nodes[is_indices[i]].touched = PETSC_TRUE;
           graph->nodes[is_indices[i]].subset = 0;
         }
         graph->nodes[is_indices[i]].special_dof = PCBDDCGRAPH_DIRICHLET_MARK;
@@ -1020,7 +1018,7 @@ PetscErrorCode PCBDDCGraphSetUp(PCBDDCGraph graph, PetscInt custom_minimal_size,
   if (!graph->seq_graph) {
     for (i = 0; i < graph->nvtxs; i++) {
       if (graph->nodes[i].count < 2) {
-        PetscCall(PetscBTSet(graph->touched, i));
+        graph->nodes[i].touched = PETSC_TRUE;
         graph->nodes[i].subset = 0;
       }
     }
@@ -1029,7 +1027,7 @@ PetscErrorCode PCBDDCGraphSetUp(PCBDDCGraph graph, PetscInt custom_minimal_size,
   /* init graph structure and compute default subsets */
   nodes_touched = 0;
   for (i = 0; i < graph->nvtxs; i++)
-    if (PetscBTLookup(graph->touched, i)) nodes_touched++;
+    if (graph->nodes[i].touched) nodes_touched++;
 
   i            = 0;
   graph->ncc   = 0;
@@ -1045,31 +1043,35 @@ PetscErrorCode PCBDDCGraphSetUp(PCBDDCGraph graph, PetscInt custom_minimal_size,
 
   while (nodes_touched < graph->nvtxs) {
     /*  find first untouched node in local ordering */
-    while (PetscBTLookup(graph->touched, i)) i++;
-    PetscCall(PetscBTSet(graph->touched, i));
+    while (graph->nodes[i].touched) i++;
+    graph->nodes[i].touched    = PETSC_TRUE;
     graph->nodes[i].subset     = graph->ncc + 1;
     graph->cptr[graph->ncc]    = total_counts;
     graph->queue[total_counts] = i;
     total_counts++;
     nodes_touched++;
+
     /* now find all other nodes having the same set of sharing subdomains */
+    const PCBDDCGraphNode *nodei = &graph->nodes[i];
     for (j = i + 1; j < graph->nvtxs; j++) {
+      PCBDDCGraphNode *nodej = &graph->nodes[j];
+
       /* check for same number of sharing subdomains, dof number and same special mark */
-      if (!PetscBTLookup(graph->touched, j) && graph->nodes[i].count == graph->nodes[j].count && graph->nodes[i].which_dof == graph->nodes[j].which_dof && graph->nodes[i].special_dof == graph->nodes[j].special_dof) {
+      if (!nodej->touched && nodei->count == nodej->count && nodei->which_dof == nodej->which_dof && nodei->special_dof == nodej->special_dof) {
         /* check for same set of sharing subdomains */
         same_set = PETSC_TRUE;
-        for (k = 0; k < graph->nodes[j].count; k++) {
-          if (graph->nodes[i].neighbours_set[k] != graph->nodes[j].neighbours_set[k]) {
+        for (k = 0; k < nodei->count; k++) {
+          if (nodei->neighbours_set[k] != nodej->neighbours_set[k]) {
             same_set = PETSC_FALSE;
             break;
           }
         }
         /* check for same local groups */
         if (same_set) {
-          if (graph->nodes[i].local_groups_count != graph->nodes[j].local_groups_count) same_set = PETSC_FALSE;
+          if (nodei->local_groups_count != nodej->local_groups_count) same_set = PETSC_FALSE;
           else {
-            for (k = 0; k < graph->nodes[j].local_groups_count; k++) {
-              if (graph->nodes[i].local_groups[k] != graph->nodes[j].local_groups[k]) {
+            for (k = 0; k < nodei->local_groups_count; k++) {
+              if (nodei->local_groups[k] != nodej->local_groups[k]) {
                 same_set = PETSC_FALSE;
                 break;
               }
@@ -1079,8 +1081,8 @@ PetscErrorCode PCBDDCGraphSetUp(PCBDDCGraph graph, PetscInt custom_minimal_size,
 
         /* Add to subset */
         if (same_set) {
-          PetscCall(PetscBTSet(graph->touched, j));
-          graph->nodes[j].subset = graph->ncc + 1;
+          nodej->touched = PETSC_TRUE;
+          nodej->subset  = graph->ncc + 1;
           nodes_touched++;
           graph->queue[total_counts] = j;
           total_counts++;
@@ -1173,7 +1175,6 @@ PetscErrorCode PCBDDCGraphReset(PCBDDCGraph graph)
   PetscCall(ISLocalToGlobalMappingDestroy(&graph->l2gmap));
   PetscCall(PetscFree(graph->subset_ncc));
   PetscCall(PetscFree(graph->subset_ref_node));
-  PetscCall(PetscBTDestroy(&graph->touched));
   for (PetscInt i = 0; i < graph->nvtxs; i++) {
     PetscCall(PetscFree(graph->nodes[i].neighbours_set));
     PetscCall(PetscFree(graph->nodes[i].local_groups));
@@ -1217,7 +1218,6 @@ PetscErrorCode PCBDDCGraphInit(PCBDDCGraph graph, ISLocalToGlobalMapping l2gmap,
   graph->nvtxs        = n;
   graph->nvtxs_global = N;
   /* allocate used space */
-  PetscCall(PetscBTCreate(graph->nvtxs, &graph->touched));
   PetscCall(PetscCalloc1(graph->nvtxs, &graph->nodes));
   /* use -1 as a default value for which_dof array */
   for (n = 0; n < graph->nvtxs; n++) graph->nodes[n].which_dof = -1;
