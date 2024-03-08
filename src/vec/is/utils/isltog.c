@@ -984,7 +984,7 @@ PetscErrorCode ISGlobalToLocalMappingApplyBlock(ISLocalToGlobalMapping mapping, 
 . mapping - the mapping from local to global indexing
 
   Output Parameters:
-+ nproc    - number of processes that are connected to self
++ nproc    - number of processes that are connected to the calling process
 . procs    - neighboring processes
 . numprocs - number of block indices for each process
 - indices  - block indices (in local numbering) shared with neighbors (sorted by global numbering)
@@ -1015,9 +1015,9 @@ PetscErrorCode ISLocalToGlobalMappingGetBlockInfo(ISLocalToGlobalMapping mapping
 . mapping - the mapping from local to global indexing
 
   Output Parameter:
-+ n       - total number of processes sharing the local block indices (including self)
-. n_procs - an array storing the number of processes for each local block indices
-- procs   - the processes' rank for each local block index (sorted, self is first)
++ n       - number of local block nodes
+. n_procs - an array storing the number of processes for each local block node (including self)
+- procs   - the processes' rank for each local block node (sorted, self is first)
 
   Level: advanced
 
@@ -1028,7 +1028,7 @@ PetscErrorCode ISLocalToGlobalMappingGetBlockInfo(ISLocalToGlobalMapping mapping
   cannot be inferred in the general case, unless the mapping is locally one-to-one on each process.
 
 .seealso: `ISLocalToGlobalMappingDestroy()`, `ISLocalToGlobalMappingCreateIS()`, `ISLocalToGlobalMappingCreate()`,
-          `ISLocalToGlobalMappingGetBlockInfo()`, `ISLocalToGlobalMappingRestoreBlockNodeInfo()`
+          `ISLocalToGlobalMappingGetBlockInfo()`, `ISLocalToGlobalMappingRestoreBlockNodeInfo()`, `ISLocalToGlobalMappingGetNodeInfo()`
 @*/
 PetscErrorCode ISLocalToGlobalMappingGetBlockNodeInfo(ISLocalToGlobalMapping mapping, PetscInt *n, PetscInt *n_procs[], PetscInt **procs[])
 {
@@ -1048,22 +1048,22 @@ PetscErrorCode ISLocalToGlobalMappingGetBlockNodeInfo(ISLocalToGlobalMapping map
 
   Input Parameters:
 + mapping - the mapping from local to global indexing
-. nnodes  - number of local blocked nodes
-. count   - number of neighboring processes per block node
-- indices - indices of processes sharing the block node (sorted)
+. n       - number of local block nodes
+. n_procs - an array storing the number of processes for each local block nodes (including self)
+- procs   - the processes' rank for each local block node (sorted, self is first)
 
   Level: advanced
 
 .seealso: `ISLocalToGlobalMappingDestroy()`, `ISLocalToGlobalMappingCreateIS()`, `ISLocalToGlobalMappingCreate()`,
           `ISLocalToGlobalMappingGetBlockNodeInfo()`
 @*/
-PetscErrorCode ISLocalToGlobalMappingRestoreBlockNodeInfo(ISLocalToGlobalMapping mapping, PetscInt *nnodes, PetscInt *count[], PetscInt **indices[])
+PetscErrorCode ISLocalToGlobalMappingRestoreBlockNodeInfo(ISLocalToGlobalMapping mapping, PetscInt *n, PetscInt *n_procs[], PetscInt **procs[])
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mapping, IS_LTOGM_CLASSID, 1);
-  if (nnodes) *nnodes = 0;
-  if (count) *count = NULL;
-  if (indices) *indices = NULL;
+  if (n) *n = 0;
+  if (n_procs) *n_procs = NULL;
+  if (procs) *procs = NULL;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1233,7 +1233,7 @@ static PetscErrorCode ISLocalToGlobalMappingSetUpBlockInfo_Private(ISLocalToGlob
 
   Input Parameters:
 + mapping  - the mapping from local to global indexing
-. nproc    - number of processes that are connected to self
++ nproc    - number of processes that are connected to the calling process
 . procs    - neighboring processes
 . numprocs - number of block indices for each process
 - indices  - block indices (in local numbering) shared with neighbors (sorted by global numbering)
@@ -1263,7 +1263,7 @@ PetscErrorCode ISLocalToGlobalMappingRestoreBlockInfo(ISLocalToGlobalMapping map
 . mapping - the mapping from local to global indexing
 
   Output Parameters:
-+ nproc    - number of processes that are connected to self
++ nproc    - number of processes that are connected to the calling process
 . procs    - neighboring processes
 . numprocs - number of indices for each process
 - indices  - indices (in local numbering) shared with neighbors (sorted by global numbering)
@@ -1279,7 +1279,7 @@ PetscErrorCode ISLocalToGlobalMappingRestoreBlockInfo(ISLocalToGlobalMapping map
   dynamically or defining static ones large enough.
 
 .seealso: [](sec_scatter), `ISLocalToGlobalMappingDestroy()`, `ISLocalToGlobalMappingCreateIS()`, `ISLocalToGlobalMappingCreate()`,
-          `ISLocalToGlobalMappingRestoreInfo()`
+          `ISLocalToGlobalMappingRestoreInfo()`, `ISLocalToGlobalMappingGetNodeInfo()`
 @*/
 PetscErrorCode ISLocalToGlobalMappingGetInfo(ISLocalToGlobalMapping mapping, PetscInt *nproc, PetscInt *procs[], PetscInt *numprocs[], PetscInt **indices[])
 {
@@ -1319,7 +1319,7 @@ PetscErrorCode ISLocalToGlobalMappingGetInfo(ISLocalToGlobalMapping mapping, Pet
 
   Input Parameters:
 + mapping  - the mapping from local to global indexing
-. nproc    - number of processes that are connected to self
++ nproc    - number of processes that are connected to the calling process
 . procs    - neighboring processes
 . numprocs - number of indices for each process
 - indices  - indices (in local numbering) shared with neighbors (sorted by global numbering)
@@ -1353,9 +1353,9 @@ PetscErrorCode ISLocalToGlobalMappingRestoreInfo(ISLocalToGlobalMapping mapping,
 . mapping - the mapping from local to global indexing
 
   Output Parameters:
-+ nnodes  - number of local nodes (same as `ISLocalToGlobalMappingGetSize()`)
-. count   - number of neighboring processes per node
-- indices - indices of processes sharing the node (sorted)
++ n       - number of local nodes
+. n_procs - an array storing the number of processes for each local node (including self)
+- procs   - the processes' rank for each local node (sorted, self is first)
 
   Level: advanced
 
@@ -1363,46 +1363,46 @@ PetscErrorCode ISLocalToGlobalMappingRestoreInfo(ISLocalToGlobalMapping mapping,
   The user needs to call `ISLocalToGlobalMappingRestoreNodeInfo()` when the data is no longer needed.
 
 .seealso: [](sec_scatter), `ISLocalToGlobalMappingDestroy()`, `ISLocalToGlobalMappingCreateIS()`, `ISLocalToGlobalMappingCreate()`,
-          `ISLocalToGlobalMappingGetInfo()`, `ISLocalToGlobalMappingRestoreNodeInfo()`
+          `ISLocalToGlobalMappingGetInfo()`, `ISLocalToGlobalMappingRestoreNodeInfo()`, `ISLocalToGlobalMappingGetBlockNodeInfo()`
 @*/
-PetscErrorCode ISLocalToGlobalMappingGetNodeInfo(ISLocalToGlobalMapping mapping, PetscInt *nnodes, PetscInt *count[], PetscInt **indices[])
+PetscErrorCode ISLocalToGlobalMappingGetNodeInfo(ISLocalToGlobalMapping mapping, PetscInt *n, PetscInt *n_procs[], PetscInt **procs[])
 {
-  PetscInt **bindices = NULL, *bcount = NULL, bs, i, j, k, bn;
+  PetscInt **bprocs = NULL, *bn_procs = NULL, bs, i, j, k, bn;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mapping, IS_LTOGM_CLASSID, 1);
   bs = mapping->bs;
-  PetscCall(ISLocalToGlobalMappingGetBlockNodeInfo(mapping, &bn, &bcount, &bindices));
+  PetscCall(ISLocalToGlobalMappingGetBlockNodeInfo(mapping, &bn, &bn_procs, &bprocs));
   if (bs > 1) { /* we need to expand the cached info */
-    PetscInt *tcount;
+    PetscInt *tn_procs;
     PetscInt  c;
 
-    PetscCall(PetscMalloc1(bn * bs, &tcount));
+    PetscCall(PetscMalloc1(bn * bs, &tn_procs));
     for (i = 0, c = 0; i < bn; i++) {
-      for (k = 0; k < bs; k++) tcount[i * bs + k] = bcount[i];
-      c += bs * bcount[i];
+      for (k = 0; k < bs; k++) tn_procs[i * bs + k] = bn_procs[i];
+      c += bs * bn_procs[i];
     }
-    if (nnodes) *nnodes = bn * bs;
-    if (indices) {
-      PetscInt **tindices;
+    if (n) *n = bn * bs;
+    if (procs) {
+      PetscInt **tprocs;
       PetscInt   tn = bn * bs;
 
-      PetscCall(PetscMalloc1(tn, &tindices));
-      if (tn) PetscCall(PetscMalloc1(c, &tindices[0]));
-      for (i = 0; i < tn - 1; i++) tindices[i + 1] = tindices[i] + tcount[i];
+      PetscCall(PetscMalloc1(tn, &tprocs));
+      if (tn) PetscCall(PetscMalloc1(c, &tprocs[0]));
+      for (i = 0; i < tn - 1; i++) tprocs[i + 1] = tprocs[i] + tn_procs[i];
       for (i = 0; i < bn; i++) {
         for (k = 0; k < bs; k++) {
-          for (j = 0; j < bcount[i]; j++) tindices[i * bs + k][j] = bindices[i][j];
+          for (j = 0; j < bn_procs[i]; j++) tprocs[i * bs + k][j] = bprocs[i][j];
         }
       }
-      *indices = tindices;
+      *procs = tprocs;
     }
-    if (count) *count = tcount;
-    else PetscCall(PetscFree(tcount));
+    if (n_procs) *n_procs = tn_procs;
+    else PetscCall(PetscFree(tn_procs));
   } else {
-    if (nnodes) *nnodes = bn;
-    if (count) *count = bcount;
-    if (indices) *indices = bindices;
+    if (n) *n = bn;
+    if (n_procs) *n_procs = bn_procs;
+    if (procs) *procs = bprocs;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1414,26 +1414,27 @@ PetscErrorCode ISLocalToGlobalMappingGetNodeInfo(ISLocalToGlobalMapping mapping,
 
   Input Parameters:
 + mapping - the mapping from local to global indexing
-. nnodes  - number of local nodes (same as `ISLocalToGlobalMappingGetSize()`)
-. count   - number of neighboring processes per node
-- indices - indices of processes sharing the node (sorted)
+. n       - number of local nodes
+. n_procs - an array storing the number of processes for each local node (including self)
+- procs   - the processes' rank for each local node (sorted, self is first)
 
   Level: advanced
 
 .seealso: [](sec_scatter), `ISLocalToGlobalMappingDestroy()`, `ISLocalToGlobalMappingCreateIS()`, `ISLocalToGlobalMappingCreate()`,
           `ISLocalToGlobalMappingGetInfo()`
 @*/
-PetscErrorCode ISLocalToGlobalMappingRestoreNodeInfo(ISLocalToGlobalMapping mapping, PetscInt *nnodes, PetscInt *count[], PetscInt **indices[])
+PetscErrorCode ISLocalToGlobalMappingRestoreNodeInfo(ISLocalToGlobalMapping mapping, PetscInt *n, PetscInt *n_procs[], PetscInt **procs[])
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mapping, IS_LTOGM_CLASSID, 1);
   if (mapping->bs > 1) {
-    if (count) PetscCall(PetscFree(*count));
-    if (indices) {
-      if (*indices) PetscCall(PetscFree((*indices)[0]));
-      PetscCall(PetscFree(*indices));
+    if (n_procs) PetscCall(PetscFree(*n_procs));
+    if (procs) {
+      if (*procs) PetscCall(PetscFree((*procs)[0]));
+      PetscCall(PetscFree(*procs));
     }
   }
+  PetscCall(ISLocalToGlobalMappingRestoreBlockNodeInfo(mapping, n, n_procs, procs));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
