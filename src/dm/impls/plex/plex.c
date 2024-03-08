@@ -7641,7 +7641,7 @@ PETSC_INTERN PetscErrorCode DMPlexAnchorsGetSubMatModification(DM dm, PetscSecti
         if (a >= sStart && a < sEnd) PetscCall(PetscSectionGetDof(section, a, &aDof));
         if (aDof) {
           newPoints[2 * newP]     = a;
-          newPoints[2 * newP + 1] = 0; // orientatons are accounted for in constructing the matrix, newly added points are in default orientation
+          newPoints[2 * newP + 1] = 0; // orientations are accounted for in constructing the matrix, newly added points are in default orientation
           newP++;
         }
       }
@@ -7653,6 +7653,7 @@ PETSC_INTERN PetscErrorCode DMPlexAnchorsGetSubMatModification(DM dm, PetscSecti
   }
 
   if (outMat) {
+    PetscScalar *tmpMat;
     PetscCall(PetscArraycpy(oldOffsetsCopy, oldOffsets, 32));
     PetscCall(PetscArraycpy(newOffsetsCopy, newOffsets, 32));
 
@@ -7668,24 +7669,58 @@ PETSC_INTERN PetscErrorCode DMPlexAnchorsGetSubMatModification(DM dm, PetscSecti
     PetscCall(DMPlexAnchorsGetSubMatIndices(newNumPoints, newPoints, section, section, tmpNewIndices, newOffsetsCopy, newIndices, NULL));
 
     PetscCall(DMGetWorkArray(dm, numIndices * newNumIndices, MPIU_SCALAR, &modMat));
+    PetscCall(DMGetWorkArray(dm, numIndices * newNumIndices, MPIU_SCALAR, &tmpMat));
     PetscCall(PetscArrayzero(modMat, newNumIndices * numIndices));
-    PetscCall(MatGetValues(cMat, numIndices, indices, newNumIndices, newIndices, modMat));
+    // for each field, insert the anchor modification into modMat
+    for (PetscInt f = 0; f < PetscMax(1, numFields); f++) {
+      PetscInt fStart    = oldOffsets[f];
+      PetscInt fNewStart = newOffsets[f];
+      for (PetscInt p = 0, newP = 0, o = fStart, oNew = fNewStart; p < numPoints; p++) {
+        PetscInt b    = points[2 * p];
+        PetscInt bDof = 0, bSecDof = 0, bOff;
 
-    for (PetscInt i = 0; i < numIndices; i++) {
-      PetscInt l;
-
-      if (indices[i] > 0) continue;
-      l = -(indices[i] + 1);
-      for (PetscInt j = 0; j < newNumIndices; j++) {
-        if (newIndices[j] == l) {
-          modMat[i * newNumIndices + j] += 1;
-          break;
+        if (b >= sStart && b < sEnd) {
+          if (numFields) {
+            PetscCall(PetscSectionGetFieldDof(section, b, f, &bSecDof));
+          } else {
+            PetscCall(PetscSectionGetDof(section, b, &bSecDof));
+          }
         }
+        if (!bSecDof) continue;
+        if (b >= aStart && b < aEnd) PetscCall(PetscSectionGetDof(aSec, b, &bDof));
+        if (bDof) {
+          PetscCall(PetscSectionGetOffset(aSec, b, &bOff));
+          for (PetscInt q = 0; q < bDof; q++, newP++) {
+            PetscInt a = anchors[bOff + q], aDof = 0;
+
+            if (a >= sStart && a < sEnd) {
+              if (numFields) {
+                PetscCall(PetscSectionGetFieldDof(section, a, f, &aDof));
+              } else {
+                PetscCall(PetscSectionGetDof(section, a, &aDof));
+              }
+            }
+            if (aDof) {
+              PetscCall(MatGetValues(cMat, bSecDof, &indices[o], aDof, &newIndices[oNew], tmpMat));
+              for (PetscInt d = 0; d < bSecDof; d++) {
+                for (PetscInt e = 0; e < aDof; e++) modMat[(o + d) * newNumIndices + oNew + e] = tmpMat[d * aDof + e];
+              }
+            }
+            oNew += aDof;
+          }
+        } else {
+          // Insert the identity matrix in this block
+          for (PetscInt d = 0; d < bSecDof; d++) modMat[(o + d) * newNumIndices + oNew + d] = 1;
+          oNew += bSecDof;
+          newP++;
+        }
+        o += bSecDof;
       }
     }
 
     *outMat = modMat;
 
+    PetscCall(DMRestoreWorkArray(dm, numIndices * newNumIndices, MPIU_SCALAR, &tmpMat));
     PetscCall(DMRestoreWorkArray(dm, newNumIndices, MPIU_INT, &tmpNewIndices));
     PetscCall(DMRestoreWorkArray(dm, newNumIndices, MPIU_INT, &newIndices));
     PetscCall(DMRestoreWorkArray(dm, numIndices, MPIU_INT, &tmpIndices));
