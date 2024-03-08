@@ -7665,7 +7665,7 @@ PETSC_INTERN PetscErrorCode DMPlexAnchorsGetSubMatModification(DM dm, PetscSecti
     for (PetscInt i = 0; i < newNumIndices; i++) newIndices[i] = -1;
 
     PetscCall(DMPlexAnchorsGetSubMatIndices(numPoints, points, section, cSec, tmpIndices, oldOffsetsCopy, indices, perms));
-    PetscCall(DMPlexAnchorsGetSubMatIndices(newNumPoints, newPoints, section, section, tmpNewIndices, newOffsetsCopy, newIndices, perms));
+    PetscCall(DMPlexAnchorsGetSubMatIndices(newNumPoints, newPoints, section, section, tmpNewIndices, newOffsetsCopy, newIndices, NULL));
 
     PetscCall(DMGetWorkArray(dm, numIndices * newNumIndices, MPIU_SCALAR, &modMat));
     PetscCall(PetscArrayzero(modMat, newNumIndices * numIndices));
