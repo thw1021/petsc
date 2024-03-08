@@ -7740,15 +7740,16 @@ PETSC_INTERN PetscErrorCode DMPlexAnchorsGetSubMatModification(DM dm, PetscSecti
 
 PETSC_INTERN PetscErrorCode DMPlexAnchorsModifyMat_Internal(DM dm, PetscSection section, PetscInt numPoints, PetscInt numIndices, const PetscInt points[], const PetscInt ***perms, PetscInt numRows, PetscInt numCols, const PetscScalar values[], PetscInt *outNumPoints, PetscInt *outNumIndices, PetscInt *outPoints[], PetscScalar *outValues[], PetscInt offsets[], PetscBool multiplyRight, PetscBool multiplyLeft)
 {
-  PetscScalar *modMat = NULL;
+  PetscScalar *modMat        = NULL;
+  PetscInt     newNumIndices = -1;
 
   PetscFunctionBegin;
   /* If M is the matrix represented by values, get the matrix C such that we will add M * C (or, if multiplyLeft, C^T * M * C) into the global matrix.
      modMat is that matrix C */
-  PetscCall(DMPlexAnchorsGetSubMatModification(dm, section, numPoints, numIndices, points, perms, outNumPoints, outNumIndices, outPoints, offsets, outValues ? &modMat : NULL));
+  PetscCall(DMPlexAnchorsGetSubMatModification(dm, section, numPoints, numIndices, points, perms, outNumPoints, &newNumIndices, outPoints, offsets, outValues ? &modMat : NULL));
+  if (outNumIndices) *outNumIndices = newNumIndices;
   if (modMat) {
-    const PetscScalar *newValues     = values;
-    PetscInt           newNumIndices = *outNumIndices;
+    const PetscScalar *newValues = values;
 
     if (multiplyRight) {
       PetscScalar *newNewValues = NULL;
