@@ -433,7 +433,7 @@ prepend-path PATH "%s"
     else:
       self.petsclib = '-lpetscts -lpetscsnes -lpetscksp -lpetscdm -lpetscmat -lpetscvec -lpetscsys'
     self.complibs = self.compilers.flibs+self.compilers.cxxlibs+self.compilers.LIBS.split()
-    self.PETSC_WITH_EXTERNAL_LIB = self.libraries.toStringNoDupes(['-L${PETSC_DIR}/${PETSC_ARCH}/lib', self.petsclib]+self.packagelibs+self.complibs)
+    self.PETSC_WITH_EXTERNAL_LIB = '-L${PETSC_DIR}/${PETSC_ARCH}/lib ' + self.petsclib + ' ' + self.libraries.toStringNoDupes(self.packagelibs+self.complibs)
     self.PETSC_EXTERNAL_LIB_BASIC = self.libraries.toStringNoDupes(self.packagelibs+self.complibs)
 
     self.addMakeMacro('PETSC_EXTERNAL_LIB_BASIC',self.PETSC_EXTERNAL_LIB_BASIC)
