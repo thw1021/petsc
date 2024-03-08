@@ -7569,7 +7569,7 @@ PETSC_INTERN PetscErrorCode DMPlexAnchorsGetSubMatModification(DM dm, PetscSecti
           if (a >= sStart && a < sEnd) PetscCall(PetscSectionGetDof(section, a, &aDof));
           if (aDof) {
             anyConstrained = PETSC_TRUE;
-            newNumPoints += bDof;
+            newNumPoints += 1;
           }
           newNumIndices += aDof;
           for (f = 0; f < numFields; ++f) {
