@@ -4148,9 +4148,7 @@ PetscErrorCode PCBDDCSetUpCorrection(PC pc, Mat *coarse_submat)
   PetscCall(MatDestroy(&pcbddc->coarse_psi_D));
   if (!pcbddc->coarse_phi_B) {
     PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, n_B, pcbddc->local_primal_size, NULL, &pcbddc->coarse_phi_B));
-    if (pcbddc->switch_static || pcbddc->dbg_flag) {
-      PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, n_D, pcbddc->local_primal_size, NULL, &pcbddc->coarse_phi_D));
-    }
+    if (pcbddc->switch_static || pcbddc->dbg_flag) { PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, n_D, pcbddc->local_primal_size, NULL, &pcbddc->coarse_phi_D)); }
     if (!pcbddc->symmetric_primal) {
       PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, n_B, pcbddc->local_primal_size, NULL, &pcbddc->coarse_psi_B));
       if (pcbddc->switch_static || pcbddc->dbg_flag) PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, n_D, pcbddc->local_primal_size, NULL, &pcbddc->coarse_psi_D));
