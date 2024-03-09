@@ -5524,8 +5524,7 @@ PetscErrorCode DMPlexSetCellType(DM dm, PetscInt cell, DMPolytopeType celltype)
 
 PetscErrorCode DMCreateCoordinateDM_Plex(DM dm, DM *cdm)
 {
-  PetscSection section, s;
-  Mat          m;
+  PetscSection section;
   PetscInt     maxHeight;
   const char  *prefix;
 
@@ -5539,11 +5538,6 @@ PetscErrorCode DMCreateCoordinateDM_Plex(DM dm, DM *cdm)
   PetscCall(PetscSectionCreate(PetscObjectComm((PetscObject)dm), &section));
   PetscCall(DMSetLocalSection(*cdm, section));
   PetscCall(PetscSectionDestroy(&section));
-  PetscCall(PetscSectionCreate(PETSC_COMM_SELF, &s));
-  PetscCall(MatCreate(PETSC_COMM_SELF, &m));
-  PetscCall(DMSetDefaultConstraints(*cdm, s, m, NULL));
-  PetscCall(PetscSectionDestroy(&s));
-  PetscCall(MatDestroy(&m));
 
   PetscCall(DMSetNumFields(*cdm, 1));
   PetscCall(DMCreateDS(*cdm));
