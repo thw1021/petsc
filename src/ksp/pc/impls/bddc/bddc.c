@@ -57,6 +57,7 @@ static PetscErrorCode PCSetFromOptions_BDDC(PC pc, PetscOptionItems *PetscOption
   PetscCall(PetscOptionsBool("-pc_bddc_neumann_approximate_scale", "Inform PCBDDC that we need to scale the Neumann solve", "none", pcbddc->NullSpace_corr[3], &pcbddc->NullSpace_corr[3], NULL));
   /* Primal space customization */
   PetscCall(PetscOptionsBool("-pc_bddc_use_local_mat_graph", "Use or not adjacency graph of local mat for interface analysis", "none", pcbddc->use_local_adj, &pcbddc->use_local_adj, NULL));
+  PetscCall(PetscOptionsInt("-pc_bddc_local_mat_graph_square", "Square adjacency graph of local mat for interface analysis", "none", pcbddc->local_adj_square, &pcbddc->local_adj_square, NULL));
   PetscCall(PetscOptionsInt("-pc_bddc_graph_maxcount", "Maximum number of shared subdomains for a connected component", "none", pcbddc->graphmaxcount, &pcbddc->graphmaxcount, NULL));
   PetscCall(PetscOptionsBool("-pc_bddc_corner_selection", "Activates face-based corner selection", "none", pcbddc->corner_selection, &pcbddc->corner_selection, NULL));
   PetscCall(PetscOptionsBool("-pc_bddc_use_vertices", "Use or not corner dofs in coarse space", "none", pcbddc->use_vertices, &pcbddc->use_vertices, NULL));
