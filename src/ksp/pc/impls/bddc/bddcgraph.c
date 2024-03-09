@@ -690,13 +690,13 @@ PetscErrorCode PCBDDCGraphComputeConnectedComponents(PCBDDCGraph graph)
 
 static inline PetscErrorCode PCBDDCGraphComputeCC_Private(PCBDDCGraph graph, PetscInt pid, PetscInt *PETSC_RESTRICT queue_tip, PetscInt n_prev, PetscInt *n_added)
 {
-  PetscInt  i, j, n = 0;
+  PetscInt i, j, n = 0;
 
   const PetscInt *PETSC_RESTRICT xadj        = graph->xadj;
   const PetscInt *PETSC_RESTRICT adjncy      = graph->adjncy;
   const PetscInt *PETSC_RESTRICT subset_idxs = graph->subset_idxs[pid - 1];
   const PetscInt *PETSC_RESTRICT local_subs  = graph->local_subs;
-  const PetscInt subset_size                 = graph->subset_size[pid - 1];
+  const PetscInt                 subset_size = graph->subset_size[pid - 1];
 
   PCBDDCGraphNode *PETSC_RESTRICT nodes = graph->nodes;
 
@@ -715,7 +715,7 @@ static inline PetscErrorCode PCBDDCGraphComputeCC_Private(PCBDDCGraph graph, Pet
 
           if (!nodes[dof].touched && nodes[dof].subset == pid) {
             nodes[dof].touched = PETSC_TRUE;
-            queue_tip[n] = dof;
+            queue_tip[n]       = dof;
             n++;
           }
         }
@@ -725,7 +725,7 @@ static inline PetscErrorCode PCBDDCGraphComputeCC_Private(PCBDDCGraph graph, Pet
 
           if (!nodes[dof].touched && nodes[dof].subset == pid) {
             nodes[dof].touched = PETSC_TRUE;
-            queue_tip[n] = dof;
+            queue_tip[n]       = dof;
             n++;
           }
         }
@@ -744,7 +744,7 @@ static inline PetscErrorCode PCBDDCGraphComputeCC_Private(PCBDDCGraph graph, Pet
 
           if (!nodes[dof].touched && nodes[dof].subset == pid && local_subs[dof] == sid) {
             nodes[dof].touched = PETSC_TRUE;
-            queue_tip[n] = dof;
+            queue_tip[n]       = dof;
             n++;
           }
         }
@@ -754,7 +754,7 @@ static inline PetscErrorCode PCBDDCGraphComputeCC_Private(PCBDDCGraph graph, Pet
 
           if (!nodes[dof].touched && nodes[dof].subset == pid && local_subs[dof] == sid) {
             nodes[dof].touched = PETSC_TRUE;
-            queue_tip[n] = dof;
+            queue_tip[n]       = dof;
             n++;
           }
         }
@@ -768,7 +768,7 @@ static inline PetscErrorCode PCBDDCGraphComputeCC_Private(PCBDDCGraph graph, Pet
 
       if (!nodes[dof].touched && nodes[dof].subset == pid && local_subs[dof] == sid) {
         nodes[dof].touched = PETSC_TRUE;
-        queue_tip[n] = dof;
+        queue_tip[n]       = dof;
         n++;
       }
     }
@@ -778,7 +778,7 @@ static inline PetscErrorCode PCBDDCGraphComputeCC_Private(PCBDDCGraph graph, Pet
 
       if (!nodes[dof].touched && nodes[dof].subset == pid) {
         nodes[dof].touched = PETSC_TRUE;
-        queue_tip[n] = dof;
+        queue_tip[n]       = dof;
         n++;
       }
     }
@@ -1010,9 +1010,9 @@ PetscErrorCode PCBDDCGraphSetUp(PCBDDCGraph graph, PetscInt custom_minimal_size,
     PetscCall(ISGetIndices(dirichlet_is, (const PetscInt **)&is_indices));
     for (i = 0; i < is_size; i++) {
       if (is_indices[i] > -1 && is_indices[i] < nvtxs) { /* out of bounds indices (if any) are skipped */
-        if (!graph->seq_graph) {                                /* dirichlet nodes treated as internal */
+        if (!graph->seq_graph) {                         /* dirichlet nodes treated as internal */
           graph->nodes[is_indices[i]].touched = PETSC_TRUE;
-          graph->nodes[is_indices[i]].subset = 0;
+          graph->nodes[is_indices[i]].subset  = 0;
         }
         graph->nodes[is_indices[i]].special_dof = PCBDDCGRAPH_DIRICHLET_MARK;
       }
@@ -1038,7 +1038,7 @@ PetscErrorCode PCBDDCGraphSetUp(PCBDDCGraph graph, PetscInt custom_minimal_size,
     for (i = 0; i < nvtxs; i++) {
       if (graph->nodes[i].count < 2) {
         graph->nodes[i].touched = PETSC_TRUE;
-        graph->nodes[i].subset = 0;
+        graph->nodes[i].subset  = 0;
       }
     }
   }
@@ -1071,13 +1071,13 @@ PetscErrorCode PCBDDCGraphSetUp(PCBDDCGraph graph, PetscInt custom_minimal_size,
     nodes_touched++;
 
     /* now find all other nodes having the same set of sharing subdomains */
-    const PCBDDCGraphNode *nodei = &graph->nodes[i];
-    const PetscInt icount = nodei->count;
-    const PetscInt iwhich_dof = nodei->which_dof;
-    const PetscInt ispecial_dof = nodei->special_dof;
-    const PetscInt ilocal_groups_count = nodei->local_groups_count;
-    const PetscInt *PETSC_RESTRICT ineighbours_set = nodei->neighbours_set;
-    const PetscInt *PETSC_RESTRICT ilocal_groups = nodei->local_groups;
+    const PCBDDCGraphNode         *nodei               = &graph->nodes[i];
+    const PetscInt                 icount              = nodei->count;
+    const PetscInt                 iwhich_dof          = nodei->which_dof;
+    const PetscInt                 ispecial_dof        = nodei->special_dof;
+    const PetscInt                 ilocal_groups_count = nodei->local_groups_count;
+    const PetscInt *PETSC_RESTRICT ineighbours_set     = nodei->neighbours_set;
+    const PetscInt *PETSC_RESTRICT ilocal_groups       = nodei->local_groups;
     for (j = i + 1; j < nvtxs; j++) {
       PCBDDCGraphNode *PETSC_RESTRICT nodej = &graph->nodes[j];
 
