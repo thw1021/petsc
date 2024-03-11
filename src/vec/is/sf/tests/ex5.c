@@ -1,7 +1,79 @@
-static char help[] = "Test PetscSFFCompose when the ilocal arrays are not identity nor dense\n\n";
+static char help[] = "Test PetscSFFCompose and PetscSFCreateStridedSF when the ilocal arrays are not identity nor dense\n\n";
 
 #include <petsc.h>
 #include <petscsf.h>
+
+static PetscErrorCode TestVector(PetscSF sf, const char *sfname)
+{
+  PetscInt mr, ml;
+  MPI_Comm comm;
+
+  PetscFunctionBeginUser;
+  comm = PetscObjectComm((PetscObject)sf);
+  PetscCall(PetscSFGetGraph(sf, &mr, NULL, NULL, NULL));
+  PetscCall(PetscSFGetLeafRange(sf, NULL, &ml));
+  for (PetscInt bs = 1; bs < 3; bs++) {
+    for (PetscInt r = 0; r < 2; r++) {
+      for (PetscInt l = 0; l < 2; l++) {
+        PetscSF   vsf;
+        PetscInt *rdata, *ldata, *rdatav, *ldatav;
+        PetscInt  ldr = PETSC_DECIDE;
+        PetscInt  ldl = PETSC_DECIDE;
+        PetscBool flg;
+
+        if (r == 1) ldr = mr;
+        if (r == 2) ldr = mr + 7;
+        if (l == 1) ldl = ml + 1;
+        if (l == 2) ldl = ml + 5;
+
+        PetscCall(PetscSFCreateStridedSF(sf, bs, ldr, ldl, &vsf));
+        if (ldr == PETSC_DECIDE) ldr = mr;
+        if (ldl == PETSC_DECIDE) ldl = ml + 1;
+
+        PetscCall(PetscCalloc4(bs * ldr, &rdata, bs * ldl, &ldata, bs * ldr, &rdatav, bs * ldl, &ldatav));
+        for (PetscInt i = 0; i < bs * ldr; i++) rdata[i] = i + 1;
+
+        for (PetscInt i = 0; i < bs; i++) {
+          PetscCall(PetscSFBcastBegin(sf, MPIU_INT, PetscSafePointerPlusOffset(rdata, i * ldr), PetscSafePointerPlusOffset(ldata, i * ldl), MPI_REPLACE));
+          PetscCall(PetscSFBcastEnd(sf, MPIU_INT, PetscSafePointerPlusOffset(rdata, i * ldr), PetscSafePointerPlusOffset(ldata, i * ldl), MPI_REPLACE));
+        }
+        PetscCall(PetscSFBcastBegin(vsf, MPIU_INT, rdata, ldatav, MPI_REPLACE));
+        PetscCall(PetscSFBcastEnd(vsf, MPIU_INT, rdata, ldatav, MPI_REPLACE));
+        PetscCall(PetscArraycmp(ldata, ldatav, bs * ldl, &flg));
+
+        PetscCall(MPIU_Allreduce(MPI_IN_PLACE, &flg, 1, MPIU_BOOL, MPI_LAND, comm));
+        if (!flg) {
+          PetscCall(PetscPrintf(comm, "Error with Bcast on %s: block size %" PetscInt_FMT ", ldr %" PetscInt_FMT ", ldl %" PetscInt_FMT "\n", sfname, bs, ldr, ldl));
+          PetscCall(PetscPrintf(comm, "Single SF\n"));
+          PetscCall(PetscIntView(bs * ldl, ldata, PETSC_VIEWER_STDOUT_(comm)));
+          PetscCall(PetscPrintf(comm, "Vector SF\n"));
+          PetscCall(PetscIntView(bs * ldl, ldatav, PETSC_VIEWER_STDOUT_(comm)));
+        }
+        PetscCall(PetscArrayzero(rdata, bs * ldr));
+        PetscCall(PetscArrayzero(rdatav, bs * ldr));
+
+        for (PetscInt i = 0; i < bs; i++) {
+          PetscCall(PetscSFReduceBegin(sf, MPIU_INT, PetscSafePointerPlusOffset(ldata, i * ldl), PetscSafePointerPlusOffset(rdata, i * ldr), MPI_SUM));
+          PetscCall(PetscSFReduceEnd(sf, MPIU_INT, PetscSafePointerPlusOffset(ldata, i * ldl), PetscSafePointerPlusOffset(rdata, i * ldr), MPI_SUM));
+        }
+        PetscCall(PetscSFReduceBegin(vsf, MPIU_INT, ldata, rdatav, MPI_SUM));
+        PetscCall(PetscSFReduceEnd(vsf, MPIU_INT, ldata, rdatav, MPI_SUM));
+        PetscCall(PetscArraycmp(rdata, rdatav, bs * ldr, &flg));
+        PetscCall(MPIU_Allreduce(MPI_IN_PLACE, &flg, 1, MPIU_BOOL, MPI_LAND, comm));
+        if (!flg) {
+          PetscCall(PetscPrintf(comm, "Error with Reduce on %s: block size %" PetscInt_FMT ", ldr %" PetscInt_FMT ", ldl %" PetscInt_FMT "\n", sfname, bs, ldr, ldl));
+          PetscCall(PetscPrintf(comm, "Single SF\n"));
+          PetscCall(PetscIntView(bs * ldr, rdata, PETSC_VIEWER_STDOUT_(comm)));
+          PetscCall(PetscPrintf(comm, "Vector SF\n"));
+          PetscCall(PetscIntView(bs * ldr, rdatav, PETSC_VIEWER_STDOUT_(comm)));
+        }
+        PetscCall(PetscFree4(rdata, ldata, rdatav, ldatav));
+        PetscCall(PetscSFDestroy(&vsf));
+      }
+    }
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
 
 int main(int argc, char **argv)
 {
@@ -68,6 +140,9 @@ int main(int argc, char **argv)
   PetscCall(PetscSFViewFromOptions(sfA, NULL, "-view"));
   PetscCall(PetscSFViewFromOptions(sfB, NULL, "-view"));
 
+  PetscCall(TestVector(sfA, "sfA"));
+  PetscCall(TestVector(sfB, "sfB"));
+
   PetscCall(PetscSFGetLeafRange(sfA, NULL, &mA));
   PetscCall(PetscSFGetLeafRange(sfB, NULL, &mB));
   PetscCall(PetscMalloc2(nrootsA, &rdA, nldataA, &ldA));
@@ -93,6 +168,7 @@ int main(int argc, char **argv)
   PetscCall(PetscSFSetUp(sfBA));
   PetscCall(PetscObjectSetName((PetscObject)sfBA, "sfBA"));
   PetscCall(PetscSFViewFromOptions(sfBA, NULL, "-view"));
+  PetscCall(TestVector(sfBA, "sfBA"));
 
   for (i = 0; i < nldataB; i++) ldB[i] = -1;
   PetscCall(PetscViewerASCIIPrintf(PETSC_VIEWER_STDOUT_WORLD, "BcastBA\n"));
@@ -107,6 +183,7 @@ int main(int argc, char **argv)
   PetscCall(PetscSFSetFromOptions(sfAm));
   PetscCall(PetscObjectSetName((PetscObject)sfAm, "sfAm"));
   PetscCall(PetscSFViewFromOptions(sfAm, NULL, "-view"));
+  PetscCall(TestVector(sfAm, "sfAm"));
 
   if (!inverse) {
     PetscCall(PetscSFComposeInverse(sfA, sfA, &sfAAm));
@@ -117,11 +194,13 @@ int main(int argc, char **argv)
   PetscCall(PetscSFSetUp(sfAAm));
   PetscCall(PetscObjectSetName((PetscObject)sfAAm, "sfAAm"));
   PetscCall(PetscSFViewFromOptions(sfAAm, NULL, "-view"));
+  PetscCall(TestVector(sfAAm, "sfAAm"));
 
   PetscCall(PetscSFCreateInverseSF(sfB, &sfBm));
   PetscCall(PetscSFSetFromOptions(sfBm));
   PetscCall(PetscObjectSetName((PetscObject)sfBm, "sfBm"));
   PetscCall(PetscSFViewFromOptions(sfBm, NULL, "-view"));
+  PetscCall(TestVector(sfBm, "sfBm"));
 
   if (!inverse) {
     PetscCall(PetscSFComposeInverse(sfB, sfB, &sfBBm));
@@ -132,6 +211,7 @@ int main(int argc, char **argv)
   PetscCall(PetscSFSetUp(sfBBm));
   PetscCall(PetscObjectSetName((PetscObject)sfBBm, "sfBBm"));
   PetscCall(PetscSFViewFromOptions(sfBBm, NULL, "-view"));
+  PetscCall(TestVector(sfBBm, "sfBBm"));
 
   PetscCall(PetscFree2(rdA, ldA));
   PetscCall(PetscFree2(rdB, ldB));
