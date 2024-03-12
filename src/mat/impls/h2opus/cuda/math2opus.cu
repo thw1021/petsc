@@ -16,7 +16,6 @@
   #include <petscsf.h>
 
 /* math2opusutils */
-PETSC_INTERN PetscErrorCode PetscSFGetVectorSF(PetscSF, PetscInt, PetscInt, PetscInt, PetscSF *);
 PETSC_INTERN PetscErrorCode MatDenseGetH2OpusVectorSF(Mat, PetscSF, PetscSF *);
 PETSC_INTERN PetscErrorCode VecSign(Vec, Vec);
 PETSC_INTERN PetscErrorCode VecSetDelta(Vec, PetscInt);
