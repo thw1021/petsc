@@ -1115,8 +1115,9 @@ PetscErrorCode MatCreateSubMatrix_MPIAIJ_All(Mat A, MatCreateSubMatrixOption fla
 
     /* zero column space */
     nrecv = 0;
-    for (i = 0; i < size; i++)
+    for (i = 0; i < size; i++) {
       for (j = A->rmap->range[i]; j < A->rmap->range[i + 1]; j++) nrecv += lens[j];
+    }
     PetscCall(PetscArrayzero(b->j, nrecv));
 
     /*   Copy my part of matrix column indices over    */
