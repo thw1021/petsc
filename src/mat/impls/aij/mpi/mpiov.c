@@ -1090,7 +1090,7 @@ PetscErrorCode MatCreateSubMatrix_MPIAIJ_All(Mat A, MatCreateSubMatrixOption fla
   Mat_SeqAIJ *b, *ad = (Mat_SeqAIJ *)a->A->data, *bd = (Mat_SeqAIJ *)a->B->data;
   PetscMPIInt size, rank;
   PetscInt    sendcount, i, *rstarts = A->rmap->range, n, cnt, j, nrecv = 0;
-  PetscInt    m, *b_sendj, *garray   = a->garray, *lens, *jsendbuf, *a_jsendbuf, *b_jsendbuf;
+  PetscInt    m, *b_sendj, *garray = a->garray, *lens, *jsendbuf, *a_jsendbuf, *b_jsendbuf;
 
   PetscFunctionBegin;
   PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)A), &size));
