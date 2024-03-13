@@ -78,6 +78,7 @@ Changes: Development
 - Add function ``MatGetRowSumAbs()`` to compute vector of L1 norms of rows ([B]AIJ only)
 - Deprecated ``MATIS`` options ``-matis_xxx``. Use ``-mat_is_xxx``
 - Add support for repeated entries in the local part of the local to global map for ``MATIS`` via the routines ``MatISSetAllowRepeated()`` and ``MatISGetAllowRepeated()``.
+- Add support to dump and load a matrix of ``MATIS`` type.
 
 .. rubric:: MatCoarsen:
 
