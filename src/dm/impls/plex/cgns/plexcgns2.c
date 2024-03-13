@@ -664,6 +664,7 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
   cgsize_t          isize[3];
 
   PetscFunctionBegin;
+  if (cgv->base) PetscFunctionReturn(PETSC_SUCCESS);
   if (!cgv->file_num) {
     PetscInt time_step;
     PetscCall(DMGetOutputSequenceNumber(dm, &time_step, NULL));
@@ -796,11 +797,12 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
     cgv->zone            = zone;
     cgv->node_l2g        = node_l2g;
     cgv->num_local_nodes = num_local_nodes;
-    cgv->nStart          = nStart;
-    cgv->nEnd            = nEnd;
-    cgv->eStart          = e_start;
-    cgv->eEnd            = e_start + e_owned;
-    if (1) {
+    cgv->nStart[0]       = nStart;
+    cgv->nEnd[0]         = nEnd;
+    cgv->eStart[0]       = e_start;
+    cgv->eEnd[0]         = e_start + e_owned;
+
+    {
       PetscMPIInt rank;
       int        *efield;
       int         sol, field;
@@ -854,35 +856,53 @@ PetscErrorCode VecView_Plex_Local_CGNS(Vec V, PetscViewer viewer)
   DM                 dm;
   PetscSection       section;
   PetscInt           time_step, num_fields, pStart, pEnd, cStart, cEnd;
-  PetscReal          time, *time_slot;
-  size_t            *step_slot;
+  PetscReal          time;
   const PetscScalar *v;
   char               solution_name[PETSC_MAX_PATH_LEN];
   int                sol;
 
   PetscFunctionBegin;
   PetscCall(VecGetDM(V, &dm));
-  if (!cgv->node_l2g) PetscCall(DMView(dm, viewer));
-  if (!cgv->nodal_field) PetscCall(PetscMalloc1(PetscMax(cgv->nEnd - cgv->nStart, cgv->eEnd - cgv->eStart), &cgv->nodal_field));
-  if (!cgv->output_times) PetscCall(PetscSegBufferCreate(sizeof(PetscReal), 20, &cgv->output_times));
-  if (!cgv->output_steps) PetscCall(PetscSegBufferCreate(sizeof(size_t), 20, &cgv->output_steps));
-
   PetscCall(DMGetOutputSequenceNumber(dm, &time_step, &time));
   if (time_step < 0) {
     time_step = 0;
     time      = 0.;
   }
-  PetscCall(PetscSegBufferGet(cgv->output_times, 1, &time_slot));
-  *time_slot = time;
-  PetscCall(PetscSegBufferGet(cgv->output_steps, 1, &step_slot));
-  *step_slot = time_step;
+
+  if (cgv->last_step != time_step) {
+    PetscReal *time_slot;
+    size_t    *step_slot;
+
+    PetscCall(PetscViewerCGNSCheckBatch_Internal(viewer));
+    cgv->solVertex     = 0;
+    cgv->solCellCenter = 0;
+    if (!cgv->base) PetscCall(DMView(dm, viewer));
+    if (!cgv->nodal_field) PetscCall(PetscMalloc1(PetscMax(cgv->nEnd[0] - cgv->nStart[0], cgv->eEnd[0] - cgv->eStart[0]), &cgv->nodal_field));
+    if (!cgv->output_times) PetscCall(PetscSegBufferCreate(sizeof(PetscReal), 20, &cgv->output_times));
+    if (!cgv->output_steps) PetscCall(PetscSegBufferCreate(sizeof(size_t), 20, &cgv->output_steps));
+
+    PetscCall(PetscSegBufferGet(cgv->output_times, 1, &time_slot));
+    *time_slot = time;
+    PetscCall(PetscSegBufferGet(cgv->output_steps, 1, &step_slot));
+    *step_slot     = time_step;
+    cgv->last_step = time_step;
+  }
+
   PetscCall(PetscSNPrintf(solution_name, sizeof solution_name, "FlowSolution%" PetscInt_FMT, time_step));
   PetscCall(DMGetLocalSection(dm, &section));
   PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
   PetscCall(PetscSectionGetChart(section, &pStart, &pEnd));
   CGNS_ENUMT(GridLocation_t) grid_loc = CGNS_ENUMV(Vertex);
   if (cStart == pStart && cEnd == pEnd) grid_loc = CGNS_ENUMV(CellCenter);
-  PetscCallCGNS(cg_sol_write(cgv->file_num, cgv->base, cgv->zone, solution_name, grid_loc, &sol));
+
+  if (grid_loc == CGNS_ENUMV(Vertex)) {
+    if (!cgv->solVertex) PetscCallCGNS(cg_sol_write(cgv->file_num, cgv->base, cgv->zone, solution_name, grid_loc, &cgv->solVertex));
+    sol = cgv->solVertex;
+  } else {
+    if (!cgv->solCellCenter) PetscCallCGNS(cg_sol_write(cgv->file_num, cgv->base, cgv->zone, solution_name, grid_loc, &cgv->solCellCenter));
+    sol = cgv->solCellCenter;
+  }
+
   PetscCall(VecGetArrayRead(V, &v));
   PetscCall(PetscSectionGetNumFields(section, &num_fields));
   for (PetscInt field = 0; field < num_fields; field++) {
@@ -910,8 +930,8 @@ PetscErrorCode VecView_Plex_Local_CGNS(Vec V, PetscViewer viewer)
           switch (grid_loc) {
           case CGNS_ENUMV(Vertex): {
             PetscInt gn = cgv->node_l2g[n];
-            if (gn < cgv->nStart || cgv->nEnd <= gn) continue;
-            cgv->nodal_field[gn - cgv->nStart] = v[off + c];
+            if (gn < cgv->nStart[0] || cgv->nEnd[0] <= gn) continue;
+            cgv->nodal_field[gn - cgv->nStart[0]] = v[off + c];
           } break;
           case CGNS_ENUMV(CellCenter): {
             cgv->nodal_field[n] = v[off + c];
@@ -922,15 +942,14 @@ PetscErrorCode VecView_Plex_Local_CGNS(Vec V, PetscViewer viewer)
         }
       }
       // CGNS nodes use 1-based indexing
-      cgsize_t start = cgv->nStart + 1, end = cgv->nEnd;
+      cgsize_t start = cgv->nStart[0] + 1, end = cgv->nEnd[0];
       if (grid_loc == CGNS_ENUMV(CellCenter)) {
-        start = cgv->eStart + 1;
-        end   = cgv->eEnd;
+        start = cgv->eStart[0] + 1;
+        end   = cgv->eEnd[0];
       }
       PetscCallCGNS(cgp_field_write_data(cgv->file_num, cgv->base, cgv->zone, sol, cgfield, &start, &end, cgv->nodal_field));
     }
   }
   PetscCall(VecRestoreArrayRead(V, &v));
-  PetscCall(PetscViewerCGNSCheckBatch_Internal(viewer));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
