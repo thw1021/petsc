@@ -2181,7 +2181,7 @@ PetscErrorCode DMCreateSuperDM(DM dms[], PetscInt n, IS **is, DM *superdm)
   Developer Notes:
   The `dmlist` is for the inner subdomains or the outer subdomains or all subdomains?
 
-  The names are inconsistent the hooks use `DMSubDomainHook` which is nothing like `DMCreateDomainDecomposition()` while `DMRefineHook` is used for `DMRefine()`.
+  The names are inconsistent, the hooks use `DMSubDomainHook` which is nothing like `DMCreateDomainDecomposition()` while `DMRefineHook` is used for `DMRefine()`.
 
 .seealso: [](ch_dmbase), `DM`, `DMCreateFieldDecomposition()`, `DMDestroy()`, `DMCreateDomainDecompositionScatters()`, `DMView()`, `DMCreateInterpolation()`,
           `DMSubDomainHookAdd()`, `DMSubDomainHookRemove()`,`DMCreateColoring()`, `DMCreateMatrix()`, `DMCreateMassMatrix()`, `DMRefine()`, `DMCoarsen()`
