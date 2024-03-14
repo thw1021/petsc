@@ -986,6 +986,9 @@ PETSC_EXTERN PetscErrorCode MatCreateSchurComplementPmat(Mat, Mat, Mat, Mat, Mat
 
 PETSC_EXTERN PetscErrorCode MatCreateLMVMDFP(MPI_Comm, PetscInt, PetscInt, Mat *);
 PETSC_EXTERN PetscErrorCode MatCreateLMVMBFGS(MPI_Comm, PetscInt, PetscInt, Mat *);
+PETSC_EXTERN PetscErrorCode MatCreateLMVMDBFGS(MPI_Comm, PetscInt, PetscInt, Mat *);
+PETSC_EXTERN PetscErrorCode MatCreateLMVMDDFP(MPI_Comm, PetscInt, PetscInt, Mat *);
+PETSC_EXTERN PetscErrorCode MatCreateLMVMDQN(MPI_Comm, PetscInt, PetscInt, Mat *);
 PETSC_EXTERN PetscErrorCode MatCreateLMVMSR1(MPI_Comm, PetscInt, PetscInt, Mat *);
 PETSC_EXTERN PetscErrorCode MatCreateLMVMBroyden(MPI_Comm, PetscInt, PetscInt, Mat *);
 PETSC_EXTERN PetscErrorCode MatCreateLMVMBadBroyden(MPI_Comm, PetscInt, PetscInt, Mat *);
@@ -1010,6 +1013,7 @@ PETSC_EXTERN PetscErrorCode MatLMVMGetJ0(Mat, Mat *);
 PETSC_EXTERN PetscErrorCode MatLMVMGetJ0PC(Mat, PC *);
 PETSC_EXTERN PetscErrorCode MatLMVMGetJ0KSP(Mat, KSP *);
 PETSC_EXTERN PetscErrorCode MatLMVMSetHistorySize(Mat, PetscInt);
+PETSC_EXTERN PetscErrorCode MatLMVMGetHistorySize(Mat, PetscInt *);
 PETSC_EXTERN PetscErrorCode MatLMVMGetUpdateCount(Mat, PetscInt *);
 PETSC_EXTERN PetscErrorCode MatLMVMGetRejectCount(Mat, PetscInt *);
 PETSC_EXTERN PetscErrorCode MatLMVMSymBroydenSetDelta(Mat, PetscScalar);
@@ -1023,6 +1027,13 @@ typedef enum {
 PETSC_EXTERN const char *const MatLMVMSymBroydenScaleTypes[];
 
 PETSC_EXTERN PetscErrorCode MatLMVMSymBroydenSetScaleType(Mat, MatLMVMSymBroydenScaleType);
+
+typedef enum {
+  MAT_LMVM_DENSE_BASIC,
+  MAT_LMVM_DENSE_REORDER,
+  MAT_LMVM_DENSE_INPLACE
+} MatLMVMDenseType;
+PETSC_EXTERN const char *const MatLMVMDenseTypes[];
 
 PETSC_EXTERN PetscErrorCode KSPSetDM(KSP, DM);
 PETSC_EXTERN PetscErrorCode KSPSetDMActive(KSP, PetscBool);
