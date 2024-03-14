@@ -16,11 +16,12 @@ configure_options = [
 
   #'--prefix=petsc-install', temporarily disable for gitlab-ci
 
+  'LDFLAGS=-Wl,-ld_classic', # for scalapack and perhaps others
   '--download-netlib-lapack=1',
   #'--download-mpich=1',
   #'--download-mpich-device=ch3:sock',
   #'--download-mpich-configure-arguments=--disable-two-level-namespace', # workaround for AMREX build failure with MPICH 4.0.1 and above
-  '--with-mpi-dir=/Users/petsc/soft/mpich-4.1.2',
+  '--with-mpi-dir=/Users/petsc/soft/mpich-4.2.0-p1',
   '--download-metis=1',
   '--download-parmetis=1',
   '--download-bison=1',
