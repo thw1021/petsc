@@ -16,6 +16,7 @@ configure_options = [
 
   #'--prefix=petsc-install', temporarily disable for gitlab-ci
 
+  'LDFLAGS=-Wl,-ld_classic', # for scalapack and perhaps others
   '--download-netlib-lapack=1',
   #'--download-mpich=1',
   #'--download-mpich-device=ch3:sock',

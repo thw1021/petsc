@@ -12,6 +12,7 @@ configure_options = [
   'COPTFLAGS=-g -O',
   'FOPTFLAGS=-g -O',
   'CXXOPTFLAGS=-g -O',
+  'LDFLAGS=-Wl,-no_warn_duplicate_libraries', # causes grief if mixed with -ld_classic
   '--with-petsc4py=1',
   '--download-mpi4py=1',
   '--download-make=1',
