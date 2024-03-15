@@ -522,6 +522,8 @@ extern void petscfortranprinttounit_(PetscInt *, const char *, PetscErrorCode *,
 
   #define PETSCDEFAULTBUFFERSIZE 8 * 1024
 
+#include <petsc/private/fortranimpl.h>
+
 // PetscClangLinter pragma disable: -fdoc-synopsis-macro-explicit-synopsis-valid-header
 /*MC
   PetscViewerASCIISetFileUnit - sets the `PETSCVIEWERASCII` to write to a Fortran IO unit
@@ -549,8 +551,11 @@ extern void petscfortranprinttounit_(PetscInt *, const char *, PetscErrorCode *,
 M*/
 PETSC_EXTERN void petscviewerasciisetfileunit_(PetscViewer *lab, PetscInt *unit, PetscErrorCode *ierr)
 {
-  PetscViewer_ASCII *vascii = (PetscViewer_ASCII *)(*lab)->data;
+  PetscViewer_ASCII *vascii;
+  PetscViewer       v;
 
+  PetscPatchDefaultViewers_Fortran(lab, v);
+  vascii = (PetscViewer_ASCII *)v->data;
   if (vascii->mode == FILE_MODE_READ) {
     *ierr = PETSC_ERR_ARG_WRONGSTATE;
     return;
@@ -891,7 +896,8 @@ static PetscErrorCode PetscViewerView_ASCII(PetscViewer v, PetscViewer viewer)
   PetscViewer_ASCII *ascii = (PetscViewer_ASCII *)v->data;
 
   PetscFunctionBegin;
-  if (ascii->filename) PetscCall(PetscViewerASCIIPrintf(viewer, "Filename: %s\n", ascii->filename));
+  if (ascii->fileunit) PetscCall(PetscViewerASCIIPrintf(viewer, "Fortran FILE UNIT: %d\n", ascii->fileunit));
+  else if (ascii->filename) PetscCall(PetscViewerASCIIPrintf(viewer, "Filename: %s\n", ascii->filename));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
