@@ -280,11 +280,9 @@ PetscMPIInt Petsc_Reduction_keyval = MPI_KEYVAL_INVALID;
   The binding for the first argument changed from MPI 1.0 to 1.1; in 1.0
   it was MPI_Comm *comm.
 */
-static PetscMPIInt MPIAPI Petsc_DelReduction(MPI_Comm comm, PetscMPIInt keyval, void *attr_val, void *extra_state)
+static PetscMPIInt MPIAPI Petsc_DelReduction(MPI_Comm comm, PETSC_UNUSED PetscMPIInt keyval, void *attr_val, PETSC_UNUSED void *extra_state)
 {
   PetscFunctionBegin;
-  (void)keyval;
-  (void)extra_state;
   PetscCallMPI(PetscInfo(0, "Deleting reduction data in an MPI_Comm %ld\n", (long)comm));
   PetscCallMPI(PetscSplitReductionDestroy((PetscSplitReduction *)attr_val));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -300,6 +298,7 @@ PetscErrorCode PetscSplitReductionGet(MPI_Comm comm, PetscSplitReduction **sr)
   PetscMPIInt flag;
 
   PetscFunctionBegin;
+  PetscCheck(!PetscDefined(HAVE_THREADSAFETY), comm, PETSC_ERR_SUP, "PetscSplitReductionGet() is not thread-safe");
   if (Petsc_Reduction_keyval == MPI_KEYVAL_INVALID) {
     /*
        The calling sequence of the 2nd argument to this function changed

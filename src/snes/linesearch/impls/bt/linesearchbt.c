@@ -83,10 +83,15 @@ static PetscErrorCode SNESLineSearchApply_BT(SNESLineSearch linesearch)
   PetscCall(SNESLineSearchPreCheck(linesearch, X, Y, &changed_y));
   PetscCall(SNESLineSearchSetReason(linesearch, SNES_LINESEARCH_SUCCEEDED));
 
-  PetscCall(VecNormBegin(Y, NORM_2, &ynorm));
-  PetscCall(VecNormBegin(X, NORM_2, &xnorm));
-  PetscCall(VecNormEnd(Y, NORM_2, &ynorm));
-  PetscCall(VecNormEnd(X, NORM_2, &xnorm));
+  if (!PetscDefined(HAVE_THREADSAFETY)) {
+    PetscCall(VecNormBegin(Y, NORM_2, &ynorm));
+    PetscCall(VecNormBegin(X, NORM_2, &xnorm));
+    PetscCall(VecNormEnd(Y, NORM_2, &ynorm));
+    PetscCall(VecNormEnd(X, NORM_2, &xnorm));
+  } else {
+    PetscCall(VecNorm(Y, NORM_2, &ynorm));
+    PetscCall(VecNorm(X, NORM_2, &xnorm));
+  }
 
   if (ynorm == 0.0) {
     if (monitor) {
