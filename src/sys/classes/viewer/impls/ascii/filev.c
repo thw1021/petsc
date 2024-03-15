@@ -564,7 +564,7 @@ PETSC_EXTERN void petscviewerasciiworldsetfileunit_(PetscInt *unit, PetscErrorCo
   PETSC_VIEWER_ASCII_WORLD_fileunit = *unit;
 }
 
-#include <petsc/private/fortranimpl.h>
+  #include <petsc/private/fortranimpl.h>
 
 // PetscClangLinter pragma disable: -fdoc-synopsis-macro-explicit-synopsis-valid-header
 /*MC
@@ -594,7 +594,7 @@ M*/
 PETSC_EXTERN void petscviewerasciisetfileunit_(PetscViewer *lab, PetscInt *unit, PetscErrorCode *ierr)
 {
   PetscViewer_ASCII *vascii;
-  PetscViewer       v;
+  PetscViewer        v;
 
   PetscPatchDefaultViewers_Fortran(lab, v);
   vascii = (PetscViewer_ASCII *)v->data;
