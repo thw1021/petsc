@@ -280,11 +280,9 @@ PetscMPIInt Petsc_Reduction_keyval = MPI_KEYVAL_INVALID;
   The binding for the first argument changed from MPI 1.0 to 1.1; in 1.0
   it was MPI_Comm *comm.
 */
-static PetscMPIInt MPIAPI Petsc_DelReduction(MPI_Comm comm, PetscMPIInt keyval, void *attr_val, void *extra_state)
+static PetscMPIInt MPIAPI Petsc_DelReduction(MPI_Comm comm, PETSC_UNUSED PetscMPIInt keyval, void *attr_val, PETSC_UNUSED void *extra_state)
 {
   PetscFunctionBegin;
-  (void)keyval;
-  (void)extra_state;
   PetscCallMPI(PetscInfo(0, "Deleting reduction data in an MPI_Comm %ld\n", (long)comm));
   PetscCallMPI(PetscSplitReductionDestroy((PetscSplitReduction *)attr_val));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -300,6 +298,7 @@ PetscErrorCode PetscSplitReductionGet(MPI_Comm comm, PetscSplitReduction **sr)
   PetscMPIInt flag;
 
   PetscFunctionBegin;
+  PetscCheck(!PetscDefined(HAVE_THREADSAFETY), comm, PETSC_ERR_SUP, "PetscSplitReductionGet() is not thread-safe");
   if (Petsc_Reduction_keyval == MPI_KEYVAL_INVALID) {
     /*
        The calling sequence of the 2nd argument to this function changed
@@ -346,6 +345,11 @@ PetscErrorCode VecDotBegin(Vec x, Vec y, PetscScalar *result)
   PetscValidHeaderSpecific(x, VEC_CLASSID, 1);
   PetscValidHeaderSpecific(y, VEC_CLASSID, 2);
   PetscCall(PetscObjectGetComm((PetscObject)x, &comm));
+  if (PetscDefined(HAVE_THREADSAFETY)) {
+    PetscCheck(result, comm, PETSC_ERR_ARG_NULL, "result cannot be NULL when configuring --with-threadsafety");
+    PetscCall(VecDot(x, y, result));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
   PetscCall(PetscSplitReductionGet(comm, &sr));
   PetscCheck(sr->state == STATE_BEGIN, PETSC_COMM_SELF, PETSC_ERR_ORDER, "Called before all VecxxxEnd() called");
   if (sr->numopsbegin >= sr->maxops) PetscCall(PetscSplitReductionExtend(sr));
@@ -379,6 +383,7 @@ PetscErrorCode VecDotEnd(Vec x, Vec y, PetscScalar *result)
   MPI_Comm             comm;
 
   PetscFunctionBegin;
+  if (PetscDefined(HAVE_THREADSAFETY)) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(PetscObjectGetComm((PetscObject)x, &comm));
   PetscCall(PetscSplitReductionGet(comm, &sr));
   PetscCall(PetscSplitReductionEnd(sr));
@@ -423,6 +428,11 @@ PetscErrorCode VecTDotBegin(Vec x, Vec y, PetscScalar *result)
 
   PetscFunctionBegin;
   PetscCall(PetscObjectGetComm((PetscObject)x, &comm));
+  if (PetscDefined(HAVE_THREADSAFETY)) {
+    PetscCheck(result, comm, PETSC_ERR_ARG_NULL, "result cannot be NULL when configuring --with-threadsafety");
+    PetscCall(VecTDot(x, y, result));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
   PetscCall(PetscSplitReductionGet(comm, &sr));
   PetscCheck(sr->state == STATE_BEGIN, PETSC_COMM_SELF, PETSC_ERR_ORDER, "Called before all VecxxxEnd() called");
   if (sr->numopsbegin >= sr->maxops) PetscCall(PetscSplitReductionExtend(sr));
@@ -486,6 +496,11 @@ PetscErrorCode VecNormBegin(Vec x, NormType ntype, PetscReal *result)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x, VEC_CLASSID, 1);
   PetscCall(PetscObjectGetComm((PetscObject)x, &comm));
+  if (PetscDefined(HAVE_THREADSAFETY)) {
+    PetscCheck(result, comm, PETSC_ERR_ARG_NULL, "result cannot be NULL when configuring --with-threadsafety");
+    PetscCall(VecNorm(x, ntype, result));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
   PetscCall(PetscSplitReductionGet(comm, &sr));
   PetscCheck(sr->state == STATE_BEGIN, PETSC_COMM_SELF, PETSC_ERR_ORDER, "Called before all VecxxxEnd() called");
   if (sr->numopsbegin >= sr->maxops || (sr->numopsbegin == sr->maxops - 1 && ntype == NORM_1_AND_2)) PetscCall(PetscSplitReductionExtend(sr));
@@ -529,6 +544,7 @@ PetscErrorCode VecNormEnd(Vec x, NormType ntype, PetscReal *result)
   MPI_Comm             comm;
 
   PetscFunctionBegin;
+  if (PetscDefined(HAVE_THREADSAFETY)) PetscFunctionReturn(PETSC_SUCCESS);
   PetscValidHeaderSpecific(x, VEC_CLASSID, 1);
   PetscCall(PetscObjectGetComm((PetscObject)x, &comm));
   PetscCall(PetscSplitReductionGet(comm, &sr));
@@ -588,6 +604,11 @@ PetscErrorCode VecMDotBegin(Vec x, PetscInt nv, const Vec y[], PetscScalar resul
 
   PetscFunctionBegin;
   PetscCall(PetscObjectGetComm((PetscObject)x, &comm));
+  if (PetscDefined(HAVE_THREADSAFETY)) {
+    PetscCheck(result, comm, PETSC_ERR_ARG_NULL, "result cannot be NULL when configuring --with-threadsafety");
+    PetscCall(VecMDot(x, nv, y, result));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
   PetscCall(PetscSplitReductionGet(comm, &sr));
   PetscCheck(sr->state == STATE_BEGIN, PETSC_COMM_SELF, PETSC_ERR_ORDER, "Called before all VecxxxEnd() called");
   for (i = 0; i < nv; i++) {
@@ -628,6 +649,7 @@ PetscErrorCode VecMDotEnd(Vec x, PetscInt nv, const Vec y[], PetscScalar result[
   PetscInt             i;
 
   PetscFunctionBegin;
+  if (PetscDefined(HAVE_THREADSAFETY)) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(PetscObjectGetComm((PetscObject)x, &comm));
   PetscCall(PetscSplitReductionGet(comm, &sr));
   PetscCall(PetscSplitReductionEnd(sr));
@@ -673,6 +695,11 @@ PetscErrorCode VecMTDotBegin(Vec x, PetscInt nv, const Vec y[], PetscScalar resu
 
   PetscFunctionBegin;
   PetscCall(PetscObjectGetComm((PetscObject)x, &comm));
+  if (PetscDefined(HAVE_THREADSAFETY)) {
+    PetscCheck(result, comm, PETSC_ERR_ARG_NULL, "result cannot be NULL when configuring --with-threadsafety");
+    PetscCall(VecMTDot(x, nv, y, result));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
   PetscCall(PetscSplitReductionGet(comm, &sr));
   PetscCheck(sr->state == STATE_BEGIN, PETSC_COMM_SELF, PETSC_ERR_ORDER, "Called before all VecxxxEnd() called");
   for (i = 0; i < nv; i++) {
