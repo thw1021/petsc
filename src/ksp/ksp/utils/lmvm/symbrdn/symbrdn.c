@@ -1,5 +1,8 @@
 #include <../src/ksp/ksp/utils/lmvm/symbrdn/symbrdn.h> /*I "petscksp.h" I*/
+#include <../src/ksp/ksp/utils/lmvm/dense/denseqn.h>
 #include <../src/ksp/ksp/utils/lmvm/diagbrdn/diagbrdn.h>
+#include <petsc/private/kspimpl.h>
+#include <petscdevice.h>
 
 const char *const MatLMVMSymBroydenScaleTypes[] = {"NONE", "SCALAR", "DIAGONAL", "USER", "MatLMVMSymBrdnScaleType", "MAT_LMVM_SYMBROYDEN_SCALING_", NULL};
 
@@ -544,7 +547,6 @@ PetscErrorCode MatCreate_LMVMSymBrdn(Mat B)
   B->ops->setfromoptions = MatSetFromOptions_LMVMSymBrdn;
   B->ops->setup          = MatSetUp_LMVMSymBrdn;
   B->ops->destroy        = MatDestroy_LMVMSymBrdn;
-  B->ops->solve          = MatSolve_LMVMSymBrdn;
 
   lmvm                = (Mat_LMVM *)B->data;
   lmvm->square        = PETSC_TRUE;
@@ -552,6 +554,7 @@ PetscErrorCode MatCreate_LMVMSymBrdn(Mat B)
   lmvm->ops->reset    = MatReset_LMVMSymBrdn;
   lmvm->ops->update   = MatUpdate_LMVMSymBrdn;
   lmvm->ops->mult     = MatMult_LMVMSymBrdn;
+  lmvm->ops->solve    = MatSolve_LMVMSymBrdn;
   lmvm->ops->copy     = MatCopy_LMVMSymBrdn;
 
   PetscCall(PetscNew(&lsb));
@@ -591,19 +594,51 @@ PetscErrorCode MatCreate_LMVMSymBrdn(Mat B)
 @*/
 PetscErrorCode MatLMVMSymBroydenSetDelta(Mat B, PetscScalar delta)
 {
-  Mat_LMVM    *lmvm = (Mat_LMVM *)B->data;
-  Mat_SymBrdn *lsb  = (Mat_SymBrdn *)lmvm->ctx;
-  PetscBool    is_bfgs, is_dfp, is_symbrdn, is_symbadbrdn;
+  Mat_LMVM *lmvm = (Mat_LMVM *)B->data;
+  PetscBool is_bfgs, is_dfp, is_symbrdn, is_symbadbrdn, is_dbfgs, is_ddfp, is_dqn;
+  PetscReal del_min, del_max, del_buf;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectTypeCompare((PetscObject)B, MATLMVMBFGS, &is_bfgs));
+  PetscCall(PetscObjectTypeCompare((PetscObject)B, MATLMVMDBFGS, &is_dbfgs));
+  PetscCall(PetscObjectTypeCompare((PetscObject)B, MATLMVMDDFP, &is_ddfp));
+  PetscCall(PetscObjectTypeCompare((PetscObject)B, MATLMVMDQN, &is_dqn));
   PetscCall(PetscObjectTypeCompare((PetscObject)B, MATLMVMDFP, &is_dfp));
   PetscCall(PetscObjectTypeCompare((PetscObject)B, MATLMVMSYMBROYDEN, &is_symbrdn));
   PetscCall(PetscObjectTypeCompare((PetscObject)B, MATLMVMSYMBADBROYDEN, &is_symbadbrdn));
-  PetscCheck(is_bfgs || is_dfp || is_symbrdn || is_symbadbrdn, PetscObjectComm((PetscObject)B), PETSC_ERR_ARG_INCOMP, "diagonal scaling is only available for DFP, BFGS and SymBrdn matrices");
-  lsb->delta = PetscAbsReal(PetscRealPart(delta));
-  lsb->delta = PetscMin(lsb->delta, lsb->delta_max);
-  lsb->delta = PetscMax(lsb->delta, lsb->delta_min);
+
+  if (is_bfgs || is_dfp || is_symbrdn || is_symbadbrdn) {
+    Mat_SymBrdn *lsb = (Mat_SymBrdn *)lmvm->ctx;
+
+    lsb     = (Mat_SymBrdn *)lmvm->ctx;
+    del_min = lsb->delta_min;
+    del_max = lsb->delta_max;
+  } else if (is_dbfgs || is_ddfp || is_dqn) {
+    Mat_DQN      *lqn     = (Mat_DQN *)lmvm->ctx;
+    Mat_LMVM     *dbase   = (Mat_LMVM *)lqn->diag_qn->data;
+    Mat_DiagBrdn *diagctx = (Mat_DiagBrdn *)dbase->ctx;
+
+    del_min = diagctx->delta_min;
+    del_max = diagctx->delta_max;
+  } else {
+    SETERRQ(PetscObjectComm((PetscObject)B), PETSC_ERR_ARG_INCOMP, "diagonal scaling only available for SymBrdn-derived types (DBFGS, BFGS, DDFP, DFP, SymBrdn, SymBadBrdn");
+  }
+
+  del_buf = PetscAbsReal(PetscRealPart(delta));
+  del_buf = PetscMin(del_buf, del_max);
+  del_buf = PetscMax(del_buf, del_min);
+  if (is_dbfgs || is_ddfp || is_dqn) {
+    Mat_DQN      *lqn     = (Mat_DQN *)lmvm->ctx;
+    Mat_LMVM     *dbase   = (Mat_LMVM *)lqn->diag_qn->data;
+    Mat_DiagBrdn *diagctx = (Mat_DiagBrdn *)dbase->ctx;
+
+    diagctx->delta = del_buf;
+  } else {
+    Mat_SymBrdn *lsb = (Mat_SymBrdn *)lmvm->ctx;
+
+    lsb        = (Mat_SymBrdn *)lmvm->ctx;
+    lsb->delta = del_buf;
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -682,6 +717,7 @@ PetscErrorCode MatLMVMSymBroydenSetScaleType(Mat B, MatLMVMSymBroydenScaleType s
 PetscErrorCode MatCreateLMVMSymBroyden(MPI_Comm comm, PetscInt n, PetscInt N, Mat *B)
 {
   PetscFunctionBegin;
+  PetscCall(KSPInitializePackage());
   PetscCall(MatCreate(comm, B));
   PetscCall(MatSetSizes(*B, n, n, N, N));
   PetscCall(MatSetType(*B, MATLMVMSYMBROYDEN));
@@ -691,24 +727,26 @@ PetscErrorCode MatCreateLMVMSymBroyden(MPI_Comm comm, PetscInt n, PetscInt N, Ma
 
 PetscErrorCode MatSymBrdnApplyJ0Fwd(Mat B, Vec X, Vec Z)
 {
-  Mat_LMVM    *lmvm = (Mat_LMVM *)B->data;
-  Mat_SymBrdn *lsb  = (Mat_SymBrdn *)lmvm->ctx;
+  Mat_LMVM          *lmvm = (Mat_LMVM *)B->data;
+  Mat_SymBrdn       *lsb  = (Mat_SymBrdn *)lmvm->ctx;
+  PetscDeviceContext dctx;
 
   PetscFunctionBegin;
   if (lmvm->J0 || lmvm->user_pc || lmvm->user_ksp || lmvm->user_scale) {
     lsb->scale_type = MAT_LMVM_SYMBROYDEN_SCALE_USER;
     PetscCall(MatLMVMApplyJ0Fwd(B, X, Z));
   } else {
+    PetscCall(PetscDeviceContextGetCurrentContext(&dctx));
     switch (lsb->scale_type) {
     case MAT_LMVM_SYMBROYDEN_SCALE_SCALAR:
-      PetscCall(VecAXPBY(Z, 1.0 / lsb->sigma, 0.0, X));
+      PetscCall(VecAXPBYAsync_Private(Z, 1.0 / lsb->sigma, 0.0, X, dctx));
       break;
     case MAT_LMVM_SYMBROYDEN_SCALE_DIAGONAL:
       PetscCall(MatMult(lsb->D, X, Z));
       break;
     case MAT_LMVM_SYMBROYDEN_SCALE_NONE:
     default:
-      PetscCall(VecCopy(X, Z));
+      PetscCall(VecCopyAsync_Private(X, Z, dctx));
       break;
     }
   }
@@ -717,24 +755,26 @@ PetscErrorCode MatSymBrdnApplyJ0Fwd(Mat B, Vec X, Vec Z)
 
 PetscErrorCode MatSymBrdnApplyJ0Inv(Mat B, Vec F, Vec dX)
 {
-  Mat_LMVM    *lmvm = (Mat_LMVM *)B->data;
-  Mat_SymBrdn *lsb  = (Mat_SymBrdn *)lmvm->ctx;
+  Mat_LMVM          *lmvm = (Mat_LMVM *)B->data;
+  Mat_SymBrdn       *lsb  = (Mat_SymBrdn *)lmvm->ctx;
+  PetscDeviceContext dctx;
 
   PetscFunctionBegin;
   if (lmvm->J0 || lmvm->user_pc || lmvm->user_ksp || lmvm->user_scale) {
     lsb->scale_type = MAT_LMVM_SYMBROYDEN_SCALE_USER;
     PetscCall(MatLMVMApplyJ0Inv(B, F, dX));
   } else {
+    PetscCall(PetscDeviceContextGetCurrentContext(&dctx));
     switch (lsb->scale_type) {
     case MAT_LMVM_SYMBROYDEN_SCALE_SCALAR:
-      PetscCall(VecAXPBY(dX, lsb->sigma, 0.0, F));
+      PetscCall(VecAXPBYAsync_Private(dX, lsb->sigma, 0.0, F, dctx));
       break;
     case MAT_LMVM_SYMBROYDEN_SCALE_DIAGONAL:
       PetscCall(MatSolve(lsb->D, F, dX));
       break;
     case MAT_LMVM_SYMBROYDEN_SCALE_NONE:
     default:
-      PetscCall(VecCopy(F, dX));
+      PetscCall(VecCopyAsync_Private(F, dX, dctx));
       break;
     }
   }
