@@ -420,7 +420,6 @@ static PetscErrorCode MatForwardSolve_MKL_CPARDISO(Mat A, Vec b, Vec x)
   PetscCall(VecRestoreArray(x, &xarray));
   PetscCall(VecRestoreArrayRead(b, &barray));
   mat_mkl_cpardiso->CleanUp = PETSC_TRUE;
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -445,7 +444,6 @@ static PetscErrorCode MatBackwardSolve_MKL_CPARDISO(Mat A, Vec b, Vec x)
   PetscCall(VecRestoreArray(x, &xarray));
   PetscCall(VecRestoreArrayRead(b, &barray));
   mat_mkl_cpardiso->CleanUp = PETSC_TRUE;
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
