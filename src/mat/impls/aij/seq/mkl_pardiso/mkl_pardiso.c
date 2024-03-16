@@ -798,7 +798,7 @@ static PetscErrorCode MatFactorSymbolic_AIJMKL_PARDISO_Private(Mat F, Mat A, con
   else F->ops->choleskyfactornumeric = MatFactorNumeric_MKL_PARDISO;
 
   F->ops->solve          = MatSolve_MKL_PARDISO;
-   F->ops->forwardsolve  = MatForwardSolve_MKL_PARDISO;
+  F->ops->forwardsolve   = MatForwardSolve_MKL_PARDISO;
   F->ops->backwardsolve  = MatBackwardSolve_MKL_PARDISO;
   F->ops->solvetranspose = MatSolveTranspose_MKL_PARDISO;
   F->ops->matsolve       = MatMatSolve_MKL_PARDISO;
@@ -849,7 +849,7 @@ static PetscErrorCode MatView_MKL_PARDISO(Mat A, PetscViewer viewer)
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
   if (iascii) {
     PetscCall(PetscViewerGetFormat(viewer, &format));
-  if (format == PETSC_VIEWER_ASCII_INFO) {
+    if (format == PETSC_VIEWER_ASCII_INFO) {
       PetscCall(PetscViewerASCIIPrintf(viewer, "MKL PARDISO run parameters:\n"));
       PetscCall(PetscViewerASCIIPrintf(viewer, "MKL PARDISO phase:             %d \n", mat_mkl_pardiso->phase));
       for (i = 1; i <= 64; i++) PetscCall(PetscViewerASCIIPrintf(viewer, "MKL PARDISO iparm[%d]:     %d \n", i, mat_mkl_pardiso->iparm[i - 1]));

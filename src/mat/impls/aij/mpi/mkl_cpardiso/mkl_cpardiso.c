@@ -726,13 +726,12 @@ static PetscErrorCode MatCholeskyFactorSymbolic_AIJMKL_CPARDISO(Mat F, Mat A, IS
   mat_mkl_cpardiso->CleanUp     = PETSC_TRUE;
   F->ops->choleskyfactornumeric = MatFactorNumeric_MKL_CPARDISO;
   F->ops->solve                 = MatSolve_MKL_CPARDISO;
-  if (A->spd == PETSC_BOOL3_TRUE) 
-  {
-    F->ops->forwardsolve          = MatForwardSolve_MKL_CPARDISO;
-    F->ops->backwardsolve         = MatBackwardSolve_MKL_CPARDISO;
-  }
   F->ops->solvetranspose        = MatSolveTranspose_MKL_CPARDISO;
   F->ops->matsolve              = MatMatSolve_MKL_CPARDISO;
+  if (A->spd == PETSC_BOOL3_TRUE) {
+    F->ops->forwardsolve  = MatForwardSolve_MKL_CPARDISO;
+    F->ops->backwardsolve = MatBackwardSolve_MKL_CPARDISO;
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
