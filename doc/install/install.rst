@@ -492,12 +492,13 @@ it is best to reinstall all ``brew`` packages using, for example,
 
 .. code-block:: console
 
-   $ brew leaves > leaves.lst      # save packages list to re-install
-   $ emacs leaves.lst 	           # edit leaves.lst to remove any un-needed pkgs
-   $ brew uninstall `brew list`	   # delete all installed packages
+   $ brew leaves > leaves.lst                  # save formulae list to re-install
+   $ brew list --casks > casks.lst             # save casks list to re-install
+   $ emacs leaves.lst                          # edit leaves.lst to remove any un-needed pkgs
+   $ brew uninstall `brew list`                # delete all installed packages
    $ brew cleanup
    $ brew update
-   $ brew install `cat leaves.lst` # install needed packages
+   $ brew install `cat leaves.lst casks.lst`   # install needed packages
 
 .. _doc_config_install:
 
