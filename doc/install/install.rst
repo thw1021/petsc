@@ -493,8 +493,8 @@ it is best to reinstall all ``brew`` packages using, for example,
 .. code-block:: console
 
    $ brew leaves > leaves.lst                  # save packages list to re-install
-   $ emacs leaves.lst 	                       # edit leaves.lst to remove any un-needed pkgs
-   $ brew uninstall `brew list --formula`	   # delete all installed formula packages
+   $ emacs leaves.lst                          # edit leaves.lst to remove any un-needed pkgs
+   $ brew uninstall `brew list --formula`      # delete all installed formula packages
    $ brew cleanup
    $ brew update
    $ brew install `cat leaves.lst`             # install needed packages
