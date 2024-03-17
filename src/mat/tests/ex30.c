@@ -13,7 +13,7 @@ int main(int argc, char **args)
 {
   Mat           C, A;
   PetscInt      i, j, m = 5, n = 5, Ii, J, lf = 0;
-  PetscBool     LU = PETSC_FALSE, CHOLESKY, TRIANGULAR = PETSC_FALSE, MATDSPL = PETSC_FALSE, flg, matordering;
+  PetscBool     LU = PETSC_FALSE, CHOLESKY, TRIANGULAR = PETSC_FALSE, MATDSPL = PETSC_FALSE, flg, matordering, use_mkl_pardiso = PETSC_FALSE;
   PetscScalar   v;
   IS            row, col;
   PetscViewer   viewer1, viewer2;
@@ -22,6 +22,7 @@ int main(int argc, char **args)
   PetscReal     norm2, norm2_inplace, tol = 100. * PETSC_MACHINE_EPSILON;
   PetscRandom   rdm;
   PetscMPIInt   size;
+  char          pack[PETSC_MAX_PATH_LEN];
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &args, (char *)0, help));
@@ -62,6 +63,8 @@ int main(int argc, char **args)
   PetscCall(MatIsSymmetric(C, 0.0, &flg));
   PetscCheck(flg, PETSC_COMM_SELF, PETSC_ERR_SUP, "C is non-symmetric");
 
+  PetscCall(MatSetOption(C, MAT_SPD, PETSC_TRUE));
+
   /* Create vectors for error checking */
   PetscCall(MatCreateVecs(C, &x, &b));
   PetscCall(VecDuplicate(x, &y));
@@ -95,10 +98,16 @@ int main(int argc, char **args)
   info.diagonal_fill = 0;
   info.zeropivot     = 0.0;
 
+  PetscCall(PetscOptionsGetString(NULL, NULL, "-mat_solver_type", pack, sizeof(pack), NULL));
+#if defined(PETSC_HAVE_MKL_PARDISO)
+  PetscCall(PetscStrcmp(MATSOLVERMKL_PARDISO, pack, &use_mkl_pardiso));
+#endif
+
   PetscCall(PetscOptionsHasName(NULL, NULL, "-lu", &LU));
   if (LU) {
     printf("Test LU...\n");
-    PetscCall(MatGetFactor(C, MATSOLVERPETSC, MAT_FACTOR_LU, &A));
+    if (use_mkl_pardiso) PetscCall(MatGetFactor(C, MATSOLVERMKL_PARDISO, MAT_FACTOR_LU, &A));
+    else PetscCall(MatGetFactor(C, MATSOLVERPETSC, MAT_FACTOR_LU, &A));
     PetscCall(MatLUFactorSymbolic(A, C, row, col, &info));
   } else {
     printf("Test ILU...\n");
@@ -135,7 +144,8 @@ int main(int argc, char **args)
   if (CHOLESKY) {
     printf("Test Cholesky...\n");
     lf = -1;
-    PetscCall(MatGetFactor(C, MATSOLVERPETSC, MAT_FACTOR_CHOLESKY, &A));
+    if (use_mkl_pardiso) PetscCall(MatGetFactor(C, MATSOLVERMKL_PARDISO, MAT_FACTOR_CHOLESKY, &A));
+    else PetscCall(MatGetFactor(C, MATSOLVERPETSC, MAT_FACTOR_CHOLESKY, &A));
     PetscCall(MatCholeskyFactorSymbolic(A, C, row, &info));
   } else {
     printf("Test ICC...\n");
@@ -223,6 +233,12 @@ int main(int argc, char **args)
    test:
       suffix: 6
       args: -lu -triangular_solve
+      output_file: output/ex30_3.out
+      
+   test:
+      suffix: 7
+      requires: mkl_pardiso
+      args: -lu -mat_solver_type mkl_pardiso -triangular_solve
       output_file: output/ex30_3.out
 
 TEST*/
