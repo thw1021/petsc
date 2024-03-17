@@ -1,4 +1,4 @@
-static char help[] = "Tests MatForwardSolve and MatBackwardSolve for LU and Cholesky decompositions using Pardiso and C/Pardiso.\n\n";
+static char help[] = "Tests MatForwardSolve and MatBackwardSolve for LU and Cholesky decompositions using C/Pardiso.\n\n";
 
 #include <petscdmda.h>
 #include <petscmat.h>
