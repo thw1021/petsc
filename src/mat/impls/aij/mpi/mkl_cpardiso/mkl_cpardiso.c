@@ -374,7 +374,7 @@ static PetscErrorCode MatDestroy_MKL_CPARDISO(Mat A)
  */
 static PetscErrorCode MatSolve_MKL_CPARDISO(Mat A, Vec b, Vec x)
 {
-  Mat_MKL_CPARDISO  *mat_mkl_cpardiso = (Mat_MKL_CPARDISO *)(A)->data;
+  Mat_MKL_CPARDISO  *mat_mkl_cpardiso = (Mat_MKL_CPARDISO *)A->data;
   PetscScalar       *xarray;
   const PetscScalar *barray;
 
@@ -398,7 +398,7 @@ static PetscErrorCode MatSolve_MKL_CPARDISO(Mat A, Vec b, Vec x)
 
 static PetscErrorCode MatForwardSolve_MKL_CPARDISO(Mat A, Vec b, Vec x)
 {
-  Mat_MKL_CPARDISO  *mat_mkl_cpardiso = (Mat_MKL_CPARDISO *)(A)->data;
+  Mat_MKL_CPARDISO  *mat_mkl_cpardiso = (Mat_MKL_CPARDISO *)A->data;
   PetscScalar       *xarray;
   const PetscScalar *barray;
 
@@ -422,7 +422,7 @@ static PetscErrorCode MatForwardSolve_MKL_CPARDISO(Mat A, Vec b, Vec x)
 
 static PetscErrorCode MatBackwardSolve_MKL_CPARDISO(Mat A, Vec b, Vec x)
 {
-  Mat_MKL_CPARDISO  *mat_mkl_cpardiso = (Mat_MKL_CPARDISO *)(A)->data;
+  Mat_MKL_CPARDISO  *mat_mkl_cpardiso = (Mat_MKL_CPARDISO *)A->data;
   PetscScalar       *xarray;
   const PetscScalar *barray;
 
@@ -461,7 +461,7 @@ static PetscErrorCode MatSolveTranspose_MKL_CPARDISO(Mat A, Vec b, Vec x)
 
 static PetscErrorCode MatMatSolve_MKL_CPARDISO(Mat A, Mat B, Mat X)
 {
-  Mat_MKL_CPARDISO  *mat_mkl_cpardiso = (Mat_MKL_CPARDISO *)(A)->data;
+  Mat_MKL_CPARDISO  *mat_mkl_cpardiso = (Mat_MKL_CPARDISO *)A->data;
   PetscScalar       *xarray;
   const PetscScalar *barray;
 
@@ -491,7 +491,7 @@ static PetscErrorCode MatMatSolve_MKL_CPARDISO(Mat A, Mat B, Mat X)
  */
 static PetscErrorCode MatFactorNumeric_MKL_CPARDISO(Mat F, Mat A, const MatFactorInfo *info)
 {
-  Mat_MKL_CPARDISO *mat_mkl_cpardiso = (Mat_MKL_CPARDISO *)(F)->data;
+  Mat_MKL_CPARDISO *mat_mkl_cpardiso = (Mat_MKL_CPARDISO *)F->data;
 
   PetscFunctionBegin;
   mat_mkl_cpardiso->matstruc = SAME_NONZERO_PATTERN;

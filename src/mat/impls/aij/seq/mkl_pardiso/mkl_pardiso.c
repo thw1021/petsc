@@ -500,7 +500,7 @@ static PetscErrorCode MatSolveTranspose_MKL_PARDISO(Mat A, Vec b, Vec x)
 
 static PetscErrorCode MatMatSolve_MKL_PARDISO(Mat A, Mat B, Mat X)
 {
-  Mat_MKL_PARDISO   *mat_mkl_pardiso = (Mat_MKL_PARDISO *)(A)->data;
+  Mat_MKL_PARDISO   *mat_mkl_pardiso = (Mat_MKL_PARDISO *)A->data;
   const PetscScalar *barray;
   PetscScalar       *xarray;
   PetscBool          flg;
@@ -579,7 +579,7 @@ static PetscErrorCode MatMatSolve_MKL_PARDISO(Mat A, Mat B, Mat X)
 
 static PetscErrorCode MatFactorNumeric_MKL_PARDISO(Mat F, Mat A, const MatFactorInfo *info)
 {
-  Mat_MKL_PARDISO *mat_mkl_pardiso = (Mat_MKL_PARDISO *)(F)->data;
+  Mat_MKL_PARDISO *mat_mkl_pardiso = (Mat_MKL_PARDISO *)F->data;
 
   PetscFunctionBegin;
   mat_mkl_pardiso->matstruc = SAME_NONZERO_PATTERN;
