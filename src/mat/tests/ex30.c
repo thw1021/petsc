@@ -234,7 +234,7 @@ int main(int argc, char **args)
       suffix: 6
       args: -lu -triangular_solve
       output_file: output/ex30_3.out
-      
+
    test:
       suffix: 7
       requires: mkl_pardiso
