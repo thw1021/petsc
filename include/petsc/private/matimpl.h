@@ -253,6 +253,9 @@ PETSC_INTERN PetscErrorCode MatConvert_Dense_ScaLAPACK(Mat, MatType, MatReuse, M
 PETSC_INTERN PetscErrorCode MatSetPreallocationCOO_Basic(Mat, PetscCount, PetscInt[], PetscInt[]);
 PETSC_INTERN PetscErrorCode MatSetValuesCOO_Basic(Mat, const PetscScalar[], InsertMode);
 
+/* This can be moved to the public header after implementing some missing MatProducts */
+PETSC_INTERN PetscErrorCode MatCreateFromISLocalToGlobalMapping(ISLocalToGlobalMapping, Mat, PetscBool, PetscBool, MatType, Mat *);
+
 /* these callbacks rely on the old matrix function pointers for
    matmat operations. They are unsafe, and should be removed.
    However, the amount of work needed to clean up all the
@@ -749,8 +752,9 @@ typedef struct {
 } MatParentState;
 
 PETSC_EXTERN PetscErrorCode MatFactorDumpMatrix(Mat);
-PETSC_INTERN PetscErrorCode MatShift_Basic(Mat, PetscScalar);
 PETSC_INTERN PetscErrorCode MatSetBlockSizes_Default(Mat, PetscInt, PetscInt);
+
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode MatShift_Basic(Mat, PetscScalar);
 
 static inline PetscErrorCode MatPivotCheck_nz(PETSC_UNUSED Mat mat, const MatFactorInfo *info, FactorShiftCtx *sctx, PETSC_UNUSED PetscInt row)
 {
