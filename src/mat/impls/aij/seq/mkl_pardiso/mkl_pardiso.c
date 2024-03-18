@@ -798,7 +798,7 @@ static PetscErrorCode MatFactorSymbolic_AIJMKL_PARDISO_Private(Mat F, Mat A, con
   F->ops->solve          = MatSolve_MKL_PARDISO;
   F->ops->solvetranspose = MatSolveTranspose_MKL_PARDISO;
   F->ops->matsolve       = MatMatSolve_MKL_PARDISO;
-  if (F->factortype == MAT_FACTOR_LU || (F->factortype == MAT_FACTOR_CHOLESKY && A->spd == PETSC_BOOL3_TRUE)) {
+  if (F->factortype == MAT_FACTOR_LU || (!PetscDefined(USE_COMPLEX) && F->factortype == MAT_FACTOR_CHOLESKY && A->spd == PETSC_BOOL3_TRUE)) {
     F->ops->backwardsolve = MatBackwardSolve_MKL_PARDISO;
     F->ops->forwardsolve  = MatForwardSolve_MKL_PARDISO;
   }

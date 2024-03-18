@@ -13,7 +13,8 @@ int main(int argc, char **args)
   PetscInt      i, j, k, n = 5;
   PetscBool     CHOL = PETSC_FALSE;
   MatStencil    row, cols[5];
-  PetscReal     vals[5], norm2, tol = 100. * PETSC_MACHINE_EPSILON;
+  PetscScalar   vals[5];
+  PetscReal     norm2, tol = 100. * PETSC_MACHINE_EPSILON;
   PetscRandom   rdm;
   MatFactorInfo finfo;
 
@@ -84,10 +85,12 @@ int main(int argc, char **args)
 
   PetscCall(MatGetOrdering(A, MATORDERINGNATURAL, &rowis, &colis));
   if (CHOL) {
+    PetscCall(PetscPrintf(MPI_COMM_WORLD, "Test Cholesky...\n"));
     PetscCall(MatGetFactor(A, MATSOLVERMKL_CPARDISO, MAT_FACTOR_CHOLESKY, &F));
     PetscCall(MatCholeskyFactorSymbolic(F, A, rowis, &finfo));
     PetscCall(MatCholeskyFactorNumeric(F, A, &finfo));
   } else {
+    PetscCall(PetscPrintf(MPI_COMM_WORLD, "Test LU...\n"));
     PetscCall(MatGetFactor(A, MATSOLVERMKL_CPARDISO, MAT_FACTOR_LU, &F));
     PetscCall(MatLUFactorSymbolic(F, A, rowis, colis, &finfo));
     PetscCall(MatLUFactorNumeric(F, A, &finfo));
@@ -124,9 +127,8 @@ int main(int argc, char **args)
 
    test:
       suffix: 2
-      requires: mkl_cpardiso
+      requires: !complex mkl_cpardiso
       nsize: 4
       args: -chol
-      output_file: output/ex263_1.out
 
 TEST*/

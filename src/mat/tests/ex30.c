@@ -13,7 +13,7 @@ int main(int argc, char **args)
 {
   Mat           C, A;
   PetscInt      i, j, m = 5, n = 5, Ii, J, lf = 0;
-  PetscBool     LU = PETSC_FALSE, CHOLESKY, TRIANGULAR = PETSC_FALSE, MATDSPL = PETSC_FALSE, flg, matordering, use_mkl_pardiso = PETSC_FALSE;
+  PetscBool     LU = PETSC_FALSE, CHOLESKY = PETSC_FALSE, TRIANGULAR = PETSC_FALSE, MATDSPL = PETSC_FALSE, flg, matordering, use_mkl_pardiso = PETSC_FALSE;
   PetscScalar   v;
   IS            row, col;
   PetscViewer   viewer1, viewer2;
@@ -118,6 +118,20 @@ int main(int argc, char **args)
   }
   PetscCall(MatLUFactorNumeric(A, C, &info));
 
+  /* test MatForwardSolve() and MatBackwardSolve() with MKL Pardiso*/
+  if (LU && use_mkl_pardiso) {
+    PetscCall(PetscOptionsHasName(NULL, NULL, "-triangular_solve", &TRIANGULAR));
+    if (TRIANGULAR) {
+      printf("Test MatForwardSolve...\n");
+      PetscCall(MatForwardSolve(A, b, ytmp));
+      printf("Test MatBackwardSolve...\n");
+      PetscCall(MatBackwardSolve(A, ytmp, y));
+      PetscCall(VecAXPY(y, -1.0, x));
+      PetscCall(VecNorm(y, NORM_2, &norm2));
+      if (norm2 > tol) PetscCall(PetscPrintf(PETSC_COMM_SELF, "MatForwardSolve and BackwardSolve: Norm of error=%g\n", (double)norm2));
+    }
+  }
+
   /* Solve A*y = b, then check the error */
   PetscCall(MatSolve(A, b, y));
   PetscCall(VecAXPY(y, -1.0, x));
@@ -140,7 +154,7 @@ int main(int argc, char **args)
   }
 
   /* Test Cholesky and ICC on seqaij matrix with matrix reordering on aij matrix C */
-  CHOLESKY = LU;
+  PetscCall(PetscOptionsHasName(NULL, NULL, "-chol", &CHOLESKY));
   if (CHOLESKY) {
     printf("Test Cholesky...\n");
     lf = -1;
@@ -160,7 +174,7 @@ int main(int argc, char **args)
   PetscCall(MatCholeskyFactorNumeric(A, C, &info));
 
   /* test MatForwardSolve() and MatBackwardSolve() with matrix reordering on aij matrix C */
-  if (lf == -1) {
+  if (CHOLESKY) {
     PetscCall(PetscOptionsHasName(NULL, NULL, "-triangular_solve", &TRIANGULAR));
     if (TRIANGULAR) {
       printf("Test MatForwardSolve...\n");
@@ -217,28 +231,33 @@ int main(int argc, char **args)
 
    test:
       suffix: 2
-      args: -mat_ordering -display_matrices -nox -lu
+      args: -mat_ordering -display_matrices -nox -lu -chol
 
    test:
       suffix: 3
-      args: -mat_ordering -lu -triangular_solve
+      args: -mat_ordering -lu -chol -triangular_solve
 
    test:
       suffix: 4
 
    test:
       suffix: 5
-      args: -lu
+      args: -lu -chol
 
    test:
       suffix: 6
-      args: -lu -triangular_solve
+      args: -lu -chol -triangular_solve
       output_file: output/ex30_3.out
 
    test:
       suffix: 7
       requires: mkl_pardiso
+      args: -lu -chol -mat_solver_type mkl_pardiso
+      output_file: output/ex30_5.out
+
+   test:
+      suffix: 8
+      requires: mkl_pardiso
       args: -lu -mat_solver_type mkl_pardiso -triangular_solve
-      output_file: output/ex30_3.out
 
 TEST*/
