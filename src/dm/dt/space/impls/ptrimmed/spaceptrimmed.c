@@ -357,10 +357,17 @@ static PetscErrorCode PetscSpaceInitialize_Ptrimmed(PetscSpace sp)
 /*MC
   PETSCSPACEPTRIMMED = "ptrimmed" - A `PetscSpace` object that encapsulates a trimmed polynomial space.
 
-  Level: intermediate
+  If we just consider spaces of functions (0-forms), then we can write the trimmed polynomial space of degree $r$ as
+$$
+  \mathcal{P}^-_r = mathcal{P}_{r-1} \oplus \kappa \mathcal{H}_{r-1} \Lambda^1
+$$
+where $\mathcal{H}_r$ is the space of homogeneous polynomials of degree $r$, $\Lambda^1$ is the space of one-forms, and $\kappa$ is the Kozul operator. We can simplify this by computing the action of the Kozul operator on one-forms, to get
+$$
+  \mathcal{P}^-_r = mathcal{P}_{r-1} \oplus \bf{x} \mathcal{H}_{r-1}
+$$
+This decomposition is detailed in ``Finite element exterior calculus'', Arnold, 2018.
 
-  Developer Note:
-  Need a good easy to understand reference for trimmed poynomial spaces
+  Level: intermediate
 
 .seealso: `PetscSpace`, `PetscSpaceType`, `PetscSpaceCreate()`, `PetscSpaceSetType()`, `PetscDTPTrimmedEvalJet()`
 M*/
