@@ -7,7 +7,7 @@
   Not Collective
 
   Input Parameters:
-+ dm - the distributed array
++ dm - the `DMDA`
 - s  - A `MatStencil` that provides (i,j,k)
 
   Output Parameter:
@@ -15,7 +15,10 @@
 
   Level: developer
 
-.seealso: [](sec_struct), `DM`, `DMDA`
+  Note:
+  The (i,j,k) are in the local numbering of the `DMDA`. That is they are non-negative offsets to the ghost corners returned by `DMDAGetGhostCorners()`
+
+.seealso: [](sec_struct), `DM`, `DMDA`, `DMDAGetGhostCorners()`
 @*/
 PetscErrorCode DMDAConvertToCell(DM dm, MatStencil s, PetscInt *cell)
 {
