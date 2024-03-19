@@ -333,7 +333,7 @@ no overhead, not even a copy, for this operation.
 For the Apple M2, we present the results using Unix shared memory communication of the matrix and vectors to the server processes
 in :any:`fig_m2_gamg_server_shared_speedup`.
 To run this one must first increase the allowed amount of shared memory with
-`sudo sysctl kern.sysv.shmmax=4194304000` and `sudo sysctl kern.sysv.shmall=131072000`.
+`sudo sysctl kern.sysv.shmmax=4194304000`, `sudo sysctl kern.sysv.shmall=131072000` and, `sudo sysctl kern.sysv.shmseq=1000`.
 
 .. figure:: /images/manual/m2_gamg_server_shared_speedup.svg
   :alt: GAMG solver speedup
