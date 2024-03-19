@@ -590,6 +590,7 @@ PetscErrorCode PCMPIServerEnd(void)
     PetscViewer       viewer = NULL;
     PetscViewerFormat format;
 
+    PetscCall(PCMPIServerAddressesFinalize());
     PetscCallMPI(MPI_Bcast(&request, 1, MPIU_ENUM, 0, PC_MPI_COMM_WORLD));
     PETSC_COMM_WORLD = MPI_COMM_WORLD; /* could use PC_MPI_COMM_WORLD */
     PetscOptionsBegin(PETSC_COMM_SELF, NULL, "MPI linear solver server options", NULL);

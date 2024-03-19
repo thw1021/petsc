@@ -28,6 +28,36 @@ typedef struct {
 
 #endif
 
+/*@C
+  PCMPIServerAddressesFinalizes - frees any shared memory that was allocated by `PCMPIServerAllocateArray()` but
+  not deallocated with `PCMPIServerDeallocateArray()`
+
+  Level: developer
+
+  Notes:
+  This prevents any shared memory allocated, but not deallocated, from remaining on the system and preventing
+  its future use.
+
+  If the program crashes outstanding shared memory allocations may remain.
+
+.seealso: `PCMPIServerAllocateArray()`, `PCMPIServerDeallocateArray()`, `PCMPIServerAllocateArray()`, `PCMPIServerUnmapAddresses()`
+@*/
+PetscErrorCode PCMPIServerAddressesFinalize(void)
+{
+  PetscFunctionBegin;
+#if defined(PETSC_HAVE_SHARED_MEMORY)
+    PCMPIServerAllocation next = allocations, previous = NULL;
+
+    while (next) {
+      PetscCheck(!shmctl(next->shmid, IPC_RMID, NULL), PETSC_COMM_SELF, PETSC_ERR_SYS, "Unable to free shared memory key %d shmid %d %s", next->shmkey, next->shmid, strerror(errno));
+      previous = next;
+      next = next->next;
+      PetscCall(PetscFree(previous));
+    }
+#endif
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 PetscErrorCode PCMPIServerAddressesDestroy(PCMPIServerAddresses *addresses)
 {
   PetscFunctionBegin;
@@ -179,11 +209,11 @@ PetscErrorCode PCMPIServerUnmapAddresses(PetscInt n, void **addres)
   Notes:
   Uses `PetscMalloc()` if `PETSC_HAVE_SHARED_MEMORY` is not defined or the MPI linear solver server is not running
 
-  Sometimes when a program crashes, shared memory IDs may remain, making it impossible to run the program again.
+  Sometimes when a program crashes, shared memory IDs may remain, making it impossible to rerun the program.
 
   Use the Unix command `ipcs -m` to see what memory IDs are currently allocated and `ipcrm -m ID` to remove a memory ID
 
-  Use the Unix command `for i in $(ipcs -m | tail -$(expr $(ipcs -m | wc -l) - 3) | tr -s ' ' | cut -d" " -f2); do ipcrm -m $i; done`
+  Use the Unix command `ipcrm --all` or `for i in $(ipcs -m | tail -$(expr $(ipcs -m | wc -l) - 3) | tr -s ' ' | cut -d" " -f3); do ipcrm -M $i; done`
   to delete all the currently allocated memory IDs.
 
 .seealso: [](sec_pcmpi), `PCMPIServerBegin()`, `PCMPI`, `KSPCheckPCMPI()`, `PCMPIServerDeallocateArray()`

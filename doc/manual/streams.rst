@@ -305,7 +305,7 @@ and note that it is disappointingly far below the parallel solve without the ser
 
 ``PCMPI`` has two approaches for distributing the linear system. The first uses ``MPI_Scatterv()`` to communicate the matrix and vector entries from the initial compute process to all of the
 server processes. Unfortunately ``MPI_Scatterv()`` does not scale with more MPI processes hence the solution time is limited by the ``MPI_Scatterv()``. To remove this limitation
-the second communication mechanism is ``MPI_Win_allocate_shared()`` or Unix shared memory ``shmget()``. Here ``PCMPI`` allocates shared memory
+the second communication mechanism is Unix shared memory ``shmget()``. Here ``PCMPI`` allocates shared memory
 from which all the MPI processes in the server
 can access their portion of the matrices and vectors that they need.
 There is still a (now smaller) server processing overhead since the initial data storage of the sequential matrix (in ``MATSEQAIJ`` storage)

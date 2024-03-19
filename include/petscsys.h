@@ -2364,6 +2364,8 @@ PETSC_EXTERN PetscErrorCode PCMPIServerAllocateArray(size_t, size_t, void **);
 PETSC_EXTERN PetscErrorCode PCMPIServerDeallocateArray(void **);
 PETSC_EXTERN PetscErrorCode PCMPIServerMapAddresses(MPI_Comm, PetscInt, const void **, void **);
 PETSC_EXTERN PetscErrorCode PCMPIServerUnmapAddresses(PetscInt, void **);
+PETSC_EXTERN PetscErrorCode PCMPIServerAddressesFinalize(void);
+
 typedef struct {
   PetscInt n;
   void    *addr[3];
