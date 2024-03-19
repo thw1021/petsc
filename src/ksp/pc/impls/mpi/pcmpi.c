@@ -577,7 +577,7 @@ PetscErrorCode PCMPIServerBegin(void)
   Level: developer
 
   Note:
-  This is normally called automatically in `PetscFinalize()` when the option is provided
+  This is normally called automatically in `PetscFinalize()`
 
 .seealso: [](sec_pcmpi), `PCMPIServerBegin()`, `PCMPI`, `KSPCheckPCMPI()`
 @*/
@@ -897,5 +897,31 @@ PETSC_EXTERN PetscErrorCode PCCreate_MPI(PC pc)
   pc->ops->view           = PCView_MPI;
   pc->ops->setfromoptions = PCSetFromOptions_MPI;
   PetscCall(PetscObjectChangeTypeName((PetscObject)pc, PCMPI));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PCMPIGetKSP - Gets the `KSP` created by the `PCMPI`
+
+  Not Collective
+
+  Input Parameter:
+. pc - the preconditioner context
+
+  Output Parameter:
+. innerksp - the inner `KSP`
+
+  Level: advanced
+
+.seealso: [](ch_ksp), `KSP`, `PCMPI`, `PCREDISTRIBUTE`
+@*/
+PetscErrorCode PCMPIGetKSP(PC pc, KSP *innerksp)
+{
+  PC_MPI *red = (PC_MPI *)pc->data;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
+  PetscAssertPointer(innerksp, 2);
+  *innerksp = red->ksps[0];
   PetscFunctionReturn(PETSC_SUCCESS);
 }

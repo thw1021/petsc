@@ -216,6 +216,35 @@ PetscErrorCode PCMPIServerUnmapAddresses(PetscInt n, void **addres)
   Use the Unix command `ipcrm --all` or `for i in $(ipcs -m | tail -$(expr $(ipcs -m | wc -l) - 3) | tr -s ' ' | cut -d" " -f3); do ipcrm -M $i; done`
   to delete all the currently allocated memory IDs.
 
+  Under Apple macOS the following file, with a suffix of .plist must be copied to /Library/LaunchDaemons/ and the machine rebooted before using shared memory
+.vb
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+ <key>Label</key>
+ <string>shmemsetup</string>
+ <key>UserName</key>
+ <string>root</string>
+ <key>GroupName</key>
+ <string>wheel</string>
+ <key>ProgramArguments</key>
+ <array>
+ <string>/usr/sbin/sysctl</string>
+ <string>-w</string>
+ <string>kern.sysv.shmmax=4194304000</string>
+ <string>kern.sysv.shmmni=2064</string>
+ <string>kern.sysv.shmseg=2064</string>
+ <string>kern.sysv.shmall=131072000</string>
+  </array>
+ <key>KeepAlive</key>
+ <false/>
+ <key>RunAtLoad</key>
+ <true/>
+</dict>
+</plist>
+.ve
+
 .seealso: [](sec_pcmpi), `PCMPIServerBegin()`, `PCMPI`, `KSPCheckPCMPI()`, `PCMPIServerDeallocateArray()`
 @*/
 PetscErrorCode PCMPIServerAllocateArray(size_t sz, size_t asz, void **addr)
