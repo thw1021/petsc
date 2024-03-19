@@ -8,7 +8,7 @@
 
   Input Parameters:
 + dm - the `DMDA`
-- s  - A `MatStencil` that provides (i,j,k)
+- s  - a `MatStencil` that provides (i,j,k)
 
   Output Parameter:
 . cell - the local cell or vertext number

@@ -440,7 +440,7 @@ PETSC_EXTERN PetscErrorCode DMCreate_DA(DM da)
 . comm - The communicator for the `DMDA` object
 
   Output Parameter:
-. da - The `DMDA` object
+. da - the `DMDA` object
 
   Level: advanced
 
