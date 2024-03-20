@@ -1253,7 +1253,7 @@ PetscErrorCode PCASMGetSubKSP(PC pc, PetscInt *n_local, PetscInt *first_local, K
    To set the options on the solvers separate for each block call `PCASMGetSubKSP()`
    and set the options directly on the resulting `KSP` object (you can access its `PC` with `KSPGetPC()`)
 
-   If the `PC` has an associated `DM` then by default ``DMCreateDomainDecomposition()` is used to create the subdomains
+   If the `PC` has an associated `DM`, then, by default, `DMCreateDomainDecomposition()` is used to create the subdomains
 
 .seealso: [](ch_ksp), `PCCreate()`, `PCSetType()`, `PCType`, `PC`, `PCASMType`, `PCCompositeType`,
           `PCBJACOBI`, `PCASMGetSubKSP()`, `PCASMSetLocalSubdomains()`, `PCASMType`, `PCASMGetType()`, `PCASMSetLocalType()`, `PCASMGetLocalType()`
