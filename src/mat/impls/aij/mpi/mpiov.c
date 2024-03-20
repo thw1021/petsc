@@ -1145,7 +1145,7 @@ PetscErrorCode MatCreateSubMatrix_MPIAIJ_All(Mat A, MatCreateSubMatrixOption fla
     }
     PetscCheck(cnt == sendcount, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Corrupted PETSc matrix: nz given %" PetscInt_FMT " actual nz %" PetscInt_FMT, sendcount, cnt);
 
-    /* send column inidices, b->j was zeroed */
+    /* send column indices, b->j was zeroed */
     PetscCallMPI(MPI_Allreduce(MPI_IN_PLACE, b->j, nrecv, MPIU_INT, MPI_SUM, PetscObjectComm((PetscObject)A)));
 
     /*  Assemble the matrix into useable form (note numerical values not yet set) */
