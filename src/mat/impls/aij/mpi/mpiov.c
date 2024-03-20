@@ -1148,7 +1148,7 @@ PetscErrorCode MatCreateSubMatrix_MPIAIJ_All(Mat A, MatCreateSubMatrixOption fla
     /* send column indices, b->j was zeroed */
     PetscCallMPI(MPI_Allreduce(MPI_IN_PLACE, b->j, nrecv, MPIU_INT, MPI_SUM, PetscObjectComm((PetscObject)A)));
 
-    /*  Assemble the matrix into useable form (note numerical values not yet set) */
+    /*  Assemble the matrix into useable form (numerical values not yet set) */
     /* set the b->ilen (length of each row) values */
     PetscCall(PetscArraycpy(b->ilen, lens, A->rmap->N));
     /* set the b->i indices */
@@ -1203,7 +1203,7 @@ PetscErrorCode MatCreateSubMatrix_MPIAIJ_All(Mat A, MatCreateSubMatrixOption fla
     PetscCheck(cnt == sendcount, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Corrupted PETSc matrix: nz given %" PetscInt_FMT " actual nz %" PetscInt_FMT, sendcount, cnt);
 
     /* send values, b->a was zeroed */
-    PetscCallMPI(MPI_Allreduce(MPI_IN_PLACE, b->a, b->nz, MPIU_SCALAR, MPI_SUM, PetscObjectComm((PetscObject)A)));
+    PetscCallMPI(MPI_Allreduce(MPI_IN_PLACE, b->a, b->nz, MPIU_SCALAR, MPIU_SUM, PetscObjectComm((PetscObject)A)));
 
     PetscCall(MatSeqAIJRestoreArrayRead(a->A, &ada));
     PetscCall(MatSeqAIJRestoreArrayRead(a->B, &bda));
