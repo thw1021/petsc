@@ -1097,7 +1097,7 @@ PetscErrorCode MatCreateSubMatrix_MPIAIJ_All(Mat A, MatCreateSubMatrixOption fla
   PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)A), &rank));
   if (scall == MAT_INITIAL_MATRIX) {
     /* Tell every processor the number of nonzeros per row */
-    PetscCall(PetscMalloc1(A->rmap->N, &lens));
+    PetscCall(PetscCalloc1(A->rmap->N, &lens));
     for (i = A->rmap->rstart; i < A->rmap->rend; i++) lens[i] = ad->i[i - A->rmap->rstart + 1] - ad->i[i - A->rmap->rstart] + bd->i[i - A->rmap->rstart + 1] - bd->i[i - A->rmap->rstart];
 
     /* All MPI ranks get the same matrix */
