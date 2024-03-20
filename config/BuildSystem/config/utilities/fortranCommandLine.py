@@ -35,6 +35,7 @@ class Configure(config.base.Configure):
       self.libraries.popLanguage()
       self.addDefine('HAVE_FORTRAN_GET_COMMAND_ARGUMENT',1)
       return
+    raise RuntimeError("Missing GET_COMMAND_ARGUMENT support in Fortran!")
 
     # These are for when the routines are called from C
     # We should unify the naming conventions of these.
