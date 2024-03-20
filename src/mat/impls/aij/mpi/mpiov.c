@@ -1100,7 +1100,7 @@ PetscErrorCode MatCreateSubMatrix_MPIAIJ_All(Mat A, MatCreateSubMatrixOption fla
     PetscCall(PetscCalloc1(A->rmap->N, &lens));
     for (i = A->rmap->rstart; i < A->rmap->rend; i++) lens[i] = ad->i[i - A->rmap->rstart + 1] - ad->i[i - A->rmap->rstart] + bd->i[i - A->rmap->rstart + 1] - bd->i[i - A->rmap->rstart];
 
-    /* All MPI ranks get the same matrix */
+    /* All MPI processes get the same matrix */
     PetscCallMPI(MPI_Allreduce(MPI_IN_PLACE, lens, A->rmap->N, MPIU_INT, MPI_SUM, PetscObjectComm((PetscObject)A)));
 
     /*     Create the sequential matrix of the same type as the local block diagonal  */
@@ -1168,7 +1168,7 @@ PetscErrorCode MatCreateSubMatrix_MPIAIJ_All(Mat A, MatCreateSubMatrixOption fla
     const PetscScalar *ada, *bda, *a_sendbuf, *b_sendbuf;
     MatScalar         *sendbuf;
 
-    /* initialize b->a*/
+    /* initialize b->a */
     PetscCall(PetscArrayzero(b->a, b->nz));
 
     PetscCall(MatSeqAIJGetArrayRead(a->A, &ada));
