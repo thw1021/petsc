@@ -1301,11 +1301,13 @@ static PetscErrorCode PetscLogHandlerView_Default_Info(PetscLogHandler handler, 
   PetscCall(PetscGetProgramName(pname, sizeof(pname)));
   PetscCall(PetscGetDate(date, sizeof(date)));
   PetscCall(PetscGetVersion(version, sizeof(version)));
-  if (size == 1) {
-    PetscCall(PetscFPrintf(comm, fd, "%s on a %s named %s with %d processor, by %s %s\n", pname, arch, hostname, size, username, date));
-  } else {
-    PetscCall(PetscFPrintf(comm, fd, "%s on a %s named %s with %d processors, by %s %s\n", pname, arch, hostname, size, username, date));
-  }
+
+#if defined(PETSC_HAVE_CUDA)
+  if (PetscDeviceCUPMRuntimeArch) PetscCall(PetscFPrintf(comm, fd, "%s on a %s named %s with %d processor(s) and CUDA architecture %d, by %s on %s\n", pname, arch, hostname, size, PetscDeviceCUPMRuntimeArch, username, date));
+  else
+#endif
+    PetscCall(PetscFPrintf(comm, fd, "%s on a %s named %s with %d processor(s), by %s on %s\n", pname, arch, hostname, size, username, date));
+
 #if defined(PETSC_HAVE_OPENMP)
   PetscCall(PetscFPrintf(comm, fd, "Using %" PetscInt_FMT " OpenMP threads\n", PetscNumOMPThreads));
 #endif
