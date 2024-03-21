@@ -264,12 +264,5 @@ MPI linear solver server statistics:
 -mpi_linear_solver_server_view # (source: command line)
 -n 20 # (source: command line)
 -options_view # (source: file)
--pc_gamg_sym_graph true # (source: file)
--pc_gamg_symmetrize_graph true # (source: file)
 -pc_type gamg # (source: file)
 #End of PETSc Option Table entries
-WARNING! There are options you set that were not used!
-WARNING! could be spelling mistake, etc!
-There are 2 unused database options. They are:
-Option left: name:-pc_gamg_sym_graph value: true source: file
-Option left: name:-pc_gamg_symmetrize_graph value: true source: file

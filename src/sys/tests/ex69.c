@@ -28,6 +28,9 @@ int main(int argc, char **args)
 
 /*TEST
 
+   build:
+     requires: openmp
+
    test:
 
 TEST*/

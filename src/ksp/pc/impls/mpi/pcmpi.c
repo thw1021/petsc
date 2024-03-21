@@ -10,7 +10,7 @@
     could be passed through the server.
 
 */
-#include <petsc/private/pcimpl.h>
+#include <petsc/private/pcimpl.h> /*I "petscksp.h" I*/
 #include <petsc/private/kspimpl.h>
 #include <petscts.h>
 #include <petsctao.h>

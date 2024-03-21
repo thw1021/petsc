@@ -90,7 +90,7 @@
 !     test:
 !       requires: defined(PETSC_USE_SINGLE_LIBRARY)
 !       nsize: 3
-!       filter: sed 's?ATOL?RTOL?g' | grep -v HERMITIAN | grep -v "shared memory"
+!       filter: sed 's?ATOL?RTOL?g' | grep -v HERMITIAN | grep -v "shared memory" | grep -v "Mat_0x"
 !       # use the MPI Linear Solver Server
 !       args: -n 20 -mpi_linear_solver_server -mpi_linear_solver_server_view
 !       # controls for the use of PCMPI on a particular system
@@ -102,7 +102,7 @@
 !       suffix: 2
 !       requires: defined(PETSC_USE_SINGLE_LIBRARY)
 !       nsize: 3
-!       filter: sed 's?ATOL?RTOL?g' | grep -v HERMITIAN | grep -v "shared memory"
+!       filter: sed 's?ATOL?RTOL?g' | grep -v HERMITIAN | grep -v "shared memory" | grep -v "Mat_0x"
 !       # use the MPI Linear Solver Server
 !       args: -n 20 -mpi_linear_solver_server -mpi_linear_solver_server_view
 !       # controls for the use of PCMPI on a particular system

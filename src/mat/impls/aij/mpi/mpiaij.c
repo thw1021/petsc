@@ -3926,7 +3926,7 @@ static PetscErrorCode MatMPIAIJSetPreallocationCSR_MPIAIJ(Mat B, const PetscInt 
 
   for (i = 0; i < m; i++) {
     ii = i + rstart;
-    PetscCall(MatSetValues_MPIAIJ(B, 1, &ii, Ii[i + 1] - Ii[i], PetscSafePointerPlusOffset(J, Ii[i] - irstart), PetscSafePointerPlusOffset(v, Ii[i] -irstart), INSERT_VALUES));
+    PetscCall(MatSetValues_MPIAIJ(B, 1, &ii, Ii[i + 1] - Ii[i], PetscSafePointerPlusOffset(J, Ii[i] - irstart), PetscSafePointerPlusOffset(v, Ii[i] - irstart), INSERT_VALUES));
   }
   nooffprocentries    = B->nooffprocentries;
   B->nooffprocentries = PETSC_TRUE;

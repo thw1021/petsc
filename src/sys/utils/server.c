@@ -46,14 +46,14 @@ PetscErrorCode PCMPIServerAddressesFinalize(void)
 {
   PetscFunctionBegin;
 #if defined(PETSC_HAVE_SHARED_MEMORY)
-    PCMPIServerAllocation next = allocations, previous = NULL;
+  PCMPIServerAllocation next = allocations, previous = NULL;
 
-    while (next) {
-      PetscCheck(!shmctl(next->shmid, IPC_RMID, NULL), PETSC_COMM_SELF, PETSC_ERR_SYS, "Unable to free shared memory key %d shmid %d %s", next->shmkey, next->shmid, strerror(errno));
-      previous = next;
-      next = next->next;
-      PetscCall(PetscFree(previous));
-    }
+  while (next) {
+    PetscCheck(!shmctl(next->shmid, IPC_RMID, NULL), PETSC_COMM_SELF, PETSC_ERR_SYS, "Unable to free shared memory key %d shmid %d %s", next->shmkey, next->shmid, strerror(errno));
+    previous = next;
+    next     = next->next;
+    PetscCall(PetscFree(previous));
+  }
 #endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -263,7 +263,7 @@ PetscErrorCode PCMPIServerAllocateArray(size_t sz, size_t asz, void **addr)
     PetscCheck(allocation->shmid != -1, PETSC_COMM_SELF, PETSC_ERR_LIB, "Unable to schmget() of size %d with key %d %s", (int)allocation->sz, allocation->shmkey, strerror(errno));
     allocation->addr = shmat(allocation->shmid, (void *)0, 0);
     PetscCheck(allocation->addr, PETSC_COMM_SELF, PETSC_ERR_LIB, "Unable to shmat() of shmid %d %s", (int)allocation->shmid, strerror(errno));
-    PetscCheck((uint64_t) allocation->addr != 0xffffffffffffffff,PETSC_COMM_SELF, PETSC_ERR_LIB, "shmat() of shmid %d returned 0xffffffffffffffff %s", (int)allocation->shmid, strerror(errno));
+    PetscCheck((uint64_t)allocation->addr != 0xffffffffffffffff, PETSC_COMM_SELF, PETSC_ERR_LIB, "shmat() of shmid %d returned 0xffffffffffffffff %s", (int)allocation->shmid, strerror(errno));
 
     if (!allocations) allocations = allocation;
     else {

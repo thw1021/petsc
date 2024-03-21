@@ -1080,10 +1080,10 @@ PetscErrorCode KSPSolve(KSP ksp, Vec b, Vec x)
   PetscCall(KSPSolve_Private(ksp, b, x));
   PetscCall(PetscObjectTypeCompare((PetscObject)ksp->pc, PCMPI, &isPCMPI));
   if (PCMPIServerActive && isPCMPI) {
-    KSP                subksp;
+    KSP subksp;
 
-    PetscCall(PCMPIGetKSP(ksp->pc,&subksp));
-    ksp->its = subksp->its;
+    PetscCall(PCMPIGetKSP(ksp->pc, &subksp));
+    ksp->its    = subksp->its;
     ksp->reason = subksp->reason;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
