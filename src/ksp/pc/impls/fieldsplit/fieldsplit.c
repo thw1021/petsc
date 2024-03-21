@@ -3159,7 +3159,7 @@ PetscErrorCode PCFieldSplitSetDetectSaddlePoint(PC pc, PetscBool flg)
      to define a split by an arbitrary collection of entries.
 
       If no splits are set, the default is used. If a `DM` is associated with the `PC` and it supports
-      `DMCreateFieldDecomposition()`, then that is used for the default. Otherwis,e the splits are defined by entries strided by bs,
+      `DMCreateFieldDecomposition()`, then that is used for the default. Otherwise, the splits are defined by entries strided by bs,
       beginning at 0 then 1, etc to bs-1. The block size can be set with `PCFieldSplitSetBlockSize()`,
       if this is not called the block size defaults to the blocksize of the second matrix passed
       to `KSPSetOperators()`/`PCSetOperators()`.
