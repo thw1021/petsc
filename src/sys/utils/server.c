@@ -29,7 +29,7 @@ typedef struct {
 #endif
 
 /*@C
-  PCMPIServerAddressesFinalizes - frees any shared memory that was allocated by `PCMPIServerAllocateArray()` but
+  PCMPIServerAddressesFinalize - frees any shared memory that was allocated by `PCMPIServerAllocateArray()` but
   not deallocated with `PCMPIServerDeallocateArray()`
 
   Level: developer
@@ -40,7 +40,7 @@ typedef struct {
 
   If the program crashes outstanding shared memory allocations may remain.
 
-.seealso: `PCMPIServerAllocateArray()`, `PCMPIServerDeallocateArray()`, `PCMPIServerAllocateArray()`, `PCMPIServerUnmapAddresses()`
+.seealso: `PCMPIServerAllocateArray()`, `PCMPIServerDeallocateArray()`, `PCMPIServerUnmapAddresses()`
 @*/
 PetscErrorCode PCMPIServerAddressesFinalize(void)
 {

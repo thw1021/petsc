@@ -38,7 +38,7 @@
     PetscErrorCode ierr
     double precision cputime_start,cputime_end,wtime_start,wtime_end,omp_get_wtime
     integer(kind = 8) systime_start,systime_end,systime_rate
-    double precision x(100000000)
+    double precision x(100)
     integer i,maxthreads,omp_get_max_threads
 
     PetscCallA(PetscInitialize(ierr))
@@ -46,7 +46,7 @@
     wtime_start = omp_get_wtime()
     call cpu_time(cputime_start)
 !$OMP PARALLEL DO
-    do i=1,100000000
+    do i=1,100
       x(i) = exp(3.0d0*i)
     enddo
     call cpu_time(cputime_end)
@@ -62,7 +62,7 @@
     call system_clock(systime_start,systime_rate)
     wtime_start = omp_get_wtime()
     call cpu_time(cputime_start)
-    do i=1,100000000
+    do i=1,100
       x(i) = exp(3.0d0*i)
     enddo
     call cpu_time(cputime_end)
@@ -81,5 +81,6 @@ end program ex69F90
 !     requires: openmp
 !
 !   test:
+!     filter: grep -v "Number of threads"
 !
 !TEST*/

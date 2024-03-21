@@ -1,104 +1,30 @@
     Residual norms for  solve.
-    0 KSP Residual norm 1.158677524300e+02 
-    1 KSP Residual norm 4.216999980011e+00 
-    2 KSP Residual norm 8.278646554890e-01 
-    3 KSP Residual norm 4.449711972207e-02 
-    4 KSP Residual norm 2.946487799686e-03 
-    5 KSP Residual norm 1.761314070387e-04 
-    6 KSP Residual norm 2.192401290341e-05 
-    7 KSP Residual norm 1.598151121082e-07 
-    8 KSP Residual norm 2.799002343469e-14 
-  Linear  solve converged due to CONVERGED_RTOL iterations 8
+    0 KSP Residual norm 1.476279106402e+02
+    1 KSP Residual norm 3.025158182641e-14
+  Linear  solve converged due to CONVERGED_RTOL iterations 1
 KSP Object: () 1 MPI process
   type: gmres
     restart=30, using Classical (unmodified) Gram-Schmidt Orthogonalization with no iterative refinement
     happy breakdown tolerance 1e-30
-  maximum iterations=100, initial guess is zero
-  tolerances:  relative=1e-10, absolute=1e-50, divergence=10000.
+  maximum iterations=10000, initial guess is zero
+  tolerances: relative=1e-05, absolute=1e-50, divergence=10000.
   left preconditioning
   using PRECONDITIONED norm type for convergence test
 PC Object: () 1 MPI process
-  type: gamg
-    type is MULTIPLICATIVE, levels=2 cycles=v
-      Cycles per PCApply=1
-      Using externally compute Galerkin coarse grid matrices
-      GAMG specific options
-        Threshold for dropping small values in graph on each level =   -1.   -1.  
-        Threshold scaling factor for each level not specified = 1.
-        AGG specific options
-          Number of levels of aggressive coarsening 1
-          Square graph aggressive coarsening
-          Number smoothing steps 1
-        Complexity:    grid = 1.25    operator = 1.23214
-  Coarse grid solver -- level 0 -------------------------------
-    KSP Object: (mg_coarse_) 1 MPI process
-      type: preonly
-      maximum iterations=10000, initial guess is zero
-      tolerances:  relative=1e-05, absolute=1e-50, divergence=10000.
-      left preconditioning
-      using NONE norm type for convergence test
-    PC Object: (mg_coarse_) 1 MPI process
-      type: bjacobi
-        number of blocks = 1
-        Local solver information for first block is in the following KSP and PC objects on rank 0:
-        Use -mg_coarse_ksp_view ::ascii_info_detail to display information for all blocks
-        KSP Object: (mg_coarse_sub_) 1 MPI process
-          type: preonly
-          maximum iterations=1, initial guess is zero
-          tolerances:  relative=1e-05, absolute=1e-50, divergence=10000.
-          left preconditioning
-          using NONE norm type for convergence test
-        PC Object: (mg_coarse_sub_) 1 MPI process
-          type: lu
-            out-of-place factorization
-            tolerance for zero pivot 2.22045e-14
-            using diagonal shift on blocks to prevent zero pivot [INBLOCKS]
-            matrix ordering: nd
-            factor fill ratio given 5., needed 1.15385
-              Factored matrix follows:
-                Mat Object: (mg_coarse_sub_) 1 MPI process
-                  type: seqaij
-                  rows=5, cols=5
-                  package used to perform factorization: petsc
-                  total: nonzeros=15, allocated nonzeros=15
-                    using I-node routines: found 4 nodes, limit used is 5
-          linear system matrix = precond matrix:
-          Mat Object: (mg_coarse_sub_) 1 MPI process
-            type: seqaij
-            rows=5, cols=5
-            total: nonzeros=13, allocated nonzeros=13
-            total number of mallocs used during MatSetValues calls=0
-              not using I-node routines
-      linear system matrix = precond matrix:
-      Mat Object: (mg_coarse_sub_) 1 MPI process
-        type: seqaij
-        rows=5, cols=5
-        total: nonzeros=13, allocated nonzeros=13
-        total number of mallocs used during MatSetValues calls=0
-          not using I-node routines
-  Down solver (pre-smoother) on level 1 -------------------------------
-    KSP Object: (mg_levels_1_) 1 MPI process
-      type: chebyshev
-        Chebyshev polynomial of first kind
-        eigenvalue targets used: min 0.197388, max 2.17127
-        eigenvalues provided (min 0.0191687, max 1.97388) with transform: [0. 0.1; 0. 1.1]
-      maximum iterations=2, nonzero initial guess
-      tolerances:  relative=1e-05, absolute=1e-50, divergence=10000.
-      left preconditioning
-      using NONE norm type for convergence test
-    PC Object: (mg_levels_1_) 1 MPI process
-      type: jacobi
-        type DIAGONAL
-      linear system matrix = precond matrix:
-      Mat Object: Mat_0x843c90_0 1 MPI process
-        type: seqaij
-        rows=20, cols=20
-        total: nonzeros=56, allocated nonzeros=56
-        total number of mallocs used during MatSetValues calls=0
-          not using I-node routines
-  Up solver (post-smoother) same as down solver (pre-smoother)
+  type: ilu
+    out-of-place factorization
+    0 levels of fill
+    tolerance for zero pivot 2.22045e-14
+    matrix ordering: natural
+    factor fill ratio given 1., needed 1.
+      Factored matrix follows:
+        Mat Object: () 1 MPI process
+          type: seqaij
+          rows=20, cols=20
+          package used to perform factorization: petsc
+          total: nonzeros=56, allocated nonzeros=56
+            not using I-node routines
   linear system matrix = precond matrix:
-  Mat Object: Mat_0x843c90_0 1 MPI process
     type: seqaij
     rows=20, cols=20
     total: nonzeros=56, allocated nonzeros=56
@@ -107,7 +33,7 @@ PC Object: () 1 MPI process
 KSP Object: (mpi_linear_solver_server_) 1 MPI process
   type: preonly
   maximum iterations=10000, initial guess is zero
-  tolerances:  relative=1e-05, absolute=1e-50, divergence=10000.
+  tolerances: relative=1e-05, absolute=1e-50, divergence=10000.
   left preconditioning
   using NONE norm type for convergence test
 PC Object: (mpi_linear_solver_server_) 1 MPI process
@@ -116,115 +42,38 @@ PC Object: (mpi_linear_solver_server_) 1 MPI process
   Desired minimum number of nonzeros per rank for MPI parallel solve 10000
   *** Use -mpi_linear_solver_server_view to statistics on all the solves ***
   linear system matrix = precond matrix:
-  Mat Object: Mat_0x843c90_0 1 MPI process
     type: seqaij
     rows=20, cols=20
     total: nonzeros=56, allocated nonzeros=56
     total number of mallocs used during MatSetValues calls=0
       not using I-node routines
     Residual norms for  solve.
-    0 KSP Residual norm 2.490953482658e+00 
-    1 KSP Residual norm 2.361489021524e-01 
-    2 KSP Residual norm 4.464701934877e-02 
-    3 KSP Residual norm 6.185654452421e-03 
-    4 KSP Residual norm 6.839901521645e-04 
-    5 KSP Residual norm 6.656041284549e-05 
-    6 KSP Residual norm 6.971890128190e-06 
-    7 KSP Residual norm 6.293597213631e-07 
-    8 KSP Residual norm 2.679496115699e-08 
-    9 KSP Residual norm 8.406935680345e-10 
-   10 KSP Residual norm 6.033449409594e-16 
-  Linear  solve converged due to CONVERGED_RTOL iterations 10
+    0 KSP Residual norm 2.627679687191e+00
+    1 KSP Residual norm 1.786480530479e-16
+  Linear  solve converged due to CONVERGED_RTOL iterations 1
 KSP Object: () 1 MPI process
   type: gmres
     restart=30, using Classical (unmodified) Gram-Schmidt Orthogonalization with no iterative refinement
     happy breakdown tolerance 1e-30
-  maximum iterations=100, initial guess is zero
-  tolerances:  relative=1e-10, absolute=1e-50, divergence=10000.
+  maximum iterations=10000, initial guess is zero
+  tolerances: relative=1e-05, absolute=1e-50, divergence=10000.
   left preconditioning
   using PRECONDITIONED norm type for convergence test
 PC Object: () 1 MPI process
-  type: gamg
-    type is MULTIPLICATIVE, levels=2 cycles=v
-      Cycles per PCApply=1
-      Using externally compute Galerkin coarse grid matrices
-      GAMG specific options
-        Threshold for dropping small values in graph on each level =   -1.   -1.  
-        Threshold scaling factor for each level not specified = 1.
-        AGG specific options
-          Number of levels of aggressive coarsening 1
-          Square graph aggressive coarsening
-          Number smoothing steps 1
-        Complexity:    grid = 1.25    operator = 1.23214
-  Coarse grid solver -- level 0 -------------------------------
-    KSP Object: (mg_coarse_) 1 MPI process
-      type: preonly
-      maximum iterations=10000, initial guess is zero
-      tolerances:  relative=1e-05, absolute=1e-50, divergence=10000.
-      left preconditioning
-      using NONE norm type for convergence test
-    PC Object: (mg_coarse_) 1 MPI process
-      type: bjacobi
-        number of blocks = 1
-        Local solver information for first block is in the following KSP and PC objects on rank 0:
-        Use -mg_coarse_ksp_view ::ascii_info_detail to display information for all blocks
-        KSP Object: (mg_coarse_sub_) 1 MPI process
-          type: preonly
-          maximum iterations=1, initial guess is zero
-          tolerances:  relative=1e-05, absolute=1e-50, divergence=10000.
-          left preconditioning
-          using NONE norm type for convergence test
-        PC Object: (mg_coarse_sub_) 1 MPI process
-          type: lu
-            out-of-place factorization
-            tolerance for zero pivot 2.22045e-14
-            using diagonal shift on blocks to prevent zero pivot [INBLOCKS]
-            matrix ordering: nd
-            factor fill ratio given 5., needed 1.15385
-              Factored matrix follows:
-                Mat Object: (mg_coarse_sub_) 1 MPI process
-                  type: seqaij
-                  rows=5, cols=5
-                  package used to perform factorization: petsc
-                  total: nonzeros=15, allocated nonzeros=15
-                    using I-node routines: found 4 nodes, limit used is 5
-          linear system matrix = precond matrix:
-          Mat Object: (mg_coarse_sub_) 1 MPI process
-            type: seqaij
-            rows=5, cols=5
-            total: nonzeros=13, allocated nonzeros=13
-            total number of mallocs used during MatSetValues calls=0
-              not using I-node routines
-      linear system matrix = precond matrix:
-      Mat Object: (mg_coarse_sub_) 1 MPI process
-        type: seqaij
-        rows=5, cols=5
-        total: nonzeros=13, allocated nonzeros=13
-        total number of mallocs used during MatSetValues calls=0
-          not using I-node routines
-  Down solver (pre-smoother) on level 1 -------------------------------
-    KSP Object: (mg_levels_1_) 1 MPI process
-      type: chebyshev
-        Chebyshev polynomial of first kind
-        eigenvalue targets used: min 0.197388, max 2.17127
-        eigenvalues provided (min 0.0191687, max 1.97388) with transform: [0. 0.1; 0. 1.1]
-      maximum iterations=2, nonzero initial guess
-      tolerances:  relative=1e-05, absolute=1e-50, divergence=10000.
-      left preconditioning
-      using NONE norm type for convergence test
-    PC Object: (mg_levels_1_) 1 MPI process
-      type: jacobi
-        type DIAGONAL
-      linear system matrix = precond matrix:
-      Mat Object: Mat_0x843c90_0 1 MPI process
-        type: seqaij
-        rows=20, cols=20
-        total: nonzeros=56, allocated nonzeros=56
-        total number of mallocs used during MatSetValues calls=0
-          not using I-node routines
-  Up solver (post-smoother) same as down solver (pre-smoother)
+  type: ilu
+    out-of-place factorization
+    0 levels of fill
+    tolerance for zero pivot 2.22045e-14
+    matrix ordering: natural
+    factor fill ratio given 1., needed 1.
+      Factored matrix follows:
+        Mat Object: () 1 MPI process
+          type: seqaij
+          rows=20, cols=20
+          package used to perform factorization: petsc
+          total: nonzeros=56, allocated nonzeros=56
+            not using I-node routines
   linear system matrix = precond matrix:
-  Mat Object: Mat_0x843c90_0 1 MPI process
     type: seqaij
     rows=20, cols=20
     total: nonzeros=56, allocated nonzeros=56
@@ -233,7 +82,7 @@ PC Object: () 1 MPI process
 KSP Object: (mpi_linear_solver_server_) 1 MPI process
   type: preonly
   maximum iterations=10000, initial guess is zero
-  tolerances:  relative=1e-05, absolute=1e-50, divergence=10000.
+  tolerances: relative=1e-05, absolute=1e-50, divergence=10000.
   left preconditioning
   using NONE norm type for convergence test
 PC Object: (mpi_linear_solver_server_) 1 MPI process
@@ -242,7 +91,6 @@ PC Object: (mpi_linear_solver_server_) 1 MPI process
   Desired minimum number of nonzeros per rank for MPI parallel solve 10000
   *** Use -mpi_linear_solver_server_view to statistics on all the solves ***
   linear system matrix = precond matrix:
-  Mat Object: Mat_0x843c90_0 1 MPI process
     type: seqaij
     rows=20, cols=20
     total: nonzeros=56, allocated nonzeros=56
@@ -250,19 +98,4 @@ PC Object: (mpi_linear_solver_server_) 1 MPI process
       not using I-node routines
 MPI linear solver server statistics:
     Ranks        KSPSolve()s     Mats        KSPs       Avg. Size      Avg. Its
-  Sequential         2                         1            20           9
-#PETSc Option Table entries:
--ksp_converged_reason # (source: command line)
--ksp_max_it 100 # (source: file)
--ksp_monitor # (source: command line)
--ksp_reuse_preconditioner # (source: file)
--ksp_rtol 1.e-10 # (source: file)
--ksp_type gmres # (source: file)
--ksp_view # (source: command line)
--mpi_linear_solver_server # (source: command line)
--mpi_linear_solver_server_ksp_view # (source: command line)
--mpi_linear_solver_server_view # (source: command line)
--n 20 # (source: command line)
--options_view # (source: file)
--pc_type gamg # (source: file)
-#End of PETSc Option Table entries
+  Sequential         2                         1            20           1
