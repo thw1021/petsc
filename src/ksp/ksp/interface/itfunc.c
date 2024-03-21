@@ -1070,12 +1070,22 @@ static PetscErrorCode KSPSolve_Private(KSP ksp, Vec b, Vec x)
 @*/
 PetscErrorCode KSPSolve(KSP ksp, Vec b, Vec x)
 {
+  PetscBool isPCMPI;
+
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
   if (b) PetscValidHeaderSpecific(b, VEC_CLASSID, 2);
   if (x) PetscValidHeaderSpecific(x, VEC_CLASSID, 3);
   ksp->transpose_solve = PETSC_FALSE;
   PetscCall(KSPSolve_Private(ksp, b, x));
+  PetscCall(PetscObjectTypeCompare((PetscObject)ksp->pc, PCMPI, &isPCMPI));
+  if (PCMPIServerActive && isPCMPI) {
+    KSP subksp;
+
+    PetscCall(PCMPIGetKSP(ksp->pc, &subksp));
+    ksp->its    = subksp->its;
+    ksp->reason = subksp->reason;
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
