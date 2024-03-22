@@ -340,6 +340,49 @@ int main(int argc, char **argv)
 /*TEST
 
   test:
+    suffix:2d_rt0_tri
+    requires: triangle
+    args: -sol_type linear -dmsnes_check 0.001 \
+          -potential_petscspace_degree 0 \
+          -potential_petscdualspace_lagrange_continuity 0 \
+          -field_petscspace_type ptrimmed \
+          -field_petscspace_components 2 \
+          -field_petscspace_ptrimmed_form_degree -1 \
+          -field_petscdualspace_order 1 \
+          -field_petscdualspace_form_degree -1 \
+          -field_petscdualspace_lagrange_trimmed true \
+          -field_petscfe_default_quadrature_order 2
+
+  test:
+    suffix:2d_rt0_quad
+    requires: triangle
+    args: -dm_plex_simplex 0 -sol_type linear -dmsnes_check 0.001 \
+          -potential_petscspace_degree 0 \
+          -potential_petscdualspace_lagrange_continuity 0 \
+          -field_petscspace_degree 1 \
+          -field_petscspace_type sum \
+          -field_petscspace_variables 2 \
+          -field_petscspace_components 2 \
+          -field_petscspace_sum_spaces 2 \
+          -field_petscspace_sum_concatenate true \
+          -field_sumcomp_0_petscspace_variables 2 \
+          -field_sumcomp_0_petscspace_type tensor \
+          -field_sumcomp_0_petscspace_tensor_spaces 2 \
+          -field_sumcomp_0_petscspace_tensor_uniform false \
+          -field_sumcomp_0_tensorcomp_0_petscspace_degree 1 \
+          -field_sumcomp_0_tensorcomp_1_petscspace_degree 0 \
+          -field_sumcomp_1_petscspace_variables 2 \
+          -field_sumcomp_1_petscspace_type tensor \
+          -field_sumcomp_1_petscspace_tensor_spaces 2 \
+          -field_sumcomp_1_petscspace_tensor_uniform false \
+          -field_sumcomp_1_tensorcomp_0_petscspace_degree 0 \
+          -field_sumcomp_1_tensorcomp_1_petscspace_degree 1 \
+          -field_petscdualspace_form_degree -1 \
+          -field_petscdualspace_order 1 \
+          -field_petscdualspace_lagrange_trimmed true \
+          -field_petscfe_default_quadrature_order 2
+
+  test:
     suffix: 2d_bdm1_p0
     requires: triangle
     args: -sol_type linear \
