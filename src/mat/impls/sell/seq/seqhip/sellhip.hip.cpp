@@ -975,6 +975,19 @@ PETSC_INTERN PetscErrorCode MatConvert_SeqSELL_SeqSELLHIP(Mat B)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*MC
+  MatCreate_SeqSELLHIP - MATSELLHIP = "(seq)sellhip" - A matrix type to be used for sparse matrices on AMD GPUs.
+
+  Options Database Keys:
++  -mat_type seqsellhip - sets the matrix type to "seqsellhip" during a call to `MatSetFromOptions()`
+.  -mat_sell_spmv_hip_kernel - selects a spmv kernel for MatSELLHIP
+-  -mat_sell_spmv_hip_blocky - sets the y dimension of the block size of the spmv kernels. These kernels use a 2D block with the x dimension equal to the wrap size (normally 64 for AMD GPUs)
+
+  Level: beginner
+
+.seealso: [](ch_matrices), `Mat`, `MATSELLHIP`
+M*/
+
 PETSC_EXTERN PetscErrorCode MatCreate_SeqSELLHIP(Mat B)
 {
   PetscFunctionBegin;
