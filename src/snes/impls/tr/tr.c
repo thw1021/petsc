@@ -317,7 +317,7 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
   SNES_NEWTONTR            *neP = (SNES_NEWTONTR *)snes->data;
   Vec                       X, F, Y, G, W, GradF, YU;
   PetscInt                  maxits, lits;
-  PetscReal                 rho, fnorm, gnorm = 0.0, xnorm = 0.0, delta, ynorm;
+  PetscReal                 rho, fnorm, gnorm = 0.0, delta, ynorm;
   PetscReal                 deltaM, fk, fkp1, deltaqm, gTy, yTHy;
   PetscReal                 auk, gfnorm, ycnorm, gTBg, objmin = 0.0;
   KSP                       ksp;
@@ -366,7 +366,7 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
 
   PetscCall(VecNorm(F, NORM_2, &fnorm)); /* fnorm <- || F || */
   SNESCheckFunctionNorm(snes, fnorm);
-  PetscCall(VecNorm(X, NORM_2, &xnorm)); /* xnorm <- || X || */
+  PetscCall(VecNorm(X, NORM_2, &snes->xnorm)); /* xnorm <- || X || */
 
   PetscCall(PetscObjectSAWsTakeAccess((PetscObject)snes));
   snes->norm = fnorm;
@@ -378,7 +378,7 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
 
   /* test convergence */
   rho_satisfied = PETSC_FALSE;
-  PetscCall(SNESConverged(snes, 0, 0.0, 0.0, fnorm));
+  PetscCall(SNESConverged(snes, 0, snes->xnorm, 0.0, fnorm));
   PetscCall(SNESMonitor(snes, 0, fnorm));
   if (snes->reason) PetscFunctionReturn(PETSC_SUCCESS);
 
@@ -552,8 +552,8 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
       rho_satisfied = PETSC_FALSE;
       PetscCall(PetscInfo(snes, "Trying again in smaller region\n"));
       /* check to see if progress is hopeless */
-      PetscCall(SNESTR_Converged_Private(snes, snes->iter, xnorm, ynorm, fnorm, &snes->reason, snes->cnvP));
-      if (!snes->reason) PetscCall(SNESConverged(snes, snes->iter, xnorm, ynorm, fnorm));
+      PetscCall(SNESTR_Converged_Private(snes, snes->iter, snes->xnorm, ynorm, fnorm, &snes->reason, snes->cnvP));
+      if (!snes->reason) PetscCall(SNESConverged(snes, snes->iter, snes->xnorm, ynorm, fnorm));
       if (snes->reason == SNES_CONVERGED_SNORM_RELATIVE) snes->reason = SNES_DIVERGED_TR_DELTA;
       snes->numFailures++;
       /* We're not progressing, so return with the current iterate */
@@ -573,14 +573,13 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
       PetscCall(PetscObjectSAWsTakeAccess((PetscObject)snes));
       snes->iter++;
       snes->norm  = fnorm;
-      snes->xnorm = xnorm;
       snes->ynorm = ynorm;
       PetscCall(PetscObjectSAWsGrantAccess((PetscObject)snes));
       PetscCall(SNESLogConvergenceHistory(snes, snes->norm, lits));
 
       /* Test for convergence, xnorm = || X || */
-      PetscCall(VecNorm(X, NORM_2, &xnorm));
-      PetscCall(SNESConverged(snes, snes->iter, xnorm, ynorm, fnorm));
+      PetscCall(VecNorm(X, NORM_2, &snes->xnorm));
+      PetscCall(SNESConverged(snes, snes->iter, snes->xnorm, ynorm, fnorm));
       PetscCall(SNESMonitor(snes, snes->iter, snes->norm));
       if (snes->reason) break;
     }
