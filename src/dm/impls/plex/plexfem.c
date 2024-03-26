@@ -276,6 +276,59 @@ static PetscErrorCode DMPlexProjectRigidBody_Private(PetscInt dim, PetscReal t, 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode DMPlexProjectCoordinates_Private(PetscInt dim, PetscReal t, const PetscReal X[], PetscInt Nc, PetscScalar *mode, void *ctx)
+{
+  PetscFunctionBegin;
+  PetscCheck(Nc == dim, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Dimension %" PetscInt_FMT " does not match number of field components %" PetscInt_FMT, dim, Nc);
+  for (PetscInt i = 0; i < dim; i++) mode[i] = X[i];
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static void DMPlexProjectDisplacementRigidBody_Private(PetscInt dim, PetscInt Nf, PetscInt _Nf_aux, const PetscInt uOff[], const PetscInt _uOff_x[], const PetscScalar u[], const PetscScalar _u_t[], const PetscScalar _u_x[], const PetscInt _aOff[], const PetscInt _aOff_x[], const PetscScalar _a[], const PetscScalar _a_t[], const PetscScalar _a_x[], PetscReal t, const PetscReal X[], PetscInt _numConstants, const PetscScalar _constants[], PetscScalar *mode, PetscInt d)
+{
+  PetscFunctionBegin;
+  for (PetscInt i = 0; i < dim; i++) mode[i] = 0.;
+  if (d < dim) {
+    mode[d] = 1.; /* Translation along axis d */
+  } else {
+    for (PetscInt f = 0; f < Nf; f++) {
+      PetscBool any_nonzero = PETSC_FALSE;
+
+      if (uOff[f + 1] - uOff[f] != dim) continue;
+      for (PetscInt i = 0; i < dim; i++) {
+        if (u[uOff[f] + i] != 0.0) {
+          any_nonzero = PETSC_TRUE;
+          break;
+        }
+      }
+      if (any_nonzero) {
+        PetscInt  ctx[2];
+        PetscReal xyz[3];
+
+        ctx[0] = dim;
+        ctx[1] = d;
+        for (PetscInt d = 0; d < dim; d++) xyz[d] = PetscRealPart(u[uOff[f] + d]);
+        PetscCallAbort(PETSC_COMM_SELF, DMPlexProjectRigidBody_Private(dim, t, xyz, dim, mode, (void *)ctx));
+        break;
+      }
+    }
+  }
+  PetscFunctionReturnVoid();
+}
+
+#define DMPLEX_INSTANTIATE_DISPLACEMENT_RIGID_BODY(d) \
+  static void DMPlexProjectDisplacementRigidBody_Private_##d(PetscInt dim, PetscInt Nf, PetscInt Nf_aux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal X[], PetscInt numConstants, const PetscScalar constants[], PetscScalar *mode) \
+  { \
+    DMPlexProjectDisplacementRigidBody_Private(dim, Nf, Nf_aux, uOff, uOff_x, u, u_t, u_x, aOff, aOff_x, a, a_t, a_x, t, X, numConstants, constants, mode, d); \
+  }
+
+DMPLEX_INSTANTIATE_DISPLACEMENT_RIGID_BODY(0)
+DMPLEX_INSTANTIATE_DISPLACEMENT_RIGID_BODY(1)
+DMPLEX_INSTANTIATE_DISPLACEMENT_RIGID_BODY(2)
+DMPLEX_INSTANTIATE_DISPLACEMENT_RIGID_BODY(3)
+DMPLEX_INSTANTIATE_DISPLACEMENT_RIGID_BODY(4)
+DMPLEX_INSTANTIATE_DISPLACEMENT_RIGID_BODY(5)
+
 /*@
   DMPlexCreateRigidBody - For the default global section, create rigid body modes by function space interpolation
 
@@ -349,6 +402,101 @@ PetscErrorCode DMPlexCreateRigidBody(DM dm, PetscInt field, MatNullSpace *sp)
   PetscCall(MatNullSpaceCreate(comm, PETSC_FALSE, mmin, mode, sp));
   for (i = 0; i < m; ++i) PetscCall(VecDestroy(&mode[i]));
   PetscCall(PetscFree2(func, ctxs));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  DMPlexCreateDisplacementRigidBody - For the default global section, create rigid body modes for coordinates that have been displaced by one of the fields in a solution vector.
+
+  Collective
+
+  Input Parameters:
++ dm       - the `DM`
+. u_global - Global vector containing the displacements
+- field    - The field number for the field containing the displacements, 0 for the default
+
+  Output Parameter:
+. sp - the null space
+
+  Level: advanced
+
+  Note:
+  This is intended for large-strain mechanics simulations.  For infinitesimal strain problems or for purely Eulerian calculations, use the simpler `DMPlexCreateRigidBody()`.
+
+.seealso: [](ch_unstructured), `DM`, `DMPLEX`, `MatNullSpaceCreate()`, `PCGAMG`, `DMPlexCreateRigidBody()`
+@*/
+PetscErrorCode DMPlexCreateDisplacementRigidBody(DM dm, Vec u_global, PetscInt field, MatNullSpace *sp)
+{
+  PetscErrorCode (**func)(PetscInt, PetscReal, const PetscReal *, PetscInt, PetscScalar *, void *);
+  void (**field_func)(PetscInt, PetscInt, PetscInt, const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], PetscReal, const PetscReal x[], PetscInt, const PetscScalar[], PetscScalar[]);
+  MPI_Comm     comm;
+  Vec          projected_coords_local;
+  Vec          mode_local[6], mode[6];
+  PetscSection section, globalSection;
+  PetscInt     dim, dimEmbed, Nf, n, m, mmin, d, i, j;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
+  PetscValidHeaderSpecific(u_global, VEC_CLASSID, 2);
+  PetscCall(PetscObjectGetComm((PetscObject)dm, &comm));
+  PetscCall(DMGetDimension(dm, &dim));
+  PetscCall(DMGetCoordinateDim(dm, &dimEmbed));
+  PetscCall(DMGetNumFields(dm, &Nf));
+  PetscCheck(!Nf || !(field < 0 || field >= Nf), comm, PETSC_ERR_ARG_OUTOFRANGE, "Field %" PetscInt_FMT " is not in [0, %" PetscInt_FMT ")", field, Nf);
+  PetscCheck(dim <= 3, comm, PETSC_ERR_ARG_OUTOFRANGE, "Cannot compute displacement rigid body modes for spatial dimension %" PetscInt_FMT, dim);
+  if (dim == 1 && Nf < 2) {
+    PetscCall(MatNullSpaceCreate(comm, PETSC_TRUE, 0, NULL, sp));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+  PetscCall(DMGetLocalSection(dm, &section));
+  PetscCall(DMGetGlobalSection(dm, &globalSection));
+  PetscCall(PetscSectionGetConstrainedStorageSize(globalSection, &n));
+  PetscCall(PetscCalloc2(Nf, &func, Nf, &field_func));
+
+  // first project coordinates into the local dofs
+  PetscCall(DMCreateLocalVector(dm, &projected_coords_local));
+  PetscCall(DMPlexInsertBoundaryValues(dm, PETSC_TRUE, projected_coords_local, PETSC_MIN_REAL, NULL, NULL, NULL));
+  PetscCall(DMGlobalToLocal(dm, u_global, INSERT_VALUES, projected_coords_local));
+  func[field] = DMPlexProjectCoordinates_Private;
+  PetscCall(DMProjectFunctionLocal(dm, 0.0, func, NULL, ADD_ALL_VALUES, projected_coords_local));
+  m    = (dim * (dim + 1)) / 2;
+  mmin = PetscMin(m, n);
+  for (i = 0; i < m; ++i) {
+    PetscCall(VecDuplicate(projected_coords_local, &mode_local[i]));
+    PetscCall(VecDuplicate(u_global, &mode[i]));
+  }
+  for (d = 0; d < m; d++) {
+    switch (d) {
+      // clang-format off
+    case 0: field_func[field] = DMPlexProjectDisplacementRigidBody_Private_0; break;
+    case 1: field_func[field] = DMPlexProjectDisplacementRigidBody_Private_1; break;
+    case 2: field_func[field] = DMPlexProjectDisplacementRigidBody_Private_2; break;
+    case 3: field_func[field] = DMPlexProjectDisplacementRigidBody_Private_3; break;
+    case 4: field_func[field] = DMPlexProjectDisplacementRigidBody_Private_4; break;
+    case 5: field_func[field] = DMPlexProjectDisplacementRigidBody_Private_5; break;
+    default: PetscUnreachable();
+      // clang-format on
+    }
+    PetscCall(VecCopy(projected_coords_local, mode_local[d]));
+    PetscCall(DMProjectFieldLocal(dm, 0.0, mode_local[d], field_func, INSERT_ALL_VALUES, mode_local[d]));
+    PetscCall(DMLocalToGlobal(dm, mode_local[d], INSERT_VALUES, mode[d]));
+    PetscCall(VecDestroy(&mode_local[d]));
+  }
+  /* Orthonormalize system */
+  for (i = 0; i < mmin; ++i) {
+    PetscScalar dots[6];
+
+    PetscCall(VecNormalize(mode[i], NULL));
+    PetscCall(VecMDot(mode[i], mmin - i - 1, mode + i + 1, dots + i + 1));
+    for (j = i + 1; j < mmin; ++j) {
+      dots[j] *= -1.0;
+      PetscCall(VecAXPY(mode[j], dots[j], mode[i]));
+    }
+  }
+  PetscCall(MatNullSpaceCreate(comm, PETSC_FALSE, mmin, mode, sp));
+  for (i = 0; i < m; ++i) PetscCall(VecDestroy(&mode[i]));
+  PetscCall(VecDestroy(&projected_coords_local));
+  PetscCall(PetscFree2(func, field_func));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
