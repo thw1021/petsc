@@ -209,6 +209,34 @@ PETSC_EXTERN PetscErrorCode SNESNewtonTRDCGetPreCheck(SNES, PetscErrorCode (**)(
 PETSC_EXTERN PetscErrorCode SNESNewtonTRDCSetPostCheck(SNES, PetscErrorCode (*)(SNES, Vec, Vec, Vec, PetscBool *, PetscBool *, void *), void *ctx);
 PETSC_EXTERN PetscErrorCode SNESNewtonTRDCGetPostCheck(SNES, PetscErrorCode (**)(SNES, Vec, Vec, Vec, PetscBool *, PetscBool *, void *), void **ctx);
 
+/*E
+  SNESJacobianProjectionType - type of projection to perform on linear update systems
+
+  Values:
++ `SNES_JACOBIAN_PROJECT_NONE`             - do not project the problem onto a subspace
+. `SNES_JACOBIAN_PROJECT_FIXED`            - project out the nullspace set with `SNESSetKSPProjection()` at every iteration
+. `SNES_JACOBIAN_PROJECT_UPDATE`           - project out the nullspace set with `SNESSetKSPProjectionUpdate()`
+. `SNES_JACOBIAN_PROJECT_NEARNULLSPACE`    - project out the near nullspace of the Jacobian
+- `SNES_JACOBIAN_PROJECT_PC_NEARNULLSPACE` - project out the near nullspace of the Jacobian preconditioner out of the system
+
+  Level: advanced
+
+.seealso: [](ch_snes), `KSPSetProjections()`, `SNESSetJacobianProjection()`, `SNESComputeJacobianProjection()`
+E*/
+typedef enum {
+  SNES_JACOBIAN_PROJECT_NONE,
+  SNES_JACOBIAN_PROJECT_FIXED,
+  SNES_JACOBIAN_PROJECT_UPDATE,
+  SNES_JACOBIAN_PROJECT_NEARNULLSPACE,
+  SNES_JACOBIAN_PROJECT_PC_NEARNULLSPACE,
+} SNESJacobianProjectionType;
+
+PETSC_EXTERN const char *const SNESJacobianProjectionTypes[];
+
+PETSC_EXTERN PetscErrorCode SNESSetJacobianProjection(SNES, SNESJacobianProjectionType, MatNullSpace, PetscErrorCode (*)(SNES, Vec, MatNullSpace *, void *), void *);
+PETSC_EXTERN PetscErrorCode SNESGetJacobianProjection(SNES, SNESJacobianProjectionType *, MatNullSpace *, PetscErrorCode (**)(SNES, Vec, MatNullSpace *, void *), void **);
+PETSC_EXTERN PetscErrorCode SNESComputeJacobianProjection(SNES, Vec, MatNullSpace *);
+
 PETSC_EXTERN PetscErrorCode SNESGetNonlinearStepFailures(SNES, PetscInt *);
 PETSC_EXTERN PetscErrorCode SNESSetMaxNonlinearStepFailures(SNES, PetscInt);
 PETSC_EXTERN PetscErrorCode SNESGetMaxNonlinearStepFailures(SNES, PetscInt *);
