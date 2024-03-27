@@ -187,9 +187,9 @@ static PetscErrorCode spherical_transformation_offset(PetscInt dim, PetscReal ti
   PetscReal phi   = x[2];
   PetscReal XYZ[3];
 
-  XYZ[0] = r * cos(theta) * cos(phi);
-  XYZ[1] = r * sin(theta) * cos(phi);
-  XYZ[2] = r * sin(phi);
+  XYZ[0] = r * PetscCosReal(theta) * PetscCosReal(phi);
+  XYZ[1] = r * PetscSinReal(theta) * PetscCosReal(phi);
+  XYZ[2] = r * PetscSinReal(phi);
 
   u[0] = XYZ[0] - x[0];
   u[1] = XYZ[1] - x[1];
@@ -205,8 +205,8 @@ static PetscErrorCode polar_transformation_offset_yz(PetscInt dim, PetscReal tim
   PetscReal theta = x[2];
   PetscReal YZ[2];
 
-  YZ[0] = r * cos(theta);
-  YZ[1] = r * sin(theta);
+  YZ[0] = r * PetscCosReal(theta);
+  YZ[1] = r * PetscSinReal(theta);
 
   u[0] = 0;
   u[1] = YZ[0] - x[1];
@@ -444,6 +444,7 @@ int main(int argc, char **argv)
     args: -dm_plex_dim 3 -disp_petscspace_degree 1 -elastMat_petscspace_degree 0 \
           -snes_monitor -snes_converged_reason -snes_rtol 1.e-12 -snes_ksp_ew -snes_ksp_ew_version 1 \
           -ksp_type minres -ksp_minres_qlp -ksp_converged_reason
+    filter: sed -e "s/ iterations *[0-9]\{1,\}//g"
 
     # observe that the full rigid body modes are not in the nullspace until convergence
     test:
@@ -458,4 +459,7 @@ int main(int argc, char **argv)
       suffix: 2
       args: -partial_bcs -dm_plex_simplex 0 -dm_plex_box_faces 2,1,1 -pc_type none -ksp_view_eigenvalues_explicit
 
+    test:
+      suffix: 3
+      args: -dm_plex_box_faces 1,1,1 -pc_type none -ksp_view_eigenvalues_explicit -snes_jacobian_projection_type nearnullspace -snes_view
 TEST*/
