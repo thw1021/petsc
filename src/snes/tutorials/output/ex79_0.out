@@ -1,4 +1,4 @@
-  0 SNES Function norm 2.520250039056e+00 
+  0 SNES Function norm 2.520250039056e+00
   Linear solve converged due to CONVERGED_RTOL iterations 1
 Explicitly computed eigenvalues
 -0.757546 + 0.i
@@ -25,7 +25,7 @@ Explicitly computed eigenvalues
 4.40337 + 0.i
 4.62132 + 0.i
 6.90152 + 0.i
-  1 SNES Function norm 1.062707088125e+00 
+  1 SNES Function norm 1.062707088125e+00
   Linear solve converged due to CONVERGED_RTOL iterations 2
 Explicitly computed eigenvalues
 -0.0862688 + 0.i
@@ -52,7 +52,7 @@ Explicitly computed eigenvalues
 3.35543 + 0.i
 3.62687 + 0.i
 6.18582 + 0.i
-  2 SNES Function norm 4.325515821171e-01 
+  2 SNES Function norm 4.325515821171e-01
   Linear solve converged due to CONVERGED_RTOL iterations 1
 Explicitly computed eigenvalues
 -0.115657 + 0.i
@@ -79,7 +79,7 @@ Explicitly computed eigenvalues
 3.18454 + 0.i
 3.71877 + 0.i
 3.84071 + 0.i
-  3 SNES Function norm 1.239234118263e-01 
+  3 SNES Function norm 1.239234118263e-01
   Linear solve converged due to CONVERGED_RTOL iterations 5
 Explicitly computed eigenvalues
 -0.0267562 + 0.i
@@ -106,7 +106,7 @@ Explicitly computed eigenvalues
 3.07559 + 0.i
 3.63198 + 0.i
 3.67617 + 0.i
-  4 SNES Function norm 5.352424011097e-03 
+  4 SNES Function norm 5.352424011097e-03
   Linear solve converged due to CONVERGED_RTOL iterations 3
 Explicitly computed eigenvalues
 -5.16111e-05 + 0.i
@@ -133,7 +133,7 @@ Explicitly computed eigenvalues
 3.09882 + 0.i
 3.59033 + 0.i
 3.59208 + 0.i
-  5 SNES Function norm 3.406410388640e-04 
+  5 SNES Function norm 3.406410388640e-04
   Linear solve converged due to CONVERGED_RTOL iterations 6
 Explicitly computed eigenvalues
 -1.4361e-05 + 0.i
@@ -160,7 +160,7 @@ Explicitly computed eigenvalues
 3.09885 + 0.i
 3.59058 + 0.i
 3.59076 + 0.i
-  6 SNES Function norm 5.089928410559e-07 
+  6 SNES Function norm 5.089928410559e-07
   Linear solve converged due to CONVERGED_RTOL iterations 9
 Explicitly computed eigenvalues
 -1.53991e-16 + 0.i
@@ -187,7 +187,7 @@ Explicitly computed eigenvalues
 3.09885 + 0.i
 3.59067 + 0.i
 3.59067 + 0.i
-  7 SNES Function norm 7.021101788159e-12 
+  7 SNES Function norm 7.021101788159e-12
   Linear solve converged due to CONVERGED_RTOL iterations 11
 Explicitly computed eigenvalues
 -8.24228e-13 + 0.i
@@ -214,6 +214,6 @@ Explicitly computed eigenvalues
 3.09885 + 0.i
 3.59067 + 0.i
 3.59067 + 0.i
-  8 SNES Function norm 2.978149496640e-16 
+  8 SNES Function norm 2.978149496640e-16
 Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 8
 Number of SNES iterations = 8

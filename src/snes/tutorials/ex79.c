@@ -458,4 +458,7 @@ int main(int argc, char **argv)
       suffix: 2
       args: -partial_bcs -dm_plex_simplex 0 -dm_plex_box_faces 2,1,1 -pc_type none -ksp_view_eigenvalues_explicit
 
+    test:
+      suffix: 3
+      args: -dm_plex_box_faces 1,1,1 -pc_type none -ksp_view_eigenvalues_explicit -snes_jacobian_projection_type nearnullspace -snes_view
 TEST*/
