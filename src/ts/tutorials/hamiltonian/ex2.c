@@ -153,7 +153,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   options->positionDraw           = NULL;
   options->positionDrawSP         = NULL;
   options->twostream              = PETSC_FALSE;
-  options->checkweights            = PETSC_FALSE;
+  options->checkweights           = PETSC_FALSE;
 
   PetscOptionsBegin(comm, "", "Central Orbit Options", "DMSWARM");
   PetscCall(PetscOptionsBool("-error", "Flag to print the error", "ex9.c", options->error, &options->error, NULL));
@@ -267,7 +267,6 @@ static PetscErrorCode SetupContext(DM dm, DM sw, AppCtx *user)
     PetscCall(PetscDrawAxisSetLabels(axis_Pot, "Particles", "x", "potential"));
     PetscCall(PetscDrawSetSave(user->PotDraw, "ex9_phi_spatial.png"));
   }
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -304,9 +303,7 @@ static PetscErrorCode CheckWeights(DM sw)
   PetscFunctionBeginUser;
   PetscCall(DMSwarmGetField(sw, "w_q", NULL, NULL, (void **)&w));
   PetscCall(DMSwarmGetLocalSize(sw, &Np));
-  for (PetscInt p = 0; p < Np; ++p) {
-    PetscCheck(w[p] >= 0.0, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Particle %" PetscInt_FMT " has negative weight %g", p, w[p]);
-  }
+  for (PetscInt p = 0; p < Np; ++p) { PetscCheck(w[p] >= 0.0, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Particle %" PetscInt_FMT " has negative weight %g", p, w[p]); }
   PetscCall(DMSwarmRestoreField(sw, "w_q", NULL, NULL, (void **)&w));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Weights are all positive.\n"));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -851,7 +848,7 @@ PetscErrorCode PetscPDFCosine1D_TwoStream(const PetscReal x[], const PetscReal s
 {
   const PetscReal alpha = scale ? scale[0] : 0.0;
   const PetscReal k     = scale ? scale[1] : 1.;
-  p[0]                  = (1. + alpha*PetscCosReal(k*x[0]));
+  p[0]                  = (1. + alpha * PetscCosReal(k * x[0]));
   return PETSC_SUCCESS;
 }
 
@@ -990,9 +987,10 @@ static PetscErrorCode InitializeParticles_PerturbedWeights(DM sw, AppCtx *user)
 
       const PetscInt p = pidx[cv];
       // Two stream function from 1/2pi v^2 e^(-v^2/2)
-      if (user->twostream) weight_v[p] = 1./(PetscSqrtReal(2*PETSC_PI)) * (((coords_v[0] * PetscExpReal(-PetscSqr(coords_v[0]) / 2.)) - (coords_v[1] * PetscExpReal(-PetscSqr(coords_v[1]) / 2.)))) - 0.5*PetscErfReal(coords_v[0] / PetscSqrtReal(2.)) + 0.5*(PetscErfReal(coords_v[1] / PetscSqrtReal(2.)));
+      if (user->twostream)
+        weight_v[p] = 1. / (PetscSqrtReal(2 * PETSC_PI)) * (((coords_v[0] * PetscExpReal(-PetscSqr(coords_v[0]) / 2.)) - (coords_v[1] * PetscExpReal(-PetscSqr(coords_v[1]) / 2.)))) - 0.5 * PetscErfReal(coords_v[0] / PetscSqrtReal(2.)) + 0.5 * (PetscErfReal(coords_v[1] / PetscSqrtReal(2.)));
       else weight_v[p] = 0.5 * (PetscErfReal(coords_v[1] / PetscSqrtReal(2.)) - PetscErfReal(coords_v[0] / PetscSqrtReal(2.)));
-      
+
       weight[p] = user->totalWeight * weight_v[p] * weight_x[c];
       if (weight[p] > 1.) PetscPrintf(PETSC_COMM_WORLD, "weights: %g, %g, %g\n", user->totalWeight, weight_v[p], weight_x[c]);
       //PetscPrintf(PETSC_COMM_WORLD, "particle %"PetscInt_FMT": %g, weight_v: %g weight_x: %g\n", p, weight[p], weight_v[p], weight_x[p]);
@@ -1124,9 +1122,9 @@ static PetscErrorCode InitializeVelocities_Fake1D(DM sw, AppCtx *user)
 
 static PetscErrorCode CreateSwarm(DM dm, AppCtx *user, DM *sw)
 {
-  PetscReal   v0[2] = {1., 0.};
+  PetscReal v0[2] = {1., 0.};
   //PetscRandom rnd;
-  PetscInt    dim;
+  PetscInt dim;
 
   PetscFunctionBeginUser;
   PetscCall(DMGetDimension(dm, &dim));
@@ -1365,7 +1363,6 @@ static PetscErrorCode ComputeFieldAtParticles_Primal(SNES snes, DM sw, PetscReal
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-
 static PetscErrorCode ComputeFieldAtParticles_Mixed(SNES snes, DM sw, PetscReal E[])
 {
   AppCtx         *user;
@@ -1519,7 +1516,6 @@ static PetscErrorCode ComputeFieldAtParticles_Mixed(SNES snes, DM sw, PetscReal 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-
 static PetscErrorCode ComputeFieldAtParticles(SNES snes, DM sw, PetscReal E[])
 {
   AppCtx  *ctx;
@@ -1549,7 +1545,6 @@ static PetscErrorCode ComputeFieldAtParticles(SNES snes, DM sw, PetscReal E[])
   default:
     SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "No solver for electrostatic model %s", EMTypes[ctx->em]);
   }
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1801,9 +1796,9 @@ static PetscErrorCode DMSwarmTSRedistribute(TS ts)
 }
 
 #if 0
-// send in a random value in "dummy" for the perturbation 
+// send in a random value in "dummy" for the perturbation
 PetscErrorCode stream(PetscInt dim, PetscReal time, const PetscReal dummy[], PetscInt p, PetscScalar v[], void *ctx)
-{ 
+{
   AppCtx*   user = (AppCtx*) ctx;
   PetscReal rand[1], scale[1] = {1.}, point[1];
 
@@ -1821,7 +1816,7 @@ PetscErrorCode line(PetscInt dim, PetscReal time, const PetscReal dummy[], Petsc
   DM        sw, cdm;
   PetscInt  Np;
   PetscReal low[2], high[2];
-  AppCtx*   user = (AppCtx*) ctx;
+  AppCtx   *user = (AppCtx *)ctx;
 
   sw = user->swarm;
   PetscCall(DMSwarmGetCellDM(sw, &cdm));
@@ -1829,7 +1824,7 @@ PetscErrorCode line(PetscInt dim, PetscReal time, const PetscReal dummy[], Petsc
   PetscCall(DMGetLocalBoundingBox(cdm, low, high));
   PetscCall(DMSwarmGetLocalSize(sw, &Np));
   // shift it by h/2 so nothing is initialized directly on a boundary
-  x[0] = ((high[0] - low[0])/Np) * (p + 0.5); 
+  x[0] = ((high[0] - low[0]) / Np) * (p + 0.5);
   x[1] = 0.;
   return PETSC_SUCCESS;
 }
@@ -1849,11 +1844,11 @@ PetscErrorCode line(PetscInt dim, PetscReal time, const PetscReal dummy[], Petsc
 */
 static PetscErrorCode InitializeSolveAndSwarm(TS ts, PetscBool useInitial)
 {
-  DM          sw;
-  Vec         u, gc, gv, gc0, gv0;
-  IS          isx, isv;
-  PetscInt    dim;
-  AppCtx     *user;
+  DM       sw;
+  Vec      u, gc, gv, gc0, gv0;
+  IS       isx, isv;
+  PetscInt dim;
+  AppCtx  *user;
 
   PetscFunctionBeginUser;
   PetscCall(TSGetDM(ts, &sw));
@@ -1959,15 +1954,15 @@ static PetscErrorCode ComputeError(TS ts, Vec U, Vec E)
 
 static PetscErrorCode MigrateParticles(TS ts)
 {
-  DM sw, cdm;
+  DM               sw, cdm;
   const PetscReal *L;
 
   PetscFunctionBeginUser;
   PetscCall(TSGetDM(ts, &sw));
   PetscCall(DMViewFromOptions(sw, NULL, "-migrate_view_pre"));
   {
-    Vec u, gc, gv, position, momentum;
-    IS  isx, isv;
+    Vec        u, gc, gv, position, momentum;
+    IS         isx, isv;
     PetscReal *pos, *mom;
 
     PetscCall(TSGetSolution(ts, &u));
@@ -1981,13 +1976,13 @@ static PetscErrorCode MigrateParticles(TS ts)
     PetscCall(DMSwarmCreateGlobalVectorFromField(sw, "velocity", &gv));
     PetscCall(VecISCopy(u, isx, SCATTER_REVERSE, gc));
     PetscCall(VecISCopy(u, isv, SCATTER_REVERSE, gv));
-    
+
     PetscCall(DMSwarmGetCellDM(sw, &cdm));
     PetscCall(DMGetPeriodicity(cdm, NULL, NULL, &L));
     if ((L[0] || L[1]) >= 0.) {
       PetscReal *x, *v, upper[3], lower[3];
       PetscInt   Np, dim;
-      
+
       PetscCall(DMSwarmGetLocalSize(sw, &Np));
       PetscCall(DMGetDimension(cdm, &dim));
       PetscCall(DMGetBoundingBox(cdm, lower, upper));
@@ -2024,12 +2019,12 @@ static PetscErrorCode MigrateParticles(TS ts)
 
 int main(int argc, char **argv)
 {
-  DM     dm, sw;
-  TS     ts;
-  Vec    u;
+  DM        dm, sw;
+  TS        ts;
+  Vec       u;
   PetscReal dt;
   PetscInt  maxn;
-  AppCtx user;
+  AppCtx    user;
 
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
   PetscCall(ProcessOptions(PETSC_COMM_WORLD, &user));
@@ -2081,7 +2076,7 @@ int main(int argc, char **argv)
 
 /*TEST
 
-   # for viewers 
+   # for viewers
    #-ts_monitor_sp_swarm_phase -ts_monitor_sp_swarm -em_snes_monitor -ts_monitor_sp_swarm_multi_species 0 -ts_monitor_sp_swarm_retain 0
    testset:
      requires: defined(PETSC_HAVE_EXECUTABLE_EXPORT)
