@@ -13,6 +13,9 @@ configure_options = [
   '--download-superlu_dist',
   '--download-metis',
   '--download-parmetis',
+  '--download-hypre',
+  '--download-mfem',
+  '--download-mfem-commit=origin/stefanozampini/petsc-3.21',
   '--download-cmake',  # needed by metis/parmetis
   '--with-strict-petscerrorcode',
 ]
