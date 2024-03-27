@@ -553,9 +553,9 @@ static PetscErrorCode MonitorPositions_2D(TS ts, PetscInt step, PetscReal t, Vec
         if (s[p] == 0) {
           speed = PetscSqrtReal(PetscSqr(v[p * dim]) + PetscSqr(v[p * dim + 1]));
           if (dim == 1 || user->fake_1D) {
-            PetscCall(PetscDrawSPAddPointColorized(user->positionDrawSP, &x[p * dim], &x[p * dim + 1], &speed));
-          } else {
             PetscCall(PetscDrawSPAddPointColorized(user->positionDrawSP, &x[p * dim], &v[p * dim], &speed));
+          } else {
+            PetscCall(PetscDrawSPAddPointColorized(user->positionDrawSP, &x[p * dim], &x[p * dim + 1], &speed));
           }
         } else if (s[p] == 1) {
           PetscCall(PetscDrawSPAddPoint(user->positionDrawSP, &x[p * dim], &v[p * dim]));
