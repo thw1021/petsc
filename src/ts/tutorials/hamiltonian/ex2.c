@@ -2133,7 +2133,7 @@ int main(int argc, char **argv)
              -ksp_gmres_restart 500
     # Recommend -draw_size 500,500
    testset:
-   requires: defined(PETSC_HAVE_EXECUTABLE_EXPORT) double !complex
+     requires: defined(PETSC_HAVE_EXECUTABLE_EXPORT) double !complex
      args: -dm_plex_dim 2 -fake_1D -dm_plex_simplex 0 -dm_plex_box_faces 20,1 -dm_plex_box_lower 0,-1 -dm_plex_box_upper 12.5664,1 \
            -dm_swarm_coordinate_density constant -dm_swarm_num_particles 100 \
            -dm_plex_box_bd periodic,none -periodic -ts_type basicsymplectic -ts_basicsymplectic_type 1\
@@ -2150,7 +2150,7 @@ int main(int argc, char **argv)
    # -dm_plex_box_faces 100,1 -vdm_plex_box_faces 8000 -dm_swarm_num_particles 800000
    # -ts_monitor_sp_swarm_multi_species 0 -ts_monitor_sp_swarm_retain 0 -ts_monitor_sp_swarm_phase 1 -draw_size 500,500
    testset:
-   requires: defined(PETSC_HAVE_EXECUTABLE_EXPORT) double !complex
+     requires: defined(PETSC_HAVE_EXECUTABLE_EXPORT) double !complex
      args: -dm_plex_dim 2 -dm_plex_box_bd periodic,none -dm_plex_simplex 0 -dm_plex_box_faces 10,1 -dm_plex_box_lower 0,-0.5 -dm_plex_box_upper 12.5664,0.5\
            -ts_dt 0.03 -ts_max_time 500 -ts_max_steps 500 -ts_type basicsymplectic -ts_basicsymplectic_type 1\
            -em_snes_atol 1.e-12 -em_snes_error_if_not_converged -em_ksp_error_if_not_converged\
