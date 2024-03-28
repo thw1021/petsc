@@ -955,6 +955,9 @@ PETSC_EXTERN PetscErrorCode KSPSetUseFischerGuess(KSP, PetscInt, PetscInt);
 PETSC_EXTERN PetscErrorCode KSPSetInitialGuessKnoll(KSP, PetscBool);
 PETSC_EXTERN PetscErrorCode KSPGetInitialGuessKnoll(KSP, PetscBool *);
 
+PETSC_EXTERN PetscErrorCode KSPSetProjections(KSP, MatNullSpace, MatNullSpace);
+PETSC_EXTERN PetscErrorCode KSPGetProjections(KSP, MatNullSpace *, MatNullSpace *);
+
 /*E
     MatSchurComplementAinvType - Determines how to approximate the inverse of the (0,0) block in Schur complement preconditioning matrix assembly routines
 

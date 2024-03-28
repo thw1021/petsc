@@ -1424,6 +1424,8 @@ PetscErrorCode KSPReset(KSP ksp)
   PetscCall(VecDestroy(&ksp->vec_sol));
   PetscCall(VecDestroy(&ksp->diagonal));
   PetscCall(VecDestroy(&ksp->truediagonal));
+  PetscCall(MatNullSpaceDestroy(&ksp->left_projection));
+  PetscCall(MatNullSpaceDestroy(&ksp->right_projection));
 
   ksp->setupstage = KSP_SETUP_NEW;
   ksp->nmax       = PETSC_DECIDE;
@@ -3047,5 +3049,68 @@ PetscErrorCode KSPSetUseExplicitTranspose(KSP ksp, PetscBool flg)
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
   PetscValidLogicalCollectiveBool(ksp, flg, 2);
   ksp->transpose.use_explicittranspose = flg;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  KSPSetProjections - Set nullspaces that will be projected out of the system matrix and preconditioner.
+
+  Collective
+
+  Input Parameters:
++ ksp              - the `KSP` context
+. left_projection  - the nullspace of the left projection, or `NULL` if no projection is applied on the left
+- right_projection - the nullspace of the right projection, or `NULL` if no projection is applied on the right
+
+  Level: advanced
+
+  Notes:
+  If $P_L$ is the left projection and $P_R$ is the right projection, adding projections modifies the
+  system of equations solved by `KSPSolve()` from `$Ax = b$ to $P_L A P_R x = b$.  This can be useful, for example,
+  if $A$ is slightly perturbed from a compatible singular system and you would like to "project out" the perturbation (see,
+  for example, `SNESComputeJacobianProjection()`).
+
+  $P_R$ and $P_L$ are not intended to enforce the actual nullspace or adjoint nullspace of $A$: use `MatSetNullSpace()`
+  and `MatSetTransposeNullSpace()` for that.
+
+.seealso: [](ch_ksp), `KSP`, `KSPGetProjections()`, `MatSetNullSpace()`
+@*/
+PetscErrorCode KSPSetProjections(KSP ksp, MatNullSpace left_projection, MatNullSpace right_projection)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
+  if (left_projection) PetscValidHeaderSpecific(left_projection, MAT_NULLSPACE_CLASSID, 2);
+  if (right_projection) PetscValidHeaderSpecific(right_projection, MAT_NULLSPACE_CLASSID, 3);
+  PetscCall(PetscObjectReference((PetscObject)left_projection));
+  PetscCall(PetscObjectReference((PetscObject)right_projection));
+  PetscCall(MatNullSpaceDestroy(&ksp->left_projection));
+  PetscCall(MatNullSpaceDestroy(&ksp->right_projection));
+  ksp->left_projection  = left_projection;
+  ksp->right_projection = right_projection;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  KSPGetProjections - Get the nullspaces set with `KSPSetProjections()`.
+
+  Not collective
+
+  Input Parameter:
+. ksp - the `KSP` context
+
+  Output Parameters:
++ left_projection  - (optional, pass `NULL` if not needed) the nullspace of the left projection, or NULL if no left projection is set
+- right_projection - (optional, pass `NULL` if not needed) the nullspace of the right projection, nor NULL if no right projection is set
+
+  Level: advanced
+
+.seealso: [](ch_ksp), `KSP`, `KSPSetProjections()`
+@*/
+PetscErrorCode KSPGetProjections(KSP ksp, MatNullSpace *left_projection, MatNullSpace *right_projection)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
+  if (left_projection) *left_projection = ksp->left_projection;
+  if (right_projection) *right_projection = ksp->right_projection;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
