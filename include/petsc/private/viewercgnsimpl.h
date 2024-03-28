@@ -3,6 +3,8 @@
 #include <petsc/private/viewerimpl.h>
 #include <cgnstypes.h>
 
+#define CGNS_MAX_DIM 3
+
 typedef struct {
   char           *filename_template;
   char           *filename;
@@ -10,12 +12,17 @@ typedef struct {
   int             file_num;
   const PetscInt *node_l2g;
   int             base, zone;
-  PetscInt        num_local_nodes, nStart, nEnd;
-  PetscInt        eStart, eEnd;
-  PetscScalar    *nodal_field;
-  PetscSegBuffer  output_steps;
-  PetscSegBuffer  output_times;
-  PetscInt        batch_size;
+  /* flow solution on each location exists in the file */
+  PetscInt solVertex, solCellCenter, solIFaceCenter, solJFaceCenter, solKFaceCenter;
+  PetscInt num_local_nodes;
+  /* A range of indices is half-open, i.e., [Start, End). An unstructured grid uses only Start[0] and End[0] (consistent with CGNS convention). */
+  PetscInt       nStart[CGNS_MAX_DIM], nEnd[CGNS_MAX_DIM]; /* range of indices of local nodes */
+  PetscInt       eStart[CGNS_MAX_DIM], eEnd[CGNS_MAX_DIM]; /* range of indices of local elements */
+  PetscScalar   *nodal_field;
+  PetscSegBuffer output_steps;
+  PetscSegBuffer output_times;
+  PetscInt       last_step;
+  PetscInt       batch_size;
 } PetscViewer_CGNS;
 
 #define PetscCallCGNS(ierr) \
