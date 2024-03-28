@@ -147,6 +147,22 @@ PetscErrorCode KSPView(KSP ksp, PetscViewer viewer)
     }
     if (ksp->dscale) PetscCall(PetscViewerASCIIPrintf(viewer, "  diagonally scaled system\n"));
     PetscCall(PetscViewerASCIIPrintf(viewer, "  using %s norm type for convergence test\n", KSPNormTypes[ksp->normtype]));
+    if (ksp->left_projection) {
+      PetscCall(PetscViewerASCIIPrintf(viewer, "  nullspace of %s projection:\n", ksp->right_projection == ksp->left_projection ? "symmetric" : "left"));
+      PetscCall(PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_INFO));
+      PetscCall(PetscViewerASCIIPushTab(viewer));
+      PetscCall(MatNullSpaceView(ksp->left_projection, viewer));
+      PetscCall(PetscViewerASCIIPopTab(viewer));
+      PetscCall(PetscViewerPopFormat(viewer));
+    }
+    if (ksp->right_projection && ksp->right_projection != ksp->left_projection) {
+      PetscCall(PetscViewerASCIIPrintf(viewer, "  nullspace of left projection:\n"));
+      PetscCall(PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_INFO));
+      PetscCall(PetscViewerASCIIPushTab(viewer));
+      PetscCall(MatNullSpaceView(ksp->left_projection, viewer));
+      PetscCall(PetscViewerASCIIPopTab(viewer));
+      PetscCall(PetscViewerPopFormat(viewer));
+    }
   } else if (isbinary) {
     PetscInt    classid = KSP_FILE_CLASSID;
     MPI_Comm    comm;

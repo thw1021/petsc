@@ -1644,7 +1644,7 @@ static PetscErrorCode DMPlexView_Ascii(DM dm, PetscViewer viewer)
       PetscCall(ISRestoreIndices(valueIS, &values));
       PetscCall(ISDestroy(&valueIS));
     }
-    {
+    if (numLabels) {
       char    **labelNames;
       PetscInt  Nl = numLabels;
       PetscBool flg;

@@ -192,6 +192,8 @@ struct _p_KSP {
   void *prectx, *postctx;
 
   PetscInt nestlevel; /* how many levels of nesting does the KSP have */
+
+  MatNullSpace left_projection, right_projection;
 };
 
 typedef struct { /* dummy data structure used in KSPMonitorDynamicTolerance() */
@@ -366,72 +368,144 @@ static inline PetscErrorCode KSP_RemoveNullSpaceTranspose(KSP ksp, Vec y)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static inline PetscErrorCode KSP_MatMult(KSP ksp, Mat A, Vec x, Vec y)
+static inline PetscErrorCode KSP_NullSpaceGetProjection(MatNullSpace nsp, Vec x, Vec *Px)
 {
   PetscFunctionBegin;
-  if (ksp->transpose_solve) PetscCall(MatMultTranspose(A, x, y));
-  else PetscCall(MatMult(A, x, y));
+  *Px = x;
+  if (nsp) {
+    Vec _Px;
+    PetscCall(VecDuplicate(x, &_Px));
+    PetscCall(VecCopy(x, _Px));
+    PetscCall(MatNullSpaceRemove(nsp, _Px));
+    *Px = _Px;
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static inline PetscErrorCode KSP_NullSpaceRestoreProjection(MatNullSpace nsp, Vec x, Vec *Px)
+{
+  PetscFunctionBegin;
+  if (nsp) { PetscCall(VecDestroy(Px)); }
+  *Px = NULL;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static inline PetscErrorCode KSP_GetProjections(KSP ksp, MatNullSpace *left_projection, MatNullSpace *right_projection)
+{
+  PetscFunctionBegin;
+  *left_projection  = ksp->transpose_solve ? ksp->right_projection : ksp->left_projection;
+  *right_projection = ksp->transpose_solve ? ksp->left_projection : ksp->right_projection;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static inline PetscErrorCode KSP_MatMult(KSP ksp, Mat A, Vec x, Vec y)
+{
+  MatNullSpace PL, PR;
+  Vec          Px;
+
+  PetscFunctionBegin;
+  PetscCall(KSP_GetProjections(ksp, &PL, &PR));
+  PetscCall(KSP_NullSpaceGetProjection(PR, x, &Px));
+  if (ksp->transpose_solve) PetscCall(MatMultTranspose(A, Px, y));
+  else PetscCall(MatMult(A, Px, y));
+  PetscCall(KSP_NullSpaceRestoreProjection(PR, x, &Px));
+  if (PL) PetscCall(MatNullSpaceRemove(PL, y));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static inline PetscErrorCode KSP_MatMultTranspose(KSP ksp, Mat A, Vec x, Vec y)
 {
+  MatNullSpace PL, PR;
+  Vec          Px;
+
   PetscFunctionBegin;
-  if (ksp->transpose_solve) PetscCall(MatMult(A, x, y));
-  else PetscCall(MatMultTranspose(A, x, y));
+  PetscCall(KSP_GetProjections(ksp, &PL, &PR));
+  PetscCall(KSP_NullSpaceGetProjection(PL, x, &Px));
+  if (ksp->transpose_solve) PetscCall(MatMult(A, Px, y));
+  else PetscCall(MatMultTranspose(A, Px, y));
+  PetscCall(KSP_NullSpaceRestoreProjection(PL, x, &Px));
+  if (PR) PetscCall(MatNullSpaceRemove(PR, y));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static inline PetscErrorCode KSP_MatMultHermitianTranspose(KSP ksp, Mat A, Vec x, Vec y)
 {
+  MatNullSpace PL, PR;
+  Vec          Px;
+
   PetscFunctionBegin;
-  if (!ksp->transpose_solve) PetscCall(MatMultHermitianTranspose(A, x, y));
+  PetscCall(KSP_GetProjections(ksp, &PL, &PR));
+  PetscCall(KSP_NullSpaceGetProjection(PL, x, &Px));
+  if (!ksp->transpose_solve) PetscCall(MatMultHermitianTranspose(A, Px, y));
   else {
     Vec w;
 
-    PetscCall(VecDuplicate(x, &w));
-    PetscCall(VecCopy(x, w));
+    PetscCall(VecDuplicate(Px, &w));
+    PetscCall(VecCopy(Px, w));
     PetscCall(VecConjugate(w));
     PetscCall(MatMult(A, w, y));
     PetscCall(VecDestroy(&w));
     PetscCall(VecConjugate(y));
   }
+  PetscCall(KSP_NullSpaceRestoreProjection(PL, x, &Px));
+  if (PR) PetscCall(MatNullSpaceRemove(PR, y));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static inline PetscErrorCode KSP_PCApply(KSP ksp, Vec x, Vec y)
 {
+  MatNullSpace PL, PR;
+  Vec          Px;
+
   PetscFunctionBegin;
+  PetscCall(KSP_GetProjections(ksp, &PL, &PR));
+  PetscCall(KSP_NullSpaceGetProjection(PL, x, &Px));
   if (ksp->transpose_solve) {
-    PetscCall(PCApplyTranspose(ksp->pc, x, y));
+    PetscCall(PCApplyTranspose(ksp->pc, Px, y));
     PetscCall(KSP_RemoveNullSpaceTranspose(ksp, y));
   } else {
-    PetscCall(PCApply(ksp->pc, x, y));
+    PetscCall(PCApply(ksp->pc, Px, y));
     PetscCall(KSP_RemoveNullSpace(ksp, y));
   }
+  PetscCall(KSP_NullSpaceRestoreProjection(PL, x, &Px));
+  if (PR) PetscCall(MatNullSpaceRemove(PR, y));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static inline PetscErrorCode KSP_PCApplyTranspose(KSP ksp, Vec x, Vec y)
 {
+  MatNullSpace PL, PR;
+  Vec          Px;
+
   PetscFunctionBegin;
+  PetscCall(KSP_GetProjections(ksp, &PL, &PR));
+  PetscCall(KSP_NullSpaceGetProjection(PR, x, &Px));
   if (ksp->transpose_solve) {
-    PetscCall(PCApply(ksp->pc, x, y));
+    PetscCall(PCApply(ksp->pc, Px, y));
     PetscCall(KSP_RemoveNullSpace(ksp, y));
   } else {
-    PetscCall(PCApplyTranspose(ksp->pc, x, y));
+    PetscCall(PCApplyTranspose(ksp->pc, Px, y));
     PetscCall(KSP_RemoveNullSpaceTranspose(ksp, y));
   }
+  PetscCall(KSP_NullSpaceRestoreProjection(PR, x, &Px));
+  if (PL) PetscCall(MatNullSpaceRemove(PL, y));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static inline PetscErrorCode KSP_PCApplyHermitianTranspose(KSP ksp, Vec x, Vec y)
 {
+  MatNullSpace PL, PR;
+  Vec          Px;
+
   PetscFunctionBegin;
-  PetscCall(VecConjugate(x));
-  PetscCall(KSP_PCApplyTranspose(ksp, x, y));
-  PetscCall(VecConjugate(x));
+  PetscCall(KSP_GetProjections(ksp, &PL, &PR));
+  PetscCall(KSP_NullSpaceGetProjection(PR, x, &Px));
+  PetscCall(VecConjugate(Px));
+  PetscCall(KSP_PCApplyTranspose(ksp, Px, y));
+  if (Px == x) PetscCall(VecConjugate(Px));
   PetscCall(VecConjugate(y));
+  PetscCall(KSP_NullSpaceRestoreProjection(PR, x, &Px));
+  if (PL) PetscCall(MatNullSpaceRemove(PL, y));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -459,24 +533,53 @@ static inline PetscErrorCode KSP_PCMatApplyTranspose(KSP ksp, Mat X, Mat Y)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+PETSC_INTERN PetscErrorCode PCApplyBAorABTransposeWithProjection_Internal(PC, PCSide, Vec, Vec, Vec, MatNullSpace);
+PETSC_INTERN PetscErrorCode PCApplyBAorABWithProjection_Internal(PC, PCSide, Vec, Vec, Vec, MatNullSpace);
+
 static inline PetscErrorCode KSP_PCApplyBAorAB(KSP ksp, Vec x, Vec y, Vec w)
 {
+  MatNullSpace PL, PR, Pinner, Pouter;
+  Vec          Px;
+  PCSide       pc_side;
+
   PetscFunctionBegin;
+  PetscCall(KSPGetPCSide(ksp, &pc_side));
+  PetscAssert(pc_side != PC_SIDE_DEFAULT, PetscObjectComm((PetscObject)ksp), PETSC_ERR_PLIB, "KSPPCSide() returned PC_SIDE_DEFAULT");
+  PL     = ksp->left_projection;
+  PR     = ksp->right_projection;
+  Pinner = (pc_side == PC_LEFT) ? PL : PR;
+  Pouter = (pc_side == PC_LEFT) ? PR : (pc_side == PC_RIGHT) ? PL : NULL;
+  PetscCall(KSP_NullSpaceGetProjection(Pouter, x, &Px));
   if (ksp->transpose_solve) {
-    PetscCall(PCApplyBAorABTranspose(ksp->pc, ksp->pc_side, x, y, w));
+    PetscCall(PCApplyBAorABTransposeWithProjection_Internal(ksp->pc, ksp->pc_side, Px, y, w, Pinner));
     PetscCall(KSP_RemoveNullSpaceTranspose(ksp, y));
   } else {
-    PetscCall(PCApplyBAorAB(ksp->pc, ksp->pc_side, x, y, w));
+    PetscCall(PCApplyBAorABWithProjection_Internal(ksp->pc, ksp->pc_side, Px, y, w, Pinner));
     PetscCall(KSP_RemoveNullSpace(ksp, y));
   }
+  PetscCall(KSP_NullSpaceRestoreProjection(Pouter, x, &Px));
+  if (Pouter) PetscCall(MatNullSpaceRemove(Pouter, y));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static inline PetscErrorCode KSP_PCApplyBAorABTranspose(KSP ksp, Vec x, Vec y, Vec w)
 {
+  MatNullSpace PL, PR, Pinner, Pouter;
+  Vec          Px;
+  PCSide       pc_side;
+
   PetscFunctionBegin;
-  if (ksp->transpose_solve) PetscCall(PCApplyBAorAB(ksp->pc, ksp->pc_side, x, y, w));
-  else PetscCall(PCApplyBAorABTranspose(ksp->pc, ksp->pc_side, x, y, w));
+  PetscCall(KSPGetPCSide(ksp, &pc_side));
+  PetscAssert(pc_side != PC_SIDE_DEFAULT, PetscObjectComm((PetscObject)ksp), PETSC_ERR_PLIB, "KSPPCSide() returned PC_SIDE_DEFAULT");
+  PL     = ksp->left_projection;
+  PR     = ksp->right_projection;
+  Pinner = (pc_side == PC_LEFT) ? PL : PR;
+  Pouter = (pc_side == PC_LEFT) ? PR : (pc_side == PC_RIGHT) ? PL : NULL;
+  PetscCall(KSP_NullSpaceGetProjection(Pouter, x, &Px));
+  if (ksp->transpose_solve) PetscCall(PCApplyBAorABWithProjection_Internal(ksp->pc, ksp->pc_side, Px, y, w, Pinner));
+  else PetscCall(PCApplyBAorABTransposeWithProjection_Internal(ksp->pc, ksp->pc_side, Px, y, w, Pinner));
+  PetscCall(KSP_NullSpaceRestoreProjection(Pouter, x, &Px));
+  if (Pouter) PetscCall(MatNullSpaceRemove(Pouter, y));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

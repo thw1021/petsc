@@ -402,6 +402,7 @@ PETSC_EXTERN PetscErrorCode DMPlexComputeMassMatrixNested(DM, DM, Mat, void *);
 PETSC_EXTERN PetscErrorCode DMPlexComputeMassMatrixGeneral(DM, DM, Mat, void *);
 
 PETSC_EXTERN PetscErrorCode DMPlexCreateRigidBody(DM, PetscInt, MatNullSpace *);
+PETSC_EXTERN PetscErrorCode DMPlexCreateDisplacementRigidBody(DM, Vec, PetscInt, MatNullSpace *);
 PETSC_EXTERN PetscErrorCode DMPlexCreateRigidBodies(DM, PetscInt, DMLabel, const PetscInt[], const PetscInt[], MatNullSpace *);
 
 PETSC_EXTERN PetscErrorCode DMPlexSetSNESLocalFEM(DM, PetscBool, void *);
