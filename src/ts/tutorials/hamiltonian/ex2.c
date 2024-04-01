@@ -2091,7 +2091,7 @@ int main(int argc, char **argv)
            -em_snes_atol 1.e-15 -em_snes_error_if_not_converged -em_ksp_error_if_not_converged\
            -dm_swarm_num_species 1 -dm_swarm_num_particles 360\
            -cosine_coefficients 0.01,0.5 -perturbed_weights -total_weight 1. \
-           -charges -1.,1. -fake_1D -twostream -periodic -sigma 1.0e-8
+           -charges -1.,1. -fake_1D -twostream -sigma 1.0e-8
      test:
        suffix: two_stream_c0
        args: -em_type primal -petscfe_default_quadrature_order 2 -petscspace_degree 2 -em_pc_type svd
@@ -2139,7 +2139,7 @@ int main(int argc, char **argv)
      requires: defined(PETSC_HAVE_EXECUTABLE_EXPORT)
      args: -dm_plex_dim 2 -fake_1D -dm_plex_simplex 0 -dm_plex_box_faces 20,1 -dm_plex_box_lower 0,-1 -dm_plex_box_upper 12.5664,1 \
            -dm_swarm_coordinate_density constant -dm_swarm_num_particles 100 \
-           -dm_plex_box_bd periodic,none -periodic -ts_type basicsymplectic -ts_basicsymplectic_type 1\
+           -dm_plex_box_bd periodic,none -ts_type basicsymplectic -ts_basicsymplectic_type 1\
            -dm_view -output_step 50 -sigma 1.0e-8 -timeScale 2.0e-14\
            -ts_monitor_sp_swarm -ts_monitor_sp_swarm_retain 0 -ts_monitor_sp_swarm_phase 0
      test:
@@ -2159,7 +2159,7 @@ int main(int argc, char **argv)
            -em_snes_atol 1.e-12 -em_snes_error_if_not_converged -em_ksp_error_if_not_converged\
            -dm_swarm_num_species 1 -dm_swarm_num_particles 100 -dm_view\
            -vdm_plex_dim 1 -vdm_plex_box_lower -10 -vdm_plex_box_upper 10 -vdm_plex_simplex 0 -vdm_plex_box_faces 10\
-           -output_step 1 -fake_1D -perturbed_weights -periodic -cosine_coefficients 0.01,0.5 -charges -1.0,1.0 -total_weight 1.0
+           -output_step 1 -fake_1D -perturbed_weights -cosine_coefficients 0.01,0.5 -charges -1.0,1.0 -total_weight 1.0
      test:
        suffix: uniform_equilibrium_1d
        args: -cosine_coefficients 0.0,0.5 -em_type primal -petscspace_degree 1 -em_pc_type svd
