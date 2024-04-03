@@ -29,7 +29,7 @@ class Configure(config.package.Package):
     g = open(os.path.join(self.packageDir, mkfile), 'w')
     self.pushLanguage('C')
     g.write('CC = '+self.getCompiler()+'\n')
-    g.write('CFLAGS = '+self.updatePackageCFlags(self.getCompilerFlags())+'\n')
+    g.write('CFLAGS = -Wno-implicit-int -Wno-deprecated-non-prototype '+self.updatePackageCFlags(self.getCompilerFlags())+'\n')
     g.write('OFLAGS = '+self.updatePackageCFlags(self.getCompilerFlags())+'\n')
     self.popLanguage()
     g.close()
