@@ -97,6 +97,24 @@ static PetscErrorCode MatGetRowMaxAbs_MPIBAIJ(Mat A, Vec v, PetscInt idx[])
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode MatGetRowSumAbs_MPIBAIJ(Mat A, Vec v)
+{
+  Mat_MPIBAIJ *a = (Mat_MPIBAIJ *)A->data;
+  PetscInt     m = A->rmap->n;
+  Vec          vB, vA;
+
+  PetscFunctionBegin;
+  PetscCall(VecCreateSeq(PETSC_COMM_SELF, m, &vA));
+  PetscCall(MatGetRowSumAbs(a->A, vA));
+  PetscCall(VecCreateSeq(PETSC_COMM_SELF, m, &vB));
+  PetscCall(MatGetRowSumAbs(a->B, vB));
+  PetscCall(VecAXPY(vA, 1.0, vB));
+  PetscCall(VecDestroy(&vB));
+  PetscCall(VecCopy(vA, v));
+  PetscCall(VecDestroy(&vA));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode MatStoreValues_MPIBAIJ(Mat mat)
 {
   Mat_MPIBAIJ *aij = (Mat_MPIBAIJ *)mat->data;
@@ -2565,7 +2583,7 @@ static struct _MatOps MatOps_Values = {MatSetValues_MPIBAIJ,
                                        NULL,
                                        /*150*/ NULL,
                                        MatEliminateZeros_MPIBAIJ,
-                                       NULL};
+                                       MatGetRowSumAbs_MPIBAIJ};
 
 PETSC_INTERN PetscErrorCode MatConvert_MPIBAIJ_MPISBAIJ(Mat, MatType, MatReuse, Mat *);
 PETSC_INTERN PetscErrorCode MatConvert_XAIJ_IS(Mat, MatType, MatReuse, Mat *);
