@@ -429,13 +429,15 @@ PetscErrorCode MatXAIJSetPreallocation(Mat A, PetscInt bs, const PetscInt dnnz[]
  @*/
 PetscErrorCode MatHeaderMerge(Mat A, Mat *C)
 {
-  PetscInt         refct;
-  PetscOps         Abops;
-  struct _MatOps   Aops;
-  char            *mtype, *mname, *mprefix;
-  Mat_Product     *product;
-  Mat_Redundant   *redundant;
-  PetscObjectState state;
+  PetscInt          refct;
+  PetscOps          Abops;
+  struct _MatOps    Aops;
+  char             *mtype, *mname, *mprefix;
+  Mat_Product      *product;
+  Mat_Redundant    *redundant;
+  PetscObjectState  state;
+  PetscObjectList   olist;
+  PetscFunctionList qlist;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
@@ -452,10 +454,14 @@ PetscErrorCode MatHeaderMerge(Mat A, Mat *C)
   mprefix   = ((PetscObject)A)->prefix;
   product   = A->product;
   redundant = A->redundant;
+  qlist     = ((PetscObject)A)->qlist;
+  olist     = ((PetscObject)A)->olist;
 
   /* zero these so the destroy below does not free them */
   ((PetscObject)A)->type_name = NULL;
   ((PetscObject)A)->name      = NULL;
+  ((PetscObject)A)->qlist     = NULL;
+  ((PetscObject)A)->olist     = NULL;
 
   /*
      free all the interior data structures from mat
@@ -468,8 +474,6 @@ PetscErrorCode MatHeaderMerge(Mat A, Mat *C)
   PetscCall(PetscFree(A->defaultrandtype));
   PetscCall(PetscLayoutDestroy(&A->rmap));
   PetscCall(PetscLayoutDestroy(&A->cmap));
-  PetscCall(PetscFunctionListDestroy(&((PetscObject)A)->qlist));
-  PetscCall(PetscObjectListDestroy(&((PetscObject)A)->olist));
   PetscCall(PetscComposedQuantitiesDestroy((PetscObject)A));
 
   /* copy C over to A */
@@ -487,10 +491,15 @@ PetscErrorCode MatHeaderMerge(Mat A, Mat *C)
   A->product                  = product;
   A->redundant                = redundant;
 
+  /* Append the saved lists */
+  PetscCall(PetscFunctionListDuplicate(qlist, &((PetscObject)A)->qlist));
+  PetscCall(PetscObjectListDuplicate(olist, &((PetscObject)A)->olist));
+  PetscCall(PetscFunctionListDestroy(&qlist));
+  PetscCall(PetscObjectListDestroy(&olist));
+
   /* since these two are copied into A we do not want them destroyed in C */
   ((PetscObject)*C)->qlist = NULL;
   ((PetscObject)*C)->olist = NULL;
-
   PetscCall(PetscHeaderDestroy(C));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
