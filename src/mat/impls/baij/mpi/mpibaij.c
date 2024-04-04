@@ -100,13 +100,12 @@ static PetscErrorCode MatGetRowMaxAbs_MPIBAIJ(Mat A, Vec v, PetscInt idx[])
 static PetscErrorCode MatGetRowSumAbs_MPIBAIJ(Mat A, Vec v)
 {
   Mat_MPIBAIJ *a = (Mat_MPIBAIJ *)A->data;
-  PetscInt     m = A->rmap->n;
   Vec          vB, vA;
 
   PetscFunctionBegin;
-  PetscCall(VecCreateSeq(PETSC_COMM_SELF, m, &vA));
+  PetscCall(MatCreateVecs(a->A, NULL, &vA));
   PetscCall(MatGetRowSumAbs(a->A, vA));
-  PetscCall(VecCreateSeq(PETSC_COMM_SELF, m, &vB));
+  PetscCall(MatCreateVecs(a->B, NULL, &vB));
   PetscCall(MatGetRowSumAbs(a->B, vB));
   PetscCall(VecAXPY(vA, 1.0, vB));
   PetscCall(VecDestroy(&vB));
