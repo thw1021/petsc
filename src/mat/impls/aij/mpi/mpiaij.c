@@ -2197,7 +2197,7 @@ static PetscErrorCode MatGetRowSumAbs_MPIAIJ(Mat A, Vec v)
   PetscFunctionBegin;
   PetscCall(MatCreateVecs(a->A, NULL, &vA));
   PetscCall(MatGetRowSumAbs(a->A, vA));
-  PetscCall(MatCreateVecs(a->A, NULL, &vB));
+  PetscCall(MatCreateVecs(a->B, NULL, &vB));
   PetscCall(MatGetRowSumAbs(a->B, vB));
   PetscCall(VecAXPY(vA, 1.0, vB));
   PetscCall(VecDestroy(&vB));
