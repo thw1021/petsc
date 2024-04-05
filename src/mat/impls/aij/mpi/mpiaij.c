@@ -2221,10 +2221,6 @@ static PetscErrorCode MatGetRowMinAbs_MPIAIJ(Mat A, Vec v, PetscInt idx[])
   Mat_SeqAIJ        *b = (Mat_SeqAIJ *)B->data;
 
   PetscFunctionBegin;
-#if defined(PETSC_HAVE_DEVICE)
-  PetscAssert(A->offloadmask == PETSC_OFFLOAD_CPU || A->offloadmask == PETSC_OFFLOAD_BOTH, PETSC_COMM_SELF, PETSC_ERR_SUP, "GPUs not supported");
-  if (A->offloadmask == PETSC_OFFLOAD_BOTH) A->offloadmask = PETSC_OFFLOAD_CPU;
-#endif
   /* When a process holds entire A and other processes have no entry */
   if (A->cmap->N == n) {
     PetscCall(VecGetArrayWrite(v, &diagA));
@@ -2341,10 +2337,6 @@ static PetscErrorCode MatGetRowMin_MPIAIJ(Mat A, Vec v, PetscInt idx[])
   Mat_SeqAIJ        *b = (Mat_SeqAIJ *)B->data;
 
   PetscFunctionBegin;
-#if defined(PETSC_HAVE_DEVICE)
-  PetscAssert(A->offloadmask == PETSC_OFFLOAD_CPU || A->offloadmask == PETSC_OFFLOAD_BOTH, PETSC_COMM_SELF, PETSC_ERR_SUP, "GPUs not supported");
-  if (A->offloadmask == PETSC_OFFLOAD_BOTH) A->offloadmask = PETSC_OFFLOAD_CPU;
-#endif
   /* When a process holds entire A and other processes have no entry */
   if (A->cmap->N == n) {
     PetscCall(VecGetArrayWrite(v, &diagA));
@@ -2461,10 +2453,6 @@ static PetscErrorCode MatGetRowMax_MPIAIJ(Mat A, Vec v, PetscInt idx[])
   Mat_SeqAIJ        *b = (Mat_SeqAIJ *)B->data;
 
   PetscFunctionBegin;
-#if defined(PETSC_HAVE_DEVICE)
-  PetscAssert(A->offloadmask == PETSC_OFFLOAD_CPU || A->offloadmask == PETSC_OFFLOAD_BOTH, PETSC_COMM_SELF, PETSC_ERR_SUP, "GPUs not supported");
-  if (A->offloadmask == PETSC_OFFLOAD_BOTH) A->offloadmask = PETSC_OFFLOAD_CPU;
-#endif
   /* When a process holds entire A and other processes have no entry */
   if (A->cmap->N == n) {
     PetscCall(VecGetArrayWrite(v, &diagA));
