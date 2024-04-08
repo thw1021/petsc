@@ -21,6 +21,7 @@ class Configure(config.package.CMakePackage):
                                  # essentially impossible to use ML's 64-bit integer mode with PETSc's --with-64-bit-indices
     self.hastests          = 1
     self.downloaddirnames  = ['pkg-trilinos-ml']
+
     return
 
   def setupDependencies(self, framework):
@@ -33,6 +34,8 @@ class Configure(config.package.CMakePackage):
     return
 
   def formCMakeConfigureArgs(self):
+    if '++' in self.externalPackagesDir:
+      raise RuntimeError('Cannot build ml in a folder containing "++"')
     args = config.package.CMakePackage.formCMakeConfigureArgs(self)
     args.append('-DTrilinos_ENABLE_ALL_OPTIONAL_PACKAGES=OFF')
     args.append('-DTrilinos_ENABLE_ALL_PACKAGES=OFF')
