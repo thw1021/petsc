@@ -25,27 +25,46 @@ variables:
 #
 
 .test-basic:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    - if: $CI_PIPELINE_SOURCE == "web"
+    - if: $CI_PIPELINE_SOURCE == "api"
   interruptible: true
-  only:
-    refs:
-#     Set with CI/CD Shedules - New Schedule
-      - schedules
-      - api
-#     Set with CI/CD Pipelines - Run Pipeline
-      - web
-      - merge_requests
   dependencies: []
 
 .test:
-  extends: .test-basic
-  except:
-    variables:
-      # Skip if the docs-only label is attached to a merge request
-      - $CI_MERGE_REQUEST_LABELS =~ /(^|,)docs-only($|,)/
-      - $PETSC_CI_SCHEDULED =~ /yes/
+  rules:
+    - if: $PETSC_CI_PAGES == "yes"
+      when: never
+    - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)docs-only($|,)/
+      when: never
+    - !reference [.test-basic, rules]
+  interruptible: true
+  dependencies: []
+
+.test-docs:
+  rules:
+    - if: $PETSC_CI_PAGES == "yes"
+      when: never
+    - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)docs-only($|,)/
+    - !reference [.test-basic, rules]
+  interruptible: true
+  dependencies: []
+
+.test-pause:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && ($CI_MERGE_REQUEST_EVENT_TYPE == "merged_result" || $CI_MERGE_REQUEST_EVENT_TYPE == "detached")
+      when: manual
+
+.test-pages:
+  rules:
+    - if: $PETSC_CI_PAGES == "yes"
+  interruptible: true
+  dependencies: []
 
 check-ci-settings:
-  extends: .test-basic
+  extends: .test-docs
   stage: .pre
   tags:
     - gce-stage1
@@ -227,7 +246,7 @@ petsc4py-pip:
     - python -m petsc4py
 
 checksource:
-  extends: .test-basic
+  extends: .test-docs
   stage: .pre
   tags:
     - gce-u22-stage1
@@ -249,16 +268,10 @@ checksource:
     expire_in: 4 days
 
 pause-for-approval:
-  extends: .test
+  extends: .test-pause
   stage: .pre
   tags:
     - gce-stage1
-  only:
-    refs:
-      - merge_requests
-    variables:
-      - $CI_MERGE_REQUEST_EVENT_TYPE == "merged_result"
-      - $CI_MERGE_REQUEST_EVENT_TYPE == "detached"
   script:
     - echo "pause-for-approval has no script to run"
   variables:
@@ -469,13 +482,11 @@ linux-gcc-pkgs-opt:
   extends:
     - .stage-2
     - .linux_test
+    - .test-docs
   tags:
     - gce-stage2
   variables:
     TEST_ARCH: arch-ci-linux-gcc-pkgs-opt
-  except:
-    variables:
-      - $PETSC_CI_SCHEDULED =~ /yes/
 
 linux-gcc-complex-opt-32bit:
   extends:
@@ -846,21 +857,20 @@ check-each-commit:
   extends:
     - .stage-2
     - .linux_test
+    - .test-docs
     - .coverage-disable
   tags:
     - gce-u22-stage2
   script:
     - export PATH=/nfs/gce/projects/petsc/soft/u22.04/spack-2024-03-06/opt/spack/linux-ubuntu22.04-x86_64/gcc-11.4.0/llvm-18.1.0-7hsf4hzma6aebqsd4ifb5brchcooktkp/bin:$PATH
     - lib/petsc/bin/maint/check-each-commit.sh
-  except:
-    variables:
-      - $PETSC_CI_SCHEDULED =~ /yes/
   allow_failure: true
 
 linux-analyzer:
   extends:
     - .stage-2
     - .linux_test
+    - .test-docs
     - .coverage-disable
   tags:
     - gce-u22-stage2
@@ -886,9 +896,6 @@ linux-analyzer:
     - arch-*/lib/petsc/conf/*.log
     - ./petscLintPatches/*.patch
     expire_in: 4 days
-  except:
-    variables:
-      - $PETSC_CI_SCHEDULED =~ /yes/
 
 linux-intel:
   extends:
@@ -1214,7 +1221,7 @@ analyze-pipeline:
 docs-review:
   extends:
     - .docs
-    - .test-basic
+    - .test-docs
   script:
     - (time make html BUILDDIR="../public" SPHINXOPTS="-T -E -W --keep-going -j 2") || (printf "Sphinx build failed (warnings count as errors)\n" && false)
     - (time make latexpdf SPHINXOPTS="-T -E -W --keep-going -j 2") || (printf "Sphinx build failed (warnings count as errors)\n" && false)
@@ -1228,15 +1235,14 @@ docs-review:
     paths:
       - public
     expire_in: 4 days
-  except:
-    variables:
-      - $PETSC_CI_SCHEDULED =~ /yes/
 
 #
 # Deploy documentation using GitLab pages
 #
 pages: # this job name has special meaning to GitLab
-  extends: .docs
+  extends:
+    - .docs
+    - .test-pages
   interruptible: true
   script:
     - mkdir -p ../public/ && cp public/* ../public/
@@ -1244,9 +1250,6 @@ pages: # this job name has special meaning to GitLab
     - cd .. && git clean -fdxq -e public -e venv-petsc-docs && cd doc && rm -rf images
     - (git checkout origin/release && pip install -r requirements.txt && make website-deploy SPHINXOPTS="-j 1" BUILDDIR="../public/release" && make latexpdf && mkdir -p ../public/release/manual && cp _build/latex/manual.pdf ../public/release/manual/) || (printf "Sphinx build failed (warnings count as errors)\n" && false)
     - rm -rf ../public/*/.doctrees
-  only:
-    variables:
-      - $PETSC_CI_SCHEDULED == "yes"
   artifacts:
     paths:
       - public
