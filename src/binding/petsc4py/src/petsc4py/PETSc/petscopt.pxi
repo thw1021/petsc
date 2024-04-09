@@ -68,7 +68,7 @@ cdef getopt_Bool(PetscOptions opt, const char *pre, const char *name, object def
     cdef PetscBool flag  = PETSC_FALSE
     CHKERR( PetscOptionsGetBool(opt, pre, name, &value, &flag) )
     if flag==PETSC_TRUE: return toBool(value)
-    if deft is not None: return deft
+    if deft is not None: return toBool(asBool(deft))
     raise KeyError(opt2str(pre, name))
 
 cdef getopt_BoolArray(PetscOptions opt, const char *pre, const char *name, object deft):
@@ -77,13 +77,14 @@ cdef getopt_BoolArray(PetscOptions opt, const char *pre, const char *name, objec
     cdef PetscBool flag = PETSC_FALSE
     cdef object dummy
     if deft is not None:
+        deft = [toBool(asBool(d)) for d in deft]
         deft = iarray_b(deft, &ndeft, &ivaluedeft)
         if ndeft > nmax:
             dummy = oarray_b(empty_b(ndeft), &nmax, &ivalue)
         memcpy(ivalue, ivaluedeft, <size_t>ndeft*sizeof(PetscBool))
     CHKERR( PetscOptionsGetBoolArray(opt, pre, name, ivalue, &nmax, &flag) )
-    if flag==PETSC_TRUE: return array_b(nmax, ivalue)
-    if deft is not None: return deft
+    if flag==PETSC_TRUE: return array_b(nmax, ivalue).astype('bool')
+    if deft is not None: return deft.astype('bool')
     raise KeyError(opt2str(pre, name))
 
 cdef getopt_Int(PetscOptions opt, const char *pre, const char *name, object deft):
@@ -91,7 +92,7 @@ cdef getopt_Int(PetscOptions opt, const char *pre, const char *name, object deft
     cdef PetscBool flag = PETSC_FALSE
     CHKERR( PetscOptionsGetInt(opt, pre, name, &value, &flag) )
     if flag==PETSC_TRUE: return toInt(value)
-    if deft is not None: return deft
+    if deft is not None: return toInt(asInt(deft))
     raise KeyError(opt2str(pre, name))
 
 cdef getopt_IntArray(PetscOptions opt, const char *pre, const char *name, object deft):
@@ -114,7 +115,7 @@ cdef getopt_Real(PetscOptions opt, const char *pre, const char *name, object def
     cdef PetscBool flag = PETSC_FALSE
     CHKERR( PetscOptionsGetReal(opt, pre, name, &value, &flag) )
     if flag==PETSC_TRUE: return toReal(value)
-    if deft is not None: return deft
+    if deft is not None: return toReal(asReal(deft))
     raise KeyError(opt2str(pre, name))
 
 cdef getopt_RealArray(PetscOptions opt, const char *pre, const char *name, object deft):
@@ -137,7 +138,7 @@ cdef getopt_Scalar(PetscOptions opt, const char *pre, const char *name, object d
     cdef PetscBool flag = PETSC_FALSE
     CHKERR( PetscOptionsGetScalar(opt, pre, name, &value, &flag) )
     if flag==PETSC_TRUE: return toScalar(value)
-    if deft is not None: return deft
+    if deft is not None: return toScalar(asScalar(deft))
     raise KeyError(opt2str(pre, name))
 
 cdef getopt_ScalarArray(PetscOptions opt, const char *pre, const char *name, object deft):
@@ -160,7 +161,7 @@ cdef getopt_String(PetscOptions opt, const char *pre, const char *name, object d
     cdef PetscBool flag = PETSC_FALSE
     CHKERR( PetscOptionsGetString(opt, pre, name, value, 1024, &flag) )
     if flag==PETSC_TRUE: return bytes2str(value)
-    if deft is not None: return deft
+    if deft is not None: return str(deft)
     raise KeyError(opt2str(pre, name))
 
 cdef enum PetscOptType:
