@@ -1073,6 +1073,8 @@ cdef class PC(Object):
     def getHYPREType(self) -> str:
         """Return the `Type.HYPRE` type.
 
+        Not collective.
+
         See Also
         --------
         petsc.PCHYPREGetType
@@ -1084,6 +1086,8 @@ cdef class PC(Object):
 
     def setHYPREType(self, hypretype: str):
         """Set the `Type.HYPRE` type.
+
+        Collective.
 
         Parameters
         ----------
@@ -1297,6 +1301,8 @@ cdef class PC(Object):
     def setFactorSetUpSolverType(self) -> None:
         """Set up the factorization solver.
 
+        Collective.
+
         This can be called after `KSP.setOperators` or `PC.setOperators`, causes
         `petsc.MatGetFactor` to be called so then one may set the options for
         that particular factorization object.
@@ -1379,6 +1385,8 @@ cdef class PC(Object):
         shift_type: Mat.FactorShiftType | None = None,
         amount: float | None = None) -> None:
         """Set options for shifting diagonal entries of a matrix.
+
+        Logically collective.
 
         Parameters
         ----------
@@ -1484,6 +1492,8 @@ cdef class PC(Object):
     def setFieldSplitFields(self, bsize: int, *fields: Tuple[str, Sequence[int]]) -> None:
         """Sets the elements for the field split.
 
+        Collective.
+
         Parameters
         ----------
         bsize
@@ -1512,6 +1522,8 @@ cdef class PC(Object):
     def getFieldSplitSubKSP(self) -> list[KSP]:
         """Return the `KSP` for all splits.
 
+        Not collective.
+
         See Also
         --------
         petsc.PCFieldSplitGetSubKSP
@@ -1529,6 +1541,8 @@ cdef class PC(Object):
 
     def getFieldSplitSchurGetSubKSP(self) -> list[KSP]:
         """Return the `KSP` for the Schur complement based splits.
+
+        Not collective.
 
         See Also
         --------
@@ -1710,6 +1724,8 @@ cdef class PC(Object):
 
     def setMGLevels(self, levels: int) -> None:
         """Set the number of `MG` levels.
+
+        Logically collective.
 
         Parameters
         ----------
@@ -1928,6 +1944,8 @@ cdef class PC(Object):
     def setMGCycleType(self, cycle_type: MGCycleType) -> None:
         """Set the type of cycles.
 
+        Logically collective.
+
         Parameters
         ----------
         cycle_type
@@ -2036,7 +2054,7 @@ cdef class PC(Object):
     def setBDDCLocalAdjacency(self, csr: CSRIndicesSpec) -> None:
         """Provide a custom connectivity graph for local dofs.
 
-        Not Collective.
+        Not collective.
 
         Parameters
         ----------
@@ -2423,6 +2441,8 @@ cdef class PC(Object):
     def setHPDDMAuxiliaryMat(self, IS uis, Mat uaux) -> None:
         """Set the auxiliary matrix used by the preconditioner.
 
+        Logically collective.
+
         Parameters
         ----------
         uis
@@ -2440,6 +2460,8 @@ cdef class PC(Object):
     def setHPDDMRHSMat(self, Mat B) -> None:
         """Set the right-hand side matrix of the preconditioner.
 
+        Logically collective.
+
         Parameters
         ----------
         B
@@ -2454,6 +2476,8 @@ cdef class PC(Object):
 
     def setHPDDMHasNeumannMat(self, has: bool) -> None:
         """Set to indicate that the `Mat` passed to the `PC` is the local Neumann matrix.
+
+        Logically collective.
 
         Parameters
         ----------
@@ -2489,6 +2513,8 @@ cdef class PC(Object):
     def getHPDDMCoarseCorrectionType(self) -> HPDDMCoarseCorrectionType:
         """Return the coarse correction type.
 
+        Not collective.
+
         See Also
         --------
         petsc.PCHPDDMGetCoarseCorrectionType
@@ -2501,6 +2527,8 @@ cdef class PC(Object):
     def getHPDDMSTShareSubKSP(self) -> bool:
         """Return true if the `KSP` in SLEPc ``ST`` and the subdomain solver is shared.
 
+        Not collective.
+
         See Also
         --------
         petsc.PCHPDDMGetSTShareSubKSP
@@ -2512,6 +2540,8 @@ cdef class PC(Object):
 
     def setHPDDMDeflationMat(self, IS uis, Mat U):
         """Set the deflation space used to assemble a coarse operator.
+
+        Logically collective.
 
         Parameters
         ----------
@@ -2532,6 +2562,8 @@ cdef class PC(Object):
     def setSPAIEpsilon(self, val: float) -> None:
         """Set the tolerance for the preconditioner.
 
+        Logically collective.
+
         Parameters
         ----------
         val
@@ -2548,6 +2580,8 @@ cdef class PC(Object):
     def setSPAINBSteps(self, nbsteps: int) -> None:
         """Set the maximum number of improvement steps per row.
 
+        Logically collective.
+
         Parameters
         ----------
         nbsteps
@@ -2563,6 +2597,8 @@ cdef class PC(Object):
 
     def setSPAIMax(self, maxval: int) -> None:
         """Set the size of working buffers in the preconditioner.
+
+        Logically collective.
 
         Parameters
         ----------
@@ -2581,6 +2617,8 @@ cdef class PC(Object):
     def setSPAIMaxNew(self, maxval: int) -> None:
         """Set the maximum number of new non-zero candidates per step.
 
+        Logically collective.
+
         Parameters
         ----------
         maxval
@@ -2596,6 +2634,8 @@ cdef class PC(Object):
 
     def setSPAIBlockSize(self, n: int) -> None:
         """Set the block size of the preconditioner.
+
+        Logically collective.
 
         Parameters
         ----------
@@ -2613,6 +2653,8 @@ cdef class PC(Object):
     def setSPAICacheSize(self, size: int) -> None:
         """Set the cache size.
 
+        Logically collective.
+
         Parameters
         ----------
         size
@@ -2629,6 +2671,8 @@ cdef class PC(Object):
     def setSPAIVerbose(self, level: int) -> None:
         """Set the verbosity level.
 
+        Logically collective.
+
         Parameters
         ----------
         level
@@ -2644,6 +2688,8 @@ cdef class PC(Object):
 
     def setSPAISp(self, sym: int) -> None:
         """Set to specify a symmetric sparsity pattern.
+
+        Logically collective.
 
         Parameters
         ----------
@@ -2829,6 +2875,8 @@ cdef class PC(Object):
 
     def getDeflationPC(self) -> PC:
         """Return the additional preconditioner.
+
+        Not collective.
 
         See Also
         --------

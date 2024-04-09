@@ -181,6 +181,8 @@ cdef class TS(Object):
     def load(self, Viewer viewer) -> None:
         """Load a `TS` that has been stored in binary with `view`.
 
+        Collective.
+
         Parameters
         ----------
         viewer
@@ -196,6 +198,8 @@ cdef class TS(Object):
     def destroy(self) -> Self:
         """Destroy the `TS` that was created with `create`.
 
+        Collective.
+
         See Also
         --------
         petsc.TSDestroy
@@ -206,6 +210,8 @@ cdef class TS(Object):
 
     def create(self, comm: Comm | None = None) -> Self:
         """Create an empty `TS`.
+
+        Collective.
 
         The problem type can then be set with `setProblemType` and the type of
         solver can then be set with `setType`.
@@ -243,6 +249,8 @@ cdef class TS(Object):
     def setType(self, ts_type: Type | str) -> None:
         """Set the method to be used as the `TS` solver.
 
+        Collective.
+
         Parameters
         ----------
         ts_type
@@ -263,6 +271,8 @@ cdef class TS(Object):
 
     def setRKType(self, ts_type: RKType | str) -> None:
         """Set the type of the *Runge-Kutta* scheme.
+
+        Logically collective.
 
         Parameters
         ----------
@@ -285,6 +295,8 @@ cdef class TS(Object):
     def setARKIMEXType(self, ts_type: ARKIMEXType | str) -> None:
         """Set the type of `Type.ARKIMEX` scheme.
 
+        Logically collective.
+
         Parameters
         ----------
         ts_type
@@ -306,6 +318,8 @@ cdef class TS(Object):
     def setARKIMEXFullyImplicit(self, flag: bool) -> None:
         """Solve both parts of the equation implicitly.
 
+        Logically collective.
+
         Parameters
         ----------
         flag
@@ -322,6 +336,8 @@ cdef class TS(Object):
     def getType(self) -> str:
         """Return the `TS` type.
 
+        Not collective.
+
         See Also
         --------
         petsc.TSGetType
@@ -333,6 +349,8 @@ cdef class TS(Object):
 
     def getRKType(self) -> str:
         """Return the `Type.RK` scheme.
+
+        Not collective.
 
         See Also
         --------
@@ -346,6 +364,8 @@ cdef class TS(Object):
     def getARKIMEXType(self) -> str:
         """Return the `Type.ARKIMEX` scheme.
 
+        Not collective.
+
         See Also
         --------
         petsc.TSARKIMEXGetType
@@ -357,6 +377,8 @@ cdef class TS(Object):
 
     def setDIRKType(self, ts_type: DIRKType | str) -> None:
         """Set the type of `Type.DIRK` scheme.
+
+        Logically collective.
 
         Parameters
         ----------
@@ -379,6 +401,8 @@ cdef class TS(Object):
     def getDIRKType(self) -> str:
         """Return the `Type.DIRK` scheme.
 
+        Not collective.
+
         See Also
         --------
         setDIRKType, petsc.TSDIRKGetType
@@ -390,6 +414,8 @@ cdef class TS(Object):
 
     def setProblemType(self, ptype: ProblemType) -> None:
         """Set the type of problem to be solved.
+
+        Logically collective.
 
         Parameters
         ----------
@@ -406,6 +432,8 @@ cdef class TS(Object):
     def getProblemType(self) -> ProblemType:
         """Return the type of problem to be solved.
 
+        Not collective.
+
         See Also
         --------
         petsc.TSGetProblemType
@@ -418,7 +446,7 @@ cdef class TS(Object):
     def setEquationType(self, eqtype: EquationType) -> None:
         """Set the type of the equation that `TS` is solving.
 
-        Not collective.
+        Logically collective.
 
         Parameters
         ----------
@@ -547,6 +575,8 @@ cdef class TS(Object):
         kargs : dict[str, Any] | None = None) -> None:
         """Set the routine for evaluating the function ``G`` in ``U_t = G(t,u)``.
 
+        Logically collective.
+
         Parameters
         ----------
         function
@@ -619,6 +649,8 @@ cdef class TS(Object):
     def computeRHSFunction(self, t: float, Vec x, Vec f) -> None:
         """Evaluate the right-hand side function.
 
+        Collective.
+
         Parameters
         ----------
         t
@@ -638,6 +670,8 @@ cdef class TS(Object):
 
     def computeRHSFunctionLinear(self, t: float, Vec x, Vec f) -> None:
         """Evaluate the right-hand side via the user-provided Jacobian.
+
+        Collective.
 
         Parameters
         ----------
@@ -1319,6 +1353,8 @@ cdef class TS(Object):
     def getTimeSpanSolutions(self) -> list[Vec]:
         """Return the solutions at the times in the time span.
 
+        Not collective.
+
         See Also
         --------
         setTimeSpan, petsc.TSGetTimeSpanSolutions
@@ -1928,6 +1964,8 @@ cdef class TS(Object):
     def getMonitor(self) -> list[tuple[TSMonitorFunction,tuple[Any, ...],dict[str, Any]]]:
         """Return the monitor.
 
+        Not collective.
+
         See Also
         --------
         setMonitor
@@ -1952,6 +1990,8 @@ cdef class TS(Object):
 
     def monitor(self, step: int, time: float, Vec u=None) -> None:
         """Monitor the solve.
+
+        Collective.
 
         Parameters
         ----------
@@ -2120,6 +2160,8 @@ cdef class TS(Object):
     def getPreStep(self) -> tuple[TSPreStepFunction,tuple[Any, ...] | None,dict[str, Any] | None]:
         """Return the prestep function.
 
+        Not collective.
+
         See Also
         --------
         setPreStep
@@ -2229,6 +2271,8 @@ cdef class TS(Object):
     def rollBack(self) -> None:
         """Roll back one time step.
 
+        Collective.
+
         See Also
         --------
         petsc.TSRollBack
@@ -2302,6 +2346,8 @@ cdef class TS(Object):
     def getStepLimits(self) -> tuple[float,float]:
         """Return the minimum and maximum allowed time step sizes.
 
+        Not collective.
+
         See Also
         --------
         petsc.TSAdaptGetStepLimits
@@ -2349,6 +2395,8 @@ cdef class TS(Object):
 
     def getCostIntegral(self) -> Vec:
         """Return a vector of values of the integral term in the cost functions.
+
+        Not collective.
 
         See Also
         --------
@@ -2409,6 +2457,8 @@ cdef class TS(Object):
     def getCostGradients(self) -> tuple[list[Vec],list[Vec]]:
         """Return the cost gradients.
 
+        Not collective.
+
         See Also
         --------
         setCostGradients, petsc.TSGetCostGradients
@@ -2465,6 +2515,8 @@ cdef class TS(Object):
     def createQuadratureTS(self, forward: bool=True) -> TS:
         """Create a sub `TS` that evaluates integrals over time.
 
+        Collective.
+
         Parameters
         ----------
         forward
@@ -2483,6 +2535,8 @@ cdef class TS(Object):
 
     def getQuadratureTS(self) -> tuple[bool, TS]:
         """Return the sub `TS` that evaluates integrals over time.
+
+        Not collective.
 
         Returns
         -------
@@ -2509,6 +2563,8 @@ cdef class TS(Object):
         args: tuple[Any, ...] | None = None,
         kargs: dict[str, Any] | None = None) -> None:
         """Set the function that computes the Jacobian with respect to the parameters.
+
+        Collective.
 
         Parameters
         ----------
@@ -2540,6 +2596,8 @@ cdef class TS(Object):
     def computeRHSJacobianP(self, t: float, Vec x, Mat J) -> None:
         """Run the user-defined JacobianP function.
 
+        Collective.
+
         Parameters
         ----------
         t
@@ -2559,6 +2617,8 @@ cdef class TS(Object):
 
     def adjointSetSteps(self, adjoint_steps: int) -> None:
         """Set the number of steps the adjoint solver should take backward in time.
+
+        Logically collective.
 
         Parameters
         ----------
@@ -2708,6 +2768,8 @@ cdef class TS(Object):
     def setTheta(self, theta: float) -> None:
         """Set the abscissa of the stage in ``(0,1]`` for `Type.THETA`.
 
+        Logically collective.
+
         Parameters
         ----------
         theta
@@ -2742,6 +2804,8 @@ cdef class TS(Object):
     def setThetaEndpoint(self, flag=True) -> None:
         """Set to use the endpoint variant of `Type.THETA`.
 
+        Logically collective.
+
         Parameters
         ----------
         flag
@@ -2757,6 +2821,8 @@ cdef class TS(Object):
 
     def getThetaEndpoint(self) -> bool:
         """Return whether the endpoint variable of `Type.THETA` is used.
+
+        Not collective.
 
         See Also
         --------
@@ -2826,6 +2892,8 @@ cdef class TS(Object):
 
     def getAlphaParams(self) -> tuple[float, float, float]:
         """Return the algorithmic parameters for `Type.ALPHA`.
+
+        Not collective.
 
         See Also
         --------
