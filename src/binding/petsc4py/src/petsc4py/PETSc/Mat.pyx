@@ -1681,7 +1681,7 @@ cdef class Mat(Object):
 
     #
 
-    def setOptionsPrefix(self, prefix: str) -> None:
+    def setOptionsPrefix(self, prefix: str | None = None) -> None:
         """Set the prefix used for searching for options in the database.
 
         Logically collective.
@@ -1709,7 +1709,7 @@ cdef class Mat(Object):
         CHKERR( MatGetOptionsPrefix(self.mat, &cval) )
         return bytes2str(cval)
 
-    def appendOptionsPrefix(self, prefix: str) -> None:
+    def appendOptionsPrefix(self, prefix: str | None = None) -> None:
         """Append to the prefix used for searching for options in the database.
 
         Logically collective.

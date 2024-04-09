@@ -523,7 +523,7 @@ cdef class KSP(Object):
         CHKERR( KSPGetType(self.ksp, &cval) )
         return bytes2str(cval)
 
-    def setOptionsPrefix(self, prefix: str) -> None:
+    def setOptionsPrefix(self, prefix: str | None = None) -> None:
         """Set the prefix used for all `KSP` options in the database.
 
         Logically collective.
@@ -575,7 +575,7 @@ cdef class KSP(Object):
         CHKERR( KSPGetOptionsPrefix(self.ksp, &cval) )
         return bytes2str(cval)
 
-    def appendOptionsPrefix(self, prefix: str) -> None:
+    def appendOptionsPrefix(self, prefix: str | None = None) -> None:
         """Append to prefix used for all `KSP` options in the database.
 
         Logically collective.
