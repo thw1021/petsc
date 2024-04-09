@@ -1126,6 +1126,8 @@ cdef class KSP(Object):
     def callConvergenceTest(self, its: int, rnorm: float) -> None:
         """Call the convergence test callback.
 
+        Collective.
+
         Parameters
         ----------
         its
@@ -1368,6 +1370,8 @@ cdef class KSP(Object):
     def setNormType(self, normtype: NormType) -> None:
         """Set the norm that is used for convergence testing.
 
+        Logically collective.
+
         Parameters
         ----------
         normtype
@@ -1406,6 +1410,8 @@ cdef class KSP(Object):
 
     def setComputeEigenvalues(self, flag: bool) -> None:
         """Set a flag to compute eigenvalues.
+
+        Logically collective.
 
         Set a flag so that the extreme eigenvalues values will be
         calculated via a Lanczos or Arnoldi process as the linear
@@ -1474,6 +1480,8 @@ cdef class KSP(Object):
 
     def getComputeSingularValues(self) -> bool:
         """Return flag indicating whether singular values will be calculated.
+
+        Not collective.
 
         Return the flag indicating whether the extreme singular values
         will be calculated via a Lanczos or Arnoldi process as the
@@ -1549,6 +1557,8 @@ cdef class KSP(Object):
     def getInitialGuessKnoll(self) -> bool:
         """Determine whether the KSP solver is using the Knoll trick.
 
+        Not collective.
+
         This uses the Knoll trick; using `PC.apply` to compute the
         initial guess.
 
@@ -1563,6 +1573,8 @@ cdef class KSP(Object):
 
     def setUseFischerGuess(self, model: int, size: int) -> None:
         """Use the Paul Fischer algorithm to compute initial guesses.
+
+        Logically collective.
 
         Use the Paul Fischer algorithm or its variants to compute
         initial guesses for a set of solves with related right hand
@@ -1637,7 +1649,7 @@ cdef class KSP(Object):
     ) -> None:
         """Set the function that is called at the beginning of each `KSP.solve`.
 
-        Logically Collective.
+        Logically collective.
 
         Parameters
         ----------
@@ -1671,7 +1683,7 @@ cdef class KSP(Object):
     ) -> None:
         """Set the function that is called at the end of each `KSP.solve`.
 
-        Logically Collective.
+        Logically collective.
 
         Parameters
         ----------
@@ -1805,6 +1817,8 @@ cdef class KSP(Object):
     def matSolve(self, Mat B, Mat X) -> None:
         """Solve a linear system with multiple right-hand sides.
 
+        Collective.
+
         These are stored as a `Mat.Type.DENSE`. Unlike `solve`,
         ``B`` and ``X`` must be different matrices.
 
@@ -1824,6 +1838,8 @@ cdef class KSP(Object):
 
     def matSolveTranspose(self, Mat B, Mat X) -> None:
         """Solve the transpose of a linear system with multiple RHS.
+
+        Collective.
 
         Parameters
         ----------
@@ -1893,6 +1909,8 @@ cdef class KSP(Object):
     def getHPDDMType(self) -> HPDDMType:
         """Return the Krylov solver type.
 
+        Not collective.
+
         See Also
         --------
         petsc.KSPHPDDMGetType
@@ -1952,6 +1970,8 @@ cdef class KSP(Object):
     def getSolution(self) -> Vec:
         """Return the solution for the linear system to be solved.
 
+        Not collective.
+
         Note that this may not be the solution that is stored during
         the iterative process.
 
@@ -1971,6 +1991,8 @@ cdef class KSP(Object):
         left: int | None = None
     ) -> tuple[list[Vec], list[Vec]] | list[Vec] | None:
         """Create working vectors.
+
+        Collective.
 
         Parameters
         ----------
@@ -2015,6 +2037,8 @@ cdef class KSP(Object):
     def buildSolution(self, Vec x=None) -> Vec:
         """Return the solution vector.
 
+        Collective.
+
         Parameters
         ----------
         x
@@ -2035,6 +2059,8 @@ cdef class KSP(Object):
     def buildResidual(self, Vec r=None) -> Vec:
         """Return the residual of the linear system.
 
+        Collective.
+
         Parameters
         ----------
         r
@@ -2054,6 +2080,8 @@ cdef class KSP(Object):
 
     def computeEigenvalues(self) -> ArrayComplex:
         """Compute the extreme eigenvalues for the preconditioned operator.
+
+        Not collective.
 
         See Also
         --------
@@ -2076,6 +2104,8 @@ cdef class KSP(Object):
     def computeExtremeSingularValues(self) -> tuple[float, float]:
         """Compute the extreme singular values for the preconditioned operator.
 
+        Collective.
+
         Returns
         -------
         smax : float
@@ -2097,6 +2127,8 @@ cdef class KSP(Object):
 
     def setGMRESRestart(self, restart: int) -> None:
         """Set number of iterations at which KSP restarts.
+
+        Logically collective.
 
         Suitable KSPs are: KSPGMRES, KSPFGMRES and KSPLGMRES.
 

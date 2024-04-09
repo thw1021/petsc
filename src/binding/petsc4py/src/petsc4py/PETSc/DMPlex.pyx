@@ -367,6 +367,8 @@ cdef class DMPlex(DM):
     def createCohesiveSubmesh(self, hasLagrange: bool, value: int) -> DMPlex:
         """Extract the hypersurface defined by one face of the cohesive cells.
 
+        Collective.
+
         Parameters
         ----------
         hasLagrange
@@ -861,6 +863,8 @@ cdef class DMPlex(DM):
     def orient(self) -> None:
         """Give a consistent orientation to the input mesh.
 
+        Collective.
+
         See Also
         --------
         DM, DMPlex, DM.create, petsc.DMPlexOrient
@@ -870,6 +874,8 @@ cdef class DMPlex(DM):
 
     def getCellNumbering(self) -> IS:
         """Return a global cell numbering for all cells on this process.
+
+        Collective the first time it is called.
 
         See Also
         --------
@@ -883,6 +889,8 @@ cdef class DMPlex(DM):
 
     def getVertexNumbering(self) -> IS:
         """Return a global vertex numbering for all vertices on this process.
+
+        Collective the first time it is called.
 
         See Also
         --------
@@ -1361,6 +1369,8 @@ cdef class DMPlex(DM):
     def labelComplete(self, DMLabel label) -> None:
         """Add the transitive closure to the surface.
 
+        Not collective.
+
         Parameters
         ----------
         label
@@ -1375,6 +1385,8 @@ cdef class DMPlex(DM):
 
     def labelCohesiveComplete(self, DMLabel label, DMLabel bdlabel, bdvalue: int, flip: bool, DMPlex subdm) -> None:
         """Add all other mesh pieces to complete the surface.
+
+        Not collective.
 
         Parameters
         ----------
@@ -1404,6 +1416,8 @@ cdef class DMPlex(DM):
     def setAdjacencyUseAnchors(self, useAnchors: bool = True) -> None:
         """Define adjacency in the mesh using the point-to-point constraints.
 
+        Logically collective.
+
         Parameters
         ----------
         useAnchors
@@ -1423,6 +1437,8 @@ cdef class DMPlex(DM):
     def getAdjacencyUseAnchors(self) -> bool:
         """Query whether adjacency in the mesh uses the point-to-point constraints.
 
+        Not collective.
+
         See Also
         --------
         DMPlex, DMPlex.getAdjacency, DMPlex.distribute
@@ -1435,6 +1451,8 @@ cdef class DMPlex(DM):
 
     def getAdjacency(self, p: int) -> ArrayInt:
         """Return all points adjacent to the given point.
+
+        Not collective.
 
         Parameters
         ----------
@@ -1493,6 +1511,8 @@ cdef class DMPlex(DM):
 
     def rebalanceSharedPoints(self, entityDepth: int | None = 0, useInitialGuess: bool | None = True, parallel: bool | None = True) -> bool:
         """Redistribute shared points in order to achieve better balancing.
+
+        Collective.
 
         Parameters
         ----------
@@ -1597,6 +1617,8 @@ cdef class DMPlex(DM):
     def isSimplex(self) -> bool:
         """Return the flag indicating if the first cell is a simplex.
 
+        Not collective.
+
         See Also
         --------
         DM, DMPlex, DMPlex.getCellType, DMPlex.getHeightStratum
@@ -1650,6 +1672,8 @@ cdef class DMPlex(DM):
     def distributionSetName(self, name: str) -> None:
         """Set the name of the specific parallel distribution.
 
+        Logically collective.
+
         Parameters
         ----------
         name
@@ -1668,6 +1692,8 @@ cdef class DMPlex(DM):
 
     def distributionGetName(self) -> str:
         """Retrieve the name of the specific parallel distribution.
+
+        Not collective.
 
         Returns
         -------
@@ -2011,6 +2037,8 @@ cdef class DMPlex(DM):
     def setRefinementUniform(self, refinementUniform: bool | None = True) -> None:
         """Set the flag for uniform refinement.
 
+        Logically collective.
+
         Parameters
         ----------
         refinementUniform
@@ -2028,6 +2056,8 @@ cdef class DMPlex(DM):
 
     def getRefinementUniform(self) -> bool:
         """Retrieve the flag for uniform refinement.
+
+        Not collective.
 
         Returns
         -------
@@ -2048,6 +2078,8 @@ cdef class DMPlex(DM):
     def setRefinementLimit(self, refinementLimit: float) -> None:
         """Set the maximum cell volume for refinement.
 
+        Logically collective.
+
         Parameters
         ----------
         refinementLimit
@@ -2065,6 +2097,8 @@ cdef class DMPlex(DM):
 
     def getRefinementLimit(self) -> float:
         """Retrieve the maximum cell volume for refinement.
+
+        Not collective.
 
         See Also
         --------
@@ -2167,7 +2201,7 @@ cdef class DMPlex(DM):
     def computeCellGeometryFVM(self, cell: int) -> tuple[float, ArrayReal, ArrayReal]:
         """Compute the volume for a given cell.
 
-        Collective.
+        Not collective.
 
         Parameters
         ----------
@@ -2273,6 +2307,8 @@ cdef class DMPlex(DM):
     def metricSetUniform(self, uniform: bool) -> None:
         """Record whether the metric is uniform or not.
 
+        Logically collective.
+
         Parameters
         ----------
         uniform
@@ -2290,6 +2326,8 @@ cdef class DMPlex(DM):
     def metricIsUniform(self) -> bool:
         """Return the flag indicating whether the metric is uniform or not.
 
+        Not collective.
+
         See Also
         --------
         DMPlex.metricSetUniform, DMPlex.metricRestrictAnisotropyFirst
@@ -2302,6 +2340,8 @@ cdef class DMPlex(DM):
 
     def metricSetIsotropic(self, isotropic: bool) -> None:
         """Record whether the metric is isotropic or not.
+
+        Logically collective.
 
         Parameters
         ----------
@@ -2320,6 +2360,8 @@ cdef class DMPlex(DM):
     def metricIsIsotropic(self) -> bool:
         """Return the flag indicating whether the metric is isotropic or not.
 
+        Not collective.
+
         See Also
         --------
         DMPlex.metricSetIsotropic, DMPlex.metricIsUniform
@@ -2332,6 +2374,8 @@ cdef class DMPlex(DM):
 
     def metricSetRestrictAnisotropyFirst(self, restrictAnisotropyFirst: bool) -> None:
         """Record whether anisotropy is be restricted before normalization or after.
+
+        Logically collective.
 
         Parameters
         ----------
@@ -2350,6 +2394,8 @@ cdef class DMPlex(DM):
     def metricRestrictAnisotropyFirst(self) -> bool:
         """Return ``true`` if anisotropy is restricted before normalization.
 
+        Not collective.
+
         See Also
         --------
         DMPlex.metricIsIsotropic, DMPlex.metricSetRestrictAnisotropyFirst
@@ -2362,6 +2408,8 @@ cdef class DMPlex(DM):
 
     def metricSetNoInsertion(self, noInsert: bool) -> None:
         """Set the flag indicating whether node insertion should be turned off.
+
+        Logically collective.
 
         Parameters
         ----------
@@ -2381,6 +2429,8 @@ cdef class DMPlex(DM):
     def metricNoInsertion(self) -> bool:
         """Return the flag indicating whether node insertion and deletion are turned off.
 
+        Not collective.
+
         See Also
         --------
         DMPlex.metricSetNoInsertion, DMPlex.metricNoSwapping
@@ -2394,6 +2444,8 @@ cdef class DMPlex(DM):
 
     def metricSetNoSwapping(self, noSwap: bool) -> None:
         """Set the flag indicating whether facet swapping should be turned off.
+
+        Logically collective.
 
         Parameters
         ----------
@@ -2413,6 +2465,8 @@ cdef class DMPlex(DM):
     def metricNoSwapping(self) -> bool:
         """Return the flag indicating whether facet swapping is turned off.
 
+        Not collective.
+
         See Also
         --------
         DMPlex.metricSetNoSwapping, DMPlex.metricNoInsertion
@@ -2426,6 +2480,8 @@ cdef class DMPlex(DM):
 
     def metricSetNoMovement(self, noMove: bool) -> None:
         """Set the flag indicating whether node movement should be turned off.
+
+        Logically collective.
 
         Parameters
         ----------
@@ -2445,6 +2501,8 @@ cdef class DMPlex(DM):
     def metricNoMovement(self) -> bool:
         """Return the flag indicating whether node movement is turned off.
 
+        Not collective.
+
         See Also
         --------
         DMPlex.metricSetNoMovement, DMPlex.metricNoInsertion
@@ -2458,6 +2516,8 @@ cdef class DMPlex(DM):
 
     def metricSetNoSurf(self, noSurf: bool) -> None:
         """Set the flag indicating whether surface modification should be turned off.
+
+        Logically collective.
 
         Parameters
         ----------
@@ -2477,6 +2537,8 @@ cdef class DMPlex(DM):
     def metricNoSurf(self) -> bool:
         """Return the flag indicating whether surface modification is turned off.
 
+        Not collective.
+
         See Also
         --------
         DMPlex.metricSetNoSurf, DMPlex.metricNoMovement
@@ -2490,6 +2552,8 @@ cdef class DMPlex(DM):
 
     def metricSetVerbosity(self, verbosity: int) -> None:
         """Set the verbosity of the mesh adaptation package.
+
+        Logically collective.
 
         Parameters
         ----------
@@ -2507,6 +2571,8 @@ cdef class DMPlex(DM):
 
     def metricGetVerbosity(self) -> int:
         """Return the verbosity of the mesh adaptation package.
+
+        Not collective.
 
         Returns
         -------
@@ -2526,6 +2592,8 @@ cdef class DMPlex(DM):
     def metricSetNumIterations(self, numIter: int) -> None:
         """Set the number of parallel adaptation iterations.
 
+        Logically collective.
+
         Parameters
         ----------
         numIter
@@ -2543,6 +2611,8 @@ cdef class DMPlex(DM):
     def metricGetNumIterations(self) -> int:
         """Return the number of parallel adaptation iterations.
 
+        Not collective.
+
         See Also
         --------
         DMPlex.metricSetNumIterations, DMPlex.metricGetVerbosity
@@ -2555,6 +2625,8 @@ cdef class DMPlex(DM):
 
     def metricSetMinimumMagnitude(self, h_min: float) -> None:
         """Set the minimum tolerated metric magnitude.
+
+        Logically collective.
 
         Parameters
         ----------
@@ -2573,6 +2645,8 @@ cdef class DMPlex(DM):
     def metricGetMinimumMagnitude(self) -> float:
         """Return the minimum tolerated metric magnitude.
 
+        Not collective.
+
         See Also
         --------
         DMPlex.metricSetMinimumMagnitude, DMPlex.metricGetMaximumMagnitude
@@ -2585,6 +2659,8 @@ cdef class DMPlex(DM):
 
     def metricSetMaximumMagnitude(self, h_max: float) -> None:
         """Set the maximum tolerated metric magnitude.
+
+        Logically collective.
 
         Parameters
         ----------
@@ -2603,6 +2679,8 @@ cdef class DMPlex(DM):
     def metricGetMaximumMagnitude(self) -> float:
         """Return the maximum tolerated metric magnitude.
 
+        Not collective.
+
         See Also
         --------
         DMPlex.metricSetMaximumMagnitude, DMPlex.metricGetMinimumMagnitude
@@ -2615,6 +2693,8 @@ cdef class DMPlex(DM):
 
     def metricSetMaximumAnisotropy(self, a_max: float) -> None:
         """Set the maximum tolerated metric anisotropy.
+
+        Logically collective.
 
         Parameters
         ----------
@@ -2633,6 +2713,8 @@ cdef class DMPlex(DM):
     def metricGetMaximumAnisotropy(self) -> float:
         """Return the maximum tolerated metric anisotropy.
 
+        Not collective.
+
         See Also
         --------
         DMPlex.metricSetMaximumAnisotropy, DMPlex.metricGetMaximumMagnitude
@@ -2645,6 +2727,8 @@ cdef class DMPlex(DM):
 
     def metricSetTargetComplexity(self, targetComplexity: float) -> None:
         """Set the target metric complexity.
+
+        Logically collective.
 
         Parameters
         ----------
@@ -2663,6 +2747,8 @@ cdef class DMPlex(DM):
     def metricGetTargetComplexity(self) -> float:
         """Return the target metric complexity.
 
+        Not collective.
+
         See Also
         --------
         DMPlex.metricSetTargetComplexity, DMPlex.metricGetNormalizationOrder
@@ -2675,6 +2761,8 @@ cdef class DMPlex(DM):
 
     def metricSetNormalizationOrder(self, p: float) -> None:
         """Set the order p for L-p normalization.
+
+        Logically collective.
 
         Parameters
         ----------
@@ -2693,6 +2781,8 @@ cdef class DMPlex(DM):
     def metricGetNormalizationOrder(self) -> float:
         """Return the order p for L-p normalization.
 
+        Not collective.
+
         See Also
         --------
         DMPlex.metricSetNormalizationOrder, DMPlex.metricGetTargetComplexity
@@ -2705,6 +2795,8 @@ cdef class DMPlex(DM):
 
     def metricSetGradationFactor(self, beta: float) -> None:
         """Set the metric gradation factor.
+
+        Logically collective.
 
         Parameters
         ----------
@@ -2723,6 +2815,8 @@ cdef class DMPlex(DM):
     def metricGetGradationFactor(self) -> float:
         """Return the metric gradation factor.
 
+        Not collective.
+
         See Also
         --------
         DMPlex.metricSetGradationFactor, DMPlex.metricGetHausdorffNumber
@@ -2735,6 +2829,8 @@ cdef class DMPlex(DM):
 
     def metricSetHausdorffNumber(self, hausd: float) -> None:
         """Set the metric Hausdorff number.
+
+        Logically collective.
 
         Parameters
         ----------
@@ -2753,6 +2849,8 @@ cdef class DMPlex(DM):
     def metricGetHausdorffNumber(self) -> float:
         """Return the metric Hausdorff number.
 
+        Not collective.
+
         See Also
         --------
         DMPlex.metricGetGradationFactor, DMPlex.metricSetHausdorffNumber
@@ -2765,6 +2863,8 @@ cdef class DMPlex(DM):
 
     def metricCreate(self, field: int | None = 0) -> Vec:
         """Create a Riemannian metric field.
+
+        Collective.
 
         Parameters
         ----------
@@ -2784,6 +2884,8 @@ cdef class DMPlex(DM):
 
     def metricCreateUniform(self, alpha: float, field: int | None = 0) -> Vec:
         """Construct a uniform isotropic metric.
+
+        Collective.
 
         Parameters
         ----------
@@ -2807,6 +2909,8 @@ cdef class DMPlex(DM):
     def metricCreateIsotropic(self, Vec indicator, field: int | None = 0) -> Vec:
         """Construct an isotropic metric from an error indicator.
 
+        Collective.
+
         Parameters
         ----------
         indicator
@@ -2827,6 +2931,8 @@ cdef class DMPlex(DM):
 
     def metricDeterminantCreate(self, field: int | None = 0) -> tuple[Vec, DM]:
         """Create the determinant field for a Riemannian metric.
+
+        Collective.
 
         Parameters
         ----------
@@ -2854,6 +2960,8 @@ cdef class DMPlex(DM):
 
     def metricEnforceSPD(self, Vec metric, Vec ometric, Vec determinant, restrictSizes: bool | None = False, restrictAnisotropy: bool | None = False) -> tuple[Vec, Vec]:
         """Enforce symmetric positive-definiteness of a metric.
+
+        Collective.
 
         Parameters
         ----------
@@ -2890,6 +2998,8 @@ cdef class DMPlex(DM):
     def metricNormalize(self, Vec metric, Vec ometric, Vec determinant, restrictSizes: bool | None = True, restrictAnisotropy: bool | None = True) -> tuple[Vec, Vec]:
         """Apply L-p normalization to a metric.
 
+        Collective.
+
         Parameters
         ----------
         metric
@@ -2924,6 +3034,8 @@ cdef class DMPlex(DM):
     def metricAverage2(self, Vec metric1, Vec metric2, Vec metricAvg) -> Vec:
         """Compute and return the unweighted average of two metrics.
 
+        Collective.
+
         Parameters
         ----------
         metric1
@@ -2943,6 +3055,8 @@ cdef class DMPlex(DM):
 
     def metricAverage3(self, Vec metric1, Vec metric2, Vec metric3, Vec metricAvg) -> Vec:
         """Compute and return the unweighted average of three metrics.
+
+        Collective.
 
         Parameters
         ----------
@@ -2966,6 +3080,8 @@ cdef class DMPlex(DM):
     def metricIntersection2(self, Vec metric1, Vec metric2, Vec metricInt) -> Vec:
         """Compute and return the intersection of two metrics.
 
+        Collective.
+
         Parameters
         ----------
         metric1
@@ -2985,6 +3101,8 @@ cdef class DMPlex(DM):
 
     def metricIntersection3(self, Vec metric1, Vec metric2, Vec metric3, Vec metricInt) -> Vec:
         """Compute the intersection of three metrics.
+
+        Collective.
 
         Parameters
         ----------

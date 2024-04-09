@@ -220,6 +220,8 @@ cdef class DMLabel(Object):
     def addStratum(self, value: int) -> None:
         """Add a new stratum value in a `DMLabel`.
 
+        Not collective.
+
         Parameters
         ----------
         value
