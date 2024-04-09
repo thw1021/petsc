@@ -75,6 +75,9 @@ class Configure(config.package.Package):
     a list of the given cuda arch numbers.
     raises RuntimeError if cuda arch is not a list of version numbers
     '''
+    if not hasattr(self,'cudaArch'):
+      raise RuntimeError('cudaArch is not set') from None
+
     arch_list = self.cudaArch.split(',')
 
     try:
