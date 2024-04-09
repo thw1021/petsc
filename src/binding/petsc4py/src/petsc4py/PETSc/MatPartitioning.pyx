@@ -1,6 +1,7 @@
 # --------------------------------------------------------------------
 
 class MatPartitioningType(object):
+    """The partitioning types."""
     PARTITIONINGCURRENT  = S_(MATPARTITIONINGCURRENT)
     PARTITIONINGAVERAGE  = S_(MATPARTITIONINGAVERAGE)
     PARTITIONINGSQUARE   = S_(MATPARTITIONINGSQUARE)

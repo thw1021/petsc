@@ -1737,7 +1737,7 @@ cdef class Mat(Object):
         """
         CHKERR( MatSetFromOptions(self.mat) )
 
-    def setUp(self) -> None:
+    def setUp(self) -> Self:
         """Set up the internal data structures for using the matrix.
 
         Collective.

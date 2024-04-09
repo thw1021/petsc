@@ -2258,7 +2258,8 @@ cdef class SNES(Object):
             self.setKSP(value)
 
     property use_ew:
-        def __get__(self):
+        """Use the Eisenstat-Walker trick."""
+        def __get__(self) -> bool:
             return self.getUseEW()
         def __set__(self, value):
             self.setUseEW(value)
