@@ -55,12 +55,11 @@ class BaseTestObject(object):
         prefix2 = 'opt_'
         self.obj.setOptionsPrefix(prefix2)
         self.assertEqual(self.obj.getOptionsPrefix(), prefix2)
-        ## self.obj.appendOptionsPrefix(prefix1)
-        ## self.assertEqual(self.obj.getOptionsPrefix(),
-        ##                  prefix2 + prefix1)
-        ## self.obj.prependOptionsPrefix(prefix1)
-        ## self.assertEqual(self.obj.getOptionsPrefix(),
-        ##                  prefix1 + prefix2 + prefix1)
+        self.obj.appendOptionsPrefix(prefix1)
+        self.assertEqual(self.obj.getOptionsPrefix(),
+                         prefix2 + prefix1)
+        self.obj.setOptionsPrefix()
+        self.assertEqual(self.obj.getOptionsPrefix(), None)
         self.obj.setFromOptions()
 
     def testName(self):
