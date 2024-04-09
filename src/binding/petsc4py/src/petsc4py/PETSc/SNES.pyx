@@ -193,7 +193,7 @@ cdef class SNES(Object):
         CHKERR( SNESGetType(self.snes, &cval) )
         return bytes2str(cval)
 
-    def setOptionsPrefix(self, prefix: str) -> None:
+    def setOptionsPrefix(self, prefix: str | None = None) -> None:
         """Set the prefix used for searching for options in the database.
 
         Logically collective.
@@ -221,7 +221,7 @@ cdef class SNES(Object):
         CHKERR( SNESGetOptionsPrefix(self.snes, &cval) )
         return bytes2str(cval)
 
-    def appendOptionsPrefix(self, prefix: str) -> None:
+    def appendOptionsPrefix(self, prefix: str | None = None) -> None:
         """Append to the prefix used for searching for options in the database.
 
         Logically collective.
