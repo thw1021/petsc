@@ -264,7 +264,7 @@ cdef class DM(Object):
         cdef PetscInt cdim = asInt(dim)
         CHKERR( DMSetCoordinateDim(self.dm, cdim) )
 
-    def setOptionsPrefix(self, prefix: str) -> None:
+    def setOptionsPrefix(self, prefix: str | None = None) -> None:
         """Set the prefix used for searching for options in the database.
 
         Logically collective.
@@ -292,7 +292,7 @@ cdef class DM(Object):
         CHKERR( DMGetOptionsPrefix(self.dm, &cval) )
         return bytes2str(cval)
 
-    def appendOptionsPrefix(self, prefix: str) -> None:
+    def appendOptionsPrefix(self, prefix: str | None = None) -> None:
         """Append to the prefix used for searching for options in the database.
 
         Logically collective.
