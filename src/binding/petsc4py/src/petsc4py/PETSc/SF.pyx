@@ -1,6 +1,7 @@
 # --------------------------------------------------------------------
 
 class SFType(object):
+    """The star forest types."""
     BASIC      = S_(PETSCSFBASIC)
     NEIGHBOR   = S_(PETSCSFNEIGHBOR)
     ALLGATHERV = S_(PETSCSFALLGATHERV)

@@ -40,7 +40,8 @@ StreamType = make_enum_class(
 
   See Also
   --------
-  DeviceContext, DeviceContext.getStreamType, DeviceContext.setStreamType, petsc.PetscStreamType
+  DeviceContext, DeviceContext.getStreamType
+  DeviceContext.setStreamType, petsc.PetscStreamType
 
   """,
   (
@@ -57,7 +58,8 @@ DeviceJoinMode = make_enum_class(
 
   See Also
   --------
-  DeviceContext, DeviceContext.join, DeviceContext.fork, petsc.PetscDeviceContextJoinMode
+  DeviceContext, DeviceContext.join, DeviceContext.fork
+  petsc.PetscDeviceContextJoinMode
 
   """,
   (
