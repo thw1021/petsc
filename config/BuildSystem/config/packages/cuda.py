@@ -301,8 +301,8 @@ class Configure(config.package.Package):
 
     if 'with-cuda-dir' in self.argDB and os.path.exists(os.path.join(self.argDB['with-cuda-dir'],'include','cuda.h')):
       self.cudaDir = self.argDB['with-cuda-dir']
-    if self.setCompilers.isCygwin(self.log):  # Handle win32fe nvcc as the compiler name
-      petscNvcc = petscNvcc.split(' ')[1]
+    if self.setCompilers.isCygwin(self.log):  #  nvcc has to be in PATH for win32fe
+      petscNvcc = 'nvcc'
 
     self.getExecutable(petscNvcc,getFullPath=1,resultName='systemNvcc')
     if hasattr(self,'systemNvcc') and not hasattr(self, 'cudaDir'):
