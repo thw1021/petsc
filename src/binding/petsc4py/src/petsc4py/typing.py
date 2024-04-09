@@ -28,6 +28,7 @@ from .PETSc import (
 
 __all__ = [
     "Scalar",
+    "ArrayBool",
     "ArrayInt",
     "ArrayReal",
     "ArrayComplex",
@@ -93,6 +94,9 @@ Scalars can be either `float` or `complex` (but not both) depending on how
 PETSc was configured (``./configure --with-scalar-type=real|complex``).
 
 """
+
+ArrayBool = NDArray[bool]
+"""Array of `bool`."""
 
 ArrayInt = NDArray[int]
 """Array of `int`."""
