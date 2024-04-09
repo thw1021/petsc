@@ -172,7 +172,8 @@ cdef class PC(Object):
     >>> m = PETSc.Mat().createDense(2,array=[[1,0],[0,1]])
     >>> pc = PETSc.PC().create()
     >>> pc.setOperators(m)
-    >>> u = pc(v) # Vec u is created internally, can also be passed as second argument
+    >>> u = pc(v) # u is created internally
+    >>> pc.apply(v, u) # u can also be passed as second argument
 
     See Also
     --------
@@ -2353,6 +2354,7 @@ cdef class PC(Object):
 
     # --- Patch ---
     def setPatchCellNumbering(self, Section sec not None):
+        """Set the cell numbering."""
         CHKERR( PCPatchSetCellNumbering(self.pc, sec.sec) )
 
     def setPatchDiscretisationInfo(self, dms, bs,
@@ -2360,6 +2362,7 @@ cdef class PC(Object):
                                    subspaceOffsets,
                                    ghostBcNodes,
                                    globalBcNodes):
+        """Set discretisation info."""
         cdef PetscInt numSubSpaces = 0
         cdef PetscInt numGhostBcs = 0, numGlobalBcs = 0
         cdef PetscInt *nodesPerCell = NULL
@@ -2396,6 +2399,7 @@ cdef class PC(Object):
         CHKERR( PetscFree(ccellNodeMaps) )
 
     def setPatchComputeOperator(self, operator, args=None, kargs=None):
+        """Set compute operator callbacks."""
         if args is  None: args  = ()
         if kargs is None: kargs = {}
         context = (operator, args, kargs)
@@ -2403,6 +2407,7 @@ cdef class PC(Object):
         CHKERR( PCPatchSetComputeOperator(self.pc, PCPatch_ComputeOperator, <void*>context) )
 
     def setPatchComputeOperatorInteriorFacets(self, operator, args=None, kargs=None):
+        """Set compute operator callbacks."""
         if args is  None: args  = ()
         if kargs is None: kargs = {}
         context = (operator, args, kargs)
@@ -2410,6 +2415,7 @@ cdef class PC(Object):
         CHKERR( PCPatchSetComputeOperatorInteriorFacets(self.pc, PCPatch_ComputeOperatorInteriorFacets, <void*>context) )
 
     def setPatchComputeFunction(self, function, args=None, kargs=None):
+        """Set compute operator callbacks."""
         if args is  None: args  = ()
         if kargs is None: kargs = {}
         context = (function, args, kargs)
@@ -2417,6 +2423,7 @@ cdef class PC(Object):
         CHKERR( PCPatchSetComputeFunction(self.pc, PCPatch_ComputeFunction, <void*>context) )
 
     def setPatchComputeFunctionInteriorFacets(self, function, args=None, kargs=None):
+        """Set compute operator callbacks."""
         if args is  None: args  = ()
         if kargs is None: kargs = {}
         context = (function, args, kargs)
@@ -2424,6 +2431,7 @@ cdef class PC(Object):
         CHKERR( PCPatchSetComputeFunction(self.pc, PCPatch_ComputeFunctionInteriorFacets, <void*>context) )
 
     def setPatchConstructType(self, typ, operator=None, args=None, kargs=None):
+        """Set compute operator callbacks."""
         if args is  None: args  = ()
         if kargs is None: kargs = {}
 

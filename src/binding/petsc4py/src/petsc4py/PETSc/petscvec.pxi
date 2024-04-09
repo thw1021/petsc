@@ -618,8 +618,6 @@ cdef class _Vec_buffer:
 
 cdef class _Vec_LocalForm:
 
-    "Context manager for `Vec` local form"
-
     cdef Vec gvec
     cdef Vec lvec
 

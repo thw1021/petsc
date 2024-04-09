@@ -166,16 +166,9 @@ class KSPType(object):
         natively in PETSc, e.g., GCRODR, a recycled Krylov
         method which is similar to KSPLGMRES. `petsc.KSPHPDDM`
 
-    Notes
-    -----
-    `KSP Type <https://petsc.org/release/docs/manualpages/KSP/KSPType/>`__
-    `KSP Type table <https://petsc.org/release/docs/manual/ksp/#tab-kspdefaults>`__
-    `Pieplined KSP methods <https://petsc.org/release/docs/manual/ksp/#sec-pipelineksp>`__
-    `Flexible KSP methods <https://petsc.org/release/docs/manual/ksp/#sec-flexibleksp>`__
-
     See Also
     --------
-    petsc_options, petsc.KSP
+    petsc_options, petsc.KSPType
 
     """
     RICHARDSON = S_(KSPRICHARDSON)

@@ -1,14 +1,17 @@
 # --------------------------------------------------------------------
 
 class DMDAStencilType(object):
+    """Stencil types."""
     STAR = DMDA_STENCIL_STAR
     BOX  = DMDA_STENCIL_BOX
 
 class DMDAInterpolationType(object):
+    """Interpolation types."""
     Q0 = DMDA_INTERPOLATION_Q0
     Q1 = DMDA_INTERPOLATION_Q1
 
 class DMDAElementType(object):
+    """Element types."""
     P1 = DMDA_ELEMENT_P1
     Q1 = DMDA_ELEMENT_Q1
 

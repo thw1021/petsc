@@ -1,6 +1,7 @@
 # --------------------------------------------------------------------
 
 class AOType(object):
+    """The application ordering types."""
     BASIC          = S_(AOBASIC)
     ADVANCED       = S_(AOADVANCED)
     MAPPING        = S_(AOMAPPING)

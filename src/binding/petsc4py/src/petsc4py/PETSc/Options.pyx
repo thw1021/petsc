@@ -1,14 +1,21 @@
 # --------------------------------------------------------------------
 
 cdef class Options:
-    """The options database object."""
+    """The options database object.
+
+    Parameters
+    ----------
+    prefix : str, optional
+        Optional string to prepend to all the options.
+
+    """
 
     cdef PetscOptions opt
     cdef object       _prefix
 
-    def __init__(self, prefix=None):
+    def __init__(self, prefix = None):
         self.opt = NULL
-        self.prefix  = prefix
+        self.prefix = prefix
 
     def __dealloc__(self):
         if self.opt == NULL: return

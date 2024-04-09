@@ -1,22 +1,26 @@
 # --------------------------------------------------------------------
 
 class DMSwarmType(object):
+    """Swarm types."""
     BASIC = DMSWARM_BASIC
     PIC = DMSWARM_PIC
 
 class DMSwarmMigrateType(object):
+    """Swarm migration types."""
     MIGRATE_BASIC = DMSWARM_MIGRATE_BASIC
     MIGRATE_DMCELLNSCATTER = DMSWARM_MIGRATE_DMCELLNSCATTER
     MIGRATE_DMCELLEXACT = DMSWARM_MIGRATE_DMCELLEXACT
     MIGRATE_USER = DMSWARM_MIGRATE_USER
 
 class DMSwarmCollectType(object):
+    """Swarm collection types."""
     COLLECT_BASIC = DMSWARM_COLLECT_BASIC
     COLLECT_DMDABOUNDINGBOX = DMSWARM_COLLECT_DMDABOUNDINGBOX
     COLLECT_GENERAL = DMSWARM_COLLECT_GENERAL
     COLLECT_USER = DMSWARM_COLLECT_USER
 
 class DMSwarmPICLayoutType(object):
+    """Swarm PIC layout types."""
     LAYOUT_REGULAR = DMSWARMPIC_LAYOUT_REGULAR
     LAYOUT_GAUSS = DMSWARMPIC_LAYOUT_GAUSS
     LAYOUT_SUBDIVISION = DMSWARMPIC_LAYOUT_SUBDIVISION

@@ -1,6 +1,7 @@
 # --------------------------------------------------------------------
 
 class SpaceType(object):
+    """The function space types."""
     POLYNOMIAL = S_(PETSCSPACEPOLYNOMIAL)
     PTRIMMED   = S_(PETSCSPACEPTRIMMED)
     TENSOR     = S_(PETSCSPACETENSOR)
@@ -12,7 +13,7 @@ class SpaceType(object):
 # --------------------------------------------------------------------
 
 cdef class Space(Object):
-    """Linear space object."""
+    """Function space object."""
     Type = SpaceType
 
     def __cinit__(self):
@@ -569,6 +570,7 @@ cdef class Space(Object):
 # --------------------------------------------------------------------
 
 class DualSpaceType(object):
+    """The dual space types."""
     LAGRANGE = S_(PETSCDUALSPACELAGRANGE)
     SIMPLE   = S_(PETSCDUALSPACESIMPLE)
     REFINED  = S_(PETSCDUALSPACEREFINED)
