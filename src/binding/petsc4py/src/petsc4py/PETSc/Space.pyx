@@ -101,6 +101,8 @@ cdef class Space(Object):
     def getDimension(self) -> int:
         """Return the number of basis vectors.
 
+        Not collective.
+
         See Also
         --------
         petsc.PetscSpaceGetDimension
@@ -112,6 +114,8 @@ cdef class Space(Object):
 
     def getDegree(self) -> tuple[int, int]:
         """Return the polynomial degrees that characterize this space.
+
+        Not collective.
 
         Returns
         -------
@@ -131,6 +135,8 @@ cdef class Space(Object):
 
     def setDegree(self, degree: int | None, maxDegree: int | None) -> None:
         """Set the degree of approximation for this space.
+
+        Logically collective.
 
         One of ``degree`` and ``maxDegree`` can be `None`.
 
@@ -156,6 +162,8 @@ cdef class Space(Object):
     def getNumVariables(self) -> int:
         """Return the number of variables for this space.
 
+        Not collective.
+
         See Also
         --------
         setNumVariables, petsc.PetscSpaceGetNumVariables
@@ -167,6 +175,8 @@ cdef class Space(Object):
 
     def setNumVariables(self, n: int) -> None:
         """Set the number of variables for this space.
+
+        Logically collective.
 
         Parameters
         ----------
@@ -184,6 +194,8 @@ cdef class Space(Object):
     def getNumComponents(self) -> int:
         """Return the number of components for this space.
 
+        Not collective.
+
         See Also
         --------
         setNumComponents, petsc.PetscSpaceGetNumComponents
@@ -195,6 +207,8 @@ cdef class Space(Object):
 
     def setNumComponents(self, nc: int) -> None:
         """Set the number of components for this space.
+
+        Logically collective.
 
         Parameters
         ----------
@@ -257,6 +271,8 @@ cdef class Space(Object):
     def getSumConcatenate(self) -> bool:
         """Return the concatenate flag for this space.
 
+        Not collective.
+
         A concatenated sum space will have the number of components equal to
         the sum of the number of components of all subspaces.
         A non-concatenated, or direct sum space will have the same number of
@@ -273,6 +289,8 @@ cdef class Space(Object):
 
     def setSumConcatenate(self, concatenate: bool) -> None:
         """Set the concatenate flag for this space.
+
+        Logically collective.
 
         A concatenated sum space will have the number of components equal to
         the sum of the number of components of all subspaces.
@@ -296,6 +314,8 @@ cdef class Space(Object):
     def getSumNumSubspaces(self) -> int:
         """Return the number of spaces in the sum.
 
+        Not collective.
+
         See Also
         --------
         setSumNumSubspaces, petsc.PetscSpaceSumGetNumSubspaces
@@ -307,6 +327,8 @@ cdef class Space(Object):
 
     def getSumSubspace(self, s: int) -> Space:
         """Return a space in the sum.
+
+        Not collective.
 
         Parameters
         ----------
@@ -326,6 +348,8 @@ cdef class Space(Object):
     def setSumSubspace(self, s: int, Space subsp) -> None:
         """Set a space in the sum.
 
+        Logically collective.
+
         Parameters
         ----------
         s
@@ -344,6 +368,8 @@ cdef class Space(Object):
     def setSumNumSubspaces(self, numSumSpaces: int) -> None:
         """Set the number of spaces in the sum.
 
+        Logically collective.
+
         Parameters
         ----------
         numSumSpaces
@@ -360,6 +386,8 @@ cdef class Space(Object):
     def getTensorNumSubspaces(self) -> int:
         """Return the number of spaces in the tensor product.
 
+        Not collective.
+
         See Also
         --------
         setTensorNumSubspaces, petsc.PetscSpaceTensorGetNumSubspaces
@@ -371,6 +399,8 @@ cdef class Space(Object):
 
     def setTensorSubspace(self, s: int, Space subsp) -> None:
         """Set a space in the tensor product.
+
+        Logically collective.
 
         Parameters
         ----------
@@ -390,6 +420,8 @@ cdef class Space(Object):
     def getTensorSubspace(self, s: int) -> Space:
         """Return a space in the tensor product.
 
+        Not collective.
+
         Parameters
         ----------
         s
@@ -408,6 +440,8 @@ cdef class Space(Object):
     def setTensorNumSubspaces(self, numTensSpaces: int) -> None:
         """Set the number of spaces in the tensor product.
 
+        Logically collective.
+
         Parameters
         ----------
         numTensSpaces
@@ -423,6 +457,8 @@ cdef class Space(Object):
 
     def getPolynomialTensor(self) -> bool:
         """Return whether a function space is a space of tensor polynomials.
+
+        Not collective.
 
         Return `True` if a function space is a space of tensor polynomials
         (the space is spanned by polynomials whose degree in each variable is
@@ -441,6 +477,8 @@ cdef class Space(Object):
 
     def setPolynomialTensor(self, tensor: bool) -> None:
         """Set whether a function space is a space of tensor polynomials.
+
+        Logically collective.
 
         Set to `True` for a function space which is a space of tensor
         polynomials (the space is spanned by polynomials whose degree in each
@@ -499,6 +537,8 @@ cdef class Space(Object):
     def setPTrimmedFormDegree(self, formDegree: int) -> None:
         """Set the form degree of the trimmed polynomials.
 
+        Logically collective.
+
         Parameters
         ----------
         formDegree
@@ -514,6 +554,8 @@ cdef class Space(Object):
 
     def getPTrimmedFormDegree(self) -> int:
         """Return the form degree of the trimmed polynomials.
+
+        Not collective.
 
         See Also
         --------
@@ -673,6 +715,8 @@ cdef class DualSpace(Object):
     def getNumComponents(self) -> int:
         """Return the number of components for this space.
 
+        Not collective.
+
         See Also
         --------
         setNumComponents, petsc.PetscDualSpaceGetNumComponents
@@ -684,6 +728,8 @@ cdef class DualSpace(Object):
 
     def setNumComponents(self, nc: int) -> None:
         """Set the number of components for this space.
+
+        Logically collective.
 
         Parameters
         ----------

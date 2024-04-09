@@ -1407,6 +1407,8 @@ cdef class Mat(Object):
     ) -> Self:
         """Create a hierarchical `Type.H2OPUS` matrix sampling from a provided operator.
 
+        Collective.
+
         Parameters
         ----------
         A
@@ -2091,6 +2093,8 @@ cdef class Mat(Object):
     def setTransposePrecursor(self, Mat out) -> None:
         """Set transpose precursor.
 
+        Logically collective.
+
         See Also
         --------
         petsc.MatTransposeSetPrecursor
@@ -2323,7 +2327,15 @@ cdef class Mat(Object):
         return (toBool(flag1), toBool(flag2))
 
     def isStructurallySymmetric(self) -> bool:
-        """Return the boolean indicating if the matrix is structurally symmetric."""
+        """Return the boolean indicating if the matrix is structurally symmetric.
+
+        Not collective.
+
+        See Also
+        --------
+        petsc.MatIsStructurallySymmetric
+
+        """
         cdef PetscBool flag = PETSC_FALSE
         CHKERR( MatIsStructurallySymmetric(self.mat, &flag) )
         return toBool(flag)
@@ -3454,6 +3466,8 @@ cdef class Mat(Object):
     def getRedundantMatrix(self, nsubcomm: int, subcomm: Comm | None = None, Mat out=None) -> Mat:
         """Return redundant matrices on subcommunicators.
 
+        Collective.
+
         Parameters
         ----------
         nsubcomm
@@ -4413,6 +4427,8 @@ cdef class Mat(Object):
     ) -> Mat:
         """Compute C, the Kronecker product of A and B.
 
+        Collective.
+
         Parameters
         ----------
         mat
@@ -4443,6 +4459,8 @@ cdef class Mat(Object):
     def bindToCPU(self, flg: bool) -> None:
         """Mark a matrix to temporarily stay on the CPU.
 
+        Collective.
+
         Once marked, perform computations on the CPU.
 
         Parameters
@@ -4460,6 +4478,8 @@ cdef class Mat(Object):
 
     def boundToCPU(self) -> bool:
         """Query if a matrix is bound to the CPU.
+
+        Not collective.
 
         See Also
         --------
@@ -4709,7 +4729,7 @@ cdef class Mat(Object):
     def setISAllowRepeated(self, allow: bool = True) -> None:
         """Allow repeated entries in the local to global map.
 
-        Logically Collective.
+        Logically collective.
 
         Parameters
         ----------
@@ -4727,7 +4747,7 @@ cdef class Mat(Object):
     def getISAllowRepeated(self) -> bool:
         """Get the flag for repeated entries in the local to global map.
 
-        Not Collective.
+        Not collective.
 
         See Also
         --------
@@ -4760,6 +4780,8 @@ cdef class Mat(Object):
     def getISLocalMat(self) -> Mat:
         """Return the local matrix stored inside a `Type.IS` matrix.
 
+        Not collective.
+
         See Also
         --------
         petsc.MatISGetLocalMat
@@ -4772,6 +4794,8 @@ cdef class Mat(Object):
 
     def restoreISLocalMat(self, Mat local not None) -> None:
         """Restore the local matrix obtained with `getISLocalMat`.
+
+        Not collective.
 
         Parameters
         ----------
@@ -4787,6 +4811,8 @@ cdef class Mat(Object):
 
     def setISLocalMat(self, Mat local not None) -> None:
         """Set the local matrix stored inside a `Type.IS`.
+
+        Not collective.
 
         Parameters
         ----------
@@ -4806,6 +4832,8 @@ cdef class Mat(Object):
         onnz: Sequence[int],
         ) -> Self:
         """Preallocate memory for a `Type.IS` parallel matrix.
+
+        Collective.
 
         Parameters
         ----------
@@ -4896,6 +4924,8 @@ cdef class Mat(Object):
     def H2OpusOrthogonalize(self) -> Self:
         """Orthogonalize the basis tree of a hierarchical matrix.
 
+        Collective.
+
         See Also
         --------
         petsc.MatH2OpusOrthogonalize
@@ -4906,6 +4936,8 @@ cdef class Mat(Object):
 
     def H2OpusCompress(self, tol: float):
         """Compress a hierarchical matrix.
+
+        Collective.
 
         Parameters
         ----------
@@ -4923,6 +4955,8 @@ cdef class Mat(Object):
 
     def H2OpusLowRankUpdate(self, Mat U, Mat V=None, s: float = 1.0):
         """Perform a low-rank update of the form ``self`` += sUVᵀ.
+
+        Collective.
 
         Parameters
         ----------

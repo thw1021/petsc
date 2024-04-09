@@ -1805,7 +1805,7 @@ cdef class SNES(Object):
     def getUseEW(self) -> bool:
         """Return the flag indicating if the solver uses the Eisenstat-Walker trick.
 
-        Not Collective.
+        Not collective.
 
         See Also
         --------

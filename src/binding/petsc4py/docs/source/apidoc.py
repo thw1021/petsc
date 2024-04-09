@@ -114,9 +114,15 @@ def docstring(obj):
         for i,l in enumerate(lines):
             if len(l) > 79:
                 logger.warning(f'Line {i} for {sig} too long.')
-        #init = ("Collective.", "Not collective.", "Logically collective.", "Neighborwise collective.")
-        #if lines[0] not in init:
-        #   logger.warning(f'Unexpected collectiveness specification for {sig}\nFound {lines[0]}')
+        init = (
+                 "Collective.",
+                 "Not collective.",
+                 "Logically collective.",
+                 "Neighborwise collective.",
+                 "Collective the first time it is called."
+               )
+        if lines[0] not in init:
+           logger.warning(f'Unexpected collectiveness specification for {sig}\nFound {lines[0]}')
 
     if link:
         linktxt, _, link = link.rpartition(' ')

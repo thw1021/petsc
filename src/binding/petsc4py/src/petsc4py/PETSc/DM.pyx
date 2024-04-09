@@ -1194,6 +1194,8 @@ cdef class DM(Object):
     def setCoordinateDisc(self, FE disc, project: bool) -> Self:
         """Project coordinates to a different space.
 
+        Collective.
+
         Parameters
         ----------
         disc
@@ -1211,7 +1213,7 @@ cdef class DM(Object):
     def getCoordinatesLocalized(self) -> bool:
         """Check if the coordinates have been localized for cells.
 
-        Collective.
+        Not collective.
 
         See Also
         --------
@@ -1592,6 +1594,8 @@ cdef class DM(Object):
     ) -> DM:
         """Return a mesh adapted to the specified metric field.
 
+        Collective.
+
         Parameters
         ----------
         metric
@@ -1641,6 +1645,8 @@ cdef class DM(Object):
     def setLocalSection(self, Section sec) -> None:
         """Set the `Section` encoding the local data layout for the `DM`.
 
+        Collective.
+
         See Also
         --------
         petsc.DMSetLocalSection
@@ -1650,6 +1656,8 @@ cdef class DM(Object):
 
     def getLocalSection(self) -> Section:
         """Return the `Section` encoding the local data layout for the `DM`.
+
+        Not collective.
 
         See Also
         --------
@@ -1664,6 +1672,8 @@ cdef class DM(Object):
     def setGlobalSection(self, Section sec) -> None:
         """Set the `Section` encoding the global data layout for the `DM`.
 
+        Collective.
+
         See Also
         --------
         petsc.DMSetGlobalSection
@@ -1673,6 +1683,8 @@ cdef class DM(Object):
 
     def getGlobalSection(self) -> Section:
         """Return the `Section` encoding the global data layout for the `DM`.
+
+        Collective the first time it is called.
 
         See Also
         --------
@@ -1696,6 +1708,8 @@ cdef class DM(Object):
     def createSectionSF(self, Section localsec, Section globalsec) -> None:
         """Create the `SF` encoding the parallel DOF overlap for the `DM`.
 
+        Collective.
+
         Parameters
         ----------
         localsec
@@ -1717,6 +1731,8 @@ cdef class DM(Object):
     def getSectionSF(self) -> SF:
         """Return the `Section` encoding the parallel DOF overlap.
 
+        Collective the first time it is called.
+
         See Also
         --------
         petsc.DMGetSectionSF
@@ -1729,6 +1745,8 @@ cdef class DM(Object):
 
     def setSectionSF(self, SF sf) -> None:
         """Set the `Section` encoding the parallel DOF overlap for the `DM`.
+
+        Logically collective.
 
         See Also
         --------
@@ -1744,6 +1762,8 @@ cdef class DM(Object):
     def getPointSF(self) -> SF:
         """Return the `SF` encoding the parallel DOF overlap for the `DM`.
 
+        Not collective.
+
         See Also
         --------
         petsc.DMGetPointSF
@@ -1756,6 +1776,8 @@ cdef class DM(Object):
 
     def setPointSF(self, SF sf) -> None:
         """Set the `SF` encoding the parallel DOF overlap for the `DM`.
+
+        Logically collective.
 
         See Also
         --------
