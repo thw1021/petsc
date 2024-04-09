@@ -110,10 +110,18 @@ cdef class Options:
         CHKERR( PetscOptionsHasName(self.opt, pr, nm, &flag) )
         return toBool(flag)
 
-    def setValue(self, name: str, value: str | bool) -> None:
+    def setValue(self, name: str,
+                 value: bool | int | float | Scalar | Sequence[bool] | Sequence[int] | Sequence[float] | Sequence[Scalar] | str) -> None:
         """Set a value for an option.
 
         Logically collective.
+
+        Parameters
+        ----------
+        name
+            The string identifying the option.
+        value
+            The option value.
 
         See Also
         --------
@@ -127,7 +135,14 @@ cdef class Options:
             option = bytes2str(nm)
         else:
             option = '-%s%s' % (bytes2str(pr), bytes2str(&nm[1]))
-        if type(value) is bool:
+
+        if isinstance(value, ndarray):
+            value = value.tolist()
+        if isinstance(value, (tuple, list)):
+            value = str(value).replace(' ', '').\
+                    replace('(', '').replace(')', '').\
+                    replace('[', '').replace(']', '')
+        elif isinstance(value, bool):
             value = str(value).lower()
         elif value is not None:
             value = str(value)
