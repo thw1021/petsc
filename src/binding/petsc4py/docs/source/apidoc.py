@@ -50,6 +50,7 @@ def is_staticmethod(obj):
 def is_constant(obj):
     return isinstance(obj, (int, float, str, dict))
 
+
 def is_datadescr(obj):
     return inspect.isdatadescriptor(obj) and not hasattr(obj, 'fget')
 
@@ -60,6 +61,10 @@ def is_property(obj):
 
 def is_class(obj):
     return inspect.isclass(obj) or type(obj) is type(int)
+
+
+def is_hidden(obj):
+    return obj.__qualname__.startswith('_')
 
 
 class Lines(list):
@@ -82,16 +87,22 @@ class Lines(list):
             self.append(indent + line)
 
 
-def signature(obj):
+def signature(obj, fail=True):
     doc = obj.__doc__
-    doc = doc or f"{obj.__name__}: Any"  # FIXME remove line
+    if not doc:
+        if fail and not is_hidden(obj):
+            logger.warning(f'Missing signature for {obj}')
+        doc = f"{obj.__name__}: Any"
     sig = doc.partition('\n')[0].split('.', 1)[-1]
     return sig or None
 
 
-def docstring(obj):
+def docstring(obj, fail=True):
     doc = obj.__doc__
-    doc = doc or '' # FIXME
+    if not doc:
+        if fail and not is_hidden(obj):
+            logger.warning(f'Missing docstring for {obj}')
+        doc = ''
     link = None
     sig = None
     cl = is_class(obj)
@@ -104,25 +115,32 @@ def docstring(obj):
     summary, _, docbody = doc.partition('\n')
     summary = summary.strip()
     docbody = textwrap.dedent(docbody).strip()
-    if docbody and sig:
+
+    # raise warning if docstring is not provided for a method
+    if not summary and not is_function(obj) and is_method(obj):
+        logger.warning(f'docstring: Missing summary for {obj}')
+
+    # warnings for docstrings that are not compliant
+    if len(summary) > 79:
+        logger.warning(f'Summary for {obj} too long.')
+    if docbody:
         if not summary.endswith('.'):
-            logger.warning(f'Summary for {sig} does not end with period.')
-        if len(summary) > 79:
-            logger.warning(f'Summary for {sig} too long.')
+            logger.warning(f'Summary for {obj} does not end with period.')
         # FIXME
         lines = docbody.split('\n')
         for i,l in enumerate(lines):
             if len(l) > 79:
-                logger.warning(f'Line {i} for {sig} too long.')
-        init = (
-                 "Collective.",
-                 "Not collective.",
-                 "Logically collective.",
-                 "Neighborwise collective.",
-                 "Collective the first time it is called."
-               )
-        if lines[0] not in init:
-           logger.warning(f'Unexpected collectiveness specification for {sig}\nFound {lines[0]}')
+                logger.warning(f'Line {i} for documentation of {obj} too long.')
+        if not cl:
+            init = (
+                     "Collective.",
+                     "Not collective.",
+                     "Logically collective.",
+                     "Neighborwise collective.",
+                     "Collective the first time it is called."
+                   )
+            if lines[0] not in init:
+               logger.warning(f'Unexpected collectiveness specification for {sig}\nFound {lines[0]}')
 
     if link:
         linktxt, _, link = link.rpartition(' ')
@@ -305,8 +323,6 @@ def visit_class(cls, outer=None, done=None):
                 elif is_staticmethod(obj):
                     lines.add = "@staticmethod"
                 lines.add = visit_method(attr)
-            elif False:
-                lines.add = f"{name} = {attr.__name__}"
             continue
 
         if is_datadescr(attr):

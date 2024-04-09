@@ -180,14 +180,9 @@ class EmbedSignature(CythonTransform):
         if not self.current_directives['embedsignature']:
             return node
 
-        is_constructor = False
         hide_self = False
         if node.entry.is_special:
-            is_constructor = self.class_node and node.name == '__init__'
-            if not is_constructor:
-                return node
-            class_name, func_name = None, self.class_name
-            hide_self = True
+            return node
         else:
             class_name, func_name = self.class_name, node.name
 
@@ -201,20 +196,17 @@ class EmbedSignature(CythonTransform):
             return_expr=node.return_type_annotation,
             return_type=None, hide_self=hide_self)
         if signature:
-            if is_constructor:
-                doc_holder = self.class_node.entry.type.scope
-            else:
-                doc_holder = node.entry
+            doc_holder = node.entry
 
             if doc_holder.doc is not None:
                 old_doc = doc_holder.doc
-            elif not is_constructor and getattr(node, 'py_func', None) is not None:
+            elif getattr(node, 'py_func', None) is not None:
                 old_doc = node.py_func.entry.doc
             else:
                 old_doc = None
             new_doc = self._embed_signature(signature, node.pos, old_doc)
             doc_holder.doc = EncodedString(new_doc)
-            if not is_constructor and getattr(node, 'py_func', None) is not None:
+            if getattr(node, 'py_func', None) is not None:
                 node.py_func.entry.doc = EncodedString(new_doc)
         return node
 

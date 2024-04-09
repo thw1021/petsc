@@ -27,6 +27,7 @@ class DMBoundaryType(object):
     TWIST    = DM_BOUNDARY_TWIST
 
 class DMPolytopeType(object):
+    """The `DM` cell types."""
     POINT              = DM_POLYTOPE_POINT
     SEGMENT            = DM_POLYTOPE_SEGMENT
     POINT_PRISM_TENSOR = DM_POLYTOPE_POINT_PRISM_TENSOR
@@ -46,6 +47,7 @@ class DMPolytopeType(object):
     UNKNOWN_FACE       = DM_POLYTOPE_UNKNOWN_FACE
 
 class DMReorderDefaultFlag(object):
+    """The `DM` reordering default flags."""
     NOTSET = DM_REORDER_DEFAULT_NOTSET
     FALSE  = DM_REORDER_DEFAULT_FALSE
     TRUE   = DM_REORDER_DEFAULT_TRUE
@@ -53,9 +55,7 @@ class DMReorderDefaultFlag(object):
 # --------------------------------------------------------------------
 
 cdef class DM(Object):
-    """An object describing a computational grid or mesh.
-
-    """
+    """An object describing a computational grid or mesh."""
 
     Type         = DMType
     BoundaryType = DMBoundaryType
@@ -334,9 +334,11 @@ cdef class DM(Object):
     # --- application context ---
 
     def setAppCtx(self, appctx):
+        """Set the application context."""
         self.set_attr('__appctx__', appctx)
 
     def getAppCtx(self):
+        """Return the application context."""
         return self.get_attr('__appctx__')
 
     #
@@ -2310,7 +2312,8 @@ cdef class DM(Object):
     # --- application context ---
 
     property appctx:
-        def __get__(self):
+        """Application context."""
+        def __get__(self) -> object:
             return self.getAppCtx()
         def __set__(self, value):
             self.setAppCtx(value)
@@ -2318,7 +2321,8 @@ cdef class DM(Object):
     # --- discretization space ---
 
     property ds:
-        def __get__(self):
+        """Discrete space."""
+        def __get__(self) -> DS:
             return self.getDS()
         def __set__(self, value):
             self.setDS(value)

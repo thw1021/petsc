@@ -90,7 +90,8 @@ cdef class Viewer(Object):
 
     Viewer is described in the `PETSc manual <petsc:sec_viewers>`.
 
-    Viewers can be called as functions where the argument specified is the PETSc object to be viewed. See the example below.
+    Viewers can be called as functions where the argument specified
+    is the PETSc object to be viewed. See the example below.
 
     Examples
     --------
@@ -904,8 +905,40 @@ cdef class Viewer(Object):
 # --------------------------------------------------------------------
 
 cdef class ViewerHDF5(Viewer):
+    """Viewer object for HDF5 file formats.
 
-    def create(self, name, mode=None, comm=None):
+    Viewer is described in the `PETSc manual <petsc:sec_viewers>`.
+
+    See Also
+    --------
+    Viewer
+
+    """
+
+    def create(
+        self,
+        name: str,
+        mode: FileMode | str | None = None,
+        comm: Comm | None = None,
+        ) -> Self:
+        """Create a viewer of type `Type.HDF5`.
+
+        Collective.
+
+        Parameters
+        ----------
+        name
+            The filename associated with the viewer.
+        mode
+            The mode type.
+        comm
+            MPI communicator, defaults to `Sys.getDefaultComm`.
+
+        See Also
+        --------
+        Viewer.createHDF5
+
+        """
         cdef MPI_Comm ccomm = def_Comm(comm, PETSC_COMM_DEFAULT)
         cdef const char *cname = NULL
         name = str2bytes(name, &cname)
@@ -918,32 +951,107 @@ cdef class ViewerHDF5(Viewer):
         CHKERR( PetscViewerFileSetName(self.vwr, cname) )
         return self
 
-    def pushTimestepping(self):
+    def pushTimestepping(self) -> None:
+        """Activate the timestepping mode.
+
+        Logically collective.
+
+        See Also
+        --------
+        popTimestepping, petsc.PetscViewerHDF5PushTimestepping
+
+        """
         CHKERR( PetscViewerHDF5PushTimestepping(self.vwr) )
 
     def popTimestepping(self):
+        """Dectivate the timestepping mode.
+
+        Logically collective.
+
+        See Also
+        --------
+        pushTimestepping, petsc.PetscViewerHDF5PopTimestepping
+
+        """
         CHKERR( PetscViewerHDF5PopTimestepping(self.vwr) )
 
-    def getTimestep(self):
+    def getTimestep(self) -> int:
+        """Return the current time step.
+
+        Not collective.
+
+        See Also
+        --------
+        pushTimestepping, setTimestep, incrementTimestep
+        petsc.PetscViewerHDF5GetTimestep
+
+        """
         cdef PetscInt ctimestep = 0
         CHKERR( PetscViewerHDF5GetTimestep(self.vwr, &ctimestep) )
         return toInt(ctimestep)
 
-    def setTimestep(self, timestep):
+    def setTimestep(self, timestep: int) -> None:
+        """Set the current time step.
+
+        Logically collective.
+
+        See Also
+        --------
+        pushTimestepping, getTimestep, incrementTimestep
+        petsc.PetscViewerHDF5SetTimestep
+
+        """
         CHKERR( PetscViewerHDF5SetTimestep(self.vwr, asInt(timestep)) )
 
     def incrementTimestep(self):
+        """Increment the time step.
+
+        Logically collective.
+
+        See Also
+        --------
+        pushTimestepping, setTimestep, getTimestep
+        petsc.PetscViewerHDF5IncrementTimestep
+
+        """
         CHKERR( PetscViewerHDF5IncrementTimestep(self.vwr) )
 
-    def pushGroup(self, group):
+    def pushGroup(self, group: str) -> None:
+        """Set the current group.
+
+        Logically collective.
+
+        See Also
+        --------
+        popGroup, getGroup, petsc.PetscViewerHDF5PushGroup
+
+        """
         cdef const char *cgroup = NULL
         group = str2bytes(group, &cgroup)
         CHKERR( PetscViewerHDF5PushGroup(self.vwr, cgroup) )
 
-    def popGroup(self):
+    def popGroup(self) -> None:
+        """Pop the current group from the stack.
+
+        Logically collective.
+
+        See Also
+        --------
+        pushGroup, getGroup, petsc.PetscViewerHDF5PopGroup
+
+        """
         CHKERR( PetscViewerHDF5PopGroup(self.vwr) )
 
-    def getGroup(self):
+    def getGroup(self) -> str:
+        """Return the current group.
+
+        Not collective.
+
+        See Also
+        --------
+        pushGroup, popGroup, petsc.PetscViewerHDF5GetGroup
+
+        """
         cdef char *cgroup = NULL
         CHKERR( PetscViewerHDF5GetGroup(self.vwr, NULL, &cgroup) )
         group = bytes2str(cgroup)

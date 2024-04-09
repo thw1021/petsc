@@ -1,6 +1,7 @@
 # --------------------------------------------------------------------
 
 class FEType(object):
+    """The finite element types."""
     BASIC     = S_(PETSCFEBASIC)
     OPENCL    = S_(PETSCFEOPENCL)
     COMPOSITE = S_(PETSCFECOMPOSITE)

@@ -1,11 +1,13 @@
 # --------------------------------------------------------------------
 
 class DMStagStencilType(object):
+    """Stencil types."""
     STAR = DMSTAG_STENCIL_STAR
     BOX  = DMSTAG_STENCIL_BOX
     NONE = DMSTAG_STENCIL_NONE
 
 class DMStagStencilLocation(object):
+    """Stencil location types."""
     NULLLOC          = DMSTAG_NULL_LOCATION
     BACK_DOWN_LEFT   = DMSTAG_BACK_DOWN_LEFT
     BACK_DOWN        = DMSTAG_BACK_DOWN
@@ -828,11 +830,11 @@ cdef class DMStag(DM):
         return (da,davec)
 
     def getVecArray(self, Vec vec) -> None:
-        """**Not implemented in petsc4py.**"""
+        """Not implemented."""
         raise NotImplementedError('getVecArray for DMStag not yet implemented in petsc4py')
 
     def get1dCoordinatecArrays(self) -> None:
-        """**Not implemented in petsc4py.**"""
+        """Not implemented."""
         raise NotImplementedError('get1dCoordinatecArrays for DMStag not yet implemented in petsc4py')
 
     property dim:
