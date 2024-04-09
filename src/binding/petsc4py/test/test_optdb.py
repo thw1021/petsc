@@ -1,6 +1,7 @@
 import unittest
 from petsc4py import PETSc
 from sys import getrefcount
+import numpy as np
 
 # --------------------------------------------------------------------
 
@@ -73,6 +74,77 @@ class TestOptions(unittest.TestCase):
         for k in dct:
             self.assertEqual(allopts[k], dct[k][1:-1])
             del self.opts[k]
+
+    def testType(self):
+        types = [
+            (bool, bool, self.opts.getBool, self.opts.getBoolArray),
+            (int, PETSc.IntType(), self.opts.getInt, self.opts.getIntArray),
+            (float, PETSc.RealType(), self.opts.getReal, self.opts.getRealArray),
+        ]
+        if PETSc.ScalarType() is PETSc.ComplexType:
+            types.append(
+                (
+                    complex,
+                    PETSc.ScalarType(),
+                    self.opts.getScalar,
+                    self.opts.getScalarArray,
+                )
+            )
+        else:
+            types.append(
+                (
+                    float,
+                    PETSc.ScalarType(),
+                    self.opts.getScalar,
+                    self.opts.getScalarArray,
+                )
+            )
+        toval = (lambda x: x, lambda x: np.array(x).tolist(), lambda x: np.array(x))
+        sv = 1
+        av = (1, 0, 1)
+        defv = 0
+        defarrayv = (0, 0, 1, 0)
+        for pyt, pat, pget, pgetarray in types:
+            for tov in toval:
+                self.opts.setValue('sv', tov(sv))
+                self.opts.setValue('av', tov(av))
+
+                v = pget('sv')
+                self.assertTrue(isinstance(v, pyt))
+                self.assertEqual(v, pyt(sv))
+
+                v = pget('sv', defv)
+                self.assertTrue(isinstance(v, pyt))
+                self.assertEqual(v, pyt(sv))
+
+                v = pget('missing', defv)
+                self.assertTrue(isinstance(v, pyt))
+                self.assertEqual(v, pyt(defv))
+
+                if pgetarray is not None:
+                    arrayv = pgetarray('av')
+                    self.assertEqual(arrayv.dtype, pat)
+                    self.assertEqual(len(arrayv), len(av))
+                    for v1, v2 in zip(arrayv, av):
+                        self.assertTrue(isinstance(v1.item(), pyt))
+                        self.assertEqual(v1.item(), pyt(v2))
+
+                    arrayv = pgetarray('av', defarrayv)
+                    self.assertEqual(arrayv.dtype, pat)
+                    self.assertEqual(len(arrayv), len(av))
+                    for v1, v2 in zip(arrayv, av):
+                        self.assertTrue(isinstance(v1.item(), pyt))
+                        self.assertEqual(v1.item(), pyt(v2))
+
+                    arrayv = pgetarray('missing', defarrayv)
+                    self.assertEqual(arrayv.dtype, pat)
+                    self.assertEqual(len(arrayv), len(defarrayv))
+                    for v1, v2 in zip(arrayv, defarrayv):
+                        self.assertTrue(isinstance(v1.item(), pyt))
+                        self.assertEqual(v1.item(), pyt(v2))
+
+                self.opts.delValue('sv')
+                self.opts.delValue('av')
 
     def testMonitor(self):
         optlist = []
