@@ -5,6 +5,7 @@ class DMSwarmType(object):
     BASIC = DMSWARM_BASIC
     PIC = DMSWARM_PIC
 
+
 class DMSwarmMigrateType(object):
     """Swarm migration types."""
     MIGRATE_BASIC = DMSWARM_MIGRATE_BASIC
@@ -12,12 +13,14 @@ class DMSwarmMigrateType(object):
     MIGRATE_DMCELLEXACT = DMSWARM_MIGRATE_DMCELLEXACT
     MIGRATE_USER = DMSWARM_MIGRATE_USER
 
+
 class DMSwarmCollectType(object):
     """Swarm collection types."""
     COLLECT_BASIC = DMSWARM_COLLECT_BASIC
     COLLECT_DMDABOUNDINGBOX = DMSWARM_COLLECT_DMDABOUNDINGBOX
     COLLECT_GENERAL = DMSWARM_COLLECT_GENERAL
     COLLECT_USER = DMSWARM_COLLECT_USER
+
 
 class DMSwarmPICLayoutType(object):
     """Swarm PIC layout types."""
@@ -668,7 +671,7 @@ cdef class DMSwarm(DM):
         filename = str2bytes(filename, &cfilename)
         cdef PetscInt cnfields = <PetscInt> len(fieldnames)
         cdef const char** cfieldnames = NULL
-        cdef object tmp = oarray_p(empty_p(cnfields), NULL, <void**>&cfieldnames)
+        _tmp = oarray_p(empty_p(cnfields), NULL, <void**>&cfieldnames)
         fieldnames = list(fieldnames)
         for i from 0 <= i < cnfields:
             fieldnames[i] = str2bytes(fieldnames[i], &cval)
@@ -826,9 +829,9 @@ cdef class DMSwarm(DM):
         cdef const char *cval = NULL
         cdef PetscInt cnfields = <PetscInt> len(fieldnames)
         cdef const char** cfieldnames = NULL
-        cdef object tmp = oarray_p(empty_p(cnfields), NULL, <void**>&cfieldnames)
+        _tmp = oarray_p(empty_p(cnfields), NULL, <void**>&cfieldnames)
         cdef PetscVec *cfieldvecs
-        cdef object tmp2 = oarray_p(empty_p(cnfields), NULL, <void**>&cfieldvecs)
+        _tmp2 = oarray_p(empty_p(cnfields), NULL, <void**>&cfieldvecs)
         cdef PetscScatterMode cmode = scattermode(mode)
         fieldnames = list(fieldnames)
         for i from 0 <= i < cnfields:

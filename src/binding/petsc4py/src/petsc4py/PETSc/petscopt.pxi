@@ -5,37 +5,37 @@ cdef extern from * nogil:
 
     PetscErrorCode PetscOptionsCreate(PetscOptions*)
     PetscErrorCode PetscOptionsDestroy(PetscOptions*)
-    PetscErrorCode PetscOptionsView(PetscOptions,PetscViewer)
+    PetscErrorCode PetscOptionsView(PetscOptions, PetscViewer)
     PetscErrorCode PetscOptionsClear(PetscOptions)
 
-    PetscErrorCode PetscOptionsPrefixPush(PetscOptions,char[])
+    PetscErrorCode PetscOptionsPrefixPush(PetscOptions, char[])
     PetscErrorCode PetscOptionsPrefixPop(PetscOptions)
 
-    PetscErrorCode PetscOptionsHasName(PetscOptions,char[],char[],PetscBool*)
-    PetscErrorCode PetscOptionsSetAlias(PetscOptions,char[],char[])
-    PetscErrorCode PetscOptionsSetValue(PetscOptions,char[],char[])
-    PetscErrorCode PetscOptionsClearValue(PetscOptions,char[])
+    PetscErrorCode PetscOptionsHasName(PetscOptions, char[], char[], PetscBool*)
+    PetscErrorCode PetscOptionsSetAlias(PetscOptions, char[], char[])
+    PetscErrorCode PetscOptionsSetValue(PetscOptions, char[], char[])
+    PetscErrorCode PetscOptionsClearValue(PetscOptions, char[])
 
-    PetscErrorCode PetscOptionsInsertString(PetscOptions,char[])
-    PetscErrorCode PetscOptionsInsertFile(PetscOptions,char[])
-    PetscErrorCode PetscOptionsGetAll(PetscOptions,char*[])
+    PetscErrorCode PetscOptionsInsertString(PetscOptions, char[])
+    PetscErrorCode PetscOptionsInsertFile(PetscOptions, char[])
+    PetscErrorCode PetscOptionsGetAll(PetscOptions, char*[])
 
-    PetscErrorCode PetscOptionsGetBool(PetscOptions,char[],char[],PetscBool*,PetscBool*)
-    PetscErrorCode PetscOptionsGetBoolArray(PetscOptions,char[],char[],PetscBool[],PetscInt*,PetscBool*)
-    PetscErrorCode PetscOptionsGetInt(PetscOptions,char[],char[],PetscInt*,PetscBool*)
-    PetscErrorCode PetscOptionsGetIntArray(PetscOptions,char[],char[],PetscInt[],PetscInt*,PetscBool*)
-    PetscErrorCode PetscOptionsGetReal(PetscOptions,char[],char[],PetscReal*,PetscBool*)
-    PetscErrorCode PetscOptionsGetRealArray(PetscOptions,char[],char[],PetscReal[],PetscInt*,PetscBool*)
-    PetscErrorCode PetscOptionsGetScalar(PetscOptions,char[],char[],PetscScalar*,PetscBool*)
-    PetscErrorCode PetscOptionsGetScalarArray(PetscOptions,char[],char[],PetscScalar[],PetscInt*,PetscBool*)
-    PetscErrorCode PetscOptionsGetString(PetscOptions,char[],char[],char[],size_t,PetscBool*)
+    PetscErrorCode PetscOptionsGetBool(PetscOptions, char[], char[], PetscBool*, PetscBool*)
+    PetscErrorCode PetscOptionsGetBoolArray(PetscOptions, char[], char[], PetscBool[], PetscInt*, PetscBool*)
+    PetscErrorCode PetscOptionsGetInt(PetscOptions, char[], char[], PetscInt*, PetscBool*)
+    PetscErrorCode PetscOptionsGetIntArray(PetscOptions, char[], char[], PetscInt[], PetscInt*, PetscBool*)
+    PetscErrorCode PetscOptionsGetReal(PetscOptions, char[], char[], PetscReal*, PetscBool*)
+    PetscErrorCode PetscOptionsGetRealArray(PetscOptions, char[], char[], PetscReal[], PetscInt*, PetscBool*)
+    PetscErrorCode PetscOptionsGetScalar(PetscOptions, char[], char[], PetscScalar*, PetscBool*)
+    PetscErrorCode PetscOptionsGetScalarArray(PetscOptions, char[], char[], PetscScalar[], PetscInt*, PetscBool*)
+    PetscErrorCode PetscOptionsGetString(PetscOptions, char[], char[], char[], size_t, PetscBool*)
 
     ctypedef struct _p_PetscToken
     ctypedef _p_PetscToken* PetscToken
-    PetscErrorCode PetscTokenCreate(char[],char,PetscToken*)
+    PetscErrorCode PetscTokenCreate(char[], char, PetscToken*)
     PetscErrorCode PetscTokenDestroy(PetscToken*)
-    PetscErrorCode PetscTokenFind(PetscToken,char*[])
-    PetscErrorCode PetscOptionsValidKey(char[],PetscBool*)
+    PetscErrorCode PetscTokenFind(PetscToken, char*[])
+    PetscErrorCode PetscOptionsValidKey(char[], PetscBool*)
 
 #
 
@@ -210,20 +210,20 @@ cdef getopt(PetscOptions opt, PetscOptType otype, prefix, name, deft):
 # simple minded options parser
 
 cdef tokenize(options):
-  cdef PetscToken t = NULL
-  cdef const char *s = NULL
-  cdef const char *p = NULL
-  options = str2bytes(options, &s)
-  cdef list tokens = []
-  CHKERR( PetscTokenCreate(s, c' ', &t) )
-  try:
-      CHKERR( PetscTokenFind(t, <char**>&p) )
-      while p != NULL:
-          tokens.append(bytes2str(p))
-          CHKERR( PetscTokenFind(t, <char**>&p) )
-  finally:
-      CHKERR( PetscTokenDestroy(&t) )
-  return tokens
+    cdef PetscToken t = NULL
+    cdef const char *s = NULL
+    cdef const char *p = NULL
+    options = str2bytes(options, &s)
+    cdef list tokens = []
+    CHKERR( PetscTokenCreate(s, c' ', &t) )
+    try:
+        CHKERR( PetscTokenFind(t, <char**>&p) )
+        while p != NULL:
+            tokens.append(bytes2str(p))
+            CHKERR( PetscTokenFind(t, <char**>&p) )
+    finally:
+        CHKERR( PetscTokenDestroy(&t) )
+    return tokens
 
 cdef bint iskey(key):
     cdef const char *k = NULL
@@ -275,5 +275,3 @@ cdef parseopt(options, prefix):
             opts[key] = value
     # we are done
     return opts
-
-#

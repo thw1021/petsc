@@ -269,8 +269,9 @@ cdef class LogStage:
         """The current stage name."""
         def __get__(self) -> str:
             return self.getName()
+
         def __set__(self, value):
-            <void>self; <void>value; # unused
+            <void>self; <void>value # unused
             raise TypeError("readonly attribute")
 
     #
@@ -331,6 +332,7 @@ cdef class LogStage:
         """Whether the stage is activate."""
         def __get__(self) -> bool:
             return self.getActive()
+
         def __set__(self, value):
             self.setActive(value)
 
@@ -373,6 +375,7 @@ cdef class LogStage:
         """Whether the stage is visible."""
         def __get__(self) -> bool:
             return self.getVisible()
+
         def __set__(self, value):
             self.setVisible(value)
 
@@ -418,8 +421,9 @@ cdef class LogClass:
         """The log class name."""
         def __get__(self) -> str:
             return self.getName()
+
         def __set__(self, value):
-            <void>self; <void>value; # unused
+            <void>self; <void>value # unused
             raise TypeError("readonly attribute")
 
     #
@@ -448,6 +452,7 @@ cdef class LogClass:
         """Log class activation."""
         def __get__(self) -> bool:
             return self.getActive()
+
         def __set__(self, value):
             self.setActive(value)
 
@@ -487,8 +492,6 @@ cdef class LogEvent:
 
     def __exit__(self, *exc):
         self.end()
-
-
 
     def begin(self, *objs) -> None:
         """Log the beginning of a user event.
@@ -539,8 +542,9 @@ cdef class LogEvent:
         """The current event name."""
         def __get__(self) ->str:
             return self.getName()
+
         def __set__(self, value):
-            <void>self; <void>value; # unused
+            <void>self; <void>value # unused
             raise TypeError("readonly attribute")
 
     #
@@ -598,6 +602,7 @@ cdef class LogEvent:
         """Event activation."""
         def __get__(self) -> bool:
             return self.getActive()
+
         def __set__(self, value):
             self.setActive(value)
 
@@ -629,6 +634,7 @@ cdef class LogEvent:
         """All events activation."""
         def __get__(self) -> bool:
             self.getActiveAll()
+
         def __set__(self, value):
             self.setActiveAll(value)
 

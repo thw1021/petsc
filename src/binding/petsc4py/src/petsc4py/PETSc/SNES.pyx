@@ -29,6 +29,7 @@ class SNESType(object):
     COMPOSITE        = S_(SNESCOMPOSITE)
     PATCH            = S_(SNESPATCH)
 
+
 class SNESNormSchedule(object):
     """SNES norm schedule.
 
@@ -51,6 +52,7 @@ class SNESNormSchedule(object):
     INITIAL_ONLY       = NORM_INITIAL_ONLY
     FINAL_ONLY         = NORM_FINAL_ONLY
     INITIAL_FINAL_ONLY = NORM_INITIAL_FINAL_ONLY
+
 
 # FIXME Missing reference petsc.SNESConvergedReason
 class SNESConvergedReason(object):
@@ -83,6 +85,7 @@ class SNESConvergedReason(object):
     DIVERGED_TR_DELTA        = SNES_DIVERGED_TR_DELTA
 
 # --------------------------------------------------------------------
+
 
 cdef class SNES(Object):
     """Nonlinear equations solver.
@@ -733,7 +736,7 @@ cdef class SNES(Object):
         """
         cdef Vec f = Vec()
         cdef void* ctx
-        cdef PetscErrorCode (*fun)(PetscSNES,PetscVec,PetscVec,void*)
+        cdef PetscErrorCode (*fun)(PetscSNES, PetscVec, PetscVec, void*)
         CHKERR( SNESGetFunction(self.snes, &f.vec, &fun, &ctx) )
         CHKERR( PetscINCREF(f.obj) )
         cdef object function = self.get_attr('__function__')
@@ -1221,7 +1224,6 @@ cdef class SNES(Object):
         cdef PetscReal rval3 = asReal(fnorm)
         CHKERR( SNESConverged(self.snes, ival, rval1, rval2, rval3) )
 
-
     def setConvergenceHistory(self, length=None, reset=False) -> None:
         """Set the convergence history.
 
@@ -1236,7 +1238,7 @@ cdef class SNES(Object):
         cdef PetscInt  *idata = NULL
         cdef PetscInt   size = 1000
         cdef PetscBool flag = PETSC_FALSE
-        #FIXME
+        # FIXME
         if   length is True:     pass
         elif length is not None: size = asInt(length)
         if size < 0: size = 1000
@@ -1902,7 +1904,7 @@ cdef class SNES(Object):
                 'gamma'     : toReal(gamma),
                 'alpha'     : toReal(alpha),
                 'alpha2'    : toReal(alpha2),
-                'threshold' : toReal(threshold),}
+                'threshold' : toReal(threshold), }
 
     # --- matrix-free / finite differences ---
 
@@ -2221,6 +2223,7 @@ cdef class SNES(Object):
         """Application context."""
         def __get__(self) -> Any:
             return self.getAppCtx()
+
         def __set__(self, value):
             self.setAppCtx(value)
 
@@ -2230,6 +2233,7 @@ cdef class SNES(Object):
         """`DM`."""
         def __get__(self) -> DM:
             return self.getDM()
+
         def __set__(self, value):
             self.setDM(value)
 
@@ -2239,6 +2243,7 @@ cdef class SNES(Object):
         """Nonlinear preconditioner."""
         def __get__(self) -> SNES:
             return self.getNPC()
+
         def __set__(self, value):
             self.setNPC(value)
 
@@ -2265,6 +2270,7 @@ cdef class SNES(Object):
         """Linear solver."""
         def __get__(self) -> KSP:
             return self.getKSP()
+
         def __set__(self, value):
             self.setKSP(value)
 
@@ -2272,6 +2278,7 @@ cdef class SNES(Object):
         """Use the Eisenstat-Walker trick."""
         def __get__(self) -> bool:
             return self.getUseEW()
+
         def __set__(self, value):
             self.setUseEW(value)
 
@@ -2281,6 +2288,7 @@ cdef class SNES(Object):
         """Relative residual tolerance."""
         def __get__(self) -> float:
             return self.getTolerances()[0]
+
         def __set__(self, value):
             self.setTolerances(rtol=value)
 
@@ -2288,6 +2296,7 @@ cdef class SNES(Object):
         """Absolute residual tolerance."""
         def __get__(self) -> float:
             return self.getTolerances()[1]
+
         def __set__(self, value):
             self.setTolerances(atol=value)
 
@@ -2295,6 +2304,7 @@ cdef class SNES(Object):
         """Solution update tolerance."""
         def __get__(self) -> float:
             return self.getTolerances()[2]
+
         def __set__(self, value):
             self.setTolerances(stol=value)
 
@@ -2302,6 +2312,7 @@ cdef class SNES(Object):
         """Maximum number of iterations."""
         def __get__(self) -> int:
             return self.getTolerances()[3]
+
         def __set__(self, value):
             self.setTolerances(max_it=value)
 
@@ -2311,6 +2322,7 @@ cdef class SNES(Object):
         """Maximum number of function evaluations."""
         def __get__(self) -> int:
             return self.getMaxFunctionEvaluations()
+
         def __set__(self, value):
             self.setMaxFunctionEvaluations(value)
 
@@ -2320,6 +2332,7 @@ cdef class SNES(Object):
         """Number of iterations."""
         def __get__(self) -> int:
             return self.getIterationNumber()
+
         def __set__(self, value):
             self.setIterationNumber(value)
 
@@ -2327,6 +2340,7 @@ cdef class SNES(Object):
         """Function norm."""
         def __get__(self) -> float:
             return self.getFunctionNorm()
+
         def __set__(self, value):
             self.setFunctionNorm(value)
 
@@ -2341,6 +2355,7 @@ cdef class SNES(Object):
         """Converged reason."""
         def __get__(self) -> ConvergedReason:
             return self.getConvergedReason()
+
         def __set__(self, value):
             self.setConvergedReason(value)
 
@@ -2365,6 +2380,7 @@ cdef class SNES(Object):
         """Boolean indicating if the solver uses matrix-free finite-differencing."""
         def __get__(self) -> bool:
             return self.getUseMF()
+
         def __set__(self, value):
             self.setUseMF(value)
 
@@ -2372,6 +2388,7 @@ cdef class SNES(Object):
         """Boolean indicating if the solver uses coloring finite-differencing."""
         def __get__(self) -> bool:
             return self.getUseFD()
+
         def __set__(self, value):
             self.setUseFD(value)
 
