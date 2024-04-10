@@ -367,7 +367,6 @@ cdef class Sys:
             raise ValueError(f"unknown error handler: {errhandler!r}")
         CHKERR( PetscPushErrorHandler(handler, NULL) )
 
-
     @classmethod
     def popErrorHandler(cls) -> None:
         """Remove the current error handler.

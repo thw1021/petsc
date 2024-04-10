@@ -15,73 +15,73 @@ cdef extern from * nogil:
         DMDA_ELEMENT_Q1
 
     PetscErrorCode DMDACreateND(MPI_Comm,
-                     PetscInt,PetscInt,                # dim, dof
-                     PetscInt,PetscInt,PetscInt,       # M, N, P
-                     PetscInt,PetscInt,PetscInt,       # m, n, p
-                     PetscInt[],PetscInt[],PetscInt[], # lx, ly, lz
-                     PetscDMBoundaryType,              # bx
-                     PetscDMBoundaryType,              # by
-                     PetscDMBoundaryType,              # bz
-                     PetscDMDAStencilType,             # stencil type
-                     PetscInt,                         # stencil width
-                     PetscDM*)
+                                PetscInt, PetscInt,                # dim, dof
+                                PetscInt, PetscInt, PetscInt,       # M, N, P
+                                PetscInt, PetscInt, PetscInt,       # m, n, p
+                                PetscInt[], PetscInt[], PetscInt[], # lx, ly, lz
+                                PetscDMBoundaryType,              # bx
+                                PetscDMBoundaryType,              # by
+                                PetscDMBoundaryType,              # bz
+                                PetscDMDAStencilType,             # stencil type
+                                PetscInt,                         # stencil width
+                                PetscDM*)
 
-    PetscErrorCode DMDASetDof(PetscDM,PetscInt)
-    PetscErrorCode DMDASetSizes(PetscDM,PetscInt,PetscInt,PetscInt)
-    PetscErrorCode DMDASetNumProcs(PetscDM,PetscInt,PetscInt,PetscInt)
-    PetscErrorCode DMDASetBoundaryType(PetscDM,PetscDMBoundaryType,PetscDMBoundaryType,PetscDMBoundaryType)
-    PetscErrorCode DMDASetStencilType(PetscDM,PetscDMDAStencilType)
-    PetscErrorCode DMDASetStencilWidth(PetscDM,PetscInt)
+    PetscErrorCode DMDASetDof(PetscDM, PetscInt)
+    PetscErrorCode DMDASetSizes(PetscDM, PetscInt, PetscInt, PetscInt)
+    PetscErrorCode DMDASetNumProcs(PetscDM, PetscInt, PetscInt, PetscInt)
+    PetscErrorCode DMDASetBoundaryType(PetscDM, PetscDMBoundaryType, PetscDMBoundaryType, PetscDMBoundaryType)
+    PetscErrorCode DMDASetStencilType(PetscDM, PetscDMDAStencilType)
+    PetscErrorCode DMDASetStencilWidth(PetscDM, PetscInt)
 
     PetscErrorCode DMDAGetInfo(PetscDM,
-                    PetscInt*,
-                    PetscInt*,PetscInt*,PetscInt*,
-                    PetscInt*,PetscInt*,PetscInt*,
-                    PetscInt*,PetscInt*,
-                    PetscDMBoundaryType*,
-                    PetscDMBoundaryType*,
-                    PetscDMBoundaryType*,
-                    PetscDMDAStencilType*)
+                               PetscInt*,
+                               PetscInt*, PetscInt*, PetscInt*,
+                               PetscInt*, PetscInt*, PetscInt*,
+                               PetscInt*, PetscInt*,
+                               PetscDMBoundaryType*,
+                               PetscDMBoundaryType*,
+                               PetscDMBoundaryType*,
+                               PetscDMDAStencilType*)
     PetscErrorCode DMDAGetCorners(PetscDM,
-                       PetscInt*,PetscInt*,PetscInt*,
-                       PetscInt*,PetscInt*,PetscInt*)
+                                  PetscInt*, PetscInt*, PetscInt*,
+                                  PetscInt*, PetscInt*, PetscInt*)
     PetscErrorCode DMDAGetGhostCorners(PetscDM,
-                            PetscInt*,PetscInt*,PetscInt*,
-                            PetscInt*,PetscInt*,PetscInt*)
+                                       PetscInt*, PetscInt*, PetscInt*,
+                                       PetscInt*, PetscInt*, PetscInt*)
     PetscErrorCode DMDAGetOwnershipRanges(PetscDM,
-                               const PetscInt*[],
-                               const PetscInt*[],
-                               const PetscInt*[])
+                                          const PetscInt*[],
+                                          const PetscInt*[],
+                                          const PetscInt*[])
 
     PetscErrorCode DMDASetUniformCoordinates(PetscDM,
-                                  PetscReal,PetscReal,
-                                  PetscReal,PetscReal,
-                                  PetscReal,PetscReal)
-    PetscErrorCode DMGetBoundingBox(PetscDM,PetscReal[],PetscReal[])
-    PetscErrorCode DMGetLocalBoundingBox(PetscDM,PetscReal[],PetscReal[])
+                                             PetscReal, PetscReal,
+                                             PetscReal, PetscReal,
+                                             PetscReal, PetscReal)
+    PetscErrorCode DMGetBoundingBox(PetscDM, PetscReal[], PetscReal[])
+    PetscErrorCode DMGetLocalBoundingBox(PetscDM, PetscReal[], PetscReal[])
 
-    PetscErrorCode DMDACreateNaturalVector(PetscDM,PetscVec*)
-    PetscErrorCode DMDAGlobalToNaturalBegin(PetscDM,PetscVec,PetscInsertMode,PetscVec)
-    PetscErrorCode DMDAGlobalToNaturalEnd(PetscDM,PetscVec,PetscInsertMode,PetscVec)
-    PetscErrorCode DMDANaturalToGlobalBegin(PetscDM,PetscVec,PetscInsertMode,PetscVec)
-    PetscErrorCode DMDANaturalToGlobalEnd(PetscDM,PetscVec,PetscInsertMode,PetscVec)
+    PetscErrorCode DMDACreateNaturalVector(PetscDM, PetscVec*)
+    PetscErrorCode DMDAGlobalToNaturalBegin(PetscDM, PetscVec, PetscInsertMode, PetscVec)
+    PetscErrorCode DMDAGlobalToNaturalEnd(PetscDM, PetscVec, PetscInsertMode, PetscVec)
+    PetscErrorCode DMDANaturalToGlobalBegin(PetscDM, PetscVec, PetscInsertMode, PetscVec)
+    PetscErrorCode DMDANaturalToGlobalEnd(PetscDM, PetscVec, PetscInsertMode, PetscVec)
 
-    PetscErrorCode DMDAGetAO(PetscDM,PetscAO*)
-    PetscErrorCode DMDAGetScatter(PetscDM,PetscScatter*,PetscScatter*)
+    PetscErrorCode DMDAGetAO(PetscDM, PetscAO*)
+    PetscErrorCode DMDAGetScatter(PetscDM, PetscScatter*, PetscScatter*)
 
-    PetscErrorCode DMDASetRefinementFactor(PetscDM,PetscInt,PetscInt,PetscInt)
-    PetscErrorCode DMDAGetRefinementFactor(PetscDM,PetscInt*,PetscInt*,PetscInt*)
-    PetscErrorCode DMDASetInterpolationType(PetscDM,PetscDMDAInterpolationType)
-    PetscErrorCode DMDAGetInterpolationType(PetscDM,PetscDMDAInterpolationType*)
-    PetscErrorCode DMDASetElementType(PetscDM,PetscDMDAElementType)
-    PetscErrorCode DMDAGetElementType(PetscDM,PetscDMDAElementType*)
-    PetscErrorCode DMDAGetElements(PetscDM,PetscInt*,PetscInt*,const PetscInt**)
-    PetscErrorCode DMDARestoreElements(PetscDM,PetscInt*,PetscInt*,const PetscInt**)
+    PetscErrorCode DMDASetRefinementFactor(PetscDM, PetscInt, PetscInt, PetscInt)
+    PetscErrorCode DMDAGetRefinementFactor(PetscDM, PetscInt*, PetscInt*, PetscInt*)
+    PetscErrorCode DMDASetInterpolationType(PetscDM, PetscDMDAInterpolationType)
+    PetscErrorCode DMDAGetInterpolationType(PetscDM, PetscDMDAInterpolationType*)
+    PetscErrorCode DMDASetElementType(PetscDM, PetscDMDAElementType)
+    PetscErrorCode DMDAGetElementType(PetscDM, PetscDMDAElementType*)
+    PetscErrorCode DMDAGetElements(PetscDM, PetscInt*, PetscInt*, const PetscInt**)
+    PetscErrorCode DMDARestoreElements(PetscDM, PetscInt*, PetscInt*, const PetscInt**)
 
-    PetscErrorCode DMDASetFieldName(PetscDM,PetscInt,const char[])
-    PetscErrorCode DMDAGetFieldName(PetscDM,PetscInt,const char*[])
-    PetscErrorCode DMDASetCoordinateName(PetscDM,PetscInt,const char[])
-    PetscErrorCode DMDAGetCoordinateName(PetscDM,PetscInt,const char*[])
+    PetscErrorCode DMDASetFieldName(PetscDM, PetscInt, const char[])
+    PetscErrorCode DMDAGetFieldName(PetscDM, PetscInt, const char*[])
+    PetscErrorCode DMDASetCoordinateName(PetscDM, PetscInt, const char[])
+    PetscErrorCode DMDAGetCoordinateName(PetscDM, PetscInt, const char*[])
 
 # --------------------------------------------------------------------
 
@@ -114,12 +114,12 @@ cdef inline PetscDMDAElementType daelementtype(object etype) \
     return etype
 
 cdef inline PetscErrorCode DMDAGetDim(PetscDM da, PetscInt *dim) noexcept nogil:
-     return DMDAGetInfo(da, dim,
-                        NULL, NULL, NULL,
-                        NULL, NULL, NULL,
-                        NULL, NULL,
-                        NULL, NULL, NULL,
-                        NULL)
+    return DMDAGetInfo(da, dim,
+                       NULL, NULL, NULL,
+                       NULL, NULL, NULL,
+                       NULL, NULL,
+                       NULL, NULL, NULL,
+                       NULL)
 
 cdef inline PetscInt asDims(dims,
                             PetscInt *_M,
@@ -177,7 +177,7 @@ cdef inline tuple asOwnershipRanges(object ownership_ranges,
         if p[0] == PETSC_DECIDE: p[0] = nlz
         elif p[0] != nlz: raise ValueError(
             "ownership range size %d and number or processors %d" %
-             (toInt(nlz), toInt(p[0])))
+            (toInt(nlz), toInt(p[0])))
     return tuple(ranges)
 
 cdef inline tuple toOwnershipRanges(PetscInt dim,
@@ -287,13 +287,13 @@ cdef class _DMDA_Vec_array(object):
 
 
 cdef object adjust_index_exp(object starts, object index):
-     if not isinstance(index, tuple):
-         return adjust_index(starts[0], index)
-     index = list(index)
-     for i, start in enumerate(starts):
-         index[i] = adjust_index(start, index[i])
-     index = tuple(index)
-     return index
+    if not isinstance(index, tuple):
+        return adjust_index(starts[0], index)
+    index = list(index)
+    for i, start in enumerate(starts):
+        index[i] = adjust_index(start, index[i])
+    index = tuple(index)
+    return index
 
 cdef object adjust_index(object lbound, object index):
     if index is None:

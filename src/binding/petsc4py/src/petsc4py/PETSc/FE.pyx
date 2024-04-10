@@ -8,6 +8,7 @@ class FEType(object):
 
 # --------------------------------------------------------------------
 
+
 cdef class FE(Object):
     """A PETSc object that manages a finite element space."""
 
@@ -114,7 +115,7 @@ cdef class FE(Object):
         cdef PetscBool cisSimplex = asBool(isSimplex)
         cdef const char *cprefix = NULL
         if prefix:
-             prefix = str2bytes(prefix, &cprefix)
+            prefix = str2bytes(prefix, &cprefix)
         CHKERR( PetscFECreateDefault(ccomm, cdim, cnc, cisSimplex, cprefix, cqorder, &newfe))
         CHKERR( PetscCLEAR(self.obj) ); self.fe = newfe
         return self
@@ -236,7 +237,7 @@ cdef class FE(Object):
 
         """
         cdef PetscInt ccomp = asInt(comp)
-        CHKERR( PetscFESetNumComponents(self.fe, comp) )
+        CHKERR( PetscFESetNumComponents(self.fe, ccomp) )
 
     def getNumDof(self) -> ndarray:
         """Return the number of DOFs.
@@ -312,7 +313,7 @@ cdef class FE(Object):
         """
         cdef PetscInt cblockSize = asInt(blockSize), cnumBlocks = asInt(numBlocks)
         cdef PetscInt cbatchSize = asInt(batchSize), cnumBatches = asInt(numBatches)
-        CHKERR( PetscFESetTileSizes(self.fe, blockSize, numBlocks, batchSize, numBatches) )
+        CHKERR( PetscFESetTileSizes(self.fe, cblockSize, cnumBlocks, cbatchSize, cnumBatches) )
 
     def getFaceQuadrature(self) -> Quad:
         """Return the `Quad` used to calculate inner products on faces.

@@ -18,6 +18,7 @@ class DMType(object):
     PRODUCT   = S_(DMPRODUCT)
     STAG      = S_(DMSTAG)
 
+
 class DMBoundaryType(object):
     """`DM` Boundary types."""
     NONE     = DM_BOUNDARY_NONE
@@ -25,6 +26,7 @@ class DMBoundaryType(object):
     MIRROR   = DM_BOUNDARY_MIRROR
     PERIODIC = DM_BOUNDARY_PERIODIC
     TWIST    = DM_BOUNDARY_TWIST
+
 
 class DMPolytopeType(object):
     """The `DM` cell types."""
@@ -46,6 +48,7 @@ class DMPolytopeType(object):
     UNKNOWN_CELL       = DM_POLYTOPE_UNKNOWN_CELL
     UNKNOWN_FACE       = DM_POLYTOPE_UNKNOWN_FACE
 
+
 class DMReorderDefaultFlag(object):
     """The `DM` reordering default flags."""
     NOTSET = DM_REORDER_DEFAULT_NOTSET
@@ -53,6 +56,7 @@ class DMReorderDefaultFlag(object):
     TRUE   = DM_REORDER_DEFAULT_TRUE
 
 # --------------------------------------------------------------------
+
 
 cdef class DM(Object):
     """An object describing a computational grid or mesh."""
@@ -62,7 +66,6 @@ cdef class DM(Object):
     PolytopeType = DMPolytopeType
 
     ReorderDefaultFlag = DMReorderDefaultFlag
-    """Flag indicating whether `DM` is reordered by default."""
 
     #
 
@@ -1236,7 +1239,7 @@ cdef class DM(Object):
         petsc.DMGetBoundingBox
 
         """
-        cdef PetscInt i,dim=0
+        cdef PetscInt i, dim=0
         CHKERR( DMGetCoordinateDim(self.dm, &dim) )
         cdef PetscReal gmin[3], gmax[3]
         CHKERR( DMGetBoundingBox(self.dm, gmin, gmax) )
@@ -1253,7 +1256,7 @@ cdef class DM(Object):
         petsc.DMGetLocalBoundingBox
 
         """
-        cdef PetscInt i,dim=0
+        cdef PetscInt i, dim=0
         CHKERR( DMGetCoordinateDim(self.dm, &dim) )
         cdef PetscReal lmin[3], lmax[3]
         CHKERR( DMGetLocalBoundingBox(self.dm, lmin, lmax) )
@@ -1351,7 +1354,7 @@ cdef class DM(Object):
         cdef Mat A = Mat()
         cdef Vec scale = Vec()
         CHKERR( DMCreateInterpolation(self.dm, dm.dm,
-                                   &A.mat, &scale.vec))
+                                      &A.mat, &scale.vec))
         return (A, scale)
 
     def createInjection(self, DM dm) -> Mat:
@@ -1480,7 +1483,7 @@ cdef class DM(Object):
         """
         cdef PetscInt i, n = asInt(nlevels)
         cdef PetscDM *newdmf = NULL
-        cdef object tmp = oarray_p(empty_p(n), NULL, <void**>&newdmf)
+        _tmp = oarray_p(empty_p(n), NULL, <void**>&newdmf)
         CHKERR( DMRefineHierarchy(self.dm, n, newdmf) )
         cdef DM dmf = None
         cdef list hierarchy = []
@@ -1507,7 +1510,7 @@ cdef class DM(Object):
         """
         cdef PetscInt i, n = asInt(nlevels)
         cdef PetscDM *newdmc = NULL
-        cdef object tmp = oarray_p(empty_p(n),NULL, <void**>&newdmc)
+        _tmp = oarray_p(empty_p(n), NULL, <void**>&newdmc)
         CHKERR( DMCoarsenHierarchy(self.dm, n, newdmc) )
         cdef DM dmc = None
         cdef list hierarchy = []
@@ -2315,6 +2318,7 @@ cdef class DM(Object):
         """Application context."""
         def __get__(self) -> object:
             return self.getAppCtx()
+
         def __set__(self, value):
             self.setAppCtx(value)
 
@@ -2324,6 +2328,7 @@ cdef class DM(Object):
         """Discrete space."""
         def __get__(self) -> DS:
             return self.getDS()
+
         def __set__(self, value):
             self.setDS(value)
 

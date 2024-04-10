@@ -13,6 +13,7 @@ class SFType(object):
 
 # --------------------------------------------------------------------
 
+
 cdef class SF(Object):
     """Star Forest object for communication.
 

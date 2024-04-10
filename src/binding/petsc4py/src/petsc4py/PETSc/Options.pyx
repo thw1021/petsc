@@ -37,8 +37,10 @@ cdef class Options:
         """Prefix for options."""
         def __get__(self) -> str:
             return self._prefix
+
         def __set__(self, prefix):
             self._prefix = getprefix(prefix)
+
         def __del__(self):
             self._prefix = None
     #
@@ -112,7 +114,7 @@ cdef class Options:
         """Return the boolean indicating if the option is in the database."""
         cdef const char *pr = NULL
         cdef const char *nm = NULL
-        tmp = getpair(self.prefix, name, &pr, &nm)
+        _tmp = getpair(self.prefix, name, &pr, &nm)
         cdef PetscBool flag = PETSC_FALSE
         CHKERR( PetscOptionsHasName(self.opt, pr, nm, &flag) )
         return toBool(flag)
@@ -137,7 +139,7 @@ cdef class Options:
         """
         cdef const char *pr = NULL
         cdef const char *nm = NULL
-        tmp = getpair(self.prefix, name, &pr, &nm)
+        _tmp = getpair(self.prefix, name, &pr, &nm)
         if pr == NULL:
             option = bytes2str(nm)
         else:
@@ -171,7 +173,7 @@ cdef class Options:
         """
         cdef const char *pr = NULL
         cdef const char *nm = NULL
-        tmp = getpair(self.prefix, name, &pr, &nm)
+        _tmp = getpair(self.prefix, name, &pr, &nm)
         if pr == NULL:
             option = bytes2str(nm)
         else:

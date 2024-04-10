@@ -6,6 +6,7 @@ class DSType(object):
 
 # --------------------------------------------------------------------
 
+
 cdef class DS(Object):
     """Discrete System object."""
 
@@ -277,8 +278,6 @@ cdef class DS(Object):
         cdef PetscInt cf = asInt(f)
         cdef FE fe = disc
         CHKERR( PetscDSSetDiscretization(self.ds, cf, <PetscObject> fe.fe) )
-
-
 
 # --------------------------------------------------------------------
 
