@@ -81,7 +81,7 @@ class BaseTestTSNonlinear(object):
 
 class BaseTestTSNonlinearRHS(BaseTestTSNonlinear):
 
-    def testSolveRHS(self):
+    def testSolveRHS(self, nullsol=False):
         ts = self.ts
         dct = self.ts.getDict()
         self.assertTrue(dct is not None)
@@ -109,16 +109,20 @@ class BaseTestTSNonlinearRHS(BaseTestTSNonlinear):
         ts.setMaxSteps(nT)
         ts.setFromOptions()
         u[0], u[1], u[2] = 1, 2, 3
-        ts.solve(u)
+        if nullsol:
+            ts.setSolution(u)
+            ts.solve()
+        else:
+            ts.solve(u)
 
         self.assertTrue(ode.rhsfunction_calls > 0)
         self.assertTrue(ode.rhsjacobian_calls > 0)
 
         dct = self.ts.getDict()
-        self.assertTrue('__appctx__'      in dct)
+        self.assertTrue('__appctx__' in dct)
         self.assertTrue('__rhsfunction__' in dct)
         self.assertTrue('__rhsjacobian__' in dct)
-        self.assertTrue('__monitor__'     in dct)
+        self.assertTrue('__monitor__' in dct)
 
         n = ode.monitor_calls
         ts.monitor(ts.step_number, ts.time)
@@ -164,6 +168,9 @@ class BaseTestTSNonlinearRHS(BaseTestTSNonlinear):
         self.ts.setStepNumber(0)
         self.testSolveRHS()
         self.ts.reset()
+        self.ts.setStepNumber(0)
+        self.testSolveRHS(nullsol=True)
+        self.ts.reset()
 
 class BaseTestTSNonlinearI(BaseTestTSNonlinear):
 
@@ -201,10 +208,10 @@ class BaseTestTSNonlinearI(BaseTestTSNonlinear):
         self.assertTrue(ode.ijacobian_calls > 0)
 
         dct = self.ts.getDict()
-        self.assertTrue('__appctx__'      in dct)
+        self.assertTrue('__appctx__' in dct)
         self.assertTrue('__ifunction__' in dct)
         self.assertTrue('__ijacobian__' in dct)
-        self.assertTrue('__monitor__'     in dct)
+        self.assertTrue('__monitor__' in dct)
 
         n = ode.monitor_calls
         ts.monitor(ts.step_number, ts.time)
