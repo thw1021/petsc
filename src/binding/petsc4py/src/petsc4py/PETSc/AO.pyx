@@ -9,6 +9,7 @@ class AOType(object):
 
 # --------------------------------------------------------------------
 
+
 cdef class AO(Object):
     """Application ordering object."""
     Type = AOType

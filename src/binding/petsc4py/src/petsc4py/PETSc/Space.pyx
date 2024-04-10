@@ -12,6 +12,7 @@ class SpaceType(object):
 
 # --------------------------------------------------------------------
 
+
 cdef class Space(Object):
     """Function space object."""
     Type = SpaceType
@@ -153,7 +154,6 @@ cdef class Space(Object):
         getDegree, petsc.PetscSpaceSetDegree
 
         """
-        assert( (degree != None) & (maxDegree != None))
         cdef PetscInt cdegree = PETSC_DETERMINE
         if degree is not None: cdegree = asInt(degree)
         cdef PetscInt cmaxdegree = PETSC_DETERMINE
@@ -223,17 +223,6 @@ cdef class Space(Object):
         """
         cdef PetscInt cnc = asInt(nc)
         CHKERR( PetscSpaceSetNumComponents(self.space, cnc) )
-
-    #def evaluate(self, points):
-    #    cdef PetscInt  cnpoints = 0, cdim=0, cnfuncs=0
-    #    cdef PetscReal *cpoints = NULL
-    #    cdef PetscReal *B = NULL, *D = NULL, *H = NULL
-    #    points = iarray_r(points, &cnpoints,  &cpoints)
-    #    # Get the dimension of the space
-    #    CHKERR( PetscSpaceGetDimension( self.space, &cnfuncs) )
-    #    CHKERR( PetscSpace)
-    #    CHKERR( PetscSpaceEvaluate(self.space, cnpoints, &cpoints, &B, &D, &H) )
-    #    return array_r(cnpoints*cdim, B), array_r(cnpoints*cnc, D), array_r(, H)
 
     def getType(self) -> str:
         """Return the type of the space object.
@@ -310,7 +299,7 @@ cdef class Space(Object):
 
         """
         cdef PetscBool cconcatenate = asBool(concatenate)
-        CHKERR( PetscSpaceSumSetConcatenate(self.space, concatenate))
+        CHKERR( PetscSpaceSumSetConcatenate(self.space, cconcatenate))
 
     def getSumNumSubspaces(self) -> int:
         """Return the number of spaces in the sum.
@@ -343,7 +332,7 @@ cdef class Space(Object):
         """
         cdef Space subsp = Space()
         cdef PetscInt cs = asInt(s)
-        CHKERR( PetscSpaceSumGetSubspace(self.space, s, &subsp.space) )
+        CHKERR( PetscSpaceSumGetSubspace(self.space, cs, &subsp.space) )
         return subsp
 
     def setSumSubspace(self, s: int, Space subsp) -> None:
@@ -569,6 +558,7 @@ cdef class Space(Object):
 
 # --------------------------------------------------------------------
 
+
 class DualSpaceType(object):
     """The dual space types."""
     LAGRANGE = S_(PETSCDUALSPACELAGRANGE)
@@ -577,6 +567,7 @@ class DualSpaceType(object):
     BDM      = S_(PETSCDUALSPACEBDM)
 
 # --------------------------------------------------------------------
+
 
 cdef class DualSpace(Object):
     """Dual space to a linear space."""
@@ -776,7 +767,7 @@ cdef class DualSpace(Object):
 
         """
         cdef PetscDualSpaceType cval = NULL
-        space_type = str2bytes(dualspace_type, &cval)
+        dualspace_type = str2bytes(dualspace_type, &cval)
         CHKERR( PetscDualSpaceSetType(self.dualspace, cval) )
         return self
 

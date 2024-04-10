@@ -481,6 +481,7 @@ cdef class Object:
         """Object type."""
         def __get__(self) -> str:
             return self.getType()
+
         def __set__(self, value):
             self.setType(value)
 
@@ -488,6 +489,7 @@ cdef class Object:
         """Options prefix."""
         def __get__(self) -> str:
             return self.getOptionsPrefix()
+
         def __set__(self, value):
             self.setOptionsPrefix(value)
 
@@ -500,6 +502,7 @@ cdef class Object:
         """The object name."""
         def __get__(self) -> str:
             return self.getName()
+
         def __set__(self, value):
             self.setName(value)
 
@@ -555,7 +558,7 @@ cdef int PyPetscType_Register(int classid, type cls) except -1:
         value = type_registry[key]
         if cls is not value:
             raise ValueError(
-                "key: %d, cannot register: %s, " \
+                "key: %d, cannot register: %s, "
                 "already registered: %s" % (key, cls, value))
     return 0
 

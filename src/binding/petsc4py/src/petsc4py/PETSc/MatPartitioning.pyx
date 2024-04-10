@@ -13,6 +13,7 @@ class MatPartitioningType(object):
 
 # --------------------------------------------------------------------
 
+
 cdef class MatPartitioning(Object):
     """Object for managing the partitioning of a matrix or graph."""
 
