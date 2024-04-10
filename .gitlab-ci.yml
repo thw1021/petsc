@@ -229,7 +229,7 @@ check-ci-settings:
 #
 
 .stage-1:
-  extends: .rules-default
+  extends: .rules-default-slepc-hpddm-gpu
   stage: stage-1
   tags:
     - gce-u22-stage1
