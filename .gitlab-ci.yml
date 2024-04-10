@@ -41,10 +41,13 @@ variables:
       when: never
     - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)docs-only($|,)/
       when: never
+    - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)petsc4py-only($|,)/
+      when: never
     - !reference [.rules-source, rules]
   interruptible: true
   dependencies: []
 
+# default-docs jobs should be run for petsc4py-only aswell
 .rules-default-docs:
   rules:
     - if: $PETSC_CI_EXTENDED == "yes"
@@ -52,6 +55,20 @@ variables:
     - if: $PETSC_CI_PAGES == "yes"
       when: never
     - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)docs-only($|,)/
+    - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)petsc4py-only($|,)/
+    - !reference [.rules-source, rules]
+  interruptible: true
+  dependencies: []
+
+.rules-default-petsc4py:
+  rules:
+    - if: $PETSC_CI_EXTENDED == "yes"
+      when: never
+    - if: $PETSC_CI_PAGES == "yes"
+      when: never
+    - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)docs-only($|,)/
+      when: never
+    - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)petsc4py-only($|,)/
     - !reference [.rules-source, rules]
   interruptible: true
   dependencies: []
@@ -196,7 +213,9 @@ gcc-lto:
     LOAD_MODULES: gcc/12.1.0 mpich/4.1-gcc-12.1.0
 
 petsc4py-install:
-  extends: .stage-2
+  extends:
+    - .stage-2
+    - .rules-default-petsc4py
   tags:
     - gce-u22-stage1
   variables:
@@ -234,7 +253,9 @@ petsc4py-install:
     - mv arch-* hide/ && PETSC_DIR="${PWD}/${T_PREFIX}" ${T_VALIDATE_CMD} && mv hide/arch-* ./
 
 petsc4py-pip:
-  extends: .stage-2
+  extends:
+    - .stage-2
+    - .rules-default-petsc4py
   tags:
     - gce-u22-stage1
   variables:
@@ -443,6 +464,7 @@ osx-arm:
   extends:
     - .stage-3
     - .osx_test
+    - .rules-default-petsc4py
     - .coverage-disable
   tags:
     - os:macos-arm
@@ -693,6 +715,7 @@ linux-cmplx-single-arm:
   extends:
     - .stage-3
     - .linux_test
+    - .rules-default-petsc4py
     # gcovr does not work on arm/linux
     - .coverage-disable
   tags:
@@ -770,6 +793,7 @@ linux-pkgs-cxx-mlib:
   extends:
     - .stage-3
     - .linux_test
+    - .rules-default-petsc4py
   tags:
     - gce-u22-stage3
   variables:
@@ -790,6 +814,7 @@ linux-pkgs-opt:
   extends:
     - .stage-3
     - .linux_test
+    - .rules-default-petsc4py
   tags:
     - gce-u22-stage3, linux-fast
   variables:
@@ -846,6 +871,7 @@ linux-intel-cmplx:
   extends:
     - .stage-3
     - .linux_test_nofflags
+    - .rules-default-petsc4py
     - .coverage-disable
   tags:
     - gce-u22-stage3
@@ -1053,6 +1079,7 @@ osx-cxx-cmplx-pkgs-dbg:
   extends:
     - .stage-3
     - .osx_test
+    - .rules-default-petsc4py
     - .coverage-disable
   tags:
     - os:macos-x64
