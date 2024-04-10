@@ -45,11 +45,13 @@ variables:
       when: never
     - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)slepc-hpddm-only($|,)/
       when: never
+    - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)gpu-only($|,)/
+      when: never
     - !reference [.rules-source, rules]
   interruptible: true
   dependencies: []
 
-# default-docs jobs should be run for petsc4py-only, slepc-hpddm-only aswell
+# default-docs jobs should be run for petsc4py-only, slepc-hpddm-only, gpu-only aswell
 .rules-default-docs:
   rules:
     - if: $PETSC_CI_EXTENDED == "yes"
@@ -59,6 +61,7 @@ variables:
     - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)docs-only($|,)/
     - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)petsc4py-only($|,)/
     - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)slepc-hpddm-only($|,)/
+    - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)gpu-only($|,)/
     - !reference [.rules-source, rules]
   interruptible: true
   dependencies: []
@@ -72,6 +75,8 @@ variables:
     - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)docs-only($|,)/
       when: never
     - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)slepc-hpddm-only($|,)/
+      when: never
+    - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)gpu-only($|,)/
       when: never
     - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)petsc4py-only($|,)/
     - !reference [.rules-source, rules]
@@ -88,7 +93,26 @@ variables:
       when: never
     - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)petsc4py-only($|,)/
       when: never
+    - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)gpu-only($|,)/
+      when: never
     - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)slepc-hpddm-only($|,)/
+    - !reference [.rules-source, rules]
+  interruptible: true
+  dependencies: []
+
+.rules-default-gpu:
+  rules:
+    - if: $PETSC_CI_EXTENDED == "yes"
+      when: never
+    - if: $PETSC_CI_PAGES == "yes"
+      when: never
+    - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)docs-only($|,)/
+      when: never
+    - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)petsc4py-only($|,)/
+      when: never
+    - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)slepc-hpddm-only($|,)/
+      when: never
+    - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)gpu-only($|,)/
     - !reference [.rules-source, rules]
   interruptible: true
   dependencies: []
@@ -101,11 +125,33 @@ variables:
       when: never
     - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)docs-only($|,)/
       when: never
+    - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)gpu-only($|,)/
+      when: never
     - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)petsc4py-only($|,)/
     - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)slepc-hpddm-only($|,)/
     - !reference [.rules-source, rules]
   interruptible: true
   dependencies: []
+
+#.rules-default-petsc4py-gpu:  # currently no job requires this rule
+
+.rules-default-slepc-hpddm-gpu:
+  rules:
+    - if: $PETSC_CI_EXTENDED == "yes"
+      when: never
+    - if: $PETSC_CI_PAGES == "yes"
+      when: never
+    - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)docs-only($|,)/
+      when: never
+    - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)petsc4py-only($|,)/
+      when: never
+    - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)slepc-hpddm-only($|,)/
+    - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)gpu-only($|,)/
+    - !reference [.rules-source, rules]
+  interruptible: true
+  dependencies: []
+
+# .rules-default-petsc4py-slepc-hpddm-gpu: # currently no job requires this rule
 
 .rules-pause:
   rules:
@@ -613,6 +659,7 @@ linux-hip-double:
   extends:
     - .stage-3
     - .linux_test_noflags
+    - .rules-default-gpu
     - .coverage-disable
   tags:
     - gpu:amd, os:linux
@@ -623,6 +670,7 @@ linux-sycl-double:
   extends:
     - .stage-3
     - .linux_test_nofflags
+    - .rules-default-gpu
     - .coverage-disable
   tags:
     - gce-u22-stage3, linux-fast
@@ -637,6 +685,7 @@ linux-cuda-pkgs:
   extends:
     - .stage-3
     - .linux_test
+    - .rules-default-gpu
   tags:
     - cuda-stage3
   variables:
@@ -656,6 +705,7 @@ linux-cuda112-omp:
   extends:
     - .stage-3
     - .linux_test
+    - .rules-default-gpu
     - .coverage-disable
   tags:
     - cuda-stage3
@@ -671,6 +721,7 @@ linux-cuda-cmplx:
   extends:
     - .stage-3
     - .linux_test
+    - .rules-default-gpu
   tags:
     - cuda-stage3
   variables:
@@ -681,6 +732,7 @@ linux-cuda-double-64idx:
   extends:
     - .stage-3
     - .linux_test
+    - .rules-default-gpu
   tags:
     - cuda12
   variables:
@@ -692,7 +744,7 @@ linux-cuda-single-cxx:
   extends:
     - .stage-3
     - .linux_test_noflags
-    - .rules-default-slepc-hpddm
+    - .rules-default-slepc-hpddm-gpu
     - .coverage-disable
   tags:
     - cuda-stage3
@@ -706,7 +758,7 @@ linux-cuda-uni-pkgs:
   extends:
     - .stage-3
     - .linux_test
-    - .rules-default-slepc-hpddm
+    - .rules-default-slepc-hpddm-gpu
   tags:
     - cuda-stage3
   variables:
@@ -718,6 +770,7 @@ linux-clang-cuda:
   extends:
     - .stage-3
     - .linux_test
+    - .rules-default-gpu
     - .coverage-disable
   tags:
     - cuda-stage3
@@ -732,6 +785,7 @@ linux-viennacl:
   extends:
     - .stage-3
     - .linux_test
+    - .rules-default-gpu
   tags:
     - cuda-stage3
   variables:
