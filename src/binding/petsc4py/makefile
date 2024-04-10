@@ -51,6 +51,14 @@ uninstall:
 
 # ----
 
+.PHONY: lint
+GITSRC = '*.pyx' '*.pxi' '*.pxd'
+LINTOPTS =
+lint:
+	-@git --no-pager ls-files -z ${GITSRC} | xargs -0 cython-lint ${LINTOPTS} --files
+
+# ----
+
 .PHONY: docs docs-html docs-pdf docs-misc
 docs: docs-html docs-pdf docs-misc
 docs-html: rst2html sphinx-html

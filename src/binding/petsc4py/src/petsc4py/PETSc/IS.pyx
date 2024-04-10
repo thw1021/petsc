@@ -8,6 +8,7 @@ class ISType(object):
 
 # --------------------------------------------------------------------
 
+
 cdef class IS(Object):
     """A collection of indices.
 
@@ -38,7 +39,6 @@ cdef class IS(Object):
         cdef _IS_buffer buf = <_IS_buffer>(view.obj)
         buf.releasebuffer(view)
         <void>self # unused
-
 
     # 'with' statement (PEP 343)
 
@@ -206,8 +206,8 @@ cdef class IS(Object):
     def createStride(
         self,
         size: int,
-        first: int=0,
-        step: int=0,
+        first: int = 0,
+        step: int = 0,
         comm: Comm | None = None
     ) -> Self:
         """Create an index set consisting of evenly spaced values.

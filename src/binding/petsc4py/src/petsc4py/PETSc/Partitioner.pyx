@@ -12,6 +12,7 @@ class PartitionerType(object):
 
 # --------------------------------------------------------------------
 
+
 cdef class Partitioner(Object):
     """A graph partitioner."""
 

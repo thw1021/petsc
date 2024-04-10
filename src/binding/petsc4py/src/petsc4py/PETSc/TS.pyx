@@ -33,6 +33,7 @@ class TSType(object):
     CRANK_NICOLSON = CN
     RUNGE_KUTTA    = RK
 
+
 class TSRKType(object):
     """The *RK* subtype."""
     RK1FE = S_(TSRK1FE)
@@ -47,6 +48,7 @@ class TSRKType(object):
     RK6VR = S_(TSRK6VR)
     RK7VR = S_(TSRK7VR)
     RK8VR = S_(TSRK8VR)
+
 
 class TSARKIMEXType(object):
     """The *ARKIMEX* subtype."""
@@ -63,6 +65,7 @@ class TSARKIMEXType(object):
     ARKIMEXARS443 = S_(TSARKIMEXARS443)
     ARKIMEX4      = S_(TSARKIMEX4)
     ARKIMEX5      = S_(TSARKIMEX5)
+
 
 class TSDIRKType(object):
     """The *DIRK* subtype."""
@@ -83,10 +86,12 @@ class TSDIRKType(object):
     DIRK8616SAL   = S_(TSDIRK8616SAL)
     DIRKES8516SAL = S_(TSDIRKES8516SAL)
 
+
 class TSProblemType(object):
     """Distinguishes linear and nonlinear problems."""
     LINEAR    = TS_LINEAR
     NONLINEAR = TS_NONLINEAR
+
 
 class TSEquationType(object):
     """Distinguishes among types of explicit and implicit equations."""
@@ -104,12 +109,14 @@ class TSEquationType(object):
     DAE_IMPLICIT_INDEX3       = TS_EQ_DAE_IMPLICIT_INDEX3
     DAE_IMPLICIT_INDEXHI      = TS_EQ_DAE_IMPLICIT_INDEXHI
 
+
 class TSExactFinalTime(object):
     """The method for ending time stepping."""
     UNSPECIFIED = TS_EXACTFINALTIME_UNSPECIFIED
     STEPOVER    = TS_EXACTFINALTIME_STEPOVER
     INTERPOLATE = TS_EXACTFINALTIME_INTERPOLATE
     MATCHSTEP   = TS_EXACTFINALTIME_MATCHSTEP
+
 
 class TSConvergedReason(object):
     """The reason the time step is converging."""
@@ -126,6 +133,7 @@ class TSConvergedReason(object):
     DIVERGED_STEP_REJECTED   = TS_DIVERGED_STEP_REJECTED
 
 # -----------------------------------------------------------------------------
+
 
 cdef class TS(Object):
     """ODE integrator.
@@ -573,7 +581,7 @@ cdef class TS(Object):
         Vec f=None,
         args : tuple[Any, ...] | None = None,
         kargs : dict[str, Any] | None = None) -> None:
-        """Set the routine for evaluating the function ``G`` in ``U_t = G(t,u)``.
+        """Set the routine for evaluating the function ``G`` in ``U_t = G(t, u)``.
 
         Logically collective.
 
@@ -611,7 +619,7 @@ cdef class TS(Object):
         Mat P=None,
         args : tuple[Any, ...] | None = None,
         kargs : dict[str, Any] | None = None) -> None:
-        """Set the function to compute the Jacobian of ``G`` in ``U_t = G(U,t)``.
+        """Set the function to compute the Jacobian of ``G`` in ``U_t = G(U, t)``.
 
         Logically collective.
 
@@ -825,7 +833,7 @@ cdef class TS(Object):
         Logically collective.
 
         Set the function to compute the matrix ``dF/dU + a*dF/dU_t`` where
-        ``F(t,U,U_t)`` is the function provided with `setIFunction`.
+        ``F(t, U, U_t)`` is the function provided with `setIFunction`.
 
         Parameters
         ----------
@@ -869,7 +877,7 @@ cdef class TS(Object):
         Logically collective.
 
         Set the function that computes the Jacobian of ``F`` with respect to
-        the parameters ``P`` where ``F(Udot,U,t) = G(U,P,t)``, as well as the
+        the parameters ``P`` where ``F(Udot, U, t) = G(U, P, t)``, as well as the
         location to store the matrix.
 
         Parameters
@@ -901,7 +909,7 @@ cdef class TS(Object):
 
     def computeIFunction(self,
                          t: float, Vec x, Vec xdot,
-                         Vec f, imex: bool=False) -> None:
+                         Vec f, imex: bool = False) -> None:
         """Evaluate the DAE residual written in implicit form.
 
         Collective.
@@ -931,12 +939,12 @@ cdef class TS(Object):
 
     def computeIJacobian(self,
                          t: float, Vec x, Vec xdot, a: float,
-                         Mat J, Mat P=None, imex: bool=False) -> None:
+                         Mat J, Mat P = None, imex: bool = False) -> None:
         """Evaluate the Jacobian of the DAE.
 
         Collective.
 
-        If ``F(t,U,Udot)=0`` is the DAE, the required Jacobian is
+        If ``F(t, U, Udot)=0`` is the DAE, the required Jacobian is
         ``dF/dU + shift*dF/dUdot``
 
         Parameters
@@ -970,8 +978,8 @@ cdef class TS(Object):
                                    jmat, pmat, bval) )
 
     def computeIJacobianP(self,
-                         t: float, Vec x, Vec xdot, a: float,
-                         Mat J, imex: bool=False) -> None:
+                          t: float, Vec x, Vec xdot, a: float,
+                          Mat J, imex: bool = False) -> None:
         """Evaluate the Jacobian with respect to parameters.
 
         Collective.
@@ -1001,7 +1009,7 @@ cdef class TS(Object):
         cdef PetscBool bval  = asBool(imex)
         cdef PetscMat jmat = J.mat
         CHKERR( TSComputeIJacobianP(self.ts, rval1, x.vec, xdot.vec, rval2,
-                                   jmat, bval) )
+                                    jmat, bval) )
 
     def getIFunction(self) -> tuple[Vec, TSIFunction]:
         """Return the vector and function which computes the implicit residual.
@@ -1139,7 +1147,7 @@ cdef class TS(Object):
         """
         cdef PetscReal rval = asReal(t)
         CHKERR( TSComputeI2Function(self.ts, rval, x.vec, xdot.vec, xdotdot.vec,
-                                   f.vec) )
+                                    f.vec) )
 
     def computeI2Jacobian(
         self,
@@ -1155,7 +1163,7 @@ cdef class TS(Object):
 
         Collective.
 
-        If ``F(t,U,V,A)=0`` is the DAE,
+        If ``F(t, U, V, A)=0`` is the DAE,
         the required Jacobian is ``dF/dU + v dF/dV + a dF/dA``.
 
         Parameters
@@ -1188,7 +1196,7 @@ cdef class TS(Object):
         cdef PetscMat jmat = J.mat, pmat = J.mat
         if P is not None: pmat = P.mat
         CHKERR( TSComputeI2Jacobian(self.ts, rval1, x.vec, xdot.vec, xdotdot.vec, rval2, rval3,
-                                   jmat, pmat) )
+                                    jmat, pmat) )
 
     def getI2Function(self) -> tuple[Vec, TSI2Function]:
         """Return the vector and function which computes the residual.
@@ -1322,7 +1330,7 @@ cdef class TS(Object):
 
         Notes
         -----
-        ``-ts_time_span <t0,...tf>`` sets the time span from the commandline
+        ``-ts_time_span <t0, ..., tf>`` sets the time span from the commandline
 
         See Also
         --------
@@ -1331,7 +1339,7 @@ cdef class TS(Object):
         """
         cdef PetscInt  nt = 0
         cdef PetscReal *rtspan = NULL
-        cdef object tmp = oarray_r(tspan, &nt, &rtspan)
+        _tmp = oarray_r(tspan, &nt, &rtspan)
         CHKERR( TSSetTimeSpan(self.ts, nt, rtspan) )
 
     def getTimeSpan(self) -> ArrayReal:
@@ -1709,11 +1717,6 @@ cdef class TS(Object):
         cdef PetscInt rej = asInt(n)
         CHKERR( TSSetMaxStepRejections(self.ts, rej))
 
-    #def getMaxStepRejections(self):
-    #    cdef PetscInt n = 0
-    #    CHKERR( TSGetMaxStepRejections(self.ts, &n))
-    #    return toInt(n)
-
     def getStepRejections(self) -> int:
         """Return the total number of rejected steps.
 
@@ -1749,11 +1752,6 @@ cdef class TS(Object):
         cdef PetscInt fails = asInt(n)
         CHKERR( TSSetMaxSNESFailures(self.ts, fails))
 
-    #def getMaxSNESFailures(self, n):
-    #    cdef PetscInt n = 0
-    #    CHKERR( TSGetMaxSNESFailures(self.ts, &n))
-    #    return toInt(n)
-
     def getSNESFailures(self) -> int:
         """Return the total number of failed `SNES` solves in the `TS`.
 
@@ -1771,7 +1769,7 @@ cdef class TS(Object):
         CHKERR( TSGetSNESFailures(self.ts, &n) )
         return toInt(n)
 
-    def setErrorIfStepFails(self, flag: bool=True) -> None:
+    def setErrorIfStepFails(self, flag: bool = True) -> None:
         """Immediately error is no step succeeds.
 
         Not collective.
@@ -1793,7 +1791,7 @@ cdef class TS(Object):
         cdef PetscBool bval = flag
         CHKERR( TSSetErrorIfStepFails(self.ts, bval))
 
-    def setTolerances(self, rtol: float=None, atol: float=None) -> None:
+    def setTolerances(self, rtol: float = None, atol: float = None) -> None:
         """Set tolerances for local truncation error when using an adaptive controller.
 
         Logically collective.
@@ -1832,7 +1830,7 @@ cdef class TS(Object):
             ratol = asReal(atol)
         CHKERR( TSSetTolerances(self.ts, ratol, vatol, rrtol, vrtol) )
 
-    def getTolerances(self) ->tuple[float,float]:
+    def getTolerances(self) ->tuple[float, float]:
         """Return the tolerances for local truncation error.
 
         Logically collective.
@@ -1961,7 +1959,7 @@ cdef class TS(Object):
         context = (monitor, args, kargs)
         monitorlist.append(context)
 
-    def getMonitor(self) -> list[tuple[TSMonitorFunction,tuple[Any, ...],dict[str, Any]]]:
+    def getMonitor(self) -> list[tuple[TSMonitorFunction, tuple[Any, ...], dict[str, Any]]]:
         """Return the monitor.
 
         Not collective.
@@ -2022,7 +2020,7 @@ cdef class TS(Object):
         direction: Sequence[int],
         terminate: Sequence[bool],
         indicator: TSIndicatorFunction | None,
-        postevent: TSPostEventFunction=None,
+        postevent: TSPostEventFunction = None,
         args: tuple[Any, ...] | None = None,
         kargs: dict[str, Any] | None = None) -> None:
         """Set a function used for detecting events.
@@ -2032,7 +2030,7 @@ cdef class TS(Object):
         Parameters
         ----------
         direction
-            Direction of zero crossing to be detected {-1,0,+1}.
+            Direction of zero crossing to be detected {-1, 0, +1}.
         terminate
             Flags for each event to indicate stepping should be terminated.
         indicator
@@ -2072,7 +2070,7 @@ cdef class TS(Object):
         else:
             CHKERR( TSSetEventHandler(self.ts, nevents, idirs, iterm, NULL, NULL, <void*>NULL) )
 
-    def setEventTolerances(self, tol: float=None, vtol: Sequence[float]=None) -> None:
+    def setEventTolerances(self, tol: float = None, vtol: Sequence[float] = None) -> None:
         """Set tolerances for event zero crossings when using event handler.
 
         Logically collective.
@@ -2157,7 +2155,7 @@ cdef class TS(Object):
             self.set_attr('__prestep__', None)
             CHKERR( TSSetPreStep(self.ts, NULL) )
 
-    def getPreStep(self) -> tuple[TSPreStepFunction,tuple[Any, ...] | None,dict[str, Any] | None]:
+    def getPreStep(self) -> tuple[TSPreStepFunction, tuple[Any, ...] | None, dict[str, Any] | None]:
         """Return the prestep function.
 
         Not collective.
@@ -2170,9 +2168,9 @@ cdef class TS(Object):
         return self.get_attr('__prestep__')
 
     def setPostStep(self,
-        poststep: TSPostStepFunction | None,
-        args: tuple[Any, ...] | None = None,
-        kargs: dict[str, Any] | None = None) -> None:
+                    poststep: TSPostStepFunction | None,
+                    args: tuple[Any, ...] | None = None,
+                    kargs: dict[str, Any] | None = None) -> None:
         """Set a function to be called at the end of each time step.
 
         Logically collective.
@@ -2201,7 +2199,7 @@ cdef class TS(Object):
             self.set_attr('__poststep__', None)
             CHKERR( TSSetPostStep(self.ts, NULL) )
 
-    def getPostStep(self) -> tuple[TSPostStepFunction,tuple[Any, ...] | None,dict[str, Any] | None]:
+    def getPostStep(self) -> tuple[TSPostStepFunction, tuple[Any, ...] | None, dict[str, Any] | None]:
         """Return the poststep function."""
         return self.get_attr('__poststep__')
 
@@ -2342,7 +2340,7 @@ cdef class TS(Object):
         TSGetAdapt(self.ts, &tsadapt)
         CHKERR( TSAdaptSetStepLimits(tsadapt, hminr, hmaxr) )
 
-    def getStepLimits(self) -> tuple[float,float]:
+    def getStepLimits(self) -> tuple[float, float]:
         """Return the minimum and maximum allowed time step sizes.
 
         Not collective.
@@ -2430,7 +2428,7 @@ cdef class TS(Object):
         petsc.TSSetCostGradients
 
         """
-        cdef PetscInt n = 0;
+        cdef PetscInt n = 0
         cdef PetscVec *vecl = NULL
         cdef PetscVec *vecm = NULL
         cdef mem1 = None, mem2 = None
@@ -2453,7 +2451,7 @@ cdef class TS(Object):
         self.set_attr('__costgradients_memory', (mem1, mem2))
         CHKERR( TSSetCostGradients(self.ts, n, vecl, vecm) )
 
-    def getCostGradients(self) -> tuple[list[Vec],list[Vec]]:
+    def getCostGradients(self) -> tuple[list[Vec], list[Vec]]:
         """Return the cost gradients.
 
         Not collective.
@@ -2511,7 +2509,7 @@ cdef class TS(Object):
         else:
             CHKERR( TSSetRHSJacobianP(self.ts, Amat, NULL, NULL) )
 
-    def createQuadratureTS(self, forward: bool=True) -> TS:
+    def createQuadratureTS(self, forward: bool = True) -> TS:
         """Create a sub `TS` that evaluates integrals over time.
 
         Collective.
@@ -2765,7 +2763,7 @@ cdef class TS(Object):
     # --- Theta ---
 
     def setTheta(self, theta: float) -> None:
-        """Set the abscissa of the stage in ``(0,1]`` for `Type.THETA`.
+        """Set the abscissa of the stage in ``(0, 1]`` for `Type.THETA`.
 
         Logically collective.
 
@@ -2787,7 +2785,7 @@ cdef class TS(Object):
         CHKERR( TSThetaSetTheta(self.ts, rval) )
 
     def getTheta(self) -> float:
-        """Return the abscissa of the stage in ``(0,1]`` for `Type.THETA`.
+        """Return the abscissa of the stage in ``(0, 1]`` for `Type.THETA`.
 
         Not collective.
 
@@ -2858,9 +2856,9 @@ cdef class TS(Object):
 
     def setAlphaParams(
         self,
-        alpha_m: float | None=None,
-        alpha_f: float | None=None,
-        gamma: float | None=None) -> None:
+        alpha_m: float | None = None,
+        alpha_f: float | None = None,
+        gamma: float | None = None) -> None:
         """Set the algorithmic parameters for `Type.ALPHA`.
 
         Logically collective.
@@ -2909,6 +2907,7 @@ cdef class TS(Object):
         """Application context."""
         def __get__(self) -> Any:
             return self.getAppCtx()
+
         def __set__(self, value) -> None:
             self.setAppCtx(value)
 
@@ -2918,6 +2917,7 @@ cdef class TS(Object):
         """The `DM`."""
         def __get__(self) -> DM:
             return self.getDM()
+
         def __set__(self, value) -> None:
             self.setDM(value)
 
@@ -2927,6 +2927,7 @@ cdef class TS(Object):
         """The problem type."""
         def __get__(self) -> ProblemType:
             return self.getProblemType()
+
         def __set__(self, value) -> None:
             self.setProblemType(value)
 
@@ -2934,6 +2935,7 @@ cdef class TS(Object):
         """The equation type."""
         def __get__(self) -> EquationType:
             return self.getEquationType()
+
         def __set__(self, value) -> None:
             self.setEquationType(value)
 
@@ -2958,6 +2960,7 @@ cdef class TS(Object):
         """The current time."""
         def __get__(self) -> float:
             return self.getTime()
+
         def __set__(self, value) -> None:
             self.setTime(value)
 
@@ -2965,6 +2968,7 @@ cdef class TS(Object):
         """The current time step size."""
         def __get__(self) -> None:
             return self.getTimeStep()
+
         def __set__(self, value):
             self.setTimeStep(value)
 
@@ -2972,6 +2976,7 @@ cdef class TS(Object):
         """The current step number."""
         def __get__(self) -> int:
             return self.getStepNumber()
+
         def __set__(self, value) -> None:
             self.setStepNumber(value)
 
@@ -2979,6 +2984,7 @@ cdef class TS(Object):
         """The maximum time."""
         def __get__(self) -> float:
             return self.getMaxTime()
+
         def __set__(self, value) -> None:
             self.setMaxTime(value)
 
@@ -2986,6 +2992,7 @@ cdef class TS(Object):
         """The maximum number of steps."""
         def __get__(self) -> int:
             return self.getMaxSteps()
+
         def __set__(self, value) -> None:
             self.setMaxSteps(value)
 
@@ -2995,6 +3002,7 @@ cdef class TS(Object):
         """The relative tolerance."""
         def __get__(self) -> float:
             return self.getTolerances()[0]
+
         def __set__(self, value) -> None:
             self.setTolerances(rtol=value)
 
@@ -3002,6 +3010,7 @@ cdef class TS(Object):
         """The absolute tolerance."""
         def __get__(self) -> float:
             return self.getTolerances()[1]
+
         def __set__(self, value) -> None:
             self.setTolerances(atol=value)
 
@@ -3009,6 +3018,7 @@ cdef class TS(Object):
         """The converged reason."""
         def __get__(self) -> TSConvergedReason:
             return self.getConvergedReason()
+
         def __set__(self, value) -> None:
             self.setConvergedReason(value)
 

@@ -17,6 +17,7 @@ class ViewerType(object):
     ADIOS       = S_(PETSCVIEWERADIOS)
     EXODUSII    = S_(PETSCVIEWEREXODUSII)
 
+
 class ViewerFormat(object):
     """Viewer format."""
     DEFAULT           = PETSC_VIEWER_DEFAULT
@@ -58,6 +59,7 @@ class ViewerFormat(object):
     LOAD_BALANCE      = PETSC_VIEWER_LOAD_BALANCE
     FAILED            = PETSC_VIEWER_FAILED
 
+
 class ViewerFileMode(object):
     """Viewer file mode."""
     # native
@@ -69,6 +71,7 @@ class ViewerFileMode(object):
     # aliases
     R, W, A, U = READ, WRITE, APPEND, UPDATE
     AU = UA    = APPEND_UPDATE
+
 
 class ViewerDrawSize(object):
     """Window size."""
@@ -84,6 +87,7 @@ class ViewerDrawSize(object):
     QUARTER = QUARTER_SIZE
 
 # --------------------------------------------------------------------
+
 
 cdef class Viewer(Object):
     """Viewer object.

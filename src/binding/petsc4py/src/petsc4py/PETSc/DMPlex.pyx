@@ -75,11 +75,11 @@ cdef class DMPlex(DM):
         if PyArray_NDIM(coords) != 2: raise ValueError(
                 ("coords vertices must have two dimensions: "
                  "coords.ndim=%d") % (PyArray_NDIM(coords)) )
-        numCells     = <PetscInt>   PyArray_DIM(cells,  0)
-        numCorners   = <PetscInt>   PyArray_DIM(cells,  1)
-        numVertices  = <PetscInt>   PyArray_DIM(coords, 0)
-        spaceDim     = <PetscInt>   PyArray_DIM(coords, 1)
-        cellVertices = <PetscInt*>  PyArray_DATA(cells)
+        numCells     = <PetscInt> PyArray_DIM(cells, 0)
+        numCorners   = <PetscInt> PyArray_DIM(cells, 1)
+        numVertices  = <PetscInt> PyArray_DIM(coords, 0)
+        spaceDim     = <PetscInt> PyArray_DIM(coords, 1)
+        cellVertices = <PetscInt*> PyArray_DATA(cells)
         vertexCoords = <PetscReal*> PyArray_DATA(coords)
         CHKERR( DMPlexCreateFromCellListPetsc(ccomm, cdim, numCells, numVertices,
                                               numCorners, interp, cellVertices,
@@ -87,7 +87,7 @@ cdef class DMPlex(DM):
         CHKERR( PetscCLEAR(self.obj) ); self.dm = newdm
         return self
 
-    def createBoxMesh(self, faces: Sequence[int], lower: Sequence[float] | None = (0,0,0), upper: Sequence[float] | None = (1,1,1),
+    def createBoxMesh(self, faces: Sequence[int], lower: Sequence[float] | None = (0, 0, 0), upper: Sequence[float] | None = (1, 1, 1),
                       simplex: bool | None = True, periodic: Sequence | str | int | bool | None = False, interpolate: bool | None = True, comm: Comm | None = None) -> Self:
         """Create a mesh on the tensor product of intervals.
 
@@ -104,7 +104,7 @@ cdef class DMPlex(DM):
         simplex
             `True` for simplices, `False` for tensor cells.
         periodic
-            The boundary type for the X,Y,Z direction,
+            The boundary type for the X, Y, Z direction,
             or `None` for `DM.BoundaryType.NONE`.
         interpolate
             Flag to create intermediate mesh entities (edges, faces).
@@ -127,7 +127,7 @@ cdef class DMPlex(DM):
         cdef PetscReal cupper[3]
         cupper[0] = cupper[1] = cupper[2] = 1
         for i from 0 <= i < dim: cupper[i] = upper[i]
-        cdef PetscDMBoundaryType btype[3];
+        cdef PetscDMBoundaryType btype[3]
         asBoundary(periodic, &btype[0], &btype[1], &btype[2])
         cdef PetscBool csimplex = simplex
         cdef PetscBool cinterp = interpolate
@@ -138,7 +138,7 @@ cdef class DMPlex(DM):
         CHKERR( PetscCLEAR(self.obj) ); self.dm = newdm
         return self
 
-    def createBoxSurfaceMesh(self, faces: Sequence[int], lower: Sequence[float] | None = (0,0,0), upper: Sequence[float] | None = (1,1,1),
+    def createBoxSurfaceMesh(self, faces: Sequence[int], lower: Sequence[float] | None = (0, 0, 0), upper: Sequence[float] | None = (1, 1, 1),
                              interpolate: bool | None = True, comm: Comm | None = None) -> Self:
         """Create a mesh on the surface of a box mesh using tensor cells.
 
@@ -568,7 +568,7 @@ cdef class DMPlex(DM):
         cdef PetscInt cp = asInt(p)
         cdef PetscInt cconePos = asInt(conePos)
         cdef PetscInt cconePoint = asInt(conePoint)
-        CHKERR( DMPlexInsertCone(self.dm,cp,cconePos,cconePoint) )
+        CHKERR( DMPlexInsertCone(self.dm, cp, cconePos, cconePoint) )
 
     def insertConeOrientation(self, p: int, conePos: int, coneOrientation: int) -> None:
         """Insert a point orientation for the in-edge for the point p in the DAG.
@@ -930,7 +930,7 @@ cdef class DMPlex(DM):
 
         """
         cdef PetscInt depth = 0
-        CHKERR( DMPlexGetDepth(self.dm,&depth) )
+        CHKERR( DMPlexGetDepth(self.dm, &depth) )
         return toInt(depth)
 
     def getDepthStratum(self, svalue: int) -> tuple[int, int]:
@@ -1141,10 +1141,10 @@ cdef class DMPlex(DM):
         cdef PetscInt *points = NULL
         CHKERR( DMPlexGetTransitiveClosure(self.dm, cp, cuseCone, &numPoints, &points) )
         try:
-            out = array_i(2*numPoints,points)
+            out = array_i(2*numPoints, points)
         finally:
             CHKERR( DMPlexRestoreTransitiveClosure(self.dm, cp, cuseCone, &numPoints, &points) )
-        return out[::2],out[1::2]
+        return out[::2], out[1::2]
 
     def vecGetClosure(self, Section sec, Vec vec, p: int) -> ArrayScalar:
         """Return an array of values on the closure of ``p``.
@@ -1232,7 +1232,7 @@ cdef class DMPlex(DM):
         cdef PetscInt cp = asInt(point)
         cdef PetscInt csize = 0
         cdef PetscScalar *cvals = NULL
-        cdef object tmp = iarray_s(values, &csize, &cvals)
+        _tmp = iarray_s(values, &csize, &cvals)
         cdef PetscInsertMode im = insertmode(addv)
         CHKERR( DMPlexVecSetClosure(self.dm, csec, vec.vec, cp, cvals, im) )
 
@@ -1264,12 +1264,12 @@ cdef class DMPlex(DM):
         DM, DMPlex, petsc.DMPlexMatSetClosure
 
         """
-        cdef PetscSection csec  =  sec.sec if  sec is not None else NULL
+        cdef PetscSection csec = sec.sec if sec is not None else NULL
         cdef PetscSection cgsec = gsec.sec if gsec is not None else NULL
         cdef PetscInt cp = asInt(point)
         cdef PetscInt csize = 0
         cdef PetscScalar *cvals = NULL
-        cdef object tmp = iarray_s(values, &csize, &cvals)
+        _tmp = iarray_s(values, &csize, &cvals)
         cdef PetscInsertMode im = insertmode(addv)
         CHKERR( DMPlexMatSetClosure(self.dm, csec, cgsec, mat.mat, cp, cvals, im) )
 
@@ -1872,13 +1872,13 @@ cdef class DMPlex(DM):
             if bcComps is not None:
                 bcComps = list(bcComps)
                 assert len(bcComps) == nbc
-                tmp1 = oarray_p(empty_p(nbc), NULL, <void**>&bccomps)
+                _tmp1 = oarray_p(empty_p(nbc), NULL, <void**>&bccomps)
                 for i from 0 <= i < nbc:
                     bccomps[i] = (<IS?>bcComps[<Py_ssize_t>i]).iset
             if bcPoints is not None:
                 bcPoints = list(bcPoints)
                 assert len(bcPoints) == nbc
-                tmp2 = oarray_p(empty_p(nbc), NULL, <void**>&bcpoints)
+                _tmp2 = oarray_p(empty_p(nbc), NULL, <void**>&bcpoints)
                 for i from 0 <= i < nbc:
                     bcpoints[i] = (<IS?>bcPoints[<Py_ssize_t>i]).iset
             else:
@@ -3003,7 +3003,6 @@ cdef class DMPlex(DM):
         """
         cdef PetscBool bval_rs = asBool(restrictSizes)
         cdef PetscBool bval_ra = asBool(restrictAnisotropy)
-        cdef DM dmDet = DM()
         CHKERR( DMPlexMetricEnforceSPD(self.dm, metric.vec, bval_rs, bval_ra, ometric.vec, determinant.vec) )
         return (ometric, determinant)
 
@@ -3436,6 +3435,8 @@ cdef class DMPlex(DM):
         CHKERR( DMPlexLocalVectorLoad(self.dm, viewer.vwr, sectiondm.dm, sf.sf, vec.vec))
 
 # --------------------------------------------------------------------
+
+
 class DMPlexTransformType(object):
     """Transormation types."""
     REFINEREGULAR = S_(DMPLEXREFINEREGULAR)
@@ -3448,6 +3449,7 @@ class DMPlexTransformType(object):
     REFINE1D = S_(DMPLEXREFINE1D)
     EXTRUDE = S_(DMPLEXEXTRUDE)
     TRANSFORMFILTER = S_(DMPLEXTRANSFORMFILTER)
+
 
 cdef class DMPlexTransform(Object):
     """Mesh transformations."""
