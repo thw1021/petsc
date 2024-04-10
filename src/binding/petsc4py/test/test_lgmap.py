@@ -36,7 +36,7 @@ class BaseTestLGMap(object):
         info = self.lgmap.getInfo()
         self.assertEqual(type(info), dict)
         if self.lgmap.getComm().getSize() == 1:
-            self.assertEqual(info, {})
+            self.assertTrue(len(info) == 1)
         else:
             self.assertTrue(len(info) > 1)
             self.assertTrue(len(info) < 4)
@@ -133,7 +133,7 @@ class TestLGMapBlock(unittest.TestCase):
         info = self.lgmap.getBlockInfo()
         self.assertEqual(type(info), dict)
         if self.lgmap.getComm().getSize() == 1:
-            self.assertEqual(info, {})
+            self.assertTrue(len(info) == 1)
         else:
             self.assertTrue(len(info) > 1)
             self.assertTrue(len(info) < 4)
@@ -142,7 +142,7 @@ class TestLGMapBlock(unittest.TestCase):
         info = self.lgmap.getInfo()
         self.assertEqual(type(info), dict)
         if self.lgmap.getComm().getSize() == 1:
-            self.assertEqual(info, {})
+            self.assertTrue(len(info) == 1)
         else:
             self.assertTrue(len(info) > 1)
             self.assertTrue(len(info) < 4)
