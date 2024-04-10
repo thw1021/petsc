@@ -569,7 +569,7 @@ cdef class TS(Object):
 
     def setRHSFunction(
         self,
-        function: TSRHSFunction,
+        function: TSRHSFunction | None,
         Vec f=None,
         args : tuple[Any, ...] | None = None,
         kargs : dict[str, Any] | None = None) -> None:
@@ -606,7 +606,7 @@ cdef class TS(Object):
 
     def setRHSJacobian(
         self,
-        jacobian: TSRHSJacobian,
+        jacobian: TSRHSJacobian | None,
         Mat J=None,
         Mat P=None,
         args : tuple[Any, ...] | None = None,
@@ -778,7 +778,7 @@ cdef class TS(Object):
 
     def setIFunction(
         self,
-        function: TSIFunction,
+        function: TSIFunction | None,
         Vec f=None,
         args : tuple[Any, ...] | None = None,
         kargs : dict[str, Any] | None = None) -> None:
@@ -815,7 +815,7 @@ cdef class TS(Object):
 
     def setIJacobian(
         self,
-        jacobian: TSIJacobian,
+        jacobian: TSIJacobian | None,
         Mat J=None,
         Mat P=None,
         args : tuple[Any, ...] | None = None,
@@ -1037,7 +1037,7 @@ cdef class TS(Object):
 
     def setI2Function(
         self,
-        function: TSI2Function,
+        function: TSI2Function | None,
         Vec f=None,
         args : tuple[Any, ...] | None = None,
         kargs : dict[str, Any] | None = None) -> None:
@@ -1074,7 +1074,7 @@ cdef class TS(Object):
 
     def setI2Jacobian(
         self,
-        jacobian: TSI2Jacobian,
+        jacobian: TSI2Jacobian | None,
         Mat J=None,
         Mat P=None,
         args=None,
@@ -1929,7 +1929,7 @@ cdef class TS(Object):
 
     def setMonitor(
         self,
-        monitor: TSMonitorFunction,
+        monitor: TSMonitorFunction | None,
         args : tuple[Any, ...] | None = None,
         kargs : dict[str, Any] | None = None) -> None:
         """Set an additional monitor to the `TS`.
@@ -2021,7 +2021,7 @@ cdef class TS(Object):
         self,
         direction: Sequence[int],
         terminate: Sequence[bool],
-        indicator: TSIndicatorFunction,
+        indicator: TSIndicatorFunction | None,
         postevent: TSPostEventFunction=None,
         args: tuple[Any, ...] | None = None,
         kargs: dict[str, Any] | None = None) -> None:
@@ -2126,7 +2126,7 @@ cdef class TS(Object):
 
     def setPreStep(
         self,
-        prestep: TSPreStepFunction,
+        prestep: TSPreStepFunction | None,
         args: tuple[Any, ...] | None = None,
         kargs: dict[str, Any] | None = None) -> None:
         """Set a function to be called at the beginning of each time step.
@@ -2170,7 +2170,7 @@ cdef class TS(Object):
         return self.get_attr('__prestep__')
 
     def setPostStep(self,
-        poststep: TSPostStepFunction,
+        poststep: TSPostStepFunction | None,
         args: tuple[Any, ...] | None = None,
         kargs: dict[str, Any] | None = None) -> None:
         """Set a function to be called at the end of each time step.
@@ -2280,7 +2280,7 @@ cdef class TS(Object):
         """
         CHKERR( TSRollBack(self.ts) )
 
-    def solve(self, Vec u) -> None:
+    def solve(self, Vec u=None) -> None:
         """Step the requested number of timesteps.
 
         Collective.
@@ -2288,17 +2288,16 @@ cdef class TS(Object):
         Parameters
         ----------
         u
-            The solution vector. Can be `None` if `setSolution` was used and
-            `setExactFinalTime` is not set as ``TS_EXACTFINALTIME_MATCHSTEP``.
-            Otherwise this vector must contain the initial conditions and will
-            contain the solution at the final requested time.
+            The solution vector. Can be `None`.
 
         See Also
         --------
         petsc.TSSolve
 
         """
-        CHKERR( TSSolve(self.ts, u.vec) )
+        cdef PetscVec uvec=NULL
+        if u is not None: uvec = u.vec
+        CHKERR( TSSolve(self.ts, uvec) )
 
     def interpolate(self, t: float, Vec u) -> None:
         """Interpolate the solution to a given time.
@@ -2477,7 +2476,7 @@ cdef class TS(Object):
 
     def setRHSJacobianP(
         self,
-        jacobianp: TSRHSJacobianP,
+        jacobianp: TSRHSJacobianP | None,
         Mat A=None,
         args: tuple[Any, ...] | None = None,
         kargs: dict[str, Any] | None = None) -> None:
@@ -2558,7 +2557,7 @@ cdef class TS(Object):
 
     def setRHSJacobianP(
         self,
-        rhsjacobianp: TSRHSJacobianP,
+        rhsjacobianp: TSRHSJacobianP | None,
         Mat A=None,
         args: tuple[Any, ...] | None = None,
         kargs: dict[str, Any] | None = None) -> None:
