@@ -609,7 +609,7 @@ cdef class SNES(Object):
 
     # --- user Function/Jacobian routines ---
 
-    def setLineSearchPreCheck(self, precheck: SNESLSPreFunction,
+    def setLineSearchPreCheck(self, precheck: SNESLSPreFunction | None,
                               args: tuple[Any, ...] | None = None,
                               kargs: dict[str, Any] | None = None) -> None:
         """Set the callback that will be called before applying the linesearch.
@@ -643,7 +643,7 @@ cdef class SNES(Object):
             self.set_attr('__precheck__', None)
             CHKERR( SNESLineSearchSetPreCheck(snesls, NULL, NULL) )
 
-    def setInitialGuess(self, initialguess: SNESGuessFunction,
+    def setInitialGuess(self, initialguess: SNESGuessFunction | None,
                         args: tuple[Any, ...] | None = None,
                         kargs: dict[str, Any] | None = None) -> None:
         """Set the callback to compute the initial guess.
@@ -686,7 +686,8 @@ cdef class SNES(Object):
         """
         return self.get_attr('__initialguess__')
 
-    def setFunction(self, function: SNESFunction, Vec f=None,
+    def setFunction(self, function: SNESFunction | None,
+                    Vec f=None,
                     args: tuple[Any, ...] | None = None,
                     kargs: dict[str, Any] | None = None) -> None:
         """Set the callback to compute the nonlinear function.
@@ -749,7 +750,7 @@ cdef class SNES(Object):
 
         return (f, None)
 
-    def setUpdate(self, update: SNESUpdateFunction,
+    def setUpdate(self, update: SNESUpdateFunction | None,
                   args: tuple[Any, ...] | None = None,
                   kargs: dict[str, Any] | None = None) -> None:
         """Set the callback to compute update at the beginning of each step.
@@ -792,7 +793,9 @@ cdef class SNES(Object):
         """
         return self.get_attr('__update__')
 
-    def setJacobian(self, jacobian: SNESJacobianFunction, Mat J=None, Mat P=None,
+    def setJacobian(self,
+                    jacobian: SNESJacobianFunction | None,
+                    Mat J=None, Mat P=None,
                     args: tuple[Any, ...] | None = None, kargs: dict[str, Any] | None = None) -> None:
         """Set the callback to compute the Jacobian.
 
@@ -856,7 +859,8 @@ cdef class SNES(Object):
         cdef object jacobian = self.get_attr('__jacobian__')
         return (J, P, jacobian)
 
-    def setObjective(self, objective: SNESObjFunction,
+    def setObjective(self,
+                     objective: SNESObjFunction | None,
                      args: tuple[Any, ...] | None = None,
                      kargs: dict[str, Any] | None = None) -> None:
         """Set the callback to compute the objective function.
@@ -961,7 +965,8 @@ cdef class SNES(Object):
         CHKERR( SNESComputeObjective(self.snes, x.vec, &o) )
         return toReal(o)
 
-    def setNGS(self, ngs: SNESNGSFunction,
+    def setNGS(self,
+               ngs: SNESNGSFunction | None,
                args: tuple[Any, ...] | None = None,
                kargs: dict[str, Any] | None = None) -> None:
         """Set the callback to compute nonlinear Gauss-Seidel.
@@ -982,11 +987,14 @@ cdef class SNES(Object):
         getNGS, computeNGS, petsc.SNESSetNGS
 
         """
-        if args  is None: args  = ()
-        if kargs is None: kargs = {}
-        context = (ngs, args, kargs)
-        self.set_attr('__ngs__', context)
-        CHKERR( SNESSetNGS(self.snes, SNES_NGS, <void*>context) )
+        if ngs is not None:
+            if args  is None: args  = ()
+            if kargs is None: kargs = {}
+            context = (ngs, args, kargs)
+            self.set_attr('__ngs__', context)
+            CHKERR( SNESSetNGS(self.snes, SNES_NGS, <void*>context) )
+        else:
+            CHKERR( SNESSetNGS(self.snes, NULL, NULL) )
 
     def getNGS(self) -> SNESNGSFunction:
         """Return the nonlinear Gauss-Seidel callback tuple.
@@ -1277,7 +1285,10 @@ cdef class SNES(Object):
 
     # --- monitoring ---
 
-    def setMonitor(self, monitor: SNESMonitorFunction, args: tuple[Any, ...] | None = None, kargs: dict[str, Any] | None = None) -> None:
+    def setMonitor(self,
+                   monitor: SNESMonitorFunction | None,
+                   args: tuple[Any, ...] | None = None,
+                   kargs: dict[str, Any] | None = None) -> None:
         """Set the callback used to monitor solver convergence.
 
         Logically collective.
