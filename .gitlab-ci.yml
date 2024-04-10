@@ -24,7 +24,7 @@ variables:
 # The most basic template that most tests will expand upon
 #
 
-.test-basic:
+.rules-source:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_PIPELINE_SOURCE == "schedule"
@@ -33,38 +33,48 @@ variables:
   interruptible: true
   dependencies: []
 
-.test:
+.rules-default:
   rules:
+    - if: $PETSC_CI_EXTENDED == "yes"
+      when: never
     - if: $PETSC_CI_PAGES == "yes"
       when: never
     - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)docs-only($|,)/
       when: never
-    - !reference [.test-basic, rules]
+    - !reference [.rules-source, rules]
   interruptible: true
   dependencies: []
 
-.test-docs:
+.rules-default-docs:
   rules:
+    - if: $PETSC_CI_EXTENDED == "yes"
+      when: never
     - if: $PETSC_CI_PAGES == "yes"
       when: never
     - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)docs-only($|,)/
-    - !reference [.test-basic, rules]
+    - !reference [.rules-source, rules]
   interruptible: true
   dependencies: []
 
-.test-pause:
+.rules-pause:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" && ($CI_MERGE_REQUEST_EVENT_TYPE == "merged_result" || $CI_MERGE_REQUEST_EVENT_TYPE == "detached")
       when: manual
 
-.test-pages:
+.rules-pages:
   rules:
     - if: $PETSC_CI_PAGES == "yes"
   interruptible: true
   dependencies: []
 
+.rules-extended:
+  rules:
+    - if: $PETSC_CI_EXTENDED == "yes"
+  interruptible: true
+  dependencies: []
+
 check-ci-settings:
-  extends: .test-docs
+  extends: .rules-default-docs
   stage: .pre
   tags:
     - gce-stage1
@@ -77,7 +87,7 @@ check-ci-settings:
 #
 
 .stage-1:
-  extends: .test
+  extends: .rules-default
   stage: stage-1
   tags:
     - gce-u22-stage1
@@ -246,7 +256,7 @@ petsc4py-pip:
     - python -m petsc4py
 
 checksource:
-  extends: .test-docs
+  extends: .rules-default-docs
   stage: .pre
   tags:
     - gce-u22-stage1
@@ -268,7 +278,7 @@ checksource:
     expire_in: 4 days
 
 pause-for-approval:
-  extends: .test-pause
+  extends: .rules-pause
   stage: .pre
   tags:
     - gce-stage1
@@ -299,7 +309,7 @@ pause-for-approval:
 #
 .stage-23:
   extends:
-    - .test
+    - .rules-default
     - .coverage-generate
   script:
     - if [ ! -z ${LOAD_MODULES+x} ]; then module --trace load ${LOAD_MODULES}; module list; fi
@@ -482,7 +492,7 @@ linux-gcc-pkgs-opt:
   extends:
     - .stage-2
     - .linux_test
-    - .test-docs
+    - .rules-default-docs
   tags:
     - gce-stage2
   variables:
@@ -857,7 +867,7 @@ check-each-commit:
   extends:
     - .stage-2
     - .linux_test
-    - .test-docs
+    - .rules-default-docs
     - .coverage-disable
   tags:
     - gce-u22-stage2
@@ -870,7 +880,7 @@ linux-analyzer:
   extends:
     - .stage-2
     - .linux_test
-    - .test-docs
+    - .rules-default-docs
     - .coverage-disable
   tags:
     - gce-u22-stage2
@@ -1088,7 +1098,7 @@ osx-xsdk-opt:
 
 # job for analyzing the coverage results and generating the various reports
 coverage-analyze:
-  extends: .test
+  extends: .rules-default
   stage: stage-4
   tags:
     - gce-u22-short
@@ -1151,7 +1161,7 @@ coverage-analyze:
 # template for the coverage review jobs, these must be separate jobs as you cannot deploy multiple
 # environments from one job...
 .coverage-review:
-  extends: .test
+  extends: .rules-default
   stage: .post
   tags:
     - gce-u22-short
@@ -1221,7 +1231,7 @@ analyze-pipeline:
 docs-review:
   extends:
     - .docs
-    - .test-docs
+    - .rules-default-docs
   script:
     - (time make html BUILDDIR="../public" SPHINXOPTS="-T -E -W --keep-going -j 2") || (printf "Sphinx build failed (warnings count as errors)\n" && false)
     - (time make latexpdf SPHINXOPTS="-T -E -W --keep-going -j 2") || (printf "Sphinx build failed (warnings count as errors)\n" && false)
@@ -1242,7 +1252,7 @@ docs-review:
 pages: # this job name has special meaning to GitLab
   extends:
     - .docs
-    - .test-pages
+    - .rules-pages
   interruptible: true
   script:
     - mkdir -p ../public/ && cp public/* ../public/
@@ -1255,13 +1265,13 @@ pages: # this job name has special meaning to GitLab
       - public
     expire_in: 4 days
 
-#
-#
-# The following tests are experimental; more tests by users at other sites may be added below this. Experimental test
-# that fail produce a warning, but do not block execution of a pipeline.
-#
-
-.test-experimental:
-  extends: .test
-  allow_failure: true
-
+ext-linux-cxx-pkgs-opt:
+  extends:
+    - .stage-3
+    - .linux_test
+    - .rules-extended
+    - .coverage-disable
+  tags:
+    - gce-u22-stage3
+  variables:
+    TEST_ARCH: arch-ci-ext-linux-cxx-pkgs-opt
