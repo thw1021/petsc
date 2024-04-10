@@ -447,7 +447,8 @@ class BaseTestPlexHDF5(object):
                 # Redistribute
                 part = plex.getPartitioner()
                 part.setType(self.partitionerType())
-                _ = plex.distribute(overlap=0)
+                plex.distribute(overlap=0)
+                part.destroy()
                 plex.setName("DMPlex Object")
                 plex.setOptionsPrefix("redistributed_")
                 plex.setFromOptions()
