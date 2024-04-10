@@ -170,6 +170,51 @@ variables:
   interruptible: true
   dependencies: []
 
+#########
+# add in dummy jobs to identify which rule is used for the currently running pipeline
+
+.no-op:
+  stage: .pre
+  tags:
+    - gce-stage1
+  script:
+    - echo "no script to run"
+  variables:
+    GIT_STRATEGY: none
+  allow_failure: false
+
+docs-only-jobs:
+  extends:
+    - .no-op
+  rules:
+    - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)docs-only($|,)/
+
+petsc4py-only-jobs:
+  extends:
+    - .no-op
+  rules:
+    - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)petsc4py-only($|,)/
+
+slepc-hpddm-only-jobs:
+  extends:
+    - .no-op
+  rules:
+    - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)slepc-hpddm-only($|,)/
+
+gpu-only-jobs:
+  extends:
+    - .no-op
+  rules:
+    - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)gpu-only($|,)/
+
+pause-for-approval:
+  extends:
+    - .no-op
+    - .rules-pause
+  when: manual
+
+#########
+
 check-ci-settings:
   extends: .rules-default-docs
   stage: .pre
@@ -377,18 +422,6 @@ checksource:
     - arch-*/lib/petsc/conf/*.patch
     - arch-*/lib/petsc/conf/*.log
     expire_in: 4 days
-
-pause-for-approval:
-  extends: .rules-pause
-  stage: .pre
-  tags:
-    - gce-stage1
-  script:
-    - echo "pause-for-approval has no script to run"
-  variables:
-    GIT_STRATEGY: none
-  when: manual
-  allow_failure: false
 
 #
 # Basic template for code coverage generation. Tests should additionally inherit from the more
