@@ -366,7 +366,7 @@ M*/
    Notes:
    This should only be used with Fortran. With C/C++, use `PetscCall()` always.
 
-  The Fortran function in which this is used must declare a `PetscErrorCode` variable necessarily named `ierr
+   The Fortran function in which this is used must declare a `PetscErrorCode` variable necessarily named `ierr`
    Use `SETERRA()` to set an error in a Fortran main program and `SETERRQ()` in Fortran subroutines
 
 .seealso: `SETERRQ()`, `SETERRA()`, `SETERRABORT()`, `PetscCall()`, `CHKERRA()`, `PetscCallAbort()`
