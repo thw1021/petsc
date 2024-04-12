@@ -3,6 +3,7 @@
 */
 
 #include <petsc/private/matimpl.h> /*I "petscmat.h" I*/
+#include <petscblaslapack.h>
 
 PetscClassId MAT_NULLSPACE_CLASSID;
 
@@ -222,10 +223,12 @@ PetscErrorCode MatNullSpaceView(MatNullSpace sp, PetscViewer viewer)
   Notes:
   See `MatNullSpaceSetFunction()` as an alternative way of providing the null space information instead of providing the vectors.
 
+  See `MatNullSpaceCreateFromSpanningVecs()` for creating a nullspace from an arbitrary set of vectors.
+
   If has_cnst is `PETSC_TRUE` you do not need to pass a constant vector in as a fourth argument to this routine, nor do you
   need to pass in a function that eliminates the constant function into `MatNullSpaceSetFunction()`.
 
-.seealso: [](ch_matrices), `Mat`, `MatNullSpace`, `MatNullSpaceDestroy()`, `MatNullSpaceRemove()`, `MatSetNullSpace()`, `MatNullSpaceSetFunction()`
+.seealso: [](ch_matrices), `Mat`, `MatNullSpace`, `MatNullSpaceDestroy()`, `MatNullSpaceRemove()`, `MatSetNullSpace()`, `MatNullSpaceSetFunction()`, `MatNullSpaceCreateFromSpanningVecs()`
 @*/
 PetscErrorCode MatNullSpaceCreate(MPI_Comm comm, PetscBool has_cnst, PetscInt n, const Vec vecs[], MatNullSpace *SP)
 {
@@ -273,12 +276,14 @@ PetscErrorCode MatNullSpaceCreate(MPI_Comm comm, PetscBool has_cnst, PetscInt n,
 
   PetscCall(PetscHeaderCreate(sp, MAT_NULLSPACE_CLASSID, "MatNullSpace", "Null space", "Mat", comm, MatNullSpaceDestroy, MatNullSpaceView));
 
-  sp->has_cnst = has_cnst;
-  sp->n        = n;
-  sp->vecs     = NULL;
-  sp->alpha    = NULL;
-  sp->remove   = NULL;
-  sp->rmctx    = NULL;
+  sp->has_cnst        = has_cnst;
+  sp->n               = n;
+  sp->n_spanning_vecs = 0;
+  sp->vecs            = NULL;
+  sp->spanning_vecs   = NULL;
+  sp->alpha           = NULL;
+  sp->remove          = NULL;
+  sp->rmctx           = NULL;
 
   if (n) {
     PetscCall(PetscMalloc1(n, &sp->vecs));
@@ -290,6 +295,183 @@ PetscErrorCode MatNullSpaceCreate(MPI_Comm comm, PetscBool has_cnst, PetscInt n,
   }
 
   *SP = sp;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  MatNullSpaceSetSpanningVecs - Attach a set of vectors that span the
+  nullspace.  Unlike the orthonormal vectors used to create the space in
+  `MatNullSpaceCreate()`, these vectors do not need to be orthonormal or even
+  linearly independent.
+
+  Collective
+
+  Input Parameters:
++ sp              - the `MatNullSpace` context
+. n_spanning_vecs - the number of vectors in `spanning_vecs`
+- spanning_vecs   - a set of vectors that span the null space.
+
+  Level: advanced
+
+  Notes:
+  This method is useful if the $n$-dimensional nullspace is defined by some vectors $\{v_0, \dots, v_{m-1}\}$.
+  The vectors returned by `MatNullSpaceGetVecs()` describe an orthonormal basis of the nullspace, and so do not
+  retain information about $\{v\}$.  The spanning vectors used internally by a
+  `MatNullSpace` and do not affect `MatNullSpaceRemove()`.  They can accessed by `MatNullSpaceGetSpanningVecs()`.
+
+  The array `spanning_vecs` is treated the same as the array of vectors passed to `MatNullSpaceCreate()`: the vectors
+  themselves are referenced, but the array is not.
+
+.seealso: [](ch_matrices), `Mat`, `MatNullSpace`, `MatNullSpaceCreate()`, `MatNullSpaceGetVecs()`, `MatNullSpaceGetSpanningVecs()`.
+@*/
+PetscErrorCode MatNullSpaceSetSpanningVecs(MatNullSpace sp, PetscInt n_spanning_vecs, const Vec spanning_vecs[])
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(sp, MAT_NULLSPACE_CLASSID, 1);
+  for (PetscInt i = 0; i < n_spanning_vecs; i++) PetscValidHeaderSpecific(spanning_vecs[i], VEC_CLASSID, 3);
+  for (PetscInt i = 0; i < n_spanning_vecs; i++) PetscCall(VecLockReadPush(spanning_vecs[i]));
+  if (n_spanning_vecs) {
+    PetscCall(PetscMalloc1(n_spanning_vecs, &sp->spanning_vecs));
+    for (PetscInt i = 0; i < n_spanning_vecs; i++) {
+      PetscCall(PetscObjectReference((PetscObject)spanning_vecs[i]));
+      sp->spanning_vecs[i] = spanning_vecs[i];
+    }
+  }
+  sp->n_spanning_vecs = n_spanning_vecs;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  MatNullSpaceGetSpanningVecs - Get the spanning vectors of the nullspace set with `MatNullSpaceSetSpanningVecs()`.
+
+  Not collective
+
+  Input Parameter:
+. sp - the `MatNullSpace` context
+
+  Output Parameters:
++ n_spanning_vecs - the number of vectors in `spanning_vecs`
+- spanning_vecs   - vectors that span the nullspace set in `MatNullSpaceSetSpanningVecs()`
+
+  Level: advanced
+
+  Note:
+  Use `MatNullSpaceGetVecs()` to get an orthonormal basis of the nullspace.  There may be more spanning vectors
+  than the dimension of the nullspace, they may not be normalized, and they may be linearly dependent.
+
+.seealso: [](ch_matrices), `Mat`, `MatNullSpace`, `MatNullSpaceCreate()`, `MatNullSpaceGetVecs()`, `MatNullSpaceGetSpanningVecs()`.
+@*/
+PetscErrorCode MatNullSpaceGetSpanningVecs(MatNullSpace sp, PetscInt *n_spanning_vecs, const Vec **spanning_vecs)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(sp, MAT_NULLSPACE_CLASSID, 1);
+  if (n_spanning_vecs) *n_spanning_vecs = sp->n_spanning_vecs;
+  if (spanning_vecs) *spanning_vecs = sp->spanning_vecs;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  MatNullSpaceCreateFromSpanningVecs - Create a nullspace from an arbitrary set
+  of spanning vectors (as opposed to an orthonormal basis, which is required by
+  `MatNullSpaceCreate()`).
+
+  Collective
+
+  Input Parameters:
++ comm     - the MPI communicator associated with the object
+. n        - number of vectors in null space
+- vecs     - the vectors that span the null space. These vectors are NOT
+             copied, so do not change them after this call. You should free the
+             array that you pass in and destroy the vectors (this will reduce
+             the reference count for them by one).
+
+  Output Parameter:
+. sp - the null space context
+
+  Level: advanced
+
+  Options Database Keys:
++ -mat_nullspace_spanning_vecs_atol - the absolute tolerance for singular values considered numerically zero when determining an orthonormal basis for the span
++ -mat_nullspace_spanning_vecs_rtol - the relative tolerance (relative to the largest singular value) for singular values considered numerically zero when determining an orthonormal basis for the span
+
+  Notes:
+  An orthonormal basis (possibly containing fewer vectors, if the spanning
+  vectors are linearly dependent) is internally computed, which is accessible
+  from `MatNullSpaceGetVecs()`.  The original spanning vecs are avaiable from
+  `MatNullSpaceGetSpanningVecs()`.
+
+.seealso: [](ch_matrices), `Mat`, `MatNullSpace`, `MatNullSpaceDestroy()`,
+          `MatNullSpaceRemove()`, `MatSetNullSpace()`, `MatNullSpaceSetFunction()`,
+          `MatNullSpaceCreate()`, `MatNullSpaceSetSpanningVecs()`,
+          `MatNullSpaceGetSpanningVecs()`
+@*/
+PetscErrorCode MatNullSpaceCreateFromSpanningVecs(MPI_Comm comm, PetscInt n, const Vec vecs[], MatNullSpace *sp)
+{
+  PetscInt    m, M, n_cols_self, r, r_orig;
+  PetscMPIInt rank;
+  VecType     vec_type;
+  Mat         B, U;
+  Vec         S;
+  Vec        *ortho_vecs;
+
+  PetscFunctionBegin;
+  PetscCheck(n >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of vectors (given %" PetscInt_FMT ") cannot be negative", n);
+  if (n == 0) {
+    PetscCall(MatNullSpaceCreate(comm, PETSC_FALSE, n, vecs, sp));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+  PetscAssertPointer(vecs, 3);
+  for (PetscInt i = 0; i < n; i++) PetscValidHeaderSpecific(vecs[i], VEC_CLASSID, 3);
+  PetscAssertPointer(sp, 4);
+  PetscCall(VecGetSize(vecs[0], &M));
+  PetscCall(VecGetLocalSize(vecs[0], &m));
+  PetscCall(VecGetType(vecs[0], &vec_type));
+  PetscCallMPI(MPI_Comm_rank(comm, &rank));
+  n_cols_self = (rank == 0) ? n : 0;
+  PetscCall(MatCreateDenseFromVecType(comm, vec_type, m, n_cols_self, M, n, PETSC_DEFAULT, NULL, &B));
+  for (PetscInt i = 0; i < n; i++) {
+    Vec b_i;
+    PetscCall(MatDenseGetColumnVecWrite(B, i, &b_i));
+    PetscCall(VecCopy(vecs[i], b_i));
+    PetscCall(MatDenseRestoreColumnVecWrite(B, i, &b_i));
+  }
+  PetscCall(MatDenseTallSkinnySVD(B, MAT_INITIAL_MATRIX, &U, &S, NULL));
+  PetscCall(MatDestroy(&B));
+  PetscCall(MatGetSize(U, NULL, &r));
+  r_orig = r;
+  if (rank == 0 && r > 0) {
+    PetscReal          a_tol = PetscSqrtReal((PetscReal)M) * PETSC_MACHINE_EPSILON;
+    PetscReal          r_tol = PETSC_MACHINE_EPSILON;
+    PetscReal          tol;
+    PetscOptions       options;
+    const PetscScalar *_S;
+
+    PetscCall(PetscObjectGetOptions((PetscObject)vecs[0], &options));
+    PetscCall(PetscOptionsGetReal(options, NULL, "-mat_nullspace_spanning_vecs_atol", &a_tol, NULL));
+    PetscCall(PetscOptionsGetReal(options, NULL, "-mat_nullspace_spanning_vecs_rtol", &r_tol, NULL));
+    PetscCall(VecGetArrayRead(S, &_S));
+    tol = PetscMax(PetscRealPart(_S[0]) * r_tol, a_tol);
+    for (PetscInt i = 0; i < r_orig; i++) {
+      if (PetscRealPart(_S[i]) <= tol) r = PetscMin(r, i);
+    }
+    PetscCall(VecRestoreArrayRead(S, &_S));
+  }
+  PetscCallMPI(MPI_Bcast(&r, 1, MPIU_INT, 0, comm));
+  PetscCall(PetscMalloc1(r, &ortho_vecs));
+  for (PetscInt i = 0; i < r; i++) {
+    Vec u_i;
+
+    PetscCall(MatDenseGetColumnVecRead(U, i, &u_i));
+    PetscCall(VecDuplicate(u_i, &ortho_vecs[i]));
+    PetscCall(VecCopy(u_i, ortho_vecs[i]));
+    PetscCall(MatDenseRestoreColumnVecRead(U, i, &u_i));
+  }
+  PetscCall(VecDestroy(&S));
+  PetscCall(MatDestroy(&U));
+  PetscCall(MatNullSpaceCreate(comm, PETSC_FALSE, r, ortho_vecs, sp));
+  for (PetscInt i = 0; i < r; i++) PetscCall(VecDestroy(&ortho_vecs[i]));
+  PetscCall(PetscFree(ortho_vecs));
+  PetscCall(MatNullSpaceSetSpanningVecs(*sp, n, vecs));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -307,8 +489,6 @@ PetscErrorCode MatNullSpaceCreate(MPI_Comm comm, PetscBool has_cnst, PetscInt n,
 @*/
 PetscErrorCode MatNullSpaceDestroy(MatNullSpace *sp)
 {
-  PetscInt i;
-
   PetscFunctionBegin;
   if (!*sp) PetscFunctionReturn(PETSC_SUCCESS);
   PetscValidHeaderSpecific(*sp, MAT_NULLSPACE_CLASSID, 1);
@@ -317,9 +497,11 @@ PetscErrorCode MatNullSpaceDestroy(MatNullSpace *sp)
     PetscFunctionReturn(PETSC_SUCCESS);
   }
 
-  for (i = 0; i < (*sp)->n; i++) PetscCall(VecLockReadPop((*sp)->vecs[i]));
+  for (PetscInt i = 0; i < (*sp)->n; i++) PetscCall(VecLockReadPop((*sp)->vecs[i]));
+  for (PetscInt i = 0; i < (*sp)->n_spanning_vecs; i++) PetscCall(VecLockReadPop((*sp)->spanning_vecs[i]));
 
   PetscCall(VecDestroyVecs((*sp)->n, &(*sp)->vecs));
+  PetscCall(VecDestroyVecs((*sp)->n_spanning_vecs, &(*sp)->spanning_vecs));
   PetscCall(PetscFree((*sp)->alpha));
   PetscCall(PetscHeaderDestroy(sp));
   PetscFunctionReturn(PETSC_SUCCESS);

@@ -162,7 +162,7 @@ static PetscErrorCode MatDenseSVD_LAPACK(Mat A, MatReuse reuse, Mat *U, Vec *S, 
 #endif
     PetscCheck(lierr == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in LAPACK gesvd %d", (int)lierr);
 
-    lwork = (PetscBLASInt)work_size;
+    lwork = (PetscBLASInt)PetscRealPart(work_size);
     PetscCall(PetscMalloc1(lwork, &uwork));
     PetscCall(PetscLogEventBegin(event, NULL, NULL, NULL, NULL));
 #if !defined(PETSC_USE_COMPLEX)

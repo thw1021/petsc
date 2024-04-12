@@ -354,7 +354,7 @@ PetscErrorCode DMPlexCreateRigidBody(DM dm, PetscInt field, MatNullSpace *sp)
   MPI_Comm     comm;
   Vec          mode[6];
   PetscSection section, globalSection;
-  PetscInt     dim, dimEmbed, Nf, n, m, mmin, d, i, j;
+  PetscInt     dim, dimEmbed, Nf, n, m;
   void       **ctxs;
 
   PetscFunctionBegin;
@@ -377,10 +377,9 @@ PetscErrorCode DMPlexCreateRigidBody(DM dm, PetscInt field, MatNullSpace *sp)
   PetscCall(VecSetSizes(mode[0], n, PETSC_DETERMINE));
   PetscCall(VecSetUp(mode[0]));
   PetscCall(VecGetSize(mode[0], &n));
-  mmin        = PetscMin(m, n);
   func[field] = DMPlexProjectRigidBody_Private;
-  for (i = 1; i < m; ++i) PetscCall(VecDuplicate(mode[0], &mode[i]));
-  for (d = 0; d < m; d++) {
+  for (PetscInt i = 1; i < m; ++i) PetscCall(VecDuplicate(mode[0], &mode[i]));
+  for (PetscInt d = 0; d < m; d++) {
     PetscInt ctx[2];
 
     ctxs[field] = (void *)(&ctx[0]);
@@ -388,19 +387,8 @@ PetscErrorCode DMPlexCreateRigidBody(DM dm, PetscInt field, MatNullSpace *sp)
     ctx[1]      = d;
     PetscCall(DMProjectFunction(dm, 0.0, func, ctxs, INSERT_VALUES, mode[d]));
   }
-  /* Orthonormalize system */
-  for (i = 0; i < mmin; ++i) {
-    PetscScalar dots[6];
-
-    PetscCall(VecNormalize(mode[i], NULL));
-    PetscCall(VecMDot(mode[i], mmin - i - 1, mode + i + 1, dots + i + 1));
-    for (j = i + 1; j < mmin; ++j) {
-      dots[j] *= -1.0;
-      PetscCall(VecAXPY(mode[j], dots[j], mode[i]));
-    }
-  }
-  PetscCall(MatNullSpaceCreate(comm, PETSC_FALSE, mmin, mode, sp));
-  for (i = 0; i < m; ++i) PetscCall(VecDestroy(&mode[i]));
+  PetscCall(MatNullSpaceCreateFromSpanningVecs(comm, m, mode, sp));
+  for (PetscInt i = 0; i < m; ++i) PetscCall(VecDestroy(&mode[i]));
   PetscCall(PetscFree2(func, ctxs));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -433,7 +421,7 @@ PetscErrorCode DMPlexCreateDisplacementRigidBody(DM dm, Vec u_global, PetscInt f
   Vec          projected_coords_local;
   Vec          mode_local[6], mode[6];
   PetscSection section, globalSection;
-  PetscInt     dim, dimEmbed, Nf, n, m, mmin, d, i, j;
+  PetscInt     dim, dimEmbed, Nf, n, m;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -459,13 +447,12 @@ PetscErrorCode DMPlexCreateDisplacementRigidBody(DM dm, Vec u_global, PetscInt f
   PetscCall(DMGlobalToLocal(dm, u_global, INSERT_VALUES, projected_coords_local));
   func[field] = DMPlexProjectCoordinates_Private;
   PetscCall(DMProjectFunctionLocal(dm, 0.0, func, NULL, ADD_ALL_VALUES, projected_coords_local));
-  m    = (dim * (dim + 1)) / 2;
-  mmin = PetscMin(m, n);
-  for (i = 0; i < m; ++i) {
+  m = (dim * (dim + 1)) / 2;
+  for (PetscInt i = 0; i < m; ++i) {
     PetscCall(VecDuplicate(projected_coords_local, &mode_local[i]));
     PetscCall(VecDuplicate(u_global, &mode[i]));
   }
-  for (d = 0; d < m; d++) {
+  for (PetscInt d = 0; d < m; d++) {
     switch (d) {
       // clang-format off
     case 0: field_func[field] = DMPlexProjectDisplacementRigidBody_Private_0; break;
@@ -482,19 +469,8 @@ PetscErrorCode DMPlexCreateDisplacementRigidBody(DM dm, Vec u_global, PetscInt f
     PetscCall(DMLocalToGlobal(dm, mode_local[d], INSERT_VALUES, mode[d]));
     PetscCall(VecDestroy(&mode_local[d]));
   }
-  /* Orthonormalize system */
-  for (i = 0; i < mmin; ++i) {
-    PetscScalar dots[6];
-
-    PetscCall(VecNormalize(mode[i], NULL));
-    PetscCall(VecMDot(mode[i], mmin - i - 1, mode + i + 1, dots + i + 1));
-    for (j = i + 1; j < mmin; ++j) {
-      dots[j] *= -1.0;
-      PetscCall(VecAXPY(mode[j], dots[j], mode[i]));
-    }
-  }
-  PetscCall(MatNullSpaceCreate(comm, PETSC_FALSE, mmin, mode, sp));
-  for (i = 0; i < m; ++i) PetscCall(VecDestroy(&mode[i]));
+  PetscCall(MatNullSpaceCreateFromSpanningVecs(comm, m, mode, sp));
+  for (PetscInt i = 0; i < m; ++i) PetscCall(VecDestroy(&mode[i]));
   PetscCall(VecDestroy(&projected_coords_local));
   PetscCall(PetscFree2(func, field_func));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -528,7 +504,7 @@ PetscErrorCode DMPlexCreateRigidBodies(DM dm, PetscInt nb, DMLabel label, const 
   PetscSection section, globalSection;
   Vec         *mode;
   PetscScalar *dots;
-  PetscInt     dim, dimEmbed, n, m, b, d, i, j, off;
+  PetscInt     dim, dimEmbed, n, m, off;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectGetComm((PetscObject)dm, &comm));
@@ -542,9 +518,10 @@ PetscErrorCode DMPlexCreateRigidBodies(DM dm, PetscInt nb, DMLabel label, const 
   PetscCall(VecCreate(comm, &mode[0]));
   PetscCall(VecSetSizes(mode[0], n, PETSC_DETERMINE));
   PetscCall(VecSetUp(mode[0]));
-  for (i = 1; i < m; ++i) PetscCall(VecDuplicate(mode[0], &mode[i]));
-  for (b = 0, off = 0; b < nb; ++b) {
-    for (d = 0; d < m / nb; ++d) {
+  for (PetscInt i = 1; i < m; ++i) PetscCall(VecDuplicate(mode[0], &mode[i]));
+  off = 0;
+  for (PetscInt b = 0; b < nb; ++b) {
+    for (PetscInt d = 0; d < m / nb; ++d) {
       PetscInt ctx[2];
       PetscErrorCode (*func)(PetscInt, PetscReal, const PetscReal *, PetscInt, PetscScalar *, void *) = DMPlexProjectRigidBody_Private;
       void *voidctx                                                                                   = (void *)(&ctx[0]);
@@ -555,19 +532,8 @@ PetscErrorCode DMPlexCreateRigidBodies(DM dm, PetscInt nb, DMLabel label, const 
       off += nids[b];
     }
   }
-  /* Orthonormalize system */
-  for (i = 0; i < m; ++i) {
-    PetscScalar dots[6];
-
-    PetscCall(VecNormalize(mode[i], NULL));
-    PetscCall(VecMDot(mode[i], m - i - 1, mode + i + 1, dots + i + 1));
-    for (j = i + 1; j < m; ++j) {
-      dots[j] *= -1.0;
-      PetscCall(VecAXPY(mode[j], dots[j], mode[i]));
-    }
-  }
-  PetscCall(MatNullSpaceCreate(comm, PETSC_FALSE, m, mode, sp));
-  for (i = 0; i < m; ++i) PetscCall(VecDestroy(&mode[i]));
+  PetscCall(MatNullSpaceCreateFromSpanningVecs(comm, m, mode, sp));
+  for (PetscInt i = 0; i < m; ++i) PetscCall(VecDestroy(&mode[i]));
   PetscCall(PetscFree2(mode, dots));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
