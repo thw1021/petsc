@@ -62,6 +62,7 @@ Changes: Development
 .. rubric:: DMPlex:
 
 - Add ``DMPlexOrientLabel()``
+- Add an argument to ``DMPlexLabelCohesiveComplete()`` in order to change behavior at surface boundary
 
 .. rubric:: FE/FV:
 
