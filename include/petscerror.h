@@ -327,7 +327,7 @@ M*/
   `PetscUseTypeMethod()` or `PetscTryTypeMethod()` should be used when calling functions pointers contained in a PETSc object's `ops` array
 
   Fortran Notes:
-    The Fortran function from which this is used must declare a `PetscErrorCode` variable necessarily named `ierr`, and `ierr` must be
+    The Fortran function in which this is used must declare a `PetscErrorCode` variable necessarily named `ierr`, and `ierr` must be
     the final argument to the PETSc function being called.
 
     In the main program and in Fortran subroutines that do not have `ierr` as the final return parameter, one
@@ -349,7 +349,7 @@ M*/
 M*/
 
 /*MC
-   PetscCallA - Fortran-only macro that should be used in the main program to call PETSc functions instead of using
+   PetscCallA - Fortran-only macro that should be used in the main program and subroutines that do not have `ierr` as the final return parameter, to call PETSc functions instead of using
    `PetscCall()` which should be used in other Fortran subroutines
 
    Synopsis:
@@ -366,6 +366,7 @@ M*/
    Notes:
    This should only be used with Fortran. With C/C++, use `PetscCall()` always.
 
+  The Fortran function in which this is used must declare a `PetscErrorCode` variable necessarily named `ierr
    Use `SETERRA()` to set an error in a Fortran main program and `SETERRQ()` in Fortran subroutines
 
 .seealso: `SETERRQ()`, `SETERRA()`, `SETERRABORT()`, `PetscCall()`, `CHKERRA()`, `PetscCallAbort()`
