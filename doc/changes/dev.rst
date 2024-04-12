@@ -61,6 +61,8 @@ Changes: Development
 
 .. rubric:: DMPlex:
 
+- Add ``DMPlexOrientLabel()``
+
 .. rubric:: FE/FV:
 
 .. rubric:: DMNetwork:
