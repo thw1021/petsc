@@ -634,6 +634,7 @@ static PetscErrorCode PCSetFromOptions_HYPRE_ILU(PC pc, PetscOptionItems *PetscO
   PetscBool flg;
   PetscInt  indx;
   PetscReal tmpdbl;
+  PetscBool tmp_truth;
 
   PetscFunctionBegin;
   PetscOptionsHeadBegin(PetscOptionsObject, "HYPRE ILU Options");
@@ -711,10 +712,9 @@ static PetscErrorCode PCSetFromOptions_HYPRE_ILU(PC pc, PetscOptionItems *PetscO
   }
 
   /* ILU: Triangular Solve */
-  PetscCall(PetscOptionsInt("-pc_hypre_ilu_tri_solve", "Enable triangular solve", "None", 0, &indx, &flg));
+  PetscCall(PetscOptionsBool("-pc_hypre_ilu_tri_solve", "Enable triangular solve", "None", 0, &tmp_truth, &flg));
   if (flg) {
-    PetscCheck(indx==0||indx==1, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_OUTOFRANGE, "Triangular solve, you need to provide a value of either 0 or 1, you provided %" PetscInt_FMT, indx);
-    PetscCallExternal(HYPRE_ILUSetTriSolve, jac->hsolver, indx);
+    PetscCallExternal(HYPRE_ILUSetTriSolve, jac->hsolver, tmp_truth);
   }
 
   /* ILU: Lower Jacobi iteration */
@@ -730,10 +730,9 @@ static PetscErrorCode PCSetFromOptions_HYPRE_ILU(PC pc, PetscOptionItems *PetscO
   }
 
   /* ILU: local reordering */
-  PetscCall(PetscOptionsInt("-pc_hypre_ilu_local_reordering", "Enable local reordering", "None", 0, &indx, &flg));
+  PetscCall(PetscOptionsBool("-pc_hypre_ilu_local_reordering", "Enable local reordering", "None", 0, &tmp_truth, &flg));
   if (flg) {
-    PetscCheck(indx==0||indx==1, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_OUTOFRANGE, "Local reordering, you need to provide a value of either 0 or 1, you provided %" PetscInt_FMT, indx);
-    PetscCallExternal(HYPRE_ILUSetLocalReordering, jac->hsolver, indx);
+    PetscCallExternal(HYPRE_ILUSetLocalReordering, jac->hsolver, tmp_truth);
   }
 
   PetscOptionsHeadEnd();
@@ -1089,10 +1088,9 @@ static PetscErrorCode PCSetFromOptions_HYPRE_BoomerAMG(PC pc, PetscOptionItems *
   }
 
   /* ILU: Triangular Solve */
-  PetscCall(PetscOptionsInt("-pc_hypre_boomeramg_ilu_tri_solve", "Enable triangular solve", "None", 0, &indx, &flg));
+  PetscCall(PetscOptionsBool("-pc_hypre_boomeramg_ilu_tri_solve", "Enable triangular solve", "None", 0, &tmp_truth, &flg));
   if (flg) {
-    PetscCheck(indx==0||indx==1, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_OUTOFRANGE, "Triangular solve, you need to provide a value of either 0 or 1, you provided %" PetscInt_FMT, indx);
-    PetscCallExternal(HYPRE_BoomerAMGSetILUTriSolve, jac->hsolver, indx);
+    PetscCallExternal(HYPRE_BoomerAMGSetILUTriSolve, jac->hsolver, tmp_truth);
   }
 
   /* ILU: Lower Jacobi iteration */
@@ -1108,10 +1106,9 @@ static PetscErrorCode PCSetFromOptions_HYPRE_BoomerAMG(PC pc, PetscOptionItems *
   }
 
   /* ILU: local reordering */
-  PetscCall(PetscOptionsInt("-pc_hypre_boomeramg_ilu_local_reordering", "Enable local reordering", "None", 0, &indx, &flg));
+  PetscCall(PetscOptionsBool("-pc_hypre_boomeramg_ilu_local_reordering", "Enable local reordering", "None", 0, &tmp_truth, &flg));
   if (flg) {
-    PetscCheck(indx==0||indx==1, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_OUTOFRANGE, "Local reordering, you need to provide a value of either 0 or 1, you provided %" PetscInt_FMT, indx);
-    PetscCallExternal(HYPRE_BoomerAMGSetILULocalReordering, jac->hsolver, indx);
+    PetscCallExternal(HYPRE_BoomerAMGSetILULocalReordering, jac->hsolver, tmp_truth);
   }
 
   /* Number of levels for ILU(k) for Euclid */
