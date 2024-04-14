@@ -7,7 +7,7 @@
 PetscFunctionList DMLabelList              = NULL;
 PetscBool         DMLabelRegisterAllCalled = PETSC_FALSE;
 
-/*@C
+/*@
   DMLabelCreate - Create a `DMLabel` object, which is a multimap
 
   Collective
@@ -51,7 +51,7 @@ PetscErrorCode DMLabelCreate(MPI_Comm comm, const char name[], DMLabel *label)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMLabelSetUp - SetUp a `DMLabel` object
 
   Collective
@@ -627,6 +627,9 @@ PetscErrorCode DMLabelDuplicate(DMLabel label, DMLabel *labelnew)
   For the comparison, we ignore the order of stratum values, and strata with no points.
 
   The communicator needs to be specified because currently `DMLabel` can live on `PETSC_COMM_SELF` even if the underlying `DM` is parallel.
+
+  Developer Note:
+  Fortran stub cannot be generated automatically because `message` must be freed with `PetscFree()`
 
 .seealso: `DMLabel`, `DM`, `DMCompareLabels()`, `DMLabelGetNumValues()`, `DMLabelGetDefaultValue()`, `DMLabelGetNonEmptyStratumValuesIS()`, `DMLabelGetStratumIS()`
 @*/
@@ -2302,7 +2305,7 @@ PetscErrorCode DMLabelRegisterDestroy(void)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMLabelSetType - Sets the particular implementation for a label.
 
   Collective
@@ -2339,7 +2342,7 @@ PetscErrorCode DMLabelSetType(DMLabel label, DMLabelType method)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMLabelGetType - Gets the type name (as a string) from the label.
 
   Not Collective
