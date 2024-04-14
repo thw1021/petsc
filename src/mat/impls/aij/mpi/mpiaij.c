@@ -5063,7 +5063,7 @@ PetscErrorCode MatCreateMPIAIJSumSeqAIJSymbolic(MPI_Comm comm, Mat seqmat, Petsc
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   MatCreateMPIAIJSumSeqAIJ - Creates a `MATMPIAIJ` matrix by adding sequential
   matrices from each processor
 
@@ -5084,7 +5084,7 @@ PetscErrorCode MatCreateMPIAIJSumSeqAIJSymbolic(MPI_Comm comm, Mat seqmat, Petsc
   Note:
   The dimensions of the sequential matrix in each processor MUST be the same.
   The input seqmat is included into the container "Mat_Merge_SeqsToMPI", and will be
-  destroyed when mpimat is destroyed. Call `PetscObjectQuery()` to access seqmat.
+  destroyed when `mpimat` is destroyed. Call `PetscObjectQuery()` to access seqmat.
 
 .seealso: [](ch_matrices), `Mat`, `MatCreateAIJ()`
 @*/

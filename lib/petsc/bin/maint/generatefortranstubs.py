@@ -264,7 +264,7 @@ def processf90interfaces(petscdir,petscarch,verbose):
 def main(petscdir,petscarch,bfort,dir,verbose):
   for dirpath, dirnames, filenames in os.walk(dir, topdown=True):
     filenames = [i for i in filenames if not i.find('#') > -1 and os.path.splitext(i)[1] in ['.c','.h','.cxx','.cu']]
-    dirnames[:] = [d for d in dirnames if d not in ['output','tutorials','tests','binding','benchmarks'] and not d.startswith('ftn-') and not d.startswith('f90-')]
+    dirnames[:] = [d for d in dirnames if d not in ['output','tutorials','tests','binding','benchmarks','yaml'] and not d.startswith('ftn-') and not d.startswith('f90-')]
     processDir(petscdir, petscarch,bfort, verbose, dirpath, dirnames, filenames)
   return
 #
