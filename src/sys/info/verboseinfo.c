@@ -76,7 +76,7 @@ PetscErrorCode PetscInfoAllow(PetscBool flag)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PetscInfoSetFile - Sets the printing destination for all `PetscInfo()` calls
 
   Not Collective
@@ -141,7 +141,7 @@ PetscErrorCode PetscInfoSetFile(const char filename[], const char mode[])
 
 .seealso: [](sec_PetscInfo), `PetscInfo()`, `PetscInfoSetFile()`, `PetscInfoSetFromOptions()`, `PetscInfoDestroy()`
 @*/
-PetscErrorCode PetscInfoGetFile(char **filename, FILE **InfoFile)
+PetscErrorCode PetscInfoGetFile(char *filename[], FILE **InfoFile)
 {
   PetscFunctionBegin;
   PetscAssertPointer(filename, 1);
@@ -194,7 +194,7 @@ PetscErrorCode PetscInfoSetClasses(PetscBool exclude, PetscInt n, const char *co
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PetscInfoGetClass - Indicates whether the provided `classname` is marked as a filter in `PetscInfo()` as set by `PetscInfoSetClasses()`
 
   Not Collective
@@ -212,7 +212,7 @@ PetscErrorCode PetscInfoSetClasses(PetscBool exclude, PetscInt n, const char *co
 
 .seealso: [](sec_PetscInfo), `PetscInfo()`, `PetscInfoSetClasses()`, `PetscInfoSetFromOptions()`, `PetscObjectGetName()`
 @*/
-PetscErrorCode PetscInfoGetClass(const char *classname, PetscBool *found)
+PetscErrorCode PetscInfoGetClass(const char classname[], PetscBool *found)
 {
   PetscInt unused;
 
@@ -260,7 +260,7 @@ PetscErrorCode PetscInfoGetInfo(PetscBool *infoEnabled, PetscBool *classesSet, P
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PetscInfoProcessClass - Activates or deactivates a class based on the filtering status of `PetscInfo()`
 
   Not Collective
