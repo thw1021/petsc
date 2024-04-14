@@ -1009,7 +1009,7 @@ cdef class Vec(Object):
 
     #
 
-    def setOptionsPrefix(self, prefix: str | None = None) -> None:
+    def setOptionsPrefix(self, prefix: str | None) -> None:
         """Set the prefix used for searching for options in the database.
 
         Logically collective.
@@ -1037,7 +1037,7 @@ cdef class Vec(Object):
         CHKERR( VecGetOptionsPrefix(self.vec, &cval) )
         return bytes2str(cval)
 
-    def appendOptionsPrefix(self, prefix: str | None = None) -> None:
+    def appendOptionsPrefix(self, prefix: str | None) -> None:
         """Append to the prefix used for searching for options in the database.
 
         Logically collective.
