@@ -1882,7 +1882,7 @@ static PetscErrorCode PCFieldSplitGetSubKSP_FieldSplit(PC pc, PetscInt *n, KSP *
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PCFieldSplitRestrictIS - Restricts the fieldsplit `IS`s to be within a given `IS`.
 
   Input Parameters:
@@ -2024,7 +2024,7 @@ static PetscErrorCode PCFieldSplitSetIS_FieldSplit(PC pc, const char splitname[]
 . n          - the number of fields in this split
 . fields     - the fields in this split
 - fields_col - generally the same as fields, if it does not match fields then the matrix block that is solved for this set of fields comes from an off-diagonal block
-                 of the matrix and fields_col provides the column indices for that block
+               of the matrix and fields_col provides the column indices for that block
 
   Level: intermediate
 
@@ -2048,7 +2048,7 @@ static PetscErrorCode PCFieldSplitSetIS_FieldSplit(PC pc, const char splitname[]
 
 .seealso: [](sec_block_matrices), `PC`, `PCFieldSplitGetSubKSP()`, `PCFIELDSPLIT`, `PCFieldSplitSetBlockSize()`, `PCFieldSplitSetIS()`, `PCFieldSplitRestrictIS()`
 @*/
-PetscErrorCode PCFieldSplitSetFields(PC pc, const char splitname[], PetscInt n, const PetscInt *fields, const PetscInt *fields_col)
+PetscErrorCode PCFieldSplitSetFields(PC pc, const char splitname[], PetscInt n, const PetscInt fields[], const PetscInt fields_col[])
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
@@ -2179,7 +2179,7 @@ PetscErrorCode PCFieldSplitGetOffDiagUseAmat(PC pc, PetscBool *flg)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PCFieldSplitSetIS - Sets the exact elements for a split in a `PCFIELDSPLIT`
 
   Logically Collective
@@ -2209,7 +2209,7 @@ PetscErrorCode PCFieldSplitSetIS(PC pc, const char splitname[], IS is)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PCFieldSplitGetIS - Retrieves the elements for a split as an `IS`
 
   Logically Collective
@@ -2249,7 +2249,7 @@ PetscErrorCode PCFieldSplitGetIS(PC pc, const char splitname[], IS *is)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PCFieldSplitGetISByIndex - Retrieves the elements for a given split as an `IS`
 
   Logically Collective

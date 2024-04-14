@@ -309,7 +309,7 @@ PetscErrorCode VecNormalize(Vec x, PetscReal *val)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   VecMax - Determines the vector component with maximum real part and its location.
 
   Collective
@@ -346,7 +346,7 @@ PetscErrorCode VecMax(Vec x, PetscInt *p, PetscReal *val)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   VecMin - Determines the vector component with minimum real part and its location.
 
   Collective
@@ -4011,7 +4011,7 @@ PetscErrorCode VecLockReadPop(Vec x)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   VecLockWriteSet  - Lock or unlock a vector for exclusive read/write access
 
   Logically Collective

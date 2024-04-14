@@ -583,7 +583,7 @@ static PetscErrorCode TSSundialsMonitorInternalSteps_Sundials(TS ts, PetscBool s
 }
 /* -------------------------------------------------------------------------------------------*/
 
-/*@C
+/*@
   TSSundialsGetIterations - Gets the number of nonlinear and linear iterations used so far by `TSSUNDIALS`.
 
   Not Collective
