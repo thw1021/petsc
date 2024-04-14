@@ -61,7 +61,7 @@ class BaseTestObject:
         self.assertEqual(self.obj.getOptionsPrefix(), prefix2)
         self.obj.appendOptionsPrefix(prefix1)
         self.assertEqual(self.obj.getOptionsPrefix(), prefix2 + prefix1)
-        self.obj.setOptionsPrefix()
+        self.obj.setOptionsPrefix(None)
         self.assertEqual(self.obj.getOptionsPrefix(), None)
         self.obj.setFromOptions()
 

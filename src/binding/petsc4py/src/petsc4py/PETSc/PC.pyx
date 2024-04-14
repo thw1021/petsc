@@ -319,7 +319,7 @@ cdef class PC(Object):
         CHKERR( PCGetType(self.pc, &cval) )
         return bytes2str(cval)
 
-    def setOptionsPrefix(self, prefix: str | None = None) -> None:
+    def setOptionsPrefix(self, prefix: str | None) -> None:
         """Set the prefix used for all the `PC` options.
 
         Logically collective.
@@ -352,7 +352,7 @@ cdef class PC(Object):
         CHKERR( PCGetOptionsPrefix(self.pc, &cval) )
         return bytes2str(cval)
 
-    def appendOptionsPrefix(self, prefix: str | None = None) -> None:
+    def appendOptionsPrefix(self, prefix: str | None) -> None:
         """Append to the prefix used for all the `PC` options.
 
         Logically collective.
