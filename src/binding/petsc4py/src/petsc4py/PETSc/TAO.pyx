@@ -196,7 +196,7 @@ cdef class TAO(Object):
         CHKERR( TaoGetType(self.tao, &ctype) )
         return bytes2str(ctype)
 
-    def setOptionsPrefix(self, prefix: str | None = None) -> None:
+    def setOptionsPrefix(self, prefix: str | None) -> None:
         """Set the prefix used for searching for options in the database.
 
         Logically collective.
@@ -210,7 +210,7 @@ cdef class TAO(Object):
         prefix = str2bytes(prefix, &cprefix)
         CHKERR( TaoSetOptionsPrefix(self.tao, cprefix) )
 
-    def appendOptionsPrefix(self, prefix: str | None = None) -> None:
+    def appendOptionsPrefix(self, prefix: str | None) -> None:
         """Append to the prefix used for searching for options in the database.
 
         Logically collective.

@@ -482,7 +482,7 @@ cdef class TS(Object):
         CHKERR( TSGetEquationType(self.ts, &eqtype) )
         return eqtype
 
-    def setOptionsPrefix(self, prefix : str | None = None) -> None:
+    def setOptionsPrefix(self, prefix : str | None) -> None:
         """Set the prefix used for all the `TS` options.
 
         Logically collective.
@@ -519,7 +519,7 @@ cdef class TS(Object):
         CHKERR( TSGetOptionsPrefix(self.ts, &cval) )
         return bytes2str(cval)
 
-    def appendOptionsPrefix(self, prefix: str | None = None) -> None:
+    def appendOptionsPrefix(self, prefix: str | None) -> None:
         """Append to the prefix used for all the `TS` options.
 
         Logically collective.
