@@ -10,7 +10,7 @@
   PetscFOpen - Has the first process in the MPI communicator open a file;
   all others do nothing.
 
-  Logically Collective; No Fortran Support
+  Logically Collective
 
   Input Parameters:
 + comm - the MPI communicator
@@ -61,7 +61,7 @@ PetscErrorCode PetscFOpen(MPI_Comm comm, const char name[], const char mode[], F
   PetscFClose - Has MPI rank 0 in the communicator close a
   file (usually obtained with `PetscFOpen()`; all others do nothing.
 
-  Logically Collective; No Fortran Support
+  Logically Collective
 
   Input Parameters:
 + comm - the MPI communicator
@@ -192,7 +192,7 @@ PetscErrorCode PetscPOpen(MPI_Comm comm, const char machine[], const char progra
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PetscPOpenSetMachine - Sets the name of the default machine to run `PetscPOpen()` calls on
 
   Logically Collective, but only MPI rank 0 runs the command
