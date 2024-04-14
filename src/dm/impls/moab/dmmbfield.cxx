@@ -180,7 +180,7 @@ PetscErrorCode DMMoabSetFieldNames(DM dm, PetscInt numFields, const char *fields
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMMoabGetFieldName - Gets the names of individual field components in multicomponent
   vectors associated with a DMDA.
 
@@ -198,7 +198,7 @@ PetscErrorCode DMMoabSetFieldNames(DM dm, PetscInt numFields, const char *fields
 
 .seealso: `DMMoabSetFieldName()`, `DMMoabSetFields()`
 @*/
-PetscErrorCode DMMoabGetFieldName(DM dm, PetscInt field, const char **fieldName)
+PetscErrorCode DMMoabGetFieldName(DM dm, PetscInt field, const char *fieldName[])
 {
   DM_Moab *dmmoab;
 
