@@ -220,6 +220,8 @@ cdef class DMLabel(Object):
     def addStratum(self, value: int) -> None:
         """Add a new stratum value in a `DMLabel`.
 
+        Not collective.
+
         Parameters
         ----------
         value
@@ -250,7 +252,7 @@ cdef class DMLabel(Object):
         """
         cdef PetscInt *istrata = NULL
         cdef PetscInt numStrata = 0
-        fields = iarray_i(strata, &numStrata, &istrata)
+        strata = iarray_i(strata, &numStrata, &istrata)
         CHKERR( DMLabelAddStrata(self.dmlabel, numStrata, istrata) )
 
     def addStrataIS(self, IS iset) -> None:

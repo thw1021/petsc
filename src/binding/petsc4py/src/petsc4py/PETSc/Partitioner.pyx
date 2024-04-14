@@ -1,6 +1,7 @@
 # --------------------------------------------------------------------
 
 class PartitionerType(object):
+    """The partitioner types."""
     PARMETIS        = S_(PETSCPARTITIONERPARMETIS)
     PTSCOTCH        = S_(PETSCPARTITIONERPTSCOTCH)
     CHACO           = S_(PETSCPARTITIONERCHACO)
@@ -10,6 +11,7 @@ class PartitionerType(object):
     MATPARTITIONING = S_(PETSCPARTITIONERMATPARTITIONING)
 
 # --------------------------------------------------------------------
+
 
 cdef class Partitioner(Object):
     """A graph partitioner."""

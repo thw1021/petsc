@@ -1,6 +1,7 @@
 # --------------------------------------------------------------------
 
 class SFType(object):
+    """The star forest types."""
     BASIC      = S_(PETSCSFBASIC)
     NEIGHBOR   = S_(PETSCSFNEIGHBOR)
     ALLGATHERV = S_(PETSCSFALLGATHERV)
@@ -11,6 +12,7 @@ class SFType(object):
     WINDOW     = S_(PETSCSFWINDOW)
 
 # --------------------------------------------------------------------
+
 
 cdef class SF(Object):
     """Star Forest object for communication.
