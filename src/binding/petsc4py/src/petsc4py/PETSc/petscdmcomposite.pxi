@@ -2,17 +2,17 @@
 
 cdef extern from * nogil:
 
-    PetscErrorCode DMCompositeCreate(MPI_Comm,PetscDM*)
-    PetscErrorCode DMCompositeAddDM(PetscDM,PetscDM)
-    PetscErrorCode DMCompositeGetNumberDM(PetscDM,PetscInt*)
-    PetscErrorCode DMCompositeScatterArray(PetscDM,PetscVec,PetscVec*)
-    PetscErrorCode DMCompositeGatherArray(PetscDM,PetscInsertMode,PetscVec,PetscVec*)
-    PetscErrorCode DMCompositeGetEntriesArray(PetscDM,PetscDM*)
-    PetscErrorCode DMCompositeGetAccessArray(PetscDM,PetscVec,PetscInt,const PetscInt*,PetscVec*)
-    PetscErrorCode DMCompositeRestoreAccessArray(PetscDM,PetscVec,PetscInt,const PetscInt*,PetscVec*)
-    PetscErrorCode DMCompositeGetGlobalISs(PetscDM,PetscIS**)
-    PetscErrorCode DMCompositeGetLocalISs(PetscDM,PetscIS**)
-    PetscErrorCode DMCompositeGetISLocalToGlobalMappings(PetscDM,PetscLGMap**)
+    PetscErrorCode DMCompositeCreate(MPI_Comm, PetscDM*)
+    PetscErrorCode DMCompositeAddDM(PetscDM, PetscDM)
+    PetscErrorCode DMCompositeGetNumberDM(PetscDM, PetscInt*)
+    PetscErrorCode DMCompositeScatterArray(PetscDM, PetscVec, PetscVec*)
+    PetscErrorCode DMCompositeGatherArray(PetscDM, PetscInsertMode, PetscVec, PetscVec*)
+    PetscErrorCode DMCompositeGetEntriesArray(PetscDM, PetscDM*)
+    PetscErrorCode DMCompositeGetAccessArray(PetscDM, PetscVec, PetscInt, const PetscInt*, PetscVec*)
+    PetscErrorCode DMCompositeRestoreAccessArray(PetscDM, PetscVec, PetscInt, const PetscInt*, PetscVec*)
+    PetscErrorCode DMCompositeGetGlobalISs(PetscDM, PetscIS**)
+    PetscErrorCode DMCompositeGetLocalISs(PetscDM, PetscIS**)
+    PetscErrorCode DMCompositeGetISLocalToGlobalMappings(PetscDM, PetscLGMap**)
 
 cdef class _DMComposite_access:
     cdef PetscDM  dm

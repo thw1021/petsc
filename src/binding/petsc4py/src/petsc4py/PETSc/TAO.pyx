@@ -42,6 +42,7 @@ class TAOType:
     ALMM     = S_(TAOALMM)
     PYTHON   = S_(TAOPYTHON)
 
+
 class TAOConvergedReason:
     """TAO solver termination reason.
 
@@ -69,6 +70,7 @@ class TAOConvergedReason:
     DIVERGED_TR_REDUCTION = TAO_DIVERGED_TR_REDUCTION #
     DIVERGED_USER         = TAO_DIVERGED_USER         # user defined
 
+
 class TAOBNCGType:
     """TAO Bound Constrained Conjugate Gradient (BNCG) Update Type."""
     GD         = TAO_BNCG_GD
@@ -85,6 +87,7 @@ class TAOBNCGType:
     SSML_DFP   = TAO_BNCG_SSML_DFP
     SSML_BRDN  = TAO_BNCG_SSML_BRDN
 # --------------------------------------------------------------------
+
 
 cdef class TAO(Object):
     """Optimization solver.
@@ -193,7 +196,7 @@ cdef class TAO(Object):
         CHKERR( TaoGetType(self.tao, &ctype) )
         return bytes2str(ctype)
 
-    def setOptionsPrefix(self, prefix: str) -> None:
+    def setOptionsPrefix(self, prefix: str | None) -> None:
         """Set the prefix used for searching for options in the database.
 
         Logically collective.
@@ -207,7 +210,7 @@ cdef class TAO(Object):
         prefix = str2bytes(prefix, &cprefix)
         CHKERR( TaoSetOptionsPrefix(self.tao, cprefix) )
 
-    def appendOptionsPrefix(self, prefix: str) -> None:
+    def appendOptionsPrefix(self, prefix: str | None) -> None:
         """Append to the prefix used for searching for options in the database.
 
         Logically collective.
@@ -499,7 +502,7 @@ cdef class TAO(Object):
             xl = <Vec?> ol; xu = <Vec?> ou
             CHKERR( TaoSetVariableBounds(self.tao, xl.vec, xu.vec) )
             return
-        if isinstance(varbounds, Vec): #FIXME
+        if isinstance(varbounds, Vec): # FIXME
             ol = varbounds; ou = args
             xl = <Vec?> ol; xu = <Vec?> ou
             CHKERR( TaoSetVariableBounds(self.tao, xl.vec, xu.vec) )
@@ -754,7 +757,7 @@ cdef class TAO(Object):
             self.set_attr('__update__', None)
             CHKERR( TaoSetUpdate(self.tao, NULL, NULL) )
 
-    def getUpdate(self) -> tuple[TAOUpdateFunction, tuple[Any,...], dict[str, Any]]:
+    def getUpdate(self) -> tuple[TAOUpdateFunction, tuple[Any, ...], dict[str, Any]]:
         """Return the callback to compute the update.
 
         Not collective.
@@ -1232,19 +1235,19 @@ cdef class TAO(Object):
         Parameters
         ----------
         its
-            Current number of iterations 
+            Current number of iterations
             or `None` to use the value stored internally by the solver.
         f
-            Current value of the objective function 
+            Current value of the objective function
             or `None` to use the value stored internally by the solver.
         res
-            Current value of the residual norm 
+            Current value of the residual norm
             or `None` to use the value stored internally by the solver.
         cnorm
-            Current value of the constrains norm 
+            Current value of the constrains norm
             or `None` to use the value stored internally by the solver.
         step
-            Current value of the step 
+            Current value of the step
             or `None` to use the value stored internally by the solver.
 
         See Also
@@ -1640,10 +1643,10 @@ cdef class TAO(Object):
         Not collective.
 
         """
-        #FIXME
-        #See Also
-        #--------
-        #petsc.TaoBRGNGetDampingVector
+        # FIXME
+        # See Also
+        # --------
+        # petsc.TaoBRGNGetDampingVector
         cdef Vec damp = Vec()
         CHKERR( TaoBRGNGetDampingVector(self.tao, &damp.vec) )
         CHKERR( PetscINCREF(damp.obj) )
@@ -1756,6 +1759,7 @@ cdef class TAO(Object):
         """Application context."""
         def __get__(self) -> Any:
             return self.getAppCtx()
+
         def __set__(self, value: Any):
             self.setAppCtx(value)
 
@@ -1773,6 +1777,7 @@ cdef class TAO(Object):
         """Broken."""
         def __get__(self) -> Any:
             return self.getFunctionTolerances()
+
         def __set__(self, value):
             if isinstance(value, (tuple, list)):
                 self.setFunctionTolerances(*value)
@@ -1785,6 +1790,7 @@ cdef class TAO(Object):
         """Broken."""
         def __get__(self) -> Any:
             return self.getGradientTolerances()
+
         def __set__(self, value):
             if isinstance(value, (tuple, list)):
                 self.getGradientTolerances(*value)
@@ -1797,6 +1803,7 @@ cdef class TAO(Object):
         """Broken."""
         def __get__(self) -> Any:
             return self.getConstraintTolerances()
+
         def __set__(self, value):
             if isinstance(value, (tuple, list)):
                 self.getConstraintTolerances(*value)
@@ -1872,6 +1879,7 @@ del TAOBNCGType
 
 # --------------------------------------------------------------------
 
+
 class TAOLineSearchType:
     """TAO Line Search Types."""
     UNIT        = S_(TAOLINESEARCHUNIT)
@@ -1880,6 +1888,7 @@ class TAOLineSearchType:
     IPM         = S_(TAOLINESEARCHIPM)
     OWARMIJO    = S_(TAOLINESEARCHOWARMIJO)
     GPCG        = S_(TAOLINESEARCHGPCG)
+
 
 class TAOLineSearchConvergedReason:
     """TAO Line Search Termination Reasons."""
@@ -1902,6 +1911,7 @@ class TAOLineSearchConvergedReason:
 
 # --------------------------------------------------------------------
 
+
 cdef class TAOLineSearch(Object):
     """TAO Line Search."""
 
@@ -1909,8 +1919,8 @@ cdef class TAOLineSearch(Object):
     Reason = TAOLineSearchConvergedReason
 
     def __cinit__(self):
-         self.obj = <PetscObject*> &self.taols
-         self.taols = NULL
+        self.obj = <PetscObject*> &self.taols
+        self.taols = NULL
 
     def view(self, Viewer viewer=None) -> None:
         """View the linesearch object.
@@ -2022,7 +2032,7 @@ cdef class TAOLineSearch(Object):
         """
         CHKERR( TaoLineSearchSetUp(self.taols) )
 
-    def setOptionsPrefix(self, prefix) -> None:
+    def setOptionsPrefix(self, prefix: str | None = None) -> None:
         """Set the prefix used for searching for options in the database.
 
         Logically collective.
@@ -2154,7 +2164,7 @@ cdef class TAOLineSearch(Object):
         cdef PetscReal f = 0
         cdef PetscReal steplen = 0
         cdef PetscTAOLineSearchConvergedReason reason = TAOLINESEARCH_CONTINUE_ITERATING
-        CHKERR( TaoLineSearchApply(self.taols,x.vec,&f,g.vec,s.vec,&steplen,&reason))
+        CHKERR( TaoLineSearchApply(self.taols, x.vec, &f, g.vec, s.vec, &steplen, &reason))
         return (toReal(f), toReal(steplen), reason)
 
 # --------------------------------------------------------------------

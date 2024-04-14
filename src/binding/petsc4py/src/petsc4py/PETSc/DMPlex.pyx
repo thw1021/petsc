@@ -3,7 +3,9 @@
 cdef class DMPlex(DM):
     """Encapsulate an unstructured mesh.
 
-    DMPlex encapsulates both topology and geometry. It is capable of parallel refinement and coarsening (using Pragmatic or ParMmg) and parallel redistribution for load balancing. It is designed to interface with the `FE` and ``FV`` trial discretization objects.
+    DMPlex encapsulates both topology and geometry.
+    It is capable of parallel refinement and coarsening (using Pragmatic or ParMmg)
+    and parallel redistribution for load balancing.
 
     """
 
@@ -73,11 +75,11 @@ cdef class DMPlex(DM):
         if PyArray_NDIM(coords) != 2: raise ValueError(
                 ("coords vertices must have two dimensions: "
                  "coords.ndim=%d") % (PyArray_NDIM(coords)) )
-        numCells     = <PetscInt>   PyArray_DIM(cells,  0)
-        numCorners   = <PetscInt>   PyArray_DIM(cells,  1)
-        numVertices  = <PetscInt>   PyArray_DIM(coords, 0)
-        spaceDim     = <PetscInt>   PyArray_DIM(coords, 1)
-        cellVertices = <PetscInt*>  PyArray_DATA(cells)
+        numCells     = <PetscInt> PyArray_DIM(cells, 0)
+        numCorners   = <PetscInt> PyArray_DIM(cells, 1)
+        numVertices  = <PetscInt> PyArray_DIM(coords, 0)
+        spaceDim     = <PetscInt> PyArray_DIM(coords, 1)
+        cellVertices = <PetscInt*> PyArray_DATA(cells)
         vertexCoords = <PetscReal*> PyArray_DATA(coords)
         CHKERR( DMPlexCreateFromCellListPetsc(ccomm, cdim, numCells, numVertices,
                                               numCorners, interp, cellVertices,
@@ -85,7 +87,7 @@ cdef class DMPlex(DM):
         CHKERR( PetscCLEAR(self.obj) ); self.dm = newdm
         return self
 
-    def createBoxMesh(self, faces: Sequence[int], lower: Sequence[float] | None = (0,0,0), upper: Sequence[float] | None = (1,1,1),
+    def createBoxMesh(self, faces: Sequence[int], lower: Sequence[float] | None = (0, 0, 0), upper: Sequence[float] | None = (1, 1, 1),
                       simplex: bool | None = True, periodic: Sequence | str | int | bool | None = False, interpolate: bool | None = True, comm: Comm | None = None) -> Self:
         """Create a mesh on the tensor product of intervals.
 
@@ -102,7 +104,7 @@ cdef class DMPlex(DM):
         simplex
             `True` for simplices, `False` for tensor cells.
         periodic
-            The boundary type for the X,Y,Z direction,
+            The boundary type for the X, Y, Z direction,
             or `None` for `DM.BoundaryType.NONE`.
         interpolate
             Flag to create intermediate mesh entities (edges, faces).
@@ -125,7 +127,7 @@ cdef class DMPlex(DM):
         cdef PetscReal cupper[3]
         cupper[0] = cupper[1] = cupper[2] = 1
         for i from 0 <= i < dim: cupper[i] = upper[i]
-        cdef PetscDMBoundaryType btype[3];
+        cdef PetscDMBoundaryType btype[3]
         asBoundary(periodic, &btype[0], &btype[1], &btype[2])
         cdef PetscBool csimplex = simplex
         cdef PetscBool cinterp = interpolate
@@ -136,7 +138,7 @@ cdef class DMPlex(DM):
         CHKERR( PetscCLEAR(self.obj) ); self.dm = newdm
         return self
 
-    def createBoxSurfaceMesh(self, faces: Sequence[int], lower: Sequence[float] | None = (0,0,0), upper: Sequence[float] | None = (1,1,1),
+    def createBoxSurfaceMesh(self, faces: Sequence[int], lower: Sequence[float] | None = (0, 0, 0), upper: Sequence[float] | None = (1, 1, 1),
                              interpolate: bool | None = True, comm: Comm | None = None) -> Self:
         """Create a mesh on the surface of a box mesh using tensor cells.
 
@@ -367,6 +369,8 @@ cdef class DMPlex(DM):
     def createCohesiveSubmesh(self, hasLagrange: bool, value: int) -> DMPlex:
         """Extract the hypersurface defined by one face of the cohesive cells.
 
+        Collective.
+
         Parameters
         ----------
         hasLagrange
@@ -564,7 +568,7 @@ cdef class DMPlex(DM):
         cdef PetscInt cp = asInt(p)
         cdef PetscInt cconePos = asInt(conePos)
         cdef PetscInt cconePoint = asInt(conePoint)
-        CHKERR( DMPlexInsertCone(self.dm,cp,cconePos,cconePoint) )
+        CHKERR( DMPlexInsertCone(self.dm, cp, cconePos, cconePoint) )
 
     def insertConeOrientation(self, p: int, conePos: int, coneOrientation: int) -> None:
         """Insert a point orientation for the in-edge for the point p in the DAG.
@@ -861,6 +865,8 @@ cdef class DMPlex(DM):
     def orient(self) -> None:
         """Give a consistent orientation to the input mesh.
 
+        Collective.
+
         See Also
         --------
         DM, DMPlex, DM.create, petsc.DMPlexOrient
@@ -870,6 +876,8 @@ cdef class DMPlex(DM):
 
     def getCellNumbering(self) -> IS:
         """Return a global cell numbering for all cells on this process.
+
+        Collective the first time it is called.
 
         See Also
         --------
@@ -883,6 +891,8 @@ cdef class DMPlex(DM):
 
     def getVertexNumbering(self) -> IS:
         """Return a global vertex numbering for all vertices on this process.
+
+        Collective the first time it is called.
 
         See Also
         --------
@@ -920,7 +930,7 @@ cdef class DMPlex(DM):
 
         """
         cdef PetscInt depth = 0
-        CHKERR( DMPlexGetDepth(self.dm,&depth) )
+        CHKERR( DMPlexGetDepth(self.dm, &depth) )
         return toInt(depth)
 
     def getDepthStratum(self, svalue: int) -> tuple[int, int]:
@@ -1131,10 +1141,10 @@ cdef class DMPlex(DM):
         cdef PetscInt *points = NULL
         CHKERR( DMPlexGetTransitiveClosure(self.dm, cp, cuseCone, &numPoints, &points) )
         try:
-            out = array_i(2*numPoints,points)
+            out = array_i(2*numPoints, points)
         finally:
             CHKERR( DMPlexRestoreTransitiveClosure(self.dm, cp, cuseCone, &numPoints, &points) )
-        return out[::2],out[1::2]
+        return out[::2], out[1::2]
 
     def vecGetClosure(self, Section sec, Vec vec, p: int) -> ArrayScalar:
         """Return an array of values on the closure of ``p``.
@@ -1222,7 +1232,7 @@ cdef class DMPlex(DM):
         cdef PetscInt cp = asInt(point)
         cdef PetscInt csize = 0
         cdef PetscScalar *cvals = NULL
-        cdef object tmp = iarray_s(values, &csize, &cvals)
+        _tmp = iarray_s(values, &csize, &cvals)
         cdef PetscInsertMode im = insertmode(addv)
         CHKERR( DMPlexVecSetClosure(self.dm, csec, vec.vec, cp, cvals, im) )
 
@@ -1254,12 +1264,12 @@ cdef class DMPlex(DM):
         DM, DMPlex, petsc.DMPlexMatSetClosure
 
         """
-        cdef PetscSection csec  =  sec.sec if  sec is not None else NULL
+        cdef PetscSection csec = sec.sec if sec is not None else NULL
         cdef PetscSection cgsec = gsec.sec if gsec is not None else NULL
         cdef PetscInt cp = asInt(point)
         cdef PetscInt csize = 0
         cdef PetscScalar *cvals = NULL
-        cdef object tmp = iarray_s(values, &csize, &cvals)
+        _tmp = iarray_s(values, &csize, &cvals)
         cdef PetscInsertMode im = insertmode(addv)
         CHKERR( DMPlexMatSetClosure(self.dm, csec, cgsec, mat.mat, cp, cvals, im) )
 
@@ -1361,6 +1371,8 @@ cdef class DMPlex(DM):
     def labelComplete(self, DMLabel label) -> None:
         """Add the transitive closure to the surface.
 
+        Not collective.
+
         Parameters
         ----------
         label
@@ -1375,6 +1387,8 @@ cdef class DMPlex(DM):
 
     def labelCohesiveComplete(self, DMLabel label, DMLabel bdlabel, bdvalue: int, flip: bool, DMPlex subdm) -> None:
         """Add all other mesh pieces to complete the surface.
+
+        Not collective.
 
         Parameters
         ----------
@@ -1404,6 +1418,8 @@ cdef class DMPlex(DM):
     def setAdjacencyUseAnchors(self, useAnchors: bool = True) -> None:
         """Define adjacency in the mesh using the point-to-point constraints.
 
+        Logically collective.
+
         Parameters
         ----------
         useAnchors
@@ -1423,6 +1439,8 @@ cdef class DMPlex(DM):
     def getAdjacencyUseAnchors(self) -> bool:
         """Query whether adjacency in the mesh uses the point-to-point constraints.
 
+        Not collective.
+
         See Also
         --------
         DMPlex, DMPlex.getAdjacency, DMPlex.distribute
@@ -1435,6 +1453,8 @@ cdef class DMPlex(DM):
 
     def getAdjacency(self, p: int) -> ArrayInt:
         """Return all points adjacent to the given point.
+
+        Not collective.
 
         Parameters
         ----------
@@ -1493,6 +1513,8 @@ cdef class DMPlex(DM):
 
     def rebalanceSharedPoints(self, entityDepth: int | None = 0, useInitialGuess: bool | None = True, parallel: bool | None = True) -> bool:
         """Redistribute shared points in order to achieve better balancing.
+
+        Collective.
 
         Parameters
         ----------
@@ -1597,6 +1619,8 @@ cdef class DMPlex(DM):
     def isSimplex(self) -> bool:
         """Return the flag indicating if the first cell is a simplex.
 
+        Not collective.
+
         See Also
         --------
         DM, DMPlex, DMPlex.getCellType, DMPlex.getHeightStratum
@@ -1650,6 +1674,8 @@ cdef class DMPlex(DM):
     def distributionSetName(self, name: str) -> None:
         """Set the name of the specific parallel distribution.
 
+        Logically collective.
+
         Parameters
         ----------
         name
@@ -1668,6 +1694,8 @@ cdef class DMPlex(DM):
 
     def distributionGetName(self) -> str:
         """Retrieve the name of the specific parallel distribution.
+
+        Not collective.
 
         Returns
         -------
@@ -1844,13 +1872,13 @@ cdef class DMPlex(DM):
             if bcComps is not None:
                 bcComps = list(bcComps)
                 assert len(bcComps) == nbc
-                tmp1 = oarray_p(empty_p(nbc), NULL, <void**>&bccomps)
+                _tmp1 = oarray_p(empty_p(nbc), NULL, <void**>&bccomps)
                 for i from 0 <= i < nbc:
                     bccomps[i] = (<IS?>bcComps[<Py_ssize_t>i]).iset
             if bcPoints is not None:
                 bcPoints = list(bcPoints)
                 assert len(bcPoints) == nbc
-                tmp2 = oarray_p(empty_p(nbc), NULL, <void**>&bcpoints)
+                _tmp2 = oarray_p(empty_p(nbc), NULL, <void**>&bcpoints)
                 for i from 0 <= i < nbc:
                     bcpoints[i] = (<IS?>bcPoints[<Py_ssize_t>i]).iset
             else:
@@ -2011,6 +2039,8 @@ cdef class DMPlex(DM):
     def setRefinementUniform(self, refinementUniform: bool | None = True) -> None:
         """Set the flag for uniform refinement.
 
+        Logically collective.
+
         Parameters
         ----------
         refinementUniform
@@ -2028,6 +2058,8 @@ cdef class DMPlex(DM):
 
     def getRefinementUniform(self) -> bool:
         """Retrieve the flag for uniform refinement.
+
+        Not collective.
 
         Returns
         -------
@@ -2048,6 +2080,8 @@ cdef class DMPlex(DM):
     def setRefinementLimit(self, refinementLimit: float) -> None:
         """Set the maximum cell volume for refinement.
 
+        Logically collective.
+
         Parameters
         ----------
         refinementLimit
@@ -2065,6 +2099,8 @@ cdef class DMPlex(DM):
 
     def getRefinementLimit(self) -> float:
         """Retrieve the maximum cell volume for refinement.
+
+        Not collective.
 
         See Also
         --------
@@ -2167,7 +2203,7 @@ cdef class DMPlex(DM):
     def computeCellGeometryFVM(self, cell: int) -> tuple[float, ArrayReal, ArrayReal]:
         """Compute the volume for a given cell.
 
-        Collective.
+        Not collective.
 
         Parameters
         ----------
@@ -2268,10 +2304,22 @@ cdef class DMPlex(DM):
     # Metric
 
     def metricSetFromOptions(self) -> None:
+        """Configure the object from the options database.
+
+        Collective.
+
+        See Also
+        --------
+        petsc_options
+
+        """
+        # FIXME petsc.DMPlexMetricSetFromOptions
         CHKERR( DMPlexMetricSetFromOptions(self.dm) )
 
     def metricSetUniform(self, uniform: bool) -> None:
         """Record whether the metric is uniform or not.
+
+        Logically collective.
 
         Parameters
         ----------
@@ -2290,6 +2338,8 @@ cdef class DMPlex(DM):
     def metricIsUniform(self) -> bool:
         """Return the flag indicating whether the metric is uniform or not.
 
+        Not collective.
+
         See Also
         --------
         DMPlex.metricSetUniform, DMPlex.metricRestrictAnisotropyFirst
@@ -2302,6 +2352,8 @@ cdef class DMPlex(DM):
 
     def metricSetIsotropic(self, isotropic: bool) -> None:
         """Record whether the metric is isotropic or not.
+
+        Logically collective.
 
         Parameters
         ----------
@@ -2320,6 +2372,8 @@ cdef class DMPlex(DM):
     def metricIsIsotropic(self) -> bool:
         """Return the flag indicating whether the metric is isotropic or not.
 
+        Not collective.
+
         See Also
         --------
         DMPlex.metricSetIsotropic, DMPlex.metricIsUniform
@@ -2332,6 +2386,8 @@ cdef class DMPlex(DM):
 
     def metricSetRestrictAnisotropyFirst(self, restrictAnisotropyFirst: bool) -> None:
         """Record whether anisotropy is be restricted before normalization or after.
+
+        Logically collective.
 
         Parameters
         ----------
@@ -2350,6 +2406,8 @@ cdef class DMPlex(DM):
     def metricRestrictAnisotropyFirst(self) -> bool:
         """Return ``true`` if anisotropy is restricted before normalization.
 
+        Not collective.
+
         See Also
         --------
         DMPlex.metricIsIsotropic, DMPlex.metricSetRestrictAnisotropyFirst
@@ -2362,6 +2420,8 @@ cdef class DMPlex(DM):
 
     def metricSetNoInsertion(self, noInsert: bool) -> None:
         """Set the flag indicating whether node insertion should be turned off.
+
+        Logically collective.
 
         Parameters
         ----------
@@ -2381,6 +2441,8 @@ cdef class DMPlex(DM):
     def metricNoInsertion(self) -> bool:
         """Return the flag indicating whether node insertion and deletion are turned off.
 
+        Not collective.
+
         See Also
         --------
         DMPlex.metricSetNoInsertion, DMPlex.metricNoSwapping
@@ -2394,6 +2456,8 @@ cdef class DMPlex(DM):
 
     def metricSetNoSwapping(self, noSwap: bool) -> None:
         """Set the flag indicating whether facet swapping should be turned off.
+
+        Logically collective.
 
         Parameters
         ----------
@@ -2413,6 +2477,8 @@ cdef class DMPlex(DM):
     def metricNoSwapping(self) -> bool:
         """Return the flag indicating whether facet swapping is turned off.
 
+        Not collective.
+
         See Also
         --------
         DMPlex.metricSetNoSwapping, DMPlex.metricNoInsertion
@@ -2426,6 +2492,8 @@ cdef class DMPlex(DM):
 
     def metricSetNoMovement(self, noMove: bool) -> None:
         """Set the flag indicating whether node movement should be turned off.
+
+        Logically collective.
 
         Parameters
         ----------
@@ -2445,6 +2513,8 @@ cdef class DMPlex(DM):
     def metricNoMovement(self) -> bool:
         """Return the flag indicating whether node movement is turned off.
 
+        Not collective.
+
         See Also
         --------
         DMPlex.metricSetNoMovement, DMPlex.metricNoInsertion
@@ -2458,6 +2528,8 @@ cdef class DMPlex(DM):
 
     def metricSetNoSurf(self, noSurf: bool) -> None:
         """Set the flag indicating whether surface modification should be turned off.
+
+        Logically collective.
 
         Parameters
         ----------
@@ -2477,6 +2549,8 @@ cdef class DMPlex(DM):
     def metricNoSurf(self) -> bool:
         """Return the flag indicating whether surface modification is turned off.
 
+        Not collective.
+
         See Also
         --------
         DMPlex.metricSetNoSurf, DMPlex.metricNoMovement
@@ -2490,6 +2564,8 @@ cdef class DMPlex(DM):
 
     def metricSetVerbosity(self, verbosity: int) -> None:
         """Set the verbosity of the mesh adaptation package.
+
+        Logically collective.
 
         Parameters
         ----------
@@ -2507,6 +2583,8 @@ cdef class DMPlex(DM):
 
     def metricGetVerbosity(self) -> int:
         """Return the verbosity of the mesh adaptation package.
+
+        Not collective.
 
         Returns
         -------
@@ -2526,6 +2604,8 @@ cdef class DMPlex(DM):
     def metricSetNumIterations(self, numIter: int) -> None:
         """Set the number of parallel adaptation iterations.
 
+        Logically collective.
+
         Parameters
         ----------
         numIter
@@ -2543,6 +2623,8 @@ cdef class DMPlex(DM):
     def metricGetNumIterations(self) -> int:
         """Return the number of parallel adaptation iterations.
 
+        Not collective.
+
         See Also
         --------
         DMPlex.metricSetNumIterations, DMPlex.metricGetVerbosity
@@ -2555,6 +2637,8 @@ cdef class DMPlex(DM):
 
     def metricSetMinimumMagnitude(self, h_min: float) -> None:
         """Set the minimum tolerated metric magnitude.
+
+        Logically collective.
 
         Parameters
         ----------
@@ -2573,6 +2657,8 @@ cdef class DMPlex(DM):
     def metricGetMinimumMagnitude(self) -> float:
         """Return the minimum tolerated metric magnitude.
 
+        Not collective.
+
         See Also
         --------
         DMPlex.metricSetMinimumMagnitude, DMPlex.metricGetMaximumMagnitude
@@ -2585,6 +2671,8 @@ cdef class DMPlex(DM):
 
     def metricSetMaximumMagnitude(self, h_max: float) -> None:
         """Set the maximum tolerated metric magnitude.
+
+        Logically collective.
 
         Parameters
         ----------
@@ -2603,6 +2691,8 @@ cdef class DMPlex(DM):
     def metricGetMaximumMagnitude(self) -> float:
         """Return the maximum tolerated metric magnitude.
 
+        Not collective.
+
         See Also
         --------
         DMPlex.metricSetMaximumMagnitude, DMPlex.metricGetMinimumMagnitude
@@ -2615,6 +2705,8 @@ cdef class DMPlex(DM):
 
     def metricSetMaximumAnisotropy(self, a_max: float) -> None:
         """Set the maximum tolerated metric anisotropy.
+
+        Logically collective.
 
         Parameters
         ----------
@@ -2633,6 +2725,8 @@ cdef class DMPlex(DM):
     def metricGetMaximumAnisotropy(self) -> float:
         """Return the maximum tolerated metric anisotropy.
 
+        Not collective.
+
         See Also
         --------
         DMPlex.metricSetMaximumAnisotropy, DMPlex.metricGetMaximumMagnitude
@@ -2645,6 +2739,8 @@ cdef class DMPlex(DM):
 
     def metricSetTargetComplexity(self, targetComplexity: float) -> None:
         """Set the target metric complexity.
+
+        Logically collective.
 
         Parameters
         ----------
@@ -2663,6 +2759,8 @@ cdef class DMPlex(DM):
     def metricGetTargetComplexity(self) -> float:
         """Return the target metric complexity.
 
+        Not collective.
+
         See Also
         --------
         DMPlex.metricSetTargetComplexity, DMPlex.metricGetNormalizationOrder
@@ -2675,6 +2773,8 @@ cdef class DMPlex(DM):
 
     def metricSetNormalizationOrder(self, p: float) -> None:
         """Set the order p for L-p normalization.
+
+        Logically collective.
 
         Parameters
         ----------
@@ -2693,6 +2793,8 @@ cdef class DMPlex(DM):
     def metricGetNormalizationOrder(self) -> float:
         """Return the order p for L-p normalization.
 
+        Not collective.
+
         See Also
         --------
         DMPlex.metricSetNormalizationOrder, DMPlex.metricGetTargetComplexity
@@ -2705,6 +2807,8 @@ cdef class DMPlex(DM):
 
     def metricSetGradationFactor(self, beta: float) -> None:
         """Set the metric gradation factor.
+
+        Logically collective.
 
         Parameters
         ----------
@@ -2723,6 +2827,8 @@ cdef class DMPlex(DM):
     def metricGetGradationFactor(self) -> float:
         """Return the metric gradation factor.
 
+        Not collective.
+
         See Also
         --------
         DMPlex.metricSetGradationFactor, DMPlex.metricGetHausdorffNumber
@@ -2735,6 +2841,8 @@ cdef class DMPlex(DM):
 
     def metricSetHausdorffNumber(self, hausd: float) -> None:
         """Set the metric Hausdorff number.
+
+        Logically collective.
 
         Parameters
         ----------
@@ -2753,6 +2861,8 @@ cdef class DMPlex(DM):
     def metricGetHausdorffNumber(self) -> float:
         """Return the metric Hausdorff number.
 
+        Not collective.
+
         See Also
         --------
         DMPlex.metricGetGradationFactor, DMPlex.metricSetHausdorffNumber
@@ -2765,6 +2875,8 @@ cdef class DMPlex(DM):
 
     def metricCreate(self, field: int | None = 0) -> Vec:
         """Create a Riemannian metric field.
+
+        Collective.
 
         Parameters
         ----------
@@ -2784,6 +2896,8 @@ cdef class DMPlex(DM):
 
     def metricCreateUniform(self, alpha: float, field: int | None = 0) -> Vec:
         """Construct a uniform isotropic metric.
+
+        Collective.
 
         Parameters
         ----------
@@ -2807,6 +2921,8 @@ cdef class DMPlex(DM):
     def metricCreateIsotropic(self, Vec indicator, field: int | None = 0) -> Vec:
         """Construct an isotropic metric from an error indicator.
 
+        Collective.
+
         Parameters
         ----------
         indicator
@@ -2827,6 +2943,8 @@ cdef class DMPlex(DM):
 
     def metricDeterminantCreate(self, field: int | None = 0) -> tuple[Vec, DM]:
         """Create the determinant field for a Riemannian metric.
+
+        Collective.
 
         Parameters
         ----------
@@ -2854,6 +2972,8 @@ cdef class DMPlex(DM):
 
     def metricEnforceSPD(self, Vec metric, Vec ometric, Vec determinant, restrictSizes: bool | None = False, restrictAnisotropy: bool | None = False) -> tuple[Vec, Vec]:
         """Enforce symmetric positive-definiteness of a metric.
+
+        Collective.
 
         Parameters
         ----------
@@ -2883,12 +3003,13 @@ cdef class DMPlex(DM):
         """
         cdef PetscBool bval_rs = asBool(restrictSizes)
         cdef PetscBool bval_ra = asBool(restrictAnisotropy)
-        cdef DM dmDet = DM()
         CHKERR( DMPlexMetricEnforceSPD(self.dm, metric.vec, bval_rs, bval_ra, ometric.vec, determinant.vec) )
         return (ometric, determinant)
 
     def metricNormalize(self, Vec metric, Vec ometric, Vec determinant, restrictSizes: bool | None = True, restrictAnisotropy: bool | None = True) -> tuple[Vec, Vec]:
         """Apply L-p normalization to a metric.
+
+        Collective.
 
         Parameters
         ----------
@@ -2924,6 +3045,8 @@ cdef class DMPlex(DM):
     def metricAverage2(self, Vec metric1, Vec metric2, Vec metricAvg) -> Vec:
         """Compute and return the unweighted average of two metrics.
 
+        Collective.
+
         Parameters
         ----------
         metric1
@@ -2943,6 +3066,8 @@ cdef class DMPlex(DM):
 
     def metricAverage3(self, Vec metric1, Vec metric2, Vec metric3, Vec metricAvg) -> Vec:
         """Compute and return the unweighted average of three metrics.
+
+        Collective.
 
         Parameters
         ----------
@@ -2966,6 +3091,8 @@ cdef class DMPlex(DM):
     def metricIntersection2(self, Vec metric1, Vec metric2, Vec metricInt) -> Vec:
         """Compute and return the intersection of two metrics.
 
+        Collective.
+
         Parameters
         ----------
         metric1
@@ -2985,6 +3112,8 @@ cdef class DMPlex(DM):
 
     def metricIntersection3(self, Vec metric1, Vec metric2, Vec metric3, Vec metricInt) -> Vec:
         """Compute the intersection of three metrics.
+
+        Collective.
 
         Parameters
         ----------
@@ -3306,7 +3435,10 @@ cdef class DMPlex(DM):
         CHKERR( DMPlexLocalVectorLoad(self.dm, viewer.vwr, sectiondm.dm, sf.sf, vec.vec))
 
 # --------------------------------------------------------------------
+
+
 class DMPlexTransformType(object):
+    """Transormation types."""
     REFINEREGULAR = S_(DMPLEXREFINEREGULAR)
     REFINEALFELD = S_(DMPLEXREFINEALFELD)
     REFINEPOWELLSABIN = S_(DMPLEXREFINEPOWELLSABIN)
@@ -3318,18 +3450,35 @@ class DMPlexTransformType(object):
     EXTRUDE = S_(DMPLEXEXTRUDE)
     TRANSFORMFILTER = S_(DMPLEXTRANSFORMFILTER)
 
+
 cdef class DMPlexTransform(Object):
+    """Mesh transformations."""
 
     def __cinit__(self):
         self.obj = <PetscObject*> &self.tr
         self.tr  = NULL
 
-    def apply(self, DM dm):
+    def apply(self, DM dm) -> DM:
+        """Apply a mesh tranformation.
+
+        Collective.
+
+        """
+        # FIXME petsc.DMPlexTransformApply
         cdef DMPlex newdm = DMPlex()
         CHKERR( DMPlexTransformApply(self.tr, dm.dm, &newdm.dm) )
         return newdm
 
-    def create(self, comm=None):
+    def create(self, comm: Comm | None = None) -> Self:
+        """Create a mesh tranformation.
+
+        Collective.
+
+        See Also
+        --------
+        petsc.DMPlexTransformCreate
+
+        """
         cdef MPI_Comm ccomm = def_Comm(comm, PETSC_COMM_DEFAULT)
         cdef PetscDMPlexTransform newtr = NULL
         CHKERR( DMPlexTransformCreate(ccomm, &newtr) )
@@ -3337,31 +3486,93 @@ cdef class DMPlexTransform(Object):
         self.tr = newtr
         return self
 
-    def destroy(self):
+    def destroy(self) -> Self:
+        """Destroy a mesh tranformation.
+
+        Collective.
+
+        See Also
+        --------
+        petsc.DMPlexTransformDestroy
+
+        """
         CHKERR( DMPlexTransformDestroy(&self.tr) )
         return self
 
-    def getType(self):
+    def getType(self) -> str:
+        """Return the transformation type name.
+
+        Not collective.
+
+        See Also
+        --------
+        petsc.DMPlexTransformGetType
+
+        """
         cdef PetscDMPlexTransformType cval = NULL
         CHKERR( DMPlexTransformGetType(self.tr, &cval) )
         return bytes2str(cval)
 
-    def setUp(self):
+    def setUp(self) -> Self:
+        """Setup a mesh tranformation.
+
+        Collective.
+
+        """
+        # FIXME petsc.DMPlexTransformSetUp
         CHKERR( DMPlexTransformSetUp(self.tr) )
         return self
 
-    def setType(self, tr_type):
+    def setType(self, tr_type : DMPlexTransformType | str) -> None:
+        """Set the transformation type.
+
+        Collective.
+
+        See Also
+        --------
+        petsc.DMPlexTransformSetType
+
+        """
         cdef PetscDMPlexTransformType cval = NULL
         tr_type = str2bytes(tr_type, &cval)
         CHKERR( DMPlexTransformSetType(self.tr, cval) )
 
-    def setDM(self, DM dm):
+    def setDM(self, DM dm) -> None:
+        """Set the `DM` for the transformation.
+
+        Logically collective.
+
+        """
+        # FIXME petsc.DMPlexTransformSetDM
         CHKERR( DMPlexTransformSetDM(self.tr, dm.dm) )
 
-    def setFromOptions(self):
+    def setFromOptions(self) -> None:
+        """Configure the transformation from the options database.
+
+        Collective.
+
+        See Also
+        --------
+        petsc_options, petsc.DMPlexTransformSetFromOptions
+
+        """
         CHKERR( DMPlexTransformSetFromOptions(self.tr) )
 
-    def view(self, Viewer viewer=None):
+    def view(self, Viewer viewer=None) -> None:
+        """View the mesh transformation.
+
+        Collective.
+
+        Parameters
+        ----------
+        viewer
+            A `Viewer` instance or `None` for the default viewer.
+
+        See Also
+        --------
+        Viewer, petsc.DMPlexTransformView
+
+        """
         cdef PetscViewer vwr = NULL
         if viewer is not None: vwr = viewer.vwr
         CHKERR( DMPlexTransformView(self.tr, vwr) )

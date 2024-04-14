@@ -28,13 +28,13 @@ cdef extern from * nogil:
 # --------------------------------------------------------------------
 
 cdef inline object bytes2str(const char p[]):
-     if p == NULL:
-         return None
-     cdef bytes s = <char*>p
-     if isinstance(s, str):
-         return s
-     else:
-         return s.decode()
+    if p == NULL:
+        return None
+    cdef bytes s = <char*>p
+    if isinstance(s, str):
+        return s
+    else:
+        return s.decode()
 
 cdef inline object str2bytes(object s, const char *p[]):
     if s is None:
@@ -46,9 +46,9 @@ cdef inline object str2bytes(object s, const char *p[]):
     return s
 
 cdef inline object S_(const char p[]):
-     if p == NULL: return None
-     cdef object s = <char*>p
-     return s if isinstance(s, str) else s.decode()
+    if p == NULL: return None
+    cdef object s = <char*>p
+    return s if isinstance(s, str) else s.decode()
 
 
 # --------------------------------------------------------------------
@@ -94,7 +94,7 @@ cdef inline int SETERRMPI(int ierr) except -1 nogil:
     cdef int  result_len = <int>sizeof(mpi_err_str)
 
     <void>memset(mpi_err_str, 0, result_len)
-    <void>MPI_Error_string(ierr, mpi_err_str, &result_len);
+    <void>MPI_Error_string(ierr, mpi_err_str, &result_len)
     <void>result_len
 
     cdef char error_str[MPI_MAX_ERROR_STRING+64]
@@ -106,7 +106,7 @@ cdef inline int SETERRMPI(int ierr) except -1 nogil:
 
 cdef inline PetscErrorCode CHKERRMPI(int ierr) except PETSC_ERR_PYTHON nogil:
     if ierr == MPI_SUCCESS:
-      return PETSC_SUCCESS
+        return PETSC_SUCCESS
     <void>SETERRMPI(ierr)
     return PETSC_ERR_PYTHON
 
@@ -125,7 +125,7 @@ cdef extern from "<petsc4py/pyscalar.h>":
     PetscScalar PyPetscScalar_AsPetscScalar(object) except? <PetscScalar>-1.0
 
 cdef extern from "<petsc4py/pybuffer.h>":
-    int  PyPetscBuffer_FillInfo(Py_buffer*,void*,PetscInt,char,int,int) except -1
+    int  PyPetscBuffer_FillInfo(Py_buffer*, void*, PetscInt, char, int, int) except -1
     void PyPetscBuffer_Release(Py_buffer*)
 
 cdef inline object toBool(PetscBool value):
@@ -260,11 +260,11 @@ include "libpetsc4py.pyx"
 
 cdef extern from "Python.h":
     int Py_IsInitialized() nogil
-    int PyList_Insert(object,Py_ssize_t,object) except -1
-    int PyList_Append(object,object) except -1
+    int PyList_Insert(object, Py_ssize_t, object) except -1
+    int PyList_Append(object, object) except -1
 
 cdef extern from * nogil:
-    PetscErrorCode PetscTBEH(MPI_Comm,int,char*,char*,int,PetscErrorType,char*,void*)
+    PetscErrorCode PetscTBEH(MPI_Comm, int, char*, char*, int, PetscErrorType, char*, void*)
 
 cdef object tracebacklist = []
 
@@ -328,7 +328,7 @@ cdef PetscErrorCode PetscPythonErrorHandler(
 
 cdef extern from "<stdlib.h>" nogil:
     void* malloc(size_t)
-    void* realloc (void*,size_t)
+    void* realloc (void*, size_t)
     void free(void*)
 
 cdef extern from "<stdarg.h>" nogil:
@@ -336,8 +336,8 @@ cdef extern from "<stdarg.h>" nogil:
         pass
 
 cdef extern from "<string.h>" nogil:
-    void* memset(void*,int,size_t)
-    void* memcpy(void*,void*,size_t)
+    void* memset(void*, int, size_t)
+    void* memcpy(void*, void*, size_t)
     char* strdup(char*)
 
 cdef extern from "<stdio.h>" nogil:
@@ -347,7 +347,7 @@ cdef extern from "<stdio.h>" nogil:
 
 cdef extern from "Python.h":
     int Py_AtExit(void (*)() noexcept nogil)
-    void PySys_WriteStderr(char*,...)
+    void PySys_WriteStderr(char*, ...)
 
 cdef extern from * nogil:
     """
@@ -374,7 +374,7 @@ cdef int getinitargs(object args, int *argc, char **argv[]) except -1:
             v[i] = strdup(args[i])
             if v[i] == NULL:
                 raise MemoryError
-    except:
+    except Exception:
         delinitargs(&c, &v); raise
     argc[0] = c; argv[0] = v
     return 0
@@ -383,7 +383,7 @@ cdef void delinitargs(int *argc, char **argv[]) noexcept nogil:
     # dallocate command line arguments
     cdef int i, c = argc[0]
     cdef char** v = argv[0]
-    argc[0] = 0; argv[0] = NULL;
+    argc[0] = 0; argv[0] = NULL
     if c >= 0 and v != NULL:
         for 0 <= i < c:
             if  v[i] != NULL: free(v[i])
@@ -419,9 +419,9 @@ cdef void finalize() noexcept nogil:
 # --------------------------------------------------------------------
 
 cdef extern from *:
-    PetscErrorCode (*PetscVFPrintf)(FILE*,const char*,va_list) except PETSC_ERR_PYTHON nogil
+    PetscErrorCode (*PetscVFPrintf)(FILE*, const char*, va_list) except PETSC_ERR_PYTHON nogil
 
-cdef PetscErrorCode (*prevfprintf)(FILE*,const char*,va_list) except PETSC_ERR_PYTHON nogil
+cdef PetscErrorCode (*prevfprintf)(FILE*, const char*, va_list) except PETSC_ERR_PYTHON nogil
 prevfprintf = NULL
 
 cdef PetscErrorCode PetscVFPrintf_PythonStdStream(
@@ -432,13 +432,13 @@ cdef PetscErrorCode PetscVFPrintf_PythonStdStream(
     cdef size_t stringlen = sizeof(cstring)
     cdef size_t final_pos
     if (fd == PETSC_STDOUT) and not (sys.stdout == sys.__stdout__):
-        CHKERR( PetscVSNPrintf(&cstring[0], stringlen, fmt, &final_pos,ap))
+        CHKERR( PetscVSNPrintf(&cstring[0], stringlen, fmt, &final_pos, ap))
         if final_pos > 0 and cstring[final_pos-1] == '\x00':
             final_pos -= 1
         ustring = cstring[:final_pos].decode('UTF-8')
         sys.stdout.write(ustring)
     elif (fd == PETSC_STDERR) and not (sys.stderr == sys.__stderr__):
-        CHKERR( PetscVSNPrintf(&cstring[0], stringlen, fmt, &final_pos,ap))
+        CHKERR( PetscVSNPrintf(&cstring[0], stringlen, fmt, &final_pos, ap))
         if final_pos > 0 and cstring[final_pos-1] == '\x00':
             final_pos -= 1
         ustring = cstring[:final_pos].decode('UTF-8')
@@ -571,6 +571,7 @@ cdef int register() except -1:
 
 # --------------------------------------------------------------------
 
+
 def _initialize(args=None, comm=None):
     import atexit
     global tracebacklist
@@ -590,9 +591,11 @@ def _initialize(args=None, comm=None):
     # Register finalizer
     atexit.register(_pre_finalize)
 
+
 def _pre_finalize():
     # Called while the Python interpreter is still running
     garbage_cleanup()
+
 
 def _finalize():
     finalize()
@@ -616,11 +619,14 @@ def _finalize():
     global citations_registry
     citations_registry.clear()
 
+
 def _push_python_vfprintf():
     _push_vfprintf(&PetscVFPrintf_PythonStdStream)
 
+
 def _pop_python_vfprintf():
     _pop_vfprintf()
+
 
 def _stdout_is_stderr():
     global PETSC_STDOUT, PETSC_STDERR
