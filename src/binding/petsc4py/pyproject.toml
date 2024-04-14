@@ -6,12 +6,6 @@ requires = [
 ]
 build-backend = "setuptools.build_meta"
 
-#[project.optional-dependencies]
-#lint = [
-#  "ruff",
-#  "cython-lint",
-#]
-
 [tool.cython-lint]
 ignore = [
   "E125", # continuation line with same indent as next logical line
@@ -23,39 +17,3 @@ ignore = [
   "E701", # multiple statements on one line (colon)
   "E702", # multiple statements on one line (semicolon)
 ]
-
-[tool.ruff.lint]
-select = [
-  "A",
-  "B",
-  "C",
-  # "D",
-  "E",
-  "F",
-  "G",
-  # "I",
-  "S",
-  "W",
-  "UP",
-  # "ARG",
-  # "ISC",
-  "PIE",
-  # "PTH",
-  "PYI",
-  "RET",
-  # "RUF",
-  # "TRY",
-  "YTT",
-]
-
-ignore = [
-  "E501",  # Line too long
-  "E731",  # Do not assign a `lambda` expression, use a `def`
-  "G004",  # Logging statement uses f-string
-  "S110",  # `try`-`except`-`pass` detected, consider logging the exception
-  "UP015", # [*] Unnecessary open mode parameters
-  "C901",  # `function` is too complex
-]
-
-[tool.ruff.format]
-quote-style = "single"

@@ -51,11 +51,24 @@ uninstall:
 
 # ----
 
-.PHONY: lint
-GITSRC = '*.pyx' '*.pxi' '*.pxd'
-LINTOPTS =
+.PHONY: lint ruff-lint cython-lint
+CYTHONLINT_SRC = '*.pyx' '*.pxi' '*.pxd'
+CYTHONLINT_OPTS =
+RUFF_SRC = .
+RUFF_OPTS = check
+
+cython-lint:
+	-@git --no-pager ls-files -z ${CYTHONLINT_SRC} | xargs -0 cython-lint ${CYTHONLINT_OPTS} --files
+
+ruff-lint:
+	-@ruff ${RUFF_OPTS} ${RUFF_SRC}
+
 lint:
-	-@git --no-pager ls-files -z ${GITSRC} | xargs -0 cython-lint ${LINTOPTS} --files
+	${RM} -r petsc4py-lint-env
+	${PYTHON} -m venv petsc4py-lint-env
+	. petsc4py-lint-env/bin/activate && python -m pip install ruff cython-lint
+	. petsc4py-lint-env/bin/activate && ${MAKE} cython-lint
+	. petsc4py-lint-env/bin/activate && ${MAKE} ruff-lint
 
 # ----
 
@@ -114,7 +127,8 @@ docsclean:
 website:
 	${RM} -r petsc-doc-env
 	${PYTHON} -m venv petsc-doc-env
-	. petsc-doc-env/bin/activate && env CFLAGS=-O0 python -m pip install .[doc]
+	. petsc-doc-env/bin/activate && env CFLAGS=-O0 python -m pip install .
+	. petsc-doc-env/bin/activate && python -m pip install -r docs/source/requirements.txt
 	. petsc-doc-env/bin/activate && ${MAKE} sphinx-html SPHINXOPTS=-Wj2
 	mkdir -p ${LOC}/petsc4py
 	mv docs/html/* ${LOC}/petsc4py
