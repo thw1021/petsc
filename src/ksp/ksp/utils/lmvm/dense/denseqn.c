@@ -110,17 +110,11 @@ static PetscErrorCode MatAllocate_LMVMDQN(Mat B, Vec X, Vec F)
         PetscCall(MatDuplicate(lqn->Sfull, MAT_SHARE_NONZERO_PATTERN, &lqn->HY));
         PetscCall(MatCreateVecs(lqn->YtS_triu, &lqn->diag_vec, &lqn->rwork1));
         PetscCall(MatCreateVecs(lqn->YtS_triu, &lqn->rwork2, &lqn->rwork3));
-        PetscCall(MatCreateVecs(lqn->YtS_triu, &lqn->rwork4, &lqn->rwork5));
-        PetscCall(VecZeroEntries(lqn->rwork4));
-        PetscCall(VecZeroEntries(lqn->rwork5));
       } else if (is_dbfgs) {
         PetscCall(MatCreateDenseFromVecType(comm, vec_type, m, m, M, M, -1, NULL, &lqn->StY_triu));
         PetscCall(MatDuplicate(lqn->Sfull, MAT_SHARE_NONZERO_PATTERN, &lqn->BS));
         PetscCall(MatCreateVecs(lqn->StY_triu, &lqn->diag_vec, &lqn->rwork1));
         PetscCall(MatCreateVecs(lqn->StY_triu, &lqn->rwork2, &lqn->rwork3));
-        PetscCall(MatCreateVecs(lqn->StY_triu, &lqn->rwork4, &lqn->rwork5));
-        PetscCall(VecZeroEntries(lqn->rwork4));
-        PetscCall(VecZeroEntries(lqn->rwork5));
       } else {
         SETERRQ(PetscObjectComm((PetscObject)B), PETSC_ERR_ARG_INCOMP, "MatAllocate_LMVMDQN is only available for dense derived types. (DBFGS, DDFP, DQN");
       }
@@ -267,8 +261,6 @@ static PetscErrorCode MatLMVMDQNResetDestructive(Mat B)
   PetscCall(VecDestroy(&lqn->rwork1));
   PetscCall(VecDestroy(&lqn->rwork2));
   PetscCall(VecDestroy(&lqn->rwork3));
-  PetscCall(VecDestroy(&lqn->rwork4));
-  PetscCall(VecDestroy(&lqn->rwork5));
   PetscCall(VecDestroy(&lqn->rwork2_local));
   PetscCall(VecDestroy(&lqn->rwork3_local));
   PetscCall(VecDestroy(&lqn->cyclic_work_vec));

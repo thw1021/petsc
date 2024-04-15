@@ -23,7 +23,7 @@ typedef struct {
   Vec                        diag_vec;
   Vec                        diag_vec_recycle_order;
   Vec                        inv_diag_vec;
-  Vec                        column_work, column_work2, rwork1, rwork2, rwork3, rwork4, rwork5;
+  Vec                        column_work, column_work2, rwork1, rwork2, rwork3;
   Vec                        rwork2_local, rwork3_local;
   Vec                        local_work_vec, local_work_vec_copy;
   Vec                        cyclic_work_vec;
