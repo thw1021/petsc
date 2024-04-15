@@ -96,6 +96,7 @@ class MatType(object):
     DIAGONAL         = S_(MATDIAGONAL)
     H2OPUS           = S_(MATH2OPUS)
 
+
 class MatOption(object):
     """Matrix option.
 
@@ -132,6 +133,7 @@ class MatOption(object):
     SORTED_FULL                 = MAT_SORTED_FULL
     OPTION_MAX                  = MAT_OPTION_MAX
 
+
 class MatAssemblyType(object):
     """Matrix assembly type.
 
@@ -147,11 +149,13 @@ class MatAssemblyType(object):
     FINAL = FINAL_ASSEMBLY
     FLUSH = FLUSH_ASSEMBLY
 
+
 class MatInfoType(object):
     """Matrix info type."""
     LOCAL = MAT_LOCAL
     GLOBAL_MAX = MAT_GLOBAL_MAX
     GLOBAL_SUM = MAT_GLOBAL_SUM
+
 
 class MatStructure(object):
     """Matrix modification structure.
@@ -172,6 +176,7 @@ class MatStructure(object):
     DIFFERENT = DIFFERENT_NZ = DIFFERENT_NONZERO_PATTERN
     UNKNOWN   = UNKNOWN_NZ   = UNKNOWN_NONZERO_PATTERN
 
+
 class MatDuplicateOption(object):
     """Matrix duplicate option.
 
@@ -183,6 +188,7 @@ class MatDuplicateOption(object):
     DO_NOT_COPY_VALUES    = MAT_DO_NOT_COPY_VALUES
     COPY_VALUES           = MAT_COPY_VALUES
     SHARE_NONZERO_PATTERN = MAT_SHARE_NONZERO_PATTERN
+
 
 class MatOrderingType(object):
     """Factored matrix ordering type.
@@ -202,6 +208,7 @@ class MatOrderingType(object):
     SPECTRAL    = S_(MATORDERINGSPECTRAL)
     AMD         = S_(MATORDERINGAMD)
     METISND     = S_(MATORDERINGMETISND)
+
 
 class MatSolverType(object):
     """Factored matrix solver type.
@@ -232,6 +239,7 @@ class MatSolverType(object):
     CUDA            = S_(MATSOLVERCUDA)
     SPQR            = S_(MATSOLVERSPQR)
 
+
 class MatFactorShiftType(object):
     """Factored matrix shift type.
 
@@ -248,6 +256,7 @@ class MatFactorShiftType(object):
     # aliases
     NZ = MAT_SHIFT_NONZERO
     PD = MAT_SHIFT_POSITIVE_DEFINITE
+
 
 class MatSORType(object):
     """Matrix SOR type.
@@ -268,6 +277,7 @@ class MatSORType(object):
     APPLY_UPPER           = SOR_APPLY_UPPER
     APPLY_LOWER           = SOR_APPLY_LOWER
 
+
 @cython.internal
 cdef class MatStencil:
     """Associate structured grid coordinates with matrix indices.
@@ -284,6 +294,7 @@ cdef class MatStencil:
         "First logical grid coordinate."
         def __get__(self) -> int:
             return toInt(self.stencil.i)
+
         def __set__(self, value: int) -> None:
             self.stencil.i = asInt(value)
 
@@ -291,6 +302,7 @@ cdef class MatStencil:
         "Second logical grid coordinate."
         def __get__(self) -> int:
             return toInt(self.stencil.j)
+
         def __set__(self, value: int) -> None:
             self.stencil.j = asInt(value)
 
@@ -298,6 +310,7 @@ cdef class MatStencil:
         "Third logical grid coordinate."
         def __get__(self) -> int:
             return toInt(self.stencil.k)
+
         def __set__(self, value: int) -> None:
             self.stencil.k = asInt(value)
 
@@ -305,6 +318,7 @@ cdef class MatStencil:
         "Field component."
         def __get__(self) -> int:
             return toInt(self.stencil.c)
+
         def __set__(self, value: int) -> None:
             self.stencil.c = asInt(value)
 
@@ -313,6 +327,7 @@ cdef class MatStencil:
         def __get__(self) -> tuple[int, int, int]:
             cdef PetscMatStencil *s = &self.stencil
             return toInt(s.i), toInt(s.j), toInt(s.k)
+
         def __set__(self, value: Sequence[int]) -> None:
             cdef PetscMatStencil *s = &self.stencil
             s.i = s.j = s.k = 0
@@ -323,6 +338,7 @@ cdef class MatStencil:
         def __get__(self) -> int:
             cdef PetscMatStencil *s = &self.stencil
             return toInt(s.c)
+
         def __set__(self, value: int) -> None:
             cdef PetscMatStencil *s = &self.stencil
             s.c = asInt(value)
@@ -1377,17 +1393,17 @@ cdef class Mat(Object):
         cdef PetscMat *cmats   = NULL
         cdef PetscIS  *cisrows = NULL
         cdef PetscIS  *ciscols = NULL
-        cdef object tmp1, tmp2, tmp3
-        tmp1 = oarray_p(empty_p(nr*nc), NULL, <void**>&cmats)
+        cdef object unused1, unused2, unused3
+        unused1 = oarray_p(empty_p(nr*nc), NULL, <void**>&cmats)
         for i from 0 <= i < mr:
             for j from 0 <= j < mc:
                 mat = mats[i][j]
                 cmats[i*mc+j] = (<Mat?>mat).mat if mat is not None else NULL
         if isrows is not None:
-            tmp2 = oarray_p(empty_p(nr), NULL, <void**>&cisrows)
+            unused2 = oarray_p(empty_p(nr), NULL, <void**>&cisrows)
             for i from 0 <= i < mr: cisrows[i] = (<IS?>isrows[i]).iset
         if iscols is not None:
-            tmp3 = oarray_p(empty_p(nc), NULL, <void**>&ciscols)
+            unused3 = oarray_p(empty_p(nc), NULL, <void**>&ciscols)
             for j from 0 <= j < mc: ciscols[j] = (<IS?>iscols[j]).iset
         cdef PetscMat newmat = NULL
         CHKERR( MatCreateNest(ccomm, nr, cisrows, nc, ciscols, cmats, &newmat) )
@@ -1406,6 +1422,8 @@ cdef class Mat(Object):
         rtol: float | None = None,
     ) -> Self:
         """Create a hierarchical `Type.H2OPUS` matrix sampling from a provided operator.
+
+        Collective.
 
         Parameters
         ----------
@@ -1521,9 +1539,9 @@ cdef class Mat(Object):
         cdef PetscInt bs = 1
         if rbs == cbs: bs = rbs
         if lgmapr is not None:
-           lgmr = lgmapr.lgm
+            lgmr = lgmapr.lgm
         if lgmapc is not None:
-           lgmc = lgmapc.lgm
+            lgmc = lgmapc.lgm
         CHKERR( MatCreateIS(ccomm, bs, m, n, M, N, lgmr, lgmc, &newmat) )
         CHKERR( PetscCLEAR(self.obj) ); self.mat = newmat
         return self
@@ -1681,7 +1699,7 @@ cdef class Mat(Object):
 
     #
 
-    def setOptionsPrefix(self, prefix: str) -> None:
+    def setOptionsPrefix(self, prefix: str | None = None) -> None:
         """Set the prefix used for searching for options in the database.
 
         Logically collective.
@@ -1709,7 +1727,7 @@ cdef class Mat(Object):
         CHKERR( MatGetOptionsPrefix(self.mat, &cval) )
         return bytes2str(cval)
 
-    def appendOptionsPrefix(self, prefix: str) -> None:
+    def appendOptionsPrefix(self, prefix: str | None = None) -> None:
         """Append to the prefix used for searching for options in the database.
 
         Logically collective.
@@ -1735,7 +1753,7 @@ cdef class Mat(Object):
         """
         CHKERR( MatSetFromOptions(self.mat) )
 
-    def setUp(self) -> None:
+    def setUp(self) -> Self:
         """Set up the internal data structures for using the matrix.
 
         Collective.
@@ -2091,6 +2109,8 @@ cdef class Mat(Object):
     def setTransposePrecursor(self, Mat out) -> None:
         """Set transpose precursor.
 
+        Logically collective.
+
         See Also
         --------
         petsc.MatTransposeSetPrecursor
@@ -2323,7 +2343,15 @@ cdef class Mat(Object):
         return (toBool(flag1), toBool(flag2))
 
     def isStructurallySymmetric(self) -> bool:
-        """Return the boolean indicating if the matrix is structurally symmetric."""
+        """Return the boolean indicating if the matrix is structurally symmetric.
+
+        Not collective.
+
+        See Also
+        --------
+        petsc.MatIsStructurallySymmetric
+
+        """
         cdef PetscBool flag = PETSC_FALSE
         CHKERR( MatIsStructurallySymmetric(self.mat, &flag) )
         return toBool(flag)
@@ -2341,7 +2369,7 @@ cdef class Mat(Object):
         CHKERR( MatZeroEntries(self.mat) )
 
     def getValue(self, row, col) -> Scalar:
-        """Return the value in the (row,col) position.
+        """Return the value in the (row, col) position.
 
         Not collective.
 
@@ -2357,7 +2385,7 @@ cdef class Mat(Object):
         return toScalar(sval)
 
     def getValues(self, rows: Sequence[int], cols: Sequence[int], values: ArrayScalar = None) -> ArrayScalar:
-        """Return the values in the ``zip(rows,cols)`` positions.
+        """Return the values in the ``zip(rows, cols)`` positions.
 
         Not collective.
 
@@ -3232,10 +3260,9 @@ cdef class Mat(Object):
         """
         cdef PetscScalar sval = asScalar(diag)
         cdef PetscInt nrows = asInt(len(rows))
-        cdef PetscMatStencil st
-        cdef MatStencil r
+        cdef MatStencil r = 0
         cdef PetscMatStencil *crows = NULL
-        CHKERR( PetscMalloc(<size_t>(nrows+1)*sizeof(st), &crows) )
+        CHKERR( PetscMalloc(<size_t>(nrows+1)*sizeof(PetscMatStencil), &crows) )
         for i in range(nrows):
             r = rows[i]
             crows[i] = r.stencil
@@ -3378,7 +3405,7 @@ cdef class Mat(Object):
         """
         cdef Vec vecr, vecl
         if side is None:
-            vecr = Vec(); vecl = Vec();
+            vecr = Vec(); vecl = Vec()
             CHKERR( MatCreateVecs(self.mat, &vecr.vec, &vecl.vec) )
             return (vecr, vecl)
         elif side in ('r', 'R', 'right', 'Right', 'RIGHT'):
@@ -3453,6 +3480,8 @@ cdef class Mat(Object):
 
     def getRedundantMatrix(self, nsubcomm: int, subcomm: Comm | None = None, Mat out=None) -> Mat:
         """Return redundant matrices on subcommunicators.
+
+        Collective.
 
         Parameters
         ----------
@@ -3795,11 +3824,11 @@ cdef class Mat(Object):
         self,
         Vec b,
         Vec x,
-        omega:float = 1.0,
-        sortype:SORType | None = None,
-        shift:float = 0.0,
-        its:int = 1,
-        lits:int = 1,
+        omega: float = 1.0,
+        sortype: SORType | None = None,
+        shift: float = 0.0,
+        its: int = 1,
+        lits: int = 1,
         ) -> None:
         """Compute relaxation (SOR, Gauss-Seidel) sweeps.
 
@@ -3876,7 +3905,7 @@ cdef class Mat(Object):
         if submat is None: submat = Mat()
         if submat.mat != NULL: reuse = MAT_REUSE_MATRIX
         CHKERR( MatCreateSubMatrix(self.mat, isrow.iset, ciscol,
-                                reuse, &submat.mat) )
+                                   reuse, &submat.mat) )
         return submat
 
     def createSubMatrices(
@@ -3914,11 +3943,10 @@ cdef class Mat(Object):
         cdef PetscIS  *cisrows = NULL
         cdef PetscIS  *ciscols = NULL
         cdef PetscMat *cmats   = NULL
-        cdef object tmp1, tmp2
         cdef Mat mat
-        tmp1 = oarray_p(empty_p(n), NULL, <void**>&cisrows)
+        cdef object unused1 = oarray_p(empty_p(n), NULL, <void**>&cisrows)
         for i from 0 <= i < n: cisrows[i] = (<IS?>isrows[i]).iset
-        tmp2 = oarray_p(empty_p(n), NULL, <void**>&ciscols)
+        cdef object unused2 = oarray_p(empty_p(n), NULL, <void**>&ciscols)
         for i from 0 <= i < n: ciscols[i] = (<IS?>iscols[i]).iset
         if submats is not None:
             reuse = MAT_REUSE_MATRIX
@@ -4413,6 +4441,8 @@ cdef class Mat(Object):
     ) -> Mat:
         """Compute C, the Kronecker product of A and B.
 
+        Collective.
+
         Parameters
         ----------
         mat
@@ -4443,6 +4473,8 @@ cdef class Mat(Object):
     def bindToCPU(self, flg: bool) -> None:
         """Mark a matrix to temporarily stay on the CPU.
 
+        Collective.
+
         Once marked, perform computations on the CPU.
 
         Parameters
@@ -4460,6 +4492,8 @@ cdef class Mat(Object):
 
     def boundToCPU(self) -> bool:
         """Query if a matrix is bound to the CPU.
+
+        Not collective.
 
         See Also
         --------
@@ -4709,7 +4743,7 @@ cdef class Mat(Object):
     def setISAllowRepeated(self, allow: bool = True) -> None:
         """Allow repeated entries in the local to global map.
 
-        Logically Collective.
+        Logically collective.
 
         Parameters
         ----------
@@ -4727,14 +4761,14 @@ cdef class Mat(Object):
     def getISAllowRepeated(self) -> bool:
         """Get the flag for repeated entries in the local to global map.
 
-        Not Collective.
+        Not collective.
 
         See Also
         --------
         setISAllowRepeated, petsc.MatISGetAllowRepeated
 
         """
-        cdef PetscBool callow
+        cdef PetscBool callow = PETSC_FALSE
         CHKERR( MatISGetAllowRepeated(self.mat, &callow) )
         return asBool(callow)
 
@@ -4760,6 +4794,8 @@ cdef class Mat(Object):
     def getISLocalMat(self) -> Mat:
         """Return the local matrix stored inside a `Type.IS` matrix.
 
+        Not collective.
+
         See Also
         --------
         petsc.MatISGetLocalMat
@@ -4772,6 +4808,8 @@ cdef class Mat(Object):
 
     def restoreISLocalMat(self, Mat local not None) -> None:
         """Restore the local matrix obtained with `getISLocalMat`.
+
+        Not collective.
 
         Parameters
         ----------
@@ -4787,6 +4825,8 @@ cdef class Mat(Object):
 
     def setISLocalMat(self, Mat local not None) -> None:
         """Set the local matrix stored inside a `Type.IS`.
+
+        Not collective.
 
         Parameters
         ----------
@@ -4806,6 +4846,8 @@ cdef class Mat(Object):
         onnz: Sequence[int],
         ) -> Self:
         """Preallocate memory for a `Type.IS` parallel matrix.
+
+        Collective.
 
         Parameters
         ----------
@@ -4896,6 +4938,8 @@ cdef class Mat(Object):
     def H2OpusOrthogonalize(self) -> Self:
         """Orthogonalize the basis tree of a hierarchical matrix.
 
+        Collective.
+
         See Also
         --------
         petsc.MatH2OpusOrthogonalize
@@ -4906,6 +4950,8 @@ cdef class Mat(Object):
 
     def H2OpusCompress(self, tol: float):
         """Compress a hierarchical matrix.
+
+        Collective.
 
         Parameters
         ----------
@@ -4923,6 +4969,8 @@ cdef class Mat(Object):
 
     def H2OpusLowRankUpdate(self, Mat U, Mat V=None, s: float = 1.0):
         """Perform a low-rank update of the form ``self`` += sUVᵀ.
+
+        Collective.
 
         Parameters
         ----------
@@ -4966,7 +5014,7 @@ cdef class Mat(Object):
         """
         cdef PetscInt _icntl = asInt(icntl)
         cdef PetscInt _ival = asInt(ival)
-        CHKERR( MatMumpsSetIcntl(self.mat, _icntl, _ival) );
+        CHKERR( MatMumpsSetIcntl(self.mat, _icntl, _ival) )
 
     def getMumpsIcntl(self, icntl: int) -> int:
         """Return the MUMPS parameter, ``ICNTL[icntl]``.
@@ -4980,7 +5028,7 @@ cdef class Mat(Object):
         """
         cdef PetscInt _icntl = asInt(icntl)
         cdef PetscInt ival = 0
-        CHKERR( MatMumpsGetIcntl(self.mat, _icntl, &ival) );
+        CHKERR( MatMumpsGetIcntl(self.mat, _icntl, &ival) )
         return toInt(ival)
 
     def setMumpsCntl(self, icntl: int, val: float):
@@ -5002,7 +5050,7 @@ cdef class Mat(Object):
         """
         cdef PetscInt _icntl = asInt(icntl)
         cdef PetscReal _val = asReal(val)
-        CHKERR( MatMumpsSetCntl(self.mat, _icntl, _val) );
+        CHKERR( MatMumpsSetCntl(self.mat, _icntl, _val) )
 
     def getMumpsCntl(self, icntl: int) -> float:
         """Return the MUMPS parameter, ``CNTL[icntl]``.
@@ -5016,7 +5064,7 @@ cdef class Mat(Object):
         """
         cdef PetscInt _icntl = asInt(icntl)
         cdef PetscReal val = 0
-        CHKERR( MatMumpsGetCntl(self.mat, _icntl, &val) );
+        CHKERR( MatMumpsGetCntl(self.mat, _icntl, &val) )
         return toReal(val)
 
     def getMumpsInfo(self, icntl: int) -> int:
@@ -5036,7 +5084,7 @@ cdef class Mat(Object):
         """
         cdef PetscInt _icntl = asInt(icntl)
         cdef PetscInt ival = 0
-        CHKERR( MatMumpsGetInfo(self.mat, _icntl, &ival) );
+        CHKERR( MatMumpsGetInfo(self.mat, _icntl, &ival) )
         return toInt(ival)
 
     def getMumpsInfog(self, icntl: int) -> int:
@@ -5056,7 +5104,7 @@ cdef class Mat(Object):
         """
         cdef PetscInt _icntl = asInt(icntl)
         cdef PetscInt ival = 0
-        CHKERR( MatMumpsGetInfog(self.mat, _icntl, &ival) );
+        CHKERR( MatMumpsGetInfog(self.mat, _icntl, &ival) )
         return toInt(ival)
 
     def getMumpsRinfo(self, icntl: int) -> float:
@@ -5076,7 +5124,7 @@ cdef class Mat(Object):
         """
         cdef PetscInt _icntl = asInt(icntl)
         cdef PetscReal val = 0
-        CHKERR( MatMumpsGetRinfo(self.mat, _icntl, &val) );
+        CHKERR( MatMumpsGetRinfo(self.mat, _icntl, &val) )
         return toReal(val)
 
     def getMumpsRinfog(self, icntl: int) -> float:
@@ -5096,7 +5144,7 @@ cdef class Mat(Object):
         """
         cdef PetscInt _icntl = asInt(icntl)
         cdef PetscReal val = 0
-        CHKERR( MatMumpsGetRinfog(self.mat, _icntl, &val) );
+        CHKERR( MatMumpsGetRinfog(self.mat, _icntl, &val) )
         return toReal(val)
 
     # solve
@@ -5311,8 +5359,8 @@ cdef class Mat(Object):
         cdef int itemsize = <int>sizeof(PetscScalar)
         cdef int flags = NPY_ARRAY_FARRAY
         cdef npy_intp dims[2], strides[2]
-        dims[0] = <npy_intp>m; strides[0] = <npy_intp>sizeof(PetscScalar);
-        dims[1] = <npy_intp>N; strides[1] = <npy_intp>(lda*sizeof(PetscScalar));
+        dims[0] = <npy_intp>m; strides[0] = <npy_intp>sizeof(PetscScalar)
+        dims[1] = <npy_intp>N; strides[1] = <npy_intp>(lda*sizeof(PetscScalar))
         array = <object>PyArray_New(<PyTypeObject*>ndarray, 2, dims, typenum,
                                     strides, data, itemsize, flags, NULL)
         if readonly:
@@ -5406,7 +5454,7 @@ cdef class Mat(Object):
         petsc.MatNestGetSize
 
         """
-        cdef PetscInt nrows, ncols
+        cdef PetscInt nrows = 0, ncols = 0
         CHKERR( MatNestGetSize(self.mat, &nrows, &ncols) )
         return toInt(nrows), toInt(ncols)
 
@@ -5420,15 +5468,15 @@ cdef class Mat(Object):
         petsc.MatNestGetISs
 
         """
-        cdef PetscInt i, nrows =0, ncols = 0
+        cdef PetscInt nrows = 0, ncols = 0
         cdef PetscIS *cisrows = NULL
         cdef PetscIS *ciscols = NULL
         CHKERR( MatNestGetSize(self.mat, &nrows, &ncols) )
-        cdef object tmpr = oarray_p(empty_p(nrows), NULL, <void**>&cisrows)
-        cdef object tmpc = oarray_p(empty_p(ncols), NULL, <void**>&ciscols)
+        cdef object unusedr = oarray_p(empty_p(nrows), NULL, <void**>&cisrows)
+        cdef object unusedc = oarray_p(empty_p(ncols), NULL, <void**>&ciscols)
         CHKERR( MatNestGetISs(self.mat, cisrows, ciscols) )
-        cdef object isetsrows = [ref_IS(cisrows[i]) for i from 0 <= i < nrows]
-        cdef object isetscols = [ref_IS(ciscols[i]) for i from 0 <= i < ncols]
+        isetsrows = [ref_IS(cisrows[i]) for i from 0 <= i < nrows]
+        isetscols = [ref_IS(ciscols[i]) for i from 0 <= i < ncols]
         return isetsrows, isetscols
 
     def getNestLocalISs(self) -> tuple[list[IS], list[IS]]:
@@ -5441,15 +5489,15 @@ cdef class Mat(Object):
         petsc.MatNestGetLocalISs
 
         """
-        cdef PetscInt i, nrows =0, ncols = 0
+        cdef PetscInt nrows = 0, ncols = 0
         cdef PetscIS *cisrows = NULL
         cdef PetscIS *ciscols = NULL
         CHKERR( MatNestGetSize(self.mat, &nrows, &ncols) )
-        cdef object tmpr = oarray_p(empty_p(nrows), NULL, <void**>&cisrows)
-        cdef object tmpc = oarray_p(empty_p(ncols), NULL, <void**>&ciscols)
+        cdef object unusedr = oarray_p(empty_p(nrows), NULL, <void**>&cisrows)
+        cdef object unusedc = oarray_p(empty_p(ncols), NULL, <void**>&ciscols)
         CHKERR( MatNestGetLocalISs(self.mat, cisrows, ciscols) )
-        cdef object isetsrows = [ref_IS(cisrows[i]) for i from 0 <= i < nrows]
-        cdef object isetscols = [ref_IS(ciscols[i]) for i from 0 <= i < ncols]
+        isetsrows = [ref_IS(cisrows[i]) for i from 0 <= i < nrows]
+        isetscols = [ref_IS(ciscols[i]) for i from 0 <= i < ncols]
         return isetsrows, isetscols
 
     def getNestSubMatrix(self, i: int, j: int) -> Mat:
@@ -5522,6 +5570,7 @@ cdef class Mat(Object):
         """Matrix local and global sizes."""
         def __get__(self) -> tuple[tuple[int, int], tuple[int, int]]:
             return self.getSizes()
+
         def __set__(self, value):
             self.setSizes(value)
 
@@ -5735,7 +5784,7 @@ cdef class NullSpace(Object):
         if constant: has_const = PETSC_TRUE
         cdef PetscInt i = 0, nv = <PetscInt>len(vectors)
         cdef PetscVec *v = NULL
-        cdef object tmp2 = oarray_p(empty_p(nv), NULL, <void**>&v)
+        cdef object unused2 = oarray_p(empty_p(nv), NULL, <void**>&v)
         for i from 0 <= i < nv:
             v[i] = (<Vec?>(vectors[<Py_ssize_t>i])).vec
         cdef PetscNullSpace newnsp = NULL

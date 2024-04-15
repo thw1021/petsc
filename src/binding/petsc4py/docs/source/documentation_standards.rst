@@ -102,5 +102,5 @@ enum the ``| str`` can be omitted. Full signature example::
 
     def setType(self, ksp_type: KSP.Type | str) -> None:
 
-If a NumPy array is returned, use ``ArrayInt``/``ArrayReal``/``ArrayScalar`` as the
+If a NumPy array is returned, use ``ArrayBool``/``ArrayInt``/``ArrayReal``/``ArrayScalar`` as the
 return type.

@@ -20,12 +20,15 @@ class VecType(object):
     MPIKOKKOS  = S_(VECMPIKOKKOS)
     KOKKOS     = S_(VECKOKKOS)
 
+
 class VecOption(object):
     """Vector assembly option."""
     IGNORE_OFF_PROC_ENTRIES = VEC_IGNORE_OFF_PROC_ENTRIES
     IGNORE_NEGATIVE_INDICES = VEC_IGNORE_NEGATIVE_INDICES
 
 # --------------------------------------------------------------------
+
+
 cdef class Vec(Object):
     """A vector object.
 
@@ -106,12 +109,6 @@ cdef class Vec(Object):
 
     def __matmul__(self, other):
         return vec_matmul(self, other)
-    #
-
-    #def __len__(self):
-    #    cdef PetscInt size = 0
-    #    CHKERR( VecGetSize(self.vec, &size) )
-    #    return <Py_ssize_t>size
 
     def __getitem__(self, i):
         return vec_getitem(self, i)
@@ -278,7 +275,7 @@ cdef class Vec(Object):
         Sys_Layout(ccomm, bs, &n, &N)
         if bs == PETSC_DECIDE: bs = 1
         cdef PetscVec newvec = NULL
-        CHKERR( VecCreate(ccomm,&newvec) )
+        CHKERR( VecCreate(ccomm, &newvec) )
         CHKERR( VecSetSizes(newvec, n, N) )
         CHKERR( VecSetBlockSize(newvec, bs) )
         CHKERR( VecSetType(newvec, VECSEQ) )
@@ -367,9 +364,9 @@ cdef class Vec(Object):
             (toInt(na), toInt(n), toInt(bs)))
         cdef PetscVec newvec = NULL
         if comm_size(ccomm) == 1:
-            CHKERR( VecCreateSeqWithArray(ccomm,bs,N,sa,&newvec) )
+            CHKERR( VecCreateSeqWithArray(ccomm, bs, N, sa, &newvec) )
         else:
-            CHKERR( VecCreateMPIWithArray(ccomm,bs,n,N,sa,&newvec) )
+            CHKERR( VecCreateMPIWithArray(ccomm, bs, n, N, sa, &newvec) )
         CHKERR( PetscCLEAR(self.obj) ); self.vec = newvec
         self.set_attr('__array__', array)
         return self
@@ -424,9 +421,9 @@ cdef class Vec(Object):
             (toInt(na), toInt(n), toInt(bs)))
         cdef PetscVec newvec = NULL
         if comm_size(ccomm) == 1:
-            CHKERR( VecCreateSeqCUDAWithArrays(ccomm,bs,N,sa,gpuarray,&newvec) )
+            CHKERR( VecCreateSeqCUDAWithArrays(ccomm, bs, N, sa, gpuarray, &newvec) )
         else:
-            CHKERR( VecCreateMPICUDAWithArrays(ccomm,bs,n,N,sa,gpuarray,&newvec) )
+            CHKERR( VecCreateMPICUDAWithArrays(ccomm, bs, n, N, sa, gpuarray, &newvec) )
         CHKERR( PetscCLEAR(self.obj) ); self.vec = newvec
 
         if cpuarray is not None:
@@ -483,9 +480,9 @@ cdef class Vec(Object):
             (toInt(na), toInt(n), toInt(bs)))
         cdef PetscVec newvec = NULL
         if comm_size(ccomm) == 1:
-            CHKERR( VecCreateSeqHIPWithArrays(ccomm,bs,N,sa,gpuarray,&newvec) )
+            CHKERR( VecCreateSeqHIPWithArrays(ccomm, bs, N, sa, gpuarray, &newvec) )
         else:
-            CHKERR( VecCreateMPIHIPWithArrays(ccomm,bs,n,N,sa,gpuarray,&newvec) )
+            CHKERR( VecCreateMPIHIPWithArrays(ccomm, bs, n, N, sa, gpuarray, &newvec) )
         CHKERR( PetscCLEAR(self.obj) ); self.vec = newvec
 
         if cpuarray is not None:
@@ -542,9 +539,9 @@ cdef class Vec(Object):
             raise ValueError( "array size %d and vector local size %d block size %d" % (toInt(na), toInt(n), toInt(bs)))
         cdef PetscVec newvec = NULL
         if comm_size(ccomm) == 1:
-            CHKERR( VecCreateSeqViennaCLWithArrays(ccomm,bs,N,sa,vclvec,&newvec) )
+            CHKERR( VecCreateSeqViennaCLWithArrays(ccomm, bs, N, sa, vclvec, &newvec) )
         else:
-            CHKERR( VecCreateMPIViennaCLWithArrays(ccomm,bs,n,N,sa,vclvec,&newvec) )
+            CHKERR( VecCreateMPIViennaCLWithArrays(ccomm, bs, n, N, sa, vclvec, &newvec) )
         CHKERR( PetscCLEAR(self.obj) ); self.vec = newvec
 
         if cpuarray is not None:
@@ -592,8 +589,7 @@ cdef class Vec(Object):
         cdef int64_t* shape = NULL
         cdef int64_t* strides = NULL
         cdef MPI_Comm ccomm = def_Comm(comm, PETSC_COMM_DEFAULT)
-        cdef PetscInt bs = 0,n = 0,N = 0
-        cdef DLContext* ctx = NULL
+        cdef PetscInt bs = 0, n = 0, N = 0
 
         if not PyCapsule_CheckExact(dltensor):
             dltensor = dltensor.__dlpack__()
@@ -620,21 +616,21 @@ cdef class Vec(Object):
             (toInt(nz), toInt(n), toInt(bs)))
         cdef PetscVec newvec = NULL
         cdef PetscDLDeviceType dltype = ptr.dl_tensor.ctx.device_type
-        if dltype in [kDLCUDA,kDLCUDAManaged]:
+        if dltype in [kDLCUDA, kDLCUDAManaged]:
             if comm_size(ccomm) == 1:
-                CHKERR( VecCreateSeqCUDAWithArray(ccomm,bs,N,<PetscScalar*>(ptr.dl_tensor.data),&newvec) )
+                CHKERR( VecCreateSeqCUDAWithArray(ccomm, bs, N, <PetscScalar*>(ptr.dl_tensor.data), &newvec) )
             else:
-                CHKERR( VecCreateMPICUDAWithArray(ccomm,bs,n,N,<PetscScalar*>(ptr.dl_tensor.data),&newvec) )
-        elif dltype in [kDLCPU,kDLCUDAHost,kDLROCMHost]:
+                CHKERR( VecCreateMPICUDAWithArray(ccomm, bs, n, N, <PetscScalar*>(ptr.dl_tensor.data), &newvec) )
+        elif dltype in [kDLCPU, kDLCUDAHost, kDLROCMHost]:
             if comm_size(ccomm) == 1:
-                CHKERR( VecCreateSeqWithArray(ccomm,bs,N,<PetscScalar*>(ptr.dl_tensor.data),&newvec) )
+                CHKERR( VecCreateSeqWithArray(ccomm, bs, N, <PetscScalar*>(ptr.dl_tensor.data), &newvec) )
             else:
-                CHKERR( VecCreateMPIWithArray(ccomm,bs,n,N,<PetscScalar*>(ptr.dl_tensor.data),&newvec) )
+                CHKERR( VecCreateMPIWithArray(ccomm, bs, n, N, <PetscScalar*>(ptr.dl_tensor.data), &newvec) )
         elif dltype == kDLROCM:
             if comm_size(ccomm) == 1:
-                CHKERR( VecCreateSeqHIPWithArray(ccomm,bs,N,<PetscScalar*>(ptr.dl_tensor.data),&newvec) )
+                CHKERR( VecCreateSeqHIPWithArray(ccomm, bs, N, <PetscScalar*>(ptr.dl_tensor.data), &newvec) )
             else:
-                CHKERR( VecCreateMPIHIPWithArray(ccomm,bs,n,N,<PetscScalar*>(ptr.dl_tensor.data),&newvec) )
+                CHKERR( VecCreateMPIHIPWithArray(ccomm, bs, n, N, <PetscScalar*>(ptr.dl_tensor.data), &newvec) )
         else:
             raise TypeError("Device type {} not supported".format(dltype))
 
@@ -681,7 +677,7 @@ cdef class Vec(Object):
         clearDLPackInfo, createWithDLPack
 
         """
-        cdef object ctx0 = self.get_attr('__dltensor_ctx__'), ctx = None
+        cdef object ctx = None
         cdef DLManagedTensor* ptr = NULL
         cdef int64_t* shape_arr = NULL
         cdef int64_t* strides_arr = NULL
@@ -1001,20 +997,20 @@ cdef class Vec(Object):
         cdef PetscInt n = <PetscInt>m
         cdef PetscVec *cvecs  = NULL
         cdef PetscIS  *cisets = NULL
-        cdef object tmp1, tmp2
-        tmp1 = oarray_p(empty_p(n), NULL, <void**>&cvecs)
+        cdef object unused1, unused2
+        unused1 = oarray_p(empty_p(n), NULL, <void**>&cvecs)
         for i from 0 <= i < m: cvecs[i] = (<Vec?>vecs[i]).vec
         if isets is not None:
-            tmp2 = oarray_p(empty_p(n), NULL, <void**>&cisets)
+            unused2 = oarray_p(empty_p(n), NULL, <void**>&cisets)
             for i from 0 <= i < m: cisets[i] = (<IS?>isets[i]).iset
         cdef PetscVec newvec = NULL
-        CHKERR( VecCreateNest(ccomm, n, cisets, cvecs,&newvec) )
+        CHKERR( VecCreateNest(ccomm, n, cisets, cvecs, &newvec) )
         CHKERR( PetscCLEAR(self.obj) ); self.vec = newvec
         return self
 
     #
 
-    def setOptionsPrefix(self, prefix: str) -> None:
+    def setOptionsPrefix(self, prefix: str | None) -> None:
         """Set the prefix used for searching for options in the database.
 
         Logically collective.
@@ -1042,7 +1038,7 @@ cdef class Vec(Object):
         CHKERR( VecGetOptionsPrefix(self.vec, &cval) )
         return bytes2str(cval)
 
-    def appendOptionsPrefix(self, prefix: str) -> None:
+    def appendOptionsPrefix(self, prefix: str | None) -> None:
         """Append to the prefix used for searching for options in the database.
 
         Logically collective.
@@ -1327,7 +1323,7 @@ cdef class Vec(Object):
         else:
             return vec_getbuffer_w(self)
 
-    def getArray(self, readonly: bool=False) -> ArrayScalar:
+    def getArray(self, readonly: bool = False) -> ArrayScalar:
         """Return local portion of the vector as an `ndarray`.
 
         Logically collective.
@@ -1607,7 +1603,7 @@ cdef class Vec(Object):
         petsc.VecGetOffloadMask, petsc.PetscOffloadMask
 
         """
-        cdef PetscOffloadMask mask
+        cdef PetscOffloadMask mask = PETSC_OFFLOAD_UNALLOCATED
         CHKERR( VecGetOffloadMask(self.vec, &mask) )
         return mask
 
@@ -1942,7 +1938,7 @@ cdef class Vec(Object):
         cdef PetscVec *v=NULL
         cdef PetscScalar *val=NULL
         cdef Py_ssize_t i=0
-        cdef object tmp = oarray_p(empty_p(nv), NULL, <void**>&v)
+        cdef object unused = oarray_p(empty_p(nv), NULL, <void**>&v)
         for i from 0 <= i < nv:
             v[i] = (<Vec?>(vecs[i])).vec
         if out is None:
@@ -1975,7 +1971,7 @@ cdef class Vec(Object):
         cdef PetscVec *v=NULL
         cdef PetscScalar *val=NULL
         cdef Py_ssize_t i=0
-        cdef object tmp = oarray_p(empty_p(nv), NULL, <void**>&v)
+        cdef object unused = oarray_p(empty_p(nv), NULL, <void**>&v)
         for i from 0 <= i < nv:
             v[i] = (<Vec?>(vecs[i])).vec
         out = oarray_s(out, &no, &val)
@@ -2005,7 +2001,7 @@ cdef class Vec(Object):
         cdef PetscVec *v=NULL
         cdef PetscScalar *val=NULL
         cdef Py_ssize_t i=0
-        cdef object tmp = oarray_p(empty_p(nv), NULL, <void**>&v)
+        cdef object unused = oarray_p(empty_p(nv), NULL, <void**>&v)
         for i from 0 <= i < nv:
             v[i] = (<Vec?>(vecs[i])).vec
         out = oarray_s(out, &no, &val)
@@ -2036,7 +2032,7 @@ cdef class Vec(Object):
         cdef PetscVec *v=NULL
         cdef PetscScalar *val=NULL
         cdef Py_ssize_t i=0
-        cdef object tmp = oarray_p(empty_p(nv), NULL, <void**>&v)
+        cdef object unused = oarray_p(empty_p(nv), NULL, <void**>&v)
         for i from 0 <= i < nv:
             v[i] = (<Vec?>(vecs[i])).vec
         if out is None:
@@ -2069,7 +2065,7 @@ cdef class Vec(Object):
         cdef PetscVec *v=NULL
         cdef PetscScalar *val=NULL
         cdef Py_ssize_t i=0
-        cdef object tmp = oarray_p(empty_p(nv), NULL, <void**>&v)
+        cdef object unused = oarray_p(empty_p(nv), NULL, <void**>&v)
         for i from 0 <= i < nv:
             v[i] = (<Vec?>(vecs[i])).vec
         out = oarray_s(out, &no, &val)
@@ -2099,7 +2095,7 @@ cdef class Vec(Object):
         cdef PetscVec *v=NULL
         cdef PetscScalar *val=NULL
         cdef Py_ssize_t i=0
-        cdef object tmp = oarray_p(empty_p(nv), NULL, <void**>&v)
+        cdef object unused = oarray_p(empty_p(nv), NULL, <void**>&v)
         for i from 0 <= i < nv:
             v[i] = (<Vec?>(vecs[i])).vec
         out = oarray_s(out, &no, &val)
@@ -2613,8 +2609,8 @@ cdef class Vec(Object):
         cdef PetscInt n = 0
         cdef PetscScalar *a = NULL
         cdef PetscVec *v = NULL
-        cdef object tmp1 = iarray_s(alphas, &n, &a)
-        cdef object tmp2 = oarray_p(empty_p(n),NULL, <void**>&v)
+        cdef object unused1 = iarray_s(alphas, &n, &a)
+        cdef object unused2 = oarray_p(empty_p(n), NULL, <void**>&v)
         assert n == len(vecs)
         cdef Py_ssize_t i=0
         for i from 0 <= i < n:
@@ -3482,10 +3478,10 @@ cdef class Vec(Object):
         CHKERR( VecNestGetSubVecs(self.vec, &N, &sx) )
         output = []
         for i in range(N):
-          pyvec = Vec()
-          pyvec.vec = sx[i]
-          CHKERR( PetscObjectReference(<PetscObject> pyvec.vec) )
-          output.append(pyvec)
+            pyvec = Vec()
+            pyvec.vec = sx[i]
+            CHKERR( PetscObjectReference(<PetscObject> pyvec.vec) )
+            output.append(pyvec)
 
         return output
 
@@ -3517,7 +3513,7 @@ cdef class Vec(Object):
         idxm = iarray_i(idxm, &N, &cidxm)
 
         cdef PetscVec* csx = NULL
-        tmp = oarray_p(empty_p(N), NULL, <void**>&csx)
+        cdef object unused = oarray_p(empty_p(N), NULL, <void**>&csx)
         for i from 0 <= i < N: csx[i] = (<Vec?>sx[i]).vec
 
         CHKERR( VecNestSetSubVecs(self.vec, N, cidxm, csx) )
@@ -3556,6 +3552,7 @@ cdef class Vec(Object):
         """The local and global vector sizes."""
         def __get__(self) -> LayoutSizeSpec:
             return self.getSizes()
+
         def __set__(self, value):
             self.setSizes(value)
 
@@ -3598,6 +3595,7 @@ cdef class Vec(Object):
         """Writeable `ndarray` containing the local portion of the vector."""
         def __get__(self) -> ArrayScalar:
             return self.getArray()
+
         def __set__(self, value):
             cdef buf = self.getBuffer()
             with buf as array: array[:] = value
@@ -3616,6 +3614,7 @@ cdef class Vec(Object):
         """Alias for `array_w`."""
         def __get__(self) -> ArrayScalar:
             return self.array_w
+
         def __set__(self, value):
             self.array_w = value
 
