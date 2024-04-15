@@ -892,7 +892,7 @@ PetscErrorCode MatGetOptionsPrefix(Mat A, const char *prefix[])
   the object is changed. By saving and later querying the object state
   one can determine whether information about the object is still current.
 
-.seealso: `PetscObjectStateGet()`
+.seealso: [](ch_matrices), `Mat`, `MatCreate()`, `PetscObjectStateGet()`
 @*/
 PetscErrorCode MatGetState(Mat A, PetscObjectState *state)
 {

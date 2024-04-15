@@ -1631,7 +1631,7 @@ PetscErrorCode VecGetOptionsPrefix(Vec v, const char *prefix[])
   the object is changed. By saving and later querying the object state
   one can determine whether information about the object is still current.
 
-.seealso: `PetscObjectStateGet()`
+.seealso: [](ch_vectors), `Vec`, `VecCreate()`, `PetscObjectStateGet()`
 @*/
 PetscErrorCode VecGetState(Vec v, PetscObjectState *state)
 {
