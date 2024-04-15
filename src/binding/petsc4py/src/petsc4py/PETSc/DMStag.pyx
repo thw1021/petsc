@@ -1,11 +1,14 @@
 # --------------------------------------------------------------------
 
 class DMStagStencilType(object):
+    """Stencil types."""
     STAR = DMSTAG_STENCIL_STAR
     BOX  = DMSTAG_STENCIL_BOX
     NONE = DMSTAG_STENCIL_NONE
 
+
 class DMStagStencilLocation(object):
+    """Stencil location types."""
     NULLLOC          = DMSTAG_NULL_LOCATION
     BACK_DOWN_LEFT   = DMSTAG_BACK_DOWN_LEFT
     BACK_DOWN        = DMSTAG_BACK_DOWN
@@ -36,6 +39,7 @@ class DMStagStencilLocation(object):
     FRONT_UP_RIGHT   = DMSTAG_FRONT_UP_RIGHT
 
 # --------------------------------------------------------------------
+
 
 cdef class DMStag(DM):
     """A DM object representing a "staggered grid" or a structured cell complex."""
@@ -237,8 +241,8 @@ cdef class DMStag(DM):
 
         """
         cdef tuple gdofs = tuple(dofs)
-        cdef PetscInt gdim=PETSC_DECIDE, dof0=1, dof1=0, dof2=0, dof3=0
-        gdim = asDofs(gdofs, &dof0, &dof1, &dof2, &dof3)
+        cdef PetscInt dof0=1, dof1=0, dof2=0, dof3=0
+        asDofs(gdofs, &dof0, &dof1, &dof2, &dof3)
         CHKERR( DMStagSetDOF(self.dm, dof0, dof1, dof2, dof3) )
 
     def setGlobalSizes(self, sizes: tuple[int, ...]) -> None:
@@ -257,8 +261,8 @@ cdef class DMStag(DM):
 
         """
         cdef tuple gsizes = tuple(sizes)
-        cdef PetscInt gdim=PETSC_DECIDE, M=1, N=1, P=1
-        gdim = asStagDims(gsizes, &M, &N, &P)
+        cdef PetscInt M=1, N=1, P=1
+        asStagDims(gsizes, &M, &N, &P)
         CHKERR( DMStagSetGlobalSizes(self.dm, M, N, P) )
 
     def setProcSizes(self, sizes: tuple[int, ...]) -> None:
@@ -277,8 +281,8 @@ cdef class DMStag(DM):
 
         """
         cdef tuple psizes = tuple(sizes)
-        cdef PetscInt pdim=PETSC_DECIDE, m=PETSC_DECIDE, n=PETSC_DECIDE, p=PETSC_DECIDE
-        pdim = asStagDims(psizes, &m, &n, &p)
+        cdef PetscInt m=PETSC_DECIDE, n=PETSC_DECIDE, p=PETSC_DECIDE
+        asStagDims(psizes, &m, &n, &p)
         CHKERR( DMStagSetNumRanks(self.dm, m, n, p) )
 
     def setOwnershipRanges(self, ranges: tuple[Sequence[int], ...]) -> None:
@@ -300,7 +304,7 @@ cdef class DMStag(DM):
         cdef PetscInt *lx = NULL, *ly = NULL, *lz = NULL
         CHKERR( DMGetDimension(self.dm, &dim) )
         CHKERR( DMStagGetNumRanks(self.dm, &m, &n, &p) )
-        ownership_ranges = asStagOwnershipRanges(ranges, dim, &m, &n, &p, &lx, &ly, &lz)
+        asStagOwnershipRanges(ranges, dim, &m, &n, &p, &lx, &ly, &lz)
         CHKERR( DMStagSetOwnershipRanges(self.dm, lx, ly, lz) )
 
     # Getters
@@ -356,7 +360,7 @@ cdef class DMStag(DM):
         cdef PetscInt dim=0, dof0=0, dof1=0, dof2=0, dof3=0
         CHKERR( DMStagGetDOF(self.dm, &dof0, &dof1, &dof2, &dof3) )
         CHKERR( DMGetDimension(self.dm, &dim) )
-        return toDofs(dim+1,dof0,dof1,dof2,dof3)
+        return toDofs(dim+1, dof0, dof1, dof2, dof3)
 
     def getCorners(self) -> tuple[tuple[int, ...], tuple[int, ...], tuple[int, ...]]:
         """Return starting element index, width and number of partial elements.
@@ -780,8 +784,8 @@ cdef class DMStag(DM):
 
         """
         cdef tuple gdofs = tuple(dofs)
-        cdef PetscInt gdim=PETSC_DECIDE, dof0=1, dof1=0, dof2=0, dof3=0
-        gdim = asDofs(gdofs, &dof0, &dof1, &dof2, &dof3)
+        cdef PetscInt dof0=1, dof1=0, dof2=0, dof3=0
+        asDofs(gdofs, &dof0, &dof1, &dof2, &dof3)
         cdef PetscDM newda = NULL
         CHKERR( DMStagCreateCompatibleDMStag(self.dm, dof0, dof1, dof2, dof3, &newda) )
         cdef DM newdm = type(self)()
@@ -825,14 +829,14 @@ cdef class DMStag(DM):
         CHKERR( PetscCLEAR(da.obj) ); da.dm = pda
         cdef Vec davec = Vec()
         CHKERR( PetscCLEAR(davec.obj) ); davec.vec = pdavec
-        return (da,davec)
+        return (da, davec)
 
     def getVecArray(self, Vec vec) -> None:
-        """**Not implemented in petsc4py.**"""
+        """Not implemented."""
         raise NotImplementedError('getVecArray for DMStag not yet implemented in petsc4py')
 
     def get1dCoordinatecArrays(self) -> None:
-        """**Not implemented in petsc4py.**"""
+        """Not implemented."""
         raise NotImplementedError('get1dCoordinatecArrays for DMStag not yet implemented in petsc4py')
 
     property dim:
