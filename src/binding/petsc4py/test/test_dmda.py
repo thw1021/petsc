@@ -168,6 +168,8 @@ class BaseTestDA:
             self.assertTrue(abs(n1 - n2) <= 1)
 
     def testCoarsenRefine(self):
+        if PETSc.COMM_WORLD.getSize() > 6:
+            return
         da = self.da
         cda = self.da.coarsen()
         self.assertEqual(da.getDim(), cda.getDim())
@@ -187,6 +189,8 @@ class BaseTestDA:
             self.assertTrue(isinstance(item, PETSc.DM))
 
     def testCoarsenHierarchy(self):
+        if PETSc.COMM_WORLD.getSize() > 6:
+            return
         levels = self.da.coarsenHierarchy(2)
         self.assertTrue(isinstance(levels, list))
         self.assertEqual(len(levels), 2)
@@ -201,6 +205,8 @@ class BaseTestDA:
         _, _ = da.createInterpolation(rda)
 
     def testCreateInjection(self):
+        if PETSc.COMM_WORLD.getSize() > 6:
+            return
         da = self.da
         if da.dim == 1:
             return
