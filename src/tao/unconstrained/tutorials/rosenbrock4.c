@@ -161,7 +161,7 @@ int main(int argc, char **argv)
     suffix: test_dbfgs
     nsize: {{1 2 3}}
     output_file: output/rosenbrock1_14.out
-    args: -n 10 -tao_type bqnktr -test_lmvm -tao_max_it 10 -tao_bqnk_mat_type lmvmdbfgs -tao_bqnk_mat_lmvm_scale_type none -tao_bqnk_mat_lbfgs_type {{inplace reorder}}
+    args: -n 10 -tao_type bqnktr -test_lmvm -tao_max_it 10 -tao_bqnk_mat_type lmvmdbfgs -tao_bqnk_mat_lmvm_scale_type none -tao_bqnk_mat_lbfgs_type {{inplace reorder}} -tao_bqnk_mat_lbfgs_recursive {{0 1}}
 
   test:
     suffix: test_ddfp
