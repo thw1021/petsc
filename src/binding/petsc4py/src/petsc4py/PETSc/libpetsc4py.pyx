@@ -157,6 +157,7 @@ cdef object load_module(object path):
     module.__file__ = path
     module.__package__ = None
     module_cache[path] = module
+    cdef object code = None
     try:
         with open(path, 'r') as source:
             code = compile(source.read(), path, 'exec')
@@ -1742,7 +1743,6 @@ cdef PetscErrorCode KSPSolve_Python_default(
                 b"@ksp.vec_work_res",
                 <PetscObject>v) )
     #
-    cdef PetscInt its = 0
     cdef PetscVec R = NULL
     cdef PetscReal rnorm = 0
     #
@@ -1753,6 +1753,7 @@ cdef PetscErrorCode KSPSolve_Python_default(
     CHKERR( KSPLogHistory(ksp, ksp.norm) )
     CHKERR( KSPMonitor(ksp, ksp.iter, ksp.norm) )
     for its from 0 <= its < ksp.max_its:
+        <void> its # unused
         if ksp.reason: break
         KSPPreStep_Python(ksp)
         #
@@ -2013,12 +2014,12 @@ cdef PetscErrorCode SNESSolve_Python_default(
     ) except PETSC_ERR_PYTHON with gil:
     FunctionBegin(b"SNESSolve_Python_default")
     cdef PetscVec X=NULL, F=NULL, Y=NULL
-    cdef PetscSNESLineSearch ls
+    cdef PetscSNESLineSearch ls=NULL
     CHKERR( SNESGetSolution(snes, &X) )
     CHKERR( SNESGetFunction(snes, &F, NULL, NULL) )
     CHKERR( SNESGetSolutionUpdate(snes, &Y) )
     CHKERR( SNESGetLineSearch(snes, &ls) )
-    cdef PetscInt  its=0, lits=0
+    cdef PetscInt  lits=0
     cdef PetscReal xnorm = 0.0
     cdef PetscReal fnorm = 0.0
     cdef PetscReal ynorm = 0.0
@@ -2037,6 +2038,7 @@ cdef PetscErrorCode SNESSolve_Python_default(
     cdef PetscObjectState ostate = -1
     cdef PetscObjectState nstate = -1
     for its from 0 <= its < snes.max_its:
+        <void> its # unused
         CHKERR( PetscObjectStateGet(<PetscObject>X, &ostate) )
         SNESPreStep_Python(snes)
         CHKERR( PetscObjectStateGet(<PetscObject>X, &nstate) )
@@ -2497,12 +2499,12 @@ cdef PetscErrorCode TSStep_Python_default(
             b"@ts.vec_update",
             <PetscObject*>&vec_update) )
     #
-    cdef PetscInt  r = 0
     cdef PetscReal tt = ts.ptime
     cdef PetscReal dt = ts.time_step
     cdef PetscBool accept  = PETSC_TRUE
     cdef PetscBool stageok = PETSC_TRUE
     for r from 0 <= r < ts.max_reject:
+        <void> r # unused
         tt = ts.ptime + ts.time_step
         CHKERR( VecCopy(ts.vec_sol, vec_update) )
         CHKERR( TSPreStage(ts, tt+dt) )
@@ -2741,9 +2743,9 @@ cdef PetscErrorCode TaoSolve_Python_default(
 
     cdef PetscObjectState ostate = -1
     cdef PetscObjectState nstate = -1
-    cdef PetscInt its = 0
     cdef PetscTAOLineSearchConvergedReason lsr = TAOLINESEARCH_SUCCESS
     for its from 0 <= its < tao.max_it:
+        <void> its # unused
         if tao.reason: break
         CHKERR( PetscObjectStateGet(<PetscObject>X, &ostate) )
         CHKERR( TaoComputeUpdate(tao) )

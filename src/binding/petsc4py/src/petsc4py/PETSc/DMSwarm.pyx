@@ -146,7 +146,7 @@ cdef class DMSwarm(DM):
 
         """
         cdef const char *cfieldname = NULL
-        cdef PetscVec vec
+        cdef PetscVec vec = NULL
         fieldname = str2bytes(fieldname, &cfieldname)
         CHKERR( DMSwarmDestroyLocalVectorFromField(self.dm, cfieldname, &vec) )
 
@@ -671,7 +671,7 @@ cdef class DMSwarm(DM):
         filename = str2bytes(filename, &cfilename)
         cdef PetscInt cnfields = <PetscInt> len(fieldnames)
         cdef const char** cfieldnames = NULL
-        _tmp = oarray_p(empty_p(cnfields), NULL, <void**>&cfieldnames)
+        cdef object unused = oarray_p(empty_p(cnfields), NULL, <void**>&cfieldnames)
         fieldnames = list(fieldnames)
         for i from 0 <= i < cnfields:
             fieldnames[i] = str2bytes(fieldnames[i], &cval)
@@ -829,9 +829,9 @@ cdef class DMSwarm(DM):
         cdef const char *cval = NULL
         cdef PetscInt cnfields = <PetscInt> len(fieldnames)
         cdef const char** cfieldnames = NULL
-        _tmp = oarray_p(empty_p(cnfields), NULL, <void**>&cfieldnames)
-        cdef PetscVec *cfieldvecs
-        _tmp2 = oarray_p(empty_p(cnfields), NULL, <void**>&cfieldvecs)
+        cdef object unused = oarray_p(empty_p(cnfields), NULL, <void**>&cfieldnames)
+        cdef PetscVec *cfieldvecs = NULL
+        cdef object unused2 = oarray_p(empty_p(cnfields), NULL, <void**>&cfieldvecs)
         cdef PetscScatterMode cmode = scattermode(mode)
         fieldnames = list(fieldnames)
         for i from 0 <= i < cnfields:

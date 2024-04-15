@@ -992,7 +992,7 @@ cdef class DMDA(DM):
         setRefinementFactor, petsc.DMDAGetRefinementFactor
 
         """
-        cdef PetscInt i, dim = 0, refine[3]
+        cdef PetscInt dim = 0, refine[3]
         CHKERR( DMDAGetDim(self.dm, &dim) )
         CHKERR( DMDAGetRefinementFactor(self.dm,
                                         &refine[0],

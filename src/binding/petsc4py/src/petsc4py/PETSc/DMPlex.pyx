@@ -1232,7 +1232,7 @@ cdef class DMPlex(DM):
         cdef PetscInt cp = asInt(point)
         cdef PetscInt csize = 0
         cdef PetscScalar *cvals = NULL
-        _tmp = iarray_s(values, &csize, &cvals)
+        cdef object unused = iarray_s(values, &csize, &cvals)
         cdef PetscInsertMode im = insertmode(addv)
         CHKERR( DMPlexVecSetClosure(self.dm, csec, vec.vec, cp, cvals, im) )
 
@@ -1269,7 +1269,7 @@ cdef class DMPlex(DM):
         cdef PetscInt cp = asInt(point)
         cdef PetscInt csize = 0
         cdef PetscScalar *cvals = NULL
-        _tmp = iarray_s(values, &csize, &cvals)
+        cdef object unused = iarray_s(values, &csize, &cvals)
         cdef PetscInsertMode im = insertmode(addv)
         CHKERR( DMPlexMatSetClosure(self.dm, csec, cgsec, mat.mat, cp, cvals, im) )
 
@@ -1867,18 +1867,19 @@ cdef class DMPlex(DM):
         cdef PetscInt *bcfield = NULL
         cdef PetscIS *bccomps  = NULL
         cdef PetscIS *bcpoints = NULL
+        cdef object unused1, unused2
         if bcField is not None:
             bcField = iarray_i(bcField, &nbc, &bcfield)
             if bcComps is not None:
                 bcComps = list(bcComps)
                 assert len(bcComps) == nbc
-                _tmp1 = oarray_p(empty_p(nbc), NULL, <void**>&bccomps)
+                unused1 = oarray_p(empty_p(nbc), NULL, <void**>&bccomps)
                 for i from 0 <= i < nbc:
                     bccomps[i] = (<IS?>bcComps[<Py_ssize_t>i]).iset
             if bcPoints is not None:
                 bcPoints = list(bcPoints)
                 assert len(bcPoints) == nbc
-                _tmp2 = oarray_p(empty_p(nbc), NULL, <void**>&bcpoints)
+                unused2 = oarray_p(empty_p(nbc), NULL, <void**>&bcpoints)
                 for i from 0 <= i < nbc:
                     bcpoints[i] = (<IS?>bcPoints[<Py_ssize_t>i]).iset
             else:

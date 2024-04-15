@@ -1339,7 +1339,7 @@ cdef class TS(Object):
         """
         cdef PetscInt  nt = 0
         cdef PetscReal *rtspan = NULL
-        _tmp = oarray_r(tspan, &nt, &rtspan)
+        cdef unused = oarray_r(tspan, &nt, &rtspan)
         CHKERR( TSSetTimeSpan(self.ts, nt, rtspan) )
 
     def getTimeSpan(self) -> ArrayReal:
@@ -2461,7 +2461,7 @@ cdef class TS(Object):
         setCostGradients, petsc.TSGetCostGradients
 
         """
-        cdef PetscInt i = 0, n = 0
+        cdef PetscInt n = 0
         cdef PetscVec *vecl = NULL
         cdef PetscVec *vecm = NULL
         CHKERR( TSGetCostGradients(self.ts, &n, &vecl, &vecm) )

@@ -114,7 +114,7 @@ cdef class Options:
         """Return the boolean indicating if the option is in the database."""
         cdef const char *pr = NULL
         cdef const char *nm = NULL
-        _tmp = getpair(self.prefix, name, &pr, &nm)
+        cdef object unused = getpair(self.prefix, name, &pr, &nm)
         cdef PetscBool flag = PETSC_FALSE
         CHKERR( PetscOptionsHasName(self.opt, pr, nm, &flag) )
         return toBool(flag)
@@ -139,7 +139,7 @@ cdef class Options:
         """
         cdef const char *pr = NULL
         cdef const char *nm = NULL
-        _tmp = getpair(self.prefix, name, &pr, &nm)
+        cdef object unused = getpair(self.prefix, name, &pr, &nm)
         if pr == NULL:
             option = bytes2str(nm)
         else:
@@ -173,7 +173,7 @@ cdef class Options:
         """
         cdef const char *pr = NULL
         cdef const char *nm = NULL
-        _tmp = getpair(self.prefix, name, &pr, &nm)
+        cdef object unused = getpair(self.prefix, name, &pr, &nm)
         if pr == NULL:
             option = bytes2str(nm)
         else:

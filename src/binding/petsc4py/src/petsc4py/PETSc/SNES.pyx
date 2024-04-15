@@ -263,7 +263,7 @@ cdef class SNES(Object):
 
     def getApplicationContext(self) -> Any:
         """Return the application context."""
-        cdef void *ctx
+        cdef void *ctx = NULL
         appctx = self.get_attr('__appctx__')
         if appctx is None:
             CHKERR( SNESGetApplicationContext(self.snes, &ctx) )
@@ -734,9 +734,10 @@ cdef class SNES(Object):
         setFunction, petsc.SNESGetFunction
 
         """
+        cdef PetscErrorCode(*fun)(PetscSNES, PetscVec, PetscVec, void*)
         cdef Vec f = Vec()
-        cdef void* ctx
-        cdef PetscErrorCode (*fun)(PetscSNES, PetscVec, PetscVec, void*)
+        cdef void* ctx = NULL
+        fun = SNES_Function
         CHKERR( SNESGetFunction(self.snes, &f.vec, &fun, &ctx) )
         CHKERR( PetscINCREF(f.obj) )
         cdef object function = self.get_attr('__function__')

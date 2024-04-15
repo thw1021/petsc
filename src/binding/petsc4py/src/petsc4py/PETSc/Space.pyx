@@ -110,7 +110,7 @@ cdef class Space(Object):
         petsc.PetscSpaceGetDimension
 
         """
-        cdef PetscInt cdim
+        cdef PetscInt cdim = 0
         CHKERR( PetscSpaceGetDimension(self.space, &cdim))
         return toInt(cdim)
 
@@ -131,7 +131,7 @@ cdef class Space(Object):
         setDegree, petsc.PetscSpaceGetDegree
 
         """
-        cdef PetscInt cdegmax, cdegmin
+        cdef PetscInt cdegmax = 0, cdegmin = 0
         CHKERR( PetscSpaceGetDegree(self.space, &cdegmin, &cdegmax))
         return toInt(cdegmin), toInt(cdegmax)
 
@@ -170,7 +170,7 @@ cdef class Space(Object):
         setNumVariables, petsc.PetscSpaceGetNumVariables
 
         """
-        cdef PetscInt cnvars
+        cdef PetscInt cnvars = 0
         CHKERR( PetscSpaceGetNumVariables(self.space, &cnvars))
         return toInt(cnvars)
 
@@ -202,7 +202,7 @@ cdef class Space(Object):
         setNumComponents, petsc.PetscSpaceGetNumComponents
 
         """
-        cdef PetscInt cncomps
+        cdef PetscInt cncomps = 0
         CHKERR( PetscSpaceGetNumComponents(self.space, &cncomps))
         return toInt(cncomps)
 
@@ -273,7 +273,7 @@ cdef class Space(Object):
         setSumConcatenate, petsc.PetscSpaceSumGetConcatenate
 
         """
-        cdef PetscBool concatenate
+        cdef PetscBool concatenate = PETSC_FALSE
         CHKERR( PetscSpaceSumGetConcatenate(self.space, &concatenate))
         return toBool(concatenate)
 
@@ -311,7 +311,7 @@ cdef class Space(Object):
         setSumNumSubspaces, petsc.PetscSpaceSumGetNumSubspaces
 
         """
-        cdef PetscInt numSumSpaces
+        cdef PetscInt numSumSpaces = 0
         CHKERR( PetscSpaceSumGetNumSubspaces(self.space, &numSumSpaces))
         return toInt(numSumSpaces)
 
@@ -461,7 +461,7 @@ cdef class Space(Object):
         setPolynomialTensor, petsc.PetscSpacePolynomialGetTensor
 
         """
-        cdef PetscBool ctensor
+        cdef PetscBool ctensor = PETSC_FALSE
         CHKERR( PetscSpacePolynomialGetTensor(self.space, &ctensor) )
         return toBool(ctensor)
 
@@ -701,7 +701,7 @@ cdef class DualSpace(Object):
         petsc.PetscDualSpaceGetDimension
 
         """
-        cdef PetscInt cdim
+        cdef PetscInt cdim = 0
         CHKERR( PetscDualSpaceGetDimension(self.dualspace, &cdim))
         return toInt(cdim)
 
@@ -715,7 +715,7 @@ cdef class DualSpace(Object):
         setNumComponents, petsc.PetscDualSpaceGetNumComponents
 
         """
-        cdef PetscInt cncomps
+        cdef PetscInt cncomps = 0
         CHKERR( PetscDualSpaceGetNumComponents(self.dualspace, &cncomps))
         return toInt(cncomps)
 
@@ -781,7 +781,7 @@ cdef class DualSpace(Object):
         setOrder, petsc.PetscDualSpaceGetOrder
 
         """
-        cdef PetscInt corder
+        cdef PetscInt corder = 0
         CHKERR( PetscDualSpaceGetOrder(self.dualspace, &corder))
         return toInt(corder)
 

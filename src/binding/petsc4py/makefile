@@ -52,16 +52,18 @@ uninstall:
 # ----
 
 .PHONY: lint ruff-lint cython-lint
-CYTHONLINT_SRC = '*.pyx' '*.pxi' '*.pxd'
+CYTHONLINT_SRC = src demo
 CYTHONLINT_OPTS =
 RUFF_SRC = .
 RUFF_OPTS = check
 
 cython-lint:
-	-@git --no-pager ls-files -z ${CYTHONLINT_SRC} | xargs -0 cython-lint ${CYTHONLINT_OPTS} --files
+	conf/cythonize.sh -Wextra -Werror
+	cython-lint ${CYTHONLINT_OPTS} ${CYTHONLINT_SRC}
+
 
 ruff-lint:
-	-@ruff ${RUFF_OPTS} ${RUFF_SRC}
+	ruff ${RUFF_OPTS} ${RUFF_SRC}
 
 lint:
 	${RM} -r petsc4py-lint-env

@@ -1393,16 +1393,17 @@ cdef class Mat(Object):
         cdef PetscMat *cmats   = NULL
         cdef PetscIS  *cisrows = NULL
         cdef PetscIS  *ciscols = NULL
-        _tmp1 = oarray_p(empty_p(nr*nc), NULL, <void**>&cmats)
+        cdef object unused1, unused2, unused3
+        unused1 = oarray_p(empty_p(nr*nc), NULL, <void**>&cmats)
         for i from 0 <= i < mr:
             for j from 0 <= j < mc:
                 mat = mats[i][j]
                 cmats[i*mc+j] = (<Mat?>mat).mat if mat is not None else NULL
         if isrows is not None:
-            _tmp2 = oarray_p(empty_p(nr), NULL, <void**>&cisrows)
+            unused2 = oarray_p(empty_p(nr), NULL, <void**>&cisrows)
             for i from 0 <= i < mr: cisrows[i] = (<IS?>isrows[i]).iset
         if iscols is not None:
-            _tmp3 = oarray_p(empty_p(nc), NULL, <void**>&ciscols)
+            unused3 = oarray_p(empty_p(nc), NULL, <void**>&ciscols)
             for j from 0 <= j < mc: ciscols[j] = (<IS?>iscols[j]).iset
         cdef PetscMat newmat = NULL
         CHKERR( MatCreateNest(ccomm, nr, cisrows, nc, ciscols, cmats, &newmat) )
@@ -3259,10 +3260,9 @@ cdef class Mat(Object):
         """
         cdef PetscScalar sval = asScalar(diag)
         cdef PetscInt nrows = asInt(len(rows))
-        cdef PetscMatStencil st
-        cdef MatStencil r
+        cdef MatStencil r = 0
         cdef PetscMatStencil *crows = NULL
-        CHKERR( PetscMalloc(<size_t>(nrows+1)*sizeof(st), &crows) )
+        CHKERR( PetscMalloc(<size_t>(nrows+1)*sizeof(PetscMatStencil), &crows) )
         for i in range(nrows):
             r = rows[i]
             crows[i] = r.stencil
@@ -3944,9 +3944,9 @@ cdef class Mat(Object):
         cdef PetscIS  *ciscols = NULL
         cdef PetscMat *cmats   = NULL
         cdef Mat mat
-        _tmp1 = oarray_p(empty_p(n), NULL, <void**>&cisrows)
+        cdef object unused1 = oarray_p(empty_p(n), NULL, <void**>&cisrows)
         for i from 0 <= i < n: cisrows[i] = (<IS?>isrows[i]).iset
-        _tmp2 = oarray_p(empty_p(n), NULL, <void**>&ciscols)
+        cdef object unused2 = oarray_p(empty_p(n), NULL, <void**>&ciscols)
         for i from 0 <= i < n: ciscols[i] = (<IS?>iscols[i]).iset
         if submats is not None:
             reuse = MAT_REUSE_MATRIX
@@ -4768,7 +4768,7 @@ cdef class Mat(Object):
         setISAllowRepeated, petsc.MatISGetAllowRepeated
 
         """
-        cdef PetscBool callow
+        cdef PetscBool callow = PETSC_FALSE
         CHKERR( MatISGetAllowRepeated(self.mat, &callow) )
         return asBool(callow)
 
@@ -5454,7 +5454,7 @@ cdef class Mat(Object):
         petsc.MatNestGetSize
 
         """
-        cdef PetscInt nrows, ncols
+        cdef PetscInt nrows = 0, ncols = 0
         CHKERR( MatNestGetSize(self.mat, &nrows, &ncols) )
         return toInt(nrows), toInt(ncols)
 
@@ -5468,12 +5468,12 @@ cdef class Mat(Object):
         petsc.MatNestGetISs
 
         """
-        cdef PetscInt i, nrows =0, ncols = 0
+        cdef PetscInt nrows = 0, ncols = 0
         cdef PetscIS *cisrows = NULL
         cdef PetscIS *ciscols = NULL
         CHKERR( MatNestGetSize(self.mat, &nrows, &ncols) )
-        _tmpr = oarray_p(empty_p(nrows), NULL, <void**>&cisrows)
-        _tmpc = oarray_p(empty_p(ncols), NULL, <void**>&ciscols)
+        cdef object unusedr = oarray_p(empty_p(nrows), NULL, <void**>&cisrows)
+        cdef object unusedc = oarray_p(empty_p(ncols), NULL, <void**>&ciscols)
         CHKERR( MatNestGetISs(self.mat, cisrows, ciscols) )
         isetsrows = [ref_IS(cisrows[i]) for i from 0 <= i < nrows]
         isetscols = [ref_IS(ciscols[i]) for i from 0 <= i < ncols]
@@ -5489,12 +5489,12 @@ cdef class Mat(Object):
         petsc.MatNestGetLocalISs
 
         """
-        cdef PetscInt i, nrows =0, ncols = 0
+        cdef PetscInt nrows = 0, ncols = 0
         cdef PetscIS *cisrows = NULL
         cdef PetscIS *ciscols = NULL
         CHKERR( MatNestGetSize(self.mat, &nrows, &ncols) )
-        _tmpr = oarray_p(empty_p(nrows), NULL, <void**>&cisrows)
-        _tmpc = oarray_p(empty_p(ncols), NULL, <void**>&ciscols)
+        cdef object unusedr = oarray_p(empty_p(nrows), NULL, <void**>&cisrows)
+        cdef object unusedc = oarray_p(empty_p(ncols), NULL, <void**>&ciscols)
         CHKERR( MatNestGetLocalISs(self.mat, cisrows, ciscols) )
         isetsrows = [ref_IS(cisrows[i]) for i from 0 <= i < nrows]
         isetscols = [ref_IS(ciscols[i]) for i from 0 <= i < ncols]
@@ -5784,7 +5784,7 @@ cdef class NullSpace(Object):
         if constant: has_const = PETSC_TRUE
         cdef PetscInt i = 0, nv = <PetscInt>len(vectors)
         cdef PetscVec *v = NULL
-        _tmp2 = oarray_p(empty_p(nv), NULL, <void**>&v)
+        cdef object unused2 = oarray_p(empty_p(nv), NULL, <void**>&v)
         for i from 0 <= i < nv:
             v[i] = (<Vec?>(vectors[<Py_ssize_t>i])).vec
         cdef PetscNullSpace newnsp = NULL

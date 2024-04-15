@@ -965,7 +965,7 @@ cdef class PC(Object):
         petsc.PCASMGetSubKSP
 
         """
-        cdef PetscInt i = 0, n = 0
+        cdef PetscInt n = 0
         cdef PetscKSP *p = NULL
         CHKERR( PCASMGetSubKSP(self.pc, &n, NULL, &p) )
         return [ref_KSP(p[i]) for i from 0 <= i <n]
@@ -1544,7 +1544,7 @@ cdef class PC(Object):
         petsc.PCFieldSplitGetSubKSP
 
         """
-        cdef PetscInt i = 0, n = 0
+        cdef PetscInt n = 0
         cdef PetscKSP *p = NULL
         cdef object subksp = None
         try:
@@ -1564,7 +1564,7 @@ cdef class PC(Object):
         petsc.PCFieldSplitSchurGetSubKSP, petsc.PCFieldSplitGetSubKSP
 
         """
-        cdef PetscInt i = 0, n = 0
+        cdef PetscInt n = 0
         cdef PetscKSP *p = NULL
         cdef object subksp = None
         try:
@@ -2335,7 +2335,7 @@ cdef class PC(Object):
         isfields = [isfields] if isinstance(isfields, IS) else list(isfields)
         cdef Py_ssize_t i, n = len(isfields)
         cdef PetscIS  *cisfields = NULL
-        _tmp = oarray_p(empty_p(n), NULL, <void**>&cisfields)
+        cdef object unused = oarray_p(empty_p(n), NULL, <void**>&cisfields)
         for i from 0 <= i < n: cisfields[i] = (<IS?>isfields[i]).iset
         CHKERR( PCBDDCSetDofsSplitting(self.pc, <PetscInt>n, cisfields) )
 
@@ -2360,7 +2360,7 @@ cdef class PC(Object):
         isfields = [isfields] if isinstance(isfields, IS) else list(isfields)
         cdef Py_ssize_t i, n = len(isfields)
         cdef PetscIS  *cisfields = NULL
-        _tmp = oarray_p(empty_p(n), NULL, <void**>&cisfields)
+        cdef object unused = oarray_p(empty_p(n), NULL, <void**>&cisfields)
         for i from 0 <= i < n: cisfields[i] = (<IS?>isfields[i]).iset
         CHKERR( PCBDDCSetDofsSplittingLocal(self.pc, <PetscInt>n, cisfields) )
 
