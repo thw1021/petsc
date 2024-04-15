@@ -416,7 +416,6 @@ cdef PetscErrorCode MatCreate_Python(
     PetscMat mat,
     ) except PETSC_ERR_PYTHON with gil:
     FunctionBegin(b"MatCreate_Python")
-    #
     cdef MatOps ops       = mat.ops
     ops.destroy           = MatDestroy_Python
     ops.setfromoptions    = MatSetFromOptions_Python
@@ -494,7 +493,6 @@ cdef inline PetscErrorCode MatDestroy_Python_inner(
 cdef PetscErrorCode MatDestroy_Python(
     PetscMat mat,
     ) except PETSC_ERR_PYTHON nogil:
-
     FunctionBegin(b"MatDestroy_Python")
     CHKERR( PetscObjectComposeFunction(
             <PetscObject>mat, b"MatPythonSetType_C",
@@ -516,7 +514,6 @@ cdef PetscErrorCode MatSetFromOptions_Python(
     PetscOptionItems *PetscOptionsObject,
     ) except PETSC_ERR_PYTHON with gil:
     FunctionBegin(b"MatSetFromOptions_Python")
-    #
     cdef char name[2048], *defval = PyMat(mat).getname()
     cdef PetscBool found = PETSC_FALSE
     cdef PetscOptionItems *opts "PetscOptionsObject" = PetscOptionsObject
@@ -1251,7 +1248,6 @@ cdef PetscErrorCode PCCreate_Python(
     PetscPC pc,
     ) except PETSC_ERR_PYTHON with gil:
     FunctionBegin(b"PCCreate_Python")
-    #
     cdef PCOps ops          = pc.ops
     ops.reset               = PCReset_Python
     ops.destroy             = PCDestroy_Python
@@ -1308,7 +1304,6 @@ cdef PetscErrorCode PCSetUp_Python(
     PetscPC pc,
     ) except PETSC_ERR_PYTHON with gil:
     FunctionBegin(b"PCSetUp_Python")
-    #
     cdef char name[2048]
     cdef PetscBool found = PETSC_FALSE
     if PyPC(pc).self is None:
@@ -1360,7 +1355,6 @@ cdef PetscErrorCode PCSetFromOptions_Python(
     PetscOptionItems *PetscOptionsObject,
     ) except PETSC_ERR_PYTHON with gil:
     FunctionBegin(b"PCSetFromOptions_Python")
-    #
     cdef char name[2048], *defval = PyPC(pc).getname()
     cdef PetscBool found = PETSC_FALSE
     cdef PetscOptionItems *opts "PetscOptionsObject" = PetscOptionsObject
@@ -1533,7 +1527,6 @@ cdef PetscErrorCode KSPCreate_Python(
     PetscKSP ksp,
     ) except PETSC_ERR_PYTHON with gil:
     FunctionBegin(b"KSPCreate_Python")
-    #
     cdef KSPOps ops    = ksp.ops
     ops.reset          = KSPReset_Python
     ops.destroy        = KSPDestroy_Python
@@ -1599,7 +1592,6 @@ cdef PetscErrorCode KSPSetUp_Python(
     PetscKSP ksp,
     ) except PETSC_ERR_PYTHON with gil:
     FunctionBegin(b"KSPSetUp_Python")
-    #
     cdef char name[2048]
     cdef PetscBool found = PETSC_FALSE
     if PyKSP(ksp).self is None:
@@ -1643,7 +1635,6 @@ cdef PetscErrorCode KSPSetFromOptions_Python(
     PetscOptionItems *PetscOptionsObject
     ) except PETSC_ERR_PYTHON with gil:
     FunctionBegin(b"KSPSetFromOptions_Python")
-    #
     cdef char name[2048], *defval = PyKSP(ksp).getname()
     cdef PetscBool found = PETSC_FALSE
     cdef PetscOptionItems *opts "PetscOptionsObject" = PetscOptionsObject
@@ -1728,7 +1719,6 @@ cdef PetscErrorCode KSPSolve_Python_default(
     PetscVec X,
     ) except PETSC_ERR_PYTHON with gil:
     FunctionBegin(b"KSPSolve_Python_default")
-    #
     cdef PetscVec t = NULL
     CHKERR( PetscObjectQuery(
             <PetscObject>ksp,
@@ -1879,7 +1869,6 @@ cdef PetscErrorCode SNESCreate_Python(
     PetscSNES snes,
     ) except PETSC_ERR_PYTHON with gil:
     FunctionBegin(b"SNESCreate_Python")
-    #
     cdef SNESOps ops   = snes.ops
     cdef PetscSNESLineSearch ls = NULL
     ops.reset          = SNESReset_Python
@@ -1976,7 +1965,6 @@ cdef PetscErrorCode SNESSetFromOptions_Python(
     PetscOptionItems *PetscOptionsObject,
     ) except PETSC_ERR_PYTHON with gil:
     FunctionBegin(b"SNESSetFromOptions_Python")
-    #
     cdef char name[2048], *defval = PySNES(snes).getname()
     cdef PetscBool found = PETSC_FALSE
     cdef PetscOptionItems *opts "PetscOptionsObject" = PetscOptionsObject
@@ -2024,7 +2012,6 @@ cdef PetscErrorCode SNESSolve_Python_default(
     PetscSNES snes,
     ) except PETSC_ERR_PYTHON with gil:
     FunctionBegin(b"SNESSolve_Python_default")
-    #
     cdef PetscVec X=NULL, F=NULL, Y=NULL
     cdef PetscSNESLineSearch ls
     CHKERR( SNESGetSolution(snes, &X) )
@@ -2211,7 +2198,6 @@ cdef PetscErrorCode TSCreate_Python(
     PetscTS ts,
     ) except PETSC_ERR_PYTHON with gil:
     FunctionBegin(b"TSCreate_Python")
-    #
     cdef TSOps ops     = ts.ops
     ops.reset          = TSReset_Python
     ops.destroy        = TSDestroy_Python
@@ -2269,7 +2255,6 @@ cdef PetscErrorCode TSSetUp_Python(
     PetscTS ts,
     ) except PETSC_ERR_PYTHON with gil:
     FunctionBegin(b"TSSetUp_Python")
-    #
     cdef PetscVec vec_update = NULL
     CHKERR( VecDuplicate(ts.vec_sol, &vec_update) )
     CHKERR( PetscObjectCompose(<PetscObject>ts,
@@ -2404,7 +2389,7 @@ cdef PetscErrorCode SNESTSFormFunction_Python(
     PetscVec  f,
     PetscTS   ts,
     ) except PETSC_ERR_PYTHON with gil:
-    #
+    FunctionBegin(b"SNESTSFormFunction _Python")
     cdef formSNESFunction = PyTS(ts).formSNESFunction
     if formSNESFunction is not None:
         args = (SNES_(snes), Vec_(x), Vec_(f), TS_(ts))
@@ -2431,7 +2416,7 @@ cdef PetscErrorCode SNESTSFormJacobian_Python(
     PetscMat  B,
     PetscTS   ts,
     ) except PETSC_ERR_PYTHON with gil:
-    #
+    FunctionBegin(b"SNESTSFormJacobian _Python")
     cdef formSNESJacobian = PyTS(ts).formSNESJacobian
     if formSNESJacobian is not None:
         args = (SNES_(snes), Vec_(x), Mat_(A), Mat_(B), TS_(ts))
@@ -2457,7 +2442,6 @@ cdef PetscErrorCode TSSolveStep_Python(
     PetscVec  x,
     ) except PETSC_ERR_PYTHON with gil:
     FunctionBegin(b"TSSolveStep_Python")
-    #
     cdef solveStep = PyTS(ts).solveStep
     if solveStep is not None:
         solveStep(TS_(ts), <double>t, Vec_(x))
@@ -2614,7 +2598,6 @@ cdef PetscErrorCode TaoCreate_Python(
     PetscTAO tao,
     ) except PETSC_ERR_PYTHON with gil:
     FunctionBegin(b"TaoCreate_Python")
-    #
     cdef TaoOps ops    = tao.ops
     ops.destroy        = TaoDestroy_Python
     ops.view           = TaoView_Python
@@ -2692,7 +2675,6 @@ cdef PetscErrorCode TaoSetFromOptions_Python(
     PetscOptionItems *PetscOptionsObject,
     ) except PETSC_ERR_PYTHON with gil:
     FunctionBegin(b"TaoSetFromOptions_Python")
-    #
     cdef char name[2048], *defval = PyTao(tao).getname()
     cdef PetscBool found = PETSC_FALSE
     cdef PetscOptionItems *opts "PetscOptionsObject" = PetscOptionsObject
@@ -2723,7 +2705,6 @@ cdef PetscErrorCode TaoSolve_Python(
     PetscTAO tao,
     ) except PETSC_ERR_PYTHON with gil:
     FunctionBegin(b"TaoSolve_Python")
-    #
     tao.niter = 0
     tao.ksp_its = 0
     tao.reason = TAO_CONTINUE_ITERATING
@@ -2740,7 +2721,6 @@ cdef PetscErrorCode TaoSolve_Python_default(
     PetscTAO tao,
     ) except PETSC_ERR_PYTHON with gil:
     FunctionBegin(b"TaoSolve_Python_default")
-    #
     cdef PetscVec X = NULL, G = NULL, S = NULL
     CHKERR( TaoGetVecs(tao, &X, &G, &S) )
     #
