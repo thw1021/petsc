@@ -209,7 +209,7 @@ cdef class _PyObj:
             ctx[0] = NULL
         return 0
 
-    cdef int setname(self, char name[]) except -1:
+    cdef int setname(self, const char name[]) except -1:
         if name != NULL and name[0] != 0:
             self.name = name
         else:
@@ -245,7 +245,7 @@ cdef class _PyObj:
             return self.name
         return NULL
 
-cdef createcontext(char name_p[]):
+cdef createcontext(const char name_p[]):
     if name_p == NULL: return None
     cdef name = bytes2str(name_p)
     cdef mod
@@ -364,7 +364,7 @@ cdef public PetscErrorCode MatPythonSetContext(PetscMat mat, void *ctx) \
     PyMat(mat).setcontext(ctx, Mat_(mat))
     return FunctionEnd()
 
-cdef PetscErrorCode MatPythonSetType_PYTHON(PetscMat mat, char name[]) \
+cdef PetscErrorCode MatPythonSetType_PYTHON(PetscMat mat, const char *name) \
     except PETSC_ERR_PYTHON with gil:
     FunctionBegin(b"MatPythonSetType_PYTHON")
     if name == NULL: return FunctionEnd() # XXX
@@ -1229,7 +1229,7 @@ cdef public PetscErrorCode PCPythonSetContext(PetscPC pc, void *ctx) \
     PyPC(pc).setcontext(ctx, PC_(pc))
     return FunctionEnd()
 
-cdef PetscErrorCode PCPythonSetType_PYTHON(PetscPC pc, char name[]) \
+cdef PetscErrorCode PCPythonSetType_PYTHON(PetscPC pc, const char *name) \
     except PETSC_ERR_PYTHON with gil:
     FunctionBegin(b"PCPythonSetType_PYTHON")
     if name == NULL: return FunctionEnd() # XXX
@@ -1508,7 +1508,7 @@ cdef public PetscErrorCode KSPPythonSetContext(PetscKSP ksp, void *ctx) \
     PyKSP(ksp).setcontext(ctx, KSP_(ksp))
     return FunctionEnd()
 
-cdef PetscErrorCode KSPPythonSetType_PYTHON(PetscKSP ksp, char name[]) \
+cdef PetscErrorCode KSPPythonSetType_PYTHON(PetscKSP ksp, const char *name) \
     except PETSC_ERR_PYTHON with gil:
     FunctionBegin(b"KSPPythonSetType_PYTHON")
     if name == NULL: return FunctionEnd() # XXX
@@ -1850,7 +1850,7 @@ cdef public PetscErrorCode SNESPythonSetContext(PetscSNES snes, void *ctx) \
     PySNES(snes).setcontext(ctx, SNES_(snes))
     return FunctionEnd()
 
-cdef PetscErrorCode SNESPythonSetType_PYTHON(PetscSNES snes, char name[]) \
+cdef PetscErrorCode SNESPythonSetType_PYTHON(PetscSNES snes, const char *name) \
     except PETSC_ERR_PYTHON with gil:
     FunctionBegin(b"SNESPythonSetType_PYTHON")
     if name == NULL: return FunctionEnd() # XXX
@@ -2179,7 +2179,7 @@ cdef public PetscErrorCode TSPythonSetContext(PetscTS ts, void *ctx) \
     PyTS(ts).setcontext(ctx, TS_(ts))
     return FunctionEnd()
 
-cdef PetscErrorCode TSPythonSetType_PYTHON(PetscTS ts, char name[]) \
+cdef PetscErrorCode TSPythonSetType_PYTHON(PetscTS ts, const char *name) \
     except PETSC_ERR_PYTHON with gil:
     FunctionBegin(b"TSPythonSetType_PYTHON")
     if name == NULL: return FunctionEnd() # XXX
@@ -2579,7 +2579,7 @@ cdef public PetscErrorCode TaoPythonSetContext(PetscTAO tao, void *ctx) \
     PyTao(tao).setcontext(ctx, TAO_(tao))
     return FunctionEnd()
 
-cdef PetscErrorCode TaoPythonSetType_PYTHON(PetscTAO tao, char name[]) \
+cdef PetscErrorCode TaoPythonSetType_PYTHON(PetscTAO tao, const char *name) \
     except PETSC_ERR_PYTHON with gil:
     FunctionBegin(b"TaoPythonSetType_PYTHON")
     if name == NULL: return FunctionEnd() # XXX
