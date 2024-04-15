@@ -41,7 +41,7 @@ cdef class _DMComposite_access:
         CHKERR( VecDestroy(&self.gvec) )
 
     def __enter__(self):
-        cdef Py_ssize_t i, n = self.nlocs
+        cdef Py_ssize_t n = self.nlocs
         CHKERR( DMCompositeGetAccessArray(self.dm, self.gvec, self.nlocs, self.locs, self.vecs) )
         self.access = [ref_Vec(self.vecs[i]) for i from 0 <= i < n]
         return tuple(self.access)

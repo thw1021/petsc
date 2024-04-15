@@ -75,12 +75,12 @@ cdef getopt_BoolArray(PetscOptions opt, const char *pre, const char *name, objec
     cdef PetscBool value[1024], *ivalue = value, *ivaluedeft = NULL
     cdef PetscInt nmax = 1024, ndeft = 0
     cdef PetscBool flag = PETSC_FALSE
-    cdef object dummy
+    cdef object unused
     if deft is not None:
         deft = [toBool(asBool(d)) for d in deft]
         deft = iarray_b(deft, &ndeft, &ivaluedeft)
         if ndeft > nmax:
-            dummy = oarray_b(empty_b(ndeft), &nmax, &ivalue)
+            unused = oarray_b(empty_b(ndeft), &nmax, &ivalue)
         memcpy(ivalue, ivaluedeft, <size_t>ndeft*sizeof(PetscBool))
     CHKERR( PetscOptionsGetBoolArray(opt, pre, name, ivalue, &nmax, &flag) )
     if flag==PETSC_TRUE: return array_b(nmax, ivalue).astype('bool')
@@ -99,11 +99,11 @@ cdef getopt_IntArray(PetscOptions opt, const char *pre, const char *name, object
     cdef PetscInt value[1024], *ivalue = value, *ivaluedeft = NULL
     cdef PetscInt nmax = 1024, ndeft = 0
     cdef PetscBool flag = PETSC_FALSE
-    cdef object dummy
+    cdef object unused
     if deft is not None:
         deft = iarray_i(deft, &ndeft, &ivaluedeft)
         if ndeft > nmax:
-            dummy = oarray_i(empty_i(ndeft), &nmax, &ivalue)
+            unused = oarray_i(empty_i(ndeft), &nmax, &ivalue)
         memcpy(ivalue, ivaluedeft, <size_t>ndeft*sizeof(PetscInt))
     CHKERR( PetscOptionsGetIntArray(opt, pre, name, ivalue, &nmax, &flag) )
     if flag==PETSC_TRUE: return array_i(nmax, ivalue)
@@ -122,11 +122,11 @@ cdef getopt_RealArray(PetscOptions opt, const char *pre, const char *name, objec
     cdef PetscReal value[1024], *ivalue = value, *ivaluedeft = NULL
     cdef PetscInt nmax = 1024, ndeft = 0
     cdef PetscBool flag = PETSC_FALSE
-    cdef object dummy
+    cdef object unused
     if deft is not None:
         deft = iarray_r(deft, &ndeft, &ivaluedeft)
         if ndeft > nmax:
-            dummy = oarray_r(empty_r(ndeft), &nmax, &ivalue)
+            unused = oarray_r(empty_r(ndeft), &nmax, &ivalue)
         memcpy(ivalue, ivaluedeft, <size_t>ndeft*sizeof(PetscReal))
     CHKERR( PetscOptionsGetRealArray(opt, pre, name, ivalue, &nmax, &flag) )
     if flag==PETSC_TRUE: return array_r(nmax, ivalue)
@@ -145,11 +145,11 @@ cdef getopt_ScalarArray(PetscOptions opt, const char *pre, const char *name, obj
     cdef PetscScalar value[1024], *ivalue = value, *ivaluedeft = NULL
     cdef PetscInt nmax = 1024, ndeft = 0
     cdef PetscBool flag = PETSC_FALSE
-    cdef object dummy
+    cdef object unused
     if deft is not None:
         deft = iarray_s(deft, &ndeft, &ivaluedeft)
         if ndeft > nmax:
-            dummy = oarray_s(empty_s(ndeft), &nmax, &ivalue)
+            unused = oarray_s(empty_s(ndeft), &nmax, &ivalue)
         memcpy(ivalue, ivaluedeft, <size_t>ndeft*sizeof(PetscScalar))
     CHKERR( PetscOptionsGetScalarArray(opt, pre, name, ivalue, &nmax, &flag) )
     if flag==PETSC_TRUE: return array_s(nmax, ivalue)
@@ -195,7 +195,7 @@ cdef getpair(prefix, name, const char **pr, const char **nm):
 cdef getopt(PetscOptions opt, PetscOptType otype, prefix, name, deft):
     cdef const char *pr = NULL
     cdef const char *nm = NULL
-    tmp = getpair(prefix, name, &pr, &nm)
+    cdef object unused = getpair(prefix, name, &pr, &nm)
     if otype == OPT_BOOL        : return getopt_Bool        (opt, pr, nm, deft)
     if otype == OPT_BOOLARRAY   : return getopt_BoolArray   (opt, pr, nm, deft)
     if otype == OPT_INT         : return getopt_Int         (opt, pr, nm, deft)

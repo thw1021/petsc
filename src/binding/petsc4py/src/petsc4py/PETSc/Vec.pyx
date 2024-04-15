@@ -997,10 +997,11 @@ cdef class Vec(Object):
         cdef PetscInt n = <PetscInt>m
         cdef PetscVec *cvecs  = NULL
         cdef PetscIS  *cisets = NULL
-        _tmp1 = oarray_p(empty_p(n), NULL, <void**>&cvecs)
+        cdef object unused1, unused2
+        unused1 = oarray_p(empty_p(n), NULL, <void**>&cvecs)
         for i from 0 <= i < m: cvecs[i] = (<Vec?>vecs[i]).vec
         if isets is not None:
-            _tmp2 = oarray_p(empty_p(n), NULL, <void**>&cisets)
+            unused2 = oarray_p(empty_p(n), NULL, <void**>&cisets)
             for i from 0 <= i < m: cisets[i] = (<IS?>isets[i]).iset
         cdef PetscVec newvec = NULL
         CHKERR( VecCreateNest(ccomm, n, cisets, cvecs, &newvec) )
@@ -1602,7 +1603,7 @@ cdef class Vec(Object):
         petsc.VecGetOffloadMask, petsc.PetscOffloadMask
 
         """
-        cdef PetscOffloadMask mask
+        cdef PetscOffloadMask mask = PETSC_OFFLOAD_UNALLOCATED
         CHKERR( VecGetOffloadMask(self.vec, &mask) )
         return mask
 
@@ -1937,7 +1938,7 @@ cdef class Vec(Object):
         cdef PetscVec *v=NULL
         cdef PetscScalar *val=NULL
         cdef Py_ssize_t i=0
-        _tmp = oarray_p(empty_p(nv), NULL, <void**>&v)
+        cdef object unused = oarray_p(empty_p(nv), NULL, <void**>&v)
         for i from 0 <= i < nv:
             v[i] = (<Vec?>(vecs[i])).vec
         if out is None:
@@ -1970,7 +1971,7 @@ cdef class Vec(Object):
         cdef PetscVec *v=NULL
         cdef PetscScalar *val=NULL
         cdef Py_ssize_t i=0
-        _tmp = oarray_p(empty_p(nv), NULL, <void**>&v)
+        cdef object unused = oarray_p(empty_p(nv), NULL, <void**>&v)
         for i from 0 <= i < nv:
             v[i] = (<Vec?>(vecs[i])).vec
         out = oarray_s(out, &no, &val)
@@ -2000,7 +2001,7 @@ cdef class Vec(Object):
         cdef PetscVec *v=NULL
         cdef PetscScalar *val=NULL
         cdef Py_ssize_t i=0
-        _tmp = oarray_p(empty_p(nv), NULL, <void**>&v)
+        cdef object unused = oarray_p(empty_p(nv), NULL, <void**>&v)
         for i from 0 <= i < nv:
             v[i] = (<Vec?>(vecs[i])).vec
         out = oarray_s(out, &no, &val)
@@ -2031,7 +2032,7 @@ cdef class Vec(Object):
         cdef PetscVec *v=NULL
         cdef PetscScalar *val=NULL
         cdef Py_ssize_t i=0
-        _tmp = oarray_p(empty_p(nv), NULL, <void**>&v)
+        cdef object unused = oarray_p(empty_p(nv), NULL, <void**>&v)
         for i from 0 <= i < nv:
             v[i] = (<Vec?>(vecs[i])).vec
         if out is None:
@@ -2064,7 +2065,7 @@ cdef class Vec(Object):
         cdef PetscVec *v=NULL
         cdef PetscScalar *val=NULL
         cdef Py_ssize_t i=0
-        _tmp = oarray_p(empty_p(nv), NULL, <void**>&v)
+        cdef object unused = oarray_p(empty_p(nv), NULL, <void**>&v)
         for i from 0 <= i < nv:
             v[i] = (<Vec?>(vecs[i])).vec
         out = oarray_s(out, &no, &val)
@@ -2094,7 +2095,7 @@ cdef class Vec(Object):
         cdef PetscVec *v=NULL
         cdef PetscScalar *val=NULL
         cdef Py_ssize_t i=0
-        _tmp = oarray_p(empty_p(nv), NULL, <void**>&v)
+        cdef object unused = oarray_p(empty_p(nv), NULL, <void**>&v)
         for i from 0 <= i < nv:
             v[i] = (<Vec?>(vecs[i])).vec
         out = oarray_s(out, &no, &val)
@@ -2608,8 +2609,8 @@ cdef class Vec(Object):
         cdef PetscInt n = 0
         cdef PetscScalar *a = NULL
         cdef PetscVec *v = NULL
-        _tmp1 = iarray_s(alphas, &n, &a)
-        _tmp2 = oarray_p(empty_p(n), NULL, <void**>&v)
+        cdef object unused1 = iarray_s(alphas, &n, &a)
+        cdef object unused2 = oarray_p(empty_p(n), NULL, <void**>&v)
         assert n == len(vecs)
         cdef Py_ssize_t i=0
         for i from 0 <= i < n:
@@ -3512,7 +3513,7 @@ cdef class Vec(Object):
         idxm = iarray_i(idxm, &N, &cidxm)
 
         cdef PetscVec* csx = NULL
-        _tmp = oarray_p(empty_p(N), NULL, <void**>&csx)
+        cdef object unused = oarray_p(empty_p(N), NULL, <void**>&csx)
         for i from 0 <= i < N: csx[i] = (<Vec?>sx[i]).vec
 
         CHKERR( VecNestSetSubVecs(self.vec, N, cidxm, csx) )
