@@ -20,9 +20,10 @@ PETSC_EXTERN PetscErrorCode SNESCreate_Anderson(SNES);
 PETSC_EXTERN PetscErrorCode SNESCreate_ASPIN(SNES);
 PETSC_EXTERN PetscErrorCode SNESCreate_Composite(SNES);
 PETSC_EXTERN PetscErrorCode SNESCreate_Patch(SNES);
+PETSC_EXTERN PetscErrorCode SNESCreate_NEWTONAL(SNES);
 
-const char *SNESConvergedReasons_Shifted[] = {" ", "DIVERGED_TR_DELTA", "DIVERGED_JACOBIAN_DOMAIN", "DIVERGED_DTOL", "DIVERGED_LOCAL_MIN", "DIVERGED_INNER", "DIVERGED_LINE_SEARCH", "DIVERGED_MAX_IT", "DIVERGED_FNORM_NAN", "DIVERGED_LINEAR_SOLVE", "DIVERGED_FUNCTION_COUNT", "DIVERGED_FUNCTION_DOMAIN", "CONVERGED_ITERATING", " ", "CONVERGED_FNORM_ABS", "CONVERGED_FNORM_RELATIVE", "CONVERGED_SNORM_RELATIVE", "CONVERGED_ITS", " ", "SNESConvergedReason", "", NULL};
-const char *const *SNESConvergedReasons = SNESConvergedReasons_Shifted + 12;
+const char *SNESConvergedReasons_Shifted[] = {" ", "DIVERGED_AL_STEP_SIZE", "DIVERGED_TR_DELTA", "DIVERGED_JACOBIAN_DOMAIN", "DIVERGED_DTOL", "DIVERGED_LOCAL_MIN", "DIVERGED_INNER", "DIVERGED_LINE_SEARCH", "DIVERGED_MAX_IT", "DIVERGED_FNORM_NAN", "DIVERGED_LINEAR_SOLVE", "DIVERGED_FUNCTION_COUNT", "DIVERGED_FUNCTION_DOMAIN", "CONVERGED_ITERATING", " ", "CONVERGED_FNORM_ABS", "CONVERGED_FNORM_RELATIVE", "CONVERGED_SNORM_RELATIVE", "CONVERGED_ITS", " ", "SNESConvergedReason", "", NULL};
+const char *const *SNESConvergedReasons = SNESConvergedReasons_Shifted + 13;
 
 const char              *SNESNormSchedules_Shifted[] = {"DEFAULT", "NONE", "ALWAYS", "INITIALONLY", "FINALONLY", "INITIALFINALONLY", "SNESNormSchedule", "SNES_NORM_", NULL};
 const char *const *const SNESNormSchedules           = SNESNormSchedules_Shifted + 1;
@@ -65,6 +66,7 @@ PetscErrorCode SNESRegisterAll(void)
   PetscCall(SNESRegister(SNESASPIN, SNESCreate_ASPIN));
   PetscCall(SNESRegister(SNESCOMPOSITE, SNESCreate_Composite));
   PetscCall(SNESRegister(SNESPATCH, SNESCreate_Patch));
+  PetscCall(SNESRegister(SNESNEWTONAL, SNESCreate_NEWTONAL));
 
   PetscCall(KSPMonitorRegister("snes_preconditioned_residual", PETSCVIEWERASCII, PETSC_VIEWER_DEFAULT, KSPMonitorSNESResidual, NULL, NULL));
   PetscCall(KSPMonitorRegister("snes_preconditioned_residual", PETSCVIEWERDRAW, PETSC_VIEWER_DRAW_LG, KSPMonitorSNESResidualDrawLG, KSPMonitorSNESResidualDrawLGCreate, NULL));

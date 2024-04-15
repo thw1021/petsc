@@ -48,6 +48,7 @@ typedef const char *SNESType;
 #define SNESASPIN            "aspin"
 #define SNESCOMPOSITE        "composite"
 #define SNESPATCH            "patch"
+#define SNESNEWTONAL         "newtonal"
 
 /* Logging support */
 PETSC_EXTERN PetscClassId SNES_CLASSID;
@@ -324,6 +325,7 @@ typedef enum {                       /* converged */
   SNES_DIVERGED_JACOBIAN_DOMAIN      = -10, /* Jacobian calculation does not make sense */
   SNES_DIVERGED_TR_DELTA             = -11,
   SNES_CONVERGED_TR_DELTA_DEPRECATED = -11,
+  SNES_DIVERGED_AL_STEP_SIZE         = -12, /* Quadratic control region too small */
 
   SNES_CONVERGED_ITERATING = 0
 } SNESConvergedReason;
@@ -928,6 +930,8 @@ PETSC_EXTERN PetscErrorCode DMSNESSetFunctionContextDestroy(DM, PetscErrorCode (
 PETSC_EXTERN PetscErrorCode DMSNESSetMFFunction(DM, SNESFunctionFn *, void *);
 PETSC_EXTERN PetscErrorCode DMSNESSetNGS(DM, SNESNGSFn *, void *);
 PETSC_EXTERN PetscErrorCode DMSNESGetNGS(DM, SNESNGSFn **, void **);
+PETSC_EXTERN PetscErrorCode DMSNESSetNewtonAL(DM, SNESFunctionFn *, void *);
+PETSC_EXTERN PetscErrorCode DMSNESGetNewtonAL(DM, SNESFunctionFn **, void **);
 PETSC_EXTERN PetscErrorCode DMSNESSetJacobian(DM, SNESJacobianFn *, void *);
 PETSC_EXTERN PetscErrorCode DMSNESGetJacobian(DM, SNESJacobianFn **, void **);
 PETSC_EXTERN PetscErrorCode DMSNESSetJacobianContextDestroy(DM, PetscErrorCode (*)(void *));
@@ -1264,3 +1268,9 @@ PETSC_EXTERN PetscErrorCode DMSNESCheckJacobian(SNES, DM, Vec, PetscReal, PetscB
 PETSC_EXTERN PetscErrorCode DMSNESCheckFromOptions(SNES, Vec);
 PETSC_EXTERN PetscErrorCode DMSNESComputeJacobianAction(DM, Vec, Vec, Vec, void *);
 PETSC_EXTERN PetscErrorCode DMSNESCreateJacobianMF(DM, Vec, void *, Mat *);
+
+/* routines for SNES_NEWTONAL */
+PETSC_EXTERN PetscErrorCode SNESSetNewtonAL(SNES, SNESFunctionFn *, void *ctx);
+PETSC_EXTERN PetscErrorCode SNESGetNewtonAL(SNES, SNESFunctionFn **, void **ctx);
+PETSC_EXTERN PetscErrorCode SNESComputeNewtonAL(SNES, Vec, Vec);
+PETSC_EXTERN PetscErrorCode SNESNewtonALGetLoadParameter(SNES, PetscReal *);

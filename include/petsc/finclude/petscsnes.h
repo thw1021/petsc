@@ -38,6 +38,7 @@
 #define SNESNEWTONLS         'newtonls'
 #define SNESNEWTONTR         'newtontr'
 #define SNESNEWTONTRDC       'newtontrdc'
+#define SNESNEWTONAL         'newtonal'
 #define SNESPYTHON           'python'
 #define SNESNRICHARDSON      'nrichardson'
 #define SNESKSPONLY          'ksponly'

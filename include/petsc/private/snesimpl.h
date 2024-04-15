@@ -191,6 +191,9 @@ struct _DMSNESOps {
   /* User-defined smoother */
   SNESNGSFn *computegs;
 
+  /* Arc length function */
+  SNESFunctionFn *computealfunction;
+
   PetscErrorCode (*destroy)(DMSNES);
   PetscErrorCode (*duplicate)(DMSNES, DMSNES);
 };
@@ -233,6 +236,7 @@ struct _p_DMSNES {
   void          *mffunctionctx;
   void          *gsctx;
   void          *pctx;
+  void          *alctx;
   void          *objectivectx;
 
   void *data;
@@ -298,6 +302,7 @@ PETSC_EXTERN PetscLogEvent SNES_FunctionEval;
 PETSC_EXTERN PetscLogEvent SNES_JacobianEval;
 PETSC_EXTERN PetscLogEvent SNES_NGSEval;
 PETSC_EXTERN PetscLogEvent SNES_NGSFuncEval;
+PETSC_EXTERN PetscLogEvent SNES_NewtonALEval;
 PETSC_EXTERN PetscLogEvent SNES_NPCSolve;
 PETSC_EXTERN PetscLogEvent SNES_ObjectiveEval;
 

@@ -546,6 +546,72 @@ PetscErrorCode DMSNESGetNGS(DM dm, PetscErrorCode (**f)(SNES, Vec, Vec, void *),
 }
 
 /*@C
+  DMSNESSetNewtonAL - set `SNES` arc length tangent load function into a `DMSNES` object
+
+  Not Collective
+
+  Input Parameters:
++ dm  - `DM` to be used with `SNES`
+. f   - tangent load function, see `SNESSetNewtonAL`
+- ctx - context for residual evaluation
+
+  Level: developer
+
+  Note:
+  `SNESSetNewtonAL()` is normally used, but it calls this function internally because the user context 
+  is actually associated with the `DM`.  This makes the interface consistent regardless of whether the user interacts with a
+ `DM` or not.
+
+  Developer Note:
+  If `DM` took a more central role at some later date, this could become the primary method of supplying the function
+
+.seealso: [](ch_snes), `DMSNES`, `DMSNESSetJacobian()`, `DMSNESSetFunction()`, `DMSNESSetNewtonAL()`, `SNESSetNewtonAL()`
+@*/
+PetscErrorCode DMSNESSetNewtonAL(DM dm, SNESFunctionFn *f, void *ctx)
+{
+  DMSNES sdm;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
+  if (f || ctx) PetscCall(DMGetDMSNESWrite(dm, &sdm));
+  if (f) sdm->ops->computealfunction = f;
+  if (ctx) sdm->alctx = ctx;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  DMSNESGetNewtonAL - get `SNES` arc length tangent load function from a `DMSNES` object
+
+  Not Collective
+
+  Input Parameter:
+. dm - `DM` to be used with `SNES`
+  
+  Output Parameters:
++ f   - tangent load function which computes the tangent load for the arc length method, see `SNESSetNewtonAL()`
+- ctx - context for residual evaluation
+
+  Level: developer
+
+  Note:
+  `SNESGetNewtonAL()` is normally used, but it calls this function internally because the user context is actually
+  associated with the `DM`.
+
+.seealso: [](ch_snes), `DMSNES`, `DMSNESSetJacobian()`, `DMSNESSetFunction()`, `DMSNESSetNewtonAL()`, `SNESGetNewtonAL()`
+@*/
+PetscErrorCode DMSNESGetNewtonAL(DM dm, SNESFunctionFn **f, void **ctx)
+{
+  DMSNES sdm;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
+  PetscCall(DMGetDMSNES(dm, &sdm));
+  if (f) *f = sdm->ops->computealfunction;
+  if (ctx) *ctx = sdm->alctx;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
   DMSNESSetJacobian - set `SNES` Jacobian evaluation function into a `DMSNES` object
 
   Not Collective

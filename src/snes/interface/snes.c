@@ -10,7 +10,7 @@ PetscFunctionList SNESList              = NULL;
 
 /* Logging support */
 PetscClassId  SNES_CLASSID, DMSNES_CLASSID;
-PetscLogEvent SNES_Solve, SNES_SetUp, SNES_FunctionEval, SNES_JacobianEval, SNES_NGSEval, SNES_NGSFuncEval, SNES_NPCSolve, SNES_ObjectiveEval;
+PetscLogEvent SNES_Solve, SNES_SetUp, SNES_FunctionEval, SNES_JacobianEval, SNES_NGSEval, SNES_NGSFuncEval, SNES_NewtonALEval, SNES_NPCSolve, SNES_ObjectiveEval;
 
 /*@
   SNESSetErrorIfNotConverged - Causes `SNESSolve()` to generate an error immediately if the solver has not converged.
@@ -2507,6 +2507,55 @@ PetscErrorCode SNESComputeNGS(SNES snes, Vec b, Vec x)
   PetscCallBack("SNES callback NGS", (*sdm->ops->computegs)(snes, x, b, sdm->gsctx));
   if (b) PetscCall(VecLockReadPop(b));
   PetscCall(PetscLogEventEnd(SNES_NGSEval, snes, x, b, 0));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  SNESComputeNewtonAL - Calls the function that has been set with `SNESSetNewtonAL()`.
+
+  Collective
+
+  Input Parameters:
++ snes - the `SNES` context
+- X    - input vector
+
+  Output Parameter:
+. Q - tangent load vector, as set by `SNESSetNewtonAL()`
+
+  Level: developer
+
+  Notes:
+  `SNESComputeNewtonAL()` is typically used within nonlinear solvers
+  implementations, so users would not generally call this routine themselves.
+
+.seealso: [](ch_snes), `SNES`, `SNESSetNewtonAL()`, `SNESGetNewtonAL()`
+@*/
+PetscErrorCode SNESComputeNewtonAL(SNES snes, Vec X, Vec Q)
+{
+  DM     dm;
+  DMSNES sdm;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
+  PetscValidHeaderSpecific(X, VEC_CLASSID, 2);
+  PetscValidHeaderSpecific(Q, VEC_CLASSID, 3);
+  PetscCheckSameComm(snes, 1, X, 2);
+  PetscCheckSameComm(snes, 1, Q, 3);
+  PetscCall(VecValidValues_Internal(X, 2, PETSC_TRUE));
+
+  PetscCall(PetscLogEventBegin(SNES_NewtonALEval, snes, X, Q, 0));
+  PetscCall(SNESGetDM(snes, &dm));
+  PetscCall(DMGetDMSNES(dm, &sdm));
+  PetscCall(VecLockReadPush(X));
+  {
+    void           *ctx;
+    SNESFunctionFn *computealfunction;
+    PetscCall(DMSNESGetFunction(dm, &computealfunction, &ctx));
+    PetscCheck(computealfunction, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Must call SNESSetNewtonAL() before SNESComputeNewtonAL(), likely called from SNESSolve().");
+    PetscCallBack("SNES callback NewtonAL tangent load function", (*computealfunction)(snes, X, Q, ctx));
+  }
+  PetscCall(VecLockReadPop(X));
+  PetscCall(PetscLogEventEnd(SNES_NewtonALEval, snes, X, Q, 0));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
