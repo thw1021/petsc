@@ -433,7 +433,6 @@ cdef PetscErrorCode DMSHELL_CreateDomainDecompositionScatters(
 
     cdef DM Dm = subtype_DM(dm)()
     cdef int i
-    cdef const char *cname = NULL
     cdef DM subdm = None
 
     Dm.dm = dm

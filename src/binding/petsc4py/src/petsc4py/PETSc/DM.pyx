@@ -1239,7 +1239,7 @@ cdef class DM(Object):
         petsc.DMGetBoundingBox
 
         """
-        cdef PetscInt i, dim=0
+        cdef PetscInt dim=0
         CHKERR( DMGetCoordinateDim(self.dm, &dim) )
         cdef PetscReal gmin[3], gmax[3]
         CHKERR( DMGetBoundingBox(self.dm, gmin, gmax) )
@@ -1256,7 +1256,7 @@ cdef class DM(Object):
         petsc.DMGetLocalBoundingBox
 
         """
-        cdef PetscInt i, dim=0
+        cdef PetscInt dim=0
         CHKERR( DMGetCoordinateDim(self.dm, &dim) )
         cdef PetscReal lmin[3], lmax[3]
         CHKERR( DMGetLocalBoundingBox(self.dm, lmin, lmax) )
@@ -1483,7 +1483,7 @@ cdef class DM(Object):
         """
         cdef PetscInt i, n = asInt(nlevels)
         cdef PetscDM *newdmf = NULL
-        _tmp = oarray_p(empty_p(n), NULL, <void**>&newdmf)
+        cdef object unused = oarray_p(empty_p(n), NULL, <void**>&newdmf)
         CHKERR( DMRefineHierarchy(self.dm, n, newdmf) )
         cdef DM dmf = None
         cdef list hierarchy = []
@@ -1510,7 +1510,7 @@ cdef class DM(Object):
         """
         cdef PetscInt i, n = asInt(nlevels)
         cdef PetscDM *newdmc = NULL
-        _tmp = oarray_p(empty_p(n), NULL, <void**>&newdmc)
+        cdef object unused = oarray_p(empty_p(n), NULL, <void**>&newdmc)
         CHKERR( DMCoarsenHierarchy(self.dm, n, newdmc) )
         cdef DM dmc = None
         cdef list hierarchy = []

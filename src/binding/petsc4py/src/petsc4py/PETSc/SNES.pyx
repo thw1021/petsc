@@ -263,7 +263,7 @@ cdef class SNES(Object):
 
     def getApplicationContext(self) -> Any:
         """Return the application context."""
-        cdef void *ctx
+        cdef void *ctx = NULL
         appctx = self.get_attr('__appctx__')
         if appctx is None:
             CHKERR( SNESGetApplicationContext(self.snes, &ctx) )
@@ -735,8 +735,8 @@ cdef class SNES(Object):
 
         """
         cdef Vec f = Vec()
-        cdef void* ctx
-        cdef PetscErrorCode (*fun)(PetscSNES, PetscVec, PetscVec, void*)
+        cdef void* ctx = NULL
+        cdef void* fun = NULL
         CHKERR( SNESGetFunction(self.snes, &f.vec, &fun, &ctx) )
         CHKERR( PetscINCREF(f.obj) )
         cdef object function = self.get_attr('__function__')
@@ -745,7 +745,7 @@ cdef class SNES(Object):
         if function is not None:
             return (f, function)
 
-        if ctx != NULL and <void*>SNES_Function == <void*>fun:
+        if ctx != NULL and <void*>SNES_Function == fun:
             context = <object>ctx
             if context is not None:
                 assert type(context) is tuple

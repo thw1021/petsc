@@ -430,7 +430,7 @@ cdef PetscErrorCode PetscVFPrintf_PythonStdStream(
     import sys
     cdef char cstring[8192]
     cdef size_t stringlen = sizeof(cstring)
-    cdef size_t final_pos
+    cdef size_t final_pos = 0
     if (fd == PETSC_STDOUT) and not (sys.stdout == sys.__stdout__):
         CHKERR( PetscVSNPrintf(&cstring[0], stringlen, fmt, &final_pos, ap))
         if final_pos > 0 and cstring[final_pos-1] == '\x00':

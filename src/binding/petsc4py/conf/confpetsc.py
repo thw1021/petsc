@@ -178,6 +178,9 @@ def cython_run(
     args += [source]
     if target:
         args += ['--output-file', target]
+    extra = True
+    if extra:
+        args += ['-Wextra', '-Werror']
     err = cythonize(args)
     if err:
         raise DistutilsError(f"Cython failure: '{source}' -> '{target}'")

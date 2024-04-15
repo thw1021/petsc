@@ -172,7 +172,7 @@ cdef class Device:
         type, petsc.PetscDeviceGetType
 
         """
-        cdef PetscDeviceType cdtype
+        cdef PetscDeviceType cdtype = PETSC_DEVICE_HOST
 
         CHKERR(PetscDeviceGetType(self.device, &cdtype))
         return toDeviceType(cdtype)
@@ -439,7 +439,7 @@ cdef class DeviceContext(Object):
         cdef PetscInt                    nsub           = 0
         cdef PetscDeviceContextJoinMode  cjoin_mode     = asJoinMode(join_mode)
 
-        _tmp = oarray_p(py_sub_ctxs, &nsub, <void**>&np_subctx)
+        cdef object unused = oarray_p(py_sub_ctxs, &nsub, <void**>&np_subctx)
         try:
             CHKERR(PetscMalloc(<size_t>(nsub) * sizeof(PetscDeviceContext *), &np_subctx_copy))
             CHKERR(PetscMemcpy(np_subctx_copy, np_subctx, <size_t>(nsub) * sizeof(PetscDeviceContext *)))
