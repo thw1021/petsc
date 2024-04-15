@@ -86,6 +86,7 @@ Changes: Development
 - Add ``DMAdaptorMonitorRegister()``, ``DMAdaptorMonitorRegisterAll()``, ``DMAdaptorMonitorRegisterDestroy()``
 - Add ``DMAdaptorGetCriterion()`` and ``DMAdaptorSetCriterion()``
 - Add ``DMAdaptorSetOptionsPrefix()``
+- Add Newton's method with arc length continuation: ``SNESNEWTONAL``
 
 .. rubric:: SNESLineSearch:
 
