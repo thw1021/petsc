@@ -129,6 +129,7 @@ static PetscErrorCode MatAllocate_LMVMDQN(Mat B, Vec X, Vec F)
       }
       if (lqn->use_recursive && (is_dbfgs || is_ddfp)) {
         PetscCall(VecDuplicateVecs(X, lmvm->m, &lqn->PQ));
+        PetscCall(VecDuplicate(lmvm->Xprev, &lqn->column_work2));
         PetscCall(PetscMalloc1(lmvm->m, &lqn->yts));
         if (is_dbfgs) {
           PetscCall(PetscMalloc1(lmvm->m, &lqn->stp));
@@ -143,7 +144,6 @@ static PetscErrorCode MatAllocate_LMVMDQN(Mat B, Vec X, Vec F)
       PetscCall(VecZeroEntries(lqn->diag_vec));
     }
     PetscCall(VecDuplicate(lmvm->Xprev, &lqn->column_work));
-    if (is_dbfgs) PetscCall(VecDuplicate(lmvm->Xprev, &lqn->column_work2));
     if (!(lmvm->J0 || lmvm->user_pc || lmvm->user_ksp || lmvm->user_scale)) { PetscCall(MatLMVMAllocate(lqn->diag_qn, X, F)); }
     lmvm->allocated = PETSC_TRUE;
     B->preallocated = PETSC_TRUE;
@@ -1453,8 +1453,8 @@ static PetscErrorCode MatSolve_LMVMDDFP(Mat H, Vec F, Vec dX)
       /* column_work : S[i], column_work2 : Y[i] */
       PetscCall(MatGetColumnVector(ldfp->Sfull, ldfp->column_work, idx));
       PetscCall(MatGetColumnVector(ldfp->Yfull, ldfp->column_work2, idx));
-      PetscCall(VecDot(ldfp->column_work, dX, &ytx));
-      PetscCall(VecAXPBYPCZ(dX, -PetscRealPart(ytx) / ldfp->ytq[idx], PetscRealPart(stf) / ldfp->yts[i], 1.0, ldfp->PQ[idx], ldfp->column_work2));
+      PetscCall(VecDot(ldfp->column_work2, dX, &ytx));
+      PetscCall(VecAXPBYPCZ(dX, -PetscRealPart(ytx) / ldfp->ytq[idx], PetscRealPart(stf) / ldfp->yts[i], 1.0, ldfp->PQ[idx], ldfp->column_work));
     }
     PetscCall(VecRestoreArrayAndMemType(ldfp->rwork1, &workscalar));
   } else {
@@ -1606,7 +1606,7 @@ PetscErrorCode MatCreate_LMVMDDFP(Mat B)
   ldfp->max_seq_rejects = lmvm->m / 2;
   ldfp->strategy        = MAT_LMVM_DENSE_INPLACE;
   ldfp->scale_type      = MAT_LMVM_SYMBROYDEN_SCALE_DIAGONAL;
-  ldfp->use_recursive   = PETSC_FALSE;
+  ldfp->use_recursive   = PETSC_TRUE;
   ldfp->needPQ          = PETSC_TRUE;
 
   PetscCall(MatCreate(PetscObjectComm((PetscObject)B), &ldfp->diag_qn));
