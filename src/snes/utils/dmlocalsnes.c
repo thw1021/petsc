@@ -6,10 +6,12 @@ typedef struct {
   PetscErrorCode (*residuallocal)(DM, Vec, Vec, void *);
   PetscErrorCode (*jacobianlocal)(DM, Vec, Mat, Mat, void *);
   PetscErrorCode (*boundarylocal)(DM, Vec, void *);
+  PetscErrorCode (*newtonallocal)(DM, Vec, Vec, void *);
   void *objectivelocalctx;
   void *residuallocalctx;
   void *jacobianlocalctx;
   void *boundarylocalctx;
+  void *newtonallocalctx;
 } DMSNES_Local;
 
 static PetscErrorCode DMSNESDestroy_DMLocal(DMSNES sdm)
@@ -187,6 +189,49 @@ static PetscErrorCode SNESComputeJacobian_DMLocal(SNES snes, Vec X, Mat A, Mat B
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode SNESComputeNewtonAL_DMLocal(SNES snes, Vec X, Vec Q, void *ctx)
+{
+  DMSNES_Local *dmlocalsnes = (DMSNES_Local *)ctx;
+  DM            dm;
+  Vec           Xloc, Qloc;
+  PetscBool     transform;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
+  PetscValidHeaderSpecific(X, VEC_CLASSID, 2);
+  PetscValidHeaderSpecific(Q, VEC_CLASSID, 3);
+  PetscCall(SNESGetDM(snes, &dm));
+  PetscCall(DMGetLocalVector(dm, &Xloc));
+  PetscCall(DMGetLocalVector(dm, &Qloc));
+  PetscCall(VecZeroEntries(Xloc));
+  PetscCall(VecZeroEntries(Qloc));
+  /* Non-conforming routines needs boundary values before G2L */
+  if (dmlocalsnes->boundarylocal) PetscCall((*dmlocalsnes->boundarylocal)(dm, Xloc, dmlocalsnes->boundarylocalctx));
+  PetscCall(DMGlobalToLocalBegin(dm, X, INSERT_VALUES, Xloc));
+  PetscCall(DMGlobalToLocalEnd(dm, X, INSERT_VALUES, Xloc));
+  /* Need to reset boundary values if we transformed */
+  PetscCall(DMHasBasisTransform(dm, &transform));
+  if (transform && dmlocalsnes->boundarylocal) PetscCall((*dmlocalsnes->boundarylocal)(dm, Xloc, dmlocalsnes->boundarylocalctx));
+  CHKMEMQ;
+  PetscCall((*dmlocalsnes->newtonallocal)(dm, Xloc, Qloc, dmlocalsnes->newtonallocalctx));
+  CHKMEMQ;
+  PetscCall(VecZeroEntries(Q));
+  PetscCall(DMLocalToGlobalBegin(dm, Qloc, ADD_VALUES, Q));
+  PetscCall(DMLocalToGlobalEnd(dm, Qloc, ADD_VALUES, Q));
+  PetscCall(DMRestoreLocalVector(dm, &Qloc));
+  PetscCall(DMRestoreLocalVector(dm, &Xloc));
+  {
+    char     name[PETSC_MAX_PATH_LEN];
+    PetscInt it;
+
+    PetscCall(SNESGetIterationNumber(snes, &it));
+    PetscCall(PetscSNPrintf(name, PETSC_MAX_PATH_LEN, "Tangent Load, Iterate %d", (int)it));
+    PetscCall(PetscObjectSetName((PetscObject)Q, name));
+    PetscCall(VecViewFromOptions(Q, (PetscObject)snes, "-dmsnes_newtonal_vec_view"));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*@C
   DMSNESSetObjectiveLocal - set a local objective evaluation function. This function is called with local vector
   containing the local vector information PLUS ghost point information. It should compute a result for all local
@@ -335,6 +380,46 @@ PetscErrorCode DMSNESSetJacobianLocal(DM dm, PetscErrorCode (*func)(DM dm, Vec X
 }
 
 /*@C
+  DMSNESSetNewtonALLocal - set a local tangent laod evaluation function. This function is called with local vector
+  containing the local vector information PLUS ghost point information. It should compute a result for all local
+  elements and `DMSNES` will automatically accumulate the overlapping values. See `SNESSetNewtonAL()` for more
+  information on what the local function should compute.
+
+  Logically Collective
+
+  Input Parameters:
++ dm   - `DM` to associate callback with
+. func - local tangent load evaluation
+- ctx  - optional context for local tangent load evaluation
+
+  Calling sequence of `func`:
++ dm  - `DM` for the function
+. x   - vector to state at which to evaluate tangent load
+. f   - vector to hold the function evaluation
+- ctx - optional context passed above
+
+  Level: advanced
+
+.seealso: [](ch_snes), `SNESNEWTONAL`, `DMSNESSetNewtonAL()`, `DMSNESSetFunctionLocal()`, `DMSNESSetJacobianLocal()`
+@*/
+PetscErrorCode DMSNESSetNewtonALLocal(DM dm, PetscErrorCode (*func)(DM dm, Vec x, Vec f, void *ctx), void *ctx)
+{
+  DMSNES        sdm;
+  DMSNES_Local *dmlocalsnes;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
+  PetscCall(DMGetDMSNESWrite(dm, &sdm));
+  PetscCall(DMLocalSNESGetContext(dm, sdm, &dmlocalsnes));
+
+  dmlocalsnes->newtonallocal    = func;
+  dmlocalsnes->newtonallocalctx = ctx;
+
+  PetscCall(DMSNESSetFunction(dm, SNESComputeNewtonAL_DMLocal, dmlocalsnes));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
   DMSNESGetObjectiveLocal - get the local objective evaluation function information set with `DMSNESSetObjectiveLocal()`.
 
   Not Collective
@@ -451,5 +536,35 @@ PetscErrorCode DMSNESGetJacobianLocal(DM dm, PetscErrorCode (**func)(DM, Vec, Ma
   PetscCall(DMLocalSNESGetContext(dm, sdm, &dmlocalsnes));
   if (func) *func = dmlocalsnes->jacobianlocal;
   if (ctx) *ctx = dmlocalsnes->jacobianlocalctx;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  DMSNESGetNewtonALLocal - get the local tangent load evaluation function information set with `DMSNESSetNewtonALLocal()`.
+
+  Not Collective
+
+  Input Parameter:
+. dm - `DM` with the associated callback
+  
+    Output Parameters:
++ func - local tangent load evaluation
+- ctx  - context for local tangent load evaluation
+
+  Level: advanced
+
+.seealso: [](ch_snes), `DMSNESSetNewtonAL()`, `DMSNESSetNewtonALLocal()`, `DMSNESSetFunctionLocal()`
+@*/
+PetscErrorCode DMSNESGetNewtonALLocal(DM dm, PetscErrorCode (**func)(DM, Vec, Vec, void *), void **ctx)
+{
+  DMSNES        sdm;
+  DMSNES_Local *dmlocalsnes;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
+  PetscCall(DMGetDMSNES(dm, &sdm));
+  PetscCall(DMLocalSNESGetContext(dm, sdm, &dmlocalsnes));
+  if (func) *func = dmlocalsnes->newtonallocal;
+  if (ctx) *ctx = dmlocalsnes->newtonallocalctx;
   PetscFunctionReturn(PETSC_SUCCESS);
 }

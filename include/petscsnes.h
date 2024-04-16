@@ -953,19 +953,23 @@ PETSC_EXTERN PetscErrorCode DMDASNESSetFunctionLocal(DM, InsertMode, DMDASNESFun
 PETSC_EXTERN PetscErrorCode DMDASNESSetJacobianLocal(DM, DMDASNESJacobianFn *, void *);
 PETSC_EXTERN PetscErrorCode DMDASNESSetObjectiveLocal(DM, DMDASNESObjectiveFn *, void *);
 PETSC_EXTERN PetscErrorCode DMDASNESSetPicardLocal(DM, InsertMode, DMDASNESFunctionFn *, DMDASNESJacobianFn, void *);
+PETSC_EXTERN PetscErrorCode DMDASNESSetNewtonALLocal(DM, InsertMode, DMDASNESFunctionFn *, void *);
 
 PETSC_EXTERN PetscErrorCode DMDASNESSetFunctionLocalVec(DM, InsertMode, DMDASNESFunctionVecFn *, void *);
 PETSC_EXTERN PetscErrorCode DMDASNESSetJacobianLocalVec(DM, DMDASNESJacobianVecFn *, void *);
 PETSC_EXTERN PetscErrorCode DMDASNESSetObjectiveLocalVec(DM, DMDASNESObjectiveVecFn *, void *);
+PETSC_EXTERN PetscErrorCode DMDASNESSetNewtonALLocalVec(DM, InsertMode, DMDASNESFunctionVecFn *, void *);
 
 PETSC_EXTERN PetscErrorCode DMSNESSetBoundaryLocal(DM, PetscErrorCode (*)(DM, Vec, void *), void *);
 PETSC_EXTERN PetscErrorCode DMSNESSetObjectiveLocal(DM, PetscErrorCode (*)(DM, Vec, PetscReal *, void *), void *);
 PETSC_EXTERN PetscErrorCode DMSNESSetFunctionLocal(DM, PetscErrorCode (*)(DM, Vec, Vec, void *), void *);
 PETSC_EXTERN PetscErrorCode DMSNESSetJacobianLocal(DM, PetscErrorCode (*)(DM, Vec, Mat, Mat, void *), void *);
+PETSC_EXTERN PetscErrorCode DMSNESSetNewtonALLocal(DM, PetscErrorCode (*)(DM, Vec, Vec, void *), void *);
 PETSC_EXTERN PetscErrorCode DMSNESGetBoundaryLocal(DM, PetscErrorCode (**)(DM, Vec, void *), void **);
 PETSC_EXTERN PetscErrorCode DMSNESGetObjectiveLocal(DM, PetscErrorCode (**)(DM, Vec, PetscReal *, void *), void **);
 PETSC_EXTERN PetscErrorCode DMSNESGetFunctionLocal(DM, PetscErrorCode (**)(DM, Vec, Vec, void *), void **);
 PETSC_EXTERN PetscErrorCode DMSNESGetJacobianLocal(DM, PetscErrorCode (**)(DM, Vec, Mat, Mat, void *), void **);
+PETSC_EXTERN PetscErrorCode DMSNESGetNewtonALLocal(DM, PetscErrorCode (**)(DM, Vec, Vec, void *), void **);
 
 /* Routines for Multiblock solver */
 PETSC_EXTERN PetscErrorCode SNESMultiblockSetFields(SNES, const char[], PetscInt, const PetscInt *);
@@ -1274,3 +1278,30 @@ PETSC_EXTERN PetscErrorCode SNESSetNewtonAL(SNES, SNESFunctionFn *, void *ctx);
 PETSC_EXTERN PetscErrorCode SNESGetNewtonAL(SNES, SNESFunctionFn **, void **ctx);
 PETSC_EXTERN PetscErrorCode SNESComputeNewtonAL(SNES, Vec, Vec);
 PETSC_EXTERN PetscErrorCode SNESNewtonALGetLoadParameter(SNES, PetscReal *);
+
+/*MC
+   SNESNewtonALCorrectionType - the approach used by `SNESNEWTONAL` to determine 
+   the correction to the current increment. While the exact correction satisfies 
+   the constraint surface at every iteration, it also requires solving a quadratic 
+   equation which may not have real roots. Conversely, the normal correction is more 
+   efficient and always yields a real correction and is the default.
+
+   Values:
++   `SNES_NEWTONAL_CORRECTION_EXACT` - choose the correction which exactly satisfies the constraint
+-   `SNES_NEWTONAL_CORRECTION_NORMAL` - choose the correction in the updated normal hyper-surface to the contraint surface
+
+   Options Database Key:
+. -snes_newtonal_correction_type <exact> - select type from <exact,normal>
+
+   Level: intermediate
+
+.seealso: `SNES, `SNESNGMRES`, `SNESNGMRESSetSelectType()`, `SNESNGMRESGetSelectType()`, `SNESNGMRESSetRestartType()`,
+          `SNESNGMRESGetRestartType()`, `SNESNGMRESRestartType`
+M*/
+typedef enum {
+  SNES_NEWTONAL_CORRECTION_EXACT  = 0,
+  SNES_NEWTONAL_CORRECTION_NORMAL = 1,
+} SNESNewtonALCorrectionType;
+PETSC_EXTERN const char *const SNESNewtonALCorrectionTypes[];
+
+PETSC_EXTERN PetscErrorCode SNESNewtonALSetCorrectionType(SNES, SNESNewtonALCorrectionType);
