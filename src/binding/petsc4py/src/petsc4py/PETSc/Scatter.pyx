@@ -19,6 +19,7 @@ class ScatterType(object):
 
 # --------------------------------------------------------------------
 
+
 cdef class Scatter(Object):
     """Scatter object.
 
@@ -30,7 +31,6 @@ cdef class Scatter(Object):
     Vec, SF, petsc.VecScatter
 
     """
-
 
     Type = ScatterType
     Mode = ScatterMode
@@ -155,7 +155,7 @@ cdef class Scatter(Object):
 
         """
         cdef PetscScatterType cval = NULL
-        vec_type = str2bytes(scatter_type, &cval)
+        scatter_type = str2bytes(scatter_type, &cval)
         CHKERR( VecScatterSetType(self.sct, cval) )
 
     def getType(self) -> str:

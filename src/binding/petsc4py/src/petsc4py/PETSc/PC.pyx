@@ -53,6 +53,7 @@ class PCType(object):
     HPDDM              = S_(PCHPDDM)
     H2OPUS             = S_(PCH2OPUS)
 
+
 class PCSide(object):
     """The manner in which the preconditioner is applied."""
     # native
@@ -64,12 +65,14 @@ class PCSide(object):
     R = RIGHT
     S = SYMMETRIC
 
+
 class PCASMType(object):
     """The *ASM* subtype."""
     NONE        = PC_ASM_NONE
     BASIC       = PC_ASM_BASIC
     RESTRICT    = PC_ASM_RESTRICT
     INTERPOLATE = PC_ASM_INTERPOLATE
+
 
 class PCGASMType(object):
     """The *GASM* subtype."""
@@ -78,6 +81,7 @@ class PCGASMType(object):
     RESTRICT    = PC_GASM_RESTRICT
     INTERPOLATE = PC_GASM_INTERPOLATE
 
+
 class PCMGType(object):
     """The *MG* subtype."""
     MULTIPLICATIVE = PC_MG_MULTIPLICATIVE
@@ -85,16 +89,19 @@ class PCMGType(object):
     FULL           = PC_MG_FULL
     KASKADE        = PC_MG_KASKADE
 
+
 class PCMGCycleType(object):
     """The *MG* cycle type."""
     V = PC_MG_CYCLE_V
     W = PC_MG_CYCLE_W
+
 
 class PCGAMGType(object):
     """The *GAMG* subtype."""
     AGG       = S_(PCGAMGAGG)
     GEO       = S_(PCGAMGGEO)
     CLASSICAL = S_(PCGAMGCLASSICAL)
+
 
 class PCCompositeType(object):
     """The composite type."""
@@ -104,6 +111,7 @@ class PCCompositeType(object):
     SPECIAL                  = PC_COMPOSITE_SPECIAL
     SCHUR                    = PC_COMPOSITE_SCHUR
 
+
 class PCFieldSplitSchurPreType(object):
     """The field split Schur subtype."""
     SELF                     = PC_FIELDSPLIT_SCHUR_PRE_SELF
@@ -112,12 +120,14 @@ class PCFieldSplitSchurPreType(object):
     USER                     = PC_FIELDSPLIT_SCHUR_PRE_USER
     FULL                     = PC_FIELDSPLIT_SCHUR_PRE_FULL
 
+
 class PCFieldSplitSchurFactType(object):
     """The field split Schur factorization type."""
     DIAG                     = PC_FIELDSPLIT_SCHUR_FACT_DIAG
     LOWER                    = PC_FIELDSPLIT_SCHUR_FACT_LOWER
     UPPER                    = PC_FIELDSPLIT_SCHUR_FACT_UPPER
     FULL                     = PC_FIELDSPLIT_SCHUR_FACT_FULL
+
 
 class PCPatchConstructType(object):
     """The patch construction type."""
@@ -127,12 +137,14 @@ class PCPatchConstructType(object):
     USER                     = PC_PATCH_USER
     PYTHON                   = PC_PATCH_PYTHON
 
+
 class PCHPDDMCoarseCorrectionType(object):
     """The *HPDDM* coarse correction type."""
     DEFLATED                 = PC_HPDDM_COARSE_CORRECTION_DEFLATED
     ADDITIVE                 = PC_HPDDM_COARSE_CORRECTION_ADDITIVE
     BALANCED                 = PC_HPDDM_COARSE_CORRECTION_BALANCED
     NONE                     = PC_HPDDM_COARSE_CORRECTION_NONE
+
 
 class PCDeflationSpaceType(object):
     """The deflation space subtype."""
@@ -146,6 +158,7 @@ class PCDeflationSpaceType(object):
     AGGREGATION              = PC_DEFLATION_SPACE_AGGREGATION
     USER                     = PC_DEFLATION_SPACE_USER
 
+
 class PCFailedReason(object):
     """The reason the preconditioner has failed."""
     SETUP_ERROR              = PC_SETUP_ERROR
@@ -158,6 +171,7 @@ class PCFailedReason(object):
 
 # --------------------------------------------------------------------
 
+
 cdef class PC(Object):
     """Preconditioners.
 
@@ -168,11 +182,12 @@ cdef class PC(Object):
     Examples
     --------
     >>> from petsc4py import PETSc
-    >>> v = PETSc.Vec().createWithArray([1,2])
-    >>> m = PETSc.Mat().createDense(2,array=[[1,0],[0,1]])
+    >>> v = PETSc.Vec().createWithArray([1, 2])
+    >>> m = PETSc.Mat().createDense(2, array=[[1, 0], [0, 1]])
     >>> pc = PETSc.PC().create()
     >>> pc.setOperators(m)
-    >>> u = pc(v) # Vec u is created internally, can also be passed as second argument
+    >>> u = pc(v) # u is created internally
+    >>> pc.apply(v, u) # u can also be passed as second argument
 
     See Also
     --------
@@ -304,7 +319,7 @@ cdef class PC(Object):
         CHKERR( PCGetType(self.pc, &cval) )
         return bytes2str(cval)
 
-    def setOptionsPrefix(self, prefix: str) -> None:
+    def setOptionsPrefix(self, prefix: str | None) -> None:
         """Set the prefix used for all the `PC` options.
 
         Logically collective.
@@ -337,7 +352,7 @@ cdef class PC(Object):
         CHKERR( PCGetOptionsPrefix(self.pc, &cval) )
         return bytes2str(cval)
 
-    def appendOptionsPrefix(self, prefix: str) -> None:
+    def appendOptionsPrefix(self, prefix: str | None) -> None:
         """Append to the prefix used for all the `PC` options.
 
         Logically collective.
@@ -398,7 +413,7 @@ cdef class PC(Object):
         if P is not None: pmat = P.mat
         CHKERR( PCSetOperators(self.pc, amat, pmat) )
 
-    def getOperators(self) -> tuple[Mat,Mat]:
+    def getOperators(self) -> tuple[Mat, Mat]:
         """Return the matrices associated with a linear system.
 
         Not collective.
@@ -484,7 +499,7 @@ cdef class PC(Object):
             cflag = PETSC_TRUE
         CHKERR( PCSetReusePreconditioner(self.pc, cflag) )
 
-    def setFailedReason(self, reason: FailedReason | str) ->  None:
+    def setFailedReason(self, reason: FailedReason | str) -> None:
         """Set the reason the `PC` terminated.
 
         Logically collective.
@@ -857,7 +872,7 @@ cdef class PC(Object):
     def setASMLocalSubdomains(
         self,
         nsd: int,
-        is_: Sequence[IS] | None = None,
+        is_sub: Sequence[IS] | None = None,
         is_local: Sequence[IS] | None = None) -> None:
         """Set the local subdomains.
 
@@ -867,7 +882,7 @@ cdef class PC(Object):
         ----------
         nsd
             The number of subdomains for this process.
-        is\_
+        is_sub
             Defines the subdomains for this process or `None` to determine
             internally.
         is_local
@@ -883,11 +898,11 @@ cdef class PC(Object):
         cdef PetscInt i = 0
         cdef PetscIS *isets = NULL
         cdef PetscIS *isets_local = NULL
-        if is_ is not None:
-            assert len(is_) == nsd
+        if is_sub is not None:
+            assert len(is_sub) == nsd
             CHKERR( PetscMalloc(<size_t>n*sizeof(PetscIS), &isets) )
             for i in range(n):
-                isets[i] = (<IS?>is_[i]).iset
+                isets[i] = (<IS?>is_sub[i]).iset
         if is_local is not None:
             assert len(is_local) == nsd
             CHKERR( PetscMalloc(<size_t>n*sizeof(PetscIS), &isets_local) )
@@ -900,8 +915,8 @@ cdef class PC(Object):
     def setASMTotalSubdomains(
         self,
         nsd: int,
-        is_: Sequence[IS] | None=None,
-        is_local: Sequence[IS] | None=None) -> None:
+        is_sub: Sequence[IS] | None = None,
+        is_local: Sequence[IS] | None = None) -> None:
         """Set the subdomains for all processes.
 
         Collective.
@@ -910,7 +925,7 @@ cdef class PC(Object):
         ----------
         nsd
             The number of subdomains for all processes.
-        is\_
+        is_sub
             Defines the subdomains for all processes or `None` to determine
             internally.
         is_local
@@ -926,11 +941,11 @@ cdef class PC(Object):
         cdef PetscInt i = 0
         cdef PetscIS *isets = NULL
         cdef PetscIS *isets_local = NULL
-        if is_ is not None:
-            assert len(is_) == nsd
+        if is_sub is not None:
+            assert len(is_sub) == nsd
             CHKERR( PetscMalloc(<size_t>n*sizeof(PetscIS), &isets) )
             for i in range(n):
-                isets[i] = (<IS?>is_[i]).iset
+                isets[i] = (<IS?>is_sub[i]).iset
         if is_local is not None:
             assert len(is_local) == nsd
             CHKERR( PetscMalloc(<size_t>n*sizeof(PetscIS), &isets_local) )
@@ -950,7 +965,7 @@ cdef class PC(Object):
         petsc.PCASMGetSubKSP
 
         """
-        cdef PetscInt i = 0, n = 0
+        cdef PetscInt n = 0
         cdef PetscKSP *p = NULL
         CHKERR( PCASMGetSubKSP(self.pc, &n, NULL, &p) )
         return [ref_KSP(p[i]) for i from 0 <= i <n]
@@ -1073,6 +1088,8 @@ cdef class PC(Object):
     def getHYPREType(self) -> str:
         """Return the `Type.HYPRE` type.
 
+        Not collective.
+
         See Also
         --------
         petsc.PCHYPREGetType
@@ -1084,6 +1101,8 @@ cdef class PC(Object):
 
     def setHYPREType(self, hypretype: str):
         """Set the `Type.HYPRE` type.
+
+        Collective.
 
         Parameters
         ----------
@@ -1226,11 +1245,11 @@ cdef class PC(Object):
         Parameters
         ----------
         ozz
-            A vector representing ``[1,0,0]`` or ``[1,0]`` in 2D.
+            A vector representing ``[1, 0, 0]`` or ``[1, 0]`` in 2D.
         zoz
-            A vector representing ``[0,1,0]`` or ``[0,1]`` in 2D.
+            A vector representing ``[0, 1, 0]`` or ``[0, 1]`` in 2D.
         zzo
-            A vector representing ``[0,0,1]`` or `None` in 2D.
+            A vector representing ``[0, 0, 1]`` or `None` in 2D.
 
         See Also
         --------
@@ -1296,6 +1315,8 @@ cdef class PC(Object):
 
     def setFactorSetUpSolverType(self) -> None:
         """Set up the factorization solver.
+
+        Collective.
 
         This can be called after `KSP.setOperators` or `PC.setOperators`, causes
         `petsc.MatGetFactor` to be called so then one may set the options for
@@ -1379,6 +1400,8 @@ cdef class PC(Object):
         shift_type: Mat.FactorShiftType | None = None,
         amount: float | None = None) -> None:
         """Set options for shifting diagonal entries of a matrix.
+
+        Logically collective.
 
         Parameters
         ----------
@@ -1484,6 +1507,8 @@ cdef class PC(Object):
     def setFieldSplitFields(self, bsize: int, *fields: Tuple[str, Sequence[int]]) -> None:
         """Sets the elements for the field split.
 
+        Collective.
+
         Parameters
         ----------
         bsize
@@ -1512,12 +1537,14 @@ cdef class PC(Object):
     def getFieldSplitSubKSP(self) -> list[KSP]:
         """Return the `KSP` for all splits.
 
+        Not collective.
+
         See Also
         --------
         petsc.PCFieldSplitGetSubKSP
 
         """
-        cdef PetscInt i = 0, n = 0
+        cdef PetscInt n = 0
         cdef PetscKSP *p = NULL
         cdef object subksp = None
         try:
@@ -1530,12 +1557,14 @@ cdef class PC(Object):
     def getFieldSplitSchurGetSubKSP(self) -> list[KSP]:
         """Return the `KSP` for the Schur complement based splits.
 
+        Not collective.
+
         See Also
         --------
         petsc.PCFieldSplitSchurGetSubKSP, petsc.PCFieldSplitGetSubKSP
 
         """
-        cdef PetscInt i = 0, n = 0
+        cdef PetscInt n = 0
         cdef PetscKSP *p = NULL
         cdef object subksp = None
         try:
@@ -1710,6 +1739,8 @@ cdef class PC(Object):
 
     def setMGLevels(self, levels: int) -> None:
         """Set the number of `MG` levels.
+
+        Logically collective.
 
         Parameters
         ----------
@@ -1928,6 +1959,8 @@ cdef class PC(Object):
     def setMGCycleType(self, cycle_type: MGCycleType) -> None:
         """Set the type of cycles.
 
+        Logically collective.
+
         Parameters
         ----------
         cycle_type
@@ -2036,7 +2069,7 @@ cdef class PC(Object):
     def setBDDCLocalAdjacency(self, csr: CSRIndicesSpec) -> None:
         """Provide a custom connectivity graph for local dofs.
 
-        Not Collective.
+        Not collective.
 
         Parameters
         ----------
@@ -2302,8 +2335,7 @@ cdef class PC(Object):
         isfields = [isfields] if isinstance(isfields, IS) else list(isfields)
         cdef Py_ssize_t i, n = len(isfields)
         cdef PetscIS  *cisfields = NULL
-        cdef object tmp
-        tmp = oarray_p(empty_p(n), NULL, <void**>&cisfields)
+        cdef object unused = oarray_p(empty_p(n), NULL, <void**>&cisfields)
         for i from 0 <= i < n: cisfields[i] = (<IS?>isfields[i]).iset
         CHKERR( PCBDDCSetDofsSplitting(self.pc, <PetscInt>n, cisfields) )
 
@@ -2328,13 +2360,13 @@ cdef class PC(Object):
         isfields = [isfields] if isinstance(isfields, IS) else list(isfields)
         cdef Py_ssize_t i, n = len(isfields)
         cdef PetscIS  *cisfields = NULL
-        cdef object tmp
-        tmp = oarray_p(empty_p(n), NULL, <void**>&cisfields)
+        cdef object unused = oarray_p(empty_p(n), NULL, <void**>&cisfields)
         for i from 0 <= i < n: cisfields[i] = (<IS?>isfields[i]).iset
         CHKERR( PCBDDCSetDofsSplittingLocal(self.pc, <PetscInt>n, cisfields) )
 
     # --- Patch ---
     def setPatchCellNumbering(self, Section sec not None):
+        """Set the cell numbering."""
         CHKERR( PCPatchSetCellNumbering(self.pc, sec.sec) )
 
     def setPatchDiscretisationInfo(self, dms, bs,
@@ -2342,6 +2374,7 @@ cdef class PC(Object):
                                    subspaceOffsets,
                                    ghostBcNodes,
                                    globalBcNodes):
+        """Set discretisation info."""
         cdef PetscInt numSubSpaces = 0
         cdef PetscInt numGhostBcs = 0, numGlobalBcs = 0
         cdef PetscInt *nodesPerCell = NULL
@@ -2378,6 +2411,7 @@ cdef class PC(Object):
         CHKERR( PetscFree(ccellNodeMaps) )
 
     def setPatchComputeOperator(self, operator, args=None, kargs=None):
+        """Set compute operator callbacks."""
         if args is  None: args  = ()
         if kargs is None: kargs = {}
         context = (operator, args, kargs)
@@ -2385,6 +2419,7 @@ cdef class PC(Object):
         CHKERR( PCPatchSetComputeOperator(self.pc, PCPatch_ComputeOperator, <void*>context) )
 
     def setPatchComputeOperatorInteriorFacets(self, operator, args=None, kargs=None):
+        """Set compute operator callbacks."""
         if args is  None: args  = ()
         if kargs is None: kargs = {}
         context = (operator, args, kargs)
@@ -2392,6 +2427,7 @@ cdef class PC(Object):
         CHKERR( PCPatchSetComputeOperatorInteriorFacets(self.pc, PCPatch_ComputeOperatorInteriorFacets, <void*>context) )
 
     def setPatchComputeFunction(self, function, args=None, kargs=None):
+        """Set compute operator callbacks."""
         if args is  None: args  = ()
         if kargs is None: kargs = {}
         context = (function, args, kargs)
@@ -2399,6 +2435,7 @@ cdef class PC(Object):
         CHKERR( PCPatchSetComputeFunction(self.pc, PCPatch_ComputeFunction, <void*>context) )
 
     def setPatchComputeFunctionInteriorFacets(self, function, args=None, kargs=None):
+        """Set compute operator callbacks."""
         if args is  None: args  = ()
         if kargs is None: kargs = {}
         context = (function, args, kargs)
@@ -2406,6 +2443,7 @@ cdef class PC(Object):
         CHKERR( PCPatchSetComputeFunction(self.pc, PCPatch_ComputeFunctionInteriorFacets, <void*>context) )
 
     def setPatchConstructType(self, typ, operator=None, args=None, kargs=None):
+        """Set compute operator callbacks."""
         if args is  None: args  = ()
         if kargs is None: kargs = {}
 
@@ -2422,6 +2460,8 @@ cdef class PC(Object):
 
     def setHPDDMAuxiliaryMat(self, IS uis, Mat uaux) -> None:
         """Set the auxiliary matrix used by the preconditioner.
+
+        Logically collective.
 
         Parameters
         ----------
@@ -2440,6 +2480,8 @@ cdef class PC(Object):
     def setHPDDMRHSMat(self, Mat B) -> None:
         """Set the right-hand side matrix of the preconditioner.
 
+        Logically collective.
+
         Parameters
         ----------
         B
@@ -2454,6 +2496,8 @@ cdef class PC(Object):
 
     def setHPDDMHasNeumannMat(self, has: bool) -> None:
         """Set to indicate that the `Mat` passed to the `PC` is the local Neumann matrix.
+
+        Logically collective.
 
         Parameters
         ----------
@@ -2489,6 +2533,8 @@ cdef class PC(Object):
     def getHPDDMCoarseCorrectionType(self) -> HPDDMCoarseCorrectionType:
         """Return the coarse correction type.
 
+        Not collective.
+
         See Also
         --------
         petsc.PCHPDDMGetCoarseCorrectionType
@@ -2501,6 +2547,8 @@ cdef class PC(Object):
     def getHPDDMSTShareSubKSP(self) -> bool:
         """Return true if the `KSP` in SLEPc ``ST`` and the subdomain solver is shared.
 
+        Not collective.
+
         See Also
         --------
         petsc.PCHPDDMGetSTShareSubKSP
@@ -2512,6 +2560,8 @@ cdef class PC(Object):
 
     def setHPDDMDeflationMat(self, IS uis, Mat U):
         """Set the deflation space used to assemble a coarse operator.
+
+        Logically collective.
 
         Parameters
         ----------
@@ -2532,6 +2582,8 @@ cdef class PC(Object):
     def setSPAIEpsilon(self, val: float) -> None:
         """Set the tolerance for the preconditioner.
 
+        Logically collective.
+
         Parameters
         ----------
         val
@@ -2548,6 +2600,8 @@ cdef class PC(Object):
     def setSPAINBSteps(self, nbsteps: int) -> None:
         """Set the maximum number of improvement steps per row.
 
+        Logically collective.
+
         Parameters
         ----------
         nbsteps
@@ -2563,6 +2617,8 @@ cdef class PC(Object):
 
     def setSPAIMax(self, maxval: int) -> None:
         """Set the size of working buffers in the preconditioner.
+
+        Logically collective.
 
         Parameters
         ----------
@@ -2581,6 +2637,8 @@ cdef class PC(Object):
     def setSPAIMaxNew(self, maxval: int) -> None:
         """Set the maximum number of new non-zero candidates per step.
 
+        Logically collective.
+
         Parameters
         ----------
         maxval
@@ -2596,6 +2654,8 @@ cdef class PC(Object):
 
     def setSPAIBlockSize(self, n: int) -> None:
         """Set the block size of the preconditioner.
+
+        Logically collective.
 
         Parameters
         ----------
@@ -2613,6 +2673,8 @@ cdef class PC(Object):
     def setSPAICacheSize(self, size: int) -> None:
         """Set the cache size.
 
+        Logically collective.
+
         Parameters
         ----------
         size
@@ -2629,6 +2691,8 @@ cdef class PC(Object):
     def setSPAIVerbose(self, level: int) -> None:
         """Set the verbosity level.
 
+        Logically collective.
+
         Parameters
         ----------
         level
@@ -2644,6 +2708,8 @@ cdef class PC(Object):
 
     def setSPAISp(self, sym: int) -> None:
         """Set to specify a symmetric sparsity pattern.
+
+        Logically collective.
 
         Parameters
         ----------
@@ -2734,7 +2800,7 @@ cdef class PC(Object):
 
         """
         cdef PetscScalar cfact = asScalar(fact)
-        CHKERR( PCDeflationSetCorrectionFactor(self.pc, fact) )
+        CHKERR( PCDeflationSetCorrectionFactor(self.pc, cfact) )
 
     def setDeflationSpaceToCompute(self, space_type: DeflationSpaceType, size: int) -> None:
         """Set the deflation space type.
@@ -2755,7 +2821,7 @@ cdef class PC(Object):
         """
         cdef PetscInt csize = asInt(size)
         cdef PetscPCDeflationSpaceType ctype = space_type
-        CHKERR( PCDeflationSetSpaceToCompute(self.pc, space_type, csize) )
+        CHKERR( PCDeflationSetSpaceToCompute(self.pc, ctype, csize) )
 
     def setDeflationSpace(self, Mat W, transpose: bool) -> None:
         """Set the deflation space matrix or its (Hermitian) transpose.
@@ -2829,6 +2895,8 @@ cdef class PC(Object):
 
     def getDeflationPC(self) -> PC:
         """Return the additional preconditioner.
+
+        Not collective.
 
         See Also
         --------

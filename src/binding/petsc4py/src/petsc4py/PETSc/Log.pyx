@@ -210,7 +210,12 @@ cdef class Log:
 cdef class LogStage:
     """Logging support for different stages."""
 
-    cdef readonly PetscLogStage id
+    cdef PetscLogStage id
+
+    property id:
+        """The log stage identifier."""
+        def __get__(self) -> int:
+            return self.id
 
     def __cinit__(self):
         self.id = 0
@@ -254,16 +259,19 @@ cdef class LogStage:
 
     #
 
-    def getName(self):
+    def getName(self) -> str:
+        """Return the current stage name."""
         cdef const char *cval = NULL
         CHKERR( PetscLogStageFindName(self.id, &cval) )
         return bytes2str(cval)
 
     property name:
-        def __get__(self):
+        """The current stage name."""
+        def __get__(self) -> str:
             return self.getName()
+
         def __set__(self, value):
-            <void>self; <void>value; # unused
+            <void>self; <void>value # unused
             raise TypeError("readonly attribute")
 
     #
@@ -321,8 +329,10 @@ cdef class LogStage:
         CHKERR( PetscLogStageSetActive(self.id, tval) )
 
     property active:
-        def __get__(self):
+        """Whether the stage is activate."""
+        def __get__(self) -> bool:
             return self.getActive()
+
         def __set__(self, value):
             self.setActive(value)
 
@@ -362,8 +372,10 @@ cdef class LogStage:
         CHKERR( PetscLogStageSetVisible(self.id, tval) )
 
     property visible:
-        def __get__(self):
+        """Whether the stage is visible."""
+        def __get__(self) -> bool:
             return self.getVisible()
+
         def __set__(self, value):
             self.setVisible(value)
 
@@ -382,8 +394,14 @@ cdef LogStage reg_LogStage(object name, PetscLogStage stageid):
 # --------------------------------------------------------------------
 
 cdef class LogClass:
+    """Logging support."""
 
-    cdef readonly PetscLogClass id
+    cdef PetscLogClass id
+
+    property id:
+        """The log class identifier."""
+        def __get__(self) -> int:
+            return self.id
 
     def __cinit__(self):
         self.id = PETSC_OBJECT_CLASSID
@@ -393,39 +411,48 @@ cdef class LogClass:
 
     #
 
-    def getName(self):
+    def getName(self) -> str:
+        """Return the log class name."""
         cdef const char *cval = NULL
         CHKERR( PetscLogClassFindName(self.id, &cval) )
         return bytes2str(cval)
 
     property name:
-        def __get__(self):
+        """The log class name."""
+        def __get__(self) -> str:
             return self.getName()
+
         def __set__(self, value):
-            <void>self; <void>value; # unused
+            <void>self; <void>value # unused
             raise TypeError("readonly attribute")
 
     #
 
-    def activate(self):
+    def activate(self) -> None:
+        """Activate the log class."""
         CHKERR( PetscLogClassActivate(self.id) )
 
-    def deactivate(self):
+    def deactivate(self) -> None:
+        """Deactivate the log class."""
         CHKERR( PetscLogClassDeactivate(self.id) )
 
-    def getActive(self):
+    def getActive(self) -> bool:
+        """Not implemented."""
         <void>self # unused
         raise NotImplementedError
 
-    def setActive(self, flag):
+    def setActive(self, flag: bool) -> None:
+        """Activate or deactivate the log class."""
         if flag:
             CHKERR( PetscLogClassActivate(self.id) )
         else:
             CHKERR( PetscLogClassDeactivate(self.id) )
 
     property active:
-        def __get__(self):
+        """Log class activation."""
+        def __get__(self) -> bool:
             return self.getActive()
+
         def __set__(self, value):
             self.setActive(value)
 
@@ -444,8 +471,14 @@ cdef LogClass reg_LogClass(object name, PetscLogClass classid):
 # --------------------------------------------------------------------
 
 cdef class LogEvent:
+    """Logging support."""
 
-    cdef readonly PetscLogEvent id
+    cdef PetscLogEvent id
+
+    property id:
+        """The log event identifier."""
+        def __get__(self) -> int:
+            return self.id
 
     def __cinit__(self):
         self.id = 0
@@ -459,8 +492,6 @@ cdef class LogEvent:
 
     def __exit__(self, *exc):
         self.end()
-
-
 
     def begin(self, *objs) -> None:
         """Log the beginning of a user event.
@@ -501,16 +532,19 @@ cdef class LogEvent:
         CHKERR( PetscLogEventEnd(self.id, o[0], o[1], o[2], o[3]) )
 
     #
-    def getName(self):
+    def getName(self) -> str:
+        """The current event name."""
         cdef const char *cval = NULL
         CHKERR( PetscLogEventFindName(self.id, &cval) )
         return bytes2str(cval)
 
     property name:
-        def __get__(self):
+        """The current event name."""
+        def __get__(self) ->str:
             return self.getName()
+
         def __set__(self, value):
-            <void>self; <void>value; # unused
+            <void>self; <void>value # unused
             raise TypeError("readonly attribute")
 
     #
@@ -539,7 +573,8 @@ cdef class LogEvent:
         """
         CHKERR( PetscLogEventDeactivate(self.id) )
 
-    def getActive(self):
+    def getActive(self) -> bool:
+        """Not implemented."""
         <void>self # unused
         raise NotImplementedError
 
@@ -564,12 +599,15 @@ cdef class LogEvent:
             CHKERR( PetscLogEventDeactivate(self.id) )
 
     property active:
-        def __get__(self):
+        """Event activation."""
+        def __get__(self) -> bool:
             return self.getActive()
+
         def __set__(self, value):
             self.setActive(value)
 
-    def getActiveAll(self):
+    def getActiveAll(self) -> bool:
+        """Not implemented."""
         <void>self # unused
         raise NotImplementedError
 
@@ -593,8 +631,10 @@ cdef class LogEvent:
         CHKERR( PetscLogEventSetActiveAll(self.id, tval) )
 
     property active_all:
-        def __get__(self):
+        """All events activation."""
+        def __get__(self) -> bool:
             self.getActiveAll()
+
         def __set__(self, value):
             self.setActiveAll(value)
 

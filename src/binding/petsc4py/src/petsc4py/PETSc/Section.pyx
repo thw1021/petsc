@@ -174,7 +174,7 @@ cdef class Section(Object):
         """
         cdef PetscInt cfield = asInt(field)
         cdef const char *fieldName = NULL
-        CHKERR( PetscSectionGetFieldName(self.sec,cfield,&fieldName) )
+        CHKERR( PetscSectionGetFieldName(self.sec, cfield, &fieldName) )
         return bytes2str(fieldName)
 
     def setFieldName(self, field: int, fieldName: str) -> None:
@@ -197,7 +197,7 @@ cdef class Section(Object):
         cdef PetscInt cfield = asInt(field)
         cdef const char *cname = NULL
         fieldName = str2bytes(fieldName, &cname)
-        CHKERR( PetscSectionSetFieldName(self.sec,cfield,cname) )
+        CHKERR( PetscSectionSetFieldName(self.sec, cfield, cname) )
 
     def getFieldComponents(self, field: int) -> int:
         """Return the number of field components for the given field.
@@ -215,7 +215,7 @@ cdef class Section(Object):
 
         """
         cdef PetscInt cfield = asInt(field), cnumComp = 0
-        CHKERR( PetscSectionGetFieldComponents(self.sec,cfield,&cnumComp) )
+        CHKERR( PetscSectionGetFieldComponents(self.sec, cfield, &cnumComp) )
         return toInt(cnumComp)
 
     def setFieldComponents(self, field: int, numComp: int) -> None:
@@ -237,7 +237,7 @@ cdef class Section(Object):
         """
         cdef PetscInt cfield = asInt(field)
         cdef PetscInt cnumComp = asInt(numComp)
-        CHKERR( PetscSectionSetFieldComponents(self.sec,cfield,cnumComp) )
+        CHKERR( PetscSectionSetFieldComponents(self.sec, cfield, cnumComp) )
 
     def getChart(self) -> tuple[int, int]:
         """Return the range in which points (indices) lie for this section.
@@ -331,7 +331,7 @@ cdef class Section(Object):
 
         """
         cdef PetscInt cpoint = asInt(point), cnumDof = 0
-        CHKERR( PetscSectionGetDof(self.sec,cpoint,&cnumDof) )
+        CHKERR( PetscSectionGetDof(self.sec, cpoint, &cnumDof) )
         return toInt(cnumDof)
 
     def setDof(self, point: int, numDof: int) -> None:
@@ -353,7 +353,7 @@ cdef class Section(Object):
         """
         cdef PetscInt cpoint = asInt(point)
         cdef PetscInt cnumDof = asInt(numDof)
-        CHKERR( PetscSectionSetDof(self.sec,cpoint,cnumDof) )
+        CHKERR( PetscSectionSetDof(self.sec, cpoint, cnumDof) )
 
     def addDof(self, point: int, numDof: int) -> None:
         """Add ``numDof`` degrees of freedom associated with a given point.
@@ -374,7 +374,7 @@ cdef class Section(Object):
         """
         cdef PetscInt cpoint = asInt(point)
         cdef PetscInt cnumDof = asInt(numDof)
-        CHKERR( PetscSectionAddDof(self.sec,cpoint,cnumDof) )
+        CHKERR( PetscSectionAddDof(self.sec, cpoint, cnumDof) )
 
     def getFieldDof(self, point: int, field: int) -> int:
         """Return the number of DOFs associated with a field on a given point.
@@ -395,7 +395,7 @@ cdef class Section(Object):
         """
         cdef PetscInt cpoint = asInt(point), cnumDof = 0
         cdef PetscInt cfield = asInt(field)
-        CHKERR( PetscSectionGetFieldDof(self.sec,cpoint,cfield,&cnumDof) )
+        CHKERR( PetscSectionGetFieldDof(self.sec, cpoint, cfield, &cnumDof) )
         return toInt(cnumDof)
 
     def setFieldDof(self, point: int, field: int, numDof: int) -> None:
@@ -420,7 +420,7 @@ cdef class Section(Object):
         cdef PetscInt cpoint = asInt(point)
         cdef PetscInt cfield = asInt(field)
         cdef PetscInt cnumDof = asInt(numDof)
-        CHKERR( PetscSectionSetFieldDof(self.sec,cpoint,cfield,cnumDof) )
+        CHKERR( PetscSectionSetFieldDof(self.sec, cpoint, cfield, cnumDof) )
 
     def addFieldDof(self, point: int, field: int, numDof: int) -> None:
         """Add ``numDof`` DOFs associated with a field on a given point.
@@ -444,7 +444,7 @@ cdef class Section(Object):
         cdef PetscInt cpoint = asInt(point)
         cdef PetscInt cfield = asInt(field)
         cdef PetscInt cnumDof = asInt(numDof)
-        CHKERR( PetscSectionAddFieldDof(self.sec,cpoint,cfield,cnumDof) )
+        CHKERR( PetscSectionAddFieldDof(self.sec, cpoint, cfield, cnumDof) )
 
     def getConstraintDof(self, point: int) -> int:
         """Return the number of constrained DOFs associated with a given point.
@@ -462,7 +462,7 @@ cdef class Section(Object):
 
         """
         cdef PetscInt cpoint = asInt(point), cnumDof = 0
-        CHKERR( PetscSectionGetConstraintDof(self.sec,cpoint,&cnumDof) )
+        CHKERR( PetscSectionGetConstraintDof(self.sec, cpoint, &cnumDof) )
         return toInt(cnumDof)
 
     def setConstraintDof(self, point: int, numDof: int) -> None:
@@ -484,7 +484,7 @@ cdef class Section(Object):
         """
         cdef PetscInt cpoint = asInt(point)
         cdef PetscInt cnumDof = asInt(numDof)
-        CHKERR( PetscSectionSetConstraintDof(self.sec,cpoint,cnumDof) )
+        CHKERR( PetscSectionSetConstraintDof(self.sec, cpoint, cnumDof) )
 
     def addConstraintDof(self, point: int, numDof: int) -> None:
         """Increment the number of constrained DOFs for a given point.
@@ -505,7 +505,7 @@ cdef class Section(Object):
         """
         cdef PetscInt cpoint = asInt(point)
         cdef PetscInt cnumDof = asInt(numDof)
-        CHKERR( PetscSectionAddConstraintDof(self.sec,cpoint,cnumDof) )
+        CHKERR( PetscSectionAddConstraintDof(self.sec, cpoint, cnumDof) )
 
     def getFieldConstraintDof(self, point: int, field: int) -> int:
         """Return the number of constrained DOFs for a given field on a point.
@@ -526,7 +526,7 @@ cdef class Section(Object):
         """
         cdef PetscInt cpoint = asInt(point), cnumDof = 0
         cdef PetscInt cfield = asInt(field)
-        CHKERR( PetscSectionGetFieldConstraintDof(self.sec,cpoint,cfield,&cnumDof) )
+        CHKERR( PetscSectionGetFieldConstraintDof(self.sec, cpoint, cfield, &cnumDof) )
         return toInt(cnumDof)
 
     def setFieldConstraintDof(
@@ -557,7 +557,7 @@ cdef class Section(Object):
         cdef PetscInt cpoint = asInt(point)
         cdef PetscInt cfield = asInt(field)
         cdef PetscInt cnumDof = asInt(numDof)
-        CHKERR( PetscSectionSetFieldConstraintDof(self.sec,cpoint,cfield,cnumDof) )
+        CHKERR( PetscSectionSetFieldConstraintDof(self.sec, cpoint, cfield, cnumDof) )
 
     def addFieldConstraintDof(
         self,
@@ -587,7 +587,7 @@ cdef class Section(Object):
         cdef PetscInt cpoint = asInt(point)
         cdef PetscInt cfield = asInt(field)
         cdef PetscInt cnumDof = asInt(numDof)
-        CHKERR( PetscSectionAddFieldConstraintDof(self.sec,cpoint,cfield,cnumDof) )
+        CHKERR( PetscSectionAddFieldConstraintDof(self.sec, cpoint, cfield, cnumDof) )
 
     def getConstraintIndices(self, point: int) -> ArrayInt:
         """Return the point DOFs numbers which are constrained for a given point.
@@ -634,8 +634,8 @@ cdef class Section(Object):
         cdef PetscInt nindex = 0
         cdef PetscInt *cindices = NULL
         indices = iarray_i(indices, &nindex, &cindices)
-        CHKERR( PetscSectionSetConstraintDof(self.sec,cpoint,nindex) )
-        CHKERR( PetscSectionSetConstraintIndices(self.sec,cpoint,cindices) )
+        CHKERR( PetscSectionSetConstraintDof(self.sec, cpoint, nindex) )
+        CHKERR( PetscSectionSetConstraintIndices(self.sec, cpoint, cindices) )
 
     def getFieldConstraintIndices(self, point: int, field: int) -> ArrayInt:
         """Return the field DOFs numbers, in [0, DOFs), which are constrained.
@@ -660,8 +660,8 @@ cdef class Section(Object):
         cdef PetscInt cfield = asInt(field)
         cdef PetscInt nindex = 0
         cdef const PetscInt *indices = NULL
-        CHKERR( PetscSectionGetFieldConstraintDof(self.sec,cpoint,cfield,&nindex) )
-        CHKERR( PetscSectionGetFieldConstraintIndices(self.sec,cpoint,cfield,&indices) )
+        CHKERR( PetscSectionGetFieldConstraintDof(self.sec, cpoint, cfield, &nindex) )
+        CHKERR( PetscSectionGetFieldConstraintIndices(self.sec, cpoint, cfield, &indices) )
         return array_i(nindex, indices)
 
     def setFieldConstraintIndices(
@@ -693,8 +693,8 @@ cdef class Section(Object):
         cdef PetscInt nindex = 0
         cdef PetscInt *cindices = NULL
         indices = iarray_i(indices, &nindex, &cindices)
-        CHKERR( PetscSectionSetFieldConstraintDof(self.sec,cpoint,cfield,nindex) )
-        CHKERR( PetscSectionSetFieldConstraintIndices(self.sec,cpoint,cfield,cindices) )
+        CHKERR( PetscSectionSetFieldConstraintDof(self.sec, cpoint, cfield, nindex) )
+        CHKERR( PetscSectionSetFieldConstraintIndices(self.sec, cpoint, cfield, cindices) )
 
     def getMaxDof(self) -> int:
         """Return the maximum number of DOFs for any point in the section.
@@ -707,7 +707,7 @@ cdef class Section(Object):
 
         """
         cdef PetscInt maxDof = 0
-        CHKERR( PetscSectionGetMaxDof(self.sec,&maxDof) )
+        CHKERR( PetscSectionGetMaxDof(self.sec, &maxDof) )
         return toInt(maxDof)
 
     def getStorageSize(self) -> int:
@@ -721,7 +721,7 @@ cdef class Section(Object):
 
         """
         cdef PetscInt size = 0
-        CHKERR( PetscSectionGetStorageSize(self.sec,&size) )
+        CHKERR( PetscSectionGetStorageSize(self.sec, &size) )
         return toInt(size)
 
     def getConstrainedStorageSize(self) -> int:
@@ -735,7 +735,7 @@ cdef class Section(Object):
 
         """
         cdef PetscInt size = 0
-        CHKERR( PetscSectionGetConstrainedStorageSize(self.sec,&size) )
+        CHKERR( PetscSectionGetConstrainedStorageSize(self.sec, &size) )
         return toInt(size)
 
     def getOffset(self, point: int) -> int:
@@ -757,7 +757,7 @@ cdef class Section(Object):
 
         """
         cdef PetscInt cpoint = asInt(point), offset = 0
-        CHKERR( PetscSectionGetOffset(self.sec,cpoint,&offset) )
+        CHKERR( PetscSectionGetOffset(self.sec, cpoint, &offset) )
         return toInt(offset)
 
     def setOffset(self, point: int, offset: int) -> None:
@@ -781,7 +781,7 @@ cdef class Section(Object):
         """
         cdef PetscInt cpoint = asInt(point)
         cdef PetscInt coffset = asInt(offset)
-        CHKERR( PetscSectionSetOffset(self.sec,cpoint,coffset) )
+        CHKERR( PetscSectionSetOffset(self.sec, cpoint, coffset) )
 
     def getFieldOffset(self, point: int, field: int) -> int:
         """Return the offset for the field DOFs on the given point.
@@ -806,7 +806,7 @@ cdef class Section(Object):
         cdef PetscInt cpoint = asInt(point)
         cdef PetscInt cfield = asInt(field)
         cdef PetscInt offset = 0
-        CHKERR( PetscSectionGetFieldOffset(self.sec,cpoint,cfield,&offset) )
+        CHKERR( PetscSectionGetFieldOffset(self.sec, cpoint, cfield, &offset) )
         return toInt(offset)
 
     def setFieldOffset(self, point: int, field: int, offset: int) -> None:
@@ -833,9 +833,9 @@ cdef class Section(Object):
         cdef PetscInt cpoint = asInt(point)
         cdef PetscInt cfield = asInt(field)
         cdef PetscInt coffset = asInt(offset)
-        CHKERR( PetscSectionSetFieldOffset(self.sec,cpoint,cfield,coffset) )
+        CHKERR( PetscSectionSetFieldOffset(self.sec, cpoint, cfield, coffset) )
 
-    def getOffsetRange(self) -> tuple[int,int]:
+    def getOffsetRange(self) -> tuple[int, int]:
         """Return the full range of offsets, [start, end), for a section.
 
         Not collective.
@@ -846,8 +846,8 @@ cdef class Section(Object):
 
         """
         cdef PetscInt oStart = 0, oEnd = 0
-        CHKERR( PetscSectionGetOffsetRange(self.sec,&oStart,&oEnd) )
-        return toInt(oStart),toInt(oEnd)
+        CHKERR( PetscSectionGetOffsetRange(self.sec, &oStart, &oEnd) )
+        return toInt(oStart), toInt(oEnd)
 
     # FIXME: Hardcoded PETSC_FALSE parameters
     def createGlobalSection(self, SF sf) -> Section:
@@ -881,5 +881,5 @@ cdef class Section(Object):
 
         """
         cdef Section gsec = Section()
-        CHKERR( PetscSectionCreateGlobalSection(self.sec,sf.sf,PETSC_TRUE,PETSC_FALSE,PETSC_FALSE,&gsec.sec) )
+        CHKERR( PetscSectionCreateGlobalSection(self.sec, sf.sf, PETSC_TRUE, PETSC_FALSE, PETSC_FALSE, &gsec.sec) )
         return gsec

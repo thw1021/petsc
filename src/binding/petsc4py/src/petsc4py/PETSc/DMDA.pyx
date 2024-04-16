@@ -1,18 +1,24 @@
 # --------------------------------------------------------------------
 
 class DMDAStencilType(object):
+    """Stencil types."""
     STAR = DMDA_STENCIL_STAR
     BOX  = DMDA_STENCIL_BOX
 
+
 class DMDAInterpolationType(object):
+    """Interpolation types."""
     Q0 = DMDA_INTERPOLATION_Q0
     Q1 = DMDA_INTERPOLATION_Q1
 
+
 class DMDAElementType(object):
+    """Element types."""
     P1 = DMDA_ELEMENT_P1
     Q1 = DMDA_ELEMENT_Q1
 
 # --------------------------------------------------------------------
+
 
 cdef class DMDA(DM):
     """A DM object that is used to manage data for a structured grid."""
@@ -180,12 +186,12 @@ cdef class DMDA(DM):
         cdef PetscDMDAStencilType  stype  = DMDA_STENCIL_BOX
         cdef PetscInt              swidth = PETSC_DECIDE
         CHKERR( DMDAGetInfo(self.dm,
-                          &ndim,
-                          &M, &N, &P,
-                          &m, &n, &p,
-                          &ndof, &swidth,
-                          &btx, &bty, &btz,
-                          &stype) )
+                            &ndim,
+                            &M, &N, &P,
+                            &m, &n, &p,
+                            &ndof, &swidth,
+                            &btx, &bty, &btz,
+                            &stype) )
         cdef const PetscInt *lx = NULL, *ly = NULL, *lz = NULL
         CHKERR( DMDAGetOwnershipRanges(self.dm, &lx, &ly, &lz) )
         cdef MPI_Comm comm = MPI_COMM_NULL
@@ -416,12 +422,12 @@ cdef class DMDA(DM):
         cdef PetscDMBoundaryType bty = DM_BOUNDARY_NONE
         cdef PetscDMBoundaryType btz = DM_BOUNDARY_NONE
         CHKERR( DMDAGetInfo(self.dm,
-                          &dim,
-                          NULL, NULL, NULL,
-                          NULL, NULL, NULL,
-                          NULL, NULL,
-                          &btx, &bty, &btz,
-                          NULL) )
+                            &dim,
+                            NULL, NULL, NULL,
+                            NULL, NULL, NULL,
+                            NULL, NULL,
+                            &btx, &bty, &btz,
+                            NULL) )
         return toDims(dim, btx, bty, btz)
 
     def setStencilType(self, stencil_type: StencilType) -> None:
@@ -454,12 +460,12 @@ cdef class DMDA(DM):
         """
         cdef PetscDMDAStencilType stype = DMDA_STENCIL_BOX
         CHKERR( DMDAGetInfo(self.dm,
-                          NULL,
-                          NULL, NULL, NULL,
-                          NULL, NULL, NULL,
-                          NULL, NULL,
-                          NULL, NULL, NULL,
-                          &stype) )
+                            NULL,
+                            NULL, NULL, NULL,
+                            NULL, NULL, NULL,
+                            NULL, NULL,
+                            NULL, NULL, NULL,
+                            &stype) )
         return stype
 
     def setStencilWidth(self, stencil_width: int) -> None:
@@ -972,9 +978,9 @@ cdef class DMDA(DM):
         refine[1] = asInt(refine_y)
         refine[2] = asInt(refine_z)
         CHKERR( DMDASetRefinementFactor(self.dm,
-                                      refine[0],
-                                      refine[1],
-                                      refine[2]) )
+                                        refine[0],
+                                        refine[1],
+                                        refine[2]) )
 
     def getRefinementFactor(self) -> tuple[int, ...]:
         """Return the ratios that the DMDA grid is refined in each dimension.
@@ -986,12 +992,12 @@ cdef class DMDA(DM):
         setRefinementFactor, petsc.DMDAGetRefinementFactor
 
         """
-        cdef PetscInt i, dim = 0, refine[3]
+        cdef PetscInt dim = 0, refine[3]
         CHKERR( DMDAGetDim(self.dm, &dim) )
         CHKERR( DMDAGetRefinementFactor(self.dm,
-                                      &refine[0],
-                                      &refine[1],
-                                      &refine[2]) )
+                                        &refine[0],
+                                        &refine[1],
+                                        &refine[2]) )
         return tuple([toInt(refine[i]) for 0 <= i < dim])
 
     def setInterpolationType(self, interp_type: InterpolationType) -> None:

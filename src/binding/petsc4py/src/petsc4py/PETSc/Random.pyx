@@ -10,6 +10,7 @@ class RandomType(object):
 
 # --------------------------------------------------------------------
 
+
 cdef class Random(Object):
     """The random number generator object.
 
@@ -233,6 +234,7 @@ cdef class Random(Object):
         """The seed of the random number generator."""
         def __get__(self) -> int:
             return self.getSeed()
+
         def __set__(self, value: int | None) -> None:
             self.setSeed(value)
 
@@ -240,6 +242,7 @@ cdef class Random(Object):
         """The interval of the generated random numbers."""
         def __get__(self) -> tuple[Scalar, Scalar]:
             return self.getInterval()
+
         def __set__(self, value: tuple[Scalar, Scalar]):
             self.setInterval(value)
 

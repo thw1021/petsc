@@ -10,17 +10,16 @@ cdef extern from "Python.h":
     ctypedef int traverseproc(PyObject *, visitproc, void *) noexcept
     ctypedef int inquiry(PyObject *) noexcept
     ctypedef struct PyTypeObject:
-       char*        tp_name
-       traverseproc tp_traverse
-       inquiry      tp_clear
+        char         *tp_name
+        traverseproc tp_traverse
+        inquiry      tp_clear
     PyTypeObject *Py_TYPE(PyObject *)
 
 cdef extern from "<petsc/private/garbagecollector.h>" nogil:
     PetscErrorCode PetscGarbageCleanup(MPI_Comm)
-    PetscErrorCode PetscGarbageView(MPI_Comm,PetscViewer);
+    PetscErrorCode PetscGarbageView(MPI_Comm, PetscViewer)
 
 cdef int tp_traverse(PyObject *o, visitproc visit, void *arg) noexcept:
-    ## printf("%s.tp_traverse(%p)\n", Py_TYPE(o).tp_name, <void*>o)
     cdef PetscObject p = (<Object>o).obj[0]
     if p == NULL: return 0
     cdef PyObject *d = <PyObject*>p.python_context
@@ -28,15 +27,14 @@ cdef int tp_traverse(PyObject *o, visitproc visit, void *arg) noexcept:
     return visit(d, arg)
 
 cdef int tp_clear(PyObject *o) noexcept:
-    ## printf("%s.tp_clear(%p)\n", Py_TYPE(o).tp_name, <void*>o)
     cdef PetscObject *p = (<Object>o).obj
     PetscDEALLOC(p)
     return 0
 
 cdef inline void TypeEnableGC(PyTypeObject *t) noexcept:
-    ## printf("%s: enforcing GC support\n", t.tp_name)
     t.tp_traverse = tp_traverse
     t.tp_clear    = tp_clear
+
 
 def garbage_cleanup(comm=None):
     """Clean up unused PETSc objects.
@@ -60,6 +58,7 @@ def garbage_cleanup(comm=None):
         if ccomm == MPI_COMM_NULL:
             raise ValueError("null communicator")
         CHKERR( PetscGarbageCleanup(ccomm) )
+
 
 def garbage_view(comm=None):
     """Print summary of the garbage PETSc objects.
