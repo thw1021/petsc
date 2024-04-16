@@ -81,14 +81,14 @@ class TestOptions(unittest.TestCase):
     def testType(self):
         types = [
             (bool, bool, self.opts.getBool, self.opts.getBoolArray),
-            (int, PETSc.IntType(), self.opts.getInt, self.opts.getIntArray),
-            (float, PETSc.RealType(), self.opts.getReal, self.opts.getRealArray),
+            (int, PETSc.IntType, self.opts.getInt, self.opts.getIntArray),
+            (float, PETSc.RealType, self.opts.getReal, self.opts.getRealArray),
         ]
-        if PETSc.ScalarType() is PETSc.ComplexType:
+        if PETSc.ScalarType is PETSc.ComplexType:
             types.append(
                 (
                     complex,
-                    PETSc.ScalarType(),
+                    PETSc.ScalarType,
                     self.opts.getScalar,
                     self.opts.getScalarArray,
                 )
@@ -97,7 +97,7 @@ class TestOptions(unittest.TestCase):
             types.append(
                 (
                     float,
-                    PETSc.ScalarType(),
+                    PETSc.ScalarType,
                     self.opts.getScalar,
                     self.opts.getScalarArray,
                 )
