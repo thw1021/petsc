@@ -129,11 +129,11 @@ static PetscErrorCode MatAllocate_LMVMDQN(Mat B, Vec X, Vec F)
       }
       if (lqn->use_recursive && (is_dbfgs || is_ddfp)) {
         PetscCall(VecDuplicateVecs(X, lmvm->m, &lqn->PQ));
-        PetscCall(PetscMalloc(lmvm->m, &lqn->yts));
+        PetscCall(PetscMalloc1(lmvm->m, &lqn->yts));
         if (is_dbfgs) {
-          PetscCall(PetscMalloc(lmvm->m, &lqn->stp));
+          PetscCall(PetscMalloc1(lmvm->m, &lqn->stp));
         } else if (is_ddfp) {
-          PetscCall(PetscMalloc(lmvm->m, &lqn->ytq));
+          PetscCall(PetscMalloc1(lmvm->m, &lqn->ytq));
         }
       }
       PetscCall(VecDuplicate(lqn->rwork2, &lqn->cyclic_work_vec));
