@@ -74,8 +74,8 @@ class Configure(config.package.Package):
     self.addMakeMacro('PETSC4PY','yes')
     self.addMakeRule('petsc4pybuild','', \
                        ['@echo "*** Building petsc4py ***"',\
-                          '@${RM} ${PETSC_ARCH}/lib/petsc/conf/petsc4py.errorflg',\
-                          '@(cd '+self.packageDir+' && ${RM} -rf build && \\\n\
+                          '${RM} ${PETSC_ARCH}/lib/petsc/conf/petsc4py.errorflg',\
+                          '(MPICC=${PCC} && export MPICC && cd '+self.packageDir+' && ${MAKE} clean && \\\n\
            '+newdir+archflags+self.python.pyexe+' setup.py build ) || \\\n\
              (echo "**************************ERROR*************************************" && \\\n\
              echo "Error building petsc4py." && \\\n\
@@ -84,7 +84,7 @@ class Configure(config.package.Package):
              exit 1)'])
     self.addMakeRule('petsc4pyinstall','', \
                        ['@echo "*** Installing petsc4py ***"',\
-                          '@(MPICC=${PCC} && export MPICC && cd '+self.packageDir+' && \\\n\
+                          '(MPICC=${PCC} && export MPICC && cd '+self.packageDir+' && \\\n\
            '+newdir+archflags+self.python.pyexe+' setup.py install --install-lib='+installLibPath+' \\\n\
                $(if $(DESTDIR),--root=\'$(DESTDIR)\') ) || \\\n\
              (echo "**************************ERROR*************************************" && \\\n\
