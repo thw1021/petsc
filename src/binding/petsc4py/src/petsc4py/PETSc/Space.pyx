@@ -1,6 +1,7 @@
 # --------------------------------------------------------------------
 
 class SpaceType(object):
+    """The function space types."""
     POLYNOMIAL = S_(PETSCSPACEPOLYNOMIAL)
     PTRIMMED   = S_(PETSCSPACEPTRIMMED)
     TENSOR     = S_(PETSCSPACETENSOR)
@@ -11,8 +12,9 @@ class SpaceType(object):
 
 # --------------------------------------------------------------------
 
+
 cdef class Space(Object):
-    """Linear space object."""
+    """Function space object."""
     Type = SpaceType
 
     def __cinit__(self):
@@ -101,17 +103,21 @@ cdef class Space(Object):
     def getDimension(self) -> int:
         """Return the number of basis vectors.
 
+        Not collective.
+
         See Also
         --------
         petsc.PetscSpaceGetDimension
 
         """
-        cdef PetscInt cdim
+        cdef PetscInt cdim = 0
         CHKERR( PetscSpaceGetDimension(self.space, &cdim))
         return toInt(cdim)
 
     def getDegree(self) -> tuple[int, int]:
         """Return the polynomial degrees that characterize this space.
+
+        Not collective.
 
         Returns
         -------
@@ -125,12 +131,14 @@ cdef class Space(Object):
         setDegree, petsc.PetscSpaceGetDegree
 
         """
-        cdef PetscInt cdegmax, cdegmin
+        cdef PetscInt cdegmax = 0, cdegmin = 0
         CHKERR( PetscSpaceGetDegree(self.space, &cdegmin, &cdegmax))
         return toInt(cdegmin), toInt(cdegmax)
 
     def setDegree(self, degree: int | None, maxDegree: int | None) -> None:
         """Set the degree of approximation for this space.
+
+        Logically collective.
 
         One of ``degree`` and ``maxDegree`` can be `None`.
 
@@ -146,7 +154,6 @@ cdef class Space(Object):
         getDegree, petsc.PetscSpaceSetDegree
 
         """
-        assert( (degree != None) & (maxDegree != None))
         cdef PetscInt cdegree = PETSC_DETERMINE
         if degree is not None: cdegree = asInt(degree)
         cdef PetscInt cmaxdegree = PETSC_DETERMINE
@@ -156,17 +163,21 @@ cdef class Space(Object):
     def getNumVariables(self) -> int:
         """Return the number of variables for this space.
 
+        Not collective.
+
         See Also
         --------
         setNumVariables, petsc.PetscSpaceGetNumVariables
 
         """
-        cdef PetscInt cnvars
+        cdef PetscInt cnvars = 0
         CHKERR( PetscSpaceGetNumVariables(self.space, &cnvars))
         return toInt(cnvars)
 
     def setNumVariables(self, n: int) -> None:
         """Set the number of variables for this space.
+
+        Logically collective.
 
         Parameters
         ----------
@@ -184,17 +195,21 @@ cdef class Space(Object):
     def getNumComponents(self) -> int:
         """Return the number of components for this space.
 
+        Not collective.
+
         See Also
         --------
         setNumComponents, petsc.PetscSpaceGetNumComponents
 
         """
-        cdef PetscInt cncomps
+        cdef PetscInt cncomps = 0
         CHKERR( PetscSpaceGetNumComponents(self.space, &cncomps))
         return toInt(cncomps)
 
     def setNumComponents(self, nc: int) -> None:
         """Set the number of components for this space.
+
+        Logically collective.
 
         Parameters
         ----------
@@ -208,17 +223,6 @@ cdef class Space(Object):
         """
         cdef PetscInt cnc = asInt(nc)
         CHKERR( PetscSpaceSetNumComponents(self.space, cnc) )
-
-    #def evaluate(self, points):
-    #    cdef PetscInt  cnpoints = 0, cdim=0, cnfuncs=0
-    #    cdef PetscReal *cpoints = NULL
-    #    cdef PetscReal *B = NULL, *D = NULL, *H = NULL
-    #    points = iarray_r(points, &cnpoints,  &cpoints)
-    #    # Get the dimension of the space
-    #    CHKERR( PetscSpaceGetDimension( self.space, &cnfuncs) )
-    #    CHKERR( PetscSpace)
-    #    CHKERR( PetscSpaceEvaluate(self.space, cnpoints, &cpoints, &B, &D, &H) )
-    #    return array_r(cnpoints*cdim, B), array_r(cnpoints*cnc, D), array_r(, H)
 
     def getType(self) -> str:
         """Return the type of the space object.
@@ -257,6 +261,8 @@ cdef class Space(Object):
     def getSumConcatenate(self) -> bool:
         """Return the concatenate flag for this space.
 
+        Not collective.
+
         A concatenated sum space will have the number of components equal to
         the sum of the number of components of all subspaces.
         A non-concatenated, or direct sum space will have the same number of
@@ -267,12 +273,14 @@ cdef class Space(Object):
         setSumConcatenate, petsc.PetscSpaceSumGetConcatenate
 
         """
-        cdef PetscBool concatenate
+        cdef PetscBool concatenate = PETSC_FALSE
         CHKERR( PetscSpaceSumGetConcatenate(self.space, &concatenate))
         return toBool(concatenate)
 
     def setSumConcatenate(self, concatenate: bool) -> None:
         """Set the concatenate flag for this space.
+
+        Logically collective.
 
         A concatenated sum space will have the number of components equal to
         the sum of the number of components of all subspaces.
@@ -291,22 +299,26 @@ cdef class Space(Object):
 
         """
         cdef PetscBool cconcatenate = asBool(concatenate)
-        CHKERR( PetscSpaceSumSetConcatenate(self.space, concatenate))
+        CHKERR( PetscSpaceSumSetConcatenate(self.space, cconcatenate))
 
     def getSumNumSubspaces(self) -> int:
         """Return the number of spaces in the sum.
+
+        Not collective.
 
         See Also
         --------
         setSumNumSubspaces, petsc.PetscSpaceSumGetNumSubspaces
 
         """
-        cdef PetscInt numSumSpaces
+        cdef PetscInt numSumSpaces = 0
         CHKERR( PetscSpaceSumGetNumSubspaces(self.space, &numSumSpaces))
         return toInt(numSumSpaces)
 
     def getSumSubspace(self, s: int) -> Space:
         """Return a space in the sum.
+
+        Not collective.
 
         Parameters
         ----------
@@ -320,11 +332,13 @@ cdef class Space(Object):
         """
         cdef Space subsp = Space()
         cdef PetscInt cs = asInt(s)
-        CHKERR( PetscSpaceSumGetSubspace(self.space, s, &subsp.space) )
+        CHKERR( PetscSpaceSumGetSubspace(self.space, cs, &subsp.space) )
         return subsp
 
     def setSumSubspace(self, s: int, Space subsp) -> None:
         """Set a space in the sum.
+
+        Logically collective.
 
         Parameters
         ----------
@@ -344,6 +358,8 @@ cdef class Space(Object):
     def setSumNumSubspaces(self, numSumSpaces: int) -> None:
         """Set the number of spaces in the sum.
 
+        Logically collective.
+
         Parameters
         ----------
         numSumSpaces
@@ -360,6 +376,8 @@ cdef class Space(Object):
     def getTensorNumSubspaces(self) -> int:
         """Return the number of spaces in the tensor product.
 
+        Not collective.
+
         See Also
         --------
         setTensorNumSubspaces, petsc.PetscSpaceTensorGetNumSubspaces
@@ -371,6 +389,8 @@ cdef class Space(Object):
 
     def setTensorSubspace(self, s: int, Space subsp) -> None:
         """Set a space in the tensor product.
+
+        Logically collective.
 
         Parameters
         ----------
@@ -390,6 +410,8 @@ cdef class Space(Object):
     def getTensorSubspace(self, s: int) -> Space:
         """Return a space in the tensor product.
 
+        Not collective.
+
         Parameters
         ----------
         s
@@ -408,6 +430,8 @@ cdef class Space(Object):
     def setTensorNumSubspaces(self, numTensSpaces: int) -> None:
         """Set the number of spaces in the tensor product.
 
+        Logically collective.
+
         Parameters
         ----------
         numTensSpaces
@@ -424,6 +448,8 @@ cdef class Space(Object):
     def getPolynomialTensor(self) -> bool:
         """Return whether a function space is a space of tensor polynomials.
 
+        Not collective.
+
         Return `True` if a function space is a space of tensor polynomials
         (the space is spanned by polynomials whose degree in each variable is
         bounded by the given order), as opposed to polynomials (the space is
@@ -435,12 +461,14 @@ cdef class Space(Object):
         setPolynomialTensor, petsc.PetscSpacePolynomialGetTensor
 
         """
-        cdef PetscBool ctensor
+        cdef PetscBool ctensor = PETSC_FALSE
         CHKERR( PetscSpacePolynomialGetTensor(self.space, &ctensor) )
         return toBool(ctensor)
 
     def setPolynomialTensor(self, tensor: bool) -> None:
         """Set whether a function space is a space of tensor polynomials.
+
+        Logically collective.
 
         Set to `True` for a function space which is a space of tensor
         polynomials (the space is spanned by polynomials whose degree in each
@@ -499,6 +527,8 @@ cdef class Space(Object):
     def setPTrimmedFormDegree(self, formDegree: int) -> None:
         """Set the form degree of the trimmed polynomials.
 
+        Logically collective.
+
         Parameters
         ----------
         formDegree
@@ -515,6 +545,8 @@ cdef class Space(Object):
     def getPTrimmedFormDegree(self) -> int:
         """Return the form degree of the trimmed polynomials.
 
+        Not collective.
+
         See Also
         --------
         setPTrimmedFormDegree, petsc.PetscSpacePTrimmedGetFormDegree
@@ -526,13 +558,16 @@ cdef class Space(Object):
 
 # --------------------------------------------------------------------
 
+
 class DualSpaceType(object):
+    """The dual space types."""
     LAGRANGE = S_(PETSCDUALSPACELAGRANGE)
     SIMPLE   = S_(PETSCDUALSPACESIMPLE)
     REFINED  = S_(PETSCDUALSPACEREFINED)
     BDM      = S_(PETSCDUALSPACEBDM)
 
 # --------------------------------------------------------------------
+
 
 cdef class DualSpace(Object):
     """Dual space to a linear space."""
@@ -666,24 +701,28 @@ cdef class DualSpace(Object):
         petsc.PetscDualSpaceGetDimension
 
         """
-        cdef PetscInt cdim
+        cdef PetscInt cdim = 0
         CHKERR( PetscDualSpaceGetDimension(self.dualspace, &cdim))
         return toInt(cdim)
 
     def getNumComponents(self) -> int:
         """Return the number of components for this space.
 
+        Not collective.
+
         See Also
         --------
         setNumComponents, petsc.PetscDualSpaceGetNumComponents
 
         """
-        cdef PetscInt cncomps
+        cdef PetscInt cncomps = 0
         CHKERR( PetscDualSpaceGetNumComponents(self.dualspace, &cncomps))
         return toInt(cncomps)
 
     def setNumComponents(self, nc: int) -> None:
         """Set the number of components for this space.
+
+        Logically collective.
 
         Parameters
         ----------
@@ -728,7 +767,7 @@ cdef class DualSpace(Object):
 
         """
         cdef PetscDualSpaceType cval = NULL
-        space_type = str2bytes(dualspace_type, &cval)
+        dualspace_type = str2bytes(dualspace_type, &cval)
         CHKERR( PetscDualSpaceSetType(self.dualspace, cval) )
         return self
 
@@ -742,7 +781,7 @@ cdef class DualSpace(Object):
         setOrder, petsc.PetscDualSpaceGetOrder
 
         """
-        cdef PetscInt corder
+        cdef PetscInt corder = 0
         CHKERR( PetscDualSpaceGetOrder(self.dualspace, &corder))
         return toInt(corder)
 

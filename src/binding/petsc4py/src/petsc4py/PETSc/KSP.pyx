@@ -166,16 +166,9 @@ class KSPType(object):
         natively in PETSc, e.g., GCRODR, a recycled Krylov
         method which is similar to KSPLGMRES. `petsc.KSPHPDDM`
 
-    Notes
-    -----
-    `KSP Type <https://petsc.org/release/docs/manualpages/KSP/KSPType/>`__
-    `KSP Type table <https://petsc.org/release/docs/manual/ksp/#tab-kspdefaults>`__
-    `Pieplined KSP methods <https://petsc.org/release/docs/manual/ksp/#sec-pipelineksp>`__
-    `Flexible KSP methods <https://petsc.org/release/docs/manual/ksp/#sec-flexibleksp>`__
-
     See Also
     --------
-    petsc_options, petsc.KSP
+    petsc_options, petsc.KSPType
 
     """
     RICHARDSON = S_(KSPRICHARDSON)
@@ -227,6 +220,7 @@ class KSPType(object):
     FETIDP     = S_(KSPFETIDP)
     HPDDM      = S_(KSPHPDDM)
 
+
 class KSPNormType(object):
     """KSP norm type.
 
@@ -261,6 +255,7 @@ class KSPNormType(object):
     PRECONDITIONED   = NORM_PRECONDITIONED
     UNPRECONDITIONED = NORM_UNPRECONDITIONED
     NATURAL          = NORM_NATURAL
+
 
 class KSPConvergedReason(object):
     """KSP Converged Reason.
@@ -329,7 +324,7 @@ class KSPConvergedReason(object):
     `petsc.KSPConvergedReason`
 
     """
-    #iterating
+    # iterating
     CONVERGED_ITERATING       = KSP_CONVERGED_ITERATING
     ITERATING                 = KSP_CONVERGED_ITERATING
     # converged
@@ -353,6 +348,7 @@ class KSPConvergedReason(object):
     DIVERGED_INDEFINITE_MAT   = KSP_DIVERGED_INDEFINITE_MAT
     DIVERGED_PCSETUP_FAILED   = KSP_DIVERGED_PC_FAILED
 
+
 class KSPHPDDMType(object):
     """The *HPDDM* Krylov solver type."""
     GMRES                     = KSP_HPDDM_TYPE_GMRES
@@ -365,6 +361,7 @@ class KSPHPDDMType(object):
     PREONLY                   = KSP_HPDDM_TYPE_PREONLY
 
 # --------------------------------------------------------------------
+
 
 cdef class KSP(Object):
     """Abstract PETSc object that manages all Krylov methods.
@@ -523,7 +520,7 @@ cdef class KSP(Object):
         CHKERR( KSPGetType(self.ksp, &cval) )
         return bytes2str(cval)
 
-    def setOptionsPrefix(self, prefix: str) -> None:
+    def setOptionsPrefix(self, prefix: str | None) -> None:
         """Set the prefix used for all `KSP` options in the database.
 
         Logically collective.
@@ -575,7 +572,7 @@ cdef class KSP(Object):
         CHKERR( KSPGetOptionsPrefix(self.ksp, &cval) )
         return bytes2str(cval)
 
-    def appendOptionsPrefix(self, prefix: str) -> None:
+    def appendOptionsPrefix(self, prefix: str | None) -> None:
         """Append to prefix used for all `KSP` options in the database.
 
         Logically collective.
@@ -958,7 +955,7 @@ cdef class KSP(Object):
 
         """
         cdef PetscReal crtol, catol, cdivtol
-        crtol = catol = cdivtol = PETSC_DEFAULT;
+        crtol = catol = cdivtol = PETSC_DEFAULT
         if rtol   is not None: crtol   = asReal(rtol)
         if atol   is not None: catol   = asReal(atol)
         if divtol is not None: cdivtol = asReal(divtol)
@@ -1048,20 +1045,17 @@ cdef class KSP(Object):
             CHKERR( KSPGetNormType(self.ksp, &normtype) )
             if normtype != KSP_NORM_NONE:
                 CHKERR( PetscObjectTypeCompare(<PetscObject>self.ksp,
-                KSPLSQR,  &islsqr)  )
+                                               KSPLSQR,  &islsqr)  )
                 CHKERR( KSPConvergedDefaultCreate(&cctx) )
                 if not islsqr:
-                    CHKERR( KSPSetConvergenceTest(
-                    self.ksp, KSPConvergedDefault,
-                    cctx, KSPConvergedDefaultDestroy) )
+                    CHKERR( KSPSetConvergenceTest(self.ksp, KSPConvergedDefault,
+                                                  cctx, KSPConvergedDefaultDestroy) )
                 else:
-                    CHKERR( KSPSetConvergenceTest(
-                    self.ksp, KSPLSQRConvergedDefault,
-                    cctx, KSPConvergedDefaultDestroy) )
+                    CHKERR( KSPSetConvergenceTest(self.ksp, KSPLSQRConvergedDefault,
+                                                  cctx, KSPConvergedDefaultDestroy) )
             else:
-                CHKERR( KSPSetConvergenceTest(
-                        self.ksp, KSPConvergedSkip,
-                        NULL, NULL) )
+                CHKERR( KSPSetConvergenceTest(self.ksp, KSPConvergedSkip,
+                                              NULL, NULL) )
             self.set_attr('__converged__', None)
 
     def addConvergenceTest(
@@ -1099,8 +1093,6 @@ cdef class KSP(Object):
         petsc.KSPSetConvergenceTest, petsc.KSPConvergedDefault
 
         """
-        cdef PetscKSPNormType normtype = KSP_NORM_NONE
-        cdef void* cctx = NULL
         cdef object oconverged = self.get_attr("__converged__")
         cdef PetscBool pre = asBool(prepend)
         if converged is None: return
@@ -1125,6 +1117,8 @@ cdef class KSP(Object):
 
     def callConvergenceTest(self, its: int, rnorm: float) -> None:
         """Call the convergence test callback.
+
+        Collective.
 
         Parameters
         ----------
@@ -1221,10 +1215,9 @@ cdef class KSP(Object):
     # --- monitoring ---
 
     def setMonitor(self,
-        monitor: KSPMonitorFunction,
-        args: tuple[Any, ...] | None = None,
-        kargs: dict[str, Any] | None = None
-    ) -> None:
+                   monitor: KSPMonitorFunction,
+                   args: tuple[Any, ...] | None = None,
+                   kargs: dict[str, Any] | None = None) -> None:
         """Set additional function to monitor the residual.
 
         Logically collective.
@@ -1368,6 +1361,8 @@ cdef class KSP(Object):
     def setNormType(self, normtype: NormType) -> None:
         """Set the norm that is used for convergence testing.
 
+        Logically collective.
+
         Parameters
         ----------
         normtype
@@ -1406,6 +1401,8 @@ cdef class KSP(Object):
 
     def setComputeEigenvalues(self, flag: bool) -> None:
         """Set a flag to compute eigenvalues.
+
+        Logically collective.
 
         Set a flag so that the extreme eigenvalues values will be
         calculated via a Lanczos or Arnoldi process as the linear
@@ -1474,6 +1471,8 @@ cdef class KSP(Object):
 
     def getComputeSingularValues(self) -> bool:
         """Return flag indicating whether singular values will be calculated.
+
+        Not collective.
 
         Return the flag indicating whether the extreme singular values
         will be calculated via a Lanczos or Arnoldi process as the
@@ -1549,6 +1548,8 @@ cdef class KSP(Object):
     def getInitialGuessKnoll(self) -> bool:
         """Determine whether the KSP solver is using the Knoll trick.
 
+        Not collective.
+
         This uses the Knoll trick; using `PC.apply` to compute the
         initial guess.
 
@@ -1563,6 +1564,8 @@ cdef class KSP(Object):
 
     def setUseFischerGuess(self, model: int, size: int) -> None:
         """Use the Paul Fischer algorithm to compute initial guesses.
+
+        Logically collective.
 
         Use the Paul Fischer algorithm or its variants to compute
         initial guesses for a set of solves with related right hand
@@ -1637,7 +1640,7 @@ cdef class KSP(Object):
     ) -> None:
         """Set the function that is called at the beginning of each `KSP.solve`.
 
-        Logically Collective.
+        Logically collective.
 
         Parameters
         ----------
@@ -1671,7 +1674,7 @@ cdef class KSP(Object):
     ) -> None:
         """Set the function that is called at the end of each `KSP.solve`.
 
-        Logically Collective.
+        Logically collective.
 
         Parameters
         ----------
@@ -1805,6 +1808,8 @@ cdef class KSP(Object):
     def matSolve(self, Mat B, Mat X) -> None:
         """Solve a linear system with multiple right-hand sides.
 
+        Collective.
+
         These are stored as a `Mat.Type.DENSE`. Unlike `solve`,
         ``B`` and ``X`` must be different matrices.
 
@@ -1824,6 +1829,8 @@ cdef class KSP(Object):
 
     def matSolveTranspose(self, Mat B, Mat X) -> None:
         """Solve the transpose of a linear system with multiple RHS.
+
+        Collective.
 
         Parameters
         ----------
@@ -1893,6 +1900,8 @@ cdef class KSP(Object):
     def getHPDDMType(self) -> HPDDMType:
         """Return the Krylov solver type.
 
+        Not collective.
+
         See Also
         --------
         petsc.KSPHPDDMGetType
@@ -1952,6 +1961,8 @@ cdef class KSP(Object):
     def getSolution(self) -> Vec:
         """Return the solution for the linear system to be solved.
 
+        Not collective.
+
         Note that this may not be the solution that is stored during
         the iterative process.
 
@@ -1971,6 +1982,8 @@ cdef class KSP(Object):
         left: int | None = None
     ) -> tuple[list[Vec], list[Vec]] | list[Vec] | None:
         """Create working vectors.
+
+        Collective.
 
         Parameters
         ----------
@@ -2015,6 +2028,8 @@ cdef class KSP(Object):
     def buildSolution(self, Vec x=None) -> Vec:
         """Return the solution vector.
 
+        Collective.
+
         Parameters
         ----------
         x
@@ -2035,6 +2050,8 @@ cdef class KSP(Object):
     def buildResidual(self, Vec r=None) -> Vec:
         """Return the residual of the linear system.
 
+        Collective.
+
         Parameters
         ----------
         r
@@ -2054,6 +2071,8 @@ cdef class KSP(Object):
 
     def computeEigenvalues(self) -> ArrayComplex:
         """Compute the extreme eigenvalues for the preconditioned operator.
+
+        Not collective.
 
         See Also
         --------
@@ -2076,6 +2095,8 @@ cdef class KSP(Object):
     def computeExtremeSingularValues(self) -> tuple[float, float]:
         """Compute the extreme singular values for the preconditioned operator.
 
+        Collective.
+
         Returns
         -------
         smax : float
@@ -2097,6 +2118,8 @@ cdef class KSP(Object):
 
     def setGMRESRestart(self, restart: int) -> None:
         """Set number of iterations at which KSP restarts.
+
+        Logically collective.
 
         Suitable KSPs are: KSPGMRES, KSPFGMRES and KSPLGMRES.
 
@@ -2208,6 +2231,7 @@ cdef class KSP(Object):
         """The solver application context."""
         def __get__(self) -> Any:
             return self.getAppCtx()
+
         def __set__(self, value):
             self.setAppCtx(value)
 
@@ -2217,6 +2241,7 @@ cdef class KSP(Object):
         """The solver `DM`."""
         def __get__(self) -> DM:
             return self.getDM()
+
         def __set__(self, value):
             self.setDM(value)
 
@@ -2250,6 +2275,7 @@ cdef class KSP(Object):
         """Whether guess is non-zero."""
         def __get__(self) -> bool:
             return self.getInitialGuessNonzero()
+
         def __set__(self, value):
             self.setInitialGuessNonzero(value)
 
@@ -2257,6 +2283,7 @@ cdef class KSP(Object):
         """Whether solver uses Knoll trick."""
         def __get__(self) -> bool:
             return self.getInitialGuessKnoll()
+
         def __set__(self, value):
             self.setInitialGuessKnoll(value)
 
@@ -2271,6 +2298,7 @@ cdef class KSP(Object):
         """The side on which preconditioning is performed."""
         def __get__(self) -> PC.Side:
             return self.getPCSide()
+
         def __set__(self, value):
             self.setPCSide(value)
 
@@ -2278,6 +2306,7 @@ cdef class KSP(Object):
         """The norm used by the solver."""
         def __get__(self) -> NormType:
             return self.getNormType()
+
         def __set__(self, value):
             self.setNormType(value)
 
@@ -2287,6 +2316,7 @@ cdef class KSP(Object):
         """The relative tolerance of the solver."""
         def __get__(self) -> float:
             return self.getTolerances()[0]
+
         def __set__(self, value):
             self.setTolerances(rtol=value)
 
@@ -2294,6 +2324,7 @@ cdef class KSP(Object):
         """The absolute tolerance of the solver."""
         def __get__(self) -> float:
             return self.getTolerances()[1]
+
         def __set__(self, value):
             self.setTolerances(atol=value)
 
@@ -2301,6 +2332,7 @@ cdef class KSP(Object):
         """The divergence tolerance of the solver."""
         def __get__(self) -> float:
             return self.getTolerances()[2]
+
         def __set__(self, value):
             self.setTolerances(divtol=value)
 
@@ -2308,6 +2340,7 @@ cdef class KSP(Object):
         """The maximum number of iteration the solver may take."""
         def __get__(self) -> int:
             return self.getTolerances()[3]
+
         def __set__(self, value):
             self.setTolerances(max_it=value)
 
@@ -2317,6 +2350,7 @@ cdef class KSP(Object):
         """The current number of iterations the solver has taken."""
         def __get__(self) -> int:
             return self.getIterationNumber()
+
         def __set__(self, value):
             self.setIterationNumber(value)
 
@@ -2324,6 +2358,7 @@ cdef class KSP(Object):
         """The norm of the residual at the current iteration."""
         def __get__(self) -> float:
             return self.getResidualNorm()
+
         def __set__(self, value):
             self.setResidualNorm(value)
 
@@ -2338,6 +2373,7 @@ cdef class KSP(Object):
         """The converged reason."""
         def __get__(self) -> KSP.ConvergedReason:
             return self.getConvergedReason()
+
         def __set__(self, value):
             self.setConvergedReason(value)
 

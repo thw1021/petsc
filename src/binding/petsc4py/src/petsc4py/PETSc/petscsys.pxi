@@ -8,50 +8,50 @@ cdef extern from * nogil:
         PETSC_DATATYPE_UNKNOWN
 
     const char PETSC_AUTHOR_INFO[]
-    PetscErrorCode PetscGetVersion(char[],size_t)
-    PetscErrorCode PetscGetVersionNumber(PetscInt*,PetscInt*,PetscInt*,PetscInt*)
+    PetscErrorCode PetscGetVersion(char[], size_t)
+    PetscErrorCode PetscGetVersionNumber(PetscInt*, PetscInt*, PetscInt*, PetscInt*)
 
-    PetscErrorCode PetscInitialize(int*,char***,char[],char[])
+    PetscErrorCode PetscInitialize(int*, char***, char[], char[])
     PetscErrorCode PetscInitializeNoArguments()
     PetscErrorCode PetscFinalize()
     PetscBool PetscInitializeCalled
     PetscBool PetscFinalizeCalled
 
     ctypedef PetscErrorCode (*PetscErrorHandlerFunction)(
-        MPI_Comm,int,char*,char*,int,PetscErrorType,char*,void*)
+        MPI_Comm, int, char*, char*, int, PetscErrorType, char*, void*)
     PetscErrorHandlerFunction PetscAttachDebuggerErrorHandler
     PetscErrorHandlerFunction PetscEmacsClientErrorHandler
     PetscErrorHandlerFunction PetscTraceBackErrorHandler
     PetscErrorHandlerFunction PetscMPIAbortErrorHandler
     PetscErrorHandlerFunction PetscAbortErrorHandler
     PetscErrorHandlerFunction PetscIgnoreErrorHandler
-    PetscErrorCode PetscPushErrorHandler(PetscErrorHandlerFunction,void*)
+    PetscErrorCode PetscPushErrorHandler(PetscErrorHandlerFunction, void*)
     PetscErrorCode PetscPopErrorHandler()
     PetscErrorCode PetscPopSignalHandler()
     PetscErrorCode PetscInfoAllow(PetscBool)
-    PetscErrorCode PetscInfoSetFile(char*,char*)
+    PetscErrorCode PetscInfoSetFile(char*, char*)
 
-    PetscErrorCode PetscErrorMessage(int,char*[],char**)
+    PetscErrorCode PetscErrorMessage(int, char*[], char**)
 
-    PetscErrorCode PetscSplitOwnership(MPI_Comm,PetscInt*,PetscInt*)
-    PetscErrorCode PetscSplitOwnershipBlock(MPI_Comm,PetscInt,PetscInt*,PetscInt*)
+    PetscErrorCode PetscSplitOwnership(MPI_Comm, PetscInt*, PetscInt*)
+    PetscErrorCode PetscSplitOwnershipBlock(MPI_Comm, PetscInt, PetscInt*, PetscInt*)
 
     FILE *PETSC_STDOUT
     FILE *PETSC_STDERR
 
-    PetscErrorCode PetscPrintf(MPI_Comm,char[],...)
-    PetscErrorCode PetscVSNPrintf(char*,size_t,const char[],size_t *,va_list)
-    PetscErrorCode PetscVFPrintfDefault(FILE*,const char[],va_list)
-    PetscErrorCode PetscSynchronizedPrintf(MPI_Comm,char[],...)
-    PetscErrorCode PetscSynchronizedFlush(MPI_Comm,FILE*)
+    PetscErrorCode PetscPrintf(MPI_Comm, char[], ...)
+    PetscErrorCode PetscVSNPrintf(char*, size_t, const char[], size_t *, va_list)
+    PetscErrorCode PetscVFPrintfDefault(FILE*, const char[], va_list)
+    PetscErrorCode PetscSynchronizedPrintf(MPI_Comm, char[], ...)
+    PetscErrorCode PetscSynchronizedFlush(MPI_Comm, FILE*)
 
-    PetscErrorCode PetscSequentialPhaseBegin(MPI_Comm,int)
-    PetscErrorCode PetscSequentialPhaseEnd(MPI_Comm,int)
+    PetscErrorCode PetscSequentialPhaseBegin(MPI_Comm, int)
+    PetscErrorCode PetscSequentialPhaseEnd(MPI_Comm, int)
     PetscErrorCode PetscSleep(PetscReal)
 
-    PetscErrorCode PetscCitationsRegister(const char[],PetscBool*)
+    PetscErrorCode PetscCitationsRegister(const char[], PetscBool*)
 
-    PetscErrorCode PetscHasExternalPackage(const char[],PetscBool*)
+    PetscErrorCode PetscHasExternalPackage(const char[], PetscBool*)
 
 
 cdef inline PetscErrorCode Sys_Sizes(

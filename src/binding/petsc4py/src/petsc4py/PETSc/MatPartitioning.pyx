@@ -1,6 +1,7 @@
 # --------------------------------------------------------------------
 
 class MatPartitioningType(object):
+    """The partitioning types."""
     PARTITIONINGCURRENT  = S_(MATPARTITIONINGCURRENT)
     PARTITIONINGAVERAGE  = S_(MATPARTITIONINGAVERAGE)
     PARTITIONINGSQUARE   = S_(MATPARTITIONINGSQUARE)
@@ -11,6 +12,7 @@ class MatPartitioningType(object):
     PARTITIONINGHIERARCH = S_(MATPARTITIONINGHIERARCH)
 
 # --------------------------------------------------------------------
+
 
 cdef class MatPartitioning(Object):
     """Object for managing the partitioning of a matrix or graph."""

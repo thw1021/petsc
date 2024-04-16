@@ -1,6 +1,7 @@
 # --------------------------------------------------------------------
 
 class SFType(object):
+    """The star forest types."""
     BASIC      = S_(PETSCSFBASIC)
     NEIGHBOR   = S_(PETSCSFNEIGHBOR)
     ALLGATHERV = S_(PETSCSFALLGATHERV)
@@ -11,6 +12,7 @@ class SFType(object):
     WINDOW     = S_(PETSCSFWINDOW)
 
 # --------------------------------------------------------------------
+
 
 cdef class SF(Object):
     """Star Forest object for communication.
@@ -289,7 +291,7 @@ cdef class SF(Object):
 
         """
         cdef const PetscInt *cdegree = NULL
-        cdef PetscInt nroots
+        cdef PetscInt nroots = 0
         CHKERR( PetscSFComputeDegreeBegin(self.sf, &cdegree) )
         CHKERR( PetscSFComputeDegreeEnd(self.sf, &cdegree) )
         CHKERR( PetscSFGetGraph(self.sf, &nroots, NULL, NULL, NULL) )
@@ -396,8 +398,8 @@ cdef class SF(Object):
         petsc.PetscSFDistributeSection
 
         """
-        cdef PetscInt lpStart
-        cdef PetscInt lpEnd
+        cdef PetscInt lpStart = 0
+        cdef PetscInt lpEnd = 0
         cdef PetscInt *cremoteOffsets = NULL
         cdef ndarray remoteOffsets
         cdef MPI_Comm ccomm = def_Comm(self.comm, PETSC_COMM_DEFAULT)

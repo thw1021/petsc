@@ -1,11 +1,13 @@
 # --------------------------------------------------------------------
 
 class ISType(object):
+    """The index set types."""
     GENERAL = S_(ISGENERAL)
     BLOCK   = S_(ISBLOCK)
     STRIDE  = S_(ISSTRIDE)
 
 # --------------------------------------------------------------------
+
 
 cdef class IS(Object):
     """A collection of indices.
@@ -37,7 +39,6 @@ cdef class IS(Object):
         cdef _IS_buffer buf = <_IS_buffer>(view.obj)
         buf.releasebuffer(view)
         <void>self # unused
-
 
     # 'with' statement (PEP 343)
 
@@ -205,8 +206,8 @@ cdef class IS(Object):
     def createStride(
         self,
         size: int,
-        first: int=0,
-        step: int=0,
+        first: int = 0,
+        step: int = 0,
         comm: Comm | None = None
     ) -> Self:
         """Create an index set consisting of evenly spaced values.
@@ -1051,7 +1052,7 @@ cdef class IS(Object):
 
 
 class GLMapMode(object):
-    """Enum describing mapping behavior for global-to-local maps when global indices are missing.
+    """Enum describing mapping behavior when global indices are missing.
 
     MASK
         Give missing global indices a local index of -1.
@@ -1068,6 +1069,7 @@ class GLMapMode(object):
 
 
 class LGMapType(object):
+    """Local to global map types."""
     BASIC = S_(ISLOCALTOGLOBALMAPPINGBASIC)
     HASH  = S_(ISLOCALTOGLOBALMAPPINGHASH)
 
@@ -1075,7 +1077,7 @@ class LGMapType(object):
 # --------------------------------------------------------------------
 
 cdef class LGMap(Object):
-    """Mapping from an arbitrary local ordering from ``0`` to ``n-1`` to a global PETSc ordering used by a vector or matrix.
+    """Mapping from a local to a global ordering.
 
     See Also
     --------

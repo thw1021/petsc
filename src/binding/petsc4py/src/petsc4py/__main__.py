@@ -13,9 +13,11 @@ Usage::
 
 """
 
-def help(args=None):
+
+def help(args=None):  # noqa: A001
     import shlex
     import sys
+
     # program name
     try:
         prog = sys.argv[0]
@@ -32,8 +34,10 @@ def help(args=None):
         args.append('-help')
     # import and initialize
     import petsc4py
+
     petsc4py.init([prog] + args)
     from petsc4py import PETSc
+
     # help dispatcher
     COMM = PETSc.COMM_SELF
     if 'vec' in args:
@@ -74,6 +78,7 @@ def help(args=None):
         dmplex = PETSc.DMPlex().create(comm=COMM)
         dmplex.setFromOptions()
         dmplex.destroy()
+
 
 if __name__ == '__main__':
     help()
