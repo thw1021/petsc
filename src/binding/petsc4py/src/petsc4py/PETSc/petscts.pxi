@@ -353,7 +353,7 @@ cdef extern from * nogil: # custom.h
 cdef inline TS ref_TS(PetscTS ts):
     cdef TS ob = <TS> TS()
     ob.ts = ts
-    CHKERR( PetscINCREF(ob.obj) )
+    CHKERR(PetscINCREF(ob.obj))
     return ob
 
 # -----------------------------------------------------------------------------
@@ -364,7 +364,7 @@ cdef PetscErrorCode TS_RHSFunction(
     PetscVec  x,
     PetscVec  f,
     void      *ctx,
-    ) except PETSC_ERR_PYTHON with gil:
+   ) except PETSC_ERR_PYTHON with gil:
     cdef TS  Ts   = ref_TS(ts)
     cdef Vec Xvec = ref_Vec(x)
     cdef Vec Fvec = ref_Vec(f)
@@ -382,7 +382,7 @@ cdef PetscErrorCode TS_RHSJacobian(
     PetscMat  J,
     PetscMat  P,
     void      *ctx,
-    ) except PETSC_ERR_PYTHON with gil:
+   ) except PETSC_ERR_PYTHON with gil:
     cdef TS  Ts   = ref_TS(ts)
     cdef Vec Xvec = ref_Vec(x)
     cdef Mat Jmat = ref_Mat(J)
@@ -400,7 +400,7 @@ cdef PetscErrorCode TS_RHSJacobianP(
     PetscVec  x,
     PetscMat  J,
     void      *ctx,
-    ) except PETSC_ERR_PYTHON with gil:
+   ) except PETSC_ERR_PYTHON with gil:
     cdef TS  Ts   = ref_TS(ts)
     cdef Vec Xvec = ref_Vec(x)
     cdef Mat Jmat = ref_Mat(J)
@@ -420,7 +420,7 @@ cdef PetscErrorCode TS_IFunction(
     PetscVec  xdot,
     PetscVec  f,
     void      *ctx,
-    ) except PETSC_ERR_PYTHON with gil:
+   ) except PETSC_ERR_PYTHON with gil:
     cdef TS  Ts    = ref_TS(ts)
     cdef Vec Xvec  = ref_Vec(x)
     cdef Vec XDvec = ref_Vec(xdot)
@@ -441,7 +441,7 @@ cdef PetscErrorCode TS_IJacobian(
     PetscMat  J,
     PetscMat  P,
     void      *ctx,
-    ) except PETSC_ERR_PYTHON with gil:
+   ) except PETSC_ERR_PYTHON with gil:
     cdef TS   Ts    = ref_TS(ts)
     cdef Vec  Xvec  = ref_Vec(x)
     cdef Vec  XDvec = ref_Vec(xdot)
@@ -462,7 +462,7 @@ cdef PetscErrorCode TS_IJacobianP(
     PetscReal a,
     PetscMat  J,
     void      *ctx,
-    ) except PETSC_ERR_PYTHON with gil:
+   ) except PETSC_ERR_PYTHON with gil:
     cdef TS   Ts    = ref_TS(ts)
     cdef Vec  Xvec  = ref_Vec(x)
     cdef Vec  XDvec = ref_Vec(xdot)
@@ -482,7 +482,7 @@ cdef PetscErrorCode TS_I2Function(
     PetscVec  xdotdot,
     PetscVec  f,
     void      *ctx,
-    ) except PETSC_ERR_PYTHON with gil:
+   ) except PETSC_ERR_PYTHON with gil:
     cdef TS  Ts    = ref_TS(ts)
     cdef Vec Xvec  = ref_Vec(x)
     cdef Vec XDvec = ref_Vec(xdot)
@@ -506,7 +506,7 @@ cdef PetscErrorCode TS_I2Jacobian(
     PetscMat  J,
     PetscMat  P,
     void      *ctx,
-    ) except PETSC_ERR_PYTHON with gil:
+   ) except PETSC_ERR_PYTHON with gil:
     cdef TS   Ts    = ref_TS(ts)
     cdef Vec  Xvec  = ref_Vec(x)
     cdef Vec  XDvec = ref_Vec(xdot)
@@ -528,7 +528,7 @@ cdef PetscErrorCode TS_Monitor(
     PetscReal time,
     PetscVec  u,
     void      *ctx,
-    ) except PETSC_ERR_PYTHON with gil:
+   ) except PETSC_ERR_PYTHON with gil:
     cdef TS  Ts = ref_TS(ts)
     cdef Vec Vu = ref_Vec(u)
     cdef object monitorlist = Ts.get_attr('__monitor__')
@@ -545,14 +545,14 @@ cdef PetscErrorCode TS_Indicator(
     PetscVec  u,
     PetscReal fvalue[],
     void      *ctx,
-    ) except PETSC_ERR_PYTHON with gil:
+   ) except PETSC_ERR_PYTHON with gil:
     cdef TS  Ts = ref_TS(ts)
     cdef Vec Vu = ref_Vec(u)
     cdef object context = Ts.get_attr('__indicator__')
     if context is None: return PETSC_SUCCESS
     (indicator, args, kargs) = context
     cdef PetscInt nevents = 0
-    CHKERR( TSGetNumEvents(ts, &nevents) )
+    CHKERR(TSGetNumEvents(ts, &nevents))
     cdef npy_intp s = <npy_intp> nevents
     fvalue_array = PyArray_SimpleNewFromData(1, &s, NPY_PETSC_REAL, fvalue)
     indicator(Ts, toReal(time), Vu, fvalue_array, *args, **kargs)
@@ -566,7 +566,7 @@ cdef PetscErrorCode TS_PostEvent(
     PetscVec  u,
     PetscBool forward,
     void      *ctx,
-    ) except PETSC_ERR_PYTHON with gil:
+   ) except PETSC_ERR_PYTHON with gil:
     cdef TS  Ts = ref_TS(ts)
     cdef Vec Vu = ref_Vec(u)
     cdef object context = Ts.get_attr('__postevent__')
@@ -579,7 +579,7 @@ cdef PetscErrorCode TS_PostEvent(
 
 cdef PetscErrorCode TS_PreStep(
     PetscTS ts,
-    ) except PETSC_ERR_PYTHON with gil:
+   ) except PETSC_ERR_PYTHON with gil:
     cdef TS Ts = ref_TS(ts)
     (prestep, args, kargs) = Ts.get_attr('__prestep__')
     prestep(Ts, *args, **kargs)
@@ -587,7 +587,7 @@ cdef PetscErrorCode TS_PreStep(
 
 cdef PetscErrorCode TS_PostStep(
     PetscTS ts,
-    ) except PETSC_ERR_PYTHON with gil:
+   ) except PETSC_ERR_PYTHON with gil:
     cdef TS Ts = ref_TS(ts)
     (poststep, args, kargs) = Ts.get_attr('__poststep__')
     poststep(Ts, *args, **kargs)

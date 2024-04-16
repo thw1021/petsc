@@ -127,7 +127,7 @@ cdef class TAO(Object):
         """
         cdef PetscViewer vwr = NULL
         if viewer is not None: vwr = viewer.vwr
-        CHKERR( TaoView(self.tao, vwr) )
+        CHKERR(TaoView(self.tao, vwr))
 
     def destroy(self) -> Self:
         """Destroy the solver.
@@ -139,7 +139,7 @@ cdef class TAO(Object):
         petsc.TaoDestroy
 
         """
-        CHKERR( TaoDestroy(&self.tao) )
+        CHKERR(TaoDestroy(&self.tao))
         return self
 
     def create(self, comm: Comm | None = None) -> Self:
@@ -159,8 +159,8 @@ cdef class TAO(Object):
         """
         cdef MPI_Comm ccomm = def_Comm(comm, PETSC_COMM_DEFAULT)
         cdef PetscTAO newtao = NULL
-        CHKERR( TaoCreate(ccomm, &newtao) )
-        CHKERR( PetscCLEAR(self.obj) ); self.tao = newtao
+        CHKERR(TaoCreate(ccomm, &newtao))
+        CHKERR(PetscCLEAR(self.obj)); self.tao = newtao
         return self
 
     def setType(self, tao_type: Type | str) -> None:
@@ -180,7 +180,7 @@ cdef class TAO(Object):
         """
         cdef PetscTAOType ctype = NULL
         tao_type = str2bytes(tao_type, &ctype)
-        CHKERR( TaoSetType(self.tao, ctype) )
+        CHKERR(TaoSetType(self.tao, ctype))
 
     def getType(self) -> str:
         """Return the type of the solver.
@@ -193,7 +193,7 @@ cdef class TAO(Object):
 
         """
         cdef PetscTAOType ctype = NULL
-        CHKERR( TaoGetType(self.tao, &ctype) )
+        CHKERR(TaoGetType(self.tao, &ctype))
         return bytes2str(ctype)
 
     def setOptionsPrefix(self, prefix: str | None) -> None:
@@ -208,7 +208,7 @@ cdef class TAO(Object):
         """
         cdef const char *cprefix = NULL
         prefix = str2bytes(prefix, &cprefix)
-        CHKERR( TaoSetOptionsPrefix(self.tao, cprefix) )
+        CHKERR(TaoSetOptionsPrefix(self.tao, cprefix))
 
     def appendOptionsPrefix(self, prefix: str | None) -> None:
         """Append to the prefix used for searching for options in the database.
@@ -222,7 +222,7 @@ cdef class TAO(Object):
         """
         cdef const char *cprefix = NULL
         prefix = str2bytes(prefix, &cprefix)
-        CHKERR( TaoAppendOptionsPrefix(self.tao, cprefix) )
+        CHKERR(TaoAppendOptionsPrefix(self.tao, cprefix))
 
     def getOptionsPrefix(self) -> str:
         """Return the prefix used for searching for options in the database.
@@ -235,7 +235,7 @@ cdef class TAO(Object):
 
         """
         cdef const char *prefix = NULL
-        CHKERR( TaoGetOptionsPrefix(self.tao, &prefix) )
+        CHKERR(TaoGetOptionsPrefix(self.tao, &prefix))
         return bytes2str(prefix)
 
     def setFromOptions(self) -> None:
@@ -248,7 +248,7 @@ cdef class TAO(Object):
         petsc_options, petsc.TaoSetFromOptions
 
         """
-        CHKERR( TaoSetFromOptions(self.tao) )
+        CHKERR(TaoSetFromOptions(self.tao))
 
     def setUp(self) -> None:
         """Set up the internal data structures for using the solver.
@@ -260,7 +260,7 @@ cdef class TAO(Object):
         petsc.TaoSetUp
 
         """
-        CHKERR( TaoSetUp(self.tao) )
+        CHKERR(TaoSetUp(self.tao))
 
     #
 
@@ -275,7 +275,7 @@ cdef class TAO(Object):
 
         """
         cdef PetscReal cradius = asReal(radius)
-        CHKERR( TaoSetInitialTrustRegionRadius(self.tao, cradius) )
+        CHKERR(TaoSetInitialTrustRegionRadius(self.tao, cradius))
 
     # --------------
 
@@ -297,7 +297,7 @@ cdef class TAO(Object):
         getSolution, petsc.TaoSetSolution
 
         """
-        CHKERR( TaoSetSolution(self.tao, x.vec) )
+        CHKERR(TaoSetSolution(self.tao, x.vec))
 
     def setObjective(self, objective: TAOObjectiveFunction, args: tuple[Any, ...] | None = None, kargs: dict[str, Any] | None = None) -> None:
         """Set the objective function evaluation callback.
@@ -322,7 +322,7 @@ cdef class TAO(Object):
         if kargs is None: kargs = {}
         context = (objective, args, kargs)
         self.set_attr("__objective__", context)
-        CHKERR( TaoSetObjective(self.tao, TAO_Objective, <void*>context) )
+        CHKERR(TaoSetObjective(self.tao, TAO_Objective, <void*>context))
 
     def setResidual(self, residual: TAOResidualFunction, Vec R=None, args: tuple[Any, ...] | None = None, kargs: dict[str, Any] | None = None) -> None:
         """Set the residual evaluation callback for least-squares applications.
@@ -351,7 +351,7 @@ cdef class TAO(Object):
         if kargs is None: kargs = {}
         context = (residual, args, kargs)
         self.set_attr("__residual__", context)
-        CHKERR( TaoSetResidualRoutine(self.tao, Rvec, TAO_Residual, <void*>context) )
+        CHKERR(TaoSetResidualRoutine(self.tao, Rvec, TAO_Residual, <void*>context))
 
     def setJacobianResidual(self, jacobian: TAOJacobianResidualFunction, Mat J=None, Mat P=None, args: tuple[Any, ...] | None = None, kargs: dict[str, Any] | None = None) -> None:
         """Set the callback to compute the least-squares residual Jacobian.
@@ -384,7 +384,7 @@ cdef class TAO(Object):
         if kargs is None: kargs = {}
         context = (jacobian, args, kargs)
         self.set_attr("__jacobian_residual__", context)
-        CHKERR( TaoSetJacobianResidualRoutine(self.tao, Jmat, Pmat, TAO_JacobianResidual, <void*>context) )
+        CHKERR(TaoSetJacobianResidualRoutine(self.tao, Jmat, Pmat, TAO_JacobianResidual, <void*>context))
 
     def setGradient(self, gradient: TAOGradientFunction, Vec g=None, args: tuple[Any, ...] | None = None, kargs: dict[str, Any] | None = None) -> None:
         """Set the gradient evaluation callback.
@@ -413,7 +413,7 @@ cdef class TAO(Object):
         if kargs is None: kargs = {}
         context = (gradient, args, kargs)
         self.set_attr("__gradient__", context)
-        CHKERR( TaoSetGradient(self.tao, gvec, TAO_Gradient, <void*>context) )
+        CHKERR(TaoSetGradient(self.tao, gvec, TAO_Gradient, <void*>context))
 
     def getGradient(self) -> tuple[Vec, TAOGradientFunction]:
         """Return the vector used to store the gradient and the evaluation callback.
@@ -426,8 +426,8 @@ cdef class TAO(Object):
 
         """
         cdef Vec vec = Vec()
-        CHKERR( TaoGetGradient(self.tao, &vec.vec, NULL, NULL) )
-        CHKERR( PetscINCREF(vec.obj) )
+        CHKERR(TaoGetGradient(self.tao, &vec.vec, NULL, NULL))
+        CHKERR(PetscINCREF(vec.obj))
         cdef object gradient = self.get_attr("__gradient__")
         return (vec, gradient)
 
@@ -459,7 +459,7 @@ cdef class TAO(Object):
         if kargs is None: kargs = {}
         context = (objgrad, args, kargs)
         self.set_attr("__objgrad__", context)
-        CHKERR( TaoSetObjectiveAndGradient(self.tao, gvec, TAO_ObjGrad, <void*>context) )
+        CHKERR(TaoSetObjectiveAndGradient(self.tao, gvec, TAO_ObjGrad, <void*>context))
 
     def getObjectiveAndGradient(self) -> tuple[Vec, TAOObjectiveGradientFunction]:
         """Return the vector used to store the gradient and the evaluation callback.
@@ -472,8 +472,8 @@ cdef class TAO(Object):
 
         """
         cdef Vec vec = Vec()
-        CHKERR( TaoGetObjectiveAndGradient(self.tao, &vec.vec, NULL, NULL) )
-        CHKERR( PetscINCREF(vec.obj) )
+        CHKERR(TaoGetObjectiveAndGradient(self.tao, &vec.vec, NULL, NULL))
+        CHKERR(PetscINCREF(vec.obj))
         cdef object objgrad = self.get_attr("__objgrad__")
         return (vec, objgrad)
 
@@ -500,18 +500,18 @@ cdef class TAO(Object):
         if (isinstance(varbounds, list) or isinstance(varbounds, tuple)):
             ol, ou = varbounds
             xl = <Vec?> ol; xu = <Vec?> ou
-            CHKERR( TaoSetVariableBounds(self.tao, xl.vec, xu.vec) )
+            CHKERR(TaoSetVariableBounds(self.tao, xl.vec, xu.vec))
             return
         if isinstance(varbounds, Vec): # FIXME
             ol = varbounds; ou = args
             xl = <Vec?> ol; xu = <Vec?> ou
-            CHKERR( TaoSetVariableBounds(self.tao, xl.vec, xu.vec) )
+            CHKERR(TaoSetVariableBounds(self.tao, xl.vec, xu.vec))
             return
         if args is None: args = ()
         if kargs is None: kargs = {}
         context = (varbounds, args, kargs)
         self.set_attr("__varbounds__", context)
-        CHKERR( TaoSetVariableBoundsRoutine(self.tao, TAO_VarBounds, <void*>context) )
+        CHKERR(TaoSetVariableBoundsRoutine(self.tao, TAO_VarBounds, <void*>context))
 
     def setConstraints(self, constraints: TAOConstraintsFunction, Vec C=None, args: tuple[Any, ...] | None = None, kargs: dict[str, Any] | None = None) -> None:
         """Set the callback to compute constraints.
@@ -540,7 +540,7 @@ cdef class TAO(Object):
         if kargs is None: kargs = {}
         context = (constraints, args, kargs)
         self.set_attr("__constraints__", context)
-        CHKERR( TaoSetConstraintsRoutine(self.tao, Cvec, TAO_Constraints, <void*>context) )
+        CHKERR(TaoSetConstraintsRoutine(self.tao, Cvec, TAO_Constraints, <void*>context))
 
     def setHessian(self, hessian: TAOHessianFunction, Mat H=None, Mat P=None,
                    args: tuple[Any, ...] | None = None, kargs: dict[str, Any] | None = None) -> None:
@@ -575,7 +575,7 @@ cdef class TAO(Object):
         if kargs is None: kargs = {}
         context = (hessian, args, kargs)
         self.set_attr("__hessian__", context)
-        CHKERR( TaoSetHessian(self.tao, Hmat, Pmat, TAO_Hessian, <void*>context) )
+        CHKERR(TaoSetHessian(self.tao, Hmat, Pmat, TAO_Hessian, <void*>context))
 
     def getHessian(self) -> tuple[Mat, Mat, TAOHessianFunction]:
         """Return the matrices used to store the Hessian and the evaluation callback.
@@ -589,9 +589,9 @@ cdef class TAO(Object):
         """
         cdef Mat J = Mat()
         cdef Mat P = Mat()
-        CHKERR( TaoGetHessian(self.tao, &J.mat, &P.mat, NULL, NULL) )
-        CHKERR( PetscINCREF(J.obj) )
-        CHKERR( PetscINCREF(P.obj) )
+        CHKERR(TaoGetHessian(self.tao, &J.mat, &P.mat, NULL, NULL))
+        CHKERR(PetscINCREF(J.obj))
+        CHKERR(PetscINCREF(P.obj))
         cdef object hessian = self.get_attr("__hessian__")
         return (J, P, hessian)
 
@@ -627,7 +627,7 @@ cdef class TAO(Object):
         if kargs is None: kargs = {}
         context = (jacobian, args, kargs)
         self.set_attr("__jacobian__", context)
-        CHKERR( TaoSetJacobianRoutine(self.tao, Jmat, Pmat, TAO_Jacobian, <void*>context) )
+        CHKERR(TaoSetJacobianRoutine(self.tao, Jmat, Pmat, TAO_Jacobian, <void*>context))
 
     def setStateDesignIS(self, IS state=None, IS design=None) -> None:
         """Set the index sets indicating state and design variables.
@@ -642,7 +642,7 @@ cdef class TAO(Object):
         cdef PetscIS s_is = NULL, d_is = NULL
         if state  is not None: s_is = state.iset
         if design is not None: d_is = design.iset
-        CHKERR( TaoSetStateDesignIS(self.tao, s_is, d_is) )
+        CHKERR(TaoSetStateDesignIS(self.tao, s_is, d_is))
 
     def setJacobianState(self, jacobian_state, Mat J=None, Mat P=None, Mat I=None,
                          args: tuple[Any, ...] | None = None, kargs: dict[str, Any] | None = None) -> None:
@@ -665,8 +665,8 @@ cdef class TAO(Object):
         if kargs is None: kargs = {}
         context = (jacobian_state, args, kargs)
         self.set_attr("__jacobian_state__", context)
-        CHKERR( TaoSetJacobianStateRoutine(self.tao, Jmat, Pmat, Imat,
-                                           TAO_JacobianState, <void*>context) )
+        CHKERR(TaoSetJacobianStateRoutine(self.tao, Jmat, Pmat, Imat,
+                                          TAO_JacobianState, <void*>context))
 
     def setJacobianDesign(self, jacobian_design, Mat J=None,
                           args: tuple[Any, ...] | None = None, kargs: dict[str, Any] | None = None) -> None:
@@ -685,8 +685,8 @@ cdef class TAO(Object):
         if kargs is None: kargs = {}
         context = (jacobian_design, args, kargs)
         self.set_attr("__jacobian_design__", context)
-        CHKERR( TaoSetJacobianDesignRoutine(self.tao, Jmat,
-                                            TAO_JacobianDesign, <void*>context) )
+        CHKERR(TaoSetJacobianDesignRoutine(self.tao, Jmat,
+                                           TAO_JacobianDesign, <void*>context))
 
     def setEqualityConstraints(self, equality_constraints, Vec c,
                                args: tuple[Any, ...] | None = None, kargs: dict[str, Any] | None = None) -> None:
@@ -703,8 +703,8 @@ cdef class TAO(Object):
         if kargs is None: kargs = {}
         context = (equality_constraints, args, kargs)
         self.set_attr("__equality_constraints__", context)
-        CHKERR( TaoSetEqualityConstraintsRoutine(self.tao, c.vec,
-                                                 TAO_EqualityConstraints, <void*>context) )
+        CHKERR(TaoSetEqualityConstraintsRoutine(self.tao, c.vec,
+                                                TAO_EqualityConstraints, <void*>context))
 
     def setJacobianEquality(self, jacobian_equality, Mat J=None, Mat P=None,
                             args: tuple[Any, ...] | None = None, kargs: dict[str, Any] | None = None) -> None:
@@ -725,8 +725,8 @@ cdef class TAO(Object):
         if kargs is None: kargs = {}
         context = (jacobian_equality, args, kargs)
         self.set_attr("__jacobian_equality__", context)
-        CHKERR( TaoSetJacobianEqualityRoutine(self.tao, Jmat, Pmat,
-                                              TAO_JacobianEquality, <void*>context) )
+        CHKERR(TaoSetJacobianEqualityRoutine(self.tao, Jmat, Pmat,
+                                             TAO_JacobianEquality, <void*>context))
 
     def setUpdate(self, update: TAOUpdateFunction, args: tuple[Any, ...] | None = None, kargs: dict[str, Any] | None = None) -> None:
         """Set the callback to compute update at each optimization step.
@@ -752,10 +752,10 @@ cdef class TAO(Object):
             if kargs is None: kargs = {}
             context = (update, args, kargs)
             self.set_attr('__update__', context)
-            CHKERR( TaoSetUpdate(self.tao, TAO_Update, <void*>context) )
+            CHKERR(TaoSetUpdate(self.tao, TAO_Update, <void*>context))
         else:
             self.set_attr('__update__', None)
-            CHKERR( TaoSetUpdate(self.tao, NULL, NULL) )
+            CHKERR(TaoSetUpdate(self.tao, NULL, NULL))
 
     def getUpdate(self) -> tuple[TAOUpdateFunction, tuple[Any, ...], dict[str, Any]]:
         """Return the callback to compute the update.
@@ -787,7 +787,7 @@ cdef class TAO(Object):
 
         """
         cdef PetscReal f = 0
-        CHKERR( TaoComputeObjective(self.tao, x.vec, &f) )
+        CHKERR(TaoComputeObjective(self.tao, x.vec, &f))
         return toReal(f)
 
     def computeResidual(self, Vec x, Vec f) -> None:
@@ -807,7 +807,7 @@ cdef class TAO(Object):
         setResidual, petsc.TaoComputeResidual
 
         """
-        CHKERR( TaoComputeResidual(self.tao, x.vec, f.vec) )
+        CHKERR(TaoComputeResidual(self.tao, x.vec, f.vec))
 
     def computeGradient(self, Vec x, Vec g) -> None:
         """Compute the gradient of the objective function.
@@ -826,7 +826,7 @@ cdef class TAO(Object):
         setGradient, petsc.TaoComputeGradient
 
         """
-        CHKERR( TaoComputeGradient(self.tao, x.vec, g.vec) )
+        CHKERR(TaoComputeGradient(self.tao, x.vec, g.vec))
 
     def computeObjectiveGradient(self, Vec x, Vec g) -> float:
         """Compute the gradient of the objective function and its value.
@@ -847,7 +847,7 @@ cdef class TAO(Object):
 
         """
         cdef PetscReal f = 0
-        CHKERR( TaoComputeObjectiveAndGradient(self.tao, x.vec, &f, g.vec) )
+        CHKERR(TaoComputeObjectiveAndGradient(self.tao, x.vec, &f, g.vec))
         return toReal(f)
 
     def computeDualVariables(self, Vec xl, Vec xu) -> None:
@@ -860,7 +860,7 @@ cdef class TAO(Object):
         petsc.TaoComputeDualVariables
 
         """
-        CHKERR( TaoComputeDualVariables(self.tao, xl.vec, xu.vec) )
+        CHKERR(TaoComputeDualVariables(self.tao, xl.vec, xu.vec))
 
     def computeVariableBounds(self, Vec xl, Vec xu) -> None:
         """Compute the vectors corresponding to variables' bounds.
@@ -872,19 +872,19 @@ cdef class TAO(Object):
         setVariableBounds, petsc.TaoComputeVariableBounds
 
         """
-        CHKERR( TaoComputeVariableBounds(self.tao) )
+        CHKERR(TaoComputeVariableBounds(self.tao))
         cdef PetscVec Lvec = NULL, Uvec = NULL
-        CHKERR( TaoGetVariableBounds(self.tao, &Lvec, &Uvec) )
+        CHKERR(TaoGetVariableBounds(self.tao, &Lvec, &Uvec))
         if xl.vec != NULL:
             if Lvec != NULL:
-                CHKERR( VecCopy(Lvec, xl.vec) )
+                CHKERR(VecCopy(Lvec, xl.vec))
             else:
-                CHKERR( VecSet(xl.vec, <PetscScalar>PETSC_NINFINITY) )
+                CHKERR(VecSet(xl.vec, <PetscScalar>PETSC_NINFINITY))
         if xu.vec != NULL:
             if Uvec != NULL:
-                CHKERR( VecCopy(Uvec, xu.vec) )
+                CHKERR(VecCopy(Uvec, xu.vec))
             else:
-                CHKERR( VecSet(xu.vec, <PetscScalar>PETSC_INFINITY) )
+                CHKERR(VecSet(xu.vec, <PetscScalar>PETSC_INFINITY))
 
     def computeConstraints(self, Vec x, Vec c) -> None:
         """Compute the vector corresponding to the constraints.
@@ -903,7 +903,7 @@ cdef class TAO(Object):
         setVariableBounds, petsc.TaoComputeVariableBounds
 
         """
-        CHKERR( TaoComputeConstraints(self.tao, x.vec, c.vec) )
+        CHKERR(TaoComputeConstraints(self.tao, x.vec, c.vec))
 
     def computeHessian(self, Vec x, Mat H, Mat P=None) -> None:
         """Compute the Hessian of the objective function.
@@ -926,7 +926,7 @@ cdef class TAO(Object):
         """
         cdef PetscMat hmat = H.mat, pmat = H.mat
         if P is not None: pmat = P.mat
-        CHKERR( TaoComputeHessian(self.tao, x.vec, hmat, pmat) )
+        CHKERR(TaoComputeHessian(self.tao, x.vec, hmat, pmat))
 
     def computeJacobian(self, Vec x, Mat J, Mat P=None) -> None:
         """Compute the Jacobian.
@@ -949,7 +949,7 @@ cdef class TAO(Object):
         """
         cdef PetscMat jmat = J.mat, pmat = J.mat
         if P is not None: pmat = P.mat
-        CHKERR( TaoComputeJacobian(self.tao, x.vec, jmat, pmat) )
+        CHKERR(TaoComputeJacobian(self.tao, x.vec, jmat, pmat))
 
     # --------------
 
@@ -978,7 +978,7 @@ cdef class TAO(Object):
         if gatol is not None: _gatol = asReal(gatol)
         if grtol is not None: _grtol = asReal(grtol)
         if gttol is not None: _gttol = asReal(gttol)
-        CHKERR( TaoSetTolerances(self.tao, _gatol, _grtol, _gttol) )
+        CHKERR(TaoSetTolerances(self.tao, _gatol, _grtol, _gttol))
 
     def getTolerances(self) -> tuple[float, float, float]:
         """Return the tolerance parameters used in the solver convergence tests.
@@ -1002,7 +1002,7 @@ cdef class TAO(Object):
 
         """
         cdef PetscReal _gatol=PETSC_DEFAULT, _grtol=PETSC_DEFAULT, _gttol=PETSC_DEFAULT
-        CHKERR( TaoGetTolerances(self.tao, &_gatol, &_grtol, &_gttol) )
+        CHKERR(TaoGetTolerances(self.tao, &_gatol, &_grtol, &_gttol))
         return (toReal(_gatol), toReal(_grtol), toReal(_gttol))
 
     def setMaximumIterations(self, mit: int) -> float:
@@ -1016,7 +1016,7 @@ cdef class TAO(Object):
 
         """
         cdef PetscInt _mit = asInt(mit)
-        CHKERR( TaoSetMaximumIterations(self.tao, _mit) )
+        CHKERR(TaoSetMaximumIterations(self.tao, _mit))
 
     def getMaximumIterations(self) -> int:
         """Return the maximum number of solver iterations.
@@ -1029,7 +1029,7 @@ cdef class TAO(Object):
 
         """
         cdef PetscInt _mit = PETSC_DEFAULT
-        CHKERR( TaoGetMaximumIterations(self.tao, &_mit) )
+        CHKERR(TaoGetMaximumIterations(self.tao, &_mit))
         return toInt(_mit)
 
     def setMaximumFunctionEvaluations(self, mit: int) -> None:
@@ -1043,7 +1043,7 @@ cdef class TAO(Object):
 
         """
         cdef PetscInt _mit = asInt(mit)
-        CHKERR( TaoSetMaximumFunctionEvaluations(self.tao, _mit) )
+        CHKERR(TaoSetMaximumFunctionEvaluations(self.tao, _mit))
 
     def getMaximumFunctionEvaluations(self) -> int:
         """Return the maximum number of objective evaluations within the solver.
@@ -1056,7 +1056,7 @@ cdef class TAO(Object):
 
         """
         cdef PetscInt _mit = PETSC_DEFAULT
-        CHKERR( TaoGetMaximumFunctionEvaluations(self.tao, &_mit) )
+        CHKERR(TaoGetMaximumFunctionEvaluations(self.tao, &_mit))
         return toInt(_mit)
 
     def setConstraintTolerances(self, catol: float = None, crtol: float = None) -> None:
@@ -1079,7 +1079,7 @@ cdef class TAO(Object):
         cdef PetscReal _catol=PETSC_DEFAULT, _crtol=PETSC_DEFAULT
         if catol is not None: _catol = asReal(catol)
         if crtol is not None: _crtol = asReal(crtol)
-        CHKERR( TaoSetConstraintTolerances(self.tao, _catol, _crtol) )
+        CHKERR(TaoSetConstraintTolerances(self.tao, _catol, _crtol))
 
     def getConstraintTolerances(self) -> tuple[float, float]:
         """Return the constraints tolerance parameters used in the convergence tests.
@@ -1099,7 +1099,7 @@ cdef class TAO(Object):
 
         """
         cdef PetscReal _catol=PETSC_DEFAULT, _crtol=PETSC_DEFAULT
-        CHKERR( TaoGetConstraintTolerances(self.tao, &_catol, &_crtol) )
+        CHKERR(TaoGetConstraintTolerances(self.tao, &_catol, &_crtol))
         return (toReal(_catol), toReal(_crtol))
 
     def setConvergenceTest(self, converged: TAOConvergedFunction | None, args: tuple[Any, ...] | None = None, kargs: dict[str, Any] | None = None) -> None:
@@ -1122,13 +1122,13 @@ cdef class TAO(Object):
 
         """
         if converged is None:
-            CHKERR( TaoSetConvergenceTest(self.tao, TaoDefaultConvergenceTest, NULL) )
+            CHKERR(TaoSetConvergenceTest(self.tao, TaoDefaultConvergenceTest, NULL))
             self.set_attr('__converged__', None)
         else:
             if args is None: args = ()
             if kargs is None: kargs = {}
             self.set_attr('__converged__', (converged, args, kargs))
-            CHKERR( TaoSetConvergenceTest(self.tao, TAO_Converged, NULL) )
+            CHKERR(TaoSetConvergenceTest(self.tao, TAO_Converged, NULL))
 
     def getConvergenceTest(self) -> tuple[TAOConvergedFunction, tuple[Any, ...], dict[str, Any]]:
         """Return the callback used to test for solver convergence.
@@ -1153,7 +1153,7 @@ cdef class TAO(Object):
 
         """
         cdef PetscTAOConvergedReason creason = reason
-        CHKERR( TaoSetConvergedReason(self.tao, creason) )
+        CHKERR(TaoSetConvergedReason(self.tao, creason))
 
     def getConvergedReason(self) -> ConvergedReason:
         """Return the termination flag.
@@ -1166,7 +1166,7 @@ cdef class TAO(Object):
 
         """
         cdef PetscTAOConvergedReason creason = TAO_CONTINUE_ITERATING
-        CHKERR( TaoGetConvergedReason(self.tao, &creason) )
+        CHKERR(TaoGetConvergedReason(self.tao, &creason))
         return creason
 
     def setMonitor(self, monitor: TAOMonitorFunction, args: tuple[Any, ...] | None = None, kargs: dict[str, Any] | None = None) -> None:
@@ -1193,7 +1193,7 @@ cdef class TAO(Object):
         if args  is None: args  = ()
         if kargs is None: kargs = {}
         if monitorlist is None:
-            CHKERR( TaoMonitorSet(self.tao, TAO_Monitor, NULL, NULL) )
+            CHKERR(TaoMonitorSet(self.tao, TAO_Monitor, NULL, NULL))
             self.set_attr('__monitor__',  [(monitor, args, kargs)])
         else:
             monitorlist.append((monitor, args, kargs))
@@ -1220,7 +1220,7 @@ cdef class TAO(Object):
         setMonitor, petsc.TaoMonitorCancel
 
         """
-        CHKERR( TaoMonitorCancel(self.tao) )
+        CHKERR(TaoMonitorCancel(self.tao))
         self.set_attr('__monitor__',  None)
 
     # Tao overwrites these statistics. Copy user defined only if present
@@ -1260,7 +1260,7 @@ cdef class TAO(Object):
         cdef PetscReal cres = 0.0
         cdef PetscReal ccnorm = 0.0
         cdef PetscReal cstep = 0.0
-        CHKERR( TaoGetSolutionStatus(self.tao, &cits, &cf, &cres, &ccnorm, &cstep, NULL) )
+        CHKERR(TaoGetSolutionStatus(self.tao, &cits, &cf, &cres, &ccnorm, &cstep, NULL))
         if its is not None:
             cits = asInt(its)
         if f is not None:
@@ -1271,7 +1271,7 @@ cdef class TAO(Object):
             ccnorm = asReal(cnorm)
         if step is not None:
             cstep = asReal(step)
-        CHKERR( TaoMonitor(self.tao, cits, cf, cres, ccnorm, cstep) )
+        CHKERR(TaoMonitor(self.tao, cits, cf, cres, ccnorm, cstep))
 
     #
 
@@ -1291,8 +1291,8 @@ cdef class TAO(Object):
 
         """
         if x is not None:
-            CHKERR( TaoSetSolution(self.tao, x.vec) )
-        CHKERR( TaoSolve(self.tao) )
+            CHKERR(TaoSetSolution(self.tao, x.vec))
+        CHKERR(TaoSolve(self.tao))
 
     def getSolution(self) -> Vec:
         """Return the vector holding the solution.
@@ -1305,8 +1305,8 @@ cdef class TAO(Object):
 
         """
         cdef Vec vec = Vec()
-        CHKERR( TaoGetSolution(self.tao, &vec.vec) )
-        CHKERR( PetscINCREF(vec.obj) )
+        CHKERR(TaoGetSolution(self.tao, &vec.vec))
+        CHKERR(PetscINCREF(vec.obj))
         return vec
 
     def setGradientNorm(self, Mat mat) -> None:
@@ -1319,7 +1319,7 @@ cdef class TAO(Object):
         getGradientNorm, petsc.TaoSetGradientNorm
 
         """
-        CHKERR( TaoSetGradientNorm(self.tao, mat.mat) )
+        CHKERR(TaoSetGradientNorm(self.tao, mat.mat))
 
     def getGradientNorm(self) -> Mat:
         """Return the matrix used to compute inner products.
@@ -1332,8 +1332,8 @@ cdef class TAO(Object):
 
         """
         cdef Mat mat = Mat()
-        CHKERR( TaoGetGradientNorm(self.tao, &mat.mat) )
-        CHKERR( PetscINCREF(mat.obj) )
+        CHKERR(TaoGetGradientNorm(self.tao, &mat.mat))
+        CHKERR(PetscINCREF(mat.obj))
         return mat
 
     def setLMVMH0(self, Mat mat) -> None:
@@ -1346,7 +1346,7 @@ cdef class TAO(Object):
         getLMVMH0, petsc.TaoLMVMSetH0
 
         """
-        CHKERR( TaoLMVMSetH0(self.tao, mat.mat) )
+        CHKERR(TaoLMVMSetH0(self.tao, mat.mat))
 
     def getLMVMH0(self) -> Mat:
         """Return the initial Hessian for the quasi-Newton approximation.
@@ -1359,8 +1359,8 @@ cdef class TAO(Object):
 
         """
         cdef Mat mat = Mat()
-        CHKERR( TaoLMVMGetH0(self.tao, &mat.mat) )
-        CHKERR( PetscINCREF(mat.obj) )
+        CHKERR(TaoLMVMGetH0(self.tao, &mat.mat))
+        CHKERR(PetscINCREF(mat.obj))
         return mat
 
     def getLMVMH0KSP(self) -> KSP:
@@ -1374,8 +1374,8 @@ cdef class TAO(Object):
 
         """
         cdef KSP ksp = KSP()
-        CHKERR( TaoLMVMGetH0KSP(self.tao, &ksp.ksp) )
-        CHKERR( PetscINCREF(ksp.obj) )
+        CHKERR(TaoLMVMGetH0KSP(self.tao, &ksp.ksp))
+        CHKERR(PetscINCREF(ksp.obj))
         return ksp
 
     def getVariableBounds(self) -> tuple[Vec, Vec]:
@@ -1389,8 +1389,8 @@ cdef class TAO(Object):
 
         """
         cdef Vec xl = Vec(), xu = Vec()
-        CHKERR( TaoGetVariableBounds(self.tao, &xl.vec, &xu.vec) )
-        CHKERR( PetscINCREF(xl.obj) ); CHKERR( PetscINCREF(xu.obj) )
+        CHKERR(TaoGetVariableBounds(self.tao, &xl.vec, &xu.vec))
+        CHKERR(PetscINCREF(xl.obj)); CHKERR(PetscINCREF(xu.obj))
         return (xl, xu)
 
     def setBNCGType(self, cg_type: BNCGType) -> None:
@@ -1404,7 +1404,7 @@ cdef class TAO(Object):
 
         """
         cdef PetscTAOBNCGType ctype = cg_type
-        CHKERR( TaoBNCGSetType(self.tao, ctype) )
+        CHKERR(TaoBNCGSetType(self.tao, ctype))
 
     def getBNCGType(self) -> BNCGType:
         """Return the type of the BNCG solver.
@@ -1417,7 +1417,7 @@ cdef class TAO(Object):
 
         """
         cdef PetscTAOBNCGType cg_type = TAO_BNCG_SSML_BFGS
-        CHKERR( TaoBNCGGetType(self.tao, &cg_type) )
+        CHKERR(TaoBNCGGetType(self.tao, &cg_type))
         return cg_type
 
     def setIterationNumber(self, its: int) -> None:
@@ -1431,7 +1431,7 @@ cdef class TAO(Object):
 
         """
         cdef PetscInt ival = asInt(its)
-        CHKERR( TaoSetIterationNumber(self.tao, ival) )
+        CHKERR(TaoSetIterationNumber(self.tao, ival))
 
     def getIterationNumber(self) -> int:
         """Return the current iteration number.
@@ -1444,7 +1444,7 @@ cdef class TAO(Object):
 
         """
         cdef PetscInt its=0
-        CHKERR( TaoGetIterationNumber(self.tao, &its) )
+        CHKERR(TaoGetIterationNumber(self.tao, &its))
         return toInt(its)
 
     def getObjectiveValue(self) -> float:
@@ -1458,7 +1458,7 @@ cdef class TAO(Object):
 
         """
         cdef PetscReal fval=0
-        CHKERR( TaoGetSolutionStatus(self.tao, NULL, &fval, NULL, NULL, NULL, NULL) )
+        CHKERR(TaoGetSolutionStatus(self.tao, NULL, &fval, NULL, NULL, NULL, NULL))
         return toReal(fval)
 
     getFunctionValue = getObjectiveValue
@@ -1474,7 +1474,7 @@ cdef class TAO(Object):
 
         """
         cdef PetscTAOConvergedReason reason = TAO_CONTINUE_ITERATING
-        CHKERR( TaoGetConvergedReason(self.tao, &reason) )
+        CHKERR(TaoGetConvergedReason(self.tao, &reason))
         return reason
 
     def getSolutionNorm(self) -> tuple[float, float, float]:
@@ -1499,7 +1499,7 @@ cdef class TAO(Object):
         cdef PetscReal gnorm=0
         cdef PetscReal cnorm=0
         cdef PetscReal fval=0
-        CHKERR( TaoGetSolutionStatus(self.tao, NULL, &fval, &gnorm, &cnorm, NULL, NULL) )
+        CHKERR(TaoGetSolutionStatus(self.tao, NULL, &fval, &gnorm, &cnorm, NULL, NULL))
         return (toReal(fval), toReal(gnorm), toReal(cnorm))
 
     def getSolutionStatus(self) -> tuple[int, float, float, float, float, ConvergedReason]:
@@ -1530,9 +1530,9 @@ cdef class TAO(Object):
         cdef PetscInt its=0
         cdef PetscReal fval=0, gnorm=0, cnorm=0, xdiff=0
         cdef PetscTAOConvergedReason reason = TAO_CONTINUE_ITERATING
-        CHKERR( TaoGetSolutionStatus(self.tao, &its,
-                                     &fval, &gnorm, &cnorm, &xdiff,
-                                     &reason) )
+        CHKERR(TaoGetSolutionStatus(self.tao, &its,
+                                    &fval, &gnorm, &cnorm, &xdiff,
+                                    &reason))
         return (toInt(its), toReal(fval),
                 toReal(gnorm), toReal(cnorm),
                 toReal(xdiff), reason)
@@ -1548,8 +1548,8 @@ cdef class TAO(Object):
 
         """
         cdef KSP ksp = KSP()
-        CHKERR( TaoGetKSP(self.tao, &ksp.ksp) )
-        CHKERR( PetscINCREF(ksp.obj) )
+        CHKERR(TaoGetKSP(self.tao, &ksp.ksp))
+        CHKERR(PetscINCREF(ksp.obj))
         return ksp
 
     # BRGN routines
@@ -1565,8 +1565,8 @@ cdef class TAO(Object):
 
         """
         cdef TAO subsolver = TAO()
-        CHKERR( TaoBRGNGetSubsolver(self.tao, &subsolver.tao) )
-        CHKERR( PetscINCREF(subsolver.obj) )
+        CHKERR(TaoBRGNGetSubsolver(self.tao, &subsolver.tao))
+        CHKERR(PetscINCREF(subsolver.obj))
         return subsolver
 
     def setBRGNRegularizerObjectiveGradient(self, objgrad, args: tuple[Any, ...] | None = None, kargs: dict[str, Any] | None = None) -> None:
@@ -1583,7 +1583,7 @@ cdef class TAO(Object):
         if kargs is None: kargs = {}
         context = (objgrad, args, kargs)
         self.set_attr("__brgnregobjgrad__", context)
-        CHKERR( TaoBRGNSetRegularizerObjectiveAndGradientRoutine(self.tao, TAO_BRGNRegObjGrad, <void*>context) )
+        CHKERR(TaoBRGNSetRegularizerObjectiveAndGradientRoutine(self.tao, TAO_BRGNRegObjGrad, <void*>context))
 
     def setBRGNRegularizerHessian(self, hessian, Mat H=None, args: tuple[Any, ...] | None = None, kargs: dict[str, Any] | None = None) -> None:
         """Set the callback to compute the regularizer Hessian.
@@ -1601,7 +1601,7 @@ cdef class TAO(Object):
         if kargs is None: kargs = {}
         context = (hessian, args, kargs)
         self.set_attr("__brgnreghessian__", context)
-        CHKERR( TaoBRGNSetRegularizerHessianRoutine(self.tao, Hmat, TAO_BRGNRegHessian, <void*>context) )
+        CHKERR(TaoBRGNSetRegularizerHessianRoutine(self.tao, Hmat, TAO_BRGNRegHessian, <void*>context))
 
     def setBRGNRegularizerWeight(self, weight: float) -> None:
         """Set the regularizer weight.
@@ -1610,7 +1610,7 @@ cdef class TAO(Object):
 
         """
         cdef PetscReal cweight = asReal(weight)
-        CHKERR( TaoBRGNSetRegularizerWeight(self.tao, cweight) )
+        CHKERR(TaoBRGNSetRegularizerWeight(self.tao, cweight))
 
     def setBRGNSmoothL1Epsilon(self, epsilon: float) -> None:
         """Set the smooth L1 epsilon.
@@ -1623,7 +1623,7 @@ cdef class TAO(Object):
 
         """
         cdef PetscReal ceps = asReal(epsilon)
-        CHKERR( TaoBRGNSetL1SmoothEpsilon(self.tao, ceps) )
+        CHKERR(TaoBRGNSetL1SmoothEpsilon(self.tao, ceps))
 
     def setBRGNDictionaryMatrix(self, Mat D) -> None:
         """Set the dictionary matrix.
@@ -1635,7 +1635,7 @@ cdef class TAO(Object):
         petsc.TaoBRGNSetDictionaryMatrix
 
         """
-        CHKERR( TaoBRGNSetDictionaryMatrix(self.tao, D.mat) )
+        CHKERR(TaoBRGNSetDictionaryMatrix(self.tao, D.mat))
 
     def getBRGNDampingVector(self) -> Vec:
         """Return the damping vector.
@@ -1648,8 +1648,8 @@ cdef class TAO(Object):
         # --------
         # petsc.TaoBRGNGetDampingVector
         cdef Vec damp = Vec()
-        CHKERR( TaoBRGNGetDampingVector(self.tao, &damp.vec) )
-        CHKERR( PetscINCREF(damp.obj) )
+        CHKERR(TaoBRGNGetDampingVector(self.tao, &damp.vec))
+        CHKERR(PetscINCREF(damp.obj))
         return damp
 
     def createPython(self, context: Any = None, comm: Comm | None = None) -> Self:
@@ -1671,10 +1671,10 @@ cdef class TAO(Object):
         """
         cdef MPI_Comm ccomm = def_Comm(comm, PETSC_COMM_DEFAULT)
         cdef PetscTAO tao = NULL
-        CHKERR( TaoCreate(ccomm, &tao) )
-        CHKERR( PetscCLEAR(self.obj) ); self.tao = tao
-        CHKERR( TaoSetType(self.tao, TAOPYTHON) )
-        CHKERR( TaoPythonSetContext(self.tao, <void*>context) )
+        CHKERR(TaoCreate(ccomm, &tao))
+        CHKERR(PetscCLEAR(self.obj)); self.tao = tao
+        CHKERR(TaoSetType(self.tao, TAOPYTHON))
+        CHKERR(TaoPythonSetContext(self.tao, <void*>context))
         return self
 
     def setPythonContext(self, context: Any) -> None:
@@ -1687,7 +1687,7 @@ cdef class TAO(Object):
         petsc_python_tao, getPythonContext
 
         """
-        CHKERR( TaoPythonSetContext(self.tao, <void*>context) )
+        CHKERR(TaoPythonSetContext(self.tao, <void*>context))
 
     def getPythonContext(self) -> Any:
         """Return the instance of the class implementing the required Python methods.
@@ -1700,7 +1700,7 @@ cdef class TAO(Object):
 
         """
         cdef void *context = NULL
-        CHKERR( TaoPythonGetContext(self.tao, &context) )
+        CHKERR(TaoPythonGetContext(self.tao, &context))
         if context == NULL: return None
         else: return <object> context
 
@@ -1717,7 +1717,7 @@ cdef class TAO(Object):
         """
         cdef const char *cval = NULL
         py_type = str2bytes(py_type, &cval)
-        CHKERR( TaoPythonSetType(self.tao, cval) )
+        CHKERR(TaoPythonSetType(self.tao, cval))
 
     def getPythonType(self) -> str:
         """Return the fully qualified Python name of the class used by the solver.
@@ -1731,7 +1731,7 @@ cdef class TAO(Object):
 
         """
         cdef const char *cval = NULL
-        CHKERR( TaoPythonGetType(self.tao, &cval) )
+        CHKERR(TaoPythonGetType(self.tao, &cval))
         return bytes2str(cval)
 
     def getLineSearch(self) -> TAOLineSearch:
@@ -1745,8 +1745,8 @@ cdef class TAO(Object):
 
         """
         cdef TAOLineSearch ls = TAOLineSearch()
-        CHKERR( TaoGetLineSearch(self.tao, &ls.taols) )
-        CHKERR( PetscINCREF(ls.obj) )
+        CHKERR(TaoGetLineSearch(self.tao, &ls.taols))
+        CHKERR(PetscINCREF(ls.obj))
         return ls
 
     # --- backward compatibility ---
@@ -1939,7 +1939,7 @@ cdef class TAOLineSearch(Object):
         """
         cdef PetscViewer vwr = NULL
         if viewer is not None: vwr = viewer.vwr
-        CHKERR( TaoLineSearchView(self.taols, vwr) )
+        CHKERR(TaoLineSearchView(self.taols, vwr))
 
     def destroy(self) -> Self:
         """Destroy the linesearch object.
@@ -1951,7 +1951,7 @@ cdef class TAOLineSearch(Object):
         petsc.TaoLineSearchDestroy
 
         """
-        CHKERR( TaoLineSearchDestroy(&self.taols) )
+        CHKERR(TaoLineSearchDestroy(&self.taols))
         return self
 
     def create(self, comm=None) -> Self:
@@ -1971,8 +1971,8 @@ cdef class TAOLineSearch(Object):
         """
         cdef MPI_Comm ccomm = def_Comm(comm, PETSC_COMM_DEFAULT)
         cdef PetscTAOLineSearch newtaols = NULL
-        CHKERR( TaoLineSearchCreate(ccomm, &newtaols) )
-        CHKERR( PetscCLEAR(self.obj) ); self.taols = newtaols
+        CHKERR(TaoLineSearchCreate(ccomm, &newtaols))
+        CHKERR(PetscCLEAR(self.obj)); self.taols = newtaols
         return self
 
     def setType(self, ls_type: Type | str) -> None:
@@ -1992,7 +1992,7 @@ cdef class TAOLineSearch(Object):
         """
         cdef PetscTAOLineSearchType ctype = NULL
         ls_type = str2bytes(ls_type, &ctype)
-        CHKERR( TaoLineSearchSetType(self.taols, ctype) )
+        CHKERR(TaoLineSearchSetType(self.taols, ctype))
 
     def getType(self) -> str:
         """Return the type of the linesearch.
@@ -2005,7 +2005,7 @@ cdef class TAOLineSearch(Object):
 
         """
         cdef PetscTAOLineSearchType ctype = NULL
-        CHKERR( TaoLineSearchGetType(self.taols, &ctype) )
+        CHKERR(TaoLineSearchGetType(self.taols, &ctype))
         return bytes2str(ctype)
 
     def setFromOptions(self) -> None:
@@ -2018,7 +2018,7 @@ cdef class TAOLineSearch(Object):
         petsc_options, petsc.TaoLineSearchSetFromOptions
 
         """
-        CHKERR( TaoLineSearchSetFromOptions(self.taols) )
+        CHKERR(TaoLineSearchSetFromOptions(self.taols))
 
     def setUp(self) -> None:
         """Set up the internal data structures for using the linesearch.
@@ -2030,7 +2030,7 @@ cdef class TAOLineSearch(Object):
         petsc.TaoLineSearchSetUp
 
         """
-        CHKERR( TaoLineSearchSetUp(self.taols) )
+        CHKERR(TaoLineSearchSetUp(self.taols))
 
     def setOptionsPrefix(self, prefix: str | None = None) -> None:
         """Set the prefix used for searching for options in the database.
@@ -2044,7 +2044,7 @@ cdef class TAOLineSearch(Object):
         """
         cdef const char *cprefix = NULL
         prefix = str2bytes(prefix, &cprefix)
-        CHKERR( TaoLineSearchSetOptionsPrefix(self.taols, cprefix) )
+        CHKERR(TaoLineSearchSetOptionsPrefix(self.taols, cprefix))
 
     def getOptionsPrefix(self) -> str:
         """Return the prefix used for searching for options in the database.
@@ -2057,7 +2057,7 @@ cdef class TAOLineSearch(Object):
 
         """
         cdef const char *prefix = NULL
-        CHKERR( TaoLineSearchGetOptionsPrefix(self.taols, &prefix) )
+        CHKERR(TaoLineSearchGetOptionsPrefix(self.taols, &prefix))
         return bytes2str(prefix)
 
     def setObjective(self, objective : TAOLSObjectiveFunction, args: tuple[Any, ...] | None = None, kargs: dict[str, Any] | None = None) -> None:
@@ -2080,7 +2080,7 @@ cdef class TAOLineSearch(Object):
         petsc.TaoLineSearchSetObjectiveRoutine
 
         """
-        CHKERR( TaoLineSearchSetObjectiveRoutine(self.taols, TAOLS_Objective, NULL) )
+        CHKERR(TaoLineSearchSetObjectiveRoutine(self.taols, TAOLS_Objective, NULL))
         if args is None: args = ()
         if kargs is None: kargs = {}
         self.set_attr("__objective__", (objective, args, kargs))
@@ -2107,7 +2107,7 @@ cdef class TAOLineSearch(Object):
         petsc.TaoLineSearchSetGradientRoutine
 
         """
-        CHKERR( TaoLineSearchSetGradientRoutine(self.taols, TAOLS_Gradient, NULL) )
+        CHKERR(TaoLineSearchSetGradientRoutine(self.taols, TAOLS_Gradient, NULL))
         if args is None: args = ()
         if kargs is None: kargs = {}
         self.set_attr("__gradient__", (gradient, args, kargs))
@@ -2134,7 +2134,7 @@ cdef class TAOLineSearch(Object):
         petsc.TaoLineSearchSetObjectiveAndGradientRoutine
 
         """
-        CHKERR( TaoLineSearchSetObjectiveAndGradientRoutine(self.taols, TAOLS_ObjGrad, NULL) )
+        CHKERR(TaoLineSearchSetObjectiveAndGradientRoutine(self.taols, TAOLS_ObjGrad, NULL))
         if args is None: args = ()
         if kargs is None: kargs = {}
         self.set_attr("__objgrad__", (objgrad, args, kargs))
@@ -2149,7 +2149,7 @@ cdef class TAOLineSearch(Object):
         petsc.TaoLineSearchUseTaoRoutines
 
         """
-        CHKERR( TaoLineSearchUseTaoRoutines(self.taols, tao.tao) )
+        CHKERR(TaoLineSearchUseTaoRoutines(self.taols, tao.tao))
 
     def apply(self, Vec x, Vec g, Vec s) -> tuple[float, float, str]:
         """Performs a line-search in a given step direction.
@@ -2164,7 +2164,7 @@ cdef class TAOLineSearch(Object):
         cdef PetscReal f = 0
         cdef PetscReal steplen = 0
         cdef PetscTAOLineSearchConvergedReason reason = TAOLINESEARCH_CONTINUE_ITERATING
-        CHKERR( TaoLineSearchApply(self.taols, x.vec, &f, g.vec, s.vec, &steplen, &reason))
+        CHKERR(TaoLineSearchApply(self.taols, x.vec, &f, g.vec, s.vec, &steplen, &reason))
         return (toReal(f), toReal(steplen), reason)
 
 # --------------------------------------------------------------------

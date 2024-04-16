@@ -150,17 +150,17 @@ cdef inline type subtype_DM(PetscDM dm):
     if obj == NULL: return DM
     # ---
     cdef PetscBool match = PETSC_FALSE
-    CHKERR( PetscObjectTypeCompare(obj, b"da", &match) )
+    CHKERR(PetscObjectTypeCompare(obj, b"da", &match))
     if match == PETSC_TRUE: return DMDA
-    CHKERR( PetscObjectTypeCompare(obj, b"plex", &match) )
+    CHKERR(PetscObjectTypeCompare(obj, b"plex", &match))
     if match == PETSC_TRUE: return DMPlex
-    CHKERR( PetscObjectTypeCompare(obj, b"composite", &match) )
+    CHKERR(PetscObjectTypeCompare(obj, b"composite", &match))
     if match == PETSC_TRUE: return DMComposite
-    CHKERR( PetscObjectTypeCompare(obj, b"shell", &match) )
+    CHKERR(PetscObjectTypeCompare(obj, b"shell", &match))
     if match == PETSC_TRUE: return DMShell
-    CHKERR( PetscObjectTypeCompare(obj, b"stag", &match) )
+    CHKERR(PetscObjectTypeCompare(obj, b"stag", &match))
     if match == PETSC_TRUE: return DMStag
-    CHKERR( PetscObjectTypeCompare(obj, b"swarm", &match) )
+    CHKERR(PetscObjectTypeCompare(obj, b"swarm", &match))
     if match == PETSC_TRUE: return DMSwarm
     # ---
     return DM
@@ -169,7 +169,7 @@ cdef inline type subtype_Object(PetscObject obj):
     cdef type klass = Object
     if obj == NULL: return klass
     cdef PetscClassId classid = 0
-    CHKERR( PetscObjectGetClassId(obj, &classid) )
+    CHKERR(PetscObjectGetClassId(obj, &classid))
     if classid == PETSC_DM_CLASSID:
         klass = subtype_DM(<PetscDM>obj)
     else:

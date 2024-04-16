@@ -35,7 +35,7 @@ cdef class FE(Object):
         """
         cdef PetscViewer vwr = NULL
         if viewer is not None: vwr = viewer.vwr
-        CHKERR( PetscFEView(self.fe, vwr) )
+        CHKERR(PetscFEView(self.fe, vwr))
 
     def destroy(self) -> Self:
         """Destroy the `FE` object.
@@ -47,7 +47,7 @@ cdef class FE(Object):
         petsc.PetscFEDestroy
 
         """
-        CHKERR( PetscFEDestroy(&self.fe) )
+        CHKERR(PetscFEDestroy(&self.fe))
         return self
 
     def create(self, comm: Comm | None = None) -> Self:
@@ -69,8 +69,8 @@ cdef class FE(Object):
         """
         cdef MPI_Comm ccomm = def_Comm(comm, PETSC_COMM_DEFAULT)
         cdef PetscFE newfe = NULL
-        CHKERR( PetscFECreate(ccomm, &newfe) )
-        CHKERR( PetscCLEAR(self.obj) ); self.fe = newfe
+        CHKERR(PetscFECreate(ccomm, &newfe))
+        CHKERR(PetscCLEAR(self.obj)); self.fe = newfe
         return self
 
     def createDefault(
@@ -80,8 +80,7 @@ cdef class FE(Object):
         isSimplex: bool,
         qorder: int = DETERMINE,
         prefix: str = None,
-        comm: Comm | None = None
-    ) -> Self:
+        comm: Comm | None = None) -> Self:
         """Create a `FE` for basic FEM computation.
 
         Collective.
@@ -116,8 +115,8 @@ cdef class FE(Object):
         cdef const char *cprefix = NULL
         if prefix:
             prefix = str2bytes(prefix, &cprefix)
-        CHKERR( PetscFECreateDefault(ccomm, cdim, cnc, cisSimplex, cprefix, cqorder, &newfe))
-        CHKERR( PetscCLEAR(self.obj) ); self.fe = newfe
+        CHKERR(PetscFECreateDefault(ccomm, cdim, cnc, cisSimplex, cprefix, cqorder, &newfe))
+        CHKERR(PetscCLEAR(self.obj)); self.fe = newfe
         return self
 
     def createLagrange(
@@ -127,8 +126,7 @@ cdef class FE(Object):
         isSimplex: bool,
         k: int,
         qorder: int = DETERMINE,
-        comm: Comm | None = None
-    ) -> Self:
+        comm: Comm | None = None) -> Self:
         """Create a `FE` for the basic Lagrange space of degree k.
 
         Collective.
@@ -161,8 +159,8 @@ cdef class FE(Object):
         cdef PetscInt ck = asInt(k)
         cdef PetscInt cqorder = asInt(qorder)
         cdef PetscBool cisSimplex = asBool(isSimplex)
-        CHKERR( PetscFECreateLagrange(ccomm, cdim, cnc, cisSimplex, ck, cqorder, &newfe))
-        CHKERR( PetscCLEAR(self.obj) ); self.fe = newfe
+        CHKERR(PetscFECreateLagrange(ccomm, cdim, cnc, cisSimplex, ck, cqorder, &newfe))
+        CHKERR(PetscCLEAR(self.obj)); self.fe = newfe
         return self
 
     def getQuadrature(self) -> Quad:
@@ -176,7 +174,7 @@ cdef class FE(Object):
 
         """
         cdef Quad quad = Quad()
-        CHKERR( PetscFEGetQuadrature(self.fe, &quad.quad) )
+        CHKERR(PetscFEGetQuadrature(self.fe, &quad.quad))
         return quad
 
     def getDimension(self) -> int:
@@ -190,7 +188,7 @@ cdef class FE(Object):
 
         """
         cdef PetscInt cdim = 0
-        CHKERR( PetscFEGetDimension(self.fe, &cdim) )
+        CHKERR(PetscFEGetDimension(self.fe, &cdim))
         return toInt(cdim)
 
     def getSpatialDimension(self) -> int:
@@ -204,7 +202,7 @@ cdef class FE(Object):
 
         """
         cdef PetscInt csdim = 0
-        CHKERR( PetscFEGetSpatialDimension(self.fe, &csdim) )
+        CHKERR(PetscFEGetSpatialDimension(self.fe, &csdim))
         return toInt(csdim)
 
     def getNumComponents(self) -> int:
@@ -218,7 +216,7 @@ cdef class FE(Object):
 
         """
         cdef PetscInt comp = 0
-        CHKERR( PetscFEGetNumComponents(self.fe, &comp) )
+        CHKERR(PetscFEGetNumComponents(self.fe, &comp))
         return toInt(comp)
 
     def setNumComponents(self, comp: int) -> None:
@@ -237,7 +235,7 @@ cdef class FE(Object):
 
         """
         cdef PetscInt ccomp = asInt(comp)
-        CHKERR( PetscFESetNumComponents(self.fe, ccomp) )
+        CHKERR(PetscFESetNumComponents(self.fe, ccomp))
 
     def getNumDof(self) -> ndarray:
         """Return the number of DOFs.
@@ -254,8 +252,8 @@ cdef class FE(Object):
         """
         cdef const PetscInt *numDof = NULL
         cdef PetscInt cdim = 0
-        CHKERR( PetscFEGetDimension(self.fe, &cdim) )
-        CHKERR( PetscFEGetNumDof(self.fe, &numDof) )
+        CHKERR(PetscFEGetDimension(self.fe, &cdim))
+        CHKERR(PetscFEGetNumDof(self.fe, &numDof))
         return array_i(cdim, numDof)
 
     def getTileSizes(self) -> tuple(int, int, int, int):
@@ -281,7 +279,7 @@ cdef class FE(Object):
         """
         cdef PetscInt blockSize = 0, numBlocks = 0
         cdef PetscInt batchSize = 0, numBatches = 0
-        CHKERR( PetscFEGetTileSizes(self.fe, &blockSize, &numBlocks, &batchSize, &numBatches) )
+        CHKERR(PetscFEGetTileSizes(self.fe, &blockSize, &numBlocks, &batchSize, &numBatches))
         return toInt(blockSize), toInt(numBlocks), toInt(batchSize), toInt(numBatches)
 
     def setTileSizes(
@@ -289,8 +287,7 @@ cdef class FE(Object):
         blockSize: int,
         numBlocks: int,
         batchSize: int,
-        numBatches: int,
-    ) -> None:
+        numBatches: int) -> None:
         """Set the tile sizes for evaluation.
 
         Not collective.
@@ -313,7 +310,7 @@ cdef class FE(Object):
         """
         cdef PetscInt cblockSize = asInt(blockSize), cnumBlocks = asInt(numBlocks)
         cdef PetscInt cbatchSize = asInt(batchSize), cnumBatches = asInt(numBatches)
-        CHKERR( PetscFESetTileSizes(self.fe, cblockSize, cnumBlocks, cbatchSize, cnumBatches) )
+        CHKERR(PetscFESetTileSizes(self.fe, cblockSize, cnumBlocks, cbatchSize, cnumBatches))
 
     def getFaceQuadrature(self) -> Quad:
         """Return the `Quad` used to calculate inner products on faces.
@@ -326,7 +323,7 @@ cdef class FE(Object):
 
         """
         cdef Quad quad = Quad()
-        CHKERR( PetscFEGetFaceQuadrature(self.fe, &quad.quad) )
+        CHKERR(PetscFEGetFaceQuadrature(self.fe, &quad.quad))
         return quad
 
     def setQuadrature(self, Quad quad) -> Self:
@@ -344,7 +341,7 @@ cdef class FE(Object):
         getQuadrature, petsc.PetscFESetQuadrature
 
         """
-        CHKERR( PetscFESetQuadrature(self.fe, quad.quad) )
+        CHKERR(PetscFESetQuadrature(self.fe, quad.quad))
         return self
 
     def setFaceQuadrature(self, Quad quad) -> Quad:
@@ -362,7 +359,7 @@ cdef class FE(Object):
         getFaceQuadrature, petsc.PetscFESetFaceQuadrature
 
         """
-        CHKERR( PetscFESetFaceQuadrature(self.fe, quad.quad) )
+        CHKERR(PetscFESetFaceQuadrature(self.fe, quad.quad))
         return self
 
     def setType(self, fe_type: Type | str) -> Self:
@@ -382,7 +379,7 @@ cdef class FE(Object):
         """
         cdef PetscFEType cval = NULL
         fe_type = str2bytes(fe_type, &cval)
-        CHKERR( PetscFESetType(self.fe, cval) )
+        CHKERR(PetscFESetType(self.fe, cval))
         return self
 
     def getBasisSpace(self) -> Space:
@@ -396,7 +393,7 @@ cdef class FE(Object):
 
         """
         cdef Space sp = Space()
-        CHKERR( PetscFEGetBasisSpace(self.fe, &sp.space ) )
+        CHKERR(PetscFEGetBasisSpace(self.fe, &sp.space))
         return sp
 
     def setBasisSpace(self, Space sp) -> None:
@@ -414,7 +411,7 @@ cdef class FE(Object):
         getBasisSpace, petsc.PetscFESetBasisSpace
 
         """
-        CHKERR( PetscFESetBasisSpace(self.fe, sp.space ) )
+        CHKERR(PetscFESetBasisSpace(self.fe, sp.space))
 
     def setFromOptions(self) -> None:
         """Set parameters in a `FE` from the options database.
@@ -426,7 +423,7 @@ cdef class FE(Object):
         petsc_options, petsc.PetscFESetFromOptions
 
         """
-        CHKERR( PetscFESetFromOptions(self.fe) )
+        CHKERR(PetscFESetFromOptions(self.fe))
 
     def setUp(self) -> None:
         """Construct data structures for the `FE` after the `Type` has been set.
@@ -438,7 +435,7 @@ cdef class FE(Object):
         petsc.PetscFESetUp
 
         """
-        CHKERR( PetscFESetUp(self.fe) )
+        CHKERR(PetscFESetUp(self.fe))
 
     def getDualSpace(self) -> DualSpace:
         """Return the `DualSpace` used to define the inner product for the `FE`.
@@ -451,7 +448,7 @@ cdef class FE(Object):
 
         """
         cdef DualSpace dspace = DualSpace()
-        CHKERR( PetscFEGetDualSpace(self.fe, &dspace.dualspace) )
+        CHKERR(PetscFEGetDualSpace(self.fe, &dspace.dualspace))
         return dspace
 
     def setDualSpace(self, DualSpace dspace) -> None:
@@ -469,7 +466,7 @@ cdef class FE(Object):
         getDualSpace, DualSpace, petsc.PetscFESetDualSpace
 
         """
-        CHKERR( PetscFESetDualSpace(self.fe, dspace.dualspace) )
+        CHKERR(PetscFESetDualSpace(self.fe, dspace.dualspace))
 
 # --------------------------------------------------------------------
 

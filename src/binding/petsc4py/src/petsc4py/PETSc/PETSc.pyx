@@ -53,7 +53,7 @@ cdef inline object S_(const char p[]):
 
 # --------------------------------------------------------------------
 
-# Vile hack for raising a exception and not contaminating traceback
+# Vile hack for raising an exception and not contaminating traceback
 
 cdef extern from *:
     void PyErr_SetObject(object, object)
@@ -430,21 +430,21 @@ cdef PetscErrorCode PetscVFPrintf_PythonStdStream(
     import sys
     cdef char cstring[8192]
     cdef size_t stringlen = sizeof(cstring)
-    cdef size_t final_pos
+    cdef size_t final_pos = 0
     if (fd == PETSC_STDOUT) and not (sys.stdout == sys.__stdout__):
-        CHKERR( PetscVSNPrintf(&cstring[0], stringlen, fmt, &final_pos, ap))
+        CHKERR(PetscVSNPrintf(&cstring[0], stringlen, fmt, &final_pos, ap))
         if final_pos > 0 and cstring[final_pos-1] == '\x00':
             final_pos -= 1
         ustring = cstring[:final_pos].decode('UTF-8')
         sys.stdout.write(ustring)
     elif (fd == PETSC_STDERR) and not (sys.stderr == sys.__stderr__):
-        CHKERR( PetscVSNPrintf(&cstring[0], stringlen, fmt, &final_pos, ap))
+        CHKERR(PetscVSNPrintf(&cstring[0], stringlen, fmt, &final_pos, ap))
         if final_pos > 0 and cstring[final_pos-1] == '\x00':
             final_pos -= 1
         ustring = cstring[:final_pos].decode('UTF-8')
         sys.stderr.write(ustring)
     else:
-        CHKERR( PetscVFPrintfDefault(fd, fmt, ap) )
+        CHKERR(PetscVFPrintfDefault(fd, fmt, ap))
     return PETSC_SUCCESS
 
 cdef int _push_vfprintf(
@@ -471,11 +471,11 @@ cdef int initialize(object args, object comm) except -1:
     global PETSC_COMM_WORLD
     PETSC_COMM_WORLD = def_Comm(comm, PETSC_COMM_WORLD)
     # initialize PETSc
-    CHKERR( PetscInitialize(&PyPetsc_Argc, &PyPetsc_Argv, NULL, NULL) )
+    CHKERR(PetscInitialize(&PyPetsc_Argc, &PyPetsc_Argv, NULL, NULL))
     # install Python error handler
     cdef PetscErrorHandlerFunction handler = NULL
     handler = <PetscErrorHandlerFunction>PetscPythonErrorHandler
-    CHKERR( PetscPushErrorHandler(handler, NULL) )
+    CHKERR(PetscPushErrorHandler(handler, NULL))
     # redirect PETSc std streams
     import sys
     if (sys.stdout != sys.__stdout__) or (sys.stderr != sys.__stderr__):
@@ -535,11 +535,11 @@ cdef int register() except -1:
     if registercalled: return 0
     registercalled = True
     # register citation
-    CHKERR( PetscCitationsRegister(citation, NULL) )
+    CHKERR(PetscCitationsRegister(citation, NULL))
     # make sure all PETSc packages are initialized
-    CHKERR( PetscInitializePackageAll() )
+    CHKERR(PetscInitializePackageAll())
     # register custom implementations
-    CHKERR( PetscPythonRegisterAll() )
+    CHKERR(PetscPythonRegisterAll())
     # register Python types
     PyPetscType_Register(PETSC_OBJECT_CLASSID,           Object)
     PyPetscType_Register(PETSC_VIEWER_CLASSID,           Viewer)

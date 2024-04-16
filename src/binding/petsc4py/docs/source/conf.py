@@ -113,7 +113,7 @@ autosummary_context = {
 
 # Links depends on the actual branch -> release or main
 www = f'https://gitlab.com/petsc/petsc/-/tree/{get_doc_branch()}'
-extlinks = {'sources': (f'{www}/src/binding/petsc4py/src/%s', '')}
+extlinks = {'sources': (f'{www}/src/binding/petsc4py/src/%s', '%s')}
 
 napoleon_preprocess_types = True
 

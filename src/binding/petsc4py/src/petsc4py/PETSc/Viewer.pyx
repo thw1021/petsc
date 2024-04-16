@@ -132,7 +132,7 @@ cdef class Viewer(Object):
     def __call__(self, Object obj) -> None:
         """View a generic object."""
         assert obj.obj != NULL
-        CHKERR( PetscObjectView(obj.obj[0], self.vwr) )
+        CHKERR(PetscObjectView(obj.obj[0], self.vwr))
 
     #
 
@@ -157,12 +157,12 @@ cdef class Viewer(Object):
 
         """
         if obj is None:
-            CHKERR( PetscViewerView(self.vwr, NULL) )
+            CHKERR(PetscViewerView(self.vwr, NULL))
         elif isinstance(obj, Viewer):
-            CHKERR( PetscViewerView(self.vwr, (<Viewer?>obj).vwr) )
+            CHKERR(PetscViewerView(self.vwr, (<Viewer?>obj).vwr))
         else:
             assert (<Object?>obj).obj != NULL
-            CHKERR( PetscObjectView((<Object?>obj).obj[0], self.vwr) )
+            CHKERR(PetscObjectView((<Object?>obj).obj[0], self.vwr))
 
     def destroy(self) -> Self:
         """Destroy the viewer.
@@ -174,7 +174,7 @@ cdef class Viewer(Object):
         petsc.PetscViewerDestroy
 
         """
-        CHKERR( PetscViewerDestroy(&self.vwr) )
+        CHKERR(PetscViewerDestroy(&self.vwr))
         return self
 
     def create(self, comm: Comm | None = None) -> Self:
@@ -194,8 +194,8 @@ cdef class Viewer(Object):
         """
         cdef MPI_Comm ccomm = def_Comm(comm, PETSC_COMM_DEFAULT)
         cdef PetscViewer newvwr = NULL
-        CHKERR( PetscViewerCreate(ccomm, &newvwr) )
-        CHKERR( PetscCLEAR(self.obj) ); self.vwr = newvwr
+        CHKERR(PetscViewerCreate(ccomm, &newvwr))
+        CHKERR(PetscCLEAR(self.obj)); self.vwr = newvwr
         return self
 
     def createASCII(
@@ -203,7 +203,7 @@ cdef class Viewer(Object):
         name: str,
         mode: FileMode | str | None = None,
         comm: Comm | None = None,
-        ) -> Self:
+       ) -> Self:
         """Create a viewer of type `Type.ASCII`.
 
         Collective.
@@ -229,11 +229,11 @@ cdef class Viewer(Object):
         cdef PetscFileMode cmode = PETSC_FILE_MODE_WRITE
         if mode is not None: cmode = filemode(mode)
         cdef PetscViewer newvwr = NULL
-        CHKERR( PetscViewerCreate(ccomm, &newvwr) )
-        CHKERR( PetscCLEAR(self.obj) ); self.vwr = newvwr
-        CHKERR( PetscViewerSetType(self.vwr, PETSCVIEWERASCII) )
-        CHKERR( PetscViewerFileSetMode(self.vwr, cmode) )
-        CHKERR( PetscViewerFileSetName(self.vwr, cname) )
+        CHKERR(PetscViewerCreate(ccomm, &newvwr))
+        CHKERR(PetscCLEAR(self.obj)); self.vwr = newvwr
+        CHKERR(PetscViewerSetType(self.vwr, PETSCVIEWERASCII))
+        CHKERR(PetscViewerFileSetMode(self.vwr, cmode))
+        CHKERR(PetscViewerFileSetName(self.vwr, cname))
         return self
 
     def createBinary(
@@ -241,7 +241,7 @@ cdef class Viewer(Object):
         name: str,
         mode: FileMode | str | None = None,
         comm: Comm | None = None,
-        ) -> Self:
+       ) -> Self:
         """Create a viewer of type `Type.BINARY`.
 
         Collective.
@@ -265,8 +265,8 @@ cdef class Viewer(Object):
         name = str2bytes(name, &cname)
         cdef PetscFileMode cmode = filemode(mode)
         cdef PetscViewer newvwr = NULL
-        CHKERR( PetscViewerBinaryOpen(ccomm, cname, cmode, &newvwr) )
-        CHKERR( PetscCLEAR(self.obj) ); self.vwr = newvwr
+        CHKERR(PetscViewerBinaryOpen(ccomm, cname, cmode, &newvwr))
+        CHKERR(PetscCLEAR(self.obj)); self.vwr = newvwr
         return self
 
     def createMPIIO(
@@ -274,7 +274,7 @@ cdef class Viewer(Object):
         name: str,
         mode: FileMode | str | None = None,
         comm: Comm | None = None,
-        ) -> Self:
+       ) -> Self:
         """Create a viewer of type `Type.BINARY` supporting MPI-IO.
 
         Collective.
@@ -298,12 +298,12 @@ cdef class Viewer(Object):
         name = str2bytes(name, &cname)
         cdef PetscFileMode cmode = filemode(mode)
         cdef PetscViewer newvwr = NULL
-        CHKERR( PetscViewerCreate(ccomm, &newvwr) )
-        CHKERR( PetscCLEAR(self.obj) ); self.vwr = newvwr
-        CHKERR( PetscViewerSetType(self.vwr, PETSCVIEWERBINARY) )
-        CHKERR( PetscViewerBinarySetUseMPIIO(self.vwr, PETSC_TRUE) )
-        CHKERR( PetscViewerFileSetMode(self.vwr, cmode) )
-        CHKERR( PetscViewerFileSetName(self.vwr, cname) )
+        CHKERR(PetscViewerCreate(ccomm, &newvwr))
+        CHKERR(PetscCLEAR(self.obj)); self.vwr = newvwr
+        CHKERR(PetscViewerSetType(self.vwr, PETSCVIEWERBINARY))
+        CHKERR(PetscViewerBinarySetUseMPIIO(self.vwr, PETSC_TRUE))
+        CHKERR(PetscViewerFileSetMode(self.vwr, cmode))
+        CHKERR(PetscViewerFileSetName(self.vwr, cname))
         return self
 
     def createVTK(
@@ -311,7 +311,7 @@ cdef class Viewer(Object):
         name: str,
         mode: FileMode | str | None = None,
         comm: Comm | None = None,
-        ) -> Self:
+       ) -> Self:
         """Create a viewer of type `Type.VTK`.
 
         Collective.
@@ -335,11 +335,11 @@ cdef class Viewer(Object):
         name = str2bytes(name, &cname)
         cdef PetscFileMode cmode = filemode(mode)
         cdef PetscViewer newvwr = NULL
-        CHKERR( PetscViewerCreate(ccomm, &newvwr) )
-        CHKERR( PetscCLEAR(self.obj) ); self.vwr = newvwr
-        CHKERR( PetscViewerSetType(self.vwr, PETSCVIEWERVTK) )
-        CHKERR( PetscViewerFileSetMode(self.vwr, cmode) )
-        CHKERR( PetscViewerFileSetName(self.vwr, cname) )
+        CHKERR(PetscViewerCreate(ccomm, &newvwr))
+        CHKERR(PetscCLEAR(self.obj)); self.vwr = newvwr
+        CHKERR(PetscViewerSetType(self.vwr, PETSCVIEWERVTK))
+        CHKERR(PetscViewerFileSetMode(self.vwr, cmode))
+        CHKERR(PetscViewerFileSetName(self.vwr, cname))
         return self
 
     def createHDF5(
@@ -347,7 +347,7 @@ cdef class Viewer(Object):
         name: str,
         mode: FileMode | str | None = None,
         comm: Comm | None = None,
-        ) -> Self:
+       ) -> Self:
         """Create a viewer of type `Type.HDF5`.
 
         Collective.
@@ -371,11 +371,11 @@ cdef class Viewer(Object):
         name = str2bytes(name, &cname)
         cdef PetscFileMode cmode = filemode(mode)
         cdef PetscViewer newvwr = NULL
-        CHKERR( PetscViewerCreate(ccomm, &newvwr) )
-        CHKERR( PetscCLEAR(self.obj) ); self.vwr = newvwr
-        CHKERR( PetscViewerSetType(self.vwr, PETSCVIEWERHDF5) )
-        CHKERR( PetscViewerFileSetMode(self.vwr, cmode) )
-        CHKERR( PetscViewerFileSetName(self.vwr, cname) )
+        CHKERR(PetscViewerCreate(ccomm, &newvwr))
+        CHKERR(PetscCLEAR(self.obj)); self.vwr = newvwr
+        CHKERR(PetscViewerSetType(self.vwr, PETSCVIEWERHDF5))
+        CHKERR(PetscViewerFileSetMode(self.vwr, cmode))
+        CHKERR(PetscViewerFileSetName(self.vwr, cname))
         return self
 
     def createDraw(
@@ -385,7 +385,7 @@ cdef class Viewer(Object):
         position: tuple[int, int] | None = None,
         size: tuple[int, int] | int | None = None,
         comm: Comm | None = None,
-        ) -> Self:
+       ) -> Self:
         """Create a `Type.DRAW` viewer.
 
         Collective.
@@ -423,9 +423,9 @@ cdef class Viewer(Object):
             except TypeError:
                 w = h = size
         cdef PetscViewer newvwr = NULL
-        CHKERR( PetscViewerDrawOpen(ccomm, cdisplay, ctitle,
-                                    x, y, w, h, &newvwr) )
-        CHKERR( PetscCLEAR(self.obj) ); self.vwr = newvwr
+        CHKERR(PetscViewerDrawOpen(ccomm, cdisplay, ctitle,
+                                   x, y, w, h, &newvwr))
+        CHKERR(PetscCLEAR(self.obj)); self.vwr = newvwr
         return self
 
     def setType(self, vwr_type: Type | str) -> None:
@@ -445,7 +445,7 @@ cdef class Viewer(Object):
         """
         cdef PetscViewerType cval = NULL
         vwr_type = str2bytes(vwr_type, &cval)
-        CHKERR( PetscViewerSetType(self.vwr, cval) )
+        CHKERR(PetscViewerSetType(self.vwr, cval))
 
     def getType(self) -> str:
         """Return the type of the viewer.
@@ -458,7 +458,7 @@ cdef class Viewer(Object):
 
         """
         cdef PetscViewerType cval = NULL
-        CHKERR( PetscViewerGetType(self.vwr, &cval) )
+        CHKERR(PetscViewerGetType(self.vwr, &cval))
         return bytes2str(cval)
 
     def getFormat(self) -> Format:
@@ -472,7 +472,7 @@ cdef class Viewer(Object):
 
         """
         cdef PetscViewerFormat format = PETSC_VIEWER_DEFAULT
-        CHKERR( PetscViewerGetFormat(self.vwr, &format) )
+        CHKERR(PetscViewerGetFormat(self.vwr, &format))
         return format
 
     def pushFormat(self, format: Format) -> None:
@@ -485,7 +485,7 @@ cdef class Viewer(Object):
         popFormat, petsc.PetscViewerPushFormat
 
         """
-        CHKERR( PetscViewerPushFormat(self.vwr, format) )
+        CHKERR(PetscViewerPushFormat(self.vwr, format))
 
     def popFormat(self) -> None:
         """Pop format from the viewer.
@@ -497,7 +497,7 @@ cdef class Viewer(Object):
         pushFormat, petsc.PetscViewerPopFormat
 
         """
-        CHKERR( PetscViewerPopFormat(self.vwr) )
+        CHKERR(PetscViewerPopFormat(self.vwr))
 
     def getSubViewer(self, comm: Comm | None = None) -> Viewer:
         """Return a viewer defined on a subcommunicator.
@@ -520,7 +520,7 @@ cdef class Viewer(Object):
         """
         cdef MPI_Comm ccomm = def_Comm(comm, PETSC_COMM_SELF)
         cdef Viewer sub = Viewer()
-        CHKERR( PetscViewerGetSubViewer(self.vwr, ccomm, &sub.vwr) )
+        CHKERR(PetscViewerGetSubViewer(self.vwr, ccomm, &sub.vwr))
         return sub
 
     def restoreSubViewer(self, Viewer sub) -> None:
@@ -539,7 +539,7 @@ cdef class Viewer(Object):
 
         """
         cdef MPI_Comm ccomm = def_Comm(sub.getComm(), PETSC_COMM_SELF)
-        CHKERR( PetscViewerRestoreSubViewer(self.vwr, ccomm, &sub.vwr) )
+        CHKERR(PetscViewerRestoreSubViewer(self.vwr, ccomm, &sub.vwr))
 
     @classmethod
     def STDOUT(cls, comm: Comm | None = None) -> Viewer:
@@ -556,7 +556,7 @@ cdef class Viewer(Object):
         cdef MPI_Comm ccomm = def_Comm(comm, PETSC_COMM_DEFAULT)
         cdef Viewer viewer = Viewer()
         viewer.vwr = PETSC_VIEWER_STDOUT_(ccomm)
-        CHKERR( PetscINCREF(viewer.obj) )
+        CHKERR(PetscINCREF(viewer.obj))
         return viewer
 
     @classmethod
@@ -574,7 +574,7 @@ cdef class Viewer(Object):
         cdef MPI_Comm ccomm = def_Comm(comm, PETSC_COMM_DEFAULT)
         cdef Viewer viewer = Viewer()
         viewer.vwr = PETSC_VIEWER_STDERR_(ccomm)
-        CHKERR( PetscINCREF(viewer.obj) )
+        CHKERR(PetscINCREF(viewer.obj))
         return viewer
 
     @classmethod
@@ -595,7 +595,7 @@ cdef class Viewer(Object):
         cdef const char *cname = NULL
         name = str2bytes(name, &cname)
         cdef Viewer viewer = Viewer()
-        CHKERR( PetscViewerASCIIOpen(ccomm, cname, &viewer.vwr) )
+        CHKERR(PetscViewerASCIIOpen(ccomm, cname, &viewer.vwr))
         return viewer
 
     @classmethod
@@ -613,7 +613,7 @@ cdef class Viewer(Object):
         cdef MPI_Comm ccomm = def_Comm(comm, PETSC_COMM_DEFAULT)
         cdef Viewer viewer = Viewer()
         viewer.vwr = PETSC_VIEWER_BINARY_(ccomm)
-        CHKERR( PetscINCREF(viewer.obj) )
+        CHKERR(PetscINCREF(viewer.obj))
         return viewer
 
     @classmethod
@@ -631,7 +631,7 @@ cdef class Viewer(Object):
         cdef MPI_Comm ccomm = def_Comm(comm, PETSC_COMM_DEFAULT)
         cdef Viewer viewer = Viewer()
         viewer.vwr = PETSC_VIEWER_DRAW_(ccomm)
-        CHKERR( PetscINCREF(viewer.obj) )
+        CHKERR(PetscINCREF(viewer.obj))
         return viewer
 
     # --- ASCII viewers ---
@@ -647,7 +647,7 @@ cdef class Viewer(Object):
 
         """
         cdef PetscInt ctabs = asInt(tabs)
-        CHKERR( PetscViewerASCIISetTab(self.vwr, ctabs) )
+        CHKERR(PetscViewerASCIISetTab(self.vwr, ctabs))
 
     def getASCIITab(self) -> int:
         """Return the ASCII tab level.
@@ -660,10 +660,10 @@ cdef class Viewer(Object):
 
         """
         cdef PetscInt tabs = 0
-        CHKERR( PetscViewerASCIIGetTab(self.vwr, &tabs) )
+        CHKERR(PetscViewerASCIIGetTab(self.vwr, &tabs))
         return toInt(tabs)
 
-    def addASCIITab(self, tabs: int):
+    def addASCIITab(self, tabs: int) -> None:
         """Increment the ASCII tab level.
 
         Collective.
@@ -674,7 +674,7 @@ cdef class Viewer(Object):
 
         """
         cdef PetscInt ctabs = asInt(tabs)
-        CHKERR( PetscViewerASCIIAddTab(self.vwr, ctabs) )
+        CHKERR(PetscViewerASCIIAddTab(self.vwr, ctabs))
 
     def subtractASCIITab(self, tabs: int) -> None:
         """Decrement the ASCII tab level.
@@ -687,7 +687,7 @@ cdef class Viewer(Object):
 
         """
         cdef PetscInt ctabs = asInt(tabs)
-        CHKERR( PetscViewerASCIISubtractTab(self.vwr, ctabs) )
+        CHKERR(PetscViewerASCIISubtractTab(self.vwr, ctabs))
 
     def pushASCIISynchronized(self) -> None:
         """Allow ASCII synchronized calls.
@@ -700,7 +700,7 @@ cdef class Viewer(Object):
         petsc.PetscViewerASCIIPushSynchronized
 
         """
-        CHKERR( PetscViewerASCIIPushSynchronized(self.vwr) )
+        CHKERR(PetscViewerASCIIPushSynchronized(self.vwr))
 
     def popASCIISynchronized(self) -> None:
         """Disallow ASCII synchronized calls.
@@ -713,7 +713,7 @@ cdef class Viewer(Object):
         petsc.PetscViewerASCIIPopSynchronized
 
         """
-        CHKERR( PetscViewerASCIIPopSynchronized(self.vwr) )
+        CHKERR(PetscViewerASCIIPopSynchronized(self.vwr))
 
     def pushASCIITab(self) -> None:
         """Push an additional tab level.
@@ -725,7 +725,7 @@ cdef class Viewer(Object):
         popASCIITab, petsc.PetscViewerASCIIPushTab
 
         """
-        CHKERR( PetscViewerASCIIPushTab(self.vwr) )
+        CHKERR(PetscViewerASCIIPushTab(self.vwr))
 
     def popASCIITab(self) -> None:
         """Pop an additional tab level pushed via `pushASCIITab`.
@@ -737,7 +737,7 @@ cdef class Viewer(Object):
         pushASCIITab, petsc.PetscViewerASCIIPopTab
 
         """
-        CHKERR( PetscViewerASCIIPopTab(self.vwr) )
+        CHKERR(PetscViewerASCIIPopTab(self.vwr))
 
     def useASCIITabs(self, flag: bool) -> None:
         """Enable/disable the use of ASCII tabs.
@@ -750,7 +750,7 @@ cdef class Viewer(Object):
 
         """
         cdef PetscBool flg = asBool(flag)
-        CHKERR( PetscViewerASCIIUseTabs(self.vwr, flg) )
+        CHKERR(PetscViewerASCIIUseTabs(self.vwr, flg))
 
     def printfASCII(self, msg: str) -> None:
         """Print a message.
@@ -764,7 +764,7 @@ cdef class Viewer(Object):
         """
         cdef const char *cmsg = NULL
         msg = str2bytes(msg, &cmsg)
-        CHKERR( PetscViewerASCIIPrintf(self.vwr, '%s', cmsg) )
+        CHKERR(PetscViewerASCIIPrintf(self.vwr, '%s', cmsg))
 
     def printfASCIISynchronized(self, msg: str) -> None:
         """Print a synchronized message.
@@ -778,7 +778,7 @@ cdef class Viewer(Object):
         """
         cdef const char *cmsg = NULL
         msg = str2bytes(msg, &cmsg)
-        CHKERR( PetscViewerASCIISynchronizedPrintf(self.vwr, '%s', cmsg) )
+        CHKERR(PetscViewerASCIISynchronizedPrintf(self.vwr, '%s', cmsg))
 
     # --- methods specific to file viewers ---
 
@@ -792,7 +792,7 @@ cdef class Viewer(Object):
         petsc.PetscViewerFlush
 
         """
-        CHKERR( PetscViewerFlush(self.vwr) )
+        CHKERR(PetscViewerFlush(self.vwr))
 
     def setFileMode(self, mode: FileMode | str) -> None:
         """Set file mode.
@@ -804,7 +804,7 @@ cdef class Viewer(Object):
         getFileMode, petsc.PetscViewerFileSetMode
 
         """
-        CHKERR( PetscViewerFileSetMode(self.vwr, filemode(mode)) )
+        CHKERR(PetscViewerFileSetMode(self.vwr, filemode(mode)))
 
     def getFileMode(self) -> FileMode:
         """Return the file mode.
@@ -817,7 +817,7 @@ cdef class Viewer(Object):
 
         """
         cdef PetscFileMode mode = PETSC_FILE_MODE_READ
-        CHKERR( PetscViewerFileGetMode(self.vwr, &mode) )
+        CHKERR(PetscViewerFileGetMode(self.vwr, &mode))
         return mode
 
     def setFileName(self, name: str) -> None:
@@ -832,7 +832,7 @@ cdef class Viewer(Object):
         """
         cdef const char *cval = NULL
         name = str2bytes(name, &cval)
-        CHKERR( PetscViewerFileSetName(self.vwr, cval) )
+        CHKERR(PetscViewerFileSetName(self.vwr, cval))
 
     def getFileName(self) -> str:
         """Return file name.
@@ -845,7 +845,7 @@ cdef class Viewer(Object):
 
         """
         cdef const char *cval = NULL
-        CHKERR( PetscViewerFileGetName(self.vwr, &cval) )
+        CHKERR(PetscViewerFileGetName(self.vwr, &cval))
         return bytes2str(cval)
 
     # --- methods specific to draw viewers ---
@@ -856,7 +856,7 @@ cdef class Viewer(Object):
         title: str | None = None,
         position: tuple[int, int] | None = None,
         size: tuple[int, int] | int | None = None,
-        ) -> None:
+       ) -> None:
         """Set window information for a `Type.DRAW` viewer.
 
         Collective.
@@ -890,9 +890,9 @@ cdef class Viewer(Object):
                 w, h = size
             except TypeError:
                 w = h = size
-        CHKERR( PetscViewerDrawSetInfo(self.vwr,
-                                       cdisplay, ctitle,
-                                       x, y, w, h) )
+        CHKERR(PetscViewerDrawSetInfo(self.vwr,
+                                      cdisplay, ctitle,
+                                      x, y, w, h))
 
     def clearDraw(self) -> None:
         """Reset graphics.
@@ -904,7 +904,7 @@ cdef class Viewer(Object):
         petsc.PetscViewerDrawClear
 
         """
-        CHKERR( PetscViewerDrawClear(self.vwr) )
+        CHKERR(PetscViewerDrawClear(self.vwr))
 
 # --------------------------------------------------------------------
 
@@ -924,7 +924,7 @@ cdef class ViewerHDF5(Viewer):
         name: str,
         mode: FileMode | str | None = None,
         comm: Comm | None = None,
-        ) -> Self:
+       ) -> Self:
         """Create a viewer of type `Type.HDF5`.
 
         Collective.
@@ -948,11 +948,11 @@ cdef class ViewerHDF5(Viewer):
         name = str2bytes(name, &cname)
         cdef PetscFileMode cmode = filemode(mode)
         cdef PetscViewer newvwr = NULL
-        CHKERR( PetscViewerCreate(ccomm, &newvwr) )
-        CHKERR( PetscCLEAR(self.obj) ); self.vwr = newvwr
-        CHKERR( PetscViewerSetType(self.vwr, PETSCVIEWERHDF5) )
-        CHKERR( PetscViewerFileSetMode(self.vwr, cmode) )
-        CHKERR( PetscViewerFileSetName(self.vwr, cname) )
+        CHKERR(PetscViewerCreate(ccomm, &newvwr))
+        CHKERR(PetscCLEAR(self.obj)); self.vwr = newvwr
+        CHKERR(PetscViewerSetType(self.vwr, PETSCVIEWERHDF5))
+        CHKERR(PetscViewerFileSetMode(self.vwr, cmode))
+        CHKERR(PetscViewerFileSetName(self.vwr, cname))
         return self
 
     def pushTimestepping(self) -> None:
@@ -965,10 +965,10 @@ cdef class ViewerHDF5(Viewer):
         popTimestepping, petsc.PetscViewerHDF5PushTimestepping
 
         """
-        CHKERR( PetscViewerHDF5PushTimestepping(self.vwr) )
+        CHKERR(PetscViewerHDF5PushTimestepping(self.vwr))
 
-    def popTimestepping(self):
-        """Dectivate the timestepping mode.
+    def popTimestepping(self) -> None:
+        """Deactivate the timestepping mode.
 
         Logically collective.
 
@@ -977,7 +977,7 @@ cdef class ViewerHDF5(Viewer):
         pushTimestepping, petsc.PetscViewerHDF5PopTimestepping
 
         """
-        CHKERR( PetscViewerHDF5PopTimestepping(self.vwr) )
+        CHKERR(PetscViewerHDF5PopTimestepping(self.vwr))
 
     def getTimestep(self) -> int:
         """Return the current time step.
@@ -991,7 +991,7 @@ cdef class ViewerHDF5(Viewer):
 
         """
         cdef PetscInt ctimestep = 0
-        CHKERR( PetscViewerHDF5GetTimestep(self.vwr, &ctimestep) )
+        CHKERR(PetscViewerHDF5GetTimestep(self.vwr, &ctimestep))
         return toInt(ctimestep)
 
     def setTimestep(self, timestep: int) -> None:
@@ -1005,9 +1005,9 @@ cdef class ViewerHDF5(Viewer):
         petsc.PetscViewerHDF5SetTimestep
 
         """
-        CHKERR( PetscViewerHDF5SetTimestep(self.vwr, asInt(timestep)) )
+        CHKERR(PetscViewerHDF5SetTimestep(self.vwr, asInt(timestep)))
 
-    def incrementTimestep(self):
+    def incrementTimestep(self) -> None:
         """Increment the time step.
 
         Logically collective.
@@ -1018,7 +1018,7 @@ cdef class ViewerHDF5(Viewer):
         petsc.PetscViewerHDF5IncrementTimestep
 
         """
-        CHKERR( PetscViewerHDF5IncrementTimestep(self.vwr) )
+        CHKERR(PetscViewerHDF5IncrementTimestep(self.vwr))
 
     def pushGroup(self, group: str) -> None:
         """Set the current group.
@@ -1032,7 +1032,7 @@ cdef class ViewerHDF5(Viewer):
         """
         cdef const char *cgroup = NULL
         group = str2bytes(group, &cgroup)
-        CHKERR( PetscViewerHDF5PushGroup(self.vwr, cgroup) )
+        CHKERR(PetscViewerHDF5PushGroup(self.vwr, cgroup))
 
     def popGroup(self) -> None:
         """Pop the current group from the stack.
@@ -1044,7 +1044,7 @@ cdef class ViewerHDF5(Viewer):
         pushGroup, getGroup, petsc.PetscViewerHDF5PopGroup
 
         """
-        CHKERR( PetscViewerHDF5PopGroup(self.vwr) )
+        CHKERR(PetscViewerHDF5PopGroup(self.vwr))
 
     def getGroup(self) -> str:
         """Return the current group.
@@ -1057,9 +1057,9 @@ cdef class ViewerHDF5(Viewer):
 
         """
         cdef char *cgroup = NULL
-        CHKERR( PetscViewerHDF5GetGroup(self.vwr, NULL, &cgroup) )
+        CHKERR(PetscViewerHDF5GetGroup(self.vwr, NULL, &cgroup))
         group = bytes2str(cgroup)
-        CHKERR( PetscFree(cgroup) )
+        CHKERR(PetscFree(cgroup))
         return group
 
 # --------------------------------------------------------------------

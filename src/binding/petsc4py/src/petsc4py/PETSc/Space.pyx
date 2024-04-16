@@ -31,7 +31,7 @@ cdef class Space(Object):
         petsc.PetscSpaceSetUp
 
         """
-        CHKERR( PetscSpaceSetUp(self.space) )
+        CHKERR(PetscSpaceSetUp(self.space))
 
     def create(self, comm: Comm | None = None) -> Self:
         """Create an empty `Space` object.
@@ -52,8 +52,8 @@ cdef class Space(Object):
         """
         cdef MPI_Comm ccomm = def_Comm(comm, PETSC_COMM_DEFAULT)
         cdef PetscSpace newsp = NULL
-        CHKERR( PetscSpaceCreate(ccomm, &newsp) )
-        CHKERR( PetscCLEAR(self.obj) ); self.space = newsp
+        CHKERR(PetscSpaceCreate(ccomm, &newsp))
+        CHKERR(PetscCLEAR(self.obj)); self.space = newsp
         return self
 
     def destroy(self) -> Self:
@@ -66,7 +66,7 @@ cdef class Space(Object):
         petsc.PetscSpaceDestroy
 
         """
-        CHKERR( PetscSpaceDestroy(&self.space) )
+        CHKERR(PetscSpaceDestroy(&self.space))
         return self
 
     def view(self, Viewer viewer=None) -> None:
@@ -86,7 +86,7 @@ cdef class Space(Object):
         """
         cdef PetscViewer vwr = NULL
         if viewer is not None: vwr = viewer.vwr
-        CHKERR( PetscSpaceView(self.space, vwr) )
+        CHKERR(PetscSpaceView(self.space, vwr))
 
     def setFromOptions(self) -> None:
         """Set parameters in `Space` from the options database.
@@ -98,7 +98,7 @@ cdef class Space(Object):
         petsc_options, petsc.PetscSpaceSetFromOptions
 
         """
-        CHKERR( PetscSpaceSetFromOptions(self.space) )
+        CHKERR(PetscSpaceSetFromOptions(self.space))
 
     def getDimension(self) -> int:
         """Return the number of basis vectors.
@@ -110,8 +110,8 @@ cdef class Space(Object):
         petsc.PetscSpaceGetDimension
 
         """
-        cdef PetscInt cdim
-        CHKERR( PetscSpaceGetDimension(self.space, &cdim))
+        cdef PetscInt cdim = 0
+        CHKERR(PetscSpaceGetDimension(self.space, &cdim))
         return toInt(cdim)
 
     def getDegree(self) -> tuple[int, int]:
@@ -131,8 +131,8 @@ cdef class Space(Object):
         setDegree, petsc.PetscSpaceGetDegree
 
         """
-        cdef PetscInt cdegmax, cdegmin
-        CHKERR( PetscSpaceGetDegree(self.space, &cdegmin, &cdegmax))
+        cdef PetscInt cdegmax = 0, cdegmin = 0
+        CHKERR(PetscSpaceGetDegree(self.space, &cdegmin, &cdegmax))
         return toInt(cdegmin), toInt(cdegmax)
 
     def setDegree(self, degree: int | None, maxDegree: int | None) -> None:
@@ -158,7 +158,7 @@ cdef class Space(Object):
         if degree is not None: cdegree = asInt(degree)
         cdef PetscInt cmaxdegree = PETSC_DETERMINE
         if maxDegree is not None: cmaxdegree = asInt(maxDegree)
-        CHKERR( PetscSpaceSetDegree(self.space, cdegree, cmaxdegree) )
+        CHKERR(PetscSpaceSetDegree(self.space, cdegree, cmaxdegree))
 
     def getNumVariables(self) -> int:
         """Return the number of variables for this space.
@@ -170,8 +170,8 @@ cdef class Space(Object):
         setNumVariables, petsc.PetscSpaceGetNumVariables
 
         """
-        cdef PetscInt cnvars
-        CHKERR( PetscSpaceGetNumVariables(self.space, &cnvars))
+        cdef PetscInt cnvars = 0
+        CHKERR(PetscSpaceGetNumVariables(self.space, &cnvars))
         return toInt(cnvars)
 
     def setNumVariables(self, n: int) -> None:
@@ -190,7 +190,7 @@ cdef class Space(Object):
 
         """
         cdef PetscInt cn = asInt(n)
-        CHKERR( PetscSpaceSetNumVariables(self.space, cn) )
+        CHKERR(PetscSpaceSetNumVariables(self.space, cn))
 
     def getNumComponents(self) -> int:
         """Return the number of components for this space.
@@ -202,8 +202,8 @@ cdef class Space(Object):
         setNumComponents, petsc.PetscSpaceGetNumComponents
 
         """
-        cdef PetscInt cncomps
-        CHKERR( PetscSpaceGetNumComponents(self.space, &cncomps))
+        cdef PetscInt cncomps = 0
+        CHKERR(PetscSpaceGetNumComponents(self.space, &cncomps))
         return toInt(cncomps)
 
     def setNumComponents(self, nc: int) -> None:
@@ -222,7 +222,7 @@ cdef class Space(Object):
 
         """
         cdef PetscInt cnc = asInt(nc)
-        CHKERR( PetscSpaceSetNumComponents(self.space, cnc) )
+        CHKERR(PetscSpaceSetNumComponents(self.space, cnc))
 
     def getType(self) -> str:
         """Return the type of the space object.
@@ -235,7 +235,7 @@ cdef class Space(Object):
 
         """
         cdef PetscSpaceType cval = NULL
-        CHKERR( PetscSpaceGetType(self.space, &cval) )
+        CHKERR(PetscSpaceGetType(self.space, &cval))
         return bytes2str(cval)
 
     def setType(self, space_type: Type | str) -> Self:
@@ -255,7 +255,7 @@ cdef class Space(Object):
         """
         cdef PetscSpaceType cval = NULL
         space_type = str2bytes(space_type, &cval)
-        CHKERR( PetscSpaceSetType(self.space, cval) )
+        CHKERR(PetscSpaceSetType(self.space, cval))
         return self
 
     def getSumConcatenate(self) -> bool:
@@ -273,8 +273,8 @@ cdef class Space(Object):
         setSumConcatenate, petsc.PetscSpaceSumGetConcatenate
 
         """
-        cdef PetscBool concatenate
-        CHKERR( PetscSpaceSumGetConcatenate(self.space, &concatenate))
+        cdef PetscBool concatenate = PETSC_FALSE
+        CHKERR(PetscSpaceSumGetConcatenate(self.space, &concatenate))
         return toBool(concatenate)
 
     def setSumConcatenate(self, concatenate: bool) -> None:
@@ -299,7 +299,7 @@ cdef class Space(Object):
 
         """
         cdef PetscBool cconcatenate = asBool(concatenate)
-        CHKERR( PetscSpaceSumSetConcatenate(self.space, cconcatenate))
+        CHKERR(PetscSpaceSumSetConcatenate(self.space, cconcatenate))
 
     def getSumNumSubspaces(self) -> int:
         """Return the number of spaces in the sum.
@@ -311,8 +311,8 @@ cdef class Space(Object):
         setSumNumSubspaces, petsc.PetscSpaceSumGetNumSubspaces
 
         """
-        cdef PetscInt numSumSpaces
-        CHKERR( PetscSpaceSumGetNumSubspaces(self.space, &numSumSpaces))
+        cdef PetscInt numSumSpaces = 0
+        CHKERR(PetscSpaceSumGetNumSubspaces(self.space, &numSumSpaces))
         return toInt(numSumSpaces)
 
     def getSumSubspace(self, s: int) -> Space:
@@ -332,7 +332,7 @@ cdef class Space(Object):
         """
         cdef Space subsp = Space()
         cdef PetscInt cs = asInt(s)
-        CHKERR( PetscSpaceSumGetSubspace(self.space, cs, &subsp.space) )
+        CHKERR(PetscSpaceSumGetSubspace(self.space, cs, &subsp.space))
         return subsp
 
     def setSumSubspace(self, s: int, Space subsp) -> None:
@@ -353,7 +353,7 @@ cdef class Space(Object):
 
         """
         cdef PetscInt cs = asInt(s)
-        CHKERR( PetscSpaceSumSetSubspace(self.space, cs, subsp.space) )
+        CHKERR(PetscSpaceSumSetSubspace(self.space, cs, subsp.space))
 
     def setSumNumSubspaces(self, numSumSpaces: int) -> None:
         """Set the number of spaces in the sum.
@@ -371,7 +371,7 @@ cdef class Space(Object):
 
         """
         cdef PetscInt cnumSumSpaces = asInt(numSumSpaces)
-        CHKERR( PetscSpaceSumSetNumSubspaces(self.space, cnumSumSpaces) )
+        CHKERR(PetscSpaceSumSetNumSubspaces(self.space, cnumSumSpaces))
 
     def getTensorNumSubspaces(self) -> int:
         """Return the number of spaces in the tensor product.
@@ -384,7 +384,7 @@ cdef class Space(Object):
 
         """
         cdef PetscInt cnumTensSpaces = 0
-        CHKERR( PetscSpaceTensorGetNumSubspaces(self.space, &cnumTensSpaces) )
+        CHKERR(PetscSpaceTensorGetNumSubspaces(self.space, &cnumTensSpaces))
         return toInt(cnumTensSpaces)
 
     def setTensorSubspace(self, s: int, Space subsp) -> None:
@@ -405,7 +405,7 @@ cdef class Space(Object):
 
         """
         cdef PetscInt cs = asInt(s)
-        CHKERR( PetscSpaceTensorSetSubspace(self.space, cs, subsp.space) )
+        CHKERR(PetscSpaceTensorSetSubspace(self.space, cs, subsp.space))
 
     def getTensorSubspace(self, s: int) -> Space:
         """Return a space in the tensor product.
@@ -424,7 +424,7 @@ cdef class Space(Object):
         """
         cdef PetscInt cs = asInt(s)
         cdef Space subsp = Space()
-        CHKERR( PetscSpaceTensorGetSubspace(self.space, cs, &subsp.space) )
+        CHKERR(PetscSpaceTensorGetSubspace(self.space, cs, &subsp.space))
         return subsp
 
     def setTensorNumSubspaces(self, numTensSpaces: int) -> None:
@@ -443,7 +443,7 @@ cdef class Space(Object):
 
         """
         cdef PetscInt cnumTensSpaces = asInt(numTensSpaces)
-        CHKERR( PetscSpaceTensorSetNumSubspaces(self.space, cnumTensSpaces) )
+        CHKERR(PetscSpaceTensorSetNumSubspaces(self.space, cnumTensSpaces))
 
     def getPolynomialTensor(self) -> bool:
         """Return whether a function space is a space of tensor polynomials.
@@ -461,8 +461,8 @@ cdef class Space(Object):
         setPolynomialTensor, petsc.PetscSpacePolynomialGetTensor
 
         """
-        cdef PetscBool ctensor
-        CHKERR( PetscSpacePolynomialGetTensor(self.space, &ctensor) )
+        cdef PetscBool ctensor = PETSC_FALSE
+        CHKERR(PetscSpacePolynomialGetTensor(self.space, &ctensor))
         return toBool(ctensor)
 
     def setPolynomialTensor(self, tensor: bool) -> None:
@@ -488,7 +488,7 @@ cdef class Space(Object):
 
         """
         cdef PetscBool ctensor = asBool(tensor)
-        CHKERR( PetscSpacePolynomialSetTensor(self.space, ctensor) )
+        CHKERR(PetscSpacePolynomialSetTensor(self.space, ctensor))
 
     def setPointPoints(self, Quad quad) -> None:
         """Set the evaluation points for the space to be based on a quad.
@@ -508,7 +508,7 @@ cdef class Space(Object):
         getPointPoints, petsc.PetscSpacePointSetPoints
 
         """
-        CHKERR( PetscSpacePointSetPoints(self.space, quad.quad))
+        CHKERR(PetscSpacePointSetPoints(self.space, quad.quad))
 
     def getPointPoints(self) -> Quad:
         """Return the evaluation points for the space as the points of a quad.
@@ -521,7 +521,7 @@ cdef class Space(Object):
 
         """
         cdef Quad quad = Quad()
-        CHKERR( PetscSpacePointGetPoints(self.space, &quad.quad))
+        CHKERR(PetscSpacePointGetPoints(self.space, &quad.quad))
         return quad
 
     def setPTrimmedFormDegree(self, formDegree: int) -> None:
@@ -540,7 +540,7 @@ cdef class Space(Object):
 
         """
         cdef PetscInt cformDegree = asInt(formDegree)
-        CHKERR( PetscSpacePTrimmedSetFormDegree(self.space, cformDegree) )
+        CHKERR(PetscSpacePTrimmedSetFormDegree(self.space, cformDegree))
 
     def getPTrimmedFormDegree(self) -> int:
         """Return the form degree of the trimmed polynomials.
@@ -553,7 +553,7 @@ cdef class Space(Object):
 
         """
         cdef PetscInt cformDegree = 0
-        CHKERR( PetscSpacePTrimmedGetFormDegree(self.space, &cformDegree) )
+        CHKERR(PetscSpacePTrimmedGetFormDegree(self.space, &cformDegree))
         return toInt(cformDegree)
 
 # --------------------------------------------------------------------
@@ -588,7 +588,7 @@ cdef class DualSpace(Object):
         petsc.PetscDualSpaceSetUp
 
         """
-        CHKERR( PetscDualSpaceSetUp(self.dualspace) )
+        CHKERR(PetscDualSpaceSetUp(self.dualspace))
 
     def create(self, comm: Comm | None = None) -> Self:
         """Create an empty `DualSpace` object.
@@ -609,8 +609,8 @@ cdef class DualSpace(Object):
         """
         cdef MPI_Comm ccomm = def_Comm(comm, PETSC_COMM_DEFAULT)
         cdef PetscDualSpace newdsp = NULL
-        CHKERR( PetscDualSpaceCreate(ccomm, &newdsp) )
-        CHKERR( PetscCLEAR(self.obj) ); self.dualspace = newdsp
+        CHKERR(PetscDualSpaceCreate(ccomm, &newdsp))
+        CHKERR(PetscCLEAR(self.obj)); self.dualspace = newdsp
         return self
 
     def view(self, Viewer viewer=None) -> None:
@@ -630,7 +630,7 @@ cdef class DualSpace(Object):
         """
         cdef PetscViewer vwr = NULL
         if viewer is not None: vwr = viewer.vwr
-        CHKERR( PetscDualSpaceView(self.dualspace, vwr) )
+        CHKERR(PetscDualSpaceView(self.dualspace, vwr))
 
     def destroy(self) -> Self:
         """Destroy the `DualSpace` object.
@@ -642,7 +642,7 @@ cdef class DualSpace(Object):
         petsc.PetscDualSpaceDestroy
 
         """
-        CHKERR( PetscDualSpaceDestroy(&self.dualspace) )
+        CHKERR(PetscDualSpaceDestroy(&self.dualspace))
         return self
 
     def duplicate(self) -> DualSpace:
@@ -656,7 +656,7 @@ cdef class DualSpace(Object):
 
         """
         cdef DualSpace spNew = DualSpace()
-        CHKERR( PetscDualSpaceDuplicate(self.dualspace, &spNew.dualspace) )
+        CHKERR(PetscDualSpaceDuplicate(self.dualspace, &spNew.dualspace))
 
     def getDM(self) -> DM:
         """Return the `DM` representing the reference cell of a `DualSpace`.
@@ -669,7 +669,7 @@ cdef class DualSpace(Object):
 
         """
         cdef DM dm = DM()
-        CHKERR( PetscDualSpaceGetDM(self.dualspace, &dm.dm) )
+        CHKERR(PetscDualSpaceGetDM(self.dualspace, &dm.dm))
         return dm
 
     def setDM(self, DM dm) -> None:
@@ -687,7 +687,7 @@ cdef class DualSpace(Object):
         getDM, petsc.PetscDualSpaceSetDM
 
         """
-        CHKERR( PetscDualSpaceSetDM(self.dualspace, dm.dm) )
+        CHKERR(PetscDualSpaceSetDM(self.dualspace, dm.dm))
 
     def getDimension(self) -> int:
         """Return the dimension of the dual space.
@@ -701,8 +701,8 @@ cdef class DualSpace(Object):
         petsc.PetscDualSpaceGetDimension
 
         """
-        cdef PetscInt cdim
-        CHKERR( PetscDualSpaceGetDimension(self.dualspace, &cdim))
+        cdef PetscInt cdim = 0
+        CHKERR(PetscDualSpaceGetDimension(self.dualspace, &cdim))
         return toInt(cdim)
 
     def getNumComponents(self) -> int:
@@ -715,8 +715,8 @@ cdef class DualSpace(Object):
         setNumComponents, petsc.PetscDualSpaceGetNumComponents
 
         """
-        cdef PetscInt cncomps
-        CHKERR( PetscDualSpaceGetNumComponents(self.dualspace, &cncomps))
+        cdef PetscInt cncomps = 0
+        CHKERR(PetscDualSpaceGetNumComponents(self.dualspace, &cncomps))
         return toInt(cncomps)
 
     def setNumComponents(self, nc: int) -> None:
@@ -735,7 +735,7 @@ cdef class DualSpace(Object):
 
         """
         cdef PetscInt cnc = asInt(nc)
-        CHKERR( PetscDualSpaceSetNumComponents(self.dualspace, cnc) )
+        CHKERR(PetscDualSpaceSetNumComponents(self.dualspace, cnc))
 
     def getType(self) -> str:
         """Return the type of the dual space object.
@@ -748,7 +748,7 @@ cdef class DualSpace(Object):
 
         """
         cdef PetscDualSpaceType cval = NULL
-        CHKERR( PetscDualSpaceGetType(self.dualspace, &cval) )
+        CHKERR(PetscDualSpaceGetType(self.dualspace, &cval))
         return bytes2str(cval)
 
     def setType(self, dualspace_type: Type | str) -> Self:
@@ -768,7 +768,7 @@ cdef class DualSpace(Object):
         """
         cdef PetscDualSpaceType cval = NULL
         dualspace_type = str2bytes(dualspace_type, &cval)
-        CHKERR( PetscDualSpaceSetType(self.dualspace, cval) )
+        CHKERR(PetscDualSpaceSetType(self.dualspace, cval))
         return self
 
     def getOrder(self) -> int:
@@ -781,8 +781,8 @@ cdef class DualSpace(Object):
         setOrder, petsc.PetscDualSpaceGetOrder
 
         """
-        cdef PetscInt corder
-        CHKERR( PetscDualSpaceGetOrder(self.dualspace, &corder))
+        cdef PetscInt corder = 0
+        CHKERR(PetscDualSpaceGetOrder(self.dualspace, &corder))
         return toInt(corder)
 
     def setOrder(self, order: int) -> None:
@@ -801,7 +801,7 @@ cdef class DualSpace(Object):
 
         """
         cdef PetscInt corder = asInt(order)
-        CHKERR( PetscDualSpaceSetOrder(self.dualspace, corder) )
+        CHKERR(PetscDualSpaceSetOrder(self.dualspace, corder))
 
     def getNumDof(self) -> ArrayInt:
         """Return the number of degrees of freedom for each spatial dimension.
@@ -815,8 +815,8 @@ cdef class DualSpace(Object):
         """
         cdef const PetscInt *cndof = NULL
         cdef PetscInt cdim = 0
-        CHKERR( PetscDualSpaceGetDimension(self.dualspace, &cdim) )
-        CHKERR( PetscDualSpaceGetNumDof(self.dualspace, &cndof) )
+        CHKERR(PetscDualSpaceGetDimension(self.dualspace, &cdim))
+        CHKERR(PetscDualSpaceGetNumDof(self.dualspace, &cndof))
         return array_i(cdim + 1, cndof)
 
     def getFunctional(self, i: int) -> Quad:
@@ -836,7 +836,7 @@ cdef class DualSpace(Object):
         """
         cdef PetscInt ci = asInt(i)
         cdef Quad functional = Quad()
-        CHKERR( PetscDualSpaceGetFunctional( self.dualspace, ci, &functional.quad) )
+        CHKERR(PetscDualSpaceGetFunctional(self.dualspace, ci, &functional.quad))
         return functional
 
     def getInteriorDimension(self) -> int:
@@ -853,7 +853,7 @@ cdef class DualSpace(Object):
 
         """
         cdef PetscInt cintdim = 0
-        CHKERR( PetscDualSpaceGetInteriorDimension(self.dualspace, &cintdim) )
+        CHKERR(PetscDualSpaceGetInteriorDimension(self.dualspace, &cintdim))
         return toInt(cintdim)
 
     def getLagrangeContinuity(self) -> bool:
@@ -867,7 +867,7 @@ cdef class DualSpace(Object):
 
         """
         cdef PetscBool ccontinuous = PETSC_FALSE
-        CHKERR( PetscDualSpaceLagrangeGetContinuity(self.dualspace, &ccontinuous))
+        CHKERR(PetscDualSpaceLagrangeGetContinuity(self.dualspace, &ccontinuous))
         return toBool(ccontinuous)
 
     def setLagrangeContinuity(self, continuous: bool) -> None:
@@ -886,7 +886,7 @@ cdef class DualSpace(Object):
 
         """
         cdef PetscBool ccontinuous = asBool(continuous)
-        CHKERR( PetscDualSpaceLagrangeSetContinuity(self.dualspace, ccontinuous))
+        CHKERR(PetscDualSpaceLagrangeSetContinuity(self.dualspace, ccontinuous))
 
     def getLagrangeTensor(self) -> bool:
         """Return the tensor nature of the dual space.
@@ -899,7 +899,7 @@ cdef class DualSpace(Object):
 
         """
         cdef PetscBool ctensor = PETSC_FALSE
-        CHKERR( PetscDualSpaceLagrangeGetTensor(self.dualspace, &ctensor))
+        CHKERR(PetscDualSpaceLagrangeGetTensor(self.dualspace, &ctensor))
         return toBool(ctensor)
 
     def setLagrangeTensor(self, tensor: bool) -> None:
@@ -918,7 +918,7 @@ cdef class DualSpace(Object):
 
         """
         cdef PetscBool ctensor = asBool(tensor)
-        CHKERR( PetscDualSpaceLagrangeSetTensor(self.dualspace, ctensor))
+        CHKERR(PetscDualSpaceLagrangeSetTensor(self.dualspace, ctensor))
 
     def getLagrangeTrimmed(self) -> bool:
         """Return the trimmed nature of the dual space.
@@ -931,7 +931,7 @@ cdef class DualSpace(Object):
 
         """
         cdef PetscBool ctrimmed = PETSC_FALSE
-        CHKERR( PetscDualSpaceLagrangeGetTrimmed(self.dualspace, &ctrimmed))
+        CHKERR(PetscDualSpaceLagrangeGetTrimmed(self.dualspace, &ctrimmed))
         return toBool(ctrimmed)
 
     def setLagrangeTrimmed(self, trimmed: bool) -> None:
@@ -952,7 +952,7 @@ cdef class DualSpace(Object):
 
         """
         cdef PetscBool ctrimmed = asBool(trimmed)
-        CHKERR( PetscDualSpaceLagrangeSetTrimmed(self.dualspace, ctrimmed))
+        CHKERR(PetscDualSpaceLagrangeSetTrimmed(self.dualspace, ctrimmed))
 
     def setSimpleDimension(self, dim: int) -> None:
         """Set the number of functionals in the dual space basis.
@@ -970,7 +970,7 @@ cdef class DualSpace(Object):
 
         """
         cdef PetscInt cdim = asInt(dim)
-        CHKERR( PetscDualSpaceSimpleSetDimension(self.dualspace, cdim) )
+        CHKERR(PetscDualSpaceSimpleSetDimension(self.dualspace, cdim))
 
     def setSimpleFunctional(self, func: int, Quad functional) -> None:
         """Set the given basis element for this dual space.
@@ -990,7 +990,7 @@ cdef class DualSpace(Object):
 
         """
         cdef PetscInt cfunc = asInt(func)
-        CHKERR( PetscDualSpaceSimpleSetFunctional(self.dualspace, cfunc, functional.quad) )
+        CHKERR(PetscDualSpaceSimpleSetFunctional(self.dualspace, cfunc, functional.quad))
 
 del SpaceType
 del DualSpaceType

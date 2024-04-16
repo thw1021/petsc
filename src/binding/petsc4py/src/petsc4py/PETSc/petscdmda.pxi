@@ -15,15 +15,15 @@ cdef extern from * nogil:
         DMDA_ELEMENT_Q1
 
     PetscErrorCode DMDACreateND(MPI_Comm,
-                                PetscInt, PetscInt,                # dim, dof
+                                PetscInt, PetscInt,                 # dim, dof
                                 PetscInt, PetscInt, PetscInt,       # M, N, P
                                 PetscInt, PetscInt, PetscInt,       # m, n, p
                                 PetscInt[], PetscInt[], PetscInt[], # lx, ly, lz
-                                PetscDMBoundaryType,              # bx
-                                PetscDMBoundaryType,              # by
-                                PetscDMBoundaryType,              # bz
-                                PetscDMDAStencilType,             # stencil type
-                                PetscInt,                         # stencil width
+                                PetscDMBoundaryType,                # bx
+                                PetscDMBoundaryType,                # by
+                                PetscDMBoundaryType,                # bz
+                                PetscDMDAStencilType,               # stencil type
+                                PetscInt,                           # stencil width
                                 PetscDM*)
 
     PetscErrorCode DMDASetDof(PetscDM, PetscInt)
@@ -205,22 +205,22 @@ cdef class _DMDA_Vec_array(object):
     def __cinit__(self, DMDA da, Vec vec, bint DOF=False):
         #
         cdef PetscInt dim=0, dof=0
-        CHKERR( DMDAGetInfo(da.dm,
-                            &dim, NULL, NULL, NULL, NULL, NULL, NULL,
-                            &dof, NULL, NULL, NULL, NULL, NULL) )
+        CHKERR(DMDAGetInfo(da.dm,
+                           &dim, NULL, NULL, NULL, NULL, NULL, NULL,
+                           &dof, NULL, NULL, NULL, NULL, NULL))
         cdef PetscInt lxs=0, lys=0, lzs=0
         cdef PetscInt lxm=0, lym=0, lzm=0
-        CHKERR( DMDAGetCorners(da.dm,
-                               &lxs, &lys, &lzs,
-                               &lxm, &lym, &lzm) )
+        CHKERR(DMDAGetCorners(da.dm,
+                              &lxs, &lys, &lzs,
+                              &lxm, &lym, &lzm))
         cdef PetscInt gxs=0, gys=0, gzs=0
         cdef PetscInt gxm=0, gym=0, gzm=0
-        CHKERR( DMDAGetGhostCorners(da.dm,
-                                    &gxs, &gys, &gzs,
-                                    &gxm, &gym, &gzm) )
+        CHKERR(DMDAGetGhostCorners(da.dm,
+                                   &gxs, &gys, &gzs,
+                                   &gxm, &gym, &gzm))
         #
         cdef PetscInt n=0
-        CHKERR( VecGetLocalSize(vec.vec, &n) )
+        CHKERR(VecGetLocalSize(vec.vec, &n))
         cdef PetscInt xs, ys, zs, xm, ym, zm
         if (n == lxm*lym*lzm*dof):
             xs, ys, zs = lxs, lys, lzs

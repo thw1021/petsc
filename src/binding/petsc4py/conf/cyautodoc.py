@@ -8,6 +8,7 @@ from Cython.Compiler.AutoDocTransforms import (
     ExpressionWriter as BaseExpressionWriter,
     AnnotationWriter as BaseAnnotationWriter,
 )
+from Cython.Compiler.Errors import error
 
 
 class ExpressionWriter(BaseExpressionWriter):
@@ -116,6 +117,7 @@ class EmbedSignature(CythonTransform):
 
     def _fmt_signature(
         self,
+        node,
         cls_name,
         func_name,
         args,
@@ -144,6 +146,12 @@ class EmbedSignature(CythonTransform):
         if ret_doc:
             docfmt = self._select_format('%s -> %s', '%s -> (%s)')
             func_doc = docfmt % (func_doc, ret_doc)
+        else:
+            if not func_doc.startswith('_') and not func_name.startswith('_'):
+                error(
+                    node.pos,
+                    f'cyautodoc._fmt_signature: missing return type for {func_doc}',
+                )
         return func_doc
 
     def _fmt_relative_position(self, pos):
@@ -196,6 +204,7 @@ class EmbedSignature(CythonTransform):
         nkargs = getattr(node, 'num_kwonly_args', 0)
         npargs = len(node.args) - nkargs - npoargs
         signature = self._fmt_signature(
+            node,
             class_name,
             func_name,
             node.args,
@@ -230,6 +239,7 @@ class EmbedSignature(CythonTransform):
             return node
 
         signature = self._fmt_signature(
+            node,
             self.class_name,
             node.declarator.base.name,
             node.declarator.args,

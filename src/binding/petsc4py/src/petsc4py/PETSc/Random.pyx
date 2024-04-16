@@ -56,7 +56,7 @@ cdef class Random(Object):
         assert self.obj != NULL
         cdef PetscViewer vwr = NULL
         if viewer is not None: vwr = viewer.vwr
-        CHKERR( PetscRandomView(self.rnd, vwr) )
+        CHKERR(PetscRandomView(self.rnd, vwr))
 
     def destroy(self) -> Self:
         """Destroy the random number generator object.
@@ -68,7 +68,7 @@ cdef class Random(Object):
         petsc.PetscRandomDestroy
 
         """
-        CHKERR( PetscRandomDestroy(&self.rnd) )
+        CHKERR(PetscRandomDestroy(&self.rnd))
         return self
 
     def create(self, comm: Comm | None = None) -> Self:
@@ -87,7 +87,7 @@ cdef class Random(Object):
 
         """
         cdef MPI_Comm ccomm = def_Comm(comm, PETSC_COMM_DEFAULT)
-        CHKERR( PetscRandomCreate(ccomm, &self.rnd) )
+        CHKERR(PetscRandomCreate(ccomm, &self.rnd))
         return self
 
     def setType(self, rnd_type: Random.Type | str) -> None:
@@ -107,7 +107,7 @@ cdef class Random(Object):
         """
         cdef PetscRandomType cval = NULL
         rnd_type = str2bytes(rnd_type, &cval)
-        CHKERR( PetscRandomSetType(self.rnd, cval) )
+        CHKERR(PetscRandomSetType(self.rnd, cval))
 
     def getType(self) -> str:
         """Return the type of the random number generator object.
@@ -120,7 +120,7 @@ cdef class Random(Object):
 
         """
         cdef PetscRandomType cval = NULL
-        CHKERR( PetscRandomGetType(self.rnd, &cval) )
+        CHKERR(PetscRandomGetType(self.rnd, &cval))
         return bytes2str(cval)
 
     def setFromOptions(self) -> None:
@@ -133,7 +133,7 @@ cdef class Random(Object):
         petsc_options, petsc.PetscRandomSetFromOptions
 
         """
-        CHKERR( PetscRandomSetFromOptions(self.rnd) )
+        CHKERR(PetscRandomSetFromOptions(self.rnd))
 
     def getValue(self) -> Scalar:
         """Generate a scalar random number.
@@ -146,7 +146,7 @@ cdef class Random(Object):
 
         """
         cdef PetscScalar sval = 0
-        CHKERR( PetscRandomGetValue(self.rnd, &sval) )
+        CHKERR(PetscRandomGetValue(self.rnd, &sval))
         return toScalar(sval)
 
     def getValueReal(self) -> float:
@@ -160,7 +160,7 @@ cdef class Random(Object):
 
         """
         cdef PetscReal rval = 0
-        CHKERR( PetscRandomGetValueReal(self.rnd, &rval) )
+        CHKERR(PetscRandomGetValueReal(self.rnd, &rval))
         return toReal(rval)
 
     def getSeed(self) -> int:
@@ -174,7 +174,7 @@ cdef class Random(Object):
 
         """
         cdef unsigned long seed = 0
-        CHKERR( PetscRandomGetSeed(self.rnd, &seed) )
+        CHKERR(PetscRandomGetSeed(self.rnd, &seed))
         return seed
 
     def setSeed(self, seed: int | None = None) -> None:
@@ -193,8 +193,8 @@ cdef class Random(Object):
 
         """
         if seed is not None:
-            CHKERR( PetscRandomSetSeed(self.rnd, seed) )
-        CHKERR( PetscRandomSeed(self.rnd) )
+            CHKERR(PetscRandomSetSeed(self.rnd, seed))
+        CHKERR(PetscRandomSeed(self.rnd))
 
     def getInterval(self) -> tuple[Scalar, Scalar]:
         """Return the interval containing the random numbers generated.
@@ -208,7 +208,7 @@ cdef class Random(Object):
         """
         cdef PetscScalar sval1 = 0
         cdef PetscScalar sval2 = 1
-        CHKERR( PetscRandomGetInterval(self.rnd, &sval1, &sval2) )
+        CHKERR(PetscRandomGetInterval(self.rnd, &sval1, &sval2))
         return (toScalar(sval1), toScalar(sval2))
 
     def setInterval(self, interval: tuple[Scalar, Scalar]) -> None:
@@ -226,7 +226,7 @@ cdef class Random(Object):
         low, high = interval
         sval1 = asScalar(low)
         sval2 = asScalar(high)
-        CHKERR( PetscRandomSetInterval(self.rnd, sval1, sval2) )
+        CHKERR(PetscRandomSetInterval(self.rnd, sval1, sval2))
 
     #
 

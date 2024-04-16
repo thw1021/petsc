@@ -263,7 +263,7 @@ cdef inline object toBoundary(PetscInt dim,
 cdef inline DM ref_DM(PetscDM dm):
     cdef DM ob = <DM> DM()
     ob.dm = dm
-    CHKERR( PetscINCREF(ob.obj) )
+    CHKERR(PetscINCREF(ob.obj))
     return ob
 
 # --------------------------------------------------------------------
@@ -272,7 +272,7 @@ cdef PetscErrorCode DM_PyCoarsenHook(
     PetscDM fine,
     PetscDM coarse,
     void    *ctx,
-    ) except PETSC_ERR_PYTHON with gil:
+   ) except PETSC_ERR_PYTHON with gil:
 
     cdef DM Fine = ref_DM(fine)
     cdef DM Coarse = ref_DM(coarse)
@@ -290,7 +290,7 @@ cdef PetscErrorCode DM_PyRestrictHook(
     PetscMat inject,
     PetscDM  coarse,
     void     *ctx,
-    ) except PETSC_ERR_PYTHON with gil:
+   ) except PETSC_ERR_PYTHON with gil:
 
     cdef DM  Fine = ref_DM(fine)
     cdef Mat Mrestrict = ref_Mat(mrestrict)

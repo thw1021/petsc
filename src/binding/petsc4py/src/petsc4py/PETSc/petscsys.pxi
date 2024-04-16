@@ -59,7 +59,7 @@ cdef inline PetscErrorCode Sys_Sizes(
     PetscInt *_b,
     PetscInt *_n,
     PetscInt *_N,
-    ) except PETSC_ERR_PYTHON:
+   ) except PETSC_ERR_PYTHON:
     # get block size
     cdef PetscInt bs=PETSC_DECIDE, b=PETSC_DECIDE
     if bsize is not None: bs = b = asInt(bsize)
@@ -80,10 +80,10 @@ cdef inline PetscErrorCode Sys_Sizes(
         "local and global sizes cannot be both 'DECIDE'")
     if (n > 0) and (n % bs): raise ValueError(
         "local size %d not divisible by block size %d" %
-        (toInt(n), toInt(bs)) )
+        (toInt(n), toInt(bs)))
     if (N > 0) and (N % bs): raise ValueError(
         "global size %d not divisible by block size %d" %
-        (toInt(N), toInt(bs)) )
+        (toInt(N), toInt(bs)))
     # return result to the caller
     if _b != NULL: _b[0] = b
     if _n != NULL: _n[0] = n
@@ -95,13 +95,13 @@ cdef inline PetscErrorCode Sys_Layout(
     PetscInt bs,
     PetscInt *_n,
     PetscInt *_N,
-    ) except PETSC_ERR_PYTHON:
+   ) except PETSC_ERR_PYTHON:
     cdef PetscInt n = _n[0]
     cdef PetscInt N = _N[0]
     if bs < 0: bs = 1
     if n  > 0: n = n // bs
     if N  > 0: N = N // bs
-    CHKERR( PetscSplitOwnership(comm, &n, &N) )
+    CHKERR(PetscSplitOwnership(comm, &n, &N))
     _n[0] = n * bs
     _N[0] = N * bs
     return PETSC_SUCCESS
