@@ -14,15 +14,16 @@ Docstring standards
 -------------------
 Docstrings are to be written in `numpydoc:format` format.
 
-The first line of a function or method docstring must be a short description of
-the method in imperative mood ("Return the norm of the matrix.") "Return" is
-to be preferred over "Get" in this sentence. A blank line must follow this
-description. Use one-liner descriptions for properties.
+The first line of a class, function or method docstring must be a short
+description of the method in imperative mood ("Return the norm of the matrix.")
+"Return" is to be preferred over "Get" in this sentence. A blank line must
+follow this description. Use one-liner descriptions for properties.
 
-If the corresponding C API documentation lists a function as being collective,
-then this information must be repeated on the next line of the docstring.
-Valid strings are: "Not collective.", "Logically collective.", "Collective.",
-or "Neighborwise collective.".
+If the corresponding C API documentation of a method lists a function as being
+collective, then this information must be repeated on the next line of the
+docstring. Valid strings are: "Not collective.", "Logically collective.",
+"Collective.", "Neighborwise collective.", or "Collective the first time it is
+called".
 
 The initial description section can contain more information if this is useful.
 In particular, if there is a PETSc manual chapter about a class, then this
@@ -41,12 +42,15 @@ allowed by numpydoc may be included if they are useful.
 Parameters
 ..........
 
-This is required unless there are no parameters, or it will be completely
-obvious to even a novice user what the parameters do.
+This is required for methods unless there are no parameters, or it will be
+completely obvious to even a novice user what the parameters do.
 
-Types should only be specified in this section if for some reason the types
-provided by typing prove to be inadequate. If no type is being specified, do
-not include a colon (``:``) to the right of the parameter name.
+If a class has a non-trivial constructor, the arguments of the constructor and
+their types must be explicitly documented within this section.
+
+For methods, types should only be specified in this section if for some reason
+the types provided by typing prove to be inadequate. If no type is being
+specified, do not include a colon (``:``) to the right of the parameter name.
 
 Use `Sys.getDefaultComm` when specifying the default communicator.
 
@@ -96,11 +100,11 @@ Communicators in type signatures must use Python typing instead of c-typing
 (i.e. ``comm: Comm`` not ``Comm comm``). This is because communicators
 can come from ``mpi4py`` and not just the ``petsc4py.PETSc.Comm`` class.
 
-For petsc4py native types that are can be strings, the type is ``argument:
+For petsc4py native types that are strings, the type is ``argument:
 KSP.Type | str`` (not e.g.: ``KSPType argument``). If the type is strictly an
 enum the ``| str`` can be omitted. Full signature example::
 
     def setType(self, ksp_type: KSP.Type | str) -> None:
 
-If a NumPy array is returned, use ``ArrayBool``/``ArrayInt``/``ArrayReal``/``ArrayScalar`` as the
-return type.
+If a NumPy array is returned, use
+``ArrayBool``/``ArrayInt``/``ArrayReal``/``ArrayScalar`` as the return type.

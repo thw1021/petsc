@@ -235,7 +235,7 @@ cdef extern from * nogil: # custom.h
 cdef inline KSP ref_KSP(PetscKSP ksp):
     cdef KSP ob = <KSP> KSP()
     ob.ksp = ksp
-    CHKERR( PetscINCREF(ob.obj) )
+    CHKERR(PetscINCREF(ob.obj))
     return ob
 
 # -----------------------------------------------------------------------------
@@ -246,7 +246,7 @@ cdef PetscErrorCode KSP_Converged(
     PetscReal rnm,
     PetscKSPConvergedReason *r,
     void      *ctx,
-    ) except PETSC_ERR_PYTHON with gil:
+   ) except PETSC_ERR_PYTHON with gil:
     cdef KSP Ksp = ref_KSP(ksp)
     (converged, args, kargs) = Ksp.get_attr('__converged__')
     reason = converged(Ksp, toInt(its), toReal(rnm), *args, **kargs)
@@ -263,7 +263,7 @@ cdef PetscErrorCode KSP_Monitor(
     PetscInt  its,
     PetscReal rnm,
     void      *ctx,
-    ) except PETSC_ERR_PYTHON with gil:
+   ) except PETSC_ERR_PYTHON with gil:
     cdef KSP Ksp = ref_KSP(ksp)
     cdef object monitorlist = Ksp.get_attr('__monitor__')
     if monitorlist is None: return PETSC_SUCCESS
@@ -277,7 +277,7 @@ cdef PetscErrorCode KSP_ComputeRHS(
     PetscKSP ksp,
     PetscVec rhs,
     void     *ctx,
-    ) except PETSC_ERR_PYTHON with gil:
+   ) except PETSC_ERR_PYTHON with gil:
     cdef KSP Ksp = ref_KSP(ksp)
     cdef Vec Rhs = ref_Vec(rhs)
     cdef object context = Ksp.get_attr('__rhs__')
@@ -292,7 +292,7 @@ cdef PetscErrorCode KSP_ComputeOps(
     PetscMat A,
     PetscMat B,
     void     *ctx,
-    ) except PETSC_ERR_PYTHON with gil:
+   ) except PETSC_ERR_PYTHON with gil:
     cdef KSP Ksp  = ref_KSP(ksp)
     cdef Mat Amat = ref_Mat(A)
     cdef Mat Bmat = ref_Mat(B)
@@ -310,7 +310,7 @@ cdef PetscErrorCode KSP_PreSolve(
     PetscVec rhs,
     PetscVec x,
     void* ctx,
-    ) except PETSC_ERR_PYTHON with gil:
+   ) except PETSC_ERR_PYTHON with gil:
     cdef KSP Ksp = ref_KSP(ksp)
     cdef Vec Rhs = ref_Vec(rhs)
     cdef Vec X = ref_Vec(x)
@@ -326,7 +326,7 @@ cdef PetscErrorCode KSP_PostSolve(
     PetscVec rhs,
     PetscVec x,
     void* ctx,
-    ) except PETSC_ERR_PYTHON with gil:
+   ) except PETSC_ERR_PYTHON with gil:
     cdef KSP Ksp = ref_KSP(ksp)
     cdef Vec Rhs = ref_Vec(rhs)
     cdef Vec X = ref_Vec(x)

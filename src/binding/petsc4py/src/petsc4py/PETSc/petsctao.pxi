@@ -245,7 +245,7 @@ cdef extern from * nogil:
 cdef inline TAO ref_TAO(PetscTAO tao):
     cdef TAO ob = <TAO> TAO()
     ob.tao = tao
-    CHKERR( PetscINCREF(ob.obj) )
+    CHKERR(PetscINCREF(ob.obj))
     return ob
 
 # --------------------------------------------------------------------
@@ -488,7 +488,7 @@ cdef PetscErrorCode TAO_Update(
 cdef PetscErrorCode TAO_Converged(PetscTAO _tao,
                                   void* ctx) except PETSC_ERR_PYTHON with gil:
     # call first the default convergence test
-    CHKERR( TaoDefaultConvergenceTest(_tao, NULL) )
+    CHKERR(TaoDefaultConvergenceTest(_tao, NULL))
     # call next the user-provided convergence test
     cdef TAO tao = ref_TAO(_tao)
     (converged, args, kargs) = tao.get_attr('__converged__')
@@ -504,7 +504,7 @@ cdef PetscErrorCode TAO_Converged(PetscTAO _tao,
         creason = reason
         assert creason >= TAO_DIVERGED_USER
         assert creason <= TAO_CONVERGED_USER
-    CHKERR( TaoSetConvergedReason(_tao, creason) )
+    CHKERR(TaoSetConvergedReason(_tao, creason))
     return PETSC_SUCCESS
 
 cdef PetscErrorCode TAO_Monitor(PetscTAO _tao,
@@ -521,7 +521,7 @@ cdef PetscErrorCode TAO_Monitor(PetscTAO _tao,
 cdef inline TAOLineSearch ref_TAOLS(PetscTAOLineSearch taols):
     cdef TAOLineSearch ob = <TAOLineSearch> TAOLineSearch()
     ob.taols = taols
-    CHKERR( PetscINCREF(ob.obj) )
+    CHKERR(PetscINCREF(ob.obj))
     return ob
 
 # --------------------------------------------------------------------

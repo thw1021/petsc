@@ -116,13 +116,13 @@ cdef inline Comm new_Comm(MPI_Comm comm):
 cdef inline int comm_size(MPI_Comm comm) except ? -1:
     if comm == MPI_COMM_NULL: raise ValueError("null communicator")
     cdef int size = 0
-    CHKERR( <PetscErrorCode>MPI_Comm_size(comm, &size) )
+    CHKERR(<PetscErrorCode>MPI_Comm_size(comm, &size))
     return size
 
 cdef inline int comm_rank(MPI_Comm comm) except ? -1:
     if comm == MPI_COMM_NULL: raise ValueError("null communicator")
     cdef int rank = 0
-    CHKERR( <PetscErrorCode>MPI_Comm_rank(comm, &rank) )
+    CHKERR(<PetscErrorCode>MPI_Comm_rank(comm, &rank))
     return rank
 
 # --------------------------------------------------------------------

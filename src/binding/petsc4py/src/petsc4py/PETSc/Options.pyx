@@ -19,7 +19,7 @@ cdef class Options:
 
     def __dealloc__(self):
         if self.opt == NULL: return
-        CHKERR( PetscOptionsDestroy(&self.opt) )
+        CHKERR(PetscOptionsDestroy(&self.opt))
 
     def __contains__(self, item):
         return self.hasName(item)
@@ -48,19 +48,19 @@ cdef class Options:
     def create(self) -> Self:
         """Create a options database."""
         if self.opt != NULL: return
-        CHKERR( PetscOptionsCreate(&self.opt) )
+        CHKERR(PetscOptionsCreate(&self.opt))
         return self
 
     def destroy(self) -> Self:
         """Destroy a options database."""
         if self.opt == NULL: return
-        CHKERR( PetscOptionsDestroy(&self.opt) )
+        CHKERR(PetscOptionsDestroy(&self.opt))
         return self
 
     def clear(self) -> Self:
         """Clear a options database."""
         if self.opt == NULL: return
-        CHKERR( PetscOptionsClear(self.opt) )
+        CHKERR(PetscOptionsClear(self.opt))
         return self
 
     def view(self, Viewer viewer=None) -> None:
@@ -80,7 +80,7 @@ cdef class Options:
         """
         cdef PetscViewer vwr = NULL
         if viewer is not None: vwr = viewer.vwr
-        CHKERR( PetscOptionsView(self.opt, vwr) )
+        CHKERR(PetscOptionsView(self.opt, vwr))
 
     def prefixPush(self, prefix: str | Options | Object | None) -> None:
         """Push a prefix for the options database.
@@ -95,7 +95,7 @@ cdef class Options:
         prefix = getprefix(prefix)
         cdef const char *cprefix = NULL
         prefix = str2bytes(prefix, &cprefix)
-        CHKERR( PetscOptionsPrefixPush(self.opt, cprefix) )
+        CHKERR(PetscOptionsPrefixPush(self.opt, cprefix))
 
     def prefixPop(self) -> None:
         """Pop a prefix for the options database.
@@ -107,16 +107,16 @@ cdef class Options:
         prefixPush, petsc.PetscOptionsPrefixPop
 
         """
-        CHKERR( PetscOptionsPrefixPop(self.opt) )
+        CHKERR(PetscOptionsPrefixPop(self.opt))
     #
 
     def hasName(self, name: str) -> bool:
         """Return the boolean indicating if the option is in the database."""
         cdef const char *pr = NULL
         cdef const char *nm = NULL
-        _tmp = getpair(self.prefix, name, &pr, &nm)
+        cdef object unused = getpair(self.prefix, name, &pr, &nm)
         cdef PetscBool flag = PETSC_FALSE
-        CHKERR( PetscOptionsHasName(self.opt, pr, nm, &flag) )
+        CHKERR(PetscOptionsHasName(self.opt, pr, nm, &flag))
         return toBool(flag)
 
     def setValue(self, name: str,
@@ -139,7 +139,7 @@ cdef class Options:
         """
         cdef const char *pr = NULL
         cdef const char *nm = NULL
-        _tmp = getpair(self.prefix, name, &pr, &nm)
+        cdef object unused = getpair(self.prefix, name, &pr, &nm)
         if pr == NULL:
             option = bytes2str(nm)
         else:
@@ -159,7 +159,7 @@ cdef class Options:
         cdef const char *val = NULL
         option = str2bytes(option, &key)
         value  = str2bytes(value,  &val)
-        CHKERR( PetscOptionsSetValue(self.opt, key, val) )
+        CHKERR(PetscOptionsSetValue(self.opt, key, val))
 
     def delValue(self, name: str) -> None:
         """Delete an option from the database.
@@ -173,14 +173,14 @@ cdef class Options:
         """
         cdef const char *pr = NULL
         cdef const char *nm = NULL
-        _tmp = getpair(self.prefix, name, &pr, &nm)
+        cdef object unused = getpair(self.prefix, name, &pr, &nm)
         if pr == NULL:
             option = bytes2str(nm)
         else:
             option = '-%s%s' % (bytes2str(pr), bytes2str(&nm[1]))
         cdef const char *key = NULL
         option = str2bytes(option, &key)
-        CHKERR( PetscOptionsClearValue(self.opt, key) )
+        CHKERR(PetscOptionsClearValue(self.opt, key))
 
     #
 
@@ -378,7 +378,7 @@ cdef class Options:
         """
         cdef const char *cstring = NULL
         string = str2bytes(string, &cstring)
-        CHKERR( PetscOptionsInsertString(self.opt, cstring) )
+        CHKERR(PetscOptionsInsertString(self.opt, cstring))
 
     def getAll(self) -> dict[str, str]:
         """Return all the options and their values.
@@ -391,9 +391,9 @@ cdef class Options:
 
         """
         cdef char *allopts = NULL
-        CHKERR( PetscOptionsGetAll(self.opt, &allopts) )
+        CHKERR(PetscOptionsGetAll(self.opt, &allopts))
         options = bytes2str(allopts)
-        CHKERR( PetscFree(allopts) )
+        CHKERR(PetscFree(allopts))
         return parseopt(options, self.prefix)
 
 # --------------------------------------------------------------------

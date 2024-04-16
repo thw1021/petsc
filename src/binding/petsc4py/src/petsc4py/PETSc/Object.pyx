@@ -15,7 +15,7 @@ cdef class Object:
         self.obj = &self.oval
 
     def __dealloc__(self):
-        CHKERR( PetscDEALLOC(&self.obj[0]) )
+        CHKERR(PetscDEALLOC(&self.obj[0]))
         self.obj = NULL
 
     def __richcmp__(self, other, int op):
@@ -33,7 +33,7 @@ cdef class Object:
         cdef Object obj = type(self)()
         cdef PetscObject o = self.obj[0]
         if o != NULL:
-            CHKERR( PetscObjectReference(o) )
+            CHKERR(PetscObjectReference(o))
         obj.obj[0] = o
         return obj
 
@@ -76,7 +76,7 @@ cdef class Object:
         """
         cdef PetscViewer vwr = NULL
         if viewer is not None: vwr = viewer.vwr
-        CHKERR( PetscObjectView(self.obj[0], vwr) )
+        CHKERR(PetscObjectView(self.obj[0], vwr))
 
     def destroy(self) -> Self:
         """Destroy the object.
@@ -88,7 +88,7 @@ cdef class Object:
         petsc.PetscObjectDestroy
 
         """
-        CHKERR( PetscObjectDestroy(&self.obj[0]) )
+        CHKERR(PetscObjectDestroy(&self.obj[0]))
         return self
 
     def getType(self) -> str:
@@ -102,7 +102,7 @@ cdef class Object:
 
         """
         cdef const char *cval = NULL
-        CHKERR( PetscObjectGetType(self.obj[0], &cval) )
+        CHKERR(PetscObjectGetType(self.obj[0], &cval))
         return bytes2str(cval)
 
     #
@@ -119,7 +119,7 @@ cdef class Object:
         """
         cdef const char *cval = NULL
         prefix = str2bytes(prefix, &cval)
-        CHKERR( PetscObjectSetOptionsPrefix(self.obj[0], cval) )
+        CHKERR(PetscObjectSetOptionsPrefix(self.obj[0], cval))
 
     def getOptionsPrefix(self) -> str:
         """Return the prefix used for searching for options in the database.
@@ -132,7 +132,7 @@ cdef class Object:
 
         """
         cdef const char *cval = NULL
-        CHKERR( PetscObjectGetOptionsPrefix(self.obj[0], &cval) )
+        CHKERR(PetscObjectGetOptionsPrefix(self.obj[0], &cval))
         return bytes2str(cval)
 
     def appendOptionsPrefix(self, prefix: str | None) -> None:
@@ -147,7 +147,7 @@ cdef class Object:
         """
         cdef const char *cval = NULL
         prefix = str2bytes(prefix, &cval)
-        CHKERR( PetscObjectAppendOptionsPrefix(self.obj[0], cval) )
+        CHKERR(PetscObjectAppendOptionsPrefix(self.obj[0], cval))
 
     def setFromOptions(self) -> None:
         """Configure the object from the options database.
@@ -159,7 +159,7 @@ cdef class Object:
         petsc_options, petsc.PetscObjectSetFromOptions
 
         """
-        CHKERR( PetscObjectSetFromOptions(self.obj[0]) )
+        CHKERR(PetscObjectSetFromOptions(self.obj[0]))
 
     def viewFromOptions(self, name : str, Object objpre=None) -> None:
         """View the object via command line options.
@@ -182,7 +182,7 @@ cdef class Object:
         cdef const char *cval = NULL
         pobj = objpre.obj[0] if objpre is not None else NULL
         name = str2bytes(name, &cval)
-        CHKERR( PetscObjectViewFromOptions(self.obj[0], pobj, cval) )
+        CHKERR(PetscObjectViewFromOptions(self.obj[0], pobj, cval))
 
     #
 
@@ -197,7 +197,7 @@ cdef class Object:
 
         """
         cdef Comm comm = Comm()
-        CHKERR( PetscObjectGetComm(self.obj[0], &comm.comm) )
+        CHKERR(PetscObjectGetComm(self.obj[0], &comm.comm))
         return comm
 
     def getName(self) -> str:
@@ -211,7 +211,7 @@ cdef class Object:
 
         """
         cdef const char *cval = NULL
-        CHKERR( PetscObjectGetName(self.obj[0], &cval) )
+        CHKERR(PetscObjectGetName(self.obj[0], &cval))
         return bytes2str(cval)
 
     def setName(self, name : str | None) -> None:
@@ -226,7 +226,7 @@ cdef class Object:
         """
         cdef const char *cval = NULL
         name = str2bytes(name, &cval)
-        CHKERR( PetscObjectSetName(self.obj[0], cval) )
+        CHKERR(PetscObjectSetName(self.obj[0], cval))
 
     def getClassId(self) -> int:
         """Return the class identifier of the object.
@@ -239,7 +239,7 @@ cdef class Object:
 
         """
         cdef PetscClassId classid = 0
-        CHKERR( PetscObjectGetClassId(self.obj[0], &classid) )
+        CHKERR(PetscObjectGetClassId(self.obj[0], &classid))
         return <long>classid
 
     def getClassName(self) -> str:
@@ -253,7 +253,7 @@ cdef class Object:
 
         """
         cdef const char *cval = NULL
-        CHKERR( PetscObjectGetClassName(self.obj[0], &cval) )
+        CHKERR(PetscObjectGetClassName(self.obj[0], &cval))
         return bytes2str(cval)
 
     def getRefCount(self) -> int:
@@ -268,7 +268,7 @@ cdef class Object:
         """
         if self.obj[0] == NULL: return 0
         cdef PetscInt refcnt = 0
-        CHKERR( PetscObjectGetReference(self.obj[0], &refcnt) )
+        CHKERR(PetscObjectGetReference(self.obj[0], &refcnt))
         return toInt(refcnt)
 
     # --- general support ---
@@ -294,7 +294,7 @@ cdef class Object:
         cdef PetscObject cobj = NULL
         name = str2bytes(name, &cval)
         if obj is not None: cobj = obj.obj[0]
-        CHKERR( PetscObjectCompose(self.obj[0], cval, cobj) )
+        CHKERR(PetscObjectCompose(self.obj[0], cval, cobj))
 
     def query(self, name: str) -> Object:
         """Query for the PETSc object associated with a key string.
@@ -309,11 +309,11 @@ cdef class Object:
         cdef const char *cval = NULL
         cdef PetscObject cobj = NULL
         name = str2bytes(name, &cval)
-        CHKERR( PetscObjectQuery(self.obj[0], cval, &cobj) )
+        CHKERR(PetscObjectQuery(self.obj[0], cval, &cobj))
         if cobj == NULL: return None
         cdef Object obj = subtype_Object(cobj)()
         obj.obj[0] = cobj
-        CHKERR( PetscINCREF(obj.obj) )
+        CHKERR(PetscINCREF(obj.obj))
         return obj
 
     def incRef(self) -> int:
@@ -329,8 +329,8 @@ cdef class Object:
         cdef PetscObject obj = self.obj[0]
         cdef PetscInt refct = 0
         if obj != NULL:
-            CHKERR( PetscObjectReference(obj) )
-            CHKERR( PetscObjectGetReference(obj, &refct) )
+            CHKERR(PetscObjectReference(obj))
+            CHKERR(PetscObjectGetReference(obj, &refct))
         return toInt(refct)
 
     def decRef(self) -> int:
@@ -346,8 +346,8 @@ cdef class Object:
         cdef PetscObject obj = self.obj[0]
         cdef PetscInt refct = 0
         if obj != NULL:
-            CHKERR( PetscObjectGetReference(obj, &refct) )
-            CHKERR( PetscObjectDereference(obj) )
+            CHKERR(PetscObjectGetReference(obj, &refct))
+            CHKERR(PetscObjectDereference(obj))
             if refct == 1: self.obj[0] = NULL
             refct -= 1
         return toInt(refct)
@@ -416,7 +416,7 @@ cdef class Object:
 
         """
         cdef PetscObjectState state = 0
-        CHKERR( PetscObjectStateGet(self.obj[0], &state) )
+        CHKERR(PetscObjectStateGet(self.obj[0], &state))
         return <long>state
 
     def stateSet(self, state : int) -> None:
@@ -430,7 +430,7 @@ cdef class Object:
 
         """
         cdef PetscObjectState cstate = asInt(state)
-        CHKERR( PetscObjectStateSet(self.obj[0], cstate) )
+        CHKERR(PetscObjectStateSet(self.obj[0], cstate))
 
     # --- tab level ---
 
@@ -446,7 +446,7 @@ cdef class Object:
         """
         cdef PetscInt ctab = asInt(tab)
         cdef PetscObject cobj = <PetscObject> NULL if parent is None else parent.obj[0]
-        CHKERR( PetscObjectIncrementTabLevel(self.obj[0], cobj, ctab) )
+        CHKERR(PetscObjectIncrementTabLevel(self.obj[0], cobj, ctab))
 
     def setTabLevel(self, level : int) -> None:
         """Set the PETSc object tab level.
@@ -459,7 +459,7 @@ cdef class Object:
 
         """
         cdef PetscInt clevel = asInt(level)
-        CHKERR( PetscObjectSetTabLevel(self.obj[0], clevel) )
+        CHKERR(PetscObjectSetTabLevel(self.obj[0], clevel))
 
     def getTabLevel(self) -> None:
         """Return the PETSc object tab level.
@@ -472,7 +472,7 @@ cdef class Object:
 
         """
         cdef PetscInt clevel = 0
-        CHKERR( PetscObjectGetTabLevel(self.obj[0], &clevel) )
+        CHKERR(PetscObjectGetTabLevel(self.obj[0], &clevel))
         return toInt(clevel)
 
     # --- properties ---
@@ -541,7 +541,7 @@ cdef class Object:
 
 include "cyclicgc.pxi"
 
-cdef dict type_registry = { 0 : None }
+cdef dict type_registry = {0 : None}
 __type_registry__ = type_registry
 
 cdef int PyPetscType_Register(int classid, type cls) except -1:

@@ -58,8 +58,7 @@ cdef class DMStag(DM):
         proc_sizes: tuple[int, ...] | None = None,
         ownership_ranges: tuple[Sequence[int], ...] | None = None,
         comm: Comm | None = None,
-        setUp: bool | None = False,
-    ) -> Self:
+        setUp: bool | None = False) -> Self:
         """Create a DMDA object.
 
         Collective.
@@ -149,14 +148,14 @@ cdef class DMStag(DM):
         # create
         cdef PetscDM newda = NULL
         if dim == 1:
-            CHKERR( DMStagCreate1d(ccomm, btx, M, dof0, dof1, stype, swidth, lx, &newda) )
+            CHKERR(DMStagCreate1d(ccomm, btx, M, dof0, dof1, stype, swidth, lx, &newda))
         if dim == 2:
-            CHKERR( DMStagCreate2d(ccomm, btx, bty, M, N, m, n, dof0, dof1, dof2, stype, swidth, lx, ly, &newda) )
+            CHKERR(DMStagCreate2d(ccomm, btx, bty, M, N, m, n, dof0, dof1, dof2, stype, swidth, lx, ly, &newda))
         if dim == 3:
-            CHKERR( DMStagCreate3d(ccomm, btx, bty, btz, M, N, P, m, n, p, dof0, dof1, dof2, dof3, stype, swidth, lx, ly, lz, &newda) )
-        CHKERR( PetscCLEAR(self.obj) ); self.dm = newda
+            CHKERR(DMStagCreate3d(ccomm, btx, bty, btz, M, N, P, m, n, p, dof0, dof1, dof2, dof3, stype, swidth, lx, ly, lz, &newda))
+        CHKERR(PetscCLEAR(self.obj)); self.dm = newda
         if setUp:
-            CHKERR( DMSetUp(self.dm) )
+            CHKERR(DMSetUp(self.dm))
         return self
 
     # Setters
@@ -179,7 +178,7 @@ cdef class DMStag(DM):
 
         """
         cdef PetscInt sw = asInt(swidth)
-        CHKERR( DMStagSetStencilWidth(self.dm, sw) )
+        CHKERR(DMStagSetStencilWidth(self.dm, sw))
 
     def setStencilType(self, stenciltype: StencilType | str) -> None:
         """Set elementwise ghost/halo stencil type.
@@ -197,12 +196,11 @@ cdef class DMStag(DM):
 
         """
         cdef PetscDMStagStencilType stype = asStagStencil(stenciltype)
-        CHKERR( DMStagSetStencilType(self.dm, stype) )
+        CHKERR(DMStagSetStencilType(self.dm, stype))
 
     def setBoundaryTypes(
         self,
-        boundary_types: tuple[DM.BoundaryType | int | str | bool, ...],
-    ) -> None:
+        boundary_types: tuple[DM.BoundaryType | int | str | bool, ...]) -> None:
         """Set the boundary types.
 
         Logically collective.
@@ -221,7 +219,7 @@ cdef class DMStag(DM):
         cdef PetscDMBoundaryType bty = DM_BOUNDARY_NONE
         cdef PetscDMBoundaryType btz = DM_BOUNDARY_NONE
         asBoundary(boundary_types, &btx, &bty, &btz)
-        CHKERR( DMStagSetBoundaryTypes(self.dm, btx, bty, btz) )
+        CHKERR(DMStagSetBoundaryTypes(self.dm, btx, bty, btz))
 
     def setDof(self, dofs: tuple[int, ...]) -> None:
         """Set DOFs/stratum.
@@ -243,7 +241,7 @@ cdef class DMStag(DM):
         cdef tuple gdofs = tuple(dofs)
         cdef PetscInt dof0=1, dof1=0, dof2=0, dof3=0
         asDofs(gdofs, &dof0, &dof1, &dof2, &dof3)
-        CHKERR( DMStagSetDOF(self.dm, dof0, dof1, dof2, dof3) )
+        CHKERR(DMStagSetDOF(self.dm, dof0, dof1, dof2, dof3))
 
     def setGlobalSizes(self, sizes: tuple[int, ...]) -> None:
         """Set global element counts in each dimension.
@@ -263,7 +261,7 @@ cdef class DMStag(DM):
         cdef tuple gsizes = tuple(sizes)
         cdef PetscInt M=1, N=1, P=1
         asStagDims(gsizes, &M, &N, &P)
-        CHKERR( DMStagSetGlobalSizes(self.dm, M, N, P) )
+        CHKERR(DMStagSetGlobalSizes(self.dm, M, N, P))
 
     def setProcSizes(self, sizes: tuple[int, ...]) -> None:
         """Set the number of processes in each dimension in the global process grid.
@@ -283,7 +281,7 @@ cdef class DMStag(DM):
         cdef tuple psizes = tuple(sizes)
         cdef PetscInt m=PETSC_DECIDE, n=PETSC_DECIDE, p=PETSC_DECIDE
         asStagDims(psizes, &m, &n, &p)
-        CHKERR( DMStagSetNumRanks(self.dm, m, n, p) )
+        CHKERR(DMStagSetNumRanks(self.dm, m, n, p))
 
     def setOwnershipRanges(self, ranges: tuple[Sequence[int], ...]) -> None:
         """Set elements per process in each dimension.
@@ -302,10 +300,10 @@ cdef class DMStag(DM):
         """
         cdef PetscInt dim=0, m=PETSC_DECIDE, n=PETSC_DECIDE, p=PETSC_DECIDE
         cdef PetscInt *lx = NULL, *ly = NULL, *lz = NULL
-        CHKERR( DMGetDimension(self.dm, &dim) )
-        CHKERR( DMStagGetNumRanks(self.dm, &m, &n, &p) )
+        CHKERR(DMGetDimension(self.dm, &dim))
+        CHKERR(DMStagGetNumRanks(self.dm, &m, &n, &p))
         asStagOwnershipRanges(ranges, dim, &m, &n, &p, &lx, &ly, &lz)
-        CHKERR( DMStagSetOwnershipRanges(self.dm, lx, ly, lz) )
+        CHKERR(DMStagSetOwnershipRanges(self.dm, lx, ly, lz))
 
     # Getters
 
@@ -330,7 +328,7 @@ cdef class DMStag(DM):
 
         """
         cdef PetscInt epe=0
-        CHKERR( DMStagGetEntriesPerElement(self.dm, &epe) )
+        CHKERR(DMStagGetEntriesPerElement(self.dm, &epe))
         return toInt(epe)
 
     def getStencilWidth(self) -> int:
@@ -344,7 +342,7 @@ cdef class DMStag(DM):
 
         """
         cdef PetscInt swidth=0
-        CHKERR( DMStagGetStencilWidth(self.dm, &swidth) )
+        CHKERR(DMStagGetStencilWidth(self.dm, &swidth))
         return toInt(swidth)
 
     def getDof(self) -> tuple[int, ...]:
@@ -358,8 +356,8 @@ cdef class DMStag(DM):
 
         """
         cdef PetscInt dim=0, dof0=0, dof1=0, dof2=0, dof3=0
-        CHKERR( DMStagGetDOF(self.dm, &dof0, &dof1, &dof2, &dof3) )
-        CHKERR( DMGetDimension(self.dm, &dim) )
+        CHKERR(DMStagGetDOF(self.dm, &dof0, &dof1, &dof2, &dof3))
+        CHKERR(DMGetDimension(self.dm, &dim))
         return toDofs(dim+1, dof0, dof1, dof2, dof3)
 
     def getCorners(self) -> tuple[tuple[int, ...], tuple[int, ...], tuple[int, ...]]:
@@ -380,8 +378,8 @@ cdef class DMStag(DM):
 
         """
         cdef PetscInt dim=0, x=0, y=0, z=0, m=0, n=0, p=0, nExtrax=0, nExtray=0, nExtraz=0
-        CHKERR( DMGetDimension(self.dm, &dim) )
-        CHKERR( DMStagGetCorners(self.dm, &x, &y, &z, &m, &n, &p, &nExtrax, &nExtray, &nExtraz) )
+        CHKERR(DMGetDimension(self.dm, &dim))
+        CHKERR(DMStagGetCorners(self.dm, &x, &y, &z, &m, &n, &p, &nExtrax, &nExtray, &nExtraz))
         return (asInt(x), asInt(y), asInt(z))[:<Py_ssize_t>dim], (asInt(m), asInt(n), asInt(p))[:<Py_ssize_t>dim], (asInt(nExtrax), asInt(nExtray), asInt(nExtraz))[:<Py_ssize_t>dim]
 
     def getGhostCorners(self) -> tuple[tuple[int, ...], tuple[int, ...]]:
@@ -395,8 +393,8 @@ cdef class DMStag(DM):
 
         """
         cdef PetscInt dim=0, x=0, y=0, z=0, m=0, n=0, p=0
-        CHKERR( DMGetDimension(self.dm, &dim) )
-        CHKERR( DMStagGetGhostCorners(self.dm, &x, &y, &z, &m, &n, &p) )
+        CHKERR(DMGetDimension(self.dm, &dim))
+        CHKERR(DMStagGetGhostCorners(self.dm, &x, &y, &z, &m, &n, &p))
         return (asInt(x), asInt(y), asInt(z))[:<Py_ssize_t>dim], (asInt(m), asInt(n), asInt(p))[:<Py_ssize_t>dim]
 
     def getLocalSizes(self) -> tuple[int, ...]:
@@ -412,8 +410,8 @@ cdef class DMStag(DM):
 
         """
         cdef PetscInt dim=0, m=PETSC_DECIDE, n=PETSC_DECIDE, p=PETSC_DECIDE
-        CHKERR( DMGetDimension(self.dm, &dim) )
-        CHKERR( DMStagGetLocalSizes(self.dm, &m, &n, &p) )
+        CHKERR(DMGetDimension(self.dm, &dim))
+        CHKERR(DMStagGetLocalSizes(self.dm, &m, &n, &p))
         return toStagDims(dim, m, n, p)
 
     def getGlobalSizes(self) -> tuple[int, ...]:
@@ -427,8 +425,8 @@ cdef class DMStag(DM):
 
         """
         cdef PetscInt dim=0, m=PETSC_DECIDE, n=PETSC_DECIDE, p=PETSC_DECIDE
-        CHKERR( DMGetDimension(self.dm, &dim) )
-        CHKERR( DMStagGetGlobalSizes(self.dm, &m, &n, &p) )
+        CHKERR(DMGetDimension(self.dm, &dim))
+        CHKERR(DMStagGetGlobalSizes(self.dm, &m, &n, &p))
         return toStagDims(dim, m, n, p)
 
     def getProcSizes(self) -> tuple[int, ...]:
@@ -442,8 +440,8 @@ cdef class DMStag(DM):
 
         """
         cdef PetscInt dim=0, m=PETSC_DECIDE, n=PETSC_DECIDE, p=PETSC_DECIDE
-        CHKERR( DMGetDimension(self.dm, &dim) )
-        CHKERR( DMStagGetNumRanks(self.dm, &m, &n, &p) )
+        CHKERR(DMGetDimension(self.dm, &dim))
+        CHKERR(DMStagGetNumRanks(self.dm, &m, &n, &p))
         return toStagDims(dim, m, n, p)
 
     def getStencilType(self) -> str:
@@ -457,7 +455,7 @@ cdef class DMStag(DM):
 
         """
         cdef PetscDMStagStencilType stype = DMSTAG_STENCIL_BOX
-        CHKERR( DMStagGetStencilType(self.dm, &stype) )
+        CHKERR(DMStagGetStencilType(self.dm, &stype))
         return toStagStencil(stype)
 
     def getOwnershipRanges(self) -> tuple[Sequence[int], ...]:
@@ -472,9 +470,9 @@ cdef class DMStag(DM):
         """
         cdef PetscInt dim=0, m=0, n=0, p=0
         cdef const PetscInt *lx = NULL, *ly = NULL, *lz = NULL
-        CHKERR( DMGetDimension(self.dm, &dim) )
-        CHKERR( DMStagGetNumRanks(self.dm, &m, &n, &p) )
-        CHKERR( DMStagGetOwnershipRanges(self.dm, &lx, &ly, &lz) )
+        CHKERR(DMGetDimension(self.dm, &dim))
+        CHKERR(DMStagGetNumRanks(self.dm, &m, &n, &p))
+        CHKERR(DMStagGetOwnershipRanges(self.dm, &lx, &ly, &lz))
         return toStagOwnershipRanges(dim, m, n, p, lx, ly, lz)
 
     def getBoundaryTypes(self) -> tuple[str, ...]:
@@ -491,8 +489,8 @@ cdef class DMStag(DM):
         cdef PetscDMBoundaryType btx = DM_BOUNDARY_NONE
         cdef PetscDMBoundaryType bty = DM_BOUNDARY_NONE
         cdef PetscDMBoundaryType btz = DM_BOUNDARY_NONE
-        CHKERR( DMGetDimension(self.dm, &dim) )
-        CHKERR( DMStagGetBoundaryTypes(self.dm, &btx, &bty, &btz) )
+        CHKERR(DMGetDimension(self.dm, &dim))
+        CHKERR(DMStagGetBoundaryTypes(self.dm, &btx, &bty, &btz))
         return toStagBoundaryTypes(dim, btx, bty, btz)
 
     def getIsFirstRank(self) -> tuple[int, ...]:
@@ -507,8 +505,8 @@ cdef class DMStag(DM):
         """
         cdef PetscBool rank0=PETSC_FALSE, rank1=PETSC_FALSE, rank2=PETSC_FALSE
         cdef PetscInt dim=0
-        CHKERR( DMGetDimension(self.dm, &dim) )
-        CHKERR( DMStagGetIsFirstRank(self.dm, &rank0, &rank1, &rank2) )
+        CHKERR(DMGetDimension(self.dm, &dim))
+        CHKERR(DMStagGetIsFirstRank(self.dm, &rank0, &rank1, &rank2))
         return toStagDims(dim, rank0, rank1, rank2)
 
     def getIsLastRank(self) -> tuple[int, ...]:
@@ -523,8 +521,8 @@ cdef class DMStag(DM):
         """
         cdef PetscBool rank0=PETSC_FALSE, rank1=PETSC_FALSE, rank2=PETSC_FALSE
         cdef PetscInt dim=0
-        CHKERR( DMGetDimension(self.dm, &dim) )
-        CHKERR( DMStagGetIsLastRank(self.dm, &rank0, &rank1, &rank2) )
+        CHKERR(DMGetDimension(self.dm, &dim))
+        CHKERR(DMStagGetIsLastRank(self.dm, &rank0, &rank1, &rank2))
         return toStagDims(dim, rank0, rank1, rank2)
 
     # Coordinate-related functions
@@ -536,8 +534,7 @@ cdef class DMStag(DM):
         ymin: float = 0,
         ymax: float = 1,
         zmin: float = 0,
-        zmax: float = 1,
-    ) -> None:
+        zmax: float = 1) -> None:
         """Set coordinates to be a uniform grid, storing all values.
 
         Collective.
@@ -566,7 +563,7 @@ cdef class DMStag(DM):
         cdef PetscReal _xmin = asReal(xmin), _xmax = asReal(xmax)
         cdef PetscReal _ymin = asReal(ymin), _ymax = asReal(ymax)
         cdef PetscReal _zmin = asReal(zmin), _zmax = asReal(zmax)
-        CHKERR( DMStagSetUniformCoordinatesExplicit(self.dm, _xmin, _xmax, _ymin, _ymax, _zmin, _zmax) )
+        CHKERR(DMStagSetUniformCoordinatesExplicit(self.dm, _xmin, _xmax, _ymin, _ymax, _zmin, _zmax))
 
     def setUniformCoordinatesProduct(
         self,
@@ -575,8 +572,7 @@ cdef class DMStag(DM):
         ymin: float = 0,
         ymax: float = 1,
         zmin: float = 0,
-        zmax: float = 1,
-    ) -> None:
+        zmax: float = 1) -> None:
         """Create uniform coordinates, as a product of 1D arrays.
 
         Collective.
@@ -609,7 +605,7 @@ cdef class DMStag(DM):
         cdef PetscReal _xmin = asReal(xmin), _xmax = asReal(xmax)
         cdef PetscReal _ymin = asReal(ymin), _ymax = asReal(ymax)
         cdef PetscReal _zmin = asReal(zmin), _zmax = asReal(zmax)
-        CHKERR( DMStagSetUniformCoordinatesProduct(self.dm, _xmin, _xmax, _ymin, _ymax, _zmin, _zmax) )
+        CHKERR(DMStagSetUniformCoordinatesProduct(self.dm, _xmin, _xmax, _ymin, _ymax, _zmin, _zmax))
 
     def setUniformCoordinates(
         self,
@@ -618,8 +614,7 @@ cdef class DMStag(DM):
         ymin: float = 0,
         ymax: float = 1,
         zmin: float = 0,
-        zmax: float = 1,
-    ) -> None:
+        zmax: float = 1) -> None:
         """Set the coordinates to be a uniform grid..
 
         Collective.
@@ -657,7 +652,7 @@ cdef class DMStag(DM):
         cdef PetscReal _xmin = asReal(xmin), _xmax = asReal(xmax)
         cdef PetscReal _ymin = asReal(ymin), _ymax = asReal(ymax)
         cdef PetscReal _zmin = asReal(zmin), _zmax = asReal(zmax)
-        CHKERR( DMStagSetUniformCoordinates(self.dm, _xmin, _xmax, _ymin, _ymax, _zmin, _zmax) )
+        CHKERR(DMStagSetUniformCoordinates(self.dm, _xmin, _xmax, _ymin, _ymax, _zmin, _zmax))
 
     def setCoordinateDMType(self, dmtype: DM.Type) -> None:
         """Set the type to store coordinates.
@@ -676,7 +671,7 @@ cdef class DMStag(DM):
         """
         cdef PetscDMType cval = NULL
         dmtype = str2bytes(dmtype, &cval)
-        CHKERR( DMStagSetCoordinateDMType(self.dm, cval) )
+        CHKERR(DMStagSetCoordinateDMType(self.dm, cval))
 
     # Location slot related functions
 
@@ -700,7 +695,7 @@ cdef class DMStag(DM):
         cdef PetscInt slot=0
         cdef PetscInt comp=asInt(c)
         cdef PetscDMStagStencilLocation sloc = asStagStencilLocation(loc)
-        CHKERR( DMStagGetLocationSlot(self.dm, sloc, comp, &slot) )
+        CHKERR(DMStagGetLocationSlot(self.dm, sloc, comp, &slot))
         return toInt(slot)
 
     def getProductCoordinateLocationSlot(self, loc: StencilLocation) -> None:
@@ -720,7 +715,7 @@ cdef class DMStag(DM):
         """
         cdef PetscInt slot=0
         cdef PetscDMStagStencilLocation sloc = asStagStencilLocation(loc)
-        CHKERR( DMStagGetProductCoordinateLocationSlot(self.dm, sloc, &slot) )
+        CHKERR(DMStagGetProductCoordinateLocationSlot(self.dm, sloc, &slot))
         return toInt(slot)
 
     def getLocationDof(self, loc: StencilLocation) -> int:
@@ -740,7 +735,7 @@ cdef class DMStag(DM):
         """
         cdef PetscInt dof=0
         cdef PetscDMStagStencilLocation sloc = asStagStencilLocation(loc)
-        CHKERR( DMStagGetLocationDOF(self.dm, sloc, &dof) )
+        CHKERR(DMStagGetLocationDOF(self.dm, sloc, &dof))
         return toInt(dof)
 
     # Random other functions
@@ -766,7 +761,7 @@ cdef class DMStag(DM):
         petsc.DMStagMigrateVec
 
         """
-        CHKERR( DMStagMigrateVec(self.dm, vec.vec, dmTo.dm, vecTo.vec ) )
+        CHKERR(DMStagMigrateVec(self.dm, vec.vec, dmTo.dm, vecTo.vec))
 
     def createCompatibleDMStag(self, dofs: tuple[int, ...]) -> DM:
         """Create a compatible ``DMStag`` with different DOFs/stratum.
@@ -787,17 +782,16 @@ cdef class DMStag(DM):
         cdef PetscInt dof0=1, dof1=0, dof2=0, dof3=0
         asDofs(gdofs, &dof0, &dof1, &dof2, &dof3)
         cdef PetscDM newda = NULL
-        CHKERR( DMStagCreateCompatibleDMStag(self.dm, dof0, dof1, dof2, dof3, &newda) )
+        CHKERR(DMStagCreateCompatibleDMStag(self.dm, dof0, dof1, dof2, dof3, &newda))
         cdef DM newdm = type(self)()
-        CHKERR( PetscCLEAR(newdm.obj) ); newdm.dm = newda
+        CHKERR(PetscCLEAR(newdm.obj)); newdm.dm = newda
         return newdm
 
     def VecSplitToDMDA(
         self,
         Vec vec,
         loc: StencilLocation,
-        c: int,
-    ) -> tuple[DMDA, Vec]:
+        c: int) -> tuple[DMDA, Vec]:
         """Return ``DMDA``, ``Vec`` from a subgrid of a ``DMStag``, its ``Vec``.
 
         Collective.
@@ -824,11 +818,11 @@ cdef class DMStag(DM):
         cdef PetscDMStagStencilLocation sloc = asStagStencilLocation(loc)
         cdef PetscDM pda = NULL
         cdef PetscVec pdavec = NULL
-        CHKERR( DMStagVecSplitToDMDA(self.dm, vec.vec, sloc, pc, &pda, &pdavec) )
+        CHKERR(DMStagVecSplitToDMDA(self.dm, vec.vec, sloc, pc, &pda, &pdavec))
         cdef DM da = DMDA()
-        CHKERR( PetscCLEAR(da.obj) ); da.dm = pda
+        CHKERR(PetscCLEAR(da.obj)); da.dm = pda
         cdef Vec davec = Vec()
-        CHKERR( PetscCLEAR(davec.obj) ); davec.vec = pdavec
+        CHKERR(PetscCLEAR(davec.obj)); davec.vec = pdavec
         return (da, davec)
 
     def getVecArray(self, Vec vec) -> None:

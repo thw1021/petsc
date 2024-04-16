@@ -36,7 +36,7 @@ cdef inline void TypeEnableGC(PyTypeObject *t) noexcept:
     t.tp_clear    = tp_clear
 
 
-def garbage_cleanup(comm=None):
+def garbage_cleanup(comm: Comm | None = None) -> None:
     """Clean up unused PETSc objects.
 
     Collective.
@@ -48,19 +48,19 @@ def garbage_cleanup(comm=None):
 
     """
     if not (<int>PetscInitializeCalled): return
-    if (<int>PetscFinalizeCalled):   return
+    if (<int>PetscFinalizeCalled): return
     cdef MPI_Comm ccomm = MPI_COMM_NULL
     if comm is None:
         ccomm = GetComm(COMM_WORLD, MPI_COMM_NULL)
-        CHKERR( PetscGarbageCleanup(ccomm) )
+        CHKERR(PetscGarbageCleanup(ccomm))
     else:
         ccomm = GetComm(comm, MPI_COMM_NULL)
         if ccomm == MPI_COMM_NULL:
             raise ValueError("null communicator")
-        CHKERR( PetscGarbageCleanup(ccomm) )
+        CHKERR(PetscGarbageCleanup(ccomm))
 
 
-def garbage_view(comm=None):
+def garbage_view(comm: Comm | None = None) -> None:
     """Print summary of the garbage PETSc objects.
 
     Collective.
@@ -72,13 +72,13 @@ def garbage_view(comm=None):
 
     """
     if not (<int>PetscInitializeCalled): return
-    if (<int>PetscFinalizeCalled):   return
+    if (<int>PetscFinalizeCalled): return
     cdef MPI_Comm ccomm = MPI_COMM_NULL
     if comm is None:
         comm = COMM_WORLD
     ccomm = GetComm(comm, MPI_COMM_NULL)
     if ccomm == MPI_COMM_NULL:
         raise ValueError("null communicator")
-    CHKERR( PetscGarbageView(ccomm, NULL) )
+    CHKERR(PetscGarbageView(ccomm, NULL))
 
 # --------------------------------------------------------------------

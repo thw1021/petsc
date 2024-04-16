@@ -439,7 +439,7 @@ cdef class KSP(Object):
         """
         cdef PetscViewer vwr = NULL
         if viewer is not None: vwr = viewer.vwr
-        CHKERR( KSPView(self.ksp, vwr) )
+        CHKERR(KSPView(self.ksp, vwr))
 
     def destroy(self) -> Self:
         """Destroy KSP context.
@@ -451,7 +451,7 @@ cdef class KSP(Object):
         petsc.KSPDestroy
 
         """
-        CHKERR( KSPDestroy(&self.ksp) )
+        CHKERR(KSPDestroy(&self.ksp))
         return self
 
     def create(self, comm: Comm | None = None) -> Self:
@@ -466,8 +466,8 @@ cdef class KSP(Object):
         """
         cdef MPI_Comm ccomm = def_Comm(comm, PETSC_COMM_DEFAULT)
         cdef PetscKSP newksp = NULL
-        CHKERR( KSPCreate(ccomm, &newksp) )
-        CHKERR( PetscCLEAR(self.obj) ); self.ksp = newksp
+        CHKERR(KSPCreate(ccomm, &newksp))
+        CHKERR(PetscCLEAR(self.obj)); self.ksp = newksp
         return self
 
     def setType(self, ksp_type: Type | str) -> None:
@@ -504,7 +504,7 @@ cdef class KSP(Object):
         """
         cdef PetscKSPType cval = NULL
         ksp_type = str2bytes(ksp_type, &cval)
-        CHKERR( KSPSetType(self.ksp, cval) )
+        CHKERR(KSPSetType(self.ksp, cval))
 
     def getType(self) -> str:
         """Return the KSP type as a string from the `KSP` object.
@@ -517,7 +517,7 @@ cdef class KSP(Object):
 
         """
         cdef PetscKSPType cval = NULL
-        CHKERR( KSPGetType(self.ksp, &cval) )
+        CHKERR(KSPGetType(self.ksp, &cval))
         return bytes2str(cval)
 
     def setOptionsPrefix(self, prefix: str | None) -> None:
@@ -556,7 +556,7 @@ cdef class KSP(Object):
         """
         cdef const char *cval = NULL
         prefix = str2bytes(prefix, &cval)
-        CHKERR( KSPSetOptionsPrefix(self.ksp, cval) )
+        CHKERR(KSPSetOptionsPrefix(self.ksp, cval))
 
     def getOptionsPrefix(self) -> str:
         """Return the prefix used for all `KSP` options in the database.
@@ -569,7 +569,7 @@ cdef class KSP(Object):
 
         """
         cdef const char *cval = NULL
-        CHKERR( KSPGetOptionsPrefix(self.ksp, &cval) )
+        CHKERR(KSPGetOptionsPrefix(self.ksp, &cval))
         return bytes2str(cval)
 
     def appendOptionsPrefix(self, prefix: str | None) -> None:
@@ -595,7 +595,7 @@ cdef class KSP(Object):
         """
         cdef const char *cval = NULL
         prefix = str2bytes(prefix, &cval)
-        CHKERR( KSPAppendOptionsPrefix(self.ksp, cval) )
+        CHKERR(KSPAppendOptionsPrefix(self.ksp, cval))
 
     def setFromOptions(self) -> None:
         """Set `KSP` options from the options database.
@@ -610,7 +610,7 @@ cdef class KSP(Object):
         petsc_options, petsc.KSPSetFromOptions
 
         """
-        CHKERR( KSPSetFromOptions(self.ksp) )
+        CHKERR(KSPSetFromOptions(self.ksp))
 
     # --- application context ---
 
@@ -662,10 +662,10 @@ cdef class KSP(Object):
 
         """
         cdef PetscDM newdm = NULL
-        CHKERR( KSPGetDM(self.ksp, &newdm) )
+        CHKERR(KSPGetDM(self.ksp, &newdm))
         cdef DM dm = subtype_DM(newdm)()
         dm.dm = newdm
-        CHKERR( PetscINCREF(dm.obj) )
+        CHKERR(PetscINCREF(dm.obj))
         return dm
 
     def setDM(self, DM dm) -> None:
@@ -699,7 +699,7 @@ cdef class KSP(Object):
         petsc.KSPSetDM
 
         """
-        CHKERR( KSPSetDM(self.ksp, dm.dm) )
+        CHKERR(KSPSetDM(self.ksp, dm.dm))
 
     def setDMActive(self, flag: bool) -> None:
         """`DM` should be used to generate system matrix & RHS vector.
@@ -723,7 +723,7 @@ cdef class KSP(Object):
 
         """
         cdef PetscBool cflag = asBool(flag)
-        CHKERR( KSPSetDMActive(self.ksp, cflag) )
+        CHKERR(KSPSetDMActive(self.ksp, cflag))
 
     # --- operators and preconditioner ---
 
@@ -731,8 +731,7 @@ cdef class KSP(Object):
         self,
         rhs: KSPRHSFunction,
         args: tuple[Any, ...] | None = None,
-        kargs: dict[str, Any] | None = None
-    ) -> None:
+        kargs: dict[str, Any] | None = None) -> None:
         """Set routine to compute the right-hand side of the linear system.
 
         Logically collective.
@@ -760,14 +759,13 @@ cdef class KSP(Object):
         if kargs is None: kargs = {}
         context = (rhs, args, kargs)
         self.set_attr('__rhs__', context)
-        CHKERR( KSPSetComputeRHS(self.ksp, KSP_ComputeRHS, <void*>context) )
+        CHKERR(KSPSetComputeRHS(self.ksp, KSP_ComputeRHS, <void*>context))
 
     def setComputeOperators(
         self,
         operators: KSPOperatorsFunction,
         args: tuple[Any, ...] | None = None,
-        kargs: dict[str, Any] | None = None
-    ) -> None:
+        kargs: dict[str, Any] | None = None) -> None:
         """Set routine to compute the linear operators.
 
         Logically collective.
@@ -806,7 +804,7 @@ cdef class KSP(Object):
         if kargs is None: kargs = {}
         context = (operators, args, kargs)
         self.set_attr('__operators__', context)
-        CHKERR( KSPSetComputeOperators(self.ksp, KSP_ComputeOps, <void*>context) )
+        CHKERR(KSPSetComputeOperators(self.ksp, KSP_ComputeOps, <void*>context))
 
     def setOperators(self, Mat A=None, Mat P=None) -> None:
         """Set matrix associated with the linear system.
@@ -847,7 +845,7 @@ cdef class KSP(Object):
         if A is not None: amat = A.mat
         cdef PetscMat pmat=amat
         if P is not None: pmat = P.mat
-        CHKERR( KSPSetOperators(self.ksp, amat, pmat) )
+        CHKERR(KSPSetOperators(self.ksp, amat, pmat))
 
     def getOperators(self) -> tuple[Mat, Mat]:
         """Return the matrix associated with the linear system.
@@ -871,9 +869,9 @@ cdef class KSP(Object):
 
         """
         cdef Mat A = Mat(), P = Mat()
-        CHKERR( KSPGetOperators(self.ksp, &A.mat, &P.mat) )
-        CHKERR( PetscINCREF(A.obj) )
-        CHKERR( PetscINCREF(P.obj) )
+        CHKERR(KSPGetOperators(self.ksp, &A.mat, &P.mat))
+        CHKERR(PetscINCREF(A.obj))
+        CHKERR(PetscINCREF(P.obj))
         return (A, P)
 
     def setPC(self, PC pc) -> None:
@@ -894,7 +892,7 @@ cdef class KSP(Object):
         PETSc.KSP, getPC, petsc.KSPSetPC
 
         """
-        CHKERR( KSPSetPC(self.ksp, pc.pc) )
+        CHKERR(KSPSetPC(self.ksp, pc.pc))
 
     def getPC(self) -> PC:
         """Return the preconditioner.
@@ -907,8 +905,8 @@ cdef class KSP(Object):
 
         """
         cdef PC pc = PC()
-        CHKERR( KSPGetPC(self.ksp, &pc.pc) )
-        CHKERR( PetscINCREF(pc.obj) )
+        CHKERR(KSPGetPC(self.ksp, &pc.pc))
+        CHKERR(PetscINCREF(pc.obj))
         return pc
 
     # --- tolerances and convergence ---
@@ -918,8 +916,7 @@ cdef class KSP(Object):
         rtol: float | None = None,
         atol: float | None = None,
         divtol: float | None = None,
-        max_it: int | None = None
-    ) -> None:
+        max_it: int | None = None) -> None:
         """Set various tolerances used by the KSP convergence testers.
 
         Logically collective.
@@ -961,7 +958,7 @@ cdef class KSP(Object):
         if divtol is not None: cdivtol = asReal(divtol)
         cdef PetscInt cmaxits = PETSC_DEFAULT
         if max_it is not None: cmaxits = asInt(max_it)
-        CHKERR( KSPSetTolerances(self.ksp, crtol, catol, cdivtol, cmaxits) )
+        CHKERR(KSPSetTolerances(self.ksp, crtol, catol, cdivtol, cmaxits))
 
     def getTolerances(self) -> tuple[float, float, float, int]:
         """Return various tolerances used by the KSP convergence tests.
@@ -989,15 +986,14 @@ cdef class KSP(Object):
         """
         cdef PetscReal crtol=0, catol=0, cdivtol=0
         cdef PetscInt cmaxits=0
-        CHKERR( KSPGetTolerances(self.ksp, &crtol, &catol, &cdivtol, &cmaxits) )
+        CHKERR(KSPGetTolerances(self.ksp, &crtol, &catol, &cdivtol, &cmaxits))
         return (toReal(crtol), toReal(catol), toReal(cdivtol), toInt(cmaxits))
 
     def setConvergenceTest(
         self,
         converged: KSPConvergenceTestFunction,
         args: tuple[Any, ...] | None = None,
-        kargs: dict[str, Any] | None = None
-    ) -> None:
+        kargs: dict[str, Any] | None = None) -> None:
         """Set the function to be used to determine convergence.
 
         Logically collective.
@@ -1032,8 +1028,8 @@ cdef class KSP(Object):
         cdef void* cctx = NULL
         cdef PetscBool islsqr = PETSC_FALSE
         if converged is not None:
-            CHKERR( KSPSetConvergenceTest(
-                    self.ksp, KSP_Converged, NULL, NULL) )
+            CHKERR(KSPSetConvergenceTest(
+                    self.ksp, KSP_Converged, NULL, NULL))
             if args is None: args = ()
             if kargs is None: kargs = {}
             self.set_attr('__converged__', (converged, args, kargs))
@@ -1042,20 +1038,20 @@ cdef class KSP(Object):
             # different convergence tests (like KSPLSQR for example)
             # Now we handle LSQR explicitly, but a proper mechanism,
             # say KSPGetDefaultConverged would be more appropriate
-            CHKERR( KSPGetNormType(self.ksp, &normtype) )
+            CHKERR(KSPGetNormType(self.ksp, &normtype))
             if normtype != KSP_NORM_NONE:
-                CHKERR( PetscObjectTypeCompare(<PetscObject>self.ksp,
-                                               KSPLSQR,  &islsqr)  )
-                CHKERR( KSPConvergedDefaultCreate(&cctx) )
+                CHKERR(PetscObjectTypeCompare(<PetscObject>self.ksp,
+                                              KSPLSQR,  &islsqr))
+                CHKERR(KSPConvergedDefaultCreate(&cctx))
                 if not islsqr:
-                    CHKERR( KSPSetConvergenceTest(self.ksp, KSPConvergedDefault,
-                                                  cctx, KSPConvergedDefaultDestroy) )
+                    CHKERR(KSPSetConvergenceTest(self.ksp, KSPConvergedDefault,
+                                                 cctx, KSPConvergedDefaultDestroy))
                 else:
-                    CHKERR( KSPSetConvergenceTest(self.ksp, KSPLSQRConvergedDefault,
-                                                  cctx, KSPConvergedDefaultDestroy) )
+                    CHKERR(KSPSetConvergenceTest(self.ksp, KSPLSQRConvergedDefault,
+                                                 cctx, KSPConvergedDefaultDestroy))
             else:
-                CHKERR( KSPSetConvergenceTest(self.ksp, KSPConvergedSkip,
-                                              NULL, NULL) )
+                CHKERR(KSPSetConvergenceTest(self.ksp, KSPConvergedSkip,
+                                             NULL, NULL))
             self.set_attr('__converged__', None)
 
     def addConvergenceTest(
@@ -1063,8 +1059,7 @@ cdef class KSP(Object):
         converged: KSPConvergenceTestFunction,
         args: tuple[Any, ...] | None = None,
         kargs: dict[str, Any] | None = None,
-        prepend: bool = False
-    ) -> None:
+        prepend: bool = False) -> None:
         """Add the function to be used to determine convergence.
 
         Logically collective.
@@ -1097,7 +1092,7 @@ cdef class KSP(Object):
         cdef PetscBool pre = asBool(prepend)
         if converged is None: return
         if oconverged is not None: raise NotImplementedError("converged callback already set or added")
-        CHKERR( KSPAddConvergenceTest(self.ksp, KSP_Converged, pre) )
+        CHKERR(KSPAddConvergenceTest(self.ksp, KSP_Converged, pre))
         if args is None: args = ()
         if kargs is None: kargs = {}
         self.set_attr('__converged__', (converged, args, kargs))
@@ -1135,14 +1130,13 @@ cdef class KSP(Object):
         cdef PetscInt  ival = asInt(its)
         cdef PetscReal rval = asReal(rnorm)
         cdef PetscKSPConvergedReason reason = KSP_CONVERGED_ITERATING
-        CHKERR( KSPConvergenceTestCall(self.ksp, ival, rval, &reason) )
+        CHKERR(KSPConvergenceTestCall(self.ksp, ival, rval, &reason))
         return reason
 
     def setConvergenceHistory(
         self,
         length: int | None = None,
-        reset: bool = False
-    ) -> None:
+        reset: bool = False) -> None:
         """Set the array used to hold the residual history.
 
         Not collective.
@@ -1181,7 +1175,7 @@ cdef class KSP(Object):
         if reset: flag = PETSC_TRUE
         cdef object hist = oarray_r(empty_r(size), NULL, &data)
         self.set_attr('__history__', hist)
-        CHKERR( KSPSetResidualHistory(self.ksp, data, size, flag) )
+        CHKERR(KSPSetResidualHistory(self.ksp, data, size, flag))
 
     def getConvergenceHistory(self) -> ArrayReal:
         """Return array containing the residual history.
@@ -1195,7 +1189,7 @@ cdef class KSP(Object):
         """
         cdef const PetscReal *data = NULL
         cdef PetscInt   size = 0
-        CHKERR( KSPGetResidualHistory(self.ksp, &data, &size) )
+        CHKERR(KSPGetResidualHistory(self.ksp, &data, &size))
         return array_r(size, data)
 
     def logConvergenceHistory(self, rnorm: float) -> None:
@@ -1210,7 +1204,7 @@ cdef class KSP(Object):
 
         """
         cdef PetscReal rval = asReal(rnorm)
-        CHKERR( KSPLogResidualHistory(self.ksp, rval) )
+        CHKERR(KSPLogResidualHistory(self.ksp, rval))
 
     # --- monitoring ---
 
@@ -1256,7 +1250,7 @@ cdef class KSP(Object):
         if monitorlist is None:
             monitorlist = []
             self.set_attr('__monitor__', monitorlist)
-            CHKERR( KSPMonitorSet(self.ksp, KSP_Monitor, NULL, NULL) )
+            CHKERR(KSPMonitorSet(self.ksp, KSP_Monitor, NULL, NULL))
         if args is None: args = ()
         if kargs is None: kargs = {}
         monitorlist.append((monitor, args, kargs))
@@ -1284,7 +1278,7 @@ cdef class KSP(Object):
         petsc_options, getMonitor, setMonitor, monitor, petsc.KSPMonitorCancel
 
         """
-        CHKERR( KSPMonitorCancel(self.ksp) )
+        CHKERR(KSPMonitorCancel(self.ksp))
         self.set_attr('__monitor__', None)
 
     cancelMonitor = monitorCancel
@@ -1306,7 +1300,7 @@ cdef class KSP(Object):
         """
         cdef PetscInt  ival = asInt(its)
         cdef PetscReal rval = asReal(rnorm)
-        CHKERR( KSPMonitor(self.ksp, ival, rval) )
+        CHKERR(KSPMonitor(self.ksp, ival, rval))
 
     # --- customization ---
 
@@ -1342,7 +1336,7 @@ cdef class KSP(Object):
         petsc.KSPSetPCSide
 
         """
-        CHKERR( KSPSetPCSide(self.ksp, side) )
+        CHKERR(KSPSetPCSide(self.ksp, side))
 
     def getPCSide(self) -> PC.Side:
         """Return the preconditioning side.
@@ -1355,7 +1349,7 @@ cdef class KSP(Object):
 
         """
         cdef PetscPCSide side = PC_LEFT
-        CHKERR( KSPGetPCSide(self.ksp, &side) )
+        CHKERR(KSPGetPCSide(self.ksp, &side))
         return side
 
     def setNormType(self, normtype: NormType) -> None:
@@ -1383,7 +1377,7 @@ cdef class KSP(Object):
         petsc.KSPSetCheckNormIteration
 
         """
-        CHKERR( KSPSetNormType(self.ksp, normtype) )
+        CHKERR(KSPSetNormType(self.ksp, normtype))
 
     def getNormType(self) -> NormType:
         """Return the norm that is used for convergence testing.
@@ -1396,7 +1390,7 @@ cdef class KSP(Object):
 
         """
         cdef PetscKSPNormType normtype = KSP_NORM_NONE
-        CHKERR( KSPGetNormType(self.ksp, &normtype) )
+        CHKERR(KSPGetNormType(self.ksp, &normtype))
         return normtype
 
     def setComputeEigenvalues(self, flag: bool) -> None:
@@ -1423,7 +1417,7 @@ cdef class KSP(Object):
 
         """
         cdef PetscBool compute = asBool(flag)
-        CHKERR( KSPSetComputeEigenvalues(self.ksp, compute) )
+        CHKERR(KSPSetComputeEigenvalues(self.ksp, compute))
 
     def getComputeEigenvalues(self) -> bool:
         """Return flag indicating whether eigenvalues will be calculated.
@@ -1440,7 +1434,7 @@ cdef class KSP(Object):
 
         """
         cdef PetscBool flag = PETSC_FALSE
-        CHKERR( KSPGetComputeEigenvalues(self.ksp, &flag) )
+        CHKERR(KSPGetComputeEigenvalues(self.ksp, &flag))
         return toBool(flag)
 
     def setComputeSingularValues(self, flag: bool) -> None:
@@ -1467,7 +1461,7 @@ cdef class KSP(Object):
 
         """
         cdef PetscBool compute = asBool(flag)
-        CHKERR( KSPSetComputeSingularValues(self.ksp, compute) )
+        CHKERR(KSPSetComputeSingularValues(self.ksp, compute))
 
     def getComputeSingularValues(self) -> bool:
         """Return flag indicating whether singular values will be calculated.
@@ -1484,7 +1478,7 @@ cdef class KSP(Object):
 
         """
         cdef PetscBool flag = PETSC_FALSE
-        CHKERR( KSPGetComputeSingularValues(self.ksp, &flag) )
+        CHKERR(KSPGetComputeSingularValues(self.ksp, &flag))
         return toBool(flag)
 
     # --- initial guess ---
@@ -1509,7 +1503,7 @@ cdef class KSP(Object):
 
         """
         cdef PetscBool guess_nonzero = asBool(flag)
-        CHKERR( KSPSetInitialGuessNonzero(self.ksp, guess_nonzero) )
+        CHKERR(KSPSetInitialGuessNonzero(self.ksp, guess_nonzero))
 
     def getInitialGuessNonzero(self) -> bool:
         """Determine whether the KSP solver uses a zero initial guess.
@@ -1522,7 +1516,7 @@ cdef class KSP(Object):
 
         """
         cdef PetscBool flag = PETSC_FALSE
-        CHKERR( KSPGetInitialGuessNonzero(self.ksp, &flag) )
+        CHKERR(KSPGetInitialGuessNonzero(self.ksp, &flag))
         return toBool(flag)
 
     def setInitialGuessKnoll(self, flag: bool) -> None:
@@ -1543,7 +1537,7 @@ cdef class KSP(Object):
 
         """
         cdef PetscBool guess_knoll = asBool(flag)
-        CHKERR( KSPSetInitialGuessKnoll(self.ksp, guess_knoll) )
+        CHKERR(KSPSetInitialGuessKnoll(self.ksp, guess_knoll))
 
     def getInitialGuessKnoll(self) -> bool:
         """Determine whether the KSP solver is using the Knoll trick.
@@ -1559,7 +1553,7 @@ cdef class KSP(Object):
 
         """
         cdef PetscBool flag = PETSC_FALSE
-        CHKERR( KSPGetInitialGuessKnoll(self.ksp, &flag) )
+        CHKERR(KSPGetInitialGuessKnoll(self.ksp, &flag))
         return toBool(flag)
 
     def setUseFischerGuess(self, model: int, size: int) -> None:
@@ -1586,7 +1580,7 @@ cdef class KSP(Object):
         """
         cdef PetscInt ival1 = asInt(model)
         cdef PetscInt ival2 = asInt(size)
-        CHKERR( KSPSetUseFischerGuess(self.ksp, ival1, ival2) )
+        CHKERR(KSPSetUseFischerGuess(self.ksp, ival1, ival2))
 
     # --- solving ---
 
@@ -1600,7 +1594,7 @@ cdef class KSP(Object):
         petsc.KSPSetUp
 
         """
-        CHKERR( KSPSetUp(self.ksp) )
+        CHKERR(KSPSetUp(self.ksp))
 
     def reset(self) -> None:
         """Resets a KSP context.
@@ -1615,7 +1609,7 @@ cdef class KSP(Object):
         petsc.KSPReset
 
         """
-        CHKERR( KSPReset(self.ksp) )
+        CHKERR(KSPReset(self.ksp))
 
     def setUpOnBlocks(self) -> None:
         """Set up the preconditioner for each block in a block method.
@@ -1630,14 +1624,13 @@ cdef class KSP(Object):
         petsc.KSPSetUpOnBlocks
 
         """
-        CHKERR( KSPSetUpOnBlocks(self.ksp) )
+        CHKERR(KSPSetUpOnBlocks(self.ksp))
 
     def setPreSolve(
         self,
         presolve: KSPPreSolveFunction | None,
         args: tuple[Any, ...] | None = None,
-        kargs: dict[str, Any] | None = None
-    ) -> None:
+        kargs: dict[str, Any] | None = None) -> None:
         """Set the function that is called at the beginning of each `KSP.solve`.
 
         Logically collective.
@@ -1661,17 +1654,16 @@ cdef class KSP(Object):
             if kargs is None: kargs = {}
             context = (presolve, args, kargs)
             self.set_attr('__presolve__', context)
-            CHKERR( KSPSetPreSolve(self.ksp, KSP_PreSolve, <void*>context) )
+            CHKERR(KSPSetPreSolve(self.ksp, KSP_PreSolve, <void*>context))
         else:
             self.set_attr('__presolve__', None)
-            CHKERR( KSPSetPreSolve(self.ksp, NULL, NULL) )
+            CHKERR(KSPSetPreSolve(self.ksp, NULL, NULL))
 
     def setPostSolve(
         self,
         postsolve: KSPPostSolveFunction | None,
         args: tuple[Any, ...] | None = None,
-        kargs: dict[str, Any] | None = None
-    ) -> None:
+        kargs: dict[str, Any] | None = None) -> None:
         """Set the function that is called at the end of each `KSP.solve`.
 
         Logically collective.
@@ -1695,10 +1687,10 @@ cdef class KSP(Object):
             if kargs is None: kargs = {}
             context = (postsolve, args, kargs)
             self.set_attr('__postsolve__', context)
-            CHKERR( KSPSetPostSolve(self.ksp, KSP_PostSolve, <void*>context) )
+            CHKERR(KSPSetPostSolve(self.ksp, KSP_PostSolve, <void*>context))
         else:
             self.set_attr('__postsolve__', None)
-            CHKERR( KSPSetPostSolve(self.ksp, NULL, NULL) )
+            CHKERR(KSPSetPostSolve(self.ksp, NULL, NULL))
 
     def solve(self, Vec b, Vec x) -> None:
         """Solve the linear system.
@@ -1779,7 +1771,7 @@ cdef class KSP(Object):
         cdef PetscVec x_vec = NULL
         if b is not None: b_vec = b.vec
         if x is not None: x_vec = x.vec
-        CHKERR( KSPSolve(self.ksp, b_vec, x_vec) )
+        CHKERR(KSPSolve(self.ksp, b_vec, x_vec))
 
     def solveTranspose(self, Vec b, Vec x) -> None:
         """Solve the transpose of a linear system.
@@ -1803,7 +1795,7 @@ cdef class KSP(Object):
         solve, petsc.KSPSolveTranspose
 
         """
-        CHKERR( KSPSolveTranspose(self.ksp, b.vec, x.vec) )
+        CHKERR(KSPSolveTranspose(self.ksp, b.vec, x.vec))
 
     def matSolve(self, Mat B, Mat X) -> None:
         """Solve a linear system with multiple right-hand sides.
@@ -1825,7 +1817,7 @@ cdef class KSP(Object):
         solve, petsc.KSPMatSolve
 
         """
-        CHKERR( KSPMatSolve(self.ksp, B.mat, X.mat) )
+        CHKERR(KSPMatSolve(self.ksp, B.mat, X.mat))
 
     def matSolveTranspose(self, Mat B, Mat X) -> None:
         """Solve the transpose of a linear system with multiple RHS.
@@ -1844,39 +1836,39 @@ cdef class KSP(Object):
         solveTranspose, petsc.KSPMatSolve
 
         """
-        CHKERR( KSPMatSolveTranspose(self.ksp, B.mat, X.mat) )
+        CHKERR(KSPMatSolveTranspose(self.ksp, B.mat, X.mat))
 
     def setIterationNumber(self, its: int) -> None:
         """Use `its` property."""
         cdef PetscInt ival = asInt(its)
-        CHKERR( KSPSetIterationNumber(self.ksp, ival) )
+        CHKERR(KSPSetIterationNumber(self.ksp, ival))
 
     def getIterationNumber(self) -> int:
         """Use `its` property."""
         cdef PetscInt ival = 0
-        CHKERR( KSPGetIterationNumber(self.ksp, &ival) )
+        CHKERR(KSPGetIterationNumber(self.ksp, &ival))
         return toInt(ival)
 
     def setResidualNorm(self, rnorm: float) -> None:
         """Use `norm` property."""
         cdef PetscReal rval = asReal(rnorm)
-        CHKERR( KSPSetResidualNorm(self.ksp, rval) )
+        CHKERR(KSPSetResidualNorm(self.ksp, rval))
 
     def getResidualNorm(self) -> float:
         """Use `norm` property."""
         cdef PetscReal rval = 0
-        CHKERR( KSPGetResidualNorm(self.ksp, &rval) )
+        CHKERR(KSPGetResidualNorm(self.ksp, &rval))
         return toReal(rval)
 
     def setConvergedReason(self, reason: KSP.ConvergedReason) -> None:
         """Use `reason` property."""
         cdef PetscKSPConvergedReason val = reason
-        CHKERR( KSPSetConvergedReason(self.ksp, val) )
+        CHKERR(KSPSetConvergedReason(self.ksp, val))
 
     def getConvergedReason(self) -> KSP.ConvergedReason:
         """Use `reason` property."""
         cdef PetscKSPConvergedReason reason = KSP_CONVERGED_ITERATING
-        CHKERR( KSPGetConvergedReason(self.ksp, &reason) )
+        CHKERR(KSPGetConvergedReason(self.ksp, &reason))
         return reason
 
     def setHPDDMType(self, hpddm_type: HPDDMType) -> None:
@@ -1895,7 +1887,7 @@ cdef class KSP(Object):
 
         """
         cdef PetscKSPHPDDMType ctype = hpddm_type
-        CHKERR( KSPHPDDMSetType(self.ksp, ctype) )
+        CHKERR(KSPHPDDMSetType(self.ksp, ctype))
 
     def getHPDDMType(self) -> HPDDMType:
         """Return the Krylov solver type.
@@ -1908,7 +1900,7 @@ cdef class KSP(Object):
 
         """
         cdef PetscKSPHPDDMType cval = KSP_HPDDM_TYPE_GMRES
-        CHKERR( KSPHPDDMGetType(self.ksp, &cval) )
+        CHKERR(KSPHPDDMGetType(self.ksp, &cval))
         return cval
 
     def setErrorIfNotConverged(self, flag: bool) -> None:
@@ -1927,7 +1919,7 @@ cdef class KSP(Object):
 
         """
         cdef PetscBool ernc = asBool(flag)
-        CHKERR( KSPSetErrorIfNotConverged(self.ksp, ernc) )
+        CHKERR(KSPSetErrorIfNotConverged(self.ksp, ernc))
 
     def getErrorIfNotConverged(self) -> bool:
         """Return the flag indicating the solver will error if divergent.
@@ -1940,7 +1932,7 @@ cdef class KSP(Object):
 
         """
         cdef PetscBool flag = PETSC_FALSE
-        CHKERR( KSPGetErrorIfNotConverged(self.ksp, &flag) )
+        CHKERR(KSPGetErrorIfNotConverged(self.ksp, &flag))
         return toBool(flag)
 
     def getRhs(self) -> Vec:
@@ -1954,8 +1946,8 @@ cdef class KSP(Object):
 
         """
         cdef Vec vec = Vec()
-        CHKERR( KSPGetRhs(self.ksp, &vec.vec) )
-        CHKERR( PetscINCREF(vec.obj) )
+        CHKERR(KSPGetRhs(self.ksp, &vec.vec))
+        CHKERR(PetscINCREF(vec.obj))
         return vec
 
     def getSolution(self) -> Vec:
@@ -1972,15 +1964,14 @@ cdef class KSP(Object):
 
         """
         cdef Vec vec = Vec()
-        CHKERR( KSPGetSolution(self.ksp, &vec.vec) )
-        CHKERR( PetscINCREF(vec.obj) )
+        CHKERR(KSPGetSolution(self.ksp, &vec.vec))
+        CHKERR(PetscINCREF(vec.obj))
         return vec
 
     def getWorkVecs(
         self,
         right: int | None = None,
-        left: int | None = None
-    ) -> tuple[list[Vec], list[Vec]] | list[Vec] | None:
+        left: int | None = None) -> tuple[list[Vec], list[Vec]] | list[Vec] | None:
         """Create working vectors.
 
         Collective.
@@ -2008,7 +1999,7 @@ cdef class KSP(Object):
         if L: nl = asInt(left)
         cdef object vecsr = [] if R else None
         cdef object vecsl = [] if L else None
-        CHKERR( KSPCreateVecs(self.ksp, nr, &vr, nl, &vr) )
+        CHKERR(KSPCreateVecs(self.ksp, nr, &vr, nl, &vr))
         try:
             for i from 0 <= i < nr:
                 vecsr.append(ref_Vec(vr[i]))
@@ -2042,9 +2033,9 @@ cdef class KSP(Object):
         """
         if x is None: x = Vec()
         if x.vec == NULL:
-            CHKERR( KSPGetSolution(self.ksp, &x.vec) )
-            CHKERR( VecDuplicate(x.vec, &x.vec) )
-        CHKERR( KSPBuildSolution(self.ksp, x.vec, NULL) )
+            CHKERR(KSPGetSolution(self.ksp, &x.vec))
+            CHKERR(VecDuplicate(x.vec, &x.vec))
+        CHKERR(KSPBuildSolution(self.ksp, x.vec, NULL))
         return x
 
     def buildResidual(self, Vec r=None) -> Vec:
@@ -2064,9 +2055,9 @@ cdef class KSP(Object):
         """
         if r is None: r = Vec()
         if r.vec == NULL:
-            CHKERR( KSPGetRhs(self.ksp, &r.vec) )
-            CHKERR( VecDuplicate(r.vec, &r.vec) )
-        CHKERR( KSPBuildResidual(self.ksp , NULL, r.vec, &r.vec) )
+            CHKERR(KSPGetRhs(self.ksp, &r.vec))
+            CHKERR(VecDuplicate(r.vec, &r.vec))
+        CHKERR(KSPBuildResidual(self.ksp , NULL, r.vec, &r.vec))
         return r
 
     def computeEigenvalues(self) -> ArrayComplex:
@@ -2083,10 +2074,10 @@ cdef class KSP(Object):
         cdef PetscInt neig = 0
         cdef PetscReal *rdata = NULL
         cdef PetscReal *idata = NULL
-        CHKERR( KSPGetIterationNumber(self.ksp, &its) )
+        CHKERR(KSPGetIterationNumber(self.ksp, &its))
         cdef ndarray r = oarray_r(empty_r(its), NULL, &rdata)
         cdef ndarray i = oarray_r(empty_r(its), NULL, &idata)
-        CHKERR( KSPComputeEigenvalues(self.ksp, its, rdata, idata, &neig) )
+        CHKERR(KSPComputeEigenvalues(self.ksp, its, rdata, idata, &neig))
         eigen = empty_c(neig)
         eigen.real = r[:neig]
         eigen.imag = i[:neig]
@@ -2111,7 +2102,7 @@ cdef class KSP(Object):
         """
         cdef PetscReal smax = 0
         cdef PetscReal smin = 0
-        CHKERR( KSPComputeExtremeSingularValues(self.ksp, &smax, &smin) )
+        CHKERR(KSPComputeExtremeSingularValues(self.ksp, &smax, &smin))
         return toReal(smax), toReal(smin)
 
     # --- GMRES ---
@@ -2134,15 +2125,14 @@ cdef class KSP(Object):
 
         """
         cdef PetscInt ival = asInt(restart)
-        CHKERR( KSPGMRESSetRestart(self.ksp, ival) )
+        CHKERR(KSPGMRESSetRestart(self.ksp, ival))
 
     # --- Python ---
 
     def createPython(
         self,
         context: Any = None,
-        comm: Comm | None = None
-    ) -> Self:
+        comm: Comm | None = None) -> Self:
         """Create a linear solver of Python type.
 
         Collective.
@@ -2162,10 +2152,10 @@ cdef class KSP(Object):
         """
         cdef MPI_Comm ccomm = def_Comm(comm, PETSC_COMM_DEFAULT)
         cdef PetscKSP newksp = NULL
-        CHKERR( KSPCreate(ccomm, &newksp) )
-        CHKERR( PetscCLEAR(self.obj) ); self.ksp = newksp
-        CHKERR( KSPSetType(self.ksp, KSPPYTHON) )
-        CHKERR( KSPPythonSetContext(self.ksp, <void*>context) )
+        CHKERR(KSPCreate(ccomm, &newksp))
+        CHKERR(PetscCLEAR(self.obj)); self.ksp = newksp
+        CHKERR(KSPSetType(self.ksp, KSPPYTHON))
+        CHKERR(KSPPythonSetContext(self.ksp, <void*>context))
         return self
 
     def setPythonContext(self, context: Any | None = None) -> None:
@@ -2178,7 +2168,7 @@ cdef class KSP(Object):
         petsc_python_ksp, getPythonContext
 
         """
-        CHKERR( KSPPythonSetContext(self.ksp, <void*>context) )
+        CHKERR(KSPPythonSetContext(self.ksp, <void*>context))
 
     def getPythonContext(self) -> Any:
         """Return the instance of the class implementing Python methods.
@@ -2191,7 +2181,7 @@ cdef class KSP(Object):
 
         """
         cdef void *context = NULL
-        CHKERR( KSPPythonGetContext(self.ksp, &context) )
+        CHKERR(KSPPythonGetContext(self.ksp, &context))
         if context == NULL: return None
         else: return <object> context
 
@@ -2208,7 +2198,7 @@ cdef class KSP(Object):
         """
         cdef const char *cval = NULL
         py_type = str2bytes(py_type, &cval)
-        CHKERR( KSPPythonSetType(self.ksp, cval) )
+        CHKERR(KSPPythonSetType(self.ksp, cval))
 
     def getPythonType(self) -> str:
         """Return the fully qualified Python name of the class used by the solver.
@@ -2222,7 +2212,7 @@ cdef class KSP(Object):
 
         """
         cdef const char *cval = NULL
-        CHKERR( KSPPythonGetType(self.ksp, &cval) )
+        CHKERR(KSPPythonGetType(self.ksp, &cval))
         return bytes2str(cval)
 
     # --- application context ---

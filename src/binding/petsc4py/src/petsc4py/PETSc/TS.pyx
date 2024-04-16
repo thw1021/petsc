@@ -184,7 +184,7 @@ cdef class TS(Object):
         """
         cdef PetscViewer cviewer = NULL
         if viewer is not None: cviewer = viewer.vwr
-        CHKERR( TSView(self.ts, cviewer) )
+        CHKERR(TSView(self.ts, cviewer))
 
     def load(self, Viewer viewer) -> None:
         """Load a `TS` that has been stored in binary with `view`.
@@ -201,7 +201,7 @@ cdef class TS(Object):
         petsc.TSLoad
 
         """
-        CHKERR( TSLoad(self.ts, viewer.vwr) )
+        CHKERR(TSLoad(self.ts, viewer.vwr))
 
     def destroy(self) -> Self:
         """Destroy the `TS` that was created with `create`.
@@ -213,7 +213,7 @@ cdef class TS(Object):
         petsc.TSDestroy
 
         """
-        CHKERR( TSDestroy(&self.ts) )
+        CHKERR(TSDestroy(&self.ts))
         return self
 
     def create(self, comm: Comm | None = None) -> Self:
@@ -236,8 +236,8 @@ cdef class TS(Object):
         """
         cdef MPI_Comm ccomm = def_Comm(comm, PETSC_COMM_DEFAULT)
         cdef PetscTS newts = NULL
-        CHKERR( TSCreate(ccomm, &newts) )
-        CHKERR( PetscCLEAR(self.obj) ); self.ts = newts
+        CHKERR(TSCreate(ccomm, &newts))
+        CHKERR(PetscCLEAR(self.obj)); self.ts = newts
         return self
 
     def clone(self) -> TS:
@@ -251,7 +251,7 @@ cdef class TS(Object):
 
         """
         cdef TS ts = TS()
-        CHKERR( TSClone(self.ts, &ts.ts) )
+        CHKERR(TSClone(self.ts, &ts.ts))
         return ts
 
     def setType(self, ts_type: Type | str) -> None:
@@ -275,7 +275,7 @@ cdef class TS(Object):
         """
         cdef PetscTSType cval = NULL
         ts_type = str2bytes(ts_type, &cval)
-        CHKERR( TSSetType(self.ts, cval) )
+        CHKERR(TSSetType(self.ts, cval))
 
     def setRKType(self, ts_type: RKType | str) -> None:
         """Set the type of the *Runge-Kutta* scheme.
@@ -298,7 +298,7 @@ cdef class TS(Object):
         """
         cdef PetscTSRKType cval = NULL
         ts_type = str2bytes(ts_type, &cval)
-        CHKERR( TSRKSetType(self.ts, cval) )
+        CHKERR(TSRKSetType(self.ts, cval))
 
     def setARKIMEXType(self, ts_type: ARKIMEXType | str) -> None:
         """Set the type of `Type.ARKIMEX` scheme.
@@ -321,7 +321,7 @@ cdef class TS(Object):
         """
         cdef PetscTSARKIMEXType cval = NULL
         ts_type = str2bytes(ts_type, &cval)
-        CHKERR( TSARKIMEXSetType(self.ts, cval) )
+        CHKERR(TSARKIMEXSetType(self.ts, cval))
 
     def setARKIMEXFullyImplicit(self, flag: bool) -> None:
         """Solve both parts of the equation implicitly.
@@ -339,7 +339,7 @@ cdef class TS(Object):
 
         """
         cdef PetscBool bval = asBool(flag)
-        CHKERR( TSARKIMEXSetFullyImplicit(self.ts, bval) )
+        CHKERR(TSARKIMEXSetFullyImplicit(self.ts, bval))
 
     def getType(self) -> str:
         """Return the `TS` type.
@@ -352,7 +352,7 @@ cdef class TS(Object):
 
         """
         cdef PetscTSType cval = NULL
-        CHKERR( TSGetType(self.ts, &cval) )
+        CHKERR(TSGetType(self.ts, &cval))
         return bytes2str(cval)
 
     def getRKType(self) -> str:
@@ -366,7 +366,7 @@ cdef class TS(Object):
 
         """
         cdef PetscTSRKType cval = NULL
-        CHKERR( TSRKGetType(self.ts, &cval) )
+        CHKERR(TSRKGetType(self.ts, &cval))
         return bytes2str(cval)
 
     def getARKIMEXType(self) -> str:
@@ -380,7 +380,7 @@ cdef class TS(Object):
 
         """
         cdef PetscTSARKIMEXType cval = NULL
-        CHKERR( TSARKIMEXGetType(self.ts, &cval) )
+        CHKERR(TSARKIMEXGetType(self.ts, &cval))
         return bytes2str(cval)
 
     def setDIRKType(self, ts_type: DIRKType | str) -> None:
@@ -404,7 +404,7 @@ cdef class TS(Object):
         """
         cdef PetscTSDIRKType cval = NULL
         ts_type = str2bytes(ts_type, &cval)
-        CHKERR( TSDIRKSetType(self.ts, cval) )
+        CHKERR(TSDIRKSetType(self.ts, cval))
 
     def getDIRKType(self) -> str:
         """Return the `Type.DIRK` scheme.
@@ -417,7 +417,7 @@ cdef class TS(Object):
 
         """
         cdef PetscTSDIRKType cval = NULL
-        CHKERR( TSDIRKGetType(self.ts, &cval) )
+        CHKERR(TSDIRKGetType(self.ts, &cval))
         return bytes2str(cval)
 
     def setProblemType(self, ptype: ProblemType) -> None:
@@ -435,7 +435,7 @@ cdef class TS(Object):
         petsc.TSSetProblemType
 
         """
-        CHKERR( TSSetProblemType(self.ts, ptype) )
+        CHKERR(TSSetProblemType(self.ts, ptype))
 
     def getProblemType(self) -> ProblemType:
         """Return the type of problem to be solved.
@@ -448,7 +448,7 @@ cdef class TS(Object):
 
         """
         cdef PetscTSProblemType ptype = TS_NONLINEAR
-        CHKERR( TSGetProblemType(self.ts, &ptype) )
+        CHKERR(TSGetProblemType(self.ts, &ptype))
         return ptype
 
     def setEquationType(self, eqtype: EquationType) -> None:
@@ -466,7 +466,7 @@ cdef class TS(Object):
         petsc.TSSetEquationType
 
         """
-        CHKERR( TSSetEquationType(self.ts, eqtype) )
+        CHKERR(TSSetEquationType(self.ts, eqtype))
 
     def getEquationType(self) -> EquationType:
         """Get the type of the equation that `TS` is solving.
@@ -479,7 +479,7 @@ cdef class TS(Object):
 
         """
         cdef PetscTSEquationType eqtype = TS_EQ_UNSPECIFIED
-        CHKERR( TSGetEquationType(self.ts, &eqtype) )
+        CHKERR(TSGetEquationType(self.ts, &eqtype))
         return eqtype
 
     def setOptionsPrefix(self, prefix : str | None) -> None:
@@ -503,7 +503,7 @@ cdef class TS(Object):
         """
         cdef const char *cval = NULL
         prefix = str2bytes(prefix, &cval)
-        CHKERR( TSSetOptionsPrefix(self.ts, cval) )
+        CHKERR(TSSetOptionsPrefix(self.ts, cval))
 
     def getOptionsPrefix(self) -> str:
         """Return the prefix used for all the `TS` options.
@@ -516,7 +516,7 @@ cdef class TS(Object):
 
         """
         cdef const char *cval = NULL
-        CHKERR( TSGetOptionsPrefix(self.ts, &cval) )
+        CHKERR(TSGetOptionsPrefix(self.ts, &cval))
         return bytes2str(cval)
 
     def appendOptionsPrefix(self, prefix: str | None) -> None:
@@ -540,7 +540,7 @@ cdef class TS(Object):
         """
         cdef const char *cval = NULL
         prefix = str2bytes(prefix, &cval)
-        CHKERR( TSAppendOptionsPrefix(self.ts, cval) )
+        CHKERR(TSAppendOptionsPrefix(self.ts, cval))
 
     def setFromOptions(self) -> None:
         """Set various `TS` parameters from user options.
@@ -552,7 +552,7 @@ cdef class TS(Object):
         petsc_options, petsc.TSSetFromOptions
 
         """
-        CHKERR( TSSetFromOptions(self.ts) )
+        CHKERR(TSSetFromOptions(self.ts))
 
     # --- application context ---
 
@@ -608,9 +608,9 @@ cdef class TS(Object):
             if kargs is None: kargs = {}
             context = (function, args, kargs)
             self.set_attr('__rhsfunction__', context)
-            CHKERR( TSSetRHSFunction(self.ts, fvec, TS_RHSFunction, <void*>context) )
+            CHKERR(TSSetRHSFunction(self.ts, fvec, TS_RHSFunction, <void*>context))
         else:
-            CHKERR( TSSetRHSFunction(self.ts, fvec, NULL, NULL) )
+            CHKERR(TSSetRHSFunction(self.ts, fvec, NULL, NULL))
 
     def setRHSJacobian(
         self,
@@ -650,9 +650,9 @@ cdef class TS(Object):
             if kargs is None: kargs = {}
             context = (jacobian, args, kargs)
             self.set_attr('__rhsjacobian__', context)
-            CHKERR( TSSetRHSJacobian(self.ts, Jmat, Pmat, TS_RHSJacobian, <void*>context) )
+            CHKERR(TSSetRHSJacobian(self.ts, Jmat, Pmat, TS_RHSJacobian, <void*>context))
         else:
-            CHKERR( TSSetRHSJacobian(self.ts, Jmat, Pmat, NULL, NULL) )
+            CHKERR(TSSetRHSJacobian(self.ts, Jmat, Pmat, NULL, NULL))
 
     def computeRHSFunction(self, t: float, Vec x, Vec f) -> None:
         """Evaluate the right-hand side function.
@@ -674,7 +674,7 @@ cdef class TS(Object):
 
         """
         cdef PetscReal time = asReal(t)
-        CHKERR( TSComputeRHSFunction(self.ts, time, x.vec, f.vec) )
+        CHKERR(TSComputeRHSFunction(self.ts, time, x.vec, f.vec))
 
     def computeRHSFunctionLinear(self, t: float, Vec x, Vec f) -> None:
         """Evaluate the right-hand side via the user-provided Jacobian.
@@ -696,7 +696,7 @@ cdef class TS(Object):
 
         """
         cdef PetscReal time = asReal(t)
-        CHKERR( TSComputeRHSFunctionLinear(self.ts, time, x.vec, f.vec, NULL) )
+        CHKERR(TSComputeRHSFunctionLinear(self.ts, time, x.vec, f.vec, NULL))
 
     def computeRHSJacobian(self, t: float, Vec x, Mat J, Mat P=None) -> None:
         """Compute the Jacobian matrix that has been set with `setRHSJacobian`.
@@ -722,7 +722,7 @@ cdef class TS(Object):
         cdef PetscReal time = asReal(t)
         cdef PetscMat jmat = J.mat, pmat = J.mat
         if P is not None: pmat = P.mat
-        CHKERR( TSComputeRHSJacobian(self.ts, time, x.vec, jmat, pmat) )
+        CHKERR(TSComputeRHSJacobian(self.ts, time, x.vec, jmat, pmat))
 
     def computeRHSJacobianConstant(self, t: float, Vec x, Mat J, Mat P=None) -> None:
         """Reuse a Jacobian that is time-independent.
@@ -748,7 +748,7 @@ cdef class TS(Object):
         cdef PetscReal time = asReal(t)
         cdef PetscMat jmat = J.mat, pmat = J.mat
         if P is not None: pmat = P.mat
-        CHKERR( TSComputeRHSJacobianConstant(self.ts, time, x.vec, jmat, pmat, NULL) )
+        CHKERR(TSComputeRHSJacobianConstant(self.ts, time, x.vec, jmat, pmat, NULL))
 
     def getRHSFunction(self) -> tuple[Vec, TSRHSFunction]:
         """Return the vector where the rhs is stored and the function used to compute it.
@@ -761,8 +761,8 @@ cdef class TS(Object):
 
         """
         cdef Vec f = Vec()
-        CHKERR( TSGetRHSFunction(self.ts, &f.vec, NULL, NULL) )
-        CHKERR( PetscINCREF(f.obj) )
+        CHKERR(TSGetRHSFunction(self.ts, &f.vec, NULL, NULL))
+        CHKERR(PetscINCREF(f.obj))
         cdef object function = self.get_attr('__rhsfunction__')
         return (f, function)
 
@@ -777,8 +777,8 @@ cdef class TS(Object):
 
         """
         cdef Mat J = Mat(), P = Mat()
-        CHKERR( TSGetRHSJacobian(self.ts, &J.mat, &P.mat, NULL, NULL) )
-        CHKERR( PetscINCREF(J.obj) ); CHKERR( PetscINCREF(P.obj) )
+        CHKERR(TSGetRHSJacobian(self.ts, &J.mat, &P.mat, NULL, NULL))
+        CHKERR(PetscINCREF(J.obj)); CHKERR(PetscINCREF(P.obj))
         cdef object jacobian = self.get_attr('__rhsjacobian__')
         return (J, P, jacobian)
 
@@ -817,9 +817,9 @@ cdef class TS(Object):
             if kargs is None: kargs = {}
             context = (function, args, kargs)
             self.set_attr('__ifunction__', context)
-            CHKERR( TSSetIFunction(self.ts, fvec, TS_IFunction, <void*>context) )
+            CHKERR(TSSetIFunction(self.ts, fvec, TS_IFunction, <void*>context))
         else:
-            CHKERR( TSSetIFunction(self.ts, fvec, NULL, NULL) )
+            CHKERR(TSSetIFunction(self.ts, fvec, NULL, NULL))
 
     def setIJacobian(
         self,
@@ -862,9 +862,9 @@ cdef class TS(Object):
             if kargs is None: kargs = {}
             context = (jacobian, args, kargs)
             self.set_attr('__ijacobian__', context)
-            CHKERR( TSSetIJacobian(self.ts, Jmat, Pmat, TS_IJacobian, <void*>context) )
+            CHKERR(TSSetIJacobian(self.ts, Jmat, Pmat, TS_IJacobian, <void*>context))
         else:
-            CHKERR( TSSetIJacobian(self.ts, Jmat, Pmat, NULL, NULL) )
+            CHKERR(TSSetIJacobian(self.ts, Jmat, Pmat, NULL, NULL))
 
     def setIJacobianP(
         self,
@@ -903,9 +903,9 @@ cdef class TS(Object):
             if kargs is None: kargs = {}
             context = (jacobian, args, kargs)
             self.set_attr('__ijacobianp__', context)
-            CHKERR( TSSetIJacobianP(self.ts, Jmat, TS_IJacobianP, <void*>context) )
+            CHKERR(TSSetIJacobianP(self.ts, Jmat, TS_IJacobianP, <void*>context))
         else:
-            CHKERR( TSSetIJacobianP(self.ts, Jmat, NULL, NULL) )
+            CHKERR(TSSetIJacobianP(self.ts, Jmat, NULL, NULL))
 
     def computeIFunction(self,
                          t: float, Vec x, Vec xdot,
@@ -934,8 +934,8 @@ cdef class TS(Object):
         """
         cdef PetscReal rval = asReal(t)
         cdef PetscBool bval = imex
-        CHKERR( TSComputeIFunction(self.ts, rval, x.vec, xdot.vec,
-                                   f.vec, bval) )
+        CHKERR(TSComputeIFunction(self.ts, rval, x.vec, xdot.vec,
+                                  f.vec, bval))
 
     def computeIJacobian(self,
                          t: float, Vec x, Vec xdot, a: float,
@@ -974,8 +974,8 @@ cdef class TS(Object):
         cdef PetscBool bval  = imex
         cdef PetscMat jmat = J.mat, pmat = J.mat
         if P is not None: pmat = P.mat
-        CHKERR( TSComputeIJacobian(self.ts, rval1, x.vec, xdot.vec, rval2,
-                                   jmat, pmat, bval) )
+        CHKERR(TSComputeIJacobian(self.ts, rval1, x.vec, xdot.vec, rval2,
+                                  jmat, pmat, bval))
 
     def computeIJacobianP(self,
                           t: float, Vec x, Vec xdot, a: float,
@@ -1008,8 +1008,8 @@ cdef class TS(Object):
         cdef PetscReal rval2 = asReal(a)
         cdef PetscBool bval  = asBool(imex)
         cdef PetscMat jmat = J.mat
-        CHKERR( TSComputeIJacobianP(self.ts, rval1, x.vec, xdot.vec, rval2,
-                                    jmat, bval) )
+        CHKERR(TSComputeIJacobianP(self.ts, rval1, x.vec, xdot.vec, rval2,
+                                   jmat, bval))
 
     def getIFunction(self) -> tuple[Vec, TSIFunction]:
         """Return the vector and function which computes the implicit residual.
@@ -1022,8 +1022,8 @@ cdef class TS(Object):
 
         """
         cdef Vec f = Vec()
-        CHKERR( TSGetIFunction(self.ts, &f.vec, NULL, NULL) )
-        CHKERR( PetscINCREF(f.obj) )
+        CHKERR(TSGetIFunction(self.ts, &f.vec, NULL, NULL))
+        CHKERR(PetscINCREF(f.obj))
         cdef object function = self.get_attr('__ifunction__')
         return (f, function)
 
@@ -1038,8 +1038,8 @@ cdef class TS(Object):
 
         """
         cdef Mat J = Mat(), P = Mat()
-        CHKERR( TSGetIJacobian(self.ts, &J.mat, &P.mat, NULL, NULL) )
-        CHKERR( PetscINCREF(J.obj) ); CHKERR( PetscINCREF(P.obj) )
+        CHKERR(TSGetIJacobian(self.ts, &J.mat, &P.mat, NULL, NULL))
+        CHKERR(PetscINCREF(J.obj)); CHKERR(PetscINCREF(P.obj))
         cdef object jacobian = self.get_attr('__ijacobian__')
         return (J, P, jacobian)
 
@@ -1076,9 +1076,9 @@ cdef class TS(Object):
             if kargs is None: kargs = {}
             context = (function, args, kargs)
             self.set_attr('__i2function__', context)
-            CHKERR( TSSetI2Function(self.ts, fvec, TS_I2Function, <void*>context) )
+            CHKERR(TSSetI2Function(self.ts, fvec, TS_I2Function, <void*>context))
         else:
-            CHKERR( TSSetI2Function(self.ts, fvec, NULL, NULL) )
+            CHKERR(TSSetI2Function(self.ts, fvec, NULL, NULL))
 
     def setI2Jacobian(
         self,
@@ -1118,9 +1118,9 @@ cdef class TS(Object):
             if kargs is None: kargs = {}
             context = (jacobian, args, kargs)
             self.set_attr('__i2jacobian__', context)
-            CHKERR( TSSetI2Jacobian(self.ts, Jmat, Pmat, TS_I2Jacobian, <void*>context) )
+            CHKERR(TSSetI2Jacobian(self.ts, Jmat, Pmat, TS_I2Jacobian, <void*>context))
         else:
-            CHKERR( TSSetI2Jacobian(self.ts, Jmat, Pmat, NULL, NULL) )
+            CHKERR(TSSetI2Jacobian(self.ts, Jmat, Pmat, NULL, NULL))
 
     def computeI2Function(self, t: float, Vec x, Vec xdot, Vec xdotdot, Vec f) -> None:
         """Evaluate the DAE residual in implicit form.
@@ -1146,8 +1146,8 @@ cdef class TS(Object):
 
         """
         cdef PetscReal rval = asReal(t)
-        CHKERR( TSComputeI2Function(self.ts, rval, x.vec, xdot.vec, xdotdot.vec,
-                                    f.vec) )
+        CHKERR(TSComputeI2Function(self.ts, rval, x.vec, xdot.vec, xdotdot.vec,
+                                   f.vec))
 
     def computeI2Jacobian(
         self,
@@ -1195,8 +1195,8 @@ cdef class TS(Object):
         cdef PetscReal rval3 = asReal(a)
         cdef PetscMat jmat = J.mat, pmat = J.mat
         if P is not None: pmat = P.mat
-        CHKERR( TSComputeI2Jacobian(self.ts, rval1, x.vec, xdot.vec, xdotdot.vec, rval2, rval3,
-                                    jmat, pmat) )
+        CHKERR(TSComputeI2Jacobian(self.ts, rval1, x.vec, xdot.vec, xdotdot.vec, rval2, rval3,
+                                   jmat, pmat))
 
     def getI2Function(self) -> tuple[Vec, TSI2Function]:
         """Return the vector and function which computes the residual.
@@ -1209,8 +1209,8 @@ cdef class TS(Object):
 
         """
         cdef Vec f = Vec()
-        CHKERR( TSGetI2Function(self.ts, &f.vec, NULL, NULL) )
-        CHKERR( PetscINCREF(f.obj) )
+        CHKERR(TSGetI2Function(self.ts, &f.vec, NULL, NULL))
+        CHKERR(PetscINCREF(f.obj))
         cdef object function = self.get_attr('__i2function__')
         return (f, function)
 
@@ -1225,8 +1225,8 @@ cdef class TS(Object):
 
         """
         cdef Mat J = Mat(), P = Mat()
-        CHKERR( TSGetI2Jacobian(self.ts, &J.mat, &P.mat, NULL, NULL) )
-        CHKERR( PetscINCREF(J.obj) ); CHKERR( PetscINCREF(P.obj) )
+        CHKERR(TSGetI2Jacobian(self.ts, &J.mat, &P.mat, NULL, NULL))
+        CHKERR(PetscINCREF(J.obj)); CHKERR(PetscINCREF(P.obj))
         cdef object jacobian = self.get_attr('__i2jacobian__')
         return (J, P, jacobian)
 
@@ -1247,7 +1247,7 @@ cdef class TS(Object):
         petsc.TSSetSolution
 
         """
-        CHKERR( TSSetSolution(self.ts, u.vec) )
+        CHKERR(TSSetSolution(self.ts, u.vec))
 
     def getSolution(self) -> Vec:
         """Return the solution at the present timestep.
@@ -1264,8 +1264,8 @@ cdef class TS(Object):
 
         """
         cdef Vec u = Vec()
-        CHKERR( TSGetSolution(self.ts, &u.vec) )
-        CHKERR( PetscINCREF(u.obj) )
+        CHKERR(TSGetSolution(self.ts, &u.vec))
+        CHKERR(PetscINCREF(u.obj))
         return u
 
     def setSolution2(self, Vec u, Vec v) -> None:
@@ -1285,7 +1285,7 @@ cdef class TS(Object):
         petsc.TS2SetSolution
 
         """
-        CHKERR( TS2SetSolution(self.ts, u.vec, v.vec) )
+        CHKERR(TS2SetSolution(self.ts, u.vec, v.vec))
 
     def getSolution2(self) -> tuple[Vec, Vec]:
         """Return the solution and time derivative at the present timestep.
@@ -1303,9 +1303,9 @@ cdef class TS(Object):
         """
         cdef Vec u = Vec()
         cdef Vec v = Vec()
-        CHKERR( TS2GetSolution(self.ts, &u.vec, &v.vec) )
-        CHKERR( PetscINCREF(u.obj) )
-        CHKERR( PetscINCREF(v.obj) )
+        CHKERR(TS2GetSolution(self.ts, &u.vec, &v.vec))
+        CHKERR(PetscINCREF(u.obj))
+        CHKERR(PetscINCREF(v.obj))
         return (u, v)
 
     # --- time span ---
@@ -1339,8 +1339,8 @@ cdef class TS(Object):
         """
         cdef PetscInt  nt = 0
         cdef PetscReal *rtspan = NULL
-        _tmp = oarray_r(tspan, &nt, &rtspan)
-        CHKERR( TSSetTimeSpan(self.ts, nt, rtspan) )
+        cdef unused = oarray_r(tspan, &nt, &rtspan)
+        CHKERR(TSSetTimeSpan(self.ts, nt, rtspan))
 
     def getTimeSpan(self) -> ArrayReal:
         """Return the time span.
@@ -1354,7 +1354,7 @@ cdef class TS(Object):
         """
         cdef const PetscReal *rtspan = NULL
         cdef PetscInt   nt = 0
-        CHKERR( TSGetTimeSpan(self.ts, &nt, &rtspan) )
+        CHKERR(TSGetTimeSpan(self.ts, &nt, &rtspan))
         cdef object tspan = array_r(nt, rtspan)
         return tspan
 
@@ -1370,7 +1370,7 @@ cdef class TS(Object):
         """
         cdef PetscInt nt = 0
         cdef PetscVec *sols = NULL
-        CHKERR( TSGetTimeSpanSolutions(self.ts, &nt, &sols) )
+        CHKERR(TSGetTimeSpanSolutions(self.ts, &nt, &sols))
         cdef object sollist = None
         if sols != NULL:
             sollist = [ref_Vec(sols[i]) for i from 0 <= i < nt]
@@ -1389,8 +1389,8 @@ cdef class TS(Object):
 
         """
         cdef SNES snes = SNES()
-        CHKERR( TSGetSNES(self.ts, &snes.snes) )
-        CHKERR( PetscINCREF(snes.obj) )
+        CHKERR(TSGetSNES(self.ts, &snes.snes))
+        CHKERR(PetscINCREF(snes.obj))
         return snes
 
     def getKSP(self) -> KSP:
@@ -1404,8 +1404,8 @@ cdef class TS(Object):
 
         """
         cdef KSP ksp = KSP()
-        CHKERR( TSGetKSP(self.ts, &ksp.ksp) )
-        CHKERR( PetscINCREF(ksp.obj) )
+        CHKERR(TSGetKSP(self.ts, &ksp.ksp))
+        CHKERR(PetscINCREF(ksp.obj))
         return ksp
 
     # --- discretization space ---
@@ -1424,10 +1424,10 @@ cdef class TS(Object):
 
         """
         cdef PetscDM newdm = NULL
-        CHKERR( TSGetDM(self.ts, &newdm) )
+        CHKERR(TSGetDM(self.ts, &newdm))
         cdef DM dm = subtype_DM(newdm)()
         dm.dm = newdm
-        CHKERR( PetscINCREF(dm.obj) )
+        CHKERR(PetscINCREF(dm.obj))
         return dm
 
     def setDM(self, DM dm) -> None:
@@ -1445,7 +1445,7 @@ cdef class TS(Object):
         petsc.TSSetDM
 
         """
-        CHKERR( TSSetDM(self.ts, dm.dm) )
+        CHKERR(TSSetDM(self.ts, dm.dm))
 
     # --- customization ---
 
@@ -1465,7 +1465,7 @@ cdef class TS(Object):
 
         """
         cdef PetscReal rval = asReal(t)
-        CHKERR( TSSetTime(self.ts, rval) )
+        CHKERR(TSSetTime(self.ts, rval))
 
     def getTime(self) -> float:
         """Return the time of the most recently completed step.
@@ -1482,7 +1482,7 @@ cdef class TS(Object):
 
         """
         cdef PetscReal rval = 0
-        CHKERR( TSGetTime(self.ts, &rval) )
+        CHKERR(TSGetTime(self.ts, &rval))
         return toReal(rval)
 
     def getPrevTime(self) -> float:
@@ -1496,7 +1496,7 @@ cdef class TS(Object):
 
         """
         cdef PetscReal rval = 0
-        CHKERR( TSGetPrevTime(self.ts, &rval) )
+        CHKERR(TSGetPrevTime(self.ts, &rval))
         return toReal(rval)
 
     def getSolveTime(self) -> float:
@@ -1513,7 +1513,7 @@ cdef class TS(Object):
 
         """
         cdef PetscReal rval = 0
-        CHKERR( TSGetSolveTime(self.ts, &rval) )
+        CHKERR(TSGetSolveTime(self.ts, &rval))
         return toReal(rval)
 
     def setTimeStep(self, time_step: float) -> None:
@@ -1532,7 +1532,7 @@ cdef class TS(Object):
 
         """
         cdef PetscReal rval = asReal(time_step)
-        CHKERR( TSSetTimeStep(self.ts, rval) )
+        CHKERR(TSSetTimeStep(self.ts, rval))
 
     def getTimeStep(self) -> float:
         """Return the duration of the current timestep.
@@ -1545,7 +1545,7 @@ cdef class TS(Object):
 
         """
         cdef PetscReal tstep = 0
-        CHKERR( TSGetTimeStep(self.ts, &tstep) )
+        CHKERR(TSGetTimeStep(self.ts, &tstep))
         return toReal(tstep)
 
     def setStepNumber(self, step_number: int) -> None:
@@ -1573,7 +1573,7 @@ cdef class TS(Object):
 
         """
         cdef PetscInt ival = asInt(step_number)
-        CHKERR( TSSetStepNumber(self.ts, ival) )
+        CHKERR(TSSetStepNumber(self.ts, ival))
 
     def getStepNumber(self) -> int:
         """Return the number of time steps completed.
@@ -1586,7 +1586,7 @@ cdef class TS(Object):
 
         """
         cdef PetscInt ival = 0
-        CHKERR( TSGetStepNumber(self.ts, &ival) )
+        CHKERR(TSGetStepNumber(self.ts, &ival))
         return toInt(ival)
 
     def setMaxTime(self, max_time: float) -> None:
@@ -1609,7 +1609,7 @@ cdef class TS(Object):
 
         """
         cdef PetscReal rval = asReal(max_time)
-        CHKERR( TSSetMaxTime(self.ts, rval) )
+        CHKERR(TSSetMaxTime(self.ts, rval))
 
     def getMaxTime(self) -> float:
         """Return the maximum (final) time.
@@ -1624,7 +1624,7 @@ cdef class TS(Object):
 
         """
         cdef PetscReal rval = 0
-        CHKERR( TSGetMaxTime(self.ts, &rval) )
+        CHKERR(TSGetMaxTime(self.ts, &rval))
         return toReal(rval)
 
     def setMaxSteps(self, max_steps: int) -> None:
@@ -1645,7 +1645,7 @@ cdef class TS(Object):
 
         """
         cdef PetscInt  ival = asInt(max_steps)
-        CHKERR( TSSetMaxSteps(self.ts, ival) )
+        CHKERR(TSSetMaxSteps(self.ts, ival))
 
     def getMaxSteps(self) -> int:
         """Return the maximum number of steps to use.
@@ -1658,7 +1658,7 @@ cdef class TS(Object):
 
         """
         cdef PetscInt ival = 0
-        CHKERR( TSGetMaxSteps(self.ts, &ival) )
+        CHKERR(TSGetMaxSteps(self.ts, &ival))
         return toInt(ival)
 
     def getSNESIterations(self) -> int:
@@ -1675,7 +1675,7 @@ cdef class TS(Object):
 
         """
         cdef PetscInt n = 0
-        CHKERR( TSGetSNESIterations(self.ts, &n) )
+        CHKERR(TSGetSNESIterations(self.ts, &n))
         return toInt(n)
 
     def getKSPIterations(self) -> int:
@@ -1692,7 +1692,7 @@ cdef class TS(Object):
 
         """
         cdef PetscInt n = 0
-        CHKERR( TSGetKSPIterations(self.ts, &n) )
+        CHKERR(TSGetKSPIterations(self.ts, &n))
         return toInt(n)
 
     def setMaxStepRejections(self, n: int) -> None:
@@ -1715,7 +1715,7 @@ cdef class TS(Object):
 
         """
         cdef PetscInt rej = asInt(n)
-        CHKERR( TSSetMaxStepRejections(self.ts, rej))
+        CHKERR(TSSetMaxStepRejections(self.ts, rej))
 
     def getStepRejections(self) -> int:
         """Return the total number of rejected steps.
@@ -1731,7 +1731,7 @@ cdef class TS(Object):
 
         """
         cdef PetscInt n = 0
-        CHKERR( TSGetStepRejections(self.ts, &n) )
+        CHKERR(TSGetStepRejections(self.ts, &n))
         return toInt(n)
 
     def setMaxSNESFailures(self, n: int) -> None:
@@ -1750,7 +1750,7 @@ cdef class TS(Object):
 
         """
         cdef PetscInt fails = asInt(n)
-        CHKERR( TSSetMaxSNESFailures(self.ts, fails))
+        CHKERR(TSSetMaxSNESFailures(self.ts, fails))
 
     def getSNESFailures(self) -> int:
         """Return the total number of failed `SNES` solves in the `TS`.
@@ -1766,7 +1766,7 @@ cdef class TS(Object):
 
         """
         cdef PetscInt n = 0
-        CHKERR( TSGetSNESFailures(self.ts, &n) )
+        CHKERR(TSGetSNESFailures(self.ts, &n))
         return toInt(n)
 
     def setErrorIfStepFails(self, flag: bool = True) -> None:
@@ -1789,7 +1789,7 @@ cdef class TS(Object):
 
         """
         cdef PetscBool bval = flag
-        CHKERR( TSSetErrorIfStepFails(self.ts, bval))
+        CHKERR(TSSetErrorIfStepFails(self.ts, bval))
 
     def setTolerances(self, rtol: float = None, atol: float = None) -> None:
         """Set tolerances for local truncation error when using an adaptive controller.
@@ -1828,7 +1828,7 @@ cdef class TS(Object):
             vatol = (<Vec>atol).vec
         else:
             ratol = asReal(atol)
-        CHKERR( TSSetTolerances(self.ts, ratol, vatol, rrtol, vrtol) )
+        CHKERR(TSSetTolerances(self.ts, ratol, vatol, rrtol, vrtol))
 
     def getTolerances(self) ->tuple[float, float]:
         """Return the tolerances for local truncation error.
@@ -1851,7 +1851,7 @@ cdef class TS(Object):
         cdef PetscReal ratol = PETSC_DEFAULT
         cdef PetscVec  vrtol = NULL
         cdef PetscVec  vatol = NULL
-        CHKERR( TSGetTolerances(self.ts, &ratol, &vatol, &rrtol, &vrtol) )
+        CHKERR(TSGetTolerances(self.ts, &ratol, &vatol, &rrtol, &vrtol))
         cdef object rtol = None
         if vrtol != NULL:
             rtol = ref_Vec(vrtol)
@@ -1884,7 +1884,7 @@ cdef class TS(Object):
 
         """
         cdef PetscTSExactFinalTimeOption oval = option
-        CHKERR( TSSetExactFinalTime(self.ts, oval) )
+        CHKERR(TSSetExactFinalTime(self.ts, oval))
 
     def setConvergedReason(self, reason: ConvergedReason) -> None:
         """Set the reason for handling the convergence of `solve`.
@@ -1905,7 +1905,7 @@ cdef class TS(Object):
 
         """
         cdef PetscTSConvergedReason cval = reason
-        CHKERR( TSSetConvergedReason(self.ts, cval) )
+        CHKERR(TSSetConvergedReason(self.ts, cval))
 
     def getConvergedReason(self) -> ConvergedReason:
         """Return the reason the `TS` step was stopped.
@@ -1920,7 +1920,7 @@ cdef class TS(Object):
 
         """
         cdef PetscTSConvergedReason reason = TS_CONVERGED_ITERATING
-        CHKERR( TSGetConvergedReason(self.ts, &reason) )
+        CHKERR(TSGetConvergedReason(self.ts, &reason))
         return reason
 
     # --- monitoring ---
@@ -1953,7 +1953,7 @@ cdef class TS(Object):
         if monitorlist is None:
             monitorlist = []
             self.set_attr('__monitor__', monitorlist)
-            CHKERR( TSMonitorSet(self.ts, TS_Monitor, NULL, NULL) )
+            CHKERR(TSMonitorSet(self.ts, TS_Monitor, NULL, NULL))
         if args  is None: args  = ()
         if kargs is None: kargs = {}
         context = (monitor, args, kargs)
@@ -1982,7 +1982,7 @@ cdef class TS(Object):
 
         """
         self.set_attr('__monitor__', None)
-        CHKERR( TSMonitorCancel(self.ts) )
+        CHKERR(TSMonitorCancel(self.ts))
 
     cancelMonitor = monitorCancel
 
@@ -2010,8 +2010,8 @@ cdef class TS(Object):
         cdef PetscVec  uvec = NULL
         if u is not None: uvec = u.vec
         if uvec == NULL:
-            CHKERR( TSGetSolution(self.ts, &uvec) )
-        CHKERR( TSMonitor(self.ts, ival, rval, uvec) )
+            CHKERR(TSGetSolution(self.ts, &uvec))
+        CHKERR(TSMonitor(self.ts, ival, rval, uvec))
 
     # --- event handling ---
 
@@ -2063,12 +2063,12 @@ cdef class TS(Object):
             self.set_attr('__indicator__', (indicator, args, kargs))
             if postevent is not None:
                 self.set_attr('__postevent__', (postevent, args, kargs))
-                CHKERR( TSSetEventHandler(self.ts, nevents, idirs, iterm, TS_Indicator, TS_PostEvent, <void*>NULL) )
+                CHKERR(TSSetEventHandler(self.ts, nevents, idirs, iterm, TS_Indicator, TS_PostEvent, <void*>NULL))
             else:
                 self.set_attr('__postevent__', None)
-                CHKERR( TSSetEventHandler(self.ts, nevents, idirs, iterm, TS_Indicator, NULL, <void*>NULL) )
+                CHKERR(TSSetEventHandler(self.ts, nevents, idirs, iterm, TS_Indicator, NULL, <void*>NULL))
         else:
-            CHKERR( TSSetEventHandler(self.ts, nevents, idirs, iterm, NULL, NULL, <void*>NULL) )
+            CHKERR(TSSetEventHandler(self.ts, nevents, idirs, iterm, NULL, NULL, <void*>NULL))
 
     def setEventTolerances(self, tol: float = None, vtol: Sequence[float] = None) -> None:
         """Set tolerances for event zero crossings when using event handler.
@@ -2101,10 +2101,10 @@ cdef class TS(Object):
         if tol is not None:
             tolr = asReal(tol)
         if vtol is not None:
-            CHKERR( TSGetNumEvents(self.ts, &nevents) )
+            CHKERR(TSGetNumEvents(self.ts, &nevents))
             vtol = iarray_r(vtol, &ntolr,  &vtolr)
             assert ntolr == nevents
-        CHKERR( TSSetEventTolerances(self.ts, tolr, vtolr) )
+        CHKERR(TSSetEventTolerances(self.ts, tolr, vtolr))
 
     def getNumEvents(self) -> int:
         """Return the number of events.
@@ -2117,7 +2117,7 @@ cdef class TS(Object):
 
         """
         cdef PetscInt nevents = 0
-        CHKERR( TSGetNumEvents(self.ts, &nevents) )
+        CHKERR(TSGetNumEvents(self.ts, &nevents))
         return toInt(nevents)
 
     # --- solving ---
@@ -2150,10 +2150,10 @@ cdef class TS(Object):
             if kargs is None: kargs = {}
             context = (prestep, args, kargs)
             self.set_attr('__prestep__', context)
-            CHKERR( TSSetPreStep(self.ts, TS_PreStep) )
+            CHKERR(TSSetPreStep(self.ts, TS_PreStep))
         else:
             self.set_attr('__prestep__', None)
-            CHKERR( TSSetPreStep(self.ts, NULL) )
+            CHKERR(TSSetPreStep(self.ts, NULL))
 
     def getPreStep(self) -> tuple[TSPreStepFunction, tuple[Any, ...] | None, dict[str, Any] | None]:
         """Return the prestep function.
@@ -2194,10 +2194,10 @@ cdef class TS(Object):
             if kargs is None: kargs = {}
             context = (poststep, args, kargs)
             self.set_attr('__poststep__', context)
-            CHKERR( TSSetPostStep(self.ts, TS_PostStep) )
+            CHKERR(TSSetPostStep(self.ts, TS_PostStep))
         else:
             self.set_attr('__poststep__', None)
-            CHKERR( TSSetPostStep(self.ts, NULL) )
+            CHKERR(TSSetPostStep(self.ts, NULL))
 
     def getPostStep(self) -> tuple[TSPostStepFunction, tuple[Any, ...] | None, dict[str, Any] | None]:
         """Return the poststep function."""
@@ -2213,7 +2213,7 @@ cdef class TS(Object):
         petsc.TSSetUp
 
         """
-        CHKERR( TSSetUp(self.ts) )
+        CHKERR(TSSetUp(self.ts))
 
     def reset(self) -> None:
         """Reset the `TS`, removing any allocated vectors and matrices.
@@ -2225,7 +2225,7 @@ cdef class TS(Object):
         petsc.TSReset
 
         """
-        CHKERR( TSReset(self.ts) )
+        CHKERR(TSReset(self.ts))
 
     def step(self) -> None:
         """Take one step.
@@ -2241,7 +2241,7 @@ cdef class TS(Object):
         petsc.TSStep
 
         """
-        CHKERR( TSStep(self.ts) )
+        CHKERR(TSStep(self.ts))
 
     def restartStep(self) -> None:
         """Flag the solver to restart the next step.
@@ -2264,7 +2264,7 @@ cdef class TS(Object):
         petsc.TSRestartStep
 
         """
-        CHKERR( TSRestartStep(self.ts) )
+        CHKERR(TSRestartStep(self.ts))
 
     def rollBack(self) -> None:
         """Roll back one time step.
@@ -2276,7 +2276,7 @@ cdef class TS(Object):
         petsc.TSRollBack
 
         """
-        CHKERR( TSRollBack(self.ts) )
+        CHKERR(TSRollBack(self.ts))
 
     def solve(self, Vec u=None) -> None:
         """Step the requested number of timesteps.
@@ -2295,7 +2295,7 @@ cdef class TS(Object):
         """
         cdef PetscVec uvec=NULL
         if u is not None: uvec = u.vec
-        CHKERR( TSSolve(self.ts, uvec) )
+        CHKERR(TSSolve(self.ts, uvec))
 
     def interpolate(self, t: float, Vec u) -> None:
         """Interpolate the solution to a given time.
@@ -2315,7 +2315,7 @@ cdef class TS(Object):
 
         """
         cdef PetscReal rval = asReal(t)
-        CHKERR( TSInterpolate(self.ts, rval, u.vec) )
+        CHKERR(TSInterpolate(self.ts, rval, u.vec))
 
     def setStepLimits(self, hmin: float, hmax: float) -> None:
         """Set the minimum and maximum allowed step sizes.
@@ -2338,7 +2338,7 @@ cdef class TS(Object):
         cdef PetscReal hminr = toReal(hmin)
         cdef PetscReal hmaxr = toReal(hmax)
         TSGetAdapt(self.ts, &tsadapt)
-        CHKERR( TSAdaptSetStepLimits(tsadapt, hminr, hmaxr) )
+        CHKERR(TSAdaptSetStepLimits(tsadapt, hminr, hmaxr))
 
     def getStepLimits(self) -> tuple[float, float]:
         """Return the minimum and maximum allowed time step sizes.
@@ -2354,7 +2354,7 @@ cdef class TS(Object):
         cdef PetscReal hminr = 0.
         cdef PetscReal hmaxr = 0.
         TSGetAdapt(self.ts, &tsadapt)
-        CHKERR( TSAdaptGetStepLimits(tsadapt, &hminr, &hmaxr) )
+        CHKERR(TSAdaptGetStepLimits(tsadapt, &hminr, &hmaxr))
         return (asReal(hminr), asReal(hmaxr))
 
     # --- Adjoint methods ---
@@ -2401,8 +2401,8 @@ cdef class TS(Object):
 
         """
         cdef Vec cost = Vec()
-        CHKERR( TSGetCostIntegral(self.ts, &cost.vec) )
-        CHKERR( PetscINCREF(cost.obj) )
+        CHKERR(TSGetCostIntegral(self.ts, &cost.vec))
+        CHKERR(PetscINCREF(cost.obj))
         return cost
 
     def setCostGradients(
@@ -2449,7 +2449,7 @@ cdef class TS(Object):
             for i from 0 <= i < n:
                 vecm[i] = (<Vec?>vm[i]).vec
         self.set_attr('__costgradients_memory', (mem1, mem2))
-        CHKERR( TSSetCostGradients(self.ts, n, vecl, vecm) )
+        CHKERR(TSSetCostGradients(self.ts, n, vecl, vecm))
 
     def getCostGradients(self) -> tuple[list[Vec], list[Vec]]:
         """Return the cost gradients.
@@ -2461,10 +2461,10 @@ cdef class TS(Object):
         setCostGradients, petsc.TSGetCostGradients
 
         """
-        cdef PetscInt i = 0, n = 0
+        cdef PetscInt n = 0
         cdef PetscVec *vecl = NULL
         cdef PetscVec *vecm = NULL
-        CHKERR( TSGetCostGradients(self.ts, &n, &vecl, &vecm) )
+        CHKERR(TSGetCostGradients(self.ts, &n, &vecl, &vecm))
         cdef object vl = None, vm = None
         if vecl != NULL:
             vl = [ref_Vec(vecl[i]) for i from 0 <= i < n]
@@ -2505,9 +2505,9 @@ cdef class TS(Object):
             if kargs is None: kargs = {}
             context = (jacobianp, args, kargs)
             self.set_attr('__rhsjacobianp__', context)
-            CHKERR( TSSetRHSJacobianP(self.ts, Amat, TS_RHSJacobianP, <void*>context) )
+            CHKERR(TSSetRHSJacobianP(self.ts, Amat, TS_RHSJacobianP, <void*>context))
         else:
-            CHKERR( TSSetRHSJacobianP(self.ts, Amat, NULL, NULL) )
+            CHKERR(TSSetRHSJacobianP(self.ts, Amat, NULL, NULL))
 
     def createQuadratureTS(self, forward: bool = True) -> TS:
         """Create a sub `TS` that evaluates integrals over time.
@@ -2526,8 +2526,8 @@ cdef class TS(Object):
         """
         cdef TS qts = TS()
         cdef PetscBool fwd = forward
-        CHKERR( TSCreateQuadratureTS(self.ts, fwd, &qts.ts) )
-        CHKERR( PetscINCREF(qts.obj) )
+        CHKERR(TSCreateQuadratureTS(self.ts, fwd, &qts.ts))
+        CHKERR(PetscINCREF(qts.obj))
         return qts
 
     def getQuadratureTS(self) -> tuple[bool, TS]:
@@ -2549,8 +2549,8 @@ cdef class TS(Object):
         """
         cdef TS qts = TS()
         cdef PetscBool fwd = PETSC_FALSE
-        CHKERR( TSGetQuadratureTS(self.ts, &fwd, &qts.ts) )
-        CHKERR( PetscINCREF(qts.obj) )
+        CHKERR(TSGetQuadratureTS(self.ts, &fwd, &qts.ts))
+        CHKERR(PetscINCREF(qts.obj))
         return (toBool(fwd), qts)
 
     def setRHSJacobianP(
@@ -2586,9 +2586,9 @@ cdef class TS(Object):
             if kargs is None: kargs = {}
             context = (rhsjacobianp, args, kargs)
             self.set_attr('__rhsjacobianp__', context)
-            CHKERR( TSSetRHSJacobianP(self.ts, Amat, TS_RHSJacobianP, <void*>context) )
+            CHKERR(TSSetRHSJacobianP(self.ts, Amat, TS_RHSJacobianP, <void*>context))
         else:
-            CHKERR( TSSetRHSJacobianP(self.ts, Amat, NULL, NULL) )
+            CHKERR(TSSetRHSJacobianP(self.ts, Amat, NULL, NULL))
 
     def computeRHSJacobianP(self, t: float, Vec x, Mat J) -> None:
         """Run the user-defined JacobianP function.
@@ -2610,7 +2610,7 @@ cdef class TS(Object):
 
         """
         cdef PetscReal rval = asReal(t)
-        CHKERR( TSComputeRHSJacobianP(self.ts, rval, x.vec, J.mat) )
+        CHKERR(TSComputeRHSJacobianP(self.ts, rval, x.vec, J.mat))
 
     def adjointSetSteps(self, adjoint_steps: int) -> None:
         """Set the number of steps the adjoint solver should take backward in time.
@@ -2628,7 +2628,7 @@ cdef class TS(Object):
 
         """
         cdef PetscInt ival = asInt(adjoint_steps)
-        CHKERR( TSAdjointSetSteps(self.ts, ival) )
+        CHKERR(TSAdjointSetSteps(self.ts, ival))
 
     def adjointSetUp(self) -> None:
         """Set up the internal data structures for the later use of an adjoint solver.
@@ -2652,7 +2652,7 @@ cdef class TS(Object):
         petsc.TSAdjointSolve
 
         """
-        CHKERR( TSAdjointSolve(self.ts) )
+        CHKERR(TSAdjointSolve(self.ts))
 
     def adjointStep(self) -> None:
         """Step one time step backward in the adjoint run.
@@ -2699,10 +2699,10 @@ cdef class TS(Object):
         """
         cdef MPI_Comm ccomm = def_Comm(comm, PETSC_COMM_DEFAULT)
         cdef PetscTS newts = NULL
-        CHKERR( TSCreate(ccomm, &newts) )
-        CHKERR( PetscCLEAR(self.obj) ); self.ts = newts
-        CHKERR( TSSetType(self.ts, TSPYTHON) )
-        CHKERR( TSPythonSetContext(self.ts, <void*>context) )
+        CHKERR(TSCreate(ccomm, &newts))
+        CHKERR(PetscCLEAR(self.obj)); self.ts = newts
+        CHKERR(TSSetType(self.ts, TSPYTHON))
+        CHKERR(TSPythonSetContext(self.ts, <void*>context))
         return self
 
     def setPythonContext(self, context: Any) -> None:
@@ -2715,7 +2715,7 @@ cdef class TS(Object):
         petsc_python_ts, getPythonContext
 
         """
-        CHKERR( TSPythonSetContext(self.ts, <void*>context) )
+        CHKERR(TSPythonSetContext(self.ts, <void*>context))
 
     def getPythonContext(self) -> Any:
         """Return the instance of the class implementing the required Python methods.
@@ -2728,7 +2728,7 @@ cdef class TS(Object):
 
         """
         cdef void *context = NULL
-        CHKERR( TSPythonGetContext(self.ts, &context) )
+        CHKERR(TSPythonGetContext(self.ts, &context))
         if context == NULL: return None
         else: return <object> context
 
@@ -2744,7 +2744,7 @@ cdef class TS(Object):
         """
         cdef const char *cval = NULL
         py_type = str2bytes(py_type, &cval)
-        CHKERR( TSPythonSetType(self.ts, cval) )
+        CHKERR(TSPythonSetType(self.ts, cval))
 
     def getPythonType(self) -> str:
         """Return the fully qualified Python name of the class used by the solver.
@@ -2757,7 +2757,7 @@ cdef class TS(Object):
 
         """
         cdef const char *cval = NULL
-        CHKERR( TSPythonGetType(self.ts, &cval) )
+        CHKERR(TSPythonGetType(self.ts, &cval))
         return bytes2str(cval)
 
     # --- Theta ---
@@ -2782,7 +2782,7 @@ cdef class TS(Object):
 
         """
         cdef PetscReal rval = asReal(theta)
-        CHKERR( TSThetaSetTheta(self.ts, rval) )
+        CHKERR(TSThetaSetTheta(self.ts, rval))
 
     def getTheta(self) -> float:
         """Return the abscissa of the stage in ``(0, 1]`` for `Type.THETA`.
@@ -2795,7 +2795,7 @@ cdef class TS(Object):
 
         """
         cdef PetscReal rval = 0
-        CHKERR( TSThetaGetTheta(self.ts, &rval) )
+        CHKERR(TSThetaGetTheta(self.ts, &rval))
         return toReal(rval)
 
     def setThetaEndpoint(self, flag=True) -> None:
@@ -2814,7 +2814,7 @@ cdef class TS(Object):
 
         """
         cdef PetscBool bval = flag
-        CHKERR( TSThetaSetEndpoint(self.ts, bval) )
+        CHKERR(TSThetaSetEndpoint(self.ts, bval))
 
     def getThetaEndpoint(self) -> bool:
         """Return whether the endpoint variable of `Type.THETA` is used.
@@ -2827,7 +2827,7 @@ cdef class TS(Object):
 
         """
         cdef PetscBool flag = PETSC_FALSE
-        CHKERR( TSThetaGetEndpoint(self.ts, &flag) )
+        CHKERR(TSThetaGetEndpoint(self.ts, &flag))
         return toBool(flag)
 
     # --- Alpha ---
@@ -2852,7 +2852,7 @@ cdef class TS(Object):
 
         """
         cdef PetscReal rval = asReal(radius)
-        CHKERR( TSAlphaSetRadius(self.ts, rval) )
+        CHKERR(TSAlphaSetRadius(self.ts, rval))
 
     def setAlphaParams(
         self,
@@ -2880,12 +2880,12 @@ cdef class TS(Object):
 
         """
         cdef PetscReal rval1 = 0, rval2 = 0, rval3 = 0
-        try: CHKERR( TSAlphaGetParams(self.ts, &rval1, &rval2, &rval3) )
+        try: CHKERR(TSAlphaGetParams(self.ts, &rval1, &rval2, &rval3))
         except PetscError: pass
         if alpha_m is not None: rval1 = asReal(alpha_m)
         if alpha_f is not None: rval2 = asReal(alpha_f)
         if gamma   is not None: rval3 = asReal(gamma)
-        CHKERR( TSAlphaSetParams(self.ts,  rval1,  rval2,  rval3) )
+        CHKERR(TSAlphaSetParams(self.ts,  rval1,  rval2,  rval3))
 
     def getAlphaParams(self) -> tuple[float, float, float]:
         """Return the algorithmic parameters for `Type.ALPHA`.
@@ -2898,7 +2898,7 @@ cdef class TS(Object):
 
         """
         cdef PetscReal rval1 = 0, rval2 = 0, rval3 = 0
-        CHKERR( TSAlphaGetParams(self.ts, &rval1, &rval2, &rval3) )
+        CHKERR(TSAlphaGetParams(self.ts, &rval1, &rval2, &rval3))
         return (toReal(rval1), toReal(rval2), toReal(rval3))
 
     # --- application context ---

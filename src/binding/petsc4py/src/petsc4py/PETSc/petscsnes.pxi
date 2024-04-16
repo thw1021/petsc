@@ -262,7 +262,7 @@ cdef extern from * nogil: # custom.h
 cdef inline SNES ref_SNES(PetscSNES snes):
     cdef SNES ob = <SNES> SNES()
     ob.snes = snes
-    CHKERR( PetscINCREF(ob.obj) )
+    CHKERR(PetscINCREF(ob.obj))
     return ob
 
 # -----------------------------------------------------------------------------
@@ -271,7 +271,7 @@ cdef PetscErrorCode SNES_InitialGuess(
     PetscSNES snes,
     PetscVec  x,
     void      *ctx,
-    ) except PETSC_ERR_PYTHON with gil:
+   ) except PETSC_ERR_PYTHON with gil:
     cdef SNES Snes = ref_SNES(snes)
     cdef Vec  Xvec = ref_Vec(x)
     cdef object context = Snes.get_attr('__initialguess__')
@@ -289,9 +289,9 @@ cdef PetscErrorCode SNES_PreCheck(
     PetscVec  y,
     PetscBool *changed,
     void      *ctx
-    ) except PETSC_ERR_PYTHON with gil:
+   ) except PETSC_ERR_PYTHON with gil:
     cdef PetscSNES snes = NULL
-    CHKERR( SNESLineSearchGetSNES(linesearch, &snes) )
+    CHKERR(SNESLineSearchGetSNES(linesearch, &snes))
     cdef object b = False
     cdef SNES Snes = ref_SNES(snes)
     cdef Vec  Xvec = ref_Vec(x)
@@ -312,7 +312,7 @@ cdef PetscErrorCode SNES_Function(
     PetscVec  x,
     PetscVec  f,
     void      *ctx,
-    ) except PETSC_ERR_PYTHON with gil:
+   ) except PETSC_ERR_PYTHON with gil:
     cdef SNES Snes = ref_SNES(snes)
     cdef Vec  Xvec = ref_Vec(x)
     cdef Vec  Fvec = ref_Vec(f)
@@ -328,7 +328,7 @@ cdef PetscErrorCode SNES_Function(
 cdef PetscErrorCode SNES_Update(
     PetscSNES snes,
     PetscInt  its,
-    ) except PETSC_ERR_PYTHON with gil:
+   ) except PETSC_ERR_PYTHON with gil:
     cdef SNES Snes = ref_SNES(snes)
     cdef object context = Snes.get_attr('__update__')
     assert context is not None and type(context) is tuple # sanity check
@@ -344,7 +344,7 @@ cdef PetscErrorCode SNES_Jacobian(
     PetscMat  J,
     PetscMat  P,
     void      *ctx,
-    ) except PETSC_ERR_PYTHON with gil:
+   ) except PETSC_ERR_PYTHON with gil:
     cdef SNES Snes = ref_SNES(snes)
     cdef Vec  Xvec = ref_Vec(x)
     cdef Mat  Jmat = ref_Mat(J)
@@ -363,7 +363,7 @@ cdef PetscErrorCode SNES_Objective(
     PetscVec  x,
     PetscReal *o,
     void      *ctx,
-    ) except PETSC_ERR_PYTHON with gil:
+   ) except PETSC_ERR_PYTHON with gil:
     cdef SNES Snes = ref_SNES(snes)
     cdef Vec  Xvec = ref_Vec(x)
     cdef object context = Snes.get_attr('__objective__')
@@ -381,7 +381,7 @@ cdef PetscErrorCode SNES_NGS(
     PetscVec  x,
     PetscVec  b,
     void      *ctx,
-    ) except PETSC_ERR_PYTHON with gil:
+   ) except PETSC_ERR_PYTHON with gil:
     cdef SNES Snes = ref_SNES(snes)
     cdef Vec  Xvec = ref_Vec(x)
     cdef Vec  Bvec = ref_Vec(b)
@@ -402,7 +402,7 @@ cdef PetscErrorCode SNES_Converged(
     PetscReal  fnorm,
     PetscSNESConvergedReason *r,
     void       *ctx,
-    ) except PETSC_ERR_PYTHON with gil:
+   ) except PETSC_ERR_PYTHON with gil:
     cdef SNES Snes = ref_SNES(snes)
     cdef object it = toInt(iters)
     cdef object xn = toReal(xnorm)
@@ -426,7 +426,7 @@ cdef PetscErrorCode SNES_Monitor(
     PetscInt  iters,
     PetscReal rnorm,
     void      *ctx,
-    ) except PETSC_ERR_PYTHON with gil:
+   ) except PETSC_ERR_PYTHON with gil:
     cdef SNES Snes = ref_SNES(snes)
     cdef object monitorlist = Snes.get_attr('__monitor__')
     if monitorlist is None: return PETSC_SUCCESS

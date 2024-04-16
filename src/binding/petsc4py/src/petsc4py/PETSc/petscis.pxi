@@ -97,13 +97,13 @@ cdef extern from * nogil:
 cdef inline IS ref_IS(PetscIS iset):
     cdef IS ob = <IS> IS()
     ob.iset = iset
-    CHKERR( PetscINCREF(ob.obj) )
+    CHKERR(PetscINCREF(ob.obj))
     return ob
 
 cdef inline LGMap ref_LGMap(PetscLGMap lgm):
     cdef LGMap ob = <LGMap> LGMap()
     ob.lgm = lgm
-    CHKERR( PetscINCREF(ob.obj) )
+    CHKERR(PetscINCREF(ob.obj))
     return ob
 
 # --------------------------------------------------------------------
@@ -117,7 +117,7 @@ cdef class _IS_buffer:
 
     def __cinit__(self, IS iset):
         cdef PetscIS i = iset.iset
-        CHKERR( PetscINCREF(<PetscObject*>&i) )
+        CHKERR(PetscINCREF(<PetscObject*>&i))
         self.iset = i
         self.size = 0
         self.data = NULL
@@ -125,22 +125,22 @@ cdef class _IS_buffer:
 
     def __dealloc__(self):
         if self.hasarray and self.iset != NULL:
-            CHKERR( ISRestoreIndices(self.iset, &self.data) )
-        CHKERR( ISDestroy(&self.iset) )
+            CHKERR(ISRestoreIndices(self.iset, &self.data))
+        CHKERR(ISDestroy(&self.iset))
 
     #
 
     cdef int acquire(self) except -1:
         if not self.hasarray and self.iset != NULL:
-            CHKERR( ISGetLocalSize(self.iset, &self.size) )
-            CHKERR( ISGetIndices(self.iset, &self.data) )
+            CHKERR(ISGetLocalSize(self.iset, &self.size))
+            CHKERR(ISGetIndices(self.iset, &self.data))
             self.hasarray = 1
         return 0
 
     cdef int release(self) except -1:
         if self.hasarray and self.iset != NULL:
             self.size = 0
-            CHKERR( ISRestoreIndices(self.iset, &self.data) )
+            CHKERR(ISRestoreIndices(self.iset, &self.data))
             self.hasarray = 0
             self.data = NULL
         return 0
@@ -190,7 +190,7 @@ cdef class _IS_buffer:
             p[0] = <void*>self.data
             n = self.size
         elif self.iset != NULL:
-            CHKERR( ISGetLocalSize(self.iset, &n) )
+            CHKERR(ISGetLocalSize(self.iset, &n))
         return <Py_ssize_t>(<size_t>n*sizeof(PetscInt))
 
     def __getsegcount__(self, Py_ssize_t *lenp):
@@ -209,7 +209,7 @@ cdef class _IS_buffer:
         def __get__(self):
             cdef PetscInt n = 0
             if self.iset != NULL:
-                CHKERR( ISGetLocalSize(self.iset, &n) )
+                CHKERR(ISGetLocalSize(self.iset, &n))
             cdef object size = toInt(n)
             cdef dtype descr = PyArray_DescrFromType(NPY_PETSC_INT)
             cdef str typestr = "=%c%d" % (descr.kind, descr.itemsize)

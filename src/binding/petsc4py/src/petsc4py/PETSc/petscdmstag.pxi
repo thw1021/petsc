@@ -235,7 +235,7 @@ cdef inline object toStagBoundary(PetscDMBoundaryType btype):
     elif btype == DM_BOUNDARY_GHOSTED:    return "ghosted"
 
 cdef inline tuple toStagBoundaryTypes(PetscInt dim, PetscDMBoundaryType btx, PetscDMBoundaryType bty, PetscDMBoundaryType btz):
-    if dim == 1: return (toStagBoundary(btx), )
+    if dim == 1: return (toStagBoundary(btx),)
     if dim == 2: return (toStagBoundary(btx), toStagBoundary(bty))
     if dim == 3: return (toStagBoundary(btx), toStagBoundary(bty), toStagBoundary(btz))
 
