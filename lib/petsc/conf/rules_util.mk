@@ -74,12 +74,6 @@ GITCFSRCEXCL = \
 ':!*binding/*' \
 ':!*f90-mod/*'
 
-PETSCRUFF ?= ruff
-PETSCRUFF_SRC ?= 'src/binding/petsc4py/*.py' ':!src/binding/petsc4py/demo/legacy/*'
-RUFF_OPTIONS ?= check
-checkbadPython:
-	-@git --no-pager ls-files -z ${PETSCRUFF_SRC} | xargs -0 ${PETSCRUFF} ${RUFF_OPTIONS}
-
 # Check that copies of external source code that live in the PETSc repository have not been changed by developer
 checkbadFileChange:
 	@git diff --stat --exit-code `lib/petsc/bin/maint/check-merge-branch.sh`..HEAD -- src/sys/yaml/src src/sys/yaml/include src/sys/yaml/License include/petsc/private/valgrind include/petsc/private/kash
