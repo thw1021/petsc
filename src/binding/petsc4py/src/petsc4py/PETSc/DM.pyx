@@ -18,6 +18,7 @@ class DMType(object):
     PRODUCT   = S_(DMPRODUCT)
     STAG      = S_(DMSTAG)
 
+
 class DMBoundaryType(object):
     """`DM` Boundary types."""
     NONE     = DM_BOUNDARY_NONE
@@ -26,7 +27,9 @@ class DMBoundaryType(object):
     PERIODIC = DM_BOUNDARY_PERIODIC
     TWIST    = DM_BOUNDARY_TWIST
 
+
 class DMPolytopeType(object):
+    """The `DM` cell types."""
     POINT              = DM_POLYTOPE_POINT
     SEGMENT            = DM_POLYTOPE_SEGMENT
     POINT_PRISM_TENSOR = DM_POLYTOPE_POINT_PRISM_TENSOR
@@ -45,24 +48,24 @@ class DMPolytopeType(object):
     UNKNOWN_CELL       = DM_POLYTOPE_UNKNOWN_CELL
     UNKNOWN_FACE       = DM_POLYTOPE_UNKNOWN_FACE
 
+
 class DMReorderDefaultFlag(object):
+    """The `DM` reordering default flags."""
     NOTSET = DM_REORDER_DEFAULT_NOTSET
     FALSE  = DM_REORDER_DEFAULT_FALSE
     TRUE   = DM_REORDER_DEFAULT_TRUE
 
 # --------------------------------------------------------------------
 
-cdef class DM(Object):
-    """An object describing a computational grid or mesh.
 
-    """
+cdef class DM(Object):
+    """An object describing a computational grid or mesh."""
 
     Type         = DMType
     BoundaryType = DMBoundaryType
     PolytopeType = DMPolytopeType
 
     ReorderDefaultFlag = DMReorderDefaultFlag
-    """Flag indicating whether `DM` is reordered by default."""
 
     #
 
@@ -264,7 +267,7 @@ cdef class DM(Object):
         cdef PetscInt cdim = asInt(dim)
         CHKERR( DMSetCoordinateDim(self.dm, cdim) )
 
-    def setOptionsPrefix(self, prefix: str) -> None:
+    def setOptionsPrefix(self, prefix: str | None) -> None:
         """Set the prefix used for searching for options in the database.
 
         Logically collective.
@@ -292,7 +295,7 @@ cdef class DM(Object):
         CHKERR( DMGetOptionsPrefix(self.dm, &cval) )
         return bytes2str(cval)
 
-    def appendOptionsPrefix(self, prefix: str) -> None:
+    def appendOptionsPrefix(self, prefix: str | None) -> None:
         """Append to the prefix used for searching for options in the database.
 
         Logically collective.
@@ -334,9 +337,11 @@ cdef class DM(Object):
     # --- application context ---
 
     def setAppCtx(self, appctx):
+        """Set the application context."""
         self.set_attr('__appctx__', appctx)
 
     def getAppCtx(self):
+        """Return the application context."""
         return self.get_attr('__appctx__')
 
     #
@@ -1194,6 +1199,8 @@ cdef class DM(Object):
     def setCoordinateDisc(self, FE disc, project: bool) -> Self:
         """Project coordinates to a different space.
 
+        Collective.
+
         Parameters
         ----------
         disc
@@ -1211,7 +1218,7 @@ cdef class DM(Object):
     def getCoordinatesLocalized(self) -> bool:
         """Check if the coordinates have been localized for cells.
 
-        Collective.
+        Not collective.
 
         See Also
         --------
@@ -1232,7 +1239,7 @@ cdef class DM(Object):
         petsc.DMGetBoundingBox
 
         """
-        cdef PetscInt i,dim=0
+        cdef PetscInt dim=0
         CHKERR( DMGetCoordinateDim(self.dm, &dim) )
         cdef PetscReal gmin[3], gmax[3]
         CHKERR( DMGetBoundingBox(self.dm, gmin, gmax) )
@@ -1249,7 +1256,7 @@ cdef class DM(Object):
         petsc.DMGetLocalBoundingBox
 
         """
-        cdef PetscInt i,dim=0
+        cdef PetscInt dim=0
         CHKERR( DMGetCoordinateDim(self.dm, &dim) )
         cdef PetscReal lmin[3], lmax[3]
         CHKERR( DMGetLocalBoundingBox(self.dm, lmin, lmax) )
@@ -1347,7 +1354,7 @@ cdef class DM(Object):
         cdef Mat A = Mat()
         cdef Vec scale = Vec()
         CHKERR( DMCreateInterpolation(self.dm, dm.dm,
-                                   &A.mat, &scale.vec))
+                                      &A.mat, &scale.vec))
         return (A, scale)
 
     def createInjection(self, DM dm) -> Mat:
@@ -1476,7 +1483,7 @@ cdef class DM(Object):
         """
         cdef PetscInt i, n = asInt(nlevels)
         cdef PetscDM *newdmf = NULL
-        cdef object tmp = oarray_p(empty_p(n), NULL, <void**>&newdmf)
+        cdef object unused = oarray_p(empty_p(n), NULL, <void**>&newdmf)
         CHKERR( DMRefineHierarchy(self.dm, n, newdmf) )
         cdef DM dmf = None
         cdef list hierarchy = []
@@ -1503,7 +1510,7 @@ cdef class DM(Object):
         """
         cdef PetscInt i, n = asInt(nlevels)
         cdef PetscDM *newdmc = NULL
-        cdef object tmp = oarray_p(empty_p(n),NULL, <void**>&newdmc)
+        cdef object unused = oarray_p(empty_p(n), NULL, <void**>&newdmc)
         CHKERR( DMCoarsenHierarchy(self.dm, n, newdmc) )
         cdef DM dmc = None
         cdef list hierarchy = []
@@ -1592,6 +1599,8 @@ cdef class DM(Object):
     ) -> DM:
         """Return a mesh adapted to the specified metric field.
 
+        Collective.
+
         Parameters
         ----------
         metric
@@ -1641,6 +1650,8 @@ cdef class DM(Object):
     def setLocalSection(self, Section sec) -> None:
         """Set the `Section` encoding the local data layout for the `DM`.
 
+        Collective.
+
         See Also
         --------
         petsc.DMSetLocalSection
@@ -1650,6 +1661,8 @@ cdef class DM(Object):
 
     def getLocalSection(self) -> Section:
         """Return the `Section` encoding the local data layout for the `DM`.
+
+        Not collective.
 
         See Also
         --------
@@ -1664,6 +1677,8 @@ cdef class DM(Object):
     def setGlobalSection(self, Section sec) -> None:
         """Set the `Section` encoding the global data layout for the `DM`.
 
+        Collective.
+
         See Also
         --------
         petsc.DMSetGlobalSection
@@ -1673,6 +1688,8 @@ cdef class DM(Object):
 
     def getGlobalSection(self) -> Section:
         """Return the `Section` encoding the global data layout for the `DM`.
+
+        Collective the first time it is called.
 
         See Also
         --------
@@ -1696,6 +1713,8 @@ cdef class DM(Object):
     def createSectionSF(self, Section localsec, Section globalsec) -> None:
         """Create the `SF` encoding the parallel DOF overlap for the `DM`.
 
+        Collective.
+
         Parameters
         ----------
         localsec
@@ -1717,6 +1736,8 @@ cdef class DM(Object):
     def getSectionSF(self) -> SF:
         """Return the `Section` encoding the parallel DOF overlap.
 
+        Collective the first time it is called.
+
         See Also
         --------
         petsc.DMGetSectionSF
@@ -1729,6 +1750,8 @@ cdef class DM(Object):
 
     def setSectionSF(self, SF sf) -> None:
         """Set the `Section` encoding the parallel DOF overlap for the `DM`.
+
+        Logically collective.
 
         See Also
         --------
@@ -1744,6 +1767,8 @@ cdef class DM(Object):
     def getPointSF(self) -> SF:
         """Return the `SF` encoding the parallel DOF overlap for the `DM`.
 
+        Not collective.
+
         See Also
         --------
         petsc.DMGetPointSF
@@ -1756,6 +1781,8 @@ cdef class DM(Object):
 
     def setPointSF(self, SF sf) -> None:
         """Set the `SF` encoding the parallel DOF overlap for the `DM`.
+
+        Logically collective.
 
         See Also
         --------
@@ -2288,16 +2315,20 @@ cdef class DM(Object):
     # --- application context ---
 
     property appctx:
-        def __get__(self):
+        """Application context."""
+        def __get__(self) -> object:
             return self.getAppCtx()
+
         def __set__(self, value):
             self.setAppCtx(value)
 
     # --- discretization space ---
 
     property ds:
-        def __get__(self):
+        """Discrete space."""
+        def __get__(self) -> DS:
             return self.getDS()
+
         def __set__(self, value):
             self.setDS(value)
 

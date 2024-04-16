@@ -17,6 +17,7 @@ if __name__ == '__main__':
     '--with-cxx=clang++',
     '--with-fc=0',
     '--with-debugging=1',
+    '--with-petsc4py=1',
     'CFLAGS=-fsanitize=address,undefined',
     'CXXFLAGS=-fsanitize=address,undefined',
     'LDFLAGS=-lubsan',
