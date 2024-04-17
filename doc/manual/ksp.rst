@@ -438,7 +438,7 @@ can be used by the options database command
     - ``python``
   * - Shell for no ``KSP`` method
     - ``KSPNONE``
-    - ``preonly`` or ``none``
+    - ``none``
 
 
 Note: the bi-conjugate gradient method requires application of both the
