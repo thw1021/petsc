@@ -437,7 +437,7 @@ can be used by the options database command
     - ``KSPPYTHON``
     - ``python``
   * - Shell for no ``KSP`` method
-    - ``KSPPREONLY`` or ``KSPNONE``
+    - ``KSPNONE``
     - ``preonly`` or ``none``
 
 
