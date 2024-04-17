@@ -24,12 +24,6 @@ typedef struct {
   PetscErrorCode (*rhsplocal)(DMDALocalInfo *, void *, void *, void *);
   PetscErrorCode (*jacobianplocal)(DMDALocalInfo *, void *, Mat, Mat, void *);
   void *picardlocalctx;
-
-  /* For arc length continuation defined locally */
-  DMDASNESFunctionFn    *newtonallocal;
-  DMDASNESFunctionVecFn *newtonallocalvec;
-  void                  *newtonallocalctx;
-  InsertMode             newtonallocalimode;
 } DMSNES_DA;
 
 static PetscErrorCode DMSNESDestroy_DMDA(DMSNES sdm)
@@ -116,65 +110,6 @@ static PetscErrorCode SNESComputeFunction_DMDA(SNES snes, Vec X, Vec F, void *ct
   }
   PetscCall(DMRestoreLocalVector(dm, &Xloc));
   if (snes->domainerror) PetscCall(VecSetInf(F));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode SNESComputeNewtonAL_DMDA(SNES snes, Vec X, Vec Q, void *ctx)
-{
-  DM            dm;
-  DMSNES_DA    *dmdasnes = (DMSNES_DA *)ctx;
-  DMDALocalInfo info;
-  Vec           Xloc;
-  void         *x, *q, *rctx;
-
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
-  PetscValidHeaderSpecific(X, VEC_CLASSID, 2);
-  PetscValidHeaderSpecific(Q, VEC_CLASSID, 3);
-  PetscCheck(dmdasnes->newtonallocal || dmdasnes->newtonallocalvec, PetscObjectComm((PetscObject)snes), PETSC_ERR_PLIB, "Corrupt context");
-  PetscCall(SNESGetDM(snes, &dm));
-  PetscCall(DMGetLocalVector(dm, &Xloc));
-  PetscCall(DMGlobalToLocalBegin(dm, X, INSERT_VALUES, Xloc));
-  PetscCall(DMGlobalToLocalEnd(dm, X, INSERT_VALUES, Xloc));
-  PetscCall(DMDAGetLocalInfo(dm, &info));
-  rctx = dmdasnes->newtonallocalctx ? dmdasnes->newtonallocalctx : snes->user;
-  switch (dmdasnes->newtonallocalimode) {
-  case INSERT_VALUES: {
-    PetscCall(PetscLogEventBegin(SNES_FunctionEval, snes, X, Q, 0));
-    if (dmdasnes->newtonallocalvec) PetscCallBack("SNES DMDA local callback function", (*dmdasnes->newtonallocalvec)(&info, Xloc, Q, rctx));
-    else {
-      PetscCall(DMDAVecGetArray(dm, Xloc, &x));
-      PetscCall(DMDAVecGetArray(dm, Q, &q));
-      PetscCallBack("SNES DMDA local callback function", (*dmdasnes->newtonallocal)(&info, x, q, rctx));
-      PetscCall(DMDAVecRestoreArray(dm, Xloc, &x));
-      PetscCall(DMDAVecRestoreArray(dm, Q, &q));
-    }
-    PetscCall(PetscLogEventEnd(SNES_FunctionEval, snes, X, Q, 0));
-  } break;
-  case ADD_VALUES: {
-    Vec QLoc;
-    PetscCall(DMGetLocalVector(dm, &QLoc));
-    PetscCall(VecZeroEntries(QLoc));
-    PetscCall(PetscLogEventBegin(SNES_FunctionEval, snes, X, Q, 0));
-    if (dmdasnes->newtonallocalvec) PetscCallBack("SNES DMDA local callback function", (*dmdasnes->newtonallocalvec)(&info, Xloc, QLoc, rctx));
-    else {
-      PetscCall(DMDAVecGetArray(dm, Xloc, &x));
-      PetscCall(DMDAVecGetArray(dm, QLoc, &q));
-      PetscCallBack("SNES DMDA local callback function", (*dmdasnes->newtonallocal)(&info, x, q, rctx));
-      PetscCall(DMDAVecRestoreArray(dm, Xloc, &x));
-      PetscCall(DMDAVecRestoreArray(dm, QLoc, &q));
-    }
-    PetscCall(PetscLogEventEnd(SNES_FunctionEval, snes, X, Q, 0));
-    PetscCall(VecZeroEntries(Q));
-    PetscCall(DMLocalToGlobalBegin(dm, QLoc, ADD_VALUES, Q));
-    PetscCall(DMLocalToGlobalEnd(dm, QLoc, ADD_VALUES, Q));
-    PetscCall(DMRestoreLocalVector(dm, &QLoc));
-  } break;
-  default:
-    SETERRQ(PetscObjectComm((PetscObject)snes), PETSC_ERR_ARG_INCOMP, "Cannot use imode=%d", (int)dmdasnes->newtonallocalimode);
-  }
-  PetscCall(DMRestoreLocalVector(dm, &Xloc));
-  if (snes->domainerror) PetscCall(VecSetInf(Q));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -632,85 +567,5 @@ PetscErrorCode DMDASNESSetPicardLocal(DM dm, InsertMode imode, PetscErrorCode (*
 
   PetscCall(DMSNESSetPicard(dm, SNESComputePicard_DMDA, SNESComputePicardJacobian_DMDA, dmdasnes));
   PetscCall(DMSNESSetMFFunction(dm, SNESComputeFunction_DMDA, dmdasnes));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@C
-  DMDASNESSetNewtonALLocal - set a local tangent load evaluation function for use with `DMDA` and `SNESNEWTONAL`.
-  See `SNESSetNewtonAL()` for more information on what the this function should compute.
-
-  Logically Collective
-
-  Input Parameters:
-+ dm    - `DM` to associate callback with
-. imode - `INSERT_VALUES` if local function computes owned part, `ADD_VALUES` if it contributes to ghosted part
-. func  - local tangent load evaluation
-- ctx   - optional context for local tangent load evaluation
-
-  Calling sequence of `func`:
-+ info - `DMDALocalInfo` defining the subdomain to evaluate the tangent load on
-. x    - dimensional pointer to state at which to evaluate tangent load (e.g. PetscScalar *x or **x or ***x)
-. f    - dimensional pointer to tangent load, write the tangent load here (e.g. PetscScalar *f or **f or ***f)
-- ctx  - optional context passed above
-
-  Level: intermediate
-
-.seealso: [](ch_snes), `DMDA`, `SNESNEWTONAL`, `DMDASNESSetNewtonALLocal()`, `SNESSetNewtonAL()`, `DMDACreate1d()`, `DMDACreate2d()`, `DMDACreate3d()`
-@*/
-PetscErrorCode DMDASNESSetNewtonALLocal(DM dm, InsertMode imode, PetscErrorCode (*func)(DMDALocalInfo *info, void *x, void *f, void *ctx), void *ctx)
-{
-  DMSNES     sdm;
-  DMSNES_DA *dmdasnes;
-
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
-  PetscCall(DMGetDMSNESWrite(dm, &sdm));
-  PetscCall(DMDASNESGetContext(dm, sdm, &dmdasnes));
-
-  dmdasnes->newtonallocalimode = imode;
-  dmdasnes->newtonallocal      = func;
-  dmdasnes->newtonallocalctx   = ctx;
-
-  PetscCall(DMSNESSetFunction(dm, SNESComputeNewtonAL_DMDA, dmdasnes));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@C
-  DMDASNESSetNewtonALLocalVec - set a local tangent load evaluation function that operates on a local vector for `DMDA` and `SNESNEWTONAL`.
-  See `SNESSetNewtonAL()` for more information on what the this function should compute.
-
-  Logically Collective
-
-  Input Parameters:
-+ dm    - `DM` to associate callback with
-. imode - `INSERT_VALUES` if local function computes owned part, `ADD_VALUES` if it contributes to ghosted part
-. func  - local tangent load evaluation
-- ctx   - optional context for local tangent load evaluation
-
-  Calling sequence of `func`:
-+ info - `DMDALocalInfo` defining the subdomain to evaluate the tangent load on
-. x    - state vector at which to evaluate tangent load
-. f    - tangent load vector
-- ctx  - optional context passed above
-
-  Level: intermediate
-
-.seealso: [](ch_snes), `DMDA`, `SNESNEWTONAL`, `DMDASNESSetNewtonALLocal()`, `SNESSetNewtonAL()`, `DMDACreate1d()`, `DMDACreate2d()`, `DMDACreate3d()`
-@*/
-PetscErrorCode DMDASNESSetNewtonALLocalVec(DM dm, InsertMode imode, PetscErrorCode (*func)(DMDALocalInfo *info, Vec x, Vec f, void *ctx), void *ctx)
-{
-  DMSNES     sdm;
-  DMSNES_DA *dmdasnes;
-
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
-  PetscCall(DMGetDMSNESWrite(dm, &sdm));
-  PetscCall(DMDASNESGetContext(dm, sdm, &dmdasnes));
-
-  dmdasnes->newtonallocalimode = imode;
-  dmdasnes->newtonallocalvec   = func;
-  dmdasnes->newtonallocalctx   = ctx;
-
-  PetscCall(DMSNESSetFunction(dm, SNESComputeNewtonAL_DMDA, dmdasnes));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

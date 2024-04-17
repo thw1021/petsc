@@ -12,7 +12,6 @@ typedef struct {
   PetscReal                  step_size;
   PetscReal                  min_step_size;
   PetscReal                  psisq;
-  PetscReal                  delta_s;
   PetscReal                  lambda_update;
   PetscReal                  lambda;
   SNESNewtonALCorrectionType correction_type;

@@ -191,7 +191,8 @@ PetscErrorCode SNESComputeNewtonAL(SNES snes, Vec X, Vec Q)
   PetscCall(PetscLogEventBegin(SNES_NewtonALEval, snes, X, Q, 0));
   PetscCall(SNESGetDM(snes, &dm));
   PetscCall(DMGetDMSNES(dm, &sdm));
-  PetscCall(DMSNESGetFunction(dm, &computealfunction, &ctx));
+  PetscCall(VecZeroEntries(Q));
+  PetscCall(DMSNESGetNewtonAL(dm, &computealfunction, &ctx));
   PetscCheck(computealfunction || snes->vec_rhs, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "No tangent load function or rhs vector has been set");
   if (computealfunction) {
     PetscCall(VecLockReadPush(X));
@@ -201,8 +202,9 @@ PetscErrorCode SNESComputeNewtonAL(SNES snes, Vec X, Vec Q)
   if (snes->vec_rhs) {
     SNES_NEWTONAL *al = (SNES_NEWTONAL *)snes->data;
 
+    PetscCall(SNESNewtonALScaleRHS(snes));
     PetscCheck(al->vec_rhs_orig, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "No original rhs vector has been set");
-    PetscCall(VecAXPBY(Q, 1, 0, al->vec_rhs_orig));
+    PetscCall(VecAXPY(Q, 1, al->vec_rhs_orig));
   }
   PetscCall(PetscLogEventEnd(SNES_NewtonALEval, snes, X, Q, 0));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -219,7 +221,7 @@ static PetscErrorCode SNESSolve_NEWTONAL(SNES snes)
   SNES_NEWTONAL *data = (SNES_NEWTONAL *)snes->data;
   PetscInt       maxits, maxincs, lits;
   PetscReal      fnorm, xnorm, ynorm, stepSize;
-  Vec            oldDeltaX, DeltaX, deltaX, X, R, Q, deltaX_Q, deltaX_R, W;
+  Vec            DeltaX, deltaX, X, R, Q, deltaX_Q, deltaX_R, W;
 
   PetscFunctionBegin;
   PetscCheck(!snes->xl && !snes->xu && !snes->ops->computevariablebounds, PetscObjectComm((PetscObject)snes), PETSC_ERR_ARG_WRONGSTATE, "SNES solver %s does not support bounds", ((PetscObject)snes)->type_name);
@@ -228,35 +230,31 @@ static PetscErrorCode SNESSolve_NEWTONAL(SNES snes)
   snes->numLinearSolveFailures = 0;
   snes->reason                 = SNES_CONVERGED_ITERATING;
 
-  maxits    = snes->max_its;        /* maximum number of iterations */
-  maxincs   = data->max_steps;      /* maximum number of increments */
-  X         = snes->vec_sol;        /* solution vector */
-  R         = snes->vec_func;       /* residual vector */
-  Q         = snes->work[0];        /* tangent load vector */
-  deltaX_Q  = snes->work[1];        /* variation of X with respect to lambda */
-  deltaX_R  = snes->work[2];        /* linearized error correction */
-  W         = snes->work[3];        /* work vector */
-  DeltaX    = snes->work[4];        /* step from equilibrium */
-  oldDeltaX = snes->work[5];        /* old step from equilibrium */
-  deltaX    = snes->vec_sol_update; /* full newton step */
-  stepSize  = data->step_size;      /* initial step size */
+  maxits   = snes->max_its;        /* maximum number of iterations */
+  maxincs  = data->max_steps;      /* maximum number of increments */
+  X        = snes->vec_sol;        /* solution vector */
+  R        = snes->vec_func;       /* residual vector */
+  Q        = snes->work[0];        /* tangent load vector */
+  deltaX_Q = snes->work[1];        /* variation of X with respect to lambda */
+  deltaX_R = snes->work[2];        /* linearized error correction */
+  W        = snes->work[3];        /* work vector */
+  DeltaX   = snes->work[4];        /* step from equilibrium */
+  deltaX   = snes->vec_sol_update; /* full newton step */
+  stepSize = data->step_size;      /* initial step size */
 
   PetscCall(VecZeroEntries(DeltaX));
 
   /* main incremental-iterative loop */
   for (PetscInt i = 0; i < maxincs; i++) {
-    PetscReal deltaLambda, oldLambdaUpdate = data->lambda_update;
-    if (i > 0) PetscCall(VecCopy(DeltaX, oldDeltaX));
+    PetscReal deltaLambda;
 
     PetscCall(PetscObjectSAWsTakeAccess((PetscObject)snes));
     snes->iter = 0;
     snes->norm = 0.0;
     PetscCall(PetscObjectSAWsGrantAccess((PetscObject)snes));
-    PetscCall(SNESNewtonALScaleRHS(snes));
-    PetscCall(SNESComputeFunction(snes, X, R));
     PetscCall(SNESComputeNewtonAL(snes, X, Q));
-    PetscCall(VecWAXPY(W, 1, R, Q)); /* W <- R + Q */
-
+    PetscCall(SNESComputeFunction(snes, X, R));
+    PetscCall(VecWAXPY(W, 1, R, Q));       /* W <- R + Q */
     PetscCall(VecNorm(W, NORM_2, &fnorm)); /* fnorm <- ||F||  */
     SNESCheckFunctionNorm(snes, fnorm);
 
@@ -270,7 +268,7 @@ static PetscErrorCode SNESSolve_NEWTONAL(SNES snes)
     PetscCall(VecZeroEntries(deltaX));
 
     for (PetscInt j = 0; j < maxits; j++) {
-      PetscReal normsqX_Q;
+      PetscReal normsqX_Q, deltaS = 1;
 
       /* Call general purpose update function */
       PetscTryTypeMethod(snes, update, snes->iter);
@@ -285,7 +283,7 @@ static PetscErrorCode SNESSolve_NEWTONAL(SNES snes)
       PetscCall(PetscInfo(snes, "iter=%" PetscInt_FMT ", tangent load linear solve iterations=%" PetscInt_FMT "\n", snes->iter, lits));
       /* Compute load parameter variation */
       PetscCall(VecDot(deltaX_Q, deltaX_Q, &normsqX_Q));
-      /* On first iter, use predictor */
+      /* On first iter, use predictor. This is the same regardless of corrector scheme. */
       if (j == 0) {
         PetscReal sign = 1.0;
         if (i > 0) {
@@ -307,55 +305,96 @@ static PetscErrorCode SNESSolve_NEWTONAL(SNES snes)
         PetscCall(VecNorm(R, NORM_2, &fnorm));
 
         if (data->correction_type == SNES_NEWTONAL_CORRECTION_NORMAL) {
-          /* Solve a*deltaLambda^2 + b*deltaLambda + c = 0 */
+          /* 
+            Take a step orthogonal to the current incremental update DeltaX.
+            Note, this approach is cheaper than the exact correction, but may exhibit convergence
+            issues due to the iterative trial points not being on the quadratic contraint surface.
+            On the bright side, we always have a real and unique solution for deltaLambda.
+          */
           PetscReal dot1, dot2;
 
           PetscCall(VecDot(DeltaX, deltaX_R, &dot1));
           PetscCall(VecDot(DeltaX, deltaX_Q, &dot2));
-          deltaLambda = -dot1 * (1 / (dot2 + data->psisq * data->lambda_update));
+          deltaLambda = -dot1 / (dot2 + data->psisq * data->lambda_update);
         } else {
-          /* Solve a*deltaLambda^2 + b*deltaLambda + c = 0 */
-          PetscReal a, b, c, psisqLambdaUpdate, discriminant;
+          /* 
+            Solve 
+              a*deltaLambda^2 + b*deltaLambda + c = 0  (*)
+            where
+              a = a0
+              b = b0 + b1*deltaS
+              c = c0 + c1*deltaS + c2*deltaS^2
+            and deltaS is either 1, or the largest value in (0, 1) that satisfies
+              b^2 - 4*a*c = as*deltaS^2 + bs*deltaS + cs >= 0
+            where
+              as = b1^2 - 4*a0*c2
+              bs = 2*b1*b0 - 4*a0*c1
+              cs = b0^2 - 4*a0*c0
+            These "partial corrections" prevent (*) from having complex roots.
+          */
+          PetscReal psisqLambdaUpdate, discriminant;
+          PetscReal a, b, c;
+          PetscReal as, bs, cs;
+          PetscReal a0, b0, b1, c0, c1, c2;
 
           psisqLambdaUpdate = data->psisq * data->lambda_update;
-          a                 = normsqX_Q + data->psisq;
-          PetscCall(VecWAXPY(W, data->delta_s, deltaX_R, DeltaX));
-          PetscCall(VecDot(deltaX_Q, W, &b));
-          b = 2.0 * (b + psisqLambdaUpdate);
-          PetscCall(VecDot(W, W, &c));
-          c = c + psisqLambdaUpdate * data->lambda_update - stepSize * stepSize;
+          a0                = normsqX_Q + data->psisq;
+          PetscCall(VecDot(deltaX_Q, DeltaX, &b0));
+          PetscCall(VecDot(deltaX_Q, deltaX_R, &b1));
+          b0 = 2.0 * (b0 + psisqLambdaUpdate);
+          b1 *= 2.0;
+          PetscCall(VecDot(DeltaX, DeltaX, &c0));
+          c0 = c0 + psisqLambdaUpdate * data->lambda_update - stepSize * stepSize;
+          PetscCall(VecDot(DeltaX, deltaX_R, &c1));
+          c1 *= 2.0;
+          PetscCall(VecDot(deltaX_R, deltaX_R, &c2));
 
-          discriminant = b * b - 4.0 * a * c;
-          PetscCall(PetscInfo(snes, "iter=%" PetscInt_FMT ", a=%18.16e, b=%18.16e, c=%18.16e, discriminant=%18.16e\n", snes->iter, (double)a, (double)b, (double)c, (double)discriminant));
+          as = b1 * b1 - 4 * a0 * c2;
+          bs = 2 * b1 * b0 - 4 * a0 * c1;
+          cs = b0 * b0 - 4 * a0 * c0;
+
+          discriminant = cs + bs * deltaS + as * deltaS * deltaS;
+
           if (discriminant < 0) {
-            /* If the discriminant is negative, we have only complex roots. Shrink step size and retry step. */
-            stepSize *= 0.5;
-            PetscCall(PetscInfo(snes, "iter=%" PetscInt_FMT ", discriminant=%18.16e < 0, shrinking step size to %18.16e\n", snes->iter, (double)discriminant, (double)stepSize));
-            snes->reason = SNES_DIVERGED_AL_STEP_SIZE;
-            break;
+            /* Take deltaS < 1 with the unique root -b/(2*a) */
+            PetscReal t;
+
+            t      = bs / (2 * as);
+            deltaS = -t + PetscSqrtReal(t * t - cs / as);
+            a      = a0;
+            b      = b0 + b1 * deltaS;
+            PetscCall(PetscInfo(snes, "iter=%" PetscInt_FMT ", discriminant=%18.16e < 0, shrinking residual update size to deltaS = %18.16e\n", snes->iter, (double)discriminant, (double)deltaS));
+            deltaLambda = -b / (2.0 * a);
           } else {
+            /* Use deltaS = 1, pick root that is closest to the last point to prevent doubling back */
             PetscReal dlambda1, dlambda2, pmpart, t;
 
-            pmpart   = PetscSqrtReal(discriminant);
-            dlambda1 = (-b - pmpart) / (2.0 * a);
-            dlambda2 = (-b + pmpart) / (2.0 * a);
-            PetscCall(VecDot(DeltaX, deltaX_Q, &t));
-            t           = t + psisqLambdaUpdate;
-            deltaLambda = t * dlambda1 > t * dlambda2 ? dlambda1 : dlambda2;
+            a           = a0;
+            b           = b0 + b1 * deltaS;
+            c           = c0 + c1 * deltaS + c2 * deltaS * deltaS;
+            t           = b / (2.0 * a);
+            pmpart      = PetscSqrtReal(t * t - c / a);
+            dlambda1    = -t - pmpart;
+            dlambda2    = -t + pmpart;
+            deltaLambda = b0 * dlambda1 > b0 * dlambda2 ? dlambda1 : dlambda2;
           }
         }
       }
       PetscCall(PetscObjectSAWsTakeAccess((PetscObject)snes));
+      data->lambda = data->lambda + deltaLambda;
+      if (data->lambda > 1.0) {
+        /* Ensure that lambda = 1 exactly at the end of incremental process. This ensures the final solution matches the problem we want to solve. */
+        deltaLambda  = deltaLambda - (data->lambda - 1);
+        data->lambda = 1.0;
+      }
       data->lambda_update = data->lambda_update + deltaLambda;
-      data->lambda        = data->lambda + deltaLambda;
       PetscCall(PetscObjectSAWsGrantAccess((PetscObject)snes));
       PetscCall(PetscInfo(snes, "iter=%" PetscInt_FMT ", lambda=%18.16e, lambda_update=%18.16e\n", snes->iter, (double)data->lambda, (double)data->lambda_update));
-      PetscCall(VecAXPBYPCZ(deltaX, data->delta_s, deltaLambda, 0, deltaX_R, deltaX_Q));
+      PetscCall(VecAXPBYPCZ(deltaX, deltaS, deltaLambda, 0, deltaX_R, deltaX_Q));
       PetscCall(VecAXPY(DeltaX, 1, deltaX));
       PetscCall(VecAXPY(X, 1, deltaX));
-      PetscCall(SNESNewtonALScaleRHS(snes));
-      PetscCall(SNESComputeFunction(snes, X, R));
       PetscCall(SNESComputeNewtonAL(snes, X, Q));
+      PetscCall(SNESComputeFunction(snes, X, R));
       PetscCall(VecNorm(R, NORM_2, &fnorm));
       PetscCall(VecNorm(X, NORM_2, &xnorm));
       PetscCall(VecNorm(deltaX, NORM_2, &ynorm));
@@ -374,30 +413,20 @@ static PetscErrorCode SNESSolve_NEWTONAL(SNES snes)
       PetscCall(SNESConverged(snes, snes->iter, xnorm, ynorm, fnorm));
       PetscCall(SNESMonitor(snes, snes->iter, snes->norm));
       if (snes->reason) {
-        PetscCall(PetscPrintf(PetscObjectComm((PetscObject)snes), "SNES solve converged reason %s\n", SNESConvergedReasons[snes->reason]));
+        PetscCall(PetscInfo(snes, "Inner SNES solve converged reason %s\n", SNESConvergedReasons[snes->reason]));
         break;
       }
     }
-    if (snes->reason == SNES_DIVERGED_AL_STEP_SIZE) {
-      /* restarting step */
-      i = i - 1;
-      data->lambda -= data->lambda_update;
-      data->lambda_update = 0;
-      PetscCall(VecAXPY(X, -1, DeltaX));
-      if (i > 0) PetscCall(VecCopy(oldDeltaX, DeltaX));
-      else PetscCall(VecZeroEntries(DeltaX));
-      if (stepSize < data->min_step_size) break;
-      snes->reason = SNES_CONVERGED_ITERATING;
-      continue;
-    } else if (snes->reason < 0) {
-      PetscCall(PetscInfo(snes, "SNES solve failed reason %s\n", SNESConvergedReasons[snes->reason]));
+    if (snes->reason < 0) {
+      PetscCall(PetscInfo(snes, "Inner SNES solve failed reason %s\n", SNESConvergedReasons[snes->reason]));
       break;
     }
     if (data->lambda >= 1.0) {
-      snes->iter = i;
+      snes->iter = i + 1;
       break;
     } else if (i == maxincs - 1) {
       snes->reason = SNES_DIVERGED_MAX_IT;
+      snes->iter   = i + 1;
       break;
     } else {
       snes->reason = SNES_CONVERGED_ITERATING;
@@ -423,10 +452,9 @@ static PetscErrorCode SNESSetUp_NEWTONAL(SNES snes)
   SNES_NEWTONAL *data = (SNES_NEWTONAL *)snes->data;
 
   PetscFunctionBegin;
-  PetscCall(SNESSetWorkVecs(snes, 6));
+  PetscCall(SNESSetWorkVecs(snes, 5));
   data->lambda_update = 0.0;
   data->lambda        = 0.0;
-  data->delta_s       = 1.0;
   PetscCall(SNESSetUpMatrices(snes));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

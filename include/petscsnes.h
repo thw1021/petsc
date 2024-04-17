@@ -325,7 +325,6 @@ typedef enum {                       /* converged */
   SNES_DIVERGED_JACOBIAN_DOMAIN      = -10, /* Jacobian calculation does not make sense */
   SNES_DIVERGED_TR_DELTA             = -11,
   SNES_CONVERGED_TR_DELTA_DEPRECATED = -11,
-  SNES_DIVERGED_AL_STEP_SIZE         = -12, /* Quadratic control region too small */
 
   SNES_CONVERGED_ITERATING = 0
 } SNESConvergedReason;
@@ -953,23 +952,19 @@ PETSC_EXTERN PetscErrorCode DMDASNESSetFunctionLocal(DM, InsertMode, DMDASNESFun
 PETSC_EXTERN PetscErrorCode DMDASNESSetJacobianLocal(DM, DMDASNESJacobianFn *, void *);
 PETSC_EXTERN PetscErrorCode DMDASNESSetObjectiveLocal(DM, DMDASNESObjectiveFn *, void *);
 PETSC_EXTERN PetscErrorCode DMDASNESSetPicardLocal(DM, InsertMode, DMDASNESFunctionFn *, DMDASNESJacobianFn, void *);
-PETSC_EXTERN PetscErrorCode DMDASNESSetNewtonALLocal(DM, InsertMode, DMDASNESFunctionFn *, void *);
 
 PETSC_EXTERN PetscErrorCode DMDASNESSetFunctionLocalVec(DM, InsertMode, DMDASNESFunctionVecFn *, void *);
 PETSC_EXTERN PetscErrorCode DMDASNESSetJacobianLocalVec(DM, DMDASNESJacobianVecFn *, void *);
 PETSC_EXTERN PetscErrorCode DMDASNESSetObjectiveLocalVec(DM, DMDASNESObjectiveVecFn *, void *);
-PETSC_EXTERN PetscErrorCode DMDASNESSetNewtonALLocalVec(DM, InsertMode, DMDASNESFunctionVecFn *, void *);
 
 PETSC_EXTERN PetscErrorCode DMSNESSetBoundaryLocal(DM, PetscErrorCode (*)(DM, Vec, void *), void *);
 PETSC_EXTERN PetscErrorCode DMSNESSetObjectiveLocal(DM, PetscErrorCode (*)(DM, Vec, PetscReal *, void *), void *);
 PETSC_EXTERN PetscErrorCode DMSNESSetFunctionLocal(DM, PetscErrorCode (*)(DM, Vec, Vec, void *), void *);
 PETSC_EXTERN PetscErrorCode DMSNESSetJacobianLocal(DM, PetscErrorCode (*)(DM, Vec, Mat, Mat, void *), void *);
-PETSC_EXTERN PetscErrorCode DMSNESSetNewtonALLocal(DM, PetscErrorCode (*)(DM, Vec, Vec, void *), void *);
 PETSC_EXTERN PetscErrorCode DMSNESGetBoundaryLocal(DM, PetscErrorCode (**)(DM, Vec, void *), void **);
 PETSC_EXTERN PetscErrorCode DMSNESGetObjectiveLocal(DM, PetscErrorCode (**)(DM, Vec, PetscReal *, void *), void **);
 PETSC_EXTERN PetscErrorCode DMSNESGetFunctionLocal(DM, PetscErrorCode (**)(DM, Vec, Vec, void *), void **);
 PETSC_EXTERN PetscErrorCode DMSNESGetJacobianLocal(DM, PetscErrorCode (**)(DM, Vec, Mat, Mat, void *), void **);
-PETSC_EXTERN PetscErrorCode DMSNESGetNewtonALLocal(DM, PetscErrorCode (**)(DM, Vec, Vec, void *), void **);
 
 /* Routines for Multiblock solver */
 PETSC_EXTERN PetscErrorCode SNESMultiblockSetFields(SNES, const char[], PetscInt, const PetscInt *);
