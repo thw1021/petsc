@@ -78,12 +78,14 @@ typedef struct {
   PetscReal width;
   PetscReal arc;
   PetscReal ploading;
+  PetscReal load_factor;
 } AppCtx;
 
 PetscErrorCode        InitialGuess(DM, AppCtx *, Vec);
 PetscErrorCode        FormRHS(DM, AppCtx *, Vec);
 PetscErrorCode        FormCoordinates(DM, AppCtx *);
 extern PetscErrorCode NonlinearGS(SNES, Vec, Vec, void *);
+PetscErrorCode        TangentLoad(SNES, Vec, Vec, void *);
 
 int main(int argc, char **argv)
 {
@@ -111,14 +113,15 @@ int main(int argc, char **argv)
   PetscCall(SNESSetNGS(snes, NonlinearGS, &user));
 
   PetscCall(DMDAGetInfo(da, 0, &mx, &my, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE));
-  user.loading  = 0.0;
-  user.arc      = PETSC_PI / 3.;
-  user.mu       = 4.0;
-  user.lambda   = 1.0;
-  user.rad      = 100.0;
-  user.height   = 3.;
-  user.width    = 1.;
-  user.ploading = -5e3;
+  user.loading     = 0.0;
+  user.arc         = PETSC_PI / 3.;
+  user.mu          = 4.0;
+  user.lambda      = 1.0;
+  user.rad         = 100.0;
+  user.height      = 3.;
+  user.width       = 1.;
+  user.ploading    = -5e3;
+  user.load_factor = 1.0;
 
   PetscCall(PetscOptionsGetReal(NULL, NULL, "-arc", &user.arc, NULL));
   PetscCall(PetscOptionsGetReal(NULL, NULL, "-mu", &user.mu, &muflg));
@@ -146,6 +149,17 @@ int main(int argc, char **argv)
   PetscCall(DMDASNESSetFunctionLocal(da, INSERT_VALUES, (PetscErrorCode(*)(DMDALocalInfo *, void *, void *, void *))FormFunctionLocal, &user));
   PetscCall(DMDASNESSetJacobianLocal(da, (DMDASNESJacobianFn *)FormJacobianLocal, &user));
   PetscCall(SNESSetFromOptions(snes));
+  {
+    SNESType  type;
+    PetscBool is_al;
+
+    PetscCall(SNESGetType(snes, &type));
+    PetscCall(PetscStrcmp(type, SNESNEWTONAL, &is_al));
+    if (is_al) {
+      PetscCall(SNESSetNewtonAL(snes, TangentLoad, &user));
+      user.load_factor = 0.0;
+    }
+  }
   PetscCall(FormCoordinates(da, &user));
 
   PetscCall(DMCreateGlobalVector(da, &x));
@@ -452,7 +466,7 @@ void QuadraturePointGeometricJacobian(CoordField *ec, PetscInt qi, PetscInt qj, 
   }
 }
 
-void FormElementJacobian(Field *ex, CoordField *ec, Field *ef, PetscScalar *ej, AppCtx *user)
+void FormElementJacobian(Field *ex, CoordField *ec, Field *ef, Field *eq, PetscScalar *ej, AppCtx *user)
 {
   PetscReal   vol;
   PetscScalar J[9];
@@ -468,6 +482,12 @@ void FormElementJacobian(Field *ex, CoordField *ec, Field *ef, PetscScalar *ej, 
       ef[i][0] = 0.;
       ef[i][1] = 0.;
       ef[i][2] = 0.;
+    }
+  if (eq)
+    for (i = 0; i < NEB; i++) {
+      eq[i][0] = 0.;
+      eq[i][1] = 0.;
+      eq[i][2] = 0.;
     }
   /* loop over quadrature */
   for (qk = 0; qk < NQ; qk++) {
@@ -490,7 +510,19 @@ void FormElementJacobian(Field *ex, CoordField *ec, Field *ef, PetscScalar *ej, 
                 TensorVector(invJ, &grad[3 * bidx], lgrad);
                 /* mu*F : grad phi_{u,v,w} */
                 for (m = 0; m < 3; m++) ef[idx][m] += scl * (lgrad[0] * FS[3 * m + 0] + lgrad[1] * FS[3 * m + 1] + lgrad[2] * FS[3 * m + 2]);
-                ef[idx][1] -= scl * user->loading * vals[bidx];
+                ef[idx][1] -= user->load_factor * scl * user->loading * vals[bidx];
+              }
+            }
+          }
+        }
+        if (eq) {
+          for (kk = 0; kk < NB; kk++) {
+            for (jj = 0; jj < NB; jj++) {
+              for (ii = 0; ii < NB; ii++) {
+                PetscInt idx  = ii + jj * NB + kk * NB * NB;
+                PetscInt bidx = NEB * idx + qi + NQ * qj + NQ * NQ * qk;
+                /* external force vector */
+                eq[idx][1] += scl * user->loading * vals[bidx];
               }
             }
           }
@@ -567,7 +599,7 @@ void FormPBJacobian(PetscInt i, PetscInt j, PetscInt k, Field *ex, CoordField *e
         if (ef) {
           TensorTensor(F, S, FS);
           for (m = 0; m < 3; m++) ef[0][m] += scl * (lgrad[0] * FS[3 * m + 0] + lgrad[1] * FS[3 * m + 1] + lgrad[2] * FS[3 * m + 2]);
-          ef[0][1] -= scl * user->loading * vals[bidx];
+          ef[0][1] -= user->load_factor * scl * user->loading * vals[bidx];
         }
         /* form the jacobian */
         if (ej) {
@@ -659,7 +691,7 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, Field ***x, Mat jacpre, Ma
     for (j = yes; j < yee; j++) {
       for (i = xes; i < xee; i++) {
         GatherElementData(mx, my, mz, x, c, i, j, k, ex, ec, user);
-        FormElementJacobian(ex, ec, NULL, ej, user);
+        FormElementJacobian(ex, ec, NULL, NULL, ej, user);
         ApplyBCsElement(mx, my, mz, i, j, k, ej);
         nrows = 0.;
         for (kk = 0; kk < NB; kk++) {
@@ -775,7 +807,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, Field ***x, Field ***f, vo
     for (j = yes; j < yee; j++) {
       for (i = xes; i < xee; i++) {
         GatherElementData(mx, my, mz, x, c, i, j, k, ex, ec, user);
-        FormElementJacobian(ex, ec, ef, NULL, user);
+        FormElementJacobian(ex, ec, ef, NULL, NULL, user);
         /* put this element's additions into the residuals */
         for (kk = 0; kk < NB; kk++) {
           for (jj = 0; jj < NB; jj++) {
@@ -902,6 +934,98 @@ PetscErrorCode NonlinearGS(SNES snes, Vec X, Vec B, void *ptr)
     PetscCall(DMDAVecRestoreArray(da, Bl, &b));
     PetscCall(DMRestoreLocalVector(da, &Bl));
   }
+  PetscCall(DMDAVecRestoreArray(cda, C, &c));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode TangentLoad(SNES snes, Vec X, Vec Q, void *ptr)
+{
+  /* values for each basis function at each quadrature point */
+  AppCtx  *user = (AppCtx *)ptr;
+  PetscInt xs, ys, zs;
+  PetscInt xm, ym, zm;
+  PetscInt mx, my, mz;
+  DM       da;
+  Vec      Xl, Ql;
+  Field ***x, ***q;
+  PetscInt i, j, k, l;
+  PetscInt ii, jj, kk;
+
+  Field      eq[NEB];
+  Field      ex[NEB];
+  CoordField ec[NEB];
+
+  PetscInt      xes, yes, zes, xee, yee, zee;
+  DM            cda;
+  CoordField ***c;
+  Vec           C;
+
+  PetscFunctionBegin;
+  /* update user context with current load parameter */
+  PetscCall(SNESNewtonALGetLoadParameter(snes, &user->load_factor));
+
+  PetscCall(SNESGetDM(snes, &da));
+  PetscCall(DMGetLocalVector(da, &Xl));
+  PetscCall(DMGetLocalVector(da, &Ql));
+  PetscCall(DMGlobalToLocal(da, X, INSERT_VALUES, Xl));
+
+  PetscCall(DMDAVecGetArray(da, Xl, &x));
+  PetscCall(DMDAVecGetArray(da, Ql, &q));
+
+  PetscCall(DMGetCoordinateDM(da, &cda));
+  PetscCall(DMGetCoordinatesLocal(da, &C));
+  PetscCall(DMDAVecGetArray(cda, C, &c));
+  PetscCall(DMDAGetInfo(da, 0, &mx, &my, &mz, 0, 0, 0, 0, 0, 0, 0, 0, 0));
+  PetscCall(DMDAGetCorners(da, &xs, &ys, &zs, &xm, &ym, &zm));
+
+  /* loop over elements */
+  for (k = zs; k < zs + zm; k++) {
+    for (j = ys; j < ys + ym; j++) {
+      for (i = xs; i < xs + xm; i++) {
+        for (l = 0; l < 3; l++) q[k][j][i][l] = 0.;
+      }
+    }
+  }
+  /* element starts and ends */
+  xes = xs;
+  yes = ys;
+  zes = zs;
+  xee = xs + xm;
+  yee = ys + ym;
+  zee = zs + zm;
+  if (xs > 0) xes = xs - 1;
+  if (ys > 0) yes = ys - 1;
+  if (zs > 0) zes = zs - 1;
+  if (xs + xm == mx) xee = xs + xm - 1;
+  if (ys + ym == my) yee = ys + ym - 1;
+  if (zs + zm == mz) zee = zs + zm - 1;
+  for (k = zes; k < zee; k++) {
+    for (j = yes; j < yee; j++) {
+      for (i = xes; i < xee; i++) {
+        GatherElementData(mx, my, mz, x, c, i, j, k, ex, ec, user);
+        FormElementJacobian(ex, ec, NULL, eq, NULL, user);
+        /* put this element's additions into the residuals */
+        for (kk = 0; kk < NB; kk++) {
+          for (jj = 0; jj < NB; jj++) {
+            for (ii = 0; ii < NB; ii++) {
+              PetscInt idx = ii + jj * NB + kk * NB * NB;
+              if (k + kk >= zs && j + jj >= ys && i + ii >= xs && k + kk < zs + zm && j + jj < ys + ym && i + ii < xs + xm) {
+                if (!OnBoundary(i + ii, j + jj, k + kk, mx, my, mz)) {
+                  for (l = 0; l < 3; l++) q[k + kk][j + jj][i + ii][l] += eq[idx][l];
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  PetscCall(DMDAVecRestoreArray(da, Xl, &x));
+  PetscCall(DMDAVecRestoreArray(da, Ql, &q));
+  PetscCall(VecZeroEntries(Q));
+  PetscCall(DMLocalToGlobal(da, Ql, INSERT_VALUES, Q));
+  PetscCall(DMRestoreLocalVector(da, &Ql));
+  PetscCall(DMRestoreLocalVector(da, &Xl));
   PetscCall(DMDAVecRestoreArray(cda, C, &c));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1034,20 +1158,30 @@ PetscErrorCode DisplayLine(SNES snes, Vec X)
 
 /*TEST
 
-   test:
-      nsize: 2
-      args: -da_refine 2 -pc_type mg -rad 10.0 -young 10. -ploading 0.0 -loading -1. -mg_levels_ksp_max_it 2 -snes_monitor_short -ksp_monitor_short -snes_max_it 7
-      requires: !single
-      timeoutfactor: 3
+test:
+  nsize: 2
+  args: -da_refine 2 -pc_type mg -rad 10.0 -young 10. -ploading 0.0 -loading -1. -mg_levels_ksp_max_it 2 -snes_monitor_short -ksp_monitor_short -snes_max_it 7
+  requires: !single
+  timeoutfactor: 3
 
-   test:
-      suffix: 2
-      args: -da_refine 2 -pc_type mg -rad 10.0 -young 10. -ploading 0.0 -loading -1. -mg_levels_ksp_max_it 2 -snes_monitor_short -ksp_monitor_short -npc_snes_type fas -npc_fas_levels_snes_type ncg -npc_fas_levels_snes_max_it 3 -npc_snes_monitor_short -snes_max_it 2
-      requires: !single
+test:
+  suffix: 2
+  args: -da_refine 2 -pc_type mg -rad 10.0 -young 10. -ploading 0.0 -loading -1. -mg_levels_ksp_max_it 2 -snes_monitor_short -ksp_monitor_short -npc_snes_type fas -npc_fas_levels_snes_type ncg -npc_fas_levels_snes_max_it 3 -npc_snes_monitor_short -snes_max_it 2
+  requires: !single
 
-   test:
-      suffix: 3
-      args: -da_refine 1 -da_overlap 3 -da_local_subdomains 4 -snes_type aspin -rad 10.0 -young 10. -ploading 0.0 -loading -0.5 -snes_monitor_short -ksp_monitor_short -npc_sub_snes_rtol 1e-2 -ksp_rtol 1e-2 -ksp_max_it 14 -snes_converged_reason -snes_max_linear_solve_fail 100 -snes_max_it 4 -npc_sub_ksp_type preonly -npc_sub_pc_type lu
-      requires: !single
+test:
+  suffix: 3
+  args: -da_refine 1 -da_overlap 3 -da_local_subdomains 4 -snes_type aspin -rad 10.0 -young 10. -ploading 0.0 -loading -0.5 -snes_monitor_short -ksp_monitor_short -npc_sub_snes_rtol 1e-2 -ksp_rtol 1e-2 -ksp_max_it 14 -snes_converged_reason -snes_max_linear_solve_fail 100 -snes_max_it 4 -npc_sub_ksp_type preonly -npc_sub_pc_type lu
+  requires: !single
+
+test:
+  suffix: 4
+  args: -da_refine 2 -pc_type mg -rad 10.0 -young 10. -ploading -1. -loading -1. -mg_levels_ksp_max_it 2 -snes_monitor_short -ksp_monitor_short -snes_type newtonal -snes_newtonal_step_size 30 -ksp_rtol 1e-4
+  requires: !single
+
+test:
+  suffix: 5
+  args: -da_refine 2 -pc_type mg -rad 10.0 -young 10. -ploading -1. -loading -1. -mg_levels_ksp_max_it 2 -snes_monitor_short -ksp_monitor_short -snes_type newtonal -snes_newtonal_step_size 30 -snes_newtonal_correction_type normal -ksp_rtol 1e-4
+  requires: !single
 
 TEST*/
