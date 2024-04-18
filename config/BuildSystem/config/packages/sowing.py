@@ -8,7 +8,7 @@ def noCheck(command, status, output, error):
 class Configure(config.package.GNUPackage):
   def __init__(self, framework):
     config.package.GNUPackage.__init__(self, framework)
-    self.minversion        = '1.1.26.8'
+    self.minversion        = '1.26.8'
     self.gitcommit         = 'v1.1.26-p8'
     self.download          = ['git://https://bitbucket.org/petsc/pkg-sowing.git','https://bitbucket.org/petsc/pkg-sowing/get/'+self.gitcommit+'.tar.gz']
     self.downloaddirnames  = ['petsc-pkg-sowing']
@@ -54,6 +54,7 @@ class Configure(config.package.GNUPackage):
 
   def checkBfortVersion(self):
     '''Check if the bfort version is recent enough'''
+    self.logPrint("Checking bfort version\n")
     try:
       import re
       (output, error, status) = config.base.Configure.executeShellCommand(self.bfort+' -version', checkCommand=noCheck, log = self.log)
@@ -67,7 +68,7 @@ class Configure(config.package.GNUPackage):
          msg = os.path.join(self.petscdir.dir,self.arch,'lib','petsc','conf','pkg.conf.sowing')
       raise RuntimeError('The '+self.bfort+' version check failed:\nlikely the bfort is broken/outdated.\nTry removing '+msg+'\nThen rerun ./configure\nThe error message from the failed test was:'+str(e))
     version = tuple(map(int, self.minversion.split('.')))
-    if foundversion < version:
+    if tuple(map(int, self.foundversion.split('.'))) < version:
       raise RuntimeError(self.bfort+' version '+".".join(map(str,foundversion))+' is older than required '+self.minversion+'.\nRun ./configure with --download-sowing or install a new version of Sowing')
     return
 
