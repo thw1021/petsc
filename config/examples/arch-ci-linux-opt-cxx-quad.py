@@ -19,6 +19,7 @@ configure_options = [
   '--with-mpi-f90module-visibility=0',
   '--with-strict-petscerrorcode',
   '--with-coverage',
+  '--download-sowing',
   ]
 
 if __name__ == '__main__':

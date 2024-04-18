@@ -16,6 +16,7 @@ configure_options = [
   '--download-bison',
   '--download-revolve=1',
   '--with-strict-petscerrorcode',
+  '--download-sowing',
   ]
 
 if __name__ == '__main__':

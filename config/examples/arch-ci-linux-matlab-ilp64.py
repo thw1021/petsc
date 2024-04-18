@@ -37,5 +37,6 @@ if __name__ == '__main__':
     '--with-ssl=0',
     '--with-coverage=1',
     '--with-strict-petscerrorcode',
+    '--download-sowing',
   ]
   configure.petsc_configure(configure_options)
