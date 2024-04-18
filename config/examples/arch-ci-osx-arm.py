@@ -20,7 +20,8 @@ configure_options = [
   '--with-f2cblaslapack-fp16-bindings=1',
   #'--with-coverage',
   '--with-strict-petscerrorcode',
-  ]
+  '--download-sowing',
+]
 
 if __name__ == '__main__':
   import sys,os

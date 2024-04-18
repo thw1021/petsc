@@ -49,7 +49,8 @@ configure_options = [
   #'--download-spai=1',
   #'--with-coverage',
   '--with-strict-petscerrorcode',
-  ]
+  '--download-sowing',
+]
 
 if __name__ == '__main__':
   import sys,os

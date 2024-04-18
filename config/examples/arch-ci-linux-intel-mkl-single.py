@@ -28,5 +28,6 @@ if __name__ == '__main__':
     '--download-parmetis',
     '--download-hypre',
     '--with-strict-petscerrorcode',
+    '--download-sowing',    
   ]
   configure.petsc_configure(configure_options)
