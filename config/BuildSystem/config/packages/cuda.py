@@ -116,6 +116,8 @@ class Configure(config.package.Package):
 
   def cmakeArch(self):
     # CMake supports 'all', 'all-major', 'native', and a semicolon-separated list of numbers
+    if not hasattr(self,'cudaArch'):
+      raise RuntimeError('A package you requested requires the CUDA Arch which PETSc could not determine automatically. Rerun ./configure with the additional option --with-cuda-arch=value')
     return self.cudaArch.replace(',', ';')
 
   def setupDependencies(self, framework):
