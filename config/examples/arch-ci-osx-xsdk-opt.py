@@ -17,7 +17,7 @@ configure_options = [
   '--download-eigen',
   #'--with-coverage',
   '--with-strict-petscerrorcode=0',
-  ]
+]
 
 if __name__ == '__main__':
   import sys,os

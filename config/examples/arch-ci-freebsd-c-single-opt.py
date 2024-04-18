@@ -16,7 +16,8 @@ configure_options = [
   '--download-hypre',
   '--download-cmake',  # needed by metis/parmetis
   '--with-strict-petscerrorcode',
-]
+  '--download-sowing',
+  ]
 
 if __name__ == '__main__':
   import sys,os

@@ -32,6 +32,7 @@ configure_options = [
   '--download-fblaslapack=1',
   '--with-strict-petscerrorcode',
   '--with-coverage',
+  '--download-sowing',  
   ]
 
 if __name__ == '__main__':

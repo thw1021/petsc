@@ -58,6 +58,7 @@ configure_options = [
   '--download-mpi4py',
   '--with-petsc4py',
   '--with-debugging',
+  '--download-sowing',
   ]
 
 if __name__ == '__main__':
