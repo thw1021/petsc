@@ -13,6 +13,7 @@ configure_options = [
   '--with-mpi=0',
   '--with-batch',
   '--with-strict-petscerrorcode',
+  '--download-sowing',  
   ]
 
 if __name__ == '__main__':
