@@ -19,5 +19,6 @@ if __name__ == '__main__':
     '--with-mpiexec=/cygdrive/c/PROGRA~1/MICROS~2/Bin/mpiexec',
     '--with-shared-libraries=0',
     '--with-strict-petscerrorcode',
+    '--download-sowing',    
   ]
   configure.petsc_configure(configure_options)

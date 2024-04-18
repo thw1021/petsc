@@ -23,5 +23,6 @@ if __name__ == '__main__':
     '--download-superlu_dist=1',
     '--with-strict-petscerrorcode',
     '--with-coverage',
+    '--download-sowing',    
   ]
   configure.petsc_configure(configure_options)

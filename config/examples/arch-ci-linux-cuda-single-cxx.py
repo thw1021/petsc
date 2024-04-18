@@ -32,6 +32,7 @@ if __name__ == '__main__':
     # on Mac OS X, MSVC on Windows), you must set -ccbin appropriately in CUDAFLAGS, as in the example for PGI below:
     # 'CUDAFLAGS=-ccbin pgc++',
     '--with-strict-petscerrorcode',
+    '--download-sowing',    
   ]
 
   configure.petsc_configure(configure_options)
