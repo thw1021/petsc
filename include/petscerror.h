@@ -152,7 +152,7 @@ M*/
   } while (0)
 
 /*MC
-  PetscCheck - Check that a particular condition is true
+  PetscCheck - Check that a particular condition is true, if not true - set and return errorcode
 
   Synopsis:
   #include <petscerror.h>
