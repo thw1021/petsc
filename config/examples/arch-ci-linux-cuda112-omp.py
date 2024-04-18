@@ -23,6 +23,7 @@ if __name__ == '__main__':
     '--download-hypre-configure-arguments=--enable-unified-memory',
     '--with-strict-petscerrorcode',
     #'--with-coverage',
+    '--download-sowing',    
   ]
 
   configure.petsc_configure(configure_options)

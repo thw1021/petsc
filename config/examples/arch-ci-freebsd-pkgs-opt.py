@@ -31,6 +31,7 @@ configure_options = [
   '--download-revolve=1',
   '--with-strict-petscerrorcode',
   '--with-fortran-bindings-inplace',
+  '--download-sowing',
   ]
 
 if __name__ == '__main__':
