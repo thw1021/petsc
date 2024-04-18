@@ -27,5 +27,6 @@ if __name__ == '__main__':
     '--with-shared-libraries=0',
     '--with-mpi-f90module-visibility=0',
     '--with-strict-petscerrorcode',
+    '--download-sowing',
   ]
   configure.petsc_configure(configure_options)

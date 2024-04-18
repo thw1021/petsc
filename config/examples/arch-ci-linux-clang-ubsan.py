@@ -21,6 +21,7 @@ if __name__ == '__main__':
     'CXXFLAGS=-fsanitize=address,undefined',
     'LDFLAGS=-lubsan',
     '--with-strict-petscerrorcode',
+    '--download-sowing',    
   ]
   configure.petsc_configure(configure_options)
 

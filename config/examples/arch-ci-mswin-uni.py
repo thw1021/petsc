@@ -17,6 +17,7 @@ if __name__ == '__main__':
     '--with-fc=0',
     '--with-mpi=0',
     '--with-strict-petscerrorcode',
+    '--download-sowing',
   ]
   configure.petsc_configure(configure_options)
 
