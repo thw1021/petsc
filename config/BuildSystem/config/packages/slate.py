@@ -39,7 +39,7 @@ class Configure(config.package.CMakePackage):
 
     if self.cuda.found:
       args.append('-Dgpu_backend=cuda')
-      self.cuda.cmakeSetCUDAArch(args)
+      args.extend(self.cuda.getCmakeCUDAArchFlag())
     elif self.hip.found:
       args.append('-Dgpu_backend=hip')
       args.append('-DCMAKE_HIP_ARCHITECTURES="'+self.hip.hipArch+'"') # cmake supports format like "gfx801;gfx900"

@@ -53,7 +53,7 @@ class Configure(config.package.CMakePackage):
     if self.cuda.found:
       GPUBackend = 'CUDA'
       # Prefer cmake options instead of -DAMReX_CUDA_ARCH
-      self.cuda.cmakeSetCUDAArch(args)
+      args.extend(self.cuda.getCmakeCUDAArchFlag())
     elif self.hip.found:
       GPUBackend = 'HIP'
       args.append('-DCMAKE_HIP_ARCHITECTURES="'+self.hip.hipArch+'"')
