@@ -28,6 +28,7 @@ if __name__ == '__main__':
     '--with-sycl=1',
     '--with-syclc=icpx', # dpcpp is deprecated by Intel. One should use 'icpx -fsycl' to compile sycl code. petsc handles that automatically.
     '--with-strict-petscerrorcode',
+    '--download-sowing',
   ]
 
   configure.petsc_configure(configure_options)

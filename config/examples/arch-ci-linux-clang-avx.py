@@ -26,5 +26,6 @@ if __name__ == '__main__':
     '--with-mpi-f90module-visibility=0',
     '--with-strict-petscerrorcode',
     '--with-coverage',
+    '--download-sowing',    
   ]
   configure.petsc_configure(configure_options)

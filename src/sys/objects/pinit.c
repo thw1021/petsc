@@ -84,7 +84,7 @@ extern PetscInt PetscNumBLASThreads;
 /*@C
   PetscInitializeNoPointers - Calls PetscInitialize() from C/C++ without the pointers to argc and args
 
-  Collective
+  Collective, No Fortran Support
 
   Input Parameters:
 + argc     - number of args
@@ -96,7 +96,7 @@ extern PetscInt PetscNumBLASThreads;
 
   Notes:
   this is called only by the PETSc Julia interface. Even though it might start MPI it sets the flag to
-  indicate that it did NOT start MPI so that the PetscFinalize() does not end MPI, thus allowing PetscInitialize() to
+  indicate that it did NOT start MPI so that the `PetscFinalize()` does not end MPI, thus allowing `PetscInitialize()` to
   be called multiple times from Julia without the problem of trying to initialize MPI more than once.
 
   Developer Notes:
@@ -501,7 +501,7 @@ PetscErrorCode PetscGetProgramName(char name[], size_t len)
   PetscGetArgs - Allows you to access the raw command line arguments anywhere
   after PetscInitialize() is called but before `PetscFinalize()`.
 
-  Not Collective
+  Not Collective, No Fortran Support
 
   Output Parameters:
 + argc - count of number of command line arguments
@@ -530,7 +530,7 @@ PetscErrorCode PetscGetArgs(int *argc, char ***args)
   PetscGetArguments - Allows you to access the  command line arguments anywhere
   after `PetscInitialize()` is called but before `PetscFinalize()`.
 
-  Not Collective
+  Not Collective, No Fortran Support
 
   Output Parameter:
 . args - the command line arguments
@@ -561,7 +561,7 @@ PetscErrorCode PetscGetArguments(char ***args)
 /*@C
   PetscFreeArguments - Frees the memory obtained with `PetscGetArguments()`
 
-  Not Collective
+  Not Collective, No Fortran Support
 
   Output Parameter:
 . args - the command line arguments

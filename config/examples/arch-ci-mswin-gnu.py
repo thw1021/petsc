@@ -12,6 +12,7 @@ configure_options = [
   '--with-visibility=0',
   'FFLAGS=-fno-backtrace -ffree-line-length-0',
   '--with-strict-petscerrorcode',
+  '--download-sowing',
   ]
 
 if __name__ == '__main__':
