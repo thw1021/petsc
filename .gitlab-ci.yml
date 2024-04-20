@@ -877,7 +877,7 @@ linux-analyzer:
     - printf "./config/examples/${TEST_ARCH}.py\n"
     - cat ./config/examples/${TEST_ARCH}.py
     - ./config/examples/${TEST_ARCH}.py
-    - make LINTER_OPTIONS="${LINTER_OPTIONS}" test-lint
+    - make LINTER_OPTIONS="${LINTER_OPTIONS}" test-lint REPLACE=1
     - make V=3 LINTER_OPTIONS="${LINTER_OPTIONS} -- ./src" lint
   variables:
     TEST_ARCH: arch-ci-linux-analyzer
