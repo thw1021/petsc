@@ -32,6 +32,7 @@ configure_options = [
   '--with-strict-petscerrorcode',
   '--with-coverage',
   '--with-fortran-bindings-inplace',
+  '--download-sowing',
   ]
 
 if __name__ == '__main__':

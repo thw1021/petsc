@@ -21,6 +21,7 @@ configure_options = [
   '--with-x=0',
   '--download-mpich',
   '--download-fblaslapack',
+  '--download-sowing',
   ]
 
 if __name__ == '__main__':

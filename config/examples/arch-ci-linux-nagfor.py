@@ -10,6 +10,7 @@ configure_options = [
   '--with-fc=petscnagfor',
   '--with-strict-petscerrorcode',
   '--with-coverage',
+  '--download-sowing',
 ]
 
 if __name__ == '__main__':

@@ -27,6 +27,7 @@ configure_options = [
   # limiting to C++17 because maybe it *is* the compilers fault this time.
   '--with-cxx-dialect=17',
   '--with-strict-petscerrorcode',
+  '--download-sowing',
   ]
 
 if __name__ == '__main__':

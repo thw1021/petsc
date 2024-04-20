@@ -48,6 +48,7 @@ if __name__ == '__main__':
     '--download-butterflypack',
     '--download-strumpack',
     '--with-strict-petscerrorcode',
+    '--download-sowing',    
   ]
 
   configure.petsc_configure(configure_options)

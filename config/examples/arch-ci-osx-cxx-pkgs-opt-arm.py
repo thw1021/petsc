@@ -63,6 +63,7 @@ configure_options = [
   '--download-pnetcdf',
   '--download-zlib',
   '--with-strict-petscerrorcode',
+  '--download-sowing',  
   ]
 
 if __name__ == '__main__':
