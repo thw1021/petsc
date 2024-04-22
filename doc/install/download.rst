@@ -83,7 +83,7 @@ Note: Release Schedule
 
 We intend to provide new releases every 6 months, and patch updates to current release every month.
 
-New releases (for example, 3.20.0, 3.21.0, 3.22.0, etc.):
+New releases (for example: 3.20.0, 3.21.0, 3.22.0, etc.):
 
 - March (end of the month)
 - September (end of the month)
