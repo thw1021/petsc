@@ -78,8 +78,8 @@ More details on contributing to PETSc development are at :any:`ch_contributing`.
 the documentation, which is largely the same as the release documentation is `available <https://petsc.org/main>`__.
 
 
-Note: Release Schedule
-======================
+Release Schedule
+================
 
 We intend to provide new releases every 6 months, and patch updates to current release every month.
 
