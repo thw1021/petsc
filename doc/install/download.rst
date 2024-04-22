@@ -92,5 +92,5 @@ New patch updates (for example: 3.21.1, 2.21.2, 3.21.3 etc.):
 
 - Last week of every month (or first week on next month - if delayed)
 
-And with a new release of PETSc the old version will no longer get patch updates. i.e When 3.22.0 is released, bug fixes
-and any updates will go to 3.22.x - and petsc-3.21, petsc-3.20 etc will not get any additional patch updates.
+And with a new release of PETSc the old version will no longer get patch updates. I.e., when 3.22.0 is released, bug fixes
+and any updates will go to 3.22.x - and petsc-3.21, petsc-3.20, etc., will not get any additional patch updates.
