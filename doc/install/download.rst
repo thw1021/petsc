@@ -89,6 +89,7 @@ New releases (for example, 3.20.0, 3.21.0, 3.22.0):
 - September (end of the month)
 
 New patch updates (for example: 3.21.1, 2.21.2, 3.21.3 etc)
+
 - Last week of every month (or first week on next month - if delayed)
 
 And with a new release of PETSc the old version will no longer get patch updates. i.e When 3.22.0 is released, bug fixes
