@@ -14,6 +14,9 @@ typedef struct {
   PetscReal                  psisq;
   PetscReal                  lambda_update;
   PetscReal                  lambda;
+  PetscReal                  lambda_max;
+  PetscReal                  lambda_min;
+  PetscBool                  scale_rhs;
   SNESNewtonALCorrectionType correction_type;
 
   Vec vec_rhs_orig;

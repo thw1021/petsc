@@ -141,7 +141,7 @@ static PetscErrorCode SNESNewtonALScaleRHS(SNES snes)
   PetscReal      lambda;
 
   PetscFunctionBegin;
-  if (!snes->vec_rhs) PetscFunctionReturn(PETSC_SUCCESS);
+  if (!snes->vec_rhs || !al->scale_rhs) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(SNESNewtonALGetLoadParameter(snes, &lambda));
   if (!al->vec_rhs_orig) {
     PetscCall(VecDuplicate(snes->vec_rhs, &al->vec_rhs_orig));
@@ -149,6 +149,18 @@ static PetscErrorCode SNESNewtonALScaleRHS(SNES snes)
     PetscCall(VecScale(snes->vec_rhs, lambda));
   } else {
     PetscCall(VecAXPBY(snes->vec_rhs, lambda, 0.0, al->vec_rhs_orig));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode SNESNewtonALResetRHS(SNES snes)
+{
+  SNES_NEWTONAL *al = (SNES_NEWTONAL *)snes->data;
+
+  PetscFunctionBegin;
+  if (al->vec_rhs_orig) {
+    PetscCall(VecCopy(al->vec_rhs_orig, snes->vec_rhs));
+    PetscCall(VecDestroy(&al->vec_rhs_orig));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -179,6 +191,7 @@ PetscErrorCode SNESComputeNewtonAL(SNES snes, Vec X, Vec Q)
   DMSNES          sdm;
   void           *ctx;
   SNESFunctionFn *computealfunction;
+  SNES_NEWTONAL  *al;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
@@ -187,21 +200,20 @@ PetscErrorCode SNESComputeNewtonAL(SNES snes, Vec X, Vec Q)
   PetscCheckSameComm(snes, 1, X, 2);
   PetscCheckSameComm(snes, 1, Q, 3);
   PetscCall(VecValidValues_Internal(X, 2, PETSC_TRUE));
+  al = (SNES_NEWTONAL *)snes->data;
 
   PetscCall(PetscLogEventBegin(SNES_NewtonALEval, snes, X, Q, 0));
   PetscCall(SNESGetDM(snes, &dm));
   PetscCall(DMGetDMSNES(dm, &sdm));
   PetscCall(VecZeroEntries(Q));
   PetscCall(DMSNESGetNewtonAL(dm, &computealfunction, &ctx));
-  PetscCheck(computealfunction || snes->vec_rhs, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "No tangent load function or rhs vector has been set");
+  PetscCheck(computealfunction || (snes->vec_rhs && al->scale_rhs), PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "No tangent load function or rhs vector has been set");
   if (computealfunction) {
     PetscCall(VecLockReadPush(X));
     PetscCallBack("SNES callback NewtonAL tangent load function", (*computealfunction)(snes, X, Q, ctx));
     PetscCall(VecLockReadPop(X));
   }
-  if (snes->vec_rhs) {
-    SNES_NEWTONAL *al = (SNES_NEWTONAL *)snes->data;
-
+  if (snes->vec_rhs && al->scale_rhs) {
     PetscCall(SNESNewtonALScaleRHS(snes));
     PetscCheck(al->vec_rhs_orig, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "No original rhs vector has been set");
     PetscCall(VecAXPY(Q, 1, al->vec_rhs_orig));
@@ -245,7 +257,7 @@ static PetscErrorCode SNESSolve_NEWTONAL(SNES snes)
   PetscCall(VecZeroEntries(DeltaX));
 
   /* main incremental-iterative loop */
-  for (PetscInt i = 0; i < maxincs; i++) {
+  for (PetscInt i = 0; i < maxincs || maxincs < 0; i++) {
     PetscReal deltaLambda;
 
     PetscCall(PetscObjectSAWsTakeAccess((PetscObject)snes));
@@ -255,7 +267,7 @@ static PetscErrorCode SNESSolve_NEWTONAL(SNES snes)
     PetscCall(SNESComputeNewtonAL(snes, X, Q));
     PetscCall(SNESComputeFunction(snes, X, R));
     PetscCall(VecWAXPY(W, 1, R, Q));       /* W <- R + Q */
-    PetscCall(VecNorm(W, NORM_2, &fnorm)); /* fnorm <- ||F||  */
+    PetscCall(VecNorm(W, NORM_2, &fnorm)); /* fnorm <- ||W|| */
     SNESCheckFunctionNorm(snes, fnorm);
 
     /* Monitor convergence */
@@ -382,18 +394,26 @@ static PetscErrorCode SNESSolve_NEWTONAL(SNES snes)
       }
       PetscCall(PetscObjectSAWsTakeAccess((PetscObject)snes));
       data->lambda = data->lambda + deltaLambda;
-      if (data->lambda > 1.0) {
-        /* Ensure that lambda = 1 exactly at the end of incremental process. This ensures the final solution matches the problem we want to solve. */
-        deltaLambda  = deltaLambda - (data->lambda - 1);
-        data->lambda = 1.0;
+      if (data->lambda > data->lambda_max) {
+        /* Ensure that lambda = lambda_max exactly at the end of incremental process. This ensures the final solution matches the problem we want to solve. */
+        deltaLambda  = deltaLambda - (data->lambda - data->lambda_max);
+        data->lambda = data->lambda_max;
+      }
+      if (data->lambda < data->lambda_min) {
+        /* Ensure that lambda >= lambda_min. This prevents some potential oscillatory behavior. */
+        deltaLambda  = deltaLambda - (data->lambda - data->lambda_min);
+        data->lambda = data->lambda_min;
       }
       data->lambda_update = data->lambda_update + deltaLambda;
       PetscCall(PetscObjectSAWsGrantAccess((PetscObject)snes));
       PetscCall(PetscInfo(snes, "iter=%" PetscInt_FMT ", lambda=%18.16e, lambda_update=%18.16e\n", snes->iter, (double)data->lambda, (double)data->lambda_update));
+      /* deltaX = deltaS*deltaX_R + deltaLambda*deltaX_Q */
       PetscCall(VecAXPBYPCZ(deltaX, deltaS, deltaLambda, 0, deltaX_R, deltaX_Q));
       PetscCall(VecAXPY(DeltaX, 1, deltaX));
       PetscCall(VecAXPY(X, 1, deltaX));
+      /* Q = -dF/dlambda(X, lambda)*/
       PetscCall(SNESComputeNewtonAL(snes, X, Q));
+      /* R = F(X, lambda) */
       PetscCall(SNESComputeFunction(snes, X, R));
       PetscCall(VecNorm(R, NORM_2, &fnorm));
       PetscCall(VecNorm(X, NORM_2, &xnorm));
@@ -421,10 +441,10 @@ static PetscErrorCode SNESSolve_NEWTONAL(SNES snes)
       PetscCall(PetscInfo(snes, "Inner SNES solve failed reason %s\n", SNESConvergedReasons[snes->reason]));
       break;
     }
-    if (data->lambda >= 1.0) {
+    if (data->lambda >= data->lambda_max) {
       snes->iter = i + 1;
       break;
-    } else if (i == maxincs - 1) {
+    } else if (maxincs > 0 && i == maxincs - 1) {
       snes->reason = SNES_DIVERGED_MAX_IT;
       snes->iter   = i + 1;
       break;
@@ -433,6 +453,8 @@ static PetscErrorCode SNESSolve_NEWTONAL(SNES snes)
       snes->iter   = 0;
     }
   }
+  /* Reset RHS vector, if changed */
+  PetscCall(SNESNewtonALResetRHS(snes));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -469,7 +491,8 @@ static PetscErrorCode SNESSetUp_NEWTONAL(SNES snes)
 */
 static PetscErrorCode SNESSetFromOptions_NEWTONAL(SNES snes, PetscOptionItems *PetscOptionsObject)
 {
-  SNES_NEWTONAL *data = (SNES_NEWTONAL *)snes->data;
+  SNES_NEWTONAL             *data            = (SNES_NEWTONAL *)snes->data;
+  SNESNewtonALCorrectionType correction_type = SNES_NEWTONAL_CORRECTION_EXACT;
 
   PetscFunctionBegin;
   PetscOptionsHeadBegin(PetscOptionsObject, "SNES Newton Arc Length options");
@@ -481,8 +504,14 @@ static PetscErrorCode SNESSetFromOptions_NEWTONAL(SNES snes, PetscOptionItems *P
   PetscCall(PetscOptionsReal("-snes_newtonal_min_step_size", "Minimum arc length increment step size", "SNESNewtonAL", data->min_step_size, &data->min_step_size, NULL));
   data->psisq = 1.0;
   PetscCall(PetscOptionsReal("-snes_newtonal_psisq", "Regularization parameter for arc length continuation, 0 for cylindrical", "SNESNewtonAL", data->psisq, &data->psisq, NULL));
-  data->correction_type = SNES_NEWTONAL_CORRECTION_EXACT;
-  PetscCall(PetscOptionsEnum("-snes_newtonal_correction_type", "Type of correction to use in the arc-length continuation method", "SNESNewtonALCorrectionType", SNESNewtonALCorrectionTypes, (PetscEnum)data->correction_type, (PetscEnum *)&data->correction_type, NULL));
+  data->lambda_min = 0.0;
+  PetscCall(PetscOptionsReal("-snes_newtonal_lambda_min", "Minimum value of the load parameter lambda", "SNESNewtonAL", data->lambda_min, &data->lambda_min, NULL));
+  data->lambda_max = 1.0;
+  PetscCall(PetscOptionsReal("-snes_newtonal_lambda_max", "Maximum value of the load parameter lambda", "SNESNewtonAL", data->lambda_max, &data->lambda_max, NULL));
+  data->scale_rhs = PETSC_TRUE;
+  PetscCall(PetscOptionsBool("-snes_newtonal_scale_rhs", "Scale the constant vector passed to `SNESSolve` by the load parameter lambda", "SNESNewtonAL", data->scale_rhs, &data->scale_rhs, NULL));
+  PetscCall(PetscOptionsEnum("-snes_newtonal_correction_type", "Type of correction to use in the arc-length continuation method", "SNESNewtonALCorrectionType", SNESNewtonALCorrectionTypes, (PetscEnum)correction_type, (PetscEnum *)&correction_type, NULL));
+  PetscCall(SNESNewtonALSetCorrectionType(snes, correction_type));
   PetscOptionsHeadEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -539,10 +568,12 @@ static PetscErrorCode SNESView_NEWTONAL(SNES snes, PetscViewer viewer)
    Options Database Keys:
 +   -snes_newtonal_step_size <1.0> - Initial arc length increment step size
 .   -snes_newtonal_min_step_size <1.0e-6> - Minimum arc length increment step size
-.   -snes_newtonal_max_steps <100> - Maximum number of increment steps
+.   -snes_newtonal_max_steps <100> - Maximum number of increment steps, or negative for no limit (not recommended)
 .   -snes_newtonal_psisq <1.0> - Regularization parameter for arc length continuation, 0 for cylindrical. Larger values generally lead to more steps.
-.   -snes_linesearch_type <basic> - basic.  Select line search type
--   -snes_linesearch_damping - damping factor used for basic line search
+.   -snes_newtonal_lambda_min <0.0> - Minimum value of the load parameter lambda
+.   -snes_newtonal_lambda_max <1.0> - Maximum value of the load parameter lambda
+.   -snes_newtonal_scale_rhs <true> - Scale the constant vector passed to `SNESSolve` by the load parameter lambda
+-   -snes_newtonal_correction_type <exact> - Type of correction to use in the arc-length continuation method, `exact` or `normal`
 
    Level: intermediate
 
@@ -551,7 +582,6 @@ M*/
 PETSC_EXTERN PetscErrorCode SNESCreate_NEWTONAL(SNES snes)
 {
   SNES_NEWTONAL *arclengthParameters;
-  SNESLineSearch linesearch;
 
   PetscFunctionBegin;
   snes->ops->setup          = SNESSetUp_NEWTONAL;
@@ -563,9 +593,6 @@ PETSC_EXTERN PetscErrorCode SNESCreate_NEWTONAL(SNES snes)
 
   snes->usesksp = PETSC_TRUE;
   snes->usesnpc = PETSC_FALSE;
-
-  PetscCall(SNESGetLineSearch(snes, &linesearch));
-  if (!((PetscObject)linesearch)->type_name) PetscCall(SNESLineSearchSetType(linesearch, SNESLINESEARCHBASIC));
 
   snes->alwayscomputesfinalresidual = PETSC_TRUE;
 
