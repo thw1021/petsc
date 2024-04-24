@@ -750,7 +750,7 @@ PetscErrorCode KSPMINRESSetUseQLP(KSP ksp, PetscBool qlp)
 }
 
 /*@
-  KSPMINRESSetRadius - Set the maximum solution norm allowed for use with trust region methods
+  KSPMINRESSetRadius - Set the maximum solution norm allowed
 
   Logically Collective
 
@@ -763,7 +763,9 @@ PetscErrorCode KSPMINRESSetUseQLP(KSP ksp, PetscBool qlp)
   Options Database Key:
 . -ksp_minres_radius <real> - maximum allowed solution norm
 
-  Developer Note:
+  Developer Notes:
+  This is normally for use with trust region methods, but is applied in all cases
+
   Perhaps the KSPXXXSetRadius() should be unified
 
 .seealso: [](ch_ksp), `KSP`, `KSPMINRES`, `KSPMINRESSetUseQLP()`
@@ -842,8 +844,9 @@ PETSC_EXTERN PetscErrorCode KSPCreate_MINRES(KSP ksp)
 #else
   minres->haptol = 1.e-50;
 #endif
-  /* those are set as 1.e7 in the MATLAB code -> use 1.0/sqrt(eps) to support single precision */
-  minres->maxxnorm = 1.0 / PETSC_SQRT_MACHINE_EPSILON;
+  /* those are set as 1.e7 in the MATLAB code -> use 1.0/sqrt(eps) to support single precision
+     Set maxxnorm very large by default so that uses of MINRES without TR do not fail */
+  minres->maxxnorm = 1.0 / PETSC_MACHINE_EPSILON;
   minres->TranCond = 1.0 / PETSC_SQRT_MACHINE_EPSILON;
 
   ksp->data = (void *)minres;
