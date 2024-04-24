@@ -37,6 +37,7 @@ configure_options = [
   '--download-adblaslapack=1',
   '--download-hpddm=1',
   '--with-strict-petscerrorcode',
+  '--download-sowing',
   ]
 
 if __name__ == '__main__':

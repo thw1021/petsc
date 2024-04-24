@@ -33,6 +33,7 @@ configure_options = [
   '--with-tau-perfstubs=0',
   '--with-strict-petscerrorcode',
   '--with-coverage',
+  '--download-sowing',  
   ]
 
 if __name__ == '__main__':

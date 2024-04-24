@@ -37,6 +37,7 @@ configure_options = [
   '--with-zlib=1',
   '--with-coverage=1',
   '--with-strict-petscerrorcode',
+  '--download-sowing',
   ]
 
 if __name__ == '__main__':
