@@ -329,7 +329,7 @@ static PetscErrorCode SNESSolve_NEWTONAL(SNES snes)
       PetscCall(KSPGetIterationNumber(snes->ksp, &lits));
       PetscCall(PetscInfo(snes, "iter=%" PetscInt_FMT ", tangent load linear solve iterations=%" PetscInt_FMT "\n", snes->iter, lits));
       /* Compute load parameter variation */
-      PetscCall(VecDot(deltaX_Q, deltaX_Q, &normsqX_Q));
+      PetscCall(VecDotBegin(deltaX_Q, deltaX_Q, &normsqX_Q));
       /* On first iter, use predictor. This is the same regardless of corrector scheme. */
       if (j == 0) {
         PetscReal sign = 1.0;
@@ -340,8 +340,8 @@ static PetscErrorCode SNESSolve_NEWTONAL(SNES snes)
         }
         data->lambda_update = 0.0;
         PetscCall(VecZeroEntries(DeltaX));
+        PetscCall(VecDotEnd(deltaX_Q, deltaX_Q, &normsqX_Q));
         deltaLambda = sign * stepSize / PetscSqrtReal(normsqX_Q + data->psisq);
-        PetscCall(VecNorm(Q, NORM_2, &fnorm));
       } else {
         /* Solve J deltaX_R = -R */
         PetscCall(KSPSolve(snes->ksp, R, deltaX_R));
@@ -349,7 +349,6 @@ static PetscErrorCode SNESSolve_NEWTONAL(SNES snes)
         PetscCall(KSPGetIterationNumber(snes->ksp, &lits));
         PetscCall(PetscInfo(snes, "iter=%" PetscInt_FMT ", residual linear solve iterations=%" PetscInt_FMT "\n", snes->iter, lits));
         PetscCall(VecScale(deltaX_R, -1));
-        PetscCall(VecNorm(R, NORM_2, &fnorm));
 
         if (data->correction_type == SNES_NEWTONAL_CORRECTION_NORMAL) {
           /* 
@@ -360,8 +359,11 @@ static PetscErrorCode SNESSolve_NEWTONAL(SNES snes)
           */
           PetscReal dot1, dot2;
 
-          PetscCall(VecDot(DeltaX, deltaX_R, &dot1));
-          PetscCall(VecDot(DeltaX, deltaX_Q, &dot2));
+          PetscCall(VecDotBegin(DeltaX, deltaX_R, &dot1));
+          PetscCall(VecDotBegin(DeltaX, deltaX_Q, &dot2));
+          PetscCall(VecDotEnd(deltaX_Q, deltaX_Q, &normsqX_Q));
+          PetscCall(VecDotEnd(DeltaX, deltaX_R, &dot1));
+          PetscCall(VecDotEnd(DeltaX, deltaX_Q, &dot2));
           deltaLambda = -dot1 / (dot2 + data->psisq * data->lambda_update);
         } else {
           /* 
@@ -385,16 +387,23 @@ static PetscErrorCode SNESSolve_NEWTONAL(SNES snes)
           PetscReal a0, b0, b1, c0, c1, c2;
 
           psisqLambdaUpdate = data->psisq * data->lambda_update;
-          a0                = normsqX_Q + data->psisq;
-          PetscCall(VecDot(deltaX_Q, DeltaX, &b0));
-          PetscCall(VecDot(deltaX_Q, deltaX_R, &b1));
+          PetscCall(VecDotBegin(deltaX_Q, DeltaX, &b0));
+          PetscCall(VecDotBegin(deltaX_Q, deltaX_R, &b1));
+          PetscCall(VecDotBegin(DeltaX, DeltaX, &c0));
+          PetscCall(VecDotBegin(DeltaX, deltaX_R, &c1));
+          PetscCall(VecDotBegin(deltaX_R, deltaX_R, &c2));
+          PetscCall(VecDotEnd(deltaX_Q, deltaX_Q, &normsqX_Q));
+          PetscCall(VecDotEnd(deltaX_Q, DeltaX, &b0));
+          PetscCall(VecDotEnd(deltaX_Q, deltaX_R, &b1));
+          PetscCall(VecDotEnd(DeltaX, DeltaX, &c0));
+          PetscCall(VecDotEnd(DeltaX, deltaX_R, &c1));
+          PetscCall(VecDotEnd(deltaX_R, deltaX_R, &c2));
+
+          a0 = normsqX_Q + data->psisq;
           b0 = 2.0 * (b0 + psisqLambdaUpdate);
           b1 *= 2.0;
-          PetscCall(VecDot(DeltaX, DeltaX, &c0));
           c0 = c0 + psisqLambdaUpdate * data->lambda_update - stepSize * stepSize;
-          PetscCall(VecDot(DeltaX, deltaX_R, &c1));
           c1 *= 2.0;
-          PetscCall(VecDot(deltaX_R, deltaX_R, &c2));
 
           as = b1 * b1 - 4 * a0 * c2;
           bs = 2 * b1 * b0 - 4 * a0 * c1;
@@ -450,9 +459,12 @@ static PetscErrorCode SNESSolve_NEWTONAL(SNES snes)
       PetscCall(SNESComputeNewtonAL(snes, X, Q));
       /* R = F(X, lambda) */
       PetscCall(SNESComputeFunction(snes, X, R));
-      PetscCall(VecNorm(R, NORM_2, &fnorm));
-      PetscCall(VecNorm(X, NORM_2, &xnorm));
-      PetscCall(VecNorm(deltaX, NORM_2, &ynorm));
+      PetscCall(VecNormBegin(R, NORM_2, &fnorm));
+      PetscCall(VecNormBegin(X, NORM_2, &xnorm));
+      PetscCall(VecNormBegin(deltaX, NORM_2, &ynorm));
+      PetscCall(VecNormEnd(R, NORM_2, &fnorm));
+      PetscCall(VecNormEnd(X, NORM_2, &xnorm));
+      PetscCall(VecNormEnd(deltaX, NORM_2, &ynorm));
 
       if (PetscLogPrintInfo) PetscCall(SNESNewtonALCheckArcLength(snes, DeltaX, data->lambda_update, stepSize));
 
