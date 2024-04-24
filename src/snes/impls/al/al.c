@@ -1,5 +1,32 @@
 #include <../src/snes/impls/al/alimpl.h>
 
+const char NewtonALExactCitation[]   = "@article{Ritto-CorreaCamotim2008,\n"
+                                       "  title={On the arc-length and other quadratic control methods: Established, less known and new implementation procedures},\n"
+                                       "  volume={86},\n"
+                                       "  ISSN={0045-7949},\n"
+                                       "  DOI={10.1016/j.compstruc.2007.08.003},\n"
+                                       "  number={11},\n"
+                                       "  journal={Computers & Structures},\n"
+                                       "  author={Ritto-Corr{\\^{e}}a, Manuel and Camotim, Dinar},\n"
+                                       "  year={2008},\n"
+                                       "  month=jun,\n"
+                                       "  pages={1353-1368},\n"
+                                       "}\n";
+PetscBool  NewtonALExactCitationSet  = PETSC_FALSE;
+const char NewtonALNormalCitation[]  = "@article{LeonPaulinoPereiraMenezesLages_2011,\n"
+                                       "  title={A Unified Library of Nonlinear Solution Schemes},\n"
+                                       "  volume={64},\n"
+                                       "  ISSN={0003-6900, 2379-0407},\n"
+                                       "  DOI={10.1115/1.4006992},\n"
+                                       "  number={4},\n"
+                                       "  journal={Applied Mechanics Reviews},\n"
+                                       "  author={Leon, Sofie E. and Paulino, Glaucio H. and Pereira, Anderson and Menezes, Ivan F. M. and Lages, Eduardo N.},\n"
+                                       "  year={2011},\n"
+                                       "  month=jul,\n"
+                                       "  pages={040803},\n"
+                                       "  language={en}\n"
+                                       "}\n";
+PetscBool  NewtonALNormalCitationSet = PETSC_FALSE;
 /*
      This file implements a truncated Newton method with arc length continuation,
      for solving a system of nonlinear equations, using the KSP, Vec,
@@ -237,6 +264,14 @@ static PetscErrorCode SNESSolve_NEWTONAL(SNES snes)
 
   PetscFunctionBegin;
   PetscCheck(!snes->xl && !snes->xu && !snes->ops->computevariablebounds, PetscObjectComm((PetscObject)snes), PETSC_ERR_ARG_WRONGSTATE, "SNES solver %s does not support bounds", ((PetscObject)snes)->type_name);
+
+  /* Register citations */
+  PetscCall(PetscCitationsRegister(SNESCitation, &SNEScite));
+  if (data->correction_type == SNES_NEWTONAL_CORRECTION_EXACT) {
+    PetscCall(PetscCitationsRegister(NewtonALExactCitation, &NewtonALExactCitationSet));
+  } else if (data->correction_type == SNES_NEWTONAL_CORRECTION_NORMAL) {
+    PetscCall(PetscCitationsRegister(NewtonALNormalCitation, &NewtonALNormalCitationSet));
+  }
 
   snes->numFailures            = 0;
   snes->numLinearSolveFailures = 0;
@@ -564,6 +599,9 @@ static PetscErrorCode SNESView_NEWTONAL(SNES snes, PetscViewer viewer)
 
 /*MC
    SNESNewtonAL - Newton based nonlinear solver that uses a arc-length continuation method to solve the nonlinear system.
+
+   The exact correction scheme with partial updates is detailed in {cite}`Ritto-CorreaCamotim2008` and the implementation of the
+   normal correction scheme is based on {cite}`LeonPaulinoPereiraMenezesLages_2011`.
 
    Options Database Keys:
 +   -snes_newtonal_step_size <1.0> - Initial arc length increment step size

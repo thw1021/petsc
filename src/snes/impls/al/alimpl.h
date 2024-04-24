@@ -21,3 +21,8 @@ typedef struct {
 
   Vec vec_rhs_orig;
 } SNES_NEWTONAL;
+
+PETSC_INTERN const char NewtonALExactCitation[];
+PETSC_INTERN PetscBool  NewtonALExactCitationSet;
+PETSC_INTERN const char NewtonALNormalCitation[];
+PETSC_INTERN PetscBool  NewtonALNormalCitationSet;
