@@ -1275,10 +1275,10 @@ PETSC_EXTERN PetscErrorCode SNESComputeNewtonAL(SNES, Vec, Vec);
 PETSC_EXTERN PetscErrorCode SNESNewtonALGetLoadParameter(SNES, PetscReal *);
 
 /*MC
-   SNESNewtonALCorrectionType - the approach used by `SNESNEWTONAL` to determine 
-   the correction to the current increment. While the exact correction satisfies 
-   the constraint surface at every iteration, it also requires solving a quadratic 
-   equation which may not have real roots. Conversely, the normal correction is more 
+   SNESNewtonALCorrectionType - the approach used by `SNESNEWTONAL` to determine
+   the correction to the current increment. While the exact correction satisfies
+   the constraint surface at every iteration, it also requires solving a quadratic
+   equation which may not have real roots. Conversely, the normal correction is more
    efficient and always yields a real correction and is the default.
 
    Values:
@@ -1290,8 +1290,7 @@ PETSC_EXTERN PetscErrorCode SNESNewtonALGetLoadParameter(SNES, PetscReal *);
 
    Level: intermediate
 
-.seealso: `SNES, `SNESNGMRES`, `SNESNGMRESSetSelectType()`, `SNESNGMRESGetSelectType()`, `SNESNGMRESSetRestartType()`,
-          `SNESNGMRESGetRestartType()`, `SNESNGMRESRestartType`
+.seealso: `SNES`, `SNESNEWTONAL`, `SNESNewtonALSetCorrectionType()`
 M*/
 typedef enum {
   SNES_NEWTONAL_CORRECTION_EXACT  = 0,

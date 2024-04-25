@@ -558,7 +558,7 @@ PetscErrorCode DMSNESGetNGS(DM dm, PetscErrorCode (**f)(SNES, Vec, Vec, void *),
   Level: developer
 
   Note:
-  `SNESSetNewtonAL()` is normally used, but it calls this function internally because the user context 
+  `SNESSetNewtonAL()` is normally used, but it calls this function internally because the user context
   is actually associated with the `DM`.  This makes the interface consistent regardless of whether the user interacts with a
  `DM` or not.
 
@@ -586,7 +586,7 @@ PetscErrorCode DMSNESSetNewtonAL(DM dm, SNESFunctionFn *f, void *ctx)
 
   Input Parameter:
 . dm - `DM` to be used with `SNES`
-  
+
   Output Parameters:
 + f   - tangent load function which computes the tangent load for the arc length method, see `SNESSetNewtonAL()`
 - ctx - context for residual evaluation
