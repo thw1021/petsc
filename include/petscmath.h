@@ -743,11 +743,11 @@ M*/
 
 /*MC
    PetscRealConstant - a compile time macro that ensures a given constant real number is properly represented in the configured
-   precision of `PetscReal` be it single, double or 128 bit representation
+   precision of `PetscReal` be it half, single, double or 128-bit representation
 
    Synopsis:
    #include <petscmath.h>
-   PetscReal PetscRealConstatn(real_number)
+   PetscReal PetscRealConstant(real_number)
 
    Not Collective
 
@@ -757,11 +757,11 @@ M*/
    Level: beginner
 
    Note:
-   For example if PETSc is configured with --with-scalar-precision=__float128 and one writes
+   For example, if PETSc is configured with `--with-precision=__float128` and one writes
 .vb
    PetscReal d = 1.5;
 .ve
-   the result is 1.5 in double precision extended to 128 represention meaning it is very far from the correct value. Hence one should write
+   the result is 1.5 in double precision extended to 128 represention, meaning it is very far from the correct value. Hence, one should write
 .vb
    PetscReal d = PetscRealConstant(1.5);
 .ve
@@ -798,7 +798,7 @@ M*/
 M*/
 
 /*MC
-  PETSC_SQRT2 - the value of $ \sqrt(2) $ to the correct precision of `PetscReal`.
+  PETSC_SQRT2 - the value of $ \sqrt{2} $ to the correct precision of `PetscReal`.
 
   Level: beginner
 
@@ -826,7 +826,7 @@ M*/
 M*/
 
 /*MC
-  PETSC_REAL_MIN - the smallest postive normalized real value that can be stored in a `PetscReal`.
+  PETSC_REAL_MIN - the smallest positive normalized real value that can be stored in a `PetscReal`.
 
   Level: beginner
 
