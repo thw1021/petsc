@@ -79,7 +79,7 @@ PetscErrorCode SNESNewtonALSetCorrectionType(SNES snes, SNESNewtonALCorrectionTy
 }
 
 /*@C
-  SNESSetNewtonAL - Sets a user function that is called at each function evaluation to
+  SNESNewtonALSetFunction - Sets a user function that is called at each function evaluation to
   compute the tangent load vector for the arc-length continuation method. The tangent load vector is the
   partial derivative of external load with respect to the load parameter. In the case of proportional
   loading, the tangent load vector is the full external load vector at the end of the load step.
@@ -96,9 +96,9 @@ PetscErrorCode SNESNewtonALSetCorrectionType(SNES snes, SNESNewtonALCorrectionTy
   Note:
   If the current value of the load parameter is needed in `func`, it can be obtained with `SNESNewtonALGetLoadParameter()`.
 
-.seealso: [](ch_snes), `SNES`, `SNESNEWTONAL`, `SNESGetNewtonAL()`, `SNESNewtonALGetLoadParameter()`
+.seealso: [](ch_snes), `SNES`, `SNESNEWTONAL`, `SNESNewtonALGetFunction()`, `SNESNewtonALGetLoadParameter()`
 @*/
-PetscErrorCode SNESSetNewtonAL(SNES snes, SNESFunctionFn *func, void *ctx)
+PetscErrorCode SNESNewtonALSetFunction(SNES snes, SNESFunctionFn *func, void *ctx)
 {
   DM dm;
 
@@ -110,20 +110,20 @@ PetscErrorCode SNESSetNewtonAL(SNES snes, SNESFunctionFn *func, void *ctx)
 }
 
 /*@C
-  SNESGetNewtonAL - Get the user function and context set with `SNESSetNewtonAL`
+  SNESNewtonALGetFunction - Get the user function and context set with `SNESNewtonALSetFunction`
 
   Logically Collective
 
   Input Parameters:
 + snes - the nonlinear solver object
-. func - [optional] tangent load function evaluation routine, see `SNESSetNewtonAL()` for the call sequence
+. func - [optional] tangent load function evaluation routine, see `SNESNewtonALSetFunction()` for the call sequence
 - ctx  - [optional] user-defined context for private data for the function evaluation routine (may be `NULL`)
 
   Level: intermediate
 
-.seealso: [](ch_snes), `SNES`, `SNESNEWTONAL`, `SNESSetNewtonAL()`
+.seealso: [](ch_snes), `SNES`, `SNESNEWTONAL`, `SNESNewtonALSetFunction()`
 @*/
-PetscErrorCode SNESGetNewtonAL(SNES snes, SNESFunctionFn **func, void **ctx)
+PetscErrorCode SNESNewtonALGetFunction(SNES snes, SNESFunctionFn **func, void **ctx)
 {
   DM dm;
 
@@ -136,7 +136,7 @@ PetscErrorCode SNESGetNewtonAL(SNES snes, SNESFunctionFn **func, void **ctx)
 
 /*@C
   SNESNewtonALGetLoadParameter - Get the value of the load parameter `lambda` for the arc-length continuation method.
-  This function should be used in the functions provided to `SNESSetFunction()` and `SNESSetNewtonAL()`
+  This function should be used in the functions provided to `SNESSetFunction()` and `SNESNewtonALSetFunction()`
   to compute the residual and tangent load vectors for a given value of `lambda` (0 <= lambda <= 1).
   Usually, `lambda` is used to scale the external force vector in the residual function, i.e. proportional loading,
   in which case the tangent load vector is the full external force vector.
@@ -151,7 +151,7 @@ PetscErrorCode SNESGetNewtonAL(SNES snes, SNESFunctionFn **func, void **ctx)
 
   Level: intermediate
 
-.seealso: [](ch_snes), `SNES`, `SNESNEWTONAL`, `SNESSetNewtonAL()`
+.seealso: [](ch_snes), `SNES`, `SNESNEWTONAL`, `SNESNewtonALSetFunction()`
 @*/
 PetscErrorCode SNESNewtonALGetLoadParameter(SNES snes, PetscReal *lambda)
 {
@@ -196,7 +196,7 @@ static PetscErrorCode SNESNewtonALResetRHS(SNES snes)
 }
 
 /*@C
-  SNESComputeNewtonAL - Calls the function that has been set with `SNESSetNewtonAL()`.
+  SNESNewtonALComputeFunction - Calls the function that has been set with `SNESNewtonALSetFunction()`.
 
   Collective
 
@@ -205,17 +205,17 @@ static PetscErrorCode SNESNewtonALResetRHS(SNES snes)
 - X    - input vector
 
   Output Parameter:
-. Q - tangent load vector, as set by `SNESSetNewtonAL()`
+. Q - tangent load vector, as set by `SNESNewtonALSetFunction()`
 
   Level: developer
 
   Note:
-  `SNESComputeNewtonAL()` is typically used within nonlinear solvers
+  `SNESNewtonALComputeFunction()` is typically used within nonlinear solvers
   implementations, so users would not generally call this routine themselves.
 
-.seealso: [](ch_snes), `SNES`, `SNESSetNewtonAL()`, `SNESGetNewtonAL()`
+.seealso: [](ch_snes), `SNES`, `SNESNewtonALSetFunction()`, `SNESNewtonALGetFunction()`
 @*/
-PetscErrorCode SNESComputeNewtonAL(SNES snes, Vec X, Vec Q)
+PetscErrorCode SNESNewtonALComputeFunction(SNES snes, Vec X, Vec Q)
 {
   DM              dm;
   DMSNES          sdm;
@@ -296,7 +296,7 @@ static PetscErrorCode SNESSolve_NEWTONAL(SNES snes)
     snes->iter = 0;
     snes->norm = 0.0;
     PetscCall(PetscObjectSAWsGrantAccess((PetscObject)snes));
-    PetscCall(SNESComputeNewtonAL(snes, X, Q));
+    PetscCall(SNESNewtonALComputeFunction(snes, X, Q));
     PetscCall(SNESComputeFunction(snes, X, R));
     PetscCall(VecWAXPY(W, 1, R, Q));       /* W <- R + Q */
     PetscCall(VecNorm(W, NORM_2, &fnorm)); /* fnorm <- ||W|| */
@@ -453,7 +453,7 @@ static PetscErrorCode SNESSolve_NEWTONAL(SNES snes)
       PetscCall(VecAXPY(DeltaX, 1, deltaX));
       PetscCall(VecAXPY(X, 1, deltaX));
       /* Q = -dF/dlambda(X, lambda)*/
-      PetscCall(SNESComputeNewtonAL(snes, X, Q));
+      PetscCall(SNESNewtonALComputeFunction(snes, X, Q));
       /* R = F(X, lambda) */
       PetscCall(SNESComputeFunction(snes, X, R));
       PetscCall(VecNormBegin(R, NORM_2, &fnorm));
@@ -542,8 +542,6 @@ static PetscErrorCode SNESSetFromOptions_NEWTONAL(SNES snes, PetscOptionItems *P
   PetscCall(PetscOptionsReal("-snes_newtonal_step_size", "Initial arc length increment step size", "SNESNewtonAL", data->step_size, &data->step_size, NULL));
   data->max_steps = 100;
   PetscCall(PetscOptionsInt("-snes_newtonal_max_steps", "Maximum number of increment steps", "SNESNewtonAL", data->max_steps, &data->max_steps, NULL));
-  data->min_step_size = 1.0e-6;
-  PetscCall(PetscOptionsReal("-snes_newtonal_min_step_size", "Minimum arc length increment step size", "SNESNewtonAL", data->min_step_size, &data->min_step_size, NULL));
   data->psisq = 1.0;
   PetscCall(PetscOptionsReal("-snes_newtonal_psisq", "Regularization parameter for arc length continuation, 0 for cylindrical", "SNESNewtonAL", data->psisq, &data->psisq, NULL));
   data->lambda_min = 0.0;
@@ -585,25 +583,6 @@ static PetscErrorCode SNESDestroy_NEWTONAL(SNES snes)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*
-   SNESView_NEWTONAL - Prints info from the SNESNEWTONAL data structure.
-
-   Input Parameters:
-.  SNES - the SNES context
-.  viewer - visualization context
-
-   Application Interface Routine: SNESView()
-*/
-static PetscErrorCode SNESView_NEWTONAL(SNES snes, PetscViewer viewer)
-{
-  PetscBool iascii;
-
-  PetscFunctionBegin;
-  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
-  if (iascii) { }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 /*MC
    SNESNewtonAL - Newton based nonlinear solver that uses a arc-length continuation method to solve the nonlinear system.
 
@@ -612,7 +591,6 @@ static PetscErrorCode SNESView_NEWTONAL(SNES snes, PetscViewer viewer)
 
    Options Database Keys:
 +   -snes_newtonal_step_size <1.0>         - Initial arc length increment step size
-.   -snes_newtonal_min_step_size <1.0e-6>  - Minimum arc length increment step size
 .   -snes_newtonal_max_steps <100>         - Maximum number of increment steps, or negative for no limit (not recommended)
 .   -snes_newtonal_psisq <1.0>             - Regularization parameter for arc length continuation, 0 for cylindrical. Larger values generally lead to more steps.
 .   -snes_newtonal_lambda_min <0.0>        - Minimum value of the load parameter lambda
@@ -622,7 +600,7 @@ static PetscErrorCode SNESView_NEWTONAL(SNES snes, PetscViewer viewer)
 
    Level: intermediate
 
-.seealso: [](ch_snes), `SNESCreate()`, `SNES`, `SNESSetType()`, `SNESNEWTONAL`, `SNESSetNewtonAL()`, `SNESGetNewtonAL()`, `SNESNewtonALGetLoadParameter()`
+.seealso: [](ch_snes), `SNESCreate()`, `SNES`, `SNESSetType()`, `SNESNEWTONAL`, `SNESNewtonALSetFunction()`, `SNESNewtonALGetFunction()`, `SNESNewtonALGetLoadParameter()`
 M*/
 PETSC_EXTERN PetscErrorCode SNESCreate_NEWTONAL(SNES snes)
 {
@@ -633,7 +611,6 @@ PETSC_EXTERN PetscErrorCode SNESCreate_NEWTONAL(SNES snes)
   snes->ops->solve          = SNESSolve_NEWTONAL;
   snes->ops->destroy        = SNESDestroy_NEWTONAL;
   snes->ops->setfromoptions = SNESSetFromOptions_NEWTONAL;
-  snes->ops->view           = SNESView_NEWTONAL;
   snes->ops->reset          = SNESReset_NEWTONAL;
 
   snes->usesksp = PETSC_TRUE;

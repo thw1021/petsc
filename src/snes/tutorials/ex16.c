@@ -156,7 +156,7 @@ int main(int argc, char **argv)
     PetscCall(SNESGetType(snes, &type));
     PetscCall(PetscStrcmp(type, SNESNEWTONAL, &is_al));
     if (is_al) {
-      PetscCall(SNESSetNewtonAL(snes, TangentLoad, &user));
+      PetscCall(SNESNewtonALSetFunction(snes, TangentLoad, &user));
       user.load_factor = 0.0;
     }
   }

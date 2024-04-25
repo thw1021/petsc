@@ -10,7 +10,6 @@
 typedef struct {
   PetscInt                   max_steps;       /* maximum number of continuation steps */
   PetscReal                  step_size;       /* radius of quadratic constraint surface */
-  PetscReal                  min_step_size;   /* minimum radius (unused) */
   PetscReal                  psisq;           /* load factor regularization parameter */
   PetscReal                  lambda_update;   /* accumulated update to lambda over the current increment */
   PetscReal                  lambda;          /* load parameter */

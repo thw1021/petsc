@@ -552,20 +552,20 @@ PetscErrorCode DMSNESGetNGS(DM dm, PetscErrorCode (**f)(SNES, Vec, Vec, void *),
 
   Input Parameters:
 + dm  - `DM` to be used with `SNES`
-. f   - tangent load function, see `SNESSetNewtonAL`
+. f   - tangent load function, see `SNESNewtonALSetFunction`
 - ctx - context for residual evaluation
 
   Level: developer
 
   Note:
-  `SNESSetNewtonAL()` is normally used, but it calls this function internally because the user context
+  `SNESNewtonALSetFunction()` is normally used, but it calls this function internally because the user context
   is actually associated with the `DM`.  This makes the interface consistent regardless of whether the user interacts with a
  `DM` or not.
 
   Developer Note:
   If `DM` took a more central role at some later date, this could become the primary method of supplying the function
 
-.seealso: [](ch_snes), `DMSNES`, `DMSNESSetJacobian()`, `DMSNESSetFunction()`, `DMSNESSetNewtonAL()`, `SNESSetNewtonAL()`
+.seealso: [](ch_snes), `DMSNES`, `DMSNESSetJacobian()`, `DMSNESSetFunction()`, `DMSNESSetNewtonAL()`, `SNESNewtonALSetFunction()`
 @*/
 PetscErrorCode DMSNESSetNewtonAL(DM dm, SNESFunctionFn *f, void *ctx)
 {
@@ -588,16 +588,16 @@ PetscErrorCode DMSNESSetNewtonAL(DM dm, SNESFunctionFn *f, void *ctx)
 . dm - `DM` to be used with `SNES`
 
   Output Parameters:
-+ f   - tangent load function which computes the tangent load for the arc length method, see `SNESSetNewtonAL()`
++ f   - tangent load function which computes the tangent load for the arc length method, see `SNESNewtonALSetFunction()`
 - ctx - context for residual evaluation
 
   Level: developer
 
   Note:
-  `SNESGetNewtonAL()` is normally used, but it calls this function internally because the user context is actually
+  `SNESNewtonALGetFunction()` is normally used, but it calls this function internally because the user context is actually
   associated with the `DM`.
 
-.seealso: [](ch_snes), `DMSNES`, `DMSNESSetJacobian()`, `DMSNESSetFunction()`, `DMSNESSetNewtonAL()`, `SNESGetNewtonAL()`
+.seealso: [](ch_snes), `DMSNES`, `DMSNESSetJacobian()`, `DMSNESSetFunction()`, `DMSNESSetNewtonAL()`, `SNESNewtonALGetFunction()`
 @*/
 PetscErrorCode DMSNESGetNewtonAL(DM dm, SNESFunctionFn **f, void **ctx)
 {
