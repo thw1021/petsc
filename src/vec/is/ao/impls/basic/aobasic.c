@@ -267,7 +267,7 @@ PETSC_INTERN PetscErrorCode AOCreate_Basic(AO ao)
   Level: beginner
 
   Note:
-  The arrays `myapp` and `mypetsc` must contain the all the integers 0 to napp-1 with no duplicates; that is there cannot be any "holes"
+  The arrays `myapp` and `mypetsc` must contain the all the integers 0 to `napp`-1 with no duplicates; that is there cannot be any "holes"
   in the indices. Use `AOCreateMapping()` or `AOCreateMappingIS()` if you wish to have "holes" in the indices.
 
 .seealso: [](sec_ao), [](sec_scatter), `AO`, `AOCreateBasicIS()`, `AODestroy()`, `AOPetscToApplication()`, `AOApplicationToPetsc()`
