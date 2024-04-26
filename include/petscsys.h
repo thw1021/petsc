@@ -2113,7 +2113,7 @@ PETSC_EXTERN PetscErrorCode PetscMkdtemp(char[]);
 PETSC_EXTERN PetscErrorCode PetscRMTree(const char[]);
 
 /*MC
-   PetscBinaryBigEndian - indicates if values in memory as stored with big endian format
+   PetscBinaryBigEndian - indicates if values in memory are stored with big endian format
 
    Synopsis:
    #include <petscsys.h>
