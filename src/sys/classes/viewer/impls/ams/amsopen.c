@@ -1,7 +1,7 @@
 #include <petsc/private/viewerimpl.h> /*I  "petscsys.h"  */
 #include <petscviewersaws.h>
 
-/*@C
+/*@
   PetscViewerSAWsOpen - Opens an SAWs `PetscViewer`.
 
   Collective; No Fortran Support
@@ -38,7 +38,7 @@ PetscErrorCode PetscViewerSAWsOpen(MPI_Comm comm, PetscViewer *lab)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PetscObjectViewSAWs - View the base portion of any object with an SAWs viewer
 
   Collective
