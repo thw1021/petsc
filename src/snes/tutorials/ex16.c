@@ -33,7 +33,9 @@ static char help[] = "Large-deformation Elasticity Buckling Example";
 
     This example is meant to show the strain placed upon the nonlinear solvers when trying to "snap through" the arch
     using the loading.  Under certain parameter regimes, the arch will invert under the load, and the number of Newton
-    steps will jump considerably.  Composed nonlinear solvers may be used to mitigate this difficulty.
+    steps will jump considerably.  Composed nonlinear solvers may be used to mitigate this difficulty.  This example
+    also demonstrates the use of the arc length continuation method NEWTONAL, which avoids the numerical difficulties
+    of the snap-through via tracing the equilibrium path through load increments.
 
     The initial setup follows the example in pg. 268 of "Nonlinear Finite Element Methods" by Peter Wriggers, but is a
     3D extension.
@@ -1158,30 +1160,30 @@ PetscErrorCode DisplayLine(SNES snes, Vec X)
 
 /*TEST
 
-test:
-  nsize: 2
-  args: -da_refine 2 -pc_type mg -rad 10.0 -young 10. -ploading 0.0 -loading -1. -mg_levels_ksp_max_it 2 -snes_monitor_short -ksp_monitor_short
-  requires: !single
-  timeoutfactor: 3
+   test:
+      nsize: 2
+      args: -da_refine 2 -pc_type mg -rad 10.0 -young 10. -ploading 0.0 -loading -1. -mg_levels_ksp_max_it 2 -snes_monitor_short -ksp_monitor_short
+      requires: !single
+      timeoutfactor: 3
 
-test:
-  suffix: 2
-  args: -da_refine 2 -pc_type mg -rad 10.0 -young 10. -ploading 0.0 -loading -1. -mg_levels_ksp_max_it 2 -snes_monitor_short -ksp_monitor_short -npc_snes_type fas -npc_fas_levels_snes_type ncg -npc_fas_levels_snes_max_it 3 -npc_snes_monitor_short
-  requires: !single
+   test:
+      suffix: 2
+      args: -da_refine 2 -pc_type mg -rad 10.0 -young 10. -ploading 0.0 -loading -1. -mg_levels_ksp_max_it 2 -snes_monitor_short -ksp_monitor_short -npc_snes_type fas -npc_fas_levels_snes_type ncg -npc_fas_levels_snes_max_it 3 -npc_snes_monitor_short
+      requires: !single
 
-test:
-  suffix: 3
-  args: -da_refine 1 -da_overlap 3 -da_local_subdomains 4 -snes_type aspin -rad 10.0 -young 10. -ploading 0.0 -loading -0.5 -snes_monitor_short -ksp_monitor_short -npc_sub_snes_rtol 1e-2 -ksp_rtol 1e-2 -ksp_max_it 14 -snes_converged_reason -snes_max_linear_solve_fail 100 -npc_sub_ksp_type preonly -npc_sub_pc_type lu
-  requires: !single
+   test:
+      suffix: 3
+      args: -da_refine 1 -da_overlap 3 -da_local_subdomains 4 -snes_type aspin -rad 10.0 -young 10. -ploading 0.0 -loading -0.5 -snes_monitor_short -ksp_monitor_short -npc_sub_snes_rtol 1e-2 -ksp_rtol 1e-2 -ksp_max_it 14 -snes_converged_reason -snes_max_linear_solve_fail 100 -npc_sub_ksp_type preonly -npc_sub_pc_type lu
+      requires: !single
 
-test:
-  suffix: 4
-  args: -da_refine 2 -pc_type mg -rad 10.0 -young 10. -ploading -1. -loading -1. -mg_levels_ksp_max_it 2 -snes_monitor_short -ksp_monitor_short -snes_type newtonal -snes_newtonal_step_size 30 -ksp_rtol 1e-4
-  requires: !single
+   test:
+      suffix: 4
+      args: -da_refine 2 -pc_type mg -rad 10.0 -young 10. -ploading -1. -loading -1. -mg_levels_ksp_max_it 2 -snes_monitor_short -ksp_monitor_short -snes_type newtonal -snes_newtonal_step_size 30 -ksp_rtol 1e-4
+      requires: !single
 
-test:
-  suffix: 5
-  args: -da_refine 2 -pc_type mg -rad 10.0 -young 10. -ploading -1. -loading -1. -mg_levels_ksp_max_it 2 -snes_monitor_short -ksp_monitor_short -snes_type newtonal -snes_newtonal_step_size 30 -snes_newtonal_correction_type normal -ksp_rtol 1e-4
-  requires: !single
+   test:
+      suffix: 5
+      args: -da_refine 2 -pc_type mg -rad 10.0 -young 10. -ploading -1. -loading -1. -mg_levels_ksp_max_it 2 -snes_monitor_short -ksp_monitor_short -snes_type newtonal -snes_newtonal_step_size 30 -snes_newtonal_correction_type normal -ksp_rtol 1e-4
+      requires: !single
 
 TEST*/
