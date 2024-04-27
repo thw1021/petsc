@@ -52,6 +52,16 @@ static PetscErrorCode SNESNewtonALCheckArcLength(SNES snes, Vec XStep, PetscReal
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/* stable implementation of roots of a*x^2 + b*x + c = 0 */
+static inline void PetscQuadraticRoots(PetscReal a, PetscReal b, PetscReal c, PetscReal *xm, PetscReal *xp)
+{
+  PetscReal temp = -0.5 * (b + PetscCopysignReal(1.0, b) * PetscSqrtReal(b * b - 4 * a * c));
+  PetscReal x1   = temp / a;
+  PetscReal x2   = c / temp;
+  *xm            = PetscMin(x1, x2);
+  *xp            = PetscMax(x1, x2);
+}
+
 /*@
   SNESNewtonALSetCorrectionType - Set the type of correction to use in the arc-length continuation method.
 
@@ -391,56 +401,46 @@ static PetscErrorCode SNESSolve_NEWTONAL(SNES snes)
               cs = b0^2 - 4*a0*c0
             These "partial corrections" prevent (*) from having complex roots.
           */
-          PetscReal psisqLambdaUpdate, discriminant;
-          PetscReal a, b, c;
-          PetscReal as, bs, cs;
-          PetscReal a0, b0, b1, c0, c1, c2;
+          PetscReal   psisqLambdaUpdate, discriminant;
+          PetscReal   as, bs, cs;
+          PetscReal   a0, b0, b1, c0, c1, c2;
+          PetscScalar coefs1[3]; /* coefs[0] = deltaX_Q*DeltaX, coefs[1] = deltaX_R*DeltaX, coefs[2] = DeltaX*DeltaX */
+          PetscScalar coefs2[2]; /* coefs[0] = deltaX_Q*deltaX_R, coefs[1] = deltaX_R*deltaX_R */
+          const Vec   rhs1[3] = {deltaX_Q, deltaX_R, DeltaX};
+          const Vec   rhs2[2] = {deltaX_Q, deltaX_R};
 
           psisqLambdaUpdate = data->psisq * data->lambda_update;
-          PetscCall(VecDotBegin(deltaX_Q, DeltaX, &b0));
-          PetscCall(VecDotBegin(deltaX_Q, deltaX_R, &b1));
-          PetscCall(VecDotBegin(DeltaX, DeltaX, &c0));
-          PetscCall(VecDotBegin(DeltaX, deltaX_R, &c1));
-          PetscCall(VecDotBegin(deltaX_R, deltaX_R, &c2));
-          PetscCall(VecDotEnd(deltaX_Q, DeltaX, &b0));
-          PetscCall(VecDotEnd(deltaX_Q, deltaX_R, &b1));
-          PetscCall(VecDotEnd(DeltaX, DeltaX, &c0));
-          PetscCall(VecDotEnd(DeltaX, deltaX_R, &c1));
-          PetscCall(VecDotEnd(deltaX_R, deltaX_R, &c2));
+          PetscCall(VecMDotBegin(DeltaX, 3, rhs1, coefs1));
+          PetscCall(VecMDotBegin(deltaX_R, 2, rhs2, coefs2));
+          PetscCall(VecMDotEnd(DeltaX, 3, rhs1, coefs1));
+          PetscCall(VecMDotEnd(deltaX_R, 2, rhs2, coefs2));
 
           a0 = normsqX_Q + data->psisq;
-          b0 = 2.0 * (b0 + psisqLambdaUpdate);
-          b1 *= 2.0;
-          c0 = c0 + psisqLambdaUpdate * data->lambda_update - stepSize * stepSize;
-          c1 *= 2.0;
+          b0 = 2 * (coefs1[0] + psisqLambdaUpdate);
+          b1 = 2 * coefs2[0];
+          c0 = coefs1[2] + psisqLambdaUpdate * data->lambda_update - stepSize * stepSize;
+          c1 = 2 * coefs1[1];
+          c2 = coefs2[1];
 
           as = b1 * b1 - 4 * a0 * c2;
-          bs = 2 * b1 * b0 - 4 * a0 * c1;
+          bs = 2 * (b1 * b0 - 2 * a0 * c1);
           cs = b0 * b0 - 4 * a0 * c0;
 
           discriminant = cs + bs * deltaS + as * deltaS * deltaS;
 
           if (discriminant < 0) {
             /* Take deltaS < 1 with the unique root -b/(2*a) */
-            PetscReal t;
+            PetscReal x1;
 
-            t      = bs / (2 * as);
-            deltaS = -t + PetscSqrtReal(t * t - cs / as);
-            a      = a0;
-            b      = b0 + b1 * deltaS;
+            /* Compute deltaS to be the largest root of (as * x^2 + bs * x + cs = 0) */
+            PetscQuadraticRoots(as, bs, cs, &x1, &deltaS);
             PetscCall(PetscInfo(snes, "iter=%" PetscInt_FMT ", discriminant=%18.16e < 0, shrinking residual update size to deltaS = %18.16e\n", snes->iter, (double)discriminant, (double)deltaS));
-            deltaLambda = -b / (2.0 * a);
+            deltaLambda = -0.5 * (b0 + b1 * deltaS) / a0;
           } else {
             /* Use deltaS = 1, pick root that is closest to the last point to prevent doubling back */
-            PetscReal dlambda1, dlambda2, pmpart, t;
+            PetscReal dlambda1, dlambda2;
 
-            a           = a0;
-            b           = b0 + b1 * deltaS;
-            c           = c0 + c1 * deltaS + c2 * deltaS * deltaS;
-            t           = b / (2.0 * a);
-            pmpart      = PetscSqrtReal(t * t - c / a);
-            dlambda1    = -t - pmpart;
-            dlambda2    = -t + pmpart;
+            PetscQuadraticRoots(a0, b0 + b1, c0 + c1 + c2, &dlambda1, &dlambda2);
             deltaLambda = b0 * dlambda1 > b0 * dlambda2 ? dlambda1 : dlambda2;
           }
         }
