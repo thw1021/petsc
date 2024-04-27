@@ -191,9 +191,6 @@ struct _DMSNESOps {
   /* User-defined smoother */
   SNESNGSFn *computegs;
 
-  /* Arc length function */
-  SNESFunctionFn *computealfunction;
-
   PetscErrorCode (*destroy)(DMSNES);
   PetscErrorCode (*duplicate)(DMSNES, DMSNES);
 };
@@ -236,7 +233,6 @@ struct _p_DMSNES {
   void          *mffunctionctx;
   void          *gsctx;
   void          *pctx;
-  void          *alctx;
   void          *objectivectx;
 
   void *data;

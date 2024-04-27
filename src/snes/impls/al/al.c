@@ -70,11 +70,17 @@ static PetscErrorCode SNESNewtonALCheckArcLength(SNES snes, Vec XStep, PetscReal
 @*/
 PetscErrorCode SNESNewtonALSetCorrectionType(SNES snes, SNESNewtonALCorrectionType ctype)
 {
-  SNES_NEWTONAL *al = (SNES_NEWTONAL *)snes->data;
+  SNES_NEWTONAL *al;
+  PetscBool      is_al;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
-  al->correction_type = ctype;
+  PetscValidLogicalCollectiveEnum(snes, ctype, 2);
+  PetscCall(PetscObjectTypeCompare((PetscObject)snes, SNESNEWTONAL, &is_al));
+  if (is_al) {
+    al                  = (SNES_NEWTONAL *)snes->data;
+    al->correction_type = ctype;
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -100,12 +106,17 @@ PetscErrorCode SNESNewtonALSetCorrectionType(SNES snes, SNESNewtonALCorrectionTy
 @*/
 PetscErrorCode SNESNewtonALSetFunction(SNES snes, SNESFunctionFn *func, void *ctx)
 {
-  DM dm;
+  SNES_NEWTONAL *al;
+  PetscBool      is_al;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
-  PetscCall(SNESGetDM(snes, &dm));
-  PetscCall(DMSNESSetNewtonAL(dm, func, ctx));
+  PetscCall(PetscObjectTypeCompare((PetscObject)snes, SNESNEWTONAL, &is_al));
+  if (is_al) {
+    al                    = (SNES_NEWTONAL *)snes->data;
+    al->computealfunction = func;
+    al->alctx             = ctx;
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -125,12 +136,17 @@ PetscErrorCode SNESNewtonALSetFunction(SNES snes, SNESFunctionFn *func, void *ct
 @*/
 PetscErrorCode SNESNewtonALGetFunction(SNES snes, SNESFunctionFn **func, void **ctx)
 {
-  DM dm;
+  SNES_NEWTONAL *al;
+  PetscBool      is_al;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
-  PetscCall(SNESGetDM(snes, &dm));
-  PetscCall(DMSNESGetNewtonAL(dm, func, ctx));
+  PetscCall(PetscObjectTypeCompare((PetscObject)snes, SNESNEWTONAL, &is_al));
+  if (is_al) {
+    al = (SNES_NEWTONAL *)snes->data;
+    if (func) *func = al->computealfunction;
+    if (ctx) *ctx = al->alctx;
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -156,29 +172,31 @@ PetscErrorCode SNESNewtonALGetFunction(SNES snes, SNESFunctionFn **func, void **
 PetscErrorCode SNESNewtonALGetLoadParameter(SNES snes, PetscReal *lambda)
 {
   SNES_NEWTONAL *al;
+  PetscBool      is_al;
 
   PetscFunctionBeginHot;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
-  al = (SNES_NEWTONAL *)snes->data;
   PetscAssertPointer(lambda, 2);
-  *lambda = al->lambda;
+  PetscCall(PetscObjectTypeCompare((PetscObject)snes, SNESNEWTONAL, &is_al));
+  if (is_al) {
+    al      = (SNES_NEWTONAL *)snes->data;
+    *lambda = al->lambda;
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode SNESNewtonALScaleRHS(SNES snes)
 {
   SNES_NEWTONAL *al = (SNES_NEWTONAL *)snes->data;
-  PetscReal      lambda;
 
   PetscFunctionBegin;
   if (!snes->vec_rhs || !al->scale_rhs) PetscFunctionReturn(PETSC_SUCCESS);
-  PetscCall(SNESNewtonALGetLoadParameter(snes, &lambda));
   if (!al->vec_rhs_orig) {
     PetscCall(VecDuplicate(snes->vec_rhs, &al->vec_rhs_orig));
     PetscCall(VecCopy(snes->vec_rhs, al->vec_rhs_orig));
-    PetscCall(VecScale(snes->vec_rhs, lambda));
+    PetscCall(VecScale(snes->vec_rhs, al->lambda));
   } else {
-    PetscCall(VecAXPBY(snes->vec_rhs, lambda, 0.0, al->vec_rhs_orig));
+    PetscCall(VecAXPBY(snes->vec_rhs, al->lambda, 0.0, al->vec_rhs_orig));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -217,11 +235,10 @@ static PetscErrorCode SNESNewtonALResetRHS(SNES snes)
 @*/
 PetscErrorCode SNESNewtonALComputeFunction(SNES snes, Vec X, Vec Q)
 {
-  DM              dm;
-  DMSNES          sdm;
   void           *ctx;
   SNESFunctionFn *computealfunction;
   SNES_NEWTONAL  *al;
+  PetscBool       is_al;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
@@ -230,13 +247,15 @@ PetscErrorCode SNESNewtonALComputeFunction(SNES snes, Vec X, Vec Q)
   PetscCheckSameComm(snes, 1, X, 2);
   PetscCheckSameComm(snes, 1, Q, 3);
   PetscCall(VecValidValues_Internal(X, 2, PETSC_TRUE));
-  al = (SNES_NEWTONAL *)snes->data;
+  PetscCall(PetscObjectTypeCompare((PetscObject)snes, SNESNEWTONAL, &is_al));
+  if (!is_al) PetscFunctionReturn(PETSC_SUCCESS);
+
+  al                = (SNES_NEWTONAL *)snes->data;
+  computealfunction = al->computealfunction;
+  ctx               = al->alctx;
 
   PetscCall(PetscLogEventBegin(SNES_NewtonALEval, snes, X, Q, 0));
-  PetscCall(SNESGetDM(snes, &dm));
-  PetscCall(DMGetDMSNES(dm, &sdm));
   PetscCall(VecZeroEntries(Q));
-  PetscCall(DMSNESGetNewtonAL(dm, &computealfunction, &ctx));
   PetscCheck(computealfunction || (snes->vec_rhs && al->scale_rhs), PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "No tangent load function or rhs vector has been set");
   if (computealfunction) {
     PetscCall(VecLockReadPush(X));

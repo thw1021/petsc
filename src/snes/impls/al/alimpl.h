@@ -19,6 +19,9 @@ typedef struct {
   SNESNewtonALCorrectionType correction_type; /* type of correction scheme to use */
 
   Vec vec_rhs_orig; /* original right-hand side vector, used if `scale_rhs == PETSC_TRUE` */
+
+  SNESFunctionFn *computealfunction; /* user-provided function to compute the tangent load vector  */
+  void           *alctx;             /* user-provided context for the tangent load vector computation */
 } SNES_NEWTONAL;
 
 PETSC_INTERN const char NewtonALExactCitation[];

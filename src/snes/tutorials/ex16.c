@@ -97,7 +97,7 @@ int main(int argc, char **argv)
   SNES      snes;
   DM        da;
   Vec       x, X, b;
-  PetscBool youngflg, poissonflg, muflg, lambdaflg, view = PETSC_FALSE, viewline = PETSC_FALSE;
+  PetscBool youngflg, poissonflg, muflg, lambdaflg, alflg, view = PETSC_FALSE, viewline = PETSC_FALSE;
   PetscReal poisson = 0.2, young = 4e4;
   char      filename[PETSC_MAX_PATH_LEN]     = "ex16.vts";
   char      filename_def[PETSC_MAX_PATH_LEN] = "ex16_def.vts";
@@ -151,17 +151,10 @@ int main(int argc, char **argv)
   PetscCall(DMDASNESSetFunctionLocal(da, INSERT_VALUES, (PetscErrorCode(*)(DMDALocalInfo *, void *, void *, void *))FormFunctionLocal, &user));
   PetscCall(DMDASNESSetJacobianLocal(da, (DMDASNESJacobianFn *)FormJacobianLocal, &user));
   PetscCall(SNESSetFromOptions(snes));
-  {
-    SNESType  type;
-    PetscBool is_al;
+  PetscCall(SNESNewtonALSetFunction(snes, TangentLoad, &user));
+  PetscCall(PetscObjectTypeCompare((PetscObject)snes, SNESNEWTONAL, &alflg));
+  if (alflg) user.load_factor = 0.0;
 
-    PetscCall(SNESGetType(snes, &type));
-    PetscCall(PetscStrcmp(type, SNESNEWTONAL, &is_al));
-    if (is_al) {
-      PetscCall(SNESNewtonALSetFunction(snes, TangentLoad, &user));
-      user.load_factor = 0.0;
-    }
-  }
   PetscCall(FormCoordinates(da, &user));
 
   PetscCall(DMCreateGlobalVector(da, &x));

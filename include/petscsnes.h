@@ -929,8 +929,6 @@ PETSC_EXTERN PetscErrorCode DMSNESSetFunctionContextDestroy(DM, PetscErrorCode (
 PETSC_EXTERN PetscErrorCode DMSNESSetMFFunction(DM, SNESFunctionFn *, void *);
 PETSC_EXTERN PetscErrorCode DMSNESSetNGS(DM, SNESNGSFn *, void *);
 PETSC_EXTERN PetscErrorCode DMSNESGetNGS(DM, SNESNGSFn **, void **);
-PETSC_EXTERN PetscErrorCode DMSNESSetNewtonAL(DM, SNESFunctionFn *, void *);
-PETSC_EXTERN PetscErrorCode DMSNESGetNewtonAL(DM, SNESFunctionFn **, void **);
 PETSC_EXTERN PetscErrorCode DMSNESSetJacobian(DM, SNESJacobianFn *, void *);
 PETSC_EXTERN PetscErrorCode DMSNESGetJacobian(DM, SNESJacobianFn **, void **);
 PETSC_EXTERN PetscErrorCode DMSNESSetJacobianContextDestroy(DM, PetscErrorCode (*)(void *));
