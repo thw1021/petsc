@@ -195,34 +195,6 @@ PetscErrorCode SNESNewtonALGetLoadParameter(SNES snes, PetscReal *lambda)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode SNESNewtonALScaleRHS(SNES snes)
-{
-  SNES_NEWTONAL *al = (SNES_NEWTONAL *)snes->data;
-
-  PetscFunctionBegin;
-  if (!snes->vec_rhs || !al->scale_rhs) PetscFunctionReturn(PETSC_SUCCESS);
-  if (!al->vec_rhs_orig) {
-    PetscCall(VecDuplicate(snes->vec_rhs, &al->vec_rhs_orig));
-    PetscCall(VecCopy(snes->vec_rhs, al->vec_rhs_orig));
-    PetscCall(VecScale(snes->vec_rhs, al->lambda));
-  } else {
-    PetscCall(VecAXPBY(snes->vec_rhs, al->lambda, 0.0, al->vec_rhs_orig));
-  }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode SNESNewtonALResetRHS(SNES snes)
-{
-  SNES_NEWTONAL *al = (SNES_NEWTONAL *)snes->data;
-
-  PetscFunctionBegin;
-  if (al->vec_rhs_orig) {
-    PetscCall(VecCopy(al->vec_rhs_orig, snes->vec_rhs));
-    PetscCall(VecDestroy(&al->vec_rhs_orig));
-  }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 /*@C
   SNESNewtonALComputeFunction - Calls the function that has been set with `SNESNewtonALSetFunction()`.
 
@@ -272,9 +244,13 @@ PetscErrorCode SNESNewtonALComputeFunction(SNES snes, Vec X, Vec Q)
     PetscCallBack("SNES callback NewtonAL tangent load function", (*computealfunction)(snes, X, Q, ctx));
     PetscCall(VecLockReadPop(X));
   }
-  if (snes->vec_rhs && al->scale_rhs) {
-    PetscCall(SNESNewtonALScaleRHS(snes));
-    PetscCheck(al->vec_rhs_orig, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "No original rhs vector has been set");
+  if (al->scale_rhs && snes->vec_rhs) {
+    /* Save original RHS vector values, then scale `snes->vec_rhs` by load parameter */
+    if (!al->vec_rhs_orig) {
+      PetscCall(VecDuplicate(snes->vec_rhs, &al->vec_rhs_orig));
+      PetscCall(VecSwap(snes->vec_rhs, al->vec_rhs_orig));
+    }
+    PetscCall(VecAXPBY(snes->vec_rhs, al->lambda, 0.0, al->vec_rhs_orig));
     PetscCall(VecAXPY(Q, 1, al->vec_rhs_orig));
   }
   PetscCall(PetscLogEventEnd(SNES_NewtonALEval, snes, X, Q, 0));
@@ -515,7 +491,10 @@ static PetscErrorCode SNESSolve_NEWTONAL(SNES snes)
     }
   }
   /* Reset RHS vector, if changed */
-  PetscCall(SNESNewtonALResetRHS(snes));
+  if (data->vec_rhs_orig) {
+    PetscCall(VecSwap(data->vec_rhs_orig, snes->vec_rhs));
+    PetscCall(VecDestroy(&data->vec_rhs_orig));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
