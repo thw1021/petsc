@@ -48,7 +48,7 @@ static PetscErrorCode SNESNewtonALCheckArcLength(SNES snes, Vec XStep, PetscReal
   arcLength      = PetscSqrtReal(arcLength);
   arcLengthError = PetscAbsReal(arcLength - stepSize);
 
-  if (arcLengthError > 1.0e-6) PetscCall(PetscInfo(snes, "Arc length differs from specified step size: computed=%18.16e, expected=%18.16e, error=%18.16e \n", (double)arcLength, (double)stepSize, (double)arcLengthError));
+  if (arcLengthError > PETSC_SQRT_MACHINE_EPSILON) PetscCall(PetscInfo(snes, "Arc length differs from specified step size: computed=%18.16e, expected=%18.16e, error=%18.16e \n", (double)arcLength, (double)stepSize, (double)arcLengthError));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
