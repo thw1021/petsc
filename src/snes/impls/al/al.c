@@ -1,4 +1,4 @@
-#include <../src/snes/impls/al/alimpl.h>
+#include <../src/snes/impls/al/alimpl.h> /*I "petscsnes.h" I*/
 
 /*
      This file implements a truncated Newton method with arc length continuation,
