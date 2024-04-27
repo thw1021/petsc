@@ -95,9 +95,7 @@ PetscErrorCode SNESNewtonALSetCorrectionType(SNES snes, SNESNewtonALCorrectionTy
 
 /*@C
   SNESNewtonALSetFunction - Sets a user function that is called at each function evaluation to
-  compute the tangent load vector for the arc-length continuation method. The tangent load vector is the
-  partial derivative of external load with respect to the load parameter. In the case of proportional
-  loading, the tangent load vector is the full external load vector at the end of the load step.
+  compute the tangent load vector for the arc-length continuation method.
 
   Logically Collective
 
@@ -108,8 +106,11 @@ PetscErrorCode SNESNewtonALSetCorrectionType(SNES snes, SNESNewtonALCorrectionTy
 
   Level: intermediate
 
-  Note:
+  Notes:
   If the current value of the load parameter is needed in `func`, it can be obtained with `SNESNewtonALGetLoadParameter()`.
+
+  The tangent load vector is the partial derivative of external load with respect to the load parameter.
+  In the case of proportional loading, the tangent load vector is the full external load vector at the end of the load step.
 
 .seealso: [](ch_snes), `SNES`, `SNESNEWTONAL`, `SNESNewtonALGetFunction()`, `SNESNewtonALGetLoadParameter()`
 @*/
@@ -161,10 +162,6 @@ PetscErrorCode SNESNewtonALGetFunction(SNES snes, SNESFunctionFn **func, void **
 
 /*@C
   SNESNewtonALGetLoadParameter - Get the value of the load parameter `lambda` for the arc-length continuation method.
-  This function should be used in the functions provided to `SNESSetFunction()` and `SNESNewtonALSetFunction()`
-  to compute the residual and tangent load vectors for a given value of `lambda` (0 <= lambda <= 1).
-  Usually, `lambda` is used to scale the external force vector in the residual function, i.e. proportional loading,
-  in which case the tangent load vector is the full external force vector.
 
   Logically Collective
 
@@ -175,6 +172,13 @@ PetscErrorCode SNESNewtonALGetFunction(SNES snes, SNESFunctionFn **func, void **
 . lambda - the arc-length parameter
 
   Level: intermediate
+
+  Notes:
+  This function should be used in the functions provided to `SNESSetFunction()` and `SNESNewtonALSetFunction()`
+  to compute the residual and tangent load vectors for a given value of `lambda` (0 <= lambda <= 1).
+
+  Usually, `lambda` is used to scale the external force vector in the residual function, i.e. proportional loading,
+  in which case the tangent load vector is the full external force vector.
 
 .seealso: [](ch_snes), `SNES`, `SNESNEWTONAL`, `SNESNewtonALSetFunction()`
 @*/
@@ -256,6 +260,14 @@ PetscErrorCode SNESNewtonALComputeFunction(SNES snes, Vec X, Vec Q)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*
+  SNESSolve_NEWTONAL - Solves a nonlinear system with Newton's method with arc length continuation.
+
+  Input Parameter:
+. snes - the `SNES` context
+
+  Application Interface Routine: SNESSolve()
+*/
 static PetscErrorCode SNESSolve_NEWTONAL(SNES snes)
 {
   SNES_NEWTONAL *data = (SNES_NEWTONAL *)snes->data;
@@ -567,12 +579,9 @@ static PetscErrorCode SNESDestroy_NEWTONAL(SNES snes)
 }
 
 /*MC
-   SNESNewtonAL - Newton based nonlinear solver that uses a arc-length continuation method to solve the nonlinear system.
+  SNESNEWTONAL - Newton based nonlinear solver that uses a arc-length continuation method to solve the nonlinear system.
 
-   The exact correction scheme with partial updates is detailed in {cite}`Ritto-CorreaCamotim2008` and the implementation of the
-   normal correction scheme is based on {cite}`LeonPaulinoPereiraMenezesLages_2011`.
-
-   Options Database Keys:
+  Options Database Keys:
 +   -snes_newtonal_step_size <1.0>         - Initial arc length increment step size
 .   -snes_newtonal_max_steps <100>         - Maximum number of increment steps, or negative for no limit (not recommended)
 .   -snes_newtonal_psisq <1.0>             - Regularization parameter for arc length continuation, 0 for cylindrical. Larger values generally lead to more steps.
@@ -581,7 +590,11 @@ static PetscErrorCode SNESDestroy_NEWTONAL(SNES snes)
 .   -snes_newtonal_scale_rhs <true>        - Scale the constant vector passed to `SNESSolve` by the load parameter lambda
 -   -snes_newtonal_correction_type <exact> - Type of correction to use in the arc-length continuation method, `exact` or `normal`
 
-   Level: intermediate
+  Level: intermediate
+
+  Note:
+  The exact correction scheme with partial updates is detailed in {cite}`Ritto-CorreaCamotim2008` and the implementation of the
+  normal correction scheme is based on {cite}`LeonPaulinoPereiraMenezesLages_2011`.
 
 .seealso: [](ch_snes), `SNESCreate()`, `SNES`, `SNESSetType()`, `SNESNEWTONAL`, `SNESNewtonALSetFunction()`, `SNESNewtonALGetFunction()`, `SNESNewtonALGetLoadParameter()`
 M*/
