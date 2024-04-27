@@ -292,16 +292,16 @@ static PetscErrorCode SNESSolve_NEWTONAL(SNES snes)
   snes->numLinearSolveFailures = 0;
   snes->reason                 = SNES_CONVERGED_ITERATING;
 
-  maxits   = snes->max_its;        /* maximum number of iterations */
-  maxincs  = data->max_steps;      /* maximum number of increments */
-  X        = snes->vec_sol;        /* solution vector */
-  R        = snes->vec_func;       /* residual vector */
-  Q        = snes->work[0];        /* tangent load vector */
-  deltaX_Q = snes->work[1];        /* variation of X with respect to lambda */
-  deltaX_R = snes->work[2];        /* linearized error correction */
-  DeltaX   = snes->work[3];        /* step from equilibrium */
-  deltaX   = snes->vec_sol_update; /* full newton step */
-  stepSize = data->step_size;      /* initial step size */
+  maxits   = snes->max_its;                /* maximum number of iterations */
+  maxincs  = data->max_continuation_steps; /* maximum number of increments */
+  X        = snes->vec_sol;                /* solution vector */
+  R        = snes->vec_func;               /* residual vector */
+  Q        = snes->work[0];                /* tangent load vector */
+  deltaX_Q = snes->work[1];                /* variation of X with respect to lambda */
+  deltaX_R = snes->work[2];                /* linearized error correction */
+  DeltaX   = snes->work[3];                /* step from equilibrium */
+  deltaX   = snes->vec_sol_update;         /* full newton step */
+  stepSize = data->step_size;              /* initial step size */
 
   PetscCall(VecZeroEntries(DeltaX));
 
@@ -542,7 +542,7 @@ static PetscErrorCode SNESSetFromOptions_NEWTONAL(SNES snes, PetscOptionItems *P
   PetscFunctionBegin;
   PetscOptionsHeadBegin(PetscOptionsObject, "SNES Newton Arc Length options");
   PetscCall(PetscOptionsReal("-snes_newtonal_step_size", "Initial arc length increment step size", "SNESNewtonAL", data->step_size, &data->step_size, NULL));
-  PetscCall(PetscOptionsInt("-snes_newtonal_max_steps", "Maximum number of increment steps", "SNESNewtonAL", data->max_steps, &data->max_steps, NULL));
+  PetscCall(PetscOptionsInt("-snes_newtonal_max_continuation_steps", "Maximum number of increment steps", "SNESNewtonAL", data->max_continuation_steps, &data->max_continuation_steps, NULL));
   PetscCall(PetscOptionsReal("-snes_newtonal_psisq", "Regularization parameter for arc length continuation, 0 for cylindrical", "SNESNewtonAL", data->psisq, &data->psisq, NULL));
   PetscCall(PetscOptionsReal("-snes_newtonal_lambda_min", "Minimum value of the load parameter lambda", "SNESNewtonAL", data->lambda_min, &data->lambda_min, NULL));
   PetscCall(PetscOptionsReal("-snes_newtonal_lambda_max", "Maximum value of the load parameter lambda", "SNESNewtonAL", data->lambda_max, &data->lambda_max, NULL));
@@ -582,13 +582,13 @@ static PetscErrorCode SNESDestroy_NEWTONAL(SNES snes)
   SNESNEWTONAL - Newton based nonlinear solver that uses a arc-length continuation method to solve the nonlinear system.
 
   Options Database Keys:
-+   -snes_newtonal_step_size <1.0>         - Initial arc length increment step size
-.   -snes_newtonal_max_steps <100>         - Maximum number of increment steps, or negative for no limit (not recommended)
-.   -snes_newtonal_psisq <1.0>             - Regularization parameter for arc length continuation, 0 for cylindrical. Larger values generally lead to more steps.
-.   -snes_newtonal_lambda_min <0.0>        - Minimum value of the load parameter lambda
-.   -snes_newtonal_lambda_max <1.0>        - Maximum value of the load parameter lambda
-.   -snes_newtonal_scale_rhs <true>        - Scale the constant vector passed to `SNESSolve` by the load parameter lambda
--   -snes_newtonal_correction_type <exact> - Type of correction to use in the arc-length continuation method, `exact` or `normal`
++   -snes_newtonal_step_size <1.0>              - Initial arc length increment step size
+.   -snes_newtonal_max_continuation_steps <100> - Maximum number of continuation steps, or negative for no limit (not recommended)
+.   -snes_newtonal_psisq <1.0>                  - Regularization parameter for arc length continuation, 0 for cylindrical. Larger values generally lead to more steps.
+.   -snes_newtonal_lambda_min <0.0>             - Minimum value of the load parameter lambda
+.   -snes_newtonal_lambda_max <1.0>             - Maximum value of the load parameter lambda
+.   -snes_newtonal_scale_rhs <true>             - Scale the constant vector passed to `SNESSolve` by the load parameter lambda
+-   -snes_newtonal_correction_type <exact>      - Type of correction to use in the arc-length continuation method, `exact` or `normal`
 
   Level: intermediate
 
@@ -615,15 +615,15 @@ PETSC_EXTERN PetscErrorCode SNESCreate_NEWTONAL(SNES snes)
   snes->alwayscomputesfinalresidual = PETSC_TRUE;
 
   PetscCall(PetscNew(&arclengthParameters));
-  arclengthParameters->lambda          = 0.0;
-  arclengthParameters->lambda_update   = 0.0;
-  arclengthParameters->step_size       = 1.0;
-  arclengthParameters->max_steps       = 100;
-  arclengthParameters->psisq           = 1.0;
-  arclengthParameters->lambda_min      = 0.0;
-  arclengthParameters->lambda_max      = 1.0;
-  arclengthParameters->scale_rhs       = PETSC_TRUE;
-  arclengthParameters->correction_type = SNES_NEWTONAL_CORRECTION_EXACT;
-  snes->data                           = (void *)arclengthParameters;
+  arclengthParameters->lambda                 = 0.0;
+  arclengthParameters->lambda_update          = 0.0;
+  arclengthParameters->step_size              = 1.0;
+  arclengthParameters->max_continuation_steps = 100;
+  arclengthParameters->psisq                  = 1.0;
+  arclengthParameters->lambda_min             = 0.0;
+  arclengthParameters->lambda_max             = 1.0;
+  arclengthParameters->scale_rhs              = PETSC_TRUE;
+  arclengthParameters->correction_type        = SNES_NEWTONAL_CORRECTION_EXACT;
+  snes->data                                  = (void *)arclengthParameters;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
