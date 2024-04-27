@@ -67,7 +67,7 @@ static inline void PetscQuadraticRoots(PetscReal a, PetscReal b, PetscReal c, Pe
   Logically Collective
 
   Input Parameters:
-+ snes - the nonlinear solver object
++ snes  - the nonlinear solver object
 - ctype - the type of correction to use
 
   Options Database Key:
