@@ -1962,7 +1962,7 @@ PetscErrorCode PetscLogMPEDump(const char sname[])
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PetscLogView - Prints a summary of the logging.
 
   Collective
