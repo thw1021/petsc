@@ -145,16 +145,16 @@ PetscErrorCode DMPlexCreateCGNS(MPI_Comm comm, PetscInt cgid, PetscBool interpol
       ierr = cg_zone_type(cgid, 1, z, &zonetype);CHKERRQ(ierr);
       if (zonetype == CGNS_ENUMV(Structured)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"Can only handle Unstructured zones for CGNS");
       ierr = cg_nsections(cgid, 1, z, &nsections);CHKERRQ(ierr);
-      if (nsections > 1) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"CGNS file must have a single section, not %d\n",nsections);
-      ierr = cg_section_read(cgid, 1, z, 1, buffer, &cellType, &start, &end, &nbndry, &parentFlag);CHKERRQ(ierr);
+      /*if (nsections > 1) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"CGNS file must have a single section, not %d\n",nsections);*/
+      ierr = cg_section_read(cgid, 1, z, nsections, buffer, &cellType, &start, &end, &nbndry, &parentFlag);CHKERRQ(ierr);
       /* This alone is reason enough to bludgeon every single CGNDS developer, this must be what they describe as the "idiocy of crowds" */
       if (cellType == CGNS_ENUMV(MIXED)) {
         cgsize_t elementDataSize, *elements;
         PetscInt off;
 
-        ierr = cg_ElementDataSize(cgid, 1, z, 1, &elementDataSize);CHKERRQ(ierr);
+        ierr = cg_ElementDataSize(cgid, 1, z, nsections, &elementDataSize);CHKERRQ(ierr);
         ierr = PetscMalloc1(elementDataSize, &elements);CHKERRQ(ierr);
-        ierr = cg_elements_read(cgid, 1, z, 1, elements, NULL);CHKERRQ(ierr);
+        ierr = cg_elements_read(cgid, 1, z, nsections, elements, NULL);CHKERRQ(ierr);
         for (c_loc = start, off = 0; c_loc <= end; ++c_loc, ++c) {
           switch (elements[off]) {
           case CGNS_ENUMV(TRI_3):   numCorners = 3;break;
@@ -185,14 +185,16 @@ PetscErrorCode DMPlexCreateCGNS(MPI_Comm comm, PetscInt cgid, PetscBool interpol
       CGNS_ENUMT(ElementType_t) cellType;
       cgsize_t                    *elements, elementDataSize, start, end;
       int                          nbndry, parentFlag;
+      int                         nsections;
       PetscInt                    *cone, numc, numCorners, maxCorners = 27;
 
-      ierr = cg_section_read(cgid, 1, z, 1, buffer, &cellType, &start, &end, &nbndry, &parentFlag);CHKERRQ(ierr);
+      ierr = cg_nsections(cgid, 1, z, &nsections);CHKERRQ(ierr);
+      ierr = cg_section_read(cgid, 1, z, nsections, buffer, &cellType, &start, &end, &nbndry, &parentFlag);CHKERRQ(ierr);
       numc = end - start;
       /* This alone is reason enough to bludgeon every single CGNDS developer, this must be what they describe as the "idiocy of crowds" */
-      ierr = cg_ElementDataSize(cgid, 1, z, 1, &elementDataSize);CHKERRQ(ierr);
+      ierr = cg_ElementDataSize(cgid, 1, z, nsections, &elementDataSize);CHKERRQ(ierr);
       ierr = PetscMalloc2(elementDataSize,&elements,maxCorners,&cone);CHKERRQ(ierr);
-      ierr = cg_elements_read(cgid, 1, z, 1, elements, NULL);CHKERRQ(ierr);
+      ierr = cg_elements_read(cgid, 1, z, nsections, elements, NULL);CHKERRQ(ierr);
       if (cellType == CGNS_ENUMV(MIXED)) {
         /* CGNS uses Fortran-based indexing, DMPlex uses C-style and numbers cell first then vertices. */
         for (c_loc = 0, v = 0; c_loc <= numc; ++c_loc, ++c) {
