@@ -29,6 +29,10 @@ class Configure(config.package.CMakePackage):
     self.bison   = framework.require('config.packages.bison',self)
     self.regex   = framework.require('config.packages.regex',self)
     self.odeps   =  [self.pthread,self.zlib,self.regex,self.bison]
+    if not hasattr(self.programs, 'flex'): self.programs.getExecutable('flex', getFullPath = 1)
+    if not hasattr(self.programs, 'flex'): raise RuntimeError('PTScotch needs flex installed')
+
+    if not self.bison.found or not self.bison.haveBison3plus: raise RuntimeError('PTScotch needs Bison version 3.0 or above, use --download-bison')
     return
 
   def formCMakeConfigureArgs(self):
@@ -61,7 +65,3 @@ class Configure(config.package.CMakePackage):
     return args
 
   #def configureLibrary(self):
-  #  if not hasattr(self.programs, 'flex'): self.programs.getExecutable('flex', getFullPath = 1)
-  #  if not hasattr(self.programs, 'flex'): raise RuntimeError('PTScotch needs flex installed')
-
-  #  if not self.bison.found or not self.bison.haveBison3plus: raise RuntimeError('PTScotch needs Bison version 3.0 or above, use --download-bison')
