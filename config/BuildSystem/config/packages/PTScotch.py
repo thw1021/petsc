@@ -33,8 +33,12 @@ class Configure(config.package.CMakePackage):
     args = config.package.CMakePackage.formCMakeConfigureArgs(self)
 
     args.append('-DINTSIZE:STRING='+ ('64' if self.getDefaultIndexSize() == 64 else '32'))
+
     args.append('-DINSTALL_METIS_HEADERS:BOOL=OFF')
     args.append('-DSCOTCH_METIS_PREFIX:BOOL=ON')
+
+    args.append('-DCOMMON_RANDOM_FIXED_SEED:BOOL=OFF')
+
     if self.setCompilers.isDarwin(self.log):
       #args.append('-DCOMMON_TIMING_OLD')
       args.append('-DCOMMON_OS_MACOS:BOOL=ON')
