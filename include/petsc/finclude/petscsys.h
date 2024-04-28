@@ -220,4 +220,13 @@
 #define PetscFunctionList PetscFortranAddr
 
 #define PetscInfoCommFlag PetscEnum
+
+! used by bfort generated function interfaces with PetscObject arguments
+! and missing Fortran 2018 support
+#if defined(PETSC_HAVE_FORTRAN_TYPE_STAR)
+#define type_PetscObject type(*)
+#else
+#define type_PetscObject type(PetscObject)
+#endif
+
 #endif
