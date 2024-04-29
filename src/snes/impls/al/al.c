@@ -220,8 +220,8 @@ PetscErrorCode SNESNewtonALGetLoadParameter(SNES snes, PetscReal *lambda)
 @*/
 PetscErrorCode SNESNewtonALComputeFunction(SNES snes, Vec X, Vec Q)
 {
-  void           *ctx;
-  SNESFunctionFn *computealfunction;
+  void           *ctx               = NULL;
+  SNESFunctionFn *computealfunction = NULL;
   SNES_NEWTONAL  *al;
   PetscBool       is_al;
 
@@ -235,9 +235,8 @@ PetscErrorCode SNESNewtonALComputeFunction(SNES snes, Vec X, Vec Q)
   PetscCall(PetscObjectTypeCompare((PetscObject)snes, SNESNEWTONAL, &is_al));
   if (!is_al) PetscFunctionReturn(PETSC_SUCCESS);
 
-  al                = (SNES_NEWTONAL *)snes->data;
-  computealfunction = al->computealfunction;
-  ctx               = al->alctx;
+  al = (SNES_NEWTONAL *)snes->data;
+  PetscCall(SNESNewtonALGetFunction(snes, &computealfunction, &ctx));
 
   PetscCall(PetscLogEventBegin(SNES_NewtonALEval, snes, X, Q, 0));
   PetscCall(VecZeroEntries(Q));
@@ -439,9 +438,11 @@ static PetscErrorCode SNESSolve_NEWTONAL(SNES snes)
         data->lambda = data->lambda_max;
       }
       if (data->lambda < data->lambda_min) {
+        // LCOV_EXCL_START
         /* Ensure that lambda >= lambda_min. This prevents some potential oscillatory behavior. */
         deltaLambda  = deltaLambda - (data->lambda - data->lambda_min);
         data->lambda = data->lambda_min;
+        // LCOV_EXCL_STOP
       }
       data->lambda_update = data->lambda_update + deltaLambda;
       PetscCall(PetscObjectSAWsGrantAccess((PetscObject)snes));
@@ -479,15 +480,9 @@ static PetscErrorCode SNESSolve_NEWTONAL(SNES snes)
       PetscCall(SNESLogConvergenceHistory(snes, snes->norm, lits));
       PetscCall(SNESConverged(snes, snes->iter, xnorm, ynorm, fnorm));
       PetscCall(SNESMonitor(snes, snes->iter, snes->norm));
-      if (snes->reason) {
-        PetscCall(PetscInfo(snes, "Inner SNES solve converged reason %s\n", SNESConvergedReasons[snes->reason]));
-        break;
-      }
+      if (snes->reason) break;
     }
-    if (snes->reason < 0) {
-      PetscCall(PetscInfo(snes, "Inner SNES solve failed reason %s\n", SNESConvergedReasons[snes->reason]));
-      break;
-    }
+    if (snes->reason < 0) break;
     if (data->lambda >= data->lambda_max) {
       snes->iter = i + 1;
       break;
