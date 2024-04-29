@@ -51,8 +51,9 @@ PetscErrorCode PetscMemcmp(const void *str1, const void *str2, size_t len, Petsc
 #if defined(PETSC_HAVE_HWLOC)
   #include <petsc/private/petscimpl.h>
   #include <hwloc.h>
+#endif
 
-/*@C
+/*@
   PetscProcessPlacementView - display the MPI rank placement by core
 
   Input Parameter:
@@ -65,6 +66,7 @@ PetscErrorCode PetscMemcmp(const void *str1, const void *str2, size_t len, Petsc
 @*/
 PetscErrorCode PetscProcessPlacementView(PetscViewer viewer)
 {
+#if defined(PETSC_HAVE_HWLOC)
   PetscBool        isascii;
   PetscMPIInt      rank;
   hwloc_bitmap_t   set;
@@ -86,6 +88,9 @@ PetscErrorCode PetscProcessPlacementView(PetscViewer viewer)
   PetscCall(PetscViewerFlush(viewer));
   hwloc_bitmap_free(set);
   hwloc_topology_destroy(topology);
+#else
+  PetscFunctionBegin;
+  SETERRQ(PetscObjectComm((PetscObject)viewer), PETSC_ERR_SUP, "Requires PETSc be configured with --with-hwloc or --download-hwloc");
+#endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-#endif

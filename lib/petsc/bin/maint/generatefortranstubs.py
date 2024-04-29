@@ -45,7 +45,7 @@ def FixFile(filename):
   data = re.subn('\nvoid ','\nPETSC_EXTERN void ',data)[0]
   data = re.subn('\nPetscErrorCode ','\nPETSC_EXTERN void ',data)[0]
   data = re.subn(r'Petsc([ToRm]*)Pointer\(int\)','Petsc\\1Pointer(void*)',data)[0]
-  data = re.subn(r'PetscToPointer\(a\) \(a\)','PetscToPointer(a) (*(PetscFortranAddr *)(a))',data)[0]
+  data = re.subn(r'PetscToPointer\(a\) \(a\)','PetscToPointer(a) (a ? *(PetscFortranAddr *)(a) : 0)',data)[0]
   data = re.subn(r'PetscFromPointer\(a\) \(int\)\(a\)','PetscFromPointer(a) (PetscFortranAddr)(a)',data)[0]
   data = re.subn(r'PetscToPointer\( \*\(int\*\)','PetscToPointer(',data)[0]
   data = re.subn('MPI_Comm comm','MPI_Comm *comm',data)[0]
@@ -188,6 +188,7 @@ def processDir(petscdir, petscarch,bfort, verbose, dirpath, dirnames, filenames)
       cmd = 'BFORT_CONFIG_PATH='+os.path.join(petscdir,'lib','petsc','conf')+' '+bfort+' '+' '.join(options+filenames[i:i+split_ct])+' -f90modfile f90module'+str(i)+'.f90'
       try:
         output = check_output(cmd, cwd=dirpath, shell=True).decode('utf-8')
+        print(output)
       except subprocess.CalledProcessError as e:
         raise SystemError(str(e)+'\nIn '+dirpath+'\n'+e.output.decode(encoding='UTF-8',errors='replace'));
     FixDir(petscdir,petscarch, dirpath,outdir,verbose)
