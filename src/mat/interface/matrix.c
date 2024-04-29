@@ -6786,11 +6786,20 @@ PetscErrorCode MatGetLocalSize(Mat mat, PetscInt *m, PetscInt *n)
 
   Level: developer
 
-  Note:
+  Notes:
+   If the `Mat` was obtained from a `DM` with `DMCreateMatrix()` then the range values are determined by the specific `DM`.
+
+  If the `Mat` was created directly the range values are determined by the local size passed to `MatSetSizes()` or `MatCreateAIJ()`
+  If `PETSC_DECIDE` was passed as the local size then the vector uses default values for the range using `PetscSplitOwnership()`.
+
+  For certain `DM`, such as `DMDA`, it is better to use `DM` specific routines, such as `DMDAGetGhostCorners()`, to determine
+  the local values in the matrix.
+
   Returns the columns of the "diagonal block" for most sparse matrix formats. See [Matrix
   Layouts](sec_matlayout) for details on matrix layouts.
 
-.seealso: [](ch_matrices), `Mat`, `MatGetOwnershipRange()`, `MatGetOwnershipRanges()`, `MatGetOwnershipRangesColumn()`, `PetscLayout`
+.seealso: [](ch_matrices), `Mat`, `MatGetOwnershipRange()`, `MatGetOwnershipRanges()`, `MatGetOwnershipRangesColumn()`, `PetscLayout`,
+          `PetscLayout`, `MatSetSizes()`, `MatCreateAIJ()`, `PetscLayout`, `DMDAGetGhostCorners()`, `DM`
 @*/
 PetscErrorCode MatGetOwnershipRangeColumn(Mat mat, PetscInt *m, PetscInt *n)
 {
@@ -6820,13 +6829,23 @@ PetscErrorCode MatGetOwnershipRangeColumn(Mat mat, PetscInt *m, PetscInt *n)
 
   Level: beginner
 
-  Note:
+  Notes:
+  If the `Mat` was obtained from a `DM` with `DMCreateMatrix()` then the range values are determined by the specific `DM`.
+
+  If the `Mat` was created directly the range values are determined by the local size passed to `MatSetSizes()` or `MatCreateAIJ()`
+  If `PETSC_DECIDE` was passed as the local size then the vector uses default values for the range using `PetscSplitOwnership()`.
+
+  For certain `DM`, such as `DMDA`, it is better to use `DM` specific routines, such as `DMDAGetGhostCorners()`, to determine
+  the local values in the matrix.
+
+  The high argument is one more than the last element stored locally.
+
   For all matrices  it returns the range of matrix rows associated with rows of a vector that
   would contain the result of a matrix vector product with this matrix. See [Matrix
   Layouts](sec_matlayout) for details on matrix layouts.
 
-.seealso: [](ch_matrices), `Mat`, `MatGetOwnershipRanges()`, `MatGetOwnershipRangeColumn()`, `MatGetOwnershipRangesColumn()`, `PetscSplitOwnership()`, `PetscSplitOwnershipBlock()`,
-          `PetscLayout`
+.seealso: [](ch_matrices), `Mat`, `MatGetOwnershipRanges()`, `MatGetOwnershipRangeColumn()`, `MatGetOwnershipRangesColumn()`, `PetscSplitOwnership()`,
+          `PetscSplitOwnershipBlock()`, `PetscLayout`, `MatSetSizes()`, `MatCreateAIJ()`, `PetscLayout`, `DMDAGetGhostCorners()`, `DM`
 @*/
 PetscErrorCode MatGetOwnershipRange(Mat mat, PetscInt *m, PetscInt *n)
 {
@@ -6855,12 +6874,22 @@ PetscErrorCode MatGetOwnershipRange(Mat mat, PetscInt *m, PetscInt *n)
 
   Level: beginner
 
-  Note:
+  Notes:
+  If the `Mat` was obtained from a `DM` with `DMCreateMatrix()` then the range values are determined by the specific `DM`.
+
+  If the `Mat` was created directly the range values are determined by the local size passed to `MatSetSizes()` or `MatCreateAIJ()`
+  If `PETSC_DECIDE` was passed as the local size then the vector uses default values for the range using `PetscSplitOwnership()`.
+
+  For certain `DM`, such as `DMDA`, it is better to use `DM` specific routines, such as `DMDAGetGhostCorners()`, to determine
+  the local values in the matrix.
+
   For all matrices  it returns the ranges of matrix rows associated with rows of a vector that
   would contain the result of a matrix vector product with this matrix. See [Matrix
   Layouts](sec_matlayout) for details on matrix layouts.
 
-.seealso: [](ch_matrices), `Mat`, `MatGetOwnershipRange()`, `MatGetOwnershipRangeColumn()`, `MatGetOwnershipRangesColumn()`, `PetscLayout`
+.seealso: [](ch_matrices), `Mat`, `MatGetOwnershipRange()`, `MatGetOwnershipRangeColumn()`, `MatGetOwnershipRangesColumn()`, `PetscLayout`,
+          `PetscSplitOwnership()`, `PetscSplitOwnershipBlock()`, `PetscLayout`, `MatSetSizes()`, `MatCreateAIJ()`, `PetscLayout`,
+          `DMDAGetGhostCorners()`, `DM`
 @*/
 PetscErrorCode MatGetOwnershipRanges(Mat mat, const PetscInt **ranges)
 {
@@ -6886,11 +6915,21 @@ PetscErrorCode MatGetOwnershipRanges(Mat mat, const PetscInt **ranges)
 
   Level: beginner
 
-  Note:
+  Notes:
+  If the `Mat` was obtained from a `DM` with `DMCreateMatrix()` then the range values are determined by the specific `DM`.
+
+  If the `Mat` was created directly the range values are determined by the local size passed to `MatSetSizes()` or `MatCreateAIJ()`
+  If `PETSC_DECIDE` was passed as the local size then the vector uses default values for the range using `PetscSplitOwnership()`.
+
+  For certain `DM`, such as `DMDA`, it is better to use `DM` specific routines, such as `DMDAGetGhostCorners()`, to determine
+  the local values in the matrix.
+
   Returns the columns of the "diagonal blocks", for most sparse matrix formats. See [Matrix
   Layouts](sec_matlayout) for details on matrix layouts.
 
-.seealso: [](ch_matrices), `Mat`, `MatGetOwnershipRange()`, `MatGetOwnershipRangeColumn()`, `MatGetOwnershipRanges()`
+.seealso: [](ch_matrices), `Mat`, `MatGetOwnershipRange()`, `MatGetOwnershipRangeColumn()`, `MatGetOwnershipRanges()`,
+          `PetscSplitOwnership()`, `PetscSplitOwnershipBlock()`, `PetscLayout`, `MatSetSizes()`, `MatCreateAIJ()`, `PetscLayout`,
+          `DMDAGetGhostCorners()`, `DM`
 @*/
 PetscErrorCode MatGetOwnershipRangesColumn(Mat mat, const PetscInt **ranges)
 {
@@ -6922,7 +6961,7 @@ PetscErrorCode MatGetOwnershipRangesColumn(Mat mat, const PetscInt **ranges)
   `MATSCALAPACK` the ownership is more complicated. See [Matrix Layouts](sec_matlayout) for
   details on matrix layouts.
 
-.seealso: [](ch_matrices), `Mat`, `MatGetOwnershipRange()`, `MatGetOwnershipRangeColumn()`, `MatSetValues()`, ``MATELEMENTAL``, ``MATSCALAPACK``
+.seealso: [](ch_matrices), `Mat`, `MatGetOwnershipRanges()`, `MatGetOwnershipRangeColumns()`, `MatSetValues()`, ``MATELEMENTAL``, ``MATSCALAPACK``
 @*/
 PetscErrorCode MatGetOwnershipIS(Mat A, IS *rows, IS *cols)
 {
