@@ -37,6 +37,7 @@ PetscBool  NewtonALNormalCitationSet = PETSC_FALSE;
 
 const char *const SNESNewtonALCorrectionTypes[] = {"EXACT", "NORMAL", "SNESNewtonALCorrectionType", "SNES_NEWTONAL_CORRECTION_", NULL};
 
+// LCOV_EXCL_START
 static PetscErrorCode SNESNewtonALCheckArcLength(SNES snes, Vec XStep, PetscReal lambdaStep, PetscReal stepSize)
 {
   PetscReal      arcLength, arcLengthError;

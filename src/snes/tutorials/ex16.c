@@ -83,11 +83,10 @@ typedef struct {
   PetscReal load_factor;
 } AppCtx;
 
-PetscErrorCode        InitialGuess(DM, AppCtx *, Vec);
-PetscErrorCode        FormRHS(DM, AppCtx *, Vec);
-PetscErrorCode        FormCoordinates(DM, AppCtx *);
-extern PetscErrorCode NonlinearGS(SNES, Vec, Vec, void *);
-PetscErrorCode        TangentLoad(SNES, Vec, Vec, void *);
+PetscErrorCode InitialGuess(DM, AppCtx *, Vec);
+PetscErrorCode FormRHS(DM, AppCtx *, Vec);
+PetscErrorCode FormCoordinates(DM, AppCtx *);
+PetscErrorCode TangentLoad(SNES, Vec, Vec, void *);
 
 int main(int argc, char **argv)
 {
@@ -111,8 +110,6 @@ int main(int argc, char **argv)
   PetscCall(DMSetFromOptions(da));
   PetscCall(DMSetUp(da));
   PetscCall(SNESSetDM(snes, (DM)da));
-
-  PetscCall(SNESSetNGS(snes, NonlinearGS, &user));
 
   PetscCall(DMDAGetInfo(da, 0, &mx, &my, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE));
   user.loading     = 0.0;
@@ -560,58 +557,6 @@ void FormElementJacobian(Field *ex, CoordField *ec, Field *ef, Field *eq, PetscS
   } /* end of quadrature points */
 }
 
-void FormPBJacobian(PetscInt i, PetscInt j, PetscInt k, Field *ex, CoordField *ec, Field *ef, PetscScalar *ej, AppCtx *user)
-{
-  PetscReal   vol;
-  PetscScalar J[9];
-  PetscScalar invJ[9];
-  PetscScalar F[9], S[9], dF[9], dS[9], dFS[9], FdS[9], FS[9];
-  PetscReal   scl;
-  PetscInt    l, ll, qi, qj, qk, m;
-  PetscInt    idx = i + j * NB + k * NB * NB;
-  PetscScalar lgrad[3];
-
-  if (ej)
-    for (l = 0; l < 9; l++) ej[l] = 0.;
-  if (ef)
-    for (l = 0; l < 1; l++) {
-      ef[l][0] = 0.;
-      ef[l][1] = 0.;
-      ef[l][2] = 0.;
-    }
-  /* loop over quadrature */
-  for (qk = 0; qk < NQ; qk++) {
-    for (qj = 0; qj < NQ; qj++) {
-      for (qi = 0; qi < NQ; qi++) {
-        PetscInt bidx = NEB * idx + qi + NQ * qj + NQ * NQ * qk;
-        QuadraturePointGeometricJacobian(ec, qi, qj, qk, J);
-        InvertTensor(J, invJ, &vol);
-        TensorVector(invJ, &grad[3 * bidx], lgrad);
-        scl = vol * wts[qi] * wts[qj] * wts[qk];
-        DeformationGradient(ex, qi, qj, qk, invJ, F);
-        SaintVenantKirchoff(user->lambda, user->mu, F, S);
-        /* form the function */
-        if (ef) {
-          TensorTensor(F, S, FS);
-          for (m = 0; m < 3; m++) ef[0][m] += scl * (lgrad[0] * FS[3 * m + 0] + lgrad[1] * FS[3 * m + 1] + lgrad[2] * FS[3 * m + 2]);
-          ef[0][1] -= user->load_factor * scl * user->loading * vals[bidx];
-        }
-        /* form the jacobian */
-        if (ej) {
-          for (l = 0; l < 3; l++) {
-            DeformationGradientJacobian(qi, qj, qk, i, j, k, l, invJ, dF);
-            SaintVenantKirchoffJacobian(user->lambda, user->mu, F, dF, dS);
-            TensorTensor(dF, S, dFS);
-            TensorTensor(F, dS, FdS);
-            for (m = 0; m < 9; m++) dFS[m] += FdS[m];
-            for (ll = 0; ll < 3; ll++) ej[ll + 3 * l] += scl * (lgrad[0] * dFS[3 * ll + 0] + lgrad[1] * dFS[3 * ll + 1] + lgrad[2] * dFS[3 * ll + 2]);
-          }
-        }
-      }
-    } /* end of quadrature points */
-  }
-}
-
 void ApplyBCsElement(PetscInt mx, PetscInt my, PetscInt mz, PetscInt i, PetscInt j, PetscInt k, PetscScalar *jacobian)
 {
   PetscInt ii, jj, kk, ll, ei, ej, ek, el;
@@ -820,114 +765,6 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, Field ***x, Field ***f, vo
         }
       }
     }
-  }
-  PetscCall(DMDAVecRestoreArray(cda, C, &c));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-PetscErrorCode NonlinearGS(SNES snes, Vec X, Vec B, void *ptr)
-{
-  /* values for each basis function at each quadrature point */
-  AppCtx       *user = (AppCtx *)ptr;
-  PetscInt      i, j, k, l, m, n, s;
-  PetscInt      pi, pj, pk;
-  Field         ef[1];
-  Field         ex[8];
-  PetscScalar   ej[9];
-  CoordField    ec[8];
-  PetscScalar   pjac[9], pjinv[9];
-  PetscScalar   pf[3], py[3];
-  PetscInt      xs, ys, zs;
-  PetscInt      xm, ym, zm;
-  PetscInt      mx, my, mz;
-  DM            cda;
-  CoordField ***c;
-  Vec           C;
-  DM            da;
-  Vec           Xl, Bl;
-  Field      ***x, ***b;
-  PetscInt      sweeps, its;
-  PetscReal     atol, rtol, stol;
-  PetscReal     fnorm0 = 0.0, fnorm, ynorm, xnorm = 0.0;
-
-  PetscFunctionBegin;
-  PetscCall(SNESNGSGetSweeps(snes, &sweeps));
-  PetscCall(SNESNGSGetTolerances(snes, &atol, &rtol, &stol, &its));
-
-  PetscCall(SNESGetDM(snes, &da));
-  PetscCall(DMGetLocalVector(da, &Xl));
-  if (B) PetscCall(DMGetLocalVector(da, &Bl));
-  PetscCall(DMGlobalToLocalBegin(da, X, INSERT_VALUES, Xl));
-  PetscCall(DMGlobalToLocalEnd(da, X, INSERT_VALUES, Xl));
-  if (B) {
-    PetscCall(DMGlobalToLocalBegin(da, B, INSERT_VALUES, Bl));
-    PetscCall(DMGlobalToLocalEnd(da, B, INSERT_VALUES, Bl));
-  }
-  PetscCall(DMDAVecGetArray(da, Xl, &x));
-  if (B) PetscCall(DMDAVecGetArray(da, Bl, &b));
-
-  PetscCall(DMGetCoordinateDM(da, &cda));
-  PetscCall(DMGetCoordinatesLocal(da, &C));
-  PetscCall(DMDAVecGetArray(cda, C, &c));
-  PetscCall(DMDAGetInfo(da, 0, &mx, &my, &mz, 0, 0, 0, 0, 0, 0, 0, 0, 0));
-  PetscCall(DMDAGetCorners(da, &xs, &ys, &zs, &xm, &ym, &zm));
-
-  for (s = 0; s < sweeps; s++) {
-    for (k = zs; k < zs + zm; k++) {
-      for (j = ys; j < ys + ym; j++) {
-        for (i = xs; i < xs + xm; i++) {
-          if (OnBoundary(i, j, k, mx, my, mz)) {
-            BoundaryValue(i, j, k, mx, my, mz, x[k][j][i], user);
-          } else {
-            for (n = 0; n < its; n++) {
-              for (m = 0; m < 9; m++) pjac[m] = 0.;
-              for (m = 0; m < 3; m++) pf[m] = 0.;
-              /* gather the elements for this point */
-              for (pk = -1; pk < 1; pk++) {
-                for (pj = -1; pj < 1; pj++) {
-                  for (pi = -1; pi < 1; pi++) {
-                    /* check that this element exists */
-                    if (i + pi >= 0 && i + pi < mx - 1 && j + pj >= 0 && j + pj < my - 1 && k + pk >= 0 && k + pk < mz - 1) {
-                      /* create the element function and jacobian */
-                      GatherElementData(mx, my, mz, x, c, i + pi, j + pj, k + pk, ex, ec, user);
-                      FormPBJacobian(-pi, -pj, -pk, ex, ec, ef, ej, user);
-                      /* extract the point named by i,j,k from the whole element jacobian and function */
-                      for (l = 0; l < 3; l++) {
-                        pf[l] += ef[0][l];
-                        for (m = 0; m < 3; m++) pjac[3 * m + l] += ej[3 * m + l];
-                      }
-                    }
-                  }
-                }
-              }
-              /* invert */
-              InvertTensor(pjac, pjinv, NULL);
-              /* apply */
-              if (B)
-                for (m = 0; m < 3; m++) pf[m] -= b[k][j][i][m];
-              TensorVector(pjinv, pf, py);
-              xnorm = 0.;
-              for (m = 0; m < 3; m++) {
-                x[k][j][i][m] -= py[m];
-                xnorm += PetscRealPart(x[k][j][i][m] * x[k][j][i][m]);
-              }
-              fnorm = PetscRealPart(pf[0] * pf[0] + pf[1] * pf[1] + pf[2] * pf[2]);
-              if (n == 0) fnorm0 = fnorm;
-              ynorm = PetscRealPart(py[0] * py[0] + py[1] * py[1] + py[2] * py[2]);
-              if (fnorm < atol * atol || fnorm < rtol * rtol * fnorm0 || ynorm < stol * stol * xnorm) break;
-            }
-          }
-        }
-      }
-    }
-  }
-  PetscCall(DMDAVecRestoreArray(da, Xl, &x));
-  PetscCall(DMLocalToGlobalBegin(da, Xl, INSERT_VALUES, X));
-  PetscCall(DMLocalToGlobalEnd(da, Xl, INSERT_VALUES, X));
-  PetscCall(DMRestoreLocalVector(da, &Xl));
-  if (B) {
-    PetscCall(DMDAVecRestoreArray(da, Bl, &b));
-    PetscCall(DMRestoreLocalVector(da, &Bl));
   }
   PetscCall(DMDAVecRestoreArray(cda, C, &c));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1171,12 +1008,18 @@ PetscErrorCode DisplayLine(SNES snes, Vec X)
 
    test:
       suffix: 4
-      args: -da_refine 2 -pc_type mg -rad 10.0 -young 10. -ploading -1. -loading -1. -mg_levels_ksp_max_it 2 -snes_monitor_short -ksp_monitor_short -snes_type newtonal -snes_newtonal_step_size 30 -ksp_rtol 1e-4
-      requires: !single
+      args: -da_refine 2 -pc_type mg -rad 10.0 -young 10. -ploading -1. -loading -1. -mg_levels_ksp_max_it 2 -snes_monitor_short -ksp_monitor_short -snes_type newtonal -snes_newtonal_step_size 30 -ksp_rtol 1e-4 -info
+      requires: !single defined(PETSC_USE_INFO)
+      filter: grep -h -e "KSP Residual norm" -e "SNES Function norm" -e "Number of SNES iterations" -e "mu:"
 
    test:
       suffix: 5
       args: -da_refine 2 -pc_type mg -rad 10.0 -young 10. -ploading -1. -loading -1. -mg_levels_ksp_max_it 2 -snes_monitor_short -ksp_monitor_short -snes_type newtonal -snes_newtonal_step_size 30 -snes_newtonal_correction_type normal -ksp_rtol 1e-4
+      requires: !single
+
+   test:
+      suffix: 6
+      args: -da_refine 2 -pc_type mg -rad 10.0 -young 10. -ploading -0.5 -loading -1 -mg_levels_ksp_max_it 2 -snes_monitor_short -ksp_monitor_short -snes_type newtonal -snes_newtonal_step_size 0.5 -snes_newtonal_max_continuation_steps 3 -snes_newtonal_scale_rhs false -snes_newtonal_lambda_min -0.1 -ksp_rtol 1e-4
       requires: !single
 
 TEST*/
