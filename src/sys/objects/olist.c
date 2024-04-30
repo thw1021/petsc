@@ -190,7 +190,7 @@ PetscErrorCode PetscObjectListFind(PetscObjectList fl, const char name[], PetscO
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@S
   PetscObjectListReverseFind - given a object, find the matching name if it exists
 
   No Fortran Support
@@ -212,7 +212,7 @@ PetscErrorCode PetscObjectListFind(PetscObjectList fl, const char name[], PetscO
 
 .seealso: `PetscObjectListDestroy()`,`PetscObjectListAdd()`,`PetscObjectListDuplicate()`,`PetscObjectListFind()`, `PetscObjectList`
 @*/
-PetscErrorCode PetscObjectListReverseFind(PetscObjectList fl, PetscObject obj, char **name, PetscBool *skipdereference)
+PetscErrorCode PetscObjectListReverseFind(PetscObjectList fl, PetscObject obj, char *name[], PetscBool *skipdereference)
 {
   PetscFunctionBegin;
   PetscAssertPointer(name, 3);
