@@ -6789,7 +6789,7 @@ PetscErrorCode MatGetLocalSize(Mat mat, PetscInt *m, PetscInt *n)
   Notes:
   If the `Mat` was obtained from a `DM` with `DMCreateMatrix()`, then the range values are determined by the specific `DM`.
 
-  If the `Mat` was created directly the range values are determined by the local size passed to `MatSetSizes()` or `MatCreateAIJ()`
+  If the `Mat` was created directly the range values are determined by the local size passed to `MatSetSizes()` or `MatCreateAIJ()`.
   If `PETSC_DECIDE` was passed as the local size, then the vector uses default values for the range using `PetscSplitOwnership()`.
 
   For certain `DM`, such as `DMDA`, it is better to use `DM` specific routines, such as `DMDAGetGhostCorners()`, to determine
@@ -6832,7 +6832,7 @@ PetscErrorCode MatGetOwnershipRangeColumn(Mat mat, PetscInt *m, PetscInt *n)
   Notes:
   If the `Mat` was obtained from a `DM` with `DMCreateMatrix()`, then the range values are determined by the specific `DM`.
 
-  If the `Mat` was created directly the range values are determined by the local size passed to `MatSetSizes()` or `MatCreateAIJ()`
+  If the `Mat` was created directly the range values are determined by the local size passed to `MatSetSizes()` or `MatCreateAIJ()`.
   If `PETSC_DECIDE` was passed as the local size, then the vector uses default values for the range using `PetscSplitOwnership()`.
 
   For certain `DM`, such as `DMDA`, it is better to use `DM` specific routines, such as `DMDAGetGhostCorners()`, to determine
@@ -6877,7 +6877,7 @@ PetscErrorCode MatGetOwnershipRange(Mat mat, PetscInt *m, PetscInt *n)
   Notes:
   If the `Mat` was obtained from a `DM` with `DMCreateMatrix()`, then the range values are determined by the specific `DM`.
 
-  If the `Mat` was created directly the range values are determined by the local size passed to `MatSetSizes()` or `MatCreateAIJ()`
+  If the `Mat` was created directly the range values are determined by the local size passed to `MatSetSizes()` or `MatCreateAIJ()`.
   If `PETSC_DECIDE` was passed as the local size, then the vector uses default values for the range using `PetscSplitOwnership()`.
 
   For certain `DM`, such as `DMDA`, it is better to use `DM` specific routines, such as `DMDAGetGhostCorners()`, to determine
@@ -6918,7 +6918,7 @@ PetscErrorCode MatGetOwnershipRanges(Mat mat, const PetscInt **ranges)
   Notes:
   If the `Mat` was obtained from a `DM` with `DMCreateMatrix()`, then the range values are determined by the specific `DM`.
 
-  If the `Mat` was created directly the range values are determined by the local size passed to `MatSetSizes()` or `MatCreateAIJ()`
+  If the `Mat` was created directly the range values are determined by the local size passed to `MatSetSizes()` or `MatCreateAIJ()`.
   If `PETSC_DECIDE` was passed as the local size, then the vector uses default values for the range using `PetscSplitOwnership()`.
 
   For certain `DM`, such as `DMDA`, it is better to use `DM` specific routines, such as `DMDAGetGhostCorners()`, to determine
