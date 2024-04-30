@@ -53,15 +53,11 @@ using common_type_t = typename std::common_type<T...>::type;
 
 #if PETSC_CPP_VERSION >= 17
 using std::void_t;
-using std::invoke_result_t;
 using std::disjunction;
 using std::conjunction;
 #else
 template <class...>
 using void_t = void;
-
-template <class F, class... Args>
-using invoke_result_t = typename std::result_of<F && (Args && ...)>::type;
 
 template <class...>
 struct disjunction : std::false_type { };
