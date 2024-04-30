@@ -64,23 +64,27 @@
 #endif
 #define PETSC_FORTRANADDR PETSC_LONG
 
-      PetscEnum, parameter :: PETSC_DATATYPE_UNKNOWN = 0
-      PetscEnum, parameter :: PETSC_DOUBLE = 1
-      PetscEnum, parameter :: PETSC_COMPLEX = 2
-      PetscEnum, parameter :: PETSC_LONG = 3
-      PetscEnum, parameter :: PETSC_SHORT = 4
-      PetscEnum, parameter :: PETSC_FLOAT = 5
-      PetscEnum, parameter :: PETSC_CHAR = 6
-      PetscEnum, parameter :: PETSC_BIT_LOGICAL = 7
-      PetscEnum, parameter :: PETSC_ENUM = 8
-      PetscEnum, parameter :: PETSC_BOOL = 9
-      PetscEnum, parameter :: PETSC___FLOAT128 = 10
-      PetscEnum, parameter :: PETSC_OBJECT = 11
-      PetscEnum, parameter :: PETSC_FUNCTION = 12
-      PetscEnum, parameter :: PETSC_STRING = 13
-      PetscEnum, parameter :: PETSC___FP16 = 14
-      PetscEnum, parameter :: PETSC_STRUCT = 15
-      PetscEnum, parameter :: PETSC_INT = 16
+      type tPetscDataType
+        PetscEnum:: v PETSC_FORTRAN_TYPE_INITIALIZE
+      end type tPetscDataType
+
+      PetscDataType, parameter ::  PETSC_DATATYPE_UNKNOWN = tPetscDataType(0)
+      PetscDataType, parameter ::  PETSC_DOUBLE = tPetscDataType(1)
+      PetscDataType, parameter ::  PETSC_COMPLEX = tPetscDataType(2)
+      PetscDataType, parameter ::  PETSC_LONG = tPetscDataType(3)
+      PetscDataType, parameter ::  PETSC_SHORT = tPetscDataType(4)
+      PetscDataType, parameter ::  PETSC_FLOAT = tPetscDataType(5)
+      PetscDataType, parameter ::  PETSC_CHAR = tPetscDataType(6)
+      PetscDataType, parameter ::  PETSC_BIT_LOGICAL = tPetscDataType(7)
+      PetscDataType, parameter ::  PETSC_ENUM = tPetscDataType(8)
+      PetscDataType, parameter ::  PETSC_BOOL = tPetscDataType(9)
+      PetscDataType, parameter ::  PETSC___FLOAT128 = tPetscDataType(10)
+      PetscDataType, parameter ::  PETSC_OBJECT = tPetscDataType(11)
+      PetscDataType, parameter ::  PETSC_FUNCTION = tPetscDataType(12)
+      PetscDataType, parameter ::  PETSC_STRING = tPetscDataType(13)
+      PetscDataType, parameter ::  PETSC___FP16 = tPetscDataType(14)
+      PetscDataType, parameter ::  PETSC_STRUCT = tPetscDataType(15)
+      PetscDataType, parameter ::  PETSC_INT = tPetscDataType(16)
 !
 !
 !

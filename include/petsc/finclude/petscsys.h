@@ -87,7 +87,7 @@
 !
 #define PetscCopyMode PetscEnum
 !
-#define PetscDataType PetscEnum
+#define PetscDataType type(tPetscDataType)
 #define PetscFPTrap PetscEnum
 !
 #define PetscFortranFloat real(kind=selected_real_kind(5))
