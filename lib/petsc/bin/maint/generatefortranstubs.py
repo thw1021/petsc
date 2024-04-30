@@ -45,7 +45,7 @@ def FixFile(filename):
   data = re.subn('\nvoid ','\nPETSC_EXTERN void ',data)[0]
   data = re.subn('\nPetscErrorCode ','\nPETSC_EXTERN void ',data)[0]
   data = re.subn(r'Petsc([ToRm]*)Pointer\(int\)','Petsc\\1Pointer(void*)',data)[0]
-  data = re.subn(r'PetscToPointer\(a\) \(a\)','PetscToPointer(a) (*(PetscFortranAddr *)(a))',data)[0]
+  data = re.subn(r'PetscToPointer\(a\) \(a\)','PetscToPointer(a) (a ? *(PetscFortranAddr *)(a) : 0)',data)[0]
   data = re.subn(r'PetscFromPointer\(a\) \(int\)\(a\)','PetscFromPointer(a) (PetscFortranAddr)(a)',data)[0]
   data = re.subn(r'PetscToPointer\( \*\(int\*\)','PetscToPointer(',data)[0]
   data = re.subn('MPI_Comm comm','MPI_Comm *comm',data)[0]
