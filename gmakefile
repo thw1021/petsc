@@ -216,8 +216,7 @@ $(OBJDIR)/%.o : %.hip.cpp | $$(@D)/.DIR
 	$(PETSC_COMPILE.hip.cpp) $(abspath $<) -o $@
 
 $(OBJDIR)/%.o : %.cu | $$(@D)/.DIR
-	$(PETSC_COMPILE.cu) $(abspath $<) -o $@ # Compile first so that if there is an error, it comes from a normal compile
-	@$(PETSC_GENDEPS.cu) $(abspath $<) -o $(@:%.o=%.d) # Generate the dependencies for later
+	$(PETSC_COMPILE.cu) $(CUDA_GENDEPS_WITH_COMPILE_FLAG) $(abspath $<) -o $@
 
 FCMOD = cd
 $(OBJDIR)/%.o : %.F | $$(@D)/.DIR

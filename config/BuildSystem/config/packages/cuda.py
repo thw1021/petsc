@@ -474,10 +474,23 @@ class Configure(config.package.Package):
 
     if not self.cudaclang:
       self.addMakeMacro('CUDA_HOSTFLAGS','--compiler-options="$(CXXCPPFLAGS) $(CUDA_CXXFLAGS)"')
-      self.addMakeMacro('CUDA_PETSC_GENDEPS','$(call quiet,CUDAC,.dep) --generate-dependencies --output-directory=$(@D) $(MPICXX_INCLUDES) $(CUDAC_FLAGS) --compiler-options="$(CXXCPPFLAGS) $(CUDA_CXXFLAGS)"')
+      # From nvcc -help
+      # --generate-dependencies-with-compile            (-MD)
+      #   Generate a dependency file and compile the input file. The dependency file
+      #   can be included in a make file for the .c/.cc/.cpp/.cxx/.cu input file.
+      #   This option cannot be specified together with -E.
+      #   The dependency file name is computed as follows:
+      #   - If -MF is specified, then the specified file is used as the dependency
+      #   file name
+      #   - If -o is specified, the dependency file name is computed from the specified
+      #   file name by replacing the suffix with '.d'.
+      #   - Otherwise, the dependency file name is computed by replacing the input
+      #   file names's suffix with '.d'
+      #   If the dependency file name is computed based on either -MF or -o, then multiple
+      #   input files are not supported.
+      self.addMakeMacro('CUDA_GENDEPS_WITH_COMPILE_FLAG','--generate-dependencies-with-compile')
     else:
       self.addMakeMacro('CUDA_HOSTFLAGS','$(CXXCPPFLAGS) $(CUDA_CXXFLAGS) $(CUDA_DEPFLAGS) $(PETSC_CC_INCLUDES)')
-      self.addMakeMacro('CUDA_PETSC_GENDEPS','true')
     return
 
   def checkKnownBadCUDAHostCompilerCombo(self):
