@@ -1082,12 +1082,12 @@ inline PetscErrorCode MatDense_Seq_CUPM<T>::BindToCPU(Mat A, PetscBool to_host) 
   MatSetOp_CUPM(to_host, A, lufactor, MatLUFactor_SeqDense, SolveLU::Factor);
   MatSetOp_CUPM(to_host, A, getcolumnvector, MatGetColumnVector_SeqDense, GetColumnVector);
   MatSetOp_CUPM(to_host, A, scale, MatScale_SeqDense, Scale);
-  MatSetOp_CUPM(to_host, A, shift, MatShift_SeqDense, Shift);
+  MatSetOp_CUPM(to_host, A, shift, MatShift_SeqDense, MatDense_CUPM<T,MatDense_Seq_CUPM<T>>::Shift);
   MatSetOp_CUPM(to_host, A, copy, MatCopy_SeqDense, Copy);
   MatSetOp_CUPM(to_host, A, zeroentries, MatZeroEntries_SeqDense, ZeroEntries);
   MatSetOp_CUPM(to_host, A, setup, MatSetUp_SeqDense, SetUp);
   MatSetOp_CUPM(to_host, A, setrandom, MatSetRandom_SeqDense, SetRandom);
-  MatSetOp_CUPM(to_host, A, getdiagonal, MatGetDiagonal_SeqDense, GetDiagonal);
+  MatSetOp_CUPM(to_host, A, getdiagonal, MatGetDiagonal_SeqDense, MatDense_CUPM<T,MatDense_Seq_CUPM<T>>::GetDiagonal);
   // seemingly always the same
   A->ops->productsetfromoptions = MatProductSetFromOptions_SeqDense;
 

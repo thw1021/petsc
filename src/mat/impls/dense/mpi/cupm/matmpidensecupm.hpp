@@ -184,7 +184,7 @@ inline PetscErrorCode MatDense_MPI_CUPM<T>::Convert_Dispatch_(Mat M, MatType, Ma
     // ============================================================
     // Function Pointer Ops
     // ============================================================
-    MatSetOp_CUPM(to_host, B, getdiagonal, MatGetDiagonal_MPIDense, GetDiagonal);
+    MatSetOp_CUPM(to_host, B, getdiagonal, MatGetDiagonal_MPIDense, MatDense_CUPM<T,MatDense_MPI_CUPM<T>>::GetDiagonal);
     MatSetOp_CUPM(to_host, B, bindtocpu, nullptr, BindToCPU);
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -265,7 +265,7 @@ inline PetscErrorCode MatDense_MPI_CUPM<T>::BindToCPU(Mat A, PetscBool usehost) 
   MatComposeOp_CUPM(usehost, pobj, "MatDenseGetColumnVecWrite_C", MatDenseGetColumnVecWrite_MPIDense, GetColumnVec<PETSC_MEMORY_ACCESS_WRITE>);
   MatComposeOp_CUPM(usehost, pobj, "MatDenseRestoreColumnVecWrite_C", MatDenseRestoreColumnVecWrite_MPIDense, RestoreColumnVec<PETSC_MEMORY_ACCESS_WRITE>);
 
-  MatSetOp_CUPM(usehost, A, shift, MatShift_MPIDense, Shift);
+  MatSetOp_CUPM(usehost, A, shift, MatShift_MPIDense, MatDense_CUPM<T,MatDense_MPI_CUPM<T>>::Shift);
 
   if (const auto mimpl_cmat = mimpl->cmat) PetscCall(MatBindToCPU(mimpl_cmat, usehost));
   PetscFunctionReturn(PETSC_SUCCESS);
