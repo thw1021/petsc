@@ -295,14 +295,19 @@ PetscErrorCode PetscOptionsInsertFileYAML(MPI_Comm comm, PetscOptions options, c
 
   Once yaml fixes them, we can remove the pragmas
 */
-  #if defined(__clang__) || defined(__GNUC__) || defined(__GNUG__)
+#if defined(__clang__)
+  #pragma clang diagnostic push
+  #pragma clang diagnostic ignored "-Wsign-conversion"
+#elif defined(__GNUC__) || defined(__GNUG__)
     #pragma GCC diagnostic push
     #pragma GCC diagnostic ignored "-Wsign-conversion"
-  #endif
+#endif
   #include <../src/sys/yaml/src/scanner.c>
-  #if defined(__clang__) || defined(__GNUC__) || defined(__GNUG__)
+#if defined(__clang__)
+  #pragma clang diagnostic pop
+#elif defined(__GNUC__) || defined(__GNUG__)
     #pragma GCC diagnostic pop
-  #endif
+#endif
 
 /* Silence a few unused-function warnings */
 static PETSC_UNUSED void petsc_yaml_unused(void)
