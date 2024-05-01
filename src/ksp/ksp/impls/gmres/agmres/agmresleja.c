@@ -1,13 +1,10 @@
 #define PETSCKSP_DLL
 /*
- * Functions in this file reorder the Ritz values in the (modified) Leja order.
- *
- * References : [1] Bai, Zhaojun and  Hu, D. and Reichel, L. A Newton basis GMRES implementation. IMA J. Numer. Anal. 14 (1994), no. 4, 563-581.
- *
- */
+   Functions in this file reorder the Ritz values in the (modified) Leja order.
+*/
 #include <../src/ksp/ksp/impls/gmres/agmres/agmresimpl.h>
 
-static PetscErrorCode KSPAGMRESLejafmaxarray(PetscScalar *re, PetscInt pt, PetscInt n,PetscInt *pos)
+static PetscErrorCode KSPAGMRESLejafmaxarray(PetscScalar *re, PetscInt pt, PetscInt n, PetscInt *pos)
 {
   PetscInt    i;
   PetscScalar mx;
@@ -21,7 +18,7 @@ static PetscErrorCode KSPAGMRESLejafmaxarray(PetscScalar *re, PetscInt pt, Petsc
       *pos = i;
     }
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode KSPAGMRESLejaCfpdMax(PetscScalar *rm, PetscScalar *im, PetscInt *spos, PetscInt nbre, PetscInt n, PetscInt *rpos)
@@ -37,7 +34,7 @@ static PetscErrorCode KSPAGMRESLejaCfpdMax(PetscScalar *rm, PetscScalar *im, Pet
     for (j = 0; j < nbre; j++) {
       rd = rm[i] - rm[spos[j]];
       id = im[i] - im[spos[j]];
-      pd = pd * PetscSqrtReal(rd*rd + id*id);
+      pd = pd * PetscSqrtReal(rd * rd + id * id);
     }
     if (max < pd) {
       *rpos = i;
@@ -45,34 +42,33 @@ static PetscErrorCode KSPAGMRESLejaCfpdMax(PetscScalar *rm, PetscScalar *im, Pet
     }
     pd = 1.0;
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode KSPAGMRESLejaOrdering(PetscScalar *re, PetscScalar *im, PetscScalar *rre, PetscScalar *rim, PetscInt m)
 {
-  PetscInt       *spos;
-  PetscScalar    *n_cmpl,temp;
-  PetscErrorCode ierr;
-  PetscInt       i, pos, j;
+  PetscInt    *spos;
+  PetscScalar *n_cmpl, temp;
+  PetscInt     i, pos, j;
 
   PetscFunctionBegin;
-  ierr = PetscMalloc1(m, &n_cmpl);CHKERRQ(ierr);
-  ierr = PetscMalloc1(m, &spos);CHKERRQ(ierr);
+  PetscCall(PetscMalloc1(m, &n_cmpl));
+  PetscCall(PetscMalloc1(m, &spos));
   /* Check the proper order of complex conjugate pairs */
   j = 0;
-  while (j  < m) {
-    if (im[j] != 0.0) { /* complex eigenvalue */
+  while (j < m) {
+    if (im[j] != 0.0) {  /* complex eigenvalue */
       if (im[j] < 0.0) { /* change the order */
-        temp    = im[j+1];
-        im[j+1] = im[j];
-        im[j]   = temp;
+        temp      = im[j + 1];
+        im[j + 1] = im[j];
+        im[j]     = temp;
       }
       j += 2;
     } else j++;
   }
 
-  for (i = 0; i < m; i++) n_cmpl[i] = PetscSqrtReal(re[i]*re[i]+im[i]*im[i]);
-  ierr = KSPAGMRESLejafmaxarray(n_cmpl, 0, m, &pos);CHKERRQ(ierr);
+  for (i = 0; i < m; i++) n_cmpl[i] = PetscSqrtReal(re[i] * re[i] + im[i] * im[i]);
+  PetscCall(KSPAGMRESLejafmaxarray(n_cmpl, 0, m, &pos));
   j = 0;
   if (im[pos] >= 0.0) {
     rre[0] = re[pos];
@@ -82,12 +78,12 @@ PetscErrorCode KSPAGMRESLejaOrdering(PetscScalar *re, PetscScalar *im, PetscScal
   }
   while (j < (m)) {
     if (im[pos] > 0) {
-      rre[j]  = re[pos+1];
-      rim[j]  = im[pos+1];
+      rre[j]  = re[pos + 1];
+      rim[j]  = im[pos + 1];
       spos[j] = pos + 1;
       j++;
     }
-    ierr = KSPAGMRESLejaCfpdMax(re, im, spos, j, m, &pos);CHKERRQ(ierr);
+    PetscCall(KSPAGMRESLejaCfpdMax(re, im, spos, j, m, &pos));
     if (im[pos] < 0) pos--;
 
     if ((im[pos] >= 0) && (j < m)) {
@@ -97,7 +93,7 @@ PetscErrorCode KSPAGMRESLejaOrdering(PetscScalar *re, PetscScalar *im, PetscScal
       j++;
     }
   }
-  ierr = PetscFree(spos);CHKERRQ(ierr);
-  ierr = PetscFree(n_cmpl);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscFree(spos));
+  PetscCall(PetscFree(n_cmpl));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

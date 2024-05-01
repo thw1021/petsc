@@ -22,9 +22,7 @@
  20     continue
  10   continue
 
-      return
       end
-
 
       subroutine MSGemvp(bs,ncols,A,x,y)
       implicit none
@@ -40,9 +38,7 @@
  20     continue
  10   continue
 
-      return
       end
-
 
       subroutine MSGemvm(bs,ncols,A,x,y)
       implicit none
@@ -58,9 +54,7 @@
  20     continue
  10   continue
 
-      return
       end
-
 
       subroutine MSGemvt(bs,ncols,A,x,y)
       implicit none
@@ -78,7 +72,6 @@
         y(i) = sum
  10   continue
 
-      return
       end
 
       subroutine MSGemm(bs,A,B,C)
@@ -87,7 +80,6 @@
       MatScalar   A(bs,bs),B(bs,bs),C(bs,bs)
       PetscScalar sum
       PetscInt    i,j,k
-
 
       do 10, i=1,bs
         do 20, j=1,bs
@@ -99,9 +91,7 @@
  20     continue
  10   continue
 
-      return
       end
-
 
       subroutine MSGemmi(bs,A,C,B)
       implicit none
@@ -110,7 +100,6 @@
       PetscScalar sum
 
       PetscInt    i,j,k
-
 
       do 10, i=1,bs
         do 20, j=1,bs
@@ -122,5 +111,4 @@
  20     continue
  10   continue
 
-      return
       end

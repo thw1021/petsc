@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import os
 petsc_hash_pkgs=os.path.join(os.getenv('HOME'),'petsc-hash-pkgs')
@@ -23,7 +23,7 @@ configure_options = [
   '--download-elemental=1',
   '--download-hdf5',
   '--with-zlib=1',
-  '--download-sundials=1',
+  '--download-sundials2=1',
   '--download-hypre=1',
   '--download-suitesparse=1',
   '--download-make=1', # required by suitesparse
@@ -32,9 +32,11 @@ configure_options = [
   '--download-netcdf=1',
   '--download-moab=1',
   '--download-saws',
+  '--download-ks',
   '--download-codipack=1',
   '--download-adblaslapack=1',
-  '--download-hpddm=1'
+  '--download-hpddm=1',
+  '--with-strict-petscerrorcode',
   ]
 
 if __name__ == '__main__':

@@ -17,14 +17,14 @@
   Output parameter:
   A   - pointer to array for which memory is allocated
 
-
   Note: Only arrays of doubles are currently accounted for in ADOL-C's myalloc2 function.
 */
-template <class T> PetscErrorCode AdolcMalloc2(PetscInt m,PetscInt n,T **A[])
+template <class T>
+PetscErrorCode AdolcMalloc2(PetscInt m, PetscInt n, T **A[])
 {
   PetscFunctionBegin;
-  *A = myalloc2(m,n);
-  PetscFunctionReturn(0);
+  *A = myalloc2(m, n);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*
@@ -35,11 +35,12 @@ template <class T> PetscErrorCode AdolcMalloc2(PetscInt m,PetscInt n,T **A[])
 
   Note: Only arrays of doubles are currently accounted for in ADOL-C's myfree2 function.
 */
-template <class T> PetscErrorCode AdolcFree2(T **A)
+template <class T>
+PetscErrorCode AdolcFree2(T **A)
 {
   PetscFunctionBegin;
   myfree2(A);
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*
@@ -55,19 +56,19 @@ template <class T> PetscErrorCode AdolcFree2(T **A)
   array - contiguously allocated array of the appropriate dimension with
           ghost points, pointing to the 1-array
 */
-template <class T> PetscErrorCode GiveGhostPoints(DM da,T *cgs,void *array)
+template <class T>
+PetscErrorCode GiveGhostPoints(DM da, T *cgs, void *array)
 {
-  PetscErrorCode ierr;
-  PetscInt       dim;
+  PetscInt dim;
 
   PetscFunctionBegin;
-  ierr = DMDAGetInfo(da,&dim,0,0,0,0,0,0,0,0,0,0,0,0);CHKERRQ(ierr);
+  PetscCall(DMDAGetInfo(da, &dim, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0));
   if (dim == 1) {
-    ierr = GiveGhostPoints1d(da,(T**)array);CHKERRQ(ierr);
+    PetscCall(GiveGhostPoints1d(da, (T **)array));
   } else if (dim == 2) {
-    ierr = GiveGhostPoints2d(da,cgs,(T***)array);CHKERRQ(ierr);
-  } else if (dim == 3) SETERRQ(PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"GiveGhostPoints3d not yet implemented\n"); // TODO
-  PetscFunctionReturn(0);
+    PetscCall(GiveGhostPoints2d(da, cgs, (T ***)array));
+  } else PetscCheck(dim != 3, PetscObjectComm((PetscObject)da), PETSC_ERR_SUP, "GiveGhostPoints3d not yet implemented"); // TODO
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*
@@ -80,15 +81,15 @@ template <class T> PetscErrorCode GiveGhostPoints(DM da,T *cgs,void *array)
   Output parameter:
   a1d - contiguously allocated 1-array
 */
-template <class T> PetscErrorCode GiveGhostPoints1d(DM da,T *a1d[])
+template <class T>
+PetscErrorCode GiveGhostPoints1d(DM da, T *a1d[])
 {
-  PetscErrorCode ierr;
-  PetscInt       gxs;
+  PetscInt gxs;
 
   PetscFunctionBegin;
-  ierr = DMDAGetGhostCorners(da,&gxs,NULL,NULL,NULL,NULL,NULL);CHKERRQ(ierr);
+  PetscCall(DMDAGetGhostCorners(da, &gxs, NULL, NULL, NULL, NULL, NULL));
   *a1d -= gxs;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*
@@ -104,17 +105,16 @@ template <class T> PetscErrorCode GiveGhostPoints1d(DM da,T *a1d[])
   a2d - contiguously allocated 2-array with ghost points, pointing to the
         1-array
 */
-template <class T> PetscErrorCode GiveGhostPoints2d(DM da,T *cgs,T **a2d[])
+template <class T>
+PetscErrorCode GiveGhostPoints2d(DM da, T *cgs, T **a2d[])
 {
-  PetscErrorCode ierr;
-  PetscInt       gxs,gys,gxm,gym,j;
+  PetscInt gxs, gys, gxm, gym;
 
   PetscFunctionBegin;
-  ierr = DMDAGetGhostCorners(da,&gxs,&gys,NULL,&gxm,&gym,NULL);CHKERRQ(ierr);
-  for (j=0; j<gym; j++)
-    (*a2d)[j] = cgs + j*gxm - gxs;
+  PetscCall(DMDAGetGhostCorners(da, &gxs, &gys, NULL, &gxm, &gym, NULL));
+  for (PetscInt j = 0; j < gym; j++) (*a2d)[j] = cgs + j * gxm - gxs;
   *a2d -= gys;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*
@@ -127,15 +127,14 @@ template <class T> PetscErrorCode GiveGhostPoints2d(DM da,T *cgs,T **a2d[])
   Output parameter:
   S - resulting n x m submatrix
 */
-template <class T> PetscErrorCode Subidentity(PetscInt n,PetscInt s,T **S)
+template <class T>
+PetscErrorCode Subidentity(PetscInt n, PetscInt s, T **S)
 {
-  PetscInt       i;
+  PetscInt i;
 
   PetscFunctionBegin;
-  for (i=0; i<n; i++) {
-    S[i][i+s] = 1.;
-  }
-  PetscFunctionReturn(0);
+  for (i = 0; i < n; i++) S[i][i + s] = 1.;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*
@@ -145,11 +144,10 @@ template <class T> PetscErrorCode Subidentity(PetscInt n,PetscInt s,T **S)
   n - number of rows/columns
   I - n x n array with memory pre-allocated
 */
-template <class T> PetscErrorCode Identity(PetscInt n,T **I)
+template <class T>
+PetscErrorCode Identity(PetscInt n, T **I)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  ierr = Subidentity(n,0,I);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(Subidentity(n, 0, I));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

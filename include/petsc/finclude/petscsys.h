@@ -29,13 +29,16 @@
 #define integer2 integer(kind=selected_int_kind(3))
 #define integer1 integer(kind=selected_int_kind(1))
 #define PetscBool  logical(kind=4)
+#define PetscBool3  integer(kind=selected_int_kind(5))
 
 #if (PETSC_SIZEOF_VOID_P == 8)
 #define PetscOffset integer8
 #define PetscFortranAddr integer8
+#define PetscCount integer8
 #else
 #define PetscOffset integer4
 #define PetscFortranAddr integer4
+#define PetscCount integer4
 #endif
 
 #if defined(PETSC_USE_64BIT_INDICES)
@@ -53,6 +56,9 @@
 #define PetscFortranInt integer8
 #endif
 !
+! Fortran does not support unsigned, though ISO_C_BINDING
+! supports INTEGER(KIND=C_SIZE_T). We don't use that here
+! only to avoid importing the module.
 #if (PETSC_SIZEOF_SIZE_T == 8)
 #define PetscSizeT integer8
 #else
@@ -75,6 +81,9 @@
 #define PetscLogEvent PetscFortranInt
 #define PetscLogStage PetscFortranInt
 #define PetscVoid PetscFortranAddr
+!
+#define PetscDeviceType PetscEnum
+#define PetscDevice PetscFortranAddr
 !
 #define PetscCopyMode PetscEnum
 !
@@ -162,11 +171,26 @@
 !
 !     Macros for error checking
 !
-#define SETERRQ(c,ierr,s)  call PetscError(c,ierr,0,s); return
-#define SETERRA(c,ierr,s)  call PetscError(c,ierr,0,s); call MPIU_Abort(c,ierr)
+#define SETERRQ(c, ierr, s)  call PetscError(c, ierr, 0, s); return
+#define SETERRA(c, ierr, s)  call PetscError(c, ierr, 0, s); call MPIU_Abort(c, ierr)
+#if defined(PETSC_HAVE_FORTRAN_FREE_LINE_LENGTH_NONE)
+#define CHKERRQ(ierr) if (ierr .ne. 0) then;call PetscErrorF(ierr,__LINE__,__FILE__);return;endif
+#define CHKERRA(ierr) if (ierr .ne. 0) then;call PetscErrorF(ierr,__LINE__,__FILE__);call MPIU_Abort(PETSC_COMM_SELF,ierr);endif
+#define CHKERRMPI(ierr) if (ierr .ne. 0) then;call PetscErrorMPI(ierr,__LINE__,__FILE__);return;endif
+#define CHKERRMPIA(ierr) if (ierr .ne. 0) then;call PetscErrorMPI(ierr,__LINE__,__FILE__);call MPIU_Abort(PETSC_COMM_SELF,ierr);endif
+#else
 #define CHKERRQ(ierr) if (ierr .ne. 0) then;call PetscErrorF(ierr);return;endif
-#define CHKERRA(ierr) if (ierr .ne. 0) then;call PetscErrorF(ierr);call MPIU_Abort(MPI_COMM_SELF,ierr);endif
+#define CHKERRA(ierr) if (ierr .ne. 0) then;call PetscErrorF(ierr);call MPIU_Abort(PETSC_COMM_SELF,ierr);endif
+#define CHKERRMPI(ierr) if (ierr .ne. 0) then;call PetscErrorMPI(ierr);return;endif
+#define CHKERRMPIA(ierr) if (ierr .ne. 0) then;call PetscErrorMPI(ierr);call MPIU_Abort(PETSC_COMM_SELF,ierr);endif
+#endif
 #define CHKMEMQ call chkmemfortran(__LINE__,__FILE__,ierr)
+#define PetscCall(func) call func; CHKERRQ(ierr)
+#define PetscCallMPI(func) call func; CHKERRMPI(ierr)
+#define PetscCallA(func) call func; CHKERRA(ierr)
+#define PetscCallMPIA(func) call func; CHKERRMPIA(ierr)
+#define PetscCheckA(err, c, ierr, s) if (.not.(err)) then; SETERRA(c, ierr, s); endif
+#define PetscCheck(err, c, ierr, s) if (.not.(err)) then; SETERRQ(c, ierr, s); endif
 
 #define PetscMatlabEngine PetscFortranAddr
 
@@ -190,6 +214,8 @@
 #define PetscSubcommType PetscEnum
 
 #define PetscOptions type(tPetscOptions)
+
+#define PetscBench type(tPetscBench)
 
 #define PetscFunctionList PetscFortranAddr
 

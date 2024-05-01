@@ -1,99 +1,89 @@
-
 #include <petsc/private/vecimpl.h> /*I "petscvec.h" I*/
 #include "../src/vec/vec/utils/tagger/impls/andor.h"
 
 /*@C
-  VecTaggerOrGetSubs - Get the sub VecTaggers whose union defines the outer VecTagger
+  VecTaggerOrGetSubs - Get the sub `VecTagger`s whose union defines the outer `VecTagger`
 
-  Not collective
+  Not Collective
 
-  Input Arguments:
-. tagger - the VecTagger context
+  Input Parameter:
+. tagger - the `VecTagger` context
 
-  Output Arguments:
-+ nsubs - the number of sub VecTaggers
-- subs - the sub VecTaggers
+  Output Parameters:
++ nsubs - the number of sub `VecTagger`s
+- subs  - the sub `VecTagger`s
 
   Level: advanced
 
-.seealso: VecTaggerOrSetSubs()
+.seealso: `VecTaggerOrSetSubs()`
 @*/
-PetscErrorCode VecTaggerOrGetSubs(VecTagger tagger, PetscInt *nsubs, VecTagger **subs)
+PetscErrorCode VecTaggerOrGetSubs(VecTagger tagger, PetscInt *nsubs, VecTagger *subs[])
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  ierr = VecTaggerGetSubs_AndOr(tagger,nsubs,subs);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(VecTaggerGetSubs_AndOr(tagger, nsubs, subs));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-  VecTaggerOrSetSubs - Set the sub VecTaggers whose union defines the outer VecTagger
+  VecTaggerOrSetSubs - Set the sub `VecTagger`s whose union defines the outer `VecTagger`
 
-  Logically collective
+  Logically Collective
 
-  Input Arguments:
-+ tagger - the VecTagger context
-. nsubs - the number of sub VecTaggers
-- subs - the sub VecTaggers
+  Input Parameters:
++ tagger - the `VecTagger` context
+. nsubs  - the number of sub `VecTagger`s
+. subs   - the sub `VecTagger`s
+- mode   - the copy mode to use for `subs`
 
   Level: advanced
 
-.seealso: VecTaggerOrSetSubs()
+.seealso: `VecTaggetOrGetStubs()`
 @*/
-PetscErrorCode VecTaggerOrSetSubs(VecTagger tagger, PetscInt nsubs, VecTagger *subs, PetscCopyMode mode)
+PetscErrorCode VecTaggerOrSetSubs(VecTagger tagger, PetscInt nsubs, VecTagger subs[], PetscCopyMode mode)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  ierr = VecTaggerSetSubs_AndOr(tagger,nsubs,subs,mode);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(VecTaggerSetSubs_AndOr(tagger, nsubs, subs, mode));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode VecTaggerComputeBoxes_Or(VecTagger tagger,Vec vec,PetscInt *numBoxes,VecTaggerBox **boxes)
+static PetscErrorCode VecTaggerComputeBoxes_Or(VecTagger tagger, Vec vec, PetscInt *numBoxes, VecTaggerBox **boxes, PetscBool *listed)
 {
-  PetscInt        i, bs, nsubs, *numSubBoxes, nboxes, total;
-  VecTaggerBox    **subBoxes;
-  VecTagger       *subs;
-  VecTaggerBox    *bxs;
-  PetscErrorCode  ierr;
+  PetscInt       i, bs, nsubs, *numSubBoxes, nboxes, total;
+  VecTaggerBox **subBoxes;
+  VecTagger     *subs;
+  VecTaggerBox  *bxs;
+  PetscBool      boxlisted;
 
   PetscFunctionBegin;
-  ierr = VecTaggerGetBlockSize(tagger,&bs);CHKERRQ(ierr);
-  ierr = VecTaggerOrGetSubs(tagger,&nsubs,&subs);CHKERRQ(ierr);
-  ierr = PetscMalloc2(nsubs,&numSubBoxes,nsubs,&subBoxes);CHKERRQ(ierr);
+  PetscCall(VecTaggerGetBlockSize(tagger, &bs));
+  PetscCall(VecTaggerOrGetSubs(tagger, &nsubs, &subs));
+  PetscCall(PetscMalloc2(nsubs, &numSubBoxes, nsubs, &subBoxes));
   for (i = 0, total = 0; i < nsubs; i++) {
-    PetscErrorCode ierr2;
-
-    ierr2 = VecTaggerComputeBoxes(subs[i],vec,&numSubBoxes[i],&subBoxes[i]);
-    if (ierr2 == PETSC_ERR_SUP) { /* no support, clean up and exit */
+    PetscCall(VecTaggerComputeBoxes(subs[i], vec, &numSubBoxes[i], &subBoxes[i], &boxlisted));
+    if (!boxlisted) { /* no support, clean up and exit */
       PetscInt j;
 
-      for (j = 0; j < i; j++) {
-        ierr = PetscFree(subBoxes[j]);CHKERRQ(ierr);
-      }
-      ierr = PetscFree2(numSubBoxes,subBoxes);CHKERRQ(ierr);
-      SETERRQ(PetscObjectComm((PetscObject)tagger),PETSC_ERR_SUP,"Sub tagger does not support box computation");
-    } else {
-      CHKERRQ(ierr2);
+      for (j = 0; j < i; j++) PetscCall(PetscFree(subBoxes[j]));
+      PetscCall(PetscFree2(numSubBoxes, subBoxes));
+      if (listed) *listed = PETSC_FALSE;
     }
     total += numSubBoxes[i];
   }
-  ierr = PetscMalloc1(bs * total, &bxs);CHKERRQ(ierr);
+  PetscCall(PetscMalloc1(bs * total, &bxs));
   for (i = 0, nboxes = 0; i < nsubs; i++) { /* stupid O(N^2) check to remove subboxes */
     PetscInt j;
 
     for (j = 0; j < numSubBoxes[i]; j++) {
-      PetscInt     k;
-      VecTaggerBox *subBox = &subBoxes[i][j*bs];
+      PetscInt      k;
+      VecTaggerBox *subBox = &subBoxes[i][j * bs];
 
       for (k = 0; k < nboxes; k++) {
-        PetscBool   isSub = PETSC_FALSE;
+        PetscBool isSub = PETSC_FALSE;
 
         VecTaggerBox *prevBox = &bxs[bs * k];
-        ierr = VecTaggerAndOrIsSubBox_Private(bs,prevBox,subBox,&isSub);CHKERRQ(ierr);
+        PetscCall(VecTaggerAndOrIsSubBox_Private(bs, prevBox, subBox, &isSub));
         if (isSub) break;
-        ierr = VecTaggerAndOrIsSubBox_Private(bs,subBox,prevBox,&isSub);CHKERRQ(ierr);
+        PetscCall(VecTaggerAndOrIsSubBox_Private(bs, subBox, prevBox, &isSub));
         if (isSub) {
           PetscInt l;
 
@@ -105,50 +95,51 @@ static PetscErrorCode VecTaggerComputeBoxes_Or(VecTagger tagger,Vec vec,PetscInt
       for (k = 0; k < bs; k++) bxs[nboxes * bs + k] = subBox[k];
       nboxes++;
     }
-    ierr = PetscFree(subBoxes[i]);CHKERRQ(ierr);
+    PetscCall(PetscFree(subBoxes[i]));
   }
-  ierr = PetscFree2(numSubBoxes,subBoxes);CHKERRQ(ierr);
+  PetscCall(PetscFree2(numSubBoxes, subBoxes));
   *numBoxes = nboxes;
-  *boxes = bxs;
-  PetscFunctionReturn(0);
+  *boxes    = bxs;
+  if (listed) *listed = PETSC_TRUE;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode VecTaggerComputeIS_Or(VecTagger tagger, Vec vec, IS *is)
+static PetscErrorCode VecTaggerComputeIS_Or(VecTagger tagger, Vec vec, IS *is, PetscBool *listed)
 {
-  PetscInt       nsubs, i;
-  VecTagger      *subs;
-  IS             unionIS;
-  PetscErrorCode ierr, ierr2;
+  PetscInt   nsubs, i;
+  VecTagger *subs;
+  IS         unionIS;
+  PetscBool  boxlisted;
 
   PetscFunctionBegin;
-  ierr2 = VecTaggerComputeIS_FromBoxes(tagger,vec,is);
-  if (ierr2 != PETSC_ERR_SUP) {
-    CHKERRQ(ierr2);
-    PetscFunctionReturn(0);
+  PetscCall(VecTaggerComputeIS_FromBoxes(tagger, vec, is, &boxlisted));
+  if (boxlisted) {
+    if (listed) *listed = PETSC_TRUE;
+    PetscFunctionReturn(PETSC_SUCCESS);
   }
-  ierr = VecTaggerOrGetSubs(tagger,&nsubs,&subs);CHKERRQ(ierr);
-  ierr = ISCreateGeneral(PetscObjectComm((PetscObject)vec),0,NULL,PETSC_OWN_POINTER,&unionIS);CHKERRQ(ierr);
+  PetscCall(VecTaggerOrGetSubs(tagger, &nsubs, &subs));
+  PetscCall(ISCreateGeneral(PetscObjectComm((PetscObject)vec), 0, NULL, PETSC_OWN_POINTER, &unionIS));
   for (i = 0; i < nsubs; i++) {
     IS subIS, newUnionIS;
 
-    ierr = VecTaggerComputeIS(subs[i],vec,&subIS);CHKERRQ(ierr);
-    ierr = ISExpand(unionIS,subIS,&newUnionIS);CHKERRQ(ierr);
-    ierr = ISSort(newUnionIS);CHKERRQ(ierr);
-    ierr = ISDestroy(&unionIS);CHKERRQ(ierr);
+    PetscCall(VecTaggerComputeIS(subs[i], vec, &subIS, &boxlisted));
+    PetscCheck(boxlisted, PetscObjectComm((PetscObject)tagger), PETSC_ERR_SUP, "Tagger cannot VecTaggerComputeIS()");
+    PetscCall(ISExpand(unionIS, subIS, &newUnionIS));
+    PetscCall(ISSort(newUnionIS));
+    PetscCall(ISDestroy(&unionIS));
     unionIS = newUnionIS;
-    ierr = ISDestroy(&subIS);CHKERRQ(ierr);
+    PetscCall(ISDestroy(&subIS));
   }
   *is = unionIS;
-  PetscFunctionReturn(0);
+  if (listed) *listed = PETSC_TRUE;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PETSC_INTERN PetscErrorCode VecTaggerCreate_Or(VecTagger tagger)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  ierr = VecTaggerCreate_AndOr(tagger);CHKERRQ(ierr);
+  PetscCall(VecTaggerCreate_AndOr(tagger));
   tagger->ops->computeboxes = VecTaggerComputeBoxes_Or;
-  tagger->ops->computeis        = VecTaggerComputeIS_Or;
-  PetscFunctionReturn(0);
+  tagger->ops->computeis    = VecTaggerComputeIS_Or;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

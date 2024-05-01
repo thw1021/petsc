@@ -3,16 +3,23 @@ import config.package
 class Configure(config.package.Package):
   def __init__(self, framework):
     config.package.Package.__init__(self, framework)
-    self.download               = ['http://ftp.mcs.anl.gov/pub/petsc/externalpackages/f2cblaslapack-3.4.2.q4.tar.gz']
+    self.download               = ['https://web.cels.anl.gov/projects/petsc/download/externalpackages/f2cblaslapack-3.8.0.q2.tar.gz']
     self.downloadonWindows      = 1
     self.skippackagewithoptions = 1
-    self.installwithbatch       = 1
 
   def setupDependencies(self, framework):
     config.package.Package.setupDependencies(self, framework)
     self.blis = framework.require('config.packages.blis', self)
+    self.blis.complex_return = 'intel' # f2cblaslapack puts complex return values into the arguments, like Intel Fortran compilers, and blis needs to know this
+    self.scalartypes = framework.require('PETSc.options.scalarTypes', self)
     self.odeps = [self.blis]
     return
+
+  def setupHelp(self, help):
+    config.package.GNUPackage.setupHelp(self,help)
+    import nargs
+    help.addArgument('F2CBLASLAPACK', '-with-f2cblaslapack-float128-bindings', nargs.ArgBool(None, 0, 'Build BLAS/LAPACK with __float128 bindings'))
+    help.addArgument('F2CBLASLAPACK', '-with-f2cblaslapack-fp16-bindings', nargs.ArgBool(None, 0, 'Build BLAS/LAPACK with __fp16 bindings'))
 
   def configureLibrary(self):
     if self.argDB['with-64-bit-blas-indices']:
@@ -29,6 +36,21 @@ class Configure(config.package.Package):
     elif self.blis.found: make_target = 'blasaux_lib lapack_lib'
     else: make_target = 'blas_lib lapack_lib'
 
+    if self.argDB['with-f2cblaslapack-float128-bindings'] and self.defaultPrecision != '__fp128':
+      if not self.scalartypes.have__float128:
+        raise RuntimeError('No __float128 support provided by the compiler, cannot use --with-f2cblaslapack-float128-bindings')
+      if self.defaultPrecision == '__fp16':
+        make_target = 'blas_qhlib lapack_qhlib'
+      else:
+        make_target = 'blas_qlib lapack_qlib'
+    if self.argDB['with-f2cblaslapack-fp16-bindings'] and self.defaultPrecision != '__fp16':
+      if not self.scalartypes.have__fp16:
+        raise RuntimeError('No __fp16 support provided by the compiler, cannot use --with-f2cblaslapack-fp16-bindings')
+      if self.defaultPrecision == '__float128' or self.argDB['with-f2cblaslapack-float128-bindings']:
+        make_target = 'blas_qhlib lapack_qhlib'
+      else:
+        make_target = 'blas_hlib lapack_hlib'
+
     libdir = self.libDir
     confdir = self.confDir
 
@@ -39,14 +61,14 @@ class Configure(config.package.Package):
             cc = self.compilers.CC
             line = 'CC = '+cc+'\n'
           if line.startswith('COPTFLAGS '):
-            self.setCompilers.pushLanguage('C')
-            line = 'COPTFLAGS  = '+self.removeWarningFlags(self.setCompilers.getCompilerFlags())+'\n'
-            self.setCompilers.popLanguage()
+            self.pushLanguage('C')
+            line = 'COPTFLAGS  = '+self.updatePackageCFlags(self.getCompilerFlags())+'\n'
+            self.popLanguage()
           if line.startswith('CNOOPT'):
-            self.setCompilers.pushLanguage('C')
+            self.pushLanguage('C')
             noopt = self.checkNoOptFlag()
-            line = 'CNOOPT = '+noopt+ ' '+self.getSharedFlag(self.setCompilers.getCompilerFlags())+' '+self.getPointerSizeFlag(self.setCompilers.getCompilerFlags())+' '+self.getWindowsNonOptFlags(self.setCompilers.getCompilerFlags())+'\n'
-            self.setCompilers.popLanguage()
+            line = 'CNOOPT = '+noopt+ ' '+self.getSharedFlag(self.getCompilerFlags())+' '+self.getPointerSizeFlag(self.getCompilerFlags())+' '+self.getWindowsNonOptFlags(self.getCompilerFlags())+'\n'
+            self.popLanguage()
           if line.startswith('AR  '):
             line = 'AR      = '+self.setCompilers.AR+'\n'
           if line.startswith('AR_FLAGS  '):
@@ -74,6 +96,12 @@ blas_qlib:\n\
 \t-@$(RANLIB) $(BLAS_LIB_NAME)\n\
 lapack_qlib:\n\
 \t-@cd lapack; $(MAKE) qlib $(MAKE_OPTIONS_LAPACK)\n\
+\t-@$(RANLIB) $(LAPACK_LIB_NAME)\n\
+blas_qhlib:\n\
+\t-@cd blas;   $(MAKE) qhlib $(MAKE_OPTIONS_BLAS)\n\
+\t-@$(RANLIB) $(BLAS_LIB_NAME)\n\
+lapack_qhlib:\n\
+\t-@cd lapack; $(MAKE) qhlib $(MAKE_OPTIONS_LAPACK)\n\
 \t-@$(RANLIB) $(LAPACK_LIB_NAME)\n'''
       g.write(otherlibs)
 
@@ -89,15 +117,14 @@ lapack_qlib:\n\
       self.logPrint('Error running make on '+self.packageDir+': '+str(e))
       raise RuntimeError('Error running make on '+self.packageDir)
     try:
-      self.logPrintBox('Installing F2CBLASLAPACK')
-      self.installDirProvider.printSudoPasswordMessage()
+      self.logPrintBox('Installing F2CBLASLAPACK; this may take several minutes')
       output2,err2,ret  = config.package.Package.executeShellCommandSeq([
-        self.withSudo('mkdir', '-p', libdir),
-        self.withSudo('cp', '-f', 'libf2clapack.' + self.setCompilers.AR_LIB_SUFFIX, 'libf2cblas.' + self.setCompilers.AR_LIB_SUFFIX, libdir),
+        ['mkdir', '-p', libdir],
+        ['cp', '-f', 'libf2clapack.' + self.setCompilers.AR_LIB_SUFFIX, 'libf2cblas.' + self.setCompilers.AR_LIB_SUFFIX, libdir],
         ], cwd=self.packageDir, timeout=60, log = self.log)
     except RuntimeError as e:
-      self.logPrint('Error moving '+blasDir+' libraries: '+str(e))
-      raise RuntimeError('Error moving '+blasDir+' libraries')
+      self.logPrint('Error moving '+self.packageDir+' libraries: '+str(e))
+      raise RuntimeError('Error moving '+self.packageDir+' libraries')
     self.postInstall(output1+err1+output2+err2,'tmpmakefile')
     return self.installDir
 

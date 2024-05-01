@@ -1,14 +1,6 @@
-ALL: lib
+-include ../../../petscdir.mk
 
-CFLAGS   =
-FFLAGS   =
-SOURCEC  = pythonsys.c
-SOURCEF  =
-SOURCEH  =
-LIBBASE  = libpetscsys
-DIRS     =
-LOCDIR   = src/sys/python/
+MANSEC   = Sys
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
-include ${PETSC_DIR}/lib/petsc/conf/rules
-include ${PETSC_DIR}/lib/petsc/conf/test
+include ${PETSC_DIR}/lib/petsc/conf/rules_doc.mk

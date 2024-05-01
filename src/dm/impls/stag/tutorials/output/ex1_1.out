@@ -4,7 +4,8 @@ Dimension: 1
 Global size: 11
 Boundary ghosting: NONE
 Elementwise ghost stencil: STAR, width 1
-Stratum dof: 0:1 1:1
+1 DOF per vertex  (0D)
+1 DOF per element (1D)
 [0] Local elements : 2 (3 with ghosts)
 [0] Local native entries: 4
 [0] Local entries total : 6
@@ -32,7 +33,8 @@ Dimension: 1
 Global size: 11
 Boundary ghosting: NONE
 Elementwise ghost stencil: STAR, width 1
-Stratum dof: 0:1 1:1
+1 DOF per vertex  (0D)
+1 DOF per element (1D)
 [0] Local elements : 2 (3 with ghosts)
 [0] Local native entries: 4
 [0] Local entries total : 6
@@ -60,7 +62,8 @@ Dimension: 1
 Global size: 11
 Boundary ghosting: NONE
 Elementwise ghost stencil: STAR, width 1
-Stratum dof: 0:1 1:0
+1 DOF per vertex  (0D)
+0 DOF per element (1D)
 [0] Local elements : 2 (3 with ghosts)
 [0] Local native entries: 2
 [0] Local entries total : 3
@@ -82,28 +85,28 @@ Stratum dof: 0:1 1:0
 [6] Local elements : 1 (3 with ghosts)
 [6] Local native entries: 2
 [6] Local entries total : 3
-  0 KSP Residual norm 1097.97 
-  1 KSP Residual norm 1097.97 
-  2 KSP Residual norm 982.066 
-  3 KSP Residual norm 982.066 
-  4 KSP Residual norm 850.516 
-  5 KSP Residual norm 850.516 
-  6 KSP Residual norm 694.479 
-  7 KSP Residual norm 694.479 
-  8 KSP Residual norm 491.147 
-  9 KSP Residual norm 491.147 
- 10 KSP Residual norm 12.2814 
- 11 KSP Residual norm 12.0665 
- 12 KSP Residual norm 11.4018 
- 13 KSP Residual norm 11.1451 
- 14 KSP Residual norm 10.5537 
- 15 KSP Residual norm 10.4188 
- 16 KSP Residual norm 9.85403 
- 17 KSP Residual norm 9.80042 
- 18 KSP Residual norm 9.21536 
- 19 KSP Residual norm 9.20827 
- 20 KSP Residual norm 8.53107 
- 21 KSP Residual norm 8.52094 
+  0 KSP Residual norm 1097.97
+  1 KSP Residual norm 1097.97
+  2 KSP Residual norm 982.066
+  3 KSP Residual norm 982.066
+  4 KSP Residual norm 850.516
+  5 KSP Residual norm 850.516
+  6 KSP Residual norm 694.479
+  7 KSP Residual norm 694.479
+  8 KSP Residual norm 491.147
+  9 KSP Residual norm 491.147
+ 10 KSP Residual norm 12.2814
+ 11 KSP Residual norm 12.0665
+ 12 KSP Residual norm 11.4018
+ 13 KSP Residual norm 11.1451
+ 14 KSP Residual norm 10.5537
+ 15 KSP Residual norm 10.4188
+ 16 KSP Residual norm 9.85403
+ 17 KSP Residual norm 9.80042
+ 18 KSP Residual norm 9.21536
+ 19 KSP Residual norm 9.20827
+ 20 KSP Residual norm 8.53107
+ 21 KSP Residual norm 8.52094
  22 KSP Residual norm < 1.e-11
 DM Object: 7 MPI processes
   type: stag
@@ -111,7 +114,8 @@ Dimension: 1
 Global size: 11
 Boundary ghosting: NONE
 Elementwise ghost stencil: STAR, width 1
-Stratum dof: 0:1 1:0
+1 DOF per vertex  (0D)
+0 DOF per element (1D)
 [0] Local elements : 2 (3 with ghosts)
 [0] Local native entries: 2
 [0] Local entries total : 3
@@ -139,7 +143,8 @@ Dimension: 1
 Global size: 11
 Boundary ghosting: NONE
 Elementwise ghost stencil: STAR, width 1
-Stratum dof: 0:0 1:1
+0 DOF per vertex  (0D)
+1 DOF per element (1D)
 [0] Local elements : 2 (3 with ghosts)
 [0] Local native entries: 2
 [0] Local entries total : 3

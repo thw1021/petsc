@@ -1,102 +1,78 @@
-static char help[] = "Test that shared points on interface of partitions can be rebalanced.\n\n";
+static char help[]     = "Test that shared points on interface of partitions can be rebalanced.\n\n";
 static char FILENAME[] = "ex31.c";
 
 #include <petscdmplex.h>
 #include <petscviewerhdf5.h>
-#include "petscsf.h"
-
+#include <petscsf.h>
 
 typedef struct {
-  PetscInt  dim;                          /* The topological mesh dimension */ PetscInt  faces[3];                     /* Number of faces per dimension */
-  PetscBool simplex;                      /* Use simplices or hexes */
-  PetscBool interpolate;                  /* Interpolate mesh */
-  PetscBool parallel;                     /* Use ParMetis or Metis */
-  PetscBool useInitialGuess;              /* Only active when in parallel, uses RefineKway of ParMetis */
-  PetscInt  entityDepth;                  /* depth of the entities to rebalance ( 0 => vertices) */
+  PetscBool parallel;        /* Use ParMetis or Metis */
+  PetscBool useInitialGuess; /* Only active when in parallel, uses RefineKway of ParMetis */
+  PetscInt  entityDepth;     /* depth of the entities to rebalance ( 0 => vertices) */
 } AppCtx;
 
 static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 {
-  PetscInt dim;
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  options->dim             = 3;
-  options->simplex         = PETSC_FALSE;
-  options->interpolate     = PETSC_FALSE;
-  options->entityDepth     = 0;
   options->parallel        = PETSC_FALSE;
   options->useInitialGuess = PETSC_FALSE;
   options->entityDepth     = 0;
-  ierr = PetscOptionsBegin(comm, "", "Meshing Interpolation Test Options", "DMPLEX");CHKERRQ(ierr);
-  ierr = PetscOptionsBoundedInt("-entity_depth", "Depth of the entities to rebalance (0 => vertices)", FILENAME, options->entityDepth, &options->entityDepth, NULL,0);CHKERRQ(ierr);
-  ierr = PetscOptionsRangeInt("-dim", "The topological mesh dimension", FILENAME, options->dim, &options->dim, NULL,1,3);CHKERRQ(ierr);
-  if (options->dim > 3) SETERRQ1(comm, PETSC_ERR_ARG_OUTOFRANGE, "dimension set to %d, must be <= 3", options->dim);
-  ierr = PetscOptionsBool("-simplex", "Use simplices if true, otherwise hexes", FILENAME, options->simplex, &options->simplex, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-interpolate", "Interpolate the mesh", FILENAME, options->interpolate, &options->interpolate, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-parallel", "Use ParMetis instead of Metis", FILENAME, options->parallel, &options->parallel, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-use_initial_guess", "Use RefineKway function of ParMetis", FILENAME, options->useInitialGuess, &options->useInitialGuess, NULL);CHKERRQ(ierr);
-  options->faces[0] = 1; options->faces[1] = 1; options->faces[2] = 1;
-  dim = options->dim;
-  ierr = PetscOptionsIntArray("-faces", "Number of faces per dimension", FILENAME, options->faces, &dim, NULL);CHKERRQ(ierr);
-  if (dim) options->dim = dim;
-  ierr = PetscOptionsEnd();
-  PetscFunctionReturn(0);
-}
 
+  PetscOptionsBegin(comm, "", "Meshing Interpolation Test Options", "DMPLEX");
+  PetscCall(PetscOptionsBoundedInt("-entity_depth", "Depth of the entities to rebalance (0 => vertices)", FILENAME, options->entityDepth, &options->entityDepth, NULL, 0));
+  PetscCall(PetscOptionsBool("-parallel", "Use ParMetis instead of Metis", FILENAME, options->parallel, &options->parallel, NULL));
+  PetscCall(PetscOptionsBool("-use_initial_guess", "Use RefineKway function of ParMetis", FILENAME, options->useInitialGuess, &options->useInitialGuess, NULL));
+  PetscOptionsEnd();
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
 
 static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
 {
-  PetscInt       dim          = user->dim;
-  PetscInt      *faces        = user->faces;
-  PetscBool      simplex      = user->simplex;
-  PetscBool      interpolate  = user->interpolate;
-  PetscMPIInt    rank;
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  ierr = MPI_Comm_rank(comm, &rank);CHKERRQ(ierr);
-  ierr = DMPlexCreateBoxMesh(comm, dim, simplex, faces, NULL, NULL, NULL, interpolate, dm);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(DMCreate(comm, dm));
+  PetscCall(DMSetType(*dm, DMPLEX));
+  PetscCall(DMSetFromOptions(*dm));
+  PetscCall(DMViewFromOptions(*dm, NULL, "-dm_view"));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 int main(int argc, char **argv)
 {
-  MPI_Comm       comm;
-  DM             dm, dmdist;
+  MPI_Comm         comm;
+  DM               dm, dmdist;
   PetscPartitioner part;
-  AppCtx         user;
-  IS             is=NULL;
-  PetscSection   s=NULL, gsection=NULL;
-  PetscErrorCode ierr;
-  PetscMPIInt    size;
-  PetscSF        sf;
-  PetscInt       pStart, pEnd, p, minBefore, maxBefore, minAfter, maxAfter, gSizeBefore, gSizeAfter;
-  PetscBool      success;
+  AppCtx           user;
+  IS               is = NULL;
+  PetscSection     s = NULL, gsection = NULL;
+  PetscMPIInt      size;
+  PetscSF          sf;
+  PetscInt         pStart, pEnd, p, minBefore, maxBefore, minAfter, maxAfter, gSizeBefore, gSizeAfter;
+  PetscBool        success;
 
-  ierr = PetscInitialize(&argc, &argv, NULL,help);if (ierr) return ierr;
+  PetscFunctionBeginUser;
+  PetscCall(PetscInitialize(&argc, &argv, NULL, help));
   comm = PETSC_COMM_WORLD;
-  ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
-  ierr = ProcessOptions(comm, &user);CHKERRQ(ierr);
-  ierr = CreateMesh(comm, &user, &dm);CHKERRQ(ierr);
+  PetscCallMPI(MPI_Comm_size(comm, &size));
+  PetscCall(ProcessOptions(comm, &user));
+  PetscCall(CreateMesh(comm, &user, &dm));
 
   /* partition dm using PETSCPARTITIONERPARMETIS */
-  ierr = DMPlexGetPartitioner(dm, &part);CHKERRQ(ierr);
-  ierr = PetscObjectSetOptionsPrefix((PetscObject)part,"p_");CHKERRQ(ierr);
-  ierr = PetscPartitionerSetType(part, PETSCPARTITIONERPARMETIS);CHKERRQ(ierr);
-  ierr = PetscPartitionerSetFromOptions(part);CHKERRQ(ierr);
-  ierr = PetscSectionCreate(comm, &s);CHKERRQ(ierr);
-  ierr = PetscPartitionerDMPlexPartition(part, dm, NULL, s, &is);CHKERRQ(ierr);
+  PetscCall(DMPlexGetPartitioner(dm, &part));
+  PetscCall(PetscObjectSetOptionsPrefix((PetscObject)part, "p_"));
+  PetscCall(PetscPartitionerSetType(part, PETSCPARTITIONERPARMETIS));
+  PetscCall(PetscPartitionerSetFromOptions(part));
+  PetscCall(PetscSectionCreate(comm, &s));
+  PetscCall(PetscPartitionerDMPlexPartition(part, dm, NULL, s, &is));
 
-  ierr = DMPlexDistribute(dm, 0, NULL, &dmdist);CHKERRQ(ierr);
+  PetscCall(DMPlexDistribute(dm, 0, NULL, &dmdist));
   if (dmdist) {
-    ierr = DMDestroy(&dm);CHKERRQ(ierr);
+    PetscCall(DMDestroy(&dm));
     dm = dmdist;
   }
 
   /* cleanup */
-  ierr = PetscSectionDestroy(&s);CHKERRQ(ierr);
-  ierr = ISDestroy(&is);CHKERRQ(ierr);
+  PetscCall(PetscSectionDestroy(&s));
+  PetscCall(ISDestroy(&is));
 
   /* We make a PetscSection with a DOF on every mesh entity of depth
    * user.entityDepth, then make a global section and look at its storage size.
@@ -104,71 +80,73 @@ int main(int argc, char **argv)
    * remains the same. We also make sure that the balance has improved at least
    * a little bit compared to the initial decomposition. */
 
-  if (size>1) {
-    ierr = PetscSectionCreate(comm, &s);CHKERRQ(ierr);
-    ierr = PetscSectionSetNumFields(s, 1);CHKERRQ(ierr);
-    ierr = PetscSectionSetFieldComponents(s, 0, 1);CHKERRQ(ierr);
-    ierr = DMPlexGetDepthStratum(dm, user.entityDepth, &pStart, &pEnd);CHKERRQ(ierr);
-    ierr = PetscSectionSetChart(s, pStart, pEnd);CHKERRQ(ierr);
+  if (size > 1) {
+    PetscCall(PetscSectionCreate(comm, &s));
+    PetscCall(PetscSectionSetNumFields(s, 1));
+    PetscCall(PetscSectionSetFieldComponents(s, 0, 1));
+    PetscCall(DMPlexGetDepthStratum(dm, user.entityDepth, &pStart, &pEnd));
+    PetscCall(PetscSectionSetChart(s, pStart, pEnd));
     for (p = pStart; p < pEnd; ++p) {
-      ierr = PetscSectionSetDof(s, p, 1);CHKERRQ(ierr);
-      ierr = PetscSectionSetFieldDof(s, p, 0, 1);CHKERRQ(ierr);
+      PetscCall(PetscSectionSetDof(s, p, 1));
+      PetscCall(PetscSectionSetFieldDof(s, p, 0, 1));
     }
-    ierr = PetscSectionSetUp(s);CHKERRQ(ierr);
-    ierr = DMGetPointSF(dm, &sf);CHKERRQ(ierr);
-    ierr = PetscSectionCreateGlobalSection(s, sf, PETSC_FALSE, PETSC_FALSE, &gsection);CHKERRQ(ierr);
-    ierr = PetscSectionGetStorageSize(gsection, &gSizeBefore);CHKERRQ(ierr);
+    PetscCall(PetscSectionSetUp(s));
+    PetscCall(DMGetPointSF(dm, &sf));
+    PetscCall(PetscSectionCreateGlobalSection(s, sf, PETSC_TRUE, PETSC_FALSE, PETSC_FALSE, &gsection));
+    PetscCall(PetscSectionGetStorageSize(gsection, &gSizeBefore));
     minBefore = gSizeBefore;
     maxBefore = gSizeBefore;
-    ierr = MPI_Allreduce(MPI_IN_PLACE, &gSizeBefore, 1, MPIU_INT, MPI_SUM, comm);CHKERRQ(ierr);
-    ierr = MPI_Allreduce(MPI_IN_PLACE, &minBefore, 1, MPIU_INT, MPI_MIN, comm);CHKERRQ(ierr);
-    ierr = MPI_Allreduce(MPI_IN_PLACE, &maxBefore, 1, MPIU_INT, MPI_MAX, comm);CHKERRQ(ierr);
-    ierr = PetscSectionDestroy(&gsection);CHKERRQ(ierr);
+    PetscCall(MPIU_Allreduce(MPI_IN_PLACE, &gSizeBefore, 1, MPIU_INT, MPI_SUM, comm));
+    PetscCall(MPIU_Allreduce(MPI_IN_PLACE, &minBefore, 1, MPIU_INT, MPI_MIN, comm));
+    PetscCall(MPIU_Allreduce(MPI_IN_PLACE, &maxBefore, 1, MPIU_INT, MPI_MAX, comm));
+    PetscCall(PetscSectionDestroy(&gsection));
   }
 
-  ierr = DMPlexRebalanceSharedPoints(dm, user.entityDepth, user.useInitialGuess, user.parallel, &success);CHKERRQ(ierr);
+  PetscCall(DMPlexRebalanceSharedPoints(dm, user.entityDepth, user.useInitialGuess, user.parallel, &success));
 
-  if (size>1) {
-    ierr = PetscSectionCreateGlobalSection(s, sf, PETSC_FALSE, PETSC_FALSE, &gsection);CHKERRQ(ierr);
-    ierr = PetscSectionGetStorageSize(gsection, &gSizeAfter);CHKERRQ(ierr);
+  if (size > 1) {
+    PetscCall(PetscSectionCreateGlobalSection(s, sf, PETSC_TRUE, PETSC_FALSE, PETSC_FALSE, &gsection));
+    PetscCall(PetscSectionGetStorageSize(gsection, &gSizeAfter));
     minAfter = gSizeAfter;
     maxAfter = gSizeAfter;
-    ierr = MPI_Allreduce(MPI_IN_PLACE, &gSizeAfter, 1, MPIU_INT, MPI_SUM, comm);CHKERRQ(ierr);
-    ierr = MPI_Allreduce(MPI_IN_PLACE, &minAfter, 1, MPIU_INT, MPI_MIN, comm);CHKERRQ(ierr);
-    ierr = MPI_Allreduce(MPI_IN_PLACE, &maxAfter, 1, MPIU_INT, MPI_MAX, comm);CHKERRQ(ierr);
-    if (gSizeAfter != gSizeBefore) SETERRQ(comm, PETSC_ERR_PLIB, "Global section has not the same size before and after.");
-    if (!(minAfter >= minBefore && maxAfter <= maxBefore && (minAfter > minBefore || maxAfter < maxBefore))) SETERRQ(comm, PETSC_ERR_PLIB, "DMPlexRebalanceSharedPoints did not improve mesh point balance.");
-    ierr = PetscSectionDestroy(&gsection);CHKERRQ(ierr);
-    ierr = PetscSectionDestroy(&s);CHKERRQ(ierr);
+    PetscCall(MPIU_Allreduce(MPI_IN_PLACE, &gSizeAfter, 1, MPIU_INT, MPI_SUM, comm));
+    PetscCall(MPIU_Allreduce(MPI_IN_PLACE, &minAfter, 1, MPIU_INT, MPI_MIN, comm));
+    PetscCall(MPIU_Allreduce(MPI_IN_PLACE, &maxAfter, 1, MPIU_INT, MPI_MAX, comm));
+    PetscCheck(gSizeAfter == gSizeBefore, comm, PETSC_ERR_PLIB, "Global section has not the same size before and after.");
+    PetscCheck(minAfter >= minBefore && maxAfter <= maxBefore && (minAfter > minBefore || maxAfter < maxBefore), comm, PETSC_ERR_PLIB, "DMPlexRebalanceSharedPoints did not improve mesh point balance.");
+    PetscCall(PetscSectionDestroy(&gsection));
+    PetscCall(PetscSectionDestroy(&s));
   }
 
-  ierr = DMDestroy(&dm);CHKERRQ(ierr);
-
-  ierr = PetscFinalize();
-  return ierr;
+  PetscCall(DMDestroy(&dm));
+  PetscCall(PetscFinalize());
+  return 0;
 }
 
 /*TEST
 
-  test:
-    # rebalance a mesh
-    suffix: 0
-    nsize: {{2 3 4}}
-    requires: parmetis
-    args: -faces {{2,3,4  5,4,3  7,11,5}} -interpolate -entity_depth {{0 1}} -parallel {{FALSE TRUE}} -use_initial_guess FALSE
+  testset:
+    args: -dm_plex_dim 3 -dm_plex_simplex 0
 
-  test:
-    # rebalance a mesh but use the initial guess (uses a random algorithm and gives different results on different machines, so just check that it runs).
-    suffix: 1
-    nsize: {{2 3 4}}
-    requires: parmetis
-    args: -faces {{2,3,4  5,4,3  7,11,5}} -interpolate -entity_depth {{0 1}} -parallel TRUE -use_initial_guess TRUE
+    test:
+      # rebalance a mesh
+      suffix: 0
+      nsize: {{2 3 4}}
+      requires: parmetis
+      args: -dm_plex_box_faces {{2,3,4 5,4,3 7,11,5}} -entity_depth {{0 1}} -parallel {{FALSE TRUE}} -use_initial_guess FALSE
 
-  test:
-    # no-op in serial
-    suffix: 2
-    nsize: {{1}}
-    requires: parmetis
-    args: -faces 2,3,4 -interpolate -entity_depth 0 -parallel FALSE -use_initial_guess FALSE
+    test:
+      # rebalance a mesh but use the initial guess (uses a random algorithm and gives different results on different machines, so just check that it runs).
+      suffix: 1
+      nsize: {{2 3 4}}
+      requires: parmetis
+      args: -dm_plex_box_faces {{2,3,4 5,4,3 7,11,5}} -entity_depth {{0 1}} -parallel TRUE -use_initial_guess TRUE
+
+    test:
+      # no-op in serial
+      suffix: 2
+      nsize: {{1}}
+      requires: parmetis
+      args: -dm_plex_box_faces 2,3,4 -entity_depth 0 -parallel FALSE -use_initial_guess FALSE
 
 TEST*/

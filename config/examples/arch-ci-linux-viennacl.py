@@ -1,10 +1,11 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 if __name__ == '__main__':
   import sys
   import os
   sys.path.insert(0, os.path.abspath('config'))
   import configure
   configure_options = [
+    '--with-make-test-np=20',
     'COPTFLAGS=-g -O',
     'FOPTFLAGS=-g -O',
     'CXXOPTFLAGS=-g -O',
@@ -14,5 +15,7 @@ if __name__ == '__main__':
     '--with-cuda=0',
     '--download-codipack=1',
     '--download-adblaslapack=1',
+    '--with-strict-petscerrorcode',
+    '--with-coverage',
   ]
   configure.petsc_configure(configure_options)

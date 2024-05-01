@@ -3,12 +3,13 @@ import config.package
 class Configure(config.package.GNUPackage):
   def __init__(self, framework):
     config.package.GNUPackage.__init__(self, framework)
-    self.download         = ['https://sourceforge.net/projects/libpng/files/libpng16/1.6.37/libpng-1.6.37.tar.gz',
-                             'http://ftp.mcs.anl.gov/pub/petsc/externalpackages/libpng-1.6.37.tar.gz']
+    self.versionname      = 'PNG_LIBPNG_VER_STRING'
+    self.version          = '1.6.40'
+    self.download         = ['https://sourceforge.net/projects/libpng/files/libpng16/'+self.version+'/libpng-'+self.version+'.tar.gz',
+                             'https://web.cels.anl.gov/projects/petsc/download/externalpackages/libpng-'+self.version+'.tar.gz']
     self.includes         = ['png.h']
     self.liblist          = [['libpng.a']]
     self.functions        = ['png_create_write_struct']
-    self.lookforbydefault = 0
 
   def setupDependencies(self, framework):
     config.package.Package.setupDependencies(self, framework)

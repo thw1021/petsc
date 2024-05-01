@@ -13,6 +13,7 @@ class Configure(config.base.Configure):
     return
 
   def setExternalPackagesDir(self):
+    '''Set location where external packages will be downloaded to'''
     if self.framework.externalPackagesDir is None:
       self.dir = os.path.join(os.path.abspath(os.path.join(self.arch.arch)), 'externalpackages')
     else:
@@ -20,14 +21,14 @@ class Configure(config.base.Configure):
     return
 
   def cleanExternalpackagesDir(self):
+    '''Remove all downloaded external packages, from --with-clean'''
     import shutil
     if self.framework.argDB['with-clean'] and os.path.isdir(self.dir):
-      self.logPrintBox('Warning: "with-clean" is specified. Removing all externalpackage files from '+ self.dir)
+      self.logPrintWarning('"with-clean" is specified. Removing all externalpackage files from '+ self.dir)
       shutil.rmtree(self.dir)
     return
 
   def configure(self):
     self.executeTest(self.setExternalPackagesDir)
     self.executeTest(self.cleanExternalpackagesDir)
-
     return

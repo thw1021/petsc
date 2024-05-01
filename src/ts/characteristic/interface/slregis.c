@@ -1,23 +1,22 @@
 #include <petsc/private/characteristicimpl.h>
 
 static PetscBool CharacteristicPackageInitialized = PETSC_FALSE;
+
 /*@C
-  CharacteristicFinalizePackage - This function destroys everything in the Petsc interface to the characteristics package. It is
-  called from PetscFinalize().
+  CharacteristicFinalizePackage - This function destroys everything in the `Characteristics` package. It is
+  called from `PetscFinalize()`.
 
   Level: developer
 
-.seealso: PetscFinalize()
+.seealso: [](ch_ts), `PetscFinalize()`, `CharacteristicInitializePackage()`
 @*/
 PetscErrorCode CharacteristicFinalizePackage(void)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  ierr = PetscFunctionListDestroy(&CharacteristicList);CHKERRQ(ierr);
+  PetscCall(PetscFunctionListDestroy(&CharacteristicList));
   CharacteristicPackageInitialized = PETSC_FALSE;
   CharacteristicRegisterAllCalled  = PETSC_FALSE;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
@@ -27,48 +26,47 @@ PetscErrorCode CharacteristicFinalizePackage(void)
 
   Level: developer
 
-.seealso: PetscInitialize()
+.seealso: [](ch_ts), `PetscInitialize()`, `CharacteristicFinalizePackage()`
 @*/
 PetscErrorCode CharacteristicInitializePackage(void)
 {
-  char           logList[256];
-  PetscBool      opt,pkg;
-  PetscErrorCode ierr;
+  char      logList[256];
+  PetscBool opt, pkg;
 
   PetscFunctionBegin;
-  if (CharacteristicPackageInitialized) PetscFunctionReturn(0);
+  if (CharacteristicPackageInitialized) PetscFunctionReturn(PETSC_SUCCESS);
   CharacteristicPackageInitialized = PETSC_TRUE;
   /* Register Classes */
-  ierr = PetscClassIdRegister("Method of Characteristics",&CHARACTERISTIC_CLASSID);CHKERRQ(ierr);
+  PetscCall(PetscClassIdRegister("Method of Characteristics", &CHARACTERISTIC_CLASSID));
   /* Register Constructors */
-  ierr = CharacteristicRegisterAll();CHKERRQ(ierr);
+  PetscCall(CharacteristicRegisterAll());
   /* Register Events */
-  ierr = PetscLogEventRegister("MOCSetUp",         CHARACTERISTIC_CLASSID,&CHARACTERISTIC_SetUp);CHKERRQ(ierr);
-  ierr = PetscLogEventRegister("MOCSolve",         CHARACTERISTIC_CLASSID,&CHARACTERISTIC_Solve);CHKERRQ(ierr);
-  ierr = PetscLogEventRegister("MOCQueueSetup",    CHARACTERISTIC_CLASSID,&CHARACTERISTIC_QueueSetup);CHKERRQ(ierr);
-  ierr = PetscLogEventRegister("MOCDAUpdate",      CHARACTERISTIC_CLASSID,&CHARACTERISTIC_DAUpdate);CHKERRQ(ierr);
-  ierr = PetscLogEventRegister("MOCHalfTimeLocal", CHARACTERISTIC_CLASSID,&CHARACTERISTIC_HalfTimeLocal);CHKERRQ(ierr);
-  ierr = PetscLogEventRegister("MOCHalfTimeRemot", CHARACTERISTIC_CLASSID,&CHARACTERISTIC_HalfTimeRemote);CHKERRQ(ierr);
-  ierr = PetscLogEventRegister("MOCHalfTimeExchg", CHARACTERISTIC_CLASSID,&CHARACTERISTIC_HalfTimeExchange);CHKERRQ(ierr);
-  ierr = PetscLogEventRegister("MOCFullTimeLocal", CHARACTERISTIC_CLASSID,&CHARACTERISTIC_FullTimeLocal);CHKERRQ(ierr);
-  ierr = PetscLogEventRegister("MOCFullTimeRemot", CHARACTERISTIC_CLASSID,&CHARACTERISTIC_FullTimeRemote);CHKERRQ(ierr);
-  ierr = PetscLogEventRegister("MOCFullTimeExchg", CHARACTERISTIC_CLASSID,&CHARACTERISTIC_FullTimeExchange);CHKERRQ(ierr);
+  PetscCall(PetscLogEventRegister("MOCSetUp", CHARACTERISTIC_CLASSID, &CHARACTERISTIC_SetUp));
+  PetscCall(PetscLogEventRegister("MOCSolve", CHARACTERISTIC_CLASSID, &CHARACTERISTIC_Solve));
+  PetscCall(PetscLogEventRegister("MOCQueueSetup", CHARACTERISTIC_CLASSID, &CHARACTERISTIC_QueueSetup));
+  PetscCall(PetscLogEventRegister("MOCDAUpdate", CHARACTERISTIC_CLASSID, &CHARACTERISTIC_DAUpdate));
+  PetscCall(PetscLogEventRegister("MOCHalfTimeLocal", CHARACTERISTIC_CLASSID, &CHARACTERISTIC_HalfTimeLocal));
+  PetscCall(PetscLogEventRegister("MOCHalfTimeRemot", CHARACTERISTIC_CLASSID, &CHARACTERISTIC_HalfTimeRemote));
+  PetscCall(PetscLogEventRegister("MOCHalfTimeExchg", CHARACTERISTIC_CLASSID, &CHARACTERISTIC_HalfTimeExchange));
+  PetscCall(PetscLogEventRegister("MOCFullTimeLocal", CHARACTERISTIC_CLASSID, &CHARACTERISTIC_FullTimeLocal));
+  PetscCall(PetscLogEventRegister("MOCFullTimeRemot", CHARACTERISTIC_CLASSID, &CHARACTERISTIC_FullTimeRemote));
+  PetscCall(PetscLogEventRegister("MOCFullTimeExchg", CHARACTERISTIC_CLASSID, &CHARACTERISTIC_FullTimeExchange));
   /* Process Info */
   {
-    PetscClassId  classids[1];
+    PetscClassId classids[1];
 
     classids[0] = CHARACTERISTIC_CLASSID;
-    ierr = PetscInfoProcessClass("characteristic", 1, classids);CHKERRQ(ierr);
+    PetscCall(PetscInfoProcessClass("characteristic", 1, classids));
   }
   /* Process summary exclusions */
-  ierr = PetscOptionsGetString(NULL,NULL,"-log_exclude",logList,sizeof(logList),&opt);CHKERRQ(ierr);
+  PetscCall(PetscOptionsGetString(NULL, NULL, "-log_exclude", logList, sizeof(logList), &opt));
   if (opt) {
-    ierr = PetscStrInList("characteristic",logList,',',&pkg);CHKERRQ(ierr);
-    if (pkg) {ierr = PetscLogEventExcludeClass(CHARACTERISTIC_CLASSID);CHKERRQ(ierr);}
+    PetscCall(PetscStrInList("characteristic", logList, ',', &pkg));
+    if (pkg) PetscCall(PetscLogEventExcludeClass(CHARACTERISTIC_CLASSID));
   }
   /* Process package finalizer */
-  ierr = PetscRegisterFinalize(CharacteristicFinalizePackage);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscRegisterFinalize(CharacteristicFinalizePackage));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 #if defined(PETSC_HAVE_DYNAMIC_LIBRARIES)
@@ -76,15 +74,12 @@ PetscErrorCode CharacteristicInitializePackage(void)
   PetscDLLibraryRegister - This function is called when the dynamic library it is in is opened.
 
   This one registers the method of characteristics code
-
  */
 PETSC_EXTERN PetscErrorCode PetscDLLibraryRegister_petsccharacteristic(void)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  ierr = CharacteristicInitializePackage();CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(CharacteristicInitializePackage());
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 #endif /* PETSC_HAVE_DYNAMIC_LIBRARIES */

@@ -3,8 +3,8 @@ import config.package
 class Configure(config.package.GNUPackage):
   def __init__(self, framework):
     config.package.GNUPackage.__init__(self, framework)
-    self.gitcommit         = '6f24c5e' # master may 23, 2019
-    self.download          = ['git://https://github.com/ornladios/ADIOS.git']
+    self.gitcommit         = 'de85222e71148d2ae47e6af3f9e48dc98323cffb' # master Aug 4, 2021
+    self.download          = ['git://https://github.com/ornladios/ADIOS.git', 'https://github.com/ornladios/ADIOS/archive/'+self.gitcommit+'.tar.gz']
     self.downloaddirnames  = ['adios']
     self.functions         = ['adios_open']
     self.includes          = ['adios.h']
@@ -31,17 +31,17 @@ class Configure(config.package.GNUPackage):
   def formGNUConfigureArgs(self):
     '''Add ADIOS specific configure arguments'''
     args = config.package.GNUPackage.formGNUConfigureArgs(self)
-    self.framework.pushLanguage('C')
-    args.append('MPICC="'+self.framework.getCompiler()+'"')
-    self.framework.popLanguage()
+    self.pushLanguage('C')
+    args.append('MPICC="'+self.getCompiler()+'"')
+    self.popLanguage()
     if hasattr(self.compilers, 'CXX'):
-      self.framework.pushLanguage('Cxx')
-      args.append('MPICXX="'+self.framework.getCompiler()+'"')
-      self.framework.popLanguage()
+      self.pushLanguage('Cxx')
+      args.append('MPICXX="'+self.getCompiler()+'"')
+      self.popLanguage()
     if hasattr(self.compilers, 'FC'):
-      self.framework.pushLanguage('FC')
-      args.append('MPIFC="'+self.framework.getCompiler()+'"')
-      self.framework.popLanguage()
+      self.pushLanguage('FC')
+      args.append('MPIFC="'+self.getCompiler()+'"')
+      self.popLanguage()
     else:
       args.append('--disable-fortran')
     if self.hdf5.found:

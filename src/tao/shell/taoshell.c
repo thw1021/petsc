@@ -2,168 +2,151 @@
 
 typedef struct _n_TaoShell Tao_Shell;
 
-struct _n_TaoShell
-{
+struct _n_TaoShell {
   PetscErrorCode (*solve)(Tao);
-  void            *ctx;
+  void *ctx;
 };
 
 /*@C
-   TaoShellSetSolve - Sets routine to apply as solver
+  TaoShellSetSolve - Sets routine to apply as solver
 
-   Logically Collective on Tao
+  Logically Collective
 
-   Input Parameters:
-+  tao - the nonlinear solver context
--  solve - the application-provided solver routine
+  Input Parameters:
++ tao   - the nonlinear solver context
+- solve - the application-provided solver routine
 
-   Calling sequence of solve:
-.vb
-   PetscErrorCode solve (Tao tao)
-.ve
+  Calling sequence of `solve`:
+. tao - the optimizer, get the application context with `TaoShellGetContext()`
 
-.  tao - the optimizer, get the application context with TaoShellGetContext()
+  Level: advanced
 
-   Notes:
-    the function MUST return an error code of 0 on success and nonzero on failure.
-
-   Level: advanced
-
-.seealso: TAOSHELL, TaoShellSetContext(), TaoShellGetContext()
+.seealso: `Tao`, `TAOSHELL`, `TaoShellSetContext()`, `TaoShellGetContext()`
 @*/
-PetscErrorCode TaoShellSetSolve(Tao tao, PetscErrorCode (*solve) (Tao))
+PetscErrorCode TaoShellSetSolve(Tao tao, PetscErrorCode (*solve)(Tao))
 {
-  Tao_Shell                    *shell = (Tao_Shell*)tao->data;
+  Tao_Shell *shell = (Tao_Shell *)tao->data;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
   shell->solve = solve;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-    TaoShellGetContext - Returns the user-provided context associated with a shell Tao
+  TaoShellGetContext - Returns the user-provided context associated with a `TAOSHELL`
 
-    Not Collective
+  Not Collective
 
-    Input Parameter:
-.   tao - should have been created with TaoSetType(tao,TAOSHELL);
+  Input Parameter:
+. tao - should have been created with `TaoSetType`(tao,`TAOSHELL`);
 
-    Output Parameter:
-.   ctx - the user provided context
+  Output Parameter:
+. ctx - the user provided context
 
-    Level: advanced
+  Level: advanced
 
-    Notes:
-    This routine is intended for use within various shell routines
+  Note:
+  This routine is intended for use within various shell routines
 
-.seealso: TaoCreateShell(), TaoShellSetContext()
+.seealso: `Tao`, `TAOSHELL`, `TaoCreateShell()`, `TaoShellSetContext()`
 @*/
-PetscErrorCode  TaoShellGetContext(Tao tao,void **ctx)
+PetscErrorCode TaoShellGetContext(Tao tao, void *ctx)
 {
-  PetscErrorCode ierr;
-  PetscBool      flg;
+  PetscBool flg;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
-  PetscValidPointer(ctx,2);
-  ierr = PetscObjectTypeCompare((PetscObject)tao,TAOSHELL,&flg);CHKERRQ(ierr);
-  if (!flg) *ctx = NULL;
-  else      *ctx = ((Tao_Shell*)(tao->data))->ctx;
-  PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
+  PetscAssertPointer(ctx, 2);
+  PetscCall(PetscObjectTypeCompare((PetscObject)tao, TAOSHELL, &flg));
+  if (!flg) *(void **)ctx = NULL;
+  else *(void **)ctx = ((Tao_Shell *)tao->data)->ctx;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-    TaoShellSetContext - sets the context for a shell Tao
+  TaoShellSetContext - sets the context for a `TAOSHELL`
 
-   Logically Collective on Tao
+  Logically Collective
 
-    Input Parameters:
-+   tao - the shell Tao
--   ctx - the context
+  Input Parameters:
++ tao - the shell Tao
+- ctx - the context
 
-   Level: advanced
+  Level: advanced
 
-   Fortran Notes:
-    The context can only be an integer or a PetscObject
-      unfortunately it cannot be a Fortran array or derived type.
+  Fortran Notes:
+  The context can only be an integer or a `PetscObject`
 
-
-.seealso: TaoCreateShell(), TaoShellGetContext()
+.seealso: `Tao`, `TAOSHELL`, `TaoCreateShell()`, `TaoShellGetContext()`
 @*/
-PetscErrorCode  TaoShellSetContext(Tao tao,void *ctx)
+PetscErrorCode TaoShellSetContext(Tao tao, void *ctx)
 {
-  Tao_Shell     *shell = (Tao_Shell*)tao->data;
-  PetscErrorCode ierr;
-  PetscBool      flg;
+  Tao_Shell *shell = (Tao_Shell *)tao->data;
+  PetscBool  flg;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
-  ierr = PetscObjectTypeCompare((PetscObject)tao,TAOSHELL,&flg);CHKERRQ(ierr);
+  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
+  PetscCall(PetscObjectTypeCompare((PetscObject)tao, TAOSHELL, &flg));
   if (flg) shell->ctx = ctx;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode TaoSolve_Shell(Tao tao)
 {
-  Tao_Shell                    *shell = (Tao_Shell*)tao->data;
-  PetscErrorCode               ierr;
+  Tao_Shell *shell = (Tao_Shell *)tao->data;
 
   PetscFunctionBegin;
-  if (!shell->solve) SETERRQ(PetscObjectComm((PetscObject)tao),PETSC_ERR_ARG_WRONGSTATE,"Must call TaoShellSetSolve() first");
+  PetscCheck(shell->solve, PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_WRONGSTATE, "Must call TaoShellSetSolve() first");
   tao->reason = TAO_CONVERGED_USER;
-  ierr = (*(shell->solve)) (tao);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall((*shell->solve)(tao));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode TaoDestroy_Shell(Tao tao)
+static PetscErrorCode TaoDestroy_Shell(Tao tao)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  ierr = PetscFree(tao->data);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscFree(tao->data));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode TaoSetUp_Shell(Tao tao)
+static PetscErrorCode TaoSetUp_Shell(Tao tao)
 {
   PetscFunctionBegin;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode TaoSetFromOptions_Shell(PetscOptionItems *PetscOptionsObject,Tao tao)
+static PetscErrorCode TaoSetFromOptions_Shell(Tao tao, PetscOptionItems *PetscOptionsObject)
 {
   PetscFunctionBegin;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode TaoView_Shell(Tao tao, PetscViewer viewer)
+static PetscErrorCode TaoView_Shell(Tao tao, PetscViewer viewer)
 {
   PetscFunctionBegin;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*MC
-  TAOSHELL - a user provided nonlinear solver
+  TAOSHELL - a user provided optimizer
 
    Level: advanced
 
-.seealso: TaoCreate(), Tao, TaoSetType(), TaoType (for list of available types)
+.seealso: `TaoCreate()`, `Tao`, `TaoSetType()`, `TaoType`
 M*/
 PETSC_EXTERN PetscErrorCode TaoCreate_Shell(Tao tao)
 {
-  Tao_Shell      *shell;
-  PetscErrorCode ierr;
+  Tao_Shell *shell;
 
   PetscFunctionBegin;
-  tao->ops->destroy = TaoDestroy_Shell;
-  tao->ops->setup = TaoSetUp_Shell;
+  tao->ops->destroy        = TaoDestroy_Shell;
+  tao->ops->setup          = TaoSetUp_Shell;
   tao->ops->setfromoptions = TaoSetFromOptions_Shell;
-  tao->ops->view = TaoView_Shell;
-  tao->ops->solve = TaoSolve_Shell;
+  tao->ops->view           = TaoView_Shell;
+  tao->ops->solve          = TaoSolve_Shell;
 
-  ierr = PetscNewLog(tao,&shell);CHKERRQ(ierr);
-  tao->data = (void*)shell;
-  PetscFunctionReturn(0);
+  PetscCall(PetscNew(&shell));
+  tao->data = (void *)shell;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
-

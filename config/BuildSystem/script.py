@@ -93,7 +93,7 @@ class Script(logger.Logger):
     return argDB
 
   def setupHelp(self, help):
-    '''This method should be overidden to provide help for arguments'''
+    '''This method should be overridden to provide help for arguments'''
     import nargs
 
     help.addArgument('Script', '-h',    nargs.ArgBool(None, 0, 'Print this help message', isTemporary = 1), ignoreDuplicates = 1)
@@ -125,22 +125,28 @@ class Script(logger.Logger):
     return
 
   def checkPython(self):
-    if not hasattr(sys, 'version_info') or sys.version_info < (2,6):
-      raise RuntimeError('BuildSystem requires Python version 2.6 or higher. Get Python at https://www.python.org/')
+    if not hasattr(sys, 'version_info') or sys.version_info < (3,4):
+      raise RuntimeError('BuildSystem requires Python version 3.4 or higher. Get Python at https://www.python.org/')
     return
 
+  @staticmethod
   def getModule(root, name):
     '''Retrieve a specific module from the directory root, bypassing the usual paths'''
-    import imp
+    if sys.version_info < (3,12):
+      import imp
+      (fp, pathname, description) = imp.find_module(name, [root])
+      try:
+        return imp.load_module(name, fp, pathname, description)
+      finally:
+        if fp: fp.close()
+    else:
+      import importlib.util
+      spec = importlib.util.spec_from_file_location(name, root)
+      module = importlib.util.module_from_spec(spec) # novermin
+      sys.modules[name] = module
+      spec.loader.exec_module(module)
 
-    (fp, pathname, description) = imp.find_module(name, [root])
-    try:
-      return imp.load_module(name, fp, pathname, description)
-    finally:
-      if fp: fp.close()
-    return
-  getModule = staticmethod(getModule)
-
+  @staticmethod
   def importModule(moduleName):
     '''Import the named module, and return the module object
        - Works properly for fully qualified names'''
@@ -149,28 +155,27 @@ class Script(logger.Logger):
     for comp in components[1:]:
       module = getattr(module, comp)
     return module
-  importModule = staticmethod(importModule)
 
   @staticmethod
-  def runShellCommand(command, log=None, cwd=None):
-    return Script.runShellCommandSeq([command], log=log, cwd=cwd)
+  def runShellCommand(command, log=None, cwd=None, env=None):
+    return Script.runShellCommandSeq([command], log=log, cwd=cwd, env=env)
 
   @staticmethod
-  def runShellCommandSeq(commandseq, log=None, cwd=None):
+  def runShellCommandSeq(commandseq, log=None, cwd=None, env=None):
     Popen = subprocess.Popen
     PIPE  = subprocess.PIPE
     output = ''
     error = ''
+    ret = 0
     for command in commandseq:
       useShell = isinstance(command, str) or isinstance(command, bytes)
       if log: log.write('Executing: %s\n' % (command,))
       try:
-        pipe = Popen(command, cwd=cwd, stdin=None, stdout=PIPE, stderr=PIPE,
+        pipe = Popen(command, cwd=cwd, env=env, stdin=None, stdout=PIPE, stderr=PIPE,
                      shell=useShell)
         (out, err) = pipe.communicate()
-        if sys.version_info >= (3,0):
-          out = out.decode(encoding='UTF-8',errors='replace')
-          err = err.decode(encoding='UTF-8',errors='replace')
+        out = out.decode(encoding='UTF-8',errors='replace')
+        err = err.decode(encoding='UTF-8',errors='replace')
         ret = pipe.returncode
       except Exception as e:
         if hasattr(e,'message') and hasattr(e,'errno'):
@@ -183,24 +188,32 @@ class Script(logger.Logger):
         break
     return (output, error, ret)
 
+  @staticmethod
   def defaultCheckCommand(command, status, output, error):
-    '''Raise an error if the exit status is nonzero'''
-    if status: raise RuntimeError('Could not execute "%s":\n%s' % (command,output+error))
-  defaultCheckCommand = staticmethod(defaultCheckCommand)
-
-  def passCheckCommand(command, status, output, error):
-    '''Does not check the command results'''
-  passCheckCommand = staticmethod(passCheckCommand)
+    '''Raise an error if the exit status is nonzero
+       Since output and error may be huge and the exception error message may be printed to the
+       screen we cannot print the entire output'''
+    if status:
+      mlen = 512//2
+      if len(output) > 2*mlen:
+        output = output[0:mlen]+'\n .... more output .....\n'+output[len(output)- mlen:]
+      if len(error) > 2*mlen:
+        error = error[0:mlen]+'\n .... more error .....\n'+error[len(error)- mlen:]
+      raise RuntimeError('Could not execute "%s":\n%s' % (command,output+error))
 
   @staticmethod
-  def executeShellCommand(command, checkCommand = None, timeout = 600.0, log = None, lineLimit = 0, cwd=None, logOutputflg = True, threads = 0):
+  def passCheckCommand(command, status, output, error):
+    '''Does not check the command results'''
+
+  @staticmethod
+  def executeShellCommand(command, checkCommand = None, timeout = 600.0, log = None, lineLimit = 0, cwd=None, env=None, logOutputflg = True, threads = 0):
     '''Execute a shell command returning the output, and optionally provide a custom error checker
        - This returns a tuple of the (output, error, statuscode)'''
     '''The timeout is ignored unless the threads values is nonzero'''
-    return Script.executeShellCommandSeq([command], checkCommand=checkCommand, timeout=timeout, log=log, lineLimit=lineLimit, cwd=cwd,logOutputflg = logOutputflg, threads = threads)
+    return Script.executeShellCommandSeq([command], checkCommand=checkCommand, timeout=timeout, log=log, lineLimit=lineLimit, cwd=cwd, env=env, logOutputflg = logOutputflg, threads = threads)
 
   @staticmethod
-  def executeShellCommandSeq(commandseq, checkCommand = None, timeout = 600.0, log = None, lineLimit = 0, cwd=None, logOutputflg = True, threads = 0):
+  def executeShellCommandSeq(commandseq, checkCommand = None, timeout = 600.0, log = None, lineLimit = 0, cwd=None, env=None, logOutputflg = True, threads = 0):
     '''Execute a sequence of shell commands (an && chain) returning the output, and optionally provide a custom error checker
        - This returns a tuple of the (output, error, statuscode)'''
     if not checkCommand:
@@ -220,8 +233,7 @@ class Script(logger.Logger):
         else:
           log.write('stdout: '+output+'\n')
       return output
-    def runInShell(commandseq, log, cwd):
-      if not useThreads: log.write('UseThreads is off\n')
+    def runInShell(commandseq, log, cwd, env):
       if useThreads and threads:
         import threading
         log.write('Running Executable with threads to time it out at '+str(timeout)+'\n')
@@ -232,22 +244,22 @@ class Script(logger.Logger):
             self.setDaemon(1)
           def run(self):
             (self.output, self.error, self.status) = ('', '', -1) # So these fields exist even if command fails with no output
-            (self.output, self.error, self.status) = Script.runShellCommandSeq(commandseq, log, cwd)
+            (self.output, self.error, self.status) = Script.runShellCommandSeq(commandseq, log, cwd, env)
         thread = InShell()
         thread.start()
         thread.join(timeout)
-        if thread.isAlive():
+        if thread.is_alive():
           error = 'Runaway process exceeded time limit of '+str(timeout)+'\n'
           log.write(error)
           return ('', error, -1)
         else:
           return (thread.output, thread.error, thread.status)
       else:
-        log.write('Running Executable WITHOUT threads to time it out\n')
-        return Script.runShellCommandSeq(commandseq, log, cwd)
+        return Script.runShellCommandSeq(commandseq, log, cwd, env)
 
-    (output, error, status) = runInShell(commandseq, log, cwd)
+    (output, error, status) = runInShell(commandseq, log, cwd, env)
     output = logOutput(log, output,logOutputflg)
+    logOutput(log, error,logOutputflg)
     checkCommand(commandseq, status, output, error)
     return (output, error, status)
 

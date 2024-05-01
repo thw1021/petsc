@@ -1,452 +1,539 @@
 /* Program usage: mpiexec -n 2 ./ex1 [-help] [all TAO options] */
 
 /* ----------------------------------------------------------------------
-min f = (x0 - 2)^2 + (x1 - 2)^2 - 2*(x0 + x1)
+min f(x) = (x0 - 2)^2 + (x1 - 2)^2 - 2*(x0 + x1)
 s.t.  x0^2 + x1 - 2 = 0
       0  <= x0^2 - x1 <= 1
       -1 <= x0, x1 <= 2
+-->
+      g(x)  = 0
+      h(x) >= 0
+      -1 <= x0, x1 <= 2
+where
+      g(x) = x0^2 + x1 - 2
+      h(x) = [x0^2 - x1
+              1 -(x0^2 - x1)]
 ---------------------------------------------------------------------- */
 
 #include <petsctao.h>
 
-static  char help[]= "Solves constrained optimiztion problem using pdipm.\n\
+static char help[] = "Solves constrained optimization problem using pdipm.\n\
 Input parameters include:\n\
   -tao_type pdipm    : sets Tao solver\n\
   -no_eq             : removes the equaility constraints from the problem\n\
+  -init_view         : view initial object setup\n\
   -snes_fd           : snes with finite difference Jacobian (needed for pdipm)\n\
-  -tao_cmonitor      : convergence monitor with constraint norm \n\
-  -tao_view_solution : view exact solution at each itteration\n\
-  Note: external package superlu_dist is requried to run either for ipm or pdipm. Additionally This is designed for a maximum of 2 processors, the code will error if size > 2.\n\n";
+  -snes_compare_explicit : compare user Jacobian with finite difference Jacobian \n\
+  -tao_monitor_constraint_norm : convergence monitor with constraint norm \n\
+  -tao_monitor_solution : view exact solution at each iteration\n\
+  Note: external package MUMPS is required to run pdipm in parallel. This is designed for a maximum of 2 processors, the code will error if size > 2.\n";
 
 /*
-   User-defined application context - contains data needed by the
-   application-provided call-back routines, FormFunction(),
-   FormGradient(), and FormHessian().
-*/
-
-/*
-   x,d in R^n
-   f in R
-   bin in R^mi
-   beq in R^me
-   Aeq in R^(me x n)
-   Ain in R^(mi x n)
-   H in R^(n x n)
-   min f=(1/2)*x'*H*x + d'*x
-   s.t.  Aeq*x == beq
-         Ain*x >= bin
+   User-defined application context - contains data needed by the application
 */
 typedef struct {
-  PetscInt n;  /* Global length of x */
-  PetscInt ne; /* Global number of equality constraints */
-  PetscInt ni; /* Global number of inequality constraints */
-  PetscBool noeqflag;
-  Vec      x,xl,xu;
-  Vec      ce,ci,bl,bu,Xseq;
-  Mat      Ae,Ai,H;
+  PetscInt   n;  /* Global length of x */
+  PetscInt   ne; /* Global number of equality constraints */
+  PetscInt   ni; /* Global number of inequality constraints */
+  PetscBool  noeqflag, initview;
+  Vec        x, xl, xu;
+  Vec        ce, ci, bl, bu, Xseq;
+  Mat        Ae, Ai, H;
   VecScatter scat;
 } AppCtx;
 
 /* -------- User-defined Routines --------- */
 PetscErrorCode InitializeProblem(AppCtx *);
 PetscErrorCode DestroyProblem(AppCtx *);
-PetscErrorCode FormFunctionGradient(Tao,Vec,PetscReal *,Vec,void *);
-PetscErrorCode FormHessian(Tao,Vec,Mat,Mat, void*);
-PetscErrorCode FormInequalityConstraints(Tao,Vec,Vec,void*);
-PetscErrorCode FormEqualityConstraints(Tao,Vec,Vec,void*);
-PetscErrorCode FormInequalityJacobian(Tao,Vec,Mat,Mat, void*);
-PetscErrorCode FormEqualityJacobian(Tao,Vec,Mat,Mat, void*);
+PetscErrorCode FormFunctionGradient(Tao, Vec, PetscReal *, Vec, void *);
+PetscErrorCode FormPDIPMHessian(Tao, Vec, Mat, Mat, void *);
+PetscErrorCode FormInequalityConstraints(Tao, Vec, Vec, void *);
+PetscErrorCode FormEqualityConstraints(Tao, Vec, Vec, void *);
+PetscErrorCode FormInequalityJacobian(Tao, Vec, Mat, Mat, void *);
+PetscErrorCode FormEqualityJacobian(Tao, Vec, Mat, Mat, void *);
 
-PetscErrorCode main(int argc,char **argv)
+int main(int argc, char **argv)
 {
-  PetscErrorCode ierr;  /* used to check for functions returning nonzeros */
-  Tao            tao;
-  KSP            ksp;
-  PC             pc;
-  AppCtx         user;  /* application context */
-  Vec            x;
-  PetscMPIInt    rank;
+  Tao         tao;
+  KSP         ksp;
+  PC          pc;
+  AppCtx      user; /* application context */
+  Vec         x, G, CI, CE;
+  PetscMPIInt size;
+  TaoType     type;
+  PetscReal   f;
+  PetscBool   pdipm, mumps;
 
-  ierr = PetscInitialize(&argc,&argv,(char*)0,help);if (ierr) return ierr;
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
-  if (rank>1){
-    SETERRQ(PETSC_COMM_SELF,1,"More than 2 processors detected. Example written to use max of 2 processors.\n");
+  PetscFunctionBeginUser;
+  PetscCall(PetscInitialize(&argc, &argv, (char *)0, help));
+  PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD, &size));
+  PetscCheck(size <= 2, PETSC_COMM_WORLD, PETSC_ERR_WRONG_MPI_SIZE, "More than 2 processors detected. Example written to use max of 2 processors.");
+
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "---- Constrained Problem -----\n"));
+  PetscCall(InitializeProblem(&user)); /* sets up problem, function below */
+
+  PetscCall(TaoCreate(PETSC_COMM_WORLD, &tao));
+  PetscCall(TaoSetType(tao, TAOALMM));
+  PetscCall(TaoSetSolution(tao, user.x));
+  PetscCall(TaoSetVariableBounds(tao, user.xl, user.xu));
+  PetscCall(TaoSetObjectiveAndGradient(tao, NULL, FormFunctionGradient, (void *)&user));
+  PetscCall(TaoSetTolerances(tao, 1.e-4, 0.0, 0.0));
+  PetscCall(TaoSetConstraintTolerances(tao, 1.e-4, 0.0));
+  PetscCall(TaoSetMaximumFunctionEvaluations(tao, 1e6));
+  PetscCall(TaoSetFromOptions(tao));
+
+  if (!user.noeqflag) {
+    PetscCall(TaoSetEqualityConstraintsRoutine(tao, user.ce, FormEqualityConstraints, (void *)&user));
+    PetscCall(TaoSetJacobianEqualityRoutine(tao, user.Ae, user.Ae, FormEqualityJacobian, (void *)&user));
+  }
+  PetscCall(TaoSetInequalityConstraintsRoutine(tao, user.ci, FormInequalityConstraints, (void *)&user));
+  PetscCall(TaoSetJacobianInequalityRoutine(tao, user.Ai, user.Ai, FormInequalityJacobian, (void *)&user));
+
+  PetscCall(TaoGetType(tao, &type));
+  PetscCall(PetscObjectTypeCompare((PetscObject)tao, TAOPDIPM, &pdipm));
+  if (pdipm) {
+    /*
+      PDIPM produces an indefinite KKT matrix with some zeros along the diagonal
+      Inverting this indefinite matrix requires PETSc to be configured with MUMPS
+    */
+    PetscCall(PetscHasExternalPackage("mumps", &mumps));
+    PetscCheck(mumps, PetscObjectComm((PetscObject)tao), PETSC_ERR_SUP, "TAOPDIPM requires PETSc to be configured with MUMPS (--download-mumps)");
+    PetscCall(TaoGetKSP(tao, &ksp));
+    PetscCall(KSPGetPC(ksp, &pc));
+    PetscCall(PCFactorSetMatSolverType(pc, MATSOLVERMUMPS));
+    PetscCall(KSPSetType(ksp, KSPPREONLY));
+    PetscCall(PCSetType(pc, PCCHOLESKY));
+    PetscCall(KSPSetFromOptions(ksp));
+    PetscCall(TaoSetHessian(tao, user.H, user.H, FormPDIPMHessian, (void *)&user));
   }
 
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"---- Constrained Problem -----\n");CHKERRQ(ierr);
-  ierr = InitializeProblem(&user);CHKERRQ(ierr); /* sets up problem, function below */
-  ierr = TaoCreate(PETSC_COMM_WORLD,&tao);CHKERRQ(ierr);
-  ierr = TaoSetType(tao,TAOPDIPM);CHKERRQ(ierr);
-  ierr = TaoSetInitialVector(tao,user.x);CHKERRQ(ierr); /* gets solution vector from problem */
-  ierr = TaoSetVariableBounds(tao,user.xl,user.xu);CHKERRQ(ierr); /* sets lower upper bounds from given solution */
-  ierr = TaoSetObjectiveAndGradientRoutine(tao,FormFunctionGradient,(void*)&user);CHKERRQ(ierr);
-
-  if (!user.noeqflag){
-    ierr = TaoSetEqualityConstraintsRoutine(tao,user.ce,FormEqualityConstraints,(void*)&user);CHKERRQ(ierr);
+  /* Print out an initial view of the problem */
+  if (user.initview) {
+    PetscCall(TaoSetUp(tao));
+    PetscCall(VecDuplicate(user.x, &G));
+    PetscCall(FormFunctionGradient(tao, user.x, &f, G, (void *)&user));
+    PetscCall(FormPDIPMHessian(tao, user.x, user.H, user.H, (void *)&user));
+    PetscCall(PetscViewerASCIIPushTab(PETSC_VIEWER_STDOUT_WORLD));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nInitial point X:\n"));
+    PetscCall(VecView(user.x, PETSC_VIEWER_STDOUT_WORLD));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nInitial objective f(x) = %g\n", (double)f));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nInitial gradient and Hessian:\n"));
+    PetscCall(VecView(G, PETSC_VIEWER_STDOUT_WORLD));
+    PetscCall(MatView(user.H, PETSC_VIEWER_STDOUT_WORLD));
+    PetscCall(VecDestroy(&G));
+    PetscCall(FormInequalityJacobian(tao, user.x, user.Ai, user.Ai, (void *)&user));
+    PetscCall(MatCreateVecs(user.Ai, NULL, &CI));
+    PetscCall(FormInequalityConstraints(tao, user.x, CI, (void *)&user));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nInitial inequality constraints and Jacobian:\n"));
+    PetscCall(VecView(CI, PETSC_VIEWER_STDOUT_WORLD));
+    PetscCall(MatView(user.Ai, PETSC_VIEWER_STDOUT_WORLD));
+    PetscCall(VecDestroy(&CI));
+    if (!user.noeqflag) {
+      PetscCall(FormEqualityJacobian(tao, user.x, user.Ae, user.Ae, (void *)&user));
+      PetscCall(MatCreateVecs(user.Ae, NULL, &CE));
+      PetscCall(FormEqualityConstraints(tao, user.x, CE, (void *)&user));
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nInitial equality constraints and Jacobian:\n"));
+      PetscCall(VecView(CE, PETSC_VIEWER_STDOUT_WORLD));
+      PetscCall(MatView(user.Ae, PETSC_VIEWER_STDOUT_WORLD));
+      PetscCall(VecDestroy(&CE));
+    }
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\n"));
+    PetscCall(PetscViewerASCIIPopTab(PETSC_VIEWER_STDOUT_WORLD));
   }
-  ierr = TaoSetInequalityConstraintsRoutine(tao,user.ci,FormInequalityConstraints,(void*)&user);CHKERRQ(ierr);
 
-  if (!user.noeqflag){
-    ierr = TaoSetJacobianEqualityRoutine(tao,user.Ae,user.Ae,FormEqualityJacobian,(void*)&user);CHKERRQ(ierr); /* equality jacobian */
-  }
-  ierr = TaoSetJacobianInequalityRoutine(tao,user.Ai,user.Ai,FormInequalityJacobian,(void*)&user);CHKERRQ(ierr); /* inequality jacobian */
-  ierr = TaoSetHessianRoutine(tao,user.H,user.H,FormHessian,(void*)&user);CHKERRQ(ierr);
-  ierr = TaoSetTolerances(tao,1.e-6,1.e-6,1.e-6);CHKERRQ(ierr);
-  ierr = TaoSetConstraintTolerances(tao,1.e-6,1.e-6);CHKERRQ(ierr);
-
-  ierr = TaoGetKSP(tao,&ksp);CHKERRQ(ierr);
-  ierr = KSPGetPC(ksp,&pc);CHKERRQ(ierr);
-  ierr = PCSetType(pc,PCLU);CHKERRQ(ierr);
-  /*
-      This algorithm produces matrices with zeros along the diagonal therefore we use
-    SuperLU_DIST which provides shift to the diagonal
-  */
-  ierr = PCFactorSetMatSolverType(pc,MATSOLVERSUPERLU_DIST);CHKERRQ(ierr);  /* requires superlu_dist to solve pdipm */
-  ierr = KSPSetType(ksp,KSPPREONLY);CHKERRQ(ierr);
-  ierr = KSPSetFromOptions(ksp);CHKERRQ(ierr);
-
-  ierr = TaoSetFromOptions(tao);CHKERRQ(ierr);
-
-  ierr = TaoSolve(tao);CHKERRQ(ierr);
-  ierr = TaoGetSolutionVector(tao,&x);CHKERRQ(ierr);
-  ierr = VecView(x,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
+  PetscCall(TaoSolve(tao));
+  PetscCall(TaoGetSolution(tao, &x));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Found solution:\n"));
+  PetscCall(VecView(x, PETSC_VIEWER_STDOUT_WORLD));
 
   /* Free objects */
-  ierr = DestroyProblem(&user);CHKERRQ(ierr);
-  ierr = TaoDestroy(&tao);CHKERRQ(ierr);
-  ierr = PetscFinalize();
-  return ierr;
+  PetscCall(DestroyProblem(&user));
+  PetscCall(TaoDestroy(&tao));
+  PetscCall(PetscFinalize());
+  return PETSC_SUCCESS;
 }
 
 PetscErrorCode InitializeProblem(AppCtx *user)
 {
-  PetscErrorCode ierr;
-  PetscMPIInt    size;
-  PetscMPIInt    rank;
-  PetscInt       nloc,neloc,niloc;
+  PetscMPIInt size;
+  PetscMPIInt rank;
+  PetscInt    nloc, neloc, niloc;
 
   PetscFunctionBegin;
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
+  PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD, &size));
+  PetscCallMPI(MPI_Comm_rank(PETSC_COMM_WORLD, &rank));
   user->noeqflag = PETSC_FALSE;
-  ierr = PetscOptionsGetBool(NULL,NULL,"-no_eq",&user->noeqflag,NULL);CHKERRQ(ierr);
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-no_eq", &user->noeqflag, NULL));
+  user->initview = PETSC_FALSE;
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-init_view", &user->initview, NULL));
+
+  /* Tell user the correct solution, not an error checking */
   if (!user->noeqflag) {
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"Solution should be f(1,1)=-2\n");CHKERRQ(ierr);
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Expected solution: f(1, 1) = -2\n"));
+  } else {
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Expected solution (-no_eq): f(1.73205, 2) = -7.3923\n"));
   }
 
   /* create vector x and set initial values */
   user->n = 2; /* global length */
-  nloc = (rank==0)?user->n:0;
-  ierr = VecCreateMPI(PETSC_COMM_WORLD,nloc,user->n,&user->x);CHKERRQ(ierr);
-  ierr = VecSet(user->x,0);CHKERRQ(ierr);
+  nloc    = (size == 1) ? user->n : 1;
+  PetscCall(VecCreate(PETSC_COMM_WORLD, &user->x));
+  PetscCall(VecSetSizes(user->x, nloc, user->n));
+  PetscCall(VecSetFromOptions(user->x));
+  PetscCall(VecSet(user->x, 0.0));
 
   /* create and set lower and upper bound vectors */
-  ierr = VecDuplicate(user->x,&user->xl);CHKERRQ(ierr);
-  ierr = VecDuplicate(user->x,&user->xu);CHKERRQ(ierr);
-  ierr = VecSet(user->xl,-1.0);CHKERRQ(ierr);
-  ierr = VecSet(user->xu,2.0);CHKERRQ(ierr);
+  PetscCall(VecDuplicate(user->x, &user->xl));
+  PetscCall(VecDuplicate(user->x, &user->xu));
+  PetscCall(VecSet(user->xl, -1.0));
+  PetscCall(VecSet(user->xu, 2.0));
 
   /* create scater to zero */
-  ierr = VecScatterCreateToZero(user->x,&user->scat,&user->Xseq);CHKERRQ(ierr);
+  PetscCall(VecScatterCreateToZero(user->x, &user->scat, &user->Xseq));
 
-    user->ne = 1;
-    neloc = (rank==0)?user->ne:0;
-
-  if (!user->noeqflag){
-    ierr = VecCreateMPI(PETSC_COMM_WORLD,neloc,user->ne,&user->ce);CHKERRQ(ierr); /* a 1x1 vec for equality constraints */
-  }
+  user->ne = 1;
   user->ni = 2;
-  niloc = (rank==0)?user->ni:0;
-  ierr = VecCreateMPI(PETSC_COMM_WORLD,niloc,user->ni,&user->ci);CHKERRQ(ierr); /* a 2x1 vec for inequality constraints */
+  neloc    = (rank == 0) ? user->ne : 0;
+  niloc    = (size == 1) ? user->ni : 1;
 
-  /* nexn & nixn matricies for equaly and inequalty constriants */
-  if (!user->noeqflag){
-    ierr = MatCreate(PETSC_COMM_WORLD,&user->Ae);CHKERRQ(ierr);
-    ierr = MatSetSizes(user->Ae,neloc,nloc,user->ne,user->n);CHKERRQ(ierr);
-    ierr = MatSetUp(user->Ae);CHKERRQ(ierr);
-    ierr = MatSetFromOptions(user->Ae);CHKERRQ(ierr);
+  if (!user->noeqflag) {
+    PetscCall(VecCreate(PETSC_COMM_WORLD, &user->ce)); /* a 1x1 vec for equality constraints */
+    PetscCall(VecSetSizes(user->ce, neloc, user->ne));
+    PetscCall(VecSetFromOptions(user->ce));
+    PetscCall(VecSetUp(user->ce));
   }
 
-  ierr = MatCreate(PETSC_COMM_WORLD,&user->Ai);CHKERRQ(ierr);
-  ierr = MatCreate(PETSC_COMM_WORLD,&user->H);CHKERRQ(ierr);
+  PetscCall(VecCreate(PETSC_COMM_WORLD, &user->ci)); /* a 2x1 vec for inequality constraints */
+  PetscCall(VecSetSizes(user->ci, niloc, user->ni));
+  PetscCall(VecSetFromOptions(user->ci));
+  PetscCall(VecSetUp(user->ci));
 
-  ierr = MatSetSizes(user->Ai,niloc,nloc,user->ni,user->n);CHKERRQ(ierr);
-  ierr = MatSetSizes(user->H,nloc,nloc,user->n,user->n);CHKERRQ(ierr);
+  /* nexn & nixn matrices for equally and inequalty constraints */
+  if (!user->noeqflag) {
+    PetscCall(MatCreate(PETSC_COMM_WORLD, &user->Ae));
+    PetscCall(MatSetSizes(user->Ae, neloc, nloc, user->ne, user->n));
+    PetscCall(MatSetFromOptions(user->Ae));
+    PetscCall(MatSetUp(user->Ae));
+  }
 
-  ierr = MatSetUp(user->Ai);CHKERRQ(ierr);
-  ierr = MatSetUp(user->H);CHKERRQ(ierr);
+  PetscCall(MatCreate(PETSC_COMM_WORLD, &user->Ai));
+  PetscCall(MatSetSizes(user->Ai, niloc, nloc, user->ni, user->n));
+  PetscCall(MatSetFromOptions(user->Ai));
+  PetscCall(MatSetUp(user->Ai));
 
-  ierr = MatSetFromOptions(user->Ai);CHKERRQ(ierr);
-  ierr = MatSetFromOptions(user->H);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(MatCreate(PETSC_COMM_WORLD, &user->H));
+  PetscCall(MatSetSizes(user->H, nloc, nloc, user->n, user->n));
+  PetscCall(MatSetFromOptions(user->H));
+  PetscCall(MatSetUp(user->H));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode DestroyProblem(AppCtx *user)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  if (!user->noeqflag){
-   ierr = MatDestroy(&user->Ae);CHKERRQ(ierr);
-  }
-  ierr = MatDestroy(&user->Ai);CHKERRQ(ierr);
-  ierr = MatDestroy(&user->H);CHKERRQ(ierr);
+  if (!user->noeqflag) PetscCall(MatDestroy(&user->Ae));
+  PetscCall(MatDestroy(&user->Ai));
+  PetscCall(MatDestroy(&user->H));
 
-  ierr = VecDestroy(&user->x);CHKERRQ(ierr);
-  if (!user->noeqflag){
-    ierr = VecDestroy(&user->ce);CHKERRQ(ierr);
-  }
-  ierr = VecDestroy(&user->ci);CHKERRQ(ierr);
-  ierr = VecDestroy(&user->xl);CHKERRQ(ierr);
-  ierr = VecDestroy(&user->xu);CHKERRQ(ierr);
-  ierr = VecDestroy(&user->Xseq);CHKERRQ(ierr);
-  ierr = VecScatterDestroy(&user->scat);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(VecDestroy(&user->x));
+  if (!user->noeqflag) PetscCall(VecDestroy(&user->ce));
+  PetscCall(VecDestroy(&user->ci));
+  PetscCall(VecDestroy(&user->xl));
+  PetscCall(VecDestroy(&user->xu));
+  PetscCall(VecDestroy(&user->Xseq));
+  PetscCall(VecScatterDestroy(&user->scat));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*
-  f(X) = (x0 - 2)^2 + (x1 - 2)^2 - 2*(x0 + x1)
-  G(X) = fx = [2.0*(x[0]-2.0) - 2.0; 2.0*(x[1]-2.0) - 2.0]
+/* Evaluate
+   f(x) = (x0 - 2)^2 + (x1 - 2)^2 - 2*(x0 + x1)
+   G = grad f = [2*(x0 - 2) - 2, 2*(x1 - 2) - 2] = 2*X - 6
 */
 PetscErrorCode FormFunctionGradient(Tao tao, Vec X, PetscReal *f, Vec G, void *ctx)
 {
-  PetscScalar       g;
   const PetscScalar *x;
-  MPI_Comm          comm;
-  PetscMPIInt       rank;
-  PetscErrorCode    ierr;
-  PetscReal         fin;
-  AppCtx            *user=(AppCtx*)ctx;
-  Vec               Xseq=user->Xseq;
-  VecScatter        scat=user->scat;
+  MPI_Comm           comm;
+  PetscMPIInt        rank;
+  PetscReal          fin;
+  AppCtx            *user = (AppCtx *)ctx;
+  Vec                Xseq = user->Xseq;
+  VecScatter         scat = user->scat;
 
   PetscFunctionBegin;
-  ierr = PetscObjectGetComm((PetscObject)tao,&comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
+  /* f = (x0 - 2)^2 + (x1 - 2)^2 - 2*(x0 + x1) */
+  PetscCall(PetscObjectGetComm((PetscObject)tao, &comm));
+  PetscCallMPI(MPI_Comm_rank(comm, &rank));
 
-  ierr = VecScatterBegin(scat,X,Xseq,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-  ierr = VecScatterEnd(scat,X,Xseq,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
+  PetscCall(VecScatterBegin(scat, X, Xseq, INSERT_VALUES, SCATTER_FORWARD));
+  PetscCall(VecScatterEnd(scat, X, Xseq, INSERT_VALUES, SCATTER_FORWARD));
 
   fin = 0.0;
-  if (!rank) {
-    ierr = VecGetArrayRead(Xseq,&x);CHKERRQ(ierr);
-    fin = (x[0]-2.0)*(x[0]-2.0) + (x[1]-2.0)*(x[1]-2.0) - 2.0*(x[0]+x[1]);
-    g = 2.0*(x[0]-2.0) - 2.0;
-    ierr = VecSetValue(G,0,g,INSERT_VALUES);CHKERRQ(ierr);
-    g = 2.0*(x[1]-2.0) - 2.0;
-    ierr = VecSetValue(G,1,g,INSERT_VALUES);CHKERRQ(ierr);
-    ierr = VecRestoreArrayRead(Xseq,&x);CHKERRQ(ierr);
+  if (rank == 0) {
+    PetscCall(VecGetArrayRead(Xseq, &x));
+    fin = (x[0] - 2.0) * (x[0] - 2.0) + (x[1] - 2.0) * (x[1] - 2.0) - 2.0 * (x[0] + x[1]);
+    PetscCall(VecRestoreArrayRead(Xseq, &x));
   }
-  ierr = MPI_Allreduce(&fin,f,1,MPIU_REAL,MPIU_SUM,comm);CHKERRQ(ierr);
-  ierr = VecAssemblyBegin(G);CHKERRQ(ierr);
-  ierr = VecAssemblyEnd(G);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(MPIU_Allreduce(&fin, f, 1, MPIU_REAL, MPIU_SUM, comm));
+
+  /* G = 2*X - 6 */
+  PetscCall(VecSet(G, -6.0));
+  PetscCall(VecAXPY(G, 2.0, X));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode FormHessian(Tao tao, Vec x,Mat H, Mat Hpre, void *ctx)
+/* Evaluate PDIPM Hessian, see Eqn(22) in http://doi.org/10.1049/gtd2.12708
+   H = Wxx = fxx        + Jacobian(grad g^T*DE)   - Jacobian(grad h^T*DI)]
+           = fxx        + Jacobin([2*x0; 1]de[0]) - Jacobian([2*x0, -2*x0; -1, 1][di[0] di[1]]^T)
+           = [2 0; 0 2] + [2*de[0]  0;      0  0] - [2*di[0]-2*di[1], 0; 0, 0]
+           = [ 2*(1+de[0]-di[0]+di[1]), 0;
+                          0,            2]
+*/
+PetscErrorCode FormPDIPMHessian(Tao tao, Vec x, Mat H, Mat Hpre, void *ctx)
 {
-  AppCtx            *user=(AppCtx*)ctx;
-  Vec               DE,DI;
+  AppCtx            *user = (AppCtx *)ctx;
+  Vec                DE, DI;
   const PetscScalar *de, *di;
-  PetscInt          zero=0,one=1;
-  PetscScalar       two=2.0;
-  PetscScalar       val=0.0;
-  Vec               Deseq,Diseq=user->Xseq;
-  VecScatter        Descat,Discat=user->scat;
-  PetscMPIInt       rank;
-  MPI_Comm          comm;
-  PetscErrorCode    ierr;
+  PetscInt           zero = 0, one = 1;
+  PetscScalar        two = 2.0;
+  PetscScalar        val = 0.0;
+  Vec                Deseq, Diseq;
+  VecScatter         Descat, Discat;
+  PetscMPIInt        rank;
+  MPI_Comm           comm;
 
   PetscFunctionBegin;
-  ierr = TaoGetDualVariables(tao,&DE,&DI);CHKERRQ(ierr);
+  PetscCall(TaoGetDualVariables(tao, &DE, &DI));
 
-  ierr = PetscObjectGetComm((PetscObject)tao,&comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
+  PetscCall(PetscObjectGetComm((PetscObject)tao, &comm));
+  PetscCallMPI(MPI_Comm_rank(comm, &rank));
 
-  if (!user->noeqflag){
-   ierr = VecScatterCreateToZero(DE,&Descat,&Deseq);CHKERRQ(ierr);
-   ierr = VecScatterBegin(Descat,DE,Deseq,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-   ierr = VecScatterEnd(Descat,DE,Deseq,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
+  if (!user->noeqflag) {
+    PetscCall(VecScatterCreateToZero(DE, &Descat, &Deseq));
+    PetscCall(VecScatterBegin(Descat, DE, Deseq, INSERT_VALUES, SCATTER_FORWARD));
+    PetscCall(VecScatterEnd(Descat, DE, Deseq, INSERT_VALUES, SCATTER_FORWARD));
   }
+  PetscCall(VecScatterCreateToZero(DI, &Discat, &Diseq));
+  PetscCall(VecScatterBegin(Discat, DI, Diseq, INSERT_VALUES, SCATTER_FORWARD));
+  PetscCall(VecScatterEnd(Discat, DI, Diseq, INSERT_VALUES, SCATTER_FORWARD));
 
-  ierr = VecScatterBegin(Discat,DI,Diseq,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-  ierr = VecScatterEnd(Discat,DI,Diseq,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
+  if (rank == 0) {
+    if (!user->noeqflag) { PetscCall(VecGetArrayRead(Deseq, &de)); /* places equality constraint dual into array */ }
+    PetscCall(VecGetArrayRead(Diseq, &di)); /* places inequality constraint dual into array */
 
-  if (!rank){
-    if (!user->noeqflag){
-      ierr = VecGetArrayRead(Deseq,&de);CHKERRQ(ierr);  /* places equality constraint dual into array */
+    if (!user->noeqflag) {
+      val = 2.0 * (1 + de[0] - di[0] + di[1]);
+      PetscCall(VecRestoreArrayRead(Deseq, &de));
+      PetscCall(VecRestoreArrayRead(Diseq, &di));
+    } else {
+      val = 2.0 * (1 - di[0] + di[1]);
     }
-
-    ierr = VecGetArrayRead(Diseq,&di);CHKERRQ(ierr);  /* places inequality constraint dual into array */
-    if (!user->noeqflag){
-      val = 2.0 * (1 + de[0] + di[0] - di[1]);
-      ierr = VecRestoreArrayRead(Deseq,&de);CHKERRQ(ierr);
-    }else{
-      val = 2.0 * (1 + di[0] - di[1]);
-    }
-    ierr = VecRestoreArrayRead(Diseq,&di);CHKERRQ(ierr);
-    ierr = MatSetValues(H,1,&zero,1,&zero,&val,INSERT_VALUES);CHKERRQ(ierr);
-    ierr = MatSetValues(H,1,&one,1,&one,&two,INSERT_VALUES);CHKERRQ(ierr);
+    PetscCall(VecRestoreArrayRead(Diseq, &di));
+    PetscCall(MatSetValues(H, 1, &zero, 1, &zero, &val, INSERT_VALUES));
+    PetscCall(MatSetValues(H, 1, &one, 1, &one, &two, INSERT_VALUES));
   }
-
-  ierr = MatAssemblyBegin(H,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  ierr = MatAssemblyEnd(H,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  if (!user->noeqflag){
-    ierr = VecScatterDestroy(&Descat);CHKERRQ(ierr);
-    ierr = VecDestroy(&Deseq);CHKERRQ(ierr);
+  PetscCall(MatAssemblyBegin(H, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(H, MAT_FINAL_ASSEMBLY));
+  if (!user->noeqflag) {
+    PetscCall(VecScatterDestroy(&Descat));
+    PetscCall(VecDestroy(&Deseq));
   }
-  PetscFunctionReturn(0);
+  PetscCall(VecScatterDestroy(&Discat));
+  PetscCall(VecDestroy(&Diseq));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode FormInequalityConstraints(Tao tao,Vec X,Vec CI,void *ctx)
+/* Evaluate
+   h = [ x0^2 - x1;
+         1 -(x0^2 - x1)]
+*/
+PetscErrorCode FormInequalityConstraints(Tao tao, Vec X, Vec CI, void *ctx)
 {
   const PetscScalar *x;
-  PetscScalar       ci;
-  PetscErrorCode    ierr;
-  MPI_Comm          comm;
-  PetscMPIInt       rank;
-  AppCtx            *user=(AppCtx*)ctx;
-  Vec               Xseq=user->Xseq;
-  VecScatter        scat=user->scat;
+  PetscScalar        ci;
+  MPI_Comm           comm;
+  PetscMPIInt        rank;
+  AppCtx            *user = (AppCtx *)ctx;
+  Vec                Xseq = user->Xseq;
+  VecScatter         scat = user->scat;
 
   PetscFunctionBegin;
-  ierr = PetscObjectGetComm((PetscObject)tao,&comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
+  PetscCall(PetscObjectGetComm((PetscObject)tao, &comm));
+  PetscCallMPI(MPI_Comm_rank(comm, &rank));
 
-  ierr = VecScatterBegin(scat,X,Xseq,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-  ierr = VecScatterEnd(scat,X,Xseq,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
+  PetscCall(VecScatterBegin(scat, X, Xseq, INSERT_VALUES, SCATTER_FORWARD));
+  PetscCall(VecScatterEnd(scat, X, Xseq, INSERT_VALUES, SCATTER_FORWARD));
 
-  if (!rank) {
-    ierr = VecGetArrayRead(Xseq,&x);CHKERRQ(ierr);
-    ci = x[0]*x[0] - x[1];
-    ierr = VecSetValue(CI,0,ci,INSERT_VALUES);CHKERRQ(ierr);
-    ci = -x[0]*x[0] + x[1] + 1.0;
-    ierr = VecSetValue(CI,1,ci,INSERT_VALUES);CHKERRQ(ierr);
-    ierr = VecRestoreArrayRead(Xseq,&x);CHKERRQ(ierr);
+  if (rank == 0) {
+    PetscCall(VecGetArrayRead(Xseq, &x));
+    ci = x[0] * x[0] - x[1];
+    PetscCall(VecSetValue(CI, 0, ci, INSERT_VALUES));
+    ci = -x[0] * x[0] + x[1] + 1.0;
+    PetscCall(VecSetValue(CI, 1, ci, INSERT_VALUES));
+    PetscCall(VecRestoreArrayRead(Xseq, &x));
   }
-  ierr = VecAssemblyBegin(CI);CHKERRQ(ierr);
-  ierr = VecAssemblyEnd(CI);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(VecAssemblyBegin(CI));
+  PetscCall(VecAssemblyEnd(CI));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode FormEqualityConstraints(Tao tao,Vec X,Vec CE,void *ctx)
+/* Evaluate
+   g = [ x0^2 + x1 - 2]
+*/
+PetscErrorCode FormEqualityConstraints(Tao tao, Vec X, Vec CE, void *ctx)
 {
   const PetscScalar *x;
-  PetscScalar       ce;
-  PetscErrorCode    ierr;
-  MPI_Comm          comm;
-  PetscMPIInt       rank;
-  AppCtx            *user=(AppCtx*)ctx;
-  Vec               Xseq=user->Xseq;
-  VecScatter        scat=user->scat;
+  PetscScalar        ce;
+  MPI_Comm           comm;
+  PetscMPIInt        rank;
+  AppCtx            *user = (AppCtx *)ctx;
+  Vec                Xseq = user->Xseq;
+  VecScatter         scat = user->scat;
 
   PetscFunctionBegin;
-  ierr = PetscObjectGetComm((PetscObject)tao,&comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
+  PetscCall(PetscObjectGetComm((PetscObject)tao, &comm));
+  PetscCallMPI(MPI_Comm_rank(comm, &rank));
 
-  ierr = VecScatterBegin(scat,X,Xseq,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-  ierr = VecScatterEnd(scat,X,Xseq,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
+  PetscCall(VecScatterBegin(scat, X, Xseq, INSERT_VALUES, SCATTER_FORWARD));
+  PetscCall(VecScatterEnd(scat, X, Xseq, INSERT_VALUES, SCATTER_FORWARD));
 
-  if (!rank) {
-    ierr = VecGetArrayRead(Xseq,&x);CHKERRQ(ierr);
-    ce = x[0]*x[0] + x[1] - 2.0;
-    ierr = VecSetValue(CE,0,ce,INSERT_VALUES);CHKERRQ(ierr);
-    ierr = VecRestoreArrayRead(Xseq,&x);CHKERRQ(ierr);
+  if (rank == 0) {
+    PetscCall(VecGetArrayRead(Xseq, &x));
+    ce = x[0] * x[0] + x[1] - 2.0;
+    PetscCall(VecSetValue(CE, 0, ce, INSERT_VALUES));
+    PetscCall(VecRestoreArrayRead(Xseq, &x));
   }
-  ierr = VecAssemblyBegin(CE);CHKERRQ(ierr);
-  ierr = VecAssemblyEnd(CE);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(VecAssemblyBegin(CE));
+  PetscCall(VecAssemblyEnd(CE));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode FormInequalityJacobian(Tao tao, Vec X, Mat JI, Mat JIpre,  void *ctx)
+/*
+  grad h = [  2*x0, -1;
+             -2*x0,  1]
+*/
+PetscErrorCode FormInequalityJacobian(Tao tao, Vec X, Mat JI, Mat JIpre, void *ctx)
 {
-  AppCtx            *user=(AppCtx*)ctx;
-  PetscInt          cols[2],min,max,i;
-  PetscScalar       vals[2];
+  AppCtx            *user = (AppCtx *)ctx;
+  PetscInt           zero = 0, one = 1, cols[2];
+  PetscScalar        vals[2];
   const PetscScalar *x;
-  PetscErrorCode    ierr;
-  Vec               Xseq=user->Xseq;
-  VecScatter        scat=user->scat;
-  MPI_Comm          comm;
-  PetscMPIInt       rank;
+  Vec                Xseq = user->Xseq;
+  VecScatter         scat = user->scat;
+  MPI_Comm           comm;
+  PetscMPIInt        rank;
 
   PetscFunctionBegin;
-  ierr = PetscObjectGetComm((PetscObject)tao,&comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
-  ierr = VecScatterBegin(scat,X,Xseq,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-  ierr = VecScatterEnd(scat,X,Xseq,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
+  PetscCall(PetscObjectGetComm((PetscObject)tao, &comm));
+  PetscCallMPI(MPI_Comm_rank(comm, &rank));
+  PetscCall(VecScatterBegin(scat, X, Xseq, INSERT_VALUES, SCATTER_FORWARD));
+  PetscCall(VecScatterEnd(scat, X, Xseq, INSERT_VALUES, SCATTER_FORWARD));
 
-  ierr = VecGetArrayRead(Xseq,&x);CHKERRQ(ierr);
-  ierr = MatGetOwnershipRange(JI,&min,&max);CHKERRQ(ierr);
-
-  cols[0] = 0; cols[1] = 1;
-  for (i=min;i<max;i++) {
-    if (i==0){
-      vals[0] = +2*x[0]; vals[1] = -1.0;
-      ierr = MatSetValues(JI,1,&i,2,cols,vals,INSERT_VALUES);CHKERRQ(ierr);
-    }
-    if (i==1) {
-      vals[0] = -2*x[0]; vals[1] = +1.0;
-      ierr = MatSetValues(JI,1,&i,2,cols,vals,INSERT_VALUES);CHKERRQ(ierr);
-    }
+  PetscCall(VecGetArrayRead(Xseq, &x));
+  if (rank == 0) {
+    cols[0] = 0;
+    cols[1] = 1;
+    vals[0] = 2 * x[0];
+    vals[1] = -1.0;
+    PetscCall(MatSetValues(JI, 1, &zero, 2, cols, vals, INSERT_VALUES));
+    vals[0] = -2 * x[0];
+    vals[1] = 1.0;
+    PetscCall(MatSetValues(JI, 1, &one, 2, cols, vals, INSERT_VALUES));
   }
-  ierr = VecRestoreArrayRead(Xseq,&x);CHKERRQ(ierr);
-
-  ierr = MatAssemblyBegin(JI,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  ierr = MatAssemblyEnd(JI,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(VecRestoreArrayRead(Xseq, &x));
+  PetscCall(MatAssemblyBegin(JI, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(JI, MAT_FINAL_ASSEMBLY));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode FormEqualityJacobian(Tao tao,Vec X,Mat JE,Mat JEpre,void *ctx)
+/*
+  grad g = [2*x0, 1.0]
+*/
+PetscErrorCode FormEqualityJacobian(Tao tao, Vec X, Mat JE, Mat JEpre, void *ctx)
 {
-  PetscInt          rows[2];
-  PetscScalar       vals[2];
+  PetscInt           zero = 0, cols[2];
+  PetscScalar        vals[2];
   const PetscScalar *x;
-  PetscMPIInt       rank;
-  MPI_Comm          comm;
-  PetscErrorCode    ierr;
+  PetscMPIInt        rank;
+  MPI_Comm           comm;
 
   PetscFunctionBegin;
-  ierr = PetscObjectGetComm((PetscObject)tao,&comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
+  PetscCall(PetscObjectGetComm((PetscObject)tao, &comm));
+  PetscCallMPI(MPI_Comm_rank(comm, &rank));
 
-  if (!rank) {
-    ierr = VecGetArrayRead(X,&x);CHKERRQ(ierr);
-    rows[0] = 0;       rows[1] = 1;
-    vals[0] = 2*x[0];  vals[1] = 1.0;
-    ierr = MatSetValues(JE,1,rows,2,rows,vals,INSERT_VALUES);CHKERRQ(ierr);
-    ierr = VecRestoreArrayRead(X,&x);CHKERRQ(ierr);
+  if (rank == 0) {
+    PetscCall(VecGetArrayRead(X, &x));
+    cols[0] = 0;
+    cols[1] = 1;
+    vals[0] = 2 * x[0];
+    vals[1] = 1.0;
+    PetscCall(MatSetValues(JE, 1, &zero, 2, cols, vals, INSERT_VALUES));
+    PetscCall(VecRestoreArrayRead(X, &x));
   }
-  ierr = MatAssemblyBegin(JE,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  ierr = MatAssemblyEnd(JE,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(MatAssemblyBegin(JE, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(JE, MAT_FINAL_ASSEMBLY));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
-
 
 /*TEST
 
    build:
-      requires: !complex !define(PETSC_USE_CXX)
+      requires: !complex !defined(PETSC_USE_CXX)
 
    test:
-      requires: superlu_dist
-      args: -tao_converged_reason
+      args: -tao_converged_reason -tao_gatol 1.e-6 -tao_type pdipm -tao_pdipm_kkt_shift_pd
+      requires: mumps !single
+      filter: sed  -e "s/CONVERGED_GATOL iterations *[0-9]\{1,\}/CONVERGED_GATOL/g"
+
+   test:
+      suffix: pdipm_2
+      requires: mumps
+      nsize: 2
+      args: -tao_converged_reason -tao_gatol 1.e-6 -tao_type pdipm
+      filter: sed  -e "s/CONVERGED_GATOL iterations *[0-9]\{1,\}/CONVERGED_GATOL/g"
 
    test:
       suffix: 2
-      requires: superlu_dist
-      nsize: 2
       args: -tao_converged_reason
+      filter: sed  -e "s/CONVERGED_GATOL iterations *[0-9]\{1,\}/CONVERGED_GATOL/g"
 
    test:
       suffix: 3
-      requires: superlu_dist
       args: -tao_converged_reason -no_eq
+      filter: sed  -e "s/CONVERGED_GATOL iterations *[0-9]\{1,\}/CONVERGED_GATOL/g"
 
    test:
       suffix: 4
-      requires: superlu_dist
+      args: -tao_converged_reason -tao_almm_type classic
+      requires: !single
+      filter: sed  -e "s/CONVERGED_GATOL iterations *[0-9]\{1,\}/CONVERGED_GATOL/g"
+
+   test:
+      suffix: 5
+      args: -tao_converged_reason -tao_almm_type classic -no_eq -tao_almm_subsolver_tao_max_it 100
+      requires: !single !defined(PETSCTEST_VALGRIND)
+      filter: sed  -e "s/CONVERGED_GATOL iterations *[0-9]\{1,\}/CONVERGED_GATOL/g"
+
+   test:
+      suffix: 6
+      args: -tao_converged_reason -tao_almm_subsolver_tao_type bqnktr
+      filter: sed  -e "s/CONVERGED_GATOL iterations *[0-9]\{1,\}/CONVERGED_GATOL/g"
+
+   test:
+      suffix: 7
+      args: -tao_converged_reason -tao_almm_subsolver_tao_type bncg
+      filter: sed  -e "s/CONVERGED_GATOL iterations *[0-9]\{1,\}/CONVERGED_GATOL/g"
+
+   test:
+      suffix: 8
       nsize: 2
-      args: -tao_converged_reason -no_eq
+      args: -tao_converged_reason
+      filter: sed  -e "s/CONVERGED_GATOL iterations *[0-9]\{1,\}/CONVERGED_GATOL/g"
+
+   test:
+      suffix: 9
+      nsize: 2
+      args: -tao_converged_reason -vec_type cuda -mat_type aijcusparse
+      requires: cuda
+      filter: sed  -e "s/CONVERGED_GATOL iterations *[0-9]\{1,\}/CONVERGED_GATOL/g"
 
 TEST*/

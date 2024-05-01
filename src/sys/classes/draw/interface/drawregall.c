@@ -1,8 +1,4 @@
-
-/*
-       Provides the calling sequences for all the basic PetscDraw routines.
-*/
-#include <petsc/private/drawimpl.h>  /*I "petscdraw.h" I*/
+#include <petsc/private/drawimpl.h> /*I "petscdraw.h" I*/
 
 PETSC_EXTERN PetscErrorCode PetscDrawCreate_Image(PetscDraw);
 PETSC_EXTERN PetscErrorCode PetscDrawCreate_TikZ(PetscDraw);
@@ -17,29 +13,27 @@ PETSC_EXTERN PetscErrorCode PetscDrawCreate_Win32(PetscDraw);
 PetscBool PetscDrawRegisterAllCalled = PETSC_FALSE;
 
 /*@C
-  PetscDrawRegisterAll - Registers all of the graphics methods in the PetscDraw package.
+  PetscDrawRegisterAll - Registers all of the graphics methods in the `PetscDraw` package.
 
   Not Collective
 
   Level: developer
 
-.seealso:  PetscDrawRegisterDestroy()
+.seealso: `PetscDraw`, `PetscDrawType`, `PetscDrawRegisterDestroy()`
 @*/
-PetscErrorCode  PetscDrawRegisterAll(void)
+PetscErrorCode PetscDrawRegisterAll(void)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  if (PetscDrawRegisterAllCalled) PetscFunctionReturn(0);
+  if (PetscDrawRegisterAllCalled) PetscFunctionReturn(PETSC_SUCCESS);
   PetscDrawRegisterAllCalled = PETSC_TRUE;
 
-  ierr = PetscDrawRegister(PETSC_DRAW_IMAGE,    PetscDrawCreate_Image);CHKERRQ(ierr);
-  ierr = PetscDrawRegister(PETSC_DRAW_TIKZ,     PetscDrawCreate_TikZ);CHKERRQ(ierr);
+  PetscCall(PetscDrawRegister(PETSC_DRAW_IMAGE, PetscDrawCreate_Image));
+  PetscCall(PetscDrawRegister(PETSC_DRAW_TIKZ, PetscDrawCreate_TikZ));
 #if defined(PETSC_HAVE_X)
-  ierr = PetscDrawRegister(PETSC_DRAW_X,        PetscDrawCreate_X);CHKERRQ(ierr);
+  PetscCall(PetscDrawRegister(PETSC_DRAW_X, PetscDrawCreate_X));
 #elif defined(PETSC_USE_WINDOWS_GRAPHICS)
-  ierr = PetscDrawRegister(PETSC_DRAW_WIN32,    PetscDrawCreate_Win32);CHKERRQ(ierr);
+  PetscCall(PetscDrawRegister(PETSC_DRAW_WIN32, PetscDrawCreate_Win32));
 #endif
-  ierr = PetscDrawRegister(PETSC_DRAW_NULL,     PetscDrawCreate_Null);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscDrawRegister(PETSC_DRAW_NULL, PetscDrawCreate_Null));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

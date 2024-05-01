@@ -1,16 +1,7 @@
+-include ../../../../../petscdir.mk
 
-ALL: lib
-
-CFLAGS   =
-FFLAGS   =
-SOURCEC  =
-SOURCEF  =
-SOURCEH  =
-LIBBASE  = libpetscsys
-DIRS     = rand rand48 rander48 sprng random123
-LOCDIR   = src/sys/classes/random/impls/
+MANSEC   = Sys
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
-include ${PETSC_DIR}/lib/petsc/conf/rules
-include ${PETSC_DIR}/lib/petsc/conf/test
+include ${PETSC_DIR}/lib/petsc/conf/rules_doc.mk
 

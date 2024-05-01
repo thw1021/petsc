@@ -10,9 +10,7 @@ class Configure(config.package.CMakePackage):
     self.downloaddirnames = ['trilinos']
     self.includes         = ['Trilinos_version.h']
     self.functions        = ['Zoltan_Create']   # one of the very few C routines in Trilinos
-    self.cxx              = 1
-    self.requirescxx11    = 1
-    self.downloadonWindows= 0
+    self.buildLanguages   = ['Cxx']
     self.hastests         = 1
     self.requiresrpath    = 1
     self.precisions       = ['double']
@@ -51,7 +49,7 @@ class Configure(config.package.CMakePackage):
 
   def checkTrilinosDuplicates(self):
     # we check this in two places, before doing a Trilinos install and (for when PETSc does not install Trilinos) when checking that
-    # the the Trilinos libraries are valid
+    # the Trilinos libraries are valid
     if self.zoltan.found:
       raise RuntimeError('Trilinos contains Zoltan, therefore do not provide/build a Zoltan if you are providing/building Trilinos')
     if self.ml.found:
@@ -76,7 +74,7 @@ class Configure(config.package.CMakePackage):
 
   # older versions of Trilinos require passing rpath with the various library paths
   # this caused problems on Apple with cmake generating command lines that are too long
-  # Trilinos was fixed to handled the rpath internally using cmake 
+  # Trilinos was fixed to handled the rpath internally using cmake
   def toStringNoDupes(self,string):
     string    = self.libraries.toStringNoDupes(string)
     if self.requiresrpath: return string
@@ -122,17 +120,15 @@ class Configure(config.package.CMakePackage):
     if not self.hdf5.found:
       raise RuntimeError('Trilinos requires hdf5 so make sure you have --download-hdf5 or --with-hdf5-dir if you are building Trilinos')
 
-    # Check for 64bit pointers
+    # Check for 64-bit pointers
     if self.types.sizes['void-p'] != 8:
-      raise RuntimeError('Trilinos requires 64bit compilers, your compiler is using 32 bit pointers!')
+      raise RuntimeError('Trilinos requires 64-bit pointer compilers, your compiler is using 32-bit pointers!')
 
     args = config.package.CMakePackage.formCMakeConfigureArgs(self)
     args.append('-DUSE_XSDK_DEFAULTS=YES')
     if self.compilerFlags.debugging:
-      args.append('-DCMAKE_BUILD_TYPE=DEBUG')
       args.append('-DTrilinos_ENABLE_DEBUG=YES')
     else:
-      args.append('-DCMAKE_BUILD_TYPE=RELEASE')
       args.append('-DXSDK_ENABLE_DEBUG=NO')
 
     # Roscoe says I should to this
@@ -149,9 +145,6 @@ class Configure(config.package.CMakePackage):
     args.append('-DTpetra_INST_FLOAT=OFF')
     args.append('-DTpetra_INST_COMPLEX_FLOAT=OFF')
     args.append('-DTpetra_INST_COMPLEX_DOUBLE=OFF')
-
-    # Trilinos cmake does not set this variable (as it should) so cmake install does not properly reset the -id and rpath of --prefix installed Trilinos libraries
-    args.append('-DCMAKE_INSTALL_NAME_DIR:STRING="'+os.path.join(self.installDir,self.libdir)+'"')
 
     if self.boost.found:
       args.append('-DTPL_ENABLE_Boost=ON')
@@ -293,7 +286,7 @@ class Configure(config.package.CMakePackage):
       os.unlink('simplemake')
     except RuntimeError as e:
       raise RuntimeError('Unable to generate list of Trilinos Libraries')
-    # generateLibList() wants this ridiculus format
+    # generateLibList() wants this ridiculous format
     l = output1.split(' ')
     ll = [os.path.join(dir,'lib'+l[0][2:]+'.a')]
     for i in l[1:]:

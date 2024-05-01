@@ -1,0 +1,21 @@
+@@ -10,5 +10,5 @@
+ typedef struct _p_PetscLinterDummyObj *PetscLinterDummyObj;
+ 
+-PetscErrorCode ValidPetscObject(PetscObject obj, PetscLinterDummyObj dobj)
++static PetscErrorCode ValidPetscObject(PetscObject obj, PetscLinterDummyObj dobj)
+ {
+   /* incorrect */
+@@ -13,5 +13,5 @@
+ {
+   /* incorrect */
+-  PetscValidHeader(obj, 2);
++  PetscValidHeader(obj, 1);
+   PetscValidHeader(dobj, 600);
+ 
+@@ -14,5 +14,5 @@
+   /* incorrect */
+   PetscValidHeader(obj, 2);
+-  PetscValidHeader(dobj, 600);
++  PetscValidHeader(dobj, 2);
+ 
+   /* correct */

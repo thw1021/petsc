@@ -1,4 +1,3 @@
-
 /*
  Partial differential equation
 
@@ -23,196 +22,202 @@ static char help[] = "Solves 1D constant coefficient Laplacian using DMSHELL and
 #include <petscdmshell.h>
 #include <petscksp.h>
 
-static PetscErrorCode ComputeMatrix(KSP,Mat,Mat,void*);
-static PetscErrorCode ComputeRHS(KSP,Vec,void*);
-static PetscErrorCode CreateMatrix(DM,Mat*);
-static PetscErrorCode CreateGlobalVector(DM,Vec*);
-static PetscErrorCode CreateLocalVector(DM,Vec*);
-static PetscErrorCode Refine(DM,MPI_Comm,DM*);
-static PetscErrorCode Coarsen(DM,MPI_Comm,DM*);
-static PetscErrorCode CreateInterpolation(DM,DM,Mat*,Vec*);
-static PetscErrorCode CreateRestriction(DM,DM,Mat*);
+static PetscErrorCode ComputeMatrix(KSP, Mat, Mat, void *);
+static PetscErrorCode ComputeRHS(KSP, Vec, void *);
+static PetscErrorCode CreateMatrix(DM, Mat *);
+static PetscErrorCode CreateGlobalVector(DM, Vec *);
+static PetscErrorCode CreateLocalVector(DM, Vec *);
+static PetscErrorCode Refine(DM, MPI_Comm, DM *);
+static PetscErrorCode Coarsen(DM, MPI_Comm, DM *);
+static PetscErrorCode CreateInterpolation(DM, DM, Mat *, Vec *);
+static PetscErrorCode CreateRestriction(DM, DM, Mat *);
+static PetscErrorCode Destroy(void *);
 
-static PetscErrorCode MyDMShellCreate(MPI_Comm comm,DM da,DM *shell)
+static PetscErrorCode MyDMShellCreate(MPI_Comm comm, DM da, DM *shell)
 {
-  PetscErrorCode ierr;
-
-  ierr = DMShellCreate(comm,shell);CHKERRQ(ierr);
-  ierr = DMShellSetContext(*shell,da);CHKERRQ(ierr);
-  ierr = DMShellSetCreateMatrix(*shell,CreateMatrix);CHKERRQ(ierr);
-  ierr = DMShellSetCreateGlobalVector(*shell,CreateGlobalVector);CHKERRQ(ierr);
-  ierr = DMShellSetCreateLocalVector(*shell,CreateLocalVector);CHKERRQ(ierr);
-  ierr = DMShellSetRefine(*shell,Refine);CHKERRQ(ierr);
-  ierr = DMShellSetCoarsen(*shell,Coarsen);CHKERRQ(ierr);
-  ierr = DMShellSetCreateInterpolation(*shell,CreateInterpolation);CHKERRQ(ierr);
-  ierr = DMShellSetCreateRestriction(*shell,CreateRestriction);CHKERRQ(ierr);
-  return 0;
+  PetscFunctionBeginUser;
+  PetscCall(DMShellCreate(comm, shell));
+  PetscCall(DMShellSetContext(*shell, da));
+  PetscCall(DMShellSetCreateMatrix(*shell, CreateMatrix));
+  PetscCall(DMShellSetCreateGlobalVector(*shell, CreateGlobalVector));
+  PetscCall(DMShellSetCreateLocalVector(*shell, CreateLocalVector));
+  PetscCall(DMShellSetRefine(*shell, Refine));
+  PetscCall(DMShellSetCoarsen(*shell, Coarsen));
+  PetscCall(DMShellSetCreateInterpolation(*shell, CreateInterpolation));
+  PetscCall(DMShellSetCreateRestriction(*shell, CreateRestriction));
+  PetscCall(DMShellSetDestroyContext(*shell, Destroy));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-int main(int argc,char **argv)
+int main(int argc, char **argv)
 {
-  PetscErrorCode ierr;
-  KSP            ksp;
-  DM             da,shell;
-  PetscInt       levels;
+  KSP      ksp;
+  DM       da, shell;
+  PetscInt levels;
 
-  ierr = PetscInitialize(&argc,&argv,(char*)0,help);if (ierr) return ierr;
-  ierr = KSPCreate(PETSC_COMM_WORLD,&ksp);CHKERRQ(ierr);
-  ierr = DMDACreate1d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE,129,1,1,0,&da);CHKERRQ(ierr);
-  ierr = DMSetFromOptions(da);CHKERRQ(ierr);
-  ierr = DMSetUp(da);CHKERRQ(ierr);
-  ierr = MyDMShellCreate(PETSC_COMM_WORLD,da,&shell);CHKERRQ(ierr);
+  PetscFunctionBeginUser;
+  PetscCall(PetscInitialize(&argc, &argv, (char *)0, help));
+  PetscCall(KSPCreate(PETSC_COMM_WORLD, &ksp));
+  PetscCall(DMDACreate1d(PETSC_COMM_WORLD, DM_BOUNDARY_NONE, 129, 1, 1, 0, &da));
+  PetscCall(DMSetFromOptions(da));
+  PetscCall(DMSetUp(da));
+  PetscCall(MyDMShellCreate(PETSC_COMM_WORLD, da, &shell));
   /* these two lines are not needed but allow PCMG to automatically know how many multigrid levels the user wants */
-  ierr = DMGetRefineLevel(da,&levels);CHKERRQ(ierr);
-  ierr = DMSetRefineLevel(shell,levels);CHKERRQ(ierr);
+  PetscCall(DMGetRefineLevel(da, &levels));
+  PetscCall(DMSetRefineLevel(shell, levels));
 
-  ierr = KSPSetDM(ksp,shell);CHKERRQ(ierr);
-  ierr = KSPSetComputeRHS(ksp,ComputeRHS,NULL);CHKERRQ(ierr);
-  ierr = KSPSetComputeOperators(ksp,ComputeMatrix,NULL);CHKERRQ(ierr);
-  ierr = KSPSetFromOptions(ksp);CHKERRQ(ierr);
-  ierr = KSPSolve(ksp,NULL,NULL);CHKERRQ(ierr);
+  PetscCall(KSPSetDM(ksp, shell));
+  PetscCall(KSPSetComputeRHS(ksp, ComputeRHS, NULL));
+  PetscCall(KSPSetComputeOperators(ksp, ComputeMatrix, NULL));
+  PetscCall(KSPSetFromOptions(ksp));
+  PetscCall(KSPSolve(ksp, NULL, NULL));
 
-  ierr = KSPDestroy(&ksp);CHKERRQ(ierr);
-  ierr = DMDestroy(&shell);CHKERRQ(ierr);
-  ierr = DMDestroy(&da);CHKERRQ(ierr);
-  ierr = PetscFinalize();
-  return ierr;
-}
-
-static PetscErrorCode CreateMatrix(DM shell,Mat *A)
-{
-  PetscErrorCode ierr;
-  DM             da;
-
-  ierr = DMShellGetContext(shell,(void**)&da);CHKERRQ(ierr);
-  ierr = DMCreateMatrix(da,A);CHKERRQ(ierr);
+  PetscCall(KSPDestroy(&ksp));
+  PetscCall(DMDestroy(&shell));
+  PetscCall(PetscFinalize());
   return 0;
 }
 
-static PetscErrorCode CreateInterpolation(DM dm1,DM dm2,Mat *mat,Vec *vec)
+static PetscErrorCode Destroy(void *ctx)
 {
-  DM             da1,da2;
-  PetscErrorCode ierr;
-
-  ierr = DMShellGetContext(dm1,(void**)&da1);CHKERRQ(ierr);
-  ierr = DMShellGetContext(dm2,(void**)&da2);CHKERRQ(ierr);
-  ierr = DMCreateInterpolation(da1,da2,mat,vec);CHKERRQ(ierr);
-  return 0;
+  PetscFunctionBeginUser;
+  PetscCall(DMDestroy((DM *)&ctx));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode CreateRestriction(DM dm1,DM dm2,Mat *mat)
+static PetscErrorCode CreateMatrix(DM shell, Mat *A)
 {
-  DM             da1,da2;
-  PetscErrorCode ierr;
-  Mat            tmat;
-
-  ierr = DMShellGetContext(dm1,(void**)&da1);CHKERRQ(ierr);
-  ierr = DMShellGetContext(dm2,(void**)&da2);CHKERRQ(ierr);
-  ierr = DMCreateInterpolation(da1,da2,&tmat,NULL);CHKERRQ(ierr);
-  ierr = MatTranspose(tmat,MAT_INITIAL_MATRIX,mat);CHKERRQ(ierr);
-  ierr = MatDestroy(&tmat);CHKERRQ(ierr);
-  return 0;
-}
-
-static PetscErrorCode CreateGlobalVector(DM shell,Vec *x)
-{
-  PetscErrorCode ierr;
-  DM             da;
-
-  ierr = DMShellGetContext(shell,(void**)&da);CHKERRQ(ierr);
-  ierr = DMCreateGlobalVector(da,x);CHKERRQ(ierr);
-  ierr = VecSetDM(*x,shell);CHKERRQ(ierr);
-  return 0;
-}
-
-static PetscErrorCode CreateLocalVector(DM shell,Vec *x)
-{
-  PetscErrorCode ierr;
-  DM             da;
-
-  ierr = DMShellGetContext(shell,(void**)&da);CHKERRQ(ierr);
-  ierr = DMCreateLocalVector(da,x);CHKERRQ(ierr);
-  ierr = VecSetDM(*x,shell);CHKERRQ(ierr);
-  return 0;
-}
-
-static PetscErrorCode Refine(DM shell,MPI_Comm comm,DM *dmnew)
-{
-  PetscErrorCode ierr;
-  DM             da,dafine;
-
-  ierr = DMShellGetContext(shell,(void**)&da);CHKERRQ(ierr);
-  ierr = DMRefine(da,comm,&dafine);CHKERRQ(ierr);
-  ierr = MyDMShellCreate(PetscObjectComm((PetscObject)shell),dafine,dmnew);CHKERRQ(ierr);
-  return 0;
-}
-
-static PetscErrorCode Coarsen(DM shell,MPI_Comm comm,DM *dmnew)
-{
-  PetscErrorCode ierr;
-  DM             da,dacoarse;
-
-  ierr = DMShellGetContext(shell,(void**)&da);CHKERRQ(ierr);
-  ierr = DMCoarsen(da,comm,&dacoarse);CHKERRQ(ierr);
-  ierr = MyDMShellCreate(PetscObjectComm((PetscObject)shell),dacoarse,dmnew);CHKERRQ(ierr);
-  /* discard an "extra" reference count to dacoarse */
-  ierr = DMDestroy(&dacoarse);CHKERRQ(ierr);
-  return 0;
-}
-
-static PetscErrorCode ComputeRHS(KSP ksp,Vec b,void *ctx)
-{
-  PetscErrorCode ierr;
-  PetscInt       mx,idx[2];
-  PetscScalar    h,v[2];
-  DM             da,shell;
+  DM da;
 
   PetscFunctionBeginUser;
-  ierr   = KSPGetDM(ksp,&shell);CHKERRQ(ierr);
-  ierr   = DMShellGetContext(shell,(void**)&da);CHKERRQ(ierr);
-  ierr   = DMDAGetInfo(da,0,&mx,0,0,0,0,0,0,0,0,0,0,0);CHKERRQ(ierr);
-  h      = 1.0/((mx-1));
-  ierr   = VecSet(b,h);CHKERRQ(ierr);
-  idx[0] = 0; idx[1] = mx -1;
-  v[0]   = v[1] = 0.0;
-  ierr   = VecSetValues(b,2,idx,v,INSERT_VALUES);CHKERRQ(ierr);
-  ierr   = VecAssemblyBegin(b);CHKERRQ(ierr);
-  ierr   = VecAssemblyEnd(b);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(DMShellGetContext(shell, &da));
+  PetscCall(DMCreateMatrix(da, A));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode ComputeMatrix(KSP ksp,Mat J,Mat jac,void *ctx)
+static PetscErrorCode CreateInterpolation(DM dm1, DM dm2, Mat *mat, Vec *vec)
 {
-  PetscErrorCode ierr;
-  PetscInt       i,mx,xm,xs;
-  PetscScalar    v[3],h;
-  MatStencil     row,col[3];
-  DM             da,shell;
+  DM da1, da2;
 
   PetscFunctionBeginUser;
-  ierr = KSPGetDM(ksp,&shell);CHKERRQ(ierr);
-  ierr   = DMShellGetContext(shell,(void**)&da);CHKERRQ(ierr);
-  ierr = DMDAGetInfo(da,0,&mx,0,0,0,0,0,0,0,0,0,0,0);CHKERRQ(ierr);
-  ierr = DMDAGetCorners(da,&xs,0,0,&xm,0,0);CHKERRQ(ierr);
-  h    = 1.0/(mx-1);
+  PetscCall(DMShellGetContext(dm1, &da1));
+  PetscCall(DMShellGetContext(dm2, &da2));
+  PetscCall(DMCreateInterpolation(da1, da2, mat, vec));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
 
-  for (i=xs; i<xs+xm; i++) {
+static PetscErrorCode CreateRestriction(DM dm1, DM dm2, Mat *mat)
+{
+  DM  da1, da2;
+  Mat tmat;
+
+  PetscFunctionBeginUser;
+  PetscCall(DMShellGetContext(dm1, &da1));
+  PetscCall(DMShellGetContext(dm2, &da2));
+  PetscCall(DMCreateInterpolation(da1, da2, &tmat, NULL));
+  PetscCall(MatTranspose(tmat, MAT_INITIAL_MATRIX, mat));
+  PetscCall(MatDestroy(&tmat));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode CreateGlobalVector(DM shell, Vec *x)
+{
+  DM da;
+
+  PetscFunctionBeginUser;
+  PetscCall(DMShellGetContext(shell, &da));
+  PetscCall(DMCreateGlobalVector(da, x));
+  PetscCall(VecSetDM(*x, shell));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode CreateLocalVector(DM shell, Vec *x)
+{
+  DM da;
+
+  PetscFunctionBeginUser;
+  PetscCall(DMShellGetContext(shell, &da));
+  PetscCall(DMCreateLocalVector(da, x));
+  PetscCall(VecSetDM(*x, shell));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode Refine(DM shell, MPI_Comm comm, DM *dmnew)
+{
+  DM da, dafine;
+
+  PetscFunctionBeginUser;
+  PetscCall(DMShellGetContext(shell, &da));
+  PetscCall(DMRefine(da, comm, &dafine));
+  PetscCall(MyDMShellCreate(PetscObjectComm((PetscObject)shell), dafine, dmnew));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode Coarsen(DM shell, MPI_Comm comm, DM *dmnew)
+{
+  DM da, dacoarse;
+
+  PetscFunctionBeginUser;
+  PetscCall(DMShellGetContext(shell, &da));
+  PetscCall(DMCoarsen(da, comm, &dacoarse));
+  PetscCall(MyDMShellCreate(PetscObjectComm((PetscObject)shell), dacoarse, dmnew));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode ComputeRHS(KSP ksp, Vec b, void *ctx)
+{
+  PetscInt    mx, idx[2];
+  PetscScalar h, v[2];
+  DM          da, shell;
+
+  PetscFunctionBeginUser;
+  PetscCall(KSPGetDM(ksp, &shell));
+  PetscCall(DMShellGetContext(shell, &da));
+  PetscCall(DMDAGetInfo(da, 0, &mx, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0));
+  h = 1.0 / (mx - 1);
+  PetscCall(VecSet(b, h));
+  idx[0] = 0;
+  idx[1] = mx - 1;
+  v[0] = v[1] = 0.0;
+  PetscCall(VecSetValues(b, 2, idx, v, INSERT_VALUES));
+  PetscCall(VecAssemblyBegin(b));
+  PetscCall(VecAssemblyEnd(b));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode ComputeMatrix(KSP ksp, Mat J, Mat jac, void *ctx)
+{
+  PetscInt    i, mx, xm, xs;
+  PetscScalar v[3], h;
+  MatStencil  row, col[3];
+  DM          da, shell;
+
+  PetscFunctionBeginUser;
+  PetscCall(KSPGetDM(ksp, &shell));
+  PetscCall(DMShellGetContext(shell, &da));
+  PetscCall(DMDAGetInfo(da, 0, &mx, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0));
+  PetscCall(DMDAGetCorners(da, &xs, 0, 0, &xm, 0, 0));
+  h = 1.0 / (mx - 1);
+
+  for (i = xs; i < xs + xm; i++) {
     row.i = i;
-    if (i==0 || i==mx-1) {
-      v[0] = 2.0/h;
-      ierr = MatSetValuesStencil(jac,1,&row,1,&row,v,INSERT_VALUES);CHKERRQ(ierr);
+    if (i == 0 || i == mx - 1) {
+      v[0] = 2.0 / h;
+      PetscCall(MatSetValuesStencil(jac, 1, &row, 1, &row, v, INSERT_VALUES));
     } else {
-      v[0]  = (-1.0)/h;col[0].i = i-1;
-      v[1]  = (2.0)/h;col[1].i = row.i;
-      v[2]  = (-1.0)/h;col[2].i = i+1;
-      ierr  = MatSetValuesStencil(jac,1,&row,3,col,v,INSERT_VALUES);CHKERRQ(ierr);
+      v[0]     = (-1.0) / h;
+      col[0].i = i - 1;
+      v[1]     = (2.0) / h;
+      col[1].i = row.i;
+      v[2]     = (-1.0) / h;
+      col[2].i = i + 1;
+      PetscCall(MatSetValuesStencil(jac, 1, &row, 3, col, v, INSERT_VALUES));
     }
   }
-  ierr = MatAssemblyBegin(jac,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  ierr = MatAssemblyEnd(jac,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(MatAssemblyBegin(jac, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(jac, MAT_FINAL_ASSEMBLY));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
-
 
 /*TEST
 

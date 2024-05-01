@@ -1,6 +1,5 @@
 !
-!
-!  Include file for Fortran use of the PC (preconditioner) package in PETSc
+! Used by petsckspdefmod.F90 to create Fortran module file
 !
 #include "petsc/finclude/petscpc.h"
 
@@ -101,6 +100,14 @@
       PetscEnum, parameter :: PC_EXOTIC_FACE=0
       PetscEnum, parameter :: PC_EXOTIC_WIREBASKET=1
 
+! PCMGCoarseSpaceType
+      PetscEnum, parameter :: PCMG_ADAPT_NONE = 0
+      PetscEnum, parameter :: PCMG_ADAPT_POLYNOMIAL = 1
+      PetscEnum, parameter :: PCMG_ADAPT_HARMONIC = 2
+      PetscEnum, parameter :: PCMG_ADAPT_EIGENVECTOR = 3
+      PetscEnum, parameter :: PCMG_ADAPT_GENERALIZED_EIGENVECTOR = 4
+      PetscEnum, parameter :: PCMG_ADAPT_GDSW = 5
+
 ! PCDeflationSpaceType
       PetscEnum, parameter :: PC_DEFLATION_SPACE_HAAR = 0
       PetscEnum, parameter :: PC_DEFLATION_SPACE_DB2  = 1
@@ -114,6 +121,11 @@
 ! PCBDDCInterfaceExtType
       PetscEnum, parameter :: PC_BDDC_INTERFACE_EXT_DIRICHLET=0
       PetscEnum, parameter :: PC_BDDC_INTERFACE_EXT_LUMP=1
+! PCHPDDMCoarseCorrectionType
+      PetscEnum, parameter :: PC_HPDDM_COARSE_CORRECTION_DEFLATED=0
+      PetscEnum, parameter :: PC_HPDDM_COARSE_CORRECTION_ADDITIVE=1
+      PetscEnum, parameter :: PC_HPDDM_COARSE_CORRECTION_BALANCED=2
+      PetscEnum, parameter :: PC_HPDDM_COARSE_CORRECTION_NONE=3
 !
 ! PCFailedReason
 !
@@ -122,9 +134,6 @@
       PetscEnum, parameter :: PC_FACTOR_NUMERIC_ZEROPIVOT=2
       PetscEnum, parameter :: PC_FACTOR_OUTMEMORY=3
       PetscEnum, parameter :: PC_FACTOR_OTHER=4
-      PetscEnum, parameter :: PC_SUBPC_ERROR=5
-
-      external  PCMGRESIDUALDEFAULT
-!
-!  End of Fortran include file for the PC package in PETSc
+      PetscEnum, parameter :: PC_INCONSISTENT_RHS=5
+      PetscEnum, parameter :: PC_SUBPC_ERROR=6
 

@@ -2,16 +2,13 @@
 
 static PetscErrorCode DMDestroy_Product(DM dm)
 {
-  PetscErrorCode ierr;
-  DM_Product     *product = (DM_Product*)dm->data;
-  PetscInt       d;
+  DM_Product *product = (DM_Product *)dm->data;
+  PetscInt    d;
 
   PetscFunctionBeginUser;
-  for (d=0; d<DMPRODUCT_MAX_DIM; ++d) {
-    ierr = DMDestroy(&product->dm[d]);CHKERRQ(ierr);
-  }
-  ierr = PetscFree(product);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  for (d = 0; d < DMPRODUCT_MAX_DIM; ++d) PetscCall(DMDestroy(&product->dm[d]));
+  PetscCall(PetscFree(product));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*MC
@@ -22,24 +19,23 @@ static PetscErrorCode DMDestroy_Product(DM dm)
 
   Level: advanced
 
-.seealso: DM, DMSTAG, DMProductGetDM(), DMProductSetDimensionIndex(), DMProductSetDM(), DMStagSetUniformCoordinatesProduct(),
-          DMStagGetProductCoordinateArrays(), DMStagGetProductCoordinateArraysRead()
+.seealso: `DM`, `DMSTAG`, `DMProductGetDM()`, `DMProductSetDimensionIndex()`, `DMProductSetDM()`, `DMStagSetUniformCoordinatesProduct()`,
+          `DMStagGetProductCoordinateArrays()`, `DMStagGetProductCoordinateArraysRead()`
 M*/
 
 PETSC_EXTERN PetscErrorCode DMCreate_Product(DM dm)
 {
-  PetscErrorCode ierr;
-  DM_Product     *product;
-  PetscInt       d;
+  DM_Product *product;
+  PetscInt    d;
 
   PetscFunctionBegin;
-  PetscValidPointer(dm,1);
-  ierr = PetscNewLog(dm,&product);CHKERRQ(ierr);
+  PetscAssertPointer(dm, 1);
+  PetscCall(PetscNew(&product));
   dm->data = product;
 
-  for (d=0; d<DMPRODUCT_MAX_DIM; ++d) product->dm[d]  = NULL;
-  for (d=0; d<DMPRODUCT_MAX_DIM; ++d) product->dim[d] = -1;
+  for (d = 0; d < DMPRODUCT_MAX_DIM; ++d) product->dm[d] = NULL;
+  for (d = 0; d < DMPRODUCT_MAX_DIM; ++d) product->dim[d] = -1;
 
-  dm->ops->destroy            = DMDestroy_Product;
-  PetscFunctionReturn(0);
+  dm->ops->destroy = DMDestroy_Product;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

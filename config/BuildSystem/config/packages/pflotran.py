@@ -9,9 +9,10 @@ class Configure(config.package.GNUPackage):
     self.functions         = []
     self.includes          = []
     self.hastests          = 1
-    self.fc                = 1    # 1 means requires fortran
+    self.buildLanguages    = ['FC']    # 1 means requires fortran
     self.linkedbypetsc     = 0
     self.useddirectly      = 0
+    self.skippackagelibincludedirs = 1
     return
 
   def setupDependencies(self, framework):
@@ -32,10 +33,6 @@ class Configure(config.package.GNUPackage):
       raise RuntimeError('Pflotran does not support --with-pflotran; only --download-pflotran')
     if 'with-pflotran-dir' in self.framework.clArgDB:
       raise RuntimeError('Pflotran does not support --with-pflotran-dir; only --download-pflotran')
-    if 'with-pflotran-include' in self.framework.clArgDB:
-      raise RuntimeError('Pflotran does not support --with-pflotran-include; only --download-pflotran')
-    if 'with-pflotran-lib' in self.framework.clArgDB:
-      raise RuntimeError('Pflotran does not support --with-pflotran-lib; only --download-pflotran')
     if 'with-pflotran-shared' in self.framework.clArgDB:
       raise RuntimeError('Pflotran does not support --with-pflotran-shared')
 
@@ -71,9 +68,7 @@ class Configure(config.package.GNUPackage):
       self.log.write(output+err)
 
       self.logPrintBox('Installing Pflotran; this may take several minutes')
-      self.installDirProvider.printSudoPasswordMessage(1)
-      # TODO: Once the prefix code above is handled correctly thgis should use self.installSudo
-      output,err,ret  = config.package.GNUPackage.executeShellCommand('cd '+self.packageDir+' && '+self.installDirProvider.installSudo+' make install',timeout=100, log = self.log)
+      output,err,ret  = config.package.GNUPackage.executeShellCommand('cd '+self.packageDir+' && make install',timeout=100, log = self.log)
       self.log.write(output+err)
     except RuntimeError as e:
       raise RuntimeError('Error configuring/compiling or installing Pflotran: '+str(e))

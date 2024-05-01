@@ -1,49 +1,49 @@
-DM Object: Mesh 1 MPI processes
+DM Object: Mesh 1 MPI process
   type: plex
 Mesh in 2 dimensions:
-  0-cells: 4225
-  1-cells: 12416
-  2-cells: 8192
+  Number of 0-cells per rank: 4225
+  Number of 1-cells per rank: 12416
+  Number of 2-cells per rank: 8192
 Labels:
   marker: 4 strata with value/size (4 (129), 1 (127), 2 (129), 3 (127))
   Face Sets: 4 strata with value/size (1 (126), 4 (126), 2 (126), 3 (126))
   depth: 3 strata with value/size (0 (4225), 1 (12416), 2 (8192))
   DM_0x84000000_1 in 2 dimensions:
-    0-cells:   1230  
-    1-cells:   3555  
-    2-cells:   2326  
+    Number of 0-cells per rank:   1230  
+    Number of 1-cells per rank:   3555  
+    Number of 2-cells per rank:   2326  
   Labels:
     marker: 4 strata with value/size (4 (33), 1 (33), 2 (33), 3 (33))
     depth: 3 strata with value/size (0 (1230), 1 (3555), 2 (2326))
     DM_0x84000000_2 in 2 dimensions:
-      0-cells:     414    
-      1-cells:     1171    
-      2-cells:     758    
+      Number of 0-cells per rank:     414    
+      Number of 1-cells per rank:     1171    
+      Number of 2-cells per rank:     758    
     Labels:
       marker: 4 strata with value/size (1 (17), 4 (17), 2 (17), 3 (17))
       depth: 3 strata with value/size (0 (414), 1 (1171), 2 (758))
       DM_0x84000000_3 in 2 dimensions:
-        0-cells:       144      
-        1-cells:       391      
-        2-cells:       248      
+        Number of 0-cells per rank:       144      
+        Number of 1-cells per rank:       391      
+        Number of 2-cells per rank:       248      
       Labels:
         marker: 4 strata with value/size (1 (9), 4 (10), 2 (10), 3 (9))
         depth: 3 strata with value/size (0 (144), 1 (391), 2 (248))
         DM_0x84000000_4 in 2 dimensions:
-          0-cells:         53        
-          1-cells:         132        
-          2-cells:         80        
+          Number of 0-cells per rank:         53        
+          Number of 1-cells per rank:         132        
+          Number of 2-cells per rank:         80        
         Labels:
           marker: 4 strata with value/size (1 (8), 4 (6), 2 (6), 3 (4))
           depth: 3 strata with value/size (0 (53), 1 (132), 2 (80))
           DM_0x84000000_5 in 2 dimensions:
-            0-cells:           26          
-            1-cells:           58          
-            2-cells:           33          
+            Number of 0-cells per rank:           26          
+            Number of 1-cells per rank:           58          
+            Number of 2-cells per rank:           33          
           Labels:
             marker: 4 strata with value/size (1 (5), 4 (5), 2 (5), 3 (2))
             depth: 3 strata with value/size (0 (26), 1 (58), 2 (33))
-  0 SNES Function norm 3.538058091867e+00 
+  0 SNES Function norm 3.538058091867e+00
       Residual norms for mg_levels_2_ solve.
       0 KSP none resid norm 6.684008878137e-01 true resid norm 2.369800283865e+00 ||r(i)||/||b|| 6.698025364005e-01
       1 KSP none resid norm 4.919051758707e-01 true resid norm 1.446688201971e+00 ||r(i)||/||b|| 4.088932867712e-01
@@ -187,26 +187,26 @@ Labels:
       0 KSP none resid norm 1.263527529909e-12 true resid norm 5.482185061163e-12 ||r(i)||/||b|| 1.316191618409e-01
       1 KSP none resid norm 7.035333348528e-13 true resid norm 2.751650664419e-12 ||r(i)||/||b|| 6.606306611126e-02
    10 KSP preconditioned resid norm 1.076324140418e-11 true resid norm 4.165187640224e-11 ||r(i)||/||b|| 1.177252473553e-11
-KSP Object: 1 MPI processes
+KSP Object: 1 MPI process
   type: richardson
     damping factor=1.
   maximum iterations=10000, initial guess is zero
-  tolerances:  relative=1e-12, absolute=1e-50, divergence=10000.
+  tolerances: relative=1e-12, absolute=1e-50, divergence=10000.
   left preconditioning
   using PRECONDITIONED norm type for convergence test
-PC Object: 1 MPI processes
+PC Object: 1 MPI process
   type: mg
     type is MULTIPLICATIVE, levels=3 cycles=v
       Cycles per PCApply=1
       Not using Galerkin computed coarse grid matrices
-  Coarse grid solver -- level -------------------------------
-    KSP Object: (mg_coarse_) 1 MPI processes
+  Coarse grid solver -- level 0 -------------------------------
+    KSP Object: (mg_coarse_) 1 MPI process
       type: preonly
       maximum iterations=10000, initial guess is zero
-      tolerances:  relative=1e-05, absolute=1e-50, divergence=10000.
+      tolerances: relative=1e-05, absolute=1e-50, divergence=10000.
       left preconditioning
       using NONE norm type for convergence test
-    PC Object: (mg_coarse_) 1 MPI processes
+    PC Object: (mg_coarse_) 1 MPI process
       type: lu
         out-of-place factorization
         tolerance for zero pivot 2.22045e-14
@@ -214,43 +214,44 @@ PC Object: 1 MPI processes
         matrix ordering: nd
         factor fill ratio given 5., needed 4.12177
           Factored matrix follows:
-            Mat Object: 1 MPI processes
+            Mat Object: (mg_coarse_) 1 MPI process
               type: seqaij
               rows=396, cols=396
               package used to perform factorization: petsc
               total: nonzeros=10832, allocated nonzeros=10832
                 not using I-node routines
       linear system matrix = precond matrix:
-      Mat Object: 1 MPI processes
+      Mat Object: 1 MPI process
         type: seqaij
         rows=396, cols=396
         total: nonzeros=2628, allocated nonzeros=2628
         total number of mallocs used during MatSetValues calls=0
           not using I-node routines
   Down solver (pre-smoother) on level 1 -------------------------------
-    KSP Object: (mg_levels_1_) 1 MPI processes
+    KSP Object: (mg_levels_1_) 1 MPI process
       type: chebyshev
+        Chebyshev polynomial of first kind
         eigenvalue estimates used:  min = 0.0998627, max = 1.09849
         eigenvalues estimate via gmres min 0.01045, max 0.998627
         eigenvalues estimated using gmres with translations  [0. 0.1; 0. 1.1]
-        KSP Object: (mg_levels_1_esteig_) 1 MPI processes
+        KSP Object: (mg_levels_1_esteig_) 1 MPI process
           type: gmres
             restart=30, using Classical (unmodified) Gram-Schmidt Orthogonalization with no iterative refinement
             happy breakdown tolerance 1e-30
           maximum iterations=10, initial guess is zero
-          tolerances:  relative=1e-12, absolute=1e-50, divergence=10000.
+          tolerances: relative=1e-12, absolute=1e-50, divergence=10000.
           left preconditioning
           using PRECONDITIONED norm type for convergence test
-        estimating eigenvalues using noisy right hand side
+        estimating eigenvalues using a noisy random number generated right-hand side
       maximum iterations=2, nonzero initial guess
-      tolerances:  relative=1e-05, absolute=1e-50, divergence=10000.
+      tolerances: relative=1e-05, absolute=1e-50, divergence=10000.
       left preconditioning
       using NONE norm type for convergence test
-    PC Object: (mg_levels_1_) 1 MPI processes
+    PC Object: (mg_levels_1_) 1 MPI process
       type: sor
         type = local_symmetric, iterations = 1, local iterations = 1, omega = 1.
       linear system matrix = precond matrix:
-      Mat Object: 1 MPI processes
+      Mat Object: 1 MPI process
         type: seqaij
         rows=1196, cols=1196
         total: nonzeros=8090, allocated nonzeros=8090
@@ -258,29 +259,30 @@ PC Object: 1 MPI processes
           not using I-node routines
   Up solver (post-smoother) same as down solver (pre-smoother)
   Down solver (pre-smoother) on level 2 -------------------------------
-    KSP Object: (mg_levels_2_) 1 MPI processes
+    KSP Object: (mg_levels_2_) 1 MPI process
       type: chebyshev
+        Chebyshev polynomial of first kind
         eigenvalue estimates used:  min = 0.0998957, max = 1.09885
         eigenvalues estimate via gmres min 0.0139685, max 0.998957
         eigenvalues estimated using gmres with translations  [0. 0.1; 0. 1.1]
-        KSP Object: (mg_levels_2_esteig_) 1 MPI processes
+        KSP Object: (mg_levels_2_esteig_) 1 MPI process
           type: gmres
             restart=30, using Classical (unmodified) Gram-Schmidt Orthogonalization with no iterative refinement
             happy breakdown tolerance 1e-30
           maximum iterations=10, initial guess is zero
-          tolerances:  relative=1e-12, absolute=1e-50, divergence=10000.
+          tolerances: relative=1e-12, absolute=1e-50, divergence=10000.
           left preconditioning
           using PRECONDITIONED norm type for convergence test
-        estimating eigenvalues using noisy right hand side
+        estimating eigenvalues using a noisy random number generated right-hand side
       maximum iterations=2, nonzero initial guess
-      tolerances:  relative=1e-05, absolute=1e-50, divergence=10000.
+      tolerances: relative=1e-05, absolute=1e-50, divergence=10000.
       left preconditioning
       using NONE norm type for convergence test
-    PC Object: (mg_levels_2_) 1 MPI processes
+    PC Object: (mg_levels_2_) 1 MPI process
       type: sor
         type = local_symmetric, iterations = 1, local iterations = 1, omega = 1.
       linear system matrix = precond matrix:
-      Mat Object: 1 MPI processes
+      Mat Object: 1 MPI process
         type: seqaij
         rows=4160, cols=4160
         total: nonzeros=28606, allocated nonzeros=28606
@@ -288,12 +290,12 @@ PC Object: 1 MPI processes
           not using I-node routines
   Up solver (post-smoother) same as down solver (pre-smoother)
   linear system matrix = precond matrix:
-  Mat Object: 1 MPI processes
+  Mat Object: 1 MPI process
     type: seqaij
     rows=4160, cols=4160
     total: nonzeros=28606, allocated nonzeros=28606
     total number of mallocs used during MatSetValues calls=0
       not using I-node routines
-  1 SNES Function norm 4.165180020529e-11 
+  1 SNES Function norm 4.165180020529e-11
 L_2 Error: 1.8925
 Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1

@@ -23,6 +23,4 @@
         z(i) = sum
  10   continue
 
-      return
       end
-

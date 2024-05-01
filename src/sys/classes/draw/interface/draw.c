@@ -1,62 +1,55 @@
-
-/*
-       Provides the calling sequences for all the basic PetscDraw routines.
-*/
-#include <petsc/private/drawimpl.h>  /*I "petscdraw.h" I*/
+#include <petsc/private/drawimpl.h> /*I "petscdraw.h" I*/
 #include <petscviewer.h>
 
 PetscClassId PETSC_DRAW_CLASSID;
 
 static PetscBool PetscDrawPackageInitialized = PETSC_FALSE;
 /*@C
-  PetscDrawFinalizePackage - This function destroys everything in the Petsc interface to the Draw package. It is
-  called from PetscFinalize().
+  PetscDrawFinalizePackage - This function destroys everything in the Petsc interface to the `PetscDraw` package. It is
+  called from `PetscFinalize()`.
 
   Level: developer
 
-.seealso: PetscFinalize()
+.seealso: `PetscDraw`, `PetscFinalize()`
 @*/
-PetscErrorCode  PetscDrawFinalizePackage(void)
+PetscErrorCode PetscDrawFinalizePackage(void)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  ierr = PetscFunctionListDestroy(&PetscDrawList);CHKERRQ(ierr);
+  PetscCall(PetscFunctionListDestroy(&PetscDrawList));
   PetscDrawPackageInitialized = PETSC_FALSE;
   PetscDrawRegisterAllCalled  = PETSC_FALSE;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-  PetscInitializeDrawPackage - This function initializes everything in the PetscDraw package. It is called
-  from PetscDLLibraryRegister_petsc() when using dynamic libraries, and on the call to PetscInitialize()
+  PetscDrawInitializePackage - This function initializes everything in the `PetscDraw` package. It is called
+  from PetscDLLibraryRegister_petsc() when using dynamic libraries, and on the call to `PetscInitialize()`
   when using shared or static libraries.
 
   Level: developer
 
-.seealso: PetscInitialize()
+.seealso: `PetscDraw`, `PetscInitialize()`
 @*/
-PetscErrorCode  PetscDrawInitializePackage(void)
+PetscErrorCode PetscDrawInitializePackage(void)
 {
-  char           logList[256];
-  PetscBool      opt,pkg;
-  PetscErrorCode ierr;
+  char      logList[256];
+  PetscBool opt, pkg;
 
   PetscFunctionBegin;
-  if (PetscDrawPackageInitialized) PetscFunctionReturn(0);
+  if (PetscDrawPackageInitialized) PetscFunctionReturn(PETSC_SUCCESS);
   PetscDrawPackageInitialized = PETSC_TRUE;
   /* Register Classes */
-  ierr = PetscClassIdRegister("Draw",&PETSC_DRAW_CLASSID);CHKERRQ(ierr);
-  ierr = PetscClassIdRegister("Draw Axis",&PETSC_DRAWAXIS_CLASSID);CHKERRQ(ierr);
-  ierr = PetscClassIdRegister("Line Graph",&PETSC_DRAWLG_CLASSID);CHKERRQ(ierr);
-  ierr = PetscClassIdRegister("Histogram",&PETSC_DRAWHG_CLASSID);CHKERRQ(ierr);
-  ierr = PetscClassIdRegister("Bar Graph",&PETSC_DRAWBAR_CLASSID);CHKERRQ(ierr);
-  ierr = PetscClassIdRegister("Scatter Plot",&PETSC_DRAWSP_CLASSID);CHKERRQ(ierr);
+  PetscCall(PetscClassIdRegister("Draw", &PETSC_DRAW_CLASSID));
+  PetscCall(PetscClassIdRegister("Draw Axis", &PETSC_DRAWAXIS_CLASSID));
+  PetscCall(PetscClassIdRegister("Line Graph", &PETSC_DRAWLG_CLASSID));
+  PetscCall(PetscClassIdRegister("Histogram", &PETSC_DRAWHG_CLASSID));
+  PetscCall(PetscClassIdRegister("Bar Graph", &PETSC_DRAWBAR_CLASSID));
+  PetscCall(PetscClassIdRegister("Scatter Plot", &PETSC_DRAWSP_CLASSID));
   /* Register Constructors */
-  ierr = PetscDrawRegisterAll();CHKERRQ(ierr);
+  PetscCall(PetscDrawRegisterAll());
   /* Process Info */
   {
-    PetscClassId  classids[6];
+    PetscClassId classids[6];
 
     classids[0] = PETSC_DRAW_CLASSID;
     classids[1] = PETSC_DRAWAXIS_CLASSID;
@@ -64,426 +57,403 @@ PetscErrorCode  PetscDrawInitializePackage(void)
     classids[3] = PETSC_DRAWHG_CLASSID;
     classids[4] = PETSC_DRAWBAR_CLASSID;
     classids[5] = PETSC_DRAWSP_CLASSID;
-    ierr = PetscInfoProcessClass("draw", 6, classids);CHKERRQ(ierr);
+    PetscCall(PetscInfoProcessClass("draw", 6, classids));
   }
   /* Process summary exclusions */
-  ierr = PetscOptionsGetString(NULL,NULL,"-log_exclude",logList,sizeof(logList),&opt);CHKERRQ(ierr);
+  PetscCall(PetscOptionsGetString(NULL, NULL, "-log_exclude", logList, sizeof(logList), &opt));
   if (opt) {
-    ierr = PetscStrInList("draw",logList,',',&pkg);CHKERRQ(ierr);
+    PetscCall(PetscStrInList("draw", logList, ',', &pkg));
     if (pkg) {
-      ierr = PetscLogEventExcludeClass(PETSC_DRAW_CLASSID);CHKERRQ(ierr);
-      ierr = PetscLogEventExcludeClass(PETSC_DRAWAXIS_CLASSID);CHKERRQ(ierr);
-      ierr = PetscLogEventExcludeClass(PETSC_DRAWLG_CLASSID);CHKERRQ(ierr);
-      ierr = PetscLogEventExcludeClass(PETSC_DRAWHG_CLASSID);CHKERRQ(ierr);
-      ierr = PetscLogEventExcludeClass(PETSC_DRAWBAR_CLASSID);CHKERRQ(ierr);
-      ierr = PetscLogEventExcludeClass(PETSC_DRAWSP_CLASSID);CHKERRQ(ierr);
+      PetscCall(PetscLogEventExcludeClass(PETSC_DRAW_CLASSID));
+      PetscCall(PetscLogEventExcludeClass(PETSC_DRAWAXIS_CLASSID));
+      PetscCall(PetscLogEventExcludeClass(PETSC_DRAWLG_CLASSID));
+      PetscCall(PetscLogEventExcludeClass(PETSC_DRAWHG_CLASSID));
+      PetscCall(PetscLogEventExcludeClass(PETSC_DRAWBAR_CLASSID));
+      PetscCall(PetscLogEventExcludeClass(PETSC_DRAWSP_CLASSID));
     }
   }
   /* Register package finalizer */
-  ierr = PetscRegisterFinalize(PetscDrawFinalizePackage);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscRegisterFinalize(PetscDrawFinalizePackage));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   PetscDrawResizeWindow - Allows one to resize a window from a program.
+  PetscDrawResizeWindow - Allows one to resize a window from a program.
 
-   Collective on PetscDraw
+  Collective
 
-   Input Parameter:
-+  draw - the window
--  w,h - the new width and height of the window
+  Input Parameters:
++ draw - the window
+. w    - the new width of the window
+- h    - the new height of the window
 
-   Level: intermediate
+  Level: intermediate
 
-.seealso: PetscDrawCheckResizedWindow()
+.seealso: `PetscDraw`, `PetscDrawCheckResizedWindow()`
 @*/
-PetscErrorCode  PetscDrawResizeWindow(PetscDraw draw,int w,int h)
+PetscErrorCode PetscDrawResizeWindow(PetscDraw draw, int w, int h)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
-  PetscValidLogicalCollectiveInt(draw,w,2);
-  PetscValidLogicalCollectiveInt(draw,h,3);
-  if (draw->ops->resizewindow) {
-    ierr = (*draw->ops->resizewindow)(draw,w,h);CHKERRQ(ierr);
-  }
-  PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(draw, PETSC_DRAW_CLASSID, 1);
+  PetscValidLogicalCollectiveInt(draw, w, 2);
+  PetscValidLogicalCollectiveInt(draw, h, 3);
+  PetscTryTypeMethod(draw, resizewindow, w, h);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   PetscDrawGetWindowSize - Gets the size of the window.
+  PetscDrawGetWindowSize - Gets the size of the window.
 
-   Not collective
+  Not Collective
 
-   Input Parameter:
-.  draw - the window
+  Input Parameter:
+. draw - the window
 
-   Output Parameters:
-.  w,h - the window width and height
+  Output Parameters:
++ w - the window width
+- h - the window height
 
-   Level: intermediate
+  Level: intermediate
 
-.seealso: PetscDrawResizeWindow(), PetscDrawCheckResizedWindow()
+.seealso: `PetscDraw`, `PetscDrawResizeWindow()`, `PetscDrawCheckResizedWindow()`
 @*/
-PetscErrorCode  PetscDrawGetWindowSize(PetscDraw draw,int *w,int *h)
+PetscErrorCode PetscDrawGetWindowSize(PetscDraw draw, int *w, int *h)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
-  if (w) PetscValidPointer(w,2);
-  if (h) PetscValidPointer(h,3);
+  PetscValidHeaderSpecific(draw, PETSC_DRAW_CLASSID, 1);
+  if (w) PetscAssertPointer(w, 2);
+  if (h) PetscAssertPointer(h, 3);
   if (w) *w = draw->w;
   if (h) *h = draw->h;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   PetscDrawCheckResizedWindow - Checks if the user has resized the window.
+  PetscDrawCheckResizedWindow - Checks if the user has resized the window.
 
-   Collective on PetscDraw
+  Collective
 
-   Input Parameter:
-.  draw - the window
+  Input Parameter:
+. draw - the window
 
-   Level: advanced
+  Level: advanced
 
-.seealso: PetscDrawResizeWindow()
-
+.seealso: `PetscDraw`, `PetscDrawResizeWindow()`
 @*/
-PetscErrorCode  PetscDrawCheckResizedWindow(PetscDraw draw)
+PetscErrorCode PetscDrawCheckResizedWindow(PetscDraw draw)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
-  if (draw->ops->checkresizedwindow) {
-    ierr = (*draw->ops->checkresizedwindow)(draw);CHKERRQ(ierr);
-  }
-  PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(draw, PETSC_DRAW_CLASSID, 1);
+  PetscTryTypeMethod(draw, checkresizedwindow);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
-   PetscDrawGetTitle - Gets pointer to title of a PetscDraw context.
+/*@
+  PetscDrawGetTitle - Gets pointer to title of a `PetscDraw` context.
 
-   Not collective
+  Not Collective
 
-   Input Parameter:
-.  draw - the graphics context
+  Input Parameter:
+. draw - the graphics context
 
-   Output Parameter:
-.  title - the title
+  Output Parameter:
+. title - the title
 
-   Level: intermediate
+  Level: intermediate
 
-.seealso: PetscDrawSetTitle()
+.seealso: `PetscDraw`, `PetscDrawSetTitle()`
 @*/
-PetscErrorCode  PetscDrawGetTitle(PetscDraw draw,const char *title[])
+PetscErrorCode PetscDrawGetTitle(PetscDraw draw, const char *title[])
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
-  PetscValidPointer(title,2);
+  PetscValidHeaderSpecific(draw, PETSC_DRAW_CLASSID, 1);
+  PetscAssertPointer(title, 2);
   *title = draw->title;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
-   PetscDrawSetTitle - Sets the title of a PetscDraw context.
+/*@
+  PetscDrawSetTitle - Sets the title of a `PetscDraw` context.
 
-   Collective on PetscDraw
+  Collective
 
-   Input Parameters:
-+  draw - the graphics context
--  title - the title
+  Input Parameters:
++ draw  - the graphics context
+- title - the title
 
-   Level: intermediate
+  Level: intermediate
 
-   Note: The title is positioned in the windowing system title bar for the window. Hence it will not be saved with -draw_save
-   in the image.
+  Notes:
+  The title is positioned in the windowing system title bar for the window. Hence it will not be saved with -draw_save
+  in the image.
 
-   A copy of the string is made, so you may destroy the
-   title string after calling this routine.
+  A copy of the string is made, so you may destroy the
+  title string after calling this routine.
 
-   You can use PetscDrawAxisSetLabels() to indicate a title within the window
+  You can use `PetscDrawAxisSetLabels()` to indicate a title within the window
 
-.seealso: PetscDrawGetTitle(), PetscDrawAppendTitle()
+.seealso: `PetscDraw`, `PetscDrawGetTitle()`, `PetscDrawAppendTitle()`
 @*/
-PetscErrorCode  PetscDrawSetTitle(PetscDraw draw,const char title[])
+PetscErrorCode PetscDrawSetTitle(PetscDraw draw, const char title[])
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
-  PetscValidCharPointer(title,2);
-  ierr = PetscFree(draw->title);CHKERRQ(ierr);
-  ierr = PetscStrallocpy(title,&draw->title);CHKERRQ(ierr);
-  if (draw->ops->settitle) {
-    ierr = (*draw->ops->settitle)(draw,draw->title);CHKERRQ(ierr);
-  }
-  PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(draw, PETSC_DRAW_CLASSID, 1);
+  PetscAssertPointer(title, 2);
+  PetscCall(PetscFree(draw->title));
+  PetscCall(PetscStrallocpy(title, &draw->title));
+  PetscTryTypeMethod(draw, settitle, draw->title);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
-   PetscDrawAppendTitle - Appends to the title of a PetscDraw context.
+/*@
+  PetscDrawAppendTitle - Appends to the title of a `PetscDraw` context.
 
-   Collective on PetscDraw
+  Collective
 
-   Input Parameters:
-+  draw - the graphics context
--  title - the title
+  Input Parameters:
++ draw  - the graphics context
+- title - the title
 
-   Note:
-   A copy of the string is made, so you may destroy the
-   title string after calling this routine.
+  Level: advanced
 
-   Level: advanced
+  Note:
+  A copy of the string is made, so you may destroy the
+  title string after calling this routine.
 
-.seealso: PetscDrawSetTitle(), PetscDrawGetTitle()
+.seealso: `PetscDraw`, `PetscDrawSetTitle()`, `PetscDrawGetTitle()`
 @*/
-PetscErrorCode  PetscDrawAppendTitle(PetscDraw draw,const char title[])
+PetscErrorCode PetscDrawAppendTitle(PetscDraw draw, const char title[])
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
-  if (title) PetscValidCharPointer(title,2);
-  if (!title || !title[0]) PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(draw, PETSC_DRAW_CLASSID, 1);
+  if (title) PetscAssertPointer(title, 2);
+  if (!title || !title[0]) PetscFunctionReturn(PETSC_SUCCESS);
 
   if (draw->title) {
-    size_t len1,len2;
-    char   *newtitle;
-    ierr = PetscStrlen(title,&len1);CHKERRQ(ierr);
-    ierr = PetscStrlen(draw->title,&len2);CHKERRQ(ierr);
-    ierr = PetscMalloc1(len1 + len2 + 1,&newtitle);CHKERRQ(ierr);
-    ierr = PetscStrcpy(newtitle,draw->title);CHKERRQ(ierr);
-    ierr = PetscStrcat(newtitle,title);CHKERRQ(ierr);
-    ierr = PetscFree(draw->title);CHKERRQ(ierr);
-    draw->title = newtitle;
+    size_t len1, len2, new_len;
+    PetscCall(PetscStrlen(draw->title, &len1));
+    PetscCall(PetscStrlen(title, &len2));
+    new_len = len1 + len2 + 1;
+    PetscCall(PetscRealloc(new_len * sizeof(*draw->title), &draw->title));
+    PetscCall(PetscStrncpy(draw->title + len1, title, len2 + 1));
   } else {
-    ierr = PetscStrallocpy(title,&draw->title);CHKERRQ(ierr);
+    PetscCall(PetscStrallocpy(title, &draw->title));
   }
-  if (draw->ops->settitle) {
-    ierr = (*draw->ops->settitle)(draw,draw->title);CHKERRQ(ierr);
-  }
-  PetscFunctionReturn(0);
+  PetscTryTypeMethod(draw, settitle, draw->title);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscDrawDestroy_Private(PetscDraw draw)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  if (!draw->ops->save && !draw->ops->getimage) PetscFunctionReturn(0);
-  ierr = PetscDrawSaveMovie(draw);CHKERRQ(ierr);
+  if (!draw->ops->save && !draw->ops->getimage) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCall(PetscDrawSaveMovie(draw));
   if (draw->savefinalfilename) {
     draw->savesinglefile = PETSC_TRUE;
-    ierr = PetscDrawSetSave(draw,draw->savefinalfilename);CHKERRQ(ierr);
-    ierr = PetscDrawSave(draw);CHKERRQ(ierr);
+    PetscCall(PetscDrawSetSave(draw, draw->savefinalfilename));
+    PetscCall(PetscDrawSave(draw));
   }
-  ierr = PetscBarrier((PetscObject)draw);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscBarrier((PetscObject)draw));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   PetscDrawDestroy - Deletes a draw context.
+  PetscDrawDestroy - Deletes a draw context.
 
-   Collective on PetscDraw
+  Collective
 
-   Input Parameters:
-.  draw - the drawing context
+  Input Parameter:
+. draw - the drawing context
 
-   Level: beginner
+  Level: beginner
 
-.seealso: PetscDrawCreate()
-
+.seealso: `PetscDraw`, `PetscDrawCreate()`
 @*/
-PetscErrorCode  PetscDrawDestroy(PetscDraw *draw)
+PetscErrorCode PetscDrawDestroy(PetscDraw *draw)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  if (!*draw) PetscFunctionReturn(0);
-  PetscValidHeaderSpecific(*draw,PETSC_DRAW_CLASSID,1);
-  if (--((PetscObject)(*draw))->refct > 0) PetscFunctionReturn(0);
+  if (!*draw) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscValidHeaderSpecific(*draw, PETSC_DRAW_CLASSID, 1);
+  if (--((PetscObject)*draw)->refct > 0) PetscFunctionReturn(PETSC_SUCCESS);
 
   if ((*draw)->pause == -2) {
     (*draw)->pause = -1;
-    ierr = PetscDrawPause(*draw);CHKERRQ(ierr);
+    PetscCall(PetscDrawPause(*draw));
   }
 
   /* if memory was published then destroy it */
-  ierr = PetscObjectSAWsViewOff((PetscObject)*draw);CHKERRQ(ierr);
+  PetscCall(PetscObjectSAWsViewOff((PetscObject)*draw));
 
-  ierr = PetscDrawDestroy_Private(*draw);CHKERRQ(ierr);
+  PetscCall(PetscDrawDestroy_Private(*draw));
 
-  if ((*draw)->ops->destroy) {
-    ierr = (*(*draw)->ops->destroy)(*draw);CHKERRQ(ierr);
-  }
-  ierr = PetscDrawDestroy(&(*draw)->popup);CHKERRQ(ierr);
-  ierr = PetscFree((*draw)->title);CHKERRQ(ierr);
-  ierr = PetscFree((*draw)->display);CHKERRQ(ierr);
-  ierr = PetscFree((*draw)->savefilename);CHKERRQ(ierr);
-  ierr = PetscFree((*draw)->saveimageext);CHKERRQ(ierr);
-  ierr = PetscFree((*draw)->savemovieext);CHKERRQ(ierr);
-  ierr = PetscFree((*draw)->savefinalfilename);CHKERRQ(ierr);
-  ierr = PetscHeaderDestroy(draw);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscTryTypeMethod(*draw, destroy);
+  PetscCall(PetscDrawDestroy(&(*draw)->popup));
+  PetscCall(PetscFree((*draw)->title));
+  PetscCall(PetscFree((*draw)->display));
+  PetscCall(PetscFree((*draw)->savefilename));
+  PetscCall(PetscFree((*draw)->saveimageext));
+  PetscCall(PetscFree((*draw)->savemovieext));
+  PetscCall(PetscFree((*draw)->savefinalfilename));
+  PetscCall(PetscHeaderDestroy(draw));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   PetscDrawGetPopup - Creates a popup window associated with a PetscDraw window.
+  PetscDrawGetPopup - Creates a popup window associated with a `PetscDraw` window.
 
-   Collective on PetscDraw
+  Collective
 
-   Input Parameter:
-.  draw - the original window
+  Input Parameter:
+. draw - the original window
 
-   Output Parameter:
-.  popup - the new popup window
+  Output Parameter:
+. popup - the new popup window
 
-   Level: advanced
+  Level: advanced
 
-.seealso: PetscDrawScalePopup(), PetscDrawCreate()
-
+.seealso: `PetscDraw`, `PetscDrawScalePopup()`, `PetscDrawCreate()`
 @*/
-PetscErrorCode  PetscDrawGetPopup(PetscDraw draw,PetscDraw *popup)
+PetscErrorCode PetscDrawGetPopup(PetscDraw draw, PetscDraw *popup)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
-  PetscValidPointer(popup,2);
+  PetscValidHeaderSpecific(draw, PETSC_DRAW_CLASSID, 1);
+  PetscAssertPointer(popup, 2);
 
   if (draw->popup) *popup = draw->popup;
   else if (draw->ops->getpopup) {
-    ierr = (*draw->ops->getpopup)(draw,popup);CHKERRQ(ierr);
+    PetscUseTypeMethod(draw, getpopup, popup);
     if (*popup) {
-      ierr = PetscObjectSetOptionsPrefix((PetscObject)*popup,"popup_");CHKERRQ(ierr);
+      PetscCall(PetscObjectSetOptionsPrefix((PetscObject)*popup, "popup_"));
       (*popup)->pause = 0.0;
-      ierr = PetscDrawSetFromOptions(*popup);CHKERRQ(ierr);
+      PetscCall(PetscDrawSetFromOptions(*popup));
     }
   } else *popup = NULL;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
-  PetscDrawSetDisplay - Sets the display where a PetscDraw object will be displayed
+/*@
+  PetscDrawSetDisplay - Sets the display where a `PetscDraw` object will be displayed
 
-  Input Parameter:
-+ draw - the drawing context
+  Input Parameters:
++ draw    - the drawing context
 - display - the X windows display
 
   Level: advanced
 
-.seealso: PetscDrawCreate()
-
+.seealso: `PetscDraw`, `PetscDrawOpenX()`, `PetscDrawCreate()`
 @*/
-PetscErrorCode  PetscDrawSetDisplay(PetscDraw draw,const char display[])
+PetscErrorCode PetscDrawSetDisplay(PetscDraw draw, const char display[])
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  ierr = PetscFree(draw->display);CHKERRQ(ierr);
-  ierr = PetscStrallocpy(display,&draw->display);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscFree(draw->display));
+  PetscCall(PetscStrallocpy(display, &draw->display));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
-
 
 /*@
-   PetscDrawSetDoubleBuffer - Sets a window to be double buffered.
+  PetscDrawSetDoubleBuffer - Sets a window to be double buffered.
 
-   Logically Collective on PetscDraw
+  Logically Collective
 
-   Input Parameter:
-.  draw - the drawing context
+  Input Parameter:
+. draw - the drawing context
 
-   Level: intermediate
+  Level: intermediate
 
+.seealso: `PetscDraw`, `PetscDrawOpenX()`, `PetscDrawCreate()`
 @*/
-PetscErrorCode  PetscDrawSetDoubleBuffer(PetscDraw draw)
+PetscErrorCode PetscDrawSetDoubleBuffer(PetscDraw draw)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
-  if (draw->ops->setdoublebuffer) {
-    ierr = (*draw->ops->setdoublebuffer)(draw);CHKERRQ(ierr);
-  }
-  PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(draw, PETSC_DRAW_CLASSID, 1);
+  PetscTryTypeMethod(draw, setdoublebuffer);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
-   PetscDrawGetSingleton - Gain access to a PetscDraw object as if it were owned
-        by the one process.
+/*@
+  PetscDrawGetSingleton - Gain access to a `PetscDraw` object as if it were owned
+  by the one process.
 
-   Collective on PetscDraw
+  Collective
 
-   Input Parameter:
-.  draw - the original window
+  Input Parameter:
+. draw - the original window
 
-   Output Parameter:
-.  sdraw - the singleton window
+  Output Parameter:
+. sdraw - the singleton window
 
-   Level: advanced
+  Level: advanced
 
-.seealso: PetscDrawRestoreSingleton(), PetscViewerGetSingleton(), PetscViewerRestoreSingleton()
-
+.seealso: `PetscDraw`, `PetscDrawRestoreSingleton()`, `PetscViewerGetSingleton()`, `PetscViewerRestoreSingleton()`
 @*/
-PetscErrorCode  PetscDrawGetSingleton(PetscDraw draw,PetscDraw *sdraw)
+PetscErrorCode PetscDrawGetSingleton(PetscDraw draw, PetscDraw *sdraw)
 {
-  PetscErrorCode ierr;
-  PetscMPIInt    size;
+  PetscMPIInt size;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
-  PetscValidPointer(sdraw,2);
+  PetscValidHeaderSpecific(draw, PETSC_DRAW_CLASSID, 1);
+  PetscAssertPointer(sdraw, 2);
 
-  ierr = MPI_Comm_size(PetscObjectComm((PetscObject)draw),&size);CHKERRQ(ierr);
+  PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)draw), &size));
   if (size == 1) {
-    ierr = PetscObjectReference((PetscObject)draw);CHKERRQ(ierr);
+    PetscCall(PetscObjectReference((PetscObject)draw));
     *sdraw = draw;
   } else {
     if (draw->ops->getsingleton) {
-      ierr = (*draw->ops->getsingleton)(draw,sdraw);CHKERRQ(ierr);
-    } else SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot get singleton for this type %s of draw object",((PetscObject)draw)->type_name);
+      PetscUseTypeMethod(draw, getsingleton, sdraw);
+    } else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "Cannot get singleton for this type %s of draw object", ((PetscObject)draw)->type_name);
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
-   PetscDrawRestoreSingleton - Remove access to a PetscDraw object as if it were owned
-        by the one process.
+/*@
+  PetscDrawRestoreSingleton - Remove access to a `PetscDraw` object obtained with `PetscDrawGetSingleton()`
+  by the one process.
 
-   Collective on PetscDraw
+  Collective
 
-   Input Parameters:
-+  draw - the original window
--  sdraw - the singleton window
+  Input Parameters:
++ draw  - the original window
+- sdraw - the singleton window
 
-   Level: advanced
+  Level: advanced
 
-.seealso: PetscDrawGetSingleton(), PetscViewerGetSingleton(), PetscViewerRestoreSingleton()
-
+.seealso: `PetscDraw`, `PetscDrawGetSingleton()`, `PetscViewerGetSingleton()`, `PetscViewerRestoreSingleton()`
 @*/
-PetscErrorCode  PetscDrawRestoreSingleton(PetscDraw draw,PetscDraw *sdraw)
+PetscErrorCode PetscDrawRestoreSingleton(PetscDraw draw, PetscDraw *sdraw)
 {
-  PetscErrorCode ierr;
-  PetscMPIInt    size;
+  PetscMPIInt size;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
-  PetscValidPointer(sdraw,2);
-  PetscValidHeaderSpecific(*sdraw,PETSC_DRAW_CLASSID,2);
+  PetscValidHeaderSpecific(draw, PETSC_DRAW_CLASSID, 1);
+  PetscAssertPointer(sdraw, 2);
+  PetscValidHeaderSpecific(*sdraw, PETSC_DRAW_CLASSID, 2);
 
-  ierr = MPI_Comm_size(PetscObjectComm((PetscObject)draw),&size);CHKERRQ(ierr);
+  PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)draw), &size));
   if (size == 1) {
     if (draw == *sdraw) {
-      ierr = PetscObjectDereference((PetscObject)draw);CHKERRQ(ierr);
+      PetscCall(PetscObjectDereference((PetscObject)draw));
       *sdraw = NULL;
-    } else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Cannot restore singleton, it is not the parent draw");
-  } else {
-    if (draw->ops->restoresingleton) {
-      ierr = (*draw->ops->restoresingleton)(draw,sdraw);CHKERRQ(ierr);
-    } else SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot restore singleton for this type %s of draw object",((PetscObject)draw)->type_name);
-  }
-  PetscFunctionReturn(0);
+    } else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Cannot restore singleton, it is not the parent draw");
+  } else PetscUseTypeMethod(draw, restoresingleton, sdraw);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PetscDrawSetVisible - Sets if the drawing surface (the 'window') is visible on its display.
+
+  Input Parameters:
++ draw    - the drawing window
+- visible - if the surface should be visible
+
+  Level: intermediate
+
+.seealso: `PetscDraw`
+@*/
+PetscErrorCode PetscDrawSetVisible(PetscDraw draw, PetscBool visible)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(draw, PETSC_DRAW_CLASSID, 1);
+  PetscTryTypeMethod(draw, setvisible, visible);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

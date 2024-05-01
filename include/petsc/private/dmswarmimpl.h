@@ -1,11 +1,12 @@
+#pragma once
 
-#if !defined(_SWARMIMPL_H)
-#define _SWARMIMPL_H
-
-#include <petscvec.h> /*I "petscvec.h" I*/
-#include <petscmat.h>       /*I      "petscmat.h"          I*/
+#include <petscvec.h>     /*I "petscvec.h" I*/
+#include <petscmat.h>     /*I      "petscmat.h"          I*/
 #include <petscdmswarm.h> /*I      "petscdmswarm.h"    I*/
 #include <petsc/private/dmimpl.h>
+
+PETSC_EXTERN PetscBool  SwarmProjcite;
+PETSC_EXTERN const char SwarmProjCitation[];
 
 PETSC_EXTERN PetscLogEvent DMSWARM_Migrate;
 PETSC_EXTERN PetscLogEvent DMSWARM_SetSizes;
@@ -18,15 +19,21 @@ PETSC_EXTERN PetscLogEvent DMSWARM_DataExchangerEnd;
 PETSC_EXTERN PetscLogEvent DMSWARM_DataExchangerSendCount;
 PETSC_EXTERN PetscLogEvent DMSWARM_DataExchangerPack;
 
-typedef struct _p_DMSwarmDataField* DMSwarmDataField;
-typedef struct _p_DMSwarmDataBucket* DMSwarmDataBucket;
-typedef struct _p_DMSwarmSort* DMSwarmSort;
+/*
+ Error checking to ensure the swarm type is correct and that a cell DM has been set
+*/
+#define DMSWARMPICVALID(dm) \
+  do { \
+    DM_Swarm *_swarm = (DM_Swarm *)(dm)->data; \
+    PetscCheck(_swarm->swarm_type == DMSWARM_PIC, PetscObjectComm((PetscObject)(dm)), PETSC_ERR_SUP, "Valid only for DMSwarm-PIC. You must call DMSwarmSetType(dm,DMSWARM_PIC)"); \
+    PetscCheck(_swarm->dmcell, PetscObjectComm((PetscObject)(dm)), PETSC_ERR_SUP, "Valid only for DMSwarmPIC if the cell DM is set. You must call DMSwarmSetCellDM(dm,celldm)"); \
+  } while (0)
 
 typedef struct {
   DMSwarmDataBucket db;
-
-  PetscBool field_registration_initialized;
-  PetscBool field_registration_finalized;
+  PetscInt          refct;
+  PetscBool         field_registration_initialized;
+  PetscBool         field_registration_finalized;
   /* DMSwarmProjectMethod *swarm_project;*/ /* swarm, geometry, result */
 
   /* PetscInt overlap; */
@@ -34,20 +41,26 @@ typedef struct {
 
   char      vec_field_name[PETSC_MAX_PATH_LEN];
   PetscBool vec_field_set;
-  PetscInt  vec_field_bs,vec_field_nlocal;
+  PetscInt  vec_field_bs, vec_field_nlocal;
 
   PetscBool          issetup;
   DMSwarmType        swarm_type;
   DMSwarmMigrateType migrate_type;
   DMSwarmCollectType collect_type;
 
-  DM        dmcell;
+  DM dmcell;
 
   PetscBool migrate_error_on_missing_point;
 
-  PetscBool collect_view_active;
-  PetscInt  collect_view_reset_nlocal;
+  PetscBool   collect_view_active;
+  PetscInt    collect_view_reset_nlocal;
   DMSwarmSort sort_context;
+
+  /* Support for PIC */
+  PetscInt Ns; /* The number of particle species */
+
+  PetscSimplePointFn *coordFunc; /* Function to set particle coordinates */
+  PetscSimplePointFn *velFunc;   /* Function to set particle velocities */
 } DM_Swarm;
 
 typedef struct {
@@ -56,15 +69,12 @@ typedef struct {
 } SwarmPoint;
 
 struct _p_DMSwarmSort {
-  PetscBool isvalid;
-  PetscInt ncells,npoints;
-  PetscInt *pcell_offsets;
+  PetscBool   isvalid;
+  PetscInt    ncells, npoints;
+  PetscInt   *pcell_offsets;
   SwarmPoint *list;
 };
 
-
 PETSC_INTERN PetscErrorCode DMSwarmMigrate_Push_Basic(DM, PetscBool);
-PETSC_INTERN PetscErrorCode DMSwarmMigrate_CellDMScatter(DM,PetscBool);
-PETSC_INTERN PetscErrorCode DMSwarmMigrate_CellDMExact(DM,PetscBool);
-
-#endif /* _SWARMIMPL_H */
+PETSC_INTERN PetscErrorCode DMSwarmMigrate_CellDMScatter(DM, PetscBool);
+PETSC_INTERN PetscErrorCode DMSwarmMigrate_CellDMExact(DM, PetscBool);

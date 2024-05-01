@@ -1,4 +1,3 @@
-
 #include <petscdraw.h>
 #include <petscviewer.h>
 #include <petsc/private/viewerimpl.h>
@@ -6,113 +5,103 @@
 static PetscBool PetscSysPackageInitialized = PETSC_FALSE;
 
 /*@C
-  PetscSysFinalizePackage - This function destroys everything in the PETSc created internally in the system library portion of PETSc.
-  It is called from PetscFinalize().
+  PetscSysFinalizePackage - This function destroys everything in the system library portion of PETSc.
+  It is called from `PetscFinalize()`.
 
   Level: developer
 
-.seealso: PetscFinalize()
+.seealso: `PetscSysInitializePackage()`, `PetscFinalize()`
 @*/
-PetscErrorCode  PetscSysFinalizePackage(void)
+PetscErrorCode PetscSysFinalizePackage(void)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  if (Petsc_Seq_keyval != MPI_KEYVAL_INVALID) {
-    ierr = MPI_Comm_free_keyval(&Petsc_Seq_keyval);CHKERRQ(ierr);
-  }
+  if (Petsc_Seq_keyval != MPI_KEYVAL_INVALID) PetscCallMPI(MPI_Comm_free_keyval(&Petsc_Seq_keyval));
   PetscSysPackageInitialized = PETSC_FALSE;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-  PetscSysInitializePackage - This function initializes everything in the main Petsc package. It is called
-  from PetscDLLibraryRegister_petsc() when using dynamic libraries, and on the call to PetscInitialize()
+  PetscSysInitializePackage - This function initializes everything in the system library portion of PETSc. It is called
+  from `PetscDLLibraryRegister_petsc()` when using dynamic libraries, and in the call to `PetscInitialize()`
   when using shared or static libraries.
 
   Level: developer
 
-.seealso: PetscInitialize()
+.seealso: `PetscSysFinalizePackage()`, `PetscInitialize()`
 @*/
-PetscErrorCode  PetscSysInitializePackage(void)
+PetscErrorCode PetscSysInitializePackage(void)
 {
-  char           logList[256];
-  PetscBool      opt,pkg;
-  PetscErrorCode ierr;
+  char      logList[256];
+  PetscBool opt, pkg;
 
   PetscFunctionBegin;
-  if (PetscSysPackageInitialized) PetscFunctionReturn(0);
+  if (PetscSysPackageInitialized) PetscFunctionReturn(PETSC_SUCCESS);
   PetscSysPackageInitialized = PETSC_TRUE;
   /* Register Classes */
-  ierr = PetscClassIdRegister("Object",&PETSC_OBJECT_CLASSID);CHKERRQ(ierr);
-  ierr = PetscClassIdRegister("Container",&PETSC_CONTAINER_CLASSID);CHKERRQ(ierr);
+  PetscCall(PetscClassIdRegister("Object", &PETSC_OBJECT_CLASSID));
+  PetscCall(PetscClassIdRegister("Container", &PETSC_CONTAINER_CLASSID));
 
   /* Register Events */
-  ierr = PetscLogEventRegister("PetscBarrier", PETSC_SMALLEST_CLASSID,&PETSC_Barrier);CHKERRQ(ierr);
-  ierr = PetscLogEventRegister("BuildTwoSided",PETSC_SMALLEST_CLASSID,&PETSC_BuildTwoSided);CHKERRQ(ierr);
-  ierr = PetscLogEventRegister("BuildTwoSidedF",PETSC_SMALLEST_CLASSID,&PETSC_BuildTwoSidedF);CHKERRQ(ierr);
+  PetscCall(PetscLogEventRegister("PetscBarrier", PETSC_SMALLEST_CLASSID, &PETSC_Barrier));
+  PetscCall(PetscLogEventRegister("BuildTwoSided", PETSC_SMALLEST_CLASSID, &PETSC_BuildTwoSided));
+  PetscCall(PetscLogEventRegister("BuildTwoSidedF", PETSC_SMALLEST_CLASSID, &PETSC_BuildTwoSidedF));
   /* Process Info */
   {
-    PetscClassId  classids[1];
+    PetscClassId classids[1];
 
     classids[0] = PETSC_SMALLEST_CLASSID;
-    ierr = PetscInfoProcessClass("sys", 1, classids);CHKERRQ(ierr);
+    PetscCall(PetscInfoProcessClass("sys", 1, classids));
   }
   /* Process summary exclusions */
-  ierr = PetscOptionsGetString(NULL,NULL,"-log_exclude",logList,sizeof(logList),&opt);CHKERRQ(ierr);
+  PetscCall(PetscOptionsGetString(NULL, NULL, "-log_exclude", logList, sizeof(logList), &opt));
   if (opt) {
-    ierr = PetscStrInList("null",logList,',',&pkg);CHKERRQ(ierr);
-    if (pkg) {ierr = PetscLogEventExcludeClass(PETSC_SMALLEST_CLASSID);CHKERRQ(ierr);}
+    PetscCall(PetscStrInList("null", logList, ',', &pkg));
+    if (pkg) PetscCall(PetscLogEventExcludeClass(PETSC_SMALLEST_CLASSID));
   }
-  ierr = PetscRegisterFinalize(PetscSysFinalizePackage);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscRegisterFinalize(PetscSysFinalizePackage));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 #if defined(PETSC_HAVE_DYNAMIC_LIBRARIES)
 
-#if defined(PETSC_USE_SINGLE_LIBRARY)
+  #if defined(PETSC_USE_SINGLE_LIBRARY)
 PETSC_EXTERN PetscErrorCode PetscDLLibraryRegister_petscvec(void);
 PETSC_EXTERN PetscErrorCode PetscDLLibraryRegister_petscmat(void);
 PETSC_EXTERN PetscErrorCode PetscDLLibraryRegister_petscdm(void);
 PETSC_EXTERN PetscErrorCode PetscDLLibraryRegister_petscksp(void);
 PETSC_EXTERN PetscErrorCode PetscDLLibraryRegister_petscsnes(void);
 PETSC_EXTERN PetscErrorCode PetscDLLibraryRegister_petscts(void);
-#endif
+  #endif
 
-#if defined(PETSC_USE_SINGLE_LIBRARY)
-#else
-#endif
-/*
+  /*
   PetscDLLibraryRegister - This function is called when the dynamic library it is in is opened.
 
-  This one registers all the draw and PetscViewer objects.
+  This one registers all the system level objects.
 
  */
-#if defined(PETSC_USE_SINGLE_LIBRARY)
+  #if defined(PETSC_USE_SINGLE_LIBRARY)
 PETSC_EXTERN PetscErrorCode PetscDLLibraryRegister_petsc(void)
-#else
+  #else
 PETSC_EXTERN PetscErrorCode PetscDLLibraryRegister_petscsys(void)
-#endif
+  #endif
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   /*
       If we got here then PETSc was properly loaded
   */
-  ierr = PetscSysInitializePackage();CHKERRQ(ierr);
-  ierr = PetscDrawInitializePackage();CHKERRQ(ierr);
-  ierr = PetscViewerInitializePackage();CHKERRQ(ierr);
-  ierr = PetscRandomInitializePackage();CHKERRQ(ierr);
+  PetscCall(PetscSysInitializePackage());
+  PetscCall(PetscDrawInitializePackage());
+  PetscCall(PetscViewerInitializePackage());
+  PetscCall(PetscRandomInitializePackage());
 
-#if defined(PETSC_USE_SINGLE_LIBRARY)
-  ierr = PetscDLLibraryRegister_petscvec();CHKERRQ(ierr);
-  ierr = PetscDLLibraryRegister_petscmat();CHKERRQ(ierr);
-  ierr = PetscDLLibraryRegister_petscdm();CHKERRQ(ierr);
-  ierr = PetscDLLibraryRegister_petscksp();CHKERRQ(ierr);
-  ierr = PetscDLLibraryRegister_petscsnes();CHKERRQ(ierr);
-  ierr = PetscDLLibraryRegister_petscts();CHKERRQ(ierr);
-#endif
-  PetscFunctionReturn(0);
+  #if defined(PETSC_USE_SINGLE_LIBRARY)
+  PetscCall(PetscDLLibraryRegister_petscvec());
+  PetscCall(PetscDLLibraryRegister_petscmat());
+  PetscCall(PetscDLLibraryRegister_petscdm());
+  PetscCall(PetscDLLibraryRegister_petscksp());
+  PetscCall(PetscDLLibraryRegister_petscsnes());
+  PetscCall(PetscDLLibraryRegister_petscts());
+  #endif
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
-#endif  /* PETSC_HAVE_DYNAMIC_LIBRARIES */
+#endif /* PETSC_HAVE_DYNAMIC_LIBRARIES */

@@ -1,312 +1,305 @@
-static char help[] = "Test DMCreateLocalVector_Plex, DMPlexGetCellFields and DMPlexRestoreCellFields work properly for 0 fields/cells/DS dimension\n\n";
+static char help[]     = "Test DMCreateLocalVector_Plex, DMPlexGetCellFields and DMPlexRestoreCellFields work properly for 0 fields/cells/DS dimension\n\n";
 static char FILENAME[] = "ex25.c";
 
 #include <petscdmplex.h>
 #include <petscds.h>
 #include <petscsnes.h>
 
-
 typedef struct {
-  PetscInt  test;
-  PetscInt  dim;                          /* The topological mesh dimension */
-  PetscInt  faces[3];                     /* Number of faces per dimension */
-  PetscBool simplex;                      /* Use simplices or hexes */
-  PetscBool interpolate;                  /* Interpolate mesh */
-  char      filename[PETSC_MAX_PATH_LEN]; /* Import mesh from file */
+  PetscInt test;
 } AppCtx;
 
 static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 {
-  PetscInt dim;
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  options->test         = 0;
-  options->dim          = 3;
-  options->simplex      = PETSC_TRUE;
-  options->interpolate  = PETSC_FALSE;
-  options->filename[0]  = '\0';
-  ierr = PetscOptionsBegin(comm, "", "Zero-sized DMPlexGetCellFields Test Options", "DMPLEX");CHKERRQ(ierr);
-  ierr = PetscOptionsBoundedInt("-test", "Test to run", FILENAME, options->test, &options->test, NULL,0);CHKERRQ(ierr);
-  ierr = PetscOptionsRangeInt("-dim", "The topological mesh dimension", FILENAME, options->dim, &options->dim, NULL,1,3);CHKERRQ(ierr);
-  if (options->dim > 3) SETERRQ1(comm, PETSC_ERR_ARG_OUTOFRANGE, "dimension set to %d, must be <= 3", options->dim);
-  ierr = PetscOptionsBool("-simplex", "Use simplices if true, otherwise hexes", FILENAME, options->simplex, &options->simplex, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-interpolate", "Interpolate the mesh", FILENAME, options->interpolate, &options->interpolate, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsString("-filename", "The mesh file", FILENAME, options->filename, options->filename, sizeof(options->filename), NULL);CHKERRQ(ierr);
-  options->faces[0] = 1; options->faces[1] = 1; options->faces[2] = 1;
-  dim = options->dim;
-  ierr = PetscOptionsIntArray("-faces", "Number of faces per dimension", FILENAME, options->faces, &dim, NULL);CHKERRQ(ierr);
-  if (dim) options->dim = dim;
-  ierr = PetscOptionsEnd();
-  PetscFunctionReturn(0);
+  options->test = 0;
+  PetscOptionsBegin(comm, "", "Zero-sized DMPlexGetCellFields Test Options", "DMPLEX");
+  PetscCall(PetscOptionsBoundedInt("-test", "Test to run", FILENAME, options->test, &options->test, NULL, 0));
+  PetscOptionsEnd();
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *options, DM *dm)
 {
-  PetscInt       dim          = options->dim;
-  PetscInt      *faces        = options->faces;
-  PetscBool      simplex      = options->simplex;
-  PetscBool      interpolate  = options->interpolate;
-  const char    *filename     = options->filename;
-  size_t         len;
-  PetscMPIInt    rank;
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  ierr = MPI_Comm_rank(comm, &rank);CHKERRQ(ierr);
-  ierr = PetscStrlen(filename, &len);CHKERRQ(ierr);
-  if (len) {
-    ierr = DMPlexCreateFromFile(comm, filename, interpolate, dm);CHKERRQ(ierr);
-    ierr = DMGetDimension(*dm, &options->dim);CHKERRQ(ierr);
-  } else {
-    ierr = DMPlexCreateBoxMesh(comm, dim, simplex, faces, NULL, NULL, NULL, interpolate, dm);CHKERRQ(ierr);
-  }
-  PetscFunctionReturn(0);
+  PetscCall(DMCreate(comm, dm));
+  PetscCall(DMSetType(*dm, DMPLEX));
+  PetscCall(DMSetFromOptions(*dm));
+  PetscCall(DMViewFromOptions(*dm, NULL, "-dm_view"));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /* no discretization is given so DMGetNumFields yields 0 */
 static PetscErrorCode test0(DM dm, AppCtx *options)
 {
-  Vec            locX;
-  PetscErrorCode ierr;
+  Vec locX;
 
   PetscFunctionBegin;
-  ierr = DMGetLocalVector(dm, &locX);CHKERRQ(ierr);
-  ierr = DMRestoreLocalVector(dm, &locX);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(DMGetLocalVector(dm, &locX));
+  PetscCall(DMRestoreLocalVector(dm, &locX));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /* no discretization is given so DMGetNumFields and PetscDSGetTotalDimension yield 0 */
 static PetscErrorCode test1(DM dm, AppCtx *options)
 {
-  IS             cells;
-  Vec            locX, locX_t, locA;
-  PetscScalar    *u, *u_t, *a;
-  PetscErrorCode ierr;
+  IS           cells;
+  Vec          locX, locX_t, locA;
+  PetscScalar *u, *u_t, *a;
 
   PetscFunctionBegin;
-  ierr = ISCreateStride(PETSC_COMM_SELF, 0, 0, 1, &cells);CHKERRQ(ierr);
-  ierr = DMGetLocalVector(dm, &locX);CHKERRQ(ierr);
-  ierr = DMGetLocalVector(dm, &locX_t);CHKERRQ(ierr);
-  ierr = DMGetLocalVector(dm, &locA);CHKERRQ(ierr);
-  ierr = DMPlexGetCellFields(    dm, cells, locX, locX_t, locA, &u, &u_t, &a);CHKERRQ(ierr);
-  ierr = DMPlexRestoreCellFields(dm, cells, locX, locX_t, locA, &u, &u_t, &a);CHKERRQ(ierr);
-  ierr = DMRestoreLocalVector(dm, &locX);CHKERRQ(ierr);
-  ierr = DMRestoreLocalVector(dm, &locX_t);CHKERRQ(ierr);
-  ierr = DMRestoreLocalVector(dm, &locA);CHKERRQ(ierr);
-  ierr = ISDestroy(&cells);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(ISCreateStride(PETSC_COMM_SELF, 0, 0, 1, &cells));
+  PetscCall(DMGetLocalVector(dm, &locX));
+  PetscCall(DMGetLocalVector(dm, &locX_t));
+  PetscCall(DMGetLocalVector(dm, &locA));
+  PetscCall(DMPlexGetCellFields(dm, cells, locX, locX_t, locA, &u, &u_t, &a));
+  PetscCall(DMPlexRestoreCellFields(dm, cells, locX, locX_t, locA, &u, &u_t, &a));
+  PetscCall(DMRestoreLocalVector(dm, &locX));
+  PetscCall(DMRestoreLocalVector(dm, &locX_t));
+  PetscCall(DMRestoreLocalVector(dm, &locA));
+  PetscCall(ISDestroy(&cells));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /* no discretization is given so DMGetNumFields and PetscDSGetTotalDimension yield 0 */
 static PetscErrorCode test2(DM dm, AppCtx *options)
 {
-  IS             cells;
-  Vec            locX, locX_t, locA;
-  PetscScalar    *u, *u_t, *a;
-  PetscMPIInt    rank;
-  PetscErrorCode ierr;
+  IS           cells;
+  Vec          locX, locX_t, locA;
+  PetscScalar *u, *u_t, *a;
+  PetscMPIInt  rank;
 
   PetscFunctionBegin;
-  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)dm), &rank);CHKERRQ(ierr);
-  ierr = ISCreateStride(PETSC_COMM_SELF, rank ? 0 : 1, 0, 1, &cells);CHKERRQ(ierr);
-  ierr = DMGetLocalVector(dm, &locX);CHKERRQ(ierr);
-  ierr = DMGetLocalVector(dm, &locX_t);CHKERRQ(ierr);
-  ierr = DMGetLocalVector(dm, &locA);CHKERRQ(ierr);
-  ierr = DMPlexGetCellFields(    dm, cells, locX, locX_t, locA, &u, &u_t, &a);CHKERRQ(ierr);
-  ierr = DMPlexRestoreCellFields(dm, cells, locX, locX_t, locA, &u, &u_t, &a);CHKERRQ(ierr);
-  ierr = DMRestoreLocalVector(dm, &locX);CHKERRQ(ierr);
-  ierr = DMRestoreLocalVector(dm, &locX_t);CHKERRQ(ierr);
-  ierr = DMRestoreLocalVector(dm, &locA);CHKERRQ(ierr);
-  ierr = ISDestroy(&cells);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)dm), &rank));
+  PetscCall(ISCreateStride(PETSC_COMM_SELF, rank ? 0 : 1, 0, 1, &cells));
+  PetscCall(DMGetLocalVector(dm, &locX));
+  PetscCall(DMGetLocalVector(dm, &locX_t));
+  PetscCall(DMGetLocalVector(dm, &locA));
+  PetscCall(DMPlexGetCellFields(dm, cells, locX, locX_t, locA, &u, &u_t, &a));
+  PetscCall(DMPlexRestoreCellFields(dm, cells, locX, locX_t, locA, &u, &u_t, &a));
+  PetscCall(DMRestoreLocalVector(dm, &locX));
+  PetscCall(DMRestoreLocalVector(dm, &locX_t));
+  PetscCall(DMRestoreLocalVector(dm, &locA));
+  PetscCall(ISDestroy(&cells));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode test3(DM dm, AppCtx *options)
 {
-  PetscDS        ds;
-  PetscFE        fe;
-  PetscErrorCode ierr;
+  PetscDS   ds;
+  PetscFE   fe;
+  PetscInt  dim;
+  PetscBool simplex;
 
   PetscFunctionBegin;
-  ierr = DMGetDS(dm, &ds);CHKERRQ(ierr);
-  ierr = PetscFECreateDefault(PetscObjectComm((PetscObject) dm), options->dim, 1, options->simplex, NULL, -1, &fe);CHKERRQ(ierr);
-  ierr = PetscDSSetDiscretization(ds, 0, (PetscObject)fe);CHKERRQ(ierr);
-  ierr = PetscFEDestroy(&fe);CHKERRQ(ierr);
-  ierr = test1(dm, options);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(DMGetDimension(dm, &dim));
+  PetscCall(DMPlexIsSimplex(dm, &simplex));
+  PetscCall(DMGetDS(dm, &ds));
+  PetscCall(PetscFECreateDefault(PetscObjectComm((PetscObject)dm), dim, 1, simplex, NULL, -1, &fe));
+  PetscCall(PetscDSSetDiscretization(ds, 0, (PetscObject)fe));
+  PetscCall(PetscFEDestroy(&fe));
+  PetscCall(test1(dm, options));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode test4(DM dm, AppCtx *options)
 {
-  PetscFE        fe;
-  PetscErrorCode ierr;
+  PetscFE   fe;
+  PetscInt  dim;
+  PetscBool simplex;
 
   PetscFunctionBegin;
-  ierr = PetscFECreateDefault(PetscObjectComm((PetscObject) dm), options->dim, 1, options->simplex, NULL, -1, &fe);CHKERRQ(ierr);
-  ierr = DMSetField(dm, 0, NULL, (PetscObject)fe);CHKERRQ(ierr);
-  ierr = PetscFEDestroy(&fe);CHKERRQ(ierr);
-  ierr = DMCreateDS(dm);CHKERRQ(ierr);
-  ierr = test2(dm, options);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(DMGetDimension(dm, &dim));
+  PetscCall(DMPlexIsSimplex(dm, &simplex));
+  PetscCall(PetscFECreateDefault(PetscObjectComm((PetscObject)dm), dim, 1, simplex, NULL, -1, &fe));
+  PetscCall(DMSetField(dm, 0, NULL, (PetscObject)fe));
+  PetscCall(PetscFEDestroy(&fe));
+  PetscCall(DMCreateDS(dm));
+  PetscCall(test2(dm, options));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode test5(DM dm, AppCtx *options)
 {
-  IS             cells;
-  Vec            locX, locX_t, locA;
-  PetscScalar    *u, *u_t, *a;
-  PetscErrorCode ierr;
+  IS           cells;
+  Vec          locX, locX_t, locA;
+  PetscScalar *u, *u_t, *a;
 
   PetscFunctionBegin;
   locX_t = NULL;
-  locA = NULL;
-  ierr = ISCreateStride(PETSC_COMM_SELF, 0, 0, 1, &cells);CHKERRQ(ierr);
-  ierr = DMGetLocalVector(dm, &locX);CHKERRQ(ierr);
-  ierr = DMPlexGetCellFields(    dm, cells, locX, locX_t, locA, &u, &u_t, &a);CHKERRQ(ierr);
-  ierr = DMPlexRestoreCellFields(dm, cells, locX, locX_t, locA, &u, &u_t, &a);CHKERRQ(ierr);
-  ierr = DMRestoreLocalVector(dm, &locX);CHKERRQ(ierr);
-  ierr = ISDestroy(&cells);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  locA   = NULL;
+  PetscCall(ISCreateStride(PETSC_COMM_SELF, 0, 0, 1, &cells));
+  PetscCall(DMGetLocalVector(dm, &locX));
+  PetscCall(DMPlexGetCellFields(dm, cells, locX, locX_t, locA, &u, &u_t, &a));
+  PetscCall(DMPlexRestoreCellFields(dm, cells, locX, locX_t, locA, &u, &u_t, &a));
+  PetscCall(DMRestoreLocalVector(dm, &locX));
+  PetscCall(ISDestroy(&cells));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode test6(DM dm, AppCtx *options)
 {
-  IS             cells;
-  Vec            locX, locX_t, locA;
-  PetscScalar    *u, *u_t, *a;
-  PetscMPIInt    rank;
-  PetscErrorCode ierr;
+  IS           cells;
+  Vec          locX, locX_t, locA;
+  PetscScalar *u, *u_t, *a;
+  PetscMPIInt  rank;
 
   PetscFunctionBegin;
-  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)dm), &rank);CHKERRQ(ierr);
+  PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)dm), &rank));
   locX_t = NULL;
-  locA = NULL;
-  ierr = ISCreateStride(PETSC_COMM_SELF, rank ? 0 : 1, 0, 1, &cells);CHKERRQ(ierr);
-  ierr = DMGetLocalVector(dm, &locX);CHKERRQ(ierr);
-  ierr = DMPlexGetCellFields(    dm, cells, locX, locX_t, locA, &u, &u_t, &a);CHKERRQ(ierr);
-  ierr = DMPlexRestoreCellFields(dm, cells, locX, locX_t, locA, &u, &u_t, &a);CHKERRQ(ierr);
-  ierr = DMRestoreLocalVector(dm, &locX);CHKERRQ(ierr);
-  ierr = ISDestroy(&cells);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  locA   = NULL;
+  PetscCall(ISCreateStride(PETSC_COMM_SELF, rank ? 0 : 1, 0, 1, &cells));
+  PetscCall(DMGetLocalVector(dm, &locX));
+  PetscCall(DMPlexGetCellFields(dm, cells, locX, locX_t, locA, &u, &u_t, &a));
+  PetscCall(DMPlexRestoreCellFields(dm, cells, locX, locX_t, locA, &u, &u_t, &a));
+  PetscCall(DMRestoreLocalVector(dm, &locX));
+  PetscCall(ISDestroy(&cells));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode test7(DM dm, AppCtx *options)
 {
-  PetscFE        fe;
-  PetscErrorCode ierr;
+  PetscFE   fe;
+  PetscInt  dim;
+  PetscBool simplex;
 
   PetscFunctionBegin;
-  ierr = PetscFECreateDefault(PetscObjectComm((PetscObject) dm), options->dim, 1, options->simplex, NULL, -1, &fe);CHKERRQ(ierr);
-  ierr = DMSetField(dm, 0, NULL, (PetscObject)fe);CHKERRQ(ierr);
-  ierr = PetscFEDestroy(&fe);CHKERRQ(ierr);
-  ierr = DMCreateDS(dm);CHKERRQ(ierr);
-  ierr = test5(dm, options);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(DMGetDimension(dm, &dim));
+  PetscCall(DMPlexIsSimplex(dm, &simplex));
+  PetscCall(PetscFECreateDefault(PetscObjectComm((PetscObject)dm), dim, 1, simplex, NULL, -1, &fe));
+  PetscCall(DMSetField(dm, 0, NULL, (PetscObject)fe));
+  PetscCall(PetscFEDestroy(&fe));
+  PetscCall(DMCreateDS(dm));
+  PetscCall(test5(dm, options));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode test8(DM dm, AppCtx *options)
 {
-  PetscFE        fe;
-  PetscErrorCode ierr;
+  PetscFE   fe;
+  PetscInt  dim;
+  PetscBool simplex;
 
   PetscFunctionBegin;
-  ierr = PetscFECreateDefault(PetscObjectComm((PetscObject) dm), options->dim, 1, options->simplex, NULL, -1, &fe);CHKERRQ(ierr);
-  ierr = DMSetField(dm, 0, NULL, (PetscObject)fe);CHKERRQ(ierr);
-  ierr = PetscFEDestroy(&fe);CHKERRQ(ierr);
-  ierr = DMCreateDS(dm);CHKERRQ(ierr);
-  ierr = test6(dm, options);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(DMGetDimension(dm, &dim));
+  PetscCall(DMPlexIsSimplex(dm, &simplex));
+  PetscCall(PetscFECreateDefault(PetscObjectComm((PetscObject)dm), dim, 1, simplex, NULL, -1, &fe));
+  PetscCall(DMSetField(dm, 0, NULL, (PetscObject)fe));
+  PetscCall(PetscFEDestroy(&fe));
+  PetscCall(DMCreateDS(dm));
+  PetscCall(test6(dm, options));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 int main(int argc, char **argv)
 {
-  MPI_Comm       comm;
-  DM             dm;
-  AppCtx         options;
-  PetscErrorCode ierr;
+  MPI_Comm comm;
+  DM       dm;
+  AppCtx   options;
 
-  ierr = PetscInitialize(&argc, &argv, NULL,help);if (ierr) return ierr;
+  PetscFunctionBeginUser;
+  PetscCall(PetscInitialize(&argc, &argv, NULL, help));
   comm = PETSC_COMM_WORLD;
-  ierr = ProcessOptions(comm, &options);CHKERRQ(ierr);
-  ierr = CreateMesh(comm, &options, &dm);CHKERRQ(ierr);
+  PetscCall(ProcessOptions(comm, &options));
+  PetscCall(CreateMesh(comm, &options, &dm));
 
   switch (options.test) {
-    case 0: ierr = test0(dm, &options);CHKERRQ(ierr); break;
-    case 1: ierr = test1(dm, &options);CHKERRQ(ierr); break;
-    case 2: ierr = test2(dm, &options);CHKERRQ(ierr); break;
-    case 3: ierr = test3(dm, &options);CHKERRQ(ierr); break;
-    case 4: ierr = test4(dm, &options);CHKERRQ(ierr); break;
-    case 5: ierr = test5(dm, &options);CHKERRQ(ierr); break;
-    case 6: ierr = test6(dm, &options);CHKERRQ(ierr); break;
-    case 7: ierr = test7(dm, &options);CHKERRQ(ierr); break;
-    case 8: ierr = test8(dm, &options);CHKERRQ(ierr); break;
-    default: SETERRQ1(comm, PETSC_ERR_ARG_OUTOFRANGE, "No such test: %D", options.test);
+  case 0:
+    PetscCall(test0(dm, &options));
+    break;
+  case 1:
+    PetscCall(test1(dm, &options));
+    break;
+  case 2:
+    PetscCall(test2(dm, &options));
+    break;
+  case 3:
+    PetscCall(test3(dm, &options));
+    break;
+  case 4:
+    PetscCall(test4(dm, &options));
+    break;
+  case 5:
+    PetscCall(test5(dm, &options));
+    break;
+  case 6:
+    PetscCall(test6(dm, &options));
+    break;
+  case 7:
+    PetscCall(test7(dm, &options));
+    break;
+  case 8:
+    PetscCall(test8(dm, &options));
+    break;
+  default:
+    SETERRQ(comm, PETSC_ERR_ARG_OUTOFRANGE, "No such test: %" PetscInt_FMT, options.test);
   }
 
-  ierr = DMDestroy(&dm);CHKERRQ(ierr);
-  ierr = PetscFinalize();
-  return ierr;
+  PetscCall(DMDestroy(&dm));
+  PetscCall(PetscFinalize());
+  return 0;
 }
 
 /*TEST
 
-  test:
-    suffix: 0
-    requires: ctetgen
-    args: -test 0
-  test:
-    suffix: 1
-    requires: ctetgen
-    args: -test 1
-  test:
-    suffix: 2
-    requires: ctetgen
-    args: -test 2
-  test:
-    suffix: 3
-    requires: ctetgen
-    args: -test 3
-  test:
-    suffix: 4
-    requires: ctetgen
-    args: -test 4
-  test:
-    suffix: 5
-    requires: ctetgen
-    args: -test 5
-  test:
-    suffix: 6
-    requires: ctetgen
-    args: -test 6
-  test:
-    suffix: 7
-    requires: ctetgen
-    args: -test 7
-  test:
-    suffix: 8
-    requires: ctetgen
-    args: -test 8
-  test:
-    suffix: 9
-    requires: ctetgen
-    nsize: 2
-    args: -test 1
-  test:
-    suffix: 10
-    requires: ctetgen
-    nsize: 2
-    args: -test 2
-  test:
-    suffix: 11
-    requires: ctetgen
-    nsize: 2
-    args: -test 3
-  test:
-    suffix: 12
-    requires: ctetgen
-    nsize: 2
-    args: -test 4
+  testset:
+    args: -dm_plex_dim 3 -dm_plex_interpolate 0
+
+    test:
+      suffix: 0
+      requires: ctetgen
+      args: -test 0
+    test:
+      suffix: 1
+      requires: ctetgen
+      args: -test 1
+    test:
+      suffix: 2
+      requires: ctetgen
+      args: -test 2
+    test:
+      suffix: 3
+      requires: ctetgen
+      args: -test 3
+    test:
+      suffix: 4
+      requires: ctetgen
+      args: -test 4
+    test:
+      suffix: 5
+      requires: ctetgen
+      args: -test 5
+    test:
+      suffix: 6
+      requires: ctetgen
+      args: -test 6
+    test:
+      suffix: 7
+      requires: ctetgen
+      args: -test 7
+    test:
+      suffix: 8
+      requires: ctetgen
+      args: -test 8
+    test:
+      suffix: 9
+      requires: ctetgen
+      nsize: 2
+      args: -test 1
+    test:
+      suffix: 10
+      requires: ctetgen
+      nsize: 2
+      args: -test 2
+    test:
+      suffix: 11
+      requires: ctetgen
+      nsize: 2
+      args: -test 3
+    test:
+      suffix: 12
+      requires: ctetgen
+      nsize: 2
+      args: -test 4
 
 TEST*/
-

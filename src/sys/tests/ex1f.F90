@@ -8,9 +8,7 @@
       PetscErrorCode  ierr
       integer line
 
-      call PetscError(PETSC_COMM_SELF,1,PETSC_ERROR_INITIAL,'Error message')
-
-      return
+      call PetscError(PETSC_COMM_SELF,1,PETSC_ERROR_INITIAL,'My error message')
       end
 
       subroutine MyErrHandler(comm,line,fun,file,n,p,mess,ctx,ierr)
@@ -21,8 +19,8 @@
       MPI_Comm comm
       character*(*) fun,file,mess
 
-      print*,'My error handler ',mess
-      return
+      write(6,*) 'My error handler ',mess
+      call flush(6)
       end
 
       program main
@@ -30,35 +28,24 @@
       PetscErrorCode ierr
       external       MyErrHandler
 
-      call PetscInitialize(PETSC_NULL_CHARACTER,ierr)
-      if (ierr .ne. 0) then
-        print*,'Unable to initialize PETSc'
-        stop
-      endif
-
-      call PetscPushErrorHandler(PetscTraceBackErrorHandler,PETSC_NULL_INTEGER,ierr)
-
-      call GenerateErr(__LINE__,ierr)
-
-      call PetscPushErrorHandler(MyErrHandler,PETSC_NULL_INTEGER,ierr)
-
-      call GenerateErr(__LINE__,ierr)
-
-      call PetscPushErrorHandler(PetscAbortErrorHandler,PETSC_NULL_INTEGER,ierr)
-
-      call GenerateErr(__LINE__,ierr)
-
-      call PetscFinalize(ierr)
+      PetscCallA(PetscInitialize(ierr))
+      PetscCallA(PetscPushErrorHandler(PetscTraceBackErrorHandler,PETSC_NULL_INTEGER,ierr))
+      PetscCallA(GenerateErr(__LINE__,ierr))
+      PetscCallA(PetscPushErrorHandler(MyErrHandler,PETSC_NULL_INTEGER,ierr))
+      PetscCallA(GenerateErr(__LINE__,ierr))
+      PetscCallA(PetscPushErrorHandler(PetscAbortErrorHandler,PETSC_NULL_INTEGER,ierr))
+      PetscCallA(GenerateErr(__LINE__,ierr))
+      PetscCallA(PetscFinalize(ierr))
       end
 
 !
-!     These test fails on some systems randomly due to the Fortran and C output becoming mixxed up,
+!     These test fails on some systems randomly due to the Fortran and C output becoming mixed up,
 !     using a Fortran flush after the Fortran print* does not resolve the issue
 !
 !/*TEST
 !
 !   test:
 !     args: -error_output_stdout
-!     filter:Error: egrep  "(My error handler|Operating system error: Cannot allocate memory)" | wc -l
+!     filter:Error: grep -E "(My error handler|Operating system error: Cannot allocate memory)" | wc -l
 !
 !TEST*/

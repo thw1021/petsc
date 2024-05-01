@@ -1,5 +1,3 @@
-
-
       program main
 #include <petsc/finclude/petsc.h>
       use petsc
@@ -11,25 +9,15 @@
 !
 !  Variables:
 !     snes        - nonlinear solver
-!     ksp        - linear solver
-!     pc          - preconditioner context
-!     ksp         - Krylov subspace method context
 !     x, r        - solution, residual vectors
 !     J           - Jacobian matrix
-!     its         - iterations for convergence
 !
       SNES     snes
-      PC       pc
-      KSP      ksp
       Vec      x,r,lb,ub
       Mat      J
-      SNESLineSearch linesearch
       PetscErrorCode  ierr
-      PetscInt its,i2,i20
+      PetscInt i2
       PetscMPIInt size
-      PetscScalar   pfive
-      PetscReal   tol
-      PetscBool   setls
       PetscScalar,pointer :: xx(:)
       PetscScalar zero,big
       SNESLineSearch ls
@@ -40,29 +28,14 @@
       external FormFunction, FormJacobian
       external ShashiPostCheck
 
-! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-!                   Macro definitions
-! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-!
-!  Macros to make clearer the process of setting values in vectors and
-!  getting values from vectors.  These vectors are used in the routines
-!  FormFunction() and FormJacobian().
-!   - The element lx_a(ib) is element ib in the vector x
-!
-#define lx_a(ib) lx_v(lx_i + (ib))
-#define lf_a(ib) lf_v(lf_i + (ib))
 !
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !                 Beginning of program
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-      call PetscInitialize(PETSC_NULL_CHARACTER,ierr)
-      if (ierr .ne. 0) then
-         print*,'Unable to initialize PETSc'
-         stop
-      endif
-      call MPI_Comm_size(PETSC_COMM_WORLD,size,ierr)
-      if (size .ne. 1) then; SETERRA(PETSC_COMM_WORLD,1,'requires one process'); endif
+      PetscCallA(PetscInitialize(ierr))
+      PetscCallMPIA(MPI_Comm_size(PETSC_COMM_WORLD,size,ierr))
+      PetscCheckA(size .eq. 1,PETSC_COMM_WORLD,1,'requires one process')
 
       big  = 2.88
       big  = PETSC_INFINITY
@@ -72,7 +45,7 @@
 !  Create nonlinear solver context
 ! - - - - - - - - - -- - - - - - - - - - - - - - - - - - - - - - - - - -
 
-      call SNESCreate(PETSC_COMM_WORLD,snes,ierr)
+      PetscCallA(SNESCreate(PETSC_COMM_WORLD,snes,ierr))
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !  Create matrix and vector data structures; set corresponding routines
@@ -80,58 +53,55 @@
 
 !  Create vectors for solution and nonlinear function
 
-      call VecCreateSeq(PETSC_COMM_SELF,i2,x,ierr)
-      call VecDuplicate(x,r,ierr)
-
+      PetscCallA(VecCreateSeq(PETSC_COMM_SELF,i2,x,ierr))
+      PetscCallA(VecDuplicate(x,r,ierr))
 
 !  Create Jacobian matrix data structure
 
-      call MatCreateDense(PETSC_COMM_SELF,26,26,26,26,                          &
-     &                    PETSC_NULL_SCALAR,J,ierr)
+      PetscCallA(MatCreateDense(PETSC_COMM_SELF,26,26,26,26,PETSC_NULL_SCALAR,J,ierr))
 
 !  Set function evaluation routine and vector
 
-      call SNESSetFunction(snes,r,FormFunction,0,ierr)
+      PetscCallA(SNESSetFunction(snes,r,FormFunction,0,ierr))
 
 !  Set Jacobian matrix data structure and Jacobian evaluation routine
 
-      call SNESSetJacobian(snes,J,J,FormJacobian,0,ierr)
+      PetscCallA(SNESSetJacobian(snes,J,J,FormJacobian,0,ierr))
 
-      call VecDuplicate(x,lb,ierr)
-      call VecDuplicate(x,ub,ierr)
-      call VecSet(lb,zero,ierr)
-!      call VecGetArrayF90(lb,xx,ierr)
-!      call ShashiLowerBound(xx)
-!      call VecRestoreArrayF90(lb,xx,ierr)
-      call VecSet(ub,big,ierr)
-!      call SNESVISetVariableBounds(snes,lb,ub,ierr)
+      PetscCallA(VecDuplicate(x,lb,ierr))
+      PetscCallA(VecDuplicate(x,ub,ierr))
+      PetscCallA(VecSet(lb,zero,ierr))
+!      PetscCallA(VecGetArrayF90(lb,xx,ierr))
+!      PetscCallA(ShashiLowerBound(xx))
+!      PetscCallA(VecRestoreArrayF90(lb,xx,ierr))
+      PetscCallA(VecSet(ub,big,ierr))
+!      PetscCallA(SNESVISetVariableBounds(snes,lb,ub,ierr))
 
-      call SNESGetLineSearch(snes,ls,ierr)
-      call SNESLineSearchSetPostCheck(ls,ShashiPostCheck,                 &
-     &                                0,ierr)
-      call SNESSetType(snes,SNESVINEWTONRSLS,ierr)
+      PetscCallA(SNESGetLineSearch(snes,ls,ierr))
+      PetscCallA(SNESLineSearchSetPostCheck(ls,ShashiPostCheck,0,ierr))
+      PetscCallA(SNESSetType(snes,SNESVINEWTONRSLS,ierr))
 
-      call SNESSetFromOptions(snes,ierr)
+      PetscCallA(SNESSetFromOptions(snes,ierr))
 
 !     set initial guess
 
-      call VecGetArrayF90(x,xx,ierr)
-      call ShashiInitialGuess(xx)
-      call VecRestoreArrayF90(x,xx,ierr)
+      PetscCallA(VecGetArrayF90(x,xx,ierr))
+      PetscCallA(ShashiInitialGuess(xx))
+      PetscCallA(VecRestoreArrayF90(x,xx,ierr))
 
-      call SNESSolve(snes,PETSC_NULL_VEC,x,ierr)
+      PetscCallA(SNESSolve(snes,PETSC_NULL_VEC,x,ierr))
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !  Free work space.  All PETSc objects should be destroyed when they
 !  are no longer needed.
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-      call VecDestroy(lb,ierr)
-      call VecDestroy(ub,ierr)
-      call VecDestroy(x,ierr)
-      call VecDestroy(r,ierr)
-      call MatDestroy(J,ierr)
-      call SNESDestroy(snes,ierr)
-      call PetscFinalize(ierr)
+      PetscCallA(VecDestroy(lb,ierr))
+      PetscCallA(VecDestroy(ub,ierr))
+      PetscCallA(VecDestroy(x,ierr))
+      PetscCallA(VecDestroy(r,ierr))
+      PetscCallA(MatDestroy(J,ierr))
+      PetscCallA(SNESDestroy(snes,ierr))
+      PetscCallA(PetscFinalize(ierr))
       end
 !
 ! ------------------------------------------------------------------------
@@ -157,8 +127,7 @@
 
 !  Declarations for use with local arrays
 
-      PetscScalar  lx_v(2),lf_v(2)
-      PetscOffset  lx_i,lf_i
+      PetscScalar,pointer ::lx_v(:),lf_v(:)
 
 !  Get pointers to vector data.
 !    - For default PETSc vectors, VecGetArray() returns a pointer to
@@ -168,13 +137,12 @@
 !    - Note that the Fortran interface to VecGetArray() differs from the
 !      C version.  See the Fortran chapter of the users manual for details.
 
-      call VecGetArrayRead(x,lx_v,lx_i,ierr)
-      call VecGetArray(f,lf_v,lf_i,ierr)
-      call ShashiFormFunction(lx_a(1),lf_a(1))
-      call VecRestoreArrayRead(x,lx_v,lx_i,ierr)
-      call VecRestoreArray(f,lf_v,lf_i,ierr)
+      PetscCall(VecGetArrayReadF90(x,lx_v,ierr))
+      PetscCall(VecGetArrayF90(f,lf_v,ierr))
+      PetscCall(ShashiFormFunction(lx_v,lf_v))
+      PetscCall(VecRestoreArrayReadF90(x,lx_v,ierr))
+      PetscCall(VecRestoreArrayF90(f,lf_v,ierr))
 
-      return
       end
 
 ! ---------------------------------------------------------------------
@@ -198,30 +166,25 @@
       SNES         snes
       Vec          X
       Mat          jac,B
-      PetscScalar  A(4)
       PetscErrorCode ierr
-      PetscInt idx(2),i2
       integer dummy(*)
 
 !  Declarations for use with local arrays
-
-      PetscScalar lx_v(1),lf_v(1)
-      PetscOffset lx_i,lf_i
+      PetscScalar,pointer ::lx_v(:),lf_v(:,:)
 
 !  Get pointer to vector data
 
-      call VecGetArrayRead(x,lx_v,lx_i,ierr)
-      call MatDenseGetArray(B,lf_v,lf_i,ierr)
-      call ShashiFormJacobian(lx_a(1),lf_a(1))
-      call MatDenseRestoreArray(B,lf_v,lf_i,ierr)
-      call VecRestoreArrayRead(x,lx_v,lx_i,ierr)
+      PetscCall(VecGetArrayReadF90(x,lx_v,ierr))
+      PetscCall(MatDenseGetArrayF90(B,lf_v,ierr))
+      PetscCall(ShashiFormJacobian(lx_v,lf_v))
+      PetscCall(MatDenseRestoreArrayF90(B,lf_v,ierr))
+      PetscCall(VecRestoreArrayReadF90(x,lx_v,ierr))
 
 !  Assemble matrix
 
-      call MatAssemblyBegin(jac,MAT_FINAL_ASSEMBLY,ierr)
-      call MatAssemblyEnd(jac,MAT_FINAL_ASSEMBLY,ierr)
+      PetscCall(MatAssemblyBegin(jac,MAT_FINAL_ASSEMBLY,ierr))
+      PetscCall(MatAssemblyEnd(jac,MAT_FINAL_ASSEMBLY,ierr))
 
-      return
       end
 
             subroutine ShashiLowerBound(an_r)
@@ -233,7 +196,6 @@
         do i=2,26
            an_r(i) = 1000.0/6.023D+23
         enddo
-        return
         end
 
             subroutine ShashiInitialGuess(an_r)
@@ -250,12 +212,8 @@
         PetscScalar p_init
         PetscInt nfuel
         PetscScalar temp,pt
-        PetscScalar an_r(26),k_eq(23),f_eq(26)
-        PetscScalar d_eq(26,26),H_molar(26)
+        PetscScalar an_r(26)
         PetscInt an_h(1),an_c(1)
-        PetscScalar part_p(26)
-        PetscInt i_cc,i_hh,i_h2o
-        PetscInt i_pwr2,i_co2_h2o
 
         pt = 0.1
         atom_c_init =6.7408177364816552D-022
@@ -271,7 +229,6 @@
         h_init = 128799.7267952987
         p_init = 0.1
         temp = 1500
-
 
       an_r( 1) =     1.66000D-24
       an_r( 2) =     1.66030D-22
@@ -305,7 +262,6 @@
       an_r( 6) =     1.88000
       an_r(14) =     1.
 
-
 #if defined(solution)
       an_r( 1) =      3.802208D-33
       an_r( 2) =      1.298287D-29
@@ -335,10 +291,7 @@
       an_r(26) =      6.149551D-18
 #endif
 
-      return
       end
-
-
 
       subroutine ShashiFormFunction(an_r,f_eq)
 !       implicit PetscScalar (a-h,o-z)
@@ -354,14 +307,12 @@
         PetscScalar p_init
         PetscInt nfuel
         PetscScalar temp,pt
-       PetscScalar an_r(26),k_eq(23),f_eq(26)
-       PetscScalar d_eq(26,26),H_molar(26)
-       PetscInt an_h(1),an_c(1)
-       PetscScalar part_p(26),idiff
+        PetscScalar an_r(26),k_eq(23),f_eq(26)
+        PetscScalar H_molar(26)
+        PetscInt an_h(1),an_c(1)
+        PetscScalar part_p(26),idiff
         PetscInt i_cc,i_hh,i_h2o
-        PetscInt i_pwr2,i_co2_h2o
-        PetscScalar an_t,sum_h,pt_cubed,pt_five
-        PetscScalar pt_four,pt_val1,pt_val2
+        PetscScalar an_t,sum_h
         PetscScalar a_io2
         PetscInt i,ip
         pt = 0.1
@@ -443,7 +394,6 @@
      &              + an_r(16)+ 2*an_r(17) + an_r(19)                   &
      &              +an_r(20) + 3*an_r(22)+an_r(26))
 
-
         f_eq(2) = atom_o_init                                           &
      &          - (an_o_additive*an_r(2) + 2*an_r(3)                    &
      &             + 2*an_r(4) + an_r(5)                                &
@@ -451,16 +401,12 @@
      &             + 2*an_r(15) + 2*an_r(16)+ an_r(20) + an_r(22)       &
      &             + an_r(23) + 2*an_r(24) + 1*an_r(25)+an_r(26))
 
-
         f_eq(3) = an_r(2)-1.0d-150
 
         f_eq(4) = atom_c_init                                           &
      &          - (an_c(1)*an_r(1) + an_c_additive * an_r(2)            &
      &          + an_r(4) + an_r(13)+ 2*an_r(17) + an_r(18)             &
      &          + an_r(19) + an_r(20))
-
-
-
 
         do ip = 1,26
            part_p(ip) = (an_r(ip)/an_t) * pt
@@ -481,9 +427,6 @@
      &              + an_r(15)                                          &
      &              + an_r(23))
 
-
-
-
       f_eq( 7) = part_p(11)                                             &
      &         - (k_eq( 1) * sqrt(part_p(14)+1d-23))
       f_eq( 8) = part_p( 8)                                             &
@@ -502,7 +445,6 @@
       f_eq(12) = part_p( 5)                                             &
      &         - (k_eq( 6) * sqrt(part_p( 3)+1d-23))                    &
      &         * (part_p(14))
-
 
       f_eq(13) = part_p( 4)                                             &
      &         - (k_eq( 7) * sqrt(part_p(3)+1.0d-23))                   &
@@ -532,9 +474,7 @@
 
       f_eq(21) = part_p(21)*part_p(23) - k_eq(19)*part_p(7)*part_p(8)
 
-
       f_eq(22) = part_p(5)*part_p(11) - k_eq(20)*part_p(21)*part_p(22)
-
 
       f_eq(23) = part_p(24) - k_eq(21)*part_p(21)*part_p(3)
 
@@ -549,7 +489,6 @@
                  write(44,*)i,f_eq(i)
               enddo
 
-      return
       end
 
       subroutine ShashiFormJacobian(an_r,d_eq)
@@ -566,25 +505,25 @@
         PetscScalar p_init
         PetscInt nfuel
         PetscScalar temp,pt
-        PetscScalar an_t,ai_o2,sum_h
+        PetscScalar an_t,ai_o2
         PetscScalar an_tot1_d,an_tot1
         PetscScalar an_tot2_d,an_tot2
         PetscScalar const5,const3,const2
-        PetscScalar   const_cube
-        PetscScalar   const_five
-        PetscScalar   const_four
-        PetscScalar   const_six
-        PetscInt jj,jb,ii3,id,ib,ip,i
-        PetscScalar   pt2,pt1
-        PetscScalar an_r(26),k_eq(23),f_eq(26)
+        PetscScalar const_cube
+        PetscScalar const_five
+        PetscScalar const_four
+        PetscScalar const_six
+        PetscInt jj,jb,ii3,id,ib,i
+        PetscScalar pt2,pt1
+        PetscScalar an_r(26),k_eq(23)
         PetscScalar d_eq(26,26),H_molar(26)
         PetscInt an_h(1),an_c(1)
-        PetscScalar ai_pwr1,part_p(26),idiff
+        PetscScalar ai_pwr1,idiff
         PetscInt i_cc,i_hh
         PetscInt i_h2o,i_pwr2,i_co2_h2o
         PetscScalar pt_cube,pt_five
         PetscScalar pt_four
-        PetscScalar pt_val1,pt_val2,a_io2
+        PetscScalar pt_val1,pt_val2
         PetscInt j
 
         pt = 0.1
@@ -699,16 +638,12 @@
         d_eq(2,25) = -1
         d_eq(2,26) = -1
 
-
-
         d_eq(6,6) = -2
         d_eq(6,7) = -1
         d_eq(6,9) = -1
         d_eq(6,12) = -2
         d_eq(6,15) = -1
         d_eq(6,23) = -1
-
-
 
         d_eq(4,1) = -an_c(1)
         d_eq(4,2) = -an_c_additive
@@ -719,12 +654,10 @@
         d_eq(4,19) = -1
         d_eq(4,20) = -1
 
-
 !----------
         const2 = an_t*an_t
         const3 = (an_t)*sqrt(an_t)
         const5 = an_t*const3
-
 
            const_cube =  an_t*an_t*an_t
            const_four =  const2*const2
@@ -753,11 +686,9 @@
            pt_val2 = (pt/an_t)**(i_pwr2)
            an_tot2_d = an_tot2*an_t
 
-
            d_eq(5,1) =                                                  &
      &           -(an_r(4)**i_cc)*(an_r(5)**i_h2o)                      &
      &           *((pt/an_t)**idiff) *(-idiff/an_t)
-
 
            do jj = 2,26
               d_eq(5,jj) = d_eq(5,1)
@@ -774,22 +705,16 @@
      &               - (i_h2o*(an_r(5)**(i_h2o-1)))                     &
      &               * (an_r(4)**i_cc)* ((pt/an_t)**idiff)
 
-
-
            d_eq(3,1) = -(an_r(4)**2)*(an_r(5)**3)*(pt/an_t)*(-1.0/an_t)
            do jj = 2,26
               d_eq(3,jj) = d_eq(3,1)
            enddo
 
-
            d_eq(3,2) = d_eq(3,2) + k_eq(12)* (an_r(3)**3)
-
-
 
            d_eq(3,3) = d_eq(3,3) + k_eq(12)* (3*an_r(3)**2)*an_r(2)
 
            d_eq(3,4) = d_eq(3,4) - 2*an_r(4)*(an_r(5)**3)*(pt/an_t)
-
 
            d_eq(3,5) = d_eq(3,5) - 3*(an_r(5)**2)*(an_r(4)**2)*(pt/an_t)
 !     &                           *(pt_five/const_five)
@@ -798,8 +723,6 @@
               d_eq(3,ii3) = 0.0d0
            enddo
            d_eq(3,2) = 1.0d0
-
-
 
         d_eq(7,1) = pt*an_r(11)*(-1.0)/const2                           &
      &            -k_eq(1)*sqrt(pt)*sqrt(an_r(14)+1d-50)*(-0.5/const3)
@@ -812,7 +735,6 @@
         d_eq(7,14) = d_eq(7,14)                                         &
      &            - k_eq(1)*sqrt(pt)*(0.5/(sqrt((an_r(14)+1d-50)*an_t)))
 
-
         d_eq(8,1) = pt*an_r(8)*(-1.0)/const2                            &
      &            -k_eq(2)*sqrt(pt)*sqrt(an_r(3)+1.0d-50)*(-0.5/const3)
 
@@ -824,7 +746,6 @@
      &            -k_eq(2)*sqrt(pt)*(0.5/(sqrt((an_r(3)+1.0d-50)*an_t)))
         d_eq(8,8) = d_eq(8,8) + pt/an_t
 
-
         d_eq(9,1) = pt*an_r(7)*(-1.0)/const2                            &
      &            -k_eq(3)*sqrt(pt)*sqrt(an_r(6))*(-0.5/const3)
 
@@ -835,7 +756,6 @@
         d_eq(9,7) = d_eq(9,7) + pt/an_t
         d_eq(9,6) = d_eq(9,6)                                           &
      &             -k_eq(3)*sqrt(pt)*(0.5/(sqrt(an_r(6)*an_t)))
-
 
         d_eq(10,1) = pt*an_r(10)*(-1.0)/const2                          &
      &             -k_eq(4)*(pt)*sqrt((an_r(3)+1.0d-50)                 &
@@ -868,12 +788,9 @@
      &       *(0.5/(sqrt(an_r(6))*an_t))
         d_eq(11,9) = d_eq(11,9) + pt/an_t
 
-
-
         d_eq(12,1) = pt*an_r(5)*(-1.0)/const2                           &
      &             -k_eq(6)*(pt**1.5)*sqrt(an_r(3)+1.0d-50)             &
      &             *(an_r(14))*(-1.5/const5)
-
 
         do jj = 2,26
            d_eq(12,jj) = d_eq(12,1)
@@ -886,7 +803,6 @@
         d_eq(12,5) = d_eq(12,5) + pt/an_t
         d_eq(12,14) = d_eq(12,14)                                       &
      &            -k_eq(6)*(pt**1.5)*(sqrt(an_r(3)+1.0d-50)/const3)
-
 
         d_eq(13,1) = pt*an_r(4)*(-1.0)/const2                           &
      &             -k_eq(7)*(pt**1.5)*sqrt(an_r(3)+1.0d-50)             &
@@ -904,9 +820,6 @@
         d_eq(13,13) = d_eq(13,13)                                       &
      &            -k_eq(7)*(pt**1.5)*(sqrt(an_r(3)+1.0d-50)/const3)
 
-
-
-
         d_eq(14,1) = pt*an_r(15)*(-1.0)/const2                          &
      &             -k_eq(8)*(pt**1.5)*sqrt(an_r(3)+1.0d-50)             &
      &             *(an_r(9))*(-1.5/const5)
@@ -922,8 +835,6 @@
      &            -k_eq(8)*(pt**1.5)*(sqrt(an_r(3)+1.0d-50)/const3)
         d_eq(14,15) = d_eq(14,15)+ pt/an_t
 
-
-
         d_eq(15,1) = pt*an_r(16)*(-1.0)/const2                          &
      &             -k_eq(9)*(pt**1.5)*sqrt(an_r(14)+1.0d-50)            &
      &             *(an_r(3))*(-1.5/const5)
@@ -938,7 +849,6 @@
      &            -k_eq(9)*(pt**1.5)*(an_r(3)/const3)                   &
      &            *(0.5/sqrt(an_r(14)+1.0d-50))
         d_eq(15,16) = d_eq(15,16) + pt/an_t
-
 
         d_eq(16,1) = pt*an_r(12)*(-1.0)/const2                          &
      &             -k_eq(10)*(pt**1.5)*sqrt(an_r(3)+1.0d-50)            &
@@ -956,13 +866,8 @@
      &             -k_eq(10)*(pt**1.5)*(sqrt(an_r(3)+1.0d-50)/const3)
         d_eq(16,12) = d_eq(16,12) + pt/an_t
 
-
-
-
-
         const_cube =  an_t*an_t*an_t
         const_four =  const2*const2
-
 
         d_eq(17,1) = an_r(14)*an_r(18)*an_r(18)*(pt**3)*(-3/const_four) &
      &             - k_eq(15) * an_r(17)*pt * (-1/const2)
@@ -973,7 +878,6 @@
         d_eq(17,17) = d_eq(17,17) - k_eq(15)*pt/an_t
         d_eq(17,18) = d_eq(17,18) + 2*an_r(18)*an_r(14)                 &
      &                            *(pt**3)/const_cube
-
 
         d_eq(18,1) = an_r(13)*an_r(13)*(pt**2)*(-2/const_cube)          &
      &             - k_eq(16) * an_r(3)*an_r(18)*an_r(18)               &
@@ -987,8 +891,6 @@
      &              + 2* an_r(13)*pt*pt /const2
         d_eq(18,18) = d_eq(18,18) -k_eq(16)*an_r(3)                     &
      &              * 2*an_r(18)*pt*pt*pt/const_cube
-
-
 
 !====for eq 19
 
@@ -1046,8 +948,6 @@
         d_eq(22,11) = d_eq(22,11) + an_r(5)*pt*pt/(const2)
         d_eq(22,5) = d_eq(22,5) + an_r(11)*pt*pt/(const2)
 
-
-
 !========
 !  for 23
 
@@ -1100,15 +1000,12 @@
         d_eq(26,25) = 1
         d_eq(26,26) = 1
 
-
            do j = 1,26
          do i = 1,26
                 write(44,*)i,j,d_eq(i,j)
               enddo
            enddo
 
-
-        return
         end
 
       subroutine ShashiPostCheck(ls,X,Y,W,c_Y,c_W,dummy)
@@ -1122,7 +1019,7 @@
       PetscBool c_Y,c_W
       PetscScalar,pointer :: xx(:)
       PetscInt i
-      call VecGetArrayF90(W,xx,ierr)
+      PetscCall(VecGetArrayF90(W,xx,ierr))
       do i=1,26
          if (xx(i) < 0.0) then
             xx(i) = 0.0
@@ -1132,6 +1029,5 @@
            xx(i) = 3.0
         endif
       enddo
-      call VecRestoreArrayF90(W,xx,ierr)
-      return
+      PetscCall(VecRestoreArrayF90(W,xx,ierr))
       end

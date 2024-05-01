@@ -1,76 +1,65 @@
 /*
        Provides the calling sequences for all the basic PetscDraw routines.
 */
-#include <petsc/private/drawimpl.h>  /*I "petscdraw.h" I*/
+#include <petsc/private/drawimpl.h> /*I "petscdraw.h" I*/
 
 /*@
-   PetscDrawClear - Clears graphical output. All processors must call this routine.
-   Does not return until the draw in context is clear.
+  PetscDrawClear - Clears graphical output. All processors must call this routine.
+  Does not return until the draw in context is clear.
 
-   Collective on PetscDraw
+  Collective
 
-   Input Parameters:
-.  draw - the drawing context
+  Input Parameter:
+. draw - the drawing context
 
-   Level: intermediate
+  Level: intermediate
 
+.seealso: `PetscDrawBOP()`, `PetscDrawEOP()`
 @*/
-PetscErrorCode  PetscDrawClear(PetscDraw draw)
+PetscErrorCode PetscDrawClear(PetscDraw draw)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
-  if (draw->saveonclear) {ierr = PetscDrawSave(draw);CHKERRQ(ierr);}
-  if (draw->ops->clear) {
-    ierr = (*draw->ops->clear)(draw);CHKERRQ(ierr);
-  }
-  PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(draw, PETSC_DRAW_CLASSID, 1);
+  if (draw->saveonclear) PetscCall(PetscDrawSave(draw));
+  PetscTryTypeMethod(draw, clear);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   PetscDrawBOP - Begins a new page or frame on the selected graphical device.
+  PetscDrawBOP - Begins a new page or frame on the selected graphical device.
 
-   Logically Collective on PetscDraw
+  Logically Collective
 
-   Input Parameter:
-.  draw - the drawing context
+  Input Parameter:
+. draw - the drawing context
 
-   Level: advanced
+  Level: advanced
 
-.seealso: PetscDrawEOP(), PetscDrawClear()
+.seealso: `PetscDrawEOP()`, `PetscDrawClear()`
 @*/
-PetscErrorCode  PetscDrawBOP(PetscDraw draw)
+PetscErrorCode PetscDrawBOP(PetscDraw draw)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
-  if (draw->ops->beginpage) {
-    ierr = (*draw->ops->beginpage)(draw);CHKERRQ(ierr);
-  }
-  PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(draw, PETSC_DRAW_CLASSID, 1);
+  PetscTryTypeMethod(draw, beginpage);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 /*@
-   PetscDrawEOP - Ends a page or frame on the selected graphical device.
+  PetscDrawEOP - Ends a page or frame on the selected graphical device.
 
-   Logically Collective on PetscDraw
+  Logically Collective
 
-   Input Parameter:
-.  draw - the drawing context
+  Input Parameter:
+. draw - the drawing context
 
-   Level: advanced
+  Level: advanced
 
-.seealso: PetscDrawBOP(), PetscDrawClear()
+.seealso: `PetscDrawBOP()`, `PetscDrawClear()`
 @*/
-PetscErrorCode  PetscDrawEOP(PetscDraw draw)
+PetscErrorCode PetscDrawEOP(PetscDraw draw)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
-  if (draw->ops->endpage) {
-    ierr =  (*draw->ops->endpage)(draw);CHKERRQ(ierr);
-  }
-  PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(draw, PETSC_DRAW_CLASSID, 1);
+  PetscTryTypeMethod(draw, endpage);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

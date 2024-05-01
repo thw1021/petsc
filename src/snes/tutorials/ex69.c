@@ -7,21 +7,11 @@ and compare against exact solutions from Mirko Velic.\n\n\n";
   (\nabla v, \mu (\nabla u + {\nabla u}^T)) - (\nabla\cdot v, p) + (v, f) &= 0 \\
   (q, \nabla\cdot u)                                                      &= 0
 \end{align*}
-Free slip conditions for velocity are enforced on every wall. The pressure is
-constrained to have zero integral over the domain.
+Free slip conditions for velocity are enforced on every wall. The pressure is constrained to have zero integral over the domain.
 
 To produce nice output, use
 
   -dm_refine 3 -show_error -dm_view hdf5:sol1.h5 -error_vec_view hdf5:sol1.h5::append -sol_vec_view hdf5:sol1.h5::append -exact_vec_view hdf5:sol1.h5::append
-
-Testing the solver:
-
-./ex69 -sol_type solkx -simplex 0 -mantle_basename /PETSc3/geophysics/MM/input_data/TwoDimSlab45cg1deguf4 -dm_plex_separate_marker -vel_petscspace_degree 1 -pres_petscspace_degree 0 -pc_fieldsplit_diag_use_amat -pc_type fieldsplit -pc_fieldsplit_type schur -pc_fieldsplit_schur_factorization_type full -pc_fieldsplit_schur_precondition a11 -fieldsplit_velocity_pc_type lu -fieldsplit_pressure_pc_type lu -snes_error_if_not_converged -snes_view -ksp_error_if_not_converged -dm_view -snes_monitor -snes_converged_reason -ksp_monitor_true_residual -ksp_converged_reason -fieldsplit_velocity_ksp_monitor_no -fieldsplit_velocity_ksp_converged_reason_no -fieldsplit_pressure_ksp_monitor -fieldsplit_pressure_ksp_converged_reason -ksp_rtol 1e-8 -fieldsplit_pressure_ksp_rtol 1e-3 -fieldsplit_pressure_pc_type lu -snes_max_it 1 -snes_error_if_not_converged 0 -snes_view -petscds_jac_pre 1
-
-Testing the Jacobian:
-
-./ex69  -sol_type solkx -simplex 0 -mantle_basename $PETSC_DIR/share/petsc/datafiles/mantle/small -dm_plex_separate_marker -vel_petscspace_degree 1 -pres_petscspace_degree 0 -pc_fieldsplit_diag_use_amat -pc_type fieldsplit -pc_fieldsplit_type schur -pc_fieldsplit_schur_factorization_type full -pc_fieldsplit_schur_precondition a11 -fieldsplit_velocity_pc_type lu -fieldsplit_pressure_pc_type lu -snes_error_if_not_converged -snes_view -ksp_error_if_not_converged -dm_view -snes_monitor -snes_converged_reason -ksp_monitor -ksp_converged_reason -fieldsplit_velocity_ksp_monitor -fieldsplit_velocity_ksp_converged_reason -fieldsplit_velocity_ksp_view_pmat -fieldsplit_pressure_ksp_monitor -fieldsplit_pressure_ksp_converged_reason -fieldsplit_pressure_ksp_view_pmat -snes_test_jacobian -snes_test_jacobian_view -petscds_jac_pre 0
-
 */
 
 #include <petscdmplex.h>
@@ -29,179 +19,133 @@ Testing the Jacobian:
 #include <petscds.h>
 #include <petscbag.h>
 
-typedef enum {SOLKX, SOLCX, NUM_SOL_TYPES} SolutionType;
-const char *solTypes[NUM_SOL_TYPES+1] = {"solkx", "solcx", "unknown"};
+typedef enum {
+  SOLKX,
+  SOLCX,
+  NUM_SOL_TYPES
+} SolutionType;
+const char *solTypes[NUM_SOL_TYPES + 1] = {"solkx", "solcx", "unknown"};
 
 typedef struct {
-  PetscInt  n, m;       /* x- and y-wavelengths for variation across the domain */
+  PetscInt n, m; /* x- and y-wavelengths for variation across the domain */
   /* SolKx */
-  PetscReal B;          /* Exponential scale for viscosity variation */
+  PetscReal B; /* Exponential scale for viscosity variation */
   /* SolCx */
   PetscReal etaA, etaB; /* Two viscosities for discontinuous change */
   PetscReal xc;         /* The location of viscosity jump */
 } Parameter;
 
 typedef struct {
-  PetscInt      debug;             /* The debugging level */
-  PetscBool     showSolution, showError;
-  /* Domain and mesh definition */
-  PetscInt      dim;               /* The topological mesh dimension */
-  PetscBool     simplex;           /* Use simplices or tensor product cells */
-  PetscInt      serRef;            /* Number of serial refinements before the mesh gets distributed */
-  int           verts[3];          /* The number of vertices in each dimension for mantle problems */
-  int           perm[3] ;          /* The permutation of axes for mantle problems */
-  /* Problem definition */
-  SolutionType  solType;           /* The type of exact solution */
-  PetscBag      bag;               /* Holds problem parameters */
+  SolutionType solType; /* The type of exact solution */
+  PetscBag     bag;     /* Holds problem parameters */
 } AppCtx;
 
-static PetscErrorCode zero_scalar(PetscInt dim, PetscReal time, const PetscReal coords[], PetscInt Nf, PetscScalar *u, void *ctx)
+static PetscErrorCode zero(PetscInt dim, PetscReal time, const PetscReal coords[], PetscInt Nc, PetscScalar *u, void *ctx)
 {
-  u[0] = 0.0;
-  return 0;
+  PetscInt c;
+  for (c = 0; c < Nc; ++c) u[c] = 0.0;
+  return PETSC_SUCCESS;
 }
-static PetscErrorCode one_scalar(PetscInt dim, PetscReal time, const PetscReal coords[], PetscInt Nf, PetscScalar *u, void *ctx)
+static PetscErrorCode one(PetscInt dim, PetscReal time, const PetscReal coords[], PetscInt Nc, PetscScalar *u, void *ctx)
 {
-  u[0] = 1.0;
-  return 0;
-}
-static PetscErrorCode zero_vector(PetscInt dim, PetscReal time, const PetscReal coords[], PetscInt Nf, PetscScalar *u, void *ctx)
-{
-  PetscInt d;
-  for (d = 0; d < dim; ++d) u[d] = 0.0;
-  return 0;
+  PetscInt c;
+  for (c = 0; c < Nc; ++c) u[c] = 1.0;
+  return PETSC_SUCCESS;
 }
 
-static void f0_u(PetscInt dim, PetscInt Nf, PetscInt NfAux,
-                 const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
-                 const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
-                 PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f0[])
+static void f0_u(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f0[])
 {
   f0[0] = 0.0;
-  f0[1] = -PetscSinScalar(constants[1]*PETSC_PI*x[1])*PetscCosScalar(constants[0]*PETSC_PI*x[0]);
+  f0[1] = -PetscSinScalar(constants[1] * PETSC_PI * x[1]) * PetscCosScalar(constants[0] * PETSC_PI * x[0]);
 }
 
-static void stokes_momentum_kx(PetscInt dim, PetscInt Nf, PetscInt NfAux,
-                               const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
-                               const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
-                               PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f1[])
+static void stokes_momentum_kx(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f1[])
 {
-  const PetscReal mu = PetscExpReal(2.0*PetscRealPart(constants[2])*x[0]);
+  const PetscReal mu = PetscExpReal(2.0 * PetscRealPart(constants[2]) * x[0]);
   PetscInt        c, d;
 
   for (c = 0; c < dim; ++c) {
-    for (d = 0; d < dim; ++d) {
-      f1[c*dim+d] = mu * (u_x[c*dim+d] + u_x[d*dim+c]);
-    }
-    f1[c*dim+c] -= u[dim];
+    for (d = 0; d < dim; ++d) f1[c * dim + d] = mu * (u_x[c * dim + d] + u_x[d * dim + c]);
+    f1[c * dim + c] -= u[dim];
   }
 }
 
-static void stokes_momentum_cx(PetscInt dim, PetscInt Nf, PetscInt NfAux,
-                               const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
-                               const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
-                               PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f1[])
+static void stokes_momentum_cx(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f1[])
 {
   const PetscReal mu = x[0] < PetscRealPart(constants[4]) ? PetscRealPart(constants[2]) : PetscRealPart(constants[3]);
   PetscInt        c, d;
 
   for (c = 0; c < dim; ++c) {
-    for (d = 0; d < dim; ++d) {
-      f1[c*dim+d] = mu * (u_x[c*dim+d] + u_x[d*dim+c]);
-    }
-    f1[c*dim+c] -= u[dim];
+    for (d = 0; d < dim; ++d) f1[c * dim + d] = mu * (u_x[c * dim + d] + u_x[d * dim + c]);
+    f1[c * dim + c] -= u[dim];
   }
 }
 
-static void stokes_mass(PetscInt dim, PetscInt Nf, PetscInt NfAux,
-                        const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
-                        const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
-                        PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f0[])
+static void stokes_mass(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f0[])
 {
   PetscInt d;
   f0[0] = 0.0;
-  for (d = 0; d < dim; ++d) f0[0] += u_x[d*dim+d];
+  for (d = 0; d < dim; ++d) f0[0] -= u_x[d * dim + d];
 }
 
-static void f1_zero(PetscInt dim, PetscInt Nf, PetscInt NfAux,
-                    const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
-                    const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
-                    PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f1[])
+static void f1_zero(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f1[])
 {
   PetscInt d;
-  for (d = 0; d < dim*dim; ++d) f1[d] = 0.0;
+  for (d = 0; d < dim * dim; ++d) f1[d] = 0.0;
 }
 
 /* < q, \nabla\cdot u >, J_{pu} */
-static void stokes_mass_J(PetscInt dim, PetscInt Nf, PetscInt NfAux,
-                          const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
-                          const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
-                          PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar g1[])
+static void stokes_mass_J(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar g1[])
 {
   PetscInt d;
-  for (d = 0; d < dim; ++d) g1[d*dim+d] = 1.0; /* \frac{\partial\phi^{u_d}}{\partial x_d} */
+  for (d = 0; d < dim; ++d) g1[d * dim + d] = -1.0; /* \frac{\partial\phi^{u_d}}{\partial x_d} */
 }
 
-
 /* -< \nabla\cdot v, p >, J_{up} */
-static void stokes_momentum_pres_J(PetscInt dim, PetscInt Nf, PetscInt NfAux,
-                                   const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
-                                   const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
-                                   PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar g2[])
+static void stokes_momentum_pres_J(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar g2[])
 {
   PetscInt d;
-  for (d = 0; d < dim; ++d) g2[d*dim+d] = -1.0; /* \frac{\partial\psi^{u_d}}{\partial x_d} */
+  for (d = 0; d < dim; ++d) g2[d * dim + d] = -1.0; /* \frac{\partial\psi^{u_d}}{\partial x_d} */
 }
 
 /* < \nabla v, \nabla u + {\nabla u}^T >, J_{uu}
    This just gives \nabla u, give the perdiagonal for the transpose */
-static void stokes_momentum_vel_J_kx(PetscInt dim, PetscInt Nf, PetscInt NfAux,
-                                     const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
-                                     const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
-                                     PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar g3[])
+static void stokes_momentum_vel_J_kx(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar g3[])
 {
-  const PetscReal mu  = PetscExpReal(2.0*PetscRealPart(constants[2])*x[0]);
+  const PetscReal mu = PetscExpReal(2.0 * PetscRealPart(constants[2]) * x[0]);
   PetscInt        cI, d;
 
   for (cI = 0; cI < dim; ++cI) {
     for (d = 0; d < dim; ++d) {
-      g3[((cI*dim+cI)*dim+d)*dim+d] += mu; /*g3[cI, cI, d, d]*/
-      g3[((cI*dim+d)*dim+d)*dim+cI] += mu; /*g3[cI, d, d, cI]*/
+      g3[((cI * dim + cI) * dim + d) * dim + d] += mu; /*g3[cI, cI, d, d]*/
+      g3[((cI * dim + d) * dim + d) * dim + cI] += mu; /*g3[cI, d, d, cI]*/
     }
   }
 }
-static void stokes_momentum_vel_J_cx(PetscInt dim, PetscInt Nf, PetscInt NfAux,
-                                     const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
-                                     const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
-                                     PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar g3[])
+static void stokes_momentum_vel_J_cx(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar g3[])
 {
   const PetscReal mu = x[0] < PetscRealPart(constants[4]) ? PetscRealPart(constants[2]) : PetscRealPart(constants[3]);
   PetscInt        cI, d;
 
   for (cI = 0; cI < dim; ++cI) {
     for (d = 0; d < dim; ++d) {
-      g3[((cI*dim+cI)*dim+d)*dim+d] += mu; /*g3[cI, cI, d, d]*/
-      g3[((cI*dim+d)*dim+d)*dim+cI] += mu; /*g3[cI, d, d, cI]*/
+      g3[((cI * dim + cI) * dim + d) * dim + d] += mu; /*g3[cI, cI, d, d]*/
+      g3[((cI * dim + d) * dim + d) * dim + cI] += mu; /*g3[cI, d, d, cI]*/
     }
   }
 }
 
 /* 1/mu < q, I q >, Jp_{pp} */
-static void stokes_identity_J_kx(PetscInt dim, PetscInt Nf, PetscInt NfAux,
-                                 const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
-                                 const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
-                                 PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar g0[])
+static void stokes_identity_J_kx(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar g0[])
 {
-  const PetscReal mu = PetscExpReal(2.0*PetscRealPart(constants[2])*x[0]);
-  g0[0] = 1.0/mu;
+  const PetscReal mu = PetscExpReal(2.0 * PetscRealPart(constants[2]) * x[0]);
+  g0[0]              = 1.0 / mu;
 }
-static void stokes_identity_J_cx(PetscInt dim, PetscInt Nf, PetscInt NfAux,
-                                 const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
-                                 const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
-                                 PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar g0[])
+
+static void stokes_identity_J_cx(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar g0[])
 {
   const PetscReal mu = x[0] < PetscRealPart(constants[4]) ? PetscRealPart(constants[2]) : PetscRealPart(constants[3]);
-  g0[0] = 1.0/mu;
+  g0[0]              = 1.0 / mu;
 }
 
 /*
@@ -221,93 +165,95 @@ static void stokes_identity_J_cx(PetscInt dim, PetscInt Nf, PetscInt NfAux,
 - mu    - The viscosity at (x,z), or NULL
 
   Note:
-$  The domain is the square 0 <= x,z <= 1. We solve the Stokes equation for incompressible flow with free-slip boundary
-$  conditions everywhere. The forcing term f is given by
-$
-$    fx = 0
-$    fz = sigma*sin(km*z)*cos(kn*x)
-$
-$  where
-$
-$    km = m*Pi (m may be non-integral)
-$    kn = n*Pi
-$
-$  meaning that the density rho is -sigma*sin(km*z)*cos(kn*x). Here we set sigma = 1.
-$  The viscosity eta is exp(2*B*x).
+.vb
+  The domain is the square 0 <= x,z <= 1. We solve the Stokes equation for incompressible flow with free-slip boundary
+  conditions everywhere. The forcing term f is given by
+
+    fx = 0
+    fz = sigma*sin(km*z)*cos(kn*x)
+
+  where
+
+    km = m*Pi (m may be non-integral)
+    kn = n*Pi
+
+  meaning that the density rho is -sigma*sin(km*z)*cos(kn*x). Here we set sigma = 1.
+  The viscosity eta is exp(2*B*x).
+.ve
+
 */
-static PetscErrorCode SolKxSolution(const PetscReal pos[], PetscReal m, PetscInt n, PetscReal B,
-                                    PetscScalar vel[], PetscScalar *p, PetscScalar s[], PetscScalar gamma[], PetscScalar *mu)
+static PetscErrorCode SolKxSolution(const PetscReal pos[], PetscReal m, PetscInt n, PetscReal B, PetscScalar vel[], PetscScalar *p, PetscScalar s[], PetscScalar gamma[], PetscScalar *mu)
 {
   PetscReal sigma = 1.0;
   PetscReal Z;
-  PetscReal u1,u2,u3,u4,u5,u6;
-  PetscReal sum1,sum2,sum3,sum4,sum5,sum6;
-  PetscReal kn,km,x,z;
-  PetscReal _PC1,_PC2,_PC3,_PC4;
+  PetscReal u1, u2, u3, u4, u5, u6;
+  PetscReal sum1, sum2, sum3, sum4, sum5, sum6;
+  PetscReal kn, km, x, z;
+  PetscReal _PC1, _PC2, _PC3, _PC4;
   PetscReal Rp, UU, VV;
-  PetscReal a,b,r,_aa,_bb,AA,BB,Rm;
-  PetscReal num1,num2,num3,num4,den1;
+  PetscReal a, b, r, _aa, _bb, AA, BB, Rm;
+  PetscReal num1, num2, num3, num4, den1;
 
-  PetscReal t1,t2,t3,t4,t5,t6,t7,t8,t9,t10;
-  PetscReal t11,t12,t13,t14,t15,t16,t17,t18,t19,t20;
-  PetscReal t21,t22,t23,t24,t25,t26,t27,t28,t29,t30;
-  PetscReal t31,t32,t33,t34,t35,t36,t37,t38,t39,t40;
-  PetscReal t41,t42,t43,t44,t45,t46,t47,t49,t51,t53;
-  PetscReal t56,t58,t61,t62,t63,t64,t65,t66,t67,t68;
-  PetscReal t69,t70,t71,t72,t73,t74,t75,t76,t77,t78;
-  PetscReal t79,t80,t81,t82,t83,t84,t85,t86,t87,t88;
-  PetscReal t89,t90,t91,t92,t93,t94,t95,t96,t97,t99;
-  PetscReal t100,t101,t103,t104,t105,t106,t107,t108,t109,t110;
-  PetscReal t111,t112,t113,t114,t115,t116,t117,t118,t119,t120;
-  PetscReal t121,t124,t125,t126,t127,t129,t130,t132,t133,t135;
-  PetscReal t136,t138,t140,t141,t142,t143,t152,t160,t162;
+  PetscReal t1, t2, t3, t4, t5, t6, t7, t8, t9, t10;
+  PetscReal t11, t12, t13, t14, t15, t16, t17, t18, t19, t20;
+  PetscReal t21, t22, t23, t24, t25, t26, t27, t28, t29, t30;
+  PetscReal t31, t32, t33, t34, t35, t36, t37, t38, t39, t40;
+  PetscReal t41, t42, t43, t44, t45, t46, t47, t49, t51, t53;
+  PetscReal t56, t58, t61, t62, t63, t64, t65, t66, t67, t68;
+  PetscReal t69, t70, t71, t72, t73, t74, t75, t76, t77, t78;
+  PetscReal t79, t80, t81, t82, t83, t84, t85, t86, t87, t88;
+  PetscReal t89, t90, t91, t92, t93, t94, t95, t96, t97, t99;
+  PetscReal t100, t101, t103, t104, t105, t106, t107, t108, t109, t110;
+  PetscReal t111, t112, t113, t114, t115, t116, t117, t118, t119, t120;
+  PetscReal t121, t124, t125, t126, t127, t129, t130, t132, t133, t135;
+  PetscReal t136, t138, t140, t141, t142, t143, t152, t160, t162;
 
   PetscFunctionBegin;
   /*************************************************************************/
   /*************************************************************************/
   /* rho = -sin(km*z)*cos(kn*x) */
-  x = pos[0];
-  z = pos[1];
-  Z = PetscExpReal( 2.0 * B * x);
-  km = m*PETSC_PI; /* solution valid for km not zero -- should get trivial solution if km=0 */
-  kn = (PetscReal) n*PETSC_PI;
+  x  = pos[0];
+  z  = pos[1];
+  Z  = PetscExpReal(2.0 * B * x);
+  km = m * PETSC_PI; /* solution valid for km not zero -- should get trivial solution if km=0 */
+  kn = (PetscReal)n * PETSC_PI;
   /*************************************************************************/
   /*************************************************************************/
-  a = B*B + km*km;
-  b = 2.0*km*B;
-  r = PetscSqrtReal(a*a + b*b);
-  Rp = PetscSqrtReal( (r+a)/2.0);
-  Rm  = PetscSqrtReal( (r-a)/2.0);
-  UU  = Rp - B;
+  a  = B * B + km * km;
+  b  = 2.0 * km * B;
+  r  = PetscSqrtReal(a * a + b * b);
+  Rp = PetscSqrtReal((r + a) / 2.0);
+  Rm = PetscSqrtReal((r - a) / 2.0);
+  UU = Rp - B;
   VV = Rp + B;
 
-  sum1=0.0;
-  sum2=0.0;
-  sum3=0.0;
-  sum4=0.0;
-  sum5=0.0;
-  sum6=0.0;
+  sum1 = 0.0;
+  sum2 = 0.0;
+  sum3 = 0.0;
+  sum4 = 0.0;
+  sum5 = 0.0;
+  sum6 = 0.0;
   /*sum7=0.0;*/
 
   /*******************************************/
   /*         calculate the constants         */
   /*******************************************/
 
-  t1 = kn * kn;
-  t4 = km * km;
-  t5 = t4 + t1;
-  t6 = t5 * t5;
-  t8 = pow(km + kn, 0.2e1);
-  t9 = B * B;
+  t1  = kn * kn;
+  t4  = km * km;
+  t5  = t4 + t1;
+  t6  = t5 * t5;
+  t8  = pow(km + kn, 0.2e1);
+  t9  = B * B;
   t16 = pow(km - kn, 0.2e1);
   _aa = -0.4e1 * B * t1 * sigma * t5 / (t6 + 0.4e1 * t8 * t9) / (t6 + 0.4e1 * t16 * t9);
 
-  t2 = km * km;
-  t3 = kn * kn;
-  t5 = pow(t2 + t3, 0.2e1);
-  t6 = km - kn;
-  t7 = km + kn;
-  t9 = B * B;
+  t2  = km * km;
+  t3  = kn * kn;
+  t5  = pow(t2 + t3, 0.2e1);
+  t6  = km - kn;
+  t7  = km + kn;
+  t9  = B * B;
   t13 = t7 * t7;
   t19 = t6 * t6;
   _bb = sigma * kn * (t5 + 0.4e1 * t6 * t7 * t9) / (t5 + 0.4e1 * t13 * t9) / (t5 + 0.4e1 * t19 * t9);
@@ -318,39 +264,39 @@ static PetscErrorCode SolKxSolution(const PetscReal pos[], PetscReal m, PetscInt
   /*******************************************/
   /*       calculate the velocities etc      */
   /*******************************************/
-  t1 = Rm * Rm;
-  t2 = B - Rp;
-  t4 = Rp + B;
-  t6 = UU * x;
-  t9 = PetscExpReal(t6 - 0.4e1 * Rp);
-  t13 = B * B;
-  t16 = Rp * t1;
-  t18 = Rp * Rp;
-  t19 = B * t18;
-  t20 = t13 * Rp;
-  t22 = kn * kn;
-  t24 = B * t1;
-  t32 = 0.8e1 * t13 * BB * kn * Rp;
-  t34 = 0.2e1 * Rm;
-  t35 = PetscCosReal(t34);
-  t37 = Rp * Rm;
-  t49 = PetscSinReal(t34);
-  t63 = PetscExpReal(t6 - 0.2e1 * Rp);
-  t65 = Rm * t2;
-  t67 = 0.2e1 * B * kn;
-  t68 = B * Rm;
-  t69 = t67 + t68 + t37;
-  t73 = 0.3e1 * t13;
-  t75 = 0.2e1 * B * Rp;
-  t76 = t73 - t75 + t1 - t22 - t18;
-  t78 = t65 * t76 * BB;
-  t80 = Rm - kn;
-  t81 = PetscCosReal(t80);
-  t83 = -t67 + t68 + t37;
-  t88 = Rm + kn;
-  t89 = PetscCosReal(t88);
-  t92 = t65 * t76 * AA;
-  t97 = PetscSinReal(t80);
+  t1   = Rm * Rm;
+  t2   = B - Rp;
+  t4   = Rp + B;
+  t6   = UU * x;
+  t9   = PetscExpReal(t6 - 0.4e1 * Rp);
+  t13  = B * B;
+  t16  = Rp * t1;
+  t18  = Rp * Rp;
+  t19  = B * t18;
+  t20  = t13 * Rp;
+  t22  = kn * kn;
+  t24  = B * t1;
+  t32  = 0.8e1 * t13 * BB * kn * Rp;
+  t34  = 0.2e1 * Rm;
+  t35  = PetscCosReal(t34);
+  t37  = Rp * Rm;
+  t49  = PetscSinReal(t34);
+  t63  = PetscExpReal(t6 - 0.2e1 * Rp);
+  t65  = Rm * t2;
+  t67  = 0.2e1 * B * kn;
+  t68  = B * Rm;
+  t69  = t67 + t68 + t37;
+  t73  = 0.3e1 * t13;
+  t75  = 0.2e1 * B * Rp;
+  t76  = t73 - t75 + t1 - t22 - t18;
+  t78  = t65 * t76 * BB;
+  t80  = Rm - kn;
+  t81  = PetscCosReal(t80);
+  t83  = -t67 + t68 + t37;
+  t88  = Rm + kn;
+  t89  = PetscCosReal(t88);
+  t92  = t65 * t76 * AA;
+  t97  = PetscSinReal(t80);
   t103 = PetscSinReal(t88);
   t108 = PetscExpReal(t6 - 0.3e1 * Rp - B);
   t110 = Rm * t4;
@@ -362,49 +308,49 @@ static PetscErrorCode SolKxSolution(const PetscReal pos[], PetscReal m, PetscInt
   t140 = PetscExpReal(t6 - Rp - B);
   num1 = -0.4e1 * t1 * t2 * t4 * AA * t9 + ((0.2e1 * Rp * (0.3e1 * t13 * B - 0.2e1 * t16 - t19 - 0.2e1 * t20 - B * t22 - t24) * AA - t32) * t35 + (0.2e1 * t37 * (t1 + 0.5e1 * t13 - t22 - t18) * AA - 0.8e1 * B * BB * kn * Rm * Rp) * t49 - 0.2e1 * B * (0.3e1 * t20 - Rp * t22 - t18 * Rp - 0.2e1 * t19 - t16 - 0.2e1 * t24) * AA + t32) * t63 + ((0.2e1 * t65 * t69 * AA + t78) * t81 + (0.2e1 * t65 * t83 * AA - t78) * t89 + (t92 - 0.2e1 * t65 * t69 * BB) * t97 + (t92 + 0.2e1 * t65 * t83 * BB) * t103) * t108 + ((-0.2e1 * t110 * t111 * AA - t117) * t81 + (-0.2e1 * t110 * t120 * AA + t117) * t89 + (-t127 + 0.2e1 * t110 * t111 * BB) * t97 + (-t127 - 0.2e1 * t110 * t120 * BB) * t103) * t140;
 
-  t1 = Rp + B;
-  t2 = Rm * t1;
-  t3 = B * B;
-  t4 = 0.3e1 * t3;
-  t5 = B * Rp;
-  t7 = Rm * Rm;
-  t8 = kn * kn;
-  t9 = Rp * Rp;
-  t10 = t4 + 0.2e1 * t5 + t7 - t8 - t9;
-  t12 = t2 * t10 * AA;
-  t14 = B * Rm;
-  t20 = UU * x;
-  t23 = PetscExpReal(t20 - 0.4e1 * Rp);
-  t25 = Rp * Rm;
-  t32 = Rm * kn;
-  t37 = 0.2e1 * Rm;
-  t38 = PetscCosReal(t37);
-  t40 = t3 * B;
-  t44 = B * t9;
-  t45 = t3 * Rp;
-  t53 = t3 * BB;
-  t58 = PetscSinReal(t37);
-  t69 = PetscExpReal(t20 - 0.2e1 * Rp);
-  t72 = 0.3e1 * t40 * Rm;
-  t73 = t9 * Rp;
-  t74 = t73 * Rm;
-  t75 = t7 * Rm;
-  t76 = B * t75;
-  t77 = t14 * t8;
-  t78 = Rp * t75;
-  t80 = 0.8e1 * t45 * kn;
-  t81 = t25 * t8;
-  t83 = 0.5e1 * t45 * Rm;
-  t84 = t44 * Rm;
-  t85 = t72 - t74 + t76 - t77 + t78 + t80 - t81 + t83 + t84;
-  t88 = 0.2e1 * t9 * t3;
-  t90 = 0.3e1 * t40 * Rp;
-  t91 = t7 * t3;
-  t93 = 0.2e1 * t5 * t32;
-  t94 = t5 * t7;
-  t95 = t5 * t8;
-  t96 = B * t73;
-  t97 = t7 * t9;
+  t1   = Rp + B;
+  t2   = Rm * t1;
+  t3   = B * B;
+  t4   = 0.3e1 * t3;
+  t5   = B * Rp;
+  t7   = Rm * Rm;
+  t8   = kn * kn;
+  t9   = Rp * Rp;
+  t10  = t4 + 0.2e1 * t5 + t7 - t8 - t9;
+  t12  = t2 * t10 * AA;
+  t14  = B * Rm;
+  t20  = UU * x;
+  t23  = PetscExpReal(t20 - 0.4e1 * Rp);
+  t25  = Rp * Rm;
+  t32  = Rm * kn;
+  t37  = 0.2e1 * Rm;
+  t38  = PetscCosReal(t37);
+  t40  = t3 * B;
+  t44  = B * t9;
+  t45  = t3 * Rp;
+  t53  = t3 * BB;
+  t58  = PetscSinReal(t37);
+  t69  = PetscExpReal(t20 - 0.2e1 * Rp);
+  t72  = 0.3e1 * t40 * Rm;
+  t73  = t9 * Rp;
+  t74  = t73 * Rm;
+  t75  = t7 * Rm;
+  t76  = B * t75;
+  t77  = t14 * t8;
+  t78  = Rp * t75;
+  t80  = 0.8e1 * t45 * kn;
+  t81  = t25 * t8;
+  t83  = 0.5e1 * t45 * Rm;
+  t84  = t44 * Rm;
+  t85  = t72 - t74 + t76 - t77 + t78 + t80 - t81 + t83 + t84;
+  t88  = 0.2e1 * t9 * t3;
+  t90  = 0.3e1 * t40 * Rp;
+  t91  = t7 * t3;
+  t93  = 0.2e1 * t5 * t32;
+  t94  = t5 * t7;
+  t95  = t5 * t8;
+  t96  = B * t73;
+  t97  = t7 * t9;
   t100 = 0.2e1 * t3 * Rm * kn;
   t101 = -t88 + t90 - t91 - t93 - t94 - t95 - t96 - t97 - t100;
   t105 = Rm - kn;
@@ -423,39 +369,39 @@ static PetscErrorCode SolKxSolution(const PetscReal pos[], PetscReal m, PetscInt
   t162 = PetscExpReal(t20 - Rp - B);
   num2 = (0.2e1 * t12 - 0.8e1 * t14 * kn * t1 * BB) * t23 + ((-0.2e1 * t25 * (t7 + 0.5e1 * t3 - t8 - t9) * AA + 0.8e1 * B * BB * t32 * Rp) * t38 + (0.2e1 * Rp * (0.3e1 * t40 - 0.2e1 * Rp * t7 - t44 - 0.2e1 * t45 - B * t8 - B * t7) * AA - 0.8e1 * t53 * kn * Rp) * t58 - 0.2e1 * t14 * (-t8 + t9 + t4 + t7) * AA + 0.8e1 * t53 * t32) * t69 + ((-t85 * AA - 0.2e1 * t101 * BB) * t106 + (-t108 * AA + 0.2e1 * t110 * BB) * t115 + (-0.2e1 * t101 * AA + t85 * BB) * t121 + (-0.2e1 * t110 * AA - t108 * BB) * t127) * t132 + ((t12 - 0.2e1 * t2 * t136 * BB) * t106 + (t12 + 0.2e1 * t2 * t142 * BB) * t115 + (-0.2e1 * t2 * t136 * AA - t152) * t121 + (-0.2e1 * t2 * t142 * AA + t152) * t127) * t162;
 
-  t1 = Rm * Rm;
-  t2 = B - Rp;
-  t4 = Rp + B;
-  t6 = VV * x;
-  t7 = PetscExpReal(-t6);
-  t11 = kn * kn;
-  t13 = B * t1;
-  t14 = Rp * Rp;
-  t15 = B * t14;
-  t16 = B * B;
-  t17 = t16 * Rp;
-  t21 = Rp * t1;
-  t30 = 0.8e1 * t16 * BB * kn * Rp;
-  t32 = 0.2e1 * Rm;
-  t33 = PetscCosReal(t32);
-  t35 = Rp * Rm;
-  t47 = PetscSinReal(t32);
-  t61 = PetscExpReal(-t6 - 0.2e1 * Rp);
-  t63 = Rm * t2;
-  t65 = 0.2e1 * B * kn;
-  t66 = B * Rm;
-  t67 = t65 + t66 + t35;
-  t71 = 0.3e1 * t16;
-  t73 = 0.2e1 * B * Rp;
-  t74 = t71 - t73 + t1 - t11 - t14;
-  t76 = t63 * t74 * BB;
-  t78 = Rm - kn;
-  t79 = PetscCosReal(t78);
-  t81 = -t65 + t66 + t35;
-  t86 = Rm + kn;
-  t87 = PetscCosReal(t86);
-  t90 = t63 * t74 * AA;
-  t95 = PetscSinReal(t78);
+  t1   = Rm * Rm;
+  t2   = B - Rp;
+  t4   = Rp + B;
+  t6   = VV * x;
+  t7   = PetscExpReal(-t6);
+  t11  = kn * kn;
+  t13  = B * t1;
+  t14  = Rp * Rp;
+  t15  = B * t14;
+  t16  = B * B;
+  t17  = t16 * Rp;
+  t21  = Rp * t1;
+  t30  = 0.8e1 * t16 * BB * kn * Rp;
+  t32  = 0.2e1 * Rm;
+  t33  = PetscCosReal(t32);
+  t35  = Rp * Rm;
+  t47  = PetscSinReal(t32);
+  t61  = PetscExpReal(-t6 - 0.2e1 * Rp);
+  t63  = Rm * t2;
+  t65  = 0.2e1 * B * kn;
+  t66  = B * Rm;
+  t67  = t65 + t66 + t35;
+  t71  = 0.3e1 * t16;
+  t73  = 0.2e1 * B * Rp;
+  t74  = t71 - t73 + t1 - t11 - t14;
+  t76  = t63 * t74 * BB;
+  t78  = Rm - kn;
+  t79  = PetscCosReal(t78);
+  t81  = -t65 + t66 + t35;
+  t86  = Rm + kn;
+  t87  = PetscCosReal(t86);
+  t90  = t63 * t74 * AA;
+  t95  = PetscSinReal(t78);
   t101 = PetscSinReal(t86);
   t106 = PetscExpReal(-t6 - 0.3e1 * Rp - B);
   t108 = Rm * t4;
@@ -467,39 +413,39 @@ static PetscErrorCode SolKxSolution(const PetscReal pos[], PetscReal m, PetscInt
   t138 = PetscExpReal(-t6 - Rp - B);
   num3 = -0.4e1 * t1 * t2 * t4 * AA * t7 + ((-0.2e1 * Rp * (-B * t11 - t13 - t15 + 0.2e1 * t17 + 0.3e1 * t16 * B + 0.2e1 * t21) * AA + t30) * t33 + (-0.2e1 * t35 * (t1 + 0.5e1 * t16 - t11 - t14) * AA + 0.8e1 * B * BB * kn * Rm * Rp) * t47 + 0.2e1 * B * (0.3e1 * t17 - t21 + 0.2e1 * t15 + 0.2e1 * t13 - Rp * t11 - t14 * Rp) * AA - t30) * t61 + ((-0.2e1 * t63 * t67 * AA - t76) * t79 + (-0.2e1 * t63 * t81 * AA + t76) * t87 + (-t90 + 0.2e1 * t63 * t67 * BB) * t95 + (-t90 - 0.2e1 * t63 * t81 * BB) * t101) * t106 + ((0.2e1 * t108 * t109 * AA + t115) * t79 + (0.2e1 * t108 * t118 * AA - t115) * t87 + (t125 - 0.2e1 * t108 * t109 * BB) * t95 + (t125 + 0.2e1 * t108 * t118 * BB) * t101) * t138;
 
-  t1 = B - Rp;
-  t2 = Rm * t1;
-  t3 = B * B;
-  t4 = 0.3e1 * t3;
-  t5 = B * Rp;
-  t7 = Rm * Rm;
-  t8 = kn * kn;
-  t9 = Rp * Rp;
-  t10 = t4 - 0.2e1 * t5 + t7 - t8 - t9;
-  t12 = t2 * t10 * AA;
-  t14 = B * Rm;
-  t20 = VV * x;
-  t21 = PetscExpReal(-t20);
-  t23 = Rp * Rm;
-  t30 = Rm * kn;
-  t35 = 0.2e1 * Rm;
-  t36 = PetscCosReal(t35);
-  t40 = B * t9;
-  t41 = t3 * Rp;
-  t43 = t3 * B;
-  t51 = t3 * BB;
-  t56 = PetscSinReal(t35);
-  t67 = PetscExpReal(-t20 - 0.2e1 * Rp);
-  t70 = 0.2e1 * B * kn;
-  t71 = t70 + t14 + t23;
-  t76 = Rm - kn;
-  t77 = PetscCosReal(t76);
-  t79 = -t70 + t14 + t23;
-  t84 = Rm + kn;
-  t85 = PetscCosReal(t84);
-  t91 = t2 * t10 * BB;
-  t93 = PetscSinReal(t76);
-  t99 = PetscSinReal(t84);
+  t1   = B - Rp;
+  t2   = Rm * t1;
+  t3   = B * B;
+  t4   = 0.3e1 * t3;
+  t5   = B * Rp;
+  t7   = Rm * Rm;
+  t8   = kn * kn;
+  t9   = Rp * Rp;
+  t10  = t4 - 0.2e1 * t5 + t7 - t8 - t9;
+  t12  = t2 * t10 * AA;
+  t14  = B * Rm;
+  t20  = VV * x;
+  t21  = PetscExpReal(-t20);
+  t23  = Rp * Rm;
+  t30  = Rm * kn;
+  t35  = 0.2e1 * Rm;
+  t36  = PetscCosReal(t35);
+  t40  = B * t9;
+  t41  = t3 * Rp;
+  t43  = t3 * B;
+  t51  = t3 * BB;
+  t56  = PetscSinReal(t35);
+  t67  = PetscExpReal(-t20 - 0.2e1 * Rp);
+  t70  = 0.2e1 * B * kn;
+  t71  = t70 + t14 + t23;
+  t76  = Rm - kn;
+  t77  = PetscCosReal(t76);
+  t79  = -t70 + t14 + t23;
+  t84  = Rm + kn;
+  t85  = PetscCosReal(t84);
+  t91  = t2 * t10 * BB;
+  t93  = PetscSinReal(t76);
+  t99  = PetscSinReal(t84);
   t104 = PetscExpReal(-t20 - 0.3e1 * Rp - B);
   t107 = 0.3e1 * t43 * Rm;
   t108 = t9 * Rp;
@@ -528,71 +474,73 @@ static PetscErrorCode SolKxSolution(const PetscReal pos[], PetscReal m, PetscInt
   t160 = PetscExpReal(-t20 - Rp - B);
   num4 = (0.2e1 * t12 - 0.8e1 * t14 * kn * t1 * BB) * t21 + ((0.2e1 * t23 * (t7 + 0.5e1 * t3 - t8 - t9) * AA - 0.8e1 * B * BB * t30 * Rp) * t36 + (-0.2e1 * Rp * (-B * t8 - B * t7 - t40 + 0.2e1 * t41 + 0.3e1 * t43 + 0.2e1 * Rp * t7) * AA + 0.8e1 * t51 * kn * Rp) * t56 - 0.2e1 * t14 * (-t8 + t9 + t4 + t7) * AA + 0.8e1 * t51 * t30) * t67 + ((t12 - 0.2e1 * t2 * t71 * BB) * t77 + (t12 + 0.2e1 * t2 * t79 * BB) * t85 + (-0.2e1 * t2 * t71 * AA - t91) * t93 + (-0.2e1 * t2 * t79 * AA + t91) * t99) * t104 + ((-t120 * AA + 0.2e1 * t136 * BB) * t77 + (-t141 * AA - 0.2e1 * t143 * BB) * t85 + (0.2e1 * t136 * AA + t120 * BB) * t93 + (0.2e1 * t143 * AA - t141 * BB) * t99) * t160;
 
-
-  t1 = Rm * Rm;
-  t2 = Rp * Rp;
-  t3 = t1 * t2;
-  t4 = B * B;
-  t5 = t1 * t4;
-  t9 = PetscExpReal(-0.4e1 * Rp);
-  t15 = PetscCosReal(0.2e1 * Rm);
-  t22 = PetscExpReal(-0.2e1 * Rp);
+  t1   = Rm * Rm;
+  t2   = Rp * Rp;
+  t3   = t1 * t2;
+  t4   = B * B;
+  t5   = t1 * t4;
+  t9   = PetscExpReal(-0.4e1 * Rp);
+  t15  = PetscCosReal(0.2e1 * Rm);
+  t22  = PetscExpReal(-0.2e1 * Rp);
   den1 = (-0.4e1 * t3 + 0.4e1 * t5) * t9 + ((0.8e1 * t1 + 0.8e1 * t4) * t2 * t15 - 0.8e1 * t5 - 0.8e1 * t2 * t4) * t22 - 0.4e1 * t3 + 0.4e1 * t5;
 
-  _PC1=num1/den1; _PC2=num2/den1; _PC3=num3/den1; _PC4=num4/den1;
+  _PC1 = num1 / den1;
+  _PC2 = num2 / den1;
+  _PC3 = num3 / den1;
+  _PC4 = num4 / den1;
 
-  t1 = Rm * x;
-  t2 = PetscCosReal(t1);
-  t4 = PetscSinReal(t1);
+  t1  = Rm * x;
+  t2  = PetscCosReal(t1);
+  t4  = PetscSinReal(t1);
   t10 = PetscExpReal(-0.2e1 * x * B);
   t12 = kn * x;
   t13 = PetscCosReal(t12);
   t16 = PetscSinReal(t12);
-  u1 = -km * (_PC1 * t2 + _PC2 * t4 + _PC3 * t2 + _PC4 * t4 + t10 * AA * t13 + t10 * BB * t16);
+  u1  = -km * (_PC1 * t2 + _PC2 * t4 + _PC3 * t2 + _PC4 * t4 + t10 * AA * t13 + t10 * BB * t16);
 
-  t2 = Rm * x;
-  t3 = PetscCosReal(t2);
-  t6 = PetscSinReal(t2);
+  t2  = Rm * x;
+  t3  = PetscCosReal(t2);
+  t6  = PetscSinReal(t2);
   t22 = PetscExpReal(-0.2e1 * x * B);
   t23 = B * t22;
   t24 = kn * x;
   t25 = PetscCosReal(t24);
   t29 = PetscSinReal(t24);
-  u2 = UU * _PC1 * t3 + UU * _PC2 * t6 - _PC1 * t6 * Rm + _PC2 * t3 * Rm - VV * _PC3 * t3 - VV * _PC4 * t6 - _PC3 * t6 * Rm + _PC4 * t3 * Rm - 0.2e1 * t23 * AA * t25 - 0.2e1 * t23 * BB * t29 - t22 * AA * t29 * kn + t22 * BB * t25 * kn;
+  u2  = UU * _PC1 * t3 + UU * _PC2 * t6 - _PC1 * t6 * Rm + _PC2 * t3 * Rm - VV * _PC3 * t3 - VV * _PC4 * t6 - _PC3 * t6 * Rm + _PC4 * t3 * Rm - 0.2e1 * t23 * AA * t25 - 0.2e1 * t23 * BB * t29 - t22 * AA * t29 * kn + t22 * BB * t25 * kn;
 
-  t3 = PetscExpReal(0.2e1 * x * B);
-  t4 = t3 * B;
-  t8 = km * km;
-  t9 = t3 * t8;
-  t11 = 0.3e1 * t9 * Rm;
-  t12 = Rm * Rm;
-  t14 = t3 * t12 * Rm;
-  t15 = UU * UU;
-  t19 = 0.4e1 * t4 * UU * Rm - t11 - t14 + 0.3e1 * t3 * t15 * Rm;
-  t20 = Rm * x;
-  t21 = PetscSinReal(t20);
-  t27 = 0.2e1 * B * t9;
-  t33 = 0.2e1 * t4 * t12;
-  t36 = 0.3e1 * t3 * UU * t12 - t27 - 0.2e1 * t4 * t15 + 0.3e1 * t9 * UU + t33 - t3 * t15 * UU;
-  t37 = PetscCosReal(t20);
-  t49 = VV * VV;
-  t53 = -0.4e1 * t4 * VV * Rm - t11 + 0.3e1 * t3 * t49 * Rm - t14;
-  t64 = t3 * t49 * VV + t33 - 0.3e1 * t9 * VV - 0.2e1 * t4 * t49 - t27 - 0.3e1 * t3 * VV * t12;
-  t76 = B * t8;
-  t80 = kn * kn;
-  t83 = B * B;
-  t87 = t80 * kn;
-  t90 = kn * x;
-  t91 = PetscSinReal(t90);
+  t3   = PetscExpReal(0.2e1 * x * B);
+  t4   = t3 * B;
+  t8   = km * km;
+  t9   = t3 * t8;
+  t11  = 0.3e1 * t9 * Rm;
+  t12  = Rm * Rm;
+  t14  = t3 * t12 * Rm;
+  t15  = UU * UU;
+  t19  = 0.4e1 * t4 * UU * Rm - t11 - t14 + 0.3e1 * t3 * t15 * Rm;
+  t20  = Rm * x;
+  t21  = PetscSinReal(t20);
+  t27  = 0.2e1 * B * t9;
+  t33  = 0.2e1 * t4 * t12;
+  t36  = 0.3e1 * t3 * UU * t12 - t27 - 0.2e1 * t4 * t15 + 0.3e1 * t9 * UU + t33 - t3 * t15 * UU;
+  t37  = PetscCosReal(t20);
+  t49  = VV * VV;
+  t53  = -0.4e1 * t4 * VV * Rm - t11 + 0.3e1 * t3 * t49 * Rm - t14;
+  t64  = t3 * t49 * VV + t33 - 0.3e1 * t9 * VV - 0.2e1 * t4 * t49 - t27 - 0.3e1 * t3 * VV * t12;
+  t76  = B * t8;
+  t80  = kn * kn;
+  t83  = B * B;
+  t87  = t80 * kn;
+  t90  = kn * x;
+  t91  = PetscSinReal(t90);
   t106 = PetscCosReal(t90);
   u3 = -((t19 * t21 + t36 * t37) * _PC1 + (t36 * t21 - t19 * t37) * _PC2 + (t53 * t21 + t64 * t37) * _PC3 + (t64 * t21 - t53 * t37) * _PC4 + (-0.3e1 * t8 * AA * kn - 0.8e1 * t76 * BB - 0.4e1 * BB * B * t80 + 0.4e1 * AA * t83 * kn - AA * t87) * t91 + (-0.4e1 * AA * t80 * B - 0.4e1 * t83 * BB * kn + 0.3e1 * t8 * BB * kn - sigma + BB * t87 - 0.8e1 * t76 * AA) * t106) / km;
 
-  t3 = PetscExpReal(0.2e1 * x * B);
-  t4 = km * km;
-  t5 = t3 * t4;
-  t6 = Rm * x;
-  t7 = PetscCosReal(t6);
-  t8 = _PC1 * t7;
+  t3  = PetscExpReal(0.2e1 * x * B);
+  t4  = km * km;
+  t5  = t3 * t4;
+  t6  = Rm * x;
+  t7  = PetscCosReal(t6);
+  t8  = _PC1 * t7;
   t10 = PetscSinReal(t6);
   t11 = _PC2 * t10;
   t13 = _PC3 * t7;
@@ -615,37 +563,37 @@ static PetscErrorCode SolKxSolution(const PetscReal pos[], PetscReal m, PetscInt
   t82 = t46 * t13 + t46 * t15 + 0.2e1 * t49 * _PC3 * t10 * Rm - 0.2e1 * t49 * _PC4 * t7 * Rm - t3 * _PC3 * t39 - t3 * _PC4 * t42 + 0.4e1 * t62 * AA * t19 + 0.4e1 * t62 * BB * t22 + 0.4e1 * B * AA * t22 * kn - 0.4e1 * B * BB * t19 * kn - AA * t19 * t78 - BB * t22 * t78;
   u4 = t44 + t82;
 
-  t3 = PetscExpReal(0.2e1 * x * B);
-  t4 = t3 * B;
-  t8 = km * km;
-  t9 = t3 * t8;
-  t10 = t9 * Rm;
-  t11 = Rm * Rm;
-  t13 = t3 * t11 * Rm;
-  t14 = UU * UU;
-  t18 = 0.4e1 * t4 * UU * Rm - t10 - t13 + 0.3e1 * t3 * t14 * Rm;
-  t19 = Rm * x;
-  t20 = PetscSinReal(t19);
-  t26 = 0.2e1 * B * t9;
-  t31 = 0.2e1 * t4 * t11;
-  t34 = 0.3e1 * t3 * UU * t11 - t26 - 0.2e1 * t4 * t14 + t9 * UU + t31 - t3 * t14 * UU;
-  t35 = PetscCosReal(t19);
-  t47 = VV * VV;
-  t51 = -0.4e1 * t4 * VV * Rm - t10 + 0.3e1 * t3 * t47 * Rm - t13;
-  t61 = t3 * t47 * VV + t31 - t9 * VV - 0.2e1 * t4 * t47 - t26 - 0.3e1 * t3 * VV * t11;
-  t72 = B * t8;
-  t76 = kn * kn;
-  t79 = B * B;
-  t83 = t76 * kn;
-  t86 = kn * x;
-  t87 = PetscSinReal(t86);
+  t3   = PetscExpReal(0.2e1 * x * B);
+  t4   = t3 * B;
+  t8   = km * km;
+  t9   = t3 * t8;
+  t10  = t9 * Rm;
+  t11  = Rm * Rm;
+  t13  = t3 * t11 * Rm;
+  t14  = UU * UU;
+  t18  = 0.4e1 * t4 * UU * Rm - t10 - t13 + 0.3e1 * t3 * t14 * Rm;
+  t19  = Rm * x;
+  t20  = PetscSinReal(t19);
+  t26  = 0.2e1 * B * t9;
+  t31  = 0.2e1 * t4 * t11;
+  t34  = 0.3e1 * t3 * UU * t11 - t26 - 0.2e1 * t4 * t14 + t9 * UU + t31 - t3 * t14 * UU;
+  t35  = PetscCosReal(t19);
+  t47  = VV * VV;
+  t51  = -0.4e1 * t4 * VV * Rm - t10 + 0.3e1 * t3 * t47 * Rm - t13;
+  t61  = t3 * t47 * VV + t31 - t9 * VV - 0.2e1 * t4 * t47 - t26 - 0.3e1 * t3 * VV * t11;
+  t72  = B * t8;
+  t76  = kn * kn;
+  t79  = B * B;
+  t83  = t76 * kn;
+  t86  = kn * x;
+  t87  = PetscSinReal(t86);
   t101 = PetscCosReal(t86);
   u5 = ((t18 * t20 + t34 * t35) * _PC1 + (t34 * t20 - t18 * t35) * _PC2 + (t51 * t20 + t61 * t35) * _PC3 + (t61 * t20 - t51 * t35) * _PC4 + (-t8 * AA * kn - 0.4e1 * t72 * BB - 0.4e1 * BB * B * t76 + 0.4e1 * AA * t79 * kn - AA * t83) * t87 + (-0.4e1 * AA * t76 * B - 0.4e1 * t79 * BB * kn + t8 * BB * kn - sigma + BB * t83 - 0.4e1 * t72 * AA) * t101) / km;
 
-  t3 = PetscExpReal(0.2e1 * x * B);
-  t4 = UU * UU;
-  t8 = km * km;
-  t9 = t3 * t8;
+  t3  = PetscExpReal(0.2e1 * x * B);
+  t4  = UU * UU;
+  t8  = km * km;
+  t9  = t3 * t8;
   t10 = t9 * Rm;
   t11 = Rm * Rm;
   t13 = t3 * t11 * Rm;
@@ -668,37 +616,33 @@ static PetscErrorCode SolKxSolution(const PetscReal pos[], PetscReal m, PetscInt
   t96 = PetscCosReal(t83);
   u6 = -((t18 * t20 + t34 * t35) * _PC1 + (t34 * t20 - t18 * t35) * _PC2 + (t51 * t20 + t61 * t35) * _PC3 + (t61 * t20 - t51 * t35) * _PC4 + (-0.4e1 * BB * B * t71 + 0.4e1 * AA * t74 * kn + t8 * AA * kn - AA * t80) * t84 + (-0.4e1 * AA * t71 * B - t8 * BB * kn - 0.4e1 * t74 * BB * kn - sigma + BB * t80) * t96) / km;
 
-  /*SS = sin(km*z)*(exp(UU*x)*(_PC1*cos(Rm*x)+_PC2*sin(Rm*x)) + exp(-VV*x)*(_PC3*cos(Rm*x)+_PC4*sin(Rm*x)) + exp(-2*x*B)*(AA*cos(kn*x)+BB*sin(kn*x)));*/
+  /* SS = sin(km*z)*(exp(UU*x)*(_PC1*cos(Rm*x)+_PC2*sin(Rm*x)) + exp(-VV*x)*(_PC3*cos(Rm*x)+_PC4*sin(Rm*x)) + exp(-2*x*B)*(AA*cos(kn*x)+BB*sin(kn*x))); */
 
   /* u1 = Vx, u2 = Vz, u3 = txx, u4 = tzx, u5 = pressure, u6 = tzz */
 
-  sum5 += u5*PetscCosReal(km*z);  /* pressure */
-  sum6 += u6*PetscCosReal(km*z);  /* zz total stress */
+  sum5 += u5 * PetscCosReal(km * z); /* pressure */
+  sum6 += u6 * PetscCosReal(km * z); /* zz total stress */
 
-  u1 *= PetscCosReal(km*z); /* x velocity */
+  u1 *= PetscCosReal(km * z); /* x velocity */
   sum1 += u1;
-  u2 *= PetscSinReal(km*z); /* z velocity */
+  u2 *= PetscSinReal(km * z); /* z velocity */
   sum2 += u2;
 
-  u3 *= PetscCosReal(km*z); /* xx total stress */
+  u3 *= PetscCosReal(km * z); /* xx total stress */
   sum3 += u3;
-  u4 *= PetscSinReal(km*z); /* zx stress */
+  u4 *= PetscSinReal(km * z); /* zx stress */
   sum4 += u4;
 
   /* rho = -sigma*sin(km*z)*cos(kn*x); */ /* density */
   /* sum7 += rho; */
 
   /* Output */
-  if (mu) {
-    *mu = Z;
-  }
+  if (mu) *mu = Z;
   if (vel) {
     vel[0] = sum1;
     vel[1] = sum2;
   }
-  if (p) {
-    (*p) = sum5;
-  }
+  if (p) (*p) = sum5;
   if (s) {
     s[0] = sum3;
     s[1] = sum4;
@@ -706,31 +650,29 @@ static PetscErrorCode SolKxSolution(const PetscReal pos[], PetscReal m, PetscInt
   }
   if (gamma) {
     /* sigma = tau - p, tau = sigma + p, tau[] = 2*eta*gamma[] */
-    gamma[0] = (sum3+sum5)/(2.0*Z);
-    gamma[1] = (sum4)/(2.0*Z);
-    gamma[2] = (sum6+sum5)/(2.0*Z);
+    gamma[0] = (sum3 + sum5) / (2.0 * Z);
+    gamma[1] = (sum4) / (2.0 * Z);
+    gamma[2] = (sum6 + sum5) / (2.0 * Z);
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode SolKxSolutionVelocity(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar v[], void *ctx)
 {
-  Parameter     *s = (Parameter *) ctx;
-  PetscErrorCode ierr;
+  Parameter *s = (Parameter *)ctx;
 
   PetscFunctionBegin;
-  ierr = SolKxSolution(x, s->m, s->n, s->B, v, NULL, NULL, NULL, NULL);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(SolKxSolution(x, s->m, s->n, s->B, v, NULL, NULL, NULL, NULL));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode SolKxSolutionPressure(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar p[], void *ctx)
 {
-  Parameter     *s = (Parameter *) ctx;
-  PetscErrorCode ierr;
+  Parameter *s = (Parameter *)ctx;
 
   PetscFunctionBegin;
-  ierr = SolKxSolution(x, s->m, s->n, s->B, NULL, p, NULL, NULL, NULL);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(SolKxSolution(x, s->m, s->n, s->B, NULL, p, NULL, NULL, NULL));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*
@@ -752,137 +694,138 @@ static PetscErrorCode SolKxSolutionPressure(PetscInt dim, PetscReal time, const 
 - mu    - The viscosity at (x,z), or NULL
 
   Note:
-$  The domain is the square 0 <= x,z <= 1. We solve the Stokes equation for incompressible flow with free-slip boundary
-$  conditions everywhere. The forcing term f is given by
-$
-$    fx = 0
-$    fz = sigma*sin(km*z)*cos(kn*x)
-$
-$  where
-$
-$    km = m*Pi (m may be non-integral)
-$    kn = n*Pi
-$
-$  meaning that the density rho is -sigma*sin(km*z)*cos(kn*x). Here we set sigma = 1.
-$  The viscosity eta jumps from etaA to etaB at x = xc.
-*/
-static PetscErrorCode SolCxSolution(const PetscReal pos[], PetscReal m, PetscInt n, PetscReal xc, PetscReal etaA, PetscReal etaB,
-                                    PetscScalar vel[], PetscScalar *p, PetscScalar s[], PetscScalar gamma[], PetscScalar *mu)
-{
-  PetscReal _PC1A,_PC2A,_PC3A,_PC4A,_PC1B,_PC2B,_PC3B,_PC4B,_PC1,_PC2,_PC3,_PC4;
-  PetscReal t1,t2,t3,t4,t5,t6,t7,t8,t9,t10,t11,t12,t13,t14,t15,t16,t17,t18,t19,t20,t21,t22,t23,t24,t25,t26,t27,t28,t29,t30,t31,t32,t33,t34,t35,t36,t37,t38,t39,t40;
-  PetscReal t41,t42,t43,t44,t45,t46,t47,t48,t49,t50,t51,t52,t53,t54,t55,t56,t57,t58,t59,t60,t61,t62,t63,t64,t65,t66,t67,t68,t69,t70,t71,t72,t73,t74,t75,t76,t77,t78,t79,t80;
-  PetscReal t81,t82,t83,t84,t85,t86,t87,t88,t89,t90,t91,t92,t93,t94,t95,t96,t97,t98,t99,t100,t101,t102,t103,t104,t105,t106,t107,t108,t109,t110,t111,t112,t113,t115,t116,t117,t118,t119,t120;
-  PetscReal t121,t122,t123,t124,t125,t126,t127,t128,t129,t130,t131,t132,t133,t134,t135,t136,t137,t138,t139,t140,t141,t142,t143,t144,t145,t146,t147,t148,t149,t150,t151,t152,t153,t154,t155,t156,t157,t158,t159,t160;
-  PetscReal t161,t162,t163,t164,t165,t166,t167,t168,t169,t170,t171,t172,t173,t174,t175,t176,t177,t178,t179,t180,t181,t182,t183,t184,t186,t187,t188,t189,t190,t191,t192,t193,t194,t195,t196,t197,t198,t199;
-  PetscReal t201,t202,t203,t204,t206,t207,t208,t209,t210,t211,t212,t213,t215,t216,t217,t218,t219,t220,t221,t222,t223,t224,t225,t226,t227,t228,t229,t230,t231,t232,t233,t234,t235,t236,t237,t238,t239,t240;
-  PetscReal t241,t242,t243,t244,t245,t246,t247,t248,t249,t250,t251,t252,t253,t254,t255,t256,t257,t258,t259,t260,t261,t262,t263,t264,t265,t267,t268,t269,t270,t272,t273,t274,t275,t276,t277,t278,t279,t280;
-  PetscReal t281,t282,t283,t284,t285,t286,t288,t289,t290,t291,t292,t295,t296,t297,t298,t299,t300,t301,t303,t304,t305,t307,t308,t310,t311,t312,t313,t314,t315,t316,t317,t318,t319,t320;
-  PetscReal t321,t322,t323,t324,t325,t326,t327,t328,t329,t330,t331,t332,t334,t335,t336,t337,t338,t339,t340,t341,t342,t344,t345,t346,t347,t348,t349,t350,t351,t352,t353,t354,t355,t356,t358,t359,t360;
-  PetscReal t361,t362,t363,t364,t365,t366,t367,t368,t369,t370,t371,t372,t373,t374,t375,t376,t377,t378,t379,t380,t381,t382,t383,t384,t385,t386,t387,t389,t390,t391,t393,t394,t395,t396,t397,t398;
-  PetscReal t401,t402,t403,t404,t405,t406,t407,t408,t409,t410,t411,t412,t413,t414,t415,t416,t417,t418,t419,t421,t422,t423,t424,t425,t426,t427,t428,t429,t430,t431,t432,t433,t434,t436,t437,t438,t439,t440;
-  PetscReal t441,t442,t443,t444,t445,t446,t447,t448,t450,t451,t453,t454,t455,t456,t457,t458,t459,t461,t462,t463,t464,t465,t466,t468,t469,t470,t471,t474,t475,t478,t480;
-  PetscReal t482,t483,t484,t485,t488,t489,t490,t492,t493,t495,t497,t498,t499,t501,t502,t503,t504,t505,t507,t508,t509,t510,t511,t512,t513,t515,t518,t520;
-  PetscReal t522,t525,t527,t528,t529,t530,t532,t533,t534,t535,t536,t538,t539,t541,t542,t544,t545,t546,t547,t548,t549,t550,t551,t552,t553,t554,t555,t556,t557,t560;
-  PetscReal t561,t562,t563,t564,t567,t568,t571,t573,t575,t576,t578,t579,t583,t590,t591,t594,t595,t596,t597,t598,t600;
-  PetscReal t601,t602,t604,t606,t607,t608,t611,t613,t615,t616,t617,t619,t621,t623,t624,t625,t626,t627,t629,t630,t632,t633,t634,t638,t639,t640;
-  PetscReal t641,t642,t643,t644,t645,t647,t648,t649,t650,t651,t652,t653,t654,t655,t656,t657,t658,t659,t660,t662,t663,t665,t666,t667,t668,t670,t671,t672,t673,t674,t675,t676,t679,t680;
-  PetscReal t682,t683,t684,t685,t686,t688,t689,t690,t691,t693,t694,t695,t696,t697,t698,t699,t700,t701,t702,t704,t705,t708,t709,t711,t712,t713,t714,t717,t718,t719;
-  PetscReal t721,t722,t723,t726,t727,t728,t730,t733,t734,t735,t736,t737,t738,t739,t740,t741,t744,t745,t746,t749,t750,t752,t753,t754,t755,t757,t758,t759,t760;
-  PetscReal t761,t762,t763,t764,t766,t767,t768,t770,t771,t772,t773,t774,t775,t776,t777,t778,t780,t781,t782,t785,t786,t789,t790,t791,t792,t793,t794,t795,t796,t797,t798,t800;
-  PetscReal t801,t806,t807,t808,t809,t811,t812,t817,t818,t819,t821,t822,t824,t827,t828,t830,t834,t835,t837,t840;
-  PetscReal t842,t843,t844,t845,t846,t849,t850,t853,t854,t855,t857,t858,t859,t860,t863,t864,t867,t868,t869,t873,t874,t877,t878,t879,t880;
-  PetscReal t884,t888,t891,t894,t900,t901,t903,t904,t907,t908,t909,t911,t914,t915,t916,t919,t920;
-  PetscReal t923,t924,t925,t926,t927,t929,t932,t935,t937,t939,t942,t943,t944,t945,t947,t948,t949,t950,t952,t953,t954,t955,t956,t957;
-  PetscReal t961,t964,t965,t966,t967,t968,t969,t971,t972,t974,t977,t978,t981,t983,t987,t988,t992,t993,t994,t997,t998;
-  PetscReal t1001,t1003,t1005,t1006,t1009,t1010,t1012,t1013,t1015,t1016,t1017,t1018,t1020,t1021,t1029,t1031,t1032,t1033,t1040;
-  PetscReal t1041,t1042,t1044,t1047,t1050,t1054,t1055,t1057,t1058,t1063,t1068,t1069,t1070,t1079,t1080;
-  PetscReal t1088,t1089,t1091,t1092,t1094,t1096,t1101,t1102,t1103,t1104,t1105,t1108,t1112,t1113,t1118,t1119,t1120;
-  PetscReal t1121,t1122,t1123,t1124,t1125,t1126,t1127,t1128,t1129,t1130,t1132,t1133,t1134,t1135,t1138,t1139,t1140,t1141,t1142,t1145,t1146,t1148,t1149,t1150,t1153,t1154,t1156,t1157,t1158,t1159;
-  PetscReal t1161,t1162,t1165,t1166,t1170,t1171,t1172,t1173,t1175,t1176,t1178,t1180,t1181,t1182,t1185,t1189,t1192,t1193,t1195,t1196,t1199;
-  PetscReal t1201,t1203,t1209,t1210,t1211,t1213,t1214,t1218,t1221,t1224,t1225,t1226,t1228,t1233,t1234,t1235,t1236,t1237,t1240;
-  PetscReal t1241,t1242,t1243,t1244,t1245,t1248,t1251,t1252,t1257,t1258,t1259,t1260,t1263,t1268,t1269,t1272,t1280;
-  PetscReal t1282,t1283,t1284,t1285,t1287,t1288,t1289,t1292,t1293,t1296,t1297,t1300,t1304,t1307,t1310,t1311,t1312,t1316,t1317,t1320;
-  PetscReal t1321,t1323,t1328,t1330,t1331,t1332,t1333,t1336,t1338,t1343,t1344,t1346,t1349,t1350,t1354;
-  PetscReal t1366,t1369,t1370,t1371,t1376,t1378,t1380,t1383,t1386,t1387,t1388,t1391,t1393,t1399;
-  PetscReal t1411,t1412,t1420,t1427;
-  PetscReal t1450,t1456,t1468,t1472,t1474,t1478;
-  PetscReal t1504,t1511;
-  PetscReal t1545;
-  PetscReal t1564,t1583;
+.vb
+  The domain is the square 0 <= x,z <= 1. We solve the Stokes equation for incompressible flow with free-slip boundary
+  conditions everywhere. The forcing term f is given by
 
-  PetscReal      sum1 = 0.0, sum2 = 0.0, sum3 = 0.0, sum4 = 0.0, sum5 = 0.0, sum6 = 0.0;
-  PetscReal      ZA = etaA, ZB = etaB;
-  PetscInt       nz  = m,    nx = n;
-  PetscReal      u1, u2, u3, u4, u5, u6, Z, x = pos[0], z = pos[1];
+    fx = 0
+    fz = sigma*sin(km*z)*cos(kn*x)
+
+  where
+
+    km = m*Pi (m may be non-integral)
+    kn = n*Pi
+
+  meaning that the density rho is -sigma*sin(km*z)*cos(kn*x). Here we set sigma = 1.
+  The viscosity eta jumps from etaA to etaB at x = xc.
+.ve
+*/
+static PetscErrorCode SolCxSolution(const PetscReal pos[], PetscReal m, PetscInt n, PetscReal xc, PetscReal etaA, PetscReal etaB, PetscScalar vel[], PetscScalar *p, PetscScalar s[], PetscScalar gamma[], PetscScalar *mu)
+{
+  PetscReal _PC1A, _PC2A, _PC3A, _PC4A, _PC1B, _PC2B, _PC3B, _PC4B, _PC1, _PC2, _PC3, _PC4;
+  PetscReal t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15, t16, t17, t18, t19, t20, t21, t22, t23, t24, t25, t26, t27, t28, t29, t30, t31, t32, t33, t34, t35, t36, t37, t38, t39, t40;
+  PetscReal t41, t42, t43, t44, t45, t46, t47, t48, t49, t50, t51, t52, t53, t54, t55, t56, t57, t58, t59, t60, t61, t62, t63, t64, t65, t66, t67, t68, t69, t70, t71, t72, t73, t74, t75, t76, t77, t78, t79, t80;
+  PetscReal t81, t82, t83, t84, t85, t86, t87, t88, t89, t90, t91, t92, t93, t94, t95, t96, t97, t98, t99, t100, t101, t102, t103, t104, t105, t106, t107, t108, t109, t110, t111, t112, t113, t115, t116, t117, t118, t119, t120;
+  PetscReal t121, t122, t123, t124, t125, t126, t127, t128, t129, t130, t131, t132, t133, t134, t135, t136, t137, t138, t139, t140, t141, t142, t143, t144, t145, t146, t147, t148, t149, t150, t151, t152, t153, t154, t155, t156, t157, t158, t159, t160;
+  PetscReal t161, t162, t163, t164, t165, t166, t167, t168, t169, t170, t171, t172, t173, t174, t175, t176, t177, t178, t179, t180, t181, t182, t183, t184, t186, t187, t188, t189, t190, t191, t192, t193, t194, t195, t196, t197, t198, t199;
+  PetscReal t201, t202, t203, t204, t206, t207, t208, t209, t210, t211, t212, t213, t215, t216, t217, t218, t219, t220, t221, t222, t223, t224, t225, t226, t227, t228, t229, t230, t231, t232, t233, t234, t235, t236, t237, t238, t239, t240;
+  PetscReal t241, t242, t243, t244, t245, t246, t247, t248, t249, t250, t251, t252, t253, t254, t255, t256, t257, t258, t259, t260, t261, t262, t263, t264, t265, t267, t268, t269, t270, t272, t273, t274, t275, t276, t277, t278, t279, t280;
+  PetscReal t281, t282, t283, t284, t285, t286, t288, t289, t290, t291, t292, t295, t296, t297, t298, t299, t300, t301, t303, t304, t305, t307, t308, t310, t311, t312, t313, t314, t315, t316, t317, t318, t319, t320;
+  PetscReal t321, t322, t323, t324, t325, t326, t327, t328, t329, t330, t331, t332, t334, t335, t336, t337, t338, t339, t340, t341, t342, t344, t345, t346, t347, t348, t349, t350, t351, t352, t353, t354, t355, t356, t358, t359, t360;
+  PetscReal t361, t362, t363, t364, t365, t366, t367, t368, t369, t370, t371, t372, t373, t374, t375, t376, t377, t378, t379, t380, t381, t382, t383, t384, t385, t386, t387, t389, t390, t391, t393, t394, t395, t396, t397, t398;
+  PetscReal t401, t402, t403, t404, t405, t406, t407, t408, t409, t410, t411, t412, t413, t414, t415, t416, t417, t418, t419, t421, t422, t423, t424, t425, t426, t427, t428, t429, t430, t431, t432, t433, t434, t436, t437, t438, t439, t440;
+  PetscReal t441, t442, t443, t444, t445, t446, t447, t448, t450, t451, t453, t454, t455, t456, t457, t458, t459, t461, t462, t463, t464, t465, t466, t468, t469, t470, t471, t474, t475, t478, t480;
+  PetscReal t482, t483, t484, t485, t488, t489, t490, t492, t493, t495, t497, t498, t499, t501, t502, t503, t504, t505, t507, t508, t509, t510, t511, t512, t513, t515, t518, t520;
+  PetscReal t522, t525, t527, t528, t529, t530, t532, t533, t534, t535, t536, t538, t539, t541, t542, t544, t545, t546, t547, t548, t549, t550, t551, t552, t553, t554, t555, t556, t557, t560;
+  PetscReal t561, t562, t563, t564, t567, t568, t571, t573, t575, t576, t578, t579, t583, t590, t591, t594, t595, t596, t597, t598, t600;
+  PetscReal t601, t602, t604, t606, t607, t608, t611, t613, t615, t616, t617, t619, t621, t623, t624, t625, t626, t627, t629, t630, t632, t633, t634, t638, t639, t640;
+  PetscReal t641, t642, t643, t644, t645, t647, t648, t649, t650, t651, t652, t653, t654, t655, t656, t657, t658, t659, t660, t662, t663, t665, t666, t667, t668, t670, t671, t672, t673, t674, t675, t676, t679, t680;
+  PetscReal t682, t683, t684, t685, t686, t688, t689, t690, t691, t693, t694, t695, t696, t697, t698, t699, t700, t701, t702, t704, t705, t708, t709, t711, t712, t713, t714, t717, t718, t719;
+  PetscReal t721, t722, t723, t726, t727, t728, t730, t733, t734, t735, t736, t737, t738, t739, t740, t741, t744, t745, t746, t749, t750, t752, t753, t754, t755, t757, t758, t759, t760;
+  PetscReal t761, t762, t763, t764, t766, t767, t768, t770, t771, t772, t773, t774, t775, t776, t777, t778, t780, t781, t782, t785, t786, t789, t790, t791, t792, t793, t794, t795, t796, t797, t798, t800;
+  PetscReal t801, t806, t807, t808, t809, t811, t812, t817, t818, t819, t821, t822, t824, t827, t828, t830, t834, t835, t837, t840;
+  PetscReal t842, t843, t844, t845, t846, t849, t850, t853, t854, t855, t857, t858, t859, t860, t863, t864, t867, t868, t869, t873, t874, t877, t878, t879, t880;
+  PetscReal t884, t888, t891, t894, t900, t901, t903, t904, t907, t908, t909, t911, t914, t915, t916, t919, t920;
+  PetscReal t923, t924, t925, t926, t927, t929, t932, t935, t937, t939, t942, t943, t944, t945, t947, t948, t949, t950, t952, t953, t954, t955, t956, t957;
+  PetscReal t961, t964, t965, t966, t967, t968, t969, t971, t972, t974, t977, t978, t981, t983, t987, t988, t992, t993, t994, t997, t998;
+  PetscReal t1001, t1003, t1005, t1006, t1009, t1010, t1012, t1013, t1015, t1016, t1017, t1018, t1020, t1021, t1029, t1031, t1032, t1033, t1040;
+  PetscReal t1041, t1042, t1044, t1047, t1050, t1054, t1055, t1057, t1058, t1063, t1068, t1069, t1070, t1079, t1080;
+  PetscReal t1088, t1089, t1091, t1092, t1094, t1096, t1101, t1102, t1103, t1104, t1105, t1108, t1112, t1113, t1118, t1119, t1120;
+  PetscReal t1121, t1122, t1123, t1124, t1125, t1126, t1127, t1128, t1129, t1130, t1132, t1133, t1134, t1135, t1138, t1139, t1140, t1141, t1142, t1145, t1146, t1148, t1149, t1150, t1153, t1154, t1156, t1157, t1158, t1159;
+  PetscReal t1161, t1162, t1165, t1166, t1170, t1171, t1172, t1173, t1175, t1176, t1178, t1180, t1181, t1182, t1185, t1189, t1192, t1193, t1195, t1196, t1199;
+  PetscReal t1201, t1203, t1209, t1210, t1211, t1213, t1214, t1218, t1221, t1224, t1225, t1226, t1228, t1233, t1234, t1235, t1236, t1237, t1240;
+  PetscReal t1241, t1242, t1243, t1244, t1245, t1248, t1251, t1252, t1257, t1258, t1259, t1260, t1263, t1268, t1269, t1272, t1280;
+  PetscReal t1282, t1283, t1284, t1285, t1287, t1288, t1289, t1292, t1293, t1296, t1297, t1300, t1304, t1307, t1310, t1311, t1312, t1316, t1317, t1320;
+  PetscReal t1321, t1323, t1328, t1330, t1331, t1332, t1333, t1336, t1338, t1343, t1344, t1346, t1349, t1350, t1354;
+  PetscReal t1366, t1369, t1370, t1371, t1376, t1378, t1380, t1383, t1386, t1387, t1388, t1391, t1393, t1399;
+  PetscReal t1411, t1412, t1420, t1427;
+  PetscReal t1450, t1456, t1468, t1472, t1474, t1478;
+  PetscReal t1504, t1511;
+  PetscReal t1545;
+  PetscReal t1564, t1583;
+
+  PetscReal sum1 = 0.0, sum2 = 0.0, sum3 = 0.0, sum4 = 0.0, sum5 = 0.0, sum6 = 0.0;
+  PetscReal ZA = etaA, ZB = etaB;
+  PetscInt  nz = m, nx = n;
+  PetscReal u1, u2, u3, u4, u5, u6, Z, x = pos[0], z = pos[1];
 
   PetscFunctionBegin;
   /* Note that there is no Fourier sum here. */
   /****************************************************************************************/
   _PC1A = 0;
   /****************************************************************************************/
-  t1 = nx * 0.3141592654e1;
-  t2 = PetscSinReal(t1);
-  t3 = nx * t2;
-  t4 = nz * nz;
-  t5 = t4 * t4;
-  t6 = 0.3141592654e1 * 0.3141592654e1;
-  t8 = t3 * t5 * t6;
-  t9 = ZA * xc;
-  t12 = PetscExpReal(xc * nz * 0.3141592654e1);
-  t13 = t12 * t12;
-  t15 = nz * 0.3141592654e1;
-  t16 = PetscExpReal(t15);
-  t17 = t16 * t16;
-  t18 = t17 * t16;
-  t19 = ZB * t13 * t18;
-  t20 = t9 * t19;
-  t23 = ZA * ZA;
-  t24 = nx * nx;
-  t25 = t24 * nx;
-  t26 = t23 * t25;
-  t28 = t13 * t13;
-  t29 = t28 * t13;
-  t33 = nx * ZB;
-  t34 = t1 * xc;
-  t35 = PetscSinReal(t34);
-  t36 = t4 * nz;
-  t37 = t35 * t36;
-  t38 = t33 * t37;
-  t39 = 0.3141592654e1 * ZA;
-  t40 = t13 * t12;
-  t41 = t17 * t40;
-  t45 = ZB * ZB;
-  t46 = t45 * t24;
-  t47 = t46 * t4;
-  t48 = 0.3141592654e1 * xc;
-  t49 = t13 * t17;
-  t53 = xc * xc;
-  t54 = t36 * t53;
-  t56 = t54 * t6 * t45;
-  t57 = PetscCosReal(t34);
-  t58 = t57 * t24;
-  t59 = t28 * t12;
-  t60 = t17 * t59;
-  t61 = t58 * t60;
-  t64 = t25 * t2;
-  t65 = t64 * t15;
-  t72 = nx * t23;
-  t74 = t72 * t2 * t5;
-  t75 = t6 * t53;
-  t76 = t16 * t29;
-  t80 = t23 * nz;
-  t81 = t80 * 0.3141592654e1;
-  t82 = t18 * t28;
-  t86 = nx * t5;
-  t87 = t23 * t6;
-  t89 = xc * t2;
-  t90 = t13 * t18;
-  t91 = t89 * t90;
-  t94 = t28 * t28;
-  t96 = t24 * nz;
-  t98 = t4 * t45;
-  t99 = t98 * 0.3141592654e1;
+  t1   = nx * 0.3141592654e1;
+  t2   = PetscSinReal(t1);
+  t3   = nx * t2;
+  t4   = nz * nz;
+  t5   = t4 * t4;
+  t6   = 0.3141592654e1 * 0.3141592654e1;
+  t8   = t3 * t5 * t6;
+  t9   = ZA * xc;
+  t12  = PetscExpReal(xc * nz * 0.3141592654e1);
+  t13  = t12 * t12;
+  t15  = nz * 0.3141592654e1;
+  t16  = PetscExpReal(t15);
+  t17  = t16 * t16;
+  t18  = t17 * t16;
+  t19  = ZB * t13 * t18;
+  t20  = t9 * t19;
+  t23  = ZA * ZA;
+  t24  = nx * nx;
+  t25  = t24 * nx;
+  t26  = t23 * t25;
+  t28  = t13 * t13;
+  t29  = t28 * t13;
+  t33  = nx * ZB;
+  t34  = t1 * xc;
+  t35  = PetscSinReal(t34);
+  t36  = t4 * nz;
+  t37  = t35 * t36;
+  t38  = t33 * t37;
+  t39  = 0.3141592654e1 * ZA;
+  t40  = t13 * t12;
+  t41  = t17 * t40;
+  t45  = ZB * ZB;
+  t46  = t45 * t24;
+  t47  = t46 * t4;
+  t48  = 0.3141592654e1 * xc;
+  t49  = t13 * t17;
+  t53  = xc * xc;
+  t54  = t36 * t53;
+  t56  = t54 * t6 * t45;
+  t57  = PetscCosReal(t34);
+  t58  = t57 * t24;
+  t59  = t28 * t12;
+  t60  = t17 * t59;
+  t61  = t58 * t60;
+  t64  = t25 * t2;
+  t65  = t64 * t15;
+  t72  = nx * t23;
+  t74  = t72 * t2 * t5;
+  t75  = t6 * t53;
+  t76  = t16 * t29;
+  t80  = t23 * nz;
+  t81  = t80 * 0.3141592654e1;
+  t82  = t18 * t28;
+  t86  = nx * t5;
+  t87  = t23 * t6;
+  t89  = xc * t2;
+  t90  = t13 * t18;
+  t91  = t89 * t90;
+  t94  = t28 * t28;
+  t96  = t24 * nz;
+  t98  = t4 * t45;
+  t99  = t98 * 0.3141592654e1;
   t100 = t58 * t41;
   t104 = 0.3141592654e1 * t25;
   t105 = ZA * nz * t104;
@@ -1075,68 +1018,68 @@ static PetscErrorCode SolCxSolution(const PetscReal pos[], PetscReal m, PetscInt
 
   _PC2A = (t147 - 0.4e1 * t65 * t217 + t418 + 0.2e1 * t150 * t222 + t327 - 0.2e1 * t149 * t19 + 0.2e1 * t335 * ZB * t24 * ZA - 0.16e2 * t312 * t313 * t355 * t59 - 0.4e1 * t281 * ZB * ZA * t597 - 0.2e1 * t505 * t45 * t281 * t58 - 0.4e1 * t211 * t2 * t53 * t76 + 0.8e1 * t305 * t286 - 0.4e1 * t122 * t499 - 0.4e1 * t331 * t332 + 0.8e1 * t345 * t177 * t60 - 0.2e1 * t142 * t177 * t82 + 0.2e1 * t72 * t281 * t415 + 0.4e1 * t349 * t96 * t41 - 0.2e1 * t81 * t64 * t76 + 0.2e1 * t58 * t80 * t59 + 0.8e1 * t345 * t177 * t41 - 0.4e1 * t8 * t499 + t242 + 0.4e1 * t8 * t518 + t625 + t685 + 0.2e1 * t328 * t174 + 0.2e1 * t331 * t455 - 0.2e1 * t33 * t2 * t4 * ZA * t82 - 0.4e1 * t626 * t191 + 0.16e2 * t364 * t373 - 0.2e1 * t621 * t597 - 0.2e1 * t439 * t568 + t492 + t533 * t96 + t232 * t96 + 0.2e1 * t567 * t441 + t561) / (t740 + t789 + t834 + t874 + t911 + t948 + t987 + t1021);
   /****************************************************************************************/
-  t1 = nz * nz;
-  t2 = t1 * nz;
-  t3 = t2 * 0.3141592654e1;
-  t4 = t3 * xc;
-  t5 = ZB * ZB;
-  t7 = PetscExpReal(nz * 0.3141592654e1);
-  t8 = t7 * t7;
-  t9 = t5 * t8;
-  t12 = PetscExpReal(xc * nz * 0.3141592654e1);
-  t13 = t12 * t12;
-  t14 = t13 * t13;
-  t15 = t14 * t13;
-  t19 = nx * nx;
-  t21 = nx * 0.3141592654e1;
-  t22 = PetscSinReal(t21);
-  t23 = t19 * nx * t22;
-  t24 = t23 * 0.3141592654e1;
-  t25 = ZA * ZB;
-  t26 = t7 * t15;
-  t27 = t25 * t26;
-  t30 = t21 * xc;
-  t31 = PetscSinReal(t30);
-  t32 = t31 * nx;
-  t33 = t32 * nz;
-  t34 = ZA * ZA;
-  t35 = t8 * t8;
-  t36 = t34 * t35;
-  t40 = t2 * t34;
-  t41 = 0.3141592654e1 * t8;
-  t42 = t41 * t15;
-  t45 = t1 * t5;
-  t46 = t14 * t14;
-  t49 = t19 * t5;
-  t51 = t19 * t46;
-  t53 = t19 * t34;
-  t55 = t8 * t7;
-  t56 = t13 * t55;
-  t57 = t25 * t56;
-  t60 = t2 * nx;
-  t61 = 0.3141592654e1 * 0.3141592654e1;
-  t63 = t60 * t31 * t61;
-  t64 = xc * xc;
-  t65 = ZA * t64;
-  t66 = ZB * t8;
-  t67 = t14 * t12;
-  t68 = t66 * t67;
-  t69 = t65 * t68;
-  t72 = -0.4e1 * t4 * t9 * t15 + 0.4e1 * t24 * t27 + 0.4e1 * t33 * t36 * t12 - 0.4e1 * t40 * t42 - t45 * t46 + t45 * t14 - t49 * t14 + t51 * t5 - t53 * t14 + 0.4e1 * t24 * t57 + 0.32e2 * t63 * t69;
-  t73 = t1 * nx;
-  t75 = t73 * t31 * 0.3141592654e1;
-  t76 = t8 * t67;
-  t77 = t25 * t76;
-  t80 = t1 * t1;
-  t81 = t80 * t34;
-  t83 = t61 * t14;
-  t87 = t1 * t19;
-  t88 = PetscCosReal(t30);
-  t90 = t87 * t88 * t61;
-  t91 = t5 * t64;
-  t92 = t13 * t12;
-  t93 = t8 * t92;
-  t94 = t91 * t93;
+  t1   = nz * nz;
+  t2   = t1 * nz;
+  t3   = t2 * 0.3141592654e1;
+  t4   = t3 * xc;
+  t5   = ZB * ZB;
+  t7   = PetscExpReal(nz * 0.3141592654e1);
+  t8   = t7 * t7;
+  t9   = t5 * t8;
+  t12  = PetscExpReal(xc * nz * 0.3141592654e1);
+  t13  = t12 * t12;
+  t14  = t13 * t13;
+  t15  = t14 * t13;
+  t19  = nx * nx;
+  t21  = nx * 0.3141592654e1;
+  t22  = PetscSinReal(t21);
+  t23  = t19 * nx * t22;
+  t24  = t23 * 0.3141592654e1;
+  t25  = ZA * ZB;
+  t26  = t7 * t15;
+  t27  = t25 * t26;
+  t30  = t21 * xc;
+  t31  = PetscSinReal(t30);
+  t32  = t31 * nx;
+  t33  = t32 * nz;
+  t34  = ZA * ZA;
+  t35  = t8 * t8;
+  t36  = t34 * t35;
+  t40  = t2 * t34;
+  t41  = 0.3141592654e1 * t8;
+  t42  = t41 * t15;
+  t45  = t1 * t5;
+  t46  = t14 * t14;
+  t49  = t19 * t5;
+  t51  = t19 * t46;
+  t53  = t19 * t34;
+  t55  = t8 * t7;
+  t56  = t13 * t55;
+  t57  = t25 * t56;
+  t60  = t2 * nx;
+  t61  = 0.3141592654e1 * 0.3141592654e1;
+  t63  = t60 * t31 * t61;
+  t64  = xc * xc;
+  t65  = ZA * t64;
+  t66  = ZB * t8;
+  t67  = t14 * t12;
+  t68  = t66 * t67;
+  t69  = t65 * t68;
+  t72  = -0.4e1 * t4 * t9 * t15 + 0.4e1 * t24 * t27 + 0.4e1 * t33 * t36 * t12 - 0.4e1 * t40 * t42 - t45 * t46 + t45 * t14 - t49 * t14 + t51 * t5 - t53 * t14 + 0.4e1 * t24 * t57 + 0.32e2 * t63 * t69;
+  t73  = t1 * nx;
+  t75  = t73 * t31 * 0.3141592654e1;
+  t76  = t8 * t67;
+  t77  = t25 * t76;
+  t80  = t1 * t1;
+  t81  = t80 * t34;
+  t83  = t61 * t14;
+  t87  = t1 * t19;
+  t88  = PetscCosReal(t30);
+  t90  = t87 * t88 * t61;
+  t91  = t5 * t64;
+  t92  = t13 * t12;
+  t93  = t8 * t92;
+  t94  = t91 * t93;
   t100 = ZB * t64 * ZA * t8 * t92;
   t103 = nz * t19;
   t105 = t103 * t88 * 0.3141592654e1;
@@ -1326,69 +1269,69 @@ static PetscErrorCode SolCxSolution(const PetscReal pos[], PetscReal m, PetscInt
   /****************************************************************************************/
   _PC4A = 0;
   /****************************************************************************************/
-  t1 = nx * 0.3141592654e1;
-  t2 = t1 * xc;
-  t3 = PetscCosReal(t2);
-  t4 = nx * nx;
-  t6 = nz * 0.3141592654e1;
-  t7 = t3 * t4 * t6;
-  t8 = ZA * ZB;
-  t9 = PetscExpReal(t6);
-  t10 = t9 * t9;
-  t11 = xc * nz;
-  t13 = PetscExpReal(t11 * 0.3141592654e1);
-  t14 = t13 * t13;
-  t15 = t14 * t13;
-  t16 = t14 * t14;
-  t17 = t16 * t15;
-  t18 = t10 * t17;
-  t19 = t8 * t18;
-  t22 = PetscSinReal(t2);
-  t23 = nx * t22;
-  t24 = t23 * nz;
-  t25 = ZB * ZB;
-  t30 = nz * nz;
-  t31 = t30 * nz;
-  t32 = t31 * nx;
-  t33 = 0.3141592654e1 * 0.3141592654e1;
-  t35 = t32 * t22 * t33;
-  t36 = ZA * ZA;
-  t37 = t36 * xc;
-  t38 = t16 * t13;
-  t39 = t10 * t38;
-  t40 = t37 * t39;
-  t43 = PetscSinReal(t1);
-  t44 = nx * t43;
-  t45 = t30 * 0.3141592654e1;
-  t46 = t44 * t45;
-  t47 = ZA * xc;
-  t49 = ZB * t16 * t9;
-  t54 = t4 * nx * t43;
-  t55 = xc * xc;
-  t57 = t54 * t30 * t55;
-  t58 = t33 * 0.3141592654e1;
-  t59 = t58 * t25;
-  t60 = t16 * t9;
-  t61 = t59 * t60;
-  t64 = xc * t25;
-  t65 = t14 * t9;
-  t66 = t64 * t65;
-  t70 = t44 * t31 * t33;
-  t71 = t37 * t65;
-  t74 = t10 * t15;
-  t75 = t64 * t74;
-  t78 = t25 * t10;
-  t83 = t54 * nz * t33;
-  t84 = t55 * t25;
-  t85 = t10 * t9;
-  t86 = t14 * t85;
-  t87 = t84 * t86;
-  t90 = t30 * t30;
-  t92 = t44 * t90 * t58;
-  t93 = t55 * xc;
-  t94 = t93 * t25;
-  t95 = t85 * t16;
-  t96 = t94 * t95;
+  t1   = nx * 0.3141592654e1;
+  t2   = t1 * xc;
+  t3   = PetscCosReal(t2);
+  t4   = nx * nx;
+  t6   = nz * 0.3141592654e1;
+  t7   = t3 * t4 * t6;
+  t8   = ZA * ZB;
+  t9   = PetscExpReal(t6);
+  t10  = t9 * t9;
+  t11  = xc * nz;
+  t13  = PetscExpReal(t11 * 0.3141592654e1);
+  t14  = t13 * t13;
+  t15  = t14 * t13;
+  t16  = t14 * t14;
+  t17  = t16 * t15;
+  t18  = t10 * t17;
+  t19  = t8 * t18;
+  t22  = PetscSinReal(t2);
+  t23  = nx * t22;
+  t24  = t23 * nz;
+  t25  = ZB * ZB;
+  t30  = nz * nz;
+  t31  = t30 * nz;
+  t32  = t31 * nx;
+  t33  = 0.3141592654e1 * 0.3141592654e1;
+  t35  = t32 * t22 * t33;
+  t36  = ZA * ZA;
+  t37  = t36 * xc;
+  t38  = t16 * t13;
+  t39  = t10 * t38;
+  t40  = t37 * t39;
+  t43  = PetscSinReal(t1);
+  t44  = nx * t43;
+  t45  = t30 * 0.3141592654e1;
+  t46  = t44 * t45;
+  t47  = ZA * xc;
+  t49  = ZB * t16 * t9;
+  t54  = t4 * nx * t43;
+  t55  = xc * xc;
+  t57  = t54 * t30 * t55;
+  t58  = t33 * 0.3141592654e1;
+  t59  = t58 * t25;
+  t60  = t16 * t9;
+  t61  = t59 * t60;
+  t64  = xc * t25;
+  t65  = t14 * t9;
+  t66  = t64 * t65;
+  t70  = t44 * t31 * t33;
+  t71  = t37 * t65;
+  t74  = t10 * t15;
+  t75  = t64 * t74;
+  t78  = t25 * t10;
+  t83  = t54 * nz * t33;
+  t84  = t55 * t25;
+  t85  = t10 * t9;
+  t86  = t14 * t85;
+  t87  = t84 * t86;
+  t90  = t30 * t30;
+  t92  = t44 * t90 * t58;
+  t93  = t55 * xc;
+  t94  = t93 * t25;
+  t95  = t85 * t16;
+  t96  = t94 * t95;
   t102 = t23 * t45;
   t103 = t10 * t10;
   t104 = ZB * t103;
@@ -1580,28 +1523,28 @@ static PetscErrorCode SolCxSolution(const PetscReal pos[], PetscReal m, PetscInt
   t949 = t103 * t16;
   t950 = t949 * t90;
   t953 = -0.2e1 * t915 * t103 * t90 + 0.2e1 * t915 * t920 - 0.2e1 * t915 * t123 * t919 + 0.2e1 * t915 * t16 * t90 - 0.2e1 * t915 * t929 - 0.2e1 * t915 * t932 - 0.2e1 * t935 * t323 * t123 + 0.2e1 * t935 * t939 + 0.4e1 * t915 * t943 + 0.4e1 * t182 * t172 * t90 + 0.2e1 * t915 * t950;
-  t954 = t171 * t36;
-  t955 = t90 * nz;
-  t956 = xc * t955;
-  t957 = t118 * t10;
-  t964 = t33 * t33;
-  t965 = t964 * ZB;
-  t966 = t965 * t640;
-  t967 = t10 * t919;
-  t968 = t55 * t16;
-  t969 = t967 * t968;
-  t972 = t935 * t36;
-  t974 = t103 * t30 * t4;
-  t977 = xc * t16;
-  t978 = t967 * t977;
-  t981 = t90 * t30;
-  t983 = t16 * t10;
-  t987 = t182 * ZA;
-  t988 = t4 * t10;
-  t992 = t171 * t604;
-  t993 = xc * t14;
-  t994 = t932 * t993;
-  t997 = t182 * t30;
+  t954  = t171 * t36;
+  t955  = t90 * nz;
+  t956  = xc * t955;
+  t957  = t118 * t10;
+  t964  = t33 * t33;
+  t965  = t964 * ZB;
+  t966  = t965 * t640;
+  t967  = t10 * t919;
+  t968  = t55 * t16;
+  t969  = t967 * t968;
+  t972  = t935 * t36;
+  t974  = t103 * t30 * t4;
+  t977  = xc * t16;
+  t978  = t967 * t977;
+  t981  = t90 * t30;
+  t983  = t16 * t10;
+  t987  = t182 * ZA;
+  t988  = t4 * t10;
+  t992  = t171 * t604;
+  t993  = xc * t14;
+  t994  = t932 * t993;
+  t997  = t182 * t30;
   t1005 = t171 * t285;
   t1006 = t988 * t993;
   t1009 = t58 * t914;
@@ -1645,77 +1588,77 @@ static PetscErrorCode SolCxSolution(const PetscReal pos[], PetscReal m, PetscInt
 
   _PC1B = (t127 + t204 + t270 + t329 + t384 + t439 + t501 + t549 + t601 + t647 + t698 + t739 + t782 + t821 + t867 + t909) / (t953 + t1013 + t1057 + t1094 + t1140 + t1182 + t1225 + t1263);
   /****************************************************************************************/
-  t1 = nz * nz;
-  t2 = t1 * nz;
-  t3 = nx * t2;
-  t4 = 0.3141592654e1 * ZA;
-  t5 = t3 * t4;
-  t6 = nx * 0.3141592654e1;
-  t7 = t6 * xc;
-  t8 = PetscSinReal(t7);
-  t9 = t8 * ZB;
-  t10 = nz * 0.3141592654e1;
-  t11 = PetscExpReal(t10);
-  t12 = t11 * t11;
-  t15 = PetscExpReal(xc * nz * 0.3141592654e1);
-  t16 = t15 * t15;
-  t17 = t16 * t16;
-  t18 = t17 * t15;
-  t19 = t12 * t18;
-  t23 = t1 * t1;
-  t24 = nx * t23;
-  t25 = ZB * ZB;
-  t27 = t18 * t8;
-  t28 = 0.3141592654e1 * 0.3141592654e1;
-  t29 = xc * xc;
-  t30 = t28 * t29;
-  t34 = t1 * xc;
-  t35 = 0.3141592654e1 * ZB;
-  t36 = t34 * t35;
-  t37 = PetscCosReal(t7);
-  t38 = ZA * t37;
-  t39 = nx * nx;
-  t40 = t39 * t12;
-  t41 = t16 * t15;
-  t43 = t38 * t40 * t41;
-  t46 = t25 * nz;
-  t47 = t46 * 0.3141592654e1;
-  t48 = t39 * nx;
-  t49 = PetscSinReal(t6);
-  t50 = t48 * t49;
-  t51 = t12 * t11;
-  t52 = t51 * t17;
-  t53 = t50 * t52;
-  t56 = t34 * 0.3141592654e1 * t25;
-  t57 = t37 * t39;
-  t58 = t17 * t41;
-  t59 = t12 * t58;
-  t60 = t57 * t59;
-  t63 = t25 * t18;
-  t64 = t57 * nz;
-  t67 = ZA * ZA;
-  t68 = t67 * nz;
-  t69 = 0.3141592654e1 * t48;
-  t70 = t68 * t69;
-  t71 = t49 * xc;
-  t72 = t17 * t16;
-  t73 = t11 * t72;
-  t74 = t71 * t73;
-  t77 = t1 * t67;
-  t78 = t77 * 0.3141592654e1;
-  t81 = nx * t25;
-  t82 = t81 * t49;
-  t83 = t17 * t17;
-  t85 = t1 * t83 * t11;
-  t87 = nx * ZB;
-  t88 = t8 * t2;
-  t89 = t87 * t88;
-  t90 = 0.3141592654e1 * xc;
-  t91 = t12 * t12;
-  t92 = ZA * t91;
-  t97 = ZB * ZA;
-  t98 = t97 * t37;
-  t99 = t39 * nz;
+  t1   = nz * nz;
+  t2   = t1 * nz;
+  t3   = nx * t2;
+  t4   = 0.3141592654e1 * ZA;
+  t5   = t3 * t4;
+  t6   = nx * 0.3141592654e1;
+  t7   = t6 * xc;
+  t8   = PetscSinReal(t7);
+  t9   = t8 * ZB;
+  t10  = nz * 0.3141592654e1;
+  t11  = PetscExpReal(t10);
+  t12  = t11 * t11;
+  t15  = PetscExpReal(xc * nz * 0.3141592654e1);
+  t16  = t15 * t15;
+  t17  = t16 * t16;
+  t18  = t17 * t15;
+  t19  = t12 * t18;
+  t23  = t1 * t1;
+  t24  = nx * t23;
+  t25  = ZB * ZB;
+  t27  = t18 * t8;
+  t28  = 0.3141592654e1 * 0.3141592654e1;
+  t29  = xc * xc;
+  t30  = t28 * t29;
+  t34  = t1 * xc;
+  t35  = 0.3141592654e1 * ZB;
+  t36  = t34 * t35;
+  t37  = PetscCosReal(t7);
+  t38  = ZA * t37;
+  t39  = nx * nx;
+  t40  = t39 * t12;
+  t41  = t16 * t15;
+  t43  = t38 * t40 * t41;
+  t46  = t25 * nz;
+  t47  = t46 * 0.3141592654e1;
+  t48  = t39 * nx;
+  t49  = PetscSinReal(t6);
+  t50  = t48 * t49;
+  t51  = t12 * t11;
+  t52  = t51 * t17;
+  t53  = t50 * t52;
+  t56  = t34 * 0.3141592654e1 * t25;
+  t57  = t37 * t39;
+  t58  = t17 * t41;
+  t59  = t12 * t58;
+  t60  = t57 * t59;
+  t63  = t25 * t18;
+  t64  = t57 * nz;
+  t67  = ZA * ZA;
+  t68  = t67 * nz;
+  t69  = 0.3141592654e1 * t48;
+  t70  = t68 * t69;
+  t71  = t49 * xc;
+  t72  = t17 * t16;
+  t73  = t11 * t72;
+  t74  = t71 * t73;
+  t77  = t1 * t67;
+  t78  = t77 * 0.3141592654e1;
+  t81  = nx * t25;
+  t82  = t81 * t49;
+  t83  = t17 * t17;
+  t85  = t1 * t83 * t11;
+  t87  = nx * ZB;
+  t88  = t8 * t2;
+  t89  = t87 * t88;
+  t90  = 0.3141592654e1 * xc;
+  t91  = t12 * t12;
+  t92  = ZA * t91;
+  t97  = ZB * ZA;
+  t98  = t97 * t37;
+  t99  = t39 * nz;
   t100 = t12 * t41;
   t104 = 0.8e1 * t5 * t9 * t19 + 0.8e1 * t24 * t25 * t27 * t30 + 0.12e2 * t36 * t43 - t47 * t53 - 0.2e1 * t56 * t60 - 0.4e1 * t63 * t64 + 0.6e1 * t70 * t74 + 0.4e1 * t78 * t60 - t82 * t85 + 0.4e1 * t89 * t90 * t92 * t41 + 0.4e1 * t98 * t99 * t100;
   t105 = t67 * t48;
@@ -2054,71 +1997,71 @@ static PetscErrorCode SolCxSolution(const PetscReal pos[], PetscReal m, PetscInt
 
   _PC2B = (t1133 + t1196 + t1068 + t811 + t466 + t1012 + t381 + t162 + t249 + t533 + t844 + t104 + t1159 + t571 + t211 + t874 + t607 + t339 + t296 + t638 + t908 + t671 + t419 + t983 + t705 + t1105 + t501 + t778 + t1040 + t1228 + t741 + t944) / (t1292 + t1344 + t1386 + t1427 + t1468 + t1511 + t1545 + t1583);
   /****************************************************************************************/
-  t1 = nz * nz;
-  t2 = t1 * nz;
-  t3 = t2 * nx;
-  t4 = nx * 0.3141592654e1;
-  t5 = t4 * xc;
-  t6 = PetscSinReal(t5);
-  t7 = 0.3141592654e1 * 0.3141592654e1;
-  t9 = t3 * t6 * t7;
-  t10 = xc * xc;
-  t11 = ZA * ZA;
-  t12 = t10 * t11;
-  t13 = nz * 0.3141592654e1;
-  t14 = PetscExpReal(t13);
-  t15 = t14 * t14;
-  t16 = xc * nz;
-  t18 = PetscExpReal(t16 * 0.3141592654e1);
-  t19 = t18 * t18;
-  t20 = t19 * t18;
-  t21 = t15 * t20;
-  t22 = t12 * t21;
-  t25 = nx * t6;
-  t26 = t1 * 0.3141592654e1;
-  t27 = t25 * t26;
-  t28 = ZA * ZB;
-  t29 = t18 * t15;
-  t30 = t28 * t29;
-  t33 = t25 * nz;
-  t34 = t11 * t15;
-  t35 = t19 * t19;
-  t36 = t35 * t18;
-  t40 = t25 * t1;
-  t41 = 0.3141592654e1 * t11;
-  t42 = t15 * t36;
-  t43 = t41 * t42;
-  t46 = nx * nx;
-  t47 = t1 * t46;
-  t48 = t47 * t11;
-  t49 = t7 * xc;
-  t50 = t35 * t15;
-  t51 = t49 * t50;
-  t55 = PetscSinReal(t4);
-  t56 = t46 * nx * t55;
-  t58 = t56 * nz * t7;
-  t59 = ZB * ZB;
-  t60 = t10 * t59;
-  t61 = t15 * t14;
-  t62 = t19 * t61;
-  t63 = t60 * t62;
-  t66 = t19 * t14;
-  t67 = t60 * t66;
-  t70 = t28 * t42;
-  t73 = PetscCosReal(t5);
-  t74 = t47 * t73;
-  t75 = t7 * t11;
-  t77 = t75 * t10 * t36;
-  t80 = t73 * t46;
-  t81 = t80 * nz;
-  t82 = 0.3141592654e1 * t59;
-  t83 = t82 * t42;
-  t87 = xc * t11;
-  t88 = t87 * t62;
-  t91 = nz * nx;
-  t92 = t55 * t61;
-  t96 = nx * t55;
-  t98 = t96 * t2 * t7;
+  t1   = nz * nz;
+  t2   = t1 * nz;
+  t3   = t2 * nx;
+  t4   = nx * 0.3141592654e1;
+  t5   = t4 * xc;
+  t6   = PetscSinReal(t5);
+  t7   = 0.3141592654e1 * 0.3141592654e1;
+  t9   = t3 * t6 * t7;
+  t10  = xc * xc;
+  t11  = ZA * ZA;
+  t12  = t10 * t11;
+  t13  = nz * 0.3141592654e1;
+  t14  = PetscExpReal(t13);
+  t15  = t14 * t14;
+  t16  = xc * nz;
+  t18  = PetscExpReal(t16 * 0.3141592654e1);
+  t19  = t18 * t18;
+  t20  = t19 * t18;
+  t21  = t15 * t20;
+  t22  = t12 * t21;
+  t25  = nx * t6;
+  t26  = t1 * 0.3141592654e1;
+  t27  = t25 * t26;
+  t28  = ZA * ZB;
+  t29  = t18 * t15;
+  t30  = t28 * t29;
+  t33  = t25 * nz;
+  t34  = t11 * t15;
+  t35  = t19 * t19;
+  t36  = t35 * t18;
+  t40  = t25 * t1;
+  t41  = 0.3141592654e1 * t11;
+  t42  = t15 * t36;
+  t43  = t41 * t42;
+  t46  = nx * nx;
+  t47  = t1 * t46;
+  t48  = t47 * t11;
+  t49  = t7 * xc;
+  t50  = t35 * t15;
+  t51  = t49 * t50;
+  t55  = PetscSinReal(t4);
+  t56  = t46 * nx * t55;
+  t58  = t56 * nz * t7;
+  t59  = ZB * ZB;
+  t60  = t10 * t59;
+  t61  = t15 * t14;
+  t62  = t19 * t61;
+  t63  = t60 * t62;
+  t66  = t19 * t14;
+  t67  = t60 * t66;
+  t70  = t28 * t42;
+  t73  = PetscCosReal(t5);
+  t74  = t47 * t73;
+  t75  = t7 * t11;
+  t77  = t75 * t10 * t36;
+  t80  = t73 * t46;
+  t81  = t80 * nz;
+  t82  = 0.3141592654e1 * t59;
+  t83  = t82 * t42;
+  t87  = xc * t11;
+  t88  = t87 * t62;
+  t91  = nz * nx;
+  t92  = t55 * t61;
+  t96  = nx * t55;
+  t98  = t96 * t2 * t7;
   t101 = xc * t59;
   t102 = t101 * t62;
   t108 = t1 * t1;
@@ -2342,10 +2285,10 @@ static PetscErrorCode SolCxSolution(const PetscReal pos[], PetscReal m, PetscInt
   t932 = t87 * t29;
   t945 = t82 * t21;
   t953 = -0.16e2 * t920 * t276 - 0.8e1 * t169 * t30 - 0.8e1 * t633 * t77 - 0.2e1 * t27 * t932 - 0.4e1 * t174 * t49 * t162 + 0.8e1 * t206 * t87 * t124 - 0.2e1 * t147 * t768 + 0.4e1 * t169 * t522 - 0.12e2 * t81 * t945 + 0.4e1 * t33 * t28 * t115 + 0.4e1 * t525 * t819;
-  t971 = t282 * t127;
-  t978 = -0.6e1 * t98 * t102 + 0.2e1 * t169 * t515 - 0.2e1 * t310 * t377 + 0.2e1 * t147 * t830 + 0.8e1 * t368 * t22 - 0.2e1 * t169 * t617 + 0.16e2 * t662 * t276 - 0.8e1 * t355 * t854 + 0.4e1 * t493 * t971 - 0.16e2 * t9 * t533 - 0.2e1 * t169 * t279;
-  t997 = xc * t127;
-  t998 = t997 * t59;
+  t971  = t282 * t127;
+  t978  = -0.6e1 * t98 * t102 + 0.2e1 * t169 * t515 - 0.2e1 * t310 * t377 + 0.2e1 * t147 * t830 + 0.8e1 * t368 * t22 - 0.2e1 * t169 * t617 + 0.16e2 * t662 * t276 - 0.8e1 * t355 * t854 + 0.4e1 * t493 * t971 - 0.16e2 * t9 * t533 - 0.2e1 * t169 * t279;
+  t997  = xc * t127;
+  t998  = t997 * t59;
   t1003 = 0.4e1 * t40 * t579 + 0.2e1 * t169 * t845 + 0.16e2 * t9 * t515 + 0.8e1 * t206 * t551 + t123 * t41 * t128 + 0.16e2 * t98 * t60 * t162 + 0.2e1 * t169 * t364 - 0.2e1 * t169 * t932 + t139 * t778 + 0.4e1 * t648 * t998 + 0.2e1 * t147 * t412;
   t1006 = t2 * t59;
   t1017 = xc * t35;
@@ -2419,74 +2362,74 @@ static PetscErrorCode SolCxSolution(const PetscReal pos[], PetscReal m, PetscInt
   t1450 = 0.2e1 * t1376 * t767 * t1161 + 0.2e1 * t1376 * t111 * t108 + 0.4e1 * t223 * t311 * t108 + 0.4e1 * t109 * t35 * t520 * ZA + 0.16e2 * t1123 * t1135 * t997 - 0.64e2 * t1181 * t1380 + 0.8e1 * t1150 * t903 - 0.32e2 * t1393 * t11 * t1192 * xc - 0.16e2 * t157 * t2 * xc * t560 * t1124 + 0.8e1 * t223 * t184 * t317 * t46 + 0.32e2 * t1336 * t10 * t1338 - 0.4e1 * t75 * t1119;
   _PC3B = (t606 + t722 + t1089 + t781 + 0.16e2 * t48 * t51 + t978 + t868 + t507 - t304 * t256 + 0.8e1 * t9 * t22 + t752 + 0.4e1 * t174 * t144 - 0.2e1 * t81 * t469 + 0.6e1 * t139 * t166 + t362 + 0.2e1 * t98 * t211 + t925 + t137 - t290 * t184 + 0.12e2 * t81 * t83 + t842 + 0.8e1 * t74 * t77 + 0.16e2 * t98 * t12 * t162 - 0.4e1 * t33 * t28 * t443 - 0.8e1 * t27 * t70 - 0.2e1 * t33 * t34 * t36 - 0.8e1 * t27 * t30 + 0.2e1 * t58 * t67 - 0.4e1 * t40 * t43 + 0.2e1 * t58 * t63 + t1033 - t290 * t256 + t290 * t35 + t193 + t1113 + t578 + t442 + t474 + t544 + t329 + t679 + t401 + t953 + t811 + t644 + t894 + t289 + t240 + t1055 + t1003) / (t1170 + t1218 + 0.2e1 * t1236 + t1280 + t1323 + t1370 + t1411 + t1450);
   /****************************************************************************************/
-  t1 = nz * nz;
-  t2 = t1 * xc;
-  t3 = ZB * ZB;
-  t5 = t2 * 0.3141592654e1 * t3;
-  t6 = nx * 0.3141592654e1;
-  t7 = t6 * xc;
-  t8 = PetscCosReal(t7);
-  t9 = nx * nx;
-  t10 = t8 * t9;
-  t11 = nz * 0.3141592654e1;
-  t12 = PetscExpReal(t11);
-  t13 = t12 * t12;
-  t16 = PetscExpReal(xc * nz * 0.3141592654e1);
-  t17 = t16 * t16;
-  t18 = t17 * t16;
-  t19 = t17 * t17;
-  t20 = t19 * t18;
-  t21 = t13 * t20;
-  t22 = t10 * t21;
-  t25 = ZA * ZA;
-  t26 = t1 * t25;
-  t27 = xc * 0.3141592654e1;
-  t28 = t26 * t27;
-  t29 = t19 * t16;
-  t30 = t13 * t13;
-  t31 = t29 * t30;
-  t35 = t9 * nx;
-  t36 = t3 * t35;
-  t37 = PetscSinReal(t6);
-  t38 = t13 * t12;
-  t39 = t37 * t38;
-  t40 = t39 * t19;
-  t42 = t1 * t1;
-  t43 = nx * t42;
-  t44 = xc * xc;
-  t45 = t25 * t44;
-  t46 = t43 * t45;
-  t47 = 0.3141592654e1 * 0.3141592654e1;
-  t48 = t47 * t37;
-  t49 = t17 * t38;
-  t54 = 0.3141592654e1 * t35;
-  t55 = ZA * nz * t54;
-  t56 = t37 * ZB;
-  t57 = t19 * t12;
-  t61 = t25 * t8;
-  t62 = t61 * t9;
-  t63 = nz * t30;
-  t64 = t63 * t16;
-  t67 = t1 * nz;
-  t69 = t47 * ZB;
-  t70 = t67 * t44 * t69;
-  t75 = nx * t3;
-  t76 = t75 * t37;
-  t77 = t67 * 0.3141592654e1;
-  t78 = t19 * t19;
-  t79 = t78 * t12;
-  t80 = t77 * t79;
-  t82 = t3 * t38;
-  t84 = t54 * t37;
-  t87 = PetscSinReal(t7);
-  t88 = t29 * t87;
-  t89 = t47 * t44;
-  t93 = nx * t25;
-  t94 = t87 * t42;
-  t95 = t93 * t94;
-  t96 = t47 * xc;
-  t97 = t13 * t29;
-  t98 = t96 * t97;
+  t1   = nz * nz;
+  t2   = t1 * xc;
+  t3   = ZB * ZB;
+  t5   = t2 * 0.3141592654e1 * t3;
+  t6   = nx * 0.3141592654e1;
+  t7   = t6 * xc;
+  t8   = PetscCosReal(t7);
+  t9   = nx * nx;
+  t10  = t8 * t9;
+  t11  = nz * 0.3141592654e1;
+  t12  = PetscExpReal(t11);
+  t13  = t12 * t12;
+  t16  = PetscExpReal(xc * nz * 0.3141592654e1);
+  t17  = t16 * t16;
+  t18  = t17 * t16;
+  t19  = t17 * t17;
+  t20  = t19 * t18;
+  t21  = t13 * t20;
+  t22  = t10 * t21;
+  t25  = ZA * ZA;
+  t26  = t1 * t25;
+  t27  = xc * 0.3141592654e1;
+  t28  = t26 * t27;
+  t29  = t19 * t16;
+  t30  = t13 * t13;
+  t31  = t29 * t30;
+  t35  = t9 * nx;
+  t36  = t3 * t35;
+  t37  = PetscSinReal(t6);
+  t38  = t13 * t12;
+  t39  = t37 * t38;
+  t40  = t39 * t19;
+  t42  = t1 * t1;
+  t43  = nx * t42;
+  t44  = xc * xc;
+  t45  = t25 * t44;
+  t46  = t43 * t45;
+  t47  = 0.3141592654e1 * 0.3141592654e1;
+  t48  = t47 * t37;
+  t49  = t17 * t38;
+  t54  = 0.3141592654e1 * t35;
+  t55  = ZA * nz * t54;
+  t56  = t37 * ZB;
+  t57  = t19 * t12;
+  t61  = t25 * t8;
+  t62  = t61 * t9;
+  t63  = nz * t30;
+  t64  = t63 * t16;
+  t67  = t1 * nz;
+  t69  = t47 * ZB;
+  t70  = t67 * t44 * t69;
+  t75  = nx * t3;
+  t76  = t75 * t37;
+  t77  = t67 * 0.3141592654e1;
+  t78  = t19 * t19;
+  t79  = t78 * t12;
+  t80  = t77 * t79;
+  t82  = t3 * t38;
+  t84  = t54 * t37;
+  t87  = PetscSinReal(t7);
+  t88  = t29 * t87;
+  t89  = t47 * t44;
+  t93  = nx * t25;
+  t94  = t87 * t42;
+  t95  = t93 * t94;
+  t96  = t47 * xc;
+  t97  = t13 * t29;
+  t98  = t96 * t97;
   t101 = t87 * t67;
   t102 = t93 * t101;
   t103 = t13 * t18;
@@ -2710,8 +2653,8 @@ static PetscErrorCode SolCxSolution(const PetscReal pos[], PetscReal m, PetscInt
   t915 = t89 * t145;
   t947 = t139 * t140 * t29;
   t952 = -0.2e1 * t173 * t904 + 0.4e1 * t426 * t907 + 0.12e2 * t253 * t10 * t1 * 0.3141592654e1 * t244 + 0.8e1 * t95 * t915 - t36 * t355 - 0.16e2 * t794 * t771 - 0.8e1 * t511 * t723 + 0.16e2 * t734 * t162 + t36 * t837 + 0.2e1 * t298 * t299 * t57 - 0.2e1 * t28 * t638 - 0.2e1 * t62 * t545 + 0.2e1 * t310 * t406 + 0.12e2 * t138 * t616 + 0.4e1 * t223 * t750 + t424 * t497 + 0.2e1 * t734 * t894 + 0.2e1 * t132 * xc * t18 * t10 - 0.16e2 * t70 * t947 + 0.32e2 * t891 * t947;
-  t969 = t67 * t157 * t156 * t3;
-  t974 = t27 * t133;
+  t969  = t67 * t157 * t156 * t3;
+  t974  = t27 * t133;
   t1001 = -0.8e1 * t159 * t750 - 0.16e2 * t412 * t162 - t290 * t129 + 0.8e1 * t310 * t323 - 0.4e1 * t319 * t342 + t75 * t272 + t192 * t402 - 0.8e1 * t359 * t89 * t128 - 0.10e2 * t61 * t350 * t502 + 0.8e1 * t818 * t323 - 0.4e1 * t108 * t907;
   t1042 = t89 * t97;
   t1055 = -0.2e1 * t168 * t595 + 0.16e2 * t484 * t771 + 0.4e1 * t11 * t125 * t129 - 0.2e1 * t173 * t444 + 0.2e1 * ZB * nz * t54 * t37 * ZA * t79 - t424 * t475 + 0.2e1 * t562 * t735 - 0.2e1 * t548 * t776 + t424 * t204 + 0.2e1 * t25 * t20 * t326 + 0.8e1 * t383 * t389 * t133 + t75 * t38 * t367 + 0.2e1 * t62 * t469 + 0.2e1 * t197 * t137 * t128 - 0.2e1 * t102 * t884 - 0.2e1 * t5 * t379 - 0.8e1 * t740 * t1042 - 0.16e2 * t159 * t414 - 0.2e1 * ZB * t35 * t37 * t413 + 0.2e1 * t553 * ZB * t78 * t12;
@@ -2790,20 +2733,27 @@ static PetscErrorCode SolCxSolution(const PetscReal pos[], PetscReal m, PetscInt
   /****************************************************************************************/
   /****************************************************************************************/
 
-  if (x>xc) {
-    _PC1=_PC1B; _PC2=_PC2B; _PC3=_PC3B; _PC4=_PC4B; Z=ZB;
-  }
-  else {
-    _PC1=_PC1A; _PC2=_PC2A; _PC3=_PC3A; _PC4=_PC4A; Z=ZA;
+  if (x > xc) {
+    _PC1 = _PC1B;
+    _PC2 = _PC2B;
+    _PC3 = _PC3B;
+    _PC4 = _PC4B;
+    Z    = ZB;
+  } else {
+    _PC1 = _PC1A;
+    _PC2 = _PC2A;
+    _PC3 = _PC3A;
+    _PC4 = _PC4A;
+    Z    = ZA;
   }
   /****************************************************************************************/
   /****************************************************************************************/
-  t1 = nz * nz;
-  t2 = t1 * t1;
-  t3 = t2 * nz;
-  t4 = x * t3;
-  t5 = 0.3141592654e1 * 0.3141592654e1;
-  t6 = t5 * 0.3141592654e1;
+  t1  = nz * nz;
+  t2  = t1 * t1;
+  t3  = t2 * nz;
+  t4  = x * t3;
+  t5  = 0.3141592654e1 * 0.3141592654e1;
+  t6  = t5 * 0.3141592654e1;
   t11 = _PC3 * t6;
   t12 = x * nz;
   t13 = nx * nx;
@@ -2841,14 +2791,14 @@ static PetscErrorCode SolCxSolution(const PetscReal pos[], PetscReal m, PetscInt
   u1 = (t55 + t90 + t120 + t155) / (0.4e1 * t158 * t19 * t2 + 0.8e1 * t158 * t19 * t1 * t13 + 0.4e1 * t158 * t19 * t14);
   /****************************************************************************************/
   /****************************************************************************************/
-  t1 = nz * nz;
-  t2 = t1 * nz;
-  t3 = x * t2;
-  t4 = 0.3141592654e1 * 0.3141592654e1;
-  t5 = t4 * 0.3141592654e1;
-  t6 = t3 * t5;
-  t7 = _PC2 * Z;
-  t8 = nx * nx;
+  t1  = nz * nz;
+  t2  = t1 * nz;
+  t3  = x * t2;
+  t4  = 0.3141592654e1 * 0.3141592654e1;
+  t5  = t4 * 0.3141592654e1;
+  t6  = t3 * t5;
+  t7  = _PC2 * Z;
+  t8  = nx * nx;
   t12 = t1 * t1;
   t13 = t12 * nz;
   t14 = x * t13;
@@ -2882,15 +2832,15 @@ static PetscErrorCode SolCxSolution(const PetscReal pos[], PetscReal m, PetscInt
   u2 = (-0.4e1 * t6 * t7 * t8 + 0.2e1 * t14 * t15 * t19 - 0.2e1 * t23 * t7 * t24 + 0.2e1 * t28 * t29 + 0.2e1 * t33 * t34 + 0.4e1 * t6 * t37 * t8 - 0.2e1 * t14 * t5 * _PC2 * Z + 0.2e1 * t45 * Z * t19 * t24 + 0.2e1 * t23 * t37 * t24 + 0.4e1 * t33 * t3 * t53 + t91 + t121 + t156) / (0.4e1 * t159 * t18 * t12 + 0.8e1 * t159 * t18 * t1 * t8 + 0.4e1 * t159 * t18 * t24);
   /****************************************************************************************/
   /****************************************************************************************/
-  t1 = 0.3141592654e1 * 0.3141592654e1;
-  t2 = t1 * 0.3141592654e1;
-  t3 = _PC1 * t2;
-  t4 = t3 * Z;
-  t5 = nz * nz;
-  t6 = t5 * t5;
-  t7 = t6 * nz;
-  t8 = x * t7;
-  t9 = x * nz;
+  t1  = 0.3141592654e1 * 0.3141592654e1;
+  t2  = t1 * 0.3141592654e1;
+  t3  = _PC1 * t2;
+  t4  = t3 * Z;
+  t5  = nz * nz;
+  t6  = t5 * t5;
+  t7  = t6 * nz;
+  t8  = x * t7;
+  t9  = x * nz;
   t11 = PetscExpReal(t9 * 0.3141592654e1);
   t12 = t11 * t11;
   t13 = t8 * t12;
@@ -2927,13 +2877,13 @@ static PetscErrorCode SolCxSolution(const PetscReal pos[], PetscReal m, PetscInt
   u3 = (t57 + t94 + t128 + t156) / (0.4e1 * t159 * t6 + 0.8e1 * t159 * t73 + 0.4e1 * t159 * t31);
   /****************************************************************************************/
   /****************************************************************************************/
-  t1 = _PC2 * Z;
-  t2 = 0.3141592654e1 * 0.3141592654e1;
-  t3 = t2 * 0.3141592654e1;
-  t4 = nz * nz;
-  t5 = t4 * t4;
-  t6 = t5 * t4;
-  t8 = t3 * t6 * x;
+  t1  = _PC2 * Z;
+  t2  = 0.3141592654e1 * 0.3141592654e1;
+  t3  = t2 * 0.3141592654e1;
+  t4  = nz * nz;
+  t5  = t4 * t4;
+  t6  = t5 * t4;
+  t8  = t3 * t6 * x;
   t11 = x * t4;
   t12 = t11 * t3;
   t15 = PetscExpReal(x * nz * 0.3141592654e1);
@@ -2962,7 +2912,7 @@ static PetscErrorCode SolCxSolution(const PetscReal pos[], PetscReal m, PetscInt
   t83 = nz * t16;
   t84 = t83 * t19;
   t95 = -t34 * t58 + 0.2e1 * t60 * t23 * t16 + 0.2e1 * t60 * nz * t19 - t11 * 0.3141592654e1 * t18 + 0.4e1 * t60 * t69 * t18 + 0.4e1 * t73 * t75 + 0.4e1 * t33 * t5 * t79 * t18 + 0.2e1 * t73 * t84 + 0.2e1 * t60 * t84 + 0.2e1 * t33 * t4 * t79 * t19 + 0.4e1 * t60 * t75;
-  t97 = t34 * t3;
+  t97  = t34 * t3;
   t101 = Z * _PC1;
   t102 = t16 * t19;
   t106 = t16 * t18;
@@ -2973,37 +2923,31 @@ static PetscErrorCode SolCxSolution(const PetscReal pos[], PetscReal m, PetscInt
 
   u4 = (t57 + t95 + t135 + t164) / (0.4e1 * t24 * t15 + 0.8e1 * t127 * t15 * t18 + 0.4e1 * t131 * t15 * t19);
 
-
   /****************************************************************************************/
   /****************************************************************************************/
 
+  u5 = (PetscReal)(-2 * Z * nz * PETSC_PI * u2 - u3 * 2 * nz * PETSC_PI) * PetscCosReal(nz * PETSC_PI * z); /* pressure */
 
-  u5 = (PetscReal)(-2*Z*nz*PETSC_PI*u2-u3*2*nz*PETSC_PI)*PetscCosReal(nz*PETSC_PI*z); /* pressure */
+  u6 = (PetscReal)(u3 * 2 * nz * PETSC_PI + 4 * Z * nz * PETSC_PI * u2) * PetscCosReal(nz * PETSC_PI * z); /* zz stress */
+  sum5 += u5;
+  sum6 += u6;
 
-  u6 = (PetscReal)(u3*2*nz*PETSC_PI + 4*Z*nz*PETSC_PI*u2)*PetscCosReal(nz*PETSC_PI*z); /* zz stress */
-  sum5 +=u5;
-  sum6 +=u6;
-
-  u1 *= PetscCosReal(nz*PETSC_PI*z); /* x velocity */
+  u1 *= PetscCosReal(nz * PETSC_PI * z); /* x velocity */
   sum1 += u1;
-  u2 *= PetscSinReal(nz*PETSC_PI*z); /* z velocity */
+  u2 *= PetscSinReal(nz * PETSC_PI * z); /* z velocity */
   sum2 += u2;
-  u3 *= 2*nz*PETSC_PI*PetscCosReal(nz*PETSC_PI*z); /* xx stress */
+  u3 *= 2 * nz * PETSC_PI * PetscCosReal(nz * PETSC_PI * z); /* xx stress */
   sum3 += u3;
-  u4 *= 2*nz*PETSC_PI*PetscSinReal(nz*PETSC_PI*z); /* zx stress */
+  u4 *= 2 * nz * PETSC_PI * PetscSinReal(nz * PETSC_PI * z); /* zx stress */
   sum4 += u4;
 
   /* Output */
-  if (mu) {
-    *mu = Z;
-  }
+  if (mu) *mu = Z;
   if (vel) {
     vel[0] = sum1;
     vel[1] = sum2;
   }
-  if (p) {
-    (*p) = sum5;
-  }
+  if (p) (*p) = sum5;
   if (s) {
     s[0] = sum3;
     s[1] = sum4;
@@ -3011,226 +2955,183 @@ static PetscErrorCode SolCxSolution(const PetscReal pos[], PetscReal m, PetscInt
   }
   if (gamma) {
     /* sigma = tau - p, tau = sigma + p, tau[] = 2*eta*gamma[] */
-    gamma[0] = (sum3+sum5)/(2.0*Z);
-    gamma[1] = (sum4)/(2.0*Z);
-    gamma[2] = (sum6+sum5)/(2.0*Z);
+    gamma[0] = (sum3 + sum5) / (2.0 * Z);
+    gamma[1] = (sum4) / (2.0 * Z);
+    gamma[2] = (sum6 + sum5) / (2.0 * Z);
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode SolCxSolutionVelocity(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar v[], void *ctx)
 {
-  Parameter     *s = (Parameter *) ctx;
-  PetscErrorCode ierr;
+  Parameter *s = (Parameter *)ctx;
 
   PetscFunctionBegin;
-  ierr = SolCxSolution(x, s->m, s->n, s->xc, s->etaA, s->etaB, v, NULL, NULL, NULL, NULL);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(SolCxSolution(x, s->m, s->n, s->xc, s->etaA, s->etaB, v, NULL, NULL, NULL, NULL));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode SolCxSolutionPressure(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar p[], void *ctx)
 {
-  Parameter     *s = (Parameter *) ctx;
-  PetscErrorCode ierr;
+  Parameter *s = (Parameter *)ctx;
 
   PetscFunctionBegin;
-  ierr = SolCxSolution(x, s->m, s->n, s->xc, s->etaA, s->etaB, NULL, p, NULL, NULL, NULL);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(SolCxSolution(x, s->m, s->n, s->xc, s->etaA, s->etaB, NULL, p, NULL, NULL, NULL));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 {
-  PetscInt       sol;
-  PetscErrorCode ierr;
+  PetscInt sol;
 
   PetscFunctionBeginUser;
-  options->debug           = 0;
-  options->dim             = 2;
-  options->serRef          = 0;
-  options->simplex         = PETSC_TRUE;
-  options->showSolution    = PETSC_FALSE;
-  options->showError       = PETSC_FALSE;
-  options->solType         = SOLKX;
-
-  ierr = PetscOptionsBegin(comm, "", "Variable-Viscosity Stokes Problem Options", "DMPLEX");CHKERRQ(ierr);
-  ierr = PetscOptionsInt("-debug", "The debugging level", "ex69.c", options->debug, &options->debug, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsInt("-dim", "The topological mesh dimension", "ex69.c", options->dim, &options->dim, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-simplex", "Use simplices or tensor product cells", "ex69.c", options->simplex, &options->simplex, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsInt("-serial_refinements", "Number of serial uniform refinements steps", "ex69.c", options->serRef, &options->serRef, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-show_solution", "Output the solution for verification", "ex69.c", options->showSolution, &options->showSolution, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-show_error", "Output the error for verification", "ex69.c", options->showError, &options->showError, NULL);CHKERRQ(ierr);
-  sol  = options->solType;
-  ierr = PetscOptionsEList("-sol_type", "Type of exact solution", "ex69.c", solTypes, NUM_SOL_TYPES, solTypes[options->solType], &sol, NULL);CHKERRQ(ierr);
-  options->solType = (SolutionType) sol;
-  ierr = PetscOptionsEnd();
-  PetscFunctionReturn(0);
+  options->solType = SOLKX;
+  PetscOptionsBegin(comm, "", "Variable-Viscosity Stokes Problem Options", "DMPLEX");
+  sol = options->solType;
+  PetscCall(PetscOptionsEList("-sol_type", "Type of exact solution", "ex69.c", solTypes, NUM_SOL_TYPES, solTypes[options->solType], &sol, NULL));
+  options->solType = (SolutionType)sol;
+  PetscOptionsEnd();
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode SetUpParameters(AppCtx *user)
 {
-  PetscBag       bag;
-  Parameter     *p;
-  PetscErrorCode ierr;
+  PetscBag   bag;
+  Parameter *p;
 
   PetscFunctionBeginUser;
   /* setup PETSc parameter bag */
-  ierr = PetscBagGetData(user->bag, (void **) &p);CHKERRQ(ierr);
-  ierr = PetscBagSetName(user->bag, "par", "Problem parameters");CHKERRQ(ierr);
-  bag  = user->bag;
+  PetscCall(PetscBagGetData(user->bag, (void **)&p));
+  PetscCall(PetscBagSetName(user->bag, "par", "Problem parameters"));
+  bag = user->bag;
   switch (user->solType) {
   case SOLKX:
-    ierr = PetscBagRegisterInt(bag,  &p->n, 1,   "n", "x-wavelength for forcing variation");CHKERRQ(ierr);
-    ierr = PetscBagRegisterInt(bag,  &p->m, 1,   "m", "z-wavelength for forcing variation");CHKERRQ(ierr);
-    ierr = PetscBagRegisterReal(bag, &p->B, 1.0, "B", "Exponential scale for viscosity variation");CHKERRQ(ierr);
+    PetscCall(PetscBagRegisterInt(bag, &p->n, 1, "n", "x-wavelength for forcing variation"));
+    PetscCall(PetscBagRegisterInt(bag, &p->m, 1, "m", "z-wavelength for forcing variation"));
+    PetscCall(PetscBagRegisterReal(bag, &p->B, 1.0, "B", "Exponential scale for viscosity variation"));
     break;
   case SOLCX:
-    ierr = PetscBagRegisterInt(bag,  &p->n,    1,   "n",    "x-wavelength for forcing variation");CHKERRQ(ierr);
-    ierr = PetscBagRegisterInt(bag,  &p->m,    1,   "m",    "z-wavelength for forcing variation");CHKERRQ(ierr);
-    ierr = PetscBagRegisterReal(bag, &p->etaA, 1.0, "etaA", "Viscosity for x < xc");CHKERRQ(ierr);
-    ierr = PetscBagRegisterReal(bag, &p->etaB, 1.0, "etaB", "Viscosity for x > xc");CHKERRQ(ierr);
-    ierr = PetscBagRegisterReal(bag, &p->xc,   0.5, "xc",   "x-coordinate of the viscosity jump");CHKERRQ(ierr);
+    PetscCall(PetscBagRegisterInt(bag, &p->n, 1, "n", "x-wavelength for forcing variation"));
+    PetscCall(PetscBagRegisterInt(bag, &p->m, 1, "m", "z-wavelength for forcing variation"));
+    PetscCall(PetscBagRegisterReal(bag, &p->etaA, 1.0, "etaA", "Viscosity for x < xc"));
+    PetscCall(PetscBagRegisterReal(bag, &p->etaB, 1.0, "etaB", "Viscosity for x > xc"));
+    PetscCall(PetscBagRegisterReal(bag, &p->xc, 0.5, "xc", "x-coordinate of the viscosity jump"));
     break;
   default:
-    SETERRQ2(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Invalid solution type %d (%s)", (PetscInt) user->solType, solTypes[PetscMin(user->solType, NUM_SOL_TYPES)]);
+    SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Invalid solution type %d (%s)", user->solType, solTypes[PetscMin(user->solType, NUM_SOL_TYPES)]);
   }
-  PetscFunctionReturn(0);
+  PetscCall(PetscBagSetFromOptions(bag));
+  PetscCall(PetscBagViewFromOptions(bag, NULL, "-param_view"));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/* Make split labels so that we can have corners in multiple labels */
+static PetscErrorCode CreateSplitLabels(DM dm)
+{
+  const char *names[4] = {"markerBottom", "markerRight", "markerTop", "markerLeft"};
+  PetscInt    ids[4]   = {1, 2, 3, 4};
+  DMLabel     label;
+  IS          is;
+  PetscInt    f;
+
+  PetscFunctionBeginUser;
+  for (f = 0; f < 4; ++f) {
+    PetscCall(DMCreateLabel(dm, names[f]));
+    PetscCall(DMGetStratumIS(dm, "marker", ids[f], &is));
+    if (!is) continue;
+    PetscCall(DMGetLabel(dm, names[f], &label));
+    PetscCall(DMLabelInsertIS(label, is, 1));
+    PetscCall(ISDestroy(&is));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
 {
-  DM               dmDist = NULL;
-  PetscPartitioner part;
-  PetscInt         dim    = user->dim;
-  PetscInt         cells[3];
-  PetscErrorCode   ierr;
+  DM cdm;
 
   PetscFunctionBeginUser;
-  if (dim > 3) SETERRQ1(comm,PETSC_ERR_ARG_OUTOFRANGE,"dim %D is too big, must be <= 3",dim);
-  cells[0] = cells[1] = cells[2] = user->simplex ? dim : 3;
-  ierr = DMPlexCreateBoxMesh(comm, dim, user->simplex, cells, NULL, NULL, NULL, PETSC_TRUE, dm);CHKERRQ(ierr);
-  /* Make split labels so that we can have corners in multiple labels */
-  {
-    const char *names[4] = {"markerBottom", "markerRight", "markerTop", "markerLeft"};
-    PetscInt    ids[4]   = {1, 2, 3, 4};
-    DMLabel     label;
-    IS          is;
-    PetscInt    f;
-
-    for (f = 0; f < 4; ++f) {
-      ierr = DMGetStratumIS(*dm, "marker", ids[f],  &is);CHKERRQ(ierr);
-      if (!is) continue;
-      ierr = DMCreateLabel(*dm, names[f]);CHKERRQ(ierr);
-      ierr = DMGetLabel(*dm, names[f], &label);CHKERRQ(ierr);
-      if (is) {
-        ierr = DMLabelInsertIS(label, is, 1);CHKERRQ(ierr);
-      }
-      ierr = ISDestroy(&is);CHKERRQ(ierr);
-    }
+  PetscCall(DMCreate(comm, dm));
+  PetscCall(DMSetType(*dm, DMPLEX));
+  PetscCall(DMSetFromOptions(*dm));
+  cdm = *dm;
+  while (cdm) {
+    PetscCall(CreateSplitLabels(cdm));
+    PetscCall(DMGetCoarseDM(cdm, &cdm));
   }
-  ierr = PetscObjectSetName((PetscObject)(*dm),"Mesh");CHKERRQ(ierr);
-  {
-    PetscInt r;
-
-    for (r = 0; r < user->serRef; ++r) {
-      DM dmRefined;
-
-      ierr = DMPlexSetRefinementUniform(*dm, PETSC_TRUE);CHKERRQ(ierr);
-      ierr = DMRefine(*dm, PetscObjectComm((PetscObject)*dm), &dmRefined);CHKERRQ(ierr);
-      if (dmRefined) {
-        ierr = DMDestroy(dm);CHKERRQ(ierr);
-        *dm  = dmRefined;
-      }
-    }
-  }
-  /* Distribute mesh over processes */
-  ierr = DMPlexGetPartitioner(*dm, &part);CHKERRQ(ierr);
-  ierr = PetscPartitionerSetFromOptions(part);CHKERRQ(ierr);
-  ierr = DMPlexDistribute(*dm, 0, NULL, &dmDist);CHKERRQ(ierr);
-  if (dmDist) {
-    ierr = PetscObjectSetName((PetscObject)dmDist,"Distributed Mesh");CHKERRQ(ierr);
-    ierr = DMDestroy(dm);CHKERRQ(ierr);
-    *dm  = dmDist;
-  }
-  ierr = DMSetFromOptions(*dm);CHKERRQ(ierr);
-  ierr = DMViewFromOptions(*dm, NULL, "-dm_view");CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(DMViewFromOptions(*dm, NULL, "-dm_view"));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode SetupProblem(DM dm, AppCtx *user)
 {
   PetscErrorCode (*exactFunc)(PetscInt dim, PetscReal t, const PetscReal x[], PetscInt Nf, PetscScalar *u, void *ctx);
   PetscDS        prob;
-  const PetscInt id  = 1;
-  PetscInt       comp;
+  DMLabel        label;
+  const PetscInt id = 1;
+  PetscInt       dim, comp;
   Parameter     *ctx;
   void          *data;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
-  ierr = DMGetDS(dm, &prob);CHKERRQ(ierr);
+  PetscCall(DMGetDimension(dm, &dim));
+  PetscCall(DMGetDS(dm, &prob));
   switch (user->solType) {
   case SOLKX:
-    ierr = PetscDSSetResidual(prob, 0, f0_u, stokes_momentum_kx);CHKERRQ(ierr);
-    ierr = PetscDSSetResidual(prob, 1, stokes_mass, f1_zero);CHKERRQ(ierr);
-    ierr = PetscDSSetJacobian(prob, 0, 0, NULL, NULL,  NULL,  stokes_momentum_vel_J_kx);CHKERRQ(ierr);
-    ierr = PetscDSSetJacobian(prob, 0, 1, NULL, NULL,  stokes_momentum_pres_J, NULL);CHKERRQ(ierr);
-    ierr = PetscDSSetJacobian(prob, 1, 0, NULL, stokes_mass_J, NULL,  NULL);CHKERRQ(ierr);
-    ierr = PetscDSSetJacobianPreconditioner(prob, 0, 0, NULL, NULL, NULL, stokes_momentum_vel_J_kx);CHKERRQ(ierr);
-    ierr = PetscDSSetJacobianPreconditioner(prob, 0, 1, NULL, NULL, stokes_momentum_pres_J, NULL);CHKERRQ(ierr);
-    ierr = PetscDSSetJacobianPreconditioner(prob, 1, 0, NULL, stokes_mass_J, NULL, NULL);CHKERRQ(ierr);
-    ierr = PetscDSSetJacobianPreconditioner(prob, 1, 1, stokes_identity_J_kx, NULL, NULL, NULL);CHKERRQ(ierr);
+    PetscCall(PetscDSSetResidual(prob, 0, f0_u, stokes_momentum_kx));
+    PetscCall(PetscDSSetResidual(prob, 1, stokes_mass, f1_zero));
+    PetscCall(PetscDSSetJacobian(prob, 0, 0, NULL, NULL, NULL, stokes_momentum_vel_J_kx));
+    PetscCall(PetscDSSetJacobian(prob, 0, 1, NULL, NULL, stokes_momentum_pres_J, NULL));
+    PetscCall(PetscDSSetJacobian(prob, 1, 0, NULL, stokes_mass_J, NULL, NULL));
+    PetscCall(PetscDSSetJacobianPreconditioner(prob, 0, 0, NULL, NULL, NULL, stokes_momentum_vel_J_kx));
+    PetscCall(PetscDSSetJacobianPreconditioner(prob, 1, 1, stokes_identity_J_kx, NULL, NULL, NULL));
     break;
   case SOLCX:
-    ierr = PetscDSSetResidual(prob, 0, f0_u, stokes_momentum_cx);CHKERRQ(ierr);
-    ierr = PetscDSSetResidual(prob, 1, stokes_mass, f1_zero);CHKERRQ(ierr);
-    ierr = PetscDSSetJacobian(prob, 0, 0, NULL, NULL,  NULL,  stokes_momentum_vel_J_cx);CHKERRQ(ierr);
-    ierr = PetscDSSetJacobian(prob, 0, 1, NULL, NULL,  stokes_momentum_pres_J, NULL);CHKERRQ(ierr);
-    ierr = PetscDSSetJacobian(prob, 1, 0, NULL, stokes_mass_J, NULL,  NULL);CHKERRQ(ierr);
-    ierr = PetscDSSetJacobianPreconditioner(prob, 0, 0, NULL, NULL, NULL, stokes_momentum_vel_J_kx);CHKERRQ(ierr);
-    ierr = PetscDSSetJacobianPreconditioner(prob, 0, 1, NULL, NULL, stokes_momentum_pres_J, NULL);CHKERRQ(ierr);
-    ierr = PetscDSSetJacobianPreconditioner(prob, 1, 0, NULL, stokes_mass_J, NULL, NULL);CHKERRQ(ierr);
-    ierr = PetscDSSetJacobianPreconditioner(prob, 1, 1, stokes_identity_J_cx, NULL, NULL, NULL);CHKERRQ(ierr);
+    PetscCall(PetscDSSetResidual(prob, 0, f0_u, stokes_momentum_cx));
+    PetscCall(PetscDSSetResidual(prob, 1, stokes_mass, f1_zero));
+    PetscCall(PetscDSSetJacobian(prob, 0, 0, NULL, NULL, NULL, stokes_momentum_vel_J_cx));
+    PetscCall(PetscDSSetJacobian(prob, 0, 1, NULL, NULL, stokes_momentum_pres_J, NULL));
+    PetscCall(PetscDSSetJacobian(prob, 1, 0, NULL, stokes_mass_J, NULL, NULL));
+    PetscCall(PetscDSSetJacobianPreconditioner(prob, 0, 0, NULL, NULL, NULL, stokes_momentum_vel_J_kx));
+    PetscCall(PetscDSSetJacobianPreconditioner(prob, 1, 1, stokes_identity_J_cx, NULL, NULL, NULL));
     break;
   default:
-    SETERRQ2(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Invalid solution type %d (%s)", (PetscInt) user->solType, solTypes[PetscMin(user->solType, NUM_SOL_TYPES)]);
+    SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Invalid solution type %d (%s)", user->solType, solTypes[PetscMin(user->solType, NUM_SOL_TYPES)]);
   }
-  ierr = PetscBagGetData(user->bag, &data);CHKERRQ(ierr);
-  switch (user->dim) {
+  PetscCall(PetscBagGetData(user->bag, &data));
+  switch (dim) {
   case 2:
     switch (user->solType) {
     case SOLKX:
-      ierr = PetscDSSetExactSolution(prob, 0, SolKxSolutionVelocity, data);CHKERRQ(ierr);
-      ierr = PetscDSSetExactSolution(prob, 1, SolKxSolutionPressure, data);CHKERRQ(ierr);
+      PetscCall(PetscDSSetExactSolution(prob, 0, SolKxSolutionVelocity, data));
+      PetscCall(PetscDSSetExactSolution(prob, 1, SolKxSolutionPressure, data));
       break;
     case SOLCX:
-      ierr = PetscDSSetExactSolution(prob, 0, SolCxSolutionVelocity, data);CHKERRQ(ierr);
-      ierr = PetscDSSetExactSolution(prob, 1, SolCxSolutionPressure, data);CHKERRQ(ierr);
+      PetscCall(PetscDSSetExactSolution(prob, 0, SolCxSolutionVelocity, data));
+      PetscCall(PetscDSSetExactSolution(prob, 1, SolCxSolutionPressure, data));
       break;
     default:
-      SETERRQ2(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Invalid solution type %d (%s)", (PetscInt) user->solType, solTypes[PetscMin(user->solType, NUM_SOL_TYPES)]);
+      SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Invalid solution type %d (%s)", user->solType, solTypes[PetscMin(user->solType, NUM_SOL_TYPES)]);
     }
     break;
   default:
-    SETERRQ1(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Invalid dimension %D", user->dim);
+    SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Invalid dimension %" PetscInt_FMT, dim);
   }
   /* Setup constants */
   {
     Parameter *param;
 
-    ierr = PetscBagGetData(user->bag, (void **) &param);CHKERRQ(ierr);
+    PetscCall(PetscBagGetData(user->bag, (void **)&param));
     switch (user->solType) {
-    case SOLKX:
-    {
+    case SOLKX: {
       PetscScalar constants[3];
 
       constants[0] = param->m;
       constants[1] = param->n;
       constants[2] = param->B;
-      ierr = PetscDSSetConstants(prob, 3, constants);CHKERRQ(ierr);
-    }
-    break;
-    case SOLCX:
-    {
+      PetscCall(PetscDSSetConstants(prob, 3, constants));
+    } break;
+    case SOLCX: {
       PetscScalar constants[5];
 
       constants[0] = param->m;
@@ -3238,244 +3139,292 @@ static PetscErrorCode SetupProblem(DM dm, AppCtx *user)
       constants[2] = param->etaA;
       constants[3] = param->etaB;
       constants[4] = param->xc;
-      ierr = PetscDSSetConstants(prob, 5, constants);CHKERRQ(ierr);
-    }
-    break;
-    default: SETERRQ1(PETSC_COMM_WORLD, PETSC_ERR_SUP, "No parameter information for solution type %d", user->solType);
+      PetscCall(PetscDSSetConstants(prob, 5, constants));
+    } break;
+    default:
+      SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_SUP, "No parameter information for solution type %d", user->solType);
     }
   }
   /* Setup Boundary Conditions */
-  ierr = PetscDSGetExactSolution(prob, 0, &exactFunc, (void **) &ctx);CHKERRQ(ierr);
+  PetscCall(PetscDSGetExactSolution(prob, 0, &exactFunc, (void **)&ctx));
   comp = 1;
-  ierr = DMAddBoundary(dm, DM_BC_ESSENTIAL, "wallB", "markerBottom", 0, 1, &comp, (void (*)(void)) exactFunc, NULL, 1, &id, ctx);CHKERRQ(ierr);
+  PetscCall(DMGetLabel(dm, "markerBottom", &label));
+  PetscCall(DMAddBoundary(dm, DM_BC_ESSENTIAL, "wallB", label, 1, &id, 0, 1, &comp, (void (*)(void))exactFunc, NULL, ctx, NULL));
   comp = 0;
-  ierr = DMAddBoundary(dm, DM_BC_ESSENTIAL, "wallR", "markerRight",  0, 1, &comp, (void (*)(void)) exactFunc, NULL, 1, &id, ctx);CHKERRQ(ierr);
+  PetscCall(DMGetLabel(dm, "markerRight", &label));
+  PetscCall(DMAddBoundary(dm, DM_BC_ESSENTIAL, "wallR", label, 1, &id, 0, 1, &comp, (void (*)(void))exactFunc, NULL, ctx, NULL));
   comp = 1;
-  ierr = DMAddBoundary(dm, DM_BC_ESSENTIAL, "wallT", "markerTop",    0, 1, &comp, (void (*)(void)) exactFunc, NULL, 1, &id, ctx);CHKERRQ(ierr);
+  PetscCall(DMGetLabel(dm, "markerTop", &label));
+  PetscCall(DMAddBoundary(dm, DM_BC_ESSENTIAL, "wallT", label, 1, &id, 0, 1, &comp, (void (*)(void))exactFunc, NULL, ctx, NULL));
   comp = 0;
-  ierr = DMAddBoundary(dm, DM_BC_ESSENTIAL, "wallL", "markerLeft",   0, 1, &comp, (void (*)(void)) exactFunc, NULL, 1, &id, ctx);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(DMGetLabel(dm, "markerLeft", &label));
+  PetscCall(DMAddBoundary(dm, DM_BC_ESSENTIAL, "wallL", label, 1, &id, 0, 1, &comp, (void (*)(void))exactFunc, NULL, ctx, NULL));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode CreatePressureNullSpace(DM dm, PetscInt origField, PetscInt field, MatNullSpace *nullspace)
+{
+  Vec vec;
+  PetscErrorCode (*funcs[2])(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar *u, void *ctx) = {zero, one};
+
+  PetscFunctionBeginUser;
+  PetscCheck(origField == 1, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONG, "Field %" PetscInt_FMT " should be 1 for pressure", origField);
+  funcs[field] = one;
+  {
+    PetscDS ds;
+    PetscCall(DMGetDS(dm, &ds));
+    PetscCall(PetscObjectViewFromOptions((PetscObject)ds, NULL, "-ds_view"));
+  }
+  PetscCall(DMCreateGlobalVector(dm, &vec));
+  PetscCall(DMProjectFunction(dm, 0.0, funcs, NULL, INSERT_ALL_VALUES, vec));
+  PetscCall(VecNormalize(vec, NULL));
+  PetscCall(MatNullSpaceCreate(PetscObjectComm((PetscObject)dm), PETSC_FALSE, 1, &vec, nullspace));
+  PetscCall(VecDestroy(&vec));
+  /* New style for field null spaces */
+  {
+    PetscObject  pressure;
+    MatNullSpace nullspacePres;
+
+    PetscCall(DMGetField(dm, field, NULL, &pressure));
+    PetscCall(MatNullSpaceCreate(PetscObjectComm(pressure), PETSC_TRUE, 0, NULL, &nullspacePres));
+    PetscCall(PetscObjectCompose(pressure, "nullspace", (PetscObject)nullspacePres));
+    PetscCall(MatNullSpaceDestroy(&nullspacePres));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode SetupDiscretization(DM dm, AppCtx *user)
 {
-  DM              cdm = dm;
-  const PetscInt  dim = user->dim;
-  PetscFE         fe[2];
-  MPI_Comm        comm;
-  PetscErrorCode  ierr;
+  DM             cdm = dm;
+  PetscFE        fe[2];
+  DMPolytopeType ct;
+  PetscInt       dim, cStart;
+  PetscBool      simplex;
 
   PetscFunctionBeginUser;
+  PetscCall(DMGetDimension(dm, &dim));
+  PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, NULL));
+  PetscCall(DMPlexGetCellType(dm, cStart, &ct));
+  simplex = DMPolytopeTypeGetNumVertices(ct) == DMPolytopeTypeGetDim(ct) + 1 ? PETSC_TRUE : PETSC_FALSE;
   /* Create discretization of solution fields */
-  ierr = PetscObjectGetComm((PetscObject) dm, &comm);CHKERRQ(ierr);
-  ierr = PetscFECreateDefault(comm, dim, dim, user->simplex, "vel_", PETSC_DEFAULT, &fe[0]);CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject) fe[0], "velocity");CHKERRQ(ierr);
-  ierr = PetscFECreateDefault(comm, dim, 1, user->simplex, "pres_", PETSC_DEFAULT, &fe[1]);CHKERRQ(ierr);
-  ierr = PetscFECopyQuadrature(fe[0], fe[1]);CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject) fe[1], "pressure");CHKERRQ(ierr);
+  PetscCall(PetscFECreateDefault(PETSC_COMM_SELF, dim, dim, simplex, "vel_", PETSC_DEFAULT, &fe[0]));
+  PetscCall(PetscObjectSetName((PetscObject)fe[0], "velocity"));
+  PetscCall(PetscFECreateDefault(PETSC_COMM_SELF, dim, 1, simplex, "pres_", PETSC_DEFAULT, &fe[1]));
+  PetscCall(PetscFECopyQuadrature(fe[0], fe[1]));
+  PetscCall(PetscObjectSetName((PetscObject)fe[1], "pressure"));
   /* Set discretization and boundary conditions for each mesh */
-  ierr = DMSetField(dm, 0, NULL, (PetscObject) fe[0]);CHKERRQ(ierr);
-  ierr = DMSetField(dm, 1, NULL, (PetscObject) fe[1]);CHKERRQ(ierr);
-  ierr = DMCreateDS(dm);CHKERRQ(ierr);
-  ierr = SetupProblem(dm, user);CHKERRQ(ierr);
+  PetscCall(DMSetField(dm, 0, NULL, (PetscObject)fe[0]));
+  PetscCall(DMSetField(dm, 1, NULL, (PetscObject)fe[1]));
+  PetscCall(DMCreateDS(dm));
+  PetscCall(SetupProblem(dm, user));
   while (cdm) {
-    ierr = DMCopyDisc(dm, cdm);CHKERRQ(ierr);
-    ierr = DMGetCoarseDM(cdm, &cdm);CHKERRQ(ierr);
+    PetscCall(DMCopyDisc(dm, cdm));
+    PetscCall(DMSetNullSpaceConstructor(cdm, 1, CreatePressureNullSpace));
+    PetscCall(DMGetCoarseDM(cdm, &cdm));
   }
-  ierr = PetscFEDestroy(&fe[0]);CHKERRQ(ierr);
-  ierr = PetscFEDestroy(&fe[1]);CHKERRQ(ierr);
+  PetscCall(PetscFEDestroy(&fe[0]));
+  PetscCall(PetscFEDestroy(&fe[1]));
   {
     PetscObject  pressure;
     MatNullSpace nullSpacePres;
 
-    ierr = DMGetField(dm, 1, NULL, &pressure);CHKERRQ(ierr);
-    ierr = MatNullSpaceCreate(PetscObjectComm(pressure), PETSC_TRUE, 0, NULL, &nullSpacePres);CHKERRQ(ierr);
-    ierr = PetscObjectCompose(pressure, "nullspace", (PetscObject) nullSpacePres);CHKERRQ(ierr);
-    ierr = MatNullSpaceDestroy(&nullSpacePres);CHKERRQ(ierr);
+    PetscCall(DMGetField(dm, 1, NULL, &pressure));
+    PetscCall(MatNullSpaceCreate(PetscObjectComm(pressure), PETSC_TRUE, 0, NULL, &nullSpacePres));
+    PetscCall(PetscObjectCompose(pressure, "nullspace", (PetscObject)nullSpacePres));
+    PetscCall(MatNullSpaceDestroy(&nullSpacePres));
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode CreatePressureNullSpace(DM dm, AppCtx *user, Vec *v, MatNullSpace *nullSpace)
+/* Add a vector in the nullspace to make the continuum integral 0.
+
+   If int(u) = a and int(n) = b, then int(u - a/b n) = a - a/b b = 0
+*/
+static void pressure(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar p[])
 {
-  Vec              vec;
-  PetscErrorCode (*funcs[2])(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar *u, void* ctx) = {zero_vector, one_scalar};
-  PetscErrorCode   ierr;
+  p[0] = u[uOff[1]];
+}
+static PetscErrorCode CorrectDiscretePressure(DM dm, MatNullSpace nullspace, Vec u, AppCtx *user)
+{
+  PetscDS     ds;
+  const Vec  *nullvecs;
+  PetscScalar pintd, intc[2], intn[2];
+  MPI_Comm    comm;
 
   PetscFunctionBeginUser;
-  ierr = DMCreateGlobalVector(dm, &vec);CHKERRQ(ierr);
-  ierr = DMProjectFunction(dm, 0.0, funcs, NULL, INSERT_ALL_VALUES, vec);CHKERRQ(ierr);
-  ierr = VecNormalize(vec, NULL);CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject) vec, "Pressure Null Space");CHKERRQ(ierr);
-  ierr = VecViewFromOptions(vec, NULL, "-null_space_vec_view");CHKERRQ(ierr);
-  ierr = MatNullSpaceCreate(PetscObjectComm((PetscObject) dm), PETSC_FALSE, 1, &vec, nullSpace);CHKERRQ(ierr);
-  if (v) {*v = vec;}
-  else   {ierr = VecDestroy(&vec);CHKERRQ(ierr);}
-  PetscFunctionReturn(0);
+  PetscCall(PetscObjectGetComm((PetscObject)dm, &comm));
+  PetscCall(DMGetDS(dm, &ds));
+  PetscCall(PetscDSSetObjective(ds, 1, pressure));
+  PetscCall(MatNullSpaceGetVecs(nullspace, NULL, NULL, &nullvecs));
+  PetscCall(VecDot(nullvecs[0], u, &pintd));
+  PetscCheck(PetscAbsScalar(pintd) <= PETSC_SMALL, comm, PETSC_ERR_ARG_WRONG, "Discrete integral of pressure: %g", (double)PetscRealPart(pintd));
+  PetscCall(DMPlexComputeIntegralFEM(dm, nullvecs[0], intn, user));
+  PetscCall(DMPlexComputeIntegralFEM(dm, u, intc, user));
+  PetscCall(VecAXPY(u, -intc[1] / intn[1], nullvecs[0]));
+  PetscCall(DMPlexComputeIntegralFEM(dm, u, intc, user));
+  PetscCheck(PetscAbsScalar(intc[1]) <= PETSC_SMALL, comm, PETSC_ERR_ARG_WRONG, "Continuum integral of pressure after correction: %g", (double)PetscRealPart(intc[1]));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode SNESConvergenceCorrectPressure(SNES snes, PetscInt it, PetscReal xnorm, PetscReal gnorm, PetscReal f, SNESConvergedReason *reason, void *user)
+{
+  PetscFunctionBeginUser;
+  PetscCall(SNESConvergedDefault(snes, it, xnorm, gnorm, f, reason, user));
+  if (*reason > 0) {
+    DM           dm;
+    Mat          J;
+    Vec          u;
+    MatNullSpace nullspace;
+
+    PetscCall(SNESGetDM(snes, &dm));
+    PetscCall(SNESGetSolution(snes, &u));
+    PetscCall(SNESGetJacobian(snes, &J, NULL, NULL, NULL));
+    PetscCall(MatGetNullSpace(J, &nullspace));
+    PetscCheck(nullspace, PetscObjectComm((PetscObject)snes), PETSC_ERR_ARG_WRONG, "SNES Jacobian has no attached null space");
+    PetscCall(CorrectDiscretePressure(dm, nullspace, u, (AppCtx *)user));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 int main(int argc, char **argv)
 {
-  SNES            snes;                 /* nonlinear solver */
-  DM              dm;                   /* problem definition */
-  Vec             u,r;                  /* solution, residual vectors */
-  Mat             J, M;                 /* Jacobian matrix */
-  MatNullSpace    nullSpace;            /* May be necessary for pressure */
-  Vec             nullVec;
-  PetscScalar     pint;
-  AppCtx          user;                 /* user-defined work context */
-  PetscInt        its;                  /* iterations for convergence */
-  PetscReal       error = 0.0;          /* L_2 error in the solution */
-  PetscReal       ferrors[2];
-  PetscErrorCode  (*initialGuess[2])(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar *u, void* ctx) = {zero_vector, zero_scalar};
-  PetscErrorCode  ierr;
+  SNES         snes;      /* nonlinear solver */
+  DM           dm;        /* problem definition */
+  Vec          u, r;      /* solution, residual vectors */
+  Mat          J, M;      /* Jacobian and preconditiong matrix */
+  MatNullSpace nullSpace; /* May be necessary for pressure */
+  AppCtx       user;      /* user-defined work context */
+  PetscErrorCode (*initialGuess[2])(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar *u, void *ctx) = {zero, zero};
 
-  ierr = PetscInitialize(&argc, &argv, NULL,help);if (ierr) return ierr;
-  ierr = ProcessOptions(PETSC_COMM_WORLD, &user);CHKERRQ(ierr);
-  ierr = SNESCreate(PETSC_COMM_WORLD, &snes);CHKERRQ(ierr);
-  ierr = CreateMesh(PETSC_COMM_WORLD, &user, &dm);CHKERRQ(ierr);
-  ierr = SNESSetDM(snes, dm);CHKERRQ(ierr);
-  ierr = DMSetApplicationContext(dm, &user);CHKERRQ(ierr);
+  PetscFunctionBeginUser;
+  PetscCall(PetscInitialize(&argc, &argv, NULL, help));
+  PetscCall(ProcessOptions(PETSC_COMM_WORLD, &user));
+  PetscCall(SNESCreate(PETSC_COMM_WORLD, &snes));
+  PetscCall(CreateMesh(PETSC_COMM_WORLD, &user, &dm));
+  PetscCall(SNESSetDM(snes, dm));
+  PetscCall(DMSetApplicationContext(dm, &user));
   /* Setup problem parameters */
-  ierr = PetscBagCreate(PETSC_COMM_WORLD, sizeof(Parameter), &user.bag);CHKERRQ(ierr);
-  ierr = SetUpParameters(&user);CHKERRQ(ierr);
+  PetscCall(PetscBagCreate(PETSC_COMM_WORLD, sizeof(Parameter), &user.bag));
+  PetscCall(SetUpParameters(&user));
   /* Setup problem */
-  ierr = SetupDiscretization(dm, &user);CHKERRQ(ierr);
-  ierr = DMPlexCreateClosureIndex(dm, NULL);CHKERRQ(ierr);
+  PetscCall(SetupDiscretization(dm, &user));
+  PetscCall(DMPlexCreateClosureIndex(dm, NULL));
 
-  ierr = DMCreateGlobalVector(dm, &u);CHKERRQ(ierr);
-  ierr = VecDuplicate(u, &r);CHKERRQ(ierr);
+  PetscCall(DMCreateGlobalVector(dm, &u));
+  PetscCall(VecDuplicate(u, &r));
 
-  ierr = DMPlexSetSNESLocalFEM(dm,&user,&user,&user);CHKERRQ(ierr);
-  ierr = CreatePressureNullSpace(dm, &user, &nullVec, &nullSpace);CHKERRQ(ierr);
+  PetscCall(DMPlexSetSNESLocalFEM(dm, PETSC_FALSE, &user));
+  PetscCall(CreatePressureNullSpace(dm, 1, 1, &nullSpace));
 
   { /* set tolerances */
     KSP ksp;
 
-    ierr = SNESGetKSP(snes,&ksp);CHKERRQ(ierr);
-    ierr = KSPSetTolerances(ksp,1.e-2*PETSC_SMALL,PETSC_SMALL,PETSC_DEFAULT,PETSC_DEFAULT);CHKERRQ(ierr);
+    PetscCall(SNESGetKSP(snes, &ksp));
+    PetscCall(KSPSetTolerances(ksp, 1.e-2 * PETSC_SMALL, PETSC_SMALL, PETSC_DEFAULT, PETSC_DEFAULT));
   }
-
-  ierr = SNESSetFromOptions(snes);CHKERRQ(ierr);
 
   /* There should be a way to express this using the DM */
-  ierr = SNESSetUp(snes);CHKERRQ(ierr);
-  ierr = SNESGetJacobian(snes, &J, &M, NULL, NULL);CHKERRQ(ierr);
-  ierr = MatSetNullSpace(J, nullSpace);CHKERRQ(ierr);
+  PetscCall(SNESSetFromOptions(snes));
+  PetscCall(SNESSetUp(snes));
+  PetscCall(SNESGetJacobian(snes, &J, &M, NULL, NULL));
+  PetscCall(MatSetNullSpace(J, nullSpace));
+  PetscCall(PetscObjectSetOptionsPrefix((PetscObject)M, "prec_"));
+  PetscCall(MatSetFromOptions(M));
+  PetscCall(SNESSetConvergenceTest(snes, SNESConvergenceCorrectPressure, &user, NULL));
+
+  PetscCall(DMSNESCheckFromOptions(snes, u));
+  PetscCall(DMProjectFunction(dm, 0.0, initialGuess, NULL, INSERT_VALUES, u));
+  PetscCall(PetscObjectSetName((PetscObject)u, "Solution"));
+  PetscCall(SNESSolve(snes, NULL, u));
   {
     PetscErrorCode (*exacts[2])(PetscInt dim, PetscReal t, const PetscReal x[], PetscInt Nf, PetscScalar *u, void *ctx);
-    void            *ectxs[2];
-    PetscDS          ds;
+    void   *ectxs[2];
+    PetscDS ds;
+    Vec     e;
 
-    ierr = DMGetDS(dm, &ds);CHKERRQ(ierr);
-    ierr = PetscDSGetExactSolution(ds, 0, &exacts[0], &ectxs[0]);CHKERRQ(ierr);
-    ierr = PetscDSGetExactSolution(ds, 1, &exacts[1], &ectxs[1]);CHKERRQ(ierr);
-    ierr = DMProjectFunction(dm, 0.0, exacts, ectxs, INSERT_ALL_VALUES, u);CHKERRQ(ierr);
-    ierr = PetscObjectSetName((PetscObject) u, "Exact Solution");CHKERRQ(ierr);
-    ierr = VecViewFromOptions(u, NULL, "-exact_vec_view");CHKERRQ(ierr);
-    ierr = VecDot(nullVec, u, &pint);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD, "Integral of pressure: %g\n",(double) (PetscAbsScalar(pint) < 1.0e-14 ? 0.0 : PetscRealPart(pint)));CHKERRQ(ierr);
-    ierr = DMSNESCheckFromOptions(snes, u);CHKERRQ(ierr);
-    ierr = DMProjectFunction(dm, 0.0, initialGuess, NULL, INSERT_VALUES, u);CHKERRQ(ierr);
-    ierr = PetscObjectSetName((PetscObject) u, "Initial Solution");CHKERRQ(ierr);
-    ierr = VecViewFromOptions(u, NULL, "-initial_vec_view");CHKERRQ(ierr);
-    ierr = PetscObjectSetName((PetscObject) u, "Solution");CHKERRQ(ierr);
-    ierr = SNESSolve(snes, NULL, u);CHKERRQ(ierr);
-    ierr = SNESGetIterationNumber(snes, &its);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD, "Number of SNES iterations = %D\n", its);CHKERRQ(ierr);
-    ierr = DMComputeL2Diff(dm, 0.0, exacts, ectxs, u, &error);CHKERRQ(ierr);
-    ierr = DMComputeL2FieldDiff(dm, 0.0, exacts, ectxs, u, ferrors);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD, "L_2 Error: %.3g [%.3g, %.3g]\n", (double)error, (double)ferrors[0], (double)ferrors[1]);CHKERRQ(ierr);
-    ierr = VecDot(nullVec, u, &pint);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD, "Integral of pressure: %g\n", (double) (PetscAbsScalar(pint) < 1.0e-14 ? 0.0 : PetscRealPart(pint)));CHKERRQ(ierr);
-    if (user.showError) {
-      Vec r;
+    PetscCall(DMGetDS(dm, &ds));
+    PetscCall(PetscDSGetExactSolution(ds, 0, &exacts[0], &ectxs[0]));
+    PetscCall(PetscDSGetExactSolution(ds, 1, &exacts[1], &ectxs[1]));
 
-      ierr = DMGetGlobalVector(dm, &r);CHKERRQ(ierr);
-      ierr = DMProjectFunction(dm, 0.0, exacts, ectxs, INSERT_ALL_VALUES, r);CHKERRQ(ierr);
-      ierr = VecAXPY(r, -1.0, u);CHKERRQ(ierr);
-      ierr = PetscObjectSetName((PetscObject) r, "Solution Error");CHKERRQ(ierr);
-      ierr = VecViewFromOptions(r, NULL, "-error_vec_view");CHKERRQ(ierr);
-      ierr = DMRestoreGlobalVector(dm, &r);CHKERRQ(ierr);
-    }
+    PetscCall(DMGetGlobalVector(dm, &e));
+    PetscCall(PetscObjectCompose((PetscObject)e, "__Vec_bc_zero__", (PetscObject)dm));
+    PetscCall(DMPlexComputeL2DiffVec(dm, 0.0, exacts, ectxs, u, e));
+    PetscCall(PetscObjectSetName((PetscObject)e, "Solution Error"));
+    PetscCall(VecViewFromOptions(e, NULL, "-error_vec_view"));
+    PetscCall(PetscObjectCompose((PetscObject)e, "__Vec_bc_zero__", NULL));
+    PetscCall(DMRestoreGlobalVector(dm, &e));
   }
-  if (user.showSolution) {
-    ierr = PetscPrintf(PETSC_COMM_WORLD, "Solution\n");CHKERRQ(ierr);
-    ierr = VecChop(u, 3.0e-9);CHKERRQ(ierr);
-    ierr = VecView(u, PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
-  }
-  ierr = VecViewFromOptions(u, NULL, "-sol_vec_view");CHKERRQ(ierr);
+  PetscCall(VecViewFromOptions(u, NULL, "-sol_vec_view"));
 
-  ierr = VecDestroy(&nullVec);CHKERRQ(ierr);
-  ierr = MatNullSpaceDestroy(&nullSpace);CHKERRQ(ierr);
-  ierr = VecDestroy(&u);CHKERRQ(ierr);
-  ierr = VecDestroy(&r);CHKERRQ(ierr);
-  ierr = SNESDestroy(&snes);CHKERRQ(ierr);
-  ierr = DMDestroy(&dm);CHKERRQ(ierr);
-  ierr = PetscBagDestroy(&user.bag);CHKERRQ(ierr);
-  ierr = PetscFinalize();
-  return ierr;
+  PetscCall(MatNullSpaceDestroy(&nullSpace));
+  PetscCall(VecDestroy(&u));
+  PetscCall(VecDestroy(&r));
+  PetscCall(SNESDestroy(&snes));
+  PetscCall(DMDestroy(&dm));
+  PetscCall(PetscBagDestroy(&user.bag));
+  PetscCall(PetscFinalize());
+  return 0;
 }
 
 /*TEST
 
-  # 2D serial P2/P1 tests 0-2
-  test:
-    suffix: 0
-    requires: triangle
-    filter: sed  -e "s/SNES iterations *= *[123]/SNES iterations=4/g" -e "s/solver iterations *= *[123]/solver iterations=4/g" -e "s/evaluations=2/evaluations=3/g"
-    args: -dm_plex_separate_marker -vel_petscspace_degree 2 -pres_petscspace_degree 1 -pc_use_amat -pc_type fieldsplit -pc_fieldsplit_type schur -pc_fieldsplit_schur_factorization_type full -pc_fieldsplit_schur_precondition full -fieldsplit_velocity_pc_type lu -fieldsplit_pressure_pc_type svd -snes_error_if_not_converged -ksp_error_if_not_converged -snes_view -dm_view -dmsnes_check .001 -show_solution
-  test:
-    suffix: 1
-    requires: triangle
-    filter: sed  -e "s/SNES iterations *= *[123]/SNES iterations=4/g" -e "s/solver iterations *= *[123]/solver iterations=4/g" -e "s/evaluations=2/evaluations=3/g"
-    args: -dm_plex_separate_marker -dm_refine 1 -vel_petscspace_degree 2 -pres_petscspace_degree 1 -pc_use_amat -pc_type fieldsplit -pc_fieldsplit_type schur -pc_fieldsplit_schur_factorization_type full -pc_fieldsplit_schur_precondition full -fieldsplit_velocity_pc_type lu -fieldsplit_pressure_pc_type svd -snes_error_if_not_converged -ksp_error_if_not_converged -snes_view -dm_view -dmsnes_check .001 -show_solution
-  test:
-    suffix: 2
-    requires: triangle
-    filter: sed  -e "s/SNES iterations *= *[123]/SNES iterations=4/g" -e "s/solver iterations *= *[123]/solver iterations=4/g" -e "s/evaluations=2/evaluations=3/g"
-    args: -dm_plex_separate_marker -dm_refine 1 -vel_petscspace_degree 2 -pres_petscspace_degree 1 -pc_use_amat -ksp_rtol 1.0e-9 -pc_type fieldsplit -pc_fieldsplit_type schur -pc_fieldsplit_schur_factorization_type full -pc_fieldsplit_schur_precondition a11 -fieldsplit_velocity_pc_type lu -fieldsplit_pressure_ksp_rtol 1e-9 -fieldsplit_pressure_pc_type lu -snes_error_if_not_converged -ksp_error_if_not_converged -snes_view -dm_view -dmsnes_check .001 -show_solution
   # 2D serial discretization tests
   test:
     suffix: p2p1
     requires: triangle
-    filter: sed  -e "s/SNES iterations *= *[123]/SNES iterations=4/g" -e "s/solver iterations *= *[123]/solver iterations=4/g" -e "s/evaluations=2/evaluations=3/g"
-    args: -dm_plex_separate_marker -vel_petscspace_degree 2 -pres_petscspace_degree 1 -pc_fieldsplit_diag_use_amat -pc_type fieldsplit -pc_fieldsplit_type schur -pc_fieldsplit_schur_factorization_type full -pc_fieldsplit_schur_precondition a11 -fieldsplit_velocity_pc_type lu -fieldsplit_pressure_pc_type lu -snes_error_if_not_converged -snes_view -ksp_error_if_not_converged -dm_view
+    args: -dm_plex_separate_marker -vel_petscspace_degree 2 -pres_petscspace_degree 1 \
+      -snes_error_if_not_converged -dmsnes_check .001 \
+      -ksp_rtol 1.e-9 -ksp_error_if_not_converged -pc_use_amat \
+      -pc_type fieldsplit -pc_fieldsplit_type schur -pc_fieldsplit_schur_factorization_type full -pc_fieldsplit_schur_precondition a11 \
+        -fieldsplit_velocity_pc_type lu \
+        -fieldsplit_pressure_ksp_rtol 1.e-9 -fieldsplit_pressure_pc_type lu
   test:
-    suffix: p2p1ref
+    suffix: p2p1_gmg
     requires: triangle
-    filter: sed  -e "s/SNES iterations *= *[123]/SNES iterations=4/g" -e "s/solver iterations *= *[123]/solver iterations=4/g" -e "s/evaluations=2/evaluations=3/g"
-    args: -dm_plex_separate_marker -dm_refine 2 -vel_petscspace_degree 2 -pres_petscspace_degree 1 -pc_fieldsplit_diag_use_amat -pc_type fieldsplit -pc_fieldsplit_type schur -pc_fieldsplit_schur_factorization_type full -pc_fieldsplit_schur_precondition a11 -fieldsplit_velocity_pc_type lu -fieldsplit_pressure_pc_type lu -snes_error_if_not_converged -snes_view -ksp_error_if_not_converged -dm_view
+    args: -dm_plex_separate_marker -dm_refine_hierarchy 2 -vel_petscspace_degree 2 -pres_petscspace_degree 1 \
+      -snes_error_if_not_converged -dmsnes_check .001 \
+      -ksp_type fgmres -ksp_rtol 1.e-9 -ksp_error_if_not_converged -pc_use_amat \
+      -pc_type fieldsplit -pc_fieldsplit_type schur -pc_fieldsplit_schur_factorization_type full -pc_fieldsplit_schur_precondition a11 \
+        -fieldsplit_velocity_pc_type mg \
+        -fieldsplit_pressure_ksp_rtol 1.e-9 -fieldsplit_pressure_pc_type lu
   test:
-    suffix: q2q1
-    requires:
-    filter: sed  -e "s/SNES iterations *= *[123]/SNES iterations=4/g" -e "s/solver iterations *= *[123]/solver iterations=4/g" -e "s/evaluations=2/evaluations=3/g"
-    args: -dm_plex_separate_marker -simplex 0 -vel_petscspace_degree 2 -pres_petscspace_degree 1 -pc_fieldsplit_diag_use_amat -pc_type fieldsplit -pc_fieldsplit_type schur -pc_fieldsplit_schur_factorization_type full -pc_fieldsplit_schur_precondition a11 -fieldsplit_velocity_pc_type lu -fieldsplit_pressure_pc_type lu -snes_error_if_not_converged -snes_view -ksp_error_if_not_converged -dm_view
+    suffix: p2p1_conv
+    requires: triangle
+    # -dm_refine 2 gives L_2 convergence rate: [3.0, 2.2]
+    args: -dm_plex_separate_marker -vel_petscspace_degree 2 -pres_petscspace_degree 1 \
+      -snes_error_if_not_converged -snes_convergence_estimate -convest_num_refine 2 \
+      -ksp_rtol 1.e-9 -ksp_error_if_not_converged -pc_use_amat \
+      -pc_type fieldsplit -pc_fieldsplit_type schur -pc_fieldsplit_schur_factorization_type full -pc_fieldsplit_schur_precondition a11 \
+        -fieldsplit_velocity_pc_type lu \
+        -fieldsplit_pressure_ksp_rtol 1.e-9 -fieldsplit_pressure_pc_type lu
   test:
-    suffix: q2q1ref
-    requires: !single
-    filter: sed  -e "s/SNES iterations *= *[123]/SNES iterations=4/g" -e "s/solver iterations *= *[123]/solver iterations=4/g" -e "s/evaluations=2/evaluations=3/g"
-    args: -dm_plex_separate_marker -simplex 0 -dm_refine 2 -vel_petscspace_degree 2 -pres_petscspace_degree 1 -pc_fieldsplit_diag_use_amat -pc_type fieldsplit -pc_fieldsplit_type schur -pc_fieldsplit_schur_factorization_type full -pc_fieldsplit_schur_precondition a11 -fieldsplit_velocity_pc_type lu -fieldsplit_pressure_pc_type lu -snes_error_if_not_converged -snes_view -ksp_error_if_not_converged -dm_view
+    suffix: q2q1_conv
+    # -dm_refine 2 gives L_2 convergence rate: [3.0, 2.1]
+    args: -dm_plex_simplex 0 -dm_plex_separate_marker -vel_petscspace_degree 2 -pres_petscspace_degree 1 \
+      -snes_error_if_not_converged -snes_convergence_estimate -convest_num_refine 2 \
+      -ksp_rtol 1.e-9 -ksp_error_if_not_converged -pc_use_amat \
+      -pc_type fieldsplit -pc_fieldsplit_type schur -pc_fieldsplit_schur_factorization_type full -pc_fieldsplit_schur_precondition a11 \
+        -fieldsplit_velocity_pc_type lu \
+        -fieldsplit_pressure_ksp_rtol 1.e-9 -fieldsplit_pressure_pc_type lu
   test:
-    suffix: q1p0
-    requires:
-    filter: sed  -e "s/SNES iterations *= *[123]/SNES iterations=4/g" -e "s/solver iterations *= *[123]/solver iterations=4/g" -e "s/evaluations=2/evaluations=3/g"
-    args: -dm_plex_separate_marker -simplex 0 -vel_petscspace_degree 1 -pres_petscspace_degree 0 -pc_fieldsplit_diag_use_amat -pc_type fieldsplit -pc_fieldsplit_type schur -pc_fieldsplit_schur_factorization_type full -pc_fieldsplit_schur_precondition a11 -fieldsplit_velocity_pc_type lu -fieldsplit_pressure_pc_type lu -snes_error_if_not_converged -snes_view -ksp_error_if_not_converged -dm_view
+    suffix: q1p0_conv
+    # -dm_refine 2 gives L_2 convergence rate: [2.0, 1.0]
+    args: -dm_plex_simplex 0 -dm_plex_separate_marker -vel_petscspace_degree 1 -pres_petscspace_degree 0 \
+      -snes_error_if_not_converged -snes_convergence_estimate -convest_num_refine 2 \
+      -ksp_rtol 1.e-9 -ksp_error_if_not_converged -pc_use_amat \
+      -pc_type fieldsplit -pc_fieldsplit_type schur -pc_fieldsplit_schur_factorization_type full -pc_fieldsplit_schur_precondition a11 \
+        -fieldsplit_velocity_pc_type lu \
+        -fieldsplit_pressure_ksp_rtol 1.e-9 -fieldsplit_pressure_pc_type lu
   test:
-    suffix: q1p0ref
-    requires:
-    filter: sed  -e "s/SNES iterations *= *[123]/SNES iterations=4/g" -e "s/solver iterations *= *[123]/solver iterations=4/g" -e "s/evaluations=2/evaluations=3/g"
-    args: -dm_plex_separate_marker -simplex 0 -dm_refine 2 -vel_petscspace_degree 1 -pres_petscspace_degree 0 -pc_fieldsplit_diag_use_amat -pc_type fieldsplit -pc_fieldsplit_type schur -pc_fieldsplit_schur_factorization_type full -pc_fieldsplit_schur_precondition a11 -fieldsplit_velocity_pc_type lu -fieldsplit_pressure_pc_type lu -snes_error_if_not_converged -snes_view -ksp_error_if_not_converged -dm_view
-  test:
-    suffix: q2p1
-    requires:
-    filter: sed  -e "s/SNES iterations *= *[123]/SNES iterations=4/g" -e "s/solver iterations *= *[123]/solver iterations=4/g" -e "s/evaluations=2/evaluations=3/g"
-    args: -dm_plex_separate_marker -simplex 0 -vel_petscspace_degree 2 -pres_petscspace_degree 1 -pres_petscspace_poly_tensor 0 -pres_petscdualspace_lagrange_continuity 0 -pc_fieldsplit_diag_use_amat -pc_type fieldsplit -pc_fieldsplit_type schur -pc_fieldsplit_schur_factorization_type full -pc_fieldsplit_schur_precondition a11 -fieldsplit_velocity_pc_type lu -fieldsplit_pressure_ksp_rtol 1e-10 -fieldsplit_pressure_pc_type lu -fieldsplit_pressure_pc_factor_shift_type -snes_error_if_not_converged -snes_view -ksp_error_if_not_converged -dm_view
-  test:
-    suffix: q2p1ref
-    requires: !single
-    filter: sed  -e "s/SNES iterations *= *[123]/SNES iterations=4/g" -e "s/solver iterations *= *[123]/solver iterations=4/g" -e "s/evaluations=2/evaluations=3/g"
-    args: -dm_plex_separate_marker -simplex 0 -dm_refine 2 -vel_petscspace_degree 2 -pres_petscspace_degree 1 -pres_petscspace_poly_tensor 0 -pres_petscdualspace_lagrange_continuity 0 -pc_fieldsplit_diag_use_amat -pc_type fieldsplit -pc_fieldsplit_type schur -pc_fieldsplit_schur_factorization_type full -pc_fieldsplit_schur_precondition a11 -fieldsplit_velocity_pc_type lu -fieldsplit_pressure_ksp_rtol 1e-10 -fieldsplit_pressure_pc_type lu -snes_error_if_not_converged -snes_view -ksp_error_if_not_converged -dm_view
+    suffix: q2p1_conv
+    # -dm_refine 2 gives L_2 convergence rate: [3.0, 2.0]
+    args: -dm_plex_simplex 0 -dm_plex_separate_marker \
+      -vel_petscspace_degree 2 -pres_petscspace_degree 1 -pres_petscspace_poly_tensor 0 -pres_petscdualspace_lagrange_continuity 0 \
+      -snes_error_if_not_converged -snes_convergence_estimate -convest_num_refine 2 \
+      -ksp_rtol 1.e-9 -ksp_error_if_not_converged -pc_use_amat \
+      -pc_type fieldsplit -pc_fieldsplit_type schur -pc_fieldsplit_schur_factorization_type full -pc_fieldsplit_schur_precondition a11 \
+        -fieldsplit_velocity_pc_type lu \
+        -fieldsplit_pressure_ksp_rtol 1.e-9 -fieldsplit_pressure_pc_type lu
 
   # FETI-DP tests
   testset:
@@ -3483,111 +3432,170 @@ int main(int argc, char **argv)
     suffix: q2p1fetidp
     requires: !single
     nsize: 5
-    filter: grep -v "variant HERMITIAN" | grep -v "SNES iterations" | grep -v "solver iterations" | grep -v "evaluations=" | sed  -e "s/type: seqaijviennacl/type: seqaij/g" -e "s/type: seqaijcusparse/type: seqaij/g"
-    args: -petscpartitioner_type simple -dm_plex_separate_marker -simplex 0 -dm_refine 1 -vel_petscspace_degree 2 -pres_petscspace_degree 1 -pres_petscspace_poly_tensor 0 -pres_petscdualspace_lagrange_continuity 0 -pres_petscdualspace_lagrange_node_endpoints 0 -snes_error_if_not_converged -snes_view -ksp_error_if_not_converged -dm_view -dm_mat_type is -ksp_type fetidp -ksp_fetidp_saddlepoint -ksp_fetidp_saddlepoint_flip -fetidp_ksp_type cg -fetidp_ksp_norm_type natural -fetidp_bddc_pc_bddc_detect_disconnected -fetidp_bddc_pc_bddc_symmetric -fetidp_bddc_pc_bddc_vertex_size 3 -fetidp_bddc_pc_bddc_graph_maxcount 2 -fetidp_bddc_pc_bddc_dirichlet_pc_type svd -fetidp_bddc_pc_bddc_neumann_pc_type svd -fetidp_bddc_pc_bddc_coarse_redundant_pc_type svd
+    args: -dm_plex_simplex 0 -dm_plex_separate_marker -dm_refine_pre 1 -dm_mat_type is -dm_view -petscpartitioner_type simple \
+      -vel_petscspace_degree 2 -pres_petscspace_degree 1 -pres_petscspace_poly_tensor 0 -pres_petscdualspace_lagrange_continuity 0 -pres_petscdualspace_lagrange_node_endpoints 0 \
+      -snes_error_if_not_converged \
+      -ksp_error_if_not_converged \
+      -ksp_type fetidp -ksp_fetidp_saddlepoint -fetidp_ksp_type cg -fetidp_ksp_norm_type natural \
+      -fetidp_bddc_pc_bddc_detect_disconnected -fetidp_bddc_pc_bddc_symmetric -fetidp_bddc_pc_bddc_vertex_size 3 -fetidp_bddc_pc_bddc_graph_maxcount 2 -fetidp_bddc_pc_bddc_coarse_redundant_pc_type svd -fetidp_bddc_pc_bddc_dirichlet_pc_type svd -fetidp_bddc_pc_bddc_neumann_pc_type svd
     test:
       suffix: aij
-      args: -matis_localmat_type aij
+      args: -mat_is_localmat_type aij
     test:
-      requires: viennacl
+      requires: viennacl !CUDA_VERSION_11PLUS broken
       suffix: aijviennacl
-      args: -matis_localmat_type aijviennacl
+      args: -mat_is_localmat_type aijviennacl
     test:
       requires: cuda
       suffix: aijcusparse
-      args: -matis_localmat_type aijcusparse
+      args: -mat_is_localmat_type aijcusparse
 
   testset:
     suffix: q2p1fetidp_deluxe
     output_file: output/ex69_q2p1fetidp_deluxe.out
     requires: mumps double
     nsize: 5
-    filter: grep -v "variant HERMITIAN" | grep -v "SNES iterations" | grep -v "solver iterations" | grep -v "evaluations=" | sed  -e "s/type: seqaijviennacl/type: seqaij/g" -e "s/type: seqaijcusparse/type: seqaij/g"
-    args: -petscpartitioner_type simple -dm_plex_separate_marker -simplex 0 -dm_refine 1 -vel_petscspace_degree 2 -pres_petscspace_degree 1 -pres_petscspace_poly_tensor 0 -pres_petscdualspace_lagrange_continuity 0 -snes_error_if_not_converged -ksp_error_if_not_converged -dm_view -dm_mat_type is -ksp_type fetidp -ksp_fetidp_saddlepoint -ksp_fetidp_saddlepoint_flip -fetidp_ksp_type cg -fetidp_ksp_norm_type natural -fetidp_bddc_pc_bddc_detect_disconnected -fetidp_bddc_pc_bddc_symmetric -fetidp_bddc_pc_bddc_vertex_size 3 -fetidp_bddc_pc_bddc_graph_maxcount 2 -fetidp_bddc_pc_bddc_use_deluxe_scaling -fetidp_bddc_pc_bddc_deluxe_singlemat -fetidp_bddc_pc_bddc_deluxe_zerorows -fetidp_bddc_sub_schurs_mat_solver_type mumps -fetidp_bddc_sub_schurs_mat_mumps_icntl_14 500 -fetidp_bddc_pc_bddc_coarse_redundant_pc_type svd
+    args: -dm_plex_simplex 0 -dm_plex_separate_marker -dm_refine_pre 1 -dm_mat_type is -dm_view -petscpartitioner_type simple \
+      -vel_petscspace_degree 2 -pres_petscspace_degree 1 -pres_petscspace_poly_tensor 0 -pres_petscdualspace_lagrange_continuity 0 -pres_petscdualspace_lagrange_node_endpoints 0 \
+      -snes_error_if_not_converged \
+      -ksp_error_if_not_converged \
+      -ksp_type fetidp -ksp_fetidp_saddlepoint -fetidp_ksp_type cg -fetidp_ksp_norm_type natural \
+      -fetidp_bddc_pc_bddc_detect_disconnected -fetidp_bddc_pc_bddc_symmetric -fetidp_bddc_pc_bddc_vertex_size 3 -fetidp_bddc_pc_bddc_graph_maxcount 2 -fetidp_bddc_pc_bddc_use_deluxe_scaling -fetidp_bddc_pc_bddc_deluxe_singlemat -fetidp_bddc_pc_bddc_deluxe_zerorows \
+      -fetidp_bddc_sub_schurs_mat_solver_type mumps -fetidp_bddc_sub_schurs_mat_mumps_icntl_14 500 -fetidp_bddc_pc_bddc_coarse_redundant_pc_type svd
     test:
       suffix: aij
-      args: -matis_localmat_type aij
+      args: -mat_is_localmat_type aij
     test:
       suffix: aij_seqdense
-      args: -matis_localmat_type aij -fetidp_bddc_sub_schurs_schur_mat_type seqdense
+      args: -mat_is_localmat_type aij -fetidp_bddc_sub_schurs_schur_mat_type seqdense
     test:
-      requires: viennacl
+      requires: viennacl !CUDA_VERSION_11PLUS
       suffix: aijviennacl
-      args: -matis_localmat_type aijviennacl
+      args: -mat_is_localmat_type aijviennacl
     test:
       requires: cuda
       suffix: aijcusparse
-      args: -matis_localmat_type aijcusparse
+      args: -mat_is_localmat_type aijcusparse
 
   testset:
     suffix: q2p1fetidp_deluxe_adaptive
     output_file: output/ex69_q2p1fetidp_deluxe_adaptive.out
     requires: mumps double
     nsize: 5
-    filter: grep -v "variant HERMITIAN" | grep -v "SNES iterations" | grep -v "solver iterations" | grep -v "evaluations=" | sed  -e "s/type: seqaijviennacl/type: seqaij/g" -e "s/type: seqaijcusparse/type: seqaij/g"
-    args: -petscpartitioner_type simple -dm_plex_separate_marker -simplex 0 -dm_refine 1 -vel_petscspace_degree 2 -pres_petscspace_degree 1 -pres_petscspace_poly_tensor 0 -pres_petscdualspace_lagrange_continuity 0 -snes_error_if_not_converged -ksp_error_if_not_converged -dm_view -dm_mat_type is -ksp_type fetidp -ksp_fetidp_saddlepoint -ksp_fetidp_saddlepoint_flip -fetidp_ksp_type cg -fetidp_ksp_norm_type natural -fetidp_bddc_pc_bddc_detect_disconnected -fetidp_bddc_pc_bddc_symmetric -fetidp_bddc_pc_bddc_vertex_size 3 -fetidp_bddc_pc_bddc_graph_maxcount 2 -fetidp_bddc_pc_bddc_use_deluxe_scaling -fetidp_bddc_pc_bddc_deluxe_singlemat -fetidp_bddc_pc_bddc_adaptive_userdefined -fetidp_bddc_sub_schurs_mat_solver_type mumps -fetidp_bddc_pc_bddc_adaptive_threshold 1.3 -fetidp_bddc_sub_schurs_mat_mumps_icntl_14 500 -fetidp_bddc_pc_bddc_coarse_redundant_pc_type svd
+    args: -dm_plex_simplex 0 -dm_plex_separate_marker -dm_refine_pre 1 -dm_mat_type is -dm_view -petscpartitioner_type simple \
+      -vel_petscspace_degree 2 -pres_petscspace_degree 1 -pres_petscspace_poly_tensor 0 -pres_petscdualspace_lagrange_continuity 0 -pres_petscdualspace_lagrange_node_endpoints 0 \
+      -snes_error_if_not_converged \
+      -ksp_error_if_not_converged \
+      -ksp_type fetidp -ksp_fetidp_saddlepoint -fetidp_ksp_type cg -fetidp_ksp_norm_type natural \
+      -fetidp_bddc_pc_bddc_detect_disconnected -fetidp_bddc_pc_bddc_symmetric -fetidp_bddc_pc_bddc_vertex_size 3 -fetidp_bddc_pc_bddc_graph_maxcount 2 -fetidp_bddc_pc_bddc_use_deluxe_scaling -fetidp_bddc_pc_bddc_deluxe_singlemat -fetidp_bddc_pc_bddc_adaptive_userdefined -fetidp_bddc_pc_bddc_adaptive_threshold 1.3 \
+      -fetidp_bddc_sub_schurs_mat_solver_type mumps -fetidp_bddc_sub_schurs_mat_mumps_icntl_14 500 -fetidp_bddc_pc_bddc_coarse_redundant_pc_type svd
     test:
       suffix: aij
-      args: -matis_localmat_type aij
+      args: -mat_is_localmat_type aij
     test:
       suffix: aij_seqdense
-      args: -matis_localmat_type aij -fetidp_bddc_sub_schurs_schur_mat_type seqdense
+      args: -mat_is_localmat_type aij -fetidp_bddc_sub_schurs_schur_mat_type seqdense
     test:
-      requires: viennacl
+      requires: viennacl !CUDA_VERSION_11PLUS
       suffix: aijviennacl
-      args: -matis_localmat_type aijviennacl
+      args: -mat_is_localmat_type aijviennacl
     test:
       requires: cuda
       suffix: aijcusparse
-      args: -matis_localmat_type aijcusparse
+      args: -mat_is_localmat_type aijcusparse
 
   test:
     suffix: p2p1fetidp
     requires: triangle
-    nsize: 5
-    filter: grep -v "variant HERMITIAN" | grep -v "SNES iterations" | grep -v "solver iterations" | grep -v "evaluations="
-    args: -petscpartitioner_type simple -dm_plex_separate_marker -dm_refine 2 -vel_petscspace_degree 2 -pres_petscspace_degree 1 -snes_error_if_not_converged -snes_view -ksp_error_if_not_converged -dm_view -dm_mat_type is -ksp_type fetidp -ksp_fetidp_saddlepoint -ksp_fetidp_saddlepoint_flip -fetidp_ksp_type cg -fetidp_ksp_norm_type natural -fetidp_bddc_pc_bddc_detect_disconnected -fetidp_bddc_pc_bddc_symmetric -fetidp_bddc_pc_bddc_vertex_size 3 -fetidp_bddc_pc_bddc_graph_maxcount 2 -fetidp_bddc_pc_bddc_dirichlet_pc_type svd -fetidp_bddc_pc_bddc_neumann_pc_type svd -fetidp_bddc_pc_bddc_coarse_redundant_pc_type cholesky -fetidp_pc_fieldsplit_schur_fact_type diag -fetidp_fieldsplit_p_pc_type jacobi -fetidp_fieldsplit_lag_ksp_type preonly -fetidp_fieldsplit_p_ksp_type preonly
+    nsize: 4
+    args: -dm_plex_separate_marker -dm_refine_pre 2 -dm_refine_uniform_pre -dm_mat_type is -dm_view -petscpartitioner_type simple \
+      -vel_petscspace_degree 2 -pres_petscspace_degree 1 \
+      -snes_error_if_not_converged \
+      -ksp_error_if_not_converged \
+      -ksp_type fetidp -ksp_fetidp_saddlepoint -fetidp_ksp_type cg -fetidp_ksp_norm_type natural -fetidp_pc_fieldsplit_schur_fact_type diag \
+      -fetidp_fieldsplit_p_pc_type jacobi -fetidp_fieldsplit_p_ksp_type preonly \
+      -fetidp_fieldsplit_lag_ksp_type preonly \
+      -fetidp_bddc_pc_bddc_detect_disconnected -fetidp_bddc_pc_bddc_symmetric -fetidp_bddc_pc_bddc_vertex_size 3 -fetidp_bddc_pc_bddc_graph_maxcount 2 -fetidp_bddc_pc_bddc_coarse_redundant_pc_type cholesky -fetidp_bddc_pc_bddc_dirichlet_pc_type svd -fetidp_bddc_pc_bddc_neumann_pc_type svd
 
   test:
     suffix: p2p1fetidp_allp
     requires: triangle
-    nsize: 5
-    filter: grep -v "variant HERMITIAN" | grep -v "SNES iterations" | grep -v "solver iterations" | grep -v "evaluations="
-    args: -petscpartitioner_type simple -dm_plex_separate_marker -dm_refine 2 -vel_petscspace_degree 2 -pres_petscspace_degree 1 -snes_error_if_not_converged -snes_view -ksp_error_if_not_converged -dm_view -dm_mat_type is -ksp_type fetidp -ksp_fetidp_saddlepoint -ksp_fetidp_saddlepoint_flip -fetidp_ksp_type cg -fetidp_ksp_norm_type natural -fetidp_bddc_pc_bddc_detect_disconnected -fetidp_bddc_pc_bddc_symmetric -fetidp_bddc_pc_bddc_vertex_size 3 -fetidp_bddc_pc_bddc_graph_maxcount 2 -fetidp_bddc_pc_bddc_dirichlet_pc_type svd -fetidp_bddc_pc_bddc_neumann_pc_type svd -fetidp_bddc_pc_bddc_coarse_redundant_pc_type cholesky -fetidp_pc_fieldsplit_schur_fact_type diag -fetidp_fieldsplit_p_pc_type jacobi -fetidp_fieldsplit_lag_ksp_type preonly -fetidp_fieldsplit_p_ksp_type preonly -ksp_fetidp_pressure_all
+    nsize: 4
+    args: -dm_plex_separate_marker -dm_refine_pre 2 -dm_refine_uniform_pre -dm_mat_type is -dm_view -petscpartitioner_type simple \
+      -vel_petscspace_degree 2 -pres_petscspace_degree 1 \
+      -snes_error_if_not_converged \
+      -ksp_error_if_not_converged \
+      -ksp_type fetidp -ksp_fetidp_saddlepoint -fetidp_ksp_type cg -fetidp_ksp_norm_type natural -fetidp_pc_fieldsplit_schur_fact_type diag -ksp_fetidp_pressure_all \
+      -fetidp_fieldsplit_p_pc_type jacobi -fetidp_fieldsplit_p_ksp_type preonly \
+      -fetidp_fieldsplit_lag_ksp_type preonly \
+      -fetidp_bddc_pc_bddc_detect_disconnected -fetidp_bddc_pc_bddc_symmetric -fetidp_bddc_pc_bddc_vertex_size 3 -fetidp_bddc_pc_bddc_graph_maxcount 2 -fetidp_bddc_pc_bddc_coarse_redundant_pc_type cholesky -fetidp_bddc_pc_bddc_dirichlet_pc_type svd -fetidp_bddc_pc_bddc_neumann_pc_type svd
 
   test:
     suffix: p2p1fetidp_discharm
     requires: triangle
-    nsize: 5
-    filter: grep -v "variant HERMITIAN" | grep -v "SNES iterations" | grep -v "solver iterations" | grep -v "evaluations="
-    args: -petscpartitioner_type simple -dm_plex_separate_marker -dm_refine 2 -vel_petscspace_degree 2 -pres_petscspace_degree 1 -snes_error_if_not_converged -snes_view -ksp_error_if_not_converged -dm_view -dm_mat_type is -ksp_type fetidp -ksp_fetidp_saddlepoint -ksp_fetidp_saddlepoint_flip -fetidp_ksp_type cg -fetidp_ksp_norm_type natural -fetidp_bddc_pc_bddc_detect_disconnected -fetidp_bddc_pc_bddc_symmetric -fetidp_bddc_pc_bddc_vertex_size 3 -fetidp_bddc_pc_bddc_graph_maxcount 2 -fetidp_bddc_pc_bddc_dirichlet_pc_type none -fetidp_bddc_pc_bddc_neumann_pc_type svd -fetidp_bddc_pc_bddc_coarse_redundant_pc_type cholesky -fetidp_pc_fieldsplit_schur_fact_type diag -fetidp_fieldsplit_p_pc_type jacobi -fetidp_fieldsplit_lag_ksp_type preonly -fetidp_fieldsplit_p_ksp_type preonly -fetidp_pc_discrete_harmonic -fetidp_harmonic_pc_type cholesky
+    nsize: 4
+    args: -dm_plex_separate_marker -dm_refine_pre 2 -dm_refine_uniform_pre -dm_mat_type is -dm_view -petscpartitioner_type simple \
+      -vel_petscspace_degree 2 -pres_petscspace_degree 1 \
+      -snes_error_if_not_converged \
+      -ksp_error_if_not_converged \
+      -ksp_type fetidp -ksp_fetidp_saddlepoint -fetidp_ksp_type cg -fetidp_ksp_norm_type natural -fetidp_pc_fieldsplit_schur_fact_type diag -fetidp_pc_discrete_harmonic -fetidp_harmonic_pc_type cholesky \
+      -fetidp_fieldsplit_p_pc_type jacobi -fetidp_fieldsplit_p_ksp_type preonly \
+      -fetidp_fieldsplit_lag_ksp_type preonly \
+      -fetidp_bddc_pc_bddc_detect_disconnected -fetidp_bddc_pc_bddc_symmetric -fetidp_bddc_pc_bddc_vertex_size 3 -fetidp_bddc_pc_bddc_graph_maxcount 2 -fetidp_bddc_pc_bddc_coarse_redundant_pc_type cholesky -fetidp_bddc_pc_bddc_dirichlet_pc_type none -fetidp_bddc_pc_bddc_neumann_pc_type svd
 
   test:
     suffix: p2p1fetidp_lumped
     requires: triangle
-    nsize: 5
-    filter: grep -v "variant HERMITIAN" | grep -v "SNES iterations" | grep -v "solver iterations" | grep -v "evaluations="
-    args: -petscpartitioner_type simple -dm_plex_separate_marker -dm_refine 2 -vel_petscspace_degree 2 -pres_petscspace_degree 1 -snes_error_if_not_converged -snes_view -ksp_error_if_not_converged -dm_view -dm_mat_type is -ksp_type fetidp -ksp_fetidp_saddlepoint -ksp_fetidp_saddlepoint_flip -fetidp_ksp_type cg -fetidp_ksp_norm_type natural -fetidp_bddc_pc_bddc_detect_disconnected -fetidp_bddc_pc_bddc_symmetric -fetidp_bddc_pc_bddc_vertex_size 3 -fetidp_bddc_pc_bddc_graph_maxcount 2 -fetidp_bddc_pc_bddc_dirichlet_pc_type none -fetidp_bddc_pc_bddc_neumann_pc_type svd -fetidp_bddc_pc_bddc_coarse_redundant_pc_type cholesky -fetidp_pc_fieldsplit_schur_fact_type diag -fetidp_fieldsplit_p_pc_type jacobi -fetidp_fieldsplit_lag_ksp_type preonly -fetidp_fieldsplit_p_ksp_type preonly -fetidp_pc_lumped
+    nsize: 4
+    args: -dm_plex_separate_marker -dm_refine_pre 2 -dm_refine_uniform_pre -dm_mat_type is -dm_view -petscpartitioner_type simple \
+      -vel_petscspace_degree 2 -pres_petscspace_degree 1 \
+      -snes_error_if_not_converged \
+      -ksp_error_if_not_converged \
+      -ksp_type fetidp -ksp_fetidp_saddlepoint -fetidp_ksp_type cg -fetidp_ksp_norm_type natural -fetidp_pc_fieldsplit_schur_fact_type diag -fetidp_pc_lumped \
+      -fetidp_fieldsplit_p_pc_type jacobi -fetidp_fieldsplit_p_ksp_type preonly \
+      -fetidp_fieldsplit_lag_ksp_type preonly \
+      -fetidp_bddc_pc_bddc_detect_disconnected -fetidp_bddc_pc_bddc_symmetric -fetidp_bddc_pc_bddc_vertex_size 3 -fetidp_bddc_pc_bddc_graph_maxcount 2 -fetidp_bddc_pc_bddc_coarse_redundant_pc_type cholesky -fetidp_bddc_pc_bddc_dirichlet_pc_type none -fetidp_bddc_pc_bddc_neumann_pc_type svd
 
   test:
     suffix: p2p1fetidp_deluxe
     requires: triangle mumps
-    nsize: 5
-    filter: grep -v "variant HERMITIAN" | grep -v "SNES iterations" | grep -v "solver iterations" | grep -v "evaluations="
-    args: -petscpartitioner_type simple -dm_plex_separate_marker -dm_refine 2 -vel_petscspace_degree 2 -pres_petscspace_degree 1 -snes_error_if_not_converged -ksp_error_if_not_converged -dm_view -dm_mat_type is -ksp_type fetidp -ksp_fetidp_saddlepoint -ksp_fetidp_saddlepoint_flip -fetidp_ksp_type cg -fetidp_ksp_norm_type natural -fetidp_bddc_pc_bddc_detect_disconnected -fetidp_bddc_pc_bddc_symmetric -fetidp_bddc_pc_bddc_vertex_size 3 -fetidp_bddc_pc_bddc_graph_maxcount 2 -fetidp_bddc_pc_bddc_coarse_redundant_pc_type cholesky -fetidp_pc_fieldsplit_schur_fact_type diag -fetidp_fieldsplit_p_pc_type jacobi -fetidp_fieldsplit_lag_ksp_type preonly -fetidp_fieldsplit_p_ksp_type preonly -fetidp_bddc_pc_bddc_use_deluxe_scaling -fetidp_bddc_pc_bddc_deluxe_singlemat -fetidp_bddc_sub_schurs_mat_mumps_icntl_14 500 -fetidp_bddc_sub_schurs_posdef 0
+    nsize: 4
+    args: -dm_plex_separate_marker -dm_refine_pre 2 -dm_refine_uniform_pre -dm_mat_type is -dm_view -petscpartitioner_type simple \
+      -vel_petscspace_degree 2 -pres_petscspace_degree 1 \
+      -snes_error_if_not_converged \
+      -ksp_error_if_not_converged \
+      -ksp_type fetidp -ksp_fetidp_saddlepoint -fetidp_ksp_type cg -fetidp_ksp_norm_type natural -fetidp_pc_fieldsplit_schur_fact_type diag \
+      -fetidp_fieldsplit_p_pc_type jacobi -fetidp_fieldsplit_p_ksp_type preonly \
+      -fetidp_fieldsplit_lag_ksp_type preonly \
+      -fetidp_bddc_pc_bddc_detect_disconnected -fetidp_bddc_pc_bddc_symmetric -fetidp_bddc_pc_bddc_vertex_size 3 -fetidp_bddc_pc_bddc_graph_maxcount 2 -fetidp_bddc_pc_bddc_coarse_redundant_pc_type cholesky -fetidp_bddc_pc_bddc_use_deluxe_scaling -fetidp_bddc_pc_bddc_deluxe_singlemat \
+      -fetidp_bddc_sub_schurs_mat_solver_type mumps -fetidp_bddc_sub_schurs_mat_mumps_icntl_14 500 -fetidp_bddc_sub_schurs_posdef 0
 
   test:
     suffix: p2p1fetidp_deluxe_discharm
     requires: triangle mumps
-    nsize: 5
-    filter: grep -v "variant HERMITIAN" | grep -v "SNES iterations" | grep -v "solver iterations" | grep -v "evaluations="
-    args: -petscpartitioner_type simple -dm_plex_separate_marker -dm_refine 2 -vel_petscspace_degree 2 -pres_petscspace_degree 1 -snes_error_if_not_converged -ksp_error_if_not_converged -dm_view -dm_mat_type is -ksp_type fetidp -ksp_fetidp_saddlepoint -ksp_fetidp_saddlepoint_flip -fetidp_ksp_type cg -fetidp_ksp_norm_type natural -fetidp_bddc_pc_bddc_detect_disconnected -fetidp_bddc_pc_bddc_symmetric -fetidp_bddc_pc_bddc_vertex_size 3 -fetidp_bddc_pc_bddc_graph_maxcount 2 -fetidp_bddc_pc_bddc_coarse_redundant_pc_type cholesky -fetidp_pc_fieldsplit_schur_fact_type diag -fetidp_fieldsplit_p_pc_type jacobi -fetidp_fieldsplit_lag_ksp_type preonly -fetidp_fieldsplit_p_ksp_type preonly -fetidp_bddc_pc_bddc_use_deluxe_scaling -fetidp_bddc_pc_bddc_deluxe_singlemat -fetidp_bddc_sub_schurs_mat_mumps_icntl_14 500 -fetidp_bddc_sub_schurs_posdef 0 -fetidp_bddc_sub_schurs_discrete_harmonic
+    nsize: 4
+    args: -dm_plex_separate_marker -dm_refine_pre 2 -dm_refine_uniform_pre -dm_mat_type is -dm_view -petscpartitioner_type simple \
+      -vel_petscspace_degree 2 -pres_petscspace_degree 1 \
+      -snes_error_if_not_converged \
+      -ksp_error_if_not_converged \
+      -ksp_type fetidp -ksp_fetidp_saddlepoint -fetidp_ksp_type cg -fetidp_ksp_norm_type natural -fetidp_pc_fieldsplit_schur_fact_type diag \
+      -fetidp_fieldsplit_p_pc_type jacobi -fetidp_fieldsplit_p_ksp_type preonly \
+      -fetidp_fieldsplit_lag_ksp_type preonly \
+      -fetidp_bddc_pc_bddc_detect_disconnected -fetidp_bddc_pc_bddc_symmetric -fetidp_bddc_pc_bddc_vertex_size 3 -fetidp_bddc_pc_bddc_graph_maxcount 2 -fetidp_bddc_pc_bddc_coarse_redundant_pc_type cholesky -fetidp_bddc_pc_bddc_use_deluxe_scaling -fetidp_bddc_pc_bddc_deluxe_singlemat \
+       -fetidp_bddc_sub_schurs_mat_solver_type mumps -fetidp_bddc_sub_schurs_mat_mumps_icntl_14 500 -fetidp_bddc_sub_schurs_posdef 0  -fetidp_bddc_sub_schurs_discrete_harmonic
 
   testset:
-    nsize: 3
+    nsize: 4
     requires: triangle
     output_file: output/ex69_p2p1fetidp_olof.out
-    args: -dm_view -dm_mat_type is -dm_refine 1 -dm_plex_separate_marker -vel_petscspace_degree 2 -pres_petscspace_degree 1 -petscpartitioner_type simple -snes_error_if_not_converged -ksp_error_if_not_converged -ksp_type fetidp -ksp_fetidp_saddlepoint -ksp_fetidp_saddlepoint_flip -fetidp_ksp_type cg  -fetidp_ksp_norm_type natural -fetidp_bddc_pc_bddc_detect_disconnected -fetidp_bddc_pc_bddc_symmetric -fetidp_bddc_pc_bddc_vertex_size 3 -fetidp_bddc_pc_bddc_graph_maxcount 2 -fetidp_bddc_pc_bddc_dirichlet_pc_type none -fetidp_bddc_pc_bddc_neumann_pc_type svd -fetidp_bddc_pc_bddc_coarse_redundant_pc_type cholesky -fetidp_pc_discrete_harmonic 1 -fetidp_harmonic_pc_type cholesky -fetidp_fieldsplit_lag_ksp_error_if_not_converged 0 -fetidp_fieldsplit_lag_ksp_type chebyshev -fetidp_fieldsplit_lag_ksp_max_it 2 -ksp_fetidp_pressure_schur -fetidp_fieldsplit_p_ksp_type preonly -fetidp_fieldsplit_p_pc_type bddc -fetidp_fieldsplit_p_pc_bddc_dirichlet_pc_type none
+    args: -dm_plex_separate_marker -dm_refine_pre 2 -dm_refine_uniform_pre -dm_mat_type is -dm_view -petscpartitioner_type simple \
+      -vel_petscspace_degree 2 -pres_petscspace_degree 1 \
+      -snes_error_if_not_converged \
+      -ksp_error_if_not_converged \
+      -ksp_type fetidp -ksp_fetidp_saddlepoint -fetidp_ksp_type cg -fetidp_ksp_norm_type natural -fetidp_pc_discrete_harmonic 1 -fetidp_harmonic_pc_type cholesky -ksp_fetidp_pressure_schur \
+      -fetidp_fieldsplit_p_pc_type bddc -fetidp_fieldsplit_p_pc_bddc_dirichlet_pc_type none -fetidp_fieldsplit_p_ksp_type preonly \
+      -fetidp_fieldsplit_lag_ksp_error_if_not_converged 0 -fetidp_fieldsplit_lag_ksp_type chebyshev -fetidp_fieldsplit_lag_ksp_max_it 2 \
+      -fetidp_bddc_pc_bddc_detect_disconnected -fetidp_bddc_pc_bddc_symmetric -fetidp_bddc_pc_bddc_vertex_size 3 -fetidp_bddc_pc_bddc_graph_maxcount 2 -fetidp_bddc_pc_bddc_coarse_redundant_pc_type cholesky -fetidp_bddc_pc_bddc_dirichlet_pc_type none -fetidp_bddc_pc_bddc_neumann_pc_type svd
     test:
       suffix: p2p1fetidp_olof_full
       args: -fetidp_pc_fieldsplit_schur_fact_type full
@@ -3597,5 +3605,35 @@ int main(int argc, char **argv)
     test:
       suffix: p2p1fetidp_olof_additive
       args: -fetidp_pc_fieldsplit_type additive
+
+  #BDDC with benign trick
+  testset:
+    suffix: q2p1bddc
+    output_file: output/ex69_q2p1fetidp_deluxe.out
+    nsize: 5
+    args: -dm_plex_simplex 0 -dm_plex_separate_marker -dm_refine_pre 1 -dm_mat_type is -dm_view -petscpartitioner_type simple -vel_petscspace_degree 2 -pres_petscspace_degree 1 -pres_petscspace_poly_tensor 0 -pres_petscdualspace_lagrange_continuity 0 -pres_petscdualspace_lagrange_node_endpoints 0 -petscds_jac_pre 0 -snes_error_if_not_converged -ksp_error_if_not_converged -ksp_type cg -ksp_norm_type natural -pc_type bddc -pc_bddc_benign_trick -pc_bddc_nonetflux -pc_bddc_detect_disconnected -pc_bddc_vertex_size 2 -pc_bddc_coarse_redundant_pc_type svd -pc_bddc_use_qr_single
+    test:
+      requires: double
+      suffix: benign_card
+      # no native support for saddle point factorizations from PETSc
+      args: -pc_bddc_dirichlet_pc_type svd -pc_bddc_neumann_pc_type svd
+    test:
+      requires: mumps double
+      suffix: benign_deluxe_mumps
+      args: -pc_bddc_use_deluxe_scaling -pc_bddc_deluxe_zerorows -sub_schurs_mat_solver_type mumps -sub_schurs_mat_mumps_icntl_14 1000
+    test:
+      requires: mumps double
+      suffix: benign_deluxe_adaptive_mumps
+      args: -pc_bddc_adaptive_threshold 1.7 -pc_bddc_use_deluxe_scaling -pc_bddc_deluxe_zerorows -sub_schurs_mat_solver_type mumps -sub_schurs_mat_mumps_icntl_14 1000
+    test:
+      TODO: broken (INDEFINITE PC)
+      requires: mkl_pardiso double !complex
+      suffix: benign_deluxe_mkl
+      args: -pc_bddc_use_deluxe_scaling -pc_bddc_deluxe_zerorows -sub_schurs_mat_solver_type mkl_pardiso -snes_rtol 1.e-7
+    test:
+      TODO: broken (INDEFINITE PC)
+      requires: mkl_pardiso double !complex
+      suffix: benign_deluxe_adaptive_mkl
+      args: -pc_bddc_adaptive_threshold 1.7 -pc_bddc_use_deluxe_scaling -pc_bddc_deluxe_zerorows -sub_schurs_mat_solver_type mkl_pardiso -snes_rtol 1.e-7
 
 TEST*/

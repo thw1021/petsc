@@ -2,97 +2,84 @@ static char help[] = "Test DMStag 3d star stencil\n\n";
 #include <petscdm.h>
 #include <petscdmstag.h>
 
-int main(int argc,char **argv)
+int main(int argc, char **argv)
 {
-  PetscErrorCode  ierr;
-  DM              dm;
-  Vec             vec,vecLocal1,vecLocal2;
-  PetscScalar     *a,****a1,****a2,expected,sum;
-  PetscInt        startx,starty,startz,nx,ny,nz,i,j,k,d,is,js,ks,dof0,dof1,dof2,dof3,dofTotal,stencilWidth,ngx,ngy,ngz;
-  DMBoundaryType  boundaryTypex,boundaryTypey,boundaryTypez;
-  PetscMPIInt     rank;
+  DM             dm;
+  Vec            vec, vecLocal1, vecLocal2;
+  PetscScalar   *a, ****a1, ****a2, expected, sum;
+  PetscInt       startx, starty, startz, nx, ny, nz, i, j, k, d, is, js, ks, dof0, dof1, dof2, dof3, dofTotal, stencilWidth, ngx, ngy, ngz;
+  DMBoundaryType boundaryTypex, boundaryTypey, boundaryTypez;
+  PetscMPIInt    rank;
 
-  ierr = PetscInitialize(&argc,&argv,(char*)0,help);if (ierr) return ierr;
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
-  dof0 = 1;
-  dof1 = 1;
-  dof2 = 1;
-  dof3 = 1;
+  PetscFunctionBeginUser;
+  PetscCall(PetscInitialize(&argc, &argv, (char *)0, help));
+  PetscCallMPI(MPI_Comm_rank(PETSC_COMM_WORLD, &rank));
+  dof0         = 1;
+  dof1         = 1;
+  dof2         = 1;
+  dof3         = 1;
   stencilWidth = 2;
-  ierr = DMStagCreate3d(PETSC_COMM_WORLD,DM_BOUNDARY_PERIODIC,DM_BOUNDARY_PERIODIC,DM_BOUNDARY_PERIODIC,4,4,4,PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,dof0,dof1,dof2,dof3,DMSTAG_STENCIL_STAR,stencilWidth,NULL,NULL,NULL,&dm);CHKERRQ(ierr);
-  ierr = DMSetFromOptions(dm);CHKERRQ(ierr);
-  ierr = DMSetUp(dm);CHKERRQ(ierr);
-  ierr = DMStagGetDOF(dm,&dof0,&dof1,&dof2,&dof3);CHKERRQ(ierr);
-  dofTotal = dof0 + 3*dof1 + 3*dof2 + dof3;
-  ierr = DMStagGetStencilWidth(dm,&stencilWidth);CHKERRQ(ierr);
+  PetscCall(DMStagCreate3d(PETSC_COMM_WORLD, DM_BOUNDARY_PERIODIC, DM_BOUNDARY_PERIODIC, DM_BOUNDARY_PERIODIC, 4, 4, 4, PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE, dof0, dof1, dof2, dof3, DMSTAG_STENCIL_STAR, stencilWidth, NULL, NULL, NULL, &dm));
+  PetscCall(DMSetFromOptions(dm));
+  PetscCall(DMSetUp(dm));
+  PetscCall(DMStagGetDOF(dm, &dof0, &dof1, &dof2, &dof3));
+  dofTotal = dof0 + 3 * dof1 + 3 * dof2 + dof3;
+  PetscCall(DMStagGetStencilWidth(dm, &stencilWidth));
 
-  ierr = DMCreateLocalVector(dm,&vecLocal1);CHKERRQ(ierr);
-  ierr = VecDuplicate(vecLocal1,&vecLocal2);CHKERRQ(ierr);
+  PetscCall(DMCreateLocalVector(dm, &vecLocal1));
+  PetscCall(VecDuplicate(vecLocal1, &vecLocal2));
 
-  ierr = DMCreateGlobalVector(dm,&vec);CHKERRQ(ierr);
-  ierr = VecSet(vec,1.0);CHKERRQ(ierr);
-  ierr = VecSet(vecLocal1,0.0);CHKERRQ(ierr);
-  ierr = DMGlobalToLocalBegin(dm,vec,INSERT_VALUES,vecLocal1);CHKERRQ(ierr);
-  ierr = DMGlobalToLocalEnd(dm,vec,INSERT_VALUES,vecLocal1);CHKERRQ(ierr);
+  PetscCall(DMCreateGlobalVector(dm, &vec));
+  PetscCall(VecSet(vec, 1.0));
+  PetscCall(VecSet(vecLocal1, 0.0));
+  PetscCall(DMGlobalToLocalBegin(dm, vec, INSERT_VALUES, vecLocal1));
+  PetscCall(DMGlobalToLocalEnd(dm, vec, INSERT_VALUES, vecLocal1));
 
-  ierr = DMStagGetCorners(dm,&startx,&starty,&startz,&nx,&ny,&nz,NULL,NULL,NULL);CHKERRQ(ierr);
-  ierr = DMStagVecGetArrayRead(dm,vecLocal1,&a1);CHKERRQ(ierr);
-  ierr = DMStagVecGetArray(dm,vecLocal2,&a2);CHKERRQ(ierr);
-  for (k=startz; k<startz + nz; ++k) {
-    for (j=starty; j<starty + ny; ++j) {
-      for (i=startx; i<startx + nx; ++i) {
-        for (d=0; d<dofTotal; ++d) {
-          if (a1[k][j][i][d] != 1.0) {
-            ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] Unexpected value %g (expecting %g)\n",rank,(double)PetscRealPart(a1[k][j][i][d]),1.0);CHKERRQ(ierr);
-          }
+  PetscCall(DMStagGetCorners(dm, &startx, &starty, &startz, &nx, &ny, &nz, NULL, NULL, NULL));
+  PetscCall(DMStagVecGetArrayRead(dm, vecLocal1, &a1));
+  PetscCall(DMStagVecGetArray(dm, vecLocal2, &a2));
+  for (k = startz; k < startz + nz; ++k) {
+    for (j = starty; j < starty + ny; ++j) {
+      for (i = startx; i < startx + nx; ++i) {
+        for (d = 0; d < dofTotal; ++d) {
+          if (a1[k][j][i][d] != 1.0) PetscCall(PetscPrintf(PETSC_COMM_SELF, "[%d] Unexpected value %g (expecting %g)\n", rank, (double)PetscRealPart(a1[k][j][i][d]), 1.0));
           a2[k][j][i][d] = 0.0;
-          for (ks = -stencilWidth; ks <= stencilWidth; ++ks) {
-            a2[k][j][i][d] += a1[k+ks][j][i][d];
-          }
-          for (js = -stencilWidth; js <= stencilWidth; ++js) {
-            a2[k][j][i][d] += a1[k][j+js][i][d];
-          }
-          for (is = -stencilWidth; is <= stencilWidth; ++is) {
-            a2[k][j][i][d] += a1[k][j][i+is][d];
-          }
-            a2[k][j][i][d] -= 2.0*a1[k][j][i][d];
+          for (ks = -stencilWidth; ks <= stencilWidth; ++ks) a2[k][j][i][d] += a1[k + ks][j][i][d];
+          for (js = -stencilWidth; js <= stencilWidth; ++js) a2[k][j][i][d] += a1[k][j + js][i][d];
+          for (is = -stencilWidth; is <= stencilWidth; ++is) a2[k][j][i][d] += a1[k][j][i + is][d];
+          a2[k][j][i][d] -= 2.0 * a1[k][j][i][d];
         }
       }
     }
   }
-  ierr = DMStagVecRestoreArrayRead(dm,vecLocal1,&a1);CHKERRQ(ierr);
-  ierr = DMStagVecRestoreArray(dm,vecLocal2,&a2);CHKERRQ(ierr);
+  PetscCall(DMStagVecRestoreArrayRead(dm, vecLocal1, &a1));
+  PetscCall(DMStagVecRestoreArray(dm, vecLocal2, &a2));
 
-  DMLocalToGlobalBegin(dm,vecLocal2,INSERT_VALUES,vec);CHKERRQ(ierr);
-  DMLocalToGlobalEnd(dm,vecLocal2,INSERT_VALUES,vec);CHKERRQ(ierr);
+  PetscCall(DMLocalToGlobalBegin(dm, vecLocal2, INSERT_VALUES, vec));
+  PetscCall(DMLocalToGlobalEnd(dm, vecLocal2, INSERT_VALUES, vec));
 
   /* For the all-periodic case, some additional checks */
-  ierr = DMStagGetBoundaryTypes(dm,&boundaryTypex,&boundaryTypey,&boundaryTypez);CHKERRQ(ierr);
+  PetscCall(DMStagGetBoundaryTypes(dm, &boundaryTypex, &boundaryTypey, &boundaryTypez));
   if (boundaryTypex == DM_BOUNDARY_PERIODIC && boundaryTypey == DM_BOUNDARY_PERIODIC && boundaryTypez == DM_BOUNDARY_PERIODIC) {
+    PetscCall(DMStagGetGhostCorners(dm, NULL, NULL, NULL, &ngx, &ngy, &ngz));
+    expected = (ngx * ngy * ngz - 8 * stencilWidth * stencilWidth * stencilWidth - 4 * stencilWidth * stencilWidth * (nx + ny + nz)) * dofTotal;
+    PetscCall(VecSum(vecLocal1, &sum));
+    if (sum != expected) PetscCall(PetscPrintf(PETSC_COMM_SELF, "[%d] Unexpected sum of local entries %g (expected %g)\n", rank, (double)PetscRealPart(sum), (double)PetscRealPart(expected)));
 
-    ierr = DMStagGetGhostCorners(dm,NULL,NULL,NULL,&ngx,&ngy,&ngz);CHKERRQ(ierr);
-    expected = (ngx*ngy*ngz - 8*stencilWidth*stencilWidth*stencilWidth - 4*stencilWidth*stencilWidth*(nx + ny + nz))*dofTotal;
-    ierr = VecSum(vecLocal1,&sum);CHKERRQ(ierr);
-    if (sum != expected) {
-      ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] Unexpected sum of local entries %g (expected %g)\n",rank,(double)PetscRealPart(sum),(double)PetscRealPart(expected));CHKERRQ(ierr);
+    PetscCall(VecGetArray(vec, &a));
+    expected = 1 + 6 * stencilWidth;
+    for (i = 0; i < nz * ny * nx * dofTotal; ++i) {
+      if (a[i] != expected) PetscCall(PetscPrintf(PETSC_COMM_SELF, "[%d] Unexpected value %g (expecting %g)\n", rank, (double)PetscRealPart(a[i]), (double)PetscRealPart(expected)));
     }
-
-    ierr = VecGetArray(vec,&a);CHKERRQ(ierr);
-    expected = 1 + 6*stencilWidth;
-    for (i=0; i<nz*ny*nx*dofTotal; ++i) {
-      if (a[i] != expected) {
-        ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] Unexpected value %g (expecting %g)\n",rank,(double)PetscRealPart(a[i]),(double)PetscRealPart(expected));CHKERRQ(ierr);
-      }
-    }
-    ierr = VecRestoreArray(vec,&a);CHKERRQ(ierr);
+    PetscCall(VecRestoreArray(vec, &a));
   }
 
-  ierr = VecDestroy(&vec);CHKERRQ(ierr);
-  ierr = VecDestroy(&vecLocal1);CHKERRQ(ierr);
-  ierr = VecDestroy(&vecLocal2);CHKERRQ(ierr);
-  ierr = DMDestroy(&dm);CHKERRQ(ierr);
-  ierr = PetscFinalize();
-  return ierr;
+  PetscCall(VecDestroy(&vec));
+  PetscCall(VecDestroy(&vecLocal1));
+  PetscCall(VecDestroy(&vecLocal2));
+  PetscCall(DMDestroy(&dm));
+  PetscCall(PetscFinalize());
+  return 0;
 }
 
 /*TEST

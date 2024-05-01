@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
 import os
 petsc_hash_pkgs=os.path.join(os.getenv('HOME'),'petsc-hash-pkgs')
@@ -10,9 +10,10 @@ if __name__ == '__main__':
   import configure
   configure_options = [
     '--package-prefix-hash='+petsc_hash_pkgs,
+    '--with-make-test-np=20',
     '--with-mpi=0',
-    '--with-cc=clang',
-    '--with-cxx=clang++',
+    '--with-cc=gcc',
+    '--with-cxx=g++',
     '--with-fc=gfortran',
     '--with-cuda=1',
     '--download-hdf5',
@@ -20,9 +21,17 @@ if __name__ == '__main__':
     '--download-superlu',
     '--download-mumps',
     '--with-mumps-serial',
-    'CUDAFLAGS=-ccbin clang++',
-    'CFLAGS=-Wall -Wwrite-strings -Wno-strict-aliasing -Wno-unknown-pragmas -fstack-protector -Wno-unused-function', # should be CXXFLAGS
+    '--download-p4est=1',
+    '--with-zlib=1',
+    # stress-test h2opus: mpiuni and CPU code while PETSc has GPU support
+    '--download-h2opus',
+    '--with-cxx-dialect=14',
     '--with-shared-libraries=1',
+    '--download-slepc',
+    '--download-hpddm',
+    '--download-fftw',
+    '--with-strict-petscerrorcode',
+    '--with-coverage',
   ]
   configure.petsc_configure(configure_options)
 

@@ -1,6 +1,5 @@
-
-#include <petsc/private/matimpl.h>
-#include <../src/mat/impls/mffd/mffdimpl.h>   /*I  "petscmat.h"   I*/
+#include <../src/mat/impls/shell/shell.h> /*I  "petscmat.h"   I*/
+#include <../src/mat/impls/mffd/mffdimpl.h>
 
 PetscFunctionList MatMFFDList              = NULL;
 PetscBool         MatMFFDRegisterAllCalled = PETSC_FALSE;
@@ -9,307 +8,288 @@ PetscClassId  MATMFFD_CLASSID;
 PetscLogEvent MATMFFD_Mult;
 
 static PetscBool MatMFFDPackageInitialized = PETSC_FALSE;
+
 /*@C
-  MatMFFDFinalizePackage - This function destroys everything in the MatMFFD package. It is
-  called from PetscFinalize().
+  MatMFFDFinalizePackage - This function destroys everything in the MATMFFD` package. It is
+  called from `PetscFinalize()`.
 
   Level: developer
 
-.seealso: PetscFinalize(), MatCreateMFFD(), MatCreateSNESMF()
+.seealso: [](ch_matrices), `Mat`, `MATMFFD`, `PetscFinalize()`, `MatCreateMFFD()`, `MatCreateSNESMF()`
 @*/
-PetscErrorCode  MatMFFDFinalizePackage(void)
+PetscErrorCode MatMFFDFinalizePackage(void)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  ierr = PetscFunctionListDestroy(&MatMFFDList);CHKERRQ(ierr);
+  PetscCall(PetscFunctionListDestroy(&MatMFFDList));
   MatMFFDPackageInitialized = PETSC_FALSE;
   MatMFFDRegisterAllCalled  = PETSC_FALSE;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-  MatMFFDInitializePackage - This function initializes everything in the MatMFFD package. It is called
-  from MatInitializePackage().
+  MatMFFDInitializePackage - This function initializes everything in the MATMFFD` package. It is called
+  from `MatInitializePackage()`.
 
   Level: developer
 
-.seealso: PetscInitialize()
+.seealso: [](ch_matrices), `Mat`, `MATMFFD`, `PetscInitialize()`
 @*/
-PetscErrorCode  MatMFFDInitializePackage(void)
+PetscErrorCode MatMFFDInitializePackage(void)
 {
-  char           logList[256];
-  PetscBool      opt,pkg;
-  PetscErrorCode ierr;
+  char      logList[256];
+  PetscBool opt, pkg;
 
   PetscFunctionBegin;
-  if (MatMFFDPackageInitialized) PetscFunctionReturn(0);
+  if (MatMFFDPackageInitialized) PetscFunctionReturn(PETSC_SUCCESS);
   MatMFFDPackageInitialized = PETSC_TRUE;
   /* Register Classes */
-  ierr = PetscClassIdRegister("MatMFFD",&MATMFFD_CLASSID);CHKERRQ(ierr);
+  PetscCall(PetscClassIdRegister("MatMFFD", &MATMFFD_CLASSID));
   /* Register Constructors */
-  ierr = MatMFFDRegisterAll();CHKERRQ(ierr);
+  PetscCall(MatMFFDRegisterAll());
   /* Register Events */
-  ierr = PetscLogEventRegister("MatMult MF",MATMFFD_CLASSID,&MATMFFD_Mult);CHKERRQ(ierr);
- /* Process Info */
+  PetscCall(PetscLogEventRegister("MatMult MF", MATMFFD_CLASSID, &MATMFFD_Mult));
+  /* Process Info */
   {
-    PetscClassId  classids[1];
+    PetscClassId classids[1];
 
     classids[0] = MATMFFD_CLASSID;
-    ierr = PetscInfoProcessClass("matmffd", 1, classids);CHKERRQ(ierr);
+    PetscCall(PetscInfoProcessClass("matmffd", 1, classids));
   }
   /* Process summary exclusions */
-  ierr = PetscOptionsGetString(NULL,NULL,"-log_exclude",logList,sizeof(logList),&opt);CHKERRQ(ierr);
+  PetscCall(PetscOptionsGetString(NULL, NULL, "-log_exclude", logList, sizeof(logList), &opt));
   if (opt) {
-    ierr = PetscStrInList("matmffd",logList,',',&pkg);CHKERRQ(ierr);
-    if (pkg) {ierr = PetscLogEventExcludeClass(MATMFFD_CLASSID);CHKERRQ(ierr);}
+    PetscCall(PetscStrInList("matmffd", logList, ',', &pkg));
+    if (pkg) PetscCall(PetscLogEventExcludeClass(MATMFFD_CLASSID));
   }
   /* Register package finalizer */
-  ierr = PetscRegisterFinalize(MatMFFDFinalizePackage);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscRegisterFinalize(MatMFFDFinalizePackage));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode  MatMFFDSetType_MFFD(Mat mat,MatMFFDType ftype)
+static PetscErrorCode MatMFFDSetType_MFFD(Mat mat, MatMFFDType ftype)
 {
-  PetscErrorCode ierr,(*r)(MatMFFD);
-  MatMFFD        ctx;
-  PetscBool      match;
+  MatMFFD   ctx;
+  PetscBool match;
+  PetscErrorCode (*r)(MatMFFD);
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
-  PetscValidCharPointer(ftype,2);
-  ierr = MatShellGetContext(mat,&ctx);CHKERRQ(ierr);
+  PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
+  PetscAssertPointer(ftype, 2);
+  PetscCall(MatShellGetContext(mat, &ctx));
 
   /* already set, so just return */
-  ierr = PetscObjectTypeCompare((PetscObject)ctx,ftype,&match);CHKERRQ(ierr);
-  if (match) PetscFunctionReturn(0);
+  PetscCall(PetscObjectTypeCompare((PetscObject)ctx, ftype, &match));
+  if (match) PetscFunctionReturn(PETSC_SUCCESS);
 
   /* destroy the old one if it exists */
-  if (ctx->ops->destroy) {
-    ierr = (*ctx->ops->destroy)(ctx);CHKERRQ(ierr);
-  }
+  PetscTryTypeMethod(ctx, destroy);
 
-  ierr =  PetscFunctionListFind(MatMFFDList,ftype,&r);CHKERRQ(ierr);
-  if (!r) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE,"Unknown MatMFFD type %s given",ftype);
-  ierr = (*r)(ctx);CHKERRQ(ierr);
-  ierr = PetscObjectChangeTypeName((PetscObject)ctx,ftype);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscFunctionListFind(MatMFFDList, ftype, &r));
+  PetscCheck(r, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown MatMFFD type %s given", ftype);
+  PetscCall((*r)(ctx));
+  PetscCall(PetscObjectChangeTypeName((PetscObject)ctx, ftype));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
-    MatMFFDSetType - Sets the method that is used to compute the
-    differencing parameter for finite differene matrix-free formulations.
+/*@
+  MatMFFDSetType - Sets the method that is used to compute the
+  differencing parameter for finite difference matrix-free formulations.
 
-    Input Parameters:
-+   mat - the "matrix-free" matrix created via MatCreateSNESMF(), or MatCreateMFFD()
-          or MatSetType(mat,MATMFFD);
--   ftype - the type requested, either MATMFFD_WP or MATMFFD_DS
+  Input Parameters:
++ mat   - the "matrix-free" matrix created via `MatCreateSNESMF()`, or `MatCreateMFFD()`
+          or `MatSetType`(mat,`MATMFFD`);
+- ftype - the type requested, either `MATMFFD_WP` or `MATMFFD_DS`
 
-    Level: advanced
+  Level: advanced
 
-    Notes:
-    For example, such routines can compute h for use in
-    Jacobian-vector products of the form
+  Note:
+  For example, such routines can compute `h` for use in
+  Jacobian-vector products of the form
+.vb
 
                         F(x+ha) - F(x)
           F'(u)a  ~=  ----------------
                               h
+.ve
 
-.seealso: MatCreateSNESMF(), MatMFFDRegister(), MatMFFDSetFunction(), MatCreateMFFD()
+.seealso: [](ch_matrices), `Mat`, `MATMFFD`, `MATMFFD_WP`, `MATMFFD_DS`, `MatCreateSNESMF()`, `MatMFFDRegister()`, `MatMFFDSetFunction()`, `MatCreateMFFD()`
 @*/
-PetscErrorCode  MatMFFDSetType(Mat mat,MatMFFDType ftype)
+PetscErrorCode MatMFFDSetType(Mat mat, MatMFFDType ftype)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
-  PetscValidCharPointer(ftype,2);
-  ierr = PetscTryMethod(mat,"MatMFFDSetType_C",(Mat,MatMFFDType),(mat,ftype));CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
+  PetscAssertPointer(ftype, 2);
+  PetscTryMethod(mat, "MatMFFDSetType_C", (Mat, MatMFFDType), (mat, ftype));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatGetDiagonal_MFFD(Mat,Vec);
+static PetscErrorCode MatGetDiagonal_MFFD(Mat, Vec);
 
-typedef PetscErrorCode (*FCN1)(void*,Vec); /* force argument to next function to not be extern C*/
-static PetscErrorCode  MatMFFDSetFunctioniBase_MFFD(Mat mat,FCN1 func)
+typedef PetscErrorCode (*FCN1)(void *, Vec); /* force argument to next function to not be extern C*/
+static PetscErrorCode MatMFFDSetFunctioniBase_MFFD(Mat mat, FCN1 func)
 {
-  MatMFFD        ctx;
-  PetscErrorCode ierr;
+  MatMFFD ctx;
 
   PetscFunctionBegin;
-  ierr = MatShellGetContext(mat,&ctx);CHKERRQ(ierr);
+  PetscCall(MatShellGetContext(mat, &ctx));
   ctx->funcisetbase = func;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-typedef PetscErrorCode (*FCN2)(void*,PetscInt,Vec,PetscScalar*); /* force argument to next function to not be extern C*/
-static PetscErrorCode  MatMFFDSetFunctioni_MFFD(Mat mat,FCN2 funci)
+typedef PetscErrorCode (*FCN2)(void *, PetscInt, Vec, PetscScalar *); /* force argument to next function to not be extern C*/
+static PetscErrorCode MatMFFDSetFunctioni_MFFD(Mat mat, FCN2 funci)
 {
-  MatMFFD        ctx;
-  PetscErrorCode ierr;
+  MatMFFD ctx;
 
   PetscFunctionBegin;
-  ierr = MatShellGetContext(mat,&ctx);CHKERRQ(ierr);
+  PetscCall(MatShellGetContext(mat, &ctx));
   ctx->funci = funci;
-  ierr = MatShellSetOperation(mat,MATOP_GET_DIAGONAL,(void (*)(void))MatGetDiagonal_MFFD);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(MatShellSetOperation(mat, MATOP_GET_DIAGONAL, (void (*)(void))MatGetDiagonal_MFFD));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatMFFDGetH_MFFD(Mat mat,PetscScalar *h)
+static PetscErrorCode MatMFFDGetH_MFFD(Mat mat, PetscScalar *h)
 {
-  MatMFFD        ctx;
-  PetscErrorCode ierr;
+  MatMFFD ctx;
 
   PetscFunctionBegin;
-  ierr = MatShellGetContext(mat,&ctx);CHKERRQ(ierr);
+  PetscCall(MatShellGetContext(mat, &ctx));
   *h = ctx->currenth;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode  MatMFFDResetHHistory_MFFD(Mat J)
+static PetscErrorCode MatMFFDResetHHistory_MFFD(Mat J)
 {
-  MatMFFD        ctx;
-  PetscErrorCode ierr;
+  MatMFFD ctx;
 
   PetscFunctionBegin;
-  ierr = MatShellGetContext(J,&ctx);CHKERRQ(ierr);
+  PetscCall(MatShellGetContext(J, &ctx));
   ctx->ncurrenth = 0;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-   MatMFFDRegister - Adds a method to the MatMFFD registry.
+  MatMFFDRegister - Adds a method to the `MATMFFD` registry.
 
-   Not Collective
+  Not Collective, No Fortran Support
 
-   Input Parameters:
-+  name_solver - name of a new user-defined compute-h module
--  routine_create - routine to create method context
+  Input Parameters:
++ sname    - name of a new user-defined compute-h module
+- function - routine to create method context
 
-   Level: developer
+  Level: developer
 
-   Notes:
-   MatMFFDRegister() may be called multiple times to add several user-defined solvers.
+  Note:
+  `MatMFFDRegister()` may be called multiple times to add several user-defined solvers.
 
-   Sample usage:
+  Example Usage:
 .vb
-   MatMFFDRegister("my_h",MyHCreate);
+   MatMFFDRegister("my_h", MyHCreate);
 .ve
 
-   Then, your solver can be chosen with the procedural interface via
-$     MatMFFDSetType(mfctx,"my_h")
-   or at runtime via the option
-$     -mat_mffd_type my_h
+  Then, your solver can be chosen with the procedural interface via `MatMFFDSetType`(mfctx, "my_h")` or at runtime via the option
+  `-mat_mffd_type my_h`
 
-.seealso: MatMFFDRegisterAll(), MatMFFDRegisterDestroy()
+.seealso: [](ch_matrices), `Mat`, `MATMFFD`, `MatMFFDRegisterAll()`, `MatMFFDRegisterDestroy()`
  @*/
-PetscErrorCode  MatMFFDRegister(const char sname[],PetscErrorCode (*function)(MatMFFD))
+PetscErrorCode MatMFFDRegister(const char sname[], PetscErrorCode (*function)(MatMFFD))
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  ierr = MatInitializePackage();CHKERRQ(ierr);
-  ierr = PetscFunctionListAdd(&MatMFFDList,sname,function);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(MatInitializePackage());
+  PetscCall(PetscFunctionListAdd(&MatMFFDList, sname, function));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* ----------------------------------------------------------------------------------------*/
 static PetscErrorCode MatDestroy_MFFD(Mat mat)
 {
-  PetscErrorCode ierr;
-  MatMFFD        ctx;
+  MatMFFD ctx;
 
   PetscFunctionBegin;
-  ierr = MatShellGetContext(mat,&ctx);CHKERRQ(ierr);
-  ierr = VecDestroy(&ctx->w);CHKERRQ(ierr);
-  ierr = VecDestroy(&ctx->current_u);CHKERRQ(ierr);
-  if (ctx->current_f_allocated) {
-    ierr = VecDestroy(&ctx->current_f);CHKERRQ(ierr);
-  }
-  if (ctx->ops->destroy) {ierr = (*ctx->ops->destroy)(ctx);CHKERRQ(ierr);}
-  ierr = PetscHeaderDestroy(&ctx);CHKERRQ(ierr);
+  PetscCall(MatShellGetContext(mat, &ctx));
+  PetscCall(VecDestroy(&ctx->w));
+  PetscCall(VecDestroy(&ctx->current_u));
+  if (ctx->current_f_allocated) PetscCall(VecDestroy(&ctx->current_f));
+  PetscTryTypeMethod(ctx, destroy);
+  PetscCall(PetscHeaderDestroy(&ctx));
 
-  ierr = PetscObjectComposeFunction((PetscObject)mat,"MatMFFDSetBase_C",NULL);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)mat,"MatMFFDSetFunctioniBase_C",NULL);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)mat,"MatMFFDSetFunctioni_C",NULL);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)mat,"MatMFFDSetFunction_C",NULL);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)mat,"MatMFFDSetFunctionError_C",NULL);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)mat,"MatMFFDSetCheckh_C",NULL);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)mat,"MatMFFDSetPeriod_C",NULL);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)mat,"MatMFFDResetHHistory_C",NULL);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)mat,"MatMFFDSetHHistory_C",NULL);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)mat,"MatMFFDSetType_C",NULL);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)mat,"MatMFFDGetH_C",NULL);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatMFFDSetBase_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatMFFDSetFunctioniBase_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatMFFDSetFunctioni_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatMFFDSetFunction_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatMFFDSetFunctionError_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatMFFDSetCheckh_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatMFFDSetPeriod_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatMFFDResetHHistory_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatMFFDSetHHistory_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatMFFDSetType_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatMFFDGetH_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatSNESMFSetReuseBase_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatSNESMFGetReuseBase_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatShellSetContext_C", NULL));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*
    MatMFFDView_MFFD - Views matrix-free parameters.
 
 */
-static PetscErrorCode MatView_MFFD(Mat J,PetscViewer viewer)
+static PetscErrorCode MatView_MFFD(Mat J, PetscViewer viewer)
 {
-  PetscErrorCode ierr;
-  MatMFFD        ctx;
-  PetscBool      iascii, viewbase, viewfunction;
-  const char     *prefix;
+  MatMFFD     ctx;
+  PetscBool   iascii, viewbase, viewfunction;
+  const char *prefix;
 
   PetscFunctionBegin;
-  ierr = MatShellGetContext(J,&ctx);CHKERRQ(ierr);
-  ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii);CHKERRQ(ierr);
+  PetscCall(MatShellGetContext(J, &ctx));
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
   if (iascii) {
-    ierr = PetscViewerASCIIPrintf(viewer,"Matrix-free approximation:\n");CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"err=%g (relative error in function evaluation)\n",(double)ctx->error_rel);CHKERRQ(ierr);
+    PetscCall(PetscViewerASCIIPrintf(viewer, "Matrix-free approximation:\n"));
+    PetscCall(PetscViewerASCIIPushTab(viewer));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "err=%g (relative error in function evaluation)\n", (double)ctx->error_rel));
     if (!((PetscObject)ctx)->type_name) {
-      ierr = PetscViewerASCIIPrintf(viewer,"The compute h routine has not yet been set\n");CHKERRQ(ierr);
+      PetscCall(PetscViewerASCIIPrintf(viewer, "The compute h routine has not yet been set\n"));
     } else {
-      ierr = PetscViewerASCIIPrintf(viewer,"Using %s compute h routine\n",((PetscObject)ctx)->type_name);CHKERRQ(ierr);
+      PetscCall(PetscViewerASCIIPrintf(viewer, "Using %s compute h routine\n", ((PetscObject)ctx)->type_name));
     }
 #if defined(PETSC_USE_COMPLEX)
-    if (ctx->usecomplex) {
-      ierr = PetscViewerASCIIPrintf(viewer,"Using Lyness complex number trick to compute the matrix-vector product\n");CHKERRQ(ierr);
-    }
+    if (ctx->usecomplex) PetscCall(PetscViewerASCIIPrintf(viewer, "Using Lyness complex number trick to compute the matrix-vector product\n"));
 #endif
-    if (ctx->ops->view) {
-      ierr = (*ctx->ops->view)(ctx,viewer);CHKERRQ(ierr);
-    }
-    ierr = PetscObjectGetOptionsPrefix((PetscObject)J, &prefix);CHKERRQ(ierr);
+    PetscTryTypeMethod(ctx, view, viewer);
+    PetscCall(PetscObjectGetOptionsPrefix((PetscObject)J, &prefix));
 
-    ierr = PetscOptionsHasName(((PetscObject)J)->options,prefix, "-mat_mffd_view_base", &viewbase);CHKERRQ(ierr);
+    PetscCall(PetscOptionsHasName(((PetscObject)J)->options, prefix, "-mat_mffd_view_base", &viewbase));
     if (viewbase) {
-      ierr = PetscViewerASCIIPrintf(viewer, "Base:\n");CHKERRQ(ierr);
-      ierr = VecView(ctx->current_u, viewer);CHKERRQ(ierr);
+      PetscCall(PetscViewerASCIIPrintf(viewer, "Base:\n"));
+      PetscCall(VecView(ctx->current_u, viewer));
     }
-    ierr = PetscOptionsHasName(((PetscObject)J)->options,prefix, "-mat_mffd_view_function", &viewfunction);CHKERRQ(ierr);
+    PetscCall(PetscOptionsHasName(((PetscObject)J)->options, prefix, "-mat_mffd_view_function", &viewfunction));
     if (viewfunction) {
-      ierr = PetscViewerASCIIPrintf(viewer, "Function:\n");CHKERRQ(ierr);
-      ierr = VecView(ctx->current_f, viewer);CHKERRQ(ierr);
+      PetscCall(PetscViewerASCIIPrintf(viewer, "Function:\n"));
+      PetscCall(VecView(ctx->current_f, viewer));
     }
-    ierr = PetscViewerASCIIPopTab(viewer);CHKERRQ(ierr);
+    PetscCall(PetscViewerASCIIPopTab(viewer));
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*
    MatAssemblyEnd_MFFD - Resets the ctx->ncurrenth to zero. This
    allows the user to indicate the beginning of a new linear solve by calling
-   MatAssemblyXXX() on the matrix free matrix. This then allows the
+   MatAssemblyXXX() on the matrix-free matrix. This then allows the
    MatCreateMFFD_WP() to properly compute ||U|| only the first time
    in the linear solver rather than every time.
 
    This function is referenced directly from MatAssemblyEnd_SNESMF(), which may be in a different shared library hence
    it must be labeled as PETSC_EXTERN
 */
-PETSC_EXTERN PetscErrorCode MatAssemblyEnd_MFFD(Mat J,MatAssemblyType mt)
+PETSC_EXTERN PetscErrorCode MatAssemblyEnd_MFFD(Mat J, MatAssemblyType mt)
 {
-  PetscErrorCode ierr;
-  MatMFFD        j;
+  MatMFFD j;
 
   PetscFunctionBegin;
-  ierr = MatShellGetContext(J,&j);CHKERRQ(ierr);
-  ierr = MatMFFDResetHHistory(J);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(MatShellGetContext(J, &j));
+  PetscCall(MatMFFDResetHHistory(J));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*
@@ -320,22 +300,21 @@ PETSC_EXTERN PetscErrorCode MatAssemblyEnd_MFFD(Mat J,MatAssemblyType mt)
         u = current iterate
         h = difference interval
 */
-static PetscErrorCode MatMult_MFFD(Mat mat,Vec a,Vec y)
+static PetscErrorCode MatMult_MFFD(Mat mat, Vec a, Vec y)
 {
-  MatMFFD        ctx;
-  PetscScalar    h;
-  Vec            w,U,F;
-  PetscErrorCode ierr;
-  PetscBool      zeroa;
+  MatMFFD     ctx;
+  PetscScalar h;
+  Vec         w, U, F;
+  PetscBool   zeroa;
 
   PetscFunctionBegin;
-  ierr = MatShellGetContext(mat,&ctx);CHKERRQ(ierr);
-  if (!ctx->current_u) SETERRQ(PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_WRONGSTATE,"MatMFFDSetBase() has not been called, this is often caused by forgetting to call \n\t\tMatAssemblyBegin/End on the first Mat in the SNES compute function");
+  PetscCall(MatShellGetContext(mat, &ctx));
+  PetscCheck(ctx->current_u, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_WRONGSTATE, "MatMFFDSetBase() has not been called, this is often caused by forgetting to call MatAssemblyBegin/End on the first Mat in the SNES compute function");
   /* We log matrix-free matrix-vector products separately, so that we can
      separate the performance monitoring from the cases that use conventional
      storage.  We may eventually modify event logging to associate events
      with particular objects, hence alleviating the more general problem. */
-  ierr = PetscLogEventBegin(MATMFFD_Mult,a,y,0,0);CHKERRQ(ierr);
+  PetscCall(PetscLogEventBegin(MATMFFD_Mult, a, y, 0, 0));
 
   w = ctx->w;
   U = ctx->current_u;
@@ -344,294 +323,271 @@ static PetscErrorCode MatMult_MFFD(Mat mat,Vec a,Vec y)
       Compute differencing parameter
   */
   if (!((PetscObject)ctx)->type_name) {
-    ierr = MatMFFDSetType(mat,MATMFFD_WP);CHKERRQ(ierr);
-    ierr = MatSetFromOptions(mat);CHKERRQ(ierr);
+    PetscCall(MatMFFDSetType(mat, MATMFFD_WP));
+    PetscCall(MatSetFromOptions(mat));
   }
-  ierr = (*ctx->ops->compute)(ctx,U,a,&h,&zeroa);CHKERRQ(ierr);
+  PetscUseTypeMethod(ctx, compute, U, a, &h, &zeroa);
   if (zeroa) {
-    ierr = VecSet(y,0.0);CHKERRQ(ierr);
-    PetscFunctionReturn(0);
+    PetscCall(VecSet(y, 0.0));
+    PetscCall(PetscLogEventEnd(MATMFFD_Mult, a, y, 0, 0));
+    PetscFunctionReturn(PETSC_SUCCESS);
   }
 
-  if (mat->erroriffailure && PetscIsInfOrNanScalar(h)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Computed Nan differencing parameter h");
-  if (ctx->checkh) {
-    ierr = (*ctx->checkh)(ctx->checkhctx,U,a,&h);CHKERRQ(ierr);
-  }
+  PetscCheck(!mat->erroriffailure || !PetscIsInfOrNanScalar(h), PETSC_COMM_SELF, PETSC_ERR_PLIB, "Computed Nan differencing parameter h");
+  if (ctx->checkh) PetscCall((*ctx->checkh)(ctx->checkhctx, U, a, &h));
 
   /* keep a record of the current differencing parameter h */
   ctx->currenth = h;
 #if defined(PETSC_USE_COMPLEX)
-  ierr = PetscInfo2(mat,"Current differencing parameter: %g + %g i\n",(double)PetscRealPart(h),(double)PetscImaginaryPart(h));CHKERRQ(ierr);
+  PetscCall(PetscInfo(mat, "Current differencing parameter: %g + %g i\n", (double)PetscRealPart(h), (double)PetscImaginaryPart(h)));
 #else
-  ierr = PetscInfo1(mat,"Current differencing parameter: %15.12e\n",h);CHKERRQ(ierr);
+  PetscCall(PetscInfo(mat, "Current differencing parameter: %15.12e\n", (double)PetscRealPart(h)));
 #endif
-  if (ctx->historyh && ctx->ncurrenth < ctx->maxcurrenth) {
-    ctx->historyh[ctx->ncurrenth] = h;
-  }
+  if (ctx->historyh && ctx->ncurrenth < ctx->maxcurrenth) ctx->historyh[ctx->ncurrenth] = h;
   ctx->ncurrenth++;
 
 #if defined(PETSC_USE_COMPLEX)
-  if (ctx->usecomplex) h = PETSC_i*h;
+  if (ctx->usecomplex) h = PETSC_i * h;
 #endif
 
   /* w = u + ha */
-  ierr = VecWAXPY(w,h,a,U);CHKERRQ(ierr);
+  PetscCall(VecWAXPY(w, h, a, U));
 
   /* compute func(U) as base for differencing; only needed first time in and not when provided by user */
-  if (ctx->ncurrenth == 1 && ctx->current_f_allocated) {
-    ierr = (*ctx->func)(ctx->funcctx,U,F);CHKERRQ(ierr);
-  }
-  ierr = (*ctx->func)(ctx->funcctx,w,y);CHKERRQ(ierr);
+  if (ctx->ncurrenth == 1 && ctx->current_f_allocated) PetscCall((*ctx->func)(ctx->funcctx, U, F));
+  PetscCall((*ctx->func)(ctx->funcctx, w, y));
 
 #if defined(PETSC_USE_COMPLEX)
   if (ctx->usecomplex) {
-    ierr = VecImaginaryPart(y);CHKERRQ(ierr);
-    h    = PetscImaginaryPart(h);
+    PetscCall(VecImaginaryPart(y));
+    h = PetscImaginaryPart(h);
   } else {
-    ierr = VecAXPY(y,-1.0,F);CHKERRQ(ierr);
+    PetscCall(VecAXPY(y, -1.0, F));
   }
 #else
-  ierr = VecAXPY(y,-1.0,F);CHKERRQ(ierr);
+  PetscCall(VecAXPY(y, -1.0, F));
 #endif
-  ierr = VecScale(y,1.0/h);CHKERRQ(ierr);
-  if (mat->nullsp) {ierr = MatNullSpaceRemove(mat->nullsp,y);CHKERRQ(ierr);}
+  PetscCall(VecScale(y, 1.0 / h));
+  if (mat->nullsp) PetscCall(MatNullSpaceRemove(mat->nullsp, y));
 
-  ierr = PetscLogEventEnd(MATMFFD_Mult,a,y,0,0);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscLogEventEnd(MATMFFD_Mult, a, y, 0, 0));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*
-  MatGetDiagonal_MFFD - Gets the diagonal for a matrix free matrix
+  MatGetDiagonal_MFFD - Gets the diagonal for a matrix-free matrix
 
         y ~= (F(u + ha) - F(u))/h,
   where F = nonlinear function, as set by SNESSetFunction()
         u = current iterate
         h = difference interval
 */
-PetscErrorCode MatGetDiagonal_MFFD(Mat mat,Vec a)
+static PetscErrorCode MatGetDiagonal_MFFD(Mat mat, Vec a)
 {
-  MatMFFD        ctx;
-  PetscScalar    h,*aa,*ww,v;
-  PetscReal      epsilon = PETSC_SQRT_MACHINE_EPSILON,umin = 100.0*PETSC_SQRT_MACHINE_EPSILON;
-  Vec            w,U;
-  PetscErrorCode ierr;
-  PetscInt       i,rstart,rend;
+  MatMFFD     ctx;
+  PetscScalar h, *aa, *ww, v;
+  PetscReal   epsilon = PETSC_SQRT_MACHINE_EPSILON, umin = 100.0 * PETSC_SQRT_MACHINE_EPSILON;
+  Vec         w, U;
+  PetscInt    i, rstart, rend;
 
   PetscFunctionBegin;
-  ierr = MatShellGetContext(mat,&ctx);CHKERRQ(ierr);
-  if (!ctx->func) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Requires calling MatMFFDSetFunction() first");
-  if (!ctx->funci) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Requires calling MatMFFDSetFunctioni() first");
-  w    = ctx->w;
-  U    = ctx->current_u;
-  ierr = (*ctx->func)(ctx->funcctx,U,a);CHKERRQ(ierr);
-  if (ctx->funcisetbase) {
-    ierr = (*ctx->funcisetbase)(ctx->funcctx,U);CHKERRQ(ierr);
-  }
-  ierr = VecCopy(U,w);CHKERRQ(ierr);
+  PetscCall(MatShellGetContext(mat, &ctx));
+  PetscCheck(ctx->func, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Requires calling MatMFFDSetFunction() first");
+  PetscCheck(ctx->funci, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Requires calling MatMFFDSetFunctioni() first");
+  w = ctx->w;
+  U = ctx->current_u;
+  PetscCall((*ctx->func)(ctx->funcctx, U, a));
+  if (ctx->funcisetbase) PetscCall((*ctx->funcisetbase)(ctx->funcctx, U));
+  PetscCall(VecCopy(U, w));
 
-  ierr = VecGetOwnershipRange(a,&rstart,&rend);CHKERRQ(ierr);
-  ierr = VecGetArray(a,&aa);CHKERRQ(ierr);
-  for (i=rstart; i<rend; i++) {
-    ierr = VecGetArray(w,&ww);CHKERRQ(ierr);
-    h    = ww[i-rstart];
+  PetscCall(VecGetOwnershipRange(a, &rstart, &rend));
+  PetscCall(VecGetArray(a, &aa));
+  for (i = rstart; i < rend; i++) {
+    PetscCall(VecGetArray(w, &ww));
+    h = ww[i - rstart];
     if (h == 0.0) h = 1.0;
-    if (PetscAbsScalar(h) < umin && PetscRealPart(h) >= 0.0)     h = umin;
+    if (PetscAbsScalar(h) < umin && PetscRealPart(h) >= 0.0) h = umin;
     else if (PetscRealPart(h) < 0.0 && PetscAbsScalar(h) < umin) h = -umin;
     h *= epsilon;
 
-    ww[i-rstart] += h;
-    ierr          = VecRestoreArray(w,&ww);CHKERRQ(ierr);
-    ierr          = (*ctx->funci)(ctx->funcctx,i,w,&v);CHKERRQ(ierr);
-    aa[i-rstart]  = (v - aa[i-rstart])/h;
+    ww[i - rstart] += h;
+    PetscCall(VecRestoreArray(w, &ww));
+    PetscCall((*ctx->funci)(ctx->funcctx, i, w, &v));
+    aa[i - rstart] = (v - aa[i - rstart]) / h;
 
-    ierr          = VecGetArray(w,&ww);CHKERRQ(ierr);
-    ww[i-rstart] -= h;
-    ierr          = VecRestoreArray(w,&ww);CHKERRQ(ierr);
+    PetscCall(VecGetArray(w, &ww));
+    ww[i - rstart] -= h;
+    PetscCall(VecRestoreArray(w, &ww));
   }
-  ierr = VecRestoreArray(a,&aa);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(VecRestoreArray(a, &aa));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_EXTERN PetscErrorCode MatMFFDSetBase_MFFD(Mat J,Vec U,Vec F)
+PETSC_EXTERN PetscErrorCode MatMFFDSetBase_MFFD(Mat J, Vec U, Vec F)
 {
-  PetscErrorCode ierr;
-  MatMFFD        ctx;
+  MatMFFD ctx;
 
   PetscFunctionBegin;
-  ierr = MatShellGetContext(J,&ctx);CHKERRQ(ierr);
-  ierr = MatMFFDResetHHistory(J);CHKERRQ(ierr);
+  PetscCall(MatShellGetContext(J, &ctx));
+  PetscCall(MatMFFDResetHHistory(J));
   if (!ctx->current_u) {
-    ierr = VecDuplicate(U,&ctx->current_u);CHKERRQ(ierr);
-    ierr = VecLockReadPush(ctx->current_u);CHKERRQ(ierr);
+    PetscCall(VecDuplicate(U, &ctx->current_u));
+    PetscCall(VecLockReadPush(ctx->current_u));
   }
-  ierr = VecLockReadPop(ctx->current_u);CHKERRQ(ierr);
-  ierr = VecCopy(U,ctx->current_u);CHKERRQ(ierr);
-  ierr = VecLockReadPush(ctx->current_u);CHKERRQ(ierr);
+  PetscCall(VecLockReadPop(ctx->current_u));
+  PetscCall(VecCopy(U, ctx->current_u));
+  PetscCall(VecLockReadPush(ctx->current_u));
   if (F) {
-    if (ctx->current_f_allocated) {ierr = VecDestroy(&ctx->current_f);CHKERRQ(ierr);}
+    if (ctx->current_f_allocated) PetscCall(VecDestroy(&ctx->current_f));
     ctx->current_f           = F;
     ctx->current_f_allocated = PETSC_FALSE;
   } else if (!ctx->current_f_allocated) {
-    ierr = MatCreateVecs(J,NULL,&ctx->current_f);CHKERRQ(ierr);
-
+    PetscCall(MatCreateVecs(J, NULL, &ctx->current_f));
     ctx->current_f_allocated = PETSC_TRUE;
   }
-  if (!ctx->w) {
-    ierr = VecDuplicate(ctx->current_u,&ctx->w);CHKERRQ(ierr);
-  }
+  if (!ctx->w) PetscCall(VecDuplicate(ctx->current_u, &ctx->w));
   J->assembled = PETSC_TRUE;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-typedef PetscErrorCode (*FCN3)(void*,Vec,Vec,PetscScalar*); /* force argument to next function to not be extern C*/
+typedef PetscErrorCode (*FCN3)(void *, Vec, Vec, PetscScalar *); /* force argument to next function to not be extern C*/
 
-static PetscErrorCode  MatMFFDSetCheckh_MFFD(Mat J,FCN3 fun,void *ectx)
+static PetscErrorCode MatMFFDSetCheckh_MFFD(Mat J, FCN3 fun, void *ectx)
 {
-  MatMFFD        ctx;
-  PetscErrorCode ierr;
+  MatMFFD ctx;
 
   PetscFunctionBegin;
-  ierr = MatShellGetContext(J,&ctx);CHKERRQ(ierr);
+  PetscCall(MatShellGetContext(J, &ctx));
   ctx->checkh    = fun;
   ctx->checkhctx = ectx;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
-   MatMFFDSetOptionsPrefix - Sets the prefix used for searching for all
-   MatMFFD options in the database.
+/*@
+  MatMFFDSetOptionsPrefix - Sets the prefix used for searching for all
+  MATMFFD` options in the database.
 
-   Collective on Mat
+  Collective
 
-   Input Parameter:
-+  A - the Mat context
--  prefix - the prefix to prepend to all option names
+  Input Parameters:
++ mat    - the `MATMFFD` context
+- prefix - the prefix to prepend to all option names
 
-   Notes:
-   A hyphen (-) must NOT be given at the beginning of the prefix name.
-   The first character of all runtime options is AUTOMATICALLY the hyphen.
-
-   Level: advanced
-
-.seealso: MatSetFromOptions(), MatCreateSNESMF(), MatCreateMFFD()
-@*/
-PetscErrorCode  MatMFFDSetOptionsPrefix(Mat mat,const char prefix[])
-
-{
-  MatMFFD        mfctx;
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
-  ierr = MatShellGetContext(mat,&mfctx);CHKERRQ(ierr);
-  PetscValidHeaderSpecific(mfctx,MATMFFD_CLASSID,1);
-  ierr = PetscObjectSetOptionsPrefix((PetscObject)mfctx,prefix);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
-static PetscErrorCode  MatSetFromOptions_MFFD(PetscOptionItems *PetscOptionsObject,Mat mat)
-{
-  MatMFFD        mfctx;
-  PetscErrorCode ierr;
-  PetscBool      flg;
-  char           ftype[256];
-
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
-  ierr = MatShellGetContext(mat,&mfctx);CHKERRQ(ierr);
-  PetscValidHeaderSpecific(mfctx,MATMFFD_CLASSID,1);
-  ierr = PetscObjectOptionsBegin((PetscObject)mfctx);CHKERRQ(ierr);
-  ierr = PetscOptionsFList("-mat_mffd_type","Matrix free type","MatMFFDSetType",MatMFFDList,((PetscObject)mfctx)->type_name,ftype,256,&flg);CHKERRQ(ierr);
-  if (flg) {
-    ierr = MatMFFDSetType(mat,ftype);CHKERRQ(ierr);
-  }
-
-  ierr = PetscOptionsReal("-mat_mffd_err","set sqrt relative error in function","MatMFFDSetFunctionError",mfctx->error_rel,&mfctx->error_rel,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsInt("-mat_mffd_period","how often h is recomputed","MatMFFDSetPeriod",mfctx->recomputeperiod,&mfctx->recomputeperiod,NULL);CHKERRQ(ierr);
-
-  flg  = PETSC_FALSE;
-  ierr = PetscOptionsBool("-mat_mffd_check_positivity","Insure that U + h*a is nonnegative","MatMFFDSetCheckh",flg,&flg,NULL);CHKERRQ(ierr);
-  if (flg) {
-    ierr = MatMFFDSetCheckh(mat,MatMFFDCheckPositivity,NULL);CHKERRQ(ierr);
-  }
-#if defined(PETSC_USE_COMPLEX)
-  ierr = PetscOptionsBool("-mat_mffd_complex","Use Lyness complex number trick to compute the matrix-vector product","None",mfctx->usecomplex,&mfctx->usecomplex,NULL);CHKERRQ(ierr);
-#endif
-  if (mfctx->ops->setfromoptions) {
-    ierr = (*mfctx->ops->setfromoptions)(PetscOptionsObject,mfctx);CHKERRQ(ierr);
-  }
-  ierr = PetscOptionsEnd();CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
-static PetscErrorCode  MatMFFDSetPeriod_MFFD(Mat mat,PetscInt period)
-{
-  MatMFFD        ctx;
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  ierr = MatShellGetContext(mat,&ctx);CHKERRQ(ierr);
-  ctx->recomputeperiod = period;
-  PetscFunctionReturn(0);
-}
-
-static PetscErrorCode  MatMFFDSetFunction_MFFD(Mat mat,PetscErrorCode (*func)(void*,Vec,Vec),void *funcctx)
-{
-  MatMFFD        ctx;
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  ierr = MatShellGetContext(mat,&ctx);CHKERRQ(ierr);
-  ctx->func    = func;
-  ctx->funcctx = funcctx;
-  PetscFunctionReturn(0);
-}
-
-static PetscErrorCode  MatMFFDSetFunctionError_MFFD(Mat mat,PetscReal error)
-{
-  MatMFFD        ctx;
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  ierr = MatShellGetContext(mat,&ctx);CHKERRQ(ierr);
-  if (error != PETSC_DEFAULT) ctx->error_rel = error;
-  PetscFunctionReturn(0);
-}
-
-PetscErrorCode  MatMFFDSetHHistory_MFFD(Mat J,PetscScalar history[],PetscInt nhistory)
-{
-  MatMFFD        ctx;
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  ierr = MatShellGetContext(J,&ctx);CHKERRQ(ierr);
-  ctx->historyh    = history;
-  ctx->maxcurrenth = nhistory;
-  ctx->currenth    = 0.;
-  PetscFunctionReturn(0);
-}
-
-/*MC
-  MATMFFD - MATMFFD = "mffd" - A matrix free matrix type.
+  Note:
+  A hyphen (-) must NOT be given at the beginning of the prefix name.
+  The first character of all runtime options is AUTOMATICALLY the hyphen.
 
   Level: advanced
 
-  Developers Note: This is implemented on top of MATSHELL to get support for scaling and shifting without requiring duplicate code
+.seealso: [](ch_matrices), `Mat`, `MATMFFD`, `MatSetFromOptions()`, `MatCreateSNESMF()`, `MatCreateMFFD()`
+@*/
+PetscErrorCode MatMFFDSetOptionsPrefix(Mat mat, const char prefix[])
+{
+  MatMFFD mfctx;
 
-.seealso: MatCreateMFFD(), MatCreateSNESMF(), MatMFFDSetFunction(), MatMFFDSetType(),
-          MatMFFDSetFunctionError(), MatMFFDDSSetUmin(), MatMFFDSetFunction()
-          MatMFFDSetHHistory(), MatMFFDResetHHistory(), MatCreateSNESMF(),
-          MatMFFDGetH(),
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
+  PetscCall(MatShellGetContext(mat, &mfctx));
+  PetscValidHeaderSpecific(mfctx, MATMFFD_CLASSID, 1);
+  PetscCall(PetscObjectSetOptionsPrefix((PetscObject)mfctx, prefix));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatSetFromOptions_MFFD(Mat mat, PetscOptionItems *PetscOptionsObject)
+{
+  MatMFFD   mfctx;
+  PetscBool flg;
+  char      ftype[256];
+
+  PetscFunctionBegin;
+  PetscCall(MatShellGetContext(mat, &mfctx));
+  PetscValidHeaderSpecific(mfctx, MATMFFD_CLASSID, 1);
+  PetscObjectOptionsBegin((PetscObject)mfctx);
+  PetscCall(PetscOptionsFList("-mat_mffd_type", "Matrix free type", "MatMFFDSetType", MatMFFDList, ((PetscObject)mfctx)->type_name, ftype, 256, &flg));
+  if (flg) PetscCall(MatMFFDSetType(mat, ftype));
+
+  PetscCall(PetscOptionsReal("-mat_mffd_err", "set sqrt relative error in function", "MatMFFDSetFunctionError", mfctx->error_rel, &mfctx->error_rel, NULL));
+  PetscCall(PetscOptionsInt("-mat_mffd_period", "how often h is recomputed", "MatMFFDSetPeriod", mfctx->recomputeperiod, &mfctx->recomputeperiod, NULL));
+
+  flg = PETSC_FALSE;
+  PetscCall(PetscOptionsBool("-mat_mffd_check_positivity", "Insure that U + h*a is nonnegative", "MatMFFDSetCheckh", flg, &flg, NULL));
+  if (flg) PetscCall(MatMFFDSetCheckh(mat, MatMFFDCheckPositivity, NULL));
+#if defined(PETSC_USE_COMPLEX)
+  PetscCall(PetscOptionsBool("-mat_mffd_complex", "Use Lyness complex number trick to compute the matrix-vector product", "None", mfctx->usecomplex, &mfctx->usecomplex, NULL));
+#endif
+  PetscTryTypeMethod(mfctx, setfromoptions, PetscOptionsObject);
+  PetscOptionsEnd();
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatMFFDSetPeriod_MFFD(Mat mat, PetscInt period)
+{
+  MatMFFD ctx;
+
+  PetscFunctionBegin;
+  PetscCall(MatShellGetContext(mat, &ctx));
+  ctx->recomputeperiod = period;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatMFFDSetFunction_MFFD(Mat mat, PetscErrorCode (*func)(void *, Vec, Vec), void *funcctx)
+{
+  MatMFFD ctx;
+
+  PetscFunctionBegin;
+  PetscCall(MatShellGetContext(mat, &ctx));
+  ctx->func    = func;
+  ctx->funcctx = funcctx;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatMFFDSetFunctionError_MFFD(Mat mat, PetscReal error)
+{
+  PetscFunctionBegin;
+  if (error != (PetscReal)PETSC_DEFAULT) {
+    MatMFFD ctx;
+
+    PetscCall(MatShellGetContext(mat, &ctx));
+    ctx->error_rel = error;
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatMFFDSetHHistory_MFFD(Mat J, PetscScalar history[], PetscInt nhistory)
+{
+  MatMFFD ctx;
+
+  PetscFunctionBegin;
+  PetscCall(MatShellGetContext(J, &ctx));
+  ctx->historyh    = history;
+  ctx->maxcurrenth = nhistory;
+  ctx->currenth    = 0.;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*MC
+  MATMFFD - "mffd" - A matrix-free matrix type.
+
+  Level: advanced
+
+  Developer Notes:
+  This is implemented on top of `MATSHELL` to get support for scaling and shifting without requiring duplicate code
+
+  Users should not MatShell... operations on this class, there is some error checking for that incorrect usage
+
+.seealso: [](ch_matrices), `Mat`, `MatCreateMFFD()`, `MatCreateSNESMF()`, `MatMFFDSetFunction()`, `MatMFFDSetType()`,
+          `MatMFFDSetFunctionError()`, `MatMFFDDSSetUmin()`, `MatMFFDSetFunction()`
+          `MatMFFDSetHHistory()`, `MatMFFDResetHHistory()`, `MatCreateSNESMF()`,
+          `MatMFFDGetH()`,
 M*/
 PETSC_EXTERN PetscErrorCode MatCreate_MFFD(Mat A)
 {
-  MatMFFD        mfctx;
-  PetscErrorCode ierr;
+  MatMFFD mfctx;
 
   PetscFunctionBegin;
-  ierr = MatMFFDInitializePackage();CHKERRQ(ierr);
+  PetscCall(MatMFFDInitializePackage());
 
-  ierr = PetscHeaderCreate(mfctx,MATMFFD_CLASSID,"MatMFFD","Matrix-free Finite Differencing","Mat",PetscObjectComm((PetscObject)A),NULL,NULL);CHKERRQ(ierr);
+  PetscCall(PetscHeaderCreate(mfctx, MATMFFD_CLASSID, "MatMFFD", "Matrix-free Finite Differencing", "Mat", PetscObjectComm((PetscObject)A), NULL, NULL));
 
   mfctx->error_rel                = PETSC_SQRT_MACHINE_EPSILON;
   mfctx->recomputeperiod          = 1;
@@ -659,66 +615,68 @@ PETSC_EXTERN PetscErrorCode MatCreate_MFFD(Mat A)
   mfctx->w       = NULL;
   mfctx->mat     = A;
 
-  ierr = MatSetType(A,MATSHELL);CHKERRQ(ierr);
-  ierr = MatShellSetContext(A,mfctx);CHKERRQ(ierr);
-  ierr = MatShellSetOperation(A,MATOP_MULT,(void (*)(void))MatMult_MFFD);CHKERRQ(ierr);
-  ierr = MatShellSetOperation(A,MATOP_DESTROY,(void (*)(void))MatDestroy_MFFD);CHKERRQ(ierr);
-  ierr = MatShellSetOperation(A,MATOP_VIEW,(void (*)(void))MatView_MFFD);CHKERRQ(ierr);
-  ierr = MatShellSetOperation(A,MATOP_ASSEMBLY_END,(void (*)(void))MatAssemblyEnd_MFFD);CHKERRQ(ierr);
-  ierr = MatShellSetOperation(A,MATOP_SET_FROM_OPTIONS,(void (*)(void))MatSetFromOptions_MFFD);CHKERRQ(ierr);
+  PetscCall(MatSetType(A, MATSHELL));
+  PetscCall(MatShellSetContext(A, mfctx));
+  PetscCall(MatShellSetOperation(A, MATOP_MULT, (void (*)(void))MatMult_MFFD));
+  PetscCall(MatShellSetOperation(A, MATOP_DESTROY, (void (*)(void))MatDestroy_MFFD));
+  PetscCall(MatShellSetOperation(A, MATOP_VIEW, (void (*)(void))MatView_MFFD));
+  PetscCall(MatShellSetOperation(A, MATOP_ASSEMBLY_END, (void (*)(void))MatAssemblyEnd_MFFD));
+  PetscCall(MatShellSetOperation(A, MATOP_SET_FROM_OPTIONS, (void (*)(void))MatSetFromOptions_MFFD));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatShellSetContext_C", MatShellSetContext_Immutable));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatShellSetContextDestroy_C", MatShellSetContextDestroy_Immutable));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatShellSetManageScalingShifts_C", MatShellSetManageScalingShifts_Immutable));
 
-  ierr = PetscObjectComposeFunction((PetscObject)A,"MatMFFDSetBase_C",MatMFFDSetBase_MFFD);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)A,"MatMFFDSetFunctioniBase_C",MatMFFDSetFunctioniBase_MFFD);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)A,"MatMFFDSetFunctioni_C",MatMFFDSetFunctioni_MFFD);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)A,"MatMFFDSetFunction_C",MatMFFDSetFunction_MFFD);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)A,"MatMFFDSetCheckh_C",MatMFFDSetCheckh_MFFD);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)A,"MatMFFDSetPeriod_C",MatMFFDSetPeriod_MFFD);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)A,"MatMFFDSetFunctionError_C",MatMFFDSetFunctionError_MFFD);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)A,"MatMFFDResetHHistory_C",MatMFFDResetHHistory_MFFD);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)A,"MatMFFDSetHHistory_C",MatMFFDSetHHistory_MFFD);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)A,"MatMFFDSetType_C",MatMFFDSetType_MFFD);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)A,"MatMFFDGetH_C",MatMFFDGetH_MFFD);CHKERRQ(ierr);
-  ierr = PetscObjectChangeTypeName((PetscObject)A,MATMFFD);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatMFFDSetBase_C", MatMFFDSetBase_MFFD));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatMFFDSetFunctioniBase_C", MatMFFDSetFunctioniBase_MFFD));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatMFFDSetFunctioni_C", MatMFFDSetFunctioni_MFFD));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatMFFDSetFunction_C", MatMFFDSetFunction_MFFD));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatMFFDSetCheckh_C", MatMFFDSetCheckh_MFFD));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatMFFDSetPeriod_C", MatMFFDSetPeriod_MFFD));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatMFFDSetFunctionError_C", MatMFFDSetFunctionError_MFFD));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatMFFDResetHHistory_C", MatMFFDResetHHistory_MFFD));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatMFFDSetHHistory_C", MatMFFDSetHHistory_MFFD));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatMFFDSetType_C", MatMFFDSetType_MFFD));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatMFFDGetH_C", MatMFFDGetH_MFFD));
+  PetscCall(PetscObjectChangeTypeName((PetscObject)A, MATMFFD));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   MatCreateMFFD - Creates a matrix-free matrix. See also MatCreateSNESMF()
+  MatCreateMFFD - Creates a matrix-free matrix of type `MATMFFD`. See also `MatCreateSNESMF()`
 
-   Collective on Vec
+  Collective
 
-   Input Parameters:
-+  comm - MPI communicator
-.  m - number of local rows (or PETSC_DECIDE to have calculated if M is given)
+  Input Parameters:
++ comm - MPI communicator
+. m    - number of local rows (or `PETSC_DECIDE` to have calculated if `M` is given)
            This value should be the same as the local size used in creating the
            y vector for the matrix-vector product y = Ax.
-.  n - This value should be the same as the local size used in creating the
-       x vector for the matrix-vector product y = Ax. (or PETSC_DECIDE to have
-       calculated if N is given) For square matrices n is almost always m.
-.  M - number of global rows (or PETSC_DETERMINE to have calculated if m is given)
--  N - number of global columns (or PETSC_DETERMINE to have calculated if n is given)
+. n    - This value should be the same as the local size used in creating the
+       x vector for the matrix-vector product y = Ax. (or `PETSC_DECIDE` to have
+       calculated if `N` is given) For square matrices `n` is almost always `m`.
+. M    - number of global rows (or `PETSC_DETERMINE` to have calculated if `m` is given)
+- N    - number of global columns (or `PETSC_DETERMINE` to have calculated if `n` is given)
 
+  Output Parameter:
+. J - the matrix-free matrix
 
-   Output Parameter:
-.  J - the matrix-free matrix
-
-   Options Database Keys: call MatSetFromOptions() to trigger these
-+  -mat_mffd_type - wp or ds (see MATMFFD_WP or MATMFFD_DS)
-.  -mat_mffd_err - square root of estimated relative error in function evaluation
-.  -mat_mffd_period - how often h is recomputed, defaults to 1, everytime
-.  -mat_mffd_check_positivity - possibly decrease h until U + h*a has only positive values
--  -mat_mffd_complex - use the Lyness trick with complex numbers to compute the matrix-vector product instead of differencing
+  Options Database Keys:
++ -mat_mffd_type             - wp or ds (see `MATMFFD_WP` or `MATMFFD_DS`)
+. -mat_mffd_err              - square root of estimated relative error in function evaluation
+. -mat_mffd_period           - how often h is recomputed, defaults to 1, every time
+. -mat_mffd_check_positivity - possibly decrease `h` until U + h*a has only positive values
+. -mat_mffd_umin <umin>      - Sets umin (for default PETSc routine that computes h only)
+- -mat_mffd_complex          - use the Lyness trick with complex numbers to compute the matrix-vector product instead of differencing
                        (requires real valued functions but that PETSc be configured for complex numbers)
 
+  Level: advanced
 
-   Level: advanced
+  Notes:
+  The matrix-free matrix context merely contains the function pointers
+  and work space for performing finite difference approximations of
+  Jacobian-vector products, F'(u)*a,
 
-   Notes:
-   The matrix-free matrix context merely contains the function pointers
-   and work space for performing finite difference approximations of
-   Jacobian-vector products, F'(u)*a,
-
-   The default code uses the following approach to compute h
+  The default code uses the following approach to compute h
 
 .vb
      F'(u)*a = [F(u+h*a) - F(u)]/h where
@@ -729,411 +687,374 @@ PETSC_EXTERN PetscErrorCode MatCreate_MFFD(Mat A)
      umin = minimum iterate parameter
 .ve
 
-   You can call SNESSetJacobian() with MatMFFDComputeJacobian() if you are using matrix and not a different
-   preconditioner matrix
+  You can call `SNESSetJacobian()` with `MatMFFDComputeJacobian()` if you are using matrix and not a different
+  preconditioner matrix
 
-   The user can set the error_rel via MatMFFDSetFunctionError() and
-   umin via MatMFFDDSSetUmin(); see Users-Manual: ch_snes for details.
+  The user can set the error_rel via `MatMFFDSetFunctionError()` and
+  umin via `MatMFFDDSSetUmin()`.
 
-   The user should call MatDestroy() when finished with the matrix-free
-   matrix context.
+  The user should call `MatDestroy()` when finished with the matrix-free
+  matrix context.
 
-   Options Database Keys:
-+  -mat_mffd_err <error_rel> - Sets error_rel
-.  -mat_mffd_unim <umin> - Sets umin (for default PETSc routine that computes h only)
--  -mat_mffd_check_positivity
-
-.seealso: MatDestroy(), MatMFFDSetFunctionError(), MatMFFDDSSetUmin(), MatMFFDSetFunction()
-          MatMFFDSetHHistory(), MatMFFDResetHHistory(), MatCreateSNESMF(),
-          MatMFFDGetH(), MatMFFDRegister(), MatMFFDComputeJacobian()
-
+.seealso: [](ch_matrices), `Mat`, `MATMFFD`, `MatDestroy()`, `MatMFFDSetFunctionError()`, `MatMFFDDSSetUmin()`, `MatMFFDSetFunction()`
+          `MatMFFDSetHHistory()`, `MatMFFDResetHHistory()`, `MatCreateSNESMF()`,
+          `MatMFFDGetH()`, `MatMFFDRegister()`, `MatMFFDComputeJacobian()`
 @*/
-PetscErrorCode  MatCreateMFFD(MPI_Comm comm,PetscInt m,PetscInt n,PetscInt M,PetscInt N,Mat *J)
+PetscErrorCode MatCreateMFFD(MPI_Comm comm, PetscInt m, PetscInt n, PetscInt M, PetscInt N, Mat *J)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  ierr = MatCreate(comm,J);CHKERRQ(ierr);
-  ierr = MatSetSizes(*J,m,n,M,N);CHKERRQ(ierr);
-  ierr = MatSetType(*J,MATMFFD);CHKERRQ(ierr);
-  ierr = MatSetUp(*J);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(MatCreate(comm, J));
+  PetscCall(MatSetSizes(*J, m, n, M, N));
+  PetscCall(MatSetType(*J, MATMFFD));
+  PetscCall(MatSetUp(*J));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   MatMFFDGetH - Gets the last value that was used as the differencing
-   parameter.
+  MatMFFDGetH - Gets the last value that was used as the differencing for a `MATMFFD` matrix
+  parameter.
 
-   Not Collective
+  Not Collective
 
-   Input Parameters:
-.  mat - the matrix obtained with MatCreateSNESMF()
+  Input Parameters:
+. mat - the `MATMFFD` matrix
 
-   Output Parameter:
-.  h - the differencing step size
+  Output Parameter:
+. h - the differencing step size
 
-   Level: advanced
+  Level: advanced
 
-.seealso: MatCreateSNESMF(),MatMFFDSetHHistory(), MatCreateMFFD(), MATMFFD, MatMFFDResetHHistory()
+.seealso: [](ch_matrices), `Mat`, `MATMFFD`, `MatCreateSNESMF()`, `MatMFFDSetHHistory()`, `MatCreateMFFD()`, `MatMFFDResetHHistory()`
 @*/
-PetscErrorCode  MatMFFDGetH(Mat mat,PetscScalar *h)
+PetscErrorCode MatMFFDGetH(Mat mat, PetscScalar *h)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
-  PetscValidPointer(h,2);
-  ierr = PetscUseMethod(mat,"MatMFFDGetH_C",(Mat,PetscScalar*),(mat,h));CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
+  PetscAssertPointer(h, 2);
+  PetscUseMethod(mat, "MatMFFDGetH_C", (Mat, PetscScalar *), (mat, h));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-   MatMFFDSetFunction - Sets the function used in applying the matrix free.
+  MatMFFDSetFunction - Sets the function used in applying the matrix-free `MATMFFD` matrix.
 
-   Logically Collective on Mat
+  Logically Collective
 
-   Input Parameters:
-+  mat - the matrix free matrix created via MatCreateSNESMF() or MatCreateMFFD()
-.  func - the function to use
--  funcctx - optional function context passed to function
+  Input Parameters:
++ mat     - the matrix-free matrix `MATMFFD` created via `MatCreateSNESMF()` or `MatCreateMFFD()`
+. func    - the function to use
+- funcctx - optional function context passed to function
 
-   Calling Sequence of func:
-$     func (void *funcctx, Vec x, Vec f)
+  Calling sequence of `func`:
++ funcctx - user provided context
+. x       - input vector
+- f       - computed output function
 
-+  funcctx - user provided context
-.  x - input vector
--  f - computed output function
+  Level: advanced
 
-   Level: advanced
+  Notes:
+  If you use this you MUST call `MatAssemblyBegin()` and `MatAssemblyEnd()` on the matrix-free
+  matrix inside your compute Jacobian routine
 
-   Notes:
-    If you use this you MUST call MatAssemblyBegin()/MatAssemblyEnd() on the matrix free
-    matrix inside your compute Jacobian routine
+  If this is not set then it will use the function set with `SNESSetFunction()` if `MatCreateSNESMF()` was used.
 
-    If this is not set then it will use the function set with SNESSetFunction() if MatCreateSNESMF() was used.
-
-.seealso: MatCreateSNESMF(),MatMFFDGetH(), MatCreateMFFD(), MATMFFD,
-          MatMFFDSetHHistory(), MatMFFDResetHHistory(), SNESetFunction()
+.seealso: [](ch_matrices), `Mat`, `MATMFFD`, `MatCreateSNESMF()`, `MatMFFDGetH()`, `MatCreateMFFD()`,
+          `MatMFFDSetHHistory()`, `MatMFFDResetHHistory()`, `SNESSetFunction()`
 @*/
-PetscErrorCode  MatMFFDSetFunction(Mat mat,PetscErrorCode (*func)(void*,Vec,Vec),void *funcctx)
+PetscErrorCode MatMFFDSetFunction(Mat mat, PetscErrorCode (*func)(void *funcctx, Vec x, Vec f), void *funcctx)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
-  ierr = PetscTryMethod(mat,"MatMFFDSetFunction_C",(Mat,PetscErrorCode (*)(void*,Vec,Vec),void*),(mat,func,funcctx));CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
+  PetscTryMethod(mat, "MatMFFDSetFunction_C", (Mat, PetscErrorCode(*)(void *, Vec, Vec), void *), (mat, func, funcctx));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-   MatMFFDSetFunctioni - Sets the function for a single component
+  MatMFFDSetFunctioni - Sets the function for a single component for a `MATMFFD` matrix
 
-   Logically Collective on Mat
+  Logically Collective
 
-   Input Parameters:
-+  mat - the matrix free matrix created via MatCreateSNESMF()
--  funci - the function to use
+  Input Parameters:
++ mat   - the matrix-free matrix `MATMFFD`
+- funci - the function to use
 
-   Level: advanced
+  Level: advanced
 
-   Notes:
-    If you use this you MUST call MatAssemblyBegin()/MatAssemblyEnd() on the matrix free
-    matrix inside your compute Jacobian routine.
-    This function is necessary to compute the diagonal of the matrix.
-    funci must not contain any MPI call as it is called inside a loop on the local portion of the vector.
+  Notes:
+  If you use this you MUST call `MatAssemblyBegin()` and `MatAssemblyEnd()` on the matrix-free
+  matrix inside your compute Jacobian routine.
 
-.seealso: MatCreateSNESMF(),MatMFFDGetH(), MatMFFDSetHHistory(), MatMFFDResetHHistory(), SNESetFunction(), MatGetDiagonal()
+  This function is necessary to compute the diagonal of the matrix.
+  funci must not contain any MPI call as it is called inside a loop on the local portion of the vector.
 
+.seealso: [](ch_matrices), `Mat`, `MATMFFD`, `MatCreateSNESMF()`, `MatMFFDGetH()`, `MatMFFDSetHHistory()`, `MatMFFDResetHHistory()`, `SNESetFunction()`, `MatGetDiagonal()`
 @*/
-PetscErrorCode  MatMFFDSetFunctioni(Mat mat,PetscErrorCode (*funci)(void*,PetscInt,Vec,PetscScalar*))
+PetscErrorCode MatMFFDSetFunctioni(Mat mat, PetscErrorCode (*funci)(void *, PetscInt, Vec, PetscScalar *))
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
-  ierr = PetscTryMethod(mat,"MatMFFDSetFunctioni_C",(Mat,PetscErrorCode (*)(void*,PetscInt,Vec,PetscScalar*)),(mat,funci));CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
+  PetscTryMethod(mat, "MatMFFDSetFunctioni_C", (Mat, PetscErrorCode(*)(void *, PetscInt, Vec, PetscScalar *)), (mat, funci));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-   MatMFFDSetFunctioniBase - Sets the base vector for a single component function evaluation
+  MatMFFDSetFunctioniBase - Sets the base vector for a single component function evaluation for a `MATMFFD` matrix
 
-   Logically Collective on Mat
+  Logically Collective
 
-   Input Parameters:
-+  mat - the matrix free matrix created via MatCreateSNESMF()
--  func - the function to use
+  Input Parameters:
++ mat  - the `MATMFFD` matrix-free matrix
+- func - the function to use
 
-   Level: advanced
+  Level: advanced
 
-   Notes:
-    If you use this you MUST call MatAssemblyBegin()/MatAssemblyEnd() on the matrix free
-    matrix inside your compute Jacobian routine.
-    This function is necessary to compute the diagonal of the matrix.
+  Notes:
+  If you use this you MUST call `MatAssemblyBegin()` and `MatAssemblyEnd()` on the matrix-free
+  matrix inside your compute Jacobian routine.
 
+  This function is necessary to compute the diagonal of the matrix, used for example with `PCJACOBI`
 
-.seealso: MatCreateSNESMF(),MatMFFDGetH(), MatCreateMFFD(), MATMFFD
-          MatMFFDSetHHistory(), MatMFFDResetHHistory(), SNESetFunction(), MatGetDiagonal()
+.seealso: [](ch_matrices), `Mat`, `MATMFFD`, `MatCreateSNESMF()`, `MatMFFDGetH()`, `MatCreateMFFD()`,
+          `MatMFFDSetHHistory()`, `MatMFFDResetHHistory()`, `SNESetFunction()`, `MatGetDiagonal()`
 @*/
-PetscErrorCode  MatMFFDSetFunctioniBase(Mat mat,PetscErrorCode (*func)(void*,Vec))
+PetscErrorCode MatMFFDSetFunctioniBase(Mat mat, PetscErrorCode (*func)(void *, Vec))
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
-  ierr = PetscTryMethod(mat,"MatMFFDSetFunctioniBase_C",(Mat,PetscErrorCode (*)(void*,Vec)),(mat,func));CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
+  PetscTryMethod(mat, "MatMFFDSetFunctioniBase_C", (Mat, PetscErrorCode(*)(void *, Vec)), (mat, func));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   MatMFFDSetPeriod - Sets how often h is recomputed, by default it is everytime
+  MatMFFDSetPeriod - Sets how often h is recomputed for a `MATMFFD` matrix, by default it is every time
 
-   Logically Collective on Mat
+  Logically Collective
 
-   Input Parameters:
-+  mat - the matrix free matrix created via MatCreateSNESMF()
--  period - 1 for everytime, 2 for every second etc
+  Input Parameters:
++ mat    - the `MATMFFD` matrix-free matrix
+- period - 1 for every time, 2 for every second etc
 
-   Options Database Keys:
-.  -mat_mffd_period <period>
+  Options Database Key:
+. -mat_mffd_period <period> - Sets how often `h` is recomputed
 
-   Level: advanced
+  Level: advanced
 
-
-.seealso: MatCreateSNESMF(),MatMFFDGetH(),
-          MatMFFDSetHHistory(), MatMFFDResetHHistory()
+.seealso: [](ch_matrices), `Mat`, `MATMFFD`, `MatCreateSNESMF()`, `MatMFFDGetH()`,
+          `MatMFFDSetHHistory()`, `MatMFFDResetHHistory()`
 @*/
-PetscErrorCode  MatMFFDSetPeriod(Mat mat,PetscInt period)
+PetscErrorCode MatMFFDSetPeriod(Mat mat, PetscInt period)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
-  PetscValidLogicalCollectiveInt(mat,period,2);
-  ierr = PetscTryMethod(mat,"MatMFFDSetPeriod_C",(Mat,PetscInt),(mat,period));CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
+  PetscValidLogicalCollectiveInt(mat, period, 2);
+  PetscTryMethod(mat, "MatMFFDSetPeriod_C", (Mat, PetscInt), (mat, period));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   MatMFFDSetFunctionError - Sets the error_rel for the approximation of
-   matrix-vector products using finite differences.
+  MatMFFDSetFunctionError - Sets the error_rel for the approximation of matrix-vector products using finite differences with the `MATMFFD` matrix
 
-   Logically Collective on Mat
+  Logically Collective
 
-   Input Parameters:
-+  mat - the matrix free matrix created via MatCreateMFFD() or MatCreateSNESMF()
--  error_rel - relative error (should be set to the square root of
-               the relative error in the function evaluations)
+  Input Parameters:
++ mat   - the `MATMFFD` matrix-free matrix
+- error - relative error (should be set to the square root of the relative error in the function evaluations)
 
-   Options Database Keys:
-.  -mat_mffd_err <error_rel> - Sets error_rel
+  Options Database Key:
+. -mat_mffd_err <error_rel> - Sets error_rel
 
-   Level: advanced
+  Level: advanced
 
-   Notes:
-   The default matrix-free matrix-vector product routine computes
+  Note:
+  The default matrix-free matrix-vector product routine computes
 .vb
      F'(u)*a = [F(u+h*a) - F(u)]/h where
      h = error_rel*u'a/||a||^2                        if  |u'a| > umin*||a||_{1}
        = error_rel*umin*sign(u'a)*||a||_{1}/||a||^2   else
 .ve
 
-.seealso: MatCreateSNESMF(),MatMFFDGetH(), MatCreateMFFD(), MATMFFD
-          MatMFFDSetHHistory(), MatMFFDResetHHistory()
+.seealso: [](ch_matrices), `Mat`, `MATMFFD`, `MatCreateSNESMF()`, `MatMFFDGetH()`, `MatCreateMFFD()`,
+          `MatMFFDSetHHistory()`, `MatMFFDResetHHistory()`
 @*/
-PetscErrorCode  MatMFFDSetFunctionError(Mat mat,PetscReal error)
+PetscErrorCode MatMFFDSetFunctionError(Mat mat, PetscReal error)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
-  PetscValidLogicalCollectiveReal(mat,error,2);
-  ierr = PetscTryMethod(mat,"MatMFFDSetFunctionError_C",(Mat,PetscReal),(mat,error));CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
+  PetscValidLogicalCollectiveReal(mat, error, 2);
+  PetscTryMethod(mat, "MatMFFDSetFunctionError_C", (Mat, PetscReal), (mat, error));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   MatMFFDSetHHistory - Sets an array to collect a history of the
-   differencing values (h) computed for the matrix-free product.
+  MatMFFDSetHHistory - Sets an array to collect a history of the
+  differencing values (h) computed for the matrix-free product `MATMFFD` matrix
 
-   Logically Collective on Mat
+  Logically Collective
 
-   Input Parameters:
-+  J - the matrix-free matrix context
-.  histroy - space to hold the history
--  nhistory - number of entries in history, if more entries are generated than
+  Input Parameters:
++ J        - the `MATMFFD` matrix-free matrix
+. history  - space to hold the history
+- nhistory - number of entries in history, if more entries are generated than
               nhistory, then the later ones are discarded
 
-   Level: advanced
+  Level: advanced
 
-   Notes:
-   Use MatMFFDResetHHistory() to reset the history counter and collect
-   a new batch of differencing parameters, h.
+  Note:
+  Use `MatMFFDResetHHistory()` to reset the history counter and collect
+  a new batch of differencing parameters, h.
 
-.seealso: MatMFFDGetH(), MatCreateSNESMF(),
-          MatMFFDResetHHistory(), MatMFFDSetFunctionError()
-
+.seealso: [](ch_matrices), `Mat`, `MATMFFD`, `MatMFFDGetH()`, `MatCreateSNESMF()`,
+          `MatMFFDResetHHistory()`, `MatMFFDSetFunctionError()`
 @*/
-PetscErrorCode  MatMFFDSetHHistory(Mat J,PetscScalar history[],PetscInt nhistory)
+PetscErrorCode MatMFFDSetHHistory(Mat J, PetscScalar history[], PetscInt nhistory)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(J,MAT_CLASSID,1);
-  if (history) PetscValidPointer(history,2);
-  PetscValidLogicalCollectiveInt(J,nhistory,3);
-  ierr = PetscUseMethod(J,"MatMFFDSetHHistory_C",(Mat,PetscScalar[],PetscInt),(J,history,nhistory));CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(J, MAT_CLASSID, 1);
+  if (history) PetscAssertPointer(history, 2);
+  PetscValidLogicalCollectiveInt(J, nhistory, 3);
+  PetscUseMethod(J, "MatMFFDSetHHistory_C", (Mat, PetscScalar[], PetscInt), (J, history, nhistory));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   MatMFFDResetHHistory - Resets the counter to zero to begin
-   collecting a new set of differencing histories.
+  MatMFFDResetHHistory - Resets the counter to zero to begin
+  collecting a new set of differencing histories for the `MATMFFD` matrix
 
-   Logically Collective on Mat
+  Logically Collective
 
-   Input Parameters:
-.  J - the matrix-free matrix context
+  Input Parameter:
+. J - the matrix-free matrix context
 
-   Level: advanced
+  Level: advanced
 
-   Notes:
-   Use MatMFFDSetHHistory() to create the original history counter.
+  Note:
+  Use `MatMFFDSetHHistory()` to create the original history counter.
 
-.seealso: MatMFFDGetH(), MatCreateSNESMF(),
-          MatMFFDSetHHistory(), MatMFFDSetFunctionError()
-
+.seealso: [](ch_matrices), `Mat`, `MATMFFD`, `MatMFFDGetH()`, `MatCreateSNESMF()`,
+          `MatMFFDSetHHistory()`, `MatMFFDSetFunctionError()`
 @*/
-PetscErrorCode  MatMFFDResetHHistory(Mat J)
+PetscErrorCode MatMFFDResetHHistory(Mat J)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(J,MAT_CLASSID,1);
-  ierr = PetscTryMethod(J,"MatMFFDResetHHistory_C",(Mat),(J));CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(J, MAT_CLASSID, 1);
+  PetscTryMethod(J, "MatMFFDResetHHistory_C", (Mat), (J));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-    MatMFFDSetBase - Sets the vector U at which matrix vector products of the
-        Jacobian are computed
+  MatMFFDSetBase - Sets the vector `U` at which matrix vector products of the
+  Jacobian are computed for the `MATMFFD` matrix
 
-    Logically Collective on Mat
+  Logically Collective
 
-    Input Parameters:
-+   J - the MatMFFD matrix
-.   U - the vector
--   F - (optional) vector that contains F(u) if it has been already computed
+  Input Parameters:
++ J - the `MATMFFD` matrix
+. U - the vector
+- F - (optional) vector that contains F(u) if it has been already computed
 
-    Notes:
-    This is rarely used directly
+  Level: advanced
 
-    If F is provided then it is not recomputed. Otherwise the function is evaluated at the base
-    point during the first MatMult() after each call to MatMFFDSetBase().
+  Notes:
+  This is rarely used directly
 
-    Level: advanced
+  If `F` is provided then it is not recomputed. Otherwise the function is evaluated at the base
+  point during the first `MatMult()` after each call to `MatMFFDSetBase()`.
 
+.seealso: [](ch_matrices), `Mat`, `MATMFFD`, `MatMult()`
 @*/
-PetscErrorCode  MatMFFDSetBase(Mat J,Vec U,Vec F)
+PetscErrorCode MatMFFDSetBase(Mat J, Vec U, Vec F)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(J,MAT_CLASSID,1);
-  PetscValidHeaderSpecific(U,VEC_CLASSID,2);
-  if (F) PetscValidHeaderSpecific(F,VEC_CLASSID,3);
-  ierr = PetscTryMethod(J,"MatMFFDSetBase_C",(Mat,Vec,Vec),(J,U,F));CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(J, MAT_CLASSID, 1);
+  PetscValidHeaderSpecific(U, VEC_CLASSID, 2);
+  if (F) PetscValidHeaderSpecific(F, VEC_CLASSID, 3);
+  PetscTryMethod(J, "MatMFFDSetBase_C", (Mat, Vec, Vec), (J, U, F));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-    MatMFFDSetCheckh - Sets a function that checks the computed h and adjusts
-        it to satisfy some criteria
+  MatMFFDSetCheckh - Sets a function that checks the computed h and adjusts
+  it to satisfy some criteria for the `MATMFFD` matrix
 
-    Logically Collective on Mat
+  Logically Collective
 
-    Input Parameters:
-+   J - the MatMFFD matrix
-.   fun - the function that checks h
--   ctx - any context needed by the function
+  Input Parameters:
++ J   - the `MATMFFD` matrix
+. fun - the function that checks `h`
+- ctx - any context needed by the function
 
-    Options Database Keys:
-.   -mat_mffd_check_positivity
+  Options Database Keys:
+. -mat_mffd_check_positivity <bool> - Insure that U + h*a is non-negative
 
-    Level: advanced
+  Level: advanced
 
-    Notes:
-    For example, MatMFFDCheckPositivity() insures that all entries
-       of U + h*a are non-negative
+  Notes:
+  For example, `MatMFFDCheckPositivity()` insures that all entries of U + h*a are non-negative
 
-     The function you provide is called after the default h has been computed and allows you to
-     modify it.
+  The function you provide is called after the default `h` has been computed and allows you to
+  modify it.
 
-.seealso:  MatMFFDCheckPositivity()
+.seealso: [](ch_matrices), `Mat`, `MATMFFD`, `MatMFFDCheckPositivity()`
 @*/
-PetscErrorCode  MatMFFDSetCheckh(Mat J,PetscErrorCode (*fun)(void*,Vec,Vec,PetscScalar*),void *ctx)
+PetscErrorCode MatMFFDSetCheckh(Mat J, PetscErrorCode (*fun)(void *, Vec, Vec, PetscScalar *), void *ctx)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(J,MAT_CLASSID,1);
-  ierr = PetscTryMethod(J,"MatMFFDSetCheckh_C",(Mat,PetscErrorCode (*)(void*,Vec,Vec,PetscScalar*),void*),(J,fun,ctx));CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(J, MAT_CLASSID, 1);
+  PetscTryMethod(J, "MatMFFDSetCheckh_C", (Mat, PetscErrorCode(*)(void *, Vec, Vec, PetscScalar *), void *), (J, fun, ctx));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-    MatMFFDCheckPositivity - Checks that all entries in U + h*a are positive or
-        zero, decreases h until this is satisfied.
+  MatMFFDCheckPositivity - Checks that all entries in U + h*a are positive or
+  zero, decreases h until this is satisfied for a `MATMFFD` matrix
 
-    Logically Collective on Vec
+  Logically Collective
 
-    Input Parameters:
-+   U - base vector that is added to
-.   a - vector that is added
-.   h - scaling factor on a
--   dummy - context variable (unused)
+  Input Parameters:
++ U     - base vector that is added to
+. a     - vector that is added
+. h     - scaling factor on a
+- dummy - context variable (unused)
 
-    Options Database Keys:
-.   -mat_mffd_check_positivity
+  Options Database Keys:
+. -mat_mffd_check_positivity <bool> - Insure that U + h*a is nonnegative
 
-    Level: advanced
+  Level: advanced
 
-    Notes:
-    This is rarely used directly, rather it is passed as an argument to
-           MatMFFDSetCheckh()
+  Note:
+  This is rarely used directly, rather it is passed as an argument to `MatMFFDSetCheckh()`
 
-.seealso:  MatMFFDSetCheckh()
+.seealso: [](ch_matrices), `Mat`, `MATMFFD`, `MatMFFDSetCheckh()`
 @*/
-PetscErrorCode  MatMFFDCheckPositivity(void *dummy,Vec U,Vec a,PetscScalar *h)
+PetscErrorCode MatMFFDCheckPositivity(void *dummy, Vec U, Vec a, PetscScalar *h)
 {
-  PetscReal      val, minval;
-  PetscScalar    *u_vec, *a_vec;
-  PetscErrorCode ierr;
-  PetscInt       i,n;
-  MPI_Comm       comm;
+  PetscReal    val, minval;
+  PetscScalar *u_vec, *a_vec;
+  PetscInt     i, n;
+  MPI_Comm     comm;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(U,VEC_CLASSID,2);
-  PetscValidHeaderSpecific(a,VEC_CLASSID,3);
-  PetscValidPointer(h,4);
-  ierr   = PetscObjectGetComm((PetscObject)U,&comm);CHKERRQ(ierr);
-  ierr   = VecGetArray(U,&u_vec);CHKERRQ(ierr);
-  ierr   = VecGetArray(a,&a_vec);CHKERRQ(ierr);
-  ierr   = VecGetLocalSize(U,&n);CHKERRQ(ierr);
-  minval = PetscAbsScalar(*h)*PetscRealConstant(1.01);
-  for (i=0; i<n; i++) {
-    if (PetscRealPart(u_vec[i] + *h*a_vec[i]) <= 0.0) {
-      val = PetscAbsScalar(u_vec[i]/a_vec[i]);
+  PetscValidHeaderSpecific(U, VEC_CLASSID, 2);
+  PetscValidHeaderSpecific(a, VEC_CLASSID, 3);
+  PetscAssertPointer(h, 4);
+  PetscCall(PetscObjectGetComm((PetscObject)U, &comm));
+  PetscCall(VecGetArray(U, &u_vec));
+  PetscCall(VecGetArray(a, &a_vec));
+  PetscCall(VecGetLocalSize(U, &n));
+  minval = PetscAbsScalar(*h) * PetscRealConstant(1.01);
+  for (i = 0; i < n; i++) {
+    if (PetscRealPart(u_vec[i] + *h * a_vec[i]) <= 0.0) {
+      val = PetscAbsScalar(u_vec[i] / a_vec[i]);
       if (val < minval) minval = val;
     }
   }
-  ierr = VecRestoreArray(U,&u_vec);CHKERRQ(ierr);
-  ierr = VecRestoreArray(a,&a_vec);CHKERRQ(ierr);
-  ierr = MPIU_Allreduce(&minval,&val,1,MPIU_REAL,MPIU_MIN,comm);CHKERRQ(ierr);
+  PetscCall(VecRestoreArray(U, &u_vec));
+  PetscCall(VecRestoreArray(a, &a_vec));
+  PetscCall(MPIU_Allreduce(&minval, &val, 1, MPIU_REAL, MPIU_MIN, comm));
   if (val <= PetscAbsScalar(*h)) {
-    ierr = PetscInfo2(U,"Scaling back h from %g to %g\n",(double)PetscRealPart(*h),(double)(.99*val));CHKERRQ(ierr);
-    if (PetscRealPart(*h) > 0.0) *h =  0.99*val;
-    else                         *h = -0.99*val;
+    PetscCall(PetscInfo(U, "Scaling back h from %g to %g\n", (double)PetscRealPart(*h), (double)(.99 * val)));
+    if (PetscRealPart(*h) > 0.0) *h = 0.99 * val;
+    else *h = -0.99 * val;
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

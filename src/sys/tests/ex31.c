@@ -1,40 +1,35 @@
-
 static char help[] = "Tests PetscGetFullPath().\n\n";
-
 
 #include <petscsys.h>
 
 /* for windows - fix up path - so that we can do diff test */
-PetscErrorCode  path_to_unix(char filein[])
+PetscErrorCode path_to_unix(char filein[])
 {
-  PetscErrorCode ierr;
-  size_t         i,n;
+  size_t i, n;
 
   PetscFunctionBegin;
-  ierr = PetscStrlen(filein,&n);CHKERRQ(ierr);
-  for (i=0; i<n; i++) {
+  PetscCall(PetscStrlen(filein, &n));
+  for (i = 0; i < n; i++) {
     if (filein[i] == '\\') filein[i] = '/';
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-int main(int argc,char **argv)
+int main(int argc, char **argv)
 {
-  char           fpath[PETSC_MAX_PATH_LEN];
-  PetscErrorCode ierr;
+  char fpath[PETSC_MAX_PATH_LEN];
 
-  ierr = PetscInitialize(&argc,&argv,(char*)0,help);if (ierr) return ierr;
-  ierr = PetscGetFullPath("~/somefile",fpath,sizeof(fpath));CHKERRQ(ierr);
-  ierr = path_to_unix(fpath);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"%s\n",fpath);CHKERRQ(ierr);
-  ierr = PetscGetFullPath("someotherfile",fpath,sizeof(fpath));CHKERRQ(ierr);
-  ierr = path_to_unix(fpath);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"%s\n",fpath);CHKERRQ(ierr);
-  ierr = PetscFinalize();
-  return ierr;
+  PetscFunctionBeginUser;
+  PetscCall(PetscInitialize(&argc, &argv, (char *)0, help));
+  PetscCall(PetscGetFullPath("~/somefile", fpath, sizeof(fpath)));
+  PetscCall(path_to_unix(fpath));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%s\n", fpath));
+  PetscCall(PetscGetFullPath("someotherfile", fpath, sizeof(fpath)));
+  PetscCall(path_to_unix(fpath));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%s\n", fpath));
+  PetscCall(PetscFinalize());
+  return 0;
 }
-
-
 
 /*TEST
 

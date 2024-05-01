@@ -1,5 +1,4 @@
-
-#include <petsc/private/kspimpl.h>   /*I "petscksp.h" I*/
+#include <petsc/private/kspimpl.h> /*I "petscksp.h" I*/
 #include <petscdm.h>
 #include <petscblaslapack.h>
 
@@ -8,363 +7,305 @@ typedef struct {
   Vec work;
 } Mat_KSP;
 
-static PetscErrorCode MatCreateVecs_KSP(Mat A,Vec *X,Vec *Y)
+static PetscErrorCode MatCreateVecs_KSP(Mat A, Vec *X, Vec *Y)
 {
-  Mat_KSP        *ctx;
-  Mat            M;
-  PetscErrorCode ierr;
+  Mat_KSP *ctx;
+  Mat      M;
 
   PetscFunctionBegin;
-  ierr = MatShellGetContext(A,&ctx);CHKERRQ(ierr);
-  ierr = KSPGetOperators(ctx->ksp,&M,NULL);CHKERRQ(ierr);
-  ierr = MatCreateVecs(M,X,Y);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(MatShellGetContext(A, &ctx));
+  PetscCall(KSPGetOperators(ctx->ksp, &M, NULL));
+  PetscCall(MatCreateVecs(M, X, Y));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatMult_KSP(Mat A,Vec X,Vec Y)
+static PetscErrorCode MatMult_KSP(Mat A, Vec X, Vec Y)
 {
-  Mat_KSP        *ctx;
-  PetscErrorCode ierr;
+  Mat_KSP *ctx;
 
   PetscFunctionBegin;
-  ierr = MatShellGetContext(A,&ctx);CHKERRQ(ierr);
-  ierr = KSP_PCApplyBAorAB(ctx->ksp,X,Y,ctx->work);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(MatShellGetContext(A, &ctx));
+  PetscCall(KSP_PCApplyBAorAB(ctx->ksp, X, Y, ctx->work));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@
-    KSPComputeOperator - Computes the explicit preconditioned operator, including diagonal scaling and null
-    space removal if applicable.
+/*@C
+  KSPComputeOperator - Computes the explicit preconditioned operator, including diagonal scaling and null
+  space removal if applicable.
 
-    Collective on ksp
+  Collective
 
-    Input Parameter:
-+   ksp - the Krylov subspace context
--   mattype - the matrix type to be used
+  Input Parameters:
++ ksp     - the Krylov subspace context
+- mattype - the matrix type to be used
 
-    Output Parameter:
-.   mat - the explict preconditioned operator
+  Output Parameter:
+. mat - the explicit preconditioned operator
 
-    Notes:
-    This computation is done by applying the operators to columns of the
-    identity matrix.
+  Level: advanced
 
-    Currently, this routine uses a dense matrix format for the output operator if mattype == NULL.
-    This routine is costly in general, and is recommended for use only with relatively small systems.
+  Notes:
+  This computation is done by applying the operators to columns of the
+  identity matrix.
 
-    Level: advanced
+  Currently, this routine uses a dense matrix format for the output operator if `mattype` is `NULL`.
+  This routine is costly in general, and is recommended for use only with relatively small systems.
 
-.seealso: KSPComputeEigenvaluesExplicitly(), PCComputeOperator(), KSPSetDiagonalScale(), KSPSetNullSpace(), MatType
+.seealso: [](ch_ksp), `KSP`, `KSPSetOperators()`, `KSPComputeEigenvaluesExplicitly()`, `PCComputeOperator()`, `KSPSetDiagonalScale()`, `KSPSetNullSpace()`, `MatType`
 @*/
-PetscErrorCode  KSPComputeOperator(KSP ksp, MatType mattype, Mat *mat)
+PetscErrorCode KSPComputeOperator(KSP ksp, MatType mattype, Mat *mat)
 {
-  PetscErrorCode ierr;
-  PetscInt       N,M,m,n;
-  Mat_KSP        ctx;
-  Mat            A,Aksp;
+  PetscInt N, M, m, n;
+  Mat_KSP  ctx;
+  Mat      A, Aksp;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
-  PetscValidPointer(mat,3);
-  ierr = KSPGetOperators(ksp,&A,NULL);CHKERRQ(ierr);
-  ierr = MatGetLocalSize(A,&m,&n);CHKERRQ(ierr);
-  ierr = MatGetSize(A,&M,&N);CHKERRQ(ierr);
-  ierr = MatCreateShell(PetscObjectComm((PetscObject)ksp),m,n,M,N,&ctx,&Aksp);CHKERRQ(ierr);
-  ierr = MatShellSetOperation(Aksp,MATOP_MULT,(void (*)(void))MatMult_KSP);CHKERRQ(ierr);
-  ierr = MatShellSetOperation(Aksp,MATOP_CREATE_VECS,(void (*)(void))MatCreateVecs_KSP);CHKERRQ(ierr);
+  PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
+  PetscAssertPointer(mat, 3);
+  PetscCall(KSPGetOperators(ksp, &A, NULL));
+  PetscCall(MatGetLocalSize(A, &m, &n));
+  PetscCall(MatGetSize(A, &M, &N));
+  PetscCall(MatCreateShell(PetscObjectComm((PetscObject)ksp), m, n, M, N, &ctx, &Aksp));
+  PetscCall(MatShellSetOperation(Aksp, MATOP_MULT, (void (*)(void))MatMult_KSP));
+  PetscCall(MatShellSetOperation(Aksp, MATOP_CREATE_VECS, (void (*)(void))MatCreateVecs_KSP));
   ctx.ksp = ksp;
-  ierr = MatCreateVecs(A,&ctx.work,NULL);CHKERRQ(ierr);
-  ierr = MatComputeOperator(Aksp,mattype,mat);CHKERRQ(ierr);
-  ierr = VecDestroy(&ctx.work);CHKERRQ(ierr);
-  ierr = MatDestroy(&Aksp);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(MatCreateVecs(A, &ctx.work, NULL));
+  PetscCall(MatComputeOperator(Aksp, mattype, mat));
+  PetscCall(VecDestroy(&ctx.work));
+  PetscCall(MatDestroy(&Aksp));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   KSPComputeEigenvaluesExplicitly - Computes all of the eigenvalues of the
-   preconditioned operator using LAPACK.
+  KSPComputeEigenvaluesExplicitly - Computes all of the eigenvalues of the
+  preconditioned operator using LAPACK.
 
-   Collective on ksp
+  Collective
 
-   Input Parameter:
-+  ksp - iterative context obtained from KSPCreate()
--  n - size of arrays r and c
+  Input Parameters:
++ ksp  - iterative context obtained from `KSPCreate()`
+- nmax - size of arrays `r` and `c`
 
-   Output Parameters:
-+  r - real part of computed eigenvalues, provided by user with a dimension at least of n
--  c - complex part of computed eigenvalues, provided by user with a dimension at least of n
+  Output Parameters:
++ r - real part of computed eigenvalues, provided by user with a dimension at least of `n`
+- c - complex part of computed eigenvalues, provided by user with a dimension at least of `n`
 
-   Notes:
-   This approach is very slow but will generally provide accurate eigenvalue
-   estimates.  This routine explicitly forms a dense matrix representing
-   the preconditioned operator, and thus will run only for relatively small
-   problems, say n < 500.
+  Level: advanced
 
-   Many users may just want to use the monitoring routine
-   KSPMonitorSingularValue() (which can be set with option -ksp_monitor_singular_value)
-   to print the singular values at each iteration of the linear solve.
+  Notes:
+  This approach is very slow but will generally provide accurate eigenvalue
+  estimates.  This routine explicitly forms a dense matrix representing
+  the preconditioned operator, and thus will run only for relatively small
+  problems, say `n` < 500.
 
-   The preconditoner operator, rhs vector, solution vectors should be
-   set before this routine is called. i.e use KSPSetOperators(),KSPSolve() or
-   KSPSetOperators()
+  Many users may just want to use the monitoring routine
+  `KSPMonitorSingularValue()` (which can be set with option -ksp_monitor_singular_value)
+  to print the singular values at each iteration of the linear solve.
 
-   Level: advanced
+  The preconditioner operator, rhs vector, and solution vectors should be
+  set before this routine is called. i.e use `KSPSetOperators()`, `KSPSolve()`
 
-.seealso: KSPComputeEigenvalues(), KSPMonitorSingularValue(), KSPComputeExtremeSingularValues(), KSPSetOperators(), KSPSolve()
+.seealso: [](ch_ksp), `KSP`, `KSPComputeEigenvalues()`, `KSPMonitorSingularValue()`, `KSPComputeExtremeSingularValues()`, `KSPSetOperators()`, `KSPSolve()`
 @*/
-PetscErrorCode  KSPComputeEigenvaluesExplicitly(KSP ksp,PetscInt nmax,PetscReal r[],PetscReal c[])
+PetscErrorCode KSPComputeEigenvaluesExplicitly(KSP ksp, PetscInt nmax, PetscReal r[], PetscReal c[])
 {
-  Mat               BA;
-  PetscErrorCode    ierr;
-  PetscMPIInt       size,rank;
-  MPI_Comm          comm;
+  Mat                BA;
+  PetscMPIInt        size, rank;
+  MPI_Comm           comm;
   PetscScalar       *array;
-  Mat               A;
-  PetscInt          m,row,nz,i,n,dummy;
+  Mat                A;
+  PetscInt           m, row, nz, i, n, dummy;
   const PetscInt    *cols;
   const PetscScalar *vals;
 
   PetscFunctionBegin;
-  ierr = PetscObjectGetComm((PetscObject)ksp,&comm);CHKERRQ(ierr);
-  ierr = KSPComputeOperator(ksp,MATDENSE,&BA);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
+  PetscCall(PetscObjectGetComm((PetscObject)ksp, &comm));
+  PetscCall(KSPComputeOperator(ksp, MATDENSE, &BA));
+  PetscCallMPI(MPI_Comm_size(comm, &size));
+  PetscCallMPI(MPI_Comm_rank(comm, &rank));
 
-  ierr = MatGetSize(BA,&n,&n);CHKERRQ(ierr);
+  PetscCall(MatGetSize(BA, &n, &n));
   if (size > 1) { /* assemble matrix on first processor */
-    ierr = MatCreate(PetscObjectComm((PetscObject)ksp),&A);CHKERRQ(ierr);
-    if (!rank) {
-      ierr = MatSetSizes(A,n,n,n,n);CHKERRQ(ierr);
+    PetscCall(MatCreate(PetscObjectComm((PetscObject)ksp), &A));
+    if (rank == 0) {
+      PetscCall(MatSetSizes(A, n, n, n, n));
     } else {
-      ierr = MatSetSizes(A,0,0,n,n);CHKERRQ(ierr);
+      PetscCall(MatSetSizes(A, 0, 0, n, n));
     }
-    ierr = MatSetType(A,MATMPIDENSE);CHKERRQ(ierr);
-    ierr = MatMPIDenseSetPreallocation(A,NULL);CHKERRQ(ierr);
-    ierr = PetscLogObjectParent((PetscObject)BA,(PetscObject)A);CHKERRQ(ierr);
+    PetscCall(MatSetType(A, MATMPIDENSE));
+    PetscCall(MatMPIDenseSetPreallocation(A, NULL));
 
-    ierr = MatGetOwnershipRange(BA,&row,&dummy);CHKERRQ(ierr);
-    ierr = MatGetLocalSize(BA,&m,&dummy);CHKERRQ(ierr);
-    for (i=0; i<m; i++) {
-      ierr = MatGetRow(BA,row,&nz,&cols,&vals);CHKERRQ(ierr);
-      ierr = MatSetValues(A,1,&row,nz,cols,vals,INSERT_VALUES);CHKERRQ(ierr);
-      ierr = MatRestoreRow(BA,row,&nz,&cols,&vals);CHKERRQ(ierr);
+    PetscCall(MatGetOwnershipRange(BA, &row, &dummy));
+    PetscCall(MatGetLocalSize(BA, &m, &dummy));
+    for (i = 0; i < m; i++) {
+      PetscCall(MatGetRow(BA, row, &nz, &cols, &vals));
+      PetscCall(MatSetValues(A, 1, &row, nz, cols, vals, INSERT_VALUES));
+      PetscCall(MatRestoreRow(BA, row, &nz, &cols, &vals));
       row++;
     }
 
-    ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-    ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-    ierr = MatDenseGetArray(A,&array);CHKERRQ(ierr);
+    PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatDenseGetArray(A, &array));
   } else {
-    ierr = MatDenseGetArray(BA,&array);CHKERRQ(ierr);
+    PetscCall(MatDenseGetArray(BA, &array));
   }
 
-#if defined(PETSC_HAVE_ESSL)
-  /* ESSL has a different calling sequence for dgeev() and zgeev() than standard LAPACK */
-  if (!rank) {
-    PetscScalar  sdummy,*cwork;
-    PetscReal    *work,*realpart;
-    PetscBLASInt clen,idummy,lwork,bn,zero = 0;
-    PetscInt     *perm;
-
 #if !defined(PETSC_USE_COMPLEX)
-    clen = n;
-#else
-    clen = 2*n;
-#endif
-    ierr   = PetscMalloc1(clen,&cwork);CHKERRQ(ierr);
-    idummy = -1;                /* unused */
-    ierr   = PetscBLASIntCast(n,&bn);CHKERRQ(ierr);
-    lwork  = 5*n;
-    ierr   = PetscMalloc1(lwork,&work);CHKERRQ(ierr);
-    ierr   = PetscMalloc1(n,&realpart);CHKERRQ(ierr);
-    ierr   = PetscFPTrapPush(PETSC_FP_TRAP_OFF);CHKERRQ(ierr);
-    PetscStackCallBLAS("LAPACKgeev",LAPACKgeev_(&zero,array,&bn,cwork,&sdummy,&idummy,&idummy,&bn,work,&lwork));
-    ierr = PetscFPTrapPop();CHKERRQ(ierr);
-    ierr = PetscFree(work);CHKERRQ(ierr);
+  if (rank == 0) {
+    PetscScalar *work;
+    PetscReal   *realpart, *imagpart;
+    PetscBLASInt idummy, lwork;
+    PetscInt    *perm;
 
-    /* For now we stick with the convention of storing the real and imaginary
-       components of evalues separately.  But is this what we really want? */
-    ierr = PetscMalloc1(n,&perm);CHKERRQ(ierr);
-
-#if !defined(PETSC_USE_COMPLEX)
-    for (i=0; i<n; i++) {
-      realpart[i] = cwork[2*i];
-      perm[i]     = i;
-    }
-    ierr = PetscSortRealWithPermutation(n,realpart,perm);CHKERRQ(ierr);
-    for (i=0; i<n; i++) {
-      r[i] = cwork[2*perm[i]];
-      c[i] = cwork[2*perm[i]+1];
-    }
-#else
-    for (i=0; i<n; i++) {
-      realpart[i] = PetscRealPart(cwork[i]);
-      perm[i]     = i;
-    }
-    ierr = PetscSortRealWithPermutation(n,realpart,perm);CHKERRQ(ierr);
-    for (i=0; i<n; i++) {
-      r[i] = PetscRealPart(cwork[perm[i]]);
-      c[i] = PetscImaginaryPart(cwork[perm[i]]);
-    }
-#endif
-    ierr = PetscFree(perm);CHKERRQ(ierr);
-    ierr = PetscFree(realpart);CHKERRQ(ierr);
-    ierr = PetscFree(cwork);CHKERRQ(ierr);
-  }
-#elif !defined(PETSC_USE_COMPLEX)
-  if (!rank) {
-    PetscScalar  *work;
-    PetscReal    *realpart,*imagpart;
-    PetscBLASInt idummy,lwork;
-    PetscInt     *perm;
-
-    idummy   = n;
-    lwork    = 5*n;
-    ierr     = PetscMalloc2(n,&realpart,n,&imagpart);CHKERRQ(ierr);
-    ierr     = PetscMalloc1(5*n,&work);CHKERRQ(ierr);
+    idummy = n;
+    lwork  = 5 * n;
+    PetscCall(PetscMalloc2(n, &realpart, n, &imagpart));
+    PetscCall(PetscMalloc1(5 * n, &work));
     {
       PetscBLASInt lierr;
       PetscScalar  sdummy;
       PetscBLASInt bn;
 
-      ierr = PetscBLASIntCast(n,&bn);CHKERRQ(ierr);
-      ierr = PetscFPTrapPush(PETSC_FP_TRAP_OFF);CHKERRQ(ierr);
-      PetscStackCallBLAS("LAPACKgeev",LAPACKgeev_("N","N",&bn,array,&bn,realpart,imagpart,&sdummy,&idummy,&sdummy,&idummy,work,&lwork,&lierr));
-      if (lierr) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error in LAPACK routine %d",(int)lierr);
-      ierr = PetscFPTrapPop();CHKERRQ(ierr);
+      PetscCall(PetscBLASIntCast(n, &bn));
+      PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
+      PetscCallBLAS("LAPACKgeev", LAPACKgeev_("N", "N", &bn, array, &bn, realpart, imagpart, &sdummy, &idummy, &sdummy, &idummy, work, &lwork, &lierr));
+      PetscCheck(!lierr, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in LAPACK routine %d", (int)lierr);
+      PetscCall(PetscFPTrapPop());
     }
-    ierr = PetscFree(work);CHKERRQ(ierr);
-    ierr = PetscMalloc1(n,&perm);CHKERRQ(ierr);
+    PetscCall(PetscFree(work));
+    PetscCall(PetscMalloc1(n, &perm));
 
-    for (i=0; i<n; i++)  perm[i] = i;
-    ierr = PetscSortRealWithPermutation(n,realpart,perm);CHKERRQ(ierr);
-    for (i=0; i<n; i++) {
+    for (i = 0; i < n; i++) perm[i] = i;
+    PetscCall(PetscSortRealWithPermutation(n, realpart, perm));
+    for (i = 0; i < n; i++) {
       r[i] = realpart[perm[i]];
       c[i] = imagpart[perm[i]];
     }
-    ierr = PetscFree(perm);CHKERRQ(ierr);
-    ierr = PetscFree2(realpart,imagpart);CHKERRQ(ierr);
+    PetscCall(PetscFree(perm));
+    PetscCall(PetscFree2(realpart, imagpart));
   }
 #else
-  if (!rank) {
-    PetscScalar  *work,*eigs;
-    PetscReal    *rwork;
-    PetscBLASInt idummy,lwork;
-    PetscInt     *perm;
+  if (rank == 0) {
+    PetscScalar *work, *eigs;
+    PetscReal   *rwork;
+    PetscBLASInt idummy, lwork;
+    PetscInt    *perm;
 
     idummy = n;
-    lwork  = 5*n;
-    ierr   = PetscMalloc1(5*n,&work);CHKERRQ(ierr);
-    ierr   = PetscMalloc1(2*n,&rwork);CHKERRQ(ierr);
-    ierr   = PetscMalloc1(n,&eigs);CHKERRQ(ierr);
+    lwork  = 5 * n;
+    PetscCall(PetscMalloc1(5 * n, &work));
+    PetscCall(PetscMalloc1(2 * n, &rwork));
+    PetscCall(PetscMalloc1(n, &eigs));
     {
       PetscBLASInt lierr;
       PetscScalar  sdummy;
       PetscBLASInt nb;
-      ierr = PetscBLASIntCast(n,&nb);CHKERRQ(ierr);
-      ierr = PetscFPTrapPush(PETSC_FP_TRAP_OFF);CHKERRQ(ierr);
-      PetscStackCallBLAS("LAPACKgeev",LAPACKgeev_("N","N",&nb,array,&nb,eigs,&sdummy,&idummy,&sdummy,&idummy,work,&lwork,rwork,&lierr));
-      if (lierr) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error in LAPACK routine %d",(int)lierr);
-      ierr = PetscFPTrapPop();CHKERRQ(ierr);
+      PetscCall(PetscBLASIntCast(n, &nb));
+      PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
+      PetscCallBLAS("LAPACKgeev", LAPACKgeev_("N", "N", &nb, array, &nb, eigs, &sdummy, &idummy, &sdummy, &idummy, work, &lwork, rwork, &lierr));
+      PetscCheck(!lierr, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in LAPACK routine %d", (int)lierr);
+      PetscCall(PetscFPTrapPop());
     }
-    ierr = PetscFree(work);CHKERRQ(ierr);
-    ierr = PetscFree(rwork);CHKERRQ(ierr);
-    ierr = PetscMalloc1(n,&perm);CHKERRQ(ierr);
-    for (i=0; i<n; i++) perm[i] = i;
-    for (i=0; i<n; i++) r[i]    = PetscRealPart(eigs[i]);
-    ierr = PetscSortRealWithPermutation(n,r,perm);CHKERRQ(ierr);
-    for (i=0; i<n; i++) {
+    PetscCall(PetscFree(work));
+    PetscCall(PetscFree(rwork));
+    PetscCall(PetscMalloc1(n, &perm));
+    for (i = 0; i < n; i++) perm[i] = i;
+    for (i = 0; i < n; i++) r[i] = PetscRealPart(eigs[i]);
+    PetscCall(PetscSortRealWithPermutation(n, r, perm));
+    for (i = 0; i < n; i++) {
       r[i] = PetscRealPart(eigs[perm[i]]);
       c[i] = PetscImaginaryPart(eigs[perm[i]]);
     }
-    ierr = PetscFree(perm);CHKERRQ(ierr);
-    ierr = PetscFree(eigs);CHKERRQ(ierr);
+    PetscCall(PetscFree(perm));
+    PetscCall(PetscFree(eigs));
   }
 #endif
   if (size > 1) {
-    ierr = MatDenseRestoreArray(A,&array);CHKERRQ(ierr);
-    ierr = MatDestroy(&A);CHKERRQ(ierr);
+    PetscCall(MatDenseRestoreArray(A, &array));
+    PetscCall(MatDestroy(&A));
   } else {
-    ierr = MatDenseRestoreArray(BA,&array);CHKERRQ(ierr);
+    PetscCall(MatDenseRestoreArray(BA, &array));
   }
-  ierr = MatDestroy(&BA);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(MatDestroy(&BA));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PolyEval(PetscInt nroots,const PetscReal *r,const PetscReal *c,PetscReal x,PetscReal y,PetscReal *px,PetscReal *py)
+static PetscErrorCode PolyEval(PetscInt nroots, const PetscReal *r, const PetscReal *c, PetscReal x, PetscReal y, PetscReal *px, PetscReal *py)
 {
   PetscInt  i;
-  PetscReal rprod = 1,iprod = 0;
+  PetscReal rprod = 1, iprod = 0;
 
   PetscFunctionBegin;
-  for (i=0; i<nroots; i++) {
-    PetscReal rnew = rprod*(x - r[i]) - iprod*(y - c[i]);
-    PetscReal inew = rprod*(y - c[i]) + iprod*(x - r[i]);
-    rprod = rnew;
-    iprod = inew;
+  for (i = 0; i < nroots; i++) {
+    PetscReal rnew = rprod * (x - r[i]) - iprod * (y - c[i]);
+    PetscReal inew = rprod * (y - c[i]) + iprod * (x - r[i]);
+    rprod          = rnew;
+    iprod          = inew;
   }
   *px = rprod;
   *py = iprod;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 #include <petscdraw.h>
-/* collective on ksp */
-PetscErrorCode KSPPlotEigenContours_Private(KSP ksp,PetscInt neig,const PetscReal *r,const PetscReal *c)
+/* Collective */
+PetscErrorCode KSPPlotEigenContours_Private(KSP ksp, PetscInt neig, const PetscReal *r, const PetscReal *c)
 {
-  PetscErrorCode ierr;
-  PetscReal      xmin,xmax,ymin,ymax,*xloc,*yloc,*value,px0,py0,rscale,iscale;
-  PetscInt       M,N,i,j;
-  PetscMPIInt    rank;
-  PetscViewer    viewer;
-  PetscDraw      draw;
-  PetscDrawAxis  drawaxis;
+  PetscReal     xmin, xmax, ymin, ymax, *xloc, *yloc, *value, px0, py0, rscale, iscale;
+  PetscInt      M, N, i, j;
+  PetscMPIInt   rank;
+  PetscViewer   viewer;
+  PetscDraw     draw;
+  PetscDrawAxis drawaxis;
 
   PetscFunctionBegin;
-  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)ksp),&rank);CHKERRQ(ierr);
-  if (rank) PetscFunctionReturn(0);
+  PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)ksp), &rank));
+  if (rank) PetscFunctionReturn(PETSC_SUCCESS);
   M    = 80;
   N    = 80;
-  xmin = r[0]; xmax = r[0];
-  ymin = c[0]; ymax = c[0];
-  for (i=1; i<neig; i++) {
-    xmin = PetscMin(xmin,r[i]);
-    xmax = PetscMax(xmax,r[i]);
-    ymin = PetscMin(ymin,c[i]);
-    ymax = PetscMax(ymax,c[i]);
+  xmin = r[0];
+  xmax = r[0];
+  ymin = c[0];
+  ymax = c[0];
+  for (i = 1; i < neig; i++) {
+    xmin = PetscMin(xmin, r[i]);
+    xmax = PetscMax(xmax, r[i]);
+    ymin = PetscMin(ymin, c[i]);
+    ymax = PetscMax(ymax, c[i]);
   }
-  ierr = PetscMalloc3(M,&xloc,N,&yloc,M*N,&value);CHKERRQ(ierr);
-  for (i=0; i<M; i++) xloc[i] = xmin - 0.1*(xmax-xmin) + 1.2*(xmax-xmin)*i/(M-1);
-  for (i=0; i<N; i++) yloc[i] = ymin - 0.1*(ymax-ymin) + 1.2*(ymax-ymin)*i/(N-1);
-  ierr   = PolyEval(neig,r,c,0,0,&px0,&py0);CHKERRQ(ierr);
-  rscale = px0/(PetscSqr(px0)+PetscSqr(py0));
-  iscale = -py0/(PetscSqr(px0)+PetscSqr(py0));
-  for (j=0; j<N; j++) {
-    for (i=0; i<M; i++) {
-      PetscReal px,py,tx,ty,tmod;
-      ierr = PolyEval(neig,r,c,xloc[i],yloc[j],&px,&py);CHKERRQ(ierr);
-      tx   = px*rscale - py*iscale;
-      ty   = py*rscale + px*iscale;
+  PetscCall(PetscMalloc3(M, &xloc, N, &yloc, M * N, &value));
+  for (i = 0; i < M; i++) xloc[i] = xmin - 0.1 * (xmax - xmin) + 1.2 * (xmax - xmin) * i / (M - 1);
+  for (i = 0; i < N; i++) yloc[i] = ymin - 0.1 * (ymax - ymin) + 1.2 * (ymax - ymin) * i / (N - 1);
+  PetscCall(PolyEval(neig, r, c, 0, 0, &px0, &py0));
+  rscale = px0 / (PetscSqr(px0) + PetscSqr(py0));
+  iscale = -py0 / (PetscSqr(px0) + PetscSqr(py0));
+  for (j = 0; j < N; j++) {
+    for (i = 0; i < M; i++) {
+      PetscReal px, py, tx, ty, tmod;
+      PetscCall(PolyEval(neig, r, c, xloc[i], yloc[j], &px, &py));
+      tx   = px * rscale - py * iscale;
+      ty   = py * rscale + px * iscale;
       tmod = PetscSqr(tx) + PetscSqr(ty); /* modulus of the complex polynomial */
       if (tmod > 1) tmod = 1.0;
       if (tmod > 0.5 && tmod < 1) tmod = 0.5;
       if (tmod > 0.2 && tmod < 0.5) tmod = 0.2;
       if (tmod > 0.05 && tmod < 0.2) tmod = 0.05;
       if (tmod < 1e-3) tmod = 1e-3;
-      value[i+j*M] = PetscLogReal(tmod) / PetscLogReal(10.0);
+      value[i + j * M] = PetscLogReal(tmod) / PetscLogReal(10.0);
     }
   }
-  ierr = PetscViewerDrawOpen(PETSC_COMM_SELF,NULL,"Iteratively Computed Eigen-contours",PETSC_DECIDE,PETSC_DECIDE,450,450,&viewer);CHKERRQ(ierr);
-  ierr = PetscViewerDrawGetDraw(viewer,0,&draw);CHKERRQ(ierr);
-  ierr = PetscDrawTensorContour(draw,M,N,NULL,NULL,value);CHKERRQ(ierr);
+  PetscCall(PetscViewerDrawOpen(PETSC_COMM_SELF, NULL, "Iteratively Computed Eigen-contours", PETSC_DECIDE, PETSC_DECIDE, 450, 450, &viewer));
+  PetscCall(PetscViewerDrawGetDraw(viewer, 0, &draw));
+  PetscCall(PetscDrawTensorContour(draw, M, N, NULL, NULL, value));
   if (0) {
-    ierr = PetscDrawAxisCreate(draw,&drawaxis);CHKERRQ(ierr);
-    ierr = PetscDrawAxisSetLimits(drawaxis,xmin,xmax,ymin,ymax);CHKERRQ(ierr);
-    ierr = PetscDrawAxisSetLabels(drawaxis,"Eigen-counters","real","imag");CHKERRQ(ierr);
-    ierr = PetscDrawAxisDraw(drawaxis);CHKERRQ(ierr);
-    ierr = PetscDrawAxisDestroy(&drawaxis);CHKERRQ(ierr);
+    PetscCall(PetscDrawAxisCreate(draw, &drawaxis));
+    PetscCall(PetscDrawAxisSetLimits(drawaxis, xmin, xmax, ymin, ymax));
+    PetscCall(PetscDrawAxisSetLabels(drawaxis, "Eigen-counters", "real", "imag"));
+    PetscCall(PetscDrawAxisDraw(drawaxis));
+    PetscCall(PetscDrawAxisDestroy(&drawaxis));
   }
-  ierr = PetscViewerDestroy(&viewer);CHKERRQ(ierr);
-  ierr = PetscFree3(xloc,yloc,value);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscViewerDestroy(&viewer));
+  PetscCall(PetscFree3(xloc, yloc, value));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

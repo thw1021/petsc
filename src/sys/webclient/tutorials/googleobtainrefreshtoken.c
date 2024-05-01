@@ -1,4 +1,3 @@
-
 /*
      Obtains a refresh token that you can use in the future to access Google Drive from PETSc code
 
@@ -10,16 +9,16 @@
 
 #include <petscsys.h>
 
-int main(int argc,char **argv)
+int main(int argc, char **argv)
 {
-  PetscErrorCode ierr;
-  char           access_token[512],refresh_token[512];
+  char access_token[512], refresh_token[512];
 
-  ierr = PetscInitialize(&argc,&argv,NULL,NULL);if (ierr) return ierr;
-  ierr = PetscGoogleDriveAuthorize(PETSC_COMM_WORLD,access_token,refresh_token,sizeof(access_token));CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"Your Refresh token is %s\n",refresh_token);CHKERRQ(ierr);
-  ierr = PetscFinalize();
-  return ierr;
+  PetscFunctionBeginUser;
+  PetscCall(PetscInitialize(&argc, &argv, NULL, NULL));
+  PetscCall(PetscGoogleDriveAuthorize(PETSC_COMM_WORLD, access_token, refresh_token, sizeof(access_token)));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Your Refresh token is %s\n", refresh_token));
+  PetscCall(PetscFinalize());
+  return 0;
 }
 
 /*TEST
@@ -31,5 +30,3 @@ int main(int argc,char **argv)
      TODO: determine how to run this test without going through the browser
 
 TEST*/
-
-

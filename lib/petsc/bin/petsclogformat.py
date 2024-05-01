@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 from __future__ import print_function
 Sorted = ["PetscBarrier",
@@ -88,10 +88,8 @@ Sorted = ["PetscBarrier",
 
 
          "MatMults",
-         "MatMultConstr",
          "MatMultAdd",
          "MatMultTranspose",
-         "MatMultTrConstr",
          "MatMultTrAdd",
          "MatSolves",
          "MatSolveAdd",
@@ -155,7 +153,6 @@ Sorted = ["PetscBarrier",
          "MatGetSymTrans",
          "MatGetSymTransR",
          "MatTranspose_SeqAIJ_FAST",
-         "MatCUSPCopyTo",
          "MatCUSPARSECopyTo",
          "MatViennaCLCopyTo",
          "MatSetValBatch",

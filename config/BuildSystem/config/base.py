@@ -54,7 +54,7 @@ Output
   The object may define a headerPrefix member, which will be appended, followed
 by an underscore, to every define which is output from it. Similarly, a substPrefix
 can be defined which applies to every substitution from the object. Typedefs and
-function prototypes are placed in a separate header in order to accomodate languges
+function prototypes are placed in a separate header in order to accommodate languages
 such as Fortran whose preprocessor can sometimes fail at these statements.
 '''
 import script
@@ -99,7 +99,6 @@ class Configure(script.Script):
     if not hasattr(self, '_tmpDir'):
       self._tmpDir = os.path.join(self.framework.tmpDir, self.__module__)
       if not os.path.isdir(self._tmpDir): os.mkdir(self._tmpDir)
-      self.logPrint('All intermediate test results are stored in '+self._tmpDir)
     return self._tmpDir
   def setTmpDir(self, temp):
     if hasattr(self, '_tmpDir'):
@@ -120,7 +119,7 @@ class Configure(script.Script):
     if status:
       exitstr = ' exit code ' + str(status)
     else:
-      exitstr = ''
+      exitstr = 'exit code 0'
     self.logWrite('Possible ERROR while running %s:%s\n' % (component, exitstr))
     if output:
       self.logWrite('stdout:\n' + output)
@@ -128,10 +127,10 @@ class Configure(script.Script):
       self.logWrite('stderr:\n' + error)
 
   def executeTest(self, test, args = [], kargs = {}):
+    '''Prints the function and class information for the test and then runs the test'''
     import time
 
-    self.logWrite('================================================================================\n')
-    self.logWrite('TEST '+str(test.__func__.__name__)+' from '+str(test.__self__.__class__.__module__)+'('+str(test.__func__.__code__.co_filename)+':'+str(test.__func__.__code__.co_firstlineno)+')\n')
+    self.logPrintDivider()
     self.logPrint('TESTING: '+str(test.__func__.__name__)+' from '+str(test.__self__.__class__.__module__)+'('+str(test.__func__.__code__.co_filename)+':'+str(test.__func__.__code__.co_firstlineno)+')', debugSection = 'screen', indent = 0)
     if test.__doc__: self.logWrite('  '+test.__doc__+'\n')
     #t = time.time()
@@ -139,6 +138,12 @@ class Configure(script.Script):
     ret = test(*args,**kargs)
     #self.logPrint('  TIME: '+str(time.time() - t)+' sec', debugSection = 'screen', indent = 0)
     return ret
+
+  def printTest(self, test):
+    '''Prints the function and class information for a test'''
+    self.logPrintDivider()
+    self.logPrint('TESTING: '+str(test.__func__.__name__)+' from '+str(test.__self__.__class__.__module__)+'('+str(test.__func__.__code__.co_filename)+':'+str(test.__func__.__code__.co_firstlineno)+')', debugSection = 'screen', indent = 0)
+    if test.__doc__: self.logWrite('  '+test.__doc__+'\n')
 
   #################################
   # Define and Substitution Supported
@@ -172,8 +177,9 @@ class Configure(script.Script):
 
   def delDefine(self, name):
     '''Designate that "name" should be deleted (never put in)  configuration header'''
-    self.logPrint('Deleting "'+name+'"')
-    if name in self.defines: del self.defines[name]
+    if name in self.defines:
+      self.logPrint('Deleting "'+name+'"')
+      del self.defines[name]
     return
 
   def addTypedef(self, name, value):
@@ -210,9 +216,9 @@ class Configure(script.Script):
   def checkExecutable(self, dir, name):
     prog  = os.path.join(dir, name)
     # also strip any \ before spaces, braces, so that we can specify paths the way we want them in makefiles.
-    prog  = prog.replace('\ ',' ').replace('\(','(').replace('\)',')')
+    prog  = prog.replace(r'\ ',' ').replace(r'\(','(').replace(r'\)',')')
     found = 0
-    self.logWrite('Checking for program '+prog+'...')
+    self.logWrite('    Checking for program '+prog+'...')
     if os.path.isfile(prog) and os.access(prog, os.X_OK):
       found = 1
       self.logWrite('found\n')
@@ -223,7 +229,7 @@ class Configure(script.Script):
   def getExecutable(self, names, path = [], getFullPath = 0, useDefaultPath = 0, resultName = '', setMakeMacro = 1):
     '''Search for an executable in the list names
        - Each name in the list is tried for each entry in the path until a name is located, then it stops
-       - If found, the path is stored in the variable "name", or "resultName" if given
+       - If found, the path is attached to self as an attribute named "name", or "resultName" if given
        - By default, a make macro "resultName" will hold the path'''
     found = 0
     if isinstance(names,str) and names.startswith('/'):
@@ -273,7 +279,7 @@ class Configure(script.Script):
         if found: break
     if not found:
       dirs = self.argDB['with-executables-search-path']
-      if not isinstance(dirs, list): dirs = [dirs]
+      if not isinstance(dirs, list): dirs = dirs.split(os.path.pathsep)
       for d in dirs:
         for name in names:
           name, options, varName = getNames(name, resultName)
@@ -295,22 +301,13 @@ class Configure(script.Script):
       def logPrintFilesInPath(path):
         for d in path:
           try:
-            self.logWrite('      '+str(os.listdir(d))+'\n')
-          except OSError as e:
+            self.logWrite('      '+d+': '+' '.join(os.listdir(d))+'\n')
+          except Exception as e:
             self.logWrite('      Warning accessing '+d+' gives errors: '+str(e)+'\n')
         return
-      self.logWrite('  Unable to find programs '+str(names)+' providing listing of each search directory to help debug\n')
-      self.logWrite('    Path provided in Python program\n')
-      logPrintFilesInPath(path)
-      if useDefaultPath:
-        if os.environ['PATH'].split(os.path.pathsep):
-          self.logWrite('    Path provided by default path\n')
-          logPrintFilesInPath(os.environ['PATH'].split(os.path.pathsep))
-      dirs = self.argDB['with-executables-search-path']
-      if not isinstance(dirs, list): dirs = [dirs]
-      if dirs:
-        self.logWrite('    Path provided by --with-executables-search-path\n')
-        logPrintFilesInPath(dirs)
+      if path:
+        self.logWrite('  Unable to find programs: %s in listing of the specific search path: %s\n' % (names, path))
+        logPrintFilesInPath(path)
     return found
 
   def getExecutables(self, names, path = '', getFullPath = 0, useDefaultPath = 0, resultName = ''):
@@ -338,9 +335,10 @@ class Configure(script.Script):
     if lang is None:
       yield
     else:
-      self.pushLanguage(lang)
-      yield
-      self.popLanguage()
+      try:
+        yield self.pushLanguage(lang)
+      finally:
+        self.popLanguage()
 
   def getHeaders(self):
     self.compilerDefines = os.path.join(self.tmpDir, 'confdefs.h')
@@ -446,9 +444,14 @@ class Configure(script.Script):
       codeStr += '#include "conffix.h"\n'+includes
       if not body is None:
         if codeBegin is None:
-          codeBegin = '\nint main() {\n'
+          codeBegin = '\nint main(void) {\n'
         if codeEnd is None:
-          codeEnd   = ';\n  return 0;\n}\n'
+          if len(body) == 0:
+            codeEnd = '  return 0;\n}\n'
+          elif body.strip().endswith(';') or body.strip().endswith('}') or body.strip().endswith('\n#endif'):
+            codeEnd = '\n  return 0;\n}\n'
+          else:
+            codeEnd = ';\n  return 0;\n}\n'
         codeStr += codeBegin+body+codeEnd
     elif language == 'FC':
       if not includes is None and body is None:
@@ -465,6 +468,7 @@ class Configure(script.Script):
         codeStr += codeBegin+body+codeEnd
     else:
       raise RuntimeError('Cannot determine code body for language: '+language)
+    codeStr += '\n'
     return codeStr
 
   def preprocess(self, codeStr, timeout = 600.0):
@@ -519,8 +523,8 @@ class Configure(script.Script):
     '''Return the name of the argument which holds the preprocessor flags for the current language'''
     return self.getPreprocessorFlagsName(self.language[-1])
 
-  def filterCompileOutput(self, output):
-    return self.framework.filterCompileOutput(output)
+  def filterCompileOutput(self, output, flag = '', filterAlways = 0):
+    return self.framework.filterCompileOutput(output, flag = flag, filterAlways = filterAlways)
 
   def outputCompile(self, includes = '', body = '', cleanup = 1, codeBegin = None, codeEnd = None):
     '''Return the error output from this compile and the return code'''
@@ -535,9 +539,8 @@ class Configure(script.Script):
     command = self.getCompilerCmd()
     if self.compilerDefines: self.framework.outputHeader(self.compilerDefines)
     self.framework.outputCHeader(self.compilerFixes)
-    f = open(self.compilerSource, 'w')
-    f.write(self.getCode(includes, body, codeBegin, codeEnd))
-    f.close()
+    with open(self.compilerSource, 'w') as f:
+      f.write(self.getCode(includes, body, codeBegin, codeEnd))
     (out, err, ret) = Configure.executeShellCommand(command, checkCommand = report, log = self.log)
     if not os.path.isfile(self.compilerObj):
       err += '\nPETSc Error: No output file produced'
@@ -546,10 +549,10 @@ class Configure(script.Script):
         if os.path.isfile(filename): os.remove(filename)
     return (out, err, ret)
 
-  def checkCompile(self, includes = '', body = '', cleanup = 1, codeBegin = None, codeEnd = None):
+  def checkCompile(self, includes = '', body = '', cleanup = 1, codeBegin = None, codeEnd = None, flag = ''):
     '''Returns True if the compile was successful'''
     (output, error, returnCode) = self.outputCompile(includes, body, cleanup, codeBegin, codeEnd)
-    output = self.filterCompileOutput(output+'\n'+error)
+    output = self.filterCompileOutput(output+'\n'+error,flag=flag)
     return not (returnCode or len(output))
 
   def getCompilerFlagsName(language, compilerOnly = 0):
@@ -563,9 +566,9 @@ class Configure(script.Script):
       else:
         flagsArg = 'CXXFLAGS'
     elif language == 'HIP':
-      flagsArg = 'HIPCCFLAGS'
+      flagsArg = 'HIPFLAGS'
     elif language == 'SYCL':
-      flagsArg = 'SYCLCXXFLAGS'
+      flagsArg = 'SYCLFLAGS'
     elif language == 'FC':
       flagsArg = 'FFLAGS'
     else:
@@ -577,15 +580,15 @@ class Configure(script.Script):
     '''Return the name of the argument which holds the compiler flags for the current language'''
     return self.getCompilerFlagsName(self.language[-1], compilerOnly)
 
-  def filterLinkOutput(self, output):
-    return self.framework.filterLinkOutput(output)
+  def filterLinkOutput(self, output, filterAlways = 0):
+    return self.framework.filterLinkOutput(output, filterAlways = filterAlways)
 
-  def outputLink(self, includes, body, cleanup = 1, codeBegin = None, codeEnd = None, shared = 0, linkLanguage=None, examineOutput=lambda ret,out,err:None):
+  def outputLink(self, includes, body, cleanup = 1, codeBegin = None, codeEnd = None, shared = 0, linkLanguage=None, examineOutput=lambda ret,out,err:None,flag=''):
     import sys
 
     (out, err, ret) = self.outputCompile(includes, body, cleanup = 0, codeBegin = codeBegin, codeEnd = codeEnd)
     examineOutput(ret, out, err)
-    out = self.filterCompileOutput(out+'\n'+err)
+    out = self.filterCompileOutput(out+'\n'+err,flag=flag)
     if ret or len(out):
       self.logPrint('Compile failed inside link\n'+out)
       self.linkerObj = ''
@@ -627,8 +630,10 @@ class Configure(script.Script):
     return not (returnCode or len(output))
 
   def getLinkerFlagsName(language):
-    if language in ['C', 'CUDA', 'Cxx', 'FC', 'HIP', 'SYCL']:
+    if language in ['C', 'CUDA', 'Cxx', 'FC', 'HIP']:
       flagsArg = 'LDFLAGS'
+    elif language == 'SYCL':
+      flagsArg = 'SYCLC_LINKER_FLAGS' # refer to SYCL.py. I need standalone sycl linker flags in make macros, so I don't use LDFLAGS
     else:
       raise RuntimeError('Unknown language: '+language)
     return flagsArg
@@ -684,6 +689,7 @@ class Configure(script.Script):
     return (output+error, status)
 
   def checkRun(self, includes = '', body = '', cleanup = 1, defaultArg = '', executor = None, linkLanguage=None, timeout = 60, threads = 1):
+    self.logWrite('======== Checking running linked program\n')
     (output, returnCode) = self.outputRun(includes, body, cleanup, defaultArg, executor,linkLanguage=linkLanguage, timeout = timeout, threads = threads)
     return not returnCode
 

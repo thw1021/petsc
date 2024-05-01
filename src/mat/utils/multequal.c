@@ -1,545 +1,620 @@
+#include <petsc/private/matimpl.h> /*I   "petscmat.h"  I*/
 
-#include <petsc/private/matimpl.h>  /*I   "petscmat.h"  I*/
-
-static PetscErrorCode MatMultEqual_Private(Mat A,Mat B,PetscInt n,PetscBool *flg,PetscBool t,PetscBool add)
+static PetscErrorCode MatMultEqual_Private(Mat A, Mat B, PetscInt n, PetscBool *flg, PetscInt t, PetscInt add)
 {
-  PetscErrorCode ierr;
-  Vec            Ax,Bx,s1,s2,Ay = NULL, By = NULL;
-  PetscRandom    rctx;
-  PetscReal      r1,r2,tol=PETSC_SQRT_MACHINE_EPSILON;
-  PetscInt       am,an,bm,bn,k;
-  PetscScalar    none = -1.0;
-  const char*    sops[] = {"MatMult","MatMultAdd","MatMultTranspose","MatMultTranposeAdd"};
-  const char*    sop;
+  Vec         Ax = NULL, Bx = NULL, s1 = NULL, s2 = NULL, Ay = NULL, By = NULL;
+  PetscRandom rctx;
+  PetscReal   r1, r2, tol = PETSC_SQRT_MACHINE_EPSILON;
+  PetscInt    am, an, bm, bn, k;
+  PetscScalar none = -1.0;
+#if defined(PETSC_USE_INFO)
+  const char *sops[] = {"MatMult", "MatMultAdd", "MatMultAdd (update)", "MatMultTranspose", "MatMultTransposeAdd", "MatMultTransposeAdd (update)", "MatMultHermitianTranspose", "MatMultHermitianTransposeAdd", "MatMultHermitianTransposeAdd (update)"};
+  const char *sop;
+#endif
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(A,MAT_CLASSID,1);
-  PetscValidHeaderSpecific(B,MAT_CLASSID,2);
-  PetscCheckSameComm(A,1,B,2);
-  PetscValidLogicalCollectiveInt(A,n,3);
-  PetscValidPointer(flg,4);
-  PetscValidLogicalCollectiveBool(A,t,5);
-  PetscValidLogicalCollectiveBool(A,add,6);
-  ierr = MatGetLocalSize(A,&am,&an);CHKERRQ(ierr);
-  ierr = MatGetLocalSize(B,&bm,&bn);CHKERRQ(ierr);
-  if (am != bm || an != bn) SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Mat A,Mat B: local dim %D %D %D %D",am,bm,an,bn);
-  sop  = sops[(add ? 1 : 0) + 2 * (t ? 1 : 0)];
-  ierr = PetscRandomCreate(PetscObjectComm((PetscObject)A),&rctx);CHKERRQ(ierr);
-  ierr = PetscRandomSetFromOptions(rctx);CHKERRQ(ierr);
+  PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
+  PetscValidHeaderSpecific(B, MAT_CLASSID, 2);
+  PetscCheckSameComm(A, 1, B, 2);
+  PetscValidLogicalCollectiveInt(A, n, 3);
+  PetscAssertPointer(flg, 4);
+  PetscValidLogicalCollectiveInt(A, t, 5);
+  PetscValidLogicalCollectiveInt(A, add, 6);
+  PetscCall(MatGetLocalSize(A, &am, &an));
+  PetscCall(MatGetLocalSize(B, &bm, &bn));
+  PetscCheck(am == bm && an == bn, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Mat A,Mat B: local dim %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT, am, bm, an, bn);
+#if defined(PETSC_USE_INFO)
+  sop = sops[add + 3 * t]; /* add = 0 => no add, add = 1 => add third vector, add = 2 => add update, t = 0 => no transpose, t = 1 => transpose, t = 2 => Hermitian transpose */
+#endif
+  PetscCall(PetscRandomCreate(PetscObjectComm((PetscObject)A), &rctx));
+  PetscCall(PetscRandomSetFromOptions(rctx));
   if (t) {
-    ierr = MatCreateVecs(A,&s1,&Ax);CHKERRQ(ierr);
-    ierr = MatCreateVecs(B,&s2,&Bx);CHKERRQ(ierr);
+    PetscCall(MatCreateVecs(A, &s1, &Ax));
+    PetscCall(MatCreateVecs(B, &s2, &Bx));
   } else {
-    ierr = MatCreateVecs(A,&Ax,&s1);CHKERRQ(ierr);
-    ierr = MatCreateVecs(B,&Bx,&s2);CHKERRQ(ierr);
+    PetscCall(MatCreateVecs(A, &Ax, &s1));
+    PetscCall(MatCreateVecs(B, &Bx, &s2));
   }
   if (add) {
-    ierr = VecDuplicate(s1,&Ay);CHKERRQ(ierr);
-    ierr = VecDuplicate(s2,&By);CHKERRQ(ierr);
+    PetscCall(VecDuplicate(s1, &Ay));
+    PetscCall(VecDuplicate(s2, &By));
   }
 
   *flg = PETSC_TRUE;
-  for (k=0; k<n; k++) {
-    ierr = VecSetRandom(Ax,rctx);CHKERRQ(ierr);
-    ierr = VecCopy(Ax,Bx);CHKERRQ(ierr);
+  for (k = 0; k < n; k++) {
+    Vec Aadd = NULL, Badd = NULL;
+
+    PetscCall(VecSetRandom(Ax, rctx));
+    PetscCall(VecCopy(Ax, Bx));
     if (add) {
-      ierr = VecSetRandom(Ay,rctx);CHKERRQ(ierr);
-      ierr = VecCopy(Ay,By);CHKERRQ(ierr);
+      PetscCall(VecSetRandom(Ay, rctx));
+      PetscCall(VecCopy(Ay, By));
+      Aadd = Ay;
+      Badd = By;
+      if (add == 2) {
+        PetscCall(VecCopy(Ay, s1));
+        PetscCall(VecCopy(By, s2));
+        Aadd = s1;
+        Badd = s2;
+      }
     }
-    if (t) {
+    if (t == 1) {
       if (add) {
-        ierr = MatMultTransposeAdd(A,Ax,Ay,s1);CHKERRQ(ierr);
-        ierr = MatMultTransposeAdd(B,Bx,By,s2);CHKERRQ(ierr);
+        PetscCall(MatMultTransposeAdd(A, Ax, Aadd, s1));
+        PetscCall(MatMultTransposeAdd(B, Bx, Badd, s2));
       } else {
-        ierr = MatMultTranspose(A,Ax,s1);CHKERRQ(ierr);
-        ierr = MatMultTranspose(B,Bx,s2);CHKERRQ(ierr);
+        PetscCall(MatMultTranspose(A, Ax, s1));
+        PetscCall(MatMultTranspose(B, Bx, s2));
+      }
+    } else if (t == 2) {
+      if (add) {
+        PetscCall(MatMultHermitianTransposeAdd(A, Ax, Aadd, s1));
+        PetscCall(MatMultHermitianTransposeAdd(B, Bx, Badd, s2));
+      } else {
+        PetscCall(MatMultHermitianTranspose(A, Ax, s1));
+        PetscCall(MatMultHermitianTranspose(B, Bx, s2));
       }
     } else {
       if (add) {
-        ierr = MatMultAdd(A,Ax,Ay,s1);CHKERRQ(ierr);
-        ierr = MatMultAdd(B,Bx,By,s2);CHKERRQ(ierr);
+        PetscCall(MatMultAdd(A, Ax, Aadd, s1));
+        PetscCall(MatMultAdd(B, Bx, Badd, s2));
       } else {
-        ierr = MatMult(A,Ax,s1);CHKERRQ(ierr);
-        ierr = MatMult(B,Bx,s2);CHKERRQ(ierr);
+        PetscCall(MatMult(A, Ax, s1));
+        PetscCall(MatMult(B, Bx, s2));
       }
     }
-    ierr = VecNorm(s2,NORM_INFINITY,&r2);CHKERRQ(ierr);
+    PetscCall(VecNorm(s2, NORM_INFINITY, &r2));
     if (r2 < tol) {
-      ierr = VecNorm(s1,NORM_INFINITY,&r1);CHKERRQ(ierr);
+      PetscCall(VecNorm(s1, NORM_INFINITY, &r1));
     } else {
-      ierr = VecAXPY(s2,none,s1);CHKERRQ(ierr);
-      ierr = VecNorm(s2,NORM_INFINITY,&r1);CHKERRQ(ierr);
-      r1  /= r2;
+      PetscCall(VecAXPY(s2, none, s1));
+      PetscCall(VecNorm(s2, NORM_INFINITY, &r1));
+      r1 /= r2;
     }
     if (r1 > tol) {
       *flg = PETSC_FALSE;
-      ierr = PetscInfo3(A,"Error: %D-th %s() %g\n",k,sop,(double)r1);CHKERRQ(ierr);
+      PetscCall(PetscInfo(A, "Error: %" PetscInt_FMT "-th %s() %g\n", k, sop, (double)r1));
       break;
     }
   }
-  ierr = PetscRandomDestroy(&rctx);CHKERRQ(ierr);
-  ierr = VecDestroy(&Ax);CHKERRQ(ierr);
-  ierr = VecDestroy(&Bx);CHKERRQ(ierr);
-  ierr = VecDestroy(&Ay);CHKERRQ(ierr);
-  ierr = VecDestroy(&By);CHKERRQ(ierr);
-  ierr = VecDestroy(&s1);CHKERRQ(ierr);
-  ierr = VecDestroy(&s2);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscRandomDestroy(&rctx));
+  PetscCall(VecDestroy(&Ax));
+  PetscCall(VecDestroy(&Bx));
+  PetscCall(VecDestroy(&Ay));
+  PetscCall(VecDestroy(&By));
+  PetscCall(VecDestroy(&s1));
+  PetscCall(VecDestroy(&s2));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatMatMultEqual_Private(Mat A,Mat B,Mat C,PetscInt n,PetscBool *flg,PetscBool At,PetscBool Bt)
+static PetscErrorCode MatMatMultEqual_Private(Mat A, Mat B, Mat C, PetscInt n, PetscBool *flg, PetscBool At, PetscBool Bt)
 {
-  PetscErrorCode ierr;
-  Vec            Ax,Bx,Cx,s1,s2,s3;
-  PetscRandom    rctx;
-  PetscReal      r1,r2,tol=PETSC_SQRT_MACHINE_EPSILON;
-  PetscInt       am,an,bm,bn,cm,cn,k;
-  PetscScalar    none = -1.0;
-  const char*    sops[] = {"MatMatMult","MatTransposeMatMult","MatMatTransposeMult","MatTransposeMatTranposeMult"};
-  const char*    sop;
+  Vec         Ax, Bx, Cx, s1, s2, s3;
+  PetscRandom rctx;
+  PetscReal   r1, r2, tol = PETSC_SQRT_MACHINE_EPSILON;
+  PetscInt    am, an, bm, bn, cm, cn, k;
+  PetscScalar none = -1.0;
+#if defined(PETSC_USE_INFO)
+  const char *sops[] = {"MatMatMult", "MatTransposeMatMult", "MatMatTransposeMult", "MatTransposeMatTransposeMult"};
+  const char *sop;
+#endif
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(A,MAT_CLASSID,1);
-  PetscValidHeaderSpecific(B,MAT_CLASSID,2);
-  PetscCheckSameComm(A,1,B,2);
-  PetscValidHeaderSpecific(C,MAT_CLASSID,3);
-  PetscCheckSameComm(A,1,C,3);
-  PetscValidLogicalCollectiveInt(A,n,4);
-  PetscValidPointer(flg,5);
-  PetscValidLogicalCollectiveBool(A,At,6);
-  PetscValidLogicalCollectiveBool(B,Bt,7);
-  ierr = MatGetLocalSize(A,&am,&an);CHKERRQ(ierr);
-  ierr = MatGetLocalSize(B,&bm,&bn);CHKERRQ(ierr);
-  ierr = MatGetLocalSize(C,&cm,&cn);CHKERRQ(ierr);
-  if (At) { PetscInt tt = an; an = am; am = tt; };
-  if (Bt) { PetscInt tt = bn; bn = bm; bm = tt; };
-  if (an != bm || am != cm || bn != cn) SETERRQ6(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Mat A, B, C local dim %D %D %D %D",am,an,bm,bn,cm,cn);
-
-  sop  = sops[(At ? 1 : 0) + 2 * (Bt ? 1 : 0)];
-  ierr = PetscRandomCreate(PetscObjectComm((PetscObject)C),&rctx);CHKERRQ(ierr);
-  ierr = PetscRandomSetFromOptions(rctx);CHKERRQ(ierr);
+  PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
+  PetscValidHeaderSpecific(B, MAT_CLASSID, 2);
+  PetscCheckSameComm(A, 1, B, 2);
+  PetscValidHeaderSpecific(C, MAT_CLASSID, 3);
+  PetscCheckSameComm(A, 1, C, 3);
+  PetscValidLogicalCollectiveInt(A, n, 4);
+  PetscAssertPointer(flg, 5);
+  PetscValidLogicalCollectiveBool(A, At, 6);
+  PetscValidLogicalCollectiveBool(B, Bt, 7);
+  PetscCall(MatGetLocalSize(A, &am, &an));
+  PetscCall(MatGetLocalSize(B, &bm, &bn));
+  PetscCall(MatGetLocalSize(C, &cm, &cn));
+  if (At) {
+    PetscInt tt = an;
+    an          = am;
+    am          = tt;
+  }
   if (Bt) {
-    ierr = MatCreateVecs(B,&s1,&Bx);CHKERRQ(ierr);
+    PetscInt tt = bn;
+    bn          = bm;
+    bm          = tt;
+  }
+  PetscCheck(an == bm && am == cm && bn == cn, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Mat A, B, C local dim %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT, am, an, bm, bn, cm, cn);
+
+#if defined(PETSC_USE_INFO)
+  sop = sops[(At ? 1 : 0) + 2 * (Bt ? 1 : 0)];
+#endif
+  PetscCall(PetscRandomCreate(PetscObjectComm((PetscObject)C), &rctx));
+  PetscCall(PetscRandomSetFromOptions(rctx));
+  if (Bt) {
+    PetscCall(MatCreateVecs(B, &s1, &Bx));
   } else {
-    ierr = MatCreateVecs(B,&Bx,&s1);CHKERRQ(ierr);
+    PetscCall(MatCreateVecs(B, &Bx, &s1));
   }
   if (At) {
-    ierr = MatCreateVecs(A,&s2,&Ax);CHKERRQ(ierr);
+    PetscCall(MatCreateVecs(A, &s2, &Ax));
   } else {
-    ierr = MatCreateVecs(A,&Ax,&s2);CHKERRQ(ierr);
+    PetscCall(MatCreateVecs(A, &Ax, &s2));
   }
-  ierr = MatCreateVecs(C,&Cx,&s3);CHKERRQ(ierr);
+  PetscCall(MatCreateVecs(C, &Cx, &s3));
 
   *flg = PETSC_TRUE;
-  for (k=0; k<n; k++) {
-    ierr = VecSetRandom(Bx,rctx);CHKERRQ(ierr);
+  for (k = 0; k < n; k++) {
+    PetscCall(VecSetRandom(Bx, rctx));
     if (Bt) {
-      ierr = MatMultTranspose(B,Bx,s1);CHKERRQ(ierr);
+      PetscCall(MatMultTranspose(B, Bx, s1));
     } else {
-      ierr = MatMult(B,Bx,s1);CHKERRQ(ierr);
+      PetscCall(MatMult(B, Bx, s1));
     }
-    ierr = VecCopy(s1,Ax);CHKERRQ(ierr);
+    PetscCall(VecCopy(s1, Ax));
     if (At) {
-      ierr = MatMultTranspose(A,Ax,s2);CHKERRQ(ierr);
+      PetscCall(MatMultTranspose(A, Ax, s2));
     } else {
-      ierr = MatMult(A,Ax,s2);CHKERRQ(ierr);
+      PetscCall(MatMult(A, Ax, s2));
     }
-    ierr = VecCopy(Bx,Cx);CHKERRQ(ierr);
-    ierr = MatMult(C,Cx,s3);CHKERRQ(ierr);
+    PetscCall(VecCopy(Bx, Cx));
+    PetscCall(MatMult(C, Cx, s3));
 
-    ierr = VecNorm(s2,NORM_INFINITY,&r2);CHKERRQ(ierr);
+    PetscCall(VecNorm(s2, NORM_INFINITY, &r2));
     if (r2 < tol) {
-      ierr = VecNorm(s3,NORM_INFINITY,&r1);CHKERRQ(ierr);
+      PetscCall(VecNorm(s3, NORM_INFINITY, &r1));
     } else {
-      ierr = VecAXPY(s2,none,s3);CHKERRQ(ierr);
-      ierr = VecNorm(s2,NORM_INFINITY,&r1);CHKERRQ(ierr);
-      r1  /= r2;
+      PetscCall(VecAXPY(s2, none, s3));
+      PetscCall(VecNorm(s2, NORM_INFINITY, &r1));
+      r1 /= r2;
     }
     if (r1 > tol) {
       *flg = PETSC_FALSE;
-      ierr = PetscInfo3(A,"Error: %D-th %s %g\n",k,sop,(double)r1);CHKERRQ(ierr);
+      PetscCall(PetscInfo(A, "Error: %" PetscInt_FMT "-th %s %g\n", k, sop, (double)r1));
       break;
     }
   }
-  ierr = PetscRandomDestroy(&rctx);CHKERRQ(ierr);
-  ierr = VecDestroy(&Ax);CHKERRQ(ierr);
-  ierr = VecDestroy(&Bx);CHKERRQ(ierr);
-  ierr = VecDestroy(&Cx);CHKERRQ(ierr);
-  ierr = VecDestroy(&s1);CHKERRQ(ierr);
-  ierr = VecDestroy(&s2);CHKERRQ(ierr);
-  ierr = VecDestroy(&s3);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscRandomDestroy(&rctx));
+  PetscCall(VecDestroy(&Ax));
+  PetscCall(VecDestroy(&Bx));
+  PetscCall(VecDestroy(&Cx));
+  PetscCall(VecDestroy(&s1));
+  PetscCall(VecDestroy(&s2));
+  PetscCall(VecDestroy(&s3));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   MatMultEqual - Compares matrix-vector products of two matrices.
+  MatMultEqual - Compares matrix-vector products of two matrices.
 
-   Collective on Mat
+  Collective
 
-   Input Parameters:
-+  A - the first matrix
-.  B - the second matrix
--  n - number of random vectors to be tested
+  Input Parameters:
++ A - the first matrix
+. B - the second matrix
+- n - number of random vectors to be tested
 
-   Output Parameter:
-.  flg - PETSC_TRUE if the products are equal; PETSC_FALSE otherwise.
+  Output Parameter:
+. flg - `PETSC_TRUE` if the products are equal; `PETSC_FALSE` otherwise.
 
-   Level: intermediate
+  Level: intermediate
 
+.seealso: `Mat`, `MatMultAddEqual()`, `MatMultTransposeEqual()`, `MatMultTransposeAddEqual()`, `MatIsLinear()`
 @*/
-PetscErrorCode MatMultEqual(Mat A,Mat B,PetscInt n,PetscBool *flg)
+PetscErrorCode MatMultEqual(Mat A, Mat B, PetscInt n, PetscBool *flg)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  ierr = MatMultEqual_Private(A,B,n,flg,PETSC_FALSE,PETSC_FALSE);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(MatMultEqual_Private(A, B, n, flg, 0, 0));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   MatMultAddEqual - Compares matrix-vector products of two matrices.
+  MatMultAddEqual - Compares matrix-vector product plus vector add of two matrices.
 
-   Collective on Mat
+  Collective
 
-   Input Parameters:
-+  A - the first matrix
-.  B - the second matrix
--  n - number of random vectors to be tested
+  Input Parameters:
++ A - the first matrix
+. B - the second matrix
+- n - number of random vectors to be tested
 
-   Output Parameter:
-.  flg - PETSC_TRUE if the products are equal; PETSC_FALSE otherwise.
+  Output Parameter:
+. flg - `PETSC_TRUE` if the products are equal; `PETSC_FALSE` otherwise.
 
-   Level: intermediate
+  Level: intermediate
 
+.seealso: `Mat`, `MatMultEqual()`, `MatMultTransposeEqual()`, `MatMultTransposeAddEqual()`
 @*/
-PetscErrorCode  MatMultAddEqual(Mat A,Mat B,PetscInt n,PetscBool  *flg)
+PetscErrorCode MatMultAddEqual(Mat A, Mat B, PetscInt n, PetscBool *flg)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  ierr = MatMultEqual_Private(A,B,n,flg,PETSC_FALSE,PETSC_TRUE);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(MatMultEqual_Private(A, B, n, flg, 0, 1));
+  PetscCall(MatMultEqual_Private(A, B, n, flg, 0, 2));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   MatMultTransposeEqual - Compares matrix-vector products of two matrices.
+  MatMultTransposeEqual - Compares matrix-vector products of two matrices.
 
-   Collective on Mat
+  Collective
 
-   Input Parameters:
-+  A - the first matrix
-.  B - the second matrix
--  n - number of random vectors to be tested
+  Input Parameters:
++ A - the first matrix
+. B - the second matrix
+- n - number of random vectors to be tested
 
-   Output Parameter:
-.  flg - PETSC_TRUE if the products are equal; PETSC_FALSE otherwise.
+  Output Parameter:
+. flg - `PETSC_TRUE` if the products are equal; `PETSC_FALSE` otherwise.
 
-   Level: intermediate
+  Level: intermediate
 
+.seealso: `Mat`, `MatMultEqual()`, `MatMultAddEqual()`, `MatMultTransposeAddEqual()`
 @*/
-PetscErrorCode  MatMultTransposeEqual(Mat A,Mat B,PetscInt n,PetscBool  *flg)
+PetscErrorCode MatMultTransposeEqual(Mat A, Mat B, PetscInt n, PetscBool *flg)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  ierr = MatMultEqual_Private(A,B,n,flg,PETSC_TRUE,PETSC_FALSE);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(MatMultEqual_Private(A, B, n, flg, 1, 0));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   MatMultTransposeAddEqual - Compares matrix-vector products of two matrices.
+  MatMultTransposeAddEqual - Compares matrix-vector products of two matrices.
 
-   Collective on Mat
+  Collective
 
-   Input Parameters:
-+  A - the first matrix
-.  B - the second matrix
--  n - number of random vectors to be tested
+  Input Parameters:
++ A - the first matrix
+. B - the second matrix
+- n - number of random vectors to be tested
 
-   Output Parameter:
-.  flg - PETSC_TRUE if the products are equal; PETSC_FALSE otherwise.
+  Output Parameter:
+. flg - `PETSC_TRUE` if the products are equal; `PETSC_FALSE` otherwise.
 
-   Level: intermediate
+  Level: intermediate
 
+.seealso: `Mat`, `MatMultEqual()`, `MatMultAddEqual()`, `MatMultTransposeEqual()`
 @*/
-PetscErrorCode  MatMultTransposeAddEqual(Mat A,Mat B,PetscInt n,PetscBool  *flg)
+PetscErrorCode MatMultTransposeAddEqual(Mat A, Mat B, PetscInt n, PetscBool *flg)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  ierr = MatMultEqual_Private(A,B,n,flg,PETSC_TRUE,PETSC_TRUE);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(MatMultEqual_Private(A, B, n, flg, 1, 1));
+  PetscCall(MatMultEqual_Private(A, B, n, flg, 1, 2));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   MatMatMultEqual - Test A*B*x = C*x for n random vector x
+  MatMultHermitianTransposeEqual - Compares matrix-vector products of two matrices.
 
-   Collective on Mat
+  Collective
 
-   Input Parameters:
-+  A - the first matrix
-.  B - the second matrix
-.  C - the third matrix
--  n - number of random vectors to be tested
+  Input Parameters:
++ A - the first matrix
+. B - the second matrix
+- n - number of random vectors to be tested
 
-   Output Parameter:
-.  flg - PETSC_TRUE if the products are equal; PETSC_FALSE otherwise.
+  Output Parameter:
+. flg - `PETSC_TRUE` if the products are equal; `PETSC_FALSE` otherwise.
 
-   Level: intermediate
+  Level: intermediate
 
+.seealso: `Mat`, `MatMatMultEqual()`, `MatMultEqual()`, `MatMultAddEqual()`, `MatMultTransposeEqual()`
 @*/
-PetscErrorCode MatMatMultEqual(Mat A,Mat B,Mat C,PetscInt n,PetscBool *flg)
+PetscErrorCode MatMultHermitianTransposeEqual(Mat A, Mat B, PetscInt n, PetscBool *flg)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  ierr = MatMatMultEqual_Private(A,B,C,n,flg,PETSC_FALSE,PETSC_FALSE);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(MatMultEqual_Private(A, B, n, flg, 2, 0));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   MatTransposeMatMultEqual - Test A^T*B*x = C*x for n random vector x
+  MatMultHermitianTransposeAddEqual - Compares matrix-vector products of two matrices.
 
-   Collective on Mat
+  Collective
 
-   Input Parameters:
-+  A - the first matrix
-.  B - the second matrix
-.  C - the third matrix
--  n - number of random vectors to be tested
+  Input Parameters:
++ A - the first matrix
+. B - the second matrix
+- n - number of random vectors to be tested
 
-   Output Parameter:
-.  flg - PETSC_TRUE if the products are equal; PETSC_FALSE otherwise.
+  Output Parameter:
+. flg - `PETSC_TRUE` if the products are equal; `PETSC_FALSE` otherwise.
 
-   Level: intermediate
+  Level: intermediate
 
+.seealso: `Mat`, `MatMatMultEqual()`, `MatMultEqual()`, `MatMultAddEqual()`, `MatMultTransposeEqual()`
 @*/
-PetscErrorCode MatTransposeMatMultEqual(Mat A,Mat B,Mat C,PetscInt n,PetscBool *flg)
+PetscErrorCode MatMultHermitianTransposeAddEqual(Mat A, Mat B, PetscInt n, PetscBool *flg)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  ierr = MatMatMultEqual_Private(A,B,C,n,flg,PETSC_TRUE,PETSC_FALSE);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(MatMultEqual_Private(A, B, n, flg, 2, 1));
+  PetscCall(MatMultEqual_Private(A, B, n, flg, 2, 2));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   MatMatTransposeMultEqual - Test A*B^T*x = C*x for n random vector x
+  MatMatMultEqual - Test A*B*x = C*x for n random vector x
 
-   Collective on Mat
+  Collective
 
-   Input Parameters:
-+  A - the first matrix
-.  B - the second matrix
-.  C - the third matrix
--  n - number of random vectors to be tested
+  Input Parameters:
++ A - the first matrix
+. B - the second matrix
+. C - the third matrix
+- n - number of random vectors to be tested
 
-   Output Parameter:
-.  flg - PETSC_TRUE if the products are equal; PETSC_FALSE otherwise.
+  Output Parameter:
+. flg - `PETSC_TRUE` if the products are equal; `PETSC_FALSE` otherwise.
 
-   Level: intermediate
+  Level: intermediate
 
+.seealso: `Mat`, `MatMultEqual()`, `MatMultAddEqual()`, `MatMultTransposeEqual()`
 @*/
-PetscErrorCode MatMatTransposeMultEqual(Mat A,Mat B,Mat C,PetscInt n,PetscBool *flg)
+PetscErrorCode MatMatMultEqual(Mat A, Mat B, Mat C, PetscInt n, PetscBool *flg)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  ierr = MatMatMultEqual_Private(A,B,C,n,flg,PETSC_FALSE,PETSC_TRUE);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(MatMatMultEqual_Private(A, B, C, n, flg, PETSC_FALSE, PETSC_FALSE));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatProjMultEqual_Private(Mat A,Mat B,Mat C,PetscInt n,PetscBool rart,PetscBool *flg)
+/*@
+  MatTransposeMatMultEqual - Test A^T*B*x = C*x for n random vector x
+
+  Collective
+
+  Input Parameters:
++ A - the first matrix
+. B - the second matrix
+. C - the third matrix
+- n - number of random vectors to be tested
+
+  Output Parameter:
+. flg - `PETSC_TRUE` if the products are equal; `PETSC_FALSE` otherwise.
+
+  Level: intermediate
+
+.seealso: `Mat`, `MatMatMultEqual()`, `MatMultEqual()`, `MatMultAddEqual()`, `MatMultTransposeEqual()`
+@*/
+PetscErrorCode MatTransposeMatMultEqual(Mat A, Mat B, Mat C, PetscInt n, PetscBool *flg)
 {
-  PetscErrorCode ierr;
-  Vec            x,v1,v2,v3,v4,Cx,Bx;
-  PetscReal      norm_abs,norm_rel,tol=PETSC_SQRT_MACHINE_EPSILON;
-  PetscInt       i,am,an,bm,bn,cm,cn;
-  PetscRandom    rdm;
-  PetscScalar    none = -1.0;
+  PetscFunctionBegin;
+  PetscCall(MatMatMultEqual_Private(A, B, C, n, flg, PETSC_TRUE, PETSC_FALSE));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  MatMatTransposeMultEqual - Test A*B^T*x = C*x for n random vector x
+
+  Collective
+
+  Input Parameters:
++ A - the first matrix
+. B - the second matrix
+. C - the third matrix
+- n - number of random vectors to be tested
+
+  Output Parameter:
+. flg - `PETSC_TRUE` if the products are equal; `PETSC_FALSE` otherwise.
+
+  Level: intermediate
+
+.seealso: `Mat`, `MatMatMultEqual()`, `MatMultEqual()`, `MatMultAddEqual()`, `MatMultTransposeEqual()`
+@*/
+PetscErrorCode MatMatTransposeMultEqual(Mat A, Mat B, Mat C, PetscInt n, PetscBool *flg)
+{
+  PetscFunctionBegin;
+  PetscCall(MatMatMultEqual_Private(A, B, C, n, flg, PETSC_FALSE, PETSC_TRUE));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatProjMultEqual_Private(Mat A, Mat B, Mat C, PetscInt n, PetscBool rart, PetscBool *flg)
+{
+  Vec         x, v1, v2, v3, v4, Cx, Bx;
+  PetscReal   norm_abs, norm_rel, tol = PETSC_SQRT_MACHINE_EPSILON;
+  PetscInt    i, am, an, bm, bn, cm, cn;
+  PetscRandom rdm;
+  PetscScalar none = -1.0;
 
   PetscFunctionBegin;
-  ierr = MatGetLocalSize(A,&am,&an);CHKERRQ(ierr);
-  ierr = MatGetLocalSize(B,&bm,&bn);CHKERRQ(ierr);
-  if (rart) { PetscInt t = bm; bm = bn; bn = t; }
-  ierr = MatGetLocalSize(C,&cm,&cn);CHKERRQ(ierr);
-  if (an != bm || bn != cm || bn != cn) SETERRQ6(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Mat A, B, C local dim %D %D %D %D %D %D",am,an,bm,bn,cm,cn);
+  PetscCall(MatGetLocalSize(A, &am, &an));
+  PetscCall(MatGetLocalSize(B, &bm, &bn));
+  if (rart) {
+    PetscInt t = bm;
+    bm         = bn;
+    bn         = t;
+  }
+  PetscCall(MatGetLocalSize(C, &cm, &cn));
+  PetscCheck(an == bm && bn == cm && bn == cn, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Mat A, B, C local dim %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT, am, an, bm, bn, cm, cn);
 
   /* Create left vector of A: v2 */
-  ierr = MatCreateVecs(A,&Bx,&v2);CHKERRQ(ierr);
+  PetscCall(MatCreateVecs(A, &Bx, &v2));
 
   /* Create right vectors of B: x, v3, v4 */
   if (rart) {
-    ierr = MatCreateVecs(B,&v1,&x);CHKERRQ(ierr);
+    PetscCall(MatCreateVecs(B, &v1, &x));
   } else {
-    ierr = MatCreateVecs(B,&x,&v1);CHKERRQ(ierr);
+    PetscCall(MatCreateVecs(B, &x, &v1));
   }
-  ierr = VecDuplicate(x,&v3);CHKERRQ(ierr);
+  PetscCall(VecDuplicate(x, &v3));
 
-  ierr = MatCreateVecs(C,&Cx,&v4);CHKERRQ(ierr);
-  ierr = PetscRandomCreate(PETSC_COMM_WORLD,&rdm);CHKERRQ(ierr);
-  ierr = PetscRandomSetFromOptions(rdm);CHKERRQ(ierr);
+  PetscCall(MatCreateVecs(C, &Cx, &v4));
+  PetscCall(PetscRandomCreate(PETSC_COMM_WORLD, &rdm));
+  PetscCall(PetscRandomSetFromOptions(rdm));
 
   *flg = PETSC_TRUE;
-  for (i=0; i<n; i++) {
-    ierr = VecSetRandom(x,rdm);CHKERRQ(ierr);
-    ierr = VecCopy(x,Cx);CHKERRQ(ierr);
-    ierr = MatMult(C,Cx,v4);CHKERRQ(ierr);           /* v4 = C*x   */
+  for (i = 0; i < n; i++) {
+    PetscCall(VecSetRandom(x, rdm));
+    PetscCall(VecCopy(x, Cx));
+    PetscCall(MatMult(C, Cx, v4)); /* v4 = C*x   */
     if (rart) {
-      ierr = MatMultTranspose(B,x,v1);CHKERRQ(ierr);
+      PetscCall(MatMultTranspose(B, x, v1));
     } else {
-      ierr = MatMult(B,x,v1);CHKERRQ(ierr);
+      PetscCall(MatMult(B, x, v1));
     }
-    ierr = VecCopy(v1,Bx);CHKERRQ(ierr);
-    ierr = MatMult(A,Bx,v2);CHKERRQ(ierr);          /* v2 = A*B*x */
-    ierr = VecCopy(v2,v1);CHKERRQ(ierr);
+    PetscCall(VecCopy(v1, Bx));
+    PetscCall(MatMult(A, Bx, v2)); /* v2 = A*B*x */
+    PetscCall(VecCopy(v2, v1));
     if (rart) {
-      ierr = MatMult(B,v1,v3);CHKERRQ(ierr); /* v3 = R*A*R^t*x */
+      PetscCall(MatMult(B, v1, v3)); /* v3 = R*A*R^t*x */
     } else {
-      ierr = MatMultTranspose(B,v1,v3);CHKERRQ(ierr); /* v3 = Bt*A*B*x */
+      PetscCall(MatMultTranspose(B, v1, v3)); /* v3 = Bt*A*B*x */
     }
-    ierr = VecNorm(v4,NORM_2,&norm_abs);CHKERRQ(ierr);
-    ierr = VecAXPY(v4,none,v3);CHKERRQ(ierr);
-    ierr = VecNorm(v4,NORM_2,&norm_rel);CHKERRQ(ierr);
+    PetscCall(VecNorm(v4, NORM_2, &norm_abs));
+    PetscCall(VecAXPY(v4, none, v3));
+    PetscCall(VecNorm(v4, NORM_2, &norm_rel));
 
     if (norm_abs > tol) norm_rel /= norm_abs;
     if (norm_rel > tol) {
       *flg = PETSC_FALSE;
-      ierr = PetscInfo3(A,"Error: %D-th Mat%sMult() %g\n",i,rart ? "RARt" : "PtAP",(double)norm_rel);CHKERRQ(ierr);
+      PetscCall(PetscInfo(A, "Error: %" PetscInt_FMT "-th Mat%sMult() %g\n", i, rart ? "RARt" : "PtAP", (double)norm_rel));
       break;
     }
   }
 
-  ierr = PetscRandomDestroy(&rdm);CHKERRQ(ierr);
-  ierr = VecDestroy(&x);CHKERRQ(ierr);
-  ierr = VecDestroy(&Bx);CHKERRQ(ierr);
-  ierr = VecDestroy(&Cx);CHKERRQ(ierr);
-  ierr = VecDestroy(&v1);CHKERRQ(ierr);
-  ierr = VecDestroy(&v2);CHKERRQ(ierr);
-  ierr = VecDestroy(&v3);CHKERRQ(ierr);
-  ierr = VecDestroy(&v4);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscRandomDestroy(&rdm));
+  PetscCall(VecDestroy(&x));
+  PetscCall(VecDestroy(&Bx));
+  PetscCall(VecDestroy(&Cx));
+  PetscCall(VecDestroy(&v1));
+  PetscCall(VecDestroy(&v2));
+  PetscCall(VecDestroy(&v3));
+  PetscCall(VecDestroy(&v4));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   MatPtAPMultEqual - Compares matrix-vector products of C = Bt*A*B
+  MatPtAPMultEqual - Compares matrix-vector products of C = Bt*A*B
 
-   Collective on Mat
+  Collective
 
-   Input Parameters:
-+  A - the first matrix
-.  B - the second matrix
-.  C - the third matrix
--  n - number of random vectors to be tested
+  Input Parameters:
++ A - the first matrix
+. B - the second matrix
+. C - the third matrix
+- n - number of random vectors to be tested
 
-   Output Parameter:
-.  flg - PETSC_TRUE if the products are equal; PETSC_FALSE otherwise.
+  Output Parameter:
+. flg - `PETSC_TRUE` if the products are equal; `PETSC_FALSE` otherwise.
 
-   Level: intermediate
+  Level: intermediate
 
+.seealso: `Mat`, `MatMatMultEqual()`, `MatMultEqual()`, `MatMultAddEqual()`, `MatMultTransposeEqual()`
 @*/
-PetscErrorCode MatPtAPMultEqual(Mat A,Mat B,Mat C,PetscInt n,PetscBool *flg)
+PetscErrorCode MatPtAPMultEqual(Mat A, Mat B, Mat C, PetscInt n, PetscBool *flg)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  ierr = MatProjMultEqual_Private(A,B,C,n,PETSC_FALSE,flg);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(MatProjMultEqual_Private(A, B, C, n, PETSC_FALSE, flg));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   MatRARtMultEqual - Compares matrix-vector products of C = B*A*B^t
+  MatRARtMultEqual - Compares matrix-vector products of C = B*A*B^t
 
-   Collective on Mat
+  Collective
 
-   Input Parameters:
-+  A - the first matrix
-.  B - the second matrix
-.  C - the third matrix
--  n - number of random vectors to be tested
+  Input Parameters:
++ A - the first matrix
+. B - the second matrix
+. C - the third matrix
+- n - number of random vectors to be tested
 
-   Output Parameter:
-.  flg - PETSC_TRUE if the products are equal; PETSC_FALSE otherwise.
+  Output Parameter:
+. flg - `PETSC_TRUE` if the products are equal; `PETSC_FALSE` otherwise.
 
-   Level: intermediate
+  Level: intermediate
 
+.seealso: `Mat`, `MatMatMultEqual()`, `MatMultEqual()`, `MatMultAddEqual()`, `MatMultTransposeEqual()`
 @*/
-PetscErrorCode MatRARtMultEqual(Mat A,Mat B,Mat C,PetscInt n,PetscBool *flg)
+PetscErrorCode MatRARtMultEqual(Mat A, Mat B, Mat C, PetscInt n, PetscBool *flg)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  ierr = MatProjMultEqual_Private(A,B,C,n,PETSC_TRUE,flg);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(MatProjMultEqual_Private(A, B, C, n, PETSC_TRUE, flg));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   MatIsLinear - Check if a shell matrix A is a linear operator.
+  MatIsLinear - Check if a shell matrix `A` is a linear operator.
 
-   Collective on Mat
+  Collective
 
-   Input Parameters:
-+  A - the shell matrix
--  n - number of random vectors to be tested
+  Input Parameters:
++ A - the shell matrix
+- n - number of random vectors to be tested
 
-   Output Parameter:
-.  flg - PETSC_TRUE if the shell matrix is linear; PETSC_FALSE otherwise.
+  Output Parameter:
+. flg - `PETSC_TRUE` if the shell matrix is linear; `PETSC_FALSE` otherwise.
 
-   Level: intermediate
+  Level: intermediate
+
+.seealso: `Mat`, `MatMatMultEqual()`, `MatMultEqual()`, `MatMultAddEqual()`, `MatMultTransposeEqual()`
 @*/
-PetscErrorCode MatIsLinear(Mat A,PetscInt n,PetscBool  *flg)
+PetscErrorCode MatIsLinear(Mat A, PetscInt n, PetscBool *flg)
 {
-  PetscErrorCode ierr;
-  Vec            x,y,s1,s2;
-  PetscRandom    rctx;
-  PetscScalar    a;
-  PetscInt       k;
-  PetscReal      norm,normA;
-  MPI_Comm       comm;
-  PetscMPIInt    rank;
+  Vec         x, y, s1, s2;
+  PetscRandom rctx;
+  PetscScalar a;
+  PetscInt    k;
+  PetscReal   norm, normA;
+  MPI_Comm    comm;
+  PetscMPIInt rank;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(A,MAT_CLASSID,1);
-  ierr = PetscObjectGetComm((PetscObject)A,&comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
+  PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
+  PetscCall(PetscObjectGetComm((PetscObject)A, &comm));
+  PetscCallMPI(MPI_Comm_rank(comm, &rank));
 
-  ierr = PetscRandomCreate(comm,&rctx);CHKERRQ(ierr);
-  ierr = PetscRandomSetFromOptions(rctx);CHKERRQ(ierr);
-  ierr = MatCreateVecs(A,&x,&s1);CHKERRQ(ierr);
-  ierr = VecDuplicate(x,&y);CHKERRQ(ierr);
-  ierr = VecDuplicate(s1,&s2);CHKERRQ(ierr);
+  PetscCall(PetscRandomCreate(comm, &rctx));
+  PetscCall(PetscRandomSetFromOptions(rctx));
+  PetscCall(MatCreateVecs(A, &x, &s1));
+  PetscCall(VecDuplicate(x, &y));
+  PetscCall(VecDuplicate(s1, &s2));
 
   *flg = PETSC_TRUE;
-  for (k=0; k<n; k++) {
-    ierr = VecSetRandom(x,rctx);CHKERRQ(ierr);
-    ierr = VecSetRandom(y,rctx);CHKERRQ(ierr);
-    if (!rank) {
-      ierr = PetscRandomGetValue(rctx,&a);CHKERRQ(ierr);
-    }
-    ierr = MPI_Bcast(&a, 1, MPIU_SCALAR, 0, comm);CHKERRQ(ierr);
+  for (k = 0; k < n; k++) {
+    PetscCall(VecSetRandom(x, rctx));
+    PetscCall(VecSetRandom(y, rctx));
+    if (rank == 0) PetscCall(PetscRandomGetValue(rctx, &a));
+    PetscCallMPI(MPI_Bcast(&a, 1, MPIU_SCALAR, 0, comm));
 
     /* s2 = a*A*x + A*y */
-    ierr = MatMult(A,y,s2);CHKERRQ(ierr); /* s2 = A*y */
-    ierr = MatMult(A,x,s1);CHKERRQ(ierr); /* s1 = A*x */
-    ierr = VecAXPY(s2,a,s1);CHKERRQ(ierr); /* s2 = a s1 + s2 */
+    PetscCall(MatMult(A, y, s2));  /* s2 = A*y */
+    PetscCall(MatMult(A, x, s1));  /* s1 = A*x */
+    PetscCall(VecAXPY(s2, a, s1)); /* s2 = a s1 + s2 */
 
     /* s1 = A * (a x + y) */
-    ierr = VecAXPY(y,a,x);CHKERRQ(ierr); /* y = a x + y */
-    ierr = MatMult(A,y,s1);CHKERRQ(ierr);
-    ierr = VecNorm(s1,NORM_INFINITY,&normA);CHKERRQ(ierr);
+    PetscCall(VecAXPY(y, a, x)); /* y = a x + y */
+    PetscCall(MatMult(A, y, s1));
+    PetscCall(VecNorm(s1, NORM_INFINITY, &normA));
 
-    ierr = VecAXPY(s2,-1.0,s1);CHKERRQ(ierr); /* s2 = - s1 + s2 */
-    ierr = VecNorm(s2,NORM_INFINITY,&norm);CHKERRQ(ierr);
-    if (norm/normA > 100.*PETSC_MACHINE_EPSILON) {
+    PetscCall(VecAXPY(s2, -1.0, s1)); /* s2 = - s1 + s2 */
+    PetscCall(VecNorm(s2, NORM_INFINITY, &norm));
+    if (norm / normA > 100. * PETSC_MACHINE_EPSILON) {
       *flg = PETSC_FALSE;
-      ierr = PetscInfo3(A,"Error: %D-th |A*(ax+y) - (a*A*x+A*y)|/|A(ax+y)| %g > tol %g\n",k,(double)norm/normA,100.*PETSC_MACHINE_EPSILON);CHKERRQ(ierr);
+      PetscCall(PetscInfo(A, "Error: %" PetscInt_FMT "-th |A*(ax+y) - (a*A*x+A*y)|/|A(ax+y)| %g > tol %g\n", k, (double)(norm / normA), (double)(100. * PETSC_MACHINE_EPSILON)));
       break;
     }
   }
-  ierr = PetscRandomDestroy(&rctx);CHKERRQ(ierr);
-  ierr = VecDestroy(&x);CHKERRQ(ierr);
-  ierr = VecDestroy(&y);CHKERRQ(ierr);
-  ierr = VecDestroy(&s1);CHKERRQ(ierr);
-  ierr = VecDestroy(&s2);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscRandomDestroy(&rctx));
+  PetscCall(VecDestroy(&x));
+  PetscCall(VecDestroy(&y));
+  PetscCall(VecDestroy(&s1));
+  PetscCall(VecDestroy(&s2));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

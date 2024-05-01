@@ -3,10 +3,11 @@ import config.package
 class Configure(config.package.Package):
   def __init__(self, framework):
     config.package.Package.__init__(self, framework)
-    self.download     = ['http://www.tetgen.org/1.5/src/tetgen1.5.1.tar.gz',
-                         'http://ftp.mcs.anl.gov/pub/petsc/externalpackages/tetgen1.5.1.tar.gz']
+    self.download     = ['http://www.tetgen.org/1.5/src/tetgen1.6.0.tar.gz',
+                         'https://web.cels.anl.gov/projects/petsc/download/externalpackages/tetgen1.6.0.tar.gz']
     self.liblist      = [['libtet.a']]
-    self.cxx          = 1
+    self.includes     = ['tetgen.h']
+    self.buildLanguage= 'Cxx'
     return
 
   def setupDependencies(self, framework):
@@ -22,14 +23,14 @@ class Configure(config.package.Package):
     import config.base
     import fileinput
 
-    libDir         = os.path.join(self.installDir, 'lib')
+    libDir         = self.libDir
     includeDir     = os.path.join(self.installDir, 'include')
     makeinc        = os.path.join(self.packageDir, 'make.inc')
     configheader   = os.path.join(self.packageDir, 'configureheader.h')
 
     # This make.inc stuff is completely unnecessary for compiling TetGen. It is
     # just here for comparing different PETSC_ARCH's
-    self.setCompilers.pushLanguage('C++')
+    self.pushLanguage('C++')
     g = open(makeinc,'w')
     g.write('SHELL            = '+self.programs.SHELL+'\n')
     g.write('CP               = '+self.programs.cp+'\n')
@@ -37,7 +38,7 @@ class Configure(config.package.Package):
     g.write('MKDIR            = '+self.programs.mkdir+'\n')
     g.write('OMAKE            = '+self.make.make+' '+self.make.noprintdirflag+'\n')
 
-    g.write('CLINKER          = '+self.setCompilers.getLinker()+'\n')
+    g.write('CLINKER          = '+self.getLinker()+'\n')
     g.write('AR               = '+self.setCompilers.AR+'\n')
     g.write('ARFLAGS          = '+self.setCompilers.AR_FLAGS+'\n')
     g.write('AR_LIB_SUFFIX    = '+self.setCompilers.AR_LIB_SUFFIX+'\n')
@@ -51,13 +52,13 @@ class Configure(config.package.Package):
     g.write('TETGENLIB        = $(LIBDIR)/libtet.$(AR_LIB_SUFFIX)\n')
     g.write('SHLIB            = libtet\n')
 
-    cflags = self.removeWarningFlags(self.setCompilers.getCompilerFlags())
+    cflags = self.updatePackageCFlags(self.getCompilerFlags())
     cflags += ' '+self.headers.toString('.')
     cflags += ' -fPIC'
     cflags += ' -DTETLIBRARY'
     predcflags = '-O0 -fPIC'    # Need to compile without optimization
 
-    g.write('CC             = '+self.setCompilers.getCompiler()+'\n')
+    g.write('CC             = '+self.getCompiler()+'\n')
     g.write('CFLAGS         = '+cflags+'\n')
     g.write('PREDCXXFLAGS   = '+predcflags+'\n')
     g.close()
@@ -67,16 +68,15 @@ class Configure(config.package.Package):
       self.framework.outputHeader(configheader)
       try:
         self.logPrintBox('Compiling & installing TetGen; this may take several minutes')
-        self.installDirProvider.printSudoPasswordMessage()
-        output,err,ret = config.package.Package.executeShellCommand(self.installSudo+'mkdir -p '+os.path.join(self.installDir,'lib'), timeout=2500, log=self.log)
-        output,err,ret = config.package.Package.executeShellCommand(self.installSudo+'mkdir -p '+os.path.join(self.installDir,'include'), timeout=2500, log=self.log)
-        output1,err1,ret1  = config.package.Package.executeShellCommand('cd '+self.packageDir+' && make CXX="'+ self.setCompilers.getCompiler() + '" CXXFLAGS="' + cflags + '" PREDCXXFLAGS="' + predcflags + '" tetlib && '+self.installSudo+'cp *.a ' + libDir + ' && rm *.a *.o', timeout=2500, log = self.log)
+        output,err,ret = config.package.Package.executeShellCommand('mkdir -p '+os.path.join(self.installDir,'lib'), timeout=2500, log=self.log)
+        output,err,ret = config.package.Package.executeShellCommand('mkdir -p '+os.path.join(self.installDir,'include'), timeout=2500, log=self.log)
+        output1,err1,ret1  = config.package.Package.executeShellCommand('cd '+self.packageDir+' && make CXX="'+ self.getCompiler() + '" CXXFLAGS="' + cflags + '" PREDCXXFLAGS="' + predcflags + '" tetlib && cp *.a ' + libDir + ' && rm *.a *.o', timeout=2500, log = self.log)
       except RuntimeError as e:
         raise RuntimeError('Error running make on TetGen: '+str(e))
-      output2,err2,ret2  = config.package.Package.executeShellCommand(self.installSudo+'cp -f '+os.path.join(self.packageDir, 'tetgen.h')+' '+includeDir, timeout=60, log = self.log)
+      output2,err2,ret2  = config.package.Package.executeShellCommand('cp -f '+os.path.join(self.packageDir, 'tetgen.h')+' '+includeDir, timeout=60, log = self.log)
       self.postInstall(output1+err1+output2+err2,'make.inc')
 
-    self.setCompilers.popLanguage()
+    self.popLanguage()
     return self.installDir
 
   def configureLibrary(self):

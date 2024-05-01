@@ -9,11 +9,11 @@ class Configure(config.package.CMakePackage):
     self.functions         = []
     self.includes          = []
     self.hastests          = 1
-    self.fc                = 1    # 1 means requires fortran
-    self.cxx               = 1    # 1 means requires C++
+    self.buildLanguages    = ['Cxx','FC']   # requires C++ and Fortran
     self.linkedbypetsc     = 0
     self.makerulename      = 'alquimia'    # make on the alquimia directory tries to build executables that will fail so force only building the libraries
     self.useddirectly      = 0
+    self.skippackagelibincludedirs = 1
     return
 
   def setupDependencies(self, framework):
@@ -35,10 +35,6 @@ class Configure(config.package.CMakePackage):
       raise RuntimeError('Alquimia does not support --with-alquimia; only --download-alquimia')
     if 'with-alquimia-dir' in self.framework.clArgDB:
       raise RuntimeError('Alquimia does not support --with-alquimia-dir; only --download-alquimia')
-    if 'with-alquimia-include' in self.framework.clArgDB:
-      raise RuntimeError('Alquimia does not support --with-alquimia-include; only --download-alquimia')
-    if 'with-alquimia-lib' in self.framework.clArgDB:
-      raise RuntimeError('Alquimia does not support --with-alquimia-lib; only --download-alquimia')
 
     self.checkDownload()
     self.include = [os.path.join(self.installDir,'include')]
@@ -53,10 +49,8 @@ class Configure(config.package.CMakePackage):
     args = config.package.CMakePackage.formCMakeConfigureArgs(self)
     args.append('-DUSE_XSDK_DEFAULTS=YES')
     if self.compilerFlags.debugging:
-      args.append('-DCMAKE_BUILD_TYPE=DEBUG')
       args.append('-DXSDK_ENABLE_DEBUG=YES')
     else:
-      args.append('-DCMAKE_BUILD_TYPE=RELEASE')
       args.append('-DXSDK_ENABLE_DEBUG=NO')
 
 

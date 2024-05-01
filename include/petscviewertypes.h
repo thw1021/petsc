@@ -2,17 +2,16 @@
      PetscViewers are objects where other objects can be looked at or stored.
 */
 
-#if !defined(PETSCVIEWERTYPES_H)
-#define PETSCVIEWERTYPES_H
+#pragma once
+
+/* SUBMANSEC = Viewer */
 
 /*S
-     PetscViewer - Abstract PETSc object that helps view (in ASCII, binary, graphically etc)
-         other PETSc objects
+     PetscViewer - Abstract PETSc object for displaying (in ASCII, binary, graphically etc)
+                   PETSc objects and their data
 
    Level: beginner
 
-.seealso:  PetscViewerCreate(), PetscViewerSetType(), PetscViewerType
+.seealso: [](sec_viewers), `PetscViewerType`, `PETSCVIEWERASCII`, `PetscViewerCreate()`, `PetscViewerSetType()`
 S*/
-typedef struct _p_PetscViewer* PetscViewer;
-
-#endif
+typedef struct _p_PetscViewer *PetscViewer;

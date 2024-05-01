@@ -4,13 +4,15 @@ class Configure(config.package.CMakePackage):
   def __init__(self, framework):
     import os
     config.package.CMakePackage.__init__(self, framework)
-    self.version       = '3.3.7'
+    self.version       = '3.4.0'
     self.gitcommit     = self.version
-    self.download      = ['git://https://gitlab.com/libeigen/eigen','https://gitlab.com/libeigen/eigen/-/archive/'+self.gitcommit+'/eigen-'+self.gitcommit+'.tar.gz']
+    self.download      = ['git://https://gitlab.com/libeigen/eigen.git',
+                          'https://gitlab.com/libeigen/eigen/-/archive/'+self.gitcommit+'/eigen-'+self.gitcommit+'.tar.gz',
+                          'https://web.cels.anl.gov/projects/petsc/download/externalpackages/eigen-'+self.gitcommit+'.tar.gz']
     self.functions     = []
     self.includes      = ['Eigen/Core']
     self.liblist       = []
-    self.cxx           = 1
+    self.buildLanguages= ['Cxx']
     self.pkgname       = 'eigen3'
     self.includedir    = os.path.join('include', 'eigen3')
     self.useddirectly  = 0
@@ -23,9 +25,6 @@ class Configure(config.package.CMakePackage):
     return
 
   def formCMakeConfigureArgs(self):
-    if not self.cmake.found:
-      raise RuntimeError('CMake > 2.5 is needed to build Eigen')
-
     args = config.package.CMakePackage.formCMakeConfigureArgs(self)
     args.append('-DENABLE_OPENMP=OFF')
     return args

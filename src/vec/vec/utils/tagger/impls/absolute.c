@@ -1,24 +1,23 @@
-
 #include <petsc/private/vecimpl.h> /*I "petscvec.h" I*/
 #include "../src/vec/vec/utils/tagger/impls/simple.h"
 
-static PetscErrorCode VecTaggerComputeBoxes_Absolute(VecTagger tagger,Vec vec,PetscInt *numBoxes,VecTaggerBox **boxes)
+static PetscErrorCode VecTaggerComputeBoxes_Absolute(VecTagger tagger, Vec vec, PetscInt *numBoxes, VecTaggerBox **boxes, PetscBool *listed)
 {
   VecTagger_Simple *smpl = (VecTagger_Simple *)tagger->data;
-  PetscInt       bs, i;
-  VecTaggerBox   *bxs;
-  PetscErrorCode ierr;
+  PetscInt          bs, i;
+  VecTaggerBox     *bxs;
 
   PetscFunctionBegin;
-  ierr = VecTaggerGetBlockSize(tagger,&bs);CHKERRQ(ierr);
+  PetscCall(VecTaggerGetBlockSize(tagger, &bs));
   *numBoxes = 1;
-  ierr = PetscMalloc1(bs,&bxs);CHKERRQ(ierr);
+  PetscCall(PetscMalloc1(bs, &bxs));
   for (i = 0; i < bs; i++) {
     bxs[i].min = smpl->box[i].min;
     bxs[i].max = smpl->box[i].max;
   }
   *boxes = bxs;
-  PetscFunctionReturn(0);
+  if (listed) *listed = PETSC_TRUE;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
@@ -26,21 +25,19 @@ static PetscErrorCode VecTaggerComputeBoxes_Absolute(VecTagger tagger,Vec vec,Pe
 
   Logically Collective
 
-  Input Arguments:
-+ tagger - the VecTagger context
-- box - the box: a blocksize array of VecTaggerBox boxes
+  Input Parameters:
++ tagger - the `VecTagger` context
+- box    - the box: a blocksize array of `VecTaggerBox` boxes
 
   Level: advanced
 
-.seealso: VecTaggerAbsoluteGetBox()
+.seealso: `VecTagger`, `VecTaggerBox`, `VecTaggerAbsoluteGetBox()`
 @*/
-PetscErrorCode VecTaggerAbsoluteSetBox(VecTagger tagger,VecTaggerBox *box)
+PetscErrorCode VecTaggerAbsoluteSetBox(VecTagger tagger, VecTaggerBox box[])
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  ierr = VecTaggerSetBox_Simple(tagger,box);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(VecTaggerSetBox_Simple(tagger, box));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
@@ -48,31 +45,27 @@ PetscErrorCode VecTaggerAbsoluteSetBox(VecTagger tagger,VecTaggerBox *box)
 
   Logically Collective
 
-  Input Arguments:
-. tagger - the VecTagger context
+  Input Parameter:
+. tagger - the `VecTagger` context
 
-  Output Arguments:
-. box - the box: a blocksize array of VecTaggerBox boxes
+  Output Parameter:
+. box - the box: a blocksize array of `VecTaggerBox` boxes
 
   Level: advanced
 
-.seealso: VecTaggerAbsoluteSetBox()
+.seealso: `VecTagger`, `VecTaggerBox`, `VecTaggerAbsoluteSetBox()`
 @*/
-PetscErrorCode VecTaggerAbsoluteGetBox(VecTagger tagger,const VecTaggerBox **box)
+PetscErrorCode VecTaggerAbsoluteGetBox(VecTagger tagger, const VecTaggerBox *box[])
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  ierr = VecTaggerGetBox_Simple(tagger,box);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(VecTaggerGetBox_Simple(tagger, box));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PETSC_INTERN PetscErrorCode VecTaggerCreate_Absolute(VecTagger tagger)
 {
-  PetscErrorCode     ierr;
-
   PetscFunctionBegin;
-  ierr = VecTaggerCreate_Simple(tagger);CHKERRQ(ierr);
+  PetscCall(VecTaggerCreate_Simple(tagger));
   tagger->ops->computeboxes = VecTaggerComputeBoxes_Absolute;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

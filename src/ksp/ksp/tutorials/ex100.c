@@ -4,92 +4,84 @@
 
 PetscErrorCode RunTest(void)
 {
-  PetscInt       N    = 100, its = 0;
-  PetscBool      draw = PETSC_FALSE, test = PETSC_FALSE;
-  PetscReal      rnorm;
-  Mat            A;
-  Vec            b,x,r;
-  KSP            ksp;
-  PC             pc;
-  PetscErrorCode ierr;
+  PetscInt  N = 100, its = 0;
+  PetscBool draw = PETSC_FALSE, test = PETSC_FALSE;
+  PetscReal rnorm;
+  Mat       A;
+  Vec       b, x, r;
+  KSP       ksp;
+  PC        pc;
 
   PetscFunctionBegin;
+  PetscCall(PetscOptionsGetInt(NULL, NULL, "-N", &N, NULL));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-test", &test, NULL));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-draw", &draw, NULL));
 
-  ierr = PetscOptionsGetInt(NULL,NULL,"-N",&N,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsGetBool(NULL,NULL,"-test",&test,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsGetBool(NULL,NULL,"-draw",&draw,NULL);CHKERRQ(ierr);
+  PetscCall(MatCreate(PETSC_COMM_WORLD, &A));
+  PetscCall(MatSetSizes(A, PETSC_DECIDE, PETSC_DECIDE, N, N));
+  PetscCall(MatSetType(A, MATPYTHON));
+  PetscCall(MatPythonSetType(A, "example100.py:Laplace1D"));
+  PetscCall(MatSetUp(A));
 
-  ierr = MatCreate(PETSC_COMM_WORLD,&A);CHKERRQ(ierr);
-  ierr = MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,N,N);CHKERRQ(ierr);
-  ierr = MatSetType(A,MATPYTHON);CHKERRQ(ierr);
-  ierr = MatPythonSetType(A,"example100.py:Laplace1D");CHKERRQ(ierr);
-  ierr = MatSetUp(A);CHKERRQ(ierr);
+  PetscCall(MatCreateVecs(A, &x, &b));
+  PetscCall(VecSet(b, 1));
 
-  ierr = MatCreateVecs(A,&x,&b);CHKERRQ(ierr);
-  ierr = VecSet(b,1);CHKERRQ(ierr);
+  PetscCall(KSPCreate(PETSC_COMM_WORLD, &ksp));
+  PetscCall(KSPSetType(ksp, KSPPYTHON));
+  PetscCall(KSPPythonSetType(ksp, "example100.py:ConjGrad"));
 
-  ierr = KSPCreate(PETSC_COMM_WORLD,&ksp);CHKERRQ(ierr);
-  ierr = KSPSetType(ksp,KSPPYTHON);CHKERRQ(ierr);
-  ierr = KSPPythonSetType(ksp,"example100.py:ConjGrad");CHKERRQ(ierr);
+  PetscCall(KSPGetPC(ksp, &pc));
+  PetscCall(PCSetType(pc, PCPYTHON));
+  PetscCall(PCPythonSetType(pc, "example100.py:Jacobi"));
 
-  ierr = KSPGetPC(ksp,&pc);CHKERRQ(ierr);
-  ierr = PCSetType(pc,PCPYTHON);CHKERRQ(ierr);
-  ierr = PCPythonSetType(pc,"example100.py:Jacobi");CHKERRQ(ierr);
-
-  ierr = KSPSetOperators(ksp,A,A);CHKERRQ(ierr);
-  ierr = KSPSetFromOptions(ksp);CHKERRQ(ierr);
-  ierr = KSPSolve(ksp,b,x);CHKERRQ(ierr);
+  PetscCall(KSPSetOperators(ksp, A, A));
+  PetscCall(KSPSetFromOptions(ksp));
+  PetscCall(KSPSolve(ksp, b, x));
 
   if (test) {
-    ierr = KSPGetTotalIterations(ksp,&its);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"Number of KSP iterations = %D\n", its);CHKERRQ(ierr);
+    PetscCall(KSPGetTotalIterations(ksp, &its));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Number of KSP iterations = %" PetscInt_FMT "\n", its));
   } else {
-    ierr = VecDuplicate(b,&r);CHKERRQ(ierr);
-    ierr = MatMult(A,x,r);CHKERRQ(ierr);
-    ierr = VecAYPX(r,-1,b);CHKERRQ(ierr);
-    ierr = VecNorm(r,NORM_2,&rnorm);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"error norm = %g\n",rnorm);CHKERRQ(ierr);
-    ierr = VecDestroy(&r);CHKERRQ(ierr);
+    PetscCall(VecDuplicate(b, &r));
+    PetscCall(MatMult(A, x, r));
+    PetscCall(VecAYPX(r, -1, b));
+    PetscCall(VecNorm(r, NORM_2, &rnorm));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "error norm = %g\n", (double)rnorm));
+    PetscCall(VecDestroy(&r));
   }
 
   if (draw) {
-    ierr = VecView(x,PETSC_VIEWER_DRAW_WORLD);CHKERRQ(ierr);
-    ierr = PetscSleep(2);CHKERRQ(ierr);
+    PetscCall(VecView(x, PETSC_VIEWER_DRAW_WORLD));
+    PetscCall(PetscSleep(2));
   }
 
-  ierr = VecDestroy(&x);CHKERRQ(ierr);
-  ierr = VecDestroy(&b);CHKERRQ(ierr);
-  ierr = MatDestroy(&A);CHKERRQ(ierr);
-  ierr = KSPDestroy(&ksp);CHKERRQ(ierr);
-
-  PetscFunctionReturn(0);
+  PetscCall(VecDestroy(&x));
+  PetscCall(VecDestroy(&b));
+  PetscCall(MatDestroy(&A));
+  PetscCall(KSPDestroy(&ksp));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /* ------------------------------------------------------- */
 
 static char help[] = "Python-implemented Mat/KSP/PC.\n\n";
 
-/*
-#define PYTHON_EXE "python2.5"
-#define PYTHON_LIB "/usr/lib/libpython2.5"
-*/
-
 #if !defined(PYTHON_EXE)
-#define PYTHON_EXE 0
+  #define PYTHON_EXE 0
 #endif
 #if !defined(PYTHON_LIB)
-#define PYTHON_LIB 0
+  #define PYTHON_LIB 0
 #endif
 
 int main(int argc, char *argv[])
 {
-  PetscErrorCode ierr;
-
-  ierr = PetscInitialize(&argc,&argv,0,help);if (ierr) return ierr;
-  ierr = PetscPythonInitialize(PYTHON_EXE,PYTHON_LIB);CHKERRQ(ierr);
-  ierr = RunTest();PetscPythonPrintError();CHKERRQ(ierr);
-  ierr = PetscFinalize();
-  return ierr;
+  PetscFunctionBeginUser;
+  PetscCall(PetscInitialize(&argc, &argv, 0, help));
+  PetscCall(PetscPythonInitialize(PYTHON_EXE, PYTHON_LIB));
+  PetscCall(RunTest());
+  PetscCall(PetscPythonPrintError());
+  PetscCall(PetscFinalize());
+  return 0;
 }
 
 /*TEST

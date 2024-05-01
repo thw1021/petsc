@@ -1,6 +1,5 @@
 !
-!
-!  Include file for Fortran use of the Vec package in PETSc
+!  Used by petscvecmod.F90 to create Fortran module file
 !
 #include "petsc/finclude/petscvec.h"
 
@@ -49,7 +48,6 @@
       PetscEnum, parameter :: SCATTER_REVERSE = 1
       PetscEnum, parameter :: SCATTER_FORWARD_LOCAL = 2
       PetscEnum, parameter :: SCATTER_REVERSE_LOCAL = 3
-      PetscEnum, parameter :: SCATTER_LOCAL = 2
 !
 !  VecOption
 !
@@ -64,8 +62,6 @@
       PetscEnum, parameter :: VECOP_LOAD = 41
       PetscEnum, parameter :: VECOP_VIEWNATIVE = 68
       PetscEnum, parameter :: VECOP_LOADNATIVE = 69
-!
-!  End of Fortran include file for the Vec package in PETSc
 
 #if defined(_WIN32) && defined(PETSC_USE_SHARED_LIBRARIES)
 !DEC$ ATTRIBUTES DLLEXPORT::PETSC_NULL_VEC
@@ -89,7 +85,6 @@
 !DEC$ ATTRIBUTES DLLEXPORT::SCATTER_REVERSE
 !DEC$ ATTRIBUTES DLLEXPORT::SCATTER_FORWARD_LOCAL
 !DEC$ ATTRIBUTES DLLEXPORT::SCATTER_REVERSE_LOCAL
-!DEC$ ATTRIBUTES DLLEXPORT::SCATTER_LOCAL
 !DEC$ ATTRIBUTES DLLEXPORT::VEC_IGNORE_OFF_PROC_ENTRIES
 !DEC$ ATTRIBUTES DLLEXPORT::VEC_IGNORE_NEGATIVE_INDICES
 !DEC$ ATTRIBUTES DLLEXPORT::VEC_SUBSET_OFF_PROC_ENTRIES

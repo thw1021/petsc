@@ -1,157 +1,141 @@
-
 /*
      Provides utility routines for manulating any type of PETSc object.
 */
-#include <petsc/private/petscimpl.h>  /*I   "petscsys.h"    I*/
+#include <petsc/private/petscimpl.h> /*I   "petscsys.h"    I*/
 
 /*@C
-   PetscObjectComm - Gets the MPI communicator for any PetscObject   regardless of the type.
+  PetscObjectComm - Gets the MPI communicator for any `PetscObject` regardless of the type.
 
-   Not Collective
+  Not Collective
 
-   Input Parameter:
-.  obj - any PETSc object, for example a Vec, Mat or KSP. Thus must be
-         cast with a (PetscObject), for example,
-         SETERRQ(PetscObjectComm((PetscObject)mat,...);
+  Input Parameter:
+. obj - any PETSc object, for example a `Vec`, `Mat` or `KSP`. It must be
+        cast with a (`PetscObject`), for example, `PetscObjectComm`((`PetscObject`)mat,...);
 
-   Output Parameter:
-.  comm - the MPI communicator or MPI_COMM_NULL if object is not valid
+  Level: advanced
 
-   Level: advanced
+  Note:
+  Returns the MPI communicator or `MPI_COMM_NULL` if `obj` is not valid.
 
-   Notes:
-    Never use this in the form
-$       comm = PetscObjectComm((PetscObject)obj);
-        instead use PetscObjectGetComm()
+  This is one of the rare PETSc routines that does not return an error code. Use `PetscObjectGetComm()`
+  when appropriate for error handling.
 
-
-.seealso: PetscObjectGetComm()
+.seealso: `PetscObject`, `PetscObjectGetComm()`
 @*/
-MPI_Comm  PetscObjectComm(PetscObject obj)
+MPI_Comm PetscObjectComm(PetscObject obj)
 {
-  if (!obj) return MPI_COMM_NULL;
-  return obj->comm;
+  return obj ? obj->comm : MPI_COMM_NULL;
 }
 
 /*@C
-   PetscObjectGetComm - Gets the MPI communicator for any PetscObject,
-   regardless of the type.
+  PetscObjectGetComm - Gets the MPI communicator for any `PetscObject` regardless of the type.
 
-   Not Collective
+  Not Collective
 
-   Input Parameter:
-.  obj - any PETSc object, for example a Vec, Mat or KSP. Thus must be
-         cast with a (PetscObject), for example,
-         PetscObjectGetComm((PetscObject)mat,&comm);
+  Input Parameter:
+. obj - any PETSc object, for example a `Vec`, `Mat` or `KSP`. It must be cast with a (`PetscObject`), for example,
+        `PetscObjectGetComm`((`PetscObject`)mat,&comm);
 
-   Output Parameter:
-.  comm - the MPI communicator
+  Output Parameter:
+. comm - the MPI communicator
 
-   Level: advanced
+  Level: advanced
 
-
-.seealso: PetscObjectComm()
+.seealso: `PetscObject`, `PetscObjectComm()`
 @*/
-PetscErrorCode  PetscObjectGetComm(PetscObject obj,MPI_Comm *comm)
+PetscErrorCode PetscObjectGetComm(PetscObject obj, MPI_Comm *comm)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeader(obj,1);
-  PetscValidPointer(comm,2);
-  if (obj->bops->getcomm) {
-    ierr = obj->bops->getcomm(obj,comm);CHKERRQ(ierr);
-  } else *comm = obj->comm;
-  PetscFunctionReturn(0);
+  PetscValidHeader(obj, 1);
+  PetscAssertPointer(comm, 2);
+  *comm = obj->comm;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   PetscObjectGetTabLevel - Gets the number of tabs that ASCII output for that object use
+  PetscObjectGetTabLevel - Gets the number of tabs that `PETSCVIEWERASCII` output for that object uses
 
-   Not Collective
+  Not Collective
 
-   Input Parameter:
-.  obj - any PETSc object, for example a Vec, Mat or KSP. Thus must be
-         cast with a (PetscObject), for example,
-         PetscObjectGetComm((PetscObject)mat,&comm);
+  Input Parameter:
+. obj - any PETSc object, for example a `Vec`, `Mat` or `KSP`. It must be cast with a (`PetscObject`), for example,
+        `PetscObjectGetTabLevel`((`PetscObject`)mat,&tab);
 
-   Output Parameter:
-.   tab - the number of tabs
+  Output Parameter:
+. tab - the number of tabs
 
-   Level: developer
+  Level: developer
 
-    Notes:
-    this is used to manage the output from options that are imbedded in other objects. For example
-      the KSP object inside a SNES object. By indenting each lower level further the heirarchy of objects
-      is very clear.
+  Note:
+  This is used to manage the output from options that are embedded in other objects. For example
+  the `KSP` object inside a `SNES` object. By indenting each lower level further the hierarchy of objects
+  is clear.
 
-.seealso:  PetscObjectIncrementTabLevel()
-
+.seealso: `PetscObjectIncrementTabLevel()`, `PetscObjectSetTabLevel()`, `PETSCVIEWERASCII`, `PetscObject`
 @*/
-PetscErrorCode  PetscObjectGetTabLevel(PetscObject obj,PetscInt *tab)
+PetscErrorCode PetscObjectGetTabLevel(PetscObject obj, PetscInt *tab)
 {
   PetscFunctionBegin;
-  PetscValidHeader(obj,1);
+  PetscValidHeader(obj, 1);
+  PetscAssertPointer(tab, 2);
   *tab = obj->tablevel;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   PetscObjectSetTabLevel - Sets the number of tabs that ASCII output for that object use
+  PetscObjectSetTabLevel - Sets the number of tabs that `PETSCVIEWERASCII` output for that object uses
 
-   Not Collective
+  Not Collective
 
-   Input Parameters:
-+  obj - any PETSc object, for example a Vec, Mat or KSP. Thus must be
-         cast with a (PetscObject), for example,
-         PetscObjectGetComm((PetscObject)mat,&comm);
--   tab - the number of tabs
+  Input Parameters:
++ obj - any PETSc object, for example a `Vec`, `Mat` or `KSP`. It must be cast with a (`PetscObject`), for example,
+        `PetscObjectSetTabLevel`((`PetscObject`)mat,tab;
+- tab - the number of tabs
 
-   Level: developer
+  Level: developer
 
-    Notes:
-    this is used to manage the output from options that are imbedded in other objects. For example
-      the KSP object inside a SNES object. By indenting each lower level further the heirarchy of objects
-      is very clear.
+  Notes:
+  this is used to manage the output from options that are embedded in other objects. For example
+  the `KSP` object inside a `SNES` object. By indenting each lower level further the hierarchy of objects
+  is clear.
 
-.seealso:  PetscObjectIncrementTabLevel()
+  `PetscObjectIncrementTabLevel()` is the preferred API
+
+.seealso: `PetscObjectIncrementTabLevel()`, `PetscObjectGetTabLevel()`
 @*/
-PetscErrorCode  PetscObjectSetTabLevel(PetscObject obj,PetscInt tab)
+PetscErrorCode PetscObjectSetTabLevel(PetscObject obj, PetscInt tab)
 {
   PetscFunctionBegin;
-  PetscValidHeader(obj,1);
+  PetscValidHeader(obj, 1);
   obj->tablevel = tab;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   PetscObjectIncrementTabLevel - Sets the number of tabs that ASCII output for that object use based on
-         the tablevel of another object. This should be called immediately after the object is created.
+  PetscObjectIncrementTabLevel - Increments the number of tabs that `PETSCVIEWERASCII` output for that object use based on
+  the tablevel of another object. This should be called immediately after the object is created.
 
-   Not Collective
+  Not Collective
 
-   Input Parameter:
-+  obj - any PETSc object where we are changing the tab
-.  oldobj - the object providing the tab
--  tab - the increment that is added to the old objects tab
+  Input Parameters:
++ obj    - any PETSc object where we are changing the tab
+. oldobj - the object providing the tab, optional pass `NULL` to use 0 as the previous tablevel for `obj`
+- tab    - the increment that is added to the old objects tab
 
+  Level: developer
 
-   Level: developer
+  Note:
+  this is used to manage the output from options that are embedded in other objects. For example
+  the `KSP` object inside a `SNES` object. By indenting each lower level further the hierarchy of objects
+  is clear.
 
-    Notes:
-    this is used to manage the output from options that are imbedded in other objects. For example
-      the KSP object inside a SNES object. By indenting each lower level further the heirarchy of objects
-      is very clear.
-
-.seealso:   PetscObjectSetTabLevel(),  PetscObjectGetTabLevel()
-
+.seealso: `PETSCVIEWERASCII`, `PetscObjectSetTabLevel()`, `PetscObjectGetTabLevel()`
 @*/
-PetscErrorCode  PetscObjectIncrementTabLevel(PetscObject obj,PetscObject oldobj,PetscInt tab)
+PetscErrorCode PetscObjectIncrementTabLevel(PetscObject obj, PetscObject oldobj, PetscInt tab)
 {
-
   PetscFunctionBegin;
-  PetscValidHeader(obj,1);
-  if (oldobj) obj->tablevel = oldobj->tablevel + tab;
-  else obj->tablevel = tab;
-  PetscFunctionReturn(0);
+  PetscValidHeader(obj, 1);
+  if (oldobj) PetscValidHeader(oldobj, 2);
+  obj->tablevel = (oldobj ? oldobj->tablevel : 0) + tab;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

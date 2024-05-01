@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
 import os
 petsc_hash_pkgs=os.path.join(os.getenv('HOME'),'petsc-hash-pkgs')
@@ -20,6 +20,7 @@ configure_options = [
   '--with-mkl_sparse_optimize=0',
   '--download-chaco=1',
   '--download-exodusii=1',
+  '--download-exodusii-cmake-arguments=-DCMAKE_C_FLAGS:STRING="-DADDC_ -fPIC -g -xMIC-AVX512 -O3"', # workaround exodusii cmake failure 'cannot automatically determine Fortran mangling'
   '--download-metis=1',
   '--download-parmetis=1',
   '--with-hdf5=1',
@@ -27,9 +28,6 @@ configure_options = [
   '--with-pnetcdf-dir='+os.environ['CRAY_PARALLEL_NETCDF_PREFIX'],
   '--with-zlib=1',
   '--with-batch=1',
-  '--known-mpi-long-double=1',
-  '--known-mpi-int64_t=1',
-  '--known-mpi-c-double-complex=1',
   '--known-64-bit-blas-indices=0',
 ]
 

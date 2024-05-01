@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import os
 petsc_hash_pkgs=os.path.join(os.getenv('HOME'),'petsc-hash-pkgs')
@@ -26,14 +26,18 @@ configure_options = [
   '--download-mumps=1',
   '--download-hdf5',
   '--with-zlib=1',
-  '--download-elemental=1',
-  #'--download-sundials=1',
+  # '--download-elemental=1', # disabled since its maxCxxVersion is c++14, but Kokkos-4.0's minCxxVersion is c++17
+  #'--download-sundials2=1',
   #'--download-hypre=1',
   #'--download-suitesparse=1',
   #'--download-chaco=1',
   #'--download-spai=1',
   '--download-p4est=1',
-
+  '--with-mpi-f90module-visibility=0',
+  '--download-kokkos=1',
+  '--download-kokkos-kernels=1',
+  '--with-ssl=1',
+  '--with-strict-petscerrorcode=0',
   ]
 
 if __name__ == '__main__':

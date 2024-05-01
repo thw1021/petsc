@@ -1,10 +1,4 @@
-
 static char help[] = "Reads a PETSc matrix and vector from a socket connection,  solves a linear system and sends the result back.\n";
-
-/*T
-   Concepts: KSP^solving a linear system
-   Processors: n
-T*/
 
 /*
   Include "petscksp.h" so that we can use KSP solvers.  Note that this file
@@ -16,42 +10,42 @@ T*/
 */
 #include <petscksp.h>
 
-int main(int argc,char **args)
+int main(int argc, char **args)
 {
-  KSP            ksp;             /* linear solver context */
-  Mat            A;            /* matrix */
-  Vec            x,b;          /* approx solution, RHS, exact solution */
-  PetscViewer    fd;               /* viewer */
-  PetscErrorCode ierr;
+  KSP         ksp;  /* linear solver context */
+  Mat         A;    /* matrix */
+  Vec         x, b; /* approx solution, RHS, exact solution */
+  PetscViewer fd;   /* viewer */
 
-  ierr = PetscInitialize(&argc,&args,(char*)0,help);if (ierr) return ierr;
+  PetscFunctionBeginUser;
+  PetscCall(PetscInitialize(&argc, &args, (char *)0, help));
   fd = PETSC_VIEWER_SOCKET_WORLD;
 
-  ierr = VecCreate(PETSC_COMM_WORLD,&b);CHKERRQ(ierr);
-  ierr = VecLoad(b,fd);CHKERRQ(ierr);
-  ierr = MatCreate(PETSC_COMM_WORLD,&A);CHKERRQ(ierr);
-  ierr = MatLoad(A,fd);CHKERRQ(ierr);
-  ierr = VecDuplicate(b,&x);CHKERRQ(ierr);
+  PetscCall(VecCreate(PETSC_COMM_WORLD, &b));
+  PetscCall(VecLoad(b, fd));
+  PetscCall(MatCreate(PETSC_COMM_WORLD, &A));
+  PetscCall(MatLoad(A, fd));
+  PetscCall(VecDuplicate(b, &x));
 
-  ierr = KSPCreate(PETSC_COMM_WORLD,&ksp);CHKERRQ(ierr);
-  ierr = KSPSetOperators(ksp,A,A);CHKERRQ(ierr);
-  ierr = KSPSetFromOptions(ksp);CHKERRQ(ierr);
-  ierr = KSPSetUp(ksp);CHKERRQ(ierr);
-  ierr = KSPSolve(ksp,b,x);CHKERRQ(ierr);
-  ierr = VecView(x,fd);CHKERRQ(ierr);
-  ierr = MatDestroy(&A);CHKERRQ(ierr);
-  ierr = VecDestroy(&b);CHKERRQ(ierr);
-  ierr = VecDestroy(&x);CHKERRQ(ierr);
-  ierr = KSPDestroy(&ksp);CHKERRQ(ierr);
+  PetscCall(KSPCreate(PETSC_COMM_WORLD, &ksp));
+  PetscCall(KSPSetOperators(ksp, A, A));
+  PetscCall(KSPSetFromOptions(ksp));
+  PetscCall(KSPSetUp(ksp));
+  PetscCall(KSPSolve(ksp, b, x));
+  PetscCall(VecView(x, fd));
+  PetscCall(MatDestroy(&A));
+  PetscCall(VecDestroy(&b));
+  PetscCall(VecDestroy(&x));
+  PetscCall(KSPDestroy(&ksp));
 
-  ierr = PetscFinalize();
-  return ierr;
+  PetscCall(PetscFinalize());
+  return 0;
 }
 
 /*TEST
 
      build:
-       requires: define(PETSC_USE_SOCKET_VIEWER)
+       requires: defined(PETSC_USE_SOCKET_VIEWER)
 
      test:
        TODO: Need to figure out how to test examples that use sockets

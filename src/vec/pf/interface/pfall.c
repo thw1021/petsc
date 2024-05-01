@@ -1,40 +1,39 @@
-
-#include <petscpf.h>          /*I   "petscpf.h"   I*/
+#include <petscpf.h> /*I   "petscpf.h"   I*/
 #include <../src/vec/pf/pfimpl.h>
 
-PETSC_EXTERN PetscErrorCode PFCreate_Constant(PF,void*);
-PETSC_EXTERN PetscErrorCode PFCreate_String(PF,void*);
-PETSC_EXTERN PetscErrorCode PFCreate_Quick(PF,void*);
-PETSC_EXTERN PetscErrorCode PFCreate_Identity(PF,void*);
-#if defined(PETSC_HAVE_MATLAB_ENGINE)
-PETSC_EXTERN PetscErrorCode PFCreate_Matlab(PF,void*);
+PETSC_INTERN PetscErrorCode PFCreate_Constant(PF, void *);
+PETSC_INTERN PetscErrorCode PFCreate_Quick(PF, void *);
+PETSC_INTERN PetscErrorCode PFCreate_Identity(PF, void *);
+#if defined(PETSC_HAVE_POPEN) && defined(PETSC_USE_SHARED_LIBRARIES) && defined(PETSC_HAVE_DYNAMIC_LIBRARIES)
+PETSC_INTERN PetscErrorCode PFCreate_String(PF, void *);
+#endif
+#if defined(PETSC_HAVE_MATLAB)
+PETSC_INTERN PetscErrorCode PFCreate_Matlab(PF, void *);
 #endif
 
 /*@C
-   PFRegisterAll - Registers all of the preconditioners in the PF package.
+  PFRegisterAll - Registers all of the preconditioners in the PF package.
 
-   Not Collective
+  Not Collective
 
-   Level: advanced
+  Level: advanced
 
-.seealso: PFRegister(), PFRegisterDestroy()
+.seealso: `PFRegister()`, `PFRegisterDestroy()`
 @*/
-PetscErrorCode  PFRegisterAll(void)
+PetscErrorCode PFRegisterAll(void)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  if (PFRegisterAllCalled) PetscFunctionReturn(0);
+  if (PFRegisterAllCalled) PetscFunctionReturn(PETSC_SUCCESS);
   PFRegisterAllCalled = PETSC_TRUE;
 
-  ierr = PFRegister(PFCONSTANT,         PFCreate_Constant);CHKERRQ(ierr);
-  ierr = PFRegister(PFSTRING,           PFCreate_String);CHKERRQ(ierr);
-  ierr = PFRegister(PFQUICK,            PFCreate_Quick);CHKERRQ(ierr);
-  ierr = PFRegister(PFIDENTITY,         PFCreate_Identity);CHKERRQ(ierr);
-#if defined(PETSC_HAVE_MATLAB_ENGINE)
-  ierr = PFRegister(PFMATLAB,           PFCreate_Matlab);CHKERRQ(ierr);
+  PetscCall(PFRegister(PFCONSTANT, PFCreate_Constant));
+  PetscCall(PFRegister(PFQUICK, PFCreate_Quick));
+  PetscCall(PFRegister(PFIDENTITY, PFCreate_Identity));
+#if defined(PETSC_HAVE_POPEN) && defined(PETSC_USE_SHARED_LIBRARIES) && defined(PETSC_HAVE_DYNAMIC_LIBRARIES)
+  PetscCall(PFRegister(PFSTRING, PFCreate_String));
 #endif
-  PetscFunctionReturn(0);
+#if defined(PETSC_HAVE_MATLAB)
+  PetscCall(PFRegister(PFMATLAB, PFCreate_Matlab));
+#endif
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
-
-

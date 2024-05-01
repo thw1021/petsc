@@ -1,18 +1,9 @@
-#requiresdefine   'PETSC_HAVE_FORTRAN'
+-include ../../../petscdir.mk
+#requiresdefine   'PETSC_USE_FORTRAN_BINDINGS'
 
-ALL: lib
-
-CFLAGS   =
-FFLAGS   =
-SOURCEC  =  zsys.c  zutils.c
-SOURCEF  =
-SOURCEH  = ../../../include/petsc/private/fortranimpl.h
-LIBBASE  = libpetscsys
 MANSEC   = Sys
-LOCDIR   = src/sys/ftn-custom/
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
-include ${PETSC_DIR}/lib/petsc/conf/rules
-include ${PETSC_DIR}/lib/petsc/conf/test
+include ${PETSC_DIR}/lib/petsc/conf/rules_doc.mk
 
 

@@ -1,11 +1,10 @@
-
 /*
        Provides the registration process for PETSc PetscDraw routines
 */
-#include <petsc/private/drawimpl.h>  /*I "petscdraw.h" I*/
-#include <petscviewer.h>             /*I "petscviewer.h" I*/
+#include <petsc/private/drawimpl.h> /*I "petscdraw.h" I*/
+#include <petscviewer.h>            /*I "petscviewer.h" I*/
 #if defined(PETSC_HAVE_SAWS)
-#include <petscviewersaws.h>
+  #include <petscviewersaws.h>
 #endif
 
 /*
@@ -14,149 +13,139 @@
 PetscFunctionList PetscDrawList = NULL;
 
 /*@C
-   PetscDrawView - Prints the PetscDraw data structure.
+  PetscDrawView - Prints the `PetscDraw` data structure.
 
-   Collective on PetscDraw
+  Collective
 
-   Input Parameters:
-+  indraw - the PetscDraw context
--  viewer - visualization context
+  Input Parameters:
++ indraw - the `PetscDraw` context
+- viewer - visualization context
 
    See PetscDrawSetFromOptions() for options database keys
 
-   Note:
-   The available visualization contexts include
-+     PETSC_VIEWER_STDOUT_SELF - standard output (default)
--     PETSC_VIEWER_STDOUT_WORLD - synchronized standard
-         output where only the first processor opens
-         the file.  All other processors send their
-         data to the first processor to print.
+  Note:
+  The available visualization contexts include
++     `PETSC_VIEWER_STDOUT_SELF` - standard output (default)
+-     `PETSC_VIEWER_STDOUT_WORLD` - synchronized standard
+  output where only the first processor opens
+  the file.  All other processors send their
+  data to the first processor to print.
 
-   The user can open an alternative visualization context with
-   PetscViewerASCIIOpen() - output to a specified file.
+  The user can open an alternative visualization context with
+  `PetscViewerASCIIOpen()` - output to a specified file.
 
-   Level: beginner
+  Level: beginner
 
-.seealso: PCView(), PetscViewerASCIIOpen()
+.seealso: `PetscDraw`, `PetscViewerASCIIOpen()`, `PetscViewer`
 @*/
-PetscErrorCode  PetscDrawView(PetscDraw indraw,PetscViewer viewer)
+PetscErrorCode PetscDrawView(PetscDraw indraw, PetscViewer viewer)
 {
-  PetscErrorCode ierr;
-  PetscBool      isdraw;
+  PetscBool isdraw;
 #if defined(PETSC_HAVE_SAWS)
-  PetscBool      issaws;
+  PetscBool issaws;
 #endif
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(indraw,PETSC_DRAW_CLASSID,1);
-  if (!viewer) {
-    ierr = PetscViewerASCIIGetStdout(PetscObjectComm((PetscObject)indraw),&viewer);CHKERRQ(ierr);
-  }
-  PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,2);
-  PetscCheckSameComm(indraw,1,viewer,2);
+  PetscValidHeaderSpecific(indraw, PETSC_DRAW_CLASSID, 1);
+  if (!viewer) PetscCall(PetscViewerASCIIGetStdout(PetscObjectComm((PetscObject)indraw), &viewer));
+  PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 2);
+  PetscCheckSameComm(indraw, 1, viewer, 2);
 
-  ierr = PetscObjectPrintClassNamePrefixType((PetscObject)indraw,viewer);CHKERRQ(ierr);
-  ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERDRAW,&isdraw);CHKERRQ(ierr);
+  PetscCall(PetscObjectPrintClassNamePrefixType((PetscObject)indraw, viewer));
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERDRAW, &isdraw));
 #if defined(PETSC_HAVE_SAWS)
-  ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERSAWS,&issaws);CHKERRQ(ierr);
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERSAWS, &issaws));
 #endif
   if (isdraw) {
     PetscDraw draw;
     char      str[36];
-    PetscReal x,y,bottom,h;
+    PetscReal x, y, bottom, h;
 
-    ierr = PetscViewerDrawGetDraw(viewer,0,&draw);CHKERRQ(ierr);
-    ierr = PetscDrawGetCurrentPoint(draw,&x,&y);CHKERRQ(ierr);
-    ierr   = PetscStrncpy(str,"PetscDraw: ",sizeof(str));CHKERRQ(ierr);
-    ierr   = PetscStrlcat(str,((PetscObject)indraw)->type_name,sizeof(str));CHKERRQ(ierr);
-    ierr   = PetscDrawStringBoxed(draw,x,y,PETSC_DRAW_RED,PETSC_DRAW_BLACK,str,NULL,&h);CHKERRQ(ierr);
+    PetscCall(PetscViewerDrawGetDraw(viewer, 0, &draw));
+    PetscCall(PetscDrawGetCurrentPoint(draw, &x, &y));
+    PetscCall(PetscStrncpy(str, "PetscDraw: ", sizeof(str)));
+    PetscCall(PetscStrlcat(str, ((PetscObject)indraw)->type_name, sizeof(str)));
+    PetscCall(PetscDrawStringBoxed(draw, x, y, PETSC_DRAW_RED, PETSC_DRAW_BLACK, str, NULL, &h));
     bottom = y - h;
-    ierr = PetscDrawPushCurrentPoint(draw,x,bottom);CHKERRQ(ierr);
+    PetscCall(PetscDrawPushCurrentPoint(draw, x, bottom));
 #if defined(PETSC_HAVE_SAWS)
   } else if (issaws) {
     PetscMPIInt rank;
 
-    ierr = PetscObjectName((PetscObject)indraw);CHKERRQ(ierr);
-    ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
-    if (!((PetscObject)indraw)->amsmem && !rank) {
-      ierr = PetscObjectViewSAWs((PetscObject)indraw,viewer);CHKERRQ(ierr);
-    }
+    PetscCall(PetscObjectName((PetscObject)indraw));
+    PetscCallMPI(MPI_Comm_rank(PETSC_COMM_WORLD, &rank));
+    if (!((PetscObject)indraw)->amsmem && rank == 0) PetscCall(PetscObjectViewSAWs((PetscObject)indraw, viewer));
 #endif
-  } else if (indraw->ops->view) {
-    ierr = (*indraw->ops->view)(indraw,viewer);CHKERRQ(ierr);
-  }
-  PetscFunctionReturn(0);
+  } else PetscTryTypeMethod(indraw, view, viewer);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-   PetscDrawViewFromOptions - View from Options
+  PetscDrawViewFromOptions - View a `PetscDraw` from the option database
 
-   Collective on PetscDraw
+  Collective
 
-   Input Parameters:
-+  A - the PetscDraw context
-.  obj - Optional object
--  name - command line option
+  Input Parameters:
++ A    - the `PetscDraw` context
+. obj  - Optional object
+- name - command line option
 
-   Level: intermediate
-.seealso:  PetscDraw, PetscDrawView, PetscObjectViewFromOptions(), PetscDrawCreate()
+  Level: intermediate
+
+.seealso: `PetscDraw`, `PetscDrawView`, `PetscObjectViewFromOptions()`, `PetscDrawCreate()`
 @*/
-PetscErrorCode  PetscDrawViewFromOptions(PetscDraw A,PetscObject obj,const char name[])
+PetscErrorCode PetscDrawViewFromOptions(PetscDraw A, PetscObject obj, const char name[])
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(A,PETSC_DRAW_CLASSID,1);
-  ierr = PetscObjectViewFromOptions((PetscObject)A,obj,name);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(A, PETSC_DRAW_CLASSID, 1);
+  PetscCall(PetscObjectViewFromOptions((PetscObject)A, obj, name));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
-   PetscDrawCreate - Creates a graphics context.
+/*@
+  PetscDrawCreate - Creates a graphics context.
 
-   Collective
+  Collective
 
-   Input Parameter:
-+  comm - MPI communicator
-.  display - X display when using X windows
-.  title - optional title added to top of window
-.  x,y - coordinates of lower left corner of window or PETSC_DECIDE
--  w, h - width and height of window or PETSC_DECIDE or PETSC_DRAW_HALF_SIZE, PETSC_DRAW_FULL_SIZE,
-          or PETSC_DRAW_THIRD_SIZE or PETSC_DRAW_QUARTER_SIZE
+  Input Parameters:
++ comm    - MPI communicator
+. display - X display when using X Windows
+. title   - optional title added to top of window
+. x       - horizonatl coordinate of lower left corner of window or `PETSC_DECIDE`
+. y       - vertical coordinate of lower left corner of window or `PETSC_DECIDE`
+. w       - width of window, `PETSC_DECIDE`, `PETSC_DRAW_HALF_SIZE`, `PETSC_DRAW_FULL_SIZE`, `PETSC_DRAW_THIRD_SIZE` or `PETSC_DRAW_QUARTER_SIZE`
+- h       - height of window, `PETSC_DECIDE`, `PETSC_DRAW_HALF_SIZE`, `PETSC_DRAW_FULL_SIZE`, `PETSC_DRAW_THIRD_SIZE` or `PETSC_DRAW_QUARTER_SIZE`
 
-   Output Parameter:
-.  draw - location to put the PetscDraw context
+  Output Parameter:
+. indraw - location to put the `PetscDraw` context
 
-   Level: beginner
+  Level: beginner
 
-
-.seealso: PetscDrawSetType(), PetscDrawSetFromOptions(), PetscDrawDestroy(), PetscDrawSetType(), PetscDrawLGCreate(), PetscDrawSPCreate(),
-          PetscDrawViewPortsCreate(), PetscDrawViewPortsSet(), PetscDrawAxisCreate(), PetscDrawHGCreate(), PetscDrawBarCreate(),
-          PetscViewerDrawGetDraw(), PetscDrawSetFromOptions(), PetscDrawSetSave(), PetscDrawSetSaveMovie(), PetscDrawSetSaveFinalImage(),
-          PetscDrawOpenX(), PetscDrawOpenImage(), PetscDrawIsNull(), PetscDrawGetPopup(), PetscDrawCheckResizedWindow(), PetscDrawResizeWindow(),
-          PetscDrawGetWindowSize(), PetscDrawLine(), PetscDrawArrow(), PetscDrawLineSetWidth(), PetscDrawLineGetWidth(), PetscDrawMarker(),
-          PetscDrawPoint(), PetscDrawRectangle(), PetscDrawTriangle(), PetscDrawEllipse(), PetscDrawString(), PetscDrawStringCentered(),
-          PetscDrawStringBoxed(), PetscDrawStringBoxed(), PetscDrawStringVertical(), PetscDrawSetViewPort(), PetscDrawGetViewPort(),
-          PetscDrawSplitViewPort(), PetscDrawSetTitle(), PetscDrawAppendTitle(), PetscDrawGetTitle(), PetscDrawSetPause(), PetscDrawGetPause(),
-          PetscDrawPause(), PetscDrawSetDoubleBuffer(), PetscDrawClear(), PetscDrawFlush(), PetscDrawGetSingleton(), PetscDrawGetMouseButton(),
-          PetscDrawZoom(), PetscDrawGetBoundingBox()
-
+.seealso: `PetscDrawSetType()`, `PetscDrawSetFromOptions()`, `PetscDrawDestroy()`, `PetscDrawLGCreate()`, `PetscDrawSPCreate()`,
+          `PetscDrawViewPortsCreate()`, `PetscDrawViewPortsSet()`, `PetscDrawAxisCreate()`, `PetscDrawHGCreate()`, `PetscDrawBarCreate()`,
+          `PetscViewerDrawGetDraw()`, `PetscDrawSetSave()`, `PetscDrawSetSaveMovie()`, `PetscDrawSetSaveFinalImage()`,
+          `PetscDrawOpenX()`, `PetscDrawOpenImage()`, `PetscDrawIsNull()`, `PetscDrawGetPopup()`, `PetscDrawCheckResizedWindow()`, `PetscDrawResizeWindow()`,
+          `PetscDrawGetWindowSize()`, `PetscDrawLine()`, `PetscDrawArrow()`, `PetscDrawLineSetWidth()`, `PetscDrawLineGetWidth()`, `PetscDrawMarker()`,
+          `PetscDrawPoint()`, `PetscDrawRectangle()`, `PetscDrawTriangle()`, `PetscDrawEllipse()`, `PetscDrawString()`, `PetscDrawStringCentered()`,
+          `PetscDrawStringBoxed()`, `PetscDrawStringVertical()`, `PetscDrawSetViewPort()`, `PetscDrawGetViewPort()`,
+          `PetscDrawSplitViewPort()`, `PetscDrawSetTitle()`, `PetscDrawAppendTitle()`, `PetscDrawGetTitle()`, `PetscDrawSetPause()`, `PetscDrawGetPause()`,
+          `PetscDrawPause()`, `PetscDrawSetDoubleBuffer()`, `PetscDrawClear()`, `PetscDrawFlush()`, `PetscDrawGetSingleton()`, `PetscDrawGetMouseButton()`,
+          `PetscDrawZoom()`, `PetscDrawGetBoundingBox()`
 @*/
-PetscErrorCode  PetscDrawCreate(MPI_Comm comm,const char display[],const char title[],int x,int y,int w,int h,PetscDraw *indraw)
+PetscErrorCode PetscDrawCreate(MPI_Comm comm, const char display[], const char title[], int x, int y, int w, int h, PetscDraw *indraw)
 {
-  PetscDraw      draw;
-  PetscErrorCode ierr;
-  PetscReal      dpause = 0.0;
-  PetscBool      flag;
+  PetscDraw draw;
+  PetscReal dpause = 0.0;
+  PetscBool flag;
 
   PetscFunctionBegin;
-  ierr = PetscDrawInitializePackage();CHKERRQ(ierr);
+  PetscCall(PetscDrawInitializePackage());
   *indraw = NULL;
-  ierr = PetscHeaderCreate(draw,PETSC_DRAW_CLASSID,"Draw","Graphics","Draw",comm,PetscDrawDestroy,PetscDrawView);CHKERRQ(ierr);
+  PetscCall(PetscHeaderCreate(draw, PETSC_DRAW_CLASSID, "Draw", "Graphics", "Draw", comm, PetscDrawDestroy, PetscDrawView));
 
-  draw->data    = NULL;
-  ierr          = PetscStrallocpy(display,&draw->display);CHKERRQ(ierr);
-  ierr          = PetscStrallocpy(title,&draw->title);CHKERRQ(ierr);
+  draw->data = NULL;
+  PetscCall(PetscStrallocpy(display, &draw->display));
+  PetscCall(PetscStrallocpy(title, &draw->title));
   draw->x       = x;
   draw->y       = y;
   draw->w       = w;
@@ -172,7 +161,7 @@ PetscErrorCode  PetscDrawCreate(MPI_Comm comm,const char display[],const char ti
   draw->port_yr = 1.0;
   draw->popup   = NULL;
 
-  ierr = PetscOptionsGetReal(NULL,NULL,"-draw_pause",&dpause,&flag);CHKERRQ(ierr);
+  PetscCall(PetscOptionsGetReal(NULL, NULL, "-draw_pause", &dpause, &flag));
   if (flag) draw->pause = dpause;
 
   draw->savefilename   = NULL;
@@ -182,54 +171,54 @@ PetscErrorCode  PetscDrawCreate(MPI_Comm comm,const char display[],const char ti
   draw->savesinglefile = PETSC_FALSE;
   draw->savemoviefps   = PETSC_DECIDE;
 
-  ierr = PetscDrawSetCurrentPoint(draw,.5,.9);CHKERRQ(ierr);
+  PetscCall(PetscDrawSetCurrentPoint(draw, .5, .9));
 
-  draw->boundbox_xl  = .5;
-  draw->boundbox_xr  = .5;
-  draw->boundbox_yl  = .9;
-  draw->boundbox_yr  = .9;
+  draw->boundbox_xl = .5;
+  draw->boundbox_xr = .5;
+  draw->boundbox_yl = .9;
+  draw->boundbox_yr = .9;
 
   *indraw = draw;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
-   PetscDrawSetType - Builds graphics object for a particular implementation
+/*@
+  PetscDrawSetType - Builds graphics object for a particular implementation
 
-   Collective on PetscDraw
+  Collective
 
-   Input Parameter:
-+  draw      - the graphics context
--  type      - for example, PETSC_DRAW_X
+  Input Parameters:
++ draw - the graphics context
+- type - for example, `PETSC_DRAW_X`
 
-   Options Database Command:
-.  -draw_type  <type> - Sets the type; use -help for a list of available methods (for instance, x)
+  Options Database Key:
+. -draw_type  <type> - Sets the type; use -help for a list of available methods (for instance, x)
 
-   See PetscDrawSetFromOptions() for additional options database keys
+  Level: intermediate
 
-   Level: intermediate
+  Note:
+  See `PetscDrawSetFromOptions()` for additional options database keys
 
-   Notes:
-   See "petsc/include/petscdraw.h" for available methods (for instance,
-   PETSC_DRAW_X, PETSC_DRAW_TIKZ or PETSC_DRAW_IMAGE)
+  See "petsc/include/petscdraw.h" for available methods (for instance,
+  `PETSC_DRAW_X`, `PETSC_DRAW_TIKZ` or `PETSC_DRAW_IMAGE`)
 
-.seealso: PetscDrawSetFromOptions(), PetscDrawCreate(), PetscDrawDestroy(), PetscDrawType
+.seealso: `PetscDraw`, `PETSC_DRAW_X`, `PETSC_DRAW_TIKZ`, `PETSC_DRAW_IMAGE`, `PetscDrawSetFromOptions()`, `PetscDrawCreate()`, `PetscDrawDestroy()`, `PetscDrawType`
 @*/
-PetscErrorCode  PetscDrawSetType(PetscDraw draw,PetscDrawType type)
+PetscErrorCode PetscDrawSetType(PetscDraw draw, PetscDrawType type)
 {
-  PetscErrorCode ierr,(*r)(PetscDraw);
-  PetscBool      match;
-  PetscBool      flg=PETSC_FALSE;
+  PetscBool match;
+  PetscBool flg = PETSC_FALSE;
+  PetscErrorCode (*r)(PetscDraw);
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
-  PetscValidCharPointer(type,2);
+  PetscValidHeaderSpecific(draw, PETSC_DRAW_CLASSID, 1);
+  PetscAssertPointer(type, 2);
 
-  ierr = PetscObjectTypeCompare((PetscObject)draw,type,&match);CHKERRQ(ierr);
-  if (match) PetscFunctionReturn(0);
+  PetscCall(PetscObjectTypeCompare((PetscObject)draw, type, &match));
+  if (match) PetscFunctionReturn(PETSC_SUCCESS);
 
   /*  User requests no graphics */
-  ierr = PetscOptionsHasName(((PetscObject)draw)->options,NULL,"-nox",&flg);CHKERRQ(ierr);
+  PetscCall(PetscOptionsHasName(((PetscObject)draw)->options, NULL, "-nox", &flg));
 
   /*
      This is not ideal, but it allows codes to continue to run if X graphics
@@ -238,214 +227,205 @@ PetscErrorCode  PetscDrawSetType(PetscDraw draw,PetscDrawType type)
    */
 #if !defined(PETSC_HAVE_X)
   if (!flg) {
-    ierr = PetscStrcmp(type,PETSC_DRAW_X,&match);CHKERRQ(ierr);
+    PetscCall(PetscStrcmp(type, PETSC_DRAW_X, &match));
     if (match) {
       PetscBool dontwarn = PETSC_TRUE;
-      flg  = PETSC_TRUE;
-      ierr = PetscOptionsHasName(NULL,NULL,"-nox_warning",&dontwarn);CHKERRQ(ierr);
-      if (!dontwarn) (*PetscErrorPrintf)("PETSc installed without X windows on this machine\nproceeding without graphics\n");
+      flg                = PETSC_TRUE;
+      PetscCall(PetscOptionsHasName(NULL, NULL, "-nox_warning", &dontwarn));
+      if (!dontwarn) PetscCall((*PetscErrorPrintf)("PETSc installed without X Windows on this machine\nproceeding without graphics\n"));
     }
   }
 #endif
   if (flg) {
-    ierr = PetscStrcmp(type,"tikz",&flg);CHKERRQ(ierr);
+    PetscCall(PetscStrcmp(type, "tikz", &flg));
     if (!flg) type = PETSC_DRAW_NULL;
   }
 
-  ierr = PetscStrcmp(type,PETSC_DRAW_NULL,&match);CHKERRQ(ierr);
+  PetscCall(PetscStrcmp(type, PETSC_DRAW_NULL, &match));
   if (match) {
-    ierr = PetscOptionsHasName(NULL,NULL,"-draw_double_buffer",NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsHasName(NULL,NULL,"-draw_virtual",NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsHasName(NULL,NULL,"-draw_fast",NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsHasName(NULL,NULL,"-draw_ports",NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsHasName(NULL,NULL,"-draw_coordinates",NULL);CHKERRQ(ierr);
+    PetscCall(PetscOptionsHasName(NULL, NULL, "-draw_double_buffer", NULL));
+    PetscCall(PetscOptionsHasName(NULL, NULL, "-draw_virtual", NULL));
+    PetscCall(PetscOptionsHasName(NULL, NULL, "-draw_fast", NULL));
+    PetscCall(PetscOptionsHasName(NULL, NULL, "-draw_ports", NULL));
+    PetscCall(PetscOptionsHasName(NULL, NULL, "-draw_coordinates", NULL));
   }
 
-  ierr =  PetscFunctionListFind(PetscDrawList,type,&r);CHKERRQ(ierr);
-  if (!r) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE,"Unknown PetscDraw type given: %s",type);
-  if (draw->ops->destroy) {ierr = (*draw->ops->destroy)(draw);CHKERRQ(ierr);}
-  ierr = PetscMemzero(draw->ops,sizeof(struct _PetscDrawOps));CHKERRQ(ierr);
-  ierr = PetscObjectChangeTypeName((PetscObject)draw,type);CHKERRQ(ierr);
-  ierr = (*r)(draw);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscFunctionListFind(PetscDrawList, type, &r));
+  PetscCheck(r, PetscObjectComm((PetscObject)draw), PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown PetscDraw type given: %s", type);
+  PetscTryTypeMethod(draw, destroy);
+  PetscCall(PetscMemzero(draw->ops, sizeof(struct _PetscDrawOps)));
+  PetscCall(PetscObjectChangeTypeName((PetscObject)draw, type));
+  PetscCall((*r)(draw));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
-   PetscDrawGetType - Gets the PetscDraw type as a string from the PetscDraw object.
+/*@
+  PetscDrawGetType - Gets the `PetscDraw` type as a string from the `PetscDraw` object.
 
-   Not Collective
+  Not Collective
 
-   Input Parameter:
-.  draw - Krylov context
+  Input Parameter:
+. draw - Krylov context
 
-   Output Parameters:
-.  name - name of PetscDraw method
+  Output Parameter:
+. type - name of PetscDraw method
 
-   Level: advanced
+  Level: advanced
 
-.seealso: PetscDrawSetType(), PetscDrawType
-
+.seealso: `PetscDraw`, `PetscDrawType`, `PetscDrawSetType()`, `PetscDrawCreate()`
 @*/
-PetscErrorCode  PetscDrawGetType(PetscDraw draw,PetscDrawType *type)
+PetscErrorCode PetscDrawGetType(PetscDraw draw, PetscDrawType *type)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
-  PetscValidPointer(type,2);
+  PetscValidHeaderSpecific(draw, PETSC_DRAW_CLASSID, 1);
+  PetscAssertPointer(type, 2);
   *type = ((PetscObject)draw)->type_name;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-   PetscDrawRegister - Adds a method to the graphics package.
+  PetscDrawRegister - Adds a method to the graphics package.
 
-   Not Collective
+  Not Collective, No Fortran Support
 
-   Input Parameters:
-+  name_solver - name of a new user-defined graphics class
--  routine_create - routine to create method context
+  Input Parameters:
++ sname    - name of a new user-defined graphics class
+- function - routine to create method context
 
-   Level: developer
+  Level: developer
 
-   Notes:
-   PetscDrawRegister() may be called multiple times to add several user-defined graphics classes
+  Note:
+  `PetscDrawRegister()` may be called multiple times to add several user-defined graphics classes
 
-   Sample usage:
+  Example Usage:
 .vb
    PetscDrawRegister("my_draw_type", MyDrawCreate);
 .ve
 
-   Then, your specific graphics package can be chosen with the procedural interface via
-$     PetscDrawSetType(ksp,"my_draw_type")
-   or at runtime via the option
+  Then, your specific graphics package can be chosen with the procedural interface via
+$     PetscDrawSetType(ksp, "my_draw_type")
+  or at runtime via the option
 $     -draw_type my_draw_type
 
-
-.seealso: PetscDrawRegisterAll(), PetscDrawRegisterDestroy(), PetscDrawType, PetscDrawSetType()
+.seealso: `PetscDraw`, `PetscDrawRegisterAll()`, `PetscDrawRegisterDestroy()`, `PetscDrawType`, `PetscDrawSetType()`
 @*/
-PetscErrorCode  PetscDrawRegister(const char *sname,PetscErrorCode (*function)(PetscDraw))
+PetscErrorCode PetscDrawRegister(const char *sname, PetscErrorCode (*function)(PetscDraw))
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  ierr = PetscDrawInitializePackage();CHKERRQ(ierr);
-  ierr = PetscFunctionListAdd(&PetscDrawList,sname,function);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
-/*@C
-   PetscDrawSetOptionsPrefix - Sets the prefix used for searching for all
-   PetscDraw options in the database.
-
-   Logically Collective on PetscDraw
-
-   Input Parameter:
-+  draw - the draw context
--  prefix - the prefix to prepend to all option names
-
-   Level: advanced
-
-.seealso: PetscDrawSetFromOptions(), PetscDrawCreate()
-@*/
-PetscErrorCode  PetscDrawSetOptionsPrefix(PetscDraw draw,const char prefix[])
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
-  ierr = PetscObjectSetOptionsPrefix((PetscObject)draw,prefix);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscDrawInitializePackage());
+  PetscCall(PetscFunctionListAdd(&PetscDrawList, sname, function));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   PetscDrawSetFromOptions - Sets the graphics type from the options database.
-      Defaults to a PETSc X windows graphics.
+  PetscDrawSetOptionsPrefix - Sets the prefix used for searching for all
+  `PetscDraw` options in the database.
 
-   Collective on PetscDraw
+  Logically Collective
 
-   Input Parameter:
-.     draw - the graphics context
+  Input Parameters:
++ draw   - the draw context
+- prefix - the prefix to prepend to all option names
 
-   Options Database Keys:
-+   -nox - do not use X graphics (ignore graphics calls, but run program correctly)
-.   -nox_warning - when X windows support is not installed this prevents the warning message from being printed
-.   -draw_pause <pause amount> -- -1 indicates wait for mouse input, -2 indicates pause when window is to be destroyed
-.   -draw_marker_type - <x,point>
-.   -draw_save [optional filename] - (X windows only) saves each image before it is cleared to a file
-.   -draw_save_final_image [optional filename] - (X windows only) saves the final image displayed in a window
-.   -draw_save_movie - converts image files to a movie  at the end of the run. See PetscDrawSetSave()
-.   -draw_save_single_file - saves each new image in the same file, normally each new image is saved in a new file with 'filename/filename_%d.ext'
-.   -draw_save_on_clear - saves an image on each clear, mainly for debugging
--   -draw_save_on_flush - saves an image on each flush, mainly for debugging
+  Level: advanced
 
-   Level: intermediate
-
-   Notes:
-    Must be called after PetscDrawCreate() before the PetscDraw is used.
-
-
-.seealso: PetscDrawCreate(), PetscDrawSetType(), PetscDrawSetSave(), PetscDrawSetSaveFinalImage(), PetscDrawPause(), PetscDrawSetPause()
-
+.seealso: `PetscDraw`, `PetscDrawSetFromOptions()`, `PetscDrawCreate()`
 @*/
-PetscErrorCode  PetscDrawSetFromOptions(PetscDraw draw)
+PetscErrorCode PetscDrawSetOptionsPrefix(PetscDraw draw, const char prefix[])
 {
-  PetscErrorCode    ierr;
-  PetscBool         flg,nox;
-  char              vtype[256];
-  const char        *def;
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(draw, PETSC_DRAW_CLASSID, 1);
+  PetscCall(PetscObjectSetOptionsPrefix((PetscObject)draw, prefix));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PetscDrawSetFromOptions - Sets the graphics type from the options database.
+  Defaults to a PETSc X Windows graphics.
+
+  Collective
+
+  Input Parameter:
+. draw - the graphics context
+
+  Options Database Keys:
++ -nox                                       - do not use X graphics (ignore graphics calls, but run program correctly)
+. -nox_warning                               - when X Windows support is not installed this prevents the warning message from being printed
+. -draw_pause <pause amount>                 - - -1 indicates wait for mouse input, -2 indicates pause when window is to be destroyed
+. -draw_marker_type                          - <x,point>
+. -draw_save [optional filename]             - (X Windows only) saves each image before it is cleared to a file
+. -draw_save_final_image [optional filename] - (X Windows only) saves the final image displayed in a window
+. -draw_save_movie                           - converts image files to a movie  at the end of the run. See PetscDrawSetSave()
+. -draw_save_single_file                     - saves each new image in the same file, normally each new image is saved in a new file with 'filename/filename_%d.ext'
+. -draw_save_on_clear                        - saves an image on each clear, mainly for debugging
+- -draw_save_on_flush                        - saves an image on each flush, mainly for debugging
+
+  Level: intermediate
+
+  Note:
+  Must be called after `PetscDrawCreate()` before the `PetscDraw` is used.
+
+.seealso: `PetscDraw`, `PetscDrawCreate()`, `PetscDrawSetType()`, `PetscDrawSetSave()`, `PetscDrawSetSaveFinalImage()`, `PetscDrawPause()`, `PetscDrawSetPause()`
+@*/
+PetscErrorCode PetscDrawSetFromOptions(PetscDraw draw)
+{
+  PetscBool   flg, nox;
+  char        vtype[256];
+  const char *def;
 #if !defined(PETSC_USE_WINDOWS_GRAPHICS) && !defined(PETSC_HAVE_X)
-  PetscBool         warn;
+  PetscBool warn;
 #endif
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
+  PetscValidHeaderSpecific(draw, PETSC_DRAW_CLASSID, 1);
 
-  ierr = PetscDrawRegisterAll();CHKERRQ(ierr);
+  PetscCall(PetscDrawRegisterAll());
 
   if (((PetscObject)draw)->type_name) def = ((PetscObject)draw)->type_name;
   else {
-    ierr = PetscOptionsHasName(((PetscObject)draw)->options,NULL,"-nox",&nox);CHKERRQ(ierr);
-    def  = PETSC_DRAW_NULL;
+    PetscCall(PetscOptionsHasName(((PetscObject)draw)->options, NULL, "-nox", &nox));
+    def = PETSC_DRAW_NULL;
 #if defined(PETSC_USE_WINDOWS_GRAPHICS)
     if (!nox) def = PETSC_DRAW_WIN32;
 #elif defined(PETSC_HAVE_X)
     if (!nox) def = PETSC_DRAW_X;
 #else
-    ierr = PetscOptionsHasName(NULL,NULL,"-nox_warning",&warn);CHKERRQ(ierr);
-    if (!nox && !warn) (*PetscErrorPrintf)("PETSc installed without X windows or Microsoft Graphics on this machine\nproceeding without graphics\n");
+    PetscCall(PetscOptionsHasName(NULL, NULL, "-nox_warning", &warn));
+    if (!nox && !warn) PetscCall((*PetscErrorPrintf)("PETSc installed without X Windows or Microsoft Graphics on this machine\nproceeding without graphics\n"));
 #endif
   }
-  ierr = PetscObjectOptionsBegin((PetscObject)draw);CHKERRQ(ierr);
-  ierr = PetscOptionsFList("-draw_type","Type of graphical output","PetscDrawSetType",PetscDrawList,def,vtype,256,&flg);CHKERRQ(ierr);
+  PetscObjectOptionsBegin((PetscObject)draw);
+  PetscCall(PetscOptionsFList("-draw_type", "Type of graphical output", "PetscDrawSetType", PetscDrawList, def, vtype, 256, &flg));
   if (flg) {
-    ierr = PetscDrawSetType(draw,vtype);CHKERRQ(ierr);
+    PetscCall(PetscDrawSetType(draw, vtype));
   } else if (!((PetscObject)draw)->type_name) {
-    ierr = PetscDrawSetType(draw,def);CHKERRQ(ierr);
+    PetscCall(PetscDrawSetType(draw, def));
   }
-  ierr = PetscOptionsName("-nox","Run without graphics","None",&nox);CHKERRQ(ierr);
+  PetscCall(PetscOptionsName("-nox", "Run without graphics", "None", &nox));
   {
     char      filename[PETSC_MAX_PATH_LEN];
     char      movieext[32];
-    PetscBool image,movie;
-    ierr = PetscSNPrintf(filename,sizeof(filename),"%s%s",draw->savefilename?draw->savefilename:"",draw->saveimageext?draw->saveimageext:"");CHKERRQ(ierr);
-    ierr = PetscSNPrintf(movieext,sizeof(movieext),"%s",draw->savemovieext?draw->savemovieext:"");CHKERRQ(ierr);
-    ierr = PetscOptionsString("-draw_save","Save graphics to image file","PetscDrawSetSave",filename,filename,sizeof(filename),&image);CHKERRQ(ierr);
-    ierr = PetscOptionsString("-draw_save_movie","Make a movie from saved images","PetscDrawSetSaveMovie",movieext,movieext,sizeof(movieext),&movie);CHKERRQ(ierr);
-    ierr = PetscOptionsInt("-draw_save_movie_fps","Set frames per second in saved movie",PETSC_FUNCTION_NAME,draw->savemoviefps,&draw->savemoviefps,NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsBool("-draw_save_single_file","Each new image replaces previous image in file",PETSC_FUNCTION_NAME,draw->savesinglefile,&draw->savesinglefile,NULL);CHKERRQ(ierr);
-    if (image) {ierr = PetscDrawSetSave(draw,filename);CHKERRQ(ierr);}
-    if (movie) {ierr = PetscDrawSetSaveMovie(draw,movieext);CHKERRQ(ierr);}
-    ierr = PetscOptionsString("-draw_save_final_image","Save final graphics to image file","PetscDrawSetSaveFinalImage",filename,filename,sizeof(filename),&image);CHKERRQ(ierr);
-    if (image) {ierr = PetscDrawSetSaveFinalImage(draw,filename);CHKERRQ(ierr);}
-    ierr = PetscOptionsBool("-draw_save_on_clear","Save graphics to file on each clear",PETSC_FUNCTION_NAME,draw->saveonclear,&draw->saveonclear,NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsBool("-draw_save_on_flush","Save graphics to file on each flush",PETSC_FUNCTION_NAME,draw->saveonflush,&draw->saveonflush,NULL);CHKERRQ(ierr);
+    PetscBool image, movie;
+    PetscCall(PetscSNPrintf(filename, sizeof(filename), "%s%s", draw->savefilename ? draw->savefilename : "", draw->saveimageext ? draw->saveimageext : ""));
+    PetscCall(PetscSNPrintf(movieext, sizeof(movieext), "%s", draw->savemovieext ? draw->savemovieext : ""));
+    PetscCall(PetscOptionsString("-draw_save", "Save graphics to image file", "PetscDrawSetSave", filename, filename, sizeof(filename), &image));
+    PetscCall(PetscOptionsString("-draw_save_movie", "Make a movie from saved images", "PetscDrawSetSaveMovie", movieext, movieext, sizeof(movieext), &movie));
+    PetscCall(PetscOptionsInt("-draw_save_movie_fps", "Set frames per second in saved movie", PETSC_FUNCTION_NAME, draw->savemoviefps, &draw->savemoviefps, NULL));
+    PetscCall(PetscOptionsBool("-draw_save_single_file", "Each new image replaces previous image in file", PETSC_FUNCTION_NAME, draw->savesinglefile, &draw->savesinglefile, NULL));
+    if (image) PetscCall(PetscDrawSetSave(draw, filename));
+    if (movie) PetscCall(PetscDrawSetSaveMovie(draw, movieext));
+    PetscCall(PetscOptionsString("-draw_save_final_image", "Save final graphics to image file", "PetscDrawSetSaveFinalImage", filename, filename, sizeof(filename), &image));
+    if (image) PetscCall(PetscDrawSetSaveFinalImage(draw, filename));
+    PetscCall(PetscOptionsBool("-draw_save_on_clear", "Save graphics to file on each clear", PETSC_FUNCTION_NAME, draw->saveonclear, &draw->saveonclear, NULL));
+    PetscCall(PetscOptionsBool("-draw_save_on_flush", "Save graphics to file on each flush", PETSC_FUNCTION_NAME, draw->saveonflush, &draw->saveonflush, NULL));
   }
-  ierr = PetscOptionsReal("-draw_pause","Amount of time that program pauses after plots","PetscDrawSetPause",draw->pause,&draw->pause,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsEnum("-draw_marker_type","Type of marker to use on plots","PetscDrawSetMarkerType",PetscDrawMarkerTypes,(PetscEnum)draw->markertype,(PetscEnum *)&draw->markertype,NULL);CHKERRQ(ierr);
+  PetscCall(PetscOptionsReal("-draw_pause", "Amount of time that program pauses after plots", "PetscDrawSetPause", draw->pause, &draw->pause, NULL));
+  PetscCall(PetscOptionsEnum("-draw_marker_type", "Type of marker to use on plots", "PetscDrawSetMarkerType", PetscDrawMarkerTypes, (PetscEnum)draw->markertype, (PetscEnum *)&draw->markertype, NULL));
 
   /* process any options handlers added with PetscObjectAddOptionsHandler() */
-  ierr = PetscObjectProcessOptionsHandlers(PetscOptionsObject,(PetscObject)draw);CHKERRQ(ierr);
+  PetscCall(PetscObjectProcessOptionsHandlers((PetscObject)draw, PetscOptionsObject));
 
-  ierr = PetscDrawViewFromOptions(draw,NULL,"-draw_view");CHKERRQ(ierr);
-  ierr = PetscOptionsEnd();CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscDrawViewFromOptions(draw, NULL, "-draw_view"));
+  PetscOptionsEnd();
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

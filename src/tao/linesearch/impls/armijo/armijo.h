@@ -1,5 +1,4 @@
-#ifndef __TAOLINESEARCH_ARMIJO_H
-#define __TAOLINESEARCH_ARMIJO_H
+#pragma once
 
 /* Context for an Armijo (nonmonotone) linesearch for unconstrained
    minimization.
@@ -39,7 +38,7 @@
    the code.
 
    Finally, care must be taken when steepest descent directions are used.
-   For example, when the Newton direction is not not satisfy a sufficient
+   For example, when the Newton direction does not satisfy a sufficient
    descent criteria.  The code will apply the same test regardless of
    the direction.  This type of search may not be appropriate for all
    algorithms.  For example, when a gradient direction is used, we may
@@ -48,39 +47,37 @@
    This type of search is currently NOT supported by the code.
 
    References:
-    Armijo, "Minimization of Functions Having Lipschitz Continuous
++  * - Armijo, "Minimization of Functions Having Lipschitz Continuous
       First-Partial Derivatives," Pacific Journal of Mathematics, volume 16,
       pages 1-3, 1966.
-    Ferris and Lucidi, "Nonmonotone Stabilization Methods for Nonlinear
+.  * - Ferris and Lucidi, "Nonmonotone Stabilization Methods for Nonlinear
       Equations," Journal of Optimization Theory and Applications, volume 81,
       pages 53-71, 1994.
-    Grippo, Lampariello, and Lucidi, "A Nonmonotone Line Search Technique
+.  * - Grippo, Lampariello, and Lucidi, "A Nonmonotone Line Search Technique
       for Newton's Method," SIAM Journal on Numerical Analysis, volume 23,
       pages 707-716, 1986.
-    Grippo, Lampariello, and Lucidi, "A Class of Nonmonotone Stabilization
+-  * - Grippo, Lampariello, and Lucidi, "A Class of Nonmonotone Stabilization
       Methods in Unconstrained Optimization," Numerische Mathematik, volume 59,
       pages 779-805, 1991. */
 #include <petsc/private/taolinesearchimpl.h>
 typedef struct {
   PetscReal *memory;
 
-  PetscReal alpha;                      /* Initial reference factor >= 1 */
-  PetscReal beta;                       /* Steplength determination < 1 */
-  PetscReal beta_inf;           /* Steplength determination < 1 */
-  PetscReal sigma;                      /* Acceptance criteria < 1) */
-  PetscReal minimumStep;                /* Minimum step size */
-  PetscReal lastReference;              /* Reference value of last iteration */
+  PetscReal alpha;         /* Initial reference factor >= 1 */
+  PetscReal beta;          /* Steplength determination < 1 */
+  PetscReal beta_inf;      /* Steplength determination < 1 */
+  PetscReal sigma;         /* Acceptance criteria < 1) */
+  PetscReal minimumStep;   /* Minimum step size */
+  PetscReal lastReference; /* Reference value of last iteration */
 
-  PetscInt memorySize;          /* Number of functions kept in memory */
-  PetscInt current;                     /* Current element for FIFO */
-  PetscInt referencePolicy;             /* Integer for reference calculation rule */
-  PetscInt replacementPolicy;   /* Policy for replacing values in memory */
+  PetscInt memorySize;        /* Number of functions kept in memory */
+  PetscInt current;           /* Current element for FIFO */
+  PetscInt referencePolicy;   /* Integer for reference calculation rule */
+  PetscInt replacementPolicy; /* Policy for replacing values in memory */
 
   PetscBool nondescending;
   PetscBool memorySetup;
 
-  Vec x;        /* Maintain reference to variable vector to check for changes */
+  Vec x; /* Maintain reference to variable vector to check for changes */
   Vec work;
 } TaoLineSearch_ARMIJO;
-
-#endif

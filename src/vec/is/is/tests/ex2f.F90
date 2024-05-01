@@ -7,52 +7,47 @@
       implicit none
 
       PetscErrorCode ierr
-      PetscInt  i,n,ii(1),start
+      PetscInt  i,n,start
       PetscInt  stride,ssize,first
       IS          is
       PetscBool   flag
-      PetscOffset iis
+      PetscInt, pointer :: ii(:)
 
-      call PetscInitialize(PETSC_NULL_CHARACTER,ierr)
-      if (ierr .ne. 0) then
-        print*,'Unable to initialize PETSc'
-        stop
-      endif
+      PetscCallA(PetscInitialize(ierr))
 
 !     Test IS of size 0
       ssize = 0
       stride = 0
       first = 2
-      call ISCreateStride(PETSC_COMM_SELF,ssize,stride,first,is,ierr)
-      call ISGetLocalSize(is,n,ierr)
-      if (n .ne. 0) then; SETERRA(PETSC_COMM_SELF,PETSC_ERR_PLIB,'Wrong result from ISCreateStride'); endif
+      PetscCallA(ISCreateStride(PETSC_COMM_SELF,ssize,stride,first,is,ierr))
+      PetscCallA(ISGetLocalSize(is,n,ierr))
+      PetscCheckA(n .eq. 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,'Wrong result from ISCreateStride')
 
-      call ISStrideGetInfo(is,start,stride,ierr)
-      if (start .ne. 0) then; SETERRA(PETSC_COMM_SELF,PETSC_ERR_PLIB,'Wrong result from ISStrideGetInfo'); endif
+      PetscCallA(ISStrideGetInfo(is,start,stride,ierr))
+      PetscCheckA(start .eq. 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,'Wrong result from ISStrideGetInfo')
+      PetscCheckA(stride .eq. 2,PETSC_COMM_SELF,PETSC_ERR_PLIB,'Wrong result from ISStrideGetInfo')
 
-      if (stride .ne. 2) then; SETERRA(PETSC_COMM_SELF,PETSC_ERR_PLIB,'Wrong result from ISStrideGetInfo') ; endif
-
-      call PetscObjectTypeCompare(is,ISSTRIDE,flag,ierr)
-      if (.not. flag) then; SETERRA(PETSC_COMM_SELF,PETSC_ERR_PLIB,'Wrong result from PetscObjectTypeCompare'); endif
-      call ISGetIndices(is,ii,iis,ierr)
-      call ISRestoreIndices(is,ii,iis,ierr)
-      call ISDestroy(is,ierr)
+      PetscCallA(PetscObjectTypeCompare(is,ISSTRIDE,flag,ierr))
+      PetscCheckA(flag,PETSC_COMM_SELF,PETSC_ERR_PLIB,'Wrong result from PetscObjectTypeCompare')
+      PetscCallA(ISGetIndicesF90(is,ii,ierr))
+      PetscCallA(ISRestoreIndicesF90(is,ii,ierr))
+      PetscCallA(ISDestroy(is,ierr))
 
 !     Test ISGetIndices()
 
       ssize = 10000
       stride = -8
       first = 3
-      call ISCreateStride(PETSC_COMM_SELF,ssize,stride,first,is,ierr)
-      call ISGetLocalSize(is,n,ierr)
-      call ISGetIndices(is,ii,iis,ierr)
+      PetscCallA(ISCreateStride(PETSC_COMM_SELF,ssize,stride,first,is,ierr))
+      PetscCallA(ISGetLocalSize(is,n,ierr))
+      PetscCallA(ISGetIndicesF90(is,ii,ierr))
       do 10, i=1,n
-        if (ii(i+iis) .ne. -11 + 3*i) then; SETERRA(PETSC_COMM_SELF,PETSC_ERR_PLIB,'Wrong result from ISGetIndices'); endif
+        PetscCheckA(ii(i) .eq. -11 + 3*i,PETSC_COMM_SELF,PETSC_ERR_PLIB,'Wrong result from ISGetIndices')
  10   continue
-      call ISRestoreIndices(is,ii,iis,ierr)
-      call ISDestroy(is,ierr)
+      PetscCallA(ISRestoreIndicesF90(is,ii,ierr))
+      PetscCallA(ISDestroy(is,ierr))
 
-      call PetscFinalize(ierr)
+      PetscCallA(PetscFinalize(ierr))
       end
 
 !/*TEST

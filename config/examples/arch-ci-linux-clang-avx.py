@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
 import os
 petsc_hash_pkgs=os.path.join(os.getenv('HOME'),'petsc-hash-pkgs')
@@ -10,6 +10,7 @@ if __name__ == '__main__':
   import configure
   configure_options = [
     '--package-prefix-hash='+petsc_hash_pkgs,
+    '--with-cudac=0',
     '--download-f2cblaslapack',
     '--download-blis',
     '--download-mpich',
@@ -22,5 +23,8 @@ if __name__ == '__main__':
     'CXXOPTFLAGS=-g -O',
     '--download-codipack=1',
     '--download-adblaslapack=1',
+    '--with-mpi-f90module-visibility=0',
+    '--with-strict-petscerrorcode',
+    '--with-coverage',
   ]
   configure.petsc_configure(configure_options)

@@ -1,5 +1,4 @@
-
-#include <petsc/private/tsimpl.h>     /*I  "petscts.h"  I*/
+#include <petsc/private/tsimpl.h> /*I  "petscts.h"  I*/
 PETSC_EXTERN PetscErrorCode TSCreate_Euler(TS);
 PETSC_EXTERN PetscErrorCode TSCreate_BEuler(TS);
 PETSC_EXTERN PetscErrorCode TSCreate_Pseudo(TS);
@@ -13,6 +12,7 @@ PETSC_EXTERN PetscErrorCode TSCreate_GLLE(TS);
 PETSC_EXTERN PetscErrorCode TSCreate_SSP(TS);
 PETSC_EXTERN PetscErrorCode TSCreate_RK(TS);
 PETSC_EXTERN PetscErrorCode TSCreate_ARKIMEX(TS);
+PETSC_EXTERN PetscErrorCode TSCreate_DIRK(TS);
 PETSC_EXTERN PetscErrorCode TSCreate_RosW(TS);
 PETSC_EXTERN PetscErrorCode TSCreate_EIMEX(TS);
 PETSC_EXTERN PetscErrorCode TSCreate_Mimex(TS);
@@ -20,51 +20,50 @@ PETSC_EXTERN PetscErrorCode TSCreate_BDF(TS);
 PETSC_EXTERN PetscErrorCode TSCreate_GLEE(TS);
 PETSC_EXTERN PetscErrorCode TSCreate_BasicSymplectic(TS);
 PETSC_EXTERN PetscErrorCode TSCreate_MPRK(TS);
+PETSC_EXTERN PetscErrorCode TSCreate_DiscGrad(TS);
+PETSC_EXTERN PetscErrorCode TSCreate_IRK(TS);
 
 /*@C
-  TSRegisterAll - Registers all of the timesteppers in the TS package.
+  TSRegisterAll - Registers all of the timesteppers in the `TS` package.
 
   Not Collective
 
-  Input parameter:
-. path - The dynamic library path
-
   Level: advanced
 
-.seealso: TSCreate(), TSRegister(), TSRegisterDestroy()
+.seealso: [](ch_ts), `TS`, `TSCreate()`, `TSRegister()`, `TSRegisterDestroy()`
 @*/
-PetscErrorCode  TSRegisterAll(void)
+PetscErrorCode TSRegisterAll(void)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  if (TSRegisterAllCalled) PetscFunctionReturn(0);
+  if (TSRegisterAllCalled) PetscFunctionReturn(PETSC_SUCCESS);
   TSRegisterAllCalled = PETSC_TRUE;
 
-  ierr = TSRegister(TSEULER,          TSCreate_Euler);CHKERRQ(ierr);
-  ierr = TSRegister(TSBEULER,         TSCreate_BEuler);CHKERRQ(ierr);
-  ierr = TSRegister(TSCN,             TSCreate_CN);CHKERRQ(ierr);
-  ierr = TSRegister(TSPSEUDO,         TSCreate_Pseudo);CHKERRQ(ierr);
-  ierr = TSRegister(TSGLLE,           TSCreate_GLLE);CHKERRQ(ierr);
-  ierr = TSRegister(TSSSP,            TSCreate_SSP);CHKERRQ(ierr);
-  ierr = TSRegister(TSTHETA,          TSCreate_Theta);CHKERRQ(ierr);
-  ierr = TSRegister(TSALPHA,          TSCreate_Alpha);CHKERRQ(ierr);
-  ierr = TSRegister(TSALPHA2,         TSCreate_Alpha2);CHKERRQ(ierr);
-#if defined(PETSC_HAVE_SUNDIALS)
-  ierr = TSRegister(TSSUNDIALS,       TSCreate_Sundials);CHKERRQ(ierr);
+  PetscCall(TSRegister(TSEULER, TSCreate_Euler));
+  PetscCall(TSRegister(TSBEULER, TSCreate_BEuler));
+  PetscCall(TSRegister(TSCN, TSCreate_CN));
+  PetscCall(TSRegister(TSPSEUDO, TSCreate_Pseudo));
+  PetscCall(TSRegister(TSGLLE, TSCreate_GLLE));
+  PetscCall(TSRegister(TSSSP, TSCreate_SSP));
+  PetscCall(TSRegister(TSTHETA, TSCreate_Theta));
+  PetscCall(TSRegister(TSALPHA, TSCreate_Alpha));
+  PetscCall(TSRegister(TSALPHA2, TSCreate_Alpha2));
+#if defined(PETSC_HAVE_SUNDIALS2)
+  PetscCall(TSRegister(TSSUNDIALS, TSCreate_Sundials));
 #endif
 #if defined(PETSC_HAVE_RADAU5)
-  ierr = TSRegister(TSRADAU5,         TSCreate_Radau5);CHKERRQ(ierr);
+  PetscCall(TSRegister(TSRADAU5, TSCreate_Radau5));
 #endif
-  ierr = TSRegister(TSRK,             TSCreate_RK);CHKERRQ(ierr);
-  ierr = TSRegister(TSGLEE,           TSCreate_GLEE);CHKERRQ(ierr);
-  ierr = TSRegister(TSARKIMEX,        TSCreate_ARKIMEX);CHKERRQ(ierr);
-  ierr = TSRegister(TSROSW,           TSCreate_RosW);CHKERRQ(ierr);
-  ierr = TSRegister(TSEIMEX,          TSCreate_EIMEX);CHKERRQ(ierr);
-  ierr = TSRegister(TSMIMEX,          TSCreate_Mimex);CHKERRQ(ierr);
-  ierr = TSRegister(TSBDF,            TSCreate_BDF);CHKERRQ(ierr);
-  ierr = TSRegister(TSBASICSYMPLECTIC,TSCreate_BasicSymplectic);CHKERRQ(ierr);
-  ierr = TSRegister(TSMPRK,           TSCreate_MPRK);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(TSRegister(TSRK, TSCreate_RK));
+  PetscCall(TSRegister(TSGLEE, TSCreate_GLEE));
+  PetscCall(TSRegister(TSARKIMEX, TSCreate_ARKIMEX));
+  PetscCall(TSRegister(TSDIRK, TSCreate_DIRK));
+  PetscCall(TSRegister(TSROSW, TSCreate_RosW));
+  PetscCall(TSRegister(TSEIMEX, TSCreate_EIMEX));
+  PetscCall(TSRegister(TSMIMEX, TSCreate_Mimex));
+  PetscCall(TSRegister(TSBDF, TSCreate_BDF));
+  PetscCall(TSRegister(TSBASICSYMPLECTIC, TSCreate_BasicSymplectic));
+  PetscCall(TSRegister(TSMPRK, TSCreate_MPRK));
+  PetscCall(TSRegister(TSDISCGRAD, TSCreate_DiscGrad));
+  PetscCall(TSRegister(TSIRK, TSCreate_IRK));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
-

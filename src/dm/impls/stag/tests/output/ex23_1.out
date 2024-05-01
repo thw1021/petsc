@@ -1,8 +1,7 @@
 ####### Round 1 #######
 Coordinates dim 0:
-Vec Object: 1 MPI processes
-  type: mpi
-Process [0]
+Vec Object: coordinates 1 MPI process
+  type: seq
 -1.1
 -1.05
 -1.1
@@ -13,9 +12,8 @@ Process [0]
 -1.05
 -1.
 Coordinates dim 1:
-Vec Object: 1 MPI processes
-  type: mpi
-Process [0]
+Vec Object: coordinates 1 MPI process
+  type: seq
 -2.2
 -2.15
 -2.31
@@ -24,18 +22,16 @@ Process [0]
 -2.381
 -2.331
 Coordinates dim 2:
-Vec Object: 1 MPI processes
-  type: mpi
-Process [0]
+Vec Object: coordinates 1 MPI process
+  type: seq
 -3.3
 -3.25
 -3.52
 -3.47
 ####### Round 2 #######
 Coordinates dim 0:
-Vec Object: 1 MPI processes
-  type: mpi
-Process [0]
+Vec Object: coordinates 1 MPI process
+  type: seq
 2.
 2.
 2.
@@ -46,9 +42,8 @@ Process [0]
 2.
 2.
 Coordinates dim 1:
-Vec Object: 1 MPI processes
-  type: mpi
-Process [0]
+Vec Object: coordinates 1 MPI process
+  type: seq
 2.
 2.
 2.
@@ -57,9 +52,8 @@ Process [0]
 2.
 2.
 Coordinates dim 2:
-Vec Object: 1 MPI processes
-  type: mpi
-Process [0]
+Vec Object: coordinates 1 MPI process
+  type: seq
 2.
 2.
 2.

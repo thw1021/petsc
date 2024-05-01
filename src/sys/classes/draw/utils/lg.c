@@ -1,44 +1,43 @@
-
-#include <../src/sys/classes/draw/utils/lgimpl.h>  /*I   "petscdraw.h"  I*/
+#include <petsc/private/drawimpl.h> /*I   "petscdraw.h"  I*/
 
 /*@
-   PetscDrawLGAddCommonPoint - Adds another point to each of the line graphs. All the points share
-      the same new X coordinate.  The new point must have an X coordinate larger than the old points.
+  PetscDrawLGAddCommonPoint - Adds another point to each of the line graphs. All the points share
+  the same new X coordinate.  The new point must have an X coordinate larger than the old points.
 
-   Logically Collective on PetscDrawLG
+  Logically Collective
 
-   Input Parameters:
-+  lg - the LineGraph data structure
-.   x - the common x coordinate point
--   y - the new y coordinate point for each curve.
+  Input Parameters:
++ lg - the line graph context
+. x  - the common x coordinate point
+- y  - the new y coordinate point for each curve.
 
-   Level: intermediate
+  Level: intermediate
 
-   Note: You must call PetscDrawLGDraw() to display any added points
-         Call PetscDrawLGReset() to remove all points
+  Notes:
+  You must call `PetscDrawLGDraw()` to display any added points
 
-.seealso: PetscDrawLGCreate(), PetscDrawLGAddPoints(), PetscDrawLGAddPoint(), PetscDrawLGReset(), PetscDrawLGDraw()
+  Call `PetscDrawLGReset()` to remove all points
+
+.seealso: `PetscDrawLG`, `PetscDrawLGCreate()`, `PetscDrawLGAddPoints()`, `PetscDrawLGAddPoint()`, `PetscDrawLGReset()`, `PetscDrawLGDraw()`
 @*/
-PetscErrorCode  PetscDrawLGAddCommonPoint(PetscDrawLG lg,const PetscReal x,const PetscReal *y)
+PetscErrorCode PetscDrawLGAddCommonPoint(PetscDrawLG lg, const PetscReal x, const PetscReal *y)
 {
-  PetscErrorCode ierr;
-  PetscInt       i;
+  PetscInt i;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(lg,PETSC_DRAWLG_CLASSID,1);
+  PetscValidHeaderSpecific(lg, PETSC_DRAWLG_CLASSID, 1);
 
-  if (lg->loc+lg->dim >= lg->len) { /* allocate more space */
-    PetscReal *tmpx,*tmpy;
-    ierr     = PetscMalloc2(lg->len+lg->dim*CHUNCKSIZE,&tmpx,lg->len+lg->dim*CHUNCKSIZE,&tmpy);CHKERRQ(ierr);
-    ierr     = PetscLogObjectMemory((PetscObject)lg,2*lg->dim*CHUNCKSIZE*sizeof(PetscReal));CHKERRQ(ierr);
-    ierr     = PetscArraycpy(tmpx,lg->x,lg->len);CHKERRQ(ierr);
-    ierr     = PetscArraycpy(tmpy,lg->y,lg->len);CHKERRQ(ierr);
-    ierr     = PetscFree2(lg->x,lg->y);CHKERRQ(ierr);
-    lg->x    = tmpx;
-    lg->y    = tmpy;
-    lg->len += lg->dim*CHUNCKSIZE;
+  if (lg->loc + lg->dim >= lg->len) { /* allocate more space */
+    PetscReal *tmpx, *tmpy;
+    PetscCall(PetscMalloc2(lg->len + lg->dim * PETSC_DRAW_LG_CHUNK_SIZE, &tmpx, lg->len + lg->dim * PETSC_DRAW_LG_CHUNK_SIZE, &tmpy));
+    PetscCall(PetscArraycpy(tmpx, lg->x, lg->len));
+    PetscCall(PetscArraycpy(tmpy, lg->y, lg->len));
+    PetscCall(PetscFree2(lg->x, lg->y));
+    lg->x = tmpx;
+    lg->y = tmpy;
+    lg->len += lg->dim * PETSC_DRAW_LG_CHUNK_SIZE;
   }
-  for (i=0; i<lg->dim; i++) {
+  for (i = 0; i < lg->dim; i++) {
     if (x > lg->xmax) lg->xmax = x;
     if (x < lg->xmin) lg->xmin = x;
     if (y[i] > lg->ymax) lg->ymax = y[i];
@@ -48,48 +47,48 @@ PetscErrorCode  PetscDrawLGAddCommonPoint(PetscDrawLG lg,const PetscReal x,const
     lg->y[lg->loc++] = y[i];
   }
   lg->nopts++;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   PetscDrawLGAddPoint - Adds another point to each of the line graphs.
-   The new point must have an X coordinate larger than the old points.
+  PetscDrawLGAddPoint - Adds another point to each of the line graphs.
+  The new point must have an X coordinate larger than the old points.
 
-   Logically Collective on PetscDrawLG
+  Logically Collective
 
-   Input Parameters:
-+  lg - the LineGraph data structure
--  x, y - the points to two arrays containing the new x and y
-          point for each curve.
+  Input Parameters:
++ lg - the line graph context
+. x  - array containing the x coordinate for the point on each curve
+- y  - array containing the y coordinate for the point on each curve
 
-   Note: You must call PetscDrawLGDraw() to display any added points
-         Call PetscDrawLGReset() to remove all points
+  Level: intermediate
 
-   Level: intermediate
+  Notes:
+  You must call `PetscDrawLGDraw()` to display any added points
 
-.seealso: PetscDrawLGCreate(), PetscDrawLGAddPoints(), PetscDrawLGAddCommonPoint(), PetscDrawLGReset(), PetscDrawLGDraw()
+  Call `PetscDrawLGReset()` to remove all points
+
+.seealso: `PetscDrawLG`, `PetscDrawLGCreate()`, `PetscDrawLGAddPoints()`, `PetscDrawLGAddCommonPoint()`, `PetscDrawLGReset()`, `PetscDrawLGDraw()`
 @*/
-PetscErrorCode  PetscDrawLGAddPoint(PetscDrawLG lg,const PetscReal *x,const PetscReal *y)
+PetscErrorCode PetscDrawLGAddPoint(PetscDrawLG lg, const PetscReal *x, const PetscReal *y)
 {
-  PetscErrorCode ierr;
-  PetscInt       i;
-  PetscReal      xx;
+  PetscInt  i;
+  PetscReal xx;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(lg,PETSC_DRAWLG_CLASSID,1);
+  PetscValidHeaderSpecific(lg, PETSC_DRAWLG_CLASSID, 1);
 
-  if (lg->loc+lg->dim >= lg->len) { /* allocate more space */
-    PetscReal *tmpx,*tmpy;
-    ierr     = PetscMalloc2(lg->len+lg->dim*CHUNCKSIZE,&tmpx,lg->len+lg->dim*CHUNCKSIZE,&tmpy);CHKERRQ(ierr);
-    ierr     = PetscLogObjectMemory((PetscObject)lg,2*lg->dim*CHUNCKSIZE*sizeof(PetscReal));CHKERRQ(ierr);
-    ierr     = PetscArraycpy(tmpx,lg->x,lg->len);CHKERRQ(ierr);
-    ierr     = PetscArraycpy(tmpy,lg->y,lg->len);CHKERRQ(ierr);
-    ierr     = PetscFree2(lg->x,lg->y);CHKERRQ(ierr);
-    lg->x    = tmpx;
-    lg->y    = tmpy;
-    lg->len += lg->dim*CHUNCKSIZE;
+  if (lg->loc + lg->dim >= lg->len) { /* allocate more space */
+    PetscReal *tmpx, *tmpy;
+    PetscCall(PetscMalloc2(lg->len + lg->dim * PETSC_DRAW_LG_CHUNK_SIZE, &tmpx, lg->len + lg->dim * PETSC_DRAW_LG_CHUNK_SIZE, &tmpy));
+    PetscCall(PetscArraycpy(tmpx, lg->x, lg->len));
+    PetscCall(PetscArraycpy(tmpy, lg->y, lg->len));
+    PetscCall(PetscFree2(lg->x, lg->y));
+    lg->x = tmpx;
+    lg->y = tmpy;
+    lg->len += lg->dim * PETSC_DRAW_LG_CHUNK_SIZE;
   }
-  for (i=0; i<lg->dim; i++) {
+  for (i = 0; i < lg->dim; i++) {
     if (!x) {
       xx = lg->nopts;
     } else {
@@ -104,55 +103,56 @@ PetscErrorCode  PetscDrawLGAddPoint(PetscDrawLG lg,const PetscReal *x,const Pets
     lg->y[lg->loc++] = y[i];
   }
   lg->nopts++;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-   PetscDrawLGAddPoints - Adds several points to each of the line graphs.
-   The new points must have an X coordinate larger than the old points.
+  PetscDrawLGAddPoints - Adds several points to each of the line graphs.
+  The new points must have an X coordinate larger than the old points.
 
-   Logically Collective on PetscDrawLG
+  Logically Collective
 
-   Input Parameters:
-+  lg - the LineGraph data structure
-.  xx,yy - points to two arrays of pointers that point to arrays
-           containing the new x and y points for each curve.
--  n - number of points being added
+  Input Parameters:
++ lg - the line graph context
+. xx - array of pointers that point to arrays containing the new x coordinates for each curve.
+. yy - array of pointers that point to arrays containing the new y points for each curve.
+- n  - number of points being added
 
-   Level: intermediate
+  Level: intermediate
 
-   Note: You must call PetscDrawLGDraw() to display any added points
-         Call PetscDrawLGReset() to remove all points
+  Notes:
+  You must call `PetscDrawLGDraw()` to display any added points
 
-.seealso: PetscDrawLGCreate(), PetscDrawLGAddPoint(), PetscDrawLGAddCommonPoint(), PetscDrawLGReset(), PetscDrawLGDraw()
+  Call `PetscDrawLGReset()` to remove all points
+
+.seealso: `PetscDrawLG`, `PetscDrawLGCreate()`, `PetscDrawLGAddPoint()`, `PetscDrawLGAddCommonPoint()`, `PetscDrawLGReset()`, `PetscDrawLGDraw()`
 @*/
-PetscErrorCode  PetscDrawLGAddPoints(PetscDrawLG lg,PetscInt n,PetscReal **xx,PetscReal **yy)
+PetscErrorCode PetscDrawLGAddPoints(PetscDrawLG lg, PetscInt n, PetscReal *xx[], PetscReal *yy[])
 {
-  PetscErrorCode ierr;
-  PetscInt       i,j,k;
-  PetscReal      *x,*y;
+  PetscInt   i, j, k;
+  PetscReal *x, *y;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(lg,PETSC_DRAWLG_CLASSID,1);
+  PetscValidHeaderSpecific(lg, PETSC_DRAWLG_CLASSID, 1);
 
-  if (lg->loc+n*lg->dim >= lg->len) { /* allocate more space */
-    PetscReal *tmpx,*tmpy;
-    PetscInt  chunk = CHUNCKSIZE;
+  if (lg->loc + n * lg->dim >= lg->len) { /* allocate more space */
+    PetscReal *tmpx, *tmpy;
+    PetscInt   chunk = PETSC_DRAW_LG_CHUNK_SIZE;
 
     if (n > chunk) chunk = n;
-    ierr     = PetscMalloc2(lg->len+lg->dim*chunk,&tmpx,lg->len+lg->dim*chunk,&tmpy);CHKERRQ(ierr);
-    ierr     = PetscLogObjectMemory((PetscObject)lg,2*lg->dim*chunk*sizeof(PetscReal));CHKERRQ(ierr);
-    ierr     = PetscArraycpy(tmpx,lg->x,lg->len);CHKERRQ(ierr);
-    ierr     = PetscArraycpy(tmpy,lg->y,lg->len);CHKERRQ(ierr);
-    ierr     = PetscFree2(lg->x,lg->y);CHKERRQ(ierr);
-    lg->x    = tmpx;
-    lg->y    = tmpy;
-    lg->len += lg->dim*chunk;
+    PetscCall(PetscMalloc2(lg->len + lg->dim * chunk, &tmpx, lg->len + lg->dim * chunk, &tmpy));
+    PetscCall(PetscArraycpy(tmpx, lg->x, lg->len));
+    PetscCall(PetscArraycpy(tmpy, lg->y, lg->len));
+    PetscCall(PetscFree2(lg->x, lg->y));
+    lg->x = tmpx;
+    lg->y = tmpy;
+    lg->len += lg->dim * chunk;
   }
-  for (j=0; j<lg->dim; j++) {
-    x = xx[j]; y = yy[j];
+  for (j = 0; j < lg->dim; j++) {
+    x = xx[j];
+    y = yy[j];
     k = lg->loc + j;
-    for (i=0; i<n; i++) {
+    for (i = 0; i < n; i++) {
       if (x[i] > lg->xmax) lg->xmax = x[i];
       if (x[i] < lg->xmin) lg->xmin = x[i];
       if (y[i] > lg->ymax) lg->ymax = y[i];
@@ -160,10 +160,10 @@ PetscErrorCode  PetscDrawLGAddPoints(PetscDrawLG lg,PetscInt n,PetscReal **xx,Pe
 
       lg->x[k] = x[i];
       lg->y[k] = y[i];
-      k       += lg->dim;
+      k += lg->dim;
     }
   }
-  lg->loc   += n*lg->dim;
+  lg->loc += n * lg->dim;
   lg->nopts += n;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

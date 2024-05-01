@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 #   Builds a iOS Framework of PETSc
 #
@@ -184,7 +184,7 @@ class PETScMaker(script.Script):
        rtype = text.split(' ')[0]
        rvalue = text.split(' ')[1]
 
-       if rvalue == "'"+'PETSC_HAVE_FORTRAN'+"'" or rvalue == "'"+'PETSC_USING_F90'+"'" or rvalue == "'"+'PETSC_USING_F2003'+"'":
+       if rvalue == "'"+'PETSC_USE_FORTRAN'+"'" or rvalue == "'"+'PETSC_USING_F90'+"'" or rvalue == "'"+'PETSC_USING_F2003'+"'":
          if not hasattr(self.compilers, 'FC'):
            if self.verbose: print('Rejecting',dirname,'because fortran is not being used')
            return 0

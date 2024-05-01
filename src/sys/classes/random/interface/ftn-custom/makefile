@@ -1,18 +1,8 @@
-#requiresdefine   'PETSC_HAVE_FORTRAN'
+-include ../../../../../../petscdir.mk
+#requiresdefine   'PETSC_USE_FORTRAN_BINDINGS'
 
-ALL: lib
-
-CFLAGS    =
-FFLAGS    =
-SOURCEC	  = zrandomf.c
-SOURCEF	  =
-SOURCEH	  =
-MANSEC	  = Sys
-LIBBASE	  = libpetscsys
-DIRS	  =
-LOCDIR	  = src/sys/classes/random/interface/ftn-custom/
+MANSEC    = Sys
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
-include ${PETSC_DIR}/lib/petsc/conf/rules
-include ${PETSC_DIR}/lib/petsc/conf/test
+include ${PETSC_DIR}/lib/petsc/conf/rules_doc.mk
 

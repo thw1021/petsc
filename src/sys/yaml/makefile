@@ -1,13 +1,7 @@
+-include ../../../petscdir.mk
+#requirespackage 'PETSC_HAVE_YAML_SEE_README'
 
-#requirespackage 'PETSC_HAVE_YAML'
-
-ALL: lib
-SOURCEH   =
-SOURCEC   = yamlimpls.c
-DIRS      =
-LOCDIR    = src/sys/yaml/
 MANSEC    = Sys
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
-include ${PETSC_DIR}/lib/petsc/conf/rules
-include ${PETSC_DIR}/lib/petsc/conf/test
+include ${PETSC_DIR}/lib/petsc/conf/rules_doc.mk

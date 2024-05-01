@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 from __future__ import generators
 import config.base
 
@@ -17,7 +16,7 @@ class Configure(config.base.Configure):
 
   def setupHelp(self, help):
     import nargs
-    help.addArgument('PETSc', '-with-64-bit-indices=<bool>',   nargs.ArgBool(None, 0, 'Use 64 bit integers (long long) for indexing in vectors and matrices'))
+    help.addArgument('PETSc', '-with-64-bit-indices=<bool>',   nargs.ArgBool(None, 0, 'Use 64-bit integers (long long) for indexing in vectors and matrices\n       This does not affect indexing for BLAS/LAPACK, see --with-64-bit-blas-indices'))
     return
 
   def setupDependencies(self, framework):
@@ -37,6 +36,7 @@ class Configure(config.base.Configure):
       return 0
 
   def configureIndexSize(self):
+    '''Determine the size of PETSc indices (32 or 64-bit), from -with-64-bit-indices'''
     if self.framework.argDB['with-64-bit-indices']:
       self.integerSize = 64
       self.addDefine('USE_64BIT_INDICES', 1)
@@ -45,7 +45,7 @@ class Configure(config.base.Configure):
       self.addMakeMacro('PETSC_INDEX_SIZE', '64')
       if self.fortranPromoteInteger():
         self.addDefine('PROMOTE_FORTRAN_INTEGER', 1)
-        self.logPrintBox('Warning: you have a Fortran compiler option to promote integer to 8 bytes.\nThis is fragile and not supported by the MPI standard.\nYou must ensure in your code that all calls to MPI routines pass 4-byte integers.')
+        self.logPrintWarning('You have a Fortran compiler option to promote integer to 8 bytes. This is fragile and not supported by the MPI standard. You must ensure in your code that all calls to MPI routines pass 4-byte integers.')
     else:
       self.integerSize = 32
       self.addMakeMacro('PETSC_INDEX_SIZE', '32')

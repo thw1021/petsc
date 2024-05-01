@@ -1,16 +1,7 @@
 -include ../../../../petscdir.mk
-ALL: lib
 
-CFLAGS   =
-FFLAGS   =
-SOURCEC  = fas.c fasgalerkin.c fasfunc.c
-SOURCEF  =
-SOURCEH  =
-LIBBASE  = libpetscsnes
-MANSEC   = SNES
-SUBMANSEC= SNESFAS
-LOCDIR   = src/snes/impls/fas/
+MANSEC    = SNES
+SUBMANSEC = SNESFAS
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
-include ${PETSC_DIR}/lib/petsc/conf/rules
-include ${PETSC_DIR}/lib/petsc/conf/test
+include ${PETSC_DIR}/lib/petsc/conf/rules_doc.mk

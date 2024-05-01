@@ -1,252 +1,463 @@
-
-#include <petsc/private/matimpl.h>          /*I "petscmat.h" I*/
+#include <../src/mat/impls/shell/shell.h> /*I "petscmat.h" I*/
 
 typedef struct {
-  Mat         A;
-  Vec         w,left,right,leftwork,rightwork;
-  PetscScalar scale;
+  Mat A;
+  Mat D; /* local submatrix for diagonal part */
+  Vec w;
 } Mat_Normal;
 
-PetscErrorCode MatScale_Normal(Mat inA,PetscScalar scale)
+static PetscErrorCode MatIncreaseOverlap_Normal(Mat A, PetscInt is_max, IS is[], PetscInt ov)
 {
-  Mat_Normal *a = (Mat_Normal*)inA->data;
+  Mat_Normal *a;
+  Mat         pattern;
 
   PetscFunctionBegin;
-  a->scale *= scale;
-  PetscFunctionReturn(0);
+  PetscCheck(ov >= 0, PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_OUTOFRANGE, "Negative overlap specified");
+  PetscCall(MatShellGetContext(A, &a));
+  PetscCall(MatProductCreate(a->A, a->A, NULL, &pattern));
+  PetscCall(MatProductSetType(pattern, MATPRODUCT_AtB));
+  PetscCall(MatProductSetFromOptions(pattern));
+  PetscCall(MatProductSymbolic(pattern));
+  PetscCall(MatIncreaseOverlap(pattern, is_max, is, ov));
+  PetscCall(MatDestroy(&pattern));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatDiagonalScale_Normal(Mat inA,Vec left,Vec right)
+static PetscErrorCode MatCreateSubMatrices_Normal(Mat mat, PetscInt n, const IS irow[], const IS icol[], MatReuse scall, Mat *submat[])
 {
-  Mat_Normal     *a = (Mat_Normal*)inA->data;
-  PetscErrorCode ierr;
+  Mat_Normal *a;
+  Mat         B, *suba;
+  IS         *row;
+  PetscInt    M;
 
   PetscFunctionBegin;
-  if (left) {
-    if (!a->left) {
-      ierr = VecDuplicate(left,&a->left);CHKERRQ(ierr);
-      ierr = VecCopy(left,a->left);CHKERRQ(ierr);
-    } else {
-      ierr = VecPointwiseMult(a->left,left,a->left);CHKERRQ(ierr);
-    }
+  PetscCheck(!((Mat_Shell *)mat->data)->zrows && !((Mat_Shell *)mat->data)->zcols, PetscObjectComm((PetscObject)mat), PETSC_ERR_SUP, "Cannot call MatCreateSubMatrices() if MatZeroRows() or MatZeroRowsColumns() has been called on the input Mat"); // TODO FIXME: lift this limitation by calling MatZeroRows()/MatZeroRowsColumns() after the SubMatrices creation
+  PetscCheck(!((Mat_Shell *)mat->data)->axpy, PetscObjectComm((PetscObject)mat), PETSC_ERR_SUP, "Cannot call MatCreateSubMatrices() if MatAXPY() has been called on the input Mat"); // TODO FIXME: lift this limitation by calling MatAXPY() after the SubMatrices creation
+  PetscCheck(!((Mat_Shell *)mat->data)->left && !((Mat_Shell *)mat->data)->right, PetscObjectComm((PetscObject)mat), PETSC_ERR_SUP, "Cannot call MatCreateSubMatrices() if MatDiagonalScale() has been called on the input Mat"); // TODO FIXME: lift this limitation by calling MatDiagonalScale() after the SubMatrices creation with a SubVector
+  PetscCheck(!((Mat_Shell *)mat->data)->dshift, PetscObjectComm((PetscObject)mat), PETSC_ERR_SUP, "Cannot call MatCreateSubMatrices() if MatDiagonalSet() has been called on the input Mat"); // TODO FIXME: lift this limitation by calling MatDiagonalSet() after the SubMatrices creation with a SubVector
+  PetscCheck(irow == icol, PetscObjectComm((PetscObject)mat), PETSC_ERR_SUP, "Not implemented");
+  PetscCall(MatShellGetContext(mat, &a));
+  B = a->A;
+  if (scall != MAT_REUSE_MATRIX) PetscCall(PetscCalloc1(n, submat));
+  PetscCall(MatGetSize(B, &M, NULL));
+  PetscCall(PetscMalloc1(n, &row));
+  PetscCall(ISCreateStride(PETSC_COMM_SELF, M, 0, 1, &row[0]));
+  PetscCall(ISSetIdentity(row[0]));
+  for (M = 1; M < n; ++M) row[M] = row[0];
+  PetscCall(MatCreateSubMatrices(B, n, row, icol, MAT_INITIAL_MATRIX, &suba));
+  for (M = 0; M < n; ++M) {
+    PetscCall(MatCreateNormal(suba[M], *submat + M));
+    ((Mat_Shell *)(*submat)[M]->data)->vscale = ((Mat_Shell *)mat->data)->vscale;
+    ((Mat_Shell *)(*submat)[M]->data)->vshift = ((Mat_Shell *)mat->data)->vshift;
   }
-  if (right) {
-    if (!a->right) {
-      ierr = VecDuplicate(right,&a->right);CHKERRQ(ierr);
-      ierr = VecCopy(right,a->right);CHKERRQ(ierr);
-    } else {
-      ierr = VecPointwiseMult(a->right,right,a->right);CHKERRQ(ierr);
-    }
-  }
-  PetscFunctionReturn(0);
+  PetscCall(ISDestroy(&row[0]));
+  PetscCall(PetscFree(row));
+  PetscCall(MatDestroySubMatrices(n, &suba));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatMult_Normal(Mat N,Vec x,Vec y)
+static PetscErrorCode MatPermute_Normal(Mat A, IS rowp, IS colp, Mat *B)
 {
-  Mat_Normal     *Na = (Mat_Normal*)N->data;
-  PetscErrorCode ierr;
-  Vec            in;
+  Mat_Normal *a;
+  Mat         C, Aa;
+  IS          row;
 
   PetscFunctionBegin;
-  in = x;
-  if (Na->right) {
-    if (!Na->rightwork) {
-      ierr = VecDuplicate(Na->right,&Na->rightwork);CHKERRQ(ierr);
-    }
-    ierr = VecPointwiseMult(Na->rightwork,Na->right,in);CHKERRQ(ierr);
-    in   = Na->rightwork;
-  }
-  ierr = MatMult(Na->A,in,Na->w);CHKERRQ(ierr);
-  ierr = MatMultTranspose(Na->A,Na->w,y);CHKERRQ(ierr);
-  if (Na->left) {
-    ierr = VecPointwiseMult(y,Na->left,y);CHKERRQ(ierr);
-  }
-  ierr = VecScale(y,Na->scale);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCheck(!((Mat_Shell *)A->data)->zrows && !((Mat_Shell *)A->data)->zcols, PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "Cannot call MatPermute() if MatZeroRows() or MatZeroRowsColumns() has been called on the input Mat"); // TODO FIXME: lift this limitation by calling MatZeroRows()/MatZeroRowsColumns() after the permutation with a permuted zrows and zcols
+  PetscCheck(!((Mat_Shell *)A->data)->axpy, PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "Cannot call MatPermute() if MatAXPY() has been called on the input Mat"); // TODO FIXME: lift this limitation by calling MatAXPY() after the permutation with a permuted axpy
+  PetscCheck(!((Mat_Shell *)A->data)->left && !((Mat_Shell *)A->data)->right, PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "Cannot call MatPermute() if MatDiagonalScale() has been called on the input Mat"); // TODO FIXME: lift this limitation by calling MatDiagonalScale() after the permutation with a permuted left and right
+  PetscCheck(!((Mat_Shell *)A->data)->dshift, PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "Cannot call MatPermute() if MatDiagonalSet() has been called on the input Mat"); // TODO FIXME: lift this limitation by calling MatDiagonalSet() after the permutation with a permuted dshift
+  PetscCheck(rowp == colp, PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_INCOMP, "Row permutation and column permutation must be the same");
+  PetscCall(MatShellGetContext(A, &a));
+  Aa = a->A;
+  PetscCall(ISCreateStride(PetscObjectComm((PetscObject)Aa), Aa->rmap->n, Aa->rmap->rstart, 1, &row));
+  PetscCall(ISSetIdentity(row));
+  PetscCall(MatPermute(Aa, row, colp, &C));
+  PetscCall(ISDestroy(&row));
+  PetscCall(MatCreateNormal(C, B));
+  PetscCall(MatDestroy(&C));
+  ((Mat_Shell *)(*B)->data)->vscale = ((Mat_Shell *)A->data)->vscale;
+  ((Mat_Shell *)(*B)->data)->vshift = ((Mat_Shell *)A->data)->vshift;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatMultAdd_Normal(Mat N,Vec v1,Vec v2,Vec v3)
+static PetscErrorCode MatDuplicate_Normal(Mat A, MatDuplicateOption op, Mat *B)
 {
-  Mat_Normal     *Na = (Mat_Normal*)N->data;
-  PetscErrorCode ierr;
-  Vec            in;
+  Mat_Normal *a;
+  Mat         C;
 
   PetscFunctionBegin;
-  in = v1;
-  if (Na->right) {
-    if (!Na->rightwork) {
-      ierr = VecDuplicate(Na->right,&Na->rightwork);CHKERRQ(ierr);
-    }
-    ierr = VecPointwiseMult(Na->rightwork,Na->right,in);CHKERRQ(ierr);
-    in   = Na->rightwork;
-  }
-  ierr = MatMult(Na->A,in,Na->w);CHKERRQ(ierr);
-  ierr = VecScale(Na->w,Na->scale);CHKERRQ(ierr);
-  if (Na->left) {
-    ierr = MatMultTranspose(Na->A,Na->w,v3);CHKERRQ(ierr);
-    ierr = VecPointwiseMult(v3,Na->left,v3);CHKERRQ(ierr);
-    ierr = VecAXPY(v3,1.0,v2);CHKERRQ(ierr);
-  } else {
-    ierr = MatMultTransposeAdd(Na->A,Na->w,v2,v3);CHKERRQ(ierr);
-  }
-  PetscFunctionReturn(0);
+  PetscCall(MatShellGetContext(A, &a));
+  PetscCall(MatDuplicate(a->A, op, &C));
+  PetscCall(MatCreateNormal(C, B));
+  PetscCall(MatDestroy(&C));
+  if (op == MAT_COPY_VALUES) PetscCall(MatCopy(A, *B, SAME_NONZERO_PATTERN));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatMultTranspose_Normal(Mat N,Vec x,Vec y)
+static PetscErrorCode MatCopy_Normal(Mat A, Mat B, MatStructure str)
 {
-  Mat_Normal     *Na = (Mat_Normal*)N->data;
-  PetscErrorCode ierr;
-  Vec            in;
+  Mat_Normal *a, *b;
 
   PetscFunctionBegin;
-  in = x;
-  if (Na->left) {
-    if (!Na->leftwork) {
-      ierr = VecDuplicate(Na->left,&Na->leftwork);CHKERRQ(ierr);
-    }
-    ierr = VecPointwiseMult(Na->leftwork,Na->left,in);CHKERRQ(ierr);
-    in   = Na->leftwork;
-  }
-  ierr = MatMult(Na->A,in,Na->w);CHKERRQ(ierr);
-  ierr = MatMultTranspose(Na->A,Na->w,y);CHKERRQ(ierr);
-  if (Na->right) {
-    ierr = VecPointwiseMult(y,Na->right,y);CHKERRQ(ierr);
-  }
-  ierr = VecScale(y,Na->scale);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(MatShellGetContext(A, &a));
+  PetscCall(MatShellGetContext(B, &b));
+  PetscCall(MatCopy(a->A, b->A, str));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatMultTransposeAdd_Normal(Mat N,Vec v1,Vec v2,Vec v3)
+static PetscErrorCode MatMult_Normal(Mat N, Vec x, Vec y)
 {
-  Mat_Normal     *Na = (Mat_Normal*)N->data;
-  PetscErrorCode ierr;
-  Vec            in;
+  Mat_Normal *Na;
 
   PetscFunctionBegin;
-  in = v1;
-  if (Na->left) {
-    if (!Na->leftwork) {
-      ierr = VecDuplicate(Na->left,&Na->leftwork);CHKERRQ(ierr);
-    }
-    ierr = VecPointwiseMult(Na->leftwork,Na->left,in);CHKERRQ(ierr);
-    in   = Na->leftwork;
-  }
-  ierr = MatMult(Na->A,in,Na->w);CHKERRQ(ierr);
-  ierr = VecScale(Na->w,Na->scale);CHKERRQ(ierr);
-  if (Na->right) {
-    ierr = MatMultTranspose(Na->A,Na->w,v3);CHKERRQ(ierr);
-    ierr = VecPointwiseMult(v3,Na->right,v3);CHKERRQ(ierr);
-    ierr = VecAXPY(v3,1.0,v2);CHKERRQ(ierr);
-  } else {
-    ierr = MatMultTransposeAdd(Na->A,Na->w,v2,v3);CHKERRQ(ierr);
-  }
-  PetscFunctionReturn(0);
+  PetscCall(MatShellGetContext(N, &Na));
+  PetscCall(MatMult(Na->A, x, Na->w));
+  PetscCall(MatMultTranspose(Na->A, Na->w, y));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatDestroy_Normal(Mat N)
+static PetscErrorCode MatDestroy_Normal(Mat N)
 {
-  Mat_Normal     *Na = (Mat_Normal*)N->data;
-  PetscErrorCode ierr;
+  Mat_Normal *Na;
 
   PetscFunctionBegin;
-  ierr = MatDestroy(&Na->A);CHKERRQ(ierr);
-  ierr = VecDestroy(&Na->w);CHKERRQ(ierr);
-  ierr = VecDestroy(&Na->left);CHKERRQ(ierr);
-  ierr = VecDestroy(&Na->right);CHKERRQ(ierr);
-  ierr = VecDestroy(&Na->leftwork);CHKERRQ(ierr);
-  ierr = VecDestroy(&Na->rightwork);CHKERRQ(ierr);
-  ierr = PetscFree(N->data);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(MatShellGetContext(N, &Na));
+  PetscCall(MatDestroy(&Na->A));
+  PetscCall(MatDestroy(&Na->D));
+  PetscCall(VecDestroy(&Na->w));
+  PetscCall(PetscFree(Na));
+  PetscCall(PetscObjectComposeFunction((PetscObject)N, "MatNormalGetMat_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)N, "MatConvert_normal_seqaij_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)N, "MatConvert_normal_mpiaij_C", NULL));
+#if defined(PETSC_HAVE_HYPRE)
+  PetscCall(PetscObjectComposeFunction((PetscObject)N, "MatConvert_normal_hypre_C", NULL));
+#endif
+  PetscCall(PetscObjectComposeFunction((PetscObject)N, "MatProductSetFromOptions_normal_seqdense_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)N, "MatProductSetFromOptions_normal_mpidense_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)N, "MatShellSetContext_C", NULL));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*
       Slow, nonscalable version
 */
-PetscErrorCode MatGetDiagonal_Normal(Mat N,Vec v)
+static PetscErrorCode MatGetDiagonal_Normal(Mat N, Vec v)
 {
-  Mat_Normal        *Na = (Mat_Normal*)N->data;
-  Mat               A   = Na->A;
-  PetscErrorCode    ierr;
-  PetscInt          i,j,rstart,rend,nnz;
+  Mat_Normal        *Na;
+  Mat                A;
+  PetscInt           i, j, rstart, rend, nnz;
   const PetscInt    *cols;
-  PetscScalar       *diag,*work,*values;
+  PetscScalar       *diag, *work, *values;
   const PetscScalar *mvalues;
 
   PetscFunctionBegin;
-  ierr = PetscMalloc2(A->cmap->N,&diag,A->cmap->N,&work);CHKERRQ(ierr);
-  ierr = PetscArrayzero(work,A->cmap->N);CHKERRQ(ierr);
-  ierr = MatGetOwnershipRange(A,&rstart,&rend);CHKERRQ(ierr);
-  for (i=rstart; i<rend; i++) {
-    ierr = MatGetRow(A,i,&nnz,&cols,&mvalues);CHKERRQ(ierr);
-    for (j=0; j<nnz; j++) {
-      work[cols[j]] += mvalues[j]*mvalues[j];
-    }
-    ierr = MatRestoreRow(A,i,&nnz,&cols,&mvalues);CHKERRQ(ierr);
+  PetscCall(MatShellGetContext(N, &Na));
+  A = Na->A;
+  PetscCall(PetscMalloc2(A->cmap->N, &diag, A->cmap->N, &work));
+  PetscCall(PetscArrayzero(work, A->cmap->N));
+  PetscCall(MatGetOwnershipRange(A, &rstart, &rend));
+  for (i = rstart; i < rend; i++) {
+    PetscCall(MatGetRow(A, i, &nnz, &cols, &mvalues));
+    for (j = 0; j < nnz; j++) work[cols[j]] += mvalues[j] * mvalues[j];
+    PetscCall(MatRestoreRow(A, i, &nnz, &cols, &mvalues));
   }
-  ierr   = MPIU_Allreduce(work,diag,A->cmap->N,MPIU_SCALAR,MPIU_SUM,PetscObjectComm((PetscObject)N));CHKERRQ(ierr);
+  PetscCall(MPIU_Allreduce(work, diag, A->cmap->N, MPIU_SCALAR, MPIU_SUM, PetscObjectComm((PetscObject)N)));
   rstart = N->cmap->rstart;
   rend   = N->cmap->rend;
-  ierr   = VecGetArray(v,&values);CHKERRQ(ierr);
-  ierr   = PetscArraycpy(values,diag+rstart,rend-rstart);CHKERRQ(ierr);
-  ierr   = VecRestoreArray(v,&values);CHKERRQ(ierr);
-  ierr   = PetscFree2(diag,work);CHKERRQ(ierr);
-  ierr   = VecScale(v,Na->scale);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(VecGetArray(v, &values));
+  PetscCall(PetscArraycpy(values, diag + rstart, rend - rstart));
+  PetscCall(VecRestoreArray(v, &values));
+  PetscCall(PetscFree2(diag, work));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatGetDiagonalBlock_Normal(Mat N, Mat *D)
+{
+  Mat_Normal *Na;
+  Mat         M, A;
+
+  PetscFunctionBegin;
+  PetscCheck(!((Mat_Shell *)N->data)->zrows && !((Mat_Shell *)N->data)->zcols, PetscObjectComm((PetscObject)N), PETSC_ERR_SUP, "Cannot call MatGetDiagonalBlock() if MatZeroRows() or MatZeroRowsColumns() has been called on the input Mat"); // TODO FIXME
+  PetscCheck(!((Mat_Shell *)N->data)->axpy, PetscObjectComm((PetscObject)N), PETSC_ERR_SUP, "Cannot call MatGetDiagonalBlock() if MatAXPY() has been called on the input Mat");                                            // TODO FIXME
+  PetscCheck(!((Mat_Shell *)N->data)->left && !((Mat_Shell *)N->data)->right, PetscObjectComm((PetscObject)N), PETSC_ERR_SUP, "Cannot call MatGetDiagonalBlock() if MatDiagonalScale() has been called on the input Mat"); // TODO FIXME
+  PetscCheck(!((Mat_Shell *)N->data)->dshift, PetscObjectComm((PetscObject)N), PETSC_ERR_SUP, "Cannot call MatGetDiagonalBlock() if MatDiagonalSet() has been called on the input Mat");                                   // TODO FIXME
+  PetscCall(MatShellGetContext(N, &Na));
+  A = Na->A;
+  PetscCall(MatGetDiagonalBlock(A, &M));
+  PetscCall(MatCreateNormal(M, &Na->D));
+  *D = Na->D;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatNormalGetMat_Normal(Mat A, Mat *M)
+{
+  Mat_Normal *Aa;
+
+  PetscFunctionBegin;
+  PetscCall(MatShellGetContext(A, &Aa));
+  *M = Aa->A;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-      MatCreateNormal - Creates a new matrix object that behaves like A'*A.
+  MatNormalGetMat - Gets the `Mat` object stored inside a `MATNORMAL`
 
-   Collective on Mat
+  Logically Collective
 
-   Input Parameter:
-.   A  - the (possibly rectangular) matrix
+  Input Parameter:
+. A - the `MATNORMAL` matrix
 
-   Output Parameter:
-.   N - the matrix that represents A'*A
+  Output Parameter:
+. M - the matrix object stored inside `A`
 
-   Level: intermediate
+  Level: intermediate
 
-   Notes:
-    The product A'*A is NOT actually formed! Rather the new matrix
-          object performs the matrix-vector product by first multiplying by
-          A and then A'
+.seealso: [](ch_matrices), `Mat`, `MATNORMAL`, `MATNORMALHERMITIAN`, `MatCreateNormal()`
 @*/
-PetscErrorCode  MatCreateNormal(Mat A,Mat *N)
+PetscErrorCode MatNormalGetMat(Mat A, Mat *M)
 {
-  PetscErrorCode ierr;
-  PetscInt       m,n;
-  Mat_Normal     *Na;
-
   PetscFunctionBegin;
-  ierr = MatGetLocalSize(A,&m,&n);CHKERRQ(ierr);
-  ierr = MatCreate(PetscObjectComm((PetscObject)A),N);CHKERRQ(ierr);
-  ierr = MatSetSizes(*N,n,n,PETSC_DECIDE,PETSC_DECIDE);CHKERRQ(ierr);
-  ierr = PetscObjectChangeTypeName((PetscObject)*N,MATNORMAL);CHKERRQ(ierr);
-
-  ierr       = PetscNewLog(*N,&Na);CHKERRQ(ierr);
-  (*N)->data = (void*) Na;
-  ierr       = PetscObjectReference((PetscObject)A);CHKERRQ(ierr);
-  Na->A      = A;
-  Na->scale  = 1.0;
-
-  ierr = VecCreateMPI(PetscObjectComm((PetscObject)A),m,PETSC_DECIDE,&Na->w);CHKERRQ(ierr);
-
-  (*N)->ops->destroy          = MatDestroy_Normal;
-  (*N)->ops->mult             = MatMult_Normal;
-  (*N)->ops->multtranspose    = MatMultTranspose_Normal;
-  (*N)->ops->multtransposeadd = MatMultTransposeAdd_Normal;
-  (*N)->ops->multadd          = MatMultAdd_Normal;
-  (*N)->ops->getdiagonal      = MatGetDiagonal_Normal;
-  (*N)->ops->scale            = MatScale_Normal;
-  (*N)->ops->diagonalscale    = MatDiagonalScale_Normal;
-  (*N)->assembled             = PETSC_TRUE;
-  (*N)->cmap->N               = A->cmap->N;
-  (*N)->rmap->N               = A->cmap->N;
-  (*N)->cmap->n               = A->cmap->n;
-  (*N)->rmap->n               = A->cmap->n;
-
-  (*N)->preallocated = PETSC_TRUE;
-  PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
+  PetscValidType(A, 1);
+  PetscAssertPointer(M, 2);
+  PetscUseMethod(A, "MatNormalGetMat_C", (Mat, Mat *), (A, M));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode MatConvert_Normal_AIJ(Mat A, MatType newtype, MatReuse reuse, Mat *newmat)
+{
+  Mat_Normal *Aa;
+  Mat         B;
+  PetscInt    m, n, M, N;
+
+  PetscFunctionBegin;
+  PetscCall(MatShellGetContext(A, &Aa));
+  PetscCall(MatGetSize(A, &M, &N));
+  PetscCall(MatGetLocalSize(A, &m, &n));
+  if (reuse == MAT_REUSE_MATRIX) {
+    B = *newmat;
+    PetscCall(MatProductReplaceMats(Aa->A, Aa->A, NULL, B));
+  } else {
+    PetscCall(MatProductCreate(Aa->A, Aa->A, NULL, &B));
+    PetscCall(MatProductSetType(B, MATPRODUCT_AtB));
+    PetscCall(MatProductSetFromOptions(B));
+    PetscCall(MatProductSymbolic(B));
+    PetscCall(MatSetOption(B, MAT_SYMMETRIC, PETSC_TRUE));
+  }
+  PetscCall(MatProductNumeric(B));
+  if (reuse == MAT_INPLACE_MATRIX) {
+    PetscCall(MatHeaderReplace(A, &B));
+  } else if (reuse == MAT_INITIAL_MATRIX) *newmat = B;
+  PetscCall(MatConvert(*newmat, MATAIJ, MAT_INPLACE_MATRIX, newmat));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+#if defined(PETSC_HAVE_HYPRE)
+static PetscErrorCode MatConvert_Normal_HYPRE(Mat A, MatType type, MatReuse reuse, Mat *B)
+{
+  PetscFunctionBegin;
+  if (reuse == MAT_INITIAL_MATRIX) {
+    PetscCall(MatConvert(A, MATAIJ, reuse, B));
+    PetscCall(MatConvert(*B, type, MAT_INPLACE_MATRIX, B));
+  } else PetscCall(MatConvert_Basic(A, type, reuse, B)); /* fall back to basic convert */
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+#endif
+
+typedef struct {
+  Mat work[2];
+} Normal_Dense;
+
+static PetscErrorCode MatProductNumeric_Normal_Dense(Mat C)
+{
+  Mat           A, B;
+  Normal_Dense *contents;
+  Mat_Normal   *a;
+  PetscScalar  *array;
+
+  PetscFunctionBegin;
+  MatCheckProduct(C, 1);
+  A = C->product->A;
+  B = C->product->B;
+  PetscCall(MatShellGetContext(A, &a));
+  contents = (Normal_Dense *)C->product->data;
+  PetscCheck(contents, PetscObjectComm((PetscObject)C), PETSC_ERR_PLIB, "Product data empty");
+  if (((Mat_Shell *)A->data)->right) {
+    PetscCall(MatCopy(B, C, SAME_NONZERO_PATTERN));
+    PetscCall(MatDiagonalScale(C, ((Mat_Shell *)A->data)->right, NULL));
+  }
+  PetscCall(MatProductNumeric(contents->work[0]));
+  PetscCall(MatDenseGetArrayWrite(C, &array));
+  PetscCall(MatDensePlaceArray(contents->work[1], array));
+  PetscCall(MatProductNumeric(contents->work[1]));
+  PetscCall(MatDenseRestoreArrayWrite(C, &array));
+  PetscCall(MatDenseResetArray(contents->work[1]));
+  PetscCall(MatSetOption(C, MAT_NO_OFF_PROC_ENTRIES, PETSC_TRUE));
+  PetscCall(MatAssemblyBegin(C, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(C, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatScale(C, ((Mat_Shell *)A->data)->vscale));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatNormal_DenseDestroy(void *ctx)
+{
+  Normal_Dense *contents = (Normal_Dense *)ctx;
+
+  PetscFunctionBegin;
+  PetscCall(MatDestroy(contents->work));
+  PetscCall(MatDestroy(contents->work + 1));
+  PetscCall(PetscFree(contents));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatProductSymbolic_Normal_Dense(Mat C)
+{
+  Mat           A, B;
+  Normal_Dense *contents = NULL;
+  Mat_Normal   *a;
+  PetscScalar  *array;
+  PetscInt      n, N, m, M;
+
+  PetscFunctionBegin;
+  MatCheckProduct(C, 1);
+  PetscCheck(!C->product->data, PetscObjectComm((PetscObject)C), PETSC_ERR_PLIB, "Product data not empty");
+  A = C->product->A;
+  B = C->product->B;
+  PetscCall(MatShellGetContext(A, &a));
+  PetscCheck(!((Mat_Shell *)A->data)->zrows && !((Mat_Shell *)A->data)->zcols, PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "Cannot call MatProductSymbolic() if MatZeroRows() or MatZeroRowsColumns() has been called on the input Mat"); // TODO FIXME
+  PetscCheck(!((Mat_Shell *)A->data)->axpy, PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "Cannot call MatProductSymbolic() if MatAXPY() has been called on the input Mat");          // TODO FIXME
+  PetscCheck(!((Mat_Shell *)A->data)->left, PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "Cannot call MatProductSymbolic() if MatDiagonalScale() has been called on the input Mat"); // TODO FIXME
+  PetscCheck(!((Mat_Shell *)A->data)->dshift, PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "Cannot call MatProductSymbolic() if MatDiagonalSet() has been called on the input Mat"); // TODO FIXME
+  PetscCall(MatGetLocalSize(C, &m, &n));
+  PetscCall(MatGetSize(C, &M, &N));
+  if (m == PETSC_DECIDE || n == PETSC_DECIDE || M == PETSC_DECIDE || N == PETSC_DECIDE) {
+    PetscCall(MatGetLocalSize(B, NULL, &n));
+    PetscCall(MatGetSize(B, NULL, &N));
+    PetscCall(MatGetLocalSize(A, &m, NULL));
+    PetscCall(MatGetSize(A, &M, NULL));
+    PetscCall(MatSetSizes(C, m, n, M, N));
+  }
+  PetscCall(MatSetType(C, ((PetscObject)B)->type_name));
+  PetscCall(MatSetUp(C));
+  PetscCall(PetscNew(&contents));
+  C->product->data    = contents;
+  C->product->destroy = MatNormal_DenseDestroy;
+  if (((Mat_Shell *)A->data)->right) {
+    PetscCall(MatProductCreate(a->A, C, NULL, contents->work));
+  } else {
+    PetscCall(MatProductCreate(a->A, B, NULL, contents->work));
+  }
+  PetscCall(MatProductSetType(contents->work[0], MATPRODUCT_AB));
+  PetscCall(MatProductSetFromOptions(contents->work[0]));
+  PetscCall(MatProductSymbolic(contents->work[0]));
+  PetscCall(MatProductCreate(a->A, contents->work[0], NULL, contents->work + 1));
+  PetscCall(MatProductSetType(contents->work[1], MATPRODUCT_AtB));
+  PetscCall(MatProductSetFromOptions(contents->work[1]));
+  PetscCall(MatProductSymbolic(contents->work[1]));
+  PetscCall(MatDenseGetArrayWrite(C, &array));
+  PetscCall(MatSeqDenseSetPreallocation(contents->work[1], array));
+  PetscCall(MatMPIDenseSetPreallocation(contents->work[1], array));
+  PetscCall(MatDenseRestoreArrayWrite(C, &array));
+  C->ops->productnumeric = MatProductNumeric_Normal_Dense;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatProductSetFromOptions_Normal_Dense_AB(Mat C)
+{
+  PetscFunctionBegin;
+  C->ops->productsymbolic = MatProductSymbolic_Normal_Dense;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatProductSetFromOptions_Normal_Dense(Mat C)
+{
+  Mat_Product *product = C->product;
+
+  PetscFunctionBegin;
+  if (product->type == MATPRODUCT_AB) PetscCall(MatProductSetFromOptions_Normal_Dense_AB(C));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*MC
+  MATNORMAL - a matrix that behaves like A'*A for `MatMult()` while only containing A
+
+  Level: intermediate
+
+  Developer Notes:
+  This is implemented on top of `MATSHELL` to get support for scaling and shifting without requiring duplicate code
+
+  Users can not call `MatShellSetOperation()` operations on this class, there is some error checking for that incorrect usage
+
+.seealso: [](ch_matrices), `Mat`, `MatCreateNormal()`, `MatMult()`, `MatNormalGetMat()`, `MATNORMALHERMITIAN`, `MatCreateNormalHermitian()`
+M*/
+
+/*@
+  MatCreateNormal - Creates a new `MATNORMAL` matrix object that behaves like A'*A.
+
+  Collective
+
+  Input Parameter:
+. A - the (possibly rectangular) matrix
+
+  Output Parameter:
+. N - the matrix that represents A'*A
+
+  Level: intermediate
+
+  Notes:
+  The product A'*A is NOT actually formed! Rather the new matrix
+  object performs the matrix-vector product, `MatMult()`, by first multiplying by
+  A and then A'
+
+.seealso: [](ch_matrices), `Mat`, `MATNORMAL`, `MatMult()`, `MatNormalGetMat()`, `MATNORMALHERMITIAN`, `MatCreateNormalHermitian()`
+@*/
+PetscErrorCode MatCreateNormal(Mat A, Mat *N)
+{
+  Mat_Normal *Na;
+  VecType     vtype;
+
+  PetscFunctionBegin;
+  PetscCall(MatCreate(PetscObjectComm((PetscObject)A), N));
+  PetscCall(PetscLayoutReference(A->cmap, &(*N)->rmap));
+  PetscCall(PetscLayoutReference(A->cmap, &(*N)->cmap));
+  PetscCall(MatSetType(*N, MATSHELL));
+  PetscCall(PetscNew(&Na));
+  PetscCall(MatShellSetContext(*N, Na));
+  PetscCall(PetscObjectReference((PetscObject)A));
+  Na->A = A;
+  PetscCall(MatCreateVecs(A, NULL, &Na->w));
+
+  PetscCall(MatSetBlockSizes(*N, PetscAbs(A->cmap->bs), PetscAbs(A->rmap->bs)));
+  PetscCall(MatShellSetOperation(*N, MATOP_DESTROY, (void (*)(void))MatDestroy_Normal));
+  PetscCall(MatShellSetOperation(*N, MATOP_MULT, (void (*)(void))MatMult_Normal));
+  PetscCall(MatShellSetOperation(*N, MATOP_MULT_TRANSPOSE, (void (*)(void))MatMult_Normal));
+  PetscCall(MatShellSetOperation(*N, MATOP_DUPLICATE, (void (*)(void))MatDuplicate_Normal));
+  PetscCall(MatShellSetOperation(*N, MATOP_GET_DIAGONAL, (void (*)(void))MatGetDiagonal_Normal));
+  PetscCall(MatShellSetOperation(*N, MATOP_COPY, (void (*)(void))MatCopy_Normal));
+  (*N)->ops->getdiagonalblock  = MatGetDiagonalBlock_Normal;
+  (*N)->ops->increaseoverlap   = MatIncreaseOverlap_Normal;
+  (*N)->ops->createsubmatrices = MatCreateSubMatrices_Normal;
+  (*N)->ops->permute           = MatPermute_Normal;
+
+  PetscCall(PetscObjectComposeFunction((PetscObject)*N, "MatNormalGetMat_C", MatNormalGetMat_Normal));
+  PetscCall(PetscObjectComposeFunction((PetscObject)*N, "MatConvert_normal_seqaij_C", MatConvert_Normal_AIJ));
+  PetscCall(PetscObjectComposeFunction((PetscObject)*N, "MatConvert_normal_mpiaij_C", MatConvert_Normal_AIJ));
+#if defined(PETSC_HAVE_HYPRE)
+  PetscCall(PetscObjectComposeFunction((PetscObject)*N, "MatConvert_normal_hypre_C", MatConvert_Normal_HYPRE));
+#endif
+  PetscCall(PetscObjectComposeFunction((PetscObject)*N, "MatProductSetFromOptions_normal_seqdense_C", MatProductSetFromOptions_Normal_Dense));
+  PetscCall(PetscObjectComposeFunction((PetscObject)*N, "MatProductSetFromOptions_normal_mpidense_C", MatProductSetFromOptions_Normal_Dense));
+  PetscCall(PetscObjectComposeFunction((PetscObject)*N, "MatShellSetContext_C", MatShellSetContext_Immutable));
+  PetscCall(PetscObjectComposeFunction((PetscObject)*N, "MatShellSetContextDestroy_C", MatShellSetContextDestroy_Immutable));
+  PetscCall(PetscObjectComposeFunction((PetscObject)*N, "MatShellSetManageScalingShifts_C", MatShellSetManageScalingShifts_Immutable));
+  PetscCall(MatSetOption(*N, MAT_SYMMETRIC, PETSC_TRUE));
+  PetscCall(MatGetVecType(A, &vtype));
+  PetscCall(MatSetVecType(*N, vtype));
+#if defined(PETSC_HAVE_DEVICE)
+  PetscCall(MatBindToCPU(*N, A->boundtocpu));
+#endif
+  PetscCall(MatSetUp(*N));
+  PetscCall(PetscObjectChangeTypeName((PetscObject)*N, MATNORMAL));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}

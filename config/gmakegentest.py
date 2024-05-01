@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 from __future__ import print_function
 import pickle
@@ -6,6 +6,7 @@ import os,shutil, string, re
 import sys
 import logging, time
 import types
+import shlex
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 from collections import defaultdict
 from gmakegen import *
@@ -90,7 +91,7 @@ class generateExamples(Petsc):
       the dependencies, etc.
   """
   def __init__(self,petsc_dir=None, petsc_arch=None, pkg_dir=None, pkg_arch=None, pkg_name=None, pkg_pkgs=None, testdir='tests', verbose=False, single_ex=False, srcdir=None, check=False):
-    super(generateExamples, self).__init__(petsc_dir=petsc_dir, petsc_arch=petsc_arch, pkg_dir=pkg_dir, pkg_arch=pkg_arch, pkg_name=pkg_name, pkg_pkgs=pkg_pkgs, verbose=verbose)
+    super(generateExamples, self).__init__(petsc_dir=petsc_dir, petsc_arch=petsc_arch, pkg_dir=pkg_dir, pkg_arch=pkg_arch, pkg_name=pkg_name, pkg_pkgs=pkg_pkgs)
 
     self.single_ex=single_ex
     self.srcdir=srcdir
@@ -98,6 +99,10 @@ class generateExamples(Petsc):
 
     # Set locations to handle movement
     self.inInstallDir=self.getInInstallDir(thisscriptdir)
+
+    # Special configuration for CI testing
+    if self.petsc_arch.find('valgrind') >= 0:
+      self.conf['PETSCTEST_VALGRIND']=1
 
     if self.inInstallDir:
       # Case 2 discussed above
@@ -122,7 +127,7 @@ class generateExamples(Petsc):
     self.summarize=True if verbose else False
 
     # For help in setting the requirements
-    self.precision_types="single double __float128 int32".split()
+    self.precision_types="__fp16 single double __float128".split()
     self.integer_types="int32 int64 long32 long64".split()
     self.languages="fortran cuda hip sycl cxx cpp".split()    # Always requires C so do not list
 
@@ -176,7 +181,7 @@ class generateExamples(Petsc):
   def getLanguage(self,srcfile):
     """
     Based on the source, determine associated language as found in gmakegen.LANGS
-    Can we just return srcext[1:\] now?
+    Can we just return srcext[1:] now?
     """
     langReq=None
     srcext = getlangext(srcfile)
@@ -184,6 +189,8 @@ class generateExamples(Petsc):
     if srcext in ".F".split(): langReq="F"
     if srcext in ".cxx".split(): langReq="cxx"
     if srcext in ".kokkos.cxx".split(): langReq="kokkos_cxx"
+    if srcext in ".hip.cpp".split(): langReq="hip_cpp"
+    if srcext in ".raja.cxx".split(): langReq="raja_cxx"
     if srcext in ".cpp".split(): langReq="cpp"
     if srcext == ".cu": langReq="cu"
     if srcext == ".c": langReq="c"
@@ -284,9 +291,9 @@ class generateExamples(Petsc):
     argStr=re.sub('{{(.*?)}}',"",argStr)
     argStr=re.sub('-'," ",argStr)
     for digit in string.digits: argStr=re.sub(digit," ",argStr)
-    argStr=re.sub("\.","",argStr)
+    argStr=re.sub(r"\.","",argStr)
     argStr=re.sub(",","",argStr)
-    argStr=re.sub('\+',' ',argStr)
+    argStr=re.sub(r'\+',' ',argStr)
     argStr=re.sub(' +',' ',argStr)  # Remove repeated white space
     return argStr.strip()
 
@@ -345,16 +352,13 @@ class generateExamples(Petsc):
       Create a dictionary with all of the variables that get substituted
       into the template commands found in example_template.py
     """
-    subst={}
-
     # Handle defaults of testparse.acceptedkeys (e.g., ignores subtests)
     if 'nsize' not in testDict: testDict['nsize'] = '1'
     if 'timeoutfactor' not in testDict: testDict['timeoutfactor']="1"
-    for ak in testparse.acceptedkeys:
-      if ak=='test': continue
-      subst[ak]=(testDict[ak] if ak in testDict else '')
+    subst = {key : testDict.get(key, '') for key in testparse.acceptedkeys if key != 'test'}
 
     # Now do other variables
+    subst['env'] = '\n'.join('export '+cmd for cmd in shlex.split(subst['env']))
     subst['execname']=testDict['execname']
     subst['error']=''
     if 'filter' in testDict:
@@ -370,7 +374,7 @@ class generateExamples(Petsc):
     subst['label_suffix']=''
     subst['comments']="\n#".join(subst['comments'].split("\n"))
     if subst['comments']: subst['comments']="#"+subst['comments']
-    subst['exec']="../"+subst['execname']
+    subst['executable']="../"+subst['execname']
     subst['testroot']=self.testroot_dir
     subst['testname']=testname
     dp = self.conf.get('DATAFILESPATH','')
@@ -380,11 +384,14 @@ class generateExamples(Petsc):
     subst['petsc_index_size']=str(self.conf['PETSC_INDEX_SIZE'])
     subst['petsc_scalar_size']=str(self.conf['PETSC_SCALAR_SIZE'])
 
+    subst['petsc_test_options']=self.conf['PETSC_TEST_OPTIONS']
+
     #Conf vars
     if self.petsc_arch.find('valgrind')>=0:
       subst['mpiexec']='petsc_mpiexec_valgrind ' + self.conf['MPIEXEC']
     else:
       subst['mpiexec']=self.conf['MPIEXEC']
+    subst['mpiexec_tail']=self.conf['MPIEXEC_TAIL']
     subst['pkg_name']=self.pkg_name
     subst['pkg_dir']=self.pkg_dir
     subst['pkg_arch']=self.petsc_arch
@@ -420,11 +427,11 @@ class generateExamples(Petsc):
       Substitute variables
     """
     Str=origStr
-    for subkey in subst:
+    for subkey, subvalue in subst.items():
       if subkey=='regexes': continue
-      if not isinstance(subst[subkey],str): continue
+      if not isinstance(subvalue,str): continue
       if subkey.upper() not in Str: continue
-      Str=subst['regexes'][subkey].sub(lambda x: subst[subkey],Str)
+      Str=subst['regexes'][subkey].sub(lambda x: subvalue,Str)
     return Str
 
   def getCmds(self,subst,i, debug=False):
@@ -437,6 +444,11 @@ class generateExamples(Petsc):
     cmdLines=""
 
     # MPI is the default -- but we have a few odd commands
+    if subst['temporaries']:
+      if '*' in subst['temporaries']:
+        raise RuntimeError('{}/{}: list of temporary files to remove may not include wildcards'.format(subst['srcdir'], subst['execname']))
+      cmd=cmdindnt+self._substVars(subst,example_template.preclean)
+      cmdLines+=cmd+"\n"
     if not subst['command']:
       cmd=cmdindnt+self._substVars(subst,example_template.mpitest)
     else:
@@ -538,12 +550,16 @@ class generateExamples(Petsc):
       Generate bash script using template found next to this file.
       This file is read in at constructor time to avoid file I/O
     """
+    def opener(path,flags,*args,**kwargs):
+      kwargs.setdefault('mode',0o755)
+      return os.open(path,flags,*args,**kwargs)
+
     # runscript_dir directory has to be consistent with gmakefile
     testDict=srcDict[testname]
     rpath=self.srcrelpath(root)
     runscript_dir=os.path.join(self.testroot_dir,rpath)
     if not os.path.isdir(runscript_dir): os.makedirs(runscript_dir)
-    with open(os.path.join(runscript_dir,testname+".sh"),"w") as fh:
+    with open(os.path.join(runscript_dir,testname+".sh"),"w",opener=opener) as fh:
 
       # Get variables to go into shell scripts.  last time testDict used
       subst=self.getSubstVars(testDict,rpath,testname)
@@ -609,9 +625,6 @@ class generateExamples(Petsc):
         fh.write(loopFoot+"\n")
 
       fh.write(footer+"\n")
-
-    os.chmod(os.path.join(runscript_dir,testname+".sh"),0o755)
-    #if '10_9' in testname: sys.exit()
     return
 
   def  genScriptsAndInfo(self,exfile,root,srcDict):
@@ -661,6 +674,8 @@ class generateExamples(Petsc):
       srcDict["SKIP"].append("SYCL required for this test")
     if lang=="kokkos_cxx" and 'PETSC_HAVE_KOKKOS' not in self.conf:
       srcDict["SKIP"].append("KOKKOS required for this test")
+    if lang=="raja_cxx" and 'PETSC_HAVE_RAJA' not in self.conf:
+      srcDict["SKIP"].append("RAJA required for this test")
     if lang=="cxx" and 'PETSC_HAVE_CXX' not in self.conf:
       srcDict["SKIP"].append("C++ required for this test")
     if lang=="cpp" and 'PETSC_HAVE_CXX' not in self.conf:
@@ -711,6 +726,16 @@ class generateExamples(Petsc):
         isNull=False
         if requirement.startswith("!"):
           requirement=requirement[1:]; isNull=True
+        # 32-bit vs 64-bit pointers
+        if requirement == "64bitptr":
+          if self.conf['PETSC_SIZEOF_VOID_P']==8:
+            if isNull:
+              testDict['SKIP'].append("not 64bit-ptr required")
+              continue
+            continue  # Success
+          elif not isNull:
+            testDict['SKIP'].append("64bit-ptr required")
+            continue
         # Precision requirement for reals
         if requirement in self.precision_types:
           if self.conf['PETSC_PRECISION']==requirement:
@@ -757,7 +782,7 @@ class generateExamples(Petsc):
           testDict['SKIP'].append("Requires DATAFILESPATH")
           continue
         # Defines -- not sure I have comments matching
-        if "define(" in requirement.lower():
+        if "defined(" in requirement.lower():
           reqdef=requirement.split("(")[1].split(")")[0]
           if reqdef in self.conf:
             if isNull:
@@ -831,6 +856,7 @@ class generateExamples(Petsc):
       for root in dataDict:
         relroot=self.srcrelpath(root)
         pkg=relroot.split("/")[1]
+        if not pkg in self.sources: continue
         fh.write(relroot+"\n")
         allSrcs=[]
         for lang in LANGS: allSrcs+=self.sources[pkg][lang]['srcs']
@@ -860,20 +886,15 @@ class generateExamples(Petsc):
      the examples based on the metadata contained in the source files
     """
     debug=False
-    # Use examplesAnalyze to get what the makefles think are sources
-    #self.examplesAnalyze(root,dirs,files,anlzDict)
 
-    dataDict[root]={}
-
+    data = {}
     for exfile in files:
-      #TST: Until we replace files, still leaving the orginals as is
+      #TST: Until we replace files, still leaving the originals as is
       #if not exfile.startswith("new_"+"ex"): continue
       #if not exfile.startswith("ex"): continue
 
       # Ignore emacs and other temporary files
-      if exfile.startswith("."): continue
-      if exfile.startswith("#"): continue
-      if exfile.endswith("~"): continue
+      if exfile.startswith((".", "#")) or exfile.endswith("~"): continue
       # Only parse source files
       ext=getlangext(exfile).lstrip('.').replace('.','_')
       if ext not in LANGS: continue
@@ -881,13 +902,14 @@ class generateExamples(Petsc):
       # Convenience
       fullex=os.path.join(root,exfile)
       if self.verbose: print('   --> '+fullex)
-      dataDict[root].update(testparse.parseTestFile(fullex,0))
-      if exfile in dataDict[root]:
-        if not self.check_output:
-          self.genScriptsAndInfo(exfile,root,dataDict[root][exfile])
+      data.update(testparse.parseTestFile(fullex,0))
+      if exfile in data:
+        if self.check_output:
+          self.checkOutput(exfile,root,data[exfile])
         else:
-          self.checkOutput(exfile,root,dataDict[root][exfile])
+          self.genScriptsAndInfo(exfile,root,data[exfile])
 
+    dataDict[root] = data
     return
 
   def walktree(self,top):

@@ -1,17 +1,14 @@
-#if !defined(VECTAGGERANDOR_H)
-#define      VECTAGGERANDOR_H
+#pragma once
 #include <petsc/private/vecimpl.h>
 
 typedef struct {
   PetscInt      nsubs;
-  VecTagger     *subs;
+  VecTagger    *subs;
   PetscCopyMode mode;
 } VecTagger_AndOr;
 
-PETSC_EXTERN PetscErrorCode VecTaggerGetSubs_AndOr(VecTagger,PetscInt*,VecTagger**);
-PETSC_EXTERN PetscErrorCode VecTaggerSetSubs_AndOr(VecTagger,PetscInt,VecTagger*,PetscCopyMode);
-PETSC_EXTERN PetscErrorCode VecTaggerCreate_AndOr(VecTagger);
-PETSC_EXTERN PetscErrorCode VecTaggerAndOrIsSubBox_Private(PetscInt,const VecTaggerBox *,const VecTaggerBox *,PetscBool *);
-PETSC_EXTERN PetscErrorCode VecTaggerAndOrIntersect_Private(PetscInt,const VecTaggerBox *,const VecTaggerBox *,VecTaggerBox *,PetscBool *);
-#endif
-
+PETSC_INTERN PetscErrorCode VecTaggerGetSubs_AndOr(VecTagger, PetscInt *, VecTagger **);
+PETSC_INTERN PetscErrorCode VecTaggerSetSubs_AndOr(VecTagger, PetscInt, VecTagger *, PetscCopyMode);
+PETSC_INTERN PetscErrorCode VecTaggerCreate_AndOr(VecTagger);
+PETSC_INTERN PetscErrorCode VecTaggerAndOrIsSubBox_Private(PetscInt, const VecTaggerBox *, const VecTaggerBox *, PetscBool *);
+PETSC_INTERN PetscErrorCode VecTaggerAndOrIntersect_Private(PetscInt, const VecTaggerBox *, const VecTaggerBox *, VecTaggerBox *, PetscBool *);

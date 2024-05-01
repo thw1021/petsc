@@ -1,21 +1,10 @@
-
-#requiresdefine  'PETSC_HAVE_MATLAB_ENGINE'
-
-ALL: lib
+-include ../../../../../../petscdir.mk
+#requiresdefine  'PETSC_HAVE_MATLAB'
 
 CFLAGS    = ${MATLAB_INCLUDE}
-FFLAGS    =
-CPPFLAGS  =
-SOURCEC	  = vmatlab.c
-SOURCEF	  =
-SOURCEH	  =
-MANSEC	  = Viewer
-LIBBASE	  = libpetscsys
-LOCDIR	  = src/sys/classes/viewer/impls/matlab/
-DIRS      =
+MANSEC    = Viewer
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
-include ${PETSC_DIR}/lib/petsc/conf/rules
-include ${PETSC_DIR}/lib/petsc/conf/test
+include ${PETSC_DIR}/lib/petsc/conf/rules_doc.mk
 
 

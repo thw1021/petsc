@@ -1,0 +1,50 @@
+masses:        e= 9.109e-31; ions in proton mass units:    2.000e+00  1.800e+02 ...
+charges:       e=-1.602e-19; charges in elementary units:  1.000e+00  1.800e+01
+n:             e:  1.000e+00                           i:  1.000e+00  1.000e-06
+thermal T (K): e= 2.321e+07 i= 1.160e+07  1.160e+07. Normalization grid 0: v_0= 1.876e+07 ( 6.256e-02c) n_0= 1.000e+20 t_0= 1.909e-05 4 batched, view batch 1
+Domain radius (AMR levels) grid 0: par= 5.000e+00 perp= 5.000e+00 (0) , 1: par= 5.835e-02 perp= 5.835e-02 (0) , 2: par= 6.151e-03 perp= 6.151e-03 (0) 
+nu_alpha:  3.093538e+22 8.427101e+18 3.033756e+19
+nu_beta:  3.769714e-24 3.769714e-24 1.221387e-21
+nu_alpha[i]*nu_beta[j]*lambda[i][j]:
+ 1.000000000e+00 1.000000416e+00 3.206025701e+02
+ 2.724099089e-04 3.173347934e-04 7.663211501e-02
+ 9.703920059e-04 8.514679446e-04 3.047999074e-01
+lambda[i][j]:
+ 8.575038959e+00 8.575042530e+00 8.485122002e+00
+ 8.575042530e+00 9.989208398e+00 7.445248257e+00
+ 8.485122002e+00 7.445248257e+00 8.225848404e+00
+0) FormLandau 384 IPs, 24 cells total, Nb=16, Nq=16, dim=2, Tab: Nb=16 Nf=3 Np=16 cdim=2 N=1092
+0 TS dt 0.01 time 0.
+    0 SNES Function norm 7.558812062359e-01
+    1 SNES Function norm 4.198840088696e-03
+    2 SNES Function norm 3.091861146444e-05
+    3 SNES Function norm 2.208104713875e-07
+    4 SNES Function norm 1.632565215648e-09
+    5 SNES Function norm 1.197209412870e-11
+    6 SNES Function norm 8.920037451522e-14
+  Nonlinear solve converged due to CONVERGED_SNORM_RELATIVE iterations 6
+1 TS dt 0.01 time 0.01
+  0) species-0: charge density= -1.6162729305797e+01 z-momentum=  3.6098760201387e-18 energy=  4.8199770808867e+04
+  0) species-1: charge density=  1.6162438381907e+01 z-momentum= -2.3323644617777e-16 energy=  2.4099451614304e+04
+  0) species-2: charge density=  2.9092389087432e-04 z-momentum=  7.6602722270145e-23 energy=  2.4099451614304e-02
+	  0) Total: charge density=  3.7024853669076e-14, momentum= -2.2962649355491e-16, energy=  7.2299246522623e+04 (m_i[0]/m_e = 3670.94, 8 cells on electron grid)
+0 TS dt 0.01 time 0.
+    0 SNES Function norm 6.868785674823e-01
+    1 SNES Function norm 2.325246699120e-03
+    2 SNES Function norm 1.716496207905e-05
+    3 SNES Function norm 1.221782282288e-07
+    4 SNES Function norm 9.038360863354e-10
+    5 SNES Function norm 6.632190854303e-12
+    6 SNES Function norm 4.846056260672e-14
+  Nonlinear solve converged due to CONVERGED_SNORM_RELATIVE iterations 6
+1 TS dt 0.01 time 0.01
+  1) species-0: charge density= -1.6162729305797e+01 z-momentum=  3.7995575187338e-18 energy=  4.8199648400570e+04
+  1) species-1: charge density=  1.6162438381907e+01 z-momentum= -2.3833636847029e-16 energy=  2.4099574004884e+04
+  1) species-2: charge density=  2.9092389087432e-04 z-momentum=  3.6477486795307e-23 energy=  2.4117168156138e-02
+	  1) Total: charge density=  3.7025016299402e-14, momentum= -2.3453677447407e-16, energy=  7.2299246522623e+04 (m_i[0]/m_e = 3670.94, 8 cells on electron grid)
+Particle Moments:	 number density      momentum (par)     energy             entropy      loss : # OMP threads 1.
+	Initial:         3.374533856361e-07 -1.194443015472e-17 7.229924652262e+04 3.959622e+00 0.000000e+00
+	Coarse-graining: 3.374533856363e-07 -1.028955619953e-13 7.229924652277e+04 4.302305e+00 2.663752e-08
+	Landau:          3.374533856363e-07 -1.029466923136e-13 7.229924652277e+04 4.302335e+00 2.662684e-08
+Coarse-graining entropy generation = 3.426832e-01 ; Landau entropy generation = 3.427130e-01
+(relative) energy conservation: Coarse-graining = 1.989789e-12 ; Landau = 1.986770e-12

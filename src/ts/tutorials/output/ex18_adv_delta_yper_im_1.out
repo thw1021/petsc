@@ -1,9 +1,9 @@
-DM Object: 1 MPI processes
+DM Object: 1 MPI process
   type: plex
 Mesh in 2 dimensions:
-  0-cells: 42
-  1-cells: 78
-  2-cells: 48 (12)
+  Number of 0-cells per rank: 42
+  Number of 1-cells per rank: 78
+  Number of 2-cells per rank: 48 (12)
 Labels:
   ghost: 0 strata of sizes ()
   vtk: 1 strata of sizes (36)
@@ -73,7 +73,7 @@ Labels:
  30  time        5  |x| (       1,   0.9999) |x|_1 (      36,        1)         Error [           0, 0.000119993] int  6.66628e-06
   Nonlinear solve converged due to CONVERGED_FNORM_ABS iterations 0
  31  time    5.167  |x| (       1,   0.9999) |x|_1 (      36,        1)         Error [           0, 0.000123993] int  6.88848e-06
-TS Object: 1 MPI processes
+TS Object: 1 MPI process
   type: mimex
   maximum steps=40
   maximum time=5

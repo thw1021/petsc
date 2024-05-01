@@ -3,266 +3,327 @@
    methods as preconditioner applications in KSP solves.
 */
 
-#include <petsc/private/pcimpl.h>        /*I "petscpc.h" I*/
+#include <petsc/private/pcimpl.h> /*I "petscpc.h" I*/
 #include <petsc/private/matimpl.h>
 
 typedef struct {
-  Vec  xwork, ywork;
-  IS   inactive;
-  Mat  B;
-  PetscBool allocated;
+  Vec              xwork, ywork;
+  IS               inactive;
+  Mat              B;
+  Vec              X;
+  PetscObjectState Xstate;
+  PetscBool        setfromoptionscalled;
 } PC_LMVM;
 
 /*@
-   PCLMVMSetMatLMVM - Replaces the LMVM matrix inside the preconditioner with
-   the one provided by the user.
+  PCLMVMSetUpdateVec - Set the vector to be used as solution update for the internal LMVM matrix.
 
-   Input Parameters:
-+  pc - An LMVM preconditioner
--  B  - An LMVM-type matrix (MATLDFP, MATLBFGS, MATLSR1, MATLBRDN, MATLMBRDN, MATLSBRDN)
+  Input Parameters:
++ pc - The preconditioner
+- X  - Solution vector
 
-   Level: intermediate
+  Level: intermediate
+
+  Notes:
+  This is only needed if you want the preconditioner to automatically update the internal matrix.
+  It is called in some `SNES` implementations to update the preconditioner.
+  The right-hand side of the linear system is used as function vector.
+
+.seealso: `MatLMVMUpdate()`, `PCLMVMSetMatLMVM()`
+@*/
+PetscErrorCode PCLMVMSetUpdateVec(PC pc, Vec X)
+{
+  PC_LMVM  *ctx;
+  PetscBool same;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
+  if (X) PetscValidHeaderSpecific(X, VEC_CLASSID, 2);
+  PetscCall(PetscObjectTypeCompare((PetscObject)pc, PCLMVM, &same));
+  if (!same) PetscFunctionReturn(PETSC_SUCCESS);
+  ctx = (PC_LMVM *)pc->data;
+  PetscCall(PetscObjectReference((PetscObject)X));
+  PetscCall(VecDestroy(&ctx->X));
+  ctx->X      = X;
+  ctx->Xstate = -1;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PCLMVMSetMatLMVM - Replaces the `MATLMVM` matrix inside the preconditioner with the one provided by the user.
+
+  Input Parameters:
++ pc - An `PCLMVM` preconditioner
+- B  - An `MATLMVM` type matrix
+
+  Level: intermediate
+
+.seealso: [](ch_ksp), `PCLMVMGetMatLMVM()`
 @*/
 PetscErrorCode PCLMVMSetMatLMVM(PC pc, Mat B)
 {
-  PC_LMVM          *ctx = (PC_LMVM*)pc->data;
-  PetscErrorCode   ierr;
-  PetscBool        same;
+  PC_LMVM  *ctx;
+  PetscBool same;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
   PetscValidHeaderSpecific(B, MAT_CLASSID, 2);
-  ierr = PetscObjectTypeCompare((PetscObject)pc, PCLMVM, &same);CHKERRQ(ierr);
-  if (!same) SETERRQ(PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONG, "PC must be a PCLMVM type.");
-  ierr = PetscObjectBaseTypeCompare((PetscObject)B, MATLMVM, &same);CHKERRQ(ierr);
-  if (!same) SETERRQ(PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONG, "Matrix must be an LMVM-type.");
-  ierr = MatDestroy(&ctx->B);CHKERRQ(ierr);
-  ierr = PetscObjectReference((PetscObject)B);CHKERRQ(ierr);
+  PetscCall(PetscObjectTypeCompare((PetscObject)pc, PCLMVM, &same));
+  if (!same) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCall(PetscObjectBaseTypeCompare((PetscObject)B, MATLMVM, &same));
+  PetscCheck(same, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONG, "Matrix must be an MATLMVM.");
+  ctx = (PC_LMVM *)pc->data;
+  PetscCall(PetscObjectReference((PetscObject)B));
+  PetscCall(MatDestroy(&ctx->B));
   ctx->B = B;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   PCLMVMGetMatLMVM - Returns a pointer to the underlying LMVM matrix.
+  PCLMVMGetMatLMVM - Returns a pointer to the underlying `MATLMVM` matrix.
 
-   Input Parameters:
-.  pc - An LMVM preconditioner
+  Input Parameter:
+. pc - An `PCLMVM` preconditioner
 
-   Output Parameters:
-.  B - LMVM matrix inside the preconditioner
+  Output Parameter:
+. B - `MATLMVM` matrix used by the preconditioner
 
-   Level: intermediate
+  Level: intermediate
+
+.seealso: [](ch_ksp), `PCLMVMSetMatLMVM()`
 @*/
 PetscErrorCode PCLMVMGetMatLMVM(PC pc, Mat *B)
 {
-  PC_LMVM          *ctx = (PC_LMVM*)pc->data;
-  PetscErrorCode   ierr;
-  PetscBool        same;
+  PC_LMVM  *ctx;
+  PetscBool same;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
-  ierr = PetscObjectTypeCompare((PetscObject)pc, PCLMVM, &same);CHKERRQ(ierr);
-  if (!same) SETERRQ(PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONG, "PC must be a PCLMVM type.");
-  *B = ctx->B;
-  PetscFunctionReturn(0);
+  PetscCall(PetscObjectTypeCompare((PetscObject)pc, PCLMVM, &same));
+  PetscCheck(same, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONG, "PC must be a PCLMVM type.");
+  ctx = (PC_LMVM *)pc->data;
+  if (!ctx->B) {
+    Mat J;
+
+    if (pc->useAmat) J = pc->mat;
+    else J = pc->pmat;
+    PetscCall(PetscObjectBaseTypeCompare((PetscObject)J, MATLMVM, &same));
+    if (same) *B = J;
+    else {
+      const char *prefix;
+
+      PetscCall(PCGetOptionsPrefix(pc, &prefix));
+      PetscCall(MatCreate(PetscObjectComm((PetscObject)pc), &ctx->B));
+      PetscCall(MatSetOptionsPrefix(ctx->B, prefix));
+      PetscCall(MatAppendOptionsPrefix(ctx->B, "pc_lmvm_"));
+      PetscCall(MatSetType(ctx->B, MATLMVMBFGS));
+      PetscCall(PetscObjectIncrementTabLevel((PetscObject)ctx->B, (PetscObject)pc, 1));
+      *B = ctx->B;
+    }
+  } else *B = ctx->B;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   PCLMVMSetIS - Sets the index sets that reduce the PC application.
+  PCLMVMSetIS - Sets the index sets that reduce the `PC` application.
 
-   Input Parameters:
-+  pc - An LMVM preconditioner
--  inactive - Index set defining the variables removed from the problem
+  Input Parameters:
++ pc       - An `PCLMVM` preconditioner
+- inactive - Index set defining the variables removed from the problem
 
-   Level: intermediate
+  Level: intermediate
 
-.seealso:  MatLMVMUpdate()
+  Developer Notes:
+  Need to explain the purpose of this `IS`
+
+.seealso: [](ch_ksp), `PCLMVMClearIS()`
 @*/
 PetscErrorCode PCLMVMSetIS(PC pc, IS inactive)
 {
-  PC_LMVM          *ctx = (PC_LMVM*)pc->data;
-  PetscErrorCode   ierr;
-  PetscBool        same;
+  PC_LMVM  *ctx;
+  PetscBool same;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
   PetscValidHeaderSpecific(inactive, IS_CLASSID, 2);
-  ierr = PetscObjectTypeCompare((PetscObject)pc, PCLMVM, &same);CHKERRQ(ierr);
-  if (!same) SETERRQ(PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONG, "PC must be a PCLMVM type.");
-  ierr = PCLMVMClearIS(pc);CHKERRQ(ierr);
-  ierr = PetscObjectReference((PetscObject)inactive);CHKERRQ(ierr);
+  PetscCall(PetscObjectTypeCompare((PetscObject)pc, PCLMVM, &same));
+  if (!same) PetscFunctionReturn(PETSC_SUCCESS);
+  ctx = (PC_LMVM *)pc->data;
+  PetscCall(PCLMVMClearIS(pc));
+  PetscCall(PetscObjectReference((PetscObject)inactive));
   ctx->inactive = inactive;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   PCLMVMClearIS - Removes the inactive variable index set.
+  PCLMVMClearIS - Removes the inactive variable index set from a `PCLMVM`
 
-   Input Parameters:
-.  pc - An LMVM preconditioner
+  Input Parameter:
+. pc - An `PCLMVM` preconditioner
 
-   Level: intermediate
+  Level: intermediate
 
-.seealso:  MatLMVMUpdate()
+.seealso: [](ch_ksp), `PCLMVMSetIS()`
 @*/
 PetscErrorCode PCLMVMClearIS(PC pc)
 {
-  PC_LMVM          *ctx = (PC_LMVM*)pc->data;
-  PetscErrorCode   ierr;
-  PetscBool        same;
+  PC_LMVM  *ctx;
+  PetscBool same;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
-  ierr = PetscObjectTypeCompare((PetscObject)pc, PCLMVM, &same);CHKERRQ(ierr);
-  if (!same) SETERRQ(PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONG, "PC must be a PCLMVM type.");
-  if (ctx->inactive) {
-    ierr = ISDestroy(&ctx->inactive);CHKERRQ(ierr);
-  }
-  PetscFunctionReturn(0);
+  PetscCall(PetscObjectTypeCompare((PetscObject)pc, PCLMVM, &same));
+  if (!same) PetscFunctionReturn(PETSC_SUCCESS);
+  ctx = (PC_LMVM *)pc->data;
+  PetscCall(ISDestroy(&ctx->inactive));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PCApply_LMVM(PC pc,Vec x,Vec y)
+static PetscErrorCode PCApply_LMVM(PC pc, Vec x, Vec y)
 {
-  PC_LMVM          *ctx = (PC_LMVM*)pc->data;
-  PetscErrorCode   ierr;
-  Vec              xsub, ysub;
+  PC_LMVM *ctx = (PC_LMVM *)pc->data;
+  Vec      xsub, ysub, Bx = x, By = y;
+  Mat      B = ctx->B ? ctx->B : (pc->useAmat ? pc->mat : pc->pmat);
 
   PetscFunctionBegin;
   if (ctx->inactive) {
-    ierr = VecZeroEntries(ctx->xwork);CHKERRQ(ierr);
-    ierr = VecGetSubVector(ctx->xwork, ctx->inactive, &xsub);CHKERRQ(ierr);
-    ierr = VecCopy(x, xsub);CHKERRQ(ierr);
-    ierr = VecRestoreSubVector(ctx->xwork, ctx->inactive, &xsub);CHKERRQ(ierr);
-  } else {
-    ierr = VecCopy(x, ctx->xwork);CHKERRQ(ierr);
+    if (!ctx->xwork) PetscCall(MatCreateVecs(B, &ctx->xwork, &ctx->ywork));
+    PetscCall(VecZeroEntries(ctx->xwork));
+    PetscCall(VecGetSubVector(ctx->xwork, ctx->inactive, &xsub));
+    PetscCall(VecCopy(x, xsub));
+    PetscCall(VecRestoreSubVector(ctx->xwork, ctx->inactive, &xsub));
+    Bx = ctx->xwork;
+    By = ctx->ywork;
   }
-  ierr = MatSolve(ctx->B, ctx->xwork, ctx->ywork);CHKERRQ(ierr);
+  PetscCall(MatSolve(B, Bx, By));
   if (ctx->inactive) {
-    ierr = VecGetSubVector(ctx->ywork, ctx->inactive, &ysub);CHKERRQ(ierr);
-    ierr = VecCopy(ysub, y);CHKERRQ(ierr);
-    ierr = VecRestoreSubVector(ctx->ywork, ctx->inactive, &ysub);CHKERRQ(ierr);
-  } else {
-    ierr = VecCopy(ctx->ywork, y);CHKERRQ(ierr);
+    PetscCall(VecGetSubVector(ctx->ywork, ctx->inactive, &ysub));
+    PetscCall(VecCopy(ysub, y));
+    PetscCall(VecRestoreSubVector(ctx->ywork, ctx->inactive, &ysub));
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PCReset_LMVM(PC pc)
 {
-  PC_LMVM        *ctx = (PC_LMVM*)pc->data;
-  PetscErrorCode ierr;
+  PC_LMVM *ctx = (PC_LMVM *)pc->data;
 
   PetscFunctionBegin;
-  if (ctx->xwork) {
-    ierr = VecDestroy(&ctx->xwork);CHKERRQ(ierr);
-  }
-  if (ctx->ywork) {
-    ierr = VecDestroy(&ctx->ywork);CHKERRQ(ierr);
-  }
-  PetscFunctionReturn(0);
+  PetscCall(VecDestroy(&ctx->xwork));
+  PetscCall(VecDestroy(&ctx->ywork));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PCSetUp_LMVM(PC pc)
 {
-  PC_LMVM        *ctx = (PC_LMVM*)pc->data;
-  PetscErrorCode ierr;
-  PetscInt       n, N;
-  PetscBool      allocated;
+  PetscInt  n, N;
+  PetscBool allocated;
+  Mat       B;
+  PC_LMVM  *ctx = (PC_LMVM *)pc->data;
 
   PetscFunctionBegin;
-  ierr = MatLMVMIsAllocated(ctx->B, &allocated);CHKERRQ(ierr);
+  PetscCall(PCLMVMGetMatLMVM(pc, &B));
+  PetscCall(MatLMVMIsAllocated(B, &allocated));
   if (!allocated) {
-    ierr = MatCreateVecs(pc->mat, &ctx->xwork, &ctx->ywork);CHKERRQ(ierr);
-    ierr = VecGetLocalSize(ctx->xwork, &n);CHKERRQ(ierr);
-    ierr = VecGetSize(ctx->xwork, &N);CHKERRQ(ierr);
-    ierr = MatSetSizes(ctx->B, n, n, N, N);CHKERRQ(ierr);
-    ierr = MatLMVMAllocate(ctx->B, ctx->xwork, ctx->ywork);CHKERRQ(ierr);
-  } else {
-    ierr = MatCreateVecs(ctx->B, &ctx->xwork, &ctx->ywork);CHKERRQ(ierr);
+    Vec t1, t2;
+
+    PetscCall(MatCreateVecs(pc->mat, &t1, &t2));
+    PetscCall(VecGetLocalSize(t1, &n));
+    PetscCall(VecGetSize(t1, &N));
+    PetscCall(MatSetSizes(B, n, n, N, N));
+    PetscCall(MatLMVMAllocate(B, t1, t2));
+    PetscCall(VecDestroy(&t1));
+    PetscCall(VecDestroy(&t2));
   }
-  PetscFunctionReturn(0);
+  /* Only call SetFromOptions if we internally handle the LMVM matrix */
+  if (B == ctx->B && ctx->setfromoptionscalled) PetscCall(MatSetFromOptions(ctx->B));
+  ctx->setfromoptionscalled = PETSC_FALSE;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PCView_LMVM(PC pc,PetscViewer viewer)
+static PetscErrorCode PCView_LMVM(PC pc, PetscViewer viewer)
 {
-  PC_LMVM        *ctx = (PC_LMVM*)pc->data;
-  PetscErrorCode ierr;
-  PetscBool      iascii;
+  PC_LMVM  *ctx = (PC_LMVM *)pc->data;
+  PetscBool iascii;
 
   PetscFunctionBegin;
-  ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii);CHKERRQ(ierr);
-  if (iascii && ctx->B->assembled) {
-    ierr = PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_INFO);CHKERRQ(ierr);
-    ierr = MatView(ctx->B, viewer);CHKERRQ(ierr);
-    ierr = PetscViewerPopFormat(viewer);CHKERRQ(ierr);
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
+  if (iascii && ctx->B && ctx->B->assembled) {
+    PetscCall(PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_INFO));
+    PetscCall(MatView(ctx->B, viewer));
+    PetscCall(PetscViewerPopFormat(viewer));
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PCSetFromOptions_LMVM(PetscOptionItems* PetscOptionsObject, PC pc)
+static PetscErrorCode PCSetFromOptions_LMVM(PC pc, PetscOptionItems *PetscOptionsObject)
 {
-  PC_LMVM        *ctx = (PC_LMVM*)pc->data;
-  PetscErrorCode ierr;
+  PC_LMVM *ctx = (PC_LMVM *)pc->data;
 
   PetscFunctionBegin;
-  ierr = MatSetFromOptions(ctx->B);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  /* defer SetFromOptions calls to PCSetUp_LMVM */
+  ctx->setfromoptionscalled = PETSC_TRUE;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PCPreSolve_LMVM(PC pc, KSP ksp, Vec F, Vec X)
+{
+  PC_LMVM *ctx = (PC_LMVM *)pc->data;
+
+  PetscFunctionBegin;
+  if (ctx->X && ctx->B) { /* Perform update only if requested. Otherwise we assume the user, e.g. TAO, has already taken care of it */
+    PetscObjectState Xstate;
+
+    PetscCall(PetscObjectStateGet((PetscObject)ctx->X, &Xstate));
+    if (ctx->Xstate != Xstate) PetscCall(MatLMVMUpdate(ctx->B, ctx->X, F));
+    ctx->Xstate = Xstate;
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PCDestroy_LMVM(PC pc)
 {
-  PC_LMVM        *ctx = (PC_LMVM*)pc->data;
-  PetscErrorCode ierr;
+  PC_LMVM *ctx = (PC_LMVM *)pc->data;
 
   PetscFunctionBegin;
-  if (ctx->inactive) {
-    ierr = ISDestroy(&ctx->inactive);CHKERRQ(ierr);
-  }
-  if (pc->setupcalled) {
-    ierr = VecDestroy(&ctx->xwork);CHKERRQ(ierr);
-    ierr = VecDestroy(&ctx->ywork);CHKERRQ(ierr);
-  }
-  ierr = MatDestroy(&ctx->B);CHKERRQ(ierr);
-  ierr = PetscFree(pc->data);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(ISDestroy(&ctx->inactive));
+  PetscCall(VecDestroy(&ctx->xwork));
+  PetscCall(VecDestroy(&ctx->ywork));
+  PetscCall(VecDestroy(&ctx->X));
+  PetscCall(MatDestroy(&ctx->B));
+  PetscCall(PetscFree(pc->data));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*MC
-   PCLMVM - Creates a preconditioner around an LMVM matrix. Options for the
-            underlying LMVM matrix can be access with the "-pc_lmvm_" prefix.
+   PCLMVM - A preconditioner constructed from a `MATLMVM` matrix.
+            If the preconditioner matrix is not of type `MATLMVM`, an internal matrix is used.
+            Options for the internal `MATLMVM` matrix can be accessed with the -pc_lmvm_ prefix.
+            Alternatively, the user can pass a suitable matrix with `PCLMVMSetMatLMVM()`.
 
    Level: intermediate
 
-.seealso:  PCCreate(), PCSetType(), PCType (for list of available types),
-           PC, MATLMVM, PCLMVMUpdate(), PCLMVMSetMatLMVM(), PCLMVMGetMatLMVM()
+.seealso: [](ch_ksp), `PCCreate()`, `PCSetType()`, `PCLMVMSetUpdateVec()`, `PCLMVMSetMatLMVM()`, `PCLMVMGetMatLMVM()`
 M*/
 PETSC_EXTERN PetscErrorCode PCCreate_LMVM(PC pc)
 {
-  PetscErrorCode ierr;
-  PC_LMVM        *ctx;
+  PC_LMVM *ctx;
 
   PetscFunctionBegin;
-  ierr     = PetscNewLog(pc,&ctx);CHKERRQ(ierr);
-  pc->data = (void*)ctx;
+  PetscCall(PetscNew(&ctx));
+  pc->data = (void *)ctx;
 
-  pc->ops->reset           = PCReset_LMVM;
-  pc->ops->setup           = PCSetUp_LMVM;
-  pc->ops->destroy         = PCDestroy_LMVM;
-  pc->ops->view            = PCView_LMVM;
-  pc->ops->apply           = PCApply_LMVM;
-  pc->ops->setfromoptions  = PCSetFromOptions_LMVM;
+  pc->ops->reset               = PCReset_LMVM;
+  pc->ops->setup               = PCSetUp_LMVM;
+  pc->ops->destroy             = PCDestroy_LMVM;
+  pc->ops->view                = PCView_LMVM;
+  pc->ops->apply               = PCApply_LMVM;
+  pc->ops->setfromoptions      = PCSetFromOptions_LMVM;
   pc->ops->applysymmetricleft  = NULL;
   pc->ops->applysymmetricright = NULL;
-  pc->ops->applytranspose  = NULL;
-  pc->ops->applyrichardson = NULL;
-  pc->ops->presolve        = NULL;
-  pc->ops->postsolve       = NULL;
-
-  ierr = PCSetReusePreconditioner(pc, PETSC_TRUE);CHKERRQ(ierr);
-
-  ierr = MatCreate(PetscObjectComm((PetscObject)pc), &ctx->B);CHKERRQ(ierr);
-  ierr = MatSetType(ctx->B, MATLMVMBFGS);CHKERRQ(ierr);
-  ierr = PetscObjectIncrementTabLevel((PetscObject)ctx->B, (PetscObject)pc, 1);CHKERRQ(ierr);
-  ierr = MatSetOptionsPrefix(ctx->B, "pc_lmvm_");CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  pc->ops->applytranspose      = NULL;
+  pc->ops->applyrichardson     = NULL;
+  pc->ops->presolve            = PCPreSolve_LMVM;
+  pc->ops->postsolve           = NULL;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

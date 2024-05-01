@@ -4,12 +4,12 @@ class Configure(config.package.Package):
   def __init__(self, framework):
     config.package.Package.__init__(self, framework)
     self.gitcommit = 'v3.2p5'
-    self.download  = ['git://https://bitbucket.org/petsc/pkg-parms.git','https://bitbucket.org/petsc/pkg-metis/get/'+self.gitcommit+'.tar.gz']
+    self.download  = ['git://https://bitbucket.org/petsc/pkg-parms.git','https://bitbucket.org/petsc/pkg-parms/get/'+self.gitcommit+'.tar.gz']
     self.downloaddirnames  = ['petsc-pkg-parms','pARMS']
     self.functions = ['parms_PCCreate']
     self.includes  = ['parms.h']
     self.liblist   = [['libparms.a']]
-    #self.license   = 'http://www-users.cs.umn.edu/~saad/software/pARMS'
+    #self.license   = 'https://www-users.cs.umn.edu/~saad/software/pARMS'
     self.precisions = ['double']
     return
 
@@ -31,14 +31,14 @@ class Configure(config.package.Package):
     g.write('.SUFFIXES: .c .o .f .F\n')
 
     # C compiler
-    self.setCompilers.pushLanguage('C')
-    g.write('CC         = '+self.setCompilers.getCompiler()+'\n')
-    g.write('CFLAGS     = '+self.removeWarningFlags(self.setCompilers.getCompilerFlags())+' -DUSE_MPI -DREAL=double -DHAS_BLAS ')
+    self.pushLanguage('C')
+    g.write('CC         = '+self.getCompiler()+'\n')
+    g.write('CFLAGS     = '+self.updatePackageCFlags(self.getCompilerFlags())+' -DUSE_MPI -DREAL=double -DHAS_BLAS ')
     if self.scalartypes.scalartype == 'complex':
       g.write('-DDBL_CMPLX\n')
     else:
       g.write('-DDBL\n')
-    self.setCompilers.popLanguage()
+    self.popLanguage()
 
     # BLAS mangling
     if self.blasLapack.mangling == 'underscore':
@@ -71,14 +71,13 @@ class Configure(config.package.Package):
     if self.installNeeded('makefile.in'):
       try:
         self.logPrintBox('Compiling pARMS; this may take several minutes')
-        libDir = os.path.join(self.installDir, self.libdir,'')
+        libDir = self.libDir
         incDir = os.path.join(self.installDir, self.includedir,'')
         if not os.path.isdir(libDir):
           os.mkdir(libDir)
-        self.installDirProvider.printSudoPasswordMessage()
-        output,err,ret = config.package.Package.executeShellCommand(self.installSudo+'mkdir -p '+libDir, timeout=2500, log=self.log)
-        output,err,ret = config.package.Package.executeShellCommand(self.installSudo+'mkdir -p '+incDir, timeout=2500, log=self.log)
-        output,err,ret  = config.package.Package.executeShellCommand('cd '+self.packageDir+' && make cleanall && make OBJ3="" && '+self.installSudo+'cp -f include/*.h '+incDir +' && '+self.installSudo+'cp lib/* '+libDir, timeout=2500, log = self.log)
+        output,err,ret = config.package.Package.executeShellCommand('mkdir -p '+libDir, timeout=2500, log=self.log)
+        output,err,ret = config.package.Package.executeShellCommand('mkdir -p '+incDir, timeout=2500, log=self.log)
+        output,err,ret  = config.package.Package.executeShellCommand('cd '+self.packageDir+' && make cleanall && make OBJ3="" && cp -f include/*.h '+incDir +' && cp lib/* '+libDir, timeout=2500, log = self.log)
       except RuntimeError as e:
         raise RuntimeError('Error running make on pARMS: '+str(e))
       self.postInstall(output+err,'makefile.in')

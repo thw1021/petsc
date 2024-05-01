@@ -1,87 +1,83 @@
-#include <petsc/private/snesimpl.h>  /*I "petscsnes.h" I*/
+#include <petsc/private/snesimpl.h> /*I "petscsnes.h" I*/
 #include <petscviewersaws.h>
 
 typedef struct {
-  PetscViewer    viewer;
+  PetscViewer viewer;
 } SNESMonitor_SAWs;
 
 /*@C
-   SNESMonitorSAWsCreate - create an SAWs monitor context
+  SNESMonitorSAWsCreate - create an SAWs monitor context for `SNES`
 
-   Collective
+  Collective
 
-   Input Arguments:
-.  snes - SNES to monitor
+  Input Parameter:
+. snes - `SNES` to monitor
 
-   Output Arguments:
-.  ctx - context for monitor
+  Output Parameter:
+. ctx - context for monitor
 
-   Level: developer
+  Level: developer
 
-.seealso: SNESMonitorSAWs(), SNESMonitorSAWsDestroy()
+.seealso: [](ch_snes), `SNESMonitorSet()`, `SNES`, `SNESMonitorSAWs()`, `SNESMonitorSAWsDestroy()`
 @*/
-PetscErrorCode SNESMonitorSAWsCreate(SNES snes,void **ctx)
+PetscErrorCode SNESMonitorSAWsCreate(SNES snes, void **ctx)
 {
-  PetscErrorCode  ierr;
   SNESMonitor_SAWs *mon;
 
   PetscFunctionBegin;
-  ierr      = PetscNewLog(snes,&mon);CHKERRQ(ierr);
+  PetscCall(PetscNew(&mon));
   mon->viewer = PETSC_VIEWER_SAWS_(PetscObjectComm((PetscObject)snes));
-  if (!mon->viewer) SETERRQ(PetscObjectComm((PetscObject)snes),PETSC_ERR_PLIB,"Cannot create SAWs default viewer");
-  *ctx = (void*)mon;
-  PetscFunctionReturn(0);
+  PetscCheck(mon->viewer, PetscObjectComm((PetscObject)snes), PETSC_ERR_PLIB, "Cannot create SAWs default viewer");
+  *ctx = (void *)mon;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-   SNESMonitorSAWsDestroy - destroy a monitor context created with SNESMonitorSAWsCreate()
+  SNESMonitorSAWsDestroy - destroy a monitor context created with `SNESMonitorSAWsCreate()`
 
-   Collective
+  Collective
 
-   Input Arguments:
-.  ctx - monitor context
+  Input Parameter:
+. ctx - monitor context
 
-   Level: developer
+  Level: developer
 
-.seealso: SNESMonitorSAWsCreate()
+.seealso: [](ch_snes), `SNESMonitorSAWsCreate()`
 @*/
 PetscErrorCode SNESMonitorSAWsDestroy(void **ctx)
 {
-  PetscErrorCode  ierr;
-
   PetscFunctionBegin;
-  ierr = PetscFree(*ctx);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscFree(*ctx));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-   SNESMonitorSAWs - monitor solution using SAWs
+  SNESMonitorSAWs - monitor solution process of `SNES` using SAWs
 
-   Logically Collective on SNES
+  Collective
 
-   Input Parameters:
-+  snes   - iterative context
-.  n     - iteration number
-.  rnorm - 2-norm (preconditioned) residual value (may be estimated).
--  ctx -  PetscViewer of type SAWs
+  Input Parameters:
++ snes  - iterative context
+. n     - iteration number
+. rnorm - 2-norm (preconditioned) residual value (may be estimated).
+- ctx   - `PetscViewer` of type `PETSCVIEWERSAWS`
 
-   Level: advanced
+  Level: advanced
 
-.seealso: PetscViewerSAWsOpen()
+.seealso: [](ch_snes), `PetscViewerSAWsOpen()`, `SNESMonitorSAWsDestroy()`, `SNESMonitorSAWsCreate()`
 @*/
-PetscErrorCode SNESMonitorSAWs(SNES snes,PetscInt n,PetscReal rnorm,void *ctx)
+PetscErrorCode SNESMonitorSAWs(SNES snes, PetscInt n, PetscReal rnorm, void *ctx)
 {
-  PetscErrorCode   ierr;
-  PetscMPIInt      rank;
+  PetscMPIInt rank;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(snes,SNES_CLASSID,1);
+  PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
 
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
-  if (!rank) {
-    PetscStackCallSAWs(SAWs_Register,("/PETSc/snes_monitor_saws/its",&snes->iter,1,SAWs_READ,SAWs_INT));
-    PetscStackCallSAWs(SAWs_Register,("/PETSc/snes_monitor_saws/rnorm",&snes->norm,1,SAWs_READ,SAWs_DOUBLE));
-    ierr = PetscSAWsBlock();CHKERRQ(ierr);
+  PetscCallMPI(MPI_Comm_rank(PETSC_COMM_WORLD, &rank));
+  if (rank == 0) {
+    PetscCallSAWs(SAWs_Register, ("/PETSc/snes_monitor_saws/its", &snes->iter, 1, SAWs_READ, SAWs_INT));
+    PetscCallSAWs(SAWs_Register, ("/PETSc/snes_monitor_saws/rnorm", &snes->norm, 1, SAWs_READ, SAWs_DOUBLE));
+    PetscCall(PetscSAWsBlock());
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

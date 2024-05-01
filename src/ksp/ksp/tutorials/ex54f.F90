@@ -6,17 +6,13 @@
 !           | 0 epsilon |
 !
 !    rotated by angle 'theta' (-theta <90> in degrees) with anisotropic parameter 'epsilon' (-epsilon <0.0>).
-!    Blob right hand side centered at C (-blob_center C(1),C(2) <0,0>)
+!    Blob right-hand side centered at C (-blob_center C(1),C(2) <0,0>)
 !    Dirichlet BCs on y=-1 face.
 !
 !    -out_matlab will generate binary files for A,x,b and a ex54f.m file that reads them and plots them in matlab.
 !
 !    User can change anisotropic shape with function ex54_psi().  Negative theta will switch to a circular anisotropy.
 !
-!!/*T
-!   Concepts: KSP^solving a system of linear equations
-!T*/
-
 
 ! -----------------------------------------------------------------------
       program main
@@ -29,8 +25,8 @@
       KSP              ksp
       PetscErrorCode   ierr
       PetscViewer viewer
-      PetscInt qj,qi,ne,M,Istart,Iend,geq,ix
-      PetscInt ki,kj,lint,nel,ll,j1,i1,ndf,f4
+      PetscInt qj,qi,ne,M,Istart,Iend,geq
+      PetscInt ki,kj,nel,ll,j1,i1,ndf,f4
       PetscInt f2,f9,f6,one
       PetscInt :: idx(4)
       PetscBool  flg,out_matlab
@@ -46,13 +42,9 @@
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !                 Beginning of program
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-      call PetscInitialize(PETSC_NULL_CHARACTER,ierr)
-      if (ierr .ne. 0) then
-        print*,'Unable to initialize PETSc'
-        stop
-      endif
-      call MPI_Comm_size(PETSC_COMM_WORLD,size,ierr)
-      call MPI_Comm_rank(PETSC_COMM_WORLD,rank,ierr)
+      PetscCallA(PetscInitialize(ierr))
+      PetscCallMPIA(MPI_Comm_size(PETSC_COMM_WORLD,size,ierr))
+      PetscCallMPIA(MPI_Comm_rank(PETSC_COMM_WORLD,rank,ierr))
       one = 1
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !                 set parameters
@@ -62,24 +54,24 @@
       f9 = 9
       f6 = 6
       ne = 9
-      call PetscOptionsGetInt(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-ne',ne,flg,ierr)
+      PetscCallA(PetscOptionsGetInt(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-ne',ne,flg,ierr))
       h = 2.0/real(ne)
       M = (ne+1)*(ne+1)
       theta = 90.0
 !     theta is input in degrees
-      call PetscOptionsGetReal(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-theta',theta,flg,ierr)
+      PetscCallA(PetscOptionsGetReal(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-theta',theta,flg,ierr))
       theta = theta / 57.2957795
       eps = 1.0
-      call PetscOptionsGetReal(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-epsilon',eps,flg,ierr)
+      PetscCallA(PetscOptionsGetReal(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-epsilon',eps,flg,ierr))
       ki = 2
-      call PetscOptionsGetRealArray(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-blob_center',blb,ki,flg,ierr)
+      PetscCallA(PetscOptionsGetRealArray(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-blob_center',blb,ki,flg,ierr))
       if (.not. flg) then
          blb(1) = 0.0
          blb(2) = 0.0
       else if (ki .ne. 2) then
          print *, 'error: ', ki,' arguments read for -blob_center.  Needs to be two.'
       endif
-      call PetscOptionsGetBool(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-out_matlab',out_matlab,flg,ierr)
+      PetscCallA(PetscOptionsGetBool(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-out_matlab',out_matlab,flg,ierr))
       if (.not.flg) out_matlab = PETSC_FALSE;
 
       ev(1) = 1.0
@@ -90,25 +82,26 @@
 !     - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !  Create matrix.  When using MatCreate(), the matrix format can
 !  be specified at runtime.
-      call MatCreate(PETSC_COMM_WORLD,Amat,ierr)
-      call MatSetSizes( Amat,PETSC_DECIDE, PETSC_DECIDE, M, M, ierr)
-      call MatSetType( Amat, MATAIJ, ierr)
-      call MatSetOption(Amat,MAT_SPD,PETSC_TRUE,ierr)
+      PetscCallA(MatCreate(PETSC_COMM_WORLD,Amat,ierr))
+      PetscCallA(MatSetSizes( Amat,PETSC_DECIDE, PETSC_DECIDE, M, M, ierr))
+      PetscCallA(MatSetType( Amat, MATAIJ, ierr))
+      PetscCallA(MatSetOption(Amat,MAT_SPD,PETSC_TRUE,ierr))
+      PetscCallA(MatSetOption(Amat,MAT_SPD_ETERNAL,PETSC_TRUE,ierr))
       if (size == 1) then
-         call MatSetType( Amat, MATAIJ, ierr)
+         PetscCallA(MatSetType( Amat, MATAIJ, ierr))
       else
-         call MatSetType( Amat, MATMPIAIJ, ierr)
+         PetscCallA(MatSetType( Amat, MATMPIAIJ, ierr))
       endif
-      call MatMPIAIJSetPreallocation(Amat,f9,PETSC_NULL_INTEGER,f6,PETSC_NULL_INTEGER, ierr)
-      call MatSetFromOptions( Amat, ierr)
-      call MatSetUp( Amat, ierr)
-      call MatGetOwnershipRange( Amat, Istart, Iend, ierr)
+      PetscCallA(MatMPIAIJSetPreallocation(Amat,f9,PETSC_NULL_INTEGER,f6,PETSC_NULL_INTEGER, ierr))
+      PetscCallA(MatSetFromOptions( Amat, ierr))
+      PetscCallA(MatSetUp( Amat, ierr))
+      PetscCallA(MatGetOwnershipRange( Amat, Istart, Iend, ierr))
 !  Create vectors.  Note that we form 1 vector from scratch and
 !  then duplicate as needed.
-      call MatCreateVecs( Amat, PETSC_NULL_VEC, xvec, ierr)
-      call VecSetFromOptions( xvec, ierr)
-      call VecDuplicate( xvec, bvec, ierr)
-      call VecDuplicate( xvec, uvec, ierr)
+      PetscCallA(MatCreateVecs( Amat, PETSC_NULL_VEC, xvec, ierr))
+      PetscCallA(VecSetFromOptions( xvec, ierr))
+      PetscCallA(VecDuplicate( xvec, bvec, ierr))
+      PetscCallA(VecDuplicate( xvec, uvec, ierr))
 !  Assemble matrix.
 !   - Note that MatSetValues() uses 0-based row and column numbers
 !     in Fortran as well as in C (as set here in the array "col").
@@ -116,8 +109,6 @@
       nel = 4                   ! nodes per element (quad)
       ndf = 1
       call int2d(f2,sg)
-      lint = 4
-      ix = 0
       do geq=Istart,Iend-1,1
          qj = geq/(ne+1); qi = mod(geq,(ne+1))
          x = h*qi - 1.0; y = h*qj - 1.0 ! lower left corner (-1,-1)
@@ -128,7 +119,7 @@
             coord(1,4) = x;   coord(2,4) = y+h
 ! form stiff
             ss = 0.0
-            do ll = 1,lint
+            do ll = 1,4
                call shp2dquad(sg(1,ll),sg(2,ll),coord,shp,xsj,f2)
                xsj = xsj*sg(3,ll)*thk
                call thfx2d(ev,coord,shp,dd,f2,f2,f4,ex54_psi)
@@ -151,7 +142,7 @@
             idx(1) = geq; idx(2) = geq+1; idx(3) = geq+(ne+1)+1
             idx(4) = geq+(ne+1)
             if (qj > 0) then
-               call MatSetValues(Amat,f4,idx,f4,idx,ss,ADD_VALUES,ierr)
+               PetscCallA(MatSetValues(Amat,f4,idx,f4,idx,ss,ADD_VALUES,ierr))
             else                !     a BC
                do ki=1,4,1
                   do kj=1,4,1
@@ -164,18 +155,18 @@
                      endif
                   enddo
                enddo
-               call MatSetValues(Amat,f4,idx,f4,idx,ss,ADD_VALUES,ierr)
+               PetscCallA(MatSetValues(Amat,f4,idx,f4,idx,ss,ADD_VALUES,ierr))
             endif               ! BC
          endif                  ! add element
          if (qj > 0) then      ! set rhs
             val = h*h*exp(-100*((x+h/2)-blb(1))**2)*exp(-100*((y+h/2)-blb(2))**2)
-            call VecSetValues(bvec,one,geq,val,INSERT_VALUES,ierr)
+            PetscCallA(VecSetValues(bvec,one,geq,val,INSERT_VALUES,ierr))
          endif
       enddo
-      call MatAssemblyBegin(Amat,MAT_FINAL_ASSEMBLY,ierr)
-      call MatAssemblyEnd(Amat,MAT_FINAL_ASSEMBLY,ierr)
-      call VecAssemblyBegin(bvec,ierr)
-      call VecAssemblyEnd(bvec,ierr)
+      PetscCallA(MatAssemblyBegin(Amat,MAT_FINAL_ASSEMBLY,ierr))
+      PetscCallA(MatAssemblyEnd(Amat,MAT_FINAL_ASSEMBLY,ierr))
+      PetscCallA(VecAssemblyBegin(bvec,ierr))
+      PetscCallA(VecAssemblyEnd(bvec,ierr))
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !          Create the linear solver and set various options
@@ -183,12 +174,12 @@
 
 !  Create linear solver context
 
-      call KSPCreate(PETSC_COMM_WORLD,ksp,ierr)
+      PetscCallA(KSPCreate(PETSC_COMM_WORLD,ksp,ierr))
 
 !  Set operators. Here the matrix that defines the linear system
 !  also serves as the preconditioning matrix.
 
-      call KSPSetOperators(ksp,Amat,Amat,ierr)
+      PetscCallA(KSPSetOperators(ksp,Amat,Amat,ierr))
 
 !  Set runtime options, e.g.,
 !      -ksp_type <type> -pc_type <type> -ksp_monitor -ksp_rtol <rtol>
@@ -196,38 +187,36 @@
 !  KSPSetFromOptions() is called _after_ any other customization
 !  routines.
 
-      call KSPSetFromOptions(ksp,ierr)
+      PetscCallA(KSPSetFromOptions(ksp,ierr))
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !                      Solve the linear system
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-      call KSPSolve(ksp,bvec,xvec,ierr)
-      CHKERRA(ierr)
-
+      PetscCallA(KSPSolve(ksp,bvec,xvec,ierr))
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !                      output
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
       if (out_matlab) then
-         call PetscViewerBinaryOpen(PETSC_COMM_WORLD,'Amat',FILE_MODE_WRITE,viewer,ierr)
-         call MatView(Amat,viewer,ierr)
-         call PetscViewerDestroy(viewer,ierr)
+         PetscCallA(PetscViewerBinaryOpen(PETSC_COMM_WORLD,'Amat',FILE_MODE_WRITE,viewer,ierr))
+         PetscCallA(MatView(Amat,viewer,ierr))
+         PetscCallA(PetscViewerDestroy(viewer,ierr))
 
-         call PetscViewerBinaryOpen(PETSC_COMM_WORLD,'Bvec',FILE_MODE_WRITE,viewer,ierr)
-         call VecView(bvec,viewer,ierr)
-         call PetscViewerDestroy(viewer,ierr)
+         PetscCallA(PetscViewerBinaryOpen(PETSC_COMM_WORLD,'Bvec',FILE_MODE_WRITE,viewer,ierr))
+         PetscCallA(VecView(bvec,viewer,ierr))
+         PetscCallA(PetscViewerDestroy(viewer,ierr))
 
-         call PetscViewerBinaryOpen(PETSC_COMM_WORLD,'Xvec',FILE_MODE_WRITE,viewer,ierr)
-         call VecView(xvec,viewer,ierr)
-         call PetscViewerDestroy(viewer,ierr)
+         PetscCallA(PetscViewerBinaryOpen(PETSC_COMM_WORLD,'Xvec',FILE_MODE_WRITE,viewer,ierr))
+         PetscCallA(VecView(xvec,viewer,ierr))
+         PetscCallA(PetscViewerDestroy(viewer,ierr))
 
-         call MatMult(Amat,xvec,uvec,ierr)
+         PetscCallA(MatMult(Amat,xvec,uvec,ierr))
          val = -1.0
-         call VecAXPY(uvec,val,bvec,ierr)
-         call PetscViewerBinaryOpen(PETSC_COMM_WORLD,'Rvec',FILE_MODE_WRITE,viewer,ierr)
-         call VecView(uvec,viewer,ierr)
-         call PetscViewerDestroy(viewer,ierr)
+         PetscCallA(VecAXPY(uvec,val,bvec,ierr))
+         PetscCallA(PetscViewerBinaryOpen(PETSC_COMM_WORLD,'Rvec',FILE_MODE_WRITE,viewer,ierr))
+         PetscCallA(VecView(uvec,viewer,ierr))
+         PetscCallA(PetscViewerDestroy(viewer,ierr))
 
          if (rank == 0) then
             open(1,file='ex54f.m', FORM='formatted')
@@ -255,12 +244,12 @@
 !  Free work space.  All PETSc objects should be destroyed when they
 !  are no longer needed.
 
-      call VecDestroy(xvec,ierr)
-      call VecDestroy(bvec,ierr)
-      call VecDestroy(uvec,ierr)
-      call MatDestroy(Amat,ierr)
-      call KSPDestroy(ksp,ierr)
-      call PetscFinalize(ierr)
+      PetscCallA(VecDestroy(xvec,ierr))
+      PetscCallA(VecDestroy(bvec,ierr))
+      PetscCallA(VecDestroy(uvec,ierr))
+      PetscCallA(MatDestroy(Amat,ierr))
+      PetscCallA(KSPDestroy(ksp,ierr))
+      PetscCallA(PetscFinalize(ierr))
 
       end
 
@@ -403,18 +392,13 @@
 !     l       - Number of points/direction
 
 !     Outputs:
-!     lint    - Total number of points
 !     sg(3,*) - Array of points and weights
 !-----[--.----+----.----+----.-----------------------------------------]
       implicit  none
-      PetscInt   l,i,lint,lr(9),lz(9)
+      PetscInt   l,i,lr(9),lz(9)
       PetscReal    g,third,sg(3,*)
       data      lr/-1,1,1,-1,0,1,0,-1,0/,lz/-1,-1,1,1,-1,0,1,0,0/
       data      third / 0.3333333333333333 /
-
-!     Set number of total points
-
-      lint = l*l
 
 !     2x2 integration
       g = sqrt(third)
@@ -446,12 +430,19 @@
 !
 !/*TEST
 !
-!   build:
-!      requires: !pgf90_compiler
-!
+!  testset:
+!   nsize: 4
+!   args: -ne 39 -theta 30.0 -epsilon 1.e-1 -blob_center 0.,0. -ksp_type cg -pc_type gamg -pc_gamg_type agg -ksp_rtol 1e-4 -pc_gamg_aggressive_square_graph false -ksp_norm_type unpreconditioned
+!   requires: !single
 !   test:
-!      nsize: 4
-!      args: -ne 39 -theta 30.0 -epsilon 1.e-1 -blob_center 0.,0. -ksp_type cg -pc_type gamg -pc_gamg_type agg -pc_gamg_agg_nsmooths 1 -mg_levels_ksp_chebyshev_esteig 0,0.05,0,1.05 -mat_coarsen_type hem -pc_gamg_square_graph 0 -ksp_monitor_short -pc_gamg_esteig_ksp_max_it 5
-!      requires: !single
+!      suffix: misk
+!      args: -mat_coarsen_type misk -pc_gamg_aggressive_coarsening 0 -ksp_monitor_short
+!   test:
+!      suffix: mis
+!      args: -mat_coarsen_type mis -ksp_monitor_short
+!   test:
+!      suffix: hem
+!      args: -mat_coarsen_type hem -ksp_converged_reason
+!      filter: sed -e "s/Linear solve converged due to CONVERGED_RTOL iterations 1[2-3]/Linear solve converged due to CONVERGED_RTOL iterations 11/g"
 !
 !TEST*/

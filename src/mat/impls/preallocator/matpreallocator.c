@@ -1,57 +1,56 @@
-#include <petsc/private/matimpl.h>      /*I "petscmat.h" I*/
+#include <petsc/private/matimpl.h> /*I "petscmat.h" I*/
 #include <petsc/private/hashsetij.h>
 
 typedef struct {
   PetscHSetIJ ht;
   PetscInt   *dnz, *onz;
   PetscInt   *dnzu, *onzu;
+  PetscBool   nooffproc;
+  PetscBool   used;
 } Mat_Preallocator;
 
-PetscErrorCode MatDestroy_Preallocator(Mat A)
+static PetscErrorCode MatDestroy_Preallocator(Mat A)
 {
-  Mat_Preallocator *p = (Mat_Preallocator *) A->data;
-  PetscErrorCode    ierr;
+  Mat_Preallocator *p = (Mat_Preallocator *)A->data;
 
   PetscFunctionBegin;
-  ierr = MatStashDestroy_Private(&A->stash);CHKERRQ(ierr);
-  ierr = PetscHSetIJDestroy(&p->ht);CHKERRQ(ierr);
-  ierr = PetscFree4(p->dnz, p->onz, p->dnzu, p->onzu);CHKERRQ(ierr);
-  ierr = PetscFree(A->data);CHKERRQ(ierr);
-  ierr = PetscObjectChangeTypeName((PetscObject) A, NULL);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject) A, "MatPreallocatorPreallocate_C", NULL);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(MatStashDestroy_Private(&A->stash));
+  PetscCall(PetscHSetIJDestroy(&p->ht));
+  PetscCall(PetscFree4(p->dnz, p->onz, p->dnzu, p->onzu));
+  PetscCall(PetscFree(A->data));
+  PetscCall(PetscObjectChangeTypeName((PetscObject)A, NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatPreallocatorPreallocate_C", NULL));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatSetUp_Preallocator(Mat A)
+static PetscErrorCode MatSetUp_Preallocator(Mat A)
 {
-  Mat_Preallocator *p = (Mat_Preallocator *) A->data;
+  Mat_Preallocator *p = (Mat_Preallocator *)A->data;
   PetscInt          m, bs, mbs;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
-  ierr = PetscLayoutSetUp(A->rmap);CHKERRQ(ierr);
-  ierr = PetscLayoutSetUp(A->cmap);CHKERRQ(ierr);
-  ierr = MatGetLocalSize(A, &m, NULL);CHKERRQ(ierr);
-  ierr = PetscHSetIJCreate(&p->ht);CHKERRQ(ierr);
-  ierr = MatGetBlockSize(A, &bs);CHKERRQ(ierr);
+  PetscCall(PetscLayoutSetUp(A->rmap));
+  PetscCall(PetscLayoutSetUp(A->cmap));
+  PetscCall(MatGetLocalSize(A, &m, NULL));
+  PetscCall(PetscHSetIJCreate(&p->ht));
+  PetscCall(MatGetBlockSize(A, &bs));
   /* Do not bother bstash since MatPreallocator does not implement MatSetValuesBlocked */
-  ierr = MatStashCreate_Private(PetscObjectComm((PetscObject) A), 1, &A->stash);CHKERRQ(ierr);
+  PetscCall(MatStashCreate_Private(PetscObjectComm((PetscObject)A), 1, &A->stash));
   /* arrays are for blocked rows/cols */
-  mbs  = m/bs;
-  ierr = PetscCalloc4(mbs, &p->dnz, mbs, &p->onz, mbs, &p->dnzu, mbs, &p->onzu);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  mbs = m / bs;
+  PetscCall(PetscCalloc4(mbs, &p->dnz, mbs, &p->onz, mbs, &p->dnzu, mbs, &p->onzu));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatSetValues_Preallocator(Mat A, PetscInt m, const PetscInt *rows, PetscInt n, const PetscInt *cols, const PetscScalar *values, InsertMode addv)
+static PetscErrorCode MatSetValues_Preallocator(Mat A, PetscInt m, const PetscInt *rows, PetscInt n, const PetscInt *cols, const PetscScalar *values, InsertMode addv)
 {
-  Mat_Preallocator *p = (Mat_Preallocator *) A->data;
+  Mat_Preallocator *p = (Mat_Preallocator *)A->data;
   PetscInt          rStart, rEnd, r, cStart, cEnd, c, bs;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
-  ierr = MatGetBlockSize(A, &bs);CHKERRQ(ierr);
-  ierr = MatGetOwnershipRange(A, &rStart, &rEnd);CHKERRQ(ierr);
-  ierr = MatGetOwnershipRangeColumn(A, &cStart, &cEnd);CHKERRQ(ierr);
+  PetscCall(MatGetBlockSize(A, &bs));
+  PetscCall(MatGetOwnershipRange(A, &rStart, &rEnd));
+  PetscCall(MatGetOwnershipRangeColumn(A, &cStart, &cEnd));
   for (r = 0; r < m; ++r) {
     PetscHashIJKey key;
     PetscBool      missing;
@@ -59,51 +58,52 @@ PetscErrorCode MatSetValues_Preallocator(Mat A, PetscInt m, const PetscInt *rows
     key.i = rows[r];
     if (key.i < 0) continue;
     if ((key.i < rStart) || (key.i >= rEnd)) {
-      ierr = MatStashValuesRow_Private(&A->stash, key.i, n, cols, values, PETSC_FALSE);CHKERRQ(ierr);
+      PetscCall(MatStashValuesRow_Private(&A->stash, key.i, n, cols, values, PETSC_FALSE));
     } else { /* Hash table is for blocked rows/cols */
-      key.i = rows[r]/bs;
+      key.i = rows[r] / bs;
       for (c = 0; c < n; ++c) {
-        key.j = cols[c]/bs;
+        key.j = cols[c] / bs;
         if (key.j < 0) continue;
-        ierr = PetscHSetIJQueryAdd(p->ht, key, &missing);CHKERRQ(ierr);
+        PetscCall(PetscHSetIJQueryAdd(p->ht, key, &missing));
         if (missing) {
-          if ((key.j >= cStart/bs) && (key.j < cEnd/bs)) {
-            ++p->dnz[key.i-rStart/bs];
-            if (key.j >= key.i) ++p->dnzu[key.i-rStart/bs];
+          if ((key.j >= cStart / bs) && (key.j < cEnd / bs)) {
+            ++p->dnz[key.i - rStart / bs];
+            if (key.j >= key.i) ++p->dnzu[key.i - rStart / bs];
           } else {
-            ++p->onz[key.i-rStart/bs];
-            if (key.j >= key.i) ++p->onzu[key.i-rStart/bs];
+            ++p->onz[key.i - rStart / bs];
+            if (key.j >= key.i) ++p->onzu[key.i - rStart / bs];
           }
         }
       }
     }
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatAssemblyBegin_Preallocator(Mat A, MatAssemblyType type)
+static PetscErrorCode MatAssemblyBegin_Preallocator(Mat A, MatAssemblyType type)
 {
-  PetscInt       nstash, reallocs;
-  PetscErrorCode ierr;
+  PetscInt nstash, reallocs;
 
   PetscFunctionBegin;
-  ierr = MatStashScatterBegin_Private(A, &A->stash, A->rmap->range);CHKERRQ(ierr);
-  ierr = MatStashGetInfo_Private(&A->stash, &nstash, &reallocs);CHKERRQ(ierr);
-  ierr = PetscInfo2(A, "Stash has %D entries, uses %D mallocs.\n", nstash, reallocs);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(MatStashScatterBegin_Private(A, &A->stash, A->rmap->range));
+  PetscCall(MatStashGetInfo_Private(&A->stash, &nstash, &reallocs));
+  PetscCall(PetscInfo(A, "Stash has %" PetscInt_FMT " entries, uses %" PetscInt_FMT " mallocs.\n", nstash, reallocs));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatAssemblyEnd_Preallocator(Mat A, MatAssemblyType type)
+static PetscErrorCode MatAssemblyEnd_Preallocator(Mat A, MatAssemblyType type)
 {
-  PetscScalar   *val;
-  PetscInt      *row, *col;
-  PetscInt       i, j, rstart, ncols, flg;
-  PetscMPIInt    n;
-  PetscErrorCode ierr;
+  PetscScalar      *val;
+  PetscInt         *row, *col;
+  PetscInt          i, j, rstart, ncols, flg;
+  PetscMPIInt       n;
+  Mat_Preallocator *p = (Mat_Preallocator *)A->data;
 
   PetscFunctionBegin;
+  p->nooffproc = PETSC_TRUE;
   while (1) {
-    ierr = MatStashScatterGetMesg_Private(&A->stash, &n, &row, &col, &val, &flg);CHKERRQ(ierr);
+    PetscCall(MatStashScatterGetMesg_Private(&A->stash, &n, &row, &col, &val, &flg));
+    if (flg) p->nooffproc = PETSC_FALSE;
     if (!flg) break;
 
     for (i = 0; i < n;) {
@@ -111,131 +111,164 @@ PetscErrorCode MatAssemblyEnd_Preallocator(Mat A, MatAssemblyType type)
       for (j = i, rstart = row[j]; j < n; j++) {
         if (row[j] != rstart) break;
       }
-      if (j < n) ncols = j-i;
-      else       ncols = n-i;
+      if (j < n) ncols = j - i;
+      else ncols = n - i;
       /* Now assemble all these values with a single function call */
-      ierr = MatSetValues_Preallocator(A, 1, row+i, ncols, col+i, val+i, INSERT_VALUES);CHKERRQ(ierr);
+      PetscCall(MatSetValues_Preallocator(A, 1, row + i, ncols, col + i, val + i, INSERT_VALUES));
       i = j;
     }
   }
-  ierr = MatStashScatterEnd_Private(&A->stash);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(MatStashScatterEnd_Private(&A->stash));
+  PetscCall(MPIU_Allreduce(MPI_IN_PLACE, &p->nooffproc, 1, MPIU_BOOL, MPI_LAND, PetscObjectComm((PetscObject)A)));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatView_Preallocator(Mat A, PetscViewer viewer)
+static PetscErrorCode MatView_Preallocator(Mat A, PetscViewer viewer)
 {
   PetscFunctionBegin;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatSetOption_Preallocator(Mat A, MatOption op, PetscBool flg)
+static PetscErrorCode MatSetOption_Preallocator(Mat A, MatOption op, PetscBool flg)
 {
   PetscFunctionBegin;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatPreallocatorPreallocate_Preallocator(Mat mat, PetscBool fill, Mat A)
+static PetscErrorCode MatPreallocatorPreallocate_Preallocator(Mat mat, PetscBool fill, Mat A)
 {
-  Mat_Preallocator *p = (Mat_Preallocator *) mat->data;
+  Mat_Preallocator *p = (Mat_Preallocator *)mat->data;
   PetscInt          bs;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
-  ierr = MatGetBlockSize(mat, &bs);CHKERRQ(ierr);
-  ierr = MatXAIJSetPreallocation(A, bs, p->dnz, p->onz, p->dnzu, p->onzu);CHKERRQ(ierr);
-  ierr = MatSetUp(A);CHKERRQ(ierr);
-  ierr = MatSetOption(A, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_TRUE);CHKERRQ(ierr);
+  PetscCheck(!p->used, PetscObjectComm((PetscObject)mat), PETSC_ERR_SUP, "MatPreallocatorPreallocate() can only be used once for a give MatPreallocator object. Consider using MatDuplicate() after preallocation.");
+  p->used = PETSC_TRUE;
+  if (!fill) PetscCall(PetscHSetIJDestroy(&p->ht));
+  PetscCall(MatGetBlockSize(mat, &bs));
+  PetscCall(MatXAIJSetPreallocation(A, bs, p->dnz, p->onz, p->dnzu, p->onzu));
+  PetscCall(MatSetUp(A));
+  PetscCall(MatSetOption(A, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_TRUE));
   if (fill) {
+    PetscCall(MatSetOption(A, MAT_NO_OFF_PROC_ENTRIES, p->nooffproc));
     PetscHashIter  hi;
     PetscHashIJKey key;
-    PetscScalar    *zeros;
+    PetscScalar   *zeros;
+    PetscInt       n, maxrow = 1, *cols, rStart, rEnd, *rowstarts;
 
-    ierr = PetscCalloc1(bs*bs,&zeros);CHKERRQ(ierr);
-
-    PetscHashIterBegin(p->ht,hi);
-    while (!PetscHashIterAtEnd(p->ht,hi)) {
-      PetscHashIterGetKey(p->ht,hi,key);
-      PetscHashIterNext(p->ht,hi);
-      ierr = MatSetValuesBlocked(A,1,&key.i,1,&key.j,zeros,INSERT_VALUES);CHKERRQ(ierr);
+    PetscCall(MatGetOwnershipRange(A, &rStart, &rEnd));
+    // Ownership range is in terms of scalar entries, but we deal with blocks
+    rStart /= bs;
+    rEnd /= bs;
+    PetscCall(PetscHSetIJGetSize(p->ht, &n));
+    PetscCall(PetscMalloc2(n, &cols, rEnd - rStart + 1, &rowstarts));
+    rowstarts[0] = 0;
+    for (PetscInt i = 0; i < rEnd - rStart; i++) {
+      rowstarts[i + 1] = rowstarts[i] + p->dnz[i] + p->onz[i];
+      maxrow           = PetscMax(maxrow, p->dnz[i] + p->onz[i]);
     }
-    ierr = PetscFree(zeros);CHKERRQ(ierr);
+    PetscCheck(rowstarts[rEnd - rStart] == n, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Hash claims %" PetscInt_FMT " entries, but dnz+onz counts %" PetscInt_FMT, n, rowstarts[rEnd - rStart]);
 
-    ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-    ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+    PetscHashIterBegin(p->ht, hi);
+    while (!PetscHashIterAtEnd(p->ht, hi)) {
+      PetscHashIterGetKey(p->ht, hi, key);
+      PetscInt lrow         = key.i - rStart;
+      cols[rowstarts[lrow]] = key.j;
+      rowstarts[lrow]++;
+      PetscHashIterNext(p->ht, hi);
+    }
+    PetscCall(PetscHSetIJDestroy(&p->ht));
+
+    PetscCall(PetscCalloc1(maxrow * bs * bs, &zeros));
+    for (PetscInt i = 0; i < rEnd - rStart; i++) {
+      PetscInt grow = rStart + i;
+      PetscInt end = rowstarts[i], start = end - p->dnz[i] - p->onz[i];
+      PetscCall(PetscSortInt(end - start, PetscSafePointerPlusOffset(cols, start)));
+      PetscCall(MatSetValuesBlocked(A, 1, &grow, end - start, PetscSafePointerPlusOffset(cols, start), zeros, INSERT_VALUES));
+    }
+    PetscCall(PetscFree(zeros));
+    PetscCall(PetscFree2(cols, rowstarts));
+
+    PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatSetOption(A, MAT_NO_OFF_PROC_ENTRIES, PETSC_FALSE));
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  MatPreallocatorPreallocate - Preallocates the A matrix, using information from mat, optionally filling A with zeros
+  MatPreallocatorPreallocate - Preallocates the A matrix, using information from a `MATPREALLOCATOR` mat, optionally filling A with zeros
 
-  Input Parameter:
-+ mat  - the preallocator
+  Input Parameters:
++ mat  - the `MATPREALLOCATOR` preallocator matrix
 . fill - fill the matrix with zeros
 - A    - the matrix to be preallocated
 
   Notes:
-  This Mat implementation provides a helper utility to define the correct
+  This `MatType` implementation provides a helper utility to define the correct
   preallocation data for a given nonzero structure. Use this object like a
   regular matrix, e.g. loop over the nonzero structure of the matrix and
-  call MatSetValues() or MatSetValuesBlocked() to indicate the nonzero locations.
-  The matrix entires provided to MatSetValues() will be ignored, it only uses
+  call `MatSetValues()` or `MatSetValuesBlocked()` to indicate the nonzero locations.
+  The matrix entries provided to `MatSetValues()` will be ignored, it only uses
   the row / col indices provided to determine the information required to be
-  passed to MatXAIJSetPreallocation(). Once you have looped over the nonzero
-  structure, you must call MatAssemblyBegin(), MatAssemblyEnd() on mat.
+  passed to `MatXAIJSetPreallocation()`. Once you have looped over the nonzero
+  structure, you must call `MatAssemblyBegin()`, `MatAssemblyEnd()` on mat.
 
-  After you have assembled the preallocator matrix (mat), call MatPreallocatorPreallocate()
+  After you have assembled the preallocator matrix (mat), call `MatPreallocatorPreallocate()`
   to define the preallocation information on the matrix (A). Setting the parameter
-  fill = PETSC_TRUE will insert zeros into the matrix A. Internally MatPreallocatorPreallocate()
-  will call MatSetOption(A, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_TRUE);
+  fill = PETSC_TRUE will insert zeros into the matrix A. Internally `MatPreallocatorPreallocate()`
+  will call `MatSetOption`(A, `MAT_NEW_NONZERO_ALLOCATION_ERR`, `PETSC_TRUE`);
+
+  This function may only be called once for a given `MATPREALLOCATOR` object. If
+  multiple `Mat`s need to be preallocated, consider using `MatDuplicate()` after
+  this function.
 
   Level: advanced
 
-.seealso: MATPREALLOCATOR
+.seealso: `MATPREALLOCATOR`, `MatXAIJSetPreallocation()`
 @*/
 PetscErrorCode MatPreallocatorPreallocate(Mat mat, PetscBool fill, Mat A)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
-  PetscValidHeaderSpecific(A,   MAT_CLASSID, 3);
-  ierr = PetscUseMethod(mat, "MatPreallocatorPreallocate_C", (Mat,PetscBool,Mat),(mat,fill,A));CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscValidLogicalCollectiveBool(mat, fill, 2);
+  PetscValidHeaderSpecific(A, MAT_CLASSID, 3);
+  PetscUseMethod(mat, "MatPreallocatorPreallocate_C", (Mat, PetscBool, Mat), (mat, fill, A));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*MC
    MATPREALLOCATOR - MATPREALLOCATOR = "preallocator" - A matrix type to be used for computing a matrix preallocation.
 
    Operations Provided:
-.  MatSetValues()
+.vb
+  MatSetValues()
+.ve
 
    Options Database Keys:
-. -mat_type preallocator - sets the matrix type to "preallocator" during a call to MatSetFromOptions()
+. -mat_type preallocator - sets the matrix type to `MATPREALLOCATOR` during a call to `MatSetFromOptions()`
 
   Level: advanced
 
-.seealso: Mat
-
+.seealso: `MATPREALLOCATOR`, `Mat`, `MatPreallocatorPreallocate()`
 M*/
 
 PETSC_EXTERN PetscErrorCode MatCreate_Preallocator(Mat A)
 {
   Mat_Preallocator *p;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
-  ierr = PetscNewLog(A, &p);CHKERRQ(ierr);
-  A->data = (void *) p;
+  PetscCall(PetscNew(&p));
+  A->data = (void *)p;
 
   p->ht   = NULL;
   p->dnz  = NULL;
   p->onz  = NULL;
   p->dnzu = NULL;
   p->onzu = NULL;
+  p->used = PETSC_FALSE;
 
   /* matrix ops */
-  ierr = PetscMemzero(A->ops, sizeof(struct _MatOps));CHKERRQ(ierr);
+  PetscCall(PetscMemzero(A->ops, sizeof(struct _MatOps)));
 
   A->ops->destroy       = MatDestroy_Preallocator;
   A->ops->setup         = MatSetUp_Preallocator;
@@ -247,7 +280,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_Preallocator(Mat A)
   A->ops->setblocksizes = MatSetBlockSizes_Default; /* once set, user is not allowed to change the block sizes */
 
   /* special MATPREALLOCATOR functions */
-  ierr = PetscObjectComposeFunction((PetscObject) A, "MatPreallocatorPreallocate_C", MatPreallocatorPreallocate_Preallocator);CHKERRQ(ierr);
-  ierr = PetscObjectChangeTypeName((PetscObject) A, MATPREALLOCATOR);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatPreallocatorPreallocate_C", MatPreallocatorPreallocate_Preallocator));
+  PetscCall(PetscObjectChangeTypeName((PetscObject)A, MATPREALLOCATOR));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

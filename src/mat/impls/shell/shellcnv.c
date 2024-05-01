@@ -1,129 +1,135 @@
-#include <petsc/private/matimpl.h>        /*I "petscmat.h" I*/
+#include <petsc/private/matimpl.h> /*I "petscmat.h" I*/
+#include <petsc/private/vecimpl.h> /* for Vec->ops->setvalues */
 
-PetscErrorCode MatConvert_Shell(Mat oldmat, MatType newtype,MatReuse reuse,Mat *newmat)
+PetscErrorCode MatConvert_Shell(Mat oldmat, MatType newtype, MatReuse reuse, Mat *newmat)
 {
-  Mat            mat;
-  Vec            in,out;
-  MPI_Comm       comm;
-  PetscScalar    *array;
-  PetscInt       *dnnz,*onnz,*dnnzu,*onnzu;
-  PetscInt       cst,Nbs,mbs,nbs,rbs,cbs;
-  PetscInt       im,i,m,n,M,N,*rows,start;
-  PetscErrorCode ierr;
+  Mat          mat;
+  Vec          in, out;
+  PetscScalar *array;
+  PetscInt    *dnnz, *onnz, *dnnzu, *onnzu;
+  PetscInt     cst, cen, Nbs, mbs, nbs, rbs, cbs;
+  PetscInt     im, i, m, n, M, N, *rows, start;
 
   PetscFunctionBegin;
-  ierr = PetscObjectGetComm((PetscObject)oldmat,&comm);CHKERRQ(ierr);
-
-  ierr = MatGetOwnershipRange(oldmat,&start,NULL);CHKERRQ(ierr);
-  ierr = MatGetOwnershipRangeColumn(oldmat,&cst,NULL);CHKERRQ(ierr);
-  ierr = MatCreateVecs(oldmat,&in,&out);CHKERRQ(ierr);
-  ierr = MatGetLocalSize(oldmat,&m,&n);CHKERRQ(ierr);
-  ierr = MatGetSize(oldmat,&M,&N);CHKERRQ(ierr);
-  ierr = PetscMalloc1(m,&rows);CHKERRQ(ierr);
-
-  ierr = MatCreate(comm,&mat);CHKERRQ(ierr);
-  ierr = MatSetSizes(mat,m,n,M,N);CHKERRQ(ierr);
-  ierr = MatSetType(mat,newtype);CHKERRQ(ierr);
-  ierr = MatSetBlockSizesFromMats(mat,oldmat,oldmat);CHKERRQ(ierr);
-  ierr = MatGetBlockSizes(mat,&rbs,&cbs);CHKERRQ(ierr);
-  mbs  = m/rbs;
-  nbs  = n/cbs;
-  Nbs  = N/cbs;
-  cst  = cst/cbs;
-  ierr = PetscMalloc4(mbs,&dnnz,mbs,&onnz,mbs,&dnnzu,mbs,&onnzu);CHKERRQ(ierr);
-  for (i=0; i<mbs; i++) {
-    dnnz[i]  = nbs;
-    onnz[i]  = Nbs - nbs;
-    dnnzu[i] = PetscMax(nbs - i,0);
-    onnzu[i] = PetscMax(Nbs - (cst + nbs),0);
+  PetscCall(MatGetOwnershipRange(oldmat, &start, NULL));
+  PetscCall(MatGetOwnershipRangeColumn(oldmat, &cst, &cen));
+  PetscCall(MatCreateVecs(oldmat, &in, &out));
+  PetscCall(MatGetLocalSize(oldmat, &m, &n));
+  PetscCall(MatGetSize(oldmat, &M, &N));
+  PetscCall(PetscMalloc1(m, &rows));
+  if (reuse != MAT_REUSE_MATRIX) {
+    PetscCall(MatCreate(PetscObjectComm((PetscObject)oldmat), &mat));
+    PetscCall(MatSetSizes(mat, m, n, M, N));
+    PetscCall(MatSetType(mat, newtype));
+    PetscCall(MatSetBlockSizesFromMats(mat, oldmat, oldmat));
+    PetscCall(MatGetBlockSizes(mat, &rbs, &cbs));
+    mbs = m / rbs;
+    nbs = n / cbs;
+    Nbs = N / cbs;
+    cst = cst / cbs;
+    PetscCall(PetscMalloc4(mbs, &dnnz, mbs, &onnz, mbs, &dnnzu, mbs, &onnzu));
+    for (i = 0; i < mbs; i++) {
+      dnnz[i]  = nbs;
+      onnz[i]  = Nbs - nbs;
+      dnnzu[i] = PetscMax(nbs - i, 0);
+      onnzu[i] = PetscMax(Nbs - (cst + nbs), 0);
+    }
+    PetscCall(MatXAIJSetPreallocation(mat, PETSC_DECIDE, dnnz, onnz, dnnzu, onnzu));
+    PetscCall(PetscFree4(dnnz, onnz, dnnzu, onnzu));
+    PetscCall(VecSetOption(in, VEC_IGNORE_OFF_PROC_ENTRIES, PETSC_TRUE));
+    PetscCall(MatSetUp(mat));
+  } else {
+    mat = *newmat;
+    PetscCall(MatZeroEntries(mat));
   }
-  ierr = MatXAIJSetPreallocation(mat,PETSC_DECIDE,dnnz,onnz,dnnzu,onnzu);CHKERRQ(ierr);
-  ierr = PetscFree4(dnnz,onnz,dnnzu,onnzu);CHKERRQ(ierr);
-  ierr = VecSetOption(in,VEC_IGNORE_OFF_PROC_ENTRIES,PETSC_TRUE);CHKERRQ(ierr);
-  ierr = MatSetUp(mat);CHKERRQ(ierr);
-  for (i=0; i<N; i++) {
+  for (i = 0; i < N; i++) {
     PetscInt j;
 
-    ierr = VecZeroEntries(in);CHKERRQ(ierr);
-    ierr = VecSetValue(in,i,1.,INSERT_VALUES);CHKERRQ(ierr);
-    ierr = VecAssemblyBegin(in);CHKERRQ(ierr);
-    ierr = VecAssemblyEnd(in);CHKERRQ(ierr);
-    ierr = MatMult(oldmat,in,out);CHKERRQ(ierr);
-    ierr = VecGetArray(out,&array);CHKERRQ(ierr);
-    for (j=0, im = 0; j<m; j++) {
+    PetscCall(VecZeroEntries(in));
+    if (in->ops->setvalues) {
+      PetscCall(VecSetValue(in, i, 1., INSERT_VALUES));
+    } else {
+      if (i >= cst && i < cen) {
+        PetscCall(VecGetArray(in, &array));
+        array[i - cst] = 1.0;
+        PetscCall(VecRestoreArray(in, &array));
+      }
+    }
+    PetscCall(VecAssemblyBegin(in));
+    PetscCall(VecAssemblyEnd(in));
+    PetscCall(MatMult(oldmat, in, out));
+    PetscCall(VecGetArray(out, &array));
+    for (j = 0, im = 0; j < m; j++) {
       if (PetscAbsScalar(array[j]) == 0.0) continue;
-      rows[im]  = j+start;
+      rows[im]  = j + start;
       array[im] = array[j];
       im++;
     }
-    ierr = MatSetValues(mat,im,rows,1,&i,array,INSERT_VALUES);CHKERRQ(ierr);
-    ierr = VecRestoreArray(out,&array);CHKERRQ(ierr);
+    PetscCall(MatSetValues(mat, im, rows, 1, &i, array, INSERT_VALUES));
+    PetscCall(VecRestoreArray(out, &array));
   }
-  ierr = PetscFree(rows);CHKERRQ(ierr);
-  ierr = VecDestroy(&in);CHKERRQ(ierr);
-  ierr = VecDestroy(&out);CHKERRQ(ierr);
-  ierr = MatAssemblyBegin(mat,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  ierr = MatAssemblyEnd(mat,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+  PetscCall(PetscFree(rows));
+  PetscCall(VecDestroy(&in));
+  PetscCall(VecDestroy(&out));
+  PetscCall(MatAssemblyBegin(mat, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(mat, MAT_FINAL_ASSEMBLY));
   if (reuse == MAT_INPLACE_MATRIX) {
-    ierr = MatHeaderReplace(oldmat,&mat);CHKERRQ(ierr);
+    PetscCall(MatHeaderReplace(oldmat, &mat));
   } else {
     *newmat = mat;
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatGetDiagonal_CF(Mat A,Vec X)
+static PetscErrorCode MatGetDiagonal_CF(Mat A, Vec X)
 {
-  Mat            B;
-  PetscErrorCode ierr;
+  Mat B;
 
   PetscFunctionBegin;
-  ierr = MatShellGetContext(A,&B);CHKERRQ(ierr);
-  if (!B) SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_PLIB,"Missing user matrix");
-  ierr = MatGetDiagonal(B,X);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(MatShellGetContext(A, &B));
+  PetscCheck(B, PetscObjectComm((PetscObject)A), PETSC_ERR_PLIB, "Missing user matrix");
+  PetscCall(MatGetDiagonal(B, X));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatMult_CF(Mat A,Vec X,Vec Y)
+static PetscErrorCode MatMult_CF(Mat A, Vec X, Vec Y)
 {
-  Mat            B;
-  PetscErrorCode ierr;
+  Mat B;
 
   PetscFunctionBegin;
-  ierr = MatShellGetContext(A,&B);CHKERRQ(ierr);
-  if (!B) SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_PLIB,"Missing user matrix");
-  ierr = MatMult(B,X,Y);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(MatShellGetContext(A, &B));
+  PetscCheck(B, PetscObjectComm((PetscObject)A), PETSC_ERR_PLIB, "Missing user matrix");
+  PetscCall(MatMult(B, X, Y));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatMultTranspose_CF(Mat A,Vec X,Vec Y)
+static PetscErrorCode MatMultTranspose_CF(Mat A, Vec X, Vec Y)
 {
-  Mat            B;
-  PetscErrorCode ierr;
+  Mat B;
 
   PetscFunctionBegin;
-  ierr = MatShellGetContext(A,&B);CHKERRQ(ierr);
-  if (!B) SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_PLIB,"Missing user matrix");
-  ierr = MatMultTranspose(B,X,Y);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(MatShellGetContext(A, &B));
+  PetscCheck(B, PetscObjectComm((PetscObject)A), PETSC_ERR_PLIB, "Missing user matrix");
+  PetscCall(MatMultTranspose(B, X, Y));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode MatDestroy_CF(Mat A)
 {
-  Mat            B;
-  PetscErrorCode ierr;
+  Mat B;
 
   PetscFunctionBegin;
-  ierr = MatShellGetContext(A,&B);CHKERRQ(ierr);
-  if (!B) SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_PLIB,"Missing user matrix");
-  ierr = MatDestroy(&B);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)A,"MatProductSetFromOptions_anytype_C",NULL);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(MatShellGetContext(A, &B));
+  PetscCheck(B, PetscObjectComm((PetscObject)A), PETSC_ERR_PLIB, "Missing user matrix");
+  PetscCall(MatDestroy(&B));
+  PetscCall(MatShellSetContext(A, NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatProductSetFromOptions_anytype_C", NULL));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 typedef struct {
-  void           *userdata;
-  PetscErrorCode (*userdestroy)(void*);
+  void *userdata;
+  PetscErrorCode (*userdestroy)(void *);
   PetscErrorCode (*numeric)(Mat);
   MatProductType ptype;
   Mat            Dwork;
@@ -131,49 +137,44 @@ typedef struct {
 
 static PetscErrorCode MatProductDestroy_CF(void *data)
 {
-  PetscErrorCode ierr;
-  MatMatCF       *mmcfdata = (MatMatCF*)data;
+  MatMatCF *mmcfdata = (MatMatCF *)data;
 
   PetscFunctionBegin;
-  if (mmcfdata->userdestroy) {
-    ierr = (*mmcfdata->userdestroy)(mmcfdata->userdata);CHKERRQ(ierr);
-  }
-  ierr = MatDestroy(&mmcfdata->Dwork);CHKERRQ(ierr);
-  ierr = PetscFree(mmcfdata);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  if (mmcfdata->userdestroy) PetscCall((*mmcfdata->userdestroy)(mmcfdata->userdata));
+  PetscCall(MatDestroy(&mmcfdata->Dwork));
+  PetscCall(PetscFree(mmcfdata));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode MatProductNumericPhase_CF(Mat A, Mat B, Mat C, void *data)
 {
-  PetscErrorCode ierr;
-  MatMatCF       *mmcfdata = (MatMatCF*)data;
+  MatMatCF *mmcfdata = (MatMatCF *)data;
 
   PetscFunctionBegin;
-  if (!mmcfdata) SETERRQ(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Missing data");
-  if (!mmcfdata->numeric) SETERRQ(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Missing numeric operation");
+  PetscCheck(mmcfdata, PetscObjectComm((PetscObject)C), PETSC_ERR_PLIB, "Missing data");
+  PetscCheck(mmcfdata->numeric, PetscObjectComm((PetscObject)C), PETSC_ERR_PLIB, "Missing numeric operation");
   /* the MATSHELL interface allows us to play with the product data */
-  ierr = PetscNew(&C->product);CHKERRQ(ierr);
+  PetscCall(PetscNew(&C->product));
   C->product->type  = mmcfdata->ptype;
   C->product->data  = mmcfdata->userdata;
   C->product->Dwork = mmcfdata->Dwork;
-  ierr = MatShellGetContext(A,&C->product->A);CHKERRQ(ierr);
+  PetscCall(MatShellGetContext(A, &C->product->A));
   C->product->B = B;
-  ierr = (*mmcfdata->numeric)(C);CHKERRQ(ierr);
-  ierr = PetscFree(C->product);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall((*mmcfdata->numeric)(C));
+  PetscCall(PetscFree(C->product));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode MatProductSymbolicPhase_CF(Mat A, Mat B, Mat C, void **data)
 {
-  PetscErrorCode ierr;
-  MatMatCF       *mmcfdata;
+  MatMatCF *mmcfdata;
 
   PetscFunctionBegin;
-  ierr = MatShellGetContext(A,&C->product->A);CHKERRQ(ierr);
-  ierr = MatProductSetFromOptions(C);CHKERRQ(ierr);
-  ierr = MatProductSymbolic(C);CHKERRQ(ierr);
+  PetscCall(MatShellGetContext(A, &C->product->A));
+  PetscCall(MatProductSetFromOptions(C));
+  PetscCall(MatProductSymbolic(C));
   /* the MATSHELL interface does not allow non-empty product data */
-  ierr = PetscNew(&mmcfdata);CHKERRQ(ierr);
+  PetscCall(PetscNew(&mmcfdata));
 
   mmcfdata->numeric     = C->ops->productnumeric;
   mmcfdata->ptype       = C->product->type;
@@ -187,59 +188,60 @@ static PetscErrorCode MatProductSymbolicPhase_CF(Mat A, Mat B, Mat C, void **dat
   C->product->A       = A;
 
   *data = mmcfdata;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /* only for A of type shell, mainly used for MatMat operations of shells with AXPYs */
 static PetscErrorCode MatProductSetFromOptions_CF(Mat D)
 {
-  Mat            A,B,Ain;
-  void           (*Af)(void) = NULL;
-  PetscBool      flg;
-  PetscErrorCode ierr;
+  Mat A, B, Ain;
+  void (*Af)(void) = NULL;
+  PetscBool flg;
 
   PetscFunctionBegin;
-  MatCheckProduct(D,1);
-  if (D->product->type == MATPRODUCT_ABC) PetscFunctionReturn(0);
+  MatCheckProduct(D, 1);
+  if (D->product->type == MATPRODUCT_ABC) PetscFunctionReturn(PETSC_SUCCESS);
   A = D->product->A;
   B = D->product->B;
-  ierr = MatIsShell(A,&flg);CHKERRQ(ierr);
-  if (!flg) PetscFunctionReturn(0);
-  ierr = PetscObjectQueryFunction((PetscObject)A,"MatProductSetFromOptions_anytype_C",&Af);CHKERRQ(ierr);
-  if (Af == (void(*)(void))MatProductSetFromOptions_CF) {
-    ierr = MatShellGetContext(A,&Ain);CHKERRQ(ierr);
-  } else PetscFunctionReturn(0);
+  PetscCall(MatIsShell(A, &flg));
+  if (!flg) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCall(PetscObjectQueryFunction((PetscObject)A, "MatProductSetFromOptions_anytype_C", &Af));
+  if (Af == (void (*)(void))MatProductSetFromOptions_CF) {
+    PetscCall(MatShellGetContext(A, &Ain));
+  } else PetscFunctionReturn(PETSC_SUCCESS);
   D->product->A = Ain;
-  ierr = MatProductSetFromOptions(D);CHKERRQ(ierr);
+  PetscCall(MatProductSetFromOptions(D));
   D->product->A = A;
   if (D->ops->productsymbolic) { /* we have a symbolic match, now populate the MATSHELL operations */
-    ierr = MatShellSetMatProductOperation(A,D->product->type,MatProductSymbolicPhase_CF,MatProductNumericPhase_CF,MatProductDestroy_CF,((PetscObject)B)->type_name,NULL);CHKERRQ(ierr);
-    ierr = MatProductSetFromOptions(D);CHKERRQ(ierr);
+    PetscCall(MatShellSetMatProductOperation(A, D->product->type, MatProductSymbolicPhase_CF, MatProductNumericPhase_CF, MatProductDestroy_CF, ((PetscObject)B)->type_name, NULL));
+    PetscCall(MatProductSetFromOptions(D));
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatConvertFrom_Shell(Mat A, MatType newtype,MatReuse reuse,Mat *B)
+PetscErrorCode MatConvertFrom_Shell(Mat A, MatType newtype, MatReuse reuse, Mat *B)
 {
-  Mat            M;
-  PetscBool      flg;
-  PetscErrorCode ierr;
+  Mat       M;
+  PetscBool flg;
 
   PetscFunctionBegin;
-  ierr = PetscStrcmp(newtype,MATSHELL,&flg);CHKERRQ(ierr);
-  if (!flg) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Only conversion to MATSHELL");
+  PetscCall(PetscStrcmp(newtype, MATSHELL, &flg));
+  PetscCheck(flg, PETSC_COMM_SELF, PETSC_ERR_SUP, "Only conversion to MATSHELL");
   if (reuse == MAT_INITIAL_MATRIX) {
-    ierr = PetscObjectReference((PetscObject)A);CHKERRQ(ierr);
-    ierr = MatCreateShell(PetscObjectComm((PetscObject)A),A->rmap->n,A->cmap->n,A->rmap->N,A->cmap->N,A,&M);CHKERRQ(ierr);
-    ierr = MatSetBlockSizesFromMats(M,A,A);CHKERRQ(ierr);
-    ierr = MatShellSetOperation(M,MATOP_MULT,          (void (*)(void))MatMult_CF);CHKERRQ(ierr);
-    ierr = MatShellSetOperation(M,MATOP_MULT_TRANSPOSE,(void (*)(void))MatMultTranspose_CF);CHKERRQ(ierr);
-    ierr = MatShellSetOperation(M,MATOP_GET_DIAGONAL,  (void (*)(void))MatGetDiagonal_CF);CHKERRQ(ierr);
-    ierr = MatShellSetOperation(M,MATOP_DESTROY,       (void (*)(void))MatDestroy_CF);CHKERRQ(ierr);
-    ierr = PetscObjectComposeFunction((PetscObject)M,"MatProductSetFromOptions_anytype_C",MatProductSetFromOptions_CF);CHKERRQ(ierr);
-    ierr = PetscFree(M->defaultvectype);CHKERRQ(ierr);
-    ierr = PetscStrallocpy(A->defaultvectype,&M->defaultvectype);CHKERRQ(ierr);
+    PetscCall(PetscObjectReference((PetscObject)A));
+    PetscCall(MatCreateShell(PetscObjectComm((PetscObject)A), A->rmap->n, A->cmap->n, A->rmap->N, A->cmap->N, A, &M));
+    PetscCall(MatSetBlockSizesFromMats(M, A, A));
+    PetscCall(MatShellSetOperation(M, MATOP_MULT, (void (*)(void))MatMult_CF));
+    PetscCall(MatShellSetOperation(M, MATOP_MULT_TRANSPOSE, (void (*)(void))MatMultTranspose_CF));
+    PetscCall(MatShellSetOperation(M, MATOP_GET_DIAGONAL, (void (*)(void))MatGetDiagonal_CF));
+    PetscCall(MatShellSetOperation(M, MATOP_DESTROY, (void (*)(void))MatDestroy_CF));
+    PetscCall(PetscObjectComposeFunction((PetscObject)M, "MatProductSetFromOptions_anytype_C", MatProductSetFromOptions_CF));
+    PetscCall(PetscFree(M->defaultvectype));
+    PetscCall(PetscStrallocpy(A->defaultvectype, &M->defaultvectype));
+#if defined(PETSC_HAVE_DEVICE)
+    PetscCall(MatBindToCPU(M, A->boundtocpu));
+#endif
     *B = M;
-  } else SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Not implemented");
-  PetscFunctionReturn(0);
+  } else SETERRQ(PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "Not implemented");
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

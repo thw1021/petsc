@@ -1,17 +1,17 @@
-DM Object: Mesh 1 MPI processes
+DM Object: box 1 MPI process
   type: plex
-Mesh in 3 dimensions:
-  0-cells: 8
-  1-cells: 19
-  2-cells: 18
-  3-cells: 6
+box in 3 dimensions:
+  Number of 0-cells per rank: 8
+  Number of 1-cells per rank: 19
+  Number of 2-cells per rank: 18
+  Number of 3-cells per rank: 6
 Labels:
+  marker: 1 strata with value/size (1 (38))
   celltype: 4 strata with value/size (0 (8), 6 (6), 3 (18), 1 (19))
   depth: 4 strata with value/size (0 (8), 1 (19), 2 (18), 3 (6))
-  marker: 1 strata with value/size (1 (20))
-  boundary: 1 strata with value/size (1 (12))
+  boundary: 1 strata with value/size (1 (38))
 Local function:
-Vec Object: 1 MPI processes
+Vec Object: 1 MPI process
   type: seq
 0.
 0.666667
@@ -22,7 +22,7 @@ Vec Object: 1 MPI processes
 1.33333
 2.
 Initial guess
-Vec Object: potential 1 MPI processes
+Vec Object: potential 1 MPI process
   type: seq
 0.
 0.666667
@@ -32,9 +32,20 @@ Vec Object: potential 1 MPI processes
 1.33333
 1.33333
 2.
-L_2 Error: 0.338012
+L_2 Error: 0.33587
+BdResidual:
+Vec Object: 1 MPI process
+  type: seq
+0.333333
+-0.333333
+-0.333333
+-0.333333
+-0.333333
+-0.333333
+-0.333333
+-0.333333
 Residual:
-Vec Object: 1 MPI processes
+Vec Object: 1 MPI process
   type: seq
 0.333333
 -0.333333
@@ -45,7 +56,7 @@ Vec Object: 1 MPI processes
 -0.333333
 -0.333333
 Initial Residual
-Vec Object: Residual, Iterate 0 1 MPI processes
+Vec Object: Residual, Iterate 0 1 MPI process
   type: seq
 0.333333
 -0.333333
@@ -56,8 +67,8 @@ Vec Object: Residual, Iterate 0 1 MPI processes
 -0.333333
 -0.333333
 L_2 Residual: 0.942809
-Residual:
-Vec Object: 1 MPI processes
+BdResidual:
+Vec Object: 1 MPI process
   type: seq
 0.333333
 -0.333333
@@ -68,7 +79,18 @@ Vec Object: 1 MPI processes
 -0.333333
 -0.333333
 Residual:
-Vec Object: 1 MPI processes
+Vec Object: 1 MPI process
+  type: seq
+0.333333
+-0.333333
+-0.333333
+-0.333333
+-0.333333
+-0.333333
+-0.333333
+-0.333333
+BdResidual:
+Vec Object: 1 MPI process
   type: seq
 0.333333
 -0.333333
@@ -79,7 +101,18 @@ Vec Object: 1 MPI processes
 -0.333333
 -0.333333
 Residual:
-Vec Object: 1 MPI processes
+Vec Object: 1 MPI process
+  type: seq
+0.333333
+-0.333333
+-0.333333
+-0.333333
+-0.333333
+-0.333333
+-0.333333
+-0.333333
+BdResidual:
+Vec Object: 1 MPI process
   type: seq
 0.333333
 -0.333333
@@ -90,7 +123,18 @@ Vec Object: 1 MPI processes
 -0.333333
 -0.333333
 Residual:
-Vec Object: 1 MPI processes
+Vec Object: 1 MPI process
+  type: seq
+0.333333
+-0.333333
+-0.333333
+-0.333333
+-0.333333
+-0.333333
+-0.333333
+-0.333333
+BdResidual:
+Vec Object: 1 MPI process
   type: seq
 0.333333
 -0.333333
@@ -101,7 +145,18 @@ Vec Object: 1 MPI processes
 -0.333333
 -0.333333
 Residual:
-Vec Object: 1 MPI processes
+Vec Object: 1 MPI process
+  type: seq
+0.333333
+-0.333333
+-0.333333
+-0.333333
+-0.333333
+-0.333333
+-0.333333
+-0.333333
+BdResidual:
+Vec Object: 1 MPI process
   type: seq
 0.333333
 -0.333333
@@ -112,7 +167,18 @@ Vec Object: 1 MPI processes
 -0.333333
 -0.333333
 Residual:
-Vec Object: 1 MPI processes
+Vec Object: 1 MPI process
+  type: seq
+0.333333
+-0.333333
+-0.333333
+-0.333333
+-0.333333
+-0.333333
+-0.333333
+-0.333333
+BdResidual:
+Vec Object: 1 MPI process
   type: seq
 0.333333
 -0.333333
@@ -123,7 +189,18 @@ Vec Object: 1 MPI processes
 -0.333333
 -0.333333
 Residual:
-Vec Object: 1 MPI processes
+Vec Object: 1 MPI process
+  type: seq
+0.333333
+-0.333333
+-0.333333
+-0.333333
+-0.333333
+-0.333333
+-0.333333
+-0.333333
+BdResidual:
+Vec Object: 1 MPI process
   type: seq
 0.333333
 -0.333333
@@ -134,7 +211,18 @@ Vec Object: 1 MPI processes
 -0.333333
 -0.333333
 Residual:
-Vec Object: 1 MPI processes
+Vec Object: 1 MPI process
+  type: seq
+0.333333
+-0.333333
+-0.333333
+-0.333333
+-0.333333
+-0.333333
+-0.333333
+-0.333333
+BdResidual:
+Vec Object: 1 MPI process
   type: seq
 0.333333
 -0.333333
@@ -145,7 +233,18 @@ Vec Object: 1 MPI processes
 -0.333333
 -0.333333
 Residual:
-Vec Object: 1 MPI processes
+Vec Object: 1 MPI process
+  type: seq
+0.333333
+-0.333333
+-0.333333
+-0.333333
+-0.333333
+-0.333333
+-0.333333
+-0.333333
+BdResidual:
+Vec Object: 1 MPI process
   type: seq
 0.333333
 -0.333333
@@ -156,7 +255,29 @@ Vec Object: 1 MPI processes
 -0.333333
 -0.333333
 Residual:
-Vec Object: 1 MPI processes
+Vec Object: 1 MPI process
+  type: seq
+0.333333
+-0.333333
+-0.333333
+-0.333333
+-0.333333
+-0.333333
+-0.333333
+-0.333333
+BdResidual:
+Vec Object: 1 MPI process
+  type: seq
+1.
+-0.333333
+-0.333333
+-0.333333
+-0.333333
+-0.333333
+-0.333333
+-1.
+Residual:
+Vec Object: 1 MPI process
   type: seq
 1.
 -0.333333
@@ -167,7 +288,7 @@ Vec Object: 1 MPI processes
 -0.333333
 -1.
 Au - b = Au + F(0)
-Vec Object: Residual, Iterate 0 1 MPI processes
+Vec Object: Residual, Iterate 0 1 MPI process
   type: seq
 0.333333
 -0.333333

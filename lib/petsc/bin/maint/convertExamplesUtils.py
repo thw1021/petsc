@@ -3,7 +3,7 @@
 #
 #   MPIUNI should work for all -n 1 examples so this need not be in the
 #   requirements list
-# 
+#
 #   DATAFILES are listed in the example arguments (e.g. -f
 #   ${DATAFILES}/) so this is need not be in the requirement list
 #
@@ -15,7 +15,7 @@
 #   Scalar types: complex  (and !complex)
 #
 #   Some examples:
-#      requires:   x, superlu_dist, !single  
+#      requires: x superlu_dist !single
 #      requires: !complex !single
 #      requires: int32
 #
@@ -36,13 +36,13 @@ makefileMap["NOCOMPLEX"]="buildrequires: !complex"
 makefileMap["NOTSINGLE"]="buildrequires: !single"
 makefileMap["NOSINGLE"]="buildrequires: !single"
 
-makefileMap["DOUBLEINT32"]="buildrequires: !define(USE_64BIT_INDICES) define(PETSC_USE_REAL_DOUBLE)"  
-makefileMap["THREADSAFETY"]="buildrequires: define(PETSC_USING_FREEFORM)"
-makefileMap["F2003"]="buildrequires: define(PETSC_USING_FREEFORM) define(PETSC_USING_F2003)"
+makefileMap["DOUBLEINT32"]="buildrequires: !defined(USE_64BIT_INDICES) defined(PETSC_USE_REAL_DOUBLE)"
+makefileMap["THREADSAFETY"]="buildrequires: defined(PETSC_USING_FREEFORM)"
+makefileMap["F2003"]="buildrequires: defined(PETSC_USING_FREEFORM) defined(PETSC_USING_F2003)"
 #makefileMap["F90_DATATYPES"]="" # ??
 
 makefileMap["DATAFILESPATH"]="requires: datafilespath"
-makefileMap['INFO']="requires: define(USE_INFO)"
+makefileMap['INFO']="requires: defined(USE_INFO)"
 
 # Typo
 makefileMap["PARAMETIS"]="requires: parmetis"
@@ -50,7 +50,7 @@ makefileMap["PARAMETIS"]="requires: parmetis"
 # Some packages are runtime, but others are buildtime because of includes
 reqpkgs=["HDF5", "HYPRE", "LUSOL","MKL_PARDISO", "ML", "MUMPS", "PARMETIS", "PARMS", "PASTIX", "PTSCOTCH", "REVOLVE", "SAWS", "SPAI", "STRUMPACK", "SUITESPARSE", "SUPERLU", "SUPERLU_DIST"]
 
-bldpkgs=["CTETGEN", "EXODUSII", "CHOMBO","ELEMENTAL", "MATLAB", "MATLAB_ENGINE",  "MOAB", "FFTW", "TCHEM","VECCUDA","CUSP","CUSPARSE","TRILINOS", "X", "TRIANGLE", "YAML"]
+bldpkgs=["CTETGEN", "EXODUSII", "CHOMBO","ELEMENTAL", "MATLAB", "MATLAB_ENGINE",  "MOAB", "FFTW", "TCHEM","VECCUDA","CUSPARSE","TRILINOS", "X", "TRIANGLE", "YAML"]
 
 for pkg in reqpkgs: makefileMap[pkg]="requires: "+ pkg.lower()
 for pkg in bldpkgs: makefileMap[pkg]="buildrequires: "+ pkg.lower()
@@ -62,8 +62,8 @@ for pkg in bldpkgs: makefileMap[pkg]="buildrequires: "+ pkg.lower()
 #
 argMap={}
 # Things that are too short to do simple pattern search
-reqpkgs.remove('ML') 
-bldpkgs.remove('X') 
+reqpkgs.remove('ML')
+bldpkgs.remove('X')
 for pkg in reqpkgs+bldpkgs:
   argMap[pkg]="requires: "+pkg.lower()
 argMap['DATAFILESPATH']='requires: datafilespath'

@@ -2,8 +2,7 @@
   Private data structure used for bqpip method
 */
 
-#if !defined(__TAO_BQPIP_H)
-#define __TAO_BQPIP_H
+#pragma once
 
 #include <petsc/private/taoimpl.h>
 
@@ -12,8 +11,8 @@ typedef struct {
   PetscInt predcorr;
 
   /* Problem variables, vectors and index sets */
-  PetscInt n;   /* Dimension of the Problem */
-  PetscInt m;   /* Number of constraints */
+  PetscInt n; /* Dimension of the Problem */
+  PetscInt m; /* Number of constraints */
 
   /* Problem statistics */
   PetscReal dinfeas;
@@ -39,7 +38,7 @@ typedef struct {
   Vec DS;
   Vec GZwork;
   Vec TSwork;
-  Vec XL,XU;
+  Vec XL, XU;
 
   /* Work Vectors */
   Vec R3;
@@ -52,9 +51,6 @@ typedef struct {
   Vec RHS2;
 
   /* Data */
-  Vec C;
+  Vec       C;
   PetscReal d;
 } TAO_BQPIP;
-
-#endif  /* if !defined(__TAO_BQPIP_H) */
-

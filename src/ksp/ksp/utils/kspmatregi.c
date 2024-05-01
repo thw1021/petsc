@@ -5,29 +5,30 @@
 static PetscBool KSPMatRegisterAllCalled = PETSC_FALSE;
 
 /*@C
-  KSPMatRegisterAll - Registers all matrix implementations in the KSP package.
+  KSPMatRegisterAll - Registers all matrix implementations in the `KSP` package.
 
   Not Collective
 
   Level: advanced
 
-.seealso: MatRegisterAll(),  KSPInitializePackage()
+.seealso: [](ch_ksp), `Mat`, `MatRegister()`, `MatRegisterAll()`, `KSPInitializePackage()`
 @*/
 PetscErrorCode KSPMatRegisterAll(void)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  if (KSPMatRegisterAllCalled) PetscFunctionReturn(0);
+  if (KSPMatRegisterAllCalled) PetscFunctionReturn(PETSC_SUCCESS);
   KSPMatRegisterAllCalled = PETSC_TRUE;
-  ierr = MatRegister(MATSCHURCOMPLEMENT,       MatCreate_SchurComplement);CHKERRQ(ierr);
-  ierr = MatRegister(MATLMVMDFP,               MatCreate_LMVMDFP);CHKERRQ(ierr);
-  ierr = MatRegister(MATLMVMBFGS,              MatCreate_LMVMBFGS);CHKERRQ(ierr);
-  ierr = MatRegister(MATLMVMSR1,               MatCreate_LMVMSR1);CHKERRQ(ierr);
-  ierr = MatRegister(MATLMVMBROYDEN,           MatCreate_LMVMBrdn);CHKERRQ(ierr);
-  ierr = MatRegister(MATLMVMBADBROYDEN,        MatCreate_LMVMBadBrdn);CHKERRQ(ierr);
-  ierr = MatRegister(MATLMVMSYMBROYDEN,        MatCreate_LMVMSymBrdn);CHKERRQ(ierr);
-  ierr = MatRegister(MATLMVMSYMBADBROYDEN,     MatCreate_LMVMSymBadBrdn);CHKERRQ(ierr);
-  ierr = MatRegister(MATLMVMDIAGBROYDEN,       MatCreate_LMVMDiagBrdn);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(MatRegister(MATSCHURCOMPLEMENT, MatCreate_SchurComplement));
+  PetscCall(MatRegister(MATLMVMDFP, MatCreate_LMVMDFP));
+  PetscCall(MatRegister(MATLMVMDDFP, MatCreate_LMVMDDFP));
+  PetscCall(MatRegister(MATLMVMBFGS, MatCreate_LMVMBFGS));
+  PetscCall(MatRegister(MATLMVMDBFGS, MatCreate_LMVMDBFGS));
+  PetscCall(MatRegister(MATLMVMDQN, MatCreate_LMVMDQN));
+  PetscCall(MatRegister(MATLMVMSR1, MatCreate_LMVMSR1));
+  PetscCall(MatRegister(MATLMVMBROYDEN, MatCreate_LMVMBrdn));
+  PetscCall(MatRegister(MATLMVMBADBROYDEN, MatCreate_LMVMBadBrdn));
+  PetscCall(MatRegister(MATLMVMSYMBROYDEN, MatCreate_LMVMSymBrdn));
+  PetscCall(MatRegister(MATLMVMSYMBADBROYDEN, MatCreate_LMVMSymBadBrdn));
+  PetscCall(MatRegister(MATLMVMDIAGBROYDEN, MatCreate_LMVMDiagBrdn));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

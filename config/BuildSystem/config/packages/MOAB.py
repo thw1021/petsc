@@ -3,16 +3,15 @@ import config.package
 class Configure(config.package.GNUPackage):
   def __init__(self, framework):
     config.package.GNUPackage.__init__(self, framework)
-    # To track MOAB.git, update gitcommit to 'git describe --always' or 'git rev-parse HEAD'
-    self.gitcommit         = 'c4eed56fd6d2' # June 09, 2017, MOAB 5.0 release tag
-    self.download          = ['git://https://bitbucket.org/fathomteam/moab.git','http://ftp.mcs.anl.gov/pub/fathom/moab-5.0.0.tar.gz']
+    self.download          = ['https://web.cels.anl.gov/projects/petsc/download/externalpackages/moab-5.0.0.tar.gz']
     self.downloaddirnames  = ['moab']
     # Check for moab::Core and includes/libraries to verify build
     self.functions         = ['Core']
     self.functionsCxx      = [1, 'namespace moab {class Core {public: Core();};}','moab::Core *mb = new moab::Core()']
     self.includes          = ['moab/Core.hpp']
     self.liblist           = [['libiMesh.a', 'libMOAB.a'],['libMOAB.a']]
-    self.cxx               = 1
+    self.buildLanguages    = ['Cxx']
+    self.maxCxxVersion     = 'c++14'
     self.precisions        = ['single','double']
     self.hastests          = 1
     self.useddirectly      = 0
@@ -41,10 +40,6 @@ class Configure(config.package.GNUPackage):
     self.deps           = [self.mpi,self.blasLapack]
     self.odeps          = [self.szlib,self.eigen,self.hdf5,self.netcdf,self.metis,self.parmetis,self.ptscotch,self.zoltan]
     return
-
-  def gitPreReqCheck(self):
-    '''MOAB from the git repository needs the GNU autotools'''
-    return self.programs.autoreconf and self.programs.libtoolize
 
   def formGNUConfigureArgs(self):
     '''Add MOAB specific configure arguments'''
@@ -78,7 +73,7 @@ class Configure(config.package.GNUPackage):
       args.append('--with-eigen3="'+self.eigen.directory+'"')
     if self.metis.found:
       args.append('--with-metis="'+self.metis.directory+'"')
-      # Hacky workarround for freebsd - where -lexecinfo is required by metis.
+      # Hacky workaround for freebsd - where -lexecinfo is required by metis.
       # Ideally moab configure provides a way to disable autodetect of external packages
       # via CFLAGS/LIBS options similar to hdf5.py
       args.append('LIBS="'+self.libraries.toStringNoDupes(self.metis.lib)+'"')

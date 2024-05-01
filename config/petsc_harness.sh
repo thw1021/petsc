@@ -45,6 +45,7 @@ OPTIONS
   -o <arg> .......... Output format: 'interactive', 'err_only'
   -p ................ Print command:  Print first command and exit
   -t ................ Override the default timeout (default=$TIMEOUT sec)
+  -U ................ run cUda-memcheck
   -V ................ run Valgrind
   -v ................ Verbose: Print commands
 EOF
@@ -61,28 +62,34 @@ cleanup=false
 compile=false
 debugger=false
 printcmd=false
+mpiexec_function=false
 force=false
 diff_flags=""
-while getopts "a:cCde:fhjJ:mMn:o:pt:vV" arg
+while getopts "a:cCde:fhjJ:mMn:o:pt:UvV" arg
 do
   case $arg in
-    a ) args="$OPTARG"       ;;  
-    c ) cleanup=true         ;;  
-    C ) compile=true         ;;  
-    d ) debugger=true        ;;  
-    e ) extra_args="$OPTARG" ;;  
+    a ) args="$OPTARG"       ;;
+    c ) cleanup=true         ;;
+    C ) compile=true         ;;
+    d ) debugger=true        ;;
+    e ) extra_args="$OPTARG" ;;
     f ) force=true           ;;
-    h ) print_usage; exit    ;;  
-    n ) nsize="$OPTARG"      ;;  
-    j ) diff_flags=$diff_flags" -j"      ;;  
-    J ) diff_flags=$diff_flags" -J $OPTARG" ;;  
-    m ) diff_flags=$diff_flags" -m"      ;;  
-    M ) diff_flags=$diff_flags" -M"      ;;  
-    o ) output_fmt=$OPTARG   ;;  
+    h ) print_usage; exit    ;;
+    n ) nsize="$OPTARG"      ;;
+    j ) diff_flags=$diff_flags" -j"      ;;
+    J ) diff_flags=$diff_flags" -J $OPTARG" ;;
+    m ) diff_flags=$diff_flags" -m"      ;;
+    M ) diff_flags=$diff_flags" -M"      ;;
+    o ) output_fmt=$OPTARG   ;;
     p ) printcmd=true        ;;
-    t ) TIMEOUT=$OPTARG      ;;  
-    V ) mpiexec="petsc_mpiexec_valgrind $mpiexec" ;;  
-    v ) verbose=true         ;;  
+    t ) TIMEOUT=$OPTARG      ;;
+    U ) mpiexec="petsc_mpiexec_cudamemcheck $mpiexec"
+        mpiexec_function=true
+        ;;
+    V ) mpiexec="petsc_mpiexec_valgrind $mpiexec"
+        mpiexec_function=true
+        ;;
+    v ) verbose=true         ;;
     *)  # To take care of any extra args
       if test -n "$OPTARG"; then
         eval $arg=\"$OPTARG\"
@@ -118,6 +125,16 @@ total=0
 todo=-1; skip=-1
 job_level=0
 
+if $compile; then
+   curexec=`basename ${exec}`
+   fullexec=${abspath_scriptdir}/${curexec}
+   maketarget=`echo ${fullexec} | sed "s#${petsc_dir}/*##"`
+   (cd $petsc_dir && make -f gmakefile.test ${maketarget})
+fi
+
+###
+##   Rest of code is functions
+#
 function petsc_report_tapoutput() {
   notornot=$1
   test_label=$2
@@ -130,12 +147,12 @@ function petsc_report_tapoutput() {
 
   # Log messages
   printf "${tap_message}\n" >> ${testlogtapfile}
-  
+
   if test ${output_fmt} == "err_only"; then
-     if test -n "${notornot}"; then 
+     if test -n "${notornot}"; then
         printf "${tap_message}\n" | tee -a ${testlogerrfile}
      fi
-  else 
+  else
      printf "${tap_message}\n"
   fi
 }
@@ -144,8 +161,12 @@ function printcmd() {
   # Print command that can be run from PETSC_DIR
   cmd="$1"
   basedir=`dirname ${PWD} | sed "s#${petsc_dir}/##"`
-  modcmd=`echo ${cmd} | sed -e "s#\.\.#${basedir}#" | sed s#\>.*##`
-  printf "${modcmd}\n" 
+  modcmd=`echo ${cmd} | sed -e "s#\.\.#${basedir}#" | sed s#\>.*## | sed s#\%#\%\%#`
+  if $mpiexec_function; then
+     # Have to expand valgrind/cudamemcheck
+     modcmd=`eval "$modcmd"`
+  fi
+  printf "${modcmd}\n"
   exit
 }
 
@@ -159,7 +180,7 @@ function petsc_testrun() {
   error=$5
   cmd="$1 > $2 2> $3"
   if test -n "$error"; then
-    cmd="$1 2>&1 | cat > $2"
+    cmd="$1 1> $2  2>&1"
   fi
   echo "$cmd" > ${tlabel}.sh; chmod 755 ${tlabel}.sh
   if $printcmd; then
@@ -168,13 +189,27 @@ function petsc_testrun() {
 
   eval "{ time -p $cmd ; } 2>> timing.out"
   cmd_res=$?
+  # If testing the error output then we don't test the error code itself
+  if test -n "$error"; then
+     cmd_res=0
+  fi
+  #  If it is a lack of GPU resources or MPI failure (Intel) then try once more
+  #  See: src/sys/error/err.c
+  #  Error #134 added to handle problems with the Radeon card for hip testing
+  if [ $cmd_res -eq 96 -o $cmd_res -eq 97 -o $cmd_res -eq 98 -o $cmd_res -eq 134 ]; then
+    printf "# retrying ${tlabel}\n" | tee -a ${testlogerrfile}
+    sleep 3
+    eval "{ time -p $cmd ; } 2>> timing.out"
+    cmd_res=$?
+  fi
   touch "$2" "$3"
-  # ETIMEDOUT=110 on most systems (used by Open MPI 3.0).  MPICH uses
-  # 255.  Earlier Open MPI returns 1 but outputs about MPIEXEC_TIMEOUT.
+  # It appears current MPICH and Open MPI just shut down the job execution and do not return an error code to the executable
+  # ETIMEDOUT=110 was used by Open MPI 3.0.  MPICH used 255
+  # Earlier Open MPI versions returned 1 and the error string
   if [ $cmd_res -eq 110 -o $cmd_res -eq 255 ] || \
-        fgrep -q -s 'APPLICATION TIMED OUT' "$2" "$3" || \
-        fgrep -q -s MPIEXEC_TIMEOUT "$2" "$3" || \
-        fgrep -q -s 'APPLICATION TERMINATED WITH THE EXIT STRING: job ending due to timeout' "$2" "$3" || \
+        grep -F -q -s 'APPLICATION TIMED OUT' "$2" "$3" || \
+        grep -F -q -s MPIEXEC_TIMEOUT "$2" "$3" || \
+        grep -F -q -s 'APPLICATION TERMINATED WITH THE EXIT STRING: job ending due to timeout' "$2" "$3" || \
         grep -q -s "Timeout after [0-9]* seconds. Terminating job" "$2" "$3"; then
     timed_out=1
     # If timed out, then ensure non-zero error code
@@ -237,7 +272,7 @@ function petsc_testend() {
     printf "skip $skip\n" >> $logfile
   fi
   ENDTIME=`date +%s`
-  timing=`touch timing.out && egrep '(user|sys)' timing.out | awk '{if( sum1 == "" || $2 > sum1 ) { sum1=sprintf("%.2f",$2) } ; sum2 += sprintf("%.2f",$2)} END {printf "%.2f %.2f\n",sum1,sum2}'`
+  timing=`touch timing.out && grep -E '(user|sys)' timing.out | awk '{if( sum1 == "" || $2 > sum1 ) { sum1=sprintf("%.2f",$2) } ; sum2 += sprintf("%.2f",$2)} END {printf "%.2f %.2f\n",sum1,sum2}'`
   printf "time $timing\n" >> $logfile
   if $cleanup; then
     echo "Cleaning up"
@@ -245,19 +280,80 @@ function petsc_testend() {
   fi
 }
 
+function petsc_mpiexec_cudamemcheck() {
+  # loops over the argument list to find the call to the test executable and insert the
+  # cuda memcheck command before it.
+  # first check if compute-sanitizer exists, since cuda-memcheck is deprecated from CUDA
+  # 11-ish onwards
+  if command -v compute-sanitizer &> /dev/null; then
+    memcheck_cmd="${PETSC_CUDAMEMCHECK_COMMAND:-compute-sanitizer}"
+    declare -a default_args_to_check=('--target-processes all' '--track-stream-ordered-races all')
+  else
+    memcheck_cmd="${PETSC_CUDAMEMCHECK_COMMAND:-cuda-memcheck}"
+    declare -a default_args_to_check=('--flush-to-disk yes')
+  fi
+  if [[ -z ${PETSC_CUDAMEMCHECK_ARGS} ]]; then
+    # if user has not set the memcheck args themselves loop over the predefined default
+    # arguments and check if they can be used
+    memcheck_args='--leak-check full --report-api-errors no '
+    for option in "${default_args_to_check[@]}"; do
+      ${memcheck_cmd} ${memcheck_args} ${option} &> /dev/null
+      if [ $? -eq 0 ]; then
+        memcheck_args+="${option} "
+      fi
+    done
+  else
+    memcheck_args="${PETSC_CUDAMEMCHECK_ARGS}"
+  fi
+  pre_args=()
+  # regex to detect where the test lives in the command line. This
+  # marks the end of the options to mpiexec, and hence where we should insert the
+  # cuda-memcheck command
+  re="${executable}"
+  for i in "$@"; do
+    # first occurrence of the presence of petsc_arch is the executable,
+    # except when we install MPI ourselves
+    if [[ $i =~ ${re} ]]; then
+      # found it, put cuda memcheck command in
+      pre_args+=("${memcheck_cmd} ${memcheck_args}")
+      break
+    fi
+    pre_args+=("$i")
+    shift
+  done
+  # run command, but filter out
+  # ===== CUDA-MEMCHECK or ==== COMPUTE-SANITIZER
+  # and
+  # ===== ERROR SUMMARY: 0 errors
+  if ${printcmd}; then
+    echo ${pre_args[@]} "$@"
+  else
+    ${pre_args[@]} "$@" \
+      | grep -v 'CUDA-MEMCHECK' \
+      | grep -v 'COMPUTE-SANITIZER' \
+      | grep -v 'LEAK SUMMARY: 0 bytes leaked in 0 allocations' \
+      | grep -v 'ERROR SUMMARY: 0 errors' || [[ $? == 1 ]]
+  fi
+  # last or is needed to suppress grep exiting with error code 1 if it doesn't find a
+  # match
+}
+
 function petsc_mpiexec_valgrind() {
-  _mpiexec=$1;shift
-  npopt=$1;shift
-  np=$1;shift
-
-  valgrind="valgrind -q --tool=memcheck --leak-check=yes --num-callers=20 --track-origins=yes --suppressions=$petsc_bindir/maint/petsc-val.supp --error-exitcode=10"
-
-  $_mpiexec $npopt $np $valgrind "$@"
+  valgrind_cmd="valgrind -q --tool=memcheck --leak-check=yes --num-callers=20 --track-origins=yes --keep-debuginfo=yes --suppressions=${PETSC_DIR}/share/petsc/suppressions/valgrind --error-exitcode=10"
+  pre_args=()
+  re="${executable}"
+  for i in "$@"; do
+    if [[ $i =~ ${re} ]]; then
+      pre_args+=("${valgrind_cmd}")
+      break
+    fi
+    pre_args+=("$i")
+    shift
+  done
+  if ${printcmd}; then
+    echo ${pre_args[@]} "$@"
+  else
+    ${pre_args[@]} "$@"
+  fi
 }
 export LC_ALL=C
-
-if $compile; then
-    curexec=`basename ${exec}`
-    (cd $petsc_dir && make -f gmakefile.test ${abspath_scriptdir}/${curexec})
-fi
-

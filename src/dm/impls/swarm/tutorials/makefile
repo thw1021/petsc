@@ -1,11 +1,4 @@
--include ../petscdir.mk
-CFLAGS	        =
-FFLAGS	        =
-CPPFLAGS        =
-FPPFLAGS        =
-LOCDIR          = src/dm/impls/swarm/tutorials/
-MANSEC          = DM
+-include ../../../../../petscdir.mk
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
-include ${PETSC_DIR}/lib/petsc/conf/test

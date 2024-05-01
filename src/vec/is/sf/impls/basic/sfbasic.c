@@ -1,333 +1,537 @@
-
 #include <../src/vec/is/sf/impls/basic/sfbasic.h>
 #include <../src/vec/is/sf/impls/basic/sfpack.h>
+#include <petsc/private/viewerimpl.h>
+
+// Init persistent MPI send/recv requests
+static PetscErrorCode PetscSFLinkInitMPIRequests_Persistent_Basic(PetscSF sf, PetscSFLink link, PetscSFDirection direction)
+{
+  PetscSF_Basic     *bas = (PetscSF_Basic *)sf->data;
+  PetscInt           i, j, cnt, nrootranks, ndrootranks, nleafranks, ndleafranks;
+  const PetscInt    *rootoffset, *leafoffset;
+  MPI_Aint           disp;
+  MPI_Comm           comm          = PetscObjectComm((PetscObject)sf);
+  MPI_Datatype       unit          = link->unit;
+  const PetscMemType rootmtype_mpi = link->rootmtype_mpi, leafmtype_mpi = link->leafmtype_mpi; /* Used to select buffers passed to MPI */
+  const PetscInt     rootdirect_mpi = link->rootdirect_mpi, leafdirect_mpi = link->leafdirect_mpi;
+
+  PetscFunctionBegin;
+  if (bas->rootbuflen[PETSCSF_REMOTE] && !link->rootreqsinited[direction][rootmtype_mpi][rootdirect_mpi]) {
+    PetscCall(PetscSFGetRootInfo_Basic(sf, &nrootranks, &ndrootranks, NULL, &rootoffset, NULL));
+    if (direction == PETSCSF_LEAF2ROOT) {
+      for (i = ndrootranks, j = 0; i < nrootranks; i++, j++) {
+        disp = (rootoffset[i] - rootoffset[ndrootranks]) * link->unitbytes;
+        cnt  = rootoffset[i + 1] - rootoffset[i];
+        PetscCallMPI(MPIU_Recv_init(link->rootbuf[PETSCSF_REMOTE][rootmtype_mpi] + disp, cnt, unit, bas->iranks[i], link->tag, comm, link->rootreqs[direction][rootmtype_mpi][rootdirect_mpi] + j));
+      }
+    } else { /* PETSCSF_ROOT2LEAF */
+      for (i = ndrootranks, j = 0; i < nrootranks; i++, j++) {
+        disp = (rootoffset[i] - rootoffset[ndrootranks]) * link->unitbytes;
+        cnt  = rootoffset[i + 1] - rootoffset[i];
+        PetscCallMPI(MPIU_Send_init(link->rootbuf[PETSCSF_REMOTE][rootmtype_mpi] + disp, cnt, unit, bas->iranks[i], link->tag, comm, link->rootreqs[direction][rootmtype_mpi][rootdirect_mpi] + j));
+      }
+    }
+    link->rootreqsinited[direction][rootmtype_mpi][rootdirect_mpi] = PETSC_TRUE;
+  }
+
+  if (sf->leafbuflen[PETSCSF_REMOTE] && !link->leafreqsinited[direction][leafmtype_mpi][leafdirect_mpi]) {
+    PetscCall(PetscSFGetLeafInfo_Basic(sf, &nleafranks, &ndleafranks, NULL, &leafoffset, NULL, NULL));
+    if (direction == PETSCSF_LEAF2ROOT) {
+      for (i = ndleafranks, j = 0; i < nleafranks; i++, j++) {
+        disp = (leafoffset[i] - leafoffset[ndleafranks]) * link->unitbytes;
+        cnt  = leafoffset[i + 1] - leafoffset[i];
+        PetscCallMPI(MPIU_Send_init(link->leafbuf[PETSCSF_REMOTE][leafmtype_mpi] + disp, cnt, unit, sf->ranks[i], link->tag, comm, link->leafreqs[direction][leafmtype_mpi][leafdirect_mpi] + j));
+      }
+    } else { /* PETSCSF_ROOT2LEAF */
+      for (i = ndleafranks, j = 0; i < nleafranks; i++, j++) {
+        disp = (leafoffset[i] - leafoffset[ndleafranks]) * link->unitbytes;
+        cnt  = leafoffset[i + 1] - leafoffset[i];
+        PetscCallMPI(MPIU_Recv_init(link->leafbuf[PETSCSF_REMOTE][leafmtype_mpi] + disp, cnt, unit, sf->ranks[i], link->tag, comm, link->leafreqs[direction][leafmtype_mpi][leafdirect_mpi] + j));
+      }
+    }
+    link->leafreqsinited[direction][leafmtype_mpi][leafdirect_mpi] = PETSC_TRUE;
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+// Start MPI requests. If use non-GPU aware MPI, we might need to copy data from device buf to host buf
+static PetscErrorCode PetscSFLinkStartCommunication_Persistent_Basic(PetscSF sf, PetscSFLink link, PetscSFDirection direction)
+{
+  PetscMPIInt    nreqs;
+  MPI_Request   *reqs = NULL;
+  PetscSF_Basic *bas  = (PetscSF_Basic *)sf->data;
+  PetscInt       buflen;
+
+  PetscFunctionBegin;
+  buflen = (direction == PETSCSF_ROOT2LEAF) ? sf->leafbuflen[PETSCSF_REMOTE] : bas->rootbuflen[PETSCSF_REMOTE];
+  if (buflen) {
+    if (direction == PETSCSF_ROOT2LEAF) {
+      nreqs = sf->nleafreqs;
+      PetscCall(PetscSFLinkGetMPIBuffersAndRequests(sf, link, direction, NULL, NULL, NULL, &reqs));
+    } else { /* leaf to root */
+      nreqs = bas->nrootreqs;
+      PetscCall(PetscSFLinkGetMPIBuffersAndRequests(sf, link, direction, NULL, NULL, &reqs, NULL));
+    }
+    PetscCallMPI(MPI_Startall_irecv(buflen, link->unit, nreqs, reqs));
+  }
+
+  buflen = (direction == PETSCSF_ROOT2LEAF) ? bas->rootbuflen[PETSCSF_REMOTE] : sf->leafbuflen[PETSCSF_REMOTE];
+  if (buflen) {
+    if (direction == PETSCSF_ROOT2LEAF) {
+      nreqs = bas->nrootreqs;
+      PetscCall(PetscSFLinkCopyRootBufferInCaseNotUseGpuAwareMPI(sf, link, PETSC_TRUE /*device2host before sending */));
+      PetscCall(PetscSFLinkGetMPIBuffersAndRequests(sf, link, direction, NULL, NULL, &reqs, NULL));
+    } else { /* leaf to root */
+      nreqs = sf->nleafreqs;
+      PetscCall(PetscSFLinkCopyLeafBufferInCaseNotUseGpuAwareMPI(sf, link, PETSC_TRUE));
+      PetscCall(PetscSFLinkGetMPIBuffersAndRequests(sf, link, direction, NULL, NULL, NULL, &reqs));
+    }
+    PetscCall(PetscSFLinkSyncStreamBeforeCallMPI(sf, link, direction));
+    PetscCallMPI(MPI_Startall_isend(buflen, link->unit, nreqs, reqs));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+#if defined(PETSC_HAVE_MPIX_STREAM)
+// issue MPIX_Isend/Irecv_enqueue()
+static PetscErrorCode PetscSFLinkStartCommunication_MPIX_Stream(PetscSF sf, PetscSFLink link, PetscSFDirection direction)
+{
+  PetscSF_Basic     *bas = (PetscSF_Basic *)sf->data;
+  PetscInt           i, j, cnt, nrootranks, ndrootranks, nleafranks, ndleafranks;
+  const PetscInt    *rootoffset, *leafoffset;
+  MPI_Aint           disp;
+  MPI_Comm           stream_comm   = sf->stream_comm;
+  MPI_Datatype       unit          = link->unit;
+  const PetscMemType rootmtype_mpi = link->rootmtype_mpi, leafmtype_mpi = link->leafmtype_mpi; /* Used to select buffers passed to MPI */
+  const PetscInt     rootdirect_mpi = link->rootdirect_mpi, leafdirect_mpi = link->leafdirect_mpi;
+
+  PetscFunctionBegin;
+  if (bas->rootbuflen[PETSCSF_REMOTE]) {
+    PetscCall(PetscSFGetRootInfo_Basic(sf, &nrootranks, &ndrootranks, NULL, &rootoffset, NULL));
+    if (direction == PETSCSF_LEAF2ROOT) {
+      for (i = ndrootranks, j = 0; i < nrootranks; i++, j++) {
+        disp = (rootoffset[i] - rootoffset[ndrootranks]) * link->unitbytes;
+        cnt  = rootoffset[i + 1] - rootoffset[i];
+        PetscCallMPI(MPIX_Irecv_enqueue(link->rootbuf[PETSCSF_REMOTE][rootmtype_mpi] + disp, cnt, unit, bas->iranks[i], link->tag, stream_comm, link->rootreqs[direction][rootmtype_mpi][rootdirect_mpi] + j));
+      }
+    } else { // PETSCSF_ROOT2LEAF
+      for (i = ndrootranks, j = 0; i < nrootranks; i++, j++) {
+        disp = (rootoffset[i] - rootoffset[ndrootranks]) * link->unitbytes;
+        cnt  = rootoffset[i + 1] - rootoffset[i];
+        // no need to sync the gpu stream!
+        PetscCallMPI(MPIX_Isend_enqueue(link->rootbuf[PETSCSF_REMOTE][rootmtype_mpi] + disp, cnt, unit, bas->iranks[i], link->tag, stream_comm, link->rootreqs[direction][rootmtype_mpi][rootdirect_mpi] + j));
+      }
+    }
+  }
+
+  if (sf->leafbuflen[PETSCSF_REMOTE]) {
+    PetscCall(PetscSFGetLeafInfo_Basic(sf, &nleafranks, &ndleafranks, NULL, &leafoffset, NULL, NULL));
+    if (direction == PETSCSF_LEAF2ROOT) {
+      for (i = ndleafranks, j = 0; i < nleafranks; i++, j++) {
+        disp = (leafoffset[i] - leafoffset[ndleafranks]) * link->unitbytes;
+        cnt  = leafoffset[i + 1] - leafoffset[i];
+        // no need to sync the gpu stream!
+        PetscCallMPI(MPIX_Isend_enqueue(link->leafbuf[PETSCSF_REMOTE][leafmtype_mpi] + disp, cnt, unit, sf->ranks[i], link->tag, stream_comm, link->leafreqs[direction][leafmtype_mpi][leafdirect_mpi] + j));
+      }
+    } else { // PETSCSF_ROOT2LEAF
+      for (i = ndleafranks, j = 0; i < nleafranks; i++, j++) {
+        disp = (leafoffset[i] - leafoffset[ndleafranks]) * link->unitbytes;
+        cnt  = leafoffset[i + 1] - leafoffset[i];
+        PetscCallMPI(MPIX_Irecv_enqueue(link->leafbuf[PETSCSF_REMOTE][leafmtype_mpi] + disp, cnt, unit, sf->ranks[i], link->tag, stream_comm, link->leafreqs[direction][leafmtype_mpi][leafdirect_mpi] + j));
+      }
+    }
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscSFLinkFinishCommunication_MPIX_Stream(PetscSF sf, PetscSFLink link, PetscSFDirection direction)
+{
+  PetscSF_Basic     *bas           = (PetscSF_Basic *)sf->data;
+  const PetscMemType rootmtype_mpi = link->rootmtype_mpi, leafmtype_mpi = link->leafmtype_mpi;
+  const PetscInt     rootdirect_mpi = link->rootdirect_mpi, leafdirect_mpi = link->leafdirect_mpi;
+
+  PetscFunctionBegin;
+  PetscCallMPI(MPIX_Waitall_enqueue(bas->nrootreqs, link->rootreqs[direction][rootmtype_mpi][rootdirect_mpi], MPI_STATUSES_IGNORE));
+  PetscCallMPI(MPIX_Waitall_enqueue(sf->nleafreqs, link->leafreqs[direction][leafmtype_mpi][leafdirect_mpi], MPI_STATUSES_IGNORE));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+#endif
+
+static PetscErrorCode PetscSFSetCommunicationOps_Basic(PetscSF sf, PetscSFLink link)
+{
+  PetscFunctionBegin;
+  link->InitMPIRequests    = PetscSFLinkInitMPIRequests_Persistent_Basic;
+  link->StartCommunication = PetscSFLinkStartCommunication_Persistent_Basic;
+#if defined(PETSC_HAVE_MPIX_STREAM)
+  const PetscMemType rootmtype_mpi = link->rootmtype_mpi, leafmtype_mpi = link->leafmtype_mpi;
+  if (sf->use_stream_aware_mpi && (PetscMemTypeDevice(rootmtype_mpi) || PetscMemTypeDevice(leafmtype_mpi))) {
+    link->StartCommunication  = PetscSFLinkStartCommunication_MPIX_Stream;
+    link->FinishCommunication = PetscSFLinkFinishCommunication_MPIX_Stream;
+  }
+#endif
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
 
 /*===================================================================================*/
 /*              SF public interface implementations                                  */
 /*===================================================================================*/
 PETSC_INTERN PetscErrorCode PetscSFSetUp_Basic(PetscSF sf)
 {
-  PetscErrorCode ierr;
-  PetscSF_Basic  *bas = (PetscSF_Basic*)sf->data;
-  PetscInt       *rlengths,*ilengths,i;
-  PetscMPIInt    rank,niranks,*iranks,tag;
+  PetscSF_Basic *bas = (PetscSF_Basic *)sf->data;
+  PetscInt      *rlengths, *ilengths, i, nRemoteRootRanks, nRemoteLeafRanks;
+  PetscMPIInt    rank, niranks, *iranks, tag;
   MPI_Comm       comm;
   MPI_Group      group;
-  MPI_Request    *rootreqs,*leafreqs;
+  MPI_Request   *rootreqs, *leafreqs;
 
   PetscFunctionBegin;
-  ierr = MPI_Comm_group(PETSC_COMM_SELF,&group);CHKERRQ(ierr);
-  ierr = PetscSFSetUpRanks(sf,group);CHKERRQ(ierr);
-  ierr = MPI_Group_free(&group);CHKERRQ(ierr);
-  ierr = PetscObjectGetComm((PetscObject)sf,&comm);CHKERRQ(ierr);
-  ierr = PetscObjectGetNewTag((PetscObject)sf,&tag);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
+  PetscCallMPI(MPI_Comm_group(PETSC_COMM_SELF, &group));
+  PetscCall(PetscSFSetUpRanks(sf, group));
+  PetscCallMPI(MPI_Group_free(&group));
+  PetscCall(PetscObjectGetComm((PetscObject)sf, &comm));
+  PetscCall(PetscObjectGetNewTag((PetscObject)sf, &tag));
+  PetscCallMPI(MPI_Comm_rank(comm, &rank));
   /*
    * Inform roots about how many leaves and from which ranks
    */
-  ierr = PetscMalloc1(sf->nranks,&rlengths);CHKERRQ(ierr);
+  PetscCall(PetscMalloc1(sf->nranks, &rlengths));
   /* Determine number, sending ranks and length of incoming */
-  for (i=0; i<sf->nranks; i++) {
-    rlengths[i] = sf->roffset[i+1] - sf->roffset[i]; /* Number of roots referenced by my leaves; for rank sf->ranks[i] */
-  }
-  ierr = PetscCommBuildTwoSided(comm,1,MPIU_INT,sf->nranks-sf->ndranks,sf->ranks+sf->ndranks,rlengths+sf->ndranks,&niranks,&iranks,(void**)&ilengths);CHKERRQ(ierr);
+  for (i = 0; i < sf->nranks; i++) { rlengths[i] = sf->roffset[i + 1] - sf->roffset[i]; /* Number of roots referenced by my leaves; for rank sf->ranks[i] */ }
+  nRemoteRootRanks = sf->nranks - sf->ndranks;
+  PetscCall(PetscCommBuildTwoSided(comm, 1, MPIU_INT, nRemoteRootRanks, PetscSafePointerPlusOffset(sf->ranks, sf->ndranks), PetscSafePointerPlusOffset(rlengths, sf->ndranks), &niranks, &iranks, (void **)&ilengths));
 
   /* Sort iranks. See use of VecScatterGetRemoteOrdered_Private() in MatGetBrowsOfAoCols_MPIAIJ() on why.
      We could sort ranks there at the price of allocating extra working arrays. Presumably, niranks is
      small and the sorting is cheap.
    */
-  ierr = PetscSortMPIIntWithIntArray(niranks,iranks,ilengths);CHKERRQ(ierr);
+  PetscCall(PetscSortMPIIntWithIntArray(niranks, iranks, ilengths));
 
   /* Partition into distinguished and non-distinguished incoming ranks */
   bas->ndiranks = sf->ndranks;
-  bas->niranks = bas->ndiranks + niranks;
-  ierr = PetscMalloc2(bas->niranks,&bas->iranks,bas->niranks+1,&bas->ioffset);CHKERRQ(ierr);
+  bas->niranks  = bas->ndiranks + niranks;
+  PetscCall(PetscMalloc2(bas->niranks, &bas->iranks, bas->niranks + 1, &bas->ioffset));
   bas->ioffset[0] = 0;
-  for (i=0; i<bas->ndiranks; i++) {
-    bas->iranks[i] = sf->ranks[i];
-    bas->ioffset[i+1] = bas->ioffset[i] + rlengths[i];
+  for (i = 0; i < bas->ndiranks; i++) {
+    bas->iranks[i]      = sf->ranks[i];
+    bas->ioffset[i + 1] = bas->ioffset[i] + rlengths[i];
   }
-  if (bas->ndiranks > 1 || (bas->ndiranks == 1 && bas->iranks[0] != rank)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Broken setup for shared ranks");
-  for (; i<bas->niranks; i++) {
-    bas->iranks[i] = iranks[i-bas->ndiranks];
-    bas->ioffset[i+1] = bas->ioffset[i] + ilengths[i-bas->ndiranks];
+  PetscCheck(bas->ndiranks <= 1 && (bas->ndiranks != 1 || bas->iranks[0] == rank), PETSC_COMM_SELF, PETSC_ERR_PLIB, "Broken setup for shared ranks");
+  for (; i < bas->niranks; i++) {
+    bas->iranks[i]      = iranks[i - bas->ndiranks];
+    bas->ioffset[i + 1] = bas->ioffset[i] + ilengths[i - bas->ndiranks];
   }
   bas->itotal = bas->ioffset[i];
-  ierr = PetscFree(rlengths);CHKERRQ(ierr);
-  ierr = PetscFree(iranks);CHKERRQ(ierr);
-  ierr = PetscFree(ilengths);CHKERRQ(ierr);
+  PetscCall(PetscFree(rlengths));
+  PetscCall(PetscFree(iranks));
+  PetscCall(PetscFree(ilengths));
 
   /* Send leaf identities to roots */
-  ierr = PetscMalloc1(bas->itotal,&bas->irootloc);CHKERRQ(ierr);
-  ierr = PetscMalloc2(bas->niranks-bas->ndiranks,&rootreqs,sf->nranks-sf->ndranks,&leafreqs);CHKERRQ(ierr);
-  for (i=bas->ndiranks; i<bas->niranks; i++) {
-    ierr = MPI_Irecv(bas->irootloc+bas->ioffset[i],bas->ioffset[i+1]-bas->ioffset[i],MPIU_INT,bas->iranks[i],tag,comm,&rootreqs[i-bas->ndiranks]);CHKERRQ(ierr);
-  }
-  for (i=0; i<sf->nranks; i++) {
-    PetscMPIInt npoints;
-    ierr = PetscMPIIntCast(sf->roffset[i+1] - sf->roffset[i],&npoints);CHKERRQ(ierr);
+  nRemoteLeafRanks = bas->niranks - bas->ndiranks;
+  PetscCall(PetscMalloc1(bas->itotal, &bas->irootloc));
+  PetscCall(PetscMalloc2(nRemoteLeafRanks, &rootreqs, nRemoteRootRanks, &leafreqs));
+  for (i = bas->ndiranks; i < bas->niranks; i++) PetscCallMPI(MPIU_Irecv(bas->irootloc + bas->ioffset[i], bas->ioffset[i + 1] - bas->ioffset[i], MPIU_INT, bas->iranks[i], tag, comm, &rootreqs[i - bas->ndiranks]));
+  for (i = 0; i < sf->nranks; i++) {
+    PetscInt npoints = sf->roffset[i + 1] - sf->roffset[i];
     if (i < sf->ndranks) {
-      if (sf->ranks[i] != rank) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Cannot interpret distinguished leaf rank");
-      if (bas->iranks[0] != rank) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Cannot interpret distinguished root rank");
-      if (npoints != bas->ioffset[1]-bas->ioffset[0]) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Distinguished rank exchange has mismatched lengths");
-      ierr = PetscArraycpy(bas->irootloc+bas->ioffset[0],sf->rremote+sf->roffset[i],npoints);CHKERRQ(ierr);
+      PetscCheck(sf->ranks[i] == rank, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Cannot interpret distinguished leaf rank");
+      PetscCheck(bas->iranks[0] == rank, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Cannot interpret distinguished root rank");
+      PetscCheck(npoints == bas->ioffset[1] - bas->ioffset[0], PETSC_COMM_SELF, PETSC_ERR_PLIB, "Distinguished rank exchange has mismatched lengths");
+      PetscCall(PetscArraycpy(bas->irootloc + bas->ioffset[0], sf->rremote + sf->roffset[i], npoints));
       continue;
     }
-    ierr = MPI_Isend(sf->rremote+sf->roffset[i],npoints,MPIU_INT,sf->ranks[i],tag,comm,&leafreqs[i-sf->ndranks]);CHKERRQ(ierr);
+    PetscCallMPI(MPIU_Isend(sf->rremote + sf->roffset[i], npoints, MPIU_INT, sf->ranks[i], tag, comm, &leafreqs[i - sf->ndranks]));
   }
-  ierr = MPI_Waitall(bas->niranks-bas->ndiranks,rootreqs,MPI_STATUSES_IGNORE);CHKERRQ(ierr);
-  ierr = MPI_Waitall(sf->nranks-sf->ndranks,leafreqs,MPI_STATUSES_IGNORE);CHKERRQ(ierr);
-  ierr = PetscFree2(rootreqs,leafreqs);CHKERRQ(ierr);
+  PetscCallMPI(MPI_Waitall(nRemoteLeafRanks, rootreqs, MPI_STATUSES_IGNORE));
+  PetscCallMPI(MPI_Waitall(nRemoteRootRanks, leafreqs, MPI_STATUSES_IGNORE));
 
-  sf->nleafreqs  = sf->nranks - sf->ndranks;
-  bas->nrootreqs = bas->niranks - bas->ndiranks;
-  sf->persistent = PETSC_TRUE;
+  sf->nleafreqs  = nRemoteRootRanks;
+  bas->nrootreqs = nRemoteLeafRanks;
 
-  /* Setup fields related to packing */
-  ierr = PetscSFSetUpPackFields(sf);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  /* Setup fields related to packing, such as rootbuflen[] */
+  PetscCall(PetscSFSetUpPackFields(sf));
+  PetscCall(PetscFree2(rootreqs, leafreqs));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PETSC_INTERN PetscErrorCode PetscSFReset_Basic(PetscSF sf)
 {
-  PetscErrorCode    ierr;
-  PetscSF_Basic     *bas = (PetscSF_Basic*)sf->data;
+  PetscSF_Basic *bas  = (PetscSF_Basic *)sf->data;
+  PetscSFLink    link = bas->avail, next;
 
   PetscFunctionBegin;
-  if (bas->inuse) SETERRQ(PetscObjectComm((PetscObject)sf),PETSC_ERR_ARG_WRONGSTATE,"Outstanding operation has not been completed");
-  ierr = PetscFree2(bas->iranks,bas->ioffset);CHKERRQ(ierr);
-  ierr = PetscFree(bas->irootloc);CHKERRQ(ierr);
-#if defined(PETSC_HAVE_CUDA)
-  {
-  PetscInt  i;
-  for (i=0; i<2; i++) {if (bas->irootloc_d[i]) {cudaError_t err = cudaFree(bas->irootloc_d[i]);CHKERRCUDA(err);bas->irootloc_d[i]=NULL;}}
-  }
+  PetscCheck(!bas->inuse, PetscObjectComm((PetscObject)sf), PETSC_ERR_ARG_WRONGSTATE, "Outstanding operation has not been completed");
+  PetscCall(PetscFree2(bas->iranks, bas->ioffset));
+  PetscCall(PetscFree(bas->irootloc));
+
+#if defined(PETSC_HAVE_DEVICE)
+  for (PetscInt i = 0; i < 2; i++) PetscCall(PetscSFFree(sf, PETSC_MEMTYPE_DEVICE, bas->irootloc_d[i]));
 #endif
-  ierr = PetscSFLinkDestroy(sf,&bas->avail);CHKERRQ(ierr);
-  ierr = PetscSFResetPackFields(sf);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+
+#if defined(PETSC_HAVE_NVSHMEM)
+  PetscCall(PetscSFReset_Basic_NVSHMEM(sf));
+#endif
+
+  for (; link; link = next) {
+    next = link->next;
+    PetscCall(PetscSFLinkDestroy(sf, link));
+  }
+  bas->avail = NULL;
+  PetscCall(PetscSFResetPackFields(sf));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PETSC_INTERN PetscErrorCode PetscSFDestroy_Basic(PetscSF sf)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  ierr = PetscSFReset_Basic(sf);CHKERRQ(ierr);
-  ierr = PetscFree(sf->data);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscSFReset_Basic(sf));
+  PetscCall(PetscFree(sf->data));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode PetscSFView_Basic(PetscSF sf,PetscViewer viewer)
+#if defined(PETSC_USE_SINGLE_LIBRARY)
+  #include <petscmat.h>
+
+PETSC_INTERN PetscErrorCode PetscSFView_Basic_PatternAndSizes(PetscSF sf, PetscViewer viewer)
 {
-  PetscErrorCode ierr;
-  PetscBool      iascii;
+  PetscSF_Basic     *bas = (PetscSF_Basic *)sf->data;
+  PetscInt           i, nrootranks, ndrootranks;
+  const PetscInt    *rootoffset;
+  PetscMPIInt        rank, size;
+  const PetscMPIInt *rootranks;
+  MPI_Comm           comm = PetscObjectComm((PetscObject)sf);
+  PetscScalar        unitbytes;
+  Mat                A;
 
   PetscFunctionBegin;
-  ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii);CHKERRQ(ierr);
-  if (iascii) {ierr = PetscViewerASCIIPrintf(viewer,"  sort=%s\n",sf->rankorder ? "rank-order" : "unordered");CHKERRQ(ierr);}
-  PetscFunctionReturn(0);
-}
+  PetscCallMPI(MPI_Comm_size(comm, &size));
+  PetscCallMPI(MPI_Comm_rank(comm, &rank));
+  /* PetscSFView is most useful for the SF used in VecScatterBegin/End in MatMult etc, where we do
+    PetscSFBcast, i.e., roots send data to leaves.  We dump the communication pattern into a matrix
+    in senders' view point: how many bytes I will send to my neighbors.
 
-static PetscErrorCode PetscSFBcastAndOpBegin_Basic(PetscSF sf,MPI_Datatype unit,PetscMemType rootmtype,const void *rootdata,PetscMemType leafmtype,void *leafdata,MPI_Op op)
+    Looking at a column of the matrix, one can also know how many bytes the rank will receive from others.
+
+    If PetscSFLink bas->inuse is available, we can use that to get tree vertex size. But that would give
+    different interpretations for the same SF for different data types. Since we most care about VecScatter,
+    we uniformly treat each vertex as a PetscScalar.
+  */
+  unitbytes = (PetscScalar)sizeof(PetscScalar);
+
+  PetscCall(PetscSFGetRootInfo_Basic(sf, &nrootranks, &ndrootranks, &rootranks, &rootoffset, NULL));
+  PetscCall(MatCreateAIJ(comm, 1, 1, size, size, 1, NULL, nrootranks - ndrootranks, NULL, &A));
+  PetscCall(MatSetOptionsPrefix(A, "__petsc_internal__")); /* To prevent the internal A from taking any command line options */
+  for (i = 0; i < nrootranks; i++) PetscCall(MatSetValue(A, (PetscInt)rank, bas->iranks[i], (rootoffset[i + 1] - rootoffset[i]) * unitbytes, INSERT_VALUES));
+  PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatView(A, viewer));
+  PetscCall(MatDestroy(&A));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+#endif
+
+PETSC_INTERN PetscErrorCode PetscSFView_Basic(PetscSF sf, PetscViewer viewer)
 {
-  PetscErrorCode    ierr;
-  PetscSFLink       link = NULL;
-  MPI_Request       *rootreqs = NULL,*leafreqs = NULL;
-  PetscSF_Basic     *bas = (PetscSF_Basic*)sf->data;
+  PetscBool isascii;
 
   PetscFunctionBegin;
-  /* Create a communication link, which provides buffers & MPI requests etc */
-  ierr = PetscSFLinkCreate(sf,unit,rootmtype,rootdata,leafmtype,leafdata,op,PETSCSF_BCAST,&link);CHKERRQ(ierr);
-  /* Get MPI requests from the link. We do not need buffers explicitly since we use persistent MPI */
-  ierr = PetscSFLinkGetMPIBuffersAndRequests(sf,link,PETSCSF_ROOT2LEAF,NULL,NULL,&rootreqs,&leafreqs);CHKERRQ(ierr);
-  /* Post Irecv for remote */
-  ierr = MPI_Startall_irecv(sf->leafbuflen[PETSCSF_REMOTE],unit,sf->nleafreqs,leafreqs);CHKERRQ(ierr);
-  /* Pack rootdata and do Isend for remote */
-  ierr = PetscSFLinkPackRootData(sf,link,PETSCSF_REMOTE,rootdata);CHKERRQ(ierr);
-  ierr = MPI_Startall_isend(bas->rootbuflen[PETSCSF_REMOTE],unit,bas->nrootreqs,rootreqs);CHKERRQ(ierr);
-  /* Do local BcastAndOp, which overlaps with the irecv/isend above */
-  ierr = PetscSFLinkBcastAndOpLocal(sf,link,rootdata,leafdata,op);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
+  if (isascii && viewer->format != PETSC_VIEWER_ASCII_MATLAB) PetscCall(PetscViewerASCIIPrintf(viewer, "  MultiSF sort=%s\n", sf->rankorder ? "rank-order" : "unordered"));
+#if defined(PETSC_USE_SINGLE_LIBRARY)
+  else {
+    PetscBool isdraw, isbinary;
+    PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERDRAW, &isdraw));
+    PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERBINARY, &isbinary));
+    if ((isascii && viewer->format == PETSC_VIEWER_ASCII_MATLAB) || isdraw || isbinary) PetscCall(PetscSFView_Basic_PatternAndSizes(sf, viewer));
+  }
+#endif
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode PetscSFBcastAndOpEnd_Basic(PetscSF sf,MPI_Datatype unit,const void *rootdata,void *leafdata,MPI_Op op)
+PETSC_INTERN PetscErrorCode PetscSFBcastBegin_Basic(PetscSF sf, MPI_Datatype unit, PetscMemType rootmtype, const void *rootdata, PetscMemType leafmtype, void *leafdata, MPI_Op op)
 {
-  PetscErrorCode    ierr;
-  PetscSFLink       link = NULL;
+  PetscSFLink link = NULL;
+
+  PetscFunctionBegin;
+  /* Create a communication link, which provides buffers, MPI requests etc (if MPI is used) */
+  PetscCall(PetscSFLinkCreate(sf, unit, rootmtype, rootdata, leafmtype, leafdata, op, PETSCSF_BCAST, &link));
+  /* Pack rootdata to rootbuf for remote communication */
+  PetscCall(PetscSFLinkPackRootData(sf, link, PETSCSF_REMOTE, rootdata));
+  /* Start communication, e.g., post MPI_Isend */
+  PetscCall(PetscSFLinkStartCommunication(sf, link, PETSCSF_ROOT2LEAF));
+  /* Do local scatter (i.e., self to self communication), which overlaps with the remote communication above */
+  PetscCall(PetscSFLinkScatterLocal(sf, link, PETSCSF_ROOT2LEAF, (void *)rootdata, leafdata, op));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PETSC_INTERN PetscErrorCode PetscSFBcastEnd_Basic(PetscSF sf, MPI_Datatype unit, const void *rootdata, void *leafdata, MPI_Op op)
+{
+  PetscSFLink link = NULL;
 
   PetscFunctionBegin;
   /* Retrieve the link used in XxxBegin() with root/leafdata as key */
-  ierr = PetscSFLinkGetInUse(sf,unit,rootdata,leafdata,PETSC_OWN_POINTER,&link);CHKERRQ(ierr);
-  /* Wait for the completion of mpi */
-  ierr = PetscSFLinkMPIWaitall(sf,link,PETSCSF_ROOT2LEAF);CHKERRQ(ierr);
-  /* Unpack leafdata and reclaim the link */
-  ierr = PetscSFLinkUnpackLeafData(sf,link,PETSCSF_REMOTE,leafdata,op);CHKERRQ(ierr);
-  ierr = PetscSFLinkReclaim(sf,&link);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscSFLinkGetInUse(sf, unit, rootdata, leafdata, PETSC_OWN_POINTER, &link));
+  /* Finish remote communication, e.g., post MPI_Waitall */
+  PetscCall(PetscSFLinkFinishCommunication(sf, link, PETSCSF_ROOT2LEAF));
+  /* Unpack data in leafbuf to leafdata for remote communication */
+  PetscCall(PetscSFLinkUnpackLeafData(sf, link, PETSCSF_REMOTE, leafdata, op));
+  /* Recycle the link */
+  PetscCall(PetscSFLinkReclaim(sf, &link));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /* Shared by ReduceBegin and FetchAndOpBegin */
-PETSC_STATIC_INLINE PetscErrorCode PetscSFLeafToRootBegin_Basic(PetscSF sf,MPI_Datatype unit,PetscMemType leafmtype,const void *leafdata,PetscMemType rootmtype,void *rootdata,MPI_Op op,PetscSFOperation sfop,PetscSFLink *out)
+static inline PetscErrorCode PetscSFLeafToRootBegin_Basic(PetscSF sf, MPI_Datatype unit, PetscMemType leafmtype, const void *leafdata, PetscMemType rootmtype, void *rootdata, MPI_Op op, PetscSFOperation sfop, PetscSFLink *out)
 {
-  PetscErrorCode    ierr;
-  PetscSFLink       link;
-  PetscSF_Basic     *bas = (PetscSF_Basic*)sf->data;
-  MPI_Request       *rootreqs = NULL,*leafreqs = NULL;
+  PetscSFLink link = NULL;
 
   PetscFunctionBegin;
-  ierr = PetscSFLinkCreate(sf,unit,rootmtype,rootdata,leafmtype,leafdata,op,sfop,&link);CHKERRQ(ierr);
-  ierr = PetscSFLinkGetMPIBuffersAndRequests(sf,link,PETSCSF_LEAF2ROOT,NULL,NULL,&rootreqs,&leafreqs);CHKERRQ(ierr);
-  ierr = MPI_Startall_irecv(bas->rootbuflen[PETSCSF_REMOTE],unit,bas->nrootreqs,rootreqs);CHKERRQ(ierr);
-  ierr = PetscSFLinkPackLeafData(sf,link,PETSCSF_REMOTE,leafdata);CHKERRQ(ierr);
-  ierr = MPI_Startall_isend(sf->leafbuflen[PETSCSF_REMOTE],unit,sf->nleafreqs,leafreqs);CHKERRQ(ierr);
+  PetscCall(PetscSFLinkCreate(sf, unit, rootmtype, rootdata, leafmtype, leafdata, op, sfop, &link));
+  PetscCall(PetscSFLinkPackLeafData(sf, link, PETSCSF_REMOTE, leafdata));
+  PetscCall(PetscSFLinkStartCommunication(sf, link, PETSCSF_LEAF2ROOT));
   *out = link;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /* leaf -> root with reduction */
-static PetscErrorCode PetscSFReduceBegin_Basic(PetscSF sf,MPI_Datatype unit,PetscMemType leafmtype,const void *leafdata,PetscMemType rootmtype,void *rootdata,MPI_Op op)
+PETSC_INTERN PetscErrorCode PetscSFReduceBegin_Basic(PetscSF sf, MPI_Datatype unit, PetscMemType leafmtype, const void *leafdata, PetscMemType rootmtype, void *rootdata, MPI_Op op)
 {
-  PetscErrorCode    ierr;
-  PetscSFLink       link = NULL;
+  PetscSFLink link = NULL;
 
   PetscFunctionBegin;
-  ierr = PetscSFLeafToRootBegin_Basic(sf,unit,leafmtype,leafdata,rootmtype,rootdata,op,PETSCSF_REDUCE,&link);CHKERRQ(ierr);
-  ierr = PetscSFLinkReduceLocal(sf,link,leafdata,rootdata,op);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscSFLeafToRootBegin_Basic(sf, unit, leafmtype, leafdata, rootmtype, rootdata, op, PETSCSF_REDUCE, &link));
+  PetscCall(PetscSFLinkScatterLocal(sf, link, PETSCSF_LEAF2ROOT, rootdata, (void *)leafdata, op));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode PetscSFReduceEnd_Basic(PetscSF sf,MPI_Datatype unit,const void *leafdata,void *rootdata,MPI_Op op)
+PETSC_INTERN PetscErrorCode PetscSFReduceEnd_Basic(PetscSF sf, MPI_Datatype unit, const void *leafdata, void *rootdata, MPI_Op op)
 {
-  PetscErrorCode    ierr;
-  PetscSFLink       link = NULL;
+  PetscSFLink link = NULL;
 
   PetscFunctionBegin;
-  ierr = PetscSFLinkGetInUse(sf,unit,rootdata,leafdata,PETSC_OWN_POINTER,&link);CHKERRQ(ierr);
-  ierr = PetscSFLinkMPIWaitall(sf,link,PETSCSF_LEAF2ROOT);CHKERRQ(ierr);
-  ierr = PetscSFLinkUnpackRootData(sf,link,PETSCSF_REMOTE,rootdata,op);CHKERRQ(ierr);
-  ierr = PetscSFLinkReclaim(sf,&link);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscSFLinkGetInUse(sf, unit, rootdata, leafdata, PETSC_OWN_POINTER, &link));
+  PetscCall(PetscSFLinkFinishCommunication(sf, link, PETSCSF_LEAF2ROOT));
+  PetscCall(PetscSFLinkUnpackRootData(sf, link, PETSCSF_REMOTE, rootdata, op));
+  PetscCall(PetscSFLinkReclaim(sf, &link));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode PetscSFFetchAndOpBegin_Basic(PetscSF sf,MPI_Datatype unit,PetscMemType rootmtype,void *rootdata,PetscMemType leafmtype,const void *leafdata,void *leafupdate,MPI_Op op)
+PETSC_INTERN PetscErrorCode PetscSFFetchAndOpBegin_Basic(PetscSF sf, MPI_Datatype unit, PetscMemType rootmtype, void *rootdata, PetscMemType leafmtype, const void *leafdata, void *leafupdate, MPI_Op op)
 {
-  PetscErrorCode    ierr;
-  PetscSFLink       link = NULL;
+  PetscSFLink link = NULL;
 
   PetscFunctionBegin;
-  ierr = PetscSFLeafToRootBegin_Basic(sf,unit,leafmtype,leafdata,rootmtype,rootdata,op,PETSCSF_FETCH,&link);CHKERRQ(ierr);
-  ierr = PetscSFLinkFetchAndOpLocal(sf,link,rootdata,leafdata,leafupdate,op);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscSFLeafToRootBegin_Basic(sf, unit, leafmtype, leafdata, rootmtype, rootdata, op, PETSCSF_FETCH, &link));
+  PetscCall(PetscSFLinkFetchAndOpLocal(sf, link, rootdata, leafdata, leafupdate, op));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscSFFetchAndOpEnd_Basic(PetscSF sf,MPI_Datatype unit,void *rootdata,const void *leafdata,void *leafupdate,MPI_Op op)
+PETSC_INTERN PetscErrorCode PetscSFFetchAndOpEnd_Basic(PetscSF sf, MPI_Datatype unit, void *rootdata, const void *leafdata, void *leafupdate, MPI_Op op)
 {
-  PetscErrorCode    ierr;
-  PetscSFLink       link = NULL;
-  MPI_Request       *rootreqs = NULL,*leafreqs = NULL;
-  PetscSF_Basic     *bas = (PetscSF_Basic*)sf->data;
+  PetscSFLink link = NULL;
 
   PetscFunctionBegin;
-  ierr = PetscSFLinkGetInUse(sf,unit,rootdata,leafdata,PETSC_OWN_POINTER,&link);CHKERRQ(ierr);
+  PetscCall(PetscSFLinkGetInUse(sf, unit, rootdata, leafdata, PETSC_OWN_POINTER, &link));
   /* This implementation could be changed to unpack as receives arrive, at the cost of non-determinism */
-  ierr = PetscSFLinkMPIWaitall(sf,link,PETSCSF_LEAF2ROOT);CHKERRQ(ierr);
+  PetscCall(PetscSFLinkFinishCommunication(sf, link, PETSCSF_LEAF2ROOT));
   /* Do fetch-and-op, the (remote) update results are in rootbuf */
-  ierr = PetscSFLinkFetchRootData(sf,link,PETSCSF_REMOTE,rootdata,op);CHKERRQ(ierr);
-
+  PetscCall(PetscSFLinkFetchAndOpRemote(sf, link, rootdata, op));
   /* Bcast rootbuf to leafupdate */
-  ierr = PetscSFLinkGetMPIBuffersAndRequests(sf,link,PETSCSF_ROOT2LEAF,NULL,NULL,&rootreqs,&leafreqs);CHKERRQ(ierr);
-  /* Post leaf receives and root sends */
-  ierr = MPI_Startall_irecv(sf->leafbuflen[PETSCSF_REMOTE],unit,sf->nleafreqs,leafreqs);CHKERRQ(ierr);
-  ierr = MPI_Startall_isend(bas->rootbuflen[PETSCSF_REMOTE],unit,bas->nrootreqs,rootreqs);CHKERRQ(ierr);
+  PetscCall(PetscSFLinkStartCommunication(sf, link, PETSCSF_ROOT2LEAF));
+  PetscCall(PetscSFLinkFinishCommunication(sf, link, PETSCSF_ROOT2LEAF));
   /* Unpack and insert fetched data into leaves */
-  ierr = PetscSFLinkMPIWaitall(sf,link,PETSCSF_ROOT2LEAF);CHKERRQ(ierr);
-  ierr = PetscSFLinkUnpackLeafData(sf,link,PETSCSF_REMOTE,leafupdate,MPIU_REPLACE);CHKERRQ(ierr);
-  ierr = PetscSFLinkReclaim(sf,&link);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscSFLinkUnpackLeafData(sf, link, PETSCSF_REMOTE, leafupdate, MPI_REPLACE));
+  PetscCall(PetscSFLinkReclaim(sf, &link));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode PetscSFGetLeafRanks_Basic(PetscSF sf,PetscInt *niranks,const PetscMPIInt **iranks,const PetscInt **ioffset,const PetscInt **irootloc)
+PETSC_INTERN PetscErrorCode PetscSFGetLeafRanks_Basic(PetscSF sf, PetscInt *niranks, const PetscMPIInt **iranks, const PetscInt **ioffset, const PetscInt **irootloc)
 {
-  PetscSF_Basic *bas = (PetscSF_Basic*)sf->data;
+  PetscSF_Basic *bas = (PetscSF_Basic *)sf->data;
 
   PetscFunctionBegin;
-  if (niranks)  *niranks  = bas->niranks;
-  if (iranks)   *iranks   = bas->iranks;
-  if (ioffset)  *ioffset  = bas->ioffset;
+  if (niranks) *niranks = bas->niranks;
+  if (iranks) *iranks = bas->iranks;
+  if (ioffset) *ioffset = bas->ioffset;
   if (irootloc) *irootloc = bas->irootloc;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* An optimized PetscSFCreateEmbeddedSF. We aggresively make use of the established communication on sf.
+/* An optimized PetscSFCreateEmbeddedRootSF. We aggressively make use of the established communication on sf.
    We need one bcast on sf, and no communication anymore to build the embedded sf. Note that selected[]
    was sorted before calling the routine.
  */
-PETSC_INTERN PetscErrorCode PetscSFCreateEmbeddedSF_Basic(PetscSF sf,PetscInt nselected,const PetscInt *selected,PetscSF *newsf)
+PETSC_INTERN PetscErrorCode PetscSFCreateEmbeddedRootSF_Basic(PetscSF sf, PetscInt nselected, const PetscInt *selected, PetscSF *newsf)
 {
-  PetscSF           esf;
-  PetscInt          esf_nranks,esf_ndranks,*esf_roffset,*esf_rmine,*esf_rremote;
-  PetscInt          i,j,p,q,nroots,esf_nleaves,*new_ilocal,nranks,ndranks,niranks,ndiranks,minleaf,maxleaf,maxlocal;
-  char              *rootdata,*leafdata,*leafmem; /* Only stores 0 or 1, so we can save memory with char */
+  PetscSF            esf;
+  PetscInt           esf_nranks, esf_ndranks, *esf_roffset, *esf_rmine, *esf_rremote;
+  PetscInt           i, j, p, q, nroots, esf_nleaves, *new_ilocal, nranks, ndranks, niranks, ndiranks, minleaf, maxleaf, maxlocal;
+  char              *rootdata, *leafdata, *leafmem; /* Only stores 0 or 1, so we can save memory with char */
   PetscMPIInt       *esf_ranks;
-  const PetscMPIInt *ranks,*iranks;
-  const PetscInt    *roffset,*rmine,*rremote,*ioffset,*irootloc;
-  PetscBool         connected;
+  const PetscMPIInt *ranks, *iranks;
+  const PetscInt    *roffset, *rmine, *rremote, *ioffset, *irootloc;
+  PetscBool          connected;
   PetscSFNode       *new_iremote;
   PetscSF_Basic     *bas;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
-  ierr = PetscSFCreate(PetscObjectComm((PetscObject)sf),&esf);CHKERRQ(ierr);
-  ierr = PetscSFSetType(esf,PETSCSFBASIC);CHKERRQ(ierr); /* This optimized routine can only create a basic sf */
+  PetscCall(PetscSFCreate(PetscObjectComm((PetscObject)sf), &esf));
+  PetscCall(PetscSFSetFromOptions(esf));
+  PetscCall(PetscSFSetType(esf, PETSCSFBASIC)); /* This optimized routine can only create a basic sf */
 
   /* Find out which leaves are still connected to roots in the embedded sf by doing a Bcast */
-  ierr = PetscSFGetGraph(sf,&nroots,NULL,NULL,NULL);CHKERRQ(ierr);
-  ierr = PetscSFGetLeafRange(sf,&minleaf,&maxleaf);CHKERRQ(ierr);
+  PetscCall(PetscSFGetGraph(sf, &nroots, NULL, NULL, NULL));
+  PetscCall(PetscSFGetLeafRange(sf, &minleaf, &maxleaf));
   maxlocal = maxleaf - minleaf + 1;
-  ierr = PetscCalloc2(nroots,&rootdata,maxlocal,&leafmem);CHKERRQ(ierr);
-  leafdata = leafmem - minleaf;
+  PetscCall(PetscCalloc2(nroots, &rootdata, maxlocal, &leafmem));
+  leafdata = PetscSafePointerPlusOffset(leafmem, -minleaf);
   /* Tag selected roots */
-  for (i=0; i<nselected; ++i) rootdata[selected[i]] = 1;
+  for (i = 0; i < nselected; ++i) rootdata[selected[i]] = 1;
 
-  ierr = PetscSFBcastBegin(sf,MPI_CHAR,rootdata,leafdata);CHKERRQ(ierr);
-  ierr = PetscSFBcastEnd(sf,MPI_CHAR,rootdata,leafdata);CHKERRQ(ierr);
-  ierr = PetscSFGetLeafInfo_Basic(sf,&nranks,&ndranks,&ranks,&roffset,&rmine,&rremote);CHKERRQ(ierr); /* Get send info */
+  PetscCall(PetscSFBcastBegin(sf, MPI_CHAR, rootdata, leafdata, MPI_REPLACE));
+  PetscCall(PetscSFBcastEnd(sf, MPI_CHAR, rootdata, leafdata, MPI_REPLACE));
+  PetscCall(PetscSFGetLeafInfo_Basic(sf, &nranks, &ndranks, &ranks, &roffset, &rmine, &rremote)); /* Get send info */
   esf_nranks = esf_ndranks = esf_nleaves = 0;
-  for (i=0; i<nranks; i++) {
+  for (i = 0; i < nranks; i++) {
     connected = PETSC_FALSE; /* Is this process still connected to this remote root rank? */
-    for (j=roffset[i]; j<roffset[i+1]; j++) {if (leafdata[rmine[j]]) {esf_nleaves++; connected = PETSC_TRUE;}}
-    if (connected) {esf_nranks++; if (i < ndranks) esf_ndranks++;}
+    for (j = roffset[i]; j < roffset[i + 1]; j++) {
+      if (leafdata[rmine[j]]) {
+        esf_nleaves++;
+        connected = PETSC_TRUE;
+      }
+    }
+    if (connected) {
+      esf_nranks++;
+      if (i < ndranks) esf_ndranks++;
+    }
   }
 
   /* Set graph of esf and also set up its outgoing communication (i.e., send info), which is usually done by PetscSFSetUpRanks */
-  ierr = PetscMalloc1(esf_nleaves,&new_ilocal);CHKERRQ(ierr);
-  ierr = PetscMalloc1(esf_nleaves,&new_iremote);CHKERRQ(ierr);
-  ierr = PetscMalloc4(esf_nranks,&esf_ranks,esf_nranks+1,&esf_roffset,esf_nleaves,&esf_rmine,esf_nleaves,&esf_rremote);CHKERRQ(ierr);
-  p    = 0; /* Counter for connected root ranks */
-  q    = 0; /* Counter for connected leaves */
+  PetscCall(PetscMalloc1(esf_nleaves, &new_ilocal));
+  PetscCall(PetscMalloc1(esf_nleaves, &new_iremote));
+  PetscCall(PetscMalloc4(esf_nranks, &esf_ranks, esf_nranks + 1, &esf_roffset, esf_nleaves, &esf_rmine, esf_nleaves, &esf_rremote));
+  p              = 0; /* Counter for connected root ranks */
+  q              = 0; /* Counter for connected leaves */
   esf_roffset[0] = 0;
-  for (i=0; i<nranks; i++) { /* Scan leaf data again to fill esf arrays */
+  for (i = 0; i < nranks; i++) { /* Scan leaf data again to fill esf arrays */
     connected = PETSC_FALSE;
-    for (j=roffset[i]; j<roffset[i+1]; j++) {
+    for (j = roffset[i]; j < roffset[i + 1]; j++) {
       if (leafdata[rmine[j]]) {
-        esf_rmine[q]         = new_ilocal[q] = rmine[j];
-        esf_rremote[q]       = rremote[j];
-        new_iremote[q].index = rremote[j];
-        new_iremote[q].rank  = ranks[i];
-        connected            = PETSC_TRUE;
+        esf_rmine[q] = new_ilocal[q] = rmine[j];
+        esf_rremote[q]               = rremote[j];
+        new_iremote[q].index         = rremote[j];
+        new_iremote[q].rank          = ranks[i];
+        connected                    = PETSC_TRUE;
         q++;
       }
     }
     if (connected) {
-      esf_ranks[p]     = ranks[i];
-      esf_roffset[p+1] = q;
+      esf_ranks[p]       = ranks[i];
+      esf_roffset[p + 1] = q;
       p++;
     }
   }
 
   /* SetGraph internally resets the SF, so we only set its fields after the call */
-  ierr           = PetscSFSetGraph(esf,nroots,esf_nleaves,new_ilocal,PETSC_OWN_POINTER,new_iremote,PETSC_OWN_POINTER);CHKERRQ(ierr);
+  PetscCall(PetscSFSetGraph(esf, nroots, esf_nleaves, new_ilocal, PETSC_OWN_POINTER, new_iremote, PETSC_OWN_POINTER));
   esf->nranks    = esf_nranks;
   esf->ndranks   = esf_ndranks;
   esf->ranks     = esf_ranks;
@@ -337,29 +541,29 @@ PETSC_INTERN PetscErrorCode PetscSFCreateEmbeddedSF_Basic(PetscSF sf,PetscInt ns
   esf->nleafreqs = esf_nranks - esf_ndranks;
 
   /* Set up the incoming communication (i.e., recv info) stored in esf->data, which is usually done by PetscSFSetUp_Basic */
-  bas  = (PetscSF_Basic*)esf->data;
-  ierr = PetscSFGetRootInfo_Basic(sf,&niranks,&ndiranks,&iranks,&ioffset,&irootloc);CHKERRQ(ierr); /* Get recv info */
+  bas = (PetscSF_Basic *)esf->data;
+  PetscCall(PetscSFGetRootInfo_Basic(sf, &niranks, &ndiranks, &iranks, &ioffset, &irootloc)); /* Get recv info */
   /* Embedded sf always has simpler communication than the original one. We might allocate longer arrays than needed here. But we
      we do not care since these arrays are usually short. The benefit is we can fill these arrays by just parsing irootloc once.
    */
-  ierr = PetscMalloc2(niranks,&bas->iranks,niranks+1,&bas->ioffset);CHKERRQ(ierr);
-  ierr = PetscMalloc1(ioffset[niranks],&bas->irootloc);CHKERRQ(ierr);
+  PetscCall(PetscMalloc2(niranks, &bas->iranks, niranks + 1, &bas->ioffset));
+  PetscCall(PetscMalloc1(ioffset[niranks], &bas->irootloc));
   bas->niranks = bas->ndiranks = bas->ioffset[0] = 0;
-  p = 0; /* Counter for connected leaf ranks */
-  q = 0; /* Counter for connected roots */
-  for (i=0; i<niranks; i++) {
+  p                                              = 0; /* Counter for connected leaf ranks */
+  q                                              = 0; /* Counter for connected roots */
+  for (i = 0; i < niranks; i++) {
     connected = PETSC_FALSE; /* Is the current process still connected to this remote leaf rank? */
-    for (j=ioffset[i]; j<ioffset[i+1]; j++) {
+    for (j = ioffset[i]; j < ioffset[i + 1]; j++) {
       if (rootdata[irootloc[j]]) {
         bas->irootloc[q++] = irootloc[j];
-        connected = PETSC_TRUE;
+        connected          = PETSC_TRUE;
       }
     }
     if (connected) {
       bas->niranks++;
-      if (i<ndiranks) bas->ndiranks++; /* Note that order of ranks (including distinguished ranks) is kept */
-      bas->iranks[p]    = iranks[i];
-      bas->ioffset[p+1] = q;
+      if (i < ndiranks) bas->ndiranks++; /* Note that order of ranks (including distinguished ranks) is kept */
+      bas->iranks[p]      = iranks[i];
+      bas->ioffset[p + 1] = q;
       p++;
     }
   }
@@ -367,34 +571,59 @@ PETSC_INTERN PetscErrorCode PetscSFCreateEmbeddedSF_Basic(PetscSF sf,PetscInt ns
   bas->nrootreqs  = bas->niranks - bas->ndiranks;
   esf->persistent = PETSC_TRUE;
   /* Setup packing related fields */
-  ierr = PetscSFSetUpPackFields(esf);CHKERRQ(ierr);
+  PetscCall(PetscSFSetUpPackFields(esf));
 
+  /* Copy from PetscSFSetUp(), since this method wants to skip PetscSFSetUp(). */
+#if defined(PETSC_HAVE_CUDA)
+  if (esf->backend == PETSCSF_BACKEND_CUDA) {
+    esf->ops->Malloc = PetscSFMalloc_CUDA;
+    esf->ops->Free   = PetscSFFree_CUDA;
+  }
+#endif
+
+#if defined(PETSC_HAVE_HIP)
+  /* TODO: Needs debugging */
+  if (esf->backend == PETSCSF_BACKEND_HIP) {
+    esf->ops->Malloc = PetscSFMalloc_HIP;
+    esf->ops->Free   = PetscSFFree_HIP;
+  }
+#endif
+
+#if defined(PETSC_HAVE_KOKKOS)
+  if (esf->backend == PETSCSF_BACKEND_KOKKOS) {
+    esf->ops->Malloc = PetscSFMalloc_Kokkos;
+    esf->ops->Free   = PetscSFFree_Kokkos;
+  }
+#endif
   esf->setupcalled = PETSC_TRUE; /* We have done setup ourselves! */
-  ierr = PetscFree2(rootdata,leafmem);CHKERRQ(ierr);
+  PetscCall(PetscFree2(rootdata, leafmem));
   *newsf = esf;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PETSC_EXTERN PetscErrorCode PetscSFCreate_Basic(PetscSF sf)
 {
-  PetscSF_Basic  *dat;
-  PetscErrorCode ierr;
+  PetscSF_Basic *dat;
 
   PetscFunctionBegin;
   sf->ops->SetUp                = PetscSFSetUp_Basic;
   sf->ops->Reset                = PetscSFReset_Basic;
   sf->ops->Destroy              = PetscSFDestroy_Basic;
   sf->ops->View                 = PetscSFView_Basic;
-  sf->ops->BcastAndOpBegin      = PetscSFBcastAndOpBegin_Basic;
-  sf->ops->BcastAndOpEnd        = PetscSFBcastAndOpEnd_Basic;
+  sf->ops->BcastBegin           = PetscSFBcastBegin_Basic;
+  sf->ops->BcastEnd             = PetscSFBcastEnd_Basic;
   sf->ops->ReduceBegin          = PetscSFReduceBegin_Basic;
   sf->ops->ReduceEnd            = PetscSFReduceEnd_Basic;
   sf->ops->FetchAndOpBegin      = PetscSFFetchAndOpBegin_Basic;
   sf->ops->FetchAndOpEnd        = PetscSFFetchAndOpEnd_Basic;
   sf->ops->GetLeafRanks         = PetscSFGetLeafRanks_Basic;
-  sf->ops->CreateEmbeddedSF     = PetscSFCreateEmbeddedSF_Basic;
+  sf->ops->CreateEmbeddedRootSF = PetscSFCreateEmbeddedRootSF_Basic;
+  sf->ops->SetCommunicationOps  = PetscSFSetCommunicationOps_Basic;
 
-  ierr = PetscNewLog(sf,&dat);CHKERRQ(ierr);
-  sf->data = (void*)dat;
-  PetscFunctionReturn(0);
+  sf->persistent = PETSC_TRUE; // currently SFBASIC always uses persistent send/recv
+  sf->collective = PETSC_FALSE;
+
+  PetscCall(PetscNew(&dat));
+  sf->data = (void *)dat;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

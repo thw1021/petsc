@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
 import os
 petsc_hash_pkgs=os.path.join(os.getenv('HOME'),'petsc-hash-pkgs')
@@ -15,11 +15,13 @@ if __name__ == '__main__':
     'COPTFLAGS=-mavx2 -g -O',
     'CXXOPTFLAGS=-mavx2 -g -O',
     'FOPTFLAGS=-mavx2 -g -O',
-    '--with-mpi-dir=/homes/petsc/soft/gcc-avx2/mpich-3.3b1',
-    '--with-blaslapack-dir=/homes/petsc/soft/gcc-avx2/fblaslapack-3.4.2',
+    '--with-mpi-dir=/nfs/gce/projects/petsc/soft/u22.04/gcc-avx2/mpich-4.0.2',
+    '--with-blaslapack-dir=/nfs/gce/projects/petsc/soft/u22.04/gcc-avx2/fblaslapack-3.4.2-p3',
     '--with-memalign=64',
     '--download-metis=1',
     '--download-parmetis=1',
-    '--download-superlu_dist=1'
+    '--download-superlu_dist=1',
+    '--with-strict-petscerrorcode',
+    '--with-coverage',
   ]
   configure.petsc_configure(configure_options)

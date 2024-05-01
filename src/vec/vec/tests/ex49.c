@@ -20,34 +20,34 @@ static const char help[] = "Test VEC_SUBSET_OFF_PROC_ENTRIES\n\n";
 */
 int main(int argc, char **argv)
 {
-  Vec            v;
-  PetscInt       i, j, k, *ln, n, rstart;
-  PetscBool      saveCommunicationPattern = PETSC_FALSE;
-  PetscMPIInt    size, rank, p;
-  PetscErrorCode ierr;
+  Vec         v;
+  PetscInt    i, j, k, *ln, n, rstart;
+  PetscBool   saveCommunicationPattern = PETSC_FALSE;
+  PetscMPIInt size, rank, p;
 
-  ierr = PetscInitialize(&argc, &argv, NULL, help);if (ierr) return ierr;
-  ierr = PetscOptionsGetBool(NULL, NULL, "-save_comm", &saveCommunicationPattern, NULL);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD, &size);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD, &rank);CHKERRQ(ierr);
+  PetscFunctionBeginUser;
+  PetscCall(PetscInitialize(&argc, &argv, NULL, help));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-save_comm", &saveCommunicationPattern, NULL));
+  PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD, &size));
+  PetscCallMPI(MPI_Comm_rank(PETSC_COMM_WORLD, &rank));
 
-  ierr = PetscMalloc1(size, &ln);CHKERRQ(ierr);
+  PetscCall(PetscMalloc1(size, &ln));
   /* This bug is triggered when one of the local lengths is small. Sometimes in IBAMR this value is actually zero. */
-  for (p=0; p<size; ++p) ln[p] = 10;
+  for (p = 0; p < size; ++p) ln[p] = 10;
   ln[0] = 2;
-  ierr  = PetscPrintf(PETSC_COMM_WORLD, "local lengths are:\n");CHKERRQ(ierr);
-  ierr  = PetscIntView(1, &ln[rank], PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
-  n     = ln[rank];
-  ierr  = VecCreateMPI(MPI_COMM_WORLD, n, PETSC_DECIDE, &v);CHKERRQ(ierr);
-  ierr  = VecGetOwnershipRange(v, &rstart, NULL);CHKERRQ(ierr);
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "local lengths are:\n"));
+  PetscCall(PetscIntView(1, &ln[rank], PETSC_VIEWER_STDOUT_WORLD));
+  n = ln[rank];
+  PetscCall(VecCreateFromOptions(MPI_COMM_WORLD, NULL, 1, n, PETSC_DECIDE, &v));
+  PetscCall(VecGetOwnershipRange(v, &rstart, NULL));
 
-  for (k=0; k<5; ++k) { /* 5 iterations of VecAssembly */
-    PetscReal norm = 0.0;
-    PetscBool flag  = (k == 2) ?  PETSC_FALSE : PETSC_TRUE;
+  for (k = 0; k < 5; ++k) { /* 5 iterations of VecAssembly */
+    PetscReal norm  = 0.0;
+    PetscBool flag  = (k == 2) ? PETSC_FALSE : PETSC_TRUE;
     PetscInt  shift = (k < 2) ? 0 : (k == 2) ? 1 : 0; /* Used to change patterns */
 
     /* If saveCommunicationPattern, let's see what should happen in the 5 iterations:
-      iter 0: flag is true, and this is the first assebmly, so petsc should keep the
+      iter 0: flag is true, and this is the first assembly, so petsc should keep the
               communication pattern built during this assembly.
       iter 1: flag is true, reuse the pattern.
       iter 2: flag is false, discard/free the pattern built in iter 0; rebuild a new
@@ -59,38 +59,38 @@ int main(int argc, char **argv)
       When the vector is destroyed, memory used by the pattern is freed. One can also do it early with a call
           VecSetOption(v, VEC_SUBSET_OFF_PROC_ENTRIES, PETSC_FALSE);
      */
-    if (saveCommunicationPattern) {ierr = VecSetOption(v, VEC_SUBSET_OFF_PROC_ENTRIES, flag);CHKERRQ(ierr);}
-    ierr = VecSet(v, 0.0);CHKERRQ(ierr);
+    if (saveCommunicationPattern) PetscCall(VecSetOption(v, VEC_SUBSET_OFF_PROC_ENTRIES, flag));
+    PetscCall(VecSet(v, 0.0));
 
-    for (i=0; i<n; ++i) {
+    for (i = 0; i < n; ++i) {
       PetscScalar val = 1.0;
       PetscInt    r   = rstart + i;
 
-      ierr = VecSetValue(v, r, val, ADD_VALUES);CHKERRQ(ierr);
+      PetscCall(VecSetValue(v, r, val, ADD_VALUES));
       /* do assembly on all other processors too (the 'neighbors') */
       {
-        const PetscMPIInt neighbor = (i+shift) % size; /* Adjust communication patterns between iterations */
+        const PetscMPIInt neighbor = (i + shift) % size; /* Adjust communication patterns between iterations */
         const PetscInt    nn       = ln[neighbor];
         PetscInt          nrstart  = 0;
 
-        for (p=0; p<neighbor; ++p) nrstart += ln[p];
-        for (j=0; j<nn/4; j+= 3) {
+        for (p = 0; p < neighbor; ++p) nrstart += ln[p];
+        for (j = 0; j < nn / 4; j += 3) {
           PetscScalar val = 0.01;
           PetscInt    nr  = nrstart + j;
 
-          ierr = VecSetValue(v, nr, val, ADD_VALUES);CHKERRQ(ierr);
+          PetscCall(VecSetValue(v, nr, val, ADD_VALUES));
         }
       }
     }
-    ierr = VecAssemblyBegin(v);CHKERRQ(ierr);
-    ierr = VecAssemblyEnd(v);CHKERRQ(ierr);
-    ierr = VecNorm(v, NORM_1, &norm);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD, "norm is %g\n", (double)norm);CHKERRQ(ierr);
+    PetscCall(VecAssemblyBegin(v));
+    PetscCall(VecAssemblyEnd(v));
+    PetscCall(VecNorm(v, NORM_1, &norm));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "norm is %g\n", (double)norm));
   }
-  ierr = PetscFree(ln);CHKERRQ(ierr);
-  ierr = VecDestroy(&v);CHKERRQ(ierr);
-  ierr = PetscFinalize();
-  return ierr;
+  PetscCall(PetscFree(ln));
+  PetscCall(VecDestroy(&v));
+  PetscCall(PetscFinalize());
+  return 0;
 }
 
 /*TEST

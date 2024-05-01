@@ -1,21 +1,11 @@
-
 static char help[] = "Demonstrates PetscFileRetrieve().\n\n";
 
-/*T
-   Concepts: introduction to PETSc;
-   Concepts: printing^in parallel
-   Processors: n
-T*/
-
-
-
 #include <petscsys.h>
-int main(int argc,char **argv)
+int main(int argc, char **argv)
 {
-  PetscErrorCode ierr;
-  PetscBool      found;
-  char           localname[PETSC_MAX_PATH_LEN];
-  const char     url[] = "https://www.mcs.anl.gov/petsc/index.html";
+  PetscBool  found;
+  char       localname[PETSC_MAX_PATH_LEN];
+  const char url[] = "https://web.cels.anl.gov/projects/petsc/download/datafiles/matrices/tiny";
 
   /*
     Every PETSc routine should begin with the PetscInitialize() routine.
@@ -26,20 +16,20 @@ int main(int argc,char **argv)
                  runtime.  The user can use the "help" variable place
                  additional help messages in this printout.
   */
-  ierr = PetscInitialize(&argc,&argv,(char*)0,help);if (ierr) return ierr;
-  ierr = PetscFileRetrieve(PETSC_COMM_WORLD,url,localname,PETSC_MAX_PATH_LEN,&found);CHKERRQ(ierr);
+  PetscFunctionBeginUser;
+  PetscCall(PetscInitialize(&argc, &argv, (char *)0, help));
+  PetscCall(PetscFileRetrieve(PETSC_COMM_WORLD, url, localname, PETSC_MAX_PATH_LEN, &found));
   if (found) {
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"Successfully download file %s\n",localname);CHKERRQ(ierr);
-  } else SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"Unable to download url %s\n",url);
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Successfully download file %s\n", localname));
+  } else SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Unable to download url %s", url);
 
-  ierr = PetscFinalize();
-  return ierr;
+  PetscCall(PetscFinalize());
+  return 0;
 }
-
 
 /*TEST
 
    test:
-     requires: define(PETSC_HAVE_POPEN)
+     requires: defined(PETSC_HAVE_POPEN)
 
 TEST*/

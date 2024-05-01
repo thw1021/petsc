@@ -10,9 +10,7 @@ class Configure(config.package.CMakePackage):
     self.includes         = ['MSTK.h']
     self.liblist          = [['libmstk.a']]
     self.functions        = []
-    self.cxx              = 1
-    self.requirescxx11    = 0
-    self.downloadonWindows= 0
+    self.buildLanguages   = ['Cxx']
     self.hastests         = 1
     return
 
@@ -36,10 +34,8 @@ class Configure(config.package.CMakePackage):
     args = config.package.CMakePackage.formCMakeConfigureArgs(self)
     args.append('-DUSE_XSDK_DEFAULTS=YES')
     if self.compilerFlags.debugging:
-      args.append('-DCMAKE_BUILD_TYPE=DEBUG')
       args.append('-DXSDK_ENABLE_DEBUG=YES')
     else:
-      args.append('-DCMAKE_BUILD_TYPE=RELEASE')
       args.append('-DXSDK_ENABLE_DEBUG=NO')
 
     args.append('-DENABLE_PARALLEL=yes')
@@ -70,11 +66,11 @@ class Configure(config.package.CMakePackage):
 
     #  Need to pass -DMETIS_5 to C and C++ compiler flags otherwise assumes older Metis
     args = self.rmArgsStartsWith(args,['-DCMAKE_CXX_FLAGS:STRING','-DCMAKE_C_FLAGS:STRING'])
-    args.append('-DCMAKE_C_FLAGS:STRING="'+self.removeWarningFlags(self.setCompilers.getCompilerFlags())+' -DMETIS_5"')
+    args.append('-DCMAKE_C_FLAGS:STRING="'+self.updatePackageCFlags(self.getCompilerFlags())+' -DMETIS_5"')
     if hasattr(self.compilers, 'CXX'):
-      self.framework.pushLanguage('Cxx')
-      args.append('-DCMAKE_CXX_FLAGS:STRING="'+self.removeWarningFlags(self.framework.getCompilerFlags())+' -DMETIS_5"')
-    self.framework.popLanguage()
+      self.pushLanguage('Cxx')
+      args.append('-DCMAKE_CXX_FLAGS:STRING="'+self.updatePackageCxxFlags(self.getCompilerFlags())+' -DMETIS_5"')
+    self.popLanguage()
 
     # mstk does not use the standard -DCMAKE_INSTALL_PREFIX
     args.append('-DINSTALL_DIR='+self.installDir)

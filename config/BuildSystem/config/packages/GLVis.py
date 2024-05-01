@@ -4,10 +4,10 @@ class Configure(config.package.GNUPackage):
   def __init__(self, framework):
     config.package.GNUPackage.__init__(self, framework)
     self.gitcommit              = 'bca608d856fe8183f9f7bf5e57d493af0b02f616'
-    self.download               = ['git://https://github.com/stefanozampini/glvis.git']
+    self.download               = ['git://https://github.com/stefanozampini/glvis.git','https://github.com/stefanozampini/glvis/archive/'+self.gitcommit+'.tar.gz']
     self.linkedbypetsc          = 0
     self.downloadonWindows      = 1
-    self.cxx                    = 1
+    self.buildLanguages         = ['Cxx']
     return
 
   def setupDependencies(self, framework):
@@ -53,15 +53,15 @@ class Configure(config.package.GNUPackage):
       g.write('GLVIS_USE_LIBTIFF = NO\n')
       g.write('GLVIS_USE_LIBPNG = NO\n')
 
-      self.setCompilers.pushLanguage('C')
-      g.write('CC = '+self.setCompilers.getCompiler()+'\n')
-      g.write('CFLAGS = ' + self.removeWarningFlags(self.setCompilers.getCompilerFlags())+'\n')
-      self.setCompilers.popLanguage()
+      self.pushLanguage('C')
+      g.write('CC = '+self.getCompiler()+'\n')
+      g.write('CFLAGS = ' + self.updatePackageCFlags(self.getCompilerFlags())+'\n')
+      self.popLanguage()
 
       # build flags for serial MFEM
-      self.setCompilers.pushLanguage('Cxx')
-      mfem_flags='CXX=\"'+self.setCompilers.getCompiler()+'\" CXXFLAGS=\"-O3 '+self.setCompilers.getCompilerFlags()+'\"'
-      self.setCompilers.popLanguage()
+      self.pushLanguage('Cxx')
+      mfem_flags='CXX=\"'+self.getCompiler()+'\" CXXFLAGS=\"-O3 '+self.getCompilerFlags()+'\"'
+      self.popLanguage()
 
       g.write('PETSC_MFEM_FLAGS = '+mfem_flags+'\n')
       g.close()
@@ -73,11 +73,10 @@ class Configure(config.package.GNUPackage):
         output1,err1,ret1 = config.package.Package.executeShellCommand('make clean && '+self.make.make_jnp+' GLVIS_CONFIG_MK=glvis_config.mk', cwd=self.packageDir, timeout=2500, log = self.log)
         installBinDir = os.path.join(self.installDir,'bin')
         self.logPrintBox('Installing GLVis; this may take several minutes')
-        self.installDirProvider.printSudoPasswordMessage()
         output2,err2,ret2 = config.package.Package.executeShellCommandSeq(
-          [self.installSudo+'mkdir -p '+installBinDir,
-           self.installSudo+'cp -f glvis '+installBinDir+'/.',
-           self.installSudo+'chmod 750 '+installBinDir+'/glvis'
+          ['mkdir -p '+installBinDir,
+           'cp -f glvis '+installBinDir+'/.',
+           'chmod 750 '+installBinDir+'/glvis'
           ], cwd=self.packageDir, timeout=60, log = self.log)
       except RuntimeError as e:
         self.logPrint('Error running make on GLVis: '+str(e))

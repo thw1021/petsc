@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-#!/bin/env python
+#!/usr/bin/env python3
 #
 #    Generates etag and ctag (use -noctags to skip generation of ctags) files for PETSc
 #    Adds file names to list of tags in a TAGS file
@@ -123,16 +122,17 @@ def processDir(flist, dirpath, dirnames, filenames):
       newls.append(l)
   if newls: flist.extend([os.path.join(dirpath,name) for name in newls])
 
-  # exclude 'docs' but not 'src/docs'
+  # exclude 'petsc/docs/' only (and not docs/ in other locations)
   for exname in ['docs']:
-    if exname in dirnames and dirpath.find('src') <0:
+    if exname in dirnames and os.path.realpath(dirpath) == os.path.realpath(os.getcwd()):
       dirnames.remove(exname)
+
   # One-level unique dirs
   for exname in ['.git','.hg','SCCS', 'output', 'BitKeeper', 'externalpackages', 'bilinear', 'ftn-auto','lib','systems']:
     if exname in dirnames:
       dirnames.remove(exname)
   #  Multi-level unique dirs - specify from toplevel
-  for exname in ['src/python/PETSc','client/c++','client/c','client/python','src/docs/website/documentation/changes']:
+  for exname in ['src/python/PETSc','client/c++','client/c','client/python']:
     for name in dirnames:
       filename=os.path.join(dirpath,name)
       if filename.find(exname) >=0:
@@ -150,7 +150,7 @@ def processFiles(dirname,flist):
   # list files that can't be done with global match [as above] with complete paths
   import glob
   files= []
-  lists=['petsc/conf/*','src/docs/website/documentation/changes/dev.html']
+  lists=['petsc/conf/*']
 
   for glist in lists:
     gfiles = glob.glob(glist)
@@ -172,7 +172,7 @@ def main(ctags):
     ctagfile = None
   flist = []
   if os.path.isdir('.git'):
-    output = check_output('git ls-files | egrep -v \(^\(systems/\|share/petsc/datafiles/\)\|/output/\|\.\(png\|pdf\|ps\|ppt\|jpg\)$\)', shell=True)
+    output = check_output(r'git ls-files | grep -E -v \(^\(systems/\|share/petsc/datafiles/\)\|/output/\|\.\(png\|pdf\|ps\|ppt\|jpg\)$\)', shell=True)
     flist = output.decode(sys.getfilesystemencoding()).splitlines()
   else:
     for dirpath, dirnames, filenames in os.walk(os.getcwd()):

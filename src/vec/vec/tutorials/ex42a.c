@@ -1,28 +1,27 @@
-
-static char help[] = "Sends a PETSc vector to a socket connection, receives it back, within a loop. Works with ex42.c.\n";
+static char help[] = "Sends a PETSc vector to a socket connection, receives it back, within a loop. Must be run with ex42.c.\n";
 
 #include <petscvec.h>
 
-int main(int argc,char **args)
+int main(int argc, char **args)
 {
-  Vec            b;
-  PetscViewer    fd;
-  PetscErrorCode ierr;
-  PetscInt       i;
+  Vec         b;
+  PetscViewer fd;
+  PetscInt    i;
 
-  ierr = PetscInitialize(&argc,&args,(char*)0,help);if (ierr) return ierr;
+  PetscFunctionBeginUser;
+  PetscCall(PetscInitialize(&argc, &args, (char *)0, help));
   /* server indicates we WAIT for someone to connect to our socket */
-  ierr = PetscViewerSocketOpen(PETSC_COMM_WORLD,"server",PETSC_DEFAULT,&fd);CHKERRQ(ierr);
+  PetscCall(PetscViewerSocketOpen(PETSC_COMM_WORLD, "server", PETSC_DEFAULT, &fd));
 
-  ierr = VecCreateMPI(PETSC_COMM_WORLD,10000,PETSC_DECIDE,&b);CHKERRQ(ierr);
-  for (i=0; i<1000; i++) {
-    ierr = VecView(b,fd);CHKERRQ(ierr);
-    ierr = VecDestroy(&b);CHKERRQ(ierr);
-    ierr = VecCreate(PETSC_COMM_WORLD,&b);CHKERRQ(ierr);
-    ierr = VecLoad(b,fd);CHKERRQ(ierr);
+  PetscCall(VecCreateFromOptions(PETSC_COMM_WORLD, NULL, 1, 10000, PETSC_DECIDE, &b));
+  for (i = 0; i < 1000; i++) {
+    PetscCall(VecView(b, fd));
+    PetscCall(VecDestroy(&b));
+    PetscCall(VecCreate(PETSC_COMM_WORLD, &b));
+    PetscCall(VecLoad(b, fd));
   }
-  ierr = VecDestroy(&b);CHKERRQ(ierr);
-  ierr = PetscFinalize();
-  return ierr;
+  PetscCall(VecDestroy(&b));
+  PetscCall(PetscViewerDestroy(&fd));
+  PetscCall(PetscFinalize());
+  return 0;
 }
-

@@ -1,65 +1,59 @@
-
-#include <../src/sys/classes/random/randomimpl.h>
+#include <petsc/private/randomimpl.h>
 
 static PetscBool PetscRandomPackageInitialized = PETSC_FALSE;
+
 /*@C
-  PetscRandomFinalizePackage - This function destroys everything in the Petsc interface to the Random package. It is
-  called from PetscFinalize().
+  PetscRandomFinalizePackage - This function frees everything in the `PetscRandom` package. It is
+  called from `PetscFinalize()`.
 
   Level: developer
 
-.seealso: PetscFinalize()
+.seealso: `PetscFinalize()`
 @*/
-PetscErrorCode  PetscRandomFinalizePackage(void)
+PetscErrorCode PetscRandomFinalizePackage(void)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  ierr = PetscFunctionListDestroy(&PetscRandomList);CHKERRQ(ierr);
+  PetscCall(PetscFunctionListDestroy(&PetscRandomList));
   PetscRandomPackageInitialized = PETSC_FALSE;
   PetscRandomRegisterAllCalled  = PETSC_FALSE;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-  PetscRandomInitializePackage - This function initializes everything in the PetscRandom package. It is called
-  from PetscDLLibraryRegister_petsc() when using dynamic libraries, and on the first call to PetscRandomCreate()
+  PetscRandomInitializePackage - This function initializes everything in the `PetscRandom` package. It is called
+  from PetscDLLibraryRegister_petsc() when using dynamic libraries, and on the first call to `PetscRandomCreate()`
   when using shared or static libraries.
 
   Level: developer
 
-.seealso: PetscInitialize()
+.seealso: `PetscInitialize()`
 @*/
-PetscErrorCode  PetscRandomInitializePackage(void)
+PetscErrorCode PetscRandomInitializePackage(void)
 {
-  char           logList[256];
-  PetscBool      opt,pkg;
-  PetscErrorCode ierr;
+  char      logList[256];
+  PetscBool opt, pkg;
 
   PetscFunctionBegin;
-  if (PetscRandomPackageInitialized) PetscFunctionReturn(0);
+  if (PetscRandomPackageInitialized) PetscFunctionReturn(PETSC_SUCCESS);
   PetscRandomPackageInitialized = PETSC_TRUE;
   /* Register Class */
-  ierr = PetscClassIdRegister("PetscRandom",&PETSC_RANDOM_CLASSID);CHKERRQ(ierr);
+  PetscCall(PetscClassIdRegister("PetscRandom", &PETSC_RANDOM_CLASSID));
   /* Register Constructors */
-  ierr = PetscRandomRegisterAll();CHKERRQ(ierr);
+  PetscCall(PetscRandomRegisterAll());
   /* Process Info */
   {
-    PetscClassId  classids[1];
+    PetscClassId classids[1];
 
     classids[0] = PETSC_RANDOM_CLASSID;
-    ierr = PetscInfoProcessClass("random", 1, classids);CHKERRQ(ierr);
+    PetscCall(PetscInfoProcessClass("random", 1, classids));
   }
   /* Process summary exclusions */
-  ierr = PetscOptionsGetString(NULL,NULL,"-log_exclude",logList,sizeof(logList),&opt);CHKERRQ(ierr);
+  PetscCall(PetscOptionsGetString(NULL, NULL, "-log_exclude", logList, sizeof(logList), &opt));
   if (opt) {
-    ierr = PetscStrInList("random",logList,',',&pkg);CHKERRQ(ierr);
-    if (pkg) {ierr = PetscLogEventExcludeClass(PETSC_RANDOM_CLASSID);CHKERRQ(ierr);}
+    PetscCall(PetscStrInList("random", logList, ',', &pkg));
+    if (pkg) PetscCall(PetscLogEventExcludeClass(PETSC_RANDOM_CLASSID));
   }
   /* Register package finalizer */
-  ierr = PetscRegisterFinalize(PetscRandomFinalizePackage);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscRegisterFinalize(PetscRandomFinalizePackage));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
-
-
-

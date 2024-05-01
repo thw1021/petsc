@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 from __future__ import generators
 import config.base
 
@@ -54,12 +53,12 @@ class Configure(config.base.Configure):
 
   def configureMissingUtypeTypedefs(self):
     ''' Checks if u_short is undefined '''
-    if not self.checkCompile('#include <sys/types.h>\n', 'u_short foo;\n'):
+    if not self.checkCompile('#include <sys/types.h>\n', 'u_short foo;\n(void)foo'):
       self.addDefine('NEEDS_UTYPE_TYPEDEFS',1)
     return
 
   def configureMissingFunctions(self):
-    '''Checks for SOCKETS'''
+    '''Checks for SOCKETS and getline'''
     if not self.functions.haveFunction('socket'):
       # solaris requires these two libraries for socket()
       if self.libraries.haveLib('socket') and self.libraries.haveLib('nsl'):
@@ -74,26 +73,20 @@ class Configure(config.base.Configure):
           self.addDefine('HAVE_CLOSESOCKET',1)
         if self.checkLink('#include <Winsock2.h>','WSAGetLastError()'):
           self.addDefine('HAVE_WSAGETLASTERROR',1)
+    if not self.checkLink('#include <stdio.h>\nchar *lineptr;\nsize_t n;\nFILE *stream;\n', 'getline(&lineptr, &n, stream);\n'):
+      self.addDefine('MISSING_GETLINE', 1)
     return
 
   def configureMissingSignals(self):
     '''Check for missing signals, and define MISSING_<signal name> if necessary'''
     for signal in ['ABRT', 'ALRM', 'BUS',  'CHLD', 'CONT', 'FPE',  'HUP',  'ILL', 'INT',  'KILL', 'PIPE', 'QUIT', 'SEGV',
                    'STOP', 'SYS',  'TERM', 'TRAP', 'TSTP', 'URG',  'USR1', 'USR2']:
-      if not self.checkCompile('#include <signal.h>\n', 'int i=SIG'+signal+';\n\nif (i);\n'):
+      if not self.checkCompile('#include <signal.h>\n', 'int i=SIG'+signal+';\n(void)i'):
         self.addDefine('MISSING_SIG'+signal, 1)
     return
 
-
-  def configureMissingErrnos(self):
-    '''Check for missing errno values, and define MISSING_<errno value> if necessary'''
-    for errnoval in ['EINTR']:
-      if not self.checkCompile('#include <errno.h>','int i='+errnoval+';\n\nif (i);\n'):
-        self.addDefine('MISSING_ERRNO_'+errnoval, 1)
-    return
-
-
   def configureMissingGetdomainnamePrototype(self):
+    '''Check for missing function prototype for getdomainname()'''
     head = self.featureTestMacros() + '''
 #ifdef PETSC_HAVE_UNISTD_H
 #include <unistd.h>
@@ -119,6 +112,7 @@ if (getdomainname_ptr(test,10)) return 1;
     return
 
   def configureMissingSrandPrototype(self):
+    '''Checks for missing random number generator prototypes'''
     head = self.featureTestMacros() + '''
 #include <stdlib.h>
 '''

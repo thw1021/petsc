@@ -2,83 +2,82 @@
     Provides an interface to the FFT packages.
 */
 
-#include <../src/mat/impls/fft/fft.h>   /*I "petscmat.h" I*/
+#include <../src/mat/impls/fft/fft.h> /*I "petscmat.h" I*/
 
-PetscErrorCode MatDestroy_FFT(Mat A)
+static PetscErrorCode MatDestroy_FFT(Mat A)
 {
-  PetscErrorCode ierr;
-  Mat_FFT        *fft = (Mat_FFT*)A->data;
+  Mat_FFT *fft = (Mat_FFT *)A->data;
 
   PetscFunctionBegin;
-  if (fft->matdestroy) {
-    ierr = (fft->matdestroy)(A);CHKERRQ(ierr);
-  }
-  ierr = PetscFree(fft->dim);CHKERRQ(ierr);
-  ierr = PetscFree(A->data);CHKERRQ(ierr);
-  ierr = PetscObjectChangeTypeName((PetscObject)A,NULL);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  if (fft->matdestroy) PetscCall(fft->matdestroy(A));
+  PetscCall(PetscFree(fft->dim));
+  PetscCall(PetscFree(A->data));
+  PetscCall(PetscObjectChangeTypeName((PetscObject)A, NULL));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-      MatCreateFFT - Creates a matrix object that provides FFT via an external package
+  MatCreateFFT - Creates a matrix object that provides FFT via an external package
 
-   Collective
+  Collective
 
-   Input Parameter:
-+   comm - MPI communicator
-.   ndim - the ndim-dimensional transform
-.   dim - array of size ndim, dim[i] contains the vector length in the i-dimension
--   type - package type, e.g., FFTW or MATSEQCUFFT
+  Input Parameters:
++ comm    - MPI communicator
+. ndim    - the ndim-dimensional transform
+. dim     - array of size ndim, dim[i] contains the vector length in the i-dimension
+- mattype - package type, e.g., `MATFFTW` or `MATSEQCUFFT`
 
-   Output Parameter:
-.   A  - the matrix
+  Output Parameter:
+. A - the matrix
 
-   Options Database Keys:
-.   -mat_fft_type - set FFT type fft or seqcufft
+  Options Database Key:
+. -mat_fft_type - set FFT type fft or seqcufft
 
-   Note: this serves as a base class for all FFT marix classes, currently MATFFTW or MATSEQCUFFT
+  Level: intermediate
 
-   Level: intermediate
+  Note:
+  This serves as a base class for all FFT matrix classes, currently `MATFFTW` or `MATSEQCUFFT`
 
-.seealso: MatCreateVecsFFTW()
+.seealso: [](ch_matrices), `Mat`, `MATFFTW`, `MATSEQCUFFT`, `MatCreateVecsFFTW()`
 @*/
-PetscErrorCode MatCreateFFT(MPI_Comm comm,PetscInt ndim,const PetscInt dim[],MatType mattype,Mat *A)
+PetscErrorCode MatCreateFFT(MPI_Comm comm, PetscInt ndim, const PetscInt dim[], MatType mattype, Mat *A)
 {
-  PetscErrorCode ierr;
-  PetscMPIInt    size;
-  Mat            FFT;
-  PetscInt       N,i;
-  Mat_FFT        *fft;
+  PetscMPIInt size;
+  Mat         FFT;
+  PetscInt    N, i;
+  Mat_FFT    *fft;
 
   PetscFunctionBegin;
-  if (ndim < 1) SETERRQ1(comm,PETSC_ERR_USER,"ndim %d must be > 0",ndim);
-  ierr = MPI_Comm_size(comm, &size);CHKERRQ(ierr);
+  PetscAssertPointer(dim, 3);
+  PetscAssertPointer(A, 5);
+  PetscCheck(ndim >= 1, comm, PETSC_ERR_USER, "ndim %" PetscInt_FMT " must be > 0", ndim);
+  PetscCallMPI(MPI_Comm_size(comm, &size));
 
-  ierr      = MatCreate(comm,&FFT);CHKERRQ(ierr);
-  ierr      = PetscNewLog(FFT,&fft);CHKERRQ(ierr);
-  FFT->data = (void*)fft;
+  PetscCall(MatCreate(comm, &FFT));
+  PetscCall(PetscNew(&fft));
+  FFT->data = (void *)fft;
   N         = 1;
-  for (i=0; i<ndim; i++) {
-    if (dim[i] < 1) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_USER,"dim[%d]=%d must be > 0",i,dim[i]);
+  for (i = 0; i < ndim; i++) {
+    PetscCheck(dim[i] >= 1, PETSC_COMM_SELF, PETSC_ERR_USER, "dim[%" PetscInt_FMT "]=%" PetscInt_FMT " must be > 0", i, dim[i]);
     N *= dim[i];
   }
 
-  ierr = PetscMalloc1(ndim,&fft->dim);CHKERRQ(ierr);
-  ierr = PetscArraycpy(fft->dim,dim,ndim);CHKERRQ(ierr);
+  PetscCall(PetscMalloc1(ndim, &fft->dim));
+  PetscCall(PetscArraycpy(fft->dim, dim, ndim));
 
   fft->ndim = ndim;
   fft->n    = PETSC_DECIDE;
   fft->N    = N;
   fft->data = NULL;
 
-  ierr = MatSetType(FFT,mattype);CHKERRQ(ierr);
+  PetscCall(MatSetType(FFT, mattype));
 
   FFT->ops->destroy = MatDestroy_FFT;
 
-  /* get runtime options */
-  ierr = PetscOptionsBegin(PetscObjectComm((PetscObject)FFT),((PetscObject)FFT)->prefix,"FFT Options","Mat");CHKERRQ(ierr);
+  /* get runtime options... what options? */
+  PetscObjectOptionsBegin((PetscObject)FFT);
   PetscOptionsEnd();
 
   *A = FFT;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

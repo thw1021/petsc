@@ -1,28 +1,50 @@
-#include <petsc/private/tsimpl.h>          /*I "petscts.h" I*/
+#include <petsc/private/tsimpl.h> /*I "petscts.h" I*/
 
-/*@C
-   TSPythonSetType - Initalize a TS object implemented in Python.
+/*@
+   TSPythonSetType - Initialize a `TS` object implemented in Python.
 
-   Collective on TS
+   Collective
 
-   Input Parameter:
-+  ts - the nonlinear solver (TS) context.
+   Input Parameters:
++  ts - the `TS` context
 -  pyname - full dotted Python name [package].module[.{class|function}]
 
    Options Database Key:
-.  -ts_python_type <pyname>
+.  -ts_python_type <pyname> - python class
 
    Level: intermediate
 
-.seealso: TSCreate(), TSSetType(), TSPYTHON, PetscPythonInitialize()
+.seealso: [](ch_ts), `TSCreate()`, `TSSetType()`, `TSPYTHON`, `PetscPythonInitialize()`
 @*/
-PetscErrorCode  TSPythonSetType(TS ts,const char pyname[])
+PetscErrorCode TSPythonSetType(TS ts, const char pyname[])
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(ts,TS_CLASSID,1);
-  PetscValidCharPointer(pyname,2);
-  ierr = PetscTryMethod(ts,"TSPythonSetType_C",(TS, const char[]),(ts,pyname));CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
+  PetscAssertPointer(pyname, 2);
+  PetscTryMethod(ts, "TSPythonSetType_C", (TS, const char[]), (ts, pyname));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+   TSPythonGetType - Get the type of a `TS` object implemented in Python.
+
+   Not Collective
+
+   Input Parameter:
+.  ts - the `TS` context
+
+   Output Parameter:
+.  pyname - full dotted Python name [package].module[.{class|function}]
+
+   Level: intermediate
+
+.seealso: [](ch_ts), `TSCreate()`, `TSSetType()`, `TSPYTHON`, `PetscPythonInitialize()`, `TSPythonSetType()`
+@*/
+PetscErrorCode TSPythonGetType(TS ts, const char *pyname[])
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
+  PetscAssertPointer(pyname, 2);
+  PetscUseMethod(ts, "TSPythonGetType_C", (TS, const char *[]), (ts, pyname));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

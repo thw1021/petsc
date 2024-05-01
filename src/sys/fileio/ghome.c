@@ -1,71 +1,68 @@
-
 /*
       Code for manipulating files.
 */
 #include <petscsys.h>
 
 /*@C
-   PetscGetHomeDirectory - Returns home directory name.
+  PetscGetHomeDirectory - Returns the name of the user's home directory
 
-   Not Collective
+  Not Collective
 
-   Input Parameter:
-.  maxlen - maximum lengh allowed
+  Input Parameter:
+. maxlen - maximum length allowed
 
-   Output Parameter:
-.  dir - contains the home directory. Must be long enough to hold the name.
+  Output Parameter:
+. dir - contains the home directory. Must be long enough to hold the name.
 
-   Level: developer
+  Level: developer
 
-   Note:
-   If PETSc cannot determine the home directory it makes dir a null string
+  Notes:
+  If PETSc cannot determine the home directory it makes `dir` an empty string
 
-   On Windows machines the enviornmental variable HOME specifies the home directory.
+  On Microsoft Windows machines the environmental variable `HOME` specifies the home directory.
 
+.seealso: `PetscGetTmp()`, `PetscSharedTmp()`, `PetscGetWorkingDirectory()`
 @*/
-PetscErrorCode  PetscGetHomeDirectory(char dir[],size_t maxlen)
+PetscErrorCode PetscGetHomeDirectory(char dir[], size_t maxlen)
 {
-  PetscErrorCode ierr;
-  const char     *d1;
+  const char *d1;
 
   PetscFunctionBegin;
   d1 = getenv("HOME");
   if (d1) {
-    ierr = PetscStrncpy(dir,d1,maxlen);CHKERRQ(ierr);
+    PetscCall(PetscStrncpy(dir, d1, maxlen));
   } else if (maxlen > 0) dir[0] = 0;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-    PetscFixFilename - Fixes a file name so that it is correct for both Unix and
-    Windows by using the correct / or \ to separate directories.
+  PetscFixFilename - Fixes a file name so that it is correct for both Unix and
+  Microsoft Windows by using the correct / or \ to separate directories.
 
-   Not Collective
+  Not Collective
 
-   Input Parameter:
-.  filein - name of file to be fixed
+  Input Parameter:
+. filein - name of file to be fixed
 
-   Output Parameter:
-.  fileout - the fixed name. Should long enough to hold the filename.
+  Output Parameter:
+. fileout - the fixed name. Should long enough to hold the filename.
 
-   Level: advanced
+  Level: developer
 
-   Notes:
-   Call PetscFixFilename() just before calling fopen().
+.seealso: `PetscFOpen()`
 @*/
-PetscErrorCode  PetscFixFilename(const char filein[],char fileout[])
+PetscErrorCode PetscFixFilename(const char filein[], char fileout[])
 {
-  PetscErrorCode ierr;
-  size_t         i,n;
+  size_t i, n;
 
   PetscFunctionBegin;
-  if (!filein || !fileout) PetscFunctionReturn(0);
+  if (!filein || !fileout) PetscFunctionReturn(PETSC_SUCCESS);
 
-  ierr = PetscStrlen(filein,&n);CHKERRQ(ierr);
-  for (i=0; i<n; i++) {
+  PetscCall(PetscStrlen(filein, &n));
+  for (i = 0; i < n; i++) {
     if (filein[i] == PETSC_REPLACE_DIR_SEPARATOR) fileout[i] = PETSC_DIR_SEPARATOR;
     else fileout[i] = filein[i];
   }
   fileout[n] = 0;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

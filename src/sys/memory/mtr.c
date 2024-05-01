@@ -1,183 +1,180 @@
-
 /*
-     Interface to malloc() and free(). This code allows for logging of memory usage and some error checking
+     Logging of memory usage and some error checking
 */
-#include <petscsys.h>           /*I "petscsys.h" I*/
+#include <petsc/private/petscimpl.h> /*I "petscsys.h" I*/
 #include <petscviewer.h>
 #if defined(PETSC_HAVE_MALLOC_H)
-#include <malloc.h>
+  #include <malloc.h>
 #endif
 
 /*
      These are defined in mal.c and ensure that malloced space is PetscScalar aligned
 */
-PETSC_EXTERN PetscErrorCode PetscMallocAlign(size_t,PetscBool,int,const char[],const char[],void**);
-PETSC_EXTERN PetscErrorCode PetscFreeAlign(void*,int,const char[],const char[]);
-PETSC_EXTERN PetscErrorCode PetscReallocAlign(size_t,int,const char[],const char[],void**);
+PETSC_EXTERN PetscErrorCode PetscMallocAlign(size_t, PetscBool, int, const char[], const char[], void **);
+PETSC_EXTERN PetscErrorCode PetscFreeAlign(void *, int, const char[], const char[]);
+PETSC_EXTERN PetscErrorCode PetscReallocAlign(size_t, int, const char[], const char[], void **);
 
-#define CLASSID_VALUE  ((PetscClassId) 0xf0e0d0c9)
-#define ALREADY_FREED  ((PetscClassId) 0x0f0e0d9c)
+#define CLASSID_VALUE ((PetscClassId)0xf0e0d0c9)
+#define ALREADY_FREED ((PetscClassId)0x0f0e0d9c)
 
-/*  this is the header put at the beginning of each malloc() using for tracking allocated space and checking of allocated space heap */
+/*  this is the header put at the beginning of each PetscTrMallocDefault() for tracking allocated space and checking of allocated space heap */
 typedef struct _trSPACE {
-  size_t          size;
-  int             id;
-  int             lineno;
-  const char      *filename;
-  const char      *functionname;
-  PetscClassId    classid;
-#if defined(PETSC_USE_DEBUG)
-  PetscStack      stack;
+  size_t       size, rsize; /* Aligned size and requested size */
+  int          id;
+  int          lineno;
+  const char  *filename;
+  const char  *functionname;
+  PetscClassId classid;
+#if defined(PETSC_USE_DEBUG) && !defined(PETSC_HAVE_THREADSAFETY)
+  PetscStack stack;
 #endif
-  struct _trSPACE *next,*prev;
+  struct _trSPACE *next, *prev;
 } TRSPACE;
 
-/* HEADER_BYTES is the number of bytes in a PetscMalloc() header.
+/* HEADER_BYTES is the number of bytes in a PetscTrMallocDefault() header.
    It is sizeof(trSPACE) padded to be a multiple of PETSC_MEMALIGN.
 */
-#define HEADER_BYTES  ((sizeof(TRSPACE)+(PETSC_MEMALIGN-1)) & ~(PETSC_MEMALIGN-1))
+#define HEADER_BYTES ((sizeof(TRSPACE) + (PETSC_MEMALIGN - 1)) & ~(PETSC_MEMALIGN - 1))
 
 /* This union is used to insure that the block passed to the user retains
    a minimum alignment of PETSC_MEMALIGN.
 */
-typedef union {
+typedef union
+{
   TRSPACE sp;
   char    v[HEADER_BYTES];
 } TrSPACE;
 
 #define MAXTRMAXMEMS 50
-static size_t    TRallocated          = 0;
-static int       TRfrags              = 0;
-static TRSPACE   *TRhead              = NULL;
-static int       TRid                 = 0;
-static PetscBool TRdebugLevel         = PETSC_FALSE;
-static PetscBool TRdebugIinitializenan= PETSC_FALSE;
-static size_t    TRMaxMem             = 0;
-static int       NumTRMaxMems         = 0;
+static size_t    TRallocated           = 0;
+static int       TRfrags               = 0;
+static TRSPACE  *TRhead                = NULL;
+static int       TRid                  = 0;
+static PetscBool TRdebug               = PETSC_FALSE;
+static PetscBool TRdebugIinitializenan = PETSC_FALSE;
+static PetscBool TRrequestedSize       = PETSC_FALSE;
+static size_t    TRMaxMem              = 0;
+static int       NumTRMaxMems          = 0;
 static size_t    TRMaxMems[MAXTRMAXMEMS];
 static int       TRMaxMemsEvents[MAXTRMAXMEMS];
 /*
       Arrays to log information on mallocs for PetscMallocView()
 */
-static int        PetscLogMallocMax       = 10000;
-static int        PetscLogMalloc          = -1;
-static size_t     PetscLogMallocThreshold = 0;
-static size_t     *PetscLogMallocLength;
-static const char **PetscLogMallocFile,**PetscLogMallocFunction;
+static int          PetscLogMallocMax       = 10000;
+static int          PetscLogMalloc          = -1;
+static size_t       PetscLogMallocThreshold = 0;
+static size_t      *PetscLogMallocLength;
+static const char **PetscLogMallocFile, **PetscLogMallocFunction;
+static int          PetscLogMallocTrace          = -1;
+static size_t       PetscLogMallocTraceThreshold = 0;
+static PetscViewer  PetscLogMallocTraceViewer    = NULL;
 
 /*@C
-   PetscMallocValidate - Test the memory for corruption.  This can be called at any time between PetscInitialize() and PetscFinalize()
+  PetscMallocValidate - Test the memory for corruption.  This can be called at any time between `PetscInitialize()` and `PetscFinalize()`
 
-   Input Parameters:
-+  line - line number where call originated.
-.  function - name of function calling
--  file - file where function is
+  Input Parameters:
++ line     - line number where call originated.
+. function - name of function calling
+- file     - file where function is
 
-   Return value:
-   The number of errors detected.
+  Options Database Keys:
++ -malloc_test  - turns this feature on when PETSc was not configured with `--with-debugging=0`
+- -malloc_debug - turns this feature on anytime
 
-   Options Database:.
-+  -malloc_test - turns this feature on when PETSc was not configured with --with-debugging=0
--  -malloc_debug - turns this feature on anytime
+  Level: advanced
 
-   Output Effect:
-   Error messages are written to stdout.
+  Notes:
+  You should generally use `CHKMEMQ` as a short cut for calling this routine.
 
-   Level: advanced
+  Error messages are written to `stdout`.
 
-   Notes:
-    This is only run if PetscMallocSetDebug() has been called which is set by -malloc_test (if debugging is turned on) or -malloc_debug (any time)
+  This is only run if `PetscMallocSetDebug()` has been called which is set by `-malloc_test` (if debugging is turned on) or `-malloc_debug` (any time)
 
-    You should generally use CHKMEMQ as a short cut for calling this  routine.
+  No output is generated if there are no problems detected.
 
-    The Fortran calling sequence is simply PetscMallocValidate(ierr)
+  Fortran Notes:
+  The Fortran calling sequence is simply `PetscMallocValidate(ierr)`
 
-   No output is generated if there are no problems detected.
-
-   Developers Note:
-     Uses the flg TRdebugLevel (set as the first argument to PetscMallocSetDebug()) to determine if it should run
-
-.seealso: CHKMEMQ
-
+.seealso: `CHKMEMQ`, `PetscMalloc()`, `PetscFree()`, `PetscMallocSetDebug()`
 @*/
-PetscErrorCode  PetscMallocValidate(int line,const char function[],const char file[])
+PetscErrorCode PetscMallocValidate(int line, const char function[], const char file[])
 {
-  TRSPACE      *head,*lasthead;
+  TRSPACE      *head, *lasthead;
   char         *a;
   PetscClassId *nend;
 
-  if (!TRdebugLevel) return 0;
-  PetscFunctionBegin;
-  head = TRhead; lasthead = NULL;
+  if (!TRdebug) return PETSC_SUCCESS;
+  head     = TRhead;
+  lasthead = NULL;
   if (head && head->prev) {
-    (*PetscErrorPrintf)("PetscMallocValidate: error detected at %s() line %d in %s\n",function,line,file);
-    (*PetscErrorPrintf)("Root memory header %p has invalid back pointer %p\n",head,head->prev);
+    TRdebug = PETSC_FALSE;
+    PetscCall((*PetscErrorPrintf)("PetscMallocValidate: error detected in %s() at %s:%d\n", function, file, line));
+    PetscCall((*PetscErrorPrintf)("Root memory header %p has invalid back pointer %p\n", (void *)head, (void *)head->prev));
+    return PETSC_ERR_MEMC;
   }
   while (head) {
     if (head->classid != CLASSID_VALUE) {
-      (*PetscErrorPrintf)("PetscMallocValidate: error detected at  %s() line %d in %s\n",function,line,file);
-      (*PetscErrorPrintf)("Memory at address %p is corrupted\n",head);
-      (*PetscErrorPrintf)("Probably write past beginning or end of array\n");
-      if (lasthead) (*PetscErrorPrintf)("Last intact block allocated in %s() line %d in %s\n",lasthead->functionname,lasthead->lineno,lasthead->filename);
-      SETERRQ(PETSC_COMM_SELF,PETSC_ERR_MEMC," ");
+      TRdebug = PETSC_FALSE;
+      PetscCall((*PetscErrorPrintf)("PetscMallocValidate: error detected in %s() at %s:%d\n", function, file, line));
+      PetscCall((*PetscErrorPrintf)("Memory at address %p is corrupted\n", (void *)head));
+      PetscCall((*PetscErrorPrintf)("Probably write before beginning of or past end of array\n"));
+      if (lasthead) {
+        a = (char *)(((TrSPACE *)head) + 1);
+        PetscCall((*PetscErrorPrintf)("Last intact block [id=%d(%.0f)] at address %p allocated in %s() at %s:%d\n", lasthead->id, (PetscLogDouble)lasthead->size, a, lasthead->functionname, lasthead->filename, lasthead->lineno));
+      }
+      abort();
+      return PETSC_ERR_MEMC;
     }
-    a    = (char*)(((TrSPACE*)head) + 1);
-    nend = (PetscClassId*)(a + head->size);
+    a    = (char *)(((TrSPACE *)head) + 1);
+    nend = (PetscClassId *)(a + head->size);
     if (*nend != CLASSID_VALUE) {
-      (*PetscErrorPrintf)("PetscMallocValidate: error detected at %s() line %d in %s\n",function,line,file);
+      TRdebug = PETSC_FALSE;
+      PetscCall((*PetscErrorPrintf)("PetscMallocValidate: error detected in %s() at %s:%d\n", function, file, line));
       if (*nend == ALREADY_FREED) {
-        (*PetscErrorPrintf)("Memory [id=%d(%.0f)] at address %p already freed\n",head->id,(PetscLogDouble)head->size,a);
-        SETERRQ(PETSC_COMM_SELF,PETSC_ERR_MEMC," ");
+        PetscCall((*PetscErrorPrintf)("Memory [id=%d(%.0f)] at address %p already freed\n", head->id, (PetscLogDouble)head->size, a));
+        return PETSC_ERR_MEMC;
       } else {
-        (*PetscErrorPrintf)("Memory [id=%d(%.0f)] at address %p is corrupted (probably write past end of array)\n",head->id,(PetscLogDouble)head->size,a);
-        (*PetscErrorPrintf)("Memory originally allocated in %s() line %d in %s\n",head->functionname,head->lineno,head->filename);
-        SETERRQ(PETSC_COMM_SELF,PETSC_ERR_MEMC," ");
+        PetscCall((*PetscErrorPrintf)("Memory [id=%d(%.0f)] at address %p is corrupted (probably write past end of array)\n", head->id, (PetscLogDouble)head->size, a));
+        PetscCall((*PetscErrorPrintf)("Memory originally allocated in %s() at %s:%d\n", head->functionname, head->filename, head->lineno));
+        return PETSC_ERR_MEMC;
       }
     }
     if (head->prev && head->prev != lasthead) {
-      (*PetscErrorPrintf)("PetscMallocValidate: error detected at %s() line %d in %s\n",function,line,file);
-      (*PetscErrorPrintf)("Backpointer %p is invalid, should be %p\n",head->prev,lasthead);
-      SETERRQ(PETSC_COMM_SELF,PETSC_ERR_MEMC," ");
-    }
-    if (head->next && head != head->next->prev) {
-      (*PetscErrorPrintf)("PetscMallocValidate: error detected at %s() line %d in %s\n",function,line,file);
-      (*PetscErrorPrintf)("Next memory header %p has invalid back pointer %p, should be %p\n",head->next,head->next->prev,head);
-      SETERRQ(PETSC_COMM_SELF,PETSC_ERR_MEMC," ");
+      TRdebug = PETSC_FALSE;
+      PetscCall((*PetscErrorPrintf)("PetscMallocValidate: error detected in %s() at %s:%d\n", function, file, line));
+      PetscCall((*PetscErrorPrintf)("Backpointer %p is invalid, should be %p\n", (void *)head->prev, (void *)lasthead));
+      PetscCall((*PetscErrorPrintf)("Previous memory originally allocated in %s() at %s:%d\n", lasthead->functionname, lasthead->filename, lasthead->lineno));
+      PetscCall((*PetscErrorPrintf)("Memory originally allocated in %s() at %s:%d\n", head->functionname, head->filename, head->lineno));
+      return PETSC_ERR_MEMC;
     }
     lasthead = head;
     head     = head->next;
   }
-  PetscFunctionReturn(0);
+  return PETSC_SUCCESS;
 }
 
 /*
-    PetscTrMallocDefault - Malloc with tracing.
+    PetscTrMallocDefault - Malloc with logging and error checking
 
-    Input Parameters:
-+   a   - number of bytes to allocate
-.   lineno - line number where used.  Use __LINE__ for this
--   filename  - file name where used.  Use __FILE__ for this
-
-    Returns:
-    double aligned pointer to requested storage, or null if not  available.
- */
-PetscErrorCode  PetscTrMallocDefault(size_t a,PetscBool clear,int lineno,const char function[],const char filename[],void **result)
+*/
+static PetscErrorCode PetscTrMallocDefault(size_t a, PetscBool clear, int lineno, const char function[], const char filename[], void **result)
 {
-  TRSPACE        *head;
-  char           *inew;
-  size_t         nsize;
-  PetscErrorCode ierr;
+  TRSPACE *head;
+  char    *inew;
+  size_t   nsize;
 
   PetscFunctionBegin;
-  /* Do not try to handle empty blocks */
-  if (!a) { *result = NULL; PetscFunctionReturn(0); }
+  if (!a) {
+    *result = NULL;
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
 
-  ierr = PetscMallocValidate(lineno,function,filename); if (ierr) PetscFunctionReturn(ierr);
+  PetscCall(PetscMallocValidate(lineno, function, filename));
 
-  nsize = (a + (PETSC_MEMALIGN-1)) & ~(PETSC_MEMALIGN-1);
-  ierr  = PetscMallocAlign(nsize+sizeof(TrSPACE)+sizeof(PetscClassId),clear,lineno,function,filename,(void**)&inew);CHKERRQ(ierr);
+  nsize = (a + (PETSC_MEMALIGN - 1)) & ~(PETSC_MEMALIGN - 1);
+  PetscCall(PetscMallocAlign(nsize + sizeof(TrSPACE) + sizeof(PetscClassId), clear, lineno, function, filename, (void **)&inew));
 
-  head  = (TRSPACE*)inew;
+  head = (TRSPACE *)inew;
   inew += sizeof(TrSPACE);
 
   if (TRhead) TRhead->prev = head;
@@ -185,47 +182,42 @@ PetscErrorCode  PetscTrMallocDefault(size_t a,PetscBool clear,int lineno,const c
   TRhead       = head;
   head->prev   = NULL;
   head->size   = nsize;
-  head->id     = TRid;
+  head->rsize  = a;
+  head->id     = TRid++;
   head->lineno = lineno;
 
-  head->filename                 = filename;
-  head->functionname             = function;
-  head->classid                  = CLASSID_VALUE;
-  *(PetscClassId*)(inew + nsize) = CLASSID_VALUE;
+  head->filename                  = filename;
+  head->functionname              = function;
+  head->classid                   = CLASSID_VALUE;
+  *(PetscClassId *)(inew + nsize) = CLASSID_VALUE;
 
-  TRallocated += nsize;
+  TRallocated += TRrequestedSize ? head->rsize : head->size;
   if (TRallocated > TRMaxMem) TRMaxMem = TRallocated;
   if (PetscLogMemory) {
-    PetscInt i;
-    for (i=0; i<NumTRMaxMems; i++) {
+    for (PetscInt i = 0; i < NumTRMaxMems; i++) {
       if (TRallocated > TRMaxMems[i]) TRMaxMems[i] = TRallocated;
     }
   }
   TRfrags++;
 
-#if defined(PETSC_USE_DEBUG)
-  if (PetscStackActive()) {
-    ierr = PetscStackCopy(petscstack,&head->stack);CHKERRQ(ierr);
-    /* fix the line number to where the malloc() was called, not the PetscFunctionBegin; */
-    head->stack.line[head->stack.currentsize-2] = lineno;
-  } else {
-    head->stack.currentsize = 0;
-  }
-#if defined(PETSC_USE_REAL_SINGLE) || defined(PETSC_USE_REAL_DOUBLE)
+#if defined(PETSC_USE_DEBUG) && !defined(PETSC_HAVE_THREADSAFETY)
+  PetscCall(PetscStackCopy(&petscstack, &head->stack));
+  /* fix the line number to where PetscTrMallocDefault() was called, not the PetscFunctionBegin; */
+  head->stack.line[PetscMax(head->stack.currentsize - 2, 0)] = lineno;
+  head->stack.currentsize--;
+  #if defined(PETSC_USE_REAL_SINGLE) || defined(PETSC_USE_REAL_DOUBLE)
   if (!clear && TRdebugIinitializenan) {
-    size_t     i, n = a/sizeof(PetscReal);
-    PetscReal *s = (PetscReal*) inew;
-    /* from https://www.doc.ic.ac.uk/~eedwards/compsys/float/nan.html */
-#if defined(PETSC_USE_REAL_SINGLE)
-    int        nas = 0x7F800002;
-#else
+    size_t     n = a / sizeof(PetscReal);
+    PetscReal *s = (PetscReal *)inew;
+      /* from https://www.doc.ic.ac.uk/~eedwards/compsys/float/nan.html */
+    #if defined(PETSC_USE_REAL_SINGLE)
+    int nas = 0x7F800002;
+    #else
     PetscInt64 nas = 0x7FF0000000000002;
-#endif
-    for (i=0; i<n; i++) {
-      memcpy(s+i,&nas,sizeof(PetscReal));
-    }
+    #endif
+    for (size_t i = 0; i < n; i++) memcpy(s + i, &nas, sizeof(PetscReal));
   }
-#endif
+  #endif
 #endif
 
   /*
@@ -234,175 +226,165 @@ PetscErrorCode  PetscTrMallocDefault(size_t a,PetscBool clear,int lineno,const c
   */
   if (PetscLogMalloc > -1 && PetscLogMalloc < PetscLogMallocMax && a >= PetscLogMallocThreshold) {
     if (!PetscLogMalloc) {
-      PetscLogMallocLength = (size_t*)malloc(PetscLogMallocMax*sizeof(size_t));
-      if (!PetscLogMallocLength) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_MEM," ");
+      PetscLogMallocLength = (size_t *)malloc(PetscLogMallocMax * sizeof(size_t));
+      PetscCheck(PetscLogMallocLength, PETSC_COMM_SELF, PETSC_ERR_MEM, " ");
 
-      PetscLogMallocFile = (const char**)malloc(PetscLogMallocMax*sizeof(char*));
-      if (!PetscLogMallocFile) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_MEM," ");
+      PetscLogMallocFile = (const char **)malloc(PetscLogMallocMax * sizeof(char *));
+      PetscCheck(PetscLogMallocFile, PETSC_COMM_SELF, PETSC_ERR_MEM, " ");
 
-      PetscLogMallocFunction = (const char**)malloc(PetscLogMallocMax*sizeof(char*));
-      if (!PetscLogMallocFunction) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_MEM," ");
+      PetscLogMallocFunction = (const char **)malloc(PetscLogMallocMax * sizeof(char *));
+      PetscCheck(PetscLogMallocFunction, PETSC_COMM_SELF, PETSC_ERR_MEM, " ");
     }
     PetscLogMallocLength[PetscLogMalloc]     = nsize;
     PetscLogMallocFile[PetscLogMalloc]       = filename;
     PetscLogMallocFunction[PetscLogMalloc++] = function;
   }
-  *result = (void*)inew;
-  PetscFunctionReturn(0);
+  if (PetscLogMallocTrace > -1 && a >= PetscLogMallocTraceThreshold) PetscCall(PetscViewerASCIIPrintf(PetscLogMallocTraceViewer, "Alloc %zu %s:%d (%s)\n", a, filename ? filename : "null", lineno, function ? function : "null"));
+  *result = (void *)inew;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*
-   PetscTrFreeDefault - Free with tracing.
+   PetscTrFreeDefault - Free with logging and error checking
 
-   Input Parameters:
-.   a    - pointer to a block allocated with PetscTrMalloc
-.   lineno - line number where used.  Use __LINE__ for this
-.   file  - file name where used.  Use __FILE__ for this
- */
-PetscErrorCode  PetscTrFreeDefault(void *aa,int line,const char function[],const char file[])
+*/
+static PetscErrorCode PetscTrFreeDefault(void *aa, int lineno, const char function[], const char filename[])
 {
-  char           *a = (char*)aa;
-  TRSPACE        *head;
-  char           *ahead;
-  PetscErrorCode ierr;
-  PetscClassId   *nend;
+  char         *a = (char *)aa;
+  TRSPACE      *head;
+  char         *ahead;
+  size_t        asize;
+  PetscClassId *nend;
 
   PetscFunctionBegin;
-  /* Do not try to handle empty blocks */
-  if (!a) PetscFunctionReturn(0);
+  if (!a) PetscFunctionReturn(PETSC_SUCCESS);
 
-  ierr = PetscMallocValidate(line,function,file);CHKERRQ(ierr);
+  PetscCall(PetscMallocValidate(lineno, function, filename));
 
   ahead = a;
   a     = a - sizeof(TrSPACE);
-  head  = (TRSPACE*)a;
+  head  = (TRSPACE *)a;
 
   if (head->classid != CLASSID_VALUE) {
-    (*PetscErrorPrintf)("PetscTrFreeDefault() called from %s() line %d in %s\n",function,line,file);
-    (*PetscErrorPrintf)("Block at address %p is corrupted; cannot free;\nmay be block not allocated with PetscMalloc()\n",a);
-    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_MEMC,"Bad location or corrupted memory");
+    TRdebug = PETSC_FALSE;
+    PetscCall((*PetscErrorPrintf)("PetscTrFreeDefault() called from %s() at %s:%d\n", function, filename, lineno));
+    PetscCall((*PetscErrorPrintf)("Block at address %p is corrupted; cannot free;\nmay be block not allocated with PetscMalloc()\n", a));
+    SETERRQ(PETSC_COMM_SELF, PETSC_ERR_MEMC, "Bad location or corrupted memory");
   }
-  nend = (PetscClassId*)(ahead + head->size);
+  nend = (PetscClassId *)(ahead + head->size);
   if (*nend != CLASSID_VALUE) {
+    TRdebug = PETSC_FALSE;
     if (*nend == ALREADY_FREED) {
-      (*PetscErrorPrintf)("PetscTrFreeDefault() called from %s() line %d in %s\n",function,line,file);
-      (*PetscErrorPrintf)("Block [id=%d(%.0f)] at address %p was already freed\n",head->id,(PetscLogDouble)head->size,a + sizeof(TrSPACE));
+      PetscCall((*PetscErrorPrintf)("PetscTrFreeDefault() called from %s() at %s:%d\n", function, filename, lineno));
+      PetscCall((*PetscErrorPrintf)("Block [id=%d(%.0f)] at address %p was already freed\n", head->id, (PetscLogDouble)head->size, a + sizeof(TrSPACE)));
       if (head->lineno > 0 && head->lineno < 50000 /* sanity check */) {
-        (*PetscErrorPrintf)("Block freed in %s() line %d in %s\n",head->functionname,head->lineno,head->filename);
+        PetscCall((*PetscErrorPrintf)("Block freed in %s() at %s:%d\n", head->functionname, head->filename, head->lineno));
       } else {
-        (*PetscErrorPrintf)("Block allocated in %s() line %d in %s\n",head->functionname,-head->lineno,head->filename);
+        PetscCall((*PetscErrorPrintf)("Block allocated in %s() at %s:%d\n", head->functionname, head->filename, -head->lineno));
       }
-      SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Memory already freed");
+      SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Memory already freed");
     } else {
       /* Damaged tail */
-      (*PetscErrorPrintf)("PetscTrFreeDefault() called from %s() line %d in %s\n",function,line,file);
-      (*PetscErrorPrintf)("Block [id=%d(%.0f)] at address %p is corrupted (probably write past end of array)\n",head->id,(PetscLogDouble)head->size,a);
-      (*PetscErrorPrintf)("Block allocated in %s() line %d in %s\n",head->functionname,head->lineno,head->filename);
-      SETERRQ(PETSC_COMM_SELF,PETSC_ERR_MEMC,"Corrupted memory");
+      PetscCall((*PetscErrorPrintf)("PetscTrFreeDefault() called from %s() at %s:%d\n", function, filename, lineno));
+      PetscCall((*PetscErrorPrintf)("Block [id=%d(%.0f)] at address %p is corrupted (probably write past end of array)\n", head->id, (PetscLogDouble)head->size, a));
+      PetscCall((*PetscErrorPrintf)("Block allocated in %s() at %s:%d\n", head->functionname, head->filename, head->lineno));
+      SETERRQ(PETSC_COMM_SELF, PETSC_ERR_MEMC, "Corrupted memory");
     }
   }
-  /* Mark the location freed */
+  if (PetscLogMallocTrace > -1 && head->rsize >= PetscLogMallocTraceThreshold) {
+    PetscCall(PetscViewerASCIIPrintf(PetscLogMallocTraceViewer, "Free  %zu %s:%d (%s)\n", head->rsize, filename ? filename : "null", lineno, function ? function : "null"));
+  }
   *nend = ALREADY_FREED;
-  /* Save location where freed.  If we suspect the line number, mark as  allocated location */
-  if (line > 0 && line < 50000) {
-    head->lineno       = line;
-    head->filename     = file;
+  /* Save location where freed.  If we suspect the line number, mark as allocated location */
+  if (lineno > 0 && lineno < 50000) {
+    head->lineno       = lineno;
+    head->filename     = filename;
     head->functionname = function;
   } else {
     head->lineno = -head->lineno;
   }
-  if (TRallocated < head->size) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_MEMC,"TRallocate is smaller than memory just freed");
-  TRallocated -= head->size;
+  asize = TRrequestedSize ? head->rsize : head->size;
+  PetscCheck(TRallocated >= asize, PETSC_COMM_SELF, PETSC_ERR_MEMC, "TRallocate is smaller than memory just freed");
+  TRallocated -= asize;
   TRfrags--;
   if (head->prev) head->prev->next = head->next;
   else TRhead = head->next;
 
   if (head->next) head->next->prev = head->prev;
-  ierr = PetscFreeAlign(a,line,function,file);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscFreeAlign(a, lineno, function, filename));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*
-  PetscTrReallocDefault - Realloc with tracing.
+  PetscTrReallocDefault - Realloc with logging and error checking
 
-  Input Parameters:
-+ len      - number of bytes to allocate
-. lineno   - line number where used.  Use __LINE__ for this
-. filename - file name where used.  Use __FILE__ for this
-- result - original memory
-
-  Output Parameter:
-. result - double aligned pointer to requested storage, or null if not available.
-
-  Level: developer
-
-.seealso: PetscTrMallocDefault(), PetscTrFreeDefault()
 */
-PetscErrorCode PetscTrReallocDefault(size_t len, int lineno, const char function[], const char filename[], void **result)
+static PetscErrorCode PetscTrReallocDefault(size_t len, int lineno, const char function[], const char filename[], void **result)
 {
-  char           *a = (char *) *result;
-  TRSPACE        *head;
-  char           *ahead, *inew;
-  PetscClassId   *nend;
-  size_t         nsize;
-  PetscErrorCode ierr;
+  char         *a = (char *)*result;
+  TRSPACE      *head;
+  char         *ahead, *inew;
+  PetscClassId *nend;
+  size_t        nsize;
 
   PetscFunctionBegin;
   /* Realloc requests zero space so just free the current space */
   if (!len) {
-    ierr = PetscTrFreeDefault(*result,lineno,function,filename);CHKERRQ(ierr);
+    PetscCall(PetscTrFreeDefault(*result, lineno, function, filename));
     *result = NULL;
-    PetscFunctionReturn(0);
+    PetscFunctionReturn(PETSC_SUCCESS);
   }
-  /* If the orginal space was NULL just use the regular malloc() */
+  /* If the original space was NULL just use the regular malloc() */
   if (!*result) {
-    ierr = PetscTrMallocDefault(len,PETSC_FALSE,lineno,function,filename,result);CHKERRQ(ierr);
-    PetscFunctionReturn(0);
+    PetscCall(PetscTrMallocDefault(len, PETSC_FALSE, lineno, function, filename, result));
+    PetscFunctionReturn(PETSC_SUCCESS);
   }
 
-  ierr = PetscMallocValidate(lineno,function,filename); if (ierr) PetscFunctionReturn(ierr);
+  PetscCall(PetscMallocValidate(lineno, function, filename));
 
   ahead = a;
   a     = a - sizeof(TrSPACE);
-  head  = (TRSPACE *) a;
+  head  = (TRSPACE *)a;
   inew  = a;
 
   if (head->classid != CLASSID_VALUE) {
-    (*PetscErrorPrintf)("PetscTrReallocDefault() called from %s() line %d in %s\n",function,lineno,filename);
-    (*PetscErrorPrintf)("Block at address %p is corrupted; cannot free;\nmay be block not allocated with PetscMalloc()\n",a);
-    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_MEMC,"Bad location or corrupted memory");
+    TRdebug = PETSC_FALSE;
+    PetscCall((*PetscErrorPrintf)("PetscTrReallocDefault() called from %s() at %s:%d\n", function, filename, lineno));
+    PetscCall((*PetscErrorPrintf)("Block at address %p is corrupted; cannot free;\nmay be block not allocated with PetscMalloc()\n", a));
+    SETERRQ(PETSC_COMM_SELF, PETSC_ERR_MEMC, "Bad location or corrupted memory");
   }
   nend = (PetscClassId *)(ahead + head->size);
   if (*nend != CLASSID_VALUE) {
+    TRdebug = PETSC_FALSE;
     if (*nend == ALREADY_FREED) {
-      (*PetscErrorPrintf)("PetscTrReallocDefault() called from %s() line %d in %s\n",function,lineno,filename);
-      (*PetscErrorPrintf)("Block [id=%d(%.0f)] at address %p was already freed\n",head->id,(PetscLogDouble)head->size,a + sizeof(TrSPACE));
+      PetscCall((*PetscErrorPrintf)("PetscTrReallocDefault() called from %s() at %s:%d\n", function, filename, lineno));
+      PetscCall((*PetscErrorPrintf)("Block [id=%d(%.0f)] at address %p was already freed\n", head->id, (PetscLogDouble)head->size, a + sizeof(TrSPACE)));
       if (head->lineno > 0 && head->lineno < 50000 /* sanity check */) {
-        (*PetscErrorPrintf)("Block freed in %s() line %d in %s\n",head->functionname,head->lineno,head->filename);
+        PetscCall((*PetscErrorPrintf)("Block freed in %s() at %s:%d\n", head->functionname, head->filename, head->lineno));
       } else {
-        (*PetscErrorPrintf)("Block allocated in %s() line %d in %s\n",head->functionname,-head->lineno,head->filename);
+        PetscCall((*PetscErrorPrintf)("Block allocated in %s() at %s:%d\n", head->functionname, head->filename, -head->lineno));
       }
-      SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Memory already freed");
+      SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Memory already freed");
     } else {
       /* Damaged tail */
-      (*PetscErrorPrintf)("PetscTrReallocDefault() called from %s() line %d in %s\n",function,lineno,filename);
-      (*PetscErrorPrintf)("Block [id=%d(%.0f)] at address %p is corrupted (probably write past end of array)\n",head->id,(PetscLogDouble)head->size,a);
-      (*PetscErrorPrintf)("Block allocated in %s() line %d in %s\n",head->functionname,head->lineno,head->filename);
-      SETERRQ(PETSC_COMM_SELF,PETSC_ERR_MEMC,"Corrupted memory");
+      PetscCall((*PetscErrorPrintf)("PetscTrReallocDefault() called from %s() at %s:%d\n", function, filename, lineno));
+      PetscCall((*PetscErrorPrintf)("Block [id=%d(%.0f)] at address %p is corrupted (probably write past end of array)\n", head->id, (PetscLogDouble)head->size, a));
+      PetscCall((*PetscErrorPrintf)("Block allocated in %s() at %s:%d\n", head->functionname, head->filename, head->lineno));
+      SETERRQ(PETSC_COMM_SELF, PETSC_ERR_MEMC, "Corrupted memory");
     }
   }
 
   /* remove original reference to the memory allocated from the PETSc debugging heap */
-  TRallocated -= head->size;
+  TRallocated -= TRrequestedSize ? head->rsize : head->size;
   TRfrags--;
   if (head->prev) head->prev->next = head->next;
   else TRhead = head->next;
   if (head->next) head->next->prev = head->prev;
 
-  nsize = (len + (PETSC_MEMALIGN-1)) & ~(PETSC_MEMALIGN-1);
-  ierr  = PetscReallocAlign(nsize+sizeof(TrSPACE)+sizeof(PetscClassId),lineno,function,filename,(void**)&inew);CHKERRQ(ierr);
+  nsize = (len + (PETSC_MEMALIGN - 1)) & ~(PETSC_MEMALIGN - 1);
+  PetscCall(PetscReallocAlign(nsize + sizeof(TrSPACE) + sizeof(PetscClassId), lineno, function, filename, (void **)&inew));
 
-  head  = (TRSPACE*)inew;
+  head = (TRSPACE *)inew;
   inew += sizeof(TrSPACE);
 
   if (TRhead) TRhead->prev = head;
@@ -410,32 +392,28 @@ PetscErrorCode PetscTrReallocDefault(size_t len, int lineno, const char function
   TRhead       = head;
   head->prev   = NULL;
   head->size   = nsize;
-  head->id     = TRid;
+  head->rsize  = len;
+  head->id     = TRid++;
   head->lineno = lineno;
 
-  head->filename                 = filename;
-  head->functionname             = function;
-  head->classid                  = CLASSID_VALUE;
-  *(PetscClassId*)(inew + nsize) = CLASSID_VALUE;
+  head->filename                  = filename;
+  head->functionname              = function;
+  head->classid                   = CLASSID_VALUE;
+  *(PetscClassId *)(inew + nsize) = CLASSID_VALUE;
 
-  TRallocated += nsize;
+  TRallocated += TRrequestedSize ? head->rsize : head->size;
   if (TRallocated > TRMaxMem) TRMaxMem = TRallocated;
   if (PetscLogMemory) {
-    PetscInt i;
-    for (i=0; i<NumTRMaxMems; i++) {
+    for (PetscInt i = 0; i < NumTRMaxMems; i++) {
       if (TRallocated > TRMaxMems[i]) TRMaxMems[i] = TRallocated;
     }
   }
   TRfrags++;
 
-#if defined(PETSC_USE_DEBUG)
-  if (PetscStackActive()) {
-    ierr = PetscStackCopy(petscstack,&head->stack);CHKERRQ(ierr);
-    /* fix the line number to where the malloc() was called, not the PetscFunctionBegin; */
-    head->stack.line[head->stack.currentsize-2] = lineno;
-  } else {
-    head->stack.currentsize = 0;
-  }
+#if defined(PETSC_USE_DEBUG) && !defined(PETSC_HAVE_THREADSAFETY)
+  PetscCall(PetscStackCopy(&petscstack, &head->stack));
+  /* fix the line number to where the malloc() was called, not the PetscFunctionBegin; */
+  head->stack.line[PetscMax(head->stack.currentsize - 2, 0)] = lineno;
 #endif
 
   /*
@@ -444,499 +422,610 @@ PetscErrorCode PetscTrReallocDefault(size_t len, int lineno, const char function
   */
   if (PetscLogMalloc > -1 && PetscLogMalloc < PetscLogMallocMax && len >= PetscLogMallocThreshold) {
     if (!PetscLogMalloc) {
-      PetscLogMallocLength = (size_t*)malloc(PetscLogMallocMax*sizeof(size_t));
-      if (!PetscLogMallocLength) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_MEM," ");
+      PetscLogMallocLength = (size_t *)malloc(PetscLogMallocMax * sizeof(size_t));
+      PetscCheck(PetscLogMallocLength, PETSC_COMM_SELF, PETSC_ERR_MEM, " ");
 
-      PetscLogMallocFile = (const char**)malloc(PetscLogMallocMax*sizeof(char*));
-      if (!PetscLogMallocFile) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_MEM," ");
+      PetscLogMallocFile = (const char **)malloc(PetscLogMallocMax * sizeof(char *));
+      PetscCheck(PetscLogMallocFile, PETSC_COMM_SELF, PETSC_ERR_MEM, " ");
 
-      PetscLogMallocFunction = (const char**)malloc(PetscLogMallocMax*sizeof(char*));
-      if (!PetscLogMallocFunction) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_MEM," ");
+      PetscLogMallocFunction = (const char **)malloc(PetscLogMallocMax * sizeof(char *));
+      PetscCheck(PetscLogMallocFunction, PETSC_COMM_SELF, PETSC_ERR_MEM, " ");
     }
     PetscLogMallocLength[PetscLogMalloc]     = nsize;
     PetscLogMallocFile[PetscLogMalloc]       = filename;
     PetscLogMallocFunction[PetscLogMalloc++] = function;
   }
-  *result = (void*)inew;
-  PetscFunctionReturn(0);
+  *result = (void *)inew;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-    PetscMemoryView - Shows the amount of memory currently being used in a communicator.
+  PetscMemoryView - Shows the amount of memory currently being used in a communicator.
 
-    Collective on PetscViewer
+  Collective
 
-    Input Parameter:
-+    viewer - the viewer that defines the communicator
--    message - string printed before values
+  Input Parameters:
++ viewer  - the viewer to output the information on
+- message - string printed before values
 
-    Options Database:
-+    -malloc_debug - have PETSc track how much memory it has allocated
--    -memory_view - during PetscFinalize() have this routine called
+  Options Database Keys:
++ -malloc_debug    - have PETSc track how much memory it has allocated
+. -log_view_memory - print memory usage per event when `-log_view` is used
+- -memory_view     - during `PetscFinalize()` have this routine called
 
-    Level: intermediate
+  Level: intermediate
 
-.seealso: PetscMallocDump(), PetscMemoryGetCurrentUsage(), PetscMemorySetGetMaximumUsage(), PetscMallocView()
+.seealso: `PetscMallocDump()`, `PetscMemoryGetCurrentUsage()`, `PetscMemorySetGetMaximumUsage()`, `PetscMallocView()`, `PetscMalloc()`, `PetscFree()`
  @*/
-PetscErrorCode  PetscMemoryView(PetscViewer viewer,const char message[])
+PetscErrorCode PetscMemoryView(PetscViewer viewer, const char message[])
 {
-  PetscLogDouble allocated,allocatedmax,resident,residentmax,gallocated,gallocatedmax,gresident,gresidentmax,maxgallocated,maxgallocatedmax,maxgresident,maxgresidentmax;
-  PetscLogDouble mingallocated,mingallocatedmax,mingresident,mingresidentmax;
-  PetscErrorCode ierr;
+  PetscLogDouble allocated, allocatedmax, resident, residentmax, gallocated, gallocatedmax, gresident, gresidentmax, maxgallocated, maxgallocatedmax;
+  PetscLogDouble mingallocated, mingallocatedmax, mingresident, mingresidentmax, maxgresident, maxgresidentmax;
   MPI_Comm       comm;
 
   PetscFunctionBegin;
   if (!viewer) viewer = PETSC_VIEWER_STDOUT_WORLD;
-  ierr = PetscMallocGetCurrentUsage(&allocated);CHKERRQ(ierr);
-  ierr = PetscMallocGetMaximumUsage(&allocatedmax);CHKERRQ(ierr);
-  ierr = PetscMemoryGetCurrentUsage(&resident);CHKERRQ(ierr);
-  ierr = PetscMemoryGetMaximumUsage(&residentmax);CHKERRQ(ierr);
-  if (residentmax > 0) residentmax = PetscMax(resident,residentmax);
-  ierr = PetscObjectGetComm((PetscObject)viewer,&comm);CHKERRQ(ierr);
-  ierr = PetscViewerASCIIPrintf(viewer,message);CHKERRQ(ierr);
+  PetscCall(PetscMallocGetCurrentUsage(&allocated));
+  PetscCall(PetscMallocGetMaximumUsage(&allocatedmax));
+  PetscCall(PetscMemoryGetCurrentUsage(&resident));
+  PetscCall(PetscMemoryGetMaximumUsage(&residentmax));
+  if (residentmax > 0) residentmax = PetscMax(resident, residentmax);
+  PetscCall(PetscObjectGetComm((PetscObject)viewer, &comm));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "%s", message));
   if (resident && residentmax && allocated) {
-    ierr = MPI_Reduce(&residentmax,&gresidentmax,1,MPIU_PETSCLOGDOUBLE,MPI_SUM,0,comm);CHKERRQ(ierr);
-    ierr = MPI_Reduce(&residentmax,&maxgresidentmax,1,MPIU_PETSCLOGDOUBLE,MPI_MAX,0,comm);CHKERRQ(ierr);
-    ierr = MPI_Reduce(&residentmax,&mingresidentmax,1,MPIU_PETSCLOGDOUBLE,MPI_MIN,0,comm);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"Maximum (over computational time) process memory:        total %5.4e max %5.4e min %5.4e\n",gresidentmax,maxgresidentmax,mingresidentmax);CHKERRQ(ierr);
-    ierr = MPI_Reduce(&resident,&gresident,1,MPIU_PETSCLOGDOUBLE,MPI_SUM,0,comm);CHKERRQ(ierr);
-    ierr = MPI_Reduce(&resident,&maxgresident,1,MPIU_PETSCLOGDOUBLE,MPI_MAX,0,comm);CHKERRQ(ierr);
-    ierr = MPI_Reduce(&resident,&mingresident,1,MPIU_PETSCLOGDOUBLE,MPI_MIN,0,comm);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"Current process memory:                                  total %5.4e max %5.4e min %5.4e\n",gresident,maxgresident,mingresident);CHKERRQ(ierr);
-    ierr = MPI_Reduce(&allocatedmax,&gallocatedmax,1,MPIU_PETSCLOGDOUBLE,MPI_SUM,0,comm);CHKERRQ(ierr);
-    ierr = MPI_Reduce(&allocatedmax,&maxgallocatedmax,1,MPIU_PETSCLOGDOUBLE,MPI_MAX,0,comm);CHKERRQ(ierr);
-    ierr = MPI_Reduce(&allocatedmax,&mingallocatedmax,1,MPIU_PETSCLOGDOUBLE,MPI_MIN,0,comm);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"Maximum (over computational time) space PetscMalloc()ed: total %5.4e max %5.4e min %5.4e\n",gallocatedmax,maxgallocatedmax,mingallocatedmax);CHKERRQ(ierr);
-    ierr = MPI_Reduce(&allocated,&gallocated,1,MPIU_PETSCLOGDOUBLE,MPI_SUM,0,comm);CHKERRQ(ierr);
-    ierr = MPI_Reduce(&allocated,&maxgallocated,1,MPIU_PETSCLOGDOUBLE,MPI_MAX,0,comm);CHKERRQ(ierr);
-    ierr = MPI_Reduce(&allocated,&mingallocated,1,MPIU_PETSCLOGDOUBLE,MPI_MIN,0,comm);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"Current space PetscMalloc()ed:                           total %5.4e max %5.4e min %5.4e\n",gallocated,maxgallocated,mingallocated);CHKERRQ(ierr);
+    PetscCallMPI(MPI_Reduce(&residentmax, &gresidentmax, 1, MPIU_PETSCLOGDOUBLE, MPI_SUM, 0, comm));
+    PetscCallMPI(MPI_Reduce(&residentmax, &maxgresidentmax, 1, MPIU_PETSCLOGDOUBLE, MPI_MAX, 0, comm));
+    PetscCallMPI(MPI_Reduce(&residentmax, &mingresidentmax, 1, MPIU_PETSCLOGDOUBLE, MPI_MIN, 0, comm));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "Maximum (over computational time) process memory:        total %5.4e max %5.4e min %5.4e\n", gresidentmax, maxgresidentmax, mingresidentmax));
+    PetscCallMPI(MPI_Reduce(&resident, &gresident, 1, MPIU_PETSCLOGDOUBLE, MPI_SUM, 0, comm));
+    PetscCallMPI(MPI_Reduce(&resident, &maxgresident, 1, MPIU_PETSCLOGDOUBLE, MPI_MAX, 0, comm));
+    PetscCallMPI(MPI_Reduce(&resident, &mingresident, 1, MPIU_PETSCLOGDOUBLE, MPI_MIN, 0, comm));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "Current process memory:                                  total %5.4e max %5.4e min %5.4e\n", gresident, maxgresident, mingresident));
+    PetscCallMPI(MPI_Reduce(&allocatedmax, &gallocatedmax, 1, MPIU_PETSCLOGDOUBLE, MPI_SUM, 0, comm));
+    PetscCallMPI(MPI_Reduce(&allocatedmax, &maxgallocatedmax, 1, MPIU_PETSCLOGDOUBLE, MPI_MAX, 0, comm));
+    PetscCallMPI(MPI_Reduce(&allocatedmax, &mingallocatedmax, 1, MPIU_PETSCLOGDOUBLE, MPI_MIN, 0, comm));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "Maximum (over computational time) space PetscMalloc()ed: total %5.4e max %5.4e min %5.4e\n", gallocatedmax, maxgallocatedmax, mingallocatedmax));
+    PetscCallMPI(MPI_Reduce(&allocated, &gallocated, 1, MPIU_PETSCLOGDOUBLE, MPI_SUM, 0, comm));
+    PetscCallMPI(MPI_Reduce(&allocated, &maxgallocated, 1, MPIU_PETSCLOGDOUBLE, MPI_MAX, 0, comm));
+    PetscCallMPI(MPI_Reduce(&allocated, &mingallocated, 1, MPIU_PETSCLOGDOUBLE, MPI_MIN, 0, comm));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "Current space PetscMalloc()ed:                           total %5.4e max %5.4e min %5.4e\n", gallocated, maxgallocated, mingallocated));
   } else if (resident && residentmax) {
-    ierr = MPI_Reduce(&residentmax,&gresidentmax,1,MPIU_PETSCLOGDOUBLE,MPI_SUM,0,comm);CHKERRQ(ierr);
-    ierr = MPI_Reduce(&residentmax,&maxgresidentmax,1,MPIU_PETSCLOGDOUBLE,MPI_MAX,0,comm);CHKERRQ(ierr);
-    ierr = MPI_Reduce(&residentmax,&mingresidentmax,1,MPIU_PETSCLOGDOUBLE,MPI_MIN,0,comm);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"Maximum (over computational time) process memory:        total %5.4e max %5.4e min %5.4e\n",gresidentmax,maxgresidentmax,mingresidentmax);CHKERRQ(ierr);
-    ierr = MPI_Reduce(&resident,&gresident,1,MPIU_PETSCLOGDOUBLE,MPI_SUM,0,comm);CHKERRQ(ierr);
-    ierr = MPI_Reduce(&resident,&maxgresident,1,MPIU_PETSCLOGDOUBLE,MPI_MAX,0,comm);CHKERRQ(ierr);
-    ierr = MPI_Reduce(&resident,&mingresident,1,MPIU_PETSCLOGDOUBLE,MPI_MIN,0,comm);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"Current process memory:                                  total %5.4e max %5.4e min %5.4e\n",gresident,maxgresident,mingresident);CHKERRQ(ierr);
+    PetscCallMPI(MPI_Reduce(&residentmax, &gresidentmax, 1, MPIU_PETSCLOGDOUBLE, MPI_SUM, 0, comm));
+    PetscCallMPI(MPI_Reduce(&residentmax, &maxgresidentmax, 1, MPIU_PETSCLOGDOUBLE, MPI_MAX, 0, comm));
+    PetscCallMPI(MPI_Reduce(&residentmax, &mingresidentmax, 1, MPIU_PETSCLOGDOUBLE, MPI_MIN, 0, comm));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "Maximum (over computational time) process memory:        total %5.4e max %5.4e min %5.4e\n", gresidentmax, maxgresidentmax, mingresidentmax));
+    PetscCallMPI(MPI_Reduce(&resident, &gresident, 1, MPIU_PETSCLOGDOUBLE, MPI_SUM, 0, comm));
+    PetscCallMPI(MPI_Reduce(&resident, &maxgresident, 1, MPIU_PETSCLOGDOUBLE, MPI_MAX, 0, comm));
+    PetscCallMPI(MPI_Reduce(&resident, &mingresident, 1, MPIU_PETSCLOGDOUBLE, MPI_MIN, 0, comm));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "Current process memory:                                  total %5.4e max %5.4e min %5.4e\n", gresident, maxgresident, mingresident));
   } else if (resident && allocated) {
-    ierr = MPI_Reduce(&resident,&gresident,1,MPIU_PETSCLOGDOUBLE,MPI_SUM,0,comm);CHKERRQ(ierr);
-    ierr = MPI_Reduce(&resident,&maxgresident,1,MPIU_PETSCLOGDOUBLE,MPI_MAX,0,comm);CHKERRQ(ierr);
-    ierr = MPI_Reduce(&resident,&mingresident,1,MPIU_PETSCLOGDOUBLE,MPI_MIN,0,comm);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"Current process memory:                                  total %5.4e max %5.4e min %5.4e\n",gresident,maxgresident,mingresident);CHKERRQ(ierr);
-    ierr = MPI_Reduce(&allocated,&gallocated,1,MPIU_PETSCLOGDOUBLE,MPI_SUM,0,comm);CHKERRQ(ierr);
-    ierr = MPI_Reduce(&allocated,&maxgallocated,1,MPIU_PETSCLOGDOUBLE,MPI_MAX,0,comm);CHKERRQ(ierr);
-    ierr = MPI_Reduce(&allocated,&mingallocated,1,MPIU_PETSCLOGDOUBLE,MPI_MIN,0,comm);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"Current space PetscMalloc()ed:                           total %5.4e max %5.4e min %5.4e\n",gallocated,maxgallocated,mingallocated);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"Run with -memory_view to get maximum memory usage\n");CHKERRQ(ierr);
+    PetscCallMPI(MPI_Reduce(&resident, &gresident, 1, MPIU_PETSCLOGDOUBLE, MPI_SUM, 0, comm));
+    PetscCallMPI(MPI_Reduce(&resident, &maxgresident, 1, MPIU_PETSCLOGDOUBLE, MPI_MAX, 0, comm));
+    PetscCallMPI(MPI_Reduce(&resident, &mingresident, 1, MPIU_PETSCLOGDOUBLE, MPI_MIN, 0, comm));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "Current process memory:                                  total %5.4e max %5.4e min %5.4e\n", gresident, maxgresident, mingresident));
+    PetscCallMPI(MPI_Reduce(&allocated, &gallocated, 1, MPIU_PETSCLOGDOUBLE, MPI_SUM, 0, comm));
+    PetscCallMPI(MPI_Reduce(&allocated, &maxgallocated, 1, MPIU_PETSCLOGDOUBLE, MPI_MAX, 0, comm));
+    PetscCallMPI(MPI_Reduce(&allocated, &mingallocated, 1, MPIU_PETSCLOGDOUBLE, MPI_MIN, 0, comm));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "Current space PetscMalloc()ed:                           total %5.4e max %5.4e min %5.4e\n", gallocated, maxgallocated, mingallocated));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "Run with -memory_view to get maximum memory usage\n"));
   } else if (allocated) {
-    ierr = MPI_Reduce(&allocated,&gallocated,1,MPIU_PETSCLOGDOUBLE,MPI_SUM,0,comm);CHKERRQ(ierr);
-    ierr = MPI_Reduce(&allocated,&maxgallocated,1,MPIU_PETSCLOGDOUBLE,MPI_MAX,0,comm);CHKERRQ(ierr);
-    ierr = MPI_Reduce(&allocated,&mingallocated,1,MPIU_PETSCLOGDOUBLE,MPI_MIN,0,comm);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"Current space PetscMalloc()ed:                           total %5.4e max %5.4e min %5.4e\n",gallocated,maxgallocated,mingallocated);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"Run with -memory_view to get maximum memory usage\n");CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"OS cannot compute process memory\n");CHKERRQ(ierr);
+    PetscCallMPI(MPI_Reduce(&allocated, &gallocated, 1, MPIU_PETSCLOGDOUBLE, MPI_SUM, 0, comm));
+    PetscCallMPI(MPI_Reduce(&allocated, &maxgallocated, 1, MPIU_PETSCLOGDOUBLE, MPI_MAX, 0, comm));
+    PetscCallMPI(MPI_Reduce(&allocated, &mingallocated, 1, MPIU_PETSCLOGDOUBLE, MPI_MIN, 0, comm));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "Current space PetscMalloc()ed:                           total %5.4e max %5.4e min %5.4e\n", gallocated, maxgallocated, mingallocated));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "Run with -memory_view to get maximum memory usage\n"));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "OS cannot compute process memory\n"));
   } else {
-    ierr = PetscViewerASCIIPrintf(viewer,"Run with -malloc_debug to get statistics on PetscMalloc() calls\nOS cannot compute process memory\n");CHKERRQ(ierr);
+    PetscCall(PetscViewerASCIIPrintf(viewer, "Run with -malloc_debug to get statistics on PetscMalloc() calls\nOS cannot compute process memory\n"));
   }
-  ierr = PetscViewerFlush(viewer);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscViewerFlush(viewer));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-    PetscMallocGetCurrentUsage - gets the current amount of memory used that was PetscMalloc()ed
+  PetscMallocGetCurrentUsage - gets the current amount of memory used that was allocated with `PetscMalloc()`
 
-    Not Collective
+  Not Collective
 
-    Output Parameters:
-.   space - number of bytes currently allocated
+  Output Parameter:
+. space - number of bytes currently allocated
 
-    Level: intermediate
+  Level: intermediate
 
-.seealso: PetscMallocDump(), PetscMallocGetMaximumUsage(), PetscMemoryGetCurrentUsage(),
-          PetscMemoryGetMaximumUsage()
+  Note:
+  This only works if `-memory_view` or `-log_view_memory` have been used
+
+.seealso: `PetscMallocDump()`, `PetscMallocGetMaximumUsage()`, `PetscMemoryGetCurrentUsage()`, `PetscMalloc()`, `PetscFree()`,
+          `PetscMemoryGetMaximumUsage()`
  @*/
-PetscErrorCode  PetscMallocGetCurrentUsage(PetscLogDouble *space)
+PetscErrorCode PetscMallocGetCurrentUsage(PetscLogDouble *space)
 {
   PetscFunctionBegin;
-  *space = (PetscLogDouble) TRallocated;
-  PetscFunctionReturn(0);
+  *space = (PetscLogDouble)TRallocated;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-    PetscMallocGetMaximumUsage - gets the maximum amount of memory used that was PetscMalloc()ed at any time
-        during this run.
+  PetscMallocGetMaximumUsage - gets the maximum amount of memory used that was obtained with `PetscMalloc()` at any time
+  during this run, the high water mark.
 
-    Not Collective
+  Not Collective
 
-    Output Parameters:
-.   space - maximum number of bytes ever allocated at one time
+  Output Parameter:
+. space - maximum number of bytes ever allocated at one time
 
-    Level: intermediate
+  Level: intermediate
 
-.seealso: PetscMallocDump(), PetscMallocView(), PetscMallocGetMaximumUsage(), PetscMemoryGetCurrentUsage(),
-          PetscMallocPushMaximumUsage()
+  Note:
+  This only works if `PetscMemorySetGetMaximumUsage()`, `-memory_view`, or `-log_view_memory` have been used
+
+.seealso: `PetscMallocDump()`, `PetscMallocView()`, `PetscMemoryGetCurrentUsage()`, `PetscMalloc()`, `PetscFree()`,
+          `PetscMallocPushMaximumUsage()`
  @*/
-PetscErrorCode  PetscMallocGetMaximumUsage(PetscLogDouble *space)
+PetscErrorCode PetscMallocGetMaximumUsage(PetscLogDouble *space)
 {
   PetscFunctionBegin;
-  *space = (PetscLogDouble) TRMaxMem;
-  PetscFunctionReturn(0);
+  *space = (PetscLogDouble)TRMaxMem;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-    PetscMallocPushMaximumUsage - Adds another event to collect the maximum memory usage over an event
+  PetscMallocPushMaximumUsage - Adds another event to collect the maximum memory usage over an event
 
-    Not Collective
+  Not Collective
 
-    Input Parameter:
-.   event - an event id; this is just for error checking
+  Input Parameter:
+. event - an event id; this is just for error checking
 
-    Level: developer
+  Level: developer
 
-.seealso: PetscMallocDump(), PetscMallocView(), PetscMallocGetMaximumUsage(), PetscMemoryGetCurrentUsage(),
-          PetscMallocPopMaximumUsage()
+  Note:
+  This only does anything if `PetscMemorySetGetMaximumUsage()`, `-memory_view`, or `-log_view_memory` have been used
+
+.seealso: `PetscMallocDump()`, `PetscMallocView()`, `PetscMallocGetMaximumUsage()`, `PetscMemoryGetCurrentUsage()`, `PetscMalloc()`, `PetscFree()`,
+          `PetscMallocPopMaximumUsage()`
  @*/
-PetscErrorCode  PetscMallocPushMaximumUsage(int event)
+PetscErrorCode PetscMallocPushMaximumUsage(int event)
 {
   PetscFunctionBegin;
-  if (++NumTRMaxMems > MAXTRMAXMEMS) PetscFunctionReturn(0);
-  TRMaxMems[NumTRMaxMems-1]       = TRallocated;
-  TRMaxMemsEvents[NumTRMaxMems-1] = event;
-  PetscFunctionReturn(0);
+  if (event < 0 || ++NumTRMaxMems > MAXTRMAXMEMS) PetscFunctionReturn(PETSC_SUCCESS);
+  TRMaxMems[NumTRMaxMems - 1]       = TRallocated;
+  TRMaxMemsEvents[NumTRMaxMems - 1] = event;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-    PetscMallocPopMaximumUsage - collect the maximum memory usage over an event
+  PetscMallocPopMaximumUsage - collect the maximum memory usage over an event
 
-    Not Collective
+  Not Collective
 
-    Input Parameter:
-.   event - an event id; this is just for error checking
+  Input Parameter:
+. event - an event id; this is just for error checking
 
-    Output Parameter:
-.   mu - maximum amount of memory malloced during this event; high water mark relative to the beginning of the event
+  Output Parameter:
+. mu - maximum amount of memory malloced during this event; high water mark relative to the beginning of the event
 
-    Level: developer
+  Level: developer
 
-.seealso: PetscMallocDump(), PetscMallocView(), PetscMallocGetMaximumUsage(), PetscMemoryGetCurrentUsage(),
-          PetscMallocPushMaximumUsage()
+  Note:
+  This only does anything if `PetscMemorySetGetMaximumUsage()`, `-memory_view`, or `-log_view_memory` have been used
+
+.seealso: `PetscMallocDump()`, `PetscMallocView()`, `PetscMallocGetMaximumUsage()`, `PetscMemoryGetCurrentUsage()`, `PetscMalloc()`, `PetscFree()`,
+          `PetscMallocPushMaximumUsage()`
  @*/
-PetscErrorCode  PetscMallocPopMaximumUsage(int event,PetscLogDouble *mu)
+PetscErrorCode PetscMallocPopMaximumUsage(int event, PetscLogDouble *mu)
 {
   PetscFunctionBegin;
   *mu = 0;
-  if (NumTRMaxMems-- > MAXTRMAXMEMS) PetscFunctionReturn(0);
-  if (TRMaxMemsEvents[NumTRMaxMems] != event) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_MEMC,"PetscMallocPush/PopMaximumUsage() are not nested");
+  if (event < 0 || NumTRMaxMems-- > MAXTRMAXMEMS) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCheck(TRMaxMemsEvents[NumTRMaxMems] == event, PETSC_COMM_SELF, PETSC_ERR_MEMC, "PetscMallocPush/PopMaximumUsage() are not nested");
   *mu = TRMaxMems[NumTRMaxMems];
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-#if defined(PETSC_USE_DEBUG)
 /*@C
-   PetscMallocGetStack - returns a pointer to the stack for the location in the program a call to PetscMalloc() was used to obtain that memory
+  PetscMallocGetStack - returns a pointer to the stack for the location in the program a call to `PetscMalloc()` was used to obtain that memory
 
-   Collective on PETSC_COMM_WORLD
+  Not Collective, No Fortran Support
 
-   Input Parameter:
-.    ptr - the memory location
+  Input Parameter:
+. ptr - the memory location
 
-   Output Parameter:
-.    stack - the stack indicating where the program allocated this memory
+  Output Parameter:
+. stack - the stack indicating where the program allocated this memory
 
-   Level: intermediate
+  Level: intermediate
 
-.seealso:  PetscMallocGetCurrentUsage(), PetscMallocView()
+  Note:
+  This only does anything if `-malloc_debug` (or `-malloc_test` if PETSc was configured with debugging) has been used
+
+.seealso: `PetscMallocGetCurrentUsage()`, `PetscMallocView()`, `PetscMalloc()`, `PetscFree()`
 @*/
-PetscErrorCode  PetscMallocGetStack(void *ptr,PetscStack **stack)
+PetscErrorCode PetscMallocGetStack(void *ptr, PetscStack **stack)
 {
+#if defined(PETSC_USE_DEBUG) && !defined(PETSC_HAVE_THREADSAFETY)
   TRSPACE *head;
 
   PetscFunctionBegin;
-  head   = (TRSPACE*) (((char*)ptr) - HEADER_BYTES);
+  head   = (TRSPACE *)(((char *)ptr) - HEADER_BYTES);
   *stack = &head->stack;
-  PetscFunctionReturn(0);
-}
+  PetscFunctionReturn(PETSC_SUCCESS);
 #else
-PetscErrorCode  PetscMallocGetStack(void *ptr,void **stack)
-{
-  PetscFunctionBegin;
   *stack = NULL;
-  PetscFunctionReturn(0);
-}
+  return PETSC_SUCCESS;
 #endif
+}
 
 /*@C
-   PetscMallocDump - Dumps the currently allocated memory blocks to a file. The information
-   printed is: size of space (in bytes), address of space, id of space,
-   file in which space was allocated, and line number at which it was
-   allocated.
+  PetscMallocDump - Dumps the currently allocated memory blocks to a file. The information
+  printed is: size of space (in bytes), address of space, id of space,
+  file in which space was allocated, and line number at which it was
+  allocated.
 
-   Not Collective
+  Not Collective
 
-   Input Parameter:
-.  fp  - file pointer.  If fp is NULL, stdout is assumed.
+  Input Parameter:
+. fp - file pointer.  If `fp` is `NULL`, `stdout` is assumed.
 
-   Options Database Key:
-.  -malloc_dump <optional filename> - Dumps unfreed memory during call to PetscFinalize()
+  Options Database Key:
+. -malloc_dump <optional filename> - Print summary of unfreed memory during call to `PetscFinalize()`, writing to filename if given
 
-   Level: intermediate
+  Level: intermediate
 
-   Fortran Note:
-   The calling sequence in Fortran is PetscMallocDump(integer ierr)
-   The fp defaults to stdout.
+  Notes:
+  Uses `MPI_COMM_WORLD` to display rank, because this may be called in `PetscFinalize()` after `PETSC_COMM_WORLD` has been freed.
 
-   Notes:
-     Uses MPI_COMM_WORLD to display rank, because this may be called in PetscFinalize() after PETSC_COMM_WORLD has been freed.
+  When called in `PetscFinalize()` dumps only the allocations that have not been properly freed
 
-     When called in PetscFinalize() dumps only the allocations that have not been properly freed
+  `PetscMallocView()` prints a list of all memory ever allocated
 
-     PetscMallocView() prints a list of all memory ever allocated
+  This only does anything if `-malloc_debug` (or `-malloc_test` if PETSc was configured with debugging) has been used
 
-.seealso:  PetscMallocGetCurrentUsage(), PetscMallocView(), PetscMallocViewSet()
+  Fortran Notes:
+  The calling sequence is `PetscMallocDump`(PetscErrorCode ierr). A `fp` parameter is not supported.
+
+  Developer Notes:
+  This should be absorbed into `PetscMallocView()`
+
+.seealso: `PetscMallocGetCurrentUsage()`, `PetscMallocView()`, `PetscMallocViewSet()`, `PetscMallocValidate()`, `PetscMalloc()`, `PetscFree()`
 @*/
-PetscErrorCode  PetscMallocDump(FILE *fp)
+PetscErrorCode PetscMallocDump(FILE *fp)
 {
-  TRSPACE        *head;
-  size_t         libAlloc = 0;
-  PetscErrorCode ierr;
-  PetscMPIInt    rank;
+  TRSPACE    *head;
+  size_t      libAlloc = 0;
+  PetscMPIInt rank;
 
   PetscFunctionBegin;
-  ierr = MPI_Comm_rank(MPI_COMM_WORLD,&rank);CHKERRQ(ierr);
+  PetscCallMPI(MPI_Comm_rank(MPI_COMM_WORLD, &rank));
   if (!fp) fp = PETSC_STDOUT;
   head = TRhead;
   while (head) {
-    libAlloc += head->size;
+    libAlloc += TRrequestedSize ? head->rsize : head->size;
     head = head->next;
   }
-  if (TRallocated - libAlloc > 0) fprintf(fp,"[%d]Total space allocated %.0f bytes\n",rank,(PetscLogDouble)TRallocated);
+  if (TRallocated - libAlloc > 0) fprintf(fp, "[%d]Total space allocated %.0f bytes\n", rank, (PetscLogDouble)TRallocated);
   head = TRhead;
   while (head) {
     PetscBool isLib;
 
-    ierr = PetscStrcmp(head->functionname, "PetscDLLibraryOpen", &isLib);CHKERRQ(ierr);
+    PetscCall(PetscStrcmp(head->functionname, "PetscDLLibraryOpen", &isLib));
     if (!isLib) {
-      fprintf(fp,"[%2d]%.0f bytes %s() line %d in %s\n",rank,(PetscLogDouble)head->size,head->functionname,head->lineno,head->filename);
-#if defined(PETSC_USE_DEBUG)
-      ierr = PetscStackPrint(&head->stack,fp);CHKERRQ(ierr);
+#if defined(PETSC_USE_DEBUG) && !defined(PETSC_HAVE_THREADSAFETY)
+      fprintf(fp, "[%2d] %.0f bytes\n", rank, (PetscLogDouble)(TRrequestedSize ? head->rsize : head->size));
+      PetscCall(PetscStackPrint(&head->stack, fp));
+#else
+      fprintf(fp, "[%2d] %.0f bytes %s() at %s:%d\n", rank, (PetscLogDouble)(TRrequestedSize ? head->rsize : head->size), head->functionname, head->filename, head->lineno);
 #endif
     }
     head = head->next;
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-    PetscMallocViewSet - Activates logging of all calls to PetscMalloc() with a minimum size to view
+  PetscMallocViewSet - Activates logging of all calls to `PetscMalloc()` with a minimum size to view
 
-    Not Collective
+  Not Collective
 
-    Input Arguments:
-.   logmin - minimum allocation size to log, or PETSC_DEFAULT
+  Input Parameter:
+. logmin - minimum allocation size to log, or `PETSC_DEFAULT` to log all memory allocations
 
-    Options Database Key:
-+  -malloc_view <optional filename> - Activates PetscMallocView() in PetscFinalize()
-.  -malloc_view_threshold <min> - Sets a minimum size if -malloc_view is used
--  -log_view_memory - view the memory usage also with the -log_view option
+  Options Database Keys:
++ -malloc_view <optional filename> - Activates `PetscMallocView()` in `PetscFinalize()`
+. -malloc_view_threshold <min>     - Sets a minimum size if `-malloc_view` is used
+- -log_view_memory                 - view the memory usage also with the -log_view option
 
-    Level: advanced
+  Level: advanced
 
-    Notes: Must be called after PetscMallocSetDebug()
+  Note:
+  Must be called after `PetscMallocSetDebug()`
 
-    Uses MPI_COMM_WORLD to determine rank because PETSc communicators may not be available
+  Developer Notes:
+  Uses `MPI_COMM_WORLD` to determine rank because PETSc communicators may not be available
 
-.seealso: PetscMallocDump(), PetscMallocView(), PetscMallocViewSet()
+.seealso: `PetscMallocViewGet()`, `PetscMallocDump()`, `PetscMallocView()`, `PetscMallocTraceSet()`, `PetscMallocValidate()`, `PetscMalloc()`, `PetscFree()`
 @*/
 PetscErrorCode PetscMallocViewSet(PetscLogDouble logmin)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscLogMalloc = 0;
-  ierr = PetscMemorySetGetMaximumUsage();CHKERRQ(ierr);
+  PetscCall(PetscMemorySetGetMaximumUsage());
   if (logmin < 0) logmin = 0.0; /* PETSC_DEFAULT or PETSC_DECIDE */
   PetscLogMallocThreshold = (size_t)logmin;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-    PetscMallocViewGet - Determine whether all calls to PetscMalloc() are being logged
+  PetscMallocViewGet - Determine whether calls to `PetscMalloc()` are being logged
 
-    Not Collective
+  Not Collective
 
-    Output Arguments
-.   logging - PETSC_TRUE if logging is active
+  Output Parameter:
+. logging - `PETSC_TRUE` if logging is active
 
-    Options Database Key:
-.  -malloc_view <optional filename> - Activates PetscMallocView()
+  Options Database Key:
+. -malloc_view <optional filename> - Activates `PetscMallocView()`
 
-    Level: advanced
+  Level: advanced
 
-.seealso: PetscMallocDump(), PetscMallocView()
+.seealso: `PetscMallocViewSet()`, `PetscMallocDump()`, `PetscMallocView()`, `PetscMallocTraceGet()`, `PetscMalloc()`, `PetscFree()`
 @*/
 PetscErrorCode PetscMallocViewGet(PetscBool *logging)
 {
-
   PetscFunctionBegin;
   *logging = (PetscBool)(PetscLogMalloc >= 0);
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PetscMallocTraceSet - Trace all calls to `PetscMalloc()`. That is print each `PetscMalloc()` and `PetscFree()` call to a viewer.
+
+  Not Collective
+
+  Input Parameters:
++ viewer - The viewer to use for tracing, or `NULL` to use `PETSC_VIEWER_STDOUT_SELF`
+. active - Flag to activate or deactivate tracing
+- logmin - The smallest memory size that will be logged
+
+  Level: advanced
+
+  Note:
+  The viewer should not be collective.
+
+  This only does anything if `-malloc_debug` (or `-malloc_test` if PETSc was configured with debugging) has been used
+
+.seealso: `PetscMallocTraceGet()`, `PetscMallocViewGet()`, `PetscMallocDump()`, `PetscMallocView()`, `PetscMalloc()`, `PetscFree()`
+@*/
+PetscErrorCode PetscMallocTraceSet(PetscViewer viewer, PetscBool active, PetscLogDouble logmin)
+{
+  PetscFunctionBegin;
+  if (!active) {
+    PetscLogMallocTrace = -1;
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+  if (!viewer) viewer = PETSC_VIEWER_STDOUT_SELF;
+  PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 1);
+  PetscLogMallocTraceViewer = viewer;
+  PetscLogMallocTrace       = 0;
+  PetscCall(PetscMemorySetGetMaximumUsage());
+  if (logmin < 0) logmin = 0.0; /* PETSC_DEFAULT or PETSC_DECIDE */
+  PetscLogMallocTraceThreshold = (size_t)logmin;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PetscMallocTraceGet - Determine whether all calls to `PetscMalloc()` are being traced
+
+  Not Collective
+
+  Output Parameter:
+. logging - `PETSC_TRUE` if logging is active
+
+  Options Database Key:
+. -malloc_view <optional filename> - Activates `PetscMallocView()`
+
+  Level: advanced
+
+  This only does anything if `-malloc_debug` (or `-malloc_test` if PETSc was configured with debugging) has been used
+
+.seealso: `PetscMallocTraceSet()`, `PetscMallocViewGet()`, `PetscMallocDump()`, `PetscMallocView()`, `PetscMalloc()`, `PetscFree()`
+@*/
+PetscErrorCode PetscMallocTraceGet(PetscBool *logging)
+{
+  PetscFunctionBegin;
+  *logging = (PetscBool)(PetscLogMallocTrace >= 0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-    PetscMallocView - Saves the log of all calls to PetscMalloc(); also calls
-       PetscMemoryGetMaximumUsage()
+  PetscMallocView - Saves the log of all calls to `PetscMalloc()`; also calls `PetscMemoryGetMaximumUsage()`
 
-    Not Collective
+  Not Collective
 
-    Input Parameter:
-.   fp - file pointer; or NULL
+  Input Parameter:
+. fp - file pointer; or `NULL`
 
-    Options Database Key:
-.  -malloc_view <optional filename> - Activates PetscMallocView() in PetscFinalize()
+  Options Database Key:
+. -malloc_view <optional filename> - Activates `PetscMallocView()` in `PetscFinalize()`
 
-    Level: advanced
+  Level: advanced
 
-   Fortran Note:
-   The calling sequence in Fortran is PetscMallocView(integer ierr)
-   The fp defaults to stdout.
+  Notes:
+  `PetscMallocDump()` dumps only the currently unfreed memory, this dumps all memory ever allocated
 
-   Notes:
-     PetscMallocDump() dumps only the currently unfreed memory, this dumps all memory ever allocated
+  `PetscMemoryView()` gives a brief summary of current memory usage
 
-     PetscMemoryView() gives a brief summary of current memory usage
+  Fortran Notes:
+  The calling sequence in Fortran is `PetscMallocView`(integer ierr)
 
-.seealso: PetscMallocGetCurrentUsage(), PetscMallocDump(), PetscMallocViewSet(), PetscMemoryView()
+.seealso: `PetscMallocGetCurrentUsage()`, `PetscMallocDump()`, `PetscMallocViewSet()`, `PetscMemoryView()`, `PetscMalloc()`, `PetscFree()`
 @*/
-PetscErrorCode  PetscMallocView(FILE *fp)
+PetscErrorCode PetscMallocView(FILE *fp)
 {
-  PetscInt       i,j,n,*perm;
-  size_t         *shortlength;
-  int            *shortcount,err;
+  PetscInt       n, *perm;
+  size_t        *shortlength;
+  int           *shortcount;
   PetscMPIInt    rank;
   PetscBool      match;
-  const char     **shortfunction;
+  const char   **shortfunction;
   PetscLogDouble rss;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = MPI_Comm_rank(MPI_COMM_WORLD,&rank);CHKERRQ(ierr);
-  err = fflush(fp);
-  if (err) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SYS,"fflush() failed on file");
+  PetscCallMPI(MPI_Comm_rank(MPI_COMM_WORLD, &rank));
+  PetscCall(PetscFFlush(fp));
 
-  if (PetscLogMalloc < 0) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"PetscMallocView() called without call to PetscMallocViewSet() this is often due to\n                      setting the option -malloc_view AFTER PetscInitialize() with PetscOptionsInsert() or PetscOptionsInsertFile()");
+  PetscCheck(PetscLogMalloc >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "PetscMallocView() called without call to PetscMallocViewSet() this is often due to setting the option -malloc_view AFTER PetscInitialize() with PetscOptionsInsert() or PetscOptionsInsertFile()");
 
   if (!fp) fp = PETSC_STDOUT;
-  ierr = PetscMemoryGetMaximumUsage(&rss);CHKERRQ(ierr);
+  PetscCall(PetscMemoryGetMaximumUsage(&rss));
   if (rss) {
-    (void) fprintf(fp,"[%d] Maximum memory PetscMalloc()ed %.0f maximum size of entire process %.0f\n",rank,(PetscLogDouble)TRMaxMem,rss);
+    (void)fprintf(fp, "[%d] Maximum memory PetscMalloc()ed %.0f maximum size of entire process %.0f\n", rank, (PetscLogDouble)TRMaxMem, rss);
   } else {
-    (void) fprintf(fp,"[%d] Maximum memory PetscMalloc()ed %.0f OS cannot compute size of entire process\n",rank,(PetscLogDouble)TRMaxMem);
+    (void)fprintf(fp, "[%d] Maximum memory PetscMalloc()ed %.0f OS cannot compute size of entire process\n", rank, (PetscLogDouble)TRMaxMem);
   }
-  shortcount    = (int*)malloc(PetscLogMalloc*sizeof(int));if (!shortcount) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_MEM,"Out of memory");
-  shortlength   = (size_t*)malloc(PetscLogMalloc*sizeof(size_t));if (!shortlength) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_MEM,"Out of memory");
-  shortfunction = (const char**)malloc(PetscLogMalloc*sizeof(char*));if (!shortfunction) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_MEM,"Out of memory");
-  for (i=0,n=0; i<PetscLogMalloc; i++) {
-    for (j=0; j<n; j++) {
-      ierr = PetscStrcmp(shortfunction[j],PetscLogMallocFunction[i],&match);CHKERRQ(ierr);
-      if (match) {
-        shortlength[j] += PetscLogMallocLength[i];
-        shortcount[j]++;
-        goto foundit;
+  if (PetscLogMalloc > 0) {
+    shortcount = (int *)malloc(PetscLogMalloc * sizeof(int));
+    PetscCheck(shortcount, PETSC_COMM_SELF, PETSC_ERR_MEM, "Out of memory");
+    shortlength = (size_t *)malloc(PetscLogMalloc * sizeof(size_t));
+    PetscCheck(shortlength, PETSC_COMM_SELF, PETSC_ERR_MEM, "Out of memory");
+    shortfunction = (const char **)malloc(PetscLogMalloc * sizeof(char *));
+    PetscCheck(shortfunction, PETSC_COMM_SELF, PETSC_ERR_MEM, "Out of memory");
+    n = 0;
+    for (PetscInt i = 0; i < PetscLogMalloc; i++) {
+      for (PetscInt j = 0; j < n; j++) {
+        PetscCall(PetscStrcmp(shortfunction[j], PetscLogMallocFunction[i], &match));
+        if (match) {
+          shortlength[j] += PetscLogMallocLength[i];
+          shortcount[j]++;
+          goto foundit;
+        }
       }
+      shortfunction[n] = PetscLogMallocFunction[i];
+      shortlength[n]   = PetscLogMallocLength[i];
+      shortcount[n]    = 1;
+      n++;
+    foundit:;
     }
-    shortfunction[n] = PetscLogMallocFunction[i];
-    shortlength[n]   = PetscLogMallocLength[i];
-    shortcount[n]    = 1;
-    n++;
-foundit:;
-  }
 
-  perm = (PetscInt*)malloc(n*sizeof(PetscInt));if (!perm) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_MEM,"Out of memory");
-  for (i=0; i<n; i++) perm[i] = i;
-  ierr = PetscSortStrWithPermutation(n,(const char**)shortfunction,perm);CHKERRQ(ierr);
+    perm = (PetscInt *)malloc(n * sizeof(PetscInt));
+    PetscCheck(perm, PETSC_COMM_SELF, PETSC_ERR_MEM, "Out of memory");
+    for (PetscInt i = 0; i < n; i++) perm[i] = i;
+    PetscCall(PetscSortStrWithPermutation(n, (const char **)shortfunction, perm));
 
-  (void) fprintf(fp,"[%d] Memory usage sorted by function\n",rank);
-  for (i=0; i<n; i++) {
-    (void) fprintf(fp,"[%d] %d %.0f %s()\n",rank,shortcount[perm[i]],(PetscLogDouble)shortlength[perm[i]],shortfunction[perm[i]]);
+    (void)fprintf(fp, "[%d] Memory usage sorted by function\n", rank);
+    for (PetscInt i = 0; i < n; i++) (void)fprintf(fp, "[%d] %d %.0f %s()\n", rank, shortcount[perm[i]], (PetscLogDouble)shortlength[perm[i]], shortfunction[perm[i]]);
+    free(perm);
+    free(shortlength);
+    free(shortcount);
+    free((char **)shortfunction);
   }
-  free(perm);
-  free(shortlength);
-  free(shortcount);
-  free((char**)shortfunction);
-  err = fflush(fp);
-  if (err) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SYS,"fflush() failed on file");
-  PetscFunctionReturn(0);
+  PetscCall(PetscFFlush(fp));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* ---------------------------------------------------------------------------- */
-
 /*@
-    PetscMallocSetDebug - Set's PETSc memory debugging
+  PetscMallocSetDebug - Set's PETSc memory debugging
 
-    Not Collective
+  Not Collective
 
-    Input Parameter:
-+   eachcall - checks the entire heap of allocated memory for issues on each call to PetscMalloc() and PetscFree()
--   initializenan - initializes all memory with NaN to catch use of uninitialized floating point arrays
+  Input Parameters:
++ eachcall      - checks the entire heap of allocated memory for issues on each call to `PetscMalloc()` and `PetscFree()`, slow
+- initializenan - initializes all memory with `NaN` to catch use of uninitialized floating point arrays
 
-    Options Database:
-+   -malloc_debug <true or false> - turns on or off debugging
-.   -malloc_test - turns on all debugging if PETSc was configured with debugging including -malloc_dump, otherwise ignored
-.   -malloc_view_threshold t - log only allocations larger than t
-.   -malloc_dump <filename> - print a list of all memory that has not been freed
-.   -malloc no - (deprecated) same as -malloc_debug no
--   -malloc_log - (deprecated) same as -malloc_view
+  Options Database Keys:
++ -malloc_debug <true or false> - turns on or off debugging
+. -malloc_test                  - turns on all debugging if PETSc was configured with debugging including `-malloc_dump`, otherwise ignored
+. -malloc_view_threshold t      - log only allocations larger than t
+- -malloc_dump <filename>       - print a list of all memory that has not been freed, in `PetscFinalize()`
 
-   Level: developer
+  Level: developer
 
-    Notes: This is called in PetscInitialize() and should not be called elsewhere
+  Note:
+  This is called in `PetscInitialize()` and should not be called elsewhere
 
-.seealso: CHKMEMQ(), PetscMallocValidate(), PetscMallocGetDebug()
+.seealso: `CHKMEMQ`, `PetscMallocValidate()`, `PetscMallocGetDebug()`, `PetscMalloc()`, `PetscFree()`
 @*/
 PetscErrorCode PetscMallocSetDebug(PetscBool eachcall, PetscBool initializenan)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  if (PetscTrMalloc == PetscTrMallocDefault) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Cannot call this routine more than once, it can only be called in PetscInitialize()");
-  ierr = PetscMallocSet(PetscTrMallocDefault,PetscTrFreeDefault,PetscTrReallocDefault);CHKERRQ(ierr);
+  PetscCheck(PetscTrMalloc != PetscTrMallocDefault, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Cannot call this routine more than once, it can only be called in PetscInitialize()");
+  PetscCall(PetscMallocSet(PetscTrMallocDefault, PetscTrFreeDefault, PetscTrReallocDefault));
 
-  TRallocated         = 0;
-  TRfrags             = 0;
-  TRhead              = NULL;
-  TRid                = 0;
-  TRdebugLevel        = eachcall;
-  TRMaxMem            = 0;
-  PetscLogMallocMax   = 10000;
-  PetscLogMalloc      = -1;
+  TRallocated           = 0;
+  TRfrags               = 0;
+  TRhead                = NULL;
+  TRid                  = 0;
+  TRdebug               = eachcall;
+  TRMaxMem              = 0;
+  PetscLogMallocMax     = 10000;
+  PetscLogMalloc        = -1;
   TRdebugIinitializenan = initializenan;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-    PetscMallocGetDebug - Indicates what PETSc memory debugging it is doing.
+  PetscMallocGetDebug - Indicates what PETSc memory debugging it is doing.
 
-    Not Collective
+  Not Collective
 
-    Output Parameters:
-+    basic - doing basic debugging
-.    eachcall - checks the entire memory heap at each PetscMalloc()/PetscFree()
--    initializenan - initializes memory with NaN
+  Output Parameters:
++ basic         - doing basic debugging
+. eachcall      - checks the entire memory heap at each `PetscMalloc()`/`PetscFree()`
+- initializenan - initializes memory with `NaN`
 
-   Level: intermediate
+  Level: intermediate
 
-   Notes:
-     By default, the debug version always does some debugging unless you run with -malloc_debug no
+  Note:
+  By default, the debug configuration of PETSc always does some debugging unless you run with `-malloc_debug no`
 
-.seealso: CHKMEMQ(), PetscMallocValidate(), PetscMallocSetDebug()
+.seealso: `CHKMEMQ`, `PetscMallocValidate()`, `PetscMallocSetDebug()`, `PetscMalloc()`, `PetscFree()`
 @*/
 PetscErrorCode PetscMallocGetDebug(PetscBool *basic, PetscBool *eachcall, PetscBool *initializenan)
 {
   PetscFunctionBegin;
   if (basic) *basic = (PetscTrMalloc == PetscTrMallocDefault) ? PETSC_TRUE : PETSC_FALSE;
-  if (eachcall) *eachcall           = TRdebugLevel;
+  if (eachcall) *eachcall = TRdebug;
   if (initializenan) *initializenan = TRdebugIinitializenan;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PetscMallocLogRequestedSizeSet - Whether to log the requested or aligned memory size
+
+  Not Collective
+
+  Input Parameter:
+. flg - `PETSC_TRUE` to log the requested memory size
+
+  Options Database Key:
+. -malloc_requested_size <bool> - Sets this flag
+
+  Level: developer
+
+.seealso: `PetscMallocLogRequestedSizeGet()`, `PetscMallocViewSet()`, `PetscMalloc()`, `PetscFree()`
+@*/
+PetscErrorCode PetscMallocLogRequestedSizeSet(PetscBool flg)
+{
+  PetscFunctionBegin;
+  TRrequestedSize = flg;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PetscMallocLogRequestedSizeGet - Whether to log the requested or aligned memory size
+
+  Not Collective
+
+  Output Parameter:
+. flg - `PETSC_TRUE` if we log the requested memory size
+
+  Level: developer
+
+.seealso: `PetscMallocLogRequestedSizeSet()`, `PetscMallocViewSet()`, `PetscMalloc()`, `PetscFree()`
+@*/
+PetscErrorCode PetscMallocLogRequestedSizeGet(PetscBool *flg)
+{
+  PetscFunctionBegin;
+  *flg = TRrequestedSize;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

@@ -1,116 +1,115 @@
-
-#include <petsc/private/kspimpl.h>   /*I "petscksp.h" I*/
+#include <petsc/private/kspimpl.h> /*I "petscksp.h" I*/
 
 /*@
-   KSPInitialResidual - Computes the residual. Either b - A*C*u = b - A*x with right
-     preconditioning or C*(b - A*x) with left preconditioning; that later
-     residual is often called the "preconditioned residual".
+  KSPInitialResidual - Computes the residual. Either b - A*C*u = b - A*x with right
+  preconditioning or C*(b - A*x) with left preconditioning; the latter
+  residual is often called the "preconditioned residual".
 
-   Collective on ksp
+  Collective
 
-   Input Parameters:
-+  vsoln    - solution to use in computing residual
-.  vt1, vt2 - temporary work vectors
--  vb       - right-hand-side vector
+  Input Parameters:
++ ksp   - the `KSP` solver object
+. vsoln - solution to use in computing residual
+. vt1   - temporary work vector
+. vt2   - temporary work vector
+- vb    - right-hand-side vector
 
-   Output Parameters:
-.  vres     - calculated residual
+  Output Parameter:
+. vres - calculated residual
 
-   Notes:
-   This routine assumes that an iterative method, designed for
-$     A x = b
-   will be used with a preconditioner, C, such that the actual problem is either
-$     AC u = b (right preconditioning) or
-$     CA x = Cb (left preconditioning).
-   This means that the calculated residual will be scaled and/or preconditioned;
-   the true residual
-$     b-Ax
-   is returned in the vt2 temporary.
+  Level: developer
 
-   Level: developer
+  Note:
+  This routine assumes that an iterative method, designed for $ A x = b $
+  will be used with a preconditioner, C, such that the actual problem is either
+.vb
+  AC u = b (right preconditioning) or
+  CA x = Cb (left preconditioning).
+.ve
+  This means that the calculated residual will be scaled and/or preconditioned;
+  the true residual $ b-Ax $
+  is returned in the `vt2` temporary work vector.
 
-.seealso:  KSPMonitor()
+.seealso: [](ch_ksp), `KSP`, `KSPSolve()`, `KSPMonitor()`
 @*/
-
-PetscErrorCode  KSPInitialResidual(KSP ksp,Vec vsoln,Vec vt1,Vec vt2,Vec vres,Vec vb)
+PetscErrorCode KSPInitialResidual(KSP ksp, Vec vsoln, Vec vt1, Vec vt2, Vec vres, Vec vb)
 {
-  Mat            Amat,Pmat;
-  PetscErrorCode ierr;
+  Mat Amat, Pmat;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
-  PetscValidHeaderSpecific(vsoln,VEC_CLASSID,2);
-  PetscValidHeaderSpecific(vres,VEC_CLASSID,5);
-  PetscValidHeaderSpecific(vb,VEC_CLASSID,6);
-  if (!ksp->pc) {ierr = KSPGetPC(ksp,&ksp->pc);CHKERRQ(ierr);}
-  ierr = PCGetOperators(ksp->pc,&Amat,&Pmat);CHKERRQ(ierr);
+  PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
+  PetscValidHeaderSpecific(vsoln, VEC_CLASSID, 2);
+  PetscValidHeaderSpecific(vres, VEC_CLASSID, 5);
+  PetscValidHeaderSpecific(vb, VEC_CLASSID, 6);
+  if (!ksp->pc) PetscCall(KSPGetPC(ksp, &ksp->pc));
+  PetscCall(PCGetOperators(ksp->pc, &Amat, &Pmat));
   if (!ksp->guess_zero) {
     /* skip right scaling since current guess already has it */
-    ierr = KSP_MatMult(ksp,Amat,vsoln,vt1);CHKERRQ(ierr);
-    ierr = VecCopy(vb,vt2);CHKERRQ(ierr);
-    ierr = VecAXPY(vt2,-1.0,vt1);CHKERRQ(ierr);
+    PetscCall(KSP_MatMult(ksp, Amat, vsoln, vt1));
+    PetscCall(VecCopy(vb, vt2));
+    PetscCall(VecAXPY(vt2, -1.0, vt1));
     if (ksp->pc_side == PC_RIGHT) {
-      ierr = PCDiagonalScaleLeft(ksp->pc,vt2,vres);CHKERRQ(ierr);
+      PetscCall(PCDiagonalScaleLeft(ksp->pc, vt2, vres));
     } else if (ksp->pc_side == PC_LEFT) {
-        ierr = KSP_PCApply(ksp,vt2,vres);CHKERRQ(ierr);
-        ierr = PCDiagonalScaleLeft(ksp->pc,vres,vres);CHKERRQ(ierr);
+      PetscCall(KSP_PCApply(ksp, vt2, vres));
+      PetscCall(PCDiagonalScaleLeft(ksp->pc, vres, vres));
     } else if (ksp->pc_side == PC_SYMMETRIC) {
-      ierr = PCApplySymmetricLeft(ksp->pc,vt2,vres);CHKERRQ(ierr);
-    } else SETERRQ1(PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP, "Invalid preconditioning side %d", (int)ksp->pc_side);
+      PetscCall(PCApplySymmetricLeft(ksp->pc, vt2, vres));
+    } else SETERRQ(PetscObjectComm((PetscObject)ksp), PETSC_ERR_SUP, "Invalid preconditioning side %d", (int)ksp->pc_side);
   } else {
-    ierr = VecCopy(vb,vt2);CHKERRQ(ierr);
+    PetscCall(VecCopy(vb, vt2));
     if (ksp->pc_side == PC_RIGHT) {
-      ierr = PCDiagonalScaleLeft(ksp->pc,vb,vres);CHKERRQ(ierr);
+      PetscCall(PCDiagonalScaleLeft(ksp->pc, vb, vres));
     } else if (ksp->pc_side == PC_LEFT) {
-      ierr = KSP_PCApply(ksp,vb,vres);CHKERRQ(ierr);
-      ierr = PCDiagonalScaleLeft(ksp->pc,vres,vres);CHKERRQ(ierr);
+      PetscCall(KSP_PCApply(ksp, vb, vres));
+      PetscCall(PCDiagonalScaleLeft(ksp->pc, vres, vres));
     } else if (ksp->pc_side == PC_SYMMETRIC) {
-      ierr = PCApplySymmetricLeft(ksp->pc, vb, vres);CHKERRQ(ierr);
-    } else SETERRQ1(PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP, "Invalid preconditioning side %d", (int)ksp->pc_side);
+      PetscCall(PCApplySymmetricLeft(ksp->pc, vb, vres));
+    } else SETERRQ(PetscObjectComm((PetscObject)ksp), PETSC_ERR_SUP, "Invalid preconditioning side %d", (int)ksp->pc_side);
   }
-  PetscFunctionReturn(0);
+  /* This may be true only on a subset of MPI ranks; setting it here so it will be detected by the first norm computation in the Krylov method */
+  if (ksp->reason == KSP_DIVERGED_PC_FAILED) PetscCall(VecSetInf(vres));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   KSPUnwindPreconditioner - Unwinds the preconditioning in the solution. That is,
-     takes solution to the preconditioned problem and gets the solution to the
-     original problem from it.
+  KSPUnwindPreconditioner - Unwinds the preconditioning in the solution. That is,
+  takes solution to the preconditioned problem and gets the solution to the
+  original problem from it.
 
-   Collective on ksp
+  Collective
 
-   Input Parameters:
-+  ksp  - iterative context
-.  vsoln - solution vector
--  vt1   - temporary work vector
+  Input Parameters:
++ ksp   - iterative context
+. vsoln - solution vector
+- vt1   - temporary work vector
 
-   Output Parameter:
-.  vsoln - contains solution on output
+  Output Parameter:
+. vsoln - contains solution on output
 
-   Notes:
-   If preconditioning either symmetrically or on the right, this routine solves
-   for the correction to the unpreconditioned problem.  If preconditioning on
-   the left, nothing is done.
+  Level: advanced
 
-   Level: advanced
+  Note:
+  If preconditioning either symmetrically or on the right, this routine solves
+  for the correction to the unpreconditioned problem.  If preconditioning on
+  the left, nothing is done.
 
-.seealso: KSPSetPCSide()
+.seealso: [](ch_ksp), `KSP`, `KSPSetPCSide()`
 @*/
-PetscErrorCode  KSPUnwindPreconditioner(KSP ksp,Vec vsoln,Vec vt1)
+PetscErrorCode KSPUnwindPreconditioner(KSP ksp, Vec vsoln, Vec vt1)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
-  PetscValidHeaderSpecific(vsoln,VEC_CLASSID,2);
-  if (!ksp->pc) {ierr = KSPGetPC(ksp,&ksp->pc);CHKERRQ(ierr);}
+  PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
+  PetscValidHeaderSpecific(vsoln, VEC_CLASSID, 2);
+  if (!ksp->pc) PetscCall(KSPGetPC(ksp, &ksp->pc));
   if (ksp->pc_side == PC_RIGHT) {
-    ierr = KSP_PCApply(ksp,vsoln,vt1);CHKERRQ(ierr);
-    ierr = PCDiagonalScaleRight(ksp->pc,vt1,vsoln);CHKERRQ(ierr);
+    PetscCall(KSP_PCApply(ksp, vsoln, vt1));
+    PetscCall(PCDiagonalScaleRight(ksp->pc, vt1, vsoln));
   } else if (ksp->pc_side == PC_SYMMETRIC) {
-    ierr = PCApplySymmetricRight(ksp->pc,vsoln,vt1);CHKERRQ(ierr);
-    ierr = VecCopy(vt1,vsoln);CHKERRQ(ierr);
+    PetscCall(PCApplySymmetricRight(ksp->pc, vsoln, vt1));
+    PetscCall(VecCopy(vt1, vsoln));
   } else {
-    ierr = PCDiagonalScaleRight(ksp->pc,vsoln,vsoln);CHKERRQ(ierr);
+    PetscCall(PCDiagonalScaleRight(ksp->pc, vsoln, vsoln));
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

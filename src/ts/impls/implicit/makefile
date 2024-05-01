@@ -1,11 +1,6 @@
+-include ../../../../petscdir.mk
 
-ALL: lib
-
-LOCDIR   = src/ts/impls/implicit/
-DIRS     = sundials theta alpha glle radau5
 MANSEC   = TS
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
-include ${PETSC_DIR}/lib/petsc/conf/rules
-include ${PETSC_DIR}/lib/petsc/conf/test
-
+include ${PETSC_DIR}/lib/petsc/conf/rules_doc.mk

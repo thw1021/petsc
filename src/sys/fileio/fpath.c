@@ -1,51 +1,55 @@
-
 #include <petscsys.h>
 #if defined(PETSC_HAVE_PWD_H)
-#include <pwd.h>
+  #include <pwd.h>
 #endif
 
 /*@C
-   PetscGetFullPath - Given a filename, returns the fully qualified file name.
+  PetscGetFullPath - Given a filename, returns the fully qualified file name.
 
-   Not Collective
+  Not Collective
 
-   Input Parameters:
-+  path     - pathname to qualify
-.  fullpath - pointer to buffer to hold full pathname
--  flen     - size of fullpath
+  Input Parameters:
++ path - pathname to qualify
+- flen - size of `fullpath`
 
-   Level: developer
+  Output Parameter:
+. fullpath - buffer to hold the full pathname
 
+  Level: developer
 
-.seealso: PetscGetRelativePath()
+.seealso: `PetscGetRelativePath()`
 @*/
-PetscErrorCode  PetscGetFullPath(const char path[],char fullpath[],size_t flen)
+PetscErrorCode PetscGetFullPath(const char path[], char fullpath[], size_t flen)
 {
-  PetscErrorCode ierr;
-  size_t         ln;
-  PetscBool      flg;
+  size_t    ln;
+  PetscBool flg;
 
   PetscFunctionBegin;
   if (path[0] == '/') {
-    ierr = PetscStrncmp("/tmp_mnt/",path,9,&flg);CHKERRQ(ierr);
-    if (flg) {ierr = PetscStrncpy(fullpath,path + 8,flen);CHKERRQ(ierr);}
-    else     {ierr = PetscStrncpy(fullpath,path,flen);CHKERRQ(ierr);}
-    fullpath[flen-1] = 0;
-    PetscFunctionReturn(0);
+    PetscCall(PetscStrncmp("/tmp_mnt/", path, 9, &flg));
+    if (flg) PetscCall(PetscStrncpy(fullpath, path + 8, flen));
+    else PetscCall(PetscStrncpy(fullpath, path, flen));
+    fullpath[flen - 1] = 0;
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+  if (path[0] == '.' && path[1] == '/') {
+    PetscCall(PetscGetWorkingDirectory(fullpath, flen));
+    PetscCall(PetscStrlcat(fullpath, path + 1, flen));
+    PetscFunctionReturn(PETSC_SUCCESS);
   }
 
-  ierr = PetscStrncpy(fullpath,path,flen);CHKERRQ(ierr);
-  fullpath[flen-1] = 0;
+  PetscCall(PetscStrncpy(fullpath, path, flen));
+  fullpath[flen - 1] = 0;
   /* Remove the various "special" forms (~username/ and ~/) */
   if (fullpath[0] == '~') {
-    char tmppath[PETSC_MAX_PATH_LEN],*rest;
+    char tmppath[PETSC_MAX_PATH_LEN], *rest;
     if (fullpath[1] == '/') {
-      ierr = PetscGetHomeDirectory(tmppath,PETSC_MAX_PATH_LEN);CHKERRQ(ierr);
+      PetscCall(PetscGetHomeDirectory(tmppath, PETSC_MAX_PATH_LEN));
       rest = fullpath + 2;
     } else {
 #if defined(PETSC_HAVE_PWD_H)
-      struct passwd  *pwde;
-      char *p,*name;
+      struct passwd *pwde;
+      char          *p, *name;
 
       /* Find username */
       name = fullpath + 1;
@@ -54,39 +58,39 @@ PetscErrorCode  PetscGetFullPath(const char path[],char fullpath[],size_t flen)
       *p   = 0;
       rest = p + 1;
       pwde = getpwnam(name);
-      if (!pwde) PetscFunctionReturn(0);
+      if (!pwde) PetscFunctionReturn(PETSC_SUCCESS);
 
-      ierr = PetscStrcpy(tmppath,pwde->pw_dir);CHKERRQ(ierr);
+      PetscCall(PetscStrncpy(tmppath, pwde->pw_dir, sizeof(tmppath)));
 #else
-      PetscFunctionReturn(0);
+      PetscFunctionReturn(PETSC_SUCCESS);
 #endif
     }
-    ierr = PetscStrlen(tmppath,&ln);CHKERRQ(ierr);
-    if (tmppath[ln-1] != '/') {ierr = PetscStrcat(tmppath+ln-1,"/");CHKERRQ(ierr);}
-    ierr = PetscStrcat(tmppath,rest);CHKERRQ(ierr);
-    ierr = PetscStrncpy(fullpath,tmppath,flen);CHKERRQ(ierr);
-    fullpath[flen-1] = 0;
+    PetscCall(PetscStrlen(tmppath, &ln));
+    if (tmppath[ln - 1] != '/') PetscCall(PetscStrlcat(tmppath + ln - 1, "/", sizeof(tmppath) - ln + 1));
+    PetscCall(PetscStrlcat(tmppath, rest, sizeof(tmppath)));
+    PetscCall(PetscStrncpy(fullpath, tmppath, flen));
+    fullpath[flen - 1] = 0;
   } else {
-    ierr = PetscGetWorkingDirectory(fullpath,flen);CHKERRQ(ierr);
-    ierr = PetscStrlen(fullpath,&ln);CHKERRQ(ierr);
-    ierr = PetscStrncpy(fullpath+ln,"/",flen - ln);CHKERRQ(ierr);
-    fullpath[flen-1] = 0;
-    ierr = PetscStrlen(fullpath,&ln);CHKERRQ(ierr);
+    PetscCall(PetscGetWorkingDirectory(fullpath, flen));
+    PetscCall(PetscStrlen(fullpath, &ln));
+    PetscCall(PetscStrncpy(fullpath + ln, "/", flen - ln));
+    fullpath[flen - 1] = 0;
+    PetscCall(PetscStrlen(fullpath, &ln));
     if (path[0] == '.' && path[1] == '/') {
-      ierr = PetscStrlcat(fullpath,path+2,flen);CHKERRQ(ierr);
+      PetscCall(PetscStrlcat(fullpath, path + 2, flen));
     } else {
-      ierr = PetscStrlcat(fullpath,path,flen);CHKERRQ(ierr);
+      PetscCall(PetscStrlcat(fullpath, path, flen));
     }
-    fullpath[flen-1] = 0;
+    fullpath[flen - 1] = 0;
   }
 
   /* Remove the automounter part of the path */
-  ierr = PetscStrncmp(fullpath,"/tmp_mnt/",9,&flg);CHKERRQ(ierr);
+  PetscCall(PetscStrncmp(fullpath, "/tmp_mnt/", 9, &flg));
   if (flg) {
     char tmppath[PETSC_MAX_PATH_LEN];
-    ierr = PetscStrcpy(tmppath,fullpath + 8);CHKERRQ(ierr);
-    ierr = PetscStrcpy(fullpath,tmppath);CHKERRQ(ierr);
+    PetscCall(PetscStrncpy(tmppath, fullpath + 8, sizeof(tmppath)));
+    PetscCall(PetscStrncpy(fullpath, tmppath, flen));
   }
   /* We could try to handle things like the removal of .. etc */
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

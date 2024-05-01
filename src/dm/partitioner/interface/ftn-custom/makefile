@@ -1,17 +1,7 @@
 -include ../../../../../petscdir.mk
-#requiresdefine   'PETSC_HAVE_FORTRAN'
+#requiresdefine   'PETSC_USE_FORTRAN_BINDINGS'
 
-ALL: lib
-
-CFLAGS   =
-FFLAGS   =
-SOURCEC  = zpartitioner.c
-SOURCEF  =
-SOURCEH  =
-LIBBASE  = libpetscdm
 MANSEC   = DM
-LOCDIR   = src/dm/partitioner/interface/ftn-custom/
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
-include ${PETSC_DIR}/lib/petsc/conf/rules
-include ${PETSC_DIR}/lib/petsc/conf/test
+include ${PETSC_DIR}/lib/petsc/conf/rules_doc.mk

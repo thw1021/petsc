@@ -1,118 +1,129 @@
-static char help[] ="Tests MatPtAP() for MPIMAIJ and MPIAIJ \n ";
+static char help[] = "Tests MatPtAP() for MPIMAIJ and MPIAIJ \n ";
 
 #include <petscdmda.h>
 
-int main(int argc,char **argv)
+int main(int argc, char **argv)
 {
-  PetscErrorCode ierr;
-  DM             coarsedm,finedm;
-  PetscMPIInt    size,rank;
-  PetscInt       M,N,Z,i,nrows;
-  PetscScalar    one = 1.0;
-  PetscReal      fill=2.0;
-  Mat            A,P,C;
-  PetscScalar    *array,alpha;
-  PetscBool      Test_3D=PETSC_FALSE,flg;
-  const PetscInt *ia,*ja;
-  PetscInt       dof;
-  MPI_Comm       comm;
+  DM              coarsedm, finedm;
+  PetscMPIInt     size, rank;
+  PetscInt        M, N, Z, i, nrows;
+  PetscScalar     one  = 1.0;
+  PetscReal       fill = 2.0;
+  Mat             A, P, C;
+  PetscScalar    *array, alpha;
+  PetscBool       Test_3D = PETSC_FALSE, flg;
+  const PetscInt *ia, *ja;
+  PetscInt        dof;
+  MPI_Comm        comm;
 
-  ierr = PetscInitialize(&argc,&argv,NULL,help);if (ierr) return ierr;
+  PetscFunctionBeginUser;
+  PetscCall(PetscInitialize(&argc, &argv, NULL, help));
   comm = PETSC_COMM_WORLD;
-  ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
-  M = 10; N = 10; Z = 10;
-  dof  = 10;
+  PetscCallMPI(MPI_Comm_rank(comm, &rank));
+  PetscCallMPI(MPI_Comm_size(comm, &size));
+  M   = 10;
+  N   = 10;
+  Z   = 10;
+  dof = 10;
 
-  ierr = PetscOptionsGetBool(NULL,NULL,"-test_3D",&Test_3D,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsGetInt(NULL,NULL,"-M",&M,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsGetInt(NULL,NULL,"-N",&N,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsGetInt(NULL,NULL,"-Z",&Z,NULL);CHKERRQ(ierr);
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-test_3D", &Test_3D, NULL));
+  PetscCall(PetscOptionsGetInt(NULL, NULL, "-M", &M, NULL));
+  PetscCall(PetscOptionsGetInt(NULL, NULL, "-N", &N, NULL));
+  PetscCall(PetscOptionsGetInt(NULL, NULL, "-Z", &Z, NULL));
   /* Set up distributed array for fine grid */
   if (!Test_3D) {
-    ierr = DMDACreate2d(comm,DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,DMDA_STENCIL_STAR,M,N,PETSC_DECIDE,PETSC_DECIDE,dof,1,NULL,NULL,&coarsedm);CHKERRQ(ierr);
+    PetscCall(DMDACreate2d(comm, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_STAR, M, N, PETSC_DECIDE, PETSC_DECIDE, dof, 1, NULL, NULL, &coarsedm));
   } else {
-    ierr = DMDACreate3d(comm,DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,DMDA_STENCIL_STAR,M,N,Z,PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,dof,1,NULL,NULL,NULL,&coarsedm);CHKERRQ(ierr);
+    PetscCall(DMDACreate3d(comm, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_STAR, M, N, Z, PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE, dof, 1, NULL, NULL, NULL, &coarsedm));
   }
-  ierr = DMSetFromOptions(coarsedm);CHKERRQ(ierr);
-  ierr = DMSetUp(coarsedm);CHKERRQ(ierr);
+  PetscCall(DMSetFromOptions(coarsedm));
+  PetscCall(DMSetUp(coarsedm));
 
   /* This makes sure the coarse DMDA has the same partition as the fine DMDA */
-  ierr = DMRefine(coarsedm,PetscObjectComm((PetscObject)coarsedm),&finedm);CHKERRQ(ierr);
+  PetscCall(DMRefine(coarsedm, PetscObjectComm((PetscObject)coarsedm), &finedm));
 
   /*------------------------------------------------------------*/
-  ierr = DMSetMatType(finedm,MATAIJ);CHKERRQ(ierr);
-  ierr = DMCreateMatrix(finedm,&A);CHKERRQ(ierr);
+  PetscCall(DMSetMatType(finedm, MATAIJ));
+  PetscCall(DMCreateMatrix(finedm, &A));
 
   /* set val=one to A */
   if (size == 1) {
-    ierr = MatGetRowIJ(A,0,PETSC_FALSE,PETSC_FALSE,&nrows,&ia,&ja,&flg);CHKERRQ(ierr);
+    PetscCall(MatGetRowIJ(A, 0, PETSC_FALSE, PETSC_FALSE, &nrows, &ia, &ja, &flg));
     if (flg) {
-      ierr = MatSeqAIJGetArray(A,&array);CHKERRQ(ierr);
-      for (i=0; i<ia[nrows]; i++) array[i] = one;
-      ierr = MatSeqAIJRestoreArray(A,&array);CHKERRQ(ierr);
+      PetscCall(MatSeqAIJGetArray(A, &array));
+      for (i = 0; i < ia[nrows]; i++) array[i] = one;
+      PetscCall(MatSeqAIJRestoreArray(A, &array));
     }
-    ierr = MatRestoreRowIJ(A,0,PETSC_FALSE,PETSC_FALSE,&nrows,&ia,&ja,&flg);CHKERRQ(ierr);
+    PetscCall(MatRestoreRowIJ(A, 0, PETSC_FALSE, PETSC_FALSE, &nrows, &ia, &ja, &flg));
   } else {
-    Mat AA,AB;
-    ierr = MatMPIAIJGetSeqAIJ(A,&AA,&AB,NULL);CHKERRQ(ierr);
-    ierr = MatGetRowIJ(AA,0,PETSC_FALSE,PETSC_FALSE,&nrows,&ia,&ja,&flg);CHKERRQ(ierr);
+    Mat AA, AB;
+    PetscCall(MatMPIAIJGetSeqAIJ(A, &AA, &AB, NULL));
+    PetscCall(MatGetRowIJ(AA, 0, PETSC_FALSE, PETSC_FALSE, &nrows, &ia, &ja, &flg));
     if (flg) {
-      ierr = MatSeqAIJGetArray(AA,&array);CHKERRQ(ierr);
-      for (i=0; i<ia[nrows]; i++) array[i] = one;
-      ierr = MatSeqAIJRestoreArray(AA,&array);CHKERRQ(ierr);
+      PetscCall(MatSeqAIJGetArray(AA, &array));
+      for (i = 0; i < ia[nrows]; i++) array[i] = one;
+      PetscCall(MatSeqAIJRestoreArray(AA, &array));
     }
-    ierr = MatRestoreRowIJ(AA,0,PETSC_FALSE,PETSC_FALSE,&nrows,&ia,&ja,&flg);CHKERRQ(ierr);
-    ierr = MatGetRowIJ(AB,0,PETSC_FALSE,PETSC_FALSE,&nrows,&ia,&ja,&flg);CHKERRQ(ierr);
+    PetscCall(MatRestoreRowIJ(AA, 0, PETSC_FALSE, PETSC_FALSE, &nrows, &ia, &ja, &flg));
+    PetscCall(MatGetRowIJ(AB, 0, PETSC_FALSE, PETSC_FALSE, &nrows, &ia, &ja, &flg));
     if (flg) {
-      ierr = MatSeqAIJGetArray(AB,&array);CHKERRQ(ierr);
-      for (i=0; i<ia[nrows]; i++) array[i] = one;
-      ierr = MatSeqAIJRestoreArray(AB,&array);CHKERRQ(ierr);
+      PetscCall(MatSeqAIJGetArray(AB, &array));
+      for (i = 0; i < ia[nrows]; i++) array[i] = one;
+      PetscCall(MatSeqAIJRestoreArray(AB, &array));
     }
-    ierr = MatRestoreRowIJ(AB,0,PETSC_FALSE,PETSC_FALSE,&nrows,&ia,&ja,&flg);CHKERRQ(ierr);
+    PetscCall(MatRestoreRowIJ(AB, 0, PETSC_FALSE, PETSC_FALSE, &nrows, &ia, &ja, &flg));
   }
   /* Create interpolation between the fine and coarse grids */
-  ierr = DMCreateInterpolation(coarsedm,finedm,&P,NULL);CHKERRQ(ierr);
+  PetscCall(DMCreateInterpolation(coarsedm, finedm, &P, NULL));
 
   /* Test P^T * A * P - MatPtAP() */
   /*------------------------------*/
   /* (1) Developer API */
-  ierr = MatProductCreate(A,P,NULL,&C);CHKERRQ(ierr);
-  ierr = MatProductSetType(C,MATPRODUCT_PtAP);CHKERRQ(ierr);
-  ierr = MatProductSetAlgorithm(C,"default");CHKERRQ(ierr);
-  ierr = MatProductSetFill(C,PETSC_DEFAULT);CHKERRQ(ierr);
-  ierr = MatProductSetFromOptions(C);CHKERRQ(ierr);
-  ierr = MatProductSymbolic(C);CHKERRQ(ierr);
-  ierr = MatProductNumeric(C);CHKERRQ(ierr);
-  ierr = MatProductNumeric(C);CHKERRQ(ierr); /* Test reuse of symbolic C */
+  PetscCall(MatProductCreate(A, P, NULL, &C));
+  PetscCall(MatProductSetType(C, MATPRODUCT_PtAP));
+  PetscCall(MatProductSetAlgorithm(C, "allatonce"));
+  PetscCall(MatProductSetFill(C, PETSC_DEFAULT));
+  PetscCall(MatProductSetFromOptions(C));
+  PetscCall(MatProductSymbolic(C));
+  PetscCall(MatProductNumeric(C));
+  PetscCall(MatProductNumeric(C)); /* Test reuse of symbolic C */
 
-  ierr = MatPtAPMultEqual(A,P,C,10,&flg);CHKERRQ(ierr);
-  if (!flg) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"Error in MatProduct_PtAP");
-  ierr = MatDestroy(&C);CHKERRQ(ierr);
+  { /* Test MatProductView() */
+    PetscViewer viewer;
+    PetscCall(PetscViewerASCIIOpen(comm, NULL, &viewer));
+    PetscCall(PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_INFO));
+    PetscCall(MatProductView(C, viewer));
+    PetscCall(PetscViewerPopFormat(viewer));
+    PetscCall(PetscViewerDestroy(&viewer));
+  }
+
+  PetscCall(MatPtAPMultEqual(A, P, C, 10, &flg));
+  PetscCheck(flg, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Error in MatProduct_PtAP");
+  PetscCall(MatDestroy(&C));
 
   /* (2) User API */
-  ierr = MatPtAP(A,P,MAT_INITIAL_MATRIX,fill,&C);CHKERRQ(ierr);
+  PetscCall(MatPtAP(A, P, MAT_INITIAL_MATRIX, fill, &C));
   /* Test MAT_REUSE_MATRIX - reuse symbolic C */
-  alpha=1.0;
-  for (i=0; i<1; i++) {
+  alpha = 1.0;
+  for (i = 0; i < 1; i++) {
     alpha -= 0.1;
-    ierr   = MatScale(A,alpha);CHKERRQ(ierr);
-    ierr   = MatPtAP(A,P,MAT_REUSE_MATRIX,fill,&C);CHKERRQ(ierr);
+    PetscCall(MatScale(A, alpha));
+    PetscCall(MatPtAP(A, P, MAT_REUSE_MATRIX, fill, &C));
   }
 
   /* Free intermediate data structures created for reuse of C=Pt*A*P */
-  ierr = MatProductClear(C);CHKERRQ(ierr);
+  PetscCall(MatProductClear(C));
 
-  ierr = MatPtAPMultEqual(A,P,C,10,&flg);CHKERRQ(ierr);
-  if (!flg) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"Error in MatPtAP");
+  PetscCall(MatPtAPMultEqual(A, P, C, 10, &flg));
+  PetscCheck(flg, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Error in MatPtAP");
 
-  ierr = MatDestroy(&C);CHKERRQ(ierr);
-  ierr = MatDestroy(&A);CHKERRQ(ierr);
-  ierr = MatDestroy(&P);CHKERRQ(ierr);
-  ierr = DMDestroy(&finedm);CHKERRQ(ierr);
-  ierr = DMDestroy(&coarsedm);CHKERRQ(ierr);
-  ierr = PetscFinalize();
-  return ierr;
+  PetscCall(MatDestroy(&C));
+  PetscCall(MatDestroy(&A));
+  PetscCall(MatDestroy(&P));
+  PetscCall(DMDestroy(&finedm));
+  PetscCall(DMDestroy(&coarsedm));
+  PetscCall(PetscFinalize());
+  return 0;
 }
 
 /*TEST
@@ -124,25 +135,31 @@ int main(int argc,char **argv)
    test:
       suffix: allatonce
       nsize: 4
-      args: -M 10 -N 10 -Z 10 -matptap_via allatonce
-      output_file: output/ex89_1.out
+      args: -M 10 -N 10 -Z 10
+      output_file: output/ex89_2.out
 
    test:
       suffix: allatonce_merged
       nsize: 4
-      args: -M 10 -M 5 -M 10 -matptap_via allatonce_merged
-      output_file: output/ex96_1.out
+      args: -M 10 -M 5 -M 10 -mat_product_algorithm allatonce_merged
+      output_file: output/ex89_3.out
 
    test:
-      suffix: allatonce_3D
+      suffix: nonscalable_3D
       nsize: 4
-      args: -M 10 -M 5 -M 10 -test_3D 1 -matptap_via allatonce
-      output_file: output/ex96_1.out
+      args: -M 10 -M 5 -M 10 -test_3D 1 -mat_product_algorithm nonscalable
+      output_file: output/ex89_4.out
 
    test:
       suffix: allatonce_merged_3D
       nsize: 4
-      args: -M 10 -M 5 -M 10 -test_3D 1 -matptap_via allatonce_merged
-      output_file: output/ex96_1.out
+      args: -M 10 -M 5 -M 10 -test_3D 1 -mat_product_algorithm allatonce_merged
+      output_file: output/ex89_3.out
+
+   test:
+      suffix: nonscalable
+      nsize: 4
+      args: -M 10 -N 10 -Z 10 -mat_product_algorithm nonscalable
+      output_file: output/ex89_5.out
 
 TEST*/

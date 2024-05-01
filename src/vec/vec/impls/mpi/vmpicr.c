@@ -1,40 +1,38 @@
-
 /*
    This file contains routines for Parallel vector operations.
  */
 
-#include <petscvec.h>   /*I  "petscvec.h"   I*/
+#include <petscvec.h> /*I  "petscvec.h"   I*/
 
 /*@
-   VecCreateMPI - Creates a parallel vector.
+  VecCreateMPI - Creates a parallel vector.
 
-   Collective
+  Collective
 
-   Input Parameters:
-+  comm - the MPI communicator to use
-.  n - local vector length (or PETSC_DECIDE to have calculated if N is given)
--  N - global vector length (or PETSC_DETERMINE to have calculated if n is given)
+  Input Parameters:
++ comm - the MPI communicator to use
+. n    - local vector length (or `PETSC_DECIDE` to have calculated if `N` is given)
+- N    - global vector length (or `PETSC_DETERMINE` to have calculated if `n` is given)
 
-   Output Parameter:
-.  vv - the vector
+  Output Parameter:
+. v - the vector
 
-   Notes:
-   Use VecDuplicate() or VecDuplicateVecs() to form additional vectors of the
-   same type as an existing vector.
+  Level: intermediate
 
-   Level: intermediate
+  Notes:
+  It is recommended to use `VecCreateFromOptions()` instead of this routine
 
-.seealso: VecCreateSeq(), VecCreate(), VecDuplicate(), VecDuplicateVecs(), VecCreateGhost(),
-          VecCreateMPIWithArray(), VecCreateGhostWithArray(), VecMPISetGhost()
+  Use `VecDuplicate()` or `VecDuplicateVecs()` to form additional vectors of the
+  same type as an existing vector.
 
+.seealso: [](ch_vectors), `Vec`, `VecType`, `VecCreateSeq()`, `VecCreate()`, `VecDuplicate()`, `VecDuplicateVecs()`, `VecCreateGhost()`,
+          `VecCreateMPIWithArray()`, `VecCreateGhostWithArray()`, `VecMPISetGhost()`
 @*/
-PetscErrorCode  VecCreateMPI(MPI_Comm comm,PetscInt n,PetscInt N,Vec *v)
+PetscErrorCode VecCreateMPI(MPI_Comm comm, PetscInt n, PetscInt N, Vec *v)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  ierr = VecCreate(comm,v);CHKERRQ(ierr);
-  ierr = VecSetSizes(*v,n,N);CHKERRQ(ierr);
-  ierr = VecSetType(*v,VECMPI);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(VecCreate(comm, v));
+  PetscCall(VecSetSizes(*v, n, N));
+  PetscCall(VecSetType(*v, VECMPI));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

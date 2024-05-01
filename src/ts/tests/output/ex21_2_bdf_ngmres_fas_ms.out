@@ -71,6 +71,7 @@ TS Object: 2 MPI processes
           type: newtonls
           maximum iterations=50, maximum function evaluations=10000
           tolerances: relative=1e-08, absolute=1e-50, solution=1e-08
+          norm schedule ALWAYS
           SNESLineSearch Object: (npc_fas_coarse_) 2 MPI processes
             type: bt
               interpolation: cubic
@@ -83,20 +84,21 @@ TS Object: 2 MPI processes
               restart=30, using Classical (unmodified) Gram-Schmidt Orthogonalization with no iterative refinement
               happy breakdown tolerance 1e-30
             maximum iterations=10000, initial guess is zero
-            tolerances:  relative=1e-05, absolute=1e-50, divergence=10000.
+            tolerances: relative=1e-05, absolute=1e-50, divergence=10000.
             left preconditioning
             using PRECONDITIONED norm type for convergence test
           PC Object: (npc_fas_coarse_) 2 MPI processes
             type: bjacobi
               number of blocks = 2
-              Local solver is the same for all blocks, as in the following KSP and PC objects on rank 0:
-            KSP Object: (npc_fas_coarse_sub_) 1 MPI processes
+              Local solver information for first block is in the following KSP and PC objects on rank 0:
+              Use -npc_fas_coarse_ksp_view ::ascii_info_detail to display information for all blocks
+            KSP Object: (npc_fas_coarse_sub_) 1 MPI process
               type: preonly
               maximum iterations=10000, initial guess is zero
-              tolerances:  relative=1e-05, absolute=1e-50, divergence=10000.
+              tolerances: relative=1e-05, absolute=1e-50, divergence=10000.
               left preconditioning
               using NONE norm type for convergence test
-            PC Object: (npc_fas_coarse_sub_) 1 MPI processes
+            PC Object: (npc_fas_coarse_sub_) 1 MPI process
               type: ilu
                 out-of-place factorization
                 0 levels of fill
@@ -104,14 +106,14 @@ TS Object: 2 MPI processes
                 matrix ordering: natural
                 factor fill ratio given 1., needed 1.
                   Factored matrix follows:
-                    Mat Object: 1 MPI processes
+                    Mat Object: (npc_fas_coarse_sub_) 1 MPI process
                       type: seqaij
                       rows=15, cols=15
                       package used to perform factorization: petsc
                       total: nonzeros=59, allocated nonzeros=59
                         not using I-node routines
               linear system matrix = precond matrix:
-              Mat Object: 1 MPI processes
+              Mat Object: (npc_fas_coarse_sub_) 1 MPI process
                 type: seqaij
                 rows=15, cols=15
                 total: nonzeros=59, allocated nonzeros=59
@@ -131,20 +133,21 @@ TS Object: 2 MPI processes
           KSP Object: (npc_fas_levels_1_) 2 MPI processes
             type: preonly
             maximum iterations=10000, initial guess is zero
-            tolerances:  relative=1e-05, absolute=1e-50, divergence=10000.
+            tolerances: relative=1e-05, absolute=1e-50, divergence=10000.
             left preconditioning
             using NONE norm type for convergence test
           PC Object: (npc_fas_levels_1_) 2 MPI processes
             type: bjacobi
               number of blocks = 2
-              Local solver is the same for all blocks, as in the following KSP and PC objects on rank 0:
-            KSP Object: (npc_fas_levels_1_sub_) 1 MPI processes
+              Local solver information for first block is in the following KSP and PC objects on rank 0:
+              Use -npc_fas_levels_1_ksp_view ::ascii_info_detail to display information for all blocks
+            KSP Object: (npc_fas_levels_1_sub_) 1 MPI process
               type: preonly
               maximum iterations=10000, initial guess is zero
-              tolerances:  relative=1e-05, absolute=1e-50, divergence=10000.
+              tolerances: relative=1e-05, absolute=1e-50, divergence=10000.
               left preconditioning
               using NONE norm type for convergence test
-            PC Object: (npc_fas_levels_1_sub_) 1 MPI processes
+            PC Object: (npc_fas_levels_1_sub_) 1 MPI process
               type: ilu
                 out-of-place factorization
                 0 levels of fill
@@ -152,14 +155,14 @@ TS Object: 2 MPI processes
                 matrix ordering: natural
                 factor fill ratio given 1., needed 1.
                   Factored matrix follows:
-                    Mat Object: 1 MPI processes
+                    Mat Object: (npc_fas_levels_1_sub_) 1 MPI process
                       type: seqaij
                       rows=45, cols=45
                       package used to perform factorization: petsc
                       total: nonzeros=197, allocated nonzeros=197
                         not using I-node routines
               linear system matrix = precond matrix:
-              Mat Object: 1 MPI processes
+              Mat Object: (npc_fas_levels_1_sub_) 1 MPI process
                 type: seqaij
                 rows=45, cols=45
                 total: nonzeros=197, allocated nonzeros=197
@@ -180,20 +183,21 @@ TS Object: 2 MPI processes
           KSP Object: (npc_fas_levels_2_) 2 MPI processes
             type: preonly
             maximum iterations=10000, initial guess is zero
-            tolerances:  relative=1e-05, absolute=1e-50, divergence=10000.
+            tolerances: relative=1e-05, absolute=1e-50, divergence=10000.
             left preconditioning
             using NONE norm type for convergence test
           PC Object: (npc_fas_levels_2_) 2 MPI processes
             type: bjacobi
               number of blocks = 2
-              Local solver is the same for all blocks, as in the following KSP and PC objects on rank 0:
-            KSP Object: (npc_fas_levels_2_sub_) 1 MPI processes
+              Local solver information for first block is in the following KSP and PC objects on rank 0:
+              Use -npc_fas_levels_2_ksp_view ::ascii_info_detail to display information for all blocks
+            KSP Object: (npc_fas_levels_2_sub_) 1 MPI process
               type: preonly
               maximum iterations=10000, initial guess is zero
-              tolerances:  relative=1e-05, absolute=1e-50, divergence=10000.
+              tolerances: relative=1e-05, absolute=1e-50, divergence=10000.
               left preconditioning
               using NONE norm type for convergence test
-            PC Object: (npc_fas_levels_2_sub_) 1 MPI processes
+            PC Object: (npc_fas_levels_2_sub_) 1 MPI process
               type: ilu
                 out-of-place factorization
                 0 levels of fill
@@ -201,14 +205,14 @@ TS Object: 2 MPI processes
                 matrix ordering: natural
                 factor fill ratio given 1., needed 1.
                   Factored matrix follows:
-                    Mat Object: 1 MPI processes
+                    Mat Object: (npc_fas_levels_2_sub_) 1 MPI process
                       type: seqaij
                       rows=153, cols=153
                       package used to perform factorization: petsc
                       total: nonzeros=713, allocated nonzeros=713
                         not using I-node routines
               linear system matrix = precond matrix:
-              Mat Object: 1 MPI processes
+              Mat Object: (npc_fas_levels_2_sub_) 1 MPI process
                 type: seqaij
                 rows=153, cols=153
                 total: nonzeros=713, allocated nonzeros=713

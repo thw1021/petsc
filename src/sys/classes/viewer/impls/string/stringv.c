@@ -1,143 +1,130 @@
+#include <petsc/private/viewerimpl.h> /*I  "petscsys.h"  I*/
 
-#include <petsc/private/viewerimpl.h>   /*I  "petscsys.h"  I*/
-
-typedef struct  {
-  char      *string;         /* string where info is stored */
-  char      *head;           /* pointer to begining of unused portion */
-  size_t    curlen,maxlen;
-  PetscBool ownstring;       /* string viewer is responsable for freeing the string */
+typedef struct {
+  char     *string; /* string where info is stored */
+  char     *head;   /* pointer to beginning of unused portion */
+  size_t    curlen, maxlen;
+  PetscBool ownstring; /* string viewer is responsible for freeing the string */
 } PetscViewer_String;
 
 static PetscErrorCode PetscViewerDestroy_String(PetscViewer viewer)
 {
-  PetscViewer_String *vstr = (PetscViewer_String*)viewer->data;
-  PetscErrorCode     ierr;
+  PetscViewer_String *vstr = (PetscViewer_String *)viewer->data;
 
   PetscFunctionBegin;
-  if (vstr->ownstring) {
-    ierr = PetscFree(vstr->string);CHKERRQ(ierr);
-  }
-  ierr = PetscFree(vstr);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  if (vstr->ownstring) PetscCall(PetscFree(vstr->string));
+  PetscCall(PetscFree(vstr));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-    PetscViewerStringSPrintf - Prints information to a PetscViewer string.
+  PetscViewerStringSPrintf - Prints information to a `PETSCVIEWERSTRING` `PetscViewer` object
 
-    Logically Collective on PetscViewer (Hmmm, each processor maintains a separate string)
+  Logically Collective; No Fortran Support
 
-    Input Parameters:
-+   v - a string PetscViewer, formed by PetscViewerStringOpen()
--   format - the format of the input
+  Input Parameters:
++ viewer - a string `PetscViewer`, formed by `PetscViewerStringOpen()`
+- format - the format of the input
 
-    Level: developer
+  Level: developer
 
-    Fortran Note:
-    This routine is not supported in Fortran.
+  Note:
+  Though this is collective each MPI process maintains a separate string
 
-.seealso: PetscViewerStringOpen(), PetscViewerStringGetStringRead(), PetscViewerStringSetString(), PETSCVIEWERSTRING
+.seealso: [](sec_viewers), `PETSCVIEWERSTRING`, `PetscViewerStringOpen()`, `PetscViewerStringGetStringRead()`, `PetscViewerStringSetString()`
 @*/
-PetscErrorCode  PetscViewerStringSPrintf(PetscViewer viewer,const char format[],...)
+PetscErrorCode PetscViewerStringSPrintf(PetscViewer viewer, const char format[], ...)
 {
-  va_list            Argp;
-  size_t             fullLength;
-  size_t             shift,cshift;
-  PetscErrorCode     ierr;
-  PetscBool          isstring;
-  char               tmp[4096];
-  PetscViewer_String *vstr = (PetscViewer_String*)viewer->data;
+  va_list             Argp;
+  size_t              fullLength;
+  size_t              shift, cshift;
+  PetscBool           isstring;
+  char                tmp[4096];
+  PetscViewer_String *vstr = (PetscViewer_String *)viewer->data;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
-  PetscValidCharPointer(format,2);
-  ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERSTRING,&isstring);CHKERRQ(ierr);
-  if (!isstring) PetscFunctionReturn(0);
-  if (!vstr->string) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ORDER,"Must call PetscViewerStringSetString() before using");
+  PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 1);
+  PetscAssertPointer(format, 2);
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERSTRING, &isstring));
+  if (!isstring) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCheck(vstr->string, PETSC_COMM_SELF, PETSC_ERR_ORDER, "Must call PetscViewerStringSetString() before using");
 
-  va_start(Argp,format);
-  ierr = PetscVSNPrintf(tmp,4096,format,&fullLength,Argp);CHKERRQ(ierr);
+  va_start(Argp, format);
+  PetscCall(PetscVSNPrintf(tmp, sizeof(tmp), format, &fullLength, Argp));
   va_end(Argp);
-  ierr = PetscStrlen(tmp,&shift);CHKERRQ(ierr);
-  cshift = shift+1;
+  PetscCall(PetscStrlen(tmp, &shift));
+  cshift = shift + 1;
   if (cshift >= vstr->maxlen - vstr->curlen - 1) cshift = vstr->maxlen - vstr->curlen - 1;
-  ierr = PetscStrncpy(vstr->head,tmp,cshift);CHKERRQ(ierr);
-  vstr->head   += shift;
+  PetscCall(PetscMemcpy(vstr->head, tmp, cshift));
+  vstr->head[cshift - 1] = '\0';
+  vstr->head += shift;
   vstr->curlen += shift;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-    PetscViewerStringOpen - Opens a string as a PetscViewer. This is a very
-    simple PetscViewer; information on the object is simply stored into
-    the string in a fairly nice way.
+  PetscViewerStringOpen - Opens a string as a `PETSCVIEWERSTRING` `PetscViewer`. This is a very
+  simple `PetscViewer`; information on the object is simply stored into
+  the string in a fairly nice way.
 
-    Collective
+  Collective; No Fortran Support
 
-    Input Parameters:
-+   comm - the communicator
-.   string - the string to use
--   len    - the string length
+  Input Parameters:
++ comm   - the communicator
+. string - the string to use
+- len    - the string length
 
-    Output Parameter:
-.   lab - the PetscViewer
+  Output Parameter:
+. lab - the `PetscViewer`
 
-    Level: advanced
+  Level: advanced
 
-    Fortran Note:
-    This routine is not supported in Fortran.
-
-.seealso: PetscViewerDestroy(), PetscViewerStringSPrintf(), PetscViewerStringGetStringRead(), PetscViewerStringSetString(), PETSCVIEWERSTRING
+.seealso: [](sec_viewers), `PETSCVIEWERSTRING`, `PetscViewerDestroy()`, `PetscViewerStringSPrintf()`, `PetscViewerStringGetStringRead()`, `PetscViewerStringSetString()`
 @*/
-PetscErrorCode  PetscViewerStringOpen(MPI_Comm comm,char string[],size_t len,PetscViewer *lab)
+PetscErrorCode PetscViewerStringOpen(MPI_Comm comm, char string[], size_t len, PetscViewer *lab)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  ierr = PetscViewerCreate(comm,lab);CHKERRQ(ierr);
-  ierr = PetscViewerSetType(*lab,PETSCVIEWERSTRING);CHKERRQ(ierr);
-  ierr = PetscViewerStringSetString(*lab,string,len);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscViewerCreate(comm, lab));
+  PetscCall(PetscViewerSetType(*lab, PETSCVIEWERSTRING));
+  PetscCall(PetscViewerStringSetString(*lab, string, len));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode PetscViewerGetSubViewer_String(PetscViewer viewer,MPI_Comm comm,PetscViewer *sviewer)
+static PetscErrorCode PetscViewerGetSubViewer_String(PetscViewer viewer, MPI_Comm comm, PetscViewer *sviewer)
 {
-  PetscViewer_String *vstr = (PetscViewer_String*)viewer->data;
-  PetscErrorCode     ierr;
+  PetscViewer_String *vstr = (PetscViewer_String *)viewer->data;
 
   PetscFunctionBegin;
-  ierr = PetscViewerStringOpen(PETSC_COMM_SELF,vstr->head,vstr->maxlen-vstr->curlen,sviewer);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscViewerStringOpen(PETSC_COMM_SELF, vstr->head, vstr->maxlen - vstr->curlen, sviewer));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode PetscViewerRestoreSubViewer_String(PetscViewer viewer,MPI_Comm comm,PetscViewer *sviewer)
+static PetscErrorCode PetscViewerRestoreSubViewer_String(PetscViewer viewer, MPI_Comm comm, PetscViewer *sviewer)
 {
-  PetscErrorCode     ierr;
-  PetscViewer_String *iviewer = (PetscViewer_String*)(*sviewer)->data;
-  PetscViewer_String *vstr    = (PetscViewer_String*)viewer->data;
+  PetscViewer_String *iviewer = (PetscViewer_String *)(*sviewer)->data;
+  PetscViewer_String *vstr    = (PetscViewer_String *)viewer->data;
 
   PetscFunctionBegin;
-  vstr->head    = iviewer->head;
+  vstr->head = iviewer->head;
   vstr->curlen += iviewer->curlen;
-  ierr          = PetscViewerDestroy(sviewer);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscViewerDestroy(sviewer));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*MC
    PETSCVIEWERSTRING - A viewer that writes to a string
 
-
-.seealso:  PetscViewerStringOpen(), PetscViewerStringSPrintf(), PetscViewerSocketOpen(), PetscViewerDrawOpen(), PETSCVIEWERSOCKET,
-           PetscViewerCreate(), PetscViewerASCIIOpen(), PetscViewerBinaryOpen(), PETSCVIEWERBINARY, PETSCVIEWERDRAW,
-           PetscViewerMatlabOpen(), VecView(), DMView(), PetscViewerMatlabPutArray(), PETSCVIEWERASCII, PETSCVIEWERMATLAB,
-           PetscViewerFileSetName(), PetscViewerFileSetMode(), PetscViewerFormat, PetscViewerType, PetscViewerSetType()
-
   Level: beginner
+
+.seealso: [](sec_viewers), `PetscViewerStringOpen()`, `PetscViewerStringSPrintf()`, `PetscViewerSocketOpen()`, `PetscViewerDrawOpen()`, `PETSCVIEWERSOCKET`,
+          `PetscViewerCreate()`, `PetscViewerASCIIOpen()`, `PetscViewerBinaryOpen()`, `PETSCVIEWERBINARY`, `PETSCVIEWERDRAW`,
+          `PetscViewerMatlabOpen()`, `VecView()`, `DMView()`, `PetscViewerMatlabPutArray()`, `PETSCVIEWERASCII`, `PETSCVIEWERMATLAB`,
+          `PetscViewerFileSetName()`, `PetscViewerFileSetMode()`, `PetscViewerFormat`, `PetscViewerType`, `PetscViewerSetType()`
 M*/
 
 PETSC_EXTERN PetscErrorCode PetscViewerCreate_String(PetscViewer v)
 {
   PetscViewer_String *vstr;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   v->ops->destroy          = PetscViewerDestroy_String;
@@ -145,121 +132,113 @@ PETSC_EXTERN PetscErrorCode PetscViewerCreate_String(PetscViewer v)
   v->ops->flush            = NULL;
   v->ops->getsubviewer     = PetscViewerGetSubViewer_String;
   v->ops->restoresubviewer = PetscViewerRestoreSubViewer_String;
-  ierr                     = PetscNewLog(v,&vstr);CHKERRQ(ierr);
-  v->data                  = (void*)vstr;
-  vstr->string             = NULL;
-  PetscFunctionReturn(0);
+  PetscCall(PetscNew(&vstr));
+  v->data      = (void *)vstr;
+  vstr->string = NULL;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
+  PetscViewerStringGetStringRead - Returns the string that a `PETSCVIEWERSTRING` uses
 
-   PetscViewerStringGetStringRead - Returns the string that a string viewer uses
-
-   Logically Collective on PetscViewer
+  Logically Collective
 
   Input Parameter:
-.   viewer - string viewer
+. viewer - `PETSCVIEWERSTRING` viewer
 
   Output Parameters:
-+    string - the string, optional use NULL if you do not need
--   len - the length of the string, optional use NULL if you do
-
-  Notes: Do not write to the string nor free it
++ string - the string, optional use NULL if you do not need
+- len    - the length of the string, optional use NULL if you do
 
   Level: advanced
 
-.seealso: PetscViewerStringOpen(), PETSCVIEWERSTRING, PetscViewerStringSetString(), PetscViewerStringSPrintf(),
-          PetscViewerStringSetOwnString()
+  Note:
+  Do not write to the string nor free it
+
+.seealso: [](sec_viewers), `PetscViewerStringOpen()`, `PETSCVIEWERSTRING`, `PetscViewerStringSetString()`, `PetscViewerStringSPrintf()`,
+          `PetscViewerStringSetOwnString()`
 @*/
-PetscErrorCode  PetscViewerStringGetStringRead(PetscViewer viewer,const char *string[],size_t *len)
+PetscErrorCode PetscViewerStringGetStringRead(PetscViewer viewer, const char *string[], size_t *len)
 {
-  PetscViewer_String *vstr = (PetscViewer_String*)viewer->data;
-  PetscErrorCode     ierr;
-  PetscBool          isstring;
+  PetscViewer_String *vstr = (PetscViewer_String *)viewer->data;
+  PetscBool           isstring;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
-  ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERSTRING,&isstring);CHKERRQ(ierr);
-  if (!isstring) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Only for PETSCVIEWERSTRING");
+  PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 1);
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERSTRING, &isstring));
+  PetscCheck(isstring, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Only for PETSCVIEWERSTRING");
   if (string) *string = vstr->string;
-  if (len)    *len    = vstr->maxlen;
-  PetscFunctionReturn(0);
+  if (len) *len = vstr->maxlen;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
+  PetscViewerStringSetString - sets the string that a string viewer will print to
 
-   PetscViewerStringSetString - sets the string that a string viewer will print to
-
-   Logically Collective on PetscViewer
+  Logically Collective
 
   Input Parameters:
-+   viewer - string viewer you wish to attach string to
-.   string - the string to print data into
--   len - the length of the string
-
-  Notes: The function does not copy the string, it uses it directly therefore you cannot free
-   the string until the viewer is destroyed. If you call PetscViewerStringSetOwnString() the ownership
-   passes to the viewer and it will be responsable for freeing it. In this case the string must be
-   obtained with PetscMalloc().
++ viewer - string viewer you wish to attach string to
+. string - the string to print data into
+- len    - the length of the string
 
   Level: advanced
 
-.seealso: PetscViewerStringOpen(), PETSCVIEWERSTRING, PetscViewerStringGetStringRead(), PetscViewerStringSPrintf(),
-          PetscViewerStringSetOwnString()
+  Note:
+  The function does not copy the string, it uses it directly therefore you cannot free
+  the string until the viewer is destroyed. If you call `PetscViewerStringSetOwnString()` the ownership
+  passes to the viewer and it will be responsible for freeing it. In this case the string must be
+  obtained with `PetscMalloc()`.
+
+.seealso: [](sec_viewers), `PetscViewerStringOpen()`, `PETSCVIEWERSTRING`, `PetscViewerStringGetStringRead()`, `PetscViewerStringSPrintf()`,
+          `PetscViewerStringSetOwnString()`
 @*/
-PetscErrorCode  PetscViewerStringSetString(PetscViewer viewer,char string[],size_t len)
+PetscErrorCode PetscViewerStringSetString(PetscViewer viewer, char string[], size_t len)
 {
-  PetscViewer_String *vstr = (PetscViewer_String*)viewer->data;
-  PetscErrorCode     ierr;
-  PetscBool          isstring;
+  PetscViewer_String *vstr = (PetscViewer_String *)viewer->data;
+  PetscBool           isstring;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
-  PetscValidCharPointer(string,2);
-  ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERSTRING,&isstring);CHKERRQ(ierr);
-  if (!isstring) PetscFunctionReturn(0);
-  if (len <= 2) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"String must have length at least 2");
+  PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 1);
+  PetscAssertPointer(string, 2);
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERSTRING, &isstring));
+  if (!isstring) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCheck(len > 2, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "String must have length at least 2");
 
-  ierr         = PetscArrayzero(string,len);CHKERRQ(ierr);
+  PetscCall(PetscArrayzero(string, len));
   vstr->string = string;
   vstr->head   = string;
   vstr->curlen = 0;
   vstr->maxlen = len;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
+  PetscViewerStringSetOwnString - tells the viewer that it now owns the string and is responsible for freeing it
 
-   PetscViewerStringSetOwnString - tells the viewer that it now owns the string and is responsible for freeing it
+  Logically Collective
 
-   Logically Collective on PetscViewer
-
-  Input Parameters:
-.   viewer - string viewer
-
-  Notes: If you call this the string must have been obtained with PetscMalloc() and you cannot free the string
+  Input Parameter:
+. viewer - string viewer
 
   Level: advanced
 
-.seealso: PetscViewerStringOpen(), PETSCVIEWERSTRING, PetscViewerStringGetStringRead(), PetscViewerStringSPrintf(),
-          PetscViewerStringSetString()
+  Note:
+  If you call this the string must have been obtained with `PetscMalloc()` and you cannot free the string
+
+.seealso: [](sec_viewers), `PetscViewerStringOpen()`, `PETSCVIEWERSTRING`, `PetscViewerStringGetStringRead()`, `PetscViewerStringSPrintf()`,
+          `PetscViewerStringSetString()`
 @*/
-PetscErrorCode  PetscViewerStringSetOwnString(PetscViewer viewer)
+PetscErrorCode PetscViewerStringSetOwnString(PetscViewer viewer)
 {
-  PetscViewer_String *vstr = (PetscViewer_String*)viewer->data;
-  PetscErrorCode     ierr;
-  PetscBool          isstring;
+  PetscViewer_String *vstr = (PetscViewer_String *)viewer->data;
+  PetscBool           isstring;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
-  ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERSTRING,&isstring);CHKERRQ(ierr);
-  if (!isstring) PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 1);
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERSTRING, &isstring));
+  if (!isstring) PetscFunctionReturn(PETSC_SUCCESS);
 
   vstr->ownstring = PETSC_TRUE;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
-
-
-
-
-

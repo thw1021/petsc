@@ -1,50 +1,39 @@
-
-#include <petscsys.h>        /*I  "petscsys.h"  I*/
+#include <petscsys.h> /*I  "petscsys.h"  I*/
 #include <petsc/private/petscimpl.h>
 /*
     Note that tag of 0 is ok because comm is a private communicator
   generated below just for these routines.
 */
 
-PETSC_INTERN PetscErrorCode PetscSequentialPhaseBegin_Private(MPI_Comm comm,int ng)
+PETSC_INTERN PetscErrorCode PetscSequentialPhaseBegin_Private(MPI_Comm comm, int ng)
 {
-  PetscErrorCode ierr;
-  PetscMPIInt    rank,size,tag = 0;
-  MPI_Status     status;
+  PetscMPIInt rank, size, tag = 0;
+  MPI_Status  status;
 
   PetscFunctionBegin;
-  ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
-  if (size == 1) PetscFunctionReturn(0);
-  ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
-  if (rank) {
-    ierr = MPI_Recv(NULL,0,MPI_INT,rank-1,tag,comm,&status);CHKERRQ(ierr);
-  }
+  PetscCallMPI(MPI_Comm_size(comm, &size));
+  if (size == 1) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCallMPI(MPI_Comm_rank(comm, &rank));
+  if (rank) PetscCallMPI(MPI_Recv(NULL, 0, MPI_INT, rank - 1, tag, comm, &status));
   /* Send to the next process in the group unless we are the last process */
-  if ((rank % ng) < ng - 1 && rank != size - 1) {
-    ierr = MPI_Send(NULL,0,MPI_INT,rank + 1,tag,comm);CHKERRQ(ierr);
-  }
-  PetscFunctionReturn(0);
+  if ((rank % ng) < ng - 1 && rank != size - 1) PetscCallMPI(MPI_Send(NULL, 0, MPI_INT, rank + 1, tag, comm));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode PetscSequentialPhaseEnd_Private(MPI_Comm comm,int ng)
+PETSC_INTERN PetscErrorCode PetscSequentialPhaseEnd_Private(MPI_Comm comm, int ng)
 {
-  PetscErrorCode ierr;
-  PetscMPIInt    rank,size,tag = 0;
-  MPI_Status     status;
+  PetscMPIInt rank, size, tag = 0;
+  MPI_Status  status;
 
   PetscFunctionBegin;
-  ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
-  if (size == 1) PetscFunctionReturn(0);
+  PetscCallMPI(MPI_Comm_rank(comm, &rank));
+  PetscCallMPI(MPI_Comm_size(comm, &size));
+  if (size == 1) PetscFunctionReturn(PETSC_SUCCESS);
 
   /* Send to the first process in the next group */
-  if ((rank % ng) == ng - 1 || rank == size - 1) {
-    ierr = MPI_Send(NULL,0,MPI_INT,(rank + 1) % size,tag,comm);CHKERRQ(ierr);
-  }
-  if (!rank) {
-    ierr = MPI_Recv(NULL,0,MPI_INT,size-1,tag,comm,&status);CHKERRQ(ierr);
-  }
-  PetscFunctionReturn(0);
+  if ((rank % ng) == ng - 1 || rank == size - 1) PetscCallMPI(MPI_Send(NULL, 0, MPI_INT, (rank + 1) % size, tag, comm));
+  if (rank == 0) PetscCallMPI(MPI_Recv(NULL, 0, MPI_INT, size - 1, tag, comm, &status));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /* ---------------------------------------------------------------------*/
@@ -55,151 +44,146 @@ PETSC_INTERN PetscErrorCode PetscSequentialPhaseEnd_Private(MPI_Comm comm,int ng
 PetscMPIInt Petsc_Seq_keyval = MPI_KEYVAL_INVALID;
 
 /*@
-   PetscSequentialPhaseBegin - Begins a sequential section of code.
+  PetscSequentialPhaseBegin - Begins a sequential section of code.
 
-   Collective
+  Collective
 
-   Input Parameters:
-+  comm - Communicator to sequentialize.
--  ng   - Number in processor group.  This many processes are allowed to execute
+  Input Parameters:
++ comm - Communicator to sequentialize over
+- ng   - Number in processor group.  This many processes are allowed to execute
    at the same time (usually 1)
 
-   Level: intermediate
+  Level: intermediate
 
-   Notes:
-   PetscSequentialPhaseBegin() and PetscSequentialPhaseEnd() provide a
-   way to force a section of code to be executed by the processes in
-   rank order.  Typically, this is done with
+  Notes:
+  `PetscSequentialPhaseBegin()` and `PetscSequentialPhaseEnd()` provide a
+  way to force a section of code to be executed by the processes in
+  rank order.  Typically, this is done with
 .vb
       PetscSequentialPhaseBegin(comm, 1);
       <code to be executed sequentially>
       PetscSequentialPhaseEnd(comm, 1);
 .ve
 
-   Often, the sequential code contains output statements (e.g., printf) to
-   be executed.  Note that you may need to flush the I/O buffers before
-   calling PetscSequentialPhaseEnd().  Also, note that some systems do
-   not propagate I/O in any order to the controling terminal (in other words,
-   even if you flush the output, you may not get the data in the order
-   that you want).
+  You should use `PetscSynchronizedPrintf()` to ensure output between MPI ranks is properly order and not these routines.
 
-.seealso: PetscSequentialPhaseEnd()
-
+.seealso: `PetscSequentialPhaseEnd()`, `PetscSynchronizedPrintf()`
 @*/
-PetscErrorCode  PetscSequentialPhaseBegin(MPI_Comm comm,int ng)
+PetscErrorCode PetscSequentialPhaseBegin(MPI_Comm comm, int ng)
 {
-  PetscErrorCode ierr;
-  PetscMPIInt    size;
-  MPI_Comm       local_comm,*addr_local_comm;
+  PetscMPIInt size;
+  MPI_Comm    local_comm, *addr_local_comm;
 
   PetscFunctionBegin;
-  ierr = PetscSysInitializePackage();CHKERRQ(ierr);
-  ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
-  if (size == 1) PetscFunctionReturn(0);
+  PetscCall(PetscSysInitializePackage());
+  PetscCallMPI(MPI_Comm_size(comm, &size));
+  if (size == 1) PetscFunctionReturn(PETSC_SUCCESS);
 
   /* Get the private communicator for the sequential operations */
-  if (Petsc_Seq_keyval == MPI_KEYVAL_INVALID) {
-    ierr = MPI_Comm_create_keyval(MPI_COMM_NULL_COPY_FN,MPI_COMM_NULL_DELETE_FN,&Petsc_Seq_keyval,NULL);CHKERRQ(ierr);
-  }
+  if (Petsc_Seq_keyval == MPI_KEYVAL_INVALID) PetscCallMPI(MPI_Comm_create_keyval(MPI_COMM_NULL_COPY_FN, MPI_COMM_NULL_DELETE_FN, &Petsc_Seq_keyval, NULL));
 
-  ierr = MPI_Comm_dup(comm,&local_comm);CHKERRQ(ierr);
-  ierr = PetscMalloc1(1,&addr_local_comm);CHKERRQ(ierr);
+  PetscCallMPI(MPI_Comm_dup(comm, &local_comm));
+  PetscCall(PetscMalloc1(1, &addr_local_comm));
 
   *addr_local_comm = local_comm;
 
-  ierr = MPI_Comm_set_attr(comm,Petsc_Seq_keyval,(void*)addr_local_comm);CHKERRQ(ierr);
-  ierr = PetscSequentialPhaseBegin_Private(local_comm,ng);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCallMPI(MPI_Comm_set_attr(comm, Petsc_Seq_keyval, (void *)addr_local_comm));
+  PetscCall(PetscSequentialPhaseBegin_Private(local_comm, ng));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   PetscSequentialPhaseEnd - Ends a sequential section of code.
+  PetscSequentialPhaseEnd - Ends a sequential section of code.
 
-   Collective
+  Collective
 
-   Input Parameters:
-+  comm - Communicator to sequentialize.
--  ng   - Number in processor group.  This many processes are allowed to execute
+  Input Parameters:
++ comm - Communicator to sequentialize.
+- ng   - Number in processor group.  This many processes are allowed to execute
    at the same time (usually 1)
 
-   Level: intermediate
+  Level: intermediate
 
-   Notes:
-   See PetscSequentialPhaseBegin() for more details.
+  Note:
+  See `PetscSequentialPhaseBegin()` for more details.
 
-.seealso: PetscSequentialPhaseBegin()
-
+.seealso: `PetscSequentialPhaseBegin()`
 @*/
-PetscErrorCode  PetscSequentialPhaseEnd(MPI_Comm comm,int ng)
+PetscErrorCode PetscSequentialPhaseEnd(MPI_Comm comm, int ng)
 {
-  PetscErrorCode ierr;
-  PetscMPIInt    size,flag;
-  MPI_Comm       local_comm,*addr_local_comm;
+  PetscMPIInt size, flag;
+  MPI_Comm    local_comm, *addr_local_comm;
 
   PetscFunctionBegin;
-  ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
-  if (size == 1) PetscFunctionReturn(0);
+  PetscCallMPI(MPI_Comm_size(comm, &size));
+  if (size == 1) PetscFunctionReturn(PETSC_SUCCESS);
 
-  ierr = MPI_Comm_get_attr(comm,Petsc_Seq_keyval,(void**)&addr_local_comm,&flag);CHKERRQ(ierr);
-  if (!flag) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Wrong MPI communicator; must pass in one used with PetscSequentialPhaseBegin()");
+  PetscCallMPI(MPI_Comm_get_attr(comm, Petsc_Seq_keyval, (void **)&addr_local_comm, &flag));
+  PetscCheck(flag, PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Wrong MPI communicator; must pass in one used with PetscSequentialPhaseBegin()");
   local_comm = *addr_local_comm;
 
-  ierr = PetscSequentialPhaseEnd_Private(local_comm,ng);CHKERRQ(ierr);
+  PetscCall(PetscSequentialPhaseEnd_Private(local_comm, ng));
 
-  ierr = PetscFree(addr_local_comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_free(&local_comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_delete_attr(comm,Petsc_Seq_keyval);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscFree(addr_local_comm));
+  PetscCallMPI(MPI_Comm_free(&local_comm));
+  PetscCallMPI(MPI_Comm_delete_attr(comm, Petsc_Seq_keyval));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PetscGlobalMinMaxInt - Get the global min/max from local min/max input
 
   Collective
 
-  Input Parameter:
-. minMaxVal - An array with the local min and max
+  Input Parameters:
++ comm      - The MPI communicator to reduce with
+- minMaxVal - An array with the local min and max
 
   Output Parameter:
 . minMaxValGlobal - An array with the global min and max
 
   Level: beginner
 
-.seealso: PetscSplitOwnership()
+.seealso: `PetscSplitOwnership()`, `PetscGlobalMinMaxReal()`
 @*/
-PetscErrorCode PetscGlobalMinMaxInt(MPI_Comm comm, PetscInt minMaxVal[2], PetscInt minMaxValGlobal[2])
+PetscErrorCode PetscGlobalMinMaxInt(MPI_Comm comm, const PetscInt minMaxVal[2], PetscInt minMaxValGlobal[2])
 {
-  PetscErrorCode ierr;
+  PetscInt sendbuf[3], recvbuf[3];
 
   PetscFunctionBegin;
-  minMaxVal[1] = -minMaxVal[1];
-  ierr = MPI_Allreduce(minMaxVal, minMaxValGlobal, 2, MPIU_INT, MPI_MIN, comm);CHKERRQ(ierr);
-  minMaxValGlobal[1] = -minMaxValGlobal[1];
-  PetscFunctionReturn(0);
+  sendbuf[0] = -minMaxVal[0]; /* Note that -PETSC_MIN_INT = PETSC_MIN_INT */
+  sendbuf[1] = minMaxVal[1];
+  sendbuf[2] = (minMaxVal[0] == PETSC_MIN_INT) ? 1 : 0; /* Are there PETSC_MIN_INT in minMaxVal[0]? */
+  PetscCall(MPIU_Allreduce(sendbuf, recvbuf, 3, MPIU_INT, MPI_MAX, comm));
+  minMaxValGlobal[0] = recvbuf[2] ? PETSC_MIN_INT : -recvbuf[0];
+  minMaxValGlobal[1] = recvbuf[1];
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PetscGlobalMinMaxReal - Get the global min/max from local min/max input
 
   Collective
 
-  Input Parameter:
-. minMaxVal - An array with the local min and max
+  Input Parameters:
++ comm      - The MPI communicator to reduce with
+- minMaxVal - An array with the local min and max
 
   Output Parameter:
 . minMaxValGlobal - An array with the global min and max
 
   Level: beginner
 
-.seealso: PetscSplitOwnership()
+.seealso: `PetscSplitOwnership()`, `PetscGlobalMinMaxInt()`
 @*/
-PetscErrorCode PetscGlobalMinMaxReal(MPI_Comm comm, PetscReal minMaxVal[2], PetscReal minMaxValGlobal[2])
+PetscErrorCode PetscGlobalMinMaxReal(MPI_Comm comm, const PetscReal minMaxVal[2], PetscReal minMaxValGlobal[2])
 {
-  PetscErrorCode ierr;
+  PetscReal sendbuf[2];
 
   PetscFunctionBegin;
-  minMaxVal[1] = -minMaxVal[1];
-  ierr = MPI_Allreduce(minMaxVal, minMaxValGlobal, 2, MPIU_REAL, MPI_MIN, comm);CHKERRQ(ierr);
-  minMaxValGlobal[1] = -minMaxValGlobal[1];
-  PetscFunctionReturn(0);
+  sendbuf[0] = -minMaxVal[0];
+  sendbuf[1] = minMaxVal[1];
+  PetscCall(MPIU_Allreduce(sendbuf, minMaxValGlobal, 2, MPIU_REAL, MPIU_MAX, comm));
+  minMaxValGlobal[0] = -minMaxValGlobal[0];
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

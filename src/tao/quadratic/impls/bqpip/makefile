@@ -1,15 +1,8 @@
-ALL: lib
+-include ../../../../../petscdir.mk
+#requiresscalar    real
 
-CFLAGS   =
-FFLAGS   =
-SOURCEC  = bqpip.c
-SOURCEF  =
-SOURCEH  = bqpipimpl.h
-LIBBASE  = libpetsctao
 MANSEC   = Tao
-LOCDIR   = src/tao/quadratic/impls/bqpip/
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
-include ${PETSC_DIR}/lib/petsc/conf/rules
-include ${PETSC_DIR}/lib/petsc/conf/test
+include ${PETSC_DIR}/lib/petsc/conf/rules_doc.mk
 

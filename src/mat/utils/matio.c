@@ -1,43 +1,45 @@
 #include <petscviewer.h>
 #include <petsc/private/matimpl.h>
 
-PetscErrorCode MatView_Binary_BlockSizes(Mat mat,PetscViewer viewer)
+PetscErrorCode MatView_Binary_BlockSizes(Mat mat, PetscViewer viewer)
 {
-  FILE           *info;
-  PetscMPIInt    rank;
-  PetscInt       rbs,cbs;
-  PetscErrorCode ierr;
+  FILE       *info;
+  PetscMPIInt rank;
+  PetscInt    rbs, cbs;
+  PetscBool   skip;
 
   PetscFunctionBegin;
-  ierr = MatGetBlockSizes(mat,&rbs,&cbs);CHKERRQ(ierr);
-  ierr = PetscViewerBinaryGetInfoPointer(viewer,&info);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)viewer),&rank);CHKERRQ(ierr);
-  if (!rank && info) {
-    if (rbs != cbs) {ierr = PetscFPrintf(PETSC_COMM_SELF,info,"-matload_block_size %D,%D\n",rbs,cbs);CHKERRQ(ierr);}
-    else            {ierr = PetscFPrintf(PETSC_COMM_SELF,info,"-matload_block_size %D\n",rbs);CHKERRQ(ierr);}
+  PetscCall(PetscViewerBinaryGetSkipInfo(viewer, &skip));
+  if (skip) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCall(MatGetBlockSizes(mat, &rbs, &cbs));
+  PetscCall(PetscViewerBinaryGetInfoPointer(viewer, &info));
+  PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)viewer), &rank));
+  if (rank == 0 && info) {
+    if (rbs != cbs) PetscCall(PetscFPrintf(PETSC_COMM_SELF, info, "-matload_block_size %" PetscInt_FMT ",%" PetscInt_FMT "\n", rbs, cbs));
+    else PetscCall(PetscFPrintf(PETSC_COMM_SELF, info, "-matload_block_size %" PetscInt_FMT "\n", rbs));
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatLoad_Binary_BlockSizes(Mat mat,PetscViewer viewer)
+PetscErrorCode MatLoad_Binary_BlockSizes(Mat mat, PetscViewer viewer)
 {
-  PetscInt       rbs,cbs,bs[2],n = 2;
-  PetscBool      set;
-  PetscErrorCode ierr;
+  PetscInt  rbs, cbs, bs[2], n = 2;
+  PetscBool set;
 
   PetscFunctionBegin;
   /* get current block sizes */
-  ierr = MatGetBlockSizes(mat,&rbs,&cbs);CHKERRQ(ierr);
-  bs[0] = rbs; bs[1] = cbs;
+  PetscCall(MatGetBlockSizes(mat, &rbs, &cbs));
+  bs[0] = rbs;
+  bs[1] = cbs;
   /* get block sizes from the options database */
-  ierr = PetscOptionsBegin(PetscObjectComm((PetscObject)viewer),NULL,"Options for loading matrix block size","Mat");CHKERRQ(ierr);
-  ierr = PetscOptionsIntArray("-matload_block_size","Set the block size used to store the matrix","MatLoad",bs,&n,&set);CHKERRQ(ierr);
-  ierr = PetscOptionsEnd();CHKERRQ(ierr);
-  if (!set) PetscFunctionReturn(0);
+  PetscOptionsBegin(PetscObjectComm((PetscObject)viewer), NULL, "Options for loading matrix block size", "Mat");
+  PetscCall(PetscOptionsIntArray("-matload_block_size", "Set the block size used to store the matrix", "MatLoad", bs, &n, &set));
+  PetscOptionsEnd();
+  if (!set) PetscFunctionReturn(PETSC_SUCCESS);
   if (n == 1) bs[1] = bs[0]; /* to support -matload_block_size <bs> */
   /* set matrix block sizes */
   if (bs[0] > 0) rbs = bs[0];
   if (bs[1] > 0) cbs = bs[1];
-  ierr = MatSetBlockSizes(mat,rbs,cbs);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(MatSetBlockSizes(mat, rbs, cbs));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

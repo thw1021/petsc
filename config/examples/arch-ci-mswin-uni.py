@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
 import os
 petsc_hash_pkgs=os.path.join(os.getenv('HOME'),'petsc-hash-pkgs')
@@ -11,12 +11,12 @@ if __name__ == '__main__':
   configure_options = [
     '--package-prefix-hash='+petsc_hash_pkgs,
     '--download-f2cblaslapack',
-    '--with-cc=win32fe cl',
+    '--with-cc=cl',
     '--with-shared-libraries=1',
     '--with-cxx=0',
     '--with-fc=0',
     '--with-mpi=0',
-    'DATAFILESPATH=c:/cygwin64/home/glci/datafiles',
+    '--with-strict-petscerrorcode',
   ]
   configure.petsc_configure(configure_options)
 

@@ -4,72 +4,64 @@
 
 static PetscErrorCode DMKSPDestroy(DMKSP *kdm)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  if (!*kdm) PetscFunctionReturn(0);
-  PetscValidHeaderSpecific((*kdm),DMKSP_CLASSID,1);
-  if (--((PetscObject)(*kdm))->refct > 0) {*kdm = NULL; PetscFunctionReturn(0);}
-  if ((*kdm)->ops->destroy) {ierr = ((*kdm)->ops->destroy)(kdm);CHKERRQ(ierr);}
-  ierr = PetscHeaderDestroy(kdm);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  if (!*kdm) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscValidHeaderSpecific(*kdm, DMKSP_CLASSID, 1);
+  if (--((PetscObject)*kdm)->refct > 0) {
+    *kdm = NULL;
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+  if ((*kdm)->ops->destroy) PetscCall(((*kdm)->ops->destroy)(kdm));
+  PetscCall(PetscHeaderDestroy(kdm));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode DMKSPCreate(MPI_Comm comm,DMKSP *kdm)
+static PetscErrorCode DMKSPCreate(MPI_Comm comm, DMKSP *kdm)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  ierr = KSPInitializePackage();CHKERRQ(ierr);
-  ierr = PetscHeaderCreate(*kdm, DMKSP_CLASSID, "DMKSP", "DMKSP", "DMKSP", comm, DMKSPDestroy, NULL);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
-
-/* Attaches the DMKSP to the coarse level.
- * Under what conditions should we copy versus duplicate?
- */
-static PetscErrorCode DMCoarsenHook_DMKSP(DM dm,DM dmc,void *ctx)
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  ierr = DMCopyDMKSP(dm,dmc);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(KSPInitializePackage());
+  PetscCall(PetscHeaderCreate(*kdm, DMKSP_CLASSID, "DMKSP", "DMKSP", "DMKSP", comm, DMKSPDestroy, NULL));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /* Attaches the DMKSP to the coarse level.
  * Under what conditions should we copy versus duplicate?
  */
-static PetscErrorCode DMRefineHook_DMKSP(DM dm,DM dmc,void *ctx)
+static PetscErrorCode DMCoarsenHook_DMKSP(DM dm, DM dmc, void *ctx)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  ierr = DMCopyDMKSP(dm,dmc);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(DMCopyDMKSP(dm, dmc));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
-   DMKSPCopy - copies the information in a DMKSP to another DMKSP
-
-   Not Collective
-
-   Input Argument:
-+  kdm - Original DMKSP
--  nkdm - DMKSP to receive the data, should have been created with DMKSPCreate()
-
-   Level: developer
-
-.seealso: DMKSPCreate(), DMKSPDestroy()
-@*/
-PetscErrorCode DMKSPCopy(DMKSP kdm,DMKSP nkdm)
+/* Attaches the DMKSP to the coarse level.
+ * Under what conditions should we copy versus duplicate?
+ */
+static PetscErrorCode DMRefineHook_DMKSP(DM dm, DM dmc, void *ctx)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(kdm,DMKSP_CLASSID,1);
-  PetscValidHeaderSpecific(nkdm,DMKSP_CLASSID,2);
+  PetscCall(DMCopyDMKSP(dm, dmc));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+  DMKSPCopy - copies the information in a `DMKSP` to another `DMKSP`
+
+  Not Collective
+
+  Input Parameters:
++ kdm  - Original `DMKSP`
+- nkdm - `DMKSP` to receive the data, created with `DMKSPCreate()`
+
+  Level: developer
+
+.seealso: [](ch_ksp), `DMKSP`, `DMKSPCreate()`, `DMKSPDestroy()`
+*/
+static PetscErrorCode DMKSPCopy(DMKSP kdm, DMKSP nkdm)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(kdm, DMKSP_CLASSID, 1);
+  PetscValidHeaderSpecific(nkdm, DMKSP_CLASSID, 2);
   nkdm->ops->computeoperators    = kdm->ops->computeoperators;
   nkdm->ops->computerhs          = kdm->ops->computerhs;
   nkdm->ops->computeinitialguess = kdm->ops->computeinitialguess;
@@ -87,292 +79,287 @@ PetscErrorCode DMKSPCopy(DMKSP kdm,DMKSP nkdm)
   nkdm->fortran_func_pointers[2] = kdm->fortran_func_pointers[2];
 
   /* implementation specific copy hooks */
-  if (kdm->ops->duplicate) {ierr = (*kdm->ops->duplicate)(kdm,nkdm);CHKERRQ(ierr);}
-  PetscFunctionReturn(0);
+  PetscTryTypeMethod(kdm, duplicate, nkdm);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-   DMGetDMKSP - get read-only private DMKSP context from a DM
+  DMGetDMKSP - get the read-only private `DMKSP` context from a `DM`
 
-   Logically Collective
+  Logically Collective
 
-   Input Argument:
-.  dm - DM to be used with KSP
+  Input Parameter:
+. dm - `DM` used with a `KSP`
 
-   Output Argument:
-.  snesdm - private DMKSP context
+  Output Parameter:
+. kspdm - private `DMKSP` context
 
-   Level: developer
+  Level: developer
 
-   Notes:
-   Use DMGetDMKSPWrite() if write access is needed. The DMKSPSetXXX API should be used wherever possible.
+  Note:
+  Use `DMGetDMKSPWrite()` if write access is needed. The DMKSPSetXXX API should be used wherever possible.
 
-.seealso: DMGetDMKSPWrite()
+.seealso: [](ch_ksp), `DMKSP`, `DM`, `KSP`, `DMGetDMKSPWrite()`
 @*/
-PetscErrorCode DMGetDMKSP(DM dm,DMKSP *kspdm)
+PetscErrorCode DMGetDMKSP(DM dm, DMKSP *kspdm)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(dm,DM_CLASSID,1);
-  *kspdm = (DMKSP) dm->dmksp;
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
+  *kspdm = (DMKSP)dm->dmksp;
   if (!*kspdm) {
-    ierr                 = PetscInfo(dm,"Creating new DMKSP\n");CHKERRQ(ierr);
-    ierr                 = DMKSPCreate(PetscObjectComm((PetscObject)dm),kspdm);CHKERRQ(ierr);
-    dm->dmksp            = (PetscObject) *kspdm;
+    PetscCall(PetscInfo(dm, "Creating new DMKSP\n"));
+    PetscCall(DMKSPCreate(PetscObjectComm((PetscObject)dm), kspdm));
+    dm->dmksp            = (PetscObject)*kspdm;
     (*kspdm)->originaldm = dm;
-    ierr                 = DMCoarsenHookAdd(dm,DMCoarsenHook_DMKSP,NULL,NULL);CHKERRQ(ierr);
-    ierr                 = DMRefineHookAdd(dm,DMRefineHook_DMKSP,NULL,NULL);CHKERRQ(ierr);
+    PetscCall(DMCoarsenHookAdd(dm, DMCoarsenHook_DMKSP, NULL, NULL));
+    PetscCall(DMRefineHookAdd(dm, DMRefineHook_DMKSP, NULL, NULL));
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-   DMGetDMKSPWrite - get write access to private DMKSP context from a DM
+  DMGetDMKSPWrite - get write access to private `DMKSP` context from a `DM`
 
-   Logically Collective
+  Logically Collective
 
-   Input Argument:
-.  dm - DM to be used with KSP
+  Input Parameter:
+. dm - `DM` used with a `KSP`
 
-   Output Argument:
-.  kspdm - private DMKSP context
+  Output Parameter:
+. kspdm - private `DMKSP` context
 
-   Level: developer
+  Level: developer
 
-.seealso: DMGetDMKSP()
+.seealso: [](ch_ksp), `DMKSP`, `DM`, `KSP`, `DMGetDMKSP()`
 @*/
-PetscErrorCode DMGetDMKSPWrite(DM dm,DMKSP *kspdm)
+PetscErrorCode DMGetDMKSPWrite(DM dm, DMKSP *kspdm)
 {
-  PetscErrorCode ierr;
-  DMKSP          kdm;
+  DMKSP kdm;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(dm,DM_CLASSID,1);
-  ierr = DMGetDMKSP(dm,&kdm);CHKERRQ(ierr);
-  if (!kdm->originaldm) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"DMKSP has a NULL originaldm");
-  if (kdm->originaldm != dm) {  /* Copy on write */
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
+  PetscCall(DMGetDMKSP(dm, &kdm));
+  PetscCheck(kdm->originaldm, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "DMKSP has a NULL originaldm");
+  if (kdm->originaldm != dm) { /* Copy on write */
     DMKSP oldkdm = kdm;
-    ierr      = PetscInfo(dm,"Copying DMKSP due to write\n");CHKERRQ(ierr);
-    ierr      = DMKSPCreate(PetscObjectComm((PetscObject)dm),&kdm);CHKERRQ(ierr);
-    ierr      = DMKSPCopy(oldkdm,kdm);CHKERRQ(ierr);
-    ierr      = DMKSPDestroy((DMKSP*)&dm->dmksp);CHKERRQ(ierr);
-    dm->dmksp = (PetscObject)kdm;
+    PetscCall(PetscInfo(dm, "Copying DMKSP due to write\n"));
+    PetscCall(DMKSPCreate(PetscObjectComm((PetscObject)dm), &kdm));
+    PetscCall(DMKSPCopy(oldkdm, kdm));
+    PetscCall(DMKSPDestroy((DMKSP *)&dm->dmksp));
+    dm->dmksp       = (PetscObject)kdm;
     kdm->originaldm = dm;
   }
   *kspdm = kdm;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-   DMCopyDMKSP - copies a DM context to a new DM
+  DMCopyDMKSP - copies a `DM` `DMKSP` context to a new `DM`
 
-   Logically Collective
+  Logically Collective
 
-   Input Arguments:
-+  dmsrc - DM to obtain context from
--  dmdest - DM to add context to
+  Input Parameters:
++ dmsrc  - `DM` to obtain context from
+- dmdest - `DM` to add context to
 
-   Level: developer
+  Level: developer
 
-   Note:
-   The context is copied by reference. This function does not ensure that a context exists.
+  Note:
+  The context is copied by reference. This function does not ensure that a context exists.
 
-.seealso: DMGetDMKSP(), KSPSetDM()
+.seealso: [](ch_ksp), `DMKSP`, `DM`, `KSP`, `DMGetDMKSP()`, `KSPSetDM()`
 @*/
-PetscErrorCode DMCopyDMKSP(DM dmsrc,DM dmdest)
+PetscErrorCode DMCopyDMKSP(DM dmsrc, DM dmdest)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(dmsrc,DM_CLASSID,1);
-  PetscValidHeaderSpecific(dmdest,DM_CLASSID,2);
-  ierr          = DMKSPDestroy((DMKSP*)&dmdest->dmksp);CHKERRQ(ierr);
+  PetscValidHeaderSpecific(dmsrc, DM_CLASSID, 1);
+  PetscValidHeaderSpecific(dmdest, DM_CLASSID, 2);
+  PetscCall(DMKSPDestroy((DMKSP *)&dmdest->dmksp));
   dmdest->dmksp = dmsrc->dmksp;
-  ierr          = PetscObjectReference(dmdest->dmksp);CHKERRQ(ierr);
-  ierr          = DMCoarsenHookAdd(dmdest,DMCoarsenHook_DMKSP,NULL,NULL);CHKERRQ(ierr);
-  ierr          = DMRefineHookAdd(dmdest,DMRefineHook_DMKSP,NULL,NULL);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscObjectReference(dmdest->dmksp));
+  PetscCall(DMCoarsenHookAdd(dmdest, DMCoarsenHook_DMKSP, NULL, NULL));
+  PetscCall(DMRefineHookAdd(dmdest, DMRefineHook_DMKSP, NULL, NULL));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-   DMKSPSetComputeOperators - set KSP matrix evaluation function
+  DMKSPSetComputeOperators - set `KSP` matrix evaluation function
 
-   Not Collective
+  Not Collective
 
-   Input Argument:
-+  dm - DM to be used with KSP
-.  func - matrix evaluation function, see KSPSetComputeOperators() for calling sequence
--  ctx - context for matrix evaluation
+  Input Parameters:
++ dm   - `DM` to be used with `KSP`
+. func - matrix evaluation function,  for calling sequence see `KSPComputeOperatorsFn`
+- ctx  - context for matrix evaluation
 
-   Level: advanced
+  Level: developer
 
-   Note:
-   KSPSetComputeOperators() is normally used, but it calls this function internally because the user context is actually
-   associated with the DM.  This makes the interface consistent regardless of whether the user interacts with a DM or
-   not. If DM took a more central role at some later date, this could become the primary method of setting the matrix.
+  Note:
+  `KSPSetComputeOperators()` is normally used, but it calls this function internally because the user context is actually
+  associated with the `DM`.  This makes the interface consistent regardless of whether the user interacts with a `DM` or
+  not.
 
-.seealso: DMKSPSetContext(), DMKSPGetComputeOperators(), KSPSetOperators()
+  Developer Note:
+  If `DM` took a more central role at some later date, this could become the primary method of setting the matrix.
+
+.seealso: [](ch_ksp), `DMKSP`, `DM`, `KSP`, `DMKSPSetContext()`, `DMKSPGetComputeOperators()`, `KSPSetOperators()`, `KSPComputeOperatorsFn`
 @*/
-PetscErrorCode DMKSPSetComputeOperators(DM dm,PetscErrorCode (*func)(KSP,Mat,Mat,void*),void *ctx)
+PetscErrorCode DMKSPSetComputeOperators(DM dm, KSPComputeOperatorsFn *func, void *ctx)
 {
-  PetscErrorCode ierr;
-  DMKSP          kdm;
+  DMKSP kdm;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(dm,DM_CLASSID,1);
-  ierr = DMGetDMKSPWrite(dm,&kdm);CHKERRQ(ierr);
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
+  PetscCall(DMGetDMKSPWrite(dm, &kdm));
   if (func) kdm->ops->computeoperators = func;
   if (ctx) kdm->operatorsctx = ctx;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-   DMKSPGetComputeOperators - get KSP matrix evaluation function
+  DMKSPGetComputeOperators - get `KSP` matrix evaluation function
 
-   Not Collective
+  Not Collective
 
-   Input Argument:
-.  dm - DM to be used with KSP
+  Input Parameter:
+. dm - `DM` used with a `KSP`
 
-   Output Arguments:
-+  func - matrix evaluation function, see KSPSetComputeOperators() for calling sequence
--  ctx - context for matrix evaluation
+  Output Parameters:
++ func - matrix evaluation function,  for calling sequence see `KSPComputeOperatorsFn`
+- ctx  - context for matrix evaluation
 
-   Level: advanced
+  Level: developer
 
-.seealso: DMKSPSetContext(), KSPSetComputeOperators(), DMKSPSetComputeOperators()
+.seealso: [](ch_ksp), `DMKSP`, `DM`, `KSP`, `DMKSPSetContext()`, `KSPSetComputeOperators()`, `DMKSPSetComputeOperators()`, `KSPComputeOperatorsFn`
 @*/
-PetscErrorCode DMKSPGetComputeOperators(DM dm,PetscErrorCode (**func)(KSP,Mat,Mat,void*),void *ctx)
+PetscErrorCode DMKSPGetComputeOperators(DM dm, KSPComputeOperatorsFn **func, void *ctx)
 {
-  PetscErrorCode ierr;
-  DMKSP          kdm;
+  DMKSP kdm;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(dm,DM_CLASSID,1);
-  ierr = DMGetDMKSP(dm,&kdm);CHKERRQ(ierr);
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
+  PetscCall(DMGetDMKSP(dm, &kdm));
   if (func) *func = kdm->ops->computeoperators;
-  if (ctx) *(void**)ctx = kdm->operatorsctx;
-  PetscFunctionReturn(0);
+  if (ctx) *(void **)ctx = kdm->operatorsctx;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-   DMKSPSetComputeRHS - set KSP right hand side evaluation function
+  DMKSPSetComputeRHS - set `KSP` right-hand side evaluation function
 
-   Not Collective
+  Not Collective
 
-   Input Argument:
-+  dm - DM to be used with KSP
-.  func - right hand side evaluation function, see KSPSetComputeRHS() for calling sequence
--  ctx - context for right hand side evaluation
+  Input Parameters:
++ dm   - `DM` used with a `KSP`
+. func - right-hand side evaluation function,  for calling sequence see `KSPComputeRHSFn`
+- ctx  - context for right-hand side evaluation
 
-   Level: advanced
+  Level: developer
 
-   Note:
-   KSPSetComputeRHS() is normally used, but it calls this function internally because the user context is actually
-   associated with the DM.  This makes the interface consistent regardless of whether the user interacts with a DM or
-   not. If DM took a more central role at some later date, this could become the primary method of setting the matrix.
+  Note:
+  `KSPSetComputeRHS()` is normally used, but it calls this function internally because the user context is actually
+  associated with the `DM`.  This makes the interface consistent regardless of whether the user interacts with a `DM` or
+  not.
 
-.seealso: DMKSPSetContext(), DMKSPGetComputeRHS(), KSPSetRHS()
+  Developer Note:
+  If `DM` took a more central role at some later date, this could become the primary method of setting the matrix.
+
+.seealso: [](ch_ksp), `DMKSP`, `DM`, `KSP`, `DMKSPSetContext()`, `DMKSPGetComputeRHS()`, `KSPSetRHS()`
 @*/
-PetscErrorCode DMKSPSetComputeRHS(DM dm,PetscErrorCode (*func)(KSP,Vec,void*),void *ctx)
+PetscErrorCode DMKSPSetComputeRHS(DM dm, KSPComputeRHSFn *func, void *ctx)
 {
-  PetscErrorCode ierr;
-  DMKSP          kdm;
+  DMKSP kdm;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(dm,DM_CLASSID,1);
-  ierr = DMGetDMKSPWrite(dm,&kdm);CHKERRQ(ierr);
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
+  PetscCall(DMGetDMKSPWrite(dm, &kdm));
   if (func) kdm->ops->computerhs = func;
   if (ctx) kdm->rhsctx = ctx;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-   DMKSPSetComputeInitialGuess - set KSP initial guess evaluation function
+  DMKSPSetComputeInitialGuess - set `KSP` initial guess evaluation function
 
-   Not Collective
+  Not Collective
 
-   Input Argument:
-+  dm - DM to be used with KSP
-.  func - initial guess evaluation function, see KSPSetComputeInitialGuess() for calling sequence
--  ctx - context for right hand side evaluation
+  Input Parameters:
++ dm   - `DM` to be used with `KSP`
+. func - initial guess evaluation function, for calling sequence see `KSPComputeInitialGuessFn`
+- ctx  - context for initial guess evaluation
 
-   Level: advanced
+  Level: developer
 
-   Note:
-   KSPSetComputeInitialGuess() is normally used, but it calls this function internally because the user context is actually
-   associated with the DM.
+  Note:
+  `KSPSetComputeInitialGuess()` is normally used, but it calls this function internally because the user context is actually
+  associated with the `DM`.
 
-.seealso: DMKSPSetContext(), DMKSPGetComputeRHS(), KSPSetRHS()
+.seealso: [](ch_ksp), `DMKSP`, `DM`, `KSP`, `DMKSPSetContext()`, `DMKSPGetComputeRHS()`, `KSPSetRHS()`, `KSPComputeInitialGuessFn`
 @*/
-PetscErrorCode DMKSPSetComputeInitialGuess(DM dm,PetscErrorCode (*func)(KSP,Vec,void*),void *ctx)
+PetscErrorCode DMKSPSetComputeInitialGuess(DM dm, KSPComputeInitialGuessFn *func, void *ctx)
 {
-  PetscErrorCode ierr;
-  DMKSP          kdm;
+  DMKSP kdm;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(dm,DM_CLASSID,1);
-  ierr = DMGetDMKSPWrite(dm,&kdm);CHKERRQ(ierr);
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
+  PetscCall(DMGetDMKSPWrite(dm, &kdm));
   if (func) kdm->ops->computeinitialguess = func;
   if (ctx) kdm->initialguessctx = ctx;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-   DMKSPGetComputeRHS - get KSP right hand side evaluation function
+  DMKSPGetComputeRHS - get `KSP` right-hand side evaluation function
 
-   Not Collective
+  Not Collective
 
-   Input Argument:
-.  dm - DM to be used with KSP
+  Input Parameter:
+. dm - `DM` to be used with `KSP`
 
-   Output Arguments:
-+  func - right hand side evaluation function, see KSPSetComputeRHS() for calling sequence
--  ctx - context for right hand side evaluation
+  Output Parameters:
++ func - right-hand side evaluation function,  for calling sequence see `KSPComputeRHSFn`
+- ctx  - context for right-hand side evaluation
 
-   Level: advanced
+  Level: advanced
 
-.seealso: DMKSPSetContext(), KSPSetComputeRHS(), DMKSPSetComputeRHS()
+.seealso: [](ch_ksp), `DMKSP`, `DM`, `KSP`, `DMKSPSetContext()`, `KSPSetComputeRHS()`, `DMKSPSetComputeRHS()`, `KSPComputeRHSFn`
 @*/
-PetscErrorCode DMKSPGetComputeRHS(DM dm,PetscErrorCode (**func)(KSP,Vec,void*),void *ctx)
+PetscErrorCode DMKSPGetComputeRHS(DM dm, KSPComputeRHSFn **func, void *ctx)
 {
-  PetscErrorCode ierr;
-  DMKSP          kdm;
+  DMKSP kdm;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(dm,DM_CLASSID,1);
-  ierr = DMGetDMKSP(dm,&kdm);CHKERRQ(ierr);
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
+  PetscCall(DMGetDMKSP(dm, &kdm));
   if (func) *func = kdm->ops->computerhs;
-  if (ctx) *(void**)ctx = kdm->rhsctx;
-  PetscFunctionReturn(0);
+  if (ctx) *(void **)ctx = kdm->rhsctx;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-   DMKSPGetComputeInitialGuess - get KSP initial guess evaluation function
+  DMKSPGetComputeInitialGuess - get `KSP` initial guess evaluation function
 
-   Not Collective
+  Not Collective
 
-   Input Argument:
-.  dm - DM to be used with KSP
+  Input Parameter:
+. dm - `DM` used with a `KSP`
 
-   Output Arguments:
-+  func - initial guess evaluation function, see KSPSetComputeInitialGuess() for calling sequence
--  ctx - context for right hand side evaluation
+  Output Parameters:
++ func - initial guess evaluation function, for calling sequence see `KSPComputeInitialGuessFn`
+- ctx  - context for right-hand side evaluation
 
-   Level: advanced
+  Level: advanced
 
-.seealso: DMKSPSetContext(), KSPSetComputeRHS(), DMKSPSetComputeRHS()
+.seealso: [](ch_ksp), `DMKSP`, `DM`, `KSP`, `DMKSPSetContext()`, `KSPSetComputeRHS()`, `DMKSPSetComputeRHS()`, `KSPComputeInitialGuessFn`
 @*/
-PetscErrorCode DMKSPGetComputeInitialGuess(DM dm,PetscErrorCode (**func)(KSP,Vec,void*),void *ctx)
+PetscErrorCode DMKSPGetComputeInitialGuess(DM dm, KSPComputeInitialGuessFn **func, void *ctx)
 {
-  PetscErrorCode ierr;
-  DMKSP          kdm;
+  DMKSP kdm;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(dm,DM_CLASSID,1);
-  ierr = DMGetDMKSP(dm,&kdm);CHKERRQ(ierr);
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
+  PetscCall(DMGetDMKSP(dm, &kdm));
   if (func) *func = kdm->ops->computeinitialguess;
-  if (ctx) *(void**)ctx = kdm->initialguessctx;
-  PetscFunctionReturn(0);
+  if (ctx) *(void **)ctx = kdm->initialguessctx;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

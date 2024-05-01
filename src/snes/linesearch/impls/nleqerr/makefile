@@ -1,14 +1,6 @@
-ALL: lib
+-include ../../../../../petscdir.mk
 
-CFLAGS   =
-FFLAGS   =
-SOURCEC  = linesearchnleqerr.c
-SOURCEF  =
-SOURCEH  =
-LIBBASE  = libpetscsnes
 MANSEC   = SNES
-LOCDIR   = src/snes/linesearch/impls/nleqerr/
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
-include ${PETSC_DIR}/lib/petsc/conf/rules
-include ${PETSC_DIR}/lib/petsc/conf/test
+include ${PETSC_DIR}/lib/petsc/conf/rules_doc.mk

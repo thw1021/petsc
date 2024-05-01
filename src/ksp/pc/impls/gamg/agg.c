@@ -2,566 +2,362 @@
  GAMG geometric-algebric multigrid PC - Mark Adams 2011
  */
 
-#include <../src/ksp/pc/impls/gamg/gamg.h>        /*I "petscpc.h" I*/
-/*  Next line needed to deactivate KSP_Solve logging */
-#include <petsc/private/kspimpl.h>
+#include <../src/ksp/pc/impls/gamg/gamg.h> /*I "petscpc.h" I*/
 #include <petscblaslapack.h>
 #include <petscdm.h>
+#include <petsc/private/kspimpl.h>
 
 typedef struct {
-  PetscInt  nsmooths;
-  PetscBool sym_graph;
-  PetscInt  square_graph;
+  PetscInt   nsmooths;
+  PetscInt   aggressive_coarsening_levels; // number of aggressive coarsening levels (square or MISk)
+  PetscInt   aggressive_mis_k;             // the k in MIS-k
+  PetscBool  use_aggressive_square_graph;
+  PetscBool  use_minimum_degree_ordering;
+  PetscBool  use_low_mem_filter;
+  MatCoarsen crs;
 } PC_GAMG_AGG;
 
 /*@
-   PCGAMGSetNSmooths - Set number of smoothing steps (1 is typical)
+  PCGAMGSetNSmooths - Set number of smoothing steps (1 is typical) used for multigrid on all the levels
 
-   Not Collective on PC
+  Logically Collective
 
-   Input Parameters:
-.  pc - the preconditioner context
+  Input Parameters:
++ pc - the preconditioner context
+- n  - the number of smooths
 
-   Options Database Key:
-.  -pc_gamg_agg_nsmooths <nsmooth, default=1> - number of smoothing steps to use with smooth aggregation
+  Options Database Key:
+. -pc_gamg_agg_nsmooths <nsmooth, default=1> - number of smoothing steps to use with smooth aggregation
 
-   Level: intermediate
+  Level: intermediate
 
-.seealso: ()
+.seealso: [](ch_ksp), `PCMG`, `PCGAMG`
 @*/
 PetscErrorCode PCGAMGSetNSmooths(PC pc, PetscInt n)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(pc,PC_CLASSID,1);
-  ierr = PetscTryMethod(pc,"PCGAMGSetNSmooths_C",(PC,PetscInt),(pc,n));CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
+  PetscValidLogicalCollectiveInt(pc, n, 2);
+  PetscTryMethod(pc, "PCGAMGSetNSmooths_C", (PC, PetscInt), (pc, n));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PCGAMGSetNSmooths_AGG(PC pc, PetscInt n)
 {
-  PC_MG       *mg          = (PC_MG*)pc->data;
-  PC_GAMG     *pc_gamg     = (PC_GAMG*)mg->innerctx;
-  PC_GAMG_AGG *pc_gamg_agg = (PC_GAMG_AGG*)pc_gamg->subctx;
+  PC_MG       *mg          = (PC_MG *)pc->data;
+  PC_GAMG     *pc_gamg     = (PC_GAMG *)mg->innerctx;
+  PC_GAMG_AGG *pc_gamg_agg = (PC_GAMG_AGG *)pc_gamg->subctx;
 
   PetscFunctionBegin;
   pc_gamg_agg->nsmooths = n;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   PCGAMGSetSymGraph - Symmetrize the graph before computing the aggregation. Some algorithms require the graph be symmetric
+  PCGAMGSetAggressiveLevels -  Use aggressive coarsening on first n levels
 
-   Not Collective on PC
+  Logically Collective
 
-   Input Parameters:
-+  pc - the preconditioner context
--  n - PETSC_TRUE or PETSC_FALSE
+  Input Parameters:
++ pc - the preconditioner context
+- n  - 0, 1 or more
 
-   Options Database Key:
-.  -pc_gamg_sym_graph <true,default=false> - symmetrize the graph before computing the aggregation
+  Options Database Key:
+. -pc_gamg_aggressive_coarsening <n,default = 1> - Number of levels to square the graph on before aggregating it
 
-   Level: intermediate
+  Level: intermediate
 
-.seealso: PCGAMGSetSquareGraph()
+.seealso: [](ch_ksp), `PCGAMG`, `PCGAMGSetThreshold()`, `PCGAMGMISkSetAggressive()`, `PCGAMGSetAggressiveSquareGraph()`, `PCGAMGMISkSetMinDegreeOrdering()`, `PCGAMGSetLowMemoryFilter()`
 @*/
-PetscErrorCode PCGAMGSetSymGraph(PC pc, PetscBool n)
+PetscErrorCode PCGAMGSetAggressiveLevels(PC pc, PetscInt n)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(pc,PC_CLASSID,1);
-  ierr = PetscTryMethod(pc,"PCGAMGSetSymGraph_C",(PC,PetscBool),(pc,n));CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
-static PetscErrorCode PCGAMGSetSymGraph_AGG(PC pc, PetscBool n)
-{
-  PC_MG       *mg          = (PC_MG*)pc->data;
-  PC_GAMG     *pc_gamg     = (PC_GAMG*)mg->innerctx;
-  PC_GAMG_AGG *pc_gamg_agg = (PC_GAMG_AGG*)pc_gamg->subctx;
-
-  PetscFunctionBegin;
-  pc_gamg_agg->sym_graph = n;
-  PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
+  PetscValidLogicalCollectiveInt(pc, n, 2);
+  PetscTryMethod(pc, "PCGAMGSetAggressiveLevels_C", (PC, PetscInt), (pc, n));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   PCGAMGSetSquareGraph -  Square the graph, ie. compute A'*A before aggregating it
+  PCGAMGMISkSetAggressive - Number (k) distance in MIS coarsening (>2 is 'aggressive')
 
-   Not Collective on PC
+  Logically Collective
 
-   Input Parameters:
-+  pc - the preconditioner context
--  n - PETSC_TRUE or PETSC_FALSE
+  Input Parameters:
++ pc - the preconditioner context
+- n  - 1 or more (default = 2)
 
-   Options Database Key:
-.  -pc_gamg_square_graph <n,default = 1> - number of levels to square the graph on before aggregating it
+  Options Database Key:
+. -pc_gamg_aggressive_mis_k <n,default=2> - Number (k) distance in MIS coarsening (>2 is 'aggressive')
 
-   Notes:
-   Squaring the graph increases the rate of coarsening (aggressive coarsening) and thereby reduces the complexity of the coarse grids, and generally results in slower solver converge rates. Reducing coarse grid complexity reduced the complexity of Galerkin coarse grid construction considerably.
+  Level: intermediate
 
-   Level: intermediate
-
-.seealso: PCGAMGSetSymGraph(), PCGAMGSetThreshold()
+.seealso: [](ch_ksp), `PCGAMG`, `PCGAMGSetThreshold()`, `PCGAMGSetAggressiveLevels()`, `PCGAMGSetAggressiveSquareGraph()`, `PCGAMGMISkSetMinDegreeOrdering()`, `PCGAMGSetLowMemoryFilter()`
 @*/
-PetscErrorCode PCGAMGSetSquareGraph(PC pc, PetscInt n)
+PetscErrorCode PCGAMGMISkSetAggressive(PC pc, PetscInt n)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(pc,PC_CLASSID,1);
-  ierr = PetscTryMethod(pc,"PCGAMGSetSquareGraph_C",(PC,PetscInt),(pc,n));CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
+  PetscValidLogicalCollectiveInt(pc, n, 2);
+  PetscTryMethod(pc, "PCGAMGMISkSetAggressive_C", (PC, PetscInt), (pc, n));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PCGAMGSetSquareGraph_AGG(PC pc, PetscInt n)
-{
-  PC_MG       *mg          = (PC_MG*)pc->data;
-  PC_GAMG     *pc_gamg     = (PC_GAMG*)mg->innerctx;
-  PC_GAMG_AGG *pc_gamg_agg = (PC_GAMG_AGG*)pc_gamg->subctx;
+/*@
+  PCGAMGSetAggressiveSquareGraph - Use graph square A'A for aggressive coarsening, old method
 
+  Logically Collective
+
+  Input Parameters:
++ pc - the preconditioner context
+- b  - default false - MIS-k is faster
+
+  Options Database Key:
+. -pc_gamg_aggressive_square_graph <bool,default=false> - Use square graph (A'A) or MIS-k (k=2) for aggressive coarsening
+
+  Level: intermediate
+
+.seealso: [](ch_ksp), `PCGAMG`, `PCGAMGSetThreshold()`, `PCGAMGSetAggressiveLevels()`, `PCGAMGMISkSetAggressive()`, `PCGAMGMISkSetMinDegreeOrdering()`, `PCGAMGSetLowMemoryFilter()`
+@*/
+PetscErrorCode PCGAMGSetAggressiveSquareGraph(PC pc, PetscBool b)
+{
   PetscFunctionBegin;
-  pc_gamg_agg->square_graph = n;
-  PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
+  PetscValidLogicalCollectiveBool(pc, b, 2);
+  PetscTryMethod(pc, "PCGAMGSetAggressiveSquareGraph_C", (PC, PetscBool), (pc, b));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PCSetFromOptions_GAMG_AGG(PetscOptionItems *PetscOptionsObject,PC pc)
+/*@
+  PCGAMGMISkSetMinDegreeOrdering - Use minimum degree ordering in greedy MIS algorithm
+
+  Logically Collective
+
+  Input Parameters:
++ pc - the preconditioner context
+- b  - default true
+
+  Options Database Key:
+. -pc_gamg_mis_k_minimum_degree_ordering <bool,default=true> - Use minimum degree ordering in greedy MIS algorithm
+
+  Level: intermediate
+
+.seealso: [](ch_ksp), `PCGAMG`, `PCGAMGSetThreshold()`, `PCGAMGSetAggressiveLevels()`, `PCGAMGMISkSetAggressive()`, `PCGAMGSetAggressiveSquareGraph()`, `PCGAMGSetLowMemoryFilter()`
+@*/
+PetscErrorCode PCGAMGMISkSetMinDegreeOrdering(PC pc, PetscBool b)
 {
-  PetscErrorCode ierr;
-  PC_MG          *mg          = (PC_MG*)pc->data;
-  PC_GAMG        *pc_gamg     = (PC_GAMG*)mg->innerctx;
-  PC_GAMG_AGG    *pc_gamg_agg = (PC_GAMG_AGG*)pc_gamg->subctx;
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
+  PetscValidLogicalCollectiveBool(pc, b, 2);
+  PetscTryMethod(pc, "PCGAMGMISkSetMinDegreeOrdering_C", (PC, PetscBool), (pc, b));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PCGAMGSetLowMemoryFilter - Use low memory graph/matrix filter
+
+  Logically Collective
+
+  Input Parameters:
++ pc - the preconditioner context
+- b  - default false
+
+  Options Database Key:
+. -pc_gamg_low_memory_threshold_filter <bool,default=false> - Use low memory graph/matrix filter
+
+  Level: intermediate
+
+.seealso: `PCGAMG`, `PCGAMGSetThreshold()`, `PCGAMGSetAggressiveLevels()`, `PCGAMGMISkSetAggressive()`, `PCGAMGSetAggressiveSquareGraph()`, `PCGAMGMISkSetMinDegreeOrdering()`
+@*/
+PetscErrorCode PCGAMGSetLowMemoryFilter(PC pc, PetscBool b)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
+  PetscValidLogicalCollectiveBool(pc, b, 2);
+  PetscTryMethod(pc, "PCGAMGSetLowMemoryFilter_C", (PC, PetscBool), (pc, b));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PCGAMGSetAggressiveLevels_AGG(PC pc, PetscInt n)
+{
+  PC_MG       *mg          = (PC_MG *)pc->data;
+  PC_GAMG     *pc_gamg     = (PC_GAMG *)mg->innerctx;
+  PC_GAMG_AGG *pc_gamg_agg = (PC_GAMG_AGG *)pc_gamg->subctx;
 
   PetscFunctionBegin;
-  ierr = PetscOptionsHead(PetscOptionsObject,"GAMG-AGG options");CHKERRQ(ierr);
-  {
-    ierr = PetscOptionsInt("-pc_gamg_agg_nsmooths","smoothing steps for smoothed aggregation, usually 1","PCGAMGSetNSmooths",pc_gamg_agg->nsmooths,&pc_gamg_agg->nsmooths,NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsBool("-pc_gamg_sym_graph","Set for asymmetric matrices","PCGAMGSetSymGraph",pc_gamg_agg->sym_graph,&pc_gamg_agg->sym_graph,NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsInt("-pc_gamg_square_graph","Number of levels to square graph for faster coarsening and lower coarse grid complexity","PCGAMGSetSquareGraph",pc_gamg_agg->square_graph,&pc_gamg_agg->square_graph,NULL);CHKERRQ(ierr);
+  pc_gamg_agg->aggressive_coarsening_levels = n;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PCGAMGMISkSetAggressive_AGG(PC pc, PetscInt n)
+{
+  PC_MG       *mg          = (PC_MG *)pc->data;
+  PC_GAMG     *pc_gamg     = (PC_GAMG *)mg->innerctx;
+  PC_GAMG_AGG *pc_gamg_agg = (PC_GAMG_AGG *)pc_gamg->subctx;
+
+  PetscFunctionBegin;
+  pc_gamg_agg->aggressive_mis_k = n;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PCGAMGSetAggressiveSquareGraph_AGG(PC pc, PetscBool b)
+{
+  PC_MG       *mg          = (PC_MG *)pc->data;
+  PC_GAMG     *pc_gamg     = (PC_GAMG *)mg->innerctx;
+  PC_GAMG_AGG *pc_gamg_agg = (PC_GAMG_AGG *)pc_gamg->subctx;
+
+  PetscFunctionBegin;
+  pc_gamg_agg->use_aggressive_square_graph = b;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PCGAMGSetLowMemoryFilter_AGG(PC pc, PetscBool b)
+{
+  PC_MG       *mg          = (PC_MG *)pc->data;
+  PC_GAMG     *pc_gamg     = (PC_GAMG *)mg->innerctx;
+  PC_GAMG_AGG *pc_gamg_agg = (PC_GAMG_AGG *)pc_gamg->subctx;
+
+  PetscFunctionBegin;
+  pc_gamg_agg->use_low_mem_filter = b;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PCGAMGMISkSetMinDegreeOrdering_AGG(PC pc, PetscBool b)
+{
+  PC_MG       *mg          = (PC_MG *)pc->data;
+  PC_GAMG     *pc_gamg     = (PC_GAMG *)mg->innerctx;
+  PC_GAMG_AGG *pc_gamg_agg = (PC_GAMG_AGG *)pc_gamg->subctx;
+
+  PetscFunctionBegin;
+  pc_gamg_agg->use_minimum_degree_ordering = b;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PCSetFromOptions_GAMG_AGG(PC pc, PetscOptionItems *PetscOptionsObject)
+{
+  PC_MG       *mg          = (PC_MG *)pc->data;
+  PC_GAMG     *pc_gamg     = (PC_GAMG *)mg->innerctx;
+  PC_GAMG_AGG *pc_gamg_agg = (PC_GAMG_AGG *)pc_gamg->subctx;
+  PetscBool    n_aggressive_flg, old_sq_provided = PETSC_FALSE, new_sq_provided = PETSC_FALSE, new_sqr_graph = pc_gamg_agg->use_aggressive_square_graph;
+  PetscInt     nsq_graph_old = 0;
+
+  PetscFunctionBegin;
+  PetscOptionsHeadBegin(PetscOptionsObject, "GAMG-AGG options");
+  PetscCall(PetscOptionsInt("-pc_gamg_agg_nsmooths", "smoothing steps for smoothed aggregation, usually 1", "PCGAMGSetNSmooths", pc_gamg_agg->nsmooths, &pc_gamg_agg->nsmooths, NULL));
+  // aggressive coarsening logic with deprecated -pc_gamg_square_graph
+  PetscCall(PetscOptionsInt("-pc_gamg_aggressive_coarsening", "Number of aggressive coarsening (MIS-2) levels from finest", "PCGAMGSetAggressiveLevels", pc_gamg_agg->aggressive_coarsening_levels, &pc_gamg_agg->aggressive_coarsening_levels, &n_aggressive_flg));
+  if (!n_aggressive_flg)
+    PetscCall(PetscOptionsInt("-pc_gamg_square_graph", "Number of aggressive coarsening (MIS-2) levels from finest (deprecated alias for -pc_gamg_aggressive_coarsening)", "PCGAMGSetAggressiveLevels", nsq_graph_old, &nsq_graph_old, &old_sq_provided));
+  PetscCall(PetscOptionsBool("-pc_gamg_aggressive_square_graph", "Use square graph (A'A) or MIS-k (k=2) for aggressive coarsening", "PCGAMGSetAggressiveSquareGraph", new_sqr_graph, &pc_gamg_agg->use_aggressive_square_graph, &new_sq_provided));
+  if (!new_sq_provided && old_sq_provided) {
+    pc_gamg_agg->aggressive_coarsening_levels = nsq_graph_old; // could be zero
+    pc_gamg_agg->use_aggressive_square_graph  = PETSC_TRUE;
   }
-  ierr = PetscOptionsTail();CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  if (new_sq_provided && old_sq_provided)
+    PetscCall(PetscInfo(pc, "Warning: both -pc_gamg_square_graph and -pc_gamg_aggressive_coarsening are used. -pc_gamg_square_graph is deprecated, Number of aggressive levels is %d\n", (int)pc_gamg_agg->aggressive_coarsening_levels));
+  PetscCall(PetscOptionsBool("-pc_gamg_mis_k_minimum_degree_ordering", "Use minimum degree ordering for greedy MIS", "PCGAMGMISkSetMinDegreeOrdering", pc_gamg_agg->use_minimum_degree_ordering, &pc_gamg_agg->use_minimum_degree_ordering, NULL));
+  PetscCall(PetscOptionsBool("-pc_gamg_low_memory_threshold_filter", "Use the (built-in) low memory graph/matrix filter", "PCGAMGSetLowMemoryFilter", pc_gamg_agg->use_low_mem_filter, &pc_gamg_agg->use_low_mem_filter, NULL));
+  PetscCall(PetscOptionsInt("-pc_gamg_aggressive_mis_k", "Number of levels of multigrid to use.", "PCGAMGMISkSetAggressive", pc_gamg_agg->aggressive_mis_k, &pc_gamg_agg->aggressive_mis_k, NULL));
+  PetscOptionsHeadEnd();
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* -------------------------------------------------------------------------- */
 static PetscErrorCode PCDestroy_GAMG_AGG(PC pc)
 {
-  PetscErrorCode ierr;
-  PC_MG          *mg          = (PC_MG*)pc->data;
-  PC_GAMG        *pc_gamg     = (PC_GAMG*)mg->innerctx;
+  PC_MG   *mg      = (PC_MG *)pc->data;
+  PC_GAMG *pc_gamg = (PC_GAMG *)mg->innerctx;
 
   PetscFunctionBegin;
-  ierr = PetscFree(pc_gamg->subctx);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)pc,"PCSetCoordinates_C",NULL);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscFree(pc_gamg->subctx));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetNSmooths_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetAggressiveLevels_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGMISkSetAggressive_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGMISkSetMinDegreeOrdering_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetLowMemoryFilter_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetAggressiveSquareGraph_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCSetCoordinates_C", NULL));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* -------------------------------------------------------------------------- */
 /*
    PCSetCoordinates_AGG
-     - collective
+
+   Collective
 
    Input Parameter:
    . pc - the preconditioner context
-   . ndm - dimesion of data (used for dof/vertex for Stokes)
+   . ndm - dimension of data (used for dof/vertex for Stokes)
    . a_nloc - number of vertices local
    . coords - [a_nloc][ndm] - interleaved coordinate data: {x_0, y_0, z_0, x_1, y_1, ...}
 */
 
 static PetscErrorCode PCSetCoordinates_AGG(PC pc, PetscInt ndm, PetscInt a_nloc, PetscReal *coords)
 {
-  PC_MG          *mg      = (PC_MG*)pc->data;
-  PC_GAMG        *pc_gamg = (PC_GAMG*)mg->innerctx;
-  PetscErrorCode ierr;
-  PetscInt       arrsz,kk,ii,jj,nloc,ndatarows,ndf;
-  Mat            mat = pc->pmat;
+  PC_MG   *mg      = (PC_MG *)pc->data;
+  PC_GAMG *pc_gamg = (PC_GAMG *)mg->innerctx;
+  PetscInt arrsz, kk, ii, jj, nloc, ndatarows, ndf;
+  Mat      mat = pc->pmat;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(pc,PC_CLASSID,1);
-  PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
+  PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
+  PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
   nloc = a_nloc;
 
   /* SA: null space vectors */
-  ierr = MatGetBlockSize(mat, &ndf);CHKERRQ(ierr); /* this does not work for Stokes */
-  if (coords && ndf==1) pc_gamg->data_cell_cols = 1; /* scalar w/ coords and SA (not needed) */
+  PetscCall(MatGetBlockSize(mat, &ndf));               /* this does not work for Stokes */
+  if (coords && ndf == 1) pc_gamg->data_cell_cols = 1; /* scalar w/ coords and SA (not needed) */
   else if (coords) {
-    if (ndm > ndf) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"degrees of motion %D > block size %D",ndm,ndf);
-    pc_gamg->data_cell_cols = (ndm==2 ? 3 : 6); /* displacement elasticity */
-    if (ndm != ndf) {
-      if (pc_gamg->data_cell_cols != ndf) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Don't know how to create null space for ndm=%D, ndf=%D.  Use MatSetNearNullSpace.",ndm,ndf);
-    }
+    PetscCheck(ndm <= ndf, PETSC_COMM_SELF, PETSC_ERR_PLIB, "degrees of motion %" PetscInt_FMT " > block size %" PetscInt_FMT, ndm, ndf);
+    pc_gamg->data_cell_cols = (ndm == 2 ? 3 : 6); /* displacement elasticity */
+    if (ndm != ndf) PetscCheck(pc_gamg->data_cell_cols == ndf, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Don't know how to create null space for ndm=%" PetscInt_FMT ", ndf=%" PetscInt_FMT ".  Use MatSetNearNullSpace().", ndm, ndf);
   } else pc_gamg->data_cell_cols = ndf; /* no data, force SA with constant null space vectors */
   pc_gamg->data_cell_rows = ndatarows = ndf;
-  if (pc_gamg->data_cell_cols <= 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"pc_gamg->data_cell_cols %D <= 0",pc_gamg->data_cell_cols);
-  arrsz = nloc*pc_gamg->data_cell_rows*pc_gamg->data_cell_cols;
+  PetscCheck(pc_gamg->data_cell_cols > 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "pc_gamg->data_cell_cols %" PetscInt_FMT " <= 0", pc_gamg->data_cell_cols);
+  arrsz = nloc * pc_gamg->data_cell_rows * pc_gamg->data_cell_cols;
 
-  /* create data - syntactic sugar that should be refactored at some point */
   if (!pc_gamg->data || (pc_gamg->data_sz != arrsz)) {
-    ierr = PetscFree(pc_gamg->data);CHKERRQ(ierr);
-    ierr = PetscMalloc1(arrsz+1, &pc_gamg->data);CHKERRQ(ierr);
+    PetscCall(PetscFree(pc_gamg->data));
+    PetscCall(PetscMalloc1(arrsz + 1, &pc_gamg->data));
   }
-  /* copy data in - column oriented */
-  for (kk=0; kk<nloc; kk++) {
-    const PetscInt M     = nloc*pc_gamg->data_cell_rows; /* stride into data */
-    PetscReal      *data = &pc_gamg->data[kk*ndatarows]; /* start of cell */
-    if (pc_gamg->data_cell_cols==1) *data = 1.0;
+  /* copy data in - column-oriented */
+  for (kk = 0; kk < nloc; kk++) {
+    const PetscInt M    = nloc * pc_gamg->data_cell_rows; /* stride into data */
+    PetscReal     *data = &pc_gamg->data[kk * ndatarows]; /* start of cell */
+    if (pc_gamg->data_cell_cols == 1) *data = 1.0;
     else {
       /* translational modes */
-      for (ii=0;ii<ndatarows;ii++) {
-        for (jj=0;jj<ndatarows;jj++) {
-          if (ii==jj)data[ii*M + jj] = 1.0;
-          else data[ii*M + jj] = 0.0;
+      for (ii = 0; ii < ndatarows; ii++) {
+        for (jj = 0; jj < ndatarows; jj++) {
+          if (ii == jj) data[ii * M + jj] = 1.0;
+          else data[ii * M + jj] = 0.0;
         }
       }
 
       /* rotational modes */
       if (coords) {
         if (ndm == 2) {
-          data   += 2*M;
-          data[0] = -coords[2*kk+1];
-          data[1] =  coords[2*kk];
+          data += 2 * M;
+          data[0] = -coords[2 * kk + 1];
+          data[1] = coords[2 * kk];
         } else {
-          data   += 3*M;
-          data[0] = 0.0;             data[M+0] =  coords[3*kk+2]; data[2*M+0] = -coords[3*kk+1];
-          data[1] = -coords[3*kk+2]; data[M+1] = 0.0;             data[2*M+1] =  coords[3*kk];
-          data[2] =  coords[3*kk+1]; data[M+2] = -coords[3*kk];   data[2*M+2] = 0.0;
+          data += 3 * M;
+          data[0]         = 0.0;
+          data[M + 0]     = coords[3 * kk + 2];
+          data[2 * M + 0] = -coords[3 * kk + 1];
+          data[1]         = -coords[3 * kk + 2];
+          data[M + 1]     = 0.0;
+          data[2 * M + 1] = coords[3 * kk];
+          data[2]         = coords[3 * kk + 1];
+          data[M + 2]     = -coords[3 * kk];
+          data[2 * M + 2] = 0.0;
         }
       }
     }
   }
-
   pc_gamg->data_sz = arrsz;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-typedef PetscInt NState;
-static const NState NOT_DONE=-2;
-static const NState DELETED =-1;
-static const NState REMOVED =-3;
-#define IS_SELECTED(s) (s!=DELETED && s!=NOT_DONE && s!=REMOVED)
-
-/* -------------------------------------------------------------------------- */
-/*
-   smoothAggs - greedy grab of with G1 (unsquared graph) -- AIJ specific
-     - AGG-MG specific: clears singletons out of 'selected_2'
-
-   Input Parameter:
-   . Gmat_2 - global matrix of graph (data not defined)   base (squared) graph
-   . Gmat_1 - base graph to grab with                 base graph
-   Input/Output Parameter:
-   . aggs_2 - linked list of aggs with gids)
-*/
-static PetscErrorCode smoothAggs(PC pc,Mat Gmat_2, Mat Gmat_1,PetscCoarsenData *aggs_2)
-{
-  PetscErrorCode ierr;
-  PetscBool      isMPI;
-  Mat_SeqAIJ     *matA_1, *matB_1=NULL;
-  MPI_Comm       comm;
-  PetscInt       lid,*ii,*idx,ix,Iend,my0,kk,n,j;
-  Mat_MPIAIJ     *mpimat_2 = NULL, *mpimat_1=NULL;
-  const PetscInt nloc      = Gmat_2->rmap->n;
-  PetscScalar    *cpcol_1_state,*cpcol_2_state,*cpcol_2_par_orig,*lid_parent_gid;
-  PetscInt       *lid_cprowID_1;
-  NState         *lid_state;
-  Vec            ghost_par_orig2;
-
-  PetscFunctionBegin;
-  ierr = PetscObjectGetComm((PetscObject)Gmat_2,&comm);CHKERRQ(ierr);
-  ierr = MatGetOwnershipRange(Gmat_1,&my0,&Iend);CHKERRQ(ierr);
-
-  /* get submatrices */
-  ierr = PetscStrbeginswith(((PetscObject)Gmat_1)->type_name,MATMPIAIJ,&isMPI);CHKERRQ(ierr);
-  if (isMPI) {
-    /* grab matrix objects */
-    mpimat_2 = (Mat_MPIAIJ*)Gmat_2->data;
-    mpimat_1 = (Mat_MPIAIJ*)Gmat_1->data;
-    matA_1   = (Mat_SeqAIJ*)mpimat_1->A->data;
-    matB_1   = (Mat_SeqAIJ*)mpimat_1->B->data;
-
-    /* force compressed row storage for B matrix in AuxMat */
-    ierr = MatCheckCompressedRow(mpimat_1->B,matB_1->nonzerorowcnt,&matB_1->compressedrow,matB_1->i,Gmat_1->rmap->n,-1.0);CHKERRQ(ierr);
-
-    ierr = PetscMalloc1(nloc, &lid_cprowID_1);CHKERRQ(ierr);
-    for (lid = 0; lid < nloc; lid++) lid_cprowID_1[lid] = -1;
-    for (ix=0; ix<matB_1->compressedrow.nrows; ix++) {
-      PetscInt lid = matB_1->compressedrow.rindex[ix];
-      lid_cprowID_1[lid] = ix;
-    }
-  } else {
-    PetscBool        isAIJ;
-    ierr = PetscStrbeginswith(((PetscObject)Gmat_1)->type_name,MATSEQAIJ,&isAIJ);CHKERRQ(ierr);
-    if (!isAIJ) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_USER,"Require AIJ matrix.");
-    matA_1        = (Mat_SeqAIJ*)Gmat_1->data;
-    lid_cprowID_1 = NULL;
-  }
-  if (nloc>0) {
-    if (matB_1 && !matB_1->compressedrow.use) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"matB_1 && !matB_1->compressedrow.use: PETSc bug???");
-  }
-  /* get state of locals and selected gid for deleted */
-  ierr = PetscMalloc2(nloc, &lid_state,nloc, &lid_parent_gid);CHKERRQ(ierr);
-  for (lid = 0; lid < nloc; lid++) {
-    lid_parent_gid[lid] = -1.0;
-    lid_state[lid]      = DELETED;
-  }
-
-  /* set lid_state */
-  for (lid = 0; lid < nloc; lid++) {
-    PetscCDIntNd *pos;
-    ierr = PetscCDGetHeadPos(aggs_2,lid,&pos);CHKERRQ(ierr);
-    if (pos) {
-      PetscInt gid1;
-
-      ierr = PetscCDIntNdGetID(pos, &gid1);CHKERRQ(ierr);
-      if (gid1 != lid+my0) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_PLIB,"gid1 %D != lid %D + my0 %D",gid1,lid,my0);
-      lid_state[lid] = gid1;
-    }
-  }
-
-  /* map local to selected local, DELETED means a ghost owns it */
-  for (lid=kk=0; lid<nloc; lid++) {
-    NState state = lid_state[lid];
-    if (IS_SELECTED(state)) {
-      PetscCDIntNd *pos;
-      ierr = PetscCDGetHeadPos(aggs_2,lid,&pos);CHKERRQ(ierr);
-      while (pos) {
-        PetscInt gid1;
-        ierr = PetscCDIntNdGetID(pos, &gid1);CHKERRQ(ierr);
-        ierr = PetscCDGetNextPos(aggs_2,lid,&pos);CHKERRQ(ierr);
-
-        if (gid1 >= my0 && gid1 < Iend) lid_parent_gid[gid1-my0] = (PetscScalar)(lid + my0);
-      }
-    }
-  }
-  /* get 'cpcol_1/2_state' & cpcol_2_par_orig - uses mpimat_1/2->lvec for temp space */
-  if (isMPI) {
-    Vec tempVec;
-    /* get 'cpcol_1_state' */
-    ierr = MatCreateVecs(Gmat_1, &tempVec, NULL);CHKERRQ(ierr);
-    for (kk=0,j=my0; kk<nloc; kk++,j++) {
-      PetscScalar v = (PetscScalar)lid_state[kk];
-      ierr = VecSetValues(tempVec, 1, &j, &v, INSERT_VALUES);CHKERRQ(ierr);
-    }
-    ierr = VecAssemblyBegin(tempVec);CHKERRQ(ierr);
-    ierr = VecAssemblyEnd(tempVec);CHKERRQ(ierr);
-    ierr = VecScatterBegin(mpimat_1->Mvctx,tempVec, mpimat_1->lvec,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-    ierr = VecScatterEnd(mpimat_1->Mvctx,tempVec, mpimat_1->lvec,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-    ierr = VecGetArray(mpimat_1->lvec, &cpcol_1_state);CHKERRQ(ierr);
-    /* get 'cpcol_2_state' */
-    ierr = VecScatterBegin(mpimat_2->Mvctx,tempVec, mpimat_2->lvec,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-    ierr = VecScatterEnd(mpimat_2->Mvctx,tempVec, mpimat_2->lvec,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-    ierr = VecGetArray(mpimat_2->lvec, &cpcol_2_state);CHKERRQ(ierr);
-    /* get 'cpcol_2_par_orig' */
-    for (kk=0,j=my0; kk<nloc; kk++,j++) {
-      PetscScalar v = (PetscScalar)lid_parent_gid[kk];
-      ierr = VecSetValues(tempVec, 1, &j, &v, INSERT_VALUES);CHKERRQ(ierr);
-    }
-    ierr = VecAssemblyBegin(tempVec);CHKERRQ(ierr);
-    ierr = VecAssemblyEnd(tempVec);CHKERRQ(ierr);
-    ierr = VecDuplicate(mpimat_2->lvec, &ghost_par_orig2);CHKERRQ(ierr);
-    ierr = VecScatterBegin(mpimat_2->Mvctx,tempVec, ghost_par_orig2,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-    ierr = VecScatterEnd(mpimat_2->Mvctx,tempVec, ghost_par_orig2,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-    ierr = VecGetArray(ghost_par_orig2, &cpcol_2_par_orig);CHKERRQ(ierr);
-
-    ierr = VecDestroy(&tempVec);CHKERRQ(ierr);
-  } /* ismpi */
-
-  /* doit */
-  for (lid=0; lid<nloc; lid++) {
-    NState state = lid_state[lid];
-    if (IS_SELECTED(state)) {
-      /* steal locals */
-      ii  = matA_1->i; n = ii[lid+1] - ii[lid];
-      idx = matA_1->j + ii[lid];
-      for (j=0; j<n; j++) {
-        PetscInt lidj   = idx[j], sgid;
-        NState   statej = lid_state[lidj];
-        if (statej==DELETED && (sgid=(PetscInt)PetscRealPart(lid_parent_gid[lidj])) != lid+my0) { /* steal local */
-          lid_parent_gid[lidj] = (PetscScalar)(lid+my0); /* send this if sgid is not local */
-          if (sgid >= my0 && sgid < Iend) {       /* I'm stealing this local from a local sgid */
-            PetscInt     hav=0,slid=sgid-my0,gidj=lidj+my0;
-            PetscCDIntNd *pos,*last=NULL;
-            /* looking for local from local so id_llist_2 works */
-            ierr = PetscCDGetHeadPos(aggs_2,slid,&pos);CHKERRQ(ierr);
-            while (pos) {
-              PetscInt gid;
-              ierr = PetscCDIntNdGetID(pos, &gid);CHKERRQ(ierr);
-              if (gid == gidj) {
-                if (!last) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"last cannot be null");
-                ierr = PetscCDRemoveNextNode(aggs_2, slid, last);CHKERRQ(ierr);
-                ierr = PetscCDAppendNode(aggs_2, lid, pos);CHKERRQ(ierr);
-                hav  = 1;
-                break;
-              } else last = pos;
-
-              ierr = PetscCDGetNextPos(aggs_2,slid,&pos);CHKERRQ(ierr);
-            }
-            if (hav!=1) {
-              if (!hav) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"failed to find adj in 'selected' lists - structurally unsymmetric matrix");
-              SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"found node %D times???",hav);
-            }
-          } else {            /* I'm stealing this local, owned by a ghost */
-            if (sgid != -1) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Mat has an un-symmetric graph. Use '-%spc_gamg_sym_graph true' to symmetrize the graph or '-%spc_gamg_threshold -1' if the matrix is structurally symmetric.",((PetscObject)pc)->prefix ? ((PetscObject)pc)->prefix : "",((PetscObject)pc)->prefix ? ((PetscObject)pc)->prefix : "");
-            ierr = PetscCDAppendID(aggs_2, lid, lidj+my0);CHKERRQ(ierr);
-          }
-        }
-      } /* local neighbors */
-    } else if (state == DELETED && lid_cprowID_1) {
-      PetscInt sgidold = (PetscInt)PetscRealPart(lid_parent_gid[lid]);
-      /* see if I have a selected ghost neighbor that will steal me */
-      if ((ix=lid_cprowID_1[lid]) != -1) {
-        ii  = matB_1->compressedrow.i; n = ii[ix+1] - ii[ix];
-        idx = matB_1->j + ii[ix];
-        for (j=0; j<n; j++) {
-          PetscInt cpid   = idx[j];
-          NState   statej = (NState)PetscRealPart(cpcol_1_state[cpid]);
-          if (IS_SELECTED(statej) && sgidold != (PetscInt)statej) { /* ghost will steal this, remove from my list */
-            lid_parent_gid[lid] = (PetscScalar)statej; /* send who selected */
-            if (sgidold>=my0 && sgidold<Iend) { /* this was mine */
-              PetscInt     hav=0,oldslidj=sgidold-my0;
-              PetscCDIntNd *pos,*last=NULL;
-              /* remove from 'oldslidj' list */
-              ierr = PetscCDGetHeadPos(aggs_2,oldslidj,&pos);CHKERRQ(ierr);
-              while (pos) {
-                PetscInt gid;
-                ierr = PetscCDIntNdGetID(pos, &gid);CHKERRQ(ierr);
-                if (lid+my0 == gid) {
-                  /* id_llist_2[lastid] = id_llist_2[flid];   /\* remove lid from oldslidj list *\/ */
-                  if (!last) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"last cannot be null");
-                  ierr = PetscCDRemoveNextNode(aggs_2, oldslidj, last);CHKERRQ(ierr);
-                  /* ghost (PetscScalar)statej will add this later */
-                  hav = 1;
-                  break;
-                } else last = pos;
-
-                ierr = PetscCDGetNextPos(aggs_2,oldslidj,&pos);CHKERRQ(ierr);
-              }
-              if (hav!=1) {
-                if (!hav) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"failed to find adj in 'selected' lists - structurally unsymmetric matrix");
-                SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"found node %D times???",hav);
-              }
-            } else {
-              /* ghosts remove this later */
-            }
-          }
-        }
-      }
-    } /* selected/deleted */
-  } /* node loop */
-
-  if (isMPI) {
-    PetscScalar     *cpcol_2_parent,*cpcol_2_gid;
-    Vec             tempVec,ghostgids2,ghostparents2;
-    PetscInt        cpid,nghost_2;
-    PCGAMGHashTable gid_cpid;
-
-    ierr = VecGetSize(mpimat_2->lvec, &nghost_2);CHKERRQ(ierr);
-    ierr = MatCreateVecs(Gmat_2, &tempVec, NULL);CHKERRQ(ierr);
-
-    /* get 'cpcol_2_parent' */
-    for (kk=0,j=my0; kk<nloc; kk++,j++) {
-      ierr = VecSetValues(tempVec, 1, &j, &lid_parent_gid[kk], INSERT_VALUES);CHKERRQ(ierr);
-    }
-    ierr = VecAssemblyBegin(tempVec);CHKERRQ(ierr);
-    ierr = VecAssemblyEnd(tempVec);CHKERRQ(ierr);
-    ierr = VecDuplicate(mpimat_2->lvec, &ghostparents2);CHKERRQ(ierr);
-    ierr = VecScatterBegin(mpimat_2->Mvctx,tempVec, ghostparents2,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-    ierr = VecScatterEnd(mpimat_2->Mvctx,tempVec, ghostparents2,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-    ierr = VecGetArray(ghostparents2, &cpcol_2_parent);CHKERRQ(ierr);
-
-    /* get 'cpcol_2_gid' */
-    for (kk=0,j=my0; kk<nloc; kk++,j++) {
-      PetscScalar v = (PetscScalar)j;
-      ierr = VecSetValues(tempVec, 1, &j, &v, INSERT_VALUES);CHKERRQ(ierr);
-    }
-    ierr = VecAssemblyBegin(tempVec);CHKERRQ(ierr);
-    ierr = VecAssemblyEnd(tempVec);CHKERRQ(ierr);
-    ierr = VecDuplicate(mpimat_2->lvec, &ghostgids2);CHKERRQ(ierr);
-    ierr = VecScatterBegin(mpimat_2->Mvctx,tempVec, ghostgids2,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-    ierr = VecScatterEnd(mpimat_2->Mvctx,tempVec, ghostgids2,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-    ierr = VecGetArray(ghostgids2, &cpcol_2_gid);CHKERRQ(ierr);
-    ierr = VecDestroy(&tempVec);CHKERRQ(ierr);
-
-    /* look for deleted ghosts and add to table */
-    ierr = PCGAMGHashTableCreate(2*nghost_2+1, &gid_cpid);CHKERRQ(ierr);
-    for (cpid = 0; cpid < nghost_2; cpid++) {
-      NState state = (NState)PetscRealPart(cpcol_2_state[cpid]);
-      if (state==DELETED) {
-        PetscInt sgid_new = (PetscInt)PetscRealPart(cpcol_2_parent[cpid]);
-        PetscInt sgid_old = (PetscInt)PetscRealPart(cpcol_2_par_orig[cpid]);
-        if (sgid_old == -1 && sgid_new != -1) {
-          PetscInt gid = (PetscInt)PetscRealPart(cpcol_2_gid[cpid]);
-          ierr = PCGAMGHashTableAdd(&gid_cpid, gid, cpid);CHKERRQ(ierr);
-        }
-      }
-    }
-
-    /* look for deleted ghosts and see if they moved - remove it */
-    for (lid=0; lid<nloc; lid++) {
-      NState state = lid_state[lid];
-      if (IS_SELECTED(state)) {
-        PetscCDIntNd *pos,*last=NULL;
-        /* look for deleted ghosts and see if they moved */
-        ierr = PetscCDGetHeadPos(aggs_2,lid,&pos);CHKERRQ(ierr);
-        while (pos) {
-          PetscInt gid;
-          ierr = PetscCDIntNdGetID(pos, &gid);CHKERRQ(ierr);
-
-          if (gid < my0 || gid >= Iend) {
-            ierr = PCGAMGHashTableFind(&gid_cpid, gid, &cpid);CHKERRQ(ierr);
-            if (cpid != -1) {
-              /* a moved ghost - */
-              /* id_llist_2[lastid] = id_llist_2[flid];    /\* remove 'flid' from list *\/ */
-              ierr = PetscCDRemoveNextNode(aggs_2, lid, last);CHKERRQ(ierr);
-            } else last = pos;
-          } else last = pos;
-
-          ierr = PetscCDGetNextPos(aggs_2,lid,&pos);CHKERRQ(ierr);
-        } /* loop over list of deleted */
-      } /* selected */
-    }
-    ierr = PCGAMGHashTableDestroy(&gid_cpid);CHKERRQ(ierr);
-
-    /* look at ghosts, see if they changed - and it */
-    for (cpid = 0; cpid < nghost_2; cpid++) {
-      PetscInt sgid_new = (PetscInt)PetscRealPart(cpcol_2_parent[cpid]);
-      if (sgid_new >= my0 && sgid_new < Iend) { /* this is mine */
-        PetscInt     gid     = (PetscInt)PetscRealPart(cpcol_2_gid[cpid]);
-        PetscInt     slid_new=sgid_new-my0,hav=0;
-        PetscCDIntNd *pos;
-
-        /* search for this gid to see if I have it */
-        ierr = PetscCDGetHeadPos(aggs_2,slid_new,&pos);CHKERRQ(ierr);
-        while (pos) {
-          PetscInt gidj;
-          ierr = PetscCDIntNdGetID(pos, &gidj);CHKERRQ(ierr);
-          ierr = PetscCDGetNextPos(aggs_2,slid_new,&pos);CHKERRQ(ierr);
-
-          if (gidj == gid) { hav = 1; break; }
-        }
-        if (hav != 1) {
-          /* insert 'flidj' into head of llist */
-          ierr = PetscCDAppendID(aggs_2, slid_new, gid);CHKERRQ(ierr);
-        }
-      }
-    }
-
-    ierr = VecRestoreArray(mpimat_1->lvec, &cpcol_1_state);CHKERRQ(ierr);
-    ierr = VecRestoreArray(mpimat_2->lvec, &cpcol_2_state);CHKERRQ(ierr);
-    ierr = VecRestoreArray(ghostparents2, &cpcol_2_parent);CHKERRQ(ierr);
-    ierr = VecRestoreArray(ghostgids2, &cpcol_2_gid);CHKERRQ(ierr);
-    ierr = PetscFree(lid_cprowID_1);CHKERRQ(ierr);
-    ierr = VecDestroy(&ghostgids2);CHKERRQ(ierr);
-    ierr = VecDestroy(&ghostparents2);CHKERRQ(ierr);
-    ierr = VecDestroy(&ghost_par_orig2);CHKERRQ(ierr);
-  }
-
-  ierr = PetscFree2(lid_state,lid_parent_gid);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
-/* -------------------------------------------------------------------------- */
 /*
    PCSetData_AGG - called if data is not set with PCSetCoordinates.
       Looks in Mat for near null space.
@@ -573,69 +369,69 @@ static PetscErrorCode smoothAggs(PC pc,Mat Gmat_2, Mat Gmat_1,PetscCoarsenData *
 */
 static PetscErrorCode PCSetData_AGG(PC pc, Mat a_A)
 {
-  PetscErrorCode ierr;
-  PC_MG          *mg      = (PC_MG*)pc->data;
-  PC_GAMG        *pc_gamg = (PC_GAMG*)mg->innerctx;
-  MatNullSpace   mnull;
+  PC_MG       *mg      = (PC_MG *)pc->data;
+  PC_GAMG     *pc_gamg = (PC_GAMG *)mg->innerctx;
+  MatNullSpace mnull;
 
   PetscFunctionBegin;
-  ierr = MatGetNearNullSpace(a_A, &mnull);CHKERRQ(ierr);
+  PetscCall(MatGetNearNullSpace(a_A, &mnull));
   if (!mnull) {
     DM dm;
-    ierr = PCGetDM(pc, &dm);CHKERRQ(ierr);
-    if (!dm) {
-      ierr = MatGetDM(a_A, &dm);CHKERRQ(ierr);
-    }
+    PetscCall(PCGetDM(pc, &dm));
+    if (!dm) PetscCall(MatGetDM(a_A, &dm));
     if (dm) {
       PetscObject deformation;
       PetscInt    Nf;
 
-      ierr = DMGetNumFields(dm, &Nf);CHKERRQ(ierr);
+      PetscCall(DMGetNumFields(dm, &Nf));
       if (Nf) {
-        ierr = DMGetField(dm, 0, NULL, &deformation);CHKERRQ(ierr);
-        ierr = PetscObjectQuery((PetscObject)deformation,"nearnullspace",(PetscObject*)&mnull);CHKERRQ(ierr);
-        if (!mnull) {
-          ierr = PetscObjectQuery((PetscObject)deformation,"nullspace",(PetscObject*)&mnull);CHKERRQ(ierr);
-        }
+        PetscCall(DMGetField(dm, 0, NULL, &deformation));
+        PetscCall(PetscObjectQuery((PetscObject)deformation, "nearnullspace", (PetscObject *)&mnull));
+        if (!mnull) PetscCall(PetscObjectQuery((PetscObject)deformation, "nullspace", (PetscObject *)&mnull));
       }
     }
   }
 
   if (!mnull) {
-    PetscInt bs,NN,MM;
-    ierr = MatGetBlockSize(a_A, &bs);CHKERRQ(ierr);
-    ierr = MatGetLocalSize(a_A, &MM, &NN);CHKERRQ(ierr);
-    if (MM % bs) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"MM %D must be divisible by bs %D",MM,bs);
-    ierr = PCSetCoordinates_AGG(pc, bs, MM/bs, NULL);CHKERRQ(ierr);
+    PetscInt bs, NN, MM;
+    PetscCall(MatGetBlockSize(a_A, &bs));
+    PetscCall(MatGetLocalSize(a_A, &MM, &NN));
+    PetscCheck(MM % bs == 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "MM %" PetscInt_FMT " must be divisible by bs %" PetscInt_FMT, MM, bs);
+    PetscCall(PCSetCoordinates_AGG(pc, bs, MM / bs, NULL));
   } else {
-    PetscReal *nullvec;
-    PetscBool has_const;
-    PetscInt  i,j,mlocal,nvec,bs;
-    const Vec *vecs; const PetscScalar *v;
+    PetscReal         *nullvec;
+    PetscBool          has_const;
+    PetscInt           i, j, mlocal, nvec, bs;
+    const Vec         *vecs;
+    const PetscScalar *v;
 
-    ierr = MatGetLocalSize(a_A,&mlocal,NULL);CHKERRQ(ierr);
-    ierr = MatNullSpaceGetVecs(mnull, &has_const, &nvec, &vecs);CHKERRQ(ierr);
-    pc_gamg->data_sz = (nvec+!!has_const)*mlocal;
-    ierr = PetscMalloc1((nvec+!!has_const)*mlocal,&nullvec);CHKERRQ(ierr);
-    if (has_const) for (i=0; i<mlocal; i++) nullvec[i] = 1.0;
-    for (i=0; i<nvec; i++) {
-      ierr = VecGetArrayRead(vecs[i],&v);CHKERRQ(ierr);
-      for (j=0; j<mlocal; j++) nullvec[(i+!!has_const)*mlocal + j] = PetscRealPart(v[j]);
-      ierr = VecRestoreArrayRead(vecs[i],&v);CHKERRQ(ierr);
+    PetscCall(MatGetLocalSize(a_A, &mlocal, NULL));
+    PetscCall(MatNullSpaceGetVecs(mnull, &has_const, &nvec, &vecs));
+    for (i = 0; i < nvec; i++) {
+      PetscCall(VecGetLocalSize(vecs[i], &j));
+      PetscCheck(j == mlocal, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Attached null space vector size %" PetscInt_FMT " != matrix size %" PetscInt_FMT, j, mlocal);
+    }
+    pc_gamg->data_sz = (nvec + !!has_const) * mlocal;
+    PetscCall(PetscMalloc1((nvec + !!has_const) * mlocal, &nullvec));
+    if (has_const)
+      for (i = 0; i < mlocal; i++) nullvec[i] = 1.0;
+    for (i = 0; i < nvec; i++) {
+      PetscCall(VecGetArrayRead(vecs[i], &v));
+      for (j = 0; j < mlocal; j++) nullvec[(i + !!has_const) * mlocal + j] = PetscRealPart(v[j]);
+      PetscCall(VecRestoreArrayRead(vecs[i], &v));
     }
     pc_gamg->data           = nullvec;
-    pc_gamg->data_cell_cols = (nvec+!!has_const);
-    ierr = MatGetBlockSize(a_A, &bs);CHKERRQ(ierr);
+    pc_gamg->data_cell_cols = (nvec + !!has_const);
+    PetscCall(MatGetBlockSize(a_A, &bs));
     pc_gamg->data_cell_rows = bs;
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* -------------------------------------------------------------------------- */
 /*
- formProl0
+  formProl0 - collect null space data for each aggregate, do QR, put R in coarse grid data and Q in P_0
 
-   Input Parameter:
+  Input Parameter:
    . agg_llists - list of arrays with aggregates -- list from selected vertices of aggregate unselected vertices
    . bs - row block size
    . nSAvec - column bs of new P
@@ -643,300 +439,715 @@ static PetscErrorCode PCSetData_AGG(PC pc, Mat a_A)
    . data_stride - bs*(nloc nodes + ghost nodes) [data_stride][nSAvec]
    . data_in[data_stride*nSAvec] - local data on fine grid
    . flid_fgid[data_stride/bs] - make local to global IDs, includes ghosts in 'locals_llist'
+
   Output Parameter:
    . a_data_out - in with fine grid data (w/ghosts), out with coarse grid data
    . a_Prol - prolongation operator
 */
-static PetscErrorCode formProl0(PetscCoarsenData *agg_llists,PetscInt bs,PetscInt nSAvec,PetscInt my0crs,PetscInt data_stride,PetscReal data_in[],const PetscInt flid_fgid[],PetscReal **a_data_out,Mat a_Prol)
+static PetscErrorCode formProl0(PetscCoarsenData *agg_llists, PetscInt bs, PetscInt nSAvec, PetscInt my0crs, PetscInt data_stride, PetscReal data_in[], const PetscInt flid_fgid[], PetscReal **a_data_out, Mat a_Prol)
 {
-  PetscErrorCode  ierr;
-  PetscInt        Istart,my0,Iend,nloc,clid,flid = 0,aggID,kk,jj,ii,mm,ndone,nSelected,minsz,nghosts,out_data_stride;
+  PetscInt        Istart, my0, Iend, nloc, clid, flid = 0, aggID, kk, jj, ii, mm, nSelected, minsz, nghosts, out_data_stride;
   MPI_Comm        comm;
-  PetscMPIInt     rank;
-  PetscReal       *out_data;
-  PetscCDIntNd    *pos;
+  PetscReal      *out_data;
+  PetscCDIntNd   *pos;
   PCGAMGHashTable fgid_flid;
 
   PetscFunctionBegin;
-  ierr = PetscObjectGetComm((PetscObject)a_Prol,&comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
-  ierr = MatGetOwnershipRange(a_Prol, &Istart, &Iend);CHKERRQ(ierr);
-  nloc = (Iend-Istart)/bs; my0 = Istart/bs;
-  if ((Iend-Istart) % bs) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Iend %D - Istart %D must be divisible by bs %D",Iend,Istart,bs);
-  Iend   /= bs;
-  nghosts = data_stride/bs - nloc;
+  PetscCall(PetscObjectGetComm((PetscObject)a_Prol, &comm));
+  PetscCall(MatGetOwnershipRange(a_Prol, &Istart, &Iend));
+  nloc = (Iend - Istart) / bs;
+  my0  = Istart / bs;
+  PetscCheck((Iend - Istart) % bs == 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Iend %" PetscInt_FMT " - Istart %" PetscInt_FMT " must be divisible by bs %" PetscInt_FMT, Iend, Istart, bs);
+  Iend /= bs;
+  nghosts = data_stride / bs - nloc;
 
-  ierr = PCGAMGHashTableCreate(2*nghosts+1, &fgid_flid);CHKERRQ(ierr);
-  for (kk=0; kk<nghosts; kk++) {
-    ierr = PCGAMGHashTableAdd(&fgid_flid, flid_fgid[nloc+kk], nloc+kk);CHKERRQ(ierr);
-  }
+  PetscCall(PCGAMGHashTableCreate(2 * nghosts + 1, &fgid_flid));
+  for (kk = 0; kk < nghosts; kk++) PetscCall(PCGAMGHashTableAdd(&fgid_flid, flid_fgid[nloc + kk], nloc + kk));
 
   /* count selected -- same as number of cols of P */
-  for (nSelected=mm=0; mm<nloc; mm++) {
+  for (nSelected = mm = 0; mm < nloc; mm++) {
     PetscBool ise;
-    ierr = PetscCDEmptyAt(agg_llists, mm, &ise);CHKERRQ(ierr);
+    PetscCall(PetscCDIsEmptyAt(agg_llists, mm, &ise));
     if (!ise) nSelected++;
   }
-  ierr = MatGetOwnershipRangeColumn(a_Prol, &ii, &jj);CHKERRQ(ierr);
-  if ((ii/nSAvec) != my0crs) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_PLIB,"ii %D /nSAvec %D  != my0crs %D",ii,nSAvec,my0crs);
-  if (nSelected != (jj-ii)/nSAvec) SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_PLIB,"nSelected %D != (jj %D - ii %D)/nSAvec %D",nSelected,jj,ii,nSAvec);
+  PetscCall(MatGetOwnershipRangeColumn(a_Prol, &ii, &jj));
+  PetscCheck((ii / nSAvec) == my0crs, PETSC_COMM_SELF, PETSC_ERR_PLIB, "ii %" PetscInt_FMT " /nSAvec %" PetscInt_FMT "  != my0crs %" PetscInt_FMT, ii, nSAvec, my0crs);
+  PetscCheck(nSelected == (jj - ii) / nSAvec, PETSC_COMM_SELF, PETSC_ERR_PLIB, "nSelected %" PetscInt_FMT " != (jj %" PetscInt_FMT " - ii %" PetscInt_FMT ")/nSAvec %" PetscInt_FMT, nSelected, jj, ii, nSAvec);
 
   /* aloc space for coarse point data (output) */
-  out_data_stride = nSelected*nSAvec;
+  out_data_stride = nSelected * nSAvec;
 
-  ierr = PetscMalloc1(out_data_stride*nSAvec, &out_data);CHKERRQ(ierr);
-  for (ii=0;ii<out_data_stride*nSAvec;ii++) out_data[ii]=PETSC_MAX_REAL;
+  PetscCall(PetscMalloc1(out_data_stride * nSAvec, &out_data));
+  for (ii = 0; ii < out_data_stride * nSAvec; ii++) out_data[ii] = PETSC_MAX_REAL;
   *a_data_out = out_data; /* output - stride nSelected*nSAvec */
 
   /* find points and set prolongation */
   minsz = 100;
-  ndone = 0;
   for (mm = clid = 0; mm < nloc; mm++) {
-    ierr = PetscCDSizeAt(agg_llists, mm, &jj);CHKERRQ(ierr);
+    PetscCall(PetscCDCountAt(agg_llists, mm, &jj));
     if (jj > 0) {
       const PetscInt lid = mm, cgid = my0crs + clid;
       PetscInt       cids[100]; /* max bs */
-      PetscBLASInt   asz  =jj,M=asz*bs,N=nSAvec,INFO;
-      PetscBLASInt   Mdata=M+((N-M>0) ? N-M : 0),LDA=Mdata,LWORK=N*bs;
-      PetscScalar    *qqc,*qqr,*TAU,*WORK;
-      PetscInt       *fids;
-      PetscReal      *data;
+      PetscBLASInt   asz = jj, M = asz * bs, N = nSAvec, INFO;
+      PetscBLASInt   Mdata = M + ((N - M > 0) ? N - M : 0), LDA = Mdata, LWORK = N * bs;
+      PetscScalar   *qqc, *qqr, *TAU, *WORK;
+      PetscInt      *fids;
+      PetscReal     *data;
 
       /* count agg */
-      if (asz<minsz) minsz = asz;
+      if (asz < minsz) minsz = asz;
 
       /* get block */
-      ierr = PetscMalloc5(Mdata*N, &qqc,M*N, &qqr,N, &TAU,LWORK, &WORK,M, &fids);CHKERRQ(ierr);
+      PetscCall(PetscMalloc5(Mdata * N, &qqc, M * N, &qqr, N, &TAU, LWORK, &WORK, M, &fids));
 
       aggID = 0;
-      ierr  = PetscCDGetHeadPos(agg_llists,lid,&pos);CHKERRQ(ierr);
+      PetscCall(PetscCDGetHeadPos(agg_llists, lid, &pos));
       while (pos) {
         PetscInt gid1;
-        ierr = PetscCDIntNdGetID(pos, &gid1);CHKERRQ(ierr);
-        ierr = PetscCDGetNextPos(agg_llists,lid,&pos);CHKERRQ(ierr);
+        PetscCall(PetscCDIntNdGetID(pos, &gid1));
+        PetscCall(PetscCDGetNextPos(agg_llists, lid, &pos));
 
         if (gid1 >= my0 && gid1 < Iend) flid = gid1 - my0;
         else {
-          ierr = PCGAMGHashTableFind(&fgid_flid, gid1, &flid);CHKERRQ(ierr);
-          if (flid < 0) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Cannot find gid1 in table");
+          PetscCall(PCGAMGHashTableFind(&fgid_flid, gid1, &flid));
+          PetscCheck(flid >= 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Cannot find gid1 in table");
         }
-        /* copy in B_i matrix - column oriented */
-        data = &data_in[flid*bs];
+        /* copy in B_i matrix - column-oriented */
+        data = &data_in[flid * bs];
         for (ii = 0; ii < bs; ii++) {
           for (jj = 0; jj < N; jj++) {
-            PetscReal d = data[jj*data_stride + ii];
-            qqc[jj*Mdata + aggID*bs + ii] = d;
+            PetscReal d                       = data[jj * data_stride + ii];
+            qqc[jj * Mdata + aggID * bs + ii] = d;
           }
         }
         /* set fine IDs */
-        for (kk=0; kk<bs; kk++) fids[aggID*bs + kk] = flid_fgid[flid]*bs + kk;
+        for (kk = 0; kk < bs; kk++) fids[aggID * bs + kk] = flid_fgid[flid] * bs + kk;
         aggID++;
       }
 
       /* pad with zeros */
-      for (ii = asz*bs; ii < Mdata; ii++) {
-        for (jj = 0; jj < N; jj++, kk++) {
-          qqc[jj*Mdata + ii] = .0;
-        }
+      for (ii = asz * bs; ii < Mdata; ii++) {
+        for (jj = 0; jj < N; jj++, kk++) qqc[jj * Mdata + ii] = .0;
       }
 
-      ndone += aggID;
       /* QR */
-      ierr = PetscFPTrapPush(PETSC_FP_TRAP_OFF);CHKERRQ(ierr);
-      PetscStackCallBLAS("LAPACKgeqrf",LAPACKgeqrf_(&Mdata, &N, qqc, &LDA, TAU, WORK, &LWORK, &INFO));
-      ierr = PetscFPTrapPop();CHKERRQ(ierr);
-      if (INFO != 0) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"xGEQRF error");
-      /* get R - column oriented - output B_{i+1} */
+      PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
+      PetscCallBLAS("LAPACKgeqrf", LAPACKgeqrf_(&Mdata, &N, qqc, &LDA, TAU, WORK, &LWORK, &INFO));
+      PetscCall(PetscFPTrapPop());
+      PetscCheck(INFO == 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "xGEQRF error");
+      /* get R - column-oriented - output B_{i+1} */
       {
-        PetscReal *data = &out_data[clid*nSAvec];
+        PetscReal *data = &out_data[clid * nSAvec];
         for (jj = 0; jj < nSAvec; jj++) {
           for (ii = 0; ii < nSAvec; ii++) {
-            if (data[jj*out_data_stride + ii] != PETSC_MAX_REAL) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"data[jj*out_data_stride + ii] != %e",PETSC_MAX_REAL);
-           if (ii <= jj) data[jj*out_data_stride + ii] = PetscRealPart(qqc[jj*Mdata + ii]);
-           else data[jj*out_data_stride + ii] = 0.;
+            PetscCheck(data[jj * out_data_stride + ii] == PETSC_MAX_REAL, PETSC_COMM_SELF, PETSC_ERR_PLIB, "data[jj*out_data_stride + ii] != %e", (double)PETSC_MAX_REAL);
+            if (ii <= jj) data[jj * out_data_stride + ii] = PetscRealPart(qqc[jj * Mdata + ii]);
+            else data[jj * out_data_stride + ii] = 0.;
           }
         }
       }
 
-      /* get Q - row oriented */
-      PetscStackCallBLAS("LAPACKorgqr",LAPACKorgqr_(&Mdata, &N, &N, qqc, &LDA, TAU, WORK, &LWORK, &INFO));
-      if (INFO != 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"xORGQR error arg %d",-INFO);
+      /* get Q - row-oriented */
+      PetscCallBLAS("LAPACKorgqr", LAPACKorgqr_(&Mdata, &N, &N, qqc, &LDA, TAU, WORK, &LWORK, &INFO));
+      PetscCheck(INFO == 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "xORGQR error arg %" PetscBLASInt_FMT, -INFO);
 
       for (ii = 0; ii < M; ii++) {
-        for (jj = 0; jj < N; jj++) {
-          qqr[N*ii + jj] = qqc[jj*Mdata + ii];
-        }
+        for (jj = 0; jj < N; jj++) qqr[N * ii + jj] = qqc[jj * Mdata + ii];
       }
 
       /* add diagonal block of P0 */
-      for (kk=0; kk<N; kk++) {
-        cids[kk] = N*cgid + kk; /* global col IDs in P0 */
-      }
-      ierr = MatSetValues(a_Prol,M,fids,N,cids,qqr,INSERT_VALUES);CHKERRQ(ierr);
-      ierr = PetscFree5(qqc,qqr,TAU,WORK,fids);CHKERRQ(ierr);
+      for (kk = 0; kk < N; kk++) { cids[kk] = N * cgid + kk; /* global col IDs in P0 */ }
+      PetscCall(MatSetValues(a_Prol, M, fids, N, cids, qqr, INSERT_VALUES));
+      PetscCall(PetscFree5(qqc, qqr, TAU, WORK, fids));
       clid++;
     } /* coarse agg */
   } /* for all fine nodes */
-  ierr = MatAssemblyBegin(a_Prol,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  ierr = MatAssemblyEnd(a_Prol,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  ierr = PCGAMGHashTableDestroy(&fgid_flid);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(MatAssemblyBegin(a_Prol, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(a_Prol, MAT_FINAL_ASSEMBLY));
+  PetscCall(PCGAMGHashTableDestroy(&fgid_flid));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PCView_GAMG_AGG(PC pc,PetscViewer viewer)
+static PetscErrorCode PCView_GAMG_AGG(PC pc, PetscViewer viewer)
 {
-  PetscErrorCode ierr;
-  PC_MG          *mg      = (PC_MG*)pc->data;
-  PC_GAMG        *pc_gamg = (PC_GAMG*)mg->innerctx;
-  PC_GAMG_AGG    *pc_gamg_agg = (PC_GAMG_AGG*)pc_gamg->subctx;
+  PC_MG       *mg          = (PC_MG *)pc->data;
+  PC_GAMG     *pc_gamg     = (PC_GAMG *)mg->innerctx;
+  PC_GAMG_AGG *pc_gamg_agg = (PC_GAMG_AGG *)pc_gamg->subctx;
 
   PetscFunctionBegin;
-  ierr = PetscViewerASCIIPrintf(viewer,"      AGG specific options\n");CHKERRQ(ierr);
-  ierr = PetscViewerASCIIPrintf(viewer,"        Symmetric graph %s\n",pc_gamg_agg->sym_graph ? "true" : "false");CHKERRQ(ierr);
-  ierr = PetscViewerASCIIPrintf(viewer,"        Number of levels to square graph %D\n",pc_gamg_agg->square_graph);CHKERRQ(ierr);
-  ierr = PetscViewerASCIIPrintf(viewer,"        Number smoothing steps %D\n",pc_gamg_agg->nsmooths);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscViewerASCIIPrintf(viewer, "      AGG specific options\n"));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "        Number of levels of aggressive coarsening %d\n", (int)pc_gamg_agg->aggressive_coarsening_levels));
+  if (pc_gamg_agg->aggressive_coarsening_levels > 0) {
+    PetscCall(PetscViewerASCIIPrintf(viewer, "        %s aggressive coarsening\n", !pc_gamg_agg->use_aggressive_square_graph ? "MIS-k" : "Square graph"));
+    if (!pc_gamg_agg->use_aggressive_square_graph) PetscCall(PetscViewerASCIIPrintf(viewer, "        MIS-%d coarsening on aggressive levels\n", (int)pc_gamg_agg->aggressive_mis_k));
+  }
+  PetscCall(PetscViewerASCIIPrintf(viewer, "        Number smoothing steps %d\n", (int)pc_gamg_agg->nsmooths));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* -------------------------------------------------------------------------- */
-/*
-   PCGAMGGraph_AGG
+static PetscErrorCode PCGAMGCreateGraph_AGG(PC pc, Mat Amat, Mat *a_Gmat)
+{
+  PC_MG          *mg          = (PC_MG *)pc->data;
+  PC_GAMG        *pc_gamg     = (PC_GAMG *)mg->innerctx;
+  PC_GAMG_AGG    *pc_gamg_agg = (PC_GAMG_AGG *)pc_gamg->subctx;
+  const PetscReal vfilter     = pc_gamg->threshold[pc_gamg->current_level];
+  PetscBool       ishem, ismis;
+  const char     *prefix;
+  MatInfo         info0, info1;
+  PetscInt        bs;
 
-  Input Parameter:
-   . pc - this
-   . Amat - matrix on this fine level
-  Output Parameter:
-   . a_Gmat -
+  PetscFunctionBegin;
+  PetscCall(PetscLogEventBegin(petsc_gamg_setup_events[GAMG_COARSEN], 0, 0, 0, 0));
+  /* Note: depending on the algorithm that will be used for computing the coarse grid points this should pass PETSC_TRUE or PETSC_FALSE as the first argument */
+  /* MATCOARSENHEM requires numerical weights for edges so ensure they are computed */
+  PetscCall(MatCoarsenCreate(PetscObjectComm((PetscObject)pc), &pc_gamg_agg->crs));
+  PetscCall(PetscObjectGetOptionsPrefix((PetscObject)pc, &prefix));
+  PetscCall(PetscObjectSetOptionsPrefix((PetscObject)pc_gamg_agg->crs, prefix));
+  PetscCall(MatCoarsenSetFromOptions(pc_gamg_agg->crs));
+  PetscCall(MatGetBlockSize(Amat, &bs));
+  // check for valid indices wrt bs
+  for (int ii = 0; ii < pc_gamg_agg->crs->strength_index_size; ii++) {
+    PetscCheck(pc_gamg_agg->crs->strength_index[ii] >= 0 && pc_gamg_agg->crs->strength_index[ii] < bs, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONG, "Indices (%d) must be non-negative and < block size (%d), NB, can not use -mat_coarsen_strength_index with -mat_coarsen_strength_index",
+               (int)pc_gamg_agg->crs->strength_index[ii], (int)bs);
+  }
+  PetscCall(PetscObjectTypeCompare((PetscObject)pc_gamg_agg->crs, MATCOARSENHEM, &ishem));
+  if (ishem) {
+    if (pc_gamg_agg->aggressive_coarsening_levels) PetscCall(PetscInfo(pc, "HEM and aggressive coarsening ignored: HEM using %d iterations\n", (int)pc_gamg_agg->crs->max_it));
+    pc_gamg_agg->aggressive_coarsening_levels = 0;                                         // aggressive and HEM does not make sense
+    PetscCall(MatCoarsenSetMaximumIterations(pc_gamg_agg->crs, pc_gamg_agg->crs->max_it)); // for code coverage
+    PetscCall(MatCoarsenSetThreshold(pc_gamg_agg->crs, vfilter));                          // for code coverage
+  } else {
+    PetscCall(PetscObjectTypeCompare((PetscObject)pc_gamg_agg->crs, MATCOARSENMIS, &ismis));
+    if (ismis && pc_gamg_agg->aggressive_coarsening_levels && !pc_gamg_agg->use_aggressive_square_graph) {
+      PetscCall(PetscInfo(pc, "MIS and aggressive coarsening and no square graph: force square graph\n"));
+      pc_gamg_agg->use_aggressive_square_graph = PETSC_TRUE;
+    }
+  }
+  PetscCall(PetscLogEventEnd(petsc_gamg_setup_events[GAMG_COARSEN], 0, 0, 0, 0));
+  PetscCall(PetscLogEventBegin(petsc_gamg_setup_events[GAMG_GRAPH], 0, 0, 0, 0));
+  PetscCall(MatGetInfo(Amat, MAT_LOCAL, &info0)); /* global reduction */
+
+  if (ishem || pc_gamg_agg->use_low_mem_filter) {
+    PetscCall(MatCreateGraph(Amat, PETSC_TRUE, (vfilter >= 0 || ishem) ? PETSC_TRUE : PETSC_FALSE, vfilter, pc_gamg_agg->crs->strength_index_size, pc_gamg_agg->crs->strength_index, a_Gmat));
+  } else {
+    // make scalar graph, symetrize if not know to be symmetric, scale, but do not filter (expensive)
+    PetscCall(MatCreateGraph(Amat, PETSC_TRUE, PETSC_TRUE, -1, pc_gamg_agg->crs->strength_index_size, pc_gamg_agg->crs->strength_index, a_Gmat));
+    if (vfilter >= 0) {
+      PetscInt           Istart, Iend, ncols, nnz0, nnz1, NN, MM, nloc;
+      Mat                tGmat, Gmat = *a_Gmat;
+      MPI_Comm           comm;
+      const PetscScalar *vals;
+      const PetscInt    *idx;
+      PetscInt          *d_nnz, *o_nnz, kk, *garray = NULL, *AJ, maxcols = 0;
+      MatScalar         *AA; // this is checked in graph
+      PetscBool          isseqaij;
+      Mat                a, b, c;
+      MatType            jtype;
+
+      PetscCall(PetscObjectGetComm((PetscObject)Gmat, &comm));
+      PetscCall(PetscObjectBaseTypeCompare((PetscObject)Gmat, MATSEQAIJ, &isseqaij));
+      PetscCall(MatGetType(Gmat, &jtype));
+      PetscCall(MatCreate(comm, &tGmat));
+      PetscCall(MatSetType(tGmat, jtype));
+
+      /* TODO GPU: this can be called when filter = 0 -> Probably provide MatAIJThresholdCompress that compresses the entries below a threshold?
+        Also, if the matrix is symmetric, can we skip this
+        operation? It can be very expensive on large matrices. */
+
+      // global sizes
+      PetscCall(MatGetSize(Gmat, &MM, &NN));
+      PetscCall(MatGetOwnershipRange(Gmat, &Istart, &Iend));
+      nloc = Iend - Istart;
+      PetscCall(PetscMalloc2(nloc, &d_nnz, nloc, &o_nnz));
+      if (isseqaij) {
+        a = Gmat;
+        b = NULL;
+      } else {
+        Mat_MPIAIJ *d = (Mat_MPIAIJ *)Gmat->data;
+        a             = d->A;
+        b             = d->B;
+        garray        = d->garray;
+      }
+      /* Determine upper bound on non-zeros needed in new filtered matrix */
+      for (PetscInt row = 0; row < nloc; row++) {
+        PetscCall(MatGetRow(a, row, &ncols, NULL, NULL));
+        d_nnz[row] = ncols;
+        if (ncols > maxcols) maxcols = ncols;
+        PetscCall(MatRestoreRow(a, row, &ncols, NULL, NULL));
+      }
+      if (b) {
+        for (PetscInt row = 0; row < nloc; row++) {
+          PetscCall(MatGetRow(b, row, &ncols, NULL, NULL));
+          o_nnz[row] = ncols;
+          if (ncols > maxcols) maxcols = ncols;
+          PetscCall(MatRestoreRow(b, row, &ncols, NULL, NULL));
+        }
+      }
+      PetscCall(MatSetSizes(tGmat, nloc, nloc, MM, MM));
+      PetscCall(MatSetBlockSizes(tGmat, 1, 1));
+      PetscCall(MatSeqAIJSetPreallocation(tGmat, 0, d_nnz));
+      PetscCall(MatMPIAIJSetPreallocation(tGmat, 0, d_nnz, 0, o_nnz));
+      PetscCall(MatSetOption(tGmat, MAT_NO_OFF_PROC_ENTRIES, PETSC_TRUE));
+      PetscCall(PetscFree2(d_nnz, o_nnz));
+      PetscCall(PetscMalloc2(maxcols, &AA, maxcols, &AJ));
+      nnz0 = nnz1 = 0;
+      for (c = a, kk = 0; c && kk < 2; c = b, kk++) {
+        for (PetscInt row = 0, grow = Istart, ncol_row, jj; row < nloc; row++, grow++) {
+          PetscCall(MatGetRow(c, row, &ncols, &idx, &vals));
+          for (ncol_row = jj = 0; jj < ncols; jj++, nnz0++) {
+            PetscScalar sv = PetscAbs(PetscRealPart(vals[jj]));
+            if (PetscRealPart(sv) > vfilter) {
+              PetscInt cid = idx[jj] + Istart; //diag
+              nnz1++;
+              if (c != a) cid = garray[idx[jj]];
+              AA[ncol_row] = vals[jj];
+              AJ[ncol_row] = cid;
+              ncol_row++;
+            }
+          }
+          PetscCall(MatRestoreRow(c, row, &ncols, &idx, &vals));
+          PetscCall(MatSetValues(tGmat, 1, &grow, ncol_row, AJ, AA, INSERT_VALUES));
+        }
+      }
+      PetscCall(PetscFree2(AA, AJ));
+      PetscCall(MatAssemblyBegin(tGmat, MAT_FINAL_ASSEMBLY));
+      PetscCall(MatAssemblyEnd(tGmat, MAT_FINAL_ASSEMBLY));
+      PetscCall(MatPropagateSymmetryOptions(Gmat, tGmat)); /* Normal Mat options are not relevant ? */
+      PetscCall(PetscInfo(pc, "\t %g%% nnz after filtering, with threshold %g, %g nnz ave. (N=%" PetscInt_FMT ", max row size %" PetscInt_FMT "\n", (!nnz0) ? 1. : 100. * (double)nnz1 / (double)nnz0, (double)vfilter, (!nloc) ? 1. : (double)nnz0 / (double)nloc, MM, maxcols));
+      PetscCall(MatViewFromOptions(tGmat, NULL, "-mat_filter_graph_view"));
+      PetscCall(MatDestroy(&Gmat));
+      *a_Gmat = tGmat;
+    }
+  }
+
+  PetscCall(MatGetInfo(*a_Gmat, MAT_LOCAL, &info1)); /* global reduction */
+  if (info0.nz_used > 0) PetscCall(PetscInfo(pc, "Filtering left %g %% edges in graph (%e %e)\n", 100.0 * info1.nz_used * (double)(bs * bs) / info0.nz_used, info0.nz_used, info1.nz_used));
+  PetscCall(PetscLogEventEnd(petsc_gamg_setup_events[GAMG_GRAPH], 0, 0, 0, 0));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+typedef PetscInt    NState;
+static const NState NOT_DONE = -2;
+static const NState DELETED  = -1;
+static const NState REMOVED  = -3;
+#define IS_SELECTED(s) (s != DELETED && s != NOT_DONE && s != REMOVED)
+
+/*
+   fixAggregatesWithSquare - greedy grab of with G1 (unsquared graph) -- AIJ specific -- change to fixAggregatesWithSquare -- TODD
+     - AGG-MG specific: clears singletons out of 'selected_2'
+
+   Input Parameter:
+   . Gmat_2 - global matrix of squared graph (data not defined)
+   . Gmat_1 - base graph to grab with base graph
+   Input/Output Parameter:
+   . aggs_2 - linked list of aggs with gids)
 */
-static PetscErrorCode PCGAMGGraph_AGG(PC pc,Mat Amat,Mat *a_Gmat)
+static PetscErrorCode fixAggregatesWithSquare(PC pc, Mat Gmat_2, Mat Gmat_1, PetscCoarsenData *aggs_2)
 {
-  PetscErrorCode            ierr;
-  PC_MG                     *mg          = (PC_MG*)pc->data;
-  PC_GAMG                   *pc_gamg     = (PC_GAMG*)mg->innerctx;
-  const PetscReal           vfilter      = pc_gamg->threshold[pc_gamg->current_level];
-  PC_GAMG_AGG               *pc_gamg_agg = (PC_GAMG_AGG*)pc_gamg->subctx;
-  Mat                       Gmat;
-  MPI_Comm                  comm;
-  PetscBool /* set,flg , */ symm;
+  PetscBool      isMPI;
+  Mat_SeqAIJ    *matA_1, *matB_1 = NULL;
+  MPI_Comm       comm;
+  PetscInt       lid, *ii, *idx, ix, Iend, my0, kk, n, j;
+  Mat_MPIAIJ    *mpimat_2 = NULL, *mpimat_1 = NULL;
+  const PetscInt nloc = Gmat_2->rmap->n;
+  PetscScalar   *cpcol_1_state, *cpcol_2_state, *cpcol_2_par_orig, *lid_parent_gid;
+  PetscInt      *lid_cprowID_1 = NULL;
+  NState        *lid_state;
+  Vec            ghost_par_orig2;
+  PetscMPIInt    rank;
 
   PetscFunctionBegin;
-  ierr = PetscObjectGetComm((PetscObject)Amat,&comm);CHKERRQ(ierr);
-  ierr = PetscLogEventBegin(PC_GAMGGraph_AGG,0,0,0,0);CHKERRQ(ierr);
+  PetscCall(PetscObjectGetComm((PetscObject)Gmat_2, &comm));
+  PetscCallMPI(MPI_Comm_rank(comm, &rank));
+  PetscCall(MatGetOwnershipRange(Gmat_1, &my0, &Iend));
 
-  /* ierr = MatIsSymmetricKnown(Amat, &set, &flg);CHKERRQ(ierr); || !(set && flg) -- this causes lot of symm calls */
-  symm = (PetscBool)(pc_gamg_agg->sym_graph); /* && !pc_gamg_agg->square_graph; */
+  /* get submatrices */
+  PetscCall(PetscStrbeginswith(((PetscObject)Gmat_1)->type_name, MATMPIAIJ, &isMPI));
+  PetscCall(PetscInfo(pc, "isMPI = %s\n", isMPI ? "yes" : "no"));
+  PetscCall(PetscMalloc3(nloc, &lid_state, nloc, &lid_parent_gid, nloc, &lid_cprowID_1));
+  for (lid = 0; lid < nloc; lid++) lid_cprowID_1[lid] = -1;
+  if (isMPI) {
+    /* grab matrix objects */
+    mpimat_2 = (Mat_MPIAIJ *)Gmat_2->data;
+    mpimat_1 = (Mat_MPIAIJ *)Gmat_1->data;
+    matA_1   = (Mat_SeqAIJ *)mpimat_1->A->data;
+    matB_1   = (Mat_SeqAIJ *)mpimat_1->B->data;
 
-  ierr = PCGAMGCreateGraph(Amat, &Gmat);CHKERRQ(ierr);
-  ierr = PCGAMGFilterGraph(&Gmat, vfilter, symm);CHKERRQ(ierr);
-  *a_Gmat = Gmat;
-  ierr = PetscLogEventEnd(PC_GAMGGraph_AGG,0,0,0,0);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+    /* force compressed row storage for B matrix in AuxMat */
+    PetscCall(MatCheckCompressedRow(mpimat_1->B, matB_1->nonzerorowcnt, &matB_1->compressedrow, matB_1->i, Gmat_1->rmap->n, -1.0));
+    for (ix = 0; ix < matB_1->compressedrow.nrows; ix++) {
+      PetscInt lid = matB_1->compressedrow.rindex[ix];
+      PetscCheck(lid <= nloc && lid >= -1, PETSC_COMM_SELF, PETSC_ERR_USER, "lid %d out of range. nloc = %d", (int)lid, (int)nloc);
+      if (lid != -1) lid_cprowID_1[lid] = ix;
+    }
+  } else {
+    PetscBool isAIJ;
+    PetscCall(PetscStrbeginswith(((PetscObject)Gmat_1)->type_name, MATSEQAIJ, &isAIJ));
+    PetscCheck(isAIJ, PETSC_COMM_SELF, PETSC_ERR_USER, "Require AIJ matrix.");
+    matA_1 = (Mat_SeqAIJ *)Gmat_1->data;
+  }
+  if (nloc > 0) { PetscCheck(!matB_1 || matB_1->compressedrow.use, PETSC_COMM_SELF, PETSC_ERR_PLIB, "matB_1 && !matB_1->compressedrow.use: PETSc bug???"); }
+  /* get state of locals and selected gid for deleted */
+  for (lid = 0; lid < nloc; lid++) {
+    lid_parent_gid[lid] = -1.0;
+    lid_state[lid]      = DELETED;
+  }
+
+  /* set lid_state */
+  for (lid = 0; lid < nloc; lid++) {
+    PetscCDIntNd *pos;
+    PetscCall(PetscCDGetHeadPos(aggs_2, lid, &pos));
+    if (pos) {
+      PetscInt gid1;
+
+      PetscCall(PetscCDIntNdGetID(pos, &gid1));
+      PetscCheck(gid1 == lid + my0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "gid1 %d != lid %d + my0 %d", (int)gid1, (int)lid, (int)my0);
+      lid_state[lid] = gid1;
+    }
+  }
+
+  /* map local to selected local, DELETED means a ghost owns it */
+  for (lid = kk = 0; lid < nloc; lid++) {
+    NState state = lid_state[lid];
+    if (IS_SELECTED(state)) {
+      PetscCDIntNd *pos;
+      PetscCall(PetscCDGetHeadPos(aggs_2, lid, &pos));
+      while (pos) {
+        PetscInt gid1;
+        PetscCall(PetscCDIntNdGetID(pos, &gid1));
+        PetscCall(PetscCDGetNextPos(aggs_2, lid, &pos));
+        if (gid1 >= my0 && gid1 < Iend) lid_parent_gid[gid1 - my0] = (PetscScalar)(lid + my0);
+      }
+    }
+  }
+  /* get 'cpcol_1/2_state' & cpcol_2_par_orig - uses mpimat_1/2->lvec for temp space */
+  if (isMPI) {
+    Vec tempVec;
+    /* get 'cpcol_1_state' */
+    PetscCall(MatCreateVecs(Gmat_1, &tempVec, NULL));
+    for (kk = 0, j = my0; kk < nloc; kk++, j++) {
+      PetscScalar v = (PetscScalar)lid_state[kk];
+      PetscCall(VecSetValues(tempVec, 1, &j, &v, INSERT_VALUES));
+    }
+    PetscCall(VecAssemblyBegin(tempVec));
+    PetscCall(VecAssemblyEnd(tempVec));
+    PetscCall(VecScatterBegin(mpimat_1->Mvctx, tempVec, mpimat_1->lvec, INSERT_VALUES, SCATTER_FORWARD));
+    PetscCall(VecScatterEnd(mpimat_1->Mvctx, tempVec, mpimat_1->lvec, INSERT_VALUES, SCATTER_FORWARD));
+    PetscCall(VecGetArray(mpimat_1->lvec, &cpcol_1_state));
+    /* get 'cpcol_2_state' */
+    PetscCall(VecScatterBegin(mpimat_2->Mvctx, tempVec, mpimat_2->lvec, INSERT_VALUES, SCATTER_FORWARD));
+    PetscCall(VecScatterEnd(mpimat_2->Mvctx, tempVec, mpimat_2->lvec, INSERT_VALUES, SCATTER_FORWARD));
+    PetscCall(VecGetArray(mpimat_2->lvec, &cpcol_2_state));
+    /* get 'cpcol_2_par_orig' */
+    for (kk = 0, j = my0; kk < nloc; kk++, j++) {
+      PetscScalar v = (PetscScalar)lid_parent_gid[kk];
+      PetscCall(VecSetValues(tempVec, 1, &j, &v, INSERT_VALUES));
+    }
+    PetscCall(VecAssemblyBegin(tempVec));
+    PetscCall(VecAssemblyEnd(tempVec));
+    PetscCall(VecDuplicate(mpimat_2->lvec, &ghost_par_orig2));
+    PetscCall(VecScatterBegin(mpimat_2->Mvctx, tempVec, ghost_par_orig2, INSERT_VALUES, SCATTER_FORWARD));
+    PetscCall(VecScatterEnd(mpimat_2->Mvctx, tempVec, ghost_par_orig2, INSERT_VALUES, SCATTER_FORWARD));
+    PetscCall(VecGetArray(ghost_par_orig2, &cpcol_2_par_orig));
+
+    PetscCall(VecDestroy(&tempVec));
+  } /* ismpi */
+  for (lid = 0; lid < nloc; lid++) {
+    NState state = lid_state[lid];
+    if (IS_SELECTED(state)) {
+      /* steal locals */
+      ii  = matA_1->i;
+      n   = ii[lid + 1] - ii[lid];
+      idx = matA_1->j + ii[lid];
+      for (j = 0; j < n; j++) {
+        PetscInt lidj   = idx[j], sgid;
+        NState   statej = lid_state[lidj];
+        if (statej == DELETED && (sgid = (PetscInt)PetscRealPart(lid_parent_gid[lidj])) != lid + my0) { /* steal local */
+          lid_parent_gid[lidj] = (PetscScalar)(lid + my0);                                              /* send this if sgid is not local */
+          if (sgid >= my0 && sgid < Iend) {                                                             /* I'm stealing this local from a local sgid */
+            PetscInt      hav = 0, slid = sgid - my0, gidj = lidj + my0;
+            PetscCDIntNd *pos, *last = NULL;
+            /* looking for local from local so id_llist_2 works */
+            PetscCall(PetscCDGetHeadPos(aggs_2, slid, &pos));
+            while (pos) {
+              PetscInt gid;
+              PetscCall(PetscCDIntNdGetID(pos, &gid));
+              if (gid == gidj) {
+                PetscCheck(last, PETSC_COMM_SELF, PETSC_ERR_PLIB, "last cannot be null");
+                PetscCall(PetscCDRemoveNextNode(aggs_2, slid, last));
+                PetscCall(PetscCDAppendNode(aggs_2, lid, pos));
+                hav = 1;
+                break;
+              } else last = pos;
+              PetscCall(PetscCDGetNextPos(aggs_2, slid, &pos));
+            }
+            if (hav != 1) {
+              PetscCheck(hav, PETSC_COMM_SELF, PETSC_ERR_PLIB, "failed to find adj in 'selected' lists - structurally unsymmetric matrix");
+              SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "found node %d times???", (int)hav);
+            }
+          } else { /* I'm stealing this local, owned by a ghost */
+            PetscCheck(sgid == -1, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Mat has an un-symmetric graph. Use '-%spc_gamg_sym_graph true' to symmetrize the graph or '-%spc_gamg_threshold -1' if the matrix is structurally symmetric.",
+                       ((PetscObject)pc)->prefix ? ((PetscObject)pc)->prefix : "", ((PetscObject)pc)->prefix ? ((PetscObject)pc)->prefix : "");
+            PetscCall(PetscCDAppendID(aggs_2, lid, lidj + my0));
+          }
+        }
+      } /* local neighbors */
+    } else if (state == DELETED /* && lid_cprowID_1 */) {
+      PetscInt sgidold = (PetscInt)PetscRealPart(lid_parent_gid[lid]);
+      /* see if I have a selected ghost neighbor that will steal me */
+      if ((ix = lid_cprowID_1[lid]) != -1) {
+        ii  = matB_1->compressedrow.i;
+        n   = ii[ix + 1] - ii[ix];
+        idx = matB_1->j + ii[ix];
+        for (j = 0; j < n; j++) {
+          PetscInt cpid   = idx[j];
+          NState   statej = (NState)PetscRealPart(cpcol_1_state[cpid]);
+          if (IS_SELECTED(statej) && sgidold != (PetscInt)statej) { /* ghost will steal this, remove from my list */
+            lid_parent_gid[lid] = (PetscScalar)statej;              /* send who selected */
+            if (sgidold >= my0 && sgidold < Iend) {                 /* this was mine */
+              PetscInt      hav = 0, oldslidj = sgidold - my0;
+              PetscCDIntNd *pos, *last        = NULL;
+              /* remove from 'oldslidj' list */
+              PetscCall(PetscCDGetHeadPos(aggs_2, oldslidj, &pos));
+              while (pos) {
+                PetscInt gid;
+                PetscCall(PetscCDIntNdGetID(pos, &gid));
+                if (lid + my0 == gid) {
+                  /* id_llist_2[lastid] = id_llist_2[flid];   /\* remove lid from oldslidj list *\/ */
+                  PetscCheck(last, PETSC_COMM_SELF, PETSC_ERR_PLIB, "last cannot be null");
+                  PetscCall(PetscCDRemoveNextNode(aggs_2, oldslidj, last));
+                  /* ghost (PetscScalar)statej will add this later */
+                  hav = 1;
+                  break;
+                } else last = pos;
+                PetscCall(PetscCDGetNextPos(aggs_2, oldslidj, &pos));
+              }
+              if (hav != 1) {
+                PetscCheck(hav, PETSC_COMM_SELF, PETSC_ERR_PLIB, "failed to find (hav=%d) adj in 'selected' lists - structurally unsymmetric matrix", (int)hav);
+                SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "found node %d times???", (int)hav);
+              }
+            } else {
+              /* TODO: ghosts remove this later */
+            }
+          }
+        }
+      }
+    } /* selected/deleted */
+  } /* node loop */
+
+  if (isMPI) {
+    PetscScalar    *cpcol_2_parent, *cpcol_2_gid;
+    Vec             tempVec, ghostgids2, ghostparents2;
+    PetscInt        cpid, nghost_2;
+    PCGAMGHashTable gid_cpid;
+
+    PetscCall(VecGetSize(mpimat_2->lvec, &nghost_2));
+    PetscCall(MatCreateVecs(Gmat_2, &tempVec, NULL));
+
+    /* get 'cpcol_2_parent' */
+    for (kk = 0, j = my0; kk < nloc; kk++, j++) { PetscCall(VecSetValues(tempVec, 1, &j, &lid_parent_gid[kk], INSERT_VALUES)); }
+    PetscCall(VecAssemblyBegin(tempVec));
+    PetscCall(VecAssemblyEnd(tempVec));
+    PetscCall(VecDuplicate(mpimat_2->lvec, &ghostparents2));
+    PetscCall(VecScatterBegin(mpimat_2->Mvctx, tempVec, ghostparents2, INSERT_VALUES, SCATTER_FORWARD));
+    PetscCall(VecScatterEnd(mpimat_2->Mvctx, tempVec, ghostparents2, INSERT_VALUES, SCATTER_FORWARD));
+    PetscCall(VecGetArray(ghostparents2, &cpcol_2_parent));
+
+    /* get 'cpcol_2_gid' */
+    for (kk = 0, j = my0; kk < nloc; kk++, j++) {
+      PetscScalar v = (PetscScalar)j;
+      PetscCall(VecSetValues(tempVec, 1, &j, &v, INSERT_VALUES));
+    }
+    PetscCall(VecAssemblyBegin(tempVec));
+    PetscCall(VecAssemblyEnd(tempVec));
+    PetscCall(VecDuplicate(mpimat_2->lvec, &ghostgids2));
+    PetscCall(VecScatterBegin(mpimat_2->Mvctx, tempVec, ghostgids2, INSERT_VALUES, SCATTER_FORWARD));
+    PetscCall(VecScatterEnd(mpimat_2->Mvctx, tempVec, ghostgids2, INSERT_VALUES, SCATTER_FORWARD));
+    PetscCall(VecGetArray(ghostgids2, &cpcol_2_gid));
+    PetscCall(VecDestroy(&tempVec));
+
+    /* look for deleted ghosts and add to table */
+    PetscCall(PCGAMGHashTableCreate(2 * nghost_2 + 1, &gid_cpid));
+    for (cpid = 0; cpid < nghost_2; cpid++) {
+      NState state = (NState)PetscRealPart(cpcol_2_state[cpid]);
+      if (state == DELETED) {
+        PetscInt sgid_new = (PetscInt)PetscRealPart(cpcol_2_parent[cpid]);
+        PetscInt sgid_old = (PetscInt)PetscRealPart(cpcol_2_par_orig[cpid]);
+        if (sgid_old == -1 && sgid_new != -1) {
+          PetscInt gid = (PetscInt)PetscRealPart(cpcol_2_gid[cpid]);
+          PetscCall(PCGAMGHashTableAdd(&gid_cpid, gid, cpid));
+        }
+      }
+    }
+
+    /* look for deleted ghosts and see if they moved - remove it */
+    for (lid = 0; lid < nloc; lid++) {
+      NState state = lid_state[lid];
+      if (IS_SELECTED(state)) {
+        PetscCDIntNd *pos, *last = NULL;
+        /* look for deleted ghosts and see if they moved */
+        PetscCall(PetscCDGetHeadPos(aggs_2, lid, &pos));
+        while (pos) {
+          PetscInt gid;
+          PetscCall(PetscCDIntNdGetID(pos, &gid));
+
+          if (gid < my0 || gid >= Iend) {
+            PetscCall(PCGAMGHashTableFind(&gid_cpid, gid, &cpid));
+            if (cpid != -1) {
+              /* a moved ghost - */
+              /* id_llist_2[lastid] = id_llist_2[flid];    /\* remove 'flid' from list *\/ */
+              PetscCall(PetscCDRemoveNextNode(aggs_2, lid, last));
+            } else last = pos;
+          } else last = pos;
+
+          PetscCall(PetscCDGetNextPos(aggs_2, lid, &pos));
+        } /* loop over list of deleted */
+      } /* selected */
+    }
+    PetscCall(PCGAMGHashTableDestroy(&gid_cpid));
+
+    /* look at ghosts, see if they changed - and it */
+    for (cpid = 0; cpid < nghost_2; cpid++) {
+      PetscInt sgid_new = (PetscInt)PetscRealPart(cpcol_2_parent[cpid]);
+      if (sgid_new >= my0 && sgid_new < Iend) { /* this is mine */
+        PetscInt      gid      = (PetscInt)PetscRealPart(cpcol_2_gid[cpid]);
+        PetscInt      slid_new = sgid_new - my0, hav = 0;
+        PetscCDIntNd *pos;
+
+        /* search for this gid to see if I have it */
+        PetscCall(PetscCDGetHeadPos(aggs_2, slid_new, &pos));
+        while (pos) {
+          PetscInt gidj;
+          PetscCall(PetscCDIntNdGetID(pos, &gidj));
+          PetscCall(PetscCDGetNextPos(aggs_2, slid_new, &pos));
+
+          if (gidj == gid) {
+            hav = 1;
+            break;
+          }
+        }
+        if (hav != 1) {
+          /* insert 'flidj' into head of llist */
+          PetscCall(PetscCDAppendID(aggs_2, slid_new, gid));
+        }
+      }
+    }
+    PetscCall(VecRestoreArray(mpimat_1->lvec, &cpcol_1_state));
+    PetscCall(VecRestoreArray(mpimat_2->lvec, &cpcol_2_state));
+    PetscCall(VecRestoreArray(ghostparents2, &cpcol_2_parent));
+    PetscCall(VecRestoreArray(ghostgids2, &cpcol_2_gid));
+    PetscCall(VecDestroy(&ghostgids2));
+    PetscCall(VecDestroy(&ghostparents2));
+    PetscCall(VecDestroy(&ghost_par_orig2));
+  }
+  PetscCall(PetscFree3(lid_state, lid_parent_gid, lid_cprowID_1));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* -------------------------------------------------------------------------- */
 /*
-   PCGAMGCoarsen_AGG
+   PCGAMGCoarsen_AGG - supports squaring the graph (deprecated) and new graph for
+     communication of QR data used with HEM and MISk coarsening
 
   Input Parameter:
    . a_pc - this
+
   Input/Output Parameter:
-   . a_Gmat1 - graph on this fine level - coarsening can change this (squares it)
+   . a_Gmat1 - graph to coarsen (in), graph off processor edges for QR gather scatter (out)
+
   Output Parameter:
    . agg_lists - list of aggregates
+
 */
-static PetscErrorCode PCGAMGCoarsen_AGG(PC a_pc,Mat *a_Gmat1,PetscCoarsenData **agg_lists)
+static PetscErrorCode PCGAMGCoarsen_AGG(PC a_pc, Mat *a_Gmat1, PetscCoarsenData **agg_lists)
 {
-  PetscErrorCode ierr;
-  PC_MG          *mg          = (PC_MG*)a_pc->data;
-  PC_GAMG        *pc_gamg     = (PC_GAMG*)mg->innerctx;
-  PC_GAMG_AGG    *pc_gamg_agg = (PC_GAMG_AGG*)pc_gamg->subctx;
-  Mat            mat,Gmat2, Gmat1 = *a_Gmat1;  /* squared graph */
-  IS             perm;
-  PetscInt       Istart,Iend,Ii,nloc,bs,n,m;
-  PetscInt       *permute;
-  PetscBool      *bIndexSet;
-  MatCoarsen     crs;
-  MPI_Comm       comm;
-  PetscMPIInt    rank;
-  PetscReal      hashfact;
-  PetscInt       iSwapIndex;
-  PetscRandom    random;
+  PC_MG       *mg          = (PC_MG *)a_pc->data;
+  PC_GAMG     *pc_gamg     = (PC_GAMG *)mg->innerctx;
+  PC_GAMG_AGG *pc_gamg_agg = (PC_GAMG_AGG *)pc_gamg->subctx;
+  Mat          Gmat2, Gmat1 = *a_Gmat1; /* aggressive graph */
+  IS           perm;
+  PetscInt     Istart, Iend, Ii, nloc, bs, nn;
+  PetscInt    *permute, *degree;
+  PetscBool   *bIndexSet;
+  PetscReal    hashfact;
+  PetscInt     iSwapIndex;
+  PetscRandom  random;
+  MPI_Comm     comm;
 
   PetscFunctionBegin;
-  ierr = PetscLogEventBegin(PC_GAMGCoarsen_AGG,0,0,0,0);CHKERRQ(ierr);
-  ierr = PetscObjectGetComm((PetscObject)Gmat1,&comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(comm, &rank);CHKERRQ(ierr);
-  ierr = MatGetLocalSize(Gmat1, &n, &m);CHKERRQ(ierr);
-  ierr = MatGetBlockSize(Gmat1, &bs);CHKERRQ(ierr);
-  if (bs != 1) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"bs %D must be 1",bs);
-  nloc = n/bs;
-
-  if (pc_gamg->current_level < pc_gamg_agg->square_graph) {
-    ierr = PetscInfo2(a_pc,"Square Graph on level %D of %D to square\n",pc_gamg->current_level+1,pc_gamg_agg->square_graph);CHKERRQ(ierr);
-    ierr = MatTransposeMatMult(Gmat1, Gmat1, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &Gmat2);CHKERRQ(ierr);
-  } else Gmat2 = Gmat1;
-
+  PetscCall(PetscObjectGetComm((PetscObject)Gmat1, &comm));
+  PetscCall(PetscLogEventBegin(petsc_gamg_setup_events[GAMG_COARSEN], 0, 0, 0, 0));
+  PetscCall(MatGetLocalSize(Gmat1, &nn, NULL));
+  PetscCall(MatGetBlockSize(Gmat1, &bs));
+  PetscCheck(bs == 1, PETSC_COMM_SELF, PETSC_ERR_PLIB, "bs %" PetscInt_FMT " must be 1", bs);
+  nloc = nn / bs;
   /* get MIS aggs - randomize */
-  ierr = PetscMalloc1(nloc, &permute);CHKERRQ(ierr);
-  ierr = PetscCalloc1(nloc, &bIndexSet);CHKERRQ(ierr);
+  PetscCall(PetscMalloc2(nloc, &permute, nloc, &degree));
+  PetscCall(PetscCalloc1(nloc, &bIndexSet));
+  for (Ii = 0; Ii < nloc; Ii++) permute[Ii] = Ii;
+  PetscCall(PetscRandomCreate(PETSC_COMM_SELF, &random));
+  PetscCall(MatGetOwnershipRange(Gmat1, &Istart, &Iend));
   for (Ii = 0; Ii < nloc; Ii++) {
-    permute[Ii]   = Ii;
+    PetscInt nc;
+    PetscCall(MatGetRow(Gmat1, Istart + Ii, &nc, NULL, NULL));
+    degree[Ii] = nc;
+    PetscCall(MatRestoreRow(Gmat1, Istart + Ii, &nc, NULL, NULL));
   }
-  ierr = PetscRandomCreate(PETSC_COMM_SELF,&random);CHKERRQ(ierr);
-  ierr = MatGetOwnershipRange(Gmat1, &Istart, &Iend);CHKERRQ(ierr);
   for (Ii = 0; Ii < nloc; Ii++) {
-    ierr = PetscRandomGetValueReal(random,&hashfact);CHKERRQ(ierr);
-    iSwapIndex = (PetscInt) (hashfact*nloc)%nloc;
+    PetscCall(PetscRandomGetValueReal(random, &hashfact));
+    iSwapIndex = (PetscInt)(hashfact * nloc) % nloc;
     if (!bIndexSet[iSwapIndex] && iSwapIndex != Ii) {
-      PetscInt iTemp = permute[iSwapIndex];
+      PetscInt iTemp        = permute[iSwapIndex];
       permute[iSwapIndex]   = permute[Ii];
       permute[Ii]           = iTemp;
+      iTemp                 = degree[iSwapIndex];
+      degree[iSwapIndex]    = degree[Ii];
+      degree[Ii]            = iTemp;
       bIndexSet[iSwapIndex] = PETSC_TRUE;
     }
   }
-  ierr = PetscFree(bIndexSet);CHKERRQ(ierr);
-  ierr = PetscRandomDestroy(&random);CHKERRQ(ierr);
-  ierr = ISCreateGeneral(PETSC_COMM_SELF, nloc, permute, PETSC_USE_POINTER, &perm);CHKERRQ(ierr);
-#if defined PETSC_GAMG_USE_LOG
-  ierr = PetscLogEventBegin(petsc_gamg_setup_events[SET4],0,0,0,0);CHKERRQ(ierr);
-#endif
-  ierr = MatCoarsenCreate(comm, &crs);CHKERRQ(ierr);
-  ierr = MatCoarsenSetFromOptions(crs);CHKERRQ(ierr);
-  ierr = MatCoarsenSetGreedyOrdering(crs, perm);CHKERRQ(ierr);
-  ierr = MatCoarsenSetAdjacency(crs, Gmat2);CHKERRQ(ierr);
-  ierr = MatCoarsenSetStrictAggs(crs, PETSC_TRUE);CHKERRQ(ierr);
-  ierr = MatCoarsenApply(crs);CHKERRQ(ierr);
-  ierr = MatCoarsenGetData(crs, agg_lists);CHKERRQ(ierr); /* output */
-  ierr = MatCoarsenDestroy(&crs);CHKERRQ(ierr);
-
-  ierr = ISDestroy(&perm);CHKERRQ(ierr);
-  ierr = PetscFree(permute);CHKERRQ(ierr);
-#if defined PETSC_GAMG_USE_LOG
-  ierr = PetscLogEventEnd(petsc_gamg_setup_events[SET4],0,0,0,0);CHKERRQ(ierr);
-#endif
-
-  /* smooth aggs */
-  if (Gmat2 != Gmat1) {
-    const PetscCoarsenData *llist = *agg_lists;
-    ierr     = smoothAggs(a_pc,Gmat2, Gmat1, *agg_lists);CHKERRQ(ierr);
-    ierr     = MatDestroy(&Gmat1);CHKERRQ(ierr);
-    *a_Gmat1 = Gmat2; /* output */
-    ierr     = PetscCDGetMat(llist, &mat);CHKERRQ(ierr);
-    if (mat) SETERRQ(comm,PETSC_ERR_ARG_WRONG, "Auxilary matrix with squared graph????");
-  } else {
-    const PetscCoarsenData *llist = *agg_lists;
-    /* see if we have a matrix that takes precedence (returned from MatCoarsenApply) */
-    ierr = PetscCDGetMat(llist, &mat);CHKERRQ(ierr);
-    if (mat) {
-      ierr     = MatDestroy(&Gmat1);CHKERRQ(ierr);
-      *a_Gmat1 = mat; /* output */
-    }
+  // apply minimum degree ordering -- NEW
+  if (pc_gamg_agg->use_minimum_degree_ordering) { PetscCall(PetscSortIntWithArray(nloc, degree, permute)); }
+  PetscCall(PetscFree(bIndexSet));
+  PetscCall(PetscRandomDestroy(&random));
+  PetscCall(ISCreateGeneral(PETSC_COMM_SELF, nloc, permute, PETSC_USE_POINTER, &perm));
+  PetscCall(PetscLogEventBegin(petsc_gamg_setup_events[GAMG_MIS], 0, 0, 0, 0));
+  // square graph
+  if (pc_gamg->current_level < pc_gamg_agg->aggressive_coarsening_levels && pc_gamg_agg->use_aggressive_square_graph) {
+    PetscCall(PCGAMGSquareGraph_GAMG(a_pc, Gmat1, &Gmat2));
+  } else Gmat2 = Gmat1;
+  // switch to old MIS-1 for square graph
+  if (pc_gamg->current_level < pc_gamg_agg->aggressive_coarsening_levels) {
+    if (!pc_gamg_agg->use_aggressive_square_graph) PetscCall(MatCoarsenMISKSetDistance(pc_gamg_agg->crs, pc_gamg_agg->aggressive_mis_k)); // hardwire to MIS-2
+    else PetscCall(MatCoarsenSetType(pc_gamg_agg->crs, MATCOARSENMIS));                                                                   // old MIS -- side effect
+  } else if (pc_gamg_agg->use_aggressive_square_graph && pc_gamg_agg->aggressive_coarsening_levels > 0) {                                 // we reset the MIS
+    const char *prefix;
+    PetscCall(PetscObjectGetOptionsPrefix((PetscObject)a_pc, &prefix));
+    PetscCall(PetscObjectSetOptionsPrefix((PetscObject)pc_gamg_agg->crs, prefix));
+    PetscCall(MatCoarsenSetFromOptions(pc_gamg_agg->crs)); // get the default back on non-aggressive levels when square graph switched to old MIS
   }
-  ierr = PetscLogEventEnd(PC_GAMGCoarsen_AGG,0,0,0,0);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(MatCoarsenSetAdjacency(pc_gamg_agg->crs, Gmat2));
+  PetscCall(MatCoarsenSetStrictAggs(pc_gamg_agg->crs, PETSC_TRUE));
+  PetscCall(MatCoarsenSetGreedyOrdering(pc_gamg_agg->crs, perm));
+  PetscCall(MatCoarsenApply(pc_gamg_agg->crs));
+  PetscCall(MatCoarsenViewFromOptions(pc_gamg_agg->crs, NULL, "-mat_coarsen_view"));
+  PetscCall(MatCoarsenGetData(pc_gamg_agg->crs, agg_lists)); /* output */
+  PetscCall(MatCoarsenDestroy(&pc_gamg_agg->crs));
+
+  PetscCall(ISDestroy(&perm));
+  PetscCall(PetscFree2(permute, degree));
+  PetscCall(PetscLogEventEnd(petsc_gamg_setup_events[GAMG_MIS], 0, 0, 0, 0));
+
+  if (Gmat2 != Gmat1) { // square graph, we need ghosts for selected
+    PetscCoarsenData *llist = *agg_lists;
+    PetscCall(fixAggregatesWithSquare(a_pc, Gmat2, Gmat1, *agg_lists));
+    PetscCall(MatDestroy(&Gmat1));
+    *a_Gmat1 = Gmat2;                          /* output */
+    PetscCall(PetscCDSetMat(llist, *a_Gmat1)); /* Need a graph with ghosts here */
+  }
+  PetscCall(PetscLogEventEnd(petsc_gamg_setup_events[GAMG_COARSEN], 0, 0, 0, 0));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* -------------------------------------------------------------------------- */
 /*
  PCGAMGProlongator_AGG
 
@@ -948,138 +1159,139 @@ static PetscErrorCode PCGAMGCoarsen_AGG(PC a_pc,Mat *a_Gmat1,PetscCoarsenData **
  Output Parameter:
  . a_P_out - prolongation operator to the next level
  */
-static PetscErrorCode PCGAMGProlongator_AGG(PC pc,Mat Amat,Mat Gmat,PetscCoarsenData *agg_lists,Mat *a_P_out)
+static PetscErrorCode PCGAMGProlongator_AGG(PC pc, Mat Amat, PetscCoarsenData *agg_lists, Mat *a_P_out)
 {
-  PC_MG          *mg       = (PC_MG*)pc->data;
-  PC_GAMG        *pc_gamg  = (PC_GAMG*)mg->innerctx;
-  const PetscInt col_bs = pc_gamg->data_cell_cols;
-  PetscErrorCode ierr;
-  PetscInt       Istart,Iend,nloc,ii,jj,kk,my0,nLocalSelected,bs;
-  Mat            Prol;
-  PetscMPIInt    rank, size;
+  PC_MG         *mg      = (PC_MG *)pc->data;
+  PC_GAMG       *pc_gamg = (PC_GAMG *)mg->innerctx;
+  const PetscInt col_bs  = pc_gamg->data_cell_cols;
+  PetscInt       Istart, Iend, nloc, ii, jj, kk, my0, nLocalSelected, bs;
+  Mat            Gmat, Prol;
+  PetscMPIInt    size;
   MPI_Comm       comm;
-  PetscReal      *data_w_ghost;
-  PetscInt       myCrs0, nbnodes=0, *flid_fgid;
+  PetscReal     *data_w_ghost;
+  PetscInt       myCrs0, nbnodes = 0, *flid_fgid;
   MatType        mtype;
 
   PetscFunctionBegin;
-  ierr = PetscObjectGetComm((PetscObject)Amat,&comm);CHKERRQ(ierr);
-  if (col_bs < 1) SETERRQ(comm,PETSC_ERR_PLIB,"Column bs cannot be less than 1");
-  ierr = PetscLogEventBegin(PC_GAMGProlongator_AGG,0,0,0,0);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(comm, &rank);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(comm, &size);CHKERRQ(ierr);
-  ierr = MatGetOwnershipRange(Amat, &Istart, &Iend);CHKERRQ(ierr);
-  ierr = MatGetBlockSize(Amat, &bs);CHKERRQ(ierr);
-  nloc = (Iend-Istart)/bs; my0 = Istart/bs;
-  if ((Iend-Istart) % bs) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_PLIB,"(Iend %D - Istart %D) not divisible by bs %D",Iend,Istart,bs);
+  PetscCall(PetscObjectGetComm((PetscObject)Amat, &comm));
+  PetscCheck(col_bs >= 1, comm, PETSC_ERR_PLIB, "Column bs cannot be less than 1");
+  PetscCall(PetscLogEventBegin(petsc_gamg_setup_events[GAMG_PROL], 0, 0, 0, 0));
+  PetscCallMPI(MPI_Comm_size(comm, &size));
+  PetscCall(MatGetOwnershipRange(Amat, &Istart, &Iend));
+  PetscCall(MatGetBlockSize(Amat, &bs));
+  nloc = (Iend - Istart) / bs;
+  my0  = Istart / bs;
+  PetscCheck((Iend - Istart) % bs == 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "(Iend %" PetscInt_FMT " - Istart %" PetscInt_FMT ") not divisible by bs %" PetscInt_FMT, Iend, Istart, bs);
+  PetscCall(PetscCDGetMat(agg_lists, &Gmat)); // get auxiliary matrix for ghost edges for size > 1
 
   /* get 'nLocalSelected' */
-  for (ii=0, nLocalSelected = 0; ii < nloc; ii++) {
+  for (ii = 0, nLocalSelected = 0; ii < nloc; ii++) {
     PetscBool ise;
     /* filter out singletons 0 or 1? */
-    ierr = PetscCDEmptyAt(agg_lists, ii, &ise);CHKERRQ(ierr);
+    PetscCall(PetscCDIsEmptyAt(agg_lists, ii, &ise));
     if (!ise) nLocalSelected++;
   }
 
   /* create prolongator, create P matrix */
-  ierr = MatGetType(Amat,&mtype);CHKERRQ(ierr);
-  ierr = MatCreate(comm, &Prol);CHKERRQ(ierr);
-  ierr = MatSetSizes(Prol,nloc*bs,nLocalSelected*col_bs,PETSC_DETERMINE,PETSC_DETERMINE);CHKERRQ(ierr);
-  ierr = MatSetBlockSizes(Prol, bs, col_bs);CHKERRQ(ierr);
-  ierr = MatSetType(Prol, mtype);CHKERRQ(ierr);
-  ierr = MatSeqAIJSetPreallocation(Prol,col_bs, NULL);CHKERRQ(ierr);
-  ierr = MatMPIAIJSetPreallocation(Prol,col_bs, NULL, col_bs, NULL);CHKERRQ(ierr);
+  PetscCall(MatGetType(Amat, &mtype));
+  PetscCall(MatCreate(comm, &Prol));
+  PetscCall(MatSetSizes(Prol, nloc * bs, nLocalSelected * col_bs, PETSC_DETERMINE, PETSC_DETERMINE));
+  PetscCall(MatSetBlockSizes(Prol, bs, col_bs)); // should this be before MatSetSizes?
+  PetscCall(MatSetType(Prol, mtype));
+#if PetscDefined(HAVE_DEVICE)
+  PetscBool flg;
+  PetscCall(MatBoundToCPU(Amat, &flg));
+  PetscCall(MatBindToCPU(Prol, flg));
+  if (flg) PetscCall(MatSetBindingPropagates(Prol, PETSC_TRUE));
+#endif
+  PetscCall(MatSeqAIJSetPreallocation(Prol, col_bs, NULL));
+  PetscCall(MatMPIAIJSetPreallocation(Prol, col_bs, NULL, col_bs, NULL));
 
   /* can get all points "removed" */
-  ierr =  MatGetSize(Prol, &kk, &ii);CHKERRQ(ierr);
+  PetscCall(MatGetSize(Prol, &kk, &ii));
   if (!ii) {
-    ierr = PetscInfo(pc,"No selected points on coarse grid\n");CHKERRQ(ierr);
-    ierr = MatDestroy(&Prol);CHKERRQ(ierr);
-    *a_P_out = NULL;  /* out */
-    ierr = PetscLogEventEnd(PC_GAMGProlongator_AGG,0,0,0,0);CHKERRQ(ierr);
-    PetscFunctionReturn(0);
+    PetscCall(PetscInfo(pc, "%s: No selected points on coarse grid\n", ((PetscObject)pc)->prefix));
+    PetscCall(MatDestroy(&Prol));
+    *a_P_out = NULL; /* out */
+    PetscCall(PetscLogEventEnd(petsc_gamg_setup_events[GAMG_PROL], 0, 0, 0, 0));
+    PetscFunctionReturn(PETSC_SUCCESS);
   }
-  ierr = PetscInfo1(pc,"New grid %D nodes\n",ii/col_bs);CHKERRQ(ierr);
-  ierr = MatGetOwnershipRangeColumn(Prol, &myCrs0, &kk);CHKERRQ(ierr);
+  PetscCall(PetscInfo(pc, "%s: New grid %" PetscInt_FMT " nodes\n", ((PetscObject)pc)->prefix, ii / col_bs));
+  PetscCall(MatGetOwnershipRangeColumn(Prol, &myCrs0, &kk));
 
-  if ((kk-myCrs0) % col_bs) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_PLIB,"(kk %D -myCrs0 %D) not divisible by col_bs %D",kk,myCrs0,col_bs);
-  myCrs0 = myCrs0/col_bs;
-  if ((kk/col_bs-myCrs0) != nLocalSelected) SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_PLIB,"(kk %D/col_bs %D - myCrs0 %D) != nLocalSelected %D)",kk,col_bs,myCrs0,nLocalSelected);
+  PetscCheck((kk - myCrs0) % col_bs == 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "(kk %" PetscInt_FMT " -myCrs0 %" PetscInt_FMT ") not divisible by col_bs %" PetscInt_FMT, kk, myCrs0, col_bs);
+  myCrs0 = myCrs0 / col_bs;
+  PetscCheck((kk / col_bs - myCrs0) == nLocalSelected, PETSC_COMM_SELF, PETSC_ERR_PLIB, "(kk %" PetscInt_FMT "/col_bs %" PetscInt_FMT " - myCrs0 %" PetscInt_FMT ") != nLocalSelected %" PetscInt_FMT ")", kk, col_bs, myCrs0, nLocalSelected);
 
   /* create global vector of data in 'data_w_ghost' */
-#if defined PETSC_GAMG_USE_LOG
-  ierr = PetscLogEventBegin(petsc_gamg_setup_events[SET7],0,0,0,0);CHKERRQ(ierr);
-#endif
-  if (size > 1) { /*  */
-    PetscReal *tmp_gdata,*tmp_ldata,*tp2;
-    ierr = PetscMalloc1(nloc, &tmp_ldata);CHKERRQ(ierr);
+  PetscCall(PetscLogEventBegin(petsc_gamg_setup_events[GAMG_PROLA], 0, 0, 0, 0));
+  if (size > 1) { /* get ghost null space data */
+    PetscReal *tmp_gdata, *tmp_ldata, *tp2;
+    PetscCall(PetscMalloc1(nloc, &tmp_ldata));
     for (jj = 0; jj < col_bs; jj++) {
       for (kk = 0; kk < bs; kk++) {
-        PetscInt        ii,stride;
-        const PetscReal *tp = pc_gamg->data + jj*bs*nloc + kk;
+        PetscInt         ii, stride;
+        const PetscReal *tp = PetscSafePointerPlusOffset(pc_gamg->data, jj * bs * nloc + kk);
         for (ii = 0; ii < nloc; ii++, tp += bs) tmp_ldata[ii] = *tp;
 
-        ierr = PCGAMGGetDataWithGhosts(Gmat, 1, tmp_ldata, &stride, &tmp_gdata);CHKERRQ(ierr);
+        PetscCall(PCGAMGGetDataWithGhosts(Gmat, 1, tmp_ldata, &stride, &tmp_gdata));
 
-        if (!jj && !kk) { /* now I know how many todal nodes - allocate */
-          ierr    = PetscMalloc1(stride*bs*col_bs, &data_w_ghost);CHKERRQ(ierr);
-          nbnodes = bs*stride;
+        if (!jj && !kk) { /* now I know how many total nodes - allocate TODO: move below and do in one 'col_bs' call */
+          PetscCall(PetscMalloc1(stride * bs * col_bs, &data_w_ghost));
+          nbnodes = bs * stride;
         }
-        tp2 = data_w_ghost + jj*bs*stride + kk;
+        tp2 = PetscSafePointerPlusOffset(data_w_ghost, jj * bs * stride + kk);
         for (ii = 0; ii < stride; ii++, tp2 += bs) *tp2 = tmp_gdata[ii];
-        ierr = PetscFree(tmp_gdata);CHKERRQ(ierr);
+        PetscCall(PetscFree(tmp_gdata));
       }
     }
-    ierr = PetscFree(tmp_ldata);CHKERRQ(ierr);
+    PetscCall(PetscFree(tmp_ldata));
   } else {
-    nbnodes      = bs*nloc;
-    data_w_ghost = (PetscReal*)pc_gamg->data;
+    nbnodes      = bs * nloc;
+    data_w_ghost = (PetscReal *)pc_gamg->data;
   }
 
-  /* get P0 */
+  /* get 'flid_fgid' TODO - move up to get 'stride' and do get null space data above in one step (jj loop) */
   if (size > 1) {
-    PetscReal *fid_glid_loc,*fiddata;
-    PetscInt  stride;
+    PetscReal *fid_glid_loc, *fiddata;
+    PetscInt   stride;
 
-    ierr = PetscMalloc1(nloc, &fid_glid_loc);CHKERRQ(ierr);
-    for (kk=0; kk<nloc; kk++) fid_glid_loc[kk] = (PetscReal)(my0+kk);
-    ierr = PCGAMGGetDataWithGhosts(Gmat, 1, fid_glid_loc, &stride, &fiddata);CHKERRQ(ierr);
-    ierr = PetscMalloc1(stride, &flid_fgid);CHKERRQ(ierr);
-    for (kk=0; kk<stride; kk++) flid_fgid[kk] = (PetscInt)fiddata[kk];
-    ierr = PetscFree(fiddata);CHKERRQ(ierr);
+    PetscCall(PetscMalloc1(nloc, &fid_glid_loc));
+    for (kk = 0; kk < nloc; kk++) fid_glid_loc[kk] = (PetscReal)(my0 + kk);
+    PetscCall(PCGAMGGetDataWithGhosts(Gmat, 1, fid_glid_loc, &stride, &fiddata));
+    PetscCall(PetscMalloc1(stride, &flid_fgid)); /* copy real data to in */
+    for (kk = 0; kk < stride; kk++) flid_fgid[kk] = (PetscInt)fiddata[kk];
+    PetscCall(PetscFree(fiddata));
 
-    if (stride != nbnodes/bs) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_PLIB,"stride %D != nbnodes %D/bs %D",stride,nbnodes,bs);
-    ierr = PetscFree(fid_glid_loc);CHKERRQ(ierr);
+    PetscCheck(stride == nbnodes / bs, PETSC_COMM_SELF, PETSC_ERR_PLIB, "stride %" PetscInt_FMT " != nbnodes %" PetscInt_FMT "/bs %" PetscInt_FMT, stride, nbnodes, bs);
+    PetscCall(PetscFree(fid_glid_loc));
   } else {
-    ierr = PetscMalloc1(nloc, &flid_fgid);CHKERRQ(ierr);
-    for (kk=0; kk<nloc; kk++) flid_fgid[kk] = my0 + kk;
+    PetscCall(PetscMalloc1(nloc, &flid_fgid));
+    for (kk = 0; kk < nloc; kk++) flid_fgid[kk] = my0 + kk;
   }
-#if defined PETSC_GAMG_USE_LOG
-  ierr = PetscLogEventEnd(petsc_gamg_setup_events[SET7],0,0,0,0);CHKERRQ(ierr);
-  ierr = PetscLogEventBegin(petsc_gamg_setup_events[SET8],0,0,0,0);CHKERRQ(ierr);
-#endif
+  PetscCall(PetscLogEventEnd(petsc_gamg_setup_events[GAMG_PROLA], 0, 0, 0, 0));
+  /* get P0 */
+  PetscCall(PetscLogEventBegin(petsc_gamg_setup_events[GAMG_PROLB], 0, 0, 0, 0));
   {
     PetscReal *data_out = NULL;
-    ierr = formProl0(agg_lists, bs, col_bs, myCrs0, nbnodes,data_w_ghost, flid_fgid, &data_out, Prol);CHKERRQ(ierr);
-    ierr = PetscFree(pc_gamg->data);CHKERRQ(ierr);
+    PetscCall(formProl0(agg_lists, bs, col_bs, myCrs0, nbnodes, data_w_ghost, flid_fgid, &data_out, Prol));
+    PetscCall(PetscFree(pc_gamg->data));
 
     pc_gamg->data           = data_out;
     pc_gamg->data_cell_rows = col_bs;
-    pc_gamg->data_sz        = col_bs*col_bs*nLocalSelected;
+    pc_gamg->data_sz        = col_bs * col_bs * nLocalSelected;
   }
-#if defined PETSC_GAMG_USE_LOG
-  ierr = PetscLogEventEnd(petsc_gamg_setup_events[SET8],0,0,0,0);CHKERRQ(ierr);
-#endif
-  if (size > 1) {ierr = PetscFree(data_w_ghost);CHKERRQ(ierr);}
-  ierr = PetscFree(flid_fgid);CHKERRQ(ierr);
+  PetscCall(PetscLogEventEnd(petsc_gamg_setup_events[GAMG_PROLB], 0, 0, 0, 0));
+  if (size > 1) PetscCall(PetscFree(data_w_ghost));
+  PetscCall(PetscFree(flid_fgid));
 
-  *a_P_out = Prol;  /* out */
+  *a_P_out = Prol; /* out */
+  PetscCall(MatViewFromOptions(Prol, NULL, "-view_P"));
 
-  ierr = PetscLogEventEnd(PC_GAMGProlongator_AGG,0,0,0,0);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscLogEventEnd(petsc_gamg_setup_events[GAMG_PROL], 0, 0, 0, 0));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* -------------------------------------------------------------------------- */
 /*
    PCGAMGOptProlongator_AGG
 
@@ -1089,82 +1301,72 @@ static PetscErrorCode PCGAMGProlongator_AGG(PC pc,Mat Amat,Mat Gmat,PetscCoarsen
  In/Output Parameter:
    . a_P - prolongation operator to the next level
 */
-static PetscErrorCode PCGAMGOptProlongator_AGG(PC pc,Mat Amat,Mat *a_P)
+static PetscErrorCode PCGAMGOptProlongator_AGG(PC pc, Mat Amat, Mat *a_P)
 {
-  PetscErrorCode ierr;
-  PC_MG          *mg          = (PC_MG*)pc->data;
-  PC_GAMG        *pc_gamg     = (PC_GAMG*)mg->innerctx;
-  PC_GAMG_AGG    *pc_gamg_agg = (PC_GAMG_AGG*)pc_gamg->subctx;
-  PetscInt       jj;
-  Mat            Prol  = *a_P;
-  MPI_Comm       comm;
-  KSP            eksp;
-  Vec            bb, xx;
-  PC             epc;
-  PetscReal      alpha, emax, emin;
-  PetscRandom    random;
+  PC_MG       *mg          = (PC_MG *)pc->data;
+  PC_GAMG     *pc_gamg     = (PC_GAMG *)mg->innerctx;
+  PC_GAMG_AGG *pc_gamg_agg = (PC_GAMG_AGG *)pc_gamg->subctx;
+  PetscInt     jj;
+  Mat          Prol = *a_P;
+  MPI_Comm     comm;
+  KSP          eksp;
+  Vec          bb, xx;
+  PC           epc;
+  PetscReal    alpha, emax, emin;
 
   PetscFunctionBegin;
-  ierr = PetscObjectGetComm((PetscObject)Amat,&comm);CHKERRQ(ierr);
-  ierr = PetscLogEventBegin(PC_GAMGOptProlongator_AGG,0,0,0,0);CHKERRQ(ierr);
+  PetscCall(PetscObjectGetComm((PetscObject)Amat, &comm));
+  PetscCall(PetscLogEventBegin(petsc_gamg_setup_events[GAMG_OPT], 0, 0, 0, 0));
 
-  /* compute maximum value of operator to be used in smoother */
+  /* compute maximum singular value of operator to be used in smoother */
   if (0 < pc_gamg_agg->nsmooths) {
     /* get eigen estimates */
     if (pc_gamg->emax > 0) {
       emin = pc_gamg->emin;
       emax = pc_gamg->emax;
     } else {
-      ierr = MatCreateVecs(Amat, &bb, NULL);CHKERRQ(ierr);
-      ierr = MatCreateVecs(Amat, &xx, NULL);CHKERRQ(ierr);
-      ierr = PetscRandomCreate(PETSC_COMM_SELF,&random);CHKERRQ(ierr);
-      ierr = VecSetRandom(bb,random);CHKERRQ(ierr);
-      ierr = PetscRandomDestroy(&random);CHKERRQ(ierr);
+      const char *prefix;
 
-      ierr = KSPCreate(comm,&eksp);CHKERRQ(ierr);
-      if (pc_gamg->esteig_type[0] == '\0') {
-        PetscBool flg;
-        ierr = MatGetOption(Amat, MAT_SPD, &flg);CHKERRQ(ierr);
-        if (flg) {
-          const char *prefix;
-          ierr = KSPGetOptionsPrefix(eksp,&prefix);CHKERRQ(ierr);
-          ierr = PetscOptionsHasName(NULL,prefix,"-ksp_type",&flg);CHKERRQ(ierr);
-          if (!flg) {
-            ierr = KSPSetType(eksp, KSPCG);CHKERRQ(ierr);
-          }
-        }
-      } else {
-        ierr = KSPSetType(eksp, pc_gamg->esteig_type);CHKERRQ(ierr);
+      PetscCall(MatCreateVecs(Amat, &bb, NULL));
+      PetscCall(MatCreateVecs(Amat, &xx, NULL));
+      PetscCall(KSPSetNoisy_Private(bb));
+
+      PetscCall(KSPCreate(comm, &eksp));
+      PetscCall(KSPSetNestLevel(eksp, pc->kspnestlevel));
+      PetscCall(PCGetOptionsPrefix(pc, &prefix));
+      PetscCall(KSPSetOptionsPrefix(eksp, prefix));
+      PetscCall(KSPAppendOptionsPrefix(eksp, "pc_gamg_esteig_"));
+      {
+        PetscBool isset, sflg;
+        PetscCall(MatIsSPDKnown(Amat, &isset, &sflg));
+        if (isset && sflg) PetscCall(KSPSetType(eksp, KSPCG));
       }
-      ierr = KSPSetErrorIfNotConverged(eksp,pc->erroriffailure);CHKERRQ(ierr);
-      ierr = KSPSetTolerances(eksp,PETSC_DEFAULT,PETSC_DEFAULT,PETSC_DEFAULT,pc_gamg->esteig_max_it);CHKERRQ(ierr);
-      ierr = KSPSetNormType(eksp, KSP_NORM_NONE);CHKERRQ(ierr);
+      PetscCall(KSPSetErrorIfNotConverged(eksp, pc->erroriffailure));
+      PetscCall(KSPSetNormType(eksp, KSP_NORM_NONE));
 
-      ierr = KSPSetInitialGuessNonzero(eksp, PETSC_FALSE);CHKERRQ(ierr);
-      ierr = KSPSetOperators(eksp, Amat, Amat);CHKERRQ(ierr);
-      ierr = KSPSetComputeSingularValues(eksp,PETSC_TRUE);CHKERRQ(ierr);
+      PetscCall(KSPSetInitialGuessNonzero(eksp, PETSC_FALSE));
+      PetscCall(KSPSetOperators(eksp, Amat, Amat));
 
-      ierr = KSPGetPC(eksp, &epc);CHKERRQ(ierr);
-      ierr = PCSetType(epc, PCJACOBI);CHKERRQ(ierr);  /* smoother in smoothed agg. */
+      PetscCall(KSPGetPC(eksp, &epc));
+      PetscCall(PCSetType(epc, PCJACOBI)); /* smoother in smoothed agg. */
 
-      /* solve - keep stuff out of logging */
-      ierr = PetscLogEventDeactivate(KSP_Solve);CHKERRQ(ierr);
-      ierr = PetscLogEventDeactivate(PC_Apply);CHKERRQ(ierr);
-      ierr = KSPSolve(eksp, bb, xx);CHKERRQ(ierr);
-      ierr = KSPCheckSolve(eksp,pc,xx);CHKERRQ(ierr);
-      ierr = PetscLogEventActivate(KSP_Solve);CHKERRQ(ierr);
-      ierr = PetscLogEventActivate(PC_Apply);CHKERRQ(ierr);
+      PetscCall(KSPSetTolerances(eksp, PETSC_DEFAULT, PETSC_DEFAULT, PETSC_DEFAULT, 10)); // 10 is safer, but 5 is often fine, can override with -pc_gamg_esteig_ksp_max_it -mg_levels_ksp_chebyshev_esteig 0,0.25,0,1.2
 
-      ierr = KSPComputeExtremeSingularValues(eksp, &emax, &emin);CHKERRQ(ierr);
-      ierr = PetscInfo3(pc,"Smooth P0: max eigen=%e min=%e PC=%s\n",emax,emin,PCJACOBI);CHKERRQ(ierr);
-      ierr = VecDestroy(&xx);CHKERRQ(ierr);
-      ierr = VecDestroy(&bb);CHKERRQ(ierr);
-      ierr = KSPDestroy(&eksp);CHKERRQ(ierr);
+      PetscCall(KSPSetFromOptions(eksp));
+      PetscCall(KSPSetComputeSingularValues(eksp, PETSC_TRUE));
+      PetscCall(KSPSolve(eksp, bb, xx));
+      PetscCall(KSPCheckSolve(eksp, pc, xx));
+
+      PetscCall(KSPComputeExtremeSingularValues(eksp, &emax, &emin));
+      PetscCall(PetscInfo(pc, "%s: Smooth P0: max eigen=%e min=%e PC=%s\n", ((PetscObject)pc)->prefix, (double)emax, (double)emin, PCJACOBI));
+      PetscCall(VecDestroy(&xx));
+      PetscCall(VecDestroy(&bb));
+      PetscCall(KSPDestroy(&eksp));
     }
     if (pc_gamg->use_sa_esteig) {
       mg->min_eigen_DinvA[pc_gamg->current_level] = emin;
       mg->max_eigen_DinvA[pc_gamg->current_level] = emax;
-      ierr = PetscInfo3(pc,"Smooth P0: level %D, cache spectra %g %g\n",pc_gamg->current_level,(double)emin,(double)emax);CHKERRQ(ierr);
+      PetscCall(PetscInfo(pc, "%s: Smooth P0: level %" PetscInt_FMT ", cache spectra %g %g\n", ((PetscObject)pc)->prefix, pc_gamg->current_level, (double)emin, (double)emax));
     } else {
       mg->min_eigen_DinvA[pc_gamg->current_level] = 0;
       mg->max_eigen_DinvA[pc_gamg->current_level] = 0;
@@ -1176,50 +1378,52 @@ static PetscErrorCode PCGAMGOptProlongator_AGG(PC pc,Mat Amat,Mat *a_P)
 
   /* smooth P0 */
   for (jj = 0; jj < pc_gamg_agg->nsmooths; jj++) {
-    Mat       tMat;
-    Vec       diag;
+    Mat tMat;
+    Vec diag;
 
-#if defined PETSC_GAMG_USE_LOG
-    ierr = PetscLogEventBegin(petsc_gamg_setup_events[SET9],0,0,0,0);CHKERRQ(ierr);
-#endif
+    PetscCall(PetscLogEventBegin(petsc_gamg_setup_events[GAMG_OPTSM], 0, 0, 0, 0));
 
     /* smooth P1 := (I - omega/lam D^{-1}A)P0 */
-    ierr  = MatMatMult(Amat, Prol, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &tMat);CHKERRQ(ierr);
-    ierr  = MatCreateVecs(Amat, &diag, NULL);CHKERRQ(ierr);
-    ierr  = MatGetDiagonal(Amat, diag);CHKERRQ(ierr); /* effectively PCJACOBI */
-    ierr  = VecReciprocal(diag);CHKERRQ(ierr);
-    ierr  = MatDiagonalScale(tMat, diag, NULL);CHKERRQ(ierr);
-    ierr  = VecDestroy(&diag);CHKERRQ(ierr);
-    alpha = -1.4/emax;
-    ierr  = MatAYPX(tMat, alpha, Prol, SUBSET_NONZERO_PATTERN);CHKERRQ(ierr);
-    ierr  = MatDestroy(&Prol);CHKERRQ(ierr);
-    Prol  = tMat;
-#if defined PETSC_GAMG_USE_LOG
-    ierr = PetscLogEventEnd(petsc_gamg_setup_events[SET9],0,0,0,0);CHKERRQ(ierr);
-#endif
+    PetscCall(PetscLogEventBegin(petsc_gamg_setup_matmat_events[pc_gamg->current_level][2], 0, 0, 0, 0));
+    PetscCall(MatMatMult(Amat, Prol, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &tMat));
+    PetscCall(PetscLogEventEnd(petsc_gamg_setup_matmat_events[pc_gamg->current_level][2], 0, 0, 0, 0));
+    PetscCall(MatProductClear(tMat));
+    PetscCall(MatCreateVecs(Amat, &diag, NULL));
+    PetscCall(MatGetDiagonal(Amat, diag)); /* effectively PCJACOBI */
+    PetscCall(VecReciprocal(diag));
+    PetscCall(MatDiagonalScale(tMat, diag, NULL));
+    PetscCall(VecDestroy(&diag));
+
+    /* TODO: Set a PCFailedReason and exit the building of the AMG preconditioner */
+    PetscCheck(emax != 0.0, PetscObjectComm((PetscObject)pc), PETSC_ERR_PLIB, "Computed maximum singular value as zero");
+    /* TODO: Document the 1.4 and don't hardwire it in this routine */
+    alpha = -1.4 / emax;
+
+    PetscCall(MatAYPX(tMat, alpha, Prol, SUBSET_NONZERO_PATTERN));
+    PetscCall(MatDestroy(&Prol));
+    Prol = tMat;
+    PetscCall(PetscLogEventEnd(petsc_gamg_setup_events[GAMG_OPTSM], 0, 0, 0, 0));
   }
-  ierr = PetscLogEventEnd(PC_GAMGOptProlongator_AGG,0,0,0,0);CHKERRQ(ierr);
+  PetscCall(PetscLogEventEnd(petsc_gamg_setup_events[GAMG_OPT], 0, 0, 0, 0));
   *a_P = Prol;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* -------------------------------------------------------------------------- */
 /*
    PCCreateGAMG_AGG
 
   Input Parameter:
    . pc -
 */
-PetscErrorCode  PCCreateGAMG_AGG(PC pc)
+PetscErrorCode PCCreateGAMG_AGG(PC pc)
 {
-  PetscErrorCode ierr;
-  PC_MG          *mg      = (PC_MG*)pc->data;
-  PC_GAMG        *pc_gamg = (PC_GAMG*)mg->innerctx;
-  PC_GAMG_AGG    *pc_gamg_agg;
+  PC_MG       *mg      = (PC_MG *)pc->data;
+  PC_GAMG     *pc_gamg = (PC_GAMG *)mg->innerctx;
+  PC_GAMG_AGG *pc_gamg_agg;
 
   PetscFunctionBegin;
   /* create sub context for SA */
-  ierr            = PetscNewLog(pc,&pc_gamg_agg);CHKERRQ(ierr);
+  PetscCall(PetscNew(&pc_gamg_agg));
   pc_gamg->subctx = pc_gamg_agg;
 
   pc_gamg->ops->setfromoptions = PCSetFromOptions_GAMG_AGG;
@@ -1227,20 +1431,26 @@ PetscErrorCode  PCCreateGAMG_AGG(PC pc)
   /* reset does not do anything; setup not virtual */
 
   /* set internal function pointers */
-  pc_gamg->ops->graph             = PCGAMGGraph_AGG;
+  pc_gamg->ops->creategraph       = PCGAMGCreateGraph_AGG;
   pc_gamg->ops->coarsen           = PCGAMGCoarsen_AGG;
   pc_gamg->ops->prolongator       = PCGAMGProlongator_AGG;
   pc_gamg->ops->optprolongator    = PCGAMGOptProlongator_AGG;
   pc_gamg->ops->createdefaultdata = PCSetData_AGG;
   pc_gamg->ops->view              = PCView_GAMG_AGG;
 
-  pc_gamg_agg->square_graph = 1;
-  pc_gamg_agg->sym_graph    = PETSC_FALSE;
-  pc_gamg_agg->nsmooths     = 1;
+  pc_gamg_agg->nsmooths                     = 1;
+  pc_gamg_agg->aggressive_coarsening_levels = 1;
+  pc_gamg_agg->use_aggressive_square_graph  = PETSC_TRUE;
+  pc_gamg_agg->use_minimum_degree_ordering  = PETSC_FALSE;
+  pc_gamg_agg->use_low_mem_filter           = PETSC_FALSE;
+  pc_gamg_agg->aggressive_mis_k             = 2;
 
-  ierr = PetscObjectComposeFunction((PetscObject)pc,"PCGAMGSetNSmooths_C",PCGAMGSetNSmooths_AGG);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)pc,"PCGAMGSetSymGraph_C",PCGAMGSetSymGraph_AGG);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)pc,"PCGAMGSetSquareGraph_C",PCGAMGSetSquareGraph_AGG);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)pc,"PCSetCoordinates_C",PCSetCoordinates_AGG);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetNSmooths_C", PCGAMGSetNSmooths_AGG));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetAggressiveLevels_C", PCGAMGSetAggressiveLevels_AGG));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetAggressiveSquareGraph_C", PCGAMGSetAggressiveSquareGraph_AGG));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGMISkSetMinDegreeOrdering_C", PCGAMGMISkSetMinDegreeOrdering_AGG));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetLowMemoryFilter_C", PCGAMGSetLowMemoryFilter_AGG));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGMISkSetAggressive_C", PCGAMGMISkSetAggressive_AGG));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCSetCoordinates_C", PCSetCoordinates_AGG));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

@@ -1,5 +1,4 @@
-
-#include <petsc/private/kspimpl.h>  /*I "petscksp.h" I*/
+#include <petsc/private/kspimpl.h> /*I "petscksp.h" I*/
 
 PETSC_EXTERN PetscErrorCode KSPCreate_Richardson(KSP);
 PETSC_EXTERN PetscErrorCode KSPCreate_Chebyshev(KSP);
@@ -9,6 +8,7 @@ PETSC_EXTERN PetscErrorCode KSPCreate_PIPECG(KSP);
 PETSC_EXTERN PetscErrorCode KSPCreate_PIPECGRR(KSP);
 PETSC_EXTERN PetscErrorCode KSPCreate_PIPELCG(KSP);
 PETSC_EXTERN PetscErrorCode KSPCreate_PIPEPRCG(KSP);
+PETSC_EXTERN PetscErrorCode KSPCreate_PIPECG2(KSP);
 PETSC_EXTERN PetscErrorCode KSPCreate_CGNE(KSP);
 PETSC_EXTERN PetscErrorCode KSPCreate_NASH(KSP);
 PETSC_EXTERN PetscErrorCode KSPCreate_STCG(KSP);
@@ -19,6 +19,7 @@ PETSC_EXTERN PetscErrorCode KSPCreate_PIPEFCG(KSP);
 PETSC_EXTERN PetscErrorCode KSPCreate_GMRES(KSP);
 PETSC_EXTERN PetscErrorCode KSPCreate_BCGS(KSP);
 PETSC_EXTERN PetscErrorCode KSPCreate_IBCGS(KSP);
+PETSC_EXTERN PetscErrorCode KSPCreate_QMRCGS(KSP);
 PETSC_EXTERN PetscErrorCode KSPCreate_FBCGS(KSP);
 PETSC_EXTERN PetscErrorCode KSPCreate_PIPEBCGS(KSP);
 PETSC_EXTERN PetscErrorCode KSPCreate_FBCGSR(KSP);
@@ -51,68 +52,106 @@ PETSC_EXTERN PetscErrorCode KSPCreate_HPDDM(KSP);
 #endif
 
 /*@C
-  KSPRegisterAll - Registers all of the Krylov subspace methods in the KSP package.
+  KSPRegisterAll - Registers all of the Krylov subspace methods in the `KSP` package.
 
   Not Collective
 
   Level: advanced
-@*/
-PetscErrorCode  KSPRegisterAll(void)
-{
-  PetscErrorCode ierr;
 
+.seealso: [](ch_ksp), `KSP`, `KSPRegister()`, `KSPType`
+@*/
+PetscErrorCode KSPRegisterAll(void)
+{
   PetscFunctionBegin;
-  if (KSPRegisterAllCalled) PetscFunctionReturn(0);
+  if (KSPRegisterAllCalled) PetscFunctionReturn(PETSC_SUCCESS);
   KSPRegisterAllCalled = PETSC_TRUE;
 
-  ierr = KSPRegister(KSPCG,          KSPCreate_CG);CHKERRQ(ierr);
-  ierr = KSPRegister(KSPGROPPCG,     KSPCreate_GROPPCG);CHKERRQ(ierr);
-  ierr = KSPRegister(KSPPIPECG,      KSPCreate_PIPECG);CHKERRQ(ierr);
-  ierr = KSPRegister(KSPPIPECGRR,    KSPCreate_PIPECGRR);CHKERRQ(ierr);
-  ierr = KSPRegister(KSPPIPELCG,     KSPCreate_PIPELCG);CHKERRQ(ierr);
-  ierr = KSPRegister(KSPPIPEPRCG,    KSPCreate_PIPEPRCG);CHKERRQ(ierr);
-  ierr = KSPRegister(KSPCGNE,        KSPCreate_CGNE);CHKERRQ(ierr);
-  ierr = KSPRegister(KSPNASH,        KSPCreate_NASH);CHKERRQ(ierr);
-  ierr = KSPRegister(KSPSTCG,        KSPCreate_STCG);CHKERRQ(ierr);
-  ierr = KSPRegister(KSPGLTR,        KSPCreate_GLTR);CHKERRQ(ierr);
-  ierr = KSPRegister(KSPRICHARDSON,  KSPCreate_Richardson);CHKERRQ(ierr);
-  ierr = KSPRegister(KSPCHEBYSHEV,   KSPCreate_Chebyshev);CHKERRQ(ierr);
-  ierr = KSPRegister(KSPGMRES,       KSPCreate_GMRES);CHKERRQ(ierr);
-  ierr = KSPRegister(KSPTCQMR,       KSPCreate_TCQMR);CHKERRQ(ierr);
-  ierr = KSPRegister(KSPFCG  ,       KSPCreate_FCG);CHKERRQ(ierr);
-  ierr = KSPRegister(KSPPIPEFCG,     KSPCreate_PIPEFCG);CHKERRQ(ierr);
-  ierr = KSPRegister(KSPBCGS,        KSPCreate_BCGS);CHKERRQ(ierr);
-  ierr = KSPRegister(KSPIBCGS,       KSPCreate_IBCGS);CHKERRQ(ierr);
-  ierr = KSPRegister(KSPFBCGS,       KSPCreate_FBCGS);CHKERRQ(ierr);
-  ierr = KSPRegister(KSPPIPEBCGS,    KSPCreate_PIPEBCGS);CHKERRQ(ierr);
-  ierr = KSPRegister(KSPFBCGSR,      KSPCreate_FBCGSR);CHKERRQ(ierr);
-  ierr = KSPRegister(KSPBCGSL,       KSPCreate_BCGSL);CHKERRQ(ierr);
-  ierr = KSPRegister(KSPCGS,         KSPCreate_CGS);CHKERRQ(ierr);
-  ierr = KSPRegister(KSPTFQMR,       KSPCreate_TFQMR);CHKERRQ(ierr);
-  ierr = KSPRegister(KSPCR,          KSPCreate_CR);CHKERRQ(ierr);
-  ierr = KSPRegister(KSPPIPECR,      KSPCreate_PIPECR);CHKERRQ(ierr);
-  ierr = KSPRegister(KSPLSQR,        KSPCreate_LSQR);CHKERRQ(ierr);
-  ierr = KSPRegister(KSPPREONLY,     KSPCreate_PREONLY);CHKERRQ(ierr);
-  ierr = KSPRegister(KSPQCG,         KSPCreate_QCG);CHKERRQ(ierr);
-  ierr = KSPRegister(KSPBICG,        KSPCreate_BiCG);CHKERRQ(ierr);
-  ierr = KSPRegister(KSPFGMRES,      KSPCreate_FGMRES);CHKERRQ(ierr);
-  ierr = KSPRegister(KSPPIPEFGMRES,  KSPCreate_PIPEFGMRES);CHKERRQ(ierr);
-  ierr = KSPRegister(KSPMINRES,      KSPCreate_MINRES);CHKERRQ(ierr);
-  ierr = KSPRegister(KSPSYMMLQ,      KSPCreate_SYMMLQ);CHKERRQ(ierr);
-  ierr = KSPRegister(KSPLGMRES,      KSPCreate_LGMRES);CHKERRQ(ierr);
-  ierr = KSPRegister(KSPLCD,         KSPCreate_LCD);CHKERRQ(ierr);
-  ierr = KSPRegister(KSPGCR,         KSPCreate_GCR);CHKERRQ(ierr);
-  ierr = KSPRegister(KSPPIPEGCR,     KSPCreate_PIPEGCR);CHKERRQ(ierr);
-  ierr = KSPRegister(KSPPGMRES,      KSPCreate_PGMRES);CHKERRQ(ierr);
+  PetscCall(KSPRegister(KSPCG, KSPCreate_CG));
+  PetscCall(KSPRegister(KSPGROPPCG, KSPCreate_GROPPCG));
+  PetscCall(KSPRegister(KSPPIPECG, KSPCreate_PIPECG));
+  PetscCall(KSPRegister(KSPPIPECGRR, KSPCreate_PIPECGRR));
+  PetscCall(KSPRegister(KSPPIPELCG, KSPCreate_PIPELCG));
+  PetscCall(KSPRegister(KSPPIPEPRCG, KSPCreate_PIPEPRCG));
+  PetscCall(KSPRegister(KSPPIPECG2, KSPCreate_PIPECG2));
+  PetscCall(KSPRegister(KSPCGNE, KSPCreate_CGNE));
+  PetscCall(KSPRegister(KSPNASH, KSPCreate_NASH));
+  PetscCall(KSPRegister(KSPSTCG, KSPCreate_STCG));
+  PetscCall(KSPRegister(KSPGLTR, KSPCreate_GLTR));
+  PetscCall(KSPRegister(KSPRICHARDSON, KSPCreate_Richardson));
+  PetscCall(KSPRegister(KSPCHEBYSHEV, KSPCreate_Chebyshev));
+  PetscCall(KSPRegister(KSPGMRES, KSPCreate_GMRES));
+  PetscCall(KSPRegister(KSPTCQMR, KSPCreate_TCQMR));
+  PetscCall(KSPRegister(KSPFCG, KSPCreate_FCG));
+  PetscCall(KSPRegister(KSPPIPEFCG, KSPCreate_PIPEFCG));
+  PetscCall(KSPRegister(KSPBCGS, KSPCreate_BCGS));
+  PetscCall(KSPRegister(KSPIBCGS, KSPCreate_IBCGS));
+  PetscCall(KSPRegister(KSPQMRCGS, KSPCreate_QMRCGS));
+  PetscCall(KSPRegister(KSPFBCGS, KSPCreate_FBCGS));
+  PetscCall(KSPRegister(KSPPIPEBCGS, KSPCreate_PIPEBCGS));
+  PetscCall(KSPRegister(KSPFBCGSR, KSPCreate_FBCGSR));
+  PetscCall(KSPRegister(KSPBCGSL, KSPCreate_BCGSL));
+  PetscCall(KSPRegister(KSPCGS, KSPCreate_CGS));
+  PetscCall(KSPRegister(KSPTFQMR, KSPCreate_TFQMR));
+  PetscCall(KSPRegister(KSPCR, KSPCreate_CR));
+  PetscCall(KSPRegister(KSPPIPECR, KSPCreate_PIPECR));
+  PetscCall(KSPRegister(KSPLSQR, KSPCreate_LSQR));
+  PetscCall(KSPRegister(KSPPREONLY, KSPCreate_PREONLY));
+  PetscCall(KSPRegister(KSPNONE, KSPCreate_PREONLY));
+  PetscCall(KSPRegister(KSPQCG, KSPCreate_QCG));
+  PetscCall(KSPRegister(KSPBICG, KSPCreate_BiCG));
+  PetscCall(KSPRegister(KSPFGMRES, KSPCreate_FGMRES));
+  PetscCall(KSPRegister(KSPPIPEFGMRES, KSPCreate_PIPEFGMRES));
+  PetscCall(KSPRegister(KSPMINRES, KSPCreate_MINRES));
+  PetscCall(KSPRegister(KSPSYMMLQ, KSPCreate_SYMMLQ));
+  PetscCall(KSPRegister(KSPLGMRES, KSPCreate_LGMRES));
+  PetscCall(KSPRegister(KSPLCD, KSPCreate_LCD));
+  PetscCall(KSPRegister(KSPGCR, KSPCreate_GCR));
+  PetscCall(KSPRegister(KSPPIPEGCR, KSPCreate_PIPEGCR));
+  PetscCall(KSPRegister(KSPPGMRES, KSPCreate_PGMRES));
 #if !defined(PETSC_USE_COMPLEX)
-  ierr = KSPRegister(KSPDGMRES,      KSPCreate_DGMRES);CHKERRQ(ierr);
+  PetscCall(KSPRegister(KSPDGMRES, KSPCreate_DGMRES));
 #endif
-  ierr = KSPRegister(KSPTSIRM,       KSPCreate_TSIRM);CHKERRQ(ierr);
-  ierr = KSPRegister(KSPCGLS,        KSPCreate_CGLS);CHKERRQ(ierr);
-  ierr = KSPRegister(KSPFETIDP,      KSPCreate_FETIDP);CHKERRQ(ierr);
+  PetscCall(KSPRegister(KSPTSIRM, KSPCreate_TSIRM));
+  PetscCall(KSPRegister(KSPCGLS, KSPCreate_CGLS));
+  PetscCall(KSPRegister(KSPFETIDP, KSPCreate_FETIDP));
 #if defined(PETSC_HAVE_HPDDM)
-  ierr = KSPRegister(KSPHPDDM,       KSPCreate_HPDDM);CHKERRQ(ierr);
+  PetscCall(KSPRegister(KSPHPDDM, KSPCreate_HPDDM));
 #endif
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@C
+  KSPMonitorRegisterAll - Registers all of the Krylov subspace monitors in the `KSP` package.
+
+  Not Collective
+
+  Level: advanced
+
+.seealso: [](ch_ksp), `KSP`, `KSPMonitorRegister()`, `KSPRegister()`
+@*/
+PetscErrorCode KSPMonitorRegisterAll(void)
+{
+  PetscFunctionBegin;
+  if (KSPMonitorRegisterAllCalled) PetscFunctionReturn(PETSC_SUCCESS);
+  KSPMonitorRegisterAllCalled = PETSC_TRUE;
+
+  PetscCall(KSPMonitorRegister("preconditioned_residual", PETSCVIEWERASCII, PETSC_VIEWER_DEFAULT, KSPMonitorResidual, NULL, NULL));
+  PetscCall(KSPMonitorRegister("preconditioned_residual", PETSCVIEWERDRAW, PETSC_VIEWER_DEFAULT, KSPMonitorResidualDraw, NULL, NULL));
+  PetscCall(KSPMonitorRegister("preconditioned_residual", PETSCVIEWERDRAW, PETSC_VIEWER_DRAW_LG, KSPMonitorResidualDrawLG, KSPMonitorResidualDrawLGCreate, NULL));
+  PetscCall(KSPMonitorRegister("preconditioned_residual_short", PETSCVIEWERASCII, PETSC_VIEWER_DEFAULT, KSPMonitorResidualShort, NULL, NULL));
+  PetscCall(KSPMonitorRegister("preconditioned_residual_range", PETSCVIEWERASCII, PETSC_VIEWER_DEFAULT, KSPMonitorResidualRange, NULL, NULL));
+  PetscCall(KSPMonitorRegister("true_residual", PETSCVIEWERASCII, PETSC_VIEWER_DEFAULT, KSPMonitorTrueResidual, NULL, NULL));
+  PetscCall(KSPMonitorRegister("true_residual", PETSCVIEWERDRAW, PETSC_VIEWER_DEFAULT, KSPMonitorTrueResidualDraw, NULL, NULL));
+  PetscCall(KSPMonitorRegister("true_residual", PETSCVIEWERDRAW, PETSC_VIEWER_DRAW_LG, KSPMonitorTrueResidualDrawLG, KSPMonitorTrueResidualDrawLGCreate, NULL));
+  PetscCall(KSPMonitorRegister("true_residual_max", PETSCVIEWERASCII, PETSC_VIEWER_DEFAULT, KSPMonitorTrueResidualMax, NULL, NULL));
+  PetscCall(KSPMonitorRegister("error", PETSCVIEWERASCII, PETSC_VIEWER_DEFAULT, KSPMonitorError, NULL, NULL));
+  PetscCall(KSPMonitorRegister("error", PETSCVIEWERDRAW, PETSC_VIEWER_DEFAULT, KSPMonitorErrorDraw, NULL, NULL));
+  PetscCall(KSPMonitorRegister("error", PETSCVIEWERDRAW, PETSC_VIEWER_DRAW_LG, KSPMonitorErrorDrawLG, KSPMonitorErrorDrawLGCreate, NULL));
+  PetscCall(KSPMonitorRegister("solution", PETSCVIEWERASCII, PETSC_VIEWER_DEFAULT, KSPMonitorSolution, NULL, NULL));
+  PetscCall(KSPMonitorRegister("solution", PETSCVIEWERDRAW, PETSC_VIEWER_DEFAULT, KSPMonitorSolutionDraw, NULL, NULL));
+  PetscCall(KSPMonitorRegister("solution", PETSCVIEWERDRAW, PETSC_VIEWER_DRAW_LG, KSPMonitorSolutionDrawLG, KSPMonitorSolutionDrawLGCreate, NULL));
+  PetscCall(KSPMonitorRegister("singular_value", PETSCVIEWERASCII, PETSC_VIEWER_DEFAULT, KSPMonitorSingularValue, KSPMonitorSingularValueCreate, NULL));
+  PetscCall(KSPMonitorRegister("lsqr_residual", PETSCVIEWERASCII, PETSC_VIEWER_DEFAULT, KSPLSQRMonitorResidual, NULL, NULL));
+  PetscCall(KSPMonitorRegister("lsqr_residual", PETSCVIEWERDRAW, PETSC_VIEWER_DRAW_LG, KSPLSQRMonitorResidualDrawLG, KSPLSQRMonitorResidualDrawLGCreate, NULL));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}

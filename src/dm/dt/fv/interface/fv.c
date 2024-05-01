@@ -1,5 +1,6 @@
 #include <petsc/private/petscfvimpl.h> /*I "petscfv.h" I*/
 #include <petscdmplex.h>
+#include <petscdmplextransform.h>
 #include <petscds.h>
 
 PetscClassId PETSCLIMITER_CLASSID = 0;
@@ -7,7 +8,7 @@ PetscClassId PETSCLIMITER_CLASSID = 0;
 PetscFunctionList PetscLimiterList              = NULL;
 PetscBool         PetscLimiterRegisterAllCalled = PETSC_FALSE;
 
-PetscBool Limitercite = PETSC_FALSE;
+PetscBool  Limitercite       = PETSC_FALSE;
 const char LimiterCitation[] = "@article{BergerAftosmisMurman2005,\n"
                                "  title   = {Analysis of slope limiters on irregular grids},\n"
                                "  journal = {AIAA paper},\n"
@@ -16,53 +17,50 @@ const char LimiterCitation[] = "@article{BergerAftosmisMurman2005,\n"
                                "  year    = {2005}\n}\n";
 
 /*@C
-  PetscLimiterRegister - Adds a new PetscLimiter implementation
+  PetscLimiterRegister - Adds a new `PetscLimiter` implementation
 
-  Not Collective
+  Not Collective, No Fortran Support
 
   Input Parameters:
-+ name        - The name of a new user-defined creation routine
-- create_func - The creation routine itself
++ sname    - The name of a new user-defined creation routine
+- function - The creation routine
 
-  Notes:
-  PetscLimiterRegister() may be called multiple times to add several user-defined PetscLimiters
-
-  Sample usage:
+  Example Usage:
 .vb
     PetscLimiterRegister("my_lim", MyPetscLimiterCreate);
 .ve
 
-  Then, your PetscLimiter type can be chosen with the procedural interface via
+  Then, your `PetscLimiter` type can be chosen with the procedural interface via
 .vb
     PetscLimiterCreate(MPI_Comm, PetscLimiter *);
     PetscLimiterSetType(PetscLimiter, "my_lim");
 .ve
-   or at runtime via the option
+  or at runtime via the option
 .vb
     -petsclimiter_type my_lim
 .ve
 
   Level: advanced
 
-.seealso: PetscLimiterRegisterAll(), PetscLimiterRegisterDestroy()
+  Note:
+  `PetscLimiterRegister()` may be called multiple times to add several user-defined PetscLimiters
 
+.seealso: `PetscLimiter`, `PetscLimiterType`, `PetscLimiterRegisterAll()`, `PetscLimiterRegisterDestroy()`
 @*/
 PetscErrorCode PetscLimiterRegister(const char sname[], PetscErrorCode (*function)(PetscLimiter))
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  ierr = PetscFunctionListAdd(&PetscLimiterList, sname, function);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscFunctionListAdd(&PetscLimiterList, sname, function));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
-  PetscLimiterSetType - Builds a particular PetscLimiter
+/*@
+  PetscLimiterSetType - Builds a `PetscLimiter` for a given `PetscLimiterType`
 
-  Collective on lim
+  Collective
 
   Input Parameters:
-+ lim  - The PetscLimiter object
++ lim  - The `PetscLimiter` object
 - name - The kind of limiter
 
   Options Database Key:
@@ -70,326 +68,314 @@ PetscErrorCode PetscLimiterRegister(const char sname[], PetscErrorCode (*functio
 
   Level: intermediate
 
-.seealso: PetscLimiterGetType(), PetscLimiterCreate()
+.seealso: `PetscLimiter`, `PetscLimiterType`, `PetscLimiterGetType()`, `PetscLimiterCreate()`
 @*/
 PetscErrorCode PetscLimiterSetType(PetscLimiter lim, PetscLimiterType name)
 {
   PetscErrorCode (*r)(PetscLimiter);
-  PetscBool      match;
-  PetscErrorCode ierr;
+  PetscBool match;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(lim, PETSCLIMITER_CLASSID, 1);
-  ierr = PetscObjectTypeCompare((PetscObject) lim, name, &match);CHKERRQ(ierr);
-  if (match) PetscFunctionReturn(0);
+  PetscCall(PetscObjectTypeCompare((PetscObject)lim, name, &match));
+  if (match) PetscFunctionReturn(PETSC_SUCCESS);
 
-  ierr = PetscLimiterRegisterAll();CHKERRQ(ierr);
-  ierr = PetscFunctionListFind(PetscLimiterList, name, &r);CHKERRQ(ierr);
-  if (!r) SETERRQ1(PetscObjectComm((PetscObject) lim), PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown PetscLimiter type: %s", name);
+  PetscCall(PetscLimiterRegisterAll());
+  PetscCall(PetscFunctionListFind(PetscLimiterList, name, &r));
+  PetscCheck(r, PetscObjectComm((PetscObject)lim), PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown PetscLimiter type: %s", name);
 
-  if (lim->ops->destroy) {
-    ierr              = (*lim->ops->destroy)(lim);CHKERRQ(ierr);
-    lim->ops->destroy = NULL;
-  }
-  ierr = (*r)(lim);CHKERRQ(ierr);
-  ierr = PetscObjectChangeTypeName((PetscObject) lim, name);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscTryTypeMethod(lim, destroy);
+  lim->ops->destroy = NULL;
+
+  PetscCall((*r)(lim));
+  PetscCall(PetscObjectChangeTypeName((PetscObject)lim, name));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
-  PetscLimiterGetType - Gets the PetscLimiter type name (as a string) from the object.
+/*@
+  PetscLimiterGetType - Gets the `PetscLimiterType` name (as a string) from the `PetscLimiter`.
 
   Not Collective
 
   Input Parameter:
-. lim  - The PetscLimiter
+. lim - The `PetscLimiter`
 
   Output Parameter:
-. name - The PetscLimiter type name
+. name - The `PetscLimiterType`
 
   Level: intermediate
 
-.seealso: PetscLimiterSetType(), PetscLimiterCreate()
+.seealso: `PetscLimiter`, `PetscLimiterType`, `PetscLimiterSetType()`, `PetscLimiterCreate()`
 @*/
 PetscErrorCode PetscLimiterGetType(PetscLimiter lim, PetscLimiterType *name)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(lim, PETSCLIMITER_CLASSID, 1);
-  PetscValidPointer(name, 2);
-  ierr = PetscLimiterRegisterAll();CHKERRQ(ierr);
-  *name = ((PetscObject) lim)->type_name;
-  PetscFunctionReturn(0);
+  PetscAssertPointer(name, 2);
+  PetscCall(PetscLimiterRegisterAll());
+  *name = ((PetscObject)lim)->type_name;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-   PetscLimiterViewFromOptions - View from Options
+  PetscLimiterViewFromOptions - View a `PetscLimiter` based on values in the options database
 
-   Collective on PetscLimiter
+  Collective
 
-   Input Parameters:
-+  A - the PetscLimiter object to view
-.  obj - Optional object
--  name - command line option
+  Input Parameters:
++ A    - the `PetscLimiter` object to view
+. obj  - Optional object that provides the options prefix to use
+- name - command line option name
 
-   Level: intermediate
-.seealso:  PetscLimiter, PetscLimiterView, PetscObjectViewFromOptions(), PetscLimiterCreate()
+  Level: intermediate
+
+.seealso: `PetscLimiter`, `PetscLimiterView()`, `PetscObjectViewFromOptions()`, `PetscLimiterCreate()`
 @*/
-PetscErrorCode  PetscLimiterViewFromOptions(PetscLimiter A,PetscObject obj,const char name[])
+PetscErrorCode PetscLimiterViewFromOptions(PetscLimiter A, PetscObject obj, const char name[])
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(A,PETSCLIMITER_CLASSID,1);
-  ierr = PetscObjectViewFromOptions((PetscObject)A,obj,name);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(A, PETSCLIMITER_CLASSID, 1);
+  PetscCall(PetscObjectViewFromOptions((PetscObject)A, obj, name));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-  PetscLimiterView - Views a PetscLimiter
+  PetscLimiterView - Views a `PetscLimiter`
 
-  Collective on lim
+  Collective
 
-  Input Parameter:
-+ lim - the PetscLimiter object to view
+  Input Parameters:
++ lim - the `PetscLimiter` object to view
 - v   - the viewer
 
   Level: beginner
 
-.seealso: PetscLimiterDestroy()
+.seealso: `PetscLimiter`, `PetscViewer`, `PetscLimiterDestroy()`, `PetscLimiterViewFromOptions()`
 @*/
 PetscErrorCode PetscLimiterView(PetscLimiter lim, PetscViewer v)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(lim, PETSCLIMITER_CLASSID, 1);
-  if (!v) {ierr = PetscViewerASCIIGetStdout(PetscObjectComm((PetscObject) lim), &v);CHKERRQ(ierr);}
-  if (lim->ops->view) {ierr = (*lim->ops->view)(lim, v);CHKERRQ(ierr);}
-  PetscFunctionReturn(0);
+  if (!v) PetscCall(PetscViewerASCIIGetStdout(PetscObjectComm((PetscObject)lim), &v));
+  PetscTryTypeMethod(lim, view, v);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  PetscLimiterSetFromOptions - sets parameters in a PetscLimiter from the options database
-
-  Collective on lim
-
-  Input Parameter:
-. lim - the PetscLimiter object to set options for
-
-  Level: intermediate
-
-.seealso: PetscLimiterView()
-@*/
-PetscErrorCode PetscLimiterSetFromOptions(PetscLimiter lim)
-{
-  const char    *defaultType;
-  char           name[256];
-  PetscBool      flg;
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(lim, PETSCLIMITER_CLASSID, 1);
-  if (!((PetscObject) lim)->type_name) defaultType = PETSCLIMITERSIN;
-  else                                 defaultType = ((PetscObject) lim)->type_name;
-  ierr = PetscLimiterRegisterAll();CHKERRQ(ierr);
-
-  ierr = PetscObjectOptionsBegin((PetscObject) lim);CHKERRQ(ierr);
-  ierr = PetscOptionsFList("-petsclimiter_type", "Finite volume slope limiter", "PetscLimiterSetType", PetscLimiterList, defaultType, name, 256, &flg);CHKERRQ(ierr);
-  if (flg) {
-    ierr = PetscLimiterSetType(lim, name);CHKERRQ(ierr);
-  } else if (!((PetscObject) lim)->type_name) {
-    ierr = PetscLimiterSetType(lim, defaultType);CHKERRQ(ierr);
-  }
-  if (lim->ops->setfromoptions) {ierr = (*lim->ops->setfromoptions)(lim);CHKERRQ(ierr);}
-  /* process any options handlers added with PetscObjectAddOptionsHandler() */
-  ierr = PetscObjectProcessOptionsHandlers(PetscOptionsObject,(PetscObject) lim);CHKERRQ(ierr);
-  ierr = PetscOptionsEnd();CHKERRQ(ierr);
-  ierr = PetscLimiterViewFromOptions(lim, NULL, "-petsclimiter_view");CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
-/*@C
-  PetscLimiterSetUp - Construct data structures for the PetscLimiter
-
-  Collective on lim
-
-  Input Parameter:
-. lim - the PetscLimiter object to setup
-
-  Level: intermediate
-
-.seealso: PetscLimiterView(), PetscLimiterDestroy()
-@*/
-PetscErrorCode PetscLimiterSetUp(PetscLimiter lim)
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(lim, PETSCLIMITER_CLASSID, 1);
-  if (lim->ops->setup) {ierr = (*lim->ops->setup)(lim);CHKERRQ(ierr);}
-  PetscFunctionReturn(0);
-}
-
-/*@
-  PetscLimiterDestroy - Destroys a PetscLimiter object
-
-  Collective on lim
-
-  Input Parameter:
-. lim - the PetscLimiter object to destroy
-
-  Level: beginner
-
-.seealso: PetscLimiterView()
-@*/
-PetscErrorCode PetscLimiterDestroy(PetscLimiter *lim)
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  if (!*lim) PetscFunctionReturn(0);
-  PetscValidHeaderSpecific((*lim), PETSCLIMITER_CLASSID, 1);
-
-  if (--((PetscObject)(*lim))->refct > 0) {*lim = NULL; PetscFunctionReturn(0);}
-  ((PetscObject) (*lim))->refct = 0;
-
-  if ((*lim)->ops->destroy) {ierr = (*(*lim)->ops->destroy)(*lim);CHKERRQ(ierr);}
-  ierr = PetscHeaderDestroy(lim);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
-/*@
-  PetscLimiterCreate - Creates an empty PetscLimiter object. The type can then be set with PetscLimiterSetType().
+  PetscLimiterSetFromOptions - sets parameters in a `PetscLimiter` from the options database
 
   Collective
 
   Input Parameter:
-. comm - The communicator for the PetscLimiter object
+. lim - the `PetscLimiter` object to set options for
 
-  Output Parameter:
-. lim - The PetscLimiter object
+  Level: intermediate
+
+.seealso: `PetscLimiter`, ``PetscLimiterView()`
+@*/
+PetscErrorCode PetscLimiterSetFromOptions(PetscLimiter lim)
+{
+  const char *defaultType;
+  char        name[256];
+  PetscBool   flg;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(lim, PETSCLIMITER_CLASSID, 1);
+  if (!((PetscObject)lim)->type_name) defaultType = PETSCLIMITERSIN;
+  else defaultType = ((PetscObject)lim)->type_name;
+  PetscCall(PetscLimiterRegisterAll());
+
+  PetscObjectOptionsBegin((PetscObject)lim);
+  PetscCall(PetscOptionsFList("-petsclimiter_type", "Finite volume slope limiter", "PetscLimiterSetType", PetscLimiterList, defaultType, name, 256, &flg));
+  if (flg) {
+    PetscCall(PetscLimiterSetType(lim, name));
+  } else if (!((PetscObject)lim)->type_name) {
+    PetscCall(PetscLimiterSetType(lim, defaultType));
+  }
+  PetscTryTypeMethod(lim, setfromoptions);
+  /* process any options handlers added with PetscObjectAddOptionsHandler() */
+  PetscCall(PetscObjectProcessOptionsHandlers((PetscObject)lim, PetscOptionsObject));
+  PetscOptionsEnd();
+  PetscCall(PetscLimiterViewFromOptions(lim, NULL, "-petsclimiter_view"));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PetscLimiterSetUp - Construct data structures for the `PetscLimiter`
+
+  Collective
+
+  Input Parameter:
+. lim - the `PetscLimiter` object to setup
+
+  Level: intermediate
+
+.seealso: `PetscLimiter`, ``PetscLimiterView()`, `PetscLimiterDestroy()`
+@*/
+PetscErrorCode PetscLimiterSetUp(PetscLimiter lim)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(lim, PETSCLIMITER_CLASSID, 1);
+  PetscTryTypeMethod(lim, setup);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PetscLimiterDestroy - Destroys a `PetscLimiter` object
+
+  Collective
+
+  Input Parameter:
+. lim - the `PetscLimiter` object to destroy
 
   Level: beginner
 
-.seealso: PetscLimiterSetType(), PETSCLIMITERSIN
+.seealso: `PetscLimiter`, `PetscLimiterView()`
+@*/
+PetscErrorCode PetscLimiterDestroy(PetscLimiter *lim)
+{
+  PetscFunctionBegin;
+  if (!*lim) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscValidHeaderSpecific(*lim, PETSCLIMITER_CLASSID, 1);
+
+  if (--((PetscObject)*lim)->refct > 0) {
+    *lim = NULL;
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+  ((PetscObject)*lim)->refct = 0;
+
+  PetscTryTypeMethod(*lim, destroy);
+  PetscCall(PetscHeaderDestroy(lim));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PetscLimiterCreate - Creates an empty `PetscLimiter` object. The type can then be set with `PetscLimiterSetType()`.
+
+  Collective
+
+  Input Parameter:
+. comm - The communicator for the `PetscLimiter` object
+
+  Output Parameter:
+. lim - The `PetscLimiter` object
+
+  Level: beginner
+
+.seealso: `PetscLimiter`, `PetscLimiterType`, `PetscLimiterSetType()`, `PETSCLIMITERSIN`
 @*/
 PetscErrorCode PetscLimiterCreate(MPI_Comm comm, PetscLimiter *lim)
 {
-  PetscLimiter   l;
-  PetscErrorCode ierr;
+  PetscLimiter l;
 
   PetscFunctionBegin;
-  PetscValidPointer(lim, 2);
-  ierr = PetscCitationsRegister(LimiterCitation,&Limitercite);CHKERRQ(ierr);
+  PetscAssertPointer(lim, 2);
+  PetscCall(PetscCitationsRegister(LimiterCitation, &Limitercite));
   *lim = NULL;
-  ierr = PetscFVInitializePackage();CHKERRQ(ierr);
+  PetscCall(PetscFVInitializePackage());
 
-  ierr = PetscHeaderCreate(l, PETSCLIMITER_CLASSID, "PetscLimiter", "Finite Volume Slope Limiter", "PetscLimiter", comm, PetscLimiterDestroy, PetscLimiterView);CHKERRQ(ierr);
+  PetscCall(PetscHeaderCreate(l, PETSCLIMITER_CLASSID, "PetscLimiter", "Finite Volume Slope Limiter", "PetscLimiter", comm, PetscLimiterDestroy, PetscLimiterView));
 
   *lim = l;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
   PetscLimiterLimit - Limit the flux
 
   Input Parameters:
-+ lim  - The PetscLimiter
++ lim  - The `PetscLimiter`
 - flim - The input field
 
   Output Parameter:
-. phi  - The limited field
-
-Note: Limiters given in symmetric form following Berger, Aftosmis, and Murman 2005
-$ The classical flux-limited formulation is psi(r) where
-$
-$ r = (u[0] - u[-1]) / (u[1] - u[0])
-$
-$ The second order TVD region is bounded by
-$
-$ psi_minmod(r) = min(r,1)      and        psi_superbee(r) = min(2, 2r, max(1,r))
-$
-$ where all limiters are implicitly clipped to be non-negative. A more convenient slope-limited form is psi(r) =
-$ phi(r)(r+1)/2 in which the reconstructed interface values are
-$
-$ u(v) = u[0] + phi(r) (grad u)[0] v
-$
-$ where v is the vector from centroid to quadrature point. In these variables, the usual limiters become
-$
-$ phi_minmod(r) = 2 min(1/(1+r),r/(1+r))   phi_superbee(r) = 2 min(2/(1+r), 2r/(1+r), max(1,r)/(1+r))
-$
-$ For a nicer symmetric formulation, rewrite in terms of
-$
-$ f = (u[0] - u[-1]) / (u[1] - u[-1])
-$
-$ where r(f) = f/(1-f). Not that r(1-f) = (1-f)/f = 1/r(f) so the symmetry condition
-$
-$ phi(r) = phi(1/r)
-$
-$ becomes
-$
-$ w(f) = w(1-f).
-$
-$ The limiters below implement this final form w(f). The reference methods are
-$
-$ w_minmod(f) = 2 min(f,(1-f))             w_superbee(r) = 4 min((1-f), f)
+. phi - The limited field
 
   Level: beginner
 
-.seealso: PetscLimiterSetType(), PetscLimiterCreate()
+  Note:
+  Limiters given in symmetric form following Berger, Aftosmis, and Murman 2005
+.vb
+ The classical flux-limited formulation is psi(r) where
+
+ r = (u[0] - u[-1]) / (u[1] - u[0])
+
+ The second order TVD region is bounded by
+
+ psi_minmod(r) = min(r,1)      and        psi_superbee(r) = min(2, 2r, max(1,r))
+
+ where all limiters are implicitly clipped to be non-negative. A more convenient slope-limited form is psi(r) =
+ phi(r)(r+1)/2 in which the reconstructed interface values are
+
+ u(v) = u[0] + phi(r) (grad u)[0] v
+
+ where v is the vector from centroid to quadrature point. In these variables, the usual limiters become
+
+ phi_minmod(r) = 2 min(1/(1+r),r/(1+r))   phi_superbee(r) = 2 min(2/(1+r), 2r/(1+r), max(1,r)/(1+r))
+
+ For a nicer symmetric formulation, rewrite in terms of
+
+ f = (u[0] - u[-1]) / (u[1] - u[-1])
+
+ where r(f) = f/(1-f). Not that r(1-f) = (1-f)/f = 1/r(f) so the symmetry condition
+
+ phi(r) = phi(1/r)
+
+ becomes
+
+ w(f) = w(1-f).
+
+ The limiters below implement this final form w(f). The reference methods are
+
+ w_minmod(f) = 2 min(f,(1-f))             w_superbee(r) = 4 min((1-f), f)
+.ve
+
+.seealso: `PetscLimiter`, `PetscLimiterType`, `PetscLimiterSetType()`, `PetscLimiterCreate()`
 @*/
 PetscErrorCode PetscLimiterLimit(PetscLimiter lim, PetscReal flim, PetscReal *phi)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(lim, PETSCLIMITER_CLASSID, 1);
-  PetscValidPointer(phi, 3);
-  ierr = (*lim->ops->limit)(lim, flim, phi);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscAssertPointer(phi, 3);
+  PetscUseTypeMethod(lim, limit, flim, phi);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscLimiterDestroy_Sin(PetscLimiter lim)
 {
-  PetscLimiter_Sin *l = (PetscLimiter_Sin *) lim->data;
-  PetscErrorCode    ierr;
+  PetscLimiter_Sin *l = (PetscLimiter_Sin *)lim->data;
 
   PetscFunctionBegin;
-  ierr = PetscFree(l);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscFree(l));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscLimiterView_Sin_Ascii(PetscLimiter lim, PetscViewer viewer)
 {
   PetscViewerFormat format;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
-  ierr = PetscViewerGetFormat(viewer, &format);CHKERRQ(ierr);
-  ierr = PetscViewerASCIIPrintf(viewer, "Sin Slope Limiter:\n");CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscViewerGetFormat(viewer, &format));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "Sin Slope Limiter:\n"));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscLimiterView_Sin(PetscLimiter lim, PetscViewer viewer)
 {
-  PetscBool      iascii;
-  PetscErrorCode ierr;
+  PetscBool iascii;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(lim, PETSCLIMITER_CLASSID, 1);
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 2);
-  ierr = PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERASCII, &iascii);CHKERRQ(ierr);
-  if (iascii) {ierr = PetscLimiterView_Sin_Ascii(lim, viewer);CHKERRQ(ierr);}
-  PetscFunctionReturn(0);
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
+  if (iascii) PetscCall(PetscLimiterView_Sin_Ascii(lim, viewer));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscLimiterLimit_Sin(PetscLimiter lim, PetscReal f, PetscReal *phi)
 {
   PetscFunctionBegin;
-  *phi = PetscSinReal(PETSC_PI*PetscMax(0, PetscMin(f, 1)));
-  PetscFunctionReturn(0);
+  *phi = PetscSinReal(PETSC_PI * PetscMax(0, PetscMin(f, 1)));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscLimiterInitialize_Sin(PetscLimiter lim)
@@ -398,70 +384,66 @@ static PetscErrorCode PetscLimiterInitialize_Sin(PetscLimiter lim)
   lim->ops->view    = PetscLimiterView_Sin;
   lim->ops->destroy = PetscLimiterDestroy_Sin;
   lim->ops->limit   = PetscLimiterLimit_Sin;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*MC
-  PETSCLIMITERSIN = "sin" - A PetscLimiter object
+  PETSCLIMITERSIN = "sin" - A `PetscLimiter` implementation
 
   Level: intermediate
 
-.seealso: PetscLimiterType, PetscLimiterCreate(), PetscLimiterSetType()
+.seealso: `PetscLimiter`, `PetscLimiterType`, `PetscLimiterCreate()`, `PetscLimiterSetType()`
 M*/
 
 PETSC_EXTERN PetscErrorCode PetscLimiterCreate_Sin(PetscLimiter lim)
 {
   PetscLimiter_Sin *l;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(lim, PETSCLIMITER_CLASSID, 1);
-  ierr      = PetscNewLog(lim, &l);CHKERRQ(ierr);
+  PetscCall(PetscNew(&l));
   lim->data = l;
 
-  ierr = PetscLimiterInitialize_Sin(lim);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscLimiterInitialize_Sin(lim));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscLimiterDestroy_Zero(PetscLimiter lim)
 {
-  PetscLimiter_Zero *l = (PetscLimiter_Zero *) lim->data;
-  PetscErrorCode    ierr;
+  PetscLimiter_Zero *l = (PetscLimiter_Zero *)lim->data;
 
   PetscFunctionBegin;
-  ierr = PetscFree(l);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscFree(l));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscLimiterView_Zero_Ascii(PetscLimiter lim, PetscViewer viewer)
 {
   PetscViewerFormat format;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
-  ierr = PetscViewerGetFormat(viewer, &format);CHKERRQ(ierr);
-  ierr = PetscViewerASCIIPrintf(viewer, "Zero Slope Limiter:\n");CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscViewerGetFormat(viewer, &format));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "Zero Slope Limiter:\n"));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscLimiterView_Zero(PetscLimiter lim, PetscViewer viewer)
 {
-  PetscBool      iascii;
-  PetscErrorCode ierr;
+  PetscBool iascii;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(lim, PETSCLIMITER_CLASSID, 1);
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 2);
-  ierr = PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERASCII, &iascii);CHKERRQ(ierr);
-  if (iascii) {ierr = PetscLimiterView_Zero_Ascii(lim, viewer);CHKERRQ(ierr);}
-  PetscFunctionReturn(0);
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
+  if (iascii) PetscCall(PetscLimiterView_Zero_Ascii(lim, viewer));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscLimiterLimit_Zero(PetscLimiter lim, PetscReal f, PetscReal *phi)
 {
   PetscFunctionBegin;
   *phi = 0.0;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscLimiterInitialize_Zero(PetscLimiter lim)
@@ -470,70 +452,66 @@ static PetscErrorCode PetscLimiterInitialize_Zero(PetscLimiter lim)
   lim->ops->view    = PetscLimiterView_Zero;
   lim->ops->destroy = PetscLimiterDestroy_Zero;
   lim->ops->limit   = PetscLimiterLimit_Zero;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*MC
-  PETSCLIMITERZERO = "zero" - A PetscLimiter object
+  PETSCLIMITERZERO = "zero" - A simple `PetscLimiter` implementation
 
   Level: intermediate
 
-.seealso: PetscLimiterType, PetscLimiterCreate(), PetscLimiterSetType()
+.seealso: `PetscLimiter`, `PetscLimiterType`, `PetscLimiterCreate()`, `PetscLimiterSetType()`
 M*/
 
 PETSC_EXTERN PetscErrorCode PetscLimiterCreate_Zero(PetscLimiter lim)
 {
   PetscLimiter_Zero *l;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(lim, PETSCLIMITER_CLASSID, 1);
-  ierr      = PetscNewLog(lim, &l);CHKERRQ(ierr);
+  PetscCall(PetscNew(&l));
   lim->data = l;
 
-  ierr = PetscLimiterInitialize_Zero(lim);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscLimiterInitialize_Zero(lim));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscLimiterDestroy_None(PetscLimiter lim)
 {
-  PetscLimiter_None *l = (PetscLimiter_None *) lim->data;
-  PetscErrorCode    ierr;
+  PetscLimiter_None *l = (PetscLimiter_None *)lim->data;
 
   PetscFunctionBegin;
-  ierr = PetscFree(l);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscFree(l));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscLimiterView_None_Ascii(PetscLimiter lim, PetscViewer viewer)
 {
   PetscViewerFormat format;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
-  ierr = PetscViewerGetFormat(viewer, &format);CHKERRQ(ierr);
-  ierr = PetscViewerASCIIPrintf(viewer, "None Slope Limiter:\n");CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscViewerGetFormat(viewer, &format));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "None Slope Limiter:\n"));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscLimiterView_None(PetscLimiter lim, PetscViewer viewer)
 {
-  PetscBool      iascii;
-  PetscErrorCode ierr;
+  PetscBool iascii;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(lim, PETSCLIMITER_CLASSID, 1);
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 2);
-  ierr = PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERASCII, &iascii);CHKERRQ(ierr);
-  if (iascii) {ierr = PetscLimiterView_None_Ascii(lim, viewer);CHKERRQ(ierr);}
-  PetscFunctionReturn(0);
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
+  if (iascii) PetscCall(PetscLimiterView_None_Ascii(lim, viewer));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscLimiterLimit_None(PetscLimiter lim, PetscReal f, PetscReal *phi)
 {
   PetscFunctionBegin;
   *phi = 1.0;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscLimiterInitialize_None(PetscLimiter lim)
@@ -542,70 +520,66 @@ static PetscErrorCode PetscLimiterInitialize_None(PetscLimiter lim)
   lim->ops->view    = PetscLimiterView_None;
   lim->ops->destroy = PetscLimiterDestroy_None;
   lim->ops->limit   = PetscLimiterLimit_None;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*MC
-  PETSCLIMITERNONE = "none" - A PetscLimiter object
+  PETSCLIMITERNONE = "none" - A trivial `PetscLimiter` implementation
 
   Level: intermediate
 
-.seealso: PetscLimiterType, PetscLimiterCreate(), PetscLimiterSetType()
+.seealso: `PetscLimiter`, `PetscLimiterType`, `PetscLimiterCreate()`, `PetscLimiterSetType()`
 M*/
 
 PETSC_EXTERN PetscErrorCode PetscLimiterCreate_None(PetscLimiter lim)
 {
   PetscLimiter_None *l;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(lim, PETSCLIMITER_CLASSID, 1);
-  ierr      = PetscNewLog(lim, &l);CHKERRQ(ierr);
+  PetscCall(PetscNew(&l));
   lim->data = l;
 
-  ierr = PetscLimiterInitialize_None(lim);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscLimiterInitialize_None(lim));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscLimiterDestroy_Minmod(PetscLimiter lim)
 {
-  PetscLimiter_Minmod *l = (PetscLimiter_Minmod *) lim->data;
-  PetscErrorCode    ierr;
+  PetscLimiter_Minmod *l = (PetscLimiter_Minmod *)lim->data;
 
   PetscFunctionBegin;
-  ierr = PetscFree(l);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscFree(l));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscLimiterView_Minmod_Ascii(PetscLimiter lim, PetscViewer viewer)
 {
   PetscViewerFormat format;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
-  ierr = PetscViewerGetFormat(viewer, &format);CHKERRQ(ierr);
-  ierr = PetscViewerASCIIPrintf(viewer, "Minmod Slope Limiter:\n");CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscViewerGetFormat(viewer, &format));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "Minmod Slope Limiter:\n"));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscLimiterView_Minmod(PetscLimiter lim, PetscViewer viewer)
 {
-  PetscBool      iascii;
-  PetscErrorCode ierr;
+  PetscBool iascii;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(lim, PETSCLIMITER_CLASSID, 1);
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 2);
-  ierr = PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERASCII, &iascii);CHKERRQ(ierr);
-  if (iascii) {ierr = PetscLimiterView_Minmod_Ascii(lim, viewer);CHKERRQ(ierr);}
-  PetscFunctionReturn(0);
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
+  if (iascii) PetscCall(PetscLimiterView_Minmod_Ascii(lim, viewer));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscLimiterLimit_Minmod(PetscLimiter lim, PetscReal f, PetscReal *phi)
 {
   PetscFunctionBegin;
-  *phi = 2*PetscMax(0, PetscMin(f, 1-f));
-  PetscFunctionReturn(0);
+  *phi = 2 * PetscMax(0, PetscMin(f, 1 - f));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscLimiterInitialize_Minmod(PetscLimiter lim)
@@ -614,70 +588,66 @@ static PetscErrorCode PetscLimiterInitialize_Minmod(PetscLimiter lim)
   lim->ops->view    = PetscLimiterView_Minmod;
   lim->ops->destroy = PetscLimiterDestroy_Minmod;
   lim->ops->limit   = PetscLimiterLimit_Minmod;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*MC
-  PETSCLIMITERMINMOD = "minmod" - A PetscLimiter object
+  PETSCLIMITERMINMOD = "minmod" - A `PetscLimiter` implementation
 
   Level: intermediate
 
-.seealso: PetscLimiterType, PetscLimiterCreate(), PetscLimiterSetType()
+.seealso: `PetscLimiter`, `PetscLimiterType`, `PetscLimiterCreate()`, `PetscLimiterSetType()`
 M*/
 
 PETSC_EXTERN PetscErrorCode PetscLimiterCreate_Minmod(PetscLimiter lim)
 {
   PetscLimiter_Minmod *l;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(lim, PETSCLIMITER_CLASSID, 1);
-  ierr      = PetscNewLog(lim, &l);CHKERRQ(ierr);
+  PetscCall(PetscNew(&l));
   lim->data = l;
 
-  ierr = PetscLimiterInitialize_Minmod(lim);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscLimiterInitialize_Minmod(lim));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscLimiterDestroy_VanLeer(PetscLimiter lim)
 {
-  PetscLimiter_VanLeer *l = (PetscLimiter_VanLeer *) lim->data;
-  PetscErrorCode    ierr;
+  PetscLimiter_VanLeer *l = (PetscLimiter_VanLeer *)lim->data;
 
   PetscFunctionBegin;
-  ierr = PetscFree(l);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscFree(l));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscLimiterView_VanLeer_Ascii(PetscLimiter lim, PetscViewer viewer)
 {
   PetscViewerFormat format;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
-  ierr = PetscViewerGetFormat(viewer, &format);CHKERRQ(ierr);
-  ierr = PetscViewerASCIIPrintf(viewer, "Van Leer Slope Limiter:\n");CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscViewerGetFormat(viewer, &format));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "Van Leer Slope Limiter:\n"));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscLimiterView_VanLeer(PetscLimiter lim, PetscViewer viewer)
 {
-  PetscBool      iascii;
-  PetscErrorCode ierr;
+  PetscBool iascii;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(lim, PETSCLIMITER_CLASSID, 1);
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 2);
-  ierr = PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERASCII, &iascii);CHKERRQ(ierr);
-  if (iascii) {ierr = PetscLimiterView_VanLeer_Ascii(lim, viewer);CHKERRQ(ierr);}
-  PetscFunctionReturn(0);
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
+  if (iascii) PetscCall(PetscLimiterView_VanLeer_Ascii(lim, viewer));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscLimiterLimit_VanLeer(PetscLimiter lim, PetscReal f, PetscReal *phi)
 {
   PetscFunctionBegin;
-  *phi = PetscMax(0, 4*f*(1-f));
-  PetscFunctionReturn(0);
+  *phi = PetscMax(0, 4 * f * (1 - f));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscLimiterInitialize_VanLeer(PetscLimiter lim)
@@ -686,70 +656,66 @@ static PetscErrorCode PetscLimiterInitialize_VanLeer(PetscLimiter lim)
   lim->ops->view    = PetscLimiterView_VanLeer;
   lim->ops->destroy = PetscLimiterDestroy_VanLeer;
   lim->ops->limit   = PetscLimiterLimit_VanLeer;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*MC
-  PETSCLIMITERVANLEER = "vanleer" - A PetscLimiter object
+  PETSCLIMITERVANLEER = "vanleer" - A `PetscLimiter` implementation
 
   Level: intermediate
 
-.seealso: PetscLimiterType, PetscLimiterCreate(), PetscLimiterSetType()
+.seealso: `PetscLimiter`, `PetscLimiterType`, `PetscLimiterCreate()`, `PetscLimiterSetType()`
 M*/
 
 PETSC_EXTERN PetscErrorCode PetscLimiterCreate_VanLeer(PetscLimiter lim)
 {
   PetscLimiter_VanLeer *l;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(lim, PETSCLIMITER_CLASSID, 1);
-  ierr      = PetscNewLog(lim, &l);CHKERRQ(ierr);
+  PetscCall(PetscNew(&l));
   lim->data = l;
 
-  ierr = PetscLimiterInitialize_VanLeer(lim);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscLimiterInitialize_VanLeer(lim));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscLimiterDestroy_VanAlbada(PetscLimiter lim)
 {
-  PetscLimiter_VanAlbada *l = (PetscLimiter_VanAlbada *) lim->data;
-  PetscErrorCode    ierr;
+  PetscLimiter_VanAlbada *l = (PetscLimiter_VanAlbada *)lim->data;
 
   PetscFunctionBegin;
-  ierr = PetscFree(l);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscFree(l));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscLimiterView_VanAlbada_Ascii(PetscLimiter lim, PetscViewer viewer)
 {
   PetscViewerFormat format;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
-  ierr = PetscViewerGetFormat(viewer, &format);CHKERRQ(ierr);
-  ierr = PetscViewerASCIIPrintf(viewer, "Van Albada Slope Limiter:\n");CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscViewerGetFormat(viewer, &format));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "Van Albada Slope Limiter:\n"));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscLimiterView_VanAlbada(PetscLimiter lim, PetscViewer viewer)
 {
-  PetscBool      iascii;
-  PetscErrorCode ierr;
+  PetscBool iascii;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(lim, PETSCLIMITER_CLASSID, 1);
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 2);
-  ierr = PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERASCII, &iascii);CHKERRQ(ierr);
-  if (iascii) {ierr = PetscLimiterView_VanAlbada_Ascii(lim, viewer);CHKERRQ(ierr);}
-  PetscFunctionReturn(0);
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
+  if (iascii) PetscCall(PetscLimiterView_VanAlbada_Ascii(lim, viewer));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscLimiterLimit_VanAlbada(PetscLimiter lim, PetscReal f, PetscReal *phi)
 {
   PetscFunctionBegin;
-  *phi = PetscMax(0, 2*f*(1-f) / (PetscSqr(f) + PetscSqr(1-f)));
-  PetscFunctionReturn(0);
+  *phi = PetscMax(0, 2 * f * (1 - f) / (PetscSqr(f) + PetscSqr(1 - f)));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscLimiterInitialize_VanAlbada(PetscLimiter lim)
@@ -758,70 +724,66 @@ static PetscErrorCode PetscLimiterInitialize_VanAlbada(PetscLimiter lim)
   lim->ops->view    = PetscLimiterView_VanAlbada;
   lim->ops->destroy = PetscLimiterDestroy_VanAlbada;
   lim->ops->limit   = PetscLimiterLimit_VanAlbada;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*MC
-  PETSCLIMITERVANALBADA = "vanalbada" - A PetscLimiter object
+  PETSCLIMITERVANALBADA = "vanalbada" - A PetscLimiter implementation
 
   Level: intermediate
 
-.seealso: PetscLimiterType, PetscLimiterCreate(), PetscLimiterSetType()
+.seealso: `PetscLimiter`, `PetscLimiterType`, `PetscLimiterCreate()`, `PetscLimiterSetType()`
 M*/
 
 PETSC_EXTERN PetscErrorCode PetscLimiterCreate_VanAlbada(PetscLimiter lim)
 {
   PetscLimiter_VanAlbada *l;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(lim, PETSCLIMITER_CLASSID, 1);
-  ierr      = PetscNewLog(lim, &l);CHKERRQ(ierr);
+  PetscCall(PetscNew(&l));
   lim->data = l;
 
-  ierr = PetscLimiterInitialize_VanAlbada(lim);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscLimiterInitialize_VanAlbada(lim));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscLimiterDestroy_Superbee(PetscLimiter lim)
 {
-  PetscLimiter_Superbee *l = (PetscLimiter_Superbee *) lim->data;
-  PetscErrorCode    ierr;
+  PetscLimiter_Superbee *l = (PetscLimiter_Superbee *)lim->data;
 
   PetscFunctionBegin;
-  ierr = PetscFree(l);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscFree(l));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscLimiterView_Superbee_Ascii(PetscLimiter lim, PetscViewer viewer)
 {
   PetscViewerFormat format;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
-  ierr = PetscViewerGetFormat(viewer, &format);CHKERRQ(ierr);
-  ierr = PetscViewerASCIIPrintf(viewer, "Superbee Slope Limiter:\n");CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscViewerGetFormat(viewer, &format));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "Superbee Slope Limiter:\n"));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscLimiterView_Superbee(PetscLimiter lim, PetscViewer viewer)
 {
-  PetscBool      iascii;
-  PetscErrorCode ierr;
+  PetscBool iascii;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(lim, PETSCLIMITER_CLASSID, 1);
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 2);
-  ierr = PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERASCII, &iascii);CHKERRQ(ierr);
-  if (iascii) {ierr = PetscLimiterView_Superbee_Ascii(lim, viewer);CHKERRQ(ierr);}
-  PetscFunctionReturn(0);
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
+  if (iascii) PetscCall(PetscLimiterView_Superbee_Ascii(lim, viewer));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscLimiterLimit_Superbee(PetscLimiter lim, PetscReal f, PetscReal *phi)
 {
   PetscFunctionBegin;
-  *phi = 4*PetscMax(0, PetscMin(f, 1-f));
-  PetscFunctionReturn(0);
+  *phi = 4 * PetscMax(0, PetscMin(f, 1 - f));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscLimiterInitialize_Superbee(PetscLimiter lim)
@@ -830,71 +792,67 @@ static PetscErrorCode PetscLimiterInitialize_Superbee(PetscLimiter lim)
   lim->ops->view    = PetscLimiterView_Superbee;
   lim->ops->destroy = PetscLimiterDestroy_Superbee;
   lim->ops->limit   = PetscLimiterLimit_Superbee;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*MC
-  PETSCLIMITERSUPERBEE = "superbee" - A PetscLimiter object
+  PETSCLIMITERSUPERBEE = "superbee" - A `PetscLimiter` implementation
 
   Level: intermediate
 
-.seealso: PetscLimiterType, PetscLimiterCreate(), PetscLimiterSetType()
+.seealso: `PetscLimiter`, `PetscLimiterType`, `PetscLimiterCreate()`, `PetscLimiterSetType()`
 M*/
 
 PETSC_EXTERN PetscErrorCode PetscLimiterCreate_Superbee(PetscLimiter lim)
 {
   PetscLimiter_Superbee *l;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(lim, PETSCLIMITER_CLASSID, 1);
-  ierr      = PetscNewLog(lim, &l);CHKERRQ(ierr);
+  PetscCall(PetscNew(&l));
   lim->data = l;
 
-  ierr = PetscLimiterInitialize_Superbee(lim);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscLimiterInitialize_Superbee(lim));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscLimiterDestroy_MC(PetscLimiter lim)
 {
-  PetscLimiter_MC *l = (PetscLimiter_MC *) lim->data;
-  PetscErrorCode    ierr;
+  PetscLimiter_MC *l = (PetscLimiter_MC *)lim->data;
 
   PetscFunctionBegin;
-  ierr = PetscFree(l);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscFree(l));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscLimiterView_MC_Ascii(PetscLimiter lim, PetscViewer viewer)
 {
   PetscViewerFormat format;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
-  ierr = PetscViewerGetFormat(viewer, &format);CHKERRQ(ierr);
-  ierr = PetscViewerASCIIPrintf(viewer, "MC Slope Limiter:\n");CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscViewerGetFormat(viewer, &format));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "MC Slope Limiter:\n"));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscLimiterView_MC(PetscLimiter lim, PetscViewer viewer)
 {
-  PetscBool      iascii;
-  PetscErrorCode ierr;
+  PetscBool iascii;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(lim, PETSCLIMITER_CLASSID, 1);
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 2);
-  ierr = PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERASCII, &iascii);CHKERRQ(ierr);
-  if (iascii) {ierr = PetscLimiterView_MC_Ascii(lim, viewer);CHKERRQ(ierr);}
-  PetscFunctionReturn(0);
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
+  if (iascii) PetscCall(PetscLimiterView_MC_Ascii(lim, viewer));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /* aka Barth-Jespersen */
 static PetscErrorCode PetscLimiterLimit_MC(PetscLimiter lim, PetscReal f, PetscReal *phi)
 {
   PetscFunctionBegin;
-  *phi = PetscMin(1, 4*PetscMax(0, PetscMin(f, 1-f)));
-  PetscFunctionReturn(0);
+  *phi = PetscMin(1, 4 * PetscMax(0, PetscMin(f, 1 - f)));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscLimiterInitialize_MC(PetscLimiter lim)
@@ -903,29 +861,28 @@ static PetscErrorCode PetscLimiterInitialize_MC(PetscLimiter lim)
   lim->ops->view    = PetscLimiterView_MC;
   lim->ops->destroy = PetscLimiterDestroy_MC;
   lim->ops->limit   = PetscLimiterLimit_MC;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*MC
-  PETSCLIMITERMC = "mc" - A PetscLimiter object
+  PETSCLIMITERMC = "mc" - A `PetscLimiter` implementation
 
   Level: intermediate
 
-.seealso: PetscLimiterType, PetscLimiterCreate(), PetscLimiterSetType()
+.seealso: `PetscLimiter`, `PetscLimiterType`, `PetscLimiterCreate()`, `PetscLimiterSetType()`
 M*/
 
 PETSC_EXTERN PetscErrorCode PetscLimiterCreate_MC(PetscLimiter lim)
 {
   PetscLimiter_MC *l;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(lim, PETSCLIMITER_CLASSID, 1);
-  ierr      = PetscNewLog(lim, &l);CHKERRQ(ierr);
+  PetscCall(PetscNew(&l));
   lim->data = l;
 
-  ierr = PetscLimiterInitialize_MC(lim);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscLimiterInitialize_MC(lim));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscClassId PETSCFV_CLASSID = 0;
@@ -934,18 +891,15 @@ PetscFunctionList PetscFVList              = NULL;
 PetscBool         PetscFVRegisterAllCalled = PETSC_FALSE;
 
 /*@C
-  PetscFVRegister - Adds a new PetscFV implementation
+  PetscFVRegister - Adds a new `PetscFV` implementation
 
-  Not Collective
+  Not Collective, No Fortran Support
 
   Input Parameters:
-+ name        - The name of a new user-defined creation routine
-- create_func - The creation routine itself
++ sname    - The name of a new user-defined creation routine
+- function - The creation routine itself
 
-  Notes:
-  PetscFVRegister() may be called multiple times to add several user-defined PetscFVs
-
-  Sample usage:
+  Example Usage:
 .vb
     PetscFVRegister("my_fv", MyPetscFVCreate);
 .ve
@@ -955,423 +909,405 @@ PetscBool         PetscFVRegisterAllCalled = PETSC_FALSE;
     PetscFVCreate(MPI_Comm, PetscFV *);
     PetscFVSetType(PetscFV, "my_fv");
 .ve
-   or at runtime via the option
+  or at runtime via the option
 .vb
     -petscfv_type my_fv
 .ve
 
   Level: advanced
 
-.seealso: PetscFVRegisterAll(), PetscFVRegisterDestroy()
+  Note:
+  `PetscFVRegister()` may be called multiple times to add several user-defined PetscFVs
 
+.seealso: `PetscFV`, `PetscFVType`, `PetscFVRegisterAll()`, `PetscFVRegisterDestroy()`
 @*/
 PetscErrorCode PetscFVRegister(const char sname[], PetscErrorCode (*function)(PetscFV))
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  ierr = PetscFunctionListAdd(&PetscFVList, sname, function);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscFunctionListAdd(&PetscFVList, sname, function));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
-  PetscFVSetType - Builds a particular PetscFV
+/*@
+  PetscFVSetType - Builds a particular `PetscFV`
 
-  Collective on fvm
+  Collective
 
   Input Parameters:
-+ fvm  - The PetscFV object
-- name - The kind of FVM space
++ fvm  - The `PetscFV` object
+- name - The type of FVM space
 
   Options Database Key:
-. -petscfv_type <type> - Sets the PetscFV type; use -help for a list of available types
+. -petscfv_type <type> - Sets the `PetscFVType`; use -help for a list of available types
 
   Level: intermediate
 
-.seealso: PetscFVGetType(), PetscFVCreate()
+.seealso: `PetscFV`, `PetscFVType`, `PetscFVGetType()`, `PetscFVCreate()`
 @*/
 PetscErrorCode PetscFVSetType(PetscFV fvm, PetscFVType name)
 {
   PetscErrorCode (*r)(PetscFV);
-  PetscBool      match;
-  PetscErrorCode ierr;
+  PetscBool match;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(fvm, PETSCFV_CLASSID, 1);
-  ierr = PetscObjectTypeCompare((PetscObject) fvm, name, &match);CHKERRQ(ierr);
-  if (match) PetscFunctionReturn(0);
+  PetscCall(PetscObjectTypeCompare((PetscObject)fvm, name, &match));
+  if (match) PetscFunctionReturn(PETSC_SUCCESS);
 
-  ierr = PetscFVRegisterAll();CHKERRQ(ierr);
-  ierr = PetscFunctionListFind(PetscFVList, name, &r);CHKERRQ(ierr);
-  if (!r) SETERRQ1(PetscObjectComm((PetscObject) fvm), PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown PetscFV type: %s", name);
+  PetscCall(PetscFVRegisterAll());
+  PetscCall(PetscFunctionListFind(PetscFVList, name, &r));
+  PetscCheck(r, PetscObjectComm((PetscObject)fvm), PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown PetscFV type: %s", name);
 
-  if (fvm->ops->destroy) {
-    ierr              = (*fvm->ops->destroy)(fvm);CHKERRQ(ierr);
-    fvm->ops->destroy = NULL;
-  }
-  ierr = (*r)(fvm);CHKERRQ(ierr);
-  ierr = PetscObjectChangeTypeName((PetscObject) fvm, name);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscTryTypeMethod(fvm, destroy);
+  fvm->ops->destroy = NULL;
+
+  PetscCall((*r)(fvm));
+  PetscCall(PetscObjectChangeTypeName((PetscObject)fvm, name));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
-  PetscFVGetType - Gets the PetscFV type name (as a string) from the object.
+/*@
+  PetscFVGetType - Gets the `PetscFVType` (as a string) from a `PetscFV`.
 
   Not Collective
 
   Input Parameter:
-. fvm  - The PetscFV
+. fvm - The `PetscFV`
 
   Output Parameter:
-. name - The PetscFV type name
+. name - The `PetscFVType` name
 
   Level: intermediate
 
-.seealso: PetscFVSetType(), PetscFVCreate()
+.seealso: `PetscFV`, `PetscFVType`, `PetscFVSetType()`, `PetscFVCreate()`
 @*/
 PetscErrorCode PetscFVGetType(PetscFV fvm, PetscFVType *name)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(fvm, PETSCFV_CLASSID, 1);
-  PetscValidPointer(name, 2);
-  ierr = PetscFVRegisterAll();CHKERRQ(ierr);
-  *name = ((PetscObject) fvm)->type_name;
-  PetscFunctionReturn(0);
+  PetscAssertPointer(name, 2);
+  PetscCall(PetscFVRegisterAll());
+  *name = ((PetscObject)fvm)->type_name;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-   PetscFVViewFromOptions - View from Options
+  PetscFVViewFromOptions - View a `PetscFV` based on values in the options database
 
-   Collective on PetscFV
+  Collective
 
-   Input Parameters:
-+  A - the PetscFV object
-.  obj - Optional object
--  name - command line option
+  Input Parameters:
++ A    - the `PetscFV` object
+. obj  - Optional object that provides the options prefix
+- name - command line option name
 
-   Level: intermediate
-.seealso:  PetscFV, PetscFVView, PetscObjectViewFromOptions(), PetscFVCreate()
+  Level: intermediate
+
+.seealso: `PetscFV`, `PetscFVView()`, `PetscObjectViewFromOptions()`, `PetscFVCreate()`
 @*/
-PetscErrorCode  PetscFVViewFromOptions(PetscFV A,PetscObject obj,const char name[])
+PetscErrorCode PetscFVViewFromOptions(PetscFV A, PetscObject obj, const char name[])
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(A,PETSCFV_CLASSID,1);
-  ierr = PetscObjectViewFromOptions((PetscObject)A,obj,name);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(A, PETSCFV_CLASSID, 1);
+  PetscCall(PetscObjectViewFromOptions((PetscObject)A, obj, name));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-  PetscFVView - Views a PetscFV
+  PetscFVView - Views a `PetscFV`
 
-  Collective on fvm
+  Collective
 
-  Input Parameter:
-+ fvm - the PetscFV object to view
+  Input Parameters:
++ fvm - the `PetscFV` object to view
 - v   - the viewer
 
   Level: beginner
 
-.seealso: PetscFVDestroy()
+.seealso: `PetscFV`, `PetscViewer`, `PetscFVDestroy()`
 @*/
 PetscErrorCode PetscFVView(PetscFV fvm, PetscViewer v)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(fvm, PETSCFV_CLASSID, 1);
-  if (!v) {ierr = PetscViewerASCIIGetStdout(PetscObjectComm((PetscObject) fvm), &v);CHKERRQ(ierr);}
-  if (fvm->ops->view) {ierr = (*fvm->ops->view)(fvm, v);CHKERRQ(ierr);}
-  PetscFunctionReturn(0);
+  if (!v) PetscCall(PetscViewerASCIIGetStdout(PetscObjectComm((PetscObject)fvm), &v));
+  PetscTryTypeMethod(fvm, view, v);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  PetscFVSetFromOptions - sets parameters in a PetscFV from the options database
+  PetscFVSetFromOptions - sets parameters in a `PetscFV` from the options database
 
-  Collective on fvm
+  Collective
 
   Input Parameter:
-. fvm - the PetscFV object to set options for
+. fvm - the `PetscFV` object to set options for
 
   Options Database Key:
 . -petscfv_compute_gradients <bool> - Determines whether cell gradients are calculated
 
   Level: intermediate
 
-.seealso: PetscFVView()
+.seealso: `PetscFV`, `PetscFVView()`
 @*/
 PetscErrorCode PetscFVSetFromOptions(PetscFV fvm)
 {
-  const char    *defaultType;
-  char           name[256];
-  PetscBool      flg;
-  PetscErrorCode ierr;
+  const char *defaultType;
+  char        name[256];
+  PetscBool   flg;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(fvm, PETSCFV_CLASSID, 1);
-  if (!((PetscObject) fvm)->type_name) defaultType = PETSCFVUPWIND;
-  else                                 defaultType = ((PetscObject) fvm)->type_name;
-  ierr = PetscFVRegisterAll();CHKERRQ(ierr);
+  if (!((PetscObject)fvm)->type_name) defaultType = PETSCFVUPWIND;
+  else defaultType = ((PetscObject)fvm)->type_name;
+  PetscCall(PetscFVRegisterAll());
 
-  ierr = PetscObjectOptionsBegin((PetscObject) fvm);CHKERRQ(ierr);
-  ierr = PetscOptionsFList("-petscfv_type", "Finite volume discretization", "PetscFVSetType", PetscFVList, defaultType, name, 256, &flg);CHKERRQ(ierr);
+  PetscObjectOptionsBegin((PetscObject)fvm);
+  PetscCall(PetscOptionsFList("-petscfv_type", "Finite volume discretization", "PetscFVSetType", PetscFVList, defaultType, name, 256, &flg));
   if (flg) {
-    ierr = PetscFVSetType(fvm, name);CHKERRQ(ierr);
-  } else if (!((PetscObject) fvm)->type_name) {
-    ierr = PetscFVSetType(fvm, defaultType);CHKERRQ(ierr);
-
+    PetscCall(PetscFVSetType(fvm, name));
+  } else if (!((PetscObject)fvm)->type_name) {
+    PetscCall(PetscFVSetType(fvm, defaultType));
   }
-  ierr = PetscOptionsBool("-petscfv_compute_gradients", "Compute cell gradients", "PetscFVSetComputeGradients", fvm->computeGradients, &fvm->computeGradients, NULL);CHKERRQ(ierr);
-  if (fvm->ops->setfromoptions) {ierr = (*fvm->ops->setfromoptions)(fvm);CHKERRQ(ierr);}
+  PetscCall(PetscOptionsBool("-petscfv_compute_gradients", "Compute cell gradients", "PetscFVSetComputeGradients", fvm->computeGradients, &fvm->computeGradients, NULL));
+  PetscTryTypeMethod(fvm, setfromoptions);
   /* process any options handlers added with PetscObjectAddOptionsHandler() */
-  ierr = PetscObjectProcessOptionsHandlers(PetscOptionsObject,(PetscObject) fvm);CHKERRQ(ierr);
-  ierr = PetscLimiterSetFromOptions(fvm->limiter);CHKERRQ(ierr);
-  ierr = PetscOptionsEnd();CHKERRQ(ierr);
-  ierr = PetscFVViewFromOptions(fvm, NULL, "-petscfv_view");CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscObjectProcessOptionsHandlers((PetscObject)fvm, PetscOptionsObject));
+  PetscCall(PetscLimiterSetFromOptions(fvm->limiter));
+  PetscOptionsEnd();
+  PetscCall(PetscFVViewFromOptions(fvm, NULL, "-petscfv_view"));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  PetscFVSetUp - Construct data structures for the PetscFV
-
-  Collective on fvm
-
-  Input Parameter:
-. fvm - the PetscFV object to setup
-
-  Level: intermediate
-
-.seealso: PetscFVView(), PetscFVDestroy()
-@*/
-PetscErrorCode PetscFVSetUp(PetscFV fvm)
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(fvm, PETSCFV_CLASSID, 1);
-  ierr = PetscLimiterSetUp(fvm->limiter);CHKERRQ(ierr);
-  if (fvm->ops->setup) {ierr = (*fvm->ops->setup)(fvm);CHKERRQ(ierr);}
-  PetscFunctionReturn(0);
-}
-
-/*@
-  PetscFVDestroy - Destroys a PetscFV object
-
-  Collective on fvm
-
-  Input Parameter:
-. fvm - the PetscFV object to destroy
-
-  Level: beginner
-
-.seealso: PetscFVView()
-@*/
-PetscErrorCode PetscFVDestroy(PetscFV *fvm)
-{
-  PetscInt       i;
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  if (!*fvm) PetscFunctionReturn(0);
-  PetscValidHeaderSpecific((*fvm), PETSCFV_CLASSID, 1);
-
-  if (--((PetscObject)(*fvm))->refct > 0) {*fvm = NULL; PetscFunctionReturn(0);}
-  ((PetscObject) (*fvm))->refct = 0;
-
-  for (i = 0; i < (*fvm)->numComponents; i++) {
-    ierr = PetscFree((*fvm)->componentNames[i]);CHKERRQ(ierr);
-  }
-  ierr = PetscFree((*fvm)->componentNames);CHKERRQ(ierr);
-  ierr = PetscLimiterDestroy(&(*fvm)->limiter);CHKERRQ(ierr);
-  ierr = PetscDualSpaceDestroy(&(*fvm)->dualSpace);CHKERRQ(ierr);
-  ierr = PetscFree((*fvm)->fluxWork);CHKERRQ(ierr);
-  ierr = PetscQuadratureDestroy(&(*fvm)->quadrature);CHKERRQ(ierr);
-  ierr = PetscTabulationDestroy(&(*fvm)->T);CHKERRQ(ierr);
-
-  if ((*fvm)->ops->destroy) {ierr = (*(*fvm)->ops->destroy)(*fvm);CHKERRQ(ierr);}
-  ierr = PetscHeaderDestroy(fvm);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
-/*@
-  PetscFVCreate - Creates an empty PetscFV object. The type can then be set with PetscFVSetType().
+  PetscFVSetUp - Setup the data structures for the `PetscFV` based on the `PetscFVType` provided by `PetscFVSetType()`
 
   Collective
 
   Input Parameter:
-. comm - The communicator for the PetscFV object
+. fvm - the `PetscFV` object to setup
 
-  Output Parameter:
-. fvm - The PetscFV object
+  Level: intermediate
+
+.seealso: `PetscFV`, `PetscFVView()`, `PetscFVDestroy()`
+@*/
+PetscErrorCode PetscFVSetUp(PetscFV fvm)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(fvm, PETSCFV_CLASSID, 1);
+  PetscCall(PetscLimiterSetUp(fvm->limiter));
+  PetscTryTypeMethod(fvm, setup);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PetscFVDestroy - Destroys a `PetscFV` object
+
+  Collective
+
+  Input Parameter:
+. fvm - the `PetscFV` object to destroy
 
   Level: beginner
 
-.seealso: PetscFVSetType(), PETSCFVUPWIND
+.seealso: `PetscFV`, `PetscFVCreate()`, `PetscFVView()`
+@*/
+PetscErrorCode PetscFVDestroy(PetscFV *fvm)
+{
+  PetscInt i;
+
+  PetscFunctionBegin;
+  if (!*fvm) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscValidHeaderSpecific(*fvm, PETSCFV_CLASSID, 1);
+
+  if (--((PetscObject)*fvm)->refct > 0) {
+    *fvm = NULL;
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+  ((PetscObject)*fvm)->refct = 0;
+
+  for (i = 0; i < (*fvm)->numComponents; i++) PetscCall(PetscFree((*fvm)->componentNames[i]));
+  PetscCall(PetscFree((*fvm)->componentNames));
+  PetscCall(PetscLimiterDestroy(&(*fvm)->limiter));
+  PetscCall(PetscDualSpaceDestroy(&(*fvm)->dualSpace));
+  PetscCall(PetscFree((*fvm)->fluxWork));
+  PetscCall(PetscQuadratureDestroy(&(*fvm)->quadrature));
+  PetscCall(PetscTabulationDestroy(&(*fvm)->T));
+
+  PetscTryTypeMethod(*fvm, destroy);
+  PetscCall(PetscHeaderDestroy(fvm));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PetscFVCreate - Creates an empty `PetscFV` object. The type can then be set with `PetscFVSetType()`.
+
+  Collective
+
+  Input Parameter:
+. comm - The communicator for the `PetscFV` object
+
+  Output Parameter:
+. fvm - The `PetscFV` object
+
+  Level: beginner
+
+.seealso: `PetscFVSetUp()`, `PetscFVSetType()`, `PETSCFVUPWIND`, `PetscFVDestroy()`
 @*/
 PetscErrorCode PetscFVCreate(MPI_Comm comm, PetscFV *fvm)
 {
-  PetscFV        f;
-  PetscErrorCode ierr;
+  PetscFV f;
 
   PetscFunctionBegin;
-  PetscValidPointer(fvm, 2);
+  PetscAssertPointer(fvm, 2);
   *fvm = NULL;
-  ierr = PetscFVInitializePackage();CHKERRQ(ierr);
+  PetscCall(PetscFVInitializePackage());
 
-  ierr = PetscHeaderCreate(f, PETSCFV_CLASSID, "PetscFV", "Finite Volume", "PetscFV", comm, PetscFVDestroy, PetscFVView);CHKERRQ(ierr);
-  ierr = PetscMemzero(f->ops, sizeof(struct _PetscFVOps));CHKERRQ(ierr);
+  PetscCall(PetscHeaderCreate(f, PETSCFV_CLASSID, "PetscFV", "Finite Volume", "PetscFV", comm, PetscFVDestroy, PetscFVView));
+  PetscCall(PetscMemzero(f->ops, sizeof(struct _PetscFVOps)));
 
-  ierr = PetscLimiterCreate(comm, &f->limiter);CHKERRQ(ierr);
+  PetscCall(PetscLimiterCreate(comm, &f->limiter));
   f->numComponents    = 1;
   f->dim              = 0;
   f->computeGradients = PETSC_FALSE;
   f->fluxWork         = NULL;
-  ierr = PetscCalloc1(f->numComponents,&f->componentNames);CHKERRQ(ierr);
+  PetscCall(PetscCalloc1(f->numComponents, &f->componentNames));
 
   *fvm = f;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  PetscFVSetLimiter - Set the limiter object
+  PetscFVSetLimiter - Set the `PetscLimiter` to the `PetscFV`
 
-  Logically collective on fvm
+  Logically Collective
 
   Input Parameters:
-+ fvm - the PetscFV object
-- lim - The PetscLimiter
++ fvm - the `PetscFV` object
+- lim - The `PetscLimiter`
 
   Level: intermediate
 
-.seealso: PetscFVGetLimiter()
+.seealso: `PetscFV`, `PetscLimiter`, `PetscFVGetLimiter()`
 @*/
 PetscErrorCode PetscFVSetLimiter(PetscFV fvm, PetscLimiter lim)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(fvm, PETSCFV_CLASSID, 1);
   PetscValidHeaderSpecific(lim, PETSCLIMITER_CLASSID, 2);
-  ierr = PetscLimiterDestroy(&fvm->limiter);CHKERRQ(ierr);
-  ierr = PetscObjectReference((PetscObject) lim);CHKERRQ(ierr);
+  PetscCall(PetscLimiterDestroy(&fvm->limiter));
+  PetscCall(PetscObjectReference((PetscObject)lim));
   fvm->limiter = lim;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  PetscFVGetLimiter - Get the limiter object
+  PetscFVGetLimiter - Get the `PetscLimiter` object from the `PetscFV`
 
-  Not collective
+  Not Collective
 
   Input Parameter:
-. fvm - the PetscFV object
+. fvm - the `PetscFV` object
 
   Output Parameter:
-. lim - The PetscLimiter
+. lim - The `PetscLimiter`
 
   Level: intermediate
 
-.seealso: PetscFVSetLimiter()
+.seealso: `PetscFV`, `PetscLimiter`, `PetscFVSetLimiter()`
 @*/
 PetscErrorCode PetscFVGetLimiter(PetscFV fvm, PetscLimiter *lim)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(fvm, PETSCFV_CLASSID, 1);
-  PetscValidPointer(lim, 2);
+  PetscAssertPointer(lim, 2);
   *lim = fvm->limiter;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  PetscFVSetNumComponents - Set the number of field components
+  PetscFVSetNumComponents - Set the number of field components in a `PetscFV`
 
-  Logically collective on fvm
+  Logically Collective
 
   Input Parameters:
-+ fvm - the PetscFV object
++ fvm  - the `PetscFV` object
 - comp - The number of components
 
   Level: intermediate
 
-.seealso: PetscFVGetNumComponents()
+.seealso: `PetscFV`, `PetscFVGetNumComponents()`
 @*/
 PetscErrorCode PetscFVSetNumComponents(PetscFV fvm, PetscInt comp)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(fvm, PETSCFV_CLASSID, 1);
   if (fvm->numComponents != comp) {
     PetscInt i;
 
-    for (i = 0; i < fvm->numComponents; i++) {
-      ierr = PetscFree(fvm->componentNames[i]);CHKERRQ(ierr);
-    }
-    ierr = PetscFree(fvm->componentNames);CHKERRQ(ierr);
-    ierr = PetscCalloc1(comp,&fvm->componentNames);CHKERRQ(ierr);
+    for (i = 0; i < fvm->numComponents; i++) PetscCall(PetscFree(fvm->componentNames[i]));
+    PetscCall(PetscFree(fvm->componentNames));
+    PetscCall(PetscCalloc1(comp, &fvm->componentNames));
   }
   fvm->numComponents = comp;
-  ierr = PetscFree(fvm->fluxWork);CHKERRQ(ierr);
-  ierr = PetscMalloc1(comp, &fvm->fluxWork);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscFree(fvm->fluxWork));
+  PetscCall(PetscMalloc1(comp, &fvm->fluxWork));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  PetscFVGetNumComponents - Get the number of field components
+  PetscFVGetNumComponents - Get the number of field components in a `PetscFV`
 
-  Not collective
+  Not Collective
 
   Input Parameter:
-. fvm - the PetscFV object
+. fvm - the `PetscFV` object
 
   Output Parameter:
-, comp - The number of components
+. comp - The number of components
 
   Level: intermediate
 
-.seealso: PetscFVSetNumComponents()
+.seealso: `PetscFV`, `PetscFVSetNumComponents()`, `PetscFVSetComponentName()`
 @*/
 PetscErrorCode PetscFVGetNumComponents(PetscFV fvm, PetscInt *comp)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(fvm, PETSCFV_CLASSID, 1);
-  PetscValidPointer(comp, 2);
+  PetscAssertPointer(comp, 2);
   *comp = fvm->numComponents;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-  PetscFVSetComponentName - Set the name of a component (used in output and viewing)
+  PetscFVSetComponentName - Set the name of a component (used in output and viewing) in a `PetscFV`
 
-  Logically collective on fvm
+  Logically Collective
+
   Input Parameters:
-+ fvm - the PetscFV object
++ fvm  - the `PetscFV` object
 . comp - the component number
 - name - the component name
 
   Level: intermediate
 
-.seealso: PetscFVGetComponentName()
+.seealso: `PetscFV`, `PetscFVGetComponentName()`
 @*/
 PetscErrorCode PetscFVSetComponentName(PetscFV fvm, PetscInt comp, const char *name)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  ierr = PetscFree(fvm->componentNames[comp]);CHKERRQ(ierr);
-  ierr = PetscStrallocpy(name,&fvm->componentNames[comp]);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscFree(fvm->componentNames[comp]));
+  PetscCall(PetscStrallocpy(name, &fvm->componentNames[comp]));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
-  PetscFVGetComponentName - Get the name of a component (used in output and viewing)
+/*@
+  PetscFVGetComponentName - Get the name of a component (used in output and viewing) in a `PetscFV`
 
-  Logically collective on fvm
+  Logically Collective
+
   Input Parameters:
-+ fvm - the PetscFV object
++ fvm  - the `PetscFV` object
 - comp - the component number
 
   Output Parameter:
@@ -1379,746 +1315,806 @@ PetscErrorCode PetscFVSetComponentName(PetscFV fvm, PetscInt comp, const char *n
 
   Level: intermediate
 
-.seealso: PetscFVSetComponentName()
+.seealso: `PetscFV`, `PetscFVSetComponentName()`
 @*/
-PetscErrorCode PetscFVGetComponentName(PetscFV fvm, PetscInt comp, const char **name)
+PetscErrorCode PetscFVGetComponentName(PetscFV fvm, PetscInt comp, const char *name[])
 {
   PetscFunctionBegin;
   *name = fvm->componentNames[comp];
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  PetscFVSetSpatialDimension - Set the spatial dimension
+  PetscFVSetSpatialDimension - Set the spatial dimension of a `PetscFV`
 
-  Logically collective on fvm
+  Logically Collective
 
   Input Parameters:
-+ fvm - the PetscFV object
++ fvm - the `PetscFV` object
 - dim - The spatial dimension
 
   Level: intermediate
 
-.seealso: PetscFVGetSpatialDimension()
+.seealso: `PetscFV`, ``PetscFVGetSpatialDimension()`
 @*/
 PetscErrorCode PetscFVSetSpatialDimension(PetscFV fvm, PetscInt dim)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(fvm, PETSCFV_CLASSID, 1);
   fvm->dim = dim;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  PetscFVGetSpatialDimension - Get the spatial dimension
+  PetscFVGetSpatialDimension - Get the spatial dimension of a `PetscFV`
 
-  Logically collective on fvm
+  Not Collective
 
   Input Parameter:
-. fvm - the PetscFV object
+. fvm - the `PetscFV` object
 
   Output Parameter:
 . dim - The spatial dimension
 
   Level: intermediate
 
-.seealso: PetscFVSetSpatialDimension()
+.seealso: `PetscFV`, `PetscFVSetSpatialDimension()`
 @*/
 PetscErrorCode PetscFVGetSpatialDimension(PetscFV fvm, PetscInt *dim)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(fvm, PETSCFV_CLASSID, 1);
-  PetscValidPointer(dim, 2);
+  PetscAssertPointer(dim, 2);
   *dim = fvm->dim;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  PetscFVSetComputeGradients - Toggle computation of cell gradients
+  PetscFVSetComputeGradients - Toggle computation of cell gradients on a `PetscFV`
 
-  Logically collective on fvm
+  Logically Collective
 
   Input Parameters:
-+ fvm - the PetscFV object
++ fvm              - the `PetscFV` object
 - computeGradients - Flag to compute cell gradients
 
   Level: intermediate
 
-.seealso: PetscFVGetComputeGradients()
+.seealso: `PetscFV`, `PetscFVGetComputeGradients()`
 @*/
 PetscErrorCode PetscFVSetComputeGradients(PetscFV fvm, PetscBool computeGradients)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(fvm, PETSCFV_CLASSID, 1);
   fvm->computeGradients = computeGradients;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  PetscFVGetComputeGradients - Return flag for computation of cell gradients
+  PetscFVGetComputeGradients - Return flag for computation of cell gradients on a `PetscFV`
 
-  Not collective
+  Not Collective
 
   Input Parameter:
-. fvm - the PetscFV object
+. fvm - the `PetscFV` object
 
   Output Parameter:
 . computeGradients - Flag to compute cell gradients
 
   Level: intermediate
 
-.seealso: PetscFVSetComputeGradients()
+.seealso: `PetscFV`, `PetscFVSetComputeGradients()`
 @*/
 PetscErrorCode PetscFVGetComputeGradients(PetscFV fvm, PetscBool *computeGradients)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(fvm, PETSCFV_CLASSID, 1);
-  PetscValidPointer(computeGradients, 2);
+  PetscAssertPointer(computeGradients, 2);
   *computeGradients = fvm->computeGradients;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  PetscFVSetQuadrature - Set the quadrature object
+  PetscFVSetQuadrature - Set the `PetscQuadrature` object for a `PetscFV`
 
-  Logically collective on fvm
+  Logically Collective
 
   Input Parameters:
-+ fvm - the PetscFV object
-- q - The PetscQuadrature
++ fvm - the `PetscFV` object
+- q   - The `PetscQuadrature`
 
   Level: intermediate
 
-.seealso: PetscFVGetQuadrature()
+.seealso: `PetscQuadrature`, `PetscFV`, `PetscFVGetQuadrature()`
 @*/
 PetscErrorCode PetscFVSetQuadrature(PetscFV fvm, PetscQuadrature q)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(fvm, PETSCFV_CLASSID, 1);
-  ierr = PetscQuadratureDestroy(&fvm->quadrature);CHKERRQ(ierr);
-  ierr = PetscObjectReference((PetscObject) q);CHKERRQ(ierr);
+  PetscCall(PetscObjectReference((PetscObject)q));
+  PetscCall(PetscQuadratureDestroy(&fvm->quadrature));
   fvm->quadrature = q;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  PetscFVGetQuadrature - Get the quadrature object
+  PetscFVGetQuadrature - Get the `PetscQuadrature` from a `PetscFV`
 
-  Not collective
+  Not Collective
 
   Input Parameter:
-. fvm - the PetscFV object
+. fvm - the `PetscFV` object
 
   Output Parameter:
-. lim - The PetscQuadrature
+. q - The `PetscQuadrature`
 
   Level: intermediate
 
-.seealso: PetscFVSetQuadrature()
+.seealso: `PetscQuadrature`, `PetscFV`, `PetscFVSetQuadrature()`
 @*/
 PetscErrorCode PetscFVGetQuadrature(PetscFV fvm, PetscQuadrature *q)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(fvm, PETSCFV_CLASSID, 1);
-  PetscValidPointer(q, 2);
+  PetscAssertPointer(q, 2);
   if (!fvm->quadrature) {
     /* Create default 1-point quadrature */
-    PetscReal     *points, *weights;
-    PetscErrorCode ierr;
+    PetscReal *points, *weights;
 
-    ierr = PetscQuadratureCreate(PETSC_COMM_SELF, &fvm->quadrature);CHKERRQ(ierr);
-    ierr = PetscCalloc1(fvm->dim, &points);CHKERRQ(ierr);
-    ierr = PetscMalloc1(1, &weights);CHKERRQ(ierr);
+    PetscCall(PetscQuadratureCreate(PETSC_COMM_SELF, &fvm->quadrature));
+    PetscCall(PetscCalloc1(fvm->dim, &points));
+    PetscCall(PetscMalloc1(1, &weights));
     weights[0] = 1.0;
-    ierr = PetscQuadratureSetData(fvm->quadrature, fvm->dim, 1, 1, points, weights);CHKERRQ(ierr);
+    PetscCall(PetscQuadratureSetData(fvm->quadrature, fvm->dim, 1, 1, points, weights));
   }
   *q = fvm->quadrature;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  PetscFVGetDualSpace - Returns the PetscDualSpace used to define the inner product
+  PetscFVCreateDualSpace - Creates a `PetscDualSpace` appropriate for the `PetscFV`
 
-  Not collective
+  Not Collective
 
-  Input Parameter:
-. fvm - The PetscFV object
-
-  Output Parameter:
-. sp - The PetscDualSpace object
-
-  Note: A simple dual space is provided automatically, and the user typically will not need to override it.
+  Input Parameters:
++ fvm - The `PetscFV` object
+- ct  - The `DMPolytopeType` for the cell
 
   Level: intermediate
 
-.seealso: PetscFVCreate()
+.seealso: `PetscFVGetDualSpace()`, `PetscFVSetDualSpace()`, `PetscDualSpace`, `PetscFV`, `PetscFVCreate()`
+@*/
+PetscErrorCode PetscFVCreateDualSpace(PetscFV fvm, DMPolytopeType ct)
+{
+  DM       K;
+  PetscInt dim, Nc;
+
+  PetscFunctionBegin;
+  PetscCall(PetscFVGetSpatialDimension(fvm, &dim));
+  PetscCall(PetscFVGetNumComponents(fvm, &Nc));
+  PetscCall(PetscDualSpaceCreate(PetscObjectComm((PetscObject)fvm), &fvm->dualSpace));
+  PetscCall(PetscDualSpaceSetType(fvm->dualSpace, PETSCDUALSPACESIMPLE));
+  PetscCall(DMPlexCreateReferenceCell(PETSC_COMM_SELF, ct, &K));
+  PetscCall(PetscDualSpaceSetNumComponents(fvm->dualSpace, Nc));
+  PetscCall(PetscDualSpaceSetDM(fvm->dualSpace, K));
+  PetscCall(DMDestroy(&K));
+  PetscCall(PetscDualSpaceSimpleSetDimension(fvm->dualSpace, Nc));
+  // Should we be using PetscFVGetQuadrature() here?
+  for (PetscInt c = 0; c < Nc; ++c) {
+    PetscQuadrature qc;
+    PetscReal      *points, *weights;
+
+    PetscCall(PetscQuadratureCreate(PETSC_COMM_SELF, &qc));
+    PetscCall(PetscCalloc1(dim, &points));
+    PetscCall(PetscCalloc1(Nc, &weights));
+    weights[c] = 1.0;
+    PetscCall(PetscQuadratureSetData(qc, dim, Nc, 1, points, weights));
+    PetscCall(PetscDualSpaceSimpleSetFunctional(fvm->dualSpace, c, qc));
+    PetscCall(PetscQuadratureDestroy(&qc));
+  }
+  PetscCall(PetscDualSpaceSetUp(fvm->dualSpace));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PetscFVGetDualSpace - Returns the `PetscDualSpace` used to define the inner product on a `PetscFV`
+
+  Not Collective
+
+  Input Parameter:
+. fvm - The `PetscFV` object
+
+  Output Parameter:
+. sp - The `PetscDualSpace` object
+
+  Level: intermediate
+
+  Developer Notes:
+  There is overlap between the methods of `PetscFE` and `PetscFV`, they should probably share a common parent class
+
+.seealso: `PetscFVSetDualSpace()`, `PetscFVCreateDualSpace()`, `PetscDualSpace`, `PetscFV`, `PetscFVCreate()`
 @*/
 PetscErrorCode PetscFVGetDualSpace(PetscFV fvm, PetscDualSpace *sp)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(fvm, PETSCFV_CLASSID, 1);
-  PetscValidPointer(sp, 2);
+  PetscAssertPointer(sp, 2);
   if (!fvm->dualSpace) {
-    DM              K;
-    PetscInt        dim, Nc, c;
-    PetscErrorCode  ierr;
+    PetscInt dim;
 
-    ierr = PetscFVGetSpatialDimension(fvm, &dim);CHKERRQ(ierr);
-    ierr = PetscFVGetNumComponents(fvm, &Nc);CHKERRQ(ierr);
-    ierr = PetscDualSpaceCreate(PetscObjectComm((PetscObject) fvm), &fvm->dualSpace);CHKERRQ(ierr);
-    ierr = PetscDualSpaceSetType(fvm->dualSpace, PETSCDUALSPACESIMPLE);CHKERRQ(ierr);
-    ierr = PetscDualSpaceCreateReferenceCell(fvm->dualSpace, dim, PETSC_FALSE, &K);CHKERRQ(ierr); /* TODO: The reference cell type should be held by the discretization object */
-    ierr = PetscDualSpaceSetNumComponents(fvm->dualSpace, Nc);CHKERRQ(ierr);
-    ierr = PetscDualSpaceSetDM(fvm->dualSpace, K);CHKERRQ(ierr);
-    ierr = DMDestroy(&K);CHKERRQ(ierr);
-    ierr = PetscDualSpaceSimpleSetDimension(fvm->dualSpace, Nc);CHKERRQ(ierr);
-    /* Should we be using PetscFVGetQuadrature() here? */
-    for (c = 0; c < Nc; ++c) {
-      PetscQuadrature qc;
-      PetscReal      *points, *weights;
-      PetscErrorCode  ierr;
-
-      ierr = PetscQuadratureCreate(PETSC_COMM_SELF, &qc);CHKERRQ(ierr);
-      ierr = PetscCalloc1(dim, &points);CHKERRQ(ierr);
-      ierr = PetscCalloc1(Nc, &weights);CHKERRQ(ierr);
-      weights[c] = 1.0;
-      ierr = PetscQuadratureSetData(qc, dim, Nc, 1, points, weights);CHKERRQ(ierr);
-      ierr = PetscDualSpaceSimpleSetFunctional(fvm->dualSpace, c, qc);CHKERRQ(ierr);
-      ierr = PetscQuadratureDestroy(&qc);CHKERRQ(ierr);
-    }
-    ierr = PetscDualSpaceSetUp(fvm->dualSpace);CHKERRQ(ierr);
+    PetscCall(PetscFVGetSpatialDimension(fvm, &dim));
+    PetscCall(PetscFVCreateDualSpace(fvm, DMPolytopeTypeSimpleShape(dim, PETSC_FALSE)));
   }
   *sp = fvm->dualSpace;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  PetscFVSetDualSpace - Sets the PetscDualSpace used to define the inner product
+  PetscFVSetDualSpace - Sets the `PetscDualSpace` used to define the inner product
 
-  Not collective
+  Not Collective
 
   Input Parameters:
-+ fvm - The PetscFV object
-- sp  - The PetscDualSpace object
++ fvm - The `PetscFV` object
+- sp  - The `PetscDualSpace` object
 
   Level: intermediate
 
-  Note: A simple dual space is provided automatically, and the user typically will not need to override it.
+  Note:
+  A simple dual space is provided automatically, and the user typically will not need to override it.
 
-.seealso: PetscFVCreate()
+.seealso: `PetscFVGetDualSpace()`, `PetscFVCreateDualSpace()`, `PetscDualSpace`, `PetscFV`, `PetscFVCreate()`
 @*/
 PetscErrorCode PetscFVSetDualSpace(PetscFV fvm, PetscDualSpace sp)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(fvm, PETSCFV_CLASSID, 1);
   PetscValidHeaderSpecific(sp, PETSCDUALSPACE_CLASSID, 2);
-  ierr = PetscDualSpaceDestroy(&fvm->dualSpace);CHKERRQ(ierr);
+  PetscCall(PetscDualSpaceDestroy(&fvm->dualSpace));
   fvm->dualSpace = sp;
-  ierr = PetscObjectReference((PetscObject) fvm->dualSpace);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscObjectReference((PetscObject)fvm->dualSpace));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
   PetscFVGetCellTabulation - Returns the tabulation of the basis functions at the quadrature points
 
-  Not collective
+  Not Collective
 
   Input Parameter:
-. fvm - The PetscFV object
+. fvm - The `PetscFV` object
 
   Output Parameter:
-. T - The basis function values and derviatives at quadrature points
-
-  Note:
-$ T->T[0] = B[(p*pdim + i)*Nc + c] is the value at point p for basis function i and component c
-$ T->T[1] = D[((p*pdim + i)*Nc + c)*dim + d] is the derivative value at point p for basis function i, component c, in direction d
-$ T->T[2] = H[(((p*pdim + i)*Nc + c)*dim + d)*dim + e] is the value at point p for basis function i, component c, in directions d and e
+. T - The basis function values and derivatives at quadrature points
 
   Level: intermediate
 
-.seealso: PetscFEGetCellTabulation(), PetscFVCreateTabulation(), PetscFVGetQuadrature(), PetscQuadratureGetData()
+  Note:
+.vb
+  T->T[0] = B[(p*pdim + i)*Nc + c] is the value at point p for basis function i and component c
+  T->T[1] = D[((p*pdim + i)*Nc + c)*dim + d] is the derivative value at point p for basis function i, component c, in direction d
+  T->T[2] = H[(((p*pdim + i)*Nc + c)*dim + d)*dim + e] is the value at point p for basis function i, component c, in directions d and e
+.ve
+
+.seealso: `PetscFV`, `PetscTabulation`, `PetscFEGetCellTabulation()`, `PetscFVCreateTabulation()`, `PetscFVGetQuadrature()`, `PetscQuadratureGetData()`
 @*/
 PetscErrorCode PetscFVGetCellTabulation(PetscFV fvm, PetscTabulation *T)
 {
   PetscInt         npoints;
   const PetscReal *points;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(fvm, PETSCFV_CLASSID, 1);
-  PetscValidPointer(T, 2);
-  ierr = PetscQuadratureGetData(fvm->quadrature, NULL, NULL, &npoints, &points, NULL);CHKERRQ(ierr);
-  if (!fvm->T) {ierr = PetscFVCreateTabulation(fvm, 1, npoints, points, 1, &fvm->T);CHKERRQ(ierr);}
+  PetscAssertPointer(T, 2);
+  PetscCall(PetscQuadratureGetData(fvm->quadrature, NULL, NULL, &npoints, &points, NULL));
+  if (!fvm->T) PetscCall(PetscFVCreateTabulation(fvm, 1, npoints, points, 1, &fvm->T));
   *T = fvm->T;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
   PetscFVCreateTabulation - Tabulates the basis functions, and perhaps derivatives, at the points provided.
 
-  Not collective
+  Not Collective
 
   Input Parameters:
-+ fvm     - The PetscFV object
++ fvm     - The `PetscFV` object
 . nrepl   - The number of replicas
 . npoints - The number of tabulation points in a replica
 . points  - The tabulation point coordinates
 - K       - The order of derivative to tabulate
 
   Output Parameter:
-. T - The basis function values and derviative at tabulation points
-
-  Note:
-$ T->T[0] = B[(p*pdim + i)*Nc + c] is the value at point p for basis function i and component c
-$ T->T[1] = D[((p*pdim + i)*Nc + c)*dim + d] is the derivative value at point p for basis function i, component c, in direction d
-$ T->T[2] = H[(((p*pdim + i)*Nc + c)*dim + d)*dim + e] is the value at point p for basis function i, component c, in directions d and e
+. T - The basis function values and derivative at tabulation points
 
   Level: intermediate
 
-.seealso: PetscFECreateTabulation(), PetscTabulationDestroy(), PetscFEGetCellTabulation()
+  Note:
+.vb
+  T->T[0] = B[(p*pdim + i)*Nc + c] is the value at point p for basis function i and component c
+  T->T[1] = D[((p*pdim + i)*Nc + c)*dim + d] is the derivative value at point p for basis function i, component c, in direction d
+  T->T[2] = H[(((p*pdim + i)*Nc + c)*dim + d)*dim + e] is the value at point p for basis function i, component c, in directions d and e
+.ve
+
+.seealso: `PetscFV`, `PetscTabulation`, `PetscFECreateTabulation()`, `PetscTabulationDestroy()`, `PetscFEGetCellTabulation()`
 @*/
 PetscErrorCode PetscFVCreateTabulation(PetscFV fvm, PetscInt nrepl, PetscInt npoints, const PetscReal points[], PetscInt K, PetscTabulation *T)
 {
-  PetscInt         pdim = 1; /* Dimension of approximation space P */
-  PetscInt         cdim;     /* Spatial dimension */
-  PetscInt         Nc;       /* Field components */
-  PetscInt         k, p, d, c, e;
-  PetscErrorCode   ierr;
+  PetscInt pdim; // Dimension of approximation space P
+  PetscInt cdim; // Spatial dimension
+  PetscInt Nc;   // Field components
+  PetscInt k, p, d, c, e;
 
   PetscFunctionBegin;
   if (!npoints || K < 0) {
     *T = NULL;
-    PetscFunctionReturn(0);
+    PetscFunctionReturn(PETSC_SUCCESS);
   }
   PetscValidHeaderSpecific(fvm, PETSCFV_CLASSID, 1);
-  PetscValidPointer(points, 4);
-  PetscValidPointer(T, 6);
-  ierr = PetscFVGetSpatialDimension(fvm, &cdim);CHKERRQ(ierr);
-  ierr = PetscFVGetNumComponents(fvm, &Nc);CHKERRQ(ierr);
-  ierr = PetscMalloc1(1, T);CHKERRQ(ierr);
+  PetscAssertPointer(points, 4);
+  PetscAssertPointer(T, 6);
+  PetscCall(PetscFVGetSpatialDimension(fvm, &cdim));
+  PetscCall(PetscFVGetNumComponents(fvm, &Nc));
+  pdim = Nc;
+  PetscCall(PetscMalloc1(1, T));
   (*T)->K    = !cdim ? 0 : K;
   (*T)->Nr   = nrepl;
   (*T)->Np   = npoints;
   (*T)->Nb   = pdim;
   (*T)->Nc   = Nc;
   (*T)->cdim = cdim;
-  ierr = PetscMalloc1((*T)->K+1, &(*T)->T);CHKERRQ(ierr);
-  for (k = 0; k <= (*T)->K; ++k) {
-    ierr = PetscMalloc1(nrepl*npoints*pdim*Nc*PetscPowInt(cdim, k), &(*T)->T[k]);CHKERRQ(ierr);
+  PetscCall(PetscMalloc1((*T)->K + 1, &(*T)->T));
+  for (k = 0; k <= (*T)->K; ++k) PetscCall(PetscMalloc1(nrepl * npoints * pdim * Nc * PetscPowInt(cdim, k), &(*T)->T[k]));
+  if (K >= 0) {
+    for (p = 0; p < nrepl * npoints; ++p)
+      for (d = 0; d < pdim; ++d)
+        for (c = 0; c < Nc; ++c) (*T)->T[0][(p * pdim + d) * Nc + c] = 1.;
   }
-  if (K >= 0) {for (p = 0; p < nrepl*npoints; ++p) for (d = 0; d < pdim; ++d) for (c = 0; c < Nc; ++c) (*T)->T[0][(p*pdim + d)*Nc + c] = 1.0;}
-  if (K >= 1) {for (p = 0; p < nrepl*npoints; ++p) for (d = 0; d < pdim; ++d) for (c = 0; c < Nc; ++c) for (e = 0; e < cdim; ++e) (*T)->T[1][((p*pdim + d)*Nc + c)*cdim + e] = 0.0;}
-  if (K >= 2) {for (p = 0; p < nrepl*npoints; ++p) for (d = 0; d < pdim; ++d) for (c = 0; c < Nc; ++c) for (e = 0; e < cdim*cdim; ++e) (*T)->T[2][((p*pdim + d)*Nc + c)*cdim*cdim + e] = 0.0;}
-  PetscFunctionReturn(0);
+  if (K >= 1) {
+    for (p = 0; p < nrepl * npoints; ++p)
+      for (d = 0; d < pdim; ++d)
+        for (c = 0; c < Nc; ++c)
+          for (e = 0; e < cdim; ++e) (*T)->T[1][((p * pdim + d) * Nc + c) * cdim + e] = 0.0;
+  }
+  if (K >= 2) {
+    for (p = 0; p < nrepl * npoints; ++p)
+      for (d = 0; d < pdim; ++d)
+        for (c = 0; c < Nc; ++c)
+          for (e = 0; e < cdim * cdim; ++e) (*T)->T[2][((p * pdim + d) * Nc + c) * cdim * cdim + e] = 0.0;
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PetscFVComputeGradient - Compute the gradient reconstruction matrix for a given cell
 
   Input Parameters:
-+ fvm      - The PetscFV object
++ fvm      - The `PetscFV` object
 . numFaces - The number of cell faces which are not constrained
 - dx       - The vector from the cell centroid to the neighboring cell centroid for each face
 
+  Output Parameter:
+. grad - the gradient
+
   Level: advanced
 
-.seealso: PetscFVCreate()
+.seealso: `PetscFV`, `PetscFVCreate()`
 @*/
 PetscErrorCode PetscFVComputeGradient(PetscFV fvm, PetscInt numFaces, PetscScalar dx[], PetscScalar grad[])
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(fvm, PETSCFV_CLASSID, 1);
-  if (fvm->ops->computegradient) {ierr = (*fvm->ops->computegradient)(fvm, numFaces, dx, grad);CHKERRQ(ierr);}
-  PetscFunctionReturn(0);
+  PetscTryTypeMethod(fvm, computegradient, numFaces, dx, grad);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
   PetscFVIntegrateRHSFunction - Produce the cell residual vector for a chunk of elements by quadrature integration
 
-  Not collective
+  Not Collective
 
   Input Parameters:
-+ fvm          - The PetscFV object for the field being integrated
-. prob         - The PetscDS specifing the discretizations and continuum functions
-. field        - The field being integrated
-. Nf           - The number of faces in the chunk
-. fgeom        - The face geometry for each face in the chunk
-. neighborVol  - The volume for each pair of cells in the chunk
-. uL           - The state from the cell on the left
-- uR           - The state from the cell on the right
++ fvm         - The `PetscFV` object for the field being integrated
+. prob        - The `PetscDS` specifying the discretizations and continuum functions
+. field       - The field being integrated
+. Nf          - The number of faces in the chunk
+. fgeom       - The face geometry for each face in the chunk
+. neighborVol - The volume for each pair of cells in the chunk
+. uL          - The state from the cell on the left
+- uR          - The state from the cell on the right
 
-  Output Parameter:
-+ fluxL        - the left fluxes for each face
-- fluxR        - the right fluxes for each face
+  Output Parameters:
++ fluxL - the left fluxes for each face
+- fluxR - the right fluxes for each face
 
   Level: developer
 
-.seealso: PetscFVCreate()
+.seealso: `PetscFV`, `PetscDS`, `PetscFVFaceGeom`, `PetscFVCreate()`
 @*/
-PetscErrorCode PetscFVIntegrateRHSFunction(PetscFV fvm, PetscDS prob, PetscInt field, PetscInt Nf, PetscFVFaceGeom *fgeom, PetscReal *neighborVol,
-                                           PetscScalar uL[], PetscScalar uR[], PetscScalar fluxL[], PetscScalar fluxR[])
+PetscErrorCode PetscFVIntegrateRHSFunction(PetscFV fvm, PetscDS prob, PetscInt field, PetscInt Nf, PetscFVFaceGeom *fgeom, PetscReal *neighborVol, PetscScalar uL[], PetscScalar uR[], PetscScalar fluxL[], PetscScalar fluxR[])
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(fvm, PETSCFV_CLASSID, 1);
-  if (fvm->ops->integraterhsfunction) {ierr = (*fvm->ops->integraterhsfunction)(fvm, prob, field, Nf, fgeom, neighborVol, uL, uR, fluxL, fluxR);CHKERRQ(ierr);}
-  PetscFunctionReturn(0);
+  PetscTryTypeMethod(fvm, integraterhsfunction, prob, field, Nf, fgeom, neighborVol, uL, uR, fluxL, fluxR);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  PetscFVRefine - Create a "refined" PetscFV object that refines the reference cell into smaller copies. This is typically used
-  to precondition a higher order method with a lower order method on a refined mesh having the same number of dofs (but more
-  sparsity). It is also used to create an interpolation between regularly refined meshes.
+  PetscFVClone - Create a shallow copy of a `PetscFV` object that just references the internal objects.
 
   Input Parameter:
-. fv - The initial PetscFV
+. fv - The initial `PetscFV`
 
   Output Parameter:
-. fvRef - The refined PetscFV
+. fvNew - A clone of the `PetscFV`
 
   Level: advanced
 
-.seealso: PetscFVType, PetscFVCreate(), PetscFVSetType()
+  Notes:
+  This is typically used to change the number of components.
+
+.seealso: `PetscFV`, `PetscFVType`, `PetscFVCreate()`, `PetscFVSetType()`
+@*/
+PetscErrorCode PetscFVClone(PetscFV fv, PetscFV *fvNew)
+{
+  PetscDualSpace  Q;
+  DM              K;
+  PetscQuadrature q;
+  PetscInt        Nc, cdim;
+
+  PetscFunctionBegin;
+  PetscCall(PetscFVGetDualSpace(fv, &Q));
+  PetscCall(PetscFVGetQuadrature(fv, &q));
+  PetscCall(PetscDualSpaceGetDM(Q, &K));
+
+  PetscCall(PetscFVCreate(PetscObjectComm((PetscObject)fv), fvNew));
+  PetscCall(PetscFVSetDualSpace(*fvNew, Q));
+  PetscCall(PetscFVGetNumComponents(fv, &Nc));
+  PetscCall(PetscFVSetNumComponents(*fvNew, Nc));
+  PetscCall(PetscFVGetSpatialDimension(fv, &cdim));
+  PetscCall(PetscFVSetSpatialDimension(*fvNew, cdim));
+  PetscCall(PetscFVSetQuadrature(*fvNew, q));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PetscFVRefine - Create a "refined" `PetscFV` object that refines the reference cell into
+  smaller copies.
+
+  Input Parameter:
+. fv - The initial `PetscFV`
+
+  Output Parameter:
+. fvRef - The refined `PetscFV`
+
+  Level: advanced
+
+  Notes:
+  This is typically used to generate a preconditioner for a high order method from a lower order method on a
+  refined mesh having the same number of dofs (but more sparsity). It is also used to create an
+  interpolation between regularly refined meshes.
+
+.seealso: `PetscFV`, `PetscFVType`, `PetscFVCreate()`, `PetscFVSetType()`
 @*/
 PetscErrorCode PetscFVRefine(PetscFV fv, PetscFV *fvRef)
 {
-  PetscDualSpace    Q, Qref;
-  DM                K, Kref;
-  PetscQuadrature   q, qref;
-  DMPolytopeType    ct;
-  DMPlexCellRefiner cr;
-  PetscReal        *v0;
-  PetscReal        *jac, *invjac;
-  PetscInt          numComp, numSubelements, s;
-  PetscErrorCode    ierr;
+  PetscDualSpace  Q, Qref;
+  DM              K, Kref;
+  PetscQuadrature q, qref;
+  DMPolytopeType  ct;
+  DMPlexTransform tr;
+  PetscReal      *v0;
+  PetscReal      *jac, *invjac;
+  PetscInt        numComp, numSubelements, s;
 
   PetscFunctionBegin;
-  ierr = PetscFVGetDualSpace(fv, &Q);CHKERRQ(ierr);
-  ierr = PetscFVGetQuadrature(fv, &q);CHKERRQ(ierr);
-  ierr = PetscDualSpaceGetDM(Q, &K);CHKERRQ(ierr);
+  PetscCall(PetscFVGetDualSpace(fv, &Q));
+  PetscCall(PetscFVGetQuadrature(fv, &q));
+  PetscCall(PetscDualSpaceGetDM(Q, &K));
   /* Create dual space */
-  ierr = PetscDualSpaceDuplicate(Q, &Qref);CHKERRQ(ierr);
-  ierr = DMRefine(K, PetscObjectComm((PetscObject) fv), &Kref);CHKERRQ(ierr);
-  ierr = PetscDualSpaceSetDM(Qref, Kref);CHKERRQ(ierr);
-  ierr = DMDestroy(&Kref);CHKERRQ(ierr);
-  ierr = PetscDualSpaceSetUp(Qref);CHKERRQ(ierr);
+  PetscCall(PetscDualSpaceDuplicate(Q, &Qref));
+  PetscCall(DMRefine(K, PetscObjectComm((PetscObject)fv), &Kref));
+  PetscCall(PetscDualSpaceSetDM(Qref, Kref));
+  PetscCall(DMDestroy(&Kref));
+  PetscCall(PetscDualSpaceSetUp(Qref));
   /* Create volume */
-  ierr = PetscFVCreate(PetscObjectComm((PetscObject) fv), fvRef);CHKERRQ(ierr);
-  ierr = PetscFVSetDualSpace(*fvRef, Qref);CHKERRQ(ierr);
-  ierr = PetscFVGetNumComponents(fv,    &numComp);CHKERRQ(ierr);
-  ierr = PetscFVSetNumComponents(*fvRef, numComp);CHKERRQ(ierr);
-  ierr = PetscFVSetUp(*fvRef);CHKERRQ(ierr);
+  PetscCall(PetscFVCreate(PetscObjectComm((PetscObject)fv), fvRef));
+  PetscCall(PetscFVSetDualSpace(*fvRef, Qref));
+  PetscCall(PetscFVGetNumComponents(fv, &numComp));
+  PetscCall(PetscFVSetNumComponents(*fvRef, numComp));
+  PetscCall(PetscFVSetUp(*fvRef));
   /* Create quadrature */
-  ierr = DMPlexGetCellType(K, 0, &ct);CHKERRQ(ierr);
-  ierr = DMPlexCellRefinerCreate(K, &cr);CHKERRQ(ierr);
-  ierr = DMPlexCellRefinerGetAffineTransforms(cr, ct, &numSubelements, &v0, &jac, &invjac);CHKERRQ(ierr);
-  ierr = PetscQuadratureExpandComposite(q, numSubelements, v0, jac, &qref);CHKERRQ(ierr);
-  ierr = PetscDualSpaceSimpleSetDimension(Qref, numSubelements);CHKERRQ(ierr);
+  PetscCall(DMPlexGetCellType(K, 0, &ct));
+  PetscCall(DMPlexTransformCreate(PETSC_COMM_SELF, &tr));
+  PetscCall(DMPlexTransformSetType(tr, DMPLEXREFINEREGULAR));
+  PetscCall(DMPlexRefineRegularGetAffineTransforms(tr, ct, &numSubelements, &v0, &jac, &invjac));
+  PetscCall(PetscQuadratureExpandComposite(q, numSubelements, v0, jac, &qref));
+  PetscCall(PetscDualSpaceSimpleSetDimension(Qref, numSubelements));
   for (s = 0; s < numSubelements; ++s) {
     PetscQuadrature  qs;
     const PetscReal *points, *weights;
     PetscReal       *p, *w;
     PetscInt         dim, Nc, npoints, np;
 
-    ierr = PetscQuadratureCreate(PETSC_COMM_SELF, &qs);CHKERRQ(ierr);
-    ierr = PetscQuadratureGetData(q, &dim, &Nc, &npoints, &points, &weights);CHKERRQ(ierr);
-    np   = npoints/numSubelements;
-    ierr = PetscMalloc1(np*dim,&p);CHKERRQ(ierr);
-    ierr = PetscMalloc1(np*Nc,&w);CHKERRQ(ierr);
-    ierr = PetscArraycpy(p, &points[s*np*dim], np*dim);CHKERRQ(ierr);
-    ierr = PetscArraycpy(w, &weights[s*np*Nc], np*Nc);CHKERRQ(ierr);
-    ierr = PetscQuadratureSetData(qs, dim, Nc, np, p, w);CHKERRQ(ierr);
-    ierr = PetscDualSpaceSimpleSetFunctional(Qref, s, qs);CHKERRQ(ierr);
-    ierr = PetscQuadratureDestroy(&qs);CHKERRQ(ierr);
+    PetscCall(PetscQuadratureCreate(PETSC_COMM_SELF, &qs));
+    PetscCall(PetscQuadratureGetData(q, &dim, &Nc, &npoints, &points, &weights));
+    np = npoints / numSubelements;
+    PetscCall(PetscMalloc1(np * dim, &p));
+    PetscCall(PetscMalloc1(np * Nc, &w));
+    PetscCall(PetscArraycpy(p, &points[s * np * dim], np * dim));
+    PetscCall(PetscArraycpy(w, &weights[s * np * Nc], np * Nc));
+    PetscCall(PetscQuadratureSetData(qs, dim, Nc, np, p, w));
+    PetscCall(PetscDualSpaceSimpleSetFunctional(Qref, s, qs));
+    PetscCall(PetscQuadratureDestroy(&qs));
   }
-  ierr = PetscFVSetQuadrature(*fvRef, qref);CHKERRQ(ierr);
-  ierr = DMPlexCellRefinerDestroy(&cr);CHKERRQ(ierr);
-  ierr = PetscQuadratureDestroy(&qref);CHKERRQ(ierr);
-  ierr = PetscDualSpaceDestroy(&Qref);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscFVSetQuadrature(*fvRef, qref));
+  PetscCall(DMPlexTransformDestroy(&tr));
+  PetscCall(PetscQuadratureDestroy(&qref));
+  PetscCall(PetscDualSpaceDestroy(&Qref));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscFVDestroy_Upwind(PetscFV fvm)
 {
-  PetscFV_Upwind *b = (PetscFV_Upwind *) fvm->data;
-  PetscErrorCode ierr;
+  PetscFV_Upwind *b = (PetscFV_Upwind *)fvm->data;
 
   PetscFunctionBegin;
-  ierr = PetscFree(b);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscFree(b));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscFVView_Upwind_Ascii(PetscFV fv, PetscViewer viewer)
 {
   PetscInt          Nc, c;
   PetscViewerFormat format;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
-  ierr = PetscFVGetNumComponents(fv, &Nc);CHKERRQ(ierr);
-  ierr = PetscViewerGetFormat(viewer, &format);CHKERRQ(ierr);
-  ierr = PetscViewerASCIIPrintf(viewer, "Upwind Finite Volume:\n");CHKERRQ(ierr);
-  ierr = PetscViewerASCIIPrintf(viewer, "  num components: %d\n", Nc);CHKERRQ(ierr);
+  PetscCall(PetscFVGetNumComponents(fv, &Nc));
+  PetscCall(PetscViewerGetFormat(viewer, &format));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "Upwind Finite Volume:\n"));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "  num components: %" PetscInt_FMT "\n", Nc));
   for (c = 0; c < Nc; c++) {
-    if (fv->componentNames[c]) {
-      ierr = PetscViewerASCIIPrintf(viewer, "    component %d: %s\n", c, fv->componentNames[c]);CHKERRQ(ierr);
-    }
+    if (fv->componentNames[c]) PetscCall(PetscViewerASCIIPrintf(viewer, "    component %" PetscInt_FMT ": %s\n", c, fv->componentNames[c]));
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscFVView_Upwind(PetscFV fv, PetscViewer viewer)
 {
-  PetscBool      iascii;
-  PetscErrorCode ierr;
+  PetscBool iascii;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(fv, PETSCFV_CLASSID, 1);
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 2);
-  ierr = PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERASCII, &iascii);CHKERRQ(ierr);
-  if (iascii) {ierr = PetscFVView_Upwind_Ascii(fv, viewer);CHKERRQ(ierr);}
-  PetscFunctionReturn(0);
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
+  if (iascii) PetscCall(PetscFVView_Upwind_Ascii(fv, viewer));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscFVSetUp_Upwind(PetscFV fvm)
 {
   PetscFunctionBegin;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscFVComputeGradient_Upwind(PetscFV fv, PetscInt numFaces, const PetscScalar dx[], PetscScalar grad[])
+{
+  PetscInt dim;
+
+  PetscFunctionBegin;
+  PetscCall(PetscFVGetSpatialDimension(fv, &dim));
+  for (PetscInt f = 0; f < numFaces; ++f) {
+    for (PetscInt d = 0; d < dim; ++d) grad[f * dim + d] = 0.;
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*
   neighborVol[f*2+0] contains the left  geom
   neighborVol[f*2+1] contains the right geom
 */
-static PetscErrorCode PetscFVIntegrateRHSFunction_Upwind(PetscFV fvm, PetscDS prob, PetscInt field, PetscInt Nf, PetscFVFaceGeom *fgeom, PetscReal *neighborVol,
-                                                         PetscScalar uL[], PetscScalar uR[], PetscScalar fluxL[], PetscScalar fluxR[])
+static PetscErrorCode PetscFVIntegrateRHSFunction_Upwind(PetscFV fvm, PetscDS prob, PetscInt field, PetscInt Nf, PetscFVFaceGeom *fgeom, PetscReal *neighborVol, PetscScalar uL[], PetscScalar uR[], PetscScalar fluxL[], PetscScalar fluxR[])
 {
-  void             (*riemann)(PetscInt, PetscInt, const PetscReal[], const PetscReal[], const PetscScalar[], const PetscScalar[], PetscInt, const PetscScalar[], PetscScalar[], void *);
+  void (*riemann)(PetscInt, PetscInt, const PetscReal[], const PetscReal[], const PetscScalar[], const PetscScalar[], PetscInt, const PetscScalar[], PetscScalar[], void *);
   void              *rctx;
   PetscScalar       *flux = fvm->fluxWork;
   const PetscScalar *constants;
   PetscInt           dim, numConstants, pdim, totDim, Nc, off, f, d;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
-  ierr = PetscDSGetTotalComponents(prob, &Nc);CHKERRQ(ierr);
-  ierr = PetscDSGetTotalDimension(prob, &totDim);CHKERRQ(ierr);
-  ierr = PetscDSGetFieldOffset(prob, field, &off);CHKERRQ(ierr);
-  ierr = PetscDSGetRiemannSolver(prob, field, &riemann);CHKERRQ(ierr);
-  ierr = PetscDSGetContext(prob, field, &rctx);CHKERRQ(ierr);
-  ierr = PetscDSGetConstants(prob, &numConstants, &constants);CHKERRQ(ierr);
-  ierr = PetscFVGetSpatialDimension(fvm, &dim);CHKERRQ(ierr);
-  ierr = PetscFVGetNumComponents(fvm, &pdim);CHKERRQ(ierr);
+  PetscCall(PetscDSGetTotalComponents(prob, &Nc));
+  PetscCall(PetscDSGetTotalDimension(prob, &totDim));
+  PetscCall(PetscDSGetFieldOffset(prob, field, &off));
+  PetscCall(PetscDSGetRiemannSolver(prob, field, &riemann));
+  PetscCall(PetscDSGetContext(prob, field, &rctx));
+  PetscCall(PetscDSGetConstants(prob, &numConstants, &constants));
+  PetscCall(PetscFVGetSpatialDimension(fvm, &dim));
+  PetscCall(PetscFVGetNumComponents(fvm, &pdim));
   for (f = 0; f < Nf; ++f) {
-    (*riemann)(dim, pdim, fgeom[f].centroid, fgeom[f].normal, &uL[f*Nc], &uR[f*Nc], numConstants, constants, flux, rctx);
+    (*riemann)(dim, pdim, fgeom[f].centroid, fgeom[f].normal, &uL[f * Nc], &uR[f * Nc], numConstants, constants, flux, rctx);
     for (d = 0; d < pdim; ++d) {
-      fluxL[f*totDim+off+d] = flux[d] / neighborVol[f*2+0];
-      fluxR[f*totDim+off+d] = flux[d] / neighborVol[f*2+1];
+      fluxL[f * totDim + off + d] = flux[d] / neighborVol[f * 2 + 0];
+      fluxR[f * totDim + off + d] = flux[d] / neighborVol[f * 2 + 1];
     }
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscFVInitialize_Upwind(PetscFV fvm)
 {
   PetscFunctionBegin;
-  fvm->ops->setfromoptions          = NULL;
-  fvm->ops->setup                   = PetscFVSetUp_Upwind;
-  fvm->ops->view                    = PetscFVView_Upwind;
-  fvm->ops->destroy                 = PetscFVDestroy_Upwind;
-  fvm->ops->integraterhsfunction    = PetscFVIntegrateRHSFunction_Upwind;
-  PetscFunctionReturn(0);
+  fvm->ops->setfromoptions       = NULL;
+  fvm->ops->setup                = PetscFVSetUp_Upwind;
+  fvm->ops->view                 = PetscFVView_Upwind;
+  fvm->ops->destroy              = PetscFVDestroy_Upwind;
+  fvm->ops->computegradient      = PetscFVComputeGradient_Upwind;
+  fvm->ops->integraterhsfunction = PetscFVIntegrateRHSFunction_Upwind;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*MC
-  PETSCFVUPWIND = "upwind" - A PetscFV object
+  PETSCFVUPWIND = "upwind" - A `PetscFV` implementation
 
   Level: intermediate
 
-.seealso: PetscFVType, PetscFVCreate(), PetscFVSetType()
+.seealso: `PetscFV`, `PetscFVType`, `PetscFVCreate()`, `PetscFVSetType()`
 M*/
 
 PETSC_EXTERN PetscErrorCode PetscFVCreate_Upwind(PetscFV fvm)
 {
   PetscFV_Upwind *b;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(fvm, PETSCFV_CLASSID, 1);
-  ierr      = PetscNewLog(fvm,&b);CHKERRQ(ierr);
+  PetscCall(PetscNew(&b));
   fvm->data = b;
 
-  ierr = PetscFVInitialize_Upwind(fvm);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscFVInitialize_Upwind(fvm));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 #include <petscblaslapack.h>
 
 static PetscErrorCode PetscFVDestroy_LeastSquares(PetscFV fvm)
 {
-  PetscFV_LeastSquares *ls = (PetscFV_LeastSquares *) fvm->data;
-  PetscErrorCode        ierr;
+  PetscFV_LeastSquares *ls = (PetscFV_LeastSquares *)fvm->data;
 
   PetscFunctionBegin;
-  ierr = PetscObjectComposeFunction((PetscObject) fvm, "PetscFVLeastSquaresSetMaxFaces_C", NULL);CHKERRQ(ierr);
-  ierr = PetscFree4(ls->B, ls->Binv, ls->tau, ls->work);CHKERRQ(ierr);
-  ierr = PetscFree(ls);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscObjectComposeFunction((PetscObject)fvm, "PetscFVLeastSquaresSetMaxFaces_C", NULL));
+  PetscCall(PetscFree4(ls->B, ls->Binv, ls->tau, ls->work));
+  PetscCall(PetscFree(ls));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscFVView_LeastSquares_Ascii(PetscFV fv, PetscViewer viewer)
 {
   PetscInt          Nc, c;
   PetscViewerFormat format;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
-  ierr = PetscFVGetNumComponents(fv, &Nc);CHKERRQ(ierr);
-  ierr = PetscViewerGetFormat(viewer, &format);CHKERRQ(ierr);
-  ierr = PetscViewerASCIIPrintf(viewer, "Finite Volume with Least Squares Reconstruction:\n");CHKERRQ(ierr);
-  ierr = PetscViewerASCIIPrintf(viewer, "  num components: %d\n", Nc);CHKERRQ(ierr);
+  PetscCall(PetscFVGetNumComponents(fv, &Nc));
+  PetscCall(PetscViewerGetFormat(viewer, &format));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "Finite Volume with Least Squares Reconstruction:\n"));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "  num components: %" PetscInt_FMT "\n", Nc));
   for (c = 0; c < Nc; c++) {
-    if (fv->componentNames[c]) {
-      ierr = PetscViewerASCIIPrintf(viewer, "    component %d: %s\n", c, fv->componentNames[c]);CHKERRQ(ierr);
-    }
+    if (fv->componentNames[c]) PetscCall(PetscViewerASCIIPrintf(viewer, "    component %" PetscInt_FMT ": %s\n", c, fv->componentNames[c]));
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscFVView_LeastSquares(PetscFV fv, PetscViewer viewer)
 {
-  PetscBool      iascii;
-  PetscErrorCode ierr;
+  PetscBool iascii;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(fv, PETSCFV_CLASSID, 1);
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 2);
-  ierr = PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERASCII, &iascii);CHKERRQ(ierr);
-  if (iascii) {ierr = PetscFVView_LeastSquares_Ascii(fv, viewer);CHKERRQ(ierr);}
-  PetscFunctionReturn(0);
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
+  if (iascii) PetscCall(PetscFVView_LeastSquares_Ascii(fv, viewer));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscFVSetUp_LeastSquares(PetscFV fvm)
 {
   PetscFunctionBegin;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /* Overwrites A. Can only handle full-rank problems with m>=n */
-static PetscErrorCode PetscFVLeastSquaresPseudoInverse_Static(PetscInt m,PetscInt mstride,PetscInt n,PetscScalar *A,PetscScalar *Ainv,PetscScalar *tau,PetscInt worksize,PetscScalar *work)
+static PetscErrorCode PetscFVLeastSquaresPseudoInverse_Static(PetscInt m, PetscInt mstride, PetscInt n, PetscScalar *A, PetscScalar *Ainv, PetscScalar *tau, PetscInt worksize, PetscScalar *work)
 {
-  PetscBool      debug = PETSC_FALSE;
-  PetscErrorCode ierr;
-  PetscBLASInt   M,N,K,lda,ldb,ldwork,info;
-  PetscScalar    *R,*Q,*Aback,Alpha;
+  PetscBool    debug = PETSC_FALSE;
+  PetscBLASInt M, N, K, lda, ldb, ldwork, info;
+  PetscScalar *R, *Q, *Aback, Alpha;
 
   PetscFunctionBegin;
   if (debug) {
-    ierr = PetscMalloc1(m*n,&Aback);CHKERRQ(ierr);
-    ierr = PetscArraycpy(Aback,A,m*n);CHKERRQ(ierr);
+    PetscCall(PetscMalloc1(m * n, &Aback));
+    PetscCall(PetscArraycpy(Aback, A, m * n));
   }
 
-  ierr = PetscBLASIntCast(m,&M);CHKERRQ(ierr);
-  ierr = PetscBLASIntCast(n,&N);CHKERRQ(ierr);
-  ierr = PetscBLASIntCast(mstride,&lda);CHKERRQ(ierr);
-  ierr = PetscBLASIntCast(worksize,&ldwork);CHKERRQ(ierr);
-  ierr = PetscFPTrapPush(PETSC_FP_TRAP_OFF);CHKERRQ(ierr);
-  LAPACKgeqrf_(&M,&N,A,&lda,tau,work,&ldwork,&info);
-  ierr = PetscFPTrapPop();CHKERRQ(ierr);
-  if (info) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"xGEQRF error");
+  PetscCall(PetscBLASIntCast(m, &M));
+  PetscCall(PetscBLASIntCast(n, &N));
+  PetscCall(PetscBLASIntCast(mstride, &lda));
+  PetscCall(PetscBLASIntCast(worksize, &ldwork));
+  PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
+  PetscCallBLAS("LAPACKgeqrf", LAPACKgeqrf_(&M, &N, A, &lda, tau, work, &ldwork, &info));
+  PetscCall(PetscFPTrapPop());
+  PetscCheck(!info, PETSC_COMM_SELF, PETSC_ERR_LIB, "xGEQRF error");
   R = A; /* Upper triangular part of A now contains R, the rest contains the elementary reflectors */
 
   /* Extract an explicit representation of Q */
-  Q    = Ainv;
-  ierr = PetscArraycpy(Q,A,mstride*n);CHKERRQ(ierr);
-  K    = N;                     /* full rank */
-  PetscStackCallBLAS("LAPACKorgqr",LAPACKorgqr_(&M,&N,&K,Q,&lda,tau,work,&ldwork,&info));
-  if (info) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"xORGQR/xUNGQR error");
+  Q = Ainv;
+  PetscCall(PetscArraycpy(Q, A, mstride * n));
+  K = N; /* full rank */
+  PetscCallBLAS("LAPACKorgqr", LAPACKorgqr_(&M, &N, &K, Q, &lda, tau, work, &ldwork, &info));
+  PetscCheck(!info, PETSC_COMM_SELF, PETSC_ERR_LIB, "xORGQR/xUNGQR error");
 
   /* Compute A^{-T} = (R^{-1} Q^T)^T = Q R^{-T} */
   Alpha = 1.0;
   ldb   = lda;
-  BLAStrsm_("Right","Upper","ConjugateTranspose","NotUnitTriangular",&M,&N,&Alpha,R,&lda,Q,&ldb);
+  BLAStrsm_("Right", "Upper", "ConjugateTranspose", "NotUnitTriangular", &M, &N, &Alpha, R, &lda, Q, &ldb);
   /* Ainv is Q, overwritten with inverse */
 
-  if (debug) {                      /* Check that pseudo-inverse worked */
+  if (debug) { /* Check that pseudo-inverse worked */
     PetscScalar  Beta = 0.0;
     PetscBLASInt ldc;
     K   = N;
     ldc = N;
-    BLASgemm_("ConjugateTranspose","Normal",&N,&K,&M,&Alpha,Ainv,&lda,Aback,&ldb,&Beta,work,&ldc);
-    ierr = PetscScalarView(n*n,work,PETSC_VIEWER_STDOUT_SELF);CHKERRQ(ierr);
-    ierr = PetscFree(Aback);CHKERRQ(ierr);
+    BLASgemm_("ConjugateTranspose", "Normal", &N, &K, &M, &Alpha, Ainv, &lda, Aback, &ldb, &Beta, work, &ldc);
+    PetscCall(PetscScalarView(n * n, work, PETSC_VIEWER_STDOUT_SELF));
+    PetscCall(PetscFree(Aback));
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /* Overwrites A. Can handle degenerate problems and m<n. */
-static PetscErrorCode PetscFVLeastSquaresPseudoInverseSVD_Static(PetscInt m,PetscInt mstride,PetscInt n,PetscScalar *A,PetscScalar *Ainv,PetscScalar *tau,PetscInt worksize,PetscScalar *work)
+static PetscErrorCode PetscFVLeastSquaresPseudoInverseSVD_Static(PetscInt m, PetscInt mstride, PetscInt n, PetscScalar *A, PetscScalar *Ainv, PetscScalar *tau, PetscInt worksize, PetscScalar *work)
 {
-  PetscBool      debug = PETSC_FALSE;
-  PetscScalar   *Brhs, *Aback;
-  PetscScalar   *tmpwork;
-  PetscReal      rcond;
-#if defined (PETSC_USE_COMPLEX)
-  PetscInt       rworkSize;
-  PetscReal     *rwork;
+  PetscScalar *Brhs;
+  PetscScalar *tmpwork;
+  PetscReal    rcond;
+#if defined(PETSC_USE_COMPLEX)
+  PetscInt   rworkSize;
+  PetscReal *rwork;
 #endif
-  PetscInt       i, j, maxmn;
-  PetscBLASInt   M, N, lda, ldb, ldwork;
-  PetscBLASInt   nrhs, irank, info;
-  PetscErrorCode ierr;
+  PetscInt     i, j, maxmn;
+  PetscBLASInt M, N, lda, ldb, ldwork;
+  PetscBLASInt nrhs, irank, info;
 
   PetscFunctionBegin;
-  if (debug) {
-    ierr = PetscMalloc1(m*n,&Aback);CHKERRQ(ierr);
-    ierr = PetscArraycpy(Aback,A,m*n);CHKERRQ(ierr);
-  }
-
   /* initialize to identity */
-  tmpwork = Ainv;
-  Brhs = work;
-  maxmn = PetscMax(m,n);
-  for (j=0; j<maxmn; j++) {
-    for (i=0; i<maxmn; i++) Brhs[i + j*maxmn] = 1.0*(i == j);
+  tmpwork = work;
+  Brhs    = Ainv;
+  maxmn   = PetscMax(m, n);
+  for (j = 0; j < maxmn; j++) {
+    for (i = 0; i < maxmn; i++) Brhs[i + j * maxmn] = 1.0 * (i == j);
   }
 
-  ierr  = PetscBLASIntCast(m,&M);CHKERRQ(ierr);
-  ierr  = PetscBLASIntCast(n,&N);CHKERRQ(ierr);
-  ierr  = PetscBLASIntCast(mstride,&lda);CHKERRQ(ierr);
-  ierr  = PetscBLASIntCast(maxmn,&ldb);CHKERRQ(ierr);
-  ierr  = PetscBLASIntCast(worksize,&ldwork);CHKERRQ(ierr);
+  PetscCall(PetscBLASIntCast(m, &M));
+  PetscCall(PetscBLASIntCast(n, &N));
+  PetscCall(PetscBLASIntCast(mstride, &lda));
+  PetscCall(PetscBLASIntCast(maxmn, &ldb));
+  PetscCall(PetscBLASIntCast(worksize, &ldwork));
   rcond = -1;
-  ierr  = PetscFPTrapPush(PETSC_FP_TRAP_OFF);CHKERRQ(ierr);
   nrhs  = M;
 #if defined(PETSC_USE_COMPLEX)
-  rworkSize = 5 * PetscMin(M,N);
-  ierr  = PetscMalloc1(rworkSize,&rwork);CHKERRQ(ierr);
-  LAPACKgelss_(&M,&N,&nrhs,A,&lda,Brhs,&ldb, (PetscReal *) tau,&rcond,&irank,tmpwork,&ldwork,rwork,&info);
-  ierr = PetscFPTrapPop();CHKERRQ(ierr);
-  ierr = PetscFree(rwork);CHKERRQ(ierr);
+  rworkSize = 5 * PetscMin(M, N);
+  PetscCall(PetscMalloc1(rworkSize, &rwork));
+  PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
+  PetscCallBLAS("LAPACKgelss", LAPACKgelss_(&M, &N, &nrhs, A, &lda, Brhs, &ldb, (PetscReal *)tau, &rcond, &irank, tmpwork, &ldwork, rwork, &info));
+  PetscCall(PetscFPTrapPop());
+  PetscCall(PetscFree(rwork));
 #else
-  nrhs  = M;
-  LAPACKgelss_(&M,&N,&nrhs,A,&lda,Brhs,&ldb, (PetscReal *) tau,&rcond,&irank,tmpwork,&ldwork,&info);
-  ierr = PetscFPTrapPop();CHKERRQ(ierr);
+  nrhs = M;
+  PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
+  PetscCallBLAS("LAPACKgelss", LAPACKgelss_(&M, &N, &nrhs, A, &lda, Brhs, &ldb, (PetscReal *)tau, &rcond, &irank, tmpwork, &ldwork, &info));
+  PetscCall(PetscFPTrapPop());
 #endif
-  if (info) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"xGELSS error");
+  PetscCheck(!info, PETSC_COMM_SELF, PETSC_ERR_LIB, "xGELSS error");
   /* The following check should be turned into a diagnostic as soon as someone wants to do this intentionally */
-  if (irank < PetscMin(M,N)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_USER,"Rank deficient least squares fit, indicates an isolated cell with two colinear points");
-
-  /* Brhs shaped (M,nrhs) column-major coldim=mstride was overwritten by Ainv shaped (N,nrhs) column-major coldim=maxmn.
-   * Here we transpose to (N,nrhs) row-major rowdim=mstride. */
-  for (i=0; i<n; i++) {
-    for (j=0; j<nrhs; j++) Ainv[i*mstride+j] = Brhs[i + j*maxmn];
-  }
-  PetscFunctionReturn(0);
+  PetscCheck(irank >= PetscMin(M, N), PETSC_COMM_SELF, PETSC_ERR_USER, "Rank deficient least squares fit, indicates an isolated cell with two colinear points");
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 #if 0
@@ -2127,152 +2123,156 @@ static PetscErrorCode PetscFVLeastSquaresDebugCell_Static(PetscFV fvm, PetscInt 
   PetscReal       grad[2] = {0, 0};
   const PetscInt *faces;
   PetscInt        numFaces, f;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
-  ierr = DMPlexGetConeSize(dm, cell, &numFaces);CHKERRQ(ierr);
-  ierr = DMPlexGetCone(dm, cell, &faces);CHKERRQ(ierr);
+  PetscCall(DMPlexGetConeSize(dm, cell, &numFaces));
+  PetscCall(DMPlexGetCone(dm, cell, &faces));
   for (f = 0; f < numFaces; ++f) {
     const PetscInt *fcells;
     const CellGeom *cg1;
     const FaceGeom *fg;
 
-    ierr = DMPlexGetSupport(dm, faces[f], &fcells);CHKERRQ(ierr);
-    ierr = DMPlexPointLocalRead(dmFace, faces[f], fgeom, &fg);CHKERRQ(ierr);
+    PetscCall(DMPlexGetSupport(dm, faces[f], &fcells));
+    PetscCall(DMPlexPointLocalRead(dmFace, faces[f], fgeom, &fg));
     for (i = 0; i < 2; ++i) {
       PetscScalar du;
 
       if (fcells[i] == c) continue;
-      ierr = DMPlexPointLocalRead(dmCell, fcells[i], cgeom, &cg1);CHKERRQ(ierr);
+      PetscCall(DMPlexPointLocalRead(dmCell, fcells[i], cgeom, &cg1));
       du   = cg1->centroid[0] + 3*cg1->centroid[1] - (cg->centroid[0] + 3*cg->centroid[1]);
       grad[0] += fg->grad[!i][0] * du;
       grad[1] += fg->grad[!i][1] * du;
     }
   }
-  PetscPrintf(PETSC_COMM_SELF, "cell[%d] grad (%g, %g)\n", cell, grad[0], grad[1]);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscPrintf(PETSC_COMM_SELF, "cell[%d] grad (%g, %g)\n", cell, grad[0], grad[1]));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 #endif
 
 /*
-  PetscFVComputeGradient - Compute the gradient reconstruction matrix for a given cell
+  PetscFVComputeGradient_LeastSquares - Compute the gradient reconstruction matrix for a given cell
 
   Input Parameters:
-+ fvm      - The PetscFV object
++ fvm      - The `PetscFV` object
 . numFaces - The number of cell faces which are not constrained
 . dx       - The vector from the cell centroid to the neighboring cell centroid for each face
 
   Level: developer
 
-.seealso: PetscFVCreate()
+.seealso: `PetscFV`, `PetscFVCreate()`
 */
 static PetscErrorCode PetscFVComputeGradient_LeastSquares(PetscFV fvm, PetscInt numFaces, const PetscScalar dx[], PetscScalar grad[])
 {
-  PetscFV_LeastSquares *ls       = (PetscFV_LeastSquares *) fvm->data;
+  PetscFV_LeastSquares *ls       = (PetscFV_LeastSquares *)fvm->data;
   const PetscBool       useSVD   = PETSC_TRUE;
   const PetscInt        maxFaces = ls->maxFaces;
   PetscInt              dim, f, d;
-  PetscErrorCode        ierr;
 
   PetscFunctionBegin;
   if (numFaces > maxFaces) {
-    if (maxFaces < 0) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Reconstruction has not been initialized, call PetscFVLeastSquaresSetMaxFaces()");
-    SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of input faces %D > %D maxfaces", numFaces, maxFaces);
+    PetscCheck(maxFaces >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Reconstruction has not been initialized, call PetscFVLeastSquaresSetMaxFaces()");
+    SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of input faces %" PetscInt_FMT " > %" PetscInt_FMT " maxfaces", numFaces, maxFaces);
   }
-  ierr = PetscFVGetSpatialDimension(fvm, &dim);CHKERRQ(ierr);
+  PetscCall(PetscFVGetSpatialDimension(fvm, &dim));
   for (f = 0; f < numFaces; ++f) {
-    for (d = 0; d < dim; ++d) ls->B[d*maxFaces+f] = dx[f*dim+d];
+    for (d = 0; d < dim; ++d) ls->B[d * maxFaces + f] = dx[f * dim + d];
   }
   /* Overwrites B with garbage, returns Binv in row-major format */
-  if (useSVD) {ierr = PetscFVLeastSquaresPseudoInverseSVD_Static(numFaces, maxFaces, dim, ls->B, ls->Binv, ls->tau, ls->workSize, ls->work);CHKERRQ(ierr);}
-  else        {ierr = PetscFVLeastSquaresPseudoInverse_Static(numFaces, maxFaces, dim, ls->B, ls->Binv, ls->tau, ls->workSize, ls->work);CHKERRQ(ierr);}
-  for (f = 0; f < numFaces; ++f) {
-    for (d = 0; d < dim; ++d) grad[f*dim+d] = ls->Binv[d*maxFaces+f];
+  if (useSVD) {
+    PetscInt maxmn = PetscMax(numFaces, dim);
+    PetscCall(PetscFVLeastSquaresPseudoInverseSVD_Static(numFaces, maxFaces, dim, ls->B, ls->Binv, ls->tau, ls->workSize, ls->work));
+    /* Binv shaped in column-major, coldim=maxmn.*/
+    for (f = 0; f < numFaces; ++f) {
+      for (d = 0; d < dim; ++d) grad[f * dim + d] = ls->Binv[d + maxmn * f];
+    }
+  } else {
+    PetscCall(PetscFVLeastSquaresPseudoInverse_Static(numFaces, maxFaces, dim, ls->B, ls->Binv, ls->tau, ls->workSize, ls->work));
+    /* Binv shaped in row-major, rowdim=maxFaces.*/
+    for (f = 0; f < numFaces; ++f) {
+      for (d = 0; d < dim; ++d) grad[f * dim + d] = ls->Binv[d * maxFaces + f];
+    }
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*
   neighborVol[f*2+0] contains the left  geom
   neighborVol[f*2+1] contains the right geom
 */
-static PetscErrorCode PetscFVIntegrateRHSFunction_LeastSquares(PetscFV fvm, PetscDS prob, PetscInt field, PetscInt Nf, PetscFVFaceGeom *fgeom, PetscReal *neighborVol,
-                                                               PetscScalar uL[], PetscScalar uR[], PetscScalar fluxL[], PetscScalar fluxR[])
+static PetscErrorCode PetscFVIntegrateRHSFunction_LeastSquares(PetscFV fvm, PetscDS prob, PetscInt field, PetscInt Nf, PetscFVFaceGeom *fgeom, PetscReal *neighborVol, PetscScalar uL[], PetscScalar uR[], PetscScalar fluxL[], PetscScalar fluxR[])
 {
-  void             (*riemann)(PetscInt, PetscInt, const PetscReal[], const PetscReal[], const PetscScalar[], const PetscScalar[], PetscInt, const PetscScalar[], PetscScalar[], void *);
+  void (*riemann)(PetscInt, PetscInt, const PetscReal[], const PetscReal[], const PetscScalar[], const PetscScalar[], PetscInt, const PetscScalar[], PetscScalar[], void *);
   void              *rctx;
   PetscScalar       *flux = fvm->fluxWork;
   const PetscScalar *constants;
   PetscInt           dim, numConstants, pdim, Nc, totDim, off, f, d;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
-  ierr = PetscDSGetTotalComponents(prob, &Nc);CHKERRQ(ierr);
-  ierr = PetscDSGetTotalDimension(prob, &totDim);CHKERRQ(ierr);
-  ierr = PetscDSGetFieldOffset(prob, field, &off);CHKERRQ(ierr);
-  ierr = PetscDSGetRiemannSolver(prob, field, &riemann);CHKERRQ(ierr);
-  ierr = PetscDSGetContext(prob, field, &rctx);CHKERRQ(ierr);
-  ierr = PetscDSGetConstants(prob, &numConstants, &constants);CHKERRQ(ierr);
-  ierr = PetscFVGetSpatialDimension(fvm, &dim);CHKERRQ(ierr);
-  ierr = PetscFVGetNumComponents(fvm, &pdim);CHKERRQ(ierr);
+  PetscCall(PetscDSGetTotalComponents(prob, &Nc));
+  PetscCall(PetscDSGetTotalDimension(prob, &totDim));
+  PetscCall(PetscDSGetFieldOffset(prob, field, &off));
+  PetscCall(PetscDSGetRiemannSolver(prob, field, &riemann));
+  PetscCall(PetscDSGetContext(prob, field, &rctx));
+  PetscCall(PetscDSGetConstants(prob, &numConstants, &constants));
+  PetscCall(PetscFVGetSpatialDimension(fvm, &dim));
+  PetscCall(PetscFVGetNumComponents(fvm, &pdim));
   for (f = 0; f < Nf; ++f) {
-    (*riemann)(dim, pdim, fgeom[f].centroid, fgeom[f].normal, &uL[f*Nc], &uR[f*Nc], numConstants, constants, flux, rctx);
+    (*riemann)(dim, pdim, fgeom[f].centroid, fgeom[f].normal, &uL[f * Nc], &uR[f * Nc], numConstants, constants, flux, rctx);
     for (d = 0; d < pdim; ++d) {
-      fluxL[f*totDim+off+d] = flux[d] / neighborVol[f*2+0];
-      fluxR[f*totDim+off+d] = flux[d] / neighborVol[f*2+1];
+      fluxL[f * totDim + off + d] = flux[d] / neighborVol[f * 2 + 0];
+      fluxR[f * totDim + off + d] = flux[d] / neighborVol[f * 2 + 1];
     }
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscFVLeastSquaresSetMaxFaces_LS(PetscFV fvm, PetscInt maxFaces)
 {
-  PetscFV_LeastSquares *ls = (PetscFV_LeastSquares *) fvm->data;
-  PetscInt              dim, m, n, nrhs, minwork;
-  PetscErrorCode        ierr;
+  PetscFV_LeastSquares *ls = (PetscFV_LeastSquares *)fvm->data;
+  PetscInt              dim, m, n, nrhs, minmn, maxmn;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(fvm, PETSCFV_CLASSID, 1);
-  ierr = PetscFVGetSpatialDimension(fvm, &dim);CHKERRQ(ierr);
-  ierr = PetscFree4(ls->B, ls->Binv, ls->tau, ls->work);CHKERRQ(ierr);
+  PetscCall(PetscFVGetSpatialDimension(fvm, &dim));
+  PetscCall(PetscFree4(ls->B, ls->Binv, ls->tau, ls->work));
   ls->maxFaces = maxFaces;
-  m       = ls->maxFaces;
-  n       = dim;
-  nrhs    = ls->maxFaces;
-  minwork = 3*PetscMin(m,n) + PetscMax(2*PetscMin(m,n), PetscMax(PetscMax(m,n), nrhs)); /* required by LAPACK */
-  ls->workSize = 5*minwork; /* We can afford to be extra generous */
-  ierr = PetscMalloc4(ls->maxFaces*dim,&ls->B,ls->workSize,&ls->Binv,ls->maxFaces,&ls->tau,ls->workSize,&ls->work);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  m            = ls->maxFaces;
+  n            = dim;
+  nrhs         = ls->maxFaces;
+  minmn        = PetscMin(m, n);
+  maxmn        = PetscMax(m, n);
+  ls->workSize = 3 * minmn + PetscMax(2 * minmn, PetscMax(maxmn, nrhs)); /* required by LAPACK */
+  PetscCall(PetscMalloc4(m * n, &ls->B, maxmn * maxmn, &ls->Binv, minmn, &ls->tau, ls->workSize, &ls->work));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode PetscFVInitialize_LeastSquares(PetscFV fvm)
+static PetscErrorCode PetscFVInitialize_LeastSquares(PetscFV fvm)
 {
   PetscFunctionBegin;
-  fvm->ops->setfromoptions          = NULL;
-  fvm->ops->setup                   = PetscFVSetUp_LeastSquares;
-  fvm->ops->view                    = PetscFVView_LeastSquares;
-  fvm->ops->destroy                 = PetscFVDestroy_LeastSquares;
-  fvm->ops->computegradient         = PetscFVComputeGradient_LeastSquares;
-  fvm->ops->integraterhsfunction    = PetscFVIntegrateRHSFunction_LeastSquares;
-  PetscFunctionReturn(0);
+  fvm->ops->setfromoptions       = NULL;
+  fvm->ops->setup                = PetscFVSetUp_LeastSquares;
+  fvm->ops->view                 = PetscFVView_LeastSquares;
+  fvm->ops->destroy              = PetscFVDestroy_LeastSquares;
+  fvm->ops->computegradient      = PetscFVComputeGradient_LeastSquares;
+  fvm->ops->integraterhsfunction = PetscFVIntegrateRHSFunction_LeastSquares;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*MC
-  PETSCFVLEASTSQUARES = "leastsquares" - A PetscFV object
+  PETSCFVLEASTSQUARES = "leastsquares" - A `PetscFV` implementation
 
   Level: intermediate
 
-.seealso: PetscFVType, PetscFVCreate(), PetscFVSetType()
+.seealso: `PetscFV`, `PetscFVType`, `PetscFVCreate()`, `PetscFVSetType()`
 M*/
 
 PETSC_EXTERN PetscErrorCode PetscFVCreate_LeastSquares(PetscFV fvm)
 {
   PetscFV_LeastSquares *ls;
-  PetscErrorCode        ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(fvm, PETSCFV_CLASSID, 1);
-  ierr      = PetscNewLog(fvm, &ls);CHKERRQ(ierr);
+  PetscCall(PetscNew(&ls));
   fvm->data = ls;
 
   ls->maxFaces = -1;
@@ -2282,31 +2282,29 @@ PETSC_EXTERN PetscErrorCode PetscFVCreate_LeastSquares(PetscFV fvm)
   ls->tau      = NULL;
   ls->work     = NULL;
 
-  ierr = PetscFVSetComputeGradients(fvm, PETSC_TRUE);CHKERRQ(ierr);
-  ierr = PetscFVInitialize_LeastSquares(fvm);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject) fvm, "PetscFVLeastSquaresSetMaxFaces_C", PetscFVLeastSquaresSetMaxFaces_LS);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscFVSetComputeGradients(fvm, PETSC_TRUE));
+  PetscCall(PetscFVInitialize_LeastSquares(fvm));
+  PetscCall(PetscObjectComposeFunction((PetscObject)fvm, "PetscFVLeastSquaresSetMaxFaces_C", PetscFVLeastSquaresSetMaxFaces_LS));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
   PetscFVLeastSquaresSetMaxFaces - Set the maximum number of cell faces for gradient reconstruction
 
-  Not collective
+  Not Collective
 
-  Input parameters:
-+ fvm      - The PetscFV object
+  Input Parameters:
++ fvm      - The `PetscFV` object
 - maxFaces - The maximum number of cell faces
 
   Level: intermediate
 
-.seealso: PetscFVCreate(), PETSCFVLEASTSQUARES
+.seealso: `PetscFV`, `PetscFVCreate()`, `PETSCFVLEASTSQUARES`, `PetscFVComputeGradient()`
 @*/
 PetscErrorCode PetscFVLeastSquaresSetMaxFaces(PetscFV fvm, PetscInt maxFaces)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(fvm, PETSCFV_CLASSID, 1);
-  ierr = PetscTryMethod(fvm, "PetscFVLeastSquaresSetMaxFaces_C", (PetscFV,PetscInt), (fvm,maxFaces));CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscTryMethod(fvm, "PetscFVLeastSquaresSetMaxFaces_C", (PetscFV, PetscInt), (fvm, maxFaces));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

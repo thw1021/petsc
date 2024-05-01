@@ -18,6 +18,7 @@ class Configure(config.base.Configure):
     return
 
   def configureInstallationMethod(self):
+    '''Determine if PETSc was obtained via git or a tarball'''
     if os.path.exists(os.path.join(self.petscdir.dir,'lib','petsc','bin','maint')):
       self.logPrint('lib/petsc/bin/maint exists. This appears to be a repository clone')
       self.isClone = 1
@@ -27,21 +28,18 @@ class Configure(config.base.Configure):
           (o1, e1, s1) = self.executeShellCommand([self.sourceControl.git, 'describe', '--match=v*'],checkCommand = noCheck, log = self.log, cwd=self.petscdir.dir)
           (o2, e2, s2) = self.executeShellCommand([self.sourceControl.git, 'log', '-1', '--pretty=format:%H'],checkCommand = noCheck, log = self.log, cwd=self.petscdir.dir)
           (o3, e3, s3) = self.executeShellCommand([self.sourceControl.git, 'log', '-1', '--pretty=format:%ci'],checkCommand = noCheck, log = self.log, cwd=self.petscdir.dir)
-          (o4, e4, s4) = self.executeShellCommand([self.sourceControl.git, 'branch'],checkCommand = noCheck, log = self.log, cwd=self.petscdir.dir)
+          (o4, e4, s4) = self.executeShellCommand([self.sourceControl.git, 'rev-parse', '--abbrev-ref', 'HEAD'],checkCommand = noCheck, log = self.log, cwd=self.petscdir.dir)
+          (o5, e5, s5) = self.executeShellCommand([self.sourceControl.git, 'status', '--short', '-uno'],checkCommand = noCheck, log = self.log, cwd=self.petscdir.dir)
           if s2 or s3 or s4:
-            self.logPrintBox('***** WARNING: Git branch check is giving errors! Checking the repo with "git status"')
-            (o5, e5, s5) = self.executeShellCommand([self.sourceControl.git, 'status'],checkCommand = noCheck, log = self.log, cwd=self.petscdir.dir)
+            self.logPrintWarning('Git branch check is giving errors! Check configure.log for output from "git status"')
             self.logPrint(e5)
           else:
             if not o1: o1 = o2
             self.addDefine('VERSION_GIT','"'+o1+'"')
             self.addDefine('VERSION_DATE_GIT','"'+o3+'"')
-            try:
-              self.addDefine('VERSION_BRANCH_GIT','"'+re.compile('\* (.*)').search(o4).group(1)+'"')
-            except:
-              self.addDefine('VERSION_BRANCH_GIT','undetermined')
+            self.addDefine('VERSION_BRANCH_GIT','"'+o4+'"')
         else:
-          self.logPrintBox('\n*****WARNING: PETSC_DIR appears to be a Git clone - but git is not found in PATH********\n')
+          self.logPrintWarning('PETSC_DIR appears to be a Git clone - but git is not found in PATH')
       else:
         self.logPrint('This repository clone is obtained as a tarball as no .git dirs exist')
     else:

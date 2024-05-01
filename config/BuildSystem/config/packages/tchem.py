@@ -18,39 +18,43 @@ class Configure(config.package.Package):
     return
 
   def Install(self):
-    import os
+    import os, glob
 
-    libDir         = os.path.join(self.installDir, 'lib')
+    libDir         = self.libDir
     includeDir     = os.path.join(self.installDir, 'include')
     shareDir       = os.path.join(self.installDir, 'share')
 
     args = []
-    self.framework.pushLanguage('C')
-    args.append('CC="'+self.framework.getCompiler()+'"')
-    args.append('CFLAGS="'+self.removeWarningFlags(self.framework.getCompilerFlags())+'"')
-    self.framework.popLanguage()
+    self.pushLanguage('C')
+    args.append('CC='+self.getCompiler())
+    args.append('CFLAGS='+self.updatePackageCFlags(self.getCompilerFlags()))
+    self.popLanguage()
     if hasattr(self.compilers, 'CXX'):
-      self.framework.pushLanguage('Cxx')
-      args.append('CXX="'+self.framework.getCompiler()+'"')
-      args.append('CXXFLAGS="'+self.removeWarningFlags(self.framework.getCompilerFlags())+'"')
-      self.framework.popLanguage()
-    args = '\n'.join(args)
+      self.pushLanguage('Cxx')
+      args.append('CXX='+self.getCompiler())
+      args.append('CXXFLAGS='+self.updatePackageCxxFlags(self.getCompilerFlags()))
+      self.popLanguage()
 
     conffile = os.path.join(self.packageDir, self.package)
     fd = open(conffile, 'w')
-    fd.write(args)
+    fd.write(' '.join(args))
     fd.close()
 
     if self.installNeeded(conffile):
       try:
         self.logPrintBox('Configuring TChem')
-        output1,err1,ret1  = config.package.Package.executeShellCommand('cd '+self.packageDir+' && ./configure '+args, timeout=300, log = self.log)
+        output1,err1,ret1  = config.package.Package.executeShellCommand(['./configure'] + args, cwd=self.packageDir, timeout=300, log = self.log)
       except RuntimeError as e:
         raise RuntimeError('Error running configure on TChem: '+str(e))
       try:
         self.logPrintBox('Compiling TChem; this may take several minutes')
-        output2,err2,ret2  = config.package.Package.executeShellCommand('cd '+self.packageDir+' && make && cp include/TC_*.h %(includeDir)s && cp lib/libtchem* %(libDir)s' % dict(includeDir=includeDir,libDir=libDir), timeout=500, log = self.log)
-        output2,err2,ret2  = config.package.Package.executeShellCommand('cd '+self.packageDir+' && cp data/periodictable.dat  %(shareDir)s' % dict(shareDir=shareDir) , timeout=60, log = self.log)
+        output2,err2,ret2  = config.package.Package.executeShellCommand(['make'], cwd=self.packageDir, timeout=500, log = self.log)
+        output2,err2,ret2  = config.package.Package.executeShellCommandSeq([
+          ['mkdir', '-p', includeDir, libDir, shareDir],
+          ['cp'] + glob.glob(os.path.join(self.packageDir, 'include', 'TC_*')) + [includeDir],
+          ['cp'] + glob.glob(os.path.join(self.packageDir, 'lib', 'libtchem*')) + [libDir],
+          ['cp', os.path.join(self.packageDir, 'data', 'periodictable.dat'), shareDir],
+          ], timeout=500, log = self.log)
       except RuntimeError as e:
         raise RuntimeError('Error running make on TChem: '+str(e))
       self.postInstall(output1+err1+output2+err2,'tchem')

@@ -1,17 +1,8 @@
+-include ../../../petscdir.mk
 #requirespackage    'PETSC_HAVE_MPIUNI'
 
-ALL: lib
-
-CFLAGS   =
-FFLAGS   =
-SOURCEC	 = mpi.c mpitime.c
-SOURCEF	 =
-SOURCEH	 = ../../../include/petsc/mpiuni/mpi.h ../../../include/petsc/mpiuni/mpif.h
 SCRIPTS  = ../../../../lib/petsc/bin/petsc-mpiexec.uni
-LIBBASE	 = libpetscsys
-DIRS     = fsrc f90-mod
-LOCDIR   = src/sys/mpiuni/
+MANSEC   = Sys
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
-include ${PETSC_DIR}/lib/petsc/conf/rules
-include ${PETSC_DIR}/lib/petsc/conf/test
+include ${PETSC_DIR}/lib/petsc/conf/rules_doc.mk

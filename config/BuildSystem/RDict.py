@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 '''A remote dictionary server
 
     RDict is a typed, hierarchical, persistent dictionary intended to manage
@@ -16,7 +15,7 @@
     cascade to the parent. For instance, the length of the dictionary is the
     number of local keys plus the number of keys in the parent, and its
     parent, etc. Also, a dictionary need not have a parent. If a key does not
-    appear in the local dicitonary, the call if passed to the parent. However,
+    appear in the local dictionary, the call if passed to the parent. However,
     in this case we see that local keys can shadow those in a parent.
     Communication with the parent is handled using sockets, with the parent
     being a server and the interactive dictionary a client.
@@ -341,7 +340,7 @@ Arg class, which wraps the usual value.'''
       for arg in args:
         (key, value) = nargs.Arg.parseArgument(arg)
         self.insertArg(key, value, arg)
-    elif hasattr(args, keys):
+    elif hasattr(args, 'keys'):
       for key in args.keys():
         if isinstance(args[key], str):
           value = nargs.Arg.parseValue(args[key])
@@ -387,14 +386,14 @@ Arg class, which wraps the usual value.'''
     import RDict # Need this to locate server script
     import sys
     import time
-    import distutils.sysconfig
+    import sysconfig
 
     self.writeLogLine('CLIENT: Spawning a new server with lock file '+os.path.abspath(addrFilename))
     if os.path.exists(addrFilename):
       os.remove(addrFilename)
     oldDir      = os.getcwd()
     source      = os.path.join(os.path.dirname(os.path.abspath(sys.modules['RDict'].__file__)), 'RDict.py')
-    interpreter = os.path.join(distutils.sysconfig.get_config_var('BINDIR'), distutils.sysconfig.get_config_var('PYTHON'))
+    interpreter = os.path.join(sysconfig.get_config_var('BINDIR'), sysconfig.get_config_var('PYTHON'))
     if not os.path.isfile(interpreter):
       interpreter = 'python'
     os.chdir(os.path.dirname(addrFilename))

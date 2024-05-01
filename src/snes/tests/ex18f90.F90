@@ -2,7 +2,7 @@
 ! Example usage of Fortran 2003/2008 classes (extended derived types) as
 ! user-defined contexts in PETSc. Example contributed by Glenn Hammond.
 !
-module Base_module
+module ex18f90base_module
 #include "petsc/finclude/petscsnes.h"
       implicit none
   private
@@ -21,10 +21,10 @@ subroutine BasePrint(this)
   print *, 'Base printout'
   print *
 end subroutine BasePrint
-end module Base_module
+end module ex18f90base_module
 
-module Extended_module
-  use Base_module
+module ex18f90extended_module
+  use ex18f90base_module
   implicit none
   private
   type, public, extends(base_type) :: extended_type
@@ -41,15 +41,15 @@ subroutine ExtendedPrint(this)
   print *, 'Extended printout'
   print *
 end subroutine ExtendedPrint
-end module Extended_module
+end module ex18f90extended_module
 
-module Function_module
+module ex18f90function_module
   use petscsnes
   implicit none
   public :: TestFunction
   contains
 subroutine TestFunction(snes,xx,r,ctx,ierr)
-  use Base_module
+  use ex18f90base_module
   implicit none
   SNES :: snes
   Vec :: xx
@@ -58,19 +58,19 @@ subroutine TestFunction(snes,xx,r,ctx,ierr)
   PetscErrorCode :: ierr  ! polymorphic extensions
   call ctx%Print()
 end subroutine TestFunction
-end module Function_module
+end module ex18f90function_module
 
 program ex18f90
 
-  use Base_module
-  use Extended_module
-  use Function_module
+  use ex18f90base_module
+  use ex18f90extended_module
+  use ex18f90function_module
   implicit none
 
 ! ifort on windows requires this interface definition
 interface
   subroutine SNESSetFunction(snes_base,x,TestFunction,base,ierr)
-    use Base_module
+    use ex18f90base_module
     use petscsnes
     SNES snes_base
     Vec x
@@ -95,43 +95,38 @@ end interface
   nullify(extended)
   allocate(base)
   allocate(extended)
-  call PetscInitialize(PETSC_NULL_CHARACTER, ierr)
-  if (ierr .ne. 0) then
-    print*,'Unable to initialize PETSc'
-    stop
-  endif
-  call MPI_Comm_size(PETSC_COMM_WORLD,size,ierr);CHKERRA(ierr)
-  call MPI_Comm_rank(PETSC_COMM_WORLD,rank,ierr);CHKERRA(ierr)
+  PetscCallA(PetscInitialize(ierr))
+  PetscCallMPIA(MPI_Comm_size(PETSC_COMM_WORLD,size,ierr))
+  PetscCallMPIA(MPI_Comm_rank(PETSC_COMM_WORLD,rank,ierr))
 
-  call VecCreate(PETSC_COMM_WORLD,x,ierr);CHKERRA(ierr)
+  PetscCallA(VecCreate(PETSC_COMM_WORLD,x,ierr))
 
   ! use the base class as the context
   print *
   print *, 'the base class will succeed by printing out Base printout below'
-  call SNESCreate(PETSC_COMM_WORLD,snes_base,ierr);CHKERRA(ierr)
-  call SNESSetFunction(snes_base,x,TestFunction,base,ierr);CHKERRA(ierr)
-  call SNESComputeFunction(snes_base,x,x,ierr);CHKERRA(ierr)
-  call SNESDestroy(snes_base,ierr);CHKERRA(ierr)
+  PetscCallA(SNESCreate(PETSC_COMM_WORLD,snes_base,ierr))
+  PetscCallA(SNESSetFunction(snes_base,x,TestFunction,base,ierr))
+  PetscCallA(SNESComputeFunction(snes_base,x,x,ierr))
+  PetscCallA(SNESDestroy(snes_base,ierr))
 
   ! use the extended class as the context
   print *, 'the extended class will succeed by printing out Extended printout below'
-  call SNESCreate(PETSC_COMM_WORLD,snes_extended,ierr);CHKERRA(ierr)
-  call SNESSetFunction(snes_extended,x,TestFunction,extended,ierr);CHKERRA(ierr)
-  call SNESComputeFunction(snes_extended,x,x,ierr);CHKERRA(ierr)
-  call VecDestroy(x,ierr);CHKERRA(ierr)
-  call SNESDestroy(snes_extended,ierr);CHKERRA(ierr)
+  PetscCallA(SNESCreate(PETSC_COMM_WORLD,snes_extended,ierr))
+  PetscCallA(SNESSetFunction(snes_extended,x,TestFunction,extended,ierr))
+  PetscCallA(SNESComputeFunction(snes_extended,x,x,ierr))
+  PetscCallA(VecDestroy(x,ierr))
+  PetscCallA(SNESDestroy(snes_extended,ierr))
   if (associated(base)) deallocate(base)
   if (associated(extended)) deallocate(extended)
-  call PetscFinalize(ierr)
+  PetscCallA(PetscFinalize(ierr))
 
   print *, 'End of Fortran2003 test program'
-
 end program ex18f90
 
 !/*TEST
 !
 !   build:
-!      requires: define(PETSC_USING_F2003) define(PETSC_USING_F90FREEFORM)
+!      requires: defined(PETSC_USING_F2003) defined(PETSC_USING_F90FREEFORM)
 !   test:
 !     requires: !pgf90_compiler
 !

@@ -1,111 +1,103 @@
-
 /*
    Defines the abstract operations on AO (application orderings)
 */
-#include <../src/vec/is/ao/aoimpl.h>      /*I "petscao.h" I*/
+#include <../src/vec/is/ao/aoimpl.h> /*I "petscao.h" I*/
 
 /* Logging support */
 PetscClassId  AO_CLASSID;
 PetscLogEvent AO_PetscToApplication, AO_ApplicationToPetsc;
 
 /*@C
-   AOView - Displays an application ordering.
+  AOView - Displays an application ordering.
 
-   Collective on AO
+  Collective
 
-   Input Parameters:
-+  ao - the application ordering context
--  viewer - viewer used for display
+  Input Parameters:
++ ao     - the application ordering context
+- viewer - viewer used for display
 
-   Level: intermediate
+  Level: intermediate
 
-    Options Database Key:
-.   -ao_view - calls AOView() at end of AOCreate()
+  Options Database Key:
+. -ao_view - calls `AOView()` at end of `AOCreate()`
 
-   Note:
-   The available visualization contexts include
-+     PETSC_VIEWER_STDOUT_SELF - standard output (default)
--     PETSC_VIEWER_STDOUT_WORLD - synchronized standard
-         output where only the first processor opens
-         the file.  All other processors send their
-         data to the first processor to print.
+  Notes:
+  The available visualization contexts include
++     `PETSC_VIEWER_STDOUT_SELF` - standard output (default)
+-     `PETSC_VIEWER_STDOUT_WORLD` - synchronized standard
+  output where only the first processor opens
+  the file.  All other processors send their
+  data to the first processor to print.
 
-   The user can open an alternative visualization context with
-   PetscViewerASCIIOpen() - output to a specified file.
+  The user can open an alternative visualization context with
+  `PetscViewerASCIIOpen()` - output to a specified file.
 
-.seealso: PetscViewerASCIIOpen()
+.seealso: [](sec_ao), `AO`, `PetscViewerASCIIOpen()`
 @*/
-PetscErrorCode  AOView(AO ao,PetscViewer viewer)
+PetscErrorCode AOView(AO ao, PetscViewer viewer)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(ao,AO_CLASSID,1);
-  if (!viewer) {
-    ierr = PetscViewerASCIIGetStdout(PetscObjectComm((PetscObject)ao),&viewer);CHKERRQ(ierr);
-  }
-  PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,2);
+  PetscValidHeaderSpecific(ao, AO_CLASSID, 1);
+  if (!viewer) PetscCall(PetscViewerASCIIGetStdout(PetscObjectComm((PetscObject)ao), &viewer));
+  PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 2);
 
-  ierr = PetscObjectPrintClassNamePrefixType((PetscObject)ao,viewer);CHKERRQ(ierr);
-  ierr = (*ao->ops->view)(ao,viewer);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscObjectPrintClassNamePrefixType((PetscObject)ao, viewer));
+  PetscUseTypeMethod(ao, view, viewer);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-   AOViewFromOptions - View from Options
+  AOViewFromOptions - View an `AO` based on values in the options database
 
-   Collective on AO
+  Collective
 
-   Input Parameters:
-+  ao - the application ordering context
-.  obj - Optional object
--  name - command line option
+  Input Parameters:
++ ao   - the application ordering context
+. obj  - Optional object
+- name - command line option
 
-   Level: intermediate
-.seealso:  AO, AOView, PetscObjectViewFromOptions(), AOCreate()
+  Level: intermediate
+
+.seealso: [](sec_ao), `AO`, `AOView`, `PetscObjectViewFromOptions()`, `AOCreate()`
 @*/
-PetscErrorCode  AOViewFromOptions(AO ao,PetscObject obj,const char name[])
+PetscErrorCode AOViewFromOptions(AO ao, PetscObject obj, const char name[])
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(ao,AO_CLASSID,1);
-  ierr = PetscObjectViewFromOptions((PetscObject)ao,obj,name);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(ao, AO_CLASSID, 1);
+  PetscCall(PetscObjectViewFromOptions((PetscObject)ao, obj, name));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   AODestroy - Destroys an application ordering.
+  AODestroy - Destroys an application ordering.
 
-   Collective on AO
+  Collective
 
-   Input Parameters:
-.  ao - the application ordering context
+  Input Parameter:
+. ao - the application ordering context
 
-   Level: beginner
+  Level: beginner
 
-.seealso: AOCreate()
+.seealso: [](sec_ao), `AO`, `AOCreate()`
 @*/
-PetscErrorCode  AODestroy(AO *ao)
+PetscErrorCode AODestroy(AO *ao)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  if (!*ao) PetscFunctionReturn(0);
-  PetscValidHeaderSpecific((*ao),AO_CLASSID,1);
-  if (--((PetscObject)(*ao))->refct > 0) {*ao = NULL; PetscFunctionReturn(0);}
-  /* if memory was published with SAWs then destroy it */
-  ierr = PetscObjectSAWsViewOff((PetscObject)*ao);CHKERRQ(ierr);
-  ierr = ISDestroy(&(*ao)->isapp);CHKERRQ(ierr);
-  ierr = ISDestroy(&(*ao)->ispetsc);CHKERRQ(ierr);
-  /* destroy the internal part */
-  if ((*ao)->ops->destroy) {
-    ierr = (*(*ao)->ops->destroy)(*ao);CHKERRQ(ierr);
+  if (!*ao) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscValidHeaderSpecific(*ao, AO_CLASSID, 1);
+  if (--((PetscObject)*ao)->refct > 0) {
+    *ao = NULL;
+    PetscFunctionReturn(PETSC_SUCCESS);
   }
-  ierr = PetscHeaderDestroy(ao);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  /* if memory was published with SAWs then destroy it */
+  PetscCall(PetscObjectSAWsViewOff((PetscObject)*ao));
+  PetscCall(ISDestroy(&(*ao)->isapp));
+  PetscCall(ISDestroy(&(*ao)->ispetsc));
+  /* destroy the internal part */
+  PetscTryTypeMethod(*ao, destroy);
+  PetscCall(PetscHeaderDestroy(ao));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
-
 
 #include <../src/vec/is/is/impls/general/general.h>
 /* ---------------------------------------------------------------------*/
@@ -113,174 +105,167 @@ PetscErrorCode  AODestroy(AO *ao)
 PETSC_INTERN PetscErrorCode ISSetUp_General(IS);
 
 /*@
-   AOPetscToApplicationIS - Maps an index set in the PETSc ordering to
-   the application-defined ordering.
+  AOPetscToApplicationIS - Maps an index set in the PETSc ordering to
+  the application-defined ordering.
 
-   Collective on AO
+  Collective
 
-   Input Parameters:
-+  ao - the application ordering context
--  is - the index set; this is replaced with its mapped values
+  Input Parameters:
++ ao - the application ordering context
+- is - the index set; this is replaced with its mapped values
 
-   Output Parameter:
-.  is - the mapped index set
+  Output Parameter:
+. is - the mapped index set
 
-   Level: intermediate
+  Level: intermediate
 
-   Notes:
-   The index set cannot be of type stride or block
+  Notes:
+  The index set cannot be of type stride or block
 
-   Any integers in ia[] that are negative are left unchanged. This
-         allows one to convert, for example, neighbor lists that use negative
-         entries to indicate nonexistent neighbors due to boundary conditions
-         etc.
+  Any integers in is that are negative are left unchanged. This
+  allows one to convert, for example, neighbor lists that use negative
+  entries to indicate nonexistent neighbors due to boundary conditions etc.
 
-.seealso: AOCreateBasic(), AOView(),AOApplicationToPetsc(),
-          AOApplicationToPetscIS(),AOPetscToApplication()
+.seealso: [](sec_ao), `AO`, `AOCreateBasic()`, `AOView()`, `AOApplicationToPetsc()`,
+          `AOApplicationToPetscIS()`, `AOPetscToApplication()`
 @*/
-PetscErrorCode  AOPetscToApplicationIS(AO ao,IS is)
+PetscErrorCode AOPetscToApplicationIS(AO ao, IS is)
 {
-  PetscErrorCode ierr;
-  PetscInt       n;
-  PetscInt       *ia;
+  PetscInt  n;
+  PetscInt *ia;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(ao,AO_CLASSID,1);
-  PetscValidHeaderSpecific(is,IS_CLASSID,2);
-  ierr = ISToGeneral(is);CHKERRQ(ierr);
-  /* we cheat because we know the is is general and that we can change the indices */
-  ierr = ISGetIndices(is,(const PetscInt**)&ia);CHKERRQ(ierr);
-  ierr = ISGetLocalSize(is,&n);CHKERRQ(ierr);
-  ierr = (*ao->ops->petsctoapplication)(ao,n,ia);CHKERRQ(ierr);
-  ierr = ISRestoreIndices(is,(const PetscInt**)&ia);CHKERRQ(ierr);
+  PetscValidHeaderSpecific(ao, AO_CLASSID, 1);
+  PetscValidHeaderSpecific(is, IS_CLASSID, 2);
+  PetscCall(ISToGeneral(is));
+  /* we cheat because we know the IS is general and that we can change the indices */
+  PetscCall(ISGetIndices(is, (const PetscInt **)&ia));
+  PetscCall(ISGetLocalSize(is, &n));
+  PetscUseTypeMethod(ao, petsctoapplication, n, ia);
+  PetscCall(ISRestoreIndices(is, (const PetscInt **)&ia));
   /* updated cached values (sorted, min, max, etc.)*/
-  ierr = ISSetUp_General(is);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(ISSetUp_General(is));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   AOApplicationToPetscIS - Maps an index set in the application-defined
-   ordering to the PETSc ordering.
+  AOApplicationToPetscIS - Maps an index set in the application-defined
+  ordering to the PETSc ordering.
 
-   Collective on AO
+  Collective
 
-   Input Parameters:
-+  ao - the application ordering context
--  is - the index set; this is replaced with its mapped values
+  Input Parameters:
++ ao - the application ordering context
+- is - the index set; this is replaced with its mapped values
 
-   Output Parameter:
-.  is - the mapped index set
+  Output Parameter:
+. is - the mapped index set
 
-   Level: beginner
+  Level: beginner
 
-   Note:
-   The index set cannot be of type stride or block
+  Notes:
+  The index set cannot be of type stride or block
 
-   Any integers in ia[] that are negative are left unchanged. This
-   allows one to convert, for example, neighbor lists that use negative
-   entries to indicate nonexistent neighbors due to boundary conditions, etc.
+  Any integers in is that are negative are left unchanged. This
+  allows one to convert, for example, neighbor lists that use negative
+  entries to indicate nonexistent neighbors due to boundary conditions, etc.
 
-.seealso: AOCreateBasic(), AOView(), AOPetscToApplication(),
-          AOPetscToApplicationIS(), AOApplicationToPetsc()
+.seealso: [](sec_ao), `AO`, `AOCreateBasic()`, `AOView()`, `AOPetscToApplication()`,
+          `AOPetscToApplicationIS()`, `AOApplicationToPetsc()`
 @*/
-PetscErrorCode  AOApplicationToPetscIS(AO ao,IS is)
+PetscErrorCode AOApplicationToPetscIS(AO ao, IS is)
 {
-  PetscErrorCode ierr;
-  PetscInt       n,*ia;
+  PetscInt n, *ia;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(ao,AO_CLASSID,1);
-  PetscValidHeaderSpecific(is,IS_CLASSID,2);
-  ierr = ISToGeneral(is);CHKERRQ(ierr);
-  /* we cheat because we know the is is general and that we can change the indices */
-  ierr = ISGetIndices(is,(const PetscInt**)&ia);CHKERRQ(ierr);
-  ierr = ISGetLocalSize(is,&n);CHKERRQ(ierr);
-  ierr = (*ao->ops->applicationtopetsc)(ao,n,ia);CHKERRQ(ierr);
-  ierr = ISRestoreIndices(is,(const PetscInt**)&ia);CHKERRQ(ierr);
+  PetscValidHeaderSpecific(ao, AO_CLASSID, 1);
+  PetscValidHeaderSpecific(is, IS_CLASSID, 2);
+  PetscCall(ISToGeneral(is));
+  /* we cheat because we know the IS is general and that we can change the indices */
+  PetscCall(ISGetIndices(is, (const PetscInt **)&ia));
+  PetscCall(ISGetLocalSize(is, &n));
+  PetscUseTypeMethod(ao, applicationtopetsc, n, ia);
+  PetscCall(ISRestoreIndices(is, (const PetscInt **)&ia));
   /* updated cached values (sorted, min, max, etc.)*/
-  ierr = ISSetUp_General(is);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(ISSetUp_General(is));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   AOPetscToApplication - Maps a set of integers in the PETSc ordering to
-   the application-defined ordering.
+  AOPetscToApplication - Maps a set of integers in the PETSc ordering to
+  the application-defined ordering.
 
-   Collective on AO
+  Collective
 
-   Input Parameters:
-+  ao - the application ordering context
-.  n - the number of integers
--  ia - the integers; these are replaced with their mapped value
+  Input Parameters:
++ ao - the application ordering context
+. n  - the number of integers
+- ia - the integers; these are replaced with their mapped value
 
-   Output Parameter:
-.   ia - the mapped integers
+  Output Parameter:
+. ia - the mapped integers
 
-   Level: beginner
+  Level: beginner
 
-   Note:
-   Any integers in ia[] that are negative are left unchanged. This
-   allows one to convert, for example, neighbor lists that use negative
-   entries to indicate nonexistent neighbors due to boundary conditions, etc.
+  Note:
+  Any integers in ia[] that are negative are left unchanged. This
+  allows one to convert, for example, neighbor lists that use negative
+  entries to indicate nonexistent neighbors due to boundary conditions, etc.
 
-   Integers that are out of range are mapped to -1
+  Integers that are out of range are mapped to -1
 
-.seealso: AOCreateBasic(), AOView(),AOApplicationToPetsc(),
-          AOPetscToApplicationIS(), AOApplicationToPetsc()
+.seealso: [](sec_ao), `AO`, `AOCreateBasic()`, `AOView()`, `AOApplicationToPetsc()`,
+          `AOPetscToApplicationIS()`
 @*/
-PetscErrorCode  AOPetscToApplication(AO ao,PetscInt n,PetscInt ia[])
+PetscErrorCode AOPetscToApplication(AO ao, PetscInt n, PetscInt ia[])
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(ao,AO_CLASSID,1);
-  if (n) PetscValidIntPointer(ia,3);
-  ierr = (*ao->ops->petsctoapplication)(ao,n,ia);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(ao, AO_CLASSID, 1);
+  if (n) PetscAssertPointer(ia, 3);
+  PetscUseTypeMethod(ao, petsctoapplication, n, ia);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   AOApplicationToPetsc - Maps a set of integers in the application-defined
-   ordering to the PETSc ordering.
+  AOApplicationToPetsc - Maps a set of integers in the application-defined
+  ordering to the PETSc ordering.
 
-   Collective on AO
+  Collective
 
-   Input Parameters:
-+  ao - the application ordering context
-.  n - the number of integers
--  ia - the integers; these are replaced with their mapped value
+  Input Parameters:
++ ao - the application ordering context
+. n  - the number of integers
+- ia - the integers; these are replaced with their mapped value
 
-   Output Parameter:
-.   ia - the mapped integers
+  Output Parameter:
+. ia - the mapped integers
 
-   Level: beginner
+  Level: beginner
 
-   Note:
-   Any integers in ia[] that are negative are left unchanged. This
-   allows one to convert, for example, neighbor lists that use negative
-   entries to indicate nonexistent neighbors due to boundary conditions, etc.
+  Notes:
+  Any integers in ia[] that are negative are left unchanged. This
+  allows one to convert, for example, neighbor lists that use negative
+  entries to indicate nonexistent neighbors due to boundary conditions, etc.
 
-   Integers that are out of range are mapped to -1
+  Integers that are out of range are mapped to -1
 
-.seealso: AOCreateBasic(), AOView(), AOPetscToApplication(),
-          AOPetscToApplicationIS(), AOApplicationToPetsc()
+.seealso: [](sec_ao), `AOCreateBasic()`, `AOView()`, `AOPetscToApplication()`,
+          `AOPetscToApplicationIS()`
 @*/
-PetscErrorCode  AOApplicationToPetsc(AO ao,PetscInt n,PetscInt ia[])
+PetscErrorCode AOApplicationToPetsc(AO ao, PetscInt n, PetscInt ia[])
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(ao,AO_CLASSID,1);
-  if (n) PetscValidIntPointer(ia,3);
-  ierr = (*ao->ops->applicationtopetsc)(ao,n,ia);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(ao, AO_CLASSID, 1);
+  if (n) PetscAssertPointer(ia, 3);
+  PetscUseTypeMethod(ao, applicationtopetsc, n, ia);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
   AOPetscToApplicationPermuteInt - Permutes an array of blocks of integers
   in the PETSc ordering to the application-defined ordering.
 
-  Collective on AO
+  Collective
 
   Input Parameters:
 + ao    - The application ordering context
@@ -290,33 +275,32 @@ PetscErrorCode  AOApplicationToPetsc(AO ao,PetscInt n,PetscInt ia[])
   Output Parameter:
 . array - The permuted array
 
-  Note: The length of the array should be block*N, where N is length
+  Level: beginner
+
+  Notes:
+  The length of the array should be block*N, where N is length
   provided to the AOCreate*() method that created the AO.
 
   The permutation takes array[i_pet] --> array[i_app], where i_app is
   the index of 'i' in the application ordering and i_pet is the index
   of 'i' in the petsc ordering.
 
-  Level: beginner
-
-.seealso: AOCreateBasic(), AOView(), AOApplicationToPetsc(), AOPetscToApplicationIS()
+.seealso: [](sec_ao), `AO`, `AOCreateBasic()`, `AOView()`, `AOApplicationToPetsc()`, `AOPetscToApplicationIS()`
 @*/
-PetscErrorCode  AOPetscToApplicationPermuteInt(AO ao, PetscInt block, PetscInt array[])
+PetscErrorCode AOPetscToApplicationPermuteInt(AO ao, PetscInt block, PetscInt array[])
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(ao, AO_CLASSID,1);
-  PetscValidIntPointer(array,3);
-  ierr = (*ao->ops->petsctoapplicationpermuteint)(ao, block, array);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(ao, AO_CLASSID, 1);
+  PetscAssertPointer(array, 3);
+  PetscUseTypeMethod(ao, petsctoapplicationpermuteint, block, array);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
   AOApplicationToPetscPermuteInt - Permutes an array of blocks of integers
   in the application-defined ordering to the PETSc ordering.
 
-  Collective on AO
+  Collective
 
   Input Parameters:
 + ao    - The application ordering context
@@ -326,33 +310,32 @@ PetscErrorCode  AOPetscToApplicationPermuteInt(AO ao, PetscInt block, PetscInt a
   Output Parameter:
 . array - The permuted array
 
-  Note: The length of the array should be block*N, where N is length
+  Level: beginner
+
+  Notes:
+  The length of the array should be block*N, where N is length
   provided to the AOCreate*() method that created the AO.
 
   The permutation takes array[i_app] --> array[i_pet], where i_app is
   the index of 'i' in the application ordering and i_pet is the index
   of 'i' in the petsc ordering.
 
-  Level: beginner
-
-.seealso: AOCreateBasic(), AOView(), AOPetscToApplicationIS(), AOApplicationToPetsc()
+.seealso: [](sec_ao), `AO`, `AOCreateBasic()`, `AOView()`, `AOPetscToApplicationIS()`, `AOApplicationToPetsc()`
 @*/
-PetscErrorCode  AOApplicationToPetscPermuteInt(AO ao, PetscInt block, PetscInt array[])
+PetscErrorCode AOApplicationToPetscPermuteInt(AO ao, PetscInt block, PetscInt array[])
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(ao, AO_CLASSID,1);
-  PetscValidIntPointer(array,3);
-  ierr = (*ao->ops->applicationtopetscpermuteint)(ao, block, array);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(ao, AO_CLASSID, 1);
+  PetscAssertPointer(array, 3);
+  PetscUseTypeMethod(ao, applicationtopetscpermuteint, block, array);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
   AOPetscToApplicationPermuteReal - Permutes an array of blocks of reals
   in the PETSc ordering to the application-defined ordering.
 
-  Collective on AO
+  Collective
 
   Input Parameters:
 + ao    - The application ordering context
@@ -362,33 +345,32 @@ PetscErrorCode  AOApplicationToPetscPermuteInt(AO ao, PetscInt block, PetscInt a
   Output Parameter:
 . array - The permuted array
 
-  Note: The length of the array should be block*N, where N is length
+  Level: beginner
+
+  Notes:
+  The length of the array should be block*N, where N is length
   provided to the AOCreate*() method that created the AO.
 
   The permutation takes array[i_pet] --> array[i_app], where i_app is
   the index of 'i' in the application ordering and i_pet is the index
   of 'i' in the petsc ordering.
 
-  Level: beginner
-
-.seealso: AOCreateBasic(), AOView(), AOApplicationToPetsc(), AOPetscToApplicationIS()
+.seealso: [](sec_ao), `AO`, `AOCreateBasic()`, `AOView()`, `AOApplicationToPetsc()`, `AOPetscToApplicationIS()`
 @*/
-PetscErrorCode  AOPetscToApplicationPermuteReal(AO ao, PetscInt block, PetscReal array[])
+PetscErrorCode AOPetscToApplicationPermuteReal(AO ao, PetscInt block, PetscReal array[])
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(ao, AO_CLASSID,1);
-  PetscValidIntPointer(array,3);
-  ierr = (*ao->ops->petsctoapplicationpermutereal)(ao, block, array);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(ao, AO_CLASSID, 1);
+  PetscAssertPointer(array, 3);
+  PetscUseTypeMethod(ao, petsctoapplicationpermutereal, block, array);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
   AOApplicationToPetscPermuteReal - Permutes an array of blocks of reals
   in the application-defined ordering to the PETSc ordering.
 
-  Collective on AO
+  Collective
 
   Input Parameters:
 + ao    - The application ordering context
@@ -398,131 +380,126 @@ PetscErrorCode  AOPetscToApplicationPermuteReal(AO ao, PetscInt block, PetscReal
   Output Parameter:
 . array - The permuted array
 
-  Note: The length of the array should be block*N, where N is length
+  Level: beginner
+
+  Notes:
+  The length of the array should be block*N, where N is length
   provided to the AOCreate*() method that created the AO.
 
   The permutation takes array[i_app] --> array[i_pet], where i_app is
   the index of 'i' in the application ordering and i_pet is the index
   of 'i' in the petsc ordering.
 
-  Level: beginner
-
-.seealso: AOCreateBasic(), AOView(),AOApplicationToPetsc(), AOPetscToApplicationIS()
+.seealso: [](sec_ao), `AO`, `AOCreateBasic()`, `AOView()`, `AOApplicationToPetsc()`, `AOPetscToApplicationIS()`
 @*/
-PetscErrorCode  AOApplicationToPetscPermuteReal(AO ao, PetscInt block, PetscReal array[])
+PetscErrorCode AOApplicationToPetscPermuteReal(AO ao, PetscInt block, PetscReal array[])
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(ao, AO_CLASSID,1);
-  PetscValidIntPointer(array,3);
-  ierr = (*ao->ops->applicationtopetscpermutereal)(ao, block, array);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(ao, AO_CLASSID, 1);
+  PetscAssertPointer(array, 3);
+  PetscUseTypeMethod(ao, applicationtopetscpermutereal, block, array);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-    AOSetFromOptions - Sets AO options from the options database.
+  AOSetFromOptions - Sets `AO` options from the options database.
 
-   Collective on AO
+  Collective
 
-   Input Parameter:
-.  ao - the application ordering
+  Input Parameter:
+. ao - the application ordering
 
-   Level: beginner
+  Level: beginner
 
-.seealso: AOCreate(), AOSetType(), AODestroy(), AOPetscToApplication(), AOApplicationToPetsc()
+.seealso: [](sec_ao), `AO`, `AOCreate()`, `AOSetType()`, `AODestroy()`, `AOPetscToApplication()`, `AOApplicationToPetsc()`
 @*/
 PetscErrorCode AOSetFromOptions(AO ao)
 {
-  PetscErrorCode ierr;
-  char           type[256];
-  const char     *def=AOBASIC;
-  PetscBool      flg;
+  char        type[256];
+  const char *def = AOBASIC;
+  PetscBool   flg;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(ao,AO_CLASSID,1);
+  PetscValidHeaderSpecific(ao, AO_CLASSID, 1);
 
-  ierr = PetscObjectOptionsBegin((PetscObject)ao);CHKERRQ(ierr);
-  ierr = PetscOptionsFList("-ao_type","AO type","AOSetType",AOList,def,type,256,&flg);CHKERRQ(ierr);
+  PetscObjectOptionsBegin((PetscObject)ao);
+  PetscCall(PetscOptionsFList("-ao_type", "AO type", "AOSetType", AOList, def, type, 256, &flg));
   if (flg) {
-    ierr = AOSetType(ao,type);CHKERRQ(ierr);
+    PetscCall(AOSetType(ao, type));
   } else if (!((PetscObject)ao)->type_name) {
-    ierr = AOSetType(ao,def);CHKERRQ(ierr);
+    PetscCall(AOSetType(ao, def));
   }
-  ierr = PetscOptionsEnd();CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscOptionsEnd();
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   AOSetIS - Sets the IS associated with the application ordering.
+  AOSetIS - Sets the `IS` associated with the application ordering.
 
-   Collective
+  Collective
 
-   Input Parameters:
-+  ao - the application ordering
-.  isapp -  index set that defines an ordering
--  ispetsc - index set that defines another ordering (may be NULL to use the
+  Input Parameters:
++ ao      - the application ordering
+. isapp   - index set that defines an ordering
+- ispetsc - index set that defines another ordering (may be `NULL` to use the
              natural ordering)
 
-   Notes:
-   The index sets isapp and ispetsc are used only for creation of ao.
+  Level: beginner
 
-   This routine increases the reference count of isapp and ispetsc so you may/should destroy these arguments after this call if you no longer need them
+  Notes:
+  The index sets isapp and ispetsc are used only for creation of ao.
 
-   Level: beginner
+  This routine increases the reference count of isapp and ispetsc so you may/should destroy these arguments after this call if you no longer need them
 
-.seealso: AOCreate(), AODestroy(), AOPetscToApplication(), AOApplicationToPetsc()
+.seealso: [](sec_ao), [](sec_scatter), `AO`, `AOCreate()`, `AODestroy()`, `AOPetscToApplication()`, `AOApplicationToPetsc()`
 @*/
-PetscErrorCode AOSetIS(AO ao,IS isapp,IS ispetsc)
+PetscErrorCode AOSetIS(AO ao, IS isapp, IS ispetsc)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   if (ispetsc) {
-    PetscInt napp,npetsc;
-    ierr = ISGetLocalSize(isapp,&napp);CHKERRQ(ierr);
-    ierr = ISGetLocalSize(ispetsc,&npetsc);CHKERRQ(ierr);
-    if (napp != npetsc) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"napp %D != npetsc %D. Local IS lengths must match",napp,npetsc);
+    PetscInt napp, npetsc;
+    PetscCall(ISGetLocalSize(isapp, &napp));
+    PetscCall(ISGetLocalSize(ispetsc, &npetsc));
+    PetscCheck(napp == npetsc, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "napp %" PetscInt_FMT " != npetsc %" PetscInt_FMT ". Local IS lengths must match", napp, npetsc);
   }
-  if (isapp) {ierr = PetscObjectReference((PetscObject)isapp);CHKERRQ(ierr);}
-  if (ispetsc) {ierr = PetscObjectReference((PetscObject)ispetsc);CHKERRQ(ierr);}
-  ierr = ISDestroy(&ao->isapp);CHKERRQ(ierr);
-  ierr = ISDestroy(&ao->ispetsc);CHKERRQ(ierr);
+  if (isapp) PetscCall(PetscObjectReference((PetscObject)isapp));
+  if (ispetsc) PetscCall(PetscObjectReference((PetscObject)ispetsc));
+  PetscCall(ISDestroy(&ao->isapp));
+  PetscCall(ISDestroy(&ao->ispetsc));
   ao->isapp   = isapp;
   ao->ispetsc = ispetsc;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   AOCreate - Creates an application ordering.
+  AOCreate - Creates an application ordering. That is an object that maps from an application ordering to a PETSc ordering and vice versa
 
-   Collective
+  Collective
 
-   Input Parameters:
-.  comm - MPI communicator that is to share AO
+  Input Parameter:
+. comm - MPI communicator that is to share the `AO`
 
-   Output Parameter:
-.  ao - the new application ordering
+  Output Parameter:
+. ao - the new application ordering
 
-   Options Database Key:
-+   -ao_type <aotype> - create ao with particular format
--   -ao_view - call AOView() at the conclusion of AOCreate()
+  Options Database Key:
++ -ao_type <aotype> - create ao with particular format
+- -ao_view          - call AOView() at the conclusion of AOCreate()
 
-   Level: beginner
+  Level: beginner
 
-.seealso: AOSetIS(), AODestroy(), AOPetscToApplication(), AOApplicationToPetsc()
+.seealso: [](sec_ao), `AO`, `AOSetIS()`, `AODestroy()`, `AOPetscToApplication()`, `AOApplicationToPetsc()`
 @*/
-PetscErrorCode  AOCreate(MPI_Comm comm,AO *ao)
+PetscErrorCode AOCreate(MPI_Comm comm, AO *ao)
 {
-  PetscErrorCode ierr;
-  AO             aonew;
+  AO aonew;
 
   PetscFunctionBegin;
-  PetscValidPointer(ao,2);
+  PetscAssertPointer(ao, 2);
   *ao = NULL;
-  ierr = AOInitializePackage();CHKERRQ(ierr);
+  PetscCall(AOInitializePackage());
 
-  ierr = PetscHeaderCreate(aonew,AO_CLASSID,"AO","Application Ordering","AO",comm,AODestroy,AOView);CHKERRQ(ierr);
-  *ao  = aonew;
-  PetscFunctionReturn(0);
+  PetscCall(PetscHeaderCreate(aonew, AO_CLASSID, "AO", "Application Ordering", "AO", comm, AODestroy, AOView));
+  *ao = aonew;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

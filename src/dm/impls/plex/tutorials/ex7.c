@@ -2,116 +2,84 @@ static char help[] = "Create a Plex sphere from quads and create a P1 section\n\
 
 #include <petscdmplex.h>
 
-typedef struct {
-  PetscInt  dim;     /* Topological problem dimension */
-  PetscBool simplex; /* Mesh with simplices */
-} AppCtx;
-
-static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBeginUser;
-  options->dim     = 2;
-  options->simplex = PETSC_FALSE;
-
-  ierr = PetscOptionsBegin(comm, "", "Sphere Mesh Options", "DMPLEX");CHKERRQ(ierr);
-  ierr = PetscOptionsRangeInt("-dim", "Problem dimension", "ex7.c", options->dim, &options->dim, NULL,1,3);CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-simplex", "Use simplices, or tensor product cells", "ex7.c", options->simplex, &options->simplex, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsEnd();
-  PetscFunctionReturn(0);
-}
-
 static PetscErrorCode SetupSection(DM dm)
 {
-  PetscSection   s;
-  PetscInt       vStart, vEnd, v;
-  PetscErrorCode ierr;
+  PetscSection s;
+  PetscInt     vStart, vEnd, v;
 
   PetscFunctionBeginUser;
-  ierr = DMPlexGetDepthStratum(dm, 0, &vStart, &vEnd);CHKERRQ(ierr);
-  ierr = PetscSectionCreate(PetscObjectComm((PetscObject) dm), &s);CHKERRQ(ierr);
-  ierr = PetscSectionSetNumFields(s, 1);CHKERRQ(ierr);
-  ierr = PetscSectionSetFieldComponents(s, 0, 1);CHKERRQ(ierr);
-  ierr = PetscSectionSetChart(s, vStart, vEnd);CHKERRQ(ierr);
+  PetscCall(DMPlexGetDepthStratum(dm, 0, &vStart, &vEnd));
+  PetscCall(PetscSectionCreate(PetscObjectComm((PetscObject)dm), &s));
+  PetscCall(PetscSectionSetNumFields(s, 1));
+  PetscCall(PetscSectionSetFieldComponents(s, 0, 1));
+  PetscCall(PetscSectionSetChart(s, vStart, vEnd));
   for (v = vStart; v < vEnd; ++v) {
-    ierr = PetscSectionSetDof(s, v, 1);CHKERRQ(ierr);
-    ierr = PetscSectionSetFieldDof(s, v, 0, 1);CHKERRQ(ierr);
+    PetscCall(PetscSectionSetDof(s, v, 1));
+    PetscCall(PetscSectionSetFieldDof(s, v, 0, 1));
   }
-  ierr = PetscSectionSetUp(s);CHKERRQ(ierr);
-  ierr = DMSetLocalSection(dm, s);CHKERRQ(ierr);
-  ierr = PetscSectionDestroy(&s);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscSectionSetUp(s));
+  PetscCall(DMSetLocalSection(dm, s));
+  PetscCall(PetscSectionDestroy(&s));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 int main(int argc, char **argv)
 {
-  DM             dm;
-  Vec            u;
-  AppCtx         ctx;
-  PetscErrorCode ierr;
+  DM  dm;
+  Vec u;
 
-  ierr = PetscInitialize(&argc, &argv, NULL,help);if (ierr) return ierr;
-  ierr = ProcessOptions(PETSC_COMM_WORLD, &ctx);CHKERRQ(ierr);
-  ierr = DMPlexCreateSphereMesh(PETSC_COMM_WORLD, ctx.dim, ctx.simplex, 1.0, &dm);CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject) dm, "Sphere");CHKERRQ(ierr);
-  /* Distribute mesh over processes */
-  {
-     DM dmDist = NULL;
-     PetscPartitioner part;
-     ierr = DMPlexGetPartitioner(dm, &part);CHKERRQ(ierr);
-     ierr = PetscPartitionerSetFromOptions(part);CHKERRQ(ierr);
-     ierr = DMPlexDistribute(dm, 0, NULL, &dmDist);CHKERRQ(ierr);
-     if (dmDist) {
-       ierr = DMDestroy(&dm);CHKERRQ(ierr);
-       dm  = dmDist;
-     }
-  }
-  ierr = DMSetFromOptions(dm);CHKERRQ(ierr);
-  ierr = DMViewFromOptions(dm, NULL, "-dm_view");CHKERRQ(ierr);
-  ierr = SetupSection(dm);CHKERRQ(ierr);
-  ierr = DMGetGlobalVector(dm, &u);CHKERRQ(ierr);
-  ierr = VecSet(u, 2);CHKERRQ(ierr);
-  ierr = VecViewFromOptions(u, NULL, "-vec_view");CHKERRQ(ierr);
-  ierr = DMRestoreGlobalVector(dm, &u);CHKERRQ(ierr);
-  ierr = DMDestroy(&dm);CHKERRQ(ierr);
-  ierr = PetscFinalize();
-  return ierr;
+  PetscFunctionBeginUser;
+  PetscCall(PetscInitialize(&argc, &argv, NULL, help));
+  PetscCall(DMCreate(PETSC_COMM_WORLD, &dm));
+  PetscCall(DMSetType(dm, DMPLEX));
+  PetscCall(DMSetFromOptions(dm));
+  PetscCall(PetscObjectSetName((PetscObject)dm, "Sphere"));
+  PetscCall(DMViewFromOptions(dm, NULL, "-dm_view"));
+
+  PetscCall(SetupSection(dm));
+  PetscCall(DMGetGlobalVector(dm, &u));
+  PetscCall(VecSet(u, 2));
+  PetscCall(VecViewFromOptions(u, NULL, "-vec_view"));
+  PetscCall(DMRestoreGlobalVector(dm, &u));
+  PetscCall(DMDestroy(&dm));
+  PetscCall(PetscFinalize());
+  return 0;
 }
 
 /*TEST
 
-  test:
-    suffix: 2d_quad
+  testset:
     requires: !__float128
-    args: -dm_view
+    args: -dm_plex_shape sphere -dm_view
 
-  test:
-    suffix: 2d_quad_parallel
-    requires: !__float128
-    args: -dm_view -petscpartitioner_type simple
-    nsize: 2
+    test:
+      suffix: 2d_quad
+      args: -dm_plex_simplex 0
 
-  test:
-    suffix: 2d_tri
-    requires: !__float128
-    args: -simplex -dm_view
+    test:
+      suffix: 2d_tri
+      args:
 
-  test:
-    suffix: 2d_tri_parallel
-    requires: !__float128
-    args: -simplex -dm_view -petscpartitioner_type simple
-    nsize: 2
+    test:
+      suffix: 3d_tri
+      args: -dm_plex_dim 3
 
-  test:
-    suffix: 3d_tri
+  testset:
     requires: !__float128
-    args: -dim 3 -simplex -dm_view
+    args: -dm_plex_shape sphere -petscpartitioner_type simple -dm_view
 
-  test:
-    suffix: 3d_tri_parallel
-    requires: !__float128
-    args: -dim 3 -simplex -dm_view -petscpartitioner_type simple
-    nsize: 2
+    test:
+      suffix: 2d_quad_parallel
+      nsize: 2
+      args: -dm_plex_simplex 0
+
+    test:
+      suffix: 2d_tri_parallel
+      nsize: 2
+
+    test:
+      suffix: 3d_tri_parallel
+      nsize: 2
+      args: -dm_plex_dim 3
 
 TEST*/

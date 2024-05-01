@@ -1,136 +1,70 @@
-IS Object: 1D, Simplex, Order 3, Point 0 Symmetry -2 1 MPI processes
+IS Object: 1D, Simplex, Order 3, Point 0 Symmetry -1 1 MPI process
   type: general
 Number of indices in set 2
 0 1
 1 0
-Vec Object: 1D, Simplex, Order 3, Point 0 Symmetry -2 1 MPI processes
+Vec Object: 1D, Simplex, Order 3, Point 0 Symmetry -1 1 MPI process
   type: seq
-0.333333
--0.333333
-IS Object: 1D, Simplex, Order 3, Point 0 Symmetry -1 1 MPI processes
+0.447214
+-0.447214
+IS Object: 1D, Simplex, Order 3, Point 0 Symmetry 0 1 MPI process
   type: general
 Number of indices in set 2
 0 0
 1 1
-Vec Object: 1D, Simplex, Order 3, Point 0 Symmetry -1 1 MPI processes
+Vec Object: 1D, Simplex, Order 3, Point 0 Symmetry 0 1 MPI process
   type: seq
--0.333333
-0.333333
-IS Object: 1D, Simplex, Order 3, Point 0 Symmetry 0 1 MPI processes
-  type: general
-Number of indices in set 2
-0 0
-1 1
-Vec Object: 1D, Simplex, Order 3, Point 0 Symmetry 0 1 MPI processes
-  type: seq
--0.333333
-0.333333
-IS Object: 1D, Simplex, Order 3, Point 0 Symmetry 1 1 MPI processes
-  type: general
-Number of indices in set 2
-0 1
-1 0
-Vec Object: 1D, Simplex, Order 3, Point 0 Symmetry 1 1 MPI processes
-  type: seq
-0.333333
--0.333333
-IS Object: 1D, Simplex, Order 4, Point 0 Symmetry -2 1 MPI processes
+-0.447214
+0.447214
+IS Object: 1D, Simplex, Order 4, Point 0 Symmetry -1 1 MPI process
   type: general
 Number of indices in set 3
 0 2
 1 1
 2 0
-Vec Object: 1D, Simplex, Order 4, Point 0 Symmetry -2 1 MPI processes
+Vec Object: 1D, Simplex, Order 4, Point 0 Symmetry -1 1 MPI process
   type: seq
-0.5
+0.654654
 0.
--0.5
-IS Object: 1D, Simplex, Order 4, Point 0 Symmetry -1 1 MPI processes
+-0.654654
+IS Object: 1D, Simplex, Order 4, Point 0 Symmetry 0 1 MPI process
   type: general
 Number of indices in set 3
 0 0
 1 1
 2 2
-Vec Object: 1D, Simplex, Order 4, Point 0 Symmetry -1 1 MPI processes
+Vec Object: 1D, Simplex, Order 4, Point 0 Symmetry 0 1 MPI process
   type: seq
--0.5
+-0.654654
 0.
-0.5
-IS Object: 1D, Simplex, Order 4, Point 0 Symmetry 0 1 MPI processes
-  type: general
-Number of indices in set 3
-0 0
-1 1
-2 2
-Vec Object: 1D, Simplex, Order 4, Point 0 Symmetry 0 1 MPI processes
-  type: seq
--0.5
-0.
-0.5
-IS Object: 1D, Simplex, Order 4, Point 0 Symmetry 1 1 MPI processes
-  type: general
-Number of indices in set 3
-0 2
-1 1
-2 0
-Vec Object: 1D, Simplex, Order 4, Point 0 Symmetry 1 1 MPI processes
-  type: seq
-0.5
-0.
--0.5
-IS Object: 1D, Simplex, Order 5, Point 0 Symmetry -2 1 MPI processes
+0.654654
+IS Object: 1D, Simplex, Order 5, Point 0 Symmetry -1 1 MPI process
   type: general
 Number of indices in set 4
 0 3
 1 2
 2 1
 3 0
-Vec Object: 1D, Simplex, Order 5, Point 0 Symmetry -2 1 MPI processes
+Vec Object: 1D, Simplex, Order 5, Point 0 Symmetry -1 1 MPI process
   type: seq
-0.6
-0.2
--0.2
--0.6
-IS Object: 1D, Simplex, Order 5, Point 0 Symmetry -1 1 MPI processes
+0.765055
+0.285232
+-0.285232
+-0.765055
+IS Object: 1D, Simplex, Order 5, Point 0 Symmetry 0 1 MPI process
   type: general
 Number of indices in set 4
 0 0
 1 1
 2 2
 3 3
-Vec Object: 1D, Simplex, Order 5, Point 0 Symmetry -1 1 MPI processes
+Vec Object: 1D, Simplex, Order 5, Point 0 Symmetry 0 1 MPI process
   type: seq
--0.6
--0.2
-0.2
-0.6
-IS Object: 1D, Simplex, Order 5, Point 0 Symmetry 0 1 MPI processes
-  type: general
-Number of indices in set 4
-0 0
-1 1
-2 2
-3 3
-Vec Object: 1D, Simplex, Order 5, Point 0 Symmetry 0 1 MPI processes
-  type: seq
--0.6
--0.2
-0.2
-0.6
-IS Object: 1D, Simplex, Order 5, Point 0 Symmetry 1 1 MPI processes
-  type: general
-Number of indices in set 4
-0 3
-1 2
-2 1
-3 0
-Vec Object: 1D, Simplex, Order 5, Point 0 Symmetry 1 1 MPI processes
-  type: seq
-0.6
-0.2
--0.2
--0.6
-IS Object: 1D, Simplex, Order 6, Point 0 Symmetry -2 1 MPI processes
+-0.765055
+-0.285232
+0.285232
+0.765055
+IS Object: 1D, Simplex, Order 6, Point 0 Symmetry -1 1 MPI process
   type: general
 Number of indices in set 5
 0 4
@@ -138,14 +72,14 @@ Number of indices in set 5
 2 2
 3 1
 4 0
-Vec Object: 1D, Simplex, Order 6, Point 0 Symmetry -2 1 MPI processes
+Vec Object: 1D, Simplex, Order 6, Point 0 Symmetry -1 1 MPI process
   type: seq
-0.666667
-0.333333
+0.830224
+0.468849
 0.
--0.333333
--0.666667
-IS Object: 1D, Simplex, Order 6, Point 0 Symmetry -1 1 MPI processes
+-0.468849
+-0.830224
+IS Object: 1D, Simplex, Order 6, Point 0 Symmetry 0 1 MPI process
   type: general
 Number of indices in set 5
 0 0
@@ -153,218 +87,120 @@ Number of indices in set 5
 2 2
 3 3
 4 4
-Vec Object: 1D, Simplex, Order 6, Point 0 Symmetry -1 1 MPI processes
+Vec Object: 1D, Simplex, Order 6, Point 0 Symmetry 0 1 MPI process
   type: seq
--0.666667
--0.333333
+-0.830224
+-0.468849
 0.
-0.333333
-0.666667
-IS Object: 1D, Simplex, Order 6, Point 0 Symmetry 0 1 MPI processes
-  type: general
-Number of indices in set 5
-0 0
-1 1
-2 2
-3 3
-4 4
-Vec Object: 1D, Simplex, Order 6, Point 0 Symmetry 0 1 MPI processes
-  type: seq
--0.666667
--0.333333
-0.
-0.333333
-0.666667
-IS Object: 1D, Simplex, Order 6, Point 0 Symmetry 1 1 MPI processes
-  type: general
-Number of indices in set 5
-0 4
-1 3
-2 2
-3 1
-4 0
-Vec Object: 1D, Simplex, Order 6, Point 0 Symmetry 1 1 MPI processes
-  type: seq
-0.666667
-0.333333
-0.
--0.333333
--0.666667
-IS Object: 2D, Simplex, Order 3, Point 4 Symmetry -2 1 MPI processes
+0.468849
+0.830224
+IS Object: 2D, Simplex, Order 3, Point 4 Symmetry -1 1 MPI process
   type: general
 Number of indices in set 2
 0 2
 1 1
-Vec Object: 2D, Simplex, Order 3, Point 4 Symmetry -2 1 MPI processes
+Vec Object: 2D, Simplex, Order 3, Point 4 Symmetry -1 1 MPI process
   type: seq
-0.333333
+0.447214
 -1.
--0.333333
+-0.447214
 -1.
-IS Object: 2D, Simplex, Order 3, Point 4 Symmetry -1 1 MPI processes
+IS Object: 2D, Simplex, Order 3, Point 4 Symmetry 0 1 MPI process
   type: general
 Number of indices in set 2
 0 1
 1 2
-Vec Object: 2D, Simplex, Order 3, Point 4 Symmetry -1 1 MPI processes
+Vec Object: 2D, Simplex, Order 3, Point 4 Symmetry 0 1 MPI process
   type: seq
--0.333333
+-0.447214
 -1.
-0.333333
+0.447214
 -1.
-IS Object: 2D, Simplex, Order 3, Point 4 Symmetry 0 1 MPI processes
-  type: general
-Number of indices in set 2
-0 1
-1 2
-Vec Object: 2D, Simplex, Order 3, Point 4 Symmetry 0 1 MPI processes
-  type: seq
--0.333333
--1.
-0.333333
--1.
-IS Object: 2D, Simplex, Order 3, Point 4 Symmetry 1 1 MPI processes
-  type: general
-Number of indices in set 2
-0 2
-1 1
-Vec Object: 2D, Simplex, Order 3, Point 4 Symmetry 1 1 MPI processes
-  type: seq
-0.333333
--1.
--0.333333
--1.
-IS Object: 2D, Simplex, Order 4, Point 0 Symmetry -3 1 MPI processes
-  type: general
-Number of indices in set 3
-0 0
-1 2
-2 1
-Vec Object: 2D, Simplex, Order 4, Point 0 Symmetry -3 1 MPI processes
-  type: seq
--0.5
--0.5
--0.5
-0.
-0.
--0.5
-IS Object: 2D, Simplex, Order 4, Point 0 Symmetry -2 1 MPI processes
-  type: general
-Number of indices in set 3
-0 2
-1 1
-2 0
-Vec Object: 2D, Simplex, Order 4, Point 0 Symmetry -2 1 MPI processes
-  type: seq
--0.5
-0.
-0.
--0.5
--0.5
--0.5
-IS Object: 2D, Simplex, Order 4, Point 0 Symmetry -1 1 MPI processes
+IS Object: 2D, Simplex, Order 4, Point 0 Symmetry -3 1 MPI process
   type: general
 Number of indices in set 3
 0 1
 1 0
 2 2
-Vec Object: 2D, Simplex, Order 4, Point 0 Symmetry -1 1 MPI processes
+Vec Object: 2D, Simplex, Order 4, Point 0 Symmetry -3 1 MPI process
   type: seq
-0.
--0.5
--0.5
--0.5
--0.5
-0.
-IS Object: 2D, Simplex, Order 4, Point 0 Symmetry 0 1 MPI processes
+0.111379
+-0.55569
+-0.55569
+-0.55569
+-0.55569
+0.111379
+IS Object: 2D, Simplex, Order 4, Point 0 Symmetry -2 1 MPI process
+  type: general
+Number of indices in set 3
+0 0
+1 2
+2 1
+Vec Object: 2D, Simplex, Order 4, Point 0 Symmetry -2 1 MPI process
+  type: seq
+-0.55569
+-0.55569
+-0.55569
+0.111379
+0.111379
+-0.55569
+IS Object: 2D, Simplex, Order 4, Point 0 Symmetry -1 1 MPI process
+  type: general
+Number of indices in set 3
+0 2
+1 1
+2 0
+Vec Object: 2D, Simplex, Order 4, Point 0 Symmetry -1 1 MPI process
+  type: seq
+-0.55569
+0.111379
+0.111379
+-0.55569
+-0.55569
+-0.55569
+IS Object: 2D, Simplex, Order 4, Point 0 Symmetry 0 1 MPI process
   type: general
 Number of indices in set 3
 0 0
 1 1
 2 2
-Vec Object: 2D, Simplex, Order 4, Point 0 Symmetry 0 1 MPI processes
+Vec Object: 2D, Simplex, Order 4, Point 0 Symmetry 0 1 MPI process
   type: seq
--0.5
--0.5
-0.
--0.5
--0.5
-0.
-IS Object: 2D, Simplex, Order 4, Point 0 Symmetry 1 1 MPI processes
+-0.55569
+-0.55569
+0.111379
+-0.55569
+-0.55569
+0.111379
+IS Object: 2D, Simplex, Order 4, Point 0 Symmetry 1 1 MPI process
   type: general
 Number of indices in set 3
 0 1
 1 2
 2 0
-Vec Object: 2D, Simplex, Order 4, Point 0 Symmetry 1 1 MPI processes
+Vec Object: 2D, Simplex, Order 4, Point 0 Symmetry 1 1 MPI process
   type: seq
-0.
--0.5
--0.5
-0.
--0.5
--0.5
-IS Object: 2D, Simplex, Order 4, Point 0 Symmetry 2 1 MPI processes
+0.111379
+-0.55569
+-0.55569
+0.111379
+-0.55569
+-0.55569
+IS Object: 2D, Simplex, Order 4, Point 0 Symmetry 2 1 MPI process
   type: general
 Number of indices in set 3
 0 2
 1 0
 2 1
-Vec Object: 2D, Simplex, Order 4, Point 0 Symmetry 2 1 MPI processes
+Vec Object: 2D, Simplex, Order 4, Point 0 Symmetry 2 1 MPI process
   type: seq
--0.5
-0.
--0.5
--0.5
-0.
--0.5
-IS Object: 2D, Simplex, Order 5, Point 0 Symmetry -3 1 MPI processes
-  type: general
-Number of indices in set 6
-0 0
-1 3
-2 5
-3 1
-4 4
-5 2
-Vec Object: 2D, Simplex, Order 5, Point 0 Symmetry -3 1 MPI processes
-  type: seq
--0.6
--0.6
--0.6
--0.2
--0.6
-0.2
--0.2
--0.6
--0.2
--0.2
-0.2
--0.6
-IS Object: 2D, Simplex, Order 5, Point 0 Symmetry -2 1 MPI processes
-  type: general
-Number of indices in set 6
-0 5
-1 4
-2 2
-3 3
-4 1
-5 0
-Vec Object: 2D, Simplex, Order 5, Point 0 Symmetry -2 1 MPI processes
-  type: seq
--0.6
-0.2
--0.2
--0.2
-0.2
--0.6
--0.6
--0.2
--0.2
--0.6
--0.6
--0.6
-IS Object: 2D, Simplex, Order 5, Point 0 Symmetry -1 1 MPI processes
+-0.55569
+0.111379
+-0.55569
+-0.55569
+0.111379
+-0.55569
+IS Object: 2D, Simplex, Order 5, Point 0 Symmetry -3 1 MPI process
   type: general
 Number of indices in set 6
 0 2
@@ -373,21 +209,67 @@ Number of indices in set 6
 3 4
 4 3
 5 5
-Vec Object: 2D, Simplex, Order 5, Point 0 Symmetry -1 1 MPI processes
+Vec Object: 2D, Simplex, Order 5, Point 0 Symmetry -3 1 MPI process
   type: seq
-0.2
--0.6
--0.2
--0.6
--0.6
--0.6
--0.2
--0.2
--0.6
--0.2
--0.6
-0.2
-IS Object: 2D, Simplex, Order 5, Point 0 Symmetry 0 1 MPI processes
+0.376037
+-0.688018
+-0.163869
+-0.672261
+-0.688018
+-0.688018
+-0.163869
+-0.163869
+-0.672261
+-0.163869
+-0.688018
+0.376037
+IS Object: 2D, Simplex, Order 5, Point 0 Symmetry -2 1 MPI process
+  type: general
+Number of indices in set 6
+0 0
+1 3
+2 5
+3 1
+4 4
+5 2
+Vec Object: 2D, Simplex, Order 5, Point 0 Symmetry -2 1 MPI process
+  type: seq
+-0.688018
+-0.688018
+-0.672261
+-0.163869
+-0.688018
+0.376037
+-0.163869
+-0.672261
+-0.163869
+-0.163869
+0.376037
+-0.688018
+IS Object: 2D, Simplex, Order 5, Point 0 Symmetry -1 1 MPI process
+  type: general
+Number of indices in set 6
+0 5
+1 4
+2 2
+3 3
+4 1
+5 0
+Vec Object: 2D, Simplex, Order 5, Point 0 Symmetry -1 1 MPI process
+  type: seq
+-0.688018
+0.376037
+-0.163869
+-0.163869
+0.376037
+-0.688018
+-0.672261
+-0.163869
+-0.163869
+-0.672261
+-0.688018
+-0.688018
+IS Object: 2D, Simplex, Order 5, Point 0 Symmetry 0 1 MPI process
   type: general
 Number of indices in set 6
 0 0
@@ -396,21 +278,21 @@ Number of indices in set 6
 3 3
 4 4
 5 5
-Vec Object: 2D, Simplex, Order 5, Point 0 Symmetry 0 1 MPI processes
+Vec Object: 2D, Simplex, Order 5, Point 0 Symmetry 0 1 MPI process
   type: seq
--0.6
--0.6
--0.2
--0.6
-0.2
--0.6
--0.6
--0.2
--0.2
--0.2
--0.6
-0.2
-IS Object: 2D, Simplex, Order 5, Point 0 Symmetry 1 1 MPI processes
+-0.688018
+-0.688018
+-0.163869
+-0.672261
+0.376037
+-0.688018
+-0.672261
+-0.163869
+-0.163869
+-0.163869
+-0.688018
+0.376037
+IS Object: 2D, Simplex, Order 5, Point 0 Symmetry 1 1 MPI process
   type: general
 Number of indices in set 6
 0 2
@@ -419,21 +301,21 @@ Number of indices in set 6
 3 1
 4 3
 5 0
-Vec Object: 2D, Simplex, Order 5, Point 0 Symmetry 1 1 MPI processes
+Vec Object: 2D, Simplex, Order 5, Point 0 Symmetry 1 1 MPI process
   type: seq
-0.2
--0.6
--0.2
--0.2
--0.6
-0.2
--0.2
--0.6
--0.6
--0.2
--0.6
--0.6
-IS Object: 2D, Simplex, Order 5, Point 0 Symmetry 2 1 MPI processes
+0.376037
+-0.688018
+-0.163869
+-0.163869
+-0.688018
+0.376037
+-0.163869
+-0.672261
+-0.672261
+-0.163869
+-0.688018
+-0.688018
+IS Object: 2D, Simplex, Order 5, Point 0 Symmetry 2 1 MPI process
   type: general
 Number of indices in set 6
 0 5
@@ -442,91 +324,21 @@ Number of indices in set 6
 3 4
 4 1
 5 2
-Vec Object: 2D, Simplex, Order 5, Point 0 Symmetry 2 1 MPI processes
+Vec Object: 2D, Simplex, Order 5, Point 0 Symmetry 2 1 MPI process
   type: seq
--0.6
-0.2
--0.6
--0.2
--0.6
--0.6
--0.2
--0.2
--0.2
--0.6
-0.2
--0.6
-IS Object: 2D, Simplex, Order 6, Point 0 Symmetry -3 1 MPI processes
-  type: general
-Number of indices in set 10
-0 0
-1 4
-2 7
-3 9
-4 1
-5 5
-6 8
-7 2
-8 6
-9 3
-Vec Object: 2D, Simplex, Order 6, Point 0 Symmetry -3 1 MPI processes
-  type: seq
--0.666667
--0.666667
--0.666667
--0.333333
--0.666667
-0.
--0.666667
-0.333333
--0.333333
--0.666667
--0.333333
--0.333333
--0.333333
-0.
-0.
--0.666667
-0.
--0.333333
-0.333333
--0.666667
-IS Object: 2D, Simplex, Order 6, Point 0 Symmetry -2 1 MPI processes
-  type: general
-Number of indices in set 10
-0 9
-1 8
-2 6
-3 3
-4 7
-5 5
-6 2
-7 4
-8 1
-9 0
-Vec Object: 2D, Simplex, Order 6, Point 0 Symmetry -2 1 MPI processes
-  type: seq
--0.666667
-0.333333
--0.333333
-0.
-0.
--0.333333
-0.333333
--0.666667
--0.666667
-0.
--0.333333
--0.333333
-0.
--0.666667
--0.666667
--0.333333
--0.333333
--0.666667
--0.666667
--0.666667
-IS Object: 2D, Simplex, Order 6, Point 0 Symmetry -1 1 MPI processes
+-0.688018
+0.376037
+-0.672261
+-0.163869
+-0.688018
+-0.688018
+-0.163869
+-0.163869
+-0.163869
+-0.672261
+0.376037
+-0.688018
+IS Object: 2D, Simplex, Order 6, Point 0 Symmetry -3 1 MPI process
   type: general
 Number of indices in set 10
 0 3
@@ -539,29 +351,99 @@ Number of indices in set 10
 7 8
 8 7
 9 9
-Vec Object: 2D, Simplex, Order 6, Point 0 Symmetry -1 1 MPI processes
+Vec Object: 2D, Simplex, Order 6, Point 0 Symmetry -3 1 MPI process
   type: seq
-0.333333
--0.666667
-0.
--0.666667
--0.333333
--0.666667
--0.666667
--0.666667
-0.
--0.333333
--0.333333
--0.333333
--0.666667
+0.541391
+-0.770695
+0.112495
+-0.753424
+-0.359071
+-0.753424
+-0.770695
+-0.770695
+0.112495
+-0.359071
 -0.333333
 -0.333333
-0.
--0.666667
-0.
--0.666667
-0.333333
-IS Object: 2D, Simplex, Order 6, Point 0 Symmetry 0 1 MPI processes
+-0.753424
+-0.359071
+-0.359071
+0.112495
+-0.753424
+0.112495
+-0.770695
+0.541391
+IS Object: 2D, Simplex, Order 6, Point 0 Symmetry -2 1 MPI process
+  type: general
+Number of indices in set 10
+0 0
+1 4
+2 7
+3 9
+4 1
+5 5
+6 8
+7 2
+8 6
+9 3
+Vec Object: 2D, Simplex, Order 6, Point 0 Symmetry -2 1 MPI process
+  type: seq
+-0.770695
+-0.770695
+-0.753424
+-0.359071
+-0.753424
+0.112495
+-0.770695
+0.541391
+-0.359071
+-0.753424
+-0.333333
+-0.333333
+-0.359071
+0.112495
+0.112495
+-0.753424
+0.112495
+-0.359071
+0.541391
+-0.770695
+IS Object: 2D, Simplex, Order 6, Point 0 Symmetry -1 1 MPI process
+  type: general
+Number of indices in set 10
+0 9
+1 8
+2 6
+3 3
+4 7
+5 5
+6 2
+7 4
+8 1
+9 0
+Vec Object: 2D, Simplex, Order 6, Point 0 Symmetry -1 1 MPI process
+  type: seq
+-0.770695
+0.541391
+-0.359071
+0.112495
+0.112495
+-0.359071
+0.541391
+-0.770695
+-0.753424
+0.112495
+-0.333333
+-0.333333
+0.112495
+-0.753424
+-0.753424
+-0.359071
+-0.359071
+-0.753424
+-0.770695
+-0.770695
+IS Object: 2D, Simplex, Order 6, Point 0 Symmetry 0 1 MPI process
   type: general
 Number of indices in set 10
 0 0
@@ -574,29 +456,29 @@ Number of indices in set 10
 7 7
 8 8
 9 9
-Vec Object: 2D, Simplex, Order 6, Point 0 Symmetry 0 1 MPI processes
+Vec Object: 2D, Simplex, Order 6, Point 0 Symmetry 0 1 MPI process
   type: seq
--0.666667
--0.666667
+-0.770695
+-0.770695
+-0.359071
+-0.753424
+0.112495
+-0.753424
+0.541391
+-0.770695
+-0.753424
+-0.359071
 -0.333333
--0.666667
-0.
--0.666667
-0.333333
--0.666667
--0.666667
 -0.333333
--0.333333
--0.333333
-0.
--0.333333
--0.666667
-0.
--0.333333
-0.
--0.666667
-0.333333
-IS Object: 2D, Simplex, Order 6, Point 0 Symmetry 1 1 MPI processes
+0.112495
+-0.359071
+-0.753424
+0.112495
+-0.359071
+0.112495
+-0.770695
+0.541391
+IS Object: 2D, Simplex, Order 6, Point 0 Symmetry 1 1 MPI process
   type: general
 Number of indices in set 10
 0 3
@@ -609,29 +491,29 @@ Number of indices in set 10
 7 1
 8 4
 9 0
-Vec Object: 2D, Simplex, Order 6, Point 0 Symmetry 1 1 MPI processes
+Vec Object: 2D, Simplex, Order 6, Point 0 Symmetry 1 1 MPI process
   type: seq
-0.333333
--0.666667
-0.
+0.541391
+-0.770695
+0.112495
+-0.359071
+-0.359071
+0.112495
+-0.770695
+0.541391
+0.112495
+-0.753424
 -0.333333
 -0.333333
-0.
--0.666667
-0.333333
-0.
--0.666667
--0.333333
--0.333333
--0.666667
-0.
--0.333333
--0.666667
--0.666667
--0.333333
--0.666667
--0.666667
-IS Object: 2D, Simplex, Order 6, Point 0 Symmetry 2 1 MPI processes
+-0.753424
+0.112495
+-0.359071
+-0.753424
+-0.753424
+-0.359071
+-0.770695
+-0.770695
+IS Object: 2D, Simplex, Order 6, Point 0 Symmetry 2 1 MPI process
   type: general
 Number of indices in set 10
 0 9
@@ -644,241 +526,157 @@ Number of indices in set 10
 7 6
 8 2
 9 3
-Vec Object: 2D, Simplex, Order 6, Point 0 Symmetry 2 1 MPI processes
+Vec Object: 2D, Simplex, Order 6, Point 0 Symmetry 2 1 MPI process
   type: seq
--0.666667
-0.333333
--0.666667
-0.
--0.666667
+-0.770695
+0.541391
+-0.753424
+0.112495
+-0.753424
+-0.359071
+-0.770695
+-0.770695
+-0.359071
+0.112495
 -0.333333
--0.666667
--0.666667
 -0.333333
-0.
--0.333333
--0.333333
--0.333333
--0.666667
-0.
--0.333333
-0.
--0.666667
-0.333333
--0.666667
-IS Object: 3D, Simplex, Order 3, Point 9 Symmetry -2 1 MPI processes
+-0.359071
+-0.753424
+0.112495
+-0.359071
+0.112495
+-0.753424
+0.541391
+-0.770695
+IS Object: 3D, Simplex, Order 3, Point 9 Symmetry -1 1 MPI process
   type: general
 Number of indices in set 2
-0 5
-1 4
-Vec Object: 3D, Simplex, Order 3, Point 9 Symmetry -2 1 MPI processes
-  type: seq
--1.
-0.333333
--1.
--1.
--0.333333
--1.
-IS Object: 3D, Simplex, Order 3, Point 9 Symmetry -1 1 MPI processes
-  type: general
-Number of indices in set 2
-0 4
-1 5
-Vec Object: 3D, Simplex, Order 3, Point 9 Symmetry -1 1 MPI processes
-  type: seq
--1.
--0.333333
--1.
--1.
-0.333333
--1.
-IS Object: 3D, Simplex, Order 3, Point 9 Symmetry 0 1 MPI processes
-  type: general
-Number of indices in set 2
-0 4
-1 5
-Vec Object: 3D, Simplex, Order 3, Point 9 Symmetry 0 1 MPI processes
-  type: seq
--1.
--0.333333
--1.
--1.
-0.333333
--1.
-IS Object: 3D, Simplex, Order 3, Point 9 Symmetry 1 1 MPI processes
-  type: general
-Number of indices in set 2
-0 5
-1 4
-Vec Object: 3D, Simplex, Order 3, Point 9 Symmetry 1 1 MPI processes
-  type: seq
--1.
-0.333333
--1.
--1.
--0.333333
--1.
-IS Object: 3D, Simplex, Order 4, Point 5 Symmetry -3 1 MPI processes
-  type: general
-Number of indices in set 3
 0 1
-1 3
-2 2
-Vec Object: 3D, Simplex, Order 4, Point 5 Symmetry -3 1 MPI processes
+1 0
+Vec Object: 3D, Simplex, Order 3, Point 9 Symmetry -1 1 MPI process
   type: seq
--0.5
--0.5
 -1.
-0.
--0.5
+-0.333333
+-0.333333
+-0.333333
+-0.333333
 -1.
--0.5
-0.
--1.
-IS Object: 3D, Simplex, Order 4, Point 5 Symmetry -2 1 MPI processes
+IS Object: 3D, Simplex, Order 3, Point 9 Symmetry 0 1 MPI process
   type: general
-Number of indices in set 3
-0 3
-1 2
-2 1
-Vec Object: 3D, Simplex, Order 4, Point 5 Symmetry -2 1 MPI processes
+Number of indices in set 2
+0 0
+1 1
+Vec Object: 3D, Simplex, Order 3, Point 9 Symmetry 0 1 MPI process
   type: seq
-0.
--0.5
+-0.333333
+-0.333333
 -1.
--0.5
-0.
 -1.
--0.5
--0.5
--1.
-IS Object: 3D, Simplex, Order 4, Point 5 Symmetry -1 1 MPI processes
+-0.333333
+-0.333333
+IS Object: 3D, Simplex, Order 4, Point 5 Symmetry -3 1 MPI process
   type: general
 Number of indices in set 3
 0 2
 1 1
 2 3
-Vec Object: 3D, Simplex, Order 4, Point 5 Symmetry -1 1 MPI processes
+Vec Object: 3D, Simplex, Order 4, Point 5 Symmetry -3 1 MPI process
   type: seq
--0.5
-0.
+-0.55569
+0.111379
 -1.
--0.5
--0.5
+-0.55569
+-0.55569
 -1.
-0.
--0.5
+0.111379
+-0.55569
 -1.
-IS Object: 3D, Simplex, Order 4, Point 5 Symmetry 0 1 MPI processes
+IS Object: 3D, Simplex, Order 4, Point 5 Symmetry -2 1 MPI process
+  type: general
+Number of indices in set 3
+0 1
+1 3
+2 2
+Vec Object: 3D, Simplex, Order 4, Point 5 Symmetry -2 1 MPI process
+  type: seq
+-0.55569
+-0.55569
+-1.
+0.111379
+-0.55569
+-1.
+-0.55569
+0.111379
+-1.
+IS Object: 3D, Simplex, Order 4, Point 5 Symmetry -1 1 MPI process
+  type: general
+Number of indices in set 3
+0 3
+1 2
+2 1
+Vec Object: 3D, Simplex, Order 4, Point 5 Symmetry -1 1 MPI process
+  type: seq
+0.111379
+-0.55569
+-1.
+-0.55569
+0.111379
+-1.
+-0.55569
+-0.55569
+-1.
+IS Object: 3D, Simplex, Order 4, Point 5 Symmetry 0 1 MPI process
   type: general
 Number of indices in set 3
 0 1
 1 2
 2 3
-Vec Object: 3D, Simplex, Order 4, Point 5 Symmetry 0 1 MPI processes
+Vec Object: 3D, Simplex, Order 4, Point 5 Symmetry 0 1 MPI process
   type: seq
--0.5
--0.5
+-0.55569
+-0.55569
 -1.
--0.5
-0.
+-0.55569
+0.111379
 -1.
-0.
--0.5
+0.111379
+-0.55569
 -1.
-IS Object: 3D, Simplex, Order 4, Point 5 Symmetry 1 1 MPI processes
+IS Object: 3D, Simplex, Order 4, Point 5 Symmetry 1 1 MPI process
   type: general
 Number of indices in set 3
 0 2
 1 3
 2 1
-Vec Object: 3D, Simplex, Order 4, Point 5 Symmetry 1 1 MPI processes
+Vec Object: 3D, Simplex, Order 4, Point 5 Symmetry 1 1 MPI process
   type: seq
--0.5
-0.
+-0.55569
+0.111379
 -1.
-0.
--0.5
+0.111379
+-0.55569
 -1.
--0.5
--0.5
+-0.55569
+-0.55569
 -1.
-IS Object: 3D, Simplex, Order 4, Point 5 Symmetry 2 1 MPI processes
+IS Object: 3D, Simplex, Order 4, Point 5 Symmetry 2 1 MPI process
   type: general
 Number of indices in set 3
 0 3
 1 1
 2 2
-Vec Object: 3D, Simplex, Order 4, Point 5 Symmetry 2 1 MPI processes
+Vec Object: 3D, Simplex, Order 4, Point 5 Symmetry 2 1 MPI process
   type: seq
-0.
--0.5
+0.111379
+-0.55569
 -1.
--0.5
--0.5
+-0.55569
+-0.55569
 -1.
--0.5
-0.
+-0.55569
+0.111379
 -1.
-IS Object: 3D, Simplex, Order 5, Point 5 Symmetry -3 1 MPI processes
-  type: general
-Number of indices in set 6
-0 4
-1 7
-2 9
-3 5
-4 8
-5 6
-Vec Object: 3D, Simplex, Order 5, Point 5 Symmetry -3 1 MPI processes
-  type: seq
--0.6
--0.6
--1.
--0.2
--0.6
--1.
-0.2
--0.6
--1.
--0.6
--0.2
--1.
--0.2
--0.2
--1.
--0.6
-0.2
--1.
-IS Object: 3D, Simplex, Order 5, Point 5 Symmetry -2 1 MPI processes
-  type: general
-Number of indices in set 6
-0 9
-1 8
-2 6
-3 7
-4 5
-5 4
-Vec Object: 3D, Simplex, Order 5, Point 5 Symmetry -2 1 MPI processes
-  type: seq
-0.2
--0.6
--1.
--0.2
--0.2
--1.
--0.6
-0.2
--1.
--0.2
--0.6
--1.
--0.6
--0.2
--1.
--0.6
--0.6
--1.
-IS Object: 3D, Simplex, Order 5, Point 5 Symmetry -1 1 MPI processes
+IS Object: 3D, Simplex, Order 5, Point 5 Symmetry -3 1 MPI process
   type: general
 Number of indices in set 6
 0 6
@@ -887,27 +685,85 @@ Number of indices in set 6
 3 8
 4 7
 5 9
-Vec Object: 3D, Simplex, Order 5, Point 5 Symmetry -1 1 MPI processes
+Vec Object: 3D, Simplex, Order 5, Point 5 Symmetry -3 1 MPI process
   type: seq
--0.6
-0.2
+-0.688018
+0.376037
 -1.
--0.6
--0.2
+-0.672261
+-0.163869
 -1.
--0.6
--0.6
+-0.688018
+-0.688018
 -1.
--0.2
--0.2
+-0.163869
+-0.163869
 -1.
--0.2
--0.6
+-0.163869
+-0.672261
 -1.
-0.2
--0.6
+0.376037
+-0.688018
 -1.
-IS Object: 3D, Simplex, Order 5, Point 5 Symmetry 0 1 MPI processes
+IS Object: 3D, Simplex, Order 5, Point 5 Symmetry -2 1 MPI process
+  type: general
+Number of indices in set 6
+0 4
+1 7
+2 9
+3 5
+4 8
+5 6
+Vec Object: 3D, Simplex, Order 5, Point 5 Symmetry -2 1 MPI process
+  type: seq
+-0.688018
+-0.688018
+-1.
+-0.163869
+-0.672261
+-1.
+0.376037
+-0.688018
+-1.
+-0.672261
+-0.163869
+-1.
+-0.163869
+-0.163869
+-1.
+-0.688018
+0.376037
+-1.
+IS Object: 3D, Simplex, Order 5, Point 5 Symmetry -1 1 MPI process
+  type: general
+Number of indices in set 6
+0 9
+1 8
+2 6
+3 7
+4 5
+5 4
+Vec Object: 3D, Simplex, Order 5, Point 5 Symmetry -1 1 MPI process
+  type: seq
+0.376037
+-0.688018
+-1.
+-0.163869
+-0.163869
+-1.
+-0.688018
+0.376037
+-1.
+-0.163869
+-0.672261
+-1.
+-0.672261
+-0.163869
+-1.
+-0.688018
+-0.688018
+-1.
+IS Object: 3D, Simplex, Order 5, Point 5 Symmetry 0 1 MPI process
   type: general
 Number of indices in set 6
 0 4
@@ -916,27 +772,27 @@ Number of indices in set 6
 3 7
 4 8
 5 9
-Vec Object: 3D, Simplex, Order 5, Point 5 Symmetry 0 1 MPI processes
+Vec Object: 3D, Simplex, Order 5, Point 5 Symmetry 0 1 MPI process
   type: seq
--0.6
--0.6
+-0.688018
+-0.688018
 -1.
--0.6
--0.2
+-0.672261
+-0.163869
 -1.
--0.6
-0.2
+-0.688018
+0.376037
 -1.
--0.2
--0.6
+-0.163869
+-0.672261
 -1.
--0.2
--0.2
+-0.163869
+-0.163869
 -1.
-0.2
--0.6
+0.376037
+-0.688018
 -1.
-IS Object: 3D, Simplex, Order 5, Point 5 Symmetry 1 1 MPI processes
+IS Object: 3D, Simplex, Order 5, Point 5 Symmetry 1 1 MPI process
   type: general
 Number of indices in set 6
 0 6
@@ -945,27 +801,27 @@ Number of indices in set 6
 3 5
 4 7
 5 4
-Vec Object: 3D, Simplex, Order 5, Point 5 Symmetry 1 1 MPI processes
+Vec Object: 3D, Simplex, Order 5, Point 5 Symmetry 1 1 MPI process
   type: seq
--0.6
-0.2
+-0.688018
+0.376037
 -1.
--0.2
--0.2
+-0.163869
+-0.163869
 -1.
-0.2
--0.6
+0.376037
+-0.688018
 -1.
--0.6
--0.2
+-0.672261
+-0.163869
 -1.
--0.2
--0.6
+-0.163869
+-0.672261
 -1.
--0.6
--0.6
+-0.688018
+-0.688018
 -1.
-IS Object: 3D, Simplex, Order 5, Point 5 Symmetry 2 1 MPI processes
+IS Object: 3D, Simplex, Order 5, Point 5 Symmetry 2 1 MPI process
   type: general
 Number of indices in set 6
 0 9
@@ -974,117 +830,27 @@ Number of indices in set 6
 3 8
 4 5
 5 6
-Vec Object: 3D, Simplex, Order 5, Point 5 Symmetry 2 1 MPI processes
+Vec Object: 3D, Simplex, Order 5, Point 5 Symmetry 2 1 MPI process
   type: seq
-0.2
--0.6
+0.376037
+-0.688018
 -1.
--0.2
--0.6
+-0.163869
+-0.672261
 -1.
--0.6
--0.6
+-0.688018
+-0.688018
 -1.
--0.2
--0.2
+-0.163869
+-0.163869
 -1.
--0.6
--0.2
+-0.672261
+-0.163869
 -1.
--0.6
-0.2
+-0.688018
+0.376037
 -1.
-IS Object: 3D, Simplex, Order 6, Point 5 Symmetry -3 1 MPI processes
-  type: general
-Number of indices in set 10
-0 10
-1 14
-2 17
-3 19
-4 11
-5 15
-6 18
-7 12
-8 16
-9 13
-Vec Object: 3D, Simplex, Order 6, Point 5 Symmetry -3 1 MPI processes
-  type: seq
--0.666667
--0.666667
--1.
--0.333333
--0.666667
--1.
-0.
--0.666667
--1.
-0.333333
--0.666667
--1.
--0.666667
--0.333333
--1.
--0.333333
--0.333333
--1.
-0.
--0.333333
--1.
--0.666667
-0.
--1.
--0.333333
-0.
--1.
--0.666667
-0.333333
--1.
-IS Object: 3D, Simplex, Order 6, Point 5 Symmetry -2 1 MPI processes
-  type: general
-Number of indices in set 10
-0 19
-1 18
-2 16
-3 13
-4 17
-5 15
-6 12
-7 14
-8 11
-9 10
-Vec Object: 3D, Simplex, Order 6, Point 5 Symmetry -2 1 MPI processes
-  type: seq
-0.333333
--0.666667
--1.
-0.
--0.333333
--1.
--0.333333
-0.
--1.
--0.666667
-0.333333
--1.
-0.
--0.666667
--1.
--0.333333
--0.333333
--1.
--0.666667
-0.
--1.
--0.333333
--0.666667
--1.
--0.666667
--0.333333
--1.
--0.666667
--0.666667
--1.
-IS Object: 3D, Simplex, Order 6, Point 5 Symmetry -1 1 MPI processes
+IS Object: 3D, Simplex, Order 6, Point 5 Symmetry -3 1 MPI process
   type: general
 Number of indices in set 10
 0 13
@@ -1097,39 +863,129 @@ Number of indices in set 10
 7 18
 8 17
 9 19
-Vec Object: 3D, Simplex, Order 6, Point 5 Symmetry -1 1 MPI processes
+Vec Object: 3D, Simplex, Order 6, Point 5 Symmetry -3 1 MPI process
   type: seq
--0.666667
-0.333333
+-0.770695
+0.541391
 -1.
--0.666667
-0.
+-0.753424
+0.112495
 -1.
--0.666667
--0.333333
+-0.753424
+-0.359071
 -1.
--0.666667
--0.666667
+-0.770695
+-0.770695
 -1.
--0.333333
-0.
--1.
--0.333333
--0.333333
+-0.359071
+0.112495
 -1.
 -0.333333
--0.666667
--1.
-0.
 -0.333333
 -1.
-0.
--0.666667
+-0.359071
+-0.753424
 -1.
-0.333333
--0.666667
+0.112495
+-0.359071
 -1.
-IS Object: 3D, Simplex, Order 6, Point 5 Symmetry 0 1 MPI processes
+0.112495
+-0.753424
+-1.
+0.541391
+-0.770695
+-1.
+IS Object: 3D, Simplex, Order 6, Point 5 Symmetry -2 1 MPI process
+  type: general
+Number of indices in set 10
+0 10
+1 14
+2 17
+3 19
+4 11
+5 15
+6 18
+7 12
+8 16
+9 13
+Vec Object: 3D, Simplex, Order 6, Point 5 Symmetry -2 1 MPI process
+  type: seq
+-0.770695
+-0.770695
+-1.
+-0.359071
+-0.753424
+-1.
+0.112495
+-0.753424
+-1.
+0.541391
+-0.770695
+-1.
+-0.753424
+-0.359071
+-1.
+-0.333333
+-0.333333
+-1.
+0.112495
+-0.359071
+-1.
+-0.753424
+0.112495
+-1.
+-0.359071
+0.112495
+-1.
+-0.770695
+0.541391
+-1.
+IS Object: 3D, Simplex, Order 6, Point 5 Symmetry -1 1 MPI process
+  type: general
+Number of indices in set 10
+0 19
+1 18
+2 16
+3 13
+4 17
+5 15
+6 12
+7 14
+8 11
+9 10
+Vec Object: 3D, Simplex, Order 6, Point 5 Symmetry -1 1 MPI process
+  type: seq
+0.541391
+-0.770695
+-1.
+0.112495
+-0.359071
+-1.
+-0.359071
+0.112495
+-1.
+-0.770695
+0.541391
+-1.
+0.112495
+-0.753424
+-1.
+-0.333333
+-0.333333
+-1.
+-0.753424
+0.112495
+-1.
+-0.359071
+-0.753424
+-1.
+-0.753424
+-0.359071
+-1.
+-0.770695
+-0.770695
+-1.
+IS Object: 3D, Simplex, Order 6, Point 5 Symmetry 0 1 MPI process
   type: general
 Number of indices in set 10
 0 10
@@ -1142,39 +998,39 @@ Number of indices in set 10
 7 17
 8 18
 9 19
-Vec Object: 3D, Simplex, Order 6, Point 5 Symmetry 0 1 MPI processes
+Vec Object: 3D, Simplex, Order 6, Point 5 Symmetry 0 1 MPI process
   type: seq
--0.666667
--0.666667
+-0.770695
+-0.770695
 -1.
--0.666667
--0.333333
+-0.753424
+-0.359071
 -1.
--0.666667
-0.
+-0.753424
+0.112495
 -1.
--0.666667
-0.333333
+-0.770695
+0.541391
 -1.
--0.333333
--0.666667
--1.
--0.333333
--0.333333
+-0.359071
+-0.753424
 -1.
 -0.333333
-0.
--1.
-0.
--0.666667
--1.
-0.
 -0.333333
 -1.
-0.333333
--0.666667
+-0.359071
+0.112495
 -1.
-IS Object: 3D, Simplex, Order 6, Point 5 Symmetry 1 1 MPI processes
+0.112495
+-0.753424
+-1.
+0.112495
+-0.359071
+-1.
+0.541391
+-0.770695
+-1.
+IS Object: 3D, Simplex, Order 6, Point 5 Symmetry 1 1 MPI process
   type: general
 Number of indices in set 10
 0 13
@@ -1187,39 +1043,39 @@ Number of indices in set 10
 7 11
 8 14
 9 10
-Vec Object: 3D, Simplex, Order 6, Point 5 Symmetry 1 1 MPI processes
+Vec Object: 3D, Simplex, Order 6, Point 5 Symmetry 1 1 MPI process
   type: seq
--0.666667
-0.333333
+-0.770695
+0.541391
+-1.
+-0.359071
+0.112495
+-1.
+0.112495
+-0.359071
+-1.
+0.541391
+-0.770695
+-1.
+-0.753424
+0.112495
 -1.
 -0.333333
-0.
--1.
-0.
 -0.333333
 -1.
-0.333333
--0.666667
+0.112495
+-0.753424
 -1.
--0.666667
-0.
+-0.753424
+-0.359071
 -1.
--0.333333
--0.333333
+-0.359071
+-0.753424
 -1.
-0.
--0.666667
+-0.770695
+-0.770695
 -1.
--0.666667
--0.333333
--1.
--0.333333
--0.666667
--1.
--0.666667
--0.666667
--1.
-IS Object: 3D, Simplex, Order 6, Point 5 Symmetry 2 1 MPI processes
+IS Object: 3D, Simplex, Order 6, Point 5 Symmetry 2 1 MPI process
   type: general
 Number of indices in set 10
 0 19
@@ -1232,239 +1088,175 @@ Number of indices in set 10
 7 16
 8 12
 9 13
-Vec Object: 3D, Simplex, Order 6, Point 5 Symmetry 2 1 MPI processes
+Vec Object: 3D, Simplex, Order 6, Point 5 Symmetry 2 1 MPI process
   type: seq
-0.333333
--0.666667
+0.541391
+-0.770695
 -1.
-0.
--0.666667
+0.112495
+-0.753424
 -1.
--0.333333
--0.666667
+-0.359071
+-0.753424
 -1.
--0.666667
--0.666667
+-0.770695
+-0.770695
 -1.
-0.
--0.333333
--1.
--0.333333
--0.333333
--1.
--0.666667
--0.333333
+0.112495
+-0.359071
 -1.
 -0.333333
-0.
+-0.333333
 -1.
--0.666667
-0.
+-0.753424
+-0.359071
 -1.
--0.666667
-0.333333
+-0.359071
+0.112495
 -1.
-IS Object: 2D, Tensor, Order 3, Point 0 Symmetry -4 1 MPI processes
-  type: general
-Number of indices in set 4
-0 0
-1 2
-2 1
-3 3
-Vec Object: 2D, Tensor, Order 3, Point 0 Symmetry -4 1 MPI processes
-  type: seq
--0.333333
--0.333333
--0.333333
-0.333333
-0.333333
--0.333333
-0.333333
-0.333333
-IS Object: 2D, Tensor, Order 3, Point 0 Symmetry -3 1 MPI processes
-  type: general
-Number of indices in set 4
-0 2
-1 3
-2 0
-3 1
-Vec Object: 2D, Tensor, Order 3, Point 0 Symmetry -3 1 MPI processes
-  type: seq
--0.333333
-0.333333
-0.333333
-0.333333
--0.333333
--0.333333
-0.333333
--0.333333
-IS Object: 2D, Tensor, Order 3, Point 0 Symmetry -2 1 MPI processes
+-0.753424
+0.112495
+-1.
+-0.770695
+0.541391
+-1.
+IS Object: 2D, Tensor, Order 3, Point 0 Symmetry -4 1 MPI process
   type: general
 Number of indices in set 4
 0 3
 1 1
 2 2
 3 0
-Vec Object: 2D, Tensor, Order 3, Point 0 Symmetry -2 1 MPI processes
+Vec Object: 2D, Tensor, Order 3, Point 0 Symmetry -4 1 MPI process
   type: seq
-0.333333
-0.333333
-0.333333
--0.333333
--0.333333
-0.333333
--0.333333
--0.333333
-IS Object: 2D, Tensor, Order 3, Point 0 Symmetry -1 1 MPI processes
+0.447214
+0.447214
+0.447214
+-0.447214
+-0.447214
+0.447214
+-0.447214
+-0.447214
+IS Object: 2D, Tensor, Order 3, Point 0 Symmetry -3 1 MPI process
   type: general
 Number of indices in set 4
 0 1
 1 0
 2 3
 3 2
-Vec Object: 2D, Tensor, Order 3, Point 0 Symmetry -1 1 MPI processes
+Vec Object: 2D, Tensor, Order 3, Point 0 Symmetry -3 1 MPI process
   type: seq
-0.333333
--0.333333
--0.333333
--0.333333
-0.333333
-0.333333
--0.333333
-0.333333
-IS Object: 2D, Tensor, Order 3, Point 0 Symmetry 0 1 MPI processes
+0.447214
+-0.447214
+-0.447214
+-0.447214
+0.447214
+0.447214
+-0.447214
+0.447214
+IS Object: 2D, Tensor, Order 3, Point 0 Symmetry -2 1 MPI process
+  type: general
+Number of indices in set 4
+0 0
+1 2
+2 1
+3 3
+Vec Object: 2D, Tensor, Order 3, Point 0 Symmetry -2 1 MPI process
+  type: seq
+-0.447214
+-0.447214
+-0.447214
+0.447214
+0.447214
+-0.447214
+0.447214
+0.447214
+IS Object: 2D, Tensor, Order 3, Point 0 Symmetry -1 1 MPI process
+  type: general
+Number of indices in set 4
+0 2
+1 3
+2 0
+3 1
+Vec Object: 2D, Tensor, Order 3, Point 0 Symmetry -1 1 MPI process
+  type: seq
+-0.447214
+0.447214
+0.447214
+0.447214
+-0.447214
+-0.447214
+0.447214
+-0.447214
+IS Object: 2D, Tensor, Order 3, Point 0 Symmetry 0 1 MPI process
   type: general
 Number of indices in set 4
 0 0
 1 1
 2 2
 3 3
-Vec Object: 2D, Tensor, Order 3, Point 0 Symmetry 0 1 MPI processes
+Vec Object: 2D, Tensor, Order 3, Point 0 Symmetry 0 1 MPI process
   type: seq
--0.333333
--0.333333
-0.333333
--0.333333
--0.333333
-0.333333
-0.333333
-0.333333
-IS Object: 2D, Tensor, Order 3, Point 0 Symmetry 1 1 MPI processes
+-0.447214
+-0.447214
+0.447214
+-0.447214
+-0.447214
+0.447214
+0.447214
+0.447214
+IS Object: 2D, Tensor, Order 3, Point 0 Symmetry 1 1 MPI process
   type: general
 Number of indices in set 4
 0 1
 1 3
 2 0
 3 2
-Vec Object: 2D, Tensor, Order 3, Point 0 Symmetry 1 1 MPI processes
+Vec Object: 2D, Tensor, Order 3, Point 0 Symmetry 1 1 MPI process
   type: seq
-0.333333
--0.333333
-0.333333
-0.333333
--0.333333
--0.333333
--0.333333
-0.333333
-IS Object: 2D, Tensor, Order 3, Point 0 Symmetry 2 1 MPI processes
+0.447214
+-0.447214
+0.447214
+0.447214
+-0.447214
+-0.447214
+-0.447214
+0.447214
+IS Object: 2D, Tensor, Order 3, Point 0 Symmetry 2 1 MPI process
   type: general
 Number of indices in set 4
 0 3
 1 2
 2 1
 3 0
-Vec Object: 2D, Tensor, Order 3, Point 0 Symmetry 2 1 MPI processes
+Vec Object: 2D, Tensor, Order 3, Point 0 Symmetry 2 1 MPI process
   type: seq
-0.333333
-0.333333
--0.333333
-0.333333
-0.333333
--0.333333
--0.333333
--0.333333
-IS Object: 2D, Tensor, Order 3, Point 0 Symmetry 3 1 MPI processes
+0.447214
+0.447214
+-0.447214
+0.447214
+0.447214
+-0.447214
+-0.447214
+-0.447214
+IS Object: 2D, Tensor, Order 3, Point 0 Symmetry 3 1 MPI process
   type: general
 Number of indices in set 4
 0 2
 1 0
 2 3
 3 1
-Vec Object: 2D, Tensor, Order 3, Point 0 Symmetry 3 1 MPI processes
+Vec Object: 2D, Tensor, Order 3, Point 0 Symmetry 3 1 MPI process
   type: seq
--0.333333
-0.333333
--0.333333
--0.333333
-0.333333
-0.333333
-0.333333
--0.333333
-IS Object: 2D, Tensor, Order 4, Point 0 Symmetry -4 1 MPI processes
-  type: general
-Number of indices in set 9
-0 0
-1 3
-2 6
-3 1
-4 4
-5 7
-6 2
-7 5
-8 8
-Vec Object: 2D, Tensor, Order 4, Point 0 Symmetry -4 1 MPI processes
-  type: seq
--0.5
--0.5
--0.5
-0.
--0.5
-0.5
-0.
--0.5
-0.
-0.
-0.
-0.5
-0.5
--0.5
-0.5
-0.
-0.5
-0.5
-IS Object: 2D, Tensor, Order 4, Point 0 Symmetry -3 1 MPI processes
-  type: general
-Number of indices in set 9
-0 6
-1 7
-2 8
-3 3
-4 4
-5 5
-6 0
-7 1
-8 2
-Vec Object: 2D, Tensor, Order 4, Point 0 Symmetry -3 1 MPI processes
-  type: seq
--0.5
-0.5
-0.
-0.5
-0.5
-0.5
--0.5
-0.
-0.
-0.
-0.5
-0.
--0.5
--0.5
-0.
--0.5
-0.5
--0.5
-IS Object: 2D, Tensor, Order 4, Point 0 Symmetry -2 1 MPI processes
+-0.447214
+0.447214
+-0.447214
+-0.447214
+0.447214
+0.447214
+0.447214
+-0.447214
+IS Object: 2D, Tensor, Order 4, Point 0 Symmetry -4 1 MPI process
   type: general
 Number of indices in set 9
 0 8
@@ -1476,27 +1268,27 @@ Number of indices in set 9
 6 6
 7 3
 8 0
-Vec Object: 2D, Tensor, Order 4, Point 0 Symmetry -2 1 MPI processes
+Vec Object: 2D, Tensor, Order 4, Point 0 Symmetry -4 1 MPI process
   type: seq
-0.5
-0.5
-0.5
+0.654654
+0.654654
+0.654654
 0.
-0.5
--0.5
+0.654654
+-0.654654
 0.
-0.5
+0.654654
 0.
 0.
 0.
--0.5
--0.5
-0.5
--0.5
+-0.654654
+-0.654654
+0.654654
+-0.654654
 0.
--0.5
--0.5
-IS Object: 2D, Tensor, Order 4, Point 0 Symmetry -1 1 MPI processes
+-0.654654
+-0.654654
+IS Object: 2D, Tensor, Order 4, Point 0 Symmetry -3 1 MPI process
   type: general
 Number of indices in set 9
 0 2
@@ -1508,27 +1300,91 @@ Number of indices in set 9
 6 8
 7 7
 8 6
-Vec Object: 2D, Tensor, Order 4, Point 0 Symmetry -1 1 MPI processes
+Vec Object: 2D, Tensor, Order 4, Point 0 Symmetry -3 1 MPI process
   type: seq
-0.5
--0.5
+0.654654
+-0.654654
 0.
--0.5
--0.5
--0.5
-0.5
+-0.654654
+-0.654654
+-0.654654
+0.654654
 0.
 0.
 0.
--0.5
+-0.654654
 0.
-0.5
-0.5
+0.654654
+0.654654
 0.
-0.5
--0.5
-0.5
-IS Object: 2D, Tensor, Order 4, Point 0 Symmetry 0 1 MPI processes
+0.654654
+-0.654654
+0.654654
+IS Object: 2D, Tensor, Order 4, Point 0 Symmetry -2 1 MPI process
+  type: general
+Number of indices in set 9
+0 0
+1 3
+2 6
+3 1
+4 4
+5 7
+6 2
+7 5
+8 8
+Vec Object: 2D, Tensor, Order 4, Point 0 Symmetry -2 1 MPI process
+  type: seq
+-0.654654
+-0.654654
+-0.654654
+0.
+-0.654654
+0.654654
+0.
+-0.654654
+0.
+0.
+0.
+0.654654
+0.654654
+-0.654654
+0.654654
+0.
+0.654654
+0.654654
+IS Object: 2D, Tensor, Order 4, Point 0 Symmetry -1 1 MPI process
+  type: general
+Number of indices in set 9
+0 6
+1 7
+2 8
+3 3
+4 4
+5 5
+6 0
+7 1
+8 2
+Vec Object: 2D, Tensor, Order 4, Point 0 Symmetry -1 1 MPI process
+  type: seq
+-0.654654
+0.654654
+0.
+0.654654
+0.654654
+0.654654
+-0.654654
+0.
+0.
+0.
+0.654654
+0.
+-0.654654
+-0.654654
+0.
+-0.654654
+0.654654
+-0.654654
+IS Object: 2D, Tensor, Order 4, Point 0 Symmetry 0 1 MPI process
   type: general
 Number of indices in set 9
 0 0
@@ -1540,27 +1396,27 @@ Number of indices in set 9
 6 6
 7 7
 8 8
-Vec Object: 2D, Tensor, Order 4, Point 0 Symmetry 0 1 MPI processes
+Vec Object: 2D, Tensor, Order 4, Point 0 Symmetry 0 1 MPI process
   type: seq
--0.5
--0.5
+-0.654654
+-0.654654
 0.
--0.5
-0.5
--0.5
--0.5
+-0.654654
+0.654654
+-0.654654
+-0.654654
 0.
 0.
 0.
-0.5
+0.654654
 0.
--0.5
-0.5
+-0.654654
+0.654654
 0.
-0.5
-0.5
-0.5
-IS Object: 2D, Tensor, Order 4, Point 0 Symmetry 1 1 MPI processes
+0.654654
+0.654654
+0.654654
+IS Object: 2D, Tensor, Order 4, Point 0 Symmetry 1 1 MPI process
   type: general
 Number of indices in set 9
 0 2
@@ -1572,27 +1428,27 @@ Number of indices in set 9
 6 0
 7 3
 8 6
-Vec Object: 2D, Tensor, Order 4, Point 0 Symmetry 1 1 MPI processes
+Vec Object: 2D, Tensor, Order 4, Point 0 Symmetry 1 1 MPI process
   type: seq
-0.5
--0.5
-0.5
+0.654654
+-0.654654
+0.654654
 0.
-0.5
-0.5
+0.654654
+0.654654
 0.
--0.5
+-0.654654
 0.
 0.
 0.
-0.5
--0.5
--0.5
--0.5
+0.654654
+-0.654654
+-0.654654
+-0.654654
 0.
--0.5
-0.5
-IS Object: 2D, Tensor, Order 4, Point 0 Symmetry 2 1 MPI processes
+-0.654654
+0.654654
+IS Object: 2D, Tensor, Order 4, Point 0 Symmetry 2 1 MPI process
   type: general
 Number of indices in set 9
 0 8
@@ -1604,27 +1460,27 @@ Number of indices in set 9
 6 2
 7 1
 8 0
-Vec Object: 2D, Tensor, Order 4, Point 0 Symmetry 2 1 MPI processes
+Vec Object: 2D, Tensor, Order 4, Point 0 Symmetry 2 1 MPI process
   type: seq
-0.5
-0.5
+0.654654
+0.654654
 0.
-0.5
--0.5
-0.5
-0.5
+0.654654
+-0.654654
+0.654654
+0.654654
 0.
 0.
 0.
--0.5
+-0.654654
 0.
-0.5
--0.5
+0.654654
+-0.654654
 0.
--0.5
--0.5
--0.5
-IS Object: 2D, Tensor, Order 4, Point 0 Symmetry 3 1 MPI processes
+-0.654654
+-0.654654
+-0.654654
+IS Object: 2D, Tensor, Order 4, Point 0 Symmetry 3 1 MPI process
   type: general
 Number of indices in set 9
 0 6
@@ -1636,133 +1492,27 @@ Number of indices in set 9
 6 8
 7 5
 8 2
-Vec Object: 2D, Tensor, Order 4, Point 0 Symmetry 3 1 MPI processes
+Vec Object: 2D, Tensor, Order 4, Point 0 Symmetry 3 1 MPI process
   type: seq
--0.5
-0.5
--0.5
+-0.654654
+0.654654
+-0.654654
 0.
--0.5
--0.5
+-0.654654
+-0.654654
 0.
-0.5
+0.654654
 0.
 0.
 0.
--0.5
-0.5
-0.5
-0.5
+-0.654654
+0.654654
+0.654654
+0.654654
 0.
-0.5
--0.5
-IS Object: 2D, Tensor, Order 5, Point 0 Symmetry -4 1 MPI processes
-  type: general
-Number of indices in set 16
-0 0
-1 4
-2 8
-3 12
-4 1
-5 5
-6 9
-7 13
-8 2
-9 6
-10 10
-11 14
-12 3
-13 7
-14 11
-15 15
-Vec Object: 2D, Tensor, Order 5, Point 0 Symmetry -4 1 MPI processes
-  type: seq
--0.6
--0.6
--0.6
--0.2
--0.6
-0.2
--0.6
-0.6
--0.2
--0.6
--0.2
--0.2
--0.2
-0.2
--0.2
-0.6
-0.2
--0.6
-0.2
--0.2
-0.2
-0.2
-0.2
-0.6
-0.6
--0.6
-0.6
--0.2
-0.6
-0.2
-0.6
-0.6
-IS Object: 2D, Tensor, Order 5, Point 0 Symmetry -3 1 MPI processes
-  type: general
-Number of indices in set 16
-0 12
-1 13
-2 14
-3 15
-4 8
-5 9
-6 10
-7 11
-8 4
-9 5
-10 6
-11 7
-12 0
-13 1
-14 2
-15 3
-Vec Object: 2D, Tensor, Order 5, Point 0 Symmetry -3 1 MPI processes
-  type: seq
--0.6
-0.6
--0.2
-0.6
-0.2
-0.6
-0.6
-0.6
--0.6
-0.2
--0.2
-0.2
-0.2
-0.2
-0.6
-0.2
--0.6
--0.2
--0.2
--0.2
-0.2
--0.2
-0.6
--0.2
--0.6
--0.6
--0.2
--0.6
-0.2
--0.6
-0.6
--0.6
-IS Object: 2D, Tensor, Order 5, Point 0 Symmetry -2 1 MPI processes
+0.654654
+-0.654654
+IS Object: 2D, Tensor, Order 5, Point 0 Symmetry -4 1 MPI process
   type: general
 Number of indices in set 16
 0 15
@@ -1781,41 +1531,41 @@ Number of indices in set 16
 13 8
 14 4
 15 0
-Vec Object: 2D, Tensor, Order 5, Point 0 Symmetry -2 1 MPI processes
+Vec Object: 2D, Tensor, Order 5, Point 0 Symmetry -4 1 MPI process
   type: seq
-0.6
-0.6
-0.6
-0.2
-0.6
--0.2
-0.6
--0.6
-0.2
-0.6
-0.2
-0.2
-0.2
--0.2
-0.2
--0.6
--0.2
-0.6
--0.2
-0.2
--0.2
--0.2
--0.2
--0.6
--0.6
-0.6
--0.6
-0.2
--0.6
--0.2
--0.6
--0.6
-IS Object: 2D, Tensor, Order 5, Point 0 Symmetry -1 1 MPI processes
+0.765055
+0.765055
+0.765055
+0.285232
+0.765055
+-0.285232
+0.765055
+-0.765055
+0.285232
+0.765055
+0.285232
+0.285232
+0.285232
+-0.285232
+0.285232
+-0.765055
+-0.285232
+0.765055
+-0.285232
+0.285232
+-0.285232
+-0.285232
+-0.285232
+-0.765055
+-0.765055
+0.765055
+-0.765055
+0.285232
+-0.765055
+-0.285232
+-0.765055
+-0.765055
+IS Object: 2D, Tensor, Order 5, Point 0 Symmetry -3 1 MPI process
   type: general
 Number of indices in set 16
 0 3
@@ -1834,41 +1584,147 @@ Number of indices in set 16
 13 14
 14 13
 15 12
-Vec Object: 2D, Tensor, Order 5, Point 0 Symmetry -1 1 MPI processes
+Vec Object: 2D, Tensor, Order 5, Point 0 Symmetry -3 1 MPI process
   type: seq
-0.6
--0.6
-0.2
--0.6
--0.2
--0.6
--0.6
--0.6
-0.6
--0.2
-0.2
--0.2
--0.2
--0.2
--0.6
--0.2
-0.6
-0.2
-0.2
-0.2
--0.2
-0.2
--0.6
-0.2
-0.6
-0.6
-0.2
-0.6
--0.2
-0.6
--0.6
-0.6
-IS Object: 2D, Tensor, Order 5, Point 0 Symmetry 0 1 MPI processes
+0.765055
+-0.765055
+0.285232
+-0.765055
+-0.285232
+-0.765055
+-0.765055
+-0.765055
+0.765055
+-0.285232
+0.285232
+-0.285232
+-0.285232
+-0.285232
+-0.765055
+-0.285232
+0.765055
+0.285232
+0.285232
+0.285232
+-0.285232
+0.285232
+-0.765055
+0.285232
+0.765055
+0.765055
+0.285232
+0.765055
+-0.285232
+0.765055
+-0.765055
+0.765055
+IS Object: 2D, Tensor, Order 5, Point 0 Symmetry -2 1 MPI process
+  type: general
+Number of indices in set 16
+0 0
+1 4
+2 8
+3 12
+4 1
+5 5
+6 9
+7 13
+8 2
+9 6
+10 10
+11 14
+12 3
+13 7
+14 11
+15 15
+Vec Object: 2D, Tensor, Order 5, Point 0 Symmetry -2 1 MPI process
+  type: seq
+-0.765055
+-0.765055
+-0.765055
+-0.285232
+-0.765055
+0.285232
+-0.765055
+0.765055
+-0.285232
+-0.765055
+-0.285232
+-0.285232
+-0.285232
+0.285232
+-0.285232
+0.765055
+0.285232
+-0.765055
+0.285232
+-0.285232
+0.285232
+0.285232
+0.285232
+0.765055
+0.765055
+-0.765055
+0.765055
+-0.285232
+0.765055
+0.285232
+0.765055
+0.765055
+IS Object: 2D, Tensor, Order 5, Point 0 Symmetry -1 1 MPI process
+  type: general
+Number of indices in set 16
+0 12
+1 13
+2 14
+3 15
+4 8
+5 9
+6 10
+7 11
+8 4
+9 5
+10 6
+11 7
+12 0
+13 1
+14 2
+15 3
+Vec Object: 2D, Tensor, Order 5, Point 0 Symmetry -1 1 MPI process
+  type: seq
+-0.765055
+0.765055
+-0.285232
+0.765055
+0.285232
+0.765055
+0.765055
+0.765055
+-0.765055
+0.285232
+-0.285232
+0.285232
+0.285232
+0.285232
+0.765055
+0.285232
+-0.765055
+-0.285232
+-0.285232
+-0.285232
+0.285232
+-0.285232
+0.765055
+-0.285232
+-0.765055
+-0.765055
+-0.285232
+-0.765055
+0.285232
+-0.765055
+0.765055
+-0.765055
+IS Object: 2D, Tensor, Order 5, Point 0 Symmetry 0 1 MPI process
   type: general
 Number of indices in set 16
 0 0
@@ -1887,41 +1743,41 @@ Number of indices in set 16
 13 13
 14 14
 15 15
-Vec Object: 2D, Tensor, Order 5, Point 0 Symmetry 0 1 MPI processes
+Vec Object: 2D, Tensor, Order 5, Point 0 Symmetry 0 1 MPI process
   type: seq
--0.6
--0.6
--0.2
--0.6
-0.2
--0.6
-0.6
--0.6
--0.6
--0.2
--0.2
--0.2
-0.2
--0.2
-0.6
--0.2
--0.6
-0.2
--0.2
-0.2
-0.2
-0.2
-0.6
-0.2
--0.6
-0.6
--0.2
-0.6
-0.2
-0.6
-0.6
-0.6
-IS Object: 2D, Tensor, Order 5, Point 0 Symmetry 1 1 MPI processes
+-0.765055
+-0.765055
+-0.285232
+-0.765055
+0.285232
+-0.765055
+0.765055
+-0.765055
+-0.765055
+-0.285232
+-0.285232
+-0.285232
+0.285232
+-0.285232
+0.765055
+-0.285232
+-0.765055
+0.285232
+-0.285232
+0.285232
+0.285232
+0.285232
+0.765055
+0.285232
+-0.765055
+0.765055
+-0.285232
+0.765055
+0.285232
+0.765055
+0.765055
+0.765055
+IS Object: 2D, Tensor, Order 5, Point 0 Symmetry 1 1 MPI process
   type: general
 Number of indices in set 16
 0 3
@@ -1940,41 +1796,41 @@ Number of indices in set 16
 13 4
 14 8
 15 12
-Vec Object: 2D, Tensor, Order 5, Point 0 Symmetry 1 1 MPI processes
+Vec Object: 2D, Tensor, Order 5, Point 0 Symmetry 1 1 MPI process
   type: seq
-0.6
--0.6
-0.6
--0.2
-0.6
-0.2
-0.6
-0.6
-0.2
--0.6
-0.2
--0.2
-0.2
-0.2
-0.2
-0.6
--0.2
--0.6
--0.2
--0.2
--0.2
-0.2
--0.2
-0.6
--0.6
--0.6
--0.6
--0.2
--0.6
-0.2
--0.6
-0.6
-IS Object: 2D, Tensor, Order 5, Point 0 Symmetry 2 1 MPI processes
+0.765055
+-0.765055
+0.765055
+-0.285232
+0.765055
+0.285232
+0.765055
+0.765055
+0.285232
+-0.765055
+0.285232
+-0.285232
+0.285232
+0.285232
+0.285232
+0.765055
+-0.285232
+-0.765055
+-0.285232
+-0.285232
+-0.285232
+0.285232
+-0.285232
+0.765055
+-0.765055
+-0.765055
+-0.765055
+-0.285232
+-0.765055
+0.285232
+-0.765055
+0.765055
+IS Object: 2D, Tensor, Order 5, Point 0 Symmetry 2 1 MPI process
   type: general
 Number of indices in set 16
 0 15
@@ -1993,41 +1849,41 @@ Number of indices in set 16
 13 2
 14 1
 15 0
-Vec Object: 2D, Tensor, Order 5, Point 0 Symmetry 2 1 MPI processes
+Vec Object: 2D, Tensor, Order 5, Point 0 Symmetry 2 1 MPI process
   type: seq
-0.6
-0.6
-0.2
-0.6
--0.2
-0.6
--0.6
-0.6
-0.6
-0.2
-0.2
-0.2
--0.2
-0.2
--0.6
-0.2
-0.6
--0.2
-0.2
--0.2
--0.2
--0.2
--0.6
--0.2
-0.6
--0.6
-0.2
--0.6
--0.2
--0.6
--0.6
--0.6
-IS Object: 2D, Tensor, Order 5, Point 0 Symmetry 3 1 MPI processes
+0.765055
+0.765055
+0.285232
+0.765055
+-0.285232
+0.765055
+-0.765055
+0.765055
+0.765055
+0.285232
+0.285232
+0.285232
+-0.285232
+0.285232
+-0.765055
+0.285232
+0.765055
+-0.285232
+0.285232
+-0.285232
+-0.285232
+-0.285232
+-0.765055
+-0.285232
+0.765055
+-0.765055
+0.285232
+-0.765055
+-0.285232
+-0.765055
+-0.765055
+-0.765055
+IS Object: 2D, Tensor, Order 5, Point 0 Symmetry 3 1 MPI process
   type: general
 Number of indices in set 16
 0 12
@@ -2046,291 +1902,209 @@ Number of indices in set 16
 13 11
 14 7
 15 3
-Vec Object: 2D, Tensor, Order 5, Point 0 Symmetry 3 1 MPI processes
+Vec Object: 2D, Tensor, Order 5, Point 0 Symmetry 3 1 MPI process
   type: seq
--0.6
-0.6
--0.6
-0.2
--0.6
--0.2
--0.6
--0.6
--0.2
-0.6
--0.2
-0.2
--0.2
--0.2
--0.2
--0.6
-0.2
-0.6
-0.2
-0.2
-0.2
--0.2
-0.2
--0.6
-0.6
-0.6
-0.6
-0.2
-0.6
--0.2
-0.6
--0.6
-IS Object: 3D, Tensor, Order 3, Point 9 Symmetry -4 1 MPI processes
-  type: general
-Number of indices in set 4
-0 8
-1 10
-2 9
-3 11
-Vec Object: 3D, Tensor, Order 3, Point 9 Symmetry -4 1 MPI processes
-  type: seq
--0.333333
--0.333333
--1.
-0.333333
--0.333333
--1.
--0.333333
-0.333333
--1.
-0.333333
-0.333333
--1.
-IS Object: 3D, Tensor, Order 3, Point 9 Symmetry -3 1 MPI processes
-  type: general
-Number of indices in set 4
-0 10
-1 11
-2 8
-3 9
-Vec Object: 3D, Tensor, Order 3, Point 9 Symmetry -3 1 MPI processes
-  type: seq
-0.333333
--0.333333
--1.
-0.333333
-0.333333
--1.
--0.333333
--0.333333
--1.
--0.333333
-0.333333
--1.
-IS Object: 3D, Tensor, Order 3, Point 9 Symmetry -2 1 MPI processes
+-0.765055
+0.765055
+-0.765055
+0.285232
+-0.765055
+-0.285232
+-0.765055
+-0.765055
+-0.285232
+0.765055
+-0.285232
+0.285232
+-0.285232
+-0.285232
+-0.285232
+-0.765055
+0.285232
+0.765055
+0.285232
+0.285232
+0.285232
+-0.285232
+0.285232
+-0.765055
+0.765055
+0.765055
+0.765055
+0.285232
+0.765055
+-0.285232
+0.765055
+-0.765055
+IS Object: 3D, Tensor, Order 3, Point 9 Symmetry -4 1 MPI process
   type: general
 Number of indices in set 4
 0 11
 1 9
 2 10
 3 8
-Vec Object: 3D, Tensor, Order 3, Point 9 Symmetry -2 1 MPI processes
+Vec Object: 3D, Tensor, Order 3, Point 9 Symmetry -4 1 MPI process
   type: seq
-0.333333
-0.333333
+0.447214
+0.447214
 -1.
--0.333333
-0.333333
+-0.447214
+0.447214
 -1.
-0.333333
--0.333333
+0.447214
+-0.447214
 -1.
--0.333333
--0.333333
+-0.447214
+-0.447214
 -1.
-IS Object: 3D, Tensor, Order 3, Point 9 Symmetry -1 1 MPI processes
+IS Object: 3D, Tensor, Order 3, Point 9 Symmetry -3 1 MPI process
   type: general
 Number of indices in set 4
 0 9
 1 8
 2 11
 3 10
-Vec Object: 3D, Tensor, Order 3, Point 9 Symmetry -1 1 MPI processes
+Vec Object: 3D, Tensor, Order 3, Point 9 Symmetry -3 1 MPI process
   type: seq
--0.333333
-0.333333
+-0.447214
+0.447214
 -1.
--0.333333
--0.333333
+-0.447214
+-0.447214
 -1.
-0.333333
-0.333333
+0.447214
+0.447214
 -1.
-0.333333
--0.333333
+0.447214
+-0.447214
 -1.
-IS Object: 3D, Tensor, Order 3, Point 9 Symmetry 0 1 MPI processes
+IS Object: 3D, Tensor, Order 3, Point 9 Symmetry -2 1 MPI process
+  type: general
+Number of indices in set 4
+0 8
+1 10
+2 9
+3 11
+Vec Object: 3D, Tensor, Order 3, Point 9 Symmetry -2 1 MPI process
+  type: seq
+-0.447214
+-0.447214
+-1.
+0.447214
+-0.447214
+-1.
+-0.447214
+0.447214
+-1.
+0.447214
+0.447214
+-1.
+IS Object: 3D, Tensor, Order 3, Point 9 Symmetry -1 1 MPI process
+  type: general
+Number of indices in set 4
+0 10
+1 11
+2 8
+3 9
+Vec Object: 3D, Tensor, Order 3, Point 9 Symmetry -1 1 MPI process
+  type: seq
+0.447214
+-0.447214
+-1.
+0.447214
+0.447214
+-1.
+-0.447214
+-0.447214
+-1.
+-0.447214
+0.447214
+-1.
+IS Object: 3D, Tensor, Order 3, Point 9 Symmetry 0 1 MPI process
   type: general
 Number of indices in set 4
 0 8
 1 9
 2 10
 3 11
-Vec Object: 3D, Tensor, Order 3, Point 9 Symmetry 0 1 MPI processes
+Vec Object: 3D, Tensor, Order 3, Point 9 Symmetry 0 1 MPI process
   type: seq
--0.333333
--0.333333
+-0.447214
+-0.447214
 -1.
--0.333333
-0.333333
+-0.447214
+0.447214
 -1.
-0.333333
--0.333333
+0.447214
+-0.447214
 -1.
-0.333333
-0.333333
+0.447214
+0.447214
 -1.
-IS Object: 3D, Tensor, Order 3, Point 9 Symmetry 1 1 MPI processes
+IS Object: 3D, Tensor, Order 3, Point 9 Symmetry 1 1 MPI process
   type: general
 Number of indices in set 4
 0 9
 1 11
 2 8
 3 10
-Vec Object: 3D, Tensor, Order 3, Point 9 Symmetry 1 1 MPI processes
+Vec Object: 3D, Tensor, Order 3, Point 9 Symmetry 1 1 MPI process
   type: seq
--0.333333
-0.333333
+-0.447214
+0.447214
 -1.
-0.333333
-0.333333
+0.447214
+0.447214
 -1.
--0.333333
--0.333333
+-0.447214
+-0.447214
 -1.
-0.333333
--0.333333
+0.447214
+-0.447214
 -1.
-IS Object: 3D, Tensor, Order 3, Point 9 Symmetry 2 1 MPI processes
+IS Object: 3D, Tensor, Order 3, Point 9 Symmetry 2 1 MPI process
   type: general
 Number of indices in set 4
 0 11
 1 10
 2 9
 3 8
-Vec Object: 3D, Tensor, Order 3, Point 9 Symmetry 2 1 MPI processes
+Vec Object: 3D, Tensor, Order 3, Point 9 Symmetry 2 1 MPI process
   type: seq
-0.333333
-0.333333
+0.447214
+0.447214
 -1.
-0.333333
--0.333333
+0.447214
+-0.447214
 -1.
--0.333333
-0.333333
+-0.447214
+0.447214
 -1.
--0.333333
--0.333333
+-0.447214
+-0.447214
 -1.
-IS Object: 3D, Tensor, Order 3, Point 9 Symmetry 3 1 MPI processes
+IS Object: 3D, Tensor, Order 3, Point 9 Symmetry 3 1 MPI process
   type: general
 Number of indices in set 4
 0 10
 1 8
 2 11
 3 9
-Vec Object: 3D, Tensor, Order 3, Point 9 Symmetry 3 1 MPI processes
+Vec Object: 3D, Tensor, Order 3, Point 9 Symmetry 3 1 MPI process
   type: seq
-0.333333
--0.333333
+0.447214
+-0.447214
 -1.
--0.333333
--0.333333
+-0.447214
+-0.447214
 -1.
-0.333333
-0.333333
+0.447214
+0.447214
 -1.
--0.333333
-0.333333
+-0.447214
+0.447214
 -1.
-IS Object: 3D, Tensor, Order 4, Point 9 Symmetry -4 1 MPI processes
-  type: general
-Number of indices in set 9
-0 27
-1 30
-2 33
-3 28
-4 31
-5 34
-6 29
-7 32
-8 35
-Vec Object: 3D, Tensor, Order 4, Point 9 Symmetry -4 1 MPI processes
-  type: seq
--0.5
--0.5
--1.
-0.
--0.5
--1.
-0.5
--0.5
--1.
--0.5
-0.
--1.
-0.
-0.
--1.
-0.5
-0.
--1.
--0.5
-0.5
--1.
-0.
-0.5
--1.
-0.5
-0.5
--1.
-IS Object: 3D, Tensor, Order 4, Point 9 Symmetry -3 1 MPI processes
-  type: general
-Number of indices in set 9
-0 33
-1 34
-2 35
-3 30
-4 31
-5 32
-6 27
-7 28
-8 29
-Vec Object: 3D, Tensor, Order 4, Point 9 Symmetry -3 1 MPI processes
-  type: seq
-0.5
--0.5
--1.
-0.5
-0.
--1.
-0.5
-0.5
--1.
-0.
--0.5
--1.
-0.
-0.
--1.
-0.
-0.5
--1.
--0.5
--0.5
--1.
--0.5
-0.
--1.
--0.5
-0.5
--1.
-IS Object: 3D, Tensor, Order 4, Point 9 Symmetry -2 1 MPI processes
+IS Object: 3D, Tensor, Order 4, Point 9 Symmetry -4 1 MPI process
   type: general
 Number of indices in set 9
 0 35
@@ -2342,36 +2116,36 @@ Number of indices in set 9
 6 33
 7 30
 8 27
-Vec Object: 3D, Tensor, Order 4, Point 9 Symmetry -2 1 MPI processes
+Vec Object: 3D, Tensor, Order 4, Point 9 Symmetry -4 1 MPI process
   type: seq
-0.5
-0.5
+0.654654
+0.654654
 -1.
 0.
-0.5
+0.654654
 -1.
--0.5
-0.5
+-0.654654
+0.654654
 -1.
-0.5
+0.654654
 0.
 -1.
 0.
 0.
 -1.
--0.5
+-0.654654
 0.
 -1.
-0.5
--0.5
+0.654654
+-0.654654
 -1.
 0.
--0.5
+-0.654654
 -1.
--0.5
--0.5
+-0.654654
+-0.654654
 -1.
-IS Object: 3D, Tensor, Order 4, Point 9 Symmetry -1 1 MPI processes
+IS Object: 3D, Tensor, Order 4, Point 9 Symmetry -3 1 MPI process
   type: general
 Number of indices in set 9
 0 29
@@ -2383,36 +2157,118 @@ Number of indices in set 9
 6 35
 7 34
 8 33
-Vec Object: 3D, Tensor, Order 4, Point 9 Symmetry -1 1 MPI processes
+Vec Object: 3D, Tensor, Order 4, Point 9 Symmetry -3 1 MPI process
   type: seq
--0.5
-0.5
+-0.654654
+0.654654
 -1.
--0.5
+-0.654654
 0.
 -1.
--0.5
--0.5
+-0.654654
+-0.654654
 -1.
 0.
-0.5
+0.654654
 -1.
 0.
 0.
 -1.
 0.
--0.5
+-0.654654
 -1.
-0.5
-0.5
+0.654654
+0.654654
 -1.
-0.5
+0.654654
 0.
 -1.
-0.5
--0.5
+0.654654
+-0.654654
 -1.
-IS Object: 3D, Tensor, Order 4, Point 9 Symmetry 0 1 MPI processes
+IS Object: 3D, Tensor, Order 4, Point 9 Symmetry -2 1 MPI process
+  type: general
+Number of indices in set 9
+0 27
+1 30
+2 33
+3 28
+4 31
+5 34
+6 29
+7 32
+8 35
+Vec Object: 3D, Tensor, Order 4, Point 9 Symmetry -2 1 MPI process
+  type: seq
+-0.654654
+-0.654654
+-1.
+0.
+-0.654654
+-1.
+0.654654
+-0.654654
+-1.
+-0.654654
+0.
+-1.
+0.
+0.
+-1.
+0.654654
+0.
+-1.
+-0.654654
+0.654654
+-1.
+0.
+0.654654
+-1.
+0.654654
+0.654654
+-1.
+IS Object: 3D, Tensor, Order 4, Point 9 Symmetry -1 1 MPI process
+  type: general
+Number of indices in set 9
+0 33
+1 34
+2 35
+3 30
+4 31
+5 32
+6 27
+7 28
+8 29
+Vec Object: 3D, Tensor, Order 4, Point 9 Symmetry -1 1 MPI process
+  type: seq
+0.654654
+-0.654654
+-1.
+0.654654
+0.
+-1.
+0.654654
+0.654654
+-1.
+0.
+-0.654654
+-1.
+0.
+0.
+-1.
+0.
+0.654654
+-1.
+-0.654654
+-0.654654
+-1.
+-0.654654
+0.
+-1.
+-0.654654
+0.654654
+-1.
+IS Object: 3D, Tensor, Order 4, Point 9 Symmetry 0 1 MPI process
   type: general
 Number of indices in set 9
 0 27
@@ -2424,36 +2280,36 @@ Number of indices in set 9
 6 33
 7 34
 8 35
-Vec Object: 3D, Tensor, Order 4, Point 9 Symmetry 0 1 MPI processes
+Vec Object: 3D, Tensor, Order 4, Point 9 Symmetry 0 1 MPI process
   type: seq
--0.5
--0.5
+-0.654654
+-0.654654
 -1.
--0.5
+-0.654654
 0.
 -1.
--0.5
-0.5
+-0.654654
+0.654654
 -1.
 0.
--0.5
+-0.654654
 -1.
 0.
 0.
 -1.
 0.
-0.5
+0.654654
 -1.
-0.5
--0.5
+0.654654
+-0.654654
 -1.
-0.5
+0.654654
 0.
 -1.
-0.5
-0.5
+0.654654
+0.654654
 -1.
-IS Object: 3D, Tensor, Order 4, Point 9 Symmetry 1 1 MPI processes
+IS Object: 3D, Tensor, Order 4, Point 9 Symmetry 1 1 MPI process
   type: general
 Number of indices in set 9
 0 29
@@ -2465,36 +2321,36 @@ Number of indices in set 9
 6 27
 7 30
 8 33
-Vec Object: 3D, Tensor, Order 4, Point 9 Symmetry 1 1 MPI processes
+Vec Object: 3D, Tensor, Order 4, Point 9 Symmetry 1 1 MPI process
   type: seq
--0.5
-0.5
+-0.654654
+0.654654
 -1.
 0.
-0.5
+0.654654
 -1.
-0.5
-0.5
+0.654654
+0.654654
 -1.
--0.5
+-0.654654
 0.
 -1.
 0.
 0.
 -1.
-0.5
+0.654654
 0.
 -1.
--0.5
--0.5
+-0.654654
+-0.654654
 -1.
 0.
--0.5
+-0.654654
 -1.
-0.5
--0.5
+0.654654
+-0.654654
 -1.
-IS Object: 3D, Tensor, Order 4, Point 9 Symmetry 2 1 MPI processes
+IS Object: 3D, Tensor, Order 4, Point 9 Symmetry 2 1 MPI process
   type: general
 Number of indices in set 9
 0 35
@@ -2506,36 +2362,36 @@ Number of indices in set 9
 6 29
 7 28
 8 27
-Vec Object: 3D, Tensor, Order 4, Point 9 Symmetry 2 1 MPI processes
+Vec Object: 3D, Tensor, Order 4, Point 9 Symmetry 2 1 MPI process
   type: seq
-0.5
-0.5
+0.654654
+0.654654
 -1.
-0.5
+0.654654
 0.
 -1.
-0.5
--0.5
+0.654654
+-0.654654
 -1.
 0.
-0.5
+0.654654
 -1.
 0.
 0.
 -1.
 0.
--0.5
+-0.654654
 -1.
--0.5
-0.5
+-0.654654
+0.654654
 -1.
--0.5
+-0.654654
 0.
 -1.
--0.5
--0.5
+-0.654654
+-0.654654
 -1.
-IS Object: 3D, Tensor, Order 4, Point 9 Symmetry 3 1 MPI processes
+IS Object: 3D, Tensor, Order 4, Point 9 Symmetry 3 1 MPI process
   type: general
 Number of indices in set 9
 0 33
@@ -2547,174 +2403,36 @@ Number of indices in set 9
 6 35
 7 32
 8 29
-Vec Object: 3D, Tensor, Order 4, Point 9 Symmetry 3 1 MPI processes
+Vec Object: 3D, Tensor, Order 4, Point 9 Symmetry 3 1 MPI process
   type: seq
-0.5
--0.5
+0.654654
+-0.654654
 -1.
 0.
--0.5
+-0.654654
 -1.
--0.5
--0.5
+-0.654654
+-0.654654
 -1.
-0.5
+0.654654
 0.
 -1.
 0.
 0.
 -1.
--0.5
+-0.654654
 0.
 -1.
-0.5
-0.5
+0.654654
+0.654654
 -1.
 0.
-0.5
+0.654654
 -1.
--0.5
-0.5
+-0.654654
+0.654654
 -1.
-IS Object: 3D, Tensor, Order 5, Point 9 Symmetry -4 1 MPI processes
-  type: general
-Number of indices in set 16
-0 64
-1 68
-2 72
-3 76
-4 65
-5 69
-6 73
-7 77
-8 66
-9 70
-10 74
-11 78
-12 67
-13 71
-14 75
-15 79
-Vec Object: 3D, Tensor, Order 5, Point 9 Symmetry -4 1 MPI processes
-  type: seq
--0.6
--0.6
--1.
--0.2
--0.6
--1.
-0.2
--0.6
--1.
-0.6
--0.6
--1.
--0.6
--0.2
--1.
--0.2
--0.2
--1.
-0.2
--0.2
--1.
-0.6
--0.2
--1.
--0.6
-0.2
--1.
--0.2
-0.2
--1.
-0.2
-0.2
--1.
-0.6
-0.2
--1.
--0.6
-0.6
--1.
--0.2
-0.6
--1.
-0.2
-0.6
--1.
-0.6
-0.6
--1.
-IS Object: 3D, Tensor, Order 5, Point 9 Symmetry -3 1 MPI processes
-  type: general
-Number of indices in set 16
-0 76
-1 77
-2 78
-3 79
-4 72
-5 73
-6 74
-7 75
-8 68
-9 69
-10 70
-11 71
-12 64
-13 65
-14 66
-15 67
-Vec Object: 3D, Tensor, Order 5, Point 9 Symmetry -3 1 MPI processes
-  type: seq
-0.6
--0.6
--1.
-0.6
--0.2
--1.
-0.6
-0.2
--1.
-0.6
-0.6
--1.
-0.2
--0.6
--1.
-0.2
--0.2
--1.
-0.2
-0.2
--1.
-0.2
-0.6
--1.
--0.2
--0.6
--1.
--0.2
--0.2
--1.
--0.2
-0.2
--1.
--0.2
-0.6
--1.
--0.6
--0.6
--1.
--0.6
--0.2
--1.
--0.6
-0.2
--1.
--0.6
-0.6
--1.
-IS Object: 3D, Tensor, Order 5, Point 9 Symmetry -2 1 MPI processes
+IS Object: 3D, Tensor, Order 5, Point 9 Symmetry -4 1 MPI process
   type: general
 Number of indices in set 16
 0 79
@@ -2733,57 +2451,57 @@ Number of indices in set 16
 13 72
 14 68
 15 64
-Vec Object: 3D, Tensor, Order 5, Point 9 Symmetry -2 1 MPI processes
+Vec Object: 3D, Tensor, Order 5, Point 9 Symmetry -4 1 MPI process
   type: seq
-0.6
-0.6
+0.765055
+0.765055
 -1.
-0.2
-0.6
+0.285232
+0.765055
 -1.
--0.2
-0.6
+-0.285232
+0.765055
 -1.
--0.6
-0.6
+-0.765055
+0.765055
 -1.
-0.6
-0.2
+0.765055
+0.285232
 -1.
-0.2
-0.2
+0.285232
+0.285232
 -1.
--0.2
-0.2
+-0.285232
+0.285232
 -1.
--0.6
-0.2
+-0.765055
+0.285232
 -1.
-0.6
--0.2
+0.765055
+-0.285232
 -1.
-0.2
--0.2
+0.285232
+-0.285232
 -1.
--0.2
--0.2
+-0.285232
+-0.285232
 -1.
--0.6
--0.2
+-0.765055
+-0.285232
 -1.
-0.6
--0.6
+0.765055
+-0.765055
 -1.
-0.2
--0.6
+0.285232
+-0.765055
 -1.
--0.2
--0.6
+-0.285232
+-0.765055
 -1.
--0.6
--0.6
+-0.765055
+-0.765055
 -1.
-IS Object: 3D, Tensor, Order 5, Point 9 Symmetry -1 1 MPI processes
+IS Object: 3D, Tensor, Order 5, Point 9 Symmetry -3 1 MPI process
   type: general
 Number of indices in set 16
 0 67
@@ -2802,57 +2520,195 @@ Number of indices in set 16
 13 78
 14 77
 15 76
-Vec Object: 3D, Tensor, Order 5, Point 9 Symmetry -1 1 MPI processes
+Vec Object: 3D, Tensor, Order 5, Point 9 Symmetry -3 1 MPI process
   type: seq
--0.6
-0.6
+-0.765055
+0.765055
 -1.
--0.6
-0.2
+-0.765055
+0.285232
 -1.
--0.6
--0.2
+-0.765055
+-0.285232
 -1.
--0.6
--0.6
+-0.765055
+-0.765055
 -1.
--0.2
-0.6
+-0.285232
+0.765055
 -1.
--0.2
-0.2
+-0.285232
+0.285232
 -1.
--0.2
--0.2
+-0.285232
+-0.285232
 -1.
--0.2
--0.6
+-0.285232
+-0.765055
 -1.
-0.2
-0.6
+0.285232
+0.765055
 -1.
-0.2
-0.2
+0.285232
+0.285232
 -1.
-0.2
--0.2
+0.285232
+-0.285232
 -1.
-0.2
--0.6
+0.285232
+-0.765055
 -1.
-0.6
-0.6
+0.765055
+0.765055
 -1.
-0.6
-0.2
+0.765055
+0.285232
 -1.
-0.6
--0.2
+0.765055
+-0.285232
 -1.
-0.6
--0.6
+0.765055
+-0.765055
 -1.
-IS Object: 3D, Tensor, Order 5, Point 9 Symmetry 0 1 MPI processes
+IS Object: 3D, Tensor, Order 5, Point 9 Symmetry -2 1 MPI process
+  type: general
+Number of indices in set 16
+0 64
+1 68
+2 72
+3 76
+4 65
+5 69
+6 73
+7 77
+8 66
+9 70
+10 74
+11 78
+12 67
+13 71
+14 75
+15 79
+Vec Object: 3D, Tensor, Order 5, Point 9 Symmetry -2 1 MPI process
+  type: seq
+-0.765055
+-0.765055
+-1.
+-0.285232
+-0.765055
+-1.
+0.285232
+-0.765055
+-1.
+0.765055
+-0.765055
+-1.
+-0.765055
+-0.285232
+-1.
+-0.285232
+-0.285232
+-1.
+0.285232
+-0.285232
+-1.
+0.765055
+-0.285232
+-1.
+-0.765055
+0.285232
+-1.
+-0.285232
+0.285232
+-1.
+0.285232
+0.285232
+-1.
+0.765055
+0.285232
+-1.
+-0.765055
+0.765055
+-1.
+-0.285232
+0.765055
+-1.
+0.285232
+0.765055
+-1.
+0.765055
+0.765055
+-1.
+IS Object: 3D, Tensor, Order 5, Point 9 Symmetry -1 1 MPI process
+  type: general
+Number of indices in set 16
+0 76
+1 77
+2 78
+3 79
+4 72
+5 73
+6 74
+7 75
+8 68
+9 69
+10 70
+11 71
+12 64
+13 65
+14 66
+15 67
+Vec Object: 3D, Tensor, Order 5, Point 9 Symmetry -1 1 MPI process
+  type: seq
+0.765055
+-0.765055
+-1.
+0.765055
+-0.285232
+-1.
+0.765055
+0.285232
+-1.
+0.765055
+0.765055
+-1.
+0.285232
+-0.765055
+-1.
+0.285232
+-0.285232
+-1.
+0.285232
+0.285232
+-1.
+0.285232
+0.765055
+-1.
+-0.285232
+-0.765055
+-1.
+-0.285232
+-0.285232
+-1.
+-0.285232
+0.285232
+-1.
+-0.285232
+0.765055
+-1.
+-0.765055
+-0.765055
+-1.
+-0.765055
+-0.285232
+-1.
+-0.765055
+0.285232
+-1.
+-0.765055
+0.765055
+-1.
+IS Object: 3D, Tensor, Order 5, Point 9 Symmetry 0 1 MPI process
   type: general
 Number of indices in set 16
 0 64
@@ -2871,57 +2727,57 @@ Number of indices in set 16
 13 77
 14 78
 15 79
-Vec Object: 3D, Tensor, Order 5, Point 9 Symmetry 0 1 MPI processes
+Vec Object: 3D, Tensor, Order 5, Point 9 Symmetry 0 1 MPI process
   type: seq
--0.6
--0.6
+-0.765055
+-0.765055
 -1.
--0.6
--0.2
+-0.765055
+-0.285232
 -1.
--0.6
-0.2
+-0.765055
+0.285232
 -1.
--0.6
-0.6
+-0.765055
+0.765055
 -1.
--0.2
--0.6
+-0.285232
+-0.765055
 -1.
--0.2
--0.2
+-0.285232
+-0.285232
 -1.
--0.2
-0.2
+-0.285232
+0.285232
 -1.
--0.2
-0.6
+-0.285232
+0.765055
 -1.
-0.2
--0.6
+0.285232
+-0.765055
 -1.
-0.2
--0.2
+0.285232
+-0.285232
 -1.
-0.2
-0.2
+0.285232
+0.285232
 -1.
-0.2
-0.6
+0.285232
+0.765055
 -1.
-0.6
--0.6
+0.765055
+-0.765055
 -1.
-0.6
--0.2
+0.765055
+-0.285232
 -1.
-0.6
-0.2
+0.765055
+0.285232
 -1.
-0.6
-0.6
+0.765055
+0.765055
 -1.
-IS Object: 3D, Tensor, Order 5, Point 9 Symmetry 1 1 MPI processes
+IS Object: 3D, Tensor, Order 5, Point 9 Symmetry 1 1 MPI process
   type: general
 Number of indices in set 16
 0 67
@@ -2940,57 +2796,57 @@ Number of indices in set 16
 13 68
 14 72
 15 76
-Vec Object: 3D, Tensor, Order 5, Point 9 Symmetry 1 1 MPI processes
+Vec Object: 3D, Tensor, Order 5, Point 9 Symmetry 1 1 MPI process
   type: seq
--0.6
-0.6
+-0.765055
+0.765055
 -1.
--0.2
-0.6
+-0.285232
+0.765055
 -1.
-0.2
-0.6
+0.285232
+0.765055
 -1.
-0.6
-0.6
+0.765055
+0.765055
 -1.
--0.6
-0.2
+-0.765055
+0.285232
 -1.
--0.2
-0.2
+-0.285232
+0.285232
 -1.
-0.2
-0.2
+0.285232
+0.285232
 -1.
-0.6
-0.2
+0.765055
+0.285232
 -1.
--0.6
--0.2
+-0.765055
+-0.285232
 -1.
--0.2
--0.2
+-0.285232
+-0.285232
 -1.
-0.2
--0.2
+0.285232
+-0.285232
 -1.
-0.6
--0.2
+0.765055
+-0.285232
 -1.
--0.6
--0.6
+-0.765055
+-0.765055
 -1.
--0.2
--0.6
+-0.285232
+-0.765055
 -1.
-0.2
--0.6
+0.285232
+-0.765055
 -1.
-0.6
--0.6
+0.765055
+-0.765055
 -1.
-IS Object: 3D, Tensor, Order 5, Point 9 Symmetry 2 1 MPI processes
+IS Object: 3D, Tensor, Order 5, Point 9 Symmetry 2 1 MPI process
   type: general
 Number of indices in set 16
 0 79
@@ -3009,57 +2865,57 @@ Number of indices in set 16
 13 66
 14 65
 15 64
-Vec Object: 3D, Tensor, Order 5, Point 9 Symmetry 2 1 MPI processes
+Vec Object: 3D, Tensor, Order 5, Point 9 Symmetry 2 1 MPI process
   type: seq
-0.6
-0.6
+0.765055
+0.765055
 -1.
-0.6
-0.2
+0.765055
+0.285232
 -1.
-0.6
--0.2
+0.765055
+-0.285232
 -1.
-0.6
--0.6
+0.765055
+-0.765055
 -1.
-0.2
-0.6
+0.285232
+0.765055
 -1.
-0.2
-0.2
+0.285232
+0.285232
 -1.
-0.2
--0.2
+0.285232
+-0.285232
 -1.
-0.2
--0.6
+0.285232
+-0.765055
 -1.
--0.2
-0.6
+-0.285232
+0.765055
 -1.
--0.2
-0.2
+-0.285232
+0.285232
 -1.
--0.2
--0.2
+-0.285232
+-0.285232
 -1.
--0.2
--0.6
+-0.285232
+-0.765055
 -1.
--0.6
-0.6
+-0.765055
+0.765055
 -1.
--0.6
-0.2
+-0.765055
+0.285232
 -1.
--0.6
--0.2
+-0.765055
+-0.285232
 -1.
--0.6
--0.6
+-0.765055
+-0.765055
 -1.
-IS Object: 3D, Tensor, Order 5, Point 9 Symmetry 3 1 MPI processes
+IS Object: 3D, Tensor, Order 5, Point 9 Symmetry 3 1 MPI process
   type: general
 Number of indices in set 16
 0 76
@@ -3078,53 +2934,53 @@ Number of indices in set 16
 13 75
 14 71
 15 67
-Vec Object: 3D, Tensor, Order 5, Point 9 Symmetry 3 1 MPI processes
+Vec Object: 3D, Tensor, Order 5, Point 9 Symmetry 3 1 MPI process
   type: seq
-0.6
--0.6
+0.765055
+-0.765055
 -1.
-0.2
--0.6
+0.285232
+-0.765055
 -1.
--0.2
--0.6
+-0.285232
+-0.765055
 -1.
--0.6
--0.6
+-0.765055
+-0.765055
 -1.
-0.6
--0.2
+0.765055
+-0.285232
 -1.
-0.2
--0.2
+0.285232
+-0.285232
 -1.
--0.2
--0.2
+-0.285232
+-0.285232
 -1.
--0.6
--0.2
+-0.765055
+-0.285232
 -1.
-0.6
-0.2
+0.765055
+0.285232
 -1.
-0.2
-0.2
+0.285232
+0.285232
 -1.
--0.2
-0.2
+-0.285232
+0.285232
 -1.
--0.6
-0.2
+-0.765055
+0.285232
 -1.
-0.6
-0.6
+0.765055
+0.765055
 -1.
-0.2
-0.6
+0.285232
+0.765055
 -1.
--0.2
-0.6
+-0.285232
+0.765055
 -1.
--0.6
-0.6
+-0.765055
+0.765055
 -1.

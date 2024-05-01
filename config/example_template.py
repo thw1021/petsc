@@ -4,9 +4,11 @@ header="""#!/usr/bin/env bash
 
 @COMMENTS@
 
+@ENV@
+
 # PATH for DLLs on windows
 PATH="$PATH":@PETSC_LIB_DIR@
-exec='@EXEC@'
+executable='@EXECUTABLE@'
 testname='@TESTNAME@'
 label='@LABEL@'
 runfiles='@LOCALRUNFILES@'
@@ -21,12 +23,15 @@ filter='@FILTER@'
 filter_output='@FILTER_OUTPUT@'
 petsc_bindir='@PETSC_BINDIR@'
 @DATAFILESPATH_LINE@
-args='@ARGS@'
+# -petsc_ci must be a command line argument because if it is from the environment it will be listed by PetscOptionsMonitor()
+args='-petsc_ci @ARGS@'
 diff_args='@DIFF_ARGS@'
 timeoutfactor=@TIMEOUTFACTOR@
+export PETSC_OPTIONS="${PETSC_OPTIONS} -check_pointer_intensity 0 -error_output_stdout -malloc_dump @PETSC_TEST_OPTIONS@"
 
 mpiexec=${PETSCMPIEXEC:-"@MPIEXEC@"}
 diffexec=${PETSCDIFF:-"${petsc_bindir}/petscdiff"}
+mpiexec_tail='@MPIEXEC_TAIL@'
 
 . "${config_dir}/petsc_harness.sh"
 
@@ -37,8 +42,9 @@ mpiexec="${mpiexec} ${mpiexec_flags}"
 
 footer='petsc_testend "@TESTROOT@" '
 
+preclean='@RM@ @TEMPORARIES@'
 todoline='petsc_report_tapoutput "" "${label}" "TODO @TODOCOMMENT@"'
 skipline='petsc_report_tapoutput "" "${label}" "SKIP @SKIPCOMMENT@"'
-mpitest='petsc_testrun "${mpiexec} -n ${insize} ${exec} ${args} @SUBARGS@" @REDIRECT_FILE@ ${testname}.err "${label}@LABEL_SUFFIX@" @ERROR@'
+mpitest='petsc_testrun "${mpiexec} -n ${insize} ${mpiexec_tail} ${executable} ${args} @SUBARGS@" @REDIRECT_FILE@ ${testname}.err "${label}@LABEL_SUFFIX@" @ERROR@'
 difftest='petsc_testrun "${diff_exe} @OUTPUT_FILE@ @REDIRECT_FILE@" diff-${testname}.out diff-${testname}.out diff-${label}@LABEL_SUFFIX@ ""'
 commandtest='petsc_testrun "@COMMAND@" @REDIRECT_FILE@ ${testname}.err cmd-${label}@LABEL_SUFFIX@ @ERROR@'

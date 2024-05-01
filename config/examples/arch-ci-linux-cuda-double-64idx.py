@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
 import os
 petsc_hash_pkgs=os.path.join(os.getenv('HOME'),'petsc-hash-pkgs')
@@ -12,16 +12,21 @@ if __name__ == '__main__':
     '--package-prefix-hash='+petsc_hash_pkgs,
     '--with-make-test-np=2',
     '--download-openmpi=1',
+    '--download-hypre=1',
+    '--download-hwloc=1',
     'COPTFLAGS=-g -O',
     'FOPTFLAGS=-g -O',
     'CXXOPTFLAGS=-g -O',
     '--with-64-bit-indices=1',
-    '--with-cuda=1',
+    '--with-cudac=nvcc', # nvcc-12.1 via ccache
+    '--with-cuda-dir=/usr/local/cuda-12.1',
     '--with-precision=double',
     '--with-clanguage=c',
     # Note: If using nvcc with a host compiler other than the CUDA SDK default for your platform (GCC on Linux, clang
     # on Mac OS X, MSVC on Windows), you must set -ccbin appropriately in CUDAFLAGS, as in the example for PGI below:
     # 'CUDAFLAGS=-ccbin pgc++',
+    '--with-strict-petscerrorcode',
+    '--with-coverage',
   ]
 
   configure.petsc_configure(configure_options)

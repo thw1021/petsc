@@ -1,4 +1,3 @@
-
 static char help[] = "Tests DMCreateDomainDecomposition.\n\n";
 
 /*
@@ -14,229 +13,228 @@ Use the options
 
 PetscErrorCode FillLocalSubdomain(DM da, Vec gvec)
 {
-  DMDALocalInfo  info;
-  PetscMPIInt    rank;
-  PetscInt       i,j,k,l;
-  PetscErrorCode ierr;
+  DMDALocalInfo info;
+  PetscMPIInt   rank;
+  PetscInt      i, j, k, l;
 
   PetscFunctionBeginUser;
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
-  ierr = DMDAGetLocalInfo(da,&info);CHKERRQ(ierr);
+  PetscCallMPI(MPI_Comm_rank(PETSC_COMM_WORLD, &rank));
+  PetscCall(DMDAGetLocalInfo(da, &info));
 
   if (info.dim == 3) {
-    PetscScalar    ***g;
-    ierr = DMDAVecGetArray(da,gvec,&g);CHKERRQ(ierr);
+    PetscScalar ***g;
+    PetscCall(DMDAVecGetArray(da, gvec, &g));
     /* loop over ghosts */
-    for (k=info.zs; k<info.zs+info.zm; k++) {
-      for (j=info.ys; j<info.ys+info.ym; j++) {
-        for (i=info.xs; i<info.xs+info.xm; i++) {
-          g[k][j][info.dof*i+0]   = i;
-          g[k][j][info.dof*i+1]   = j;
-          g[k][j][info.dof*i+2]   = k;
+    for (k = info.zs; k < info.zs + info.zm; k++) {
+      for (j = info.ys; j < info.ys + info.ym; j++) {
+        for (i = info.xs; i < info.xs + info.xm; i++) {
+          g[k][j][info.dof * i + 0] = i;
+          g[k][j][info.dof * i + 1] = j;
+          g[k][j][info.dof * i + 2] = k;
         }
       }
     }
-    ierr = DMDAVecRestoreArray(da,gvec,&g);CHKERRQ(ierr);
+    PetscCall(DMDAVecRestoreArray(da, gvec, &g));
   }
   if (info.dim == 2) {
-    PetscScalar    **g;
-    ierr = DMDAVecGetArray(da,gvec,&g);CHKERRQ(ierr);
+    PetscScalar **g;
+    PetscCall(DMDAVecGetArray(da, gvec, &g));
     /* loop over ghosts */
-    for (j=info.ys; j<info.ys+info.ym; j++) {
-      for (i=info.xs; i<info.xs+info.xm; i++) {
-        for (l = 0;l<info.dof;l++) {
-          g[j][info.dof*i+0]   = i;
-          g[j][info.dof*i+1]   = j;
-          g[j][info.dof*i+2]   = rank;
+    for (j = info.ys; j < info.ys + info.ym; j++) {
+      for (i = info.xs; i < info.xs + info.xm; i++) {
+        for (l = 0; l < info.dof; l++) {
+          g[j][info.dof * i + 0] = i;
+          g[j][info.dof * i + 1] = j;
+          g[j][info.dof * i + 2] = rank;
         }
       }
     }
-    ierr = DMDAVecRestoreArray(da,gvec,&g);CHKERRQ(ierr);
+    PetscCall(DMDAVecRestoreArray(da, gvec, &g));
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-int main(int argc,char **argv)
+int main(int argc, char **argv)
 {
-  PetscErrorCode ierr;
-  DM             da,*subda;
-  PetscInt       i,dim=3;
-  PetscMPIInt    size,rank;
-  Vec            v;
-  Vec            slvec,sgvec;
-  IS             *ois,*iis;
-  VecScatter     oscata;
-  VecScatter     *iscat,*oscat,*gscat;
-  DMDALocalInfo  info;
+  DM            da, *subda;
+  PetscInt      i, dim = 3, dof = 3;
+  PetscInt      M = 25, N = 25, P = 25;
+  PetscMPIInt   size, rank;
+  Vec           v;
+  Vec           slvec, sgvec;
+  IS           *ois, *iis;
+  VecScatter    oscata;
+  VecScatter   *iscat, *oscat, *gscat;
+  DMDALocalInfo info;
+  PetscBool     patchis_offproc = PETSC_TRUE;
 
-  ierr = PetscInitialize(&argc,&argv,(char*)0,help);if (ierr) return ierr;
-  ierr = PetscOptionsGetInt(NULL,NULL,"-dim",&dim,NULL);CHKERRQ(ierr);
+  PetscFunctionBeginUser;
+  PetscCall(PetscInitialize(&argc, &argv, (char *)0, help));
+  PetscCall(PetscOptionsGetInt(NULL, NULL, "-dim", &dim, NULL));
+  PetscCall(PetscOptionsGetInt(NULL, NULL, "-dof", &dof, NULL));
 
   /* Create distributed array and get vectors */
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
+  PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD, &size));
+  PetscCallMPI(MPI_Comm_rank(PETSC_COMM_WORLD, &rank));
   if (dim == 2) {
-    ierr = DMDACreate2d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,DMDA_STENCIL_STAR,-4,-4,PETSC_DECIDE,PETSC_DECIDE,3,1,NULL,NULL,&da);CHKERRQ(ierr);
+    PetscCall(DMDACreate2d(PETSC_COMM_WORLD, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_STAR, M, N, PETSC_DECIDE, PETSC_DECIDE, dof, 1, NULL, NULL, &da));
   } else if (dim == 3) {
-    ierr = DMDACreate3d(PETSC_COMM_WORLD, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,DMDA_STENCIL_STAR,-4,-4,-4,PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,3,1,NULL,NULL,NULL,&da);CHKERRQ(ierr);
+    PetscCall(DMDACreate3d(PETSC_COMM_WORLD, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_STAR, M, N, P, PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE, dof, 1, NULL, NULL, NULL, &da));
   }
-  ierr = DMSetFromOptions(da);CHKERRQ(ierr);
-  ierr = DMSetUp(da);CHKERRQ(ierr);
-  ierr = DMDAGetLocalInfo(da,&info);CHKERRQ(ierr);
+  PetscCall(DMSetFromOptions(da));
+  PetscCall(DMSetUp(da));
+  PetscCall(DMDAGetLocalInfo(da, &info));
 
-  ierr = DMCreateDomainDecomposition(da,NULL,NULL,&iis,&ois,&subda);CHKERRQ(ierr);
-  ierr = DMCreateDomainDecompositionScatters(da,1,subda,&iscat,&oscat,&gscat);CHKERRQ(ierr);
+  PetscCall(DMCreateDomainDecomposition(da, NULL, NULL, &iis, &ois, &subda));
+  PetscCall(DMCreateDomainDecompositionScatters(da, 1, subda, &iscat, &oscat, &gscat));
 
-  {
+  /* TODO: broken for dim=2 */
+  if (dim == 3) {
     DMDALocalInfo subinfo;
-    MatStencil    lower,upper;
-    IS            patchis,subpatchis;
+    MatStencil    lower, upper;
+    IS            patchis;
     Vec           smallvec;
     Vec           largevec;
     VecScatter    patchscat;
 
-    ierr = DMDAGetLocalInfo(subda[0],&subinfo);CHKERRQ(ierr);
+    PetscCall(DMDAGetLocalInfo(subda[0], &subinfo));
 
     lower.i = info.xs;
     lower.j = info.ys;
     lower.k = info.zs;
-    upper.i = info.xs+info.xm;
-    upper.j = info.ys+info.ym;
-    upper.k = info.zs+info.zm;
+    upper.i = info.xs + info.xm;
+    upper.j = info.ys + info.ym;
+    upper.k = info.zs + info.zm;
 
     /* test the patch IS as a thing to scatter to/from */
-    ierr = DMDACreatePatchIS(da,&lower,&upper,&patchis);CHKERRQ(ierr);
-    ierr = DMGetGlobalVector(da,&largevec);CHKERRQ(ierr);
+    PetscCall(DMDACreatePatchIS(da, &lower, &upper, &patchis, patchis_offproc));
+    PetscCall(DMGetGlobalVector(da, &largevec));
 
-    ierr = VecCreate(PETSC_COMM_SELF,&smallvec);CHKERRQ(ierr);
-    ierr = VecSetSizes(smallvec,info.dof*(upper.i - lower.i)*(upper.j - lower.j)*(upper.k - lower.k),PETSC_DECIDE);CHKERRQ(ierr);
-    ierr = VecSetFromOptions(smallvec);CHKERRQ(ierr);
-    ierr = VecScatterCreate(smallvec,NULL,largevec,patchis,&patchscat);CHKERRQ(ierr);
+    PetscCall(VecCreate(PETSC_COMM_SELF, &smallvec));
+    PetscCall(VecSetSizes(smallvec, info.dof * (upper.i - lower.i) * (upper.j - lower.j) * (upper.k - lower.k), PETSC_DECIDE));
+    PetscCall(VecSetFromOptions(smallvec));
+    PetscCall(VecScatterCreate(smallvec, NULL, largevec, patchis, &patchscat));
 
-    ierr = FillLocalSubdomain(subda[0],smallvec);CHKERRQ(ierr);
-    ierr = VecSet(largevec,0);CHKERRQ(ierr);
+    PetscCall(FillLocalSubdomain(subda[0], smallvec));
+    PetscCall(VecSet(largevec, 0));
 
-    ierr = VecScatterBegin(patchscat,smallvec,largevec,ADD_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-    ierr = VecScatterEnd(patchscat,smallvec,largevec,ADD_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
+    PetscCall(VecScatterBegin(patchscat, smallvec, largevec, ADD_VALUES, SCATTER_FORWARD));
+    PetscCall(VecScatterEnd(patchscat, smallvec, largevec, ADD_VALUES, SCATTER_FORWARD));
+    PetscCall(ISView(patchis, PETSC_VIEWER_STDOUT_WORLD));
+    PetscCall(VecScatterView(patchscat, PETSC_VIEWER_STDOUT_WORLD));
 
     for (i = 0; i < size; i++) {
-      if (i == rank) {
-        ierr = ISView(patchis,PETSC_VIEWER_STDOUT_SELF);CHKERRQ(ierr);
-        ierr = VecScatterView(patchscat,PETSC_VIEWER_STDOUT_SELF);CHKERRQ(ierr);
-        ierr = VecView(smallvec,PETSC_VIEWER_STDOUT_SELF);CHKERRQ(ierr);
-      }
-      ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRQ(ierr);
+      if (i == rank) PetscCall(VecView(smallvec, PETSC_VIEWER_STDOUT_SELF));
+      PetscCallMPI(MPI_Barrier(PETSC_COMM_WORLD));
     }
 
-    ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRQ(ierr);
-    ierr = VecView(largevec,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
+    PetscCallMPI(MPI_Barrier(PETSC_COMM_WORLD));
+    PetscCall(VecView(largevec, PETSC_VIEWER_STDOUT_WORLD));
 
-    ierr = VecDestroy(&smallvec);CHKERRQ(ierr);
-    ierr = DMRestoreGlobalVector(da,&largevec);CHKERRQ(ierr);
-    ierr = ISDestroy(&patchis);CHKERRQ(ierr);
-    ierr = VecScatterDestroy(&patchscat);CHKERRQ(ierr);
+    PetscCall(VecDestroy(&smallvec));
+    PetscCall(DMRestoreGlobalVector(da, &largevec));
+    PetscCall(ISDestroy(&patchis));
+    PetscCall(VecScatterDestroy(&patchscat));
   }
 
   /* view the various parts */
   {
     for (i = 0; i < size; i++) {
       if (i == rank) {
-        ierr = PetscPrintf(PETSC_COMM_SELF,"Processor %d: \n",i);CHKERRQ(ierr);
-        ierr = DMView(subda[0],PETSC_VIEWER_STDOUT_SELF);CHKERRQ(ierr);
+        PetscCall(PetscPrintf(PETSC_COMM_SELF, "Processor %d: \n", i));
+        PetscCall(DMView(subda[0], PETSC_VIEWER_STDOUT_SELF));
       }
-      ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRQ(ierr);
+      PetscCallMPI(MPI_Barrier(PETSC_COMM_WORLD));
     }
 
-    ierr = DMGetLocalVector(subda[0],&slvec);CHKERRQ(ierr);
-    ierr = DMGetGlobalVector(subda[0],&sgvec);CHKERRQ(ierr);
-    ierr = DMGetGlobalVector(da,&v);CHKERRQ(ierr);
+    PetscCall(DMGetLocalVector(subda[0], &slvec));
+    PetscCall(DMGetGlobalVector(subda[0], &sgvec));
+    PetscCall(DMGetGlobalVector(da, &v));
 
     /* test filling outer between the big DM and the small ones with the IS scatter*/
-    ierr = VecScatterCreate(v,ois[0],sgvec,NULL,&oscata);CHKERRQ(ierr);
+    PetscCall(VecScatterCreate(v, ois[0], sgvec, NULL, &oscata));
 
-    ierr = FillLocalSubdomain(subda[0],sgvec);CHKERRQ(ierr);
+    PetscCall(FillLocalSubdomain(subda[0], sgvec));
 
-    ierr = VecScatterBegin(oscata,sgvec,v,ADD_VALUES,SCATTER_REVERSE);CHKERRQ(ierr);
-    ierr = VecScatterEnd(oscata,sgvec,v,ADD_VALUES,SCATTER_REVERSE);CHKERRQ(ierr);
+    PetscCall(VecScatterBegin(oscata, sgvec, v, ADD_VALUES, SCATTER_REVERSE));
+    PetscCall(VecScatterEnd(oscata, sgvec, v, ADD_VALUES, SCATTER_REVERSE));
 
     /* test the local-to-local scatter */
 
     /* fill up the local subdomain and then add them together */
-    ierr = FillLocalSubdomain(da,v);CHKERRQ(ierr);
+    PetscCall(FillLocalSubdomain(da, v));
 
-    ierr = VecScatterBegin(gscat[0],v,slvec,ADD_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-    ierr = VecScatterEnd(gscat[0],v,slvec,ADD_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
+    PetscCall(VecScatterBegin(gscat[0], v, slvec, ADD_VALUES, SCATTER_FORWARD));
+    PetscCall(VecScatterEnd(gscat[0], v, slvec, ADD_VALUES, SCATTER_FORWARD));
 
-    ierr = VecView(v,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
+    PetscCall(VecView(v, PETSC_VIEWER_STDOUT_WORLD));
 
     /* test ghost scattering backwards */
 
-    ierr = VecSet(v,0);CHKERRQ(ierr);
+    PetscCall(VecSet(v, 0));
 
-    ierr = VecScatterBegin(gscat[0],slvec,v,ADD_VALUES,SCATTER_REVERSE);CHKERRQ(ierr);
-    ierr = VecScatterEnd(gscat[0],slvec,v,ADD_VALUES,SCATTER_REVERSE);CHKERRQ(ierr);
+    PetscCall(VecScatterBegin(gscat[0], slvec, v, ADD_VALUES, SCATTER_REVERSE));
+    PetscCall(VecScatterEnd(gscat[0], slvec, v, ADD_VALUES, SCATTER_REVERSE));
 
-    ierr = VecView(v,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
+    PetscCall(VecView(v, PETSC_VIEWER_STDOUT_WORLD));
 
     /* test overlap scattering backwards */
 
-    ierr = DMLocalToGlobalBegin(subda[0],slvec,ADD_VALUES,sgvec);CHKERRQ(ierr);
-    ierr = DMLocalToGlobalEnd(subda[0],slvec,ADD_VALUES,sgvec);CHKERRQ(ierr);
+    PetscCall(DMLocalToGlobalBegin(subda[0], slvec, ADD_VALUES, sgvec));
+    PetscCall(DMLocalToGlobalEnd(subda[0], slvec, ADD_VALUES, sgvec));
 
-    ierr = VecSet(v,0);CHKERRQ(ierr);
+    PetscCall(VecSet(v, 0));
 
-    ierr = VecScatterBegin(oscat[0],sgvec,v,ADD_VALUES,SCATTER_REVERSE);CHKERRQ(ierr);
-    ierr = VecScatterEnd(oscat[0],sgvec,v,ADD_VALUES,SCATTER_REVERSE);CHKERRQ(ierr);
+    PetscCall(VecScatterBegin(oscat[0], sgvec, v, ADD_VALUES, SCATTER_REVERSE));
+    PetscCall(VecScatterEnd(oscat[0], sgvec, v, ADD_VALUES, SCATTER_REVERSE));
 
-    ierr = VecView(v,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
+    PetscCall(VecView(v, PETSC_VIEWER_STDOUT_WORLD));
 
     /* test interior scattering backwards */
 
-    ierr = VecSet(v,0);CHKERRQ(ierr);
+    PetscCall(VecSet(v, 0));
 
-    ierr = VecScatterBegin(iscat[0],sgvec,v,ADD_VALUES,SCATTER_REVERSE);CHKERRQ(ierr);
-    ierr = VecScatterEnd(iscat[0],sgvec,v,ADD_VALUES,SCATTER_REVERSE);CHKERRQ(ierr);
+    PetscCall(VecScatterBegin(iscat[0], sgvec, v, ADD_VALUES, SCATTER_REVERSE));
+    PetscCall(VecScatterEnd(iscat[0], sgvec, v, ADD_VALUES, SCATTER_REVERSE));
 
-    ierr = VecView(v,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
+    PetscCall(VecView(v, PETSC_VIEWER_STDOUT_WORLD));
 
     /* test matrix allocation */
     for (i = 0; i < size; i++) {
       if (i == rank) {
         Mat m;
-        ierr = PetscPrintf(PETSC_COMM_SELF,"Processor %d: \n",i);CHKERRQ(ierr);
-        ierr = DMSetMatType(subda[0],MATAIJ);CHKERRQ(ierr);
-        ierr = DMCreateMatrix(subda[0],&m);CHKERRQ(ierr);
-        ierr = MatView(m,PETSC_VIEWER_STDOUT_SELF);CHKERRQ(ierr);
-        ierr = MatDestroy(&m);CHKERRQ(ierr);
+        PetscCall(PetscPrintf(PETSC_COMM_SELF, "Processor %d: \n", i));
+        PetscCall(DMSetMatType(subda[0], MATAIJ));
+        PetscCall(DMCreateMatrix(subda[0], &m));
+        PetscCall(MatView(m, PETSC_VIEWER_STDOUT_SELF));
+        PetscCall(MatDestroy(&m));
       }
-      ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRQ(ierr);
+      PetscCallMPI(MPI_Barrier(PETSC_COMM_WORLD));
     }
-    ierr = DMRestoreLocalVector(subda[0],&slvec);CHKERRQ(ierr);
-    ierr = DMRestoreGlobalVector(subda[0],&sgvec);CHKERRQ(ierr);
-    ierr = DMRestoreGlobalVector(da,&v);CHKERRQ(ierr);
+    PetscCall(DMRestoreLocalVector(subda[0], &slvec));
+    PetscCall(DMRestoreGlobalVector(subda[0], &sgvec));
+    PetscCall(DMRestoreGlobalVector(da, &v));
   }
 
+  PetscCall(DMDestroy(&subda[0]));
+  PetscCall(ISDestroy(&ois[0]));
+  PetscCall(ISDestroy(&iis[0]));
 
-  ierr = DMDestroy(&subda[0]);CHKERRQ(ierr);
-  ierr = ISDestroy(&ois[0]);CHKERRQ(ierr);
-  ierr = ISDestroy(&iis[0]);CHKERRQ(ierr);
+  PetscCall(VecScatterDestroy(&iscat[0]));
+  PetscCall(VecScatterDestroy(&oscat[0]));
+  PetscCall(VecScatterDestroy(&gscat[0]));
+  PetscCall(VecScatterDestroy(&oscata));
 
-  ierr = VecScatterDestroy(&iscat[0]);CHKERRQ(ierr);
-  ierr = VecScatterDestroy(&oscat[0]);CHKERRQ(ierr);
-  ierr = VecScatterDestroy(&gscat[0]);CHKERRQ(ierr);
-  ierr = VecScatterDestroy(&oscata);CHKERRQ(ierr);
+  PetscCall(PetscFree(iscat));
+  PetscCall(PetscFree(oscat));
+  PetscCall(PetscFree(gscat));
+  PetscCall(PetscFree(oscata));
 
-  ierr = PetscFree(iscat);CHKERRQ(ierr);
-  ierr = PetscFree(oscat);CHKERRQ(ierr);
-  ierr = PetscFree(gscat);CHKERRQ(ierr);
-  ierr = PetscFree(oscata);CHKERRQ(ierr);
+  PetscCall(PetscFree(subda));
+  PetscCall(PetscFree(ois));
+  PetscCall(PetscFree(iis));
 
-  ierr = PetscFree(subda);CHKERRQ(ierr);
-  ierr = PetscFree(ois);CHKERRQ(ierr);
-  ierr = PetscFree(iis);CHKERRQ(ierr);
-
-  ierr = DMDestroy(&da);CHKERRQ(ierr);
-  ierr = PetscFinalize();
-  return ierr;
+  PetscCall(DMDestroy(&da));
+  PetscCall(PetscFinalize());
+  return 0;
 }
-

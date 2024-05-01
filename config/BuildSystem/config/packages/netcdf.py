@@ -4,15 +4,13 @@ import os
 class Configure(config.package.GNUPackage):
   def __init__(self, framework):
     config.package.GNUPackage.__init__(self, framework)
-    self.version          = '4.5.0'
+    self.version          = '4.9.2'
     self.versionname      = 'NC_VERSION_MAJOR.NC_VERSION_MINOR.NC_VERSION_PATCH'
     self.versioninclude   = 'netcdf_meta.h'
-    self.download         = ['https://github.com/Unidata/netcdf-c/archive/v%s.tar.gz' % self.version,
-                             'http://ftp.mcs.anl.gov/pub/petsc/externalpackages/netcdf-%s.tar.gz' % self.version,]
+    self.download         = ['https://web.cels.anl.gov/projects/petsc/download/externalpackages/netcdf-c-4.9.2-p1.tar.gz']
     self.functions        = ['nccreate']
     self.includes         = ['netcdf.h']
     self.liblist          = [['libnetcdf.a']]
-    self.cxx              = 1
     self.useddirectly     = 0
     self.installwithbatch = 0
     return
@@ -37,5 +35,7 @@ class Configure(config.package.GNUPackage):
       args.append('--enable-pnetcdf')
     args.append('--disable-dap')
     args.append('--disable-dynamic-loading') #This was disabled in v4.3.2 - but enabled in subsequent versions - giving config errors on freebsd (wrt -ldl)
+    args.append('--disable-libxml2')
+    args.append('--disable-byterange') # curl/curl.h required for byte range support
     args.append('--disable-hdf4')
     return args

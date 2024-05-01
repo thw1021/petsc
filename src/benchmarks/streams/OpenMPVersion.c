@@ -102,7 +102,6 @@ static double a[N+OFFSET],
 static double avgtime[4] = {0}, maxtime[4] = {0},
               mintime[4] = {FLT_MAX,FLT_MAX,FLT_MAX,FLT_MAX};
 
-
 static double bytes[1] = {
   3 * sizeof(double) * N
 };
@@ -141,8 +140,6 @@ int main()
   printf("the *best* time for each is used.\n");
 
    printf(HLINE); */
-
-
 
   /* Get initial value for system clock. */
 #pragma omp parallel for
@@ -242,10 +239,8 @@ int checktick()
     minDelta = MIN(minDelta, MAX(Delta,0));
   }
 
-  return(minDelta);
+  return minDelta;
 }
-
-
 
 /* A gettimeofday routine to give access to the wall
    clock timer on most UNIX-like systems.  */
@@ -260,4 +255,3 @@ double mysecond()
   (void) gettimeofday(&tp,&tzp);
   return ((double) tp.tv_sec + (double) tp.tv_usec * 1.e-6);
 }
-

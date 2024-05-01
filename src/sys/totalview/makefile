@@ -1,16 +1,6 @@
-ALL: lib
+-include ../../../petscdir.mk
 
-CFLAGS    =
-FFLAGS    =
-CPPFLAGS  =
-SOURCEC	  = tv_data_display.c
-SOURCEF	  =
-SOURCEH	  = tv_data_display.h
-MANSEC	  = Profiling
-LIBBASE	  = libpetscsys
-DIRS	  =
-LOCDIR	  = src/sys/totalview/
+MANSEC    = Profiling
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
-include ${PETSC_DIR}/lib/petsc/conf/rules
-include ${PETSC_DIR}/lib/petsc/conf/test
+include ${PETSC_DIR}/lib/petsc/conf/rules_doc.mk

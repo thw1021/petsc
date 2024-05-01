@@ -1,4 +1,3 @@
-
 static char help[] = "Tests PetscTreeProcess()";
 
 #include <petscsys.h>
@@ -8,43 +7,36 @@ static char help[] = "Tests PetscTreeProcess()";
                     1         4
                     5
 */
-int main(int argc,char **argv)
+int main(int argc, char **argv)
 {
-  PetscErrorCode ierr;
-  PetscInt       n          = 7,cnt = 0,i,j;
-  PetscBool      mask[]     = {PETSC_TRUE,PETSC_FALSE,PETSC_FALSE,PETSC_TRUE,PETSC_FALSE,PETSC_FALSE,PETSC_FALSE};
-  PetscInt       parentId[] = {-1,         2,         0,         -1,         2,         1,         0};
-  PetscInt       Nlevels,*Level,*Levelcnt,*Idbylevel,*Column;
+  PetscInt  n = 7, cnt = 0, i, j;
+  PetscBool mask[]     = {PETSC_TRUE, PETSC_FALSE, PETSC_FALSE, PETSC_TRUE, PETSC_FALSE, PETSC_FALSE, PETSC_FALSE};
+  PetscInt  parentId[] = {-1, 2, 0, -1, 2, 1, 0};
+  PetscInt  Nlevels, *Level, *Levelcnt, *Idbylevel, *Column;
 
-  ierr = PetscInitialize(&argc,&argv,NULL,help);if (ierr) return ierr;
-  ierr = PetscProcessTree(n,mask,parentId,&Nlevels,&Level,&Levelcnt,&Idbylevel,&Column);CHKERRQ(ierr);
-  for (i=0; i<n; i++) {
-    if (!mask[i]) {
-      ierr = PetscPrintf(PETSC_COMM_WORLD," %D ",Level[i]);CHKERRQ(ierr);
-    }
+  PetscFunctionBeginUser;
+  PetscCall(PetscInitialize(&argc, &argv, NULL, help));
+  PetscCall(PetscProcessTree(n, mask, parentId, &Nlevels, &Level, &Levelcnt, &Idbylevel, &Column));
+  for (i = 0; i < n; i++) {
+    if (!mask[i]) PetscCall(PetscPrintf(PETSC_COMM_WORLD, " %" PetscInt_FMT " ", Level[i]));
   }
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"\nNumber of levels %D\n",Nlevels);CHKERRQ(ierr);
-  for (i=0; i<Nlevels; i++) {
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"\nLevel %D ",i);CHKERRQ(ierr);
-    for (j=0; j<Levelcnt[i]; j++) {
-      ierr = PetscPrintf(PETSC_COMM_WORLD,"%D ",Idbylevel[cnt++]);CHKERRQ(ierr);
-    }
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nNumber of levels %" PetscInt_FMT "\n", Nlevels));
+  for (i = 0; i < Nlevels; i++) {
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nLevel %" PetscInt_FMT " ", i));
+    for (j = 0; j < Levelcnt[i]; j++) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%" PetscInt_FMT " ", Idbylevel[cnt++]));
   }
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"\nColumn of each node");CHKERRQ(ierr);
-  for (i=0; i<n; i++) {
-    if (!mask[i]) {
-      ierr = PetscPrintf(PETSC_COMM_WORLD," %D ",Column[i]);CHKERRQ(ierr);
-    }
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nColumn of each node"));
+  for (i = 0; i < n; i++) {
+    if (!mask[i]) PetscCall(PetscPrintf(PETSC_COMM_WORLD, " %" PetscInt_FMT " ", Column[i]));
   }
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"\n");CHKERRQ(ierr);
-  ierr = PetscFree(Level);CHKERRQ(ierr);
-  ierr = PetscFree(Levelcnt);CHKERRQ(ierr);
-  ierr = PetscFree(Idbylevel);CHKERRQ(ierr);
-  ierr = PetscFree(Column);CHKERRQ(ierr);
-  ierr = PetscFinalize();
-  return ierr;
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\n"));
+  PetscCall(PetscFree(Level));
+  PetscCall(PetscFree(Levelcnt));
+  PetscCall(PetscFree(Idbylevel));
+  PetscCall(PetscFree(Column));
+  PetscCall(PetscFinalize());
+  return 0;
 }
-
 
 /*TEST
 

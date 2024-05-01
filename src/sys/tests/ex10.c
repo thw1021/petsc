@@ -1,54 +1,51 @@
-
 static char help[] = "Tests PetscArraymove()/PetscMemmove()\n";
 
 #include <petscsys.h>
 
-int main(int argc,char **argv)
+int main(int argc, char **argv)
 {
-  PetscInt       i,*a,*b;
-  PetscErrorCode ierr;
+  PetscInt i, *a, *b;
 
-  ierr = PetscInitialize(&argc,&argv,(char*)0,help);if (ierr) return ierr;
+  PetscFunctionBeginUser;
+  PetscCall(PetscInitialize(&argc, &argv, (char *)0, help));
 
-  ierr = PetscMalloc1(10,&a);CHKERRQ(ierr);
-  ierr = PetscMalloc1(20,&b);CHKERRQ(ierr);
+  PetscCall(PetscMalloc1(10, &a));
+  PetscCall(PetscMalloc1(20, &b));
 
   /*
       Nonoverlapping regions
   */
-  for (i=0; i<20; i++) b[i] = i;
-  ierr = PetscArraymove(a,b,10);CHKERRQ(ierr);
-  ierr = PetscIntView(10,a,NULL);CHKERRQ(ierr);
+  for (i = 0; i < 20; i++) b[i] = i;
+  PetscCall(PetscArraymove(a, b, 10));
+  PetscCall(PetscIntView(10, a, NULL));
 
-  ierr = PetscFree(a);CHKERRQ(ierr);
+  PetscCall(PetscFree(a));
 
   /*
      |        |                |       |
      b        a               b+15    b+20
                               a+10    a+15
   */
-  a    = b + 5;
-  ierr = PetscArraymove(a,b,15);CHKERRQ(ierr);
-  ierr = PetscIntView(15,a,NULL);CHKERRQ(ierr);
-  ierr = PetscFree(b);CHKERRQ(ierr);
+  a = b + 5;
+  PetscCall(PetscArraymove(a, b, 15));
+  PetscCall(PetscIntView(15, a, NULL));
+  PetscCall(PetscFree(b));
 
   /*
      |       |                    |       |
      a       b                   a+20   a+25
                                         b+20
   */
-  ierr = PetscMalloc1(25,&a);CHKERRQ(ierr);
-  b    = a + 5;
-  for (i=0; i<20; i++) b[i] = i;
-  ierr = PetscArraymove(a,b,20);CHKERRQ(ierr);
-  ierr = PetscIntView(20,a,NULL);CHKERRQ(ierr);
-  ierr = PetscFree(a);CHKERRQ(ierr);
+  PetscCall(PetscMalloc1(25, &a));
+  b = a + 5;
+  for (i = 0; i < 20; i++) b[i] = i;
+  PetscCall(PetscArraymove(a, b, 20));
+  PetscCall(PetscIntView(20, a, NULL));
+  PetscCall(PetscFree(a));
 
-  ierr = PetscFinalize();
-  return ierr;
+  PetscCall(PetscFinalize());
+  return 0;
 }
-
-
 
 /*TEST
 

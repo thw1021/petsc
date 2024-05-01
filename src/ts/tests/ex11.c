@@ -10,191 +10,191 @@ static char help[] = "Demonstrates previous memory leak for XXXRegister()\n\n";
 
 static PetscErrorCode TSGLLEAdaptCreate_Dummy(TSGLLEAdapt ts)
 {
-  PetscFunctionBegin;
-  PetscFunctionReturn(0);
+  PetscFunctionBeginUser;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode TSGLLECreate_Dummy(TS ts)
 {
-  PetscFunctionBegin;
-  PetscFunctionReturn(0);
+  PetscFunctionBeginUser;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode TSAdaptCreate_Dummy(TSAdapt ts)
 {
-  PetscFunctionBegin;
-  PetscFunctionReturn(0);
+  PetscFunctionBeginUser;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode TSCreate_Dummy(TS ts)
 {
-  PetscFunctionBegin;
-  PetscFunctionReturn(0);
+  PetscFunctionBeginUser;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 #if !defined(PETSC_USE_COMPLEX)
 static PetscErrorCode CharacteristicCreate_Dummy(Characteristic chr)
 {
-  PetscFunctionBegin;
-  PetscFunctionReturn(0);
+  PetscFunctionBeginUser;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 #endif
 
 static PetscErrorCode SNESLineSearchCreate_Dummy(SNESLineSearch sneslinesearch)
 {
-  PetscFunctionBegin;
-  PetscFunctionReturn(0);
+  PetscFunctionBeginUser;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode SNESCreate_Dummy(SNES snes)
 {
-  PetscFunctionBegin;
-  PetscFunctionReturn(0);
+  PetscFunctionBeginUser;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode KSPCreate_Dummy(KSP ksp)
 {
-  PetscFunctionBegin;
-  PetscFunctionReturn(0);
+  PetscFunctionBeginUser;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode KSPGuessCreate_Dummy(KSPGuess ksp)
 {
-  PetscFunctionBegin;
-  PetscFunctionReturn(0);
+  PetscFunctionBeginUser;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PCCreate_Dummy(PC pc)
 {
-  PetscFunctionBegin;
-  PetscFunctionReturn(0);
+  PetscFunctionBeginUser;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode DMCreate_Dummy(DM dm)
 {
-  PetscFunctionBegin;
-  PetscFunctionReturn(0);
+  PetscFunctionBeginUser;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatOrderingCreate_Dummy(Mat mat,MatOrderingType mtype,IS *isr,IS *isc)
+static PetscErrorCode MatOrderingCreate_Dummy(Mat mat, MatOrderingType mtype, IS *isr, IS *isc)
 {
-  PetscFunctionBegin;
-  PetscFunctionReturn(0);
+  PetscFunctionBeginUser;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode MatPartitioningCreate_Dummy(MatPartitioning mat)
 {
-  PetscFunctionBegin;
-  PetscFunctionReturn(0);
+  PetscFunctionBeginUser;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode MatCreate_Dummy(Mat mat)
 {
-  PetscFunctionBegin;
-  PetscFunctionReturn(0);
+  PetscFunctionBeginUser;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PFCreate_Dummy(PF pf,void *ctx)
+static PetscErrorCode PFCreate_Dummy(PF pf, void *ctx)
 {
-  PetscFunctionBegin;
-  PetscFunctionReturn(0);
+  PetscFunctionBeginUser;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode VecCreate_Dummy(Vec vec)
 {
-  PetscFunctionBegin;
-  PetscFunctionReturn(0);
+  PetscFunctionBeginUser;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode VecScatterCreate_Dummy(VecScatter vec)
 {
-  PetscFunctionBegin;
-  PetscFunctionReturn(0);
+  PetscFunctionBeginUser;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscSFCreate_Dummy(PetscSF sf)
 {
-  PetscFunctionBegin;
-  PetscFunctionReturn(0);
+  PetscFunctionBeginUser;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode ISLocalToGlobalMappingCreate_Dummy(ISLocalToGlobalMapping is)
 {
-  PetscFunctionBegin;
-  PetscFunctionReturn(0);
+  PetscFunctionBeginUser;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode ISCreate_Dummy(IS is)
 {
-  PetscFunctionBegin;
-  PetscFunctionReturn(0);
+  PetscFunctionBeginUser;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode AOCreate_Dummy(AO ao)
 {
-  PetscFunctionBegin;
-  PetscFunctionReturn(0);
+  PetscFunctionBeginUser;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscDrawCreate_Dummy(PetscDraw draw)
 {
-  PetscFunctionBegin;
-  PetscFunctionReturn(0);
+  PetscFunctionBeginUser;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscViewerCreate_Dummy(PetscViewer viewer)
 {
-  PetscFunctionBegin;
-  PetscFunctionReturn(0);
+  PetscFunctionBeginUser;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscRandomCreate_Dummy(PetscRandom arand)
 {
-  PetscFunctionBegin;
-  PetscFunctionReturn(0);
+  PetscFunctionBeginUser;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-int main(int argc,char **argv)
+int main(int argc, char **argv)
 {
-  PetscErrorCode ierr;
-  PetscReal      A[1],Gamma[1] = {1.0},b[1],c[1],d[1];
+  PetscReal A[1], Gamma[1] = {1.0}, b[1], c[1], d[1];
 
-  ierr = PetscInitialize(&argc,&argv,(char*)0,help);if (ierr) return ierr;
+  PetscFunctionBeginUser;
+  PetscCall(PetscInitialize(&argc, &argv, (char *)0, help));
   /* TaoLineSearchRegister() also has the same memory leak */
   /* TaoRegister() also has the same memory leak */
-  ierr = TSGLLEAdaptRegister("dummy",TSGLLEAdaptCreate_Dummy);CHKERRQ(ierr);
-  ierr = TSGLLERegister("dummy",TSGLLECreate_Dummy);CHKERRQ(ierr);
-  ierr = TSRKRegister("dummy",0,0,A,0,0,0,0,0);CHKERRQ(ierr);
-  ierr = TSGLEERegister("dummy",0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0);CHKERRQ(ierr);
-  ierr = TSARKIMEXRegister("dummy",0,0,0,0,0,0,0,0,0,0,0,0,0);CHKERRQ(ierr);
-  ierr = TSRosWRegister("dummy",0,1,A,Gamma,b,0,0,0);CHKERRQ(ierr);
-  ierr = TSBasicSymplecticRegister("dummy",0,0,c,d);CHKERRQ(ierr);
-  ierr = TSAdaptRegister("dummy",TSAdaptCreate_Dummy);CHKERRQ(ierr);
-  ierr = TSRegister("dummy",TSCreate_Dummy);CHKERRQ(ierr);
+  PetscCall(TSGLLEAdaptRegister("dummy", TSGLLEAdaptCreate_Dummy));
+  PetscCall(TSGLLERegister("dummy", TSGLLECreate_Dummy));
+  PetscCall(TSRKRegister("dummy", 0, 0, A, 0, 0, 0, 0, 0));
+  PetscCall(TSGLEERegister("dummy", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0));
+  PetscCall(TSARKIMEXRegister("dummy", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0));
+  PetscCall(TSRosWRegister("dummy", 0, 1, A, Gamma, b, 0, 0, 0));
+  PetscCall(TSBasicSymplecticRegister("dummy", 0, 0, c, d));
+  PetscCall(TSAdaptRegister("dummy", TSAdaptCreate_Dummy));
+  PetscCall(TSRegister("dummy", TSCreate_Dummy));
 #if !defined(PETSC_USE_COMPLEX)
-  ierr = CharacteristicRegister("dummy",CharacteristicCreate_Dummy);CHKERRQ(ierr);
+  PetscCall(CharacteristicRegister("dummy", CharacteristicCreate_Dummy));
 #endif
-  ierr = SNESLineSearchRegister("dummy",SNESLineSearchCreate_Dummy);CHKERRQ(ierr);
-  ierr = SNESRegister("dummy",SNESCreate_Dummy);CHKERRQ(ierr);
-  ierr = KSPGuessRegister("dummy",KSPGuessCreate_Dummy);CHKERRQ(ierr);
-  ierr = KSPRegister("dummy",KSPCreate_Dummy);CHKERRQ(ierr);
-  ierr = PCRegister("dummy",PCCreate_Dummy);CHKERRQ(ierr);
-  ierr = DMRegister("dummy",DMCreate_Dummy);CHKERRQ(ierr);
-  ierr = MatOrderingRegister("dummy",MatOrderingCreate_Dummy);CHKERRQ(ierr);
-  ierr = MatPartitioningRegister("dummy",MatPartitioningCreate_Dummy);CHKERRQ(ierr);
-  ierr = MatRegister("dummy",MatCreate_Dummy);CHKERRQ(ierr);
-  ierr = PFRegister("dummy",PFCreate_Dummy);CHKERRQ(ierr);
-  ierr = VecScatterRegister("dummy",VecScatterCreate_Dummy);CHKERRQ(ierr);
-  ierr = VecRegister("dummy",VecCreate_Dummy);CHKERRQ(ierr);
-  ierr = PetscSFRegister("dummy",PetscSFCreate_Dummy);CHKERRQ(ierr);
-  ierr = ISLocalToGlobalMappingRegister("dummy",ISLocalToGlobalMappingCreate_Dummy);CHKERRQ(ierr);
-  ierr = ISRegister("dummy",ISCreate_Dummy);CHKERRQ(ierr);
-  ierr = AORegister("dummy",AOCreate_Dummy);CHKERRQ(ierr);
-  ierr = PetscDrawRegister("dummy",PetscDrawCreate_Dummy);CHKERRQ(ierr);
-  ierr = PetscViewerRegister("dummy",PetscViewerCreate_Dummy);CHKERRQ(ierr);
-  ierr = PetscRandomRegister("dummy",PetscRandomCreate_Dummy);CHKERRQ(ierr);
-  ierr = PetscFinalize();
-  return ierr;
+  PetscCall(SNESLineSearchRegister("dummy", SNESLineSearchCreate_Dummy));
+  PetscCall(SNESRegister("dummy", SNESCreate_Dummy));
+  PetscCall(KSPGuessRegister("dummy", KSPGuessCreate_Dummy));
+  PetscCall(KSPRegister("dummy", KSPCreate_Dummy));
+  PetscCall(PCRegister("dummy", PCCreate_Dummy));
+  PetscCall(DMRegister("dummy", DMCreate_Dummy));
+  PetscCall(MatOrderingRegister("dummy", MatOrderingCreate_Dummy));
+  PetscCall(MatPartitioningRegister("dummy", MatPartitioningCreate_Dummy));
+  PetscCall(MatRegister("dummy", MatCreate_Dummy));
+  PetscCall(PFRegister("dummy", PFCreate_Dummy));
+  PetscCall(VecScatterRegister("dummy", VecScatterCreate_Dummy));
+  PetscCall(VecRegister("dummy", VecCreate_Dummy));
+  PetscCall(PetscSFRegister("dummy", PetscSFCreate_Dummy));
+  PetscCall(ISLocalToGlobalMappingRegister("dummy", ISLocalToGlobalMappingCreate_Dummy));
+  PetscCall(ISRegister("dummy", ISCreate_Dummy));
+  PetscCall(AORegister("dummy", AOCreate_Dummy));
+  PetscCall(PetscDrawRegister("dummy", PetscDrawCreate_Dummy));
+  PetscCall(PetscViewerRegister("dummy", PetscViewerCreate_Dummy));
+  PetscCall(PetscRandomRegister("dummy", PetscRandomCreate_Dummy));
+  PetscCall(PetscFinalize());
+  return 0;
 }
 
 /*TEST

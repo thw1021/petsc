@@ -6,9 +6,11 @@ import re
 class Configure(config.base.Configure):
   def __init__(self, framework, libraries = []):
     config.base.Configure.__init__(self, framework)
-    self.headerPrefix = ''
-    self.substPrefix  = ''
-    self.libraries    = libraries
+    self.headerPrefix  = ''
+    self.substPrefix   = ''
+    self.libraries     = libraries
+    self.rpathSkipDirs = [] # do not generate RPATH for dirs in this list; useful when compiling with stub libraries (.so) that do not have corresponding runtime library (.so.1) at this location. Check cuda.py for usage.
+    self.sysDirs       = ['/usr/lib','/lib','/usr/lib64','/lib64'] # skip conversion from full path to link line argument format for libraries in these dirs. For ex: some compilers internally use /usr/lib/libm.so that should not be converted to '-L/usr/lib -lm'
     return
 
   def setupDependencies(self, framework):
@@ -16,6 +18,7 @@ class Configure(config.base.Configure):
     self.setCompilers = framework.require('config.setCompilers', self)
     self.compilers    = framework.require('config.compilers',    self)
     self.headers      = framework.require('config.headers',      self)
+    self.types        = framework.require('config.types',        self)
     return
 
   def getLibArgumentList(self, library, with_rpath=True):
@@ -25,7 +28,7 @@ class Configure(config.base.Configure):
       - If the path ends in ".lib" return it unchanged
       - If the path is absolute and the filename is "lib"<name>, return -L<dir> -l<name> (optionally including rpath flag)
       - If the filename is "lib"<name>, return -l<name>
-      - If the path ends in ".so" return it unchanged
+      - If the path ends in ".so" or ".dylib" return it unchanged
       - If the path ends in ".o" return it unchanged
       - If the path is absolute, return it unchanged
       - Otherwise return -l<library>'''
@@ -35,6 +38,22 @@ class Configure(config.base.Configure):
       return [library] if with_rpath else []
     if library.startswith('${FC_LINKER_SLFLAG}'):
       return [library] if with_rpath else []
+    flagName  = self.language[-1]+'SharedLinkerFlag'
+    flagSubst = self.language[-1].upper()+'_LINKER_SLFLAG'
+    rpathFlag = ''
+    if hasattr(self.setCompilers, flagName) and not getattr(self.setCompilers, flagName) is None:
+      rpathFlag = getattr(self.setCompilers, flagName)
+    elif flagSubst in self.argDB:
+      rpathFlag = self.argDB[flagSubst]
+    if library.startswith('-L'):
+      dirname = library[2:]
+      if not dirname.startswith('$') and not os.path.isdir(dirname): self.logPrint('Warning! getLibArgumentList(): could not locate dir '+ dirname)
+      if dirname in self.sysDirs:
+          return []
+      elif with_rpath and rpathFlag and not dirname in self.rpathSkipDirs:
+        return [rpathFlag+dirname,library]
+      else:
+        return [library]
     if library.lstrip()[0] == '-':
       return [library]
     if len(library) > 3 and library[-4:] == '.lib':
@@ -42,20 +61,22 @@ class Configure(config.base.Configure):
     if os.path.basename(library).startswith('lib'):
       name = self.getLibName(library)
       if ((len(library) > 2 and library[1] == ':') or os.path.isabs(library)):
-        flagName  = self.language[-1]+'SharedLinkerFlag'
-        flagSubst = self.language[-1].upper()+'_LINKER_SLFLAG'
         dirname   = os.path.dirname(library).replace('\\ ',' ').replace(' ', '\\ ').replace('\\(','(').replace('(', '\\(').replace('\\)',')').replace(')', '\\)')
-        if dirname in ['/usr/lib','/lib','/usr/lib64','/lib64']:
+        if dirname in self.sysDirs:
           return [library]
-        if with_rpath:
+        if with_rpath and not dirname in self.rpathSkipDirs:
           if hasattr(self.setCompilers, flagName) and not getattr(self.setCompilers, flagName) is None:
-            return [getattr(self.setCompilers, flagName)+dirname,'-L'+dirname,'-l'+name]
+            import pathlib
+            if pathlib.Path(library).suffix[1:].isnumeric(): # libfoo.so.1.0
+              return [getattr(self.setCompilers, flagName)+dirname,library]
+            else:
+              return [getattr(self.setCompilers, flagName)+dirname,'-L'+dirname,'-l'+name]
           if flagSubst in self.argDB:
             return [self.argDB[flagSubst]+dirname,'-L'+dirname,'-l'+name]
         return ['-L'+dirname,'-l'+name]
       else:
         return ['-l'+name]
-    if os.path.splitext(library)[1] == '.so' or os.path.splitext(library)[1] == '.o':
+    if os.path.splitext(library)[1] == '.so' or os.path.splitext(library)[1] == '.o' or os.path.splitext(library)[1] == '.dylib':
       return [library]
     if os.path.isabs(library):
       return [library]
@@ -64,6 +85,14 @@ class Configure(config.base.Configure):
   def getLibArgument(self, library):
     '''Same as getLibArgumentList - except it returns a string instead of list.'''
     return  ' '.join(self.getLibArgumentList(library))
+
+  def addRpathSkipDir(self, dirname):
+    '''Do not generate RPATH for this dir in getLibArgumentList.'''
+    if dirname not in self.rpathSkipDirs: self.rpathSkipDirs.append(dirname)
+
+  def addSysDir(self, dirname):
+    '''Add the dir to sysDirs[]'''
+    if dirname not in self.sysDirs: self.sysDirs.append(dirname)
 
   def getLibName(library):
     if os.path.basename(library).startswith('lib'):
@@ -133,7 +162,7 @@ class Configure(config.base.Configure):
       # remove duplicate -L, -Wl,-rpath options - and only consecutive -l options
       if j in newldflags and any([j.startswith(flg) for flg in dupflags]): continue
       if newlibs and j == newlibs[-1]: continue
-      if j.startswith('-l') or j.endswith('.lib') or j.endswith('.a') or j.endswith('.o') or j == '-Wl,-Bstatic' or j == '-Wl,-Bdynamic' or j == '-Wl,--start-group' or j == '-Wl,--end-group':
+      if list(filter(j.startswith,['-l'])) or list(filter(j.endswith,['.lib','.a','.so','.o'])) or j in ['-Wl,-Bstatic','-Wl,-Bdynamic','-Wl,--start-group','-Wl,--end-group']:
         newlibs.append(j)
       else:
         newldflags.append(j)
@@ -171,10 +200,10 @@ class Configure(config.base.Configure):
           pre = prototype[f]
       else:
         # We use char because int might match the return type of a gcc2 builtin and its argument prototype would still apply.
-        pre = 'char '+funcName+'();'
+        pre = 'char '+funcName+'(void);'
       # Capture the function call in a static function so that any local variables are isolated from
       # calls to other library functions.
-      return pre + '\nstatic void _check_%s() { %s }' % (funcName, genCall(f, funcName, pre=True))
+      return pre + '\nstatic void _check_%s(void) { %s }' % (funcName, genCall(f, funcName, pre=True))
     def genCall(f, funcName, pre=False):
       if self.language[-1] != 'FC' and not pre:
         return '_check_' + funcName + '();'
@@ -235,16 +264,38 @@ extern "C" {
     if cxxLink: linklang = 'Cxx'
     else: linklang = self.language[-1]
     self.pushLanguage(compileLang)
-    found = 0
-    if self.checkLink(includes, body, linkLanguage=linklang, examineOutput=examineOutput):
-      found = 1
-      # define the symbol as found
-      if functionDefine: [self.addDefine(self.getDefineNameFunc(fname), 1) for f, fname in enumerate(funcs)]
-      # add to list of found libraries
-      elif libName:
-        for lib in libName:
-          shortlib = self.getShortLibName(lib)
-          if shortlib: self.addDefine(self.getDefineName(shortlib), 1)
+
+    found = 1
+    if libName and libName[0].startswith('/'):
+      dir = os.path.dirname(libName[0])
+      lib = os.path.basename(libName[0])[:-1]
+      self.logPrint('Checking directory of requested libraries:'+dir+' for first library:'+lib)
+      found = 0
+      try:
+        files = os.listdir(dir)
+      except:
+        self.logPrint('Directory of requested libraries '+dir+' does not exist')
+      else:
+        self.logPrint('Files in directory:'+str(files))
+        for i in files:
+          if i.startswith(lib):
+            found = 1
+            break
+
+    if found and self.checkLink(includes, body, linkLanguage=linklang, examineOutput=examineOutput):
+      if hasattr(self.compilers, 'FC') and self.language[-1] == 'C':
+        if self.compilers.checkCrossLink(includes+'\nvoid dummy(void) {'+body+'}\n',"     program main\n      print*,'testing'\n      stop\n      end\n",language1='C',language2='FC'):
+          # define the symbol as found
+          if functionDefine: [self.addDefine(self.getDefineNameFunc(fname), 1) for f, fname in enumerate(funcs)]
+          # add to list of found libraries
+          elif libName:
+            for lib in libName:
+              shortlib = self.getShortLibName(lib)
+              if shortlib: self.addDefine(self.getDefineName(shortlib), 1)
+        else:
+          found = 0
+    else:
+      found = 0
     self.setCompilers.LIBS = oldLibs
     self.popLanguage()
     return found
@@ -269,33 +320,35 @@ extern "C" {
                   '#include <stdio.h>\ndouble floor(double);',
                   '#include <stdio.h>\ndouble log10(double);',
                   '#include <stdio.h>\ndouble pow(double, double);']
-    calls = ['double x,y; scanf("%lf",&x); y = sin(x); printf("%f",y);\n',
-             'double x,y; scanf("%lf",&x); y = floor(x); printf("%f",y);\n',
-             'double x,y; scanf("%lf",&x); y = log10(x); printf("%f",y);\n',
-             'double x,y; scanf("%lf",&x); y = pow(x,x); printf("%f",y);\n']
+    calls = ['double x,y; int s = scanf("%lf",&x); y = sin(x); printf("%f %d",y,s)',
+             'double x,y; int s = scanf("%lf",&x); y = floor(x); printf("%f %d",y,s)',
+             'double x,y; int s = scanf("%lf",&x); y = log10(x); printf("%f %d",y,s)',
+             'double x,y; int s = scanf("%lf",&x); y = pow(x,x); printf("%f %d",y,s)']
     if self.check('', funcs, prototype = prototypes, call = calls):
       self.math = []
     elif self.check('m', funcs, prototype = prototypes, call = calls):
       self.math = ['libm.a']
+    if self.math == None:
+      raise RuntimeError('Cannot find basic math functions')
     self.logPrint('CheckMath: using math library '+str(self.math))
     return
 
   def checkMathErf(self):
     '''Check for erf() in libm, the math library'''
-    if not self.math is None and self.check(self.math, ['erf'], prototype = ['#include <math.h>'], call = ['double (*checkErf)(double) = erf;double x = 0,y; y = (*checkErf)(x)']):
+    if not self.math is None and self.check(self.math, ['erf'], prototype = ['#include <math.h>'], call = ['double (*checkErf)(double) = erf;double x = 0,y; y = (*checkErf)(x); (void)y']):
       self.logPrint('erf() found')
       self.addDefine('HAVE_ERF', 1)
     else:
-      self.logPrint('Warning: erf() not found')
+      self.logPrint('erf() not found')
     return
 
   def checkMathTgamma(self):
     '''Check for tgamma() in libm, the math library'''
-    if not self.math is None and self.check(self.math, ['tgamma'], prototype = ['#include <math.h>'], call = ['double (*checkTgamma)(double) = tgamma;double x = 0,y; y = (*checkTgamma)(x)']):
+    if not self.math is None and self.check(self.math, ['tgamma'], prototype = ['#include <math.h>'], call = ['double (*checkTgamma)(double) = tgamma;double x = 0,y; y = (*checkTgamma)(x); (void)y']):
       self.logPrint('tgamma() found')
       self.addDefine('HAVE_TGAMMA', 1)
     else:
-      self.logPrint('Warning: tgamma() not found')
+      self.logPrint('tgamma() not found')
     return
 
   def checkMathLgamma(self):
@@ -308,24 +361,28 @@ extern "C" {
       self.addDefine('HAVE_LGAMMA', 1)
       self.addDefine('HAVE_LGAMMA_IS_GAMMA', 1)
     else:
-      self.logPrint('Warning: lgamma() and gamma() not found')
+      self.logPrint('lgamma() and gamma() not found')
     return
 
   def checkMathFenv(self):
     '''Checks if <fenv.h> can be used with FE_DFL_ENV'''
-    if not self.math is None and self.check(self.math, ['fesetenv'], prototype = ['#include <fenv.h>'], call = ['fesetenv(FE_DFL_ENV);']):
+    if not self.math is None and self.check(self.math, ['fesetenv'], prototype = ['#include <fenv.h>'], call = ['fesetenv(FE_DFL_ENV)']):
       self.addDefine('HAVE_FENV_H', 1)
     else:
-      self.logPrint('Warning: <fenv.h> with FE_DFL_ENV not found')
+      self.logPrint('<fenv.h> with FE_DFL_ENV not found')
+    if not self.math is None and self.check(self.math, ['feclearexcept'], prototype = ['#include <fenv.h>'], call = ['feclearexcept(FE_INEXACT)']):
+      self.addDefine('HAVE_FE_VALUES', 1)
+    else:
+      self.logPrint('<fenv.h> with FE_INEXACT not found')
     return
 
   def checkMathLog2(self):
     '''Check for log2() in libm, the math library'''
-    if not self.math is None and self.check(self.math, ['log2'], prototype = ['#include <math.h>'], call = ['double (*checkLog2)(double) = log2; double x = 2.5, y = (*checkLog2)(x)']):
+    if not self.math is None and self.check(self.math, ['log2'], prototype = ['#include <math.h>'], call = ['double (*checkLog2)(double) = log2; double x = 2.5, y = (*checkLog2)(x); (void)y']):
       self.logPrint('log2() found')
       self.addDefine('HAVE_LOG2', 1)
     else:
-      self.logPrint('Warning: log2() not found')
+      self.logPrint('log2() not found')
     return
 
   def checkRealtime(self):
@@ -333,7 +390,7 @@ extern "C" {
     self.rt = None
     funcs = ['clock_gettime']
     prototypes = ['#include <time.h>']
-    calls = ['struct timespec tp; clock_gettime(CLOCK_REALTIME,&tp);']
+    calls = ['struct timespec tp; clock_gettime(CLOCK_REALTIME,&tp)']
     if self.check('', funcs, prototype=prototypes, call=calls):
       self.logPrint('realtime functions are linked in by default')
       self.rt = []
@@ -341,7 +398,7 @@ extern "C" {
       self.logPrint('Using librt for the realtime library')
       self.rt = ['librt.a']
     else:
-      self.logPrint('Warning: No realtime library found')
+      self.logPrint('No realtime library found')
     return
 
   def checkDynamic(self):
@@ -483,7 +540,8 @@ int checkInit(void) {
       if executor and str(e).find('Runaway process exceeded time limit') > -1:
         raise RuntimeError('Timeout: Unable to run MPI program with '+executor+'\n\
     (1) make sure this is the correct program to run MPI jobs\n\
-    (2) your network may be misconfigured; see https://www.mcs.anl.gov/petsc/documentation/faq.html#PetscOptionsInsertFile\n')
+    (2) your network may be misconfigured; see https://petsc.org/release/faq/#mpi-network-misconfigure\n\
+    (3) you may have VPN running whose network settings may not play nice with MPI\n')
 
     self.setCompilers.LIBS = oldLibs
     if os.path.isfile(lib1Name) and self.framework.doCleanup: os.remove(lib1Name)
@@ -493,6 +551,69 @@ int checkInit(void) {
     else:
       self.logPrint('Library was not shared')
     return isShared
+
+  def checkExportedSymbols(self, flags, checkLink = None, libraries = [], defaultArg = '', executor = None, timeout = 60):
+    '''Determine whether an executable exports shared symbols
+       - checkLink may be given as an alternative to the one in base.Configure'''
+    exports = False
+
+    if 'USE_VISIBILITY_C' in self.types.defines:
+      visibility = '__attribute__((visibility ("default")))'
+    else:
+      visibility = ''
+
+    # Make an executable that dynamically loads a symbol it contains
+    guard = self.headers.getDefineName('dlfcn.h')
+    if self.headers.headerPrefix:
+      guard = self.headers.headerPrefix+'_'+guard
+    defaultIncludes = '''
+#include <stdio.h>
+#include <stdlib.h>
+#ifdef %s
+#include <dlfcn.h>
+#endif
+
+#define PETSC_DLLEXPORT %s
+
+extern PETSC_DLLEXPORT int foo() {
+  return 42;
+}
+    ''' % (guard, visibility)
+    body = '''
+  void *lib;
+  int (*foo)();
+
+  lib = dlopen(NULL, RTLD_LAZY);
+  if (!lib) {
+    fprintf(stderr, "Could not open executable: %s\\n", dlerror());
+    exit(1);
+  }
+  foo = (int (*)(void)) dlsym(lib, "foo");
+  if (!foo) {
+    fprintf(stderr, "Could not find function in executable\\n");
+    exit(1);
+  }
+  if ((*foo)() != 42) {
+    fprintf(stderr, "Could not run function\\n");
+    exit(1);
+  }
+  '''
+    oldFlags = self.setCompilers.CFLAGS
+    oldLibs  = self.setCompilers.LIBS
+    self.setCompilers.CFLAGS += ' '+flags
+    if self.haveLib('dl'):
+      self.setCompilers.LIBS += ' -ldl'
+    try:
+      exports = self.checkRun(defaultIncludes, body, defaultArg = defaultArg, executor = executor, timeout = timeout)
+    except RuntimeError as e:
+      self.logPrint('FAIL: '+str(e))
+    self.setCompilers.CFLAGS = oldFlags
+    self.setCompilers.LIBS   = oldLibs
+    if exports:
+      self.logPrint('Executable exports symbols for dlopen()')
+    else:
+      self.logPrint('Executable does not export symbols for dlopen()')
+    return exports
 
   def isBGL(self):
     '''Returns true if compiler is IBM cross compiler for BGL'''
@@ -506,6 +627,17 @@ int checkInit(void) {
         self._isBGL = 0
     return self._isBGL
 
+  def checkExecutableExportFlag(self):
+    '''Checks for the flag that allows executables to export symbols to dlsym()'''
+    # Right now, we just check some compilers, but we should make a test trying to load a symbol from the executable
+    # Discussion: https://stackoverflow.com/questions/6292473/how-to-call-function-in-executable-from-my-library/6298434#6298434
+    for flag in ['', '-Wl,-export_dynamic', '-Wl,-export-dynamic', '-export-dynamic']:
+      if self.checkExportedSymbols(flag):
+        self.addDefine('HAVE_EXECUTABLE_EXPORT', 1)
+        self.addMakeMacro('EXEFLAGS', flag)
+        break
+    return
+
   def configure(self):
     list(map(lambda args: self.executeTest(self.check, list(args)), self.libraries))
     self.executeTest(self.checkMath)
@@ -516,4 +648,6 @@ int checkInit(void) {
     self.executeTest(self.checkMathLog2)
     self.executeTest(self.checkRealtime)
     self.executeTest(self.checkDynamic)
+    if not self.argDB['with-batch']:
+      self.executeTest(self.checkExecutableExportFlag)
     return

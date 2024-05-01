@@ -1,47 +1,53 @@
-#include <petsc/private/partitionerimpl.h>        /*I "petscpartitioner.h" I*/
+#include <petsc/private/partitionerimpl.h> /*I "petscpartitioner.h" I*/
 
-/*@C
-  PetscPartitionerSetType - Builds a particular PetscPartitioner
+/*@
+  PetscPartitionerSetType - Builds a particular `PetscPartitioner`
 
-  Collective on PetscPartitioner
+  Collective
 
   Input Parameters:
-+ part - The PetscPartitioner object
++ part - The `PetscPartitioner` object
 - name - The kind of partitioner
 
   Options Database Key:
-. -petscpartitioner_type <type> - Sets the PetscPartitioner type; use -help for a list of available types
+. -petscpartitioner_type <type> - Sets the `PetscPartitioner` type
 
   Level: intermediate
 
-.seealso: PetscPartitionerGetType(), PetscPartitionerCreate()
+  Note:
+.vb
+ PETSCPARTITIONERCHACO    - The Chaco partitioner (--download-chaco)
+ PETSCPARTITIONERPARMETIS - The ParMetis partitioner (--download-parmetis)
+ PETSCPARTITIONERSHELL    - A shell partitioner implemented by the user
+ PETSCPARTITIONERSIMPLE   - A simple partitioner that divides cells into equal, contiguous chunks
+ PETSCPARTITIONERGATHER   - Gathers all cells onto process 0
+.ve
+
+.seealso: `PetscPartitionerGetType()`, `PetscPartitionerCreate()`
 @*/
 PetscErrorCode PetscPartitionerSetType(PetscPartitioner part, PetscPartitionerType name)
 {
   PetscErrorCode (*r)(PetscPartitioner);
-  PetscBool      match;
-  PetscErrorCode ierr;
+  PetscBool match;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(part, PETSCPARTITIONER_CLASSID, 1);
-  ierr = PetscObjectTypeCompare((PetscObject) part, name, &match);CHKERRQ(ierr);
-  if (match) PetscFunctionReturn(0);
+  PetscCall(PetscObjectTypeCompare((PetscObject)part, name, &match));
+  if (match) PetscFunctionReturn(PETSC_SUCCESS);
 
-  ierr = PetscPartitionerRegisterAll();CHKERRQ(ierr);
-  ierr = PetscFunctionListFind(PetscPartitionerList, name, &r);CHKERRQ(ierr);
-  if (!r) SETERRQ1(PetscObjectComm((PetscObject) part), PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown PetscPartitioner type: %s", name);
+  PetscCall(PetscPartitionerRegisterAll());
+  PetscCall(PetscFunctionListFind(PetscPartitionerList, name, &r));
+  PetscCheck(r, PetscObjectComm((PetscObject)part), PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown PetscPartitioner type: %s", name);
 
-  if (part->ops->destroy) {
-    ierr = (*part->ops->destroy)(part);CHKERRQ(ierr);
-  }
+  PetscTryTypeMethod(part, destroy);
   part->noGraph = PETSC_FALSE;
-  ierr = PetscMemzero(part->ops, sizeof(*part->ops));CHKERRQ(ierr);
-  ierr = PetscObjectChangeTypeName((PetscObject) part, name);CHKERRQ(ierr);
-  ierr = (*r)(part);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscMemzero(part->ops, sizeof(*part->ops)));
+  PetscCall(PetscObjectChangeTypeName((PetscObject)part, name));
+  PetscCall((*r)(part));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PetscPartitionerGetType - Gets the PetscPartitioner type name (as a string) from the object.
 
   Not Collective
@@ -54,361 +60,348 @@ PetscErrorCode PetscPartitionerSetType(PetscPartitioner part, PetscPartitionerTy
 
   Level: intermediate
 
-.seealso: PetscPartitionerSetType(), PetscPartitionerCreate()
+.seealso: `PetscPartitionerSetType()`, `PetscPartitionerCreate()`
 @*/
 PetscErrorCode PetscPartitionerGetType(PetscPartitioner part, PetscPartitionerType *name)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(part, PETSCPARTITIONER_CLASSID, 1);
-  PetscValidPointer(name, 2);
-  *name = ((PetscObject) part)->type_name;
-  PetscFunctionReturn(0);
+  PetscAssertPointer(name, 2);
+  *name = ((PetscObject)part)->type_name;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-   PetscPartitionerViewFromOptions - View from Options
+  PetscPartitionerViewFromOptions - View a `PetscPartitioner` object based on options in the options database
 
-   Collective on PetscPartitioner
+  Collective
 
-   Input Parameters:
-+  A - the PetscPartitioner object
-.  obj - Optional object
--  name - command line option
+  Input Parameters:
++ A    - the `PetscPartitioner` object
+. obj  - Optional `PetscObject` that provides the options prefix
+- name - command line option
 
-   Level: intermediate
-.seealso:  PetscPartitionerView(), PetscObjectViewFromOptions()
+  Level: intermediate
+
+  Note:
+  See `PetscObjectViewFromOptions()` for the various forms of viewers that may be used
+
+.seealso: `PetscPartitionerView()`, `PetscObjectViewFromOptions()`
 @*/
-PetscErrorCode PetscPartitionerViewFromOptions(PetscPartitioner A,PetscObject obj,const char name[])
+PetscErrorCode PetscPartitionerViewFromOptions(PetscPartitioner A, PetscObject obj, const char name[])
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(A,PETSCPARTITIONER_CLASSID,1);
-  ierr = PetscObjectViewFromOptions((PetscObject)A,obj,name);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(A, PETSCPARTITIONER_CLASSID, 1);
+  PetscCall(PetscObjectViewFromOptions((PetscObject)A, obj, name));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  PetscPartitionerView - Views a PetscPartitioner
+  PetscPartitionerView - Views a `PetscPartitioner`
 
-  Collective on PetscPartitioner
+  Collective
 
-  Input Parameter:
-+ part - the PetscPartitioner object to view
+  Input Parameters:
++ part - the `PetscPartitioner` object to view
 - v    - the viewer
 
   Level: developer
 
-.seealso: PetscPartitionerDestroy()
+.seealso: `PetscPartitionerDestroy()`
 @*/
 PetscErrorCode PetscPartitionerView(PetscPartitioner part, PetscViewer v)
 {
-  PetscMPIInt    size;
-  PetscBool      isascii;
-  PetscErrorCode ierr;
+  PetscMPIInt size;
+  PetscBool   isascii;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(part, PETSCPARTITIONER_CLASSID, 1);
-  if (!v) {ierr = PetscViewerASCIIGetStdout(PetscObjectComm((PetscObject) part), &v);CHKERRQ(ierr);}
-  ierr = PetscObjectTypeCompare((PetscObject) v, PETSCVIEWERASCII, &isascii);CHKERRQ(ierr);
+  if (!v) PetscCall(PetscViewerASCIIGetStdout(PetscObjectComm((PetscObject)part), &v));
+  PetscCall(PetscObjectTypeCompare((PetscObject)v, PETSCVIEWERASCII, &isascii));
   if (isascii) {
-    ierr = MPI_Comm_size(PetscObjectComm((PetscObject) part), &size);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(v, "Graph Partitioner: %d MPI Process%s\n", size, size > 1 ? "es" : "");CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(v, "  type: %s\n", ((PetscObject)part)->type_name);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(v, "  edge cut: %D\n", part->edgeCut);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(v, "  balance: %.2g\n", part->balance);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(v, "  use vertex weights: %d\n", part->usevwgt);CHKERRQ(ierr);
+    PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)part), &size));
+    PetscCall(PetscViewerASCIIPrintf(v, "Graph Partitioner: %d MPI Process%s\n", size, size > 1 ? "es" : ""));
+    PetscCall(PetscViewerASCIIPrintf(v, "  type: %s\n", ((PetscObject)part)->type_name));
+    PetscCall(PetscViewerASCIIPrintf(v, "  edge cut: %" PetscInt_FMT "\n", part->edgeCut));
+    PetscCall(PetscViewerASCIIPrintf(v, "  balance: %.2g\n", (double)part->balance));
+    PetscCall(PetscViewerASCIIPrintf(v, "  use vertex weights: %d\n", part->usevwgt));
+    PetscCall(PetscViewerASCIIPrintf(v, "  use edge weights: %d\n", part->useewgt));
   }
-  if (part->ops->view) {ierr = (*part->ops->view)(part, v);CHKERRQ(ierr);}
-  PetscFunctionReturn(0);
+  PetscTryTypeMethod(part, view, v);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscPartitionerGetDefaultType(MPI_Comm comm, const char *currentType, const char **defaultType)
+static PetscErrorCode PetscPartitionerGetDefaultType(MPI_Comm comm, const char **defaultType)
 {
-  PetscMPIInt    size;
-  PetscErrorCode ierr;
+  PetscMPIInt size;
 
   PetscFunctionBegin;
-  ierr = MPI_Comm_size(comm, &size);CHKERRQ(ierr);
-  if (!currentType) {
-    if (size == 1) {
-      *defaultType = PETSCPARTITIONERSIMPLE;
-    } else {
-#if defined(PETSC_HAVE_PARMETIS)
-      *defaultType = PETSCPARTITIONERPARMETIS;
-#elif defined(PETSC_HAVE_PTSCOTCH)
-      *defaultType = PETSCPARTITIONERPTSCOTCH;
-#elif defined(PETSC_HAVE_CHACO)
-      *defaultType = PETSCPARTITIONERCHACO;
-#else
-      *defaultType = PETSCPARTITIONERSIMPLE;
-#endif
-    }
+  PetscCallMPI(MPI_Comm_size(comm, &size));
+  if (size == 1) {
+    *defaultType = PETSCPARTITIONERSIMPLE;
   } else {
-    *defaultType = currentType;
+#if defined(PETSC_HAVE_PARMETIS)
+    *defaultType = PETSCPARTITIONERPARMETIS;
+#elif defined(PETSC_HAVE_PTSCOTCH)
+    *defaultType = PETSCPARTITIONERPTSCOTCH;
+#elif defined(PETSC_HAVE_CHACO)
+    *defaultType = PETSCPARTITIONERCHACO;
+#else
+    *defaultType = PETSCPARTITIONERSIMPLE;
+#endif
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  PetscPartitionerSetFromOptions - sets parameters in a PetscPartitioner from the options database
+  PetscPartitionerSetFromOptions - sets parameters in a `PetscPartitioner` from the options database
 
-  Collective on PetscPartitioner
+  Collective
 
   Input Parameter:
-. part - the PetscPartitioner object to set options for
+. part - the `PetscPartitioner` object to set options for
 
   Options Database Keys:
-+  -petscpartitioner_type <type> - Sets the PetscPartitioner type; use -help for a list of available types
-.  -petscpartitioner_use_vertex_weights - Uses weights associated with the graph vertices
--  -petscpartitioner_view_graph - View the graph each time PetscPartitionerPartition is called. Viewer can be customized, see PetscOptionsGetViewer()
++ -petscpartitioner_type <type>        - Sets the `PetscPartitioner` type; use -help for a list of available types
+. -petscpartitioner_use_vertex_weights - Uses weights associated with the graph vertices
+- -petscpartitioner_view_graph         - View the graph each time PetscPartitionerPartition is called. Viewer can be customized, see `PetscOptionsGetViewer()`
 
   Level: developer
 
-.seealso: PetscPartitionerView(), PetscPartitionerSetType(), PetscPartitionerPartition()
+.seealso: `PetscPartitionerView()`, `PetscPartitionerSetType()`, `PetscPartitionerPartition()`
 @*/
 PetscErrorCode PetscPartitionerSetFromOptions(PetscPartitioner part)
 {
-  const char    *defaultType = NULL;
-  char           name[256];
-  PetscBool      flg;
-  PetscErrorCode ierr;
+  const char *currentType = NULL;
+  char        name[256];
+  PetscBool   flg;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(part, PETSCPARTITIONER_CLASSID, 1);
-  ierr = PetscPartitionerGetDefaultType(((PetscObject) part)->comm, ((PetscObject) part)->type_name,&defaultType);CHKERRQ(ierr);
-  ierr = PetscObjectOptionsBegin((PetscObject) part);CHKERRQ(ierr);
-  ierr = PetscOptionsFList("-petscpartitioner_type", "Graph partitioner", "PetscPartitionerSetType", PetscPartitionerList, defaultType, name, sizeof(name), &flg);CHKERRQ(ierr);
-  if (flg) {
-    ierr = PetscPartitionerSetType(part, name);CHKERRQ(ierr);
-  } else if (!((PetscObject) part)->type_name) {
-    ierr = PetscPartitionerSetType(part, defaultType);CHKERRQ(ierr);
-  }
-  ierr = PetscOptionsBool("-petscpartitioner_use_vertex_weights","Use vertex weights","",part->usevwgt,&part->usevwgt,NULL);CHKERRQ(ierr);
-  if (part->ops->setfromoptions) {
-    ierr = (*part->ops->setfromoptions)(PetscOptionsObject,part);CHKERRQ(ierr);
-  }
-  ierr = PetscViewerDestroy(&part->viewer);CHKERRQ(ierr);
-  ierr = PetscViewerDestroy(&part->viewerGraph);CHKERRQ(ierr);
-  ierr = PetscOptionsGetViewer(((PetscObject) part)->comm, ((PetscObject) part)->options, ((PetscObject) part)->prefix, "-petscpartitioner_view", &part->viewer, NULL, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsGetViewer(((PetscObject) part)->comm, ((PetscObject) part)->options, ((PetscObject) part)->prefix, "-petscpartitioner_view_graph", &part->viewerGraph, NULL, &part->viewGraph);CHKERRQ(ierr);
+  PetscObjectOptionsBegin((PetscObject)part);
+  PetscCall(PetscPartitionerGetType(part, &currentType));
+  PetscCall(PetscOptionsFList("-petscpartitioner_type", "Graph partitioner", "PetscPartitionerSetType", PetscPartitionerList, currentType, name, sizeof(name), &flg));
+  if (flg) PetscCall(PetscPartitionerSetType(part, name));
+  PetscCall(PetscOptionsBool("-petscpartitioner_use_vertex_weights", "Use vertex weights", "", part->usevwgt, &part->usevwgt, NULL));
+  PetscCall(PetscOptionsBool("-petscpartitioner_use_edge_weights", "Use edge weights", "", part->useewgt, &part->useewgt, NULL));
+  PetscTryTypeMethod(part, setfromoptions, PetscOptionsObject);
+  PetscCall(PetscOptionsRestoreViewer(&part->viewer));
+  PetscCall(PetscOptionsRestoreViewer(&part->viewerGraph));
+  PetscCall(PetscOptionsGetViewer(((PetscObject)part)->comm, ((PetscObject)part)->options, ((PetscObject)part)->prefix, "-petscpartitioner_view", &part->viewer, NULL, NULL));
+  PetscCall(PetscOptionsGetViewer(((PetscObject)part)->comm, ((PetscObject)part)->options, ((PetscObject)part)->prefix, "-petscpartitioner_view_graph", &part->viewerGraph, NULL, &part->viewGraph));
   /* process any options handlers added with PetscObjectAddOptionsHandler() */
-  ierr = PetscObjectProcessOptionsHandlers(PetscOptionsObject,(PetscObject) part);CHKERRQ(ierr);
-  ierr = PetscOptionsEnd();CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscObjectProcessOptionsHandlers((PetscObject)part, PetscOptionsObject));
+  PetscOptionsEnd();
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  PetscPartitionerSetUp - Construct data structures for the PetscPartitioner
+  PetscPartitionerSetUp - Construct data structures for the `PetscPartitioner`
 
-  Collective on PetscPartitioner
+  Collective
 
   Input Parameter:
-. part - the PetscPartitioner object to setup
+. part - the `PetscPartitioner` object to setup
 
   Level: developer
 
-.seealso: PetscPartitionerView(), PetscPartitionerDestroy()
+.seealso: `PetscPartitionerView()`, `PetscPartitionerDestroy()`
 @*/
 PetscErrorCode PetscPartitionerSetUp(PetscPartitioner part)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(part, PETSCPARTITIONER_CLASSID, 1);
-  if (part->ops->setup) {ierr = (*part->ops->setup)(part);CHKERRQ(ierr);}
-  PetscFunctionReturn(0);
+  PetscTryTypeMethod(part, setup);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  PetscPartitionerReset - Resets data structures for the PetscPartitioner
+  PetscPartitionerReset - Resets data structures for the `PetscPartitioner`
 
-  Collective on PetscPartitioner
+  Collective
 
   Input Parameter:
-. part - the PetscPartitioner object to reset
+. part - the `PetscPartitioner` object to reset
 
   Level: developer
 
-.seealso: PetscPartitionerSetUp(), PetscPartitionerDestroy()
+.seealso: `PetscPartitionerSetUp()`, `PetscPartitionerDestroy()`
 @*/
 PetscErrorCode PetscPartitionerReset(PetscPartitioner part)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(part, PETSCPARTITIONER_CLASSID, 1);
-  if (part->ops->reset) {ierr = (*part->ops->reset)(part);CHKERRQ(ierr);}
-  PetscFunctionReturn(0);
+  PetscTryTypeMethod(part, reset);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  PetscPartitionerDestroy - Destroys a PetscPartitioner object
+  PetscPartitionerDestroy - Destroys a `PetscPartitioner` object
 
-  Collective on PetscPartitioner
+  Collective
 
   Input Parameter:
-. part - the PetscPartitioner object to destroy
+. part - the `PetscPartitioner` object to destroy
 
   Level: developer
 
-.seealso: PetscPartitionerView()
+.seealso: `PetscPartitionerView()`
 @*/
 PetscErrorCode PetscPartitionerDestroy(PetscPartitioner *part)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  if (!*part) PetscFunctionReturn(0);
-  PetscValidHeaderSpecific((*part), PETSCPARTITIONER_CLASSID, 1);
+  if (!*part) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscValidHeaderSpecific(*part, PETSCPARTITIONER_CLASSID, 1);
 
-  if (--((PetscObject)(*part))->refct > 0) {*part = NULL; PetscFunctionReturn(0);}
-  ((PetscObject) (*part))->refct = 0;
+  if (--((PetscObject)*part)->refct > 0) {
+    *part = NULL;
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+  ((PetscObject)*part)->refct = 0;
 
-  ierr = PetscPartitionerReset(*part);CHKERRQ(ierr);
+  PetscCall(PetscPartitionerReset(*part));
 
-  ierr = PetscViewerDestroy(&(*part)->viewer);CHKERRQ(ierr);
-  ierr = PetscViewerDestroy(&(*part)->viewerGraph);CHKERRQ(ierr);
-  if ((*part)->ops->destroy) {ierr = (*(*part)->ops->destroy)(*part);CHKERRQ(ierr);}
-  ierr = PetscHeaderDestroy(part);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscOptionsRestoreViewer(&(*part)->viewer));
+  PetscCall(PetscOptionsRestoreViewer(&(*part)->viewerGraph));
+  PetscTryTypeMethod(*part, destroy);
+  PetscCall(PetscHeaderDestroy(part));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
   PetscPartitionerPartition - Partition a graph
 
-  Collective on PetscPartitioner
+  Collective
 
   Input Parameters:
-+ part    - The PetscPartitioner
-. nparts  - Number of partitions
-. numVertices - Number of vertices in the local part of the graph
-. start - row pointers for the local part of the graph (CSR style)
-. adjacency - adjacency list (CSR style)
-. vertexSection - PetscSection describing the absolute weight of each local vertex (can be NULL)
-- targetSection - PetscSection describing the absolute weight of each partition (can be NULL)
++ part          - The `PetscPartitioner`
+. nparts        - Number of partitions
+. numVertices   - Number of vertices in the local part of the graph
+. start         - row pointers for the local part of the graph (CSR style)
+. adjacency     - adjacency list (CSR style)
+. vertexSection - PetscSection describing the absolute weight of each local vertex (can be `NULL`)
+. edgeSection   - PetscSection describing the absolute weight of each local edge (can be `NULL`)
+- targetSection - PetscSection describing the absolute weight of each partition (can be `NULL`)
 
   Output Parameters:
-+ partSection     - The PetscSection giving the division of points by partition
-- partition       - The list of points by partition
++ partSection - The `PetscSection` giving the division of points by partition
+- partition   - The list of points by partition
 
-  Options Database:
-+ -petscpartitioner_view - View the partitioner information
+  Options Databasen Keys:
++ -petscpartitioner_view       - View the partitioner information
 - -petscpartitioner_view_graph - View the graph we are partitioning
-
-  Notes:
-    The chart of the vertexSection (if present) must contain [0,numVertices), with the number of dofs in the section specifying the absolute weight for each vertex.
-    The chart of the targetSection (if present) must contain [0,nparts), with the number of dofs in the section specifying the absolute weight for each partition. This information must be the same across processes, PETSc does not check it.
 
   Level: developer
 
-.seealso PetscPartitionerCreate(), PetscSectionCreate(), PetscSectionSetChart(), PetscSectionSetDof()
-@*/
-PetscErrorCode PetscPartitionerPartition(PetscPartitioner part, PetscInt nparts, PetscInt numVertices, PetscInt start[], PetscInt adjacency[], PetscSection vertexSection, PetscSection targetSection, PetscSection partSection, IS *partition)
-{
-  PetscErrorCode ierr;
+  Notes:
+  The chart of the vertexSection (if present) must contain [0,numVertices), with the number of dofs in the section specifying the absolute weight for each vertex.
+  The chart of the targetSection (if present) must contain [0,nparts), with the number of dofs in the section specifying the absolute weight for each partition. This information must be the same across processes, PETSc does not check it.
 
+.seealso: `PetscPartitionerCreate()`, `PetscPartitionerSetType()`, `PetscSectionCreate()`, `PetscSectionSetChart()`, `PetscSectionSetDof()`
+@*/
+PetscErrorCode PetscPartitionerPartition(PetscPartitioner part, PetscInt nparts, PetscInt numVertices, PetscInt start[], PetscInt adjacency[], PetscSection vertexSection, PetscSection edgeSection, PetscSection targetSection, PetscSection partSection, IS *partition)
+{
   PetscFunctionBegin;
   PetscValidHeaderSpecific(part, PETSCPARTITIONER_CLASSID, 1);
   PetscValidLogicalCollectiveInt(part, nparts, 2);
-  if (nparts <= 0) SETERRQ(PetscObjectComm((PetscObject) part), PETSC_ERR_ARG_OUTOFRANGE, "Number of parts must be positive");
-  if (numVertices < 0) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of vertices must be non-negative");
+  PetscCheck(nparts > 0, PetscObjectComm((PetscObject)part), PETSC_ERR_ARG_OUTOFRANGE, "Number of parts must be positive");
+  PetscCheck(numVertices >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of vertices must be non-negative");
   if (numVertices && !part->noGraph) {
-    PetscValidIntPointer(start, 4);
-    PetscValidIntPointer(start + numVertices, 4);
-    if (start[numVertices]) PetscValidIntPointer(adjacency, 5);
+    PetscAssertPointer(start, 4);
+    PetscAssertPointer(start + numVertices, 4);
+    if (start[numVertices]) PetscAssertPointer(adjacency, 5);
   }
   if (vertexSection) {
-    PetscInt s,e;
+    PetscInt s, e;
 
     PetscValidHeaderSpecific(vertexSection, PETSC_SECTION_CLASSID, 6);
-    ierr = PetscSectionGetChart(vertexSection, &s, &e);CHKERRQ(ierr);
-    if (s > 0 || e < numVertices) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Invalid vertexSection chart [%D,%D)",s,e);
+    PetscCall(PetscSectionGetChart(vertexSection, &s, &e));
+    PetscCheck(s <= 0 && e >= numVertices, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid vertexSection chart [%" PetscInt_FMT ",%" PetscInt_FMT ")", s, e);
+  }
+  if (edgeSection) {
+    PetscInt s, e;
+
+    PetscValidHeaderSpecific(edgeSection, PETSC_SECTION_CLASSID, 7);
+    PetscCall(PetscSectionGetChart(edgeSection, &s, &e));
+    PetscCheck(s <= 0 && e >= start[numVertices], PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid edgeSection chart [%" PetscInt_FMT ",%" PetscInt_FMT ")", s, e);
   }
   if (targetSection) {
-    PetscInt s,e;
+    PetscInt s, e;
 
-    PetscValidHeaderSpecific(targetSection, PETSC_SECTION_CLASSID, 7);
-    ierr = PetscSectionGetChart(targetSection, &s, &e);CHKERRQ(ierr);
-    if (s > 0 || e < nparts) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Invalid targetSection chart [%D,%D)",s,e);
+    PetscValidHeaderSpecific(targetSection, PETSC_SECTION_CLASSID, 8);
+    PetscCall(PetscSectionGetChart(targetSection, &s, &e));
+    PetscCheck(s <= 0 && e >= nparts, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid targetSection chart [%" PetscInt_FMT ",%" PetscInt_FMT ")", s, e);
   }
-  PetscValidHeaderSpecific(partSection, PETSC_SECTION_CLASSID, 8);
-  PetscValidPointer(partition, 9);
+  PetscValidHeaderSpecific(partSection, PETSC_SECTION_CLASSID, 9);
+  PetscAssertPointer(partition, 10);
 
-  ierr = PetscSectionReset(partSection);CHKERRQ(ierr);
-  ierr = PetscSectionSetChart(partSection, 0, nparts);CHKERRQ(ierr);
+  PetscCall(PetscSectionReset(partSection));
+  PetscCall(PetscSectionSetChart(partSection, 0, nparts));
   if (nparts == 1) { /* quick */
-    ierr = PetscSectionSetDof(partSection, 0, numVertices);CHKERRQ(ierr);
-    ierr = ISCreateStride(PetscObjectComm((PetscObject)part),numVertices,0,1,partition);CHKERRQ(ierr);
-  } else {
-    if (!part->ops->partition) SETERRQ1(PetscObjectComm((PetscObject) part), PETSC_ERR_SUP, "PetscPartitioner %s has no partitioning method", ((PetscObject)part)->type_name);
-    ierr = (*part->ops->partition)(part, nparts, numVertices, start, adjacency, vertexSection, targetSection, partSection, partition);CHKERRQ(ierr);
-  }
-  ierr = PetscSectionSetUp(partSection);CHKERRQ(ierr);
+    PetscCall(PetscSectionSetDof(partSection, 0, numVertices));
+    PetscCall(ISCreateStride(PetscObjectComm((PetscObject)part), numVertices, 0, 1, partition));
+  } else PetscUseTypeMethod(part, partition, nparts, numVertices, start, adjacency, vertexSection, edgeSection, targetSection, partSection, partition);
+  PetscCall(PetscSectionSetUp(partSection));
   if (part->viewerGraph) {
     PetscViewer viewer = part->viewerGraph;
     PetscBool   isascii;
     PetscInt    v, i;
     PetscMPIInt rank;
 
-    ierr = MPI_Comm_rank(PetscObjectComm((PetscObject) viewer), &rank);CHKERRQ(ierr);
-    ierr = PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERASCII, &isascii);CHKERRQ(ierr);
+    PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)viewer), &rank));
+    PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
     if (isascii) {
-      ierr = PetscViewerASCIIPushSynchronized(viewer);CHKERRQ(ierr);
-      ierr = PetscViewerASCIISynchronizedPrintf(viewer, "[%d]Nv: %D\n", rank, numVertices);CHKERRQ(ierr);
+      PetscCall(PetscViewerASCIIPushSynchronized(viewer));
+      PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "[%d]Nv: %" PetscInt_FMT "\n", rank, numVertices));
       for (v = 0; v < numVertices; ++v) {
         const PetscInt s = start[v];
-        const PetscInt e = start[v+1];
+        const PetscInt e = start[v + 1];
 
-        ierr = PetscViewerASCIISynchronizedPrintf(viewer, "[%d]  ", rank);CHKERRQ(ierr);
-        for (i = s; i < e; ++i) {ierr = PetscViewerASCIISynchronizedPrintf(viewer, "%D ", adjacency[i]);CHKERRQ(ierr);}
-        ierr = PetscViewerASCIISynchronizedPrintf(viewer, "[%D-%D)\n", s, e);CHKERRQ(ierr);
+        PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "[%d]  ", rank));
+        for (i = s; i < e; ++i) PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "%" PetscInt_FMT " ", adjacency[i]));
+        PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "[%" PetscInt_FMT "-%" PetscInt_FMT ")\n", s, e));
       }
-      ierr = PetscViewerFlush(viewer);CHKERRQ(ierr);
-      ierr = PetscViewerASCIIPopSynchronized(viewer);CHKERRQ(ierr);
+      PetscCall(PetscViewerFlush(viewer));
+      PetscCall(PetscViewerASCIIPopSynchronized(viewer));
     }
   }
-  if (part->viewer) {
-    ierr = PetscPartitionerView(part,part->viewer);CHKERRQ(ierr);
-  }
-  PetscFunctionReturn(0);
+  if (part->viewer) PetscCall(PetscPartitionerView(part, part->viewer));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  PetscPartitionerCreate - Creates an empty PetscPartitioner object. The type can then be set with PetscPartitionerSetType().
+  PetscPartitionerCreate - Creates an empty `PetscPartitioner` object. The type can then be set with `PetscPartitionerSetType()`.
 
   Collective
 
   Input Parameter:
-. comm - The communicator for the PetscPartitioner object
+. comm - The communicator for the `PetscPartitioner` object
 
   Output Parameter:
-. part - The PetscPartitioner object
+. part - The `PetscPartitioner` object
 
   Level: beginner
 
-.seealso: PetscPartitionerSetType(), PETSCPARTITIONERCHACO, PETSCPARTITIONERPARMETIS, PETSCPARTITIONERSHELL, PETSCPARTITIONERSIMPLE, PETSCPARTITIONERGATHER
+.seealso: `PetscPartitionerSetType()`, `PetscPartitionerDestroy()`
 @*/
 PetscErrorCode PetscPartitionerCreate(MPI_Comm comm, PetscPartitioner *part)
 {
   PetscPartitioner p;
-  const char       *partitionerType = NULL;
-  PetscErrorCode   ierr;
+  const char      *partitionerType = NULL;
 
   PetscFunctionBegin;
-  PetscValidPointer(part, 2);
+  PetscAssertPointer(part, 2);
   *part = NULL;
-  ierr = PetscPartitionerInitializePackage();CHKERRQ(ierr);
+  PetscCall(PetscPartitionerInitializePackage());
 
-  ierr = PetscHeaderCreate(p, PETSCPARTITIONER_CLASSID, "PetscPartitioner", "Graph Partitioner", "PetscPartitioner", comm, PetscPartitionerDestroy, PetscPartitionerView);CHKERRQ(ierr);
-  ierr = PetscPartitionerGetDefaultType(comm, NULL, &partitionerType);CHKERRQ(ierr);
-  ierr = PetscPartitionerSetType(p,partitionerType);CHKERRQ(ierr);
+  PetscCall(PetscHeaderCreate(p, PETSCPARTITIONER_CLASSID, "PetscPartitioner", "Graph Partitioner", "PetscPartitioner", comm, PetscPartitionerDestroy, PetscPartitionerView));
+  PetscCall(PetscPartitionerGetDefaultType(comm, &partitionerType));
+  PetscCall(PetscPartitionerSetType(p, partitionerType));
 
   p->edgeCut = 0;
   p->balance = 0.0;
   p->usevwgt = PETSC_TRUE;
 
   *part = p;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
-

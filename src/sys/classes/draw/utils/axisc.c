@@ -1,41 +1,40 @@
-#include <../src/sys/classes/draw/utils/axisimpl.h>  /*I   "petscdraw.h"  I*/
+#include <petsc/private/drawimpl.h> /*I   "petscdraw.h"  I*/
 
+#define PETSC_DRAW_AXIS_MAX_SEGMENTS 20
 PetscClassId PETSC_DRAWAXIS_CLASSID = 0;
 
 /*@
-   PetscDrawAxisCreate - Generate the axis data structure.
+  PetscDrawAxisCreate - Generate the axis data structure.
 
-   Collective on PetscDraw
+  Collective
 
-   Input Parameters:
-.  win - PetscDraw object where axis to to be made
+  Input Parameter:
+. draw - `PetscDraw` object where axis to be made
 
-   Ouput Parameters:
-.  axis - the axis datastructure
+  Output Parameter:
+. axis - the axis datastructure
 
-   Notes:
-    the MPI communicator that owns the underlying draw object owns the PetscDrawAxis object, but calls to set PetscDrawAxis options are ignored by all processes
-          except the first MPI process in the communicator
+  Note:
+  The MPI communicator that owns the underlying draw object owns the `PetscDrawAxis` object, but calls to set `PetscDrawAxis` options are
+  ignored by all processes except the first MPI rank in the communicator
 
-   Level: advanced
+  Level: advanced
 
-.seealso: PetscDrawLGCreate(), PetscDrawLG, PetscDrawSPCreate(), PetscDrawSP, PetscDrawHGCreate(), PetscDrawHG, PetscDrawBarCreate(), PetscDrawBar, PetscDrawLGGetAxis(), PetscDrawSPGetAxis(),
-          PetscDrawHGGetAxis(), PetscDrawBarGetAxis(), PetscDrawAxis, PetscDrawAxisDestroy(), PetscDrawAxisSetColors(), PetscDrawAxisSetLabels(), PetscDrawAxisSetLimits(), PetscDrawAxisGetLimits(), PetscDrawAxisSetHoldLimits(),
-          PetscDrawAxisDraw()
+.seealso: `PetscDrawLGCreate()`, `PetscDrawLG`, `PetscDrawSPCreate()`, `PetscDrawSP`, `PetscDrawHGCreate()`, `PetscDrawHG`, `PetscDrawBarCreate()`, `PetscDrawBar`, `PetscDrawLGGetAxis()`, `PetscDrawSPGetAxis()`,
+          `PetscDrawHGGetAxis()`, `PetscDrawBarGetAxis()`, `PetscDrawAxis`, `PetscDrawAxisDestroy()`, `PetscDrawAxisSetColors()`, `PetscDrawAxisSetLabels()`, `PetscDrawAxisSetLimits()`, `PetscDrawAxisGetLimits()`, `PetscDrawAxisSetHoldLimits()`,
+          `PetscDrawAxisDraw()`
 @*/
-PetscErrorCode  PetscDrawAxisCreate(PetscDraw draw,PetscDrawAxis *axis)
+PetscErrorCode PetscDrawAxisCreate(PetscDraw draw, PetscDrawAxis *axis)
 {
-  PetscDrawAxis  ad;
-  PetscErrorCode ierr;
+  PetscDrawAxis ad;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
-  PetscValidPointer(axis,2);
+  PetscValidHeaderSpecific(draw, PETSC_DRAW_CLASSID, 1);
+  PetscAssertPointer(axis, 2);
 
-  ierr = PetscHeaderCreate(ad,PETSC_DRAWAXIS_CLASSID,"DrawAxis","Draw Axis","Draw",PetscObjectComm((PetscObject)draw),PetscDrawAxisDestroy,NULL);CHKERRQ(ierr);
-  ierr = PetscLogObjectParent((PetscObject)draw,(PetscObject)ad);CHKERRQ(ierr);
+  PetscCall(PetscHeaderCreate(ad, PETSC_DRAWAXIS_CLASSID, "DrawAxis", "Draw Axis", "Draw", PetscObjectComm((PetscObject)draw), PetscDrawAxisDestroy, NULL));
 
-  ierr = PetscObjectReference((PetscObject)draw);CHKERRQ(ierr);
+  PetscCall(PetscObjectReference((PetscObject)draw));
   ad->win = draw;
 
   ad->xticks    = PetscADefTicks;
@@ -50,327 +49,340 @@ PetscErrorCode  PetscDrawAxisCreate(PetscDraw draw,PetscDrawAxis *axis)
   ad->toplabel  = NULL;
 
   *axis = ad;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-    PetscDrawAxisDestroy - Frees the space used by an axis structure.
+  PetscDrawAxisDestroy - Frees the space used by an axis structure.
 
-    Collective on PetscDrawAxis
+  Collective
 
-    Input Parameters:
-.   axis - the axis context
+  Input Parameter:
+. axis - the axis context
 
-    Level: advanced
+  Level: advanced
 
-.seealso: PetscDrawAxisCreate(), PetscDrawAxis
+.seealso: `PetscDraw`, `PetscDrawAxisCreate()`, `PetscDrawAxis`
 @*/
-PetscErrorCode  PetscDrawAxisDestroy(PetscDrawAxis *axis)
+PetscErrorCode PetscDrawAxisDestroy(PetscDrawAxis *axis)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  if (!*axis) PetscFunctionReturn(0);
-  PetscValidHeaderSpecific(*axis,PETSC_DRAWAXIS_CLASSID,1);
-  if (--((PetscObject)(*axis))->refct > 0) {*axis = NULL; PetscFunctionReturn(0);}
+  if (!*axis) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscValidHeaderSpecific(*axis, PETSC_DRAWAXIS_CLASSID, 1);
+  if (--((PetscObject)*axis)->refct > 0) {
+    *axis = NULL;
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
 
-  ierr = PetscFree((*axis)->toplabel);CHKERRQ(ierr);
-  ierr = PetscFree((*axis)->xlabel);CHKERRQ(ierr);
-  ierr = PetscFree((*axis)->ylabel);CHKERRQ(ierr);
-  ierr = PetscDrawDestroy(&(*axis)->win);CHKERRQ(ierr);
-  ierr = PetscHeaderDestroy(axis);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscFree((*axis)->toplabel));
+  PetscCall(PetscFree((*axis)->xlabel));
+  PetscCall(PetscFree((*axis)->ylabel));
+  PetscCall(PetscDrawDestroy(&(*axis)->win));
+  PetscCall(PetscHeaderDestroy(axis));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-    PetscDrawAxisSetColors -  Sets the colors to be used for the axis,
-                         tickmarks, and text.
+  PetscDrawAxisSetColors -  Sets the colors to be used for the axis,
+  tickmarks, and text.
 
-    Logically Collective on PetscDrawAxis
+  Logically Collective
 
-    Input Parameters:
-+   axis - the axis
-.   ac - the color of the axis lines
-.   tc - the color of the tick marks
--   cc - the color of the text strings
+  Input Parameters:
++ axis - the axis
+. ac   - the color of the axis lines
+. tc   - the color of the tick marks
+- cc   - the color of the text strings
 
-    Level: advanced
+  Level: advanced
 
-.seealso: PetscDrawAxisCreate(), PetscDrawAxis, PetscDrawAxisSetLabels(), PetscDrawAxisDraw(), PetscDrawAxisSetLimits()
+.seealso: `PetscDraw`, `PetscDrawAxisCreate()`, `PetscDrawAxis`, `PetscDrawAxisSetLabels()`, `PetscDrawAxisDraw()`, `PetscDrawAxisSetLimits()`
 @*/
-PetscErrorCode  PetscDrawAxisSetColors(PetscDrawAxis axis,int ac,int tc,int cc)
+PetscErrorCode PetscDrawAxisSetColors(PetscDrawAxis axis, int ac, int tc, int cc)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(axis,PETSC_DRAWAXIS_CLASSID,1);
-  PetscValidLogicalCollectiveInt(axis,ac,2);
-  PetscValidLogicalCollectiveInt(axis,tc,3);
-  PetscValidLogicalCollectiveInt(axis,cc,4);
-  axis->ac = ac; axis->tc = tc; axis->cc = cc;
-  PetscFunctionReturn(0);
-}
-
-/*@C
-    PetscDrawAxisSetLabels -  Sets the x and y axis labels.
-
-    Logically Collective on PetscDrawAxis
-
-    Input Parameters:
-+   axis - the axis
-.   top - the label at the top of the image
--   xlabel,ylabel - the labes for the x and y axis
-
-    Notes:
-    Must be called before PetscDrawAxisDraw() or PetscDrawLGDraw()
-           There should be no newlines in the arguments
-
-    Level: advanced
-
-.seealso: PetscDrawAxisCreate(), PetscDrawAxis, PetscDrawAxisSetColors(), PetscDrawAxisDraw(), PetscDrawAxisSetLimits()
-@*/
-PetscErrorCode  PetscDrawAxisSetLabels(PetscDrawAxis axis,const char top[],const char xlabel[],const char ylabel[])
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(axis,PETSC_DRAWAXIS_CLASSID,1);
-  ierr = PetscFree(axis->xlabel);CHKERRQ(ierr);
-  ierr = PetscFree(axis->ylabel);CHKERRQ(ierr);
-  ierr = PetscFree(axis->toplabel);CHKERRQ(ierr);
-  ierr = PetscStrallocpy(xlabel,&axis->xlabel);CHKERRQ(ierr);
-  ierr = PetscStrallocpy(ylabel,&axis->ylabel);CHKERRQ(ierr);
-  ierr = PetscStrallocpy(top,&axis->toplabel);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(axis, PETSC_DRAWAXIS_CLASSID, 1);
+  PetscValidLogicalCollectiveInt(axis, ac, 2);
+  PetscValidLogicalCollectiveInt(axis, tc, 3);
+  PetscValidLogicalCollectiveInt(axis, cc, 4);
+  axis->ac = ac;
+  axis->tc = tc;
+  axis->cc = cc;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-    PetscDrawAxisSetLimits -  Sets the limits (in user coords) of the axis
+  PetscDrawAxisSetLabels -  Sets the x and y axis labels.
 
-    Logically Collective on PetscDrawAxis
+  Logically Collective
 
-    Input Parameters:
-+   axis - the axis
-.   xmin,xmax - limits in x
--   ymin,ymax - limits in y
+  Input Parameters:
++ axis   - the axis
+. top    - the label at the top of the image
+. xlabel - the x axis label
+- ylabel - the y axis label
 
-    Options Database:
-.   -drawaxis_hold - hold the initial set of axis limits for future plotting
+  Level: advanced
 
-    Level: advanced
+  Notes:
+  Must be called before `PetscDrawAxisDraw()` or `PetscDrawLGDraw()`
 
-.seealso:  PetscDrawAxisSetHoldLimits(), PetscDrawAxisGetLimits(), PetscDrawAxisSetLabels(), PetscDrawAxisSetColors()
+  There should be no newlines in the arguments
 
+.seealso: `PetscDraw`, `PetscDrawAxisCreate()`, `PetscDrawAxis`, `PetscDrawAxisSetColors()`, `PetscDrawAxisDraw()`, `PetscDrawAxisSetLimits()`
 @*/
-PetscErrorCode  PetscDrawAxisSetLimits(PetscDrawAxis axis,PetscReal xmin,PetscReal xmax,PetscReal ymin,PetscReal ymax)
+PetscErrorCode PetscDrawAxisSetLabels(PetscDrawAxis axis, const char top[], const char xlabel[], const char ylabel[])
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(axis,PETSC_DRAWAXIS_CLASSID,1);
-  if (axis->hold) PetscFunctionReturn(0);
-  axis->xlow = xmin;
-  axis->xhigh= xmax;
-  axis->ylow = ymin;
-  axis->yhigh= ymax;
-  ierr = PetscOptionsHasName(((PetscObject)axis)->options,((PetscObject)axis)->prefix,"-drawaxis_hold",&axis->hold);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(axis, PETSC_DRAWAXIS_CLASSID, 1);
+  PetscCall(PetscFree(axis->xlabel));
+  PetscCall(PetscFree(axis->ylabel));
+  PetscCall(PetscFree(axis->toplabel));
+  PetscCall(PetscStrallocpy(xlabel, &axis->xlabel));
+  PetscCall(PetscStrallocpy(ylabel, &axis->ylabel));
+  PetscCall(PetscStrallocpy(top, &axis->toplabel));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-    PetscDrawAxisGetLimits -  Gets the limits (in user coords) of the axis
+  PetscDrawAxisSetLimits -  Sets the limits (in user coords) of the axis
 
-    Not Collective
+  Logically Collective
 
-    Input Parameters:
-+   axis - the axis
-.   xmin,xmax - limits in x
--   ymin,ymax - limits in y
+  Input Parameters:
++ axis - the axis
+. xmin - the lower x limit
+. xmax - the upper x limit
+. ymin - the lower y limit
+- ymax - the upper y limit
 
-    Level: advanced
+  Options Database Key:
+. -drawaxis_hold - hold the initial set of axis limits for future plotting
 
-.seealso:  PetscDrawAxisCreate(), PetscDrawAxis, PetscDrawAxisSetHoldLimits(), PetscDrawAxisSetLimits(), PetscDrawAxisSetLabels(), PetscDrawAxisSetColors()
+  Level: advanced
 
+.seealso: `PetscDrawAxisSetHoldLimits()`, `PetscDrawAxisGetLimits()`, `PetscDrawAxisSetLabels()`, `PetscDrawAxisSetColors()`
 @*/
-PetscErrorCode  PetscDrawAxisGetLimits(PetscDrawAxis axis,PetscReal *xmin,PetscReal *xmax,PetscReal *ymin,PetscReal *ymax)
+PetscErrorCode PetscDrawAxisSetLimits(PetscDrawAxis axis, PetscReal xmin, PetscReal xmax, PetscReal ymin, PetscReal ymax)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(axis,PETSC_DRAWAXIS_CLASSID,1);
+  PetscValidHeaderSpecific(axis, PETSC_DRAWAXIS_CLASSID, 1);
+  if (axis->hold) PetscFunctionReturn(PETSC_SUCCESS);
+  axis->xlow  = xmin;
+  axis->xhigh = xmax;
+  axis->ylow  = ymin;
+  axis->yhigh = ymax;
+  PetscCall(PetscOptionsHasName(((PetscObject)axis)->options, ((PetscObject)axis)->prefix, "-drawaxis_hold", &axis->hold));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PetscDrawAxisGetLimits -  Gets the limits (in user coords) of the axis
+
+  Not Collective
+
+  Input Parameters:
++ axis - the axis
+. xmin - the lower x limit
+. xmax - the upper x limit
+. ymin - the lower y limit
+- ymax - the upper y limit
+
+  Level: advanced
+
+.seealso: `PetscDrawAxisCreate()`, `PetscDrawAxis`, `PetscDrawAxisSetHoldLimits()`, `PetscDrawAxisSetLimits()`, `PetscDrawAxisSetLabels()`, `PetscDrawAxisSetColors()`
+@*/
+PetscErrorCode PetscDrawAxisGetLimits(PetscDrawAxis axis, PetscReal *xmin, PetscReal *xmax, PetscReal *ymin, PetscReal *ymax)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(axis, PETSC_DRAWAXIS_CLASSID, 1);
   if (xmin) *xmin = axis->xlow;
   if (xmax) *xmax = axis->xhigh;
   if (ymin) *ymin = axis->ylow;
   if (ymax) *ymax = axis->yhigh;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-    PetscDrawAxisSetHoldLimits -  Causes an axis to keep the same limits until this is called
-        again
+  PetscDrawAxisSetHoldLimits -  Causes an axis to keep the same limits until this is called
+  again
 
-    Logically Collective on PetscDrawAxis
+  Logically Collective
 
-    Input Parameters:
-+   axis - the axis
--   hold - PETSC_TRUE - hold current limits, PETSC_FALSE allow limits to be changed
+  Input Parameters:
++ axis - the axis
+- hold - `PETSC_TRUE` - hold current limits, `PETSC_FALSE` allow limits to be changed
 
-    Level: advanced
+  Level: advanced
 
-    Notes:
-        Once this has been called with PETSC_TRUE the limits will not change if you call
-     PetscDrawAxisSetLimits() until you call this with PETSC_FALSE
+  Note:
+  Once this has been called with `PETSC_TRUE` the limits will not change if you call
+  `PetscDrawAxisSetLimits()` until you call this with `PETSC_FALSE`
 
-.seealso:  PetscDrawAxisCreate(), PetscDrawAxis, PetscDrawAxisGetLimits(), PetscDrawAxisSetLimits(), PetscDrawAxisSetLabels(), PetscDrawAxisSetColors()
-
+.seealso: `PetscDrawAxisCreate()`, `PetscDrawAxis`, `PetscDrawAxisGetLimits()`, `PetscDrawAxisSetLimits()`, `PetscDrawAxisSetLabels()`, `PetscDrawAxisSetColors()`
 @*/
-PetscErrorCode  PetscDrawAxisSetHoldLimits(PetscDrawAxis axis,PetscBool hold)
+PetscErrorCode PetscDrawAxisSetHoldLimits(PetscDrawAxis axis, PetscBool hold)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(axis,PETSC_DRAWAXIS_CLASSID,1);
-  PetscValidLogicalCollectiveBool(axis,hold,2);
+  PetscValidHeaderSpecific(axis, PETSC_DRAWAXIS_CLASSID, 1);
+  PetscValidLogicalCollectiveBool(axis, hold, 2);
   axis->hold = hold;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-    PetscDrawAxisDraw - PetscDraws an axis.
+  PetscDrawAxisDraw - draws an axis.
 
-    Collective on PetscDrawAxis
+  Collective
 
-    Input Parameter:
-.   axis - Axis structure
+  Input Parameter:
+. axis - `PetscDrawAxis` structure
 
-    Level: advanced
+  Level: advanced
 
-    Note:
-    This draws the actual axis.  The limits etc have already been set.
-    By picking special routines for the ticks and labels, special
-    effects may be generated.  These routines are part of the Axis
-    structure (axis).
+  Note:
+  This draws the actual axis.  The limits etc have already been set.
+  By picking special routines for the ticks and labels, special
+  effects may be generated.  These routines are part of the Axis
+  structure (axis).
 
-.seealso:  PetscDrawAxisCreate(), PetscDrawAxis, PetscDrawAxisGetLimits(), PetscDrawAxisSetLimits(), PetscDrawAxisSetLabels(), PetscDrawAxisSetColors()
-
+.seealso: `PetscDrawAxisCreate()`, `PetscDrawAxis`, `PetscDrawAxisGetLimits()`, `PetscDrawAxisSetLimits()`, `PetscDrawAxisSetLabels()`, `PetscDrawAxisSetColors()`
 @*/
-PetscErrorCode  PetscDrawAxisDraw(PetscDrawAxis axis)
+PetscErrorCode PetscDrawAxisDraw(PetscDrawAxis axis)
 {
-  int            i,ntick,numx,numy,ac,tc,cc;
-  PetscMPIInt    rank;
-  size_t         len,ytlen=0;
-  PetscReal      coors[4],tickloc[MAXSEGS],sep,tw,th;
-  PetscReal      xl,xr,yl,yr,dxl=0,dyl=0,dxr=0,dyr=0;
-  char           *p;
-  PetscDraw      draw;
-  PetscBool      isnull;
-  PetscErrorCode ierr;
+  int         i, ntick, numx, numy, ac, tc, cc;
+  PetscMPIInt rank;
+  size_t      len, ytlen = 0;
+  PetscReal   coors[4], tickloc[PETSC_DRAW_AXIS_MAX_SEGMENTS], sep, tw, th;
+  PetscReal   xl, xr, yl, yr, dxl = 0, dyl = 0, dxr = 0, dyr = 0;
+  char       *p;
+  PetscDraw   draw;
+  PetscBool   isnull;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(axis,PETSC_DRAWAXIS_CLASSID,1);
-  ierr = PetscDrawIsNull(axis->win,&isnull);CHKERRQ(ierr);
-  if (isnull) PetscFunctionReturn(0);
-  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)axis),&rank);CHKERRQ(ierr);
+  PetscValidHeaderSpecific(axis, PETSC_DRAWAXIS_CLASSID, 1);
+  PetscCall(PetscDrawIsNull(axis->win, &isnull));
+  if (isnull) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)axis), &rank));
 
   draw = axis->win;
 
-  ac = axis->ac; tc = axis->tc; cc = axis->cc;
-  if (axis->xlow == axis->xhigh) {axis->xlow -= .5; axis->xhigh += .5;}
-  if (axis->ylow == axis->yhigh) {axis->ylow -= .5; axis->yhigh += .5;}
+  ac = axis->ac;
+  tc = axis->tc;
+  cc = axis->cc;
+  if (axis->xlow == axis->xhigh) {
+    axis->xlow -= .5;
+    axis->xhigh += .5;
+  }
+  if (axis->ylow == axis->yhigh) {
+    axis->ylow -= .5;
+    axis->yhigh += .5;
+  }
 
-  ierr = PetscDrawCollectiveBegin(draw);CHKERRQ(ierr);
+  PetscDrawCollectiveBegin(draw);
   if (rank) goto finally;
 
-  /* get cannonical string size */
-  ierr = PetscDrawSetCoordinates(draw,0,0,1,1);CHKERRQ(ierr);
-  ierr = PetscDrawStringGetSize(draw,&tw,&th);CHKERRQ(ierr);
+  /* get canonical string size */
+  PetscCall(PetscDrawSetCoordinates(draw, 0, 0, 1, 1));
+  PetscCall(PetscDrawStringGetSize(draw, &tw, &th));
   /* lower spacing */
-  if (axis->xlabelstr) dyl += 1.5*th;
-  if (axis->xlabel)    dyl += 1.5*th;
+  if (axis->xlabelstr) dyl += 1.5 * th;
+  if (axis->xlabel) dyl += 1.5 * th;
   /* left spacing */
-  if (axis->ylabelstr) dxl += 7.5*tw;
-  if (axis->ylabel)    dxl += 2.0*tw;
+  if (axis->ylabelstr) dxl += 7.5 * tw;
+  if (axis->ylabel) dxl += 2.0 * tw;
   /* right and top spacing */
-  if (axis->xlabelstr) dxr = 2.5*tw;
-  if (axis->ylabelstr) dyr = 0.5*th;
-  if (axis->toplabel)  dyr = 1.5*th;
+  if (axis->xlabelstr) dxr = 2.5 * tw;
+  if (axis->ylabelstr) dyr = 0.5 * th;
+  if (axis->toplabel) dyr = 1.5 * th;
   /* extra spacing */
-  dxl += 0.7*tw; dxr += 0.5*tw;
-  dyl += 0.2*th; dyr += 0.2*th;
+  dxl += 0.7 * tw;
+  dxr += 0.5 * tw;
+  dyl += 0.2 * th;
+  dyr += 0.2 * th;
   /* determine coordinates */
-  xl = (dxl*axis->xhigh + dxr*axis->xlow - axis->xlow)  / (dxl + dxr - 1);
-  xr = (dxl*axis->xhigh + dxr*axis->xlow - axis->xhigh) / (dxl + dxr - 1);
-  yl = (dyl*axis->yhigh + dyr*axis->ylow - axis->ylow)  / (dyl + dyr - 1);
-  yr = (dyl*axis->yhigh + dyr*axis->ylow - axis->yhigh) / (dyl + dyr - 1);
-  ierr = PetscDrawSetCoordinates(draw,xl,yl,xr,yr);CHKERRQ(ierr);
-  ierr = PetscDrawStringGetSize(draw,&tw,&th);CHKERRQ(ierr);
+  xl = (dxl * axis->xhigh + dxr * axis->xlow - axis->xlow) / (dxl + dxr - 1);
+  xr = (dxl * axis->xhigh + dxr * axis->xlow - axis->xhigh) / (dxl + dxr - 1);
+  yl = (dyl * axis->yhigh + dyr * axis->ylow - axis->ylow) / (dyl + dyr - 1);
+  yr = (dyl * axis->yhigh + dyr * axis->ylow - axis->yhigh) / (dyl + dyr - 1);
+  PetscCall(PetscDrawSetCoordinates(draw, xl, yl, xr, yr));
+  PetscCall(PetscDrawStringGetSize(draw, &tw, &th));
 
   /* PetscDraw the axis lines */
-  ierr = PetscDrawLine(draw,axis->xlow,axis->ylow,axis->xhigh,axis->ylow,ac);CHKERRQ(ierr);
-  ierr = PetscDrawLine(draw,axis->xlow,axis->ylow,axis->xlow,axis->yhigh,ac);CHKERRQ(ierr);
-  ierr = PetscDrawLine(draw,axis->xlow,axis->yhigh,axis->xhigh,axis->yhigh,ac);CHKERRQ(ierr);
-  ierr = PetscDrawLine(draw,axis->xhigh,axis->ylow,axis->xhigh,axis->yhigh,ac);CHKERRQ(ierr);
+  PetscCall(PetscDrawLine(draw, axis->xlow, axis->ylow, axis->xhigh, axis->ylow, ac));
+  PetscCall(PetscDrawLine(draw, axis->xlow, axis->ylow, axis->xlow, axis->yhigh, ac));
+  PetscCall(PetscDrawLine(draw, axis->xlow, axis->yhigh, axis->xhigh, axis->yhigh, ac));
+  PetscCall(PetscDrawLine(draw, axis->xhigh, axis->ylow, axis->xhigh, axis->yhigh, ac));
 
   /* PetscDraw the top label */
   if (axis->toplabel) {
-    PetscReal x = (axis->xlow + axis->xhigh)/2, y = axis->yhigh + 0.5*th;
-    ierr = PetscDrawStringCentered(draw,x,y,cc,axis->toplabel);CHKERRQ(ierr);
+    PetscReal x = (axis->xlow + axis->xhigh) / 2, y = axis->yhigh + 0.5 * th;
+    PetscCall(PetscDrawStringCentered(draw, x, y, cc, axis->toplabel));
   }
 
   /* PetscDraw the X ticks and labels */
   if (axis->xticks) {
-    numx = (int)(.15*(axis->xhigh-axis->xlow)/tw); numx = PetscClipInterval(numx,2,6);
-    ierr = (*axis->xticks)(axis->xlow,axis->xhigh,numx,&ntick,tickloc,MAXSEGS);CHKERRQ(ierr);
+    numx = (int)(.15 * (axis->xhigh - axis->xlow) / tw);
+    numx = PetscClipInterval(numx, 2, 6);
+    PetscCall((*axis->xticks)(axis->xlow, axis->xhigh, numx, &ntick, tickloc, PETSC_DRAW_AXIS_MAX_SEGMENTS));
     /* PetscDraw in tick marks */
-    for (i=0; i<ntick; i++) {
-      ierr = PetscDrawLine(draw,tickloc[i],axis->ylow,tickloc[i],axis->ylow+.5*th,tc);CHKERRQ(ierr);
-      ierr = PetscDrawLine(draw,tickloc[i],axis->yhigh,tickloc[i],axis->yhigh-.5*th,tc);CHKERRQ(ierr);
+    for (i = 0; i < ntick; i++) {
+      PetscCall(PetscDrawLine(draw, tickloc[i], axis->ylow, tickloc[i], axis->ylow + .5 * th, tc));
+      PetscCall(PetscDrawLine(draw, tickloc[i], axis->yhigh, tickloc[i], axis->yhigh - .5 * th, tc));
     }
     /* label ticks */
     if (axis->xlabelstr) {
-      for (i=0; i<ntick; i++) {
-        if (i < ntick - 1) sep = tickloc[i+1] - tickloc[i];
-        else if (i > 0)    sep = tickloc[i]   - tickloc[i-1];
-        else               sep = 0.0;
-        ierr = (*axis->xlabelstr)(tickloc[i],sep,&p);CHKERRQ(ierr);
-        ierr = PetscDrawStringCentered(draw,tickloc[i],axis->ylow-1.5*th,cc,p);CHKERRQ(ierr);
+      for (i = 0; i < ntick; i++) {
+        if (i < ntick - 1) sep = tickloc[i + 1] - tickloc[i];
+        else if (i > 0) sep = tickloc[i] - tickloc[i - 1];
+        else sep = 0.0;
+        PetscCall((*axis->xlabelstr)(tickloc[i], sep, &p));
+        PetscCall(PetscDrawStringCentered(draw, tickloc[i], axis->ylow - 1.5 * th, cc, p));
       }
     }
   }
   if (axis->xlabel) {
-    PetscReal x = (axis->xlow + axis->xhigh)/2, y = axis->ylow - 1.5*th;
-    if (axis->xlabelstr) y -= 1.5*th;
-    ierr = PetscDrawStringCentered(draw,x,y,cc,axis->xlabel);CHKERRQ(ierr);
+    PetscReal x = (axis->xlow + axis->xhigh) / 2, y = axis->ylow - 1.5 * th;
+    if (axis->xlabelstr) y -= 1.5 * th;
+    PetscCall(PetscDrawStringCentered(draw, x, y, cc, axis->xlabel));
   }
 
   /* PetscDraw the Y ticks and labels */
   if (axis->yticks) {
-    numy = (int)(.50*(axis->yhigh-axis->ylow)/th); numy = PetscClipInterval(numy,2,6);
-    ierr = (*axis->yticks)(axis->ylow,axis->yhigh,numy,&ntick,tickloc,MAXSEGS);CHKERRQ(ierr);
+    numy = (int)(.50 * (axis->yhigh - axis->ylow) / th);
+    numy = PetscClipInterval(numy, 2, 6);
+    PetscCall((*axis->yticks)(axis->ylow, axis->yhigh, numy, &ntick, tickloc, PETSC_DRAW_AXIS_MAX_SEGMENTS));
     /* PetscDraw in tick marks */
-    for (i=0; i<ntick; i++) {
-      ierr = PetscDrawLine(draw,axis->xlow,tickloc[i],axis->xlow+.5*tw,tickloc[i],tc);CHKERRQ(ierr);
-      ierr = PetscDrawLine(draw,axis->xhigh,tickloc[i],axis->xhigh-.5*tw,tickloc[i],tc);CHKERRQ(ierr);
+    for (i = 0; i < ntick; i++) {
+      PetscCall(PetscDrawLine(draw, axis->xlow, tickloc[i], axis->xlow + .5 * tw, tickloc[i], tc));
+      PetscCall(PetscDrawLine(draw, axis->xhigh, tickloc[i], axis->xhigh - .5 * tw, tickloc[i], tc));
     }
     /* label ticks */
     if (axis->ylabelstr) {
-      for (i=0; i<ntick; i++) {
-        if (i < ntick - 1) sep = tickloc[i+1] - tickloc[i];
-        else if (i > 0)    sep = tickloc[i]   - tickloc[i-1];
-        else               sep = 0.0;
-        ierr = (*axis->ylabelstr)(tickloc[i],sep,&p);CHKERRQ(ierr);
-        ierr = PetscStrlen(p,&len);CHKERRQ(ierr); ytlen = PetscMax(ytlen,len);
-        ierr = PetscDrawString(draw,axis->xlow-(len+.5)*tw,tickloc[i]-.5*th,cc,p);CHKERRQ(ierr);
+      for (i = 0; i < ntick; i++) {
+        if (i < ntick - 1) sep = tickloc[i + 1] - tickloc[i];
+        else if (i > 0) sep = tickloc[i] - tickloc[i - 1];
+        else sep = 0.0;
+        PetscCall((*axis->ylabelstr)(tickloc[i], sep, &p));
+        PetscCall(PetscStrlen(p, &len));
+        ytlen = PetscMax(ytlen, len);
+        PetscCall(PetscDrawString(draw, axis->xlow - (len + .5) * tw, tickloc[i] - .5 * th, cc, p));
       }
     }
   }
   if (axis->ylabel) {
-    PetscReal x = axis->xlow - 2.0*tw, y = (axis->ylow + axis->yhigh)/2;
-    if (axis->ylabelstr) x -= (ytlen+.5)*tw;
-    ierr = PetscStrlen(axis->ylabel,&len);CHKERRQ(ierr);
-    ierr = PetscDrawStringVertical(draw,x,y+len*th/2,cc,axis->ylabel);CHKERRQ(ierr);
+    PetscReal x = axis->xlow - 2.0 * tw, y = (axis->ylow + axis->yhigh) / 2;
+    if (axis->ylabelstr) x -= (ytlen + .5) * tw;
+    PetscCall(PetscStrlen(axis->ylabel, &len));
+    PetscCall(PetscDrawStringVertical(draw, x, y + len * th / 2, cc, axis->ylabel));
   }
 
-  ierr = PetscDrawGetCoordinates(draw,&coors[0],&coors[1],&coors[2],&coors[3]);CHKERRQ(ierr);
+  PetscCall(PetscDrawGetCoordinates(draw, &coors[0], &coors[1], &coors[2], &coors[3]));
 finally:
-  ierr = PetscDrawCollectiveEnd(draw);CHKERRQ(ierr);
-  ierr = MPI_Bcast(coors,4,MPIU_REAL,0,PetscObjectComm((PetscObject)draw));CHKERRQ(ierr);
-  ierr = PetscDrawSetCoordinates(draw,coors[0],coors[1],coors[2],coors[3]);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscDrawCollectiveEnd(draw);
+  PetscCallMPI(MPI_Bcast(coors, 4, MPIU_REAL, 0, PetscObjectComm((PetscObject)draw)));
+  PetscCall(PetscDrawSetCoordinates(draw, coors[0], coors[1], coors[2], coors[3]));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*
@@ -378,26 +390,25 @@ finally:
 */
 PetscErrorCode PetscStripe0(char *buf)
 {
-  PetscErrorCode ierr;
-  size_t         n;
-  PetscBool      flg;
-  char           *str;
+  size_t    n;
+  PetscBool flg;
+  char     *str = NULL;
 
   PetscFunctionBegin;
-  ierr = PetscStrlen(buf,&n);CHKERRQ(ierr);
-  ierr = PetscStrendswith(buf,"e00",&flg);CHKERRQ(ierr);
-  if (flg) buf[n-3] = 0;
-  ierr = PetscStrstr(buf,"e0",&str);CHKERRQ(ierr);
+  PetscCall(PetscStrlen(buf, &n));
+  PetscCall(PetscStrendswith(buf, "e00", &flg));
+  if (flg) buf[n - 3] = 0;
+  PetscCall(PetscStrstr(buf, "e0", &str));
   if (str) {
-    buf[n-2] = buf[n-1];
-    buf[n-1] = 0;
+    buf[n - 2] = buf[n - 1];
+    buf[n - 1] = 0;
   }
-  ierr = PetscStrstr(buf,"e-0",&str);CHKERRQ(ierr);
+  PetscCall(PetscStrstr(buf, "e-0", &str));
   if (str) {
-    buf[n-2] = buf[n-1];
-    buf[n-1] = 0;
+    buf[n - 2] = buf[n - 1];
+    buf[n - 1] = 0;
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*
@@ -405,47 +416,53 @@ PetscErrorCode PetscStripe0(char *buf)
 */
 PetscErrorCode PetscStripAllZeros(char *buf)
 {
-  PetscErrorCode ierr;
-  size_t         i,n;
+  size_t i, n;
 
   PetscFunctionBegin;
-  ierr = PetscStrlen(buf,&n);CHKERRQ(ierr);
-  if (buf[0] != '.') PetscFunctionReturn(0);
-  for (i=1; i<n; i++) {
-    if (buf[i] != '0') PetscFunctionReturn(0);
+  PetscCall(PetscStrlen(buf, &n));
+  if (buf[0] != '.') PetscFunctionReturn(PETSC_SUCCESS);
+  for (i = 1; i < n; i++) {
+    if (buf[i] != '0') PetscFunctionReturn(PETSC_SUCCESS);
   }
   buf[0] = '0';
   buf[1] = 0;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*
     Removes trailing zeros
 */
+#if (PETSC_SIZEOF_SIZE_T == 8)
+  #define MAX_SIZE_T PETSC_INT64_MAX
+#else
+  #define MAX_SIZE_T INT_MAX
+#endif
 PetscErrorCode PetscStripTrailingZeros(char *buf)
 {
-  PetscErrorCode ierr;
-  char           *found;
-  size_t         i,n,m = PETSC_MAX_INT;
+  char  *found = NULL;
+  size_t i, n, m = MAX_SIZE_T;
 
   PetscFunctionBegin;
   /* if there is an e in string DO NOT strip trailing zeros */
-  ierr = PetscStrchr(buf,'e',&found);CHKERRQ(ierr);
-  if (found) PetscFunctionReturn(0);
+  PetscCall(PetscStrchr(buf, 'e', &found));
+  if (found) PetscFunctionReturn(PETSC_SUCCESS);
 
-  ierr = PetscStrlen(buf,&n);CHKERRQ(ierr);
+  PetscCall(PetscStrlen(buf, &n));
   /* locate decimal point */
-  for (i=0; i<n; i++) {
-    if (buf[i] == '.') {m = i; break;}
+  for (i = 0; i < n; i++) {
+    if (buf[i] == '.') {
+      m = i;
+      break;
+    }
   }
   /* if not decimal point then no zeros to remove */
-  if (m == PETSC_MAX_INT) PetscFunctionReturn(0);
+  if (m == MAX_SIZE_T) PetscFunctionReturn(PETSC_SUCCESS);
   /* start at right end of string removing 0s */
-  for (i=n-1; i>m; i++) {
-    if (buf[i] != '0') PetscFunctionReturn(0);
+  for (i = n - 1; i > m; i++) {
+    if (buf[i] != '0') PetscFunctionReturn(PETSC_SUCCESS);
     buf[i] = 0;
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*
@@ -453,17 +470,16 @@ PetscErrorCode PetscStripTrailingZeros(char *buf)
 */
 PetscErrorCode PetscStripInitialZero(char *buf)
 {
-  PetscErrorCode ierr;
-  size_t         i,n;
+  size_t i, n;
 
   PetscFunctionBegin;
-  ierr = PetscStrlen(buf,&n);CHKERRQ(ierr);
+  PetscCall(PetscStrlen(buf, &n));
   if (buf[0] == '0') {
-    for (i=0; i<n; i++) buf[i] = buf[i+1];
+    for (i = 0; i < n; i++) buf[i] = buf[i + 1];
   } else if (buf[0] == '-' && buf[1] == '0') {
-    for (i=1; i<n; i++) buf[i] = buf[i+1];
+    for (i = 1; i < n; i++) buf[i] = buf[i + 1];
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*
@@ -471,20 +487,19 @@ PetscErrorCode PetscStripInitialZero(char *buf)
 */
 PetscErrorCode PetscStripZeros(char *buf)
 {
-  PetscErrorCode ierr;
-  size_t         i,j,n;
+  size_t i, j, n;
 
   PetscFunctionBegin;
-  ierr = PetscStrlen(buf,&n);CHKERRQ(ierr);
-  if (n<5) PetscFunctionReturn(0);
-  for (i=1; i<n-1; i++) {
-    if (buf[i] == 'e' && buf[i-1] == '0') {
-      for (j=i; j<n+1; j++) buf[j-1] = buf[j];
-      ierr = PetscStripZeros(buf);CHKERRQ(ierr);
-      PetscFunctionReturn(0);
+  PetscCall(PetscStrlen(buf, &n));
+  if (n < 5) PetscFunctionReturn(PETSC_SUCCESS);
+  for (i = 1; i < n - 1; i++) {
+    if (buf[i] == 'e' && buf[i - 1] == '0') {
+      for (j = i; j < n + 1; j++) buf[j - 1] = buf[j];
+      PetscCall(PetscStripZeros(buf));
+      PetscFunctionReturn(PETSC_SUCCESS);
     }
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*
@@ -492,27 +507,26 @@ PetscErrorCode PetscStripZeros(char *buf)
 */
 PetscErrorCode PetscStripZerosPlus(char *buf)
 {
-  PetscErrorCode ierr;
-  size_t         i,j,n;
+  size_t i, j, n;
 
   PetscFunctionBegin;
-  ierr = PetscStrlen(buf,&n);CHKERRQ(ierr);
-  if (n<5) PetscFunctionReturn(0);
-  for (i=1; i<n-2; i++) {
+  PetscCall(PetscStrlen(buf, &n));
+  if (n < 5) PetscFunctionReturn(PETSC_SUCCESS);
+  for (i = 1; i < n - 2; i++) {
     if (buf[i] == '+') {
-      if (buf[i+1] == '0') {
-        for (j=i+1; j<n; j++) buf[j-1] = buf[j+1];
-        PetscFunctionReturn(0);
+      if (buf[i + 1] == '0') {
+        for (j = i + 1; j < n; j++) buf[j - 1] = buf[j + 1];
+        PetscFunctionReturn(PETSC_SUCCESS);
       } else {
-        for (j=i+1; j<n+1; j++) buf[j-1] = buf[j];
-        PetscFunctionReturn(0);
+        for (j = i + 1; j < n + 1; j++) buf[j - 1] = buf[j];
+        PetscFunctionReturn(PETSC_SUCCESS);
       }
     } else if (buf[i] == '-') {
-      if (buf[i+1] == '0') {
-        for (j=i+1; j<n; j++) buf[j] = buf[j+1];
-        PetscFunctionReturn(0);
+      if (buf[i + 1] == '0') {
+        for (j = i + 1; j < n; j++) buf[j] = buf[j + 1];
+        PetscFunctionReturn(PETSC_SUCCESS);
       }
     }
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

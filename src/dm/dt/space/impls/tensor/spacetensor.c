@@ -1,196 +1,260 @@
 #include <petsc/private/petscfeimpl.h> /*I "petscfe.h" I*/
 
-static PetscErrorCode PetscSpaceTensorCreateSubspace(PetscSpace space, PetscInt Nvs, PetscSpace *subspace)
+static PetscErrorCode PetscSpaceTensorCreateSubspace(PetscSpace space, PetscInt Nvs, PetscInt Ncs, PetscSpace *subspace)
 {
   PetscInt    degree;
   const char *prefix;
-  PetscErrorCode ierr;
+  const char *name;
+  char        subname[PETSC_MAX_PATH_LEN];
 
   PetscFunctionBegin;
-  ierr = PetscSpaceGetDegree(space, &degree, NULL);CHKERRQ(ierr);
-  ierr = PetscObjectGetOptionsPrefix((PetscObject)space, &prefix);CHKERRQ(ierr);
-  ierr = PetscSpaceCreate(PetscObjectComm((PetscObject)space), subspace);CHKERRQ(ierr);
-  ierr = PetscSpaceSetType(*subspace, PETSCSPACEPOLYNOMIAL);CHKERRQ(ierr);
-  ierr = PetscSpaceSetNumVariables(*subspace, Nvs);CHKERRQ(ierr);
-  ierr = PetscSpaceSetNumComponents(*subspace, 1);CHKERRQ(ierr);
-  ierr = PetscSpaceSetDegree(*subspace, degree, PETSC_DETERMINE);CHKERRQ(ierr);
-  ierr = PetscObjectSetOptionsPrefix((PetscObject)*subspace, prefix);CHKERRQ(ierr);
-  ierr = PetscObjectAppendOptionsPrefix((PetscObject)*subspace, "subspace_");CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscSpaceGetDegree(space, &degree, NULL));
+  PetscCall(PetscObjectGetOptionsPrefix((PetscObject)space, &prefix));
+  PetscCall(PetscSpaceCreate(PetscObjectComm((PetscObject)space), subspace));
+  PetscCall(PetscSpaceSetType(*subspace, PETSCSPACEPOLYNOMIAL));
+  PetscCall(PetscSpaceSetNumVariables(*subspace, Nvs));
+  PetscCall(PetscSpaceSetNumComponents(*subspace, Ncs));
+  PetscCall(PetscSpaceSetDegree(*subspace, degree, PETSC_DETERMINE));
+  PetscCall(PetscObjectSetOptionsPrefix((PetscObject)*subspace, prefix));
+  PetscCall(PetscObjectAppendOptionsPrefix((PetscObject)*subspace, "tensorcomp_"));
+  if (((PetscObject)space)->name) {
+    PetscCall(PetscObjectGetName((PetscObject)space, &name));
+    PetscCall(PetscSNPrintf(subname, PETSC_MAX_PATH_LEN - 1, "%s tensor component", name));
+    PetscCall(PetscObjectSetName((PetscObject)*subspace, subname));
+  } else PetscCall(PetscObjectSetName((PetscObject)*subspace, "tensor component"));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscSpaceSetFromOptions_Tensor(PetscOptionItems *PetscOptionsObject,PetscSpace sp)
+static PetscErrorCode PetscSpaceSetFromOptions_Tensor(PetscSpace sp, PetscOptionItems *PetscOptionsObject)
 {
-  PetscSpace_Tensor *tens = (PetscSpace_Tensor *) sp->data;
+  PetscSpace_Tensor *tens = (PetscSpace_Tensor *)sp->data;
   PetscInt           Ns, Nc, i, Nv, deg;
   PetscBool          uniform = PETSC_TRUE;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
-  ierr = PetscSpaceGetNumVariables(sp, &Nv);CHKERRQ(ierr);
-  if (!Nv) PetscFunctionReturn(0);
-  ierr = PetscSpaceGetNumComponents(sp, &Nc);CHKERRQ(ierr);
-  ierr = PetscSpaceTensorGetNumSubspaces(sp, &Ns);CHKERRQ(ierr);
-  ierr = PetscSpaceGetDegree(sp, &deg, NULL);CHKERRQ(ierr);
+  PetscCall(PetscSpaceGetNumVariables(sp, &Nv));
+  if (!Nv) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCall(PetscSpaceGetNumComponents(sp, &Nc));
+  PetscCall(PetscSpaceTensorGetNumSubspaces(sp, &Ns));
+  PetscCall(PetscSpaceGetDegree(sp, &deg, NULL));
   if (Ns > 1) {
     PetscSpace s0;
 
-    ierr = PetscSpaceTensorGetSubspace(sp, 0, &s0);CHKERRQ(ierr);
+    PetscCall(PetscSpaceTensorGetSubspace(sp, 0, &s0));
     for (i = 1; i < Ns; i++) {
       PetscSpace si;
 
-      ierr = PetscSpaceTensorGetSubspace(sp, i, &si);CHKERRQ(ierr);
-      if (si != s0) {uniform = PETSC_FALSE; break;}
+      PetscCall(PetscSpaceTensorGetSubspace(sp, i, &si));
+      if (si != s0) {
+        uniform = PETSC_FALSE;
+        break;
+      }
     }
   }
-  Ns = (Ns == PETSC_DEFAULT) ? PetscMax(Nv,1) : Ns;
-  ierr = PetscOptionsHead(PetscOptionsObject,"PetscSpace tensor options");CHKERRQ(ierr);
-  ierr = PetscOptionsBoundedInt("-petscspace_tensor_spaces", "The number of subspaces", "PetscSpaceTensorSetNumSubspaces", Ns, &Ns, NULL,0);CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-petscspace_tensor_uniform", "Subspaces are identical", "PetscSpaceTensorSetFromOptions", uniform, &uniform, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsTail();CHKERRQ(ierr);
-  if (Ns < 0 || (Nv > 0 && Ns == 0)) SETERRQ1(PetscObjectComm((PetscObject)sp),PETSC_ERR_ARG_OUTOFRANGE,"Cannot have a tensor space made up of %D spaces\n",Ns);
-  if (Nv > 0 && Ns > Nv) SETERRQ2(PetscObjectComm((PetscObject)sp),PETSC_ERR_ARG_OUTOFRANGE,"Cannot have a tensor space with %D subspaces over %D variables\n", Ns, Nv);
-  if (Ns != tens->numTensSpaces) {ierr = PetscSpaceTensorSetNumSubspaces(sp, Ns);CHKERRQ(ierr);}
+  Ns = (Ns == PETSC_DEFAULT) ? PetscMax(Nv, 1) : Ns;
+  PetscOptionsHeadBegin(PetscOptionsObject, "PetscSpace tensor options");
+  PetscCall(PetscOptionsBoundedInt("-petscspace_tensor_spaces", "The number of subspaces", "PetscSpaceTensorSetNumSubspaces", Ns, &Ns, NULL, 0));
+  PetscCall(PetscOptionsBool("-petscspace_tensor_uniform", "Subspaces are identical", "PetscSpaceTensorSetFromOptions", uniform, &uniform, NULL));
+  PetscOptionsHeadEnd();
+  PetscCheck(Ns >= 0 && (Nv <= 0 || Ns != 0), PetscObjectComm((PetscObject)sp), PETSC_ERR_ARG_OUTOFRANGE, "Cannot have a tensor space made up of %" PetscInt_FMT " spaces", Ns);
+  PetscCheck(Nv <= 0 || Ns <= Nv, PetscObjectComm((PetscObject)sp), PETSC_ERR_ARG_OUTOFRANGE, "Cannot have a tensor space with %" PetscInt_FMT " subspaces over %" PetscInt_FMT " variables", Ns, Nv);
+  if (Ns != tens->numTensSpaces) PetscCall(PetscSpaceTensorSetNumSubspaces(sp, Ns));
   if (uniform) {
     PetscInt   Nvs = Nv / Ns;
+    PetscInt   Ncs;
     PetscSpace subspace;
 
-    if (Nv % Ns) SETERRQ2(PetscObjectComm((PetscObject)sp),PETSC_ERR_ARG_WRONG,"Cannot use %D uniform subspaces for %D variable space\n", Ns, Nv);
-    ierr = PetscSpaceTensorGetSubspace(sp, 0, &subspace);CHKERRQ(ierr);
-    if (!subspace) {ierr = PetscSpaceTensorCreateSubspace(sp, Nvs, &subspace);CHKERRQ(ierr);}
-    else           {ierr = PetscObjectReference((PetscObject)subspace);CHKERRQ(ierr);}
-    ierr = PetscSpaceSetFromOptions(subspace);CHKERRQ(ierr);
-    for (i = 0; i < Ns; i++) {ierr = PetscSpaceTensorSetSubspace(sp, i, subspace);CHKERRQ(ierr);}
-    ierr = PetscSpaceDestroy(&subspace);CHKERRQ(ierr);
+    PetscCheck(Nv % Ns == 0, PetscObjectComm((PetscObject)sp), PETSC_ERR_ARG_WRONG, "Cannot use %" PetscInt_FMT " uniform subspaces for %" PetscInt_FMT " variable space", Ns, Nv);
+    Ncs = (PetscInt)PetscPowReal((PetscReal)Nc, 1. / Ns);
+    PetscCheck(Nc % PetscPowInt(Ncs, Ns) == 0, PetscObjectComm((PetscObject)sp), PETSC_ERR_ARG_WRONG, "Cannot use %" PetscInt_FMT " uniform subspaces for %" PetscInt_FMT " component space", Ns, Nc);
+    PetscCall(PetscSpaceTensorGetSubspace(sp, 0, &subspace));
+    if (!subspace) PetscCall(PetscSpaceTensorCreateSubspace(sp, Nvs, Ncs, &subspace));
+    else PetscCall(PetscObjectReference((PetscObject)subspace));
+    PetscCall(PetscSpaceSetFromOptions(subspace));
+    for (i = 0; i < Ns; i++) PetscCall(PetscSpaceTensorSetSubspace(sp, i, subspace));
+    PetscCall(PetscSpaceDestroy(&subspace));
   } else {
     for (i = 0; i < Ns; i++) {
       PetscSpace subspace;
 
-      ierr = PetscSpaceTensorGetSubspace(sp, i, &subspace);CHKERRQ(ierr);
+      PetscCall(PetscSpaceTensorGetSubspace(sp, i, &subspace));
       if (!subspace) {
         char tprefix[128];
 
-        ierr = PetscSpaceTensorCreateSubspace(sp, 1, &subspace);CHKERRQ(ierr);
-        ierr = PetscSNPrintf(tprefix, 128, "%d_",(int)i);CHKERRQ(ierr);
-        ierr = PetscObjectAppendOptionsPrefix((PetscObject)subspace, tprefix);CHKERRQ(ierr);
-      } else {
-        ierr = PetscObjectReference((PetscObject)subspace);CHKERRQ(ierr);
-      }
-      ierr = PetscSpaceSetFromOptions(subspace);CHKERRQ(ierr);
-      ierr = PetscSpaceTensorSetSubspace(sp, i, subspace);CHKERRQ(ierr);
-      ierr = PetscSpaceDestroy(&subspace);CHKERRQ(ierr);
+        PetscCall(PetscSpaceTensorCreateSubspace(sp, 1, 1, &subspace));
+        PetscCall(PetscSNPrintf(tprefix, 128, "%d_", (int)i));
+        PetscCall(PetscObjectAppendOptionsPrefix((PetscObject)subspace, tprefix));
+      } else PetscCall(PetscObjectReference((PetscObject)subspace));
+      PetscCall(PetscSpaceSetFromOptions(subspace));
+      PetscCall(PetscSpaceTensorSetSubspace(sp, i, subspace));
+      PetscCall(PetscSpaceDestroy(&subspace));
     }
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscSpaceTensorView_Ascii(PetscSpace sp, PetscViewer v)
 {
-  PetscSpace_Tensor *tens = (PetscSpace_Tensor *) sp->data;
+  PetscSpace_Tensor *tens    = (PetscSpace_Tensor *)sp->data;
   PetscBool          uniform = PETSC_TRUE;
-  PetscInt           Ns = tens->numTensSpaces, i, n;
-  PetscErrorCode     ierr;
+  PetscInt           Ns      = tens->numTensSpaces, i, n;
 
   PetscFunctionBegin;
   for (i = 1; i < Ns; i++) {
-    if (tens->tensspaces[i] != tens->tensspaces[0]) {uniform = PETSC_FALSE; break;}
+    if (tens->tensspaces[i] != tens->tensspaces[0]) {
+      uniform = PETSC_FALSE;
+      break;
+    }
   }
-  if (uniform) {ierr = PetscViewerASCIIPrintf(v, "Tensor space of %D subspaces (all identical)\n", Ns);CHKERRQ(ierr);}
-  else         {ierr = PetscViewerASCIIPrintf(v, "Tensor space of %D subspaces\n", Ns);CHKERRQ(ierr);}
+  if (uniform) PetscCall(PetscViewerASCIIPrintf(v, "Tensor space of %" PetscInt_FMT " subspaces (all identical)\n", Ns));
+  else PetscCall(PetscViewerASCIIPrintf(v, "Tensor space of %" PetscInt_FMT " subspaces\n", Ns));
   n = uniform ? 1 : Ns;
   for (i = 0; i < n; i++) {
-    ierr = PetscViewerASCIIPushTab(v);CHKERRQ(ierr);
-    ierr = PetscSpaceView(tens->tensspaces[i], v);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPopTab(v);CHKERRQ(ierr);
+    PetscCall(PetscViewerASCIIPushTab(v));
+    PetscCall(PetscSpaceView(tens->tensspaces[i], v));
+    PetscCall(PetscViewerASCIIPopTab(v));
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscSpaceView_Tensor(PetscSpace sp, PetscViewer viewer)
 {
-  PetscBool      iascii;
-  PetscErrorCode ierr;
+  PetscBool iascii;
 
   PetscFunctionBegin;
-  ierr = PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERASCII, &iascii);CHKERRQ(ierr);
-  if (iascii) {ierr = PetscSpaceTensorView_Ascii(sp, viewer);CHKERRQ(ierr);}
-  PetscFunctionReturn(0);
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
+  if (iascii) PetscCall(PetscSpaceTensorView_Ascii(sp, viewer));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscSpaceSetUp_Tensor(PetscSpace sp)
 {
-  PetscSpace_Tensor *tens    = (PetscSpace_Tensor *) sp->data;
-  PetscInt           Nv, Ns, i;
+  PetscSpace_Tensor *tens = (PetscSpace_Tensor *)sp->data;
+  PetscInt           Nc, Nv, Ns;
   PetscBool          uniform = PETSC_TRUE;
   PetscInt           deg, maxDeg;
-  PetscErrorCode     ierr;
+  PetscInt           Ncprod;
 
   PetscFunctionBegin;
-  if (tens->setupCalled) PetscFunctionReturn(0);
-  ierr = PetscSpaceGetNumVariables(sp, &Nv);CHKERRQ(ierr);
-  ierr = PetscSpaceTensorGetNumSubspaces(sp, &Ns);CHKERRQ(ierr);
+  if (tens->setupCalled) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCall(PetscSpaceGetNumVariables(sp, &Nv));
+  PetscCall(PetscSpaceGetNumComponents(sp, &Nc));
+  PetscCall(PetscSpaceTensorGetNumSubspaces(sp, &Ns));
   if (Ns == PETSC_DEFAULT) {
     Ns = Nv;
-    ierr = PetscSpaceTensorSetNumSubspaces(sp, Ns);CHKERRQ(ierr);
+    PetscCall(PetscSpaceTensorSetNumSubspaces(sp, Ns));
   }
   if (!Ns) {
-    if (Nv) SETERRQ(PetscObjectComm((PetscObject)sp), PETSC_ERR_ARG_OUTOFRANGE, "Cannot have zero subspaces");
+    SETERRQ(PetscObjectComm((PetscObject)sp), PETSC_ERR_ARG_OUTOFRANGE, "Cannot have zero subspaces");
   } else {
-    PetscSpace s0;
+    PetscSpace s0 = NULL;
 
-    if (Nv > 0 && Ns > Nv) SETERRQ2(PetscObjectComm((PetscObject)sp),PETSC_ERR_ARG_OUTOFRANGE,"Cannot have a tensor space with %D subspaces over %D variables\n", Ns, Nv);
-    ierr = PetscSpaceTensorGetSubspace(sp, 0, &s0);CHKERRQ(ierr);
-    for (i = 1; i < Ns; i++) {
+    PetscCheck(Nv <= 0 || Ns <= Nv, PetscObjectComm((PetscObject)sp), PETSC_ERR_ARG_OUTOFRANGE, "Cannot have a tensor space with %" PetscInt_FMT " subspaces over %" PetscInt_FMT " variables", Ns, Nv);
+    PetscCall(PetscSpaceTensorGetSubspace(sp, 0, &s0));
+    for (PetscInt i = 1; i < Ns; i++) {
       PetscSpace si;
 
-      ierr = PetscSpaceTensorGetSubspace(sp, i, &si);CHKERRQ(ierr);
-      if (si != s0) {uniform = PETSC_FALSE; break;}
-    }
-    if (uniform) {
-      PetscInt   Nvs = Nv / Ns;
-
-      if (Nv % Ns) SETERRQ2(PetscObjectComm((PetscObject)sp),PETSC_ERR_ARG_WRONG,"Cannot use %D uniform subspaces for %D variable space\n", Ns, Nv);
-      if (!s0) {ierr = PetscSpaceTensorCreateSubspace(sp, Nvs, &s0);CHKERRQ(ierr);}
-      else     {ierr = PetscObjectReference((PetscObject) s0);CHKERRQ(ierr);}
-      ierr = PetscSpaceSetUp(s0);CHKERRQ(ierr);
-      for (i = 0; i < Ns; i++) {ierr = PetscSpaceTensorSetSubspace(sp, i, s0);CHKERRQ(ierr);}
-      ierr = PetscSpaceDestroy(&s0);CHKERRQ(ierr);
-    } else {
-      for (i = 0 ; i < Ns; i++) {
-        PetscSpace si;
-
-        ierr = PetscSpaceTensorGetSubspace(sp, i, &si);CHKERRQ(ierr);
-        if (!si) {ierr = PetscSpaceTensorCreateSubspace(sp, 1, &si);CHKERRQ(ierr);}
-        else     {ierr = PetscObjectReference((PetscObject) si);CHKERRQ(ierr);}
-        ierr = PetscSpaceSetUp(si);CHKERRQ(ierr);
-        ierr = PetscSpaceTensorSetSubspace(sp, i, si);CHKERRQ(ierr);
-        ierr = PetscSpaceDestroy(&si);CHKERRQ(ierr);
+      PetscCall(PetscSpaceTensorGetSubspace(sp, i, &si));
+      if (si != s0) {
+        uniform = PETSC_FALSE;
+        break;
       }
     }
+    if (uniform) {
+      PetscInt Nvs = Nv / Ns;
+      PetscInt Ncs;
+
+      PetscCheck(Nv % Ns == 0, PetscObjectComm((PetscObject)sp), PETSC_ERR_ARG_WRONG, "Cannot use %" PetscInt_FMT " uniform subspaces for %" PetscInt_FMT " variable space", Ns, Nv);
+      Ncs = (PetscInt)(PetscPowReal((PetscReal)Nc, 1. / Ns));
+      PetscCheck(Nc % PetscPowInt(Ncs, Ns) == 0, PetscObjectComm((PetscObject)sp), PETSC_ERR_ARG_WRONG, "Cannot use %" PetscInt_FMT " uniform subspaces for %" PetscInt_FMT " component space", Ns, Nc);
+      if (!s0) PetscCall(PetscSpaceTensorCreateSubspace(sp, Nvs, Ncs, &s0));
+      else PetscCall(PetscObjectReference((PetscObject)s0));
+      PetscCall(PetscSpaceSetUp(s0));
+      for (PetscInt i = 0; i < Ns; i++) PetscCall(PetscSpaceTensorSetSubspace(sp, i, s0));
+      PetscCall(PetscSpaceDestroy(&s0));
+      Ncprod = PetscPowInt(Ncs, Ns);
+    } else {
+      PetscInt Nvsum = 0;
+
+      Ncprod = 1;
+      for (PetscInt i = 0; i < Ns; i++) {
+        PetscInt   Nvs, Ncs;
+        PetscSpace si = NULL;
+
+        PetscCall(PetscSpaceTensorGetSubspace(sp, i, &si));
+        if (!si) PetscCall(PetscSpaceTensorCreateSubspace(sp, 1, 1, &si));
+        else PetscCall(PetscObjectReference((PetscObject)si));
+        PetscCall(PetscSpaceSetUp(si));
+        PetscCall(PetscSpaceTensorSetSubspace(sp, i, si));
+        PetscCall(PetscSpaceGetNumVariables(si, &Nvs));
+        PetscCall(PetscSpaceGetNumComponents(si, &Ncs));
+        PetscCall(PetscSpaceDestroy(&si));
+
+        Nvsum += Nvs;
+        Ncprod *= Ncs;
+      }
+
+      PetscCheck(Nvsum == Nv, PetscObjectComm((PetscObject)sp), PETSC_ERR_ARG_WRONG, "Sum of subspace variables %" PetscInt_FMT " does not equal the number of variables %" PetscInt_FMT, Nvsum, Nv);
+      PetscCheck(Nc % Ncprod == 0, PetscObjectComm((PetscObject)sp), PETSC_ERR_ARG_WRONG, "Product of subspace components %" PetscInt_FMT " does not divide the number of components %" PetscInt_FMT, Ncprod, Nc);
+    }
+    if (Ncprod != Nc) {
+      PetscInt    Ncopies = Nc / Ncprod;
+      PetscInt    Nv      = sp->Nv;
+      const char *prefix;
+      const char *name;
+      char        subname[PETSC_MAX_PATH_LEN];
+      PetscSpace  subsp;
+
+      PetscCall(PetscSpaceCreate(PetscObjectComm((PetscObject)sp), &subsp));
+      PetscCall(PetscObjectGetOptionsPrefix((PetscObject)sp, &prefix));
+      PetscCall(PetscObjectSetOptionsPrefix((PetscObject)subsp, prefix));
+      PetscCall(PetscObjectAppendOptionsPrefix((PetscObject)subsp, "sumcomp_"));
+      if (((PetscObject)sp)->name) {
+        PetscCall(PetscObjectGetName((PetscObject)sp, &name));
+        PetscCall(PetscSNPrintf(subname, PETSC_MAX_PATH_LEN - 1, "%s sum component", name));
+        PetscCall(PetscObjectSetName((PetscObject)subsp, subname));
+      } else PetscCall(PetscObjectSetName((PetscObject)subsp, "sum component"));
+      PetscCall(PetscSpaceSetType(subsp, PETSCSPACETENSOR));
+      PetscCall(PetscSpaceSetNumVariables(subsp, Nv));
+      PetscCall(PetscSpaceSetNumComponents(subsp, Ncprod));
+      PetscCall(PetscSpaceTensorSetNumSubspaces(subsp, Ns));
+      for (PetscInt i = 0; i < Ns; i++) {
+        PetscSpace ssp;
+
+        PetscCall(PetscSpaceTensorGetSubspace(sp, i, &ssp));
+        PetscCall(PetscSpaceTensorSetSubspace(subsp, i, ssp));
+      }
+      PetscCall(PetscSpaceSetUp(subsp));
+      PetscCall(PetscSpaceSetType(sp, PETSCSPACESUM));
+      PetscCall(PetscSpaceSumSetNumSubspaces(sp, Ncopies));
+      for (PetscInt i = 0; i < Ncopies; i++) PetscCall(PetscSpaceSumSetSubspace(sp, i, subsp));
+      PetscCall(PetscSpaceDestroy(&subsp));
+      PetscCall(PetscSpaceSetUp(sp));
+      PetscFunctionReturn(PETSC_SUCCESS);
+    }
   }
-  deg = PETSC_MAX_INT;
+  deg    = PETSC_MAX_INT;
   maxDeg = 0;
-  for (i = 0; i < Ns; i++) {
+  for (PetscInt i = 0; i < Ns; i++) {
     PetscSpace si;
     PetscInt   iDeg, iMaxDeg;
 
-    ierr = PetscSpaceTensorGetSubspace(sp, i, &si);CHKERRQ(ierr);
-    ierr = PetscSpaceGetDegree(si, &iDeg, &iMaxDeg);CHKERRQ(ierr);
-    deg    = PetscMin(deg, iDeg);
+    PetscCall(PetscSpaceTensorGetSubspace(sp, i, &si));
+    PetscCall(PetscSpaceGetDegree(si, &iDeg, &iMaxDeg));
+    deg = PetscMin(deg, iDeg);
     maxDeg += iMaxDeg;
   }
-  sp->degree    = deg;
-  sp->maxDegree = maxDeg;
-  tens->uniform = uniform;
+  sp->degree        = deg;
+  sp->maxDegree     = maxDeg;
+  tens->uniform     = uniform;
   tens->setupCalled = PETSC_TRUE;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscSpaceDestroy_Tensor(PetscSpace sp)
 {
-  PetscSpace_Tensor *tens    = (PetscSpace_Tensor *) sp->data;
+  PetscSpace_Tensor *tens = (PetscSpace_Tensor *)sp->data;
   PetscInt           Ns, i;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   Ns = tens->numTensSpaces;
@@ -199,120 +263,121 @@ static PetscErrorCode PetscSpaceDestroy_Tensor(PetscSpace sp)
 
     /* sp->Nv is the spatial dimension, so it is equal to the number
      * of subspaces on higher co-dimension points */
-    for (d = 0; d < sp->Nv; ++d) {
-      ierr = PetscSpaceDestroy(&tens->heightsubspaces[d]);CHKERRQ(ierr);
-    }
+    for (d = 0; d < sp->Nv; ++d) PetscCall(PetscSpaceDestroy(&tens->heightsubspaces[d]));
   }
-  ierr = PetscFree(tens->heightsubspaces);CHKERRQ(ierr);
-  for (i = 0; i < Ns; i++) {ierr = PetscSpaceDestroy(&tens->tensspaces[i]);CHKERRQ(ierr);}
-  ierr = PetscObjectComposeFunction((PetscObject) sp, "PetscSpaceTensorSetSubspace_C", NULL);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject) sp, "PetscSpaceTensorGetSubspace_C", NULL);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject) sp, "PetscSpaceTensorSetNumSubspaces_C", NULL);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject) sp, "PetscSpaceTensorGetNumSubspaces_C", NULL);CHKERRQ(ierr);
-  ierr = PetscFree(tens->tensspaces);CHKERRQ(ierr);
-  ierr = PetscFree(tens);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscFree(tens->heightsubspaces));
+  for (i = 0; i < Ns; i++) PetscCall(PetscSpaceDestroy(&tens->tensspaces[i]));
+  PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscSpaceTensorSetSubspace_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscSpaceTensorGetSubspace_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscSpaceTensorSetNumSubspaces_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscSpaceTensorGetNumSubspaces_C", NULL));
+  PetscCall(PetscFree(tens->tensspaces));
+  PetscCall(PetscFree(tens));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscSpaceGetDimension_Tensor(PetscSpace sp, PetscInt *dim)
 {
-  PetscSpace_Tensor *tens = (PetscSpace_Tensor *) sp->data;
-  PetscInt           i, Ns, Nc, d;
-  PetscErrorCode     ierr;
+  PetscSpace_Tensor *tens = (PetscSpace_Tensor *)sp->data;
+  PetscInt           i, Ns, d;
 
   PetscFunctionBegin;
-  ierr = PetscSpaceSetUp(sp);CHKERRQ(ierr);
+  PetscCall(PetscSpaceSetUp(sp));
   Ns = tens->numTensSpaces;
-  Nc = sp->Nc;
   d  = 1;
   for (i = 0; i < Ns; i++) {
     PetscInt id;
 
-    ierr = PetscSpaceGetDimension(tens->tensspaces[i], &id);CHKERRQ(ierr);
+    PetscCall(PetscSpaceGetDimension(tens->tensspaces[i], &id));
     d *= id;
   }
-  d *= Nc;
   *dim = d;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscSpaceEvaluate_Tensor(PetscSpace sp, PetscInt npoints, const PetscReal points[], PetscReal B[], PetscReal D[], PetscReal H[])
 {
-  PetscSpace_Tensor *tens  = (PetscSpace_Tensor *) sp->data;
-  DM               dm      = sp->dm;
-  PetscInt         Nc      = sp->Nc;
-  PetscInt         Nv      = sp->Nv;
-  PetscInt         Ns;
-  PetscReal       *lpoints, *sB = NULL, *sD = NULL, *sH = NULL;
-  PetscInt         c, pdim, d, e, der, der2, i, l, si, p, s, step;
-  PetscErrorCode   ierr;
+  PetscSpace_Tensor *tens = (PetscSpace_Tensor *)sp->data;
+  DM                 dm   = sp->dm;
+  PetscInt           Nc   = sp->Nc;
+  PetscInt           Nv   = sp->Nv;
+  PetscInt           Ns;
+  PetscReal         *lpoints, *sB = NULL, *sD = NULL, *sH = NULL;
+  PetscInt           pdim;
 
   PetscFunctionBegin;
-  if (!tens->setupCalled) {ierr = PetscSpaceSetUp(sp);CHKERRQ(ierr);}
+  if (!tens->setupCalled) {
+    PetscCall(PetscSpaceSetUp(sp));
+    PetscCall(PetscSpaceEvaluate(sp, npoints, points, B, D, H));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
   Ns = tens->numTensSpaces;
-  ierr = PetscSpaceGetDimension(sp,&pdim);CHKERRQ(ierr);
-  pdim /= Nc;
-  ierr = DMGetWorkArray(dm, npoints*Nv, MPIU_REAL, &lpoints);CHKERRQ(ierr);
-  if (B || D || H) {ierr = DMGetWorkArray(dm, npoints*pdim,       MPIU_REAL, &sB);CHKERRQ(ierr);}
-  if (D || H)      {ierr = DMGetWorkArray(dm, npoints*pdim*Nv,    MPIU_REAL, &sD);CHKERRQ(ierr);}
-  if (H)           {ierr = DMGetWorkArray(dm, npoints*pdim*Nv*Nv, MPIU_REAL, &sH);CHKERRQ(ierr);}
+  PetscCall(PetscSpaceGetDimension(sp, &pdim));
+  PetscCall(DMGetWorkArray(dm, npoints * Nv, MPIU_REAL, &lpoints));
+  if (B || D || H) PetscCall(DMGetWorkArray(dm, npoints * pdim * Nc, MPIU_REAL, &sB));
+  if (D || H) PetscCall(DMGetWorkArray(dm, npoints * pdim * Nc * Nv, MPIU_REAL, &sD));
+  if (H) PetscCall(DMGetWorkArray(dm, npoints * pdim * Nc * Nv * Nv, MPIU_REAL, &sH));
   if (B) {
-    for (i = 0; i < npoints*pdim*Nc*Nc; i++) B[i] = 0.;
-    for (i = 0; i < npoints*pdim; i++) B[i * Nc*Nc] = 1.;
+    for (PetscInt i = 0; i < npoints * pdim * Nc; i++) B[i] = 1.;
   }
   if (D) {
-    for (i = 0; i < npoints*pdim*Nc*Nc*Nv; i++) D[i] = 0.;
-    for (i = 0; i < npoints*pdim; i++) {
-      for (l = 0; l < Nv; l++) {
-        D[i * Nc*Nc*Nv + l] = 1.;
-      }
-    }
+    for (PetscInt i = 0; i < npoints * pdim * Nc * Nv; i++) D[i] = 1.;
   }
   if (H) {
-    for (i = 0; i < npoints*pdim*Nc*Nc*Nv*Nv; i++) H[i] = 0.;
-    for (i = 0; i < npoints*pdim; i++) {
-      for (l = 0; l < Nv*Nv; l++) {
-        H[i * Nc*Nc*Nv*Nv + l] = 1.;
-      }
-    }
+    for (PetscInt i = 0; i < npoints * pdim * Nc * Nv * Nv; i++) H[i] = 1.;
   }
-  for (s = 0, d = 0, step = 1; s < Ns; s++) {
-    PetscInt sNv, spdim;
-    PetscInt skip, j, k;
+  for (PetscInt s = 0, d = 0, vstep = 1, cstep = 1; s < Ns; s++) {
+    PetscInt sNv, sNc, spdim;
+    PetscInt vskip, cskip;
 
-    ierr = PetscSpaceGetNumVariables(tens->tensspaces[s], &sNv);CHKERRQ(ierr);
-    ierr = PetscSpaceGetDimension(tens->tensspaces[s], &spdim);CHKERRQ(ierr);
-    if ((pdim % step) || (pdim % spdim))  SETERRQ6(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Bad tensor loop: Nv %d, Ns %D, pdim %D, s %D, step %D, spdim %D", Nv, Ns, pdim, s, step, spdim);
-    skip = pdim / (step * spdim);
-    for (p = 0; p < npoints; ++p) {
-      for (i = 0; i < sNv; i++) {
-        lpoints[p * sNv + i] = points[p*Nv + d + i];
-      }
+    PetscCall(PetscSpaceGetNumVariables(tens->tensspaces[s], &sNv));
+    PetscCall(PetscSpaceGetNumComponents(tens->tensspaces[s], &sNc));
+    PetscCall(PetscSpaceGetDimension(tens->tensspaces[s], &spdim));
+    PetscCheck(!(pdim % vstep) && !(pdim % spdim), PETSC_COMM_SELF, PETSC_ERR_PLIB, "Bad tensor loop: Nv %" PetscInt_FMT ", Ns %" PetscInt_FMT ", pdim %" PetscInt_FMT ", s %" PetscInt_FMT ", vstep %" PetscInt_FMT ", spdim %" PetscInt_FMT, Nv, Ns, pdim, s, vstep, spdim);
+    PetscCheck(!(Nc % cstep) && !(Nc % sNc), PETSC_COMM_SELF, PETSC_ERR_PLIB, "Bad tensor loop: Nv %" PetscInt_FMT ", Ns %" PetscInt_FMT ", Nc %" PetscInt_FMT ", s %" PetscInt_FMT ", cstep %" PetscInt_FMT ", sNc %" PetscInt_FMT, Nv, Ns, Nc, s, cstep, spdim);
+    vskip = pdim / (vstep * spdim);
+    cskip = Nc / (cstep * sNc);
+    for (PetscInt p = 0; p < npoints; ++p) {
+      for (PetscInt i = 0; i < sNv; i++) lpoints[p * sNv + i] = points[p * Nv + d + i];
     }
-    ierr = PetscSpaceEvaluate(tens->tensspaces[s], npoints, lpoints, sB, sD, sH);CHKERRQ(ierr);
+    PetscCall(PetscSpaceEvaluate(tens->tensspaces[s], npoints, lpoints, sB, sD, sH));
     if (B) {
-      for (p = 0; p < npoints; p++) {
-        for (k = 0; k < skip; k++) {
-          for (si = 0; si < spdim; si++) {
-            for (j = 0; j < step; j++) {
-              i = (k * spdim + si) * step + j;
-              B[(pdim * p + i) * Nc * Nc] *= sB[spdim * p + si];
+      for (PetscInt k = 0; k < vskip; k++) {
+        for (PetscInt si = 0; si < spdim; si++) {
+          for (PetscInt j = 0; j < vstep; j++) {
+            PetscInt i = (k * spdim + si) * vstep + j;
+
+            for (PetscInt l = 0; l < cskip; l++) {
+              for (PetscInt sc = 0; sc < sNc; sc++) {
+                for (PetscInt m = 0; m < cstep; m++) {
+                  PetscInt c = (l * sNc + sc) * cstep + m;
+
+                  for (PetscInt p = 0; p < npoints; p++) B[(pdim * p + i) * Nc + c] *= sB[(spdim * p + si) * sNc + sc];
+                }
+              }
             }
           }
         }
       }
     }
     if (D) {
-      for (p = 0; p < npoints; p++) {
-        for (k = 0; k < skip; k++) {
-          for (si = 0; si < spdim; si++) {
-            for (j = 0; j < step; j++) {
-              i = (k * spdim + si) * step + j;
-              for (der = 0; der < Nv; der++) {
-                if (der >= d && der < d + sNv) {
-                  D[(pdim * p + i) * Nc*Nc*Nv + der] *= sD[(spdim * p + si) * sNv + der - d];
-                } else {
-                  D[(pdim * p + i) * Nc*Nc*Nv + der] *= sB[spdim * p + si];
+      for (PetscInt k = 0; k < vskip; k++) {
+        for (PetscInt si = 0; si < spdim; si++) {
+          for (PetscInt j = 0; j < vstep; j++) {
+            PetscInt i = (k * spdim + si) * vstep + j;
+
+            for (PetscInt l = 0; l < cskip; l++) {
+              for (PetscInt sc = 0; sc < sNc; sc++) {
+                for (PetscInt m = 0; m < cstep; m++) {
+                  PetscInt c = (l * sNc + sc) * cstep + m;
+
+                  for (PetscInt der = 0; der < Nv; der++) {
+                    if (der >= d && der < d + sNv) {
+                      for (PetscInt p = 0; p < npoints; p++) D[((pdim * p + i) * Nc + c) * Nv + der] *= sD[((spdim * p + si) * sNc + sc) * sNv + der - d];
+                    } else {
+                      for (PetscInt p = 0; p < npoints; p++) D[((pdim * p + i) * Nc + c) * Nv + der] *= sB[(spdim * p + si) * sNc + sc];
+                    }
+                  }
                 }
               }
             }
@@ -321,21 +386,28 @@ static PetscErrorCode PetscSpaceEvaluate_Tensor(PetscSpace sp, PetscInt npoints,
       }
     }
     if (H) {
-      for (p = 0; p < npoints; p++) {
-        for (k = 0; k < skip; k++) {
-          for (si = 0; si < spdim; si++) {
-            for (j = 0; j < step; j++) {
-              i = (k * spdim + si) * step + j;
-              for (der = 0; der < Nv; der++) {
-                for (der2 = 0; der2 < Nv; der2++) {
-                  if (der >= d && der < d + sNv && der2 >= d && der2 < d + sNv) {
-                    H[((pdim * p + i) * Nc*Nc*Nv + der) * Nv + der2] *= sH[((spdim * p + si) * sNv + der - d) * sNv + der2 - d];
-                  } else if (der >= d && der < d + sNv) {
-                    H[((pdim * p + i) * Nc*Nc*Nv + der) * Nv + der2] *= sD[(spdim * p + si) * sNv + der - d];
-                  } else if (der2 >= d && der2 < d + sNv) {
-                    H[((pdim * p + i) * Nc*Nc*Nv + der) * Nv + der2] *= sD[(spdim * p + si) * sNv + der2 - d];
-                  } else {
-                    H[((pdim * p + i) * Nc*Nc*Nv + der) * Nv + der2] *= sB[spdim * p + si];
+      for (PetscInt k = 0; k < vskip; k++) {
+        for (PetscInt si = 0; si < spdim; si++) {
+          for (PetscInt j = 0; j < vstep; j++) {
+            PetscInt i = (k * spdim + si) * vstep + j;
+
+            for (PetscInt l = 0; l < cskip; l++) {
+              for (PetscInt sc = 0; sc < sNc; sc++) {
+                for (PetscInt m = 0; m < cstep; m++) {
+                  PetscInt c = (l * sNc + sc) * cstep + m;
+
+                  for (PetscInt der = 0; der < Nv; der++) {
+                    for (PetscInt der2 = 0; der2 < Nv; der2++) {
+                      if (der >= d && der < d + sNv && der2 >= d && der2 < d + sNv) {
+                        for (PetscInt p = 0; p < npoints; p++) H[(((pdim * p + i) * Nc + c) * Nv + der) * Nv + der2] *= sH[(((spdim * p + si) * sNc + sc) * sNv + der - d) * sNv + der2 - d];
+                      } else if (der >= d && der < d + sNv) {
+                        for (PetscInt p = 0; p < npoints; p++) H[(((pdim * p + i) * Nc + c) * Nv + der) * Nv + der2] *= sD[((spdim * p + si) * sNc + sc) * sNv + der - d];
+                      } else if (der2 >= d && der2 < d + sNv) {
+                        for (PetscInt p = 0; p < npoints; p++) H[(((pdim * p + i) * Nc + c) * Nv + der) * Nv + der2] *= sD[((spdim * p + si) * sNc + sc) * sNv + der2 - d];
+                      } else {
+                        for (PetscInt p = 0; p < npoints; p++) H[(((pdim * p + i) * Nc + c) * Nv + der) * Nv + der2] *= sB[(spdim * p + si) * sNc + sc];
+                      }
+                    }
                   }
                 }
               }
@@ -345,98 +417,65 @@ static PetscErrorCode PetscSpaceEvaluate_Tensor(PetscSpace sp, PetscInt npoints,
       }
     }
     d += sNv;
-    step *= spdim;
+    vstep *= spdim;
+    cstep *= sNc;
   }
-  if (B && Nc > 1) {
-    /* Make direct sum basis for multicomponent space */
-    for (p = 0; p < npoints; ++p) {
-      for (i = 0; i < pdim; ++i) {
-        for (c = 1; c < Nc; ++c) {
-          B[(p*pdim*Nc + i*Nc + c)*Nc + c] = B[(p*pdim + i)*Nc*Nc];
-        }
-      }
-    }
-  }
-  if (D && Nc > 1) {
-    /* Make direct sum basis for multicomponent space */
-    for (p = 0; p < npoints; ++p) {
-      for (i = 0; i < pdim; ++i) {
-        for (c = 1; c < Nc; ++c) {
-          for (d = 0; d < Nv; ++d) {
-            D[((p*pdim*Nc + i*Nc + c)*Nc + c)*Nv + d] = D[(p*pdim + i)*Nc*Nc*Nv + d];
-          }
-        }
-      }
-    }
-  }
-  if (H && Nc > 1) {
-    /* Make direct sum basis for multicomponent space */
-    for (p = 0; p < npoints; ++p) {
-      for (i = 0; i < pdim; ++i) {
-        for (c = 1; c < Nc; ++c) {
-          for (d = 0; d < Nv; ++d) {
-            for (e = 0; e < Nv; ++e) {
-              H[(((p*pdim*Nc + i*Nc + c)*Nc + c)*Nv + d)*Nv + e] = H[((p*pdim + i)*Nc*Nc*Nv + d)*Nv + e];
-            }
-          }
-        }
-      }
-    }
-  }
-  if (H)           {ierr = DMRestoreWorkArray(dm, npoints*pdim*Nv*Nv, MPIU_REAL, &sH);CHKERRQ(ierr);}
-  if (D || H)      {ierr = DMRestoreWorkArray(dm, npoints*pdim*Nv,    MPIU_REAL, &sD);CHKERRQ(ierr);}
-  if (B || D || H) {ierr = DMRestoreWorkArray(dm, npoints*pdim,       MPIU_REAL, &sB);CHKERRQ(ierr);}
-  ierr = DMRestoreWorkArray(dm, npoints*Nv, MPIU_REAL, &lpoints);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  if (H) PetscCall(DMRestoreWorkArray(dm, npoints * pdim * Nc * Nv * Nv, MPIU_REAL, &sH));
+  if (D || H) PetscCall(DMRestoreWorkArray(dm, npoints * pdim * Nc * Nv, MPIU_REAL, &sD));
+  if (B || D || H) PetscCall(DMRestoreWorkArray(dm, npoints * pdim * Nc, MPIU_REAL, &sB));
+  PetscCall(DMRestoreWorkArray(dm, npoints * Nv, MPIU_REAL, &lpoints));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  PetscSpaceTensorSetNumSubspaces - Set the number of spaces in the tensor product
+  PetscSpaceTensorSetNumSubspaces - Set the number of spaces in the tensor product space
 
   Input Parameters:
-+ sp  - the function space object
++ sp            - the function space object
 - numTensSpaces - the number of spaces
 
   Level: intermediate
 
-.seealso: PetscSpaceTensorGetNumSubspaces(), PetscSpaceSetDegree(), PetscSpaceSetNumVariables()
+  Note:
+  The name NumSubspaces is misleading because it is actually setting the number of defining spaces of the tensor product space, not a number of Subspaces of it
+
+.seealso: `PETSCSPACETENSOR`, `PetscSpace`, `PetscSpaceTensorGetNumSubspaces()`, `PetscSpaceSetDegree()`, `PetscSpaceSetNumVariables()`
 @*/
 PetscErrorCode PetscSpaceTensorSetNumSubspaces(PetscSpace sp, PetscInt numTensSpaces)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCSPACE_CLASSID, 1);
-  ierr = PetscTryMethod(sp,"PetscSpaceTensorSetNumSubspaces_C",(PetscSpace,PetscInt),(sp,numTensSpaces));CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscTryMethod(sp, "PetscSpaceTensorSetNumSubspaces_C", (PetscSpace, PetscInt), (sp, numTensSpaces));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  PetscSpaceTensorGetNumSubspaces - Get the number of spaces in the tensor product
+  PetscSpaceTensorGetNumSubspaces - Get the number of spaces in the tensor product space
 
   Input Parameter:
-. sp  - the function space object
+. sp - the function space object
 
   Output Parameter:
 . numTensSpaces - the number of spaces
 
   Level: intermediate
 
-.seealso: PetscSpaceTensorSetNumSubspaces(), PetscSpaceSetDegree(), PetscSpaceSetNumVariables()
+  Note:
+  The name NumSubspaces is misleading because it is actually getting the number of defining spaces of the tensor product space, not a number of Subspaces of it
+
+.seealso: `PETSCSPACETENSOR`, `PetscSpace`, `PetscSpaceTensorSetNumSubspaces()`, `PetscSpaceSetDegree()`, `PetscSpaceSetNumVariables()`
 @*/
 PetscErrorCode PetscSpaceTensorGetNumSubspaces(PetscSpace sp, PetscInt *numTensSpaces)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCSPACE_CLASSID, 1);
-  PetscValidIntPointer(numTensSpaces, 2);
-  ierr = PetscTryMethod(sp,"PetscSpaceTensorGetNumSubspaces_C",(PetscSpace,PetscInt*),(sp,numTensSpaces));CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscAssertPointer(numTensSpaces, 2);
+  PetscTryMethod(sp, "PetscSpaceTensorGetNumSubspaces_C", (PetscSpace, PetscInt *), (sp, numTensSpaces));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  PetscSpaceTensorSetSubspace - Set a space in the tensor product
+  PetscSpaceTensorSetSubspace - Set a space in the tensor product space
 
   Input Parameters:
 + sp    - the function space object
@@ -445,149 +484,144 @@ PetscErrorCode PetscSpaceTensorGetNumSubspaces(PetscSpace sp, PetscInt *numTensS
 
   Level: intermediate
 
-.seealso: PetscSpaceTensorGetSubspace(), PetscSpaceSetDegree(), PetscSpaceSetNumVariables()
+  Note:
+  The name SetSubspace is misleading because it is actually setting one of the defining spaces of the tensor product space, not a Subspace of it
+
+.seealso: `PETSCSPACETENSOR`, `PetscSpace`, `PetscSpaceTensorGetSubspace()`, `PetscSpaceSetDegree()`, `PetscSpaceSetNumVariables()`
 @*/
 PetscErrorCode PetscSpaceTensorSetSubspace(PetscSpace sp, PetscInt s, PetscSpace subsp)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCSPACE_CLASSID, 1);
   if (subsp) PetscValidHeaderSpecific(subsp, PETSCSPACE_CLASSID, 3);
-  ierr = PetscTryMethod(sp,"PetscSpaceTensorSetSubspace_C",(PetscSpace,PetscInt,PetscSpace),(sp,s,subsp));CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscTryMethod(sp, "PetscSpaceTensorSetSubspace_C", (PetscSpace, PetscInt, PetscSpace), (sp, s, subsp));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  PetscSpaceTensorGetSubspace - Get a space in the tensor product
+  PetscSpaceTensorGetSubspace - Get a space in the tensor product space
 
   Input Parameters:
 + sp - the function space object
 - s  - The space number
 
   Output Parameter:
-. subsp - the PetscSpace
+. subsp - the `PetscSpace`
 
   Level: intermediate
 
-.seealso: PetscSpaceTensorSetSubspace(), PetscSpaceSetDegree(), PetscSpaceSetNumVariables()
+  Note:
+  The name GetSubspace is misleading because it is actually getting one of the defining spaces of the tensor product space, not a Subspace of it
+
+.seealso: `PETSCSPACETENSOR`, `PetscSpace`, `PetscSpaceTensorSetSubspace()`, `PetscSpaceSetDegree()`, `PetscSpaceSetNumVariables()`
 @*/
 PetscErrorCode PetscSpaceTensorGetSubspace(PetscSpace sp, PetscInt s, PetscSpace *subsp)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCSPACE_CLASSID, 1);
-  PetscValidPointer(subsp, 3);
-  ierr = PetscTryMethod(sp,"PetscSpaceTensorGetSubspace_C",(PetscSpace,PetscInt,PetscSpace*),(sp,s,subsp));CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscAssertPointer(subsp, 3);
+  PetscTryMethod(sp, "PetscSpaceTensorGetSubspace_C", (PetscSpace, PetscInt, PetscSpace *), (sp, s, subsp));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscSpaceTensorSetNumSubspaces_Tensor(PetscSpace space, PetscInt numTensSpaces)
 {
-  PetscSpace_Tensor *tens = (PetscSpace_Tensor *) space->data;
+  PetscSpace_Tensor *tens = (PetscSpace_Tensor *)space->data;
   PetscInt           Ns;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
-  if (tens->setupCalled) SETERRQ(PetscObjectComm((PetscObject)space),PETSC_ERR_ARG_WRONGSTATE,"Cannot change number of subspaces after setup called\n");
+  PetscCheck(!tens->setupCalled, PetscObjectComm((PetscObject)space), PETSC_ERR_ARG_WRONGSTATE, "Cannot change number of subspaces after setup called");
   Ns = tens->numTensSpaces;
-  if (numTensSpaces == Ns) PetscFunctionReturn(0);
+  if (numTensSpaces == Ns) PetscFunctionReturn(PETSC_SUCCESS);
   if (Ns >= 0) {
     PetscInt s;
 
-    for (s = 0; s < Ns; s++) {ierr = PetscSpaceDestroy(&tens->tensspaces[s]);CHKERRQ(ierr);}
-    ierr = PetscFree(tens->tensspaces);CHKERRQ(ierr);
+    for (s = 0; s < Ns; s++) PetscCall(PetscSpaceDestroy(&tens->tensspaces[s]));
+    PetscCall(PetscFree(tens->tensspaces));
   }
   Ns = tens->numTensSpaces = numTensSpaces;
-  ierr = PetscCalloc1(Ns, &tens->tensspaces);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscCalloc1(Ns, &tens->tensspaces));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscSpaceTensorGetNumSubspaces_Tensor(PetscSpace space, PetscInt *numTensSpaces)
 {
-  PetscSpace_Tensor *tens = (PetscSpace_Tensor *) space->data;
+  PetscSpace_Tensor *tens = (PetscSpace_Tensor *)space->data;
 
   PetscFunctionBegin;
   *numTensSpaces = tens->numTensSpaces;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscSpaceTensorSetSubspace_Tensor(PetscSpace space, PetscInt s, PetscSpace subspace)
 {
-  PetscSpace_Tensor *tens = (PetscSpace_Tensor *) space->data;
+  PetscSpace_Tensor *tens = (PetscSpace_Tensor *)space->data;
   PetscInt           Ns;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
-  if (tens->setupCalled) SETERRQ(PetscObjectComm((PetscObject)space),PETSC_ERR_ARG_WRONGSTATE,"Cannot change subspace after setup called\n");
+  PetscCheck(!tens->setupCalled, PetscObjectComm((PetscObject)space), PETSC_ERR_ARG_WRONGSTATE, "Cannot change subspace after setup called");
   Ns = tens->numTensSpaces;
-  if (Ns < 0) SETERRQ(PetscObjectComm((PetscObject)space),PETSC_ERR_ARG_WRONGSTATE,"Must call PetscSpaceTensorSetNumSubspaces() first\n");
-  if (s < 0 || s >= Ns) SETERRQ1(PetscObjectComm((PetscObject)space),PETSC_ERR_ARG_OUTOFRANGE,"Invalid subspace number %D\n",subspace);
-  ierr = PetscObjectReference((PetscObject)subspace);CHKERRQ(ierr);
-  ierr = PetscSpaceDestroy(&tens->tensspaces[s]);CHKERRQ(ierr);
+  PetscCheck(Ns >= 0, PetscObjectComm((PetscObject)space), PETSC_ERR_ARG_WRONGSTATE, "Must call PetscSpaceTensorSetNumSubspaces() first");
+  PetscCheck(s >= 0 && s < Ns, PetscObjectComm((PetscObject)space), PETSC_ERR_ARG_OUTOFRANGE, "Invalid subspace number %" PetscInt_FMT, s);
+  PetscCall(PetscObjectReference((PetscObject)subspace));
+  PetscCall(PetscSpaceDestroy(&tens->tensspaces[s]));
   tens->tensspaces[s] = subspace;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscSpaceGetHeightSubspace_Tensor(PetscSpace sp, PetscInt height, PetscSpace *subsp)
 {
-  PetscSpace_Tensor *tens = (PetscSpace_Tensor *) sp->data;
-  PetscInt         Nc, dim, order, i;
-  PetscSpace       bsp;
-  PetscErrorCode ierr;
+  PetscSpace_Tensor *tens = (PetscSpace_Tensor *)sp->data;
+  PetscInt           Nc, dim, order, i;
+  PetscSpace         bsp;
 
   PetscFunctionBegin;
-  if (!tens->uniform) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Can only get a generic height subspace of a uniform tensor space: this tensor space is not uniform.\n");
-  ierr = PetscSpaceGetNumComponents(sp, &Nc);CHKERRQ(ierr);
-  ierr = PetscSpaceGetNumVariables(sp, &dim);CHKERRQ(ierr);
-  ierr = PetscSpaceGetDegree(sp, &order, NULL);CHKERRQ(ierr);
-  if (height > dim || height < 0) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Asked for space at height %D for dimension %D space", height, dim);
-  if (!tens->heightsubspaces) {ierr = PetscCalloc1(dim, &tens->heightsubspaces);CHKERRQ(ierr);}
+  PetscCall(PetscSpaceGetNumVariables(sp, &dim));
+  PetscCheck(tens->uniform && tens->numTensSpaces == dim, PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Can only get a generic height subspace of a uniform tensor space of 1d spaces.");
+  PetscCall(PetscSpaceGetNumComponents(sp, &Nc));
+  PetscCall(PetscSpaceGetDegree(sp, &order, NULL));
+  PetscCheck(height <= dim && height >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Asked for space at height %" PetscInt_FMT " for dimension %" PetscInt_FMT " space", height, dim);
+  if (!tens->heightsubspaces) PetscCall(PetscCalloc1(dim, &tens->heightsubspaces));
   if (height <= dim) {
-    if (!tens->heightsubspaces[height-1]) {
+    if (!tens->heightsubspaces[height - 1]) {
       PetscSpace  sub;
       const char *name;
 
-      ierr = PetscSpaceTensorGetSubspace(sp, 0, &bsp);CHKERRQ(ierr);
-      ierr = PetscSpaceCreate(PetscObjectComm((PetscObject) sp), &sub);CHKERRQ(ierr);
-      ierr = PetscObjectGetName((PetscObject) sp,  &name);CHKERRQ(ierr);
-      ierr = PetscObjectSetName((PetscObject) sub,  name);CHKERRQ(ierr);
-      ierr = PetscSpaceSetType(sub, PETSCSPACETENSOR);CHKERRQ(ierr);
-      ierr = PetscSpaceSetNumComponents(sub, Nc);CHKERRQ(ierr);
-      ierr = PetscSpaceSetDegree(sub, order, PETSC_DETERMINE);CHKERRQ(ierr);
-      ierr = PetscSpaceSetNumVariables(sub, dim-height);CHKERRQ(ierr);
-      ierr = PetscSpaceTensorSetNumSubspaces(sub, dim-height);CHKERRQ(ierr);
-      for (i = 0; i < dim - height; i++) {
-        ierr = PetscSpaceTensorSetSubspace(sub, i, bsp);CHKERRQ(ierr);
-      }
-      ierr = PetscSpaceSetUp(sub);CHKERRQ(ierr);
-      tens->heightsubspaces[height-1] = sub;
+      PetscCall(PetscSpaceTensorGetSubspace(sp, 0, &bsp));
+      PetscCall(PetscSpaceCreate(PetscObjectComm((PetscObject)sp), &sub));
+      PetscCall(PetscObjectGetName((PetscObject)sp, &name));
+      PetscCall(PetscObjectSetName((PetscObject)sub, name));
+      PetscCall(PetscSpaceSetType(sub, PETSCSPACETENSOR));
+      PetscCall(PetscSpaceSetNumComponents(sub, Nc));
+      PetscCall(PetscSpaceSetDegree(sub, order, PETSC_DETERMINE));
+      PetscCall(PetscSpaceSetNumVariables(sub, dim - height));
+      PetscCall(PetscSpaceTensorSetNumSubspaces(sub, dim - height));
+      for (i = 0; i < dim - height; i++) PetscCall(PetscSpaceTensorSetSubspace(sub, i, bsp));
+      PetscCall(PetscSpaceSetUp(sub));
+      tens->heightsubspaces[height - 1] = sub;
     }
-    *subsp = tens->heightsubspaces[height-1];
+    *subsp = tens->heightsubspaces[height - 1];
   } else {
     *subsp = NULL;
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscSpaceTensorGetSubspace_Tensor(PetscSpace space, PetscInt s, PetscSpace *subspace)
 {
-  PetscSpace_Tensor *tens = (PetscSpace_Tensor *) space->data;
+  PetscSpace_Tensor *tens = (PetscSpace_Tensor *)space->data;
   PetscInt           Ns;
 
   PetscFunctionBegin;
   Ns = tens->numTensSpaces;
-  if (Ns < 0) SETERRQ(PetscObjectComm((PetscObject)space),PETSC_ERR_ARG_WRONGSTATE,"Must call PetscSpaceTensorSetNumSubspaces() first\n");
-  if (s < 0 || s >= Ns) SETERRQ1(PetscObjectComm((PetscObject)space),PETSC_ERR_ARG_OUTOFRANGE,"Invalid subspace number %D\n",subspace);
+  PetscCheck(Ns >= 0, PetscObjectComm((PetscObject)space), PETSC_ERR_ARG_WRONGSTATE, "Must call PetscSpaceTensorSetNumSubspaces() first");
+  PetscCheck(s >= 0 && s < Ns, PetscObjectComm((PetscObject)space), PETSC_ERR_ARG_OUTOFRANGE, "Invalid subspace number %" PetscInt_FMT, s);
   *subspace = tens->tensspaces[s];
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscSpaceInitialize_Tensor(PetscSpace sp)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   sp->ops->setfromoptions    = PetscSpaceSetFromOptions_Tensor;
   sp->ops->setup             = PetscSpaceSetUp_Tensor;
@@ -596,35 +630,34 @@ static PetscErrorCode PetscSpaceInitialize_Tensor(PetscSpace sp)
   sp->ops->getdimension      = PetscSpaceGetDimension_Tensor;
   sp->ops->evaluate          = PetscSpaceEvaluate_Tensor;
   sp->ops->getheightsubspace = PetscSpaceGetHeightSubspace_Tensor;
-  ierr = PetscObjectComposeFunction((PetscObject) sp, "PetscSpaceTensorGetNumSubspaces_C", PetscSpaceTensorGetNumSubspaces_Tensor);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject) sp, "PetscSpaceTensorSetNumSubspaces_C", PetscSpaceTensorSetNumSubspaces_Tensor);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject) sp, "PetscSpaceTensorGetSubspace_C", PetscSpaceTensorGetSubspace_Tensor);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject) sp, "PetscSpaceTensorSetSubspace_C", PetscSpaceTensorSetSubspace_Tensor);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscSpaceTensorGetNumSubspaces_C", PetscSpaceTensorGetNumSubspaces_Tensor));
+  PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscSpaceTensorSetNumSubspaces_C", PetscSpaceTensorSetNumSubspaces_Tensor));
+  PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscSpaceTensorGetSubspace_C", PetscSpaceTensorGetSubspace_Tensor));
+  PetscCall(PetscObjectComposeFunction((PetscObject)sp, "PetscSpaceTensorSetSubspace_C", PetscSpaceTensorSetSubspace_Tensor));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*MC
-  PETSCSPACETENSOR = "tensor" - A PetscSpace object that encapsulates a tensor product space.
-                     Subspaces are scalar spaces (num of componenents = 1), so the components
-                     of a vector-valued tensor space are assumed to be identical.
+  PETSCSPACETENSOR = "tensor" - A `PetscSpace` object that encapsulates a tensor product space.
+                     A tensor product is created of the components of the subspaces as well.
 
   Level: intermediate
 
-.seealso: PetscSpaceType, PetscSpaceCreate(), PetscSpaceSetType()
+.seealso: `PetscSpace`, `PetscSpaceType`, `PetscSpaceCreate()`, `PetscSpaceSetType()`, `PetscSpaceTensorGetSubspace()`, `PetscSpaceTensorSetSubspace()`,
+          `PetscSpaceTensorGetNumSubspaces()`, `PetscSpaceTensorSetNumSubspaces()`
 M*/
 
 PETSC_EXTERN PetscErrorCode PetscSpaceCreate_Tensor(PetscSpace sp)
 {
   PetscSpace_Tensor *tens;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCSPACE_CLASSID, 1);
-  ierr     = PetscNewLog(sp,&tens);CHKERRQ(ierr);
+  PetscCall(PetscNew(&tens));
   sp->data = tens;
 
   tens->numTensSpaces = PETSC_DEFAULT;
 
-  ierr = PetscSpaceInitialize_Tensor(sp);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscSpaceInitialize_Tensor(sp));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

@@ -1,130 +1,110 @@
-
 static char help[] = "Tests MatCreateLRC()\n\n";
-
-/*T
-   Concepts: Low rank correction
-
-   Processors: n
-T*/
 
 #include <petscmat.h>
 
-int main(int argc,char **args)
+int main(int argc, char **args)
 {
-  Vec            x,b,c=NULL;
-  Mat            A,U,V,LR;
-  PetscInt       i,j,Ii,J,Istart,Iend,m = 8,n = 7,rstart,rend;
-  PetscErrorCode ierr;
-  PetscBool      flg;
-  PetscScalar    *u,a;
+  Vec       x, b, c = NULL;
+  Mat       A, U, V, LR, X, LRe;
+  PetscInt  M = 5, N = 7;
+  PetscBool flg;
 
-  ierr = PetscInitialize(&argc,&args,(char*)0,help);if (ierr) return ierr;
-  ierr = PetscOptionsGetInt(NULL,NULL,"-m",&m,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsGetInt(NULL,NULL,"-n",&n,NULL);CHKERRQ(ierr);
+  PetscFunctionBeginUser;
+  PetscCall(PetscInitialize(&argc, &args, (char *)0, help));
+  PetscCall(PetscOptionsGetInt(NULL, NULL, "-m", &M, NULL));
+  PetscCall(PetscOptionsGetInt(NULL, NULL, "-n", &N, NULL));
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
          Create the sparse matrix
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-  ierr = MatCreate(PETSC_COMM_WORLD,&A);CHKERRQ(ierr);
-  ierr = MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,m*n,m*n);CHKERRQ(ierr);
-  ierr = MatSetFromOptions(A);CHKERRQ(ierr);
-  ierr = MatSetUp(A);CHKERRQ(ierr);
-  ierr = MatGetOwnershipRange(A,&Istart,&Iend);CHKERRQ(ierr);
-  for (Ii=Istart; Ii<Iend; Ii++) {
-    a = -1.0; i = Ii/n; j = Ii - i*n;
-    if (i>0)   {J = Ii - n; ierr = MatSetValues(A,1,&Ii,1,&J,&a,INSERT_VALUES);CHKERRQ(ierr);}
-    if (i<m-1) {J = Ii + n; ierr = MatSetValues(A,1,&Ii,1,&J,&a,INSERT_VALUES);CHKERRQ(ierr);}
-    if (j>0)   {J = Ii - 1; ierr = MatSetValues(A,1,&Ii,1,&J,&a,INSERT_VALUES);CHKERRQ(ierr);}
-    if (j<n-1) {J = Ii + 1; ierr = MatSetValues(A,1,&Ii,1,&J,&a,INSERT_VALUES);CHKERRQ(ierr);}
-    a = 4.0; ierr = MatSetValues(A,1,&Ii,1,&Ii,&a,INSERT_VALUES);CHKERRQ(ierr);
-  }
-  ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+  PetscCall(MatCreate(PETSC_COMM_WORLD, &A));
+  PetscCall(MatSetSizes(A, PETSC_DECIDE, PETSC_DECIDE, M, N));
+  PetscCall(MatSetOptionsPrefix(A, "A_"));
+  PetscCall(MatSetFromOptions(A));
+  PetscCall(MatSeqAIJSetPreallocation(A, 5, NULL));
+  PetscCall(MatMPIAIJSetPreallocation(A, 5, NULL, 5, NULL));
+  PetscCall(MatSetUp(A));
+  PetscCall(MatSetRandom(A, NULL));
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
          Create the dense matrices
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-  ierr = MatCreate(PETSC_COMM_WORLD,&U);CHKERRQ(ierr);
-  ierr = MatSetSizes(U,PETSC_DECIDE,PETSC_DECIDE,m*n,3);CHKERRQ(ierr);
-  ierr = MatSetType(U,MATDENSE);CHKERRQ(ierr);
-  ierr = MatSetUp(U);CHKERRQ(ierr);
-  ierr = MatGetOwnershipRange(U,&rstart,&rend);CHKERRQ(ierr);
-  ierr = MatDenseGetArray(U,&u);CHKERRQ(ierr);
-  for (i=rstart; i<rend; i++) {
-    u[i-rstart]          = (PetscReal)i;
-    u[i+rend-2*rstart]   = (PetscReal)1000*i;
-    u[i+2*rend-3*rstart] = (PetscReal)100000*i;
-  }
-  ierr = MatDenseRestoreArray(U,&u);CHKERRQ(ierr);
-  ierr = MatAssemblyBegin(U,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  ierr = MatAssemblyEnd(U,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+  PetscCall(MatCreate(PETSC_COMM_WORLD, &U));
+  PetscCall(MatSetSizes(U, PETSC_DECIDE, PETSC_DECIDE, M, 3));
+  PetscCall(MatSetType(U, MATDENSE));
+  PetscCall(MatSetOptionsPrefix(U, "U_"));
+  PetscCall(MatSetFromOptions(U));
+  PetscCall(MatSetUp(U));
+  PetscCall(MatSetRandom(U, NULL));
 
-  ierr = MatCreate(PETSC_COMM_WORLD,&V);CHKERRQ(ierr);
-  ierr = MatSetSizes(V,PETSC_DECIDE,PETSC_DECIDE,m*n,3);CHKERRQ(ierr);
-  ierr = MatSetType(V,MATDENSE);CHKERRQ(ierr);
-  ierr = MatSetUp(V);CHKERRQ(ierr);
-  ierr = MatGetOwnershipRange(U,&rstart,&rend);CHKERRQ(ierr);
-  ierr = MatDenseGetArray(V,&u);CHKERRQ(ierr);
-  for (i=rstart; i<rend; i++) {
-    u[i-rstart]          = (PetscReal)i;
-    u[i+rend-2*rstart]   = (PetscReal)1.2*i;
-    u[i+2*rend-3*rstart] = (PetscReal)1.67*i+2;
-  }
-  ierr = MatDenseRestoreArray(V,&u);CHKERRQ(ierr);
-  ierr = MatAssemblyBegin(V,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  ierr = MatAssemblyEnd(V,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+  PetscCall(MatCreate(PETSC_COMM_WORLD, &V));
+  PetscCall(MatSetSizes(V, PETSC_DECIDE, PETSC_DECIDE, N, 3));
+  PetscCall(MatSetType(V, MATDENSE));
+  PetscCall(MatSetOptionsPrefix(V, "V_"));
+  PetscCall(MatSetFromOptions(V));
+  PetscCall(MatSetUp(V));
+  PetscCall(MatSetRandom(V, NULL));
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
          Create a vector to hold the diagonal of C
+         A sequential vector can be created as well on each process
+         It is user responsibility to ensure the data in the vector
+         is consistent across processors
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-  ierr = PetscOptionsHasName(NULL,NULL,"-use_c",&flg);CHKERRQ(ierr);
+  PetscCall(PetscOptionsHasName(NULL, NULL, "-use_c", &flg));
   if (flg) {
-    ierr = VecCreateSeq(PETSC_COMM_SELF,3,&c);CHKERRQ(ierr);
-    ierr = VecGetArray(c,&u);CHKERRQ(ierr);
-    u[0] = 2.0;
-    u[1] = -1.0;
-    u[2] = 1.0;
-    ierr = VecRestoreArray(c,&u);CHKERRQ(ierr);
+    PetscCall(VecCreateFromOptions(PETSC_COMM_WORLD, NULL, 1, PETSC_DECIDE, 3, &c));
+    PetscCall(VecSetRandom(c, NULL));
   }
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
          Create low rank correction matrix
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-  ierr = PetscOptionsHasName(NULL,NULL,"-low_rank",&flg);CHKERRQ(ierr);
+  PetscCall(PetscOptionsHasName(NULL, NULL, "-low_rank", &flg));
   if (flg) {
     /* create a low-rank matrix, with no A-matrix */
-    ierr = MatCreateLRC(NULL,U,c,V,&LR);CHKERRQ(ierr);
+    PetscCall(MatCreateLRC(NULL, U, c, V, &LR));
+    PetscCall(MatDestroy(&A));
   } else {
-    ierr = MatCreateLRC(A,U,c,V,&LR);CHKERRQ(ierr);
+    PetscCall(MatCreateLRC(A, U, c, V, &LR));
   }
+
+  /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+         Create the low rank correction matrix explicitly to check for
+         correctness
+     - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+  PetscCall(MatHermitianTranspose(V, MAT_INITIAL_MATRIX, &X));
+  PetscCall(MatDiagonalScale(X, c, NULL));
+  PetscCall(MatMatMult(U, X, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &LRe));
+  PetscCall(MatDestroy(&X));
+  if (A) PetscCall(MatAYPX(LRe, 1.0, A, DIFFERENT_NONZERO_PATTERN));
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
          Create test vectors
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-  ierr = VecCreate(PETSC_COMM_WORLD,&x);CHKERRQ(ierr);
-  ierr = VecSetSizes(x,PETSC_DECIDE,m*n);CHKERRQ(ierr);
-  ierr = VecSetFromOptions(x);CHKERRQ(ierr);
-  ierr = VecDuplicate(x,&b);CHKERRQ(ierr);
-  ierr = VecGetOwnershipRange(x,&rstart,&rend);CHKERRQ(ierr);
-  ierr = VecGetArray(x,&u);CHKERRQ(ierr);
-  for (i=rstart; i<rend; i++) u[i-rstart] = (PetscScalar)i;
-  ierr = VecRestoreArray(x,&u);CHKERRQ(ierr);
+  PetscCall(MatCreateVecs(LR, &x, &b));
+  PetscCall(VecSetRandom(x, NULL));
+  PetscCall(MatMult(LR, x, b));
+  PetscCall(MatMultTranspose(LR, b, x));
+  PetscCall(VecDestroy(&x));
+  PetscCall(VecDestroy(&b));
 
-  ierr = MatMult(LR,x,b);CHKERRQ(ierr);
-  /*
-     View the product if desired
-  */
-  ierr = PetscOptionsHasName(NULL,NULL,"-view_product",&flg);CHKERRQ(ierr);
-  if (flg) {ierr = VecView(b,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);}
+  /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+         Check correctness
+     - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+  PetscCall(MatMultEqual(LR, LRe, 10, &flg));
+  if (!flg) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Error in MatMult\n"));
+#if !defined(PETSC_USE_COMPLEX)
+  PetscCall(MatMultHermitianTransposeEqual(LR, LRe, 10, &flg));
+  if (!flg) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Error in MatMultTranspose\n"));
+#endif
 
-  ierr = VecDestroy(&x);CHKERRQ(ierr);
-  ierr = VecDestroy(&b);CHKERRQ(ierr);
-  /* you can destroy the matrices in any order you like */
-  ierr = MatDestroy(&A);CHKERRQ(ierr);
-  ierr = MatDestroy(&U);CHKERRQ(ierr);
-  ierr = MatDestroy(&V);CHKERRQ(ierr);
-  ierr = VecDestroy(&c);CHKERRQ(ierr);
-  ierr = MatDestroy(&LR);CHKERRQ(ierr);
+  PetscCall(MatDestroy(&A));
+  PetscCall(MatDestroy(&LRe));
+  PetscCall(MatDestroy(&U));
+  PetscCall(MatDestroy(&V));
+  PetscCall(VecDestroy(&c));
+  PetscCall(MatDestroy(&LR));
 
   /*
      Always call PetscFinalize() before exiting a program.  This routine
@@ -132,26 +112,21 @@ int main(int argc,char **args)
        - provides summary and diagnostic information if certain runtime
          options are chosen (e.g., -log_view).
   */
-  ierr = PetscFinalize();
-  return ierr;
+  PetscCall(PetscFinalize());
+  return 0;
 }
-
 
 /*TEST
 
-   test:
-      suffix: 1
-      nsize: 2
-      args: -view_product
-
-   test:
-      suffix: 2
-      nsize: 2
-      args: -low_rank -view_product
-
-   test:
-      suffix: 3
-      nsize: 2
-      args: -use_c -view_product
+   testset:
+      output_file: output/ex102_1.out
+      nsize: {{1 2}}
+      args: -low_rank {{0 1}} -use_c {{0 1}}
+      test:
+        suffix: standard
+      test:
+        suffix: cuda
+        requires: cuda
+        args: -A_mat_type aijcusparse -U_mat_type densecuda -V_mat_type densecuda
 
 TEST*/

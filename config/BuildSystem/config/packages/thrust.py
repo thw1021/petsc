@@ -10,12 +10,11 @@ class Configure(config.package.GNUPackage):
     self.minversion       = '1.9.8'
     self.versionname      = 'THRUST_VERSION'
     self.versioninclude   = 'thrust/version.h'
-    self.gitcommit        = 'origin/master'
-    self.download         = ['git://https://github.com/thrust/thrust.git']
+    self.gitcommit        = '1.17.2'
+    self.download         = ['git://https://github.com/NVIDIA/thrust.git','https://github.com/NVIDIA/thrust/archive/'+self.gitcommit+'.tar.gz']
     self.includes         = ['thrust/version.h']
     self.precisions       = ['single','double']
-    self.cxx              = 1
-    self.requirescxx11    = 1
+    self.buildLanguages   = ['Cxx']
     return
 
   def versionToStandardForm(self,ver):
@@ -50,12 +49,8 @@ class Configure(config.package.GNUPackage):
     if not os.path.isfile(cub_cuh):
       raise RuntimeError(cub_cuh+' does not exist. You might have forgot to download the cub submodule in thrust.')
 
-    # We should have the 'su' in parent class to get it reused
-    if self.installSudo: su = self.installSudo+' -u $${SUDO_USER} '
-    else: su = ''
-
     # srcCubDir might be a symbol link
-    cpstr = su+' mkdir -p '+incDir + ' && ' +su+' cp -RL '+srcThrustDir+' '+srcCubDir+' '+incDir
+    cpstr = ' mkdir -p '+incDir + ' && cp -RL '+srcThrustDir+' '+srcCubDir+' '+incDir
     try:
       self.logPrintBox('Copying THRUST; this may take several seconds')
       output,err,ret = config.package.Package.executeShellCommand(cpstr,timeout=100,log=self.log)

@@ -4,74 +4,70 @@
 /* Reuse the type. The difference is some fields (i.e., displs, recvcounts) are not used in Gather, which is not a big deal */
 typedef PetscSF_Allgatherv PetscSF_Gather;
 
-PETSC_INTERN PetscErrorCode PetscSFBcastAndOpBegin_Gather(PetscSF sf,MPI_Datatype unit,PetscMemType rootmtype,const void *rootdata,PetscMemType leafmtype,void *leafdata,MPI_Op op)
+static PetscErrorCode PetscSFLinkStartCommunication_Gather(PetscSF sf, PetscSFLink link, PetscSFDirection direction)
 {
-  PetscErrorCode       ierr;
-  PetscSFLink          link;
-  PetscMPIInt          sendcount;
-  MPI_Comm             comm;
-  void                 *rootbuf = NULL,*leafbuf = NULL;
-  MPI_Request          *req;
+  MPI_Comm     comm    = MPI_COMM_NULL;
+  void        *rootbuf = NULL, *leafbuf = NULL;
+  MPI_Request *req = NULL;
+  PetscMPIInt  count;
+  MPI_Datatype unit = link->unit;
 
   PetscFunctionBegin;
-  ierr = PetscSFLinkCreate(sf,unit,rootmtype,rootdata,leafmtype,leafdata,op,PETSCSF_BCAST,&link);CHKERRQ(ierr);
-  ierr = PetscSFLinkPackRootData(sf,link,PETSCSF_REMOTE,rootdata);CHKERRQ(ierr);
-  ierr = PetscObjectGetComm((PetscObject)sf,&comm);CHKERRQ(ierr);
-  ierr = PetscMPIIntCast(sf->nroots,&sendcount);CHKERRQ(ierr);
-  ierr = PetscSFLinkGetMPIBuffersAndRequests(sf,link,PETSCSF_ROOT2LEAF,&rootbuf,&leafbuf,&req,NULL);CHKERRQ(ierr);
-  ierr = MPIU_Igather(rootbuf,sendcount,unit,leafbuf,sendcount,unit,0/*rank 0*/,comm,req);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  if (direction == PETSCSF_ROOT2LEAF) {
+    PetscCall(PetscSFLinkCopyRootBufferInCaseNotUseGpuAwareMPI(sf, link, PETSC_TRUE /* device2host before sending */));
+  } else {
+    PetscCall(PetscSFLinkCopyLeafBufferInCaseNotUseGpuAwareMPI(sf, link, PETSC_TRUE /* device2host */));
+  }
+  PetscCall(PetscObjectGetComm((PetscObject)sf, &comm));
+  PetscCall(PetscMPIIntCast(sf->nroots, &count));
+  PetscCall(PetscSFLinkGetMPIBuffersAndRequests(sf, link, direction, &rootbuf, &leafbuf, &req, NULL));
+  PetscCall(PetscSFLinkSyncStreamBeforeCallMPI(sf, link, direction));
+
+  if (direction == PETSCSF_ROOT2LEAF) {
+    PetscCallMPI(MPIU_Igather(rootbuf == leafbuf ? MPI_IN_PLACE : rootbuf, count, unit, leafbuf, count, unit, 0 /*rank 0*/, comm, req));
+  } else {
+    PetscCallMPI(MPIU_Iscatter(leafbuf, count, unit, rootbuf == leafbuf ? MPI_IN_PLACE : rootbuf, count, unit, 0 /*rank 0*/, comm, req));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscSFReduceBegin_Gather(PetscSF sf,MPI_Datatype unit,PetscMemType leafmtype,const void *leafdata,PetscMemType rootmtype,void *rootdata,MPI_Op op)
+static PetscErrorCode PetscSFSetCommunicationOps_Gather(PetscSF sf, PetscSFLink link)
 {
-  PetscErrorCode       ierr;
-  PetscSFLink          link;
-  PetscMPIInt          recvcount;
-  MPI_Comm             comm;
-  void                 *rootbuf = NULL,*leafbuf = NULL;
-  MPI_Request          *req;
-
   PetscFunctionBegin;
-  ierr = PetscSFLinkCreate(sf,unit,rootmtype,rootdata,leafmtype,leafdata,op,PETSCSF_REDUCE,&link);CHKERRQ(ierr);
-  ierr = PetscSFLinkPackLeafData(sf,link,PETSCSF_REMOTE,leafdata);CHKERRQ(ierr);
-  ierr = PetscObjectGetComm((PetscObject)sf,&comm);CHKERRQ(ierr);
-  ierr = PetscMPIIntCast(sf->nroots,&recvcount);CHKERRQ(ierr);
-  ierr = PetscSFLinkGetMPIBuffersAndRequests(sf,link,PETSCSF_LEAF2ROOT,&rootbuf,&leafbuf,&req,NULL);CHKERRQ(ierr);
-  ierr = MPIU_Iscatter(leafbuf,recvcount,unit,rootbuf,recvcount,unit,0/*rank 0*/,comm,req);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  link->StartCommunication = PetscSFLinkStartCommunication_Gather;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PETSC_INTERN PetscErrorCode PetscSFCreate_Gather(PetscSF sf)
 {
-  PetscErrorCode  ierr;
-  PetscSF_Gather  *dat = (PetscSF_Gather*)sf->data;
+  PetscSF_Gather *dat = (PetscSF_Gather *)sf->data;
 
   PetscFunctionBegin;
-  sf->ops->BcastAndOpEnd   = PetscSFBcastAndOpEnd_Basic;
-  sf->ops->ReduceEnd       = PetscSFReduceEnd_Basic;
+  sf->ops->BcastBegin  = PetscSFBcastBegin_Basic;
+  sf->ops->BcastEnd    = PetscSFBcastEnd_Basic;
+  sf->ops->ReduceBegin = PetscSFReduceBegin_Basic;
+  sf->ops->ReduceEnd   = PetscSFReduceEnd_Basic;
 
   /* Inherit from Allgatherv */
-  sf->ops->Reset           = PetscSFReset_Allgatherv;
-  sf->ops->Destroy         = PetscSFDestroy_Allgatherv;
-  sf->ops->GetGraph        = PetscSFGetGraph_Allgatherv;
-  sf->ops->GetRootRanks    = PetscSFGetRootRanks_Allgatherv;
-  sf->ops->GetLeafRanks    = PetscSFGetLeafRanks_Allgatherv;
-  sf->ops->FetchAndOpEnd   = PetscSFFetchAndOpEnd_Allgatherv;
-  sf->ops->CreateLocalSF   = PetscSFCreateLocalSF_Allgatherv;
+  sf->ops->Reset         = PetscSFReset_Allgatherv;
+  sf->ops->Destroy       = PetscSFDestroy_Allgatherv;
+  sf->ops->GetGraph      = PetscSFGetGraph_Allgatherv;
+  sf->ops->GetRootRanks  = PetscSFGetRootRanks_Allgatherv;
+  sf->ops->GetLeafRanks  = PetscSFGetLeafRanks_Allgatherv;
+  sf->ops->FetchAndOpEnd = PetscSFFetchAndOpEnd_Allgatherv;
+  sf->ops->CreateLocalSF = PetscSFCreateLocalSF_Allgatherv;
 
   /* Inherit from Allgather */
-  sf->ops->SetUp           = PetscSFSetUp_Allgather;
+  sf->ops->SetUp = PetscSFSetUp_Allgather;
 
   /* Inherit from Gatherv */
   sf->ops->FetchAndOpBegin = PetscSFFetchAndOpBegin_Gatherv;
 
-  /* Gather stuff */
-  sf->ops->BcastAndOpBegin = PetscSFBcastAndOpBegin_Gather;
-  sf->ops->ReduceBegin     = PetscSFReduceBegin_Gather;
+  sf->ops->SetCommunicationOps = PetscSFSetCommunicationOps_Gather;
 
-  ierr     = PetscNewLog(sf,&dat);CHKERRQ(ierr);
-  sf->data = (void*)dat;
-  PetscFunctionReturn(0);
+  sf->collective = PETSC_TRUE;
+
+  PetscCall(PetscNew(&dat));
+  sf->data = (void *)dat;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
-

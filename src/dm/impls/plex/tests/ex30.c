@@ -4,41 +4,31 @@ const char help[] = "Test memory allocation in DMPlex refinement.\n\n";
 
 int main(int argc, char **argv)
 {
-  PetscErrorCode ierr;
-  DM             dm, rdm;
-  PetscViewer    vwr;
-  PetscBool      flg;
-  char           datafile[PETSC_MAX_PATH_LEN];
-  MPI_Comm       comm;
+  DM dm;
 
-  ierr = PetscInitialize(&argc, &argv, NULL, help);if (ierr) return ierr;
-  comm = PETSC_COMM_WORLD;
-  ierr = PetscViewerCreate(comm, &vwr);CHKERRQ(ierr);
-  ierr = PetscViewerSetType(vwr, PETSCVIEWERHDF5);CHKERRQ(ierr);
-  ierr = PetscViewerFileSetMode(vwr, FILE_MODE_READ);CHKERRQ(ierr);
-  ierr = PetscOptionsGetString(NULL, NULL, "-f", datafile, sizeof(datafile), &flg);CHKERRQ(ierr);
-  if (!flg) SETERRQ(comm, PETSC_ERR_ARG_WRONG, "Must provide meshfile");
-  ierr = PetscViewerFileSetName(vwr, datafile);CHKERRQ(ierr);
-  ierr = DMCreate(comm, &dm);CHKERRQ(ierr);
-  ierr = DMSetType(dm, DMPLEX);CHKERRQ(ierr);
-  ierr = DMLoad(dm, vwr);CHKERRQ(ierr);
-  ierr = PetscViewerDestroy(&vwr);CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject)dm, "BaryDM");CHKERRQ(ierr);
-  ierr = DMViewFromOptions(dm, NULL, "-dm_view");CHKERRQ(ierr);
-  ierr = DMPlexSetRefinementUniform(dm, PETSC_TRUE);CHKERRQ(ierr);
-  ierr = DMRefine(dm, comm, &rdm);CHKERRQ(ierr);
-  ierr = DMDestroy(&dm);CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject)rdm, "RefinedDM");CHKERRQ(ierr);
-  ierr = DMViewFromOptions(rdm, NULL, "-refined_dm_view");CHKERRQ(ierr);
-  ierr = DMDestroy(&rdm);CHKERRQ(ierr);
-  ierr = PetscFinalize();
-  return ierr;
+  PetscFunctionBeginUser;
+  PetscCall(PetscInitialize(&argc, &argv, NULL, help));
+  PetscCall(DMCreate(PETSC_COMM_WORLD, &dm));
+  PetscCall(PetscObjectSetName((PetscObject)dm, "BaryDM"));
+  PetscCall(DMSetType(dm, DMPLEX));
+  PetscCall(DMSetFromOptions(dm));
+  PetscCall(DMViewFromOptions(dm, NULL, "-dm_view"));
+  //PetscCall(DMPlexSetRefinementUniform(dm, PETSC_TRUE));
+  //PetscCall(DMRefine(dm, comm, &rdm));
+  //PetscCall(DMPlexConvertOldOrientations_Internal(dm));
+  PetscCall(PetscObjectSetName((PetscObject)dm, "RefinedDM"));
+  PetscCall(PetscObjectSetOptionsPrefix((PetscObject)dm, "ref_"));
+  PetscCall(DMSetFromOptions(dm));
+  PetscCall(DMViewFromOptions(dm, NULL, "-dm_view"));
+  PetscCall(DMDestroy(&dm));
+  PetscCall(PetscFinalize());
+  return 0;
 }
 
 /*TEST
 
   test:
-    requires: hdf5 double !complex !define(PETSC_USE_64BIT_INDICES)
-    args: -f ${wPETSC_DIR}/share/petsc/datafiles/meshes/barycentricallyrefinedcube.h5 -dm_view ascii::ASCII_INFO_DETAIL -refined_dm_view ascii::ASCII_INFO_DETAIL
+    requires: hdf5 double !complex !defined(PETSC_USE_64BIT_INDICES)
+    args: -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/barycentricallyrefinedcube.h5 -dm_view ascii::ASCII_INFO_DETAIL -ref_dm_refine 1 -ref_dm_view ascii::ASCII_INFO_DETAIL
 
 TEST*/

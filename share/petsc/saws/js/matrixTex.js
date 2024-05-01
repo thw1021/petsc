@@ -1,4 +1,4 @@
-//gives users a visual of the nested matricies
+//gives users a visual of the nested matrices
 //instead of using subscript of subscript of subscript, etc. simply put the id of the matrix in the first subscript level. for example, A_{010}
 
 //this function is recursive and should always be called with parameter "0"
@@ -43,7 +43,7 @@ function getMatrixTex(data, endtag) {
             }
 
             var childEndtag = endtag + "_" + i;
-            //lay out chilren
+            //lay out children
             var childTex = getMatrixTex(data, childEndtag);
             if(childTex != "")
                 ret += getMatrixTex(data, childEndtag);

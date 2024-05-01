@@ -25,98 +25,96 @@ static char help[] = "Nonlinear, time-dependent PDE in 2d.\n";
 /*
    User-defined routines
 */
-extern PetscErrorCode FormFunction(TS,PetscReal,Vec,Vec,void*),FormInitialSolution(DM,Vec);
-extern PetscErrorCode MyTSMonitor(TS,PetscInt,PetscReal,Vec,void*);
-extern PetscErrorCode MySNESMonitor(SNES,PetscInt,PetscReal,PetscViewerAndFormat*);
+extern PetscErrorCode FormFunction(TS, PetscReal, Vec, Vec, void *), FormInitialSolution(DM, Vec);
+extern PetscErrorCode MyTSMonitor(TS, PetscInt, PetscReal, Vec, void *);
+extern PetscErrorCode MySNESMonitor(SNES, PetscInt, PetscReal, PetscViewerAndFormat *);
 
-int main(int argc,char **argv)
+int main(int argc, char **argv)
 {
-  TS                   ts;                         /* nonlinear solver */
-  Vec                  x,r;                        /* solution, residual vectors */
-  PetscInt             steps;                      /* iterations for convergence */
-  PetscErrorCode       ierr;
-  DM                   da;
-  PetscReal            ftime;
-  SNES                 ts_snes;
-  PetscBool            usemonitor = PETSC_TRUE;
+  TS                    ts;    /* nonlinear solver */
+  Vec                   x, r;  /* solution, residual vectors */
+  PetscInt              steps; /* iterations for convergence */
+  DM                    da;
+  PetscReal             ftime;
+  SNES                  ts_snes;
+  PetscBool             usemonitor = PETSC_TRUE;
   PetscViewerAndFormat *vf;
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Initialize program
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-  ierr = PetscInitialize(&argc,&argv,(char*)0,help);if (ierr) return ierr;
-  ierr = PetscOptionsGetBool(NULL,NULL,"-usemonitor",&usemonitor,NULL);CHKERRQ(ierr);
+  PetscFunctionBeginUser;
+  PetscCall(PetscInitialize(&argc, &argv, (char *)0, help));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-usemonitor", &usemonitor, NULL));
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Create distributed array (DMDA) to manage parallel grid and vectors
   - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-  ierr = DMDACreate2d(PETSC_COMM_WORLD, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE,DMDA_STENCIL_STAR,8,8,PETSC_DECIDE,PETSC_DECIDE,2,1,NULL,NULL,&da);CHKERRQ(ierr);
-  ierr = DMSetFromOptions(da);CHKERRQ(ierr);
-  ierr = DMSetUp(da);CHKERRQ(ierr);
-  ierr = DMDASetFieldName(da,0,"u");CHKERRQ(ierr);
-  ierr = DMDASetFieldName(da,1,"v");CHKERRQ(ierr);
+  PetscCall(DMDACreate2d(PETSC_COMM_WORLD, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_STAR, 8, 8, PETSC_DECIDE, PETSC_DECIDE, 2, 1, NULL, NULL, &da));
+  PetscCall(DMSetFromOptions(da));
+  PetscCall(DMSetUp(da));
+  PetscCall(DMDASetFieldName(da, 0, "u"));
+  PetscCall(DMDASetFieldName(da, 1, "v"));
 
   /*  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Extract global vectors from DMDA; then duplicate for remaining
      vectors that are the same types
    - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-  ierr = DMCreateGlobalVector(da,&x);CHKERRQ(ierr);
-  ierr = VecDuplicate(x,&r);CHKERRQ(ierr);
+  PetscCall(DMCreateGlobalVector(da, &x));
+  PetscCall(VecDuplicate(x, &r));
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Create timestepping solver context
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-  ierr = TSCreate(PETSC_COMM_WORLD,&ts);CHKERRQ(ierr);
-  ierr = TSSetDM(ts,da);CHKERRQ(ierr);
-  ierr = TSSetProblemType(ts,TS_NONLINEAR);CHKERRQ(ierr);
-  ierr = TSSetRHSFunction(ts,NULL,FormFunction,da);CHKERRQ(ierr);
+  PetscCall(TSCreate(PETSC_COMM_WORLD, &ts));
+  PetscCall(TSSetDM(ts, da));
+  PetscCall(TSSetProblemType(ts, TS_NONLINEAR));
+  PetscCall(TSSetRHSFunction(ts, NULL, FormFunction, da));
 
-  ierr = TSSetMaxTime(ts,1.0);CHKERRQ(ierr);
-  if (usemonitor) {
-    ierr = TSMonitorSet(ts,MyTSMonitor,0,0);CHKERRQ(ierr);
-  }
+  PetscCall(TSSetMaxTime(ts, 1.0));
+  if (usemonitor) PetscCall(TSMonitorSet(ts, MyTSMonitor, 0, 0));
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Customize nonlinear solver
    - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-  ierr = TSSetType(ts,TSBEULER);CHKERRQ(ierr);
-  ierr = TSGetSNES(ts,&ts_snes);CHKERRQ(ierr);
+  PetscCall(TSSetType(ts, TSBEULER));
+  PetscCall(TSGetSNES(ts, &ts_snes));
   if (usemonitor) {
-    ierr = PetscViewerAndFormatCreate(PETSC_VIEWER_STDOUT_WORLD,PETSC_VIEWER_DEFAULT,&vf);CHKERRQ(ierr);
-    ierr = SNESMonitorSet(ts_snes,(PetscErrorCode (*)(SNES,PetscInt,PetscReal,void *))MySNESMonitor,vf,(PetscErrorCode (*)(void**))PetscViewerAndFormatDestroy);CHKERRQ(ierr);
+    PetscCall(PetscViewerAndFormatCreate(PETSC_VIEWER_STDOUT_WORLD, PETSC_VIEWER_DEFAULT, &vf));
+    PetscCall(SNESMonitorSet(ts_snes, (PetscErrorCode(*)(SNES, PetscInt, PetscReal, void *))MySNESMonitor, vf, (PetscErrorCode(*)(void **))PetscViewerAndFormatDestroy));
   }
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Set initial conditions
    - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-  ierr = FormInitialSolution(da,x);CHKERRQ(ierr);
-  ierr = TSSetTimeStep(ts,.0001);CHKERRQ(ierr);
-  ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_STEPOVER);CHKERRQ(ierr);
-  ierr = TSSetSolution(ts,x);CHKERRQ(ierr);
+  PetscCall(FormInitialSolution(da, x));
+  PetscCall(TSSetTimeStep(ts, .0001));
+  PetscCall(TSSetExactFinalTime(ts, TS_EXACTFINALTIME_STEPOVER));
+  PetscCall(TSSetSolution(ts, x));
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Set runtime options
    - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-  ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
+  PetscCall(TSSetFromOptions(ts));
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Solve nonlinear system
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-  ierr = TSSolve(ts,x);CHKERRQ(ierr);
-  ierr = TSGetSolveTime(ts,&ftime);CHKERRQ(ierr);
-  ierr = TSGetStepNumber(ts,&steps);CHKERRQ(ierr);
-  ierr = VecViewFromOptions(x,NULL,"-final_sol");CHKERRQ(ierr);
+  PetscCall(TSSolve(ts, x));
+  PetscCall(TSGetSolveTime(ts, &ftime));
+  PetscCall(TSGetStepNumber(ts, &steps));
+  PetscCall(VecViewFromOptions(x, NULL, "-final_sol"));
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Free work space.  All PETSc objects should be destroyed when they
      are no longer needed.
    - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-  ierr = VecDestroy(&x);CHKERRQ(ierr);
-  ierr = VecDestroy(&r);CHKERRQ(ierr);
-  ierr = TSDestroy(&ts);CHKERRQ(ierr);
-  ierr = DMDestroy(&da);CHKERRQ(ierr);
+  PetscCall(VecDestroy(&x));
+  PetscCall(VecDestroy(&r));
+  PetscCall(TSDestroy(&ts));
+  PetscCall(DMDestroy(&da));
 
-  ierr = PetscFinalize();
-  return ierr;
+  PetscCall(PetscFinalize());
+  return 0;
 }
 /* ------------------------------------------------------------------- */
 /*
@@ -130,21 +128,22 @@ int main(int argc,char **argv)
    Output Parameter:
 .  F - function vector
  */
-PetscErrorCode FormFunction(TS ts,PetscReal ftime,Vec X,Vec F,void *ptr)
+PetscErrorCode FormFunction(TS ts, PetscReal ftime, Vec X, Vec F, void *ptr)
 {
-  DM             da = (DM)ptr;
-  PetscErrorCode ierr;
-  PetscInt       i,j,Mx,My,xs,ys,xm,ym;
-  PetscReal      hx,hy,/*hxdhy,hydhx,*/ sx,sy;
-  PetscScalar    u,uxx,uyy,v,***x,***f;
-  Vec            localX;
+  DM          da = (DM)ptr;
+  PetscInt    i, j, Mx, My, xs, ys, xm, ym;
+  PetscReal   hx, hy, /*hxdhy,hydhx,*/ sx, sy;
+  PetscScalar u, uxx, uyy, v, ***x, ***f;
+  Vec         localX;
 
   PetscFunctionBeginUser;
-  ierr = DMGetLocalVector(da,&localX);CHKERRQ(ierr);
-  ierr = DMDAGetInfo(da,PETSC_IGNORE,&Mx,&My,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE);CHKERRQ(ierr);
+  PetscCall(DMGetLocalVector(da, &localX));
+  PetscCall(DMDAGetInfo(da, PETSC_IGNORE, &Mx, &My, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE));
 
-  hx = 1.0/(PetscReal)(Mx-1); sx = 1.0/(hx*hx);
-  hy = 1.0/(PetscReal)(My-1); sy = 1.0/(hy*hy);
+  hx = 1.0 / (PetscReal)(Mx - 1);
+  sx = 1.0 / (hx * hx);
+  hy = 1.0 / (PetscReal)(My - 1);
+  sy = 1.0 / (hy * hy);
   /*hxdhy  = hx/hy;*/
   /*hydhx  = hy/hx;*/
 
@@ -154,34 +153,34 @@ PetscErrorCode FormFunction(TS ts,PetscReal ftime,Vec X,Vec F,void *ptr)
      By placing code between these two statements, computations can be
      done while messages are in transition.
   */
-  ierr = DMGlobalToLocalBegin(da,X,INSERT_VALUES,localX);CHKERRQ(ierr);
-  ierr = DMGlobalToLocalEnd(da,X,INSERT_VALUES,localX);CHKERRQ(ierr);
+  PetscCall(DMGlobalToLocalBegin(da, X, INSERT_VALUES, localX));
+  PetscCall(DMGlobalToLocalEnd(da, X, INSERT_VALUES, localX));
 
   /*
      Get pointers to vector data
   */
-  ierr = DMDAVecGetArrayDOF(da,localX,&x);CHKERRQ(ierr);
-  ierr = DMDAVecGetArrayDOF(da,F,&f);CHKERRQ(ierr);
+  PetscCall(DMDAVecGetArrayDOF(da, localX, &x));
+  PetscCall(DMDAVecGetArrayDOF(da, F, &f));
 
   /*
      Get local grid boundaries
   */
-  ierr = DMDAGetCorners(da,&xs,&ys,NULL,&xm,&ym,NULL);CHKERRQ(ierr);
+  PetscCall(DMDAGetCorners(da, &xs, &ys, NULL, &xm, &ym, NULL));
 
   /*
      Compute function over the locally owned part of the grid
   */
-  for (j=ys; j<ys+ym; j++) {
-    for (i=xs; i<xs+xm; i++) {
-      if (i == 0 || j == 0 || i == Mx-1 || j == My-1) {
+  for (j = ys; j < ys + ym; j++) {
+    for (i = xs; i < xs + xm; i++) {
+      if (i == 0 || j == 0 || i == Mx - 1 || j == My - 1) {
         f[j][i][0] = x[j][i][0];
         f[j][i][1] = x[j][i][1];
         continue;
       }
       u          = x[j][i][0];
       v          = x[j][i][1];
-      uxx        = (-2.0*u + x[j][i-1][0] + x[j][i+1][0])*sx;
-      uyy        = (-2.0*u + x[j-1][i][0] + x[j+1][i][0])*sy;
+      uxx        = (-2.0 * u + x[j][i - 1][0] + x[j][i + 1][0]) * sx;
+      uyy        = (-2.0 * u + x[j - 1][i][0] + x[j + 1][i][0]) * sy;
       f[j][i][0] = v;
       f[j][i][1] = uxx + uyy;
     }
@@ -190,47 +189,46 @@ PetscErrorCode FormFunction(TS ts,PetscReal ftime,Vec X,Vec F,void *ptr)
   /*
      Restore vectors
   */
-  ierr = DMDAVecRestoreArrayDOF(da,localX,&x);CHKERRQ(ierr);
-  ierr = DMDAVecRestoreArrayDOF(da,F,&f);CHKERRQ(ierr);
-  ierr = DMRestoreLocalVector(da,&localX);CHKERRQ(ierr);
-  ierr = PetscLogFlops(11.0*ym*xm);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(DMDAVecRestoreArrayDOF(da, localX, &x));
+  PetscCall(DMDAVecRestoreArrayDOF(da, F, &f));
+  PetscCall(DMRestoreLocalVector(da, &localX));
+  PetscCall(PetscLogFlops(11.0 * ym * xm));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /* ------------------------------------------------------------------- */
-PetscErrorCode FormInitialSolution(DM da,Vec U)
+PetscErrorCode FormInitialSolution(DM da, Vec U)
 {
-  PetscErrorCode ierr;
-  PetscInt       i,j,xs,ys,xm,ym,Mx,My;
-  PetscScalar    ***u;
-  PetscReal      hx,hy,x,y,r;
+  PetscInt       i, j, xs, ys, xm, ym, Mx, My;
+  PetscScalar ***u;
+  PetscReal      hx, hy, x, y, r;
 
   PetscFunctionBeginUser;
-  ierr = DMDAGetInfo(da,PETSC_IGNORE,&Mx,&My,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE);CHKERRQ(ierr);
+  PetscCall(DMDAGetInfo(da, PETSC_IGNORE, &Mx, &My, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE));
 
-  hx = 1.0/(PetscReal)(Mx-1);
-  hy = 1.0/(PetscReal)(My-1);
+  hx = 1.0 / (PetscReal)(Mx - 1);
+  hy = 1.0 / (PetscReal)(My - 1);
 
   /*
      Get pointers to vector data
   */
-  ierr = DMDAVecGetArrayDOF(da,U,&u);CHKERRQ(ierr);
+  PetscCall(DMDAVecGetArrayDOF(da, U, &u));
 
   /*
      Get local grid boundaries
   */
-  ierr = DMDAGetCorners(da,&xs,&ys,NULL,&xm,&ym,NULL);CHKERRQ(ierr);
+  PetscCall(DMDAGetCorners(da, &xs, &ys, NULL, &xm, &ym, NULL));
 
   /*
      Compute function over the locally owned part of the grid
   */
-  for (j=ys; j<ys+ym; j++) {
-    y = j*hy;
-    for (i=xs; i<xs+xm; i++) {
-      x = i*hx;
-      r = PetscSqrtReal((x-.5)*(x-.5) + (y-.5)*(y-.5));
+  for (j = ys; j < ys + ym; j++) {
+    y = j * hy;
+    for (i = xs; i < xs + xm; i++) {
+      x = i * hx;
+      r = PetscSqrtReal((x - .5) * (x - .5) + (y - .5) * (y - .5));
       if (r < .125) {
-        u[j][i][0] = PetscExpReal(-30.0*r*r*r);
+        u[j][i][0] = PetscExpReal(-30.0 * r * r * r);
         u[j][i][1] = 0.0;
       } else {
         u[j][i][0] = 0.0;
@@ -242,23 +240,22 @@ PetscErrorCode FormInitialSolution(DM da,Vec U)
   /*
      Restore vectors
   */
-  ierr = DMDAVecRestoreArrayDOF(da,U,&u);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(DMDAVecRestoreArrayDOF(da, U, &u));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MyTSMonitor(TS ts,PetscInt step,PetscReal ptime,Vec v,void *ctx)
+PetscErrorCode MyTSMonitor(TS ts, PetscInt step, PetscReal ptime, Vec v, void *ctx)
 {
-  PetscErrorCode ierr;
-  PetscReal      norm;
-  MPI_Comm       comm;
+  PetscReal norm;
+  MPI_Comm  comm;
 
   PetscFunctionBeginUser;
-  ierr = VecNorm(v,NORM_2,&norm);CHKERRQ(ierr);
-  ierr = PetscObjectGetComm((PetscObject)ts,&comm);CHKERRQ(ierr);
+  PetscCall(VecNorm(v, NORM_2, &norm));
+  PetscCall(PetscObjectGetComm((PetscObject)ts, &comm));
   if (step > -1) { /* -1 is used to indicate an interpolated value */
-    ierr = PetscPrintf(comm,"timestep %D time %g norm %g\n",step,(double)ptime,(double)norm);CHKERRQ(ierr);
+    PetscCall(PetscPrintf(comm, "timestep %" PetscInt_FMT " time %g norm %g\n", step, (double)ptime, (double)norm));
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*
@@ -270,13 +267,11 @@ PetscErrorCode MyTSMonitor(TS ts,PetscInt step,PetscReal ptime,Vec v,void *ctx)
      ctx - optional user-defined context for private data for the
          monitor routine, as set by SNESMonitorSet()
  */
-PetscErrorCode MySNESMonitor(SNES snes,PetscInt its,PetscReal fnorm,PetscViewerAndFormat *vf)
+PetscErrorCode MySNESMonitor(SNES snes, PetscInt its, PetscReal fnorm, PetscViewerAndFormat *vf)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBeginUser;
-  ierr = SNESMonitorDefaultShort(snes,its,fnorm,vf);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(SNESMonitorDefaultShort(snes, its, fnorm, vf));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 /*TEST
 

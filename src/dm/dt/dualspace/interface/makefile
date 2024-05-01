@@ -1,17 +1,7 @@
 -include ../../../../../petscdir.mk
-ALL: lib
 
-CFLAGS    =
-FFLAGS    =
-SOURCEC   = dualspace.c
-SOURCEF   =
-SOURCEH   =
-DIRS      =
-LIBBASE   = libpetscdm
 MANSEC    = DM
 SUBMANSEC = DUALSPACE
-LOCDIR    = src/dm/dt/dualspace/interface/
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
-include ${PETSC_DIR}/lib/petsc/conf/rules
-include ${PETSC_DIR}/lib/petsc/conf/test
+include ${PETSC_DIR}/lib/petsc/conf/rules_doc.mk

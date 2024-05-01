@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 from __future__ import generators
 import config.base
 import os
@@ -29,17 +28,9 @@ class Configure(config.base.Configure):
     self.arch     = framework.require('PETSc.options.arch', self)
     return
 
-  def printSudoPasswordMessage(self,needsudo = 1):
-    '''Prints a message that sudo password will be needed for installs of packages'''
-    '''Packages like sowing and make that are never installed in an sudo location would pass 0 for needsudo'''
-    if needsudo and self.installSudoMessage:
-      self.logPrintBox(self.installSudoMessage)
-      self.installSudoMessage = ''
-
   def setInstallDir(self):
-    ''' setup installDir to either prefix or if that is not set to PETSC_DIR/PETSC_ARCH'''
+    '''Set installDir to either prefix or if that is not set to PETSC_DIR/PETSC_ARCH'''
     self.installSudo        = ''
-    self.installSudoMessage = ''
     if self.framework.argDB['prefix']:
       self.isprefix = True
       self.dir = os.path.abspath(os.path.expanduser(self.framework.argDB['prefix']))
@@ -49,8 +40,7 @@ class Configure(config.base.Configure):
         os.makedirs(os.path.join(self.dir,'PETScTestDirectory'))
         os.rmdir(os.path.join(self.dir,'PETScTestDirectory'))
       except Exception as e:
-        self.logPrint('Error trying to to test write permissions on directory '+str(e))
-        self.installSudoMessage = 'You do not have write permissions to the --prefix directory '+self.dir+'\nYou will be prompted for the sudo password for any external package installs'
+        self.logPrint('Error trying to test write permissions on directory '+str(e))
         self.installSudo = 'sudo '
     else:
       self.dir = os.path.abspath(os.path.join(self.petscdir.dir, self.arch.arch))
@@ -76,13 +66,15 @@ class Configure(config.base.Configure):
     return
 
   def cleanConfDir(self):
+    '''Remove all the files from configuration directory for this PETSC_ARCH, from --with-clean option'''
     import shutil
     if self.framework.argDB['with-clean'] and os.path.isdir(self.confDir):
-      self.logPrintBox('Warning: "with-clean" is specified. Removing all build files from '+ self.confDir)
+      self.logPrintWarning('"with-clean" is specified. Removing all build files from '+ self.confDir)
       shutil.rmtree(self.confDir)
     return
 
   def saveReconfigure(self):
+    '''Save the configure options in a script in PETSC_ARCH/lib/petsc/conf so the same configure may be easily re-run'''
     self.reconfigure_file = os.path.join(self.dir,'lib','petsc','conf','reconfigure-'+self.arch.arch+'.py')
     self.save_reconfigure_file = None
     if self.framework.argDB['with-clean'] and os.path.exists(self.reconfigure_file):
@@ -96,6 +88,7 @@ class Configure(config.base.Configure):
     return
 
   def restoreReconfigure(self):
+    '''If --with-clean was requested but restoring the reconfigure file was requested then restore it'''
     if self.framework.argDB['with-clean'] and self.save_reconfigure_file:
       try:
         os.rename(self.save_reconfigure_file,self.reconfigure_file)

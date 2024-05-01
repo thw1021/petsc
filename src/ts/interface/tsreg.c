@@ -1,111 +1,109 @@
-#include <petsc/private/tsimpl.h>      /*I "petscts.h"  I*/
+#include <petsc/private/tsimpl.h> /*I "petscts.h"  I*/
 
 PetscFunctionList TSList              = NULL;
 PetscBool         TSRegisterAllCalled = PETSC_FALSE;
 
-/*@C
+/*@
   TSSetType - Sets the method to be used as the timestepping solver.
 
-  Collective on TS
+  Collective
 
   Input Parameters:
-+ ts   - The TS context
++ ts   - The `TS` context
 - type - A known method
 
-  Options Database Command:
+  Options Database Key:
 . -ts_type <type> - Sets the method; use -help for a list of available methods (for instance, euler)
 
-   Notes:
-   See "petsc/include/petscts.h" for available methods (for instance)
+  Level: intermediate
+
+  Notes:
+  See "petsc/include/petscts.h" for available methods (for instance)
 +  TSEULER - Euler
 .  TSSUNDIALS - SUNDIALS interface
 .  TSBEULER - Backward Euler
 -  TSPSEUDO - Pseudo-timestepping
 
-   Normally, it is best to use the TSSetFromOptions() command and
-   then set the TS type from the options database rather than by using
-   this routine.  Using the options database provides the user with
-   maximum flexibility in evaluating the many different solvers.
-   The TSSetType() routine is provided for those situations where it
-   is necessary to set the timestepping solver independently of the
-   command line or options database.  This might be the case, for example,
-   when the choice of solver changes during the execution of the
-   program, and the user's application is taking responsibility for
-   choosing the appropriate method.  In other words, this routine is
-   not for beginners.
+  Normally, it is best to use the `TSSetFromOptions()` command and
+  then set the `TS` type from the options database rather than by using
+  this routine.  Using the options database provides the user with
+  maximum flexibility in evaluating the many different solvers.
+  The TSSetType() routine is provided for those situations where it
+  is necessary to set the timestepping solver independently of the
+  command line or options database.  This might be the case, for example,
+  when the choice of solver changes during the execution of the
+  program, and the user's application is taking responsibility for
+  choosing the appropriate method.  In other words, this routine is
+  not for beginners.
 
-   Level: intermediate
-
-.seealso: TS, TSSolve(), TSCreate(), TSSetFromOptions(), TSDestroy(), TSType
-
+.seealso: [](ch_ts), `TS`, `TSSolve()`, `TSCreate()`, `TSSetFromOptions()`, `TSDestroy()`, `TSType`
 @*/
-PetscErrorCode  TSSetType(TS ts,TSType type)
+PetscErrorCode TSSetType(TS ts, TSType type)
 {
   PetscErrorCode (*r)(TS);
-  PetscBool      match;
-  PetscErrorCode ierr;
+  PetscBool match;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(ts, TS_CLASSID,1);
-  PetscValidCharPointer(type,2);
-  ierr = PetscObjectTypeCompare((PetscObject) ts, type, &match);CHKERRQ(ierr);
-  if (match) PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
+  PetscAssertPointer(type, 2);
+  PetscCall(PetscObjectTypeCompare((PetscObject)ts, type, &match));
+  if (match) PetscFunctionReturn(PETSC_SUCCESS);
 
-  ierr = PetscFunctionListFind(TSList,type,&r);CHKERRQ(ierr);
-  if (!r) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown TS type: %s", type);
-  if (ts->ops->destroy) {
-    ierr = (*(ts)->ops->destroy)(ts);CHKERRQ(ierr);
-  }
-  ierr = PetscMemzero(ts->ops,sizeof(*ts->ops));CHKERRQ(ierr);
+  PetscCall(PetscFunctionListFind(TSList, type, &r));
+  PetscCheck(r, PetscObjectComm((PetscObject)ts), PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown TS type: %s", type);
+  PetscTryTypeMethod(ts, destroy);
+  PetscCall(PetscMemzero(ts->ops, sizeof(*ts->ops)));
   ts->usessnes           = PETSC_FALSE;
   ts->default_adapt_type = TSADAPTNONE;
 
   ts->setupcalled = PETSC_FALSE;
 
-  ierr = PetscObjectChangeTypeName((PetscObject)ts, type);CHKERRQ(ierr);
-  ierr = (*r)(ts);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscObjectChangeTypeName((PetscObject)ts, type));
+  PetscCall((*r)(ts));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
-  TSGetType - Gets the TS method type (as a string).
+/*@
+  TSGetType - Gets the `TS` method type (as a string).
 
   Not Collective
 
   Input Parameter:
-. ts - The TS
+. ts - The `TS`
 
   Output Parameter:
-. type - The name of TS method
+. type - The name of `TS` method
 
   Level: intermediate
 
-.seealso TSSetType()
+.seealso: [](ch_ts), `TS`, `TSType`, `TSSetType()`
 @*/
-PetscErrorCode  TSGetType(TS ts, TSType *type)
+PetscErrorCode TSGetType(TS ts, TSType *type)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(ts,TS_CLASSID,1);
-  PetscValidPointer(type,2);
+  PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
+  PetscAssertPointer(type, 2);
   *type = ((PetscObject)ts)->type_name;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*--------------------------------------------------------------------------------------------------------------------*/
 
 /*@C
-  TSRegister - Adds a creation method to the TS package.
+  TSRegister - Adds a creation method to the `TS` package.
 
-  Not Collective
+  Not Collective, No Fortran Support
 
   Input Parameters:
-+ name        - The name of a new user-defined creation routine
-- create_func - The creation routine itself
++ sname    - The name of a new user-defined creation routine
+- function - The creation routine itself
+
+  Level: advanced
 
   Notes:
-  TSRegister() may be called multiple times to add several user-defined tses.
+  `TSRegister()` may be called multiple times to add several user-defined tses.
 
-  Sample usage:
+  Example Usage:
 .vb
   TSRegister("my_ts",  MyTSCreate);
 .ve
@@ -121,17 +119,12 @@ PetscErrorCode  TSGetType(TS ts, TSType *type)
     -ts_type my_ts
 .ve
 
-  Level: advanced
-
-.seealso: TSRegisterAll(), TSRegisterDestroy()
+.seealso: [](ch_ts), `TSSetType()`, `TSType`, `TSRegisterAll()`, `TSRegisterDestroy()`
 @*/
-PetscErrorCode  TSRegister(const char sname[], PetscErrorCode (*function)(TS))
+PetscErrorCode TSRegister(const char sname[], PetscErrorCode (*function)(TS))
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  ierr = TSInitializePackage();CHKERRQ(ierr);
-  ierr = PetscFunctionListAdd(&TSList,sname,function);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(TSInitializePackage());
+  PetscCall(PetscFunctionListAdd(&TSList, sname, function));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
-

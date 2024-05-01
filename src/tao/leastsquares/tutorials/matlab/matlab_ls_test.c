@@ -1,4 +1,4 @@
-static char help[] = "TAO/Pounders Matlab Testing on the More'-Wild Benchmark Problems\n\
+static char help[] = "TAO/Pounders MATLAB Testing on the More'-Wild Benchmark Problems\n\
 The interface calls:\n\
     TestingInitialize.m to initialize the problem set\n\
     ProblemInitialize.m to initialize each instance\n\
@@ -6,7 +6,7 @@ The interface calls:\n\
     TestingFinalize.m to store the entire set of performance data\n\
 \n\
 TestingPlot.m is called outside of TAO/Pounders to produce a performance profile\n\
-of the results compared to the Matlab fminsearch algorithm.\n";
+of the results compared to the MATLAB fminsearch algorithm.\n";
 
 #include <petsctao.h>
 #include <petscmatlab.h>
@@ -14,150 +14,146 @@ of the results compared to the Matlab fminsearch algorithm.\n";
 typedef struct {
   PetscMatlabEngine mengine;
 
-  double delta;           /* Initial trust region radius */
+  double delta; /* Initial trust region radius */
 
-  int n;                  /* Number of inputs */
-  int m;                  /* Number of outputs */
-  int nfmax;              /* Maximum function evaluations */
-  int npmax;              /* Maximum interpolation points */
+  int n;     /* Number of inputs */
+  int m;     /* Number of outputs */
+  int nfmax; /* Maximum function evaluations */
+  int npmax; /* Maximum interpolation points */
 } AppCtx;
 
 static PetscErrorCode EvaluateResidual(Tao tao, Vec X, Vec F, void *ptr)
 {
-  AppCtx         *user = (AppCtx *)ptr;
-  PetscErrorCode  ierr;
+  AppCtx *user = (AppCtx *)ptr;
 
   PetscFunctionBegin;
-  ierr = PetscObjectSetName((PetscObject)X,"X");CHKERRQ(ierr);
-  ierr = PetscMatlabEnginePut(user->mengine,(PetscObject)X);CHKERRQ(ierr);
-  ierr = PetscMatlabEngineEvaluate(user->mengine,"F = func(X);");CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject)F,"F");CHKERRQ(ierr);
-  ierr = PetscMatlabEngineGet(user->mengine,(PetscObject)F);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscObjectSetName((PetscObject)X, "X"));
+  PetscCall(PetscMatlabEnginePut(user->mengine, (PetscObject)X));
+  PetscCall(PetscMatlabEngineEvaluate(user->mengine, "F = func(X);"));
+  PetscCall(PetscObjectSetName((PetscObject)F, "F"));
+  PetscCall(PetscMatlabEngineGet(user->mengine, (PetscObject)F));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode EvaluateJacobian(Tao tao, Vec X, Mat J, Mat JPre, void *ptr)
 {
-  AppCtx         *user = (AppCtx *)ptr;
-  PetscErrorCode ierr;
+  AppCtx *user = (AppCtx *)ptr;
 
   PetscFunctionBegin;
-  ierr = PetscObjectSetName((PetscObject)X,"X");CHKERRQ(ierr);
-  ierr = PetscMatlabEnginePut(user->mengine,(PetscObject)X);CHKERRQ(ierr);
-  ierr = PetscMatlabEngineEvaluate(user->mengine,"J = jac(X);");CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject)J,"J");CHKERRQ(ierr);
-  ierr = PetscMatlabEngineGet(user->mengine,(PetscObject)J);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscObjectSetName((PetscObject)X, "X"));
+  PetscCall(PetscMatlabEnginePut(user->mengine, (PetscObject)X));
+  PetscCall(PetscMatlabEngineEvaluate(user->mengine, "J = jac(X);"));
+  PetscCall(PetscObjectSetName((PetscObject)J, "J"));
+  PetscCall(PetscMatlabEngineGet(user->mengine, (PetscObject)J));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode TaoPounders(AppCtx *user)
 {
-  PetscErrorCode ierr;
-  Tao            tao;
-  Vec            X, F;
-  Mat            J;
-  char           buf[1024];
+  Tao  tao;
+  Vec  X, F;
+  Mat  J;
+  char buf[1024];
 
   PetscFunctionBegin;
-
   /* Set the values for the algorithm options we want to use */
-  sprintf(buf,"%d",user->npmax);
-  ierr = PetscOptionsSetValue(NULL,"-tao_pounders_npmax",buf);CHKERRQ(ierr);
-  sprintf(buf,"%5.4e",user->delta);
-  ierr = PetscOptionsSetValue(NULL,"-tao_pounders_delta",buf);CHKERRQ(ierr);
+  PetscCall(PetscSNPrintf(buf, PETSC_STATIC_ARRAY_LENGTH(buf), "%d", user->npmax));
+  PetscCall(PetscOptionsSetValue(NULL, "-tao_pounders_npmax", buf));
+  PetscCall(PetscSNPrintf(buf, PETSC_STATIC_ARRAY_LENGTH(buf), "%5.4e", user->delta));
+  PetscCall(PetscOptionsSetValue(NULL, "-tao_pounders_delta", buf));
 
   /* Create the TAO objects and set the type */
-  ierr = TaoCreate(PETSC_COMM_SELF,&tao);CHKERRQ(ierr);
+  PetscCall(TaoCreate(PETSC_COMM_SELF, &tao));
 
   /* Create starting point and initialize */
-  ierr = VecCreateSeq(PETSC_COMM_SELF,user->n,&X);CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject)X,"X0");CHKERRQ(ierr);
-  ierr = PetscMatlabEngineGet(user->mengine,(PetscObject)X);CHKERRQ(ierr);
-  ierr = TaoSetInitialVector(tao,X);CHKERRQ(ierr);
+  PetscCall(VecCreateSeq(PETSC_COMM_SELF, user->n, &X));
+  PetscCall(PetscObjectSetName((PetscObject)X, "X0"));
+  PetscCall(PetscMatlabEngineGet(user->mengine, (PetscObject)X));
+  PetscCall(TaoSetSolution(tao, X));
 
   /* Create residuals vector and set residual function */
-  ierr = VecCreateSeq(PETSC_COMM_SELF,user->m,&F);CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject)F,"F");CHKERRQ(ierr);
-  ierr = TaoSetResidualRoutine(tao,F,EvaluateResidual,(void*)user);CHKERRQ(ierr);
+  PetscCall(VecCreateSeq(PETSC_COMM_SELF, user->m, &F));
+  PetscCall(PetscObjectSetName((PetscObject)F, "F"));
+  PetscCall(TaoSetResidualRoutine(tao, F, EvaluateResidual, (void *)user));
 
   /* Create Jacobian matrix and set residual Jacobian routine */
-  ierr = MatCreateSeqAIJ(PETSC_COMM_WORLD,user->m,user->n,user->n,NULL,&J);CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject)J,"J");CHKERRQ(ierr);
-  ierr = TaoSetJacobianResidualRoutine(tao,J,J,EvaluateJacobian,(void*)user);CHKERRQ(ierr);
+  PetscCall(MatCreateSeqAIJ(PETSC_COMM_WORLD, user->m, user->n, user->n, NULL, &J));
+  PetscCall(PetscObjectSetName((PetscObject)J, "J"));
+  PetscCall(TaoSetJacobianResidualRoutine(tao, J, J, EvaluateJacobian, (void *)user));
 
   /* Solve the problem */
-  ierr = TaoSetType(tao,TAOPOUNDERS);CHKERRQ(ierr);
-  ierr = TaoSetMaximumFunctionEvaluations(tao,user->nfmax);CHKERRQ(ierr);
-  ierr = TaoSetFromOptions(tao);CHKERRQ(ierr);
-  ierr = TaoSolve(tao);CHKERRQ(ierr);
+  PetscCall(TaoSetType(tao, TAOPOUNDERS));
+  PetscCall(TaoSetMaximumFunctionEvaluations(tao, user->nfmax));
+  PetscCall(TaoSetFromOptions(tao));
+  PetscCall(TaoSolve(tao));
 
   /* Finish the problem */
-  ierr = MatDestroy(&J);CHKERRQ(ierr);
-  ierr = VecDestroy(&X);CHKERRQ(ierr);
-  ierr = VecDestroy(&F);CHKERRQ(ierr);
-  ierr = TaoDestroy(&tao);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(MatDestroy(&J));
+  PetscCall(VecDestroy(&X));
+  PetscCall(VecDestroy(&F));
+  PetscCall(TaoDestroy(&tao));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 int main(int argc, char **argv)
 {
-  AppCtx         user;
-  PetscErrorCode ierr;
-  PetscScalar    tmp;
-  PetscInt       prob_id = 0;
-  PetscBool      flg, testall = PETSC_FALSE;
-  int            i, i0, imax;
+  AppCtx      user;
+  PetscScalar tmp;
+  PetscInt    prob_id = 0;
+  PetscBool   flg, testall = PETSC_FALSE;
+  int         i, i0, imax;
 
-  ierr = PetscInitialize(&argc,&argv,(char*)0,help);if (ierr) return ierr;
-  ierr = PetscOptionsGetBool(NULL,NULL,"-test_all",&testall,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsGetInt(NULL,NULL,"-prob_id",&prob_id,&flg);CHKERRQ(ierr);
+  PetscFunctionBeginUser;
+  PetscCall(PetscInitialize(&argc, &argv, (char *)0, help));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-test_all", &testall, NULL));
+  PetscCall(PetscOptionsGetInt(NULL, NULL, "-prob_id", &prob_id, &flg));
   if (!testall) {
     if (!flg) {
       SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_NULL, "Problem number must be specified with -prob_id");
     } else if ((prob_id < 1) || (prob_id > 53)) {
       SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Problem number must be between 1 and 53!");
     } else {
-      ierr = PetscPrintf(PETSC_COMM_SELF,"Running problem %d\n",prob_id);CHKERRQ(ierr);
+      PetscCall(PetscPrintf(PETSC_COMM_SELF, "Running problem %d\n", prob_id));
     }
   } else {
-    ierr = PetscPrintf(PETSC_COMM_SELF,"Running all problems\n");CHKERRQ(ierr);
+    PetscCall(PetscPrintf(PETSC_COMM_SELF, "Running all problems\n"));
   }
 
-  ierr = PetscMatlabEngineCreate(PETSC_COMM_SELF,NULL,&user.mengine);CHKERRQ(ierr);
-  ierr = PetscMatlabEngineEvaluate(user.mengine,"TestingInitialize");CHKERRQ(ierr);
+  PetscCall(PetscMatlabEngineCreate(PETSC_COMM_SELF, NULL, &user.mengine));
+  PetscCall(PetscMatlabEngineEvaluate(user.mengine, "TestingInitialize"));
 
   if (testall) {
-    i0 = 1;
+    i0   = 1;
     imax = 53;
   } else {
-    i0 = (int)prob_id;
+    i0   = (int)prob_id;
     imax = (int)prob_id;
   }
 
   for (i = i0; i <= imax; ++i) {
-      ierr = PetscPrintf(PETSC_COMM_SELF,"%d\n",i);
-      ierr = PetscMatlabEngineEvaluate(user.mengine,"np = %d; ProblemInitialize",i);CHKERRQ(ierr);
-      ierr = PetscMatlabEngineGetArray(user.mengine,1,1,&tmp,"n");CHKERRQ(ierr);
-      user.n = (int)tmp;
-      ierr = PetscMatlabEngineGetArray(user.mengine,1,1,&tmp,"m");CHKERRQ(ierr);
-      user.m = (int)tmp;
-      ierr = PetscMatlabEngineGetArray(user.mengine,1,1,&tmp,"nfmax");CHKERRQ(ierr);
-      user.nfmax = (int)tmp;
-      ierr = PetscMatlabEngineGetArray(user.mengine,1,1,&tmp,"npmax");CHKERRQ(ierr);
-      user.npmax = (int)tmp;
-      ierr = PetscMatlabEngineGetArray(user.mengine,1,1,&tmp,"delta");CHKERRQ(ierr);
-      user.delta = (double)tmp;
+    PetscCall(PetscPrintf(PETSC_COMM_SELF, "%d\n", i));
+    PetscCall(PetscMatlabEngineEvaluate(user.mengine, "np = %d; ProblemInitialize", i));
+    PetscCall(PetscMatlabEngineGetArray(user.mengine, 1, 1, &tmp, "n"));
+    user.n = (int)tmp;
+    PetscCall(PetscMatlabEngineGetArray(user.mengine, 1, 1, &tmp, "m"));
+    user.m = (int)tmp;
+    PetscCall(PetscMatlabEngineGetArray(user.mengine, 1, 1, &tmp, "nfmax"));
+    user.nfmax = (int)tmp;
+    PetscCall(PetscMatlabEngineGetArray(user.mengine, 1, 1, &tmp, "npmax"));
+    user.npmax = (int)tmp;
+    PetscCall(PetscMatlabEngineGetArray(user.mengine, 1, 1, &tmp, "delta"));
+    user.delta = (double)tmp;
 
-      /* Ignore return code for now -- do not stop testing on inf or nan errors */
-      ierr = TaoPounders(&user);CHKERRQ(ierr);
+    /* Ignore return code for now -- do not stop testing on inf or nan errors */
+    PetscCall(TaoPounders(&user));
 
-      ierr = PetscMatlabEngineEvaluate(user.mengine,"ProblemFinalize");CHKERRQ(ierr);
-    }
+    PetscCall(PetscMatlabEngineEvaluate(user.mengine, "ProblemFinalize"));
+  }
 
-  ierr = PetscMatlabEngineEvaluate(user.mengine,"TestingFinalize");CHKERRQ(ierr);
-  ierr = PetscMatlabEngineDestroy(&user.mengine);CHKERRQ(ierr);
-  ierr = PetscFinalize();
-  return ierr;
+  PetscCall(PetscMatlabEngineEvaluate(user.mengine, "TestingFinalize"));
+  PetscCall(PetscMatlabEngineDestroy(&user.mengine));
+  PetscCall(PetscFinalize());
+  return 0;
 }
 
 /*TEST
@@ -167,6 +163,6 @@ int main(int argc, char **argv)
 
    test:
       localrunfiles: more_wild_probs TestingInitialize.m TestingFinalize.m ProblemInitialize.m ProblemFinalize.m
-      args: -tao_smonitor -prob_id 5
+      args: -tao_monitor_short -prob_id 5
 
 TEST*/

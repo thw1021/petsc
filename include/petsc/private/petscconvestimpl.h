@@ -1,5 +1,4 @@
-#if !defined(PETSCCEIMPL_H)
-#define PETSCCEIMPL_H
+#pragma once
 
 #include <petscconvest.h>
 #include <petsc/private/petscimpl.h>
@@ -8,7 +7,7 @@ typedef struct _PetscConvEstOps *PetscConvEstOps;
 struct _PetscConvEstOps {
   PetscErrorCode (*setfromoptions)(PetscConvEst);
   PetscErrorCode (*setup)(PetscConvEst);
-  PetscErrorCode (*view)(PetscConvEst,PetscViewer);
+  PetscErrorCode (*view)(PetscConvEst, PetscViewer);
   PetscErrorCode (*destroy)(PetscConvEst);
   PetscErrorCode (*setsolver)(PetscConvEst, PetscObject);
   PetscErrorCode (*initguess)(PetscConvEst, PetscInt, DM, Vec);
@@ -16,22 +15,21 @@ struct _PetscConvEstOps {
   PetscErrorCode (*getconvrate)(PetscConvEst, PetscReal[]);
 };
 
-struct _p_PetscConvEst
-{
+struct _p_PetscConvEst {
   PETSCHEADER(struct _PetscConvEstOps);
   /* Inputs */
-  DM                idm;    /* Initial grid */
-  PetscObject       solver; /* Solver */
-  PetscReal         r;      /* The refinement factor (spatial check requires r = 2) */
-  PetscInt          Nr;     /* The number of refinements */
-  PetscInt          Nf;     /* The number of fields in the DM */
+  DM          idm;      /* Initial grid */
+  PetscObject solver;   /* Solver */
+  PetscReal   r;        /* The refinement factor (spatial check requires r = 2) */
+  PetscInt    Nr;       /* The number of refinements */
+  PetscInt    Nf;       /* The number of fields in the DM */
+  PetscBool   noRefine; /* Debugging flag to disable refinement */
   PetscErrorCode (**initGuess)(PetscInt, PetscReal, const PetscReal[], PetscInt, PetscScalar[], void *);
   PetscErrorCode (**exactSol)(PetscInt, PetscReal, const PetscReal[], PetscInt, PetscScalar[], void *);
-  void            **ctxs;
+  void **ctxs;
   /* Outputs */
   PetscLogEvent event;
   PetscBool     monitor;
+  PetscInt     *dofs;
   PetscReal    *errors;
 };
-
-#endif

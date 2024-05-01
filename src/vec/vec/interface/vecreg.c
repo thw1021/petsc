@@ -1,126 +1,236 @@
+#include <petsc/private/vecimpl.h> /*I "petscvec.h"  I*/
 
-#include <petsc/private/vecimpl.h>    /*I "petscvec.h"  I*/
+PetscFunctionList VecList = NULL;
 
-PetscFunctionList VecList              = NULL;
-PetscBool         VecRegisterAllCalled = PETSC_FALSE;
+/* compare a vector type against a list of target vector types */
+static inline PetscErrorCode VecTypeCompareAny_Private(VecType srcType, PetscBool *match, const char tgtTypes[], ...)
+{
+  PetscBool flg = PETSC_FALSE;
+  va_list   Argp;
 
-/*@C
+  PetscFunctionBegin;
+  PetscAssertPointer(match, 2);
+  *match = PETSC_FALSE;
+  va_start(Argp, tgtTypes);
+  while (tgtTypes && tgtTypes[0]) {
+    PetscCall(PetscStrcmp(srcType, tgtTypes, &flg));
+    if (flg) {
+      *match = PETSC_TRUE;
+      break;
+    }
+    tgtTypes = va_arg(Argp, const char *);
+  }
+  va_end(Argp);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+#define PETSC_MAX_VECTYPE_LEN 64
+
+/*@
   VecSetType - Builds a vector, for a particular vector implementation.
 
-  Collective on Vec
+  Collective
 
   Input Parameters:
-+ vec    - The vector object
-- method - The name of the vector type
++ vec     - The vector object
+- newType - The name of the vector type
 
   Options Database Key:
 . -vec_type <type> - Sets the vector type; use -help for a list
                      of available types
 
-  Notes:
-  See "petsc/include/petscvec.h" for available vector types (for instance, VECSEQ, VECMPI, or VECSHARED).
-
-  Use VecDuplicate() or VecDuplicateVecs() to form additional vectors of the same type as an existing vector.
-
   Level: intermediate
 
-.seealso: VecGetType(), VecCreate()
+  Notes:
+  See `VecType` for available vector types (for instance, `VECSEQ` or `VECMPI`)
+  Changing a vector to a new type will retain its old value if any.
+
+  Use `VecDuplicate()` or `VecDuplicateVecs()` to form additional vectors of the same type as an existing vector.
+
+.seealso: [](ch_vectors), `Vec`, `VecType`, `VecGetType()`, `VecCreate()`, `VecDuplicate()`, `VecDuplicateVecs()`
 @*/
-PetscErrorCode VecSetType(Vec vec, VecType method)
+PetscErrorCode VecSetType(Vec vec, VecType newType)
 {
   PetscErrorCode (*r)(Vec);
-  PetscBool      match;
-  PetscMPIInt    size;
-  PetscErrorCode ierr;
+  VecType      curType;
+  PetscBool    match;
+  PetscMPIInt  size;
+  PetscBool    dstSeq = PETSC_FALSE; // type info of the new type
+  MPI_Comm     comm;
+  char         seqType[PETSC_MAX_VECTYPE_LEN] = {0};
+  char         mpiType[PETSC_MAX_VECTYPE_LEN] = {0};
+  PetscScalar *oldValue;
+  PetscBool    srcStandard, dstStandard;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(vec, VEC_CLASSID,1);
-  ierr = PetscObjectTypeCompare((PetscObject) vec, method, &match);CHKERRQ(ierr);
-  if (match) PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(vec, VEC_CLASSID, 1);
 
-  /* Return if asked for VECSTANDARD and Vec is already VECSEQ on 1 process or VECMPI on more.
-     Otherwise, we free the Vec array in the call to destroy below and never reallocate it,
-     since the VecType will be the same and VecSetType(v,VECSEQ) will return when called from VecCreate_Standard */
-  ierr = MPI_Comm_size(PetscObjectComm((PetscObject)vec),&size);CHKERRQ(ierr);
-  ierr = PetscStrcmp(method,VECSTANDARD,&match);CHKERRQ(ierr);
-  if (match) {
+  PetscCall(VecGetType(vec, &curType));
+  if (!curType) goto newvec; // vec's type is not set yet
 
-    ierr = PetscObjectTypeCompare((PetscObject) vec, size > 1 ? VECMPI : VECSEQ, &match);CHKERRQ(ierr);
-    if (match) PetscFunctionReturn(0);
-  }
-  /* same reasons for VECCUDA and VECVIENNACL */
+  /* return if exactly the same type */
+  PetscCall(PetscObjectTypeCompare((PetscObject)vec, newType, &match));
+  if (match) PetscFunctionReturn(PETSC_SUCCESS);
+
+  /* error on illegal mpi to seq conversion */
+  PetscCall(PetscObjectGetComm((PetscObject)vec, &comm));
+  PetscCallMPI(MPI_Comm_size(comm, &size));
+
+  PetscCall(PetscStrbeginswith(newType, VECSEQ, &dstSeq));
+  PetscCheck(!(size > 1 && dstSeq), comm, PETSC_ERR_ARG_WRONG, "Cannot convert MPI vectors to sequential ones");
+
+  /* return if standard => standard */
+  if (size == 1) PetscCall(PetscObjectTypeCompare((PetscObject)vec, VECSEQ, &srcStandard));
+  else PetscCall(PetscObjectTypeCompare((PetscObject)vec, VECMPI, &srcStandard));
+  PetscCall(VecTypeCompareAny_Private(newType, &dstStandard, VECSTANDARD, VECSEQ, VECMPI, ""));
+  if (srcStandard && dstStandard) PetscFunctionReturn(PETSC_SUCCESS);
+
+  /* return if curType = "seq" | "mpi" + newType */
+  PetscCall(PetscStrncpy(mpiType, "mpi", 4));
+  PetscCall(PetscStrlcat(mpiType, newType, PETSC_MAX_VECTYPE_LEN));
+  PetscCall(PetscStrncpy(seqType, "seq", 4));
+  PetscCall(PetscStrlcat(seqType, newType, PETSC_MAX_VECTYPE_LEN));
+  PetscCall(PetscObjectTypeCompareAny((PetscObject)vec, &match, seqType, mpiType, ""));
+  if (match) PetscFunctionReturn(PETSC_SUCCESS);
+
+    /* downcast VECSTANDARD to VECCUDA/HIP/KOKKOS in place. We don't do in-place upcasting
+  for those vectors. At least, it is not always possible to upcast a VECCUDA to VECSTANDARD
+  in place, since the host array might be pinned (i.e., allocated by cudaMallocHost()). If
+  we upcast it to VECSTANDARD, we could not free the pinned array with PetscFree(), which
+  is assumed for VECSTANDARD. Thus we just create a new vector, though it is expensive.
+  Upcasting is rare and users are not recommended to use it.
+  */
 #if defined(PETSC_HAVE_CUDA)
-  ierr = PetscStrcmp(method,VECCUDA,&match);CHKERRQ(ierr);
-  if (match) {
-    ierr = PetscObjectTypeCompare((PetscObject) vec, size > 1 ? VECMPICUDA : VECSEQCUDA, &match);CHKERRQ(ierr);
-    if (match) PetscFunctionReturn(0);
+  {
+    PetscBool dstCUDA = PETSC_FALSE;
+    if (!dstStandard) PetscCall(VecTypeCompareAny_Private(newType, &dstCUDA, VECCUDA, VECSEQCUDA, VECMPICUDA, ""));
+    if (srcStandard && dstCUDA) {
+      if (size == 1) PetscCall(VecConvert_Seq_SeqCUDA_inplace(vec));
+      else PetscCall(VecConvert_MPI_MPICUDA_inplace(vec));
+      PetscFunctionReturn(PETSC_SUCCESS);
+    }
   }
 #endif
-#if defined(PETSC_HAVE_VIENNACL)
-  ierr = PetscStrcmp(method,VECVIENNACL,&match);CHKERRQ(ierr);
-  if (match) {
-    ierr = PetscObjectTypeCompare((PetscObject) vec, size > 1 ? VECMPIVIENNACL : VECSEQVIENNACL, &match);CHKERRQ(ierr);
-    if (match) PetscFunctionReturn(0);
+#if defined(PETSC_HAVE_HIP)
+  {
+    PetscBool dstHIP = PETSC_FALSE;
+    if (!dstStandard) PetscCall(VecTypeCompareAny_Private(newType, &dstHIP, VECHIP, VECSEQHIP, VECMPIHIP, ""));
+    if (srcStandard && dstHIP) {
+      if (size == 1) PetscCall(VecConvert_Seq_SeqHIP_inplace(vec));
+      else PetscCall(VecConvert_MPI_MPIHIP_inplace(vec));
+      PetscFunctionReturn(PETSC_SUCCESS);
+    }
   }
 #endif
-  ierr = PetscFunctionListFind(VecList,method,&r);CHKERRQ(ierr);
-  if (!r) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown vector type: %s", method);
-  if (vec->ops->destroy) {
-    ierr = (*vec->ops->destroy)(vec);CHKERRQ(ierr);
-    vec->ops->destroy = NULL;
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
+  {
+    PetscBool dstKokkos = PETSC_FALSE;
+    if (!dstStandard) PetscCall(VecTypeCompareAny_Private(newType, &dstKokkos, VECKOKKOS, VECSEQKOKKOS, VECMPIKOKKOS, ""));
+    if (srcStandard && dstKokkos) {
+      if (size == 1) PetscCall(VecConvert_Seq_SeqKokkos_inplace(vec));
+      else PetscCall(VecConvert_MPI_MPIKokkos_inplace(vec));
+      PetscFunctionReturn(PETSC_SUCCESS);
+    }
   }
+#endif
+
+  /* Other conversion scenarios: create a new vector but retain old value */
+newvec:
+  PetscCall(PetscFunctionListFind(VecList, newType, &r));
+  PetscCheck(r, PetscObjectComm((PetscObject)vec), PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown vector type: %s", newType);
+  if (curType) { /* no need to destroy a vec without type */
+    const PetscScalar *array;
+    PetscCall(VecGetArrayRead(vec, &array));
+    if (array) {                                       /* record the old value if any before destroy */
+      PetscCall(PetscMalloc1(vec->map->n, &oldValue)); /* no need to free since we'll drop it into vec */
+      PetscCall(PetscArraycpy(oldValue, array, vec->map->n));
+    } else {
+      oldValue = NULL;
+    }
+    PetscCall(VecRestoreArrayRead(vec, &array));
+    PetscTryTypeMethod(vec, destroy);
+    PetscCall(PetscMemzero(vec->ops, sizeof(struct _VecOps)));
+    PetscCall(PetscFree(vec->defaultrandtype));
+    PetscCall(PetscFree(((PetscObject)vec)->type_name)); /* free type_name to make vec clean to use, as we might call VecSetType() again */
+  }
+
   if (vec->map->n < 0 && vec->map->N < 0) {
     vec->ops->create = r;
     vec->ops->load   = VecLoad_Default;
   } else {
-    ierr = (*r)(vec);CHKERRQ(ierr);
+    PetscCall((*r)(vec));
   }
-  PetscFunctionReturn(0);
+
+  /* drop in the old value */
+  if (curType && vec->map->n) PetscCall(VecReplaceArray(vec, oldValue));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
-  VecGetType - Gets the vector type name (as a string) from the Vec.
+/*@
+  VecGetType - Gets the vector type name (as a string) from a `Vec`.
 
   Not Collective
 
   Input Parameter:
-. vec  - The vector
+. vec - The vector
 
   Output Parameter:
-. type - The vector type name
+. type - The `VecType` of the vector
 
   Level: intermediate
 
-.seealso: VecSetType(), VecCreate()
+.seealso: [](ch_vectors), `Vec`, `VecType`, `VecCreate()`, `VecDuplicate()`, `VecDuplicateVecs()`
 @*/
 PetscErrorCode VecGetType(Vec vec, VecType *type)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(vec, VEC_CLASSID,1);
-  PetscValidPointer(type,2);
-  ierr = VecRegisterAll();CHKERRQ(ierr);
+  PetscValidHeaderSpecific(vec, VEC_CLASSID, 1);
+  PetscAssertPointer(type, 2);
+  PetscCall(VecRegisterAll());
   *type = ((PetscObject)vec)->type_name;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+PetscErrorCode VecGetRootType_Private(Vec vec, VecType *vtype)
+{
+  PetscBool iscuda, iship, iskokkos, isvcl;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(vec, VEC_CLASSID, 1);
+  PetscAssertPointer(vtype, 2);
+  PetscCall(PetscObjectTypeCompareAny((PetscObject)vec, &iscuda, VECCUDA, VECMPICUDA, VECSEQCUDA, ""));
+  PetscCall(PetscObjectTypeCompareAny((PetscObject)vec, &iship, VECHIP, VECMPIHIP, VECSEQHIP, ""));
+  PetscCall(PetscObjectTypeCompareAny((PetscObject)vec, &iskokkos, VECKOKKOS, VECMPIKOKKOS, VECSEQKOKKOS, ""));
+  PetscCall(PetscObjectTypeCompareAny((PetscObject)vec, &isvcl, VECVIENNACL, VECMPIVIENNACL, VECSEQVIENNACL, ""));
+  if (iscuda) {
+    *vtype = VECCUDA;
+  } else if (iship) {
+    *vtype = VECHIP;
+  } else if (iskokkos) {
+    *vtype = VECKOKKOS;
+  } else if (isvcl) {
+    *vtype = VECVIENNACL;
+  } else {
+    *vtype = VECSTANDARD;
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
 
 /*--------------------------------------------------------------------------------------------------------------------*/
 
 /*@C
   VecRegister -  Adds a new vector component implementation
 
-  Not Collective
+  Not Collective, No Fortran Support
 
   Input Parameters:
-+ name        - The name of a new user-defined creation routine
-- create_func - The creation routine itself
++ sname    - The name of a new user-defined creation routine
+- function - The creation routine
 
   Notes:
-  VecRegister() may be called multiple times to add several user-defined vectors
+  `VecRegister()` may be called multiple times to add several user-defined vectors
 
-  Sample usage:
+  Example Usage:
 .vb
     VecRegister("my_vec",MyVectorCreate);
 .ve
@@ -130,21 +240,19 @@ PetscErrorCode VecGetType(Vec vec, VecType *type)
     VecCreate(MPI_Comm, Vec *);
     VecSetType(Vec,"my_vector_name");
 .ve
-   or at runtime via the option
+  or at runtime via the option
 .vb
     -vec_type my_vector_name
 .ve
 
   Level: advanced
 
-.seealso: VecRegisterAll(), VecRegisterDestroy()
+.seealso: `VecRegisterAll()`, `VecRegisterDestroy()`
 @*/
 PetscErrorCode VecRegister(const char sname[], PetscErrorCode (*function)(Vec))
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  ierr = VecInitializePackage();CHKERRQ(ierr);
-  ierr = PetscFunctionListAdd(&VecList,sname,function);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(VecInitializePackage());
+  PetscCall(PetscFunctionListAdd(&VecList, sname, function));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

@@ -2,8 +2,7 @@
     Context for using preconditioned CG to minimize a quadratic function
  */
 
-#if !defined(__QCG)
-#define __QCG
+#pragma once
 
 #include <petsc/private/kspimpl.h>
 
@@ -12,5 +11,3 @@ typedef struct {
   PetscReal ltsnrm;
   PetscReal delta;
 } KSP_QCG;
-
-#endif

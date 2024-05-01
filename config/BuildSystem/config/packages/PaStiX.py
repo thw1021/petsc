@@ -3,19 +3,20 @@ import config.package
 class Configure(config.package.Package):
   def __init__(self, framework):
     config.package.Package.__init__(self, framework)
-    self.version          = '5.2.3'
+    self.version          = '5.2.3-p1'
     self.versionname      = 'PASTIX_MAJOR_VERSION.PASTIX_MEDIUM_VERSION.PASTIX_MINOR_VERSION'
     # 'https://gforge.inria.fr/frs/download.php/file/36212/pastix_'+self.version+'.tar.bz2',
-    self.download         = ['http://ftp.mcs.anl.gov/pub/petsc/externalpackages/pastix_'+self.version+'.tar.bz2']
+    self.download         = ['https://web.cels.anl.gov/projects/petsc/download/externalpackages/pastix_'+self.version+'.tar.bz2']
     self.liblist          = [['libpastix.a'],
                             ['libpastix.a','libpthread.a','librt.a']]
     self.functions        = ['pastix']
     self.includes         = ['pastix.h']
     self.precisions       = ['double']
     self.downloaddirnames = ['pastix']
-    self.fc               = 1
+    self.buildLanguages   = ['C','FC']
     self.hastests         = 1
     self.hastestsdatafiles= 1
+    self.requirekandr     = 1
     return
 
 
@@ -34,6 +35,7 @@ class Configure(config.package.Package):
     return
 
   def Install(self):
+    usempi = self.mpi.found and not self.mpi.usingMPIUni
     import os
     g = open(os.path.join(os.path.join(self.packageDir,'src'),'config.in'),'w')
 
@@ -53,18 +55,18 @@ class Configure(config.package.Package):
     g.write('EXEEXT      = \n')
     g.write('OBJEXT      = .o\n')
     g.write('LIBEXT      = .'+self.setCompilers.AR_LIB_SUFFIX+'\n')
-    self.setCompilers.pushLanguage('C')
-    g.write('CCPROG      = '+self.setCompilers.getCompiler()+'\n')
+    self.pushLanguage('C')
+    g.write('CCPROG      = '+self.getCompiler()+'\n')
     # common.c tries to use some silly clock_gettime() routine that Mac doesn't have unless this is set
     if self.setCompilers.isDarwin(self.log):
       cflags = ' -DX_ARCHi686_mac    '
     else:
       cflags = ''
-    if self.mpi.found:
-      g.write('CCFOPT      = '+self.removeWarningFlags(self.setCompilers.getCompilerFlags())+' '+self.headers.toString(self.mpi.include)+' '+cflags+'\n')
+    if usempi:
+      g.write('CCFOPT      = '+self.updatePackageCFlags(self.getCompilerFlags())+' '+self.headers.toString(self.mpi.include)+' '+cflags+'\n')
     else:
-      g.write('CCFOPT      = '+self.removeWarningFlags(self.setCompilers.getCompilerFlags())+' '+cflags+'\n')
-    self.setCompilers.popLanguage()
+      g.write('CCFOPT      = '+self.updatePackageCFlags(self.getCompilerFlags())+' '+cflags+'\n')
+    self.popLanguage()
     g.write('CFPROG      = \n')
     g.write('CF90PROG    = \n')
     g.write('MCFPROG     = \n')
@@ -74,9 +76,9 @@ class Configure(config.package.Package):
     g.write('MKPROG      = '+self.make.make+'\n')
     # PaStiX make system has error where in one location it doesn't pass in CCFOTP
     if self.setCompilers.isDarwin(self.log):
-      g.write('MPCCPROG    = '+self.setCompilers.getCompiler()+' -DX_ARCHi686_mac \n')
+      g.write('MPCCPROG    = '+self.getCompiler()+' -DX_ARCHi686_mac \n')
     else:
-      g.write('MPCCPROG    = '+self.setCompilers.getCompiler()+'\n')
+      g.write('MPCCPROG    = '+self.getCompiler()+'\n')
     g.write('ARFLAGS     = '+self.setCompilers.AR_FLAGS+'\n')
     g.write('ARPROG      = '+self.setCompilers.AR+'\n')
     extralib = ''
@@ -123,7 +125,7 @@ class Configure(config.package.Package):
     g.write('#                          MPI/THREADS                            #\n')
     g.write('###################################################################\n')
     g.write('\n')
-    if not self.mpi.found:
+    if not usempi:
       g.write('# uncomment the following lines for sequential (NOMPI) version\n')
       g.write('VERSIONMPI  = _nompi\n')
       g.write('CCTYPES    := $(CCTYPES) -DFORCE_NOMPI\n')
@@ -137,7 +139,7 @@ class Configure(config.package.Package):
     g.write('# Uncomment the following line to enable a progression thread\n')
     g.write('#CCPASTIX   := $(CCPASTIX) -DTHREAD_COMM\n')
     g.write('\n')
-    g.write('# Uncomment the following line if your MPI doesn\'t support MPI_THREAD_MULTIPLE leve\n')
+    g.write('# Uncomment the following line if your MPI doesn\'t support MPI_THREAD_MULTIPLE level\n')
     g.write('#CCPASTIX   := $(CCPASTIX) -DPASTIX_FUNNELED\n')
     g.write('\n')
     g.write('# Uncomment the following line if your MPI doesn\'t support MPI_Datatype correctly\n')
@@ -175,8 +177,8 @@ class Configure(config.package.Package):
     g.write('#EXTRALIB   := $(EXTRALIB) -L$(METIS_HOME) -lmetis\n')
     g.write('\n')
     g.write('# Scotch always needed to compile\n')
-    g.write('#scotch								\n')
-    if (self.mpi.found):
+    g.write('#scotch                                                           \n')
+    if usempi:
       g.write('CCPASTIX   := $(CCPASTIX) -DDISTRIBUTED -DWITH_SCOTCH '+self.headers.toString(self.scotch.include)+'\n')
     else:
       g.write('CCPASTIX   := $(CCPASTIX) -DWITH_SCOTCH '+self.headers.toString(self.scotch.include)+'\n')
@@ -234,11 +236,10 @@ class Configure(config.package.Package):
       try:
         self.logPrintBox('Compiling PaStiX; this may take several minutes')
         output,err,ret = config.package.Package.executeShellCommand('cd '+os.path.join(self.packageDir,'src')+' && make all',timeout=2500, log = self.log)
-        libDir     = os.path.join(self.installDir, self.libdir)
+        libDir     = self.libDir
         includeDir = os.path.join(self.installDir, self.includedir)
         self.logPrintBox('Installing PaStiX; this may take several minutes')
-        self.installDirProvider.printSudoPasswordMessage()
-        output,err,ret = config.package.Package.executeShellCommand('cd '+self.packageDir+' && '+self.installSudo+'mkdir -p '+libDir+' && '+self.installSudo+'cp -f install/*.a '+libDir+'/. && '+self.installSudo+'mkdir -p '+includeDir+' && '+self.installSudo+'cp -f install/*.h '+includeDir+'/.', timeout=2500, log = self.log)
+        output,err,ret = config.package.Package.executeShellCommand('cd '+self.packageDir+' && mkdir -p '+libDir+' && cp -f install/*.a '+libDir+'/. && mkdir -p '+includeDir+' && cp -f install/*.h '+includeDir+'/.', timeout=2500, log = self.log)
       except RuntimeError as e:
         raise RuntimeError('Error running make on PaStiX: '+str(e))
       self.postInstall(output+err,os.path.join('src','config.in'))

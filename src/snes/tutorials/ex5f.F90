@@ -1,19 +1,18 @@
 !
+!  This example shows how to avoid Fortran line lengths larger than 132 characters.
+!  It avoids used of certain macros such as PetscCallA() and PetscCheckA() that
+!  generate very long lines
+!
+!  We recommend starting from src/snes/tutorials/ex5f90.F90 instead of this example
+!  because that does not have the restricted formatting that makes this version
+!  more difficult to read
+!
 !  Description: This example solves a nonlinear system in parallel with SNES.
 !  We solve the  Bratu (SFI - solid fuel ignition) problem in a 2D rectangular
 !  domain, using distributed arrays (DMDAs) to partition the parallel grid.
 !  The command line options include:
 !    -par <param>, where <param> indicates the nonlinearity of the problem
 !       problem SFI:  <parameter> = Bratu parameter (0 <= par <= 6.81)
-!
-!
-!!/*T
-!  Concepts: SNES^parallel Bratu example
-!  Concepts: DMDA^using distributed arrays;
-!  Processors: n
-!T*/
-
-
 !
 !  --------------------------------------------------------------------------
 !
@@ -31,19 +30,22 @@
 !  system of equations.
 !
 !  --------------------------------------------------------------------------
+      module ex5fmodule
+      use petscsnes
+      use petscdmda
+#include <petsc/finclude/petscsnes.h>
+#include <petsc/finclude/petscdm.h>
+#include <petsc/finclude/petscdmda.h>
+      PetscInt xs,xe,xm,gxs,gxe,gxm
+      PetscInt ys,ye,ym,gys,gye,gym
+      PetscInt mx,my
+      PetscMPIInt rank,size
+      PetscReal lambda
+      end module ex5fmodule
 
       program main
-#include <petsc/finclude/petscsnes.h>
-      use petscdmda
-      use petscsnes
+      use ex5fmodule
       implicit none
-!
-!  We place common blocks, variable declarations, and other include files
-!  needed for this code in the single file ex5f.h.  We then need to include
-!  only this file throughout the various routines in this program.  See
-!  additional comments in the file ex5f.h.
-!
-#include "ex5f.h"
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !                   Variable declarations
@@ -75,14 +77,12 @@
 !  Initialize program
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-      call PetscInitialize(PETSC_NULL_CHARACTER,ierr)
-      if (ierr .ne. 0) then
-        print*,'Unable to initialize PETSc'
-        stop
-      endif
+      call PetscInitialize(ierr)
+      CHKERRA(ierr)
       call MPI_Comm_size(PETSC_COMM_WORLD,size,ierr)
+      CHKERRMPIA(ierr)
       call MPI_Comm_rank(PETSC_COMM_WORLD,rank,ierr)
-
+      CHKERRMPIA(ierr)
 !  Initialize problem parameters
 
       i1 = 1
@@ -91,9 +91,12 @@
       lambda_min = 0.0
       lambda     = 6.0
       call PetscOptionsGetReal(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-par',lambda,PETSC_NULL_BOOL,ierr)
+      CHKERRA(ierr)
+
 ! this statement is split into multiple-lines to keep lines under 132 char limit - required by 'make check'
       if (lambda .ge. lambda_max .or. lambda .le. lambda_min) then
-        ierr = PETSC_ERR_ARG_OUTOFRANGE; SETERRA(PETSC_COMM_WORLD,ierr,'Lambda')
+         ierr = PETSC_ERR_ARG_OUTOFRANGE;
+         SETERRA(PETSC_COMM_WORLD,ierr,'Lambda')
       endif
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -101,12 +104,15 @@
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
       call SNESCreate(PETSC_COMM_WORLD,snes,ierr)
+      CHKERRA(ierr)
 
 !  Set convergence test routine if desired
 
       call PetscOptionsHasName(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-my_snes_convergence',flg,ierr)
+      CHKERRA(ierr)
       if (flg) then
         call SNESSetConvergenceTest(snes,MySNESConverged,0,PETSC_NULL_FUNCTION,ierr)
+        CHKERRA(ierr)
       endif
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -115,30 +121,34 @@
 
 !  Create distributed array (DMDA) to manage parallel grid and vectors
 
-! This really needs only the star-type stencil, but we use the box
-! stencil temporarily.
-      call DMDACreate2d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,      &
-     &     DMDA_STENCIL_STAR,i4,i4,PETSC_DECIDE,PETSC_DECIDE,i1,i1,                &
-     &     PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,da,ierr)
+!     This really needs only the star-type stencil, but we use the box stencil
+
+      call DMDACreate2d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,DMDA_STENCIL_STAR,i4,i4,PETSC_DECIDE,PETSC_DECIDE, &
+                        i1,i1, PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,da,ierr)
+      CHKERRA(ierr)
       call DMSetFromOptions(da,ierr)
+      CHKERRA(ierr)
       call DMSetUp(da,ierr)
+      CHKERRA(ierr)
 
 !  Extract global and local vectors from DMDA; then duplicate for remaining
 !  vectors that are the same types
 
       call DMCreateGlobalVector(da,x,ierr)
+      CHKERRA(ierr)
       call VecDuplicate(x,r,ierr)
+      CHKERRA(ierr)
 
 !  Get local grid boundaries (for 2-dimensional DMDA)
 
-      call DMDAGetInfo(da,PETSC_NULL_INTEGER,mx,my,PETSC_NULL_INTEGER,            &
-     &               PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,                     &
-     &               PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,                     &
-     &               PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,                     &
-     &               PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,                     &
-     &               PETSC_NULL_INTEGER,ierr)
+      call DMDAGetInfo(da,PETSC_NULL_INTEGER,mx,my,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER, &
+                       PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER, &
+                       PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,ierr)
+      CHKERRA(ierr)
       call DMDAGetCorners(da,xs,ys,PETSC_NULL_INTEGER,xm,ym,PETSC_NULL_INTEGER,ierr)
+      CHKERRA(ierr)
       call DMDAGetGhostCorners(da,gxs,gys,PETSC_NULL_INTEGER,gxm,gym,PETSC_NULL_INTEGER,ierr)
+      CHKERRA(ierr)
 
 !  Here we shift the starting indices up by one so that we can easily
 !  use the Fortran convention of 1-based indices (rather 0-based indices).
@@ -156,8 +166,11 @@
 !  Set function evaluation routine and vector
 
       call DMDASNESSetFunctionLocal(da,INSERT_VALUES,FormFunctionLocal,da,ierr)
+      CHKERRA(ierr)
       call DMDASNESSetJacobianLocal(da,FormJacobianLocal,da,ierr)
+      CHKERRA(ierr)
       call SNESSetDM(snes,da,ierr)
+      CHKERRA(ierr)
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !  Customize nonlinear solver; set runtime options
@@ -165,7 +178,8 @@
 
 !  Set runtime options (e.g., -snes_monitor -snes_rtol <rtol> -ksp_type <type>)
 
-          call SNESSetFromOptions(snes,ierr)
+      call SNESSetFromOptions(snes,ierr)
+      CHKERRA(ierr)
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !  Evaluate initial guess; then solve nonlinear system.
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -176,13 +190,15 @@
 !  this vector to zero by calling VecSet().
 
       call FormInitialGuess(x,ierr)
+      CHKERRA(ierr)
       call SNESSolve(snes,PETSC_NULL_VEC,x,ierr)
+      CHKERRA(ierr)
       call SNESGetIterationNumber(snes,its,ierr)
+      CHKERRA(ierr)
       if (rank .eq. 0) then
          write(6,100) its
       endif
   100 format('Number of SNES iterations = ',i5)
-
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !  Free work space.  All PETSc objects should be destroyed when they
@@ -190,10 +206,15 @@
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
       call VecDestroy(x,ierr)
+      CHKERRA(ierr)
       call VecDestroy(r,ierr)
+      CHKERRA(ierr)
       call SNESDestroy(snes,ierr)
+      CHKERRA(ierr)
       call DMDestroy(da,ierr)
+      CHKERRA(ierr)
       call PetscFinalize(ierr)
+      CHKERRA(ierr)
       end
 
 ! ---------------------------------------------------------------------
@@ -212,21 +233,17 @@
 !  done using the standard Fortran style of treating the local
 !  vector data as a multidimensional array over the local mesh.
 !  This routine merely handles ghost point scatters and accesses
-!  the local vector data via VecGetArray() and VecRestoreArray().
+!  the local vector data via VecGetArrayF90() and VecRestoreArrayF90().
 !
       subroutine FormInitialGuess(X,ierr)
-      use petscsnes
+      use ex5fmodule
       implicit none
-
-#include "ex5f.h"
 
 !  Input/output variables:
       Vec      X
       PetscErrorCode  ierr
-
 !  Declarations for use with local arrays:
-      PetscScalar lx_v(0:1)
-      PetscOffset lx_i
+      PetscScalar, pointer :: lx_v(:)
 
       ierr = 0
 
@@ -238,17 +255,19 @@
 !    - Note that the Fortran interface to VecGetArray() differs from the
 !      C version.  See the users manual for details.
 
-      call VecGetArray(X,lx_v,lx_i,ierr)
+      call VecGetArrayF90(X,lx_v,ierr)
+      CHKERRQ(ierr)
 
 !  Compute initial guess over the locally owned part of the grid
 
-      call InitialGuessLocal(lx_v(lx_i),ierr)
+      call InitialGuessLocal(lx_v,ierr)
+      CHKERRQ(ierr)
 
 !  Restore vector
 
-      call VecRestoreArray(X,lx_v,lx_i,ierr)
+      call VecRestoreArrayF90(X,lx_v,ierr)
+      CHKERRQ(ierr)
 
-      return
       end
 
 ! ---------------------------------------------------------------------
@@ -267,10 +286,8 @@
 !  This routine uses standard Fortran-style computations over a 2-dim array.
 !
       subroutine InitialGuessLocal(x,ierr)
-      use petscsnes
+      use ex5fmodule
       implicit none
-
-#include "ex5f.h"
 
 !  Input/output variables:
       PetscScalar    x(xs:xe,ys:ye)
@@ -299,7 +316,6 @@
  10      continue
  20   continue
 
-      return
       end
 
 ! ---------------------------------------------------------------------
@@ -319,11 +335,9 @@
 !
 !
       subroutine FormFunctionLocal(info,x,f,da,ierr)
-#include <petsc/finclude/petscdmda.h>
-      use petscsnes
+      use ex5fmodule
       implicit none
 
-#include "ex5f.h"
       DM da
 
 !  Input/output variables:
@@ -369,8 +383,8 @@
  20   continue
 
       call PetscLogFlops(11.0d0*ym*xm,ierr)
+      CHKERRQ(ierr)
 
-      return
       end
 
 ! ---------------------------------------------------------------------
@@ -410,10 +424,9 @@
 !  used in this example.
 !
       subroutine FormJacobianLocal(info,x,A,jac,da,ierr)
-      use petscsnes
+      use ex5fmodule
       implicit none
 
-#include "ex5f.h"
       DM da
 
 !  Input/output variables:
@@ -421,7 +434,6 @@
       Mat         A,jac
       PetscErrorCode  ierr
       DMDALocalInfo info(DMDA_LOCAL_INFO_SIZE)
-
 
 !  Local variables:
       PetscInt  row,col(5),i,j,i1,i5
@@ -462,6 +474,7 @@
                col(1) = row
                v(1)   = one
                call MatSetValuesLocal(jac,i1,row,i1,col,v,INSERT_VALUES,ierr)
+               CHKERRQ(ierr)
 !           interior grid points
             else
                v(1) = -hxdhy
@@ -475,23 +488,27 @@
                col(4) = row + 1
                col(5) = row + gxm
                call MatSetValuesLocal(jac,i1,row,i5,col,v, INSERT_VALUES,ierr)
+               CHKERRQ(ierr)
             endif
  10      continue
  20   continue
       call MatAssemblyBegin(jac,MAT_FINAL_ASSEMBLY,ierr)
+      CHKERRQ(ierr)
       call MatAssemblyEnd(jac,MAT_FINAL_ASSEMBLY,ierr)
+      CHKERRQ(ierr)
       if (A .ne. jac) then
          call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
+         CHKERRQ(ierr)
          call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
+         CHKERRQ(ierr)
       endif
-      return
       end
 
 !
 !     Simple convergence test based on the infinity norm of the residual being small
 !
       subroutine MySNESConverged(snes,it,xnorm,snorm,fnorm,reason,dummy,ierr)
-      use petscsnes
+      use ex5fmodule
       implicit none
 
       SNES snes
@@ -502,7 +519,9 @@
       PetscErrorCode ierr
 
       call SNESGetFunction(snes,f,PETSC_NULL_FUNCTION,dummy,ierr)
+      CHKERRQ(ierr)
       call VecNorm(f,NORM_INFINITY,nrm,ierr)
+      CHKERRQ(ierr)
       if (nrm .le. 1.e-5) reason = SNES_CONVERGED_FNORM_ABS
 
       end
@@ -514,7 +533,8 @@
 !
 !   test:
 !      nsize: 4
-!      args: -snes_mf -pc_type none -da_processors_x 4 -da_processors_y 1 -snes_monitor_short -ksp_gmres_cgs_refinement_type refine_always
+!      args: -snes_mf -pc_type none -da_processors_x 4 -da_processors_y 1 -snes_monitor_short \
+!            -ksp_gmres_cgs_refinement_type refine_always
 !
 !   test:
 !      suffix: 2

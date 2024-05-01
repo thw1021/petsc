@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-#!/bin/env python
+#!/usr/bin/env python3
 #
 # change python to whatever is needed on your system to invoke python
 #
@@ -20,9 +19,9 @@ def main():
 #
     lines = sys.stdin.readlines()
 #
-    regchapter    = re.compile('(chapter{)([^}]*)(})')
-    regsection    = re.compile('(section{)([^}]*)(})')
-    regsubsection = re.compile('(subsection{)([^}]*)(})')
+    regchapter    = re.compile(r'(chapter{)([^}]*)(})')
+    regsection    = re.compile(r'(section{)([^}]*)(})')
+    regsubsection = re.compile(r'(subsection{)([^}]*)(})')
     reglabel      = re.compile(r'(label{)([^}]*)(})')
 
     chapter    = 1

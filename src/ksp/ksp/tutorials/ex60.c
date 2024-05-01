@@ -1,19 +1,9 @@
-static const char help[]="Example demonstrating the effect of choosing FCG over CG\n\
+static const char help[] = "Example demonstrating the effect of choosing FCG over CG\n\
 for a simple diagonal system with a noisy preconditioner implemented using PCShell\n\
 Accepts an option -n for the problem size\n\
 Accepts an option -eta for the noise amplitude (set to 0 to deactivate)\n\
 Accepts an option -diagfunc [1,2,3] to select from different eigenvalue distributions\n\
 \n";
-
-/*T
-   Concepts: KSP^using nested solves
-   Concepts: KSP^using flexible Krylov methods
-   Concepts: PC^using PCShell to define custom PCs
-   Concepts: PC^using composite PCs
-   Processors: n
-T*/
-
-
 
 /*
   Solve (in parallel) a diagonal linear system.
@@ -44,178 +34,173 @@ typedef struct {
   PetscRandom random;
 } PCNoise_Ctx;
 
-PetscErrorCode PCApply_Noise(PC pc,Vec xin,Vec xout)
+PetscErrorCode PCApply_Noise(PC pc, Vec xin, Vec xout)
 {
-  PetscErrorCode ierr;
-  PCNoise_Ctx    *ctx;
-  PetscReal      nrmin, nrmnoise;
+  PCNoise_Ctx *ctx;
+  PetscReal    nrmin, nrmnoise;
 
   PetscFunctionBeginUser;
-  ierr = PCShellGetContext(pc,(void**)&ctx);CHKERRQ(ierr);
+  PetscCall(PCShellGetContext(pc, &ctx));
 
   /* xout is ||xin|| * ctx->eta*  f, where f is a pseudorandom unit vector
     (Note that this should always be combined additively with another PC) */
-  ierr = VecSetRandom(xout,ctx->random);CHKERRQ(ierr);
-  ierr = VecNorm(xin,NORM_2,&nrmin);CHKERRQ(ierr);
-  ierr = VecNorm(xout,NORM_2,&nrmnoise);CHKERRQ(ierr);
-  ierr = VecScale(xout,ctx->eta*(nrmin/nrmnoise));CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(VecSetRandom(xout, ctx->random));
+  PetscCall(VecNorm(xin, NORM_2, &nrmin));
+  PetscCall(VecNorm(xout, NORM_2, &nrmnoise));
+  PetscCall(VecScale(xout, ctx->eta * (nrmin / nrmnoise)));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode PCSetup_Noise(PC pc)
 {
-  PetscErrorCode ierr;
-  PCNoise_Ctx    *ctx;
+  PCNoise_Ctx *ctx;
 
   PetscFunctionBeginUser;
-  ierr = PCShellGetContext(pc,(void**)&ctx);CHKERRQ(ierr);
-  ierr = PetscRandomCreate(PETSC_COMM_WORLD,&ctx->random);CHKERRQ(ierr);
-  ierr = PetscRandomSetInterval(ctx->random,-1.0,1.0);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PCShellGetContext(pc, &ctx));
+  PetscCall(PetscRandomCreate(PETSC_COMM_WORLD, &ctx->random));
+  PetscCall(PetscRandomSetInterval(ctx->random, -1.0, 1.0));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode PCDestroy_Noise(PC pc)
 {
-  PetscErrorCode ierr;
-  PCNoise_Ctx    *ctx;
+  PCNoise_Ctx *ctx;
 
   PetscFunctionBeginUser;
-  ierr = PCShellGetContext(pc,(void**)&ctx);CHKERRQ(ierr);
-  ierr = PetscRandomDestroy(&ctx->random);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PCShellGetContext(pc, &ctx));
+  PetscCall(PetscRandomDestroy(&ctx->random));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscScalar diagFunc1(PetscInt i, PetscInt n)
 {
   const PetscScalar kappa = 5.0;
-  return 1.0 + (kappa*(PetscScalar)i)/(PetscScalar)(n-1);
+  return 1.0 + (kappa * (PetscScalar)i) / (PetscScalar)(n - 1);
 }
 
 PetscScalar diagFunc2(PetscInt i, PetscInt n)
 {
   const PetscScalar kappa = 50.0;
-  return 1.0 + (kappa*(PetscScalar)i)/(PetscScalar)(n-1);
+  return 1.0 + (kappa * (PetscScalar)i) / (PetscScalar)(n - 1);
 }
 
 PetscScalar diagFunc3(PetscInt i, PetscInt n)
 {
   const PetscScalar kappa = 10.0;
-  if (!i){
+  if (!i) {
     return 1e-2;
-  }else{
-    return 1. + (kappa*((PetscScalar)(i-1)))/(PetscScalar)(n-2);
+  } else {
+    return 1. + (kappa * ((PetscScalar)(i - 1))) / (PetscScalar)(n - 2);
   }
 }
 
-static PetscErrorCode AssembleDiagonalMatrix(Mat A, PetscScalar (*diagfunc)(PetscInt,PetscInt))
+static PetscErrorCode AssembleDiagonalMatrix(Mat A, PetscScalar (*diagfunc)(PetscInt, PetscInt))
 {
-  PetscErrorCode ierr;
-  PetscInt       i,rstart,rend,n;
-  PetscScalar    val;
+  PetscInt    i, rstart, rend, n;
+  PetscScalar val;
 
   PetscFunctionBeginUser;
-  ierr = MatGetSize(A,NULL,&n);CHKERRQ(ierr);
-  ierr = MatGetOwnershipRange(A,&rstart,&rend);CHKERRQ(ierr);
-  for (i=rstart;i<rend;++i){
-    val = diagfunc(i,n);
-    ierr = MatSetValues(A,1,&i,1,&i,&val,INSERT_VALUES);CHKERRQ(ierr);
+  PetscCall(MatGetSize(A, NULL, &n));
+  PetscCall(MatGetOwnershipRange(A, &rstart, &rend));
+  for (i = rstart; i < rend; ++i) {
+    val = diagfunc(i, n);
+    PetscCall(MatSetValues(A, 1, &i, 1, &i, &val, INSERT_VALUES));
   }
-  ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 int main(int argc, char **argv)
 {
-  PetscErrorCode ierr;
-  PetscInt       n=10000,its,dfid=1;
-  Vec            x,b,u;
-  Mat            A;
-  KSP            ksp;
-  PC             pc,pcnoise;
-  PCNoise_Ctx    ctx={0,NULL};
-  PetscReal      eta=0.1,norm;
-  PetscScalar(*diagfunc)(PetscInt,PetscInt);
+  PetscInt    n = 10000, its, dfid = 1;
+  Vec         x, b, u;
+  Mat         A;
+  KSP         ksp;
+  PC          pc, pcnoise;
+  PCNoise_Ctx ctx = {0, NULL};
+  PetscReal   eta = 0.1, norm;
+  PetscScalar (*diagfunc)(PetscInt, PetscInt);
 
-  ierr = PetscInitialize(&argc,&argv,(char*)0,help);if (ierr) return ierr;
+  PetscFunctionBeginUser;
+  PetscCall(PetscInitialize(&argc, &argv, (char *)0, help));
   /* Process command line options */
-  ierr = PetscOptionsGetInt(NULL,NULL,"-n",&n,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsGetReal(NULL,NULL,"-eta",&eta,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsGetInt(NULL,NULL,"-diagfunc",&dfid,NULL);CHKERRQ(ierr);
-  switch(dfid){
-    case 1:
-      diagfunc = diagFunc1;
-      break;
-    case 2:
-      diagfunc = diagFunc2;
-      break;
-    case 3:
-      diagfunc = diagFunc3;
-      break;
-    default:
-      SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Unrecognized diagfunc option");
+  PetscCall(PetscOptionsGetInt(NULL, NULL, "-n", &n, NULL));
+  PetscCall(PetscOptionsGetReal(NULL, NULL, "-eta", &eta, NULL));
+  PetscCall(PetscOptionsGetInt(NULL, NULL, "-diagfunc", &dfid, NULL));
+  switch (dfid) {
+  case 1:
+    diagfunc = diagFunc1;
+    break;
+  case 2:
+    diagfunc = diagFunc2;
+    break;
+  case 3:
+    diagfunc = diagFunc3;
+    break;
+  default:
+    SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Unrecognized diagfunc option");
   }
 
   /* Create a diagonal matrix with a given distribution of diagonal elements */
-  ierr = MatCreate(PETSC_COMM_WORLD,&A);CHKERRQ(ierr);
-  ierr = MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,n,n);CHKERRQ(ierr);
-  ierr = MatSetFromOptions(A);CHKERRQ(ierr);
-  ierr = MatSetUp(A);CHKERRQ(ierr);
-  ierr = AssembleDiagonalMatrix(A,diagfunc);CHKERRQ(ierr);
+  PetscCall(MatCreate(PETSC_COMM_WORLD, &A));
+  PetscCall(MatSetSizes(A, PETSC_DECIDE, PETSC_DECIDE, n, n));
+  PetscCall(MatSetFromOptions(A));
+  PetscCall(MatSetUp(A));
+  PetscCall(AssembleDiagonalMatrix(A, diagfunc));
 
   /* Allocate vectors and manufacture an exact solution and rhs */
-  ierr = MatCreateVecs(A,&x,NULL);CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject)x,"Computed Solution");CHKERRQ(ierr);
-  ierr = MatCreateVecs(A,&b,NULL);CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject)b,"RHS");CHKERRQ(ierr);
-  ierr = MatCreateVecs(A,&u,NULL);CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject)u,"Reference Solution");CHKERRQ(ierr);
-  ierr = VecSet(u,1.0);CHKERRQ(ierr);
-  ierr = MatMult(A,u,b);CHKERRQ(ierr);
+  PetscCall(MatCreateVecs(A, &x, NULL));
+  PetscCall(PetscObjectSetName((PetscObject)x, "Computed Solution"));
+  PetscCall(MatCreateVecs(A, &b, NULL));
+  PetscCall(PetscObjectSetName((PetscObject)b, "RHS"));
+  PetscCall(MatCreateVecs(A, &u, NULL));
+  PetscCall(PetscObjectSetName((PetscObject)u, "Reference Solution"));
+  PetscCall(VecSet(u, 1.0));
+  PetscCall(MatMult(A, u, b));
 
   /* Create a KSP object */
-  ierr = KSPCreate(PETSC_COMM_WORLD,&ksp);CHKERRQ(ierr);
-  ierr = KSPSetOperators(ksp,A,A);CHKERRQ(ierr);
+  PetscCall(KSPCreate(PETSC_COMM_WORLD, &ksp));
+  PetscCall(KSPSetOperators(ksp, A, A));
 
   /* Set up a composite preconditioner */
-  ierr = KSPGetPC(ksp,&pc);CHKERRQ(ierr);
-  ierr = PCSetType(pc,PCCOMPOSITE);CHKERRQ(ierr); /* default composite with single Identity PC */
-  ierr = PCCompositeSetType(pc,PC_COMPOSITE_ADDITIVE);CHKERRQ(ierr);
-  ierr = PCCompositeAddPC(pc,PCNONE);CHKERRQ(ierr);
-  if (eta > 0){
-    ierr = PCCompositeAddPC(pc,PCSHELL);CHKERRQ(ierr);
-    ierr = PCCompositeGetPC(pc,1,&pcnoise);CHKERRQ(ierr);
+  PetscCall(KSPGetPC(ksp, &pc));
+  PetscCall(PCSetType(pc, PCCOMPOSITE)); /* default composite with single Identity PC */
+  PetscCall(PCCompositeSetType(pc, PC_COMPOSITE_ADDITIVE));
+  PetscCall(PCCompositeAddPCType(pc, PCNONE));
+  if (eta > 0) {
+    PetscCall(PCCompositeAddPCType(pc, PCSHELL));
+    PetscCall(PCCompositeGetPC(pc, 1, &pcnoise));
     ctx.eta = eta;
-    ierr = PCShellSetContext(pcnoise,&ctx);CHKERRQ(ierr);
-    ierr = PCShellSetApply(pcnoise,PCApply_Noise);CHKERRQ(ierr);
-    ierr = PCShellSetSetUp(pcnoise,PCSetup_Noise);CHKERRQ(ierr);
-    ierr = PCShellSetDestroy(pcnoise,PCDestroy_Noise);CHKERRQ(ierr);
-    ierr = PCShellSetName(pcnoise,"Noise PC");CHKERRQ(ierr);
+    PetscCall(PCShellSetContext(pcnoise, &ctx));
+    PetscCall(PCShellSetApply(pcnoise, PCApply_Noise));
+    PetscCall(PCShellSetSetUp(pcnoise, PCSetup_Noise));
+    PetscCall(PCShellSetDestroy(pcnoise, PCDestroy_Noise));
+    PetscCall(PCShellSetName(pcnoise, "Noise PC"));
   }
 
   /* Set KSP from options (this can override the PC just defined) */
-  ierr = KSPSetFromOptions(ksp);CHKERRQ(ierr);
+  PetscCall(KSPSetFromOptions(ksp));
 
   /* Solve */
-  ierr = KSPSolve(ksp,b,x);CHKERRQ(ierr);
+  PetscCall(KSPSolve(ksp, b, x));
 
   /* Compute error */
-  ierr = VecAXPY(x,-1.0,u);CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject)x,"Error");CHKERRQ(ierr);
-  ierr = VecNorm(x,NORM_2,&norm);CHKERRQ(ierr);
-  ierr = KSPGetIterationNumber(ksp,&its);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"Norm of error %g, Iterations %D\n",(double)norm,its);CHKERRQ(ierr);
+  PetscCall(VecAXPY(x, -1.0, u));
+  PetscCall(PetscObjectSetName((PetscObject)x, "Error"));
+  PetscCall(VecNorm(x, NORM_2, &norm));
+  PetscCall(KSPGetIterationNumber(ksp, &its));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Norm of error %g, Iterations %" PetscInt_FMT "\n", (double)norm, its));
 
   /* Destroy objects and finalize */
-  ierr = KSPDestroy(&ksp);CHKERRQ(ierr);
-  ierr = MatDestroy(&A);CHKERRQ(ierr);
-  ierr = VecDestroy(&x);CHKERRQ(ierr);
-  ierr = VecDestroy(&b);CHKERRQ(ierr);
-  ierr = VecDestroy(&u);CHKERRQ(ierr);
-  ierr = PetscFinalize();
-  return ierr;
+  PetscCall(KSPDestroy(&ksp));
+  PetscCall(MatDestroy(&A));
+  PetscCall(VecDestroy(&x));
+  PetscCall(VecDestroy(&b));
+  PetscCall(VecDestroy(&u));
+  PetscCall(PetscFinalize());
+  return 0;
 }
-
 
 /*TEST
 
@@ -223,8 +208,14 @@ int main(int argc, char **argv)
       requires: !complex !single
 
    test:
+      suffix: 1
       nsize: 2
       args: -ksp_monitor_short -ksp_rtol 1e-6 -diagfunc 1 -ksp_type fcg -ksp_fcg_mmax 1 -eta 0.1
+
+   test:
+      suffix: 1_eigs
+      nsize: 2
+      args: -ksp_rtol 1e-6 -diagfunc 1 -ksp_type fcg -ksp_fcg_mmax 1 -eta 0.1 -ksp_monitor_singular_value
 
    test:
       suffix: 2

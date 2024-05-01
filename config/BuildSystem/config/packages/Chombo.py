@@ -6,9 +6,7 @@ class Configure(config.package.Package):
     self.gitcommit        = '2469eee'
     self.download         = ['git://https://bitbucket.org/petsc/pkg-chombo-3.2.git','https://bitbucket.org/petsc/pkg-chombo-3.2/get/'+self.gitcommit+'.tar.gz']
     self.functionsCxx     = [1,'namespace Box {class Box{public: Box();};}','Box::Box *nb = new Box::Box()'] 
-    self.includedir       = 'include'
     self.includes         = ['CH_config.H']
-    self.downloadonWindows= 0
     self.hastestsdatafiles= 1
     self.downloaddirnames  = ['petsc-pkg-chombo-3.2']
     return
@@ -45,13 +43,13 @@ class Configure(config.package.Package):
     g.write('#OPT='+'\n')
     g.write('#PRECISION='+'\n')
     g.write('#PROFILE='+'\n')
-    self.framework.pushLanguage('Cxx')
-    g.write('CXX='+self.framework.getCompiler()+'\n')
-    g.write('MPICXX='+self.framework.getCompiler()+'\n')
-    self.framework.popLanguage()
-    self.framework.pushLanguage('FC')
-    g.write('FC='+self.framework.getCompiler()+'\n')
-    self.framework.popLanguage()
+    self.pushLanguage('Cxx')
+    g.write('CXX='+self.getCompiler()+'\n')
+    g.write('MPICXX='+self.getCompiler()+'\n')
+    self.popLanguage()
+    self.pushLanguage('FC')
+    g.write('FC='+self.getCompiler()+'\n')
+    self.popLanguage()
     g.write('#OBJMODEL='+'\n')
     g.write('#XTRACONFIG='+'\n')
     g.write('#USE_64='+'\n')
@@ -98,9 +96,8 @@ class Configure(config.package.Package):
     if True: #self.installNeeded(os.path.join('lib','mk','Make.defs.local')):
       try:
         self.logPrintBox('Compiling and installing chombo; this may take several minutes')
-        self.installDirProvider.printSudoPasswordMessage()
-        output,err,ret = config.package.Package.executeShellCommand(self.installSudo+'mkdir -p '+os.path.join(self.installDir,'lib'), timeout=2500, log=self.log)
-        output,err,ret = config.package.Package.executeShellCommand(self.installSudo+'mkdir -p '+os.path.join(self.installDir,'include'), timeout=2500, log=self.log)
+        output,err,ret = config.package.Package.executeShellCommand('mkdir -p '+os.path.join(self.installDir,'lib'), timeout=2500, log=self.log)
+        output,err,ret = config.package.Package.executeShellCommand('mkdir -p '+os.path.join(self.installDir,'include'), timeout=2500, log=self.log)
 
         #run make -p to get library (config) namen
         poutput,perr,pret = config.package.Package.executeShellCommand('make vars', cwd=os.path.join(self.packageDir,'lib'), timeout=2500, log = self.log)
@@ -116,14 +113,12 @@ class Configure(config.package.Package):
         output,err,ret = config.package.Package.executeShellCommandSeq(
           ['make clean',
            'make lib',
-           self.installSudo+'cp -f lib*.'+self.setCompilers.AR_LIB_SUFFIX+' '+os.path.join(self.installDir,self.libdir,''),
-           self.installSudo+'cp -f include/*.H '+os.path.join(self.installDir,self.includedir,'')
+           'cp -f lib*.'+self.setCompilers.AR_LIB_SUFFIX+' '+os.path.join(self.libDir,''),
+           'cp -f include/*.H '+os.path.join(self.installDir,self.includedir,'')
           ], cwd=os.path.join(self.packageDir,'lib'), timeout=2500, log = self.log)
       except RuntimeError as e:
         raise RuntimeError('Error running make on Chombo: '+str(e))
 
-
-      self.libdir = 'lib'
       self.liblist = [['libbasetools%s.a' % config_value,'libamrelliptic%s.a' % config_value,'libamrtimedependent%s.a' % config_value,'libamrtools%s.a' % config_value,'libboxtools%s.a' % config_value]]
       self.postInstall(output+err,os.path.join('lib','mk','Make.defs.local'))
     return self.installDir

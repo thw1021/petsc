@@ -1,29 +1,45 @@
-
 /*
    Context for a Newton trust region method for solving a system
    of nonlinear equations
  */
 
-#if !defined(__SNES_TR_H)
-#define __SNES_TR_H
+#pragma once
 #include <petsc/private/snesimpl.h>
 
 typedef struct {
-  /* ---- Parameters used by the trust region method  ---- */
-  PetscReal      mu;             /* used to compute trust region parameter */
-  PetscReal      eta;            /* used to compute trust region parameter */
-  PetscReal      delta;          /* trust region parameter */
-  PetscReal      delta0;         /* used to initialize trust region parameter */
-  PetscReal      delta1;         /* used to compute trust region parameter */
-  PetscReal      delta2;         /* used to compute trust region parameter */
-  PetscReal      delta3;         /* used to compute trust region parameter */
-  PetscReal      sigma;          /* used to detemine termination */
-  PetscBool      itflag;         /* flag for convergence testing */
-  PetscReal      rnorm0,ttol;    /* used for KSP convergence test */
-  PetscErrorCode (*precheck)(SNES,Vec,Vec,PetscBool*,void*);
-  void           *precheckctx;
-  PetscErrorCode (*postcheck)(SNES,Vec,Vec,Vec,PetscBool*,PetscBool*,void*);
-  void           *postcheckctx;
-} SNES_NEWTONTR;
+  PetscReal delta;  /* trust region parameter */
+  PetscReal delta0; /* initial radius for trust region */
+  PetscReal deltaM; /* maximum radius for trust region */
+  PetscReal kmdc;   /* sufficient decrease parameter */
 
-#endif
+  /*
+    Given rho = (fk - fkp1) / (m(0) - m(pk))
+
+    The radius is modified as:
+      rho < eta2 -> delta *= t1
+      rho > eta3 -> delta *= t2
+      delta = min(delta,deltaM)
+
+    The step is accepted if rho > eta1
+  */
+  PetscReal eta1;
+  PetscReal eta2;
+  PetscReal eta3;
+  PetscReal t1;
+  PetscReal t2;
+
+  /* Use quasi-Newton models for J and (possibly different) Jp */
+  SNESNewtonTRQNType qn;
+  Mat                qnB;
+  Mat                qnB_pre;
+
+  /* The type of norm for the trust region */
+  NormType norm;
+
+  SNESNewtonTRFallbackType fallback; /* enum to distinguish fallback in case Newton step is outside of the trust region */
+
+  PetscErrorCode (*precheck)(SNES, Vec, Vec, PetscBool *, void *);
+  void *precheckctx;
+  PetscErrorCode (*postcheck)(SNES, Vec, Vec, Vec, PetscBool *, PetscBool *, void *);
+  void *postcheckctx;
+} SNES_NEWTONTR;

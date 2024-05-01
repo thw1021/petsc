@@ -1,311 +1,263 @@
-
 #include <../src/ksp/ksp/impls/gmres/gmresimpl.h>
 #include <petscblaslapack.h>
 
-PetscErrorCode KSPComputeExtremeSingularValues_GMRES(KSP ksp,PetscReal *emax,PetscReal *emin)
+PetscErrorCode KSPComputeExtremeSingularValues_GMRES(KSP ksp, PetscReal *emax, PetscReal *emin)
 {
-  KSP_GMRES      *gmres = (KSP_GMRES*)ksp->data;
-  PetscErrorCode ierr;
-  PetscInt       n = gmres->it + 1,i,N = gmres->max_k + 2;
-  PetscBLASInt   bn, bN,lwork, idummy,lierr;
-  PetscScalar    *R        = gmres->Rsvd,*work = R + N*N,sdummy = 0;
-  PetscReal      *realpart = gmres->Dsvd;
+  KSP_GMRES   *gmres = (KSP_GMRES *)ksp->data;
+  PetscInt     n = gmres->it + 1, i, N = gmres->max_k + 2;
+  PetscBLASInt bn, bN, lwork, idummy, lierr;
+  PetscScalar *R = gmres->Rsvd, *work = R + N * N, sdummy = 0;
+  PetscReal   *realpart = gmres->Dsvd;
 
   PetscFunctionBegin;
-  ierr = PetscBLASIntCast(n,&bn);CHKERRQ(ierr);
-  ierr = PetscBLASIntCast(N,&bN);CHKERRQ(ierr);
-  ierr = PetscBLASIntCast(5*N,&lwork);CHKERRQ(ierr);
-  ierr = PetscBLASIntCast(N,&idummy);CHKERRQ(ierr);
+  PetscCall(PetscBLASIntCast(n, &bn));
+  PetscCall(PetscBLASIntCast(N, &bN));
+  PetscCall(PetscBLASIntCast(5 * N, &lwork));
+  PetscCall(PetscBLASIntCast(N, &idummy));
   if (n <= 0) {
     *emax = *emin = 1.0;
-    PetscFunctionReturn(0);
+    PetscFunctionReturn(PETSC_SUCCESS);
   }
   /* copy R matrix to work space */
-  ierr = PetscArraycpy(R,gmres->hh_origin,(gmres->max_k+2)*(gmres->max_k+1));CHKERRQ(ierr);
+  PetscCall(PetscArraycpy(R, gmres->hh_origin, (gmres->max_k + 2) * (gmres->max_k + 1)));
 
   /* zero below diagonal garbage */
-  for (i=0; i<n; i++) R[i*N+i+1] = 0.0;
+  for (i = 0; i < n; i++) R[i * N + i + 1] = 0.0;
 
   /* compute Singular Values */
-  ierr = PetscFPTrapPush(PETSC_FP_TRAP_OFF);CHKERRQ(ierr);
+  PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
 #if !defined(PETSC_USE_COMPLEX)
-  PetscStackCallBLAS("LAPACKgesvd",LAPACKgesvd_("N","N",&bn,&bn,R,&bN,realpart,&sdummy,&idummy,&sdummy,&idummy,work,&lwork,&lierr));
+  PetscCallBLAS("LAPACKgesvd", LAPACKgesvd_("N", "N", &bn, &bn, R, &bN, realpart, &sdummy, &idummy, &sdummy, &idummy, work, &lwork, &lierr));
 #else
-  PetscStackCallBLAS("LAPACKgesvd",LAPACKgesvd_("N","N",&bn,&bn,R,&bN,realpart,&sdummy,&idummy,&sdummy,&idummy,work,&lwork,realpart+N,&lierr));
+  PetscCallBLAS("LAPACKgesvd", LAPACKgesvd_("N", "N", &bn, &bn, R, &bN, realpart, &sdummy, &idummy, &sdummy, &idummy, work, &lwork, realpart + N, &lierr));
 #endif
-  if (lierr) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error in SVD Lapack routine %d",(int)lierr);
-  ierr = PetscFPTrapPop();CHKERRQ(ierr);
+  PetscCheck(!lierr, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in SVD Lapack routine %d", (int)lierr);
+  PetscCall(PetscFPTrapPop());
 
-  *emin = realpart[n-1];
+  *emin = realpart[n - 1];
   *emax = realpart[0];
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* ------------------------------------------------------------------------ */
-/* ESSL has a different calling sequence for dgeev() and zgeev() than standard LAPACK */
-PetscErrorCode KSPComputeEigenvalues_GMRES(KSP ksp,PetscInt nmax,PetscReal *r,PetscReal *c,PetscInt *neig)
+PetscErrorCode KSPComputeEigenvalues_GMRES(KSP ksp, PetscInt nmax, PetscReal *r, PetscReal *c, PetscInt *neig)
 {
-#if defined(PETSC_HAVE_ESSL)
-  KSP_GMRES      *gmres = (KSP_GMRES*)ksp->data;
-  PetscErrorCode ierr;
-  PetscInt       n = gmres->it + 1,N = gmres->max_k + 1;
-  PetscInt       i,*perm;
-  PetscScalar    *R     = gmres->Rsvd;
-  PetscScalar    *cwork = R + N*N,sdummy = 0;
-  PetscReal      *work,*realpart = gmres->Dsvd;
-  PetscBLASInt   zero = 0,bn,bN,idummy = -1,lwork;
-
-  PetscFunctionBegin;
-  ierr   = PetscBLASIntCast(n,&bn);CHKERRQ(ierr);
-  ierr   = PetscBLASIntCast(N,&bN);CHKERRQ(ierr);
-  ierr   = PetscBLASIntCast(5*N,&lwork);CHKERRQ(ierr);
-  if (nmax < n) SETERRQ(PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_SIZ,"Not enough room in work space r and c for eigenvalues");
-  *neig = n;
-
-  if (!n) PetscFunctionReturn(0);
-
-  /* copy R matrix to work space */
-  ierr = PetscArraycpy(R,gmres->hes_origin,N*N);CHKERRQ(ierr);
-
-  /* compute eigenvalues */
-
-  /* for ESSL version need really cwork of length N (complex), 2N
-     (real); already at least 5N of space has been allocated */
-
-  ierr = PetscMalloc1(lwork,&work);CHKERRQ(ierr);
-  ierr = PetscFPTrapPush(PETSC_FP_TRAP_OFF);CHKERRQ(ierr);
-  PetscStackCallBLAS("LAPACKgeev",LAPACKgeev_(&zero,R,&bN,cwork,&sdummy,&idummy,&idummy,&bn,work,&lwork));
-  ierr = PetscFPTrapPop();CHKERRQ(ierr);
-  ierr = PetscFree(work);CHKERRQ(ierr);
-
-  /* For now we stick with the convention of storing the real and imaginary
-     components of evalues separately.  But is this what we really want? */
-  ierr = PetscMalloc1(n,&perm);CHKERRQ(ierr);
-
 #if !defined(PETSC_USE_COMPLEX)
-  for (i=0; i<n; i++) {
-    realpart[i] = cwork[2*i];
-    perm[i]     = i;
-  }
-  ierr = PetscSortRealWithPermutation(n,realpart,perm);CHKERRQ(ierr);
-  for (i=0; i<n; i++) {
-    r[i] = cwork[2*perm[i]];
-    c[i] = cwork[2*perm[i]+1];
-  }
-#else
-  for (i=0; i<n; i++) {
-    realpart[i] = PetscRealPart(cwork[i]);
-    perm[i]     = i;
-  }
-  ierr = PetscSortRealWithPermutation(n,realpart,perm);CHKERRQ(ierr);
-  for (i=0; i<n; i++) {
-    r[i] = PetscRealPart(cwork[perm[i]]);
-    c[i] = PetscImaginaryPart(cwork[perm[i]]);
-  }
-#endif
-  ierr = PetscFree(perm);CHKERRQ(ierr);
-#elif !defined(PETSC_USE_COMPLEX)
-  KSP_GMRES      *gmres = (KSP_GMRES*)ksp->data;
-  PetscErrorCode ierr;
-  PetscInt       n = gmres->it + 1,N = gmres->max_k + 1,i,*perm;
-  PetscBLASInt   bn, bN, lwork, idummy, lierr = -1;
-  PetscScalar    *R        = gmres->Rsvd,*work = R + N*N;
-  PetscScalar    *realpart = gmres->Dsvd,*imagpart = realpart + N,sdummy = 0;
+  KSP_GMRES   *gmres = (KSP_GMRES *)ksp->data;
+  PetscInt     n = gmres->it + 1, N = gmres->max_k + 1, i, *perm;
+  PetscBLASInt bn, bN, lwork, idummy, lierr = -1;
+  PetscScalar *R = gmres->Rsvd, *work = R + N * N;
+  PetscScalar *realpart = gmres->Dsvd, *imagpart = realpart + N, sdummy = 0;
 
   PetscFunctionBegin;
-  ierr = PetscBLASIntCast(n,&bn);CHKERRQ(ierr);
-  ierr = PetscBLASIntCast(N,&bN);CHKERRQ(ierr);
-  ierr = PetscBLASIntCast(5*N,&lwork);CHKERRQ(ierr);
-  ierr = PetscBLASIntCast(N,&idummy);CHKERRQ(ierr);
-  if (nmax < n) SETERRQ(PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_SIZ,"Not enough room in work space r and c for eigenvalues");
+  PetscCall(PetscBLASIntCast(n, &bn));
+  PetscCall(PetscBLASIntCast(N, &bN));
+  PetscCall(PetscBLASIntCast(5 * N, &lwork));
+  PetscCall(PetscBLASIntCast(N, &idummy));
+  PetscCheck(nmax >= n, PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_SIZ, "Not enough room in work space r and c for eigenvalues");
   *neig = n;
 
-  if (!n) PetscFunctionReturn(0);
+  if (!n) PetscFunctionReturn(PETSC_SUCCESS);
 
   /* copy R matrix to work space */
-  ierr = PetscArraycpy(R,gmres->hes_origin,N*N);CHKERRQ(ierr);
+  PetscCall(PetscArraycpy(R, gmres->hes_origin, N * N));
 
   /* compute eigenvalues */
-  ierr = PetscFPTrapPush(PETSC_FP_TRAP_OFF);CHKERRQ(ierr);
-  PetscStackCallBLAS("LAPACKgeev",LAPACKgeev_("N","N",&bn,R,&bN,realpart,imagpart,&sdummy,&idummy,&sdummy,&idummy,work,&lwork,&lierr));
-  if (lierr) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error in LAPACK routine %d",(int)lierr);
-  ierr = PetscFPTrapPop();CHKERRQ(ierr);
-  ierr = PetscMalloc1(n,&perm);CHKERRQ(ierr);
-  for (i=0; i<n; i++) perm[i] = i;
-  ierr = PetscSortRealWithPermutation(n,realpart,perm);CHKERRQ(ierr);
-  for (i=0; i<n; i++) {
+  PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
+  PetscCallBLAS("LAPACKgeev", LAPACKgeev_("N", "N", &bn, R, &bN, realpart, imagpart, &sdummy, &idummy, &sdummy, &idummy, work, &lwork, &lierr));
+  PetscCheck(!lierr, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in LAPACK routine %d", (int)lierr);
+  PetscCall(PetscFPTrapPop());
+  PetscCall(PetscMalloc1(n, &perm));
+  for (i = 0; i < n; i++) perm[i] = i;
+  PetscCall(PetscSortRealWithPermutation(n, realpart, perm));
+  for (i = 0; i < n; i++) {
     r[i] = realpart[perm[i]];
     c[i] = imagpart[perm[i]];
   }
-  ierr = PetscFree(perm);CHKERRQ(ierr);
+  PetscCall(PetscFree(perm));
 #else
-  KSP_GMRES      *gmres = (KSP_GMRES*)ksp->data;
-  PetscErrorCode ierr;
-  PetscInt       n  = gmres->it + 1,N = gmres->max_k + 1,i,*perm;
-  PetscScalar    *R = gmres->Rsvd,*work = R + N*N,*eigs = work + 5*N,sdummy;
-  PetscBLASInt   bn,bN,lwork,idummy,lierr = -1;
+  KSP_GMRES   *gmres = (KSP_GMRES *)ksp->data;
+  PetscInt     n = gmres->it + 1, N = gmres->max_k + 1, i, *perm;
+  PetscScalar *R = gmres->Rsvd, *work = R + N * N, *eigs = work + 5 * N, sdummy;
+  PetscBLASInt bn, bN, lwork, idummy, lierr = -1;
 
   PetscFunctionBegin;
-  ierr = PetscBLASIntCast(n,&bn);CHKERRQ(ierr);
-  ierr = PetscBLASIntCast(N,&bN);CHKERRQ(ierr);
-  ierr = PetscBLASIntCast(5*N,&lwork);CHKERRQ(ierr);
-  ierr = PetscBLASIntCast(N,&idummy);CHKERRQ(ierr);
-  if (nmax < n) SETERRQ(PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_SIZ,"Not enough room in work space r and c for eigenvalues");
+  PetscCall(PetscBLASIntCast(n, &bn));
+  PetscCall(PetscBLASIntCast(N, &bN));
+  PetscCall(PetscBLASIntCast(5 * N, &lwork));
+  PetscCall(PetscBLASIntCast(N, &idummy));
+  PetscCheck(nmax >= n, PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_SIZ, "Not enough room in work space r and c for eigenvalues");
   *neig = n;
 
-  if (!n) PetscFunctionReturn(0);
+  if (!n) PetscFunctionReturn(PETSC_SUCCESS);
 
   /* copy R matrix to work space */
-  ierr = PetscArraycpy(R,gmres->hes_origin,N*N);CHKERRQ(ierr);
+  PetscCall(PetscArraycpy(R, gmres->hes_origin, N * N));
 
   /* compute eigenvalues */
-  ierr = PetscFPTrapPush(PETSC_FP_TRAP_OFF);CHKERRQ(ierr);
-  PetscStackCallBLAS("LAPACKgeev",LAPACKgeev_("N","N",&bn,R,&bN,eigs,&sdummy,&idummy,&sdummy,&idummy,work,&lwork,gmres->Dsvd,&lierr));
-  if (lierr) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error in LAPACK routine");
-  ierr = PetscFPTrapPop();CHKERRQ(ierr);
-  ierr = PetscMalloc1(n,&perm);CHKERRQ(ierr);
-  for (i=0; i<n; i++) perm[i] = i;
-  for (i=0; i<n; i++) r[i] = PetscRealPart(eigs[i]);
-  ierr = PetscSortRealWithPermutation(n,r,perm);CHKERRQ(ierr);
-  for (i=0; i<n; i++) {
+  PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
+  PetscCallBLAS("LAPACKgeev", LAPACKgeev_("N", "N", &bn, R, &bN, eigs, &sdummy, &idummy, &sdummy, &idummy, work, &lwork, gmres->Dsvd, &lierr));
+  PetscCheck(!lierr, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in LAPACK routine");
+  PetscCall(PetscFPTrapPop());
+  PetscCall(PetscMalloc1(n, &perm));
+  for (i = 0; i < n; i++) perm[i] = i;
+  for (i = 0; i < n; i++) r[i] = PetscRealPart(eigs[i]);
+  PetscCall(PetscSortRealWithPermutation(n, r, perm));
+  for (i = 0; i < n; i++) {
     r[i] = PetscRealPart(eigs[perm[i]]);
     c[i] = PetscImaginaryPart(eigs[perm[i]]);
   }
-  ierr = PetscFree(perm);CHKERRQ(ierr);
+  PetscCall(PetscFree(perm));
 #endif
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-#if !defined(PETSC_USE_COMPLEX) && !defined(PETSC_HAVE_ESSL)
-PetscErrorCode KSPComputeRitz_GMRES(KSP ksp,PetscBool ritz,PetscBool small,PetscInt *nrit,Vec S[],PetscReal *tetar,PetscReal *tetai)
+PetscErrorCode KSPComputeRitz_GMRES(KSP ksp, PetscBool ritz, PetscBool small, PetscInt *nrit, Vec S[], PetscReal *tetar, PetscReal *tetai)
 {
-  KSP_GMRES      *gmres = (KSP_GMRES*)ksp->data;
-  PetscErrorCode ierr;
-  PetscInt       n = gmres->it + 1,N = gmres->max_k + 1,NbrRitz,nb=0;
-  PetscInt       i,j,*perm;
-  PetscReal      *H,*Q,*Ht;              /* H Hessenberg Matrix and Q matrix of eigenvectors of H*/
-  PetscReal      *wr,*wi,*modul;       /* Real and imaginary part and modul of the Ritz values*/
-  PetscReal      *SR,*work;
-  PetscBLASInt   bn,bN,lwork,idummy;
-  PetscScalar    *t,sdummy = 0;
+  KSP_GMRES   *gmres = (KSP_GMRES *)ksp->data;
+  PetscInt     NbrRitz, nb = 0, n;
+  PetscInt     i, j, *perm;
+  PetscScalar *H, *Q, *Ht; /* H Hessenberg matrix; Q matrix of eigenvectors of H */
+  PetscScalar *wr, *wi;    /* Real and imaginary part of the Ritz values */
+  PetscScalar *SR, *work;
+  PetscReal   *modul;
+  PetscBLASInt bn, bN, lwork, idummy;
+  PetscScalar *t, sdummy = 0;
+  Mat          A;
 
   PetscFunctionBegin;
-  /* n: size of the Hessenberg matrix */
-  if (gmres->fullcycle) n = N-1;
-  /* NbrRitz: number of (harmonic) Ritz pairs to extract */
-  NbrRitz = PetscMin(*nrit,n);
+  /* Express sizes in PetscBLASInt for LAPACK routines*/
+  PetscCall(PetscBLASIntCast(gmres->fullcycle ? gmres->max_k : gmres->it + 1, &bn)); /* size of the Hessenberg matrix */
+  PetscCall(PetscBLASIntCast(gmres->max_k + 1, &bN));                                /* LDA of the Hessenberg matrix */
+  PetscCall(PetscBLASIntCast(gmres->max_k + 1, &idummy));
+  PetscCall(PetscBLASIntCast(5 * (gmres->max_k + 1) * (gmres->max_k + 1), &lwork));
 
-  /* Definition of PetscBLASInt for lapack routines*/
-  ierr = PetscBLASIntCast(n,&bn);CHKERRQ(ierr);
-  ierr = PetscBLASIntCast(N,&bN);CHKERRQ(ierr);
-  ierr = PetscBLASIntCast(N,&idummy);CHKERRQ(ierr);
-  ierr = PetscBLASIntCast(5*N,&lwork);CHKERRQ(ierr);
-  /* Memory allocation */
-  ierr = PetscMalloc1(bN*bN,&H);CHKERRQ(ierr);
-  ierr = PetscMalloc1(bn*bn,&Q);CHKERRQ(ierr);
-  ierr = PetscMalloc1(lwork,&work);CHKERRQ(ierr);
-  ierr = PetscMalloc1(n,&wr);CHKERRQ(ierr);
-  ierr = PetscMalloc1(n,&wi);CHKERRQ(ierr);
+  /* NbrRitz: number of (Harmonic) Ritz pairs to extract */
+  NbrRitz = PetscMin(*nrit, bn);
+  PetscCall(KSPGetOperators(ksp, &A, NULL));
+  PetscCall(MatGetSize(A, &n, NULL));
+  NbrRitz = PetscMin(NbrRitz, n);
+
+  PetscCall(PetscMalloc4(bN * bN, &H, bn * bn, &Q, bn, &wr, bn, &wi));
 
   /* copy H matrix to work space */
-  if (gmres->fullcycle) {
-    ierr = PetscArraycpy(H,gmres->hes_ritz,bN*bN);CHKERRQ(ierr);
-  } else {
-    ierr = PetscArraycpy(H,gmres->hes_origin,bN*bN);CHKERRQ(ierr);
-  }
+  PetscCall(PetscArraycpy(H, gmres->fullcycle ? gmres->hes_ritz : gmres->hes_origin, bN * bN));
 
   /* Modify H to compute Harmonic Ritz pairs H = H + H^{-T}*h^2_{m+1,m}e_m*e_m^T */
   if (!ritz) {
     /* Transpose the Hessenberg matrix => Ht */
-    ierr = PetscMalloc1(bn*bn,&Ht);CHKERRQ(ierr);
-    for (i=0; i<bn; i++) {
-      for (j=0; j<bn; j++) {
-        Ht[i*bn+j] = H[j*bN+i];
-      }
+    PetscCall(PetscMalloc1(bn * bn, &Ht));
+    for (i = 0; i < bn; i++) {
+      for (j = 0; j < bn; j++) Ht[i * bn + j] = PetscConj(H[j * bN + i]);
     }
     /* Solve the system H^T*t = h^2_{m+1,m}e_m */
-    ierr = PetscCalloc1(bn,&t);CHKERRQ(ierr);
+    PetscCall(PetscCalloc1(bn, &t));
     /* t = h^2_{m+1,m}e_m */
-    if (gmres->fullcycle) {
-      t[bn-1] = PetscSqr(gmres->hes_ritz[(bn-1)*bN+bn]);
-    } else {
-      t[bn-1] = PetscSqr(gmres->hes_origin[(bn-1)*bN+bn]);
-    }
+    if (gmres->fullcycle) t[bn - 1] = PetscSqr(gmres->hes_ritz[(bn - 1) * bN + bn]);
+    else t[bn - 1] = PetscSqr(gmres->hes_origin[(bn - 1) * bN + bn]);
+
     /* Call the LAPACK routine dgesv to compute t = H^{-T}*t */
     {
-      PetscBLASInt info;
-      PetscBLASInt nrhs = 1;
+      PetscBLASInt  info;
+      PetscBLASInt  nrhs = 1;
       PetscBLASInt *ipiv;
-      ierr = PetscMalloc1(bn,&ipiv);CHKERRQ(ierr);
-      PetscStackCallBLAS("LAPACKgesv",LAPACKgesv_(&bn,&nrhs,Ht,&bn,ipiv,t,&bn,&info));
-      if (info) SETERRQ(PetscObjectComm((PetscObject)ksp),PETSC_ERR_PLIB,"Error while calling the Lapack routine DGESV");
-      ierr = PetscFree(ipiv);CHKERRQ(ierr);
-      ierr = PetscFree(Ht);CHKERRQ(ierr);
+      PetscCall(PetscMalloc1(bn, &ipiv));
+      PetscCallBLAS("LAPACKgesv", LAPACKgesv_(&bn, &nrhs, Ht, &bn, ipiv, t, &bn, &info));
+      PetscCheck(!info, PetscObjectComm((PetscObject)ksp), PETSC_ERR_PLIB, "Error while calling the Lapack routine DGESV");
+      PetscCall(PetscFree(ipiv));
+      PetscCall(PetscFree(Ht));
     }
-    /* Now form H + H^{-T}*h^2_{m+1,m}e_m*e_m^T */
-    for (i=0; i<bn; i++) H[(bn-1)*bn+i] += t[i];
-    ierr = PetscFree(t);CHKERRQ(ierr);
+    /* Form H + H^{-T}*h^2_{m+1,m}e_m*e_m^T */
+    for (i = 0; i < bn; i++) H[(bn - 1) * bn + i] += t[i];
+    PetscCall(PetscFree(t));
   }
 
-  /* Compute (harmonic) Ritz pairs */
+  /*
+    Compute (Harmonic) Ritz pairs;
+    For a real Ritz eigenvector at wr(j)  Q(:,j) columns contain the real right eigenvector
+    For a complex Ritz pair of eigenvectors at wr(j), wi(j), wr(j+1), and wi(j+1), Q(:,j) + i Q(:,j+1) and Q(:,j) - i Q(:,j+1) are the two eigenvectors
+  */
   {
     PetscBLASInt info;
-    ierr = PetscFPTrapPush(PETSC_FP_TRAP_OFF);CHKERRQ(ierr);
-    PetscStackCallBLAS("LAPACKgeev",LAPACKgeev_("N","V",&bn,H,&bN,wr,wi,&sdummy,&idummy,Q,&bn,work,&lwork,&info));
-    if (info) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error in LAPACK routine");
+#if defined(PETSC_USE_COMPLEX)
+    PetscReal *rwork = NULL;
+#endif
+    PetscCall(PetscMalloc1(lwork, &work));
+    PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
+#if !defined(PETSC_USE_COMPLEX)
+    PetscCallBLAS("LAPACKgeev", LAPACKgeev_("N", "V", &bn, H, &bN, wr, wi, &sdummy, &idummy, Q, &bn, work, &lwork, &info));
+#else
+    PetscCall(PetscMalloc1(2 * n, &rwork));
+    PetscCallBLAS("LAPACKgeev", LAPACKgeev_("N", "V", &bn, H, &bN, wr, &sdummy, &idummy, Q, &bn, work, &lwork, rwork, &info));
+    PetscCall(PetscFree(rwork));
+#endif
+    PetscCheck(!info, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in LAPACK routine");
+    PetscCall(PetscFPTrapPop());
+    PetscCall(PetscFree(work));
   }
-  /* sort the (harmonic) Ritz values */
-  ierr = PetscMalloc1(n,&modul);CHKERRQ(ierr);
-  ierr = PetscMalloc1(n,&perm);CHKERRQ(ierr);
-  for (i=0; i<n; i++) modul[i] = PetscSqrtReal(wr[i]*wr[i]+wi[i]*wi[i]);
-  for (i=0; i<n; i++) perm[i] = i;
-  ierr = PetscSortRealWithPermutation(n,modul,perm);CHKERRQ(ierr);
-  /* count the number of extracted Ritz or Harmonic Ritz pairs (with complex conjugates) */
+  /* sort the (Harmonic) Ritz values */
+  PetscCall(PetscMalloc2(bn, &modul, bn, &perm));
+#if defined(PETSC_USE_COMPLEX)
+  for (i = 0; i < bn; i++) modul[i] = PetscAbsScalar(wr[i]);
+#else
+  for (i = 0; i < bn; i++) modul[i] = PetscSqrtReal(wr[i] * wr[i] + wi[i] * wi[i]);
+#endif
+  for (i = 0; i < bn; i++) perm[i] = i;
+  PetscCall(PetscSortRealWithPermutation(bn, modul, perm));
+
+#if defined(PETSC_USE_COMPLEX)
+  /* sort extracted (Harmonic) Ritz pairs */
+  nb = NbrRitz;
+  PetscCall(PetscMalloc1(nb * bn, &SR));
+  for (i = 0; i < nb; i++) {
+    if (small) {
+      tetar[i] = PetscRealPart(wr[perm[i]]);
+      tetai[i] = PetscImaginaryPart(wr[perm[i]]);
+      PetscCall(PetscArraycpy(&SR[i * bn], &(Q[perm[i] * bn]), bn));
+    } else {
+      tetar[i] = PetscRealPart(wr[perm[bn - nb + i]]);
+      tetai[i] = PetscImaginaryPart(wr[perm[bn - nb + i]]);
+      PetscCall(PetscArraycpy(&SR[i * bn], &(Q[perm[bn - nb + i] * bn]), bn)); /* permute columns of Q */
+    }
+  }
+#else
+  /* count the number of extracted (Harmonic) Ritz pairs (with complex conjugates) */
   if (small) {
     while (nb < NbrRitz) {
       if (!wi[perm[nb]]) nb += 1;
-      else nb += 2;
+      else {
+        if (nb < NbrRitz - 1) nb += 2;
+        else break;
+      }
     }
-    ierr = PetscMalloc1(nb*n,&SR);CHKERRQ(ierr);
-    for (i=0; i<nb; i++) {
+    PetscCall(PetscMalloc1(nb * bn, &SR));
+    for (i = 0; i < nb; i++) {
       tetar[i] = wr[perm[i]];
       tetai[i] = wi[perm[i]];
-      ierr = PetscArraycpy(&SR[i*n],&(Q[perm[i]*bn]),n);CHKERRQ(ierr);
+      PetscCall(PetscArraycpy(&SR[i * bn], &(Q[perm[i] * bn]), bn));
     }
   } else {
     while (nb < NbrRitz) {
-      if (wi[perm[n-nb-1]] == 0) nb += 1;
-      else nb += 2;
+      if (wi[perm[bn - nb - 1]] == 0) nb += 1;
+      else {
+        if (nb < NbrRitz - 1) nb += 2;
+        else break;
+      }
     }
-    ierr = PetscMalloc1(nb*n,&SR);CHKERRQ(ierr);
-    for (i=0; i<nb; i++) {
-      tetar[i] = wr[perm[n-nb+i]];
-      tetai[i] = wi[perm[n-nb+i]];
-      ierr = PetscArraycpy(&SR[i*n], &(Q[perm[n-nb+i]*bn]), n);CHKERRQ(ierr);
-    }
-  }
-  ierr = PetscFree(modul);CHKERRQ(ierr);
-  ierr = PetscFree(perm);CHKERRQ(ierr);
-
-  /* Form the Ritz or Harmonic Ritz vectors S=VV*Sr,
-    where the columns of VV correspond to the basis of the Krylov subspace */
-  if (gmres->fullcycle) {
-    for (j=0; j<nb; j++) {
-      ierr = VecZeroEntries(S[j]);CHKERRQ(ierr);
-      ierr = VecMAXPY(S[j],n,&SR[j*n],gmres->vecb);CHKERRQ(ierr);
-    }
-  } else {
-    for (j=0; j<nb; j++) {
-      ierr = VecZeroEntries(S[j]);CHKERRQ(ierr);
-      ierr = VecMAXPY(S[j],n,&SR[j*n],&VEC_VV(0));CHKERRQ(ierr);
+    PetscCall(PetscMalloc1(nb * bn, &SR)); /* bn rows, nb columns */
+    for (i = 0; i < nb; i++) {
+      tetar[i] = wr[perm[bn - nb + i]];
+      tetai[i] = wi[perm[bn - nb + i]];
+      PetscCall(PetscArraycpy(&SR[i * bn], &(Q[perm[bn - nb + i] * bn]), bn)); /* permute columns of Q */
     }
   }
-  *nrit = nb;
-  ierr  = PetscFree(H);CHKERRQ(ierr);
-  ierr  = PetscFree(Q);CHKERRQ(ierr);
-  ierr  = PetscFree(SR);CHKERRQ(ierr);
-  ierr  = PetscFree(wr);CHKERRQ(ierr);
-  ierr  = PetscFree(wi);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
 #endif
+  PetscCall(PetscFree2(modul, perm));
+  PetscCall(PetscFree4(H, Q, wr, wi));
+
+  /* Form the (Harmonic) Ritz vectors S = SR*V, columns of VV correspond to the basis of the Krylov subspace */
+  for (j = 0; j < nb; j++) PetscCall(VecMAXPBY(S[j], bn, &SR[j * bn], 0, gmres->fullcycle ? gmres->vecb : &VEC_VV(0)));
+
+  PetscCall(PetscFree(SR));
+  *nrit = nb;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}

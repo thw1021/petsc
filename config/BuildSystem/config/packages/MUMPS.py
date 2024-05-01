@@ -3,32 +3,27 @@ import config.package
 class Configure(config.package.Package):
   def __init__(self, framework):
     config.package.Package.__init__(self, framework)
-    self.version          = '5.3.3'
+    self.version          = '5.6.2'
     self.minversion       = '5.2.1'
     self.versionname      = 'MUMPS_VERSION'
-    self.gitcommit        = 'v'+self.version+'-p2'
-    self.download         = ['git://https://bitbucket.org/petsc/pkg-mumps.git',
-                             'https://bitbucket.org/petsc/pkg-mumps/get/'+self.gitcommit+'.tar.gz']
-    self.download_darwin  = ['https://bitbucket.org/petsc/pkg-mumps/get/v5.2.1-p2.tar.gz']
+    self.requiresversion  = 1
+    self.gitcommit        = 'v'+self.version
+    self.download         = ['https://graal.ens-lyon.fr/MUMPS/MUMPS_'+self.version+'.tar.gz',
+                             'https://web.cels.anl.gov/projects/petsc/download/externalpackages/MUMPS_'+self.version+'.tar.gz']
     self.downloaddirnames = ['petsc-pkg-mumps','MUMPS']
-    self.liblist          = [['libcmumps.a','libdmumps.a','libsmumps.a','libzmumps.a','libmumps_common.a','libpord.a'],
-                            ['libcmumps.a','libdmumps.a','libsmumps.a','libzmumps.a','libmumps_common.a','libpord.a','libpthread.a'],
-                            ['libcmumps.a','libdmumps.a','libsmumps.a','libzmumps.a','libmumps_common.a','libpord.a','libmpiseq.a'],
-                            ['libcmumps.a','libdmumps.a','libsmumps.a','libzmumps.a','libmumps_common.a','libpord.a','libpthread.a','libmpiseq.a']]
-    self.functions        = ['dmumps_c']
-    self.includes         = ['dmumps_c.h']
-    #
-    self.fc               = 1
+    self.buildLanguages   = ['C','FC']
     self.precisions       = ['single','double']
     self.downloadonWindows= 1
     self.hastests         = 1
     self.hastestsdatafiles= 1
+    self.license          = 'https://mumps-solver.org/index.php?page=dwnld#form'
     return
 
   def setupHelp(self, help):
     import nargs
     config.package.Package.setupHelp(self, help)
     help.addArgument('MUMPS', '-with-mumps-serial', nargs.ArgBool(None, 0, 'Use serial build of MUMPS'))
+    help.addArgument('MUMPS', '-download-mumps-avoid-mpi-in-place', nargs.ArgBool(None, 0, 'Let MUMPS not use MPI_IN_PLACE. Since MUMPS-5.6.2, it can be used to avoid a bug in MPICH older than 4.0b1'))
     return
 
   def setupDependencies(self, framework):
@@ -40,14 +35,37 @@ class Configure(config.package.Package):
     self.parmetis         = framework.require('config.packages.parmetis',self)
     self.ptscotch         = framework.require('config.packages.PTScotch',self)
     self.scalapack        = framework.require('config.packages.scalapack',self)
+    self.hwloc            = framework.require('config.packages.hwloc',self)
+    self.openmp           = framework.require('config.packages.openmp',self)
+    self.scalartypes      = framework.require('PETSc.options.scalarTypes',self)
     if self.argDB['with-mumps-serial']:
       self.deps           = [self.blasLapack,self.flibs]
-      self.odeps          = [self.metis]
+      self.odeps          = [self.metis,self.openmp]
     else:
       self.deps           = [self.scalapack,self.mpi,self.blasLapack,self.flibs]
-      self.odeps          = [self.metis,self.parmetis,self.ptscotch]
-    self.openmp           = framework.require('config.packages.openmp',self)
+      self.odeps          = [self.metis,self.parmetis,self.ptscotch,self.hwloc,self.openmp]
     return
+
+  def configureLibrary(self):
+    for arg in ['with-64-bit-blas-indices','known-64-bit-blas-indices']:
+      if self.argDB.get(arg):
+        raise RuntimeError('MUMPS cannot be used with %s' % arg)
+    if self.scalartypes.precision == 'single':
+      if self.scalartypes.scalartype == 'real': l = 's'
+      else: l = 'c'
+    else:
+      if self.scalartypes.scalartype == 'real': l = 'd'
+      else: l = 'z'
+    self.functions = [l+'mumps_c']
+    self.includes  = [l+'mumps_c.h']
+    liblist_common = [['libmumps_common.a','libpord.a','libpthread.a'],
+                     ['libmumps_common.a','libpord.a'],
+                     ['libmumps_common.a','libpord.a','libmpiseq.a'],
+                     ['libmumps_common.a','libpord.a','libpthread.a','libmpiseq.a']]
+    self.liblist   = []
+    for libc in liblist_common:
+       self.liblist.append(['lib'+l+'mumps.a'] + libc)
+    config.package.Package.configureLibrary(self)
 
   def consistencyChecks(self):
     config.package.Package.consistencyChecks(self)
@@ -102,26 +120,21 @@ class Configure(config.package.Package):
     g.write('IORDERINGSF = $(ISCOTCH)\n')
 
     g.write('RM = /bin/rm -f\n')
-    self.setCompilers.pushLanguage('C')
-    g.write('CC = '+self.setCompilers.getCompiler()+'\n')
-    g.write('OPTC    = ' + self.removeWarningFlags(self.setCompilers.getCompilerFlags())+'\n')
+    self.pushLanguage('C')
+    g.write('CC = '+self.getCompiler()+'\n')
+    g.write('OPTC    = '+self.updatePackageCFlags(self.getCompilerFlags())+'\n')
     g.write('OUTC = -o \n')
-    self.setCompilers.popLanguage()
+    self.popLanguage()
     if not self.fortran.fortranIsF90:
       raise RuntimeError('Installing MUMPS requires a F90 compiler')
-    self.setCompilers.pushLanguage('FC')
-    g.write('FC = '+self.setCompilers.getCompiler()+'\n')
-    g.write('FL = '+self.setCompilers.getCompiler()+'\n')
-    extra_fcflags = ''
-    if config.setCompilers.Configure.isNAG(self.setCompilers.getLinker(), self.log):
-      extra_fcflags = '-dusty -dcfuns '
-    elif config.setCompilers.Configure.isGfortran100plus(self.setCompilers.getCompiler(), self.log):
-      extra_fcflags = '-fallow-argument-mismatch '
-    g.write('OPTF    = '+extra_fcflags+self.removeWarningFlags(self.setCompilers.getCompilerFlags())+'\n')
-    if self.blasLapack.mkl and self.blasLapack.foundversion.isdigit() and int(self.blasLapack.foundversion) >= 110300:
-      g.write('OPTF   += -DGEMMT_AVAILABLE \n')
+    self.pushLanguage('FC')
+    g.write('FC = '+self.getCompiler()+'\n')
+    g.write('FL = '+self.getCompiler()+'\n')
+    g.write('OPTF    = '+self.updatePackageFFlags(self.getCompilerFlags())+'\n')
+    if self.blasLapack.checkForRoutine('dgemmt'):
+      g.write('OPTF   += -DGEMMT_AVAILABLE\n')
     g.write('OUTF = -o \n')
-    self.setCompilers.popLanguage()
+    self.popLanguage()
 
     # set fortran name mangling
     # this mangling information is for both BLAS and the Fortran compiler so cannot use the BlasLapack mangling flag
@@ -144,7 +157,7 @@ class Configure(config.package.Package):
     g.write('INCSEQ  = -I$(topdir)/libseq\n')
     g.write('LIBSEQ  =  $(LAPACK) -L$(topdir)/libseq -lmpiseq\n')
     g.write('LIBBLAS = '+self.libraries.toString(self.blasLapack.dlib)+'\n')
-    g.write('OPTL    = '+self.setCompilers.getLinkerFlags()+'\n')
+    g.write('OPTL    = '+self.getLinkerFlags()+'\n')
     g.write('INCS = $(INCPAR)\n')
     g.write('LIBS = $(LIBPAR)\n')
     if self.argDB['with-mumps-serial']:
@@ -152,6 +165,19 @@ class Configure(config.package.Package):
       g.write('LIBS = $(LIBSEQ)\n')
     else:
       g.write('LIBSEQNEEDED =\n')
+      if self.openmp.found and self.hwloc.found:
+        g.write('LIBS += '+self.libraries.toString(self.hwloc.lib)+'\n')
+        g.write('OPTF += -DUSE_LIBHWLOC\n')
+        g.write('OPTC += -DUSE_LIBHWLOC\n')
+      # To avoid a bug related to MPI_IN_PLACE and old MPICH releases, see MR 4410
+      self.avoid_mpi_in_place = 0
+      if 'download-mumps-avoid-mpi-in-place' in self.framework.clArgDB: # user-provided value takes precedence
+        self.avoid_mpi_in_place = self.framework.clArgDB['download-mumps-avoid-mpi-in-place']
+      elif hasattr(self.mpi, 'mpich_numversion') and int(self.mpi.mpich_numversion) < 40000101:
+        self.avoid_mpi_in_place = 1
+      if self.avoid_mpi_in_place:
+        g.write('CDEFS += -DAVOID_MPI_IN_PLACE') # only take effect since mumps-5.6.2
+        self.addDefine('HAVE_MUMPS_AVOID_MPI_IN_PLACE', 1)
     g.close()
     if self.installNeeded('Makefile.inc'):
       try:
@@ -159,22 +185,22 @@ class Configure(config.package.Package):
       except RuntimeError as e:
         pass
       try:
-        self.logPrintBox('Compiling Mumps; this may take several minutes')
-        output2,err2,ret2 = config.package.Package.executeShellCommand(self.make.make_jnp+' alllib', cwd=self.packageDir, timeout=2500, log = self.log)
-        libDir     = os.path.join(self.installDir, self.libdir)
+        self.logPrintBox('Compiling MUMPS; this may take several minutes')
+        output2,err2,ret2 = config.package.Package.executeShellCommand(self.make.make_jnp+' prerequisites', cwd=self.packageDir, timeout=2500, log = self.log)
+        output3,err3,ret3 = config.package.Package.executeShellCommand(self.make.make_jnp+' all', cwd=os.path.join(self.packageDir,'src'), timeout=2500, log = self.log)
+        libDir     = self.libDir
         includeDir = os.path.join(self.installDir, self.includedir)
-        self.logPrintBox('Installing Mumps; this may take several minutes')
-        self.installDirProvider.printSudoPasswordMessage()
+        self.logPrintBox('Installing MUMPS; this may take several minutes')
         output,err,ret = config.package.Package.executeShellCommandSeq(
-          [self.installSudo+'mkdir -p '+libDir+' '+includeDir,
-           self.installSudo+'cp -f lib/*.* '+libDir+'/.',
-           self.installSudo+'cp -f include/*.* '+includeDir+'/.'
+          ['mkdir -p '+libDir+' '+includeDir,
+           'cp -f lib/*.* '+libDir+'/.',
+           'cp -f include/*.* '+includeDir+'/.'
           ], cwd=self.packageDir, timeout=60, log = self.log)
         if self.argDB['with-mumps-serial']:
-          output,err,ret = config.package.Package.executeShellCommand([self.installSudo+'cp', '-f', 'libseq/libmpiseq.a', libDir+'/.'], cwd=self.packageDir, timeout=60, log = self.log)
+          output,err,ret = config.package.Package.executeShellCommand(['cp', '-f', 'libseq/libmpiseq.a', libDir+'/.'], cwd=self.packageDir, timeout=60, log = self.log)
       except RuntimeError as e:
         self.logPrint('Error running make on MUMPS: '+str(e))
         raise RuntimeError('Error running make on MUMPS')
-      self.postInstall(output1+err1+output2+err2,'Makefile.inc')
+      self.postInstall(output1+err1+output2+err2+output3+err3,'Makefile.inc')
     return self.installDir
 

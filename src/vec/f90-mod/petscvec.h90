@@ -1,51 +1,87 @@
 #if defined(PETSC_HAVE_FORTRAN_TYPE_STAR)
       Interface
-       subroutine PetscSFBcastBegin(sf,unit,rarray,larray,ierr)
-          use petscisdef
+       subroutine PetscSFBcastBegin(sf,unit,rarray,larray,op,ierr)
+          import tPetscSF
           PetscSF :: sf
-          PetscMPIInt :: unit
+          PetscMPIInt :: unit,op
           type(*) :: rarray(:)
           type(*) :: larray(:)
           PetscErrorCode :: ierr
         end Subroutine PetscSFBcastBegin
 
-      subroutine PetscSFBcastEnd(sf,unit,rarray,larray,ierr)
-          use petscisdef
+      subroutine PetscSFBcastEnd(sf,unit,rarray,larray,op,ierr)
+          import tPetscSF
           PetscSF :: sf
-          PetscMPIInt :: unit
+          PetscMPIInt :: unit,op
           type(*) :: rarray(:)
           type(*) :: larray(:)
           PetscErrorCode :: ierr
         end Subroutine PetscSFBcastEnd
+
+      subroutine PetscSFReduceBegin(sf,unit,larray,rarray,op,ierr)
+          import tPetscSF
+          PetscSF :: sf
+          PetscMPIInt :: unit,op
+          type(*) :: larray(:)
+          type(*) :: rarray(:)
+          PetscErrorCode :: ierr
+        end Subroutine PetscSFReduceBegin
+
+      subroutine PetscSFReduceEnd(sf,unit,larray,rarray,op,ierr)
+          import tPetscSF
+          PetscSF :: sf
+          PetscMPIInt :: unit,op
+          type(*) :: larray(:)
+          type(*) :: rarray(:)
+          PetscErrorCode :: ierr
+        end Subroutine PetscSFReduceEnd
       end Interface
 #endif
 
       Interface
       subroutine PetscSFGetGraph(sf,nroots,nleaves,ilocal,iremote,ierr)
-          use petscisdef
+          import tPetscSF,PetscSFNode
           PetscSF :: sf
           PetscInt :: nroots,nleaves
           PetscInt, pointer :: ilocal(:)
           type(PetscSFNode), pointer :: iremote(:)
           PetscErrorCode :: ierr
       end Subroutine PetscSFGetGraph
+
+      subroutine PetscSFGetLeafRanks(sf,niranks,iranks,ioffset,irootloc,ierr)
+          import tPetscSF
+          PetscSF :: sf
+          PetscInt :: niranks
+          PetscMPIInt, pointer :: iranks(:)
+          PetscInt, pointer :: ioffset(:),irootloc(:)
+          PetscErrorCode :: ierr
+      end Subroutine PetscSFGetLeafRanks
+
+      subroutine PetscSFGetRootRanks(sf,nranks,ranks,roffset,rmine,rremote,ierr)
+          import tPetscSF
+          PetscSF :: sf
+          PetscInt :: nranks
+          PetscMPIInt, pointer :: ranks(:)
+          PetscInt, pointer :: roffset(:),rmine(:),rremote(:)
+          PetscErrorCode :: ierr
+      end Subroutine PetscSFGetRootRanks
       end Interface
 
       Interface VecGetOwnershipRange
       subroutine VecGetOwnershipRange1(x,l,h,ierr)
-      use petscvecdef
+       import tVec
        Vec, intent(in) :: x
        PetscInt, intent(out) ::  l,h
        PetscErrorCode, intent(out) :: ierr
        end subroutine
       subroutine VecGetOwnershipRange2(x,l,h,ierr)
-      use petscvecdef
+       import tVec
        Vec, intent(in) :: x
        PetscInt, intent(out) ::  l(*),h
        PetscErrorCode, intent(out) :: ierr
        end subroutine
       subroutine VecGetOwnershipRange3(x,l,h,ierr)
-      use petscvecdef
+       import tVec
        Vec, intent(in) :: x
        PetscInt, intent(out) ::  l,h(*)
        PetscErrorCode, intent(out) :: ierr
@@ -54,14 +90,14 @@
 
       Interface VecMin
       subroutine VecMin1(x,p,val,ierr)
-      use petscvecdef
+       import tVec
        Vec, intent(in) :: x
        PetscInt, intent(out) ::  p
        PetscReal, intent(out) ::  val
        PetscErrorCode, intent(out) :: ierr
        end subroutine
       subroutine VecMin2(x,p,val,ierr)
-      use petscvecdef
+       import tVec
        Vec, intent(in) :: x
        PetscInt, intent(out) ::  p(*)
        PetscReal, intent(out) ::  val
@@ -71,14 +107,14 @@
 
       Interface VecMax
       subroutine VecMax1(x,p,val,ierr)
-      use petscvecdef
+       import tVec
        Vec, intent(in) :: x
        PetscInt, intent(out) ::  p
        PetscReal, intent(out) ::  val
        PetscErrorCode, intent(out) :: ierr
        end subroutine
       subroutine VecMax2(x,p,val,ierr)
-      use petscvecdef
+       import tVec
        Vec, intent(in) :: x
        PetscInt, intent(out) ::  p(*)
        PetscReal, intent(out) ::  val
@@ -88,7 +124,7 @@
 
       Interface
       subroutine VecScatterCreateToAll(a,b,c,z)
-      use petscvecdef
+       import tVec,tVecScatter
        Vec a
        VecScatter b
        Vec c
@@ -98,7 +134,7 @@
 
       Interface
       subroutine VecScatterCreateToZero(a,b,c,z)
-      use petscvecdef
+       import tVec,tVecScatter
        Vec a
        VecScatter b
        Vec c
@@ -106,9 +142,30 @@
        end subroutine
       end Interface
 
+      Interface VecCreateSeqWithArray
+        subroutine VecCreateSeqWithArray0(a,b,c,d,e,z)
+          import tVec
+          MPI_Comm a
+          integer4 b ! bs
+          PetscInt c ! length
+          PetscScalar d (*) ! array of values
+          Vec e
+          PetscErrorCode z
+        end subroutine
+        subroutine VecCreateSeqWithArray1(a,b,c,d,e,z)
+          import tVec
+          MPI_Comm a
+          integer8 b ! bs
+          PetscInt c ! length
+          PetscScalar d (*) ! array of values
+          Vec e
+          PetscErrorCode z
+        end subroutine
+      end Interface
+
       Interface VecSetValuesLocal
         subroutine VecSetValuesLocal0(a,b,c,d,e,z)
-          use petscvecdef
+          import tVec
           Vec a ! Vec
           PetscInt b ! PetscInt
           PetscInt c (*) ! PetscInt
@@ -117,7 +174,7 @@
           PetscErrorCode z
         end subroutine
         subroutine VecSetValuesLocal11(a,b,c,d,e,z)
-          use petscvecdef
+          import tVec
           Vec a ! Vec
           PetscInt b ! PetscInt
           PetscInt c ! PetscInt
@@ -129,7 +186,7 @@
 
       Interface VecGetValues
         subroutine VecGetValues0(a,b,c,d,z)
-          use petscvecdef
+          import tVec
           Vec a ! Vec
           PetscInt b ! PetscInt
           PetscInt c (*) ! PetscInt
@@ -137,7 +194,7 @@
           PetscErrorCode z
         end subroutine
         subroutine VecGetValues1(a,b,c,d,z)
-          use petscvecdef
+          import tVec
           Vec a ! Vec
           PetscInt b ! PetscInt
           PetscInt c ! PetscInt
@@ -145,7 +202,7 @@
           PetscErrorCode z
         end subroutine
         subroutine VecGetValues11(a,b,c,d,z)
-          use petscvecdef
+          import tVec
           Vec a ! Vec
           PetscInt b ! PetscInt
           PetscInt c ! PetscInt
@@ -156,7 +213,7 @@
 
       Interface VecSetValues
         subroutine VecSetValues0(a,b,c,d,e,z)
-          use petscvecdef
+          import tVec
           Vec a ! Vec
           PetscInt b ! PetscInt
           PetscInt c (*) ! PetscInt
@@ -165,7 +222,7 @@
           PetscErrorCode z
         end subroutine
         subroutine VecSetValues1(a,b,c,d,e,z)
-          use petscvecdef
+          import tVec
           Vec a ! Vec
           PetscInt b ! PetscInt
           PetscInt c ! PetscInt
@@ -174,7 +231,7 @@
           PetscErrorCode z
         end subroutine
         subroutine VecSetValues11(a,b,c,d,e,z)
-          use petscvecdef
+          import tVec
           Vec a ! Vec
           PetscInt b ! PetscInt
           PetscInt c ! PetscInt
@@ -186,7 +243,7 @@
 
       Interface VecSetValuesBlocked
         subroutine VecSetValuesBlocked0(a,b,c,d,e,z)
-          use petscvecdef
+          import tVec
           Vec a ! Vec
           PetscInt b ! PetscInt
           PetscInt c (*) ! PetscInt
@@ -195,7 +252,7 @@
           PetscErrorCode z
         end subroutine
         subroutine VecSetValuesBlocked1(a,b,c,d,e,z)
-          use petscvecdef
+          import tVec
           Vec a ! Vec
           PetscInt b ! PetscInt
           PetscInt c ! PetscInt
@@ -204,7 +261,7 @@
           PetscErrorCode z
         end subroutine
         subroutine VecSetValuesBlocked11(a,b,c,d,e,z)
-          use petscvecdef
+          import tVec
           Vec a ! Vec
           PetscInt b ! PetscInt
           PetscInt c ! PetscInt
@@ -216,7 +273,7 @@
 
       Interface
         Subroutine VecGetArrayF90(v,array,ierr)
-          use petscvecdef
+          import tVec
           PetscScalar, pointer :: array(:)
           PetscErrorCode ierr
           Vec     v
@@ -225,7 +282,7 @@
 
       Interface
         Subroutine VecRestoreArrayF90(v,array,ierr)
-          use petscvecdef
+          import tVec
           PetscScalar, pointer :: array(:)
           PetscErrorCode ierr
           Vec     v
@@ -234,7 +291,7 @@
 
       Interface
         Subroutine VecGetArrayReadF90(v,array,ierr)
-          use petscvecdef
+          import tVec
           PetscScalar, pointer :: array(:)
           PetscErrorCode ierr
           Vec     v
@@ -243,7 +300,7 @@
 
       Interface
         Subroutine VecRestoreArrayReadF90(v,array,ierr)
-          use petscvecdef
+          import tVec
           PetscScalar, pointer :: array(:)
           PetscErrorCode ierr
           Vec     v
@@ -251,8 +308,30 @@
       End Interface
 
       Interface
+        Subroutine VecGetValuesSectionF90(v,s,p,va,ierr)
+          import tVec,tPetscSection
+          PetscScalar, pointer :: va(:)
+          PetscErrorCode ierr
+          Vec     v
+          PetscSection s
+          PetscInt p
+        End Subroutine
+      End Interface
+
+      Interface
+        Subroutine VecRestoreValuesSectionF90(v,s,p,va,ierr)
+          import tVec,tPetscSection
+          PetscScalar, pointer :: va(:)
+          PetscErrorCode ierr
+          Vec     v
+          PetscSection s
+          PetscInt p
+        End Subroutine
+      End Interface
+
+      Interface
         Subroutine VecSetValuesSectionF90(v,s,p,va,mode,ierr)
-          use petscvecdef
+          import tVec,tPetscSection
           PetscScalar, pointer :: va(:)
           PetscErrorCode ierr
           Vec     v
@@ -266,7 +345,7 @@
 
       Interface
         Subroutine VecDuplicateVecsF90(v,m,vs,ierr)
-          use petscvecdef
+          import tVec
           Vec, pointer :: vs(:)
           PetscInt m
           PetscErrorCode ierr
@@ -280,28 +359,27 @@
 !
       Interface
         Subroutine VecDestroyVecsF90(m,vs,ierr)
-          use petscvecdef
+          import tVec
           Vec, pointer :: vs(:)
           PetscInt m
           PetscErrorCode ierr
         End Subroutine
-      
-        subroutine VecSetType(a,b,ierr)
-         use petscvecdef
-         Vec a
-         character(*) b
-         PetscErrorCode ierr
-       end subroutine
+
+        Subroutine VecDestroy(a,ierr)
+          import tVec
+          Vec a
+          PetscErrorCode ierr
+        End Subroutine
 
        subroutine VecView(a,b,ierr)
-         use petscvecdef
+         import tVec,tPetscViewer
          Vec a
          PetscViewer b
          PetscErrorCode ierr
        end subroutine
-      
+
        subroutine VecScatterRemap(a,b,c,ierr)
-         use petscvecdef
+         import tVecScatter
          VecScatter a ! VecScatter
          PetscInt b (*) ! PetscInt
          PetscInt c (*) ! PetscInt
@@ -309,10 +387,10 @@
        end subroutine
 
        subroutine VecLoad(a,b,ierr)
-         use petscvecdef
+         import tVec,tPetscViewer
          Vec a
          PetscViewer b
          PetscErrorCode ierr
        end subroutine
-      
+
       end Interface

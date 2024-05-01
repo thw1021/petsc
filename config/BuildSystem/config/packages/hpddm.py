@@ -3,20 +3,18 @@ import config.package
 class Configure(config.package.Package):
   def __init__(self,framework):
     config.package.Package.__init__(self,framework)
-    self.gitcommit              = '90bcc19' # master july-29-2020
+    self.version                = '2.3.0'
+    self.gitcommit              = 'v'+self.version # 'd06546abc3b4c6a72ce64824a2833620bc9e24bf' # main march-22-2024
     self.download               = ['git://https://github.com/hpddm/hpddm','https://github.com/hpddm/hpddm/archive/'+self.gitcommit+'.tar.gz']
-    self.minversion             = '2.0.7'
+    self.minversion             = '2.2.1'
     self.versionname            = 'HPDDM_VERSION'
     self.versioninclude         = 'HPDDM_define.hpp'
-    self.requirescxx11          = 1
-    self.cxx                    = 1
+    self.buildLanguages         = ['Cxx']
     self.functions              = []
     self.includes               = ['HPDDM.hpp']
     self.skippackagewithoptions = 1
-    self.useddirectly           = 1
     self.linkedbypetsc          = 0
     self.builtafterpetsc        = 1
-    self.precisions             = ['single','double']
     self.hastestsdatafiles      = 1
     return
 
@@ -24,24 +22,25 @@ class Configure(config.package.Package):
     config.package.Package.setupDependencies(self,framework)
     self.setCompilers    = framework.require('config.setCompilers',self)
     self.sharedLibraries = framework.require('PETSc.options.sharedLibraries',self)
-    self.mathlib         = framework.require('config.packages.mathlib',self)
-    self.cxxlibs         = framework.require('config.packages.cxxlibs',self)
-    self.mpi             = framework.require('config.packages.MPI',self)
     self.blasLapack      = framework.require('config.packages.BlasLapack',self)
+    self.cxxlibs         = framework.require('config.packages.cxxlibs',self)
+    self.mathlib         = framework.require('config.packages.mathlib',self)
+    self.flibs           = framework.require('config.packages.flibs',self)
+    self.deps            = [self.blasLapack,self.cxxlibs,self.mathlib,self.flibs] # KSPHPDDM
+    self.mpi             = framework.require('config.packages.MPI',self)
     self.slepc           = framework.require('config.packages.slepc',self)
-    self.deps            = [self.blasLapack,self.cxxlibs,self.mathlib]
-    self.odeps           = [self.mpi,self.slepc]
+    self.odeps           = [self.mpi,self.slepc] # KSPHPDDM + PCHPDDM
     return
 
   def Install(self):
     import os
-    if self.slepc.found and not self.checkSharedLibrariesEnabled():
-      raise RuntimeError('Shared libraries enabled needed to build PCHPDDM')
+    if self.blasLapack.mkl and not self.blasLapack.mkl_spblas_h:
+      raise RuntimeError('Cannot use HPDDM with the MKL as \'mkl_spblas.h\' was not found, check for missing --with-blaslapack-include=/opt/intel/mkl/include (or similar)')
     buildDir = os.path.join(self.packageDir,'petsc-build')
-    self.setCompilers.pushLanguage('Cxx')
-    cxx = self.setCompilers.getCompiler()
-    cxxflags = self.setCompilers.getCompilerFlags()
-    self.setCompilers.popLanguage()
+    self.pushLanguage('Cxx')
+    cxx = self.getCompiler()
+    cxxflags = self.getCompilerFlags()
+    self.popLanguage()
     if self.framework.argDB['prefix'] and not 'package-prefix-hash' in self.argDB:
       PETSC_DIR  = os.path.abspath(os.path.expanduser(self.argDB['prefix']))
       PETSC_ARCH = ''
@@ -51,60 +50,44 @@ class Configure(config.package.Package):
       PETSC_ARCH = self.arch
       prefix     = os.path.join(self.petscdir.dir,self.arch)
     incDir = os.path.join(prefix,'include')
-    libDir = os.path.join(prefix,'lib')
-    if self.installSudo:
-      newuser = self.installSudo+' -u $${SUDO_USER} '
-    else:
-      newuser = ''
+    libDir = os.path.join(prefix,self.libDirs[0])
     self.addMakeMacro('HPDDM','yes')
     self.include = [incDir]
     if not hasattr(self.framework,'packages'):
       self.framework.packages = []
     self.framework.packages.append(self)
-    cpstr = newuser+' mkdir -p '+incDir+' && '+newuser+' cp '+os.path.join(self.packageDir,'include','*')+' '+incDir
-    self.logPrintBox('Copying HPDDM; this may take several seconds')
-    output,err,ret = config.package.Package.executeShellCommand(cpstr,timeout=100,log=self.log)
-    self.log.write(output+err)
-    # SLEPc dependency
-    if self.mpi.found:
+    try:
+      self.logPrintBox('Copying HPDDM; this may take several seconds')
+      output,err,ret = config.package.Package.executeShellCommand(['cp','-rf',os.path.join(self.packageDir,'include'),prefix],timeout=100,log=self.log) # cannot use shutil.copytree since target directory likely exists
+      self.log.write(output+err)
+    except RuntimeError as e:
+      raise RuntimeError('Error copying HPDDM: '+str(e))
+    if self.checkSharedLibrariesEnabled():
+      ldflags = ' '.join(self.setCompilers.sharedLibraryFlags)
+      cxxflags += ' '+self.headers.toStringNoDupes(self.dinclude+[os.path.join(PETSC_DIR,'include'),incDir])
+      if self.argDB['with-single-library']:
+        ldflags += ' '+self.libraries.toStringNoDupes(self.dlib+[os.path.join(libDir,'libpetsc')])
+      else:
+        ldflags += ' '+self.libraries.toStringNoDupes(self.dlib+[os.path.join(libDir,'libpetsctao'),'-lpetscts -lpetscsnes -lpetscksp -lpetscdm -lpetscmat -lpetscvec -lpetscsys'])
+      slepcbuilddep = 'slepc-install slepc-build'
+      oldFlags = self.compilers.CXXPPFLAGS
+      self.compilers.CXXPPFLAGS += ' -I'+incDir
+      self.checkVersion()
+      self.compilers.CXXPPFLAGS = oldFlags
+      # check for Windows-specific define
+      if self.sharedLibraries.getMakeMacro('PETSC_DLL_EXPORTS'):
+        cxxflags += ' -Dpetsc_EXPORTS'
+      # SLEPc dependency
       if self.slepc.found:
-        slepcbuilddep = ''
-        ldflags = ' '.join(self.setCompilers.sharedLibraryFlags)
-        # how can we get the slepc lib? Eventually, we may want to use the variables from the framework
-        #cxxflags += self.headers.toStringNoDupes(self.slepc.dinclude)
-        #ldflags += self.libraries.toString(self.slepc.dlib)
-        dinclude = [incDir,self.headers.toString(self.dinclude),os.path.join(PETSC_DIR,'include'),os.path.join(PETSC_DIR,PETSC_ARCH,'include'),os.path.join(self.petscdir.dir,'include'),os.path.join(self.packageDir,'include')]
-        dlib = [os.path.join(libDir,'libslepc.'+self.setCompilers.sharedLibraryExt)]
-        cxxflags += ' '+self.headers.toStringNoDupes(dinclude)
-        ldflags += ' '+self.libraries.toStringNoDupes(dlib)
-        slepcbuilddep = 'slepc-install slepc-build'
-        oldFlags = self.compilers.CXXPPFLAGS
-        self.compilers.CXXPPFLAGS += ' -I'+incDir
-        self.checkVersion()
-        self.compilers.CXXPPFLAGS = oldFlags
-        # check for Windows-specific define
-        if self.sharedLibraries.getMakeMacro('PETSC_DLL_EXPORTS'):
-          cxxflags += ' -Dpetsc_EXPORTS'
-          # need to explicitly link to PETSc and BLAS on Windows
-          ldflags += ' '+self.libraries.toStringNoDupes([os.path.join(libDir,'libpetsc.'+self.setCompilers.sharedLibraryExt),self.libraries.toStringNoDupes(self.blasLapack.lib)])
-        self.addMakeRule('hpddmcopy','',\
-                           ['@echo "*** Copying HPDDM ***"',\
-                            '@${RM} -f ${PETSC_ARCH}/lib/petsc/conf/hpddm.errorflg',\
-                            '@'+cpstr+' > ${PETSC_ARCH}/lib/petsc/conf/hpddm.log 2>&1 || \\\n\
-                 (echo "**************************ERROR*************************************" && \\\n\
-                 echo "Error copying HPDDM. Check ${PETSC_ARCH}/lib/petsc/conf/hpddm.log" && \\\n\
-                 echo "********************************************************************" && \\\n\
-                 touch '+os.path.join('${PETSC_ARCH}','lib','petsc','conf','hpddm.errorflg')+' && \\\n\
-                 exit 1)'])
         self.addMakeRule('hpddmbuild',slepcbuilddep,\
                            ['@echo "*** Building and installing HPDDM ***"',\
-                            '@${RM} -f ${PETSC_ARCH}/lib/petsc/conf/hpddm.errorflg',\
-                            '@'+newuser+cxx+' '+cxxflags+' '+self.packageDir+'/interface/hpddm_petsc.cpp '+ldflags+' -o '+libDir+os.path.join('/libhpddm_petsc.'+self.setCompilers.sharedLibraryExt)+' > ${PETSC_ARCH}/lib/petsc/conf/hpddm.log 2>&1 || \\\n\
-                 (echo "**************************ERROR*************************************" && \\\n\
-                 echo "Error building HPDDM. Check ${PETSC_ARCH}/lib/petsc/conf/hpddm.log" && \\\n\
-                 echo "********************************************************************" && \\\n\
-                 touch '+os.path.join('${PETSC_ARCH}','lib','petsc','conf','hpddm.errorflg')+' && \\\n\
-                 exit 1)'])
+                            '@${RM} '+os.path.join(self.petscdir.dir,self.arch,'lib','petsc','conf','hpddm.errorflg'),\
+                            '@'+cxx+' '+cxxflags+' '+os.path.join(self.packageDir,'interface','hpddm_petsc.cpp')+' '+ldflags+' -o '+os.path.join(libDir,'libhpddm_petsc.'+self.setCompilers.sharedLibraryExt)+' > '+os.path.join(self.petscdir.dir,self.arch,'lib','petsc','conf','hpddm.log')+' 2>&1 || \\\n\
+            (echo "**************************ERROR*************************************" && \\\n\
+            echo "Error building HPDDM. Check '+os.path.join(self.petscdir.dir,self.arch,'lib','petsc','conf','hpddm.log')+'" && \\\n\
+            echo "********************************************************************" && \\\n\
+            touch '+os.path.join(self.petscdir.dir,self.arch,'lib','petsc','conf','hpddm.errorflg')+' && \\\n\
+            exit 1)'])
         if self.argDB['prefix'] and not 'package-prefix-hash' in self.argDB:
           self.addMakeRule('hpddm-build','')
           self.addMakeRule('hpddm-install','hpddmbuild')
@@ -114,8 +97,10 @@ class Configure(config.package.Package):
           self.addMakeRule('hpddm-install','')
           return self.installDir
       else:
-        self.logPrintBox('***** WARNING: Compiling HPDDM with MPI but no SLEPc,\n\
-PCHPDDM won\'t be available, unless reconfiguring with --download-slepc *****')
+        self.logPrintWarning('Compiling HPDDM without SLEPc, \
+PCHPDDM won\'t be available, unless reconfiguring with --download-slepc or configuring SLEPc with --download-hpddm')
+    else:
+      self.logPrintWarning('Skipping PCHPDDM installation, remove --with-shared-libraries=0')
     self.addMakeRule('hpddm-build','')
     self.addMakeRule('hpddm-install','')
     return self.installDir

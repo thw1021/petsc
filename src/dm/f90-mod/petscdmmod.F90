@@ -1,28 +1,26 @@
-
-
         module petscdmdefdummy
         use petscmatdef
 #include <../src/dm/f90-mod/petscdm.h>
-        end module
+        end module petscdmdefdummy
 
         module petscdmlabeldef
         use petscmatdef
 #include <../src/dm/f90-mod/petscdmlabel.h>
-        end module
+        end module petscdmlabeldef
 
         module petscdmdef
         use petscdmdefdummy
         use petscdmlabeldef
         interface operator(.ne.)
           function dmnotequal(A,B)
-            use petscdmdefdummy
+            import tDM
             logical dmnotequal
             type(tDM), intent(in) :: A,B
           end function
         end interface operator (.ne.)
         interface operator(.eq.)
           function dmequals(A,B)
-            use petscdmdefdummy
+            import tDM
             logical dmequals
             type(tDM), intent(in) :: A,B
           end function
@@ -30,19 +28,23 @@
         end module
 
         function dmnotequal(A,B)
-          use petscdmdefdummy
+          use petscdmdefdummy, only: tDM
           logical dmnotequal
           type(tDM), intent(in) :: A,B
           dmnotequal = (A%v .ne. B%v)
         end function
 
         function dmequals(A,B)
-          use petscdmdefdummy
+          use petscdmdefdummy, only: tDM
           logical dmequals
           type(tDM), intent(in) :: A,B
           dmequals = (A%v .eq. B%v)
         end function
 
+#if defined(_WIN32) && defined(PETSC_USE_SHARED_LIBRARIES)
+!DEC$ ATTRIBUTES DLLEXPORT::dmnotequal
+!DEC$ ATTRIBUTES DLLEXPORT::dmequals
+#endif
         module petscdmpatchdef
         use petscdmdef
         end module
@@ -51,10 +53,9 @@
         use petscdmdef
         end module
 
-
         module petscdmlabel
         use petscdmlabeldef
-#include <../src/dm/f90-mod/petscdmlabel.h90>
+        use petscdmdef
         interface
 #include <../src/dm/f90-mod/ftn-auto-interfaces/petscdmlabel.h90>
         end interface
@@ -85,7 +86,6 @@
         end interface
         end module
 
-
         module petscdt
         use petscdmdef
 #include <../src/dm/f90-mod/petscdt.h90>
@@ -93,5 +93,3 @@
 #include <../src/dm/f90-mod/ftn-auto-interfaces/petscdt.h90>
         end interface
         end module
-
-

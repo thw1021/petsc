@@ -9,11 +9,12 @@ Graph Partitioner: 2 MPI Processes
   edge cut: 2
   balance: 0
   use vertex weights: 1
+  use edge weights: 0
   ParMetis type: kway
   load imbalance ratio 1.05
   debug flag 0
   random seed -1
-DM Object: Parallel Mesh 2 MPI processes
+DM Object: box 2 MPI processes
   type: plex
   Cell balance: 1.00 (max 8, min 8, empty 0)
   Edge Cut: 4 (on node 0.000)
@@ -40,6 +41,7 @@ Graph Partitioner: 2 MPI Processes
   edge cut: 4
   balance: 0
   use vertex weights: 1
+  use edge weights: 0
   ParMetis type: kway
   load imbalance ratio 1.05
   debug flag 0
@@ -49,12 +51,12 @@ DM Object: Parallel Mesh 2 MPI processes
   type: plex
   Cell balance: 1.00 (max 8, min 8, empty 0)
   Edge Cut: 4 (on node 0.000)
-DM Object: Simplicial Mesh 2 MPI processes
+DM Object: Generated Mesh 2 MPI processes
   type: plex
-Simplicial Mesh in 2 dimensions:
-  0-cells: 15 15
-  1-cells: 22 22
-  2-cells: 8 8
+Generated Mesh in 2 dimensions:
+  Number of 0-cells per rank: 15 15
+  Number of 1-cells per rank: 22 22
+  Number of 2-cells per rank: 8 8
 Labels:
   depth: 3 strata with value/size (0 (15), 1 (22), 2 (8))
   celltype: 3 strata with value/size (0 (15), 1 (22), 4 (8))

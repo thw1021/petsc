@@ -1,186 +1,158 @@
-
 /*
   Contains the data structure for plotting a bargraph in a window with an axis.
 */
-#include <petscdraw.h>                       /*I "petscdraw.h" I*/
-#include <petsc/private/petscimpl.h>         /*I "petscsys.h" I*/
-#include <petscviewer.h>                     /*I "petscviewer.h" I*/
-#include <../src/sys/classes/draw/utils/axisimpl.h>   /* so we can directly modify axis xticks */
+
+#include <petsc/private/drawimpl.h> /*I "petscdraw.h" I*/
+#include <petscviewer.h>            /*I "petscviewer.h" I*/
 
 PetscClassId PETSC_DRAWBAR_CLASSID = 0;
 
-struct _p_PetscDrawBar {
-  PETSCHEADER(int);
-  PetscErrorCode (*destroy)(PetscDrawSP);
-  PetscErrorCode (*view)(PetscDrawSP,PetscViewer);
-  PetscDraw      win;
-  PetscDrawAxis  axis;
-  PetscReal      ymin,ymax;
-  int            numBins;
-  PetscReal      *values;
-  int            color;
-  char           **labels;
-  PetscBool      sort;
-  PetscReal      sorttolerance;
-};
+/*@
+  PetscDrawBarCreate - Creates a bar graph data structure.
 
-#define CHUNKSIZE 100
+  Collective
 
-/*@C
-   PetscDrawBarCreate - Creates a bar graph data structure.
+  Input Parameter:
+. draw - The window where the graph will be made
 
-   Collective over PetscDraw
+  Output Parameter:
+. bar - The bar graph context
 
-   Input Parameters:
-.  draw  - The window where the graph will be made
+  Notes:
+  Call `PetscDrawBarSetData()` to provide the bins to be plotted and then `PetscDrawBarDraw()` to display the new plot
 
-   Output Parameters:
-.  bar - The bar graph context
+  The difference between a bar chart, `PetscDrawBar`, and a histogram, `PetscDrawHG`, is explained here <https://stattrek.com/statistics/charts/histogram.aspx?Tutorial=AP>
 
-   Notes:
-    Call PetscDrawBarSetData() to provide the bins to be plotted and then PetscDrawBarDraw() to display the new plot
+  The MPI communicator that owns the `PetscDraw` owns this `PetscDrawBar`, but the calls to set options and add data are ignored on all processes except the
+  zeroth MPI process in the communicator. All MPI processes in the communicator must call `PetscDrawBarDraw()` to display the updated graph.
 
-  The difference between a bar chart, PetscDrawBar, and a histogram, PetscDrawHG, is explained here https://stattrek.com/statistics/charts/histogram.aspx?Tutorial=AP
+  Level: intermediate
 
-   The MPI communicator that owns the PetscDraw owns this PetscDrawBar, but the calls to set options and add data are ignored on all processes except the
-   zeroth MPI process in the communicator. All MPI processes in the communicator must call PetscDrawBarDraw() to display the updated graph.
-
-   Level: intermediate
-
-.seealso: PetscDrawLGCreate(), PetscDrawLG, PetscDrawSPCreate(), PetscDrawSP, PetscDrawHGCreate(), PetscDrawHG, PetscDrawBarDestroy(), PetscDrawBarSetData(),
-          PetscDrawBar, PetscDrawBarDraw(), PetscDrawBarSave(), PetscDrawBarSetColor(), PetscDrawBarSort(), PetscDrawBarSetLimits(), PetscDrawBarGetAxis(), PetscDrawAxis,
-          PetscDrawBarGetDraw(), PetscDrawBarSetFromOptions()
+.seealso: `PetscDrawBar`, `PetscDrawLGCreate()`, `PetscDrawLG`, `PetscDrawSPCreate()`, `PetscDrawSP`, `PetscDrawHGCreate()`, `PetscDrawHG`, `PetscDrawBarDestroy()`, `PetscDrawBarSetData()`,
+          `PetscDrawBarDraw()`, `PetscDrawBarSave()`, `PetscDrawBarSetColor()`, `PetscDrawBarSort()`, `PetscDrawBarSetLimits()`, `PetscDrawBarGetAxis()`, `PetscDrawAxis`,
+          `PetscDrawBarGetDraw()`, `PetscDrawBarSetFromOptions()`
 @*/
-PetscErrorCode  PetscDrawBarCreate(PetscDraw draw,PetscDrawBar *bar)
+PetscErrorCode PetscDrawBarCreate(PetscDraw draw, PetscDrawBar *bar)
 {
-  PetscDrawBar   h;
-  PetscErrorCode ierr;
+  PetscDrawBar h;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
-  PetscValidPointer(bar,2);
+  PetscValidHeaderSpecific(draw, PETSC_DRAW_CLASSID, 1);
+  PetscAssertPointer(bar, 2);
 
-  ierr = PetscHeaderCreate(h,PETSC_DRAWBAR_CLASSID,"DrawBar","Bar Graph","Draw",PetscObjectComm((PetscObject)draw),PetscDrawBarDestroy,NULL);CHKERRQ(ierr);
-  ierr = PetscLogObjectParent((PetscObject)draw,(PetscObject)h);CHKERRQ(ierr);
+  PetscCall(PetscHeaderCreate(h, PETSC_DRAWBAR_CLASSID, "DrawBar", "Bar Graph", "Draw", PetscObjectComm((PetscObject)draw), PetscDrawBarDestroy, NULL));
 
-  ierr = PetscObjectReference((PetscObject)draw);CHKERRQ(ierr);
+  PetscCall(PetscObjectReference((PetscObject)draw));
   h->win = draw;
 
-  h->view        = NULL;
-  h->destroy     = NULL;
-  h->color       = PETSC_DRAW_GREEN;
-  h->ymin        = 0.;  /* if user has not set these then they are determined from the data */
-  h->ymax        = 0.;
-  h->numBins     = 0;
+  h->view    = NULL;
+  h->destroy = NULL;
+  h->color   = PETSC_DRAW_GREEN;
+  h->ymin    = 0.; /* if user has not set these then they are determined from the data */
+  h->ymax    = 0.;
+  h->numBins = 0;
 
-  ierr = PetscDrawAxisCreate(draw,&h->axis);CHKERRQ(ierr);
+  PetscCall(PetscDrawAxisCreate(draw, &h->axis));
   h->axis->xticks = NULL;
 
   *bar = h;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-   PetscDrawBarSetData
+  PetscDrawBarSetData - Set the data for a bar graph
 
-   Logically Collective on PetscDrawBar
+  Logically Collective
 
-   Input Parameter:
-+  bar - The bar graph context.
-.  bins  - number of items
-.  values - values of each item
--  labels - optional label for each bar, NULL terminated array of strings
+  Input Parameters:
++ bar    - The bar graph context.
+. bins   - number of items
+. data   - values of each item
+- labels - optional label for each bar, `NULL` terminated array of strings
 
-   Level: intermediate
+  Level: intermediate
 
-   Notes:
-    Call PetscDrawBarDraw() after this call to display the new plot
+  Notes:
+  Call `PetscDrawBarDraw()` after this call to display the new plot
 
-.seealso: PetscDrawBarCreate(), PetscDrawBar, PetscDrawBarDraw()
+  The data is ignored on all MPI processes except rank zero
 
+.seealso: `PetscDrawBar`, `PetscDrawBarCreate()`, `PetscDrawBarDraw()`
 @*/
-PetscErrorCode  PetscDrawBarSetData(PetscDrawBar bar,PetscInt bins,const PetscReal data[],const char *const *labels)
+PetscErrorCode PetscDrawBarSetData(PetscDrawBar bar, PetscInt bins, const PetscReal data[], const char *const *labels)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(bar,PETSC_DRAWBAR_CLASSID,1);
+  PetscValidHeaderSpecific(bar, PETSC_DRAWBAR_CLASSID, 1);
 
   if (bar->numBins != bins) {
-    ierr = PetscFree(bar->values);CHKERRQ(ierr);
-    ierr = PetscMalloc1(bins, &bar->values);CHKERRQ(ierr);
+    PetscCall(PetscFree(bar->values));
+    PetscCall(PetscMalloc1(bins, &bar->values));
     bar->numBins = bins;
   }
-  ierr = PetscArraycpy(bar->values,data,bins);CHKERRQ(ierr);
+  PetscCall(PetscArraycpy(bar->values, data, bins));
   bar->numBins = bins;
-  if (labels) {
-    ierr = PetscStrArrayallocpy(labels,&bar->labels);CHKERRQ(ierr);
-  }
-  PetscFunctionReturn(0);
+  if (labels) PetscCall(PetscStrArrayallocpy(labels, &bar->labels));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
   PetscDrawBarDestroy - Frees all space taken up by bar graph data structure.
 
-  Collective over PetscDrawBar
+  Collective
 
   Input Parameter:
 . bar - The bar graph context
 
   Level: intermediate
 
-.seealso:  PetscDrawBarCreate()
+.seealso: `PetscDrawBar`, `PetscDrawBarCreate()`
 @*/
-PetscErrorCode  PetscDrawBarDestroy(PetscDrawBar *bar)
+PetscErrorCode PetscDrawBarDestroy(PetscDrawBar *bar)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  if (!*bar) PetscFunctionReturn(0);
-  PetscValidHeaderSpecific(*bar,PETSC_DRAWBAR_CLASSID,1);
-  if (--((PetscObject)(*bar))->refct > 0) PetscFunctionReturn(0);
+  if (!*bar) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscValidHeaderSpecific(*bar, PETSC_DRAWBAR_CLASSID, 1);
+  if (--((PetscObject)*bar)->refct > 0) PetscFunctionReturn(PETSC_SUCCESS);
 
-  ierr = PetscFree((*bar)->values);CHKERRQ(ierr);
-  ierr = PetscStrArrayDestroy(&(*bar)->labels);CHKERRQ(ierr);
-  ierr = PetscDrawAxisDestroy(&(*bar)->axis);CHKERRQ(ierr);
-  ierr = PetscDrawDestroy(&(*bar)->win);CHKERRQ(ierr);
-  ierr = PetscHeaderDestroy(bar);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscFree((*bar)->values));
+  PetscCall(PetscStrArrayDestroy(&(*bar)->labels));
+  PetscCall(PetscDrawAxisDestroy(&(*bar)->axis));
+  PetscCall(PetscDrawDestroy(&(*bar)->win));
+  PetscCall(PetscHeaderDestroy(bar));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
   PetscDrawBarDraw - Redraws a bar graph.
 
-  Collective on PetscDrawBar
+  Collective
 
   Input Parameter:
 . bar - The bar graph context
 
   Level: intermediate
 
-.seealso: PetscDrawBar, PetscDrawBarCreate(), PetscDrawBarSetData()
-
+.seealso: `PetscDrawBar`, `PetscDrawBarCreate()`, `PetscDrawBarSetData()`
 @*/
-PetscErrorCode  PetscDrawBarDraw(PetscDrawBar bar)
+PetscErrorCode PetscDrawBarDraw(PetscDrawBar bar)
 {
-  PetscDraw      draw;
-  PetscBool      isnull;
-  PetscReal      xmin,xmax,ymin,ymax,*values,binLeft,binRight;
-  PetscInt       numValues,i,bcolor,color,idx,*perm,nplot;
-  PetscMPIInt    rank;
-  PetscErrorCode ierr;
-  char           **labels;
+  PetscDraw   draw;
+  PetscBool   isnull;
+  PetscReal   xmin, xmax, ymin, ymax, *values, binLeft, binRight;
+  PetscInt    numValues, i, bcolor, color, idx, *perm, nplot;
+  PetscMPIInt rank;
+  char      **labels;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(bar,PETSC_DRAWBAR_CLASSID,1);
-  ierr = PetscDrawIsNull(bar->win,&isnull);CHKERRQ(ierr);
-  if (isnull) PetscFunctionReturn(0);
-  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)bar),&rank);CHKERRQ(ierr);
+  PetscValidHeaderSpecific(bar, PETSC_DRAWBAR_CLASSID, 1);
+  PetscCall(PetscDrawIsNull(bar->win, &isnull));
+  if (isnull) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)bar), &rank));
 
-  if (bar->numBins < 1) PetscFunctionReturn(0);
+  if (bar->numBins < 1) PetscFunctionReturn(PETSC_SUCCESS);
 
   color = bar->color;
-  if (color == PETSC_DRAW_ROTATE) bcolor = PETSC_DRAW_BLACK+1;
+  if (color == PETSC_DRAW_ROTATE) bcolor = PETSC_DRAW_BLACK + 1;
   else bcolor = color;
 
   numValues = bar->numBins;
@@ -189,25 +161,25 @@ PetscErrorCode  PetscDrawBarDraw(PetscDrawBar bar)
     /* user has not set bounds on bars so set them based on the data */
     ymin = PETSC_MAX_REAL;
     ymax = PETSC_MIN_REAL;
-    for (i=0; i<numValues; i++) {
-      ymin = PetscMin(ymin,values[i]);
-      ymax = PetscMax(ymax,values[i]);
+    for (i = 0; i < numValues; i++) {
+      ymin = PetscMin(ymin, values[i]);
+      ymax = PetscMax(ymax, values[i]);
     }
   } else {
     ymin = bar->ymin;
     ymax = bar->ymax;
   }
-  nplot  = numValues;  /* number of points to actually plot; if some are lower than requested tolerance */
+  nplot  = numValues; /* number of points to actually plot; if some are lower than requested tolerance */
   xmin   = 0.0;
   xmax   = nplot;
   labels = bar->labels;
 
   if (bar->sort) {
-    ierr = PetscMalloc1(numValues,&perm);CHKERRQ(ierr);
-    for (i=0; i<numValues;i++) perm[i] = i;
-    ierr = PetscSortRealWithPermutation(numValues,values,perm);CHKERRQ(ierr);
+    PetscCall(PetscMalloc1(numValues, &perm));
+    for (i = 0; i < numValues; i++) perm[i] = i;
+    PetscCall(PetscSortRealWithPermutation(numValues, values, perm));
     if (bar->sorttolerance) {
-      for (i=0; i<numValues;i++) {
+      for (i = 0; i < numValues; i++) {
         if (values[perm[numValues - i - 1]] < bar->sorttolerance) {
           nplot = i;
           break;
@@ -217,105 +189,102 @@ PetscErrorCode  PetscDrawBarDraw(PetscDrawBar bar)
   }
 
   draw = bar->win;
-  ierr = PetscDrawCheckResizedWindow(draw);CHKERRQ(ierr);
-  ierr = PetscDrawClear(draw);CHKERRQ(ierr);
+  PetscCall(PetscDrawCheckResizedWindow(draw));
+  PetscCall(PetscDrawClear(draw));
 
-  ierr = PetscDrawAxisSetLimits(bar->axis,xmin,xmax,ymin,ymax);CHKERRQ(ierr);
-  ierr = PetscDrawAxisDraw(bar->axis);CHKERRQ(ierr);
+  PetscCall(PetscDrawAxisSetLimits(bar->axis, xmin, xmax, ymin, ymax));
+  PetscCall(PetscDrawAxisDraw(bar->axis));
 
-  ierr = PetscDrawCollectiveBegin(draw);CHKERRQ(ierr);
-  if (!rank) { /* Draw bins */
-    for (i=0; i<nplot; i++) {
-      idx = (bar->sort ? perm[numValues - i - 1] : i);
+  PetscDrawCollectiveBegin(draw);
+  if (rank == 0) { /* Draw bins */
+    for (i = 0; i < nplot; i++) {
+      idx      = (bar->sort ? perm[numValues - i - 1] : i);
       binLeft  = xmin + i;
       binRight = xmin + i + 1;
-      ierr = PetscDrawRectangle(draw,binLeft,ymin,binRight,values[idx],bcolor,bcolor,bcolor,bcolor);CHKERRQ(ierr);
-      ierr = PetscDrawLine(draw,binLeft,ymin,binLeft,values[idx],PETSC_DRAW_BLACK);CHKERRQ(ierr);
-      ierr = PetscDrawLine(draw,binRight,ymin,binRight,values[idx],PETSC_DRAW_BLACK);CHKERRQ(ierr);
-      ierr = PetscDrawLine(draw,binLeft,values[idx],binRight,values[idx],PETSC_DRAW_BLACK);CHKERRQ(ierr);
+      PetscCall(PetscDrawRectangle(draw, binLeft, ymin, binRight, values[idx], bcolor, bcolor, bcolor, bcolor));
+      PetscCall(PetscDrawLine(draw, binLeft, ymin, binLeft, values[idx], PETSC_DRAW_BLACK));
+      PetscCall(PetscDrawLine(draw, binRight, ymin, binRight, values[idx], PETSC_DRAW_BLACK));
+      PetscCall(PetscDrawLine(draw, binLeft, values[idx], binRight, values[idx], PETSC_DRAW_BLACK));
       if (labels) {
         PetscReal h;
-        ierr = PetscDrawStringGetSize(draw,NULL,&h);CHKERRQ(ierr);
-        ierr = PetscDrawStringCentered(draw,.5*(binLeft+binRight),ymin - 1.5*h,bcolor,labels[idx]);CHKERRQ(ierr);
+        PetscCall(PetscDrawStringGetSize(draw, NULL, &h));
+        PetscCall(PetscDrawStringCentered(draw, .5 * (binLeft + binRight), ymin - 1.5 * h, bcolor, labels[idx]));
       }
       if (color == PETSC_DRAW_ROTATE) bcolor++;
-      if (bcolor > PETSC_DRAW_BASIC_COLORS-1) bcolor = PETSC_DRAW_BLACK+1;
+      if (bcolor > PETSC_DRAW_BASIC_COLORS - 1) bcolor = PETSC_DRAW_BLACK + 1;
     }
   }
-  ierr = PetscDrawCollectiveEnd(draw);CHKERRQ(ierr);
-  if (bar->sort) {ierr = PetscFree(perm);CHKERRQ(ierr);}
+  PetscDrawCollectiveEnd(draw);
+  if (bar->sort) PetscCall(PetscFree(perm));
 
-  ierr = PetscDrawFlush(draw);CHKERRQ(ierr);
-  ierr = PetscDrawPause(draw);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscDrawFlush(draw));
+  PetscCall(PetscDrawPause(draw));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  PetscDrawBarSave - Saves a drawn image
+  PetscDrawBarSave - Saves a drawn bar graph
 
-  Collective on PetscDrawBar
+  Collective
 
-  Input Parameters:
+  Input Parameter:
 . bar - The bar graph context
 
   Level: intermediate
 
-.seealso:  PetscDrawBarCreate(), PetscDrawBarGetDraw(), PetscDrawSetSave(), PetscDrawSave(), PetscDrawBarSetData()
+.seealso: `PetscDrawSave()`, `PetscDrawBar`, `PetscDrawBarCreate()`, `PetscDrawBarGetDraw()`, `PetscDrawSetSave()`, `PetscDrawBarSetData()`
 @*/
-PetscErrorCode  PetscDrawBarSave(PetscDrawBar bar)
+PetscErrorCode PetscDrawBarSave(PetscDrawBar bar)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(bar,PETSC_DRAWBAR_CLASSID,1);
-  ierr = PetscDrawSave(bar->win);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(bar, PETSC_DRAWBAR_CLASSID, 1);
+  PetscCall(PetscDrawSave(bar->win));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
   PetscDrawBarSetColor - Sets the color the bars will be drawn with.
 
-  Logically Collective on PetscDrawBar
+  Logically Collective
 
   Input Parameters:
-+ bar - The bar graph context
-- color - one of the colors defined in petscdraw.h or PETSC_DRAW_ROTATE to make each bar a
++ bar   - The bar graph context
+- color - one of the colors defined in petscdraw.h or `PETSC_DRAW_ROTATE` to make each bar a
           different color
 
   Level: intermediate
 
-.seealso: PetscDrawBarCreate(), PetscDrawBar, PetscDrawBarSetData(), PetscDrawBarDraw(), PetscDrawBarGetAxis()
-
+.seealso: `PetscDrawBarCreate()`, `PetscDrawBar`, `PetscDrawBarSetData()`, `PetscDrawBarDraw()`, `PetscDrawBarGetAxis()`
 @*/
-PetscErrorCode  PetscDrawBarSetColor(PetscDrawBar bar, int color)
+PetscErrorCode PetscDrawBarSetColor(PetscDrawBar bar, int color)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(bar, PETSC_DRAWBAR_CLASSID,1);
+  PetscValidHeaderSpecific(bar, PETSC_DRAWBAR_CLASSID, 1);
   bar->color = color;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  PetscDrawBarSort - Sorts the values before drawing the bar chart
+  PetscDrawBarSort - Sorts the values before drawing the bar chart, the bars will be in ascending order from left to right
 
-  Logically Collective on PetscDrawBar
+  Logically Collective
 
   Input Parameters:
-+ bar - The bar graph context
-. sort - PETSC_TRUE to sort the values
++ bar       - The bar graph context
+. sort      - `PETSC_TRUE` to sort the values
 - tolerance - discard values less than tolerance
 
   Level: intermediate
 
-.seealso: PetscDrawBarCreate(), PetscDrawBar, PetscDrawBarSetData(), PetscDrawBarSetColor(), PetscDrawBarDraw(), PetscDrawBarGetAxis()
+.seealso: `PetscDrawBar`, `PetscDrawBarCreate()`, `PetscDrawBarSetData()`, `PetscDrawBarSetColor()`, `PetscDrawBarDraw()`, `PetscDrawBarGetAxis()`
 @*/
-PetscErrorCode  PetscDrawBarSort(PetscDrawBar bar, PetscBool sort, PetscReal tolerance)
+PetscErrorCode PetscDrawBarSort(PetscDrawBar bar, PetscBool sort, PetscReal tolerance)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(bar,PETSC_DRAWBAR_CLASSID,1);
+  PetscValidHeaderSpecific(bar, PETSC_DRAWBAR_CLASSID, 1);
   bar->sort          = sort;
   bar->sorttolerance = tolerance;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
@@ -323,32 +292,33 @@ PetscErrorCode  PetscDrawBarSort(PetscDrawBar bar, PetscBool sort, PetscReal tol
   points are added after this call, the limits will be adjusted to
   include those additional points.
 
-  Logically Collective on PetscDrawBar
+  Logically Collective
 
   Input Parameters:
-+ bar - The bar graph context
-- y_min,y_max - The limits
++ bar   - The bar graph context
+. y_min - The lower limit
+- y_max - The upper limit
 
   Level: intermediate
 
-.seealso: PetscDrawBarCreate(), PetscDrawBar, PetscDrawBarGetAxis(), PetscDrawBarSetData(), PetscDrawBarDraw()
+.seealso: `PetscDrawBar`, `PetscDrawBarCreate()`, `PetscDrawBarGetAxis()`, `PetscDrawBarSetData()`, `PetscDrawBarDraw()`
 @*/
-PetscErrorCode  PetscDrawBarSetLimits(PetscDrawBar bar, PetscReal y_min, PetscReal y_max)
+PetscErrorCode PetscDrawBarSetLimits(PetscDrawBar bar, PetscReal y_min, PetscReal y_max)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(bar,PETSC_DRAWBAR_CLASSID,1);
+  PetscValidHeaderSpecific(bar, PETSC_DRAWBAR_CLASSID, 1);
   bar->ymin = y_min;
   bar->ymax = y_max;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PetscDrawBarGetAxis - Gets the axis context associated with a bar graph.
   This is useful if one wants to change some axis property, such as
   labels, color, etc. The axis context should not be destroyed by the
   application code.
 
-  Not Collective, PetscDrawAxis is parallel if PetscDrawBar is parallel
+  Not Collective, axis is parallel if bar is parallel
 
   Input Parameter:
 . bar - The bar graph context
@@ -358,67 +328,71 @@ PetscErrorCode  PetscDrawBarSetLimits(PetscDrawBar bar, PetscReal y_min, PetscRe
 
   Level: intermediate
 
-.seealso: PetscDrawBarCreate(), PetscDrawBar, PetscDrawAxis, PetscDrawAxisCreate()
+.seealso: `PetscDrawBar`, `PetscDrawBarCreate()`, `PetscDrawAxis`, `PetscDrawAxisCreate()`
 @*/
-PetscErrorCode  PetscDrawBarGetAxis(PetscDrawBar bar,PetscDrawAxis *axis)
+PetscErrorCode PetscDrawBarGetAxis(PetscDrawBar bar, PetscDrawAxis *axis)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(bar,PETSC_DRAWBAR_CLASSID,1);
-  PetscValidPointer(axis,2);
+  PetscValidHeaderSpecific(bar, PETSC_DRAWBAR_CLASSID, 1);
+  PetscAssertPointer(axis, 2);
   *axis = bar->axis;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PetscDrawBarGetDraw - Gets the draw context associated with a bar graph.
 
-  Not Collective, PetscDraw is parallel if PetscDrawBar is parallel
+  Not Collective, draw is parallel if bar is parallel
 
   Input Parameter:
 . bar - The bar graph context
 
   Output Parameter:
-. draw  - The draw context
+. draw - The draw context
 
   Level: intermediate
 
-.seealso: PetscDrawBarCreate(), PetscDrawBar, PetscDrawBarDraw(), PetscDraw
+.seealso: `PetscDrawBar`, `PetscDraw`, `PetscDrawBarCreate()`, `PetscDrawBarDraw()`
 @*/
-PetscErrorCode  PetscDrawBarGetDraw(PetscDrawBar bar,PetscDraw *draw)
+PetscErrorCode PetscDrawBarGetDraw(PetscDrawBar bar, PetscDraw *draw)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(bar,PETSC_DRAWBAR_CLASSID,1);
-  PetscValidPointer(draw,2);
+  PetscValidHeaderSpecific(bar, PETSC_DRAWBAR_CLASSID, 1);
+  PetscAssertPointer(draw, 2);
   *draw = bar->win;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-    PetscDrawBarSetFromOptions - Sets options related to the PetscDrawBar
+  PetscDrawBarSetFromOptions - Sets options related to the display of the `PetscDrawBar`
 
-    Collective over PetscDrawBar
+  Collective
 
-    Options Database:
-.  -bar_sort - sort the entries before drawing the bar graph
+  Input Parameter:
+. bar - the bar graph context
 
-    Level: intermediate
+  Options Database Key:
+. -bar_sort - sort the entries before drawing the bar graph
 
+  Level: intermediate
 
-.seealso:  PetscDrawBarDestroy(), PetscDrawBarCreate(), PetscDrawBarSort()
+  Note:
+  Does not set options related to the underlying `PetscDraw` or `PetscDrawAxis`
+
+.seealso: `PetscDrawBar`, `PetscDrawBarDestroy()`, `PetscDrawBarCreate()`, `PetscDrawBarSort()`
 @*/
-PetscErrorCode  PetscDrawBarSetFromOptions(PetscDrawBar bar)
+PetscErrorCode PetscDrawBarSetFromOptions(PetscDrawBar bar)
 {
-  PetscErrorCode ierr;
-  PetscBool      set;
+  PetscBool set;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(bar,PETSC_DRAWBAR_CLASSID,1);
+  PetscValidHeaderSpecific(bar, PETSC_DRAWBAR_CLASSID, 1);
 
-  ierr = PetscOptionsHasName(((PetscObject)bar)->options,((PetscObject)bar)->prefix,"-bar_sort",&set);CHKERRQ(ierr);
+  PetscCall(PetscOptionsHasName(((PetscObject)bar)->options, ((PetscObject)bar)->prefix, "-bar_sort", &set));
   if (set) {
     PetscReal tol = bar->sorttolerance;
-    ierr = PetscOptionsGetReal(((PetscObject)bar)->options,((PetscObject)bar)->prefix,"-bar_sort",&tol,NULL);CHKERRQ(ierr);
-    ierr = PetscDrawBarSort(bar,PETSC_TRUE,tol);CHKERRQ(ierr);
+    PetscCall(PetscOptionsGetReal(((PetscObject)bar)->options, ((PetscObject)bar)->prefix, "-bar_sort", &tol, NULL));
+    PetscCall(PetscDrawBarSort(bar, PETSC_TRUE, tol));
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

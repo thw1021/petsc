@@ -1,17 +1,7 @@
+-include ../../../../../petscdir.mk
 
-ALL: lib
-
-CFLAGS    =
-FFLAGS    =
-SOURCEC	  = iscomp.c iscoloring.c isdiff.c isblock.c
-SOURCEF	  =
-SOURCEH	  =
-LIBBASE	  = libpetscvec
-DIRS	  =
-MANSEC	  = Vec
+MANSEC    = Vec
 SUBMANSEC = IS
-LOCDIR	  = src/vec/is/is/utils/
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
-include ${PETSC_DIR}/lib/petsc/conf/rules
-include ${PETSC_DIR}/lib/petsc/conf/test
+include ${PETSC_DIR}/lib/petsc/conf/rules_doc.mk

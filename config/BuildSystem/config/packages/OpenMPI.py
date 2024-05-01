@@ -4,24 +4,30 @@ import os
 class Configure(config.package.GNUPackage):
   def __init__(self, framework):
     config.package.GNUPackage.__init__(self, framework)
-    self.download               = ['https://download.open-mpi.org/release/open-mpi/v4.0/openmpi-4.0.3.tar.gz',
-                                   'http://ftp.mcs.anl.gov/pub/petsc/externalpackages/openmpi-4.0.3.tar.gz']
-    self.downloaddirnames       = ['openmpi']
+    self.version                = '5.0.3'
+    self.download               = ['https://download.open-mpi.org/release/open-mpi/v5.0/openmpi-'+self.version+'.tar.gz',
+                                   'https://web.cels.anl.gov/projects/petsc/download/externalpackages/openmpi-'+self.version+'.tar.gz']
+    self.download_git           = ['git://https://github.com/open-mpi/ompi.git']
+    self.gitsubmodules          = ['.']
+    self.downloaddirnames       = ['openmpi','ompi']
     self.skippackagewithoptions = 1
     self.isMPI                  = 1
+    self.buildLanguages         = ['C','Cxx']
     return
 
   def setupDependencies(self, framework):
     config.package.GNUPackage.setupDependencies(self, framework)
     self.cuda           = framework.require('config.packages.cuda',self)
+    self.hwloc          = framework.require('config.packages.hwloc',self)
+    self.odeps          = [self.hwloc]
     return
 
   def formGNUConfigureArgs(self):
     args = config.package.GNUPackage.formGNUConfigureArgs(self)
     args.append('--with-rsh=ssh')
+    args.append('--disable-man-pages')
+    args.append('--disable-sphinx')
     args.append('MAKE='+self.make.make)
-    if not hasattr(self.compilers, 'CXX'):
-      raise RuntimeError('Error: OpenMPI requires C++ compiler. None specified')
     if hasattr(self.compilers, 'FC'):
       self.pushLanguage('FC')
       if not self.fortran.fortranIsF90:
@@ -40,13 +46,28 @@ class Configure(config.package.GNUPackage):
     args.append('--disable-vt')
     if self.cuda.found:
       args.append('--with-cuda='+self.cuda.cudaDir)
-    # have OpenMPI build its own private copy of hwloc to prevent possible conflict with one used by PETSc
-    args.append('--with-hwloc=internal')
+    if self.hwloc.found:
+      args.append('--with-hwloc="'+self.hwloc.directory+'"')
+    else:
+      args.append('--with-hwloc=internal')
+    # https://www.open-mpi.org/faq/?category=building#libevent-or-hwloc-errors-when-linking-fortran
+    args.append('--with-libevent=internal')
+    args.append('--with-pmix=internal')
     return args
 
+  def preInstall(self):
+    if not self.getExecutable('perl'):
+      raise RuntimeError('Cannot find perl required by --download-openmpi, install perl (possibly with a package manager) and run ./configure again') 
+    self.Bootstrap('AUTOMAKE_JOBS=%d ./autogen.pl' % self.make.make_np)
+
   def checkDownload(self):
+    if config.setCompilers.Configure.isCygwin(self.log):
+      if config.setCompilers.Configure.isGNU(self.setCompilers.CC, self.log):
+        raise RuntimeError('Cannot download-install Open MPI on Windows with cygwin compilers. Suggest installing Open MPI via cygwin installer')
+      else:
+        raise RuntimeError('Cannot download-install Open MPI on Windows with Microsoft or Intel Compilers. Suggest using MS-MPI or Intel-MPI (do not use MPICH2')
     if self.argDB['download-'+self.downloadname.lower()] and  'package-prefix-hash' in self.argDB and self.argDB['package-prefix-hash'] == 'reuse':
-      self.logWrite('Reusing package prefix install of '+self.defaultInstallDir+' for OpenMPI')
+      self.logWrite('Reusing package prefix install of '+self.defaultInstallDir+' for Open MPI')
       self.installDir = self.defaultInstallDir
       self.updateCompilers(self.installDir,'mpicc','mpicxx','mpif77','mpif90')
       return self.installDir
@@ -55,7 +76,7 @@ class Configure(config.package.GNUPackage):
     return ''
 
   def Install(self):
-    '''After downloading and installing OpenMPI we need to reset the compilers to use those defined by the OpenMPI install'''
+    '''After downloading and installing Open MPI we need to reset the compilers to use those defined by the Open MPI install'''
     if 'package-prefix-hash' in self.argDB and self.argDB['package-prefix-hash'] == 'reuse':
       return self.defaultInstallDir
     installDir = config.package.GNUPackage.Install(self)

@@ -1,4 +1,4 @@
-#include <petsc/private/partitionerimpl.h>        /*I "petscpartitioner.h" I*/
+#include <petsc/private/partitionerimpl.h> /*I "petscpartitioner.h" I*/
 
 typedef struct {
   PetscInt dummy;
@@ -6,42 +6,38 @@ typedef struct {
 
 static PetscErrorCode PetscPartitionerDestroy_Gather(PetscPartitioner part)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  ierr = PetscFree(part->data);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscFree(part->data));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscPartitionerView_Gather_ASCII(PetscPartitioner part, PetscViewer viewer)
 {
   PetscFunctionBegin;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscPartitionerView_Gather(PetscPartitioner part, PetscViewer viewer)
 {
-  PetscBool      iascii;
-  PetscErrorCode ierr;
+  PetscBool iascii;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(part, PETSCPARTITIONER_CLASSID, 1);
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 2);
-  ierr = PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERASCII, &iascii);CHKERRQ(ierr);
-  if (iascii) {ierr = PetscPartitionerView_Gather_ASCII(part, viewer);CHKERRQ(ierr);}
-  PetscFunctionReturn(0);
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
+  if (iascii) PetscCall(PetscPartitionerView_Gather_ASCII(part, viewer));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscPartitionerPartition_Gather(PetscPartitioner part, PetscInt nparts, PetscInt numVertices, PetscInt start[], PetscInt adjacency[], PetscSection vertSection, PetscSection targetSection, PetscSection partSection, IS *partition)
+static PetscErrorCode PetscPartitionerPartition_Gather(PetscPartitioner part, PetscInt nparts, PetscInt numVertices, PetscInt start[], PetscInt adjacency[], PetscSection vertSection, PetscSection edgeSection, PetscSection targetSection, PetscSection partSection, IS *partition)
 {
-  PetscInt       np;
-  PetscErrorCode ierr;
+  PetscInt np;
 
   PetscFunctionBegin;
-  ierr = ISCreateStride(PETSC_COMM_SELF, numVertices, 0, 1, partition);CHKERRQ(ierr);
-  ierr = PetscSectionSetDof(partSection,0,numVertices);CHKERRQ(ierr);
-  for (np = 1; np < nparts; ++np) {ierr = PetscSectionSetDof(partSection, np, 0);CHKERRQ(ierr);}
-  PetscFunctionReturn(0);
+  PetscCall(ISCreateStride(PETSC_COMM_SELF, numVertices, 0, 1, partition));
+  PetscCall(PetscSectionSetDof(partSection, 0, numVertices));
+  for (np = 1; np < nparts; ++np) PetscCall(PetscSectionSetDof(partSection, np, 0));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscPartitionerInitialize_Gather(PetscPartitioner part)
@@ -51,7 +47,7 @@ static PetscErrorCode PetscPartitionerInitialize_Gather(PetscPartitioner part)
   part->ops->view      = PetscPartitionerView_Gather;
   part->ops->destroy   = PetscPartitionerDestroy_Gather;
   part->ops->partition = PetscPartitionerPartition_Gather;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*MC
@@ -59,21 +55,18 @@ static PetscErrorCode PetscPartitionerInitialize_Gather(PetscPartitioner part)
 
   Level: intermediate
 
-.seealso: PetscPartitionerType, PetscPartitionerCreate(), PetscPartitionerSetType()
+.seealso: `PetscPartitionerType`, `PetscPartitionerCreate()`, `PetscPartitionerSetType()`
 M*/
 
 PETSC_EXTERN PetscErrorCode PetscPartitionerCreate_Gather(PetscPartitioner part)
 {
   PetscPartitioner_Gather *p;
-  PetscErrorCode           ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(part, PETSCPARTITIONER_CLASSID, 1);
-  ierr       = PetscNewLog(part, &p);CHKERRQ(ierr);
+  PetscCall(PetscNew(&p));
   part->data = p;
 
-  ierr = PetscPartitionerInitialize_Gather(part);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscPartitionerInitialize_Gather(part));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
-
-

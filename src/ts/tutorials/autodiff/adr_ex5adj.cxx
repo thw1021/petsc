@@ -1,10 +1,6 @@
 static char help[] = "Demonstrates adjoint sensitivity analysis for Reaction-Diffusion Equations.\n";
 
 /*
-   Concepts: TS^time-dependent nonlinear problems
-   Concepts: Automatic differentiation using ADOL-C
-*/
-/*
    REQUIRES configuration of PETSc with option --download-adolc.
 
    For documentation on ADOL-C, see
@@ -46,58 +42,59 @@ static char help[] = "Demonstrates adjoint sensitivity analysis for Reaction-Dif
 
 /* (Passive) field for the two variables */
 typedef struct {
-  PetscScalar u,v;
+  PetscScalar u, v;
 } Field;
 
 /* Active field for the two variables */
 typedef struct {
-  adouble u,v;
+  adouble u, v;
 } AField;
 
 /* Application context */
 typedef struct {
-  PetscReal D1,D2,gamma,kappa;
-  AField    **u_a,**f_a;
+  PetscReal D1, D2, gamma, kappa;
+  AField  **u_a, **f_a;
   PetscBool aijpc;
-  AdolcCtx  *adctx; /* Automatic differentation support */
+  AdolcCtx *adctx; /* Automatic differentation support */
 } AppCtx;
 
-extern PetscErrorCode InitialConditions(DM da,Vec U);
-extern PetscErrorCode InitializeLambda(DM da,Vec lambda,PetscReal x,PetscReal y);
-extern PetscErrorCode IFunctionLocalPassive(DMDALocalInfo *info,PetscReal t,Field**u,Field**udot,Field**f,void *ptr);
-extern PetscErrorCode IFunctionActive(TS ts,PetscReal ftime,Vec U,Vec Udot,Vec F,void *ptr);
-extern PetscErrorCode RHSFunctionActive(TS ts,PetscReal ftime,Vec U,Vec F,void *ptr);
-extern PetscErrorCode RHSFunctionPassive(TS ts,PetscReal ftime,Vec U,Vec F,void *ptr);
-extern PetscErrorCode IJacobianByHand(TS ts,PetscReal t,Vec U,Vec Udot,PetscReal a,Mat A,Mat B,void *ctx);
-extern PetscErrorCode IJacobianAdolc(TS ts,PetscReal t,Vec U,Vec Udot,PetscReal a,Mat A,Mat B,void *ctx);
-extern PetscErrorCode RHSJacobianByHand(TS ts,PetscReal t,Vec U,Mat A,Mat B,void *ctx);
-extern PetscErrorCode RHSJacobianAdolc(TS ts,PetscReal t,Vec U,Mat A,Mat B,void *ctx);
+extern PetscErrorCode InitialConditions(DM da, Vec U);
+extern PetscErrorCode InitializeLambda(DM da, Vec lambda, PetscReal x, PetscReal y);
+extern PetscErrorCode IFunctionLocalPassive(DMDALocalInfo *info, PetscReal t, Field **u, Field **udot, Field **f, void *ptr);
+extern PetscErrorCode IFunctionActive(TS ts, PetscReal ftime, Vec U, Vec Udot, Vec F, void *ptr);
+extern PetscErrorCode RHSFunctionActive(TS ts, PetscReal ftime, Vec U, Vec F, void *ptr);
+extern PetscErrorCode RHSFunctionPassive(TS ts, PetscReal ftime, Vec U, Vec F, void *ptr);
+extern PetscErrorCode IJacobianByHand(TS ts, PetscReal t, Vec U, Vec Udot, PetscReal a, Mat A, Mat B, void *ctx);
+extern PetscErrorCode IJacobianAdolc(TS ts, PetscReal t, Vec U, Vec Udot, PetscReal a, Mat A, Mat B, void *ctx);
+extern PetscErrorCode RHSJacobianByHand(TS ts, PetscReal t, Vec U, Mat A, Mat B, void *ctx);
+extern PetscErrorCode RHSJacobianAdolc(TS ts, PetscReal t, Vec U, Mat A, Mat B, void *ctx);
 
-int main(int argc,char **argv)
+int main(int argc, char **argv)
 {
-  TS             ts;                            /* ODE integrator */
-  Vec            x,r,xdot;                      /* solution, residual, derivative */
-  PetscErrorCode ierr;
+  TS             ts;
+  Vec            x, r, xdot;
   DM             da;
   AppCtx         appctx;
-  AdolcCtx       *adctx;
+  AdolcCtx      *adctx;
   Vec            lambda[1];
-  PetscBool      forwardonly=PETSC_FALSE,implicitform=PETSC_FALSE,byhand=PETSC_FALSE;
-  PetscInt       gxm,gym,i,dofs = 2,ctrl[3] = {0,0,0};
-  PetscScalar    **Seed = NULL,**Rec = NULL,*u_vec;
-  unsigned int   **JP = NULL;
+  PetscBool      forwardonly = PETSC_FALSE, implicitform = PETSC_FALSE, byhand = PETSC_FALSE;
+  PetscInt       gxm, gym, i, dofs = 2, ctrl[3] = {0, 0, 0};
+  PetscScalar  **Seed = NULL, **Rec = NULL, *u_vec;
+  unsigned int **JP = NULL;
   ISColoring     iscoloring;
 
-  ierr = PetscInitialize(&argc,&argv,NULL,help);if (ierr) return ierr;
-  ierr = PetscNew(&adctx);CHKERRQ(ierr);
-  ierr = PetscOptionsGetBool(NULL,NULL,"-forwardonly",&forwardonly,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsGetBool(NULL,NULL,"-implicitform",&implicitform,NULL);CHKERRQ(ierr);
-  appctx.aijpc = PETSC_FALSE,adctx->no_an = PETSC_FALSE,adctx->sparse = PETSC_FALSE,adctx->sparse_view = PETSC_FALSE;adctx->sparse_view_done = PETSC_FALSE;
-  ierr = PetscOptionsGetBool(NULL,NULL,"-aijpc",&appctx.aijpc,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsGetBool(NULL,NULL,"-no_annotation",&adctx->no_an,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsGetBool(NULL,NULL,"-jacobian_by_hand",&byhand,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsGetBool(NULL,NULL,"-adolc_sparse",&adctx->sparse,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsGetBool(NULL,NULL,"-adolc_sparse_view",&adctx->sparse_view,NULL);CHKERRQ(ierr);
+  PetscFunctionBeginUser;
+  PetscCall(PetscInitialize(&argc, &argv, NULL, help));
+  PetscCall(PetscNew(&adctx));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-forwardonly", &forwardonly, NULL));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-implicitform", &implicitform, NULL));
+  appctx.aijpc = PETSC_FALSE, adctx->no_an = PETSC_FALSE, adctx->sparse = PETSC_FALSE, adctx->sparse_view = PETSC_FALSE;
+  adctx->sparse_view_done = PETSC_FALSE;
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-aijpc", &appctx.aijpc, NULL));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-no_annotation", &adctx->no_an, NULL));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-jacobian_by_hand", &byhand, NULL));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-adolc_sparse", &adctx->sparse, NULL));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-adolc_sparse_view", &adctx->sparse_view, NULL));
   appctx.D1    = 8.0e-5;
   appctx.D2    = 4.0e-5;
   appctx.gamma = .024;
@@ -107,45 +104,45 @@ int main(int argc,char **argv)
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Create distributed array (DMDA) to manage parallel grid and vectors
   - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-  ierr = DMDACreate2d(PETSC_COMM_WORLD,DM_BOUNDARY_PERIODIC,DM_BOUNDARY_PERIODIC,DMDA_STENCIL_STAR,65,65,PETSC_DECIDE,PETSC_DECIDE,2,1,NULL,NULL,&da);CHKERRQ(ierr);
-  ierr = DMSetFromOptions(da);CHKERRQ(ierr);
-  ierr = DMSetUp(da);CHKERRQ(ierr);
-  ierr = DMDASetFieldName(da,0,"u");CHKERRQ(ierr);
-  ierr = DMDASetFieldName(da,1,"v");CHKERRQ(ierr);
+  PetscCall(DMDACreate2d(PETSC_COMM_WORLD, DM_BOUNDARY_PERIODIC, DM_BOUNDARY_PERIODIC, DMDA_STENCIL_STAR, 65, 65, PETSC_DECIDE, PETSC_DECIDE, 2, 1, NULL, NULL, &da));
+  PetscCall(DMSetFromOptions(da));
+  PetscCall(DMSetUp(da));
+  PetscCall(DMDASetFieldName(da, 0, "u"));
+  PetscCall(DMDASetFieldName(da, 1, "v"));
 
   /*  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Extract global vectors from DMDA; then duplicate for remaining
      vectors that are the same types
    - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-  ierr = DMCreateGlobalVector(da,&x);CHKERRQ(ierr);
-  ierr = VecDuplicate(x,&r);CHKERRQ(ierr);
-  ierr = VecDuplicate(x,&xdot);CHKERRQ(ierr);
+  PetscCall(DMCreateGlobalVector(da, &x));
+  PetscCall(VecDuplicate(x, &r));
+  PetscCall(VecDuplicate(x, &xdot));
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Create timestepping solver context
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-  ierr = TSCreate(PETSC_COMM_WORLD,&ts);CHKERRQ(ierr);
-  ierr = TSSetType(ts,TSCN);CHKERRQ(ierr);
-  ierr = TSSetDM(ts,da);CHKERRQ(ierr);
-  ierr = TSSetProblemType(ts,TS_NONLINEAR);CHKERRQ(ierr);
+  PetscCall(TSCreate(PETSC_COMM_WORLD, &ts));
+  PetscCall(TSSetType(ts, TSCN));
+  PetscCall(TSSetDM(ts, da));
+  PetscCall(TSSetProblemType(ts, TS_NONLINEAR));
   if (!implicitform) {
-    ierr = TSSetRHSFunction(ts,NULL,RHSFunctionPassive,&appctx);CHKERRQ(ierr);
+    PetscCall(TSSetRHSFunction(ts, NULL, RHSFunctionPassive, &appctx));
   } else {
-    ierr = DMDATSSetIFunctionLocal(da,INSERT_VALUES,(DMDATSIFunctionLocal)IFunctionLocalPassive,&appctx);CHKERRQ(ierr);
+    PetscCall(DMDATSSetIFunctionLocal(da, INSERT_VALUES, (DMDATSIFunctionLocalFn *)IFunctionLocalPassive, &appctx));
   }
 
   if (!adctx->no_an) {
-    ierr = DMDAGetGhostCorners(da,NULL,NULL,NULL,&gxm,&gym,NULL);CHKERRQ(ierr);
-    adctx->m = dofs*gxm*gym;adctx->n = dofs*gxm*gym; /* Number of dependent and independent variables */
+    PetscCall(DMDAGetGhostCorners(da, NULL, NULL, NULL, &gxm, &gym, NULL));
+    adctx->m = dofs * gxm * gym;
+    adctx->n = dofs * gxm * gym; /* Number of dependent and independent variables */
 
     /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
        Trace function(s) just once
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-    ierr = PetscMalloc1(adctx->n,&u_vec);CHKERRQ(ierr);
     if (!implicitform) {
-      ierr = RHSFunctionActive(ts,1.0,x,r,&appctx);CHKERRQ(ierr);
+      PetscCall(RHSFunctionActive(ts, 1.0, x, r, &appctx));
     } else {
-      ierr = IFunctionActive(ts,1.0,x,xdot,r,&appctx);CHKERRQ(ierr);
+      PetscCall(IFunctionActive(ts, 1.0, x, xdot, r, &appctx));
     }
 
     /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -156,7 +153,6 @@ int main(int argc,char **argv)
       these objects once.
        - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
     if (adctx->sparse) {
-
       /*
          Generate sparsity pattern
 
@@ -164,12 +160,10 @@ int main(int argc,char **argv)
          provided by ColPack. Otherwise, it is the responsibility of the user
          to obtain the sparsity pattern.
       */
-      ierr = PetscMalloc1(adctx->n,&u_vec);CHKERRQ(ierr);
-      JP = (unsigned int **) malloc(adctx->m*sizeof(unsigned int*));
-      jac_pat(1,adctx->m,adctx->n,u_vec,JP,ctrl);
-      if (adctx->sparse_view) {
-        ierr = PrintSparsity(MPI_COMM_WORLD,adctx->m,JP);CHKERRQ(ierr);
-      }
+      PetscCall(PetscMalloc1(adctx->n, &u_vec));
+      JP = (unsigned int **)malloc(adctx->m * sizeof(unsigned int *));
+      jac_pat(1, adctx->m, adctx->n, u_vec, JP, ctrl);
+      if (adctx->sparse_view) PetscCall(PrintSparsity(MPI_COMM_WORLD, adctx->m, JP));
 
       /*
         Extract a column colouring
@@ -178,36 +172,34 @@ int main(int argc,char **argv)
         follows. There are also ColPack drivers available. Otherwise, it is the
         responsibility of the user to obtain a suitable colouring.
       */
-      ierr = DMCreateColoring(da,IS_COLORING_LOCAL,&iscoloring);CHKERRQ(ierr);
-      ierr = ISColoringGetIS(iscoloring,PETSC_USE_POINTER,&adctx->p,NULL);CHKERRQ(ierr);
+      PetscCall(DMCreateColoring(da, IS_COLORING_LOCAL, &iscoloring));
+      PetscCall(ISColoringGetIS(iscoloring, PETSC_USE_POINTER, &adctx->p, NULL));
 
       /* Generate seed matrix to propagate through the forward mode of AD */
-      ierr = AdolcMalloc2(adctx->n,adctx->p,&Seed);CHKERRQ(ierr);
-      ierr = GenerateSeedMatrix(iscoloring,Seed);CHKERRQ(ierr);
-      ierr = ISColoringDestroy(&iscoloring);CHKERRQ(ierr);
+      PetscCall(AdolcMalloc2(adctx->n, adctx->p, &Seed));
+      PetscCall(GenerateSeedMatrix(iscoloring, Seed));
+      PetscCall(ISColoringDestroy(&iscoloring));
 
       /*
         Generate recovery matrix, which is used to recover the Jacobian from
         compressed format */
-      ierr = AdolcMalloc2(adctx->m,adctx->p,&Rec);CHKERRQ(ierr);
-      ierr = GetRecoveryMatrix(Seed,JP,adctx->m,adctx->p,Rec);CHKERRQ(ierr);
+      PetscCall(AdolcMalloc2(adctx->m, adctx->p, &Rec));
+      PetscCall(GetRecoveryMatrix(Seed, JP, adctx->m, adctx->p, Rec));
 
       /* Store results and free workspace */
       adctx->Rec = Rec;
-      for (i=0;i<adctx->m;i++)
-        free(JP[i]);
+      for (i = 0; i < adctx->m; i++) free(JP[i]);
       free(JP);
-      ierr = PetscFree(u_vec);CHKERRQ(ierr);
+      PetscCall(PetscFree(u_vec));
 
     } else {
-
       /*
         In 'full' Jacobian mode, propagate an identity matrix through the
         forward mode of AD.
       */
       adctx->p = adctx->n;
-      ierr = AdolcMalloc2(adctx->n,adctx->p,&Seed);CHKERRQ(ierr);
-      ierr = Identity(adctx->n,Seed);CHKERRQ(ierr);
+      PetscCall(AdolcMalloc2(adctx->n, adctx->p, &Seed));
+      PetscCall(Identity(adctx->n, Seed));
     }
     adctx->Seed = Seed;
   }
@@ -217,30 +209,30 @@ int main(int argc,char **argv)
    - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
   if (!implicitform) {
     if (!byhand) {
-      ierr = TSSetRHSJacobian(ts,NULL,NULL,RHSJacobianAdolc,&appctx);CHKERRQ(ierr);
+      PetscCall(TSSetRHSJacobian(ts, NULL, NULL, RHSJacobianAdolc, &appctx));
     } else {
-      ierr = TSSetRHSJacobian(ts,NULL,NULL,RHSJacobianByHand,&appctx);CHKERRQ(ierr);
+      PetscCall(TSSetRHSJacobian(ts, NULL, NULL, RHSJacobianByHand, &appctx));
     }
   } else {
     if (appctx.aijpc) {
-      Mat A,B;
+      Mat A, B;
 
-      ierr = DMSetMatType(da,MATSELL);CHKERRQ(ierr);
-      ierr = DMCreateMatrix(da,&A);CHKERRQ(ierr);
-      ierr = MatConvert(A,MATAIJ,MAT_INITIAL_MATRIX,&B);CHKERRQ(ierr);
+      PetscCall(DMSetMatType(da, MATSELL));
+      PetscCall(DMCreateMatrix(da, &A));
+      PetscCall(MatConvert(A, MATAIJ, MAT_INITIAL_MATRIX, &B));
       /* FIXME do we need to change viewer to display matrix in natural ordering as DMCreateMatrix_DA does? */
       if (!byhand) {
-        ierr = TSSetIJacobian(ts,A,B,IJacobianAdolc,&appctx);CHKERRQ(ierr);
+        PetscCall(TSSetIJacobian(ts, A, B, IJacobianAdolc, &appctx));
       } else {
-        ierr = TSSetIJacobian(ts,A,B,IJacobianByHand,&appctx);CHKERRQ(ierr);
+        PetscCall(TSSetIJacobian(ts, A, B, IJacobianByHand, &appctx));
       }
-      ierr = MatDestroy(&A);CHKERRQ(ierr);
-      ierr = MatDestroy(&B);CHKERRQ(ierr);
+      PetscCall(MatDestroy(&A));
+      PetscCall(MatDestroy(&B));
     } else {
       if (!byhand) {
-        ierr = TSSetIJacobian(ts,NULL,NULL,IJacobianAdolc,&appctx);CHKERRQ(ierr);
+        PetscCall(TSSetIJacobian(ts, NULL, NULL, IJacobianAdolc, &appctx));
       } else {
-        ierr = TSSetIJacobian(ts,NULL,NULL,IJacobianByHand,&appctx);CHKERRQ(ierr);
+        PetscCall(TSSetIJacobian(ts, NULL, NULL, IJacobianByHand, &appctx));
       }
     }
   }
@@ -248,180 +240,188 @@ int main(int argc,char **argv)
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Set initial conditions
    - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-  ierr = InitialConditions(da,x);CHKERRQ(ierr);
-  ierr = TSSetSolution(ts,x);CHKERRQ(ierr);
+  PetscCall(InitialConditions(da, x));
+  PetscCall(TSSetSolution(ts, x));
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     Have the TS save its trajectory so that TSAdjointSolve() may be used
     and set solver options
    - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
   if (!forwardonly) {
-    ierr = TSSetSaveTrajectory(ts);CHKERRQ(ierr);
-    ierr = TSSetMaxTime(ts,200.0);CHKERRQ(ierr);
-    ierr = TSSetTimeStep(ts,0.5);CHKERRQ(ierr);
+    PetscCall(TSSetSaveTrajectory(ts));
+    PetscCall(TSSetMaxTime(ts, 200.0));
+    PetscCall(TSSetTimeStep(ts, 0.5));
   } else {
-    ierr = TSSetMaxTime(ts,2000.0);CHKERRQ(ierr);
-    ierr = TSSetTimeStep(ts,10);CHKERRQ(ierr);
+    PetscCall(TSSetMaxTime(ts, 2000.0));
+    PetscCall(TSSetTimeStep(ts, 10));
   }
-  ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_STEPOVER);CHKERRQ(ierr);
-  ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
+  PetscCall(TSSetExactFinalTime(ts, TS_EXACTFINALTIME_STEPOVER));
+  PetscCall(TSSetFromOptions(ts));
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Solve ODE system
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-  ierr = TSSolve(ts,x);CHKERRQ(ierr);
+  PetscCall(TSSolve(ts, x));
   if (!forwardonly) {
     /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
        Start the Adjoint model
        - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-    ierr = VecDuplicate(x,&lambda[0]);CHKERRQ(ierr);
+    PetscCall(VecDuplicate(x, &lambda[0]));
     /*   Reset initial conditions for the adjoint integration */
-    ierr = InitializeLambda(da,lambda[0],0.5,0.5);CHKERRQ(ierr);
-    ierr = TSSetCostGradients(ts,1,lambda,NULL);CHKERRQ(ierr);
-    ierr = TSAdjointSolve(ts);CHKERRQ(ierr);
-    ierr = VecDestroy(&lambda[0]);CHKERRQ(ierr);
+    PetscCall(InitializeLambda(da, lambda[0], 0.5, 0.5));
+    PetscCall(TSSetCostGradients(ts, 1, lambda, NULL));
+    PetscCall(TSAdjointSolve(ts));
+    PetscCall(VecDestroy(&lambda[0]));
   }
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Free work space.
    - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-  ierr = VecDestroy(&xdot);CHKERRQ(ierr);
-  ierr = VecDestroy(&r);CHKERRQ(ierr);
-  ierr = VecDestroy(&x);CHKERRQ(ierr);
-  ierr = TSDestroy(&ts);CHKERRQ(ierr);
+  PetscCall(VecDestroy(&xdot));
+  PetscCall(VecDestroy(&r));
+  PetscCall(VecDestroy(&x));
+  PetscCall(TSDestroy(&ts));
   if (!adctx->no_an) {
-    if (adctx->sparse)
-      ierr = AdolcFree2(Rec);CHKERRQ(ierr);
-    ierr = AdolcFree2(Seed);CHKERRQ(ierr);
+    if (adctx->sparse) PetscCall(AdolcFree2(Rec));
+    PetscCall(AdolcFree2(Seed));
   }
-  ierr = DMDestroy(&da);CHKERRQ(ierr);
-  ierr = PetscFree(adctx);CHKERRQ(ierr);
-  ierr = PetscFinalize();
-  return ierr;
+  PetscCall(DMDestroy(&da));
+  PetscCall(PetscFree(adctx));
+  PetscCall(PetscFinalize());
+  return 0;
 }
 
-PetscErrorCode InitialConditions(DM da,Vec U)
+PetscErrorCode InitialConditions(DM da, Vec U)
 {
-  PetscErrorCode ierr;
-  PetscInt       i,j,xs,ys,xm,ym,Mx,My;
-  Field          **u;
-  PetscReal      hx,hy,x,y;
+  PetscInt  i, j, xs, ys, xm, ym, Mx, My;
+  Field   **u;
+  PetscReal hx, hy, x, y;
 
   PetscFunctionBegin;
-  ierr = DMDAGetInfo(da,PETSC_IGNORE,&Mx,&My,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE);CHKERRQ(ierr);
+  PetscCall(DMDAGetInfo(da, PETSC_IGNORE, &Mx, &My, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE));
 
-  hx = 2.5/(PetscReal)Mx;
-  hy = 2.5/(PetscReal)My;
+  hx = 2.5 / (PetscReal)Mx;
+  hy = 2.5 / (PetscReal)My;
 
   /*
      Get pointers to vector data
   */
-  ierr = DMDAVecGetArray(da,U,&u);CHKERRQ(ierr);
+  PetscCall(DMDAVecGetArray(da, U, &u));
 
   /*
      Get local grid boundaries
   */
-  ierr = DMDAGetCorners(da,&xs,&ys,NULL,&xm,&ym,NULL);CHKERRQ(ierr);
+  PetscCall(DMDAGetCorners(da, &xs, &ys, NULL, &xm, &ym, NULL));
 
   /*
      Compute function over the locally owned part of the grid
   */
-  for (j=ys; j<ys+ym; j++) {
-    y = j*hy;
-    for (i=xs; i<xs+xm; i++) {
-      x = i*hx;
-      if ((1.0 <= x) && (x <= 1.5) && (1.0 <= y) && (y <= 1.5)) u[j][i].v = .25*PetscPowReal(PetscSinReal(4.0*PETSC_PI*x),2.0)*PetscPowReal(PetscSinReal(4.0*PETSC_PI*y),2.0);
+  for (j = ys; j < ys + ym; j++) {
+    y = j * hy;
+    for (i = xs; i < xs + xm; i++) {
+      x = i * hx;
+      if (PetscApproximateGTE(x, 1.0) && PetscApproximateLTE(x, 1.5) && PetscApproximateGTE(y, 1.0) && PetscApproximateLTE(y, 1.5))
+        u[j][i].v = PetscPowReal(PetscSinReal(4.0 * PETSC_PI * x), 2.0) * PetscPowReal(PetscSinReal(4.0 * PETSC_PI * y), 2.0) / 4.0;
       else u[j][i].v = 0.0;
 
-      u[j][i].u = 1.0 - 2.0*u[j][i].v;
+      u[j][i].u = 1.0 - 2.0 * u[j][i].v;
     }
   }
 
   /*
      Restore vectors
   */
-  ierr = DMDAVecRestoreArray(da,U,&u);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(DMDAVecRestoreArray(da, U, &u));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode InitializeLambda(DM da,Vec lambda,PetscReal x,PetscReal y)
+PetscErrorCode InitializeLambda(DM da, Vec lambda, PetscReal x, PetscReal y)
 {
-   PetscInt i,j,Mx,My,xs,ys,xm,ym;
-   PetscErrorCode ierr;
-   Field **l;
-   PetscFunctionBegin;
-
-   ierr = DMDAGetInfo(da,PETSC_IGNORE,&Mx,&My,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE);CHKERRQ(ierr);
-   /* locate the global i index for x and j index for y */
-   i = (PetscInt)(x*(Mx-1));
-   j = (PetscInt)(y*(My-1));
-   ierr = DMDAGetCorners(da,&xs,&ys,NULL,&xm,&ym,NULL);CHKERRQ(ierr);
-
-   if (xs <= i && i < xs+xm && ys <= j && j < ys+ym) {
-     /* the i,j vertex is on this process */
-     ierr = DMDAVecGetArray(da,lambda,&l);CHKERRQ(ierr);
-     l[j][i].u = 1.0;
-     l[j][i].v = 1.0;
-     ierr = DMDAVecRestoreArray(da,lambda,&l);CHKERRQ(ierr);
-   }
-   PetscFunctionReturn(0);
-}
-
-PetscErrorCode IFunctionLocalPassive(DMDALocalInfo *info,PetscReal t,Field**u,Field**udot,Field**f,void *ptr)
-{
-  AppCtx         *appctx = (AppCtx*)ptr;
-  PetscInt       i,j,xs,ys,xm,ym;
-  PetscReal      hx,hy,sx,sy;
-  PetscScalar    uc,uxx,uyy,vc,vxx,vyy;
-  PetscErrorCode ierr;
+  PetscInt i, j, Mx, My, xs, ys, xm, ym;
+  Field  **l;
 
   PetscFunctionBegin;
-  hx = 2.50/(PetscReal)(info->mx); sx = 1.0/(hx*hx);
-  hy = 2.50/(PetscReal)(info->my); sy = 1.0/(hy*hy);
+  PetscCall(DMDAGetInfo(da, PETSC_IGNORE, &Mx, &My, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE));
+  /* locate the global i index for x and j index for y */
+  i = (PetscInt)(x * (Mx - 1));
+  j = (PetscInt)(y * (My - 1));
+  PetscCall(DMDAGetCorners(da, &xs, &ys, NULL, &xm, &ym, NULL));
+
+  if (xs <= i && i < xs + xm && ys <= j && j < ys + ym) {
+    /* the i,j vertex is on this process */
+    PetscCall(DMDAVecGetArray(da, lambda, &l));
+    l[j][i].u = 1.0;
+    l[j][i].v = 1.0;
+    PetscCall(DMDAVecRestoreArray(da, lambda, &l));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode IFunctionLocalPassive(DMDALocalInfo *info, PetscReal t, Field **u, Field **udot, Field **f, void *ptr)
+{
+  AppCtx     *appctx = (AppCtx *)ptr;
+  PetscInt    i, j, xs, ys, xm, ym;
+  PetscReal   hx, hy, sx, sy;
+  PetscScalar uc, uxx, uyy, vc, vxx, vyy;
+
+  PetscFunctionBegin;
+  hx = 2.50 / (PetscReal)info->mx;
+  sx = 1.0 / (hx * hx);
+  hy = 2.50 / (PetscReal)info->my;
+  sy = 1.0 / (hy * hy);
 
   /* Get local grid boundaries */
-  xs = info->xs; xm = info->xm; ys = info->ys; ym = info->ym;
+  xs = info->xs;
+  xm = info->xm;
+  ys = info->ys;
+  ym = info->ym;
 
   /* Compute function over the locally owned part of the grid */
-  for (j=ys; j<ys+ym; j++) {
-    for (i=xs; i<xs+xm; i++) {
+  for (j = ys; j < ys + ym; j++) {
+    for (i = xs; i < xs + xm; i++) {
       uc        = u[j][i].u;
-      uxx       = (-2.0*uc + u[j][i-1].u + u[j][i+1].u)*sx;
-      uyy       = (-2.0*uc + u[j-1][i].u + u[j+1][i].u)*sy;
+      uxx       = (-2.0 * uc + u[j][i - 1].u + u[j][i + 1].u) * sx;
+      uyy       = (-2.0 * uc + u[j - 1][i].u + u[j + 1][i].u) * sy;
       vc        = u[j][i].v;
-      vxx       = (-2.0*vc + u[j][i-1].v + u[j][i+1].v)*sx;
-      vyy       = (-2.0*vc + u[j-1][i].v + u[j+1][i].v)*sy;
-      f[j][i].u = udot[j][i].u - appctx->D1*(uxx + uyy) + uc*vc*vc - appctx->gamma*(1.0 - uc);
-      f[j][i].v = udot[j][i].v - appctx->D2*(vxx + vyy) - uc*vc*vc + (appctx->gamma + appctx->kappa)*vc;
+      vxx       = (-2.0 * vc + u[j][i - 1].v + u[j][i + 1].v) * sx;
+      vyy       = (-2.0 * vc + u[j - 1][i].v + u[j + 1][i].v) * sy;
+      f[j][i].u = udot[j][i].u - appctx->D1 * (uxx + uyy) + uc * vc * vc - appctx->gamma * (1.0 - uc);
+      f[j][i].v = udot[j][i].v - appctx->D2 * (vxx + vyy) - uc * vc * vc + (appctx->gamma + appctx->kappa) * vc;
     }
   }
-  ierr = PetscLogFlops(16.0*xm*ym);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscLogFlops(16.0 * xm * ym));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode IFunctionActive(TS ts,PetscReal ftime,Vec U,Vec Udot,Vec F,void *ptr)
+PetscErrorCode IFunctionActive(TS ts, PetscReal ftime, Vec U, Vec Udot, Vec F, void *ptr)
 {
-  PetscErrorCode ierr;
-  AppCtx         *appctx = (AppCtx*)ptr;
-  DM             da;
-  DMDALocalInfo  info;
-  Field          **u,**f,**udot;
-  Vec            localU;
-  PetscInt       i,j,xs,ys,xm,ym,gxs,gys,gxm,gym;
-  PetscReal      hx,hy,sx,sy;
-  adouble        uc,uxx,uyy,vc,vxx,vyy;
-  AField         **f_a,*f_c,**u_a,*u_c;
-  PetscScalar    dummy;
+  AppCtx       *appctx = (AppCtx *)ptr;
+  DM            da;
+  DMDALocalInfo info;
+  Field       **u, **f, **udot;
+  Vec           localU;
+  PetscInt      i, j, xs, ys, xm, ym, gxs, gys, gxm, gym;
+  PetscReal     hx, hy, sx, sy;
+  adouble       uc, uxx, uyy, vc, vxx, vyy;
+  AField      **f_a, *f_c, **u_a, *u_c;
+  PetscScalar   dummy;
 
   PetscFunctionBegin;
-
-  ierr = TSGetDM(ts,&da);CHKERRQ(ierr);
-  ierr = DMDAGetLocalInfo(da,&info);CHKERRQ(ierr);
-  ierr = DMGetLocalVector(da,&localU);CHKERRQ(ierr);
-  hx = 2.50/(PetscReal)(info.mx); sx = 1.0/(hx*hx);
-  hy = 2.50/(PetscReal)(info.my); sy = 1.0/(hy*hy);
-  xs = info.xs; xm = info.xm; gxs = info.gxs; gxm = info.gxm;
-  ys = info.ys; ym = info.ym; gys = info.gys; gym = info.gym;
+  PetscCall(TSGetDM(ts, &da));
+  PetscCall(DMDAGetLocalInfo(da, &info));
+  PetscCall(DMGetLocalVector(da, &localU));
+  hx  = 2.50 / (PetscReal)info.mx;
+  sx  = 1.0 / (hx * hx);
+  hy  = 2.50 / (PetscReal)info.my;
+  sy  = 1.0 / (hy * hy);
+  xs  = info.xs;
+  xm  = info.xm;
+  gxs = info.gxs;
+  gxm = info.gxm;
+  ys  = info.ys;
+  ym  = info.ym;
+  gys = info.gys;
+  gym = info.gym;
 
   /*
      Scatter ghost points to local vector,using the 2-step process
@@ -429,15 +429,15 @@ PetscErrorCode IFunctionActive(TS ts,PetscReal ftime,Vec U,Vec Udot,Vec F,void *
      By placing code between these two statements, computations can be
      done while messages are in transition.
   */
-  ierr = DMGlobalToLocalBegin(da,U,INSERT_VALUES,localU);CHKERRQ(ierr);
-  ierr = DMGlobalToLocalEnd(da,U,INSERT_VALUES,localU);CHKERRQ(ierr);
+  PetscCall(DMGlobalToLocalBegin(da, U, INSERT_VALUES, localU));
+  PetscCall(DMGlobalToLocalEnd(da, U, INSERT_VALUES, localU));
 
   /*
      Get pointers to vector data
   */
-  ierr = DMDAVecGetArrayRead(da,localU,&u);CHKERRQ(ierr);
-  ierr = DMDAVecGetArray(da,F,&f);CHKERRQ(ierr);
-  ierr = DMDAVecGetArrayRead(da,Udot,&udot);CHKERRQ(ierr);
+  PetscCall(DMDAVecGetArrayRead(da, localU, &u));
+  PetscCall(DMDAVecGetArray(da, F, &f));
+  PetscCall(DMDAVecGetArrayRead(da, Udot, &udot));
 
   /*
     Create contiguous 1-arrays of AFields
@@ -446,18 +446,18 @@ PetscErrorCode IFunctionActive(TS ts,PetscReal ftime,Vec U,Vec Udot,Vec F,void *
           cannot be allocated using PetscMalloc, as this does not call the
           relevant class constructor. Instead, we use the C++ keyword `new`.
   */
-  u_c = new AField[info.gxm*info.gym];
-  f_c = new AField[info.gxm*info.gym];
+  u_c = new AField[info.gxm * info.gym];
+  f_c = new AField[info.gxm * info.gym];
 
   /* Create corresponding 2-arrays of AFields */
-  u_a = new AField*[info.gym];
-  f_a = new AField*[info.gym];
+  u_a = new AField *[info.gym];
+  f_a = new AField *[info.gym];
 
   /* Align indices between array types to endow 2d array with ghost points */
-  ierr = GiveGhostPoints(da,u_c,&u_a);CHKERRQ(ierr);
-  ierr = GiveGhostPoints(da,f_c,&f_a);CHKERRQ(ierr);
+  PetscCall(GiveGhostPoints(da, u_c, &u_a));
+  PetscCall(GiveGhostPoints(da, f_c, &f_a));
 
-  trace_on(1);  /* Start of active section on tape 1 */
+  trace_on(1); /* Start of active section on tape 1 */
 
   /*
     Mark independence
@@ -465,24 +465,24 @@ PetscErrorCode IFunctionActive(TS ts,PetscReal ftime,Vec U,Vec Udot,Vec F,void *
     NOTE: Ghost points are marked as independent, in place of the points they represent on
           other processors / on other boundaries.
   */
-  for (j=gys; j<gys+gym; j++) {
-    for (i=gxs; i<gxs+gxm; i++) {
+  for (j = gys; j < gys + gym; j++) {
+    for (i = gxs; i < gxs + gxm; i++) {
       u_a[j][i].u <<= u[j][i].u;
       u_a[j][i].v <<= u[j][i].v;
     }
   }
 
   /* Compute function over the locally owned part of the grid */
-  for (j=ys; j<ys+ym; j++) {
-    for (i=xs; i<xs+xm; i++) {
-      uc        = u_a[j][i].u;
-      uxx       = (-2.0*uc + u_a[j][i-1].u + u_a[j][i+1].u)*sx;
-      uyy       = (-2.0*uc + u_a[j-1][i].u + u_a[j+1][i].u)*sy;
-      vc        = u_a[j][i].v;
-      vxx       = (-2.0*vc + u_a[j][i-1].v + u_a[j][i+1].v)*sx;
-      vyy       = (-2.0*vc + u_a[j-1][i].v + u_a[j+1][i].v)*sy;
-      f_a[j][i].u = udot[j][i].u - appctx->D1*(uxx + uyy) + uc*vc*vc - appctx->gamma*(1.0 - uc);
-      f_a[j][i].v = udot[j][i].v - appctx->D2*(vxx + vyy) - uc*vc*vc + (appctx->gamma + appctx->kappa)*vc;
+  for (j = ys; j < ys + ym; j++) {
+    for (i = xs; i < xs + xm; i++) {
+      uc          = u_a[j][i].u;
+      uxx         = (-2.0 * uc + u_a[j][i - 1].u + u_a[j][i + 1].u) * sx;
+      uyy         = (-2.0 * uc + u_a[j - 1][i].u + u_a[j + 1][i].u) * sy;
+      vc          = u_a[j][i].v;
+      vxx         = (-2.0 * vc + u_a[j][i - 1].v + u_a[j][i + 1].v) * sx;
+      vyy         = (-2.0 * vc + u_a[j - 1][i].v + u_a[j + 1][i].v) * sy;
+      f_a[j][i].u = udot[j][i].u - appctx->D1 * (uxx + uyy) + uc * vc * vc - appctx->gamma * (1.0 - uc);
+      f_a[j][i].v = udot[j][i].v - appctx->D2 * (vxx + vyy) - uc * vc * vc + (appctx->gamma + appctx->kappa) * vc;
     }
   }
 
@@ -492,9 +492,9 @@ PetscErrorCode IFunctionActive(TS ts,PetscReal ftime,Vec U,Vec Udot,Vec F,void *
     NOTE: Marking dependence of dummy variables makes the index notation much simpler when forming
           the Jacobian later.
   */
-  for (j=gys; j<gys+gym; j++) {
-    for (i=gxs; i<gxs+gxm; i++) {
-      if ((i < xs) || (i >= xs+xm) || (j < ys) || (j >= ys+ym)) {
+  for (j = gys; j < gys + gym; j++) {
+    for (i = gxs; i < gxs + gxm; i++) {
+      if ((i < xs) || (i >= xs + xm) || (j < ys) || (j >= ys + ym)) {
         f_a[j][i].u >>= dummy;
         f_a[j][i].v >>= dummy;
       } else {
@@ -503,13 +503,15 @@ PetscErrorCode IFunctionActive(TS ts,PetscReal ftime,Vec U,Vec Udot,Vec F,void *
       }
     }
   }
-  trace_off();  /* End of active section */
-  ierr = PetscLogFlops(16.0*xm*ym);CHKERRQ(ierr);
+  trace_off(); /* End of active section */
+  PetscCall(PetscLogFlops(16.0 * xm * ym));
 
   /* Restore vectors */
-  ierr = DMDAVecRestoreArray(da,F,&f);CHKERRQ(ierr);
-  ierr = DMDAVecRestoreArrayRead(da,localU,&u);CHKERRQ(ierr);
-  ierr = DMDAVecRestoreArrayRead(da,Udot,&udot);CHKERRQ(ierr);
+  PetscCall(DMDAVecRestoreArray(da, F, &f));
+  PetscCall(DMDAVecRestoreArrayRead(da, localU, &u));
+  PetscCall(DMDAVecRestoreArrayRead(da, Udot, &udot));
+
+  PetscCall(DMRestoreLocalVector(da, &localU));
 
   /* Destroy AFields appropriately */
   f_a += info.gys;
@@ -518,28 +520,28 @@ PetscErrorCode IFunctionActive(TS ts,PetscReal ftime,Vec U,Vec Udot,Vec F,void *
   delete[] u_a;
   delete[] f_c;
   delete[] u_c;
-
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode RHSFunctionPassive(TS ts,PetscReal ftime,Vec U,Vec F,void *ptr)
+PetscErrorCode RHSFunctionPassive(TS ts, PetscReal ftime, Vec U, Vec F, void *ptr)
 {
-  AppCtx         *appctx = (AppCtx*)ptr;
-  DM             da;
-  PetscErrorCode ierr;
-  PetscInt       i,j,xs,ys,xm,ym,Mx,My;
-  PetscReal      hx,hy,sx,sy;
-  PetscScalar    uc,uxx,uyy,vc,vxx,vyy;
-  Field          **u,**f;
-  Vec            localU,localF;
+  AppCtx     *appctx = (AppCtx *)ptr;
+  DM          da;
+  PetscInt    i, j, xs, ys, xm, ym, Mx, My;
+  PetscReal   hx, hy, sx, sy;
+  PetscScalar uc, uxx, uyy, vc, vxx, vyy;
+  Field     **u, **f;
+  Vec         localU, localF;
 
   PetscFunctionBegin;
-  ierr = TSGetDM(ts,&da);CHKERRQ(ierr);
-  ierr = DMDAGetInfo(da,PETSC_IGNORE,&Mx,&My,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE);CHKERRQ(ierr);
-  hx = 2.50/(PetscReal)(Mx);sx = 1.0/(hx*hx);
-  hy = 2.50/(PetscReal)(My);sy = 1.0/(hy*hy);
-  ierr = DMGetLocalVector(da,&localU);CHKERRQ(ierr);
-  ierr = DMGetLocalVector(da,&localF);CHKERRQ(ierr);
+  PetscCall(TSGetDM(ts, &da));
+  PetscCall(DMDAGetInfo(da, PETSC_IGNORE, &Mx, &My, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE));
+  hx = 2.50 / (PetscReal)(Mx);
+  sx = 1.0 / (hx * hx);
+  hy = 2.50 / (PetscReal)(My);
+  sy = 1.0 / (hy * hy);
+  PetscCall(DMGetLocalVector(da, &localU));
+  PetscCall(DMGetLocalVector(da, &localF));
 
   /*
      Scatter ghost points to local vector,using the 2-step process
@@ -547,36 +549,36 @@ PetscErrorCode RHSFunctionPassive(TS ts,PetscReal ftime,Vec U,Vec F,void *ptr)
      By placing code between these two statements, computations can be
      done while messages are in transition.
   */
-  ierr = DMGlobalToLocalBegin(da,U,INSERT_VALUES,localU);CHKERRQ(ierr);
-  ierr = DMGlobalToLocalEnd(da,U,INSERT_VALUES,localU);CHKERRQ(ierr);
-  ierr = VecZeroEntries(F);CHKERRQ(ierr); // NOTE (1): See (2) below
-  ierr = DMGlobalToLocalBegin(da,F,INSERT_VALUES,localF);CHKERRQ(ierr);
-  ierr = DMGlobalToLocalEnd(da,F,INSERT_VALUES,localF);CHKERRQ(ierr);
+  PetscCall(DMGlobalToLocalBegin(da, U, INSERT_VALUES, localU));
+  PetscCall(DMGlobalToLocalEnd(da, U, INSERT_VALUES, localU));
+  PetscCall(VecZeroEntries(F)); // NOTE (1): See (2) below
+  PetscCall(DMGlobalToLocalBegin(da, F, INSERT_VALUES, localF));
+  PetscCall(DMGlobalToLocalEnd(da, F, INSERT_VALUES, localF));
 
   /*
      Get pointers to vector data
   */
-  ierr = DMDAVecGetArrayRead(da,localU,&u);CHKERRQ(ierr);
-  ierr = DMDAVecGetArray(da,localF,&f);CHKERRQ(ierr);
+  PetscCall(DMDAVecGetArrayRead(da, localU, &u));
+  PetscCall(DMDAVecGetArray(da, localF, &f));
 
   /*
      Get local grid boundaries
   */
-  ierr = DMDAGetCorners(da,&xs,&ys,NULL,&xm,&ym,NULL);CHKERRQ(ierr);
+  PetscCall(DMDAGetCorners(da, &xs, &ys, NULL, &xm, &ym, NULL));
 
   /*
      Compute function over the locally owned part of the grid
   */
-  for (j=ys; j<ys+ym; j++) {
-    for (i=xs; i<xs+xm; i++) {
+  for (j = ys; j < ys + ym; j++) {
+    for (i = xs; i < xs + xm; i++) {
       uc        = u[j][i].u;
-      uxx       = (-2.0*uc + u[j][i-1].u + u[j][i+1].u)*sx;
-      uyy       = (-2.0*uc + u[j-1][i].u + u[j+1][i].u)*sy;
+      uxx       = (-2.0 * uc + u[j][i - 1].u + u[j][i + 1].u) * sx;
+      uyy       = (-2.0 * uc + u[j - 1][i].u + u[j + 1][i].u) * sy;
       vc        = u[j][i].v;
-      vxx       = (-2.0*vc + u[j][i-1].v + u[j][i+1].v)*sx;
-      vyy       = (-2.0*vc + u[j-1][i].v + u[j+1][i].v)*sy;
-      f[j][i].u = appctx->D1*(uxx + uyy) - uc*vc*vc + appctx->gamma*(1.0 - uc);
-      f[j][i].v = appctx->D2*(vxx + vyy) + uc*vc*vc - (appctx->gamma + appctx->kappa)*vc;
+      vxx       = (-2.0 * vc + u[j][i - 1].v + u[j][i + 1].v) * sx;
+      vyy       = (-2.0 * vc + u[j - 1][i].v + u[j + 1][i].v) * sy;
+      f[j][i].u = appctx->D1 * (uxx + uyy) - uc * vc * vc + appctx->gamma * (1.0 - uc);
+      f[j][i].v = appctx->D2 * (vxx + vyy) + uc * vc * vc - (appctx->gamma + appctx->kappa) * vc;
     }
   }
 
@@ -587,39 +589,40 @@ PetscErrorCode RHSFunctionPassive(TS ts,PetscReal ftime,Vec U,Vec F,void *ptr)
      NOTE (2): We need to use ADD_VALUES if boundaries are not of type DM_BOUNDARY_NONE or
                DM_BOUNDARY_GHOSTED, meaning we should also zero F before addition (see (1) above).
   */
-  ierr = DMLocalToGlobalBegin(da,localF,ADD_VALUES,F);CHKERRQ(ierr);
-  ierr = DMLocalToGlobalEnd(da,localF,ADD_VALUES,F);CHKERRQ(ierr);
+  PetscCall(DMLocalToGlobalBegin(da, localF, ADD_VALUES, F));
+  PetscCall(DMLocalToGlobalEnd(da, localF, ADD_VALUES, F));
 
   /*
      Restore vectors
   */
-  ierr = DMDAVecRestoreArray(da,localF,&f);CHKERRQ(ierr);
-  ierr = DMDAVecRestoreArrayRead(da,localU,&u);CHKERRQ(ierr);
-  ierr = DMRestoreLocalVector(da,&localF);CHKERRQ(ierr);
-  ierr = DMRestoreLocalVector(da,&localU);CHKERRQ(ierr);
-  ierr = PetscLogFlops(16.0*xm*ym);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(DMDAVecRestoreArray(da, localF, &f));
+  PetscCall(DMDAVecRestoreArrayRead(da, localU, &u));
+  PetscCall(DMRestoreLocalVector(da, &localF));
+  PetscCall(DMRestoreLocalVector(da, &localU));
+  PetscCall(PetscLogFlops(16.0 * xm * ym));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode RHSFunctionActive(TS ts,PetscReal ftime,Vec U,Vec F,void *ptr)
+PetscErrorCode RHSFunctionActive(TS ts, PetscReal ftime, Vec U, Vec F, void *ptr)
 {
-  AppCtx         *appctx = (AppCtx*)ptr;
-  DM             da;
-  PetscErrorCode ierr;
-  PetscInt       i,j,xs,ys,xm,ym,gxs,gys,gxm,gym,Mx,My;
-  PetscReal      hx,hy,sx,sy;
-  AField         **f_a,*f_c,**u_a,*u_c;
-  adouble        uc,uxx,uyy,vc,vxx,vyy;
-  Field          **u,**f;
-  Vec            localU,localF;
+  AppCtx   *appctx = (AppCtx *)ptr;
+  DM        da;
+  PetscInt  i, j, xs, ys, xm, ym, gxs, gys, gxm, gym, Mx, My;
+  PetscReal hx, hy, sx, sy;
+  AField  **f_a, *f_c, **u_a, *u_c;
+  adouble   uc, uxx, uyy, vc, vxx, vyy;
+  Field   **u, **f;
+  Vec       localU, localF;
 
   PetscFunctionBegin;
-  ierr = TSGetDM(ts,&da);CHKERRQ(ierr);
-  ierr = DMDAGetInfo(da,PETSC_IGNORE,&Mx,&My,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE);CHKERRQ(ierr);
-  hx = 2.50/(PetscReal)(Mx);sx = 1.0/(hx*hx);
-  hy = 2.50/(PetscReal)(My);sy = 1.0/(hy*hy);
-  ierr = DMGetLocalVector(da,&localU);CHKERRQ(ierr);
-  ierr = DMGetLocalVector(da,&localF);CHKERRQ(ierr);
+  PetscCall(TSGetDM(ts, &da));
+  PetscCall(DMDAGetInfo(da, PETSC_IGNORE, &Mx, &My, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE));
+  hx = 2.50 / (PetscReal)(Mx);
+  sx = 1.0 / (hx * hx);
+  hy = 2.50 / (PetscReal)(My);
+  sy = 1.0 / (hy * hy);
+  PetscCall(DMGetLocalVector(da, &localU));
+  PetscCall(DMGetLocalVector(da, &localF));
 
   /*
      Scatter ghost points to local vector,using the 2-step process
@@ -627,23 +630,23 @@ PetscErrorCode RHSFunctionActive(TS ts,PetscReal ftime,Vec U,Vec F,void *ptr)
      By placing code between these two statements, computations can be
      done while messages are in transition.
   */
-  ierr = DMGlobalToLocalBegin(da,U,INSERT_VALUES,localU);CHKERRQ(ierr);
-  ierr = DMGlobalToLocalEnd(da,U,INSERT_VALUES,localU);CHKERRQ(ierr);
-  ierr = VecZeroEntries(F);CHKERRQ(ierr); // NOTE (1): See (2) below
-  ierr = DMGlobalToLocalBegin(da,F,INSERT_VALUES,localF);CHKERRQ(ierr);
-  ierr = DMGlobalToLocalEnd(da,F,INSERT_VALUES,localF);CHKERRQ(ierr);
+  PetscCall(DMGlobalToLocalBegin(da, U, INSERT_VALUES, localU));
+  PetscCall(DMGlobalToLocalEnd(da, U, INSERT_VALUES, localU));
+  PetscCall(VecZeroEntries(F)); // NOTE (1): See (2) below
+  PetscCall(DMGlobalToLocalBegin(da, F, INSERT_VALUES, localF));
+  PetscCall(DMGlobalToLocalEnd(da, F, INSERT_VALUES, localF));
 
   /*
      Get pointers to vector data
   */
-  ierr = DMDAVecGetArrayRead(da,localU,&u);CHKERRQ(ierr);
-  ierr = DMDAVecGetArray(da,localF,&f);CHKERRQ(ierr);
+  PetscCall(DMDAVecGetArrayRead(da, localU, &u));
+  PetscCall(DMDAVecGetArray(da, localF, &f));
 
   /*
      Get local and ghosted grid boundaries
   */
-  ierr = DMDAGetGhostCorners(da,&gxs,&gys,NULL,&gxm,&gym,NULL);CHKERRQ(ierr);
-  ierr = DMDAGetCorners(da,&xs,&ys,NULL,&xm,&ym,NULL);CHKERRQ(ierr);
+  PetscCall(DMDAGetGhostCorners(da, &gxs, &gys, NULL, &gxm, &gym, NULL));
+  PetscCall(DMDAGetCorners(da, &xs, &ys, NULL, &xm, &ym, NULL));
 
   /*
     Create contiguous 1-arrays of AFields
@@ -652,21 +655,21 @@ PetscErrorCode RHSFunctionActive(TS ts,PetscReal ftime,Vec U,Vec F,void *ptr)
           cannot be allocated using PetscMalloc, as this does not call the
           relevant class constructor. Instead, we use the C++ keyword `new`.
   */
-  u_c = new AField[gxm*gym];
-  f_c = new AField[gxm*gym];
+  u_c = new AField[gxm * gym];
+  f_c = new AField[gxm * gym];
 
   /* Create corresponding 2-arrays of AFields */
-  u_a = new AField*[gym];
-  f_a = new AField*[gym];
+  u_a = new AField *[gym];
+  f_a = new AField *[gym];
 
   /* Align indices between array types to endow 2d array with ghost points */
-  ierr = GiveGhostPoints(da,u_c,&u_a);CHKERRQ(ierr);
-  ierr = GiveGhostPoints(da,f_c,&f_a);CHKERRQ(ierr);
+  PetscCall(GiveGhostPoints(da, u_c, &u_a));
+  PetscCall(GiveGhostPoints(da, f_c, &f_a));
 
   /*
      Compute function over the locally owned part of the grid
   */
-  trace_on(1);  // ----------------------------------------------- Start of active section
+  trace_on(1); // ----------------------------------------------- Start of active section
 
   /*
     Mark independence
@@ -674,8 +677,8 @@ PetscErrorCode RHSFunctionActive(TS ts,PetscReal ftime,Vec U,Vec F,void *ptr)
     NOTE: Ghost points are marked as independent, in place of the points they represent on
           other processors / on other boundaries.
   */
-  for (j=gys; j<gys+gym; j++) {
-    for (i=gxs; i<gxs+gxm; i++) {
+  for (j = gys; j < gys + gym; j++) {
+    for (i = gxs; i < gxs + gxm; i++) {
       u_a[j][i].u <<= u[j][i].u;
       u_a[j][i].v <<= u[j][i].v;
     }
@@ -684,16 +687,16 @@ PetscErrorCode RHSFunctionActive(TS ts,PetscReal ftime,Vec U,Vec F,void *ptr)
   /*
     Compute function over the locally owned part of the grid
   */
-  for (j=ys; j<ys+ym; j++) {
-    for (i=xs; i<xs+xm; i++) {
+  for (j = ys; j < ys + ym; j++) {
+    for (i = xs; i < xs + xm; i++) {
       uc          = u_a[j][i].u;
-      uxx         = (-2.0*uc + u_a[j][i-1].u + u_a[j][i+1].u)*sx;
-      uyy         = (-2.0*uc + u_a[j-1][i].u + u_a[j+1][i].u)*sy;
+      uxx         = (-2.0 * uc + u_a[j][i - 1].u + u_a[j][i + 1].u) * sx;
+      uyy         = (-2.0 * uc + u_a[j - 1][i].u + u_a[j + 1][i].u) * sy;
       vc          = u_a[j][i].v;
-      vxx         = (-2.0*vc + u_a[j][i-1].v + u_a[j][i+1].v)*sx;
-      vyy         = (-2.0*vc + u_a[j-1][i].v + u_a[j+1][i].v)*sy;
-      f_a[j][i].u = appctx->D1*(uxx + uyy) - uc*vc*vc + appctx->gamma*(1.0 - uc);
-      f_a[j][i].v = appctx->D2*(vxx + vyy) + uc*vc*vc - (appctx->gamma + appctx->kappa)*vc;
+      vxx         = (-2.0 * vc + u_a[j][i - 1].v + u_a[j][i + 1].v) * sx;
+      vyy         = (-2.0 * vc + u_a[j - 1][i].v + u_a[j + 1][i].v) * sy;
+      f_a[j][i].u = appctx->D1 * (uxx + uyy) - uc * vc * vc + appctx->gamma * (1.0 - uc);
+      f_a[j][i].v = appctx->D2 * (vxx + vyy) + uc * vc * vc - (appctx->gamma + appctx->kappa) * vc;
     }
   }
   /*
@@ -702,18 +705,18 @@ PetscErrorCode RHSFunctionActive(TS ts,PetscReal ftime,Vec U,Vec F,void *ptr)
     NOTE: Ghost points are marked as dependent in order to vastly simplify index notation
           during Jacobian assembly.
   */
-  for (j=gys; j<gys+gym; j++) {
-    for (i=gxs; i<gxs+gxm; i++) {
+  for (j = gys; j < gys + gym; j++) {
+    for (i = gxs; i < gxs + gxm; i++) {
       f_a[j][i].u >>= f[j][i].u;
       f_a[j][i].v >>= f[j][i].v;
     }
   }
-  trace_off();  // ----------------------------------------------- End of active section
+  trace_off(); // ----------------------------------------------- End of active section
 
   /* Test zeroth order scalar evaluation in ADOL-C gives the same result */
-//  if (appctx->adctx->zos) {
-//    ierr = TestZOS2d(da,f,u,appctx);CHKERRQ(ierr); // FIXME: Why does this give nonzero?
-//  }
+  //  if (appctx->adctx->zos) {
+  //    PetscCall(TestZOS2d(da,f,u,appctx)); // FIXME: Why does this give nonzero?
+  //  }
 
   /*
      Gather global vector, using the 2-step process
@@ -722,17 +725,17 @@ PetscErrorCode RHSFunctionActive(TS ts,PetscReal ftime,Vec U,Vec F,void *ptr)
      NOTE (2): We need to use ADD_VALUES if boundaries are not of type DM_BOUNDARY_NONE or
                DM_BOUNDARY_GHOSTED, meaning we should also zero F before addition (see (1) above).
   */
-  ierr = DMLocalToGlobalBegin(da,localF,ADD_VALUES,F);CHKERRQ(ierr);
-  ierr = DMLocalToGlobalEnd(da,localF,ADD_VALUES,F);CHKERRQ(ierr);
+  PetscCall(DMLocalToGlobalBegin(da, localF, ADD_VALUES, F));
+  PetscCall(DMLocalToGlobalEnd(da, localF, ADD_VALUES, F));
 
   /*
      Restore vectors
   */
-  ierr = DMDAVecRestoreArray(da,localF,&f);CHKERRQ(ierr);
-  ierr = DMDAVecRestoreArrayRead(da,localU,&u);CHKERRQ(ierr);
-  ierr = DMRestoreLocalVector(da,&localF);CHKERRQ(ierr);
-  ierr = DMRestoreLocalVector(da,&localU);CHKERRQ(ierr);
-  ierr = PetscLogFlops(16.0*xm*ym);CHKERRQ(ierr);
+  PetscCall(DMDAVecRestoreArray(da, localF, &f));
+  PetscCall(DMDAVecRestoreArrayRead(da, localU, &u));
+  PetscCall(DMRestoreLocalVector(da, &localF));
+  PetscCall(DMRestoreLocalVector(da, &localU));
+  PetscCall(PetscLogFlops(16.0 * xm * ym));
 
   /* Destroy AFields appropriately */
   f_a += gys;
@@ -741,21 +744,19 @@ PetscErrorCode RHSFunctionActive(TS ts,PetscReal ftime,Vec U,Vec F,void *ptr)
   delete[] u_a;
   delete[] f_c;
   delete[] u_c;
-
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode IJacobianAdolc(TS ts,PetscReal t,Vec U,Vec Udot,PetscReal a,Mat A,Mat B,void *ctx)
+PetscErrorCode IJacobianAdolc(TS ts, PetscReal t, Vec U, Vec Udot, PetscReal a, Mat A, Mat B, void *ctx)
 {
-  AppCtx         *appctx = (AppCtx*)ctx;
-  DM             da;
-  PetscErrorCode ierr;
-  PetscScalar    *u_vec;
-  Vec            localU;
+  AppCtx            *appctx = (AppCtx *)ctx;
+  DM                 da;
+  const PetscScalar *u_vec;
+  Vec                localU;
 
   PetscFunctionBegin;
-  ierr = TSGetDM(ts,&da);CHKERRQ(ierr);
-  ierr = DMGetLocalVector(da,&localU);CHKERRQ(ierr);
+  PetscCall(TSGetDM(ts, &da));
+  PetscCall(DMGetLocalVector(da, &localU));
 
   /*
      Scatter ghost points to local vector,using the 2-step process
@@ -763,45 +764,46 @@ PetscErrorCode IJacobianAdolc(TS ts,PetscReal t,Vec U,Vec Udot,PetscReal a,Mat A
      By placing code between these two statements, computations can be
      done while messages are in transition.
   */
-  ierr = DMGlobalToLocalBegin(da,U,INSERT_VALUES,localU);CHKERRQ(ierr);
-  ierr = DMGlobalToLocalEnd(da,U,INSERT_VALUES,localU);CHKERRQ(ierr);
+  PetscCall(DMGlobalToLocalBegin(da, U, INSERT_VALUES, localU));
+  PetscCall(DMGlobalToLocalEnd(da, U, INSERT_VALUES, localU));
 
   /* Get pointers to vector data */
-  ierr = VecGetArray(localU,&u_vec);CHKERRQ(ierr);
+  PetscCall(VecGetArrayRead(localU, &u_vec));
 
   /*
     Compute Jacobian
   */
-  ierr = PetscAdolcComputeIJacobianLocalIDMass(1,A,u_vec,a,appctx->adctx);CHKERRQ(ierr);
+  PetscCall(PetscAdolcComputeIJacobianLocalIDMass(1, A, u_vec, a, appctx->adctx));
 
   /*
      Restore vectors
   */
-  ierr = VecRestoreArray(localU,&u_vec);CHKERRQ(ierr);
-  ierr = DMRestoreLocalVector(da,&localU);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(VecRestoreArrayRead(localU, &u_vec));
+  PetscCall(DMRestoreLocalVector(da, &localU));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode IJacobianByHand(TS ts,PetscReal t,Vec U,Vec Udot,PetscReal a,Mat A,Mat B,void *ctx)
+PetscErrorCode IJacobianByHand(TS ts, PetscReal t, Vec U, Vec Udot, PetscReal a, Mat A, Mat B, void *ctx)
 {
-  AppCtx         *appctx = (AppCtx*)ctx;     /* user-defined application context */
-  DM             da;
-  PetscErrorCode ierr;
-  PetscInt       i,j,Mx,My,xs,ys,xm,ym;
-  PetscReal      hx,hy,sx,sy;
-  PetscScalar    uc,vc;
-  Field          **u;
-  Vec            localU;
-  MatStencil     stencil[6],rowstencil;
-  PetscScalar    entries[6];
+  AppCtx     *appctx = (AppCtx *)ctx; /* user-defined application context */
+  DM          da;
+  PetscInt    i, j, Mx, My, xs, ys, xm, ym;
+  PetscReal   hx, hy, sx, sy;
+  PetscScalar uc, vc;
+  Field     **u;
+  Vec         localU;
+  MatStencil  stencil[6], rowstencil;
+  PetscScalar entries[6];
 
   PetscFunctionBegin;
-  ierr = TSGetDM(ts,&da);CHKERRQ(ierr);
-  ierr = DMGetLocalVector(da,&localU);CHKERRQ(ierr);
-  ierr = DMDAGetInfo(da,PETSC_IGNORE,&Mx,&My,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE);CHKERRQ(ierr);
+  PetscCall(TSGetDM(ts, &da));
+  PetscCall(DMGetLocalVector(da, &localU));
+  PetscCall(DMDAGetInfo(da, PETSC_IGNORE, &Mx, &My, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE));
 
-  hx = 2.50/(PetscReal)Mx; sx = 1.0/(hx*hx);
-  hy = 2.50/(PetscReal)My; sy = 1.0/(hy*hy);
+  hx = 2.50 / (PetscReal)Mx;
+  sx = 1.0 / (hx * hx);
+  hy = 2.50 / (PetscReal)My;
+  sy = 1.0 / (hy * hy);
 
   /*
      Scatter ghost points to local vector,using the 2-step process
@@ -809,18 +811,18 @@ PetscErrorCode IJacobianByHand(TS ts,PetscReal t,Vec U,Vec Udot,PetscReal a,Mat 
      By placing code between these two statements, computations can be
      done while messages are in transition.
   */
-  ierr = DMGlobalToLocalBegin(da,U,INSERT_VALUES,localU);CHKERRQ(ierr);
-  ierr = DMGlobalToLocalEnd(da,U,INSERT_VALUES,localU);CHKERRQ(ierr);
+  PetscCall(DMGlobalToLocalBegin(da, U, INSERT_VALUES, localU));
+  PetscCall(DMGlobalToLocalEnd(da, U, INSERT_VALUES, localU));
 
   /*
      Get pointers to vector data
   */
-  ierr = DMDAVecGetArrayRead(da,localU,&u);CHKERRQ(ierr);
+  PetscCall(DMDAVecGetArrayRead(da, localU, &u));
 
   /*
      Get local grid boundaries
   */
-  ierr = DMDAGetCorners(da,&xs,&ys,NULL,&xm,&ym,NULL);CHKERRQ(ierr);
+  PetscCall(DMDAGetCorners(da, &xs, &ys, NULL, &xm, &ym, NULL));
 
   stencil[0].k = 0;
   stencil[1].k = 0;
@@ -832,16 +834,16 @@ PetscErrorCode IJacobianByHand(TS ts,PetscReal t,Vec U,Vec Udot,PetscReal a,Mat 
   /*
      Compute function over the locally owned part of the grid
   */
-  for (j=ys; j<ys+ym; j++) {
-
-    stencil[0].j = j-1;
-    stencil[1].j = j+1;
+  for (j = ys; j < ys + ym; j++) {
+    stencil[0].j = j - 1;
+    stencil[1].j = j + 1;
     stencil[2].j = j;
     stencil[3].j = j;
     stencil[4].j = j;
     stencil[5].j = j;
-    rowstencil.k = 0; rowstencil.j = j;
-    for (i=xs; i<xs+xm; i++) {
+    rowstencil.k = 0;
+    rowstencil.j = j;
+    for (i = xs; i < xs + xm; i++) {
       uc = u[j][i].u;
       vc = u[j][i].v;
 
@@ -852,29 +854,44 @@ PetscErrorCode IJacobianByHand(TS ts,PetscReal t,Vec U,Vec Udot,PetscReal a,Mat 
       vyy       = (-2.0*vc + u[j-1][i].v + u[j+1][i].v)*sy;
        f[j][i].u = appctx->D1*(uxx + uyy) - uc*vc*vc + appctx->gamma*(1.0 - uc);*/
 
-      stencil[0].i = i; stencil[0].c = 0; entries[0] = -appctx->D1*sy;
-      stencil[1].i = i; stencil[1].c = 0; entries[1] = -appctx->D1*sy;
-      stencil[2].i = i-1; stencil[2].c = 0; entries[2] = -appctx->D1*sx;
-      stencil[3].i = i+1; stencil[3].c = 0; entries[3] = -appctx->D1*sx;
-      stencil[4].i = i; stencil[4].c = 0; entries[4] = 2.0*appctx->D1*(sx + sy) + vc*vc + appctx->gamma + a;
-      stencil[5].i = i; stencil[5].c = 1; entries[5] = 2.0*uc*vc;
-      rowstencil.i = i; rowstencil.c = 0;
+      stencil[0].i = i;
+      stencil[0].c = 0;
+      entries[0]   = -appctx->D1 * sy;
+      stencil[1].i = i;
+      stencil[1].c = 0;
+      entries[1]   = -appctx->D1 * sy;
+      stencil[2].i = i - 1;
+      stencil[2].c = 0;
+      entries[2]   = -appctx->D1 * sx;
+      stencil[3].i = i + 1;
+      stencil[3].c = 0;
+      entries[3]   = -appctx->D1 * sx;
+      stencil[4].i = i;
+      stencil[4].c = 0;
+      entries[4]   = 2.0 * appctx->D1 * (sx + sy) + vc * vc + appctx->gamma + a;
+      stencil[5].i = i;
+      stencil[5].c = 1;
+      entries[5]   = 2.0 * uc * vc;
+      rowstencil.i = i;
+      rowstencil.c = 0;
 
-      ierr = MatSetValuesStencil(A,1,&rowstencil,6,stencil,entries,INSERT_VALUES);CHKERRQ(ierr);
-      if (appctx->aijpc) {
-        ierr = MatSetValuesStencil(B,1,&rowstencil,6,stencil,entries,INSERT_VALUES);CHKERRQ(ierr);
-      }
-      stencil[0].c = 1; entries[0] = -appctx->D2*sy;
-      stencil[1].c = 1; entries[1] = -appctx->D2*sy;
-      stencil[2].c = 1; entries[2] = -appctx->D2*sx;
-      stencil[3].c = 1; entries[3] = -appctx->D2*sx;
-      stencil[4].c = 1; entries[4] = 2.0*appctx->D2*(sx + sy) - 2.0*uc*vc + appctx->gamma + appctx->kappa + a;
-      stencil[5].c = 0; entries[5] = -vc*vc;
+      PetscCall(MatSetValuesStencil(A, 1, &rowstencil, 6, stencil, entries, INSERT_VALUES));
+      if (appctx->aijpc) PetscCall(MatSetValuesStencil(B, 1, &rowstencil, 6, stencil, entries, INSERT_VALUES));
+      stencil[0].c = 1;
+      entries[0]   = -appctx->D2 * sy;
+      stencil[1].c = 1;
+      entries[1]   = -appctx->D2 * sy;
+      stencil[2].c = 1;
+      entries[2]   = -appctx->D2 * sx;
+      stencil[3].c = 1;
+      entries[3]   = -appctx->D2 * sx;
+      stencil[4].c = 1;
+      entries[4]   = 2.0 * appctx->D2 * (sx + sy) - 2.0 * uc * vc + appctx->gamma + appctx->kappa + a;
+      stencil[5].c = 0;
+      entries[5]   = -vc * vc;
 
-      ierr = MatSetValuesStencil(A,1,&rowstencil,6,stencil,entries,INSERT_VALUES);CHKERRQ(ierr);
-      if (appctx->aijpc) {
-        ierr = MatSetValuesStencil(B,1,&rowstencil,6,stencil,entries,INSERT_VALUES);CHKERRQ(ierr);
-      }
+      PetscCall(MatSetValuesStencil(A, 1, &rowstencil, 6, stencil, entries, INSERT_VALUES));
+      if (appctx->aijpc) PetscCall(MatSetValuesStencil(B, 1, &rowstencil, 6, stencil, entries, INSERT_VALUES));
       /* f[j][i].v = appctx->D2*(vxx + vyy) + uc*vc*vc - (appctx->gamma + appctx->kappa)*vc; */
     }
   }
@@ -882,40 +899,41 @@ PetscErrorCode IJacobianByHand(TS ts,PetscReal t,Vec U,Vec Udot,PetscReal a,Mat 
   /*
      Restore vectors
   */
-  ierr = PetscLogFlops(19.0*xm*ym);CHKERRQ(ierr);
-  ierr = DMDAVecRestoreArrayRead(da,localU,&u);CHKERRQ(ierr);
-  ierr = DMRestoreLocalVector(da,&localU);CHKERRQ(ierr);
-  ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  ierr = MatSetOption(A,MAT_NEW_NONZERO_LOCATION_ERR,PETSC_TRUE);CHKERRQ(ierr);
+  PetscCall(PetscLogFlops(19.0 * xm * ym));
+  PetscCall(DMDAVecRestoreArrayRead(da, localU, &u));
+  PetscCall(DMRestoreLocalVector(da, &localU));
+  PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatSetOption(A, MAT_NEW_NONZERO_LOCATION_ERR, PETSC_TRUE));
   if (appctx->aijpc) {
-    ierr = MatAssemblyBegin(B,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-    ierr = MatAssemblyEnd(B,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-    ierr = MatSetOption(B,MAT_NEW_NONZERO_LOCATION_ERR,PETSC_TRUE);CHKERRQ(ierr);
+    PetscCall(MatAssemblyBegin(B, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(B, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatSetOption(B, MAT_NEW_NONZERO_LOCATION_ERR, PETSC_TRUE));
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode RHSJacobianByHand(TS ts,PetscReal t,Vec U,Mat A,Mat B,void *ctx)
+PetscErrorCode RHSJacobianByHand(TS ts, PetscReal t, Vec U, Mat A, Mat B, void *ctx)
 {
-  AppCtx         *appctx = (AppCtx*)ctx;     /* user-defined application context */
-  DM             da;
-  PetscErrorCode ierr;
-  PetscInt       i,j,Mx,My,xs,ys,xm,ym;
-  PetscReal      hx,hy,sx,sy;
-  PetscScalar    uc,vc;
-  Field          **u;
-  Vec            localU;
-  MatStencil     stencil[6],rowstencil;
-  PetscScalar    entries[6];
+  AppCtx     *appctx = (AppCtx *)ctx; /* user-defined application context */
+  DM          da;
+  PetscInt    i, j, Mx, My, xs, ys, xm, ym;
+  PetscReal   hx, hy, sx, sy;
+  PetscScalar uc, vc;
+  Field     **u;
+  Vec         localU;
+  MatStencil  stencil[6], rowstencil;
+  PetscScalar entries[6];
 
   PetscFunctionBegin;
-  ierr = TSGetDM(ts,&da);CHKERRQ(ierr);
-  ierr = DMGetLocalVector(da,&localU);CHKERRQ(ierr);
-  ierr = DMDAGetInfo(da,PETSC_IGNORE,&Mx,&My,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE);CHKERRQ(ierr);
+  PetscCall(TSGetDM(ts, &da));
+  PetscCall(DMGetLocalVector(da, &localU));
+  PetscCall(DMDAGetInfo(da, PETSC_IGNORE, &Mx, &My, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE, PETSC_IGNORE));
 
-  hx = 2.50/(PetscReal)(Mx); sx = 1.0/(hx*hx);
-  hy = 2.50/(PetscReal)(My); sy = 1.0/(hy*hy);
+  hx = 2.50 / (PetscReal)(Mx);
+  sx = 1.0 / (hx * hx);
+  hy = 2.50 / (PetscReal)(My);
+  sy = 1.0 / (hy * hy);
 
   /*
      Scatter ghost points to local vector,using the 2-step process
@@ -923,18 +941,18 @@ PetscErrorCode RHSJacobianByHand(TS ts,PetscReal t,Vec U,Mat A,Mat B,void *ctx)
      By placing code between these two statements, computations can be
      done while messages are in transition.
   */
-  ierr = DMGlobalToLocalBegin(da,U,INSERT_VALUES,localU);CHKERRQ(ierr);
-  ierr = DMGlobalToLocalEnd(da,U,INSERT_VALUES,localU);CHKERRQ(ierr);
+  PetscCall(DMGlobalToLocalBegin(da, U, INSERT_VALUES, localU));
+  PetscCall(DMGlobalToLocalEnd(da, U, INSERT_VALUES, localU));
 
   /*
      Get pointers to vector data
   */
-  ierr = DMDAVecGetArrayRead(da,localU,&u);CHKERRQ(ierr);
+  PetscCall(DMDAVecGetArrayRead(da, localU, &u));
 
   /*
      Get local grid boundaries
   */
-  ierr = DMDAGetCorners(da,&xs,&ys,NULL,&xm,&ym,NULL);CHKERRQ(ierr);
+  PetscCall(DMDAGetCorners(da, &xs, &ys, NULL, &xm, &ym, NULL));
 
   stencil[0].k = 0;
   stencil[1].k = 0;
@@ -947,16 +965,16 @@ PetscErrorCode RHSJacobianByHand(TS ts,PetscReal t,Vec U,Mat A,Mat B,void *ctx)
   /*
      Compute function over the locally owned part of the grid
   */
-  for (j=ys; j<ys+ym; j++) {
-
-    stencil[0].j = j-1;
-    stencil[1].j = j+1;
+  for (j = ys; j < ys + ym; j++) {
+    stencil[0].j = j - 1;
+    stencil[1].j = j + 1;
     stencil[2].j = j;
     stencil[3].j = j;
     stencil[4].j = j;
     stencil[5].j = j;
-    rowstencil.k = 0; rowstencil.j = j;
-    for (i=xs; i<xs+xm; i++) {
+    rowstencil.k = 0;
+    rowstencil.j = j;
+    for (i = xs; i < xs + xm; i++) {
       uc = u[j][i].u;
       vc = u[j][i].v;
 
@@ -967,25 +985,44 @@ PetscErrorCode RHSJacobianByHand(TS ts,PetscReal t,Vec U,Mat A,Mat B,void *ctx)
       vyy       = (-2.0*vc + u[j-1][i].v + u[j+1][i].v)*sy;
        f[j][i].u = appctx->D1*(uxx + uyy) - uc*vc*vc + appctx->gamma*(1.0 - uc);*/
 
-      stencil[0].i = i; stencil[0].c = 0; entries[0] = appctx->D1*sy;
-      stencil[1].i = i; stencil[1].c = 0; entries[1] = appctx->D1*sy;
-      stencil[2].i = i-1; stencil[2].c = 0; entries[2] = appctx->D1*sx;
-      stencil[3].i = i+1; stencil[3].c = 0; entries[3] = appctx->D1*sx;
-      stencil[4].i = i; stencil[4].c = 0; entries[4] = -2.0*appctx->D1*(sx + sy) - vc*vc - appctx->gamma;
-      stencil[5].i = i; stencil[5].c = 1; entries[5] = -2.0*uc*vc;
-      rowstencil.i = i; rowstencil.c = 0;
+      stencil[0].i = i;
+      stencil[0].c = 0;
+      entries[0]   = appctx->D1 * sy;
+      stencil[1].i = i;
+      stencil[1].c = 0;
+      entries[1]   = appctx->D1 * sy;
+      stencil[2].i = i - 1;
+      stencil[2].c = 0;
+      entries[2]   = appctx->D1 * sx;
+      stencil[3].i = i + 1;
+      stencil[3].c = 0;
+      entries[3]   = appctx->D1 * sx;
+      stencil[4].i = i;
+      stencil[4].c = 0;
+      entries[4]   = -2.0 * appctx->D1 * (sx + sy) - vc * vc - appctx->gamma;
+      stencil[5].i = i;
+      stencil[5].c = 1;
+      entries[5]   = -2.0 * uc * vc;
+      rowstencil.i = i;
+      rowstencil.c = 0;
 
-      ierr = MatSetValuesStencil(A,1,&rowstencil,6,stencil,entries,INSERT_VALUES);CHKERRQ(ierr);
+      PetscCall(MatSetValuesStencil(A, 1, &rowstencil, 6, stencil, entries, INSERT_VALUES));
 
-      stencil[0].c = 1; entries[0] = appctx->D2*sy;
-      stencil[1].c = 1; entries[1] = appctx->D2*sy;
-      stencil[2].c = 1; entries[2] = appctx->D2*sx;
-      stencil[3].c = 1; entries[3] = appctx->D2*sx;
-      stencil[4].c = 1; entries[4] = -2.0*appctx->D2*(sx + sy) + 2.0*uc*vc - appctx->gamma - appctx->kappa;
-      stencil[5].c = 0; entries[5] = vc*vc;
+      stencil[0].c = 1;
+      entries[0]   = appctx->D2 * sy;
+      stencil[1].c = 1;
+      entries[1]   = appctx->D2 * sy;
+      stencil[2].c = 1;
+      entries[2]   = appctx->D2 * sx;
+      stencil[3].c = 1;
+      entries[3]   = appctx->D2 * sx;
+      stencil[4].c = 1;
+      entries[4]   = -2.0 * appctx->D2 * (sx + sy) + 2.0 * uc * vc - appctx->gamma - appctx->kappa;
+      stencil[5].c = 0;
+      entries[5]   = vc * vc;
       rowstencil.c = 1;
 
-      ierr = MatSetValuesStencil(A,1,&rowstencil,6,stencil,entries,INSERT_VALUES);CHKERRQ(ierr);
+      PetscCall(MatSetValuesStencil(A, 1, &rowstencil, 6, stencil, entries, INSERT_VALUES));
       /* f[j][i].v = appctx->D2*(vxx + vyy) + uc*vc*vc - (appctx->gamma + appctx->kappa)*vc; */
     }
   }
@@ -993,31 +1030,30 @@ PetscErrorCode RHSJacobianByHand(TS ts,PetscReal t,Vec U,Mat A,Mat B,void *ctx)
   /*
      Restore vectors
   */
-  ierr = PetscLogFlops(19.0*xm*ym);CHKERRQ(ierr);
-  ierr = DMDAVecRestoreArrayRead(da,localU,&u);CHKERRQ(ierr);
-  ierr = DMRestoreLocalVector(da,&localU);CHKERRQ(ierr);
-  ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  ierr = MatSetOption(A,MAT_NEW_NONZERO_LOCATION_ERR,PETSC_TRUE);CHKERRQ(ierr);
+  PetscCall(PetscLogFlops(19.0 * xm * ym));
+  PetscCall(DMDAVecRestoreArrayRead(da, localU, &u));
+  PetscCall(DMRestoreLocalVector(da, &localU));
+  PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatSetOption(A, MAT_NEW_NONZERO_LOCATION_ERR, PETSC_TRUE));
   if (appctx->aijpc) {
-    ierr = MatAssemblyBegin(B,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-    ierr = MatAssemblyEnd(B,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-    ierr = MatSetOption(B,MAT_NEW_NONZERO_LOCATION_ERR,PETSC_TRUE);CHKERRQ(ierr);
+    PetscCall(MatAssemblyBegin(B, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(B, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatSetOption(B, MAT_NEW_NONZERO_LOCATION_ERR, PETSC_TRUE));
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode RHSJacobianAdolc(TS ts,PetscReal t,Vec U,Mat A,Mat B,void *ctx)
+PetscErrorCode RHSJacobianAdolc(TS ts, PetscReal t, Vec U, Mat A, Mat B, void *ctx)
 {
-  AppCtx         *appctx = (AppCtx*)ctx;
-  DM             da;
-  PetscErrorCode ierr;
-  PetscScalar    *u_vec;
-  Vec            localU;
+  AppCtx      *appctx = (AppCtx *)ctx;
+  DM           da;
+  PetscScalar *u_vec;
+  Vec          localU;
 
   PetscFunctionBegin;
-  ierr = TSGetDM(ts,&da);CHKERRQ(ierr);
-  ierr = DMGetLocalVector(da,&localU);CHKERRQ(ierr);
+  PetscCall(TSGetDM(ts, &da));
+  PetscCall(DMGetLocalVector(da, &localU));
 
   /*
      Scatter ghost points to local vector,using the 2-step process
@@ -1025,23 +1061,23 @@ PetscErrorCode RHSJacobianAdolc(TS ts,PetscReal t,Vec U,Mat A,Mat B,void *ctx)
      By placing code between these two statements, computations can be
      done while messages are in transition.
   */
-  ierr = DMGlobalToLocalBegin(da,U,INSERT_VALUES,localU);CHKERRQ(ierr);
-  ierr = DMGlobalToLocalEnd(da,U,INSERT_VALUES,localU);CHKERRQ(ierr);
+  PetscCall(DMGlobalToLocalBegin(da, U, INSERT_VALUES, localU));
+  PetscCall(DMGlobalToLocalEnd(da, U, INSERT_VALUES, localU));
 
   /* Get pointers to vector data */
-  ierr = VecGetArray(localU,&u_vec);CHKERRQ(ierr);
+  PetscCall(VecGetArray(localU, &u_vec));
 
   /*
     Compute Jacobian
   */
-  ierr = PetscAdolcComputeRHSJacobianLocal(1,A,u_vec,appctx->adctx);CHKERRQ(ierr);
+  PetscCall(PetscAdolcComputeRHSJacobianLocal(1, A, u_vec, appctx->adctx));
 
   /*
      Restore vectors
   */
-  ierr = VecRestoreArray(localU,&u_vec);CHKERRQ(ierr);
-  ierr = DMRestoreLocalVector(da,&localU);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(VecRestoreArray(localU, &u_vec));
+  PetscCall(DMRestoreLocalVector(da, &localU));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*TEST

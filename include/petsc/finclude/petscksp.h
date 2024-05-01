@@ -19,7 +19,9 @@
 #define KSPGMRESCGSRefinementType PetscEnum
 #define MatSchurComplementAinvType PetscEnum
 #define MatLMVMSymBroydenScaleType PetscEnum
+#define MatLMVMDenseType PetscEnum
 #define KSPHPDDMType PetscEnum
+#define KSPChebyshevKind PetscEnum
 
 !
 !  Various Krylov subspace methods
@@ -31,6 +33,7 @@
 #define KSPPIPECG 'pipecg'
 #define KSPPIPECGRR 'pipecgrr'
 #define KSPPIPELCG 'pipelcg'
+#define KSPPIPECG2 'pipecg2'
 #define KSPCGNE 'cgne'
 #define KSPNASH 'nash'
 #define KSPSTCG 'stcg'
@@ -46,6 +49,7 @@
 #define KSPTCQMR 'tcqmr'
 #define KSPBCGS 'bcgs'
 #define KSPIBCGS 'ibcgs'
+#define KSPQMRCGS 'qmrcgs'
 #define KSPFBCGS  'fbcgs'
 #define KSPFBCGSR 'fbcgsr'
 #define KSPBCGSL 'bcgsl'
@@ -56,6 +60,7 @@
 #define KSPPIPECR 'pipecr'
 #define KSPLSQR 'lsqr'
 #define KSPPREONLY 'preonly'
+#define KSPNONE 'none'
 #define KSPQCG 'qcg'
 #define KSPBICG 'bicg'
 #define KSPMINRES 'minres'

@@ -1,714 +1,639 @@
-static char help[] = "Evolution of magnetic islands.\n\
-The aim of this model is to self-consistently study the interaction between the tearing mode and small scale drift-wave turbulence.\n\n\n";
+static char help[] = "Magnetohydrodynamics (MHD) with Poisson brackets and "
+                     "stream functions, solver testbed for M3D-C1. Used in https://arxiv.org/abs/2302.10242";
 
 /*F
-This is a three field model for the density $\tilde n$, vorticity $\tilde\Omega$, and magnetic flux $\tilde\psi$, using auxiliary variables potential $\tilde\phi$ and current $j_z$.
-\begin{equation}
-  \begin{aligned}
-    \partial_t \tilde n       &= \left\{ \tilde n, \tilde\phi \right\} + \beta \left\{ j_z, \tilde\psi \right\} + \left\{ \ln n_0, \tilde\phi \right\} + \mu \nabla^2_\perp \tilde n \\
-  \partial_t \tilde\Omega   &= \left\{ \tilde\Omega, \tilde\phi \right\} + \beta \left\{ j_z, \tilde\psi \right\} + \mu \nabla^2_\perp \tilde\Omega \\
-  \partial_t \tilde\psi     &= \left\{ \psi_0 + \tilde\psi, \tilde\phi - \tilde n \right\} - \left\{ \ln n_0, \tilde\psi \right\} + \frac{\eta}{\beta} \nabla^2_\perp \tilde\psi \\
-  \nabla^2_\perp\tilde\phi        &= \tilde\Omega \\
-  j_z  &= -\nabla^2_\perp  \left(\tilde\psi + \psi_0  \right)\\
-  \end{aligned}
-\end{equation}
+The strong form of a two field model for vorticity $\Omega$ and magnetic flux
+$\psi$, using auxiliary variables potential $\phi$ and (negative) current
+density $j_z$ \cite{Jardin04,Strauss98}.See http://arxiv.org/abs/  for more details
 F*/
 
-#include <petscdmplex.h>
-#include <petscts.h>
-#include <petscds.h>
 #include <assert.h>
+#include <petscdmplex.h>
+#include <petscds.h>
+#include <petscts.h>
+
+typedef enum _testidx {
+  TEST_TILT,
+  NUM_TEST_TYPES
+} TestType;
+const char *testTypes[NUM_TEST_TYPES + 1] = {"tilt", "unknown"};
+typedef enum _modelidx {
+  TWO_FILD,
+  ONE_FILD,
+  NUM_MODELS
+} ModelType;
+const char *modelTypes[NUM_MODELS + 1] = {"two-field", "one-field", "unknown"};
+typedef enum _fieldidx {
+  JZ,
+  PSI,
+  PHI,
+  OMEGA,
+  NUM_COMP
+} FieldIdx; // add more
+typedef enum _const_idx {
+  MU_CONST,
+  ETA_CONST,
+  TEST_CONST,
+  NUM_CONSTS
+} ConstIdx;
 
 typedef struct {
-  PetscInt       debug;             /* The debugging level */
-  PetscBool      plotRef;           /* Plot the reference fields */
-  /* Domain and mesh definition */
-  PetscInt       dim;               /* The topological mesh dimension */
-  char           filename[2048];    /* The optional ExodusII file */
-  PetscBool      cell_simplex;           /* Simplicial mesh */
-  DMBoundaryType boundary_types[3];
-  PetscInt       cells[3];
-  PetscInt       refine;
-  /* geometry  */
-  PetscReal      domain_lo[3], domain_hi[3];
-  DMBoundaryType periodicity[3];              /* The domain periodicity */
-  PetscReal      b0[3]; /* not used */
-  /* Problem definition */
+  PetscInt  debug; /* The debugging level */
+  PetscReal plotDt;
+  PetscReal plotStartTime;
+  PetscInt  plotIdx;
+  PetscInt  plotStep;
+  PetscBool plotting;
+  PetscInt  dim;                          /* The topological mesh dimension */
+  char      filename[PETSC_MAX_PATH_LEN]; /* The optional ExodusII file */
   PetscErrorCode (**initialFuncs)(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar *u, void *ctx);
-  PetscReal      mu, eta, beta;
-  PetscReal      a,b,Jo,Jop,m,ke,kx,ky,DeltaPrime,eps;
-  /* solver */
-  PetscBool      implicit;
+  PetscReal mu, eta;
+  PetscReal perturb;
+  TestType  testType;
+  ModelType modelType;
+  PetscInt  Nf;
 } AppCtx;
 
-static AppCtx *s_ctx;
+static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
+{
+  PetscInt ii;
 
+  PetscFunctionBeginUser;
+  options->debug         = 1;
+  options->filename[0]   = '\0';
+  options->testType      = TEST_TILT;
+  options->modelType     = TWO_FILD;
+  options->mu            = 0.005;
+  options->eta           = 0.001;
+  options->perturb       = 0;
+  options->plotDt        = 0.1;
+  options->plotStartTime = 0.0;
+  options->plotIdx       = 0;
+  options->plotStep      = PETSC_MAX_INT;
+  options->plotting      = PETSC_FALSE;
+
+  PetscOptionsBegin(comm, "", "MHD Problem Options", "DMPLEX");
+  PetscCall(PetscOptionsInt("-debug", "The debugging level", "mhd.c", options->debug, &options->debug, NULL));
+  ii                = (PetscInt)options->testType;
+  options->testType = TEST_TILT;
+  ii                = options->testType;
+  PetscCall(PetscOptionsEList("-test_type", "The test type: 'tilt' Tilt instability", "mhd.c", testTypes, NUM_TEST_TYPES, testTypes[options->testType], &ii, NULL));
+  options->testType  = (TestType)ii;
+  ii                 = (PetscInt)options->modelType;
+  options->modelType = TWO_FILD;
+  ii                 = options->modelType;
+  PetscCall(PetscOptionsEList("-model_type", "The model type: 'two', 'one' field", "mhd.c", modelTypes, NUM_MODELS, modelTypes[options->modelType], &ii, NULL));
+  options->modelType = (ModelType)ii;
+  options->Nf        = options->modelType == TWO_FILD ? 4 : 2;
+
+  PetscCall(PetscOptionsReal("-mu", "Magnetic resistivity", "mhd.c", options->mu, &options->mu, NULL));
+  PetscCall(PetscOptionsReal("-eta", "Viscosity", "mhd.c", options->eta, &options->eta, NULL));
+  PetscCall(PetscOptionsReal("-plot_dt", "Plot frequency in time", "mhd.c", options->plotDt, &options->plotDt, NULL));
+  PetscCall(PetscOptionsReal("-plot_start_time", "Time to delay start of plotting", "mhd.c", options->plotStartTime, &options->plotStartTime, NULL));
+  PetscCall(PetscOptionsReal("-perturbation", "Random perturbation of initial psi scale", "mhd.c", options->perturb, &options->perturb, NULL));
+  PetscCall(PetscPrintf(comm, "Test Type = %s\n", testTypes[options->testType]));
+  PetscCall(PetscPrintf(comm, "Model Type = %s\n", modelTypes[options->modelType]));
+  PetscCall(PetscPrintf(comm, "eta = %g\n", (double)options->eta));
+  PetscCall(PetscPrintf(comm, "mu = %g\n", (double)options->mu));
+  PetscOptionsEnd();
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+// | 0 1 | matrix to apply bracket
+// |-1 0 |
+static PetscReal s_K[2][2] = {
+  {0,  1},
+  {-1, 0}
+};
+
+/*
+ dt - "g0" are mass terms
+*/
+static void g0_dt(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar g0[])
+{
+  g0[0] = u_tShift;
+}
+
+/*
+ Identity, Mass
+*/
+static void g0_1(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar g0[])
+{
+  g0[0] = 1;
+}
+/* 'right' Poisson bracket -<.,phi>, linearized variable is left (column), data
+ * variable right */
+static void g1_phi_right(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar g1[])
+{
+  PetscInt           i, j;
+  const PetscScalar *pphiDer = &u_x[uOff_x[PHI]]; // get derivative of the 'right' ("dg") and apply to
+                                                  // live var "df"
+  for (i = 0; i < dim; ++i)
+    for (j = 0; j < dim; ++j)
+      //  indexing with inner, j, index generates the left live variable [dy,-]
+      //  by convention, put j index on right, with i destination: [ d/dy,
+      //  -d/dx]'
+      g1[i] += s_K[i][j] * pphiDer[j];
+}
+/* 'left' bracket -{jz,.}, "n" for negative, linearized variable right (column),
+ * data variable left */
+static void g1_njz_left(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar g1[])
+{
+  PetscInt           i, j;
+  const PetscScalar *jzDer = &u_x[uOff_x[JZ]]; // get derivative of the 'left' ("df") and apply to live
+                                               // var "dg"
+  for (i = 0; i < dim; ++i)
+    for (j = 0; j < dim; ++j)
+      // live right: Der[i] * K: Der[j] --> j: [d/dy, -d/dx]'
+      g1[j] += -jzDer[i] * s_K[i][j];
+}
+/* 'left' Poisson bracket -< . , psi> */
+static void g1_npsi_right(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar g1[])
+{
+  PetscInt           i, j;
+  const PetscScalar *psiDer = &u_x[uOff_x[PSI]];
+  for (i = 0; i < dim; ++i)
+    for (j = 0; j < dim; ++j) g1[i] += -s_K[i][j] * psiDer[j];
+}
+
+/* < Omega , . > */
+static void g1_omega_left(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar g1[])
+{
+  PetscInt           i, j;
+  const PetscScalar *pOmegaDer = &u_x[uOff_x[OMEGA]];
+  for (i = 0; i < dim; ++i)
+    for (j = 0; j < dim; ++j) g1[j] += pOmegaDer[i] * s_K[i][j];
+}
+
+/* < psi , . > */
+static void g1_psi_left(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar g1[])
+{
+  PetscInt           i, j;
+  const PetscScalar *pPsiDer = &u_x[uOff_x[PSI]];
+  for (i = 0; i < dim; ++i)
+    for (j = 0; j < dim; ++j) g1[j] += pPsiDer[i] * s_K[i][j];
+}
+
+// -Lapacians (resistivity), negative sign goes away from IBP
+static void g3_nmu(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar g3[])
+{
+  PetscReal mu = PetscRealPart(constants[MU_CONST]);
+  for (PetscInt d = 0; d < dim; ++d) g3[d * dim + d] = mu;
+}
+
+// Auxiliary variable = -del^2 x, negative sign goes away from IBP
+static void g3_n1(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar g3[])
+{
+  PetscInt d;
+  for (d = 0; d < dim; ++d) g3[d * dim + d] = 1;
+}
+
+/* residual point methods */
 static PetscScalar poissonBracket(PetscInt dim, const PetscScalar df[], const PetscScalar dg[])
 {
-  PetscScalar ret = df[0]*dg[1] - df[1]*dg[0];
+  PetscScalar ret = df[0] * dg[1] - df[1] * dg[0];
+  if (dim == 3) {
+    ret += df[1] * dg[2] - df[2] * dg[1];
+    ret += df[2] * dg[0] - df[0] * dg[2];
+  }
   return ret;
 }
-
-enum field_idx {DENSITY,OMEGA,PSI,PHI,JZ};
-
-static void f0_n(PetscInt dim, PetscInt Nf, PetscInt NfAux,
-                 const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
-                 const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
-                 PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f0[])
+//
+static void f0_Omega(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f0[])
 {
-  const PetscScalar *pnDer   = &u_x[uOff_x[DENSITY]];
-  const PetscScalar *ppsiDer = &u_x[uOff_x[PSI]];
-  const PetscScalar *pphiDer = &u_x[uOff_x[PHI]];
-  const PetscScalar *jzDer   = &u_x[uOff_x[JZ]];
-  const PetscScalar *logRefDenDer = &a_x[aOff_x[DENSITY]];
-  f0[0] += - poissonBracket(dim,pnDer, pphiDer) - s_ctx->beta*poissonBracket(dim,jzDer, ppsiDer) - poissonBracket(dim,logRefDenDer, pphiDer);
-  if (u_t) f0[0] += u_t[DENSITY];
-}
+  const PetscScalar *omegaDer = &u_x[uOff_x[OMEGA]];
+  const PetscScalar *psiDer   = &u_x[uOff_x[PSI]];
+  const PetscScalar *phiDer   = &u_x[uOff_x[PHI]];
+  const PetscScalar *jzDer    = &u_x[uOff_x[JZ]];
 
-static void f1_n(PetscInt dim, PetscInt Nf, PetscInt NfAux,
-                 const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
-                 const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
-                 PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f1[])
-{
-  const PetscScalar *pnDer = &u_x[uOff_x[DENSITY]];
-  PetscInt           d;
+  f0[0] += poissonBracket(dim, omegaDer, phiDer) - poissonBracket(dim, jzDer, psiDer);
 
-  for (d = 0; d < dim-1; ++d) f1[d] = -s_ctx->mu*pnDer[d];
-}
-
-static void f0_Omega(PetscInt dim, PetscInt Nf, PetscInt NfAux,
-                     const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
-                     const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
-                     PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f0[])
-{
-  const PetscScalar *pOmegaDer = &u_x[uOff_x[OMEGA]];
-  const PetscScalar *ppsiDer   = &u_x[uOff_x[PSI]];
-  const PetscScalar *pphiDer   = &u_x[uOff_x[PHI]];
-  const PetscScalar *jzDer     = &u_x[uOff_x[JZ]];
-
-  f0[0] += - poissonBracket(dim,pOmegaDer, pphiDer) - s_ctx->beta*poissonBracket(dim,jzDer, ppsiDer);
   if (u_t) f0[0] += u_t[OMEGA];
 }
 
-static void f1_Omega(PetscInt dim, PetscInt Nf, PetscInt NfAux,
-                     const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
-                     const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
-                     PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f1[])
+static void f1_Omega(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f1[])
 {
-  const PetscScalar *pOmegaDer = &u_x[uOff_x[OMEGA]];
-  PetscInt           d;
+  const PetscScalar *omegaDer = &u_x[uOff_x[OMEGA]];
+  PetscReal          mu       = PetscRealPart(constants[MU_CONST]);
 
-  for (d = 0; d < dim-1; ++d) f1[d] = -s_ctx->mu*pOmegaDer[d];
+  for (PetscInt d = 0; d < dim; ++d) f1[d] += mu * omegaDer[d];
 }
 
-static void f0_psi(PetscInt dim, PetscInt Nf, PetscInt NfAux,
-                   const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
-                   const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
-                   PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f0[])
+// d/dt + {psi,phi} - eta j_z
+static void f0_psi_4f(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f0[])
 {
-  const PetscScalar *pnDer     = &u_x[uOff_x[DENSITY]];
-  const PetscScalar *ppsiDer   = &u_x[uOff_x[PSI]];
-  const PetscScalar *pphiDer   = &u_x[uOff_x[PHI]];
-  const PetscScalar *refPsiDer = &a_x[aOff_x[PSI]];
-  const PetscScalar *logRefDenDer= &a_x[aOff_x[DENSITY]];
-  PetscScalar       psiDer[3];
-  PetscScalar       phi_n_Der[3];
-  PetscInt          d;
-  if (dim < 2) {MPI_Abort(MPI_COMM_WORLD,1); return;} /* this is needed so that the clang static analyzer does not generate a warning about variables used by not set */
-  for (d = 0; d < dim; ++d) {
-    psiDer[d]    = refPsiDer[d] + ppsiDer[d];
-    phi_n_Der[d] = pphiDer[d]   - pnDer[d];
-  }
-  f0[0] = - poissonBracket(dim,psiDer, phi_n_Der) + poissonBracket(dim,logRefDenDer, ppsiDer);
+  const PetscScalar *psiDer = &u_x[uOff_x[PSI]];
+  const PetscScalar *phiDer = &u_x[uOff_x[PHI]];
+  PetscReal          eta    = PetscRealPart(constants[ETA_CONST]);
+
+  f0[0] = -eta * u[uOff[JZ]];
+  f0[0] += poissonBracket(dim, psiDer, phiDer);
+
   if (u_t) f0[0] += u_t[PSI];
+  // printf("psiDer = %20.15e %20.15e psi = %20.15e
 }
 
-static void f1_psi(PetscInt dim, PetscInt Nf, PetscInt NfAux,
-                   const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
-                   const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
-                   PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f1[])
+// d/dt - eta j_z
+static void f0_psi_2f(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f0[])
 {
-  const PetscScalar *ppsi = &u_x[uOff_x[PSI]];
-  PetscInt           d;
+  PetscReal eta = PetscRealPart(constants[ETA_CONST]);
 
-  for (d = 0; d < dim-1; ++d) f1[d] = -(s_ctx->eta/s_ctx->beta)*ppsi[d];
+  f0[0] = -eta * u[uOff[JZ]];
+
+  if (u_t) f0[0] += u_t[PSI];
+  // printf("psiDer = %20.15e %20.15e psi = %20.15e
 }
 
-static void f0_phi(PetscInt dim, PetscInt Nf, PetscInt NfAux,
-                   const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
-                   const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
-                   PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f0[])
+static void f0_phi(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f0[])
 {
-  f0[0] = -u[uOff[OMEGA]];
+  f0[0] += u[uOff[OMEGA]];
 }
 
-static void f1_phi(PetscInt dim, PetscInt Nf, PetscInt NfAux,
-                   const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
-                   const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
-                   PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f1[])
+static void f1_phi(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f1[])
 {
-  const PetscScalar *pphi = &u_x[uOff_x[PHI]];
-  PetscInt           d;
+  const PetscScalar *phiDer = &u_x[uOff_x[PHI]];
 
-  for (d = 0; d < dim-1; ++d) f1[d] = pphi[d];
+  for (PetscInt d = 0; d < dim; ++d) f1[d] = phiDer[d];
 }
 
-static void f0_jz(PetscInt dim, PetscInt Nf, PetscInt NfAux,
-                  const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
-                  const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
-                  PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f0[])
+/* - eta M */
+static void g0_neta(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar g0[])
+{
+  PetscReal eta = PetscRealPart(constants[ETA_CONST]);
+
+  g0[0] = -eta;
+}
+
+static void f0_jz(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f0[])
 {
   f0[0] = u[uOff[JZ]];
 }
 
-static void f1_jz(PetscInt dim, PetscInt Nf, PetscInt NfAux,
-                  const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
-                  const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
-                  PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f1[])
+/* -del^2 psi = (grad v, grad psi) */
+static void f1_jz(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f1[])
 {
-  const PetscScalar *ppsi = &u_x[uOff_x[PSI]];
-  const PetscScalar *refPsiDer = &a_x[aOff_x[PSI]]; /* aOff_x[PSI] == 2*PSI */
-  PetscInt           d;
+  const PetscScalar *psiDer = &u_x[uOff_x[PSI]];
 
-  for (d = 0; d < dim-1; ++d) f1[d] = ppsi[d] + refPsiDer[d];
+  for (PetscInt d = 0; d < dim; ++d) f1[d] = psiDer[d];
 }
 
-static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
+static void f0_mhd_B_energy2(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0)
 {
-  PetscBool      flg;
-  PetscErrorCode ierr;
-  PetscInt       ii, bd;
-  PetscFunctionBeginUser;
-  options->debug               = 1;
-  options->plotRef             = PETSC_FALSE;
-  options->dim                 = 2;
-  options->filename[0]         = '\0';
-  options->cell_simplex        = PETSC_FALSE;
-  options->implicit            = PETSC_FALSE;
-  options->refine              = 2;
-  options->domain_lo[0]  = 0.0;
-  options->domain_lo[1]  = 0.0;
-  options->domain_lo[2]  = 0.0;
-  options->domain_hi[0]  = 2.0;
-  options->domain_hi[1]  = 2.0*PETSC_PI;
-  options->domain_hi[2]  = 2.0;
-  options->periodicity[0]    = DM_BOUNDARY_NONE;
-  options->periodicity[1]    = DM_BOUNDARY_NONE;
-  options->periodicity[2]    = DM_BOUNDARY_NONE;
-  options->mu   = 0;
-  options->eta  = 0;
-  options->beta = 1;
-  options->a = 1;
-  options->b = PETSC_PI;
-  options->Jop = 0;
-  options->m = 1;
-  options->eps = 1.e-6;
-
-  for (ii = 0; ii < options->dim; ++ii) options->cells[ii] = 4;
-  ierr = PetscOptionsBegin(comm, "", "Poisson Problem Options", "DMPLEX");CHKERRQ(ierr);
-  ierr = PetscOptionsInt("-debug", "The debugging level", "ex48.c", options->debug, &options->debug, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-plot_ref", "Plot the reference fields", "ex48.c", options->plotRef, &options->plotRef, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsInt("-dim", "The topological mesh dimension", "ex48.c", options->dim, &options->dim, NULL);CHKERRQ(ierr);
-  if (options->dim < 2 || options->dim > 3) SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_ARG_OUTOFRANGE,"Dim %D must be 2 or 3",options->dim);CHKERRQ(ierr);
-  ierr = PetscOptionsInt("-dm_refine", "Hack to get refinement level for cylinder", "ex48.c", options->refine, &options->refine, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-mu", "mu", "ex48.c", options->mu, &options->mu, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-eta", "eta", "ex48.c", options->eta, &options->eta, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-beta", "beta", "ex48.c", options->beta, &options->beta, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-Jop", "Jop", "ex48.c", options->Jop, &options->Jop, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-m", "m", "ex48.c", options->m, &options->m, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-eps", "eps", "ex48.c", options->eps, &options->eps, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsString("-f", "Exodus.II filename to read", "ex48.c", options->filename, options->filename, sizeof(options->filename), &flg);CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-cell_simplex", "Simplicial (true) or tensor (false) mesh", "ex48.c", options->cell_simplex, &options->cell_simplex, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-implicit", "Use implicit time integrator", "ex48.c", options->implicit, &options->implicit, NULL);CHKERRQ(ierr);
-  ii = options->dim;
-  ierr = PetscOptionsRealArray("-domain_hi", "Domain size", "ex48.c", options->domain_hi, &ii, NULL);CHKERRQ(ierr);
-  ii = options->dim;
-  ierr = PetscOptionsRealArray("-domain_lo", "Domain size", "ex48.c", options->domain_lo, &ii, NULL);CHKERRQ(ierr);
-  ii = options->dim;
-  bd = options->periodicity[0];
-  ierr = PetscOptionsEList("-x_periodicity", "The x-boundary periodicity", "ex48.c", DMBoundaryTypes, 5, DMBoundaryTypes[options->periodicity[0]], &bd, NULL);CHKERRQ(ierr);
-  options->periodicity[0] = (DMBoundaryType) bd;
-  bd = options->periodicity[1];
-  ierr = PetscOptionsEList("-y_periodicity", "The y-boundary periodicity", "ex48.c", DMBoundaryTypes, 5, DMBoundaryTypes[options->periodicity[1]], &bd, NULL);CHKERRQ(ierr);
-  options->periodicity[1] = (DMBoundaryType) bd;
-  bd = options->periodicity[2];
-  ierr = PetscOptionsEList("-z_periodicity", "The z-boundary periodicity", "ex48.c", DMBoundaryTypes, 5, DMBoundaryTypes[options->periodicity[2]], &bd, NULL);CHKERRQ(ierr);
-  options->periodicity[2] = (DMBoundaryType) bd;
-  ii = options->dim;
-  ierr = PetscOptionsIntArray("-cells", "Number of cells in each dimension", "ex48.c", options->cells, &ii, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsEnd();CHKERRQ(ierr);
-  options->a = (options->domain_hi[0]-options->domain_lo[0])/2.0;
-  options->b = (options->domain_hi[1]-options->domain_lo[1])/2.0;
-  for (ii = 0; ii < options->dim; ++ii) {
-    if (options->domain_hi[ii] <= options->domain_lo[ii]) SETERRQ3(comm,PETSC_ERR_ARG_WRONG,"Domain %D lo=%g hi=%g",ii,options->domain_lo[ii],options->domain_hi[ii]);
-  }
-  options->ke = PetscSqrtScalar(options->Jop);
-  if (options->Jop==0.0) {
-    options->Jo = 1.0/PetscPowScalar(options->a,2);
-  } else {
-    options->Jo = options->Jop*PetscCosReal(options->ke*options->a)/(1.0-PetscCosReal(options->ke*options->a));
-  }
-  options->ky = PETSC_PI*options->m/options->b;
-  if (PetscPowReal(options->ky, 2) < options->Jop) {
-    options->kx = PetscSqrtScalar(options->Jop-PetscPowScalar(options->ky,2));
-    options->DeltaPrime = -2.0*options->kx*options->a*PetscCosReal(options->kx*options->a)/PetscSinReal(options->kx*options->a);
-  } else if (PetscPowReal(options->ky, 2) > options->Jop) {
-    options->kx = PetscSqrtScalar(PetscPowScalar(options->ky,2)-options->Jop);
-    options->DeltaPrime = -2.0*options->kx*options->a*PetscCoshReal(options->kx*options->a)/PetscSinhReal(options->kx*options->a);
-  } else { /*they're equal (or there's a NaN), lim(x*cot(x))_x->0=1*/
-    options->kx = 0;
-    options->DeltaPrime = -2.0;
-  }
-  ierr = PetscPrintf(comm, "DeltaPrime=%g\n",options->DeltaPrime);CHKERRQ(ierr);
-
-  PetscFunctionReturn(0);
+  const PetscScalar *psiDer = &u_x[uOff_x[PSI]];
+  PetscScalar        b2     = 0;
+  for (int i = 0; i < dim; ++i) b2 += psiDer[i] * psiDer[i];
+  f0[0] = b2;
 }
 
-static void f_n(PetscInt dim, PetscInt Nf, PetscInt NfAux,
-                const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
-                const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
-                PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0)
+static void f0_mhd_v_energy2(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0)
 {
-  const PetscScalar *pn = &u[uOff[DENSITY]];
-  *f0 = *pn;
+  const PetscScalar *phiDer = &u_x[uOff_x[PHI]];
+  PetscScalar        v2     = 0;
+  for (int i = 0; i < dim; ++i) v2 += phiDer[i] * phiDer[i];
+  f0[0] = v2;
 }
 
-static PetscErrorCode PostStep(TS ts)
+static PetscErrorCode Monitor(TS ts, PetscInt stepi, PetscReal time, Vec X, void *actx)
 {
-  PetscErrorCode    ierr;
-  DM                dm;
-  AppCtx            *ctx;
-  PetscInt          stepi,num;
-  Vec               X;
+  AppCtx             *ctx = (AppCtx *)actx; /* user-defined application context */
+  SNES                snes;
+  SNESConvergedReason reason;
+  TSConvergedReason   tsreason;
+
   PetscFunctionBegin;
-  ierr = TSGetApplicationContext(ts, &ctx);CHKERRQ(ierr); assert(ctx);
-  if (ctx->debug<1) PetscFunctionReturn(0);
-  ierr = TSGetSolution(ts, &X);CHKERRQ(ierr);
-  ierr = VecGetDM(X, &dm);CHKERRQ(ierr);
-  ierr = TSGetStepNumber(ts, &stepi);CHKERRQ(ierr);
-  ierr = DMGetOutputSequenceNumber(dm, &num, NULL);CHKERRQ(ierr);
-  if (num < 0) {ierr = DMSetOutputSequenceNumber(dm, 0, 0.0);CHKERRQ(ierr);}
-  ierr = PetscObjectSetName((PetscObject) X, "u");CHKERRQ(ierr);
-  ierr = VecViewFromOptions(X, NULL, "-vec_view");CHKERRQ(ierr);
-  /* print integrals */
-  {
-    PetscDS          prob;
-    DM               plex;
-    PetscScalar den, tt[5];
-    ierr = DMConvert(dm, DMPLEX, &plex);CHKERRQ(ierr);
-    ierr = DMGetDS(plex, &prob);CHKERRQ(ierr);
-    ierr = PetscDSSetObjective(prob, 0, &f_n);CHKERRQ(ierr);
-    ierr = DMPlexComputeIntegralFEM(plex,X,tt,ctx);CHKERRQ(ierr);
-    den = tt[0];
-    ierr = DMDestroy(&plex);CHKERRQ(ierr);
-    PetscPrintf(PetscObjectComm((PetscObject)dm), "%D) total perturbed mass = %g\n", stepi, (double) PetscRealPart(den));CHKERRQ(ierr);
+  // PetscCall(TSGetApplicationContext(ts, &ctx));
+  if (ctx->debug < 1) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCall(TSGetSNES(ts, &snes));
+  PetscCall(SNESGetConvergedReason(snes, &reason));
+  if (reason < 0) {
+    PetscCall(PetscPrintf(PetscObjectComm((PetscObject)ts), "\t\t ***************** Monitor: SNES diverged with reason %d.\n", (int)reason));
+    PetscFunctionReturn(PETSC_SUCCESS);
   }
-  PetscFunctionReturn(0);
+  if (stepi > ctx->plotStep && ctx->plotting) {
+    ctx->plotting = PETSC_FALSE; /* was doing diagnostics, now done */
+    ctx->plotIdx++;
+  }
+  PetscCall(TSGetTime(ts, &time));
+  PetscCall(TSGetConvergedReason(ts, &tsreason));
+  if (((time - ctx->plotStartTime) / ctx->plotDt >= (PetscReal)ctx->plotIdx && time >= ctx->plotStartTime) || (tsreason == TS_CONVERGED_TIME || tsreason == TS_CONVERGED_ITS) || ctx->plotIdx == 0) {
+    DM          dm, plex;
+    Vec         X;
+    PetscReal   val;
+    PetscScalar tt[12]; // FE integral seems to need a large array
+    PetscDS     prob;
+    if (!ctx->plotting) { /* first step of possible backtracks */
+      ctx->plotting = PETSC_TRUE;
+    } else {
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\t\t ?????? ------\n"));
+      ctx->plotting = PETSC_TRUE;
+    }
+    ctx->plotStep = stepi;
+    PetscCall(TSGetSolution(ts, &X));
+    PetscCall(VecGetDM(X, &dm));
+    PetscCall(DMGetOutputSequenceNumber(dm, NULL, &val));
+    PetscCall(DMSetOutputSequenceNumber(dm, ctx->plotIdx, val));
+    PetscCall(VecViewFromOptions(X, NULL, "-vec_view_mhd"));
+    if (ctx->debug > 2) {
+      Vec R;
+      PetscCall(SNESGetFunction(snes, &R, NULL, NULL));
+      PetscCall(VecViewFromOptions(R, NULL, "-vec_view_res"));
+    }
+    // compute energy
+    PetscCall(DMGetDS(dm, &prob));
+    PetscCall(DMConvert(dm, DMPLEX, &plex));
+    PetscCall(PetscDSSetObjective(prob, 0, &f0_mhd_v_energy2));
+    PetscCall(DMPlexComputeIntegralFEM(plex, X, &tt[0], ctx));
+    val = PetscRealPart(tt[0]);
+    PetscCall(PetscDSSetObjective(prob, 0, &f0_mhd_B_energy2));
+    PetscCall(DMPlexComputeIntegralFEM(plex, X, &tt[0], ctx));
+    val = PetscSqrtReal(val) * 0.5 + PetscSqrtReal(PetscRealPart(tt[0])) * 0.5;
+    PetscCall(PetscPrintf(PetscObjectComm((PetscObject)ts), "MHD %4d) time = %9.5g, Eergy= %20.13e (plot ID %d)\n", (int)ctx->plotIdx, (double)time, (double)val, (int)ctx->plotIdx));
+    /* clean up */
+    PetscCall(DMDestroy(&plex));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode CreateBCLabel(DM dm, const char name[])
 {
-  DM             plex;
-  DMLabel        label;
-  PetscErrorCode ierr;
+  DMLabel label;
 
   PetscFunctionBeginUser;
-  ierr = DMCreateLabel(dm, name);CHKERRQ(ierr);
-  ierr = DMGetLabel(dm, name, &label);CHKERRQ(ierr);
-  ierr = DMConvert(dm, DMPLEX, &plex);CHKERRQ(ierr);
-  ierr = DMPlexMarkBoundaryFaces(dm, 1, label);CHKERRQ(ierr);
-  ierr = DMDestroy(&plex);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(DMCreateLabel(dm, name));
+  PetscCall(DMGetLabel(dm, name, &label));
+  PetscCall(DMPlexMarkBoundaryFaces(dm, PETSC_DETERMINE, label));
+  PetscCall(DMPlexLabelComplete(dm, label));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
-
+// Create mesh, dim is set here
 static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *ctx, DM *dm)
 {
-  PetscInt       dim      = ctx->dim;
-  const char    *filename = ctx->filename;
-  size_t         len;
-  PetscMPIInt    numProcs;
-  PetscErrorCode ierr;
+  const char *filename = ctx->filename;
+  size_t      len;
+  char        buff[256];
+  PetscMPIInt size;
+  PetscInt    nface = 1;
 
   PetscFunctionBeginUser;
-  ierr = MPI_Comm_size(comm, &numProcs);CHKERRQ(ierr);
-  ierr = PetscStrlen(filename, &len);CHKERRQ(ierr);
+  PetscCall(PetscStrlen(filename, &len));
   if (len) {
-    ierr = DMPlexCreateFromFile(comm, filename, PETSC_TRUE, dm);CHKERRQ(ierr);
+    PetscCall(DMPlexCreateFromFile(comm, filename, "", PETSC_TRUE, dm));
   } else {
-    PetscInt        d;
-
-    /* create DM */
-    if (ctx->cell_simplex && dim == 3) SETERRQ(comm, PETSC_ERR_ARG_WRONG, "Cannot mesh a cylinder with simplices");
-    if (dim==2) {
-      PetscInt refineRatio, totCells = 1;
-      if (ctx->cell_simplex) SETERRQ(comm, PETSC_ERR_ARG_WRONG, "Cannot mesh 2D with simplices");
-      refineRatio = PetscMax((PetscInt) (PetscPowReal(numProcs, 1.0/dim) + 0.1) - 1, 1);
-      for (d = 0; d < dim; ++d) {
-        if (ctx->cells[d] < refineRatio) ctx->cells[d] = refineRatio;
-        if (ctx->periodicity[d]==DM_BOUNDARY_PERIODIC && ctx->cells[d]*refineRatio <= 2) refineRatio = 2;
-      }
-      for (d = 0; d < dim; ++d) {
-        ctx->cells[d] *= refineRatio;
-        totCells *= ctx->cells[d];
-      }
-      if (totCells % numProcs) SETERRQ2(comm,PETSC_ERR_ARG_WRONG,"Total cells %D not divisible by processes %D", totCells, numProcs);
-      ierr = DMPlexCreateBoxMesh(comm, dim, PETSC_FALSE, ctx->cells, ctx->domain_lo, ctx->domain_hi, ctx->periodicity, PETSC_TRUE, dm);CHKERRQ(ierr);
-    } else {
-      if (ctx->periodicity[0]==DM_BOUNDARY_PERIODIC || ctx->periodicity[1]==DM_BOUNDARY_PERIODIC) SETERRQ(comm, PETSC_ERR_ARG_WRONG, "Cannot do periodic in x or y in a cylinder");
-      /* we stole dm_refine so clear it */
-      ierr = PetscOptionsClearValue(NULL,"-dm_refine");CHKERRQ(ierr);
-      ierr = DMPlexCreateHexCylinderMesh(comm, ctx->refine, ctx->periodicity[2], dm);CHKERRQ(ierr);
-    }
+    PetscCall(DMCreate(comm, dm));
+    PetscCall(DMSetType(*dm, DMPLEX));
   }
-  {
-    DM distributedMesh = NULL;
-    /* Distribute mesh over processes */
-    ierr = DMPlexDistribute(*dm, 0, NULL, &distributedMesh);CHKERRQ(ierr);
-    if (distributedMesh) {
-      ierr = DMDestroy(dm);CHKERRQ(ierr);
-      *dm  = distributedMesh;
-    }
-  }
-  {
-    PetscBool hasLabel;
-    ierr = DMHasLabel(*dm, "marker", &hasLabel);CHKERRQ(ierr);
-    if (!hasLabel) {ierr = CreateBCLabel(*dm, "marker");CHKERRQ(ierr);}
-  }
+  PetscCallMPI(MPI_Comm_size(comm, &size));
+  while (nface * nface < size) nface *= 2; // 2D
+  if (nface < 2) nface = 2;
+  PetscCall(PetscSNPrintf(buff, sizeof(buff), "-dm_plex_box_faces %d,%d -petscpartitioner_type simple", (int)nface, (int)nface));
+  PetscCall(PetscOptionsInsertString(NULL, buff));
+  PetscCall(PetscOptionsInsertString(NULL, "-dm_plex_box_lower -2,-2 -dm_plex_box_upper 2,2"));
+  PetscCall(DMSetFromOptions(*dm));
+  PetscCall(DMPlexDistributeSetDefault(*dm, PETSC_FALSE));
+  PetscCall(DMGetDimension(*dm, &ctx->dim));
   {
     char      convType[256];
     PetscBool flg;
-    ierr = PetscOptionsBegin(comm, "", "Mesh conversion options", "DMPLEX");CHKERRQ(ierr);
-    ierr = PetscOptionsFList("-dm_plex_convert_type","Convert DMPlex to another format","ex48",DMList,DMPLEX,convType,256,&flg);CHKERRQ(ierr);
-    ierr = PetscOptionsEnd();CHKERRQ(ierr);
+    PetscOptionsBegin(comm, "", "Mesh conversion options", "DMPLEX");
+    PetscCall(PetscOptionsFList("-dm_plex_convert_type", "Convert DMPlex to another format", "mhd", DMList, DMPLEX, convType, 256, &flg));
+    PetscOptionsEnd();
     if (flg) {
       DM dmConv;
-      ierr = DMConvert(*dm,convType,&dmConv);CHKERRQ(ierr);
+      PetscCall(DMConvert(*dm, convType, &dmConv));
       if (dmConv) {
-        ierr = DMDestroy(dm);CHKERRQ(ierr);
-        *dm  = dmConv;
+        PetscCall(DMDestroy(dm));
+        *dm = dmConv;
       }
     }
   }
-  ierr = PetscObjectSetName((PetscObject) *dm, "Mesh");CHKERRQ(ierr);
-  ierr = DMSetFromOptions(*dm);CHKERRQ(ierr);
-  ierr = DMLocalizeCoordinates(*dm);CHKERRQ(ierr); /* needed for periodic */
-  PetscFunctionReturn(0);
-}
-
-static PetscErrorCode log_n_0(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar *u, void *ctx)
-{
-  AppCtx *lctx = (AppCtx*)ctx;
-  assert(ctx);
-  u[0] = (lctx->domain_hi-lctx->domain_lo)+x[0];
-  return 0;
-}
-
-static PetscErrorCode Omega_0(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar *u, void *ctx)
-{
-  u[0] = 0.0;
-  return 0;
-}
-
-static PetscErrorCode psi_0(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar *u, void *ctx)
-{
-  AppCtx *lctx = (AppCtx*)ctx;
-  assert(ctx);
-  /* This sets up a symmetrix By flux aroound the mid point in x, which represents a current density flux along z.  The stability
-     is analytically known and reported in ProcessOptions. */
-  if (lctx->ke!=0.0) {
-    u[0] = (PetscCosReal(lctx->ke*(x[0]-lctx->a))-PetscCosReal(lctx->ke*lctx->a))/(1.0-PetscCosReal(lctx->ke*lctx->a));
-  } else {
-    u[0] = 1.0-PetscPowScalar((x[0]-lctx->a)/lctx->a,2);
+  PetscCall(DMLocalizeCoordinates(*dm)); /* needed for periodic */
+  {
+    PetscBool hasLabel;
+    PetscCall(DMHasLabel(*dm, "marker", &hasLabel));
+    if (!hasLabel) PetscCall(CreateBCLabel(*dm, "marker"));
   }
-  return 0;
-}
-
-static PetscErrorCode initialSolution_n(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar *u, void *ctx)
-{
-  u[0] = 0.0;
-  return 0;
+  PetscCall(PetscObjectSetName((PetscObject)*dm, "Mesh"));
+  PetscCall(DMViewFromOptions(*dm, NULL, "-dm_view_mhd"));
+  PetscCall(DMViewFromOptions(*dm, NULL, "-dm_view_res"));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode initialSolution_Omega(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar *u, void *ctx)
 {
   u[0] = 0.0;
-  return 0;
+  return PETSC_SUCCESS;
 }
 
-static PetscErrorCode initialSolution_psi(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar *u, void *a_ctx)
+static PetscErrorCode initialSolution_Psi(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar *u, void *a_ctx)
 {
-  AppCtx *ctx = (AppCtx*)a_ctx;
-  PetscScalar r = ctx->eps*(PetscScalar) (rand()) / (PetscScalar) (RAND_MAX);
-  assert(ctx);
-  if (x[0] == ctx->domain_lo[0] || x[0] == ctx->domain_hi[0]) r = 0;
-  u[0] = r;
-  /* PetscPrintf(PETSC_COMM_WORLD, "rand psi %lf\n",u[0]); */
-  return 0;
+  AppCtx   *ctx = (AppCtx *)a_ctx;
+  PetscReal r   = 0, theta, cos_theta;
+  // k = sp.jn_zeros(1, 1)[0]
+  const PetscReal k = 3.8317059702075125;
+  for (PetscInt i = 0; i < dim; i++) r += x[i] * x[i];
+  r = PetscSqrtReal(r);
+  // r = sqrt(dot(x,x))
+  theta     = PetscAtan2Real(x[1], x[0]);
+  cos_theta = PetscCosReal(theta);
+  // f = conditional(gt(r, 1.0), outer_f, inner_f)
+  if (r < 1.0) {
+    // inner_f =
+    // (2/(Constant(k)*bessel_J(0,Constant(k))))*bessel_J(1,Constant(k)*r)*cos_theta
+    u[0] = 2.0 / (k * j0(k)) * j1(k * r) * cos_theta;
+  } else {
+    // outer_f =  (1/r - r)*cos_theta
+    u[0] = (r - 1.0 / r) * cos_theta;
+  }
+  u[0] += ctx->perturb * ((double)rand() / (double)RAND_MAX - 0.5);
+  return PETSC_SUCCESS;
 }
 
-static PetscErrorCode initialSolution_phi(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar *u, void *ctx)
+static PetscErrorCode initialSolution_Phi(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar *u, void *ctx)
 {
   u[0] = 0.0;
-  return 0;
+  return PETSC_SUCCESS;
 }
 
-static PetscErrorCode initialSolution_jz(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar *u, void *ctx)
+static PetscErrorCode initialSolution_Jz(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar *u, void *ctx)
 {
   u[0] = 0.0;
-  return 0;
+  return PETSC_SUCCESS;
 }
 
-static PetscErrorCode SetupProblem(DM dm, AppCtx *ctx)
+static PetscErrorCode SetupProblem(PetscDS prob, DM dm, AppCtx *ctx)
 {
-  PetscDS        prob;
-  const PetscInt id = 1;
-  PetscErrorCode ierr, f;
+  PetscInt f;
 
   PetscFunctionBeginUser;
-  ierr = DMGetDS(dm, &prob);CHKERRQ(ierr);
-  ierr = PetscDSSetResidual(prob, 0, f0_n,     f1_n);CHKERRQ(ierr);
-  ierr = PetscDSSetResidual(prob, 1, f0_Omega, f1_Omega);CHKERRQ(ierr);
-  ierr = PetscDSSetResidual(prob, 2, f0_psi,   f1_psi);CHKERRQ(ierr);
-  ierr = PetscDSSetResidual(prob, 3, f0_phi,   f1_phi);CHKERRQ(ierr);
-  ierr = PetscDSSetResidual(prob, 4, f0_jz,    f1_jz);CHKERRQ(ierr);
-  ctx->initialFuncs[0] = initialSolution_n;
-  ctx->initialFuncs[1] = initialSolution_Omega;
-  ctx->initialFuncs[2] = initialSolution_psi;
-  ctx->initialFuncs[3] = initialSolution_phi;
-  ctx->initialFuncs[4] = initialSolution_jz;
-  for (f = 0; f < 5; ++f) {
-    ierr = PetscDSSetImplicit(prob, f, ctx->implicit);CHKERRQ(ierr);
-    ierr = DMAddBoundary(dm, DM_BC_ESSENTIAL, "wall", "marker", f, 0, NULL, (void (*)(void)) ctx->initialFuncs[f], NULL, 1, &id, ctx);CHKERRQ(ierr);
+  // for both 2 & 4 field (j_z is same)
+  PetscCall(PetscDSSetJacobian(prob, JZ, JZ, g0_1, NULL, NULL, NULL));
+  PetscCall(PetscDSSetJacobian(prob, JZ, PSI, NULL, NULL, NULL, g3_n1));
+  PetscCall(PetscDSSetResidual(prob, JZ, f0_jz, f1_jz));
+
+  PetscCall(PetscDSSetJacobian(prob, PSI, JZ, g0_neta, NULL, NULL, NULL));
+  if (ctx->modelType == ONE_FILD) {
+    PetscCall(PetscDSSetJacobian(prob, PSI, PSI, g0_dt, NULL, NULL,
+                                 NULL)); // remove phi term
+
+    PetscCall(PetscDSSetResidual(prob, PSI, f0_psi_2f, NULL));
+  } else {
+    PetscCall(PetscDSSetJacobian(prob, PSI, PSI, g0_dt, g1_phi_right, NULL, NULL));
+    PetscCall(PetscDSSetJacobian(prob, PSI, PHI, NULL, g1_psi_left, NULL, NULL));
+    PetscCall(PetscDSSetResidual(prob, PSI, f0_psi_4f, NULL));
+
+    PetscCall(PetscDSSetJacobian(prob, PHI, PHI, NULL, NULL, NULL, g3_n1));
+    PetscCall(PetscDSSetJacobian(prob, PHI, OMEGA, g0_1, NULL, NULL, NULL));
+    PetscCall(PetscDSSetResidual(prob, PHI, f0_phi, f1_phi));
+
+    PetscCall(PetscDSSetJacobian(prob, OMEGA, OMEGA, g0_dt, g1_phi_right, NULL, g3_nmu));
+    PetscCall(PetscDSSetJacobian(prob, OMEGA, PSI, NULL, g1_njz_left, NULL, NULL));
+    PetscCall(PetscDSSetJacobian(prob, OMEGA, PHI, NULL, g1_omega_left, NULL, NULL));
+    PetscCall(PetscDSSetJacobian(prob, OMEGA, JZ, NULL, g1_npsi_right, NULL, NULL));
+    PetscCall(PetscDSSetResidual(prob, OMEGA, f0_Omega, f1_Omega));
   }
-  ierr = PetscDSSetContext(prob, 0, ctx);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
+  /* Setup constants - is this persistent? */
+  {
+    PetscScalar scales[NUM_CONSTS]; // +1 adding in testType for use in the f
+                                    // and g functions
+    /* These could be set from the command line */
+    scales[MU_CONST]  = ctx->mu;
+    scales[ETA_CONST] = ctx->eta;
+    // scales[TEST_CONST] = (PetscReal)ctx->testType; -- how to make work with complex
+    PetscCall(PetscDSSetConstants(prob, NUM_CONSTS, scales));
+  }
+  for (f = 0; f < ctx->Nf; ++f) {
+    ctx->initialFuncs[f] = NULL;
+    PetscCall(PetscDSSetImplicit(prob, f, PETSC_TRUE));
+  }
+  if (ctx->testType == TEST_TILT) {
+    const PetscInt id = 1;
+    DMLabel        label;
+    PetscCall(DMGetLabel(dm, "marker", &label));
 
-static PetscErrorCode SetupEquilibriumFields(DM dm, DM dmAux, AppCtx *ctx)
-{
-  PetscErrorCode (*eqFuncs[3])(PetscInt, PetscReal, const PetscReal [], PetscInt, PetscScalar [], void *) = {log_n_0, Omega_0, psi_0};
-  Vec            eq;
-  PetscErrorCode ierr;
-  AppCtx *ctxarr[3];
+    ctx->initialFuncs[JZ]  = initialSolution_Jz;
+    ctx->initialFuncs[PSI] = initialSolution_Psi;
 
-  ctxarr[0] = ctxarr[1] = ctxarr[2] = ctx; /* each variable could have a different context */
-  PetscFunctionBegin;
-  ierr = DMCreateLocalVector(dmAux, &eq);CHKERRQ(ierr);
-  ierr = DMProjectFunctionLocal(dmAux, 0.0, eqFuncs, (void **)ctxarr, INSERT_ALL_VALUES, eq);CHKERRQ(ierr);
-  ierr = PetscObjectCompose((PetscObject) dm, "A", (PetscObject) eq);CHKERRQ(ierr);
-  if (ctx->plotRef) {  /* plot reference functions */
-    PetscViewer       viewer = NULL;
-    PetscBool         isHDF5,isVTK;
-    char              buf[256];
-    Vec               global;
-    ierr = DMCreateGlobalVector(dmAux,&global);CHKERRQ(ierr);
-    ierr = VecSet(global,.0);CHKERRQ(ierr); /* BCs! */
-    ierr = DMLocalToGlobalBegin(dmAux,eq,INSERT_VALUES,global);CHKERRQ(ierr);
-    ierr = DMLocalToGlobalEnd(dmAux,eq,INSERT_VALUES,global);CHKERRQ(ierr);
-    ierr = PetscViewerCreate(PetscObjectComm((PetscObject)dmAux),&viewer);CHKERRQ(ierr);
-#ifdef PETSC_HAVE_HDF5
-    ierr = PetscViewerSetType(viewer,PETSCVIEWERHDF5);CHKERRQ(ierr);
-#else
-    ierr = PetscViewerSetType(viewer,PETSCVIEWERVTK);CHKERRQ(ierr);
-#endif
-    ierr = PetscViewerSetFromOptions(viewer);CHKERRQ(ierr);
-    ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERHDF5,&isHDF5);CHKERRQ(ierr);
-    ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERVTK,&isVTK);CHKERRQ(ierr);
-    if (isHDF5) {
-      ierr = PetscSNPrintf(buf, 256, "uEquilibrium-%dD.h5", ctx->dim);CHKERRQ(ierr);
-    } else if (isVTK) {
-      ierr = PetscSNPrintf(buf, 256, "uEquilibrium-%dD.vtu", ctx->dim);CHKERRQ(ierr);
-      ierr = PetscViewerPushFormat(viewer,PETSC_VIEWER_VTK_VTU);CHKERRQ(ierr);
+    PetscCall(PetscDSAddBoundary(prob, DM_BC_ESSENTIAL, "Jz for tilt test", label, 1, &id, JZ, 0, NULL, (void (*)(void))initialSolution_Jz, NULL, ctx, NULL));
+    PetscCall(PetscDSAddBoundary(prob, DM_BC_ESSENTIAL, "Psi for tilt test", label, 1, &id, PSI, 0, NULL, (void (*)(void))initialSolution_Psi, NULL, ctx, NULL));
+    if (ctx->modelType == TWO_FILD) {
+      ctx->initialFuncs[OMEGA] = initialSolution_Omega;
+      ctx->initialFuncs[PHI]   = initialSolution_Phi;
+      PetscCall(PetscDSAddBoundary(prob, DM_BC_ESSENTIAL, "Omega for tilt test", label, 1, &id, OMEGA, 0, NULL, (void (*)(void))initialSolution_Omega, NULL, ctx, NULL));
+      PetscCall(PetscDSAddBoundary(prob, DM_BC_ESSENTIAL, "Phi for tilt test", label, 1, &id, PHI, 0, NULL, (void (*)(void))initialSolution_Phi, NULL, ctx, NULL));
     }
-    ierr = PetscViewerFileSetMode(viewer,FILE_MODE_WRITE);CHKERRQ(ierr);
-    ierr = PetscViewerFileSetName(viewer,buf);CHKERRQ(ierr);
-    if (isHDF5) {ierr = DMView(dmAux,viewer);CHKERRQ(ierr);}
-    /* view equilibrium fields, this will overwrite fine grids with coarse grids! */
-    ierr = PetscObjectSetName((PetscObject) global, "u0");CHKERRQ(ierr);
-    ierr = VecView(global,viewer);CHKERRQ(ierr);
-    ierr = PetscViewerDestroy(&viewer);CHKERRQ(ierr);
-    ierr = VecDestroy(&global);CHKERRQ(ierr);
+  } else {
+    PetscCheck(0, PetscObjectComm((PetscObject)prob), PETSC_ERR_ARG_WRONG, "Unsupported test type: %s (%d)", testTypes[PetscMin(ctx->testType, NUM_TEST_TYPES)], (int)ctx->testType);
   }
-  ierr = VecDestroy(&eq);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
-static PetscErrorCode SetupAuxDM(DM dm, PetscInt NfAux, PetscFE feAux[], AppCtx *user)
-{
-  DM             dmAux, coordDM;
-  PetscInt       f;
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  /* MUST call DMGetCoordinateDM() in order to get p4est setup if present */
-  ierr = DMGetCoordinateDM(dm, &coordDM);CHKERRQ(ierr);
-  if (!feAux) PetscFunctionReturn(0);
-  ierr = DMClone(dm, &dmAux);CHKERRQ(ierr);
-  ierr = PetscObjectCompose((PetscObject) dm, "dmAux", (PetscObject) dmAux);CHKERRQ(ierr);
-  ierr = DMSetCoordinateDM(dmAux, coordDM);CHKERRQ(ierr);
-  for (f = 0; f < NfAux; ++f) {ierr = DMSetField(dmAux, f, NULL, (PetscObject) feAux[f]);CHKERRQ(ierr);}
-  ierr = DMCreateDS(dmAux);CHKERRQ(ierr);
-  ierr = SetupEquilibriumFields(dm, dmAux, user);CHKERRQ(ierr);
-  ierr = DMDestroy(&dmAux);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscDSSetContext(prob, 0, ctx));
+  PetscCall(PetscDSSetFromOptions(prob));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode SetupDiscretization(DM dm, AppCtx *ctx)
 {
-  DM              cdm = dm;
-  const PetscInt  dim = ctx->dim;
-  PetscFE         fe[5], feAux[3];
-  PetscInt        Nf = 5, NfAux = 3, f;
-  PetscBool       cell_simplex = ctx->cell_simplex;
-  MPI_Comm        comm;
-  PetscErrorCode  ierr;
+  DM             cdm;
+  const PetscInt dim = ctx->dim;
+  PetscFE        fe[NUM_COMP];
+  PetscDS        prob;
+  PetscInt       Nf           = ctx->Nf, f;
+  PetscBool      cell_simplex = PETSC_TRUE;
+  MPI_Comm       comm         = PetscObjectComm((PetscObject)dm);
 
   PetscFunctionBeginUser;
   /* Create finite element */
-  ierr = PetscObjectGetComm((PetscObject) dm, &comm);CHKERRQ(ierr);
-  ierr = PetscFECreateDefault(comm, dim, 1, cell_simplex, NULL, -1, &fe[0]);CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject) fe[0], "density");CHKERRQ(ierr);
-  ierr = PetscFECreateDefault(comm, dim, 1, cell_simplex, NULL, -1, &fe[1]);CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject) fe[1], "vorticity");CHKERRQ(ierr);
-  ierr = PetscFECopyQuadrature(fe[0], fe[1]);CHKERRQ(ierr);
-  ierr = PetscFECreateDefault(comm, dim, 1, cell_simplex, NULL, -1, &fe[2]);CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject) fe[2], "flux");CHKERRQ(ierr);
-  ierr = PetscFECopyQuadrature(fe[0], fe[2]);CHKERRQ(ierr);
-  ierr = PetscFECreateDefault(comm, dim, 1, cell_simplex, NULL, -1, &fe[3]);CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject) fe[3], "potential");CHKERRQ(ierr);
-  ierr = PetscFECopyQuadrature(fe[0], fe[3]);CHKERRQ(ierr);
-  ierr = PetscFECreateDefault(comm, dim, 1, cell_simplex, NULL, -1, &fe[4]);CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject) fe[4], "current");CHKERRQ(ierr);
-  ierr = PetscFECopyQuadrature(fe[0], fe[4]);CHKERRQ(ierr);
+  PetscCall(PetscFECreateDefault(comm, dim, 1, cell_simplex, NULL, -1, &fe[JZ]));
+  PetscCall(PetscObjectSetName((PetscObject)fe[JZ], "j_z"));
+  PetscCall(DMSetField(dm, JZ, NULL, (PetscObject)fe[JZ]));
+  PetscCall(PetscFECreateDefault(comm, dim, 1, cell_simplex, NULL, -1, &fe[PSI]));
+  PetscCall(PetscObjectSetName((PetscObject)fe[PSI], "psi"));
+  PetscCall(DMSetField(dm, PSI, NULL, (PetscObject)fe[PSI]));
+  if (ctx->modelType == TWO_FILD) {
+    PetscCall(PetscFECreateDefault(comm, dim, 1, cell_simplex, NULL, -1, &fe[OMEGA]));
+    PetscCall(PetscObjectSetName((PetscObject)fe[OMEGA], "Omega"));
+    PetscCall(DMSetField(dm, OMEGA, NULL, (PetscObject)fe[OMEGA]));
 
-  ierr = PetscFECreateDefault(comm, dim, 1, cell_simplex, NULL, -1, &feAux[0]);CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject) feAux[0], "n_0");CHKERRQ(ierr);
-  ierr = PetscFECopyQuadrature(fe[0], feAux[0]);CHKERRQ(ierr);
-  ierr = PetscFECreateDefault(comm, dim, 1, cell_simplex, NULL, -1, &feAux[1]);CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject) feAux[1], "vorticity_0");CHKERRQ(ierr);
-  ierr = PetscFECopyQuadrature(fe[0], feAux[1]);CHKERRQ(ierr);
-  ierr = PetscFECreateDefault(comm, dim, 1, cell_simplex, NULL, -1, &feAux[2]);CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject) feAux[2], "flux_0");CHKERRQ(ierr);
-  ierr = PetscFECopyQuadrature(fe[0], feAux[2]);CHKERRQ(ierr);
-  /* Set discretization and boundary conditions for each mesh */
-  for (f = 0; f < Nf; ++f) {ierr = DMSetField(dm, f, NULL, (PetscObject) fe[f]);CHKERRQ(ierr);}
-  ierr = DMCreateDS(dm);CHKERRQ(ierr);
-  ierr = SetupProblem(dm, ctx);CHKERRQ(ierr);
-  while (cdm) {
-    ierr = SetupAuxDM(dm, NfAux, feAux, ctx);CHKERRQ(ierr);
-    {
-      PetscBool hasLabel;
-
-      ierr = DMHasLabel(cdm, "marker", &hasLabel);CHKERRQ(ierr);
-      if (!hasLabel) {ierr = CreateBCLabel(cdm, "marker");CHKERRQ(ierr);}
-    }
-    ierr = DMCopyDisc(dm, cdm);CHKERRQ(ierr);
-    ierr = DMGetCoarseDM(cdm, &cdm);CHKERRQ(ierr);
+    PetscCall(PetscFECreateDefault(comm, dim, 1, cell_simplex, NULL, -1, &fe[PHI]));
+    PetscCall(PetscObjectSetName((PetscObject)fe[PHI], "phi"));
+    PetscCall(DMSetField(dm, PHI, NULL, (PetscObject)fe[PHI]));
   }
-  for (f = 0; f < Nf; ++f) {ierr = PetscFEDestroy(&fe[f]);CHKERRQ(ierr);}
-  for (f = 0; f < NfAux; ++f) {ierr = PetscFEDestroy(&feAux[f]);CHKERRQ(ierr);}
-  PetscFunctionReturn(0);
+  /* Set discretization and boundary conditions for each mesh */
+  PetscCall(DMCreateDS(dm));
+  PetscCall(DMGetDS(dm, &prob));
+  for (f = 0; f < Nf; ++f) PetscCall(PetscDSSetDiscretization(prob, f, (PetscObject)fe[f]));
+  PetscCall(SetupProblem(prob, dm, ctx));
+  cdm = dm;
+  while (cdm) {
+    PetscCall(DMCopyDisc(dm, cdm));
+    if (dm != cdm) PetscCall(PetscObjectSetName((PetscObject)cdm, "Coarse"));
+    PetscCall(DMGetCoarseDM(cdm, &cdm));
+  }
+  for (f = 0; f < Nf; ++f) PetscCall(PetscFEDestroy(&fe[f]));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 int main(int argc, char **argv)
 {
-  DM             dm;
-  TS             ts;
-  Vec            u, r;
-  AppCtx         ctx;
-  PetscReal      t       = 0.0;
-  PetscReal      L2error = 0.0;
-  PetscErrorCode ierr;
-  AppCtx        *ctxarr[5];
+  DM          dm;
+  TS          ts;
+  Vec         u, r;
+  AppCtx      ctx;
+  PetscReal   t        = 0.0;
+  AppCtx     *ctxarr[] = {&ctx, &ctx, &ctx, &ctx}; // each variable could have a different context
+  PetscMPIInt rank;
 
-  ctxarr[0] = ctxarr[1] = ctxarr[2] = ctxarr[3] = ctxarr[4] = &ctx; /* each variable could have a different context */
-  s_ctx = &ctx;
-  ierr = PetscInitialize(&argc, &argv, NULL,help);if (ierr) return ierr;
-  ierr = ProcessOptions(PETSC_COMM_WORLD, &ctx);CHKERRQ(ierr);
+  PetscCall(PetscInitialize(&argc, &argv, NULL, help));
+  PetscCallMPI(MPI_Comm_rank(PETSC_COMM_WORLD, &rank));
+  PetscCall(ProcessOptions(PETSC_COMM_WORLD, &ctx)); // dim is not set
   /* create mesh and problem */
-  ierr = CreateMesh(PETSC_COMM_WORLD, &ctx, &dm);CHKERRQ(ierr);
-  ierr = DMSetApplicationContext(dm, &ctx);CHKERRQ(ierr);
-  ierr = PetscMalloc1(5, &ctx.initialFuncs);CHKERRQ(ierr);
-  ierr = SetupDiscretization(dm, &ctx);CHKERRQ(ierr);
-  ierr = DMCreateGlobalVector(dm, &u);CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject) u, "u");CHKERRQ(ierr);
-  ierr = VecDuplicate(u, &r);CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject) r, "r");CHKERRQ(ierr);
+  PetscCall(CreateMesh(PETSC_COMM_WORLD, &ctx, &dm));
+  PetscCall(DMView(dm, PETSC_VIEWER_STDOUT_WORLD));
+  PetscCall(DMSetApplicationContext(dm, &ctx));
+  PetscCall(PetscMalloc1(ctx.Nf, &ctx.initialFuncs));
+  PetscCall(SetupDiscretization(dm, &ctx));
+  PetscCall(DMCreateGlobalVector(dm, &u));
+  PetscCall(PetscObjectSetName((PetscObject)u, "u"));
+  PetscCall(VecDuplicate(u, &r));
+  PetscCall(PetscObjectSetName((PetscObject)r, "r"));
   /* create TS */
-  ierr = TSCreate(PETSC_COMM_WORLD, &ts);CHKERRQ(ierr);
-  ierr = TSSetDM(ts, dm);CHKERRQ(ierr);
-  ierr = TSSetApplicationContext(ts, &ctx);CHKERRQ(ierr);
-  ierr = DMTSSetBoundaryLocal(dm, DMPlexTSComputeBoundary, &ctx);CHKERRQ(ierr);
-  if (ctx.implicit) {
-    ierr = DMTSSetIFunctionLocal(dm, DMPlexTSComputeIFunctionFEM, &ctx);CHKERRQ(ierr);
-    ierr = DMTSSetIJacobianLocal(dm, DMPlexTSComputeIJacobianFEM, &ctx);CHKERRQ(ierr);
-  } else {
-    ierr = DMTSSetRHSFunctionLocal(dm, DMPlexTSComputeRHSFunctionFVM, &ctx);CHKERRQ(ierr);
-  }
-  ierr = TSSetExactFinalTime(ts, TS_EXACTFINALTIME_STEPOVER);CHKERRQ(ierr);
-  ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
-  ierr = TSSetPostStep(ts, PostStep);CHKERRQ(ierr);
-  /* make solution & solve */
-  ierr = DMProjectFunction(dm, t, ctx.initialFuncs, (void **)ctxarr, INSERT_ALL_VALUES, u);CHKERRQ(ierr);
-  ierr = TSSetSolution(ts,u);CHKERRQ(ierr);
-  ierr = DMViewFromOptions(dm, NULL, "-dm_view");CHKERRQ(ierr);
-  ierr = PostStep(ts);CHKERRQ(ierr); /* print the initial state */
-  ierr = TSSolve(ts, u);CHKERRQ(ierr);
-  ierr = TSGetTime(ts, &t);CHKERRQ(ierr);
-  ierr = DMComputeL2Diff(dm, t, ctx.initialFuncs, (void **)ctxarr, u, &L2error);CHKERRQ(ierr);
-  if (L2error < 1.0e-11) {ierr = PetscPrintf(PETSC_COMM_WORLD, "L_2 Error: < 1.0e-11\n");CHKERRQ(ierr);}
-  else                   {ierr = PetscPrintf(PETSC_COMM_WORLD, "L_2 Error: %g\n", L2error);CHKERRQ(ierr);}
-#if 0
-  {
-    PetscReal res = 0.0;
-    /* Check discretization error */
-    ierr = VecViewFromOptions(u, NULL, "-initial_guess_view");CHKERRQ(ierr);
-    ierr = DMComputeL2Diff(dm, 0.0, ctx.exactFuncs, NULL, u, &error);CHKERRQ(ierr);
-    if (error < 1.0e-11) {ierr = PetscPrintf(PETSC_COMM_WORLD, "L_2 Error: < 1.0e-11\n");CHKERRQ(ierr);}
-    else                 {ierr = PetscPrintf(PETSC_COMM_WORLD, "L_2 Error: %g\n", error);CHKERRQ(ierr);}
-    /* Check residual */
-    ierr = SNESComputeFunction(snes, u, r);CHKERRQ(ierr);
-    ierr = VecChop(r, 1.0e-10);CHKERRQ(ierr);
-    ierr = VecViewFromOptions(r, NULL, "-initial_residual_view");CHKERRQ(ierr);
-    ierr = VecNorm(r, NORM_2, &res);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD, "L_2 Residual: %g\n", res);CHKERRQ(ierr);
-    /* Check Jacobian */
-    {
-      Mat A;
-      Vec b;
-
-      ierr = SNESGetJacobian(snes, &A, NULL, NULL, NULL);CHKERRQ(ierr);
-      ierr = SNESComputeJacobian(snes, u, A, A);CHKERRQ(ierr);
-      ierr = VecDuplicate(u, &b);CHKERRQ(ierr);
-      ierr = VecSet(r, 0.0);CHKERRQ(ierr);
-      ierr = SNESComputeFunction(snes, r, b);CHKERRQ(ierr);
-      ierr = MatMult(A, u, r);CHKERRQ(ierr);
-      ierr = VecAXPY(r, 1.0, b);CHKERRQ(ierr);
-      ierr = VecDestroy(&b);CHKERRQ(ierr);
-      ierr = PetscPrintf(PETSC_COMM_WORLD, "Au - b = Au + F(0)\n");CHKERRQ(ierr);
-      ierr = VecChop(r, 1.0e-10);CHKERRQ(ierr);
-      ierr = VecViewFromOptions(r, NULL, "-linear_residual_view");CHKERRQ(ierr);
-      ierr = VecNorm(r, NORM_2, &res);CHKERRQ(ierr);
-      ierr = PetscPrintf(PETSC_COMM_WORLD, "Linear L_2 Residual: %g\n", res);CHKERRQ(ierr);
-    }
-  }
-#endif
-  ierr = VecDestroy(&u);CHKERRQ(ierr);
-  ierr = VecDestroy(&r);CHKERRQ(ierr);
-  ierr = TSDestroy(&ts);CHKERRQ(ierr);
-  ierr = DMDestroy(&dm);CHKERRQ(ierr);
-  ierr = PetscFree(ctx.initialFuncs);CHKERRQ(ierr);
-  ierr = PetscFinalize();
-  return ierr;
+  PetscCall(TSCreate(PETSC_COMM_WORLD, &ts));
+  PetscCall(TSSetDM(ts, dm));
+  PetscCall(TSSetApplicationContext(ts, &ctx));
+  PetscCall(DMTSSetBoundaryLocal(dm, DMPlexTSComputeBoundary, &ctx));
+  PetscCall(DMTSSetIFunctionLocal(dm, DMPlexTSComputeIFunctionFEM, &ctx));
+  PetscCall(DMTSSetIJacobianLocal(dm, DMPlexTSComputeIJacobianFEM, &ctx));
+  PetscCall(TSSetExactFinalTime(ts, TS_EXACTFINALTIME_STEPOVER));
+  PetscCall(TSSetMaxTime(ts, 15.0));
+  PetscCall(TSSetFromOptions(ts));
+  PetscCall(TSMonitorSet(ts, Monitor, &ctx, NULL));
+  /* make solution */
+  PetscCall(DMProjectFunction(dm, t, ctx.initialFuncs, (void **)ctxarr, INSERT_ALL_VALUES, u));
+  ctx.perturb = 0.0;
+  PetscCall(TSSetSolution(ts, u));
+  // solve
+  PetscCall(TSSolve(ts, u));
+  // cleanup
+  PetscCall(VecDestroy(&u));
+  PetscCall(VecDestroy(&r));
+  PetscCall(TSDestroy(&ts));
+  PetscCall(DMDestroy(&dm));
+  PetscCall(PetscFree(ctx.initialFuncs));
+  PetscCall(PetscFinalize());
+  return 0;
 }
 
 /*TEST
 
   test:
     suffix: 0
-    args: -debug 1 -dim 2 -dm_refine 1 -x_periodicity PERIODIC -ts_max_steps 1 -ts_max_time 10. -ts_dt 1.0
-  test:
-    suffix: 1
-    args: -debug 1 -dim 3 -dm_refine 1 -z_periodicity PERIODIC -ts_max_steps 1 -ts_max_time 10. -ts_dt 1.0 -domain_lo -2,-1,-1 -domain_hi 2,1,1
+    requires: triangle !complex
+    nsize: 4
+    args: -dm_plex_box_lower -2,-2 -dm_plex_box_upper 2,2 -dm_plex_simplex 1 -dm_refine_hierarchy 2 \
+      -eta 0.0001 -ksp_converged_reason -ksp_max_it 50 -ksp_rtol 1e-3 -ksp_type fgmres -mg_coarse_ksp_rtol 1e-1 \
+      -mg_coarse_ksp_type fgmres -mg_coarse_mg_levels_ksp_type gmres -mg_coarse_pc_type gamg -mg_levels_ksp_max_it 4 \
+      -mg_levels_ksp_type gmres -mg_levels_pc_type jacobi -mu 0.005 -pc_mg_type full -pc_type mg \
+      -petscpartitioner_type simple -petscspace_degree 2 -snes_converged_reason -snes_max_it 10 -snes_monitor \
+      -snes_rtol 1.e-9 -snes_stol 1.e-9 -ts_adapt_dt_max 0.01 -ts_adapt_monitor -ts_arkimex_type 1bee \
+      -ts_dt 0.001 -ts_max_reject 10 -ts_max_snes_failures -1 -ts_max_steps 1 -ts_max_time -ts_monitor -ts_type arkimex
+    filter: grep -v DM_
 
 TEST*/

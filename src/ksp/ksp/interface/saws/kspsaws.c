@@ -1,109 +1,109 @@
-#include <petsc/private/kspimpl.h>  /*I "petscksp.h" I*/
+#include <petsc/private/kspimpl.h> /*I "petscksp.h" I*/
 #include <petscviewersaws.h>
 
 typedef struct {
-  PetscViewer    viewer;
-  PetscInt       neigs;
-  PetscReal      *eigi;
-  PetscReal      *eigr;
+  PetscViewer viewer;
+  PetscInt    neigs;
+  PetscReal  *eigi;
+  PetscReal  *eigr;
 } KSPMonitor_SAWs;
 
 /*@C
-   KSPMonitorSAWsCreate - create an SAWs monitor context
+  KSPMonitorSAWsCreate - create an SAWs monitor context for `KSP`
 
-   Collective
+  Collective
 
-   Input Arguments:
-.  ksp - KSP to monitor
+  Input Parameter:
+. ksp - `KSP` to monitor
 
-   Output Arguments:
-.  ctx - context for monitor
+  Output Parameter:
+. ctx - context for monitor
 
-   Level: developer
+  Level: developer
 
-.seealso: KSPMonitorSAWs(), KSPMonitorSAWsDestroy()
+.seealso: [](ch_ksp), `KSP`, `KSPMonitorSet()`, `KSPMonitorSAWs()`, `KSPMonitorSAWsDestroy()`
 @*/
-PetscErrorCode KSPMonitorSAWsCreate(KSP ksp,void **ctx)
+PetscErrorCode KSPMonitorSAWsCreate(KSP ksp, void **ctx)
 {
-  PetscErrorCode  ierr;
   KSPMonitor_SAWs *mon;
 
   PetscFunctionBegin;
-  ierr = PetscNewLog(ksp,&mon);CHKERRQ(ierr);
+  PetscCall(PetscNew(&mon));
   mon->viewer = PETSC_VIEWER_SAWS_(PetscObjectComm((PetscObject)ksp));
-  if (!mon->viewer) SETERRQ(PetscObjectComm((PetscObject)ksp),PETSC_ERR_PLIB,"Cannot create SAWs default viewer");
-  *ctx = (void*)mon;
-  PetscFunctionReturn(0);
+  PetscCheck(mon->viewer, PetscObjectComm((PetscObject)ksp), PETSC_ERR_PLIB, "Cannot create SAWs default viewer");
+  *ctx = (void *)mon;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-   KSPMonitorSAWsDestroy - destroy a monitor context created with KSPMonitorSAWsCreate()
+  KSPMonitorSAWsDestroy - destroy a monitor context created with `KSPMonitorSAWsCreate()`
 
-   Collective
+  Collective
 
-   Input Arguments:
-.  ctx - monitor context
+  Input Parameter:
+. ctx - monitor context
 
-   Level: developer
+  Level: developer
 
-.seealso: KSPMonitorSAWsCreate()
+.seealso: [](ch_ksp), `KSP`, `KSPMonitorSet()`, `KSPMonitorSAWsCreate()`
 @*/
 PetscErrorCode KSPMonitorSAWsDestroy(void **ctx)
 {
-  KSPMonitor_SAWs *mon = (KSPMonitor_SAWs*)*ctx;
-  PetscErrorCode  ierr;
+  KSPMonitor_SAWs *mon = (KSPMonitor_SAWs *)*ctx;
 
   PetscFunctionBegin;
-  ierr = PetscFree2(mon->eigr,mon->eigi);CHKERRQ(ierr);
-  ierr = PetscFree(*ctx);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscFree2(mon->eigr, mon->eigi));
+  PetscCall(PetscFree(*ctx));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-   KSPMonitorSAWs - monitor solution using SAWs
+  KSPMonitorSAWs - monitor `KSP` solution using SAWs
 
-   Logically Collective on ksp
+  Logically Collective
 
-   Input Parameters:
-+  ksp   - iterative context
-.  n     - iteration number
-.  rnorm - 2-norm (preconditioned) residual value (may be estimated).
--  ctx -  PetscViewer of type SAWs
+  Input Parameters:
++ ksp   - iterative context
+. n     - iteration number
+. rnorm - 2-norm (preconditioned) residual value (may be estimated).
+- ctx   - created with `KSPMonitorSAWsCreate()`
 
-   Level: advanced
+  Level: advanced
 
-.seealso: KSPMonitorSingularValue(), KSPComputeExtremeSingularValues(), PetscViewerSAWsOpen()
+  Note:
+  Create the ctx with `KSPMonitorSAWsCreate()` then call `KSPMonitorSet()` with the context, this function, and `KSPMonitorSAWsDestroy()`
+
+.seealso: [](ch_ksp), `KSP`, `KSPMonitorSet()`, `KSPMonitorSAWsCreate()`, `KSPMonitorSAWsDestroy()`, `KSPMonitorSingularValue()`, `KSPComputeExtremeSingularValues()`, `PetscViewerSAWsOpen()`
 @*/
-PetscErrorCode KSPMonitorSAWs(KSP ksp,PetscInt n,PetscReal rnorm,void *ctx)
+PetscErrorCode KSPMonitorSAWs(KSP ksp, PetscInt n, PetscReal rnorm, void *ctx)
 {
-  PetscErrorCode  ierr;
-  KSPMonitor_SAWs *mon   = (KSPMonitor_SAWs*)ctx;
-  PetscReal       emax,emin;
-  PetscMPIInt     rank;
+  KSPMonitor_SAWs *mon = (KSPMonitor_SAWs *)ctx;
+  PetscReal        emax, emin;
+  PetscMPIInt      rank;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
-  ierr = KSPComputeExtremeSingularValues(ksp,&emax,&emin);CHKERRQ(ierr);
+  PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
+  PetscCall(KSPComputeExtremeSingularValues(ksp, &emax, &emin));
 
-  ierr = PetscFree2(mon->eigr,mon->eigi);CHKERRQ(ierr);
-  ierr = PetscMalloc2(n,&mon->eigr,n,&mon->eigi);CHKERRQ(ierr);
+  PetscCall(PetscFree2(mon->eigr, mon->eigi));
+  PetscCall(PetscMalloc2(n, &mon->eigr, n, &mon->eigi));
   if (n) {
-    ierr = KSPComputeEigenvalues(ksp,n,mon->eigr,mon->eigi,&mon->neigs);CHKERRQ(ierr);
+    PetscCall(KSPComputeEigenvalues(ksp, n, mon->eigr, mon->eigi, &mon->neigs));
 
-    ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
-    if (!rank) {
+    PetscCallMPI(MPI_Comm_rank(PETSC_COMM_WORLD, &rank));
+    if (rank == 0) {
       SAWs_Delete("/PETSc/ksp_monitor_saws/eigr");
       SAWs_Delete("/PETSc/ksp_monitor_saws/eigi");
 
-      PetscStackCallSAWs(SAWs_Register,("/PETSc/ksp_monitor_saws/rnorm",&ksp->rnorm,1,SAWs_READ,SAWs_DOUBLE));
-      PetscStackCallSAWs(SAWs_Register,("/PETSc/ksp_monitor_saws/neigs",&mon->neigs,1,SAWs_READ,SAWs_INT));
+      PetscCallSAWs(SAWs_Register, ("/PETSc/ksp_monitor_saws/rnorm", &ksp->rnorm, 1, SAWs_READ, SAWs_DOUBLE));
+      PetscCallSAWs(SAWs_Register, ("/PETSc/ksp_monitor_saws/neigs", &mon->neigs, 1, SAWs_READ, SAWs_INT));
       if (mon->neigs > 0) {
-        PetscStackCallSAWs(SAWs_Register,("/PETSc/ksp_monitor_saws/eigr",mon->eigr,mon->neigs,SAWs_READ,SAWs_DOUBLE));
-        PetscStackCallSAWs(SAWs_Register,("/PETSc/ksp_monitor_saws/eigi",mon->eigi,mon->neigs,SAWs_READ,SAWs_DOUBLE));
+        PetscCallSAWs(SAWs_Register, ("/PETSc/ksp_monitor_saws/eigr", mon->eigr, mon->neigs, SAWs_READ, SAWs_DOUBLE));
+        PetscCallSAWs(SAWs_Register, ("/PETSc/ksp_monitor_saws/eigi", mon->eigi, mon->neigs, SAWs_READ, SAWs_DOUBLE));
       }
-      ierr = PetscInfo2(ksp,"KSP extreme singular values min=%g max=%g\n",(double)emin,(double)emax);CHKERRQ(ierr);
-      ierr = PetscSAWsBlock();CHKERRQ(ierr);
+      PetscCall(PetscInfo(ksp, "KSP extreme singular values min=%g max=%g\n", (double)emin, (double)emax));
+      PetscCall(PetscSAWsBlock());
     }
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

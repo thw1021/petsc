@@ -1,17 +1,8 @@
+-include ../../../../../../petscdir.mk
 #requiresfunction 'PETSC_HAVE_RAND'
 
-ALL: lib
-
-CFLAGS   =
-FFLAGS   =
-SOURCEC  = rand.c
-SOURCEF  =
-SOURCEH  =
-LIBBASE  = libpetscsys
-DIRS     =
-LOCDIR   = src/sys/classes/random/impls/rand/
+MANSEC   = Sys
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
-include ${PETSC_DIR}/lib/petsc/conf/rules
-include ${PETSC_DIR}/lib/petsc/conf/test
+include ${PETSC_DIR}/lib/petsc/conf/rules_doc.mk
 

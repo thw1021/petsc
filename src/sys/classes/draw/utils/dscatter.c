@@ -1,214 +1,214 @@
-
 /*
        Contains the data structure for drawing scatter plots
     graphs in a window with an axis. This is intended for scatter
     plots that change dynamically.
 */
 
-#include <petscdraw.h>                       /*I "petscdraw.h" I*/
-#include <petsc/private/petscimpl.h>         /*I "petscsys.h" I*/
+#include <petscdraw.h>              /*I "petscdraw.h" I*/
+#include <petsc/private/drawimpl.h> /*I "petscsys.h" I*/
 
 PetscClassId PETSC_DRAWSP_CLASSID = 0;
 
-struct _p_PetscDrawSP {
-  PETSCHEADER(int);
-  PetscErrorCode (*destroy)(PetscDrawSP);
-  PetscErrorCode (*view)(PetscDrawSP,PetscViewer);
-  int            len,loc;
-  PetscDraw      win;
-  PetscDrawAxis  axis;
-  PetscReal      xmin,xmax,ymin,ymax,*x,*y;
-  int            nopts,dim;
-};
+/*@
+  PetscDrawSPCreate - Creates a scatter plot data structure.
 
-#define CHUNCKSIZE 100
+  Collective
 
-/*@C
-    PetscDrawSPCreate - Creates a scatter plot data structure.
+  Input Parameters:
++ draw - the window where the graph will be made.
+- dim  - the number of sets of points which will be drawn
 
-    Collective on PetscDraw
+  Output Parameter:
+. drawsp - the scatter plot context
 
-    Input Parameters:
-+   win - the window where the graph will be made.
--   dim - the number of sets of points which will be drawn
+  Level: intermediate
 
-    Output Parameters:
-.   drawsp - the scatter plot context
+  Notes:
+  Add points to the plot with `PetscDrawSPAddPoint()` or `PetscDrawSPAddPoints()`; the new points are not displayed until `PetscDrawSPDraw()` is called.
 
-   Level: intermediate
+  `PetscDrawSPReset()` removes all the points that have been added
 
-   Notes:
-    Add points to the plot with PetscDrawSPAddPoint() or PetscDrawSPAddPoints(); the new points are not displayed until PetscDrawSPDraw() is called.
+  `PetscDrawSPSetDimension()` determines how many point curves are being plotted.
 
-   PetscDrawSPReset() removes all the points that have been added
+  The MPI communicator that owns the `PetscDraw` owns this `PetscDrawSP`, and each process can add points. All MPI ranks in the communicator must call `PetscDrawSPDraw()` to display the updated graph.
 
-   The MPI communicator that owns the PetscDraw owns this PetscDrawSP, but the calls to set options and add points are ignored on all processes except the
-   zeroth MPI process in the communicator. All MPI processes in the communicator must call PetscDrawSPDraw() to display the updated graph.
-
-.seealso:  PetscDrawLGCreate(), PetscDrawLG, PetscDrawBarCreate(), PetscDrawBar, PetscDrawHGCreate(), PetscDrawHG, PetscDrawSPDestroy(), PetscDraw, PetscDrawSP, PetscDrawSPSetDimension(), PetscDrawSPReset(),
-           PetscDrawSPAddPoint(), PetscDrawSPAddPoints(), PetscDrawSPDraw(), PetscDrawSPSave(), PetscDrawSPSetLimits(), PetscDrawSPGetAxis(),PetscDrawAxis, PetscDrawSPGetDraw()
+.seealso: `PetscDrawLGCreate()`, `PetscDrawLG`, `PetscDrawBarCreate()`, `PetscDrawBar`, `PetscDrawHGCreate()`, `PetscDrawHG`, `PetscDrawSPDestroy()`, `PetscDraw`, `PetscDrawSP`, `PetscDrawSPSetDimension()`, `PetscDrawSPReset()`,
+          `PetscDrawSPAddPoint()`, `PetscDrawSPAddPoints()`, `PetscDrawSPDraw()`, `PetscDrawSPSave()`, `PetscDrawSPSetLimits()`, `PetscDrawSPGetAxis()`, `PetscDrawAxis`, `PetscDrawSPGetDraw()`
 @*/
-PetscErrorCode  PetscDrawSPCreate(PetscDraw draw,int dim,PetscDrawSP *drawsp)
+PetscErrorCode PetscDrawSPCreate(PetscDraw draw, int dim, PetscDrawSP *drawsp)
 {
-  PetscDrawSP    sp;
-  PetscErrorCode ierr;
+  PetscDrawSP sp;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
-  PetscValidLogicalCollectiveInt(draw,dim,2);
-  PetscValidPointer(drawsp,3);
+  PetscValidHeaderSpecific(draw, PETSC_DRAW_CLASSID, 1);
+  PetscAssertPointer(drawsp, 3);
 
-  ierr = PetscHeaderCreate(sp,PETSC_DRAWSP_CLASSID,"DrawSP","Scatter Plot","Draw",PetscObjectComm((PetscObject)draw),PetscDrawSPDestroy,NULL);CHKERRQ(ierr);
-  ierr = PetscLogObjectParent((PetscObject)draw,(PetscObject)sp);CHKERRQ(ierr);
+  PetscCall(PetscHeaderCreate(sp, PETSC_DRAWSP_CLASSID, "DrawSP", "Scatter Plot", "Draw", PetscObjectComm((PetscObject)draw), PetscDrawSPDestroy, NULL));
+  PetscCall(PetscObjectReference((PetscObject)draw));
+  sp->win       = draw;
+  sp->view      = NULL;
+  sp->destroy   = NULL;
+  sp->nopts     = 0;
+  sp->dim       = -1;
+  sp->xmin      = 1.e20;
+  sp->ymin      = 1.e20;
+  sp->zmin      = 1.e20;
+  sp->xmax      = -1.e20;
+  sp->ymax      = -1.e20;
+  sp->zmax      = -1.e20;
+  sp->colorized = PETSC_FALSE;
+  sp->loc       = 0;
 
-  ierr = PetscObjectReference((PetscObject)draw);CHKERRQ(ierr);
-  sp->win = draw;
-
-  sp->view    = NULL;
-  sp->destroy = NULL;
-  sp->nopts   = 0;
-  sp->dim     = dim;
-  sp->xmin    = 1.e20;
-  sp->ymin    = 1.e20;
-  sp->xmax    = -1.e20;
-  sp->ymax    = -1.e20;
-
-  ierr = PetscMalloc2(dim*CHUNCKSIZE,&sp->x,dim*CHUNCKSIZE,&sp->y);CHKERRQ(ierr);
-  ierr = PetscLogObjectMemory((PetscObject)sp,2*dim*CHUNCKSIZE*sizeof(PetscReal));CHKERRQ(ierr);
-
-  sp->len     = dim*CHUNCKSIZE;
-  sp->loc     = 0;
-
-  ierr = PetscDrawAxisCreate(draw,&sp->axis);CHKERRQ(ierr);
-  ierr = PetscLogObjectParent((PetscObject)sp,(PetscObject)sp->axis);CHKERRQ(ierr);
+  PetscCall(PetscDrawSPSetDimension(sp, dim));
+  PetscCall(PetscDrawAxisCreate(draw, &sp->axis));
 
   *drawsp = sp;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   PetscDrawSPSetDimension - Change the number of sets of points  that are to be drawn.
+  PetscDrawSPSetDimension - Change the number of points that are added at each  `PetscDrawSPAddPoint()`
 
-   Logically Collective on PetscDrawSP
+  Not Collective
 
-   Input Parameter:
-+  sp - the line graph context.
--  dim - the number of curves.
+  Input Parameters:
++ sp  - the scatter plot context.
+- dim - the number of point curves on this process
 
-   Level: intermediate
+  Level: intermediate
 
-.seealso: PetscDrawSP, PetscDrawSPCreate(), PetscDrawSPAddPoint(), PetscDrawSPAddPoints()
-
+.seealso: `PetscDrawSP`, `PetscDrawSPCreate()`, `PetscDrawSPAddPoint()`, `PetscDrawSPAddPoints()`
 @*/
-PetscErrorCode  PetscDrawSPSetDimension(PetscDrawSP sp,int dim)
+PetscErrorCode PetscDrawSPSetDimension(PetscDrawSP sp, int dim)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(sp,PETSC_DRAWSP_CLASSID,1);
-  PetscValidLogicalCollectiveInt(sp,dim,2);
-  if (sp->dim == dim) PetscFunctionReturn(0);
-
-  ierr    = PetscFree2(sp->x,sp->y);CHKERRQ(ierr);
+  PetscValidHeaderSpecific(sp, PETSC_DRAWSP_CLASSID, 1);
+  if (sp->dim == dim) PetscFunctionReturn(PETSC_SUCCESS);
   sp->dim = dim;
-  ierr    = PetscMalloc2(dim*CHUNCKSIZE,&sp->x,dim*CHUNCKSIZE,&sp->y);CHKERRQ(ierr);
-  ierr    = PetscLogObjectMemory((PetscObject)sp,2*dim*CHUNCKSIZE*sizeof(PetscReal));CHKERRQ(ierr);
-  sp->len = dim*CHUNCKSIZE;
-  PetscFunctionReturn(0);
+  PetscCall(PetscFree3(sp->x, sp->y, sp->z));
+  PetscCall(PetscMalloc3(dim * PETSC_DRAW_SP_CHUNK_SIZE, &sp->x, dim * PETSC_DRAW_SP_CHUNK_SIZE, &sp->y, dim * PETSC_DRAW_SP_CHUNK_SIZE, &sp->z));
+  sp->len = dim * PETSC_DRAW_SP_CHUNK_SIZE;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   PetscDrawSPReset - Clears line graph to allow for reuse with new data.
+  PetscDrawSPGetDimension - Get the number of sets of points that are to be drawn at each `PetscDrawSPAddPoint()`
 
-   Logically Collective on PetscDrawSP
+  Not Collective
 
-   Input Parameter:
-.  sp - the line graph context.
+  Input Parameter:
+. sp - the scatter plot context.
 
-   Level: intermediate
+  Output Parameter:
+. dim - the number of point curves on this process
 
-.seealso: PetscDrawSP, PetscDrawSPCreate(), PetscDrawSPAddPoint(), PetscDrawSPAddPoints(), PetscDrawSPDraw()
+  Level: intermediate
+
+.seealso: `PetscDrawSP`, `PetscDrawSPCreate()`, `PetscDrawSPAddPoint()`, `PetscDrawSPAddPoints()`
 @*/
-PetscErrorCode  PetscDrawSPReset(PetscDrawSP sp)
+PetscErrorCode PetscDrawSPGetDimension(PetscDrawSP sp, int *dim)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(sp,PETSC_DRAWSP_CLASSID,1);
+  PetscValidHeaderSpecific(sp, PETSC_DRAWSP_CLASSID, 1);
+  PetscAssertPointer(dim, 2);
+  *dim = sp->dim;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PetscDrawSPReset - Clears scatter plot to allow for reuse with new data.
+
+  Not Collective
+
+  Input Parameter:
+. sp - the scatter plot context.
+
+  Level: intermediate
+
+.seealso: `PetscDrawSP`, `PetscDrawSPCreate()`, `PetscDrawSPAddPoint()`, `PetscDrawSPAddPoints()`, `PetscDrawSPDraw()`
+@*/
+PetscErrorCode PetscDrawSPReset(PetscDrawSP sp)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(sp, PETSC_DRAWSP_CLASSID, 1);
   sp->xmin  = 1.e20;
   sp->ymin  = 1.e20;
+  sp->zmin  = 1.e20;
   sp->xmax  = -1.e20;
   sp->ymax  = -1.e20;
+  sp->zmax  = -1.e20;
   sp->loc   = 0;
   sp->nopts = 0;
-  PetscFunctionReturn(0);
-}
-
-/*@C
-   PetscDrawSPDestroy - Frees all space taken up by scatter plot data structure.
-
-   Collective on PetscDrawSP
-
-   Input Parameter:
-.  sp - the line graph context
-
-   Level: intermediate
-
-.seealso:  PetscDrawSPCreate(), PetscDrawSP, PetscDrawSPReset()
-
-@*/
-PetscErrorCode  PetscDrawSPDestroy(PetscDrawSP *sp)
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  if (!*sp) PetscFunctionReturn(0);
-  PetscValidHeaderSpecific(*sp,PETSC_DRAWSP_CLASSID,1);
-  if (--((PetscObject)(*sp))->refct > 0) {*sp = NULL; PetscFunctionReturn(0);}
-
-  ierr = PetscFree2((*sp)->x,(*sp)->y);CHKERRQ(ierr);
-  ierr = PetscDrawAxisDestroy(&(*sp)->axis);CHKERRQ(ierr);
-  ierr = PetscDrawDestroy(&(*sp)->win);CHKERRQ(ierr);
-  ierr = PetscHeaderDestroy(sp);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   PetscDrawSPAddPoint - Adds another point to each of the scatter plots.
+  PetscDrawSPDestroy - Frees all space taken up by scatter plot data structure.
 
-   Logically Collective on PetscDrawSP
+  Collective
 
-   Input Parameters:
-+  sp - the scatter plot data structure
--  x, y - the points to two vectors containing the new x and y
-          point for each curve.
+  Input Parameter:
+. sp - the scatter plot context
 
-   Level: intermediate
+  Level: intermediate
 
-   Notes:
-    the new points will not be displayed until a call to PetscDrawSPDraw() is made
-
-.seealso: PetscDrawSPAddPoints(), PetscDrawSP, PetscDrawSPCreate(), PetscDrawSPReset(), PetscDrawSPDraw()
-
+.seealso: `PetscDrawSPCreate()`, `PetscDrawSP`, `PetscDrawSPReset()`
 @*/
-PetscErrorCode  PetscDrawSPAddPoint(PetscDrawSP sp,PetscReal *x,PetscReal *y)
+PetscErrorCode PetscDrawSPDestroy(PetscDrawSP *sp)
 {
-  PetscErrorCode ierr;
-  PetscInt       i;
+  PetscFunctionBegin;
+  if (!*sp) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscValidHeaderSpecific(*sp, PETSC_DRAWSP_CLASSID, 1);
+  if (--((PetscObject)*sp)->refct > 0) {
+    *sp = NULL;
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+
+  PetscCall(PetscFree3((*sp)->x, (*sp)->y, (*sp)->z));
+  PetscCall(PetscDrawAxisDestroy(&(*sp)->axis));
+  PetscCall(PetscDrawDestroy(&(*sp)->win));
+  PetscCall(PetscHeaderDestroy(sp));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PetscDrawSPAddPoint - Adds another point to each of the scatter plot point curves.
+
+  Not Collective
+
+  Input Parameters:
++ sp - the scatter plot data structure
+. x  - the x coordinate values (of length dim) for the points of the curve
+- y  - the y coordinate values (of length dim) for the points of the curve
+
+  Level: intermediate
+
+  Note:
+  Here dim is the number of point curves passed to `PetscDrawSPCreate()`. The new points will
+  not be displayed until a call to `PetscDrawSPDraw()` is made.
+
+.seealso: `PetscDrawSPAddPoints()`, `PetscDrawSP`, `PetscDrawSPCreate()`, `PetscDrawSPReset()`, `PetscDrawSPDraw()`, `PetscDrawSPAddPointColorized()`
+@*/
+PetscErrorCode PetscDrawSPAddPoint(PetscDrawSP sp, PetscReal *x, PetscReal *y)
+{
+  PetscInt i;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(sp,PETSC_DRAWSP_CLASSID,1);
+  PetscValidHeaderSpecific(sp, PETSC_DRAWSP_CLASSID, 1);
 
-  if (sp->loc+sp->dim >= sp->len) { /* allocate more space */
-    PetscReal *tmpx,*tmpy;
-    ierr     = PetscMalloc2(sp->len+sp->dim*CHUNCKSIZE,&tmpx,sp->len+sp->dim*CHUNCKSIZE,&tmpy);CHKERRQ(ierr);
-    ierr     = PetscLogObjectMemory((PetscObject)sp,2*sp->dim*CHUNCKSIZE*sizeof(PetscReal));CHKERRQ(ierr);
-    ierr     = PetscArraycpy(tmpx,sp->x,sp->len);CHKERRQ(ierr);
-    ierr     = PetscArraycpy(tmpy,sp->y,sp->len);CHKERRQ(ierr);
-    ierr     = PetscFree2(sp->x,sp->y);CHKERRQ(ierr);
-    sp->x    = tmpx;
-    sp->y    = tmpy;
-    sp->len += sp->dim*CHUNCKSIZE;
+  if (sp->loc + sp->dim >= sp->len) { /* allocate more space */
+    PetscReal *tmpx, *tmpy, *tmpz;
+    PetscCall(PetscMalloc3(sp->len + sp->dim * PETSC_DRAW_SP_CHUNK_SIZE, &tmpx, sp->len + sp->dim * PETSC_DRAW_SP_CHUNK_SIZE, &tmpy, sp->len + sp->dim * PETSC_DRAW_SP_CHUNK_SIZE, &tmpz));
+    PetscCall(PetscArraycpy(tmpx, sp->x, sp->len));
+    PetscCall(PetscArraycpy(tmpy, sp->y, sp->len));
+    PetscCall(PetscArraycpy(tmpz, sp->z, sp->len));
+    PetscCall(PetscFree3(sp->x, sp->y, sp->z));
+    sp->x = tmpx;
+    sp->y = tmpy;
+    sp->z = tmpz;
+    sp->len += sp->dim * PETSC_DRAW_SP_CHUNK_SIZE;
   }
-  for (i=0; i<sp->dim; i++) {
+  for (i = 0; i < sp->dim; ++i) {
     if (x[i] > sp->xmax) sp->xmax = x[i];
     if (x[i] < sp->xmin) sp->xmin = x[i];
     if (y[i] > sp->ymax) sp->ymax = y[i];
@@ -217,56 +217,56 @@ PetscErrorCode  PetscDrawSPAddPoint(PetscDrawSP sp,PetscReal *x,PetscReal *y)
     sp->x[sp->loc]   = x[i];
     sp->y[sp->loc++] = y[i];
   }
-  sp->nopts++;
-  PetscFunctionReturn(0);
+  ++sp->nopts;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-
 /*@C
-   PetscDrawSPAddPoints - Adds several points to each of the scatter plots.
+  PetscDrawSPAddPoints - Adds several points to each of the scatter plot point curves.
 
-   Logically Collective on PetscDrawSP
+  Not Collective
 
-   Input Parameters:
-+  sp - the LineGraph data structure
-.  xx,yy - points to two arrays of pointers that point to arrays
-           containing the new x and y points for each curve.
--  n - number of points being added
+  Input Parameters:
++ sp - the scatter plot context
+. xx - array of pointers that point to arrays containing the new x coordinates for each curve.
+. yy - array of pointers that point to arrays containing the new y points for each curve.
+- n  - number of points being added, each represents a subarray of length dim where dim is the value from `PetscDrawSPGetDimension()`
 
-   Level: intermediate
+  Level: intermediate
 
-   Notes:
-    the new points will not be displayed until a call to PetscDrawSPDraw() is made
+  Note:
+  The new points will not be displayed until a call to `PetscDrawSPDraw()` is made
 
-.seealso: PetscDrawSPAddPoint(), PetscDrawSP, PetscDrawSPCreate(), PetscDrawSPReset(), PetscDrawSPDraw()
+.seealso: `PetscDrawSPAddPoint()`, `PetscDrawSP`, `PetscDrawSPCreate()`, `PetscDrawSPReset()`, `PetscDrawSPDraw()`, `PetscDrawSPAddPointColorized()`
 @*/
-PetscErrorCode  PetscDrawSPAddPoints(PetscDrawSP sp,int n,PetscReal **xx,PetscReal **yy)
+PetscErrorCode PetscDrawSPAddPoints(PetscDrawSP sp, int n, PetscReal *xx[], PetscReal *yy[])
 {
-  PetscErrorCode ierr;
-  PetscInt       i,j,k;
-  PetscReal      *x,*y;
+  PetscInt   i, j, k;
+  PetscReal *x, *y;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(sp,PETSC_DRAWSP_CLASSID,1);
+  PetscValidHeaderSpecific(sp, PETSC_DRAWSP_CLASSID, 1);
 
-  if (sp->loc+n*sp->dim >= sp->len) { /* allocate more space */
-    PetscReal *tmpx,*tmpy;
-    PetscInt  chunk = CHUNCKSIZE;
+  if (sp->loc + n * sp->dim >= sp->len) { /* allocate more space */
+    PetscReal *tmpx, *tmpy, *tmpz;
+    PetscInt   chunk = PETSC_DRAW_SP_CHUNK_SIZE;
     if (n > chunk) chunk = n;
-    ierr = PetscMalloc2(sp->len+sp->dim*chunk,&tmpx,sp->len+sp->dim*chunk,&tmpy);CHKERRQ(ierr);
-    ierr = PetscLogObjectMemory((PetscObject)sp,2*sp->dim*CHUNCKSIZE*sizeof(PetscReal));CHKERRQ(ierr);
-    ierr = PetscArraycpy(tmpx,sp->x,sp->len);CHKERRQ(ierr);
-    ierr = PetscArraycpy(tmpy,sp->y,sp->len);CHKERRQ(ierr);
-    ierr = PetscFree2(sp->x,sp->y);CHKERRQ(ierr);
+    PetscCall(PetscMalloc3(sp->len + sp->dim * chunk, &tmpx, sp->len + sp->dim * chunk, &tmpy, sp->len + sp->dim * chunk, &tmpz));
+    PetscCall(PetscArraycpy(tmpx, sp->x, sp->len));
+    PetscCall(PetscArraycpy(tmpy, sp->y, sp->len));
+    PetscCall(PetscArraycpy(tmpz, sp->z, sp->len));
+    PetscCall(PetscFree3(sp->x, sp->y, sp->z));
 
-    sp->x    = tmpx;
-    sp->y    = tmpy;
-    sp->len += sp->dim*CHUNCKSIZE;
+    sp->x = tmpx;
+    sp->y = tmpy;
+    sp->z = tmpz;
+    sp->len += sp->dim * PETSC_DRAW_SP_CHUNK_SIZE;
   }
-  for (j=0; j<sp->dim; j++) {
-    x = xx[j]; y = yy[j];
+  for (j = 0; j < sp->dim; ++j) {
+    x = xx[j];
+    y = yy[j];
     k = sp->loc + j;
-    for (i=0; i<n; i++) {
+    for (i = 0; i < n; ++i) {
       if (x[i] > sp->xmax) sp->xmax = x[i];
       if (x[i] < sp->xmin) sp->xmin = x[i];
       if (y[i] > sp->ymax) sp->ymax = y[i];
@@ -274,167 +274,222 @@ PetscErrorCode  PetscDrawSPAddPoints(PetscDrawSP sp,int n,PetscReal **xx,PetscRe
 
       sp->x[k] = x[i];
       sp->y[k] = y[i];
-      k       += sp->dim;
+      k += sp->dim;
     }
   }
-  sp->loc   += n*sp->dim;
+  sp->loc += n * sp->dim;
   sp->nopts += n;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   PetscDrawSPDraw - Redraws a scatter plot.
+  PetscDrawSPAddPointColorized - Adds another point to each of the scatter plots as well as a numeric value to be used to colorize the scatter point.
 
-   Collective on PetscDrawSP
+  Not Collective
 
-   Input Parameter:
-+  sp - the line graph context
--  clear - clear the window before drawing the new plot
+  Input Parameters:
++ sp - the scatter plot data structure
+. x  - array of length dim containing the new x coordinate values for each of the point curves.
+. y  - array of length dim containing the new y coordinate values for each of the point curves.
+- z  - array of length dim containing the numeric values that will be mapped to [0,255] and used for scatter point colors.
 
-   Level: intermediate
+  Level: intermediate
 
-.seealso: PetscDrawLGDraw(), PetscDrawLGSPDraw(), PetscDrawSP, PetscDrawSPCreate(), PetscDrawSPReset(), PetscDrawSPAddPoint(), PetscDrawSPAddPoints()
+  Note:
+  The dimensions of the arrays is the number of point curves passed to `PetscDrawSPCreate()`.
+  The new points will not be displayed until a call to `PetscDrawSPDraw()` is made
 
+.seealso: `PetscDrawSPAddPoints()`, `PetscDrawSP`, `PetscDrawSPCreate()`, `PetscDrawSPReset()`, `PetscDrawSPDraw()`, `PetscDrawSPAddPoint()`
 @*/
-PetscErrorCode  PetscDrawSPDraw(PetscDrawSP sp, PetscBool clear)
+PetscErrorCode PetscDrawSPAddPointColorized(PetscDrawSP sp, PetscReal *x, PetscReal *y, PetscReal *z)
 {
-  PetscReal      xmin,xmax,ymin,ymax;
-  PetscErrorCode ierr;
-  PetscMPIInt    rank;
-  PetscBool      isnull;
-  PetscDraw      draw;
+  PetscInt i;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(sp,PETSC_DRAWSP_CLASSID,1);
-  ierr = PetscDrawIsNull(sp->win,&isnull);CHKERRQ(ierr);
-  if (isnull) PetscFunctionReturn(0);
-  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)sp),&rank);CHKERRQ(ierr);
+  PetscValidHeaderSpecific(sp, PETSC_DRAWSP_CLASSID, 1);
+  sp->colorized = PETSC_TRUE;
+  if (sp->loc + sp->dim >= sp->len) { /* allocate more space */
+    PetscReal *tmpx, *tmpy, *tmpz;
+    PetscCall(PetscMalloc3(sp->len + sp->dim * PETSC_DRAW_SP_CHUNK_SIZE, &tmpx, sp->len + sp->dim * PETSC_DRAW_SP_CHUNK_SIZE, &tmpy, sp->len + sp->dim * PETSC_DRAW_SP_CHUNK_SIZE, &tmpz));
+    PetscCall(PetscArraycpy(tmpx, sp->x, sp->len));
+    PetscCall(PetscArraycpy(tmpy, sp->y, sp->len));
+    PetscCall(PetscArraycpy(tmpz, sp->z, sp->len));
+    PetscCall(PetscFree3(sp->x, sp->y, sp->z));
+    sp->x = tmpx;
+    sp->y = tmpy;
+    sp->z = tmpz;
+    sp->len += sp->dim * PETSC_DRAW_SP_CHUNK_SIZE;
+  }
+  for (i = 0; i < sp->dim; ++i) {
+    if (x[i] > sp->xmax) sp->xmax = x[i];
+    if (x[i] < sp->xmin) sp->xmin = x[i];
+    if (y[i] > sp->ymax) sp->ymax = y[i];
+    if (y[i] < sp->ymin) sp->ymin = y[i];
+    if (z[i] < sp->zmin) sp->zmin = z[i];
+    if (z[i] > sp->zmax) sp->zmax = z[i];
+    // if (z[i] > sp->zmax && z[i] < 5.) sp->zmax = z[i];
 
-  if (sp->xmin > sp->xmax || sp->ymin > sp->ymax) PetscFunctionReturn(0);
-  if (sp->nopts < 1) PetscFunctionReturn(0);
+    sp->x[sp->loc]   = x[i];
+    sp->y[sp->loc]   = y[i];
+    sp->z[sp->loc++] = z[i];
+  }
+  ++sp->nopts;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
 
+/*@
+  PetscDrawSPDraw - Redraws a scatter plot.
+
+  Collective
+
+  Input Parameters:
++ sp    - the scatter plot context
+- clear - clear the window before drawing the new plot
+
+  Level: intermediate
+
+.seealso: `PetscDrawLGDraw()`, `PetscDrawLGSPDraw()`, `PetscDrawSP`, `PetscDrawSPCreate()`, `PetscDrawSPReset()`, `PetscDrawSPAddPoint()`, `PetscDrawSPAddPoints()`
+@*/
+PetscErrorCode PetscDrawSPDraw(PetscDrawSP sp, PetscBool clear)
+{
+  PetscDraw   draw;
+  PetscBool   isnull;
+  PetscMPIInt rank, size;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(sp, PETSC_DRAWSP_CLASSID, 1);
   draw = sp->win;
+  PetscCall(PetscDrawIsNull(draw, &isnull));
+  if (isnull) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)sp), &rank));
+  PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)sp), &size));
+
   if (clear) {
-    ierr = PetscDrawCheckResizedWindow(draw);CHKERRQ(ierr);
-    ierr = PetscDrawClear(draw);CHKERRQ(ierr);
+    PetscCall(PetscDrawCheckResizedWindow(draw));
+    PetscCall(PetscDrawClear(draw));
+  }
+  {
+    PetscReal lower[2] = {sp->xmin, sp->ymin}, glower[2];
+    PetscReal upper[2] = {sp->xmax, sp->ymax}, gupper[2];
+    PetscCall(MPIU_Allreduce(lower, glower, 2, MPIU_REAL, MPIU_MIN, PetscObjectComm((PetscObject)sp)));
+    PetscCall(MPIU_Allreduce(upper, gupper, 2, MPIU_REAL, MPIU_MAX, PetscObjectComm((PetscObject)sp)));
+    PetscCall(PetscDrawAxisSetLimits(sp->axis, glower[0], gupper[0], glower[1], gupper[1]));
+    PetscCall(PetscDrawAxisDraw(sp->axis));
   }
 
-  xmin = sp->xmin; xmax = sp->xmax; ymin = sp->ymin; ymax = sp->ymax;
-  ierr = PetscDrawAxisSetLimits(sp->axis,xmin,xmax,ymin,ymax);CHKERRQ(ierr);
-  ierr = PetscDrawAxisDraw(sp->axis);CHKERRQ(ierr);
+  PetscDrawCollectiveBegin(draw);
+  {
+    const int dim = sp->dim, nopts = sp->nopts;
 
-  ierr = PetscDrawCollectiveBegin(draw);CHKERRQ(ierr);
-  if (!rank) {
-    int i,j,dim=sp->dim,nopts=sp->nopts;
-    for (i=0; i<dim; i++) {
-      for (j=0; j<nopts; j++) {
-        ierr = PetscDrawPoint(draw,sp->x[j*dim+i],sp->y[j*dim+i],PETSC_DRAW_RED);CHKERRQ(ierr);
+    for (int i = 0; i < dim; ++i) {
+      for (int p = 0; p < nopts; ++p) {
+        PetscInt color = sp->colorized ? PetscDrawRealToColor(sp->z[p * dim], sp->zmin, sp->zmax) : (size > 1 ? PetscDrawRealToColor(rank, 0, size - 1) : PETSC_DRAW_RED);
+
+        PetscCall(PetscDrawPoint(draw, sp->x[p * dim + i], sp->y[p * dim + i], color));
       }
     }
   }
-  ierr = PetscDrawCollectiveEnd(draw);CHKERRQ(ierr);
+  PetscDrawCollectiveEnd(draw);
 
-  ierr = PetscDrawFlush(draw);CHKERRQ(ierr);
-  ierr = PetscDrawPause(draw);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscDrawFlush(draw));
+  PetscCall(PetscDrawPause(draw));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   PetscDrawSPSave - Saves a drawn image
+  PetscDrawSPSave - Saves a drawn image
 
-   Collective on PetscDrawSP
+  Collective
 
-   Input Parameter:
-.  sp - the scatter plot context
+  Input Parameter:
+. sp - the scatter plot context
 
-   Level: intermediate
+  Level: intermediate
 
-.seealso:  PetscDrawSPCreate(), PetscDrawSPGetDraw(), PetscDrawSetSave(), PetscDrawSave()
+.seealso: `PetscDrawSPCreate()`, `PetscDrawSPGetDraw()`, `PetscDrawSetSave()`, `PetscDrawSave()`
 @*/
-PetscErrorCode  PetscDrawSPSave(PetscDrawSP sp)
+PetscErrorCode PetscDrawSPSave(PetscDrawSP sp)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(sp,PETSC_DRAWSP_CLASSID,1);
-  ierr = PetscDrawSave(sp->win);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(sp, PETSC_DRAWSP_CLASSID, 1);
+  PetscCall(PetscDrawSave(sp->win));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   PetscDrawSPSetLimits - Sets the axis limits for a scatter plot If more
-   points are added after this call, the limits will be adjusted to
-   include those additional points.
+  PetscDrawSPSetLimits - Sets the axis limits for a scatter plot. If more points are added after this call, the limits will be adjusted to include those additional points.
 
-   Logically Collective on PetscDrawSP
+  Not Collective
 
-   Input Parameters:
-+  xsp - the line graph context
--  x_min,x_max,y_min,y_max - the limits
+  Input Parameters:
++ sp    - the line graph context
+. x_min - the horizontal lower limit
+. x_max - the horizontal upper limit
+. y_min - the vertical lower limit
+- y_max - the vertical upper limit
 
-   Level: intermediate
+  Level: intermediate
 
-.seealso: PetscDrawSP, PetscDrawSPCreate(), PetscDrawSPDraw(), PetscDrawSPAddPoint(), PetscDrawSPAddPoints(), PetscDrawSPGetAxis()
+.seealso: `PetscDrawSP`, `PetscDrawAxis`, `PetscDrawSPCreate()`, `PetscDrawSPDraw()`, `PetscDrawSPAddPoint()`, `PetscDrawSPAddPoints()`, `PetscDrawSPGetAxis()`
 @*/
-PetscErrorCode  PetscDrawSPSetLimits(PetscDrawSP sp,PetscReal x_min,PetscReal x_max,PetscReal y_min,PetscReal y_max)
+PetscErrorCode PetscDrawSPSetLimits(PetscDrawSP sp, PetscReal x_min, PetscReal x_max, PetscReal y_min, PetscReal y_max)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(sp,PETSC_DRAWSP_CLASSID,1);
+  PetscValidHeaderSpecific(sp, PETSC_DRAWSP_CLASSID, 1);
   sp->xmin = x_min;
   sp->xmax = x_max;
   sp->ymin = y_min;
   sp->ymax = y_max;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
-   PetscDrawSPGetAxis - Gets the axis context associated with a line graph.
-   This is useful if one wants to change some axis property, such as
-   labels, color, etc. The axis context should not be destroyed by the
-   application code.
+/*@
+  PetscDrawSPGetAxis - Gets the axis context associated with a scatter plot
 
-   Not Collective, if PetscDrawSP is parallel then PetscDrawAxis is parallel
+  Not Collective
 
-   Input Parameter:
-.  sp - the line graph context
+  Input Parameter:
+. sp - the scatter plot context
 
-   Output Parameter:
-.  axis - the axis context
+  Output Parameter:
+. axis - the axis context
 
-   Level: intermediate
+  Level: intermediate
 
-.seealso: PetscDrawSP, PetscDrawSPCreate(), PetscDrawSPDraw(), PetscDrawSPAddPoint(), PetscDrawSPAddPoints(), PetscDrawAxis, PetscDrawAxisCreate()
+  Note:
+  This is useful if one wants to change some axis property, such as labels, color, etc. The axis context should not be destroyed by the application code.
 
+.seealso: `PetscDrawSP`, `PetscDrawSPCreate()`, `PetscDrawSPDraw()`, `PetscDrawSPAddPoint()`, `PetscDrawSPAddPoints()`, `PetscDrawAxis`, `PetscDrawAxisCreate()`
 @*/
-PetscErrorCode  PetscDrawSPGetAxis(PetscDrawSP sp,PetscDrawAxis *axis)
+PetscErrorCode PetscDrawSPGetAxis(PetscDrawSP sp, PetscDrawAxis *axis)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(sp,PETSC_DRAWSP_CLASSID,1);
-  PetscValidPointer(axis,2);
+  PetscValidHeaderSpecific(sp, PETSC_DRAWSP_CLASSID, 1);
+  PetscAssertPointer(axis, 2);
   *axis = sp->axis;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
-   PetscDrawSPGetDraw - Gets the draw context associated with a line graph.
+/*@
+  PetscDrawSPGetDraw - Gets the draw context associated with a scatter plot
 
-   Not Collective, PetscDraw is parallel if PetscDrawSP is parallel
+  Not Collective
 
-   Input Parameter:
-.  sp - the line graph context
+  Input Parameter:
+. sp - the scatter plot context
 
-   Output Parameter:
-.  draw - the draw context
+  Output Parameter:
+. draw - the draw context
 
-   Level: intermediate
+  Level: intermediate
 
-.seealso: PetscDrawSP, PetscDrawSPCreate(), PetscDrawSPDraw(), PetscDraw
+.seealso: `PetscDrawSP`, `PetscDrawSPCreate()`, `PetscDrawSPDraw()`, `PetscDraw`
 @*/
-PetscErrorCode  PetscDrawSPGetDraw(PetscDrawSP sp,PetscDraw *draw)
+PetscErrorCode PetscDrawSPGetDraw(PetscDrawSP sp, PetscDraw *draw)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(sp,PETSC_DRAWSP_CLASSID,1);
-  PetscValidPointer(draw,2);
+  PetscValidHeaderSpecific(sp, PETSC_DRAWSP_CLASSID, 1);
+  PetscAssertPointer(draw, 2);
   *draw = sp->win;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

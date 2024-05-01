@@ -1,13 +1,12 @@
-
         module petscdmplexdef
         use petscdmdef
 #include <../src/dm/f90-mod/petscdmplex.h>
-        end module
+        end module petscdmplexdef
 
         module petscdmnetworkdef
         use petscdmplexdef
 #include <../src/dm/f90-mod/petscdmnetwork.h>
-        end module
+        end module petscdmnetworkdef
 
         module petscdmplex
         use petscdmlabel
@@ -16,7 +15,7 @@
         interface
 #include <../src/dm/f90-mod/ftn-auto-interfaces/petscdmplex.h90>
         end interface
-        end module
+        end module petscdmplex
 
         module petscdmnetwork
         use petscdmplex
@@ -24,4 +23,4 @@
         interface
 #include <../src/dm/f90-mod/ftn-auto-interfaces/petscdmnetwork.h90>
         end interface
-        end module
+        end module petscdmnetwork

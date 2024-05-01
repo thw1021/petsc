@@ -1,3 +1,5 @@
+#pragma once
+
 /*
    Define type spbas_matrix: sparse matrices using pointers
 
@@ -19,7 +21,7 @@
    Information about each row
       row_nnz     : number of nonzeros for each row
       icol0       : column index offset (when needed, otherwise NULL)
-      icols       : array of diagonal offsets for each row, as descibed
+      icols       : array of diagonal offsets for each row, as described
                     for col_idx_type, above
       values      : array of matrix entries for each row
                     when values == NULL, this matrix is really
@@ -47,18 +49,17 @@ typedef struct {
   PetscInt nnz;
   PetscInt col_idx_type;
 
-  PetscInt    *row_nnz;
-  PetscInt    *icol0;
+  PetscInt     *row_nnz;
+  PetscInt     *icol0;
   PetscInt    **icols;
   PetscScalar **values;
 
-  PetscBool   block_data;
-  PetscInt    n_alloc_icol;
-  PetscInt    n_alloc_val;
+  PetscBool    block_data;
+  PetscInt     n_alloc_icol;
+  PetscInt     n_alloc_val;
   PetscInt    *alloc_icol;
   PetscScalar *alloc_val;
 } spbas_matrix;
-
 
 /*
   spbas_compress_pattern:
@@ -67,7 +68,7 @@ typedef struct {
      require (much) less memory.
 
   spbas_memory_requirement:
-     Calculate the number of bytes needed to store tha matrix
+     Calculate the number of bytes needed to store the matrix
 
   spbas_incomplete_cholesky:
      Incomplete Cholesky decomposition
@@ -88,15 +89,13 @@ typedef struct {
      Return the sparseness pattern (matrix without values) of a
      compressed row storage
 */
-PetscErrorCode spbas_compress_pattern(PetscInt*,PetscInt*,PetscInt,PetscInt,PetscInt,spbas_matrix*,PetscReal*);
+PetscErrorCode spbas_compress_pattern(PetscInt *, PetscInt *, PetscInt, PetscInt, PetscInt, spbas_matrix *, PetscReal *);
 size_t         spbas_memory_requirement(spbas_matrix);
 PetscErrorCode spbas_delete(spbas_matrix);
-PetscErrorCode spbas_incomplete_cholesky(Mat,const PetscInt*,const PetscInt*,spbas_matrix,PetscReal,PetscReal,spbas_matrix*);
-PetscErrorCode spbas_matrix_to_crs(spbas_matrix, MatScalar **,PetscInt **,PetscInt**);
-PetscErrorCode spbas_dump(const char*,spbas_matrix);
-PetscErrorCode spbas_transpose(spbas_matrix,spbas_matrix*);
-PetscErrorCode spbas_apply_reordering(spbas_matrix*, const PetscInt*, const PetscInt*);
-PetscErrorCode spbas_pattern_only(PetscInt, PetscInt, PetscInt*, PetscInt*, spbas_matrix*);
-PetscErrorCode spbas_power (spbas_matrix, PetscInt, spbas_matrix*);
-PetscErrorCode spbas_keep_upper(spbas_matrix*);
-
+PetscErrorCode spbas_incomplete_cholesky(Mat, const PetscInt *, const PetscInt *, spbas_matrix, PetscReal, PetscReal, spbas_matrix *, PetscBool *);
+PetscErrorCode spbas_matrix_to_crs(spbas_matrix, MatScalar **, PetscInt **, PetscInt **);
+PetscErrorCode spbas_transpose(spbas_matrix, spbas_matrix *);
+PetscErrorCode spbas_apply_reordering(spbas_matrix *, const PetscInt *, const PetscInt *);
+PetscErrorCode spbas_pattern_only(PetscInt, PetscInt, PetscInt *, PetscInt *, spbas_matrix *);
+PetscErrorCode spbas_power(spbas_matrix, PetscInt, spbas_matrix *);
+PetscErrorCode spbas_keep_upper(spbas_matrix *);

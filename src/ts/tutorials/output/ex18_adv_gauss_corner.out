@@ -1,9 +1,9 @@
-DM Object: 1 MPI processes
+DM Object: 1 MPI process
   type: plex
 Mesh in 2 dimensions:
-  0-cells: 16
-  1-cells: 24
-  2-cells: 21 (12)
+  Number of 0-cells per rank: 16
+  Number of 1-cells per rank: 24
+  Number of 2-cells per rank: 21 (12)
 Labels:
   ghost: 0 strata of sizes ()
   vtk: 1 strata of sizes (9)
@@ -111,7 +111,7 @@ Labels:
  98  time     0.98  |x| (       1,   0.4632) |x|_1 (       9,   0.8351)  
  99  time     0.99  |x| (       1,   0.4546) |x|_1 (       9,   0.8176)  
  100  time        1  |x| (       1,   0.4462) |x|_1 (       9,   0.8004)  
-TS Object: 1 MPI processes
+TS Object: 1 MPI process
   type: ssp
   maximum steps=100
   maximum time=2.

@@ -68,7 +68,7 @@ def decorate_with_conf(f):
         """
         Additional kwargs:
           precision: 'single', 'double', '__float128' for scalars
-          indices: '32bit', '64bit' integer size
+          indices: '32bit', '64-bit' integer size
           complexscalars: True/False
 
           Note these are set in order of preference:
@@ -318,7 +318,7 @@ class PetscBinaryIO(object):
 
     @decorate_with_conf
     def readMatDense(self, fh):
-        """Reads a PETSc Mat, returning a dense represention of the data, must be called after readObjectType()"""
+        """Reads a PETSc Mat, returning a dense representation of the data, must be called after readObjectType()"""
 
         try:
             M,N,nz = np.fromfile(fh, dtype=self._inttype, count=3)
@@ -500,9 +500,13 @@ class PetscBinaryIO(object):
 
 def _convert(infile, outfile, args):
     ext = os.path.splitext(infile)[1]
-    if ext == '.mtx':
-        import scipy.io
-        mat = scipy.io.mmread(infile)
+    if ext in ('.mtx', '.npz'):
+        if ext == '.mtx':
+            import scipy.io
+            mat = scipy.io.mmread(infile)
+        else:
+            import scipy.sparse
+            mat = scipy.sparse.load_npz(infile)
         if args.symmetrize:
             mat = (mat + mat.T)/2
         with open(outfile, 'wb') as fd:

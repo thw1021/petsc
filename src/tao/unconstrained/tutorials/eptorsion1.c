@@ -21,16 +21,14 @@
   file automatically includes files for lower-level support, such as those
   provided by the PETSc library:
      petsc.h       - base PETSc routines   petscvec.h - vectors
-     petscsys.h    - sysem routines        petscmat.h - matrices
+     petscsys.h    - system routines        petscmat.h - matrices
      petscis.h     - index sets            petscksp.h - Krylov subspace methods
      petscviewer.h - viewers               petscpc.h  - preconditioners
 */
 
 #include <petsctao.h>
 
-
-static  char help[]=
-"Demonstrates use of the TAO package to solve \n\
+static char help[] = "Demonstrates use of the TAO package to solve \n\
 unconstrained minimization problems on a single processor.  This example \n\
 is based on the Elastic-Plastic Torsion (dept) problem from the MINPACK-2 \n\
 test suite.\n\
@@ -39,17 +37,6 @@ The command line options are:\n\
   -my <yg>, where <yg> = number of grid points in the 2nd coordinate direction\n\
   -par <param>, where <param> = angle of twist per unit length\n\n";
 
-/*T
-   Concepts: TAO^Solving an unconstrained minimization problem
-   Routines: TaoCreate(); TaoSetType();
-   Routines: TaoSetInitialVector();
-   Routines: TaoSetObjectiveAndGradientRoutine();
-   Routines: TaoSetHessianRoutine(); TaoSetFromOptions();
-   Routines: TaoGetKSP(); TaoSolve();
-   Routines: TaoDestroy();
-   Processors: 1
-T*/
-
 /*
    User-defined application context - contains data needed by the
    application-provided call-back routines, FormFunction(),
@@ -57,130 +44,133 @@ T*/
 */
 
 typedef struct {
-   PetscReal  param;      /* nonlinearity parameter */
-   PetscInt   mx, my;     /* discretization in x- and y-directions */
-   PetscInt   ndim;       /* problem dimension */
-   Vec        s, y, xvec; /* work space for computing Hessian */
-   PetscReal  hx, hy;     /* mesh spacing in x- and y-directions */
+  PetscReal param;      /* nonlinearity parameter */
+  PetscInt  mx, my;     /* discretization in x- and y-directions */
+  PetscInt  ndim;       /* problem dimension */
+  Vec       s, y, xvec; /* work space for computing Hessian */
+  PetscReal hx, hy;     /* mesh spacing in x- and y-directions */
 } AppCtx;
 
 /* -------- User-defined Routines --------- */
 
-PetscErrorCode FormInitialGuess(AppCtx*,Vec);
-PetscErrorCode FormFunction(Tao,Vec,PetscReal*,void*);
-PetscErrorCode FormGradient(Tao,Vec,Vec,void*);
-PetscErrorCode FormHessian(Tao,Vec,Mat,Mat, void*);
-PetscErrorCode HessianProductMat(Mat,Vec,Vec);
-PetscErrorCode HessianProduct(void*,Vec,Vec);
-PetscErrorCode MatrixFreeHessian(Tao,Vec,Mat,Mat,void*);
-PetscErrorCode FormFunctionGradient(Tao,Vec,PetscReal *,Vec,void *);
+PetscErrorCode FormInitialGuess(AppCtx *, Vec);
+PetscErrorCode FormFunction(Tao, Vec, PetscReal *, void *);
+PetscErrorCode FormGradient(Tao, Vec, Vec, void *);
+PetscErrorCode FormHessian(Tao, Vec, Mat, Mat, void *);
+PetscErrorCode HessianProductMat(Mat, Vec, Vec);
+PetscErrorCode HessianProduct(void *, Vec, Vec);
+PetscErrorCode MatrixFreeHessian(Tao, Vec, Mat, Mat, void *);
+PetscErrorCode FormFunctionGradient(Tao, Vec, PetscReal *, Vec, void *);
 
-PetscErrorCode main(int argc,char **argv)
+int main(int argc, char **argv)
 {
-  PetscErrorCode     ierr;                /* used to check for functions returning nonzeros */
-  PetscInt           mx=10;               /* discretization in x-direction */
-  PetscInt           my=10;               /* discretization in y-direction */
-  Vec                x;                   /* solution, gradient vectors */
-  PetscBool          flg;                 /* A return value when checking for use options */
-  Tao                tao;                 /* Tao solver context */
-  Mat                H;                   /* Hessian matrix */
-  AppCtx             user;                /* application context */
-  PetscMPIInt        size;                /* number of processes */
-  PetscReal          one=1.0;
+  PetscInt    mx = 10; /* discretization in x-direction */
+  PetscInt    my = 10; /* discretization in y-direction */
+  Vec         x;       /* solution, gradient vectors */
+  PetscBool   flg;     /* A return value when checking for use options */
+  Tao         tao;     /* Tao solver context */
+  Mat         H;       /* Hessian matrix */
+  AppCtx      user;    /* application context */
+  PetscMPIInt size;    /* number of processes */
+  PetscReal   one = 1.0;
 
-  PetscBool          test_lmvm = PETSC_FALSE;
-  KSP                ksp;
-  PC                 pc;
-  Mat                M;
-  Vec                in, out, out2;
-  PetscReal          mult_solve_dist;
+  PetscBool test_lmvm = PETSC_FALSE;
+  KSP       ksp;
+  PC        pc;
+  Mat       M;
+  Vec       in, out, out2;
+  PetscReal mult_solve_dist;
 
   /* Initialize TAO,PETSc */
-  ierr = PetscInitialize(&argc,&argv,(char *)0,help);if (ierr) return ierr;
-  ierr = MPI_Comm_size(MPI_COMM_WORLD,&size);CHKERRQ(ierr);
-  if (size >1) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_WRONG_MPI_SIZE,"Incorrect number of processors");
+  PetscFunctionBeginUser;
+  PetscCall(PetscInitialize(&argc, &argv, (char *)0, help));
+  PetscCallMPI(MPI_Comm_size(MPI_COMM_WORLD, &size));
+  PetscCheck(size == 1, PETSC_COMM_WORLD, PETSC_ERR_WRONG_MPI_SIZE, "Incorrect number of processors");
 
   /* Specify default parameters for the problem, check for command-line overrides */
   user.param = 5.0;
-  ierr = PetscOptionsGetInt(NULL,NULL,"-my",&my,&flg);CHKERRQ(ierr);
-  ierr = PetscOptionsGetInt(NULL,NULL,"-mx",&mx,&flg);CHKERRQ(ierr);
-  ierr = PetscOptionsGetReal(NULL,NULL,"-par",&user.param,&flg);CHKERRQ(ierr);
-  ierr = PetscOptionsGetBool(NULL,NULL,"-test_lmvm",&test_lmvm,&flg);CHKERRQ(ierr);
+  PetscCall(PetscOptionsGetInt(NULL, NULL, "-my", &my, &flg));
+  PetscCall(PetscOptionsGetInt(NULL, NULL, "-mx", &mx, &flg));
+  PetscCall(PetscOptionsGetReal(NULL, NULL, "-par", &user.param, &flg));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-test_lmvm", &test_lmvm, &flg));
 
-  ierr = PetscPrintf(PETSC_COMM_SELF,"\n---- Elastic-Plastic Torsion Problem -----\n");CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_SELF,"mx: %D     my: %D   \n\n",mx,my);CHKERRQ(ierr);
-  user.ndim = mx * my; user.mx = mx; user.my = my;
-  user.hx = one/(mx+1); user.hy = one/(my+1);
+  PetscCall(PetscPrintf(PETSC_COMM_SELF, "\n---- Elastic-Plastic Torsion Problem -----\n"));
+  PetscCall(PetscPrintf(PETSC_COMM_SELF, "mx: %" PetscInt_FMT "     my: %" PetscInt_FMT "   \n\n", mx, my));
+  user.ndim = mx * my;
+  user.mx   = mx;
+  user.my   = my;
+  user.hx   = one / (mx + 1);
+  user.hy   = one / (my + 1);
 
   /* Allocate vectors */
-  ierr = VecCreateSeq(PETSC_COMM_SELF,user.ndim,&user.y);CHKERRQ(ierr);
-  ierr = VecDuplicate(user.y,&user.s);CHKERRQ(ierr);
-  ierr = VecDuplicate(user.y,&x);CHKERRQ(ierr);
+  PetscCall(VecCreateSeq(PETSC_COMM_SELF, user.ndim, &user.y));
+  PetscCall(VecDuplicate(user.y, &user.s));
+  PetscCall(VecDuplicate(user.y, &x));
 
   /* Create TAO solver and set desired solution method */
-  ierr = TaoCreate(PETSC_COMM_SELF,&tao);CHKERRQ(ierr);
-  ierr = TaoSetType(tao,TAOLMVM);CHKERRQ(ierr);
+  PetscCall(TaoCreate(PETSC_COMM_SELF, &tao));
+  PetscCall(TaoSetType(tao, TAOLMVM));
 
   /* Set solution vector with an initial guess */
-  ierr = FormInitialGuess(&user,x);CHKERRQ(ierr);
-  ierr = TaoSetInitialVector(tao,x);CHKERRQ(ierr);
+  PetscCall(FormInitialGuess(&user, x));
+  PetscCall(TaoSetSolution(tao, x));
 
   /* Set routine for function and gradient evaluation */
-  ierr = TaoSetObjectiveAndGradientRoutine(tao,FormFunctionGradient,(void *)&user);CHKERRQ(ierr);
+  PetscCall(TaoSetObjectiveAndGradient(tao, NULL, FormFunctionGradient, (void *)&user));
 
   /* From command line options, determine if using matrix-free hessian */
-  ierr = PetscOptionsHasName(NULL,NULL,"-my_tao_mf",&flg);CHKERRQ(ierr);
+  PetscCall(PetscOptionsHasName(NULL, NULL, "-my_tao_mf", &flg));
   if (flg) {
-    ierr = MatCreateShell(PETSC_COMM_SELF,user.ndim,user.ndim,user.ndim,user.ndim,(void*)&user,&H);CHKERRQ(ierr);
-    ierr = MatShellSetOperation(H,MATOP_MULT,(void(*)(void))HessianProductMat);CHKERRQ(ierr);
-    ierr = MatSetOption(H,MAT_SYMMETRIC,PETSC_TRUE);CHKERRQ(ierr);
+    PetscCall(MatCreateShell(PETSC_COMM_SELF, user.ndim, user.ndim, user.ndim, user.ndim, (void *)&user, &H));
+    PetscCall(MatShellSetOperation(H, MATOP_MULT, (void (*)(void))HessianProductMat));
+    PetscCall(MatSetOption(H, MAT_SYMMETRIC, PETSC_TRUE));
 
-    ierr = TaoSetHessianRoutine(tao,H,H,MatrixFreeHessian,(void *)&user);CHKERRQ(ierr);
+    PetscCall(TaoSetHessian(tao, H, H, MatrixFreeHessian, (void *)&user));
   } else {
-    ierr = MatCreateSeqAIJ(PETSC_COMM_SELF,user.ndim,user.ndim,5,NULL,&H);CHKERRQ(ierr);
-    ierr = MatSetOption(H,MAT_SYMMETRIC,PETSC_TRUE);CHKERRQ(ierr);
-    ierr = TaoSetHessianRoutine(tao,H,H,FormHessian,(void *)&user);CHKERRQ(ierr);
+    PetscCall(MatCreateSeqAIJ(PETSC_COMM_SELF, user.ndim, user.ndim, 5, NULL, &H));
+    PetscCall(MatSetOption(H, MAT_SYMMETRIC, PETSC_TRUE));
+    PetscCall(TaoSetHessian(tao, H, H, FormHessian, (void *)&user));
   }
 
   /* Test the LMVM matrix */
   if (test_lmvm) {
-    ierr = PetscOptionsSetValue(NULL, "-tao_type", "bntr");CHKERRQ(ierr);
-    ierr = PetscOptionsSetValue(NULL, "-tao_bnk_pc_type", "lmvm");CHKERRQ(ierr);
+    PetscCall(PetscOptionsSetValue(NULL, "-tao_type", "bntr"));
+    PetscCall(PetscOptionsSetValue(NULL, "-tao_bnk_pc_type", "lmvm"));
   }
 
   /* Check for any TAO command line options */
-  ierr = TaoSetFromOptions(tao);CHKERRQ(ierr);
+  PetscCall(TaoSetFromOptions(tao));
 
   /* SOLVE THE APPLICATION */
-  ierr = TaoSolve(tao);CHKERRQ(ierr);
+  PetscCall(TaoSolve(tao));
 
   /* Test the LMVM matrix */
   if (test_lmvm) {
-    ierr = TaoGetKSP(tao, &ksp);CHKERRQ(ierr);
-    ierr = KSPGetPC(ksp, &pc);CHKERRQ(ierr);
-    ierr = PCLMVMGetMatLMVM(pc, &M);CHKERRQ(ierr);
-    ierr = VecDuplicate(x, &in);CHKERRQ(ierr);
-    ierr = VecDuplicate(x, &out);CHKERRQ(ierr);
-    ierr = VecDuplicate(x, &out2);CHKERRQ(ierr);
-    ierr = VecSet(in, 5.0);CHKERRQ(ierr);
-    ierr = MatMult(M, in, out);CHKERRQ(ierr);
-    ierr = MatSolve(M, out, out2);CHKERRQ(ierr);
-    ierr = VecAXPY(out2, -1.0, in);CHKERRQ(ierr);
-    ierr = VecNorm(out2, NORM_2, &mult_solve_dist);CHKERRQ(ierr);
-    ierr = PetscPrintf(PetscObjectComm((PetscObject)tao), "error between MatMult and MatSolve: %e\n", mult_solve_dist);CHKERRQ(ierr);
-    ierr = VecDestroy(&in);CHKERRQ(ierr);
-    ierr = VecDestroy(&out);CHKERRQ(ierr);
-    ierr = VecDestroy(&out2);CHKERRQ(ierr);
+    PetscCall(TaoGetKSP(tao, &ksp));
+    PetscCall(KSPGetPC(ksp, &pc));
+    PetscCall(PCLMVMGetMatLMVM(pc, &M));
+    PetscCall(VecDuplicate(x, &in));
+    PetscCall(VecDuplicate(x, &out));
+    PetscCall(VecDuplicate(x, &out2));
+    PetscCall(VecSet(in, 5.0));
+    PetscCall(MatMult(M, in, out));
+    PetscCall(MatSolve(M, out, out2));
+    PetscCall(VecAXPY(out2, -1.0, in));
+    PetscCall(VecNorm(out2, NORM_2, &mult_solve_dist));
+    PetscCall(PetscPrintf(PetscObjectComm((PetscObject)tao), "error between MatMult and MatSolve: %e\n", (double)mult_solve_dist));
+    PetscCall(VecDestroy(&in));
+    PetscCall(VecDestroy(&out));
+    PetscCall(VecDestroy(&out2));
   }
 
-  ierr = TaoDestroy(&tao);CHKERRQ(ierr);
-  ierr = VecDestroy(&user.s);CHKERRQ(ierr);
-  ierr = VecDestroy(&user.y);CHKERRQ(ierr);
-  ierr = VecDestroy(&x);CHKERRQ(ierr);
-  ierr = MatDestroy(&H);CHKERRQ(ierr);
+  PetscCall(TaoDestroy(&tao));
+  PetscCall(VecDestroy(&user.s));
+  PetscCall(VecDestroy(&user.y));
+  PetscCall(VecDestroy(&x));
+  PetscCall(MatDestroy(&H));
 
-  ierr = PetscFinalize();
-  return ierr;
+  PetscCall(PetscFinalize());
+  return 0;
 }
 
 /* ------------------------------------------------------------------- */
@@ -194,26 +184,25 @@ PetscErrorCode main(int argc,char **argv)
     Output Parameters:
 .   X    - vector
 */
-PetscErrorCode FormInitialGuess(AppCtx *user,Vec X)
+PetscErrorCode FormInitialGuess(AppCtx *user, Vec X)
 {
-  PetscReal      hx = user->hx, hy = user->hy, temp;
-  PetscReal      val;
-  PetscErrorCode ierr;
-  PetscInt       i, j, k, nx = user->mx, ny = user->my;
+  PetscReal hx = user->hx, hy = user->hy, temp;
+  PetscReal val;
+  PetscInt  i, j, k, nx = user->mx, ny = user->my;
 
   /* Compute initial guess */
   PetscFunctionBeginUser;
-  for (j=0; j<ny; j++) {
-    temp = PetscMin(j+1,ny-j)*hy;
-    for (i=0; i<nx; i++) {
-      k   = nx*j + i;
-      val = PetscMin((PetscMin(i+1,nx-i))*hx,temp);
-      ierr = VecSetValues(X,1,&k,&val,ADD_VALUES);CHKERRQ(ierr);
+  for (j = 0; j < ny; j++) {
+    temp = PetscMin(j + 1, ny - j) * hy;
+    for (i = 0; i < nx; i++) {
+      k   = nx * j + i;
+      val = PetscMin((PetscMin(i + 1, nx - i)) * hx, temp);
+      PetscCall(VecSetValues(X, 1, &k, &val, ADD_VALUES));
     }
   }
-  ierr = VecAssemblyBegin(X);CHKERRQ(ierr);
-  ierr = VecAssemblyEnd(X);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(VecAssemblyBegin(X));
+  PetscCall(VecAssemblyEnd(X));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /* ------------------------------------------------------------------- */
@@ -229,14 +218,12 @@ PetscErrorCode FormInitialGuess(AppCtx *user,Vec X)
    f   - the newly evaluated function
    G   - the newly evaluated gradient
 */
-PetscErrorCode FormFunctionGradient(Tao tao,Vec X,PetscReal *f,Vec G,void *ptr)
+PetscErrorCode FormFunctionGradient(Tao tao, Vec X, PetscReal *f, Vec G, void *ptr)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBeginUser;
-  ierr = FormFunction(tao,X,f,ptr);CHKERRQ(ierr);
-  ierr = FormGradient(tao,X,G,ptr);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(FormFunction(tao, X, f, ptr));
+  PetscCall(FormGradient(tao, X, G, ptr));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /* ------------------------------------------------------------------- */
@@ -251,63 +238,62 @@ PetscErrorCode FormFunctionGradient(Tao tao,Vec X,PetscReal *f,Vec G,void *ptr)
    Output Parameters:
 .  f    - the newly evaluated function
 */
-PetscErrorCode FormFunction(Tao tao,Vec X,PetscReal *f,void *ptr)
+PetscErrorCode FormFunction(Tao tao, Vec X, PetscReal *f, void *ptr)
 {
-  AppCtx            *user = (AppCtx *) ptr;
-  PetscReal         hx = user->hx, hy = user->hy, area, three = 3.0, p5 = 0.5;
-  PetscReal         zero = 0.0, vb, vl, vr, vt, dvdx, dvdy, flin = 0.0, fquad = 0.0;
-  PetscReal         v, cdiv3 = user->param/three;
+  AppCtx            *user = (AppCtx *)ptr;
+  PetscReal          hx = user->hx, hy = user->hy, area, three = 3.0, p5 = 0.5;
+  PetscReal          zero = 0.0, vb, vl, vr, vt, dvdx, dvdy, flin = 0.0, fquad = 0.0;
+  PetscReal          v, cdiv3 = user->param / three;
   const PetscScalar *x;
-  PetscErrorCode    ierr;
-  PetscInt          nx = user->mx, ny = user->my, i, j, k;
+  PetscInt           nx = user->mx, ny = user->my, i, j, k;
 
   PetscFunctionBeginUser;
   /* Get pointer to vector data */
-  ierr = VecGetArrayRead(X,&x);CHKERRQ(ierr);
+  PetscCall(VecGetArrayRead(X, &x));
 
   /* Compute function contributions over the lower triangular elements */
-  for (j=-1; j<ny; j++) {
-    for (i=-1; i<nx; i++) {
-      k = nx*j + i;
-      v = zero;
+  for (j = -1; j < ny; j++) {
+    for (i = -1; i < nx; i++) {
+      k  = nx * j + i;
+      v  = zero;
       vr = zero;
       vt = zero;
       if (i >= 0 && j >= 0) v = x[k];
-      if (i < nx-1 && j > -1) vr = x[k+1];
-      if (i > -1 && j < ny-1) vt = x[k+nx];
-      dvdx = (vr-v)/hx;
-      dvdy = (vt-v)/hy;
-      fquad += dvdx*dvdx + dvdy*dvdy;
-      flin -= cdiv3*(v+vr+vt);
+      if (i < nx - 1 && j > -1) vr = x[k + 1];
+      if (i > -1 && j < ny - 1) vt = x[k + nx];
+      dvdx = (vr - v) / hx;
+      dvdy = (vt - v) / hy;
+      fquad += dvdx * dvdx + dvdy * dvdy;
+      flin -= cdiv3 * (v + vr + vt);
     }
   }
 
   /* Compute function contributions over the upper triangular elements */
-  for (j=0; j<=ny; j++) {
-    for (i=0; i<=nx; i++) {
-      k = nx*j + i;
+  for (j = 0; j <= ny; j++) {
+    for (i = 0; i <= nx; i++) {
+      k  = nx * j + i;
       vb = zero;
       vl = zero;
-      v = zero;
-      if (i < nx && j > 0) vb = x[k-nx];
-      if (i > 0 && j < ny) vl = x[k-1];
+      v  = zero;
+      if (i < nx && j > 0) vb = x[k - nx];
+      if (i > 0 && j < ny) vl = x[k - 1];
       if (i < nx && j < ny) v = x[k];
-      dvdx = (v-vl)/hx;
-      dvdy = (v-vb)/hy;
-      fquad = fquad + dvdx*dvdx + dvdy*dvdy;
-      flin = flin - cdiv3*(vb+vl+v);
+      dvdx  = (v - vl) / hx;
+      dvdy  = (v - vb) / hy;
+      fquad = fquad + dvdx * dvdx + dvdy * dvdy;
+      flin  = flin - cdiv3 * (vb + vl + v);
     }
   }
 
   /* Restore vector */
-  ierr = VecRestoreArrayRead(X,&x);CHKERRQ(ierr);
+  PetscCall(VecRestoreArrayRead(X, &x));
 
   /* Scale the function */
-  area = p5*hx*hy;
-  *f = area*(p5*fquad+flin);
+  area = p5 * hx * hy;
+  *f   = area * (p5 * fquad + flin);
 
-  ierr = PetscLogFlops(24.0*nx*ny);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscLogFlops(24.0 * nx * ny));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /* ------------------------------------------------------------------- */
@@ -322,88 +308,93 @@ PetscErrorCode FormFunction(Tao tao,Vec X,PetscReal *f,void *ptr)
     Output Parameters:
 .   G - vector containing the newly evaluated gradient
 */
-PetscErrorCode FormGradient(Tao tao,Vec X,Vec G,void *ptr)
+PetscErrorCode FormGradient(Tao tao, Vec X, Vec G, void *ptr)
 {
-  AppCtx            *user = (AppCtx *) ptr;
-  PetscReal         zero=0.0, p5=0.5, three = 3.0, area, val;
-  PetscErrorCode    ierr;
-  PetscInt          nx = user->mx, ny = user->my, ind, i, j, k;
-  PetscReal         hx = user->hx, hy = user->hy;
-  PetscReal         vb, vl, vr, vt, dvdx, dvdy;
-  PetscReal         v, cdiv3 = user->param/three;
+  AppCtx            *user = (AppCtx *)ptr;
+  PetscReal          zero = 0.0, p5 = 0.5, three = 3.0, area, val;
+  PetscInt           nx = user->mx, ny = user->my, ind, i, j, k;
+  PetscReal          hx = user->hx, hy = user->hy;
+  PetscReal          vb, vl, vr, vt, dvdx, dvdy;
+  PetscReal          v, cdiv3 = user->param / three;
   const PetscScalar *x;
 
   PetscFunctionBeginUser;
   /* Initialize gradient to zero */
-  ierr = VecSet(G, zero);CHKERRQ(ierr);
+  PetscCall(VecSet(G, zero));
 
   /* Get pointer to vector data */
-  ierr = VecGetArrayRead(X,&x);CHKERRQ(ierr);
+  PetscCall(VecGetArrayRead(X, &x));
 
   /* Compute gradient contributions over the lower triangular elements */
-  for (j=-1; j<ny; j++) {
-    for (i=-1; i<nx; i++) {
-      k  = nx*j + i;
+  for (j = -1; j < ny; j++) {
+    for (i = -1; i < nx; i++) {
+      k  = nx * j + i;
       v  = zero;
       vr = zero;
       vt = zero;
-      if (i >= 0 && j >= 0)    v = x[k];
-      if (i < nx-1 && j > -1) vr = x[k+1];
-      if (i > -1 && j < ny-1) vt = x[k+nx];
-      dvdx = (vr-v)/hx;
-      dvdy = (vt-v)/hy;
+      if (i >= 0 && j >= 0) v = x[k];
+      if (i < nx - 1 && j > -1) vr = x[k + 1];
+      if (i > -1 && j < ny - 1) vt = x[k + nx];
+      dvdx = (vr - v) / hx;
+      dvdy = (vt - v) / hy;
       if (i != -1 && j != -1) {
-        ind = k; val = - dvdx/hx - dvdy/hy - cdiv3;
-        ierr = VecSetValues(G,1,&ind,&val,ADD_VALUES);CHKERRQ(ierr);
+        ind = k;
+        val = -dvdx / hx - dvdy / hy - cdiv3;
+        PetscCall(VecSetValues(G, 1, &ind, &val, ADD_VALUES));
       }
-      if (i != nx-1 && j != -1) {
-        ind = k+1; val =  dvdx/hx - cdiv3;
-        ierr = VecSetValues(G,1,&ind,&val,ADD_VALUES);CHKERRQ(ierr);
+      if (i != nx - 1 && j != -1) {
+        ind = k + 1;
+        val = dvdx / hx - cdiv3;
+        PetscCall(VecSetValues(G, 1, &ind, &val, ADD_VALUES));
       }
-      if (i != -1 && j != ny-1) {
-        ind = k+nx; val = dvdy/hy - cdiv3;
-        ierr = VecSetValues(G,1,&ind,&val,ADD_VALUES);CHKERRQ(ierr);
+      if (i != -1 && j != ny - 1) {
+        ind = k + nx;
+        val = dvdy / hy - cdiv3;
+        PetscCall(VecSetValues(G, 1, &ind, &val, ADD_VALUES));
       }
     }
   }
 
   /* Compute gradient contributions over the upper triangular elements */
-  for (j=0; j<=ny; j++) {
-    for (i=0; i<=nx; i++) {
-      k = nx*j + i;
+  for (j = 0; j <= ny; j++) {
+    for (i = 0; i <= nx; i++) {
+      k  = nx * j + i;
       vb = zero;
       vl = zero;
       v  = zero;
-      if (i < nx && j > 0) vb = x[k-nx];
-      if (i > 0 && j < ny) vl = x[k-1];
+      if (i < nx && j > 0) vb = x[k - nx];
+      if (i > 0 && j < ny) vl = x[k - 1];
       if (i < nx && j < ny) v = x[k];
-      dvdx = (v-vl)/hx;
-      dvdy = (v-vb)/hy;
+      dvdx = (v - vl) / hx;
+      dvdy = (v - vb) / hy;
       if (i != nx && j != 0) {
-        ind = k-nx; val = - dvdy/hy - cdiv3;
-        ierr = VecSetValues(G,1,&ind,&val,ADD_VALUES);CHKERRQ(ierr);
+        ind = k - nx;
+        val = -dvdy / hy - cdiv3;
+        PetscCall(VecSetValues(G, 1, &ind, &val, ADD_VALUES));
       }
       if (i != 0 && j != ny) {
-        ind = k-1; val =  - dvdx/hx - cdiv3;
-        ierr = VecSetValues(G,1,&ind,&val,ADD_VALUES);CHKERRQ(ierr);
+        ind = k - 1;
+        val = -dvdx / hx - cdiv3;
+        PetscCall(VecSetValues(G, 1, &ind, &val, ADD_VALUES));
       }
       if (i != nx && j != ny) {
-        ind = k; val =  dvdx/hx + dvdy/hy - cdiv3;
-        ierr = VecSetValues(G,1,&ind,&val,ADD_VALUES);CHKERRQ(ierr);
+        ind = k;
+        val = dvdx / hx + dvdy / hy - cdiv3;
+        PetscCall(VecSetValues(G, 1, &ind, &val, ADD_VALUES));
       }
     }
   }
-  ierr = VecRestoreArrayRead(X,&x);CHKERRQ(ierr);
+  PetscCall(VecRestoreArrayRead(X, &x));
 
   /* Assemble gradient vector */
-  ierr = VecAssemblyBegin(G);CHKERRQ(ierr);
-  ierr = VecAssemblyEnd(G);CHKERRQ(ierr);
+  PetscCall(VecAssemblyBegin(G));
+  PetscCall(VecAssemblyEnd(G));
 
   /* Scale the gradient */
-  area = p5*hx*hy;
-  ierr = VecScale(G, area);CHKERRQ(ierr);
-  ierr = PetscLogFlops(24.0*nx*ny);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  area = p5 * hx * hy;
+  PetscCall(VecScale(G, area));
+  PetscCall(PetscLogFlops(24.0 * nx * ny));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /* ------------------------------------------------------------------- */
@@ -426,46 +417,43 @@ PetscErrorCode FormGradient(Tao tao,Vec X,Vec G,void *ptr)
    Hessian a column at a time, it is not particularly efficient and
    is not recommended.
 */
-PetscErrorCode FormHessian(Tao tao,Vec X,Mat H,Mat Hpre, void *ptr)
+PetscErrorCode FormHessian(Tao tao, Vec X, Mat H, Mat Hpre, void *ptr)
 {
-  AppCtx         *user = (AppCtx *) ptr;
-  PetscErrorCode ierr;
-  PetscInt       i,j, ndim = user->ndim;
-  PetscReal      *y, zero = 0.0, one = 1.0;
-  PetscBool      assembled;
+  AppCtx    *user = (AppCtx *)ptr;
+  PetscInt   i, j, ndim = user->ndim;
+  PetscReal *y, zero = 0.0, one = 1.0;
+  PetscBool  assembled;
 
   PetscFunctionBeginUser;
   user->xvec = X;
 
   /* Initialize Hessian entries and work vector to zero */
-  ierr = MatAssembled(H,&assembled);CHKERRQ(ierr);
-  if (assembled){ierr = MatZeroEntries(H);CHKERRQ(ierr);}
+  PetscCall(MatAssembled(H, &assembled));
+  if (assembled) PetscCall(MatZeroEntries(H));
 
-  ierr = VecSet(user->s, zero);CHKERRQ(ierr);
+  PetscCall(VecSet(user->s, zero));
 
   /* Loop over matrix columns to compute entries of the Hessian */
-  for (j=0; j<ndim; j++) {
-    ierr = VecSetValues(user->s,1,&j,&one,INSERT_VALUES);CHKERRQ(ierr);
-    ierr = VecAssemblyBegin(user->s);CHKERRQ(ierr);
-    ierr = VecAssemblyEnd(user->s);CHKERRQ(ierr);
+  for (j = 0; j < ndim; j++) {
+    PetscCall(VecSetValues(user->s, 1, &j, &one, INSERT_VALUES));
+    PetscCall(VecAssemblyBegin(user->s));
+    PetscCall(VecAssemblyEnd(user->s));
 
-    ierr = HessianProduct(ptr,user->s,user->y);CHKERRQ(ierr);
+    PetscCall(HessianProduct(ptr, user->s, user->y));
 
-    ierr = VecSetValues(user->s,1,&j,&zero,INSERT_VALUES);CHKERRQ(ierr);
-    ierr = VecAssemblyBegin(user->s);CHKERRQ(ierr);
-    ierr = VecAssemblyEnd(user->s);CHKERRQ(ierr);
+    PetscCall(VecSetValues(user->s, 1, &j, &zero, INSERT_VALUES));
+    PetscCall(VecAssemblyBegin(user->s));
+    PetscCall(VecAssemblyEnd(user->s));
 
-    ierr = VecGetArray(user->y,&y);CHKERRQ(ierr);
-    for (i=0; i<ndim; i++) {
-      if (y[i] != zero) {
-        ierr = MatSetValues(H,1,&i,1,&j,&y[i],ADD_VALUES);CHKERRQ(ierr);
-      }
+    PetscCall(VecGetArray(user->y, &y));
+    for (i = 0; i < ndim; i++) {
+      if (y[i] != zero) PetscCall(MatSetValues(H, 1, &i, 1, &j, &y[i], ADD_VALUES));
     }
-    ierr = VecRestoreArray(user->y,&y);CHKERRQ(ierr);
+    PetscCall(VecRestoreArray(user->y, &y));
   }
-  ierr = MatAssemblyBegin(H,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  ierr = MatAssemblyEnd(H,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(MatAssemblyBegin(H, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(H, MAT_FINAL_ASSEMBLY));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /* ------------------------------------------------------------------- */
@@ -483,13 +471,14 @@ PetscErrorCode FormHessian(Tao tao,Vec X,Mat H,Mat Hpre, void *ptr)
 .  PrecH - optionally different preconditioning Hessian
 .  flag  - flag indicating matrix structure
 */
-PetscErrorCode MatrixFreeHessian(Tao tao,Vec X,Mat H,Mat PrecH, void *ptr)
+PetscErrorCode MatrixFreeHessian(Tao tao, Vec X, Mat H, Mat PrecH, void *ptr)
 {
-  AppCtx     *user = (AppCtx *) ptr;
+  AppCtx *user = (AppCtx *)ptr;
 
   /* Sets location of vector for use in computing matrix-vector products  of the form H(X)*y  */
+  PetscFunctionBeginUser;
   user->xvec = X;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /* ------------------------------------------------------------------- */
@@ -504,15 +493,14 @@ PetscErrorCode MatrixFreeHessian(Tao tao,Vec X,Mat H,Mat PrecH, void *ptr)
    Output Parameters:
 .  y    - solution vector
 */
-PetscErrorCode HessianProductMat(Mat mat,Vec svec,Vec y)
+PetscErrorCode HessianProductMat(Mat mat, Vec svec, Vec y)
 {
-  void           *ptr;
-  PetscErrorCode ierr;
+  void *ptr;
 
   PetscFunctionBeginUser;
-  ierr = MatShellGetContext(mat,&ptr);CHKERRQ(ierr);
-  ierr = HessianProduct(ptr,svec,y);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(MatShellGetContext(mat, &ptr));
+  PetscCall(HessianProduct(ptr, svec, y));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /* ------------------------------------------------------------------- */
@@ -527,94 +515,98 @@ PetscErrorCode HessianProductMat(Mat mat,Vec svec,Vec y)
    Output Parameters:
 .  y    - product vector
 */
-PetscErrorCode HessianProduct(void *ptr,Vec svec,Vec y)
+PetscErrorCode HessianProduct(void *ptr, Vec svec, Vec y)
 {
   AppCtx            *user = (AppCtx *)ptr;
-  PetscReal         p5 = 0.5, zero = 0.0, one = 1.0, hx, hy, val, area;
+  PetscReal          p5 = 0.5, zero = 0.0, one = 1.0, hx, hy, val, area;
   const PetscScalar *x, *s;
-  PetscReal         v, vb, vl, vr, vt, hxhx, hyhy;
-  PetscErrorCode    ierr;
-  PetscInt          nx, ny, i, j, k, ind;
+  PetscReal          v, vb, vl, vr, vt, hxhx, hyhy;
+  PetscInt           nx, ny, i, j, k, ind;
 
   PetscFunctionBeginUser;
   nx   = user->mx;
   ny   = user->my;
   hx   = user->hx;
   hy   = user->hy;
-  hxhx = one/(hx*hx);
-  hyhy = one/(hy*hy);
+  hxhx = one / (hx * hx);
+  hyhy = one / (hy * hy);
 
   /* Get pointers to vector data */
-  ierr = VecGetArrayRead(user->xvec,&x);CHKERRQ(ierr);
-  ierr = VecGetArrayRead(svec,&s);CHKERRQ(ierr);
+  PetscCall(VecGetArrayRead(user->xvec, &x));
+  PetscCall(VecGetArrayRead(svec, &s));
 
   /* Initialize product vector to zero */
-  ierr = VecSet(y, zero);CHKERRQ(ierr);
+  PetscCall(VecSet(y, zero));
 
   /* Compute f''(x)*s over the lower triangular elements */
-  for (j=-1; j<ny; j++) {
-    for (i=-1; i<nx; i++) {
-       k = nx*j + i;
-       v = zero;
-       vr = zero;
-       vt = zero;
-       if (i != -1 && j != -1) v = s[k];
-       if (i != nx-1 && j != -1) {
-         vr = s[k+1];
-         ind = k+1; val = hxhx*(vr-v);
-         ierr = VecSetValues(y,1,&ind,&val,ADD_VALUES);CHKERRQ(ierr);
-       }
-       if (i != -1 && j != ny-1) {
-         vt = s[k+nx];
-         ind = k+nx; val = hyhy*(vt-v);
-         ierr = VecSetValues(y,1,&ind,&val,ADD_VALUES);CHKERRQ(ierr);
-       }
-       if (i != -1 && j != -1) {
-         ind = k; val = hxhx*(v-vr) + hyhy*(v-vt);
-         ierr = VecSetValues(y,1,&ind,&val,ADD_VALUES);CHKERRQ(ierr);
-       }
-     }
-   }
+  for (j = -1; j < ny; j++) {
+    for (i = -1; i < nx; i++) {
+      k  = nx * j + i;
+      v  = zero;
+      vr = zero;
+      vt = zero;
+      if (i != -1 && j != -1) v = s[k];
+      if (i != nx - 1 && j != -1) {
+        vr  = s[k + 1];
+        ind = k + 1;
+        val = hxhx * (vr - v);
+        PetscCall(VecSetValues(y, 1, &ind, &val, ADD_VALUES));
+      }
+      if (i != -1 && j != ny - 1) {
+        vt  = s[k + nx];
+        ind = k + nx;
+        val = hyhy * (vt - v);
+        PetscCall(VecSetValues(y, 1, &ind, &val, ADD_VALUES));
+      }
+      if (i != -1 && j != -1) {
+        ind = k;
+        val = hxhx * (v - vr) + hyhy * (v - vt);
+        PetscCall(VecSetValues(y, 1, &ind, &val, ADD_VALUES));
+      }
+    }
+  }
 
   /* Compute f''(x)*s over the upper triangular elements */
-  for (j=0; j<=ny; j++) {
-    for (i=0; i<=nx; i++) {
-       k = nx*j + i;
-       v = zero;
-       vl = zero;
-       vb = zero;
-       if (i != nx && j != ny) v = s[k];
-       if (i != nx && j != 0) {
-         vb = s[k-nx];
-         ind = k-nx; val = hyhy*(vb-v);
-         ierr = VecSetValues(y,1,&ind,&val,ADD_VALUES);CHKERRQ(ierr);
-       }
-       if (i != 0 && j != ny) {
-         vl = s[k-1];
-         ind = k-1; val = hxhx*(vl-v);
-         ierr = VecSetValues(y,1,&ind,&val,ADD_VALUES);CHKERRQ(ierr);
-       }
-       if (i != nx && j != ny) {
-         ind = k; val = hxhx*(v-vl) + hyhy*(v-vb);
-         ierr = VecSetValues(y,1,&ind,&val,ADD_VALUES);CHKERRQ(ierr);
-       }
+  for (j = 0; j <= ny; j++) {
+    for (i = 0; i <= nx; i++) {
+      k  = nx * j + i;
+      v  = zero;
+      vl = zero;
+      vb = zero;
+      if (i != nx && j != ny) v = s[k];
+      if (i != nx && j != 0) {
+        vb  = s[k - nx];
+        ind = k - nx;
+        val = hyhy * (vb - v);
+        PetscCall(VecSetValues(y, 1, &ind, &val, ADD_VALUES));
+      }
+      if (i != 0 && j != ny) {
+        vl  = s[k - 1];
+        ind = k - 1;
+        val = hxhx * (vl - v);
+        PetscCall(VecSetValues(y, 1, &ind, &val, ADD_VALUES));
+      }
+      if (i != nx && j != ny) {
+        ind = k;
+        val = hxhx * (v - vl) + hyhy * (v - vb);
+        PetscCall(VecSetValues(y, 1, &ind, &val, ADD_VALUES));
+      }
     }
   }
   /* Restore vector data */
-  ierr = VecRestoreArrayRead(svec,&s);CHKERRQ(ierr);
-  ierr = VecRestoreArrayRead(user->xvec,&x);CHKERRQ(ierr);
+  PetscCall(VecRestoreArrayRead(svec, &s));
+  PetscCall(VecRestoreArrayRead(user->xvec, &x));
 
   /* Assemble vector */
-  ierr = VecAssemblyBegin(y);CHKERRQ(ierr);
-  ierr = VecAssemblyEnd(y);CHKERRQ(ierr);
+  PetscCall(VecAssemblyBegin(y));
+  PetscCall(VecAssemblyEnd(y));
 
   /* Scale resulting vector by area */
-  area = p5*hx*hy;
-  ierr = VecScale(y, area);CHKERRQ(ierr);
-  ierr = PetscLogFlops(18.0*nx*ny);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  area = p5 * hx * hy;
+  PetscCall(VecScale(y, area));
+  PetscCall(PetscLogFlops(18.0 * nx * ny));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
-
 
 /*TEST
 
@@ -623,26 +615,38 @@ PetscErrorCode HessianProduct(void *ptr,Vec svec,Vec y)
 
    test:
       suffix: 1
-      args: -tao_smonitor -tao_type ntl -tao_gatol 1.e-4
+      args: -tao_monitor_short -tao_type ntl -tao_gatol 1.e-4
 
    test:
       suffix: 2
-      args: -tao_smonitor -tao_type ntr -tao_gatol 1.e-4
+      args: -tao_monitor_short -tao_type ntr -tao_gatol 1.e-4
 
    test:
       suffix: 3
-      args: -tao_smonitor -tao_type bntr -tao_gatol 1.e-4 -my_tao_mf -tao_test_hessian
+      args: -tao_monitor_short -tao_type bntr -tao_gatol 1.e-4 -my_tao_mf -tao_test_hessian
 
    test:
      suffix: 4
-     args: -tao_smonitor -tao_gatol 1e-3 -tao_type bqnls
+     args: -tao_monitor_short -tao_gatol 1e-3 -tao_type bqnls
 
    test:
      suffix: 5
-     args: -tao_smonitor -tao_gatol 1e-3 -tao_type blmvm
+     args: -tao_monitor_short -tao_gatol 1e-3 -tao_type blmvm
 
    test:
      suffix: 6
-     args: -tao_smonitor -tao_gatol 1e-3 -tao_type bqnktr -tao_bqnk_mat_type lmvmsr1
+     args: -tao_monitor_short -tao_gatol 1e-3 -tao_type bqnktr -tao_bqnk_mat_type lmvmsr1
+
+   test:
+     suffix: snes
+     args: -snes_monitor ::ascii_info_detail -tao_type snes -snes_type newtontr -ksp_type cg -snes_atol 1.e-4 -tao_mf_hessian {{0 1}} -pc_type none
+
+   test:
+     suffix: snes_2
+     args: -snes_monitor ::ascii_info_detail -tao_type snes -snes_type newtontr -snes_atol 5.e-4 -tao_mf_hessian -pc_type none -snes_tr_fallback_type cauchy
+
+   test:
+     suffix: snes_3
+     args: -snes_monitor ::ascii_info_detail -tao_type snes -snes_type newtontr -snes_atol 5.e-4 -tao_mf_hessian -pc_type lmvm -snes_tr_fallback_type cauchy
 
 TEST*/

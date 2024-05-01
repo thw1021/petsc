@@ -1,6 +1,8 @@
 !
 !
 !  Include file for Fortran use of the Mat package in PETSc
+!  Portions of this code are under:
+!  Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
 !
 #if !defined (PETSCMATDEF_H)
 #define PETSCMATDEF_H
@@ -10,6 +12,7 @@
 #define Mat type(tMat)
 #define MatNullSpace type(tMatNullSpace)
 #define MatFDColoring type(tMatFDColoring)
+#define MatTransposeColoring type(tMatTransposeColoring)
 
 #define MatColoring PetscFortranAddr
 #define MatPartitioning PetscFortranAddr
@@ -81,6 +84,9 @@
 #define MATMAIJ            'maij'
 #define MATSEQMAIJ         'seqmaij'
 #define MATMPIMAIJ         'mpimaij'
+#define MATKAIJ            'kaij'
+#define MATSEQKAIJ         'seqkaij'
+#define MATMPIKAIJ         'mpikaij'
 #define MATIS              'is'
 #define MATAIJ             'aij'
 #define MATSEQAIJ          'seqaij'
@@ -91,6 +97,12 @@
 #define MATAIJCUSPARSE     'aijcusparse'
 #define MATSEQAIJCUSPARSE  'seqaijcusparse'
 #define MATMPIAIJCUSPARSE  'mpiaijcusparse'
+#define MATAIJHIPSPARSE    'aijhipsparse'
+#define MATSEQAIJHIPSPARSE 'seqaijhipsparse'
+#define MATMPIAIJHIPSPARSE 'mpiaijhipsparse'
+#define MATAIJKOKKOS       'aijkokkos'
+#define MATSEQAIJKOKKOS    'seqaijkokkos'
+#define MATMPIAIJKOKKOS    'mpiaijkokkos'
 #define MATAIJVIENNACL     'aijviennacl'
 #define MATSEQAIJVIENNACL  'seqaijviennacl'
 #define MATMPIAIJVIENNACL  'mpiaijviennacl'
@@ -107,10 +119,16 @@
 #define MATSEQBAIJMKL      'seqbaijmkl'
 #define MATMPIBAIJMKL      'mpibaijmkl'
 #define MATSHELL           'shell'
+#define MATCENTERING       'centering'
 #define MATDENSE           'dense'
+#define MATDENSECUDA       'densecuda'
+#define MATDENSEHIP        'densehip'
 #define MATSEQDENSE        'seqdense'
 #define MATSEQDENSECUDA    'seqdensecuda'
+#define MATSEQDENSEHIP     'seqdensehip'
 #define MATMPIDENSE        'mpidense'
+#define MATMPIDENSECUDA    'mpidensecuda'
+#define MATMPIDENSEHIP     'mpidensehip'
 #define MATELEMENTAL       'elemental'
 #define MATSCALAPACK       'scalapack'
 #define MATBAIJ            'baij'
@@ -120,7 +138,6 @@
 #define MATSBAIJ           'sbaij'
 #define MATSEQSBAIJ        'seqsbaij'
 #define MATMPISBAIJ        'mpisbaij'
-#define MATDAAD            'daad'
 #define MATMFFD            'mffd'
 #define MATNORMAL          'normal'
 #define MATNORMALHERMITIAN 'normalh'
@@ -131,9 +148,11 @@
 #define MATFFT             'fft'
 #define MATFFTW            'fftw'
 #define MATSEQCUFFT        'seqcufft'
-#define MATTRANSPOSEMAT    'transpose'
+#define MATTRANSPOSEVIRTUAL       'transpose'
+#define MATHERMITIANTRANSPOSEVIRTUAL 'hermitiantranspose'
 #define MATSCHURCOMPLEMENT 'schurcomplement'
 #define MATPYTHON          'python'
+#define MATHYPRE           'hypre'
 #define MATHYPRESTRUCT     'hyprestruct'
 #define MATHYPRESSTRUCT    'hypresstruct'
 #define MATSUBMATRIX       'submatrix'
@@ -146,14 +165,19 @@
 #define MATDUMMY           'dummy'
 #define MATLMVM            'lmvm'
 #define MATLMVMDFP         'lmvmdfp'
+#define MATLMVMDDFP        'lmvmddfp'
 #define MATLMVMBFGS        'lmvmbfgs'
+#define MATLMVMDBFGS       'lmvmdbfgs'
+#define MATLMVMDQN         'lmvmdqn'
 #define MATLMVMSR1         'lmvmsr1'
 #define MATLMVMBROYDEN     'lmvmbroyden'
 #define MATLMVMBADBROYDEN  'lmvmbadbroyden'
 #define MATLMVMSYMBROYDEN  'lmvmsymbroyden'
 #define MATLMVMSYMBADBROYDEN 'lmvmsymbadbroyden'
 #define MATLMVMDIAGBROYDEN 'lmvmdiagbroyden'
-#define MATHARA            'hara'
+#define MATCONSTANTDIAGONAL 'constantdiagonal'
+#define MATHTOOL           'htool'
+#define MATH2OPUS          'h2opus'
 
 !
 ! MatMFFDType values
@@ -169,7 +193,6 @@
 #define MATSOLVERSTRUMPACK       'strumpack'
 #define MATSOLVERUMFPACK         'umfpack'
 #define MATSOLVERCHOLMOD         'cholmod'
-#define MATSOLVERSPARSEELEMENTAL 'sparseelemental'
 #define MATSOLVERKLU             'klu'
 #define MATSOLVERELEMENTAL       'elemental'
 #define MATSOLVERSCALAPACK       'scalapack'
@@ -184,6 +207,10 @@
 #define MATSOLVERBAS             'bas'
 #define MATSOLVERCUSPARSE        'cusparse'
 #define MATSOLVERCUDA            'cuda'
+#define MATSOLVERHIPSPARSE       'hipsparse'
+#define MATSOLVERHIP             'hip'
+#define MATSOLVERKOKKOS          'kokkos'
+#define MATSOLVERSPQR            'spqr'
 
 !
 ! GPU Storage Formats for CUSPARSE
@@ -192,8 +219,18 @@
 #define MatCUSPARSEFormatOperation PetscEnum
 
 !
+! GPU Storage Formats for HIPSPARSE
+!
+#define MatHIPSPARSEStorageFormat PetscEnum
+#define MatHIPSPARSEFormatOperation PetscEnum
+
+!
 ! sparsity reducing ordering for STRUMPACK
 !
 #define MatSTRUMPACKReordering PetscEnum
+!
+! compression types for STRUMPACK
+!
+#define MatSTRUMPACKCompressionType PetscEnum
 
 #endif

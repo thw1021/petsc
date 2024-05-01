@@ -7,24 +7,20 @@
 !
 !  The C version of this code is test_chwirut1.c
 !
-!!/*T
-!  Concepts: TAO^Solving an unconstrained minimization problem
-!  Routines: TaoCreate();
-!  Routines: TaoSetType();
-!  Routines: TaoSetInitialVector();
-!  Routines: TaoSetResidualRoutine();
-!  Routines: TaoSetFromOptions();
-!  Routines: TaoSolve();
-!  Routines: TaoDestroy();
-!  Processors: 1
-!T*/
-
 
 !
 ! ----------------------------------------------------------------------
 !
-#include "chwirut1f.h"
+      module chwirut1fmodule
+      use petsctao
+#include <petsc/finclude/petsctao.h>
+      PetscReal t(0:213)
+      PetscReal y(0:213)
+      PetscInt  m,n
+      end module chwirut1fmodule
 
+      program main
+      use chwirut1fmodule
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !                   Variable declarations
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -37,7 +33,6 @@
       Tao        tao     ! Tao context
       PetscInt         nhist
       PetscMPIInt  size,rank    ! number of processes running
-      PetscReal      zero
       PetscReal      hist(100) ! objective value history
       PetscReal      resid(100)! residual history
       PetscReal      cnorm(100)! cnorm history
@@ -50,60 +45,43 @@
 
       external FormFunction
 
-      zero = 0.0
-
 !  Initialize TAO and PETSc
-      call PetscInitialize(PETSC_NULL_CHARACTER,ierr)
-      if (ierr .ne. 0) then
-         print*,'Unable to initialize PETSc'
-         stop
-      endif
+      PetscCallA(PetscInitialize(ierr))
 
-      call MPI_Comm_size(PETSC_COMM_WORLD,size,ierr)
-      call MPI_Comm_rank(PETSC_COMM_WORLD,rank,ierr)
-      if (size .ne. 1) then; SETERRA(PETSC_COMM_SELF,PETSC_ERR_WRONG_MPI_SIZE,'This is a uniprocessor example only '); endif
+      PetscCallMPIA(MPI_Comm_size(PETSC_COMM_WORLD,size,ierr))
+      PetscCallMPIA(MPI_Comm_rank(PETSC_COMM_WORLD,rank,ierr))
+      PetscCheckA(size .eq. 1,PETSC_COMM_SELF,PETSC_ERR_WRONG_MPI_SIZE,'This is a uniprocessor example only')
 
 !  Initialize problem parameters
       m = 214
       n = 3
 
-
 !  Allocate vectors for the solution and gradient
-      call VecCreateSeq(PETSC_COMM_SELF,n,x,ierr)
-      call VecCreateSeq(PETSC_COMM_SELF,m,f,ierr)
-
+      PetscCallA(VecCreateSeq(PETSC_COMM_SELF,n,x,ierr))
+      PetscCallA(VecCreateSeq(PETSC_COMM_SELF,m,f,ierr))
 
 !  The TAO code begins here
 
 !  Create TAO solver
-      call TaoCreate(PETSC_COMM_SELF,tao,ierr);CHKERRA(ierr)
-      call TaoSetType(tao,TAOPOUNDERS,ierr);CHKERRA(ierr)
+      PetscCallA(TaoCreate(PETSC_COMM_SELF,tao,ierr))
+      PetscCallA(TaoSetType(tao,TAOPOUNDERS,ierr))
 !  Set routines for function, gradient, and hessian evaluation
 
-      call TaoSetResidualRoutine(tao,f,                       &
-     &      FormFunction,0,ierr)
-      CHKERRA(ierr)
+      PetscCallA(TaoSetResidualRoutine(tao,f,FormFunction,0,ierr))
 
 !  Optional: Set initial guess
       call InitializeData()
       call FormStartingPoint(x)
-      call TaoSetInitialVector(tao, x, ierr)
-      CHKERRA(ierr)
-
+      PetscCallA(TaoSetSolution(tao, x, ierr))
 
 !  Check for TAO command line options
-      call TaoSetFromOptions(tao,ierr)
-      CHKERRA(ierr)
+      PetscCallA(TaoSetFromOptions(tao,ierr))
       oh = 100
-      call TaoSetConvergenceHistory(tao,hist,resid,cnorm,lits,          &
-     &     oh,PETSC_TRUE,ierr)
-      CHKERRA(ierr)
+      PetscCallA(TaoSetConvergenceHistory(tao,hist,resid,cnorm,lits,oh,PETSC_TRUE,ierr))
 !  SOLVE THE APPLICATION
-      call TaoSolve(tao,ierr)
-      CHKERRA(ierr)
-      call TaoGetConvergenceHistory(tao,nhist,ierr)
-      CHKERRA(ierr)
-      call TaoGetConvergedReason(tao, reason, ierr)
+      PetscCallA(TaoSolve(tao,ierr))
+      PetscCallA(TaoGetConvergenceHistory(tao,nhist,ierr))
+      PetscCallA(TaoGetConvergedReason(tao, reason, ierr))
       if (reason .le. 0) then
          print *,'Tao failed.'
          print *,'Try a different TAO method, adjust some parameters,'
@@ -111,16 +89,15 @@
       endif
 
 !  Free TAO data structures
-      call TaoDestroy(tao,ierr)
+      PetscCallA(TaoDestroy(tao,ierr))
 
 !  Free PETSc data structures
-      call VecDestroy(x,ierr)
-      call VecDestroy(f,ierr)
+      PetscCallA(VecDestroy(x,ierr))
+      PetscCallA(VecDestroy(f,ierr))
 
-      call PetscFinalize(ierr)
+      PetscCallA(PetscFinalize(ierr))
 
       end
-
 
 ! --------------------------------------------------------------------
 !  FormFunction - Evaluates the function f(X) and gradient G(X)
@@ -134,7 +111,7 @@
 !  f - function vector
 
       subroutine FormFunction(tao, x, f, dummy, ierr)
-#include "chwirut1f.h"
+      use chwirut1fmodule
 
       Tao        tao
       Vec              x,f
@@ -142,60 +119,41 @@
       PetscInt         dummy
 
       PetscInt         i
-
-! PETSc's VecGetArray acts differently in Fortran than it does in C.
-! Calling VecGetArray((Vec) X, (PetscReal) x_array(0:1), (PetscOffset) x_index, ierr)
-! will return an array of doubles referenced by x_array offset by x_index.
-!  i.e.,  to reference the kth element of X, use x_array(k + x_index).
-! Notice that by declaring the arrays with range (0:1), we are using the C 0-indexing practice.
-      PetscReal        f_v(0:1),x_v(0:1)
-      PetscOffset      f_i,x_i
+      PetscScalar, pointer, dimension(:)  :: x_v,f_v
 
       ierr = 0
 
 !     Get pointers to vector data
-      call VecGetArray(x,x_v,x_i,ierr)
-      CHKERRQ(ierr)
-      call VecGetArray(f,f_v,f_i,ierr)
-      CHKERRQ(ierr)
-
+      PetscCall(VecGetArrayF90(x,x_v,ierr))
+      PetscCall(VecGetArrayF90(f,f_v,ierr))
 
 !     Compute F(X)
       do i=0,m-1
-         f_v(f_i+i) = y(i) - exp(-x_v(x_i+0)*t(i))/                      &
-     &    (x_v(x_i+1) + x_v(x_i+2)*t(i))
-
+         f_v(i+1) = y(i) - exp(-x_v(1)*t(i))/(x_v(2) + x_v(3)*t(i))
       enddo
 
-
 !     Restore vectors
-      call VecRestoreArray(X,x_v,x_i,ierr)
-      CHKERRQ(ierr)
-      call VecRestoreArray(F,f_v,f_i,ierr)
-      CHKERRQ(ierr)
+      PetscCall(VecRestoreArrayF90(X,x_v,ierr))
+      PetscCall(VecRestoreArrayF90(F,f_v,ierr))
 
-
-      return
       end
 
       subroutine FormStartingPoint(x)
-#include "chwirut1f.h"
+      use chwirut1fmodule
 
       Vec             x
-      PetscReal       x_v(0:1)
-      PetscOffset     x_i
+      PetscScalar, pointer, dimension(:)  :: x_v
       PetscErrorCode  ierr
 
-      call VecGetArray(x,x_v,x_i,ierr)
-      x_v(x_i) = 0.15
-      x_v(x_i+1) = 0.008
-      x_v(x_i+2) = 0.01
-      call VecRestoreArray(x,x_v,x_i,ierr)
-      return
+      PetscCall(VecGetArrayF90(x,x_v,ierr))
+      x_v(1) = 0.15
+      x_v(2) = 0.008
+      x_v(3) = 0.01
+      PetscCall(VecRestoreArrayF90(x,x_v,ierr))
       end
 
       subroutine InitializeData()
-#include "chwirut1f.h"
+      use chwirut1fmodule
 
       integer i
       i=0
@@ -414,7 +372,6 @@
       y(i) =    28.9000;  t(i) =   1.7500; i=i+1
       y(i) =    28.9500;  t(i) =   1.7500; i=i+1
 
-      return
       end
 
 !/*TEST
@@ -423,7 +380,7 @@
 !      requires: !complex
 !
 !   test:
-!      args: -tao_smonitor -tao_max_it 100 -tao_type pounders -tao_gatol 1.e-5
+!      args: -tao_monitor_short -tao_max_it 100 -tao_type pounders -tao_gatol 1.e-5
 !      requires: !single
 !
 !TEST*/

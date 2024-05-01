@@ -4,68 +4,66 @@ static char help[] = "Define a simple field over the mesh\n\n";
 
 int main(int argc, char **argv)
 {
-  DM             dm, dmDist = NULL;
-  Vec            u;
-  PetscSection   section;
-  PetscViewer    viewer;
-  PetscInt       dim = 2, numFields, numBC, i;
-  PetscInt       numComp[3];
-  PetscInt       numDof[12];
-  PetscInt       bcField[1];
-  IS             bcPointIS[1];
-  PetscBool      interpolate = PETSC_TRUE;
-  PetscErrorCode ierr;
+  DM           dm;
+  Vec          u;
+  PetscSection section;
+  PetscViewer  viewer;
+  PetscInt     dim, numFields, numBC, i;
+  PetscInt     numComp[3];
+  PetscInt     numDof[12];
+  PetscInt     bcField[1];
+  IS           bcPointIS[1];
 
-  ierr = PetscInitialize(&argc, &argv, NULL,help);if (ierr) return ierr;
-  ierr = PetscOptionsGetInt(NULL,NULL, "-dim", &dim, NULL);CHKERRQ(ierr);
+  PetscFunctionBeginUser;
+  PetscCall(PetscInitialize(&argc, &argv, NULL, help));
   /* Create a mesh */
-  ierr = DMPlexCreateBoxMesh(PETSC_COMM_WORLD, dim, PETSC_TRUE, NULL, NULL, NULL, NULL, interpolate, &dm);CHKERRQ(ierr);
-  /* Distribute mesh over processes */
-  ierr = DMPlexDistribute(dm, 0, NULL, &dmDist);CHKERRQ(ierr);
-  if (dmDist) {ierr = DMDestroy(&dm);CHKERRQ(ierr); dm = dmDist;}
+  PetscCall(DMCreate(PETSC_COMM_WORLD, &dm));
+  PetscCall(DMSetType(dm, DMPLEX));
+  PetscCall(DMSetFromOptions(dm));
+  PetscCall(DMViewFromOptions(dm, NULL, "-dm_view"));
+  PetscCall(DMGetDimension(dm, &dim));
   /* Create a scalar field u, a vector field v, and a surface vector field w */
   numFields  = 3;
   numComp[0] = 1;
   numComp[1] = dim;
-  numComp[2] = dim-1;
-  for (i = 0; i < numFields*(dim+1); ++i) numDof[i] = 0;
+  numComp[2] = dim - 1;
+  for (i = 0; i < numFields * (dim + 1); ++i) numDof[i] = 0;
   /* Let u be defined on vertices */
-  numDof[0*(dim+1)+0]     = 1;
+  numDof[0 * (dim + 1) + 0] = 1;
   /* Let v be defined on cells */
-  numDof[1*(dim+1)+dim]   = dim;
+  numDof[1 * (dim + 1) + dim] = dim;
   /* Let w be defined on faces */
-  numDof[2*(dim+1)+dim-1] = dim-1;
+  numDof[2 * (dim + 1) + dim - 1] = dim - 1;
   /* Setup boundary conditions */
   numBC = 1;
   /* Prescribe a Dirichlet condition on u on the boundary
        Label "marker" is made by the mesh creation routine */
   bcField[0] = 0;
-  ierr = DMGetStratumIS(dm, "marker", 1, &bcPointIS[0]);CHKERRQ(ierr);
+  PetscCall(DMGetStratumIS(dm, "marker", 1, &bcPointIS[0]));
   /* Create a PetscSection with this data layout */
-  ierr = DMSetNumFields(dm, numFields);CHKERRQ(ierr);
-  ierr = DMPlexCreateSection(dm, NULL, numComp, numDof, numBC, bcField, NULL, bcPointIS, NULL, &section);CHKERRQ(ierr);
-  ierr = ISDestroy(&bcPointIS[0]);CHKERRQ(ierr);
+  PetscCall(DMSetNumFields(dm, numFields));
+  PetscCall(DMPlexCreateSection(dm, NULL, numComp, numDof, numBC, bcField, NULL, bcPointIS, NULL, &section));
+  PetscCall(ISDestroy(&bcPointIS[0]));
   /* Name the Field variables */
-  ierr = PetscSectionSetFieldName(section, 0, "u");CHKERRQ(ierr);
-  ierr = PetscSectionSetFieldName(section, 1, "v");CHKERRQ(ierr);
-  ierr = PetscSectionSetFieldName(section, 2, "w");CHKERRQ(ierr);
-  ierr = PetscSectionView(section, PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
+  PetscCall(PetscSectionSetFieldName(section, 0, "u"));
+  PetscCall(PetscSectionSetFieldName(section, 1, "v"));
+  PetscCall(PetscSectionSetFieldName(section, 2, "w"));
+  PetscCall(PetscSectionViewFromOptions(section, NULL, "-mysection_view"));
   /* Tell the DM to use this data layout */
-  ierr = DMSetLocalSection(dm, section);CHKERRQ(ierr);
+  PetscCall(DMSetLocalSection(dm, section));
   /* Create a Vec with this layout and view it */
-  ierr = DMGetGlobalVector(dm, &u);CHKERRQ(ierr);
-  ierr = PetscViewerCreate(PETSC_COMM_WORLD, &viewer);CHKERRQ(ierr);
-  ierr = PetscViewerSetType(viewer, PETSCVIEWERVTK);CHKERRQ(ierr);
-  ierr = PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_VTK);CHKERRQ(ierr);
-  ierr = PetscViewerFileSetName(viewer, "sol.vtk");CHKERRQ(ierr);
-  ierr = VecView(u, viewer);CHKERRQ(ierr);
-  ierr = PetscViewerDestroy(&viewer);CHKERRQ(ierr);
-  ierr = DMRestoreGlobalVector(dm, &u);CHKERRQ(ierr);
+  PetscCall(DMGetGlobalVector(dm, &u));
+  PetscCall(PetscViewerCreate(PETSC_COMM_WORLD, &viewer));
+  PetscCall(PetscViewerSetType(viewer, PETSCVIEWERVTK));
+  PetscCall(PetscViewerFileSetName(viewer, "sol.vtu"));
+  PetscCall(VecView(u, viewer));
+  PetscCall(PetscViewerDestroy(&viewer));
+  PetscCall(DMRestoreGlobalVector(dm, &u));
   /* Cleanup */
-  ierr = PetscSectionDestroy(&section);CHKERRQ(ierr);
-  ierr = DMDestroy(&dm);CHKERRQ(ierr);
-  ierr = PetscFinalize();
-  return ierr;
+  PetscCall(PetscSectionDestroy(&section));
+  PetscCall(DMDestroy(&dm));
+  PetscCall(PetscFinalize());
+  return 0;
 }
 
 /*TEST
@@ -73,10 +71,22 @@ int main(int argc, char **argv)
   test:
     suffix: 0
     requires: triangle
-    args: -info :~sys
+    args: -mysection_view -info :~sys,mat
+
   test:
     suffix: 1
     requires: ctetgen
-    args: -dim 3 -info :~sys
+    args: -dm_plex_dim 3 -mysection_view -info :~sys,mat
+
+  test:
+    suffix: filter_0
+    args: -dm_plex_simplex 0 -dm_plex_box_faces 3,3 -dm_plex_label_lower 0,1,2,3,4,6 \
+      -dm_refine 1 -dm_plex_transform_type transform_filter -dm_plex_transform_active lower \
+      -dm_view
+
+  test:
+    suffix: submesh_0
+    requires: triangle
+    args: -dm_plex_label_middle 9,12,15,23,31 -dm_plex_submesh middle -dm_view
 
 TEST*/

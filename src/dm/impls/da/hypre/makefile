@@ -1,18 +1,8 @@
 -include ../../../../../petscdir.mk
 #requirespackage 'PETSC_HAVE_HYPRE'
-ALL: lib
 
-CFLAGS   =
-FFLAGS   =
-SOURCEC  = mhyp.c
-SOURCEF  =
-SOURCEH  = mhyp.h
-LIBBASE  = libpetscdm
-MANSEC   = DM
-SUBMANSEC= DMDA
-DIRS     =
-LOCDIR   = src/dm/impls/da/hypre/
+MANSEC    = DM
+SUBMANSEC = DMDA
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
-include ${PETSC_DIR}/lib/petsc/conf/rules
-include ${PETSC_DIR}/lib/petsc/conf/test
+include ${PETSC_DIR}/lib/petsc/conf/rules_doc.mk

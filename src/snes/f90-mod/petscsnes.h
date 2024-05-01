@@ -1,5 +1,5 @@
 !
-!  Include file for Fortran use of the SNES package in PETSc
+! Used by petscsnesmod.F90 to create Fortran module file
 !
 #include "petsc/finclude/petscsnes.h"
 
@@ -52,13 +52,18 @@
       PetscEnum, parameter :: SNES_NORM_FINAL_ONLY             =  3
       PetscEnum, parameter :: SNES_NORM_INITIAL_FINAL_ONLY     =  4
 !
-!  Some PETSc fortran functions that the user might pass as arguments
+!  SNESFunctionType
+!
+      PetscEnum, parameter :: SNES_FUNCTION_DEFAULT          = -1
+      PetscEnum, parameter :: SNES_FUNCTION_UNPRECONDITIONED = 0
+      PetscEnum, parameter :: SNES_FUNCTION_PRECONDITIONED   = 1
+!
+!  Some PETSc Fortran functions that the user might pass as arguments
 !
       external SNESCOMPUTEJACOBIANDEFAULT
       external MATMFFDCOMPUTEJACOBIAN
       external SNESCOMPUTEJACOBIANDEFAULTCOLOR
       external SNESMONITORDEFAULT
-      external SNESMONITORLGRESIDUALNORM
       external SNESMONITORSOLUTION
       external SNESMONITORSOLUTIONUPDATE
 
@@ -106,6 +111,3 @@
       PetscEnum, parameter :: SNES_NCG_HS  = 2
       PetscEnum, parameter :: SNES_NCG_DY  = 3
       PetscEnum, parameter :: SNES_NCG_CD  = 4
-!
-!  End of Fortran include file for the SNES package in PETSc
-

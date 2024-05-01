@@ -4,16 +4,16 @@ static const char help[] = "Integrate chemistry using TChem.\n";
 #include <petscdmda.h>
 
 #if defined(PETSC_HAVE_TCHEM)
-#if defined(MAX)
-#undef MAX
-#endif
-#if defined(MIN)
-#undef MIN
-#endif
-#  include <TC_params.h>
-#  include <TC_interface.h>
+  #if defined(MAX)
+    #undef MAX
+  #endif
+  #if defined(MIN)
+    #undef MIN
+  #endif
+  #include <TC_params.h>
+  #include <TC_interface.h>
 #else
-#  error TChem is required for this example.  Reconfigure PETSc using --download-tchem.
+  #error TChem is required for this example.  Reconfigure PETSc using --download-tchem.
 #endif
 /*
 
@@ -41,7 +41,7 @@ static const char help[] = "Integrate chemistry using TChem.\n";
         Save the images in a .gif (movie) file
         -draw_save -draw_save_single_file
 
-        Compute the sensitivies of the solution of the first tempature on the initial conditions
+        Compute the sensitivities of the solution of the first temperature on the initial conditions
         -ts_adjoint_solve  -ts_dt 1.e-5 -ts_type cn -ts_adjoint_view_solution draw
 
         Turn off diffusion
@@ -49,7 +49,6 @@ static const char help[] = "Integrate chemistry using TChem.\n";
 
         Turn off reactions
         -reactions no
-
 
     The solution for component i = 0 is the temperature.
 
@@ -67,159 +66,158 @@ struct _User {
   PetscReal pressure;
   int       Nspec;
   int       Nreac;
-  PetscReal Tini,dx;
+  PetscReal Tini, dx;
   PetscReal diffus;
   DM        dm;
-  PetscBool diffusion,reactions;
-  double    *tchemwork;
-  double    *Jdense;        /* Dense array workspace where Tchem computes the Jacobian */
-  PetscInt  *rows;
+  PetscBool diffusion, reactions;
+  double   *tchemwork;
+  double   *Jdense; /* Dense array workspace where Tchem computes the Jacobian */
+  PetscInt *rows;
 };
 
-static PetscErrorCode MonitorCell(TS,User,PetscInt);
-static PetscErrorCode FormRHSFunction(TS,PetscReal,Vec,Vec,void*);
-static PetscErrorCode FormRHSJacobian(TS,PetscReal,Vec,Mat,Mat,void*);
-static PetscErrorCode FormInitialSolution(TS,Vec,void*);
+static PetscErrorCode MonitorCell(TS, User, PetscInt);
+static PetscErrorCode FormRHSFunction(TS, PetscReal, Vec, Vec, void *);
+static PetscErrorCode FormRHSJacobian(TS, PetscReal, Vec, Mat, Mat, void *);
+static PetscErrorCode FormInitialSolution(TS, Vec, void *);
 
-#define TCCHKERRQ(ierr) do {if (ierr) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error in TChem library, return code %d",ierr);} while (0)
+#define PetscCallTC(ierr) \
+  do { \
+    PetscCheck(!ierr, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in TChem library, return code %d", ierr); \
+  } while (0)
 
-int main(int argc,char **argv)
+int main(int argc, char **argv)
 {
-  TS                ts;         /* time integrator */
+  TS                ts; /* time integrator */
   TSAdapt           adapt;
-  Vec               X;          /* solution vector */
-  Mat               J;          /* Jacobian matrix */
-  PetscInt          steps,ncells,xs,xm,i;
-  PetscErrorCode    ierr;
-  PetscReal         ftime,dt;
-  char              chemfile[PETSC_MAX_PATH_LEN] = "chem.inp",thermofile[PETSC_MAX_PATH_LEN] = "therm.dat";
+  Vec               X; /* solution vector */
+  Mat               J; /* Jacobian matrix */
+  PetscInt          steps, ncells, xs, xm, i;
+  PetscReal         ftime, dt;
+  char              chemfile[PETSC_MAX_PATH_LEN] = "chem.inp", thermofile[PETSC_MAX_PATH_LEN] = "therm.dat";
   struct _User      user;
   TSConvergedReason reason;
   PetscBool         showsolutions = PETSC_FALSE;
-  char              **snames,*names;
-  Vec               lambda;     /* used with TSAdjoint for sensitivities */
+  char            **snames, *names;
+  Vec               lambda; /* used with TSAdjoint for sensitivities */
 
-  ierr = PetscInitialize(&argc,&argv,(char*)0,help);if (ierr) return ierr;
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"Chemistry solver options","");CHKERRQ(ierr);
-  ierr = PetscOptionsString("-chem","CHEMKIN input file","",chemfile,chemfile,sizeof(chemfile),NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsString("-thermo","NASA thermo input file","",thermofile,thermofile,sizeof(thermofile),NULL);CHKERRQ(ierr);
-  user.pressure = 1.01325e5;    /* Pascal */
-  ierr = PetscOptionsReal("-pressure","Pressure of reaction [Pa]","",user.pressure,&user.pressure,NULL);CHKERRQ(ierr);
-  user.Tini   = 1550;
-  ierr = PetscOptionsReal("-Tini","Initial temperature [K]","",user.Tini,&user.Tini,NULL);CHKERRQ(ierr);
+  PetscFunctionBeginUser;
+  PetscCall(PetscInitialize(&argc, &argv, (char *)0, help));
+  PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "Chemistry solver options", "");
+  PetscCall(PetscOptionsString("-chem", "CHEMKIN input file", "", chemfile, chemfile, sizeof(chemfile), NULL));
+  PetscCall(PetscOptionsString("-thermo", "NASA thermo input file", "", thermofile, thermofile, sizeof(thermofile), NULL));
+  user.pressure = 1.01325e5; /* Pascal */
+  PetscCall(PetscOptionsReal("-pressure", "Pressure of reaction [Pa]", "", user.pressure, &user.pressure, NULL));
+  user.Tini = 1550;
+  PetscCall(PetscOptionsReal("-Tini", "Initial temperature [K]", "", user.Tini, &user.Tini, NULL));
   user.diffus = 100;
-  ierr = PetscOptionsReal("-diffus","Diffusion constant","",user.diffus,&user.diffus,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-draw_solution","Plot the solution for each cell","",showsolutions,&showsolutions,NULL);CHKERRQ(ierr);
+  PetscCall(PetscOptionsReal("-diffus", "Diffusion constant", "", user.diffus, &user.diffus, NULL));
+  PetscCall(PetscOptionsBool("-draw_solution", "Plot the solution for each cell", "", showsolutions, &showsolutions, NULL));
   user.diffusion = PETSC_TRUE;
-  ierr = PetscOptionsBool("-diffusion","Have diffusion","",user.diffusion,&user.diffusion,NULL);CHKERRQ(ierr);
+  PetscCall(PetscOptionsBool("-diffusion", "Have diffusion", "", user.diffusion, &user.diffusion, NULL));
   user.reactions = PETSC_TRUE;
-  ierr = PetscOptionsBool("-reactions","Have reactions","",user.reactions,&user.reactions,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsEnd();CHKERRQ(ierr);
+  PetscCall(PetscOptionsBool("-reactions", "Have reactions", "", user.reactions, &user.reactions, NULL));
+  PetscOptionsEnd();
 
-  ierr = TC_initChem(chemfile, thermofile, 0, 1.0);TCCHKERRQ(ierr);
+  PetscCallTC(TC_initChem(chemfile, thermofile, 0, 1.0));
   user.Nspec = TC_getNspec();
   user.Nreac = TC_getNreac();
 
-  ierr    = DMDACreate1d(PETSC_COMM_WORLD,DM_BOUNDARY_PERIODIC,10,user.Nspec+1,1,NULL,&user.dm);CHKERRQ(ierr);
-  ierr    = DMSetFromOptions(user.dm);CHKERRQ(ierr);
-  ierr    = DMSetUp(user.dm);CHKERRQ(ierr);
-  ierr    = DMDAGetInfo(user.dm,NULL,&ncells,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL);CHKERRQ(ierr);
-  user.dx = 1.0/ncells;  /* Set the coordinates of the cell centers; note final ghost cell is at x coordinate 1.0 */
-  ierr    = DMDASetUniformCoordinates(user.dm,0.0,1.0,0.0,1.0,0.0,1.0);CHKERRQ(ierr);
+  PetscCall(DMDACreate1d(PETSC_COMM_WORLD, DM_BOUNDARY_PERIODIC, 10, user.Nspec + 1, 1, NULL, &user.dm));
+  PetscCall(DMSetFromOptions(user.dm));
+  PetscCall(DMSetUp(user.dm));
+  PetscCall(DMDAGetInfo(user.dm, NULL, &ncells, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL));
+  user.dx = 1.0 / ncells; /* Set the coordinates of the cell centers; note final ghost cell is at x coordinate 1.0 */
+  PetscCall(DMDASetUniformCoordinates(user.dm, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0));
 
   /* set the names of each field in the DMDA based on the species name */
-  ierr = PetscMalloc1((user.Nspec+1)*LENGTHOFSPECNAME,&names);CHKERRQ(ierr);
-  ierr = PetscStrcpy(names,"Temp");CHKERRQ(ierr);
-  TC_getSnames(user.Nspec,names+LENGTHOFSPECNAME);CHKERRQ(ierr);
-  ierr = PetscMalloc1((user.Nspec+2),&snames);CHKERRQ(ierr);
-  for (i=0; i<user.Nspec+1; i++) snames[i] = names+i*LENGTHOFSPECNAME;
-  snames[user.Nspec+1] = NULL;
-  ierr = DMDASetFieldNames(user.dm,(const char * const *)snames);CHKERRQ(ierr);
-  ierr = PetscFree(snames);CHKERRQ(ierr);
-  ierr = PetscFree(names);CHKERRQ(ierr);
+  PetscCall(PetscMalloc1((user.Nspec + 1) * LENGTHOFSPECNAME, &names));
+  PetscCall(PetscStrncpy(names, "Temp", (user.Nspec + 1) * LENGTHOFSPECNAME);
+  TC_getSnames(user.Nspec, names + LENGTHOFSPECNAME);
+  PetscCall(PetscMalloc1((user.Nspec + 2), &snames));
+  for (i = 0; i < user.Nspec + 1; i++) snames[i] = names + i * LENGTHOFSPECNAME;
+  snames[user.Nspec + 1] = NULL;
+  PetscCall(DMDASetFieldNames(user.dm, (const char *const *)snames));
+  PetscCall(PetscFree(snames));
+  PetscCall(PetscFree(names));
 
+  PetscCall(DMCreateMatrix(user.dm, &J));
+  PetscCall(DMCreateGlobalVector(user.dm, &X));
 
-  ierr = DMCreateMatrix(user.dm,&J);CHKERRQ(ierr);
-  ierr = DMCreateGlobalVector(user.dm,&X);CHKERRQ(ierr);
-
-  ierr = PetscMalloc3(user.Nspec+1,&user.tchemwork,PetscSqr(user.Nspec+1),&user.Jdense,user.Nspec+1,&user.rows);CHKERRQ(ierr);
+  PetscCall(PetscMalloc3(user.Nspec + 1, &user.tchemwork, PetscSqr(user.Nspec + 1), &user.Jdense, user.Nspec + 1, &user.rows));
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Create timestepping solver context
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-  ierr = TSCreate(PETSC_COMM_WORLD,&ts);CHKERRQ(ierr);
-  ierr = TSSetDM(ts,user.dm);CHKERRQ(ierr);
-  ierr = TSSetType(ts,TSARKIMEX);CHKERRQ(ierr);
-  ierr = TSARKIMEXSetFullyImplicit(ts,PETSC_TRUE);CHKERRQ(ierr);
-  ierr = TSARKIMEXSetType(ts,TSARKIMEX4);CHKERRQ(ierr);
-  ierr = TSSetRHSFunction(ts,NULL,FormRHSFunction,&user);CHKERRQ(ierr);
-  ierr = TSSetRHSJacobian(ts,J,J,FormRHSJacobian,&user);CHKERRQ(ierr);
+  PetscCall(TSCreate(PETSC_COMM_WORLD, &ts));
+  PetscCall(TSSetDM(ts, user.dm));
+  PetscCall(TSSetType(ts, TSARKIMEX));
+  PetscCall(TSARKIMEXSetFullyImplicit(ts, PETSC_TRUE));
+  PetscCall(TSARKIMEXSetType(ts, TSARKIMEX4));
+  PetscCall(TSSetRHSFunction(ts, NULL, FormRHSFunction, &user));
+  PetscCall(TSSetRHSJacobian(ts, J, J, FormRHSJacobian, &user));
 
   ftime = 1.0;
-  ierr = TSSetMaxTime(ts,ftime);CHKERRQ(ierr);
-  ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_STEPOVER);CHKERRQ(ierr);
+  PetscCall(TSSetMaxTime(ts, ftime));
+  PetscCall(TSSetExactFinalTime(ts, TS_EXACTFINALTIME_STEPOVER));
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Set initial conditions
    - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-  ierr = FormInitialSolution(ts,X,&user);CHKERRQ(ierr);
-  ierr = TSSetSolution(ts,X);CHKERRQ(ierr);
-  dt   = 1e-10;                 /* Initial time step */
-  ierr = TSSetTimeStep(ts,dt);CHKERRQ(ierr);
-  ierr = TSGetAdapt(ts,&adapt);CHKERRQ(ierr);
-  ierr = TSAdaptSetStepLimits(adapt,1e-12,1e-4);CHKERRQ(ierr); /* Also available with -ts_adapt_dt_min/-ts_adapt_dt_max */
-  ierr = TSSetMaxSNESFailures(ts,-1);CHKERRQ(ierr);            /* Retry step an unlimited number of times */
-
+  PetscCall(FormInitialSolution(ts, X, &user));
+  PetscCall(TSSetSolution(ts, X));
+  dt = 1e-10; /* Initial time step */
+  PetscCall(TSSetTimeStep(ts, dt));
+  PetscCall(TSGetAdapt(ts, &adapt));
+  PetscCall(TSAdaptSetStepLimits(adapt, 1e-12, 1e-4)); /* Also available with -ts_adapt_dt_min/-ts_adapt_dt_max */
+  PetscCall(TSSetMaxSNESFailures(ts, -1));             /* Retry step an unlimited number of times */
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Pass information to graphical monitoring routine
    - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
   if (showsolutions) {
-    ierr = DMDAGetCorners(user.dm,&xs,NULL,NULL,&xm,NULL,NULL);CHKERRQ(ierr);
-    for (i=xs;i<xs+xm;i++) {
-      ierr = MonitorCell(ts,&user,i);CHKERRQ(ierr);
-    }
+    PetscCall(DMDAGetCorners(user.dm, &xs, NULL, NULL, &xm, NULL, NULL));
+    for (i = xs; i < xs + xm; i++) PetscCall(MonitorCell(ts, &user, i));
   }
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Set runtime options
    - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-  ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
+  PetscCall(TSSetFromOptions(ts));
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Set final conditions for sensitivities
    - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-  ierr = DMCreateGlobalVector(user.dm,&lambda);CHKERRQ(ierr);
-  ierr = TSSetCostGradients(ts,1,&lambda,NULL);CHKERRQ(ierr);
-  ierr = VecSetValue(lambda,0,1.0,INSERT_VALUES);CHKERRQ(ierr);
-  ierr = VecAssemblyBegin(lambda);CHKERRQ(ierr);
-  ierr = VecAssemblyEnd(lambda);CHKERRQ(ierr);
+  PetscCall(DMCreateGlobalVector(user.dm, &lambda));
+  PetscCall(TSSetCostGradients(ts, 1, &lambda, NULL));
+  PetscCall(VecSetValue(lambda, 0, 1.0, INSERT_VALUES));
+  PetscCall(VecAssemblyBegin(lambda));
+  PetscCall(VecAssemblyEnd(lambda));
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Solve ODE
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-  ierr = TSSolve(ts,X);CHKERRQ(ierr);
-  ierr = TSGetSolveTime(ts,&ftime);CHKERRQ(ierr);
-  ierr = TSGetStepNumber(ts,&steps);CHKERRQ(ierr);
-  ierr = TSGetConvergedReason(ts,&reason);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"%s at time %g after %D steps\n",TSConvergedReasons[reason],(double)ftime,steps);CHKERRQ(ierr);
+  PetscCall(TSSolve(ts, X));
+  PetscCall(TSGetSolveTime(ts, &ftime));
+  PetscCall(TSGetStepNumber(ts, &steps));
+  PetscCall(TSGetConvergedReason(ts, &reason));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%s at time %g after %" PetscInt_FMT " steps\n", TSConvergedReasons[reason], (double)ftime, steps));
 
   {
     Vec                max;
-    const char * const *names;
+    const char *const *names;
     PetscInt           i;
-    const PetscReal    *bmax;
+    const PetscReal   *bmax;
 
-    ierr = TSMonitorEnvelopeGetBounds(ts,&max,NULL);CHKERRQ(ierr);
+    PetscCall(TSMonitorEnvelopeGetBounds(ts, &max, NULL));
     if (max) {
-      ierr = TSMonitorLGGetVariableNames(ts,&names);CHKERRQ(ierr);
+      PetscCall(TSMonitorLGGetVariableNames(ts, &names));
       if (names) {
-        ierr = VecGetArrayRead(max,&bmax);CHKERRQ(ierr);
-        ierr = PetscPrintf(PETSC_COMM_SELF,"Species - maximum mass fraction\n");CHKERRQ(ierr);
-        for (i=1; i<user.Nspec; i++) {
-          if (bmax[i] > .01) {ierr = PetscPrintf(PETSC_COMM_SELF,"%s %g\n",names[i],bmax[i]);CHKERRQ(ierr);}
+        PetscCall(VecGetArrayRead(max, &bmax));
+        PetscCall(PetscPrintf(PETSC_COMM_SELF, "Species - maximum mass fraction\n"));
+        for (i = 1; i < user.Nspec; i++) {
+          if (bmax[i] > .01) PetscCall(PetscPrintf(PETSC_COMM_SELF, "%s %g\n", names[i], (double)bmax[i]));
         }
-        ierr = VecRestoreArrayRead(max,&bmax);CHKERRQ(ierr);
+        PetscCall(VecRestoreArrayRead(max, &bmax));
       }
     }
   }
@@ -228,196 +226,192 @@ int main(int argc,char **argv)
      Free work space.
    - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
   TC_reset();
-  ierr = DMDestroy(&user.dm);CHKERRQ(ierr);
-  ierr = MatDestroy(&J);CHKERRQ(ierr);
-  ierr = VecDestroy(&X);CHKERRQ(ierr);
-  ierr = VecDestroy(&lambda);CHKERRQ(ierr);
-  ierr = TSDestroy(&ts);CHKERRQ(ierr);
-  ierr = PetscFree3(user.tchemwork,user.Jdense,user.rows);CHKERRQ(ierr);
-  ierr = PetscFinalize();
-  return ierr;
+  PetscCall(DMDestroy(&user.dm));
+  PetscCall(MatDestroy(&J));
+  PetscCall(VecDestroy(&X));
+  PetscCall(VecDestroy(&lambda));
+  PetscCall(TSDestroy(&ts));
+  PetscCall(PetscFree3(user.tchemwork, user.Jdense, user.rows));
+  PetscCall(PetscFinalize());
+  return 0;
 }
 
 /*
    Applies the second order centered difference diffusion operator on a one dimensional periodic domain
 */
-static PetscErrorCode FormDiffusionFunction(TS ts,PetscReal t,Vec X,Vec F,void *ptr)
+static PetscErrorCode FormDiffusionFunction(TS ts, PetscReal t, Vec X, Vec F, void *ptr)
 {
-  User              user = (User)ptr;
-  PetscErrorCode    ierr;
+  User                user = (User)ptr;
   PetscScalar       **f;
   const PetscScalar **x;
-  DM                dm;
-  PetscInt          i,xs,xm,j,dof;
-  Vec               Xlocal;
-  PetscReal         idx;
+  DM                  dm;
+  PetscInt            i, xs, xm, j, dof;
+  Vec                 Xlocal;
+  PetscReal           idx;
 
   PetscFunctionBeginUser;
-  ierr = TSGetDM(ts,&dm);CHKERRQ(ierr);
-  ierr = DMDAGetInfo(dm,NULL,NULL,NULL,NULL,NULL,NULL,NULL,&dof,NULL,NULL,NULL,NULL,NULL);CHKERRQ(ierr);
-  ierr = DMGetLocalVector(dm,&Xlocal);CHKERRQ(ierr);
-  ierr = DMGlobalToLocalBegin(dm,X,INSERT_VALUES,Xlocal);CHKERRQ(ierr);
-  ierr = DMGlobalToLocalEnd(dm,X,INSERT_VALUES,Xlocal);CHKERRQ(ierr);
-  ierr = DMDAVecGetArrayDOFRead(dm,Xlocal,&x);CHKERRQ(ierr);
-  ierr = DMDAVecGetArrayDOF(dm,F,&f);CHKERRQ(ierr);
-  ierr = DMDAGetCorners(dm,&xs,NULL,NULL,&xm,NULL,NULL);CHKERRQ(ierr);
+  PetscCall(TSGetDM(ts, &dm));
+  PetscCall(DMDAGetInfo(dm, NULL, NULL, NULL, NULL, NULL, NULL, NULL, &dof, NULL, NULL, NULL, NULL, NULL));
+  PetscCall(DMGetLocalVector(dm, &Xlocal));
+  PetscCall(DMGlobalToLocalBegin(dm, X, INSERT_VALUES, Xlocal));
+  PetscCall(DMGlobalToLocalEnd(dm, X, INSERT_VALUES, Xlocal));
+  PetscCall(DMDAVecGetArrayDOFRead(dm, Xlocal, &x));
+  PetscCall(DMDAVecGetArrayDOF(dm, F, &f));
+  PetscCall(DMDAGetCorners(dm, &xs, NULL, NULL, &xm, NULL, NULL));
 
-  idx = 1.0*user->diffus/user->dx;
-  for (i=xs; i<xs+xm; i++) {
-    for (j=0; j<dof; j++) {
-      f[i][j] += idx*(x[i+1][j] - 2.0*x[i][j] + x[i-1][j]);
-    }
+  idx = 1.0 * user->diffus / user->dx;
+  for (i = xs; i < xs + xm; i++) {
+    for (j = 0; j < dof; j++) f[i][j] += idx * (x[i + 1][j] - 2.0 * x[i][j] + x[i - 1][j]);
   }
-  ierr = DMDAVecRestoreArrayDOFRead(dm,Xlocal,&x);CHKERRQ(ierr);
-  ierr = DMDAVecRestoreArrayDOF(dm,F,&f);CHKERRQ(ierr);
-  ierr = DMRestoreLocalVector(dm,&Xlocal);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(DMDAVecRestoreArrayDOFRead(dm, Xlocal, &x));
+  PetscCall(DMDAVecRestoreArrayDOF(dm, F, &f));
+  PetscCall(DMRestoreLocalVector(dm, &Xlocal));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*
    Produces the second order centered difference diffusion operator on a one dimensional periodic domain
 */
-static PetscErrorCode FormDiffusionJacobian(TS ts,PetscReal t,Vec X,Mat Amat,Mat Pmat,void *ptr)
+static PetscErrorCode FormDiffusionJacobian(TS ts, PetscReal t, Vec X, Mat Amat, Mat Pmat, void *ptr)
 {
-  User              user = (User)ptr;
-  PetscErrorCode    ierr;
-  DM                dm;
-  PetscInt          i,xs,xm,j,dof;
-  PetscReal         idx,values[3];
-  MatStencil        row,col[3];
+  User       user = (User)ptr;
+  DM         dm;
+  PetscInt   i, xs, xm, j, dof;
+  PetscReal  idx, values[3];
+  MatStencil row, col[3];
 
   PetscFunctionBeginUser;
-  ierr = TSGetDM(ts,&dm);CHKERRQ(ierr);
-  ierr = DMDAGetInfo(dm,NULL,NULL,NULL,NULL,NULL,NULL,NULL,&dof,NULL,NULL,NULL,NULL,NULL);CHKERRQ(ierr);
-  ierr = DMDAGetCorners(dm,&xs,NULL,NULL,&xm,NULL,NULL);CHKERRQ(ierr);
+  PetscCall(TSGetDM(ts, &dm));
+  PetscCall(DMDAGetInfo(dm, NULL, NULL, NULL, NULL, NULL, NULL, NULL, &dof, NULL, NULL, NULL, NULL, NULL));
+  PetscCall(DMDAGetCorners(dm, &xs, NULL, NULL, &xm, NULL, NULL));
 
-  idx = 1.0*user->diffus/user->dx;
+  idx       = 1.0 * user->diffus / user->dx;
   values[0] = idx;
-  values[1] = -2.0*idx;
+  values[1] = -2.0 * idx;
   values[2] = idx;
-  for (i=xs; i<xs+xm; i++) {
-    for (j=0; j<dof; j++) {
-      row.i = i;      row.c = j;
-      col[0].i = i-1; col[0].c = j;
-      col[1].i = i;   col[1].c = j;
-      col[2].i = i+1; col[2].c = j;
-      ierr = MatSetValuesStencil(Pmat,1,&row,3,col,values,ADD_VALUES);CHKERRQ(ierr);
+  for (i = xs; i < xs + xm; i++) {
+    for (j = 0; j < dof; j++) {
+      row.i    = i;
+      row.c    = j;
+      col[0].i = i - 1;
+      col[0].c = j;
+      col[1].i = i;
+      col[1].c = j;
+      col[2].i = i + 1;
+      col[2].c = j;
+      PetscCall(MatSetValuesStencil(Pmat, 1, &row, 3, col, values, ADD_VALUES));
     }
   }
-  ierr = MatAssemblyBegin(Pmat,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  ierr = MatAssemblyEnd(Pmat,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(MatAssemblyBegin(Pmat, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(Pmat, MAT_FINAL_ASSEMBLY));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode FormRHSFunction(TS ts,PetscReal t,Vec X,Vec F,void *ptr)
+static PetscErrorCode FormRHSFunction(TS ts, PetscReal t, Vec X, Vec F, void *ptr)
 {
-  User              user = (User)ptr;
-  PetscErrorCode    ierr;
+  User                user = (User)ptr;
   PetscScalar       **f;
   const PetscScalar **x;
-  DM                dm;
-  PetscInt          i,xs,xm;
+  DM                  dm;
+  PetscInt            i, xs, xm;
 
   PetscFunctionBeginUser;
   if (user->reactions) {
-    ierr = TSGetDM(ts,&dm);CHKERRQ(ierr);
-    ierr = DMDAVecGetArrayDOFRead(dm,X,&x);CHKERRQ(ierr);
-    ierr = DMDAVecGetArrayDOF(dm,F,&f);CHKERRQ(ierr);
-    ierr = DMDAGetCorners(dm,&xs,NULL,NULL,&xm,NULL,NULL);CHKERRQ(ierr);
+    PetscCall(TSGetDM(ts, &dm));
+    PetscCall(DMDAVecGetArrayDOFRead(dm, X, &x));
+    PetscCall(DMDAVecGetArrayDOF(dm, F, &f));
+    PetscCall(DMDAGetCorners(dm, &xs, NULL, NULL, &xm, NULL, NULL));
 
-    for (i=xs; i<xs+xm; i++) {
-      ierr = PetscArraycpy(user->tchemwork,x[i],user->Nspec+1);CHKERRQ(ierr);
+    for (i = xs; i < xs + xm; i++) {
+      PetscCall(PetscArraycpy(user->tchemwork, x[i], user->Nspec + 1));
       user->tchemwork[0] *= user->Tini; /* Dimensionalize */
-      ierr = TC_getSrc(user->tchemwork,user->Nspec+1,f[i]);TCCHKERRQ(ierr);
-      f[i][0] /= user->Tini;           /* Non-dimensionalize */
+      PetscCallTC(TC_getSrc(user->tchemwork, user->Nspec + 1, f[i]));
+      f[i][0] /= user->Tini; /* Non-dimensionalize */
     }
 
-    ierr = DMDAVecRestoreArrayDOFRead(dm,X,&x);CHKERRQ(ierr);
-    ierr = DMDAVecRestoreArrayDOF(dm,F,&f);CHKERRQ(ierr);
+    PetscCall(DMDAVecRestoreArrayDOFRead(dm, X, &x));
+    PetscCall(DMDAVecRestoreArrayDOF(dm, F, &f));
   } else {
-    ierr = VecZeroEntries(F);CHKERRQ(ierr);
+    PetscCall(VecZeroEntries(F));
   }
-  if (user->diffusion) {
-    ierr = FormDiffusionFunction(ts,t,X,F,ptr);CHKERRQ(ierr);
-  }
-  PetscFunctionReturn(0);
+  if (user->diffusion) PetscCall(FormDiffusionFunction(ts, t, X, F, ptr));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode FormRHSJacobian(TS ts,PetscReal t,Vec X,Mat Amat,Mat Pmat,void *ptr)
+static PetscErrorCode FormRHSJacobian(TS ts, PetscReal t, Vec X, Mat Amat, Mat Pmat, void *ptr)
 {
-  User              user = (User)ptr;
-  PetscErrorCode    ierr;
+  User                user = (User)ptr;
   const PetscScalar **x;
-  PetscInt          M = user->Nspec+1,i,j,xs,xm;
-  DM                dm;
+  PetscInt            M = user->Nspec + 1, i, j, xs, xm;
+  DM                  dm;
 
   PetscFunctionBeginUser;
   if (user->reactions) {
-    ierr = TSGetDM(ts,&dm);CHKERRQ(ierr);
-    ierr = MatZeroEntries(Pmat);CHKERRQ(ierr);
-    ierr = MatSetOption(Pmat,MAT_ROW_ORIENTED,PETSC_FALSE);CHKERRQ(ierr);
-    ierr = MatSetOption(Pmat,MAT_IGNORE_ZERO_ENTRIES,PETSC_TRUE);CHKERRQ(ierr);
-    ierr = DMDAVecGetArrayDOFRead(dm,X,&x);CHKERRQ(ierr);
-    ierr = DMDAGetCorners(dm,&xs,NULL,NULL,&xm,NULL,NULL);CHKERRQ(ierr);
+    PetscCall(TSGetDM(ts, &dm));
+    PetscCall(MatZeroEntries(Pmat));
+    PetscCall(MatSetOption(Pmat, MAT_ROW_ORIENTED, PETSC_FALSE));
+    PetscCall(MatSetOption(Pmat, MAT_IGNORE_ZERO_ENTRIES, PETSC_TRUE));
+    PetscCall(DMDAVecGetArrayDOFRead(dm, X, &x));
+    PetscCall(DMDAGetCorners(dm, &xs, NULL, NULL, &xm, NULL, NULL));
 
-    for (i=xs; i<xs+xm; i++) {
-      ierr = PetscArraycpy(user->tchemwork,x[i],user->Nspec+1);CHKERRQ(ierr);
-      user->tchemwork[0] *= user->Tini;  /* Dimensionalize temperature (first row) because that is what Tchem wants */
-      ierr = TC_getJacTYN(user->tchemwork,user->Nspec,user->Jdense,1);CHKERRQ(ierr);
+    for (i = xs; i < xs + xm; i++) {
+      PetscCall(PetscArraycpy(user->tchemwork, x[i], user->Nspec + 1));
+      user->tchemwork[0] *= user->Tini; /* Dimensionalize temperature (first row) because that is what Tchem wants */
+      PetscCall(TC_getJacTYN(user->tchemwork, user->Nspec, user->Jdense, 1));
 
-      for (j=0; j<M; j++) user->Jdense[j + 0*M] /= user->Tini; /* Non-dimensionalize first column */
-      for (j=0; j<M; j++) user->Jdense[0 + j*M] /= user->Tini; /* Non-dimensionalize first row */
-      for (j=0; j<M; j++) user->rows[j] = i*M+j;
-      ierr = MatSetValues(Pmat,M,user->rows,M,user->rows,user->Jdense,INSERT_VALUES);CHKERRQ(ierr);
+      for (j = 0; j < M; j++) user->Jdense[j + 0 * M] /= user->Tini; /* Non-dimensionalize first column */
+      for (j = 0; j < M; j++) user->Jdense[0 + j * M] /= user->Tini; /* Non-dimensionalize first row */
+      for (j = 0; j < M; j++) user->rows[j] = i * M + j;
+      PetscCall(MatSetValues(Pmat, M, user->rows, M, user->rows, user->Jdense, INSERT_VALUES));
     }
-    ierr = DMDAVecRestoreArrayDOFRead(dm,X,&x);CHKERRQ(ierr);
-    ierr = MatAssemblyBegin(Pmat,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-    ierr = MatAssemblyEnd(Pmat,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+    PetscCall(DMDAVecRestoreArrayDOFRead(dm, X, &x));
+    PetscCall(MatAssemblyBegin(Pmat, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(Pmat, MAT_FINAL_ASSEMBLY));
   } else {
-    ierr = MatZeroEntries(Pmat);CHKERRQ(ierr);
+    PetscCall(MatZeroEntries(Pmat));
   }
-  if (user->diffusion) {
-    ierr = FormDiffusionJacobian(ts,t,X,Amat,Pmat,ptr);CHKERRQ(ierr);
-  }
+  if (user->diffusion) PetscCall(FormDiffusionJacobian(ts, t, X, Amat, Pmat, ptr));
   if (Amat != Pmat) {
-    ierr = MatAssemblyBegin(Amat,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-    ierr = MatAssemblyEnd(Amat,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+    PetscCall(MatAssemblyBegin(Amat, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(Amat, MAT_FINAL_ASSEMBLY));
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode FormInitialSolution(TS ts,Vec X,void *ctx)
+PetscErrorCode FormInitialSolution(TS ts, Vec X, void *ctx)
 {
-  PetscScalar    **x,*xc;
-  PetscErrorCode ierr;
-  struct {const char *name; PetscReal massfrac;} initial[] = {
-    {"CH4", 0.0948178320887},
-    {"O2", 0.189635664177},
-    {"N2", 0.706766236705},
-    {"AR", 0.00878026702874}
+  PetscScalar **x, *xc;
+  struct {
+    const char *name;
+    PetscReal   massfrac;
+  } initial[] = {
+    {"CH4", 0.0948178320887 },
+    {"O2",  0.189635664177  },
+    {"N2",  0.706766236705  },
+    {"AR",  0.00878026702874}
   };
-  PetscInt       i,j,xs,xm;
-  DM             dm;
+  PetscInt i, j, xs, xm;
+  DM       dm;
 
   PetscFunctionBeginUser;
-  ierr = VecZeroEntries(X);CHKERRQ(ierr);
-  ierr = TSGetDM(ts,&dm);CHKERRQ(ierr);
-  ierr = DMDAGetCorners(dm,&xs,NULL,NULL,&xm,NULL,NULL);CHKERRQ(ierr);
+  PetscCall(VecZeroEntries(X));
+  PetscCall(TSGetDM(ts, &dm));
+  PetscCall(DMDAGetCorners(dm, &xs, NULL, NULL, &xm, NULL, NULL));
 
-  ierr = DMDAGetCoordinateArray(dm,&xc);CHKERRQ(ierr);
-  ierr = DMDAVecGetArrayDOF(dm,X,&x);CHKERRQ(ierr);
-  for (i=xs; i<xs+xm; i++) {
-    x[i][0] = 1.0 + .05*PetscSinScalar(2.*PETSC_PI*xc[i]);  /* Non-dimensionalized by user->Tini */
-    for (j=0; j<sizeof(initial)/sizeof(initial[0]); j++) {
+  PetscCall(DMDAGetCoordinateArray(dm, &xc));
+  PetscCall(DMDAVecGetArrayDOF(dm, X, &x));
+  for (i = xs; i < xs + xm; i++) {
+    x[i][0] = 1.0 + .05 * PetscSinScalar(2. * PETSC_PI * xc[i]); /* Non-dimensionalized by user->Tini */
+    for (j = 0; j < PETSC_STATIC_ARRAY_LENGTH(initial); j++) {
       int ispec = TC_getSpos(initial[j].name, strlen(initial[j].name));
-      if (ispec < 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_USER,"Could not find species %s",initial[j].name);
-      ierr = PetscPrintf(PETSC_COMM_SELF,"Species %d: %s %g\n",j,initial[j].name,initial[j].massfrac);CHKERRQ(ierr);
-      x[i][1+ispec] = initial[j].massfrac;
+      PetscCheck(ispec >= 0, PETSC_COMM_SELF, PETSC_ERR_USER, "Could not find species %s", initial[j].name);
+      PetscCall(PetscPrintf(PETSC_COMM_SELF, "Species %d: %s %g\n", j, initial[j].name, (double)initial[j].massfrac));
+      x[i][1 + ispec] = initial[j].massfrac;
     }
   }
-  ierr = DMDAVecRestoreArrayDOF(dm,X,&x);CHKERRQ(ierr);
-  ierr = DMDARestoreCoordinateArray(dm,&xc);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(DMDAVecRestoreArrayDOF(dm, X, &x));
+  PetscCall(DMDARestoreCoordinateArray(dm, &xc));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*
@@ -428,67 +422,61 @@ typedef struct {
   User     user;
 } UserLGCtx;
 
-static PetscErrorCode FormMoleFraction(UserLGCtx *ctx,Vec massf,Vec *molef)
+static PetscErrorCode FormMoleFraction(UserLGCtx *ctx, Vec massf, Vec *molef)
 {
-  User              user = ctx->user;
-  PetscErrorCode    ierr;
-  PetscReal         *M,tM=0;
-  PetscInt          i,n = user->Nspec+1;
-  PetscScalar       *mof;
+  User                user = ctx->user;
+  PetscReal          *M, tM = 0;
+  PetscInt            i, n  = user->Nspec + 1;
+  PetscScalar        *mof;
   const PetscScalar **maf;
 
-  PetscFunctionBegin;
-  ierr = VecCreateSeq(PETSC_COMM_SELF,n,molef);CHKERRQ(ierr);
-  ierr = PetscMalloc1(user->Nspec,&M);CHKERRQ(ierr);
+  PetscFunctionBeginUser;
+  PetscCall(VecCreateSeq(PETSC_COMM_SELF, n, molef));
+  PetscCall(PetscMalloc1(user->Nspec, &M));
   TC_getSmass(user->Nspec, M);
-  ierr = DMDAVecGetArrayDOFRead(user->dm,massf,&maf);CHKERRQ(ierr);
-  ierr = VecGetArray(*molef,&mof);CHKERRQ(ierr);
+  PetscCall(DMDAVecGetArrayDOFRead(user->dm, massf, &maf));
+  PetscCall(VecGetArray(*molef, &mof));
   mof[0] = maf[ctx->cell][0]; /* copy over temperature */
-  for (i=1; i<n; i++) tM += maf[ctx->cell][i]/M[i-1];
-  for (i=1; i<n; i++) {
-    mof[i] = maf[ctx->cell][i]/(M[i-1]*tM);
-  }
-  ierr = DMDAVecRestoreArrayDOFRead(user->dm,massf,&maf);CHKERRQ(ierr);
-  ierr = VecRestoreArray(*molef,&mof);CHKERRQ(ierr);
-  ierr = PetscFree(M);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  for (i = 1; i < n; i++) tM += maf[ctx->cell][i] / M[i - 1];
+  for (i = 1; i < n; i++) mof[i] = maf[ctx->cell][i] / (M[i - 1] * tM);
+  PetscCall(DMDAVecRestoreArrayDOFRead(user->dm, massf, &maf));
+  PetscCall(VecRestoreArray(*molef, &mof));
+  PetscCall(PetscFree(M));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode MonitorCellDestroy(UserLGCtx *uctx)
 {
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  ierr = PetscFree(uctx);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscFunctionBeginUser;
+  PetscCall(PetscFree(uctx));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*
    Use TSMonitorLG to monitor the reactions in a particular cell
 */
-static PetscErrorCode MonitorCell(TS ts,User user,PetscInt cell)
+static PetscErrorCode MonitorCell(TS ts, User user, PetscInt cell)
 {
-  PetscErrorCode ierr;
   TSMonitorLGCtx ctx;
-  char           **snames;
-  UserLGCtx      *uctx;
+  char         **snames;
+  UserLGCtx     *uctx;
   char           label[128];
-  PetscReal      temp,*xc;
+  PetscReal      temp, *xc;
   PetscMPIInt    rank;
 
-  PetscFunctionBegin;
-  ierr = DMDAGetCoordinateArray(user->dm,&xc);CHKERRQ(ierr);
-  temp = 1.0 + .05*PetscSinScalar(2.*PETSC_PI*xc[cell]);  /* Non-dimensionalized by user->Tini */
-  ierr = DMDARestoreCoordinateArray(user->dm,&xc);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
-  ierr = PetscSNPrintf(label,sizeof(label),"Initial Temperature %g Cell %d Rank %d",(double)user->Tini*temp,(int)cell,rank);CHKERRQ(ierr);
-  ierr = TSMonitorLGCtxCreate(PETSC_COMM_SELF,NULL,label,PETSC_DECIDE,PETSC_DECIDE,600,400,1,&ctx);CHKERRQ(ierr);
-  ierr = DMDAGetFieldNames(user->dm,(const char * const **)&snames);CHKERRQ(ierr);
-  ierr = TSMonitorLGCtxSetVariableNames(ctx,(const char * const *)snames);CHKERRQ(ierr);
-  ierr = PetscNew(&uctx);CHKERRQ(ierr);
+  PetscFunctionBeginUser;
+  PetscCall(DMDAGetCoordinateArray(user->dm, &xc));
+  temp = 1.0 + .05 * PetscSinScalar(2. * PETSC_PI * xc[cell]); /* Non-dimensionalized by user->Tini */
+  PetscCall(DMDARestoreCoordinateArray(user->dm, &xc));
+  PetscCallMPI(MPI_Comm_rank(PETSC_COMM_WORLD, &rank));
+  PetscCall(PetscSNPrintf(label, sizeof(label), "Initial Temperature %g Cell %d Rank %d", (double)user->Tini * temp, (int)cell, rank));
+  PetscCall(TSMonitorLGCtxCreate(PETSC_COMM_SELF, NULL, label, PETSC_DECIDE, PETSC_DECIDE, 600, 400, 1, &ctx));
+  PetscCall(DMDAGetFieldNames(user->dm, (const char *const **)&snames));
+  PetscCall(TSMonitorLGCtxSetVariableNames(ctx, (const char *const *)snames));
+  PetscCall(PetscNew(&uctx));
   uctx->cell = cell;
   uctx->user = user;
-  ierr = TSMonitorLGCtxSetTransform(ctx,(PetscErrorCode (*)(void*,Vec,Vec*))FormMoleFraction,(PetscErrorCode (*)(void*))MonitorCellDestroy,uctx);CHKERRQ(ierr);
-  ierr = TSMonitorSet(ts,TSMonitorLGSolution,ctx,(PetscErrorCode (*)(void**))TSMonitorLGCtxDestroy);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(TSMonitorLGCtxSetTransform(ctx, (PetscErrorCode(*)(void *, Vec, Vec *))FormMoleFraction, (PetscErrorCode(*)(void *))MonitorCellDestroy, uctx));
+  PetscCall(TSMonitorSet(ts, TSMonitorLGSolution, ctx, (PetscErrorCode(*)(void **))TSMonitorLGCtxDestroy));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

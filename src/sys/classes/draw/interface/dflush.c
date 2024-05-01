@@ -1,29 +1,25 @@
 /*
        Provides the calling sequences for all the basic PetscDraw routines.
 */
-#include <petsc/private/drawimpl.h>  /*I "petscdraw.h" I*/
+#include <petsc/private/drawimpl.h> /*I "petscdraw.h" I*/
 
 /*@
-   PetscDrawFlush - Flushes graphical output.
+  PetscDrawFlush - Flushes graphical output.
 
-   Collective on PetscDraw
+  Collective
 
-   Input Parameters:
-.  draw - the drawing context
+  Input Parameter:
+. draw - the drawing context
 
-   Level: beginner
+  Level: beginner
 
-.seealso: PetscDrawClear()
+.seealso: `PetscDraw`, `PetscDrawClear()`
 @*/
-PetscErrorCode  PetscDrawFlush(PetscDraw draw)
+PetscErrorCode PetscDrawFlush(PetscDraw draw)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
-  if (draw->ops->flush) {
-    ierr = (*draw->ops->flush)(draw);CHKERRQ(ierr);
-  }
-  if (draw->saveonflush) {ierr = PetscDrawSave(draw);CHKERRQ(ierr);}
-  PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(draw, PETSC_DRAW_CLASSID, 1);
+  PetscTryTypeMethod(draw, flush);
+  if (draw->saveonflush) PetscCall(PetscDrawSave(draw));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

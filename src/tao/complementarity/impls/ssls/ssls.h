@@ -30,41 +30,26 @@
          local q-quadratic rate.
 
  The theory for the feasible version follows from the feasible descent
- algorithm framework.
-
- References:
-   Billups, "Algorithms for Complementarity Problems and Generalized
-     Equations," Ph.D thesis, University of Wisconsin - Madison, 1995.
-   De Luca, Facchinei, Kanzow, "A Semismooth Equation Approach to the
-     Solution of Nonlinear Complementarity Problems," Mathematical
-     Programming, 75, pages 407-439, 1996.
-   Ferris, Kanzow, Munson, "Feasible Descent Algorithms for Mixed
-     Complementarity Problems," Mathematical Programming, 86,
-     pages 475-497, 1999.
-   Fischer, "A Special Newton-type Optimization Method," Optimization,
-     24, pages 269-284, 1992
-   Munson, Facchinei, Ferris, Fischer, Kanzow, "The Semismooth Algorithm
-     for Large Scale Complementarity Problems," Technical Report 99-06,
-     University of Wisconsin - Madison, 1999.
+ algorithm framework. See {cite}`billups:algorithms`, {cite}`deluca.facchinei.ea:semismooth`,
+  {cite}`ferris.kanzow.ea:feasible`, {cite}`fischer:special`, and {cite}`munson.facchinei.ea:semismooth`.
 */
 
-#ifndef __TAO_SSLS_H
-#define __TAO_SSLS_H
+#pragma once
 #include <petsc/private/taoimpl.h>
 
 typedef struct {
-  Vec ff;       /* fischer function */
-  Vec dpsi;     /* gradient of psi */
+  Vec ff;   /* fischer function */
+  Vec dpsi; /* gradient of psi */
 
-  Vec da;       /* work vector for subdifferential calculation (diag pert) */
-  Vec db;       /* work vector for subdifferential calculation (row scale) */
-  Vec dm;   /* work vector for subdifferential calculation (mu vector) */
+  Vec da; /* work vector for subdifferential calculation (diag pert) */
+  Vec db; /* work vector for subdifferential calculation (row scale) */
+  Vec dm; /* work vector for subdifferential calculation (mu vector) */
   Vec dxfree;
 
-  Vec t1;       /* work vector */
-  Vec t2;       /* work vector */
+  Vec t1; /* work vector */
+  Vec t2; /* work vector */
 
-  Vec r1,r2,r3,w; /* work vectors */
+  Vec r1, r2, r3, w; /* work vectors */
 
   PetscReal merit; /* merit function value (norm(fischer)) */
   PetscReal merit_eqn;
@@ -73,7 +58,7 @@ typedef struct {
   PetscReal delta;
   PetscReal rho;
 
-  PetscReal rtol;       /* Solution tolerances */
+  PetscReal rtol; /* Solution tolerances */
   PetscReal atol;
 
   PetscReal identifier; /* Active-set identification */
@@ -87,17 +72,14 @@ typedef struct {
   PetscReal g_mucon; /* gradient of merit function with respect to mu */
 
   Mat J_sub, Jpre_sub; /* subset of jacobian */
-  Vec f;        /* constraint function */
+  Vec f;               /* constraint function */
 
   IS fixed;
   IS free;
 } TAO_SSLS;
 
-PetscErrorCode TaoSetFromOptions_SSLS(PetscOptionItems *,Tao);
-PetscErrorCode TaoView_SSLS(Tao,PetscViewer);
+PetscErrorCode TaoSetFromOptions_SSLS(Tao, PetscOptionItems *);
+PetscErrorCode TaoView_SSLS(Tao, PetscViewer);
 
 PetscErrorCode Tao_SSLS_Function(TaoLineSearch, Vec, PetscReal *, void *);
 PetscErrorCode Tao_SSLS_FunctionGradient(TaoLineSearch, Vec, PetscReal *, Vec, void *);
-
-#endif
-

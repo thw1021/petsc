@@ -14,8 +14,8 @@ class Configure(config.package.GNUPackage):
   def __init__(self, framework):
     config.package.GNUPackage.__init__(self, framework)
     self.minversion        = '3.81'
-    self.download          = ['http://ftp.mcs.anl.gov/pub/petsc/externalpackages/make-4.2.1-6.fc28.tar.gz']
-    self.complex           = 1
+    self.download          = ['https://ftp.gnu.org/gnu/make/make-4.4.1.tar.gz',
+                              'https://web.cels.anl.gov/projects/petsc/download/externalpackages/make-4.4.1.tar.gz']
     self.downloadonWindows = 1
     self.useddirectly      = 0
     self.linkedbypetsc     = 0
@@ -25,17 +25,17 @@ class Configure(config.package.GNUPackage):
     self.haveGNUMake       = 0
     self.publicInstall     = 0  # always install in PETSC_DIR/PETSC_ARCH (not --prefix) since this is not used by users
     self.parallelMake      = 0
+    self.skippackagelibincludedirs = 1
     self.executablename    = 'make'
     return
 
   def setupHelp(self, help):
     import nargs
     config.package.GNUPackage.setupHelp(self, help)
-    help.addArgument('MAKE', '-with-make-np=<np>',                           nargs.ArgInt(None, None, min=1, help='Default number of threads to use for parallel builds'))
-    help.addArgument('MAKE', '-with-make-test-np=<np>',                      nargs.ArgInt(None, None, min=1, help='Default number of threads to use for parallel tests'))
+    help.addArgument('MAKE', '-with-make-np=<np>',                           nargs.ArgInt(None, None, min=1, help='Default number of processes to use for parallel builds'))
+    help.addArgument('MAKE', '-with-make-test-np=<np>',                      nargs.ArgInt(None, None, min=1, help='Default number of processes to use for parallel tests'))
     help.addArgument('MAKE', '-with-make-load=<load>',                       nargs.ArgReal(None, None, min=1.0, help='max load to use for parallel builds'))
     help.addArgument('MAKE', '-download-make-cc=<prog>',                     nargs.Arg(None, None, 'C compiler for GNU make configure'))
-    help.addArgument('MAKE', '-download-make-configure-options=<options>',   nargs.Arg(None, None, 'additional options for GNU make configure'))
     help.addArgument('MAKE', '-with-make-exec=<executable>',                 nargs.Arg(None, None, 'Make executable to look for'))
     return
 
@@ -43,10 +43,9 @@ class Configure(config.package.GNUPackage):
     '''Does not use the standard arguments at all since this does not use the MPI compilers etc
        Sowing will chose its own compilers if they are not provided explicitly here'''
     args = ['--prefix='+self.installDir]
+    args.append('--without-guile')
     if 'download-make-cc' in self.argDB and self.argDB['download-make-cc']:
       args.append('CC="'+self.argDB['download-make-cc']+'"')
-    if 'download-make-configure-options' in self.argDB and self.argDB['download-make-configure-options']:
-      args.append(self.argDB['download-make-configure-options'])
     return args
 
   def Install(self):
@@ -114,10 +113,10 @@ class Configure(config.package.GNUPackage):
         self.getExecutable(self.make,getFullPath = 0,resultName = 'make_user')
 
       if not self.haveGNUMake4:
-        self.logPrintBox('***** WARNING: You have a version of GNU make older than 4.0. It will work,\n\
-but may not support all the parallel testing options. You can install the \n\
-latest GNU make with your package manager, such as brew or macports, or use\n\
-the --download-make option to get the latest GNU make *****')
+        self.logPrintWarning('You have a version of GNU make older than 4.0. It will work, \
+but may not support all the parallel testing options. You can install the \
+latest GNU make with your package manager, such as Brew or MacPorts, or use \
+the --download-make option to get the latest GNU make')
       return
 
     if os.path.exists('/usr/bin/cygcheck.exe'):
@@ -163,8 +162,9 @@ Otherwise try --download-make or install "make" with a package manager.''' % sel
     self.addMakeRule('libcxx','${LIBNAME}(${OBJSCXX})')
     self.addMakeRule('libcu','${LIBNAME}(${OBJSCU})')
     self.addMakeRule('libf','${OBJSF}','-${AR} ${AR_FLAGS} ${LIBNAME} ${OBJSF}')
-    self.addMakeMacro('OMAKE_PRINTDIR ', self.make+' '+self.printdirflag)
-    self.addMakeMacro('OMAKE', self.make+' '+self.noprintdirflag)
+    self.addMakeMacro('OMAKE_PRINTDIR', self.make+self.printdirflag)
+    self.addMakeMacro('OMAKE', self.make+self.noprintdirflag)
+    self.addDefine('OMAKE','"'+self.make+self.noprintdirflag+'"')
     self.addMakeMacro('MAKE_PAR_OUT_FLG', self.paroutflg)
     return
 
@@ -237,10 +237,6 @@ Otherwise try --download-make or install "make" with a package manager.''' % sel
     self.addMakeMacro('NPMAX',str(cores))
     self.make_jnp_list = [self.make, '-j'+str(self.make_np), '-l'+str(self.make_load)]
     self.make_jnp = ' '.join(self.make_jnp_list)
-    if self.installSudo:
-      self.make_sudo_list = [self.installSudo, self.make]
-    else:
-      self.make_sudo_list = [self.make]
     return
 
   def configure(self):

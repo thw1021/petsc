@@ -1,3 +1,5 @@
+#pragma once
+
 #include <../src/ksp/ksp/utils/lmvm/lmvm.h>
 
 /*
@@ -6,8 +8,8 @@
 */
 
 typedef struct {
-  Vec *P, *Q;
-  PetscBool allocated, needP, needQ;
+  Vec       *P, *Q;
+  PetscBool  allocated, needP, needQ;
   PetscReal *yty, *yts;
   PetscReal *sts, *stq;
 } Mat_Brdn;

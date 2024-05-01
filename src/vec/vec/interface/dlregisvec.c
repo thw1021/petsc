@@ -1,4 +1,3 @@
-
 #include <petsc/private/vecimpl.h>
 #include <petsc/private/isimpl.h>
 #include <petscpf.h>
@@ -8,83 +7,80 @@
 
 static PetscBool         ISPackageInitialized = PETSC_FALSE;
 extern PetscFunctionList ISLocalToGlobalMappingList;
-const char       *ISInfos[] = {"SORTED", "UNIQUE", "PERMUTATION", "INTERVAL", "IDENTITY", "ISInfo", "IS_",NULL};
+const char              *ISInfos[] = {"SORTED", "UNIQUE", "PERMUTATION", "INTERVAL", "IDENTITY", "ISInfo", "IS_", NULL};
 
 /*@C
-  ISFinalizePackage - This function destroys everything in the IS package. It is
-  called from PetscFinalize().
+  ISFinalizePackage - This function destroys everything in the `IS` package. It is
+  called from `PetscFinalize()`.
 
   Level: developer
 
-.seealso: PetscFinalize()
+.seealso: `PetscFinalize()`
 @*/
-PetscErrorCode  ISFinalizePackage(void)
+PetscErrorCode ISFinalizePackage(void)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  ierr = PetscFunctionListDestroy(&ISList);CHKERRQ(ierr);
-  ierr = PetscFunctionListDestroy(&ISLocalToGlobalMappingList);CHKERRQ(ierr);
-  ierr = PetscFunctionListDestroy(&PetscSectionSymList);CHKERRQ(ierr);
+  PetscCall(PetscFunctionListDestroy(&ISList));
+  PetscCall(PetscFunctionListDestroy(&ISLocalToGlobalMappingList));
+  PetscCall(PetscFunctionListDestroy(&PetscSectionSymList));
   ISPackageInitialized                    = PETSC_FALSE;
   ISRegisterAllCalled                     = PETSC_FALSE;
   ISLocalToGlobalMappingRegisterAllCalled = PETSC_FALSE;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-      ISInitializePackage - This function initializes everything in the IS package. It is called
+  ISInitializePackage - This function initializes everything in the `IS` package. It is called
   from PetscDLLibraryRegister_petscvec() when using dynamic libraries, and on the first call to ISCreateXXXX()
   when using shared or static libraries.
 
   Level: developer
 
-.seealso: PetscInitialize()
+.seealso: `PetscInitialize()`
 @*/
-PetscErrorCode  ISInitializePackage(void)
+PetscErrorCode ISInitializePackage(void)
 {
-  char           logList[256];
-  PetscBool      opt,pkg;
-  PetscErrorCode ierr;
+  char      logList[256];
+  PetscBool opt, pkg;
 
   PetscFunctionBegin;
-  if (ISPackageInitialized) PetscFunctionReturn(0);
+  if (ISPackageInitialized) PetscFunctionReturn(PETSC_SUCCESS);
   ISPackageInitialized = PETSC_TRUE;
   /* Register Classes */
-  ierr = PetscClassIdRegister("Index Set",&IS_CLASSID);CHKERRQ(ierr);
-  ierr = PetscClassIdRegister("IS L to G Mapping",&IS_LTOGM_CLASSID);CHKERRQ(ierr);
-  ierr = PetscClassIdRegister("Section",&PETSC_SECTION_CLASSID);CHKERRQ(ierr);
-  ierr = PetscClassIdRegister("Section Symmetry",&PETSC_SECTION_SYM_CLASSID);CHKERRQ(ierr);
+  PetscCall(PetscClassIdRegister("Index Set", &IS_CLASSID));
+  PetscCall(PetscClassIdRegister("IS L to G Mapping", &IS_LTOGM_CLASSID));
+  PetscCall(PetscClassIdRegister("Section", &PETSC_SECTION_CLASSID));
+  PetscCall(PetscClassIdRegister("Section Symmetry", &PETSC_SECTION_SYM_CLASSID));
   /* Register Constructors */
-  ierr = ISRegisterAll();CHKERRQ(ierr);
-  ierr = ISLocalToGlobalMappingRegisterAll();CHKERRQ(ierr);
+  PetscCall(ISRegisterAll());
+  PetscCall(ISLocalToGlobalMappingRegisterAll());
   /* Register Events */
-  ierr = PetscLogEventRegister("ISView",IS_CLASSID,&IS_View);CHKERRQ(ierr);
-  ierr = PetscLogEventRegister("ISLoad",IS_CLASSID,&IS_Load);CHKERRQ(ierr);
+  PetscCall(PetscLogEventRegister("ISView", IS_CLASSID, &IS_View));
+  PetscCall(PetscLogEventRegister("ISLoad", IS_CLASSID, &IS_Load));
   /* Process Info */
   {
-    PetscClassId  classids[4];
+    PetscClassId classids[4];
 
     classids[0] = IS_CLASSID;
     classids[1] = IS_LTOGM_CLASSID;
     classids[2] = PETSC_SECTION_CLASSID;
     classids[3] = PETSC_SECTION_SYM_CLASSID;
-    ierr = PetscInfoProcessClass("is", 2, classids);CHKERRQ(ierr);
-    ierr = PetscInfoProcessClass("section", 2, &classids[2]);CHKERRQ(ierr);
+    PetscCall(PetscInfoProcessClass("is", 2, classids));
+    PetscCall(PetscInfoProcessClass("section", 2, &classids[2]));
   }
   /* Process summary exclusions */
-  ierr = PetscOptionsGetString(NULL,NULL,"-log_exclude",logList,sizeof(logList),&opt);CHKERRQ(ierr);
+  PetscCall(PetscOptionsGetString(NULL, NULL, "-log_exclude", logList, sizeof(logList), &opt));
   if (opt) {
-    ierr = PetscStrInList("is",logList,',',&pkg);CHKERRQ(ierr);
-    if (pkg) {ierr = PetscLogEventExcludeClass(IS_CLASSID);CHKERRQ(ierr);}
-    if (pkg) {ierr = PetscLogEventExcludeClass(IS_LTOGM_CLASSID);CHKERRQ(ierr);}
-    ierr = PetscStrInList("section",logList,',',&pkg);CHKERRQ(ierr);
-    if (pkg) {ierr = PetscLogEventExcludeClass(PETSC_SECTION_CLASSID);CHKERRQ(ierr);}
-    if (pkg) {ierr = PetscLogEventExcludeClass(PETSC_SECTION_SYM_CLASSID);CHKERRQ(ierr);}
+    PetscCall(PetscStrInList("is", logList, ',', &pkg));
+    if (pkg) PetscCall(PetscLogEventExcludeClass(IS_CLASSID));
+    if (pkg) PetscCall(PetscLogEventExcludeClass(IS_LTOGM_CLASSID));
+    PetscCall(PetscStrInList("section", logList, ',', &pkg));
+    if (pkg) PetscCall(PetscLogEventExcludeClass(PETSC_SECTION_CLASSID));
+    if (pkg) PetscCall(PetscLogEventExcludeClass(PETSC_SECTION_SYM_CLASSID));
   }
   /* Register package finalizer */
-  ierr = PetscRegisterFinalize(ISFinalizePackage);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscRegisterFinalize(ISFinalizePackage));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 extern MPI_Op PetscSplitReduction_Op;
@@ -94,165 +90,183 @@ extern MPI_Op PetscSplitReduction_Op;
    A call to MPI_Op_create() converts the function Vec[Max,Min]_Local() to the MPI operator Vec[Max,Min]_Local_Op.
 
 */
-MPI_Op MPIU_MAXINDEX_OP = 0;
-MPI_Op MPIU_MININDEX_OP = 0;
+MPI_Op MPIU_MAXLOC = 0;
+MPI_Op MPIU_MINLOC = 0;
 
-static void MPIAPI MPIU_MaxIndex_Local(void *in,void *out,PetscMPIInt *cnt,MPI_Datatype *datatype)
+static void MPIAPI MPIU_MaxIndex_Local(void *in, void *out, PetscMPIInt *cnt, MPI_Datatype *datatype)
 {
-  PetscReal *xin = (PetscReal*)in,*xout = (PetscReal*)out;
+  struct PetscRealInt {
+    PetscReal v;
+    PetscInt  i;
+  };
+  struct PetscRealInt *xin  = (struct PetscRealInt *)in;
+  struct PetscRealInt *xout = (struct PetscRealInt *)out;
+  int                  c;
 
   PetscFunctionBegin;
-  if (*datatype != MPIU_REAL) {
-    (*PetscErrorPrintf)("Can only handle MPIU_REAL data types");
-    PETSCABORT(MPI_COMM_SELF,PETSC_ERR_ARG_WRONG);
+  if (*datatype != MPIU_REAL_INT) {
+    PetscCallAbort(MPI_COMM_SELF, (*PetscErrorPrintf)("Can only handle MPIU_REAL_INT data types"));
+    PETSCABORT(MPI_COMM_SELF, PETSC_ERR_ARG_WRONG);
   }
-  if (xin[0] > xout[0]) {
-    xout[0] = xin[0];
-    xout[1] = xin[1];
-  } else if (xin[0] == xout[0]) {
-    xout[1] = PetscMin(xin[1],xout[1]);
+  for (c = 0; c < *cnt; c++) {
+    if (xin[c].v > xout[c].v) {
+      xout[c].v = xin[c].v;
+      xout[c].i = xin[c].i;
+    } else if (xin[c].v == xout[c].v) {
+      xout[c].i = PetscMin(xin[c].i, xout[c].i);
+    }
   }
   PetscFunctionReturnVoid(); /* cannot return a value */
 }
 
-static void MPIAPI MPIU_MinIndex_Local(void *in,void *out,PetscMPIInt *cnt,MPI_Datatype *datatype)
+static void MPIAPI MPIU_MinIndex_Local(void *in, void *out, PetscMPIInt *cnt, MPI_Datatype *datatype)
 {
-  PetscReal *xin = (PetscReal*)in,*xout = (PetscReal*)out;
+  struct PetscRealInt {
+    PetscReal v;
+    PetscInt  i;
+  };
+  struct PetscRealInt *xin  = (struct PetscRealInt *)in;
+  struct PetscRealInt *xout = (struct PetscRealInt *)out;
+  int                  c;
 
   PetscFunctionBegin;
-  if (*datatype != MPIU_REAL) {
-    (*PetscErrorPrintf)("Can only handle MPIU_REAL data types");
-    PETSCABORT(MPI_COMM_SELF,PETSC_ERR_ARG_WRONG);
+  if (*datatype != MPIU_REAL_INT) {
+    PetscCallAbort(MPI_COMM_SELF, (*PetscErrorPrintf)("Can only handle MPIU_REAL_INT data types"));
+    PETSCABORT(MPI_COMM_SELF, PETSC_ERR_ARG_WRONG);
   }
-  if (xin[0] < xout[0]) {
-    xout[0] = xin[0];
-    xout[1] = xin[1];
-  } else if (xin[0] == xout[0]) {
-    xout[1] = PetscMin(xin[1],xout[1]);
+  for (c = 0; c < *cnt; c++) {
+    if (xin[c].v < xout[c].v) {
+      xout[c].v = xin[c].v;
+      xout[c].i = xin[c].i;
+    } else if (xin[c].v == xout[c].v) {
+      xout[c].i = PetscMin(xin[c].i, xout[c].i);
+    }
   }
-  PetscFunctionReturnVoid();
+  PetscFunctionReturnVoid(); /* cannot return a value */
 }
 
-PETSC_EXTERN void MPIAPI PetscSplitReduction_Local(void*,void*,PetscMPIInt*,MPI_Datatype*);
+PETSC_EXTERN void MPIAPI PetscSplitReduction_Local(void *, void *, PetscMPIInt *, MPI_Datatype *);
 
-const char *const NormTypes[] = {"1","2","FROBENIUS","INFINITY","1_AND_2","NormType","NORM_",NULL};
-PetscInt          NormIds[7];  /* map from NormType to IDs used to cache Normvalues */
+const char *const NormTypes[] = {"1", "2", "FROBENIUS", "INFINITY", "1_AND_2", "NormType", "NORM_", NULL};
+PetscInt          NormIds[4]; /* map from NormType to IDs used to cache norm values, 1_AND_2 is excluded */
 
-static PetscBool  VecPackageInitialized = PETSC_FALSE;
+static PetscBool VecPackageInitialized = PETSC_FALSE;
 
 /*@C
-  VecInitializePackage - This function initializes everything in the Vec package. It is called
-  from PetscDLLibraryRegister_petscvec() when using dynamic libraries, and on the first call to VecCreate()
+  VecInitializePackage - This function initializes everything in the `Vec` package. It is called
+  from PetscDLLibraryRegister_petscvec() when using dynamic libraries, and on the first call to `VecCreate()`
   when using shared or static libraries.
 
   Level: developer
 
-.seealso: PetscInitialize()
+.seealso: `PetscInitialize()`
 @*/
-PetscErrorCode  VecInitializePackage(void)
+PetscErrorCode VecInitializePackage(void)
 {
-  char           logList[256];
-  PetscBool      opt,pkg;
-  PetscErrorCode ierr;
-  PetscInt       i;
+  char      logList[256];
+  PetscBool opt, pkg;
+  PetscInt  i;
 
   PetscFunctionBegin;
-  if (VecPackageInitialized) PetscFunctionReturn(0);
+  if (VecPackageInitialized) PetscFunctionReturn(PETSC_SUCCESS);
   VecPackageInitialized = PETSC_TRUE;
-  /* Initialize subpackage */
-  ierr = VecScatterInitializePackage();CHKERRQ(ierr);
   /* Register Classes */
-  ierr = PetscClassIdRegister("Vector",&VEC_CLASSID);CHKERRQ(ierr);
+  PetscCall(PetscClassIdRegister("Vector", &VEC_CLASSID));
   /* Register Constructors */
-  ierr = VecRegisterAll();CHKERRQ(ierr);
+  PetscCall(VecRegisterAll());
   /* Register Events */
-  ierr = PetscLogEventRegister("VecView",          VEC_CLASSID,&VEC_View);CHKERRQ(ierr);
-  ierr = PetscLogEventRegister("VecMax",           VEC_CLASSID,&VEC_Max);CHKERRQ(ierr);
-  ierr = PetscLogEventRegister("VecMin",           VEC_CLASSID,&VEC_Min);CHKERRQ(ierr);
-  ierr = PetscLogEventRegister("VecDot",           VEC_CLASSID,&VEC_Dot);CHKERRQ(ierr);
-  ierr = PetscLogEventRegister("VecDotNorm2",      VEC_CLASSID,&VEC_DotNorm2);CHKERRQ(ierr);
-  ierr = PetscLogEventRegister("VecMDot",          VEC_CLASSID,&VEC_MDot);CHKERRQ(ierr);
-  ierr = PetscLogEventRegister("VecTDot",          VEC_CLASSID,&VEC_TDot);CHKERRQ(ierr);
-  ierr = PetscLogEventRegister("VecMTDot",         VEC_CLASSID,&VEC_MTDot);CHKERRQ(ierr);
-  ierr = PetscLogEventRegister("VecNorm",          VEC_CLASSID,&VEC_Norm);CHKERRQ(ierr);
-  ierr = PetscLogEventRegister("VecScale",         VEC_CLASSID,&VEC_Scale);CHKERRQ(ierr);
-  ierr = PetscLogEventRegister("VecCopy",          VEC_CLASSID,&VEC_Copy);CHKERRQ(ierr);
-  ierr = PetscLogEventRegister("VecSet",           VEC_CLASSID,&VEC_Set);CHKERRQ(ierr);
-  ierr = PetscLogEventRegister("VecAXPY",          VEC_CLASSID,&VEC_AXPY);CHKERRQ(ierr);
-  ierr = PetscLogEventRegister("VecAYPX",          VEC_CLASSID,&VEC_AYPX);CHKERRQ(ierr);
-  ierr = PetscLogEventRegister("VecAXPBYCZ",       VEC_CLASSID,&VEC_AXPBYPCZ);CHKERRQ(ierr);
-  ierr = PetscLogEventRegister("VecWAXPY",         VEC_CLASSID,&VEC_WAXPY);CHKERRQ(ierr);
-  ierr = PetscLogEventRegister("VecMAXPY",         VEC_CLASSID,&VEC_MAXPY);CHKERRQ(ierr);
-  ierr = PetscLogEventRegister("VecSwap",          VEC_CLASSID,&VEC_Swap);CHKERRQ(ierr);
-  ierr = PetscLogEventRegister("VecOps",           VEC_CLASSID,&VEC_Ops);CHKERRQ(ierr);
-  ierr = PetscLogEventRegister("VecAssemblyBegin", VEC_CLASSID,&VEC_AssemblyBegin);CHKERRQ(ierr);
-  ierr = PetscLogEventRegister("VecAssemblyEnd",   VEC_CLASSID,&VEC_AssemblyEnd);CHKERRQ(ierr);
-  ierr = PetscLogEventRegister("VecPointwiseMult", VEC_CLASSID,&VEC_PointwiseMult);CHKERRQ(ierr);
-  ierr = PetscLogEventRegister("VecSetValues",     VEC_CLASSID,&VEC_SetValues);CHKERRQ(ierr);
-  ierr = PetscLogEventRegister("VecLoad",          VEC_CLASSID,&VEC_Load);CHKERRQ(ierr);
-  ierr = PetscLogEventRegister("VecScatterBegin",  VEC_CLASSID,&VEC_ScatterBegin);CHKERRQ(ierr);
-  ierr = PetscLogEventRegister("VecScatterEnd  ",  VEC_CLASSID,&VEC_ScatterEnd);CHKERRQ(ierr);
-  ierr = PetscLogEventRegister("VecSetRandom",     VEC_CLASSID,&VEC_SetRandom);CHKERRQ(ierr);
-  ierr = PetscLogEventRegister("VecReduceArith",   VEC_CLASSID,&VEC_ReduceArithmetic);CHKERRQ(ierr);
-  ierr = PetscLogEventRegister("VecReduceComm",    VEC_CLASSID,&VEC_ReduceCommunication);CHKERRQ(ierr);
-  ierr = PetscLogEventRegister("VecReduceBegin",   VEC_CLASSID,&VEC_ReduceBegin);CHKERRQ(ierr);
-  ierr = PetscLogEventRegister("VecReduceEnd",     VEC_CLASSID,&VEC_ReduceEnd);CHKERRQ(ierr);
-  ierr = PetscLogEventRegister("VecNormalize",     VEC_CLASSID,&VEC_Normalize);CHKERRQ(ierr);
+  PetscCall(PetscLogEventRegister("VecView", VEC_CLASSID, &VEC_View));
+  PetscCall(PetscLogEventRegister("VecMax", VEC_CLASSID, &VEC_Max));
+  PetscCall(PetscLogEventRegister("VecMin", VEC_CLASSID, &VEC_Min));
+  PetscCall(PetscLogEventRegister("VecDot", VEC_CLASSID, &VEC_Dot));
+  PetscCall(PetscLogEventRegister("VecDotNorm2", VEC_CLASSID, &VEC_DotNorm2));
+  PetscCall(PetscLogEventRegister("VecMDot", VEC_CLASSID, &VEC_MDot));
+  PetscCall(PetscLogEventRegister("VecTDot", VEC_CLASSID, &VEC_TDot));
+  PetscCall(PetscLogEventRegister("VecMTDot", VEC_CLASSID, &VEC_MTDot));
+  PetscCall(PetscLogEventRegister("VecNorm", VEC_CLASSID, &VEC_Norm));
+  PetscCall(PetscLogEventRegister("VecScale", VEC_CLASSID, &VEC_Scale));
+  PetscCall(PetscLogEventRegister("VecShift", VEC_CLASSID, &VEC_Shift));
+  PetscCall(PetscLogEventRegister("VecCopy", VEC_CLASSID, &VEC_Copy));
+  PetscCall(PetscLogEventRegister("VecSet", VEC_CLASSID, &VEC_Set));
+  PetscCall(PetscLogEventRegister("VecAXPY", VEC_CLASSID, &VEC_AXPY));
+  PetscCall(PetscLogEventRegister("VecAYPX", VEC_CLASSID, &VEC_AYPX));
+  PetscCall(PetscLogEventRegister("VecAXPBYCZ", VEC_CLASSID, &VEC_AXPBYPCZ));
+  PetscCall(PetscLogEventRegister("VecWAXPY", VEC_CLASSID, &VEC_WAXPY));
+  PetscCall(PetscLogEventRegister("VecMAXPY", VEC_CLASSID, &VEC_MAXPY));
+  PetscCall(PetscLogEventRegister("VecSwap", VEC_CLASSID, &VEC_Swap));
+  PetscCall(PetscLogEventRegister("VecOps", VEC_CLASSID, &VEC_Ops));
+  PetscCall(PetscLogEventRegister("VecAssemblyBegin", VEC_CLASSID, &VEC_AssemblyBegin));
+  PetscCall(PetscLogEventRegister("VecAssemblyEnd", VEC_CLASSID, &VEC_AssemblyEnd));
+  PetscCall(PetscLogEventRegister("VecPointwiseMult", VEC_CLASSID, &VEC_PointwiseMult));
+  PetscCall(PetscLogEventRegister("VecSetValues", VEC_CLASSID, &VEC_SetValues));
+  PetscCall(PetscLogEventRegister("VecSetPreallCOO", VEC_CLASSID, &VEC_SetPreallocateCOO));
+  PetscCall(PetscLogEventRegister("VecSetValuesCOO", VEC_CLASSID, &VEC_SetValuesCOO));
+  PetscCall(PetscLogEventRegister("VecLoad", VEC_CLASSID, &VEC_Load));
+  PetscCall(PetscLogEventRegister("VecScatterBegin", VEC_CLASSID, &VEC_ScatterBegin));
+  PetscCall(PetscLogEventRegister("VecScatterEnd", VEC_CLASSID, &VEC_ScatterEnd));
+  PetscCall(PetscLogEventRegister("VecSetRandom", VEC_CLASSID, &VEC_SetRandom));
+  PetscCall(PetscLogEventRegister("VecReduceArith", VEC_CLASSID, &VEC_ReduceArithmetic));
+  PetscCall(PetscLogEventRegister("VecReduceComm", VEC_CLASSID, &VEC_ReduceCommunication));
+  PetscCall(PetscLogEventRegister("VecReduceBegin", VEC_CLASSID, &VEC_ReduceBegin));
+  PetscCall(PetscLogEventRegister("VecReduceEnd", VEC_CLASSID, &VEC_ReduceEnd));
+  PetscCall(PetscLogEventRegister("VecNormalize", VEC_CLASSID, &VEC_Normalize));
 #if defined(PETSC_HAVE_VIENNACL)
-  ierr = PetscLogEventRegister("VecVCLCopyTo",     VEC_CLASSID,&VEC_ViennaCLCopyToGPU);CHKERRQ(ierr);
-  ierr = PetscLogEventRegister("VecVCLCopyFrom",   VEC_CLASSID,&VEC_ViennaCLCopyFromGPU);CHKERRQ(ierr);
+  PetscCall(PetscLogEventRegister("VecVCLCopyTo", VEC_CLASSID, &VEC_ViennaCLCopyToGPU));
+  PetscCall(PetscLogEventRegister("VecVCLCopyFrom", VEC_CLASSID, &VEC_ViennaCLCopyFromGPU));
 #endif
 #if defined(PETSC_HAVE_CUDA)
-  ierr = PetscLogEventRegister("VecCUDACopyTo",    VEC_CLASSID,&VEC_CUDACopyToGPU);CHKERRQ(ierr);
-  ierr = PetscLogEventRegister("VecCUDACopyFrom",  VEC_CLASSID,&VEC_CUDACopyFromGPU);CHKERRQ(ierr);
-  ierr = PetscLogEventRegister("VecCopyToSome",    VEC_CLASSID,&VEC_CUDACopyToGPUSome);CHKERRQ(ierr);
-  ierr = PetscLogEventRegister("VecCopyFromSome",  VEC_CLASSID,&VEC_CUDACopyFromGPUSome);CHKERRQ(ierr);
+  PetscCall(PetscLogEventRegister("VecCUDACopyTo", VEC_CLASSID, &VEC_CUDACopyToGPU));
+  PetscCall(PetscLogEventRegister("VecCUDACopyFrom", VEC_CLASSID, &VEC_CUDACopyFromGPU));
+#endif
+#if defined(PETSC_HAVE_HIP)
+  PetscCall(PetscLogEventRegister("VecHIPCopyTo", VEC_CLASSID, &VEC_HIPCopyToGPU));
+  PetscCall(PetscLogEventRegister("VecHIPCopyFrom", VEC_CLASSID, &VEC_HIPCopyFromGPU));
 #endif
 
   /* Mark non-collective events */
-  ierr = PetscLogEventSetCollective(VEC_SetValues,           PETSC_FALSE);CHKERRQ(ierr);
+  PetscCall(PetscLogEventSetCollective(VEC_SetValues, PETSC_FALSE));
 #if defined(PETSC_HAVE_VIENNACL)
-  ierr = PetscLogEventSetCollective(VEC_ViennaCLCopyToGPU,   PETSC_FALSE);CHKERRQ(ierr);
-  ierr = PetscLogEventSetCollective(VEC_ViennaCLCopyFromGPU, PETSC_FALSE);CHKERRQ(ierr);
+  PetscCall(PetscLogEventSetCollective(VEC_ViennaCLCopyToGPU, PETSC_FALSE));
+  PetscCall(PetscLogEventSetCollective(VEC_ViennaCLCopyFromGPU, PETSC_FALSE));
 #endif
 #if defined(PETSC_HAVE_CUDA)
-  ierr = PetscLogEventSetCollective(VEC_CUDACopyToGPU,       PETSC_FALSE);CHKERRQ(ierr);
-  ierr = PetscLogEventSetCollective(VEC_CUDACopyFromGPU,     PETSC_FALSE);CHKERRQ(ierr);
-  ierr = PetscLogEventSetCollective(VEC_CUDACopyToGPUSome,   PETSC_FALSE);CHKERRQ(ierr);
-  ierr = PetscLogEventSetCollective(VEC_CUDACopyFromGPUSome, PETSC_FALSE);CHKERRQ(ierr);
+  PetscCall(PetscLogEventSetCollective(VEC_CUDACopyToGPU, PETSC_FALSE));
+  PetscCall(PetscLogEventSetCollective(VEC_CUDACopyFromGPU, PETSC_FALSE));
+#endif
+#if defined(PETSC_HAVE_HIP)
+  PetscCall(PetscLogEventSetCollective(VEC_HIPCopyToGPU, PETSC_FALSE));
+  PetscCall(PetscLogEventSetCollective(VEC_HIPCopyFromGPU, PETSC_FALSE));
 #endif
   /* Turn off high traffic events by default */
-  ierr = PetscLogEventSetActiveAll(VEC_SetValues, PETSC_FALSE);CHKERRQ(ierr);
+  PetscCall(PetscLogEventSetActiveAll(VEC_SetValues, PETSC_FALSE));
   /* Process Info */
   {
-    PetscClassId  classids[1];
+    PetscClassId classids[1];
 
     classids[0] = VEC_CLASSID;
-    ierr = PetscInfoProcessClass("vec", 1, classids);CHKERRQ(ierr);
+    PetscCall(PetscInfoProcessClass("vec", 1, classids));
   }
   /* Process summary exclusions */
-  ierr = PetscOptionsGetString(NULL,NULL,"-log_exclude",logList,sizeof(logList),&opt);CHKERRQ(ierr);
+  PetscCall(PetscOptionsGetString(NULL, NULL, "-log_exclude", logList, sizeof(logList), &opt));
   if (opt) {
-    ierr = PetscStrInList("vec",logList,',',&pkg);CHKERRQ(ierr);
-    if (pkg) {ierr = PetscLogEventExcludeClass(VEC_CLASSID);CHKERRQ(ierr);}
-    if (pkg) {ierr = PetscLogEventExcludeClass(VEC_SCATTER_CLASSID);CHKERRQ(ierr);}
+    PetscCall(PetscStrInList("vec", logList, ',', &pkg));
+    if (pkg) PetscCall(PetscLogEventExcludeClass(VEC_CLASSID));
+    if (pkg) PetscCall(PetscLogEventExcludeClass(PETSCSF_CLASSID));
   }
 
   /*
     Create the special MPI reduction operation that may be used by VecNorm/DotBegin()
   */
-  ierr = MPI_Op_create(PetscSplitReduction_Local,1,&PetscSplitReduction_Op);CHKERRQ(ierr);
-  ierr = MPI_Op_create(MPIU_MaxIndex_Local,2,&MPIU_MAXINDEX_OP);CHKERRQ(ierr);
-  ierr = MPI_Op_create(MPIU_MinIndex_Local,2,&MPIU_MININDEX_OP);CHKERRQ(ierr);
+  PetscCallMPI(MPI_Op_create(PetscSplitReduction_Local, 1, &PetscSplitReduction_Op));
+  PetscCallMPI(MPI_Op_create(MPIU_MaxIndex_Local, 1, &MPIU_MAXLOC));
+  PetscCallMPI(MPI_Op_create(MPIU_MinIndex_Local, 1, &MPIU_MINLOC));
 
   /* Register the different norm types for cached norms */
-  for (i=0; i<4; i++) {
-    ierr = PetscObjectComposedDataRegister(NormIds+i);CHKERRQ(ierr);
-  }
+  for (i = 0; i < 4; i++) PetscCall(PetscObjectComposedDataRegister(NormIds + i));
 
   /* Register package finalizer */
-  ierr = PetscRegisterFinalize(VecFinalizePackage);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscRegisterFinalize(VecFinalizePackage));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
@@ -261,44 +275,37 @@ PetscErrorCode  VecInitializePackage(void)
 
   Level: developer
 
-.seealso: PetscInitialize()
+.seealso: `PetscInitialize()`
 @*/
-PetscErrorCode  VecFinalizePackage(void)
+PetscErrorCode VecFinalizePackage(void)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  ierr = PetscFunctionListDestroy(&VecList);CHKERRQ(ierr);
-  ierr = PetscFunctionListDestroy(&VecScatterList);CHKERRQ(ierr);
-  ierr = MPI_Op_free(&PetscSplitReduction_Op);CHKERRQ(ierr);
-  ierr = MPI_Op_free(&MPIU_MAXINDEX_OP);CHKERRQ(ierr);
-  ierr = MPI_Op_free(&MPIU_MININDEX_OP);CHKERRQ(ierr);
-  if (Petsc_Reduction_keyval != MPI_KEYVAL_INVALID) {
-    ierr = MPI_Comm_free_keyval(&Petsc_Reduction_keyval);CHKERRQ(ierr);
-  }
+  PetscCall(PetscFunctionListDestroy(&VecList));
+  PetscCallMPI(MPI_Op_free(&PetscSplitReduction_Op));
+  PetscCallMPI(MPI_Op_free(&MPIU_MAXLOC));
+  PetscCallMPI(MPI_Op_free(&MPIU_MINLOC));
+  if (Petsc_Reduction_keyval != MPI_KEYVAL_INVALID) PetscCallMPI(MPI_Comm_free_keyval(&Petsc_Reduction_keyval));
   VecPackageInitialized = PETSC_FALSE;
   VecRegisterAllCalled  = PETSC_FALSE;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 #if defined(PETSC_HAVE_DYNAMIC_LIBRARIES)
 /*
   PetscDLLibraryRegister - This function is called when the dynamic library it is in is opened.
 
-  This one registers all the methods that are in the basic PETSc Vec library.
+  This one registers all the methods that are in the PETSc `Vec` library.
 
  */
 PETSC_EXTERN PetscErrorCode PetscDLLibraryRegister_petscvec(void)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  ierr = PetscSFInitializePackage();CHKERRQ(ierr);
-  ierr = ISInitializePackage();CHKERRQ(ierr);
-  ierr = AOInitializePackage();CHKERRQ(ierr);
-  ierr = VecInitializePackage();CHKERRQ(ierr);
-  ierr = PFInitializePackage();CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscSFInitializePackage());
+  PetscCall(ISInitializePackage());
+  PetscCall(AOInitializePackage());
+  PetscCall(VecInitializePackage());
+  PetscCall(PFInitializePackage());
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 #endif /* PETSC_HAVE_DYNAMIC_LIBRARIES */

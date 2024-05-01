@@ -9,38 +9,28 @@
       PetscBool                                 :: flg
       PetscInt                                  :: n
 
-      call PetscInitialize(PETSC_NULL_CHARACTER,ierr)
-      if (ierr .ne. 0) then
-        print*,'Unable to initialize PETSc'
-        stop
-      endif
-      call PetscOptionsGetString(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-f',filename,flg,ierr);CHKERRA(ierr)
+      PetscCallA(PetscInitialize(ierr))
+      PetscCallA(PetscOptionsGetString(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-f',filename,flg,ierr))
       if (flg) then
-         call PetscOptionsInsertFileYAML(PETSC_COMM_WORLD,filename,PETSC_TRUE,ierr);CHKERRA(ierr)
+         PetscCallA(PetscOptionsInsertFileYAML(PETSC_COMM_WORLD,PETSC_NULL_OPTIONS,filename,PETSC_TRUE,ierr))
       end if
-      call PetscOptionsView(PETSC_NULL_OPTIONS,PETSC_VIEWER_STDOUT_WORLD,ierr);CHKERRA(ierr)
-      call PetscOptionsAllUsed(PETSC_NULL_OPTIONS,n,ierr);CHKERRQ(ierr);
-      Call PetscFinalize(ierr)
+      PetscCallA(PetscOptionsView(PETSC_NULL_OPTIONS,PETSC_VIEWER_STDOUT_WORLD,ierr))
+      PetscCallA(PetscOptionsAllUsed(PETSC_NULL_OPTIONS,n,ierr));
+      PetscCallA(PetscFinalize(ierr))
       end program ex10f90
-
-
 
 !
 !/*TEST
 !
-!   build:
-!     requires: yaml
-!
+! testset:
 !   test:
 !      suffix: 1
 !      args: -f petsc.yml -options_left 0
-!      filter:   egrep -v "(malloc_dump|malloc_test|saws_port_auto_select|display|check_pointer_intensity|error_output_stdout|nox)"
 !      localrunfiles: petsc.yml
 !
 !   test:
 !      suffix: 2
 !      args: -options_file_yaml petsc.yml -options_left 0
-!      filter:   egrep -v "(malloc_dump|malloc_test|saws_port_auto_select|display|check_pointer_intensity|error_output_stdout|nox)"
 !      localrunfiles: petsc.yml
 !
 !TEST*/

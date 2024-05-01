@@ -1,10 +1,4 @@
-
 static char help[] = "Solves a tridiagonal linear system with KSP.\n\n";
-
-/*T
-   Concepts: KSP^solving a system of linear equations
-   Processors: 1
-T*/
 
 /*
   Include "petscksp.h" so that we can use KSP solvers.  Note that this file
@@ -18,23 +12,23 @@ T*/
 */
 #include <petscksp.h>
 
-int main(int argc,char **args)
+int main(int argc, char **args)
 {
-  Vec            x, b, u;      /* approx solution, RHS, exact solution */
-  Mat            A;            /* linear system matrix */
-  KSP            ksp;          /* linear solver context */
-  PC             pc;           /* preconditioner context */
-  PetscReal      norm;         /* norm of solution error */
-  PetscErrorCode ierr;
-  PetscInt       i,n = 10,col[3],its;
-  PetscMPIInt    size;
-  PetscScalar    value[3];
+  Vec         x, b, u; /* approx solution, RHS, exact solution */
+  Mat         A;       /* linear system matrix */
+  KSP         ksp;     /* linear solver context */
+  PC          pc;      /* preconditioner context */
+  PetscReal   norm;    /* norm of solution error */
+  PetscInt    i, n = 10, col[3], its;
+  PetscMPIInt size;
+  PetscScalar value[3];
 
-  ierr = PetscInitialize(&argc,&args,(char*)0,help);if (ierr) return ierr;
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRQ(ierr);
-  if (size != 1) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_WRONG_MPI_SIZE,"This is a uniprocessor example only!");
-  ierr = PetscOptionsGetInt(NULL,NULL,"-n",&n,NULL);CHKERRQ(ierr);
+  PetscFunctionBeginUser;
+  PetscCall(PetscInitialize(&argc, &args, (char *)0, help));
+  PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD, &size));
+  PetscCheck(size == 1, PETSC_COMM_WORLD, PETSC_ERR_WRONG_MPI_SIZE, "This is a uniprocessor example only!");
 
+  PetscCall(PetscOptionsGetInt(NULL, NULL, "-n", &n, NULL));
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
          Compute the matrix and right-hand-side vector that define
@@ -45,12 +39,12 @@ int main(int argc,char **args)
      Create vectors.  Note that we form 1 vector from scratch and
      then duplicate as needed.
   */
-  ierr = VecCreate(PETSC_COMM_WORLD,&x);CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject) x, "Solution");CHKERRQ(ierr);
-  ierr = VecSetSizes(x,PETSC_DECIDE,n);CHKERRQ(ierr);
-  ierr = VecSetFromOptions(x);CHKERRQ(ierr);
-  ierr = VecDuplicate(x,&b);CHKERRQ(ierr);
-  ierr = VecDuplicate(x,&u);CHKERRQ(ierr);
+  PetscCall(VecCreate(PETSC_COMM_SELF, &x));
+  PetscCall(PetscObjectSetName((PetscObject)x, "Solution"));
+  PetscCall(VecSetSizes(x, PETSC_DECIDE, n));
+  PetscCall(VecSetFromOptions(x));
+  PetscCall(VecDuplicate(x, &b));
+  PetscCall(VecDuplicate(x, &u));
 
   /*
      Create matrix.  When using MatCreate(), the matrix format can
@@ -60,42 +54,52 @@ int main(int argc,char **args)
      preallocation of matrix memory is crucial for attaining good
      performance. See the matrix chapter of the users manual for details.
   */
-  ierr = MatCreate(PETSC_COMM_WORLD,&A);CHKERRQ(ierr);
-  ierr = MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,n,n);CHKERRQ(ierr);
-  ierr = MatSetFromOptions(A);CHKERRQ(ierr);
-  ierr = MatSetUp(A);CHKERRQ(ierr);
+  PetscCall(MatCreate(PETSC_COMM_SELF, &A));
+  PetscCall(MatSetSizes(A, PETSC_DECIDE, PETSC_DECIDE, n, n));
+  PetscCall(MatSetFromOptions(A));
+  PetscCall(MatSetUp(A));
 
   /*
      Assemble matrix
   */
-  value[0] = -1.0; value[1] = 2.0; value[2] = -1.0;
-  for (i=1; i<n-1; i++) {
-    col[0] = i-1; col[1] = i; col[2] = i+1;
-    ierr   = MatSetValues(A,1,&i,3,col,value,INSERT_VALUES);CHKERRQ(ierr);
+  value[0] = -1.0;
+  value[1] = 2.0;
+  value[2] = -1.0;
+  for (i = 1; i < n - 1; i++) {
+    col[0] = i - 1;
+    col[1] = i;
+    col[2] = i + 1;
+    PetscCall(MatSetValues(A, 1, &i, 3, col, value, INSERT_VALUES));
   }
-  i    = n - 1; col[0] = n - 2; col[1] = n - 1;
-  ierr = MatSetValues(A,1,&i,2,col,value,INSERT_VALUES);CHKERRQ(ierr);
-  i    = 0; col[0] = 0; col[1] = 1; value[0] = 2.0; value[1] = -1.0;
-  ierr = MatSetValues(A,1,&i,2,col,value,INSERT_VALUES);CHKERRQ(ierr);
-  ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+  i      = n - 1;
+  col[0] = n - 2;
+  col[1] = n - 1;
+  PetscCall(MatSetValues(A, 1, &i, 2, col, value, INSERT_VALUES));
+  i        = 0;
+  col[0]   = 0;
+  col[1]   = 1;
+  value[0] = 2.0;
+  value[1] = -1.0;
+  PetscCall(MatSetValues(A, 1, &i, 2, col, value, INSERT_VALUES));
+  PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
 
   /*
      Set exact solution; then compute right-hand-side vector.
   */
-  ierr = VecSet(u,1.0);CHKERRQ(ierr);
-  ierr = MatMult(A,u,b);CHKERRQ(ierr);
+  PetscCall(VecSet(u, 1.0));
+  PetscCall(MatMult(A, u, b));
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 Create the linear solver and set various options
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-  ierr = KSPCreate(PETSC_COMM_WORLD,&ksp);CHKERRQ(ierr);
+  PetscCall(KSPCreate(PETSC_COMM_SELF, &ksp));
 
   /*
      Set operators. Here the matrix that defines the linear system
      also serves as the matrix that defines the preconditioner.
   */
-  ierr = KSPSetOperators(ksp,A,A);CHKERRQ(ierr);
+  PetscCall(KSPSetOperators(ksp, A, A));
 
   /*
      Set linear solver defaults for this problem (optional).
@@ -106,9 +110,9 @@ int main(int argc,char **args)
        parameters could alternatively be specified at runtime via
        KSPSetFromOptions();
   */
-  ierr = KSPGetPC(ksp,&pc);CHKERRQ(ierr);
-  ierr = PCSetType(pc,PCJACOBI);CHKERRQ(ierr);
-  ierr = KSPSetTolerances(ksp,1.e-5,PETSC_DEFAULT,PETSC_DEFAULT,PETSC_DEFAULT);CHKERRQ(ierr);
+  PetscCall(KSPGetPC(ksp, &pc));
+  PetscCall(PCSetType(pc, PCJACOBI));
+  PetscCall(KSPSetTolerances(ksp, 1.e-5, PETSC_DEFAULT, PETSC_DEFAULT, PETSC_DEFAULT));
 
   /*
     Set runtime options, e.g.,
@@ -117,34 +121,46 @@ int main(int argc,char **args)
     KSPSetFromOptions() is called _after_ any other customization
     routines.
   */
-  ierr = KSPSetFromOptions(ksp);CHKERRQ(ierr);
+  PetscCall(KSPSetFromOptions(ksp));
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                       Solve the linear system
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-  ierr = KSPSolve(ksp,b,x);CHKERRQ(ierr);
-
-  /*
-     View solver info; we could instead use the option -ksp_view to
-     print this info to the screen at the conclusion of KSPSolve().
-  */
-  ierr = KSPView(ksp,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
+  PetscCall(KSPSolve(ksp, b, x));
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                       Check the solution and clean up
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-  ierr = VecAXPY(x,-1.0,u);CHKERRQ(ierr);
-  ierr = VecNorm(x,NORM_2,&norm);CHKERRQ(ierr);
-  ierr = KSPGetIterationNumber(ksp,&its);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"Norm of error %g, Iterations %D\n",(double)norm,its);CHKERRQ(ierr);
+  PetscCall(VecAXPY(x, -1.0, u));
+  PetscCall(VecNorm(x, NORM_2, &norm));
+  PetscCall(KSPGetIterationNumber(ksp, &its));
+  PetscCall(PetscPrintf(PETSC_COMM_SELF, "Norm of error %g, Iterations %" PetscInt_FMT "\n", (double)norm, its));
+
+  /* check that KSP automatically handles the fact that the new non-zero values in the matrix are propagated to the KSP solver */
+  PetscCall(MatShift(A, 2.0));
+  PetscCall(KSPSolve(ksp, b, x));
 
   /*
      Free work space.  All PETSc objects should be destroyed when they
      are no longer needed.
   */
-  ierr = VecDestroy(&x);CHKERRQ(ierr); ierr = VecDestroy(&u);CHKERRQ(ierr);
-  ierr = VecDestroy(&b);CHKERRQ(ierr); ierr = MatDestroy(&A);CHKERRQ(ierr);
-  ierr = KSPDestroy(&ksp);CHKERRQ(ierr);
+  PetscCall(KSPDestroy(&ksp));
+
+  /* test if prefixes properly propagate to PCMPI objects */
+  if (PCMPIServerActive) {
+    PetscCall(KSPCreate(PETSC_COMM_SELF, &ksp));
+    PetscCall(KSPSetOptionsPrefix(ksp, "prefix_test_"));
+    PetscCall(MatSetOptionsPrefix(A, "prefix_test_"));
+    PetscCall(KSPSetOperators(ksp, A, A));
+    PetscCall(KSPSetFromOptions(ksp));
+    PetscCall(KSPSolve(ksp, b, x));
+    PetscCall(KSPDestroy(&ksp));
+  }
+
+  PetscCall(VecDestroy(&x));
+  PetscCall(VecDestroy(&u));
+  PetscCall(VecDestroy(&b));
+  PetscCall(MatDestroy(&A));
 
   /*
      Always call PetscFinalize() before exiting a program.  This routine
@@ -152,8 +168,8 @@ int main(int argc,char **args)
        - provides summary and diagnostic information if certain runtime
          options are chosen (e.g., -log_view).
   */
-  ierr = PetscFinalize();
-  return ierr;
+  PetscCall(PetscFinalize());
+  return 0;
 }
 
 /*TEST
@@ -169,6 +185,7 @@ int main(int argc,char **args)
       suffix: 2_aijcusparse
       requires: cuda
       args: -pc_type sor -pc_sor_symmetric -ksp_monitor_short -ksp_gmres_cgs_refinement_type refine_always -mat_type aijcusparse -vec_type cuda
+      args: -ksp_view
 
    test:
       suffix: 3
@@ -177,12 +194,31 @@ int main(int argc,char **args)
    test:
       suffix: 3_aijcusparse
       requires: cuda
-      args: -pc_type eisenstat -ksp_monitor_short -ksp_gmres_cgs_refinement_type refine_always -mat_type aijcusparse -vec_type cuda
+      args: -pc_type eisenstat -ksp_monitor_short -ksp_gmres_cgs_refinement_type refine_always -mat_type aijcusparse -vec_type cuda -ksp_view
 
    test:
       suffix: aijcusparse
       requires: cuda
-      args: -ksp_monitor_short -ksp_gmres_cgs_refinement_type refine_always -mat_type aijcusparse -vec_type cuda
+      args: -ksp_monitor_short -ksp_gmres_cgs_refinement_type refine_always -mat_type aijcusparse -vec_type cuda -ksp_view
       output_file: output/ex1_1_aijcusparse.out
+
+   test:
+      requires: defined(PETSC_USE_SINGLE_LIBRARY)
+      suffix: mpi_linear_solver_server_1
+      nsize: 3
+      filter: sed 's?ATOL?RTOL?g' | grep -v HERMITIAN
+      # use the MPI Linear Solver Server
+      args: -mpi_linear_solver_server -mpi_linear_solver_server_view
+      # controls for the use of PCMPI on a particular system
+      args: -mpi_linear_solver_server_minimum_count_per_rank 5 -mpi_linear_solver_server_ksp_view -mpi_linear_solver_server_mat_view
+      # the usual options for the linear solver (in this case using the server)
+      args: -ksp_monitor -ksp_converged_reason -mat_view -ksp_view -ksp_type cg -pc_type none
+      # the options for the prefixed objects
+      args: -prefix_test_mpi_linear_solver_server_mat_view -prefix_test_ksp_monitor -prefix_test_mpi_linear_solver_server_minimum_count_per_rank 5
+
+   test:
+      requires: !__float128
+      suffix: minit
+      args: -ksp_monitor -pc_type none -ksp_min_it 8
 
 TEST*/

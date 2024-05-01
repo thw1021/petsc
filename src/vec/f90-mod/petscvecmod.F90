@@ -1,31 +1,31 @@
-
         module petscisdefdummy
         use petscsysdef
 #include <../src/vec/f90-mod/petscis.h>
-        end module
+#include <../src/vec/f90-mod/petscao.h>
+        end module petscisdefdummy
 
         module petscisdef
         use petscisdefdummy
         interface operator(.ne.)
           function isnotequal(A,B)
-            use petscisdefdummy
+            import tIs
             logical isnotequal
             type(tIS), intent(in) :: A,B
           end function
           function petscsfnotequal(A,B)
-            use petscisdefdummy
+            import tPetscSF
             logical petscsfnotequal
             type(tPetscSF), intent(in) :: A,B
           end function
         end interface operator (.ne.)
         interface operator(.eq.)
           function isequals(A,B)
-            use petscisdefdummy
+            import tIs
             logical isequals
             type(tIS), intent(in) :: A,B
           end function
           function petscsfequals(A,B)
-            use petscisdefdummy
+            import tPetscSF
             logical petscsfequals
             type(tPetscSF), intent(in) :: A,B
           end function
@@ -33,32 +33,39 @@
         end module
 
         function isnotequal(A,B)
-          use petscisdefdummy
+          use petscisdefdummy, only: tIS
           logical isnotequal
           type(tIS), intent(in) :: A,B
           isnotequal = (A%v .ne. B%v)
         end function
 
         function isequals(A,B)
-          use petscisdefdummy
+          use petscisdefdummy, only: tIS
           logical isequals
           type(tIS), intent(in) :: A,B
           isequals = (A%v .eq. B%v)
         end function
 
         function petscsfnotequal(A,B)
-          use petscisdefdummy
+          use petscisdefdummy, only: tPetscSF
           logical petscsfnotequal
           type(tPetscSF), intent(in) :: A,B
           petscsfnotequal = (A%v .ne. B%v)
         end function
 
         function petscsfequals(A,B)
-          use petscisdefdummy
+          use petscisdefdummy, only: tPetscSF
           logical petscsfequals
           type(tPetscSF), intent(in) :: A,B
           petscsfequals = (A%v .eq. B%v)
         end function
+
+#if defined(_WIN32) && defined(PETSC_USE_SHARED_LIBRARIES)
+!DEC$ ATTRIBUTES DLLEXPORT::isnotequal
+!DEC$ ATTRIBUTES DLLEXPORT::petscsfnotequal
+!DEC$ ATTRIBUTES DLLEXPORT::isequals
+!DEC$ ATTRIBUTES DLLEXPORT::petscsfequals
+#endif
 
         module  petscaodef
         use petscisdef
@@ -76,24 +83,24 @@
         use petscvecdefdummy
         interface operator(.ne.)
           function vecnotequal(A,B)
-            use petscvecdefdummy
+            import tVec
             logical vecnotequal
             type(tVec), intent(in) :: A,B
           end function
           function vecscatternotequal(A,B)
-            use petscvecdefdummy
+            import tVecScatter
             logical vecscatternotequal
             type(tVecScatter), intent(in) :: A,B
           end function
         end interface operator (.ne.)
         interface operator(.eq.)
           function vecequals(A,B)
-            use petscvecdefdummy
+            import tVec
             logical vecequals
             type(tVec), intent(in) :: A,B
           end function
           function vecscatterequals(A,B)
-            use petscvecdefdummy
+            import tVecScatter
             logical vecscatterequals
             type(tVecScatter), intent(in) :: A,B
           end function
@@ -101,32 +108,39 @@
         end module
 
         function vecnotequal(A,B)
-          use petscvecdefdummy
+          use petscvecdefdummy, only: tVec
           logical vecnotequal
           type(tVec), intent(in) :: A,B
           vecnotequal = (A%v .ne. B%v)
         end function
 
         function vecequals(A,B)
-          use petscvecdefdummy
+          use petscvecdefdummy, only: tVec
           logical vecequals
           type(tVec), intent(in) :: A,B
           vecequals = (A%v .eq. B%v)
         end function
 
         function vecscatternotequal(A,B)
-          use petscvecdefdummy
+          use petscvecdefdummy, only: tVecScatter
           logical vecscatternotequal
           type(tVecScatter), intent(in) :: A,B
           vecscatternotequal = (A%v .ne. B%v)
         end function
 
         function vecscatterequals(A,B)
-          use petscvecdefdummy
+          use petscvecdefdummy, only: tVecScatter
           logical vecscatterequals
           type(tVecScatter), intent(in) :: A,B
           vecscatterequals = (A%v .eq. B%v)
         end function
+
+#if defined(_WIN32) && defined(PETSC_USE_SHARED_LIBRARIES)
+!DEC$ ATTRIBUTES DLLEXPORT::vecnotequal
+!DEC$ ATTRIBUTES DLLEXPORT::vecscatternotequal
+!DEC$ ATTRIBUTES DLLEXPORT::vecequals
+!DEC$ ATTRIBUTES DLLEXPORT::vecscatterequals
+#endif
 
         module petscis
         use petscisdef
@@ -153,8 +167,7 @@
         end module
 
       subroutine F90ArraySFNodeCreate(array,n,ptr)
-      use petscsys
-      use petscis
+      use petscis, only: PetscSFNode
       implicit none
       PetscInt n,array(2*n)
       type(PetscSFNode), pointer :: ptr(:)

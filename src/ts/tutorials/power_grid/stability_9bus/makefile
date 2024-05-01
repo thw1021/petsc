@@ -1,16 +1,6 @@
+-include ../../../power_../stability_../petscdir.mk
 
-CFLAGS	        = -g
-FFLAGS	        =
-CPPFLAGS        =
-FPPFLAGS        =
-LOCDIR          = src/ts/tutorials/power_grid/stability_9bus/
-EXAMPLESC       = ex9bus.c ex9busadj.c ex9busopt.c ex9busoptfd.c ex9busdmnetwork.c
-EXAMPLESF       =
-EXAMPLESFH      =
-MANSEC          = TS
-DIRS            =
 CLEANFILES      = TS-data-*
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
-include ${PETSC_DIR}/lib/petsc/conf/test

@@ -1,30 +1,27 @@
-!
-!
-
-    module mymoduleex43f
+    module ex43fmodule
 #include <petsc/finclude/petscvec.h>
-      use iso_c_binding
+      use,intrinsic :: iso_c_binding
       interface
-        subroutine fillupvector(vaddr,ierr) bind ( C, name = "fillupvector")
+        subroutine fillupvector(vaddr,err) bind ( C, name = 'fillupvector')
 !
 !     We need to use iso_c_binding variables or otherwise we get compiler warnings
 !     Warning: Variable 'vaddr' at (1) is a dummy argument of the BIND(C)
 !              procedure 'fillupvector' but may not be C interoperable
 !
-          use iso_c_binding
+          use,intrinsic :: iso_c_binding
           integer(c_long_long) vaddr
-          integer(c_int) ierr
+          integer(c_int) err
         end subroutine fillupvector
       end interface
     end module
 
 #include <petsc/finclude/petscvec.h>
-        use iso_c_binding
+        use,intrinsic :: iso_c_binding
         use petscvec
-        use mymoduleex43f
+        use ex43fmodule
        implicit none
 !
-!  This routine demonstates how to call a bind C function from Fortran
+!  This routine demonstrates how to call a bind C function from Fortran
        Vec            v
        PetscErrorCode ierr
        PetscInt five
@@ -35,23 +32,22 @@
        integer(c_long_long) vaddr
        integer(c_int) err
 
-       call PetscInitialize(PETSC_NULL_CHARACTER,ierr)
-       call VecCreate(PETSC_COMM_WORLD,v,ierr);CHKERRA(ierr)
+       PetscCallA(PetscInitialize(ierr))
+       PetscCallA(VecCreate(PETSC_COMM_WORLD,v,ierr))
        five = 5
-       call VecSetSizes(v,PETSC_DECIDE,five,ierr);CHKERRA(ierr)
-       call VecSetFromOptions(v,ierr);CHKERRA(ierr)
+       PetscCallA(VecSetSizes(v,PETSC_DECIDE,five,ierr))
+       PetscCallA(VecSetFromOptions(v,ierr))
 !
 !     Now Call a Petsc Routine from Fortran
 !
 !
        vaddr = v%v
-       call fillupvector(vaddr,err);CHKERRA(ierr)
+       call fillupvector(vaddr,err)
 
-       call VecView(v,PETSC_VIEWER_STDOUT_WORLD,ierr);CHKERRA(ierr)
-       call VecDestroy(v,ierr);CHKERRA(ierr)
-       call PetscFinalize(ierr)
+       PetscCallA(VecView(v,PETSC_VIEWER_STDOUT_WORLD,ierr))
+       PetscCallA(VecDestroy(v,ierr))
+       PetscCallA(PetscFinalize(ierr))
        end
-
 
 !/*TEST
 !

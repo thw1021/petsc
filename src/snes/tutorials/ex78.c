@@ -1,13 +1,4 @@
-
 static char help[] = "Newton methods to solve u''  = f in parallel with periodic boundary conditions.\n\n";
-
-/*T
-   Concepts: SNES^basic parallel example
-   Concepts: periodic boundary conditions
-   Processors: n
-T*/
-
-
 
 /*
    Compare this example to ex3.c that handles Dirichlet boundary conditions
@@ -29,28 +20,27 @@ T*/
 #include <petscdmda.h>
 #include <petscsnes.h>
 
+PetscErrorCode FormJacobian(SNES, Vec, Mat, Mat, void *);
+PetscErrorCode FormFunction(SNES, Vec, Vec, void *);
 
-PetscErrorCode FormJacobian(SNES,Vec,Mat,Mat,void*);
-PetscErrorCode FormFunction(SNES,Vec,Vec,void*);
-
-int main(int argc,char **argv)
+int main(int argc, char **argv)
 {
-  SNES           snes;                 /* SNES context */
-  Mat            J;                    /* Jacobian matrix */
-  DM             da;
-  Vec            x,r;              /* vectors */
-  PetscErrorCode ierr;
-  PetscInt       N = 5;
-  MatNullSpace   constants;
+  SNES         snes; /* SNES context */
+  Mat          J;    /* Jacobian matrix */
+  DM           da;
+  Vec          x, r; /* vectors */
+  PetscInt     N = 5;
+  MatNullSpace constants;
 
-  ierr = PetscInitialize(&argc,&argv,(char*)0,help);if (ierr) return ierr;
-  ierr = PetscOptionsGetInt(NULL,NULL,"-n",&N,NULL);CHKERRQ(ierr);
+  PetscFunctionBeginUser;
+  PetscCall(PetscInitialize(&argc, &argv, (char *)0, help));
+  PetscCall(PetscOptionsGetInt(NULL, NULL, "-n", &N, NULL));
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Create nonlinear solver context
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-  ierr = SNESCreate(PETSC_COMM_WORLD,&snes);CHKERRQ(ierr);
+  PetscCall(SNESCreate(PETSC_COMM_WORLD, &snes));
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Create vector data structures; set function evaluation routine
@@ -59,16 +49,16 @@ int main(int argc,char **argv)
   /*
      Create distributed array (DMDA) to manage parallel grid and vectors
   */
-  ierr = DMDACreate1d(PETSC_COMM_WORLD,DM_BOUNDARY_PERIODIC,N,1,1,NULL,&da);CHKERRQ(ierr);
-  ierr = DMSetFromOptions(da);CHKERRQ(ierr);
-  ierr = DMSetUp(da);CHKERRQ(ierr);
+  PetscCall(DMDACreate1d(PETSC_COMM_WORLD, DM_BOUNDARY_PERIODIC, N, 1, 1, NULL, &da));
+  PetscCall(DMSetFromOptions(da));
+  PetscCall(DMSetUp(da));
 
   /*
      Extract global and local vectors from DMDA; then duplicate for remaining
      vectors that are the same types
   */
-  ierr = DMCreateGlobalVector(da,&x);CHKERRQ(ierr);
-  ierr = VecDuplicate(x,&r);CHKERRQ(ierr);
+  PetscCall(DMCreateGlobalVector(da, &x));
+  PetscCall(VecDuplicate(x, &r));
 
   /*
      Set function evaluation routine and vector.  Whenever the nonlinear
@@ -78,27 +68,27 @@ int main(int argc,char **argv)
         context that provides application-specific data for the
         function evaluation routine.
   */
-  ierr = SNESSetFunction(snes,r,FormFunction,da);CHKERRQ(ierr);
+  PetscCall(SNESSetFunction(snes, r, FormFunction, da));
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Create matrix data structure; set Jacobian evaluation routine
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-  ierr = DMCreateMatrix(da,&J);CHKERRQ(ierr);
-  ierr = MatNullSpaceCreate(PETSC_COMM_WORLD,PETSC_TRUE,0,NULL,&constants);CHKERRQ(ierr);
-  ierr = MatSetNullSpace(J,constants);CHKERRQ(ierr);
-  ierr = SNESSetJacobian(snes,J,J,FormJacobian,da);CHKERRQ(ierr);
+  PetscCall(DMCreateMatrix(da, &J));
+  PetscCall(MatNullSpaceCreate(PETSC_COMM_WORLD, PETSC_TRUE, 0, NULL, &constants));
+  PetscCall(MatSetNullSpace(J, constants));
+  PetscCall(SNESSetJacobian(snes, J, J, FormJacobian, da));
 
-  ierr = SNESSetFromOptions(snes);CHKERRQ(ierr);
-  ierr = SNESSolve(snes,NULL,x);CHKERRQ(ierr);
+  PetscCall(SNESSetFromOptions(snes));
+  PetscCall(SNESSolve(snes, NULL, x));
 
-  ierr = VecDestroy(&x);CHKERRQ(ierr);
-  ierr = VecDestroy(&r);CHKERRQ(ierr);
-  ierr = MatDestroy(&J);CHKERRQ(ierr);
-  ierr = MatNullSpaceDestroy(&constants);CHKERRQ(ierr);
-  ierr = SNESDestroy(&snes);CHKERRQ(ierr);
-  ierr = DMDestroy(&da);CHKERRQ(ierr);
-  ierr = PetscFinalize();
-  return ierr;
+  PetscCall(VecDestroy(&x));
+  PetscCall(VecDestroy(&r));
+  PetscCall(MatDestroy(&J));
+  PetscCall(MatNullSpaceDestroy(&constants));
+  PetscCall(SNESDestroy(&snes));
+  PetscCall(DMDestroy(&da));
+  PetscCall(PetscFinalize());
+  return 0;
 }
 
 /*
@@ -116,18 +106,17 @@ int main(int argc,char **argv)
    The user-defined context can contain any application-specific
    data needed for the function evaluation.
 */
-PetscErrorCode FormFunction(SNES snes,Vec x,Vec f,void *ctx)
+PetscErrorCode FormFunction(SNES snes, Vec x, Vec f, void *ctx)
 {
-  DM             da    = (DM) ctx;
-  PetscScalar    *xx,*ff;
-  PetscReal      h;
-  PetscErrorCode ierr;
-  PetscInt       i,M,xs,xm;
-  Vec            xlocal;
+  DM           da = (DM)ctx;
+  PetscScalar *xx, *ff;
+  PetscReal    h;
+  PetscInt     i, M, xs, xm;
+  Vec          xlocal;
 
   PetscFunctionBeginUser;
   /* Get local work vector */
-  ierr = DMGetLocalVector(da,&xlocal);CHKERRQ(ierr);
+  PetscCall(DMGetLocalVector(da, &xlocal));
 
   /*
      Scatter ghost points to local vector, using the 2-step process
@@ -135,8 +124,8 @@ PetscErrorCode FormFunction(SNES snes,Vec x,Vec f,void *ctx)
      By placing code between these two statements, computations can
      be done while messages are in transition.
   */
-  ierr = DMGlobalToLocalBegin(da,x,INSERT_VALUES,xlocal);CHKERRQ(ierr);
-  ierr = DMGlobalToLocalEnd(da,x,INSERT_VALUES,xlocal);CHKERRQ(ierr);
+  PetscCall(DMGlobalToLocalBegin(da, x, INSERT_VALUES, xlocal));
+  PetscCall(DMGlobalToLocalEnd(da, x, INSERT_VALUES, xlocal));
 
   /*
      Get pointers to vector data.
@@ -144,30 +133,30 @@ PetscErrorCode FormFunction(SNES snes,Vec x,Vec f,void *ctx)
          NOT include ghost points.
        - Using DMDAVecGetArray() allows accessing the values using global ordering
   */
-  ierr = DMDAVecGetArray(da,xlocal,&xx);CHKERRQ(ierr);
-  ierr = DMDAVecGetArray(da,f,&ff);CHKERRQ(ierr);
+  PetscCall(DMDAVecGetArray(da, xlocal, &xx));
+  PetscCall(DMDAVecGetArray(da, f, &ff));
 
   /*
      Get local grid boundaries (for 1-dimensional DMDA):
        xs, xm  - starting grid index, width of local grid (no ghost points)
   */
-  ierr = DMDAGetCorners(da,&xs,NULL,NULL,&xm,NULL,NULL);CHKERRQ(ierr);
-  ierr = DMDAGetInfo(da,NULL,&M,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL);CHKERRQ(ierr);
+  PetscCall(DMDAGetCorners(da, &xs, NULL, NULL, &xm, NULL, NULL));
+  PetscCall(DMDAGetInfo(da, NULL, &M, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL));
 
   /*
      Compute function over locally owned part of the grid
      Note the [i-1] and [i+1] will automatically access the ghost points from other processes or the periodic points.
   */
-  h = 1.0/M;
-  for (i=xs; i<xs+xm; i++) ff[i] = (xx[i-1] - 2.0*xx[i] + xx[i+1])/(h*h)  - PetscSinReal(2.0*PETSC_PI*i*h);
+  h = 1.0 / M;
+  for (i = xs; i < xs + xm; i++) ff[i] = (xx[i - 1] - 2.0 * xx[i] + xx[i + 1]) / (h * h) - PetscSinReal(2.0 * PETSC_PI * i * h);
 
   /*
      Restore vectors
   */
-  ierr = DMDAVecRestoreArray(da,xlocal,&xx);CHKERRQ(ierr);
-  ierr = DMDAVecRestoreArray(da,f,&ff);CHKERRQ(ierr);
-  ierr = DMRestoreLocalVector(da,&xlocal);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(DMDAVecRestoreArray(da, xlocal, &xx));
+  PetscCall(DMDAVecRestoreArray(da, f, &ff));
+  PetscCall(DMRestoreLocalVector(da, &xlocal));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 /* ------------------------------------------------------------------- */
 /*
@@ -183,50 +172,59 @@ PetscErrorCode FormFunction(SNES snes,Vec x,Vec f,void *ctx)
 .  B - optionally different preconditioning matrix
 .  flag - flag indicating matrix structure
 */
-PetscErrorCode FormJacobian(SNES snes,Vec x,Mat jac,Mat B,void *ctx)
+PetscErrorCode FormJacobian(SNES snes, Vec x, Mat jac, Mat B, void *ctx)
 {
-  PetscScalar    *xx,A[3];
-  PetscErrorCode ierr;
-  PetscInt       i,M,xs,xm;
-  DM             da = (DM) ctx;
-  MatStencil     row,cols[3];
-  PetscReal      h;
+  PetscScalar *xx, A[3];
+  PetscInt     i, M, xs, xm;
+  DM           da = (DM)ctx;
+  MatStencil   row, cols[3];
+  PetscReal    h;
 
   PetscFunctionBeginUser;
   /*
      Get pointer to vector data
   */
-  ierr = DMDAVecGetArrayRead(da,x,&xx);CHKERRQ(ierr);
-  ierr = DMDAGetCorners(da,&xs,NULL,NULL,&xm,NULL,NULL);CHKERRQ(ierr);
+  PetscCall(DMDAVecGetArrayRead(da, x, &xx));
+  PetscCall(DMDAGetCorners(da, &xs, NULL, NULL, &xm, NULL, NULL));
 
   /*
     Get range of locally owned matrix
   */
-  ierr = DMDAGetInfo(da,NULL,&M,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL);CHKERRQ(ierr);
+  PetscCall(DMDAGetInfo(da, NULL, &M, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL));
 
-  ierr = MatZeroEntries(jac);CHKERRQ(ierr);
-  h = 1.0/M;
+  PetscCall(MatZeroEntries(jac));
+  h = 1.0 / M;
   /* because of periodic boundary conditions we can simply loop over all local nodes and access to the left and right */
-  for (i=xs; i<xs+xm; i++) {
-    row.i = i;
+  for (i = xs; i < xs + xm; i++) {
+    row.i     = i;
     cols[0].i = i - 1;
     cols[1].i = i;
     cols[2].i = i + 1;
-    A[0] = A[2] = 1.0/(h*h); A[1] = -2.0/(h*h);
-    ierr = MatSetValuesStencil(jac,1,&row,3,cols,A,ADD_VALUES);CHKERRQ(ierr);
+    A[0] = A[2] = 1.0 / (h * h);
+    A[1]        = -2.0 / (h * h);
+    PetscCall(MatSetValuesStencil(jac, 1, &row, 3, cols, A, ADD_VALUES));
   }
 
-  ierr = DMDAVecRestoreArrayRead(da,x,&xx);CHKERRQ(ierr);
-  ierr = MatAssemblyBegin(jac,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  ierr = MatAssemblyEnd(jac,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(DMDAVecRestoreArrayRead(da, x, &xx));
+  PetscCall(MatAssemblyBegin(jac, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(jac, MAT_FINAL_ASSEMBLY));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
-
 
 /*TEST
 
    test:
       args: -snes_monitor_short -ksp_monitor_short -pc_type sor -snes_converged_reason -da_refine 3
+      requires: !single
+
+   test:
+      suffix: 2
+      args: -snes_monitor_short -ksp_monitor_short -pc_type sor -snes_converged_reason -da_refine 3 -snes_type newtontrdc
+      requires: !single
+
+   test:
+      suffix: 3
+      args: -snes_monitor_short -ksp_monitor_short -pc_type sor -snes_converged_reason -da_refine 3 -snes_type newtontrdc -snes_trdc_use_cauchy false
       requires: !single
 
 TEST*/

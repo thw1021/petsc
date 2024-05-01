@@ -35,12 +35,12 @@ Example usage:
 /* z = psi(x,y) is the hemispherical obstacle, but made C^1 with "skirt" at r=r0 */
 PetscReal psi(PetscReal x, PetscReal y)
 {
-    const PetscReal  r = x * x + y * y,r0 = 0.9,psi0 = PetscSqrtReal(1.0 - r0*r0),dpsi0 = - r0 / psi0;
-    if (r <= r0) {
-      return PetscSqrtReal(1.0 - r);
-    } else {
-      return psi0 + dpsi0 * (r - r0);
-    }
+  const PetscReal r = x * x + y * y, r0 = 0.9, psi0 = PetscSqrtReal(1.0 - r0 * r0), dpsi0 = -r0 / psi0;
+  if (r <= r0) {
+    return PetscSqrtReal(1.0 - r);
+  } else {
+    return psi0 + dpsi0 * (r - r0);
+  }
 }
 
 /*  This exact solution solves a 1D radial free-boundary problem for the
@@ -56,192 +56,198 @@ The solution is a = 0.697965148223374 (giving residual 1.5e-15).  Then
 A = a^2*(1-a^2)^(-0.5) and B = A*log(2) are as given below in the code.  */
 PetscReal u_exact(PetscReal x, PetscReal y)
 {
-    const PetscReal afree = 0.697965148223374,
-                    A     = 0.680259411891719,
-                    B     = 0.471519893402112;
-    PetscReal  r;
-    r = PetscSqrtReal(x * x + y * y);
-    return (r <= afree) ? psi(x,y)  /* active set; on the obstacle */
-                        : - A * PetscLogReal(r) + B; /* solves laplace eqn */
+  const PetscReal afree = 0.697965148223374, A = 0.680259411891719, B = 0.471519893402112;
+  PetscReal       r;
+  r = PetscSqrtReal(x * x + y * y);
+  return (r <= afree) ? psi(x, y)                 /* active set; on the obstacle */
+                      : -A * PetscLogReal(r) + B; /* solves laplace eqn */
 }
 
-extern PetscErrorCode FormExactSolution(DMDALocalInfo*,Vec);
-extern PetscErrorCode FormBounds(SNES,Vec,Vec);
-extern PetscErrorCode FormFunctionLocal(DMDALocalInfo*,PetscReal**,PetscReal**,void*);
-extern PetscErrorCode FormJacobianLocal(DMDALocalInfo*,PetscReal**,Mat,Mat,void*);
+extern PetscErrorCode FormExactSolution(DMDALocalInfo *, Vec);
+extern PetscErrorCode FormBounds(SNES, Vec, Vec);
+extern PetscErrorCode FormFunctionLocal(DMDALocalInfo *, PetscReal **, PetscReal **, void *);
+extern PetscErrorCode FormJacobianLocal(DMDALocalInfo *, PetscReal **, Mat, Mat, void *);
 
-int main(int argc,char **argv)
+int main(int argc, char **argv)
 {
-  PetscErrorCode      ierr;
-  SNES                snes;
-  DM                  da, da_after;
-  Vec                 u, u_exact;
-  DMDALocalInfo       info;
-  PetscReal           error1,errorinf;
+  SNES          snes;
+  DM            da, da_after;
+  Vec           u, u_exact;
+  DMDALocalInfo info;
+  PetscReal     error1, errorinf;
 
-  ierr = PetscInitialize(&argc,&argv,(char*)0,help);if (ierr) return ierr;
+  PetscFunctionBeginUser;
+  PetscCall(PetscInitialize(&argc, &argv, (char *)0, help));
 
-  ierr = DMDACreate2d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,
-                      DMDA_STENCIL_STAR,5,5, /* 5x5 coarse grid; override with -da_grid_x,_y */
-                      PETSC_DECIDE,PETSC_DECIDE,
-                      1,1,  /* dof=1 and s = 1 (stencil extends out one cell) */
-                      NULL,NULL,&da);CHKERRQ(ierr);
-  ierr = DMSetFromOptions(da);CHKERRQ(ierr);
-  ierr = DMSetUp(da);CHKERRQ(ierr);
-  ierr = DMDASetUniformCoordinates(da,-2.0,2.0,-2.0,2.0,0.0,1.0);CHKERRQ(ierr);
+  PetscCall(DMDACreate2d(PETSC_COMM_WORLD, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_STAR, 5, 5, /* 5x5 coarse grid; override with -da_grid_x,_y */
+                         PETSC_DECIDE, PETSC_DECIDE, 1, 1,                                              /* dof=1 and s = 1 (stencil extends out one cell) */
+                         NULL, NULL, &da));
+  PetscCall(DMSetFromOptions(da));
+  PetscCall(DMSetUp(da));
+  PetscCall(DMDASetUniformCoordinates(da, -2.0, 2.0, -2.0, 2.0, 0.0, 1.0));
 
-  ierr = DMCreateGlobalVector(da,&u);CHKERRQ(ierr);
-  ierr = VecSet(u,0.0);CHKERRQ(ierr);
+  PetscCall(DMCreateGlobalVector(da, &u));
+  PetscCall(VecSet(u, 0.0));
 
-  ierr = SNESCreate(PETSC_COMM_WORLD,&snes);CHKERRQ(ierr);
-  ierr = SNESSetDM(snes,da);CHKERRQ(ierr);
-  ierr = SNESSetType(snes,SNESVINEWTONRSLS);CHKERRQ(ierr);
-  ierr = SNESVISetComputeVariableBounds(snes,&FormBounds);CHKERRQ(ierr);
-  ierr = DMDASNESSetFunctionLocal(da,INSERT_VALUES,(DMDASNESFunction)FormFunctionLocal,NULL);CHKERRQ(ierr);
-  ierr = DMDASNESSetJacobianLocal(da,(DMDASNESJacobian)FormJacobianLocal,NULL);CHKERRQ(ierr);
-  ierr = SNESSetFromOptions(snes);CHKERRQ(ierr);
+  PetscCall(SNESCreate(PETSC_COMM_WORLD, &snes));
+  PetscCall(SNESSetDM(snes, da));
+  PetscCall(SNESSetType(snes, SNESVINEWTONRSLS));
+  PetscCall(SNESVISetComputeVariableBounds(snes, &FormBounds));
+  PetscCall(DMDASNESSetFunctionLocal(da, INSERT_VALUES, (DMDASNESFunctionFn *)FormFunctionLocal, NULL));
+  PetscCall(DMDASNESSetJacobianLocal(da, (DMDASNESJacobianFn *)FormJacobianLocal, NULL));
+  PetscCall(SNESSetFromOptions(snes));
 
   /* solve nonlinear system */
-  ierr = SNESSolve(snes,NULL,u);CHKERRQ(ierr);
-  ierr = VecDestroy(&u);CHKERRQ(ierr);
-  ierr = DMDestroy(&da);CHKERRQ(ierr);
+  PetscCall(SNESSolve(snes, NULL, u));
+  PetscCall(VecDestroy(&u));
+  PetscCall(DMDestroy(&da));
   /* DMDA after solve may be different, e.g. with -snes_grid_sequence */
-  ierr = SNESGetDM(snes,&da_after);CHKERRQ(ierr);
-  ierr = SNESGetSolution(snes,&u);CHKERRQ(ierr); /* do not destroy u */
-  ierr = DMDAGetLocalInfo(da_after,&info);CHKERRQ(ierr);
-  ierr = VecDuplicate(u,&u_exact);CHKERRQ(ierr);
-  ierr = FormExactSolution(&info,u_exact);CHKERRQ(ierr);
-  ierr = VecAXPY(u,-1.0,u_exact);CHKERRQ(ierr); /* u <-- u - u_exact */
-  ierr = VecNorm(u,NORM_1,&error1);CHKERRQ(ierr);
+  PetscCall(SNESGetDM(snes, &da_after));
+  PetscCall(SNESGetSolution(snes, &u)); /* do not destroy u */
+  PetscCall(DMDAGetLocalInfo(da_after, &info));
+  PetscCall(VecDuplicate(u, &u_exact));
+  PetscCall(FormExactSolution(&info, u_exact));
+  PetscCall(VecAXPY(u, -1.0, u_exact)); /* u <-- u - u_exact */
+  PetscCall(VecNorm(u, NORM_1, &error1));
   error1 /= (PetscReal)info.mx * (PetscReal)info.my; /* average error */
-  ierr = VecNorm(u,NORM_INFINITY,&errorinf);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"errors on %D x %D grid:  av |u-uexact|  = %.3e,  |u-uexact|_inf = %.3e\n",info.mx,info.my,(double)error1,(double)errorinf);CHKERRQ(ierr);
-  ierr = VecDestroy(&u_exact);CHKERRQ(ierr);
-  ierr = SNESDestroy(&snes);CHKERRQ(ierr);
-  ierr = DMDestroy(&da);CHKERRQ(ierr);
-  ierr = PetscFinalize();
-  return ierr;
+  PetscCall(VecNorm(u, NORM_INFINITY, &errorinf));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "errors on %" PetscInt_FMT " x %" PetscInt_FMT " grid:  av |u-uexact|  = %.3e,  |u-uexact|_inf = %.3e\n", info.mx, info.my, (double)error1, (double)errorinf));
+  PetscCall(VecDestroy(&u_exact));
+  PetscCall(SNESDestroy(&snes));
+  PetscCall(DMDestroy(&da));
+  PetscCall(PetscFinalize());
+  return 0;
 }
 
 PetscErrorCode FormExactSolution(DMDALocalInfo *info, Vec u)
 {
-  PetscErrorCode ierr;
-  PetscInt       i,j;
-  PetscReal      **au, dx, dy, x, y;
-  dx = 4.0 / (PetscReal)(info->mx-1);
-  dy = 4.0 / (PetscReal)(info->my-1);
-  ierr = DMDAVecGetArray(info->da, u, &au);CHKERRQ(ierr);
-  for (j=info->ys; j<info->ys+info->ym; j++) {
+  PetscInt    i, j;
+  PetscReal **au, dx, dy, x, y;
+
+  PetscFunctionBeginUser;
+  dx = 4.0 / (PetscReal)(info->mx - 1);
+  dy = 4.0 / (PetscReal)(info->my - 1);
+  PetscCall(DMDAVecGetArray(info->da, u, &au));
+  for (j = info->ys; j < info->ys + info->ym; j++) {
     y = -2.0 + j * dy;
-    for (i=info->xs; i<info->xs+info->xm; i++) {
-      x = -2.0 + i * dx;
-      au[j][i] = u_exact(x,y);
+    for (i = info->xs; i < info->xs + info->xm; i++) {
+      x        = -2.0 + i * dx;
+      au[j][i] = u_exact(x, y);
     }
   }
-  ierr = DMDAVecRestoreArray(info->da, u, &au);CHKERRQ(ierr);
-  return 0;
+  PetscCall(DMDAVecRestoreArray(info->da, u, &au));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode FormBounds(SNES snes, Vec Xl, Vec Xu)
 {
-  PetscErrorCode ierr;
-  DM             da;
-  DMDALocalInfo  info;
-  PetscInt       i, j;
-  PetscReal      **aXl, dx, dy, x, y;
+  DM            da;
+  DMDALocalInfo info;
+  PetscInt      i, j;
+  PetscReal   **aXl, dx, dy, x, y;
 
-  ierr = SNESGetDM(snes,&da);CHKERRQ(ierr);
-  ierr = DMDAGetLocalInfo(da,&info);CHKERRQ(ierr);
-  dx = 4.0 / (PetscReal)(info.mx-1);
-  dy = 4.0 / (PetscReal)(info.my-1);
-  ierr = DMDAVecGetArray(da, Xl, &aXl);CHKERRQ(ierr);
-  for (j=info.ys; j<info.ys+info.ym; j++) {
+  PetscFunctionBeginUser;
+  PetscCall(SNESGetDM(snes, &da));
+  PetscCall(DMDAGetLocalInfo(da, &info));
+  dx = 4.0 / (PetscReal)(info.mx - 1);
+  dy = 4.0 / (PetscReal)(info.my - 1);
+  PetscCall(DMDAVecGetArray(da, Xl, &aXl));
+  for (j = info.ys; j < info.ys + info.ym; j++) {
     y = -2.0 + j * dy;
-    for (i=info.xs; i<info.xs+info.xm; i++) {
-      x = -2.0 + i * dx;
-      aXl[j][i] = psi(x,y);
+    for (i = info.xs; i < info.xs + info.xm; i++) {
+      x         = -2.0 + i * dx;
+      aXl[j][i] = psi(x, y);
     }
   }
-  ierr = DMDAVecRestoreArray(da, Xl, &aXl);CHKERRQ(ierr);
-  ierr = VecSet(Xu,PETSC_INFINITY);CHKERRQ(ierr);
-  return 0;
+  PetscCall(DMDAVecRestoreArray(da, Xl, &aXl));
+  PetscCall(VecSet(Xu, PETSC_INFINITY));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscScalar **au, PetscScalar **af, void *user)
 {
-  PetscErrorCode ierr;
-  PetscInt       i,j;
-  PetscReal      dx,dy,x,y,ue,un,us,uw;
+  PetscInt  i, j;
+  PetscReal dx, dy, x, y, ue, un, us, uw;
 
   PetscFunctionBeginUser;
-  dx = 4.0 / (PetscReal)(info->mx-1);
-  dy = 4.0 / (PetscReal)(info->my-1);
-  for (j=info->ys; j<info->ys+info->ym; j++) {
+  dx = 4.0 / (PetscReal)(info->mx - 1);
+  dy = 4.0 / (PetscReal)(info->my - 1);
+  for (j = info->ys; j < info->ys + info->ym; j++) {
     y = -2.0 + j * dy;
-    for (i=info->xs; i<info->xs+info->xm; i++) {
+    for (i = info->xs; i < info->xs + info->xm; i++) {
       x = -2.0 + i * dx;
-      if (i == 0 || j == 0 || i == info->mx-1 || j == info->my-1) {
-        af[j][i] = 4.0 * (au[j][i] - u_exact(x,y));
+      if (i == 0 || j == 0 || i == info->mx - 1 || j == info->my - 1) {
+        af[j][i] = 4.0 * (au[j][i] - u_exact(x, y));
       } else {
-        uw = (i-1 == 0)          ? u_exact(x-dx,y) : au[j][i-1];
-        ue = (i+1 == info->mx-1) ? u_exact(x+dx,y) : au[j][i+1];
-        us = (j-1 == 0)          ? u_exact(x,y-dy) : au[j-1][i];
-        un = (j+1 == info->my-1) ? u_exact(x,y+dy) : au[j+1][i];
-        af[j][i] = - (dy/dx) * (uw - 2.0 * au[j][i] + ue) - (dx/dy) * (us - 2.0 * au[j][i] + un);
+        uw       = (i - 1 == 0) ? u_exact(x - dx, y) : au[j][i - 1];
+        ue       = (i + 1 == info->mx - 1) ? u_exact(x + dx, y) : au[j][i + 1];
+        us       = (j - 1 == 0) ? u_exact(x, y - dy) : au[j - 1][i];
+        un       = (j + 1 == info->my - 1) ? u_exact(x, y + dy) : au[j + 1][i];
+        af[j][i] = -(dy / dx) * (uw - 2.0 * au[j][i] + ue) - (dx / dy) * (us - 2.0 * au[j][i] + un);
       }
     }
   }
-  ierr = PetscLogFlops(12.0*info->ym*info->xm);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscLogFlops(12.0 * info->ym * info->xm));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscScalar **au, Mat A, Mat jac, void *user)
 {
-  PetscErrorCode ierr;
-  PetscInt       i,j,n;
-  MatStencil     col[5],row;
-  PetscReal      v[5],dx,dy,oxx,oyy;
+  PetscInt   i, j, n;
+  MatStencil col[5], row;
+  PetscReal  v[5], dx, dy, oxx, oyy;
 
   PetscFunctionBeginUser;
-  dx  = 4.0 / (PetscReal)(info->mx-1);
-  dy  = 4.0 / (PetscReal)(info->my-1);
+  dx  = 4.0 / (PetscReal)(info->mx - 1);
+  dy  = 4.0 / (PetscReal)(info->my - 1);
   oxx = dy / dx;
   oyy = dx / dy;
-  for (j=info->ys; j<info->ys+info->ym; j++) {
-    for (i=info->xs; i<info->xs+info->xm; i++) {
-      row.j = j; row.i = i;
-      if (i == 0 || j == 0 || i == info->mx-1 || j == info->my-1) { /* boundary */
+  for (j = info->ys; j < info->ys + info->ym; j++) {
+    for (i = info->xs; i < info->xs + info->xm; i++) {
+      row.j = j;
+      row.i = i;
+      if (i == 0 || j == 0 || i == info->mx - 1 || j == info->my - 1) { /* boundary */
         v[0] = 4.0;
-        ierr = MatSetValuesStencil(jac,1,&row,1,&row,v,INSERT_VALUES);CHKERRQ(ierr);
+        PetscCall(MatSetValuesStencil(jac, 1, &row, 1, &row, v, INSERT_VALUES));
       } else { /* interior grid points */
-        v[0] = 2.0 * (oxx + oyy);  col[0].j = j;  col[0].i = i;
-        n = 1;
-        if (i-1 > 0) {
-          v[n] = -oxx;  col[n].j = j;  col[n++].i = i-1;
+        v[0]     = 2.0 * (oxx + oyy);
+        col[0].j = j;
+        col[0].i = i;
+        n        = 1;
+        if (i - 1 > 0) {
+          v[n]       = -oxx;
+          col[n].j   = j;
+          col[n++].i = i - 1;
         }
-        if (i+1 < info->mx-1) {
-          v[n] = -oxx;  col[n].j = j;  col[n++].i = i+1;
+        if (i + 1 < info->mx - 1) {
+          v[n]       = -oxx;
+          col[n].j   = j;
+          col[n++].i = i + 1;
         }
-        if (j-1 > 0) {
-          v[n] = -oyy;  col[n].j = j-1;  col[n++].i = i;
+        if (j - 1 > 0) {
+          v[n]       = -oyy;
+          col[n].j   = j - 1;
+          col[n++].i = i;
         }
-        if (j+1 < info->my-1) {
-          v[n] = -oyy;  col[n].j = j+1;  col[n++].i = i;
+        if (j + 1 < info->my - 1) {
+          v[n]       = -oyy;
+          col[n].j   = j + 1;
+          col[n++].i = i;
         }
-        ierr = MatSetValuesStencil(jac,1,&row,n,col,v,INSERT_VALUES);CHKERRQ(ierr);
+        PetscCall(MatSetValuesStencil(jac, 1, &row, n, col, v, INSERT_VALUES));
       }
     }
   }
 
   /* Assemble matrix, using the 2-step process: */
-  ierr = MatAssemblyBegin(jac,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  ierr = MatAssemblyEnd(jac,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+  PetscCall(MatAssemblyBegin(jac, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(jac, MAT_FINAL_ASSEMBLY));
   if (A != jac) {
-    ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-    ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+    PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
   }
-  ierr = PetscLogFlops(2.0*info->ym*info->xm);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscLogFlops(2.0 * info->ym * info->xm));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*TEST

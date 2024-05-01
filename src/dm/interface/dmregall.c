@@ -1,4 +1,3 @@
-
 #include <petscdm.h>     /*I  "petscdm.h"  I*/
 #include <petscdmplex.h> /*I  "petscdmplex.h"  I*/
 #include <petsc/private/dmimpl.h>
@@ -31,109 +30,100 @@ PETSC_EXTERN PetscErrorCode DMCreate_Stag(DM);
 
   Not Collective
 
-  Input parameter:
-. path - The dynamic library path
-
   Level: advanced
 
-.seealso:  DMRegister(), DMRegisterDestroy()
+.seealso: `DMRegister()`, `DMRegisterDestroy()`
 @*/
-PetscErrorCode  DMRegisterAll(void)
+PetscErrorCode DMRegisterAll(void)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  if (DMRegisterAllCalled) PetscFunctionReturn(0);
+  if (DMRegisterAllCalled) PetscFunctionReturn(PETSC_SUCCESS);
   DMRegisterAllCalled = PETSC_TRUE;
 
-  ierr = DMRegister(DMDA,       DMCreate_DA);CHKERRQ(ierr);
-  ierr = DMRegister(DMCOMPOSITE,DMCreate_Composite);CHKERRQ(ierr);
-  ierr = DMRegister(DMSLICED,   DMCreate_Sliced);CHKERRQ(ierr);
-  ierr = DMRegister(DMSHELL,    DMCreate_Shell);CHKERRQ(ierr);
-  ierr = DMRegister(DMREDUNDANT,DMCreate_Redundant);CHKERRQ(ierr);
-  ierr = DMRegister(DMPLEX,     DMCreate_Plex);CHKERRQ(ierr);
-  ierr = DMRegister(DMPATCH,    DMCreate_Patch);CHKERRQ(ierr);
-  ierr = DMRegister(DMSWARM,    DMCreate_Swarm);CHKERRQ(ierr);
+  PetscCall(DMRegister(DMDA, DMCreate_DA));
+  PetscCall(DMRegister(DMCOMPOSITE, DMCreate_Composite));
+  PetscCall(DMRegister(DMSLICED, DMCreate_Sliced));
+  PetscCall(DMRegister(DMSHELL, DMCreate_Shell));
+  PetscCall(DMRegister(DMREDUNDANT, DMCreate_Redundant));
+  PetscCall(DMRegister(DMPLEX, DMCreate_Plex));
+  PetscCall(DMRegister(DMPATCH, DMCreate_Patch));
+  PetscCall(DMRegister(DMSWARM, DMCreate_Swarm));
 #if defined(PETSC_HAVE_MOAB)
-  ierr = DMRegister(DMMOAB,     DMCreate_Moab);CHKERRQ(ierr);
+  PetscCall(DMRegister(DMMOAB, DMCreate_Moab));
 #endif
-  ierr = DMRegister(DMNETWORK,  DMCreate_Network);CHKERRQ(ierr);
-  ierr = DMRegister(DMFOREST,   DMCreate_Forest);CHKERRQ(ierr);
+  PetscCall(DMRegister(DMNETWORK, DMCreate_Network));
+  PetscCall(DMRegister(DMFOREST, DMCreate_Forest));
 #if defined(PETSC_HAVE_P4EST)
-  ierr = DMRegister(DMP4EST,    DMCreate_p4est);CHKERRQ(ierr);
-  ierr = DMRegister(DMP8EST,    DMCreate_p8est);CHKERRQ(ierr);
+  PetscCall(DMRegister(DMP4EST, DMCreate_p4est));
+  PetscCall(DMRegister(DMP8EST, DMCreate_p8est));
 #endif
-  ierr = DMRegister(DMPRODUCT,  DMCreate_Product);CHKERRQ(ierr);
-  ierr = DMRegister(DMSTAG,     DMCreate_Stag);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(DMRegister(DMPRODUCT, DMCreate_Product));
+  PetscCall(DMRegister(DMSTAG, DMCreate_Stag));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-#include <petscfe.h>     /*I  "petscfe.h"  I*/
+#include <petscfe.h> /*I  "petscfe.h"  I*/
 
 PETSC_EXTERN PetscErrorCode PetscSpaceCreate_Polynomial(PetscSpace);
+PETSC_EXTERN PetscErrorCode PetscSpaceCreate_Ptrimmed(PetscSpace);
 PETSC_EXTERN PetscErrorCode PetscSpaceCreate_Tensor(PetscSpace);
 PETSC_EXTERN PetscErrorCode PetscSpaceCreate_Sum(PetscSpace);
 PETSC_EXTERN PetscErrorCode PetscSpaceCreate_Point(PetscSpace);
 PETSC_EXTERN PetscErrorCode PetscSpaceCreate_Subspace(PetscSpace);
+PETSC_EXTERN PetscErrorCode PetscSpaceCreate_WXY(PetscSpace);
 
 /*@C
   PetscSpaceRegisterAll - Registers all of the PetscSpace components in the PetscFE package.
 
   Not Collective
 
-  Input parameter:
-. path - The dynamic library path
-
   Level: advanced
 
-.seealso:  PetscSpaceRegister(), PetscSpaceRegisterDestroy()
+.seealso: `PetscSpaceRegister()`, `PetscSpaceRegisterDestroy()`
 @*/
 PetscErrorCode PetscSpaceRegisterAll(void)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  if (PetscSpaceRegisterAllCalled) PetscFunctionReturn(0);
+  if (PetscSpaceRegisterAllCalled) PetscFunctionReturn(PETSC_SUCCESS);
   PetscSpaceRegisterAllCalled = PETSC_TRUE;
 
-  ierr = PetscSpaceRegister(PETSCSPACEPOLYNOMIAL, PetscSpaceCreate_Polynomial);CHKERRQ(ierr);
-  ierr = PetscSpaceRegister(PETSCSPACETENSOR,     PetscSpaceCreate_Tensor);CHKERRQ(ierr);
-  ierr = PetscSpaceRegister(PETSCSPACESUM,        PetscSpaceCreate_Sum);CHKERRQ(ierr);
-  ierr = PetscSpaceRegister(PETSCSPACEPOINT,      PetscSpaceCreate_Point);CHKERRQ(ierr);
-  ierr = PetscSpaceRegister(PETSCSPACESUBSPACE,   PetscSpaceCreate_Subspace);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscSpaceRegister(PETSCSPACEPOLYNOMIAL, PetscSpaceCreate_Polynomial));
+  PetscCall(PetscSpaceRegister(PETSCSPACEPTRIMMED, PetscSpaceCreate_Ptrimmed));
+  PetscCall(PetscSpaceRegister(PETSCSPACETENSOR, PetscSpaceCreate_Tensor));
+  PetscCall(PetscSpaceRegister(PETSCSPACESUM, PetscSpaceCreate_Sum));
+  PetscCall(PetscSpaceRegister(PETSCSPACEPOINT, PetscSpaceCreate_Point));
+  PetscCall(PetscSpaceRegister(PETSCSPACESUBSPACE, PetscSpaceCreate_Subspace));
+  PetscCall(PetscSpaceRegister(PETSCSPACEWXY, PetscSpaceCreate_WXY));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PETSC_EXTERN PetscErrorCode PetscDualSpaceCreate_Lagrange(PetscDualSpace);
 PETSC_EXTERN PetscErrorCode PetscDualSpaceCreate_Lagrange_BDM(PetscDualSpace);
 PETSC_EXTERN PetscErrorCode PetscDualSpaceCreate_Simple(PetscDualSpace);
 PETSC_EXTERN PetscErrorCode PetscDualSpaceCreate_Refined(PetscDualSpace);
+PETSC_EXTERN PetscErrorCode PetscDualSpaceCreate_Sum(PetscDualSpace);
 
 /*@C
   PetscDualSpaceRegisterAll - Registers all of the PetscDualSpace components in the PetscFE package.
 
   Not Collective
 
-  Input parameter:
-. path - The dynamic library path
-
   Level: advanced
 
-.seealso:  PetscDualSpaceRegister(), PetscDualSpaceRegisterDestroy()
+.seealso: `PetscDualSpaceRegister()`, `PetscDualSpaceRegisterDestroy()`
 @*/
 PetscErrorCode PetscDualSpaceRegisterAll(void)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  if (PetscDualSpaceRegisterAllCalled) PetscFunctionReturn(0);
+  if (PetscDualSpaceRegisterAllCalled) PetscFunctionReturn(PETSC_SUCCESS);
   PetscDualSpaceRegisterAllCalled = PETSC_TRUE;
 
-  ierr = PetscDualSpaceRegister(PETSCDUALSPACELAGRANGE, PetscDualSpaceCreate_Lagrange);CHKERRQ(ierr);
-  ierr = PetscDualSpaceRegister(PETSCDUALSPACEBDM,      PetscDualSpaceCreate_Lagrange);CHKERRQ(ierr);
-  ierr = PetscDualSpaceRegister(PETSCDUALSPACESIMPLE,   PetscDualSpaceCreate_Simple);CHKERRQ(ierr);
-  ierr = PetscDualSpaceRegister(PETSCDUALSPACEREFINED,  PetscDualSpaceCreate_Refined);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscDualSpaceRegister(PETSCDUALSPACELAGRANGE, PetscDualSpaceCreate_Lagrange));
+  PetscCall(PetscDualSpaceRegister(PETSCDUALSPACEBDM, PetscDualSpaceCreate_Lagrange));
+  PetscCall(PetscDualSpaceRegister(PETSCDUALSPACESIMPLE, PetscDualSpaceCreate_Simple));
+  PetscCall(PetscDualSpaceRegister(PETSCDUALSPACEREFINED, PetscDualSpaceCreate_Refined));
+  PetscCall(PetscDualSpaceRegister(PETSCDUALSPACESUM, PetscDualSpaceCreate_Sum));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PETSC_EXTERN PetscErrorCode PetscFECreate_Basic(PetscFE);
@@ -142,35 +132,32 @@ PETSC_EXTERN PetscErrorCode PetscFECreate_Composite(PetscFE);
 #if defined(PETSC_HAVE_OPENCL)
 PETSC_EXTERN PetscErrorCode PetscFECreate_OpenCL(PetscFE);
 #endif
+PETSC_EXTERN PetscErrorCode PetscFECreate_Vector(PetscFE);
 
 /*@C
-  PetscFERegisterAll - Registers all of the PetscFE components in the PetscFE package.
+  PetscFERegisterAll - Registers all of the PetscFE components in the `PetscFE` package.
 
   Not Collective
 
-  Input parameter:
-. path - The dynamic library path
-
   Level: advanced
 
-.seealso:  PetscFERegister(), PetscFERegisterDestroy()
+.seealso: `PetscFERegister()`, `PetscFERegisterDestroy()`
 @*/
 PetscErrorCode PetscFERegisterAll(void)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  if (PetscFERegisterAllCalled) PetscFunctionReturn(0);
+  if (PetscFERegisterAllCalled) PetscFunctionReturn(PETSC_SUCCESS);
   PetscFERegisterAllCalled = PETSC_TRUE;
 
-  ierr = PetscFERegister(PETSCFEBASIC,     PetscFECreate_Basic);CHKERRQ(ierr);
-  ierr = PetscFERegister(PETSCFECOMPOSITE, PetscFECreate_Composite);CHKERRQ(ierr);
+  PetscCall(PetscFERegister(PETSCFEBASIC, PetscFECreate_Basic));
+  PetscCall(PetscFERegister(PETSCFECOMPOSITE, PetscFECreate_Composite));
 #if defined(PETSC_HAVE_OPENCL)
-  ierr = PetscFERegister(PETSCFEOPENCL, PetscFECreate_OpenCL);CHKERRQ(ierr);
+  PetscCall(PetscFERegister(PETSCFEOPENCL, PetscFECreate_OpenCL));
 #endif
-  PetscFunctionReturn(0);
+  PetscCall(PetscFERegister(PETSCFEVECTOR, PetscFECreate_Vector));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
-#include <petscfv.h>     /*I  "petscfv.h"  I*/
+#include <petscfv.h> /*I  "petscfv.h"  I*/
 
 PETSC_EXTERN PetscErrorCode PetscLimiterCreate_Sin(PetscLimiter);
 PETSC_EXTERN PetscErrorCode PetscLimiterCreate_Zero(PetscLimiter);
@@ -182,87 +169,72 @@ PETSC_EXTERN PetscErrorCode PetscLimiterCreate_Superbee(PetscLimiter);
 PETSC_EXTERN PetscErrorCode PetscLimiterCreate_MC(PetscLimiter);
 
 /*@C
-  PetscLimiterRegisterAll - Registers all of the PetscLimiter components in the PetscFV package.
+  PetscLimiterRegisterAll - Registers all of the `PetscLimiter` components in the `PetscFV` package.
 
   Not Collective
 
-  Input parameter:
-. path - The dynamic library path
-
   Level: advanced
 
-.seealso:  PetscLimiterRegister(), PetscLimiterRegisterDestroy()
+.seealso: `PetscLimiterRegister()`, `PetscLimiterRegisterDestroy()`
 @*/
 PetscErrorCode PetscLimiterRegisterAll(void)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  if (PetscLimiterRegisterAllCalled) PetscFunctionReturn(0);
+  if (PetscLimiterRegisterAllCalled) PetscFunctionReturn(PETSC_SUCCESS);
   PetscLimiterRegisterAllCalled = PETSC_TRUE;
 
-  ierr = PetscLimiterRegister(PETSCLIMITERSIN,       PetscLimiterCreate_Sin);CHKERRQ(ierr);
-  ierr = PetscLimiterRegister(PETSCLIMITERZERO,      PetscLimiterCreate_Zero);CHKERRQ(ierr);
-  ierr = PetscLimiterRegister(PETSCLIMITERNONE,      PetscLimiterCreate_None);CHKERRQ(ierr);
-  ierr = PetscLimiterRegister(PETSCLIMITERMINMOD,    PetscLimiterCreate_Minmod);CHKERRQ(ierr);
-  ierr = PetscLimiterRegister(PETSCLIMITERVANLEER,   PetscLimiterCreate_VanLeer);CHKERRQ(ierr);
-  ierr = PetscLimiterRegister(PETSCLIMITERVANALBADA, PetscLimiterCreate_VanAlbada);CHKERRQ(ierr);
-  ierr = PetscLimiterRegister(PETSCLIMITERSUPERBEE,  PetscLimiterCreate_Superbee);CHKERRQ(ierr);
-  ierr = PetscLimiterRegister(PETSCLIMITERMC,        PetscLimiterCreate_MC);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscLimiterRegister(PETSCLIMITERSIN, PetscLimiterCreate_Sin));
+  PetscCall(PetscLimiterRegister(PETSCLIMITERZERO, PetscLimiterCreate_Zero));
+  PetscCall(PetscLimiterRegister(PETSCLIMITERNONE, PetscLimiterCreate_None));
+  PetscCall(PetscLimiterRegister(PETSCLIMITERMINMOD, PetscLimiterCreate_Minmod));
+  PetscCall(PetscLimiterRegister(PETSCLIMITERVANLEER, PetscLimiterCreate_VanLeer));
+  PetscCall(PetscLimiterRegister(PETSCLIMITERVANALBADA, PetscLimiterCreate_VanAlbada));
+  PetscCall(PetscLimiterRegister(PETSCLIMITERSUPERBEE, PetscLimiterCreate_Superbee));
+  PetscCall(PetscLimiterRegister(PETSCLIMITERMC, PetscLimiterCreate_MC));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PETSC_EXTERN PetscErrorCode PetscFVCreate_Upwind(PetscFV);
 PETSC_EXTERN PetscErrorCode PetscFVCreate_LeastSquares(PetscFV);
 
 /*@C
-  PetscFVRegisterAll - Registers all of the PetscFV components in the PetscFV package.
+  PetscFVRegisterAll - Registers all of the `PetscFV` components in the `PetscFV` package.
 
   Not Collective
 
-  Input parameter:
-. path - The dynamic library path
-
   Level: advanced
 
-.seealso:  PetscFVRegister(), PetscFVRegisterDestroy()
+.seealso: `PetscFVRegister()`, `PetscFVRegisterDestroy()`
 @*/
 PetscErrorCode PetscFVRegisterAll(void)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  if (PetscFVRegisterAllCalled) PetscFunctionReturn(0);
+  if (PetscFVRegisterAllCalled) PetscFunctionReturn(PETSC_SUCCESS);
   PetscFVRegisterAllCalled = PETSC_TRUE;
 
-  ierr = PetscFVRegister(PETSCFVUPWIND,       PetscFVCreate_Upwind);CHKERRQ(ierr);
-  ierr = PetscFVRegister(PETSCFVLEASTSQUARES, PetscFVCreate_LeastSquares);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscFVRegister(PETSCFVUPWIND, PetscFVCreate_Upwind));
+  PetscCall(PetscFVRegister(PETSCFVLEASTSQUARES, PetscFVCreate_LeastSquares));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
-#include <petscds.h>     /*I  "petscds.h"  I*/
+#include <petscds.h> /*I  "petscds.h"  I*/
 
 PETSC_EXTERN PetscErrorCode PetscDSCreate_Basic(PetscDS);
 
 /*@C
-  PetscDSRegisterAll - Registers all of the PetscDS components in the PetscDS package.
+  PetscDSRegisterAll - Registers all of the `PetscDS` components in the `PetscDS` package.
 
   Not Collective
 
-  Input parameter:
-. path - The dynamic library path
-
   Level: advanced
 
-.seealso:  PetscDSRegister(), PetscDSRegisterDestroy()
+.seealso: `PetscDSRegister()`, `PetscDSRegisterDestroy()`
 @*/
 PetscErrorCode PetscDSRegisterAll(void)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  if (PetscDSRegisterAllCalled) PetscFunctionReturn(0);
+  if (PetscDSRegisterAllCalled) PetscFunctionReturn(PETSC_SUCCESS);
   PetscDSRegisterAllCalled = PETSC_TRUE;
 
-  ierr = PetscDSRegister(PETSCDSBASIC, PetscDSCreate_Basic);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscDSRegister(PETSCDSBASIC, PetscDSCreate_Basic));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

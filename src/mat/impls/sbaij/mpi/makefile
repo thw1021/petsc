@@ -1,21 +1,9 @@
 -include ../../../../../petscdir.mk
-ALL: lib
 
-CFLAGS	 =
-FFLAGS	 =
-CPPFLAGS =
-FPPFLAGS =
-SOURCEC	 = mpisbaij.c mmsbaij.c sbaijov.c mpiaijsbaij.c
-SOURCEF	 =
-SOURCEH	 = mpisbaij.h
-LIBBASE	 = libpetscmat
-DIRS	 = 
-MANSEC	 = Mat
-LOCDIR	 = src/mat/impls/sbaij/mpi/
+MANSEC   = Mat
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
-include ${PETSC_DIR}/lib/petsc/conf/rules
-include ${PETSC_DIR}/lib/petsc/conf/test
+include ${PETSC_DIR}/lib/petsc/conf/rules_doc.mk
 
 
 

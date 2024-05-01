@@ -1,50 +1,47 @@
-
 static char help[] = "Tests options database monitoring and precedence.\n\n";
 
 #include <petscsys.h>
 #include <petscviewer.h>
 
-PetscErrorCode PetscOptionsMonitorCustom(const char name[],const char value[],void *ctx)
+PetscErrorCode PetscOptionsMonitorCustom(const char name[], const char value[], PetscOptionSource source, void *ctx)
 {
-  PetscErrorCode ierr;
-  PetscViewer    viewer = (PetscViewer)ctx;
+  PetscViewer viewer = (PetscViewer)ctx;
 
   PetscFunctionBegin;
   if (!value) {
-    ierr = PetscViewerASCIIPrintf(viewer,"* Removing option: %s\n",name,value);CHKERRQ(ierr);
+    PetscCall(PetscViewerASCIIPrintf(viewer, "* Removing option: %s\n", name));
   } else if (!value[0]) {
-    ierr = PetscViewerASCIIPrintf(viewer,"* Setting option: %s (no value)\n",name);CHKERRQ(ierr);
+    PetscCall(PetscViewerASCIIPrintf(viewer, "* Setting option: %s (no value)\n", name));
   } else {
-    ierr = PetscViewerASCIIPrintf(viewer,"* Setting option: %s = %s\n",name,value);CHKERRQ(ierr);
+    PetscCall(PetscViewerASCIIPrintf(viewer, "* Setting option: %s = %s\n", name, value));
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-int main(int argc,char **argv)
+int main(int argc, char **argv)
 {
-  PetscErrorCode    ierr;
-  PetscViewer       viewer=NULL;
+  PetscViewer       viewer = NULL;
   PetscViewerFormat format;
 
-  ierr = PetscInitialize(&argc,&argv,"ex55options",help);if (ierr) return ierr;
-  ierr = PetscOptionsInsertString(NULL,"-option1 1 -option2 -option3 value3");CHKERRQ(ierr);
-  ierr = PetscOptionsGetViewer(PETSC_COMM_WORLD,NULL,NULL,"-options_monitor_viewer",&viewer,&format,NULL);CHKERRQ(ierr);
+  PetscFunctionBeginUser;
+  PetscCall(PetscInitialize(&argc, &argv, "ex55options", help));
+  PetscCall(PetscOptionsInsertString(NULL, "-option1 1 -option2 -option3 value3"));
+  PetscCall(PetscOptionsGetViewer(PETSC_COMM_WORLD, NULL, NULL, "-options_monitor_viewer", &viewer, &format, NULL));
   if (viewer) {
-    ierr = PetscViewerPushFormat(viewer,format);CHKERRQ(ierr);
-    ierr = PetscOptionsMonitorSet(PetscOptionsMonitorCustom,viewer,NULL);CHKERRQ(ierr);
-    ierr = PetscViewerPopFormat(viewer);CHKERRQ(ierr);
-    ierr = PetscViewerDestroy(&viewer);CHKERRQ(ierr);
+    PetscCall(PetscViewerPushFormat(viewer, format));
+    PetscCall(PetscOptionsMonitorSet(PetscOptionsMonitorCustom, viewer, NULL));
+    PetscCall(PetscViewerPopFormat(viewer));
+    PetscCall(PetscOptionsRestoreViewer(&viewer));
   }
-  ierr = PetscOptionsInsertString(NULL,"-option4 value4 -option5");CHKERRQ(ierr);
-  ierr = PetscFinalize();
-  return ierr;
+  PetscCall(PetscOptionsInsertString(NULL, "-option4 value4 -option5"));
+  PetscCall(PetscFinalize());
+  return 0;
 }
 
 /*TEST
 
    testset:
       localrunfiles: ex55options .petscrc petscrc
-      filter: egrep -v -e "(malloc|nox|display|saws_port|vecscatter|options_left|check_pointer_intensity|cuda_initialize|error_output_stdout|use_gpu_aware_mpi)"
       args: -options_left 0 -options_view -options_monitor_viewer ascii
       args: -skip_petscrc {{0 1}separate output} -options_monitor_cancel {{0 1}separate output}
       test:
@@ -59,12 +56,12 @@ int main(int argc,char **argv)
       # test effect of -skip_petscrc in ex55options file
       suffix: 4
       localrunfiles: ex55options .petscrc petscrc
-      filter: egrep -v -e "(malloc|nox|display|saws_port|vecscatter|options_left|check_pointer_intensity|cuda_initialize|error_output_stdout|use_gpu_aware_mpi)"
       args: -options_left 0 -options_view -options_monitor
    testset:
+      # test -help / -help intro / -version from command line
       localrunfiles: ex55options .petscrc petscrc
-      filter: sed -Ee "s/(revision).*$/\\1/g" | egrep -e "(revision|version|help|^See)"
-      args: -options_left 0 -options_view -options_monitor
+      filter: grep -E -e "(version|help|^See)"
+      args: -options_left -options_view -options_monitor
       test:
         suffix: 5a
         args: -help
@@ -74,5 +71,25 @@ int main(int argc,char **argv)
       test:
         suffix: 5c
         args: -version
+   testset:
+      # test -help / -help intro / -version from file
+      localrunfiles: ex55options rc_help rc_help_intro rc_version
+      filter: grep -E -e "(version|help|^See)"
+      args: -skip_petscrc
+      args: -options_left -options_view -options_monitor
+      test:
+        suffix: 6a
+        args: -options_file rc_help
+      test:
+        suffix: 6b
+        args: -options_file rc_help_intro
+      test:
+        suffix: 6c
+        args: -options_file rc_version
+
+   test:
+     localrunfiles: ex55options .petscrc petscrc
+     suffix: 7
+     args: -options_monitor -options_left 0
 
 TEST*/

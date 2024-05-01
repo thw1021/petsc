@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 from __future__ import generators
 import config.base
 import os
@@ -15,7 +14,7 @@ class Configure(config.base.Configure):
 
   def setupHelp(self, help):
     import nargs
-    help.addArgument('PETSc', '-with-debugger=<gdb,dbx,etc>',   nargs.Arg(None, None, 'Debugger to use in PETSc'))
+    help.addArgument('PETSc', '-with-debugger=<gdb,dbx,etc>',   nargs.Arg(None, None, 'Default debugger with PETSc -start_in_debugger option'))
     return
 
   def configureDebuggers(self):
@@ -23,8 +22,8 @@ class Configure(config.base.Configure):
     '''If Darwin first try lldb, next try gdb and dbx'''
     # Use the framework in order to remove the PETSC_ namespace
     if 'with-debugger' in self.argDB:
-      self.getExecutable(self.argDB['with-debugger'], getFullPath = 1)
-      if not hasattr(self,self.argDB['with-debugger']):
+      found = self.getExecutable(self.argDB['with-debugger'], getFullPath = 1)
+      if not found:
         raise RuntimeError('Cannot locate debugger indicated using --with-debugger='+self.argDB['with-debugger'])
       self.addDefine('USE_DEBUGGER','"'+self.argDB['with-debugger']+'"')
     else:

@@ -3,12 +3,11 @@ import config.package
 class Configure(config.package.Package):
   def __init__(self, framework):
     config.package.Package.__init__(self, framework)
-    self.gitcommit     = 'v1.9.1' # 2020-01-13
-    self.download      = ['git://https://github.com/SciCompKL/CoDiPack.git']
-    self.includes      = ['codi/adjointInterface.hpp']
+    self.gitcommit     = 'v2.1.0' # 2023-05-10
+    self.download      = ['git://https://github.com/SciCompKL/CoDiPack.git','https://github.com/SciCompKL/CoDiPack/archive/'+self.gitcommit+'.tar.gz']
+    self.includes      = ['codi.hpp']
     self.liblist       = []
-    self.cxx           = 1
-    self.requirescxx11 = 1
+    self.buildLanguages= ['Cxx']
     return
 
   def setupDependencies(self, framework):
@@ -19,10 +18,9 @@ class Configure(config.package.Package):
     import os
 
     self.logPrintBox('Copying CoDiPack include files to install location')
-    self.installDirProvider.printSudoPasswordMessage()
     includedir = os.path.join(self.installDir, 'include')
     output2,err2,ret2  = config.package.Package.executeShellCommandSeq([
-      self.withSudo('mkdir', '-p', includedir),
-      self.withSudo('cp', '-rf', os.path.join('include', 'codi'), os.path.join('include', 'codi.hpp'), includedir),
+      ['mkdir', '-p', includedir],
+      ['cp', '-rf', os.path.join('include', 'codi'), os.path.join('include', 'codi.hpp'), includedir],
       ], cwd=self.packageDir, timeout=250, log = self.log)
     return self.installDir

@@ -1,24 +1,27 @@
-
-#include <petsc/private/pcimpl.h>   /*I "petscpc.h" I*/
+#include <petsc/private/pcimpl.h> /*I "petscpc.h" I*/
 #include <petscblaslapack.h>
 
 /*
    Private context (data structure) for the SVD preconditioner.
 */
 typedef struct {
-  Vec         diag,work;
-  Mat         A,U,Vt;
-  PetscInt    nzero;
-  PetscReal   zerosing;         /* measure of smallest singular value treated as nonzero */
-  PetscInt    essrank;          /* essential rank of operator */
-  VecScatter  left2red,right2red;
-  Vec         leftred,rightred;
-  PetscViewer monitor;
+  Vec               diag, work;
+  Mat               A, U, Vt;
+  PetscInt          nzero;
+  PetscReal         zerosing; /* measure of smallest singular value treated as nonzero */
+  PetscInt          essrank;  /* essential rank of operator */
+  VecScatter        left2red, right2red;
+  Vec               leftred, rightred;
+  PetscViewer       monitor;
+  PetscViewerFormat monitorformat;
 } PC_SVD;
 
-typedef enum {READ=1, WRITE=2, READ_WRITE=3} AccessMode;
+typedef enum {
+  READ       = 1,
+  WRITE      = 2,
+  READ_WRITE = 3
+} AccessMode;
 
-/* -------------------------------------------------------------------------- */
 /*
    PCSetUp_SVD - Prepares for the use of the SVD preconditioner
                     by setting data structures and options.
@@ -28,139 +31,124 @@ typedef enum {READ=1, WRITE=2, READ_WRITE=3} AccessMode;
 
    Application Interface Routine: PCSetUp()
 
-   Notes:
+   Note:
    The interface routine PCSetUp() is not usually called directly by
    the user, but instead is called by PCApply() if necessary.
 */
 static PetscErrorCode PCSetUp_SVD(PC pc)
 {
-  PC_SVD         *jac = (PC_SVD*)pc->data;
-  PetscErrorCode ierr;
-  PetscScalar    *a,*u,*v,*d,*work;
-  PetscBLASInt   nb,lwork;
-  PetscInt       i,n;
-  PetscMPIInt    size;
+  PC_SVD      *jac = (PC_SVD *)pc->data;
+  PetscScalar *a, *u, *v, *d, *work;
+  PetscBLASInt nb, lwork;
+  PetscInt     i, n;
+  PetscMPIInt  size;
 
   PetscFunctionBegin;
-  ierr = MatDestroy(&jac->A);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(((PetscObject)pc->pmat)->comm,&size);CHKERRQ(ierr);
+  PetscCall(MatDestroy(&jac->A));
+  PetscCallMPI(MPI_Comm_size(((PetscObject)pc->pmat)->comm, &size));
   if (size > 1) {
     Mat redmat;
 
-    ierr = MatCreateRedundantMatrix(pc->pmat,size,PETSC_COMM_SELF,MAT_INITIAL_MATRIX,&redmat);CHKERRQ(ierr);
-    ierr = MatConvert(redmat,MATSEQDENSE,MAT_INITIAL_MATRIX,&jac->A);CHKERRQ(ierr);
-    ierr = MatDestroy(&redmat);CHKERRQ(ierr);
+    PetscCall(MatCreateRedundantMatrix(pc->pmat, size, PETSC_COMM_SELF, MAT_INITIAL_MATRIX, &redmat));
+    PetscCall(MatConvert(redmat, MATSEQDENSE, MAT_INITIAL_MATRIX, &jac->A));
+    PetscCall(MatDestroy(&redmat));
   } else {
-    ierr = MatConvert(pc->pmat,MATSEQDENSE,MAT_INITIAL_MATRIX,&jac->A);CHKERRQ(ierr);
+    PetscCall(MatConvert(pc->pmat, MATSEQDENSE, MAT_INITIAL_MATRIX, &jac->A));
   }
-  if (!jac->diag) {    /* assume square matrices */
-    ierr = MatCreateVecs(jac->A,&jac->diag,&jac->work);CHKERRQ(ierr);
+  if (!jac->diag) { /* assume square matrices */
+    PetscCall(MatCreateVecs(jac->A, &jac->diag, &jac->work));
   }
   if (!jac->U) {
-    ierr = MatDuplicate(jac->A,MAT_DO_NOT_COPY_VALUES,&jac->U);CHKERRQ(ierr);
-    ierr = MatDuplicate(jac->A,MAT_DO_NOT_COPY_VALUES,&jac->Vt);CHKERRQ(ierr);
+    PetscCall(MatDuplicate(jac->A, MAT_DO_NOT_COPY_VALUES, &jac->U));
+    PetscCall(MatDuplicate(jac->A, MAT_DO_NOT_COPY_VALUES, &jac->Vt));
   }
-  ierr  = MatGetSize(jac->A,&n,NULL);CHKERRQ(ierr);
+  PetscCall(MatGetSize(jac->A, &n, NULL));
   if (!n) {
-    ierr = PetscInfo(pc,"Matrix has zero rows, skipping svd\n");CHKERRQ(ierr);
-    PetscFunctionReturn(0);
+    PetscCall(PetscInfo(pc, "Matrix has zero rows, skipping svd\n"));
+    PetscFunctionReturn(PETSC_SUCCESS);
   }
-  ierr  = PetscBLASIntCast(n,&nb);CHKERRQ(ierr);
-  lwork = 5*nb;
-  ierr  = PetscMalloc1(lwork,&work);CHKERRQ(ierr);
-  ierr  = MatDenseGetArray(jac->A,&a);CHKERRQ(ierr);
-  ierr  = MatDenseGetArray(jac->U,&u);CHKERRQ(ierr);
-  ierr  = MatDenseGetArray(jac->Vt,&v);CHKERRQ(ierr);
-  ierr  = VecGetArray(jac->diag,&d);CHKERRQ(ierr);
+  PetscCall(PetscBLASIntCast(n, &nb));
+  lwork = 5 * nb;
+  PetscCall(PetscMalloc1(lwork, &work));
+  PetscCall(MatDenseGetArray(jac->A, &a));
+  PetscCall(MatDenseGetArray(jac->U, &u));
+  PetscCall(MatDenseGetArray(jac->Vt, &v));
+  PetscCall(VecGetArray(jac->diag, &d));
 #if !defined(PETSC_USE_COMPLEX)
   {
     PetscBLASInt lierr;
-    ierr = PetscFPTrapPush(PETSC_FP_TRAP_OFF);CHKERRQ(ierr);
-    PetscStackCallBLAS("LAPACKgesvd",LAPACKgesvd_("A","A",&nb,&nb,a,&nb,d,u,&nb,v,&nb,work,&lwork,&lierr));
-    if (lierr) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"gesv() error %d",lierr);
-    ierr = PetscFPTrapPop();CHKERRQ(ierr);
+    PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
+    PetscCallBLAS("LAPACKgesvd", LAPACKgesvd_("A", "A", &nb, &nb, a, &nb, d, u, &nb, v, &nb, work, &lwork, &lierr));
+    PetscCheck(!lierr, PETSC_COMM_SELF, PETSC_ERR_LIB, "gesvd() error %" PetscBLASInt_FMT, lierr);
+    PetscCall(PetscFPTrapPop());
   }
 #else
   {
     PetscBLASInt lierr;
-    PetscReal    *rwork,*dd;
-    ierr = PetscMalloc1(5*nb,&rwork);CHKERRQ(ierr);
-    ierr = PetscMalloc1(nb,&dd);CHKERRQ(ierr);
-    ierr = PetscFPTrapPush(PETSC_FP_TRAP_OFF);CHKERRQ(ierr);
-    PetscStackCallBLAS("LAPACKgesvd",LAPACKgesvd_("A","A",&nb,&nb,a,&nb,dd,u,&nb,v,&nb,work,&lwork,rwork,&lierr));
-    if (lierr) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"gesv() error %d",lierr);
-    ierr = PetscFree(rwork);CHKERRQ(ierr);
-    for (i=0; i<n; i++) d[i] = dd[i];
-    ierr = PetscFree(dd);CHKERRQ(ierr);
-    ierr = PetscFPTrapPop();CHKERRQ(ierr);
+    PetscReal   *rwork, *dd;
+    PetscCall(PetscMalloc1(5 * nb, &rwork));
+    PetscCall(PetscMalloc1(nb, &dd));
+    PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
+    PetscCallBLAS("LAPACKgesvd", LAPACKgesvd_("A", "A", &nb, &nb, a, &nb, dd, u, &nb, v, &nb, work, &lwork, rwork, &lierr));
+    PetscCheck(!lierr, PETSC_COMM_SELF, PETSC_ERR_LIB, "gesv() error %" PetscBLASInt_FMT, lierr);
+    PetscCall(PetscFree(rwork));
+    for (i = 0; i < n; i++) d[i] = dd[i];
+    PetscCall(PetscFree(dd));
+    PetscCall(PetscFPTrapPop());
   }
 #endif
-  ierr = MatDenseRestoreArray(jac->A,&a);CHKERRQ(ierr);
-  ierr = MatDenseRestoreArray(jac->U,&u);CHKERRQ(ierr);
-  ierr = MatDenseRestoreArray(jac->Vt,&v);CHKERRQ(ierr);
-  for (i=n-1; i>=0; i--) if (PetscRealPart(d[i]) > jac->zerosing) break;
-  jac->nzero = n-1-i;
+  PetscCall(MatDenseRestoreArray(jac->A, &a));
+  PetscCall(MatDenseRestoreArray(jac->U, &u));
+  PetscCall(MatDenseRestoreArray(jac->Vt, &v));
+  for (i = n - 1; i >= 0; i--)
+    if (PetscRealPart(d[i]) > jac->zerosing) break;
+  jac->nzero = n - 1 - i;
   if (jac->monitor) {
-    ierr = PetscViewerASCIIAddTab(jac->monitor,((PetscObject)pc)->tablevel);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(jac->monitor,"    SVD: condition number %14.12e, %D of %D singular values are (nearly) zero\n",(double)PetscRealPart(d[0]/d[n-1]),jac->nzero,n);CHKERRQ(ierr);
-    if (n >= 10) {              /* print 5 smallest and 5 largest */
-      ierr = PetscViewerASCIIPrintf(jac->monitor,"    SVD: smallest singular values: %14.12e %14.12e %14.12e %14.12e %14.12e\n",(double)PetscRealPart(d[n-1]),(double)PetscRealPart(d[n-2]),(double)PetscRealPart(d[n-3]),(double)PetscRealPart(d[n-4]),(double)PetscRealPart(d[n-5]));CHKERRQ(ierr);
-      ierr = PetscViewerASCIIPrintf(jac->monitor,"    SVD: largest singular values : %14.12e %14.12e %14.12e %14.12e %14.12e\n",(double)PetscRealPart(d[4]),(double)PetscRealPart(d[3]),(double)PetscRealPart(d[2]),(double)PetscRealPart(d[1]),(double)PetscRealPart(d[0]));CHKERRQ(ierr);
-    } else {                    /* print all singular values */
-      char     buf[256],*p;
-      size_t   left = sizeof(buf),used;
-      PetscInt thisline;
-      for (p=buf,i=n-1,thisline=1; i>=0; i--,thisline++) {
-        ierr  = PetscSNPrintfCount(p,left," %14.12e",&used,(double)PetscRealPart(d[i]));CHKERRQ(ierr);
-        left -= used;
-        p    += used;
-        if (thisline > 4 || i==0) {
-          ierr     = PetscViewerASCIIPrintf(jac->monitor,"    SVD: singular values:%s\n",buf);CHKERRQ(ierr);
-          p        = buf;
-          thisline = 0;
+    PetscCall(PetscViewerASCIIAddTab(jac->monitor, ((PetscObject)pc)->tablevel));
+    PetscCall(PetscViewerASCIIPrintf(jac->monitor, "    SVD: condition number %14.12e, %" PetscInt_FMT " of %" PetscInt_FMT " singular values are (nearly) zero\n", (double)PetscRealPart(d[0] / d[n - 1]), jac->nzero, n));
+    if (n < 10 || jac->monitorformat == PETSC_VIEWER_ALL) {
+      PetscCall(PetscViewerASCIIPrintf(jac->monitor, "    SVD: singular values:\n"));
+      for (i = 0; i < n; i++) {
+        if (i % 5 == 0) {
+          if (i != 0) PetscCall(PetscViewerASCIIPrintf(jac->monitor, "\n"));
+          PetscCall(PetscViewerASCIIPrintf(jac->monitor, "        "));
         }
+        PetscCall(PetscViewerASCIIPrintf(jac->monitor, " %14.12e", (double)PetscRealPart(d[i])));
       }
+      PetscCall(PetscViewerASCIIPrintf(jac->monitor, "\n"));
+    } else { /* print 5 smallest and 5 largest */
+      PetscCall(PetscViewerASCIIPrintf(jac->monitor, "    SVD: smallest singular values: %14.12e %14.12e %14.12e %14.12e %14.12e\n", (double)PetscRealPart(d[n - 1]), (double)PetscRealPart(d[n - 2]), (double)PetscRealPart(d[n - 3]), (double)PetscRealPart(d[n - 4]), (double)PetscRealPart(d[n - 5])));
+      PetscCall(PetscViewerASCIIPrintf(jac->monitor, "    SVD: largest singular values : %14.12e %14.12e %14.12e %14.12e %14.12e\n", (double)PetscRealPart(d[4]), (double)PetscRealPart(d[3]), (double)PetscRealPart(d[2]), (double)PetscRealPart(d[1]), (double)PetscRealPart(d[0])));
     }
-    ierr = PetscViewerASCIISubtractTab(jac->monitor,((PetscObject)pc)->tablevel);CHKERRQ(ierr);
+    PetscCall(PetscViewerASCIISubtractTab(jac->monitor, ((PetscObject)pc)->tablevel));
   }
-  ierr = PetscInfo2(pc,"Largest and smallest singular values %14.12e %14.12e\n",(double)PetscRealPart(d[0]),(double)PetscRealPart(d[n-1]));CHKERRQ(ierr);
-  for (i=0; i<n-jac->nzero; i++) d[i] = 1.0/d[i];
-  for (; i<n; i++) d[i] = 0.0;
-  if (jac->essrank > 0) for (i=0; i<n-jac->nzero-jac->essrank; i++) d[i] = 0.0; /* Skip all but essrank eigenvalues */
-  ierr = PetscInfo1(pc,"Number of zero or nearly singular values %D\n",jac->nzero);CHKERRQ(ierr);
-  ierr = VecRestoreArray(jac->diag,&d);CHKERRQ(ierr);
-#if defined(foo)
-  {
-    PetscViewer viewer;
-    ierr = PetscViewerBinaryOpen(PETSC_COMM_SELF,"joe",FILE_MODE_WRITE,&viewer);CHKERRQ(ierr);
-    ierr = MatView(jac->A,viewer);CHKERRQ(ierr);
-    ierr = MatView(jac->U,viewer);CHKERRQ(ierr);
-    ierr = MatView(jac->Vt,viewer);CHKERRQ(ierr);
-    ierr = VecView(jac->diag,viewer);CHKERRQ(ierr);
-    ierr = PetscViewerDestroy(viewer);CHKERRQ(ierr);
-  }
-#endif
-  ierr = PetscFree(work);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscInfo(pc, "Largest and smallest singular values %14.12e %14.12e\n", (double)PetscRealPart(d[0]), (double)PetscRealPart(d[n - 1])));
+  for (i = 0; i < n - jac->nzero; i++) d[i] = 1.0 / d[i];
+  for (; i < n; i++) d[i] = 0.0;
+  if (jac->essrank > 0)
+    for (i = 0; i < n - jac->nzero - jac->essrank; i++) d[i] = 0.0; /* Skip all but essrank eigenvalues */
+  PetscCall(PetscInfo(pc, "Number of zero or nearly singular values %" PetscInt_FMT "\n", jac->nzero));
+  PetscCall(VecRestoreArray(jac->diag, &d));
+  PetscCall(PetscFree(work));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PCSVDGetVec(PC pc,PCSide side,AccessMode amode,Vec x,Vec *xred)
+static PetscErrorCode PCSVDGetVec(PC pc, PCSide side, AccessMode amode, Vec x, Vec *xred)
 {
-  PC_SVD         *jac = (PC_SVD*)pc->data;
-  PetscErrorCode ierr;
-  PetscMPIInt    size;
+  PC_SVD     *jac = (PC_SVD *)pc->data;
+  PetscMPIInt size;
 
   PetscFunctionBegin;
-  ierr  = MPI_Comm_size(PetscObjectComm((PetscObject)pc),&size);CHKERRQ(ierr);
+  PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)pc), &size));
   *xred = NULL;
   switch (side) {
   case PC_LEFT:
     if (size == 1) *xred = x;
     else {
-      if (!jac->left2red) {ierr = VecScatterCreateToAll(x,&jac->left2red,&jac->leftred);CHKERRQ(ierr);}
+      if (!jac->left2red) PetscCall(VecScatterCreateToAll(x, &jac->left2red, &jac->leftred));
       if (amode & READ) {
-        ierr = VecScatterBegin(jac->left2red,x,jac->leftred,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-        ierr = VecScatterEnd(jac->left2red,x,jac->leftred,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
+        PetscCall(VecScatterBegin(jac->left2red, x, jac->leftred, INSERT_VALUES, SCATTER_FORWARD));
+        PetscCall(VecScatterEnd(jac->left2red, x, jac->leftred, INSERT_VALUES, SCATTER_FORWARD));
       }
       *xred = jac->leftred;
     }
@@ -168,47 +156,47 @@ static PetscErrorCode PCSVDGetVec(PC pc,PCSide side,AccessMode amode,Vec x,Vec *
   case PC_RIGHT:
     if (size == 1) *xred = x;
     else {
-      if (!jac->right2red) {ierr = VecScatterCreateToAll(x,&jac->right2red,&jac->rightred);CHKERRQ(ierr);}
+      if (!jac->right2red) PetscCall(VecScatterCreateToAll(x, &jac->right2red, &jac->rightred));
       if (amode & READ) {
-        ierr = VecScatterBegin(jac->right2red,x,jac->rightred,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-        ierr = VecScatterEnd(jac->right2red,x,jac->rightred,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
+        PetscCall(VecScatterBegin(jac->right2red, x, jac->rightred, INSERT_VALUES, SCATTER_FORWARD));
+        PetscCall(VecScatterEnd(jac->right2red, x, jac->rightred, INSERT_VALUES, SCATTER_FORWARD));
       }
       *xred = jac->rightred;
     }
     break;
-  default: SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_PLIB,"Side must be LEFT or RIGHT");
+  default:
+    SETERRQ(PetscObjectComm((PetscObject)pc), PETSC_ERR_PLIB, "Side must be LEFT or RIGHT");
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PCSVDRestoreVec(PC pc,PCSide side,AccessMode amode,Vec x,Vec *xred)
+static PetscErrorCode PCSVDRestoreVec(PC pc, PCSide side, AccessMode amode, Vec x, Vec *xred)
 {
-  PC_SVD         *jac = (PC_SVD*)pc->data;
-  PetscErrorCode ierr;
-  PetscMPIInt    size;
+  PC_SVD     *jac = (PC_SVD *)pc->data;
+  PetscMPIInt size;
 
   PetscFunctionBegin;
-  ierr = MPI_Comm_size(PetscObjectComm((PetscObject)pc),&size);CHKERRQ(ierr);
+  PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)pc), &size));
   switch (side) {
   case PC_LEFT:
     if (size != 1 && amode & WRITE) {
-      ierr = VecScatterBegin(jac->left2red,jac->leftred,x,INSERT_VALUES,SCATTER_REVERSE);CHKERRQ(ierr);
-      ierr = VecScatterEnd(jac->left2red,jac->leftred,x,INSERT_VALUES,SCATTER_REVERSE);CHKERRQ(ierr);
+      PetscCall(VecScatterBegin(jac->left2red, jac->leftred, x, INSERT_VALUES, SCATTER_REVERSE));
+      PetscCall(VecScatterEnd(jac->left2red, jac->leftred, x, INSERT_VALUES, SCATTER_REVERSE));
     }
     break;
   case PC_RIGHT:
     if (size != 1 && amode & WRITE) {
-      ierr = VecScatterBegin(jac->right2red,jac->rightred,x,INSERT_VALUES,SCATTER_REVERSE);CHKERRQ(ierr);
-      ierr = VecScatterEnd(jac->right2red,jac->rightred,x,INSERT_VALUES,SCATTER_REVERSE);CHKERRQ(ierr);
+      PetscCall(VecScatterBegin(jac->right2red, jac->rightred, x, INSERT_VALUES, SCATTER_REVERSE));
+      PetscCall(VecScatterEnd(jac->right2red, jac->rightred, x, INSERT_VALUES, SCATTER_REVERSE));
     }
     break;
-  default: SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_PLIB,"Side must be LEFT or RIGHT");
+  default:
+    SETERRQ(PetscObjectComm((PetscObject)pc), PETSC_ERR_PLIB, "Side must be LEFT or RIGHT");
   }
   *xred = NULL;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* -------------------------------------------------------------------------- */
 /*
    PCApply_SVD - Applies the SVD preconditioner to a vector.
 
@@ -221,67 +209,76 @@ static PetscErrorCode PCSVDRestoreVec(PC pc,PCSide side,AccessMode amode,Vec x,V
 
    Application Interface Routine: PCApply()
  */
-static PetscErrorCode PCApply_SVD(PC pc,Vec x,Vec y)
+static PetscErrorCode PCApply_SVD(PC pc, Vec x, Vec y)
 {
-  PC_SVD         *jac = (PC_SVD*)pc->data;
-  Vec            work = jac->work,xred,yred;
-  PetscErrorCode ierr;
+  PC_SVD *jac  = (PC_SVD *)pc->data;
+  Vec     work = jac->work, xred, yred;
 
   PetscFunctionBegin;
-  ierr = PCSVDGetVec(pc,PC_RIGHT,READ,x,&xred);CHKERRQ(ierr);
-  ierr = PCSVDGetVec(pc,PC_LEFT,WRITE,y,&yred);CHKERRQ(ierr);
+  PetscCall(PCSVDGetVec(pc, PC_RIGHT, READ, x, &xred));
+  PetscCall(PCSVDGetVec(pc, PC_LEFT, WRITE, y, &yred));
 #if !defined(PETSC_USE_COMPLEX)
-  ierr = MatMultTranspose(jac->U,xred,work);CHKERRQ(ierr);
+  PetscCall(MatMultTranspose(jac->U, xred, work));
 #else
-  ierr = MatMultHermitianTranspose(jac->U,xred,work);CHKERRQ(ierr);
+  PetscCall(MatMultHermitianTranspose(jac->U, xred, work));
 #endif
-  ierr = VecPointwiseMult(work,work,jac->diag);CHKERRQ(ierr);
+  PetscCall(VecPointwiseMult(work, work, jac->diag));
 #if !defined(PETSC_USE_COMPLEX)
-  ierr = MatMultTranspose(jac->Vt,work,yred);CHKERRQ(ierr);
+  PetscCall(MatMultTranspose(jac->Vt, work, yred));
 #else
-  ierr = MatMultHermitianTranspose(jac->Vt,work,yred);CHKERRQ(ierr);
+  PetscCall(MatMultHermitianTranspose(jac->Vt, work, yred));
 #endif
-  ierr = PCSVDRestoreVec(pc,PC_RIGHT,READ,x,&xred);CHKERRQ(ierr);
-  ierr = PCSVDRestoreVec(pc,PC_LEFT,WRITE,y,&yred);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PCSVDRestoreVec(pc, PC_RIGHT, READ, x, &xred));
+  PetscCall(PCSVDRestoreVec(pc, PC_LEFT, WRITE, y, &yred));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PCApplyTranspose_SVD(PC pc,Vec x,Vec y)
+static PetscErrorCode PCMatApply_SVD(PC pc, Mat X, Mat Y)
 {
-  PC_SVD         *jac = (PC_SVD*)pc->data;
-  Vec            work = jac->work,xred,yred;
-  PetscErrorCode ierr;
+  PC_SVD *jac = (PC_SVD *)pc->data;
+  Mat     W;
 
   PetscFunctionBegin;
-  ierr = PCSVDGetVec(pc,PC_LEFT,READ,x,&xred);CHKERRQ(ierr);
-  ierr = PCSVDGetVec(pc,PC_RIGHT,WRITE,y,&yred);CHKERRQ(ierr);
-  ierr = MatMult(jac->Vt,xred,work);CHKERRQ(ierr);
-  ierr = VecPointwiseMult(work,work,jac->diag);CHKERRQ(ierr);
-  ierr = MatMult(jac->U,work,yred);CHKERRQ(ierr);
-  ierr = PCSVDRestoreVec(pc,PC_LEFT,READ,x,&xred);CHKERRQ(ierr);
-  ierr = PCSVDRestoreVec(pc,PC_RIGHT,WRITE,y,&yred);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(MatTransposeMatMult(jac->U, X, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &W));
+  PetscCall(MatDiagonalScale(W, jac->diag, NULL));
+  PetscCall(MatTransposeMatMult(jac->Vt, W, MAT_REUSE_MATRIX, PETSC_DEFAULT, &Y));
+  PetscCall(MatDestroy(&W));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PCApplyTranspose_SVD(PC pc, Vec x, Vec y)
+{
+  PC_SVD *jac  = (PC_SVD *)pc->data;
+  Vec     work = jac->work, xred, yred;
+
+  PetscFunctionBegin;
+  PetscCall(PCSVDGetVec(pc, PC_LEFT, READ, x, &xred));
+  PetscCall(PCSVDGetVec(pc, PC_RIGHT, WRITE, y, &yred));
+  PetscCall(MatMult(jac->Vt, xred, work));
+  PetscCall(VecPointwiseMult(work, work, jac->diag));
+  PetscCall(MatMult(jac->U, work, yred));
+  PetscCall(PCSVDRestoreVec(pc, PC_LEFT, READ, x, &xred));
+  PetscCall(PCSVDRestoreVec(pc, PC_RIGHT, WRITE, y, &yred));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PCReset_SVD(PC pc)
 {
-  PC_SVD         *jac = (PC_SVD*)pc->data;
-  PetscErrorCode ierr;
+  PC_SVD *jac = (PC_SVD *)pc->data;
 
   PetscFunctionBegin;
-  ierr = MatDestroy(&jac->A);CHKERRQ(ierr);
-  ierr = MatDestroy(&jac->U);CHKERRQ(ierr);
-  ierr = MatDestroy(&jac->Vt);CHKERRQ(ierr);
-  ierr = VecDestroy(&jac->diag);CHKERRQ(ierr);
-  ierr = VecDestroy(&jac->work);CHKERRQ(ierr);
-  ierr = VecScatterDestroy(&jac->right2red);CHKERRQ(ierr);
-  ierr = VecScatterDestroy(&jac->left2red);CHKERRQ(ierr);
-  ierr = VecDestroy(&jac->rightred);CHKERRQ(ierr);
-  ierr = VecDestroy(&jac->leftred);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(MatDestroy(&jac->A));
+  PetscCall(MatDestroy(&jac->U));
+  PetscCall(MatDestroy(&jac->Vt));
+  PetscCall(VecDestroy(&jac->diag));
+  PetscCall(VecDestroy(&jac->work));
+  PetscCall(VecScatterDestroy(&jac->right2red));
+  PetscCall(VecScatterDestroy(&jac->left2red));
+  PetscCall(VecDestroy(&jac->rightred));
+  PetscCall(VecDestroy(&jac->leftred));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* -------------------------------------------------------------------------- */
 /*
    PCDestroy_SVD - Destroys the private context for the SVD preconditioner
    that was created with PCCreate_SVD().
@@ -293,53 +290,43 @@ static PetscErrorCode PCReset_SVD(PC pc)
 */
 static PetscErrorCode PCDestroy_SVD(PC pc)
 {
-  PC_SVD         *jac = (PC_SVD*)pc->data;
-  PetscErrorCode ierr;
+  PC_SVD *jac = (PC_SVD *)pc->data;
 
   PetscFunctionBegin;
-  ierr = PCReset_SVD(pc);CHKERRQ(ierr);
-  ierr = PetscViewerDestroy(&jac->monitor);CHKERRQ(ierr);
-  ierr = PetscFree(pc->data);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PCReset_SVD(pc));
+  PetscCall(PetscOptionsRestoreViewer(&jac->monitor));
+  PetscCall(PetscFree(pc->data));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PCSetFromOptions_SVD(PetscOptionItems *PetscOptionsObject,PC pc)
+static PetscErrorCode PCSetFromOptions_SVD(PC pc, PetscOptionItems *PetscOptionsObject)
 {
-  PetscErrorCode ierr;
-  PC_SVD         *jac = (PC_SVD*)pc->data;
-  PetscBool      flg,set;
+  PC_SVD   *jac = (PC_SVD *)pc->data;
+  PetscBool flg;
 
   PetscFunctionBegin;
-  ierr = PetscOptionsHead(PetscOptionsObject,"SVD options");CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-pc_svd_zero_sing","Singular values smaller than this treated as zero","None",jac->zerosing,&jac->zerosing,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsInt("-pc_svd_ess_rank","Essential rank of operator (0 to use entire operator)","None",jac->essrank,&jac->essrank,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-pc_svd_monitor","Monitor the conditioning, and extremal singular values","None",jac->monitor ? PETSC_TRUE : PETSC_FALSE,&flg,&set);CHKERRQ(ierr);
-  if (set) {                    /* Should make PCSVDSetMonitor() */
-    if (flg && !jac->monitor) {
-      ierr = PetscViewerASCIIOpen(PetscObjectComm((PetscObject)pc),"stdout",&jac->monitor);CHKERRQ(ierr);
-    } else if (!flg) {
-      ierr = PetscViewerDestroy(&jac->monitor);CHKERRQ(ierr);
-    }
-  }
-  ierr = PetscOptionsTail();CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscOptionsHeadBegin(PetscOptionsObject, "SVD options");
+  PetscCall(PetscOptionsReal("-pc_svd_zero_sing", "Singular values smaller than this treated as zero", "None", jac->zerosing, &jac->zerosing, NULL));
+  PetscCall(PetscOptionsInt("-pc_svd_ess_rank", "Essential rank of operator (0 to use entire operator)", "None", jac->essrank, &jac->essrank, NULL));
+  PetscCall(PetscOptionsViewer("-pc_svd_monitor", "Monitor the conditioning, and extremal singular values", "None", &jac->monitor, &jac->monitorformat, &flg));
+  PetscOptionsHeadEnd();
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PCView_SVD(PC pc,PetscViewer viewer)
+static PetscErrorCode PCView_SVD(PC pc, PetscViewer viewer)
 {
-  PC_SVD         *svd = (PC_SVD*)pc->data;
-  PetscErrorCode ierr;
-  PetscBool      iascii;
+  PC_SVD   *svd = (PC_SVD *)pc->data;
+  PetscBool iascii;
 
   PetscFunctionBegin;
-  ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii);CHKERRQ(ierr);
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
   if (iascii) {
-    ierr = PetscViewerASCIIPrintf(viewer,"  All singular values smaller than %g treated as zero\n",(double)svd->zerosing);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"  Provided essential rank of the matrix %D (all other eigenvalues are zeroed)\n",svd->essrank);CHKERRQ(ierr);
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  All singular values smaller than %g treated as zero\n", (double)svd->zerosing));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  Provided essential rank of the matrix %" PetscInt_FMT " (all other eigenvalues are zeroed)\n", svd->essrank));
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
-/* -------------------------------------------------------------------------- */
+
 /*
    PCCreate_SVD - Creates a SVD preconditioner context, PC_SVD,
    and sets this as the private data within the generic preconditioning
@@ -356,31 +343,31 @@ static PetscErrorCode PCView_SVD(PC pc,PetscViewer viewer)
 
    Level: advanced
 
-  Options Database:
-+  -pc_svd_zero_sing <rtol> Singular values smaller than this are treated as zero
--  -pc_svd_monitor  Print information on the extreme singular values of the operator
+  Options Database Keys:
++  -pc_svd_zero_sing <rtol> - Singular values smaller than this are treated as zero
+-  -pc_svd_monitor - Print information on the extreme singular values of the operator
 
   Developer Note:
   This implementation automatically creates a redundant copy of the
    matrix on each process and uses a sequential SVD solve. Why does it do this instead
-   of using the composable PCREDUNDANT object?
+   of using the composable `PCREDUNDANT` object?
 
-.seealso:  PCCreate(), PCSetType(), PCType (for list of available types), PC
+.seealso: [](ch_ksp), `PCCreate()`, `PCSetType()`, `PCType`, `PC`, `PCREDUNDANT`
 M*/
 
 PETSC_EXTERN PetscErrorCode PCCreate_SVD(PC pc)
 {
-  PC_SVD         *jac;
-  PetscErrorCode ierr;
+  PC_SVD     *jac;
+  PetscMPIInt size = 0;
 
   PetscFunctionBegin;
   /*
      Creates the private data structure for this preconditioner and
      attach it to the PC object.
   */
-  ierr          = PetscNewLog(pc,&jac);CHKERRQ(ierr);
+  PetscCall(PetscNew(&jac));
   jac->zerosing = 1.e-12;
-  pc->data      = (void*)jac;
+  pc->data      = (void *)jac;
 
   /*
       Set the pointers for the functions that are provided above.
@@ -389,6 +376,11 @@ PETSC_EXTERN PetscErrorCode PCCreate_SVD(PC pc)
       choose not to provide a couple of these functions since they are
       not needed.
   */
+
+#if defined(PETSC_HAVE_COMPLEX)
+  PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)pc), &size));
+#endif
+  if (size == 1) pc->ops->matapply = PCMatApply_SVD;
   pc->ops->apply           = PCApply_SVD;
   pc->ops->applytranspose  = PCApplyTranspose_SVD;
   pc->ops->setup           = PCSetUp_SVD;
@@ -397,6 +389,5 @@ PETSC_EXTERN PetscErrorCode PCCreate_SVD(PC pc)
   pc->ops->setfromoptions  = PCSetFromOptions_SVD;
   pc->ops->view            = PCView_SVD;
   pc->ops->applyrichardson = NULL;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
-

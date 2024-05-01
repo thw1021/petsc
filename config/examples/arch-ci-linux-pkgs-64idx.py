@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import os
 petsc_hash_pkgs=os.path.join(os.getenv('HOME'),'petsc-hash-pkgs')
@@ -20,9 +20,19 @@ configure_options = [
   '--download-superlu_dist=1',
   '--download-mumps=1',
   '--download-scalapack=1',
-  '--donwload-suitesparse=1',
+  '--download-suitesparse=1',
   '--download-p4est=1',
+  '--download-revolve=1',
   '--with-zlib=1',
+  '--download-libceed',
+  '--with-blaslapack-dir='+os.environ['MKLROOT'],
+  '--download-slepc=1',
+  '--download-hpddm=1',
+  '--download-triangle=1',
+  '--download-mmg=1',
+  '--with-tau-perfstubs=0',
+  '--with-strict-petscerrorcode',
+  '--with-coverage',
   ]
 
 if __name__ == '__main__':

@@ -1,134 +1,121 @@
-
-#include <petsc/private/isimpl.h>    /*I "petscis.h"  I*/
+#include <petsc/private/isimpl.h> /*I "petscis.h"  I*/
 
 PetscFunctionList ISList              = NULL;
 PetscBool         ISRegisterAllCalled = PETSC_FALSE;
 
 /*@
-   ISCreate - Creates an index set object.
+  ISCreate - Creates an index set object. `IS` are objects used to do efficient indexing into other data structures such as `Vec` and `Mat`
 
-   Collective
+  Collective
 
-   Input Parameters:
-.  comm - the MPI communicator
+  Input Parameter:
+. comm - the MPI communicator
 
-   Output Parameter:
-.  is - the new index set
+  Output Parameter:
+. is - the new index set
 
-   Notes:
-   When the communicator is not MPI_COMM_SELF, the operations on IS are NOT
-   conceptually the same as MPI_Group operations. The IS are then
-   distributed sets of indices and thus certain operations on them are
-   collective.
+  Level: beginner
 
-   Level: beginner
+  Notes:
+  When the communicator is not `MPI_COMM_SELF`, the operations on `is` are NOT
+  conceptually the same as `MPI_Group` operations. The `IS` are then
+  distributed sets of indices and thus certain operations on them are
+  collective.
 
-
-.seealso: ISCreateGeneral(), ISCreateStride(), ISCreateBlock(), ISAllGather()
+.seealso: [](sec_scatter), `IS`, `ISType()`, `ISSetType()`, `ISCreateGeneral()`, `ISCreateStride()`, `ISCreateBlock()`, `ISAllGather()`
 @*/
-PetscErrorCode  ISCreate(MPI_Comm comm,IS *is)
+PetscErrorCode ISCreate(MPI_Comm comm, IS *is)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidPointer(is,2);
-  ierr = ISInitializePackage();CHKERRQ(ierr);
+  PetscAssertPointer(is, 2);
+  PetscCall(ISInitializePackage());
 
-  ierr = PetscHeaderCreate(*is,IS_CLASSID,"IS","Index Set","IS",comm,ISDestroy,ISView);CHKERRQ(ierr);
-  ierr = PetscLayoutCreate(comm, &(*is)->map);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscHeaderCreate(*is, IS_CLASSID, "IS", "Index Set", "IS", comm, ISDestroy, ISView));
+  PetscCall(PetscLayoutCreate(comm, &(*is)->map));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
-  ISSetType - Builds a index set, for a particular implementation.
+/*@
+  ISSetType - Builds a index set, for a particular `ISType`
 
-  Collective on IS
+  Collective
 
   Input Parameters:
-+ is    - The index set object
++ is     - The index set object
 - method - The name of the index set type
 
   Options Database Key:
-. -is_type <type> - Sets the index set type; use -help for a list of available types
-
-  Notes:
-  See "petsc/include/petscis.h" for available istor types (for instance, ISGENERAL, ISSTRIDE, or ISBLOCK).
-
-  Use ISDuplicate() to make a duplicate
+. -is_type <type> - Sets the index set type; use `-help` for a list of available types
 
   Level: intermediate
 
+  Notes:
+  See `ISType` for available types (for instance, `ISGENERAL`, `ISSTRIDE`, or `ISBLOCK`).
 
-.seealso: ISGetType(), ISCreate()
+  Often convenience constructors such as `ISCreateGeneral()`, `ISCreateStride()` or  `ISCreateBlock()` can be used to construct the desired `IS` in one step
+
+  Use `ISDuplicate()` to make a duplicate
+
+.seealso: [](sec_scatter), `IS`, `ISGENERAL`, `ISBLOCK`, `ISGetType()`, `ISCreate()`, `ISCreateGeneral()`, `ISCreateStride()`, `ISCreateBlock()`
 @*/
-PetscErrorCode  ISSetType(IS is, ISType method)
+PetscErrorCode ISSetType(IS is, ISType method)
 {
   PetscErrorCode (*r)(IS);
-  PetscBool      match;
-  PetscErrorCode ierr;
+  PetscBool match;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(is, IS_CLASSID,1);
-  ierr = PetscObjectTypeCompare((PetscObject) is, method, &match);CHKERRQ(ierr);
-  if (match) PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(is, IS_CLASSID, 1);
+  PetscCall(PetscObjectTypeCompare((PetscObject)is, method, &match));
+  if (match) PetscFunctionReturn(PETSC_SUCCESS);
 
-  ierr = ISRegisterAll();CHKERRQ(ierr);
-  ierr = PetscFunctionListFind(ISList,method,&r);CHKERRQ(ierr);
-  if (!r) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown IS type: %s", method);
-  if (is->ops->destroy) {
-    ierr = (*is->ops->destroy)(is);CHKERRQ(ierr);
-    is->ops->destroy = NULL;
-  }
-  ierr = (*r)(is);CHKERRQ(ierr);
-  ierr = PetscObjectChangeTypeName((PetscObject)is,method);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(ISRegisterAll());
+  PetscCall(PetscFunctionListFind(ISList, method, &r));
+  PetscCheck(r, PetscObjectComm((PetscObject)is), PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown IS type: %s", method);
+  PetscTryTypeMethod(is, destroy);
+  is->ops->destroy = NULL;
+
+  PetscCall((*r)(is));
+  PetscCall(PetscObjectChangeTypeName((PetscObject)is, method));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
-  ISGetType - Gets the index set type name (as a string) from the IS.
+/*@
+  ISGetType - Gets the index set type name, `ISType`, (as a string) from the `IS`.
 
   Not Collective
 
   Input Parameter:
-. is  - The index set
+. is - The index set
 
   Output Parameter:
 . type - The index set type name
 
   Level: intermediate
 
-.seealso: ISSetType(), ISCreate()
+.seealso: [](sec_scatter), `IS`, `ISType`, `ISSetType()`, `ISCreate()`
 @*/
-PetscErrorCode  ISGetType(IS is, ISType *type)
+PetscErrorCode ISGetType(IS is, ISType *type)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(is, IS_CLASSID,1);
-  PetscValidCharPointer(type,2);
-  if (!ISRegisterAllCalled) {
-    ierr = ISRegisterAll();CHKERRQ(ierr);
-  }
+  PetscValidHeaderSpecific(is, IS_CLASSID, 1);
+  PetscAssertPointer(type, 2);
+  if (!ISRegisterAllCalled) PetscCall(ISRegisterAll());
   *type = ((PetscObject)is)->type_name;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
-
 
 /*--------------------------------------------------------------------------------------------------------------------*/
 
 /*@C
   ISRegister - Adds a new index set implementation
 
-  Not Collective
+  Not Collective, No Fortran Support
 
   Input Parameters:
-+ name        - The name of a new user-defined creation routine
-- create_func - The creation routine itself
++ sname    - The name of a new user-defined creation routine
+- function - The creation routine itself
 
-  Notes:
-  ISRegister() may be called multiple times to add several user-defined vectors
-
-  Sample usage:
+  Example Usage:
 .vb
     ISRegister("my_is_name",  MyISCreate);
 .ve
@@ -138,28 +125,25 @@ PetscErrorCode  ISGetType(IS is, ISType *type)
     ISCreate(MPI_Comm, IS *);
     ISSetType(IS,"my_is_name");
 .ve
-   or at runtime via the option
+  or at runtime via the option
 .vb
     -is_type my_is_name
 .ve
 
-  This is no ISSetFromOptions() and the current implementations do not have a way to dynamically determine type, so
-  dynamic registration of custom IS types will be of limited use to users.
-
   Level: developer
 
-.seealso: ISRegisterAll(), ISRegisterDestroy(), ISRegister()
+  Notes:
+  `ISRegister()` may be called multiple times to add several user-defined vectors
 
-  Level: advanced
+  This is no `ISSetFromOptions()` and the current implementations do not have a way to dynamically determine type, so
+  dynamic registration of custom `IS` types will be of limited use to users.
+
+.seealso: [](sec_scatter), `IS`, `ISType`, `ISSetType()`, `ISRegisterAll()`, `ISRegisterDestroy()`
 @*/
-PetscErrorCode  ISRegister(const char sname[], PetscErrorCode (*function)(IS))
+PetscErrorCode ISRegister(const char sname[], PetscErrorCode (*function)(IS))
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  ierr = ISInitializePackage();CHKERRQ(ierr);
-  ierr = PetscFunctionListAdd(&ISList,sname,function);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(ISInitializePackage());
+  PetscCall(PetscFunctionListAdd(&ISList, sname, function));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
-
-

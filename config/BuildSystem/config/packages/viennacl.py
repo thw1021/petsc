@@ -5,12 +5,13 @@ class Configure(config.package.Package):
   def __init__(self, framework):
     config.package.Package.__init__(self, framework)
     self.gitcommit         = 'dc552a8'
-    self.download          = ['git://https://github.com/viennacl/viennacl-dev']
+    self.download          = ['git://https://github.com/viennacl/viennacl-dev','https://github.com/viennacl/viennacl-dev/archive/'+self.gitcommit+'.tar.gz']
     self.downloaddirname   = [str('viennacl-dev')]
     self.includes          = ['viennacl/forwards.h']
-    self.cxx               = 1
+    self.buildLanguages    = ['Cxx']
     self.downloadonWindows = 1
     self.complex           = 0
+    self.devicePackage     = 1
     return
 
   def setupDependencies(self, framework):
@@ -29,18 +30,11 @@ class Configure(config.package.Package):
     #includeDir = self.packageDir
     srcdir     = os.path.join(self.packageDir, 'viennacl')
     destdir    = os.path.join(self.installDir, 'include', 'viennacl')
-    if self.installSudo:
-      self.installDirProvider.printSudoPasswordMessage()
-      try:
-        output,err,ret  = config.package.Package.executeShellCommand(self.installSudo+'mkdir -p '+destdir+' && '+self.installSudo+'rm -rf '+destdir+'  && '+self.installSudo+'cp -rf '+srcdir+' '+destdir, timeout=6000, log = self.log)
-      except RuntimeError as e:
-        raise RuntimeError('Error copying ViennaCL include files from '+os.path.join(self.packageDir, 'ViennaCL')+' to '+packageDir)
-    else:
-      try:
-        if os.path.isdir(destdir): shutil.rmtree(destdir)
-        shutil.copytree(srcdir,destdir)
-      except RuntimeError as e:
-        raise RuntimeError('Error installing ViennaCL include files: '+str(e))
+    try:
+      if os.path.isdir(destdir): shutil.rmtree(destdir)
+      shutil.copytree(srcdir,destdir)
+    except RuntimeError as e:
+      raise RuntimeError('Error installing ViennaCL include files: '+str(e))
     return self.installDir
 
   def configureLibrary(self):

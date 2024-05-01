@@ -1,6 +1,5 @@
-Setting option: version (no value)
-Petsc Development GIT revision
-See docs/changes/index.html for recent updates.
-See docs/faq.html for problems.
-See docs/manualpages/index.html for help. 
--version
+Setting option: version (no value) (source: command line)
+See https://petsc.org/release/changes for recent updates.
+See https://petsc.org/release/faq for problems.
+See https://petsc.org/release/manualpages for help.
+-version # (source: command line)

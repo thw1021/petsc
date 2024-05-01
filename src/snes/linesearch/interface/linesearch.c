@@ -7,181 +7,181 @@ PetscClassId  SNESLINESEARCH_CLASSID;
 PetscLogEvent SNESLINESEARCH_Apply;
 
 /*@
-   SNESLineSearchMonitorCancel - Clears all the monitor functions for a SNESLineSearch object.
+  SNESLineSearchMonitorCancel - Clears all the monitor functions for a `SNESLineSearch` object.
 
-   Logically Collective on SNESLineSearch
+  Logically Collective
 
-   Input Parameters:
-.  ls - the SNESLineSearch context
+  Input Parameter:
+. ls - the `SNESLineSearch` context
 
-   Options Database Key:
-.  -snes_linesearch_monitor_cancel - cancels all monitors that have been hardwired
-    into a code by calls to SNESLineSearchMonitorSet(), but does not cancel those
+  Options Database Key:
+. -snes_linesearch_monitor_cancel - cancels all monitors that have been hardwired
+    into a code by calls to `SNESLineSearchMonitorSet()`, but does not cancel those
     set via the options database
 
-   Notes:
-   There is no way to clear one specific monitor from a SNESLineSearch object.
+  Level: advanced
 
-   This does not clear the monitor set with SNESLineSearchSetDefaultMonitor() use SNESLineSearchSetDefaultMonitor(ls,NULL) to cancel
-   that one.
+  Notes:
+  There is no way to clear one specific monitor from a `SNESLineSearch` object.
 
-   Level: intermediate
+  This does not clear the monitor set with `SNESLineSearchSetDefaultMonitor()` use `SNESLineSearchSetDefaultMonitor`(`ls`,`NULL`) to cancel it
+  that one.
 
-.seealso: SNESGetLineSearch(), SNESLineSearchMonitorDefault(), SNESLineSearchMonitorSet()
+.seealso: [](ch_snes), `SNES`, `SNESLineSearch`, `SNESGetLineSearch()`, `SNESLineSearchMonitorDefault()`, `SNESLineSearchMonitorSet()`
 @*/
-PetscErrorCode  SNESLineSearchMonitorCancel(SNESLineSearch ls)
+PetscErrorCode SNESLineSearchMonitorCancel(SNESLineSearch ls)
 {
-  PetscErrorCode ierr;
-  PetscInt       i;
+  PetscInt i;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(ls,SNESLINESEARCH_CLASSID,1);
-  for (i=0; i<ls->numbermonitors; i++) {
-    if (ls->monitordestroy[i]) {
-      ierr = (*ls->monitordestroy[i])(&ls->monitorcontext[i]);CHKERRQ(ierr);
-    }
+  PetscValidHeaderSpecific(ls, SNESLINESEARCH_CLASSID, 1);
+  for (i = 0; i < ls->numbermonitors; i++) {
+    if (ls->monitordestroy[i]) PetscCall((*ls->monitordestroy[i])(&ls->monitorcontext[i]));
   }
   ls->numbermonitors = 0;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   SNESLineSearchMonitor - runs the user provided monitor routines, if they exist
+  SNESLineSearchMonitor - runs the user provided monitor routines, if they exist
 
-   Collective on SNES
+  Collective
 
-   Input Parameters:
-.  ls - the linesearch object
+  Input Parameter:
+. ls - the linesearch object
 
-   Notes:
-   This routine is called by the SNES implementations.
-   It does not typically need to be called by the user.
+  Level: developer
 
-   Level: developer
+  Note:
+  This routine is called by the `SNESLineSearch` implementations.
+  It does not typically need to be called by the user.
 
-.seealso: SNESGetLineSearch(), SNESLineSearchMonitorSet()
+.seealso: [](ch_snes), `SNES`, `SNESLineSearch`, `SNESGetLineSearch()`, `SNESLineSearchMonitorSet()`
 @*/
-PetscErrorCode  SNESLineSearchMonitor(SNESLineSearch ls)
+PetscErrorCode SNESLineSearchMonitor(SNESLineSearch ls)
 {
-  PetscErrorCode ierr;
-  PetscInt       i,n = ls->numbermonitors;
+  PetscInt i, n = ls->numbermonitors;
 
   PetscFunctionBegin;
-  for (i=0; i<n; i++) {
-    ierr = (*ls->monitorftns[i])(ls,ls->monitorcontext[i]);CHKERRQ(ierr);
-  }
-  PetscFunctionReturn(0);
+  for (i = 0; i < n; i++) PetscCall((*ls->monitorftns[i])(ls, ls->monitorcontext[i]));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-   SNESLineSearchMonitorSet - Sets an ADDITIONAL function that is to be used at every
-   iteration of the nonlinear solver to display the iteration's
-   progress.
+  SNESLineSearchMonitorSet - Sets an ADDITIONAL function that is to be used at every
+  iteration of the nonlinear solver to display the iteration's
+  progress.
 
-   Logically Collective on SNESLineSearch
+  Logically Collective
 
-   Input Parameters:
-+  ls - the SNESLineSearch context
-.  f - the monitor function
-.  mctx - [optional] user-defined context for private data for the
-          monitor routine (use NULL if no context is desired)
--  monitordestroy - [optional] routine that frees monitor context
-          (may be NULL)
+  Input Parameters:
++ ls             - the `SNESLineSearch` context
+. f              - the monitor function
+. mctx           - [optional] user-defined context for private data for the monitor routine (use `NULL` if no context is desired)
+- monitordestroy - [optional] routine that frees monitor context (may be `NULL`)
 
-   Notes:
-   Several different monitoring routines may be set by calling
-   SNESLineSearchMonitorSet() multiple times; all will be called in the
-   order in which they were set.
+  Calling sequence of `f`:
++ ls   - the `SNESLineSearch` context
+- mctx - [optional] user-defined context for private data for the monitor routine
 
-   Fortran Notes:
-    Only a single monitor function can be set for each SNESLineSearch object
+  Calling sequence of `monitordestroy`:
+. mctx - [optional] user-defined context for private data for the monitor routine
 
-   Level: intermediate
+  Level: intermediate
 
-.seealso: SNESGetLineSearch(), SNESLineSearchMonitorDefault(), SNESLineSearchMonitorCancel()
+  Note:
+  Several different monitoring routines may be set by calling
+  `SNESLineSearchMonitorSet()` multiple times; all will be called in the
+  order in which they were set.
+
+  Fortran Note:
+  Only a single monitor function can be set for each `SNESLineSearch` object
+
+.seealso: [](ch_snes), `SNES`, `SNESLineSearch`, `SNESGetLineSearch()`, `SNESLineSearchMonitorDefault()`, `SNESLineSearchMonitorCancel()`
 @*/
-PetscErrorCode  SNESLineSearchMonitorSet(SNESLineSearch ls,PetscErrorCode (*f)(SNESLineSearch,void*),void *mctx,PetscErrorCode (*monitordestroy)(void**))
+PetscErrorCode SNESLineSearchMonitorSet(SNESLineSearch ls, PetscErrorCode (*f)(SNESLineSearch ls, void *mctx), void *mctx, PetscErrorCode (*monitordestroy)(void **mctx))
 {
-  PetscErrorCode ierr;
-  PetscInt       i;
-  PetscBool      identical;
+  PetscInt  i;
+  PetscBool identical;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(ls,SNESLINESEARCH_CLASSID,1);
-  for (i=0; i<ls->numbermonitors;i++) {
-    ierr = PetscMonitorCompare((PetscErrorCode (*)(void))f,mctx,monitordestroy,(PetscErrorCode (*)(void))ls->monitorftns[i],ls->monitorcontext[i],ls->monitordestroy[i],&identical);CHKERRQ(ierr);
-    if (identical) PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(ls, SNESLINESEARCH_CLASSID, 1);
+  for (i = 0; i < ls->numbermonitors; i++) {
+    PetscCall(PetscMonitorCompare((PetscErrorCode(*)(void))f, mctx, monitordestroy, (PetscErrorCode(*)(void))ls->monitorftns[i], ls->monitorcontext[i], ls->monitordestroy[i], &identical));
+    if (identical) PetscFunctionReturn(PETSC_SUCCESS);
   }
-  if (ls->numbermonitors >= MAXSNESLSMONITORS) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Too many monitors set");
-  ls->monitorftns[ls->numbermonitors]          = f;
+  PetscCheck(ls->numbermonitors < MAXSNESLSMONITORS, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Too many monitors set");
+  ls->monitorftns[ls->numbermonitors]      = f;
   ls->monitordestroy[ls->numbermonitors]   = monitordestroy;
-  ls->monitorcontext[ls->numbermonitors++] = (void*)mctx;
-  PetscFunctionReturn(0);
+  ls->monitorcontext[ls->numbermonitors++] = (void *)mctx;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-   SNESLineSearchMonitorSolutionUpdate - Monitors each update a new function value the linesearch tries
+  SNESLineSearchMonitorSolutionUpdate - Monitors each update of the function value the linesearch tries
 
-   Collective on SNESLineSearch
+  Collective
 
-   Input Parameters:
-+  ls - the SNES linesearch object
--  vf - the context for the monitor, in this case it is an ASCII PetscViewer and format
+  Input Parameters:
++ ls - the `SNESLineSearch` object
+- vf - the context for the monitor, in this case it is an `PetscViewerAndFormat`
 
-   Level: intermediate
+  Options Database Key:
+. -snes_linesearch_monitor_solution_update [viewer:filename:format] - view each update tried by line search routine
 
-.seealso: SNESGetLineSearch(), SNESMonitorSet(), SNESMonitorSolution()
+  Level: developer
+
+  This is not normally called directly but is passed to `SNESLineSearchMonitorSet()`
+
+.seealso: [](ch_snes), `SNES`, `SNESLineSearch`, `SNESGetLineSearch()`, `SNESLineSearchMonitorSet()`, `SNESMonitorSolution()`
 @*/
-PetscErrorCode  SNESLineSearchMonitorSolutionUpdate(SNESLineSearch ls,PetscViewerAndFormat *vf)
+PetscErrorCode SNESLineSearchMonitorSolutionUpdate(SNESLineSearch ls, PetscViewerAndFormat *vf)
 {
-  PetscErrorCode ierr;
-  PetscViewer    viewer = vf->viewer;
-  Vec            Y,W,G;
+  PetscViewer viewer = vf->viewer;
+  Vec         Y, W, G;
 
   PetscFunctionBegin;
-  ierr = SNESLineSearchGetVecs(ls,NULL,NULL,&Y,&W,&G);CHKERRQ(ierr);
-  ierr = PetscViewerPushFormat(viewer,vf->format);CHKERRQ(ierr);
-  ierr = PetscViewerASCIIPrintf(viewer,"LineSearch attempted update to solution \n");CHKERRQ(ierr);
-  ierr = VecView(Y,viewer);CHKERRQ(ierr);
-  ierr = PetscViewerASCIIPrintf(viewer,"LineSearch attempted new solution \n");CHKERRQ(ierr);
-  ierr = VecView(W,viewer);CHKERRQ(ierr);
-  ierr = PetscViewerASCIIPrintf(viewer,"LineSearch attempted updated function value\n");CHKERRQ(ierr);
-  ierr = VecView(G,viewer);CHKERRQ(ierr);
-  ierr = PetscViewerPopFormat(viewer);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(SNESLineSearchGetVecs(ls, NULL, NULL, &Y, &W, &G));
+  PetscCall(PetscViewerPushFormat(viewer, vf->format));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "LineSearch attempted update to solution \n"));
+  PetscCall(VecView(Y, viewer));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "LineSearch attempted new solution \n"));
+  PetscCall(VecView(W, viewer));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "LineSearch attempted updated function value\n"));
+  PetscCall(VecView(G, viewer));
+  PetscCall(PetscViewerPopFormat(viewer));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   SNESLineSearchCreate - Creates the line search context.
+  SNESLineSearchCreate - Creates a `SNESLineSearch` context.
 
-   Logically Collective on Comm
+  Logically Collective
 
-   Input Parameters:
-.  comm - MPI communicator for the line search (typically from the associated SNES context).
+  Input Parameter:
+. comm - MPI communicator for the line search (typically from the associated `SNES` context).
 
-   Output Parameters:
-.  outlinesearch - the new linesearch context
+  Output Parameter:
+. outlinesearch - the new line search context
 
-   Level: developer
+  Level: developer
 
-   Notes:
-   The preferred calling sequence for users is to use SNESGetLineSearch() to acquire the SNESLineSearch instance
-   already associated with the SNES.  This function is for developer use.
+  Note:
+  The preferred calling sequence is to use `SNESGetLineSearch()` to acquire the `SNESLineSearch` instance
+  already associated with the `SNES`.
 
-.seealso: LineSearchDestroy(), SNESGetLineSearch()
+.seealso: [](ch_snes), `SNES`, `SNESLineSearch`, `LineSearchDestroy()`, `SNESGetLineSearch()`
 @*/
-
 PetscErrorCode SNESLineSearchCreate(MPI_Comm comm, SNESLineSearch *outlinesearch)
 {
-  PetscErrorCode ierr;
   SNESLineSearch linesearch;
 
   PetscFunctionBegin;
-  PetscValidPointer(outlinesearch,2);
-  ierr = SNESInitializePackage();CHKERRQ(ierr);
+  PetscAssertPointer(outlinesearch, 2);
+  PetscCall(SNESInitializePackage());
   *outlinesearch = NULL;
 
-  ierr = PetscHeaderCreate(linesearch,SNESLINESEARCH_CLASSID, "SNESLineSearch","Linesearch","SNESLineSearch",comm,SNESLineSearchDestroy,SNESLineSearchView);CHKERRQ(ierr);
+  PetscCall(PetscHeaderCreate(linesearch, SNESLINESEARCH_CLASSID, "SNESLineSearch", "Linesearch", "SNESLineSearch", comm, SNESLineSearchDestroy, SNESLineSearchView));
 
   linesearch->vec_sol_new  = NULL;
   linesearch->vec_func_new = NULL;
@@ -206,400 +206,426 @@ PetscErrorCode SNESLineSearchCreate(MPI_Comm comm, SNESLineSearch *outlinesearch
   linesearch->postcheckctx = NULL;
   linesearch->max_its      = 1;
   linesearch->setupcalled  = PETSC_FALSE;
+  linesearch->monitor      = NULL;
   *outlinesearch           = linesearch;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   SNESLineSearchSetUp - Prepares the line search for being applied by allocating
-   any required vectors.
+  SNESLineSearchSetUp - Prepares the line search for being applied by allocating
+  any required vectors.
 
-   Collective on SNESLineSearch
+  Collective
 
-   Input Parameters:
-.  linesearch - The LineSearch instance.
+  Input Parameter:
+. linesearch - The `SNESLineSearch` instance.
 
-   Notes:
-   For most cases, this needn't be called by users or outside of SNESLineSearchApply().
-   The only current case where this is called outside of this is for the VI
-   solvers, which modify the solution and work vectors before the first call
-   of SNESLineSearchApply, requiring the SNESLineSearch work vectors to be
-   allocated upfront.
+  Level: advanced
 
-   Level: advanced
+  Note:
+  For most cases, this needn't be called by users or outside of `SNESLineSearchApply()`.
+  The only current case where this is called outside of this is for the VI
+  solvers, which modify the solution and work vectors before the first call
+  of `SNESLineSearchApply()`, requiring the `SNESLineSearch` work vectors to be
+  allocated upfront.
 
-.seealso: SNESGetLineSearch(), SNESLineSearchReset()
+.seealso: [](ch_snes), `SNES`, `SNESLineSearch`, `SNESGetLineSearch()`, `SNESLineSearchReset()`
 @*/
-
 PetscErrorCode SNESLineSearchSetUp(SNESLineSearch linesearch)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  if (!((PetscObject)linesearch)->type_name) {
-    ierr = SNESLineSearchSetType(linesearch,SNESLINESEARCHBASIC);CHKERRQ(ierr);
-  }
+  if (!((PetscObject)linesearch)->type_name) PetscCall(SNESLineSearchSetType(linesearch, SNESLINESEARCHBASIC));
   if (!linesearch->setupcalled) {
-    if (!linesearch->vec_sol_new) {
-      ierr = VecDuplicate(linesearch->vec_sol, &linesearch->vec_sol_new);CHKERRQ(ierr);
-    }
-    if (!linesearch->vec_func_new) {
-      ierr = VecDuplicate(linesearch->vec_sol, &linesearch->vec_func_new);CHKERRQ(ierr);
-    }
-    if (linesearch->ops->setup) {
-      ierr = (*linesearch->ops->setup)(linesearch);CHKERRQ(ierr);
-    }
-    if (!linesearch->ops->snesfunc) {ierr = SNESLineSearchSetFunction(linesearch,SNESComputeFunction);CHKERRQ(ierr);}
+    if (!linesearch->vec_sol_new) PetscCall(VecDuplicate(linesearch->vec_sol, &linesearch->vec_sol_new));
+    if (!linesearch->vec_func_new) PetscCall(VecDuplicate(linesearch->vec_sol, &linesearch->vec_func_new));
+    PetscTryTypeMethod(linesearch, setup);
+    if (!linesearch->ops->snesfunc) PetscCall(SNESLineSearchSetFunction(linesearch, SNESComputeFunction));
     linesearch->lambda      = linesearch->damping;
     linesearch->setupcalled = PETSC_TRUE;
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-
 /*@
-   SNESLineSearchReset - Undoes the SNESLineSearchSetUp() and deletes any Vecs or Mats allocated by the line search.
+  SNESLineSearchReset - Undoes the `SNESLineSearchSetUp()` and deletes any `Vec`s or `Mat`s allocated by the line search.
 
-   Collective on SNESLineSearch
+  Collective
 
-   Input Parameters:
-.  linesearch - The LineSearch instance.
+  Input Parameter:
+. linesearch - The `SNESLineSearch` instance.
 
-   Notes:
-    Usually only called by SNESReset()
+  Level: developer
 
-   Level: developer
+  Note:
+  Usually only called by `SNESReset()`
 
-.seealso: SNESGetLineSearch(), SNESLineSearchSetUp()
+.seealso: [](ch_snes), `SNES`, `SNESLineSearch`, `SNESGetLineSearch()`, `SNESLineSearchSetUp()`
 @*/
-
 PetscErrorCode SNESLineSearchReset(SNESLineSearch linesearch)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  if (linesearch->ops->reset) (*linesearch->ops->reset)(linesearch);
+  PetscTryTypeMethod(linesearch, reset);
 
-  ierr = VecDestroy(&linesearch->vec_sol_new);CHKERRQ(ierr);
-  ierr = VecDestroy(&linesearch->vec_func_new);CHKERRQ(ierr);
+  PetscCall(VecDestroy(&linesearch->vec_sol_new));
+  PetscCall(VecDestroy(&linesearch->vec_func_new));
 
-  ierr = VecDestroyVecs(linesearch->nwork, &linesearch->work);CHKERRQ(ierr);
+  PetscCall(VecDestroyVecs(linesearch->nwork, &linesearch->work));
 
   linesearch->nwork       = 0;
   linesearch->setupcalled = PETSC_FALSE;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-   SNESLineSearchSetFunction - Sets the function evaluation used by the SNES line search
+  SNESLineSearchSetFunction - Sets the function evaluation used by the `SNES` line search
+  `
 
-   Input Parameters:
-.  linesearch - the SNESLineSearch context
-+  func       - function evaluation routine
+  Input Parameters:
++ linesearch - the `SNESLineSearch` context
+- func       - function evaluation routine, this is usually the function provided with `SNESSetFunction()`
 
-   Level: developer
+  Calling sequence of `func`:
++ snes - the `SNES` with which the `SNESLineSearch` context is associated with
+. x    - the input vector
+- f    - the computed value of the function
 
-   Notes:
-    This is used internally by PETSc and not called by users
+  Level: developer
 
-.seealso: SNESGetLineSearch(), SNESSetFunction()
+  Note:
+  By default the `SNESLineSearch` uses the function provided by `SNESSetFunction()` so this is rarely needed
+
+.seealso: [](ch_snes), `SNES`, `SNESLineSearch`, `SNESGetLineSearch()`, `SNESSetFunction()`
 @*/
-PetscErrorCode  SNESLineSearchSetFunction(SNESLineSearch linesearch, PetscErrorCode (*func)(SNES,Vec,Vec))
+PetscErrorCode SNESLineSearchSetFunction(SNESLineSearch linesearch, PetscErrorCode (*func)(SNES snes, Vec x, Vec f))
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(linesearch,SNESLINESEARCH_CLASSID,1);
+  PetscValidHeaderSpecific(linesearch, SNESLINESEARCH_CLASSID, 1);
   linesearch->ops->snesfunc = func;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-   SNESLineSearchSetPreCheck - Sets a user function that is called after the initial search direction has been computed but
-         before the line search routine has been applied. Allows the user to adjust the result of (usually a linear solve) that
-         determined the search direction.
+  SNESLineSearchSetPreCheck - Sets a function that is called after the initial search direction has been computed but
+  before the line search routine has been applied. Allows adjusting the result of (usually a linear solve) that
+  determined the search direction.
 
-   Logically Collective on SNESLineSearch
+  Logically Collective
 
-   Input Parameters:
-+  linesearch - the SNESLineSearch context
-.  func - [optional] function evaluation routine, see SNESLineSearchPreCheck() for the calling sequence
--  ctx        - [optional] user-defined context for private data for the function evaluation routine (may be NULL)
+  Input Parameters:
++ linesearch - the `SNESLineSearch` context
+. func       - [optional] function evaluation routine
+- ctx        - [optional] user-defined context for private data for the function evaluation routine (may be `NULL`)
 
-   Level: intermediate
+  Calling sequence of `func`:
++ ls        - the `SNESLineSearch` context
+. x         - the current solution
+. d         - the current search direction
+. changed_d - indicates if the search direction has been changed
+- ctx       - the context passed to `SNESLineSearchSetPreCheck()`
 
-.seealso: SNESGetLineSearch(), SNESLineSearchPreCheck(), SNESLineSearchSetPostCheck(), SNESLineSearchGetPostCheck(), SNESLineSearchGetPreCheck()
+  Level: intermediate
+
+  Note:
+  Use `SNESLineSearchSetPostCheck()` to change the step after the line search is complete.
+
+  Use `SNESVISetVariableBounds()` and `SNESVISetComputeVariableBounds()` to cause `SNES` to automatically control the ranges of variables allowed.
+
+.seealso: [](ch_snes), `SNES`, `SNESGetLineSearch()`, `SNESLineSearchPreCheck()`, `SNESLineSearchSetPostCheck()`, `SNESLineSearchGetPostCheck()`, `SNESLineSearchGetPreCheck()`,
+          `SNESVISetVariableBounds()`, `SNESVISetComputeVariableBounds()`, `SNESSetFunctionDomainError()`, `SNESSetJacobianDomainError()`
+
 @*/
-PetscErrorCode  SNESLineSearchSetPreCheck(SNESLineSearch linesearch, PetscErrorCode (*func)(SNESLineSearch,Vec,Vec,PetscBool*,void*),void *ctx)
+PetscErrorCode SNESLineSearchSetPreCheck(SNESLineSearch linesearch, PetscErrorCode (*func)(SNESLineSearch ls, Vec x, Vec d, PetscBool *changed_d, void *ctx), void *ctx)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(linesearch,SNESLINESEARCH_CLASSID,1);
+  PetscValidHeaderSpecific(linesearch, SNESLINESEARCH_CLASSID, 1);
   if (func) linesearch->ops->precheck = func;
   if (ctx) linesearch->precheckctx = ctx;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-   SNESLineSearchGetPreCheck - Gets the pre-check function for the line search routine.
+  SNESLineSearchGetPreCheck - Gets the pre-check function for the line search routine.
 
-   Input Parameters:
-.  linesearch - the SNESLineSearch context
+  Input Parameter:
+. linesearch - the `SNESLineSearch` context
 
-   Output Parameters:
-+  func       - [optional] function evaluation routine, see SNESLineSearchPreCheck() for calling sequence
--  ctx        - [optional] user-defined context for private data for the function evaluation routine (may be NULL)
+  Output Parameters:
++ func - [optional] function evaluation routine,  for calling sequence see `SNESLineSearchSetPreCheck()`
+- ctx  - [optional] user-defined context for private data for the function evaluation routine (may be `NULL`)
 
-   Level: intermediate
+  Level: intermediate
 
-.seealso: SNESGetLineSearch(), SNESGetLineSearch(), SNESLineSearchPreCheck(), SNESLineSearchGetPostCheck(), SNESLineSearchSetPreCheck(), SNESLineSearchSetPostCheck()
+.seealso: [](ch_snes), `SNES`, `SNESLineSearch`, `SNESGetLineSearch()`, `SNESLineSearchPreCheck()`, `SNESLineSearchGetPostCheck()`, `SNESLineSearchSetPreCheck()`, `SNESLineSearchSetPostCheck()`
 @*/
-PetscErrorCode  SNESLineSearchGetPreCheck(SNESLineSearch linesearch, PetscErrorCode (**func)(SNESLineSearch,Vec,Vec,PetscBool*,void*),void **ctx)
+PetscErrorCode SNESLineSearchGetPreCheck(SNESLineSearch linesearch, PetscErrorCode (**func)(SNESLineSearch, Vec, Vec, PetscBool *, void *), void **ctx)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(linesearch,SNESLINESEARCH_CLASSID,1);
+  PetscValidHeaderSpecific(linesearch, SNESLINESEARCH_CLASSID, 1);
   if (func) *func = linesearch->ops->precheck;
   if (ctx) *ctx = linesearch->precheckctx;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-   SNESLineSearchSetPostCheck - Sets a user function that is called after the line search has been applied to determine the step
-       direction and length. Allows the user a chance to change or override the decision of the line search routine
+  SNESLineSearchSetPostCheck - Sets a user function that is called after the line search has been applied to determine the step
+  direction and length. Allows the user a chance to change or override the decision of the line search routine
 
-   Logically Collective on SNESLineSearch
+  Logically Collective
 
-   Input Parameters:
-+  linesearch - the SNESLineSearch context
-.  func - [optional] function evaluation routine, see SNESLineSearchPostCheck()  for the calling sequence
--  ctx        - [optional] user-defined context for private data for the function evaluation routine (may be NULL)
+  Input Parameters:
++ linesearch - the `SNESLineSearch` context
+. func       - [optional] function evaluation routine
+- ctx        - [optional] user-defined context for private data for the function evaluation routine (may be `NULL`)
 
-   Level: intermediate
+  Calling sequence of `func`:
++ ls        - the `SNESLineSearch` context
+. x         - the current solution
+. d         - the current search direction
+. w         - $ w = x + lambda*d $ for some lambda
+. changed_d - indicates if the search direction `d` has been changed
+. changed_w - indicates `w` has been changed
+- ctx       - the context passed to `SNESLineSearchSetPreCheck()`
 
-.seealso: SNESGetLineSearch(), SNESLineSearchPostCheck(), SNESLineSearchSetPreCheck(), SNESLineSearchGetPreCheck(), SNESLineSearchGetPostCheck()
+  Level: intermediate
+
+  Notes:
+  Use `SNESLineSearchSetPreCheck()` to change the step before the line search is completed.
+  The calling sequence of the callback does not contain the current scaling factor. To access the value, use `SNESLineSearchGetLambda()`.
+
+  Use `SNESVISetVariableBounds()` and `SNESVISetComputeVariableBounds()` to cause `SNES` to automatically control the ranges of variables allowed.
+
+.seealso: [](ch_snes), `SNES`, `SNESLineSearch`, `SNESGetLineSearch()`, `SNESLineSearchPostCheck()`, `SNESLineSearchSetPreCheck()`, `SNESLineSearchGetPreCheck()`, `SNESLineSearchGetPostCheck()`,
+          `SNESVISetVariableBounds()`, `SNESVISetComputeVariableBounds()`, `SNESSetFunctionDomainError()`, `SNESSetJacobianDomainError()`
 @*/
-PetscErrorCode  SNESLineSearchSetPostCheck(SNESLineSearch linesearch, PetscErrorCode (*func)(SNESLineSearch,Vec,Vec,Vec,PetscBool*,PetscBool*,void*),void *ctx)
+PetscErrorCode SNESLineSearchSetPostCheck(SNESLineSearch linesearch, PetscErrorCode (*func)(SNESLineSearch ls, Vec x, Vec d, Vec w, PetscBool *changed_d, PetscBool *changed_w, void *ctx), void *ctx)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(linesearch,SNESLINESEARCH_CLASSID,1);
+  PetscValidHeaderSpecific(linesearch, SNESLINESEARCH_CLASSID, 1);
   if (func) linesearch->ops->postcheck = func;
   if (ctx) linesearch->postcheckctx = ctx;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-   SNESLineSearchGetPostCheck - Gets the post-check function for the line search routine.
+  SNESLineSearchGetPostCheck - Gets the post-check function for the line search routine.
 
-   Input Parameters:
-.  linesearch - the SNESLineSearch context
+  Input Parameter:
+. linesearch - the `SNESLineSearch` context
 
-   Output Parameters:
-+  func - [optional] function evaluation routine, see for the calling sequence SNESLineSearchPostCheck()
--  ctx        - [optional] user-defined context for private data for the function evaluation routine (may be NULL)
+  Output Parameters:
++ func - [optional] function evaluation routine, see for the calling sequence `SNESLineSearchSetPostCheck()`
+- ctx  - [optional] user-defined context for private data for the function evaluation routine (may be `NULL`)
 
-   Level: intermediate
+  Level: intermediate
 
-.seealso: SNESGetLineSearch(), SNESLineSearchGetPreCheck(), SNESLineSearchSetPostCheck(), SNESLineSearchPostCheck(), SNESLineSearchSetPreCheck()
+.seealso: [](ch_snes), `SNES`, `SNESLineSearch`, `SNESGetLineSearch()`, `SNESLineSearchGetPreCheck()`, `SNESLineSearchSetPostCheck()`, `SNESLineSearchPostCheck()`, `SNESLineSearchSetPreCheck()`
 @*/
-PetscErrorCode  SNESLineSearchGetPostCheck(SNESLineSearch linesearch, PetscErrorCode (**func)(SNESLineSearch,Vec,Vec,Vec,PetscBool*,PetscBool*,void*),void **ctx)
+PetscErrorCode SNESLineSearchGetPostCheck(SNESLineSearch linesearch, PetscErrorCode (**func)(SNESLineSearch, Vec, Vec, Vec, PetscBool *, PetscBool *, void *), void **ctx)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(linesearch,SNESLINESEARCH_CLASSID,1);
+  PetscValidHeaderSpecific(linesearch, SNESLINESEARCH_CLASSID, 1);
   if (func) *func = linesearch->ops->postcheck;
   if (ctx) *ctx = linesearch->postcheckctx;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   SNESLineSearchPreCheck - Prepares the line search for being applied.
+  SNESLineSearchPreCheck - Prepares the line search for being applied.
 
-   Logically Collective on SNESLineSearch
+  Logically Collective
 
-   Input Parameters:
-+  linesearch - The linesearch instance.
-.  X - The current solution
--  Y - The step direction
+  Input Parameters:
++ linesearch - The linesearch instance.
+. X          - The current solution
+- Y          - The step direction
 
-   Output Parameters:
-.  changed - Indicator that the precheck routine has changed anything
+  Output Parameter:
+. changed - Indicator that the precheck routine has changed `Y`
 
-   Level: developer
+  Level: advanced
 
-.seealso: SNESGetLineSearch(), SNESLineSearchPostCheck(), SNESLineSearchSetPreCheck(), SNESLineSearchGetPreCheck(), SNESLineSearchSetPostCheck(), SNESLineSearchGetPostCheck()
+  Note:
+  This calls any function provided with `SNESLineSearchSetPreCheck()` and is called automatically inside the line search routines
+
+  Developer Note:
+  The use of `PetscObjectGetState()` would eliminate the need for the `changed` argument to be provided
+
+.seealso: [](ch_snes), `SNES`, `SNESLineSearch`, `SNESGetLineSearch()`, `SNESLineSearchPostCheck()`, `SNESLineSearchSetPreCheck()`, `SNESLineSearchGetPreCheck()`, `SNESLineSearchSetPostCheck()`,
+          `SNESLineSearchGetPostCheck()`
 @*/
-PetscErrorCode SNESLineSearchPreCheck(SNESLineSearch linesearch,Vec X,Vec Y,PetscBool *changed)
+PetscErrorCode SNESLineSearchPreCheck(SNESLineSearch linesearch, Vec X, Vec Y, PetscBool *changed)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   *changed = PETSC_FALSE;
   if (linesearch->ops->precheck) {
-    ierr = (*linesearch->ops->precheck)(linesearch, X, Y, changed, linesearch->precheckctx);CHKERRQ(ierr);
-    PetscValidLogicalCollectiveBool(linesearch,*changed,4);
+    PetscUseTypeMethod(linesearch, precheck, X, Y, changed, linesearch->precheckctx);
+    PetscValidLogicalCollectiveBool(linesearch, *changed, 4);
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   SNESLineSearchPostCheck - Prepares the line search for being applied.
+  SNESLineSearchPostCheck - Hook to modify step direction or updated solution after a successful linesearch
 
-   Logically Collective on SNESLineSearch
+  Logically Collective
 
-   Input Parameters:
-+  linesearch - The linesearch context
-.  X - The last solution
-.  Y - The step direction
--  W - The updated solution, W = X + lambda*Y for some lambda
+  Input Parameters:
++ linesearch - The line search context
+. X          - The last solution
+. Y          - The step direction
+- W          - The updated solution, `W = X - lambda * Y` for some lambda
 
-   Output Parameters:
-+  changed_Y - Indicator if the direction Y has been changed.
--  changed_W - Indicator if the new candidate solution W has been changed.
+  Output Parameters:
++ changed_Y - Indicator if the direction `Y` has been changed.
+- changed_W - Indicator if the new candidate solution `W` has been changed.
 
-   Level: developer
+  Level: developer
 
-.seealso: SNESGetLineSearch(), SNESLineSearchPreCheck(), SNESLineSearchSetPostCheck(), SNESLineSearchGetPostCheck(), SNESLineSearchSetPrecheck(), SNESLineSearchGetPrecheck()
+  Note:
+  This calls any function provided with `SNESLineSearchSetPostCheck()` and is called automatically inside the line search routines
+
+  Developer Note:
+  The use of `PetscObjectGetState()` would eliminate the need for the `changed_Y` and `changed_W` arguments to be provided
+
+.seealso: [](ch_snes), `SNES`, `SNESGetLineSearch()`, `SNESLineSearchPreCheck()`, `SNESLineSearchSetPostCheck()`, `SNESLineSearchGetPostCheck()`, `SNESLineSearchSetPrecheck()`, `SNESLineSearchGetPrecheck()`
 @*/
-PetscErrorCode SNESLineSearchPostCheck(SNESLineSearch linesearch,Vec X,Vec Y,Vec W,PetscBool *changed_Y,PetscBool *changed_W)
+PetscErrorCode SNESLineSearchPostCheck(SNESLineSearch linesearch, Vec X, Vec Y, Vec W, PetscBool *changed_Y, PetscBool *changed_W)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   *changed_Y = PETSC_FALSE;
   *changed_W = PETSC_FALSE;
   if (linesearch->ops->postcheck) {
-    ierr = (*linesearch->ops->postcheck)(linesearch,X,Y,W,changed_Y,changed_W,linesearch->postcheckctx);CHKERRQ(ierr);
-    PetscValidLogicalCollectiveBool(linesearch,*changed_Y,5);
-    PetscValidLogicalCollectiveBool(linesearch,*changed_W,6);
+    PetscUseTypeMethod(linesearch, postcheck, X, Y, W, changed_Y, changed_W, linesearch->postcheckctx);
+    PetscValidLogicalCollectiveBool(linesearch, *changed_Y, 5);
+    PetscValidLogicalCollectiveBool(linesearch, *changed_W, 6);
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-   SNESLineSearchPreCheckPicard - Implements a correction that is sometimes useful to improve the convergence rate of Picard iteration
+  SNESLineSearchPreCheckPicard - Implements a correction that is sometimes useful to improve the convergence rate of Picard iteration {cite}`hindmarsh1996time`
 
-   Logically Collective on SNESLineSearch
+  Logically Collective
 
-   Input Arguments:
-+  linesearch - linesearch context
-.  X - base state for this step
-.  Y - initial correction
--  ctx - context for this function
+  Input Parameters:
++ linesearch - the line search context
+. X          - base state for this step
+- ctx        - context for this function
 
-   Output Arguments:
-+  Y - correction, possibly modified
--  changed - flag indicating that Y was modified
+  Input/Output Parameter:
+. Y - correction, possibly modified
 
-   Options Database Key:
-+  -snes_linesearch_precheck_picard - activate this routine
--  -snes_linesearch_precheck_picard_angle - angle
+  Output Parameter:
+. changed - flag indicating that `Y` was modified
 
-   Level: advanced
+  Options Database Keys:
++ -snes_linesearch_precheck_picard       - activate this routine
+- -snes_linesearch_precheck_picard_angle - angle
 
-   Notes:
-   This function should be passed to SNESLineSearchSetPreCheck()
+  Level: advanced
 
-   The justification for this method involves the linear convergence of a Picard iteration
-   so the Picard linearization should be provided in place of the "Jacobian". This correction
-   is generally not useful when using a Newton linearization.
+  Notes:
+  This function should be passed to `SNESLineSearchSetPreCheck()`
 
-   Reference:
-   Hindmarsh and Payne (1996) Time step limits for stable solutions of the ice sheet equation, Annals of Glaciology.
+  The justification for this method involves the linear convergence of a Picard iteration
+  so the Picard linearization should be provided in place of the "Jacobian"  {cite}`hindmarsh1996time`. This correction
+  is generally not useful when using a Newton linearization.
 
-.seealso: SNESGetLineSearch(), SNESLineSearchSetPreCheck()
+  Developer Note:
+  The use of `PetscObjectGetState()` would eliminate the need for the `changed` argument to be provided
+
+.seealso: [](ch_snes), `SNES`, `SNESLineSearch`, `SNESSetPicard()`, `SNESGetLineSearch()`, `SNESLineSearchSetPreCheck()`, `SNESLineSearchSetPostCheck()`
 @*/
-PetscErrorCode SNESLineSearchPreCheckPicard(SNESLineSearch linesearch,Vec X,Vec Y,PetscBool *changed,void *ctx)
+PetscErrorCode SNESLineSearchPreCheckPicard(SNESLineSearch linesearch, Vec X, Vec Y, PetscBool *changed, void *ctx)
 {
-  PetscErrorCode ierr;
-  PetscReal      angle = *(PetscReal*)linesearch->precheckctx;
-  Vec            Ylast;
-  PetscScalar    dot;
-  PetscInt       iter;
-  PetscReal      ynorm,ylastnorm,theta,angle_radians;
-  SNES           snes;
+  PetscReal   angle = *(PetscReal *)linesearch->precheckctx;
+  Vec         Ylast;
+  PetscScalar dot;
+  PetscInt    iter;
+  PetscReal   ynorm, ylastnorm, theta, angle_radians;
+  SNES        snes;
 
   PetscFunctionBegin;
-  ierr = SNESLineSearchGetSNES(linesearch, &snes);CHKERRQ(ierr);
-  ierr = PetscObjectQuery((PetscObject)snes,"SNESLineSearchPreCheckPicard_Ylast",(PetscObject*)&Ylast);CHKERRQ(ierr);
+  PetscCall(SNESLineSearchGetSNES(linesearch, &snes));
+  PetscCall(PetscObjectQuery((PetscObject)snes, "SNESLineSearchPreCheckPicard_Ylast", (PetscObject *)&Ylast));
   if (!Ylast) {
-    ierr = VecDuplicate(Y,&Ylast);CHKERRQ(ierr);
-    ierr = PetscObjectCompose((PetscObject)snes,"SNESLineSearchPreCheckPicard_Ylast",(PetscObject)Ylast);CHKERRQ(ierr);
-    ierr = PetscObjectDereference((PetscObject)Ylast);CHKERRQ(ierr);
+    PetscCall(VecDuplicate(Y, &Ylast));
+    PetscCall(PetscObjectCompose((PetscObject)snes, "SNESLineSearchPreCheckPicard_Ylast", (PetscObject)Ylast));
+    PetscCall(PetscObjectDereference((PetscObject)Ylast));
   }
-  ierr = SNESGetIterationNumber(snes,&iter);CHKERRQ(ierr);
+  PetscCall(SNESGetIterationNumber(snes, &iter));
   if (iter < 2) {
-    ierr     = VecCopy(Y,Ylast);CHKERRQ(ierr);
+    PetscCall(VecCopy(Y, Ylast));
     *changed = PETSC_FALSE;
-    PetscFunctionReturn(0);
+    PetscFunctionReturn(PETSC_SUCCESS);
   }
 
-  ierr = VecDot(Y,Ylast,&dot);CHKERRQ(ierr);
-  ierr = VecNorm(Y,NORM_2,&ynorm);CHKERRQ(ierr);
-  ierr = VecNorm(Ylast,NORM_2,&ylastnorm);CHKERRQ(ierr);
+  PetscCall(VecDot(Y, Ylast, &dot));
+  PetscCall(VecNorm(Y, NORM_2, &ynorm));
+  PetscCall(VecNorm(Ylast, NORM_2, &ylastnorm));
   /* Compute the angle between the vectors Y and Ylast, clip to keep inside the domain of acos() */
-  theta         = PetscAcosReal((PetscReal)PetscClipInterval(PetscAbsScalar(dot) / (ynorm * ylastnorm),-1.0,1.0));
+  theta         = PetscAcosReal((PetscReal)PetscClipInterval(PetscAbsScalar(dot) / (ynorm * ylastnorm), -1.0, 1.0));
   angle_radians = angle * PETSC_PI / 180.;
   if (PetscAbsReal(theta) < angle_radians || PetscAbsReal(theta - PETSC_PI) < angle_radians) {
     /* Modify the step Y */
-    PetscReal alpha,ydiffnorm;
-    ierr  = VecAXPY(Ylast,-1.0,Y);CHKERRQ(ierr);
-    ierr  = VecNorm(Ylast,NORM_2,&ydiffnorm);CHKERRQ(ierr);
-    alpha = (ydiffnorm > .001*ylastnorm) ? ylastnorm / ydiffnorm : 1000.0;
-    ierr  = VecCopy(Y,Ylast);CHKERRQ(ierr);
-    ierr  = VecScale(Y,alpha);CHKERRQ(ierr);
-    ierr  = PetscInfo3(snes,"Angle %14.12e degrees less than threshold %14.12e, corrected step by alpha=%14.12e\n",(double)(theta*180./PETSC_PI),(double)angle,(double)alpha);CHKERRQ(ierr);
+    PetscReal alpha, ydiffnorm;
+    PetscCall(VecAXPY(Ylast, -1.0, Y));
+    PetscCall(VecNorm(Ylast, NORM_2, &ydiffnorm));
+    alpha = (ydiffnorm > .001 * ylastnorm) ? ylastnorm / ydiffnorm : 1000.0;
+    PetscCall(VecCopy(Y, Ylast));
+    PetscCall(VecScale(Y, alpha));
+    PetscCall(PetscInfo(snes, "Angle %14.12e degrees less than threshold %14.12e, corrected step by alpha=%14.12e\n", (double)(theta * 180. / PETSC_PI), (double)angle, (double)alpha));
     *changed = PETSC_TRUE;
   } else {
-    ierr     = PetscInfo2(snes,"Angle %14.12e degrees exceeds threshold %14.12e, no correction applied\n",(double)(theta*180./PETSC_PI),(double)angle);CHKERRQ(ierr);
-    ierr     = VecCopy(Y,Ylast);CHKERRQ(ierr);
+    PetscCall(PetscInfo(snes, "Angle %14.12e degrees exceeds threshold %14.12e, no correction applied\n", (double)(theta * 180. / PETSC_PI), (double)angle));
+    PetscCall(VecCopy(Y, Ylast));
     *changed = PETSC_FALSE;
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   SNESLineSearchApply - Computes the line-search update.
+  SNESLineSearchApply - Computes the line-search update.
 
-   Collective on SNESLineSearch
+  Collective
 
-   Input Parameters:
-+  linesearch - The linesearch context
-.  X - The current solution
-.  F - The current function
-.  fnorm - The current norm
--  Y - The search direction
+  Input Parameter:
+. linesearch - The line search context
 
-   Output Parameters:
-+  X - The new solution
-.  F - The new function
--  fnorm - The new function norm
+  Input/Output Parameters:
++ X     - The current solution, on output the new solution
+. F     - The current function value, on output the new function value at the solution value `X`
+. fnorm - The current norm of `F`, on output the new norm of `F`
+- Y     - The current search direction, on output the direction determined by the linesearch, i.e. Xnew = Xold - lambda*Y
 
-   Options Database Keys:
-+ -snes_linesearch_type - basic, bt, l2, cp, nleqerr, shell
+  Options Database Keys:
++ -snes_linesearch_type                - basic (or equivalently none), bt, l2, cp, nleqerr, shell
 . -snes_linesearch_monitor [:filename] - Print progress of line searches
-. -snes_linesearch_damping - The linesearch damping parameter, default is 1.0 (no damping)
-. -snes_linesearch_norms   - Turn on/off the linesearch norms computation (SNESLineSearchSetComputeNorms())
-. -snes_linesearch_keeplambda - Keep the previous search length as the initial guess
-- -snes_linesearch_max_it - The number of iterations for iterative line searches
+. -snes_linesearch_damping             - The linesearch damping parameter, default is 1.0 (no damping)
+. -snes_linesearch_norms               - Turn on/off the linesearch norms computation (SNESLineSearchSetComputeNorms())
+. -snes_linesearch_keeplambda          - Keep the previous search length as the initial guess
+- -snes_linesearch_max_it              - The number of iterations for iterative line searches
 
-   Notes:
-   This is typically called from within a SNESSolve() implementation in order to
-   help with convergence of the nonlinear method.  Various SNES types use line searches
-   in different ways, but the overarching theme is that a line search is used to determine
-   an optimal damping parameter of a step at each iteration of the method.  Each
-   application of the line search may invoke SNESComputeFunction() several times, and
-   therefore may be fairly expensive.
+  Level: intermediate
 
-   Level: Intermediate
+  Notes:
+  This is typically called from within a `SNESSolve()` implementation in order to
+  help with convergence of the nonlinear method.  Various `SNES` types use line searches
+  in different ways, but the overarching theme is that a line search is used to determine
+  an optimal damping parameter of a step at each iteration of the method.  Each
+  application of the line search may invoke `SNESComputeFunction()` several times, and
+  therefore may be fairly expensive.
 
-.seealso: SNESGetLineSearch(), SNESLineSearchCreate(), SNESLineSearchPreCheck(), SNESLineSearchPostCheck(), SNESSolve(), SNESComputeFunction(), SNESLineSearchSetComputeNorms(),
-          SNESLineSearchType, SNESLineSearchSetType()
+.seealso: [](ch_snes), `SNES`, `SNESLineSearch`, `SNESGetLineSearch()`, `SNESLineSearchCreate()`, `SNESLineSearchGetLambda()`, `SNESLineSearchPreCheck()`, `SNESLineSearchPostCheck()`, `SNESSolve()`, `SNESComputeFunction()`, `SNESLineSearchSetComputeNorms()`,
+          `SNESLineSearchType`, `SNESLineSearchSetType()`
 @*/
-PetscErrorCode SNESLineSearchApply(SNESLineSearch linesearch, Vec X, Vec F, PetscReal * fnorm, Vec Y)
+PetscErrorCode SNESLineSearchApply(SNESLineSearch linesearch, Vec X, Vec F, PetscReal *fnorm, Vec Y)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(linesearch,SNESLINESEARCH_CLASSID,1);
-  PetscValidHeaderSpecific(X,VEC_CLASSID,2);
-  PetscValidHeaderSpecific(F,VEC_CLASSID,3);
-  PetscValidHeaderSpecific(Y,VEC_CLASSID,4);
+  PetscValidHeaderSpecific(linesearch, SNESLINESEARCH_CLASSID, 1);
+  PetscValidHeaderSpecific(X, VEC_CLASSID, 2);
+  PetscValidHeaderSpecific(F, VEC_CLASSID, 3);
+  PetscValidHeaderSpecific(Y, VEC_CLASSID, 5);
 
   linesearch->result = SNES_LINESEARCH_SUCCEEDED;
 
@@ -607,1140 +633,1121 @@ PetscErrorCode SNESLineSearchApply(SNESLineSearch linesearch, Vec X, Vec F, Pets
   linesearch->vec_update = Y;
   linesearch->vec_func   = F;
 
-  ierr = SNESLineSearchSetUp(linesearch);CHKERRQ(ierr);
+  PetscCall(SNESLineSearchSetUp(linesearch));
 
   if (!linesearch->keeplambda) linesearch->lambda = linesearch->damping; /* set the initial guess to lambda */
 
   if (fnorm) linesearch->fnorm = *fnorm;
-  else {
-    ierr = VecNorm(F, NORM_2, &linesearch->fnorm);CHKERRQ(ierr);
-  }
+  else PetscCall(VecNorm(F, NORM_2, &linesearch->fnorm));
 
-  ierr = PetscLogEventBegin(SNESLINESEARCH_Apply,linesearch,X,F,Y);CHKERRQ(ierr);
+  PetscCall(PetscLogEventBegin(SNESLINESEARCH_Apply, linesearch, X, F, Y));
 
-  ierr = (*linesearch->ops->apply)(linesearch);CHKERRQ(ierr);
+  PetscUseTypeMethod(linesearch, apply);
 
-  ierr = PetscLogEventEnd(SNESLINESEARCH_Apply,linesearch,X,F,Y);CHKERRQ(ierr);
+  PetscCall(PetscLogEventEnd(SNESLINESEARCH_Apply, linesearch, X, F, Y));
 
   if (fnorm) *fnorm = linesearch->fnorm;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   SNESLineSearchDestroy - Destroys the line search instance.
+  SNESLineSearchDestroy - Destroys the line search instance.
 
-   Collective on SNESLineSearch
+  Collective
 
-   Input Parameters:
-.  linesearch - The linesearch context
+  Input Parameter:
+. linesearch - The line search context
 
-   Level: developer
+  Level: developer
 
-.seealso: SNESGetLineSearch(), SNESLineSearchCreate(), SNESLineSearchReset(), SNESDestroy()
+  Note:
+  The line search in `SNES` is automatically called on `SNESDestroy()` so this call is rarely needed
+
+.seealso: [](ch_snes), `SNES`, `SNESLineSearch`, `SNESGetLineSearch()`, `SNESLineSearchCreate()`, `SNESLineSearchReset()`, `SNESDestroy()`
 @*/
-PetscErrorCode SNESLineSearchDestroy(SNESLineSearch * linesearch)
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  if (!*linesearch) PetscFunctionReturn(0);
-  PetscValidHeaderSpecific((*linesearch),SNESLINESEARCH_CLASSID,1);
-  if (--((PetscObject)(*linesearch))->refct > 0) {*linesearch = NULL; PetscFunctionReturn(0);}
-  ierr = PetscObjectSAWsViewOff((PetscObject)*linesearch);CHKERRQ(ierr);
-  ierr = SNESLineSearchReset(*linesearch);CHKERRQ(ierr);
-  if ((*linesearch)->ops->destroy) (*linesearch)->ops->destroy(*linesearch);
-  ierr = PetscViewerDestroy(&(*linesearch)->monitor);CHKERRQ(ierr);
-  ierr = SNESLineSearchMonitorCancel((*linesearch));CHKERRQ(ierr);
-  ierr = PetscHeaderDestroy(linesearch);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
-/*@
-   SNESLineSearchSetDefaultMonitor - Turns on/off printing useful information and debugging output about the line search.
-
-   Input Parameters:
-+  linesearch - the linesearch object
--  viewer - an ASCII PetscViewer or NULL to turn off monitor
-
-   Logically Collective on SNESLineSearch
-
-   Options Database:
-.   -snes_linesearch_monitor [:filename] - enables the monitor
-
-   Level: intermediate
-
-   Developer Note: This monitor is implemented differently than the other SNESLineSearchMonitors that are set with
-     SNESLineSearchMonitorSet() since it is called in many locations of the line search routines to display aspects of the
-     line search that are not visible to the other monitors.
-
-.seealso: SNESGetLineSearch(), SNESLineSearchGetDefaultMonitor(), PetscViewer, SNESLineSearchSetMonitor()
-@*/
-PetscErrorCode  SNESLineSearchSetDefaultMonitor(SNESLineSearch linesearch, PetscViewer viewer)
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  if (viewer) {ierr = PetscObjectReference((PetscObject)viewer);CHKERRQ(ierr);}
-  ierr = PetscViewerDestroy(&linesearch->monitor);CHKERRQ(ierr);
-  linesearch->monitor = viewer;
-  PetscFunctionReturn(0);
-}
-
-/*@
-   SNESLineSearchGetDefaultMonitor - Gets the PetscViewer instance for the line search monitor.
-
-   Input Parameter:
-.  linesearch - linesearch context
-
-   Output Parameter:
-.  monitor - monitor context
-
-   Logically Collective on SNES
-
-   Options Database Keys:
-.   -snes_linesearch_monitor - enables the monitor
-
-   Level: intermediate
-
-.seealso: SNESGetLineSearch(), SNESLineSearchSetDefaultMonitor(), PetscViewer
-@*/
-PetscErrorCode  SNESLineSearchGetDefaultMonitor(SNESLineSearch linesearch, PetscViewer *monitor)
+PetscErrorCode SNESLineSearchDestroy(SNESLineSearch *linesearch)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(linesearch,SNESLINESEARCH_CLASSID,1);
-  if (monitor) {
-    PetscValidPointer(monitor, 2);
-    *monitor = linesearch->monitor;
+  if (!*linesearch) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscValidHeaderSpecific(*linesearch, SNESLINESEARCH_CLASSID, 1);
+  if (--((PetscObject)*linesearch)->refct > 0) {
+    *linesearch = NULL;
+    PetscFunctionReturn(PETSC_SUCCESS);
   }
-  PetscFunctionReturn(0);
+  PetscCall(PetscObjectSAWsViewOff((PetscObject)*linesearch));
+  PetscCall(SNESLineSearchReset(*linesearch));
+  PetscTryTypeMethod(*linesearch, destroy);
+  PetscCall(PetscOptionsRestoreViewer(&(*linesearch)->monitor));
+  PetscCall(SNESLineSearchMonitorCancel(*linesearch));
+  PetscCall(PetscHeaderDestroy(linesearch));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  SNESLineSearchSetDefaultMonitor - Turns on/off printing useful information and debugging output about the line search.
+
+  Logically Collective
+
+  Input Parameters:
++ linesearch - the linesearch object
+- viewer     - an `PETSCVIEWERASCII` `PetscViewer` or `NULL` to turn off monitor
+
+  Options Database Key:
+. -snes_linesearch_monitor [:filename] - enables the monitor
+
+  Level: intermediate
+
+  Developer Notes:
+  This monitor is implemented differently than the other line search monitors that are set with
+  `SNESLineSearchMonitorSet()` since it is called in many locations of the line search routines to display aspects of the
+  line search that are not visible to the other monitors.
+
+.seealso: [](ch_snes), `SNES`, `SNESLineSearch`, `PETSCVIEWERASCII`, `SNESGetLineSearch()`, `SNESLineSearchGetDefaultMonitor()`, `PetscViewer`, `SNESLineSearchSetMonitor()`,
+          `SNESLineSearchMonitorSetFromOptions()`
+@*/
+PetscErrorCode SNESLineSearchSetDefaultMonitor(SNESLineSearch linesearch, PetscViewer viewer)
+{
+  PetscFunctionBegin;
+  PetscCall(PetscOptionsRestoreViewer(&linesearch->monitor));
+  linesearch->monitor = viewer;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  SNESLineSearchGetDefaultMonitor - Gets the `PetscViewer` instance for the default line search monitor that is turned on with `SNESLineSearchSetDefaultMonitor()`
+
+  Logically Collective
+
+  Input Parameter:
+. linesearch - the line search context
+
+  Output Parameter:
+. monitor - monitor context
+
+  Level: intermediate
+
+.seealso: [](ch_snes), `SNES`, `SNESLineSearch`, `SNESGetLineSearch()`, `SNESLineSearchSetDefaultMonitor()`, `PetscViewer`
+@*/
+PetscErrorCode SNESLineSearchGetDefaultMonitor(SNESLineSearch linesearch, PetscViewer *monitor)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(linesearch, SNESLINESEARCH_CLASSID, 1);
+  *monitor = linesearch->monitor;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-   SNESLineSearchMonitorSetFromOptions - Sets a monitor function and viewer appropriate for the type indicated by the user
+  SNESLineSearchMonitorSetFromOptions - Sets a monitor function and viewer appropriate for the type indicated in the options database
 
-   Collective on SNESLineSearch
+  Collective
 
-   Input Parameters:
-+  ls - LineSearch object you wish to monitor
-.  name - the monitor type one is seeking
-.  help - message indicating what monitoring is done
-.  manual - manual page for the monitor
-.  monitor - the monitor function
--  monitorsetup - a function that is called once ONLY if the user selected this monitor that may set additional features of the SNESLineSearch or PetscViewer objects
+  Input Parameters:
++ ls           - `SNESLineSearch` object to monitor
+. name         - the monitor type
+. help         - message indicating what monitoring is done
+. manual       - manual page for the monitor
+. monitor      - the monitor function
+- monitorsetup - a function that is called once ONLY if the user selected this monitor that may set additional features of the `SNESLineSearch` or `PetscViewer`
 
-   Level: developer
+  Calling sequence of `monitor`:
++ ls - `SNESLineSearch` object being monitored
+- vf - a `PetscViewerAndFormat` struct that provides the `PetscViewer` and `PetscViewerFormat` being used
 
-.seealso: PetscOptionsGetViewer(), PetscOptionsGetReal(), PetscOptionsHasName(), PetscOptionsGetString(),
-          PetscOptionsGetIntArray(), PetscOptionsGetRealArray(), PetscOptionsBool()
-          PetscOptionsInt(), PetscOptionsString(), PetscOptionsReal(), PetscOptionsBool(),
-          PetscOptionsName(), PetscOptionsBegin(), PetscOptionsEnd(), PetscOptionsHead(),
-          PetscOptionsStringArray(),PetscOptionsRealArray(), PetscOptionsScalar(),
-          PetscOptionsBoolGroupBegin(), PetscOptionsBoolGroup(), PetscOptionsBoolGroupEnd(),
-          PetscOptionsFList(), PetscOptionsEList()
+  Calling sequence of `monitorsetup`:
++ ls - `SNESLineSearch` object being monitored
+- vf - a `PetscViewerAndFormat` struct that provides the `PetscViewer` and `PetscViewerFormat` being used
+
+  Level: advanced
+
+.seealso: [](ch_snes), `SNES`, `SNESLineSearch`, `SNESLineSearchSetMonitor()`, `PetscOptionsGetViewer()`, `PetscOptionsGetReal()`, `PetscOptionsHasName()`, `PetscOptionsGetString()`,
+          `PetscOptionsGetIntArray()`, `PetscOptionsGetRealArray()`, `PetscOptionsBool()`
+          `PetscOptionsInt()`, `PetscOptionsString()`, `PetscOptionsReal()`,
+          `PetscOptionsName()`, `PetscOptionsBegin()`, `PetscOptionsEnd()`, `PetscOptionsHeadBegin()`,
+          `PetscOptionsStringArray()`, `PetscOptionsRealArray()`, `PetscOptionsScalar()`,
+          `PetscOptionsBoolGroupBegin()`, `PetscOptionsBoolGroup()`, `PetscOptionsBoolGroupEnd()`,
+          `PetscOptionsFList()`, `PetscOptionsEList()`
 @*/
-PetscErrorCode  SNESLineSearchMonitorSetFromOptions(SNESLineSearch ls,const char name[],const char help[], const char manual[],PetscErrorCode (*monitor)(SNESLineSearch,PetscViewerAndFormat*),PetscErrorCode (*monitorsetup)(SNESLineSearch,PetscViewerAndFormat*))
+PetscErrorCode SNESLineSearchMonitorSetFromOptions(SNESLineSearch ls, const char name[], const char help[], const char manual[], PetscErrorCode (*monitor)(SNESLineSearch ls, PetscViewerAndFormat *vf), PetscErrorCode (*monitorsetup)(SNESLineSearch ls, PetscViewerAndFormat *vf))
 {
-  PetscErrorCode    ierr;
   PetscViewer       viewer;
   PetscViewerFormat format;
   PetscBool         flg;
 
   PetscFunctionBegin;
-  ierr = PetscOptionsGetViewer(PetscObjectComm((PetscObject)ls),((PetscObject) ls)->options,((PetscObject)ls)->prefix,name,&viewer,&format,&flg);CHKERRQ(ierr);
+  PetscCall(PetscOptionsGetViewer(PetscObjectComm((PetscObject)ls), ((PetscObject)ls)->options, ((PetscObject)ls)->prefix, name, &viewer, &format, &flg));
   if (flg) {
     PetscViewerAndFormat *vf;
-    ierr = PetscViewerAndFormatCreate(viewer,format,&vf);CHKERRQ(ierr);
-    ierr = PetscObjectDereference((PetscObject)viewer);CHKERRQ(ierr);
-    if (monitorsetup) {
-      ierr = (*monitorsetup)(ls,vf);CHKERRQ(ierr);
-    }
-    ierr = SNESLineSearchMonitorSet(ls,(PetscErrorCode (*)(SNESLineSearch,void*))monitor,vf,(PetscErrorCode (*)(void**))PetscViewerAndFormatDestroy);CHKERRQ(ierr);
+    PetscCall(PetscViewerAndFormatCreate(viewer, format, &vf));
+    PetscCall(PetscOptionsRestoreViewer(&viewer));
+    if (monitorsetup) PetscCall((*monitorsetup)(ls, vf));
+    PetscCall(SNESLineSearchMonitorSet(ls, (PetscErrorCode(*)(SNESLineSearch, void *))monitor, vf, (PetscErrorCode(*)(void **))PetscViewerAndFormatDestroy));
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   SNESLineSearchSetFromOptions - Sets options for the line search
+  SNESLineSearchSetFromOptions - Sets options for the line search
 
-   Input Parameters:
-.  linesearch - linesearch context
+  Logically Collective
 
-   Options Database Keys:
-+ -snes_linesearch_type <type> - basic, bt, l2, cp, nleqerr, shell
-. -snes_linesearch_order <order> - 1, 2, 3.  Most types only support certain orders (bt supports 2 or 3)
-. -snes_linesearch_norms   - Turn on/off the linesearch norms for the basic linesearch typem (SNESLineSearchSetComputeNorms())
-. -snes_linesearch_minlambda - The minimum step length
-. -snes_linesearch_maxstep - The maximum step size
-. -snes_linesearch_rtol - Relative tolerance for iterative line searches
-. -snes_linesearch_atol - Absolute tolerance for iterative line searches
-. -snes_linesearch_ltol - Change in lambda tolerance for iterative line searches
-. -snes_linesearch_max_it - The number of iterations for iterative line searches
-. -snes_linesearch_monitor [:filename] - Print progress of line searches
+  Input Parameter:
+. linesearch - a `SNESLineSearch` line search context
+
+  Options Database Keys:
++ -snes_linesearch_type <type>                                      - basic (or equivalently none), bt, l2, cp, nleqerr, shell
+. -snes_linesearch_order <order>                                    - 1, 2, 3.  Most types only support certain orders (bt supports 2 or 3)
+. -snes_linesearch_norms                                            - Turn on/off the linesearch norms for the basic linesearch typem (`SNESLineSearchSetComputeNorms()`)
+. -snes_linesearch_minlambda                                        - The minimum step length
+. -snes_linesearch_maxstep                                          - The maximum step size
+. -snes_linesearch_rtol                                             - Relative tolerance for iterative line searches
+. -snes_linesearch_atol                                             - Absolute tolerance for iterative line searches
+. -snes_linesearch_ltol                                             - Change in lambda tolerance for iterative line searches
+. -snes_linesearch_max_it                                           - The number of iterations for iterative line searches
+. -snes_linesearch_monitor [:filename]                              - Print progress of line searches
 . -snes_linesearch_monitor_solution_update [viewer:filename:format] - view each update tried by line search routine
-. -snes_linesearch_damping - The linesearch damping parameter
-. -snes_linesearch_keeplambda - Keep the previous search length as the initial guess.
-. -snes_linesearch_precheck_picard - Use precheck that speeds up convergence of picard method
-- -snes_linesearch_precheck_picard_angle - Angle used in Picard precheck method
+. -snes_linesearch_damping                                          - The linesearch damping parameter
+. -snes_linesearch_keeplambda                                       - Keep the previous search length as the initial guess.
+. -snes_linesearch_precheck_picard                                  - Use precheck that speeds up convergence of picard method
+- -snes_linesearch_precheck_picard_angle                            - Angle used in Picard precheck method
 
-   Logically Collective on SNESLineSearch
+  Level: intermediate
 
-   Level: intermediate
-
-.seealso: SNESLineSearchCreate(), SNESLineSearchSetOrder(), SNESLineSearchSetType(), SNESLineSearchSetTolerances(), SNESLineSearchSetDamping(), SNESLineSearchPreCheckPicard(),
-          SNESLineSearchType, SNESLineSearchSetComputeNorms()
+.seealso: [](ch_snes), `SNES`, `SNESLineSearch`, `SNESLineSearchCreate()`, `SNESLineSearchSetOrder()`, `SNESLineSearchSetType()`, `SNESLineSearchSetTolerances()`, `SNESLineSearchSetDamping()`, `SNESLineSearchPreCheckPicard()`,
+          `SNESLineSearchType`, `SNESLineSearchSetComputeNorms()`
 @*/
 PetscErrorCode SNESLineSearchSetFromOptions(SNESLineSearch linesearch)
 {
-  PetscErrorCode    ierr;
-  const char        *deft = SNESLINESEARCHBASIC;
-  char              type[256];
-  PetscBool         flg, set;
-  PetscViewer       viewer;
+  const char *deft = SNESLINESEARCHBASIC;
+  char        type[256];
+  PetscBool   flg, set;
+  PetscViewer viewer;
 
   PetscFunctionBegin;
-  ierr = SNESLineSearchRegisterAll();CHKERRQ(ierr);
+  PetscCall(SNESLineSearchRegisterAll());
 
-  ierr = PetscObjectOptionsBegin((PetscObject)linesearch);CHKERRQ(ierr);
+  PetscObjectOptionsBegin((PetscObject)linesearch);
   if (((PetscObject)linesearch)->type_name) deft = ((PetscObject)linesearch)->type_name;
-  ierr = PetscOptionsFList("-snes_linesearch_type","Linesearch type","SNESLineSearchSetType",SNESLineSearchList,deft,type,256,&flg);CHKERRQ(ierr);
+  PetscCall(PetscOptionsFList("-snes_linesearch_type", "Linesearch type", "SNESLineSearchSetType", SNESLineSearchList, deft, type, 256, &flg));
   if (flg) {
-    ierr = SNESLineSearchSetType(linesearch,type);CHKERRQ(ierr);
+    PetscCall(SNESLineSearchSetType(linesearch, type));
   } else if (!((PetscObject)linesearch)->type_name) {
-    ierr = SNESLineSearchSetType(linesearch,deft);CHKERRQ(ierr);
+    PetscCall(SNESLineSearchSetType(linesearch, deft));
   }
 
-  ierr = PetscOptionsGetViewer(PetscObjectComm((PetscObject)linesearch),((PetscObject) linesearch)->options,((PetscObject)linesearch)->prefix,"-snes_linesearch_monitor",&viewer,NULL,&set);CHKERRQ(ierr);
+  PetscCall(PetscOptionsGetViewer(PetscObjectComm((PetscObject)linesearch), ((PetscObject)linesearch)->options, ((PetscObject)linesearch)->prefix, "-snes_linesearch_monitor", &viewer, NULL, &set));
   if (set) {
-    ierr = SNESLineSearchSetDefaultMonitor(linesearch,viewer);CHKERRQ(ierr);
-    ierr = PetscViewerDestroy(&viewer);CHKERRQ(ierr);
+    PetscCall(SNESLineSearchSetDefaultMonitor(linesearch, viewer));
+    PetscCall(PetscOptionsRestoreViewer(&viewer));
   }
-  ierr = SNESLineSearchMonitorSetFromOptions(linesearch,"-snes_linesearch_monitor_solution_update","View correction at each iteration","SNESLineSearchMonitorSolutionUpdate",SNESLineSearchMonitorSolutionUpdate,NULL);CHKERRQ(ierr);
+  PetscCall(SNESLineSearchMonitorSetFromOptions(linesearch, "-snes_linesearch_monitor_solution_update", "View correction at each iteration", "SNESLineSearchMonitorSolutionUpdate", SNESLineSearchMonitorSolutionUpdate, NULL));
 
   /* tolerances */
-  ierr = PetscOptionsReal("-snes_linesearch_minlambda","Minimum step length","SNESLineSearchSetTolerances",linesearch->steptol,&linesearch->steptol,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-snes_linesearch_maxstep","Maximum step size","SNESLineSearchSetTolerances",linesearch->maxstep,&linesearch->maxstep,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-snes_linesearch_rtol","Relative tolerance for iterative line search","SNESLineSearchSetTolerances",linesearch->rtol,&linesearch->rtol,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-snes_linesearch_atol","Absolute tolerance for iterative line search","SNESLineSearchSetTolerances",linesearch->atol,&linesearch->atol,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-snes_linesearch_ltol","Change in lambda tolerance for iterative line search","SNESLineSearchSetTolerances",linesearch->ltol,&linesearch->ltol,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsInt("-snes_linesearch_max_it","Maximum iterations for iterative line searches","SNESLineSearchSetTolerances",linesearch->max_its,&linesearch->max_its,NULL);CHKERRQ(ierr);
+  PetscCall(PetscOptionsReal("-snes_linesearch_minlambda", "Minimum step length", "SNESLineSearchSetTolerances", linesearch->steptol, &linesearch->steptol, NULL));
+  PetscCall(PetscOptionsReal("-snes_linesearch_maxstep", "Maximum step size", "SNESLineSearchSetTolerances", linesearch->maxstep, &linesearch->maxstep, NULL));
+  PetscCall(PetscOptionsReal("-snes_linesearch_rtol", "Relative tolerance for iterative line search", "SNESLineSearchSetTolerances", linesearch->rtol, &linesearch->rtol, NULL));
+  PetscCall(PetscOptionsReal("-snes_linesearch_atol", "Absolute tolerance for iterative line search", "SNESLineSearchSetTolerances", linesearch->atol, &linesearch->atol, NULL));
+  PetscCall(PetscOptionsReal("-snes_linesearch_ltol", "Change in lambda tolerance for iterative line search", "SNESLineSearchSetTolerances", linesearch->ltol, &linesearch->ltol, NULL));
+  PetscCall(PetscOptionsInt("-snes_linesearch_max_it", "Maximum iterations for iterative line searches", "SNESLineSearchSetTolerances", linesearch->max_its, &linesearch->max_its, NULL));
 
   /* damping parameters */
-  ierr = PetscOptionsReal("-snes_linesearch_damping","Line search damping and initial step guess","SNESLineSearchSetDamping",linesearch->damping,&linesearch->damping,NULL);CHKERRQ(ierr);
+  PetscCall(PetscOptionsReal("-snes_linesearch_damping", "Line search damping and initial step guess", "SNESLineSearchSetDamping", linesearch->damping, &linesearch->damping, NULL));
 
-  ierr = PetscOptionsBool("-snes_linesearch_keeplambda","Use previous lambda as damping","SNESLineSearchSetKeepLambda",linesearch->keeplambda,&linesearch->keeplambda,NULL);CHKERRQ(ierr);
+  PetscCall(PetscOptionsBool("-snes_linesearch_keeplambda", "Use previous lambda as damping", "SNESLineSearchSetKeepLambda", linesearch->keeplambda, &linesearch->keeplambda, NULL));
 
   /* precheck */
-  ierr = PetscOptionsBool("-snes_linesearch_precheck_picard","Use a correction that sometimes improves convergence of Picard iteration","SNESLineSearchPreCheckPicard",flg,&flg,&set);CHKERRQ(ierr);
+  PetscCall(PetscOptionsBool("-snes_linesearch_precheck_picard", "Use a correction that sometimes improves convergence of Picard iteration", "SNESLineSearchPreCheckPicard", flg, &flg, &set));
   if (set) {
     if (flg) {
       linesearch->precheck_picard_angle = 10.; /* correction only active if angle is less than 10 degrees */
 
-      ierr = PetscOptionsReal("-snes_linesearch_precheck_picard_angle","Maximum angle at which to activate the correction",
-                              "none",linesearch->precheck_picard_angle,&linesearch->precheck_picard_angle,NULL);CHKERRQ(ierr);
-      ierr = SNESLineSearchSetPreCheck(linesearch,SNESLineSearchPreCheckPicard,&linesearch->precheck_picard_angle);CHKERRQ(ierr);
+      PetscCall(PetscOptionsReal("-snes_linesearch_precheck_picard_angle", "Maximum angle at which to activate the correction", "none", linesearch->precheck_picard_angle, &linesearch->precheck_picard_angle, NULL));
+      PetscCall(SNESLineSearchSetPreCheck(linesearch, SNESLineSearchPreCheckPicard, &linesearch->precheck_picard_angle));
     } else {
-      ierr = SNESLineSearchSetPreCheck(linesearch,NULL,NULL);CHKERRQ(ierr);
+      PetscCall(SNESLineSearchSetPreCheck(linesearch, NULL, NULL));
     }
   }
-  ierr = PetscOptionsInt("-snes_linesearch_order","Order of approximation used in the line search","SNESLineSearchSetOrder",linesearch->order,&linesearch->order,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-snes_linesearch_norms","Compute final norms in line search","SNESLineSearchSetComputeNorms",linesearch->norms,&linesearch->norms,NULL);CHKERRQ(ierr);
+  PetscCall(PetscOptionsInt("-snes_linesearch_order", "Order of approximation used in the line search", "SNESLineSearchSetOrder", linesearch->order, &linesearch->order, NULL));
+  PetscCall(PetscOptionsBool("-snes_linesearch_norms", "Compute final norms in line search", "SNESLineSearchSetComputeNorms", linesearch->norms, &linesearch->norms, NULL));
 
-  if (linesearch->ops->setfromoptions) {
-    (*linesearch->ops->setfromoptions)(PetscOptionsObject,linesearch);CHKERRQ(ierr);
-  }
+  PetscTryTypeMethod(linesearch, setfromoptions, PetscOptionsObject);
 
-  ierr = PetscObjectProcessOptionsHandlers(PetscOptionsObject,(PetscObject)linesearch);CHKERRQ(ierr);
-  ierr = PetscOptionsEnd();CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscObjectProcessOptionsHandlers((PetscObject)linesearch, PetscOptionsObject));
+  PetscOptionsEnd();
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   SNESLineSearchView - Prints useful information about the line search
+  SNESLineSearchView - Prints useful information about the line search
 
-   Input Parameters:
-.  linesearch - linesearch context
+  Logically Collective
 
-   Logically Collective on SNESLineSearch
+  Input Parameters:
++ linesearch - line search context
+- viewer     - the `PetscViewer` to display the line search information to
 
-   Level: intermediate
+  Level: intermediate
 
-.seealso: SNESLineSearchCreate()
+.seealso: [](ch_snes), `SNES`, `SNESLineSearch`, `PetscViewer`, `SNESLineSearchCreate()`
 @*/
 PetscErrorCode SNESLineSearchView(SNESLineSearch linesearch, PetscViewer viewer)
 {
-  PetscErrorCode ierr;
-  PetscBool      iascii;
+  PetscBool iascii;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(linesearch,SNESLINESEARCH_CLASSID,1);
-  if (!viewer) {
-    ierr = PetscViewerASCIIGetStdout(PetscObjectComm((PetscObject)linesearch),&viewer);CHKERRQ(ierr);
-  }
-  PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,2);
-  PetscCheckSameComm(linesearch,1,viewer,2);
+  PetscValidHeaderSpecific(linesearch, SNESLINESEARCH_CLASSID, 1);
+  if (!viewer) PetscCall(PetscViewerASCIIGetStdout(PetscObjectComm((PetscObject)linesearch), &viewer));
+  PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 2);
+  PetscCheckSameComm(linesearch, 1, viewer, 2);
 
-  ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii);CHKERRQ(ierr);
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
   if (iascii) {
-    ierr = PetscObjectPrintClassNamePrefixType((PetscObject)linesearch,viewer);CHKERRQ(ierr);
-    if (linesearch->ops->view) {
-      ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
-      ierr = (*linesearch->ops->view)(linesearch,viewer);CHKERRQ(ierr);
-      ierr = PetscViewerASCIIPopTab(viewer);CHKERRQ(ierr);
-    }
-    ierr = PetscViewerASCIIPrintf(viewer,"  maxstep=%e, minlambda=%e\n", (double)linesearch->maxstep,(double)linesearch->steptol);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"  tolerances: relative=%e, absolute=%e, lambda=%e\n", (double)linesearch->rtol,(double)linesearch->atol,(double)linesearch->ltol);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"  maximum iterations=%D\n", linesearch->max_its);CHKERRQ(ierr);
+    PetscCall(PetscObjectPrintClassNamePrefixType((PetscObject)linesearch, viewer));
+    PetscCall(PetscViewerASCIIPushTab(viewer));
+    PetscTryTypeMethod(linesearch, view, viewer);
+    PetscCall(PetscViewerASCIIPopTab(viewer));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  maxstep=%e, minlambda=%e\n", (double)linesearch->maxstep, (double)linesearch->steptol));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  tolerances: relative=%e, absolute=%e, lambda=%e\n", (double)linesearch->rtol, (double)linesearch->atol, (double)linesearch->ltol));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  maximum iterations=%" PetscInt_FMT "\n", linesearch->max_its));
     if (linesearch->ops->precheck) {
       if (linesearch->ops->precheck == SNESLineSearchPreCheckPicard) {
-        ierr = PetscViewerASCIIPrintf(viewer,"  using precheck step to speed up Picard convergence\n", linesearch->max_its);CHKERRQ(ierr);
+        PetscCall(PetscViewerASCIIPrintf(viewer, "  using precheck step to speed up Picard convergence\n"));
       } else {
-        ierr = PetscViewerASCIIPrintf(viewer,"  using user-defined precheck step\n", linesearch->max_its);CHKERRQ(ierr);
+        PetscCall(PetscViewerASCIIPrintf(viewer, "  using user-defined precheck step\n"));
       }
     }
-    if (linesearch->ops->postcheck) {
-      ierr = PetscViewerASCIIPrintf(viewer,"  using user-defined postcheck step\n", linesearch->max_its);CHKERRQ(ierr);
-    }
+    if (linesearch->ops->postcheck) PetscCall(PetscViewerASCIIPrintf(viewer, "  using user-defined postcheck step\n"));
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
-   SNESLineSearchGetType - Gets the linesearch type
+/*@
+  SNESLineSearchGetType - Gets the `SNESLinesearchType` of a `SNESLineSearch`
 
-   Logically Collective on SNESLineSearch
+  Logically Collective
 
-   Input Parameters:
-.  linesearch - linesearch context
+  Input Parameter:
+. linesearch - the line search context
 
-   Output Parameters:
--  type - The type of line search, or NULL if not set
+  Output Parameter:
+. type - The type of line search, or `NULL` if not set
 
-   Level: intermediate
+  Level: intermediate
 
-.seealso: SNESLineSearchCreate(), SNESLineSearchType, SNESLineSearchSetFromOptions(), SNESLineSearchSetType()
+.seealso: [](ch_snes), `SNES`, `SNESLineSearch`, `SNESLineSearchType`, `SNESLineSearchCreate()`, `SNESLineSearchSetFromOptions()`, `SNESLineSearchSetType()`
 @*/
 PetscErrorCode SNESLineSearchGetType(SNESLineSearch linesearch, SNESLineSearchType *type)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(linesearch,SNESLINESEARCH_CLASSID,1);
-  PetscValidCharPointer(type,2);
+  PetscValidHeaderSpecific(linesearch, SNESLINESEARCH_CLASSID, 1);
+  PetscAssertPointer(type, 2);
   *type = ((PetscObject)linesearch)->type_name;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
-   SNESLineSearchSetType - Sets the linesearch type
+/*@
+  SNESLineSearchSetType - Sets the `SNESLinesearchType` of a `SNESLineSearch`
 
-   Logically Collective on SNESLineSearch
+  Logically Collective
 
-   Input Parameters:
-+  linesearch - linesearch context
--  type - The type of line search to be used
+  Input Parameters:
++ linesearch - the line search context
+- type       - The type of line search to be used, see `SNESLineSearchType`
 
-   Available Types:
-+  SNESLINESEARCHBASIC - Simple damping line search, defaults to using the full Newton step
-.  SNESLINESEARCHBT - Backtracking line search over the L2 norm of the function
-.  SNESLINESEARCHL2 - Secant line search over the L2 norm of the function
-.  SNESLINESEARCHCP - Critical point secant line search assuming F(x) = grad G(x) for some unknown G(x)
-.  SNESLINESEARCHNLEQERR - Affine-covariant error-oriented linesearch
--  SNESLINESEARCHSHELL - User provided SNESLineSearch implementation
+  Options Database Key:
+. -snes_linesearch_type <type> - basic (or equivalently none), bt, l2, cp, nleqerr, shell
 
-   Options Database:
-.  -snes_linesearch_type <type> - basic, bt, l2, cp, nleqerr, shell
+  Level: intermediate
 
-   Level: intermediate
-
-.seealso: SNESLineSearchCreate(), SNESLineSearchType, SNESLineSearchSetFromOptions(), SNESLineSearchGetType()
+.seealso: [](ch_snes), `SNES`, `SNESLineSearch`, `SNESLineSearchType`, `SNESLineSearchCreate()`, `SNESLineSearchSetFromOptions()`, `SNESLineSearchGetType()`
 @*/
 PetscErrorCode SNESLineSearchSetType(SNESLineSearch linesearch, SNESLineSearchType type)
 {
-  PetscErrorCode ierr,(*r)(SNESLineSearch);
-  PetscBool      match;
+  PetscBool match;
+  PetscErrorCode (*r)(SNESLineSearch);
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(linesearch,SNESLINESEARCH_CLASSID,1);
-  PetscValidCharPointer(type,2);
+  PetscValidHeaderSpecific(linesearch, SNESLINESEARCH_CLASSID, 1);
+  PetscAssertPointer(type, 2);
 
-  ierr = PetscObjectTypeCompare((PetscObject)linesearch,type,&match);CHKERRQ(ierr);
-  if (match) PetscFunctionReturn(0);
+  PetscCall(PetscObjectTypeCompare((PetscObject)linesearch, type, &match));
+  if (match) PetscFunctionReturn(PETSC_SUCCESS);
 
-  ierr = PetscFunctionListFind(SNESLineSearchList,type,&r);CHKERRQ(ierr);
-  if (!r) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE,"Unable to find requested Line Search type %s",type);
-  /* Destroy the previous private linesearch context */
-  if (linesearch->ops->destroy) {
-    ierr = (*(linesearch)->ops->destroy)(linesearch);CHKERRQ(ierr);
-    linesearch->ops->destroy = NULL;
-  }
+  PetscCall(PetscFunctionListFind(SNESLineSearchList, type, &r));
+  PetscCheck(r, PetscObjectComm((PetscObject)linesearch), PETSC_ERR_ARG_UNKNOWN_TYPE, "Unable to find requested Line Search type %s", type);
+  /* Destroy the previous private line search context */
+  PetscTryTypeMethod(linesearch, destroy);
+  linesearch->ops->destroy = NULL;
   /* Reinitialize function pointers in SNESLineSearchOps structure */
   linesearch->ops->apply          = NULL;
   linesearch->ops->view           = NULL;
   linesearch->ops->setfromoptions = NULL;
   linesearch->ops->destroy        = NULL;
 
-  ierr = PetscObjectChangeTypeName((PetscObject)linesearch,type);CHKERRQ(ierr);
-  ierr = (*r)(linesearch);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscObjectChangeTypeName((PetscObject)linesearch, type));
+  PetscCall((*r)(linesearch));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   SNESLineSearchSetSNES - Sets the SNES for the linesearch for function evaluation.
+  SNESLineSearchSetSNES - Sets the `SNES` for the linesearch for function evaluation.
 
-   Input Parameters:
-+  linesearch - linesearch context
--  snes - The snes instance
+  Input Parameters:
++ linesearch - the line search context
+- snes       - The `SNES` instance
 
-   Level: developer
+  Level: developer
 
-   Notes:
-   This happens automatically when the line search is obtained/created with
-   SNESGetLineSearch().  This routine is therefore mainly called within SNES
-   implementations.
+  Note:
+  This happens automatically when the line search is obtained/created with
+  `SNESGetLineSearch()`.  This routine is therefore mainly called within `SNES`
+  implementations.
 
-   Level: developer
-
-.seealso: SNESLineSearchGetSNES(), SNESLineSearchSetVecs(), SNES
+.seealso: [](ch_snes), `SNES`, `SNESLineSearch`, `SNESLineSearchGetSNES()`, `SNESLineSearchSetVecs()`
 @*/
-PetscErrorCode  SNESLineSearchSetSNES(SNESLineSearch linesearch, SNES snes)
+PetscErrorCode SNESLineSearchSetSNES(SNESLineSearch linesearch, SNES snes)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(linesearch,SNESLINESEARCH_CLASSID,1);
-  PetscValidHeaderSpecific(snes,SNES_CLASSID,2);
+  PetscValidHeaderSpecific(linesearch, SNESLINESEARCH_CLASSID, 1);
+  PetscValidHeaderSpecific(snes, SNES_CLASSID, 2);
   linesearch->snes = snes;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   SNESLineSearchGetSNES - Gets the SNES instance associated with the line search.
-   Having an associated SNES is necessary because most line search implementations must be able to
-   evaluate the function using SNESComputeFunction() for the associated SNES.  This routine
-   is used in the line search implementations when one must get this associated SNES instance.
+  SNESLineSearchGetSNES - Gets the `SNES` instance associated with the line search.
 
-   Input Parameters:
-.  linesearch - linesearch context
+  Not Collective
 
-   Output Parameters:
-.  snes - The snes instance
+  Input Parameter:
+. linesearch - the line search context
 
-   Level: developer
+  Output Parameter:
+. snes - The `SNES` instance
 
-.seealso: SNESLineSearchGetSNES(), SNESLineSearchSetVecs(), SNES
+  Level: developer
+
+.seealso: [](ch_snes), `SNES`, `SNESLineSearch`, `SNESType`, `SNESLineSearchSetVecs()`
 @*/
-PetscErrorCode  SNESLineSearchGetSNES(SNESLineSearch linesearch, SNES *snes)
+PetscErrorCode SNESLineSearchGetSNES(SNESLineSearch linesearch, SNES *snes)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(linesearch,SNESLINESEARCH_CLASSID,1);
-  PetscValidPointer(snes, 2);
+  PetscValidHeaderSpecific(linesearch, SNESLINESEARCH_CLASSID, 1);
+  PetscAssertPointer(snes, 2);
   *snes = linesearch->snes;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   SNESLineSearchGetLambda - Gets the last linesearch steplength discovered.
+  SNESLineSearchGetLambda - Gets the last line search steplength used
 
-   Input Parameters:
-.  linesearch - linesearch context
+  Not Collective
 
-   Output Parameters:
-.  lambda - The last steplength computed during SNESLineSearchApply()
+  Input Parameter:
+. linesearch - the line search context
 
-   Level: advanced
+  Output Parameter:
+. lambda - The last steplength computed during `SNESLineSearchApply()`
 
-   Notes:
-   This is useful in methods where the solver is ill-scaled and
-   requires some adaptive notion of the difference in scale between the
-   solution and the function.  For instance, SNESQN may be scaled by the
-   line search lambda using the argument -snes_qn_scaling ls.
+  Level: advanced
 
-.seealso: SNESLineSearchSetLambda(), SNESLineSearchGetDamping(), SNESLineSearchApply()
+  Note:
+  This is useful in methods where the solver is ill-scaled and
+  requires some adaptive notion of the difference in scale between the
+  solution and the function.  For instance, `SNESQN` may be scaled by the
+  line search lambda using the argument -snes_qn_scaling ls.
+
+.seealso: [](ch_snes), `SNES`, `SNESLineSearch`, `SNESLineSearchSetLambda()`, `SNESLineSearchGetDamping()`, `SNESLineSearchApply()`
 @*/
-PetscErrorCode  SNESLineSearchGetLambda(SNESLineSearch linesearch,PetscReal *lambda)
+PetscErrorCode SNESLineSearchGetLambda(SNESLineSearch linesearch, PetscReal *lambda)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(linesearch,SNESLINESEARCH_CLASSID,1);
-  PetscValidRealPointer(lambda, 2);
+  PetscValidHeaderSpecific(linesearch, SNESLINESEARCH_CLASSID, 1);
+  PetscAssertPointer(lambda, 2);
   *lambda = linesearch->lambda;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   SNESLineSearchSetLambda - Sets the linesearch steplength.
+  SNESLineSearchSetLambda - Sets the line search steplength
 
-   Input Parameters:
-+  linesearch - linesearch context
--  lambda - The last steplength.
+  Input Parameters:
++ linesearch - line search context
+- lambda     - The steplength to use
 
-   Notes:
-   This routine is typically used within implementations of SNESLineSearchApply()
-   to set the final steplength.  This routine (and SNESLineSearchGetLambda()) were
-   added in order to facilitate Quasi-Newton methods that use the previous steplength
-   as an inner scaling parameter.
+  Level: advanced
 
-   Level: advanced
+  Note:
+  This routine is typically used within implementations of `SNESLineSearchApply()`
+  to set the final steplength.  This routine (and `SNESLineSearchGetLambda()`) were
+  added in order to facilitate Quasi-Newton methods that use the previous steplength
+  as an inner scaling parameter.
 
-.seealso: SNESLineSearchGetLambda()
+.seealso: [](ch_snes), `SNES`, `SNESLineSearch`, `SNESLineSearchGetLambda()`
 @*/
-PetscErrorCode  SNESLineSearchSetLambda(SNESLineSearch linesearch, PetscReal lambda)
+PetscErrorCode SNESLineSearchSetLambda(SNESLineSearch linesearch, PetscReal lambda)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(linesearch,SNESLINESEARCH_CLASSID,1);
+  PetscValidHeaderSpecific(linesearch, SNESLINESEARCH_CLASSID, 1);
   linesearch->lambda = lambda;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   SNESLineSearchGetTolerances - Gets the tolerances for the linesearch.  These include
-   tolerances for the relative and absolute change in the function norm, the change
-   in lambda for iterative line searches, the minimum steplength, the maximum steplength,
-   and the maximum number of iterations the line search procedure may take.
+  SNESLineSearchGetTolerances - Gets the tolerances for the line search.
 
-   Input Parameters:
-.  linesearch - linesearch context
+  Not Collective
 
-   Output Parameters:
-+  steptol - The minimum steplength
-.  maxstep - The maximum steplength
-.  rtol    - The relative tolerance for iterative line searches
-.  atol    - The absolute tolerance for iterative line searches
-.  ltol    - The change in lambda tolerance for iterative line searches
--  max_it  - The maximum number of iterations of the line search
+  Input Parameter:
+. linesearch - the line search context
 
-   Level: intermediate
+  Output Parameters:
++ steptol - The minimum steplength
+. maxstep - The maximum steplength
+. rtol    - The relative tolerance for iterative line searches
+. atol    - The absolute tolerance for iterative line searches
+. ltol    - The change in lambda tolerance for iterative line searches
+- max_its - The maximum number of iterations of the line search
 
-   Notes:
-   Different line searches may implement these parameters slightly differently as
-   the type requires.
+  Level: intermediate
 
-.seealso: SNESLineSearchSetTolerances()
+  Note:
+  Different line searches may implement these parameters slightly differently as
+  the type requires.
+
+.seealso: [](ch_snes), `SNES`, `SNESLineSearch`, `SNESLineSearchSetTolerances()`
 @*/
-PetscErrorCode  SNESLineSearchGetTolerances(SNESLineSearch linesearch,PetscReal *steptol,PetscReal *maxstep, PetscReal *rtol, PetscReal *atol, PetscReal *ltol, PetscInt *max_its)
+PetscErrorCode SNESLineSearchGetTolerances(SNESLineSearch linesearch, PetscReal *steptol, PetscReal *maxstep, PetscReal *rtol, PetscReal *atol, PetscReal *ltol, PetscInt *max_its)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(linesearch,SNESLINESEARCH_CLASSID,1);
+  PetscValidHeaderSpecific(linesearch, SNESLINESEARCH_CLASSID, 1);
   if (steptol) {
-    PetscValidRealPointer(steptol, 2);
+    PetscAssertPointer(steptol, 2);
     *steptol = linesearch->steptol;
   }
   if (maxstep) {
-    PetscValidRealPointer(maxstep, 3);
+    PetscAssertPointer(maxstep, 3);
     *maxstep = linesearch->maxstep;
   }
   if (rtol) {
-    PetscValidRealPointer(rtol, 4);
+    PetscAssertPointer(rtol, 4);
     *rtol = linesearch->rtol;
   }
   if (atol) {
-    PetscValidRealPointer(atol, 5);
+    PetscAssertPointer(atol, 5);
     *atol = linesearch->atol;
   }
   if (ltol) {
-    PetscValidRealPointer(ltol, 6);
+    PetscAssertPointer(ltol, 6);
     *ltol = linesearch->ltol;
   }
   if (max_its) {
-    PetscValidIntPointer(max_its, 7);
+    PetscAssertPointer(max_its, 7);
     *max_its = linesearch->max_its;
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   SNESLineSearchSetTolerances -  Gets the tolerances for the linesearch.  These include
-   tolerances for the relative and absolute change in the function norm, the change
-   in lambda for iterative line searches, the minimum steplength, the maximum steplength,
-   and the maximum number of iterations the line search procedure may take.
+  SNESLineSearchSetTolerances -  Sets the tolerances for the linesearch.
 
-   Input Parameters:
-+  linesearch - linesearch context
-.  steptol - The minimum steplength
-.  maxstep - The maximum steplength
-.  rtol    - The relative tolerance for iterative line searches
-.  atol    - The absolute tolerance for iterative line searches
-.  ltol    - The change in lambda tolerance for iterative line searches
--  max_it  - The maximum number of iterations of the line search
+  Collective
 
-   Notes:
-   The user may choose to not set any of the tolerances using PETSC_DEFAULT in
-   place of an argument.
+  Input Parameters:
++ linesearch - the line search context
+. steptol    - The minimum steplength
+. maxstep    - The maximum steplength
+. rtol       - The relative tolerance for iterative line searches
+. atol       - The absolute tolerance for iterative line searches
+. ltol       - The change in lambda tolerance for iterative line searches
+- max_it     - The maximum number of iterations of the line search
 
-   Level: intermediate
+  Options Database Keys:
++ -snes_linesearch_minlambda - The minimum step length
+. -snes_linesearch_maxstep   - The maximum step size
+. -snes_linesearch_rtol      - Relative tolerance for iterative line searches
+. -snes_linesearch_atol      - Absolute tolerance for iterative line searches
+. -snes_linesearch_ltol      - Change in lambda tolerance for iterative line searches
+- -snes_linesearch_max_it    - The number of iterations for iterative line searches
 
-.seealso: SNESLineSearchGetTolerances()
+  Level: intermediate
+
+  Note:
+  The user may choose to not set any of the tolerances using `PETSC_DEFAULT` in place of an argument.
+
+.seealso: [](ch_snes), `SNES`, `SNESLineSearch`, `SNESLineSearchGetTolerances()`
 @*/
-PetscErrorCode  SNESLineSearchSetTolerances(SNESLineSearch linesearch,PetscReal steptol,PetscReal maxstep, PetscReal rtol, PetscReal atol, PetscReal ltol, PetscInt max_its)
+PetscErrorCode SNESLineSearchSetTolerances(SNESLineSearch linesearch, PetscReal steptol, PetscReal maxstep, PetscReal rtol, PetscReal atol, PetscReal ltol, PetscInt max_it)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(linesearch,SNESLINESEARCH_CLASSID,1);
-  PetscValidLogicalCollectiveReal(linesearch,steptol,2);
-  PetscValidLogicalCollectiveReal(linesearch,maxstep,3);
-  PetscValidLogicalCollectiveReal(linesearch,rtol,4);
-  PetscValidLogicalCollectiveReal(linesearch,atol,5);
-  PetscValidLogicalCollectiveReal(linesearch,ltol,6);
-  PetscValidLogicalCollectiveInt(linesearch,max_its,7);
+  PetscValidHeaderSpecific(linesearch, SNESLINESEARCH_CLASSID, 1);
+  PetscValidLogicalCollectiveReal(linesearch, steptol, 2);
+  PetscValidLogicalCollectiveReal(linesearch, maxstep, 3);
+  PetscValidLogicalCollectiveReal(linesearch, rtol, 4);
+  PetscValidLogicalCollectiveReal(linesearch, atol, 5);
+  PetscValidLogicalCollectiveReal(linesearch, ltol, 6);
+  PetscValidLogicalCollectiveInt(linesearch, max_it, 7);
 
-  if (steptol!= PETSC_DEFAULT) {
-    if (steptol < 0.0) SETERRQ1(PetscObjectComm((PetscObject)linesearch),PETSC_ERR_ARG_OUTOFRANGE,"Minimum step length %14.12e must be non-negative",(double)steptol);
+  if (steptol != (PetscReal)PETSC_DEFAULT) {
+    PetscCheck(steptol >= 0.0, PetscObjectComm((PetscObject)linesearch), PETSC_ERR_ARG_OUTOFRANGE, "Minimum step length %14.12e must be non-negative", (double)steptol);
     linesearch->steptol = steptol;
   }
 
-  if (maxstep!= PETSC_DEFAULT) {
-    if (maxstep < 0.0) SETERRQ1(PetscObjectComm((PetscObject)linesearch),PETSC_ERR_ARG_OUTOFRANGE,"Maximum step length %14.12e must be non-negative",(double)maxstep);
+  if (maxstep != (PetscReal)PETSC_DEFAULT) {
+    PetscCheck(maxstep >= 0.0, PetscObjectComm((PetscObject)linesearch), PETSC_ERR_ARG_OUTOFRANGE, "Maximum step length %14.12e must be non-negative", (double)maxstep);
     linesearch->maxstep = maxstep;
   }
 
-  if (rtol != PETSC_DEFAULT) {
-    if (rtol < 0.0 || 1.0 <= rtol) SETERRQ1(PetscObjectComm((PetscObject)linesearch),PETSC_ERR_ARG_OUTOFRANGE,"Relative tolerance %14.12e must be non-negative and less than 1.0",(double)rtol);
+  if (rtol != (PetscReal)PETSC_DEFAULT) {
+    PetscCheck(rtol >= 0.0 && rtol < 1.0, PetscObjectComm((PetscObject)linesearch), PETSC_ERR_ARG_OUTOFRANGE, "Relative tolerance %14.12e must be non-negative and less than 1.0", (double)rtol);
     linesearch->rtol = rtol;
   }
 
-  if (atol != PETSC_DEFAULT) {
-    if (atol < 0.0) SETERRQ1(PetscObjectComm((PetscObject)linesearch),PETSC_ERR_ARG_OUTOFRANGE,"Absolute tolerance %14.12e must be non-negative",(double)atol);
+  if (atol != (PetscReal)PETSC_DEFAULT) {
+    PetscCheck(atol >= 0.0, PetscObjectComm((PetscObject)linesearch), PETSC_ERR_ARG_OUTOFRANGE, "Absolute tolerance %14.12e must be non-negative", (double)atol);
     linesearch->atol = atol;
   }
 
-  if (ltol != PETSC_DEFAULT) {
-    if (ltol < 0.0) SETERRQ1(PetscObjectComm((PetscObject)linesearch),PETSC_ERR_ARG_OUTOFRANGE,"Labmda tolerance %14.12e must be non-negative",(double)ltol);
+  if (ltol != (PetscReal)PETSC_DEFAULT) {
+    PetscCheck(ltol >= 0.0, PetscObjectComm((PetscObject)linesearch), PETSC_ERR_ARG_OUTOFRANGE, "Lambda tolerance %14.12e must be non-negative", (double)ltol);
     linesearch->ltol = ltol;
   }
 
-  if (max_its != PETSC_DEFAULT) {
-    if (max_its < 0) SETERRQ1(PetscObjectComm((PetscObject)linesearch),PETSC_ERR_ARG_OUTOFRANGE,"Maximum number of iterations %D must be non-negative",max_its);
-    linesearch->max_its = max_its;
+  if (max_it != PETSC_DEFAULT) {
+    PetscCheck(max_it >= 0, PetscObjectComm((PetscObject)linesearch), PETSC_ERR_ARG_OUTOFRANGE, "Maximum number of iterations %" PetscInt_FMT " must be non-negative", max_it);
+    linesearch->max_its = max_it;
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   SNESLineSearchGetDamping - Gets the line search damping parameter.
+  SNESLineSearchGetDamping - Gets the line search damping parameter.
 
-   Input Parameters:
-.  linesearch - linesearch context
+  Input Parameter:
+. linesearch - the line search context
 
-   Output Parameters:
-.  damping - The damping parameter
+  Output Parameter:
+. damping - The damping parameter
 
-   Level: advanced
+  Level: advanced
 
-.seealso: SNESLineSearchGetStepTolerance(), SNESQN
+.seealso: [](ch_snes), `SNES`, `SNESLineSearchGetStepTolerance()`, `SNESQN`
 @*/
-
-PetscErrorCode  SNESLineSearchGetDamping(SNESLineSearch linesearch,PetscReal *damping)
+PetscErrorCode SNESLineSearchGetDamping(SNESLineSearch linesearch, PetscReal *damping)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(linesearch,SNESLINESEARCH_CLASSID,1);
-  PetscValidRealPointer(damping, 2);
+  PetscValidHeaderSpecific(linesearch, SNESLINESEARCH_CLASSID, 1);
+  PetscAssertPointer(damping, 2);
   *damping = linesearch->damping;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   SNESLineSearchSetDamping - Sets the line search damping parameter.
+  SNESLineSearchSetDamping - Sets the line search damping parameter.
 
-   Input Parameters:
-+  linesearch - linesearch context
--  damping - The damping parameter
+  Input Parameters:
++ linesearch - the line search context
+- damping    - The damping parameter
 
-   Options Database:
-.   -snes_linesearch_damping
-   Level: intermediate
+  Options Database Key:
+. -snes_linesearch_damping <damping> - the damping value
 
-   Notes:
-   The basic line search merely takes the update step scaled by the damping parameter.
-   The use of the damping parameter in the l2 and cp line searches is much more subtle;
-   it is used as a starting point in calculating the secant step. However, the eventual
-   step may be of greater length than the damping parameter.  In the bt line search it is
-   used as the maximum possible step length, as the bt line search only backtracks.
+  Level: intermediate
 
-.seealso: SNESLineSearchGetDamping()
+  Note:
+  The `SNESLINESEARCHNONE` line search merely takes the update step scaled by the damping parameter.
+  The use of the damping parameter in the `SNESLINESEARCHL2` and `SNESLINESEARCHCP` line searches is much more subtle;
+  it is used as a starting point in calculating the secant step. However, the eventual
+  step may be of greater length than the damping parameter.  In the `SNESLINESEARCHBT` line search it is
+  used as the maximum possible step length, as the `SNESLINESEARCHBT` line search only backtracks.
+
+.seealso: [](ch_snes), `SNES`, `SNESLineSearch`, `SNESLineSearchGetDamping()`
 @*/
-PetscErrorCode  SNESLineSearchSetDamping(SNESLineSearch linesearch,PetscReal damping)
+PetscErrorCode SNESLineSearchSetDamping(SNESLineSearch linesearch, PetscReal damping)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(linesearch,SNESLINESEARCH_CLASSID,1);
+  PetscValidHeaderSpecific(linesearch, SNESLINESEARCH_CLASSID, 1);
   linesearch->damping = damping;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   SNESLineSearchGetOrder - Gets the line search approximation order.
+  SNESLineSearchGetOrder - Gets the line search approximation order.
 
-   Input Parameters:
-.  linesearch - linesearch context
+  Input Parameter:
+. linesearch - the line search context
 
-   Output Parameters:
-.  order - The order
+  Output Parameter:
+. order - The order
 
-   Possible Values for order:
-+  1 or SNES_LINESEARCH_ORDER_LINEAR - linear order
-.  2 or SNES_LINESEARCH_ORDER_QUADRATIC - quadratic order
--  3 or SNES_LINESEARCH_ORDER_CUBIC - cubic order
+  Level: intermediate
 
-   Level: intermediate
-
-.seealso: SNESLineSearchSetOrder()
+.seealso: [](ch_snes), `SNES`, `SNESLineSearch`, `SNESLineSearchSetOrder()`
 @*/
-
-PetscErrorCode  SNESLineSearchGetOrder(SNESLineSearch linesearch,PetscInt *order)
+PetscErrorCode SNESLineSearchGetOrder(SNESLineSearch linesearch, PetscInt *order)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(linesearch,SNESLINESEARCH_CLASSID,1);
-  PetscValidIntPointer(order, 2);
+  PetscValidHeaderSpecific(linesearch, SNESLINESEARCH_CLASSID, 1);
+  PetscAssertPointer(order, 2);
   *order = linesearch->order;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   SNESLineSearchSetOrder - Sets the maximum order of the polynomial fit used in the line search
+  SNESLineSearchSetOrder - Sets the maximum order of the polynomial fit used in the line search
 
-   Input Parameters:
-+  linesearch - linesearch context
--  order - The damping parameter
+  Input Parameters:
++ linesearch - the line search context
+- order      - The order
 
-   Level: intermediate
+  Level: intermediate
 
-   Possible Values for order:
-+  1 or SNES_LINESEARCH_ORDER_LINEAR - linear order
-.  2 or SNES_LINESEARCH_ORDER_QUADRATIC - quadratic order
--  3 or SNES_LINESEARCH_ORDER_CUBIC - cubic order
+  Values for `order`\:
++  1 or `SNES_LINESEARCH_ORDER_LINEAR` - linear order
+.  2 or `SNES_LINESEARCH_ORDER_QUADRATIC` - quadratic order
+-  3 or `SNES_LINESEARCH_ORDER_CUBIC` - cubic order
 
-   Notes:
-   Variable orders are supported by the following line searches:
-+  bt - cubic and quadratic
--  cp - linear and quadratic
+  Options Database Key:
+. -snes_linesearch_order <order> - 1, 2, 3.  Most types only support certain orders (`SNESLINESEARCHBT` supports 2 or 3)
 
-.seealso: SNESLineSearchGetOrder(), SNESLineSearchSetDamping()
+  Note:
+  These orders are supported by `SNESLINESEARCHBT` and `SNESLINESEARCHCP`
+
+.seealso: [](ch_snes), `SNES`, `SNESLineSearch`, `SNESLineSearchGetOrder()`, `SNESLineSearchSetDamping()`
 @*/
-PetscErrorCode  SNESLineSearchSetOrder(SNESLineSearch linesearch,PetscInt order)
+PetscErrorCode SNESLineSearchSetOrder(SNESLineSearch linesearch, PetscInt order)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(linesearch,SNESLINESEARCH_CLASSID,1);
+  PetscValidHeaderSpecific(linesearch, SNESLINESEARCH_CLASSID, 1);
   linesearch->order = order;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   SNESLineSearchGetNorms - Gets the norms for for X, Y, and F.
+  SNESLineSearchGetNorms - Gets the norms for the current solution `X`, the current update `Y`, and the current function value `F`.
 
-   Input Parameters:
-.  linesearch - linesearch context
+  Not Collective
 
-   Output Parameters:
-+  xnorm - The norm of the current solution
-.  fnorm - The norm of the current function
--  ynorm - The norm of the current update
+  Input Parameter:
+. linesearch - the line search context
 
-   Notes:
-   This function is mainly called from SNES implementations.
+  Output Parameters:
++ xnorm - The norm of the current solution
+. fnorm - The norm of the current function, this is the `norm(function(X))` where `X` is the current solution.
+- ynorm - The norm of the current update (after scaling by the linesearch computed lambda)
 
-   Level: developer
+  Level: developer
 
-.seealso: SNESLineSearchSetNorms() SNESLineSearchGetVecs()
+  Notes:
+  Some values may not be up-to-date at particular points in the code.
+
+  This, in combination with `SNESLineSearchSetNorms()`, allow the line search and the `SNESSolve_XXX()` to share
+  computed values.
+
+.seealso: [](ch_snes), `SNES`, `SNESLineSearch`, `SNESLineSearchSetNorms()` `SNESLineSearchGetVecs()`
 @*/
-PetscErrorCode  SNESLineSearchGetNorms(SNESLineSearch linesearch, PetscReal * xnorm, PetscReal * fnorm, PetscReal * ynorm)
+PetscErrorCode SNESLineSearchGetNorms(SNESLineSearch linesearch, PetscReal *xnorm, PetscReal *fnorm, PetscReal *ynorm)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(linesearch,SNESLINESEARCH_CLASSID,1);
+  PetscValidHeaderSpecific(linesearch, SNESLINESEARCH_CLASSID, 1);
   if (xnorm) *xnorm = linesearch->xnorm;
   if (fnorm) *fnorm = linesearch->fnorm;
   if (ynorm) *ynorm = linesearch->ynorm;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   SNESLineSearchSetNorms - Gets the computed norms for for X, Y, and F.
+  SNESLineSearchSetNorms - Sets the computed norms for the current solution `X`, the current update `Y`, and the current function value `F`.
 
-   Input Parameters:
-+  linesearch - linesearch context
-.  xnorm - The norm of the current solution
-.  fnorm - The norm of the current function
--  ynorm - The norm of the current update
+  Collective
 
-   Level: advanced
+  Input Parameters:
++ linesearch - the line search context
+. xnorm      - The norm of the current solution
+. fnorm      - The norm of the current function, this is the `norm(function(X))` where `X` is the current solution
+- ynorm      - The norm of the current update (after scaling by the linesearch computed lambda)
 
-.seealso: SNESLineSearchGetNorms(), SNESLineSearchSetVecs()
+  Level: developer
+
+  Note:
+  This is called by the line search routines to store the values they have just computed
+
+.seealso: [](ch_snes), `SNES`, `SNESLineSearch`, `SNESLineSearchGetNorms()`, `SNESLineSearchSetVecs()`
 @*/
-PetscErrorCode  SNESLineSearchSetNorms(SNESLineSearch linesearch, PetscReal xnorm, PetscReal fnorm, PetscReal ynorm)
+PetscErrorCode SNESLineSearchSetNorms(SNESLineSearch linesearch, PetscReal xnorm, PetscReal fnorm, PetscReal ynorm)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(linesearch,SNESLINESEARCH_CLASSID,1);
+  PetscValidHeaderSpecific(linesearch, SNESLINESEARCH_CLASSID, 1);
   linesearch->xnorm = xnorm;
   linesearch->fnorm = fnorm;
   linesearch->ynorm = ynorm;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   SNESLineSearchComputeNorms - Computes the norms of X, F, and Y.
+  SNESLineSearchComputeNorms - Explicitly computes the norms of the current solution `X`, the current update `Y`, and the current function value `F`.
 
-   Input Parameters:
-.  linesearch - linesearch context
+  Input Parameter:
+. linesearch - the line search context
 
-   Options Database Keys:
-.   -snes_linesearch_norms - turn norm computation on or off
+  Options Database Key:
+. -snes_linesearch_norms - turn norm computation on or off
 
-   Level: intermediate
+  Level: intermediate
 
-.seealso: SNESLineSearchGetNorms, SNESLineSearchSetNorms(), SNESLineSearchSetComputeNorms()
+  Developer Note:
+  The options database key is misnamed. It should be -snes_linesearch_compute_norms
+
+.seealso: [](ch_snes), `SNES`, `SNESLineSearch`, `SNESLineSearchGetNorms`, `SNESLineSearchSetNorms()`, `SNESLineSearchSetComputeNorms()`
 @*/
 PetscErrorCode SNESLineSearchComputeNorms(SNESLineSearch linesearch)
 {
-  PetscErrorCode ierr;
-  SNES           snes;
+  SNES snes;
 
   PetscFunctionBegin;
   if (linesearch->norms) {
     if (linesearch->ops->vinorm) {
-      ierr = SNESLineSearchGetSNES(linesearch, &snes);CHKERRQ(ierr);
-      ierr = VecNorm(linesearch->vec_sol, NORM_2, &linesearch->xnorm);CHKERRQ(ierr);
-      ierr = VecNorm(linesearch->vec_update, NORM_2, &linesearch->ynorm);CHKERRQ(ierr);
-      ierr = (*linesearch->ops->vinorm)(snes, linesearch->vec_func, linesearch->vec_sol, &linesearch->fnorm);CHKERRQ(ierr);
+      PetscCall(SNESLineSearchGetSNES(linesearch, &snes));
+      PetscCall(VecNorm(linesearch->vec_sol, NORM_2, &linesearch->xnorm));
+      PetscCall(VecNorm(linesearch->vec_update, NORM_2, &linesearch->ynorm));
+      PetscCall((*linesearch->ops->vinorm)(snes, linesearch->vec_func, linesearch->vec_sol, &linesearch->fnorm));
     } else {
-      ierr = VecNormBegin(linesearch->vec_func,   NORM_2, &linesearch->fnorm);CHKERRQ(ierr);
-      ierr = VecNormBegin(linesearch->vec_sol,    NORM_2, &linesearch->xnorm);CHKERRQ(ierr);
-      ierr = VecNormBegin(linesearch->vec_update, NORM_2, &linesearch->ynorm);CHKERRQ(ierr);
-      ierr = VecNormEnd(linesearch->vec_func,     NORM_2, &linesearch->fnorm);CHKERRQ(ierr);
-      ierr = VecNormEnd(linesearch->vec_sol,      NORM_2, &linesearch->xnorm);CHKERRQ(ierr);
-      ierr = VecNormEnd(linesearch->vec_update,   NORM_2, &linesearch->ynorm);CHKERRQ(ierr);
+      PetscCall(VecNormBegin(linesearch->vec_func, NORM_2, &linesearch->fnorm));
+      PetscCall(VecNormBegin(linesearch->vec_sol, NORM_2, &linesearch->xnorm));
+      PetscCall(VecNormBegin(linesearch->vec_update, NORM_2, &linesearch->ynorm));
+      PetscCall(VecNormEnd(linesearch->vec_func, NORM_2, &linesearch->fnorm));
+      PetscCall(VecNormEnd(linesearch->vec_sol, NORM_2, &linesearch->xnorm));
+      PetscCall(VecNormEnd(linesearch->vec_update, NORM_2, &linesearch->ynorm));
     }
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   SNESLineSearchSetComputeNorms - Turns on or off the computation of final norms in the line search.
+  SNESLineSearchSetComputeNorms - Turns on or off the computation of final norms in the line search.
 
-   Input Parameters:
-+  linesearch  - linesearch context
--  flg  - indicates whether or not to compute norms
+  Input Parameters:
++ linesearch - the line search context
+- flg        - indicates whether or not to compute norms
 
-   Options Database Keys:
-.   -snes_linesearch_norms <true> - Turns on/off computation of the norms for basic linesearch
+  Options Database Key:
+. -snes_linesearch_norms <true> - Turns on/off computation of the norms for basic (none) `SNESLINESEARCHBASIC` line search
 
-   Notes:
-   This is most relevant to the SNESLINESEARCHBASIC line search type since most line searches have a stopping criteria involving the norm.
+  Level: intermediate
 
-   Level: intermediate
+  Note:
+  This is most relevant to the `SNESLINESEARCHBASIC` (or equivalently `SNESLINESEARCHNONE`) line search type since most line searches have a stopping criteria involving the norm.
 
-.seealso: SNESLineSearchGetNorms(), SNESLineSearchSetNorms(), SNESLineSearchComputeNorms(), SNESLINESEARCHBASIC
+  Developer Note:
+  The options database key is misnamed. It should be -snes_linesearch_compute_norms
+
+.seealso: [](ch_snes), `SNES`, `SNESLineSearch`, `SNESLineSearchGetNorms()`, `SNESLineSearchSetNorms()`, `SNESLineSearchComputeNorms()`, `SNESLINESEARCHBASIC`
 @*/
 PetscErrorCode SNESLineSearchSetComputeNorms(SNESLineSearch linesearch, PetscBool flg)
 {
   PetscFunctionBegin;
   linesearch->norms = flg;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   SNESLineSearchGetVecs - Gets the vectors from the SNESLineSearch context
+  SNESLineSearchGetVecs - Gets the vectors from the `SNESLineSearch` context
 
-   Input Parameters:
-.  linesearch - linesearch context
+  Not Collective but the vectors are parallel
 
-   Output Parameters:
-+  X - Solution vector
-.  F - Function vector
-.  Y - Search direction vector
-.  W - Solution work vector
--  G - Function work vector
+  Input Parameter:
+. linesearch - the line search context
 
-   Notes:
-   At the beginning of a line search application, X should contain a
-   solution and the vector F the function computed at X.  At the end of the
-   line search application, X should contain the new solution, and F the
-   function evaluated at the new solution.
+  Output Parameters:
++ X - Solution vector
+. F - Function vector
+. Y - Search direction vector
+. W - Solution work vector
+- G - Function work vector
 
-   These vectors are owned by the SNESLineSearch and should not be destroyed by the caller
+  Level: advanced
 
-   Level: advanced
+  Notes:
+  At the beginning of a line search application, `X` should contain a
+  solution and the vector `F` the function computed at `X`.  At the end of the
+  line search application, `X` should contain the new solution, and `F` the
+  function evaluated at the new solution.
 
-.seealso: SNESLineSearchGetNorms(), SNESLineSearchSetVecs()
+  These vectors are owned by the `SNESLineSearch` and should not be destroyed by the caller
+
+.seealso: [](ch_snes), `SNES`, `SNESLineSearch`, `SNESLineSearchGetNorms()`, `SNESLineSearchSetVecs()`
 @*/
-PetscErrorCode SNESLineSearchGetVecs(SNESLineSearch linesearch,Vec *X,Vec *F, Vec *Y,Vec *W,Vec *G)
+PetscErrorCode SNESLineSearchGetVecs(SNESLineSearch linesearch, Vec *X, Vec *F, Vec *Y, Vec *W, Vec *G)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(linesearch,SNESLINESEARCH_CLASSID,1);
+  PetscValidHeaderSpecific(linesearch, SNESLINESEARCH_CLASSID, 1);
   if (X) {
-    PetscValidPointer(X, 2);
+    PetscAssertPointer(X, 2);
     *X = linesearch->vec_sol;
   }
   if (F) {
-    PetscValidPointer(F, 3);
+    PetscAssertPointer(F, 3);
     *F = linesearch->vec_func;
   }
   if (Y) {
-    PetscValidPointer(Y, 4);
+    PetscAssertPointer(Y, 4);
     *Y = linesearch->vec_update;
   }
   if (W) {
-    PetscValidPointer(W, 5);
+    PetscAssertPointer(W, 5);
     *W = linesearch->vec_sol_new;
   }
   if (G) {
-    PetscValidPointer(G, 6);
+    PetscAssertPointer(G, 6);
     *G = linesearch->vec_func_new;
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   SNESLineSearchSetVecs - Sets the vectors on the SNESLineSearch context
+  SNESLineSearchSetVecs - Sets the vectors on the `SNESLineSearch` context
 
-   Input Parameters:
-+  linesearch - linesearch context
-.  X - Solution vector
-.  F - Function vector
-.  Y - Search direction vector
-.  W - Solution work vector
--  G - Function work vector
+  Logically Collective
 
-   Level: advanced
+  Input Parameters:
++ linesearch - the line search context
+. X          - Solution vector
+. F          - Function vector
+. Y          - Search direction vector
+. W          - Solution work vector
+- G          - Function work vector
 
-.seealso: SNESLineSearchSetNorms(), SNESLineSearchGetVecs()
+  Level: developer
+
+.seealso: [](ch_snes), `SNES`, `SNESLineSearch`, `SNESLineSearchSetNorms()`, `SNESLineSearchGetVecs()`
 @*/
-PetscErrorCode SNESLineSearchSetVecs(SNESLineSearch linesearch,Vec X,Vec F,Vec Y,Vec W, Vec G)
+PetscErrorCode SNESLineSearchSetVecs(SNESLineSearch linesearch, Vec X, Vec F, Vec Y, Vec W, Vec G)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(linesearch,SNESLINESEARCH_CLASSID,1);
+  PetscValidHeaderSpecific(linesearch, SNESLINESEARCH_CLASSID, 1);
   if (X) {
-    PetscValidHeaderSpecific(X,VEC_CLASSID,2);
+    PetscValidHeaderSpecific(X, VEC_CLASSID, 2);
     linesearch->vec_sol = X;
   }
   if (F) {
-    PetscValidHeaderSpecific(F,VEC_CLASSID,3);
+    PetscValidHeaderSpecific(F, VEC_CLASSID, 3);
     linesearch->vec_func = F;
   }
   if (Y) {
-    PetscValidHeaderSpecific(Y,VEC_CLASSID,4);
+    PetscValidHeaderSpecific(Y, VEC_CLASSID, 4);
     linesearch->vec_update = Y;
   }
   if (W) {
-    PetscValidHeaderSpecific(W,VEC_CLASSID,5);
+    PetscValidHeaderSpecific(W, VEC_CLASSID, 5);
     linesearch->vec_sol_new = W;
   }
   if (G) {
-    PetscValidHeaderSpecific(G,VEC_CLASSID,6);
+    PetscValidHeaderSpecific(G, VEC_CLASSID, 6);
     linesearch->vec_func_new = G;
   }
-  PetscFunctionReturn(0);
-}
-
-/*@C
-   SNESLineSearchAppendOptionsPrefix - Appends to the prefix used for searching for all
-   SNES options in the database.
-
-   Logically Collective on SNESLineSearch
-
-   Input Parameters:
-+  snes - the SNES context
--  prefix - the prefix to prepend to all option names
-
-   Notes:
-   A hyphen (-) must NOT be given at the beginning of the prefix name.
-   The first character of all runtime options is AUTOMATICALLY the hyphen.
-
-   Level: advanced
-
-.seealso: SNESGetOptionsPrefix()
-@*/
-PetscErrorCode  SNESLineSearchAppendOptionsPrefix(SNESLineSearch linesearch,const char prefix[])
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(linesearch,SNESLINESEARCH_CLASSID,1);
-  ierr = PetscObjectAppendOptionsPrefix((PetscObject)linesearch,prefix);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
-/*@C
-   SNESLineSearchGetOptionsPrefix - Sets the prefix used for searching for all
-   SNESLineSearch options in the database.
-
-   Not Collective
-
-   Input Parameter:
-.  linesearch - the SNESLineSearch context
-
-   Output Parameter:
-.  prefix - pointer to the prefix string used
-
-   Notes:
-   On the fortran side, the user should pass in a string 'prefix' of
-   sufficient length to hold the prefix.
-
-   Level: advanced
-
-.seealso: SNESAppendOptionsPrefix()
-@*/
-PetscErrorCode  SNESLineSearchGetOptionsPrefix(SNESLineSearch linesearch,const char *prefix[])
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(linesearch,SNESLINESEARCH_CLASSID,1);
-  ierr = PetscObjectGetOptionsPrefix((PetscObject)linesearch,prefix);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
-/*@C
-   SNESLineSearchSetWorkVecs - Gets work vectors for the line search.
-
-   Input Parameter:
-+  linesearch - the SNESLineSearch context
--  nwork - the number of work vectors
-
-   Level: developer
-
-.seealso: SNESSetWorkVecs()
-@*/
-PetscErrorCode  SNESLineSearchSetWorkVecs(SNESLineSearch linesearch, PetscInt nwork)
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  if (linesearch->vec_sol) {
-    ierr = VecDuplicateVecs(linesearch->vec_sol, nwork, &linesearch->work);CHKERRQ(ierr);
-  } else SETERRQ(PetscObjectComm((PetscObject)linesearch), PETSC_ERR_USER, "Cannot get linesearch work-vectors without setting a solution vec!");
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   SNESLineSearchGetReason - Gets the success/failure status of the last line search application
+  SNESLineSearchAppendOptionsPrefix - Appends to the prefix used for searching for all
+  `SNESLineSearch` options in the database.
 
-   Input Parameters:
-.  linesearch - linesearch context
+  Logically Collective
 
-   Output Parameters:
-.  result - The success or failure status
+  Input Parameters:
++ linesearch - the `SNESLineSearch` context
+- prefix     - the prefix to prepend to all option names
 
-   Notes:
-   This is typically called after SNESLineSearchApply() in order to determine if the line-search failed
-   (and set the SNES convergence accordingly).
+  Level: advanced
 
-   Level: intermediate
+  Note:
+  A hyphen (-) must NOT be given at the beginning of the prefix name.
+  The first character of all runtime options is AUTOMATICALLY the hyphen.
 
-.seealso: SNESLineSearchSetReason(), SNESLineSearchReason
+.seealso: [](ch_snes), `SNES`, `SNESLineSearch()`, `SNESLineSearchSetFromOptions()`, `SNESGetOptionsPrefix()`
 @*/
-PetscErrorCode  SNESLineSearchGetReason(SNESLineSearch linesearch, SNESLineSearchReason *result)
+PetscErrorCode SNESLineSearchAppendOptionsPrefix(SNESLineSearch linesearch, const char prefix[])
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(linesearch,SNESLINESEARCH_CLASSID,1);
-  PetscValidPointer(result, 2);
+  PetscValidHeaderSpecific(linesearch, SNESLINESEARCH_CLASSID, 1);
+  PetscCall(PetscObjectAppendOptionsPrefix((PetscObject)linesearch, prefix));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  SNESLineSearchGetOptionsPrefix - Gets the prefix used for searching for all
+  SNESLineSearch options in the database.
+
+  Not Collective
+
+  Input Parameter:
+. linesearch - the `SNESLineSearch` context
+
+  Output Parameter:
+. prefix - pointer to the prefix string used
+
+  Level: advanced
+
+  Fortran Notes:
+  The user should pass in a string 'prefix' of
+  sufficient length to hold the prefix.
+
+.seealso: [](ch_snes), `SNES`, `SNESLineSearch`, `SNESAppendOptionsPrefix()`
+@*/
+PetscErrorCode SNESLineSearchGetOptionsPrefix(SNESLineSearch linesearch, const char *prefix[])
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(linesearch, SNESLINESEARCH_CLASSID, 1);
+  PetscCall(PetscObjectGetOptionsPrefix((PetscObject)linesearch, prefix));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  SNESLineSearchSetWorkVecs - Sets work vectors for the line search.
+
+  Input Parameters:
++ linesearch - the `SNESLineSearch` context
+- nwork      - the number of work vectors
+
+  Level: developer
+
+  Developer Note:
+  This is called from within the set up routines for each of the line search types `SNESLineSearchType`
+
+.seealso: [](ch_snes), `SNES`, `SNESLineSearch`, `SNESSetWorkVecs()`
+@*/
+PetscErrorCode SNESLineSearchSetWorkVecs(SNESLineSearch linesearch, PetscInt nwork)
+{
+  PetscFunctionBegin;
+  PetscCheck(linesearch->vec_sol, PetscObjectComm((PetscObject)linesearch), PETSC_ERR_USER, "Cannot get linesearch work-vectors without setting a solution vec!");
+  PetscCall(VecDuplicateVecs(linesearch->vec_sol, nwork, &linesearch->work));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  SNESLineSearchGetReason - Gets the success/failure status of the last line search application
+
+  Input Parameter:
+. linesearch - the line search context
+
+  Output Parameter:
+. result - The success or failure status
+
+  Level: developer
+
+  Note:
+  This is typically called after `SNESLineSearchApply()` in order to determine if the line search failed
+  (and set into the `SNES` convergence accordingly).
+
+.seealso: [](ch_snes), `SNES`, `SNESLineSearch`, `SNESLineSearchSetReason()`, `SNESLineSearchReason`
+@*/
+PetscErrorCode SNESLineSearchGetReason(SNESLineSearch linesearch, SNESLineSearchReason *result)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(linesearch, SNESLINESEARCH_CLASSID, 1);
+  PetscAssertPointer(result, 2);
   *result = linesearch->result;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   SNESLineSearchSetReason - Sets the success/failure status of the last line search application
+  SNESLineSearchSetReason - Sets the success/failure status of the line search application
 
-   Input Parameters:
-+  linesearch - linesearch context
--  result - The success or failure status
+  Input Parameters:
++ linesearch - the line search context
+- result     - The success or failure status
 
-   Notes:
-   This is typically called in a SNESLineSearchApply() or SNESLineSearchShell implementation to set
-   the success or failure of the line search method.
+  Level: developer
 
-   Level: developer
+  Note:
+  This is typically called in a `SNESLineSearchType` implementation of `SNESLineSearchApply()` or a `SNESLINESEARCHSHELL` implementation to set
+  the success or failure of the line search method.
 
-.seealso: SNESLineSearchGetSResult()
+.seealso: [](ch_snes), `SNES`, `SNESLineSearch`, `SNESLineSearchReason`, `SNESLineSearchGetSResult()`
 @*/
-PetscErrorCode  SNESLineSearchSetReason(SNESLineSearch linesearch, SNESLineSearchReason result)
+PetscErrorCode SNESLineSearchSetReason(SNESLineSearch linesearch, SNESLineSearchReason result)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(linesearch,SNESLINESEARCH_CLASSID,1);
+  PetscValidHeaderSpecific(linesearch, SNESLINESEARCH_CLASSID, 1);
   linesearch->result = result;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+// PetscClangLinter pragma disable: -fdoc-param-list-func-parameter-documentation
 /*@C
-   SNESLineSearchSetVIFunctions - Sets VI-specific functions for line search computation.
+  SNESLineSearchSetVIFunctions - Sets VI-specific functions for line search computation.
 
-   Input Parameters:
-+  snes - nonlinear context obtained from SNESCreate()
-.  projectfunc - function for projecting the function to the bounds
--  normfunc - function for computing the norm of an active set
+  Logically Collective
 
-   Logically Collective on SNES
+  Input Parameters:
++ linesearch  - the linesearch object
+. projectfunc - function for projecting the function to the bounds, see `SNESLineSearchVIProjectFn` for calling sequence
+- normfunc    - function for computing the norm of an active set, see `SNESLineSearchVINormFn` for calling sequence
 
-   Calling sequence of projectfunc:
-.vb
-   projectfunc (SNES snes, Vec X)
-.ve
+  Level: advanced
 
-    Input parameters for projectfunc:
-+   snes - nonlinear context
--   X - current solution
+  Notes:
+  The VI solvers require projection of the solution to the feasible set.  `projectfunc` should implement this.
 
-    Output parameters for projectfunc:
-.   X - Projected solution
+  The VI solvers require special evaluation of the function norm such that the norm is only calculated
+  on the inactive set.  This should be implemented by `normfunc`.
 
-   Calling sequence of normfunc:
-.vb
-   projectfunc (SNES snes, Vec X, Vec F, PetscScalar * fnorm)
-.ve
-
-    Input parameters for normfunc:
-+   snes - nonlinear context
-.   X - current solution
--   F - current residual
-
-    Output parameters for normfunc:
-.   fnorm - VI-specific norm of the function
-
-    Notes:
-    The VI solvers require projection of the solution to the feasible set.  projectfunc should implement this.
-
-    The VI solvers require special evaluation of the function norm such that the norm is only calculated
-    on the inactive set.  This should be implemented by normfunc.
-
-    Level: developer
-
-.seealso: SNESLineSearchGetVIFunctions(), SNESLineSearchSetPostCheck(), SNESLineSearchSetPreCheck()
+.seealso: [](ch_snes), `SNES`, `SNESLineSearch`, `SNESLineSearchGetVIFunctions()`, `SNESLineSearchSetPostCheck()`, `SNESLineSearchSetPreCheck()`,
+          `SNESLineSearchVIProjectFn`, `SNESLineSearchVINormFn`
 @*/
-PetscErrorCode SNESLineSearchSetVIFunctions(SNESLineSearch linesearch, SNESLineSearchVIProjectFunc projectfunc, SNESLineSearchVINormFunc normfunc)
+PetscErrorCode SNESLineSearchSetVIFunctions(SNESLineSearch linesearch, SNESLineSearchVIProjectFn *projectfunc, SNESLineSearchVINormFn *normfunc)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(linesearch,SNESLINESEARCH_CLASSID,1);
+  PetscValidHeaderSpecific(linesearch, SNESLINESEARCH_CLASSID, 1);
   if (projectfunc) linesearch->ops->viproject = projectfunc;
   if (normfunc) linesearch->ops->vinorm = normfunc;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-   SNESLineSearchGetVIFunctions - Sets VI-specific functions for line search computation.
+  SNESLineSearchGetVIFunctions - Sets VI-specific functions for line search computation.
 
-   Input Parameters:
-.  linesearch - the line search context, obtain with SNESGetLineSearch()
+  Not Collective
 
-   Output Parameters:
-+  projectfunc - function for projecting the function to the bounds
--  normfunc - function for computing the norm of an active set
+  Input Parameter:
+. linesearch - the line search context, obtain with `SNESGetLineSearch()`
 
-   Logically Collective on SNES
+  Output Parameters:
++ projectfunc - function for projecting the function to the bounds, see `SNESLineSearchVIProjectFn` for calling sequence
+- normfunc    - function for computing the norm of an active set, see `SNESLineSearchVINormFn ` for calling sequence
 
-    Level: developer
+  Level: advanced
 
-.seealso: SNESLineSearchSetVIFunctions(), SNESLineSearchGetPostCheck(), SNESLineSearchGetPreCheck()
+.seealso: [](ch_snes), `SNES`, `SNESLineSearch`, `SNESLineSearchSetVIFunctions()`, `SNESLineSearchGetPostCheck()`, `SNESLineSearchGetPreCheck()`,
+          `SNESLineSearchVIProjectFn`, `SNESLineSearchVINormFn`
 @*/
-PetscErrorCode SNESLineSearchGetVIFunctions(SNESLineSearch linesearch, SNESLineSearchVIProjectFunc *projectfunc, SNESLineSearchVINormFunc *normfunc)
+PetscErrorCode SNESLineSearchGetVIFunctions(SNESLineSearch linesearch, SNESLineSearchVIProjectFn **projectfunc, SNESLineSearchVINormFn **normfunc)
 {
   PetscFunctionBegin;
   if (projectfunc) *projectfunc = linesearch->ops->viproject;
   if (normfunc) *normfunc = linesearch->ops->vinorm;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-  SNESLineSearchRegister - See SNESLineSearchRegister()
+  SNESLineSearchRegister - register a line search type `SNESLineSearchType`
+
+  Logically Collective, No Fortran Support
+
+  Input Parameters:
++ sname    - name of the `SNESLineSearchType()`
+- function - the creation function for that type
+
+  Calling sequence of `function`:
+. ls - the line search context
 
   Level: advanced
-@*/
-PetscErrorCode  SNESLineSearchRegister(const char sname[],PetscErrorCode (*function)(SNESLineSearch))
-{
-  PetscErrorCode ierr;
 
+.seealso: [](ch_snes), `SNES`, `SNESLineSearch`, `SNESLineSearchType`, `SNESLineSearchSetType()`
+@*/
+PetscErrorCode SNESLineSearchRegister(const char sname[], PetscErrorCode (*function)(SNESLineSearch ls))
+{
   PetscFunctionBegin;
-  ierr = SNESInitializePackage();CHKERRQ(ierr);
-  ierr = PetscFunctionListAdd(&SNESLineSearchList,sname,function);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(SNESInitializePackage());
+  PetscCall(PetscFunctionListAdd(&SNESLineSearchList, sname, function));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

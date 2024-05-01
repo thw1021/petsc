@@ -3,316 +3,289 @@ static char help[] = "Spectral element access patterns with Plex\n\n";
 #include <petscdmplex.h>
 
 typedef struct {
-  PetscInt  dim; /* Topological problem dimension */
-  PetscInt  Nf;  /* Number of fields */
-  PetscInt *Nc;  /* Number of components per field */
-  PetscInt *k;   /* Spectral order per field */
+  PetscInt  Nf; /* Number of fields */
+  PetscInt *Nc; /* Number of components per field */
+  PetscInt *k;  /* Spectral order per field */
 } AppCtx;
 
 static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 {
-  PetscInt       len;
-  PetscBool      flg;
-  PetscErrorCode ierr;
+  PetscInt  len;
+  PetscBool flg;
 
   PetscFunctionBeginUser;
-  options->dim = 2;
-  options->Nf  = 0;
-  options->Nc  = NULL;
-  options->k   = NULL;
+  options->Nf = 0;
+  options->Nc = NULL;
+  options->k  = NULL;
 
-  ierr = PetscOptionsBegin(comm, "", "SEM Problem Options", "DMPLEX");CHKERRQ(ierr);
-  ierr = PetscOptionsRangeInt("-dim", "Problem dimension", "ex6.c", options->dim, &options->dim, NULL,1,3);CHKERRQ(ierr);
-  ierr = PetscOptionsBoundedInt("-num_fields", "The number of fields", "ex6.c", options->Nf, &options->Nf, NULL,0);CHKERRQ(ierr);
+  PetscOptionsBegin(comm, "", "SEM Problem Options", "DMPLEX");
+  PetscCall(PetscOptionsBoundedInt("-num_fields", "The number of fields", "ex6.c", options->Nf, &options->Nf, NULL, 0));
   if (options->Nf) {
-    len  = options->Nf;
-    ierr = PetscMalloc1(len, &options->Nc);CHKERRQ(ierr);
-    ierr = PetscOptionsIntArray("-num_components", "The number of components per field", "ex6.c", options->Nc, &len, &flg);CHKERRQ(ierr);
-    if (flg && (len != options->Nf)) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Length of components array is %d should be %d", len, options->Nf);
-    len  = options->Nf;
-    ierr = PetscMalloc1(len, &options->k);CHKERRQ(ierr);
-    ierr = PetscOptionsIntArray("-order", "The spectral order per field", "ex6.c", options->k, &len, &flg);CHKERRQ(ierr);
-    if (flg && (len != options->Nf)) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Length of order array is %d should be %d", len, options->Nf);
+    len = options->Nf;
+    PetscCall(PetscMalloc1(len, &options->Nc));
+    PetscCall(PetscOptionsIntArray("-num_components", "The number of components per field", "ex6.c", options->Nc, &len, &flg));
+    PetscCheck(!flg || !(len != options->Nf), PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Length of components array is %" PetscInt_FMT " should be %" PetscInt_FMT, len, options->Nf);
+    len = options->Nf;
+    PetscCall(PetscMalloc1(len, &options->k));
+    PetscCall(PetscOptionsIntArray("-order", "The spectral order per field", "ex6.c", options->k, &len, &flg));
+    PetscCheck(!flg || !(len != options->Nf), PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Length of order array is %" PetscInt_FMT " should be %" PetscInt_FMT, len, options->Nf);
   }
-  ierr = PetscOptionsEnd();
-  PetscFunctionReturn(0);
+  PetscOptionsEnd();
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode LoadData2D(DM dm, PetscInt Ni, PetscInt Nj, PetscInt clSize, Vec u, AppCtx *user)
 {
-  PetscInt       i, j, f, c;
-  PetscErrorCode ierr;
+  PetscInt     i, j, f, c;
   PetscScalar *closure;
 
   PetscFunctionBeginUser;
-  ierr = PetscMalloc1(clSize,&closure);CHKERRQ(ierr);
+  PetscCall(PetscMalloc1(clSize, &closure));
   for (j = 0; j < Nj; ++j) {
     for (i = 0; i < Ni; ++i) {
-      PetscInt    ki, kj, o = 0;
-      ierr = PetscArrayzero(closure,clSize);CHKERRQ(ierr);
+      PetscInt ki, kj, o = 0;
+      PetscCall(PetscArrayzero(closure, clSize));
 
       for (f = 0; f < user->Nf; ++f) {
-        PetscInt ioff = i*user->k[f], joff = j*user->k[f];
+        PetscInt ioff = i * user->k[f], joff = j * user->k[f];
 
         for (kj = 0; kj <= user->k[f]; ++kj) {
           for (ki = 0; ki <= user->k[f]; ++ki) {
-            for (c = 0; c < user->Nc[f]; ++c) {
-              closure[o++] = ((kj + joff)*(Ni*user->k[f]+1) + ki + ioff)*user->Nc[f]+c;
-            }
+            for (c = 0; c < user->Nc[f]; ++c) closure[o++] = ((kj + joff) * (Ni * user->k[f] + 1) + ki + ioff) * user->Nc[f] + c;
           }
         }
       }
-      ierr = DMPlexVecSetClosure(dm, NULL, u, j*Ni+i, closure, INSERT_VALUES);CHKERRQ(ierr);
+      PetscCall(DMPlexVecSetClosure(dm, NULL, u, j * Ni + i, closure, INSERT_VALUES));
     }
   }
-  ierr = PetscFree(closure);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscFree(closure));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode LoadData3D(DM dm, PetscInt Ni, PetscInt Nj, PetscInt Nk, PetscInt clSize, Vec u, AppCtx *user)
 {
-  PetscInt       i, j, k, f, c;
-  PetscErrorCode ierr;
+  PetscInt     i, j, k, f, c;
   PetscScalar *closure;
 
   PetscFunctionBeginUser;
-  ierr = PetscMalloc1(clSize,&closure);CHKERRQ(ierr);
+  PetscCall(PetscMalloc1(clSize, &closure));
   for (k = 0; k < Nk; ++k) {
     for (j = 0; j < Nj; ++j) {
       for (i = 0; i < Ni; ++i) {
-        PetscInt    ki, kj, kk, o = 0;
-        ierr = PetscArrayzero(closure,clSize);CHKERRQ(ierr);
+        PetscInt ki, kj, kk, o = 0;
+        PetscCall(PetscArrayzero(closure, clSize));
 
         for (f = 0; f < user->Nf; ++f) {
-          PetscInt ioff = i*user->k[f], joff = j*user->k[f], koff = k*user->k[f];
+          PetscInt ioff = i * user->k[f], joff = j * user->k[f], koff = k * user->k[f];
 
           for (kk = 0; kk <= user->k[f]; ++kk) {
             for (kj = 0; kj <= user->k[f]; ++kj) {
               for (ki = 0; ki <= user->k[f]; ++ki) {
-                for (c = 0; c < user->Nc[f]; ++c) {
-                  closure[o++] = (((kk + koff)*(Nj*user->k[f]+1) + kj + joff)*(Ni*user->k[f]+1) + ki + ioff)*user->Nc[f]+c;
-                }
+                for (c = 0; c < user->Nc[f]; ++c) closure[o++] = (((kk + koff) * (Nj * user->k[f] + 1) + kj + joff) * (Ni * user->k[f] + 1) + ki + ioff) * user->Nc[f] + c;
               }
             }
           }
         }
-        ierr = DMPlexVecSetClosure(dm, NULL, u, (k*Nj+j)*Ni+i, closure, INSERT_VALUES);CHKERRQ(ierr);
+        PetscCall(DMPlexVecSetClosure(dm, NULL, u, (k * Nj + j) * Ni + i, closure, INSERT_VALUES));
       }
     }
   }
-  ierr = PetscFree(closure);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscFree(closure));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode CheckPoint(DM dm, Vec u, PetscInt point, AppCtx *user)
 {
   PetscSection       s;
-  PetscScalar        *a;
-  const PetscScalar  *array;
+  PetscScalar       *a;
+  const PetscScalar *array;
   PetscInt           dof, d;
-  PetscErrorCode     ierr;
 
   PetscFunctionBeginUser;
-  ierr = DMGetLocalSection(dm, &s);CHKERRQ(ierr);
-  ierr = VecGetArrayRead(u, &array);CHKERRQ(ierr);
-  ierr = DMPlexPointLocalRead(dm, point, array, &a);CHKERRQ(ierr);
-  ierr = PetscSectionGetDof(s, point, &dof);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_SELF, "Point %D: ", point);CHKERRQ(ierr);
+  PetscCall(DMGetLocalSection(dm, &s));
+  PetscCall(VecGetArrayRead(u, &array));
+  PetscCall(DMPlexPointLocalRead(dm, point, array, &a));
+  PetscCall(PetscSectionGetDof(s, point, &dof));
+  PetscCall(PetscPrintf(PETSC_COMM_SELF, "Point %" PetscInt_FMT ": ", point));
   for (d = 0; d < dof; ++d) {
-    if (d > 0) {ierr = PetscPrintf(PETSC_COMM_SELF, ", ");CHKERRQ(ierr);}
-    ierr = PetscPrintf(PETSC_COMM_SELF, "%2.0f", (double) PetscRealPart(a[d]));CHKERRQ(ierr);
+    if (d > 0) PetscCall(PetscPrintf(PETSC_COMM_SELF, ", "));
+    PetscCall(PetscPrintf(PETSC_COMM_SELF, "%2.0f", (double)PetscRealPart(a[d])));
   }
-  ierr = PetscPrintf(PETSC_COMM_SELF, "\n");CHKERRQ(ierr);
-  ierr = VecRestoreArrayRead(u, &array);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscPrintf(PETSC_COMM_SELF, "\n"));
+  PetscCall(VecRestoreArrayRead(u, &array));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode ReadData2D(DM dm, Vec u, AppCtx *user)
 {
-  PetscInt       cStart, cEnd, cell;
-  PetscErrorCode ierr;
+  PetscInt cStart, cEnd, cell;
 
   PetscFunctionBeginUser;
-  ierr = DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd);CHKERRQ(ierr);
+  PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
   for (cell = cStart; cell < cEnd; ++cell) {
     PetscScalar *closure = NULL;
     PetscInt     closureSize, ki, kj, f, c, foff = 0;
 
-    ierr = DMPlexVecGetClosure(dm, NULL, u, cell, &closureSize, &closure);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_SELF, "Cell %D\n", cell);CHKERRQ(ierr);
+    PetscCall(DMPlexVecGetClosure(dm, NULL, u, cell, &closureSize, &closure));
+    PetscCall(PetscPrintf(PETSC_COMM_SELF, "Cell %" PetscInt_FMT "\n", cell));
     for (f = 0; f < user->Nf; ++f) {
-      ierr = PetscPrintf(PETSC_COMM_SELF, "  Field %D\n", f);CHKERRQ(ierr);
+      PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Field %" PetscInt_FMT "\n", f));
       for (kj = user->k[f]; kj >= 0; --kj) {
         for (ki = 0; ki <= user->k[f]; ++ki) {
-          if (ki > 0) {ierr = PetscPrintf(PETSC_COMM_SELF, "  ");CHKERRQ(ierr);}
+          if (ki > 0) PetscCall(PetscPrintf(PETSC_COMM_SELF, "  "));
           for (c = 0; c < user->Nc[f]; ++c) {
-            if (c > 0) ierr = PetscPrintf(PETSC_COMM_SELF, ",");CHKERRQ(ierr);
-            ierr = PetscPrintf(PETSC_COMM_SELF, "%2.0f", (double) PetscRealPart(closure[(kj*(user->k[f]+1) + ki)*user->Nc[f]+c + foff]));CHKERRQ(ierr);
+            if (c > 0) PetscCall(PetscPrintf(PETSC_COMM_SELF, ","));
+            PetscCall(PetscPrintf(PETSC_COMM_SELF, "%2.0f", (double)PetscRealPart(closure[(kj * (user->k[f] + 1) + ki) * user->Nc[f] + c + foff])));
           }
         }
-        ierr = PetscPrintf(PETSC_COMM_SELF, "\n");CHKERRQ(ierr);
+        PetscCall(PetscPrintf(PETSC_COMM_SELF, "\n"));
       }
-      ierr = PetscPrintf(PETSC_COMM_SELF, "\n\n");CHKERRQ(ierr);
-      foff += PetscSqr(user->k[f]+1);
+      PetscCall(PetscPrintf(PETSC_COMM_SELF, "\n\n"));
+      foff += PetscSqr(user->k[f] + 1);
     }
-    ierr = DMPlexVecRestoreClosure(dm, NULL, u, cell, &closureSize, &closure);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_SELF, "\n\n");CHKERRQ(ierr);
+    PetscCall(DMPlexVecRestoreClosure(dm, NULL, u, cell, &closureSize, &closure));
+    PetscCall(PetscPrintf(PETSC_COMM_SELF, "\n\n"));
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode ReadData3D(DM dm, Vec u, AppCtx *user)
 {
-  PetscInt       cStart, cEnd, cell;
-  PetscErrorCode ierr;
+  PetscInt cStart, cEnd, cell;
 
   PetscFunctionBeginUser;
-  ierr = DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd);CHKERRQ(ierr);
+  PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
   for (cell = cStart; cell < cEnd; ++cell) {
     PetscScalar *closure = NULL;
     PetscInt     closureSize, ki, kj, kk, f, c, foff = 0;
 
-    ierr = DMPlexVecGetClosure(dm, NULL, u, cell, &closureSize, &closure);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_SELF, "Cell %D\n", cell);CHKERRQ(ierr);
+    PetscCall(DMPlexVecGetClosure(dm, NULL, u, cell, &closureSize, &closure));
+    PetscCall(PetscPrintf(PETSC_COMM_SELF, "Cell %" PetscInt_FMT "\n", cell));
     for (f = 0; f < user->Nf; ++f) {
-      ierr = PetscPrintf(PETSC_COMM_SELF, "  Field %D\n", f);CHKERRQ(ierr);
+      PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Field %" PetscInt_FMT "\n", f));
       for (kk = user->k[f]; kk >= 0; --kk) {
         for (kj = user->k[f]; kj >= 0; --kj) {
           for (ki = 0; ki <= user->k[f]; ++ki) {
-            if (ki > 0) {ierr = PetscPrintf(PETSC_COMM_SELF, "  ");CHKERRQ(ierr);}
+            if (ki > 0) PetscCall(PetscPrintf(PETSC_COMM_SELF, "  "));
             for (c = 0; c < user->Nc[f]; ++c) {
-              if (c > 0) ierr = PetscPrintf(PETSC_COMM_SELF, ",");CHKERRQ(ierr);
-              ierr = PetscPrintf(PETSC_COMM_SELF, "%2.0f", (double) PetscRealPart(closure[((kk*(user->k[f]+1) + kj)*(user->k[f]+1) + ki)*user->Nc[f]+c + foff]));CHKERRQ(ierr);
+              if (c > 0) PetscCall(PetscPrintf(PETSC_COMM_SELF, ","));
+              PetscCall(PetscPrintf(PETSC_COMM_SELF, "%2.0f", (double)PetscRealPart(closure[((kk * (user->k[f] + 1) + kj) * (user->k[f] + 1) + ki) * user->Nc[f] + c + foff])));
             }
           }
-          ierr = PetscPrintf(PETSC_COMM_SELF, "\n");CHKERRQ(ierr);
+          PetscCall(PetscPrintf(PETSC_COMM_SELF, "\n"));
         }
-        ierr = PetscPrintf(PETSC_COMM_SELF, "\n");CHKERRQ(ierr);
+        PetscCall(PetscPrintf(PETSC_COMM_SELF, "\n"));
       }
-      ierr = PetscPrintf(PETSC_COMM_SELF, "\n\n");CHKERRQ(ierr);
-      foff += PetscSqr(user->k[f]+1);
+      PetscCall(PetscPrintf(PETSC_COMM_SELF, "\n\n"));
+      foff += PetscSqr(user->k[f] + 1);
     }
-    ierr = DMPlexVecRestoreClosure(dm, NULL, u, cell, &closureSize, &closure);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_SELF, "\n\n");CHKERRQ(ierr);
+    PetscCall(DMPlexVecRestoreClosure(dm, NULL, u, cell, &closureSize, &closure));
+    PetscCall(PetscPrintf(PETSC_COMM_SELF, "\n\n"));
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode SetSymmetries(DM dm, PetscSection s, AppCtx *user)
 {
-  PetscInt       f, o, i, j, k, c, d;
-  DMLabel        depthLabel;
-  PetscErrorCode ierr;
+  PetscInt dim, f, o, i, j, k, c, d;
+  DMLabel  depthLabel;
 
   PetscFunctionBegin;
-  ierr = DMGetLabel(dm,"depth",&depthLabel);CHKERRQ(ierr);
+  PetscCall(DMGetDimension(dm, &dim));
+  PetscCall(DMGetLabel(dm, "depth", &depthLabel));
   for (f = 0; f < user->Nf; f++) {
     PetscSectionSym sym;
 
     if (user->k[f] < 3) continue; /* No symmetries needed for order < 3, because no cell, facet, edge or vertex has more than one node */
-    ierr = PetscSectionSymCreateLabel(PetscObjectComm((PetscObject)s),depthLabel,&sym);CHKERRQ(ierr);
+    PetscCall(PetscSectionSymCreateLabel(PetscObjectComm((PetscObject)s), depthLabel, &sym));
 
-    for (d = 0; d <= user->dim; d++) {
+    for (d = 0; d <= dim; d++) {
       if (d == 1) {
-        PetscInt        numDof  = user->k[f] - 1;
-        PetscInt        numComp = user->Nc[f];
-        PetscInt        minOrnt = -2;
-        PetscInt        maxOrnt = 2;
-        PetscInt        **perms;
+        PetscInt   numDof  = user->k[f] - 1;
+        PetscInt   numComp = user->Nc[f];
+        PetscInt   minOrnt = -1;
+        PetscInt   maxOrnt = 1;
+        PetscInt **perms;
 
-        ierr = PetscCalloc1(maxOrnt - minOrnt,&perms);CHKERRQ(ierr);
+        PetscCall(PetscCalloc1(maxOrnt - minOrnt, &perms));
         for (o = minOrnt; o < maxOrnt; o++) {
           PetscInt *perm;
 
-          if (o == -1 || !o) { /* identity */
+          if (!o) { /* identity */
             perms[o - minOrnt] = NULL;
           } else {
-            ierr = PetscMalloc1(numDof * numComp, &perm);CHKERRQ(ierr);
+            PetscCall(PetscMalloc1(numDof * numComp, &perm));
             for (i = numDof - 1, k = 0; i >= 0; i--) {
               for (j = 0; j < numComp; j++, k++) perm[k] = i * numComp + j;
             }
             perms[o - minOrnt] = perm;
           }
         }
-        ierr = PetscSectionSymLabelSetStratum(sym,d,numDof*numComp,minOrnt,maxOrnt,PETSC_OWN_POINTER,(const PetscInt **) perms,NULL);CHKERRQ(ierr);
+        PetscCall(PetscSectionSymLabelSetStratum(sym, d, numDof * numComp, minOrnt, maxOrnt, PETSC_OWN_POINTER, (const PetscInt **)perms, NULL));
       } else if (d == 2) {
-        PetscInt        perEdge = user->k[f] - 1;
-        PetscInt        numDof  = perEdge * perEdge;
-        PetscInt        numComp = user->Nc[f];
-        PetscInt        minOrnt = -4;
-        PetscInt        maxOrnt = 4;
-        PetscInt        **perms;
+        PetscInt   perEdge = user->k[f] - 1;
+        PetscInt   numDof  = perEdge * perEdge;
+        PetscInt   numComp = user->Nc[f];
+        PetscInt   minOrnt = -4;
+        PetscInt   maxOrnt = 4;
+        PetscInt **perms;
 
-        ierr = PetscCalloc1(maxOrnt-minOrnt,&perms);CHKERRQ(ierr);
+        PetscCall(PetscCalloc1(maxOrnt - minOrnt, &perms));
         for (o = minOrnt; o < maxOrnt; o++) {
           PetscInt *perm;
 
           if (!o) continue; /* identity */
-          ierr = PetscMalloc1(numDof * numComp, &perm);CHKERRQ(ierr);
+          PetscCall(PetscMalloc1(numDof * numComp, &perm));
           /* We want to perm[k] to list which *localArray* position the *sectionArray* position k should go to for the given orientation*/
           switch (o) {
           case 0:
             break; /* identity */
-          case -4: /* flip along (-1,-1)--( 1, 1), which swaps edges 0 and 3 and edges 1 and 2.  This swaps the i and j variables */
+          case -2: /* flip along (-1,-1)--( 1, 1), which swaps edges 0 and 3 and edges 1 and 2.  This swaps the i and j variables */
             for (i = 0, k = 0; i < perEdge; i++) {
               for (j = 0; j < perEdge; j++, k++) {
-                for (c = 0; c < numComp; c++) {
-                  perm[k * numComp + c] = (perEdge * j + i) * numComp + c;
-                }
+                for (c = 0; c < numComp; c++) perm[k * numComp + c] = (perEdge * j + i) * numComp + c;
               }
             }
             break;
-          case -3: /* flip along (-1, 0)--( 1, 0), which swaps edges 0 and 2.  This reverses the i variable */
+          case -1: /* flip along (-1, 0)--( 1, 0), which swaps edges 0 and 2.  This reverses the i variable */
             for (i = 0, k = 0; i < perEdge; i++) {
               for (j = 0; j < perEdge; j++, k++) {
-                for (c = 0; c < numComp; c++) {
-                  perm[k * numComp + c] = (perEdge * (perEdge - 1 - i) + j) * numComp + c;
-                }
+                for (c = 0; c < numComp; c++) perm[k * numComp + c] = (perEdge * (perEdge - 1 - i) + j) * numComp + c;
               }
             }
             break;
-          case -2: /* flip along ( 1,-1)--(-1, 1), which swaps edges 0 and 1 and edges 2 and 3.  This swaps the i and j variables and reverse both */
+          case -4: /* flip along ( 1,-1)--(-1, 1), which swaps edges 0 and 1 and edges 2 and 3.  This swaps the i and j variables and reverse both */
             for (i = 0, k = 0; i < perEdge; i++) {
               for (j = 0; j < perEdge; j++, k++) {
-                for (c = 0; c < numComp; c++) {
-                  perm[k * numComp + c] = (perEdge * (perEdge - 1 - j) + (perEdge - 1 - i)) * numComp + c;
-                }
+                for (c = 0; c < numComp; c++) perm[k * numComp + c] = (perEdge * (perEdge - 1 - j) + (perEdge - 1 - i)) * numComp + c;
               }
             }
             break;
-          case -1: /* flip along ( 0,-1)--( 0, 1), which swaps edges 3 and 1.  This reverses the j variable */
+          case -3: /* flip along ( 0,-1)--( 0, 1), which swaps edges 3 and 1.  This reverses the j variable */
             for (i = 0, k = 0; i < perEdge; i++) {
               for (j = 0; j < perEdge; j++, k++) {
-                for (c = 0; c < numComp; c++) {
-                  perm[k * numComp + c] = (perEdge * i + (perEdge - 1 - j)) * numComp + c;
-                }
+                for (c = 0; c < numComp; c++) perm[k * numComp + c] = (perEdge * i + (perEdge - 1 - j)) * numComp + c;
               }
             }
             break;
-          case  1: /* rotate section edge 1 to local edge 0.  This swaps the i and j variables and then reverses the j variable */
+          case 1: /* rotate section edge 1 to local edge 0.  This swaps the i and j variables and then reverses the j variable */
             for (i = 0, k = 0; i < perEdge; i++) {
               for (j = 0; j < perEdge; j++, k++) {
-                for (c = 0; c < numComp; c++) {
-                  perm[k * numComp + c] = (perEdge * (perEdge - 1 - j) + i) * numComp + c;
-                }
+                for (c = 0; c < numComp; c++) perm[k * numComp + c] = (perEdge * (perEdge - 1 - j) + i) * numComp + c;
               }
             }
             break;
-          case  2: /* rotate section edge 2 to local edge 0.  This reverse both i and j variables */
+          case 2: /* rotate section edge 2 to local edge 0.  This reverse both i and j variables */
             for (i = 0, k = 0; i < perEdge; i++) {
               for (j = 0; j < perEdge; j++, k++) {
-                for (c = 0; c < numComp; c++) {
-                  perm[k * numComp + c] = (perEdge * (perEdge - 1 - i) + (perEdge - 1 - j)) * numComp + c;
-                }
+                for (c = 0; c < numComp; c++) perm[k * numComp + c] = (perEdge * (perEdge - 1 - i) + (perEdge - 1 - j)) * numComp + c;
               }
             }
             break;
-          case  3: /* rotate section edge 3 to local edge 0.  This swaps the i and j variables and then reverses the i variable */
+          case 3: /* rotate section edge 3 to local edge 0.  This swaps the i and j variables and then reverses the i variable */
             for (i = 0, k = 0; i < perEdge; i++) {
               for (j = 0; j < perEdge; j++, k++) {
-                for (c = 0; c < numComp; c++) {
-                  perm[k * numComp + c] = (perEdge * j + (perEdge - 1 - i)) * numComp + c;
-                }
+                for (c = 0; c < numComp; c++) perm[k * numComp + c] = (perEdge * j + (perEdge - 1 - i)) * numComp + c;
               }
             }
             break;
@@ -321,123 +294,139 @@ static PetscErrorCode SetSymmetries(DM dm, PetscSection s, AppCtx *user)
           }
           perms[o - minOrnt] = perm;
         }
-        ierr = PetscSectionSymLabelSetStratum(sym,d,numDof*numComp,minOrnt,maxOrnt,PETSC_OWN_POINTER,(const PetscInt **) perms,NULL);CHKERRQ(ierr);
+        PetscCall(PetscSectionSymLabelSetStratum(sym, d, numDof * numComp, minOrnt, maxOrnt, PETSC_OWN_POINTER, (const PetscInt **)perms, NULL));
       }
     }
-    ierr = PetscSectionSetFieldSym(s,f,sym);CHKERRQ(ierr);
-    ierr = PetscSectionSymDestroy(&sym);CHKERRQ(ierr);
+    PetscCall(PetscSectionSetFieldSym(s, f, sym));
+    PetscCall(PetscSectionSymDestroy(&sym));
   }
-  ierr = PetscSectionViewFromOptions(s,NULL,"-section_with_sym_view");CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscSectionViewFromOptions(s, NULL, "-section_with_sym_view"));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 int main(int argc, char **argv)
 {
-  DM             dm;
-  PetscSection   s;
-  Vec            u;
-  AppCtx         user;
-  PetscInt       cells[3] = {2, 2, 2};
-  PetscInt       size = 0, f;
-  PetscErrorCode ierr;
+  DM           dm;
+  PetscSection s;
+  Vec          u;
+  AppCtx       user;
+  PetscInt     dim, size = 0, f;
 
-  ierr = PetscInitialize(&argc, &argv, NULL,help);if (ierr) return ierr;
-  ierr = ProcessOptions(PETSC_COMM_WORLD, &user);CHKERRQ(ierr);
-  ierr = DMPlexCreateBoxMesh(PETSC_COMM_WORLD, user.dim, PETSC_FALSE, cells, NULL, NULL, NULL, PETSC_TRUE, &dm);CHKERRQ(ierr);
-  ierr = DMSetFromOptions(dm);CHKERRQ(ierr);
-  ierr = DMViewFromOptions(dm, NULL, "-dm_view");CHKERRQ(ierr);
+  PetscFunctionBeginUser;
+  PetscCall(PetscInitialize(&argc, &argv, NULL, help));
+  PetscCall(ProcessOptions(PETSC_COMM_WORLD, &user));
+  PetscCall(DMCreate(PETSC_COMM_WORLD, &dm));
+  PetscCall(DMSetType(dm, DMPLEX));
+  PetscCall(DMSetFromOptions(dm));
+  PetscCall(DMViewFromOptions(dm, NULL, "-dm_view"));
+  PetscCall(DMGetDimension(dm, &dim));
   /* Create a section for SEM order k */
   {
     PetscInt *numDof, d;
 
-    ierr = PetscMalloc1(user.Nf*(user.dim+1), &numDof);CHKERRQ(ierr);
+    PetscCall(PetscMalloc1(user.Nf * (dim + 1), &numDof));
     for (f = 0; f < user.Nf; ++f) {
-      for (d = 0; d <= user.dim; ++d) numDof[f*(user.dim+1)+d] = PetscPowInt(user.k[f]-1, d)*user.Nc[f];
-      size += PetscPowInt(user.k[f]+1, d)*user.Nc[f];
+      for (d = 0; d <= dim; ++d) numDof[f * (dim + 1) + d] = PetscPowInt(user.k[f] - 1, d) * user.Nc[f];
+      size += PetscPowInt(user.k[f] + 1, d) * user.Nc[f];
     }
-    ierr = DMSetNumFields(dm, user.Nf);CHKERRQ(ierr);
-    ierr = DMPlexCreateSection(dm, NULL, user.Nc, numDof, 0, NULL, NULL, NULL, NULL, &s);CHKERRQ(ierr);
-    ierr = SetSymmetries(dm, s, &user);CHKERRQ(ierr);
-    ierr = PetscFree(numDof);CHKERRQ(ierr);
+    PetscCall(DMSetNumFields(dm, user.Nf));
+    PetscCall(DMPlexCreateSection(dm, NULL, user.Nc, numDof, 0, NULL, NULL, NULL, NULL, &s));
+    PetscCall(SetSymmetries(dm, s, &user));
+    PetscCall(PetscFree(numDof));
   }
-  ierr = DMSetLocalSection(dm, s);CHKERRQ(ierr);
+  PetscCall(DMSetLocalSection(dm, s));
   /* Create spectral ordering and load in data */
-  ierr = DMPlexSetClosurePermutationTensor(dm, PETSC_DETERMINE, NULL);CHKERRQ(ierr);
-  ierr = DMGetLocalVector(dm, &u);CHKERRQ(ierr);
-  switch (user.dim) {
-  case 2: ierr = LoadData2D(dm, 2, 2, size, u, &user);CHKERRQ(ierr);break;
-  case 3: ierr = LoadData3D(dm, 2, 2, 2, size, u, &user);CHKERRQ(ierr);break;
-  }
-  /* Remove ordering and check some values */
-  ierr = PetscSectionSetClosurePermutation(s, (PetscObject) dm, user.dim, NULL);CHKERRQ(ierr);
-  switch (user.dim) {
+  PetscCall(DMPlexSetClosurePermutationTensor(dm, PETSC_DETERMINE, NULL));
+  PetscCall(DMGetLocalVector(dm, &u));
+  switch (dim) {
   case 2:
-    ierr = CheckPoint(dm, u,  0, &user);CHKERRQ(ierr);
-    ierr = CheckPoint(dm, u, 13, &user);CHKERRQ(ierr);
-    ierr = CheckPoint(dm, u, 15, &user);CHKERRQ(ierr);
-    ierr = CheckPoint(dm, u, 19, &user);CHKERRQ(ierr);
+    PetscCall(LoadData2D(dm, 2, 2, size, u, &user));
     break;
   case 3:
-    ierr = CheckPoint(dm, u,  0, &user);CHKERRQ(ierr);
-    ierr = CheckPoint(dm, u, 13, &user);CHKERRQ(ierr);
-    ierr = CheckPoint(dm, u, 15, &user);CHKERRQ(ierr);
-    ierr = CheckPoint(dm, u, 19, &user);CHKERRQ(ierr);
+    PetscCall(LoadData3D(dm, 2, 2, 2, size, u, &user));
+    break;
+  }
+  /* Remove ordering and check some values */
+  PetscCall(PetscSectionSetClosurePermutation(s, (PetscObject)dm, dim, NULL));
+  switch (dim) {
+  case 2:
+    PetscCall(CheckPoint(dm, u, 0, &user));
+    PetscCall(CheckPoint(dm, u, 13, &user));
+    PetscCall(CheckPoint(dm, u, 15, &user));
+    PetscCall(CheckPoint(dm, u, 19, &user));
+    break;
+  case 3:
+    PetscCall(CheckPoint(dm, u, 0, &user));
+    PetscCall(CheckPoint(dm, u, 13, &user));
+    PetscCall(CheckPoint(dm, u, 15, &user));
+    PetscCall(CheckPoint(dm, u, 19, &user));
     break;
   }
   /* Recreate spectral ordering and read out data */
-  ierr = DMPlexSetClosurePermutationTensor(dm, PETSC_DETERMINE, s);CHKERRQ(ierr);
-  switch (user.dim) {
-  case 2: ierr = ReadData2D(dm, u, &user);CHKERRQ(ierr);break;
-  case 3: ierr = ReadData3D(dm, u, &user);CHKERRQ(ierr);break;
+  PetscCall(DMPlexSetClosurePermutationTensor(dm, PETSC_DETERMINE, s));
+  switch (dim) {
+  case 2:
+    PetscCall(ReadData2D(dm, u, &user));
+    break;
+  case 3:
+    PetscCall(ReadData3D(dm, u, &user));
+    break;
   }
-  ierr = DMRestoreLocalVector(dm, &u);CHKERRQ(ierr);
-  ierr = PetscSectionDestroy(&s);CHKERRQ(ierr);
-  ierr = DMDestroy(&dm);CHKERRQ(ierr);
-  ierr = PetscFree(user.Nc);CHKERRQ(ierr);
-  ierr = PetscFree(user.k);CHKERRQ(ierr);
-  ierr = PetscFinalize();
-  return ierr;
+  PetscCall(DMRestoreLocalVector(dm, &u));
+  PetscCall(PetscSectionDestroy(&s));
+  PetscCall(DMDestroy(&dm));
+  PetscCall(PetscFree(user.Nc));
+  PetscCall(PetscFree(user.k));
+  PetscCall(PetscFinalize());
+  return 0;
 }
 
 /*TEST
 
   # Spectral ordering 2D 0-5
-  test:
-    suffix: 0
-    args: -dim 2 -num_fields 1 -num_components 1 -order 2
-  test:
-    suffix: 1
-    args: -dim 2 -num_fields 1 -num_components 1 -order 3
-  test:
-    suffix: 2
-    args: -dim 2 -num_fields 1 -num_components 1 -order 5
-  test:
-    suffix: 3
-    args: -dim 2 -num_fields 1 -num_components 2 -order 2
-  test:
-    suffix: 4
-    args: -dim 2 -num_fields 2 -num_components 1,1 -order 2,2
-  test:
-    suffix: 5
-    args: -dim 2 -num_fields 2 -num_components 1,2 -order 2,3
+  testset:
+    args: -dm_plex_simplex 0 -dm_plex_box_faces 2,2
+
+    test:
+      suffix: 0
+      args: -num_fields 1 -num_components 1 -order 2
+    test:
+      suffix: 1
+      args: -num_fields 1 -num_components 1 -order 3
+    test:
+      suffix: 2
+      args: -num_fields 1 -num_components 1 -order 5
+    test:
+      suffix: 3
+      args: -num_fields 1 -num_components 2 -order 2
+    test:
+      suffix: 4
+      args: -num_fields 2 -num_components 1,1 -order 2,2
+    test:
+      suffix: 5
+      args: -num_fields 2 -num_components 1,2 -order 2,3
+
   # Spectral ordering 3D 6-11
-  test:
-    suffix: 6
-    args: -dim 3 -num_fields 1 -num_components 1 -order 2
-  test:
-    suffix: 7
-    args: -dim 3 -num_fields 1 -num_components 1 -order 3
-  test:
-    suffix: 8
-    args: -dim 3 -num_fields 1 -num_components 1 -order 5
-  test:
-    suffix: 9
-    args: -dim 3 -num_fields 1 -num_components 2 -order 2
-  test:
-    suffix: 10
-    args: -dim 3 -num_fields 2 -num_components 1,1 -order 2,2
-  test:
-    suffix: 11
-    args: -dim 3 -num_fields 2 -num_components 1,2 -order 2,3
+  testset:
+    args: -dm_plex_dim 3 -dm_plex_simplex 0 -dm_plex_box_faces 2,2,2
+
+    test:
+      suffix: 6
+      args: -num_fields 1 -num_components 1 -order 2
+    test:
+      suffix: 7
+      args: -num_fields 1 -num_components 1 -order 3
+    test:
+      suffix: 8
+      args: -num_fields 1 -num_components 1 -order 5
+    test:
+      suffix: 9
+      args: -num_fields 1 -num_components 2 -order 2
+    test:
+      suffix: 10
+      args: -num_fields 2 -num_components 1,1 -order 2,2
+    test:
+      suffix: 11
+      args: -num_fields 2 -num_components 1,2 -order 2,3
 
 TEST*/

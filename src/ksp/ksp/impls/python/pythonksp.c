@@ -1,29 +1,50 @@
-#include <petsc/private/kspimpl.h>          /*I "petscksp.h" I*/
+#include <petsc/private/kspimpl.h> /*I "petscksp.h" I*/
 
-/*@C
-   KSPPythonSetType - Initalize a KSP object implemented in Python.
+/*@
+   KSPPythonSetType - Initialize a `KSP` object to a type implemented in Python.
 
-   Collective on ksp
+   Collective
 
-   Input Parameter:
-+  ksp - the linear solver (KSP) context.
+   Input Parameters:
++  ksp - the linear solver `KSP` context.
 -  pyname - full dotted Python name [package].module[.{class|function}]
 
    Options Database Key:
-.  -ksp_python_type <pyname>
+.  -ksp_python_type <pyname> - python class
 
    Level: intermediate
 
-.seealso: KSPCreate(), KSPSetType(), KSPPYTHON, PetscPythonInitialize()
+.seealso: [](ch_ksp), `KSPCreate()`, `KSPSetType()`, `KSPPYTHON`, `PetscPythonInitialize()`
 @*/
-PetscErrorCode  KSPPythonSetType(KSP ksp,const char pyname[])
+PetscErrorCode KSPPythonSetType(KSP ksp, const char pyname[])
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
-  PetscValidCharPointer(pyname,2);
-  ierr = PetscTryMethod(ksp,"KSPPythonSetType_C",(KSP, const char[]),(ksp,pyname));CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
+  PetscAssertPointer(pyname, 2);
+  PetscTryMethod(ksp, "KSPPythonSetType_C", (KSP, const char[]), (ksp, pyname));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@
+   KSPPythonGetType - Get the type of a `KSP` object implemented in Python.
+
+   Not Collective
+
+   Input Parameter:
+.  ksp - the linear solver `KSP` context.
+
+   Output Parameter:
+.  pyname - full dotted Python name [package].module[.{class|function}]
+
+   Level: intermediate
+
+.seealso: [](ch_ksp), `KSPCreate()`, `KSPSetType()`, `KSPPYTHON`, `PetscPythonInitialize()`, `KSPPythonSetType()`
+@*/
+PetscErrorCode KSPPythonGetType(KSP ksp, const char *pyname[])
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
+  PetscAssertPointer(pyname, 2);
+  PetscUseMethod(ksp, "KSPPythonGetType_C", (KSP, const char *[]), (ksp, pyname));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}

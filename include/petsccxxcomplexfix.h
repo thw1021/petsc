@@ -1,14 +1,12 @@
-#if !defined(PETSCCXXCOMPLEXFIX_H)
-#define PETSCCXXCOMPLEXFIX_H
-#if defined(__cplusplus) && defined(PETSC_HAVE_COMPLEX) && defined(PETSC_HAVE_CXX_COMPLEX)
+#pragma once
 
 /*
-    The pragma below silence all compiler warnings comming from code in this header file.
+    The pragma below silence all compiler warnings coming from code in this header file.
     In particular, it silences `-Wfloat-equal` warnings in `operator==()` and `operator!=` below.
     Other compilers beyond GCC support this pragma.
 */
-#if defined(__GNUC__) && (__GNUC__ >= 4)
-#pragma GCC system_header
+#if defined(__GNUC__) && (__GNUC__ >= 4) && !defined(__NEC__)
+  #pragma GCC system_header
 #endif
 
 /*
@@ -36,31 +34,60 @@
      This include file defines a few additional operator overload methods for the C++ complex classes to handle
      these cases naturally within PETSc code.
 
-     This file is included automatically by PETSc include files. In the small number of cases where these additional methods
-     may conflict with other code one may add
-
-     #define PETSC_SKIP_CXX_COMPLEX_FIX
-
-     before including any PETSc include files to prevent these methods from being provided.
+     This file is included in petscsystypes.h when feasible. In the small number of cases where these additional methods
+     may conflict with other code one may add '#define PETSC_SKIP_CXX_COMPLEX_FIX 1' before including any PETSc include
+     files to prevent these methods from being provided.
 */
 
-#if defined(__GNUC__) && (__GNUC__ >= 4)
-#pragma GCC system_header
-#endif
-
 #define PETSC_CXX_COMPLEX_FIX(Type) \
-static inline PetscComplex operator+(const PetscComplex& lhs, const Type& rhs) { return const_cast<PetscComplex&>(lhs) + PetscReal(rhs); } \
-static inline PetscComplex operator+(const Type& lhs, const PetscComplex& rhs) { return PetscReal(lhs) + const_cast<PetscComplex&>(rhs); } \
-static inline PetscComplex operator-(const PetscComplex& lhs, const Type& rhs) { return const_cast<PetscComplex&>(lhs) - PetscReal(rhs); } \
-static inline PetscComplex operator-(const Type& lhs, const PetscComplex& rhs) { return PetscReal(lhs) - const_cast<PetscComplex&>(rhs); } \
-static inline PetscComplex operator*(const PetscComplex& lhs, const Type& rhs) { return const_cast<PetscComplex&>(lhs) * PetscReal(rhs); } \
-static inline PetscComplex operator*(const Type& lhs, const PetscComplex& rhs) { return PetscReal(lhs) * const_cast<PetscComplex&>(rhs); } \
-static inline PetscComplex operator/(const PetscComplex& lhs, const Type& rhs) { return const_cast<PetscComplex&>(lhs) / PetscReal(rhs); } \
-static inline PetscComplex operator/(const Type& lhs, const PetscComplex& rhs) { return PetscReal(lhs) / const_cast<PetscComplex&>(rhs); } \
-static inline bool operator==(const PetscComplex& lhs, const Type& rhs) { return const_cast<PetscComplex&>(lhs).imag() == PetscReal(0) && const_cast<PetscComplex&>(lhs).real() == PetscReal(rhs); } \
-static inline bool operator==(const Type& lhs, const PetscComplex& rhs) { return const_cast<PetscComplex&>(rhs).imag() == PetscReal(0) && const_cast<PetscComplex&>(rhs).real() == PetscReal(lhs); } \
-static inline bool operator!=(const PetscComplex& lhs, const Type& rhs) { return const_cast<PetscComplex&>(lhs).imag() != PetscReal(0) || const_cast<PetscComplex&>(lhs).real() != PetscReal(rhs); } \
-static inline bool operator!=(const Type& lhs, const PetscComplex& rhs) { return const_cast<PetscComplex&>(rhs).imag() != PetscReal(0) || const_cast<PetscComplex&>(rhs).real() != PetscReal(lhs); } \
+  static inline PetscComplex operator+(const PetscComplex &lhs, const Type &rhs) \
+  { \
+    return const_cast<PetscComplex &>(lhs) + PetscReal(rhs); \
+  } \
+  static inline PetscComplex operator+(const Type &lhs, const PetscComplex &rhs) \
+  { \
+    return PetscReal(lhs) + const_cast<PetscComplex &>(rhs); \
+  } \
+  static inline PetscComplex operator-(const PetscComplex &lhs, const Type &rhs) \
+  { \
+    return const_cast<PetscComplex &>(lhs) - PetscReal(rhs); \
+  } \
+  static inline PetscComplex operator-(const Type &lhs, const PetscComplex &rhs) \
+  { \
+    return PetscReal(lhs) - const_cast<PetscComplex &>(rhs); \
+  } \
+  static inline PetscComplex operator*(const PetscComplex &lhs, const Type &rhs) \
+  { \
+    return const_cast<PetscComplex &>(lhs) * PetscReal(rhs); \
+  } \
+  static inline PetscComplex operator*(const Type &lhs, const PetscComplex &rhs) \
+  { \
+    return PetscReal(lhs) * const_cast<PetscComplex &>(rhs); \
+  } \
+  static inline PetscComplex operator/(const PetscComplex &lhs, const Type &rhs) \
+  { \
+    return const_cast<PetscComplex &>(lhs) / PetscReal(rhs); \
+  } \
+  static inline PetscComplex operator/(const Type &lhs, const PetscComplex &rhs) \
+  { \
+    return PetscReal(lhs) / const_cast<PetscComplex &>(rhs); \
+  } \
+  static inline bool operator==(const PetscComplex &lhs, const Type &rhs) \
+  { \
+    return const_cast<PetscComplex &>(lhs).imag() == PetscReal(0) && const_cast<PetscComplex &>(lhs).real() == PetscReal(rhs); \
+  } \
+  static inline bool operator==(const Type &lhs, const PetscComplex &rhs) \
+  { \
+    return const_cast<PetscComplex &>(rhs).imag() == PetscReal(0) && const_cast<PetscComplex &>(rhs).real() == PetscReal(lhs); \
+  } \
+  static inline bool operator!=(const PetscComplex &lhs, const Type &rhs) \
+  { \
+    return const_cast<PetscComplex &>(lhs).imag() != PetscReal(0) || const_cast<PetscComplex &>(lhs).real() != PetscReal(rhs); \
+  } \
+  static inline bool operator!=(const Type &lhs, const PetscComplex &rhs) \
+  { \
+    return const_cast<PetscComplex &>(rhs).imag() != PetscReal(0) || const_cast<PetscComplex &>(rhs).real() != PetscReal(lhs); \
+  } \
 /* PETSC_CXX_COMPLEX_FIX */
 
 /*
@@ -72,6 +99,3 @@ PETSC_CXX_COMPLEX_FIX(double)
 #elif defined(PETSC_USE_REAL_DOUBLE)
 PETSC_CXX_COMPLEX_FIX(PetscInt)
 #endif /* PETSC_USE_REAL_* */
-
-#endif /* __cplusplus && PETSC_HAVE_COMPLEX && PETSC_HAVE_CXX_COMPLEX */
-#endif

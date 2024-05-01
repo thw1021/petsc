@@ -1,16 +1,6 @@
+-include ../../../petscdir.mk
 
-ALL: lib
-
-CFLAGS    =
-FFLAGS    =
-SOURCEC	  = cputime.c fdate.c
-SOURCEF	  =
-SOURCEH	  = ../../../include/petsctime.h
-MANSEC	  = Sys
-LIBBASE	  = libpetscsys
-DIRS	  =
-LOCDIR	  = src/sys/time/
+MANSEC    = Sys
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
-include ${PETSC_DIR}/lib/petsc/conf/rules
-include ${PETSC_DIR}/lib/petsc/conf/test
+include ${PETSC_DIR}/lib/petsc/conf/rules_doc.mk

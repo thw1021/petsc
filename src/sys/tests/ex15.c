@@ -4,24 +4,39 @@ static char help[] = "Tests inclusion of petscsystypes.h.\n\n";
 #include <stddef.h> /* for NULL */
 
 #if defined(PETSC_HAVE_COMPLEX)
-#define TestComplexOperators(type,value)        \
-  do {                                          \
-    type x = value;                             \
-    PetscComplex z = value; (void)z;            \
-    z = x; z += x; z = z + x; z = x + z;        \
-    z = x; z -= x; z = z - x; z = x - z;        \
-    z = x; z *= x; z = z * x; z = x * z;        \
-    z = x; z /= x; z = z / x; z = x / z;        \
-    (void)(z==x); (void)(x==z);                 \
-    (void)(z!=x); (void)(x!=z);                 \
-  } while (0)
+  #define TestComplexOperators(type, value) \
+    do { \
+      type         x = value; \
+      PetscComplex z = value; \
+      (void)z; \
+      z = x; \
+      z += x; \
+      z = z + x; \
+      z = x + z; \
+      z = x; \
+      z -= x; \
+      z = z - x; \
+      z = x - z; \
+      z = x; \
+      z *= x; \
+      z = z * x; \
+      z = x * z; \
+      z = x; \
+      z /= x; \
+      z = z / x; \
+      z = x / z; \
+      (void)(z == x); \
+      (void)(x == z); \
+      (void)(z != x); \
+      (void)(x != z); \
+    } while (0)
 #endif
 
-int main(int argc,char **argv)
+int main(int argc, char **argv)
 {
   /* numeric types */
-  PetscScalar  svalue;
-  PetscReal    rvalue;
+  PetscScalar svalue;
+  PetscReal   rvalue;
 #if defined(PETSC_HAVE_COMPLEX)
   PetscComplex cvalue;
 #endif
@@ -70,7 +85,7 @@ int main(int argc,char **argv)
   PetscSegBuffer          sbuff;
   PetscOptionsHelpPrinted oh;
 
-  ierr = 0;
+  ierr   = PETSC_SUCCESS;
   svalue = 0.0;
   rvalue = 0.0;
 #if defined(PETSC_HAVE_COMPLEX)
@@ -79,14 +94,14 @@ int main(int argc,char **argv)
 
 #if defined(PETSC_HAVE_COMPLEX)
   /* this example returns an error of 141 in GitLab CI once in a great while; this is an attempt to debug that issue */
-  if (ierr != 0) return 77;
-  TestComplexOperators(signed char,1);
-  TestComplexOperators(signed short,1);
-  TestComplexOperators(signed int,1);
-  TestComplexOperators(signed long,1L);
-  TestComplexOperators(float,1.0f);
-  TestComplexOperators(double,1.0);
-  if (ierr != 0) return 78;
+  if (ierr != PETSC_SUCCESS) return 77;
+  TestComplexOperators(signed char, 1);
+  TestComplexOperators(signed short, 1);
+  TestComplexOperators(signed int, 1);
+  TestComplexOperators(signed long, 1L);
+  TestComplexOperators(float, 1.0f);
+  TestComplexOperators(double, 1.0);
+  if (ierr != PETSC_SUCCESS) return 78;
 #endif
 
   i64  = 0;
@@ -94,15 +109,15 @@ int main(int argc,char **argv)
   bi   = 0;
   rank = 0;
 
-  b    = PETSC_FALSE;
-  cid  = 0;
-  e    = ENUM_DUMMY;
-  s    = 0;
-  c    = '\0';
-  f    = 0;
-  ld   = 0.0;
-  oid  = 0;
-  ost  = 0;
+  b   = PETSC_FALSE;
+  cid = 0;
+  e   = ENUM_DUMMY;
+  s   = 0;
+  c   = '\0';
+  f   = 0;
+  ld  = 0.0;
+  oid = 0;
+  ost = 0;
 
   cp    = PETSC_COPY_VALUES;
   dt    = PETSC_DATATYPE_UNKNOWN;
@@ -128,7 +143,7 @@ int main(int argc,char **argv)
   sbuff = NULL;
   oh    = NULL;
 
-  /* prevent to issue warning about set-but-not-used variables */
+  /* prevent to issue warning about unused-but-set variables */
   (void)help;
 
   (void)svalue;
@@ -175,9 +190,8 @@ int main(int argc,char **argv)
   (void)octrl;
   (void)sbuff;
   (void)oh;
-  return ierr;
+  return (int)ierr;
 }
-
 
 /*TEST
 

@@ -1,3 +1,4 @@
+-include ../../../petscdir.mk
 manual.pdf: manual.xml sharedLibraryCheck.jpg sharedLibraryCheck.eps sharedLibraryCheck.pdf
 	docbook2pdf manual.xml
 

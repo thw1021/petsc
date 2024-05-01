@@ -3,14 +3,17 @@ import config.package
 class Configure(config.package.Package):
   def __init__(self, framework):
     config.package.Package.__init__(self, framework)
-    self.download          = ['http://ftp.mcs.anl.gov/pub/petsc/externalpackages/Chaco-2.2-p2.tar.gz']
+    self.gitcommit         = 'v2.2-p4'
+    self.download          = ['git://https://bitbucket.org/petsc/pkg-chaco.git',
+                              'https://bitbucket.org/petsc/pkg-chaco/get/'+self.gitcommit+'.tar.gz']
+    self.downloaddirnames  = ['petsc-pkg-chaco','Chaco']
     self.functions         = ['interface']
     self.includes          = [] #Chaco does not have an include file
     self.liblist           = [['libchaco.a']]
-    self.license           = 'http://www.cs.sandia.gov/web1400/1400_download.html'
     self.downloadonWindows = 1
-    self.requires32bitint  = 1;  # 1 means that the package will not work with 64 bit integers
+    self.requires32bitint  = 1   # 1 means that the package will not work with 64-bit integers
     self.hastests          = 1
+    self.requirekandr      = 1
     return
 
   def setupDependencies(self, framework):
@@ -25,25 +28,24 @@ class Configure(config.package.Package):
 
     mkfile = 'make.inc'
     g = open(os.path.join(self.packageDir, mkfile), 'w')
-    self.setCompilers.pushLanguage('C')
-    g.write('CC = '+self.setCompilers.getCompiler()+'\n')
-    g.write('CFLAGS = '+self.removeWarningFlags(self.setCompilers.getCompilerFlags())+'\n')
-    g.write('OFLAGS = '+self.removeWarningFlags(self.setCompilers.getCompilerFlags())+'\n')
-    self.setCompilers.popLanguage()
+    self.pushLanguage('C')
+    g.write('CC = '+self.getCompiler()+'\n')
+    g.write('CFLAGS = '+self.updatePackageCFlags(self.getCompilerFlags())+'\n')
+    g.write('OFLAGS = '+self.updatePackageCFlags(self.getCompilerFlags())+'\n')
+    self.popLanguage()
     g.close()
 
     if self.installNeeded(mkfile):
       try:
         self.logPrintBox('Compiling and installing chaco; this may take several minutes')
-        self.installDirProvider.printSudoPasswordMessage()
         output,err,ret  = config.package.Package.executeShellCommandSeq(
           ['make clean',
            'make',
            self.setCompilers.AR+' '+self.setCompilers.AR_FLAGS+' '+'libchaco.'+
            self.setCompilers.AR_LIB_SUFFIX+' `ls */*.o |grep -v main/main.o`',
            self.setCompilers.RANLIB+' libchaco.'+self.setCompilers.AR_LIB_SUFFIX,
-           self.installSudo+'mkdir -p '+os.path.join(self.installDir,self.libdir),
-           self.installSudo+'cp libchaco.'+self.setCompilers.AR_LIB_SUFFIX+' '+os.path.join(self.installDir,self.libdir)
+           'mkdir -p '+self.libDir,
+           'cp libchaco.'+self.setCompilers.AR_LIB_SUFFIX+' '+self.libDir
           ], cwd=os.path.join(self.packageDir, 'code'), timeout=2500, log = self.log)
 
       except RuntimeError as e:

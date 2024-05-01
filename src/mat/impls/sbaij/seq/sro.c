@@ -1,4 +1,3 @@
-
 #include <../src/mat/impls/baij/seq/baij.h>
 #include <../src/mat/impls/sbaij/seq/sbaij.h>
 
@@ -24,44 +23,42 @@ C    M(I,J) IS STORED IN ROW I (AND THUS M(J,I) IS NOT STORED);  WHEREAS
 C    IF M(I,J) WILL BE IN THE STRICT LOWER TRIANGLE OF M, THEN M(J,I) IS
 C    STORED IN ROW J (AND THUS M(I,J) IS NOT STORED).
 
-
   -- output: new index set (inew, jnew) for A and a map a2anew that maps
              values a to anew, such that all
              nonzero A_(perm(i),iperm(k)) will be stored in the upper triangle.
              Note: matrix A is not permuted by this function!
 */
-PetscErrorCode  MatReorderingSeqSBAIJ(Mat A,IS perm)
+PetscErrorCode MatReorderingSeqSBAIJ(Mat A, IS perm)
 {
-  Mat_SeqSBAIJ   *a=(Mat_SeqSBAIJ*)A->data;
-  const PetscInt mbs=a->mbs;
+  Mat_SeqSBAIJ  *a   = (Mat_SeqSBAIJ *)A->data;
+  const PetscInt mbs = a->mbs;
 
   PetscFunctionBegin;
-  if (!mbs) PetscFunctionReturn(0);
-  SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Matrix reordering is not supported for sbaij matrix. Use aij format");
+  if (!mbs) PetscFunctionReturn(PETSC_SUCCESS);
+  SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "Matrix reordering is not supported for sbaij matrix. Use aij format");
 #if 0
-  PetscErrorCode ierr;
   const PetscInt *rip,*riip;
   PetscInt       *ai,*aj,*r;
   PetscInt       *nzr,nz,jmin,jmax,j,k,ajk,i;
   IS             iperm;  /* inverse of perm */
-  ierr = ISGetIndices(perm,&rip);CHKERRQ(ierr);
+  PetscCall(ISGetIndices(perm,&rip));
 
-  ierr = ISInvertPermutation(perm,PETSC_DECIDE,&iperm);CHKERRQ(ierr);
-  ierr = ISGetIndices(iperm,&riip);CHKERRQ(ierr);
+  PetscCall(ISInvertPermutation(perm,PETSC_DECIDE,&iperm));
+  PetscCall(ISGetIndices(iperm,&riip));
 
   for (i=0; i<mbs; i++) {
-    if (rip[i] != riip[i]) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Non-symmetric permutation, use symmetric permutation for symmetric matrices");
+    PetscCheck(rip[i] == riip[i],PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Non-symmetric permutation, use symmetric permutation for symmetric matrices");
   }
-  ierr = ISRestoreIndices(iperm,&riip);CHKERRQ(ierr);
-  ierr = ISDestroy(&iperm);CHKERRQ(ierr);
+  PetscCall(ISRestoreIndices(iperm,&riip));
+  PetscCall(ISDestroy(&iperm));
 
   if (!a->inew) {
-    ierr = PetscMalloc2(mbs+1,&ai, 2*a->i[mbs],&aj);CHKERRQ(ierr);
+    PetscCall(PetscMalloc2(mbs+1,&ai, 2*a->i[mbs],&aj));
   } else {
     ai = a->inew; aj = a->jnew;
   }
-  ierr = PetscArraycpy(ai,a->i,mbs+1);CHKERRQ(ierr);
-  ierr = PetscArraycpy(aj,a->j,a->i[mbs]);CHKERRQ(ierr);
+  PetscCall(PetscArraycpy(ai,a->i,mbs+1));
+  PetscCall(PetscArraycpy(aj,a->j,a->i[mbs]));
 
   /*
      Phase 1: Find row index r in which to store each nonzero.
@@ -70,8 +67,8 @@ PetscErrorCode  MatReorderingSeqSBAIJ(Mat A,IS perm)
               s.t. a(perm(r),perm(aj)) will fall into upper triangle part.
   */
 
-  ierr = PetscMalloc1(mbs,&nzr);CHKERRQ(ierr);
-  ierr = PetscMalloc1(ai[mbs],&r);CHKERRQ(ierr);
+  PetscCall(PetscMalloc1(mbs,&nzr));
+  PetscCall(PetscMalloc1(ai[mbs],&r));
   for (i=0; i<mbs; i++) nzr[i] = 0;
   for (i=0; i<ai[mbs]; i++) r[i] = 0;
 
@@ -119,7 +116,7 @@ PetscErrorCode  MatReorderingSeqSBAIJ(Mat A,IS perm)
   }
 
   a->a2anew = aj + ai[mbs];
-  ierr      = PetscArraycpy(a->a2anew,r,ai[mbs]);CHKERRQ(ierr);
+  PetscCall(PetscArraycpy(a->a2anew,r,ai[mbs]));
 
   /* Phase 3: permute (aj,a) to upper triangular form (wrt new ordering) */
   for (j=jmin; j<jmax; j++) {
@@ -129,24 +126,22 @@ PetscErrorCode  MatReorderingSeqSBAIJ(Mat A,IS perm)
       /* ak = aa[k]; aa[k] = aa[j]; aa[j] = ak; */
     }
   }
-  ierr= ISRestoreIndices(perm,&rip);CHKERRQ(ierr);
+  PetscCall(ISRestoreIndices(perm,&rip));
 
   a->inew = ai;
   a->jnew = aj;
 
-  ierr    = ISDestroy(&a->row);CHKERRQ(ierr);
-  ierr    = ISDestroy(&a->icol);CHKERRQ(ierr);
-  ierr    = PetscObjectReference((PetscObject)perm);CHKERRQ(ierr);
-  ierr    = ISDestroy(&a->row);CHKERRQ(ierr);
+  PetscCall(ISDestroy(&a->row));
+  PetscCall(ISDestroy(&a->icol));
+  PetscCall(PetscObjectReference((PetscObject)perm));
+  PetscCall(ISDestroy(&a->row));
   a->row  = perm;
-  ierr    = PetscObjectReference((PetscObject)perm);CHKERRQ(ierr);
-  ierr    = ISDestroy(&a->icol);CHKERRQ(ierr);
+  PetscCall(PetscObjectReference((PetscObject)perm));
+  PetscCall(ISDestroy(&a->icol));
   a->icol = perm;
 
-  ierr = PetscFree(nzr);CHKERRQ(ierr);
-  ierr = PetscFree(r);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscFree(nzr));
+  PetscCall(PetscFree(r));
+  PetscFunctionReturn(PETSC_SUCCESS);
 #endif
 }
-
-

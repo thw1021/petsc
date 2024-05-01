@@ -1,4 +1,4 @@
-#include <petsc/private/partitionerimpl.h>        /*I "petscpartitioner.h" I*/
+#include <petsc/private/partitionerimpl.h> /*I "petscpartitioner.h" I*/
 
 typedef struct {
   PetscSection section;   /* Sizes for each partition */
@@ -8,69 +8,82 @@ typedef struct {
 
 static PetscErrorCode PetscPartitionerReset_Shell(PetscPartitioner part)
 {
-  PetscPartitioner_Shell *p = (PetscPartitioner_Shell *) part->data;
-  PetscErrorCode          ierr;
+  PetscPartitioner_Shell *p = (PetscPartitioner_Shell *)part->data;
 
   PetscFunctionBegin;
-  ierr = PetscSectionDestroy(&p->section);CHKERRQ(ierr);
-  ierr = ISDestroy(&p->partition);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscSectionDestroy(&p->section));
+  PetscCall(ISDestroy(&p->partition));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscPartitionerDestroy_Shell(PetscPartitioner part)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  ierr = PetscPartitionerReset_Shell(part);CHKERRQ(ierr);
-  ierr = PetscFree(part->data);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscPartitionerReset_Shell(part));
+  PetscCall(PetscFree(part->data));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscPartitionerView_Shell_ASCII(PetscPartitioner part, PetscViewer viewer)
 {
-  PetscPartitioner_Shell *p = (PetscPartitioner_Shell *) part->data;
-  PetscErrorCode          ierr;
+  PetscPartitioner_Shell *p = (PetscPartitioner_Shell *)part->data;
 
   PetscFunctionBegin;
   if (p->random) {
-    ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer, "using random partition\n");CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPopTab(viewer);CHKERRQ(ierr);
+    PetscCall(PetscViewerASCIIPushTab(viewer));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "using random partition\n"));
+    PetscCall(PetscViewerASCIIPopTab(viewer));
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscPartitionerView_Shell(PetscPartitioner part, PetscViewer viewer)
 {
-  PetscBool      iascii;
-  PetscErrorCode ierr;
+  PetscBool iascii;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(part, PETSCPARTITIONER_CLASSID, 1);
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 2);
-  ierr = PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERASCII, &iascii);CHKERRQ(ierr);
-  if (iascii) {ierr = PetscPartitionerView_Shell_ASCII(part, viewer);CHKERRQ(ierr);}
-  PetscFunctionReturn(0);
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
+  if (iascii) PetscCall(PetscPartitionerView_Shell_ASCII(part, viewer));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscPartitionerSetFromOptions_Shell(PetscOptionItems *PetscOptionsObject, PetscPartitioner part)
+static PetscErrorCode PetscPartitionerSetFromOptions_Shell(PetscPartitioner part, PetscOptionItems *PetscOptionsObject)
 {
-  PetscPartitioner_Shell *p = (PetscPartitioner_Shell *) part->data;
-  PetscErrorCode          ierr;
+  PetscInt    sizes[16], points[1024];
+  PetscInt    Npart = 16, Npoints = 1024;
+  PetscBool   random = PETSC_FALSE, set, flgSizes, flgPoints;
+  PetscMPIInt rank;
 
   PetscFunctionBegin;
-  ierr = PetscOptionsHead(PetscOptionsObject, "PetscPartitioner Shell Options");CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-petscpartitioner_shell_random", "Use a random partition", "PetscPartitionerView", PETSC_FALSE, &p->random, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsTail();CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)part), &rank));
+  PetscOptionsHeadBegin(PetscOptionsObject, "PetscPartitioner Shell Options");
+  PetscCall(PetscPartitionerShellGetRandom(part, &random));
+  PetscCall(PetscOptionsBool("-petscpartitioner_shell_random", "Use a random partition", "PetscPartitionerView", PETSC_FALSE, &random, &set));
+  if (set) PetscCall(PetscPartitionerShellSetRandom(part, random));
+  PetscCall(PetscOptionsIntArray("-petscpartitioner_shell_sizes", "The size of each partition on rank 0", "PetscPartitionerShellSetPartition", sizes, &Npart, &flgSizes));
+  PetscCall(PetscOptionsIntArray("-petscpartitioner_shell_points", "The points in each partition on rank 0", "PetscPartitionerShellSetPartition", points, &Npoints, &flgPoints));
+  PetscCheck(!(flgSizes ^ flgPoints), PetscObjectComm((PetscObject)part), PETSC_ERR_ARG_WRONG, "Must specify both the partition sizes and points");
+  if (flgSizes) {
+    PetscInt Np = 0;
+
+    for (PetscInt i = 0; i < Npart; ++i) Np += sizes[i];
+    PetscCheck(Np == Npoints, PetscObjectComm((PetscObject)part), PETSC_ERR_ARG_WRONG, "Number of input points %" PetscInt_FMT " != %" PetscInt_FMT " sum of partition sizes", Npoints, Np);
+    if (!rank) PetscCall(PetscPartitionerShellSetPartition(part, Npart, sizes, points));
+    else {
+      PetscCall(PetscArrayzero(sizes, Npart));
+      PetscCall(PetscPartitionerShellSetPartition(part, Npart, sizes, points));
+    }
+  }
+  PetscOptionsHeadEnd();
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscPartitionerPartition_Shell(PetscPartitioner part, PetscInt nparts, PetscInt numVertices, PetscInt start[], PetscInt adjacency[], PetscSection vertSection, PetscSection targetSection, PetscSection partSection, IS *partition)
+static PetscErrorCode PetscPartitionerPartition_Shell(PetscPartitioner part, PetscInt nparts, PetscInt numVertices, PetscInt start[], PetscInt adjacency[], PetscSection vertSection, PetscSection edgeSection, PetscSection targetSection, PetscSection partSection, IS *partition)
 {
-  PetscPartitioner_Shell *p = (PetscPartitioner_Shell *) part->data;
+  PetscPartitioner_Shell *p = (PetscPartitioner_Shell *)part->data;
   PetscInt                np;
-  PetscErrorCode          ierr;
 
   PetscFunctionBegin;
   if (p->random) {
@@ -78,37 +91,37 @@ static PetscErrorCode PetscPartitionerPartition_Shell(PetscPartitioner part, Pet
     PetscInt   *sizes, *points, v, p;
     PetscMPIInt rank;
 
-    ierr = MPI_Comm_rank(PetscObjectComm((PetscObject) part), &rank);CHKERRQ(ierr);
-    ierr = PetscRandomCreate(PETSC_COMM_SELF, &r);CHKERRQ(ierr);
-    ierr = PetscRandomSetInterval(r, 0.0, (PetscScalar) nparts);CHKERRQ(ierr);
-    ierr = PetscRandomSetFromOptions(r);CHKERRQ(ierr);
-    ierr = PetscCalloc2(nparts, &sizes, numVertices, &points);CHKERRQ(ierr);
-    for (v = 0; v < numVertices; ++v) {points[v] = v;}
-    for (p = 0; p < nparts; ++p) {sizes[p] = numVertices/nparts + (PetscInt) (p < numVertices % nparts);}
-    for (v = numVertices-1; v > 0; --v) {
+    PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)part), &rank));
+    PetscCall(PetscRandomCreate(PETSC_COMM_SELF, &r));
+    PetscCall(PetscRandomSetInterval(r, 0.0, (PetscScalar)nparts));
+    PetscCall(PetscRandomSetFromOptions(r));
+    PetscCall(PetscCalloc2(nparts, &sizes, numVertices, &points));
+    for (v = 0; v < numVertices; ++v) points[v] = v;
+    for (p = 0; p < nparts; ++p) sizes[p] = numVertices / nparts + (PetscInt)(p < numVertices % nparts);
+    for (v = numVertices - 1; v > 0; --v) {
       PetscReal val;
       PetscInt  w, tmp;
 
-      ierr = PetscRandomSetInterval(r, 0.0, (PetscScalar) (v+1));CHKERRQ(ierr);
-      ierr = PetscRandomGetValueReal(r, &val);CHKERRQ(ierr);
-      w    = PetscFloorReal(val);
+      PetscCall(PetscRandomSetInterval(r, 0.0, (PetscScalar)(v + 1)));
+      PetscCall(PetscRandomGetValueReal(r, &val));
+      w         = PetscFloorReal(val);
       tmp       = points[v];
       points[v] = points[w];
       points[w] = tmp;
     }
-    ierr = PetscRandomDestroy(&r);CHKERRQ(ierr);
-    ierr = PetscPartitionerShellSetPartition(part, nparts, sizes, points);CHKERRQ(ierr);
-    ierr = PetscFree2(sizes, points);CHKERRQ(ierr);
+    PetscCall(PetscRandomDestroy(&r));
+    PetscCall(PetscPartitionerShellSetPartition(part, nparts, sizes, points));
+    PetscCall(PetscFree2(sizes, points));
   }
-  if (!p->section) SETERRQ(PetscObjectComm((PetscObject) part), PETSC_ERR_ARG_WRONG, "Shell partitioner information not provided. Please call PetscPartitionerShellSetPartition()");
-  ierr = PetscSectionGetChart(p->section, NULL, &np);CHKERRQ(ierr);
-  if (nparts != np) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of requested partitions %d != configured partitions %d", nparts, np);
-  ierr = ISGetLocalSize(p->partition, &np);CHKERRQ(ierr);
-  if (numVertices != np) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of input vertices %d != configured vertices %d", numVertices, np);
-  ierr = PetscSectionCopy(p->section, partSection);CHKERRQ(ierr);
+  PetscCheck(p->section, PetscObjectComm((PetscObject)part), PETSC_ERR_ARG_WRONG, "Shell partitioner information not provided. Please call PetscPartitionerShellSetPartition()");
+  PetscCall(PetscSectionGetChart(p->section, NULL, &np));
+  PetscCheck(nparts == np, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of requested partitions %" PetscInt_FMT " != configured partitions %" PetscInt_FMT, nparts, np);
+  PetscCall(ISGetLocalSize(p->partition, &np));
+  PetscCheck(numVertices == np, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of input vertices %" PetscInt_FMT " != configured vertices %" PetscInt_FMT, numVertices, np);
+  PetscCall(PetscSectionCopy(p->section, partSection));
   *partition = p->partition;
-  ierr = PetscObjectReference((PetscObject) p->partition);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscObjectReference((PetscObject)p->partition));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscPartitionerInitialize_Shell(PetscPartitioner part)
@@ -120,7 +133,7 @@ static PetscErrorCode PetscPartitionerInitialize_Shell(PetscPartitioner part)
   part->ops->reset          = PetscPartitionerReset_Shell;
   part->ops->destroy        = PetscPartitionerDestroy_Shell;
   part->ops->partition      = PetscPartitionerPartition_Shell;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*MC
@@ -131,112 +144,108 @@ static PetscErrorCode PetscPartitionerInitialize_Shell(PetscPartitioner part)
   Options Database Keys:
 .  -petscpartitioner_shell_random - Use a random partition
 
-.seealso: PetscPartitionerType, PetscPartitionerCreate(), PetscPartitionerSetType()
+.seealso: `PetscPartitionerType`, `PetscPartitionerCreate()`, `PetscPartitionerSetType()`
 M*/
 
 PETSC_EXTERN PetscErrorCode PetscPartitionerCreate_Shell(PetscPartitioner part)
 {
   PetscPartitioner_Shell *p;
-  PetscErrorCode          ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(part, PETSCPARTITIONER_CLASSID, 1);
-  ierr       = PetscNewLog(part, &p);CHKERRQ(ierr);
+  PetscCall(PetscNew(&p));
   part->data = p;
 
-  ierr = PetscPartitionerInitialize_Shell(part);CHKERRQ(ierr);
+  PetscCall(PetscPartitionerInitialize_Shell(part));
   p->random = PETSC_FALSE;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
-  PetscPartitionerShellSetPartition - Set an artifical partition for a mesh
+/*@
+  PetscPartitionerShellSetPartition - Set an artificial partition for a mesh
 
-  Collective on PetscPartitioner
+  Collective
 
   Input Parameters:
-+ part   - The PetscPartitioner
++ part   - The `PetscPartitioner`
 . size   - The number of partitions
-. sizes  - array of length size (or NULL) providing the number of points in each partition
-- points - array of length sum(sizes) (may be NULL iff sizes is NULL), a permutation of the points that groups those assigned to each partition in order (i.e., partition 0 first, partition 1 next, etc.)
+. sizes  - array of length size (or `NULL`) providing the number of points in each partition
+- points - array of length sum(sizes) (may be `NULL` iff sizes is `NULL`), a permutation of the points that groups those assigned to each partition in order (i.e., partition 0 first, partition 1 next, etc.)
 
   Level: developer
 
-  Notes:
-    It is safe to free the sizes and points arrays after use in this routine.
+  Note:
+  It is safe to free the sizes and points arrays after use in this routine.
 
-.seealso DMPlexDistribute(), PetscPartitionerCreate()
+.seealso: `DMPlexDistribute()`, `PetscPartitionerCreate()`
 @*/
 PetscErrorCode PetscPartitionerShellSetPartition(PetscPartitioner part, PetscInt size, const PetscInt sizes[], const PetscInt points[])
 {
-  PetscPartitioner_Shell *p = (PetscPartitioner_Shell *) part->data;
+  PetscPartitioner_Shell *p = (PetscPartitioner_Shell *)part->data;
   PetscInt                proc, numPoints;
-  PetscErrorCode          ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(part, PETSCPARTITIONER_CLASSID, 1, PETSCPARTITIONERSHELL);
-  if (sizes)  {PetscValidPointer(sizes, 3);}
-  if (points) {PetscValidPointer(points, 4);}
-  ierr = PetscSectionDestroy(&p->section);CHKERRQ(ierr);
-  ierr = ISDestroy(&p->partition);CHKERRQ(ierr);
-  ierr = PetscSectionCreate(PetscObjectComm((PetscObject) part), &p->section);CHKERRQ(ierr);
-  ierr = PetscSectionSetChart(p->section, 0, size);CHKERRQ(ierr);
+  if (sizes) PetscAssertPointer(sizes, 3);
+  if (points) PetscAssertPointer(points, 4);
+  PetscCall(PetscSectionDestroy(&p->section));
+  PetscCall(ISDestroy(&p->partition));
+  PetscCall(PetscSectionCreate(PetscObjectComm((PetscObject)part), &p->section));
+  PetscCall(PetscSectionSetChart(p->section, 0, size));
   if (sizes) {
-    for (proc = 0; proc < size; ++proc) {
-      ierr = PetscSectionSetDof(p->section, proc, sizes[proc]);CHKERRQ(ierr);
-    }
+    for (proc = 0; proc < size; ++proc) PetscCall(PetscSectionSetDof(p->section, proc, sizes[proc]));
   }
-  ierr = PetscSectionSetUp(p->section);CHKERRQ(ierr);
-  ierr = PetscSectionGetStorageSize(p->section, &numPoints);CHKERRQ(ierr);
-  ierr = ISCreateGeneral(PetscObjectComm((PetscObject) part), numPoints, points, PETSC_COPY_VALUES, &p->partition);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscSectionSetUp(p->section));
+  PetscCall(PetscSectionGetStorageSize(p->section, &numPoints));
+  PetscCall(ISCreateGeneral(PetscObjectComm((PetscObject)part), numPoints, points, PETSC_COPY_VALUES, &p->partition));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
   PetscPartitionerShellSetRandom - Set the flag to use a random partition
 
-  Collective on PetscPartitioner
+  Collective
 
   Input Parameters:
-+ part   - The PetscPartitioner
++ part   - The `PetscPartitioner`
 - random - The flag to use a random partition
 
   Level: intermediate
 
-.seealso PetscPartitionerShellGetRandom(), PetscPartitionerCreate()
+.seealso: `PetscPartitionerShellGetRandom()`, `PetscPartitionerCreate()`
 @*/
 PetscErrorCode PetscPartitionerShellSetRandom(PetscPartitioner part, PetscBool random)
 {
-  PetscPartitioner_Shell *p = (PetscPartitioner_Shell *) part->data;
+  PetscPartitioner_Shell *p = (PetscPartitioner_Shell *)part->data;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(part, PETSCPARTITIONER_CLASSID, 1, PETSCPARTITIONERSHELL);
   p->random = random;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
   PetscPartitionerShellGetRandom - get the flag to use a random partition
 
-  Collective on PetscPartitioner
+  Collective
 
   Input Parameter:
-. part   - The PetscPartitioner
+. part - The `PetscPartitioner`
 
   Output Parameter:
 . random - The flag to use a random partition
 
   Level: intermediate
 
-.seealso PetscPartitionerShellSetRandom(), PetscPartitionerCreate()
+.seealso: `PetscPartitionerShellSetRandom()`, `PetscPartitionerCreate()`
 @*/
 PetscErrorCode PetscPartitionerShellGetRandom(PetscPartitioner part, PetscBool *random)
 {
-  PetscPartitioner_Shell *p = (PetscPartitioner_Shell *) part->data;
+  PetscPartitioner_Shell *p = (PetscPartitioner_Shell *)part->data;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(part, PETSCPARTITIONER_CLASSID, 1, PETSCPARTITIONERSHELL);
-  PetscValidPointer(random, 2);
+  PetscAssertPointer(random, 2);
   *random = p->random;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

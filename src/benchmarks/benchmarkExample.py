@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 from __future__ import print_function
 import os,sys
 sys.path.append(os.path.join(os.environ['PETSC_DIR'], 'config'))
@@ -482,7 +482,7 @@ if __name__ == '__main__':
   import __main__
 
   parser = argparse.ArgumentParser(description     = 'PETSc Benchmarking',
-                                   epilog          = 'This script runs src/<library>/tutorials/ex<num>, For more information, visit https://www.mcs.anl.gov/petsc',
+                                   epilog          = 'This script runs src/<library>/tutorials/ex<num>, For more information, visit https://petsc.org/',
                                    formatter_class = argparse.ArgumentDefaultsHelpFormatter)
   parser.add_argument('--library', default='SNES',                     help='The PETSc library used in this example')
   parser.add_argument('--num',     type = int, default='5',            help='The example number')

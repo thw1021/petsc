@@ -1,175 +1,147 @@
+#include <../src/mat/impls/shell/shell.h> /*I "petscmat.h" I*/
 
-#include <petsc/private/matimpl.h>        /*I "petscmat.h" I*/
-
-const char *const MatCompositeMergeTypes[] = {"left","right","MatCompositeMergeType","MAT_COMPOSITE_",NULL};
+const char *const MatCompositeMergeTypes[] = {"left", "right", "MatCompositeMergeType", "MAT_COMPOSITE_", NULL};
 
 typedef struct _Mat_CompositeLink *Mat_CompositeLink;
 struct _Mat_CompositeLink {
   Mat               mat;
   Vec               work;
-  Mat_CompositeLink next,prev;
+  Mat_CompositeLink next, prev;
 };
 
 typedef struct {
   MatCompositeType      type;
-  Mat_CompositeLink     head,tail;
+  Mat_CompositeLink     head, tail;
   Vec                   work;
-  PetscScalar           scale;        /* scale factor supplied with MatScale() */
-  Vec                   left,right;   /* left and right diagonal scaling provided with MatDiagonalScale() */
-  Vec                   leftwork,rightwork,leftwork2,rightwork2; /* Two pairs of working vectors */
   PetscInt              nmat;
   PetscBool             merge;
   MatCompositeMergeType mergetype;
   MatStructure          structure;
 
-  PetscScalar           *scalings;
-  PetscBool             merge_mvctx;  /* Whether need to merge mvctx of component matrices */
-  Vec                   *lvecs;       /* [nmat] Basically, they are Mvctx->lvec of each component matrix */
-  PetscScalar           *larray;      /* [len] Data arrays of lvecs[] are stored consecutively in larray */
-  PetscInt              len;          /* Length of larray[] */
-  Vec                   gvec;         /* Union of lvecs[] without duplicated entries */
-  PetscInt              *location;    /* A map that maps entries in garray[] to larray[] */
-  VecScatter            Mvctx;
+  PetscScalar *scalings;
+  PetscBool    merge_mvctx; /* Whether need to merge mvctx of component matrices */
+  Vec         *lvecs;       /* [nmat] Basically, they are Mvctx->lvec of each component matrix */
+  PetscScalar *larray;      /* [len] Data arrays of lvecs[] are stored consecutively in larray */
+  PetscInt     len;         /* Length of larray[] */
+  Vec          gvec;        /* Union of lvecs[] without duplicated entries */
+  PetscInt    *location;    /* A map that maps entries in garray[] to larray[] */
+  VecScatter   Mvctx;
 } Mat_Composite;
 
-PetscErrorCode MatDestroy_Composite(Mat mat)
+static PetscErrorCode MatDestroy_Composite(Mat mat)
 {
-  PetscErrorCode    ierr;
-  Mat_Composite     *shell = (Mat_Composite*)mat->data;
-  Mat_CompositeLink next   = shell->head,oldnext;
+  Mat_Composite    *shell;
+  Mat_CompositeLink next, oldnext;
   PetscInt          i;
 
   PetscFunctionBegin;
+  PetscCall(MatShellGetContext(mat, &shell));
+  next = shell->head;
   while (next) {
-    ierr = MatDestroy(&next->mat);CHKERRQ(ierr);
-    if (next->work && (!next->next || next->work != next->next->work)) {
-      ierr = VecDestroy(&next->work);CHKERRQ(ierr);
-    }
+    PetscCall(MatDestroy(&next->mat));
+    if (next->work && (!next->next || next->work != next->next->work)) PetscCall(VecDestroy(&next->work));
     oldnext = next;
     next    = next->next;
-    ierr    = PetscFree(oldnext);CHKERRQ(ierr);
+    PetscCall(PetscFree(oldnext));
   }
-  ierr = VecDestroy(&shell->work);CHKERRQ(ierr);
-  ierr = VecDestroy(&shell->left);CHKERRQ(ierr);
-  ierr = VecDestroy(&shell->right);CHKERRQ(ierr);
-  ierr = VecDestroy(&shell->leftwork);CHKERRQ(ierr);
-  ierr = VecDestroy(&shell->rightwork);CHKERRQ(ierr);
-  ierr = VecDestroy(&shell->leftwork2);CHKERRQ(ierr);
-  ierr = VecDestroy(&shell->rightwork2);CHKERRQ(ierr);
+  PetscCall(VecDestroy(&shell->work));
 
   if (shell->Mvctx) {
-    for (i=0; i<shell->nmat; i++) {ierr = VecDestroy(&shell->lvecs[i]);CHKERRQ(ierr);}
-    ierr = PetscFree3(shell->location,shell->larray,shell->lvecs);CHKERRQ(ierr);
-    ierr = PetscFree(shell->larray);CHKERRQ(ierr);
-    ierr = VecDestroy(&shell->gvec);CHKERRQ(ierr);
-    ierr = VecScatterDestroy(&shell->Mvctx);CHKERRQ(ierr);
+    for (i = 0; i < shell->nmat; i++) PetscCall(VecDestroy(&shell->lvecs[i]));
+    PetscCall(PetscFree3(shell->location, shell->larray, shell->lvecs));
+    PetscCall(PetscFree(shell->larray));
+    PetscCall(VecDestroy(&shell->gvec));
+    PetscCall(VecScatterDestroy(&shell->Mvctx));
   }
 
-  ierr = PetscFree(shell->scalings);CHKERRQ(ierr);
-  ierr = PetscFree(mat->data);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscFree(shell->scalings));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatCompositeAddMat_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatCompositeSetType_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatCompositeGetType_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatCompositeSetMergeType_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatCompositeSetMatStructure_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatCompositeGetMatStructure_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatCompositeMerge_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatCompositeGetNumberMat_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatCompositeGetMat_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatCompositeSetScalings_C", NULL));
+  PetscCall(PetscFree(shell));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatShellSetContext_C", NULL)); // needed to avoid a call to MatShellSetContext_Immutable()
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatMult_Composite_Multiplicative(Mat A,Vec x,Vec y)
+static PetscErrorCode MatMult_Composite_Multiplicative(Mat A, Vec x, Vec y)
 {
-  Mat_Composite     *shell = (Mat_Composite*)A->data;
-  Mat_CompositeLink next   = shell->head;
-  PetscErrorCode    ierr;
-  Vec               in,out;
-  PetscScalar       scale;
-  PetscInt          i;
+  Mat_Composite    *shell;
+  Mat_CompositeLink next;
+  Vec               out;
 
   PetscFunctionBegin;
-  if (!next) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must provide at least one matrix with MatCompositeAddMat()");
-  in = x;
-  if (shell->right) {
-    if (!shell->rightwork) {
-      ierr = VecDuplicate(shell->right,&shell->rightwork);CHKERRQ(ierr);
-    }
-    ierr = VecPointwiseMult(shell->rightwork,shell->right,in);CHKERRQ(ierr);
-    in   = shell->rightwork;
-  }
+  PetscCall(MatShellGetContext(A, &shell));
+  next = shell->head;
+  PetscCheck(next, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Must provide at least one matrix with MatCompositeAddMat()");
   while (next->next) {
     if (!next->work) { /* should reuse previous work if the same size */
-      ierr = MatCreateVecs(next->mat,NULL,&next->work);CHKERRQ(ierr);
+      PetscCall(MatCreateVecs(next->mat, NULL, &next->work));
     }
-    out  = next->work;
-    ierr = MatMult(next->mat,in,out);CHKERRQ(ierr);
-    in   = out;
+    out = next->work;
+    PetscCall(MatMult(next->mat, x, out));
+    x    = out;
     next = next->next;
   }
-  ierr = MatMult(next->mat,in,y);CHKERRQ(ierr);
-  if (shell->left) {
-    ierr = VecPointwiseMult(y,shell->left,y);CHKERRQ(ierr);
+  PetscCall(MatMult(next->mat, x, y));
+  if (shell->scalings) {
+    PetscScalar scale = 1.0;
+    for (PetscInt i = 0; i < shell->nmat; i++) scale *= shell->scalings[i];
+    PetscCall(VecScale(y, scale));
   }
-  scale = shell->scale;
-  if (shell->scalings) {for (i=0; i<shell->nmat; i++) scale *= shell->scalings[i];}
-  ierr = VecScale(y,scale);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatMultTranspose_Composite_Multiplicative(Mat A,Vec x,Vec y)
+static PetscErrorCode MatMultTranspose_Composite_Multiplicative(Mat A, Vec x, Vec y)
 {
-  Mat_Composite     *shell = (Mat_Composite*)A->data;
-  Mat_CompositeLink tail   = shell->tail;
-  PetscErrorCode    ierr;
-  Vec               in,out;
-  PetscScalar       scale;
-  PetscInt          i;
+  Mat_Composite    *shell;
+  Mat_CompositeLink tail;
+  Vec               out;
 
   PetscFunctionBegin;
-  if (!tail) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must provide at least one matrix with MatCompositeAddMat()");
-  in = x;
-  if (shell->left) {
-    if (!shell->leftwork) {
-      ierr = VecDuplicate(shell->left,&shell->leftwork);CHKERRQ(ierr);
-    }
-    ierr = VecPointwiseMult(shell->leftwork,shell->left,in);CHKERRQ(ierr);
-    in   = shell->leftwork;
-  }
+  PetscCall(MatShellGetContext(A, &shell));
+  tail = shell->tail;
+  PetscCheck(tail, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Must provide at least one matrix with MatCompositeAddMat()");
   while (tail->prev) {
     if (!tail->prev->work) { /* should reuse previous work if the same size */
-      ierr = MatCreateVecs(tail->mat,NULL,&tail->prev->work);CHKERRQ(ierr);
+      PetscCall(MatCreateVecs(tail->mat, NULL, &tail->prev->work));
     }
-    out  = tail->prev->work;
-    ierr = MatMultTranspose(tail->mat,in,out);CHKERRQ(ierr);
-    in   = out;
+    out = tail->prev->work;
+    PetscCall(MatMultTranspose(tail->mat, x, out));
+    x    = out;
     tail = tail->prev;
   }
-  ierr = MatMultTranspose(tail->mat,in,y);CHKERRQ(ierr);
-  if (shell->right) {
-    ierr = VecPointwiseMult(y,shell->right,y);CHKERRQ(ierr);
+  PetscCall(MatMultTranspose(tail->mat, x, y));
+  if (shell->scalings) {
+    PetscScalar scale = 1.0;
+    for (PetscInt i = 0; i < shell->nmat; i++) scale *= shell->scalings[i];
+    PetscCall(VecScale(y, scale));
   }
-
-  scale = shell->scale;
-  if (shell->scalings) {for (i=0; i<shell->nmat; i++) scale *= shell->scalings[i];}
-  ierr = VecScale(y,scale);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatMult_Composite(Mat mat,Vec x,Vec y)
+static PetscErrorCode MatMult_Composite(Mat mat, Vec x, Vec y)
 {
-  PetscErrorCode    ierr;
-  Mat_Composite     *shell = (Mat_Composite*)mat->data;
-  Mat_CompositeLink cur = shell->head;
-  Vec               in,y2,xin;
-  Mat               A,B;
-  PetscInt          i,j,k,n,nuniq,lo,hi,mid,*gindices,*buf,*tmp,tot;
+  Mat_Composite     *shell;
+  Mat_CompositeLink  cur;
+  Vec                y2, xin;
+  Mat                A, B;
+  PetscInt           i, j, k, n, nuniq, lo, hi, mid, *gindices, *buf, *tmp, tot;
   const PetscScalar *vals;
   const PetscInt    *garray;
-  IS                ix,iy;
-  PetscBool         match;
+  IS                 ix, iy;
+  PetscBool          match;
 
   PetscFunctionBegin;
-  if (!cur) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must provide at least one matrix with MatCompositeAddMat()");
-  in = x;
-  if (shell->right) {
-    if (!shell->rightwork) {
-      ierr = VecDuplicate(shell->right,&shell->rightwork);CHKERRQ(ierr);
-    }
-    ierr = VecPointwiseMult(shell->rightwork,shell->right,in);CHKERRQ(ierr);
-    in   = shell->rightwork;
-  }
+  PetscCall(MatShellGetContext(mat, &shell));
+  cur = shell->head;
+  PetscCheck(cur, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Must provide at least one matrix with MatCompositeAddMat()");
 
   /* Try to merge Mvctx when instructed but not yet done. We did not do it in MatAssemblyEnd() since at that time
      we did not know whether mat is ADDITIVE or MULTIPLICATIVE. Only now we are assured mat is ADDITIVE and
@@ -177,8 +149,8 @@ PetscErrorCode MatMult_Composite(Mat mat,Vec x,Vec y)
    */
   if (shell->merge_mvctx && !shell->Mvctx) {
     /* Currently only implemented for MATMPIAIJ */
-    for (cur=shell->head; cur; cur=cur->next) {
-      ierr = PetscObjectTypeCompare((PetscObject)cur->mat,MATMPIAIJ,&match);CHKERRQ(ierr);
+    for (cur = shell->head; cur; cur = cur->next) {
+      PetscCall(PetscObjectTypeCompare((PetscObject)cur->mat, MATMPIAIJ, &match));
       if (!match) {
         shell->merge_mvctx = PETSC_FALSE;
         goto skip_merge_mvctx;
@@ -187,1000 +159,761 @@ PetscErrorCode MatMult_Composite(Mat mat,Vec x,Vec y)
 
     /* Go through matrices first time to count total number of nonzero off-diag columns (may have dups) */
     tot = 0;
-    for (cur=shell->head; cur; cur=cur->next) {
-      ierr = MatMPIAIJGetSeqAIJ(cur->mat,NULL,&B,NULL);CHKERRQ(ierr);
-      ierr = MatGetLocalSize(B,NULL,&n);CHKERRQ(ierr);
+    for (cur = shell->head; cur; cur = cur->next) {
+      PetscCall(MatMPIAIJGetSeqAIJ(cur->mat, NULL, &B, NULL));
+      PetscCall(MatGetLocalSize(B, NULL, &n));
       tot += n;
     }
-    ierr = PetscMalloc3(tot,&shell->location,tot,&shell->larray,shell->nmat,&shell->lvecs);CHKERRQ(ierr);
+    PetscCall(PetscMalloc3(tot, &shell->location, tot, &shell->larray, shell->nmat, &shell->lvecs));
     shell->len = tot;
 
     /* Go through matrices second time to sort off-diag columns and remove dups */
-    ierr  = PetscMalloc1(tot,&gindices);CHKERRQ(ierr); /* No Malloc2() since we will give one to petsc and free the other */
-    ierr  = PetscMalloc1(tot,&buf);CHKERRQ(ierr);
+    PetscCall(PetscMalloc1(tot, &gindices)); /* No Malloc2() since we will give one to petsc and free the other */
+    PetscCall(PetscMalloc1(tot, &buf));
     nuniq = 0; /* Number of unique nonzero columns */
-    for (cur=shell->head; cur; cur=cur->next) {
-      ierr = MatMPIAIJGetSeqAIJ(cur->mat,NULL,&B,&garray);CHKERRQ(ierr);
-      ierr = MatGetLocalSize(B,NULL,&n);CHKERRQ(ierr);
+    for (cur = shell->head; cur; cur = cur->next) {
+      PetscCall(MatMPIAIJGetSeqAIJ(cur->mat, NULL, &B, &garray));
+      PetscCall(MatGetLocalSize(B, NULL, &n));
       /* Merge pre-sorted garray[0,n) and gindices[0,nuniq) to buf[] */
       i = j = k = 0;
       while (i < n && j < nuniq) {
         if (garray[i] < gindices[j]) buf[k++] = garray[i++];
         else if (garray[i] > gindices[j]) buf[k++] = gindices[j++];
-        else {buf[k++] = garray[i++]; j++;}
+        else {
+          buf[k++] = garray[i++];
+          j++;
+        }
       }
       /* Copy leftover in garray[] or gindices[] */
       if (i < n) {
-        ierr  = PetscArraycpy(buf+k,garray+i,n-i);CHKERRQ(ierr);
-        nuniq = k + n-i;
+        PetscCall(PetscArraycpy(buf + k, garray + i, n - i));
+        nuniq = k + n - i;
       } else if (j < nuniq) {
-        ierr  = PetscArraycpy(buf+k,gindices+j,nuniq-j);CHKERRQ(ierr);
-        nuniq = k + nuniq-j;
+        PetscCall(PetscArraycpy(buf + k, gindices + j, nuniq - j));
+        nuniq = k + nuniq - j;
       } else nuniq = k;
       /* Swap gindices and buf to merge garray of the next matrix */
       tmp      = gindices;
       gindices = buf;
       buf      = tmp;
     }
-    ierr = PetscFree(buf);CHKERRQ(ierr);
+    PetscCall(PetscFree(buf));
 
     /* Go through matrices third time to build a map from gindices[] to garray[] */
     tot = 0;
-    for (cur=shell->head,j=0; cur; cur=cur->next,j++) { /* j-th matrix */
-      ierr = MatMPIAIJGetSeqAIJ(cur->mat,NULL,&B,&garray);CHKERRQ(ierr);
-      ierr = MatGetLocalSize(B,NULL,&n);CHKERRQ(ierr);
-      ierr = VecCreateSeqWithArray(PETSC_COMM_SELF,1,n,NULL,&shell->lvecs[j]);CHKERRQ(ierr);
+    for (cur = shell->head, j = 0; cur; cur = cur->next, j++) { /* j-th matrix */
+      PetscCall(MatMPIAIJGetSeqAIJ(cur->mat, NULL, &B, &garray));
+      PetscCall(MatGetLocalSize(B, NULL, &n));
+      PetscCall(VecCreateSeqWithArray(PETSC_COMM_SELF, 1, n, NULL, &shell->lvecs[j]));
       /* This is an optimized PetscFindInt(garray[i],nuniq,gindices,&shell->location[tot+i]), using the fact that garray[] is also sorted */
-      lo   = 0;
-      for (i=0; i<n; i++) {
+      lo = 0;
+      for (i = 0; i < n; i++) {
         hi = nuniq;
         while (hi - lo > 1) {
-          mid = lo + (hi - lo)/2;
+          mid = lo + (hi - lo) / 2;
           if (garray[i] < gindices[mid]) hi = mid;
           else lo = mid;
         }
-        shell->location[tot+i] = lo; /* gindices[lo] = garray[i] */
-        lo++; /* Since garray[i+1] > garray[i], we can safely advance lo */
+        shell->location[tot + i] = lo; /* gindices[lo] = garray[i] */
+        lo++;                          /* Since garray[i+1] > garray[i], we can safely advance lo */
       }
       tot += n;
     }
 
     /* Build merged Mvctx */
-    ierr = ISCreateGeneral(PETSC_COMM_SELF,nuniq,gindices,PETSC_OWN_POINTER,&ix);CHKERRQ(ierr);
-    ierr = ISCreateStride(PETSC_COMM_SELF,nuniq,0,1,&iy);CHKERRQ(ierr);
-    ierr = VecCreateMPIWithArray(PetscObjectComm((PetscObject)mat),1,mat->cmap->n,mat->cmap->N,NULL,&xin);CHKERRQ(ierr);
-    ierr = VecCreateSeq(PETSC_COMM_SELF,nuniq,&shell->gvec);CHKERRQ(ierr);
-    ierr = VecScatterCreate(xin,ix,shell->gvec,iy,&shell->Mvctx);CHKERRQ(ierr);
-    ierr = VecDestroy(&xin);CHKERRQ(ierr);
-    ierr = ISDestroy(&ix);CHKERRQ(ierr);
-    ierr = ISDestroy(&iy);CHKERRQ(ierr);
+    PetscCall(ISCreateGeneral(PETSC_COMM_SELF, nuniq, gindices, PETSC_OWN_POINTER, &ix));
+    PetscCall(ISCreateStride(PETSC_COMM_SELF, nuniq, 0, 1, &iy));
+    PetscCall(VecCreateMPIWithArray(PetscObjectComm((PetscObject)mat), 1, mat->cmap->n, mat->cmap->N, NULL, &xin));
+    PetscCall(VecCreateSeq(PETSC_COMM_SELF, nuniq, &shell->gvec));
+    PetscCall(VecScatterCreate(xin, ix, shell->gvec, iy, &shell->Mvctx));
+    PetscCall(VecDestroy(&xin));
+    PetscCall(ISDestroy(&ix));
+    PetscCall(ISDestroy(&iy));
   }
 
 skip_merge_mvctx:
-  ierr = VecSet(y,0);CHKERRQ(ierr);
-  if (!shell->leftwork2) {ierr = VecDuplicate(y,&shell->leftwork2);CHKERRQ(ierr);}
-  y2 = shell->leftwork2;
+  PetscCall(VecSet(y, 0));
+  if (!((Mat_Shell *)mat->data)->left_work) PetscCall(VecDuplicate(y, &(((Mat_Shell *)mat->data)->left_work)));
+  y2 = ((Mat_Shell *)mat->data)->left_work;
 
   if (shell->Mvctx) { /* Have a merged Mvctx */
     /* Suppose we want to compute y = sMx, where s is the scaling factor and A, B are matrix M's diagonal/off-diagonal part. We could do
-       in y = s(Ax1 + Bx2) or y = sAx1 + sBx2. The former incurs less FLOPS than the latter, but the latter provides an oppertunity to
+       in y = s(Ax1 + Bx2) or y = sAx1 + sBx2. The former incurs less FLOPS than the latter, but the latter provides an opportunity to
        overlap communication/computation since we can do sAx1 while communicating x2. Here, we use the former approach.
      */
-    ierr = VecScatterBegin(shell->Mvctx,in,shell->gvec,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-    ierr = VecScatterEnd(shell->Mvctx,in,shell->gvec,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
+    PetscCall(VecScatterBegin(shell->Mvctx, x, shell->gvec, INSERT_VALUES, SCATTER_FORWARD));
+    PetscCall(VecScatterEnd(shell->Mvctx, x, shell->gvec, INSERT_VALUES, SCATTER_FORWARD));
 
-    ierr = VecGetArrayRead(shell->gvec,&vals);CHKERRQ(ierr);
-    for (i=0; i<shell->len; i++) shell->larray[i] = vals[shell->location[i]];
-    ierr = VecRestoreArrayRead(shell->gvec,&vals);CHKERRQ(ierr);
+    PetscCall(VecGetArrayRead(shell->gvec, &vals));
+    for (i = 0; i < shell->len; i++) shell->larray[i] = vals[shell->location[i]];
+    PetscCall(VecRestoreArrayRead(shell->gvec, &vals));
 
-    for (cur=shell->head,tot=i=0; cur; cur=cur->next,i++) { /* i-th matrix */
-      ierr = MatMPIAIJGetSeqAIJ(cur->mat,&A,&B,NULL);CHKERRQ(ierr);
-      ierr = (*A->ops->mult)(A,in,y2);CHKERRQ(ierr);
-      ierr = MatGetLocalSize(B,NULL,&n);CHKERRQ(ierr);
-      ierr = VecPlaceArray(shell->lvecs[i],&shell->larray[tot]);CHKERRQ(ierr);
-      ierr = (*B->ops->multadd)(B,shell->lvecs[i],y2,y2);CHKERRQ(ierr);
-      ierr = VecResetArray(shell->lvecs[i]);CHKERRQ(ierr);
-      ierr = VecAXPY(y,(shell->scalings ? shell->scalings[i] : 1.0),y2);CHKERRQ(ierr);
+    for (cur = shell->head, tot = i = 0; cur; cur = cur->next, i++) { /* i-th matrix */
+      PetscCall(MatMPIAIJGetSeqAIJ(cur->mat, &A, &B, NULL));
+      PetscUseTypeMethod(A, mult, x, y2);
+      PetscCall(MatGetLocalSize(B, NULL, &n));
+      PetscCall(VecPlaceArray(shell->lvecs[i], &shell->larray[tot]));
+      PetscUseTypeMethod(B, multadd, shell->lvecs[i], y2, y2);
+      PetscCall(VecResetArray(shell->lvecs[i]));
+      PetscCall(VecAXPY(y, (shell->scalings ? shell->scalings[i] : 1.0), y2));
       tot += n;
     }
   } else {
     if (shell->scalings) {
-      for (cur=shell->head,i=0; cur; cur=cur->next,i++) {
-        ierr = MatMult(cur->mat,in,y2);CHKERRQ(ierr);
-        ierr = VecAXPY(y,shell->scalings[i],y2);CHKERRQ(ierr);
+      for (cur = shell->head, i = 0; cur; cur = cur->next, i++) {
+        PetscCall(MatMult(cur->mat, x, y2));
+        PetscCall(VecAXPY(y, shell->scalings[i], y2));
       }
     } else {
-      for (cur=shell->head; cur; cur=cur->next) {ierr = MatMultAdd(cur->mat,in,y,y);CHKERRQ(ierr);}
+      for (cur = shell->head; cur; cur = cur->next) PetscCall(MatMultAdd(cur->mat, x, y, y));
     }
   }
-
-  if (shell->left) {ierr = VecPointwiseMult(y,shell->left,y);CHKERRQ(ierr);}
-  ierr = VecScale(y,shell->scale);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatMultTranspose_Composite(Mat A,Vec x,Vec y)
+static PetscErrorCode MatMultTranspose_Composite(Mat A, Vec x, Vec y)
 {
-  Mat_Composite     *shell = (Mat_Composite*)A->data;
-  Mat_CompositeLink next   = shell->head;
-  PetscErrorCode    ierr;
-  Vec               in,y2 = NULL;
+  Mat_Composite    *shell;
+  Mat_CompositeLink next;
+  Vec               y2 = NULL;
   PetscInt          i;
 
   PetscFunctionBegin;
-  if (!next) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must provide at least one matrix with MatCompositeAddMat()");
-  in = x;
-  if (shell->left) {
-    if (!shell->leftwork) {
-      ierr = VecDuplicate(shell->left,&shell->leftwork);CHKERRQ(ierr);
-    }
-    ierr = VecPointwiseMult(shell->leftwork,shell->left,in);CHKERRQ(ierr);
-    in   = shell->leftwork;
-  }
+  PetscCall(MatShellGetContext(A, &shell));
+  next = shell->head;
+  PetscCheck(next, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Must provide at least one matrix with MatCompositeAddMat()");
 
-  ierr = MatMultTranspose(next->mat,in,y);CHKERRQ(ierr);
+  PetscCall(MatMultTranspose(next->mat, x, y));
   if (shell->scalings) {
-    ierr = VecScale(y,shell->scalings[0]);CHKERRQ(ierr);
-    if (!shell->rightwork2) {ierr = VecDuplicate(y,&shell->rightwork2);CHKERRQ(ierr);}
-    y2 = shell->rightwork2;
+    PetscCall(VecScale(y, shell->scalings[0]));
+    if (!((Mat_Shell *)A->data)->right_work) PetscCall(VecDuplicate(y, &(((Mat_Shell *)A->data)->right_work)));
+    y2 = ((Mat_Shell *)A->data)->right_work;
   }
   i = 1;
   while ((next = next->next)) {
-    if (!shell->scalings) {ierr = MatMultTransposeAdd(next->mat,in,y,y);CHKERRQ(ierr);}
+    if (!shell->scalings) PetscCall(MatMultTransposeAdd(next->mat, x, y, y));
     else {
-      ierr = MatMultTranspose(next->mat,in,y2);CHKERRQ(ierr);
-      ierr = VecAXPY(y,shell->scalings[i++],y2);CHKERRQ(ierr);
+      PetscCall(MatMultTranspose(next->mat, x, y2));
+      PetscCall(VecAXPY(y, shell->scalings[i++], y2));
     }
   }
-  if (shell->right) {
-    ierr = VecPointwiseMult(y,shell->right,y);CHKERRQ(ierr);
-  }
-  ierr = VecScale(y,shell->scale);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatMultAdd_Composite(Mat A,Vec x,Vec y,Vec z)
+static PetscErrorCode MatGetDiagonal_Composite(Mat A, Vec v)
 {
-  Mat_Composite     *shell = (Mat_Composite*)A->data;
-  PetscErrorCode    ierr;
-
-  PetscFunctionBegin;
-  if (y != z) {
-    ierr = MatMult(A,x,z);CHKERRQ(ierr);
-    ierr = VecAXPY(z,1.0,y);CHKERRQ(ierr);
-  } else {
-    if (!shell->leftwork) {
-      ierr = VecDuplicate(z,&shell->leftwork);CHKERRQ(ierr);
-    }
-    ierr = MatMult(A,x,shell->leftwork);CHKERRQ(ierr);
-    ierr = VecCopy(y,z);CHKERRQ(ierr);
-    ierr = VecAXPY(z,1.0,shell->leftwork);CHKERRQ(ierr);
-  }
-  PetscFunctionReturn(0);
-}
-
-PetscErrorCode MatMultTransposeAdd_Composite(Mat A,Vec x,Vec y, Vec z)
-{
-  Mat_Composite     *shell = (Mat_Composite*)A->data;
-  PetscErrorCode    ierr;
-
-  PetscFunctionBegin;
-  if (y != z) {
-    ierr = MatMultTranspose(A,x,z);CHKERRQ(ierr);
-    ierr = VecAXPY(z,1.0,y);CHKERRQ(ierr);
-  } else {
-    if (!shell->rightwork) {
-      ierr = VecDuplicate(z,&shell->rightwork);CHKERRQ(ierr);
-    }
-    ierr = MatMultTranspose(A,x,shell->rightwork);CHKERRQ(ierr);
-    ierr = VecCopy(y,z);CHKERRQ(ierr);
-    ierr = VecAXPY(z,1.0,shell->rightwork);CHKERRQ(ierr);
-  }
-  PetscFunctionReturn(0);
-}
-
-PetscErrorCode MatGetDiagonal_Composite(Mat A,Vec v)
-{
-  Mat_Composite     *shell = (Mat_Composite*)A->data;
-  Mat_CompositeLink next   = shell->head;
-  PetscErrorCode    ierr;
+  Mat_Composite    *shell;
+  Mat_CompositeLink next;
   PetscInt          i;
 
   PetscFunctionBegin;
-  if (!next) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must provide at least one matrix with MatCompositeAddMat()");
-  if (shell->right || shell->left) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot get diagonal if left or right scaling");
+  PetscCall(MatShellGetContext(A, &shell));
+  next = shell->head;
+  PetscCheck(next, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Must provide at least one matrix with MatCompositeAddMat()");
+  PetscCall(MatGetDiagonal(next->mat, v));
+  if (shell->scalings) PetscCall(VecScale(v, shell->scalings[0]));
 
-  ierr = MatGetDiagonal(next->mat,v);CHKERRQ(ierr);
-  if (shell->scalings) {ierr = VecScale(v,shell->scalings[0]);CHKERRQ(ierr);}
-
-  if (next->next && !shell->work) {
-    ierr = VecDuplicate(v,&shell->work);CHKERRQ(ierr);
-  }
+  if (next->next && !shell->work) PetscCall(VecDuplicate(v, &shell->work));
   i = 1;
   while ((next = next->next)) {
-    ierr = MatGetDiagonal(next->mat,shell->work);CHKERRQ(ierr);
-    ierr = VecAXPY(v,(shell->scalings ? shell->scalings[i++] : 1.0),shell->work);CHKERRQ(ierr);
+    PetscCall(MatGetDiagonal(next->mat, shell->work));
+    PetscCall(VecAXPY(v, (shell->scalings ? shell->scalings[i++] : 1.0), shell->work));
   }
-  ierr = VecScale(v,shell->scale);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatAssemblyEnd_Composite(Mat Y,MatAssemblyType t)
+static PetscErrorCode MatAssemblyEnd_Composite(Mat Y, MatAssemblyType t)
 {
-  Mat_Composite     *shell = (Mat_Composite*)Y->data;
-  PetscErrorCode    ierr;
+  Mat_Composite *shell;
 
   PetscFunctionBegin;
-  if (shell->merge) {
-    ierr = MatCompositeMerge(Y);CHKERRQ(ierr);
-  }
-
-  PetscFunctionReturn(0);
+  PetscCall(MatShellGetContext(Y, &shell));
+  if (shell->merge) PetscCall(MatCompositeMerge(Y));
+  else PetscCall(MatAssemblyEnd_Shell(Y, t));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatScale_Composite(Mat inA,PetscScalar alpha)
+static PetscErrorCode MatSetFromOptions_Composite(Mat A, PetscOptionItems *PetscOptionsObject)
 {
-  Mat_Composite *a = (Mat_Composite*)inA->data;
+  Mat_Composite *a;
 
   PetscFunctionBegin;
-  a->scale *= alpha;
-  PetscFunctionReturn(0);
-}
-
-PetscErrorCode MatDiagonalScale_Composite(Mat inA,Vec left,Vec right)
-{
-  Mat_Composite  *a = (Mat_Composite*)inA->data;
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  if (left) {
-    if (!a->left) {
-      ierr = VecDuplicate(left,&a->left);CHKERRQ(ierr);
-      ierr = VecCopy(left,a->left);CHKERRQ(ierr);
-    } else {
-      ierr = VecPointwiseMult(a->left,left,a->left);CHKERRQ(ierr);
-    }
-  }
-  if (right) {
-    if (!a->right) {
-      ierr = VecDuplicate(right,&a->right);CHKERRQ(ierr);
-      ierr = VecCopy(right,a->right);CHKERRQ(ierr);
-    } else {
-      ierr = VecPointwiseMult(a->right,right,a->right);CHKERRQ(ierr);
-    }
-  }
-  PetscFunctionReturn(0);
-}
-
-PetscErrorCode MatSetFromOptions_Composite(PetscOptionItems *PetscOptionsObject,Mat A)
-{
-  Mat_Composite  *a = (Mat_Composite*)A->data;
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  ierr = PetscOptionsHead(PetscOptionsObject,"MATCOMPOSITE options");CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-mat_composite_merge","Merge at MatAssemblyEnd","MatCompositeMerge",a->merge,&a->merge,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsEnum("-mat_composite_merge_type","Set composite merge direction","MatCompositeSetMergeType",MatCompositeMergeTypes,(PetscEnum)a->mergetype,(PetscEnum*)&a->mergetype,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-mat_composite_merge_mvctx","Merge MatMult() vecscat contexts","MatCreateComposite",a->merge_mvctx,&a->merge_mvctx,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsTail();CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(MatShellGetContext(A, &a));
+  PetscOptionsHeadBegin(PetscOptionsObject, "MATCOMPOSITE options");
+  PetscCall(PetscOptionsBool("-mat_composite_merge", "Merge at MatAssemblyEnd", "MatCompositeMerge", a->merge, &a->merge, NULL));
+  PetscCall(PetscOptionsEnum("-mat_composite_merge_type", "Set composite merge direction", "MatCompositeSetMergeType", MatCompositeMergeTypes, (PetscEnum)a->mergetype, (PetscEnum *)&a->mergetype, NULL));
+  PetscCall(PetscOptionsBool("-mat_composite_merge_mvctx", "Merge MatMult() vecscat contexts", "MatCreateComposite", a->merge_mvctx, &a->merge_mvctx, NULL));
+  PetscOptionsHeadEnd();
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   MatCreateComposite - Creates a matrix as the sum or product of one or more matrices
+  MatCreateComposite - Creates a matrix as the sum or product of one or more matrices
 
   Collective
 
-   Input Parameters:
-+  comm - MPI communicator
-.  nmat - number of matrices to put in
--  mats - the matrices
+  Input Parameters:
++ comm - MPI communicator
+. nmat - number of matrices to put in
+- mats - the matrices
 
-   Output Parameter:
-.  mat - the matrix
+  Output Parameter:
+. mat - the matrix
 
-   Options Database Keys:
-+  -mat_composite_merge         - merge in MatAssemblyEnd()
-.  -mat_composite_merge_mvctx   - merge Mvctx of component matrices to optimize communication in MatMult() for ADDITIVE matrices
--  -mat_composite_merge_type    - set merge direction
+  Options Database Keys:
++ -mat_composite_merge       - merge in `MatAssemblyEnd()`
+. -mat_composite_merge_mvctx - merge Mvctx of component matrices to optimize communication in `MatMult()` for ADDITIVE matrices
+- -mat_composite_merge_type  - set merge direction
 
-   Level: advanced
+  Level: advanced
 
-   Notes:
-     Alternative construction
-$       MatCreate(comm,&mat);
-$       MatSetSizes(mat,m,n,M,N);
-$       MatSetType(mat,MATCOMPOSITE);
-$       MatCompositeAddMat(mat,mats[0]);
-$       ....
-$       MatCompositeAddMat(mat,mats[nmat-1]);
-$       MatAssemblyBegin(mat,MAT_FINAL_ASSEMBLY);
-$       MatAssemblyEnd(mat,MAT_FINAL_ASSEMBLY);
+  Note:
+  Alternative construction
+.vb
+       MatCreate(comm,&mat);
+       MatSetSizes(mat,m,n,M,N);
+       MatSetType(mat,MATCOMPOSITE);
+       MatCompositeAddMat(mat,mats[0]);
+       ....
+       MatCompositeAddMat(mat,mats[nmat-1]);
+       MatAssemblyBegin(mat,MAT_FINAL_ASSEMBLY);
+       MatAssemblyEnd(mat,MAT_FINAL_ASSEMBLY);
+.ve
 
-     For the multiplicative form the product is mat[nmat-1]*mat[nmat-2]*....*mat[0]
+  For the multiplicative form the product is mat[nmat-1]*mat[nmat-2]*....*mat[0]
 
-.seealso: MatDestroy(), MatMult(), MatCompositeAddMat(), MatCompositeGetMat(), MatCompositeMerge(), MatCompositeSetType(), MATCOMPOSITE
-
+.seealso: [](ch_matrices), `Mat`, `MatDestroy()`, `MatMult()`, `MatCompositeAddMat()`, `MatCompositeGetMat()`, `MatCompositeMerge()`, `MatCompositeSetType()`,
+          `MATCOMPOSITE`, `MatCompositeType`
 @*/
-PetscErrorCode MatCreateComposite(MPI_Comm comm,PetscInt nmat,const Mat *mats,Mat *mat)
+PetscErrorCode MatCreateComposite(MPI_Comm comm, PetscInt nmat, const Mat *mats, Mat *mat)
 {
-  PetscErrorCode ierr;
-  PetscInt       m,n,M,N,i;
+  PetscInt m, n, M, N, i;
 
   PetscFunctionBegin;
-  if (nmat < 1) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Must pass in at least one matrix");
-  PetscValidPointer(mat,3);
+  PetscCheck(nmat >= 1, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Must pass in at least one matrix");
+  PetscAssertPointer(mat, 4);
 
-  ierr = MatGetLocalSize(mats[0],PETSC_IGNORE,&n);CHKERRQ(ierr);
-  ierr = MatGetLocalSize(mats[nmat-1],&m,PETSC_IGNORE);CHKERRQ(ierr);
-  ierr = MatGetSize(mats[0],PETSC_IGNORE,&N);CHKERRQ(ierr);
-  ierr = MatGetSize(mats[nmat-1],&M,PETSC_IGNORE);CHKERRQ(ierr);
-  ierr = MatCreate(comm,mat);CHKERRQ(ierr);
-  ierr = MatSetSizes(*mat,m,n,M,N);CHKERRQ(ierr);
-  ierr = MatSetType(*mat,MATCOMPOSITE);CHKERRQ(ierr);
-  for (i=0; i<nmat; i++) {
-    ierr = MatCompositeAddMat(*mat,mats[i]);CHKERRQ(ierr);
-  }
-  ierr = MatAssemblyBegin(*mat,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  ierr = MatAssemblyEnd(*mat,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(MatGetLocalSize(mats[0], PETSC_IGNORE, &n));
+  PetscCall(MatGetLocalSize(mats[nmat - 1], &m, PETSC_IGNORE));
+  PetscCall(MatGetSize(mats[0], PETSC_IGNORE, &N));
+  PetscCall(MatGetSize(mats[nmat - 1], &M, PETSC_IGNORE));
+  PetscCall(MatCreate(comm, mat));
+  PetscCall(MatSetSizes(*mat, m, n, M, N));
+  PetscCall(MatSetType(*mat, MATCOMPOSITE));
+  for (i = 0; i < nmat; i++) PetscCall(MatCompositeAddMat(*mat, mats[i]));
+  PetscCall(MatAssemblyBegin(*mat, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(*mat, MAT_FINAL_ASSEMBLY));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-
-static PetscErrorCode MatCompositeAddMat_Composite(Mat mat,Mat smat)
+static PetscErrorCode MatCompositeAddMat_Composite(Mat mat, Mat smat)
 {
-  Mat_Composite     *shell = (Mat_Composite*)mat->data;
-  Mat_CompositeLink ilink,next = shell->head;
-  PetscErrorCode    ierr;
+  Mat_Composite    *shell;
+  Mat_CompositeLink ilink, next;
+  VecType           vtype_mat, vtype_smat;
+  PetscBool         match;
 
   PetscFunctionBegin;
-  ierr        = PetscNewLog(mat,&ilink);CHKERRQ(ierr);
+  PetscCall(MatShellGetContext(mat, &shell));
+  next = shell->head;
+  PetscCall(PetscNew(&ilink));
   ilink->next = NULL;
-  ierr        = PetscObjectReference((PetscObject)smat);CHKERRQ(ierr);
-  ilink->mat  = smat;
+  PetscCall(PetscObjectReference((PetscObject)smat));
+  ilink->mat = smat;
 
   if (!next) shell->head = ilink;
   else {
-    while (next->next) {
-      next = next->next;
-    }
+    while (next->next) next = next->next;
     next->next  = ilink;
     ilink->prev = next;
   }
-  shell->tail =  ilink;
+  shell->tail = ilink;
   shell->nmat += 1;
+
+  /* If all of the partial matrices have the same default vector type, then the composite matrix should also have this default type.
+     Otherwise, the default type should be "standard". */
+  PetscCall(MatGetVecType(smat, &vtype_smat));
+  if (shell->nmat == 1) PetscCall(MatSetVecType(mat, vtype_smat));
+  else {
+    PetscCall(MatGetVecType(mat, &vtype_mat));
+    PetscCall(PetscStrcmp(vtype_smat, vtype_mat, &match));
+    if (!match) PetscCall(MatSetVecType(mat, VECSTANDARD));
+  }
 
   /* Retain the old scalings (if any) and expand it with a 1.0 for the newly added matrix */
   if (shell->scalings) {
-    ierr = PetscRealloc(sizeof(PetscScalar)*shell->nmat,&shell->scalings);CHKERRQ(ierr);
-    shell->scalings[shell->nmat-1] = 1.0;
+    PetscCall(PetscRealloc(sizeof(PetscScalar) * shell->nmat, &shell->scalings));
+    shell->scalings[shell->nmat - 1] = 1.0;
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-    MatCompositeAddMat - Add another matrix to a composite matrix.
+  MatCompositeAddMat - Add another matrix to a composite matrix.
 
-   Collective on Mat
+  Collective
 
-    Input Parameters:
-+   mat - the composite matrix
--   smat - the partial matrix
+  Input Parameters:
++ mat  - the composite matrix
+- smat - the partial matrix
 
-   Level: advanced
+  Level: advanced
 
-.seealso: MatCreateComposite(), MatCompositeGetMat(), MATCOMPOSITE
+.seealso: [](ch_matrices), `Mat`, `MatCreateComposite()`, `MatCompositeGetMat()`, `MATCOMPOSITE`
 @*/
-PetscErrorCode MatCompositeAddMat(Mat mat,Mat smat)
+PetscErrorCode MatCompositeAddMat(Mat mat, Mat smat)
 {
-  PetscErrorCode    ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
-  PetscValidHeaderSpecific(smat,MAT_CLASSID,2);
-  ierr = PetscUseMethod(mat,"MatCompositeAddMat_C",(Mat,Mat),(mat,smat));CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
+  PetscValidHeaderSpecific(smat, MAT_CLASSID, 2);
+  PetscUseMethod(mat, "MatCompositeAddMat_C", (Mat, Mat), (mat, smat));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatCompositeSetType_Composite(Mat mat,MatCompositeType type)
+static PetscErrorCode MatCompositeSetType_Composite(Mat mat, MatCompositeType type)
 {
-  Mat_Composite  *b = (Mat_Composite*)mat->data;
+  Mat_Composite *b;
 
   PetscFunctionBegin;
+  PetscCall(MatShellGetContext(mat, &b));
   b->type = type;
   if (type == MAT_COMPOSITE_MULTIPLICATIVE) {
-    mat->ops->getdiagonal   = NULL;
-    mat->ops->mult          = MatMult_Composite_Multiplicative;
-    mat->ops->multtranspose = MatMultTranspose_Composite_Multiplicative;
-    b->merge_mvctx          = PETSC_FALSE;
+    PetscCall(MatShellSetOperation(mat, MATOP_GET_DIAGONAL, NULL));
+    PetscCall(MatShellSetOperation(mat, MATOP_MULT, (void (*)(void))MatMult_Composite_Multiplicative));
+    PetscCall(MatShellSetOperation(mat, MATOP_MULT_TRANSPOSE, (void (*)(void))MatMultTranspose_Composite_Multiplicative));
+    b->merge_mvctx = PETSC_FALSE;
   } else {
-    mat->ops->getdiagonal   = MatGetDiagonal_Composite;
-    mat->ops->mult          = MatMult_Composite;
-    mat->ops->multtranspose = MatMultTranspose_Composite;
+    PetscCall(MatShellSetOperation(mat, MATOP_GET_DIAGONAL, (void (*)(void))MatGetDiagonal_Composite));
+    PetscCall(MatShellSetOperation(mat, MATOP_MULT, (void (*)(void))MatMult_Composite));
+    PetscCall(MatShellSetOperation(mat, MATOP_MULT_TRANSPOSE, (void (*)(void))MatMultTranspose_Composite));
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   MatCompositeSetType - Indicates if the matrix is defined as the sum of a set of matrices or the product.
+  MatCompositeSetType - Indicates if the matrix is defined as the sum of a set of matrices or the product.
 
-   Logically Collective on Mat
+  Logically Collective
 
-   Input Parameters:
-.  mat - the composite matrix
+  Input Parameters:
++ mat  - the composite matrix
+- type - the `MatCompositeType` to use for the matrix
 
-   Level: advanced
+  Level: advanced
 
-.seealso: MatDestroy(), MatMult(), MatCompositeAddMat(), MatCreateComposite(), MatCompositeGetType(), MATCOMPOSITE
-
+.seealso: [](ch_matrices), `Mat`, `MatDestroy()`, `MatMult()`, `MatCompositeAddMat()`, `MatCreateComposite()`, `MatCompositeGetType()`, `MATCOMPOSITE`,
+          `MatCompositeType`
 @*/
-PetscErrorCode MatCompositeSetType(Mat mat,MatCompositeType type)
+PetscErrorCode MatCompositeSetType(Mat mat, MatCompositeType type)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
-  PetscValidLogicalCollectiveEnum(mat,type,2);
-  ierr = PetscUseMethod(mat,"MatCompositeSetType_C",(Mat,MatCompositeType),(mat,type));CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
+  PetscValidLogicalCollectiveEnum(mat, type, 2);
+  PetscUseMethod(mat, "MatCompositeSetType_C", (Mat, MatCompositeType), (mat, type));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatCompositeGetType_Composite(Mat mat,MatCompositeType *type)
+static PetscErrorCode MatCompositeGetType_Composite(Mat mat, MatCompositeType *type)
 {
-  Mat_Composite  *b = (Mat_Composite*)mat->data;
+  Mat_Composite *shell;
 
   PetscFunctionBegin;
-  *type = b->type;
-  PetscFunctionReturn(0);
+  PetscCall(MatShellGetContext(mat, &shell));
+  *type = shell->type;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   MatCompositeGetType - Returns type of composite.
+  MatCompositeGetType - Returns type of composite.
 
-   Not Collective
+  Not Collective
 
-   Input Parameter:
-.  mat - the composite matrix
+  Input Parameter:
+. mat - the composite matrix
 
-   Output Parameter:
-.  type - type of composite
+  Output Parameter:
+. type - type of composite
 
-   Level: advanced
+  Level: advanced
 
-.seealso: MatCreateComposite(), MatCompositeSetType(), MATCOMPOSITE
-
+.seealso: [](ch_matrices), `Mat`, `MatCreateComposite()`, `MatCompositeSetType()`, `MATCOMPOSITE`, `MatCompositeType`
 @*/
-PetscErrorCode MatCompositeGetType(Mat mat,MatCompositeType *type)
+PetscErrorCode MatCompositeGetType(Mat mat, MatCompositeType *type)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
-  PetscValidPointer(type,2);
-  ierr = PetscUseMethod(mat,"MatCompositeGetType_C",(Mat,MatCompositeType*),(mat,type));CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
+  PetscAssertPointer(type, 2);
+  PetscUseMethod(mat, "MatCompositeGetType_C", (Mat, MatCompositeType *), (mat, type));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatCompositeSetMatStructure_Composite(Mat mat,MatStructure str)
+static PetscErrorCode MatCompositeSetMatStructure_Composite(Mat mat, MatStructure str)
 {
-  Mat_Composite  *b = (Mat_Composite*)mat->data;
+  Mat_Composite *shell;
 
   PetscFunctionBegin;
-  b->structure = str;
-  PetscFunctionReturn(0);
+  PetscCall(MatShellGetContext(mat, &shell));
+  shell->structure = str;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   MatCompositeSetMatStructure - Indicates structure of matrices in the composite matrix.
+  MatCompositeSetMatStructure - Indicates structure of matrices in the composite matrix.
 
-   Not Collective
+  Not Collective
 
-   Input Parameters:
-+  mat - the composite matrix
--  str - either SAME_NONZERO_PATTERN, DIFFERENT_NONZERO_PATTERN (default) or SUBSET_NONZERO_PATTERN
+  Input Parameters:
++ mat - the composite matrix
+- str - either `SAME_NONZERO_PATTERN`, `DIFFERENT_NONZERO_PATTERN` (default) or `SUBSET_NONZERO_PATTERN`
 
-   Level: advanced
+  Level: advanced
 
-   Notes:
-    Information about the matrices structure is used in MatCompositeMerge() for additive composite matrix.
+  Note:
+  Information about the matrices structure is used in `MatCompositeMerge()` for additive composite matrix.
 
-.seealso: MatAXPY(), MatCreateComposite(), MatCompositeMerge() MatCompositeGetMatStructure(), MATCOMPOSITE
-
+.seealso: [](ch_matrices), `Mat`, `MatAXPY()`, `MatCreateComposite()`, `MatCompositeMerge()` `MatCompositeGetMatStructure()`, `MATCOMPOSITE`
 @*/
-PetscErrorCode MatCompositeSetMatStructure(Mat mat,MatStructure str)
+PetscErrorCode MatCompositeSetMatStructure(Mat mat, MatStructure str)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
-  ierr = PetscUseMethod(mat,"MatCompositeSetMatStructure_C",(Mat,MatStructure),(mat,str));CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
+  PetscUseMethod(mat, "MatCompositeSetMatStructure_C", (Mat, MatStructure), (mat, str));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatCompositeGetMatStructure_Composite(Mat mat,MatStructure *str)
+static PetscErrorCode MatCompositeGetMatStructure_Composite(Mat mat, MatStructure *str)
 {
-  Mat_Composite  *b = (Mat_Composite*)mat->data;
+  Mat_Composite *shell;
 
   PetscFunctionBegin;
-  *str = b->structure;
-  PetscFunctionReturn(0);
+  PetscCall(MatShellGetContext(mat, &shell));
+  *str = shell->structure;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   MatCompositeGetMatStructure - Returns the structure of matrices in the composite matrix.
+  MatCompositeGetMatStructure - Returns the structure of matrices in the composite matrix.
 
-   Not Collective
+  Not Collective
 
-   Input Parameter:
-.  mat - the composite matrix
+  Input Parameter:
+. mat - the composite matrix
 
-   Output Parameter:
-.  str - structure of the matrices
+  Output Parameter:
+. str - structure of the matrices
 
-   Level: advanced
+  Level: advanced
 
-.seealso: MatCreateComposite(), MatCompositeSetMatStructure(), MATCOMPOSITE
-
+.seealso: [](ch_matrices), `Mat`, `MatCreateComposite()`, `MatCompositeSetMatStructure()`, `MATCOMPOSITE`
 @*/
-PetscErrorCode MatCompositeGetMatStructure(Mat mat,MatStructure *str)
+PetscErrorCode MatCompositeGetMatStructure(Mat mat, MatStructure *str)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
-  PetscValidPointer(str,2);
-  ierr = PetscUseMethod(mat,"MatCompositeGetMatStructure_C",(Mat,MatStructure*),(mat,str));CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
+  PetscAssertPointer(str, 2);
+  PetscUseMethod(mat, "MatCompositeGetMatStructure_C", (Mat, MatStructure *), (mat, str));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatCompositeSetMergeType_Composite(Mat mat,MatCompositeMergeType type)
+static PetscErrorCode MatCompositeSetMergeType_Composite(Mat mat, MatCompositeMergeType type)
 {
-  Mat_Composite     *shell = (Mat_Composite*)mat->data;
+  Mat_Composite *shell;
 
   PetscFunctionBegin;
+  PetscCall(MatShellGetContext(mat, &shell));
   shell->mergetype = type;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   MatCompositeSetMergeType - Sets order of MatCompositeMerge().
+  MatCompositeSetMergeType - Sets order of `MatCompositeMerge()`.
 
-   Logically Collective on Mat
+  Logically Collective
 
-   Input Parameter:
-+  mat - the composite matrix
--  type - MAT_COMPOSITE_MERGE RIGHT (default) to start merge from right with the first added matrix (mat[0]),
-          MAT_COMPOSITE_MERGE_LEFT to start merge from left with the last added matrix (mat[nmat-1])
+  Input Parameters:
++ mat  - the composite matrix
+- type - `MAT_COMPOSITE_MERGE RIGHT` (default) to start merge from right with the first added matrix (mat[0]),
+          `MAT_COMPOSITE_MERGE_LEFT` to start merge from left with the last added matrix (mat[nmat-1])
 
-   Level: advanced
+  Level: advanced
 
-   Notes:
-    The resulting matrix is the same regardles of the MergeType. Only the order of operation is changed.
-    If set to MAT_COMPOSITE_MERGE_RIGHT the order of the merge is mat[nmat-1]*(mat[nmat-2]*(...*(mat[1]*mat[0])))
-    otherwise the order is (((mat[nmat-1]*mat[nmat-2])*mat[nmat-3])*...)*mat[0].
+  Note:
+  The resulting matrix is the same regardless of the `MatCompositeMergeType`. Only the order of operation is changed.
+  If set to `MAT_COMPOSITE_MERGE_RIGHT` the order of the merge is mat[nmat-1]*(mat[nmat-2]*(...*(mat[1]*mat[0])))
+  otherwise the order is (((mat[nmat-1]*mat[nmat-2])*mat[nmat-3])*...)*mat[0].
 
-.seealso: MatCreateComposite(), MatCompositeMerge(), MATCOMPOSITE
-
+.seealso: [](ch_matrices), `Mat`, `MatCreateComposite()`, `MatCompositeMerge()`, `MATCOMPOSITE`
 @*/
-PetscErrorCode MatCompositeSetMergeType(Mat mat,MatCompositeMergeType type)
+PetscErrorCode MatCompositeSetMergeType(Mat mat, MatCompositeMergeType type)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
-  PetscValidLogicalCollectiveEnum(mat,type,2);
-  ierr = PetscUseMethod(mat,"MatCompositeSetMergeType_C",(Mat,MatCompositeMergeType),(mat,type));CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
+  PetscValidLogicalCollectiveEnum(mat, type, 2);
+  PetscUseMethod(mat, "MatCompositeSetMergeType_C", (Mat, MatCompositeMergeType), (mat, type));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode MatCompositeMerge_Composite(Mat mat)
 {
-  Mat_Composite     *shell = (Mat_Composite*)mat->data;
-  Mat_CompositeLink next   = shell->head, prev = shell->tail;
-  PetscErrorCode    ierr;
-  Mat               tmat,newmat;
-  Vec               left,right;
-  PetscScalar       scale;
+  Mat_Composite    *shell;
+  Mat_CompositeLink next, prev;
+  Mat               tmat, newmat;
+  Vec               left, right, dshift;
+  PetscScalar       scale, shift;
   PetscInt          i;
 
   PetscFunctionBegin;
-  if (!next) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must provide at least one matrix with MatCompositeAddMat()");
-
-  PetscFunctionBegin;
-  scale = shell->scale;
+  PetscCall(MatShellGetContext(mat, &shell));
+  next = shell->head;
+  prev = shell->tail;
+  PetscCheck(next, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Must provide at least one matrix with MatCompositeAddMat()");
+  PetscCheck(!((Mat_Shell *)mat->data)->zrows && !((Mat_Shell *)mat->data)->zcols, PetscObjectComm((PetscObject)mat), PETSC_ERR_SUP, "Cannot call MatCompositeMerge() if MatZeroRows() or MatZeroRowsColumns() has been called on the input Mat"); // TODO FIXME: lift this limitation by calling MatZeroRows()/MatZeroRowsColumns() after the merge
+  PetscCheck(!((Mat_Shell *)mat->data)->axpy, PetscObjectComm((PetscObject)mat), PETSC_ERR_SUP, "Cannot call MatCompositeMerge() if MatAXPY() has been called on the input Mat"); // TODO FIXME: lift this limitation by calling MatAXPY() after the merge
+  scale = ((Mat_Shell *)mat->data)->vscale;
+  shift = ((Mat_Shell *)mat->data)->vshift;
   if (shell->type == MAT_COMPOSITE_ADDITIVE) {
     if (shell->mergetype == MAT_COMPOSITE_MERGE_RIGHT) {
       i = 0;
-      ierr = MatDuplicate(next->mat,MAT_COPY_VALUES,&tmat);CHKERRQ(ierr);
-      if (shell->scalings) {ierr = MatScale(tmat,shell->scalings[i++]);CHKERRQ(ierr);}
-      while ((next = next->next)) {
-        ierr = MatAXPY(tmat,(shell->scalings ? shell->scalings[i++] : 1.0),next->mat,shell->structure);CHKERRQ(ierr);
-      }
+      PetscCall(MatDuplicate(next->mat, MAT_COPY_VALUES, &tmat));
+      if (shell->scalings) PetscCall(MatScale(tmat, shell->scalings[i++]));
+      while ((next = next->next)) PetscCall(MatAXPY(tmat, (shell->scalings ? shell->scalings[i++] : 1.0), next->mat, shell->structure));
     } else {
-      i = shell->nmat-1;
-      ierr = MatDuplicate(prev->mat,MAT_COPY_VALUES,&tmat);CHKERRQ(ierr);
-      if (shell->scalings) {ierr = MatScale(tmat,shell->scalings[i--]);CHKERRQ(ierr);}
-      while ((prev = prev->prev)) {
-        ierr = MatAXPY(tmat,(shell->scalings ? shell->scalings[i--] : 1.0),prev->mat,shell->structure);CHKERRQ(ierr);
-      }
+      i = shell->nmat - 1;
+      PetscCall(MatDuplicate(prev->mat, MAT_COPY_VALUES, &tmat));
+      if (shell->scalings) PetscCall(MatScale(tmat, shell->scalings[i--]));
+      while ((prev = prev->prev)) PetscCall(MatAXPY(tmat, (shell->scalings ? shell->scalings[i--] : 1.0), prev->mat, shell->structure));
     }
   } else {
     if (shell->mergetype == MAT_COMPOSITE_MERGE_RIGHT) {
-      ierr = MatDuplicate(next->mat,MAT_COPY_VALUES,&tmat);CHKERRQ(ierr);
+      PetscCall(MatDuplicate(next->mat, MAT_COPY_VALUES, &tmat));
       while ((next = next->next)) {
-        ierr = MatMatMult(next->mat,tmat,MAT_INITIAL_MATRIX,PETSC_DECIDE,&newmat);CHKERRQ(ierr);
-        ierr = MatDestroy(&tmat);CHKERRQ(ierr);
+        PetscCall(MatMatMult(next->mat, tmat, MAT_INITIAL_MATRIX, PETSC_DECIDE, &newmat));
+        PetscCall(MatDestroy(&tmat));
         tmat = newmat;
       }
     } else {
-      ierr = MatDuplicate(prev->mat,MAT_COPY_VALUES,&tmat);CHKERRQ(ierr);
+      PetscCall(MatDuplicate(prev->mat, MAT_COPY_VALUES, &tmat));
       while ((prev = prev->prev)) {
-        ierr = MatMatMult(tmat,prev->mat,MAT_INITIAL_MATRIX,PETSC_DECIDE,&newmat);CHKERRQ(ierr);
-        ierr = MatDestroy(&tmat);CHKERRQ(ierr);
+        PetscCall(MatMatMult(tmat, prev->mat, MAT_INITIAL_MATRIX, PETSC_DECIDE, &newmat));
+        PetscCall(MatDestroy(&tmat));
         tmat = newmat;
       }
     }
-    if (shell->scalings) {for (i=0; i<shell->nmat; i++) scale *= shell->scalings[i];}
+    if (shell->scalings) {
+      for (i = 0; i < shell->nmat; i++) scale *= shell->scalings[i];
+    }
   }
 
-  if ((left = shell->left)) {ierr = PetscObjectReference((PetscObject)left);CHKERRQ(ierr);}
-  if ((right = shell->right)) {ierr = PetscObjectReference((PetscObject)right);CHKERRQ(ierr);}
+  if ((left = ((Mat_Shell *)mat->data)->left)) PetscCall(PetscObjectReference((PetscObject)left));
+  if ((right = ((Mat_Shell *)mat->data)->right)) PetscCall(PetscObjectReference((PetscObject)right));
+  if ((dshift = ((Mat_Shell *)mat->data)->dshift)) PetscCall(PetscObjectReference((PetscObject)dshift));
 
-  ierr = MatHeaderReplace(mat,&tmat);CHKERRQ(ierr);
+  PetscCall(MatHeaderReplace(mat, &tmat));
 
-  ierr = MatDiagonalScale(mat,left,right);CHKERRQ(ierr);
-  ierr = MatScale(mat,scale);CHKERRQ(ierr);
-  ierr = VecDestroy(&left);CHKERRQ(ierr);
-  ierr = VecDestroy(&right);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(MatDiagonalScale(mat, left, right));
+  PetscCall(MatScale(mat, scale));
+  PetscCall(MatShift(mat, shift));
+  PetscCall(VecDestroy(&left));
+  PetscCall(VecDestroy(&right));
+  if (dshift) {
+    PetscCall(MatDiagonalSet(mat, dshift, ADD_VALUES));
+    PetscCall(VecDestroy(&dshift));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   MatCompositeMerge - Given a composite matrix, replaces it with a "regular" matrix
-     by summing or computing the product of all the matrices inside the composite matrix.
+  MatCompositeMerge - Given a composite matrix, replaces it with a "regular" matrix
+  by summing or computing the product of all the matrices inside the composite matrix.
 
   Collective
 
-   Input Parameters:
-.  mat - the composite matrix
+  Input Parameter:
+. mat - the composite matrix
 
+  Options Database Keys:
++ -mat_composite_merge      - merge in `MatAssemblyEnd()`
+- -mat_composite_merge_type - set merge direction
 
-   Options Database Keys:
-+  -mat_composite_merge - merge in MatAssemblyEnd()
--  -mat_composite_merge_type - set merge direction
+  Level: advanced
 
-   Level: advanced
+  Note:
+  The `MatType` of the resulting matrix will be the same as the `MatType` of the FIRST matrix in the composite matrix.
 
-   Notes:
-      The MatType of the resulting matrix will be the same as the MatType of the FIRST
-    matrix in the composite matrix.
-
-.seealso: MatDestroy(), MatMult(), MatCompositeAddMat(), MatCreateComposite(), MatCompositeSetMatStructure(), MatCompositeSetMergeType(), MATCOMPOSITE
-
+.seealso: [](ch_matrices), `Mat`, `MatDestroy()`, `MatMult()`, `MatCompositeAddMat()`, `MatCreateComposite()`, `MatCompositeSetMatStructure()`, `MatCompositeSetMergeType()`, `MATCOMPOSITE`
 @*/
 PetscErrorCode MatCompositeMerge(Mat mat)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
-  ierr = PetscUseMethod(mat,"MatCompositeMerge_C",(Mat),(mat));CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
+  PetscUseMethod(mat, "MatCompositeMerge_C", (Mat), (mat));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatCompositeGetNumberMat_Composite(Mat mat,PetscInt *nmat)
+static PetscErrorCode MatCompositeGetNumberMat_Composite(Mat mat, PetscInt *nmat)
 {
-  Mat_Composite     *shell = (Mat_Composite*)mat->data;
+  Mat_Composite *shell;
 
   PetscFunctionBegin;
+  PetscCall(MatShellGetContext(mat, &shell));
   *nmat = shell->nmat;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   MatCompositeGetNumberMat - Returns the number of matrices in the composite matrix.
+  MatCompositeGetNumberMat - Returns the number of matrices in the composite matrix.
 
-   Not Collective
+  Not Collective
 
-   Input Parameter:
-.  mat - the composite matrix
+  Input Parameter:
+. mat - the composite matrix
 
-   Output Parameter:
-.  nmat - number of matrices in the composite matrix
+  Output Parameter:
+. nmat - number of matrices in the composite matrix
 
-   Level: advanced
+  Level: advanced
 
-.seealso: MatCreateComposite(), MatCompositeGetMat(), MATCOMPOSITE
-
+.seealso: [](ch_matrices), `Mat`, `MatCreateComposite()`, `MatCompositeGetMat()`, `MATCOMPOSITE`
 @*/
-PetscErrorCode MatCompositeGetNumberMat(Mat mat,PetscInt *nmat)
+PetscErrorCode MatCompositeGetNumberMat(Mat mat, PetscInt *nmat)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
-  PetscValidPointer(nmat,2);
-  ierr = PetscUseMethod(mat,"MatCompositeGetNumberMat_C",(Mat,PetscInt*),(mat,nmat));CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
+  PetscAssertPointer(nmat, 2);
+  PetscUseMethod(mat, "MatCompositeGetNumberMat_C", (Mat, PetscInt *), (mat, nmat));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatCompositeGetMat_Composite(Mat mat,PetscInt i,Mat *Ai)
+static PetscErrorCode MatCompositeGetMat_Composite(Mat mat, PetscInt i, Mat *Ai)
 {
-  Mat_Composite     *shell = (Mat_Composite*)mat->data;
+  Mat_Composite    *shell;
   Mat_CompositeLink ilink;
   PetscInt          k;
 
   PetscFunctionBegin;
-  if (i >= shell->nmat) SETERRQ2(PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_OUTOFRANGE,"index out of range: %d >= %d",i,shell->nmat);
+  PetscCall(MatShellGetContext(mat, &shell));
+  PetscCheck(i < shell->nmat, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_OUTOFRANGE, "index out of range: %" PetscInt_FMT " >= %" PetscInt_FMT, i, shell->nmat);
   ilink = shell->head;
-  for (k=0; k<i; k++) {
-    ilink = ilink->next;
-  }
+  for (k = 0; k < i; k++) ilink = ilink->next;
   *Ai = ilink->mat;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   MatCompositeGetMat - Returns the ith matrix from the composite matrix.
+  MatCompositeGetMat - Returns the ith matrix from the composite matrix.
 
-   Logically Collective on Mat
+  Logically Collective
 
-   Input Parameter:
-+  mat - the composite matrix
--  i - the number of requested matrix
+  Input Parameters:
++ mat - the composite matrix
+- i   - the number of requested matrix
 
-   Output Parameter:
-.  Ai - ith matrix in composite
+  Output Parameter:
+. Ai - ith matrix in composite
 
-   Level: advanced
+  Level: advanced
 
-.seealso: MatCreateComposite(), MatCompositeGetNumberMat(), MatCompositeAddMat(), MATCOMPOSITE
-
+.seealso: [](ch_matrices), `Mat`, `MatCreateComposite()`, `MatCompositeGetNumberMat()`, `MatCompositeAddMat()`, `MATCOMPOSITE`
 @*/
-PetscErrorCode MatCompositeGetMat(Mat mat,PetscInt i,Mat *Ai)
+PetscErrorCode MatCompositeGetMat(Mat mat, PetscInt i, Mat *Ai)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
-  PetscValidLogicalCollectiveInt(mat,i,2);
-  PetscValidPointer(Ai,3);
-  ierr = PetscUseMethod(mat,"MatCompositeGetMat_C",(Mat,PetscInt,Mat*),(mat,i,Ai));CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
+  PetscValidLogicalCollectiveInt(mat, i, 2);
+  PetscAssertPointer(Ai, 3);
+  PetscUseMethod(mat, "MatCompositeGetMat_C", (Mat, PetscInt, Mat *), (mat, i, Ai));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatCompositeSetScalings_Composite(Mat mat,const PetscScalar *scalings)
+static PetscErrorCode MatCompositeSetScalings_Composite(Mat mat, const PetscScalar *scalings)
 {
-  PetscErrorCode ierr;
-  Mat_Composite  *shell = (Mat_Composite*)mat->data;
+  Mat_Composite *shell;
   PetscInt       nmat;
 
   PetscFunctionBegin;
-  ierr = MatCompositeGetNumberMat(mat,&nmat);CHKERRQ(ierr);
-  if (!shell->scalings) {ierr = PetscMalloc1(nmat,&shell->scalings);CHKERRQ(ierr);}
-  ierr = PetscArraycpy(shell->scalings,scalings,nmat);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(MatShellGetContext(mat, &shell));
+  PetscCall(MatCompositeGetNumberMat(mat, &nmat));
+  if (!shell->scalings) PetscCall(PetscMalloc1(nmat, &shell->scalings));
+  PetscCall(PetscArraycpy(shell->scalings, scalings, nmat));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   MatCompositeSetScalings - Sets separate scaling factors for component matrices.
+  MatCompositeSetScalings - Sets separate scaling factors for component matrices.
 
-   Logically Collective on Mat
+  Logically Collective
 
-   Input Parameter:
-+  mat      - the composite matrix
--  scalings - array of scaling factors with scalings[i] being factor of i-th matrix, for i in [0, nmat)
+  Input Parameters:
++ mat      - the composite matrix
+- scalings - array of scaling factors with scalings[i] being factor of i-th matrix, for i in [0, nmat)
 
-   Level: advanced
+  Level: advanced
 
-.seealso: MatScale(), MatDiagonalScale(), MATCOMPOSITE
-
+.seealso: [](ch_matrices), `Mat`, `MatScale()`, `MatDiagonalScale()`, `MATCOMPOSITE`
 @*/
-PetscErrorCode MatCompositeSetScalings(Mat mat,const PetscScalar *scalings)
+PetscErrorCode MatCompositeSetScalings(Mat mat, const PetscScalar *scalings)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
-  PetscValidPointer(scalings,2);
-  PetscValidLogicalCollectiveScalar(mat,*scalings,2);
-  ierr = PetscUseMethod(mat,"MatCompositeSetScalings_C",(Mat,const PetscScalar*),(mat,scalings));CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
+  PetscAssertPointer(scalings, 2);
+  PetscValidLogicalCollectiveScalar(mat, *scalings, 2);
+  PetscUseMethod(mat, "MatCompositeSetScalings_C", (Mat, const PetscScalar *), (mat, scalings));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
-
-static struct _MatOps MatOps_Values = {NULL,
-                                       NULL,
-                                       NULL,
-                                       MatMult_Composite,
-                                       MatMultAdd_Composite,
-                               /*  5*/ MatMultTranspose_Composite,
-                                       MatMultTransposeAdd_Composite,
-                                       NULL,
-                                       NULL,
-                                       NULL,
-                               /* 10*/ NULL,
-                                       NULL,
-                                       NULL,
-                                       NULL,
-                                       NULL,
-                               /* 15*/ NULL,
-                                       NULL,
-                                       MatGetDiagonal_Composite,
-                                       MatDiagonalScale_Composite,
-                                       NULL,
-                               /* 20*/ NULL,
-                                       MatAssemblyEnd_Composite,
-                                       NULL,
-                                       NULL,
-                               /* 24*/ NULL,
-                                       NULL,
-                                       NULL,
-                                       NULL,
-                                       NULL,
-                               /* 29*/ NULL,
-                                       NULL,
-                                       NULL,
-                                       NULL,
-                                       NULL,
-                               /* 34*/ NULL,
-                                       NULL,
-                                       NULL,
-                                       NULL,
-                                       NULL,
-                               /* 39*/ NULL,
-                                       NULL,
-                                       NULL,
-                                       NULL,
-                                       NULL,
-                               /* 44*/ NULL,
-                                       MatScale_Composite,
-                                       MatShift_Basic,
-                                       NULL,
-                                       NULL,
-                               /* 49*/ NULL,
-                                       NULL,
-                                       NULL,
-                                       NULL,
-                                       NULL,
-                               /* 54*/ NULL,
-                                       NULL,
-                                       NULL,
-                                       NULL,
-                                       NULL,
-                               /* 59*/ NULL,
-                                       MatDestroy_Composite,
-                                       NULL,
-                                       NULL,
-                                       NULL,
-                               /* 64*/ NULL,
-                                       NULL,
-                                       NULL,
-                                       NULL,
-                                       NULL,
-                               /* 69*/ NULL,
-                                       NULL,
-                                       NULL,
-                                       NULL,
-                                       NULL,
-                               /* 74*/ NULL,
-                                       NULL,
-                                       MatSetFromOptions_Composite,
-                                       NULL,
-                                       NULL,
-                               /* 79*/ NULL,
-                                       NULL,
-                                       NULL,
-                                       NULL,
-                                       NULL,
-                               /* 84*/ NULL,
-                                       NULL,
-                                       NULL,
-                                       NULL,
-                                       NULL,
-                               /* 89*/ NULL,
-                                       NULL,
-                                       NULL,
-                                       NULL,
-                                       NULL,
-                               /* 94*/ NULL,
-                                       NULL,
-                                       NULL,
-                                       NULL,
-                                       NULL,
-                                /*99*/ NULL,
-                                       NULL,
-                                       NULL,
-                                       NULL,
-                                       NULL,
-                               /*104*/ NULL,
-                                       NULL,
-                                       NULL,
-                                       NULL,
-                                       NULL,
-                               /*109*/ NULL,
-                                       NULL,
-                                       NULL,
-                                       NULL,
-                                       NULL,
-                               /*114*/ NULL,
-                                       NULL,
-                                       NULL,
-                                       NULL,
-                                       NULL,
-                               /*119*/ NULL,
-                                       NULL,
-                                       NULL,
-                                       NULL,
-                                       NULL,
-                               /*124*/ NULL,
-                                       NULL,
-                                       NULL,
-                                       NULL,
-                                       NULL,
-                               /*129*/ NULL,
-                                       NULL,
-                                       NULL,
-                                       NULL,
-                                       NULL,
-                               /*134*/ NULL,
-                                       NULL,
-                                       NULL,
-                                       NULL,
-                                       NULL,
-                               /*139*/ NULL,
-                                       NULL,
-                                       NULL
-};
 
 /*MC
    MATCOMPOSITE - A matrix defined by the sum (or product) of one or more matrices.
     The matrices need to have a correct size and parallel layout for the sum or product to be valid.
 
-   Notes:
-    to use the product of the matrices call MatCompositeSetType(mat,MAT_COMPOSITE_MULTIPLICATIVE);
-
   Level: advanced
 
-.seealso: MatCreateComposite(), MatCompositeSetScalings(), MatCompositeAddMat(), MatSetType(), MatCompositeSetType(), MatCompositeGetType(), MatCompositeSetMatStructure(), MatCompositeGetMatStructure(), MatCompositeMerge(), MatCompositeSetMergeType(), MatCompositeGetNumberMat(), MatCompositeGetMat()
+   Note:
+   To use the product of the matrices call `MatCompositeSetType`(mat,`MAT_COMPOSITE_MULTIPLICATIVE`);
+
+  Developer Notes:
+  This is implemented on top of `MATSHELL` to get support for scaling and shifting without requiring duplicate code
+
+  Users can not call `MatShellSetOperation()` operations on this class, there is some error checking for that incorrect usage
+
+.seealso: [](ch_matrices), `Mat`, `MatCreateComposite()`, `MatCompositeSetScalings()`, `MatCompositeAddMat()`, `MatSetType()`, `MatCompositeSetType()`, `MatCompositeGetType()`,
+          `MatCompositeSetMatStructure()`, `MatCompositeGetMatStructure()`, `MatCompositeMerge()`, `MatCompositeSetMergeType()`, `MatCompositeGetNumberMat()`, `MatCompositeGetMat()`
 M*/
 
 PETSC_EXTERN PetscErrorCode MatCreate_Composite(Mat A)
 {
-  Mat_Composite  *b;
-  PetscErrorCode ierr;
+  Mat_Composite *b;
 
   PetscFunctionBegin;
-  ierr    = PetscNewLog(A,&b);CHKERRQ(ierr);
-  A->data = (void*)b;
-  ierr    = PetscMemcpy(A->ops,&MatOps_Values,sizeof(struct _MatOps));CHKERRQ(ierr);
+  PetscCall(PetscNew(&b));
 
-  ierr = PetscLayoutSetUp(A->rmap);CHKERRQ(ierr);
-  ierr = PetscLayoutSetUp(A->cmap);CHKERRQ(ierr);
+  b->type        = MAT_COMPOSITE_ADDITIVE;
+  b->nmat        = 0;
+  b->merge       = PETSC_FALSE;
+  b->mergetype   = MAT_COMPOSITE_MERGE_RIGHT;
+  b->structure   = DIFFERENT_NONZERO_PATTERN;
+  b->merge_mvctx = PETSC_TRUE;
 
-  A->assembled    = PETSC_TRUE;
-  A->preallocated = PETSC_TRUE;
-  b->type         = MAT_COMPOSITE_ADDITIVE;
-  b->scale        = 1.0;
-  b->nmat         = 0;
-  b->merge        = PETSC_FALSE;
-  b->mergetype    = MAT_COMPOSITE_MERGE_RIGHT;
-  b->structure    = DIFFERENT_NONZERO_PATTERN;
-  b->merge_mvctx  = PETSC_TRUE;
-
-
-
-  ierr = PetscObjectComposeFunction((PetscObject)A,"MatCompositeAddMat_C",MatCompositeAddMat_Composite);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)A,"MatCompositeSetType_C",MatCompositeSetType_Composite);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)A,"MatCompositeGetType_C",MatCompositeGetType_Composite);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)A,"MatCompositeSetMergeType_C",MatCompositeSetMergeType_Composite);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)A,"MatCompositeSetMatStructure_C",MatCompositeSetMatStructure_Composite);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)A,"MatCompositeGetMatStructure_C",MatCompositeGetMatStructure_Composite);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)A,"MatCompositeMerge_C",MatCompositeMerge_Composite);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)A,"MatCompositeGetNumberMat_C",MatCompositeGetNumberMat_Composite);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)A,"MatCompositeGetMat_C",MatCompositeGetMat_Composite);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)A,"MatCompositeSetScalings_C",MatCompositeSetScalings_Composite);CHKERRQ(ierr);
-
-  ierr = PetscObjectChangeTypeName((PetscObject)A,MATCOMPOSITE);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(MatSetType(A, MATSHELL));
+  PetscCall(MatShellSetContext(A, b));
+  PetscCall(MatShellSetOperation(A, MATOP_DESTROY, (void (*)(void))MatDestroy_Composite));
+  PetscCall(MatShellSetOperation(A, MATOP_MULT, (void (*)(void))MatMult_Composite));
+  PetscCall(MatShellSetOperation(A, MATOP_MULT_TRANSPOSE, (void (*)(void))MatMultTranspose_Composite));
+  PetscCall(MatShellSetOperation(A, MATOP_GET_DIAGONAL, (void (*)(void))MatGetDiagonal_Composite));
+  PetscCall(MatShellSetOperation(A, MATOP_ASSEMBLY_END, (void (*)(void))MatAssemblyEnd_Composite));
+  PetscCall(MatShellSetOperation(A, MATOP_SET_FROM_OPTIONS, (void (*)(void))MatSetFromOptions_Composite));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatCompositeAddMat_C", MatCompositeAddMat_Composite));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatCompositeSetType_C", MatCompositeSetType_Composite));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatCompositeGetType_C", MatCompositeGetType_Composite));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatCompositeSetMergeType_C", MatCompositeSetMergeType_Composite));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatCompositeSetMatStructure_C", MatCompositeSetMatStructure_Composite));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatCompositeGetMatStructure_C", MatCompositeGetMatStructure_Composite));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatCompositeMerge_C", MatCompositeMerge_Composite));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatCompositeGetNumberMat_C", MatCompositeGetNumberMat_Composite));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatCompositeGetMat_C", MatCompositeGetMat_Composite));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatCompositeSetScalings_C", MatCompositeSetScalings_Composite));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatShellSetContext_C", MatShellSetContext_Immutable));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatShellSetContextDestroy_C", MatShellSetContextDestroy_Immutable));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatShellSetManageScalingShifts_C", MatShellSetManageScalingShifts_Immutable));
+  PetscCall(PetscObjectChangeTypeName((PetscObject)A, MATCOMPOSITE));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
-

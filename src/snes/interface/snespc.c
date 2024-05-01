@@ -1,115 +1,104 @@
-
-#include <petsc/private/snesimpl.h>      /*I "petscsnes.h"  I*/
+#include <petsc/private/snesimpl.h> /*I "petscsnes.h"  I*/
 
 /*@
-   SNESApplyNPC - Calls SNESSolve() on preconditioner for the SNES
+  SNESApplyNPC - Calls `SNESSolve()` on the preconditioner for the `SNES`
 
-   Collective on SNES
+  Collective
 
-   Input Parameters:
-+  snes - the SNES context
-.  x - input vector
--  f - optional; the function evaluation on x
+  Input Parameters:
++ snes - the `SNES` context
+. x    - input vector
+- f    - optional; the function evaluation on `x`
 
-   Output Parameter:
-.  y - function vector, as set by SNESSetFunction()
+  Output Parameter:
+. y - function vector, as set by `SNESSetFunction()`
 
-   Notes:
-   SNESComputeFunction() should be called on x before SNESApplyNPC() is called, as it is
-   with SNESComuteJacobian().
+  Level: developer
 
-   Level: developer
+  Note:
+  `SNESComputeFunction()` should be called on `x` before `SNESApplyNPC()` is called, as it is
+  with `SNESComuteJacobian()`.
 
-.seealso: SNESGetNPC(),SNESSetNPC(),SNESComputeFunction()
+.seealso: [](ch_snes), `SNES`, `SNESGetNPC()`, `SNESSetNPC()`, `SNESComputeFunction()`
 @*/
-PetscErrorCode  SNESApplyNPC(SNES snes,Vec x,Vec f,Vec y)
+PetscErrorCode SNESApplyNPC(SNES snes, Vec x, Vec f, Vec y)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(snes,SNES_CLASSID,1);
-  PetscValidHeaderSpecific(x,VEC_CLASSID,2);
-  PetscValidHeaderSpecific(y,VEC_CLASSID,3);
-  PetscCheckSameComm(snes,1,x,2);
-  PetscCheckSameComm(snes,1,y,3);
-  ierr = VecValidValues(x,2,PETSC_TRUE);CHKERRQ(ierr);
+  PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
+  PetscValidHeaderSpecific(x, VEC_CLASSID, 2);
+  PetscValidHeaderSpecific(y, VEC_CLASSID, 4);
+  PetscCheckSameComm(snes, 1, x, 2);
+  PetscCheckSameComm(snes, 1, y, 4);
+  PetscCall(VecValidValues_Internal(x, 2, PETSC_TRUE));
   if (snes->npc) {
-    if (f) {
-      ierr = SNESSetInitialFunction(snes->npc,f);CHKERRQ(ierr);
-    }
-    ierr = VecCopy(x,y);CHKERRQ(ierr);
-    ierr = PetscLogEventBegin(SNES_NPCSolve,snes->npc,x,y,0);CHKERRQ(ierr);
-    ierr = SNESSolve(snes->npc,snes->vec_rhs,y);CHKERRQ(ierr);
-    ierr = PetscLogEventEnd(SNES_NPCSolve,snes->npc,x,y,0);CHKERRQ(ierr);
-    ierr = VecAYPX(y,-1.0,x);CHKERRQ(ierr);
-    PetscFunctionReturn(0);
+    if (f) PetscCall(SNESSetInitialFunction(snes->npc, f));
+    PetscCall(VecCopy(x, y));
+    PetscCall(PetscLogEventBegin(SNES_NPCSolve, snes->npc, x, y, 0));
+    PetscCall(SNESSolve(snes->npc, snes->vec_rhs, y));
+    PetscCall(PetscLogEventEnd(SNES_NPCSolve, snes->npc, x, y, 0));
+    PetscCall(VecAYPX(y, -1.0, x));
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode SNESComputeFunctionDefaultNPC(SNES snes,Vec X,Vec F)
+PetscErrorCode SNESComputeFunctionDefaultNPC(SNES snes, Vec X, Vec F)
 {
-/* This is to be used as an argument to SNESMF -- NOT as a "function" */
+  /* This is to be used as an argument to SNESMF -- NOT as a "function" */
   SNESConvergedReason reason;
-  PetscErrorCode      ierr;
 
   PetscFunctionBegin;
   if (snes->npc) {
-    ierr = SNESApplyNPC(snes,X,NULL,F);CHKERRQ(ierr);
-    ierr = SNESGetConvergedReason(snes->npc,&reason);CHKERRQ(ierr);
-    if (reason < 0  && reason != SNES_DIVERGED_MAX_IT) {
-      ierr = SNESSetFunctionDomainError(snes);CHKERRQ(ierr);
-    }
+    PetscCall(SNESApplyNPC(snes, X, NULL, F));
+    PetscCall(SNESGetConvergedReason(snes->npc, &reason));
+    if (reason < 0 && reason != SNES_DIVERGED_MAX_IT) PetscCall(SNESSetFunctionDomainError(snes));
   } else {
-    ierr = SNESComputeFunction(snes,X,F);CHKERRQ(ierr);
+    PetscCall(SNESComputeFunction(snes, X, F));
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-   SNESGetNPCFunction - Gets the function from a preconditioner after SNESSolve() has been called.
+  SNESGetNPCFunction - Gets the current function value and its norm from a nonlinear preconditioner after `SNESSolve()` has been called on that `SNES`
 
-   Collective on SNES
+  Collective
 
-   Input Parameters:
-.  snes - the SNES context
+  Input Parameter:
+. snes - the `SNES` context
 
-   Output Parameter:
-+  F - function vector
--  fnorm - the norm of F
+  Output Parameters:
++ F     - function vector
+- fnorm - the norm of `F`
 
-   Level: developer
+  Level: developer
 
-.seealso: SNESGetNPC(),SNESSetNPC(),SNESComputeFunction(),SNESApplyNPC(),SNESSolve()
+.seealso: [](ch_snes), `SNES`, `SNESGetNPC()`, `SNESSetNPC()`, `SNESComputeFunction()`, `SNESApplyNPC()`, `SNESSolve()`
 @*/
-PetscErrorCode SNESGetNPCFunction(SNES snes,Vec F,PetscReal *fnorm)
+PetscErrorCode SNESGetNPCFunction(SNES snes, Vec F, PetscReal *fnorm)
 {
-  PetscErrorCode   ierr;
   PCSide           npcside;
   SNESFunctionType functype;
   SNESNormSchedule normschedule;
-  Vec              FPC,XPC;
+  Vec              FPC, XPC;
 
   PetscFunctionBegin;
-  if (snes->npc) {
-    ierr = SNESGetNPCSide(snes->npc,&npcside);CHKERRQ(ierr);
-    ierr = SNESGetFunctionType(snes->npc,&functype);CHKERRQ(ierr);
-    ierr = SNESGetNormSchedule(snes->npc,&normschedule);CHKERRQ(ierr);
+  PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
+  if (fnorm) PetscAssertPointer(fnorm, 3);
+  PetscCheck(snes->npc, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "No nonlinear preconditioner set");
+  PetscCall(SNESGetNPCSide(snes->npc, &npcside));
+  PetscCall(SNESGetFunctionType(snes->npc, &functype));
+  PetscCall(SNESGetNormSchedule(snes->npc, &normschedule));
 
-    /* check if the function is valid based upon how the inner solver is preconditioned */
-    if (normschedule != SNES_NORM_NONE && normschedule != SNES_NORM_INITIAL_ONLY && (npcside == PC_RIGHT || functype == SNES_FUNCTION_UNPRECONDITIONED)) {
-      ierr = SNESGetFunction(snes->npc,&FPC,NULL,NULL);CHKERRQ(ierr);
-      if (FPC) {
-        if (fnorm) {ierr = VecNorm(FPC,NORM_2,fnorm);CHKERRQ(ierr);}
-        ierr = VecCopy(FPC,F);CHKERRQ(ierr);
-      } else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Preconditioner has no function");
-    } else {
-      ierr = SNESGetSolution(snes->npc,&XPC);CHKERRQ(ierr);
-      if (XPC) {
-        ierr = SNESComputeFunction(snes->npc,XPC,F);CHKERRQ(ierr);
-        if (fnorm) {ierr = VecNorm(F,NORM_2,fnorm);CHKERRQ(ierr);}
-      } else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Preconditioner has no solution");
-    }
-  } else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"No preconditioner set");
-  PetscFunctionReturn(0);
+  /* check if the function is valid based upon how the inner solver is preconditioned */
+  if (normschedule != SNES_NORM_NONE && normschedule != SNES_NORM_INITIAL_ONLY && (npcside == PC_RIGHT || functype == SNES_FUNCTION_UNPRECONDITIONED)) {
+    PetscCall(SNESGetFunction(snes->npc, &FPC, NULL, NULL));
+    PetscCheck(FPC, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Nonlinear preconditioner has no function");
+    if (fnorm) PetscCall(VecNorm(FPC, NORM_2, fnorm));
+    PetscCall(VecCopy(FPC, F));
+  } else {
+    PetscCall(SNESGetSolution(snes->npc, &XPC));
+    PetscCheck(XPC, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Nonlinear preconditioner has no solution");
+    PetscCall(SNESComputeFunction(snes->npc, XPC, F));
+    if (fnorm) PetscCall(VecNorm(F, NORM_2, fnorm));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

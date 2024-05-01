@@ -1,6 +1,5 @@
-
 !
-!  Include file for Fortran error codes
+!  Used by petscsysmod.F90 to create Fortran module file
 !
       PetscEnum, parameter :: PETSC_ERROR_INITIAL = 0
       PetscEnum, parameter :: PETSC_ERROR_REPEAT  = 1
@@ -51,4 +50,7 @@
       PetscErrorCode, parameter :: PETSC_ERR_OPT_OVERWRITE    = 93
       PetscErrorCode, parameter :: PETSC_ERR_WRONG_MPI_SIZE   = 94
       PetscErrorCode, parameter :: PETSC_ERR_USER_INPUT       = 95
-
+      PetscErrorCode, parameter :: PETSC_ERR_GPU_RESOURCE     = 96
+      PetscErrorCode, parameter :: PETSC_ERR_GPU              = 97
+      PetscErrorCode, parameter :: PETSC_ERR_MPI              = 98
+      PetscErrorCode, parameter :: PETSC_ERR_RETURN           = 99

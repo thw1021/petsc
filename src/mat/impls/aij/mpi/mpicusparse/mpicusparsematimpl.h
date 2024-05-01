@@ -1,19 +1,10 @@
-#if !defined(__MPICUSPARSEMATIMPL)
-#define __MPICUSPARSEMATIMPL
+#pragma once
 
 #include <cusparse_v2.h>
-#include <petsc/private/cudavecimpl.h>
+#include <petsc/private/veccupmimpl.h>
 
-typedef struct {
+struct Mat_MPIAIJCUSPARSE {
   /* The following are used by GPU capabilities to store matrix storage formats on the device */
-  MatCUSPARSEStorageFormat diagGPUMatFormat;
-  MatCUSPARSEStorageFormat offdiagGPUMatFormat;
-  cudaStream_t             stream;
-  cusparseHandle_t         handle;
-} Mat_MPIAIJCUSPARSE;
-
-PETSC_INTERN PetscErrorCode MatCUSPARSESetStream(Mat, const cudaStream_t stream);
-PETSC_INTERN PetscErrorCode MatCUSPARSESetHandle(Mat, const cusparseHandle_t handle);
-PETSC_INTERN PetscErrorCode MatCUSPARSEClearHandle(Mat);
-
-#endif
+  MatCUSPARSEStorageFormat diagGPUMatFormat    = MAT_CUSPARSE_CSR;
+  MatCUSPARSEStorageFormat offdiagGPUMatFormat = MAT_CUSPARSE_CSR;
+};

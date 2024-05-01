@@ -16,12 +16,6 @@
 !  equation  lambda = C * x enforces the surface flux auxiliary equation.  B and C have all
 !  positive entries, areas in C and fraction of area in B.
 !
-!!/*T
-!  Concepts: SNES^parallel Bratu example
-!  Concepts: MatNest
-!  Processors: n
-!T*/
-
 
 !
 !  --------------------------------------------------------------------------
@@ -44,12 +38,12 @@
 !  into a module or interface. This is because they can't handle declarations
 !  in them
 !
-      module petsc_kkt_solver
+      module ex73f90tmodule
 #include <petsc/finclude/petscdm.h>
 #include <petsc/finclude/petscmat.h>
       use petscdm
       use petscmat
-      type petsc_kkt_solver_type
+      type ex73f90tmodule_type
         DM::da
 !     temp A block stuff
         PetscInt mx,my
@@ -58,20 +52,20 @@
 !     Mats
         Mat::Amat,AmatLin,Bmat,CMat,Dmat
         IS::isPhi,isLambda
-      end type petsc_kkt_solver_type
+      end type ex73f90tmodule_type
 
-      end module petsc_kkt_solver
+      end module ex73f90tmodule
 
-      module petsc_kkt_solver_interfaces
-        use petsc_kkt_solver
+      module ex73f90tmodule_interfaces
+        use ex73f90tmodule
 
       Interface SNESSetApplicationContext
         Subroutine SNESSetApplicationContext(snesIn,ctx,ierr)
 #include <petsc/finclude/petscsnes.h>
         use petscsnes
-        use petsc_kkt_solver
+        use ex73f90tmodule
           SNES::    snesIn
-          type(petsc_kkt_solver_type) ctx
+          type(ex73f90tmodule_type) ctx
           PetscErrorCode ierr
         End Subroutine
       End Interface SNESSetApplicationContext
@@ -80,13 +74,13 @@
         Subroutine SNESGetApplicationContext(snesIn,ctx,ierr)
 #include <petsc/finclude/petscsnes.h>
         use petscsnes
-        use petsc_kkt_solver
+        use ex73f90tmodule
           SNES::     snesIn
-          type(petsc_kkt_solver_type), pointer :: ctx
+          type(ex73f90tmodule_type), pointer :: ctx
           PetscErrorCode ierr
         End Subroutine
       End Interface SNESGetApplicationContext
-      end module petsc_kkt_solver_interfaces
+      end module ex73f90tmodule_interfaces
 
       program main
 #include <petsc/finclude/petscdm.h>
@@ -94,8 +88,8 @@
       use petscdm
       use petscdmda
       use petscsnes
-      use petsc_kkt_solver
-      use petsc_kkt_solver_interfaces
+      use ex73f90tmodule
+      use ex73f90tmodule_interfaces
       implicit none
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !                   Variable declarations
@@ -120,7 +114,7 @@
       PetscBool        flg
       PetscInt         ione,nfour,itwo,nloc,nloclam
       PetscReal lambda_max,lambda_min
-      type(petsc_kkt_solver_type)  solver
+      type(ex73f90tmodule_type)  solver
       PetscScalar      bval(1),cval(1),one
 
 !  Note: Any user-defined Fortran routines (such as FormJacobian)
@@ -130,12 +124,8 @@
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !  Initialize program
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-      call PetscInitialize(PETSC_NULL_CHARACTER,ierr)
-     if (ierr .ne. 0) then
-         print*,'PetscInitialize failed'
-         stop
-      endif
-      call MPI_Comm_rank(PETSC_COMM_WORLD,solver%rank,ierr);CHKERRA(ierr)
+      PetscCallA(PetscInitialize(ierr))
+      PetscCallMPIA(MPI_Comm_rank(PETSC_COMM_WORLD,solver%rank,ierr))
 
 !  Initialize problem parameters
       lambda_max  = 6.81_PETSC_REAL_KIND
@@ -144,84 +134,82 @@
       ione = 1
       nfour = 4
       itwo = 2
-      call PetscOptionsGetReal(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-par', solver%lambda,flg,ierr);CHKERRA(ierr)
-      if (solver%lambda .ge. lambda_max .or. solver%lambda .lt. lambda_min) then; SETERRA(PETSC_COMM_SELF,PETSC_ERR_USER,'Lambda provided with -par is out of range'); endif
+      PetscCallA(PetscOptionsGetReal(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-par', solver%lambda,flg,ierr))
+      PetscCheckA(solver%lambda .le. lambda_max .and. solver%lambda .ge. lambda_min,PETSC_COMM_SELF,PETSC_ERR_USER,'Lambda provided with -par is out of range')
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !  Create vector data structures; set function evaluation routine
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 !     just get size
-      call DMDACreate2d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE, DM_BOUNDARY_NONE,DMDA_STENCIL_BOX,nfour,nfour,PETSC_DECIDE,PETSC_DECIDE,ione,ione, &
-     &     PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,daphi,ierr);CHKERRA(ierr)
-      call DMSetFromOptions(daphi,ierr);CHKERRA(ierr)
-      call DMSetUp(daphi,ierr);CHKERRA(ierr)
-      call DMDAGetInfo(daphi,PETSC_NULL_INTEGER,solver%mx,solver%my,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,                        &
-     &                 PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,ierr);CHKERRA(ierr)
+      PetscCallA(DMDACreate2d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE, DM_BOUNDARY_NONE,DMDA_STENCIL_BOX,nfour,nfour,PETSC_DECIDE,PETSC_DECIDE,ione,ione,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,daphi,ierr))
+      PetscCallA(DMSetFromOptions(daphi,ierr))
+      PetscCallA(DMSetUp(daphi,ierr))
+      PetscCallA(DMDAGetInfo(daphi,PETSC_NULL_INTEGER,solver%mx,solver%my,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,ierr))
       N1 = solver%my*solver%mx
       N2 = solver%my
       flg = .false.
-      call PetscOptionsGetBool(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-no_constraints',flg,flg,ierr);CHKERRA(ierr)
+      PetscCallA(PetscOptionsGetBool(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-no_constraints',flg,flg,ierr))
       if (flg) then
          N2 = 0
       endif
 
-      call DMDestroy(daphi,ierr);CHKERRA(ierr)
+      PetscCallA(DMDestroy(daphi,ierr))
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !  Create matrix data structure; set Jacobian evaluation routine
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-      call DMShellCreate(PETSC_COMM_WORLD,daphi,ierr);CHKERRA(ierr)
-      call DMSetOptionsPrefix(daphi,'phi_',ierr);CHKERRA(ierr)
-      call DMSetFromOptions(daphi,ierr);CHKERRA(ierr)
+      PetscCallA(DMShellCreate(PETSC_COMM_WORLD,daphi,ierr))
+      PetscCallA(DMSetOptionsPrefix(daphi,'phi_',ierr))
+      PetscCallA(DMSetFromOptions(daphi,ierr))
 
-      call VecCreate(PETSC_COMM_WORLD,x1,ierr);CHKERRA(ierr)
-      call VecSetSizes(x1,PETSC_DECIDE,N1,ierr);CHKERRA(ierr)
-      call VecSetFromOptions(x1,ierr);CHKERRA(ierr)
+      PetscCallA(VecCreate(PETSC_COMM_WORLD,x1,ierr))
+      PetscCallA(VecSetSizes(x1,PETSC_DECIDE,N1,ierr))
+      PetscCallA(VecSetFromOptions(x1,ierr))
 
-      call VecGetOwnershipRange(x1,low,high,ierr);CHKERRA(ierr)
+      PetscCallA(VecGetOwnershipRange(x1,low,high,ierr))
       nloc = high - low
 
-      call MatCreate(PETSC_COMM_WORLD,Amat,ierr);CHKERRA(ierr)
-      call MatSetSizes(Amat,PETSC_DECIDE,PETSC_DECIDE,N1,N1,ierr);CHKERRA(ierr)
-      call MatSetUp(Amat,ierr);CHKERRA(ierr)
+      PetscCallA(MatCreate(PETSC_COMM_WORLD,Amat,ierr))
+      PetscCallA(MatSetSizes(Amat,PETSC_DECIDE,PETSC_DECIDE,N1,N1,ierr))
+      PetscCallA(MatSetUp(Amat,ierr))
 
-      call MatCreate(PETSC_COMM_WORLD,solver%AmatLin,ierr);CHKERRA(ierr)
-      call MatSetSizes(solver%AmatLin,PETSC_DECIDE,PETSC_DECIDE,N1,N1,ierr);CHKERRA(ierr)
-      call MatSetUp(solver%AmatLin,ierr);CHKERRA(ierr)
+      PetscCallA(MatCreate(PETSC_COMM_WORLD,solver%AmatLin,ierr))
+      PetscCallA(MatSetSizes(solver%AmatLin,PETSC_DECIDE,PETSC_DECIDE,N1,N1,ierr))
+      PetscCallA(MatSetUp(solver%AmatLin,ierr))
 
-      call FormJacobianLocal(x1,solver%AmatLin,solver,.false.,ierr);CHKERRA(ierr)
-      call MatAssemblyBegin(solver%AmatLin,MAT_FINAL_ASSEMBLY,ierr);CHKERRA(ierr)
-      call MatAssemblyEnd(solver%AmatLin,MAT_FINAL_ASSEMBLY,ierr);CHKERRA(ierr)
+      PetscCallA(FormJacobianLocal(x1,solver%AmatLin,solver,.false.,ierr))
+      PetscCallA(MatAssemblyBegin(solver%AmatLin,MAT_FINAL_ASSEMBLY,ierr))
+      PetscCallA(MatAssemblyEnd(solver%AmatLin,MAT_FINAL_ASSEMBLY,ierr))
 
-      call DMShellSetGlobalVector(daphi,x1,ierr);CHKERRA(ierr)
-      call DMShellSetMatrix(daphi,Amat,ierr);CHKERRA(ierr)
+      PetscCallA(DMShellSetGlobalVector(daphi,x1,ierr))
+      PetscCallA(DMShellSetMatrix(daphi,Amat,ierr))
 
-      call VecCreate(PETSC_COMM_SELF,x1loc,ierr);CHKERRA(ierr)
-      call VecSetSizes(x1loc,nloc,nloc,ierr);CHKERRA(ierr)
-      call VecSetFromOptions(x1loc,ierr);CHKERRA(ierr)
-      call DMShellSetLocalVector(daphi,x1loc,ierr);CHKERRA(ierr)
+      PetscCallA(VecCreate(PETSC_COMM_SELF,x1loc,ierr))
+      PetscCallA(VecSetSizes(x1loc,nloc,nloc,ierr))
+      PetscCallA(VecSetFromOptions(x1loc,ierr))
+      PetscCallA(DMShellSetLocalVector(daphi,x1loc,ierr))
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !  Create B, C, & D matrices
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-      call MatCreate(PETSC_COMM_WORLD,Cmat,ierr);CHKERRA(ierr)
-      call MatSetSizes(Cmat,PETSC_DECIDE,PETSC_DECIDE,N2,N1,ierr);CHKERRA(ierr)
-      call MatSetUp(Cmat,ierr);CHKERRA(ierr)
+      PetscCallA(MatCreate(PETSC_COMM_WORLD,Cmat,ierr))
+      PetscCallA(MatSetSizes(Cmat,PETSC_DECIDE,PETSC_DECIDE,N2,N1,ierr))
+      PetscCallA(MatSetUp(Cmat,ierr))
 !      create data for C and B
-      call MatCreate(PETSC_COMM_WORLD,Bmat,ierr);CHKERRA(ierr)
-      call MatSetSizes(Bmat,PETSC_DECIDE,PETSC_DECIDE,N1,N2,ierr);CHKERRA(ierr)
-      call MatSetUp(Bmat,ierr);CHKERRA(ierr)
+      PetscCallA(MatCreate(PETSC_COMM_WORLD,Bmat,ierr))
+      PetscCallA(MatSetSizes(Bmat,PETSC_DECIDE,PETSC_DECIDE,N1,N2,ierr))
+      PetscCallA(MatSetUp(Bmat,ierr))
 !     create data for D
-      call MatCreate(PETSC_COMM_WORLD,Dmat,ierr);CHKERRA(ierr)
-      call MatSetSizes(Dmat,PETSC_DECIDE,PETSC_DECIDE,N2,N2,ierr);CHKERRA(ierr)
-      call MatSetUp(Dmat,ierr);CHKERRA(ierr)
+      PetscCallA(MatCreate(PETSC_COMM_WORLD,Dmat,ierr))
+      PetscCallA(MatSetSizes(Dmat,PETSC_DECIDE,PETSC_DECIDE,N2,N2,ierr))
+      PetscCallA(MatSetUp(Dmat,ierr))
 
-      call VecCreate(PETSC_COMM_WORLD,x2,ierr);CHKERRA(ierr)
-      call VecSetSizes(x2,PETSC_DECIDE,N2,ierr);CHKERRA(ierr)
-      call VecSetFromOptions(x2,ierr);CHKERRA(ierr)
+      PetscCallA(VecCreate(PETSC_COMM_WORLD,x2,ierr))
+      PetscCallA(VecSetSizes(x2,PETSC_DECIDE,N2,ierr))
+      PetscCallA(VecSetFromOptions(x2,ierr))
 
-      call VecGetOwnershipRange(x2,lamlow,lamhigh,ierr);CHKERRA(ierr)
+      PetscCallA(VecGetOwnershipRange(x2,lamlow,lamhigh,ierr))
       nloclam = lamhigh-lamlow
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -240,51 +228,51 @@
             if (i .eq. 0 .or. j .eq. 0 .or. i .eq. solver%mx-1 .or. j .eq. solver%my-1) then
                !     no op
             else
-               call MatSetValues(Bmat,ione,row,ione,col,bval,INSERT_VALUES,ierr);CHKERRA(ierr)
+               PetscCallA(MatSetValues(Bmat,ione,row,ione,col,bval,INSERT_VALUES,ierr))
             endif
             row(1) = j
-            call MatSetValues(Cmat,ione,row,ione,row,cval,INSERT_VALUES,ierr);CHKERRA(ierr)
+            PetscCallA(MatSetValues(Cmat,ione,row,ione,row,cval,INSERT_VALUES,ierr))
  20   continue
       endif
-      call MatAssemblyBegin(Bmat,MAT_FINAL_ASSEMBLY,ierr);CHKERRA(ierr)
-      call MatAssemblyEnd(Bmat,MAT_FINAL_ASSEMBLY,ierr);CHKERRA(ierr)
-      call MatAssemblyBegin(Cmat,MAT_FINAL_ASSEMBLY,ierr);CHKERRA(ierr)
-      call MatAssemblyEnd(Cmat,MAT_FINAL_ASSEMBLY,ierr);CHKERRA(ierr)
+      PetscCallA(MatAssemblyBegin(Bmat,MAT_FINAL_ASSEMBLY,ierr))
+      PetscCallA(MatAssemblyEnd(Bmat,MAT_FINAL_ASSEMBLY,ierr))
+      PetscCallA(MatAssemblyBegin(Cmat,MAT_FINAL_ASSEMBLY,ierr))
+      PetscCallA(MatAssemblyEnd(Cmat,MAT_FINAL_ASSEMBLY,ierr))
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-!  Set D (indentity)
+!  Set D (identity)
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
       do 30 j=lamlow,lamhigh-1
          row(1) = j
          cval(1) = one
-         call MatSetValues(Dmat,ione,row,ione,row,cval,INSERT_VALUES,ierr);CHKERRA(ierr)
+         PetscCallA(MatSetValues(Dmat,ione,row,ione,row,cval,INSERT_VALUES,ierr))
  30   continue
-      call MatAssemblyBegin(Dmat,MAT_FINAL_ASSEMBLY,ierr);CHKERRA(ierr)
-      call MatAssemblyEnd(Dmat,MAT_FINAL_ASSEMBLY,ierr);CHKERRA(ierr)
+      PetscCallA(MatAssemblyBegin(Dmat,MAT_FINAL_ASSEMBLY,ierr))
+      PetscCallA(MatAssemblyEnd(Dmat,MAT_FINAL_ASSEMBLY,ierr))
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !  DM for lambda (dalam) : temp driver for A block, setup A block solver data
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-      call DMShellCreate(PETSC_COMM_WORLD,dalam,ierr);CHKERRA(ierr)
-      call DMShellSetGlobalVector(dalam,x2,ierr);CHKERRA(ierr)
-      call DMShellSetMatrix(dalam,Dmat,ierr);CHKERRA(ierr)
+      PetscCallA(DMShellCreate(PETSC_COMM_WORLD,dalam,ierr))
+      PetscCallA(DMShellSetGlobalVector(dalam,x2,ierr))
+      PetscCallA(DMShellSetMatrix(dalam,Dmat,ierr))
 
-      call VecCreate(PETSC_COMM_SELF,x2loc,ierr);CHKERRA(ierr)
-      call VecSetSizes(x2loc,nloclam,nloclam,ierr);CHKERRA(ierr)
-      call VecSetFromOptions(x2loc,ierr);CHKERRA(ierr)
-      call DMShellSetLocalVector(dalam,x2loc,ierr);CHKERRA(ierr)
+      PetscCallA(VecCreate(PETSC_COMM_SELF,x2loc,ierr))
+      PetscCallA(VecSetSizes(x2loc,nloclam,nloclam,ierr))
+      PetscCallA(VecSetFromOptions(x2loc,ierr))
+      PetscCallA(DMShellSetLocalVector(dalam,x2loc,ierr))
 
-      call DMSetOptionsPrefix(dalam,'lambda_',ierr);CHKERRA(ierr)
-      call DMSetFromOptions(dalam,ierr);CHKERRA(ierr)
+      PetscCallA(DMSetOptionsPrefix(dalam,'lambda_',ierr))
+      PetscCallA(DMSetFromOptions(dalam,ierr))
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !  Create field split DA
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-      call DMCompositeCreate(PETSC_COMM_WORLD,solver%da,ierr);CHKERRA(ierr)
-      call DMCompositeAddDM(solver%da,daphi,ierr);CHKERRA(ierr)
-      call DMCompositeAddDM(solver%da,dalam,ierr);CHKERRA(ierr)
-      call DMSetFromOptions(solver%da,ierr);CHKERRA(ierr)
-      call DMSetUp(solver%da,ierr);CHKERRA(ierr)
-      call DMCompositeGetGlobalISs(solver%da,isglobal,ierr);CHKERRA(ierr)
+      PetscCallA(DMCompositeCreate(PETSC_COMM_WORLD,solver%da,ierr))
+      PetscCallA(DMCompositeAddDM(solver%da,daphi,ierr))
+      PetscCallA(DMCompositeAddDM(solver%da,dalam,ierr))
+      PetscCallA(DMSetFromOptions(solver%da,ierr))
+      PetscCallA(DMSetUp(solver%da,ierr))
+      PetscCallA(DMCompositeGetGlobalISs(solver%da,isglobal,ierr))
       solver%isPhi = isglobal(1)
       solver%isLambda = isglobal(2)
 
@@ -299,32 +287,32 @@
       matArray(3) = Cmat
       matArray(4) = Dmat
 
-      call MatCreateNest(PETSC_COMM_WORLD,itwo,isglobal,itwo,isglobal,matArray,KKTmat,ierr);CHKERRA(ierr)
-      call MatSetFromOptions(KKTmat,ierr);CHKERRA(ierr)
+      PetscCallA(MatCreateNest(PETSC_COMM_WORLD,itwo,isglobal,itwo,isglobal,matArray,KKTmat,ierr))
+      PetscCallA(MatSetFromOptions(KKTmat,ierr))
 
 !  Extract global and local vectors from DMDA; then duplicate for remaining
 !     vectors that are the same types
-      call MatCreateVecs(KKTmat,x,PETSC_NULL_VEC,ierr);CHKERRA(ierr)
-      call VecDuplicate(x,r,ierr);CHKERRA(ierr)
+      PetscCallA(MatCreateVecs(KKTmat,x,PETSC_NULL_VEC,ierr))
+      PetscCallA(VecDuplicate(x,r,ierr))
 
-      call SNESCreate(PETSC_COMM_WORLD,mysnes,ierr);CHKERRA(ierr)
+      PetscCallA(SNESCreate(PETSC_COMM_WORLD,mysnes,ierr))
 
-      call SNESSetDM(mysnes,solver%da,ierr);CHKERRA(ierr)
+      PetscCallA(SNESSetDM(mysnes,solver%da,ierr))
 
-      call SNESSetApplicationContext(mysnes,solver,ierr);CHKERRA(ierr)
+      PetscCallA(SNESSetApplicationContext(mysnes,solver,ierr))
 
-      call SNESSetDM(mysnes,solver%da,ierr);CHKERRA(ierr)
+      PetscCallA(SNESSetDM(mysnes,solver%da,ierr))
 
 !  Set function evaluation routine and vector
-      call SNESSetFunction(mysnes,r,FormFunction,solver,ierr);CHKERRA(ierr)
+      PetscCallA(SNESSetFunction(mysnes,r,FormFunction,solver,ierr))
 
-      call SNESSetJacobian(mysnes,KKTmat,KKTmat,FormJacobian,solver,ierr);CHKERRA(ierr)
+      PetscCallA(SNESSetJacobian(mysnes,KKTmat,KKTmat,FormJacobian,solver,ierr))
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !  Customize nonlinear solver; set runtime options
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !  Set runtime options (e.g., -snes_monitor -snes_rtol <rtol> -ksp_type <type>)
-      call SNESSetFromOptions(mysnes,ierr);CHKERRA(ierr)
+      PetscCallA(SNESSetFromOptions(mysnes,ierr))
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !  Evaluate initial guess; then solve nonlinear system.
@@ -334,9 +322,9 @@
 !  to employ an initial guess of zero, the user should explicitly set
 !  this vector to zero by calling VecSet().
 
-      call FormInitialGuess(mysnes,x,ierr);CHKERRA(ierr)
-      call SNESSolve(mysnes,PETSC_NULL_VEC,x,ierr);CHKERRA(ierr)
-      call SNESGetIterationNumber(mysnes,its,ierr);CHKERRA(ierr)
+      PetscCallA(FormInitialGuess(mysnes,x,ierr))
+      PetscCallA(SNESSolve(mysnes,PETSC_NULL_VEC,x,ierr))
+      PetscCallA(SNESGetIterationNumber(mysnes,its,ierr))
       if (solver%rank .eq. 0) then
          write(6,100) its
       endif
@@ -346,26 +334,26 @@
 !  Free work space.  All PETSc objects should be destroyed when they
 !  are no longer needed.
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-      call MatDestroy(KKTmat,ierr);CHKERRA(ierr)
-      call MatDestroy(Amat,ierr);CHKERRA(ierr)
-      call MatDestroy(Dmat,ierr);CHKERRA(ierr)
-      call MatDestroy(Bmat,ierr);CHKERRA(ierr)
-      call MatDestroy(Cmat,ierr);CHKERRA(ierr)
-      call MatDestroy(solver%AmatLin,ierr);CHKERRA(ierr)
-      call ISDestroy(solver%isPhi,ierr);CHKERRA(ierr)
-      call ISDestroy(solver%isLambda,ierr);CHKERRA(ierr)
-      call VecDestroy(x,ierr);CHKERRA(ierr)
-      call VecDestroy(x2,ierr);CHKERRA(ierr)
-      call VecDestroy(x1,ierr);CHKERRA(ierr)
-      call VecDestroy(x1loc,ierr);CHKERRA(ierr)
-      call VecDestroy(x2loc,ierr);CHKERRA(ierr)
-      call VecDestroy(r,ierr);CHKERRA(ierr)
-      call SNESDestroy(mysnes,ierr);CHKERRA(ierr)
-      call DMDestroy(solver%da,ierr);CHKERRA(ierr)
-      call DMDestroy(daphi,ierr);CHKERRA(ierr)
-      call DMDestroy(dalam,ierr);CHKERRA(ierr)
+      PetscCallA(MatDestroy(KKTmat,ierr))
+      PetscCallA(MatDestroy(Amat,ierr))
+      PetscCallA(MatDestroy(Dmat,ierr))
+      PetscCallA(MatDestroy(Bmat,ierr))
+      PetscCallA(MatDestroy(Cmat,ierr))
+      PetscCallA(MatDestroy(solver%AmatLin,ierr))
+      PetscCallA(ISDestroy(solver%isPhi,ierr))
+      PetscCallA(ISDestroy(solver%isLambda,ierr))
+      PetscCallA(VecDestroy(x,ierr))
+      PetscCallA(VecDestroy(x2,ierr))
+      PetscCallA(VecDestroy(x1,ierr))
+      PetscCallA(VecDestroy(x1loc,ierr))
+      PetscCallA(VecDestroy(x2loc,ierr))
+      PetscCallA(VecDestroy(r,ierr))
+      PetscCallA(SNESDestroy(mysnes,ierr))
+      PetscCallA(DMDestroy(solver%da,ierr))
+      PetscCallA(DMDestroy(daphi,ierr))
+      PetscCallA(DMDestroy(dalam,ierr))
 
-      call PetscFinalize(ierr)
+      PetscCallA(PetscFinalize(ierr))
       end
 
 ! ---------------------------------------------------------------------
@@ -389,8 +377,8 @@
       subroutine FormInitialGuess(mysnes,Xnest,ierr)
 #include <petsc/finclude/petscsnes.h>
       use petscsnes
-      use petsc_kkt_solver
-      use petsc_kkt_solver_interfaces
+      use ex73f90tmodule
+      use ex73f90tmodule_interfaces
       implicit none
 !  Input/output variables:
       SNES::     mysnes
@@ -398,7 +386,7 @@
       PetscErrorCode ierr
 
 !  Declarations for use with local arrays:
-      type(petsc_kkt_solver_type), pointer:: solver
+      type(ex73f90tmodule_type), pointer:: solver
       Vec::      Xsub(2)
       PetscInt::  izero,ione,itwo
 
@@ -406,18 +394,17 @@
       ione = 1
       itwo = 2
       ierr = 0
-      call SNESGetApplicationContext(mysnes,solver,ierr);CHKERRQ(ierr)
-      call DMCompositeGetAccessArray(solver%da,Xnest,itwo,PETSC_NULL_INTEGER,Xsub,ierr);CHKERRQ(ierr)
+      PetscCall(SNESGetApplicationContext(mysnes,solver,ierr))
+      PetscCall(DMCompositeGetAccessArray(solver%da,Xnest,itwo,PETSC_NULL_INTEGER,Xsub,ierr))
 
-      call InitialGuessLocal(solver,Xsub(1),ierr);CHKERRQ(ierr)
-      call VecAssemblyBegin(Xsub(1),ierr);CHKERRQ(ierr)
-      call VecAssemblyEnd(Xsub(1),ierr);CHKERRQ(ierr)
+      PetscCall(InitialGuessLocal(solver,Xsub(1),ierr))
+      PetscCall(VecAssemblyBegin(Xsub(1),ierr))
+      PetscCall(VecAssemblyEnd(Xsub(1),ierr))
 
 !     zero out lambda
-      call VecZeroEntries(Xsub(2),ierr);CHKERRQ(ierr)
-      call DMCompositeRestoreAccessArray(solver%da,Xnest,itwo,PETSC_NULL_INTEGER,Xsub,ierr);CHKERRQ(ierr)
+      PetscCall(VecZeroEntries(Xsub(2),ierr))
+      PetscCall(DMCompositeRestoreAccessArray(solver%da,Xnest,itwo,PETSC_NULL_INTEGER,Xsub,ierr))
 
-      return
       end subroutine FormInitialGuess
 
 ! ---------------------------------------------------------------------
@@ -438,10 +425,10 @@
       subroutine InitialGuessLocal(solver,X1,ierr)
 #include <petsc/finclude/petscsys.h>
       use petscsys
-      use petsc_kkt_solver
+      use ex73f90tmodule
       implicit none
 !  Input/output variables:
-      type (petsc_kkt_solver_type)         solver
+      type (ex73f90tmodule_type)         solver
       Vec::      X1
       PetscErrorCode ierr
 
@@ -458,7 +445,7 @@
       hy     = one/(solver%my-1)
       temp1  = solver%lambda/(solver%lambda + one) + one
 
-      call VecGetOwnershipRange(X1,low,high,ierr);CHKERRQ(ierr)
+      PetscCall(VecGetOwnershipRange(X1,low,high,ierr))
 
       do 20 row=low,high-1
          j = row/solver%mx
@@ -469,12 +456,10 @@
          else
             v = temp1 * sqrt(min(min(i,solver%mx-i+1)*hx,temp))
          endif
-         call VecSetValues(X1,ione,row,v,INSERT_VALUES,ierr);CHKERRQ(ierr)
+         PetscCall(VecSetValues(X1,ione,row,v,INSERT_VALUES,ierr))
  20   continue
 
-      return
       end subroutine InitialGuessLocal
-
 
 ! ---------------------------------------------------------------------
 !
@@ -493,45 +478,43 @@
       subroutine FormJacobian(dummy,X,jac,jac_prec,solver,ierr)
 #include <petsc/finclude/petscsnes.h>
       use petscsnes
-      use petsc_kkt_solver
+      use ex73f90tmodule
       implicit none
 !  Input/output variables:
       SNES::     dummy
       Vec::      X
      Mat::     jac,jac_prec
-      type(petsc_kkt_solver_type)  solver
+      type(ex73f90tmodule_type)  solver
       PetscErrorCode ierr
 
 !  Declarations for use with local arrays:
       Vec::      Xsub(1)
      Mat::     Amat
-      PetscInt       izero,ione
+      PetscInt       ione
 
-      izero = 0
       ione = 1
 
-      call DMCompositeGetAccessArray(solver%da,X,ione,PETSC_NULL_INTEGER,Xsub,ierr);CHKERRQ(ierr)
+      PetscCall(DMCompositeGetAccessArray(solver%da,X,ione,PETSC_NULL_INTEGER,Xsub,ierr))
 
 !     Compute entries for the locally owned part of the Jacobian preconditioner.
-      call MatCreateSubMatrix(jac_prec,solver%isPhi,solver%isPhi,MAT_INITIAL_MATRIX,Amat,ierr);CHKERRQ(ierr)
+      PetscCall(MatCreateSubMatrix(jac_prec,solver%isPhi,solver%isPhi,MAT_INITIAL_MATRIX,Amat,ierr))
 
-      call FormJacobianLocal(Xsub(1),Amat,solver,.true.,ierr);CHKERRQ(ierr)
-      call MatDestroy(Amat,ierr);CHKERRQ(ierr) ! discard our reference
-      call DMCompositeRestoreAccessArray(solver%da,X,ione,PETSC_NULL_INTEGER,Xsub,ierr);CHKERRQ(ierr)
+      PetscCall(FormJacobianLocal(Xsub(1),Amat,solver,.true.,ierr))
+      PetscCall(MatDestroy(Amat,ierr)) ! discard our reference
+      PetscCall(DMCompositeRestoreAccessArray(solver%da,X,ione,PETSC_NULL_INTEGER,Xsub,ierr))
 
       ! the rest of the matrix is not touched
-      call MatAssemblyBegin(jac_prec,MAT_FINAL_ASSEMBLY,ierr);CHKERRQ(ierr)
-      call MatAssemblyEnd(jac_prec,MAT_FINAL_ASSEMBLY,ierr);CHKERRQ(ierr)
+      PetscCall(MatAssemblyBegin(jac_prec,MAT_FINAL_ASSEMBLY,ierr))
+      PetscCall(MatAssemblyEnd(jac_prec,MAT_FINAL_ASSEMBLY,ierr))
       if (jac .ne. jac_prec) then
-         call MatAssemblyBegin(jac,MAT_FINAL_ASSEMBLY,ierr);CHKERRQ(ierr)
-         call MatAssemblyEnd(jac,MAT_FINAL_ASSEMBLY,ierr);CHKERRQ(ierr)
+         PetscCall(MatAssemblyBegin(jac,MAT_FINAL_ASSEMBLY,ierr))
+         PetscCall(MatAssemblyEnd(jac,MAT_FINAL_ASSEMBLY,ierr))
       end if
 
 !     Tell the matrix we will never add a new nonzero location to the
 !     matrix. If we do it will generate an error.
-      call MatSetOption(jac_prec,MAT_NEW_NONZERO_LOCATION_ERR,PETSC_TRUE,ierr);CHKERRQ(ierr)
+      PetscCall(MatSetOption(jac_prec,MAT_NEW_NONZERO_LOCATION_ERR,PETSC_TRUE,ierr))
 
-      return
       end subroutine FormJacobian
 
 ! ---------------------------------------------------------------------
@@ -552,10 +535,10 @@
       subroutine FormJacobianLocal(X1,jac,solver,add_nl_term,ierr)
 #include <petsc/finclude/petscmat.h>
       use petscmat
-      use petsc_kkt_solver
+      use ex73f90tmodule
       implicit none
 !  Input/output variables:
-      type (petsc_kkt_solver_type) solver
+      type (ex73f90tmodule_type) solver
       Vec::      X1
      Mat::     jac
       logical        add_nl_term
@@ -579,8 +562,8 @@
       hx2inv = one/(hx*hx)
       hy2inv = one/(hy*hy)
 
-      call VecGetOwnershipRange(X1,low,high,ierr);CHKERRQ(ierr)
-      call VecGetArrayReadF90(X1,lx_v,ierr);CHKERRQ(ierr)
+      PetscCall(VecGetOwnershipRange(X1,low,high,ierr))
+      PetscCall(VecGetArrayReadF90(X1,lx_v,ierr))
 
       ii = 0
       do 20 irow=low,high-1
@@ -592,7 +575,7 @@
             col(1) = irow
             row(1) = irow
             v(1)   = one
-            call MatSetValues(jac,ione,row,ione,col,v,INSERT_VALUES,ierr);CHKERRQ(ierr)
+            PetscCall(MatSetValues(jac,ione,row,ione,col,v,INSERT_VALUES,ierr))
 !     interior grid points
          else
             v(1) = -hy2inv
@@ -611,15 +594,13 @@
             col(4) = irow + 1
             col(5) = irow + solver%mx
             row(1) = irow
-            call MatSetValues(jac,ione,row,ifive,col,v,INSERT_VALUES,ierr);CHKERRQ(ierr)
+            PetscCall(MatSetValues(jac,ione,row,ifive,col,v,INSERT_VALUES,ierr))
          endif
  20   continue
 
-      call VecRestoreArrayReadF90(X1,lx_v,ierr);CHKERRQ(ierr)
+      PetscCall(VecRestoreArrayReadF90(X1,lx_v,ierr))
 
-      return
       end subroutine FormJacobianLocal
-
 
 ! ---------------------------------------------------------------------
 !
@@ -637,42 +618,38 @@
       subroutine FormFunction(snesIn,X,F,solver,ierr)
 #include <petsc/finclude/petscsnes.h>
       use petscsnes
-      use petsc_kkt_solver
+      use ex73f90tmodule
       implicit none
 !  Input/output variables:
       SNES::     snesIn
      Vec::      X,F
       PetscErrorCode ierr
-      type (petsc_kkt_solver_type) solver
+      type (ex73f90tmodule_type) solver
 
 !  Declarations for use with local arrays:
      Vec::              Xsub(2),Fsub(2)
-      PetscInt               izero,ione,itwo
+      PetscInt               itwo
 
 !  Scatter ghost points to local vector, using the 2-step process
 !     DMGlobalToLocalBegin(), DMGlobalToLocalEnd().
 !  By placing code between these two statements, computations can
 !  be done while messages are in transition.
 
-      izero = 0
-      ione = 1
       itwo = 2
-      call DMCompositeGetAccessArray(solver%da,X,itwo,PETSC_NULL_INTEGER,Xsub,ierr);CHKERRQ(ierr)
-      call DMCompositeGetAccessArray(solver%da,F,itwo,PETSC_NULL_INTEGER,Fsub,ierr);CHKERRQ(ierr)
+      PetscCall(DMCompositeGetAccessArray(solver%da,X,itwo,PETSC_NULL_INTEGER,Xsub,ierr))
+      PetscCall(DMCompositeGetAccessArray(solver%da,F,itwo,PETSC_NULL_INTEGER,Fsub,ierr))
 
-      call FormFunctionNLTerm( Xsub(1), Fsub(1), solver, ierr);CHKERRQ(ierr)
-      call MatMultAdd( solver%AmatLin, Xsub(1), Fsub(1), Fsub(1), ierr);CHKERRQ(ierr)
+      PetscCall(FormFunctionNLTerm( Xsub(1), Fsub(1), solver, ierr))
+      PetscCall(MatMultAdd( solver%AmatLin, Xsub(1), Fsub(1), Fsub(1), ierr))
 
 !     do rest of operator (linear)
-      call MatMult(    solver%Cmat, Xsub(1),      Fsub(2), ierr);CHKERRQ(ierr)
-      call MatMultAdd( solver%Bmat, Xsub(2), Fsub(1), Fsub(1), ierr);CHKERRQ(ierr)
-      call MatMultAdd( solver%Dmat, Xsub(2), Fsub(2), Fsub(2), ierr);CHKERRQ(ierr)
+      PetscCall(MatMult(    solver%Cmat, Xsub(1),      Fsub(2), ierr))
+      PetscCall(MatMultAdd( solver%Bmat, Xsub(2), Fsub(1), Fsub(1), ierr))
+      PetscCall(MatMultAdd( solver%Dmat, Xsub(2), Fsub(2), Fsub(2), ierr))
 
-      call DMCompositeRestoreAccessArray(solver%da,X,itwo,PETSC_NULL_INTEGER,Xsub,ierr);CHKERRQ(ierr)
-      call DMCompositeRestoreAccessArray(solver%da,F,itwo,PETSC_NULL_INTEGER,Fsub,ierr);CHKERRQ(ierr)
-      return
+      PetscCall(DMCompositeRestoreAccessArray(solver%da,X,itwo,PETSC_NULL_INTEGER,Xsub,ierr))
+      PetscCall(DMCompositeRestoreAccessArray(solver%da,F,itwo,PETSC_NULL_INTEGER,Fsub,ierr))
       end subroutine formfunction
-
 
 ! ---------------------------------------------------------------------
 !
@@ -692,24 +669,23 @@
       subroutine FormFunctionNLTerm(X1,F1,solver,ierr)
 #include <petsc/finclude/petscvec.h>
       use petscvec
-      use petsc_kkt_solver
+      use ex73f90tmodule
       implicit none
 !  Input/output variables:
-      type (petsc_kkt_solver_type) solver
+      type (ex73f90tmodule_type) solver
      Vec::      X1,F1
       PetscErrorCode ierr
 !  Local variables:
-      PetscScalar one,sc
+      PetscScalar sc
       PetscScalar u,v(1)
       PetscInt  i,j,low,high,ii,ione,irow,row(1)
       PetscScalar,pointer :: lx_v(:)
 
-      one    = 1.0
       sc     = solver%lambda
       ione   = 1
 
-      call VecGetArrayReadF90(X1,lx_v,ierr);CHKERRQ(ierr)
-      call VecGetOwnershipRange(X1,low,high,ierr);CHKERRQ(ierr)
+      PetscCall(VecGetArrayReadF90(X1,lx_v,ierr))
+      PetscCall(VecGetOwnershipRange(X1,low,high,ierr))
 
 !     Compute function over the locally owned part of the grid
       ii = 0
@@ -724,25 +700,24 @@
             u = lx_v(ii)
             v(1) = -sc*exp(u)
          endif
-         call VecSetValues(F1,ione,row,v,INSERT_VALUES,ierr);CHKERRQ(ierr)
+         PetscCall(VecSetValues(F1,ione,row,v,INSERT_VALUES,ierr))
  20   continue
 
-      call VecRestoreArrayReadF90(X1,lx_v,ierr);CHKERRQ(ierr)
+      PetscCall(VecRestoreArrayReadF90(X1,lx_v,ierr))
 
-      call VecAssemblyBegin(F1,ierr);CHKERRQ(ierr)
-      call VecAssemblyEnd(F1,ierr);CHKERRQ(ierr)
+      PetscCall(VecAssemblyBegin(F1,ierr))
+      PetscCall(VecAssemblyEnd(F1,ierr))
 
       ierr = 0
-      return
       end subroutine FormFunctionNLTerm
 
 !/*TEST
 !
 !   build:
-!      requires: !single !pgf90_compiler !complex
+!      requires: !single !complex
 !
 !   test:
 !      nsize: 4
-!      args: -par 5.0 -da_grid_x 10 -da_grid_y 10 -snes_monitor_short -snes_linesearch_type basic -snes_converged_reason -ksp_type fgmres -ksp_norm_type unpreconditioned -pc_type fieldsplit -pc_fieldsplit_type schur -pc_fieldsplit_schur_fact_type upper -ksp_monitor_short -fieldsplit_lambda_ksp_type preonly -fieldsplit_lambda_pc_type jacobi -fieldsplit_phi_pc_type gamg -fieldsplit_phi_pc_gamg_agg_nsmooths 1 -fieldsplit_phi_pc_gamg_threshold 0. -fieldsplit_phi_pc_gamg_esteig_ksp_type cg
+!      args: -par 5.0 -da_grid_x 10 -da_grid_y 10 -snes_monitor_short -snes_linesearch_type basic -snes_converged_reason -ksp_type fgmres -ksp_norm_type unpreconditioned -pc_type fieldsplit -pc_fieldsplit_type schur -pc_fieldsplit_schur_fact_type upper -ksp_monitor_short -fieldsplit_lambda_ksp_type preonly -fieldsplit_lambda_pc_type jacobi -fieldsplit_phi_pc_type gamg -fieldsplit_phi_pc_gamg_esteig_ksp_type cg -fieldsplit_phi_pc_gamg_esteig_ksp_max_it 10 -fieldsplit_phi_pc_gamg_agg_nsmooths 1 -fieldsplit_phi_pc_gamg_threshold 0.
 !
 !TEST*/

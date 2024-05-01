@@ -1,29 +1,25 @@
-
-#include <petsc/private/isimpl.h>     /*I  "petscis.h"  I*/
-PETSC_EXTERN PetscErrorCode ISCreate_General(IS);
-PETSC_EXTERN PetscErrorCode ISCreate_Stride(IS);
-PETSC_EXTERN PetscErrorCode ISCreate_Block(IS);
+#include <petsc/private/isimpl.h> /*I  "petscis.h"  I*/
+PETSC_INTERN PetscErrorCode ISCreate_General(IS);
+PETSC_INTERN PetscErrorCode ISCreate_Stride(IS);
+PETSC_INTERN PetscErrorCode ISCreate_Block(IS);
 
 /*@C
-  ISRegisterAll - Registers all of the index set components in the IS package.
+  ISRegisterAll - Registers all of the index set components in the `IS` package.
 
   Not Collective
 
   Level: advanced
 
-.seealso:  ISRegister()
+.seealso: [](sec_scatter), `IS`, `ISType`, `ISRegister()`
 @*/
-PetscErrorCode  ISRegisterAll(void)
+PetscErrorCode ISRegisterAll(void)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  if (ISRegisterAllCalled) PetscFunctionReturn(0);
+  if (ISRegisterAllCalled) PetscFunctionReturn(PETSC_SUCCESS);
   ISRegisterAllCalled = PETSC_TRUE;
 
-  ierr = ISRegister(ISGENERAL, ISCreate_General);CHKERRQ(ierr);
-  ierr = ISRegister(ISSTRIDE,  ISCreate_Stride);CHKERRQ(ierr);
-  ierr = ISRegister(ISBLOCK,   ISCreate_Block);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(ISRegister(ISGENERAL, ISCreate_General));
+  PetscCall(ISRegister(ISSTRIDE, ISCreate_Stride));
+  PetscCall(ISRegister(ISBLOCK, ISCreate_Block));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
-

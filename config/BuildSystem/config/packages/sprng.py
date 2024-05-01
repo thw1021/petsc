@@ -3,7 +3,7 @@ import config.package
 class Configure(config.package.Package):
   def __init__(self, framework):
     config.package.Package.__init__(self, framework)
-    self.download  = ['http://ftp.mcs.anl.gov/pub/petsc/externalpackages/sprng-1.0.tar.gz']
+    self.download  = ['https://web.cels.anl.gov/projects/petsc/download/externalpackages/sprng-1.0.tar.gz']
     self.functions = ['make_new_seed_mpi']
     self.includes  = ['sprng.h']
     self.liblist   = [['liblcg.a']]
@@ -25,17 +25,17 @@ class Configure(config.package.Package):
     g.write('AR_LIB_SUFFIX  = '+self.setCompilers.AR_LIB_SUFFIX+'\n')
     g.write('RANLIB         = '+self.setCompilers.RANLIB+'\n')
 
-    self.setCompilers.pushLanguage('C')
-    cflags = self.removeWarningFlags(self.setCompilers.getCompilerFlags())
+    self.pushLanguage('C')
+    cflags = self.updatePackageCFlags(self.getCompilerFlags())
     cflags += ' ' + self.headers.toString(self.mpi.include)+' '+self.headers.toString('.')
     cflags += ' ' + '-DSPRNG_MPI' # either using MPI or MPIUNI
 
-    g.write('CC             = '+self.setCompilers.getCompiler()+'\n')
+    g.write('CC             = '+self.getCompiler()+'\n')
     g.write('CFLAGS         = '+cflags+'\n')
     g.write('CLD            = $(CC)\n')
     g.write('MPICC          = $(CC)\n')
-    g.write('CPP            ='+self.framework.getPreprocessor()+'\n')
-    self.setCompilers.popLanguage()
+    g.write('CPP            ='+self.getPreprocessor()+'\n')
+    self.popLanguage()
 
     # extra unused options
     g.write('CLDFLAGS       = \n')
@@ -51,10 +51,9 @@ class Configure(config.package.Package):
     if self.installNeeded(os.path.join('SRC','make.PETSC')):
       try:
         self.logPrintBox('Compiling and installing SPRNG; this may take several minutes')
-        self.installDirProvider.printSudoPasswordMessage()
-        output,err,ret = config.package.Package.executeShellCommand(self.installSudo+'mkdir -p '+os.path.join(self.installDir,'lib'), timeout=2500, log=self.log)
-        output,err,ret = config.package.Package.executeShellCommand(self.installSudo+'mkdir -p '+os.path.join(self.installDir,'include'), timeout=2500, log=self.log)
-        output,err,ret  = config.package.Package.executeShellCommand('cd '+self.packageDir+' && make realclean && cd SRC && make && cd .. && '+self.installSudo+' cp -f lib/*.a '+os.path.join(self.installDir,self.libdir,'')+' && '+self.installSudo+'cp -f include/*.h '+os.path.join(self.installDir,self.includedir,''), timeout=2500, log = self.log)
+        output,err,ret = config.package.Package.executeShellCommand('mkdir -p '+os.path.join(self.installDir,'lib'), timeout=2500, log=self.log)
+        output,err,ret = config.package.Package.executeShellCommand('mkdir -p '+os.path.join(self.installDir,'include'), timeout=2500, log=self.log)
+        output,err,ret  = config.package.Package.executeShellCommand('cd '+self.packageDir+' && make realclean && cd SRC && make && cd .. && cp -f lib/*.a '+os.path.join(self.libDir,'')+' && cp -f include/*.h '+os.path.join(self.installDir,self.includedir,''), timeout=2500, log = self.log)
       except RuntimeError as e:
         raise RuntimeError('Error running make on SPRNG: '+str(e))
       self.postInstall(output+err,os.path.join('SRC','make.PETSC'))

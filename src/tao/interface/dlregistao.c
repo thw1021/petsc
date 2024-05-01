@@ -1,78 +1,72 @@
-#define TAO_DLL
-
 #include <petsc/private/taoimpl.h>
 
 static PetscBool TaoPackageInitialized = PETSC_FALSE;
 
 /*@C
-  TaoFinalizePackage - This function destroys everything in the PETSc/TAO
-  interface to the Tao package. It is called from PetscFinalize().
+  TaoFinalizePackage - This function destroys everything in the PETSc/Tao
+  interface to the Tao package. It is called from `PetscFinalize()`.
 
   Level: developer
+
+.seealso: `TaoInitializePackage()`, `PetscFinalize()`, `TaoRegister()`, `TaoRegisterAll()`
 @*/
 PetscErrorCode TaoFinalizePackage(void)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  ierr = PetscFunctionListDestroy(&TaoList);CHKERRQ(ierr);
+  PetscCall(PetscFunctionListDestroy(&TaoList));
   TaoPackageInitialized = PETSC_FALSE;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-const char *const TaoADMMRegularizerTypes[] = {"REGULARIZER_USER","REGULARIZER_SOFT_THRESH","TaoADMMRegularizerType","TAO_ADMM_",NULL};
-const char *const TaoADMMUpdateTypes[]      = {"UPDATE_BASIC","UPDATE_ADAPTIVE","UPDATE_ADAPTIVE_RELAXED","TaoADMMUpdateType","TAO_ADMM_",NULL};
 /*@C
   TaoInitializePackage - This function sets up PETSc to use the Tao
   package.  When using static or shared libraries, this function is called from the
-  first entry to TaoCreate(); when using shared or static libraries, it is called
+  first entry to `TaoCreate()`; when using shared or static libraries, it is called
   from PetscDLLibraryRegister_tao()
 
   Level: developer
 
-.seealso: TaoCreate()
+.seealso: `TaoCreate()`, `TaoFinalizePackage()`, `TaoRegister()`, `TaoRegisterAll()`
 @*/
 PetscErrorCode TaoInitializePackage(void)
 {
-  char           logList[256];
-  PetscBool      opt,pkg;
-  PetscErrorCode ierr;
+  char      logList[256];
+  PetscBool opt, pkg;
 
   PetscFunctionBegin;
-
-  if (TaoPackageInitialized) PetscFunctionReturn(0);
+  if (TaoPackageInitialized) PetscFunctionReturn(PETSC_SUCCESS);
   TaoPackageInitialized = PETSC_TRUE;
   /* Register Classes */
-  ierr = PetscClassIdRegister("Tao",&TAO_CLASSID);CHKERRQ(ierr);
+  PetscCall(PetscClassIdRegister("Tao", &TAO_CLASSID));
   /* Register Constructors */
-  ierr = TaoRegisterAll();CHKERRQ(ierr);
+  PetscCall(TaoRegisterAll());
   /* Register Events */
-  ierr = PetscLogEventRegister("TaoSolve",         TAO_CLASSID,&TAO_Solve);CHKERRQ(ierr);
-  ierr = PetscLogEventRegister("TaoObjectiveEval", TAO_CLASSID,&TAO_ObjectiveEval);CHKERRQ(ierr);
-  ierr = PetscLogEventRegister("TaoGradientEval",  TAO_CLASSID,&TAO_GradientEval);CHKERRQ(ierr);
-  ierr = PetscLogEventRegister("TaoObjGradEval",   TAO_CLASSID,&TAO_ObjGradEval);CHKERRQ(ierr);
-  ierr = PetscLogEventRegister("TaoHessianEval",   TAO_CLASSID,&TAO_HessianEval);CHKERRQ(ierr);
-  ierr = PetscLogEventRegister("TaoConstrEval",    TAO_CLASSID,&TAO_ConstraintsEval);CHKERRQ(ierr);
-  ierr = PetscLogEventRegister("TaoJacobianEval",  TAO_CLASSID,&TAO_JacobianEval);CHKERRQ(ierr);
+  PetscCall(PetscLogEventRegister("TaoSolve", TAO_CLASSID, &TAO_Solve));
+  PetscCall(PetscLogEventRegister("TaoObjectiveEval", TAO_CLASSID, &TAO_ObjectiveEval));
+  PetscCall(PetscLogEventRegister("TaoGradientEval", TAO_CLASSID, &TAO_GradientEval));
+  PetscCall(PetscLogEventRegister("TaoObjGradEval", TAO_CLASSID, &TAO_ObjGradEval));
+  PetscCall(PetscLogEventRegister("TaoHessianEval", TAO_CLASSID, &TAO_HessianEval));
+  PetscCall(PetscLogEventRegister("TaoConstrEval", TAO_CLASSID, &TAO_ConstraintsEval));
+  PetscCall(PetscLogEventRegister("TaoJacobianEval", TAO_CLASSID, &TAO_JacobianEval));
   /* Process Info */
   {
-    PetscClassId  classids[1];
+    PetscClassId classids[1];
 
     classids[0] = TAO_CLASSID;
-    ierr = PetscInfoProcessClass("tao", 1, classids);CHKERRQ(ierr);
+    PetscCall(PetscInfoProcessClass("tao", 1, classids));
   }
   /* Process summary exclusions */
-  ierr = PetscOptionsGetString(NULL,NULL,"-log_exclude",logList,sizeof(logList),&opt);CHKERRQ(ierr);
+  PetscCall(PetscOptionsGetString(NULL, NULL, "-log_exclude", logList, sizeof(logList), &opt));
   if (opt) {
-    ierr = PetscStrInList("tao",logList,',',&pkg);CHKERRQ(ierr);
-    if (pkg) {ierr = PetscLogEventExcludeClass(TAO_CLASSID);CHKERRQ(ierr);}
+    PetscCall(PetscStrInList("tao", logList, ',', &pkg));
+    if (pkg) PetscCall(PetscLogEventExcludeClass(TAO_CLASSID));
   }
   /* Register package finalizer */
-  ierr = PetscRegisterFinalize(TaoFinalizePackage);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscRegisterFinalize(TaoFinalizePackage));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-#ifdef PETSC_USE_DYNAMIC_LIBRARIES
+#if defined(PETSC_HAVE_DYNAMIC_LIBRARIES)
 /*
   PetscDLLibraryRegister - this function is called when the dynamic library it
   is in is opened.
@@ -83,15 +77,11 @@ PetscErrorCode TaoInitializePackage(void)
   Input Parameter:
 . path - library path
 */
-
-PETSC_EXTERN PetscErrorCode PetscDLLibraryRegister_tao(void)
+PETSC_EXTERN PetscErrorCode PetscDLLibraryRegister_petsctao(void)
 {
-    PetscErrorCode ierr;
-
-    PetscFunctionBegin;
-    ierr = TaoInitializePackage();CHKERRQ(ierr);
-    ierr = TaoLineSearchInitializePackage();CHKERRQ(ierr);
-    PetscFunctionReturn(0);
+  PetscFunctionBegin;
+  PetscCall(TaoInitializePackage());
+  PetscCall(TaoLineSearchInitializePackage());
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
-
-#endif /* PETSC_USE_DYNAMIC_LIBRARIES */
+#endif /* PETSC_HAVE_DYNAMIC_LIBRARIES */

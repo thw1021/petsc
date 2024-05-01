@@ -1,4 +1,4 @@
-module ex13f90aux
+module ex13f90auxmodule
   implicit none
 contains
   !
@@ -73,7 +73,7 @@ contains
     PetscReal, intent(inout), dimension(:,1-stw:,1-stw:,1-stw:) :: f
     PetscErrorCode                                                :: ierr
     !
-    call DMDAVecGetArrayF90(da,vec,array,ierr);CHKERRQ(ierr);
+    PetscCall(DMDAVecGetArrayF90(da,vec,array,ierr))
     call transform_petsc_us(array,f,stw)
   end subroutine petsc_to_local
   subroutine transform_petsc_us(array,f,stw)
@@ -92,7 +92,7 @@ contains
     PetscReal,intent(inout),dimension(:,1-stw:,1-stw:,1-stw:)  :: f
     PetscErrorCode                                        :: ierr
     call transform_us_petsc(array,f,stw)
-    call DMDAVecRestoreArrayF90(da,vec,array,ierr);CHKERRQ(ierr);
+    PetscCall(DMDAVecRestoreArrayF90(da,vec,array,ierr))
   end subroutine local_to_petsc
   subroutine transform_us_petsc(array,f,stw)
     !Note: this assumed shape-array is what does the "coordinate transformation"
@@ -101,4 +101,4 @@ contains
     PetscReal, intent(in),dimension(:,1-stw:,1-stw:,1-stw:)      :: f
     array(:,:,:,:) = f(:,:,:,:)
   end subroutine transform_us_petsc
-end module ex13f90aux
+end module ex13f90auxmodule

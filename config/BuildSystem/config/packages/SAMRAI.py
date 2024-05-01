@@ -3,12 +3,12 @@ import config.package
 class Configure(config.package.GNUPackage):
   def __init__(self, framework):
     config.package.GNUPackage.__init__(self, framework)
-    self.download  = ['http://ftp.mcs.anl.gov/pub/petsc/externalpackages/SAMRAI-v2.4.4p.tar.gz', 'https://computation-rnd.llnl.gov/SAMRAI/download/SAMRAI-v2.4.4.tar.gz']
+    self.download  = ['https://web.cels.anl.gov/projects/petsc/download/externalpackages/SAMRAI-v2.4.4p.tar.gz', 'https://computation-rnd.llnl.gov/SAMRAI/download/SAMRAI-v2.4.4.tar.gz']
     self.functions = []
     self.includes  = ['Box.h']
     self.liblist   = [['libSAMRAI.a']]
     self.pkgname   = 'SAMRAI-2.4.4'
-    self.cxx       = 1
+    self.buildLanguages    = ['Cxx']
     return
 
   def setupDependencies(self, framework):

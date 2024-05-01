@@ -1,4 +1,3 @@
-
 /*
     Private Krylov Context Structure (KSP) for LCD
 
@@ -8,8 +7,7 @@
 
 */
 
-#if !defined(__LCDIMPL_H)
-#define __LCDIMPL_H
+#pragma once
 
 /*
         Defines the basic KSP object
@@ -20,8 +18,6 @@ typedef struct {
   PetscInt  restart;
   PetscInt  max_iters;
   PetscReal haptol;
-  Vec       *P;
-  Vec       *Q;
+  Vec      *P;
+  Vec      *Q;
 } KSP_LCD;
-
-#endif

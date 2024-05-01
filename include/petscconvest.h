@@ -1,16 +1,20 @@
 /*
       Objects which encapsulate discretizations+continuum residuals
 */
-#if !defined(PETSCCE_H)
-#define PETSCCE_H
+#pragma once
+
 #include <petscsnes.h>
 
+/* SUBMANSEC = SNES */
+
 /*S
-  PetscConvEst - Provides an estimated convergence rate for a discretized problem
+  PetscConvEst - Object that manages convergence rate estimates for a discretized problem
 
   Level: developer
 
-.seealso:  PetscConvEstCreate(), PetscConvEstDestroy()
+.seealso: `PetscConvEstCreate()`, `PetscConvEstDestroy()`, `PetscConvEstView()`, `PetscConvEstSetFromOptions()`,
+          `PetscConvEstGetSolver()`, `PetscConvEstSetSolver()`, `PetscConvEstSetUp()`, `PetscConvEstComputeInitialGuess()`,
+          `PetscConvEstComputeError()`, `PetscConvEstGetConvRate()`, `PetscConvEstMonitorDefault()`, `PetscConvEstRateView()`
 S*/
 typedef struct _p_PetscConvEst *PetscConvEst;
 
@@ -26,5 +30,3 @@ PETSC_EXTERN PetscErrorCode PetscConvEstComputeError(PetscConvEst, PetscInt, DM,
 PETSC_EXTERN PetscErrorCode PetscConvEstGetConvRate(PetscConvEst, PetscReal[]);
 PETSC_EXTERN PetscErrorCode PetscConvEstMonitorDefault(PetscConvEst, PetscInt);
 PETSC_EXTERN PetscErrorCode PetscConvEstRateView(PetscConvEst, const PetscReal[], PetscViewer);
-
-#endif

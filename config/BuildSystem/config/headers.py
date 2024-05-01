@@ -68,6 +68,9 @@ class Configure(config.base.Configure):
       newincludes.append(j)
     return ' '.join(newincludes)
 
+  def getDefineMacro(self, macro):
+    return 'HAVE_MACRO_'+macro
+
   def getDefineName(self, header):
     return 'HAVE_'+header.upper().replace('.', '_').replace('/', '_')
 
@@ -83,11 +86,17 @@ class Configure(config.base.Configure):
       if adddefine: self.addDefine(self.getDefineName(header), found)
     return found
 
-  def checkInclude(self, incl, hfiles, otherIncludes = [], timeout = 600.0):
+  def checkInclude(self, incl, hfiles, otherIncludes = [], macro = None, timeout = 600.0):
     '''Checks if a particular include file can be found along particular include paths'''
     if not isinstance(hfiles, list):
       hfiles = [hfiles]
-    self.log.write('Checking for header files ' +str(hfiles)+ ' in '+str(incl)+'\n')
+    if not isinstance(incl, list):
+      incl = [incl]
+    strmac = ''
+    if macro is not None:
+      strmac = 'defined macro {} in '.format(macro)
+    self.log.write('Checking for ' + strmac + 'header files ' +str(hfiles)+ ' in '+str(incl)+'\n')
+    found = False
     for hfile in hfiles:
       flagsArg = self.getPreprocessorFlagsArg()
       self.logPrint('Checking include with compiler flags var '+flagsArg+' '+str(incl+otherIncludes))
@@ -95,14 +104,22 @@ class Configure(config.base.Configure):
       oldFlags = getattr(self.compilers, flagsArg)
       #self.compilers.CPPFLAGS += ' '+' '.join([self.getIncludeArgument(inc) for inc in incl+otherIncludes])
       setattr(self.compilers, flagsArg, getattr(self.compilers, flagsArg)+' '+' '.join([self.getIncludeArgument(inc) for inc in incl+otherIncludes]))
-      found = self.checkPreprocess('#include <' +hfile+ '>\n', timeout = timeout)
+      body = '#include <' +hfile+ '>\n'
+      if macro is not None:
+        body += '#if !defined({})\n#error {} not defined\n#endif\n'.format(macro,macro)
+      found = self.checkPreprocess(body, timeout = timeout)
       #self.compilers.CPPFLAGS = oldFlags
       setattr(self.compilers, flagsArg, oldFlags)
-      if not found: return 0
-    self.log.write('Found header files ' +str(hfiles)+ ' in '+str(incl)+'\n')
+      if found and macro is not None:
+        self.addDefine(self.getDefineMacro(macro), 1)
+      if not found and macro is None: return 0
+    if macro is not None and not found:
+      return 0
+    self.log.write('Found ' + strmac + 'header files ' +str(hfiles)+ ' in '+str(incl)+'\n')
     return 1
 
   def checkStdC(self):
+    '''Determine if C standard headers support everything PETSc needs'''
     haveStdC = 0
     includes = '''
 #include <stdlib.h>
@@ -134,41 +151,6 @@ class Configure(config.base.Configure):
     if not haveStdC:
       raise RuntimeError("Cannot locate all the standard C header files needed by PETSc")
     return
-
-  def checkStat(self):
-    '''Checks whether stat file-mode macros are broken, and defines STAT_MACROS_BROKEN if they are'''
-    code = '''
-#include <sys/types.h>
-#include <sys/stat.h>
-
-#if defined(S_ISBLK) && defined(S_IFDIR)
-# if S_ISBLK (S_IFDIR)
-  You lose.
-# endif
-#endif
-
-#if defined(S_ISBLK) && defined(S_IFCHR)
-# if S_ISBLK (S_IFCHR)
-  You lose.
-# endif
-#endif
-
-#if defined(S_ISLNK) && defined(S_IFREG)
-# if S_ISLNK (S_IFREG)
-  You lose.
-# endif
-#endif
-
-#if defined(S_ISSOCK) && defined(S_IFREG)
-# if S_ISSOCK (S_IFREG)
-  You lose.
-# endif
-#endif
-'''
-    if self.outputPreprocess(code).find('You lose') >= 0:
-      self.addDefine('STAT_MACROS_BROKEN', 1)
-      return 0
-    return 1
 
   def checkSysWait(self):
     '''Check for POSIX.1 compatible sys/wait.h, and defines HAVE_SYS_WAIT_H if found'''
@@ -202,9 +184,9 @@ class Configure(config.base.Configure):
     '''Checks for the math headers and defines'''
     haveMath = self.check('math.h',adddefine=0)
     if haveMath:
-      if self.checkCompile('#include <math.h>\n', 'double pi = M_PI;\n\nif (pi);\n'):
+      if self.checkCompile('#include <math.h>\n', 'double pi = M_PI;\n(void)pi'):
         self.logPrint('Found math #defines, like M_PI')
-      elif self.checkCompile('#define _USE_MATH_DEFINES 1\n#include <math.h>\n', 'double pi = M_PI;\n\nif (pi);\n'):
+      elif self.checkCompile('#define _USE_MATH_DEFINES 1\n#include <math.h>\n', 'double pi = M_PI;\n(void)pi'):
         self.framework.addDefine('_USE_MATH_DEFINES', 1)
         self.logPrint('Activated Windows math #defines, like M_PI')
       else:
@@ -224,7 +206,6 @@ class Configure(config.base.Configure):
 
   def configure(self):
     self.executeTest(self.checkStdC)
-    self.executeTest(self.checkStat)
     self.executeTest(self.checkSysWait)
     self.executeTest(self.checkTime)
     self.executeTest(self.checkMath)

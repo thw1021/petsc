@@ -4,11 +4,10 @@ static char help[] = "Tests repeated PetscInitialize/PetscFinalize calls.\n\n";
 
 int main(int argc, char **argv)
 {
-  int            i,imax;
+  int i, imax;
 #if defined(PETSC_HAVE_ELEMENTAL)
-  PetscBool      initialized;
+  PetscBool initialized;
 #endif
-  PetscErrorCode ierr;
 
 #if defined(PETSC_HAVE_MPIUNI)
   imax = 32;
@@ -16,42 +15,48 @@ int main(int argc, char **argv)
   imax = 1024;
 #endif
 
-  MPI_Init(&argc, &argv);
+  PetscCallMPI(MPI_Init(&argc, &argv));
 #if defined(PETSC_HAVE_ELEMENTAL)
-  ierr = PetscElementalInitializePackage(); if (ierr) return ierr;
-  ierr = PetscElementalInitialized(&initialized); if (ierr) return ierr;
-  if (!initialized) return 1;
+  PetscCall(PetscElementalInitializePackage());
+  PetscCall(PetscElementalInitialized(&initialized));
+  PetscCheck(initialized, MPI_COMM_WORLD, PETSC_ERR_PLIB, "Error in Elemental package processing");
 #endif
   for (i = 0; i < imax; ++i) {
-    ierr = PetscInitialize(&argc, &argv, (char*) 0, help); if (ierr) return ierr;
-    ierr = PetscFinalize(); if (ierr) return ierr;
+    PetscFunctionBeginUser;
+    PetscCall(PetscInitialize(&argc, &argv, (char *)0, help));
+    PetscCall(PetscFinalize());
 #if defined(PETSC_HAVE_ELEMENTAL)
-    ierr = PetscElementalInitialized(&initialized); if (ierr) return ierr;
-    if (!initialized) return PETSC_ERR_LIB;
+    // if Elemental is initialized outside of PETSc it should remain initialized
+    PetscCall(PetscElementalInitialized(&initialized));
+    PetscCheck(initialized, MPI_COMM_WORLD, PETSC_ERR_PLIB, "Error in Elemental package processing");
 #endif
   }
 #if defined(PETSC_HAVE_ELEMENTAL)
-  ierr = PetscElementalFinalizePackage(); if (ierr) return ierr;
-  ierr = PetscElementalInitialized(&initialized); if (ierr) return ierr;
-  if (initialized) return 1;
+  PetscCall(PetscElementalFinalizePackage());
+  PetscCall(PetscElementalInitialized(&initialized));
+  PetscCheck(!initialized, MPI_COMM_WORLD, PETSC_ERR_PLIB, "Error in Elemental package processing");
   for (i = 0; i < 32; ++i) { /* increasing the upper bound will generate an error in Elemental */
-    ierr = PetscInitialize(&argc, &argv, (char*) 0, help); if (ierr) return ierr;
-    ierr = PetscElementalInitialized(&initialized);CHKERRQ(ierr);
-    if (!initialized) SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_LIB, "Uninitialized Elemental");
-    ierr = PetscFinalize(); if (ierr) return ierr;
-    ierr = PetscElementalInitialized(&initialized); if (ierr) return ierr;
-    if (initialized) return PETSC_ERR_LIB;
+    PetscFunctionBeginUser;
+    PetscCall(PetscInitialize(&argc, &argv, (char *)0, help));
+    PetscCall(PetscElementalInitialized(&initialized));
+    PetscCheck(initialized, MPI_COMM_WORLD, PETSC_ERR_PLIB, "Error in Elemental package processing");
+    PetscCheck(initialized, PETSC_COMM_WORLD, PETSC_ERR_LIB, "Uninitialized Elemental");
+    PetscCall(PetscFinalize());
+    PetscCall(PetscElementalInitialized(&initialized));
+    // if Elemental is initialized inside of PETSc it should be uninitialized in PetscFinalize()
+    PetscCheck(!initialized, MPI_COMM_WORLD, PETSC_ERR_PLIB, "Error in Elemental package processing");
   }
 #endif
-  MPI_Finalize();
-  return ierr;
+  return MPI_Finalize();
 }
 
 /*TEST
 
    test:
+      requires: !saws
 
    test:
+      requires: !saws
       suffix: 2
       nsize: 2
       output_file: output/ex26_1.out

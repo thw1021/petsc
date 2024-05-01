@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 '''
   This is the first try for a hierarchically configured module. The idea is to
 add the configure objects from a previously executed framework into the current
@@ -8,14 +8,14 @@ module.
   We must now have three distinct phases: location, construction, and testing.
 This is very similar to the current compiler checks. The construction phase is
 optional, and only necessary when the package has not been previously configured.
-The phases will necessarily interact, as an installtion must be located before
-testing, however anothe should be located if the testing fails.
+The phases will necessarily interact, as an installation must be located before
+testing, however another should be located if the testing fails.
 
   We will give each installation a unique key, which is returned by the location
 method. This will allow us to identify working installations, as well as those
 that failed testing.
 
-  There is a wierd role reversal that can happen. If we look for PETSc, but
+  There is a weird role reversal that can happen. If we look for PETSc, but
 cannot find it, it is reasonable to ask to have it automatically downloaded.
 However, in this case, rather than using the configure objects from the existing
 PETSc, we contribute objects to the PETSc which will be built.
@@ -274,7 +274,7 @@ class Configure(config.base.Configure):
   def checkWorkingLink(self):
     '''Checking that we can link a PETSc executable'''
     self.pushLanguage(self.languages.clanguage)
-    if not self.checkPETScLink('#include <petsctime.h>\n', 'PetscLogDouble time;\nPetscErrorCode ierr;\n\nierr = PetscTime(&time);CHKERRQ(ierr);\n'):
+    if not self.checkPETScLink('#include <petsctime.h>\n', 'PetscLogDouble time;\n\nPetscCall(PetscTime(&time));\n'):
       self.logPrint('PETSc cannot link, which indicates a problem with the PETSc installation')
       return 0
     self.logPrint('PETSc can link with '+self.languages.clanguage)
@@ -283,7 +283,7 @@ class Configure(config.base.Configure):
     if hasattr(self.compilers, 'CXX') and self.languages.clanguage == 'C':
       self.pushLanguage('C++')
       self.sourceExtension = '.C'
-      if not self.checkPETScLink('#include <petsctime.h>\n', 'PetscLogDouble time;\nPetscErrorCode ierr;\n\nierr = PetscTime(&time);CHKERRQ(ierr);\n'):
+      if not self.checkPETScLink('#include <petsctime.h>\n', 'PetscLogDouble time;\n\nPetscCall(PetscTime(&time));\n'):
         self.logPrint('PETSc cannot link C++ but can link C, which indicates a problem with the PETSc installation')
         self.popLanguage()
         return 0

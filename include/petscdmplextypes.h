@@ -1,33 +1,90 @@
-#if !defined(PETSCDMPLEXTYPES_H)
-#define PETSCDMPLEXTYPES_H
+#pragma once
 
-/*S
-  DMPlexCellRefiner - Object encapsulating the refinement strategy for a DMPlex
-
-  Level: developer
-
-.seealso:  DMPlexCellRefinerCreate(), DMType
-S*/
-typedef struct _p_DMPlexCellRefiner *DMPlexCellRefiner;
-
+/* SUBMANSEC = DMPlex */
 
 /*E
-  DMPlexCellRefinerType - This describes the strategy used to refine cells.
+  DMPlexShape - The domain shape used for automatic mesh creation.
+
+  Values:
++ `DM_SHAPE_BOX`         - The tensor product of intervals in dimension d
+. `DM_SHAPE_BOX_SURFACE` - The surface of a box in dimension d+1
+. `DM_SHAPE_BALL`        - The d-dimensional ball
+. `DM_SHAPE_SPHERE`      - The surface of the (d+1)-dimensional ball
+. `DM_SHAPE_CYLINDER`    - The tensor product of the interval and disk
+. `DM_SHAPE_SCHWARZ_P`   - The Schwarz-P triply periodic minimal surface
+. `DM_SHAPE_GYROID`      - The Gyroid triply periodic minimal surface
+. `DM_SHAPE_DOUBLET`     - The mesh of two cells of a specified type
+. `DM_SHAPE_ANNULUS`     - The area between two concentric spheres in dimension d
+- `DM_SHAPE_HYPERCUBIC`  - The skeleton of the tensor product of the intervals
 
   Level: beginner
 
-  The strategy gives a prescription for refining each cell type. Existing strategies include
-$ DM_REFINER_REGULAR       - Divide cells into smaller cells of the same type
-$ DM_REFINER_TO_BOX        - Divide all cells into box cells
-$ DM_REFINER_TO_SIMPLEX    - Divide all cells into simplices
-$ DM_REFINER_ALFELD2D      - Alfeld barycentric refinement of triangles
-$ DM_REFINER_ALFELD3D      - Alfeld barycentric refinement of tetrahedra
-$ DM_REFINER_POWELL_SABIN  - Powell-Sabin barycentric refinement of simplices (unfinished)
-$ DM_REFINER_BOUNDARYLAYER - Refine only tensor cells in the tensor direction, often used to refine boundary layers
-
-.seealso: DMPlexGetCellRefiner(), DMPlexSetCellRefiner(), DMRefine(), DMPolytopeType
+.seealso: [](ch_dmbase), `DMPLEX`, `DMPlexGetCellRefiner()`, `DMPlexSetCellRefiner()`, `DMRefine()`, `DMPolytopeType`, `DMPlexCoordMap`
 E*/
-typedef enum {DM_REFINER_REGULAR, DM_REFINER_TO_BOX, DM_REFINER_TO_SIMPLEX, DM_REFINER_ALFELD2D, DM_REFINER_ALFELD3D, DM_REFINER_POWELL_SABIN, DM_REFINER_BOUNDARYLAYER} DMPlexCellRefinerType;
-PETSC_EXTERN const char * const DMPlexCellRefinerTypes[];
+typedef enum {
+  DM_SHAPE_BOX,
+  DM_SHAPE_BOX_SURFACE,
+  DM_SHAPE_BALL,
+  DM_SHAPE_SPHERE,
+  DM_SHAPE_CYLINDER,
+  DM_SHAPE_SCHWARZ_P,
+  DM_SHAPE_GYROID,
+  DM_SHAPE_DOUBLET,
+  DM_SHAPE_ANNULUS,
+  DM_SHAPE_HYPERCUBIC,
+  DM_SHAPE_ZBOX,
+  DM_SHAPE_UNKNOWN
+} DMPlexShape;
+PETSC_EXTERN const char *const DMPlexShapes[];
 
-#endif
+/*E
+  DMPlexCoordMap - The coordinate mapping used for automatic mesh creation.
+
+  Values:
++ `DM_COORD_MAP_NONE`    - The identity map
+. `DM_COORD_MAP_SHEAR`   - The shear (additive) map along some dimension
+. `DM_COORD_MAP_FLARE`   - The flare (multiplicative) map along some dimension
+. `DM_COORD_MAP_ANNULUS` - The map from a rectangle to an annulus
+- `DM_COORD_MAP_SHELL`   - The map from a rectangular solid to an spherical shell
+
+  Level: beginner
+
+.seealso: [](ch_dmbase), `DMPLEX`, `DMPlexGetCellRefiner()`, `DMPlexSetCellRefiner()`, `DMRefine()`, `DMPolytopeType`, `DMPlexShape`
+E*/
+typedef enum {
+  DM_COORD_MAP_NONE,
+  DM_COORD_MAP_SHEAR,
+  DM_COORD_MAP_FLARE,
+  DM_COORD_MAP_ANNULUS,
+  DM_COORD_MAP_SHELL,
+  DM_COORD_MAP_UNKNOWN
+} DMPlexCoordMap;
+PETSC_EXTERN const char *const DMPlexCoordMaps[];
+
+/*E
+  DMPlexCSRAlgorithm - The algorithm for building the adjacency graph in CSR format, usually for a mesh partitioner
+
+  Values:
++ `DM_PLEX_CSR_MAT`     - Use `MatPartitioning` by first making a matrix
+. `DM_PLEX_CSR_GRAPH`   - Use the original `DMPLEX` and communicate along the boundary
+- `DM_PLEX_CSR_OVERLAP` - Build an overlapped `DMPLEX` and then locally compute
+
+  Level: beginner
+
+.seealso: [](ch_dmbase), `DMPLEX`, `DMPlexCreatePartitionerGraph()`, `PetscPartitionerDMPlexPartition()`, `DMPlexDistribute()`
+E*/
+typedef enum {
+  DM_PLEX_CSR_MAT,
+  DM_PLEX_CSR_GRAPH,
+  DM_PLEX_CSR_OVERLAP
+} DMPlexCSRAlgorithm;
+PETSC_EXTERN const char *const DMPlexCSRAlgorithms[];
+
+typedef struct _p_DMPlexPointQueue *DMPlexPointQueue;
+struct _p_DMPlexPointQueue {
+  PetscInt  size;   /* Size of the storage array */
+  PetscInt *points; /* Array of mesh points */
+  PetscInt  front;  /* Index of the front of the queue */
+  PetscInt  back;   /* Index of the back of the queue */
+  PetscInt  num;    /* Number of enqueued points */
+};

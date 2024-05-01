@@ -1,18 +1,14 @@
-
-#if !defined(__FFT_H)
-#define __FFT_H
+#pragma once
 
 #include <petsc/private/matimpl.h>
 
 typedef struct {
-  PetscInt ndim;
+  PetscInt  ndim;
   PetscInt *dim;
-  PetscInt n,N;         /* local and global size of the transform */
-  void     *data;       /* implementation-specific data for subclass */
+  PetscInt  n, N; /* local and global size of the transform */
+  void     *data; /* implementation-specific data for subclass */
 
   PetscErrorCode (*matdestroy)(Mat);
 } Mat_FFT;
 
 PETSC_EXTERN PetscErrorCode MatCreate_FFTW(Mat);
-
-#endif

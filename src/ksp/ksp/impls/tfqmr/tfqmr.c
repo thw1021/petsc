@@ -1,23 +1,19 @@
-
 #include <petsc/private/kspimpl.h>
 
 static PetscErrorCode KSPSetUp_TFQMR(KSP ksp)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  if (ksp->pc_side == PC_SYMMETRIC) SETERRQ(PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP,"no symmetric preconditioning for KSPTFQMR");
-  ierr = KSPSetWorkVecs(ksp,9);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCheck(ksp->pc_side != PC_SYMMETRIC, PetscObjectComm((PetscObject)ksp), PETSC_ERR_SUP, "no symmetric preconditioning for KSPTFQMR");
+  PetscCall(KSPSetWorkVecs(ksp, 9));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode  KSPSolve_TFQMR(KSP ksp)
+static PetscErrorCode KSPSolve_TFQMR(KSP ksp)
 {
-  PetscErrorCode ierr;
-  PetscInt       i,m;
-  PetscScalar    rho,rhoold,a,s,b,eta,etaold,psiold,cf;
-  PetscReal      dp,dpold,w,dpest,tau,psi,cm;
-  Vec            X,B,V,P,R,RP,T,T1,Q,U,D,AUQ;
+  PetscInt    i, m;
+  PetscScalar rho, rhoold, a, s, b, eta, etaold, psiold, cf;
+  PetscReal   dp, dpold, w, dpest, tau, psi, cm;
+  Vec         X, B, V, P, R, RP, T, T1, Q, U, D, AUQ;
 
   PetscFunctionBegin;
   X   = ksp->vec_sol;
@@ -34,22 +30,23 @@ static PetscErrorCode  KSPSolve_TFQMR(KSP ksp)
   AUQ = V;
 
   /* Compute initial preconditioned residual */
-  ierr = KSPInitialResidual(ksp,X,V,T,R,B);CHKERRQ(ierr);
+  PetscCall(KSPInitialResidual(ksp, X, V, T, R, B));
 
   /* Test for nothing to do */
-  ierr = VecNorm(R,NORM_2,&dp);CHKERRQ(ierr);
-  KSPCheckNorm(ksp,dp);
-  ierr = PetscObjectSAWsTakeAccess((PetscObject)ksp);CHKERRQ(ierr);
+  PetscCall(VecNorm(R, NORM_2, &dp));
+  KSPCheckNorm(ksp, dp);
+  PetscCall(PetscObjectSAWsTakeAccess((PetscObject)ksp));
   if (ksp->normtype != KSP_NORM_NONE) ksp->rnorm = dp;
   else ksp->rnorm = 0.0;
   ksp->its = 0;
-  ierr     = PetscObjectSAWsGrantAccess((PetscObject)ksp);CHKERRQ(ierr);
-  ierr     = KSPMonitor(ksp,0,ksp->rnorm);CHKERRQ(ierr);
-  ierr     = (*ksp->converged)(ksp,0,ksp->rnorm,&ksp->reason,ksp->cnvP);CHKERRQ(ierr);
-  if (ksp->reason) PetscFunctionReturn(0);
+  PetscCall(PetscObjectSAWsGrantAccess((PetscObject)ksp));
+  PetscCall(KSPLogResidualHistory(ksp, ksp->rnorm));
+  PetscCall(KSPMonitor(ksp, 0, ksp->rnorm));
+  PetscCall((*ksp->converged)(ksp, 0, ksp->rnorm, &ksp->reason, ksp->cnvP));
+  if (ksp->reason) PetscFunctionReturn(PETSC_SUCCESS);
 
   /* Make the initial Rp == R */
-  ierr = VecCopy(R,RP);CHKERRQ(ierr);
+  PetscCall(VecCopy(R, RP));
 
   /* Set the initial conditions */
   etaold = 0.0;
@@ -57,28 +54,28 @@ static PetscErrorCode  KSPSolve_TFQMR(KSP ksp)
   tau    = dp;
   dpold  = dp;
 
-  ierr = VecDot(R,RP,&rhoold);CHKERRQ(ierr);       /* rhoold = (r,rp)     */
-  ierr = VecCopy(R,U);CHKERRQ(ierr);
-  ierr = VecCopy(R,P);CHKERRQ(ierr);
-  ierr = KSP_PCApplyBAorAB(ksp,P,V,T);CHKERRQ(ierr);
-  ierr = VecSet(D,0.0);CHKERRQ(ierr);
+  PetscCall(VecDot(R, RP, &rhoold)); /* rhoold = (r,rp)     */
+  PetscCall(VecCopy(R, U));
+  PetscCall(VecCopy(R, P));
+  PetscCall(KSP_PCApplyBAorAB(ksp, P, V, T));
+  PetscCall(VecSet(D, 0.0));
 
-  i=0;
+  i = 0;
   do {
-    ierr = PetscObjectSAWsTakeAccess((PetscObject)ksp);CHKERRQ(ierr);
+    PetscCall(PetscObjectSAWsTakeAccess((PetscObject)ksp));
     ksp->its++;
-    ierr = PetscObjectSAWsGrantAccess((PetscObject)ksp);CHKERRQ(ierr);
-    ierr = VecDot(V,RP,&s);CHKERRQ(ierr);          /* s <- (v,rp)          */
-    KSPCheckDot(ksp,s);
-    a    = rhoold / s;                              /* a <- rho / s         */
-    ierr = VecWAXPY(Q,-a,V,U);CHKERRQ(ierr);  /* q <- u - a v         */
-    ierr = VecWAXPY(T,1.0,U,Q);CHKERRQ(ierr);     /* t <- u + q           */
-    ierr = KSP_PCApplyBAorAB(ksp,T,AUQ,T1);CHKERRQ(ierr);
-    ierr = VecAXPY(R,-a,AUQ);CHKERRQ(ierr);      /* r <- r - a K (u + q) */
-    ierr = VecNorm(R,NORM_2,&dp);CHKERRQ(ierr);
-    KSPCheckNorm(ksp,dp);
-    for (m=0; m<2; m++) {
-      if (!m) w = PetscSqrtReal(dp*dpold);
+    PetscCall(PetscObjectSAWsGrantAccess((PetscObject)ksp));
+    PetscCall(VecDot(V, RP, &s)); /* s <- (v,rp)          */
+    KSPCheckDot(ksp, s);
+    a = rhoold / s;                    /* a <- rho / s         */
+    PetscCall(VecWAXPY(Q, -a, V, U));  /* q <- u - a v         */
+    PetscCall(VecWAXPY(T, 1.0, U, Q)); /* t <- u + q           */
+    PetscCall(KSP_PCApplyBAorAB(ksp, T, AUQ, T1));
+    PetscCall(VecAXPY(R, -a, AUQ)); /* r <- r - a K (u + q) */
+    PetscCall(VecNorm(R, NORM_2, &dp));
+    KSPCheckNorm(ksp, dp);
+    for (m = 0; m < 2; m++) {
+      if (!m) w = PetscSqrtReal(dp * dpold);
       else w = dp;
       psi = w / tau;
       cm  = 1.0 / PetscSqrtReal(1.0 + psi * psi);
@@ -86,20 +83,20 @@ static PetscErrorCode  KSPSolve_TFQMR(KSP ksp)
       eta = cm * cm * a;
       cf  = psiold * psiold * etaold / a;
       if (!m) {
-        ierr = VecAYPX(D,cf,U);CHKERRQ(ierr);
+        PetscCall(VecAYPX(D, cf, U));
       } else {
-        ierr = VecAYPX(D,cf,Q);CHKERRQ(ierr);
+        PetscCall(VecAYPX(D, cf, Q));
       }
-      ierr = VecAXPY(X,eta,D);CHKERRQ(ierr);
+      PetscCall(VecAXPY(X, eta, D));
 
-      dpest = PetscSqrtReal(m + 1.0) * tau;
-      ierr  = PetscObjectSAWsTakeAccess((PetscObject)ksp);CHKERRQ(ierr);
+      dpest = PetscSqrtReal(2 * i + m + 2.0) * tau;
+      PetscCall(PetscObjectSAWsTakeAccess((PetscObject)ksp));
       if (ksp->normtype != KSP_NORM_NONE) ksp->rnorm = dpest;
       else ksp->rnorm = 0.0;
-      ierr = PetscObjectSAWsGrantAccess((PetscObject)ksp);CHKERRQ(ierr);
-      ierr = KSPLogResidualHistory(ksp,ksp->rnorm);CHKERRQ(ierr);
-      ierr = KSPMonitor(ksp,i+1,ksp->rnorm);CHKERRQ(ierr);
-      ierr = (*ksp->converged)(ksp,i+1,ksp->rnorm,&ksp->reason,ksp->cnvP);CHKERRQ(ierr);
+      PetscCall(PetscObjectSAWsGrantAccess((PetscObject)ksp));
+      PetscCall(KSPLogResidualHistory(ksp, ksp->rnorm));
+      PetscCall(KSPMonitor(ksp, i + 1, ksp->rnorm));
+      PetscCall((*ksp->converged)(ksp, i + 1, ksp->rnorm, &ksp->reason, ksp->cnvP));
       if (ksp->reason) break;
 
       etaold = eta;
@@ -107,55 +104,50 @@ static PetscErrorCode  KSPSolve_TFQMR(KSP ksp)
     }
     if (ksp->reason) break;
 
-    ierr = VecDot(R,RP,&rho);CHKERRQ(ierr);        /* rho <- (r,rp)       */
-    b    = rho / rhoold;                            /* b <- rho / rhoold   */
-    ierr = VecWAXPY(U,b,Q,R);CHKERRQ(ierr);       /* u <- r + b q        */
-    ierr = VecAXPY(Q,b,P);CHKERRQ(ierr);
-    ierr = VecWAXPY(P,b,Q,U);CHKERRQ(ierr);       /* p <- u + b(q + b p) */
-    ierr = KSP_PCApplyBAorAB(ksp,P,V,Q);CHKERRQ(ierr); /* v <- K p  */
+    PetscCall(VecDot(R, RP, &rho));  /* rho <- (r,rp)       */
+    b = rho / rhoold;                /* b <- rho / rhoold   */
+    PetscCall(VecWAXPY(U, b, Q, R)); /* u <- r + b q        */
+    PetscCall(VecAXPY(Q, b, P));
+    PetscCall(VecWAXPY(P, b, Q, U));            /* p <- u + b(q + b p) */
+    PetscCall(KSP_PCApplyBAorAB(ksp, P, V, Q)); /* v <- K p  */
 
     rhoold = rho;
     dpold  = dp;
 
     i++;
-  } while (i<ksp->max_it);
+  } while (i < ksp->max_it);
   if (i >= ksp->max_it) ksp->reason = KSP_DIVERGED_ITS;
 
-  ierr = KSPUnwindPreconditioner(ksp,X,T);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(KSPUnwindPreconditioner(ksp, X, T));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*MC
-     KSPTFQMR - A transpose free QMR (quasi minimal residual),
-
-   Options Database Keys:
-.   see KSPSolve()
+   KSPTFQMR - A transpose-free QMR (quasi minimal residual) {cite}`f:93`
 
    Level: beginner
 
    Notes:
-    Supports left and right preconditioning, but not symmetric
+   Supports left and right preconditioning, but not symmetric
 
-          The "residual norm" computed in this algorithm is actually just an upper bound on the actual residual norm.
-          That is for left preconditioning it is a bound on the preconditioned residual and for right preconditioning
-          it is a bound on the true residual.
+   The "residual norm" computed in this algorithm is actually just an upper bound on the actual residual norm.
+   That is for left preconditioning it is a bound on the preconditioned residual and for right preconditioning
+   it is a bound on the true residual.
 
-   References:
-.   1. -  Freund, 1993
+   The solver has a two-step inner iteration, each of which computes and updates to the solution and the residual norm.
+   Hence the values from `KSPGetResidualHistory()` and `KSPGetIterationNumber()` will differ.
 
-.seealso: KSPCreate(), KSPSetType(), KSPType (for list of available types), KSP, KSPTCQMR
+.seealso: [](ch_ksp), `KSPCreate()`, `KSPSetType()`, `KSPType`, `KSP`, `KSPTCQMR`
 M*/
 PETSC_EXTERN PetscErrorCode KSPCreate_TFQMR(KSP ksp)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  ierr = KSPSetSupportedNorm(ksp,KSP_NORM_PRECONDITIONED,PC_LEFT,3);CHKERRQ(ierr);
-  ierr = KSPSetSupportedNorm(ksp,KSP_NORM_UNPRECONDITIONED,PC_RIGHT,2);CHKERRQ(ierr);
-  ierr = KSPSetSupportedNorm(ksp,KSP_NORM_NONE,PC_LEFT,1);CHKERRQ(ierr);
-  ierr = KSPSetSupportedNorm(ksp,KSP_NORM_NONE,PC_RIGHT,1);CHKERRQ(ierr);
+  PetscCall(KSPSetSupportedNorm(ksp, KSP_NORM_PRECONDITIONED, PC_LEFT, 3));
+  PetscCall(KSPSetSupportedNorm(ksp, KSP_NORM_UNPRECONDITIONED, PC_RIGHT, 2));
+  PetscCall(KSPSetSupportedNorm(ksp, KSP_NORM_NONE, PC_LEFT, 1));
+  PetscCall(KSPSetSupportedNorm(ksp, KSP_NORM_NONE, PC_RIGHT, 1));
 
-  ksp->data                = (void*)0;
+  ksp->data                = (void *)0;
   ksp->ops->setup          = KSPSetUp_TFQMR;
   ksp->ops->solve          = KSPSolve_TFQMR;
   ksp->ops->destroy        = KSPDestroyDefault;
@@ -163,5 +155,5 @@ PETSC_EXTERN PetscErrorCode KSPCreate_TFQMR(KSP ksp)
   ksp->ops->buildresidual  = KSPBuildResidualDefault;
   ksp->ops->setfromoptions = NULL;
   ksp->ops->view           = NULL;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

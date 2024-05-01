@@ -7,44 +7,40 @@ static PetscBool DMFieldPackageInitialized = PETSC_FALSE;
 PetscBool DMFieldRegisterAllCalled;
 
 /*@C
-   DMFieldInitializePackage - Initialize DMField package
+  DMFieldInitializePackage - Initialize `DMField` package
 
-   Logically Collective
+  Logically Collective
 
-   Level: developer
+  Level: developer
 
-.seealso: DMFieldFinalizePackage()
+.seealso: `DMFieldFinalizePackage()`
 @*/
 PetscErrorCode DMFieldInitializePackage(void)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  if (DMFieldPackageInitialized) PetscFunctionReturn(0);
+  if (DMFieldPackageInitialized) PetscFunctionReturn(PETSC_SUCCESS);
   DMFieldPackageInitialized = PETSC_TRUE;
 
-  ierr = PetscClassIdRegister("Field over DM",&DMFIELD_CLASSID);CHKERRQ(ierr);
-  ierr = DMFieldRegisterAll();CHKERRQ(ierr);
-  ierr = PetscRegisterFinalize(DMFieldFinalizePackage);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscClassIdRegister("Field over DM", &DMFIELD_CLASSID));
+  PetscCall(DMFieldRegisterAll());
+  PetscCall(PetscRegisterFinalize(DMFieldFinalizePackage));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-   DMFieldFinalizePackage - Finalize DMField package, it is called from PetscFinalize()
+  DMFieldFinalizePackage - Finalize `DMField` package, it is called from `PetscFinalize()`
 
-   Logically Collective
+  Logically Collective
 
-   Level: developer
+  Level: developer
 
-.seealso: DMFieldInitializePackage()
+.seealso: `DMFieldInitializePackage()`
 @*/
 PetscErrorCode DMFieldFinalizePackage(void)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  ierr = PetscFunctionListDestroy(&DMFieldList);CHKERRQ(ierr);
+  PetscCall(PetscFunctionListDestroy(&DMFieldList));
   DMFieldPackageInitialized = PETSC_FALSE;
   DMFieldRegisterAllCalled  = PETSC_FALSE;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

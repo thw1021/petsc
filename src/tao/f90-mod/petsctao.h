@@ -1,8 +1,12 @@
-
 !
-!  Include file for Fortran use of the TAO (Optimization) package in PETSc
+!  Used by petsctaomod.F90 to create Fortran module file
 !
 #include "petsc/finclude/petsctao.h"
+
+      type tTao
+        PetscFortranAddr:: v PETSC_FORTRAN_TYPE_INITIALIZE
+      end type
+      Tao, parameter :: PETSC_NULL_TAO = tTao(0)
 
       PetscEnum, parameter ::  TAO_CONVERGED_GATOL = 3
       PetscEnum, parameter ::  TAO_CONVERGED_GRTOL = 4
@@ -17,3 +21,7 @@
       PetscEnum, parameter ::  TAO_DIVERGED_TR_REDUCTION = -7
       PetscEnum, parameter ::  TAO_DIVERGED_USER = -8
       PetscEnum, parameter ::  TAO_CONTINUE_ITERATING = 0
+
+      PetscEnum, parameter ::  TAO_SUBSET_SUBVEC = 0
+      PetscEnum, parameter ::  TAO_SUBSET_MASK = 1
+      PetscEnum, parameter ::  TAO_SUBSET_MATRIXFREE = 2

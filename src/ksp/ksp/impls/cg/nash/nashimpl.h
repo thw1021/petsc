@@ -12,8 +12,7 @@
 /*     Journal on Numerical Analysis, 21, pages 553-572, 1984.               */
 /*****************************************************************************/
 
-#if !defined(__CG_NASH)
-#define __CG_NASH
+#pragma once
 
 #include <petsc/private/kspimpl.h>
 
@@ -23,6 +22,3 @@ typedef struct {
   PetscReal o_fcn;
   PetscInt  dtype;
 } KSPCG_NASH;
-
-#endif
-

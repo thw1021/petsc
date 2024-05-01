@@ -1,4 +1,3 @@
-
 #include "petsc/finclude/petscsys.h"
 
 #if defined(_WIN32) && defined(PETSC_USE_SHARED_LIBRARIES)
@@ -43,9 +42,10 @@
 
       do i=1,Len
          list1(i) = trim(FArray(i))//C_NULL_CHAR
+         CArray(i) = c_loc(list1(i))
       enddo
 
-      CArray = (/(c_loc(list1(i)),i=1,Len),c_loc(nullc)/)
+      CArray(Len+1) = c_loc(nullc)
       call PetscBagRegisterEnumPrivate(bag,addr,CArray,def,n,h,ierr)
       DeAllocate(CArray)
       DeAllocate(list1)

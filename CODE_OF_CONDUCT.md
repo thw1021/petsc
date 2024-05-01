@@ -6,7 +6,7 @@ In the interest of fostering an open and welcoming environment, we as
 contributors and maintainers pledge to making participation in our project and
 our community a harassment-free experience for everyone, regardless of age, body
 size, disability, ethnicity, sex characteristics, gender identity and expression,
-level of experience, education, socio-economic status, nationality, personal
+level of experience, education, socioeconomic status, nationality, personal
 appearance, race, religion, or sexual identity and orientation.
 
 ## Our Standards
@@ -60,7 +60,7 @@ reported by contacting the project team as a group
 or confidentially by contacting
 [Jed Brown](mailto:jed@jedbrown.org),
 [Karl Rupp](mailto:me@karlrupp.net),
-and/or [Oana Marin](mailto:oanam@mcs.anl.gov).
+and/or [Hong Zhang](mailto:hzhang@mcs.anl.gov).
 All complaints will be reviewed and investigated and will result in a
 response that is deemed necessary and appropriate to the
 circumstances. The project team is obligated to maintain

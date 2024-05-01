@@ -39,7 +39,7 @@ class Configure(config.base.Configure):
         if not hasattr(self.setCompilers, name):
           raise MissingProcessor(self.dispatchNames[name])
         return getattr(self.setCompilers, name)
-      if name in ['CC_LINKER_FLAGS', 'FC_LINKER_FLAGS', 'CXX_LINKER_FLAGS', 'CUDAC_LINKER_FLAGS', 'HIPCC_LINKER_FLAGS', 'SYCLCXX_LINKER_FLAGS', 'sharedLibraryFlags', 'dynamicLibraryFlags']:
+      if name in ['CC_LINKER_FLAGS', 'FC_LINKER_FLAGS', 'CXX_LINKER_FLAGS', 'CUDAC_LINKER_FLAGS', 'HIPC_LINKER_FLAGS', 'SYCLC_LINKER_FLAGS', 'sharedLibraryFlags', 'dynamicLibraryFlags']:
         flags = getattr(self.setCompilers, name)
         if not isinstance(flags, list): flags = [flags]
         return ' '.join(flags)
@@ -114,6 +114,7 @@ class Configure(config.base.Configure):
     return
 
   def configureFortranFlush(self):
+    '''Determine if Fortran has a flush() command'''
     self.pushLanguage('FC')
     for baseName in ['flush','flush_']:
       if self.checkLink(body='      call '+baseName+'(6)'):
@@ -125,7 +126,7 @@ class Configure(config.base.Configure):
   def checkFortranTypeInitialize(self):
     '''Determines if PETSc objects in Fortran are initialized by default (doesn't work with common blocks)'''
     if self.argDB['with-fortran-type-initialize']:
-      self.addDefine('FORTRAN_TYPE_INITIALIZE', ' = -2')
+      self.addDefine('FORTRAN_TYPE_INITIALIZE', ' = -2') # If change -2, please also update PETSC_FORTRAN_OBJECT_F_DESTROYED_TO_C_NULL() etc.
       self.logPrint('Initializing Fortran objects')
     else:
       self.addDefine('FORTRAN_TYPE_INITIALIZE', ' ')
@@ -156,6 +157,17 @@ class Configure(config.base.Configure):
     else:
       self.fortranIsF90 = 0
       self.logPrint('Fortran compiler does not support F90')
+    self.popLanguage()
+    return
+
+  def checkFortran90LineLength(self):
+    '''Determine whether the Fortran compiler has infinite line length'''
+    self.pushLanguage('FC')
+    if self.checkLink(body = '      INTEGER, PARAMETER ::        int = SELECTED_INT_KIND(8);              INTEGER (KIND=int) :: ierr,ierr2;       ierr                            =                                                                                                               1; ierr2 =                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      2'):
+      self.addDefine('HAVE_FORTRAN_FREE_LINE_LENGTH_NONE', 1)
+      self.logPrint('Fortran compiler has unlimited line length')
+    else:
+      self.logPrint('Fortran compiler does not have unlimited line length')
     self.popLanguage()
     return
 
@@ -196,7 +208,8 @@ class Configure(config.base.Configure):
       character(kind=c_char,len=5),dimension(:),pointer::list1
 
       allocate(list1(5))
-      CArray = (/(c_loc(list1(i)),i=1,5),c_loc(nullc)/)'''):
+      CArray(1:Len) = c_loc(list1)
+      CArray(Len+1) = c_loc(nullc)'''):
       self.addDefine('USING_F2003', 1)
       self.fortranIsF2003 = 1
       self.logPrint('Fortran compiler supports F2003')
@@ -213,7 +226,7 @@ class Configure(config.base.Configure):
     if not self.fortranIsF90:
       self.logPrint('Not a Fortran90 compiler - hence skipping f90-array test')
       return
-    # do an apporximate test when batch mode is used, as we cannot run the proper test..
+    # do an approximate test when batch mode is used, as we cannot run the proper test..
     if self.argDB['with-batch']:
       if config.setCompilers.Configure.isPGI(self.setCompilers.FC, self.log):
         self.addDefine('HAVE_F90_2PTR_ARG', 1)
@@ -296,6 +309,7 @@ class Configure(config.base.Configure):
     return
 
   def checkFortran90AssumedType(self):
+    '''Check if Fortran compiler array pointer is a raw pointer in C''' 
     if config.setCompilers.Configure.isIBM(self.setCompilers.FC, self.log):
       self.addDefine('HAVE_F90_ASSUMED_TYPE_NOT_PTR', 1)
       self.logPrint('IBM F90 compiler detected so using HAVE_F90_ASSUMED_TYPE_NOT_PTR', 3, 'compilers')
@@ -367,7 +381,7 @@ class Configure(config.base.Configure):
     return
 
   def checkFortranModuleOutput(self):
-    '''Figures out what flag is used to specify the include path for Fortran modules'''
+    '''Figures out what flag is used to specify the output path for Fortran modules'''
     self.setCompilers.fortranModuleOutputFlag = None
     if not self.fortranIsF90:
       self.logPrint('Not a Fortran90 compiler - hence skipping module include test')
@@ -406,7 +420,7 @@ class Configure(config.base.Configure):
     self.popLanguage()
     if modname: os.remove(os.path.join(testdir, modname))
     os.rmdir(testdir)
-    # Flag not used by PETSc - do do not flag a runtime error
+    # Flag not used by PETSc - do not flag a runtime error
     #if not found:
     #  raise RuntimeError('Cannot determine Fortran module output flag')
     return
@@ -468,5 +482,6 @@ class Configure(config.base.Configure):
       self.executeTest(self.checkFortranTypeInitialize)
       self.executeTest(self.configureFortranFlush)
       self.executeTest(self.checkDependencyGenerationFlag)
+      self.executeTest(self.checkFortran90LineLength)
     return
 

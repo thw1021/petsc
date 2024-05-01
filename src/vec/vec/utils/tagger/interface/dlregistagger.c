@@ -7,44 +7,40 @@ static PetscBool VecTaggerPackageInitialized = PETSC_FALSE;
 PetscBool VecTaggerRegisterAllCalled;
 
 /*@C
-   VecTaggerInitializePackage - Initialize VecTagger package
+  VecTaggerInitializePackage - Initialize VecTagger package
 
-   Logically Collective
+  Logically Collective
 
-   Level: developer
+  Level: developer
 
-.seealso: VecTaggerFinalizePackage()
+.seealso: `VecTaggerFinalizePackage()`
 @*/
 PetscErrorCode VecTaggerInitializePackage(void)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  if (VecTaggerPackageInitialized) PetscFunctionReturn(0);
+  if (VecTaggerPackageInitialized) PetscFunctionReturn(PETSC_SUCCESS);
   VecTaggerPackageInitialized = PETSC_TRUE;
 
-  ierr = PetscClassIdRegister("Vector Indices Tagger",&VEC_TAGGER_CLASSID);CHKERRQ(ierr);
-  ierr = VecTaggerRegisterAll();CHKERRQ(ierr);
-  ierr = PetscRegisterFinalize(VecTaggerFinalizePackage);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(PetscClassIdRegister("Vector Indices Tagger", &VEC_TAGGER_CLASSID));
+  PetscCall(VecTaggerRegisterAll());
+  PetscCall(PetscRegisterFinalize(VecTaggerFinalizePackage));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-   VecTaggerFinalizePackage - Finalize VecTagger package, it is called from PetscFinalize()
+  VecTaggerFinalizePackage - Finalize VecTagger package, it is called from PetscFinalize()
 
-   Logically Collective
+  Logically Collective
 
-   Level: developer
+  Level: developer
 
-.seealso: VecTaggerInitializePackage()
+.seealso: `VecTaggerInitializePackage()`
 @*/
 PetscErrorCode VecTaggerFinalizePackage(void)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  ierr = PetscFunctionListDestroy(&VecTaggerList);CHKERRQ(ierr);
+  PetscCall(PetscFunctionListDestroy(&VecTaggerList));
   VecTaggerPackageInitialized = PETSC_FALSE;
   VecTaggerRegisterAllCalled  = PETSC_FALSE;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

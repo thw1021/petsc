@@ -1,6 +1,4 @@
-
 static char help[] = "Test memory leak when duplicating a redundant matrix.\n\n";
-
 
 /*
   Include "petscmat.h" so that we can use matrices.
@@ -11,61 +9,60 @@ static char help[] = "Test memory leak when duplicating a redundant matrix.\n\n"
 */
 #include <petscmat.h>
 
-int main(int argc,char **args)
+int main(int argc, char **args)
 {
-  Mat            A,Ar,C;
-  PetscViewer    fd;                        /* viewer */
-  char           file[PETSC_MAX_PATH_LEN];  /* input file name */
-  PetscErrorCode ierr;
-  PetscInt       ns=2;
-  PetscMPIInt    size;
-  PetscSubcomm   subc;
-  PetscBool      flg;
+  Mat          A, Ar, C;
+  PetscViewer  fd;                       /* viewer */
+  char         file[PETSC_MAX_PATH_LEN]; /* input file name */
+  PetscInt     ns = 2;
+  PetscMPIInt  size;
+  PetscSubcomm subc;
+  PetscBool    flg;
 
-  ierr = PetscInitialize(&argc,&args,(char*)0,help);if (ierr) return ierr;
+  PetscFunctionBeginUser;
+  PetscCall(PetscInitialize(&argc, &args, (char *)0, help));
   /*
      Determine files from which we read the two linear systems
      (matrix and right-hand-side vector).
   */
-  ierr = PetscOptionsGetString(NULL,NULL,"-f0",file,sizeof(file),&flg);CHKERRQ(ierr);
-  if (!flg) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_USER,"Must indicate binary file with the -f0 option");
-  ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,file,FILE_MODE_READ,&fd);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"Reading matrix with %d processors\n",size);CHKERRQ(ierr);
-  ierr = MatCreate(PETSC_COMM_WORLD,&A);CHKERRQ(ierr);
-  ierr = MatLoad(A,fd);CHKERRQ(ierr);
-  ierr = PetscViewerDestroy(&fd);CHKERRQ(ierr);
+  PetscCall(PetscOptionsGetString(NULL, NULL, "-f0", file, sizeof(file), &flg));
+  PetscCheck(flg, PETSC_COMM_WORLD, PETSC_ERR_USER, "Must indicate binary file with the -f0 option");
+  PetscCall(PetscViewerBinaryOpen(PETSC_COMM_WORLD, file, FILE_MODE_READ, &fd));
+  PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD, &size));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Reading matrix with %d processors\n", size));
+  PetscCall(MatCreate(PETSC_COMM_WORLD, &A));
+  PetscCall(MatLoad(A, fd));
+  PetscCall(PetscViewerDestroy(&fd));
   /*
      Determines amount of subcomunicators
   */
-  ierr = PetscOptionsGetInt(NULL,NULL,"-nsub",&ns,NULL);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"Splitting in %d subcommunicators\n",ns);CHKERRQ(ierr);
-  ierr = PetscSubcommCreate(PetscObjectComm((PetscObject)A),&subc);CHKERRQ(ierr);
-  ierr = PetscSubcommSetNumber(subc,ns);CHKERRQ(ierr);
-  ierr = PetscSubcommSetType(subc,PETSC_SUBCOMM_CONTIGUOUS);CHKERRQ(ierr);
-  ierr = PetscSubcommSetFromOptions(subc);CHKERRQ(ierr);
-  ierr = MatCreateRedundantMatrix(A,0,PetscSubcommChild(subc),MAT_INITIAL_MATRIX,&Ar);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"Copying matrix\n",ns);CHKERRQ(ierr);
-  ierr = MatDuplicate(Ar,MAT_COPY_VALUES,&C);CHKERRQ(ierr);
-  ierr = PetscSubcommDestroy(&subc);CHKERRQ(ierr);
+  PetscCall(PetscOptionsGetInt(NULL, NULL, "-nsub", &ns, NULL));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Splitting in %" PetscInt_FMT " subcommunicators\n", ns));
+  PetscCall(PetscSubcommCreate(PetscObjectComm((PetscObject)A), &subc));
+  PetscCall(PetscSubcommSetNumber(subc, ns));
+  PetscCall(PetscSubcommSetType(subc, PETSC_SUBCOMM_CONTIGUOUS));
+  PetscCall(PetscSubcommSetFromOptions(subc));
+  PetscCall(MatCreateRedundantMatrix(A, 0, PetscSubcommChild(subc), MAT_INITIAL_MATRIX, &Ar));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Copying matrix\n"));
+  PetscCall(MatDuplicate(Ar, MAT_COPY_VALUES, &C));
+  PetscCall(MatAXPY(Ar, 0.1, C, DIFFERENT_NONZERO_PATTERN));
+  PetscCall(PetscSubcommDestroy(&subc));
 
   /*
      Free memory
   */
-  ierr = MatDestroy(&A);CHKERRQ(ierr);
-  ierr = MatDestroy(&Ar);CHKERRQ(ierr);
-  ierr = MatDestroy(&C);CHKERRQ(ierr);
-  ierr = PetscFinalize();
-  return ierr;
+  PetscCall(MatDestroy(&A));
+  PetscCall(MatDestroy(&Ar));
+  PetscCall(MatDestroy(&C));
+  PetscCall(PetscFinalize());
+  return 0;
 }
-
 
 /*TEST
 
    test:
       nsize: 4
-      requires: datafilespath !complex double !define(PETSC_USE_64BIT_INDICES)
+      requires: !complex double !defined(PETSC_USE_64BIT_INDICES)
       args: -f0 ${wPETSC_DIR}/share/petsc/datafiles/matrices/ns-real-int32-float64 -malloc_dump
-
 
 TEST*/

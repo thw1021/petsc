@@ -5,10 +5,10 @@ track dependencies between them. It initiates the run, compiles the results, and
 handles the final output. It maintains the help list for all options available
 in the run.
 
-  The setup() method preforms generic Script setup and then is called recursively
+  The setup() method performs generic Script setup and then is called recursively
 on all the child modules. The cleanup() method performs the final output and
 logging actions
-    - Subtitute files
+    - Substitute files
     - Output configure header
     - Log filesystem actions
 
@@ -49,18 +49,10 @@ import graph
 
 import os
 import re
+import sys
 import platform
-from functools import reduce
-# workarround for python2.2 which does not have pathsep
-if not hasattr(os.path,'pathsep'): os.path.pathsep=':'
-
 import pickle
-
-try:
-  from hashlib import md5 as new_md5
-except ImportError:
-  from md5 import new as new_md5 # novermin
-
+from hashlib import md5 as new_md5
 
 class Framework(config.base.Configure, script.LanguageProcessor):
   '''This needs to manage configure information in itself just as Builder manages it for configurations'''
@@ -84,6 +76,8 @@ class Framework(config.base.Configure, script.LanguageProcessor):
     self.makeMacroHeader = ''
     self.makeRuleHeader  = ''
     self.cHeader         = 'matt_fix.h'
+    self.enablepoison    = False
+    self.poisonheader    = 'matt_poison.h'
     self.headerPrefix    = ''
     self.substPrefix     = ''
     self.pkgheader       = ''
@@ -107,7 +101,6 @@ class Framework(config.base.Configure, script.LanguageProcessor):
     self.createChildren()
     # Create argDB for user specified options only
     self.clArgDB = dict([(nargs.Arg.parseArgument(arg)[0], arg) for arg in self.clArgs])
-    self.defineDict = {}
     return
 
   def __getstate__(self):
@@ -149,7 +142,6 @@ class Framework(config.base.Configure, script.LanguageProcessor):
       self._tmpDir = tempfile.mkdtemp(prefix = 'petsc-')
       if not os.access(self._tmpDir, os.X_OK):
         raise RuntimeError('Cannot execute things in tmp directory '+self._tmpDir+'. Consider setting TMPDIR to something else.')
-      self.logPrint('All intermediate test results are stored in '+self._tmpDir)
     return self._tmpDir
   def setTmpDir(self, temp):
     if hasattr(self, '_tmpDir'):
@@ -178,9 +170,9 @@ class Framework(config.base.Configure, script.LanguageProcessor):
     packagedirs = []
 
     help.addArgument('Framework', '-configModules',       nargs.Arg(None, None, 'A list of Python modules with a Configure class'))
-    help.addArgument('Framework', '-ignoreCompileOutput=<bool>', nargs.ArgBool(None, 1, 'Ignore compiler output'))
-    help.addArgument('Framework', '-ignoreLinkOutput=<bool>',    nargs.ArgBool(None, 1, 'Ignore linker output'))
-    help.addArgument('Framework', '-ignoreWarnings=<bool>',      nargs.ArgBool(None, 0, 'Ignore compiler and linker warnings'))
+    help.addArgument('Framework', '-ignoreCompileOutput=<bool>', nargs.ArgBool(None, 1, 'Ignore compiler terminal output when checking if compiles succeed'))
+    help.addArgument('Framework', '-ignoreLinkOutput=<bool>',    nargs.ArgBool(None, 1, 'Ignore linker terminal output when checking if links succeed'))
+    help.addArgument('Framework', '-ignoreWarnings=<bool>',      nargs.ArgBool(None, 0, 'Ignore compiler and linker warnings in terminal output when checking if it succeeded'))
     help.addArgument('Framework', '-doCleanup=<bool>',           nargs.ArgBool(None, 1, 'Delete any configure generated files (turn off for debugging)'))
     help.addArgument('Framework', '-with-executables-search-path', nargs.Arg(None, searchdirs, 'A list of directories used to search for executables'))
     help.addArgument('Framework', '-with-packages-search-path',  nargs.Arg(None, packagedirs, 'A list of directories used to search for packages'))
@@ -193,6 +185,7 @@ class Framework(config.base.Configure, script.LanguageProcessor):
     if not hasattr(self, '_doCleanup'):
       return self.argDB['doCleanup']
     return self._doCleanup
+
   def setCleanup(self, doCleanup):
     self._doCleanup = doCleanup
     return
@@ -202,16 +195,41 @@ class Framework(config.base.Configure, script.LanguageProcessor):
     '''Change titles and setup all children'''
     argDB = script.Script.setupArguments(self, argDB)
 
-    self.help.title = 'Configure Help\n   Comma separated lists should be given between [] (use \[ \] in tcsh/csh)\n      For example: --with-mpi-lib=\[/usr/local/lib/libmpich.a,/usr/local/lib/libpmpich.a\]\n   Options beginning with --known- are to provide values you already know\n    Options beginning with --with- indicate that you are requesting something\n      For example: --with-clanguage=c++\n   <prog> means a program name or a full path to a program\n      For example:--with-cmake=/Users/bsmith/bin/cmake\n   <bool> means a boolean, use either 0 or 1\n   <dir> means a directory\n      For example: --with-packages-download-dir=/Users/bsmith/Downloads\n   For packages use --with-PACKAGE-dir=<dir> OR\n      --with-PACKAGE-include=<dir> --with-PACKAGE-lib=<lib> OR --download-PACKAGE'
+    self.help.title = 'Configure Help\n   Comma separated lists should be given between [] (use \\[ \\] in tcsh/csh)\n      For example: --with-mpi-lib=\\[/usr/local/lib/libmpich.a,/usr/local/lib/libpmpich.a\\]\n   Options beginning with --known- are to provide values you already know\n    Options beginning with --with- indicate that you are requesting something\n      For example: --with-clanguage=c++\n   <prog> means a program name or a full path to a program\n      For example:--with-cmake-exec=/Users/bsmith/bin/cmake\n   <bool> means a boolean, use either 0 or 1\n   <dir> means a directory\n      For example: --with-packages-download-dir=/Users/bsmith/Downloads\n   For packages use --with-PACKAGE-dir=<dir> OR\n      --with-PACKAGE-include=<dir> --with-PACKAGE-lib=<lib> OR --download-PACKAGE'
     self.actions.title = 'Configure Actions\n   These are the actions performed by configure on the filesystem'
 
     for child in self.childGraph.vertices:
       if hasattr(child, 'setupHelp'): child.setupHelp(self.help)
     return argDB
 
+  def outputBasics(self):
+    if 'CONDA_PREFIX' in os.environ and os.environ['CONDA_PREFIX'] is not None:
+      self.conda_active = True
+      self.addMakeMacro('CONDA_ACTIVE',1)
+
+    buf = 'Environmental variables'
+    for key,val in os.environ.items():
+      buf += '\n'+str(key)+'='+str(val)
+    self.logPrint(buf)
+    def logPrintFilesInPath(path):
+      for d in path:
+        try:
+          self.logWrite('      '+d+': '+' '.join(os.listdir(d))+'\n')
+        except Exception as e:
+          self.logWrite('      Warning accessing '+d+' gives errors: '+str(e)+'\n')
+      return
+    if os.environ['PATH'].split(os.path.pathsep):
+      self.logWrite('    Files in path provided by default path\n')
+      logPrintFilesInPath(os.environ['PATH'].split(os.path.pathsep))
+    dirs = self.argDB['with-executables-search-path']
+    if not isinstance(dirs, list): dirs = dirs.split(os.path.pathsep)
+    if dirs:
+      self.logWrite('    Files in path provided by --with-executables-search-path\n')
+      logPrintFilesInPath(dirs)
+
   def dumpConfFiles(self):
     '''Performs:
-       - Subtitute files
+       - Substitute files
        - Output configure header
        - Log actions'''
     self.substitute()
@@ -226,7 +244,7 @@ class Framework(config.base.Configure, script.LanguageProcessor):
       self.outputMakeRuleHeader(self.log)
       self.actions.addArgument('Framework', 'File creation', 'Created makefile configure header '+self.makeRuleHeader)
     if self.header:
-      self.outputHeader(self.header)
+      self.outputHeader(self.header, petscconf=True)
       self.log.write('**** ' + self.header + ' ****\n')
       self.outputHeader(self.log)
       self.actions.addArgument('Framework', 'File creation', 'Created configure header '+self.header)
@@ -263,7 +281,7 @@ class Framework(config.base.Configure, script.LanguageProcessor):
   def printSummary(self):
     # __str__(), __str1__(), __str2__() are used to create 3 different groups of summary outputs.
     for child in self.childGraph.vertices:
-      self.logWrite(str(child), debugSection = 'screen', forceScroll = 1)
+      self.logWrite(str(child), debugSection = 'screen', forceScroll = 1, rmDir = 0)
     for child in self.childGraph.vertices:
       if hasattr(child,'__str1__'):
         self.logWrite(child.__str1__(), debugSection = 'screen', forceScroll = 1)
@@ -324,18 +342,38 @@ class Framework(config.base.Configure, script.LanguageProcessor):
       self.getChild(moduleName)
     return
 
-  def require(self, moduleName, depChild, keywordArgs = {}):
-    '''Return a child from moduleName, creating it if necessary and making sure it runs before depChild'''
-    config = self.getChild(moduleName, keywordArgs)
-    if not config is depChild:
-      self.childGraph.addEdges(depChild, [config])
-    return config
-
   def requireModule(self, mod, depChild):
     '''Return the input module, making sure it runs before depChild'''
     if not mod is depChild:
       self.childGraph.addEdges(depChild, [mod])
     return mod
+
+  def require(self, moduleName, depChild = None, keywordArgs = {}):
+    '''Return a child from moduleName, creating it if necessary and making sure it runs before depChild'''
+    return self.requireModule(self.getChild(moduleName, keywordArgs), depChild)
+
+  @staticmethod
+  def findModule(obj, module):
+    """
+    Search OBJ's attributes for an attribute of type MODULE_TYPE.
+
+    Return the module if found, otherwise return None.
+    """
+    import inspect
+
+    if not inspect.ismodule(module):
+      raise NotImplementedError
+
+    if isinstance(module, str):
+      module_name = module
+    else:
+      module_name = module.__name__
+
+    for attr in dir(obj):
+      obj_attr = getattr(obj, attr)
+      if inspect.ismodule(obj_attr) and obj_attr.__name__ == module_name:
+        return module
+    return
 
   ###############################################
   # Dependency Mechanisms
@@ -405,8 +443,9 @@ class Framework(config.base.Configure, script.LanguageProcessor):
   # Filtering Mechanisms
 
   def filterPreprocessOutput(self,output, log = None):
+    output = output.strip()
     if log is None: log = self.log
-    log.write("Preprocess stderr before filtering:\n"+output+":\n")
+    log.write("Preprocess output before filtering:\n"+(output if not output else output+'\n'))
     # Another PGI license warning, multiline so have to discard all
     if output.find('your evaluation license will expire') > -1 and output.lower().find('error') == -1:
       output = ''
@@ -414,6 +453,7 @@ class Framework(config.base.Configure, script.LanguageProcessor):
     # Intel
     lines = [s for s in lines if s.find("icc: command line remark #10148: option '-i-dynamic' not supported") < 0]
     lines = [s for s in lines if s.find("[: unexpected operator") < 0]  # Deals with error in mpiicc and mpiicpc wrappers from some versions of Intel MPI.
+    lines = [s for s in lines if s.find(': remark #10441:') < 0]
     # IBM:
     lines = [s for s in lines if not s.startswith('cc_r:')]
     # PGI: Ignore warning about temporary license
@@ -426,29 +466,41 @@ class Framework(config.base.Configure, script.LanguageProcessor):
     # Cray GPU system at Nersc
     lines = [s for s in lines if s.find('No supported cpu target is set, CRAY_CPU_TARGET=x86-64 will be used.') < 0]
     lines = [s for s in lines if s.find('Load a valid targeting module or set CRAY_CPU_TARGET') < 0]
+    lines = [s for s in lines if s.find('The -gpu option has no effect unless a language-specific option to enable GPU code generation is used') < 0]
     # pgi dumps filename on stderr - but returns 0 errorcode'
     lines = [s for s in lines if lines != 'conftest.c:']
-    if lines: output = reduce(lambda s, t: s+t, lines, '\n')
+
+    lines = [s for s in lines if len(s)]
+    if lines: output = '\n'.join(lines)
     else: output = ''
-    log.write("Preprocess stderr after filtering:\n"+output+":\n")
+    log.write("Preprocess output after filtering:\n"+(output if not output else output+'\n'))
     return output
 
-  def filterCompileOutput(self, output):
+  def filterCompileOutput(self, output,flag = '', filterAlways = 0):
+    '''
+       With --ignoreCompileOutput=1 (default), it filters all compiler messages
+       With --ignoreCompileOutput=0 it filters only compiler messages known to be harmless
+    '''
+    output = output.strip()
+    if flag and output.find("ignoring unknown option '"+flag+"'"): return output
+    if flag and output.find("invalid value"): return output
     if output.find('warning:  attribute "deprecated" is unknown, ignored') >= 0: return output
     if output.find('PGC-W-0129-Floating point overflow') >= 0: return output
     if output.find('warning #264: floating-point value does not fit in required floating-point type') >= 0: return output
     if output.find('warning: ISO C90 does not support') >= 0: return output
     if output.find('warning: ISO C does not support') >= 0: return output
     if output.find('warning #2650: attributes ignored here') >= 0: return output
+    if output.find('warning #3175: unrecognized gcc optimization level') >= 0: return output
+    if output.find('warning: unknown attribute') >= 0: return output
     if output.find('Warning: attribute visibility is unsupported and will be skipped') >= 0: return output
     if output.find('(E) Invalid statement found within an interface block. Executable statement, statement function or syntax error encountered.') >= 0: return output
-    elif self.argDB['ignoreCompileOutput']:
+    elif self.argDB['ignoreCompileOutput'] and not filterAlways:
       output = ''
     elif output:
-      log.write("Compiler stderr before filtering:\n"+output+":\n")
+      self.log.write("Compiler output before filtering:\n"+(output if not output or output.endswith('\n') else output+'\n'))
       lines = output.splitlines()
       if self.argDB['ignoreWarnings']:
-        # EXCEPT warnings that those bastards say we want
+        # ACCEPT compiler warnings
         extraLines = [s for s in lines if s.find('implicit declaration of function') >= 0]
         lines = [s for s in lines if not self.warningRE.search(s)]
         lines = [s for s in lines if s.find('In file included from') < 0]
@@ -464,6 +516,7 @@ class Framework(config.base.Configure, script.LanguageProcessor):
       lines = [s for s in lines if s.find('warning: unused variable') < 0]
       # Intel
       lines = [s for s in lines if s.find("icc: command line remark #10148: option '-i-dynamic' not supported") < 0]
+      lines = [s for s in lines if s.find(': remark #10441:') < 0]
       # PGI: Ignore warning about temporary license
       lines = [s for s in lines if s.find('license.dat') < 0]
       # Cray XT3
@@ -475,23 +528,35 @@ class Framework(config.base.Configure, script.LanguageProcessor):
       # Cray GPU system at Nersc
       lines = [s for s in lines if s.find('No supported cpu target is set, CRAY_CPU_TARGET=x86-64 will be used.') < 0]
       lines = [s for s in lines if s.find('Load a valid targeting module or set CRAY_CPU_TARGET') < 0]
+      lines = [s for s in lines if s.find('The -gpu option has no effect unless a language-specific option to enable GPU code generation is used') < 0]
       # pgi dumps filename on stderr - but returns 0 errorcode'
       lines = [s for s in lines if lines != 'conftest.c:']
-      if lines: output = reduce(lambda s, t: s+t, lines, '\n')
+
+      lines = [s for s in lines if len(s)]
+      if lines: output = '\n'.join(lines)
       else: output = ''
-      log.write("Compiler stderr after filtering:\n"+output+":\n")
+      self.log.write("Compiler output after filtering:\n"+(output if not output else output+'\n'))
     return output
 
-  def filterLinkOutput(self, output):
+  def filterLinkOutput(self, output, filterAlways = 0):
+    '''
+       With --ignoreLinkOutput=1 (default), it filters all linker messages
+       With --ignoreLinkOutput=0 it filters only linker messages known to be harmless
+    '''
+    output = output.strip()
     if output.find('relocation R_AARCH64_ADR_PREL_PG_HI21 against symbol') >= 0: return output
-    elif self.argDB['ignoreLinkOutput']:
+    elif self.argDB['ignoreLinkOutput'] and not filterAlways:
       output = ''
     elif output:
-      log.write("Linker stderr before filtering:\n"+output+":\n")
-      hasIbmstuff = output.find('in statically linked applications requires at runtime the shared libraries from the glibc version used for linking') >= 0
+      self.log.write("Linker output before filtering:\n"+(output if not output else output+'\n'))
       lines = output.splitlines()
-      if self.argDB['ignoreWarnings'] and not hasIbmstuff:
+      if self.argDB['ignoreWarnings']:
         lines = [s for s in lines if not self.warningRE.search(s)]
+      #Intel
+      lines = [s for s in lines if s.find(": command line warning #10121: overriding") < 0]
+      lines = [s for s in lines if s.find(': remark #10441:') < 0]
+      #Intel icpx
+      lines = [s for s in lines if s.find("warning: Note that use of '-g' without any optimization-level option will turn off most compiler optimizations similar to use") < 0] 
       # PGI: Ignore warning about temporary license
       lines = [s for s in lines if s.find('license.dat') < 0]
       # Cray XT3
@@ -502,11 +567,50 @@ class Framework(config.base.Configure, script.LanguageProcessor):
       # Cray GPU system at Nersc
       lines = [s for s in lines if s.find('No supported cpu target is set, CRAY_CPU_TARGET=x86-64 will be used.') < 0]
       lines = [s for s in lines if s.find('Load a valid targeting module or set CRAY_CPU_TARGET') < 0]
+      lines = [s for s in lines if s.find('The -gpu option has no effect unless a language-specific option to enable GPU code generation is used') < 0]
+      # Cray link warnings
+      rmidx = []
+      for i in range(len(lines)-1):
+        if ((lines[i].find('in function') >=0) and (lines[i+1].find('in statically linked applications requires at runtime the shared libraries') >=0)) \
+        or ((lines[i].find('Warning:') >=0) and (lines[i+1].find('-dynamic was already seen on command line, overriding with -shared.') >=0)):
+          rmidx.extend([i,i+1])
+      lines = [lines[i] for i in range(len(lines)) if i not in rmidx]
+
       # pgi dumps filename on stderr - but returns 0 errorcode'
       lines = [s for s in lines if lines != 'conftest.c:']
-      if lines: output = reduce(lambda s, t: s+t, lines, '\n')
+      # in case -pie is always being passed to linker
+      lines = [s for s in lines if s.find('-pie being ignored. It is only used when linking a main executable') < 0]
+      # Microsoft outputs these strings when linking
+      lines = [s for s in lines if s.find('Creating library ') < 0]
+      lines = [s for s in lines if s.find('performing full link') < 0]
+      lines = [s for s in lines if s.find('linking object as if no debug info') < 0]
+      lines = [s for s in lines if s.find('skipping incompatible') < 0]
+      # Multiple gfortran libraries present
+      lines = [s for s in lines if s.find('may conflict with libgfortran') < 0]
+      # macOS libraries built for different macOS versions
+      lines = [s for s in lines if s.find(' was built for newer macOS version') < 0]
+      lines = [s for s in lines if s.find(' was built for newer OSX version') < 0]
+      lines = [s for s in lines if s.find(' stack subq instruction is too different from dwarf stack size') < 0]
+      lines = [s for s in lines if s.find('could not create compact unwind') < 0]
+      lines = [s for s in lines if s.find('ld: warning: -undefined dynamic_lookup may not work with chained fixups') < 0]
+      # Nvidia linker
+      lines = [s for s in lines if s.find('nvhpc.ld contains output sections') < 0]
+      # Intel dpcpp linker
+      # Ex. clang-offload-bundler: error: '/home/jczhang/mpich/lib': Is a directory
+      lines = [s for s in lines if s.find('clang-offload-bundler: error:') < 0]
+      lines = [s for s in lines if s.find('Compilation from IR - skipping loading of FCL') < 0]
+      lines = [s for s in lines if s.find('Build succeeded') < 0]
+      # emcc complaints incompatible linking
+      lines = [s for s in lines if s.find('wasm-ld: warning: function signature mismatch') < 0]
+      lines = [s for s in lines if s.find('>>> defined as') < 0]
+
+      lines = [s for s in lines if len(s)]
+      # a line with a single : can be created on macOS when the linker jumbles the output from warning messages with was "built for newer" warnings
+      lines = [s for s in lines if s != ':']
+
+      if lines: output = '\n'.join(lines)
       else: output = ''
-      log.write("Linker stderr after filtering:\n"+output+":\n")
+      self.log.write("Linker output after filtering:\n"+(output if not output else output+'\n'))
     return output
 
   ###############################################
@@ -644,18 +748,26 @@ class Framework(config.base.Configure, script.LanguageProcessor):
     self.actions.addArgument('Framework', 'RDict update', 'Substitutions were stored in RDict with parent '+str(argDB.parentDirectory))
     return
 
-  def outputDefine(self, f, name, value = None):
+  def outputDefine(self, f, name, value = None, condition = None):
     '''Define "name" to "value" in the configuration header'''
     # we need to keep the libraries in this list and simply not print them at the end
     # because libraries.havelib() is used to find library in this list we had to list the libraries in the
     # list even though we don't need them in petscconf.h
-    # two packages have LIB in there name so we have to include them here
-    if (name.startswith('PETSC_HAVE_LIB') and not name in ['PETSC_HAVE_LIBPNG','PETSC_HAVE_LIBJPEG']) or (name.startswith('PETSC_HAVE_') and name.endswith('LIB')): return
+    # Some packages have LIB in their name, so we have to include them here
+    if (name.startswith('PETSC_HAVE_LIB') and not name in ['PETSC_HAVE_LIBPNG','PETSC_HAVE_LIBJPEG','PETSC_HAVE_LIBCEED']) or (name.startswith('PETSC_HAVE_') and name.endswith('LIB')): return
     if value:
-      f.write('#define '+name+' '+str(value)+'\n')
-    else:
-      f.write('/* #undef '+name+' */\n')
+      if (condition):
+        f.write('#if (%s)\n' % condition)
+      f.write('#define %s %s\n' % (name,value))
+      if (condition):
+        f.write('#endif\n')
     return
+
+  def outputPoison(self, f, name):
+    '''Outputs a poison version of name to prevent accidental usage, see outputHeader'''
+    if (name.startswith('PETSC_HAVE_LIB') and not name in {'PETSC_HAVE_LIBPNG','PETSC_HAVE_LIBJPEG','PETSC_HAVE_LIBCEED'}) or (name.startswith('PETSC_HAVE_') and name.endswith('LIB')): return
+    if name.startswith(('PETSC_USE_','PETSC_HAVE_','PETSC_SKIP_')):
+      f.write('#pragma GCC poison PETSC_%s\n' % name)
 
   def outputMakeMacro(self, f, name, value):
     f.write(name+' = '+str(value)+'\n')
@@ -698,7 +810,7 @@ class Framework(config.base.Configure, script.LanguageProcessor):
     if prefix:         prefix = prefix+'_'
     return prefix+name
 
-  def processDefines(self, child, prefix = None):
+  def processDefines(self, defineDict, child, prefix = None):
     '''If the child contains a dictionary named "defines", the entries are output as defines in the config header.
     The prefix to each define is calculated as follows:
     - If the prefix argument is given, this is used, otherwise
@@ -710,19 +822,26 @@ class Framework(config.base.Configure, script.LanguageProcessor):
     for pair in child.defines.items():
       if not pair[1]: continue
       item = (self.getFullDefineName(child, pair[0], prefix), pair[1])
-      self.defineDict.update({item[0] : item})
+      defineDict[item[0]] = item
     return
 
-  def outputDefines(self, f):
-    for item in sorted(self.defineDict):
-      self.outputDefine(f, *self.defineDict[item])
+  def outputDefines(self, defineDict, f, petscconf=False):
+    for item in sorted(defineDict):
+      cond = None
+      if petscconf and 'HIP_PLATFORM' in item:
+        cond = '!defined(__HIP__)'
+      self.outputDefine(f, *defineDict[item], condition=cond)
+
+  def outputPoisons(self, defineDict, f):
+    for item in sorted(defineDict):
+      self.outputPoison(f, defineDict[item][0])
 
   def outputPkgVersion(self, f, child):
     '''If the child contains a tuple named "version_tuple", the entries are output in the config package header.'''
     if not hasattr(child, 'version_tuple') or not isinstance(child.version_tuple, tuple): return
     if not child.version_tuple: return
     vt = child.version_tuple
-    prefix = 'PETSC_PKG_'+child.name.upper()+('_')
+    prefix = 'PETSC_PKG_'+child.name.upper().replace('-','_')+('_') # Ex. convert KOKKOS-KERNELS to KOKKOS_KERNELS
     ss = ('VERSION_MAJOR','VERSION_MINOR','VERSION_SUBMINOR')
     # output versioning tuple
     for t in range(min(len(vt),3)):
@@ -786,9 +905,17 @@ class Framework(config.base.Configure, script.LanguageProcessor):
     self.outputMakeMacros(f, self)
     for child in self.childGraph.vertices:
       self.outputMakeMacros(f, child)
+    # This options are used in all runs of the test harness
+    testoptions = '-checkfunctionlist'
+    # Additional testoptions are provided in packages/
+    for child in self.childGraph.vertices:
+        if hasattr(child,'found') and child.found and hasattr(child,'testoptions') and child.testoptions:
+          testoptions += ' '+child.testoptions
+        if (not hasattr(child,'found') or not child.found) and hasattr(child,'testoptions_whennotfound'):
+          testoptions += ' '+child.testoptions_whennotfound
+    f.write('PETSC_TEST_OPTIONS = '+testoptions+'\n')
     if not hasattr(name, 'close'):
       f.close()
-    return
 
   def outputMakeRuleHeader(self, name):
     '''Write the make configuration header (bmake file)'''
@@ -809,7 +936,16 @@ class Framework(config.base.Configure, script.LanguageProcessor):
       f.close()
     return
 
-  def outputHeader(self, name, prefix = None):
+  def processPackageListDefine(self, defineDict):
+    key = 'PETSC_HAVE_PACKAGES'
+    pkglist = []
+    for pkg in self.packages:
+      pkglist.extend(pkg.pkgname.lower().split())
+    pkglist.sort()
+    str = '":' + ':'.join(pkglist) + ':"'
+    defineDict[key] = (key, str)
+
+  def outputHeader(self, name, prefix = None, petscconf = False):
     '''Write the configuration header'''
     if hasattr(name, 'close'):
       f = name
@@ -826,10 +962,30 @@ class Framework(config.base.Configure, script.LanguageProcessor):
     f.write('#define '+guard+'\n\n')
     if hasattr(self, 'headerTop'):
       f.write(str(self.headerTop)+'\n')
-    self.processDefines(self, prefix)
+    defineDict = {}
+    self.processDefines(defineDict, self, prefix)
     for child in self.childGraph.vertices:
-      self.processDefines(child, prefix)
-    self.outputDefines(f)
+      self.processDefines(defineDict, child, prefix)
+    if (petscconf):
+      self.processPackageListDefine(defineDict)
+      dir = os.path.dirname(name)
+      if dir and not os.path.exists(dir):
+        os.makedirs(dir)
+      if self.file_create_pause: time.sleep(1)
+      with open(self.poisonheader,'w') as fpoison:
+        if self.file_create_pause: time.sleep(1)
+        if self.enablepoison:
+          # it is safe to write the poison file
+          self.outputPoisons(defineDict,fpoison)
+        else:
+          # at least 1 of the languages/compilers didn't like poison
+          poisonFileName = os.path.basename(self.poisonheader,)
+          poisonGuard = 'INCLUDED_'+poisonFileName.upper().replace('.', '_')
+          lines = [''.join(['#if !defined(',poisonGuard,')\n']),
+                   ''.join(['#define ',poisonGuard,'\n']),
+                   '#endif\n']
+          fpoison.writelines(lines)
+    self.outputDefines(defineDict, f,petscconf)
     if hasattr(self, 'headerBottom'):
       f.write(str(self.headerBottom)+'\n')
     f.write('#endif\n')
@@ -928,6 +1084,7 @@ class Framework(config.base.Configure, script.LanguageProcessor):
     return
 
   def configureExternalPackagesDir(self):
+    '''Set alternative directory external packages are built in'''
     if 'with-packages-build-dir' in self.argDB:
       self.externalPackagesDir = self.argDB['with-packages-build-dir']
     else:
@@ -1129,7 +1286,7 @@ class Framework(config.base.Configure, script.LanguageProcessor):
             out += tb.getvalue()
             tb.close()
           except: pass
-        # Udpate queue
+        # Update queue
         #self.logPrint('PUSH  %s to DONE ' % child.__class__.__module__)
         done.put((ret, out, emsg, child))
         q.task_done() # novermin
@@ -1169,41 +1326,89 @@ class Framework(config.base.Configure, script.LanguageProcessor):
   def serialEvaluation(self, depGraph):
     import graph
 
-    ndepGraph = graph.DirectedGraph.topologicalSort(depGraph)
-    for child in ndepGraph:
-      if hasattr(child,'setCompilers'): setCompilers = child.setCompilers
+    def findGraphModule(dependencyGraph,moduleType):
+      moduleList = [c for c in dependencyGraph if isinstance(c,moduleType)]
+      if len(moduleList) != 1:
+        if len(moduleList) < 1:
+          errorMessage = 'Did not find module {} in graph'.format(moduleType)
+        else:
+          errorMessage = 'Found multiple instances of module {} in graph'.format(moduleType)
+        raise RuntimeError(errorMessage)
+      return moduleList[0]
 
-    ndepGraph = graph.DirectedGraph.topologicalSort(depGraph)
+    def checkChildCxxDialectBounds(child,minCxx,maxCxx):
+      def assign_blame(key, blame_list, name):
+        if key not in blame_list:
+          blame_list[key] = set()
+        blame_list[key].add(name)
+        return
+
+      child_name = child.name
+      if child.minCxxVersion > minCxx or 'Cxx' in child.buildLanguages:
+        minCxx = child.minCxxVersion
+        self.logPrint('serialEvaluation: child {child} raised minimum cxx dialect version to {minver}'.format(child=child_name,minver=minCxx))
+        assign_blame(minCxx, minCxxVersionBlameList, child_name)
+      if child.maxCxxVersion < maxCxx:
+        maxCxx = child.maxCxxVersion
+        self.logPrint('serialEvaluation: child {child} decreased maximum cxx dialect version to {maxver}'.format(child=child_name,maxver=maxCxx))
+        assign_blame(maxCxx, maxCxxVersionBlameList, child_name)
+      return minCxx,maxCxx
+
+    ndepGraph     = list(graph.DirectedGraph.topologicalSort(depGraph))
+    setCompilers  = findGraphModule(ndepGraph,config.setCompilers.Configure)
+    minCxx,maxCxx = setCompilers.cxxDialectRange['Cxx']
+    self.logPrint('serialEvaluation: initial cxxDialectRanges {rng}'.format(rng=setCompilers.cxxDialectRange['Cxx']))
+    minCxxVersionBlameList = {}
+    maxCxxVersionBlameList = {}
     for child in ndepGraph:
       if (self.argDB['with-batch'] and
           hasattr(child,'package') and
           'download-'+child.package in self.framework.clArgDB and
           self.argDB['download-'+child.package] and not
-          (hasattr(setCompilers,'cross_cc') or child.installwithbatch)): raise RuntimeError('--download-'+child.package+' cannot be used on this batch systems\n')
+          (hasattr(setCompilers,'cross_cc') or child.installwithbatch)):
+        errorMessage = '--download-'+child.package+' cannot be used on this batch systems'
+        raise RuntimeError(errorMessage)
 
       # note, only classes derived from package.py have this attribute
       if hasattr(child,'deps'):
         found = 0
         if child.required or child.lookforbydefault: found = 1
-        if 'download-'+child.package in self.framework.clArgDB and self.argDB['download-'+child.package]: found = 1
-        if 'with-'+child.package in self.framework.clArgDB and self.argDB['with-'+child.package]: found = 1
-        if 'with-'+child.package+'-lib' in self.framework.clArgDB and self.argDB['with-'+child.package+'-lib']: found = 1
-        if 'with-'+child.package+'-dir' in self.framework.clArgDB and self.argDB['with-'+child.package+'-dir']: found = 1
+        elif 'download-'+child.package in self.framework.clArgDB and self.argDB['download-'+child.package]: found = 1
+        elif 'with-'+child.package in self.framework.clArgDB and self.argDB['with-'+child.package]: found = 1
+        elif 'with-'+child.package+'-lib' in self.framework.clArgDB and self.argDB['with-'+child.package+'-lib']: found = 1
+        elif 'with-'+child.package+'-dir' in self.framework.clArgDB and self.argDB['with-'+child.package+'-dir']: found = 1
         if not found: continue
         msg = ''
+        minCxx,maxCxx = checkChildCxxDialectBounds(child,minCxx,maxCxx)
         for dep in child.deps:
-          found = 0
-          if dep.required or dep.lookforbydefault: found = 1
-          if 'download-'+dep.package in self.framework.clArgDB and self.argDB['download-'+dep.package]: found = 1
-          if 'with-'+dep.package in self.framework.clArgDB and self.argDB['with-'+dep.package]: found = 1
-          if 'with-'+dep.package+'-lib' in self.framework.clArgDB and self.argDB['with-'+dep.package+'-lib']: found = 1
-          if 'with-'+dep.package+'-dir' in self.framework.clArgDB and self.argDB['with-'+dep.package+'-dir']: found = 1
-          if not found: msg += 'Package '+child.package+' requested but dependency '+dep.package+' not requested. Perhaps you want --download-'+dep.package+'\n'
+          if dep.required or dep.lookforbydefault:
+            continue
+          elif 'download-'+dep.package in self.framework.clArgDB and self.argDB['download-'+dep.package]:
+            continue
+          elif 'with-'+dep.package in self.framework.clArgDB and self.argDB['with-'+dep.package]:
+            continue
+          elif 'with-'+dep.package+'-lib' in self.framework.clArgDB and self.argDB['with-'+dep.package+'-lib']:
+            continue
+          elif 'with-'+dep.package+'-dir' in self.framework.clArgDB and self.argDB['with-'+dep.package+'-dir']:
+            continue
+          elif dep.download:
+            emsg = '--download-'+dep.package+' or '
+          else:
+            emsg = ''
+          msg += 'Package '+child.package+' requested but dependency '+dep.package+' not requested. \n  Perhaps you want '+emsg+'--with-'+dep.package+'-dir=directory or --with-'+dep.package+'-lib=libraries and --with-'+dep.package+'-include=directory\n'
         if msg: raise RuntimeError(msg)
-        if child.cxx and ('with-cxx' in self.framework.clArgDB) and (self.argDB['with-cxx'] == '0'): raise RuntimeError('Package '+child.package+' requested requires C++ but compiler turned off.')
-        if child.fc and ('with-fc' in self.framework.clArgDB) and (self.argDB['with-fc'] == '0'): raise RuntimeError('Package '+child.package+' requested requires Fortran but compiler turned off.')
+        if 'Cxx' in child.buildLanguages and ('with-cxx' in self.framework.clArgDB) and (self.argDB['with-cxx'] == '0'): raise RuntimeError('Package '+child.package+' requested requires C++ but compiler turned off.')
+        if 'FC'  in child.buildLanguages and ('with-fc' in self.framework.clArgDB) and (self.argDB['with-fc'] == '0'): raise RuntimeError('Package '+child.package+' requested requires Fortran but compiler turned off.')
 
-    depGraph = graph.DirectedGraph.topologicalSort(depGraph)
+    if maxCxx < minCxx:
+      # low water mark
+      loPack = ', '.join(minCxxVersionBlameList[minCxx])
+      # high water mark
+      hiPack = ', '.join(maxCxxVersionBlameList[maxCxx])
+      raise RuntimeError('Requested package(s) have incompatible C++ requirements. Package(s) {loPack} require at least {mincxx} but package(s) {hiPack} require at most {maxcxx}'.format(loPack=loPack,mincxx=minCxx,hiPack=hiPack,maxcxx=maxCxx))
+    setCompilers.cxxDialectPackageRanges = (minCxxVersionBlameList,maxCxxVersionBlameList)
+    self.logPrint('serialEvaluation: new cxxDialectRanges {rng}'.format(rng=(minCxx,maxCxx)))
+    depGraph  = graph.DirectedGraph.topologicalSort(depGraph)
     totaltime = 0
     starttime = time.time()
     for child in depGraph:
@@ -1215,7 +1420,7 @@ class Framework(config.base.Configure, script.LanguageProcessor):
       child._configured = 1
       ctime = time.time()-start
       totaltime = totaltime + ctime
-      self.logPrint('child %s %f' % (child.__class__.__module__,ctime))
+      self.logPrint('child %s took %f seconds' % (child.__class__.__module__,ctime))
     self.logPrint('child sum %f' % (totaltime))
     self.logPrint('child total %f' % (time.time()-starttime))
     # use grep child configure.log | sort -k3 -g
@@ -1244,6 +1449,7 @@ class Framework(config.base.Configure, script.LanguageProcessor):
     self.setup()
     self.outputBanner()
     self.updateDependencies()
+    self.outputBasics()
     self.executeTest(self.configureExternalPackagesDir)
     self.processChildren()
     if self.argDB['with-batch']:
