@@ -80,7 +80,7 @@ class VecMPI_CUPM;
 // VecSeq or VecMPI. This is in effect "inside-out" polymorphism.
 // ==========================================================================================
 template <device::cupm::DeviceType T, typename Derived>
-class Vec_CUPMBase : protected device::cupm::impl::CUPMObject<T> {
+class Vec_CUPMBase : public device::cupm::impl::CUPMObject<T> {
 public:
   PETSC_CUPMOBJECT_HEADER(T);
 
@@ -980,13 +980,13 @@ inline PetscErrorCode Vec_CUPMBase<T, D>::BindToCPU_CUPMBase(Vec v, PetscBool us
   PetscCall(PetscStrFreeAllocpy(usehost ? PETSCRANDER48 : PETSCDEVICERAND(), &v->defaultrandtype));
 
   // set the base functions that are guaranteed to be the same for both
+  v->ops->create    = Create;
+  v->ops->destroy   = Destroy;
   v->ops->duplicate = D::Duplicate;
-  v->ops->create    = D::Create;
-  v->ops->destroy   = D::Destroy;
   v->ops->bindtocpu = D::BindToCPU;
   // Note that setting these to NULL on host breaks convergence in certain areas. I don't know
   // why, and I don't know how, but it is IMPERATIVE these are set as such!
-  v->ops->replacearray = D::template ReplaceArray<PETSC_MEMTYPE_HOST>;
+  v->ops->replacearray = ReplaceArray<PETSC_MEMTYPE_HOST>;
   v->ops->restorearray = D::template RestoreArray<PETSC_MEMTYPE_HOST, PETSC_MEMORY_ACCESS_READ_WRITE>;
 
   // set device-only common functions

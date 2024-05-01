@@ -119,8 +119,8 @@ class PETSC_SINGLE_LIBRARY_VISIBILITY_INTERNAL RestoreableArray : Interface<T> {
 public:
   PETSC_CUPM_INHERIT_INTERFACE_TYPEDEFS_USING(T);
 
-  static constexpr auto memory_type = MemoryType;
-  static constexpr auto access_type = AccessMode;
+  static constexpr PetscMemType memory_type = MemoryType;
+  static constexpr PetscMemoryAccessMode access_type = AccessMode;
 
   using value_type        = PetscScalar;
   using pointer_type      = value_type *;
@@ -129,7 +129,7 @@ public:
   PETSC_NODISCARD pointer_type      data() const noexcept;
   PETSC_NODISCARD cupm_pointer_type cupmdata() const noexcept;
 
-  operator pointer_type() const noexcept;
+  inline operator pointer_type() const noexcept { return data(); }
   // in case pointer_type == cupmscalar_pointer_type we don't want this overload to exist, so
   // we make a dummy template parameter to allow SFINAE to nix it for us
   template <typename U = pointer_type, typename = util::enable_if_t<!std::is_same<U, cupm_pointer_type>::value>>
@@ -147,10 +147,10 @@ protected:
 // ==========================================================================================
 
 template <DeviceType T, PetscMemType MT, PetscMemoryAccessMode MA>
-const PetscMemType RestoreableArray<T, MT, MA>::memory_type;
+constexpr PetscMemType RestoreableArray<T, MT, MA>::memory_type;
 
 template <DeviceType T, PetscMemType MT, PetscMemoryAccessMode MA>
-const PetscMemoryAccessMode RestoreableArray<T, MT, MA>::access_type;
+constexpr PetscMemoryAccessMode RestoreableArray<T, MT, MA>::access_type;
 
 // ==========================================================================================
 // RestoreableArray - Public API
@@ -173,12 +173,6 @@ inline typename RestoreableArray<T, MT, MA>::cupm_pointer_type RestoreableArray<
   return cupmScalarPtrCast(data());
 }
 
-template <DeviceType T, PetscMemType MT, PetscMemoryAccessMode MA>
-inline RestoreableArray<T, MT, MA>::operator pointer_type() const noexcept
-{
-  return data();
-}
-
 // in case pointer_type == cupmscalar_pointer_type we don't want this overload to exist, so
 // we make a dummy template parameter to allow SFINAE to nix it for us
 template <DeviceType T, PetscMemType MT, PetscMemoryAccessMode MA>
@@ -189,7 +183,7 @@ inline RestoreableArray<T, MT, MA>::operator cupm_pointer_type() const noexcept
 }
 
 template <DeviceType T>
-class PETSC_SINGLE_LIBRARY_VISIBILITY_INTERNAL CUPMObject : SolverInterface<T> {
+class PETSC_SINGLE_LIBRARY_VISIBILITY_INTERNAL CUPMObject : public SolverInterface<T> {
 protected:
   PETSC_CUPMSOLVER_INHERIT_INTERFACE_TYPEDEFS_USING(T);
 
