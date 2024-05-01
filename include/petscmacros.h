@@ -2,6 +2,7 @@
 
 #include <petscconf.h>
 #include <petscconf_poison.h> /* for PetscDefined() error checking */
+#include <petscpkg_version.h> // for macros checking external packages' version
 
 /* SUBMANSEC = Sys */
 
@@ -1319,9 +1320,15 @@ M*/
 #define PetscConcat6_(a, b, c, d, e, f) a##b##c##d##e##f
 #define PetscConcat6(a, b, c, d, e, f)  PetscConcat6_(a, b, c, d, e, f)
 
-#define PETSC_DEPRECATED_IDENTIFIER_(__PETSC_DEPRECATION_MACRO__, __SILENCE_MACRO__, major, minor, subminor, replacement, ...) \
-  PetscIfPetscDefined(__SILENCE_MACRO__, PetscExpandToNothing, \
+// Windows compiler is not able to handle PetscIfPetscDefined(), so we just always warn the deprecation (instead of providing a macro to silence them)
+#if defined(PETSC_HAVE_WINDOWS_COMPILERS)
+  #define PETSC_DEPRECATED_IDENTIFIER_(__PETSC_DEPRECATION_MACRO__, __SILENCE_MACRO__, major, minor, subminor, replacement, ...) \
+    __PETSC_DEPRECATION_MACRO__(PetscStringize(Use replacement (since version major.minor.subminor) instead. __VA_ARGS__))
+#else
+  #define PETSC_DEPRECATED_IDENTIFIER_(__PETSC_DEPRECATION_MACRO__, __SILENCE_MACRO__, major, minor, subminor, replacement, ...) \
+    PetscIfPetscDefined(__SILENCE_MACRO__, PetscExpandToNothing, \
                       __PETSC_DEPRECATION_MACRO__)(PetscStringize(Use replacement (since version major.minor.subminor) instead. Silence this warning (as well as all others for this version) by defining PetscConcat_(PETSC_, __SILENCE_MACRO__). __VA_ARGS__))
+#endif
 
 #define PETSC_DEPRECATED_IDENTIFIER(__PETSC_DEPRECATION_MACRO__, major, minor, subminor, ...) \
   PETSC_DEPRECATED_IDENTIFIER_(__PETSC_DEPRECATION_MACRO__, PetscConcat6(SILENCE_DEPRECATION_WARNINGS_, major, _, minor, _, subminor), major, minor, subminor, __VA_ARGS__)
