@@ -52,11 +52,11 @@ PetscErrorCode PetscGetMemType(const void *ptr, PetscMemType *type)
     enum hipMemoryType           mtype;
     cerr = hipPointerGetAttributes(&attr, ptr);
     if (cerr) cerr = hipGetLastError();
-#if PETSC_PKG_HIP_VERSION_GE(5, 5, 0)
+  #if PETSC_PKG_HIP_VERSION_GE(5, 5, 0)
     mtype = attr.type;
-#else
+  #else
     mtype = attr.memoryType;
-#endif
+  #endif
     if (cerr == hipSuccess && mtype == hipMemoryTypeDevice) *type = PETSC_MEMTYPE_DEVICE;
   }
 #endif
