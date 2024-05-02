@@ -569,14 +569,14 @@ public:
     cerr = cupmPointerGetAttributes(&attr, data);
     cerr = cupmGetLastError();
     // HIP seems to always have used memoryType though
-#if (defined(CUDART_VERSION) && (CUDART_VERSION < 10000)) || defined(__HIP_PLATFORM_HCC__)
+#if (defined(CUDART_VERSION) && (CUDART_VERSION < 10000)) || (defined(__HIP_PLATFORM_HCC__) && PETSC_PKG_HIP_VERSION_LT(5, 5, 0))
     const auto mtype = attr.memoryType;
     if (managed) *managed = static_cast<PetscBool>((cerr == cupmSuccess) && attr.isManaged);
 #else
     if (PETSC_PKG_CUDA_VERSION_GE(11, 0, 0) && (T == DeviceType::CUDA)) PetscCallCUPM(cerr);
     const auto mtype = attr.type;
     if (managed) *managed = static_cast<PetscBool>(mtype == cupmMemoryTypeManaged);
-#endif // CUDART_VERSION && CUDART_VERSION < 10000 || __HIP_PLATFORM_HCC__
+#endif // CUDART_VERSION && CUDART_VERSION < 10000 || (defined(__HIP_PLATFORM_HCC__) && PETSC_PKG_HIP_VERSION_LT(5, 5, 0))
     if (type) *type = ((cerr == cupmSuccess) && (mtype == cupmMemoryTypeDevice)) ? PETSC_MEMTYPE_CUPM() : PETSC_MEMTYPE_HOST;
     if (registered && (cerr == cupmSuccess) && (mtype == cupmMemoryTypeHost)) *registered = PETSC_TRUE;
     PetscFunctionReturn(PETSC_SUCCESS);
