@@ -549,6 +549,12 @@ public:
   #define PETSC_PKG_CUDA_VERSION_GE(...) 0
   #define CUPM_DEFINED_PETSC_PKG_CUDA_VERSION_GE
 #endif
+
+#if !defined(PETSC_PKG_HIP_VERSION_LT)
+  #define PETSC_PKG_HIP_VERSION_LT(...) 0
+  #define CUPM_DEFINED_PETSC_PKG_HIP_VERSION_LT
+#endif
+
   static PetscErrorCode PetscCUPMGetMemType(const void *data, PetscMemType *type, PetscBool *registered = nullptr, PetscBool *managed = nullptr) noexcept
   {
     cupmPointerAttributes_t attr;
@@ -583,6 +589,9 @@ public:
   }
 #if defined(CUPM_DEFINED_PETSC_PKG_CUDA_VERSION_GE)
   #undef PETSC_PKG_CUDA_VERSION_GE
+#endif
+#if defined(CUPM_DEFINED_PETSC_PKG_HIP_VERSION_LT)
+  #undef PETSC_PKG_HIP_VERSION_LT
 #endif
 
   PETSC_NODISCARD static PETSC_CONSTEXPR_14 cupmMemcpyKind_t PetscDeviceCopyModeToCUPMMemcpyKind(PetscDeviceCopyMode mode) noexcept
