@@ -29,6 +29,33 @@ PetscErrorCode DMPlexCreateCGNSFromFile_Internal(MPI_Comm comm, const char filen
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode PetscCGNSGetSectionOfHigherTopologicalOrder(int cgid, int zoneid, int *sectionid)
+{
+  int nsections, s; 
+  CGNS_ENUMT(ElementType_t) cellType;
+  CGNS_ENUMT(ElementType_t) prevCellType;
+  cgsize_t       start, end;
+  char buffer[CGIO_MAX_NAME_LENGTH + 1];
+  int            nbndry, parentFlag;
+
+  PetscFunctionBegin;
+  PetscCallCGNS(cg_nsections(cgid, 1, zoneid, &nsections));
+  PetscCheck(nsections >= 1, PETSC_COMM_SELF, PETSC_ERR_LIB, "CGNS file must have a at least one section for the zone %d", zoneid);
+  PetscCallCGNS(cg_section_read(cgid, 1, zoneid, 1, buffer, &prevCellType, &start, &end, &nbndry, &parentFlag));
+  *sectionid = 1;
+  for( s = 2; s <= nsections; s++)
+  {
+    PetscCallCGNS(cg_section_read(cgid, 1, zoneid, s, buffer, &cellType, &start, &end, &nbndry, &parentFlag));
+    if(cellType > prevCellType)
+    {
+      *sectionid = s;
+      prevCellType = cellType;
+    }
+  }
+
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 PetscErrorCode DMPlexCreateCGNS_Internal(MPI_Comm comm, PetscInt cgid, PetscBool interpolate, DM *dm)
 {
   PetscMPIInt  num_proc, rank;
@@ -100,7 +127,7 @@ PetscErrorCode DMPlexCreateCGNS_Internal(MPI_Comm comm, PetscInt cgid, PetscBool
 
       PetscCallCGNS(cg_zone_type(cgid, 1, z, &zonetype));
       PetscCheck(zonetype != CGNS_ENUMV(Structured), PETSC_COMM_SELF, PETSC_ERR_LIB, "Can only handle Unstructured zones for CGNS");
-      PetscCallCGNS(cg_nsections(cgid, 1, z, &nsections));
+      PetscCGNSGetSectionOfHigherTopologicalOrder(cgid, z, &nsections);
       PetscCallCGNS(cg_section_read(cgid, 1, z, nsections, buffer, &cellType, &start, &end, &nbndry, &parentFlag));
       /* This alone is reason enough to bludgeon every single CGNDS developer, this must be what they describe as the "idiocy of crowds" */
       if (cellType == CGNS_ENUMV(MIXED)) {
@@ -196,7 +223,7 @@ PetscErrorCode DMPlexCreateCGNS_Internal(MPI_Comm comm, PetscInt cgid, PetscBool
       int       nsections;
       PetscInt *cone, numc, numCorners, maxCorners = 27;
 
-      PetscCallCGNS(cg_nsections(cgid, 1, z, &nsections));
+      PetscCGNSGetSectionOfHigherTopologicalOrder(cgid, z, &nsections);
       PetscCallCGNS(cg_section_read(cgid, 1, z, nsections, buffer, &cellType, &start, &end, &nbndry, &parentFlag));
       numc = end - start;
       /* This alone is reason enough to bludgeon every single CGNDS developer, this must be what they describe as the "idiocy of crowds" */
