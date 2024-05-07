@@ -1817,7 +1817,7 @@ static PetscErrorCode VecDuplicateVecs_SeqKokkos_GEMV(Vec w, PetscInt m, Vec *V[
   PetscCall(PetscMalloc1(m, V));
   PetscCall(VecGetLayout(w, &map));
   lda = map->n;
-  lda = ((lda + 31) / 32) * 32; // make every vector 32-elements aligned
+  lda = ((lda + 7) / 8) * 8; // make every vector 8-elements aligned
 
   // allocate raw arrays on host and device for the whole m vectors
   PetscCall(PetscCalloc1(m * lda, &array_h));
