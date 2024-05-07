@@ -32,10 +32,6 @@ class Configure(config.package.CMakePackage):
     return
 
   def formCMakeConfigureArgs(self):
-    if not hasattr(self.programs, 'flex'): self.programs.getExecutable('flex', getFullPath = 1)
-    if not hasattr(self.programs, 'flex'): raise RuntimeError('PTScotch needs flex installed')
-
-    if not self.bison.found or not self.bison.haveBison3plus: raise RuntimeError('PTScotch needs Bison version 3.0 or above, use --download-bison')
     args = config.package.CMakePackage.formCMakeConfigureArgs(self)
 
     args.append('-DINTSIZE:STRING='+ ('64' if self.getDefaultIndexSize() == 64 else '32'))
@@ -45,18 +41,23 @@ class Configure(config.package.CMakePackage):
 
     args.append('-DCOMMON_RANDOM_FIXED_SEED:BOOL=OFF')
 
-    if self.pthread.found and self.pthread.pthread_barrier:
-      args.append('-DCOMMON_PTHREAD:BOOL=ON')
+    args.append('-DSCOTCH_RENAME:STRING=-Drestrict="restrict"')
+
+    if self.zlib.found:
+      args.append('-DCOMMON_FILE_COMPRESS_GZ:BOOL=OFF')
+
+    if self.pthread.found:
+      if self.pthread.pthread_barrier:
+        args.append('-DCOMMON_PTHREAD:BOOL=ON')
+      else:
+        args.append('-DCOMMON_PTHREAD_BARRIER:BOOL=OFF')      # OSX does not have pthread_barrier_destroy
 
     if self.setCompilers.isDarwin(self.log):
-      args.append('-DCOMMON_TIMING_OLD:BOOL=ON')
       args.append('-DCOMMON_OS_MACOS:BOOL=ON')
+      args.append('-DCOMMON_TIMING_OLD:BOOL=ON')
+
     if self.setCompilers.isMINGW(self.framework.getCompiler(), self.log):
       args.append('-DCOMMON_OS_WINDOWS:BOOL=ON')
-
-    # OSX does not have pthread_barrier_destroy
-    if self.pthread.found and not self.pthread.pthread_barrier:
-        args.append('-DCOMMON_PTHREAD_BARRIER:BOOL=OFF')
 
     #-D COMMON_PTHREAD_FILE:BOOL=ON \
     #-D SCOTCH_PTHREAD:BOOL=ON \
@@ -64,4 +65,8 @@ class Configure(config.package.CMakePackage):
     #-D COMMON_PTHREAD_AFFINITY_LINUX:BOOL=ON
     return args
 
-  #def configureLibrary(self):
+
+    #if not hasattr(self.programs, 'flex'): self.programs.getExecutable('flex', getFullPath = 1)
+    #if not hasattr(self.programs, 'flex'): raise RuntimeError('PTScotch needs flex installed')
+
+    #if not self.bison.found or not self.bison.haveBison3plus: raise RuntimeError('PTScotch needs Bison version 3.0 or above, use --download-bison')
