@@ -73,7 +73,7 @@ static PetscErrorCode VecDuplicateVecs_MPI_GEMV(Vec w, PetscInt m, Vec *V[])
     PetscCall(PetscMalloc1(m, V));
     PetscCall(VecGetLocalSize(w, &nlocal));
     lda = nlocal;
-    lda = ((lda + 31) / 32) * 32; // make every vector 32-elements aligned
+    lda = ((lda + 7) / 8) * 8; // make every vector 8-elements aligned
 
     PetscCall(PetscCalloc1(m * lda, &array));
     for (PetscInt i = 0; i < m; i++) {
