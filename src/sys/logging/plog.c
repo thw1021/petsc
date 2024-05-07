@@ -103,10 +103,7 @@ PetscBool PetscLogGpuTimeFlag = PETSC_FALSE;
 
 PetscLogState petsc_log_state = NULL;
 
-#define PETSC_LOG_HANDLER_HOT_BLANK \
-  { \
-    NULL, NULL, NULL, NULL, NULL, NULL \
-  }
+#define PETSC_LOG_HANDLER_HOT_BLANK {NULL, NULL, NULL, NULL, NULL, NULL}
 
 PetscLogHandlerHot PetscLogHandlers[PETSC_LOG_HANDLER_MAX] = {
   PETSC_LOG_HANDLER_HOT_BLANK,
