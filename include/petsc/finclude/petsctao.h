@@ -5,8 +5,10 @@
 
 #define Tao type(tTao)
 #define TaoLineSearch type(tTaoLineSearch)
+#define DMTao type(tDMTao)
 #define TaoConvergedReason PetscEnum
 #define TaoType character*(80)
+#define DMTaoType character*(80)
 #define TaoLineSearchType character*(80)
 #define TaoADMMUpdateType PetscEnum
 #define TaoADMMRegularizerType PetscEnum
@@ -48,5 +50,20 @@
 #define TAOALMM     'almm'
 #define TAOPYTHON   'python'
 #define TAOSNES     'snes'
+
+#define TAOLINESEARCHUNIT     'unit'
+#define TAOLINESEARCHMT       'more-thuente'
+#define TAOLINESEARCHGPCG     'gpcg'
+#define TAOLINESEARCHARMIJO   'armijo'
+#define TAOLINESEARCHOWARMIJO 'owarmijo'
+#define TAOLINESEARCHPSARMIJO 'psarmijo'
+#define TAOLINESEARCHIPM      'ipm'
+
+#define DMTAOL1      'l1'
+#define DMTAOL2      'l2'
+#define DMTAOSIMPLEX 'simplex'
+#define DMTAOBOX     'box'
+#define DMTAOZERO    'zero'
+#define DMTAOSHELL   'shell'
 
 #endif
