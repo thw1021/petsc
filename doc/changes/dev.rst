@@ -59,6 +59,7 @@ Changes: Development
 .. rubric:: DM/DA:
 
 - Add ``DMGetSparseLocalize()`` and ``DMSetSparseLocalize()``
+- Add ``DMGetOutputSequenceLength()``
 
 .. rubric:: DMSwarm:
 
