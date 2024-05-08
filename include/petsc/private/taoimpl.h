@@ -99,6 +99,7 @@ struct _p_Tao {
   void *user_objgradP;
   void *user_gradP;
   void *user_hessP;
+  void *user_fpiP;
   void *user_lsresP;
   void *user_lsjacP;
   void *user_conP;
@@ -132,6 +133,7 @@ struct _p_Tao {
   Vec        solution;
   Vec        gradient;
   Vec        stepdirection;
+  Vec        dualvec;
   Vec        XL;
   Vec        XU;
   Vec        IL;

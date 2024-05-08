@@ -50,6 +50,8 @@
 #define TAOALMM     'almm'
 #define TAOPYTHON   'python'
 #define TAOSNES     'snes'
+#define TAOFB       'fb'
+#define TAOCV       'cv'
 
 #define TAOLINESEARCHUNIT     'unit'
 #define TAOLINESEARCHMT       'more-thuente'
