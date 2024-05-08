@@ -199,6 +199,7 @@ cdef extern from * nogil:
     PetscTAOLineSearchType TAOLINESEARCHUNIT
     PetscTAOLineSearchType TAOLINESEARCHARMIJO
     PetscTAOLineSearchType TAOLINESEARCHOWARMIJO
+    PetscTAOLineSearchType TAOLINESEARCHPSARMIJO
     PetscTAOLineSearchType TAOLINESEARCHGPCG
     PetscTAOLineSearchType TAOLINESEARCHMT
     PetscTAOLineSearchType TAOLINESEARCHIPM

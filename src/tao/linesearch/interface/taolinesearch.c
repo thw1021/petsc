@@ -1,5 +1,6 @@
 #include <petsctaolinesearch.h> /*I "petsctaolinesearch.h" I*/
 #include <petsc/private/taolinesearchimpl.h>
+#include <petscdm.h>
 
 PetscFunctionList TaoLineSearchList = NULL;
 
@@ -81,6 +82,7 @@ PetscErrorCode TaoLineSearchView(TaoLineSearch ls, PetscViewer viewer)
     PetscCall(PetscViewerASCIIPrintf(viewer, "total number of function evaluations=%" PetscInt_FMT "\n", ls->nfeval));
     PetscCall(PetscViewerASCIIPrintf(viewer, "total number of gradient evaluations=%" PetscInt_FMT "\n", ls->ngeval));
     PetscCall(PetscViewerASCIIPrintf(viewer, "total number of function/gradient evaluations=%" PetscInt_FMT "\n", ls->nfgeval));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "total number of prox evaluations=%" PetscInt_FMT "\n", ls->nproxeval));
 
     if (ls->bounded) PetscCall(PetscViewerASCIIPrintf(viewer, "using variable bounds\n"));
     PetscCall(PetscViewerASCIIPrintf(viewer, "Termination reason: %d\n", (int)ls->reason));
@@ -132,6 +134,9 @@ PetscErrorCode TaoLineSearchCreate(MPI_Comm comm, TaoLineSearch *newls)
   ls->stepmax  = 1.0e+20;
   ls->step     = 1.0;
   ls->initstep = 1.0;
+  ls->dm       = NULL;
+  ls->prox     = NULL;
+  ls->prox_reg = NULL;
   *newls       = ls;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -171,6 +176,13 @@ PetscErrorCode TaoLineSearchSetUp(TaoLineSearch ls)
     PetscCall(TaoIsGradientDefined(ls->tao, &flg));
     ls->hasgradient = flg;
     PetscCall(TaoIsObjectiveAndGradientDefined(ls->tao, &flg));
+    ls->hasobjectiveandgradient = flg;
+  } else if (ls->usedm) {
+    PetscCall(DMTaoIsObjectiveDefined(ls->dm, &flg));
+    ls->hasobjective = flg;
+    PetscCall(DMTaoIsGradientDefined(ls->dm, &flg));
+    ls->hasgradient = flg;
+    PetscCall(DMTaoIsObjectiveAndGradientDefined(ls->dm, &flg));
     ls->hasobjectiveandgradient = flg;
   } else {
     if (ls->ops->computeobjective) {
@@ -304,9 +316,10 @@ PetscErrorCode TaoLineSearchApply(TaoLineSearch ls, Vec x, PetscReal *f, Vec g, 
   ls->stepdirection = s;
 
   PetscCall(TaoLineSearchSetUp(ls));
-  ls->nfeval  = 0;
-  ls->ngeval  = 0;
-  ls->nfgeval = 0;
+  ls->nfeval    = 0;
+  ls->ngeval    = 0;
+  ls->nfgeval   = 0;
+  ls->nproxeval = 0;
   /* Check parameter values */
   if (ls->ftol < 0.0) {
     PetscCall(PetscInfo(ls, "Bad Line Search Parameter: ftol (%g) < 0\n", (double)ls->ftol));
@@ -398,6 +411,7 @@ PetscErrorCode TaoLineSearchSetType(TaoLineSearch ls, TaoLineSearchType type)
   ls->nfeval              = 0;
   ls->ngeval              = 0;
   ls->nfgeval             = 0;
+  ls->nproxeval           = 0;
   ls->ops->setup          = NULL;
   ls->ops->apply          = NULL;
   ls->ops->view           = NULL;
@@ -567,6 +581,35 @@ PetscErrorCode TaoLineSearchGetNumberFunctionEvaluations(TaoLineSearch ls, Petsc
 }
 
 /*@
+  TaoLineSearchGetNumberProxEvaluations - Gets the number of proximal mapping evaluation
+  routines used by the line search in last application (not cumulative).
+
+  Not Collective
+
+  Input Parameter:
+. ls - the `TaoLineSearch` context
+
+  Output Parameters:
++ nproxeval - number of proximal mappinge valuations
+
+  Level: intermediate
+
+  Note:
+  If the line search is using the `Tao` objective and gradient
+  routines directly (see `TaoLineSearchUseTaoRoutines()`), then the `Tao`
+  is already counting the number of evaluations.
+
+.seealso: `TaoLineSearch`
+@*/
+PetscErrorCode TaoLineSearchGetNumberProxEvaluations(TaoLineSearch ls, PetscInt *nproxeval)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(ls, TAOLINESEARCH_CLASSID, 1);
+  *nproxeval = ls->nproxeval;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
   TaoLineSearchIsUsingTaoRoutines - Checks whether the line search is using
   the standard `Tao` evaluation routines.
 
@@ -588,6 +631,42 @@ PetscErrorCode TaoLineSearchIsUsingTaoRoutines(TaoLineSearch ls, PetscBool *flg)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ls, TAOLINESEARCH_CLASSID, 1);
   *flg = ls->usetaoroutines;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  TaoLineSearchSetProx - Sets the `DM` contexts that contain
+  appropriate proximal mapping. Used for TAOLINESEARCHPSARMIJO
+
+  Logically Collective
+
+  Input Parameters:
++ ls     - the `TaoLineSearch` context
+. dm0    - the `DM` context that contains appropriate proximal mapping
+. scale0 - scale of dm0 object
+- dm1    - the `DM` context for regularizing metric. This may be NULL
+
+  Level: advanced
+
+  Notes:
+  This routine is used in `TAOLINESEARCHPSARMIJO` to compute proximal mapping.
+
+.seealso: [](ch_tao), `Tao`, `TaoLineSearch`, `TaoLineSearchCreate()`, `TaoLineSearchSetGradientRoutine()`, `TaoLineSearchSetObjectiveAndGradientRoutine()`, `TaoLineSearchUseTaoRoutines()`
+@*/
+PetscErrorCode TaoLineSearchSetProx(TaoLineSearch ls, DM dm0, PetscReal scale0, DM dm1)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(ls, TAOLINESEARCH_CLASSID, 1);
+  PetscValidHeaderSpecific(dm0, DM_CLASSID, 2);
+  PetscCheck(scale0 >= 0, PetscObjectComm((PetscObject)ls), PETSC_ERR_USER, "Scale needs to be non-negative.");
+  if (dm1) PetscValidHeaderSpecific(dm1, DM_CLASSID, 2);
+  ls->prox       = dm0;
+  ls->prox_scale = scale0;
+  if (dm1) {
+    ls->prox_reg = dm1;
+  } else {
+    ls->prox_reg = NULL;
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -629,6 +708,7 @@ PetscErrorCode TaoLineSearchSetObjectiveRoutine(TaoLineSearch ls, PetscErrorCode
   ls->ops->computeobjective = func;
   if (ctx) ls->userctx_func = ctx;
   ls->usetaoroutines = PETSC_FALSE;
+  ls->usedm          = PETSC_FALSE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -669,6 +749,7 @@ PetscErrorCode TaoLineSearchSetGradientRoutine(TaoLineSearch ls, PetscErrorCode 
   ls->ops->computegradient = func;
   if (ctx) ls->userctx_grad = ctx;
   ls->usetaoroutines = PETSC_FALSE;
+  ls->usedm          = PETSC_FALSE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -709,6 +790,7 @@ PetscErrorCode TaoLineSearchSetObjectiveAndGradientRoutine(TaoLineSearch ls, Pet
   ls->ops->computeobjectiveandgradient = func;
   if (ctx) ls->userctx_funcgrad = ctx;
   ls->usetaoroutines = PETSC_FALSE;
+  ls->usedm          = PETSC_FALSE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -764,6 +846,31 @@ PetscErrorCode TaoLineSearchSetObjectiveAndGTSRoutine(TaoLineSearch ls, PetscErr
 }
 
 /*@
+  TaoLineSearchUseDM - Informs the `TaoLineSearch` to use the
+  objective and gradient evaluation routines from the given `DM` object.
+
+  Logically Collective
+
+  Input Parameters:
++ ls - the `TaoLineSearch` context
+- dm - the `DM` context with defined objective/gradient evaluation routines
+
+  Level: developer
+
+.seealso: [](ch_tao), `Tao`, `TaoLineSearch`, `TaoLineSearchCreate()`
+@*/
+PetscErrorCode TaoLineSearchUseDM(TaoLineSearch ls, DM dm)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(ls, TAOLINESEARCH_CLASSID, 1);
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 2);
+  ls->dm             = dm;
+  ls->usetaoroutines = PETSC_FALSE;
+  ls->usedm          = PETSC_TRUE;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
   TaoLineSearchUseTaoRoutines - Informs the `TaoLineSearch` to use the
   objective and gradient evaluation routines from the given `Tao` object. The default.
 
@@ -784,6 +891,7 @@ PetscErrorCode TaoLineSearchUseTaoRoutines(TaoLineSearch ls, Tao ts)
   PetscValidHeaderSpecific(ts, TAO_CLASSID, 2);
   ls->tao            = ts;
   ls->usetaoroutines = PETSC_TRUE;
+  ls->usedm          = PETSC_FALSE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -817,7 +925,9 @@ PetscErrorCode TaoLineSearchComputeObjective(TaoLineSearch ls, Vec x, PetscReal 
   PetscValidHeaderSpecific(x, VEC_CLASSID, 2);
   PetscAssertPointer(f, 3);
   PetscCheckSameComm(ls, 1, x, 2);
-  if (ls->usetaoroutines) {
+  if (ls->usedm) {
+    PetscCall(DMTaoComputeObjective(ls->dm, x, f));
+  } else if (ls->usetaoroutines) {
     PetscCall(TaoComputeObjective(ls->tao, x, f));
   } else {
     PetscCheck(ls->ops->computeobjective || ls->ops->computeobjectiveandgradient || ls->ops->computeobjectiveandgts, PetscObjectComm((PetscObject)ls), PETSC_ERR_ARG_WRONGSTATE, "Line Search does not have objective function set");
@@ -864,7 +974,9 @@ PetscErrorCode TaoLineSearchComputeObjectiveAndGradient(TaoLineSearch ls, Vec x,
   PetscValidHeaderSpecific(g, VEC_CLASSID, 4);
   PetscCheckSameComm(ls, 1, x, 2);
   PetscCheckSameComm(ls, 1, g, 4);
-  if (ls->usetaoroutines) {
+  if (ls->usedm) {
+    PetscCall(DMTaoComputeObjectiveAndGradient(ls->dm, x, f, g));
+  } else if (ls->usetaoroutines) {
     PetscCall(TaoComputeObjectiveAndGradient(ls->tao, x, f, g));
   } else {
     PetscCall(PetscLogEventBegin(TAOLINESEARCH_Eval, ls, 0, 0, 0));
@@ -910,7 +1022,9 @@ PetscErrorCode TaoLineSearchComputeGradient(TaoLineSearch ls, Vec x, Vec g)
   PetscValidHeaderSpecific(g, VEC_CLASSID, 3);
   PetscCheckSameComm(ls, 1, x, 2);
   PetscCheckSameComm(ls, 1, g, 3);
-  if (ls->usetaoroutines) {
+  if (ls->usedm) {
+    PetscCall(DMTaoComputeGradient(ls->dm, x, g));
+  } else if (ls->usetaoroutines) {
     PetscCall(TaoComputeGradient(ls->tao, x, g));
   } else {
     PetscCall(PetscLogEventBegin(TAOLINESEARCH_Eval, ls, 0, 0, 0));
