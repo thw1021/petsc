@@ -104,6 +104,7 @@ Changes: Development
 - Deprecate ``PETSC_DEFAULT`` in favor of ``PETSC_CURRENT`` for ``TSAdaptSetClip()``
 - Deprecate ``PETSC_DEFAULT`` in favor of ``PETSC_CURRENT`` for ``TSAdaptSetStepLimits()``
 - Add  ``TSGetStepResize()``
+- Add a new ARKIMEX solver for fast-slow systems that are partitioned component-wise and additively at the same time
 
 .. rubric:: TAO:
 
