@@ -41,7 +41,7 @@
   #define dmplexgetmeet_                  dmplexgetmeet
   #define dmplexgetfullmeet_              dmplexgetfullmeet
   #define dmplexrestoremeet_              dmplexrestoremeet
-  #define dmplexconstructghostcells_       dmplexconstructghostcells
+  #define dmplexconstructghostcells_      dmplexconstructghostcells
 #endif
 
 PETSC_EXTERN void dmplexconstructghostcells_(DM *dm, char *name, PetscInt *numGhostCells, DM *dmGhosted, int *ierr, PETSC_FORTRAN_CHARLEN_T lenN)
