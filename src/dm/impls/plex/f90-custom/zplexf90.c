@@ -49,6 +49,7 @@ PETSC_EXTERN void dmplexconstructghostcells_(DM *dm, char *name, PetscInt *numGh
   char *labelname;
 
   FIXCHAR(name, lenN, labelname);
+  CHKFORTRANNULLINTEGER(numGhostCells);
   *ierr = DMPlexConstructGhostCells(*dm, labelname, numGhostCells, dmGhosted);
   if (*ierr) return;
   FREECHAR(name, labelname);
