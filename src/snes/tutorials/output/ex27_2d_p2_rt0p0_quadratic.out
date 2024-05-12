@@ -1,0 +1,28 @@
+DMAdaptor Object: 1 MPI process
+  type: flux
+DM Adaptor
+  sequence length: 1
+VecTagger Object: (refine_) 1 MPI process
+  type: cdf
+  Block size: 1
+   cdf box=[  0.9,1.  ]
+VecTagger Object: (coarsen_) 1 MPI process
+  type: absolute
+  Block size: 1
+   absolute box=[  1.79769e+308,1.79769e+308  ]
+IS Object: 1 MPI process
+  type: general
+Number of indices in set 13
+0 6
+1 13
+2 36
+3 44
+4 49
+5 50
+6 51
+7 52
+8 54
+9 55
+10 60
+11 61
+12 63
