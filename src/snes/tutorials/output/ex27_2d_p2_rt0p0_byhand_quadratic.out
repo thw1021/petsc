@@ -1,0 +1,27 @@
+L_2 Error: 1.91687e-16
+L_2 Residual: 8.25107e-15
+Function appears to be linear
+L_2 Error: [3.00581e-16, 0.0379927]
+L_2 Residual: 0.0196419
+Function appears to be linear
+Flux error norm = 2.52113e-09	 Exact flux error norm = 1.46701e-09
+VecTagger Object: 1 MPI process
+  type: cdf
+  Block size: 1
+   cdf box=[  0.9,1.  ]
+IS Object: 1 MPI process
+  type: general
+Number of indices in set 13
+0 6
+1 13
+2 36
+3 44
+4 49
+5 50
+6 51
+7 52
+8 54
+9 55
+10 60
+11 61
+12 63
