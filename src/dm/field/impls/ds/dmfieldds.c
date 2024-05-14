@@ -794,10 +794,22 @@ static PetscErrorCode DMFieldComputeFaceData_DS(DMField field, IS pointIS, Petsc
     }
   }
   if (maxDegree <= 1) {
-    PetscInt     numCells, offset, *cells;
-    PetscFEGeom *cellGeom;
-    IS           suppIS;
+    PetscQuadrature cellQuad = NULL;
+    PetscInt        numCells, offset, *cells;
+    PetscFEGeom    *cellGeom;
+    IS              suppIS;
 
+    if (quad) {
+      PetscReal *points, *weights;
+      PetscInt   Nc, Np;
+
+      // Make a compatible cell quadrature (points don't matter since its affine)
+      PetscCall(PetscQuadratureCreate(PETSC_COMM_SELF, &cellQuad));
+      PetscCall(PetscQuadratureGetData(quad, NULL, &Nc, &Np, NULL, NULL));
+      PetscCall(PetscCalloc1((dim + 1) * Np, &points));
+      PetscCall(PetscCalloc1(Nc * Np, &weights));
+      PetscCall(PetscQuadratureSetData(cellQuad, dim + 1, Nc, Np, points, weights));
+    }
     for (p = 0, numCells = 0; p < numFaces; p++) {
       PetscInt point = points[p];
       PetscInt numSupp, numChildren;
@@ -819,7 +831,7 @@ static PetscErrorCode DMFieldComputeFaceData_DS(DMField field, IS pointIS, Petsc
       for (s = 0; s < numSupp; s++, offset++) cells[offset] = supp[s];
     }
     PetscCall(ISCreateGeneral(PETSC_COMM_SELF, numCells, cells, PETSC_USE_POINTER, &suppIS));
-    PetscCall(DMFieldCreateFEGeom(field, suppIS, quad, PETSC_FALSE, &cellGeom));
+    PetscCall(DMFieldCreateFEGeom(field, suppIS, cellQuad, PETSC_FALSE, &cellGeom));
     for (p = 0, offset = 0; p < numFaces; p++) {
       PetscInt        point = points[p];
       PetscInt        numSupp, s, q;
@@ -836,6 +848,7 @@ static PetscErrorCode DMFieldComputeFaceData_DS(DMField field, IS pointIS, Petsc
       }
     }
     PetscCall(PetscFEGeomDestroy(&cellGeom));
+    PetscCall(PetscQuadratureDestroy(&cellQuad));
     PetscCall(ISDestroy(&suppIS));
     PetscCall(PetscFree(cells));
   } else {
