@@ -230,6 +230,7 @@ static PetscErrorCode PCDestroy_Composite(PC pc)
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCCompositeGetNumberPC_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCCompositeGetPC_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCCompositeSpecialSetAlpha_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCCompositeSpecialSetAlphaMat_C", NULL));
   PetscCall(PetscFree(pc->data));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
