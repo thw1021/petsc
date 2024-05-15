@@ -377,14 +377,17 @@ int main(int argc, char **args)
 
 /*TEST
 
+   build:
+      requires: !complex
+
    test:
       args: -fA ${DATAFILESPATH}/matrices/ifiss/A -fB ${DATAFILESPATH}/matrices/ifiss/B -fQ ${DATAFILESPATH}/matrices/ifiss/Q -fbound ${DATAFILESPATH}/is/ifiss/bound -ksp_monitor
-      requires: datafilespath defined(PETSC_USE_64BIT_INDICES)
+      requires: datafilespath defined(PETSC_USE_64BIT_INDICES) !complex
 
    test:
       suffix: 2
       nsize: 2
       args: -fA ${DATAFILESPATH}/matrices/ifiss/A -fB ${DATAFILESPATH}/matrices/ifiss/B -fQ ${DATAFILESPATH}/matrices/ifiss/Q -fbound ${DATAFILESPATH}/is/ifiss/bound -ksp_monitor
-      requires: datafilespath defined(PETSC_USE_64BIT_INDICES)
+      requires: datafilespath defined(PETSC_USE_64BIT_INDICES) !complex
 
 TEST*/
