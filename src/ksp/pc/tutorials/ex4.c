@@ -55,22 +55,6 @@ static char help[] = "Applies the 2023 preconditioner of Benzi and Faccio\n\n";
  * more closely match what users experience in "physical" contexts.
  */
 
-PetscErrorCode CreateIdentity(PetscInt m, Mat *identity)
-{
-  PetscInt          start, stop;
-  const PetscScalar one = 1;
-
-  PetscFunctionBeginUser;
-  PetscCall(MatCreate(PETSC_COMM_WORLD, identity));
-  PetscCall(MatSetType(*identity, MATMPIAIJ));
-  PetscCall(MatSetSizes(*identity, m, m, PETSC_DETERMINE, PETSC_DETERMINE));
-  PetscCall(MatGetOwnershipRange(*identity, &start, &stop));
-  for (PetscInt i = start; i < stop; ++i) PetscCall(MatSetValues(*identity, 1, &i, 1, &i, &one, INSERT_VALUES));
-  PetscCall(MatAssemblyBegin(*identity, MAT_FINAL_ASSEMBLY));
-  PetscCall(MatAssemblyEnd(*identity, MAT_FINAL_ASSEMBLY));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 PetscErrorCode CreateAndLoadMat(const char *mat_name, Mat *mat)
 {
   PetscViewer viewer;
@@ -92,7 +76,7 @@ PetscErrorCode CreateAndLoadMat(const char *mat_name, Mat *mat)
 }
 
 typedef struct {
-  Mat       U, UT, D, aD, aDinv, Ik, I_plus_gammaUTaDinvU;
+  Mat       U, UT, D, aD, aDinv, I_plus_gammaUTaDinvU;
   PC        smw_cholesky;
   PetscReal gamma, alpha;
   PetscBool setup_called;
@@ -101,7 +85,6 @@ typedef struct {
 PetscErrorCode SmwSetup(PC pc)
 {
   SmwPCCtx *ctx;
-  PetscInt  k;
   Vec       aDVec;
 
   PetscFunctionBeginUser;
@@ -123,14 +106,10 @@ PetscErrorCode SmwSetup(PC pc)
   // Create UT
   PetscCall(MatTranspose(ctx->U, MAT_INITIAL_MATRIX, &ctx->UT));
 
-  // Create Ik
-  PetscCall(MatGetLocalSize(ctx->U, NULL, &k));
-  PetscCall(CreateIdentity(k, &ctx->Ik));
-
   // Create sum Mat
   PetscCall(MatMatMatMult(ctx->UT, ctx->aDinv, ctx->U, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &ctx->I_plus_gammaUTaDinvU));
   PetscCall(MatScale(ctx->I_plus_gammaUTaDinvU, ctx->gamma));
-  PetscCall(MatAXPY(ctx->I_plus_gammaUTaDinvU, 1., ctx->Ik, SUBSET_NONZERO_PATTERN));
+  PetscCall(MatShift(ctx->I_plus_gammaUTaDinvU, 1.));
 
   PetscCall(PCCreate(PETSC_COMM_WORLD, &ctx->smw_cholesky));
   PetscCall(PCSetType(ctx->smw_cholesky, PCCHOLESKY));
@@ -178,6 +157,7 @@ PetscErrorCode SmwApply(PC pc, Vec x, Vec y)
 int main(int argc, char **args)
 {
   Mat               A, B, Q, Acondensed, Bcondensed, BT, J, AplusJ, QInv, D, AplusD, JplusD, U;
+  Mat               AplusJarray[2];
   Vec               bound, x, b, Qdiag, DVec;
   PetscBool         flg;
   PetscViewer       viewer;
@@ -271,11 +251,12 @@ int main(int argc, char **args)
   PetscCall(MatScale(J, gamma));
 
   // Create sum of A + J
-  PetscCall(MatDuplicate(Acondensed, MAT_COPY_VALUES, &AplusJ));
-  PetscCall(MatAXPY(AplusJ, 1.0, J, DIFFERENT_NONZERO_PATTERN));
+  AplusJarray[0] = Acondensed;
+  AplusJarray[1] = J;
+  PetscCall(MatCreateComposite(PETSC_COMM_WORLD, 2, AplusJarray, &AplusJ));
 
   // Create decomposition matrices
-  // We've already used Qdiag, which currently represents Q^-1,  for it's necessary purposes. Let's
+  // We've already used Qdiag, which currently represents Q^-1,  for its necessary purposes. Let's
   // convert it to represent Q^(-1/2)
   PetscCall(VecSqrtAbs(Qdiag));
   // We can similarly reuse Qinv
@@ -365,7 +346,6 @@ int main(int argc, char **args)
   PetscCall(KSPDestroy(&ksp));
   PetscCall(PetscFree(boundary_indices));
   PetscCall(MatDestroy(&ctx.UT));
-  PetscCall(MatDestroy(&ctx.Ik));
   PetscCall(MatDestroy(&ctx.I_plus_gammaUTaDinvU));
   PetscCall(MatDestroy(&ctx.aD));
   PetscCall(MatDestroy(&ctx.aDinv));
