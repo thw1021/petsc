@@ -185,13 +185,12 @@ int main(int argc, char **args)
   PetscInt         *boundary_indices;
   PetscInt          boundary_indices_size, am, an, bm, bn, condensed_am, maxits, astart, aend, Dstart, Dend, num_local_bnd_dofs = 0;
   const PetscScalar zero = 0;
-  PetscScalar      *boundary_indices_values;
   IS                boundary_is, bulk_is;
   KSP               ksp;
   PC                pc, pcA, pcJ;
   PetscRandom       rctx;
-  PetscScalar       gamma = 100, alpha = .01;
-  PetscReal         dtol;
+  PetscReal        *boundary_indices_values;
+  PetscReal         gamma = 100, alpha = .01, dtol;
   PetscMPIInt       rank;
   SmwPCCtx          ctx;
 
@@ -380,6 +379,12 @@ int main(int argc, char **args)
 
    test:
       args: -fA ${DATAFILESPATH}/matrices/ifiss/A -fB ${DATAFILESPATH}/matrices/ifiss/B -fQ ${DATAFILESPATH}/matrices/ifiss/Q -fbound ${DATAFILESPATH}/is/ifiss/bound -ksp_monitor
-      requires: datafiles defined(PETSC_USE_64BIT_INDICES)
+      requires: datafilespath defined(PETSC_USE_64BIT_INDICES)
+
+   test:
+      suffix: 2
+      nsize: 2
+      args: -fA ${DATAFILESPATH}/matrices/ifiss/A -fB ${DATAFILESPATH}/matrices/ifiss/B -fQ ${DATAFILESPATH}/matrices/ifiss/Q -fbound ${DATAFILESPATH}/is/ifiss/bound -ksp_monitor
+      requires: datafilespath defined(PETSC_USE_64BIT_INDICES)
 
 TEST*/
