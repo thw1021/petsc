@@ -38,7 +38,7 @@ static char help[] = "Applies the 2023 preconditioner of Benzi and Faccio\n\n";
  * with a stretched grid and Q2-Q1 finite elements. The matrices are taken from
  * the last iteration of a Picard solve with tolerance 1e-8 with a viscosity of
  * 0.1 and a 32x32 grid. We summarize below iteration counts from running this
- * preconditioner for different grids and viscosity.
+ * preconditioner for different grids and viscosity with a KSP tolerance of 1e-6.
  *
  *       32x32 64x64 128x128
  * 0.1   28    36    43
@@ -163,14 +163,14 @@ int main(int argc, char **args)
   PetscViewer       viewer;
   char              file[PETSC_MAX_PATH_LEN];
   PetscInt         *boundary_indices;
-  PetscInt          boundary_indices_size, am, an, bm, bn, condensed_am, maxits, astart, aend, Dstart, Dend, num_local_bnd_dofs = 0;
+  PetscInt          boundary_indices_size, am, an, bm, bn, condensed_am, astart, aend, Dstart, Dend, num_local_bnd_dofs = 0;
   const PetscScalar zero = 0;
   IS                boundary_is, bulk_is;
   KSP               ksp;
   PC                pc, pcA, pcJ;
   PetscRandom       rctx;
   PetscReal        *boundary_indices_values;
-  PetscReal         gamma = 100, alpha = .01, dtol;
+  PetscReal         gamma = 100, alpha = .01;
   PetscMPIInt       rank;
   SmwPCCtx          ctx;
 
@@ -302,8 +302,6 @@ int main(int argc, char **args)
   PetscCall(KSPSetType(ksp, KSPFGMRES));
   PetscCall(KSPSetOperators(ksp, AplusJ, AplusJ));
   PetscCall(KSPSetNormType(ksp, KSP_NORM_UNPRECONDITIONED));
-  PetscCall(KSPGetTolerances(ksp, NULL, NULL, &dtol, &maxits));
-  PetscCall(KSPSetTolerances(ksp, 1e-6, 1e-50, dtol, maxits));
   PetscCall(KSPGMRESSetRestart(ksp, 300));
   PetscCall(KSPGetPC(ksp, &pc));
   PetscCall(PCSetType(pc, PCCOMPOSITE));
