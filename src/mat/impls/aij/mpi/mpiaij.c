@@ -7794,7 +7794,7 @@ PETSC_INTERN PetscErrorCode MatCreateGraph_Simple_AIJ(Mat Amat, PetscBool symmet
     if (isseqaij || ((Mat_MPIAIJ *)Amat->data)->garray) {
       PetscInt  *d_nnz, *o_nnz;
       MatScalar *aa, val, *AA;
-      PetscInt  *aj, *ai, *AJ, nc, nmax = 0;
+      PetscInt  *aj, *ai, *AJ, nc, nmax = 0, is_bad = 0;
       if (isseqaij) {
         a = Amat;
         b = NULL;
@@ -7805,36 +7805,38 @@ PETSC_INTERN PetscErrorCode MatCreateGraph_Simple_AIJ(Mat Amat, PetscBool symmet
       }
       PetscCall(PetscInfo(Amat, "New bs>1 Graph. nloc=%" PetscInt_FMT "\n", nloc));
       PetscCall(PetscMalloc2(nloc, &d_nnz, isseqaij ? 0 : nloc, &o_nnz));
-      for (c = a, kk = 0; c && kk < 2; c = b, kk++) {
+      for (c = a, kk = 0; c && kk < 2 && is_bad == 0; c = b, kk++) {
         PetscInt       *nnz = (c == a) ? d_nnz : o_nnz;
         const PetscInt *cols1, *cols2;
-        for (PetscInt brow = 0, nc1, nc2, ok = 1; brow < nloc * bs; brow += bs) { // block rows
+        for (PetscInt brow = 0, nc1, nc2; brow < nloc * bs && is_bad == 0; brow += bs) { // block rows
           PetscCall(MatGetRow(c, brow, &nc2, &cols2, NULL));
           nnz[brow / bs] = nc2 / bs;
-          if (nc2 % bs) ok = 0;
+          if (nc2 % bs) is_bad = 1;
           if (nnz[brow / bs] > nmax) nmax = nnz[brow / bs];
-          for (PetscInt ii = 1; ii < bs; ii++) { // check for non-dense blocks
+          for (PetscInt ii = 1; ii < bs && is_bad == 0; ii++) { // check for non-dense blocks
             PetscCall(MatGetRow(c, brow + ii, &nc1, &cols1, NULL));
-            if (nc1 != nc2) ok = 0;
+            if (nc1 != nc2) is_bad = 1;
             else {
-              for (PetscInt jj = 0; jj < nc1 && ok == 1; jj++) {
-                if (cols1[jj] != cols2[jj]) ok = 0;
-                if (cols1[jj] % bs != jj % bs) ok = 0;
+              for (PetscInt jj = 0; jj < nc1 && is_bad == 0; jj++) {
+                if (cols1[jj] != cols2[jj]) is_bad = 1;
+                if (cols1[jj] % bs != jj % bs) is_bad = 1;
               }
             }
             PetscCall(MatRestoreRow(c, brow + ii, &nc1, &cols1, NULL));
           }
           PetscCall(MatRestoreRow(c, brow, &nc2, &cols2, NULL));
-          if (!ok) {
-            PetscCall(PetscFree2(d_nnz, o_nnz));
-            PetscCall(PetscInfo(Amat, "Found sparse blocks - revert to slow method\n"));
-            goto old_bs;
-          }
         }
       }
-      PetscCall(MatSeqAIJSetPreallocation(Gmat, 0, d_nnz));
-      PetscCall(MatMPIAIJSetPreallocation(Gmat, 0, d_nnz, 0, o_nnz));
-      PetscCall(PetscFree2(d_nnz, o_nnz));
+      PetscCall(MPIU_Allreduce(MPI_IN_PLACE, &is_bad, 1, MPIU_INT, MPI_SUM, PetscObjectComm((PetscObject)Gmat)));
+      if (is_bad > 0) {
+        PetscCall(PetscFree2(d_nnz, o_nnz));
+        PetscCall(PetscInfo(Amat, "Found sparse blocks - revert to slow method\n"));
+        goto old_bs;
+      } else {
+        PetscCall(MatSeqAIJSetPreallocation(Gmat, 0, d_nnz));
+        PetscCall(MatMPIAIJSetPreallocation(Gmat, 0, d_nnz, 0, o_nnz));
+        PetscCall(PetscFree2(d_nnz, o_nnz));
+      }
       PetscCall(PetscMalloc2(nmax, &AA, nmax, &AJ));
       // diag
       for (PetscInt brow = 0, n, grow; brow < nloc * bs; brow += bs) { // block rows
