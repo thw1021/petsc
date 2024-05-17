@@ -1445,7 +1445,31 @@ PETSC_EXTERN PetscErrorCode PetscSplitReductionEnd(PetscSplitReduction *);
 PETSC_EXTERN PetscErrorCode PetscSplitReductionExtend(PetscSplitReduction *);
 
 #if defined(PETSC_HAVE_THREADSAFETY)
-  #if defined(PETSC_HAVE_CONCURRENCYKIT)
+  #if defined(PETSC_HAVE_OPENMP) // prefer OpenMP whenever it is available
+    #include <omp.h>
+typedef omp_lock_t PetscSpinlock;
+
+static inline PetscErrorCode PetscSpinlockCreate(PetscSpinlock *omp_lock)
+{
+  omp_init_lock(omp_lock);
+  return PETSC_SUCCESS;
+}
+static inline PetscErrorCode PetscSpinlockLock(PetscSpinlock *omp_lock)
+{
+  omp_set_lock(omp_lock);
+  return PETSC_SUCCESS;
+}
+static inline PetscErrorCode PetscSpinlockUnlock(PetscSpinlock *omp_lock)
+{
+  omp_unset_lock(omp_lock);
+  return PETSC_SUCCESS;
+}
+static inline PetscErrorCode PetscSpinlockDestroy(PetscSpinlock *omp_lock)
+{
+  omp_destroy_lock(omp_lock);
+  return PETSC_SUCCESS;
+}
+  #elif defined(PETSC_HAVE_CONCURRENCYKIT)
     #if defined(__cplusplus)
 /*  CK does not have extern "C" protection in their include files */
 extern "C" {
@@ -1513,32 +1537,6 @@ static inline PetscErrorCode PetscSpinlockDestroy(PETSC_UNUSED PetscSpinlock *sp
     #undef petsc_atomic_flag_test_and_set
     #undef petsc_atomic_flag_clear
     #undef petsc_atomic_flag
-
-  #elif defined(PETSC_HAVE_OPENMP)
-
-    #include <omp.h>
-typedef omp_lock_t PetscSpinlock;
-
-static inline PetscErrorCode PetscSpinlockCreate(PetscSpinlock *omp_lock)
-{
-  omp_init_lock(omp_lock);
-  return PETSC_SUCCESS;
-}
-static inline PetscErrorCode PetscSpinlockLock(PetscSpinlock *omp_lock)
-{
-  omp_set_lock(omp_lock);
-  return PETSC_SUCCESS;
-}
-static inline PetscErrorCode PetscSpinlockUnlock(PetscSpinlock *omp_lock)
-{
-  omp_unset_lock(omp_lock);
-  return PETSC_SUCCESS;
-}
-static inline PetscErrorCode PetscSpinlockDestroy(PetscSpinlock *omp_lock)
-{
-  omp_destroy_lock(omp_lock);
-  return PETSC_SUCCESS;
-}
   #else
     #if defined(__cplusplus)
       #error "Thread safety requires either --download-concurrencykit, std::atomic, or --with-openmp"
