@@ -74,6 +74,8 @@ PetscErrorCode MatCoarsenGetType(MatCoarsen coarsen, MatCoarsenType *type)
   Level: advanced
 
   Notes:
+  When the coarsening is used inside `PCGAMG` then the options database keys are prefixed with `-pc_gamg_`
+
   Use `MatCoarsenGetData()` to access the results of the coarsening
 
   The user can define additional coarsens; see `MatCoarsenRegister()`.
@@ -257,6 +259,9 @@ PetscErrorCode MatCoarsenView(MatCoarsen agg, PetscViewer viewer)
 
   Level: advanced
 
+  Note:
+  When the coarsening is used inside `PCGAMG` then the options database keys are prefixed with `-pc_gamg_`
+
 .seealso: `MatCoarsen`, `MatCoarsenCreate()`, `MatCoarsenApply()`, `MatCoarsenType`, `MatCoarsenGetType()`
 @*/
 PetscErrorCode MatCoarsenSetType(MatCoarsen coarser, MatCoarsenType type)
@@ -342,14 +347,18 @@ PetscErrorCode MatCoarsenGetData(MatCoarsen coarser, PetscCoarsenData **llist)
 . coarser - the coarsen context.
 
   Options Database Key:
-. -mat_coarsen_type  <type> - mis: maximal independent set based; misk: distance k MIS; hem: heavy edge matching
++ -mat_coarsen_type  <type>                                                       - mis: maximal independent set based; misk: distance k MIS; hem: heavy edge matching
+- -mat_coarsen_max_it <its> number of iterations to use in the coarsening process - see `MatCoarsenSetMaximumIterations()`
 
   Level: advanced
 
-  Note:
+  Notes:
+  When the coarsening is used inside `PCGAMG` then the options database keys are prefixed with `-pc_gamg_`
+
   Sets the `MatCoarsenType` to `MATCOARSENMISK` if has not been set previously
 
-.seealso: `MatCoarsen`, `MatCoarsenType`, `MatCoarsenApply()`, `MatCoarsenCreate()`, `MatCoarsenSetType()`
+.seealso: `MatCoarsen`, `MatCoarsenType`, `MatCoarsenApply()`, `MatCoarsenCreate()`, `MatCoarsenSetType()`,
+          `MatCoarsenSetMaximumIterations()`
 @*/
 PetscErrorCode MatCoarsenSetFromOptions(MatCoarsen coarser)
 {
@@ -382,7 +391,7 @@ PetscErrorCode MatCoarsenSetFromOptions(MatCoarsen coarser)
 }
 
 /*@
-  MatCoarsenSetMaximumIterations - Maximum HEM iterations to use
+  MatCoarsenSetMaximumIterations - Maximum `MATCOARSENHEM` iterations to use
 
   Logically Collective
 
@@ -391,9 +400,12 @@ PetscErrorCode MatCoarsenSetFromOptions(MatCoarsen coarser)
 - n      - number of HEM iterations
 
   Options Database Key:
-. -mat_coarsen_max_it <default=4> - Max HEM iterations
+. -mat_coarsen_max_it <default=4> - Maximum `MATCOARSENHEM` iterations to use
 
   Level: intermediate
+
+  Note:
+  When the coarsening is used inside `PCGAMG` then the options database keys are prefixed with `-pc_gamg_`
 
 .seealso: `MatCoarsen`, `MatCoarsenType`, `MatCoarsenApply()`, `MatCoarsenCreate()`, `MatCoarsenSetType()`
 @*/
@@ -428,6 +440,9 @@ static PetscErrorCode MatCoarsenSetMaximumIterations_MATCOARSEN(MatCoarsen coars
 
   Level: intermediate
 
+  Note:
+  When the coarsening is used inside `PCGAMG` then the options database keys are prefixed with `-pc_gamg_`
+
 .seealso: `MatCoarsen`, `MatCoarsenType`, `MatCoarsenApply()`, `MatCoarsenCreate()`, `MatCoarsenSetType()`
 @*/
 PetscErrorCode MatCoarsenSetStrengthIndex(MatCoarsen coarse, PetscInt n, PetscInt idx[])
@@ -460,6 +475,12 @@ static PetscErrorCode MatCoarsenSetStrengthIndex_MATCOARSEN(MatCoarsen coarse, P
 . -mat_coarsen_threshold <-1> - threshold
 
   Level: intermediate
+
+  Note:
+  When the coarsening is used inside `PCGAMG` then the options database keys are prefixed with `-pc_gamg_`
+
+  Developer Note:
+  It is not documented how this threshold is used
 
   Note:
   It is not documented how this threshold is used
