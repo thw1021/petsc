@@ -25,7 +25,7 @@ SNES Object: 4 MPI processes
           AGG specific options
             Number of levels of aggressive coarsening 1
             Square graph aggressive coarsening
-            Number smoothing steps 1
+            Number smoothing steps to construct prolongation 1
           Complexity:    grid = 1.11111    operator = 1.02041
     Coarse grid solver -- level 0 -------------------------------
       KSP Object: (mg_coarse_) 4 MPI processes
@@ -158,7 +158,7 @@ SNES Object: 4 MPI processes
           AGG specific options
             Number of levels of aggressive coarsening 1
             Square graph aggressive coarsening
-            Number smoothing steps 1
+            Number smoothing steps to construct prolongation 1
           Complexity:    grid = 1.02721    operator = 1.00432
     Coarse grid solver -- level 0 -------------------------------
       KSP Object: (mg_coarse_) 4 MPI processes
