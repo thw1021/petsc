@@ -171,6 +171,20 @@ PETSC_INTERN PetscErrorCode PetscInitFortran_Private(PetscBool, const char *, Pe
     } \
   } while (0)
 
+/* In the beginning of Fortran XxxCreate() ensure object is not NULL or already created */
+#define PETSC_FORTRAN_OBJECT_CREATE(a) \
+  do { \
+    if (*((void **)(a)) == (void *)0) { \
+      *ierr = PetscError(PETSC_COMM_SELF, __LINE__, PETSC_FUNCTION_NAME, __FILE__, PETSC_ERR_ARG_WRONG, PETSC_ERROR_INITIAL, "Cannot create PETSC_NULL_XXX object"); \
+      *ierr = PETSC_ERR_ARG_WRONG; \
+      return; \
+    } else if (*((void **)(a)) != (void *)-2) { \
+      *ierr = PetscError(PETSC_COMM_SELF, __LINE__, PETSC_FUNCTION_NAME, __FILE__, PETSC_ERR_ARG_WRONG, PETSC_ERROR_INITIAL, "Cannot create already existing object"); \
+      *ierr = PETSC_ERR_ARG_WRONG; \
+      return; \
+    } \
+  } while (0)
+
 /* In the beginning of Fortran XxxDestroy(a), if the input object was destroyed, change it to a petsc C NULL object so that it won't crash C XxxDestory() */
 #define PETSC_FORTRAN_OBJECT_F_DESTROYED_TO_C_NULL(a) \
   do { \
