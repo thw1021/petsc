@@ -1082,7 +1082,7 @@ PetscErrorCode DMPlexTransformCohesiveExtrudeSetTensor(DMPlexTransform tr, Petsc
 }
 
 /*@
-  DMPlexTransformCohesiveExtrudeGetTensor - Get the width of extruded cells
+  DMPlexTransformCohesiveExtrudeGetWidth - Get the width of extruded cells
 
   Not Collective
 
@@ -1108,7 +1108,7 @@ PetscErrorCode DMPlexTransformCohesiveExtrudeGetWidth(DMPlexTransform tr, PetscR
 }
 
 /*@
-  DMPlexTransformCohesiveExtrudeSetTensor - Set the width of extruded cells
+  DMPlexTransformCohesiveExtrudeSetWidth - Set the width of extruded cells
 
   Not Collective
 
