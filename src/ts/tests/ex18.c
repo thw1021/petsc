@@ -20,11 +20,12 @@ int main(int argc, char **argv)
 {
   TS        ts;
   Vec       x;
-  PetscBool dae = PETSC_TRUE;
+  PetscBool dae = PETSC_TRUE, random = PETSC_FALSE;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, (char *)0, help));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-dae", &dae, NULL));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-random", &random, NULL));
 
   PetscCall(TSCreate(PETSC_COMM_WORLD, &ts));
   PetscCall(TSSetIFunction(ts, NULL, IFunction, &dae));
@@ -34,7 +35,8 @@ int main(int argc, char **argv)
   PetscCall(VecSetSizes(x, 2, PETSC_DECIDE));
   PetscCall(VecSetFromOptions(x));
   PetscCall(VecSetUp(x));
-  PetscCall(VecSet(x, 0.5));
+  if (random) PetscCall(VecSetRandom(x, NULL));
+  else PetscCall(VecSet(x, 0.5));
   PetscCall(TSSetSolution(ts, x));
   PetscCall(VecDestroy(&x));
 
