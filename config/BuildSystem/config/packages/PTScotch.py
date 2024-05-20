@@ -23,12 +23,11 @@ class Configure(config.package.CMakePackage):
     config.package.CMakePackage.setupDependencies(self, framework)
     self.mpi     = framework.require('config.packages.MPI',self)
     self.mathlib = framework.require('config.packages.mathlib',self)
-    self.deps    = [self.mpi,self.mathlib]
+    self.bison   = framework.require('config.packages.bison',self)
+    self.deps    = [self.mpi,self.mathlib,self.bison]
     self.pthread = framework.require('config.packages.pthread',self)
     self.zlib    = framework.require('config.packages.zlib',self)
-    self.bison   = framework.require('config.packages.bison',self)
-    self.regex   = framework.require('config.packages.regex',self)
-    self.odeps   =  [self.pthread,self.zlib,self.regex,self.bison]
+    self.odeps   = [self.pthread,self.zlib]
     return
 
   def formCMakeConfigureArgs(self):
@@ -38,8 +37,6 @@ class Configure(config.package.CMakePackage):
 
     args.append('-DINSTALL_METIS_HEADERS:BOOL=OFF')
     args.append('-DSCOTCH_METIS_PREFIX:BOOL=ON')
-
-    args.append('-DCOMMON_RANDOM_FIXED_SEED:BOOL=OFF')
 
     args.append('-DSCOTCH_RENAME:STRING=-Drestrict="restrict"')
 
@@ -53,11 +50,7 @@ class Configure(config.package.CMakePackage):
         args.append('-DCOMMON_PTHREAD_BARRIER:BOOL=OFF')      # OSX does not have pthread_barrier_destroy
 
     if self.setCompilers.isDarwin(self.log):
-      args.append('-DCOMMON_OS_MACOS:BOOL=ON')
       args.append('-DCOMMON_TIMING_OLD:BOOL=ON')
-
-    if self.setCompilers.isMINGW(self.framework.getCompiler(), self.log):
-      args.append('-DCOMMON_OS_WINDOWS:BOOL=ON')
 
     #-D COMMON_PTHREAD_FILE:BOOL=ON \
     #-D SCOTCH_PTHREAD:BOOL=ON \
