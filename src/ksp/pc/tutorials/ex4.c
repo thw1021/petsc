@@ -360,12 +360,12 @@ int main(int argc, char **args)
 
    test:
       args: -fA ${DATAFILESPATH}/matrices/ifiss/A -fB ${DATAFILESPATH}/matrices/ifiss/B -fQ ${DATAFILESPATH}/matrices/ifiss/Q -fbound ${DATAFILESPATH}/is/ifiss/bound -ksp_monitor
-      requires: datafilespath defined(PETSC_USE_64BIT_INDICES) !complex
+      requires: datafilespath defined(PETSC_USE_64BIT_INDICES) !complex double
 
    test:
       suffix: 2
       nsize: 2
       args: -fA ${DATAFILESPATH}/matrices/ifiss/A -fB ${DATAFILESPATH}/matrices/ifiss/B -fQ ${DATAFILESPATH}/matrices/ifiss/Q -fbound ${DATAFILESPATH}/is/ifiss/bound -ksp_monitor
-      requires: datafilespath defined(PETSC_USE_64BIT_INDICES) !complex
+      requires: datafilespath defined(PETSC_USE_64BIT_INDICES) !complex double
 
 TEST*/
