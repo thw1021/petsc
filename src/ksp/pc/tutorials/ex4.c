@@ -67,7 +67,6 @@ PetscErrorCode CreateAndLoadMat(const char *mat_name, Mat *mat)
   PetscCheck(flg, PETSC_COMM_WORLD, PETSC_ERR_USER, "Must indicate file with the -f<mat_name> option");
   PetscCall(PetscViewerBinaryOpen(PETSC_COMM_WORLD, file, FILE_MODE_READ, &viewer));
   PetscCall(MatCreate(PETSC_COMM_WORLD, mat));
-  PetscCall(MatSetType(*mat, MATMPIAIJ));
   PetscCall(PetscObjectSetName((PetscObject)*mat, mat_name));
   PetscCall(MatSetFromOptions(*mat));
   PetscCall(MatLoad(*mat, viewer));
@@ -276,7 +275,6 @@ int main(int argc, char **args)
   // Compute preconditioner operators
   PetscCall(MatGetLocalSize(Acondensed, &condensed_am, NULL));
   PetscCall(MatCreate(PETSC_COMM_WORLD, &D));
-  PetscCall(MatSetType(D, MATMPIAIJ));
   PetscCall(MatSetSizes(D, condensed_am, condensed_am, PETSC_DETERMINE, PETSC_DETERMINE));
   PetscCall(MatGetOwnershipRange(D, &Dstart, &Dend));
   for (PetscInt i = Dstart; i < Dend; ++i) PetscCall(MatSetValues(D, 1, &i, 1, &i, &zero, INSERT_VALUES));
@@ -366,6 +364,6 @@ int main(int argc, char **args)
       suffix: 2
       nsize: 2
       args: -fA ${DATAFILESPATH}/matrices/ifiss/A -fB ${DATAFILESPATH}/matrices/ifiss/B -fQ ${DATAFILESPATH}/matrices/ifiss/Q -fbound ${DATAFILESPATH}/is/ifiss/bound -ksp_monitor
-      requires: datafilespath defined(PETSC_USE_64BIT_INDICES) !complex double
+      requires: datafilespath defined(PETSC_USE_64BIT_INDICES) !complex double strumpack
 
 TEST*/
