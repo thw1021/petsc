@@ -22,6 +22,13 @@ PetscErrorCode PetscDeviceContextSetRootStreamType_Internal(PetscStreamType type
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+#if defined(PETSC_HAVE_CUDA)
+  #include <petscdevice_cuda.h>
+#endif
+#if PetscDefined(HAVE_HIP)
+  #include <petscdevice_hip.h>
+#endif
+
 static PetscErrorCode PetscDeviceContextSetupGlobalContext_Private() noexcept
 {
   PetscFunctionBegin;
@@ -51,6 +58,20 @@ static PetscErrorCode PetscDeviceContextSetupGlobalContext_Private() noexcept
     PetscCall(PetscDeviceContextSetStreamType(globalContext, rootStreamType));
     PetscCall(PetscDeviceContextSetDefaultDeviceForType_Internal(globalContext, dtype));
     PetscCall(PetscDeviceContextSetUp(globalContext));
+#if defined(PETSC_HAVE_CUDA)
+    if (dtype == PETSC_DEVICE_CUDA) {
+      void *handle;
+      PetscCall(PetscDeviceContextGetStreamHandle_Internal(globalContext, &handle));
+      PetscDefaultCudaStream = *(cudaStream_t *)handle;
+    }
+#endif
+#if defined(PETSC_HAVE_HIP)
+    if (dtype == PETSC_DEVICE_HIP) {
+      void *handle;
+      PetscCall(PetscDeviceContextGetStreamHandle_Internal(globalContext, &handle));
+      PetscDefaultHipStream = *(hipStream_t *)handle;
+    }
+#endif
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -123,5 +144,19 @@ PetscErrorCode PetscDeviceContextSetCurrentContext(PetscDeviceContext dctx)
   PetscCall(PetscDeviceSetDefaultDeviceType(dtype));
   globalContext = dctx;
   PetscCall(PetscInfo(dctx, "Set global PetscDeviceContext id %" PetscInt64_FMT "\n", PetscObjectCast(dctx)->id));
+#if defined(PETSC_HAVE_CUDA)
+  if (dtype == PETSC_DEVICE_CUDA) {
+    void *handle;
+    PetscCall(PetscDeviceContextGetStreamHandle_Internal(globalContext, &handle));
+    PetscDefaultCudaStream = *(cudaStream_t *)handle;
+  }
+#endif
+#if defined(PETSC_HAVE_HIP)
+  if (dtype == PETSC_DEVICE_HIP) {
+    void *handle;
+    PetscCall(PetscDeviceContextGetStreamHandle_Internal(globalContext, &handle));
+    PetscDefaultHipStream = *(hipStream_t *)handle;
+  }
+#endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
