@@ -2,6 +2,12 @@
 #include <petsc/private/kokkosimpl.hpp>
 #include <petscpkg_version.h>
 #include <petsc_kokkos.hpp>
+#if defined(PETSC_HAVE_CUDA)
+  #include <petscdevice_cuda.h>
+#endif
+#if PetscDefined(HAVE_HIP)
+  #include <petscdevice_hip.h>
+#endif
 
 PetscBool    PetscKokkosInitialized = PETSC_FALSE;
 PetscScalar *PetscScalarPool        = nullptr;
@@ -40,7 +46,7 @@ PetscErrorCode PetscKokkosInitializeCheck(void)
     auto args = Kokkos::InitArguments{}; /* use default constructor */
 #endif
 
-#if (defined(KOKKOS_ENABLE_CUDA) && PetscDefined(HAVE_CUDA)) || (defined(KOKKOS_ENABLE_HIP) && PetscDefined(HAVE_HIP)) || (defined(KOKKOS_ENABLE_SYCL) && PetscDefined(HAVE_SYCL))
+#if (defined(KOKKOS_ENABLE_CUDA) && defined(PETSC_HAVE_CUDA)) || (defined(KOKKOS_ENABLE_HIP) && defined(PETSC_HAVE_HIP)) || (defined(KOKKOS_ENABLE_SYCL) && defined(PETSC_HAVE_SYCL))
     /* Kokkos does not support CUDA and HIP at the same time (but we do :)) */
     PetscDevice device;
     PetscInt    deviceId;
@@ -76,17 +82,28 @@ PetscErrorCode PetscKokkosInitializeCheck(void)
     PetscCallCXX(Kokkos::initialize(args));
     PetscBeganKokkos = PETSC_TRUE;
   }
+
   if (!PetscKokkosExecutionSpacePtr) { // No matter Kokkos is init'ed by petsc or by user, we need to init PetscKokkosExecutionSpacePtr
-#if defined(PETSC_HAVE_CUDA)
-    extern cudaStream_t PetscDefaultCudaStream;
-    PetscCallCXX(PetscKokkosExecutionSpacePtr = new Kokkos::DefaultExecutionSpace(PetscDefaultCudaStream));
-#elif defined(PETS_HAVE_HIP)
-    extern hipStream_t PetscDefaultHipStream;
-    PetscCallCXX(PetscKokkosExecutionSpacePtr = new Kokkos::DefaultExecutionSpace(PetscDefaultHipStream));
+#if (defined(KOKKOS_ENABLE_CUDA) && defined(PETSC_HAVE_CUDA)) || (defined(KOKKOS_ENABLE_HIP) && defined(PETSC_HAVE_HIP))
+    PetscDeviceContext dctx;
+    PetscDeviceType    dtype;
+    void              *handle;
+
+    PetscDeviceContextGetCurrentContext(&dctx); // set PetscDefaultCuda/HipStream
+    PetscDeviceContextGetStreamHandle(dctx, &handle);
+    PetscDeviceContextGetDeviceType(dctx, &dtype);
+
+  #if defined(PETSC_HAVE_CUDA)
+    if (dtype == PETSC_DEVICE_CUDA) PetscCallCXX(PetscKokkosExecutionSpacePtr = new Kokkos::DefaultExecutionSpace(PetscDefaultCudaStream));
+  #elif defined(PETSC_HAVE_HIP)
+    if (dtype == PETSC_DEVICE_HIP) PetscCallCXX(PetscKokkosExecutionSpacePtr = new Kokkos::DefaultExecutionSpace(PetscDefaultHipStream));
+  #endif
 #else
+    // In all other cases, we use Kokkos default
     PetscCallCXX(PetscKokkosExecutionSpacePtr = new Kokkos::DefaultExecutionSpace());
 #endif
   }
+
   if (!PetscScalarPoolSize) { // A pool for a small count of PetscScalars
     PetscScalarPoolSize = 1024;
     PetscCallCXX(PetscScalarPool = static_cast<PetscScalar *>(Kokkos::kokkos_malloc(sizeof(PetscScalar) * PetscScalarPoolSize)));
