@@ -218,6 +218,22 @@ PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetId(PetscViewer, int *);
 PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetOrder(PetscViewer, PetscInt);
 PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetOrder(PetscViewer, PetscInt *);
 
+/* SARAH ADDED FUNCTION PROTOTYPES */
+PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetZonalVariableNumber(PetscViewer viewer, int *num);
+PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetNodalVariableNumber(PetscViewer viewer, int *num);
+PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetGlobalVariableNumber(PetscViewer viewer, int *num);
+
+PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetZonalVariableNumber(PetscViewer viewer, int num);
+PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetNodalVariableNumber(PetscViewer viewer, int num);
+PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetGlobalVariableNumber(PetscViewer viewer, int num);
+
+PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetZonalVariableName(PetscViewer, int rank, const char name[]); 
+PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetNodalVariableName(PetscViewer, int rank, const char name[]);
+
+PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetZonalVariableName(PetscViewer, int rank, const char name[]);
+PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetNodalVariableName(PetscViewer, int rank, const char name[]);
+
+
 /* Mesh Partitioning and Distribution */
 #define DMPLEX_OVERLAP_MANUAL -1
 
