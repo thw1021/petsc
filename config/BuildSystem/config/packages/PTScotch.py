@@ -37,7 +37,6 @@ class Configure(config.package.CMakePackage):
 
     args.append('-DINSTALL_METIS_HEADERS:BOOL=OFF')
     args.append('-DSCOTCH_METIS_PREFIX:BOOL=ON')
-    args.append('-DCMAKE_PROGRAM_PATH:STRING='+self.petscdir.dir+'/'+self.arch+'/bin')
 
     args.append('-DSCOTCH_RENAME:STRING=-Drestrict="restrict"')
 
