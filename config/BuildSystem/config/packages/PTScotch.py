@@ -40,6 +40,8 @@ class Configure(config.package.CMakePackage):
       args.append('-DFLEX_EXECUTABLE:STRING="'+self.programs.flex+'"')
     else:
       raise RuntimeError('PTScotch needs flex installed')
+
+    if not self.bison.haveBison3plus: raise RuntimeError('PTScotch needs Bison version 3.0 or above, use --download-bison')
     args.append('-DBISON_EXECUTABLE:STRING="'+self.bison.bison+'"')
 
     args = self.rmArgsStartsWith(args, '-DCMAKE_C_FLAGS')
@@ -67,4 +69,4 @@ class Configure(config.package.CMakePackage):
     #-D SCOTCH_PTHREAD_MPI:BOOL=ON \
     #-D COMMON_PTHREAD_AFFINITY_LINUX:BOOL=ON
     return args
-    #if not self.bison.found or not self.bison.haveBison3plus: raise RuntimeError('PTScotch needs Bison version 3.0 or above, use --download-bison')
+
