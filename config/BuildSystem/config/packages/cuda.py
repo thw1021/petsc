@@ -364,7 +364,13 @@ class Configure(config.package.Package):
         body = '''int cerr;
                 cudaDeviceProp dp;
                 cerr = cudaGetDeviceProperties(&dp, 0);
-                if (cerr) printf("Error calling cudaGetDeviceProperties\\n");
+                if (cerr) {
+              #if (CUDART_VERSION >= 8000)
+                  printf("Error calling cudaGetDeviceProperties with CUDA error %d (%s) : %s\\n", cerr, cudaGetErrorName(cerr), cudaGetErrorString(cerr));
+              #else
+                  printf("Error calling cudaGetDeviceProperties with CUDA error %d\\n", cerr);
+              #endif
+                }
                 else printf("%d\\n",10*dp.major+dp.minor);
                 return(cerr);'''
         self.pushLanguage('CUDA')
