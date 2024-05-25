@@ -38,7 +38,8 @@ class Configure(config.package.CMakePackage):
     args.append('-DINSTALL_METIS_HEADERS:BOOL=OFF')
     args.append('-DSCOTCH_METIS_PREFIX:BOOL=ON')
 
-    args.append('-DSCOTCH_RENAME:STRING=-Drestrict="restrict"')
+    args = self.rmArgsStartsWith(args, '-DCMAKE_C_FLAGS')
+    args.append('-DCMAKE_C_FLAGS:STRING="'+self.updatePackageCFlags(self.getCompilerFlags())+' -Drestrict=__restrict"')
 
     if self.zlib.found:
       args.append('-DCOMMON_FILE_COMPRESS_GZ:BOOL=OFF')
@@ -51,6 +52,8 @@ class Configure(config.package.CMakePackage):
 
     if self.setCompilers.isDarwin(self.log):
       args.append('-DCOMMON_TIMING_OLD:BOOL=ON')
+
+    args.append('-DBISON_EXECUTABLE:STRING="'+self.bison.bison+'"')
 
     #-D COMMON_PTHREAD_FILE:BOOL=ON \
     #-D SCOTCH_PTHREAD:BOOL=ON \
