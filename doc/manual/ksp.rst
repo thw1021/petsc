@@ -1090,7 +1090,7 @@ allow for new components to be added easily and also populates a
 multigrid preconditioner ``PCMG`` so generic multigrid parameters are
 used (see :any:`sec_mg`). PETSc provides a fully supported (smoothed) aggregation AMG, but supports the addition of new methods
 (``-pc_type gamg -pc_gamg_type agg`` or ``PCSetType(pc,PCGAMG)`` and
-``PCGAMGSetType(pc,PCGAMGAGG)``. Examples of extension are reference implementations of
+``PCGAMGSetType(pc, PCGAMGAGG)``. Examples of extension are reference implementations of
 a classical AMG method (``-pc_gamg_type classical``), a (2D) hybrid geometric
 AMG method (``-pc_gamg_type geo``) that are not supported. A 2.5D AMG method DofColumns
 :cite:`isaacstadlerghattas2015` supports 2D coarsenings extruded in the third dimension. ``PCGAMG`` does require the use
@@ -1117,7 +1117,7 @@ constructor (or the ``-mat_type`` from the command line). For instance,
 
    * ``-pc_gamg_mat_coarsen_type`` <mis|hem|misk:misk> Algorithm used to coarsen the matrix graph. See ``MatCoarsenSetType()``.
 
-   * ``-pc_gamg_mat_coarsen_max_it`` <it:int:4> MAximum HEM iterations to use. See ``MatCoarsenSetMaximumIterations()``.
+   * ``-pc_gamg_mat_coarsen_max_it`` <it:int:4> Maximum HEM iterations to use. See ``MatCoarsenSetMaximumIterations()``.
 
    * ``-pc_gamg_aggressive_mis_k`` <k:int:2> k distance in MIS coarsening (>2 is 'aggressive') to use in coarsening.
      See `PCGAMGMISkSetAggressive()`. The larger value produces a preconditioner that is faster to create and solve with but the convergence may be slower.
@@ -1126,7 +1126,7 @@ constructor (or the ``-mat_type`` from the command line). For instance,
    * ``-pc_gamg_mis_k_minimum_degree_ordering`` <bool:true> Use a minimum degree ordering in the greedy MIS algorithm used to coarsen.
      See ``PCGAMGMISkSetMinDegreeOrdering()``
 
-* Control the generation of the prolongation for ``KSPGAMGAGG``
+* Control the generation of the prolongation for ``PCGAMGAGG``
 
    * ``-pc_gamg_agg_nsmooths`` <n:int:1> Number of smoothing steps to be used in constructing the prolongation. For symmetric problems,
      generally, one or more is best. For some strongly nonsymmetric problems, 0 may be best. See ``PCGAMGSetNSmooths()``.
@@ -1220,7 +1220,7 @@ performance. One can provide an orthonormal set of null space vectors
 with ``MatSetNearNullSpace()``. The vector of all ones is the default
 for each variable given by the block size (e.g., the translational rigid
 body modes). For elasticity, where rotational rigid body modes are
-required to complete the near-null space you can use
+required to complete the near null-space you can use
 ``MatNullSpaceCreateRigidBody()`` to create the null space vectors and
 then ``MatSetNearNullSpace()``.
 
