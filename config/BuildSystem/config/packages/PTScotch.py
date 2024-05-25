@@ -34,13 +34,21 @@ class Configure(config.package.CMakePackage):
   def formCMakeConfigureArgs(self):
     args = config.package.CMakePackage.formCMakeConfigureArgs(self)
 
+    if not hasattr(self.programs, 'flex'):
+      self.programs.getExecutable('flex', getFullPath = 1)
+    if hasattr(self.programs, 'flex'):
+      args.append('-DFLEX_EXECUTABLE:STRING="'+self.programs.flex+'"')
+    else:
+      raise RuntimeError('PTScotch needs flex installed')
+    args.append('-DBISON_EXECUTABLE:STRING="'+self.bison.bison+'"')
+
+    args = self.rmArgsStartsWith(args, '-DCMAKE_C_FLAGS')
+    args.append('-DCMAKE_C_FLAGS:STRING="'+self.updatePackageCFlags(self.getCompilerFlags())+' -Drestrict=__restrict"')
+
     args.append('-DINTSIZE:STRING='+ ('64' if self.getDefaultIndexSize() == 64 else '32'))
 
     args.append('-DINSTALL_METIS_HEADERS:BOOL=OFF')
     args.append('-DSCOTCH_METIS_PREFIX:BOOL=ON')
-
-    args = self.rmArgsStartsWith(args, '-DCMAKE_C_FLAGS')
-    args.append('-DCMAKE_C_FLAGS:STRING="'+self.updatePackageCFlags(self.getCompilerFlags())+' -Drestrict=__restrict"')
 
     if self.zlib.found:
       args.append('-DCOMMON_FILE_COMPRESS_GZ:BOOL=OFF')
@@ -54,16 +62,9 @@ class Configure(config.package.CMakePackage):
     if self.setCompilers.isDarwin(self.log):
       args.append('-DCOMMON_TIMING_OLD:BOOL=ON')
 
-    args.append('-DBISON_EXECUTABLE:STRING="'+self.bison.bison+'"')
-
     #-D COMMON_PTHREAD_FILE:BOOL=ON \
     #-D SCOTCH_PTHREAD:BOOL=ON \
     #-D SCOTCH_PTHREAD_MPI:BOOL=ON \
     #-D COMMON_PTHREAD_AFFINITY_LINUX:BOOL=ON
     return args
-
-
-    #if not hasattr(self.programs, 'flex'): self.programs.getExecutable('flex', getFullPath = 1)
-    #if not hasattr(self.programs, 'flex'): raise RuntimeError('PTScotch needs flex installed')
-
     #if not self.bison.found or not self.bison.haveBison3plus: raise RuntimeError('PTScotch needs Bison version 3.0 or above, use --download-bison')
