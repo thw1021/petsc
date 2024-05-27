@@ -27,12 +27,12 @@ int main(int argc, char **argv)
 
   PetscCall(PetscViewerView(viewer, PETSC_VIEWER_STDOUT_WORLD));
 
-  /*ZONAL TESTING*/
+  /* ZONAL TESTING */
   nZonalVar = 3;
   PetscCall(PetscViewerExodusIISetZonalVariableNumber(viewer, nZonalVar));
   nZonalVar = 2;
   PetscCall(PetscViewerExodusIIGetZonalVariableNumber(viewer, &nZonalVar));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Number of zonal variables: %d\n", nZonalVar));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Number of zonal variables: %d\n", nZonalVar));
 
   // Testing PetscViewerExodusIISetZonalVariableName and PetscViewerExodusIIGetZonalVariableName
   rank = 0;
@@ -53,12 +53,12 @@ int main(int argc, char **argv)
   PetscCall(PetscViewerExodusIIGetZonalVariableName(viewer, rank, varName));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Name of zonal variable %d: %s\n", rank, varName));
 
-  /*NODAL TESTING*/
+  /* NODAL TESTING */
   nNodalVar = 2;
   PetscCall(PetscViewerExodusIISetNodalVariableNumber(viewer, nNodalVar));
   nNodalVar = 5;
   PetscCall(PetscViewerExodusIIGetNodalVariableNumber(viewer, &nNodalVar));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\nNumber of nodal variables: %d\n", nNodalVar));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nNumber of nodal variables: %d\n", nNodalVar));
 
   rank = 0;
   strcpy(varName, "0nodalvar");
@@ -72,6 +72,18 @@ int main(int argc, char **argv)
   PetscCall(PetscViewerExodusIIGetNodalVariableName(viewer, rank, varName));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Name of nodal variable %d: %s\n", rank, varName));
 
+  /* TESTING THE MULTIPLE STRINGS SETTER */
+  // Initialize the array with 3 strings
+  char names[3][PETSC_MAX_PATH_LEN] = {
+    "variable1",
+    "variable2",
+    "variable3"
+  };
+  PetscCall(PetscViewerExodusIISetZonalVariableNames(viewer, 3, (const char **)names));
+  for (int i = 0; i < nZonalVar; i++) {
+    PetscCall(PetscViewerExodusIIGetZonalVariableName(viewer, i, varName));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Name of zonal variable %d: %s\n", i, varName));
+  }
 
   PetscCall(PetscViewerDestroy(&viewer));
   PetscCall(DMDestroy(&dm));
@@ -79,10 +91,7 @@ int main(int argc, char **argv)
   return 0;
 }
 
-
-
-
-/*TEST
+/* TEST
   build:
     requires: !complex
   testset:
@@ -91,4 +100,4 @@ int main(int argc, char **argv)
     test:
       suffix: 0
       args:
-TEST*/
+TEST */
