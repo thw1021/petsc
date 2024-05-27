@@ -250,7 +250,7 @@ PetscErrorCode PetscViewerExodusIIGetGlobalVariableNumber(PetscViewer viewer, in
 
 /* FUNCTIONS DEALING WITH STRINGS */
 /* SETTERS */
-PetscErrorCode PetscViewerExodusIISetZonalVariableName(PetscViewer viewer, int rank, const char name[]) 
+PetscErrorCode PetscViewerExodusIISetZonalVariableName(PetscViewer viewer, int rank, char name[]) 
 {
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
 
@@ -261,7 +261,7 @@ PetscErrorCode PetscViewerExodusIISetZonalVariableName(PetscViewer viewer, int r
   strcpy(exo->zonalVariableNames + rank * PETSC_MAX_PATH_LEN, name);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-PetscErrorCode PetscViewerExodusIISetNodalVariableName(PetscViewer viewer, int rank, const char name[])
+PetscErrorCode PetscViewerExodusIISetNodalVariableName(PetscViewer viewer, int rank, char name[])
 {
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
 
@@ -274,7 +274,7 @@ PetscErrorCode PetscViewerExodusIISetNodalVariableName(PetscViewer viewer, int r
 
 }
 //Retrieves the zonal variable name for a specific rank and return it
-PetscErrorCode PetscViewerExodusIIGetZonalVariableName(PetscViewer viewer, int rank, const char name[])
+PetscErrorCode PetscViewerExodusIIGetZonalVariableName(PetscViewer viewer, int rank, char name[])
 {
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
 
@@ -286,7 +286,7 @@ PetscErrorCode PetscViewerExodusIIGetZonalVariableName(PetscViewer viewer, int r
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode PetscViewerExodusIIGetNodalVariableName(PetscViewer viewer, int rank, const char name[])
+PetscErrorCode PetscViewerExodusIIGetNodalVariableName(PetscViewer viewer, int rank, char name[])
 {
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
 
@@ -296,14 +296,54 @@ PetscErrorCode PetscViewerExodusIIGetNodalVariableName(PetscViewer viewer, int r
   }
   strcpy(name, exo->nodalVariableNames + rank * PETSC_MAX_PATH_LEN);
   PetscFunctionReturn(PETSC_SUCCESS);
-
 }
 
-//PetscErrorCode PetscViewerExodusIISetNodalVariableName(PetscViewer viewer, const char name[])
-//{
-// PetscFunctionBegin;
-// PetscFunctionReturn(PETSC_SUCCESS);
-//}
+/*MULTIPLE STRINGS SETTER*/
+PetscErrorCode PetscViewerExodusIISetZonalVariableNames(PetscViewer viewer, int numNames, char names[][PETSC_MAX_PATH_LEN]) 
+{
+    PetscErrorCode ierr;
+    int i;
+    PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
+
+    PetscFunctionBegin;
+
+    // Error checking
+    //PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 1);
+    //PetscAssertPointer(names, 3);
+    //if (numNames < 0) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of names must be non-negative");
+
+    // Update the number of zonal variable names
+    exo->numZonalVariables = numNames;
+
+    // Allocate memory for the zonal variable names
+    ierr = PetscFree(exo->zonalVariableNames);CHKERRQ(ierr);
+    ierr = PetscMalloc1(numNames * PETSC_MAX_PATH_LEN, &exo->zonalVariableNames);CHKERRQ(ierr);
+
+    // Copy the names into the internal structure
+    for (i = 0; i < numNames; i++) {
+        ierr = PetscStrncpy(exo->zonalVariableNames + i * PETSC_MAX_PATH_LEN, names[i], PETSC_MAX_PATH_LEN);CHKERRQ(ierr);
+    }
+    PetscFunctionReturn(PETSC_SUCCESS);
+}
+/* MULTIPLE STRINGS GETTER */
+PetscErrorCode PetscViewerExodusIIGetZonalVariableNames(PetscViewer viewer, int numNames, char names[][PETSC_MAX_PATH_LEN]) {
+    PetscErrorCode ierr;
+    int i;
+    PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
+
+    PetscFunctionBegin;
+
+    // Error checking functions?
+    PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 1);
+    PetscAssertPointer(names, 3);
+  
+    // Copy the names from the internal structure to the provided array
+    for (i = 0; i < numNames; i++) {
+        ierr = PetscStrncpy(names[i], exo->zonalVariableNames + i * PETSC_MAX_PATH_LEN, PETSC_MAX_PATH_LEN);CHKERRQ(ierr);
+    }
+
+    PetscFunctionReturn(PETSC_SUCCESS);
+}
 
 /*MC
    PETSCVIEWEREXODUSII - A viewer that writes to an Exodus II file
