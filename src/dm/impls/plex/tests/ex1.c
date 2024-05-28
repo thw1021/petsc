@@ -754,7 +754,7 @@ int main(int argc, char **argv)
       args: -dm_plex_simplex 0 -dm_plex_box_bd periodic,periodic -dm_plex_box_faces 3,5 -conv_seq_1_dm_forest_initial_refinement 0 -conv_seq_1_dm_forest_maximum_refinement 2 -conv_seq_1_dm_p4est_refine_pattern hash
     test:
       suffix: p4est_periodic_3d
-      args: -dm_plex_dim 3 -dm_plex_simplex 0 -dm_plex_box_bd periodic,periodic,none -dm_plex_box_faces 3,5,4 -conv_seq_1_dm_forest_initial_refinement 0 -conv_seq_1_dm_forest_maximum_refinement 2 -conv_seq_1_dm_p4est_refine_pattern hash
+      args: -dm_plex_dim 3 -dm_plex_simplex 0 -dm_plex_box_bd periodic,periodic,none -dm_plex_box_faces 3,3,2 -conv_seq_1_dm_forest_initial_refinement 0 -conv_seq_1_dm_forest_maximum_refinement 1 -conv_seq_1_dm_p4est_refine_pattern hash
     test:
       suffix: p4est_gmsh_periodic
       args: -dm_coord_space 0 -conv_seq_1_dm_forest_initial_refinement 0 -conv_seq_1_dm_forest_maximum_refinement 1 -conv_seq_1_dm_p4est_refine_pattern hash -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/square_periodic.msh
