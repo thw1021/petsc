@@ -200,7 +200,6 @@ PetscErrorCode PetscViewerExodusIISetNodalVariableNumber(PetscViewer viewer, int
   exo->numNodalVariables = num;
   // Allocate memory for all nodal variable names, each with PETSC_MAX_PATH_LEN characters
   PetscCall(PetscMalloc1(num * PETSC_MAX_PATH_LEN, &exo->nodalVariableNames));
-  //exo->nodalVariableNames = (char *)malloc(sizeof(char) * num);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -246,6 +245,7 @@ PetscErrorCode PetscViewerExodusIISetZonalVariableName(PetscViewer viewer, int r
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
 
   PetscFunctionBegin;
+  
   if (rank < 0 || rank >= exo->numZonalVariables) {
     SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Rank out of range");
   }
@@ -301,19 +301,20 @@ PetscErrorCode PetscViewerExodusIISetZonalVariableNames(PetscViewer viewer, int 
     // Error checking
     if (numNames < 0) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of names must be non-negative");
 
-    // Update the number of zonal variable names
-    exo->numZonalVariables = numNames;
+    // Expand the existing zonalVariableNames array
+    ierr = PetscRealloc((exo->numZonalVariables + numNames) * PETSC_MAX_PATH_LEN * sizeof(char), &exo->zonalVariableNames);CHKERRQ(ierr);
 
-    // Free existing memory if something has been previously allocated, then allocate memory for the zonal variable names
-    ierr = PetscFree(exo->zonalVariableNames);CHKERRQ(ierr);
-    ierr = PetscMalloc1(numNames * PETSC_MAX_PATH_LEN, &exo->zonalVariableNames);CHKERRQ(ierr);
-
-    // Copy the names into the internal structure
+    // Copy the new names into the internal structure
     for (i = 0; i < numNames; i++) {
-        ierr = PetscStrncpy(exo->zonalVariableNames + i * PETSC_MAX_PATH_LEN, names[i], PETSC_MAX_PATH_LEN);
+        ierr = PetscStrncpy(exo->zonalVariableNames + (exo->numZonalVariables + i) * PETSC_MAX_PATH_LEN, names[i], PETSC_MAX_PATH_LEN);CHKERRQ(ierr);
     }
+
+    // Update the number of zonal variable names
+    exo->numZonalVariables += numNames;
+
     PetscFunctionReturn(PETSC_SUCCESS);
 }
+
 PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetNodalVariableNames(PetscViewer viewer, int numNames, char names[][PETSC_MAX_PATH_LEN])
 {
   PetscErrorCode ierr;
@@ -325,19 +326,18 @@ PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetNodalVariableNames(PetscViewer
   // Error checking
   if (numNames < 0) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of names must be non-negative");
 
-  // Update the number of zonal variable names
-  exo->numNodalVariables = numNames;
+  // Expand the existing nodalVariableNames array
+    ierr = PetscRealloc((exo->numNodalVariables + numNames) * PETSC_MAX_PATH_LEN * sizeof(char), &exo->nodalVariableNames);CHKERRQ(ierr);
 
-  // Free existing memory if something has been previously allocated, then allocate memory for the zonal variable names
-    ierr = PetscFree(exo->nodalVariableNames);CHKERRQ(ierr);
-    ierr = PetscMalloc1(numNames * PETSC_MAX_PATH_LEN, &exo->nodalVariableNames);CHKERRQ(ierr);
-
-    // Copy the names into the internal structure
+    // Copy the new names into the internal structure
     for (i = 0; i < numNames; i++) {
-        ierr = PetscStrncpy(exo->nodalVariableNames + i * PETSC_MAX_PATH_LEN, names[i], PETSC_MAX_PATH_LEN);
+        ierr = PetscStrncpy(exo->nodalVariableNames + (exo->numNodalVariables + i) * PETSC_MAX_PATH_LEN, names[i], PETSC_MAX_PATH_LEN);CHKERRQ(ierr);
     }
 
-  PetscFunctionReturn(PETSC_SUCCESS);
+    // Update the number of nodal variable names
+    exo->numNodalVariables += numNames;
+
+    PetscFunctionReturn(PETSC_SUCCESS);
 
 }
 /* MULTIPLE STRINGS GETTER */
@@ -348,7 +348,7 @@ PetscErrorCode PetscViewerExodusIIGetZonalVariableNames(PetscViewer viewer, int 
 
     PetscFunctionBegin;
 
-    // Error checking functions?
+    // Error checking functions
     PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 1);
     PetscAssertPointer(names, 3);
   
