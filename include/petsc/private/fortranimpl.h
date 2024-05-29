@@ -192,7 +192,7 @@ PETSC_INTERN PetscErrorCode PetscInitFortran_Private(PetscBool, const char *, Pe
 #define PETSC_FORTRAN_OBJECT_F_DESTROYED_TO_C_NULL(a) \
   do { \
     if (!(*(void **)a)) { \
-      *ierr = 0; \
+      *ierr = PETSC_SUCCESS; \
       return; \
     } else if (*((void **)(a)) == (void *)-2) *(a) = PETSC_NULLPTR; \
   } while (0)
