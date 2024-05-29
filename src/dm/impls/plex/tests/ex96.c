@@ -5,11 +5,11 @@ static char help[] = "Test PetscViewer_ExodusII\n\n";
 
 int main(int argc, char **argv)
 {
-  DM             dm;
-  char           ifilename[PETSC_MAX_PATH_LEN], ofilename[PETSC_MAX_PATH_LEN];
-  int            nNodalVar, nZonalVar, varIdx;
-  char           varName[EX_MAX_NAME];
-  PetscViewer    viewer;
+  DM          dm;
+  char        ifilename[PETSC_MAX_PATH_LEN], ofilename[PETSC_MAX_PATH_LEN];
+  int         nNodalVar, nZonalVar, varIdx;
+  char        varName[EX_MAX_NAME];
+  PetscViewer viewer;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
@@ -22,7 +22,6 @@ int main(int argc, char **argv)
   PetscCall(DMSetFromOptions(dm));
   PetscCall(PetscObjectSetName((PetscObject)dm, "ex96"));
   PetscCall(DMViewFromOptions(dm, NULL, "-dm_view"));
-
 
   PetscCall(PetscViewerExodusIIOpen(PETSC_COMM_WORLD, ofilename, FILE_MODE_WRITE, &viewer));
 
@@ -75,16 +74,12 @@ int main(int argc, char **argv)
 
   /* TESTING THE MULTIPLE STRINGS SETTER */
   // Initialize the array with 3 strings
-  
+
   nZonalVar = 3;
   PetscCall(PetscViewerExodusIISetZonalVariableNumber(viewer, nZonalVar));
 
   PetscCall(PetscViewerView(viewer, PETSC_VIEWER_STDOUT_WORLD));
-  char names[3][EX_MAX_NAME] = {
-    "variable1",
-    "variable2",
-    "variable3"
-  };
+  char names[3][EX_MAX_NAME] = {"variable1", "variable2", "variable3"};
   /*Testing the Setter*/
   PetscCall(PetscViewerExodusIISetZonalVariableNames(viewer, 3, names));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nMultiple string names\n"));
@@ -95,42 +90,30 @@ int main(int argc, char **argv)
   }
   PetscCall(PetscViewerExodusIIGetZonalVariableNumber(viewer, &nZonalVar));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nNumber of zonal variables: %d\n", nZonalVar));
-/*Testing the Getter*/
-  
-  char test2names[3][EX_MAX_NAME] = {
-    "pressure",
-    "temperature",
-    "density"
-  }; 
-  
+  /*Testing the Getter*/
+
+  char test2names[3][EX_MAX_NAME] = {"pressure", "temperature", "density"};
+
   PetscCall(PetscViewerExodusIISetZonalVariableNames(viewer, 3, test2names));
 
-    // Create a buffer to hold zonal variable names
-    char namesFromFunction[3][EX_MAX_NAME];
+  // Create a buffer to hold zonal variable names
+  char namesFromFunction[3][EX_MAX_NAME];
 
-    // Call the function to retrieve zonal variable names
-    PetscCall(PetscViewerExodusIIGetZonalVariableNames(viewer, 3, namesFromFunction));
+  // Call the function to retrieve zonal variable names
+  PetscCall(PetscViewerExodusIIGetZonalVariableNames(viewer, 3, namesFromFunction));
 
-    // Check if names were correctly retrieved and copied
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nZonal Variable Names:\n"));
-    for (int i = 0; i < 3; i++) {
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%d: %s\n", i, namesFromFunction[i]));
-    }
+  // Check if names were correctly retrieved and copied
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nZonal Variable Names:\n"));
+  for (int i = 0; i < 3; i++) { PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%d: %s\n", i, namesFromFunction[i])); }
 
-  char test3names[3][EX_MAX_NAME] = 
-  {"humidity",
-  "porosity",
-  "saturation"
-  };
+  char test3names[3][EX_MAX_NAME] = {"humidity", "porosity", "saturation"};
 
   PetscCall(PetscViewerExodusIISetNodalVariableNames(viewer, 3, test3names));
   PetscCall(PetscViewerExodusIIGetNodalVariableNames(viewer, 5, namesFromFunction));
 
   // Check if names were correctly retrieved and copied
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nNodal Variable Names:\n"));
-    for (int i = 0; i < 5; i++) {
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%d: %s\n", i, namesFromFunction[i]));
-    }
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nNodal Variable Names:\n"));
+  for (int i = 0; i < 5; i++) { PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%d: %s\n", i, namesFromFunction[i])); }
 
   PetscCall(PetscViewerExodusIIGetNodalVariableNumber(viewer, &nNodalVar));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nNumber of nodal variables: %d\n", nNodalVar));
@@ -142,7 +125,6 @@ int main(int argc, char **argv)
   PetscCall(PetscFinalize());
   return 0;
 }
-
 
 /* TEST
   build:
