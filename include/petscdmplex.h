@@ -224,10 +224,10 @@ PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetZonalVariableNumber(PetscViewe
 PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetNodalVariableNumber(PetscViewer viewer, int num);
 PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetGlobalVariableNumber(PetscViewer viewer, int num);
 
-PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetZonalVariableName(PetscViewer, int rank, char name[]); 
+PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetZonalVariableName(PetscViewer, int rank, char name[]);
 PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetNodalVariableName(PetscViewer, int rank, char name[]);
 
-PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetZonalVariableName(PetscViewer, int rank, char name[]); 
+PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetZonalVariableName(PetscViewer, int rank, char name[]);
 PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetNodalVariableName(PetscViewer, int rank, char name[]);
 
 /*Set and Get Multiple Names at Once for Zonal*/
