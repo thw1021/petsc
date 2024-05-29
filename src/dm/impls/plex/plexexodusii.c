@@ -285,11 +285,14 @@ PetscErrorCode PetscViewerExodusIIGetNodalVariableName(PetscViewer viewer, int r
 }
 
 /* MULTIPLE STRINGS SETTER */
-PetscErrorCode PetscViewerExodusIISetZonalVariableNames(PetscViewer viewer, int numNames, char names[][EX_MAX_NAME])
+PetscErrorCode PetscViewerExodusIISetZonalVariableNames(PetscViewer viewer, char names[][EX_MAX_NAME])
 {
   PetscErrorCode        ierr;
   int                   i;
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
+
+  int numNames;
+  PetscViewerExodusIIGetZonalVariableNumber(viewer, &numNames);
 
   PetscFunctionBegin;
 
@@ -313,12 +316,14 @@ PetscErrorCode PetscViewerExodusIISetZonalVariableNames(PetscViewer viewer, int 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetNodalVariableNames(PetscViewer viewer, int numNames, char names[][EX_MAX_NAME])
+PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetNodalVariableNames(PetscViewer viewer, char names[][EX_MAX_NAME])
 {
   PetscErrorCode        ierr;
   int                   i;
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
 
+  int numNames;
+  PetscViewerExodusIIGetNodalVariableNumber(viewer, &numNames);
   PetscFunctionBegin;
 
   // Error checking
