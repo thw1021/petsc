@@ -34,7 +34,7 @@ int main(int argc, char **argv)
   PetscCall(PetscViewerExodusIIGetZonalVariableNumber(viewer, &nZonalVar));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Number of zonal variables: %d\n", nZonalVar));
 
-  // Testing PetscViewerExodusIISetZonalVariableName and PetscViewerExodusIIGetZonalVariableName
+  /*Testing PetscViewerExodusIISetZonalVariableName and PetscViewerExodusIIGetZonalVariableName*/
   varIdx = 0;
   strcpy(varName, "var1");
   PetscCall(PetscViewerExodusIISetZonalVariableName(viewer, varIdx, varName));
