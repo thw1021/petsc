@@ -9,7 +9,7 @@ class Configure(config.package.GNUPackage):
   def __init__(self, framework):
     config.package.GNUPackage.__init__(self, framework)
     self.minversion        = '1.1.26.10'
-    self.gitcommit         = 'v1.1.26.10'
+    self.gitcommit         = '6589d1c0b81011a9f86b7852d7d2874f25759009' # May 19 2024 'v1.1.26.10'
     self.download          = ['git://https://bitbucket.org/petsc/pkg-sowing.git','https://bitbucket.org/petsc/pkg-sowing/get/'+self.gitcommit+'.tar.gz']
     self.downloaddirnames  = ['petsc-pkg-sowing']
     self.downloadonWindows = 1
