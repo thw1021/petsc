@@ -4487,7 +4487,7 @@ PetscErrorCode MatConvert(Mat mat, MatType newtype, MatReuse reuse, Mat *M)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   MatFactorGetSolverType - Returns name of the package providing the factorization routines
 
   Not Collective

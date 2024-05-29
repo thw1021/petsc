@@ -48,7 +48,6 @@
   #define matsetvalueslocaln1_         MATSETVALUESLOCALN1
   #define matdestroymatrices_          MATDESTROYMATRICES
   #define matdestroysubmatrices_       MATDESTROYSUBMATRICES
-  #define matfactorgetsolverpackage_   MATFACTORGETSOLVERPACKAGE
   #define matgetrowij_                 MATGETROWIJ
   #define matrestorerowij_             MATRESTOREROWIJ
   #define matgetrow_                   MATGETROW
@@ -74,7 +73,6 @@
   #define matzerorowscolumnslocal_     MATZEROROWSCOLUMNSLOCAL
   #define matzerorowscolumnslocalis_   MATZEROROWSCOLUMNSLOCALIS
   #define matcreatevecs_               MATCREATEVECS
-  #define matnullspaceremove_          MATNULLSPACEREMOVE
   #define matgetinfo_                  MATGETINFO
   #define matlufactor_                 MATLUFACTOR
   #define matilufactor_                MATILUFACTOR
@@ -134,7 +132,6 @@
   #define matsetvaluesblockedlocaln1_  matsetvaluesblockedlocaln1
   #define matdestroymatrices_          matdestroymatrices
   #define matdestroysubmatrices_       matdestroysubmatrices
-  #define matfactorgetsolverpackage_   matfactorgetsolverpackage
   #define matcreatevecs_               matcreatevecs
   #define matgetrowij_                 matgetrowij
   #define matrestorerowij_             matrestorerowij
@@ -158,7 +155,6 @@
   #define matzerorowslocalis_          matzerorowslocalis
   #define matzerorowscolumnslocal_     matzerorowscolumnslocal
   #define matzerorowscolumnslocalis_   matzerorowscolumnslocalis
-  #define matnullspaceremove_          matnullspaceremove
   #define matgetinfo_                  matgetinfo
   #define matlufactor_                 matlufactor
   #define matilufactor_                matilufactor
@@ -684,19 +680,6 @@ PETSC_EXTERN void matdenserestorearrayread_(Mat *mat, PetscScalar *fa, size_t *i
   if (*ierr) return;
 }
 
-PETSC_EXTERN void matfactorgetsolverpackage_(Mat *mat, char *name, PetscErrorCode *ierr, PETSC_FORTRAN_CHARLEN_T len)
-{
-  const char *tname;
-
-  *ierr = MatFactorGetSolverType(*mat, &tname);
-  if (*ierr) return;
-  if (name != PETSC_NULL_CHARACTER_Fortran) {
-    *ierr = PetscStrncpy(name, tname, len);
-    if (*ierr) return;
-  }
-  FIXRETURNCHAR(PETSC_TRUE, name, len);
-}
-
 /*
     MatCreateSubmatrices() is slightly different from C since the
     Fortran provides the array to hold the submatrix objects,while in C that
@@ -778,12 +761,6 @@ PETSC_EXTERN void matdestroysubmatrices_(PetscInt *n, Mat *smat, PetscErrorCode 
   }
   *ierr = MatDestroySubMatrices(*n, &lsmat);
   for (i = 0; i <= *n; i++) { PETSC_FORTRAN_OBJECT_C_NULL_TO_F_DESTROYED(&smat[i]); }
-}
-
-PETSC_EXTERN void matnullspaceremove_(MatNullSpace *sp, Vec *vec, PetscErrorCode *ierr)
-{
-  CHKFORTRANNULLOBJECT(*sp);
-  *ierr = MatNullSpaceRemove(*sp, *vec);
 }
 
 PETSC_EXTERN void matgetinfo_(Mat *mat, MatInfoType *flag, MatInfo *info, int *ierr)
