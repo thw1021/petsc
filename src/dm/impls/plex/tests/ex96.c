@@ -1,7 +1,7 @@
 static char help[] = "Test PetscViewer_ExodusII\n\n";
 
 #include <petsc.h>
-#include <exodusii.h>
+#include <exodusII.h>
 
 int main(int argc, char **argv)
 {
@@ -73,7 +73,6 @@ int main(int argc, char **argv)
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Name of nodal variable %d: %s\n", varIdx, varName));
 
   /* TESTING THE MULTIPLE STRINGS SETTER */
-  // Initialize the array with 3 strings
 
   nZonalVar = 3;
   PetscCall(PetscViewerExodusIISetZonalVariableNumber(viewer, nZonalVar));
@@ -81,7 +80,7 @@ int main(int argc, char **argv)
   PetscCall(PetscViewerView(viewer, PETSC_VIEWER_STDOUT_WORLD));
   char names[3][EX_MAX_NAME] = {"variable1", "variable2", "variable3"};
   /*Testing the Setter*/
-  PetscCall(PetscViewerExodusIISetZonalVariableNames(viewer, 3, names));
+  PetscCall(PetscViewerExodusIISetZonalVariableNames(viewer, names));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nMultiple string names\n"));
 
   for (int i = 0; i < nZonalVar; i++) {
@@ -90,16 +89,16 @@ int main(int argc, char **argv)
   }
   PetscCall(PetscViewerExodusIIGetZonalVariableNumber(viewer, &nZonalVar));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nNumber of zonal variables: %d\n", nZonalVar));
-  /*Testing the Getter*/
+  /* Testing the Getter */
 
   char test2names[3][EX_MAX_NAME] = {"pressure", "temperature", "density"};
 
-  PetscCall(PetscViewerExodusIISetZonalVariableNames(viewer, 3, test2names));
+  PetscCall(PetscViewerExodusIISetZonalVariableNames(viewer, test2names));
 
-  // Create a buffer to hold zonal variable names
+  /*Create a buffer to hold zonal variable names*/
   char namesFromFunction[3][EX_MAX_NAME];
 
-  // Call the function to retrieve zonal variable names
+  /* Call the function to retrieve zonal variable names */
   PetscCall(PetscViewerExodusIIGetZonalVariableNames(viewer, 3, namesFromFunction));
 
   // Check if names were correctly retrieved and copied
@@ -108,7 +107,7 @@ int main(int argc, char **argv)
 
   char test3names[3][EX_MAX_NAME] = {"humidity", "porosity", "saturation"};
 
-  PetscCall(PetscViewerExodusIISetNodalVariableNames(viewer, 3, test3names));
+  PetscCall(PetscViewerExodusIISetNodalVariableNames(viewer, test3names));
   PetscCall(PetscViewerExodusIIGetNodalVariableNames(viewer, 5, namesFromFunction));
 
   // Check if names were correctly retrieved and copied
