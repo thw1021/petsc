@@ -51,7 +51,7 @@
 
       ione = 1
       do 100 i=0,N-rank-1
-         PetscCallA(VecSetValues(x,ione,i,one,ADD_VALUES,ierr))
+         PetscCallA(VecSetValues(x,ione,[i],[one],ADD_VALUES,ierr))
  100  continue
 
 !  Assemble vector, using the 2-step process:

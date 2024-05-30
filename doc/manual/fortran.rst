@@ -94,6 +94,27 @@ For proper error handling one should not use the above syntax instead one should
    PetscCallA(KSPSolve(ksp, b, x, ierr))  ! Fortran main program
    PetscCall(KSPSolve(ksp, b, x))         // C
 
+Passing Arrays
+^^^^^^^^^^^^^^
+
+Many PETSc functions take arrays as arguments; if Fortran they must be passed as arrays even if the "array"
+is of length one (unlike Fortran 77 where one can pass scalars to functions expecting arrays). When passing
+a single value one can use the Fortran [] notation to pass the scalar as an array, for example
+
+.. code-block:: fortran
+
+   PetscCall(VecSetValues(v, one, [i], [v], ierr))
+
+This trick can only be used for arrays used to pass data into a PETSc routine, it cannot be used
+for arrays used to receive data from a PETSc routine. For example,
+
+.. code-block:: fortran
+
+   PetscCall(VecGetValues(v, one, idx, [v], ierr))
+
+is invalid and will not set ``v`` with the correct value.
+
+
 Passing Null Pointers
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -109,6 +130,35 @@ command in Fortran:
 .. code-block:: fortran
 
    PetscCall(PetscOptionsGetInt(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, PETSC_NULL_CHARACTER, '-name', N, flg, ierr))
+
+Where the code expects an array, then use ``PETSC_NULL_XXX_ARRAY``. For example:
+
+.. code-block:: fortran
+
+   PetscCall(MatCreateSeqDense(comm, m, n, PETSC_NULL_SCALAR_ARRAY, A))
+
+Finally when a subroutine returns a ``PetscObject`` through an argument to check if it is `NULL` you must use:
+
+.. code-block:: fortran
+
+   if (PetscObjectIsNull(dm)) then
+   if (.not. PetscObjectIsNull(dm)) then
+
+you cannot use
+
+.. code-block:: fortran
+
+   if (dm .eq. PETSC_NULL_DM) then
+
+Note that
+
+.. code-block:: fortran
+
+   if (PetscObjectIsNull(PETSC_NULL_VEC) then
+
+will always return true, for any PETSc object.
+
+These specializations are required because of Fortran's strict type checking system and lack of a concept of ``NULL``.
 
 Matrix, Vector and IS Indices
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

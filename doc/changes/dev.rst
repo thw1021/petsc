@@ -88,3 +88,7 @@ Changes: Development
 .. rubric:: DT:
 
 .. rubric:: Fortran:
+
+- Add interface definitions for most PETSc functions to detect illegal usage at compile time
+- Add ``PetscObjectIsNull()`` for users to check if a PETSc object is ``NULL``
+- Change the PETSc Fortran API so that non-array values, ``v``, passed to PETSc routines expecting arrays must be be caste with ``[v]`` in the calling sequence

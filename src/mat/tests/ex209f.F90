@@ -31,7 +31,7 @@
         enddo
       enddo
 
-      PetscCallA(MatSetValuesBlocked(A, one, idxm, one, idxm, km, ADD_VALUES, ierr))
+      PetscCallA(MatSetValuesBlocked(A, one, idxm, one, idxm, reshape(km, [three*three]), ADD_VALUES, ierr))
       PetscCallA(MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr))
       PetscCallA(MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr))
       PetscCallA(MatView(A,PETSC_VIEWER_STDOUT_WORLD,ierr))
