@@ -914,9 +914,9 @@ static PetscErrorCode VecNestSetSubVec_Private(Vec X, PetscInt idxm, Vec x)
   /* check if idxm < bx->nb */
   PetscCheck(idxm < bx->nb, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Out of range index value %" PetscInt_FMT " maximum %" PetscInt_FMT, idxm, bx->nb);
 
-  PetscCall(VecDestroy(&bx->v[idxm]));      /* destroy the existing vector */
-  PetscCall(VecDuplicate(x, &bx->v[idxm])); /* duplicate the layout of given vector */
-  PetscCall(VecCopy(x, bx->v[idxm]));       /* copy the contents of the given vector */
+  PetscCall(VecDestroy(&bx->v[idxm]));
+  bx->v[idxm] = x;
+  PetscCall(PetscObjectReference((PetscObject)x));
 
   /* check if we need to update the IS for the block */
   offset = X->map->rstart;
