@@ -299,9 +299,13 @@ static PetscErrorCode DMSwarmComputeMassMatrix_Private(DM dmc, DM dmf, Mat mass,
   PetscLayout  rLayout, colLayout;
   PetscInt    *dnz, *onz;
   PetscInt     locRows, locCols, rStart, colStart, colEnd, *rowIDXs;
-  PetscReal   *xi, *v0, *J, *invJ, detJ = 1.0, v0ref[3] = {-1.0, -1.0, -1.0};
+  PetscReal   *xi, v0ref[3] = {-1.0, -1.0, -1.0};
   PetscScalar *elemMat;
-  PetscInt     dim, Nf, field, cStart, cEnd, cell, totDim, maxC = 0, totNc = 0;
+  PetscInt     dim, Nf, field, cStart, cEnd, cell, totDim, maxC = 0, totNc = 0, qNc, Nq, coordDim;
+  PetscQuadrature  quad;
+  PetscFEGeom      fegeom;
+  PetscReal       *coords;
+  const PetscReal *quadPoints, *quadWeights;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectGetComm((PetscObject)mass, &comm));
@@ -309,10 +313,11 @@ static PetscErrorCode DMSwarmComputeMassMatrix_Private(DM dmc, DM dmf, Mat mass,
   PetscCall(DMGetDS(dmf, &prob));
   PetscCall(PetscDSGetNumFields(prob, &Nf));
   PetscCall(PetscDSGetTotalDimension(prob, &totDim));
-  PetscCall(PetscMalloc3(dim, &v0, dim * dim, &J, dim * dim, &invJ));
+  /* PetscCall(PetscMalloc3(dim, &v0, dim * dim, &J, dim * dim, &invJ)); */
   PetscCall(DMGetLocalSection(dmf, &fsection));
   PetscCall(DMGetGlobalSection(dmf, &globalFSection));
   PetscCall(DMPlexGetHeightStratum(dmf, 0, &cStart, &cEnd));
+  PetscCall(DMGetCoordinateDim(dmf, &coordDim));
   PetscCall(MatGetLocalSize(mass, &locRows, &locCols));
 
   PetscCall(PetscLayoutCreate(comm, &colLayout));
@@ -340,10 +345,24 @@ static PetscErrorCode DMSwarmComputeMassMatrix_Private(DM dmc, DM dmf, Mat mass,
 
     PetscCall(PetscDSGetDiscretization(prob, field, &obj));
     PetscCall(PetscObjectGetClassId(obj, &id));
-    if (id == PETSCFE_CLASSID) PetscCall(PetscFEGetNumComponents((PetscFE)obj, &Nc));
-    else PetscCall(PetscFVGetNumComponents((PetscFV)obj, &Nc));
+    /* if (id == PETSCFE_CLASSID) PetscCall(PetscFEGetNumComponents((PetscFE)obj, &Nc)); */
+    /* else PetscCall(PetscFVGetNumComponents((PetscFV)obj, &Nc)); */
+    if (id == PETSCFE_CLASSID) {
+      PetscFE fe = (PetscFE)obj;
+
+      PetscCall(PetscFEGetQuadrature(fe, &quad));
+      PetscCall(PetscFEGetNumComponents(fe, &Nc));
+    } else if (id == PETSCFV_CLASSID) {
+      PetscFV fv = (PetscFV)obj;
+
+      PetscCall(PetscFVGetQuadrature(fv, &quad));
+      PetscCall(PetscFVGetNumComponents(fv, &Nc));
+    } else SETERRQ(PetscObjectComm((PetscObject)dmf), PETSC_ERR_ARG_WRONG, "Unknown discretization type for field %" PetscInt_FMT, field);
     totNc += Nc;
   }
+  PetscCall(PetscQuadratureGetData(quad, NULL, &qNc, &Nq, &quadPoints, &quadWeights));
+  PetscCheck(!(qNc != 1) || !(qNc != totNc), PetscObjectComm((PetscObject)dmf), PETSC_ERR_ARG_SIZ, "Quadrature components %" PetscInt_FMT " != %" PetscInt_FMT " field components", qNc, totNc);
+  PetscCall(PetscMalloc4(coordDim * Nq, &coords, Nq, &fegeom.detJ, coordDim * coordDim * Nq, &fegeom.J, coordDim * coordDim * Nq, &fegeom.invJ));
   /* count non-zeros */
   PetscCall(DMSwarmSortGetAccess(dmc));
   for (field = 0; field < Nf; ++field) {
@@ -411,21 +430,26 @@ static PetscErrorCode DMSwarmComputeMassMatrix_Private(DM dmc, DM dmf, Mat mass,
       PetscInt *findices, *cindices;
       PetscInt  numFIndices, numCIndices;
 
-      /* TODO: Use DMField instead of assuming affine */
-      PetscCall(DMPlexComputeCellGeometryFEM(dmf, cell, NULL, v0, J, invJ, &detJ));
+      /* PetscCall(DMPlexComputeCellGeometryFEM(dmf, cell, NULL, v0, J, invJ, &detJ)); */
+      PetscCall(DMPlexComputeCellGeometryFEM(dmf, cell, quad, coords, fegeom.J, fegeom.invJ, fegeom.detJ));
       PetscCall(DMPlexGetClosureIndices(dmf, fsection, globalFSection, cell, PETSC_FALSE, &numFIndices, &findices, NULL, NULL));
       PetscCall(DMSwarmSortGetPointsPerCell(dmc, cell, &numCIndices, &cindices));
-      for (PetscInt j = 0; j < numCIndices; ++j) CoordinatesRealToRef(dim, dim, v0ref, v0, invJ, &fieldVals[cindices[j] * dim], &xi[j * dim]);
+      for (PetscInt j = 0; j < numCIndices; ++j) CoordinatesRealToRef(dim, dim, v0ref, coords, fegeom.invJ, &fieldVals[cindices[j] * dim], &xi[j * dim]);
       if (id == PETSCFE_CLASSID) PetscCall(PetscFECreateTabulation((PetscFE)obj, 1, numCIndices, xi, 0, &Tcoarse));
       else PetscCall(PetscFVCreateTabulation((PetscFV)obj, 1, numCIndices, xi, 0, &Tcoarse));
       /* Get elemMat entries by multiplying by weight */
       PetscCall(PetscArrayzero(elemMat, numCIndices * Nc * totDim));
       for (PetscInt i = 0; i < numFIndices / Nc; ++i) {
         for (PetscInt j = 0; j < numCIndices; ++j) {
-          for (PetscInt c = 0; c < Nc; ++c) {
-            // TODO Need field offset on particle and field here
-            /* B[(p*pdim + i)*Nc + c] is the value at point p for basis function i and component c */
-            elemMat[(j * totNc + c) * numFIndices + i * Nc + c] += Tcoarse->T[0][(j * numFIndices + i * Nc + c) * Nc + c] * (useDeltaFunction ? 1.0 : detJ);
+          PetscInt qc = 0; // dummy?
+          for (PetscInt q = 0; q < Nq; ++q) {
+            const PetscReal wt = quadWeights[q * qNc + qc];
+            PetscCheck(fegeom.detJ[q] > 0.0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid determinant %g for element %" PetscInt_FMT ", quadrature points %" PetscInt_FMT, (double)fegeom.detJ[q], cell, q);
+            for (PetscInt c = 0; c < Nc; ++c) {
+              // TODO Need field offset on particle and field here
+              /* B[(p*pdim + i)*Nc + c] is the value at point p for basis function i and component c */
+              elemMat[(j * totNc + c) * numFIndices + i * Nc + c] += Tcoarse->T[0][(j * numFIndices + i * Nc + c) * Nc + c] * (useDeltaFunction ? 1.0 : fegeom.detJ[q]) * wt;
+            }
           }
         }
       }
@@ -440,9 +464,10 @@ static PetscErrorCode DMSwarmComputeMassMatrix_Private(DM dmc, DM dmf, Mat mass,
     }
     PetscCall(DMSwarmRestoreField(dmc, DMSwarmPICField_coor, NULL, NULL, (void **)&fieldVals));
   }
+  PetscCall(PetscFree4(coords, fegeom.detJ, fegeom.J, fegeom.invJ));
   PetscCall(PetscFree3(elemMat, rowIDXs, xi));
   PetscCall(DMSwarmSortRestoreAccess(dmc));
-  PetscCall(PetscFree3(v0, J, invJ));
+  /* PetscCall(PetscFree3(v0, J, invJ)); */
   PetscCall(MatAssemblyBegin(mass, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(mass, MAT_FINAL_ASSEMBLY));
   PetscFunctionReturn(PETSC_SUCCESS);
