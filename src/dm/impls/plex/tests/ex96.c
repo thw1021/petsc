@@ -8,8 +8,8 @@ int main(int argc, char **argv)
   DM          dm;
   char        ifilename[PETSC_MAX_PATH_LEN], ofilename[PETSC_MAX_PATH_LEN];
   int         nNodalVar = 3;
-  int         nZonalVar = 3; 
-  // varIdx;
+  int         nZonalVar = 3;
+  /*varIdx*/
   char        varName[EX_MAX_NAME];
   PetscViewer viewer;
 
@@ -81,8 +81,6 @@ int main(int argc, char **argv)
   PetscCall(PetscViewerExodusIIGetNodalVariableName(viewer, varIdx, varName));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Name of nodal variable %d: %s\n", varIdx, varName));
   */
-
-
 PetscCall(PetscViewerExodusIISetZonalVariableNumber(viewer, nZonalVar));
 PetscCall(PetscViewerExodusIIGetZonalVariableNumber(viewer, &nZonalVar));
 
@@ -95,8 +93,7 @@ PetscCall(PetscViewerExodusIIGetNodalVariableNumber(viewer, &nNodalVar));
     char test1names[3][EX_MAX_NAME] = {"variable1", "variable2", "variable3"};
     PetscCall(PetscViewerExodusIISetZonalVariableNames(viewer, test1names));
     char namesFromFunction[3][EX_MAX_NAME];
-    PetscCall(PetscViewerExodusIIGetZonalVariableNames(viewer, 3, namesFromFunction)); //Needed getter 
-   
+    PetscCall(PetscViewerExodusIIGetZonalVariableNames(viewer, 3, namesFromFunction));
     /* Testing the Getter */
     /*char test2names[3][EX_MAX_NAME] = {"pressure", "temperature", "density"};
     PetscCall(PetscViewerExodusIISetZonalVariableNames(viewer, test2names));
@@ -114,17 +111,13 @@ PetscCall(PetscViewerExodusIIGetNodalVariableNumber(viewer, &nNodalVar));
 
     char namesFromFunction1[3][EX_MAX_NAME];
     PetscCall(PetscViewerExodusIIGetNodalVariableNames(viewer, 3, namesFromFunction1));
-    
     /* Check if names were correctly retrieved and copied */
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nNodal Variable Names:\n"));
     for (int i = 0; i < 3; i++) {
        PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%d: %s\n", i, namesFromFunction1[i]));
     }
-
-    
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nNumber of nodal variables: %d\n", nNodalVar));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nNumber of zonal variables: %d\n", nZonalVar));
-
     PetscCall(PetscViewerDestroy(&viewer));
     PetscCall(DMDestroy(&dm));
     PetscCall(PetscFinalize());
