@@ -2059,7 +2059,7 @@ static PetscErrorCode PCFieldSplitSetIS_FieldSplit(PC pc, const char splitname[]
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PCFieldSplitSetFields - Sets the fields that define one particular split in `PCFIELDSPLIT`
 
   Logically Collective
@@ -2402,7 +2402,7 @@ PetscErrorCode PCFieldSplitSetBlockSize(PC pc, PetscInt bs)
   Developer Notes:
   There should be a `PCFieldSplitRestoreSubKSP()` instead of requiring the user to call `PetscFree()`
 
-  The Fortran interface should be modernized to return directly the array of values.
+  The Fortran interface could be modernized to return directly the array of values.
 
 .seealso: [](sec_block_matrices), `PC`, `PCFIELDSPLIT`, `PCFieldSplitSetFields()`, `PCFieldSplitSetIS()`, `PCFieldSplitSchurGetSubKSP()`
 @*/
@@ -2754,6 +2754,9 @@ static PetscErrorCode PCFieldSplitSetSchurScale_FieldSplit(PC pc, PetscScalar sc
 - A11 - the (1,1) block
 
   Level: advanced
+
+  Note:
+  Use `NULL` for any unneeded output arguments
 
 .seealso: [](sec_block_matrices), `PC`, `PCFIELDSPLIT`, `MatSchurComplementGetSubMatrices()`, `MatSchurComplementSetSubMatrices()`
 @*/

@@ -145,7 +145,7 @@ PetscErrorCode PetscDrawHGReset(PetscDrawHG hist)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PetscDrawHGDestroy - Frees all space taken up by histogram data structure.
 
   Collective
@@ -585,7 +585,7 @@ PetscErrorCode PetscDrawHGIntegerBins(PetscDrawHG hist, PetscBool ints)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PetscDrawHGGetAxis - Gets the axis context associated with a histogram.
   This is useful if one wants to change some axis property, such as
   labels, color, etc. The axis context should not be destroyed by the
@@ -612,7 +612,7 @@ PetscErrorCode PetscDrawHGGetAxis(PetscDrawHG hist, PetscDrawAxis *axis)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PetscDrawHGGetDraw - Gets the draw context associated with a histogram.
 
   Not Collective, draw is parallel if hist is parallel

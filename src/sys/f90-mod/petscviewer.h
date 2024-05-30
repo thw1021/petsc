@@ -5,8 +5,10 @@
 
       type, extends(tPetscObject) :: tPetscViewer
       end type tPetscViewer
-
       PetscViewer, parameter :: PETSC_NULL_VIEWER = tPetscViewer(0)
+#if defined(_WIN32) && defined(PETSC_USE_SHARED_LIBRARIES)
+!DEC$ ATTRIBUTES DLLEXPORT::PETSC_NULL_VIEWER
+#endif
 !
 !     The numbers used below should match those in
 !     petsc/private/fortranimpl.h
