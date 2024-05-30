@@ -418,7 +418,7 @@ PetscErrorCode PetscSFSetRankOrder(PetscSF sf, PetscBool flg)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PetscSFSetGraph - Set a parallel star forest
 
   Collective
