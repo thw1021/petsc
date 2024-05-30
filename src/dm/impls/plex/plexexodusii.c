@@ -269,14 +269,13 @@ PetscErrorCode PetscViewerExodusIISetNodalVariableName(PetscViewer viewer, int r
   strcpy(exo->nodalVariableNames + rank * EX_MAX_NAME, name);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-//Retrieves the zonal variable name for a specific rank and return it
 PetscErrorCode PetscViewerExodusIIGetZonalVariableName(PetscViewer viewer, int rank, char name[])
 {
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
 
   PetscFunctionBegin;
   PetscCheck(rank >= 0 && rank < exo->numZonalVariables, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Rank out of range");
-  strcpy(name, exo->zonalVariableNames + rank * EX_MAX_NAME);
+  PetscStrncpy(name, exo->zonalVariableNames + rank * EX_MAX_NAME, EX_MAX_NAME);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -286,7 +285,8 @@ PetscErrorCode PetscViewerExodusIIGetNodalVariableName(PetscViewer viewer, int r
 
   PetscFunctionBegin;
   PetscCheck(rank >= 0 && rank < exo->numZonalVariables, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Rank out of range");
-  strcpy(name, exo->nodalVariableNames + rank * EX_MAX_NAME);
+  //strcpy(name, exo->nodalVariableNames + rank * EX_MAX_NAME);
+  PetscStrncpy(name, exo->zonalVariableNames + rank * EX_MAX_NAME, EX_MAX_NAME);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -297,24 +297,26 @@ PetscErrorCode PetscViewerExodusIISetZonalVariableNames(PetscViewer viewer, char
   int                   i;
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
   int numNames;
-  PetscViewerExodusIIGetZonalVariableNumber(viewer, &numNames);
-
+  
   PetscFunctionBegin;
-  PetscCheck(numNames < 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of names must be non-negative");
-  ierr = PetscRealloc((numNames)*EX_MAX_NAME * sizeof(char), &exo->zonalVariableNames);
-  CHKERRQ(ierr);
+  PetscViewerExodusIIGetZonalVariableNumber(viewer, &numNames);
+  PetscCheck(numNames >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of names must be non-negative");
 
-  // Copy the new names into the internal structure
-  for (i = 0; i < numNames; i++) {
-    ierr = PetscStrncpy(exo->zonalVariableNames + (exo->numZonalVariables + i) * EX_MAX_NAME, names[i], EX_MAX_NAME);
+  // Check if memory needs to be allocated
+  if (!exo->zonalVariableNames) {
+    ierr = PetscMalloc1(numNames * EX_MAX_NAME, &exo->zonalVariableNames);
     CHKERRQ(ierr);
   }
 
-  // Update the number of zonal variable names
-  exo->numZonalVariables += numNames;
+  // Copy the names
+  for (i = 0; i < numNames; i++) {
+    ierr = PetscStrncpy(exo->zonalVariableNames + i * EX_MAX_NAME, names[i], EX_MAX_NAME);
+    CHKERRQ(ierr);
+  }
+
+  exo->numZonalVariables = numNames; // Update the count of zonal variables
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-
 PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetNodalVariableNames(PetscViewer viewer, char names[][EX_MAX_NAME])
 {
   PetscErrorCode        ierr;
@@ -324,17 +326,14 @@ PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetNodalVariableNames(PetscViewer
   PetscViewerExodusIIGetNodalVariableNumber(viewer, &numNames);
 
   PetscFunctionBegin;
-  PetscCheck(numNames < 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of names must be non-negative");
-  ierr = PetscRealloc((exo->numNodalVariables + numNames) * EX_MAX_NAME * sizeof(char), &exo->nodalVariableNames);
-  CHKERRQ(ierr);
+  PetscCheck(numNames>=0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of names must be non-negative");
+  //ierr = PetscRealloc((exo->numNodalVariables + numNames) * EX_MAX_NAME * sizeof(char), &exo->nodalVariableNames);
+  //CHKERRQ(ierr);
 
-  // Copy the new names into the internal structure
   for (i = 0; i < numNames; i++) {
     ierr = PetscStrncpy(exo->nodalVariableNames + (exo->numNodalVariables + i) * EX_MAX_NAME, names[i], EX_MAX_NAME);
     CHKERRQ(ierr);
   }
-
-  // Update the number of nodal variable names
   exo->numNodalVariables += numNames;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -349,13 +348,13 @@ PetscErrorCode PetscViewerExodusIIGetZonalVariableNames(PetscViewer viewer, int 
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 1);
   PetscAssertPointer(names, 3);
 
-  // Copy the names from the internal structure to the provided array
   for (i = 0; i < numNames; i++) {
     ierr = PetscStrncpy(names[i], exo->zonalVariableNames + i * EX_MAX_NAME, EX_MAX_NAME);
     CHKERRQ(ierr);
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
 PetscErrorCode PetscViewerExodusIIGetNodalVariableNames(PetscViewer viewer, int numNames, char names[][EX_MAX_NAME])
 {
   PetscErrorCode        ierr;
@@ -366,7 +365,6 @@ PetscErrorCode PetscViewerExodusIIGetNodalVariableNames(PetscViewer viewer, int 
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 1);
   PetscAssertPointer(names, 3);
 
-  // Copy the names from the internal structure to the provided array
   for (i = 0; i < numNames; i++) {
     ierr = PetscStrncpy(names[i], exo->nodalVariableNames + i * EX_MAX_NAME, EX_MAX_NAME);
     CHKERRQ(ierr);
