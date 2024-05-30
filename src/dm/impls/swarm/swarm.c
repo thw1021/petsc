@@ -349,7 +349,7 @@ static PetscErrorCode DMSwarmComputeMassMatrix_Private(DM dmc, DM dmf, Mat mass,
     /* else PetscCall(PetscFVGetNumComponents((PetscFV)obj, &Nc)); */
     if (id == PETSCFE_CLASSID) {
       PetscFE fe = (PetscFE)obj;
-
+      PetscCall(PetscInfo(dmf, "Get quadrature for non-affine mass\n"));
       PetscCall(PetscFEGetQuadrature(fe, &quad));
       PetscCall(PetscFEGetNumComponents(fe, &Nc));
     } else if (id == PETSCFV_CLASSID) {
@@ -441,14 +441,12 @@ static PetscErrorCode DMSwarmComputeMassMatrix_Private(DM dmc, DM dmf, Mat mass,
       PetscCall(PetscArrayzero(elemMat, numCIndices * Nc * totDim));
       for (PetscInt i = 0; i < numFIndices / Nc; ++i) {
         for (PetscInt j = 0; j < numCIndices; ++j) {
-          PetscInt qc = 0; // dummy?
           for (PetscInt q = 0; q < Nq; ++q) {
-            const PetscReal wt = quadWeights[q * qNc + qc];
             PetscCheck(fegeom.detJ[q] > 0.0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid determinant %g for element %" PetscInt_FMT ", quadrature points %" PetscInt_FMT, (double)fegeom.detJ[q], cell, q);
             for (PetscInt c = 0; c < Nc; ++c) {
               // TODO Need field offset on particle and field here
               /* B[(p*pdim + i)*Nc + c] is the value at point p for basis function i and component c */
-              elemMat[(j * totNc + c) * numFIndices + i * Nc + c] += Tcoarse->T[0][(j * numFIndices + i * Nc + c) * Nc + c] * (useDeltaFunction ? 1.0 : fegeom.detJ[q]) * wt;
+              elemMat[(j * totNc + c) * numFIndices + i * Nc + c] += Tcoarse->T[0][(j * numFIndices + i * Nc + c) * Nc + c] * (useDeltaFunction ? 1.0 : fegeom.detJ[q]);
             }
           }
         }
