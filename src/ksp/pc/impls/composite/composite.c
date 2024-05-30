@@ -476,7 +476,7 @@ PetscErrorCode PCCompositeSpecialSetAlpha(PC pc, PetscScalar alpha)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PCCompositeAddPCType - Adds another `PC` of the given type to the composite `PC`.
 
   Collective
