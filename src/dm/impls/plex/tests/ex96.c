@@ -98,9 +98,9 @@ PetscCall(PetscViewerExodusIIGetNodalVariableNumber(viewer, &nNodalVar));
     PetscCall(PetscViewerExodusIIGetZonalVariableNames(viewer, 3, namesFromFunction)); //Needed getter 
    
     /* Testing the Getter */
-    //char test2names[3][EX_MAX_NAME] = {"pressure", "temperature", "density"};
-    //PetscCall(PetscViewerExodusIISetZonalVariableNames(viewer, test2names));
-    //PetscCall(PetscViewerExodusIIGetZonalVariableNames(viewer, 6, namesFromFunction));
+    /*char test2names[3][EX_MAX_NAME] = {"pressure", "temperature", "density"};
+    PetscCall(PetscViewerExodusIISetZonalVariableNames(viewer, test2names));
+    PetscCall(PetscViewerExodusIIGetZonalVariableNames(viewer, 6, namesFromFunction));*/
 
     /* Check if names were correctly retrieved and copied */
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nZonal Variable Names:\n"));
@@ -109,17 +109,17 @@ PetscCall(PetscViewerExodusIIGetNodalVariableNumber(viewer, &nNodalVar));
     }
 
     /* NODAL */
-    //char test3names[3][EX_MAX_NAME] = {"humidity", "porosity", "saturation"};
-    //PetscCall(PetscViewerExodusIISetNodalVariableNames(viewer, test3names));
+    char test2names[3][EX_MAX_NAME] = {"humidity", "porosity", "saturation"};
+    PetscCall(PetscViewerExodusIISetNodalVariableNames(viewer, test2names));
 
-    // Reuse namesFromFunction for nodal variable names; adjust size if needed
-    PetscCall(PetscViewerExodusIIGetNodalVariableNames(viewer, 3, namesFromFunction));
-
+    char namesFromFunction1[3][EX_MAX_NAME];
+    PetscCall(PetscViewerExodusIIGetNodalVariableNames(viewer, 3, namesFromFunction1));
+    
     /* Check if names were correctly retrieved and copied */
-    //PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nNodal Variable Names:\n"));
-    //for (int i = 0; i < 3; i++) {
-    //    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%d: %s\n", i, namesFromFunction[i]));
-   // }
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nNodal Variable Names:\n"));
+    for (int i = 0; i < 3; i++) {
+       PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%d: %s\n", i, namesFromFunction1[i]));
+    }
 
     
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nNumber of nodal variables: %d\n", nNodalVar));
