@@ -325,7 +325,7 @@ PetscErrorCode MatNullSpaceDestroy(MatNullSpace *sp)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   MatNullSpaceRemove - Removes all the components of a null space from a vector.
 
   Collective

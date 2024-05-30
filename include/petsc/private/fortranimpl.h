@@ -191,10 +191,10 @@ PETSC_INTERN PetscErrorCode PetscInitFortran_Private(PetscBool, const char *, Pe
 */
 #define PETSC_FORTRAN_OBJECT_F_DESTROYED_TO_C_NULL(a) \
   do { \
-    if (!(*(void **)a)) { \
+    if (!*(void **)a || *((void **)(a)) == (void *)-2) { \
       *ierr = PETSC_SUCCESS; \
       return; \
-    } else if (*((void **)(a)) == (void *)-2) *(a) = PETSC_NULLPTR; \
+    }\
   } while (0)
 
 /* After C XxxDestroy(a) is called, change a's state from NULL to destroyed, so that it can be used/destroyed again by Fortran.

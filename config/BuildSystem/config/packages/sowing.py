@@ -155,7 +155,7 @@ and run configure again\n')
             arch = ''
           else:
             arch = self.arch
-          generatefortranstubs.main(self.petscdir.dir, arch,self.bfort, os.path.join(self.petscdir.dir,'src'),0)
+          generatefortranstubs.main(self.petscdir.dir, arch,self.bfort, self.petscdir.dir,0)
           if self.fortran.fortranIsF90:
             generatefortranstubs.processf90interfaces(self.petscdir.dir,arch,0)
           self.framework.actions.addArgument('PETSc', 'File creation', 'Generated Fortran stubs')
