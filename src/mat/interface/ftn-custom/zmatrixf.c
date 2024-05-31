@@ -72,7 +72,6 @@
   #define matzerorowslocalis_          MATZEROROWSLOCALIS
   #define matzerorowscolumnslocal_     MATZEROROWSCOLUMNSLOCAL
   #define matzerorowscolumnslocalis_   MATZEROROWSCOLUMNSLOCALIS
-  #define matcreatevecs_               MATCREATEVECS
   #define matnullspacesetfunction_     MATNULLSPACESETFUNCTION
   #define matfindnonzerorows_          MATFINDNONZEROROWS
   #define matgetsize_                  MATGETSIZE
@@ -119,7 +118,6 @@
   #define matsetvaluesblockedlocaln1_  matsetvaluesblockedlocaln1
   #define matdestroymatrices_          matdestroymatrices
   #define matdestroysubmatrices_       matdestroysubmatrices
-  #define matcreatevecs_               matcreatevecs
   #define matgetrowij_                 matgetrowij
   #define matrestorerowij_             matrestorerowij
   #define matgetrow_                   matgetrow
@@ -486,13 +484,6 @@ PETSC_EXTERN void matnullspacesetfunction_(MatNullSpace *sp, PetscErrorCode (*re
   *ierr = MatNullSpaceSetFunction(*sp, ournullfunction, ctx);
 }
 
-PETSC_EXTERN void matcreatevecs_(Mat *mat, Vec *right, Vec *left, int *ierr)
-{
-  CHKFORTRANNULLOBJECT(right);
-  CHKFORTRANNULLOBJECT(left);
-  *ierr = MatCreateVecs(*mat, right, left);
-}
-
 PETSC_EXTERN void matgetrowij_(Mat *B, PetscInt *shift, PetscBool *sym, PetscBool *blockcompressed, PetscInt *n, PetscInt *ia, size_t *iia, PetscInt *ja, size_t *jja, PetscBool *done, PetscErrorCode *ierr)
 {
   const PetscInt *IA, *JA;
@@ -722,9 +713,7 @@ PETSC_EXTERN void matdestroysubmatrices_(PetscInt *n, Mat *smat, PetscErrorCode 
   if (*n == 0) return;
   *ierr = PetscMalloc1(*n + 1, &lsmat);
   if (*ierr) return;
-  for (i = 0; i <= *n; i++) {
-    lsmat[i] = smat[i];
-  }
+  for (i = 0; i <= *n; i++) { lsmat[i] = smat[i]; }
   *ierr = MatDestroySubMatrices(*n, &lsmat);
   if (*ierr) return;
   for (i = 0; i <= *n; i++) { PETSC_FORTRAN_OBJECT_C_NULL_TO_F_DESTROYED(&smat[i]); }
