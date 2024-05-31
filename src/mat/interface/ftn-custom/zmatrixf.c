@@ -101,7 +101,6 @@
   #define matgetownershiprange10_      MATGETOWNERSHIPRANGE10
   #define matgetownershiprange01_      MATGETOWNERSHIPRANGE01
   #define matgetownershiprange11_      MATGETOWNERSHIPRANGE11
-  #define matgetownershipis_           MATGETOWNERSHIPIS
 #elif !defined(PETSC_HAVE_FORTRAN_UNDERSCORE)
   #define matsetvalues_                matsetvalues
   #define matsetvaluesnnnn_            matsetvaluesnnnn
@@ -198,7 +197,6 @@
   #define matgetownershiprange10_      matgetownershiprange10
   #define matgetownershiprange01_      matgetownershiprange01
   #define matgetownershiprange11_      matgetownershiprange11
-  #define matgetownershipis_           matgetownershipis
 #endif
 
 PETSC_EXTERN void matgetvalues_(Mat *mat, PetscInt *m, PetscInt idxm[], PetscInt *n, PetscInt idxn[], PetscScalar v[], int *ierr)
@@ -314,13 +312,6 @@ PETSC_EXTERN void matgetownershiprange11_(Mat *mat, PetscInt *m, PetscInt *n, in
   CHKFORTRANNULLINTEGER(m);
   CHKFORTRANNULLINTEGER(n);
   *ierr = MatGetOwnershipRange(*mat, m, n);
-}
-
-PETSC_EXTERN void matgetownershipis_(Mat *mat, IS *m, IS *n, int *ierr)
-{
-  CHKFORTRANNULLOBJECT(m);
-  CHKFORTRANNULLOBJECT(n);
-  *ierr = MatGetOwnershipIS(*mat, m, n);
 }
 
 PETSC_EXTERN void matgetsize_(Mat *mat, PetscInt *m, PetscInt *n, int *ierr)
@@ -754,12 +745,12 @@ PETSC_EXTERN void matdestroysubmatrices_(PetscInt *n, Mat *smat, PetscErrorCode 
 
   if (*n == 0) return;
   *ierr = PetscMalloc1(*n + 1, &lsmat);
-  if (!smat[*n]) smat[*n] = (Mat)-2;
+  if (*ierr) return;
   for (i = 0; i <= *n; i++) {
-    PETSC_FORTRAN_OBJECT_F_DESTROYED_TO_C_NULL(&smat[i]);
     lsmat[i] = smat[i];
   }
   *ierr = MatDestroySubMatrices(*n, &lsmat);
+  if (*ierr) return;
   for (i = 0; i <= *n; i++) { PETSC_FORTRAN_OBJECT_C_NULL_TO_F_DESTROYED(&smat[i]); }
 }
 

@@ -3,6 +3,34 @@
 !
 #include "petsc/finclude/petscdraw.h"
 !
+      type, extends(tPetscObject) :: tPetscDraw
+      end type tPetscDraw
+      PetscDraw, parameter :: PETSC_NULL_DRAW = tPetscDraw(0)
+
+      type, extends(tPetscObject) :: tPetscDrawLG
+      end type tPetscDrawLG
+      PetscDrawLG, parameter :: PETSC_NULL_DRAWLG = tPetscDrawLG(0)
+
+      type, extends(tPetscObject) :: tPetscDrawBar
+      end type tPetscDrawBar
+      PetscDrawBar, parameter :: PETSC_NULL_DRAWBAR = tPetscDrawBar(0)
+
+      type, extends(tPetscObject) :: tPetscDrawAxis
+      end type tPetscDrawAxis
+      PetscDrawAxis, parameter :: PETSC_NULL_DRAWAXIS = tPetscDrawAxis(0)
+
+      type, extends(tPetscObject) :: tPetscDrawHG
+      end type tPetscDrawHG
+      PetscDrawHG, parameter :: PETSC_NULL_DRAWHG = tPetscDrawHG(0)
+
+      type, extends(tPetscObject) :: tPetscDrawSP
+      end type tPetscDrawSP
+      PetscDrawSP, parameter :: PETSC_NULL_DRAWSP = tPetscDrawSP(0)
+
+      type, extends(tPetscObject) :: tPetscDrawMesh
+      end type tPetscDrawMesh
+      PetscDrawMesh, parameter :: PETSC_NULL_DRAWMESH = tPetscDrawMesh(0)
+
 !  Flags for draw
 !
       PetscEnum, parameter :: PETSC_DRAW_BASIC_COLORS = 33

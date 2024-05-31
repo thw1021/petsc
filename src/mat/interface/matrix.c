@@ -6972,7 +6972,7 @@ PetscErrorCode MatGetOwnershipRangesColumn(Mat mat, const PetscInt *ranges[])
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   MatGetOwnershipIS - Get row and column ownership of a matrices' values as index sets.
 
   Not Collective
@@ -6987,18 +6987,22 @@ PetscErrorCode MatGetOwnershipRangesColumn(Mat mat, const PetscInt *ranges[])
   Level: intermediate
 
   Note:
+  You should call `ISDestroy()` on the returned `IS`
+
   For most matrices, excluding `MATELEMENTAL` and `MATSCALAPACK`, this corresponds to values
   returned by `MatGetOwnershipRange()`, `MatGetOwnershipRangeColumn()`. For `MATELEMENTAL` and
   `MATSCALAPACK` the ownership is more complicated. See [Matrix Layouts](sec_matlayout) for
   details on matrix layouts.
 
-.seealso: [](ch_matrices), `Mat`, `MatGetOwnershipRanges()`, `MatSetValues()`, `MATELEMENTAL`, `MATSCALAPACK`
+.seealso: [](ch_matrices), `IS`, `Mat`, `MatGetOwnershipRanges()`, `MatSetValues()`, `MATELEMENTAL`, `MATSCALAPACK`
 @*/
 PetscErrorCode MatGetOwnershipIS(Mat A, IS *rows, IS *cols)
 {
   PetscErrorCode (*f)(Mat, IS *, IS *);
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
+  PetscValidType(A, 1);
   MatCheckPreallocated(A, 1);
   PetscCall(PetscObjectQueryFunction((PetscObject)A, "MatGetOwnershipIS_C", &f));
   if (f) {
