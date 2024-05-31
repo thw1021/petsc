@@ -15,8 +15,11 @@ PETSC_EXTERN void          *PETSC_NULL_SCALAR_Fortran;
 PETSC_EXTERN void          *PETSC_NULL_DOUBLE_Fortran;
 PETSC_EXTERN void          *PETSC_NULL_REAL_Fortran;
 PETSC_EXTERN void          *PETSC_NULL_BOOL_Fortran;
+PETSC_EXTERN void          *PETSC_NULL_INTEGER_ARRAY_Fortran;
+PETSC_EXTERN void          *PETSC_NULL_SCALAR_ARRAY_Fortran;
+PETSC_EXTERN void          *PETSC_NULL_REAL_ARRAY_Fortran;
+PETSC_EXTERN void          *PETSC_NULL_MPI_COMM_Fortran;
 PETSC_EXTERN void (*PETSC_NULL_FUNCTION_Fortran)(void);
-PETSC_EXTERN void *PETSC_NULL_MPI_COMM_Fortran;
 
 PETSC_INTERN PetscErrorCode PetscInitFortran_Private(PetscBool, const char *, PetscInt);
 
@@ -65,10 +68,10 @@ PETSC_INTERN PetscErrorCode PetscInitFortran_Private(PetscBool, const char *, Pe
     The cast through PETSC_UINTPTR_T is so that compilers that warn about casting to/from void * to void(*)(void)
     will not complain about these comparisons. It is not know if this works for all compilers
 */
-#define FORTRANNULLINTEGER(a)   (((void *)(PETSC_UINTPTR_T)a) == PETSC_NULL_INTEGER_Fortran)
-#define FORTRANNULLSCALAR(a)    (((void *)(PETSC_UINTPTR_T)a) == PETSC_NULL_SCALAR_Fortran)
+#define FORTRANNULLINTEGER(a)   (((void *)(PETSC_UINTPTR_T)a) == PETSC_NULL_INTEGER_Fortran || ((void *)(PETSC_UINTPTR_T)a) == PETSC_NULL_INTEGER_ARRAY_Fortran)
+#define FORTRANNULLSCALAR(a)    (((void *)(PETSC_UINTPTR_T)a) == PETSC_NULL_SCALAR_Fortran || ((void *)(PETSC_UINTPTR_T)a) == PETSC_NULL_SCALAR_ARRAY_Fortran)
+#define FORTRANNULLREAL(a)      (((void *)(PETSC_UINTPTR_T)a) == PETSC_NULL_REAL_Fortran || ((void *)(PETSC_UINTPTR_T)a) == PETSC_NULL_REAL_ARRAY_Fortran)
 #define FORTRANNULLDOUBLE(a)    (((void *)(PETSC_UINTPTR_T)a) == PETSC_NULL_DOUBLE_Fortran)
-#define FORTRANNULLREAL(a)      (((void *)(PETSC_UINTPTR_T)a) == PETSC_NULL_REAL_Fortran)
 #define FORTRANNULLBOOL(a)      (((void *)(PETSC_UINTPTR_T)a) == PETSC_NULL_BOOL_Fortran)
 #define FORTRANNULLCHARACTER(a) (((void *)(PETSC_UINTPTR_T)a) == PETSC_NULL_CHARACTER_Fortran)
 #define FORTRANNULLFUNCTION(a)  (((void (*)(void))(PETSC_UINTPTR_T)a) == PETSC_NULL_FUNCTION_Fortran)
@@ -194,7 +197,7 @@ PETSC_INTERN PetscErrorCode PetscInitFortran_Private(PetscBool, const char *, Pe
     if (!*(void **)a || *((void **)(a)) == (void *)-2) { \
       *ierr = PETSC_SUCCESS; \
       return; \
-    }\
+    } \
   } while (0)
 
 /* After C XxxDestroy(a) is called, change a's state from NULL to destroyed, so that it can be used/destroyed again by Fortran.

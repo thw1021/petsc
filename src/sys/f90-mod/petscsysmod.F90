@@ -267,15 +267,12 @@
         use,intrinsic :: iso_c_binding
         use petscsysdef
         PetscChar(80) PETSC_NULL_CHARACTER = ''
-        PetscInt PETSC_NULL_INTEGER(1)
-        PetscFortranDouble PETSC_NULL_DOUBLE(1)
-        PetscScalar PETSC_NULL_SCALAR(1)
-        PetscReal PETSC_NULL_REAL(1)
+        PetscInt PETSC_NULL_INTEGER, PETSC_NULL_INTEGER_ARRAY(1)
+        PetscFortranDouble PETSC_NULL_DOUBLE
+        PetscScalar PETSC_NULL_SCALAR, PETSC_NULL_SCALAR_ARRAY(1)
+        PetscReal PETSC_NULL_REAL, PETSC_NULL_REAL_ARRAY(1)
         PetscBool PETSC_NULL_BOOL
         MPI_Comm  PETSC_NULL_MPI_COMM(1)
-!
-!
-!
 !
 !     Basic math constants
 !
@@ -383,11 +380,12 @@
            !  PETSC_NULL_BOOL,PETSC_NULL_FUNCTION,PETSC_NULL_MPI_COMM
         implicit none
 
-        call PetscSetFortranBasePointers(PETSC_NULL_CHARACTER,            &
+        call PetscSetFortranBasePointers(PETSC_NULL_CHARACTER,          &
      &     PETSC_NULL_INTEGER,PETSC_NULL_SCALAR,                        &
      &     PETSC_NULL_DOUBLE,PETSC_NULL_REAL,                           &
-     &     PETSC_NULL_BOOL,PETSC_NULL_FUNCTION,PETSC_NULL_MPI_COMM)
-
+     &     PETSC_NULL_BOOL,PETSC_NULL_FUNCTION,PETSC_NULL_MPI_COMM,     &
+     &     PETSC_NULL_INTEGER_ARRAY,PETSC_NULL_SCALAR_ARRAY,            &
+     &     PETSC_NULL_REAL_ARRAY)
         end
 
         subroutine PetscSetModuleBlockMPI(freal,fscalar,fsum,finteger)

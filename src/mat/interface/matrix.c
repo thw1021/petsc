@@ -874,8 +874,8 @@ PetscErrorCode MatGetOptionsPrefix(Mat A, const char *prefix[])
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
-  MatGetState - Gets the state of a `Mat`.
+/*@
+  MatGetState - Gets the state of a `Mat`. Same value as returned by `PetscObjectStateGet()`
 
   Not Collective
 
@@ -892,7 +892,9 @@ PetscErrorCode MatGetOptionsPrefix(Mat A, const char *prefix[])
   the object is changed. By saving and later querying the object state
   one can determine whether information about the object is still current.
 
-.seealso: [](ch_matrices), `Mat`, `MatCreate()`, `PetscObjectStateGet()`
+  See `MatGetNonzeroState()` to determine if the nonzero structure of the matrix has changed.
+
+.seealso: [](ch_matrices), `Mat`, `MatCreate()`, `PetscObjectStateGet()`, `MatGetNonzeroState()`
 @*/
 PetscErrorCode MatGetState(Mat A, PetscObjectState *state)
 {
@@ -4610,7 +4612,7 @@ PetscErrorCode MatSolverTypeRegister(MatSolverType package, MatType mtype, MatFa
 
   Calling sequence of `createfactor`:
 + A     - the matrix providing the factor matrix
-. mtype - the `MatType` of the factor requested
+. ftype - the `MatFactorType` of the factor requested
 - B     - the new factor matrix that responds to MatXXFactorSymbolic,Numeric() functions, such as `MatLUFactorSymbolic()`
 
   Level: developer
@@ -4618,12 +4620,12 @@ PetscErrorCode MatSolverTypeRegister(MatSolverType package, MatType mtype, MatFa
   Note:
   When `type` is `NULL` the available functions are searched for based on the order of the calls to `MatSolverTypeRegister()` in `MatInitializePackage()`.
   Since different PETSc configurations may have different external solvers, seemingly identical runs with different PETSc configurations may use a different solver.
-  For example if one configuration had --download-mumps while a different one had --download-superlu_dist.
+  For example if one configuration had `--download-mumps` while a different one had `--download-superlu_dist`.
 
 .seealso: [](ch_matrices), `Mat`, `MatFactorType`, `MatType`, `MatCopy()`, `MatDuplicate()`, `MatGetFactorAvailable()`, `MatSolverTypeRegister()`, `MatGetFactor()`,
           `MatInitializePackage()`
 @*/
-PetscErrorCode MatSolverTypeGet(MatSolverType type, MatType mtype, MatFactorType ftype, PetscBool *foundtype, PetscBool *foundmtype, PetscErrorCode (**createfactor)(Mat A, MatFactorType mtype, Mat *B))
+PetscErrorCode MatSolverTypeGet(MatSolverType type, MatType mtype, MatFactorType ftype, PetscBool *foundtype, PetscBool *foundmtype, PetscErrorCode (**createfactor)(Mat A, MatFactorType ftype, Mat *B))
 {
   MatSolverTypeHolder         next = MatSolverTypeHolders;
   PetscBool                   flg;
@@ -6897,7 +6899,8 @@ PetscErrorCode MatGetOwnershipRange(Mat mat, PetscInt *m, PetscInt *n)
 . mat - the matrix
 
   Output Parameter:
-. ranges - start of each processors portion plus one more than the total length at the end
+. ranges - start of each processors portion plus one more than the total length at the end, of length `size` + 1
+           where `size` is the number of MPI processes used by `mat`
 
   Level: beginner
 
@@ -8168,8 +8171,8 @@ PetscErrorCode MatGetColumnIJ(Mat mat, PetscInt shift, PetscBool symmetric, Pets
 . shift           - 1 or zero indicating we want the indices starting at 0 or 1
 . symmetric       - `PETSC_TRUE` or `PETSC_FALSE` indicating the matrix data structure should be symmetrized
 . inodecompressed - `PETSC_TRUE` or `PETSC_FALSE` indicating if the nonzero structure of the
-                 inodes or the nonzero elements is wanted. For `MATBAIJ` matrices the compressed version is
-                 always used.
+                    inodes or the nonzero elements is wanted. For `MATBAIJ` matrices the compressed version is
+                    always used.
 . n               - size of (possibly compressed) matrix
 . ia              - the row pointers
 - ja              - the column indices
@@ -8220,8 +8223,8 @@ PetscErrorCode MatRestoreRowIJ(Mat mat, PetscInt shift, PetscBool symmetric, Pet
 . shift           - 1 or zero indicating we want the indices starting at 0 or 1
 . symmetric       - `PETSC_TRUE` or `PETSC_FALSE` indicating the matrix data structure should be symmetrized
 - inodecompressed - `PETSC_TRUE` or `PETSC_FALSE` indicating if the nonzero structure of the
-                 inodes or the nonzero elements is wanted. For `MATBAIJ` matrices the compressed version is
-                 always used.
+                    inodes or the nonzero elements is wanted. For `MATBAIJ` matrices the compressed version is
+                    always used.
 
   Output Parameters:
 + n    - size of (possibly compressed) matrix
@@ -8973,7 +8976,7 @@ PetscErrorCode MatGetNullSpace(Mat mat, MatNullSpace *nullsp)
 - mat - the array of matrices
 
   Output Parameters:
-. nullsp - an array of null spaces, `NULL` for each matrix that does not have a null space
+. nullsp - an array of null spaces, `NULL` for each matrix that does not have a null space, length 3 * `n`
 
   Level: developer
 
@@ -9011,7 +9014,7 @@ PetscErrorCode MatGetNullSpaces(PetscInt n, Mat mat[], MatNullSpace *nullsp[])
   Input Parameters:
 + n      - the number of matrices
 . mat    - the array of matrices
-- nullsp - an array of null spaces, `NULL` if the null space does not exist
+- nullsp - an array of null spaces
 
   Level: developer
 
@@ -9199,7 +9202,7 @@ PetscErrorCode MatGetNearNullSpace(Mat mat, MatNullSpace *nullsp)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   MatICCFactor - Performs in-place incomplete Cholesky factorization of matrix.
 
   Collective
@@ -9643,7 +9646,7 @@ PetscErrorCode MatStashGetInfo(Mat mat, PetscInt *nstash, PetscInt *reallocs, Pe
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   MatCreateVecs - Get vector(s) compatible with the matrix, i.e. with the same
   parallel layout, `PetscLayout` for rows and columns
 
@@ -10875,7 +10878,7 @@ PetscErrorCode MatInvertBlockDiagonalMat(Mat A, Mat C)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   MatTransposeColoringDestroy - Destroys a coloring context for matrix product $C = A*B^T$ that was created
   via `MatTransposeColoringCreate()`.
 
