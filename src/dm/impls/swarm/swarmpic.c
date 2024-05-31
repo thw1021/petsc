@@ -529,6 +529,52 @@ PetscErrorCode DMSwarmSetNumSpecies(DM sw, PetscInt Ns)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@
+  DMSwarmGetUseAffineMass - Get option to use affine map in mass matrix
+
+  Not Collective
+
+  Input Parameter:
+. sw - the `DMSWARM`
+
+  Output Parameters:
+. b - use affine
+
+  Level: intermediate
+
+.seealso: `DMSWARM`, `DMSwarmSetUseAffineMass()`, `DMSwarmSetType()`, `DMSwarmType`
+@*/
+PetscErrorCode DMSwarmGetUseAffineMass(DM sw, PetscBool *b)
+{
+  DM_Swarm *swarm = (DM_Swarm *)sw->data;
+
+  PetscFunctionBegin;
+  *b = swarm->use_affine_mass;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  DMSwarmSetUseAffineMass - Set option to use affine map in mass matrix
+
+  Not Collective
+
+  Input Parameters:
++ sw - the `DMSWARM`
+. b - use affine
+
+  Level: intermediate
+
+.seealso: `DMSWARM`, `DMSwarmGetUseAffineMass()`, `DMSwarmSetType()`, `DMSwarmType`
+@*/
+PetscErrorCode DMSwarmSetUseAffineMass(DM sw, PetscBool b)
+{
+  DM_Swarm *swarm = (DM_Swarm *)sw->data;
+
+  PetscFunctionBegin;
+  swarm->use_affine_mass = b;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*@C
   DMSwarmGetCoordinateFunction - Get the function setting initial particle positions, if it exists
 

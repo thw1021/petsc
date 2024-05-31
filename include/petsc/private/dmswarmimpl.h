@@ -61,6 +61,7 @@ typedef struct {
 
   PetscSimplePointFn *coordFunc; /* Function to set particle coordinates */
   PetscSimplePointFn *velFunc;   /* Function to set particle velocities */
+  PetscBool           use_affine_mass;
 } DM_Swarm;
 
 typedef struct {
