@@ -92,7 +92,7 @@
       else
          PetscCallA(MatSetType( Amat, MATMPIAIJ, ierr))
       endif
-      PetscCallA(MatMPIAIJSetPreallocation(Amat,f9,PETSC_NULL_INTEGER,f6,PETSC_NULL_INTEGER, ierr))
+      PetscCallA(MatMPIAIJSetPreallocation(Amat,f9,PETSC_NULL_INTEGER_ARRAY,f6,PETSC_NULL_INTEGER_ARRAY, ierr))
       PetscCallA(MatSetFromOptions( Amat, ierr))
       PetscCallA(MatSetUp( Amat, ierr))
       PetscCallA(MatGetOwnershipRange( Amat, Istart, Iend, ierr))

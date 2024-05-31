@@ -4412,7 +4412,7 @@ PETSC_INTERN PetscErrorCode MatProductSetFromOptions_IS_XAIJ(Mat);
 
 .seealso: [](ch_matrices), `Mat`, `MatSeqAIJRestoreArray()`, `MatSeqAIJGetArrayF90()`
 @*/
-PetscErrorCode MatSeqAIJGetArray(Mat A, PetscScalar **array)
+PetscErrorCode MatSeqAIJGetArray(Mat A, PetscScalar *array[])
 {
   Mat_SeqAIJ *aij = (Mat_SeqAIJ *)A->data;
 
@@ -4441,7 +4441,7 @@ PetscErrorCode MatSeqAIJGetArray(Mat A, PetscScalar **array)
 
 .seealso: [](ch_matrices), `Mat`, `MatSeqAIJGetArray()`, `MatSeqAIJRestoreArrayF90()`
 @*/
-PetscErrorCode MatSeqAIJRestoreArray(Mat A, PetscScalar **array)
+PetscErrorCode MatSeqAIJRestoreArray(Mat A, PetscScalar *array[])
 {
   Mat_SeqAIJ *aij = (Mat_SeqAIJ *)A->data;
 
@@ -4471,7 +4471,7 @@ PetscErrorCode MatSeqAIJRestoreArray(Mat A, PetscScalar **array)
 
 .seealso: [](ch_matrices), `Mat`, `MatSeqAIJGetArray()`, `MatSeqAIJRestoreArrayRead()`
 @*/
-PetscErrorCode MatSeqAIJGetArrayRead(Mat A, const PetscScalar **array)
+PetscErrorCode MatSeqAIJGetArrayRead(Mat A, const PetscScalar *array[])
 {
   Mat_SeqAIJ *aij = (Mat_SeqAIJ *)A->data;
 
@@ -4499,7 +4499,7 @@ PetscErrorCode MatSeqAIJGetArrayRead(Mat A, const PetscScalar **array)
 
 .seealso: [](ch_matrices), `Mat`, `MatSeqAIJGetArray()`, `MatSeqAIJGetArrayRead()`
 @*/
-PetscErrorCode MatSeqAIJRestoreArrayRead(Mat A, const PetscScalar **array)
+PetscErrorCode MatSeqAIJRestoreArrayRead(Mat A, const PetscScalar *array[])
 {
   Mat_SeqAIJ *aij = (Mat_SeqAIJ *)A->data;
 
@@ -4527,7 +4527,7 @@ PetscErrorCode MatSeqAIJRestoreArrayRead(Mat A, const PetscScalar **array)
 
 .seealso: [](ch_matrices), `Mat`, `MatSeqAIJGetArray()`, `MatSeqAIJRestoreArrayRead()`
 @*/
-PetscErrorCode MatSeqAIJGetArrayWrite(Mat A, PetscScalar **array)
+PetscErrorCode MatSeqAIJGetArrayWrite(Mat A, PetscScalar *array[])
 {
   Mat_SeqAIJ *aij = (Mat_SeqAIJ *)A->data;
 
@@ -4557,7 +4557,7 @@ PetscErrorCode MatSeqAIJGetArrayWrite(Mat A, PetscScalar **array)
 
 .seealso: [](ch_matrices), `Mat`, `MatSeqAIJGetArray()`, `MatSeqAIJGetArrayRead()`
 @*/
-PetscErrorCode MatSeqAIJRestoreArrayWrite(Mat A, PetscScalar **array)
+PetscErrorCode MatSeqAIJRestoreArrayWrite(Mat A, PetscScalar *array[])
 {
   Mat_SeqAIJ *aij = (Mat_SeqAIJ *)A->data;
 
@@ -4595,7 +4595,7 @@ PetscErrorCode MatSeqAIJRestoreArrayWrite(Mat A, PetscScalar **array)
 
 .seealso: [](ch_matrices), `Mat`, `MatSeqAIJGetArray()`, `MatSeqAIJGetArrayRead()`
 @*/
-PetscErrorCode MatSeqAIJGetCSRAndMemType(Mat mat, const PetscInt **i, const PetscInt **j, PetscScalar **a, PetscMemType *mtype)
+PetscErrorCode MatSeqAIJGetCSRAndMemType(Mat mat, const PetscInt *i[], const PetscInt *j[], PetscScalar *a[], PetscMemType *mtype)
 {
   Mat_SeqAIJ *aij = (Mat_SeqAIJ *)mat->data;
 

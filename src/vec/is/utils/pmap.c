@@ -591,18 +591,18 @@ PetscErrorCode PetscLayoutCompare(PetscLayout mapa, PetscLayout mapb, PetscBool 
 }
 
 /*@
-   PetscLayoutFindOwner - Find the owning MPI process for a global index
+  PetscLayoutFindOwner - Find the owning MPI process for a global index
 
-   Not Collective; No Fortran Support
+  Not Collective; No Fortran Support
 
-   Input Parameters:
-+  map - the layout
--  idx - global index to find the owner of
+  Input Parameters:
++ map - the layout
+- idx - global index to find the owner of
 
-   Output Parameter:
-.  owner - the owning rank
+  Output Parameter:
+. owner - the owning rank
 
-   Level: developer
+  Level: developer
 
 .seealso: `PetscLayout`, `PetscLayoutFindOwnerIndex()`
 @*/
@@ -625,19 +625,19 @@ PetscErrorCode PetscLayoutFindOwner(PetscLayout map, PetscInt idx, PetscMPIInt *
 }
 
 /*@
-    PetscLayoutFindOwnerIndex - Find the owning MPI process and the local index on that process for a global index
+  PetscLayoutFindOwnerIndex - Find the owning MPI process and the local index on that process for a global index
 
-    Not Collective; No Fortran Support
+  Not Collective; No Fortran Support
 
-   Input Parameters:
-+  map   - the layout
--  idx   - global index to find the owner of
+  Input Parameters:
++ map - the layout
+- idx - global index to find the owner of
 
-   Output Parameters:
-+  owner - the owning rank
--  lidx  - local index used by the owner for `idx`
+  Output Parameters:
++ owner - the owning rank
+- lidx  - local index used by the owner for `idx`
 
-   Level: developer
+  Level: developer
 
 .seealso: `PetscLayout`, `PetscLayoutFindOwner()`
 @*/

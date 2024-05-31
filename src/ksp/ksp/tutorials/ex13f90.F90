@@ -173,13 +173,13 @@
 
 !  Create the sparse matrix. Preallocate 5 nonzeros per row.
 
-      PetscCall(MatCreateSeqAIJ(PETSC_COMM_SELF,Ntot,Ntot,five,PETSC_NULL_INTEGER,A,ierr))
+      PetscCall(MatCreateSeqAIJ(PETSC_COMM_SELF,Ntot,Ntot,five,PETSC_NULL_INTEGER_ARRAY,A,ierr))
 !
 !  Create vectors. Here we create vectors with no memory allocated.
 !  This way, we can use the data structures already in the program
 !  by using VecPlaceArray() subroutine at a later stage.
 !
-      PetscCall(VecCreateSeqWithArray(PETSC_COMM_SELF,one,Ntot,PETSC_NULL_SCALAR,b,ierr))
+      PetscCall(VecCreateSeqWithArray(PETSC_COMM_SELF,one,Ntot,PETSC_NULL_SCALAR_ARRAY,b,ierr))
       PetscCall(VecDuplicate(b,x,ierr))
 
 !  Create linear solver context. This will be used repeatedly for all

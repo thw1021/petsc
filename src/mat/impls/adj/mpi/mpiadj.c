@@ -1024,7 +1024,7 @@ PetscErrorCode MatMPIAdjToSeqRankZero(Mat A, Mat *B)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   MatMPIAdjSetPreallocation - Sets the array used for storing the matrix elements
 
   Logically Collective

@@ -27,7 +27,7 @@
       one = 1
       zero = 0
       two = 2
-      PetscCallA(MatCreateSeqAIJ(PETSC_COMM_SELF,two,two,two,PETSC_NULL_INTEGER,user%A,ierr))
+      PetscCallA(MatCreateSeqAIJ(PETSC_COMM_SELF,two,two,two,PETSC_NULL_INTEGER_ARRAY,user%A,ierr))
       val = 2.0; PetscCallA(MatSetValues(user%A,one,zero,one,zero,val,INSERT_VALUES,ierr))
       val = -1.0; PetscCallA(MatSetValues(user%A,one,zero,one,one,val,INSERT_VALUES,ierr))
       val = -1.0; PetscCallA(MatSetValues(user%A,one,one,one,zero,val,INSERT_VALUES,ierr))

@@ -76,8 +76,8 @@
       PetscCallA(MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,m*n,m*n,ierr))
       PetscCallA(MatSetType(A, MATAIJ,ierr))
       PetscCallA(MatSetFromOptions(A,ierr))
-      PetscCallA(MatMPIAIJSetPreallocation(A,five,PETSC_NULL_INTEGER,five,PETSC_NULL_INTEGER,ierr))
-      PetscCallA(MatSeqAIJSetPreallocation(A,five,PETSC_NULL_INTEGER,ierr))
+      PetscCallA(MatMPIAIJSetPreallocation(A,five,PETSC_NULL_INTEGER_ARRAY,five,PETSC_NULL_INTEGER_ARRAY,ierr))
+      PetscCallA(MatSeqAIJSetPreallocation(A,five,PETSC_NULL_INTEGER_ARRAY,ierr))
 
 !  Currently, all PETSc parallel matrix formats are partitioned by
 !  contiguous chunks of rows across the processors.  Determine which
