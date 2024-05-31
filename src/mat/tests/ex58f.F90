@@ -34,16 +34,16 @@
       PetscCallA(VecSetSizes(rowmax,M,M,ierr))
       PetscCallA(VecSetFromOptions(rowmax,ierr))
 
-      PetscCallA(MatGetRowMaxAbs(A,rowmax,PETSC_NULL_INTEGER,ierr))
+      PetscCallA(MatGetRowMaxAbs(A,rowmax,PETSC_NULL_INTEGER_ARRAY,ierr))
       PetscCallA(VecView(rowmax,PETSC_VIEWER_STDOUT_WORLD,ierr))
 
-      PetscCallA(MatGetRowMax(A,rowmax,PETSC_NULL_INTEGER,ierr))
+      PetscCallA(MatGetRowMax(A,rowmax,PETSC_NULL_INTEGER_ARRAY,ierr))
       PetscCallA(VecView(rowmax,PETSC_VIEWER_STDOUT_WORLD,ierr))
 
-      PetscCallA(MatGetRowMinAbs(A,rowmax,PETSC_NULL_INTEGER,ierr))
+      PetscCallA(MatGetRowMinAbs(A,rowmax,PETSC_NULL_INTEGER_ARRAY,ierr))
       PetscCallA(VecView(rowmax,PETSC_VIEWER_STDOUT_WORLD,ierr))
 
-      PetscCallA(MatGetRowMin(A,rowmax,PETSC_NULL_INTEGER,ierr))
+      PetscCallA(MatGetRowMin(A,rowmax,PETSC_NULL_INTEGER_ARRAY,ierr))
       PetscCallA(VecView(rowmax,PETSC_VIEWER_STDOUT_WORLD,ierr))
 
       PetscCallA(MatGetOwnershipIS(A,isrow,iscol,ierr))

@@ -193,7 +193,7 @@
 #define PetscCheckA(err, c, ierr, s) if (.not.(err)) then; SETERRA(c, ierr, s); endif
 #define PetscCheck(err, c, ierr, s) if (.not.(err)) then; SETERRQ(c, ierr, s); endif
 
-#define PetscMatlabEngine PetscFortranAddr
+#define PetscMatlabEngine type(tPetscMatlabEngine)
 
 #if !defined(PetscFlush)
 #if defined(PETSC_HAVE_FORTRAN_FLUSH)

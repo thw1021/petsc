@@ -32,15 +32,6 @@
       PetscEnum, parameter :: SNES_DIVERGED_TR_DELTA           = -11
       PetscEnum, parameter :: SNES_CONVERGED_ITERATING         =  0
 !
-!     SNESLineSearchReason
-!
-      PetscEnum, parameter :: SNES_LINESEARCH_SUCCEEDED       = 0
-      PetscEnum, parameter :: SNES_LINESEARCH_FAILED_NANORINF = 1
-      PetscEnum, parameter :: SNES_LINESEARCH_FAILED_DOMAIN   = 2
-      PetscEnum, parameter :: SNES_LINESEARCH_FAILED_REDUCT   = 3
-      PetscEnum, parameter :: SNES_LINESEARCH_FAILED_USER     = 4
-      PetscEnum, parameter :: SNES_LINESEARCH_FAILED_FUNCTION = 5
-!
 !  SNESNormSchedule
 !
       PetscEnum, parameter :: SNES_NORM_DEFAULT                = -1
