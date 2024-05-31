@@ -68,6 +68,8 @@ Changes: Development
 
 .. rubric:: DMSwarm:
 
+- Add ``DMSwarmGetUseAffineMass()`` and ``DMSwarmSetUseAffineMass()`` to access flag to (not) use affine maps for particle interpolation
+
 .. rubric:: DMPlex:
 
 - Add ``DMLabelGetValueBounds()``

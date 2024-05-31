@@ -131,6 +131,8 @@ PETSC_EXTERN PetscErrorCode DMSwarmGetCellSwarm(DM, PetscInt, DM);
 PETSC_EXTERN PetscErrorCode DMSwarmRestoreCellSwarm(DM, PetscInt, DM);
 PETSC_EXTERN PetscErrorCode DMSwarmGetNumSpecies(DM, PetscInt *);
 PETSC_EXTERN PetscErrorCode DMSwarmSetNumSpecies(DM, PetscInt);
+PETSC_EXTERN PetscErrorCode DMSwarmGetUseAffineMass(DM, PetscBool *);
+PETSC_EXTERN PetscErrorCode DMSwarmSetUseAffineMass(DM, PetscBool);
 PETSC_EXTERN PetscErrorCode DMSwarmGetCoordinateFunction(DM, PetscErrorCode (**)(PetscInt, PetscReal, const PetscReal[], PetscInt, PetscScalar[], void *));
 PETSC_EXTERN PetscErrorCode DMSwarmSetCoordinateFunction(DM, PetscErrorCode (*)(PetscInt, PetscReal, const PetscReal[], PetscInt, PetscScalar[], void *));
 PETSC_EXTERN PetscErrorCode DMSwarmGetVelocityFunction(DM, PetscErrorCode (**)(PetscInt, PetscReal, const PetscReal[], PetscInt, PetscScalar[], void *));
