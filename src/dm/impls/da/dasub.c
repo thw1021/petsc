@@ -66,15 +66,17 @@ PetscErrorCode DMDAGetLogicalCoordinate(DM da, PetscScalar x, PetscScalar y, Pet
     *JJ  = -1;
     rank = 0;
   } else {
-    *X = c[*JJ][*II].x;
-    *Y = c[*JJ][*II].y;
+    if (X) *X = c[*JJ][*II].x;
+    if (Y) *Y = c[*JJ][*II].y;
     PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)da), &rank));
     rank++;
   }
-  PetscCall(MPIU_Allreduce(&rank, &root, 1, MPI_INT, MPI_SUM, PetscObjectComm((PetscObject)da)));
-  root--;
-  PetscCallMPI(MPI_Bcast(X, 1, MPIU_SCALAR, root, PetscObjectComm((PetscObject)da)));
-  PetscCallMPI(MPI_Bcast(Y, 1, MPIU_SCALAR, root, PetscObjectComm((PetscObject)da)));
+  if (X || Y) {
+    PetscCall(MPIU_Allreduce(&rank, &root, 1, MPI_INT, MPI_SUM, PetscObjectComm((PetscObject)da)));
+    root--;
+  }
+  if (X) PetscCallMPI(MPI_Bcast(X, 1, MPIU_SCALAR, root, PetscObjectComm((PetscObject)da)));
+  if (Y) PetscCallMPI(MPI_Bcast(Y, 1, MPIU_SCALAR, root, PetscObjectComm((PetscObject)da)));
   PetscCall(DMDAVecRestoreArrayRead(dacoors, coors, &c));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
