@@ -1758,7 +1758,7 @@ PetscErrorCode PCASMGetDMSubdomains(PC pc, PetscBool *flg)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PCASMGetSubMatType - Gets the matrix type used for `PCASM` subsolves, as a string.
 
   Not Collective
@@ -1781,7 +1781,7 @@ PetscErrorCode PCASMGetSubMatType(PC pc, MatType *sub_mat_type)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PCASMSetSubMatType - Set the type of matrix used for `PCASM` subsolves
 
   Collective

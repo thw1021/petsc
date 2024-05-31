@@ -90,7 +90,7 @@
       PetscCallMPIA(MPI_Comm_size(PETSC_COMM_WORLD,size,ierr))
 
 ! Set up data structures
-      PetscCallA(DMDACreate1d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE,N,i1,i1,PETSC_NULL_INTEGER,ctx%da,ierr))
+      PetscCallA(DMDACreate1d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE,N,i1,i1,PETSC_NULL_INTEGER_ARRAY,ctx%da,ierr))
       PetscCallA(DMSetFromOptions(ctx%da,ierr))
       PetscCallA(DMSetUp(ctx%da,ierr))
       PetscCallA(DMCreateGlobalVector(ctx%da,x,ierr))
@@ -102,7 +102,7 @@
       PetscCallA(VecDuplicate(x,U,ierr))
       PetscCallA(PetscObjectSetName(U,'Exact Solution',ierr))
 
-      PetscCallA(MatCreateAIJ(PETSC_COMM_WORLD,PETSC_DECIDE,PETSC_DECIDE,N,N,i3,PETSC_NULL_INTEGER,i0,PETSC_NULL_INTEGER,J,ierr))
+      PetscCallA(MatCreateAIJ(PETSC_COMM_WORLD,PETSC_DECIDE,PETSC_DECIDE,N,N,i3,PETSC_NULL_INTEGER_ARRAY,i0,PETSC_NULL_INTEGER_ARRAY,J,ierr))
       PetscCallA(MatSetOption(J,MAT_NEW_NONZERO_LOCATION_ERR,PETSC_FALSE,ierr))
       PetscCallA(MatGetType(J,matrixname,ierr))
 

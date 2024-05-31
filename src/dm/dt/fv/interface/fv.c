@@ -1279,7 +1279,7 @@ PetscErrorCode PetscFVGetNumComponents(PetscFV fvm, PetscInt *comp)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PetscFVSetComponentName - Set the name of a component (used in output and viewing) in a `PetscFV`
 
   Logically Collective

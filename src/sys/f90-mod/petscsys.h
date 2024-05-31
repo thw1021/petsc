@@ -35,6 +35,10 @@
       end type tPetscDeviceContext
       PetscDeviceContext, parameter :: PETSC_NULL_DEVICE_CONTEXT = tPetscDeviceContext(0)
 
+      type, extends(tPetscObject) :: tPetscMatlabEngine
+      end type tPetscMatlabEngine
+      PetscMatlabEngine, parameter :: PETSC_NULL_MATLABENGINE = tPetscMatlabEngine(0)
+
 ! ------------------------------------------------------------------------
 !     Non Common block Stuff declared first
 !

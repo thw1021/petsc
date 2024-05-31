@@ -124,7 +124,7 @@
 !     This really needs only the star-type stencil, but we use the box stencil
 
       call DMDACreate2d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,DMDA_STENCIL_STAR,i4,i4,PETSC_DECIDE,PETSC_DECIDE, &
-                        i1,i1, PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,da,ierr)
+                        i1,i1, PETSC_NULL_INTEGER_ARRAY,PETSC_NULL_INTEGER_ARRAY,da,ierr)
       CHKERRA(ierr)
       call DMSetFromOptions(da,ierr)
       CHKERRA(ierr)
@@ -142,8 +142,8 @@
 !  Get local grid boundaries (for 2-dimensional DMDA)
 
       call DMDAGetInfo(da,PETSC_NULL_INTEGER,mx,my,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER, &
-                       PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER, &
-                       PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,ierr)
+                       PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_ENUM,PETSC_NULL_ENUM, &
+                       PETSC_NULL_ENUM,PETSC_NULL_ENUM,ierr)
       CHKERRA(ierr)
       call DMDAGetCorners(da,xs,ys,PETSC_NULL_INTEGER,xm,ym,PETSC_NULL_INTEGER,ierr)
       CHKERRA(ierr)

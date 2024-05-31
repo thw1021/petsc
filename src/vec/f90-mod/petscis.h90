@@ -31,6 +31,7 @@
 
       Interface
         Subroutine ISLocalToGlobalMappingGetIndicesF90(i,array,ierr)
+          import tISLocalToGlobalMapping
           PetscInt, pointer :: array(:)
           PetscErrorCode  ierr
          ISLocalToGlobalMapping       i
@@ -39,6 +40,7 @@
 
       Interface
         Subroutine ISLocalToGlobalMappingRestoreIndicesF90(i,array,ierr)
+          import tISLocalToGlobalMapping
           PetscInt, pointer :: array(:)
           PetscErrorCode  ierr
          ISLocalToGlobalMapping       i
