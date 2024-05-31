@@ -208,7 +208,6 @@ PetscErrorCode PetscViewerExodusIISetNodalVariableNumber(PetscViewer viewer, int
 
   PetscFunctionBegin;
   exo->numNodalVariables = num;
-  // Allocate memory for all nodal variable names, each with EX_MAX_NAME characters
   PetscCall(PetscMalloc1(num * EX_MAX_NAME, &exo->nodalVariableNames));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -238,15 +237,6 @@ PetscErrorCode PetscViewerExodusIIGetNodalVariableNumber(PetscViewer viewer, int
 
   PetscFunctionBegin;
   *num = exo->numNodalVariables;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-PetscErrorCode PetscViewerExodusIIGetGlobalVariableNumber(PetscViewer viewer, int *num)
-{
-  PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
-
-  PetscFunctionBegin;
-  *num = exo->numGlobalVariables;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -294,7 +284,8 @@ PetscErrorCode PetscViewerExodusIISetZonalVariableNames(PetscViewer viewer, char
   PetscErrorCode        ierr;
   int                   i;
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
-  int numNames;
+  int                   numNames;
+
   PetscFunctionBegin;
   PetscViewerExodusIIGetZonalVariableNumber(viewer, &numNames);
   PetscCheck(numNames >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of names must be non-negative");
@@ -316,15 +307,16 @@ PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetNodalVariableNames(PetscViewer
   PetscErrorCode        ierr;
   int                   i;
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
-  int numNames;
+  int                   numNames;
+
   PetscFunctionBegin;
   PetscViewerExodusIIGetNodalVariableNumber(viewer, &numNames);
-  PetscCheck(numNames>=0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of names must be non-negative");
+  PetscCheck(numNames >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of names must be non-negative");
   if (!exo->nodalVariableNames) {
     ierr = PetscMalloc1(numNames * EX_MAX_NAME, &exo->nodalVariableNames);
     CHKERRQ(ierr);
   }
- for (i = 0; i < numNames; i++) {
+  for (i = 0; i < numNames; i++) {
     ierr = PetscStrncpy(exo->nodalVariableNames + i * EX_MAX_NAME, names[i], EX_MAX_NAME);
     CHKERRQ(ierr);
   }
