@@ -560,7 +560,7 @@ PetscErrorCode DMSwarmGetUseAffineMass(DM sw, PetscBool *b)
 
   Input Parameters:
 + sw - the `DMSWARM`
-. b - use affine
+- b  - use affine
 
   Level: intermediate
 

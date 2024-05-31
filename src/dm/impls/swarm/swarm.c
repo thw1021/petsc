@@ -493,10 +493,8 @@ static PetscErrorCode DMSwarmComputeMassMatrix_Private(DM dmc, DM dmf, Mat mass,
   PetscCall(MatAssemblyEnd(mass, MAT_FINAL_ASSEMBLY));
   // normalize to row sum = 1
   if (Nq != 1) {
-    PetscCall(PetscInfo(dmf, "Scale mass by 1 / %d\n", (int)Nq));
+    PetscCall(PetscInfo(dmf, "Scale particle mass matrix by 1 / %d\n", (int)Nq));
     PetscCall(MatScale(mass, 1. / (double)Nq));
-    /* PetscCall(VecDestroy(&ones)); */
-    /* PetscCall(VecDestroy(&mass_one)); */
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
