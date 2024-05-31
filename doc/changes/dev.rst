@@ -61,14 +61,13 @@ Changes: Development
 
 .. rubric:: DM/DA:
 
-- Add ``DMGetSparseLocalize()`` and ``DMSwarmSetUseAffineMass()`` to
-  access flag to (not) use affine maps for particle interpolation
+- Add ``DMGetSparseLocalize()`` and ``DMSetSparseLocalize()``
 - Add ``DMGeomModelRegister()``, ``DMGeomModelRegisterAll()``, ``DMGeomModelRegisterDestroy()``, ``DMSnapToGeomModel()``, ``DMSetSnapToGeomModel()`` to support registering geometric models
 - Add ``DMGetOutputSequenceLength()``
 
 .. rubric:: DMSwarm:
 
-   - Add ``DMSwarmGetUseAffineMass()`` and ``DMSetSparseLocalize()``
+- Add ``DMSwarmGetUseAffineMass()`` and ``DMSwarmSetUseAffineMass()`` to access flag to (not) use affine maps for particle interpolation
 
 .. rubric:: DMPlex:
 
