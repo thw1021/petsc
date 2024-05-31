@@ -7283,13 +7283,15 @@ PetscErrorCode MatCreateSubMatricesMPI(Mat mat, PetscInt n, const IS irow[], con
 
   Level: advanced
 
-  Note:
+  Notes:
   Frees not only the matrices, but also the array that contains the matrices
+
+  For matrices obtained with  `MatCreateSubMatrices()` use `MatDestroySubMatrices()`
 
   Fortran Note:
   This does not free the array.
 
-.seealso: [](ch_matrices), `Mat`, `MatCreateSubMatrices()` `MatDestroySubMatrices()`
+.seealso: [](ch_matrices), `Mat`, `MatCreateSubMatrices()`, `MatDestroySubMatrices()`
 @*/
 PetscErrorCode MatDestroyMatrices(PetscInt n, Mat *mat[])
 {
