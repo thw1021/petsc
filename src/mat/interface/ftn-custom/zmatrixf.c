@@ -73,18 +73,6 @@
   #define matzerorowscolumnslocal_     MATZEROROWSCOLUMNSLOCAL
   #define matzerorowscolumnslocalis_   MATZEROROWSCOLUMNSLOCALIS
   #define matcreatevecs_               MATCREATEVECS
-  #define matgetinfo_                  MATGETINFO
-  #define matlufactor_                 MATLUFACTOR
-  #define matilufactor_                MATILUFACTOR
-  #define matlufactorsymbolic_         MATLUFACTORSYMBOLIC
-  #define matlufactornumeric_          MATLUFACTORNUMERIC
-  #define matcholeskyfactor_           MATCHOLESKYFACTOR
-  #define matcholeskyfactorsymbolic_   MATCHOLESKYFACTORSYMBOLIC
-  #define matcholeskyfactornumeric_    MATCHOLESKYFACTORNUMERIC
-  #define matilufactorsymbolic_        MATILUFACTORSYMBOLIC
-  #define maticcfactorsymbolic_        MATICCFACTORSYMBOLIC
-  #define maticcfactor_                MATICCFACTOR
-  #define matfactorinfoinitialize_     MATFACTORINFOINITIALIZE
   #define matnullspacesetfunction_     MATNULLSPACESETFUNCTION
   #define matfindnonzerorows_          MATFINDNONZEROROWS
   #define matgetsize_                  MATGETSIZE
@@ -154,18 +142,6 @@
   #define matzerorowslocalis_          matzerorowslocalis
   #define matzerorowscolumnslocal_     matzerorowscolumnslocal
   #define matzerorowscolumnslocalis_   matzerorowscolumnslocalis
-  #define matgetinfo_                  matgetinfo
-  #define matlufactor_                 matlufactor
-  #define matilufactor_                matilufactor
-  #define matlufactorsymbolic_         matlufactorsymbolic
-  #define matlufactornumeric_          matlufactornumeric
-  #define matcholeskyfactor_           matcholeskyfactor
-  #define matcholeskyfactorsymbolic_   matcholeskyfactorsymbolic
-  #define matcholeskyfactornumeric_    matcholeskyfactornumeric
-  #define matilufactorsymbolic_        matilufactorsymbolic
-  #define maticcfactorsymbolic_        maticcfactorsymbolic
-  #define maticcfactor_                maticcfactor
-  #define matfactorinfoinitialize_     matfactorinfoinitialize
   #define matnullspacesetfunction_     matnullspacesetfunction
   #define matfindnonzerorows_          matfindnonzerorows
   #define matgetsize_                  matgetsize
@@ -754,77 +730,6 @@ PETSC_EXTERN void matdestroysubmatrices_(PetscInt *n, Mat *smat, PetscErrorCode 
   for (i = 0; i <= *n; i++) { PETSC_FORTRAN_OBJECT_C_NULL_TO_F_DESTROYED(&smat[i]); }
 }
 
-PETSC_EXTERN void matgetinfo_(Mat *mat, MatInfoType *flag, MatInfo *info, int *ierr)
-{
-  *ierr = MatGetInfo(*mat, *flag, info);
-}
-
-PETSC_EXTERN void matlufactor_(Mat *mat, IS *row, IS *col, const MatFactorInfo *info, int *ierr)
-{
-  CHKFORTRANNULLOBJECT(row);
-  CHKFORTRANNULLOBJECT(col);
-  *ierr = MatLUFactor(*mat, row ? *row : NULL, col ? *col : NULL, info);
-}
-
-PETSC_EXTERN void matilufactor_(Mat *mat, IS *row, IS *col, const MatFactorInfo *info, int *ierr)
-{
-  CHKFORTRANNULLOBJECT(row);
-  CHKFORTRANNULLOBJECT(col);
-  *ierr = MatILUFactor(*mat, row ? *row : NULL, col ? *col : NULL, info);
-}
-
-PETSC_EXTERN void matlufactorsymbolic_(Mat *fact, Mat *mat, IS *row, IS *col, const MatFactorInfo *info, int *ierr)
-{
-  CHKFORTRANNULLOBJECT(row);
-  CHKFORTRANNULLOBJECT(col);
-  *ierr = MatLUFactorSymbolic(*fact, *mat, row ? *row : NULL, col ? *col : NULL, info);
-}
-
-PETSC_EXTERN void matlufactornumeric_(Mat *fact, Mat *mat, const MatFactorInfo *info, int *ierr)
-{
-  *ierr = MatLUFactorNumeric(*fact, *mat, info);
-}
-
-PETSC_EXTERN void matcholeskyfactor_(Mat *mat, IS *perm, const MatFactorInfo *info, int *ierr)
-{
-  CHKFORTRANNULLOBJECT(perm);
-  *ierr = MatCholeskyFactor(*mat, perm ? *perm : NULL, info);
-}
-
-PETSC_EXTERN void matcholeskyfactorsymbolic_(Mat *fact, Mat *mat, IS *perm, const MatFactorInfo *info, int *ierr)
-{
-  CHKFORTRANNULLOBJECT(perm);
-  *ierr = MatCholeskyFactorSymbolic(*fact, *mat, perm ? *perm : NULL, info);
-}
-
-PETSC_EXTERN void matcholeskyfactornumeric_(Mat *fact, Mat *mat, const MatFactorInfo *info, int *ierr)
-{
-  *ierr = MatCholeskyFactorNumeric(*fact, *mat, info);
-}
-
-PETSC_EXTERN void matilufactorsymbolic_(Mat *fact, Mat *mat, IS *row, IS *col, const MatFactorInfo *info, int *ierr)
-{
-  CHKFORTRANNULLOBJECT(row);
-  CHKFORTRANNULLOBJECT(col);
-  *ierr = MatILUFactorSymbolic(*fact, *mat, row ? *row : NULL, col ? *col : NULL, info);
-}
-
-PETSC_EXTERN void maticcfactorsymbolic_(Mat *fact, Mat *mat, IS *perm, const MatFactorInfo *info, int *ierr)
-{
-  CHKFORTRANNULLOBJECT(perm);
-  *ierr = MatICCFactorSymbolic(*fact, *mat, perm ? *perm : NULL, info);
-}
-
-PETSC_EXTERN void maticcfactor_(Mat *mat, IS *perm, const MatFactorInfo *info, int *ierr)
-{
-  CHKFORTRANNULLOBJECT(perm);
-  *ierr = MatICCFactor(*mat, perm ? *perm : NULL, info);
-}
-
-PETSC_EXTERN void matfactorinfoinitialize_(MatFactorInfo *info, int *ierr)
-{
-  *ierr = MatFactorInfoInitialize(info);
-}
 PETSC_EXTERN void matzerorowslocal_(Mat *mat, PetscInt *numRows, PetscInt rows[], PetscScalar *diag, Vec *x, Vec *b, int *ierr)
 {
   *ierr = MatZeroRowsLocal(*mat, *numRows, rows, *diag, *x, *b);
