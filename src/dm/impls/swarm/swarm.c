@@ -503,7 +503,7 @@ static PetscErrorCode DMSwarmComputeMassMatrix_Private(DM dmc, DM dmf, Mat mass,
     PetscCall(VecGetLocalSize(mass_one, &N));
     scale = (double)summ / (double)N;
     PetscCall(PetscInfo(dmf, "Scale mass by 1 / %g\n", (double)scale));
-    PetscCall(MatScale(mass, 1./scale));
+    PetscCall(MatScale(mass, 1. / scale));
     PetscCall(VecDestroy(&ones));
     PetscCall(VecDestroy(&mass_one));
   }
