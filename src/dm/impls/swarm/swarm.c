@@ -492,20 +492,11 @@ static PetscErrorCode DMSwarmComputeMassMatrix_Private(DM dmc, DM dmf, Mat mass,
   PetscCall(MatAssemblyBegin(mass, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(mass, MAT_FINAL_ASSEMBLY));
   // normalize to row sum = 1
-  {
-    Vec       ones, mass_one;
-    PetscInt  N;
-    PetscReal summ, scale;
-    PetscCall(MatCreateVecs(mass, &ones, &mass_one));
-    PetscCall(VecSet(ones, 1.0));
-    PetscCall(MatMult(mass, ones, mass_one));
-    PetscCall(VecSum(mass_one, &summ));
-    PetscCall(VecGetLocalSize(mass_one, &N));
-    scale = (double)summ / (double)N;
-    PetscCall(PetscInfo(dmf, "Scale mass by 1 / %g\n", (double)scale));
-    PetscCall(MatScale(mass, 1. / scale));
-    PetscCall(VecDestroy(&ones));
-    PetscCall(VecDestroy(&mass_one));
+  if (Nq != 1) {
+    PetscCall(PetscInfo(dmf, "Scale mass by 1 / %d\n", (int)Nq));
+    PetscCall(MatScale(mass, 1. / (double)Nq));
+    /* PetscCall(VecDestroy(&ones)); */
+    /* PetscCall(VecDestroy(&mass_one)); */
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
