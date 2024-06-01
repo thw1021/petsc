@@ -90,7 +90,7 @@ PetscErrorCode Destroy(Mat *A, IS *is0, IS *is1)
 
 int main(int argc, char *argv[])
 {
-  Mat                        A, S = NULL, Sexplicit = NULL, Sp, B, C;
+  Mat                        A, S = NULL, Sexplicit = NULL, Sp, B, C, D;
   MatSchurComplementAinvType ainv_type = MAT_SCHUR_COMPLEMENT_AINV_DIAG;
   IS                         is0, is1;
   PetscBool                  flg;
@@ -122,12 +122,18 @@ int main(int argc, char *argv[])
   }
   PetscCall(Destroy(&A, &is0, &is1));
   if (ainv_type == MAT_SCHUR_COMPLEMENT_AINV_DIAG) {
+    PetscReal norm[2];
+
     PetscCall(MatGetLocalSize(Sexplicit, &m, NULL));
     PetscCall(MatCreateDense(PetscObjectComm((PetscObject)Sexplicit), m, PETSC_DECIDE, PETSC_DECIDE, N, NULL, &B));
     PetscCall(MatSetRandom(B, NULL));
     PetscCall(MatMatMult(S, B, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &C));
-    PetscCall(MatMatMultEqual(Sexplicit, B, C, 10, &flg));
-    PetscCheck(flg, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "S*B != C");
+    PetscCall(MatMatMult(Sexplicit, B, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &D));
+    PetscCall(MatAXPY(D, -1.0, C, SAME_NONZERO_PATTERN));
+    PetscCall(MatNorm(C, NORM_INFINITY, norm));
+    PetscCall(MatNorm(D, NORM_INFINITY, norm + 1));
+    PetscCheck(norm[1] / norm[0] < PETSC_SQRT_MACHINE_EPSILON, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Sexplicit*B != S*B");
+    PetscCall(MatDestroy(&D));
     PetscCall(MatDestroy(&C));
     PetscCall(MatDestroy(&B));
   }
