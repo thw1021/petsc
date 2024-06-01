@@ -4,7 +4,7 @@ static PetscErrorCode MatMultEqual_Private(Mat A, Mat B, PetscInt n, PetscBool *
 {
   Vec         Ax = NULL, Bx = NULL, s1 = NULL, s2 = NULL, Ay = NULL, By = NULL;
   PetscRandom rctx;
-  PetscReal   r1, r2, tol = PETSC_SQRT_MACHINE_EPSILON;
+  PetscReal   r1, r2, tol = 100. * PETSC_MACHINE_EPSILON;
   PetscInt    am, an, bm, bn, k;
   PetscScalar none = -1.0;
 #if defined(PETSC_USE_INFO)
@@ -111,7 +111,7 @@ static PetscErrorCode MatMatMultEqual_Private(Mat A, Mat B, Mat C, PetscInt n, P
 {
   Vec         Ax, Bx, Cx, s1, s2, s3;
   PetscRandom rctx;
-  PetscReal   r1, r2, tol = PETSC_SQRT_MACHINE_EPSILON;
+  PetscReal   r1, r2, tol = 100. * PETSC_MACHINE_EPSILON;
   PetscInt    am, an, bm, bn, cm, cn, k;
   PetscScalar none = -1.0;
 #if defined(PETSC_USE_INFO)
@@ -427,7 +427,7 @@ PetscErrorCode MatMatTransposeMultEqual(Mat A, Mat B, Mat C, PetscInt n, PetscBo
 static PetscErrorCode MatProjMultEqual_Private(Mat A, Mat B, Mat C, PetscInt n, PetscBool rart, PetscBool *flg)
 {
   Vec         x, v1, v2, v3, v4, Cx, Bx;
-  PetscReal   norm_abs, norm_rel, tol = PETSC_SQRT_MACHINE_EPSILON;
+  PetscReal   norm_abs, norm_rel, tol = 100. * PETSC_MACHINE_EPSILON;
   PetscInt    i, am, an, bm, bn, cm, cn;
   PetscRandom rdm;
   PetscScalar none = -1.0;
