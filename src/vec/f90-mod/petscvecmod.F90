@@ -1,6 +1,7 @@
         module petscisdefdummy
         use petscsysdef
 #include <../src/vec/f90-mod/petscis.h>
+#include <../src/vec/f90-mod/petscislocaltoglobalmapping.h>
 #include <../src/vec/f90-mod/petscao.h>
         end module petscisdefdummy
 

@@ -52,8 +52,8 @@ program main
       PetscCallA( MatCreate(PETSC_COMM_WORLD,A,ierr))
       PetscCallA( MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,m*n,m*n,ierr))
       PetscCallA( MatSetFromOptions(A,ierr))
-      PetscCallA( MatMPIAIJSetPreallocation(A,five,PETSC_NULL_INTEGER,five,PETSC_NULL_INTEGER,ierr))
-      PetscCallA( MatSeqAIJSetPreallocation(A,five,PETSC_NULL_INTEGER,ierr))
+      PetscCallA( MatMPIAIJSetPreallocation(A,five,PETSC_NULL_INTEGER_ARRAY,five,PETSC_NULL_INTEGER_ARRAY,ierr))
+      PetscCallA( MatSeqAIJSetPreallocation(A,five,PETSC_NULL_INTEGER_ARRAY,ierr))
       PetscCallA( MatGetOwnershipRange(A,Istart,Iend,ierr))
 
       do Ii=Istart,Iend-1
