@@ -48,7 +48,6 @@
   #define matsetvalueslocaln1_         MATSETVALUESLOCALN1
   #define matdestroymatrices_          MATDESTROYMATRICES
   #define matdestroysubmatrices_       MATDESTROYSUBMATRICES
-  #define matfactorgetsolverpackage_   MATFACTORGETSOLVERPACKAGE
   #define matgetrowij_                 MATGETROWIJ
   #define matrestorerowij_             MATRESTOREROWIJ
   #define matgetrow_                   MATGETROW
@@ -73,20 +72,6 @@
   #define matzerorowslocalis_          MATZEROROWSLOCALIS
   #define matzerorowscolumnslocal_     MATZEROROWSCOLUMNSLOCAL
   #define matzerorowscolumnslocalis_   MATZEROROWSCOLUMNSLOCALIS
-  #define matcreatevecs_               MATCREATEVECS
-  #define matnullspaceremove_          MATNULLSPACEREMOVE
-  #define matgetinfo_                  MATGETINFO
-  #define matlufactor_                 MATLUFACTOR
-  #define matilufactor_                MATILUFACTOR
-  #define matlufactorsymbolic_         MATLUFACTORSYMBOLIC
-  #define matlufactornumeric_          MATLUFACTORNUMERIC
-  #define matcholeskyfactor_           MATCHOLESKYFACTOR
-  #define matcholeskyfactorsymbolic_   MATCHOLESKYFACTORSYMBOLIC
-  #define matcholeskyfactornumeric_    MATCHOLESKYFACTORNUMERIC
-  #define matilufactorsymbolic_        MATILUFACTORSYMBOLIC
-  #define maticcfactorsymbolic_        MATICCFACTORSYMBOLIC
-  #define maticcfactor_                MATICCFACTOR
-  #define matfactorinfoinitialize_     MATFACTORINFOINITIALIZE
   #define matnullspacesetfunction_     MATNULLSPACESETFUNCTION
   #define matfindnonzerorows_          MATFINDNONZEROROWS
   #define matgetsize_                  MATGETSIZE
@@ -103,7 +88,6 @@
   #define matgetownershiprange10_      MATGETOWNERSHIPRANGE10
   #define matgetownershiprange01_      MATGETOWNERSHIPRANGE01
   #define matgetownershiprange11_      MATGETOWNERSHIPRANGE11
-  #define matgetownershipis_           MATGETOWNERSHIPIS
 #elif !defined(PETSC_HAVE_FORTRAN_UNDERSCORE)
   #define matsetvalues_                matsetvalues
   #define matsetvaluesnnnn_            matsetvaluesnnnn
@@ -134,8 +118,6 @@
   #define matsetvaluesblockedlocaln1_  matsetvaluesblockedlocaln1
   #define matdestroymatrices_          matdestroymatrices
   #define matdestroysubmatrices_       matdestroysubmatrices
-  #define matfactorgetsolverpackage_   matfactorgetsolverpackage
-  #define matcreatevecs_               matcreatevecs
   #define matgetrowij_                 matgetrowij
   #define matrestorerowij_             matrestorerowij
   #define matgetrow_                   matgetrow
@@ -158,19 +140,6 @@
   #define matzerorowslocalis_          matzerorowslocalis
   #define matzerorowscolumnslocal_     matzerorowscolumnslocal
   #define matzerorowscolumnslocalis_   matzerorowscolumnslocalis
-  #define matnullspaceremove_          matnullspaceremove
-  #define matgetinfo_                  matgetinfo
-  #define matlufactor_                 matlufactor
-  #define matilufactor_                matilufactor
-  #define matlufactorsymbolic_         matlufactorsymbolic
-  #define matlufactornumeric_          matlufactornumeric
-  #define matcholeskyfactor_           matcholeskyfactor
-  #define matcholeskyfactorsymbolic_   matcholeskyfactorsymbolic
-  #define matcholeskyfactornumeric_    matcholeskyfactornumeric
-  #define matilufactorsymbolic_        matilufactorsymbolic
-  #define maticcfactorsymbolic_        maticcfactorsymbolic
-  #define maticcfactor_                maticcfactor
-  #define matfactorinfoinitialize_     matfactorinfoinitialize
   #define matnullspacesetfunction_     matnullspacesetfunction
   #define matfindnonzerorows_          matfindnonzerorows
   #define matgetsize_                  matgetsize
@@ -202,7 +171,6 @@
   #define matgetownershiprange10_      matgetownershiprange10
   #define matgetownershiprange01_      matgetownershiprange01
   #define matgetownershiprange11_      matgetownershiprange11
-  #define matgetownershipis_           matgetownershipis
 #endif
 
 PETSC_EXTERN void matgetvalues_(Mat *mat, PetscInt *m, PetscInt idxm[], PetscInt *n, PetscInt idxn[], PetscScalar v[], int *ierr)
@@ -318,13 +286,6 @@ PETSC_EXTERN void matgetownershiprange11_(Mat *mat, PetscInt *m, PetscInt *n, in
   CHKFORTRANNULLINTEGER(m);
   CHKFORTRANNULLINTEGER(n);
   *ierr = MatGetOwnershipRange(*mat, m, n);
-}
-
-PETSC_EXTERN void matgetownershipis_(Mat *mat, IS *m, IS *n, int *ierr)
-{
-  CHKFORTRANNULLOBJECT(m);
-  CHKFORTRANNULLOBJECT(n);
-  *ierr = MatGetOwnershipIS(*mat, m, n);
 }
 
 PETSC_EXTERN void matgetsize_(Mat *mat, PetscInt *m, PetscInt *n, int *ierr)
@@ -523,13 +484,6 @@ PETSC_EXTERN void matnullspacesetfunction_(MatNullSpace *sp, PetscErrorCode (*re
   *ierr = MatNullSpaceSetFunction(*sp, ournullfunction, ctx);
 }
 
-PETSC_EXTERN void matcreatevecs_(Mat *mat, Vec *right, Vec *left, int *ierr)
-{
-  CHKFORTRANNULLOBJECT(right);
-  CHKFORTRANNULLOBJECT(left);
-  *ierr = MatCreateVecs(*mat, right, left);
-}
-
 PETSC_EXTERN void matgetrowij_(Mat *B, PetscInt *shift, PetscBool *sym, PetscBool *blockcompressed, PetscInt *n, PetscInt *ia, size_t *iia, PetscInt *ja, size_t *jja, PetscBool *done, PetscErrorCode *ierr)
 {
   const PetscInt *IA, *JA;
@@ -684,19 +638,6 @@ PETSC_EXTERN void matdenserestorearrayread_(Mat *mat, PetscScalar *fa, size_t *i
   if (*ierr) return;
 }
 
-PETSC_EXTERN void matfactorgetsolverpackage_(Mat *mat, char *name, PetscErrorCode *ierr, PETSC_FORTRAN_CHARLEN_T len)
-{
-  const char *tname;
-
-  *ierr = MatFactorGetSolverType(*mat, &tname);
-  if (*ierr) return;
-  if (name != PETSC_NULL_CHARACTER_Fortran) {
-    *ierr = PetscStrncpy(name, tname, len);
-    if (*ierr) return;
-  }
-  FIXRETURNCHAR(PETSC_TRUE, name, len);
-}
-
 /*
     MatCreateSubmatrices() is slightly different from C since the
     Fortran provides the array to hold the submatrix objects,while in C that
@@ -771,92 +712,13 @@ PETSC_EXTERN void matdestroysubmatrices_(PetscInt *n, Mat *smat, PetscErrorCode 
 
   if (*n == 0) return;
   *ierr = PetscMalloc1(*n + 1, &lsmat);
-  if (!smat[*n]) smat[*n] = (Mat)-2;
-  for (i = 0; i <= *n; i++) {
-    PETSC_FORTRAN_OBJECT_F_DESTROYED_TO_C_NULL(&smat[i]);
-    lsmat[i] = smat[i];
-  }
+  if (*ierr) return;
+  for (i = 0; i <= *n; i++) { lsmat[i] = smat[i]; }
   *ierr = MatDestroySubMatrices(*n, &lsmat);
+  if (*ierr) return;
   for (i = 0; i <= *n; i++) { PETSC_FORTRAN_OBJECT_C_NULL_TO_F_DESTROYED(&smat[i]); }
 }
 
-PETSC_EXTERN void matnullspaceremove_(MatNullSpace *sp, Vec *vec, PetscErrorCode *ierr)
-{
-  CHKFORTRANNULLOBJECT(*sp);
-  *ierr = MatNullSpaceRemove(*sp, *vec);
-}
-
-PETSC_EXTERN void matgetinfo_(Mat *mat, MatInfoType *flag, MatInfo *info, int *ierr)
-{
-  *ierr = MatGetInfo(*mat, *flag, info);
-}
-
-PETSC_EXTERN void matlufactor_(Mat *mat, IS *row, IS *col, const MatFactorInfo *info, int *ierr)
-{
-  CHKFORTRANNULLOBJECT(row);
-  CHKFORTRANNULLOBJECT(col);
-  *ierr = MatLUFactor(*mat, row ? *row : NULL, col ? *col : NULL, info);
-}
-
-PETSC_EXTERN void matilufactor_(Mat *mat, IS *row, IS *col, const MatFactorInfo *info, int *ierr)
-{
-  CHKFORTRANNULLOBJECT(row);
-  CHKFORTRANNULLOBJECT(col);
-  *ierr = MatILUFactor(*mat, row ? *row : NULL, col ? *col : NULL, info);
-}
-
-PETSC_EXTERN void matlufactorsymbolic_(Mat *fact, Mat *mat, IS *row, IS *col, const MatFactorInfo *info, int *ierr)
-{
-  CHKFORTRANNULLOBJECT(row);
-  CHKFORTRANNULLOBJECT(col);
-  *ierr = MatLUFactorSymbolic(*fact, *mat, row ? *row : NULL, col ? *col : NULL, info);
-}
-
-PETSC_EXTERN void matlufactornumeric_(Mat *fact, Mat *mat, const MatFactorInfo *info, int *ierr)
-{
-  *ierr = MatLUFactorNumeric(*fact, *mat, info);
-}
-
-PETSC_EXTERN void matcholeskyfactor_(Mat *mat, IS *perm, const MatFactorInfo *info, int *ierr)
-{
-  CHKFORTRANNULLOBJECT(perm);
-  *ierr = MatCholeskyFactor(*mat, perm ? *perm : NULL, info);
-}
-
-PETSC_EXTERN void matcholeskyfactorsymbolic_(Mat *fact, Mat *mat, IS *perm, const MatFactorInfo *info, int *ierr)
-{
-  CHKFORTRANNULLOBJECT(perm);
-  *ierr = MatCholeskyFactorSymbolic(*fact, *mat, perm ? *perm : NULL, info);
-}
-
-PETSC_EXTERN void matcholeskyfactornumeric_(Mat *fact, Mat *mat, const MatFactorInfo *info, int *ierr)
-{
-  *ierr = MatCholeskyFactorNumeric(*fact, *mat, info);
-}
-
-PETSC_EXTERN void matilufactorsymbolic_(Mat *fact, Mat *mat, IS *row, IS *col, const MatFactorInfo *info, int *ierr)
-{
-  CHKFORTRANNULLOBJECT(row);
-  CHKFORTRANNULLOBJECT(col);
-  *ierr = MatILUFactorSymbolic(*fact, *mat, row ? *row : NULL, col ? *col : NULL, info);
-}
-
-PETSC_EXTERN void maticcfactorsymbolic_(Mat *fact, Mat *mat, IS *perm, const MatFactorInfo *info, int *ierr)
-{
-  CHKFORTRANNULLOBJECT(perm);
-  *ierr = MatICCFactorSymbolic(*fact, *mat, perm ? *perm : NULL, info);
-}
-
-PETSC_EXTERN void maticcfactor_(Mat *mat, IS *perm, const MatFactorInfo *info, int *ierr)
-{
-  CHKFORTRANNULLOBJECT(perm);
-  *ierr = MatICCFactor(*mat, perm ? *perm : NULL, info);
-}
-
-PETSC_EXTERN void matfactorinfoinitialize_(MatFactorInfo *info, int *ierr)
-{
-  *ierr = MatFactorInfoInitialize(info);
-}
 PETSC_EXTERN void matzerorowslocal_(Mat *mat, PetscInt *numRows, PetscInt rows[], PetscScalar *diag, Vec *x, Vec *b, int *ierr)
 {
   *ierr = MatZeroRowsLocal(*mat, *numRows, rows, *diag, *x, *b);
