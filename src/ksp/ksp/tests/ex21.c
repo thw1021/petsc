@@ -202,7 +202,7 @@ int main(int argc, char *argv[])
     # does not work with single because residual norm computed by GMRES recurrence formula becomes invalid
     requires: !single
     suffix: diag_3
-    args: -mat_schur_complement_ainv_type diag -ksp_rtol 1e-12
+    args: -mat_schur_complement_ainv_type diag -ksp_rtol 1e-14 -ksp_type fgmres
     nsize: 3
   test:
     # does not work with single because residual norm computed by GMRES recurrence formula becomes invalid
