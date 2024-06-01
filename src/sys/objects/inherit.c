@@ -383,7 +383,7 @@ PetscErrorCode PetscObjectsDump(FILE *fd, PetscBool all)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PetscObjectsView - Prints the currently existing objects.
 
   Logically Collective
@@ -409,7 +409,7 @@ PetscErrorCode PetscObjectsView(PetscViewer viewer)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PetscObjectsGetObject - Get a pointer to a named object
 
   Not Collective
@@ -425,7 +425,7 @@ PetscErrorCode PetscObjectsView(PetscViewer viewer)
 
 .seealso: `PetscObject`
 @*/
-PetscErrorCode PetscObjectsGetObject(const char name[], PetscObject *obj, char **classname)
+PetscErrorCode PetscObjectsGetObject(const char name[], PetscObject *obj, const char *classname[])
 {
   PetscInt    i;
   PetscObject h;
@@ -445,6 +445,16 @@ PetscErrorCode PetscObjectsGetObject(const char name[], PetscObject *obj, char *
       }
     }
   }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+#else
+PetscErrorCode PetscObjectsView(PetscViewer viewer)
+{
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode PetscObjectsGetObject(const char name[], PetscObject *obj, const char *classname[])
+{
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 #endif

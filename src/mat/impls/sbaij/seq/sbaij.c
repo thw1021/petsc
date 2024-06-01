@@ -1798,7 +1798,7 @@ PETSC_INTERN PetscErrorCode MatGetFactor_seqsbaij_petsc(Mat A, MatFactorType fty
 
 .seealso: [](ch_matrices), `Mat`, `MATSEQSBAIJ`, `MatSeqSBAIJRestoreArray()`, `MatSeqAIJGetArray()`, `MatSeqAIJRestoreArray()`
 @*/
-PetscErrorCode MatSeqSBAIJGetArray(Mat A, PetscScalar **array)
+PetscErrorCode MatSeqSBAIJGetArray(Mat A, PetscScalar *array[])
 {
   PetscFunctionBegin;
   PetscUseMethod(A, "MatSeqSBAIJGetArray_C", (Mat, PetscScalar **), (A, array));
@@ -1818,7 +1818,7 @@ PetscErrorCode MatSeqSBAIJGetArray(Mat A, PetscScalar **array)
 
 .seealso: [](ch_matrices), `Mat`, `MATSEQSBAIJ`, `MatSeqSBAIJGetArray()`, `MatSeqAIJGetArray()`, `MatSeqAIJRestoreArray()`
 @*/
-PetscErrorCode MatSeqSBAIJRestoreArray(Mat A, PetscScalar **array)
+PetscErrorCode MatSeqSBAIJRestoreArray(Mat A, PetscScalar *array[])
 {
   PetscFunctionBegin;
   PetscUseMethod(A, "MatSeqSBAIJRestoreArray_C", (Mat, PetscScalar **), (A, array));

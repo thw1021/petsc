@@ -144,7 +144,6 @@ native    MatSTRUMPACKCompressionType
 
 # petscpc.h
 nativeptr PC
-nativeptr PCType
 
 native    PCSide
 native    PCJacobiType
@@ -176,7 +175,7 @@ nativeptr PetscConvEst
 native    SNESConvergedReason
 native    SNESLineSearchReason
 nativeptr MatMFFD
-nativeptr MatMFFDType
+native    MatMFFDType
 nativeptr SNESLineSearch
 native    SNESLineSearchOrder
 native    SNESNormSchedule

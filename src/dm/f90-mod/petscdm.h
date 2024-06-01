@@ -107,6 +107,11 @@
       PetscEnum, parameter :: PETSCDTNODES_GAUSSJACOBI = 0
       PetscEnum, parameter :: PETSCDTNODES_EQUISPACED  = 1
       PetscEnum, parameter :: PETSCDTNODES_TANHSINH    = 2
+!
+!  PetscGaussLobattoLegendreCreateType
+!
+      PetscEnum, parameter :: PETSCGAUSSLOBATTOLEGENDRE_VIA_LINEAR_ALGEBR = 0
+      PetscEnum, parameter :: PETSCGAUSSLOBATTOLEGENDRE_VIA_NEWTON = 1
 
 #if defined(_WIN32) && defined(PETSC_USE_SHARED_LIBRARIES)
 !DEC$ ATTRIBUTES DLLEXPORT::PETSC_NULL_DM
