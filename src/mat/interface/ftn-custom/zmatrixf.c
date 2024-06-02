@@ -60,34 +60,8 @@
   #define matdenserestorearrayread_    MATDENSERESTOREARRAYREAD
   #define matcreatesubmatrices_        MATCREATESUBMATRICES
   #define matcreatesubmatricesmpi_     MATCREATESUBMATRICESMPI
-  #define matzerorowscolumns_          MATZEROROWSCOLUMNS
-  #define matzerorowscolumnsis_        MATZEROROWSCOLUMNSIS
-  #define matzerorowsstencil_          MATZEROROWSSTENCIL
-  #define matzerorowscolumnsstencil_   MATZEROROWSCOLUMNSSTENCIL
-  #define matzerorows_                 MATZEROROWS
-  #define matzerorowsis_               MATZEROROWSIS
-  #define matzerorowslocal_            MATZEROROWSLOCAL
-  #define matzerorowslocal0_           MATZEROROWSLOCAL0
-  #define matzerorowslocal1_           MATZEROROWSLOCAL1
-  #define matzerorowslocalis_          MATZEROROWSLOCALIS
-  #define matzerorowscolumnslocal_     MATZEROROWSCOLUMNSLOCAL
-  #define matzerorowscolumnslocalis_   MATZEROROWSCOLUMNSLOCALIS
   #define matnullspacesetfunction_     MATNULLSPACESETFUNCTION
   #define matfindnonzerorows_          MATFINDNONZEROROWS
-  #define matgetsize_                  MATGETSIZE
-  #define matgetsize00_                MATGETSIZE00
-  #define matgetsize10_                MATGETSIZE10
-  #define matgetsize01_                MATGETSIZE01
-  #define matgetlocalsize_             MATGETLOCALSIZE
-  #define matgetlocalsize00_           MATGETLOCALSIZE00
-  #define matgetlocalsize10_           MATGETLOCALSIZE10
-  #define matgetlocalsize01_           MATGETLOCALSIZE01
-  #define matsetnullspace_             MATSETNULLSPACE
-  #define matgetownershiprange_        MATGETOWNERSHIPRANGE
-  #define matgetownershiprange00_      MATGETOWNERSHIPRANGE00
-  #define matgetownershiprange10_      MATGETOWNERSHIPRANGE10
-  #define matgetownershiprange01_      MATGETOWNERSHIPRANGE01
-  #define matgetownershiprange11_      MATGETOWNERSHIPRANGE11
 #elif !defined(PETSC_HAVE_FORTRAN_UNDERSCORE)
   #define matsetvalues_                matsetvalues
   #define matsetvaluesnnnn_            matsetvaluesnnnn
@@ -130,26 +104,8 @@
   #define matdenserestorearrayread_    matdenserestorearrayread
   #define matcreatesubmatrices_        matcreatesubmatrices
   #define matcreatesubmatricesmpi_     matcreatesubmatricesmpi
-  #define matzerorowscolumns_          matzerorowscolumns
-  #define matzerorowscolumnsis_        matzerorowscolumnsis
-  #define matzerorowsstencil_          matzerorowsstencil
-  #define matzerorowscolumnsstencil_   matzerorowscolumnsstencil
-  #define matzerorows_                 matzerorows
-  #define matzerorowsis_               matzerorowsis
-  #define matzerorowslocal_            matzerorowslocal
-  #define matzerorowslocalis_          matzerorowslocalis
-  #define matzerorowscolumnslocal_     matzerorowscolumnslocal
-  #define matzerorowscolumnslocalis_   matzerorowscolumnslocalis
   #define matnullspacesetfunction_     matnullspacesetfunction
   #define matfindnonzerorows_          matfindnonzerorows
-  #define matgetsize_                  matgetsize
-  #define matgetsize00_                matgetsize00
-  #define matgetsize10_                matgetsize10
-  #define matgetsize01_                matgetsize01
-  #define matgetlocalsize_             matgetlocalsize
-  #define matgetlocalsize00_           matgetlocalsize00
-  #define matgetlocalsize10_           matgetlocalsize10
-  #define matgetlocalsize01_           matgetlocalsize01
   #define matgetvalues_                matgetvalues
   #define matgetvalues0_               matgetvalues0
   #define matgetvaluesnn1_             matgetvaluesnn1
@@ -165,12 +121,6 @@
   #define matgetvalueslocal11_         matgetvalueslocal11
   #define matgetvalueslocal1n_         matgetvalueslocal1n
   #define matgetvalueslocaln1_         matgetvalueslocaln1
-  #define matsetnullspace_             matsetnullspace
-  #define matgetownershiprange_        matgetownershiprange
-  #define matgetownershiprange00_      matgetownershiprange00
-  #define matgetownershiprange10_      matgetownershiprange10
-  #define matgetownershiprange01_      matgetownershiprange01
-  #define matgetownershiprange11_      matgetownershiprange11
 #endif
 
 PETSC_EXTERN void matgetvalues_(Mat *mat, PetscInt *m, PetscInt idxm[], PetscInt *n, PetscInt idxn[], PetscScalar v[], int *ierr)
@@ -251,85 +201,6 @@ PETSC_EXTERN void matgetvalueslocal1n_(Mat *mat, PetscInt *m, PetscInt idxm[], P
 PETSC_EXTERN void matgetvalueslocaln1_(Mat *mat, PetscInt *m, PetscInt idxm[], PetscInt *n, PetscInt idxn[], PetscScalar v[], int *ierr)
 {
   matgetvalueslocal_(mat, m, idxm, n, idxn, v, ierr);
-}
-
-PETSC_EXTERN void matgetownershiprange_(Mat *mat, PetscInt *m, PetscInt *n, int *ierr)
-{
-  CHKFORTRANNULLINTEGER(m);
-  CHKFORTRANNULLINTEGER(n);
-  *ierr = MatGetOwnershipRange(*mat, m, n);
-}
-
-PETSC_EXTERN void matgetownershiprange00_(Mat *mat, PetscInt *m, PetscInt *n, int *ierr)
-{
-  CHKFORTRANNULLINTEGER(m);
-  CHKFORTRANNULLINTEGER(n);
-  *ierr = MatGetOwnershipRange(*mat, m, n);
-}
-
-PETSC_EXTERN void matgetownershiprange10_(Mat *mat, PetscInt *m, PetscInt *n, int *ierr)
-{
-  CHKFORTRANNULLINTEGER(m);
-  CHKFORTRANNULLINTEGER(n);
-  *ierr = MatGetOwnershipRange(*mat, m, n);
-}
-
-PETSC_EXTERN void matgetownershiprange01_(Mat *mat, PetscInt *m, PetscInt *n, int *ierr)
-{
-  CHKFORTRANNULLINTEGER(m);
-  CHKFORTRANNULLINTEGER(n);
-  *ierr = MatGetOwnershipRange(*mat, m, n);
-}
-
-PETSC_EXTERN void matgetownershiprange11_(Mat *mat, PetscInt *m, PetscInt *n, int *ierr)
-{
-  CHKFORTRANNULLINTEGER(m);
-  CHKFORTRANNULLINTEGER(n);
-  *ierr = MatGetOwnershipRange(*mat, m, n);
-}
-
-PETSC_EXTERN void matgetsize_(Mat *mat, PetscInt *m, PetscInt *n, int *ierr)
-{
-  CHKFORTRANNULLINTEGER(m);
-  CHKFORTRANNULLINTEGER(n);
-  *ierr = MatGetSize(*mat, m, n);
-}
-
-PETSC_EXTERN void matgetsize00_(Mat *mat, PetscInt *m, PetscInt *n, int *ierr)
-{
-  matgetsize_(mat, m, n, ierr);
-}
-
-PETSC_EXTERN void matgetsize10_(Mat *mat, PetscInt *m, PetscInt *n, int *ierr)
-{
-  matgetsize_(mat, m, n, ierr);
-}
-
-PETSC_EXTERN void matgetsize01_(Mat *mat, PetscInt *m, PetscInt *n, int *ierr)
-{
-  matgetsize_(mat, m, n, ierr);
-}
-
-PETSC_EXTERN void matgetlocalsize_(Mat *mat, PetscInt *m, PetscInt *n, int *ierr)
-{
-  CHKFORTRANNULLINTEGER(m);
-  CHKFORTRANNULLINTEGER(n);
-  *ierr = MatGetLocalSize(*mat, m, n);
-}
-
-PETSC_EXTERN void matgetlocalsize00_(Mat *mat, PetscInt *m, PetscInt *n, int *ierr)
-{
-  matgetlocalsize_(mat, m, n, ierr);
-}
-
-PETSC_EXTERN void matgetlocalsize10_(Mat *mat, PetscInt *m, PetscInt *n, int *ierr)
-{
-  matgetlocalsize_(mat, m, n, ierr);
-}
-
-PETSC_EXTERN void matgetlocalsize01_(Mat *mat, PetscInt *m, PetscInt *n, int *ierr)
-{
-  matgetlocalsize_(mat, m, n, ierr);
 }
 
 PETSC_EXTERN void matsetvaluesblocked_(Mat *mat, PetscInt *m, PetscInt idxm[], PetscInt *n, PetscInt idxn[], PetscScalar v[], InsertMode *addv, int *ierr)
@@ -717,17 +588,4 @@ PETSC_EXTERN void matdestroysubmatrices_(PetscInt *n, Mat *smat, PetscErrorCode 
   *ierr = MatDestroySubMatrices(*n, &lsmat);
   if (*ierr) return;
   for (i = 0; i <= *n; i++) { PETSC_FORTRAN_OBJECT_C_NULL_TO_F_DESTROYED(&smat[i]); }
-}
-
-PETSC_EXTERN void matzerorowslocal_(Mat *mat, PetscInt *numRows, PetscInt rows[], PetscScalar *diag, Vec *x, Vec *b, int *ierr)
-{
-  *ierr = MatZeroRowsLocal(*mat, *numRows, rows, *diag, *x, *b);
-}
-PETSC_EXTERN void matzerorowslocal0_(Mat *mat, PetscInt *numRows, PetscInt rows[], PetscScalar *diag, Vec *x, Vec *b, int *ierr)
-{
-  matzerorowslocal_(mat, numRows, rows, diag, x, b, ierr);
-}
-PETSC_EXTERN void matzerorowslocal1_(Mat *mat, PetscInt *numRows, PetscInt rows[], PetscScalar *diag, Vec *x, Vec *b, int *ierr)
-{
-  matzerorowslocal_(mat, numRows, rows, diag, x, b, ierr);
 }

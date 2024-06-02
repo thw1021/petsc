@@ -1931,7 +1931,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_SeqSBAIJ(Mat B)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   MatSeqSBAIJSetPreallocation - Creates a sparse symmetric matrix in block AIJ (block
   compressed row) `MATSEQSBAIJ` format.  For good matrix assembly performance the
   user should preallocate the matrix storage by setting the parameter `nz`
@@ -2015,7 +2015,7 @@ PetscErrorCode MatSeqSBAIJSetPreallocationCSR(Mat B, PetscInt bs, const PetscInt
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   MatCreateSeqSBAIJ - Creates a sparse symmetric matrix in (block
   compressed row) `MATSEQSBAIJ` format.  For good matrix assembly performance the
   user should preallocate the matrix storage by setting the parameter `nz`

@@ -41,7 +41,7 @@ PetscErrorCode MatNullSpaceSetFunction(MatNullSpace sp, PetscErrorCode (*rem)(Ma
   Output Parameters:
 + has_const - `PETSC_TRUE` if the null space contains the constant vector, otherwise `PETSC_FALSE`
 . n         - number of vectors (excluding constant vector) in the null space
-- vecs      - array of length `n` containing the orthonormal vectors that span the null space (excluding the constant vector), `NULL` if `n` is 0
+- vecs      - returns array of length `n` containing the orthonormal vectors that span the null space (excluding the constant vector), `NULL` if `n` is 0
 
   Level: developer
 
