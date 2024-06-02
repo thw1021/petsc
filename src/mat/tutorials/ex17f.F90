@@ -50,9 +50,9 @@ implicit none
   PetscCallA(MatSeqAIJSetPreallocation(A,three,PETSC_NULL_INTEGER_ARRAY,ierr))
   PetscCallA(MatMPIAIJSetPreallocation(A,three,PETSC_NULL_INTEGER_ARRAY,two,PETSC_NULL_INTEGER_ARRAY,ierr))
   PetscCallA(MatSeqBAIJSetPreallocation(A,one,three,PETSC_NULL_INTEGER_ARRAY,ierr))
-  PetscCallA(MatMPIBAIJSetPreallocation(A,one,three,PETSC_NULL_INTEGER_ARRAY,2,PETSC_NULL_INTEGER_ARRAY,ierr))
+  PetscCallA(MatMPIBAIJSetPreallocation(A,one,three,PETSC_NULL_INTEGER_ARRAY,two,PETSC_NULL_INTEGER_ARRAY,ierr))
   PetscCallA(MatSeqSBAIJSetPreallocation(A,one,two,PETSC_NULL_INTEGER_ARRAY,ierr))
-  PetscCallA(MatMPISBAIJSetPreallocation(A,one,two,PETSC_NULL_INTEGER_ARRAY,1,PETSC_NULL_INTEGER_ARRAY,ierr))
+  PetscCallA(MatMPISBAIJSetPreallocation(A,one,two,PETSC_NULL_INTEGER_ARRAY,one,PETSC_NULL_INTEGER_ARRAY,ierr))
 
   PetscCallA(MatGetSize(A,PETSC_NULL_INTEGER,N,ierr))
   PetscCallA(MatGetOwnershipRange(A,rstart,rend,ierr))

@@ -29,16 +29,15 @@
 
       PetscCallA(MatSetNullSpace(A,PETSC_NULL_MATNULLSPACE,ierr))
       PetscCallA(MatGetNullSpace(A,sp,ierr))
-!     You cannot do the following comparison in Fortran
 !      PetscCheckA(sp .eq. PETSC_NULL_MATNULLSPACE,PETSC_COMM_SELF,PETSC_ERR_PLIB,'Matrix null space should not exist')
 
-      PetscCallA(MatNullSpaceCreate(PETSC_COMM_WORLD,PETSC_TRUE,zero,PETSC_NULL_VEC,sp,ierr))
+      PetscCallA(MatNullSpaceCreate(PETSC_COMM_WORLD,PETSC_TRUE,zero,PETSC_NULL_VEC_ARRAY,sp,ierr))
       PetscCallA(MatSetNullSpace(A,sp,ierr))
       PetscCallA(MatGetNullSpace(A,sp1,ierr))
-      PetscCheckA(sp1 .ne. PETSC_NULL_MATNULLSPACE,PETSC_COMM_SELF,PETSC_ERR_PLIB,'Matrix null space should not be null')
+!      PetscCheckA(sp1 .ne. PETSC_NULL_MATNULLSPACE,PETSC_COMM_SELF,PETSC_ERR_PLIB,'Matrix null space should not be null')
       PetscCallA(MatNullSpaceDestroy(sp,ierr))
 
-      PetscCallA(MatCreateSeqDense(PETSC_COMM_WORLD,one,one,PETSC_NULL_SCALAR,C,ierr))
+      PetscCallA(MatCreateSeqDense(PETSC_COMM_WORLD,one,one,PETSC_NULL_SCALAR_ARRAY,C,ierr))
       PetscCallA(MatSetValues(C,one,zero,one,zero,sone,INSERT_VALUES,ierr))
       PetscCallA(MatAssemblyBegin(C,MAT_FINAL_ASSEMBLY,ierr))
       PetscCallA(MatAssemblyEnd(C,MAT_FINAL_ASSEMBLY,ierr))

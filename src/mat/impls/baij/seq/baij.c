@@ -3801,7 +3801,7 @@ PetscErrorCode MatLoad_SeqBAIJ(Mat mat, PetscViewer viewer)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   MatCreateSeqBAIJ - Creates a sparse matrix in `MATSEQAIJ` (block
   compressed row) format.  For good matrix assembly performance the
   user should preallocate the matrix storage by setting the parameter `nz`
@@ -3860,7 +3860,7 @@ PetscErrorCode MatCreateSeqBAIJ(MPI_Comm comm, PetscInt bs, PetscInt m, PetscInt
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   MatSeqBAIJSetPreallocation - Sets the block size and expected nonzeros
   per row in the matrix. For good matrix assembly performance the
   user should preallocate the matrix storage by setting the parameter `nz`

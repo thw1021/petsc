@@ -3281,7 +3281,7 @@ static struct _MatOps MatOps_Values = {MatSetValues_SeqDense,
 . m    - number of rows
 . n    - number of columns
 - data - optional location of matrix data in column major order.  Use `NULL` for PETSc
-   to control all matrix memory allocation.
+         to control all matrix memory allocation.
 
   Output Parameter:
 . A - the matrix
@@ -3298,7 +3298,7 @@ static struct _MatOps MatOps_Values = {MatSetValues_SeqDense,
 
 .seealso: [](ch_matrices), `Mat`, `MATSEQDENSE`, `MatCreate()`, `MatCreateDense()`, `MatSetValues()`
 @*/
-PetscErrorCode MatCreateSeqDense(MPI_Comm comm, PetscInt m, PetscInt n, PetscScalar *data, Mat *A)
+PetscErrorCode MatCreateSeqDense(MPI_Comm comm, PetscInt m, PetscInt n, PetscScalar data[], Mat *A)
 {
   PetscFunctionBegin;
   PetscCall(MatCreate(comm, A));

@@ -3,7 +3,6 @@
 #include <petscviewer.h>
 
 #if defined(PETSC_HAVE_FORTRAN_CAPS)
-  #define vecsetrandom_          VECSETRANDOM
   #define vecsetvalueslocal0_    VECSETVALUESLOCAL0
   #define vecsetvalueslocal11_   VECSETVALUESLOCAL11
   #define vecsetvalueslocal1_    VECSETVALUESLOCAL1
@@ -32,12 +31,8 @@
   #define vecmin2_               VECMIN2
   #define vecmax1_               VECMAX1
   #define vecmax2_               VECMAX2
-  #define vecgetownershiprange1_ VECGETOWNERSHIPRANGE1
-  #define vecgetownershiprange2_ VECGETOWNERSHIPRANGE2
-  #define vecgetownershiprange3_ VECGETOWNERSHIPRANGE3
-  #define vecgetownershipranges_ VECGETOWNERSHIPRANGES
+
 #elif !defined(PETSC_HAVE_FORTRAN_UNDERSCORE)
-  #define vecsetrandom_          vecsetrandom
   #define vecsetvalueslocal0_    vecsetvalueslocal0
   #define vecsetvalueslocal1_    vecsetvalueslocal1
   #define vecsetvalueslocal11_   vecsetvalueslocal11
@@ -67,10 +62,6 @@
   #define vecmin2_               vecmin2
   #define vecmax1_               vecmax1
   #define vecmax2_               vecmax2
-  #define vecgetownershiprange1_ vecgetownershiprange1
-  #define vecgetownershiprange2_ vecgetownershiprange2
-  #define vecgetownershiprange3_ vecgetownershiprange3
-  #define vecgetownershipranges_ vecgetownershipranges
 #endif
 
 PETSC_EXTERN void vecsetvalueslocal_(Vec *x, PetscInt *ni, PetscInt ix[], PetscScalar y[], InsertMode *iora, int *ierr)
@@ -316,27 +307,6 @@ PETSC_EXTERN void vecmax2_(Vec *x, PetscInt *p, PetscReal *val, PetscErrorCode *
 {
   CHKFORTRANNULLINTEGER(p);
   *ierr = VecMax(*x, p, val);
-}
-
-PETSC_EXTERN void vecgetownershiprange1_(Vec *x, PetscInt *low, PetscInt *high, PetscErrorCode *ierr)
-{
-  CHKFORTRANNULLINTEGER(low);
-  CHKFORTRANNULLINTEGER(high);
-  *ierr = VecGetOwnershipRange(*x, low, high);
-}
-
-PETSC_EXTERN void vecgetownershiprange2_(Vec *x, PetscInt *low, PetscInt *high, PetscErrorCode *ierr)
-{
-  CHKFORTRANNULLINTEGER(low);
-  CHKFORTRANNULLINTEGER(high);
-  *ierr = VecGetOwnershipRange(*x, low, high);
-}
-
-PETSC_EXTERN void vecgetownershiprange3_(Vec *x, PetscInt *low, PetscInt *high, PetscErrorCode *ierr)
-{
-  CHKFORTRANNULLINTEGER(low);
-  CHKFORTRANNULLINTEGER(high);
-  *ierr = VecGetOwnershipRange(*x, low, high);
 }
 
 PETSC_EXTERN void vecgetownershipranges_(Vec *x, PetscInt *range, PetscErrorCode *ierr)

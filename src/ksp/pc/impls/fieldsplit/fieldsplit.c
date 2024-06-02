@@ -2402,7 +2402,7 @@ PetscErrorCode PCFieldSplitSetBlockSize(PC pc, PetscInt bs)
   Developer Notes:
   There should be a `PCFieldSplitRestoreSubKSP()` instead of requiring the user to call `PetscFree()`
 
-  The Fortran interface should be modernized to return directly the array of values.
+  The Fortran interface could be modernized to return directly the array of values.
 
 .seealso: [](sec_block_matrices), `PC`, `PCFIELDSPLIT`, `PCFieldSplitSetFields()`, `PCFieldSplitSetIS()`, `PCFieldSplitSchurGetSubKSP()`
 @*/
