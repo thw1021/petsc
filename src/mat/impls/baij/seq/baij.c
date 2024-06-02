@@ -3492,7 +3492,7 @@ static PetscErrorCode MatSeqBAIJSetPreallocationCSR_SeqBAIJ(Mat B, PetscInt bs, 
 
 .seealso: [](ch_matrices), `Mat`, `MATSEQBAIJ`, `MatSeqBAIJRestoreArray()`, `MatSeqAIJGetArray()`, `MatSeqAIJRestoreArray()`
 @*/
-PetscErrorCode MatSeqBAIJGetArray(Mat A, PetscScalar **array)
+PetscErrorCode MatSeqBAIJGetArray(Mat A, PetscScalar *array[])
 {
   PetscFunctionBegin;
   PetscUseMethod(A, "MatSeqBAIJGetArray_C", (Mat, PetscScalar **), (A, array));
@@ -3512,7 +3512,7 @@ PetscErrorCode MatSeqBAIJGetArray(Mat A, PetscScalar **array)
 
 .seealso: [](ch_matrices), `Mat`, `MatSeqBAIJGetArray()`, `MatSeqAIJGetArray()`, `MatSeqAIJRestoreArray()`
 @*/
-PetscErrorCode MatSeqBAIJRestoreArray(Mat A, PetscScalar **array)
+PetscErrorCode MatSeqBAIJRestoreArray(Mat A, PetscScalar *array[])
 {
   PetscFunctionBegin;
   PetscUseMethod(A, "MatSeqBAIJRestoreArray_C", (Mat, PetscScalar **), (A, array));

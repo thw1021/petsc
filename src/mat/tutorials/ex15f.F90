@@ -25,8 +25,8 @@ program main
   PetscCallA(MatCreate(PETSC_COMM_WORLD, A,ierr))
   PetscCallA(MatSetSizes(A, PETSC_DECIDE, PETSC_DECIDE, N, N,ierr))
   PetscCallA(MatSetFromOptions(A,ierr))
-  PetscCallA(MatSeqAIJSetPreallocation(A, three, PETSC_NULL_INTEGER,ierr))
-  PetscCallA(MatMPIAIJSetPreallocation(A, three, PETSC_NULL_INTEGER, two, PETSC_NULL_INTEGER,ierr))
+  PetscCallA(MatSeqAIJSetPreallocation(A, three, PETSC_NULL_INTEGER_ARRAY,ierr))
+  PetscCallA(MatMPIAIJSetPreallocation(A, three, PETSC_NULL_INTEGER_ARRAY, two, PETSC_NULL_INTEGER_ARRAY,ierr))
 
   !/* Create a linear mesh */
   PetscCallA(MatGetOwnershipRange(A, myStart, myEnd,ierr))
