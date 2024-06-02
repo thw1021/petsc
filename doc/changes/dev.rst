@@ -41,6 +41,8 @@ Changes: Development
 
 .. rubric:: Mat:
 
+- ``MatMultEqual()`` and derivatives now use the same tolerance as ``MatIsLinear()``
+
 .. rubric:: MatCoarsen:
 
 .. rubric:: PC:

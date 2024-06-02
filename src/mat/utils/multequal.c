@@ -4,9 +4,8 @@ static PetscErrorCode MatMultEqual_Private(Mat A, Mat B, PetscInt n, PetscBool *
 {
   Vec         Ax = NULL, Bx = NULL, s1 = NULL, s2 = NULL, Ay = NULL, By = NULL;
   PetscRandom rctx;
-  PetscReal   r1, r2, tol = PETSC_SQRT_MACHINE_EPSILON;
+  PetscReal   r1, r2, tol = 100. * PETSC_MACHINE_EPSILON;
   PetscInt    am, an, bm, bn, k;
-  PetscScalar none = -1.0;
 #if defined(PETSC_USE_INFO)
   const char *sops[] = {"MatMult", "MatMultAdd", "MatMultAdd (update)", "MatMultTranspose", "MatMultTransposeAdd", "MatMultTransposeAdd (update)", "MatMultHermitianTranspose", "MatMultHermitianTransposeAdd", "MatMultHermitianTransposeAdd (update)"};
   const char *sop;
@@ -87,7 +86,7 @@ static PetscErrorCode MatMultEqual_Private(Mat A, Mat B, PetscInt n, PetscBool *
     if (r2 < tol) {
       PetscCall(VecNorm(s1, NORM_INFINITY, &r1));
     } else {
-      PetscCall(VecAXPY(s2, none, s1));
+      PetscCall(VecAXPY(s2, -1.0, s1));
       PetscCall(VecNorm(s2, NORM_INFINITY, &r1));
       r1 /= r2;
     }
@@ -111,9 +110,8 @@ static PetscErrorCode MatMatMultEqual_Private(Mat A, Mat B, Mat C, PetscInt n, P
 {
   Vec         Ax, Bx, Cx, s1, s2, s3;
   PetscRandom rctx;
-  PetscReal   r1, r2, tol = PETSC_SQRT_MACHINE_EPSILON;
+  PetscReal   r1, r2, tol = 100. * PETSC_MACHINE_EPSILON;
   PetscInt    am, an, bm, bn, cm, cn, k;
-  PetscScalar none = -1.0;
 #if defined(PETSC_USE_INFO)
   const char *sops[] = {"MatMatMult", "MatTransposeMatMult", "MatMatTransposeMult", "MatTransposeMatTransposeMult"};
   const char *sop;
@@ -182,13 +180,13 @@ static PetscErrorCode MatMatMultEqual_Private(Mat A, Mat B, Mat C, PetscInt n, P
     if (r2 < tol) {
       PetscCall(VecNorm(s3, NORM_INFINITY, &r1));
     } else {
-      PetscCall(VecAXPY(s2, none, s3));
+      PetscCall(VecAXPY(s2, -1.0, s3));
       PetscCall(VecNorm(s2, NORM_INFINITY, &r1));
       r1 /= r2;
     }
     if (r1 > tol) {
       *flg = PETSC_FALSE;
-      PetscCall(PetscInfo(A, "Error: %" PetscInt_FMT "-th %s %g\n", k, sop, (double)r1));
+      PetscCall(PetscInfo(A, "Error: %" PetscInt_FMT "-th %s() %g\n", k, sop, (double)r1));
       break;
     }
   }
@@ -427,10 +425,9 @@ PetscErrorCode MatMatTransposeMultEqual(Mat A, Mat B, Mat C, PetscInt n, PetscBo
 static PetscErrorCode MatProjMultEqual_Private(Mat A, Mat B, Mat C, PetscInt n, PetscBool rart, PetscBool *flg)
 {
   Vec         x, v1, v2, v3, v4, Cx, Bx;
-  PetscReal   norm_abs, norm_rel, tol = PETSC_SQRT_MACHINE_EPSILON;
+  PetscReal   norm_abs, norm_rel, tol = 100. * PETSC_MACHINE_EPSILON;
   PetscInt    i, am, an, bm, bn, cm, cn;
   PetscRandom rdm;
-  PetscScalar none = -1.0;
 
   PetscFunctionBegin;
   PetscCall(MatGetLocalSize(A, &am, &an));
@@ -477,7 +474,7 @@ static PetscErrorCode MatProjMultEqual_Private(Mat A, Mat B, Mat C, PetscInt n, 
       PetscCall(MatMultTranspose(B, v1, v3)); /* v3 = Bt*A*B*x */
     }
     PetscCall(VecNorm(v4, NORM_2, &norm_abs));
-    PetscCall(VecAXPY(v4, none, v3));
+    PetscCall(VecAXPY(v4, -1.0, v3));
     PetscCall(VecNorm(v4, NORM_2, &norm_rel));
 
     if (norm_abs > tol) norm_rel /= norm_abs;
