@@ -67,27 +67,6 @@
       end Subroutine PetscSFGetRootRanks
       end Interface
 
-      Interface VecGetOwnershipRange
-      subroutine VecGetOwnershipRange1(x,l,h,ierr)
-       import tVec
-       Vec, intent(in) :: x
-       PetscInt, intent(out) ::  l,h
-       PetscErrorCode, intent(out) :: ierr
-       end subroutine
-      subroutine VecGetOwnershipRange2(x,l,h,ierr)
-       import tVec
-       Vec, intent(in) :: x
-       PetscInt, intent(out) ::  l(*),h
-       PetscErrorCode, intent(out) :: ierr
-       end subroutine
-      subroutine VecGetOwnershipRange3(x,l,h,ierr)
-       import tVec
-       Vec, intent(in) :: x
-       PetscInt, intent(out) ::  l,h(*)
-       PetscErrorCode, intent(out) :: ierr
-       end subroutine
-       end Interface
-
       Interface VecMin
       subroutine VecMin1(x,p,val,ierr)
        import tVec
@@ -120,47 +99,6 @@
        PetscReal, intent(out) ::  val
        PetscErrorCode, intent(out) :: ierr
        end subroutine
-      end Interface
-
-      Interface
-      subroutine VecScatterCreateToAll(a,b,c,z)
-       import tVec,tVecScatter
-       Vec a
-       VecScatter b
-       Vec c
-       PetscErrorCode z
-       end subroutine
-      end Interface
-
-      Interface
-      subroutine VecScatterCreateToZero(a,b,c,z)
-       import tVec,tVecScatter
-       Vec a
-       VecScatter b
-       Vec c
-       PetscErrorCode z
-       end subroutine
-      end Interface
-
-      Interface VecCreateSeqWithArray
-        subroutine VecCreateSeqWithArray0(a,b,c,d,e,z)
-          import tVec
-          MPI_Comm a
-          integer4 b ! bs
-          PetscInt c ! length
-          PetscScalar d (*) ! array of values
-          Vec e
-          PetscErrorCode z
-        end subroutine
-        subroutine VecCreateSeqWithArray1(a,b,c,d,e,z)
-          import tVec
-          MPI_Comm a
-          integer8 b ! bs
-          PetscInt c ! length
-          PetscScalar d (*) ! array of values
-          Vec e
-          PetscErrorCode z
-        end subroutine
       end Interface
 
       Interface VecSetValuesLocal

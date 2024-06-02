@@ -35,8 +35,8 @@
       PetscCallA(MatSetSizes(A, PETSC_DECIDE, PETSC_DECIDE, m*m, m*m, ierr))
       PetscCallA(MatSetType(A, MATAIJ, ierr))
       PetscCallA(MatSetFromOptions(A, ierr))
-      PetscCallA(MatSeqAIJSetPreallocation(A,ifive, PETSC_NULL_INTEGER, ierr))
-      PetscCallA(MatMPIAIJSetPreallocation(A,ifive,PETSC_NULL_INTEGER,ifive,PETSC_NULL_INTEGER,ierr))
+      PetscCallA(MatSeqAIJSetPreallocation(A,ifive, PETSC_NULL_INTEGER_ARRAY, ierr))
+      PetscCallA(MatMPIAIJSetPreallocation(A,ifive,PETSC_NULL_INTEGER_ARRAY,ifive,PETSC_NULL_INTEGER_ARRAY,ierr))
 
       PetscCallA(MatGetOwnershipRange(A,Istart,Iend,ierr))
 

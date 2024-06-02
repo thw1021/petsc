@@ -182,7 +182,7 @@
 
       PetscCallA(PetscOptionsHasName(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-snes_mf',matrix_free,ierr))
       if (.not. matrix_free) then
-        PetscCallA(MatCreateSeqAIJ(PETSC_COMM_WORLD,N,N,i5,PETSC_NULL_INTEGER,J,ierr))
+        PetscCallA(MatCreateSeqAIJ(PETSC_COMM_WORLD,N,N,i5,PETSC_NULL_INTEGER_ARRAY,J,ierr))
       endif
 
 !

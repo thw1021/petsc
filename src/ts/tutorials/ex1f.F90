@@ -89,7 +89,7 @@
 !    preallocating memory in sparse matrices.
 !
       i5 = 5
-      PetscCallA(MatCreateSeqAIJ(PETSC_COMM_SELF,N,N,i5,PETSC_NULL_INTEGER,J,ierr))
+      PetscCallA(MatCreateSeqAIJ(PETSC_COMM_SELF,N,N,i5,PETSC_NULL_INTEGER_ARRAY,J,ierr))
 
 !
 !     Create timestepper context

@@ -15,7 +15,7 @@
       PetscCallA(MatCreate(PETSC_COMM_WORLD,m,ierr))
       PetscCallA(MatSetSizes(m,PETSC_DECIDE,PETSC_DECIDE,twelve,twelve,ierr))
       PetscCallA(MatSetFromOptions(m,ierr))
-      PetscCallA(MatMPIAIJSetPreallocation(m,PETSC_DEFAULT_INTEGER,PETSC_NULL_INTEGER,PETSC_DEFAULT_INTEGER,PETSC_NULL_INTEGER,ierr))
+      PetscCallA(MatMPIAIJSetPreallocation(m,PETSC_DEFAULT_INTEGER,PETSC_NULL_INTEGER_ARRAY,PETSC_DEFAULT_INTEGER,PETSC_NULL_INTEGER_ARRAY,ierr))
 
       value = 3.0
       i     = 4

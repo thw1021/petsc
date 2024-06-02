@@ -1652,6 +1652,8 @@ PetscErrorCode SNESLineSearchGetReason(SNESLineSearch linesearch, SNESLineSearch
 /*@
   SNESLineSearchSetReason - Sets the success/failure status of the line search application
 
+  Logically Collective; No Fortran Support
+
   Input Parameters:
 + linesearch - the line search context
 - result     - The success or failure status
