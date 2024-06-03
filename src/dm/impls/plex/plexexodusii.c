@@ -182,6 +182,17 @@ static PetscErrorCode PetscViewerExodusIISetOrder_ExodusII(PetscViewer viewer, P
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@
+PetscViewerExodusIISetZonalVariableNumber - Set the number of zonal variables to be written in an exodusII file
+
+  Collective
+
+  Input Parameters:
++ viewer   - a PetscViewer_ExodusII viewer
+- num      - the number of variables
+
+  Level: beginner
+@*/
 PetscErrorCode PetscViewerExodusIISetZonalVariableNumber(PetscViewer viewer, int num)
 {
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
@@ -193,6 +204,17 @@ PetscErrorCode PetscViewerExodusIISetZonalVariableNumber(PetscViewer viewer, int
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@
+PetscViewerExodusIISetNodalVariableNumber - Set the number of nodal variables to be written in an exodusII file
+
+  Collective
+
+  Input Parameters:
++ viewer   - a PetscViewer_ExodusII viewer
+- num      - the number of variables
+
+  Level: beginner
+@*/
 PetscErrorCode PetscViewerExodusIISetNodalVariableNumber(PetscViewer viewer, int num)
 {
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
@@ -213,6 +235,18 @@ PetscErrorCode PetscViewerExodusIISetGlobalVariableNumber(PetscViewer viewer, in
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@
+PetscViewerExodusIIGetZonalVariableNumber - Get the number of zonal variables to be written in an exodusII file
+
+  Collective
+
+  Input Parameters:
+. viewer   - a PetscViewer_ExodusII viewer
+  Output Parameters
+. num      - the number of variables
+
+  Level: beginner
+@*/
 PetscErrorCode PetscViewerExodusIIGetZonalVariableNumber(PetscViewer viewer, int *num)
 {
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
@@ -222,6 +256,18 @@ PetscErrorCode PetscViewerExodusIIGetZonalVariableNumber(PetscViewer viewer, int
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@
+PetscViewerExodusIIGetNodalVariableNumber - Get the number of nodal variables to be written in an exodusII file
+
+  Collective
+
+  Input Parameters:
+. viewer   - a PetscViewer_ExodusII viewer
+  Output Parameters
+. num      - the number of variables
+
+  Level: beginner
+@*/
 PetscErrorCode PetscViewerExodusIIGetNodalVariableNumber(PetscViewer viewer, int *num)
 {
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
