@@ -37,7 +37,7 @@ configure_options = [
   '--download-amrex=1',
   '--download-cmake=1',
   '--download-suitesparse=1',
-  '--download-chaco=1',
+  #'--download-chaco=1', will no longer compile due to K&R declarations
   '--download-spai=1',
   # '--download-moab=1', # disabled since its maxCxxVersion is c++14, but Kokkos-4.0's minCxxVersion is c++17
   #'--download-saws', #needs /usr/bin/python [missing in newer MacOS]
