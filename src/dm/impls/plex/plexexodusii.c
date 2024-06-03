@@ -193,7 +193,7 @@ PetscViewerExodusIISetZonalVariableNumber - Set the number of zonal variables to
 
   Level: beginner
 @*/
-PetscErrorCode PetscViewerExodusIISetZonalVariableNumber(PetscViewer viewer, int num)
+PetscErrorCode PetscViewerExodusIISetZonalVariableNumber(PetscViewer viewer, PetscInt num)
 {
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
 
@@ -215,7 +215,7 @@ PetscViewerExodusIISetNodalVariableNumber - Set the number of nodal variables to
 
   Level: beginner
 @*/
-PetscErrorCode PetscViewerExodusIISetNodalVariableNumber(PetscViewer viewer, int num)
+PetscErrorCode PetscViewerExodusIISetNodalVariableNumber(PetscViewer viewer, PetscInt num)
 {
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
 
@@ -225,7 +225,7 @@ PetscErrorCode PetscViewerExodusIISetNodalVariableNumber(PetscViewer viewer, int
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode PetscViewerExodusIISetGlobalVariableNumber(PetscViewer viewer, int num)
+PetscErrorCode PetscViewerExodusIISetGlobalVariableNumber(PetscViewer viewer, PetscInt num)
 {
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
 
@@ -247,7 +247,7 @@ PetscViewerExodusIIGetZonalVariableNumber - Get the number of zonal variables to
 
   Level: beginner
 @*/
-PetscErrorCode PetscViewerExodusIIGetZonalVariableNumber(PetscViewer viewer, int *num)
+PetscErrorCode PetscViewerExodusIIGetZonalVariableNumber(PetscViewer viewer, PetscInt *num)
 {
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
 
@@ -268,7 +268,7 @@ PetscViewerExodusIIGetNodalVariableNumber - Get the number of nodal variables to
 
   Level: beginner
 @*/
-PetscErrorCode PetscViewerExodusIIGetNodalVariableNumber(PetscViewer viewer, int *num)
+PetscErrorCode PetscViewerExodusIIGetNodalVariableNumber(PetscViewer viewer, PetscInt *num)
 {
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
 
@@ -277,7 +277,7 @@ PetscErrorCode PetscViewerExodusIIGetNodalVariableNumber(PetscViewer viewer, int
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode PetscViewerExodusIISetZonalVariableName(PetscViewer viewer, int rank, char name[])
+PetscErrorCode PetscViewerExodusIISetZonalVariableName(PetscViewer viewer, PetscInt rank, char name[])
 {
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
 
@@ -287,7 +287,7 @@ PetscErrorCode PetscViewerExodusIISetZonalVariableName(PetscViewer viewer, int r
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode PetscViewerExodusIISetNodalVariableName(PetscViewer viewer, int rank, char name[])
+PetscErrorCode PetscViewerExodusIISetNodalVariableName(PetscViewer viewer, PetscInt rank, char name[])
 {
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
 
@@ -297,7 +297,7 @@ PetscErrorCode PetscViewerExodusIISetNodalVariableName(PetscViewer viewer, int r
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode PetscViewerExodusIIGetZonalVariableName(PetscViewer viewer, int rank, char name[])
+PetscErrorCode PetscViewerExodusIIGetZonalVariableName(PetscViewer viewer, PetscInt rank, char name[])
 {
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
 
@@ -307,7 +307,7 @@ PetscErrorCode PetscViewerExodusIIGetZonalVariableName(PetscViewer viewer, int r
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode PetscViewerExodusIIGetNodalVariableName(PetscViewer viewer, int rank, char name[])
+PetscErrorCode PetscViewerExodusIIGetNodalVariableName(PetscViewer viewer, PetscInt rank, char name[])
 {
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
 
@@ -361,7 +361,7 @@ PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetNodalVariableNames(PetscViewer
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode PetscViewerExodusIIGetZonalVariableNames(PetscViewer viewer, int numNames, char names[][EX_MAX_NAME])
+PetscErrorCode PetscViewerExodusIIGetZonalVariableNames(PetscViewer viewer, PetscInt numNames, char names[][EX_MAX_NAME])
 {
   PetscErrorCode        ierr;
   int                   i;
@@ -378,7 +378,7 @@ PetscErrorCode PetscViewerExodusIIGetZonalVariableNames(PetscViewer viewer, int 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode PetscViewerExodusIIGetNodalVariableNames(PetscViewer viewer, int numNames, char names[][EX_MAX_NAME])
+PetscErrorCode PetscViewerExodusIIGetNodalVariableNames(PetscViewer viewer, PetscInt numNames, char names[][EX_MAX_NAME])
 {
   PetscErrorCode        ierr;
   int                   i;
