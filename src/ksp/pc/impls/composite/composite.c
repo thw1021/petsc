@@ -303,6 +303,11 @@ static PetscErrorCode PCCompositeSpecialSetAlphaMat_Composite(PC pc, Mat alpha_m
   PC_Composite *jac = (PC_Composite *)pc->data;
 
   PetscFunctionBegin;
+  if (alpha_mat) {
+    PetscValidHeaderSpecific(alpha_mat, MAT_CLASSID, 2);
+    PetscCall(PetscObjectReference((PetscObject)alpha_mat));
+  }
+  PetscCall(MatDestroy(&jac->alpha_mat));
   jac->alpha_mat = alpha_mat;
   PetscFunctionReturn(PETSC_SUCCESS);
 }

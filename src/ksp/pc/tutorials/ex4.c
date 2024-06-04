@@ -212,14 +212,14 @@ int main(int argc, char **args)
 
   // First do vx
   for (PetscInt i = 0; i < boundary_indices_size; ++i) {
-    // Matlab uses 1-based indexing
+    // MATLAB uses 1-based indexing
     const PetscInt bnd_dof = (PetscInt)boundary_indices_values[i] - 1;
     if ((bnd_dof >= astart) && (bnd_dof < aend)) boundary_indices[num_local_bnd_dofs++] = bnd_dof;
   }
 
   // Now vy
   for (PetscInt i = 0; i < boundary_indices_size; ++i) {
-    // Matlab uses 1-based indexing
+    // MATLAB uses 1-based indexing
     const PetscInt bnd_dof = ((PetscInt)boundary_indices_values[i] - 1) + nc;
     if ((bnd_dof >= astart) && (bnd_dof < aend)) boundary_indices[num_local_bnd_dofs++] = bnd_dof;
   }
