@@ -226,7 +226,7 @@ PetscErrorCode DMDAGetCoordinateName(DM dm, PetscInt nf, const char *name[])
 
   Level: beginner
 
-  Note:
+  Notes:
   Any of `y`, `z`, `n`, and `p` can be passed in as `NULL` if not needed.
 
   The corner information is independent of the number of degrees of

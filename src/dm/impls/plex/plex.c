@@ -6483,7 +6483,7 @@ PetscErrorCode DMPlexVecGetOrientedClosure_Internal(DM dm, PetscSection section,
 .vb
   PetscScalar,dimension(:),pointer   :: values
 .ve
-  and it will allocated internally by PETSc to hold the values returned
+  and it will be allocated internally by PETSc to hold the values returned
 
 .seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMPlexVecRestoreClosure()`, `DMPlexVecSetClosure()`, `DMPlexMatSetClosure()`
 @*/

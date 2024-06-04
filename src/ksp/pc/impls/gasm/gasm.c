@@ -1067,7 +1067,7 @@ static PetscErrorCode PCGASMGetSubKSP_GASM(PC pc, PetscInt *n, PetscInt *first, 
   corrections is obtained (see `PCGASMType` for the use of inner/outer subdomains).
 
   Both inner and outer subdomains can extend over several MPI processes.
-  This process's portion of a subdomain is known as a local subdomain.
+  This process' portion of a subdomain is known as a local subdomain.
 
   Inner subdomains can not overlap with each other, do not have any entities from remote processes,
   and  have to cover the entire local subdomain owned by the current process. The index sets on each

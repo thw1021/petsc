@@ -1041,7 +1041,7 @@ PetscErrorCode PetscObjectSetUp(PetscObject obj)
 }
 
 /*MC
-  PetscObjectIsNull - returns true of the given PETSc object is a null object
+  PetscObjectIsNull - returns true if the given PETSc object is a null object
 
   Fortran only
 
@@ -1059,7 +1059,7 @@ PetscErrorCode PetscObjectSetUp(PetscObject obj)
   Example Usage:
 .vb
   if (PetscObjectIsNull(dm)) then
-  if (.not. PetscObjectIsNull(dm) then
+  if (.not. PetscObjectIsNull(dm)) then
 .ve
 
   Note:
