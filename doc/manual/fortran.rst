@@ -97,22 +97,22 @@ For proper error handling one should not use the above syntax instead one should
 Passing Arrays
 ^^^^^^^^^^^^^^
 
-Many PETSc functions take arrays as arguments; if Fortran they must be passed as arrays even if the "array"
+Many PETSc functions take arrays as arguments; in Fortran they must be passed as arrays even if the "array"
 is of length one (unlike Fortran 77 where one can pass scalars to functions expecting arrays). When passing
 a single value one can use the Fortran [] notation to pass the scalar as an array, for example
 
 .. code-block:: fortran
 
-   PetscCall(VecSetValues(v, one, [i], [v], ierr))
+   PetscCall(VecSetValues(v, one, [i], [val], ierr))
 
 This trick can only be used for arrays used to pass data into a PETSc routine, it cannot be used
 for arrays used to receive data from a PETSc routine. For example,
 
 .. code-block:: fortran
 
-   PetscCall(VecGetValues(v, one, idx, [v], ierr))
+   PetscCall(VecGetValues(v, one, idx, [val], ierr))
 
-is invalid and will not set ``v`` with the correct value.
+is invalid and will not set ``val`` with the correct value.
 
 For PETSc routine arguments that return a character string, you should pass a string long enough to hold the
 result. For example,
@@ -138,7 +138,7 @@ In the second form one passes in a pointer to an array and the PETSc routine ret
 .. code-block:: fortran
 
    PetscScalar, pointer :: array(:)
-   PetscCall(VecGetArrayF90(ksp, v, array, ierr))
+   PetscCall(VecGetArrayF90(v, array, ierr))
 
 In this second form the PETSc routine often has a name that ends with ``F90``.
 
@@ -183,7 +183,7 @@ Note that
 
 .. code-block:: fortran
 
-   if (PetscObjectIsNull(PETSC_NULL_VEC) then
+   if (PetscObjectIsNull(PETSC_NULL_VEC)) then
 
 will always return true, for any PETSc object.
 

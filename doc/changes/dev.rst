@@ -92,6 +92,6 @@ Changes: Development
 - Add ``PETSC_NULL_ENUM`` to be used instead of ``PETSC_NULL_INTEGER`` when a pointer to an ``enum`` is expected in a PETSc function call
 - Add ``PETSC_NULL_INTEGER_ARRAY``, ``PETSC_NULL_SCALAR_ARRAY``, and ``PETSC_NULL_REAL_ARRAY`` for use instead of
   ``PETSC_NULL_INTEGER``, ``PETSC_NULL_SCALAR``,  and ``PETSC_NULL_REAL`` when an array is expected in a PETSc function call
-  Add automatically generated interface definitions for most PETSc functions to detect illegal usage at compile time
+- Add automatically generated interface definitions for most PETSc functions to detect illegal usage at compile time
 - Add ``PetscObjectIsNull()`` for users to check if a PETSc object is ``NULL``
-- Change the PETSc Fortran API so that non-array values, ``v``, passed to PETSc routines expecting arrays must be be caste with ``[v]`` in the calling sequence
+- Change the PETSc Fortran API so that non-array values, ``v``, passed to PETSc routines expecting arrays must be cast with ``[v]`` in the calling sequence
