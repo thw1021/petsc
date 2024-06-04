@@ -21,6 +21,7 @@ static void ourriemannsolver(PetscInt dim, PetscInt Nf, const PetscReal x[], con
   if (func) { (*func)(&dim, &Nf, x, n, uL, uR, &numConstants, constants, flux, _ctx); }
 }
 
+// TODO: this looks like a bug setting the context to prob
 PETSC_EXTERN void petscdssetcontext_(PetscDS *prob, PetscInt *f, void *ctx, PetscErrorCode *ierr)
 {
   *ierr = PetscDSSetContext(*prob, *f, *prob);
