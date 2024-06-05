@@ -38,7 +38,7 @@ PetscErrorCode DMDAGetLogicalCoordinate(DM da, PetscScalar x, PetscScalar y, Pet
   PetscInt     i, j, xs, xm, ys, ym;
   PetscReal    d, D = PETSC_MAX_REAL, Dv;
   PetscMPIInt  rank, root;
-  PetscScalar  lX, lY;
+  PetscScalar  lX = 0., lY = 0.;
 
   PetscFunctionBegin;
   PetscCheck(da->dim != 1, PetscObjectComm((PetscObject)da), PETSC_ERR_SUP, "Cannot get point from 1d DMDA");
