@@ -1676,6 +1676,18 @@ PetscErrorCode ISSort(IS is)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(is, IS_CLASSID, 1);
+  if (PetscDefined(USE_DEBUG)) {
+    PetscInt        n;
+    const PetscInt *indices;
+    PetscBool       flg, info;
+
+    PetscCall(ISGetLocalSize(is, &n));
+    PetscCall(ISGetIndices(is, &indices));
+    PetscCall(PetscSortedInt(n, indices, &flg));
+    PetscCall(ISGetInfo(is, IS_SORTED, IS_LOCAL, PETSC_FALSE, &info));
+    if (flg || info) printf("Extra work? IS_SORTED: %s, SortedInt: %s\n", PetscBools[info], PetscBools[flg]);
+    PetscCall(ISRestoreIndices(is, &indices));
+  }
   PetscUseTypeMethod(is, sort);
   PetscCall(ISSetInfo(is, IS_SORTED, IS_LOCAL, is->info_permanent[IS_LOCAL][IS_SORTED], PETSC_TRUE));
   PetscFunctionReturn(PETSC_SUCCESS);
