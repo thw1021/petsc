@@ -220,8 +220,8 @@ PetscErrorCode DMClone(DM dm, DM *newdm)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
-  DMSetVecType - Sets the type of vector created with `DMCreateLocalVector()` and `DMCreateGlobalVector()`
+/*@
+  DMSetVecType - Sets the type of vector to be created with `DMCreateLocalVector()` and `DMCreateGlobalVector()`
 
   Logically Collective
 
@@ -250,7 +250,7 @@ PetscErrorCode DMSetVecType(DM dm, VecType ctype)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMGetVecType - Gets the type of vector created with `DMCreateLocalVector()` and `DMCreateGlobalVector()`
 
   Logically Collective
@@ -2085,7 +2085,7 @@ PetscErrorCode DMCreateFieldDecomposition(DM dm, PetscInt *len, char ***namelist
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMCreateSubDM - Returns an `IS` and `DM` encapsulating a subproblem defined by the fields passed in.
   The fields are defined by `DMCreateFieldIS()`.
 
@@ -2138,7 +2138,7 @@ PetscErrorCode DMCreateSubDM(DM dm, PetscInt numFields, const PetscInt fields[],
 
 .seealso: [](ch_dmbase), `DM`, `DMCreateSubDM()`, `DMPlexSetMigrationSF()`, `DMDestroy()`, `DMView()`, `DMCreateInterpolation()`, `DMCreateColoring()`, `DMCreateMatrix()`, `DMCreateMassMatrix()`, `DMCreateFieldIS()`, `DMCreateDomainDecomposition()`
 @*/
-PetscErrorCode DMCreateSuperDM(DM dms[], PetscInt n, IS **is, DM *superdm)
+PetscErrorCode DMCreateSuperDM(DM dms[], PetscInt n, IS *is[], DM *superdm)
 {
   PetscInt i;
 
@@ -2272,7 +2272,7 @@ PetscErrorCode DMCreateDomainDecomposition(DM dm, PetscInt *n, char ***namelist,
 
 .seealso: [](ch_dmbase), `DM`, `DMCreateDomainDecomposition()`, `DMDestroy()`, `DMView()`, `DMCreateInterpolation()`, `DMCreateColoring()`, `DMCreateMatrix()`, `DMCreateMassMatrix()`, `DMCreateFieldIS()`
 @*/
-PetscErrorCode DMCreateDomainDecompositionScatters(DM dm, PetscInt n, DM *subdms, VecScatter **iscat, VecScatter **oscat, VecScatter **gscat)
+PetscErrorCode DMCreateDomainDecompositionScatters(DM dm, PetscInt n, DM *subdms, VecScatter *iscat[], VecScatter *oscat[], VecScatter *gscat[])
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -3967,7 +3967,7 @@ PetscErrorCode DMGetType(DM dm, DMType *type)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMConvert - Converts a `DM` to another `DM`, either of the same or different type.
 
   Collective
@@ -6547,7 +6547,7 @@ PetscErrorCode DMSetOutputSequenceNumber(DM dm, PetscInt num, PetscReal val)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMOutputSequenceLoad - Retrieve the sequence value from a `PetscViewer`
 
   Input Parameters:
