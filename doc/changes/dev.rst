@@ -44,7 +44,7 @@ Changes: Development
 - Add support in ``PCFieldSplitSetFields()`` including with ``-pc_fieldsplit_%d_fields fields`` for ``MATNEST``,  making it possible to
   utilize multiple levels of ``PCFIELDSPLIT`` with ``MATNEST`` from the command line
 - Add ``PCCompositeSpecialSetAlphaMat()`` API to use a matrix other than the identity in
-  preconditioners based on an alternating direction iteration, e.g. setting :math:`M` for
+  preconditioners based on an alternating direction iteration, e.g., setting :math:`M` for
   :math:`P = (A + alpha M) M^{-1} (alpha M + B)`
 
 .. rubric:: KSP:
