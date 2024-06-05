@@ -424,21 +424,19 @@ static PetscErrorCode MatMultHermitianTranspose_SeqAIJKokkos(Mat A, Vec xx, Vec 
 static PetscErrorCode MatMultAdd_SeqAIJKokkos(Mat A, Vec xx, Vec yy, Vec zz)
 {
   Mat_SeqAIJKokkos          *aijkok;
-  ConstPetscScalarKokkosView xv, yv;
+  ConstPetscScalarKokkosView xv;
   PetscScalarKokkosView      zv;
 
   PetscFunctionBegin;
   PetscCall(PetscLogGpuTimeBegin());
   PetscCall(MatSeqAIJKokkosSyncDevice(A));
   PetscCall(VecGetKokkosView(xx, &xv));
-  PetscCall(VecGetKokkosView(yy, &yv));
-  PetscCall(VecGetKokkosViewWrite(zz, &zv));
-  if (zz != yy) Kokkos::deep_copy(zv, yv);
+  if (zz != yy) PetscCall(VecCopy(yy, zz));
+  PetscCall(VecGetKokkosView(zz, &zv));
   aijkok = static_cast<Mat_SeqAIJKokkos *>(A->spptr);
   PetscCallCXX(KokkosSparse::spmv(PetscGetKokkosExecutionSpace(), "N", 1.0 /*alpha*/, aijkok->csrmat, xv, 1.0 /*beta*/, zv)); /* z = alpha A x + beta z */
   PetscCall(VecRestoreKokkosView(xx, &xv));
-  PetscCall(VecRestoreKokkosView(yy, &yv));
-  PetscCall(VecRestoreKokkosViewWrite(zz, &zv));
+  PetscCall(VecRestoreKokkosView(zz, &zv));
   PetscCall(PetscLogGpuFlops(2.0 * aijkok->csrmat.nnz()));
   PetscCall(PetscLogGpuTimeEnd());
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -449,7 +447,7 @@ static PetscErrorCode MatMultTransposeAdd_SeqAIJKokkos(Mat A, Vec xx, Vec yy, Ve
 {
   Mat_SeqAIJKokkos          *aijkok;
   const char                *mode;
-  ConstPetscScalarKokkosView xv, yv;
+  ConstPetscScalarKokkosView xv;
   PetscScalarKokkosView      zv;
   KokkosCsrMatrix            csrmat;
 
@@ -457,9 +455,8 @@ static PetscErrorCode MatMultTransposeAdd_SeqAIJKokkos(Mat A, Vec xx, Vec yy, Ve
   PetscCall(PetscLogGpuTimeBegin());
   PetscCall(MatSeqAIJKokkosSyncDevice(A));
   PetscCall(VecGetKokkosView(xx, &xv));
-  PetscCall(VecGetKokkosView(yy, &yv));
-  PetscCall(VecGetKokkosViewWrite(zz, &zv));
-  if (zz != yy) Kokkos::deep_copy(zv, yv);
+  PetscCall(VecGetKokkosView(zz, &zv));
+  if (zz != yy) PetscCall(VecCopy(yy, zz));
   if (A->form_explicit_transpose) {
     PetscCall(MatSeqAIJKokkosGenerateTranspose_Private(A, &csrmat));
     mode = "N";
@@ -470,8 +467,7 @@ static PetscErrorCode MatMultTransposeAdd_SeqAIJKokkos(Mat A, Vec xx, Vec yy, Ve
   }
   PetscCallCXX(KokkosSparse::spmv(PetscGetKokkosExecutionSpace(), mode, 1.0 /*alpha*/, csrmat, xv, 1.0 /*beta*/, zv)); /* z = alpha A^T x + beta z */
   PetscCall(VecRestoreKokkosView(xx, &xv));
-  PetscCall(VecRestoreKokkosView(yy, &yv));
-  PetscCall(VecRestoreKokkosViewWrite(zz, &zv));
+  PetscCall(VecRestoreKokkosView(zz, &zv));
   PetscCall(PetscLogGpuFlops(2.0 * csrmat.nnz()));
   PetscCall(PetscLogGpuTimeEnd());
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -482,7 +478,7 @@ static PetscErrorCode MatMultHermitianTransposeAdd_SeqAIJKokkos(Mat A, Vec xx, V
 {
   Mat_SeqAIJKokkos          *aijkok;
   const char                *mode;
-  ConstPetscScalarKokkosView xv, yv;
+  ConstPetscScalarKokkosView xv;
   PetscScalarKokkosView      zv;
   KokkosCsrMatrix            csrmat;
 
@@ -490,9 +486,8 @@ static PetscErrorCode MatMultHermitianTransposeAdd_SeqAIJKokkos(Mat A, Vec xx, V
   PetscCall(PetscLogGpuTimeBegin());
   PetscCall(MatSeqAIJKokkosSyncDevice(A));
   PetscCall(VecGetKokkosView(xx, &xv));
-  PetscCall(VecGetKokkosView(yy, &yv));
-  PetscCall(VecGetKokkosViewWrite(zz, &zv));
-  if (zz != yy) Kokkos::deep_copy(zv, yv);
+  PetscCall(VecGetKokkosView(zz, &zv));
+  if (zz != yy) PetscCall(VecCopy(yy, zz));
   if (A->form_explicit_transpose) {
     PetscCall(MatSeqAIJKokkosGenerateHermitian_Private(A, &csrmat));
     mode = "N";
@@ -503,8 +498,7 @@ static PetscErrorCode MatMultHermitianTransposeAdd_SeqAIJKokkos(Mat A, Vec xx, V
   }
   PetscCallCXX(KokkosSparse::spmv(PetscGetKokkosExecutionSpace(), mode, 1.0 /*alpha*/, csrmat, xv, 1.0 /*beta*/, zv)); /* z = alpha A^H x + beta z */
   PetscCall(VecRestoreKokkosView(xx, &xv));
-  PetscCall(VecRestoreKokkosView(yy, &yv));
-  PetscCall(VecRestoreKokkosViewWrite(zz, &zv));
+  PetscCall(VecRestoreKokkosView(zz, &zv));
   PetscCall(PetscLogGpuFlops(2.0 * csrmat.nnz()));
   PetscCall(PetscLogGpuTimeEnd());
   PetscFunctionReturn(PETSC_SUCCESS);
