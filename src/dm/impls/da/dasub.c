@@ -38,6 +38,7 @@ PetscErrorCode DMDAGetLogicalCoordinate(DM da, PetscScalar x, PetscScalar y, Pet
   PetscInt     i, j, xs, xm, ys, ym;
   PetscReal    d, D = PETSC_MAX_REAL, Dv;
   PetscMPIInt  rank, root;
+  PetscScalar  lX, lY;
 
   PetscFunctionBegin;
   PetscCheck(da->dim != 1, PetscObjectComm((PetscObject)da), PETSC_ERR_SUP, "Cannot get point from 1d DMDA");
@@ -66,18 +67,18 @@ PetscErrorCode DMDAGetLogicalCoordinate(DM da, PetscScalar x, PetscScalar y, Pet
     *JJ  = -1;
     rank = 0;
   } else {
-    if (X) *X = c[*JJ][*II].x;
-    if (Y) *Y = c[*JJ][*II].y;
+    lX = c[*JJ][*II].x;
+    lY = c[*JJ][*II].y;
     PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)da), &rank));
     rank++;
   }
-  if (X || Y) {
-    PetscCall(MPIU_Allreduce(&rank, &root, 1, MPI_INT, MPI_SUM, PetscObjectComm((PetscObject)da)));
-    root--;
-  }
-  if (X) PetscCallMPI(MPI_Bcast(X, 1, MPIU_SCALAR, root, PetscObjectComm((PetscObject)da)));
-  if (Y) PetscCallMPI(MPI_Bcast(Y, 1, MPIU_SCALAR, root, PetscObjectComm((PetscObject)da)));
+  PetscCall(MPIU_Allreduce(&rank, &root, 1, MPI_INT, MPI_SUM, PetscObjectComm((PetscObject)da)));
+  root--;
+  PetscCallMPI(MPI_Bcast(&lX, 1, MPIU_SCALAR, root, PetscObjectComm((PetscObject)da)));
+  PetscCallMPI(MPI_Bcast(&lY, 1, MPIU_SCALAR, root, PetscObjectComm((PetscObject)da)));
   PetscCall(DMDAVecRestoreArrayRead(dacoors, coors, &c));
+  if (X) *X = lX;
+  if (Y) *Y = lY;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
