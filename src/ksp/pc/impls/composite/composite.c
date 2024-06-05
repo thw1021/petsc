@@ -207,7 +207,7 @@ static PetscErrorCode PCReset_Composite(PC pc)
   }
   PetscCall(VecDestroy(&jac->work1));
   PetscCall(VecDestroy(&jac->work2));
-  if (jac->alpha_mat) PetscCall(MatDestroy(&jac->alpha_mat));
+  PetscCall(MatDestroy(&jac->alpha_mat));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
