@@ -253,7 +253,7 @@ PETSC_EXTERN PetscErrorCode DMAdaptMetric_ParMmg_Plex(DM dm, Vec vertexMetric, D
       if (usedCopies[i] > 1) { PetscCall(PetscSectionSetDof(rankSection, i + pStart, usedCopies[i])); }
     }
     PetscCall(PetscSectionSetUp(rankSection));
-    PetscCall(PetscSectionCreateGlobalSection(rankSection, sf, PETSC_FALSE, PETSC_TRUE, &rankGlobalSection));
+    PetscCall(PetscSectionCreateGlobalSection(rankSection, sf, PETSC_FALSE, PETSC_FALSE, PETSC_TRUE, &rankGlobalSection));
 
     PetscCall(PetscSectionGetStorageSize(rankGlobalSection, &s));
     PetscCall(PetscMalloc1(s, &rankGlobalArray));
