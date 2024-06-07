@@ -4707,7 +4707,7 @@ PetscErrorCode DMPlexComputeCellTypes(DM dm)
 
 .seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMPlexRestoreJoin()`, `DMPlexGetMeet()`
 @*/
-PetscErrorCode DMPlexGetJoin(DM dm, PetscInt numPoints, const PetscInt points[], PetscInt *numCoveredPoints, const PetscInt **coveredPoints)
+PetscErrorCode DMPlexGetJoin(DM dm, PetscInt numPoints, const PetscInt points[], PetscInt *numCoveredPoints, const PetscInt *coveredPoints[])
 {
   DM_Plex  *mesh = (DM_Plex *)dm->data;
   PetscInt *join[2];
@@ -4806,7 +4806,7 @@ PetscErrorCode DMPlexRestoreJoin(DM dm, PetscInt numPoints, const PetscInt point
 
 .seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMPlexGetJoin()`, `DMPlexRestoreJoin()`, `DMPlexGetMeet()`
 @*/
-PetscErrorCode DMPlexGetFullJoin(DM dm, PetscInt numPoints, const PetscInt points[], PetscInt *numCoveredPoints, const PetscInt **coveredPoints)
+PetscErrorCode DMPlexGetFullJoin(DM dm, PetscInt numPoints, const PetscInt points[], PetscInt *numCoveredPoints, const PetscInt *coveredPoints[])
 {
   PetscInt *offsets, **closures;
   PetscInt *join[2];
@@ -4906,7 +4906,7 @@ PetscErrorCode DMPlexGetFullJoin(DM dm, PetscInt numPoints, const PetscInt point
 
 .seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMPlexRestoreMeet()`, `DMPlexGetJoin()`
 @*/
-PetscErrorCode DMPlexGetMeet(DM dm, PetscInt numPoints, const PetscInt points[], PetscInt *numCoveringPoints, const PetscInt **coveringPoints)
+PetscErrorCode DMPlexGetMeet(DM dm, PetscInt numPoints, const PetscInt points[], PetscInt *numCoveringPoints, const PetscInt *coveringPoints[])
 {
   DM_Plex  *mesh = (DM_Plex *)dm->data;
   PetscInt *meet[2];
@@ -4972,7 +4972,7 @@ PetscErrorCode DMPlexGetMeet(DM dm, PetscInt numPoints, const PetscInt points[],
 
 .seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMPlexGetMeet()`, `DMPlexGetFullMeet()`, `DMPlexGetJoin()`
 @*/
-PetscErrorCode DMPlexRestoreMeet(DM dm, PetscInt numPoints, const PetscInt points[], PetscInt *numCoveredPoints, const PetscInt **coveredPoints)
+PetscErrorCode DMPlexRestoreMeet(DM dm, PetscInt numPoints, const PetscInt points[], PetscInt *numCoveredPoints, const PetscInt *coveredPoints[])
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -5005,7 +5005,7 @@ PetscErrorCode DMPlexRestoreMeet(DM dm, PetscInt numPoints, const PetscInt point
 
 .seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMPlexGetMeet()`, `DMPlexRestoreMeet()`, `DMPlexGetJoin()`
 @*/
-PetscErrorCode DMPlexGetFullMeet(DM dm, PetscInt numPoints, const PetscInt points[], PetscInt *numCoveredPoints, const PetscInt **coveredPoints)
+PetscErrorCode DMPlexGetFullMeet(DM dm, PetscInt numPoints, const PetscInt points[], PetscInt *numCoveredPoints, const PetscInt *coveredPoints[])
 {
   PetscInt *offsets, **closures;
   PetscInt *meet[2];
@@ -5805,7 +5805,6 @@ static PetscErrorCode GetFieldSize_Private(PetscInt dim, PetscInt k, PetscBool t
 }
 
 /*@
-
   DMPlexSetClosurePermutationTensor - Create a permutation from the default (BFS) point ordering in the closure, to a
   lexicographic ordering over the tensor product cell (i.e., line, quad, hex, etc.), and set this permutation in the
   section provided (or the section of the `DM`).
@@ -6499,6 +6498,12 @@ PetscErrorCode DMPlexVecGetOrientedClosure_Internal(DM dm, PetscSection section,
   Fortran Notes:
   The `csize` argument is not present in the Fortran binding since it is internal to the array.
 
+  `values` must be declared with
+.vb
+  PetscScalar,dimension(:),pointer   :: values
+.ve
+  and it will be allocated internally by PETSc to hold the values returned
+
 .seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMPlexVecRestoreClosure()`, `DMPlexVecSetClosure()`, `DMPlexMatSetClosure()`
 @*/
 PetscErrorCode DMPlexVecGetClosure(DM dm, PetscSection section, Vec v, PetscInt point, PetscInt *csize, PetscScalar *values[])
@@ -6585,7 +6590,7 @@ PetscErrorCode DMPlexVecGetClosureAtDepth_Internal(DM dm, PetscSection section, 
 }
 
 /*@C
-  DMPlexVecRestoreClosure - Restore the array of the values on the closure of 'point'
+  DMPlexVecRestoreClosure - Restore the array of the values on the closure of 'point' obtained with `DMPlexVecGetClosure()`
 
   Not collective
 
@@ -6595,14 +6600,14 @@ PetscErrorCode DMPlexVecGetClosureAtDepth_Internal(DM dm, PetscSection section, 
 . v       - The local vector
 . point   - The point in the `DM`
 . csize   - The number of values in the closure, or `NULL`
-- values  - The array of values, which is a borrowed array and should not be freed
+- values  - The array of values
 
   Level: intermediate
 
   Note:
   The array values are discarded and not copied back into `v`. In order to copy values back to `v`, use `DMPlexVecSetClosure()`
 
-  Fortran Notes:
+  Fortran Note:
   The `csize` argument is not present in the Fortran binding since it is internal to the array.
 
 .seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMPlexVecGetClosure()`, `DMPlexVecSetClosure()`, `DMPlexMatSetClosure()`
@@ -7004,9 +7009,18 @@ static inline PetscErrorCode DMPlexVecSetClosure_Depth1_Static(DM dm, PetscSecti
 . point   - The point in the `DM`
 . values  - The array of values
 - mode    - The insert mode. One of `INSERT_ALL_VALUES`, `ADD_ALL_VALUES`, `INSERT_VALUES`, `ADD_VALUES`, `INSERT_BC_VALUES`, and `ADD_BC_VALUES`,
-         where `INSERT_ALL_VALUES` and `ADD_ALL_VALUES` also overwrite boundary conditions.
+            where `INSERT_ALL_VALUES` and `ADD_ALL_VALUES` also overwrite boundary conditions.
 
   Level: intermediate
+
+  Note:
+  Usually the input arrays were obtained with `DMPlexVecGetClosure()`
+
+  Fortran Note:
+  `values` must be declared with
+.vb
+  PetscScalar,dimension(:),pointer   :: values
+.ve
 
 .seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMPlexVecGetClosure()`, `DMPlexMatSetClosure()`
 @*/

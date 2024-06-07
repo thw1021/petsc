@@ -41,7 +41,6 @@ PetscErrorCode PetscSectionCreate(MPI_Comm comm, PetscSection *s)
   PetscCall(ISInitializePackage());
 
   PetscCall(PetscHeaderCreate(*s, PETSC_SECTION_CLASSID, "PetscSection", "Section", "IS", comm, PetscSectionDestroy, PetscSectionView));
-
   (*s)->pStart              = -1;
   (*s)->pEnd                = -1;
   (*s)->perm                = NULL;
@@ -3282,6 +3281,7 @@ PetscErrorCode PetscSectionSymCreate(MPI_Comm comm, PetscSectionSym *sym)
   PetscFunctionBegin;
   PetscAssertPointer(sym, 2);
   PetscCall(ISInitializePackage());
+
   PetscCall(PetscHeaderCreate(*sym, PETSC_SECTION_SYM_CLASSID, "PetscSectionSym", "Section Symmetry", "IS", comm, PetscSectionSymDestroy, PetscSectionSymView));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -3536,8 +3536,8 @@ PetscErrorCode PetscSectionGetFieldSym(PetscSection section, PetscInt field, Pet
 + section   - the section
 . numPoints - the number of points
 - points    - an array of size 2 * `numPoints`, containing a list of (point, orientation) pairs. (An orientation is an
-    arbitrary integer: its interpretation is up to sym.  Orientations are used by `DM`: for their interpretation in that
-    context, see `DMPlexGetConeOrientation()`).
+              arbitrary integer: its interpretation is up to sym.  Orientations are used by `DM`: for their interpretation in that
+              context, see `DMPlexGetConeOrientation()`).
 
   Output Parameters:
 + perms - The permutations for the given orientations (or `NULL` if there is no symmetry or the permutation is the identity).
