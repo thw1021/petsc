@@ -225,19 +225,19 @@ PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetZonalVariableNumber(PetscViewe
 PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetNodalVariableNumber(PetscViewer viewer, int num);
 PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetGlobalVariableNumber(PetscViewer viewer, int num);
 
-PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetZonalVariableName(PetscViewer, int rank, char name[]);
-PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetNodalVariableName(PetscViewer, int rank, char name[]);
+PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetZonalVariableName(PetscViewer, int rank, const char name[]);
+PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetNodalVariableName(PetscViewer, int rank, const char name[]);
 
-PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetZonalVariableName(PetscViewer, int rank, char name[]);
-PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetNodalVariableName(PetscViewer, int rank, char name[]);
+PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetZonalVariableName(PetscViewer, int rank, char **name);
+PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetNodalVariableName(PetscViewer, int rank, char **name);
 
 /*Set and Get Multiple Names at Once for Zonal*/
-PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetZonalVariableNames(PetscViewer, char names[][EX_MAX_NAME]);
-PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetZonalVariableNames(PetscViewer, int numNames, char names[][EX_MAX_NAME]);
+PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetZonalVariableNames(PetscViewer, const char **names);
+PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetZonalVariableNames(PetscViewer, int numNames, char **names);
 
 /*Set and Get Multiple Names at Once for Nodal*/
-PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetNodalVariableNames(PetscViewer, char names[][EX_MAX_NAME]);
-PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetNodalVariableNames(PetscViewer, int numNames, char names[][EX_MAX_NAME]);
+PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetNodalVariableNames(PetscViewer, char **names);
+PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetNodalVariableNames(PetscViewer, int numNames, char **names);
 /* Mesh Partitioning and Distribution */
 #define DMPLEX_OVERLAP_MANUAL -1
 
