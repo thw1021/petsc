@@ -14,7 +14,6 @@ typedef struct {
   int   numGlobalVariables;
   int   numZonalVariables;
   char *nodalVariableNames;
-  char *globalVariableNames;
   char *zonalVariableNames;
 } PetscViewer_ExodusII;
 
