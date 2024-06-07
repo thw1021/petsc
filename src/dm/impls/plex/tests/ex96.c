@@ -95,9 +95,8 @@ int main(int argc, char **argv)
     PetscCall(PetscViewerExodusIISetZonalVariableNames(viewer, test1names));
 
     /* Allocate memory for namesFromFunction to store the retrieved names */
-    char **namesFromFunction;
+    char *namesFromFunction[3];
     PetscCall(PetscMalloc1(3, &namesFromFunction));
-
     for (int i = 0; i < 3; i++) {
         PetscCall(PetscMalloc1(256, &namesFromFunction[i])); // Allocate memory for each string
     }
@@ -114,7 +113,6 @@ int main(int argc, char **argv)
     for (int i = 0; i < 3; i++) {
         PetscCall(PetscFree(namesFromFunction[i]));
     }
-    PetscCall(PetscFree(namesFromFunction));
 
 /* NODAL */
 //const char *test2names[] = {"humidity", "porosity", "saturation"};
