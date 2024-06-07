@@ -386,7 +386,7 @@ PetscErrorCode PetscViewerExodusIIGetNodalVariableNumber(PetscViewer viewer, int
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 /*@C
-  PetscViewerExodusIISetZonalVariableName - Sets the name of a zonal variable at a specific rank 
+  PetscViewerExodusIISetZonalVariableName - Sets the name of a zonal variable at a specific rank
 
   Collective; No Fortran Support
 
@@ -398,7 +398,7 @@ PetscErrorCode PetscViewerExodusIIGetNodalVariableNumber(PetscViewer viewer, int
   Level: intermediate
 
   Notes:
-  This function sets the name of a zonal variable at the specified rank, dynamically allocates enough memory for it and copies the name into the memory. 
+  This function sets the name of a zonal variable at the specified rank, dynamically allocates enough memory for it and copies the name into the memory.
 
 .seealso: `PETSCVIEWEREXODUSII`, `PetscViewer`, `PetscViewerCreate()`, `PetscViewerDestroy()`, `PetscViewerExodusIIOpen()`, `PetscViewerSetType()`, `PetscViewerType`, `PetscViewerExodusIIGetZonalVariableName()`
 @*/
@@ -408,12 +408,11 @@ PetscErrorCode PetscViewerExodusIISetZonalVariableName(PetscViewer viewer, int r
 
     PetscFunctionBegin;
     PetscCheck(rank >= 0 && rank < exo->numZonalVariables, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Rank out of range");
-    PetscCall(PetscStrallocpy(name, (char **)&(exo->zonalVariableNames[rank]))); // Pass pointer to pointer correctly
-
+    PetscCall(PetscStrallocpy(name, (char **)&exo->zonalVariableNames[rank]));
     PetscFunctionReturn(PETSC_SUCCESS);
 }
 /*@C
-  PetscViewerExodusIISetNodalVariableName - Sets the name of a nodal variable at a specific rank 
+  PetscViewerExodusIISetNodalVariableName - Sets the name of a nodal variable at a specific rank
 
   Collective; No Fortran Support
 
@@ -425,7 +424,7 @@ PetscErrorCode PetscViewerExodusIISetZonalVariableName(PetscViewer viewer, int r
   Level: intermediate
 
   Notes:
-  This function sets the name of a nodal variable at the specified rank. 
+  This function sets the name of a nodal variable at the specified rank.
 
 .seealso: `PETSCVIEWEREXODUSII`, `PetscViewer`, `PetscViewerCreate()`, `PetscViewerDestroy()`, `PetscViewerExodusIIOpen()`, `PetscViewerSetType()`, `PetscViewerType`, `PetscViewerExodusIIGetNodalVariableName()`
 @*/
@@ -436,11 +435,10 @@ PetscErrorCode PetscViewerExodusIISetNodalVariableName(PetscViewer viewer, int r
     PetscFunctionBegin;
     PetscCheck(rank >= 0 && rank < exo->numZonalVariables, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Rank out of range");
     PetscCall(PetscStrallocpy(name, (char **)&exo->nodalVariableNames[rank]));
-
     PetscFunctionReturn(PETSC_SUCCESS);
 }
 /*@C
-  PetscViewerExodusIIGetZonalVariableName - Gets the name of a zonal variable at a specific rank 
+  PetscViewerExodusIIGetZonalVariableName - Gets the name of a zonal variable at a specific rank
 
   Collective; No Fortran Support
 
@@ -452,7 +450,7 @@ PetscErrorCode PetscViewerExodusIISetNodalVariableName(PetscViewer viewer, int r
   Level: intermediate
 
   Notes:
-  This function sets the name of a zonal variable at the specified rank. 
+  This function sets the name of a zonal variable at the specified rank.
 
 .seealso: `PETSCVIEWEREXODUSII`, `PetscViewer`, `PetscViewerCreate()`, `PetscViewerDestroy()`, `PetscViewerExodusIIOpen()`, `PetscViewerSetType()`, `PetscViewerType`, `PetscViewerExodusIISetZonalVariableName()`
 @*/
@@ -462,11 +460,11 @@ PetscErrorCode PetscViewerExodusIIGetZonalVariableName(const PetscViewer viewer,
 
   PetscFunctionBegin;
   PetscCheck(rank >= 0 && rank < exo->numZonalVariables, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Rank out of range");
-  *name = &(exo->zonalVariableNames[rank]);
+  *name = &exo->zonalVariableNames[rank];
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 /*@C
-  PetscViewerExodusIIGetNodalVariableName - Gets the name of a nodal variable at a specific rank 
+  PetscViewerExodusIIGetNodalVariableName - Gets the name of a nodal variable at a specific rank
 
   Collective; No Fortran Support
 
@@ -478,7 +476,7 @@ PetscErrorCode PetscViewerExodusIIGetZonalVariableName(const PetscViewer viewer,
   Level: intermediate
 
   Notes:
-  This function gets the name of a nodal variable at the specified rank. 
+  This function gets the name of a nodal variable at the specified rank.
 
 .seealso: `PETSCVIEWEREXODUSII`, `PetscViewer`, `PetscViewerCreate()`, `PetscViewerDestroy()`, `PetscViewerExodusIIOpen()`, `PetscViewerSetType()`, `PetscViewerType`, `PetscViewerExodusIISetNodalVariableName()`
 @*/
@@ -488,11 +486,11 @@ PetscErrorCode PetscViewerExodusIIGetNodalVariableName(const PetscViewer viewer,
 
     PetscFunctionBegin;
     PetscCheck(rank >= 0 && rank < exo->numNodalVariables, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Rank out of range");
-    *name = &(exo->nodalVariableNames[rank]);
+    *name = &exo->nodalVariableNames[rank];
     PetscFunctionReturn(PETSC_SUCCESS);
 }
 /*@C
-  PetscViewerExodusIISetZonalVariableNames - Sets the names of nodal variables 
+  PetscViewerExodusIISetZonalVariableNames - Sets the names of nodal variables
 
   Collective; No Fortran Support
 
@@ -513,27 +511,22 @@ PetscErrorCode PetscViewerExodusIISetZonalVariableNames(PetscViewer viewer, cons
     PetscErrorCode        ierr;
     int                   i, numNames;
     PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
-    
     PetscViewerExodusIIGetZonalVariableNumber(viewer, &numNames);
+
     PetscFunctionBegin;
     PetscCheck(numNames >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of names must be non-negative");
-
-    // Allocate memory for new names array
     ierr = PetscMalloc1(numNames, &exo->zonalVariableNames);
     CHKERRQ(ierr);
-
-    // Copy names using PetscStrallocopy
     for (i = 0; i < numNames; i++) {
-        ierr = PetscStrallocpy(names[i], (char **)&(exo->zonalVariableNames[i]));
-        
-        CHKERRQ(ierr);
+      ierr = PetscStrallocpy(names[i], (char **)&exo->zonalVariableNames[i]);
+      CHKERRQ(ierr);
     }
 
     exo->numZonalVariables = numNames;
     PetscFunctionReturn(PETSC_SUCCESS);
 }
 /*@C
-  PetscViewerExodusIISetNodalVariableNames - Sets the names of nodal variables 
+  PetscViewerExodusIISetNodalVariableNames - Sets the names of nodal variables
 
   Collective; No Fortran Support
 
@@ -570,7 +563,7 @@ PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetNodalVariableNames(PetscViewer
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 /*@C
-  PetscViewerExodusIIGetZonalVariableNames - Gets the names of zonal variables 
+  PetscViewerExodusIIGetZonalVariableNames - Gets the names of zonal variables
 
   Collective; No Fortran Support
 
@@ -603,7 +596,7 @@ PetscErrorCode PetscViewerExodusIIGetZonalVariableNames(PetscViewer viewer, int 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 /*@C
-  PetscViewerExodusIIGetNodalVariableNames - Gets the names of nodal variables 
+  PetscViewerExodusIIGetNodalVariableNames - Gets the names of nodal variables
 
   Collective; No Fortran Support
 
