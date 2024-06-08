@@ -249,7 +249,7 @@ PETSC_EXTERN PetscErrorCode PetscFECreate_Composite(PetscFE fem)
   Level: intermediate
 
   Note:
-  Do note free the output arrays.
+  Do not free the output arrays.
 
 .seealso: `PetscFE`, `PetscFECreate()`
 @*/

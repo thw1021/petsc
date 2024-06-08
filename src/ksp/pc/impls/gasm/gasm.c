@@ -1,12 +1,12 @@
 /*
   This file defines an "generalized" additive Schwarz preconditioner for any Mat implementation.
-  In this version each MPI process may intersect multiple subdomains and any subdomain may
+  In this version, each MPI process may intersect multiple subdomains and any subdomain may
   intersect multiple MPI processes.  Intersections of subdomains with MPI processes are called *local
   subdomains*.
 
        N    - total number of distinct global subdomains  (set explicitly in PCGASMSetTotalSubdomains() or implicitly PCGASMSetSubdomains() and then calculated in PCSetUp_GASM())
-       n    - actual number of local subdomains on this process (set in PCGASMSetSubdomains() or calculated in PCGASMSetTotalSubdomains())
-       nmax - maximum number of local subdomains per process    (calculated in PCSetUp_GASM())
+       n    - actual number of local subdomains on this process (set in `PCGASMSetSubdomains()` or calculated in `PCGASMSetTotalSubdomains()`)
+       nmax - maximum number of local subdomains per process (calculated in PCSetUp_GASM())
 */
 #include <petsc/private/pcimpl.h> /*I "petscpc.h" I*/
 #include <petscdm.h>

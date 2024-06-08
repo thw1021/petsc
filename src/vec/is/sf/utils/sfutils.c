@@ -76,7 +76,7 @@ PetscErrorCode PetscSFSetGraphLayout(PetscSF sf, PetscLayout layout, PetscInt nl
   Notes:
   The outputs are such that passing them as inputs to `PetscSFSetGraphLayout()` would lead to the same star forest.
   The outputs `layout` and `gremote` are freshly created each time this function is called,
-  so they need to be freed (with `PetscLayoutDestroy()` and `PetscFree()`, by the user.
+  so they need to be freed (with `PetscLayoutDestroy()` and `PetscFree()`) by the user.
 
 .seealso: `PetscSF`, `PetscSFSetGraphLayout()`, `PetscSFCreate()`, `PetscSFView()`, `PetscSFSetGraph()`, `PetscSFGetGraph()`
 @*/
