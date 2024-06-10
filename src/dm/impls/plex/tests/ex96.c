@@ -88,9 +88,8 @@ int main(int argc, char **argv)
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nNumber of nodal variables: %d\n", nNodalVar));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Number of zonal variables: %d\n", nZonalVar));
 
-  /* TESTING ZONAL MULTIPLE STRINGS SETTER */
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nMultiple String Names Test\n"));
-
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nMultiple String Names Test\n"));
+    /* TESTING ZONAL MULTIPLE STRINGS SETTER */
     const char *test1names[] = {"Name1", "Name2", "Name3"}; // Example names
     PetscCall(PetscViewerExodusIISetZonalVariableNames(viewer, test1names));
 
@@ -112,6 +111,29 @@ int main(int argc, char **argv)
     /* Free allocated memory */
     for (int i = 0; i < 3; i++) {
         PetscCall(PetscFree(namesFromFunction[i]));
+    }
+
+/* TESTING ZONAL MULTIPLE STRINGS SETTER */
+PetscCall(PetscViewerExodusIISetNodalVariableNames(viewer, test1names));
+
+    /* Allocate memory for namesFromFunction to store the retrieved names */
+    char *namesFromFunctionZ[3];
+    PetscCall(PetscMalloc1(3, &namesFromFunctionZ));
+    for (int i = 0; i < 3; i++) {
+        PetscCall(PetscMalloc1(256, &namesFromFunctionZ[i])); // Allocate memory for each string
+    }
+
+    PetscCall(PetscViewerExodusIIGetNodalVariableNames(viewer, 3, namesFromFunctionZ));
+
+    /* Check if names were correctly retrieved and copied */
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nNodal Variable Names:\n"));
+    for (int i = 0; i < 3; i++) {
+        PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%d: %s\n", i, namesFromFunctionZ[i]));
+    }
+
+    /* Free allocated memory */
+    for (int i = 0; i < 3; i++) {
+        PetscCall(PetscFree(namesFromFunctionZ[i]));
     }
 
 /* NODAL */
