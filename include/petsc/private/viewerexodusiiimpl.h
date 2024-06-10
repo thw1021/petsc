@@ -10,9 +10,9 @@ typedef struct {
   int           exoid;
   PetscInt      order; /* the "order" of the mesh, used to construct tri6, tetra10 cells */
 
-  int   numNodalVariables;
-  int   numGlobalVariables;
-  int   numZonalVariables;
+  int    numNodalVariables;
+  int    numGlobalVariables;
+  int    numZonalVariables;
   char **nodalVariableNames;
   char **zonalVariableNames;
 } PetscViewer_ExodusII;
