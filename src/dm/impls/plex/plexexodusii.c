@@ -573,7 +573,7 @@ PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetNodalVariableNames(PetscViewer
   /* Allocates memory for an array of pointers to strings. Each pointer in this array will point to a dynamically allocated string */
     ierr = PetscMalloc1(numNames, &exo->nodalVariableNames);
     CHKERRQ(ierr);
-  
+
   /* Copy names using PetscStrallocpy */
     for (i = 0; i < numNames; i++) {
         ierr = PetscStrallocpy(names[i], &exo->nodalVariableNames[i]);
