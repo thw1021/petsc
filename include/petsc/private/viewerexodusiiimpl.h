@@ -13,8 +13,8 @@ typedef struct {
   int   numNodalVariables;
   int   numGlobalVariables;
   int   numZonalVariables;
-  char *nodalVariableNames;
-  char *zonalVariableNames;
+  char **nodalVariableNames;
+  char **zonalVariableNames;
 } PetscViewer_ExodusII;
 
 #endif
