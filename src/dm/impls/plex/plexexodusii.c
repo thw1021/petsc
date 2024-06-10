@@ -158,7 +158,7 @@ static PetscErrorCode PetscViewerFileSetName_ExodusII(PetscViewer viewer, const 
   Note:
   This function extracts the filename from the ExodusII `PetscViewer` context and provides it to the caller.
 
-.seealso: `PetscViewer`, `PetscViewerExodusIIOpen()`, `PetscViewerType`, `PetscViewerCreate()`, `PetscViewerDestroy()`
+.seealso: `PetscViewer`, `PetscViewerExodusIIOpen()`, `PetscViewerType`, `PetscViewerCreate()`, `PetscViewerDestroy()`, `PetscViewerFileSetMode_ExodusII`, `PetscViewerFileGetMode_ExodusII`
 @*/
 static PetscErrorCode PetscViewerFileGetName_ExodusII(PetscViewer viewer, const char **name)
 {
@@ -270,7 +270,22 @@ static PetscErrorCode PetscViewerExodusIIGetOrder_ExodusII(PetscViewer viewer, P
   *order = exo->order;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+/*@C
+  PetscViewerExodusIISetOrder_ExodusII - Sets the mesh order for a `PetscViewer` used with ExodusII.
 
+  Collective; No Fortran Support
+
+  Input Parameters:
++ viewer - the `PetscViewer` context
+- order  - the mesh order to set
+
+  Level: intermediate
+
+  Note:
+  This function sets the mesh order in the ExodusII `PetscViewer` context.
+
+.seealso: `PetscViewer`, `PetscViewerExodusIIOpen()`, `PetscViewerType`, `PetscViewerCreate()`, `PetscViewerDestroy()`, `PetscViewerExodusIIGetOrder_ExodusII()`
+@*/
 static PetscErrorCode PetscViewerExodusIISetOrder_ExodusII(PetscViewer viewer, PetscInt order)
 {
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
@@ -377,19 +392,19 @@ PetscErrorCode PetscViewerExodusIIGetNodalVariableNumber(PetscViewer viewer, int
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 /*@C
-  PetscViewerExodusIISetZonalVariableName - Sets the name of a zonal variable at a specific rank
+  PetscViewerExodusIISetZonalVariableName - Sets the name of a zonal variable at a specific rank.
 
   Collective; No Fortran Support
 
   Input Parameters:
 + viewer - the `PetscViewer` of type `PETSCVIEWEREXODUSII`
-+ rank - the index for which you want to save the name
-- name[] - string array containing name characters
++ rank   - the index for which you want to save the name
+- name   - string containing the name characters
 
   Level: intermediate
 
   Notes:
-  This function sets the name of a zonal variable at the specified rank, dynamically allocates enough memory for it and copies the name into the memory.
+  This function sets the name of a zonal variable at the specified rank, dynamically allocates enough memory for it, and copies the name into the memory.
 
 .seealso: `PETSCVIEWEREXODUSII`, `PetscViewer`, `PetscViewerCreate()`, `PetscViewerDestroy()`, `PetscViewerExodusIIOpen()`, `PetscViewerSetType()`, `PetscViewerType`, `PetscViewerExodusIIGetZonalVariableName()`
 @*/
@@ -403,14 +418,14 @@ PetscErrorCode PetscViewerExodusIISetZonalVariableName(PetscViewer viewer, int r
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 /*@C
-  PetscViewerExodusIISetNodalVariableName - Sets the name of a nodal variable at a specific rank
+  PetscViewerExodusIISetNodalVariableName - Sets the name of a nodal variable at a specific rank.
 
   Collective; No Fortran Support
 
   Input Parameters:
 + viewer - the `PetscViewer` of type `PETSCVIEWEREXODUSII`
-+ rank - the index for which you want to save the name
-- name[] - string array containing name characters
++ rank   - the index for which you want to save the name
+- name   - string containing the name characters
 
   Level: intermediate
 
@@ -429,19 +444,21 @@ PetscErrorCode PetscViewerExodusIISetNodalVariableName(PetscViewer viewer, int r
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 /*@C
-  PetscViewerExodusIIGetZonalVariableName - Gets the name of a zonal variable at a specific rank
+  PetscViewerExodusIIGetZonalVariableName - Gets the name of a zonal variable at a specific rank.
 
   Collective; No Fortran Support
 
   Input Parameters:
 + viewer - the `PetscViewer` of type `PETSCVIEWEREXODUSII`
-+ rank - the index for which you want to save the name
-- name[] - string array containing name characters
+- rank   - the index for which you want to get the name
+
+  Output Parameter:
+- name - pointer to the string containing the name characters
 
   Level: intermediate
 
   Notes:
-  This function sets the name of a zonal variable at the specified rank.
+  This function gets the name of a zonal variable at the specified rank.
 
 .seealso: `PETSCVIEWEREXODUSII`, `PetscViewer`, `PetscViewerCreate()`, `PetscViewerDestroy()`, `PetscViewerExodusIIOpen()`, `PetscViewerSetType()`, `PetscViewerType`, `PetscViewerExodusIISetZonalVariableName()`
 @*/
@@ -487,8 +504,7 @@ PetscErrorCode PetscViewerExodusIIGetNodalVariableName(const PetscViewer viewer,
 
   Input Parameters:
 + viewer - the `PetscViewer` of type `PETSCVIEWEREXODUSII`
-+ rank - the index for which you want to save the name
-+ names[][] - 2D array containing the array of string names to be set
+- names  - 2D array containing the array of string names to be set
 
   Level: intermediate
 
@@ -516,18 +532,16 @@ PetscErrorCode PetscViewerExodusIISetZonalVariableNames(PetscViewer viewer, cons
         ierr = PetscStrallocpy(names[i], &exo->zonalVariableNames[i]);/*tried removing the &(char **)*/
         CHKERRQ(ierr);
     }
-
-    //exo->numZonalVariables = numNames;
     PetscFunctionReturn(PETSC_SUCCESS);
 }
 /*@C
-  PetscViewerExodusIISetNodalVariableNames - Sets the names of nodal variables
+  PetscViewerExodusIISetNodalVariableNames - Sets the names of nodal variables.
 
   Collective; No Fortran Support
 
   Input Parameters:
 + viewer - the `PetscViewer` of type `PETSCVIEWEREXODUSII`
-+ names[][] - 2D array containing the array of string names to be set
++ names  - 2D array containing the array of string names to be set
 
   Level: intermediate
 
@@ -556,23 +570,22 @@ PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetNodalVariableNames(PetscViewer
         ierr = PetscStrallocpy(names[i], &exo->nodalVariableNames[i]);
         CHKERRQ(ierr);
     }
-  //exo->numNodalVariables = numNames;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 /*@C
-  PetscViewerExodusIIGetZonalVariableNames - Gets the names of zonal variables
+  PetscViewerExodusIIGetZonalVariableNames - Gets the names of zonal variables.
 
   Collective; No Fortran Support
 
   Input Parameters:
-+ viewer - the `PetscViewer` of type `PETSCVIEWEREXODUSII`
++ viewer   - the `PetscViewer` of type `PETSCVIEWEREXODUSII`
 + numNames - the number of zonal variable names to retrieve
-+ names[][] - 2D array where the zonal variable names will be saved
+- names    - 2D array where the zonal variable names will be saved
 
   Level: intermediate
 
   Notes:
-  This function allows users to get multiple zonal variable names at a time.
+  This function retrieves the specified number of zonal variable names from the `PetscViewer` context and saves them into the provided array `names`.
 
 .seealso: `PETSCVIEWEREXODUSII`, `PetscViewer`, `PetscViewerCreate()`, `PetscViewerDestroy()`, `PetscViewerExodusIIOpen()`, `PetscViewerSetType()`, `PetscViewerType`, `PetscViewerExodusIISetZonalVariableNames()`
 @*/
@@ -590,19 +603,19 @@ PetscErrorCode PetscViewerExodusIIGetZonalVariableNames(PetscViewer viewer, int 
     PetscFunctionReturn(PETSC_SUCCESS);
 }
 /*@C
-  PetscViewerExodusIIGetNodalVariableNames - Gets the names of nodal variables
+  PetscViewerExodusIIGetNodalVariableNames - Gets the names of nodal variables.
 
   Collective; No Fortran Support
 
   Input Parameters:
-+ viewer - the `PetscViewer` of type `PETSCVIEWEREXODUSII`
++ viewer   - the `PetscViewer` of type `PETSCVIEWEREXODUSII`
 + numNames - the number of nodal variable names to retrieve
-+ names[][] - 2D array where the nodal variable names will be saved
+- names    - 2D array where the nodal variable names will be saved
 
   Level: intermediate
 
   Notes:
-  This function allows users to get multiple nodal variable names at a time.
+  This function retrieves the specified number of nodal variable names from the `PetscViewer` context and saves them into the provided array `names`.
 
 .seealso: `PETSCVIEWEREXODUSII`, `PetscViewer`, `PetscViewerCreate()`, `PetscViewerDestroy()`, `PetscViewerExodusIIOpen()`, `PetscViewerSetType()`, `PetscViewerType`, `PetscViewerExodusIISetNodalVariableNames()`
 @*/
@@ -620,7 +633,6 @@ PetscErrorCode PetscViewerExodusIIGetNodalVariableNames(PetscViewer viewer, int 
     }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-
 /*MC
    PETSCVIEWEREXODUSII - A viewer that writes to an Exodus II file
 
@@ -629,7 +641,6 @@ PetscErrorCode PetscViewerExodusIIGetNodalVariableNames(PetscViewer viewer, int 
 .seealso: `PetscViewerExodusIIOpen()`, `PetscViewerCreate()`, `PETSCVIEWERBINARY`, `PETSCVIEWERHDF5`, `DMView()`,
           `PetscViewerFileSetName()`, `PetscViewerFileSetMode()`, `PetscViewerFormat`, `PetscViewerType`, `PetscViewerSetType()`
 M*/
-
 PETSC_EXTERN PetscErrorCode PetscViewerCreate_ExodusII(PetscViewer v)
 {
   PetscViewer_ExodusII *exo;
@@ -658,7 +669,6 @@ PETSC_EXTERN PetscErrorCode PetscViewerCreate_ExodusII(PetscViewer v)
   PetscCall(PetscObjectComposeFunction((PetscObject)v, "PetscViewerGetOrder_C", PetscViewerExodusIIGetOrder_ExodusII));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-
 /*
   EXOGetVarIndex - Locate a result in an exodus file based on its name
 
