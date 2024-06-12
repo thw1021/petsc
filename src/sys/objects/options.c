@@ -124,7 +124,6 @@ PETSC_INTERN PetscErrorCode PetscOptionsInsertStringYAML_Private(PetscOptions, c
 static PetscErrorCode PetscOptionsMonitor(PetscOptions options, const char name[], const char value[], PetscOptionSource source)
 {
   PetscFunctionBegin;
-  if (!value) value = "";
   if (options->monitorFromOptions) PetscCall(PetscOptionsMonitorDefault(name, value, source, NULL));
   for (PetscInt i = 0; i < options->numbermonitors; i++) PetscCall((*options->monitor[i])(name, value, source, options->monitorcontext[i]));
   PetscFunctionReturn(PETSC_SUCCESS);
