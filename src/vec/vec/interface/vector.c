@@ -575,7 +575,11 @@ PetscErrorCode VecDestroy(Vec *v)
     PetscFunctionReturn(PETSC_SUCCESS);
   }
 
+  if (*v != (*v)->localform.vec) PetscCall(VecDestroy(&(*v)->localform.vec));
+  PetscCall(ISDestroy(&(*v)->localform.is));
+  PetscCall(VecScatterDestroy(&(*v)->localform.scatter));
   PetscCall(PetscObjectSAWsViewOff((PetscObject)*v));
+  PetscCall(PetscObjectComposeFunction((PetscObject)*v, "VecLocalFormCreate_C", NULL));
   /* destroy the internal part */
   PetscTryTypeMethod(*v, destroy);
   PetscCall(PetscFree((*v)->defaultrandtype));

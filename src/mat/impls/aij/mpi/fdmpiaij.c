@@ -34,9 +34,9 @@ PetscErrorCode MatFDColoringApply_BAIJ(Mat J, MatFDColoring coloring, Vec x1, vo
   PetscInt           k, cstart, cend, l, row, col, nz, spidx, i, j;
   PetscScalar        dx = 0.0, *w3_array, *dy_i, *dy = coloring->dy;
   PetscScalar       *vscale_array;
-  const PetscScalar *xx;
+  const PetscScalar *xx, *lvscale_array;
   PetscReal          epsilon = coloring->error_rel, umin = coloring->umin, unorm;
-  Vec                w1 = coloring->w1, w2 = coloring->w2, w3, vscale = coloring->vscale;
+  Vec                w1 = coloring->w1, w2 = coloring->w2, w3, lvscale, vscale = coloring->vscale;
   void              *fctx  = coloring->fctx;
   PetscInt           ctype = coloring->ctype, nxloc, nrows_k;
   PetscScalar       *valaddr;
@@ -77,10 +77,7 @@ PetscErrorCode MatFDColoringApply_BAIJ(Mat J, MatFDColoring coloring, Vec x1, vo
     PetscCall(VecRestoreArrayRead(x1, &xx));
     PetscCall(VecRestoreArray(vscale, &vscale_array));
   }
-  if (ctype == IS_COLORING_GLOBAL && coloring->htype[0] == 'd') {
-    PetscCall(VecGhostUpdateBegin(vscale, INSERT_VALUES, SCATTER_FORWARD));
-    PetscCall(VecGhostUpdateEnd(vscale, INSERT_VALUES, SCATTER_FORWARD));
-  }
+  if (ctype == IS_COLORING_GLOBAL && coloring->htype[0] == 'd') { PetscCall(VecLocalFormGetRead(vscale, &lvscale)); }
 
   /* (3) Loop over each color */
   if (!coloring->w3) {
@@ -91,7 +88,7 @@ PetscErrorCode MatFDColoringApply_BAIJ(Mat J, MatFDColoring coloring, Vec x1, vo
   w3 = coloring->w3;
 
   PetscCall(VecGetOwnershipRange(x1, &cstart, &cend)); /* used by ghosted vscale */
-  if (vscale) PetscCall(VecGetArray(vscale, &vscale_array));
+  if (ctype == IS_COLORING_GLOBAL && coloring->htype[0] == 'd') PetscCall(VecGetArrayRead(lvscale, &lvscale_array));
   nz = 0;
   for (k = 0; k < ncolors; k++) {
     coloring->currentcolor = k;
@@ -111,14 +108,14 @@ PetscErrorCode MatFDColoringApply_BAIJ(Mat J, MatFDColoring coloring, Vec x1, vo
           w3_array[col] += 1.0 / dx;
           if (i) w3_array[col - 1] -= 1.0 / dx; /* resume original w3[col-1] */
         }
-      } else {                  /* htype == 'ds' */
-        vscale_array -= cstart; /* shift pointer so global index can be used */
+      } else {                   /* htype == 'ds' */
+        lvscale_array -= cstart; /* shift pointer so global index can be used */
         for (l = 0; l < ncolumns[k]; l++) {
           col = i + bs * coloring->columns[k][l]; /* local column (in global index!) of the matrix we are probing for */
-          w3_array[col] += 1.0 / vscale_array[col];
-          if (i) w3_array[col - 1] -= 1.0 / vscale_array[col - 1]; /* resume original w3[col-1] */
+          w3_array[col] += 1.0 / lvscale_array[col];
+          if (i) w3_array[col - 1] -= 1.0 / lvscale_array[col - 1]; /* resume original w3[col-1] */
         }
-        vscale_array += cstart;
+        lvscale_array += cstart;
       }
       if (ctype == IS_COLORING_GLOBAL) w3_array += cstart;
       PetscCall(VecRestoreArray(w3, &w3_array));
@@ -162,7 +159,7 @@ PetscErrorCode MatFDColoringApply_BAIJ(Mat J, MatFDColoring coloring, Vec x1, vo
         dy_i    = dy;
         for (i = 0; i < bs; i++) {   /* column of the block */
           for (j = 0; j < bs; j++) { /* row of the block */
-            valaddr[spidx++] = dy_i[row + j] * vscale_array[col + i];
+            valaddr[spidx++] = dy_i[row + j] * lvscale_array[col + i];
           }
           dy_i += nxloc; /* points to dy+i*nxloc */
         }
@@ -171,8 +168,10 @@ PetscErrorCode MatFDColoringApply_BAIJ(Mat J, MatFDColoring coloring, Vec x1, vo
   }
   PetscCall(MatAssemblyBegin(J, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(J, MAT_FINAL_ASSEMBLY));
-  if (vscale) PetscCall(VecRestoreArray(vscale, &vscale_array));
-
+  if (ctype == IS_COLORING_GLOBAL && coloring->htype[0] == 'd') {
+    PetscCall(VecRestoreArrayRead(lvscale, &lvscale_array));
+    PetscCall(VecLocalFormRestoreRead(vscale, &lvscale));
+  }
   coloring->currentcolor = -1;
   PetscCall(VecBindToCPU(x1, PETSC_FALSE));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -184,10 +183,10 @@ PetscErrorCode MatFDColoringApply_AIJ(Mat J, MatFDColoring coloring, Vec x1, voi
   PetscErrorCode (*f)(void *, Vec, Vec, void *) = (PetscErrorCode(*)(void *, Vec, Vec, void *))coloring->f;
   PetscInt           k, cstart, cend, l, row, col, nz;
   PetscScalar        dx = 0.0, *y, *w3_array;
-  const PetscScalar *xx;
+  const PetscScalar *xx, *lvscale_array;
   PetscScalar       *vscale_array;
   PetscReal          epsilon = coloring->error_rel, umin = coloring->umin, unorm;
-  Vec                w1 = coloring->w1, w2 = coloring->w2, w3, vscale = coloring->vscale;
+  Vec                w1 = coloring->w1, w2 = coloring->w2, w3, lvscale, vscale = coloring->vscale;
   void              *fctx  = coloring->fctx;
   ISColoringType     ctype = coloring->ctype;
   PetscInt           nxloc, nrows_k;
@@ -231,17 +230,14 @@ PetscErrorCode MatFDColoringApply_AIJ(Mat J, MatFDColoring coloring, Vec x1, voi
     PetscCall(VecRestoreArrayRead(x1, &xx));
     PetscCall(VecRestoreArray(vscale, &vscale_array));
   }
-  if (ctype == IS_COLORING_GLOBAL && coloring->htype[0] == 'd') {
-    PetscCall(VecGhostUpdateBegin(vscale, INSERT_VALUES, SCATTER_FORWARD));
-    PetscCall(VecGhostUpdateEnd(vscale, INSERT_VALUES, SCATTER_FORWARD));
-  }
+  if (ctype == IS_COLORING_GLOBAL && coloring->htype[0] == 'd') { PetscCall(VecLocalFormGetRead(vscale, &lvscale)); }
 
   /* (3) Loop over each color */
   if (!coloring->w3) PetscCall(VecDuplicate(x1, &coloring->w3));
   w3 = coloring->w3;
 
   PetscCall(VecGetOwnershipRange(x1, &cstart, &cend)); /* used by ghosted vscale */
-  if (vscale) PetscCall(VecGetArray(vscale, &vscale_array));
+  if (ctype == IS_COLORING_GLOBAL && coloring->htype[0] == 'd') PetscCall(VecGetArrayRead(lvscale, &lvscale_array));
   nz = 0;
 
   if (coloring->bcols > 1) { /* use blocked insertion of Jentry */
@@ -268,13 +264,13 @@ PetscErrorCode MatFDColoringApply_AIJ(Mat J, MatFDColoring coloring, Vec x1, voi
             col = coloring->columns[k + i][l]; /* local column (in global index!) of the matrix we are probing for */
             w3_array[col] += 1.0 / dx;
           }
-        } else {                  /* htype == 'ds' */
-          vscale_array -= cstart; /* shift pointer so global index can be used */
+        } else {                   /* htype == 'ds' */
+          lvscale_array -= cstart; /* shift pointer so global index can be used */
           for (l = 0; l < ncolumns[k + i]; l++) {
             col = coloring->columns[k + i][l]; /* local column (in global index!) of the matrix we are probing for */
-            w3_array[col] += 1.0 / vscale_array[col];
+            w3_array[col] += 1.0 / lvscale_array[col];
           }
-          vscale_array += cstart;
+          lvscale_array += cstart;
         }
         if (ctype == IS_COLORING_GLOBAL) w3_array += cstart;
         PetscCall(VecRestoreArray(w3, &w3_array));
@@ -316,9 +312,9 @@ PetscErrorCode MatFDColoringApply_AIJ(Mat J, MatFDColoring coloring, Vec x1, voi
           row = Jentry[nz].row; /* local row index */
 #if defined(PETSC_USE_COMPLEX)  /* See https://lists.mcs.anl.gov/pipermail/petsc-users/2021-December/045158.html */
           PetscScalar *tmp = Jentry[nz].valaddr;
-          *tmp             = dy[row] * vscale_array[Jentry[nz].col];
+          *tmp             = dy[row] * lvscale_array[Jentry[nz].col];
 #else
-          *Jentry[nz].valaddr = dy[row] * vscale_array[Jentry[nz].col];
+          *Jentry[nz].valaddr = dy[row] * lvscale_array[Jentry[nz].col];
 #endif
           nz++;
         }
@@ -340,13 +336,13 @@ PetscErrorCode MatFDColoringApply_AIJ(Mat J, MatFDColoring coloring, Vec x1, voi
           col = coloring->columns[k][l]; /* local column (in global index!) of the matrix we are probing for */
           w3_array[col] += 1.0 / dx;
         }
-      } else {                  /* htype == 'ds' */
-        vscale_array -= cstart; /* shift pointer so global index can be used */
+      } else {                   /* htype == 'ds' */
+        lvscale_array -= cstart; /* shift pointer so global index can be used */
         for (l = 0; l < ncolumns[k]; l++) {
           col = coloring->columns[k][l]; /* local column (in global index!) of the matrix we are probing for */
-          w3_array[col] += 1.0 / vscale_array[col];
+          w3_array[col] += 1.0 / lvscale_array[col];
         }
-        vscale_array += cstart;
+        lvscale_array += cstart;
       }
       if (ctype == IS_COLORING_GLOBAL) w3_array += cstart;
       PetscCall(VecRestoreArray(w3, &w3_array));
@@ -381,9 +377,9 @@ PetscErrorCode MatFDColoringApply_AIJ(Mat J, MatFDColoring coloring, Vec x1, voi
           row = Jentry[nz].row; /* local row index */
 #if defined(PETSC_USE_COMPLEX)  /* See https://lists.mcs.anl.gov/pipermail/petsc-users/2021-December/045158.html */
           PetscScalar *tmp = Jentry[nz].valaddr;
-          *tmp             = y[row] * vscale_array[Jentry[nz].col];
+          *tmp             = y[row] * lvscale_array[Jentry[nz].col];
 #else
-          *Jentry[nz].valaddr = y[row] * vscale_array[Jentry[nz].col];
+          *Jentry[nz].valaddr = y[row] * lvscale_array[Jentry[nz].col];
 #endif
           nz++;
         }
@@ -394,7 +390,10 @@ PetscErrorCode MatFDColoringApply_AIJ(Mat J, MatFDColoring coloring, Vec x1, voi
 
   PetscCall(MatAssemblyBegin(J, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(J, MAT_FINAL_ASSEMBLY));
-  if (vscale) PetscCall(VecRestoreArray(vscale, &vscale_array));
+  if (ctype == IS_COLORING_GLOBAL && coloring->htype[0] == 'd') {
+    PetscCall(VecRestoreArrayRead(lvscale, &lvscale_array));
+    PetscCall(VecLocalFormRestoreRead(vscale, &lvscale));
+  }
   coloring->currentcolor = -1;
   if (!alreadyboundtocpu) PetscCall(VecBindToCPU(x1, PETSC_FALSE));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -422,7 +421,7 @@ PetscErrorCode MatFDColoringSetUp_MPIXAIJ(Mat mat, ISColoring iscoloring, MatFDC
 
   PetscFunctionBegin;
   if (ctype == IS_COLORING_LOCAL) {
-    PetscCheck(map, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_INCOMP, "When using ghosted differencing matrix must have local to global mapping provided with MatSetLocalToGlobalMapping");
+    PetscCheck(map, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_INCOMP, "When using ghosted differencing matrix must have local to global mapping provided with MatSetLocalToGlobalMapping()");
     PetscCall(ISLocalToGlobalMappingGetIndices(map, &ltog));
   }
 
@@ -446,13 +445,17 @@ PetscErrorCode MatFDColoringSetUp_MPIXAIJ(Mat mat, ISColoring iscoloring, MatFDC
 
     if (ctype == IS_COLORING_GLOBAL && c->htype[0] == 'd') { /* create vscale for storing dx */
       PetscInt *garray;
+      IS        is;
+
       PetscCall(PetscMalloc1(B->cmap->n, &garray));
       for (i = 0; i < baij->B->cmap->n / bs; i++) {
         for (j = 0; j < bs; j++) garray[i * bs + j] = bs * baij->garray[i] + j;
       }
-      PetscCall(VecCreateGhost(PetscObjectComm((PetscObject)mat), mat->cmap->n, PETSC_DETERMINE, B->cmap->n, garray, &c->vscale));
+
+      PetscCall(ISCreateGeneral(PETSC_COMM_SELF, baij->B->cmap->n, garray, PETSC_OWN_POINTER, &is));
+      PetscCall(VecLocalFormCreate(PetscObjectComm((PetscObject)mat), mat->cmap->n, PETSC_DETERMINE, is, &c->vscale));
+      PetscCall(ISDestroy(&is));
       PetscCall(VecBindToCPU(c->vscale, PETSC_TRUE));
-      PetscCall(PetscFree(garray));
     }
   } else if (isSELL) {
     Mat_MPISELL *sell = (Mat_MPISELL *)mat->data;
@@ -476,7 +479,11 @@ PetscErrorCode MatFDColoringSetUp_MPIXAIJ(Mat mat, ISColoring iscoloring, MatFDC
     bs = 1; /* only bs=1 is supported for non MPIBAIJ matrix */
 
     if (ctype == IS_COLORING_GLOBAL && c->htype[0] == 'd') { /* create vscale for storing dx */
-      PetscCall(VecCreateGhost(PetscObjectComm((PetscObject)mat), mat->cmap->n, PETSC_DETERMINE, B->cmap->n, sell->garray, &c->vscale));
+      IS is;
+
+      PetscCall(ISCreateGeneral(PETSC_COMM_SELF, B->cmap->n, sell->garray, PETSC_COPY_VALUES, &is));
+      PetscCall(VecLocalFormCreate(PetscObjectComm((PetscObject)mat), mat->cmap->n, PETSC_DETERMINE, is, &c->vscale));
+      PetscCall(ISDestroy(&is));
       PetscCall(VecBindToCPU(c->vscale, PETSC_TRUE));
     }
   } else {
@@ -501,7 +508,11 @@ PetscErrorCode MatFDColoringSetUp_MPIXAIJ(Mat mat, ISColoring iscoloring, MatFDC
     bs = 1; /* only bs=1 is supported for non MPIBAIJ matrix */
 
     if (ctype == IS_COLORING_GLOBAL && c->htype[0] == 'd') { /* create vscale for storing dx */
-      PetscCall(VecCreateGhost(PetscObjectComm((PetscObject)mat), mat->cmap->n, PETSC_DETERMINE, B->cmap->n, aij->garray, &c->vscale));
+      IS is;
+
+      PetscCall(ISCreateGeneral(PETSC_COMM_SELF, B->cmap->n, aij->garray, PETSC_COPY_VALUES, &is));
+      PetscCall(VecLocalFormCreate(PetscObjectComm((PetscObject)mat), mat->cmap->n, PETSC_DETERMINE, is, &c->vscale));
+      PetscCall(ISDestroy(&is));
       PetscCall(VecBindToCPU(c->vscale, PETSC_TRUE));
     }
   }

@@ -539,27 +539,22 @@ static PetscErrorCode TestFEJacobian(DM dm, AppCtx *user)
     PetscCall(DMPlexSNESComputeJacobianFEM(dm, local, E, E, NULL));
     PetscCall(DMPlexCreateRigidBody(dm, 0, &sp));
     PetscCall(MatNullSpaceGetVecs(sp, &hasConst, &n, &vecs));
-    if (n) PetscCall(VecDuplicate(vecs[0], &res));
-    PetscCall(DMCreateLocalVector(dm, &localX));
-    PetscCall(DMCreateLocalVector(dm, &localRes));
+    for (i = 0; i < n; i++) PetscCall(VecSetDM(vecs[i], dm));
+    if (n) PetscCall(DMGetGlobalVector(dm, &res));
     for (i = 0; i < n; i++) { /* also test via matrix-free Jacobian application */
       PetscReal resNorm;
 
+      PetscCall(VecLocalFormGetWrite(res, &localRes));
+      PetscCall(VecLocalFormGetRead(vecs[i], &localX));
       PetscCall(VecSet(localRes, 0.));
-      PetscCall(VecSet(localX, 0.));
       PetscCall(VecSet(local, 0.));
-      PetscCall(VecSet(res, 0.));
-      PetscCall(DMGlobalToLocalBegin(dm, vecs[i], INSERT_VALUES, localX));
-      PetscCall(DMGlobalToLocalEnd(dm, vecs[i], INSERT_VALUES, localX));
       PetscCall(DMSNESComputeJacobianAction(dm, local, localX, localRes, NULL));
-      PetscCall(DMLocalToGlobalBegin(dm, localRes, ADD_VALUES, res));
-      PetscCall(DMLocalToGlobalEnd(dm, localRes, ADD_VALUES, res));
+      PetscCall(VecLocalFormRestoreRead(vecs[i], &localX));
+      PetscCall(VecLocalFormRestoreWrite(res, ADD_VALUES, &localRes));
       PetscCall(VecNorm(res, NORM_2, &resNorm));
       if (resNorm > PETSC_SMALL) PetscCall(PetscPrintf(PetscObjectComm((PetscObject)dm), "Symmetric gradient action null space vector %" PetscInt_FMT " residual: %E\n", i, (double)resNorm));
     }
-    PetscCall(VecDestroy(&localRes));
-    PetscCall(VecDestroy(&localX));
-    PetscCall(VecDestroy(&res));
+    if (n) PetscCall(DMRestoreGlobalVector(dm, &res));
     PetscCall(MatNullSpaceTest(sp, E, &isNullSpace));
     if (isNullSpace) {
       PetscCall(PetscPrintf(PetscObjectComm((PetscObject)dm), "Symmetric gradient null space: PASS\n"));

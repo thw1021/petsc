@@ -31,9 +31,15 @@ Changes: Development
 
 .. rubric:: Vec:
 
-- The ``IS`` passed to ``VecISAXPY()``, ``VecISCopy()``. ``VecISSet()``, and ``VecISShift()`` must have the same communicator of the vectors used
-- Make ``VecLock`` API active in optimized mode
-- ``VecNestSetSubVec()`` and ``VecNestSetSubVecs()`` now take references to input vectors rather than creating duplicates
+- Add ``VecGhostGetGhostIS()`` to get the ghost indices of a ghosted vector
+- Add ``-vec_mdot_use_gemv`` to let ``VecMDot()``, ``VecMTDot()``  use BLAS2 ``gemv()`` instead of custom unrolled kernel. Default is on
+- Add ``-vec_maxpy_use_gemv`` to let ``VecMAXPY()`` use BLAS2 ``gemv()`` instead of custom unrolled kernel. Default is off
+- ``VecReplaceArray()`` on the first Vec obtained from ``VecDuplicateVecs()`` with either of the two above \*_use_gemv options won't work anymore. If needed, turn them off or use ``VecDuplicateVec()`` instead
+- ``VecScale()`` is now a logically collective operation
+- Add ``VecISShift()`` to shift a part of the vector
+- ``VecISSet()`` does no longer accept NULL as index set
+- Add ``VecLocalFormGetRead()``, ``VecLocalFormRestoreRead()``, ``VecLocalFormGetWrite()``, ``VecLocalFormRestoreWrite()``, ``VecLocalFormSetVec()``, ``VecLocalFormSetIS()``, ``VecLocalFormSetUpdateRead()``, and ``VecLocalFormSetUpdateWrite()``
+- Deprecate ``VecGhostGetGhostIS()``, ``VecGhostGetLocalForm()``, ``VecGhostRestoreLocalForm()``, ``VecGhostIsLocalForm()``, ``VecGhostUpdateBegin()``, ``VecGhostUpdateEnd()``, ``VecCreateGhost()``, ``VecCreateGhostWithArray()``, ``VecCreateGhostBlock()``, and ``VecCreateGhostBlockWithArray()``
 
 .. rubric:: PetscSection:
 

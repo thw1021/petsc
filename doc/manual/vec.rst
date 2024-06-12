@@ -569,12 +569,12 @@ and write the residual evaluation using
 .. code-block::
 
    Node **f,**u;
-   DMDAVecGetArray(DM da,Vec local,&u);
+   DMDAVecGetArrayRead(DM da,Vec local,&u);
    DMDAVecGetArray(DM da,Vec global,&f);
     ...
        f[i][j].omega = ...
     ...
-   DMDAVecRestoreArray(DM da,Vec local,&u);
+   DMDAVecRestoreArrayRead(DM da,Vec local,&u);
    DMDAVecRestoreArray(DM da,Vec global,&f);
 
 The ``DMDAVecGetArray`` routines are also provided for GPU access with CUDA, HIP, and Kokkos. For example,
@@ -763,14 +763,59 @@ scalar output, like the result of a ``VecDot()`` are placed in CPU memory.
 
 .. _sec_localglobal:
 
-Local/global vectors and communicating between vectors
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Local/global vectors and communicating between them
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Many PDE problems require ghost (or halo) values in each MPI process or even more general parallel communication
 of vector values. These values are needed
 to perform function evaluation on that MPI process. The exact structure of the ghost values needed
-depends on the type of grid being used. ``DM`` provides a uniform API for communicating the needed
-values. We introduce the concept in detail for ``DMDA``.
+depends on the type of grid being used. The functions starting with ``VecLocalForm`` provide an easy way to manage
+local/ghosted vectors associated with a global (parallel, non-ghosted) vector.
+
+For any global vector obtained with ``DMCreateGlobalVector()`` or other vector on which ``VecLocalFormSetIS()``
+has been called one can obtain a local vector from that global vector with the correct ghost values using
+
+.. code-block::
+
+   VecLocalFormGetRead(Vec g, Vec *l);
+
+
+It's standard usage pattern is
+
+.. code-block::
+
+   VecLocalFormGetRead(Vec g, Vec *l);
+   // perform computation that uses entries of l but does not change l or g
+   VecLocalFormRestoreRead(Vec g, Vec *l);
+
+``VecLocalFormGetRead()`` is optimized to only update the ghost values when needed, so, for example,
+
+.. code-block::
+
+   VecLocalFormGetRead(Vec g, Vec *l);
+   VecLocalFormRestoreRead(Vec g, Vec *l);
+   VecLocalFormGetRead(Vec g, Vec *l);
+
+will only perform communication on the first call.
+
+In certain situations, such as in sequential runs or when the ghost points are located at the end of the vector's array (set with
+``VecLocalFormSetIS()``) the actual array space is shared between the global and local vector reducing or eliminating the
+need for the local values to be copied. :any:`ex22.c <veclocalformsetis>` demonstrates the use if ``VecLocalFormSetIS()``.
+
+.. _veclocalformsetis:
+.. admonition:: Listing: `Vec Tutorial src/vec/vec/tutorials/ex22.c <PETSC_DOC_OUT_ROOT_PLACEHOLDER/src/tutorials/ex22.c.html>`__
+
+   .. literalinclude:: /../src/vec/vec/tutorials/ex22.c
+      :start-at: int main(int argc, char **argv)
+      :end-at: PetscCall(VecDestroy(&gx));
+
+
+DM Local vectors
+~~~~~~~~~~~~~~~~
+
+In addition to supporting ``VecLocalFormGetRead()``, which we recommend using whenever possible, ``DM`` vectors provide a way
+to generate local vectors separately from global vectors and to communicate values between the global and local vectors.
+We introduce the concept in detail for ``DMDA``.
 
 Each ``DM`` object defines the layout of two vectors: a distributed
 global vector and a local vector that includes room for the appropriate
@@ -1181,6 +1226,8 @@ nonlinear solvers.
 
 Global Vectors with locations for ghost values
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The routines that begin with ``VecGhost`` are deprecated, see ``VecLocalFormSetIS()`` for the alternative.
 
 There are two minor drawbacks to the basic approach described above for unstructured grids:
 

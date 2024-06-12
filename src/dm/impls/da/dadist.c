@@ -19,7 +19,8 @@ static PetscErrorCode VecDuplicate_MPI_DA(Vec g, Vec *gg)
 
 PetscErrorCode DMCreateGlobalVector_DA(DM da, Vec *g)
 {
-  DM_DA *dd = (DM_DA *)da->data;
+  DM_DA      *dd = (DM_DA *)da->data;
+  PetscMPIInt size;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, DM_CLASSID, 1);
@@ -37,6 +38,9 @@ PetscErrorCode DMCreateGlobalVector_DA(DM da, Vec *g)
   PetscCall(VecSetOperation(*g, VECOP_VIEW, (void (*)(void))VecView_MPI_DA));
   PetscCall(VecSetOperation(*g, VECOP_LOAD, (void (*)(void))VecLoad_Default_DA));
   PetscCall(VecSetOperation(*g, VECOP_DUPLICATE, (void (*)(void))VecDuplicate_MPI_DA));
+
+  PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)da), &size));
+  if (size == 1 && dd->bx == DM_BOUNDARY_NONE && dd->by == DM_BOUNDARY_NONE && dd->bz == DM_BOUNDARY_NONE) PetscCall(VecLocalFormSetVec(*g, *g));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
