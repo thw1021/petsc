@@ -1614,14 +1614,18 @@ static PetscErrorCode MatDenseGetSubMatrix_MPIDense(Mat A, PetscInt rbegin, Pets
   Mat_MPIDense *a = (Mat_MPIDense *)A->data;
   Mat_MPIDense *c;
   MPI_Comm      comm;
-  PetscInt      pbegin, pend;
+  PetscInt      pbegin, pend, cpbegin, cpend;
+  PetscInt      clocal_start, clocal_end;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectGetComm((PetscObject)A, &comm));
   PetscCheck(!a->vecinuse, comm, PETSC_ERR_ORDER, "Need to call MatDenseRestoreColumnVec() first");
   PetscCheck(!a->matinuse, comm, PETSC_ERR_ORDER, "Need to call MatDenseRestoreSubMatrix() first");
-  pbegin = PetscMax(0, PetscMin(A->rmap->rend, rbegin) - A->rmap->rstart);
-  pend   = PetscMin(A->rmap->n, PetscMax(0, rend - A->rmap->rstart));
+  pbegin  = PetscMax(0, PetscMin(A->rmap->rend, rbegin) - A->rmap->rstart);
+  pend    = PetscMin(A->rmap->n, PetscMax(0, rend - A->rmap->rstart));
+  cpbegin = PetscMax(0, PetscMin(A->cmap->rend, cbegin) - A->cmap->rstart);
+  cpend   = PetscMin(A->cmap->n, PetscMax(0, cend - A->cmap->rstart));
+  PetscCall(PetscLayoutGetRange(A->cmap, &clocal_start, &clocal_end));
   if (!a->cmat) {
     PetscCall(MatCreate(comm, &a->cmat));
     PetscCall(MatSetType(a->cmat, ((PetscObject)A)->type_name));
@@ -1631,8 +1635,12 @@ static PetscErrorCode MatDenseGetSubMatrix_MPIDense(Mat A, PetscInt rbegin, Pets
       PetscCall(PetscLayoutSetSize(a->cmat->rmap, rend - rbegin));
       PetscCall(PetscLayoutSetUp(a->cmat->rmap));
     }
-    PetscCall(PetscLayoutSetSize(a->cmat->cmap, cend - cbegin));
-    PetscCall(PetscLayoutSetUp(a->cmat->cmap));
+    if (cend - cbegin == A->cmap->N) PetscCall(PetscLayoutReference(A->cmap, &a->cmat->cmap));
+    else {
+      PetscCall(PetscLayoutSetLocalSize(a->cmat->cmap, cpend - cpbegin));
+      PetscCall(PetscLayoutSetSize(a->cmat->cmap, cend - cbegin));
+      PetscCall(PetscLayoutSetUp(a->cmat->cmap));
+    }
   } else {
     PetscBool same = (PetscBool)(rend - rbegin == a->cmat->rmap->N);
     if (same && a->cmat->rmap->N != A->rmap->N) {
@@ -1646,9 +1654,18 @@ static PetscErrorCode MatDenseGetSubMatrix_MPIDense(Mat A, PetscInt rbegin, Pets
       PetscCall(PetscLayoutSetSize(a->cmat->rmap, rend - rbegin));
       PetscCall(PetscLayoutSetUp(a->cmat->rmap));
     }
-    if (cend - cbegin != a->cmat->cmap->N) {
+    same = (PetscBool)(cend - cbegin == a->cmat->cmap->N);
+    if (same && a->cmat->cmap->N != A->cmap->N) {
+      same = (PetscBool)(cpend - cpbegin == a->cmat->cmap->n);
+      PetscCall(MPIU_Allreduce(MPI_IN_PLACE, &same, 1, MPIU_BOOL, MPI_LAND, PetscObjectComm((PetscObject)A)));
+    }
+    if (!same) {
+      Mat_MPIDense *cmat_data = (Mat_MPIDense *)a->cmat->data;
+
+      PetscCall(PetscSFDestroy(&cmat_data->Mvctx));
       PetscCall(PetscLayoutDestroy(&a->cmat->cmap));
       PetscCall(PetscLayoutCreate(comm, &a->cmat->cmap));
+      PetscCall(PetscLayoutSetLocalSize(a->cmat->cmap, cpend - cpbegin));
       PetscCall(PetscLayoutSetSize(a->cmat->cmap, cend - cbegin));
       PetscCall(PetscLayoutSetUp(a->cmat->cmap));
     }
