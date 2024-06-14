@@ -674,7 +674,7 @@ static PetscErrorCode CreateMeshFromFile(MPI_Comm comm, AppCtx *user, DM *dm, DM
   PetscCall(DMPlexIsDistributed(*dm, &distributed));
   PetscCall(PetscPrintf(comm, "DMPlexCreateFromFile produced %s mesh.\n", distributed ? "distributed" : "serial"));
   if (testHeavy && distributed) {
-    PetscCall(PetscOptionsSetValue(NULL, "-dm_plex_hdf5_force_sequential", NULL));
+    PetscCall(PetscOptionsSetValue(NULL, "-dm_plex_hdf5_force_sequential", ""));
     PetscCall(DMPlexCreateFromFile(comm, filename, "ex18_plex", interpCreate, serialDM));
     PetscCall(DMPlexIsDistributed(*serialDM, &distributed));
     PetscCheck(!distributed, comm, PETSC_ERR_PLIB, "unable to create a serial DM from file");

@@ -133,7 +133,7 @@ int main(int argc, char **argv)
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, (char *)0, help));
   PetscCall(PetscOptionsSetValue(NULL, "-file", "ex30_output"));
-  PetscCall(PetscOptionsSetValue(NULL, "-snes_monitor_short", NULL));
+  PetscCall(PetscOptionsSetValue(NULL, "-snes_monitor_short", ""));
   PetscCall(PetscOptionsSetValue(NULL, "-snes_max_it", "20"));
   PetscCall(PetscOptionsSetValue(NULL, "-ksp_max_it", "1500"));
   PetscCall(PetscOptionsSetValue(NULL, "-ksp_gmres_restart", "300"));

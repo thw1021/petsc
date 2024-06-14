@@ -124,7 +124,6 @@ PETSC_INTERN PetscErrorCode PetscOptionsInsertStringYAML_Private(PetscOptions, c
 static PetscErrorCode PetscOptionsMonitor(PetscOptions options, const char name[], const char value[], PetscOptionSource source)
 {
   PetscFunctionBegin;
-  if (!value) value = "";
   if (options->monitorFromOptions) PetscCall(PetscOptionsMonitorDefault(name, value, source, NULL));
   for (PetscInt i = 0; i < options->numbermonitors; i++) PetscCall((*options->monitor[i])(name, value, source, options->monitorcontext[i]));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -342,10 +341,10 @@ static PetscErrorCode PetscOptionsInsertString_Private(PetscOptions options, con
       PetscCall(PetscTokenFind(token, &second));
       PetscCall(PetscOptionsValidKey(second, &key));
       if (!key) {
-        PetscCall(PetscOptionsSetValue_Private(options, first, second, NULL, source));
+        PetscCall(PetscOptionsSetValue_Private(options, first, second ? second : "", NULL, source));
         PetscCall(PetscTokenFind(token, &first));
       } else {
-        PetscCall(PetscOptionsSetValue_Private(options, first, NULL, NULL, source));
+        PetscCall(PetscOptionsSetValue_Private(options, first, "", NULL, source));
         first = second;
       }
     }
@@ -590,7 +589,7 @@ static PetscErrorCode PetscOptionsInsertFilePetsc(MPI_Comm comm, PetscOptions op
     PetscCall(PetscTokenDestroy(&token));
   }
 
-  if (cnt) PetscCall(PetscOptionsInsertString_Private(options, vstring, PETSC_OPT_FILE));
+  if (cnt) PetscCall(PetscOptionsInsertString_Private(options, vstring ? vstring : "", PETSC_OPT_FILE));
   PetscCall(PetscFree(packed));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -703,7 +702,7 @@ PetscErrorCode PetscOptionsInsertArgs(PetscOptions options, int argc, char *args
       PetscBool nextiskey = PETSC_FALSE;
       if (left >= 2) PetscCall(PetscOptionsValidKey(eargs[1], &nextiskey));
       if (left < 2 || nextiskey) {
-        PetscCall(PetscOptionsSetValue_Private(options, eargs[0], NULL, NULL, PETSC_OPT_COMMAND_LINE));
+        PetscCall(PetscOptionsSetValue_Private(options, eargs[0], "", NULL, PETSC_OPT_COMMAND_LINE));
         eargs++;
         left--;
       } else {
@@ -775,7 +774,7 @@ static PetscErrorCode PetscOptionsProcessPrecedentFlags(PetscOptions options, in
   /* Store precedent options in database and mark them as used */
   for (o = 1; o < n; o++) {
     if (set[o]) {
-      PetscCall(PetscOptionsSetValue_Private(options, opt[o], val[o], &a, PETSC_OPT_COMMAND_LINE));
+      PetscCall(PetscOptionsSetValue_Private(options, opt[o], val[o] ? val[o] : "", &a, PETSC_OPT_COMMAND_LINE));
       options->used[a] = PETSC_TRUE;
     }
   }
@@ -1247,7 +1246,7 @@ PetscErrorCode PetscOptionsSetAlias(PetscOptions options, const char newname[], 
   Input Parameters:
 + options - options database, use `NULL` for the default global database
 . name    - name of option, this SHOULD have the - prepended
-- value   - the option value (not used for all options, so can be `NULL`)
+- value   - the option value (not used for all options, so can be an empty string `""`. Using `NULL` as a value will remove the previous option entry from the database.)
 
   Level: intermediate
 
