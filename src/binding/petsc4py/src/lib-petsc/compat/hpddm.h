@@ -21,6 +21,8 @@ PetscErrorCode PCHPDDMGetCoarseCorrectionType(PETSC_UNUSED PC pc,PETSC_UNUSED PC
 PetscErrorCode PCHPDDMGetSTShareSubKSP(PETSC_UNUSED PC pc,PETSC_UNUSED PetscBool *share){PetscHPDDMError;}
 PetscErrorCode PCHPDDMSetDeflationMat(PETSC_UNUSED PC pc,PETSC_UNUSED IS is,PETSC_UNUSED Mat U){PetscHPDDMError;}
 PetscErrorCode PCHPDDMCreateDeflationMat(PETSC_UNUSED PC pc,PETSC_UNUSED Mat *P){PetscHPDDMError;}
+PetscErrorCode PCHPDDMGetSubPC(PETSC_UNUSED PC pc, PETSC_UNUSED PetscInt l, PETSC_UNUSED KSP *sub){PetscHPDDMError;}
+PetscErrorCode PCHPDDMGetCoarseSolve(PETSC_UNUSED PC pc, PETSC_UNUSED KSP *ksp){PetscHPDDMError;}
 
 #undef PetscHPDDMError
 

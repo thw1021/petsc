@@ -345,6 +345,8 @@ cdef extern from * nogil:
     PetscErrorCode PCHPDDMGetSTShareSubKSP(PetscPC, PetscBool*)
     PetscErrorCode PCHPDDMSetDeflationMat(PetscPC, PetscIS, PetscMat)
     PetscErrorCode PCHPDDMCreateDeflationMat(PetscPC, PetscMat*)
+    PetscErrorCode PCHPDDMGetSubPC(PetscPC, PetscInt, PetscPC*);
+    PetscErrorCode PCHPDDMGetCoarseSolve(PetscPC, PetscKSP*);
 
     # --- SPAI ---
     PetscErrorCode PCSPAISetEpsilon(PetscPC, PetscReal)
