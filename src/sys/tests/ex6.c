@@ -9,7 +9,7 @@ int main(int argc, char **argv)
   const char *val;
   PetscBool   has;
 
-  PetscCall(PetscOptionsSetValue(NULL, "-skip_petscrc", NULL));
+  PetscCall(PetscOptionsSetValue(NULL, "-skip_petscrc", ""));
   PetscCall(PetscOptionsSetValue(NULL, "-use_gpu_aware_mpi", "0"));
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
@@ -27,7 +27,7 @@ int main(int argc, char **argv)
   PetscCall(PetscOptionsHasName(NULL, "abc", "-", &has));
   PetscTestCheck(has == PETSC_FALSE);
 
-  PetscCall(PetscOptionsSetValue(NULL, "-abc", NULL));
+  PetscCall(PetscOptionsSetValue(NULL, "-abc", ""));
   PetscCall(PetscOptionsHasName(NULL, NULL, "-abc", &has));
   PetscTestCheck(has == PETSC_TRUE);
   PetscCall(PetscOptionsHasName(NULL, "", "-abc", &has));
@@ -42,16 +42,16 @@ int main(int argc, char **argv)
   PetscCall(PetscOptionsClearValue(NULL, "-ABC"));
 
   PetscCall(PetscOptionsPrefixPush(NULL, "a"));
-  PetscCall(PetscOptionsSetValue(NULL, "-x", NULL));
+  PetscCall(PetscOptionsSetValue(NULL, "-x", ""));
   PetscCall(PetscOptionsHasName(NULL, NULL, "-ax", &has));
   PetscTestCheck(has == PETSC_TRUE);
   PetscCall(PetscOptionsPrefixPush(NULL, "b"));
-  PetscCall(PetscOptionsSetValue(NULL, "-xy", NULL));
+  PetscCall(PetscOptionsSetValue(NULL, "-xy", ""));
   PetscCall(PetscOptionsHasName(NULL, NULL, "-abxy", &has));
   PetscTestCheck(has == PETSC_TRUE);
   PetscCall(PetscOptionsPrefixPop(NULL));
   PetscCall(PetscOptionsPrefixPush(NULL, "c"));
-  PetscCall(PetscOptionsSetValue(NULL, "-xz", NULL));
+  PetscCall(PetscOptionsSetValue(NULL, "-xz", ""));
   PetscCall(PetscOptionsHasName(NULL, NULL, "-acxz", &has));
   PetscTestCheck(has == PETSC_TRUE);
   PetscCall(PetscOptionsPrefixPop(NULL));
@@ -60,12 +60,12 @@ int main(int argc, char **argv)
   PetscCall(PetscOptionsClearValue(NULL, "-abxy"));
   PetscCall(PetscOptionsClearValue(NULL, "-acxz"));
 
-  PetscCall(PetscOptionsSetValue(NULL, "-FOO", NULL));
+  PetscCall(PetscOptionsSetValue(NULL, "-FOO", ""));
   PetscCall(PetscOptionsSetValue(NULL, "-FOO", "BAR"));
-  PetscCall(PetscOptionsSetValue(NULL, "-FOO", NULL));
+  PetscCall(PetscOptionsSetValue(NULL, "-FOO", ""));
   PetscCall(PetscOptionsClearValue(NULL, "-FOO"));
   PetscCall(PetscOptionsSetValue(NULL, "-FOO", "BAR"));
-  PetscCall(PetscOptionsSetValue(NULL, "-FOO", NULL));
+  PetscCall(PetscOptionsSetValue(NULL, "-FOO", ""));
   PetscCall(PetscOptionsSetValue(NULL, "-FOO", "BAR"));
   PetscCall(PetscOptionsClearValue(NULL, "-FOO"));
 
@@ -80,7 +80,7 @@ int main(int argc, char **argv)
       name[1] = c;
       PetscCall(PetscOptionsHasName(NULL, NULL, name, &has));
       PetscTestCheck(has == PETSC_FALSE);
-      PetscCall(PetscOptionsSetValue(NULL, name, NULL));
+      PetscCall(PetscOptionsSetValue(NULL, name, ""));
       PetscCall(PetscOptionsHasName(NULL, NULL, name, &has));
       PetscTestCheck(has == PETSC_TRUE);
     }
@@ -96,7 +96,7 @@ int main(int argc, char **argv)
       name[1] = c;
       PetscCall(PetscOptionsHasName(NULL, NULL, name, &has));
       PetscTestCheck(has == PETSC_FALSE);
-      PetscCall(PetscOptionsSetValue(NULL, name, NULL));
+      PetscCall(PetscOptionsSetValue(NULL, name, ""));
       PetscCall(PetscOptionsHasName(NULL, NULL, name, &has));
       PetscTestCheck(has == PETSC_TRUE);
     }

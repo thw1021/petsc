@@ -6,8 +6,8 @@ int main(int argc, char **argv)
 {
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
-  PetscCall(PetscOptionsSetValue(NULL, "-abc", NULL));
-  PetscCall(PetscOptionsSetValue(NULL, "-FOO", NULL));
+  PetscCall(PetscOptionsSetValue(NULL, "-abc", ""));
+  PetscCall(PetscOptionsSetValue(NULL, "-FOO", ""));
   PetscCall(PetscOptionsClearValue(NULL, "-FOO"));
   PetscCall(PetscOptionsView(NULL, NULL));
   PetscCall(PetscFinalize());

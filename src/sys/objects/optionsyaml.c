@@ -266,7 +266,7 @@ PetscErrorCode PetscOptionsInsertFileYAML(MPI_Comm comm, PetscOptions options, c
   PetscCallMPI(MPI_Bcast(yamlString, yamlLength + 1, MPI_CHAR, 0, comm));
 
   prev = PetscYAMLSetComm(comm);
-  PetscCall(PetscOptionsInsertStringYAML_Private(options, yamlString, PETSC_OPT_FILE));
+  PetscCall(PetscOptionsInsertStringYAML_Private(options, yamlString ? yamlString : "", PETSC_OPT_FILE));
   (void)PetscYAMLSetComm(prev);
 
   PetscCall(PetscFree(yamlString));
