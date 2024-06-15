@@ -11,6 +11,8 @@ Changes: Development
 
 .. rubric:: General:
 
+- Deprecate ``PETSC_DEFAULT`` in favor of ``PETSC_CURRENT``. 
+
 .. rubric:: Configure/Build:
 
 .. rubric:: Sys:
@@ -54,6 +56,9 @@ Changes: Development
 - Change the option database keys for coarsening for ``PCGAMG`` to use the prefix ``-pc_gamg_``, for example ``-pc_gamg_mat_coarsen_type``
 
 .. rubric:: KSP:
+
+- Add support for ``PETSC_DETERMINE`` as an argument to ``KSPSetTolerances()`` to set the parameter back to its initial value when the object was created
+
 
 .. rubric:: SNES:
 

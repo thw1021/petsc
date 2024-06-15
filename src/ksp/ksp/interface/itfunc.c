@@ -1614,10 +1614,15 @@ PetscErrorCode KSPGetTolerances(KSP ksp, PetscReal *rtol, PetscReal *abstol, Pet
   Level: intermediate
 
   Notes:
-  Use `PETSC_DEFAULT` to retain the default value of any of the tolerances.
+  Use `PETSC_CURRENT` to retain the current value of any of the parameters. The deprecated `PETSC_DEFAULT` also retains the current value (though the name is confusing)
+
+  Use `PETSC_DETERMINE` to set the value to what it was when the object was fully created (the default value).
 
   See `KSPConvergedDefault()` for details how these parameters are used in the default convergence test.  See also `KSPSetConvergenceTest()`
   for setting user-defined stopping criteria.
+
+  Fortran Note:
+  Use `PETSC_CURRENT_INTEGER`, `PETSC_CURRENT_REAL`, `PETSC_DETERMINE_INTEGER`, or `PETSC_DETERMINE_REAL`
 
 .seealso: [](ch_ksp), `KSPGetTolerances()`, `KSPConvergedDefault()`, `KSPSetConvergenceTest()`, `KSP`, `KSPSetMinimumIterations()`
 @*/
@@ -1630,19 +1635,27 @@ PetscErrorCode KSPSetTolerances(KSP ksp, PetscReal rtol, PetscReal abstol, Petsc
   PetscValidLogicalCollectiveReal(ksp, dtol, 4);
   PetscValidLogicalCollectiveInt(ksp, maxits, 5);
 
-  if (rtol != (PetscReal)PETSC_DEFAULT) {
+  if (rtol == (PetscReal)PETSC_DETERMINE) {
+    ksp->rtol = ksp->defaults.rtol;
+  } else if (rtol != (PetscReal)PETSC_DEFAULT) {
     PetscCheck(rtol >= 0.0 && rtol < 1.0, PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_OUTOFRANGE, "Relative tolerance %g must be non-negative and less than 1.0", (double)rtol);
     ksp->rtol = rtol;
   }
-  if (abstol != (PetscReal)PETSC_DEFAULT) {
+  if (abstol == (PetscReal)PETSC_DETERMINE) {
+    ksp->abstol = ksp->defaults.abstol;
+  } else if (abstol != (PetscReal)PETSC_DEFAULT) {
     PetscCheck(abstol >= 0.0, PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_OUTOFRANGE, "Absolute tolerance %g must be non-negative", (double)abstol);
     ksp->abstol = abstol;
   }
-  if (dtol != (PetscReal)PETSC_DEFAULT) {
+  if (dtol == (PetscReal)PETSC_DETERMINE) {
+    ksp->divtol = ksp->defaults.divtol;
+  } else if (dtol != (PetscReal)PETSC_DEFAULT) {
     PetscCheck(dtol >= 0.0, PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_OUTOFRANGE, "Divergence tolerance %g must be larger than 1.0", (double)dtol);
     ksp->divtol = dtol;
   }
-  if (maxits != PETSC_DEFAULT) {
+  if (maxits == (PetscInt)PETSC_DETERMINE) {
+    ksp->max_it = ksp->defaults.max_it;
+  } else if (maxits != (PetscInt)PETSC_DEFAULT) {
     PetscCheck(maxits >= 0, PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_OUTOFRANGE, "Maximum number of iterations %" PetscInt_FMT " must be non-negative", maxits);
     ksp->max_it = maxits;
   }

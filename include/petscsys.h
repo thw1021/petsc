@@ -209,18 +209,29 @@ M*/
 #define PETSC_NULL   PETSC_DEPRECATED_MACRO(3, 19, 0, "PETSC_NULLPTR", ) PETSC_NULLPTR
 
 /*MC
-    PETSC_DECIDE - standard way of passing in integer or floating point parameter
-       where you wish PETSc to use the default.
+   PETSC_DECIDE - standard way of passing in integer or floating point parameter to indicate PETSc should determine an appropriate value
 
    Level: beginner
+
+   Note:
+   Same as `PETSC_DETERMINE`
+
+   Fortran Note:
+   Use `PETSC_DETERMINE_INTEGER` or `PETSC_DETERMINE_REAL`.
 
 .seealso: `PETSC_DEFAULT`, `PETSC_IGNORE`, `PETSC_DETERMINE`
 M*/
 
 /*MC
-   PETSC_DETERMINE - standard way of passing in integer or floating point parameter where you wish PETSc to compute the required value.
+   PETSC_DETERMINE - standard way of passing in integer or floating point parameter to indicate PETSc should determine an appropriate value
 
    Level: beginner
+
+   Note:
+   Same as `PETSC_DECIDE`
+
+   Fortran Note:
+   Use `PETSC_DETERMINE_INTEGER` or `PETSC_DETERMINE_REAL`.
 
    Developer Note:
    I would like to use const `PetscInt` `PETSC_DETERMINE` = `PETSC_DECIDE`; but for
@@ -230,20 +241,36 @@ M*/
 M*/
 
 /*MC
-   PETSC_DEFAULT - standard way of passing in integer or floating point parameter where you wish PETSc to use the default.
+   PETSC_CURRENT - standard way of indicating to an object not change the current value of the parameter in the object
 
    Level: beginner
 
-   Fortran Note:
-   You need to use `PETSC_DEFAULT_INTEGER` or `PETSC_DEFAULT_REAL`.
+   Note:
+   Use `PETSC_DECIDE` to use the value that was set by PETSc when the object was created
 
-.seealso: `PETSC_DECIDE`, `PETSC_IGNORE`, `PETSC_DETERMINE`
+   Fortran Note:
+   Use `PETSC_CURRENT_INTEGER` or `PETSC_CURRENT_REAL`.
+
+.seealso: `PETSC_DECIDE`, `PETSC_IGNORE`, `PETSC_DETERMINE`, `PETSC_DEFAULT`
+M*/
+
+/*MC
+   PETSC_DEFAULT - deprecated, see `PETSC_CURRENT` and `PETSC_DETERMINE`
+
+   Level: beginner
+
+   Notes:
+   The name is confusing since it tells the object to continue to use the value it is using, not the default value when the object was created.
+
+.seealso: `PETSC_DECIDE`, `PETSC_IGNORE`, `PETSC_DETERMINE`, `PETSC_CURRENT`
 M*/
 
 /* These MUST be preprocessor defines! see https://gitlab.com/petsc/petsc/-/issues/1370 */
 #define PETSC_DECIDE    (-1)
 #define PETSC_DETERMINE PETSC_DECIDE
-#define PETSC_DEFAULT   (-2)
+#define PETSC_CURRENT   (-2)
+// #define PETSC_DEFAULT   PETSC_DEPRECATED_MACRO(3, 22, 0, "PETSC_CURRENT", ) PETSC_CURRENT
+#define PETSC_DEFAULT PETSC_CURRENT
 
 /*MC
    PETSC_COMM_WORLD - the equivalent of the `MPI_COMM_WORLD` communicator which represents all the processes that PETSc knows about.
