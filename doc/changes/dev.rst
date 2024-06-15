@@ -65,6 +65,9 @@ Changes: Development
 
 .. rubric:: KSP:
 
+- Add support for ``PETSC_DETERMINE`` as an argument to ``KSPSetTolerances()`` to set the parameter back to its initial value when the object was created
+- Deprecate ``PETSC_DEFAULT`` with ``PETSC_CURRENT`` for  ``SKSPetTolerances()``
+
 .. rubric:: SNES:
 
 .. rubric:: SNESLineSearch:
