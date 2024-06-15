@@ -209,41 +209,100 @@ M*/
 #define PETSC_NULL   PETSC_DEPRECATED_MACRO(3, 19, 0, "PETSC_NULLPTR", ) PETSC_NULLPTR
 
 /*MC
-    PETSC_DECIDE - standard way of passing in integer or floating point parameter
-       where you wish PETSc to use the default.
+   PETSC_UNLIMITED - standard way of passing an integer or floating point parameter to indicate PETSc there is no bound on the value allowed
 
    Level: beginner
 
-.seealso: `PETSC_DEFAULT`, `PETSC_IGNORE`, `PETSC_DETERMINE`
+   Example Usage:
+.vb
+   KSPSetTolerances(ksp, PETSC_CURRENT, PETSC_CURRENT, PETSC_UNLIMITED, PETSC_UNLIMITED);
+.ve
+  indicates that the solver is allowed to take any number of iterations and will not stop early no matter how the residual gets.
+
+   Fortran Note:
+   Use `PETSC_UNLIMITED_INTEGER` or `PETSC_UNLIMITED_REAL`.
+
+.seealso: `PETSC_DEFAULT`, `PETSC_IGNORE`, `PETSC_DETERMINE`, `PETSC_DECIDE`
 M*/
 
 /*MC
-   PETSC_DETERMINE - standard way of passing in integer or floating point parameter where you wish PETSc to compute the required value.
+   PETSC_DECIDE - standard way of passing an integer or floating point parameter to indicate PETSc should determine an appropriate value
 
    Level: beginner
+
+   Example Usage:
+.vb
+   VecSetSizes(ksp, PETSC_DETERMINE, 10);
+.ve
+  indicates that the global size of the vector is 10 and the local size will be automatically determined so that the sum of the
+  local sizes is the global size, see `PetscSplitOwnership()`.
+
+   Fortran Note:
+   Use `PETSC_DECIDE_INTEGER` or `PETSC_DECIDE_REAL`.
+
+.seealso: `PETSC_DEFAULT`, `PETSC_IGNORE`, `PETSC_DETERMINE`, `PETSC_UNLIMITED'
+M*/
+
+/*MC
+   PETSC_DETERMINE - standard way of passing an integer or floating point parameter to indicate PETSc should determine an appropriate value
+
+   Level: beginner
+
+    Example Usage:
+.vb
+   VecSetSizes(ksp, 10, PETSC_DETERMINE);
+.ve
+  indicates that the local size of the vector is 10 and the global size will be automatically summing up all the local sizes.
+
+   Note:
+   Same as `PETSC_DECIDE`
+
+   Fortran Note:
+   Use `PETSC_DETERMINE_INTEGER` or `PETSC_DETERMINE_REAL`.
 
    Developer Note:
    I would like to use const `PetscInt` `PETSC_DETERMINE` = `PETSC_DECIDE`; but for
    some reason this is not allowed by the standard even though `PETSC_DECIDE` is a constant value.
 
-.seealso: `PETSC_DECIDE`, `PETSC_DEFAULT`, `PETSC_IGNORE`, `VecSetSizes()`
+.seealso: `PETSC_DECIDE`, `PETSC_DEFAULT`, `PETSC_IGNORE`, `VecSetSizes()`, `PETSC_UNLIMITED'
 M*/
 
 /*MC
-   PETSC_DEFAULT - standard way of passing in integer or floating point parameter where you wish PETSc to use the default.
+   PETSC_CURRENT - standard way of indicating to an object not to change the current value of the parameter in the object
 
    Level: beginner
 
-   Fortran Note:
-   You need to use `PETSC_DEFAULT_INTEGER` or `PETSC_DEFAULT_REAL`.
+   Note:
+   Use `PETSC_DECIDE` to use the value that was set by PETSc when the object's type was set
 
-.seealso: `PETSC_DECIDE`, `PETSC_IGNORE`, `PETSC_DETERMINE`
+   Fortran Note:
+   Use `PETSC_CURRENT_INTEGER` or `PETSC_CURRENT_REAL`.
+
+.seealso: `PETSC_DECIDE`, `PETSC_IGNORE`, `PETSC_DETERMINE`, `PETSC_DEFAULT`, `PETSC_UNLIMITED'
+M*/
+
+/*MC
+   PETSC_DEFAULT - deprecated, see `PETSC_CURRENT` and `PETSC_DETERMINE`
+
+   Level: beginner
+
+   Note:
+   The name is confusing since it tells the object to continue to use the value it is using, not the default value when the object's type was set.
+
+   Developer Note:
+   Unfortunately this was used for two different purposes in the past, to actually trigger the use of a default value or to continue the
+   use of currently set value (in, for example, `XXXSetTolerances()`.
+
+.seealso: `PETSC_DECIDE`, `PETSC_IGNORE`, `PETSC_DETERMINE`, `PETSC_CURRENT`, `PETSC_UNLIMITED'
 M*/
 
 /* These MUST be preprocessor defines! see https://gitlab.com/petsc/petsc/-/issues/1370 */
 #define PETSC_DECIDE    (-1)
 #define PETSC_DETERMINE PETSC_DECIDE
-#define PETSC_DEFAULT   (-2)
+#define PETSC_CURRENT   (-2)
+#define PETSC_UNLIMITED (-3)
+// #define PETSC_DEFAULT   PETSC_DEPRECATED_MACRO(3, 22, 0, "PETSC_CURRENT", ) PETSC_CURRENT
+#define PETSC_DEFAULT PETSC_CURRENT
 
 /*MC
    PETSC_COMM_WORLD - the equivalent of the `MPI_COMM_WORLD` communicator which represents all the processes that PETSc knows about.
@@ -1233,6 +1292,40 @@ PETSC_EXTERN PetscErrorCode PetscObjectSetUp(PetscObject);
 PETSC_EXTERN PetscErrorCode PetscObjectSetPrintedOptions(PetscObject);
 PETSC_EXTERN PetscErrorCode PetscObjectInheritPrintedOptions(PetscObject, PetscObject);
 PETSC_EXTERN PetscErrorCode PetscCommGetNewTag(MPI_Comm, PetscMPIInt *);
+
+/*MC
+   PetscObjectParameterSet - sets a parameter value in a `PetscObject` to a new `value` if its current value is the default for the object
+
+   No Fortran Support
+
+   Synopsis:
+   #include <petscsys.h>
+   PetscBool PetscObjectParameterSet(PetscObject obj, char* NAME, PetscReal value);
+
+   Input Parameters:
++  obj - the `PetscObject`
+.  NAME - the name of the parameter, unquoted
+-  value - the new value
+
+   Level: developer
+
+   Notes:
+   The defaults for an object are the values set when the object's type is set.
+
+   Always sets the default value for the parameter to `value`
+
+   This is used in, for example, `SNESCreate_NGS()` to overwrite the previous default values of some parameters set in `SNESCreate()`
+
+   Developer Note:
+   This only works for `PetscObject` that have a `defaults` struct in their defining structure.
+
+.seealso: `PetscInitialize()`, `PetscFinalize()`, `PetscObject`, `SNESParametersInitialize()`
+M*/
+#define PetscObjectParameterSet(obj, NAME, value) \
+  do { \
+    if (obj->NAME == obj->defaults.NAME) obj->NAME = value; \
+    obj->defaults.NAME = value; \
+  } while (0)
 
 #include <petscviewertypes.h>
 #include <petscoptions.h>

@@ -97,8 +97,12 @@ struct _p_KSP {
     abstol,                                              /* absolute tolerance */
     ttol,                                                /* (not set by user)  */
     divtol;                                              /* divergence tolerance */
-  PetscReal          rnorm0;                             /* initial residual norm (used for divergence testing) */
-  PetscReal          rnorm;                              /* current residual norm */
+  struct {
+    PetscReal rtol, abstol, divtol;
+    PetscInt  max_it;
+  } defaults;
+  PetscReal          rnorm0; /* initial residual norm (used for divergence testing) */
+  PetscReal          rnorm;  /* current residual norm */
   KSPConvergedReason reason;
   PetscBool          errorifnotconverged; /* create an error if the KSPSolve() does not converge */
 
