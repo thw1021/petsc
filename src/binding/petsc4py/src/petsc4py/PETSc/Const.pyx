@@ -3,6 +3,7 @@
 DECIDE    = PETSC_DECIDE
 DEFAULT   = PETSC_DEFAULT
 DETERMINE = PETSC_DETERMINE
+CURRENT   = PETSC_CURRENT
 
 __doc__ += """
 Basic constants:
@@ -10,9 +11,11 @@ Basic constants:
 `DECIDE`
     Use a default value for an `int` or `float` parameter.
 `DEFAULT`
-    Use a default value for an `int` or `float` parameter.
+    Use a default value chosen by PETSc.
 `DETERMINE`
     Compute a default value for an `int` or `float` parameter.
+    For tolerances this uses the default value from when
+    the object's type was set.
 """
 
 # ------------------------------------------------------------------------------
