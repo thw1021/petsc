@@ -124,7 +124,6 @@ PETSC_INTERN PetscErrorCode PetscOptionsInsertStringYAML_Private(PetscOptions, c
 static PetscErrorCode PetscOptionsMonitor(PetscOptions options, const char name[], const char value[], PetscOptionSource source)
 {
   PetscFunctionBegin;
-  if (!value) value = "";
   if (options->monitorFromOptions) PetscCall(PetscOptionsMonitorDefault(name, value, source, NULL));
   for (PetscInt i = 0; i < options->numbermonitors; i++) PetscCall((*options->monitor[i])(name, value, source, options->monitorcontext[i]));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1378,6 +1377,7 @@ setvalue:
     options->values[n] = (char *)malloc((len + 1) * sizeof(char));
     if (!options->values[n]) return PETSC_ERR_MEM;
     strcpy(options->values[n], value);
+    options->values[n][len] = '\0';
   } else {
     options->values[n] = NULL;
   }
@@ -1390,7 +1390,7 @@ setvalue:
     options->used[n]    = PETSC_TRUE;
   }
 
-  PetscCall(PetscOptionsMonitor(options, name, value, source));
+  PetscCall(PetscOptionsMonitor(options, name, value ? value : "", source));
   if (pos) *pos = n;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
