@@ -214,10 +214,9 @@ PETSC_EXTERN PetscErrorCode SNESCreate_Anderson(SNES snes)
   snes->data    = (void *)ngmres;
   ngmres->msize = 30;
 
-  if (!snes->tolerancesset) {
-    snes->max_funcs = 30000;
-    snes->max_its   = 10000;
-  }
+  PetscCall(SNESParametersInitialize(snes));
+  PetscObjectParameterSet(snes, max_funcs, 30000);
+  PetscObjectParameterSet(snes, max_its, 10000);
 
   PetscCall(SNESGetLineSearch(snes, &linesearch));
   if (!((PetscObject)linesearch)->type_name) PetscCall(SNESLineSearchSetType(linesearch, SNESLINESEARCHBASIC));

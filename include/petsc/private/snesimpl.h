@@ -113,8 +113,15 @@ struct _p_SNES {
   PetscInt  pre_iter;          /* The present iteration of the Preconditioner lagging */
   PetscBool lagpre_persist;    /* The pre_iter persists until reset */
   PetscInt  gridsequence;      /* number of grid sequence steps to take; defaults to zero */
-
-  PetscBool tolerancesset; /* SNESSetTolerances() called and tolerances should persist through SNESCreate_XXX()*/
+  struct {
+    PetscInt  max_its;
+    PetscInt  max_funcs;
+    PetscReal rtol;
+    PetscReal divtol;
+    PetscReal abstol;
+    PetscReal stol;
+    PetscReal deltatol;
+  } defaults;
 
   PetscBool vec_func_init_set; /* the initial function has been set */
 

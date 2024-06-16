@@ -207,13 +207,12 @@ PETSC_EXTERN PetscErrorCode SNESCreate_NRichardson(SNES snes)
 
   snes->alwayscomputesfinalresidual = PETSC_TRUE;
 
+  PetscCall(SNESParametersInitialize(snes));
+  PetscObjectParameterSet(snes, max_funcs, 30000);
+  PetscObjectParameterSet(snes, max_its, 10000);
+  PetscObjectParameterSet(snes, stol, 1e-20);
+
   PetscCall(PetscNew(&neP));
   snes->data = (void *)neP;
-
-  if (!snes->tolerancesset) {
-    snes->max_funcs = 30000;
-    snes->max_its   = 10000;
-    snes->stol      = 1e-20;
-  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
