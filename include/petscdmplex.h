@@ -220,26 +220,25 @@ PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetOrder(PetscViewer, PetscInt);
 PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetOrder(PetscViewer, PetscInt *);
 
 /* SARAH ADDED FUNCTION PROTOTYPES */
-PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetZonalVariableNumber(PetscViewer viewer, int *num);
-PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetNodalVariableNumber(PetscViewer viewer, int *num);
-PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetGlobalVariableNumber(PetscViewer viewer, int *num);
+PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetZonalVariable(PetscViewer, int *);
+PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetNodalVariable(PetscViewer, int *);
 
-PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetZonalVariableNumber(PetscViewer viewer, int num);
-PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetNodalVariableNumber(PetscViewer viewer, int num);
+PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetZonalVariable(PetscViewer, int);
+PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetNodalVariable(PetscViewer, int);
 
-PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetZonalVariableName(PetscViewer, int rank, const char name[]);
-PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetNodalVariableName(PetscViewer, int rank, const char name[]);
+PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetZonalVariableName(PetscViewer, int, const char[]);
+PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetNodalVariableName(PetscViewer, int, const char[]);
 
-PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetZonalVariableName(PetscViewer, int rank, char **name);
-PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetNodalVariableName(PetscViewer, int rank, char **name);
+PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetZonalVariableName(PetscViewer, int, char **);
+PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetNodalVariableName(PetscViewer, int, char **);
 
 /* Set and Get Multiple Names at Once for Zonal */
-PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetZonalVariableNames(PetscViewer, const char **names);
-PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetZonalVariableNames(PetscViewer, int numNames, char **names);
+PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetZonalVariableNames(PetscViewer, const char **);
+PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetZonalVariableNames(PetscViewer, int, char **);
 
 /* Set and Get Multiple Names at Once for Nodal */
-PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetNodalVariableNames(PetscViewer, const char **names);
-PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetNodalVariableNames(PetscViewer, int numNames, char **names);
+PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetNodalVariableNames(PetscViewer, const char **);
+PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetNodalVariableNames(PetscViewer, int, char **);
 /* Mesh Partitioning and Distribution */
 #define DMPLEX_OVERLAP_MANUAL -1
 
