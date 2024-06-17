@@ -271,6 +271,7 @@ typedef const char *DMTaoType;
 #define DMTAOBOX     "box"
 #define DMTAOZERO    "zero"
 #define DMTAOSHELL   "shell"
+#define DMTAOPYTHON  "python"
 
 PETSC_EXTERN PetscClassId      TAO_CLASSID;
 PETSC_EXTERN PetscClassId      DMTAO_CLASSID;
@@ -361,7 +362,7 @@ PETSC_EXTERN PetscErrorCode TaoSolve(Tao);
 PETSC_EXTERN PetscErrorCode TaoRegister(const char[], PetscErrorCode (*)(Tao));
 PETSC_EXTERN PetscErrorCode TaoRegisterDestroy(void);
 
-PETSC_EXTERN PetscErrorCode DMTaoRegister(const char[], PetscErrorCode (*)(DM));
+PETSC_EXTERN PetscErrorCode DMTaoRegister(const char[], PetscErrorCode (*)(DMTao));
 PETSC_EXTERN PetscErrorCode DMTaoRegisterDestroy(void);
 
 PETSC_EXTERN PetscErrorCode TaoGetConvergedReason(Tao, TaoConvergedReason *);
@@ -624,9 +625,12 @@ PETSC_EXTERN PetscErrorCode DMTaoShellSetContext(DM, void *);
 PETSC_EXTERN PetscErrorCode DMTaoShellGetContext(DM, void *);
 PETSC_EXTERN PetscErrorCode DMTaoShellSetProximalMap(DM, PetscErrorCode (*)(DMTao, DMTao, PetscReal, Vec, Vec, PetscBool));
 
-PETSC_EXTERN PetscErrorCode DMTaoSetOptionsPrefix(DMTao, const char prefix[]);
-PETSC_EXTERN PetscErrorCode DMTaoAppendOptionsPrefix(DMTao, const char[]);
-PETSC_EXTERN PetscErrorCode DMTaoGetOptionsPrefix(DMTao, const char *[]);
+PETSC_EXTERN PetscErrorCode DMTaoSetOptionsPrefix(DM, const char prefix[]);
+PETSC_EXTERN PetscErrorCode DMTaoAppendOptionsPrefix(DM, const char[]);
+PETSC_EXTERN PetscErrorCode DMTaoGetOptionsPrefix(DM, const char *[]);
+
+PETSC_EXTERN PetscErrorCode DMTaoPythonSetType(DM, const char[]);
+PETSC_EXTERN PetscErrorCode DMTaoPythonGetType(DM, const char *[]);
 
 /* prox calculus rules options */
 PETSC_EXTERN PetscErrorCode DMTaoSetTranslationVector(DM, Vec);

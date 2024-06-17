@@ -1157,7 +1157,7 @@ PetscErrorCode DMTaoIsObjectiveAndGradientDefined(DM dm, PetscBool *flg)
   Not Collective
 
   Input Parameters:
-+ sname - name of a new user-defined dmtAO
++ sname - name of a new user-defined `DMTao`
 - func  - routine to Create method context
 
   Your solver can be chosen with the procedural interface via
@@ -1172,7 +1172,7 @@ $    -dmtao_type my_dmtao
 
 .seealso: [](ch_tao), `Tao`, `DMTao`
 @*/
-PetscErrorCode DMTaoRegister(const char sname[], PetscErrorCode (*func)(DM))
+PetscErrorCode DMTaoRegister(const char sname[], PetscErrorCode (*func)(DMTao))
 {
   PetscFunctionBegin;
   PetscCall(DMTaoInitializePackage());
