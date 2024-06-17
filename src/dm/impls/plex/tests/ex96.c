@@ -31,6 +31,7 @@ int main(int argc, char **argv)
   PetscCall(PetscViewerExodusIISetOrder(viewer, order));
   PetscCall(DMView(dm, viewer));
   PetscCall(PetscViewerView(viewer, PETSC_VIEWER_STDOUT_WORLD));
+  PetscCall(PetscViewerFlush(viewer));
 
 
   /* TESTING ZONAL VARIABLE NUMBER & NAME */
