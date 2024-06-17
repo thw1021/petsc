@@ -47,18 +47,18 @@ program ex96f90
     PetscCallA(PetscViewerView(viewer,PETSC_VIEWER_STDOUT_WORLD,ierr))
 
     numVar = 3
-    PetscCall(PetscViewerExodusIISetZonalVariableNumber(viewer, numVar,ierr))
+    PetscCall(PetscViewerExodusIISetZonalVariable(viewer, numVar,ierr))
 
     numVar = -1
-    PetscCall(PetscViewerExodusIIGetZonalVariableNumber(viewer, numVar,ierr))
+    PetscCall(PetscViewerExodusIIGetZonalVariable(viewer, numVar,ierr))
     write(IOBuffer,'("Number of zonal variables", I3, "\n")') numVar
     PetscCallA(PetscPrintf(PETSC_COMM_WORLD,IOBuffer,ierr))
 
     numVar = 2
-    PetscCall(PetscViewerExodusIISetNodalVariableNumber(viewer, numVar,ierr))
+    PetscCall(PetscViewerExodusIISetNodalVariable(viewer, numVar,ierr))
 
     numVar = -1
-    PetscCall(PetscViewerExodusIIGetNodalVariableNumber(viewer, numVar,ierr))
+    PetscCall(PetscViewerExodusIIGetNodalVariable(viewer, numVar,ierr))
     write(IOBuffer,'("Number of nodal variables", I3, "\n")') numVar
     PetscCallA(PetscPrintf(PETSC_COMM_WORLD,IOBuffer,ierr))
 
@@ -66,7 +66,7 @@ program ex96f90
 
     !!! This call should lead to an error
     numVar = 2
-    PetscCall(PetscViewerExodusIISetNodalVariableNumber(viewer, numVar,ierr))
+    PetscCall(PetscViewerExodusIISetNodalVariable(viewer, numVar,ierr))
 
     PetscCallA(PetscViewerDestroy(viewer, ierr))
     PetscCallA(PetscFinalize(ierr))
