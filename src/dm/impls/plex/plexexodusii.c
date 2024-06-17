@@ -329,6 +329,7 @@ PetscErrorCode PetscViewerExodusIISetZonalVariable(PetscViewer viewer, int num)
   PetscCheck(exo->numZonalVariables == -1,comm, PETSC_ERR_SUP, "The number of zonal variables has already been set to %" PetscInt_FMT " and cannot be overwritten", exo->numZonalVariables);
   PetscCheck((exo->btype != FILE_MODE_READ) && (exo->btype != FILE_MODE_UNDEFINED),comm, PETSC_ERR_FILE_WRITE, "Cannot set the number of variables because the file is not writable");
   exo->numZonalVariables = num;
+  // Make a call to ex_put_XXX and do error checking
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -359,6 +360,7 @@ PetscErrorCode PetscViewerExodusIISetNodalVariable(PetscViewer viewer, int num)
   PetscCheck(exo->numNodalVariables == -1,comm, PETSC_ERR_SUP, "The number of nodal variables has already been set to %" PetscInt_FMT " and cannot be overwritten", exo->numNodalVariables);
   PetscCheck((exo->btype != FILE_MODE_READ) && (exo->btype != FILE_MODE_UNDEFINED),comm, PETSC_ERR_FILE_WRITE, "Cannot set the number of variables because the file is not writable");
   exo->numNodalVariables = num;
+  // Make a call to ex_put_XXX and do error checking
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
