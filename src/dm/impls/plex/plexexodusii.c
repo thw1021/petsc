@@ -66,6 +66,31 @@ static PetscErrorCode PetscViewerView_ExodusII(PetscViewer v, PetscViewer viewer
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@C
+  PetscViewerFlush_ExodusII - Commits all pending output to file 
+
+  Collective; No Fortran Support
+
+  Input Parameters:
+. v       - the `PetscViewer` context
+
+  Level: intermediate
+
+  Note:
+
+.seealso: `PETSC_VIEWER_EXODUSII_()`, `PetscViewer`, `PetscViewerExodusIIOpen()`, `PetscViewerType`, `PetscViewerCreate()`, `PetscViewerDestroy()`
+@*/
+static PetscErrorCode PetscViewerFlush_ExodusII(PetscViewer v)
+{
+  PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)v->data;
+
+  PetscFunctionBegin;
+  if (exo->exoid >= 0) {
+    PetscCallExternal(ex_update, exo->exoid);
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode PetscViewerSetFromOptions_ExodusII(PetscViewer v, PetscOptionItems *PetscOptionsObject)
 {
   PetscFunctionBegin;
@@ -694,7 +719,7 @@ PETSC_EXTERN PetscErrorCode PetscViewerCreate_ExodusII(PetscViewer v)
   v->ops->setfromoptions = PetscViewerSetFromOptions_ExodusII;
   v->ops->setup          = PetscViewerSetUp_ExodusII;
   v->ops->view           = PetscViewerView_ExodusII;
-  v->ops->flush          = 0;
+  v->ops->flush          = PetscViewerFlush_ExodusII;
   exo->btype             = FILE_MODE_UNDEFINED;
   exo->filename          = 0;
   exo->exoid             = -1;

@@ -50,6 +50,7 @@ program ex96f90
     ! Save the geometry to the file, erasing all previous content
     PetscCallA(DMView(dm,viewer,ierr))
     PetscCallA(PetscViewerView(viewer,PETSC_VIEWER_STDOUT_WORLD,ierr))
+    PetscCall(PetscViewerFlush(viewer,ierr))
 
     numVar = 3
     PetscCall(PetscViewerExodusIISetZonalVariable(viewer, numVar,ierr))
