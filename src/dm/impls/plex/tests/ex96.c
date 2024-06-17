@@ -5,11 +5,11 @@ static char help[] = "Test PetscViewer_ExodusII\n\n";
 
 int main(int argc, char **argv)
 {
-  DM   dm;
-  char ifilename[PETSC_MAX_PATH_LEN], ofilename[PETSC_MAX_PATH_LEN];
-  int  nNodalVar = 3;
-  int  nZonalVar = 3;
-  /*varIdx*/
+  DM          dm;
+  char        ifilename[PETSC_MAX_PATH_LEN], ofilename[PETSC_MAX_PATH_LEN];
+  PetscInt    nNodalVar = 3;
+  PetscInt    nZonalVar = 3;
+  PetscInt    order     = 1;
   PetscViewer viewer;
 
   PetscFunctionBeginUser;
@@ -26,6 +26,12 @@ int main(int argc, char **argv)
 
   PetscCall(PetscViewerExodusIIOpen(PETSC_COMM_WORLD, ofilename, FILE_MODE_WRITE, &viewer));
   PetscCall(PetscViewerView(viewer, PETSC_VIEWER_STDOUT_WORLD));
+
+  /* Save the geometry to the file, erasing all previous content */
+  PetscCall(PetscViewerExodusIISetOrder(viewer, order));
+  PetscCall(DMView(dm, viewer));
+  PetscCall(PetscViewerView(viewer, PETSC_VIEWER_STDOUT_WORLD));
+
 
   /* TESTING ZONAL VARIABLE NUMBER & NAME */
   //nZonalVar = 3; /*TOTAL IN TEST*/
@@ -153,7 +159,7 @@ int main(int argc, char **argv)
   build:
     requires: !complex
   testset:
-    args: -i ${wPETSC_DIR}/share/petsc/datafiles/meshes/doublet-tet.msh -dm_view
+    args: -i ${wPETSC_DIR}/share/petsc/datafiles/meshes/doublet-tet.msh -o test.exo -dm_view
     nsize: 1
     test:
       suffix: 0

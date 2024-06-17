@@ -13,9 +13,9 @@ program ex96f90
     PetscErrorCode                     :: ierr
     type(tDM)                          :: dm
     character(len=PETSC_MAX_PATH_LEN)  :: ifilename,ofilename,IOBuffer
-    ! character(len=MXNAME),dimension(:),pointer :: varNames
     PetscInt                           :: numVar
     PetscMPIInt                        :: rank,numProc
+    PetscInt                           :: order = 1
     PetscBool                          :: flg
     type(tPetscViewer)                 :: viewer
 
@@ -44,6 +44,11 @@ program ex96f90
 
     ! Create the exodus file
     PetscCallA(PetscViewerExodusIIOpen(PETSC_COMM_WORLD,ofilename,FILE_MODE_WRITE,viewer,ierr))
+    PetscCallA(PetscViewerView(viewer,PETSC_VIEWER_STDOUT_WORLD,ierr))
+
+    PetscCallA(PetscViewerExodusIISetOrder(viewer,order,ierr))
+    ! Save the geometry to the file, erasing all previous content
+    PetscCallA(DMView(dm,viewer,ierr))
     PetscCallA(PetscViewerView(viewer,PETSC_VIEWER_STDOUT_WORLD,ierr))
 
     numVar = 3
