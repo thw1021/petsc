@@ -2109,6 +2109,9 @@ PETSC_EXTERN PetscErrorCode MatNullSpaceView(MatNullSpace, PetscViewer);
 PETSC_EXTERN PetscErrorCode MatNullSpaceGetVecs(MatNullSpace, PetscBool *, PetscInt *, const Vec **);
 PETSC_EXTERN PetscErrorCode MatNullSpaceSetSpanningVecs(MatNullSpace, PetscInt, const Vec[]);
 PETSC_EXTERN PetscErrorCode MatNullSpaceGetSpanningVecs(MatNullSpace, PetscInt *, const Vec **);
+PETSC_EXTERN PetscErrorCode MatNullSpaceSetComputeSpanningVecsAdjoint(MatNullSpace, PetscErrorCode (*)(MatNullSpace, Vec, Vec, const Vec[], void *), void *);
+PETSC_EXTERN PetscErrorCode MatNullSpaceGetComputeSpanningVecsAdjoint(MatNullSpace, PetscErrorCode (**)(MatNullSpace, Vec, Vec, const Vec[], void *), void **);
+PETSC_EXTERN PetscErrorCode MatNullSpaceComputeSpanningVecsAdjoint(MatNullSpace, Vec, Vec, const Vec[]);
 PETSC_EXTERN PetscErrorCode MatNullSpaceCreateRigidBody(Vec, MatNullSpace *);
 
 PETSC_EXTERN PetscErrorCode MatReorderingSeqSBAIJ(Mat, IS);

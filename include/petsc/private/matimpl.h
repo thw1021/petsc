@@ -735,11 +735,13 @@ struct _p_MatNullSpace {
   PetscBool    has_cnst;
   PetscInt     n;
   PetscInt     n_spanning_vecs;
-  Vec         *vecs;                                   /* orthonormal basis (order is arbitrary) */
-  Vec         *spanning_vecs;                          /* vectors that span the nullspace, not orthonormal or even linearly independent */
-  PetscScalar *alpha;                                  /* for projections */
-  PetscErrorCode (*remove)(MatNullSpace, Vec, void *); /* for user provided removal function */
-  void *rmctx;                                         /* context for remove() function */
+  Vec         *vecs;                                                         /* orthonormal basis (order is arbitrary) */
+  Vec         *spanning_vecs;                                                /* vectors that span the nullspace, not orthonormal or even linearly independent */
+  PetscScalar *alpha;                                                        /* for projections */
+  PetscErrorCode (*remove)(MatNullSpace, Vec, void *);                       /* for user provided removal function */
+  void *rmctx;                                                               /* context for remove() function */
+  PetscErrorCode (*adjoint_fn)(MatNullSpace, Vec, Vec, const Vec[], void *); /* adjoint of spanning vecs as a function of a solution */
+  void *adjoint_ctx;
 };
 
 /*

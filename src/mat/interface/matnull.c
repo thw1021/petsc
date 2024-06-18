@@ -475,6 +475,108 @@ PetscErrorCode MatNullSpaceCreateFromSpanningVecs(MPI_Comm comm, PetscInt n, con
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@C
+  MatNullSpaceSetComputeSpanningVecsAdjoint - Set a function that computes the adjoint of the spanning vectors (`MatNullSpaceSetSpanningVecs()`) with respect to a solution vector.
+
+  Logically collective
+
+  Input Parameters:
++ sp         - a `MatNullSpace` that has had spanning vectors set with `MatNullSpaceSetSpanningVecs()` or was created with `MatNullSpaceCreateFromSpanningVecs()`
+. adjoint_fn - a pointer to a function that will compute the adjoint of the spanning vectors with respect to a solution variable, which will be called by `MatNullSpaceComputeSpanningVecsAdjoint()`
+- ctx        - the user-defined context for `adjoint_fn`
+
+  Calling sequence of `adjoint_fn`:
++ sp       - the `MatNullSpace`
+. x        - the current solution vector
+. g        - a variation vector that is the same shape as the spanning vectors in `MatNullSpaceGetSpanningVecs()`
+. g_dot_dx - an array of of vectors. `g_dot_dx[i]` should contain the value $\partial_x (g^T s_i(x))$, where $s_i(x)$ is the $i$th spanning vector, treated as a vector-valued function of $x$.
+- ctx      - the user-defined context
+
+  Level: developer
+
+  Note:
+  This function facilitates automatic computation of projection spaces in `SNESComputeJacobianProjection()`
+
+.seealso: `MatNullSpace`, `MatNullSpaceSetSpanningVecs()`, `MatNullSpaceGetSpanningVecs(), `MatNullSpaceCreateFromSpanningVecs()`, `MatNullSpaceGetComputeSpanningVecsAdjoint()`, `SNESComputeJacobianProjection()`, `MatNullSpaceComputeSpanningVecs
+@*/
+PetscErrorCode MatNullSpaceSetComputeSpanningVecsAdjoint(MatNullSpace sp, PetscErrorCode (*adjoint_fn)(MatNullSpace sp, Vec x, Vec g, const Vec g_dot_dx[], void *ctx), void *ctx)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(sp, MAT_NULLSPACE_CLASSID, 1);
+  if (adjoint_fn) PetscAssertPointer(adjoint_fn, 2);
+  if (ctx) PetscAssertPointer(ctx, 3);
+  sp->adjoint_fn  = adjoint_fn;
+  sp->adjoint_ctx = ctx;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  MatNullSpaceGetComputeSpanningVecsAdjoint - Get the function that computes the adjoint of the spanning vectors (`MatNullSpaceSetSpanningVecs()`) with respect to a solution vector.
+
+  Logically collective
+
+  Input Parameter:
+. sp         - a `MatNullSpace`
+
+  Output Parameters:
++ adjoint_fn - if not `NULL`, set to a pointer to the function that computes the adjoint of the spanning vectors with respect to a solution variable.  The output is `NULL` if `MatNullSpaceSetComputeSpanningVecsAdjoint()` was not set
+- ctx        - if not `NULL`, set to the user-defined context for `adjoint_fn`
+
+  Calling sequence of `adjoint_fn`:
++ sp       - the `MatNullSpace`
+. x        - the current solution vector
+. g        - a variation vector that is the same shape as the spanning vectors in `MatNullSpaceGetSpanningVecs()`
+. g_dot_dx - an array of of vectors. `g_dot_dx[i]` should contain the value $\partial_x (g^T s_i(x))$, where $s_i(x)$ is the $i$th spanning vector, treated as a vector-valued function of $x$.
+- ctx      - the user-defined context
+
+  Level: developer
+
+.seealso: `MatNullSpace`, `MatNullSpaceSetSpanningVecs()`, `MatNullSpaceGetSpanningVecs(), `MatNullSpaceGetSpanningVecs()`, `MatNullSpaceCreateFromSpanningVecs()`, `MatNullSpaceSetComputeSpanningVecsAdjoint()`, `MatNullSpaceComputeSpanningVecsAdjoint()`
+@*/
+PetscErrorCode MatNullSpaceGetComputeSpanningVecsAdjoint(MatNullSpace sp, PetscErrorCode (**adjoint_fn)(MatNullSpace sp, Vec x, Vec g, const Vec g_dot_dx[], void *ctx), void **ctx)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(sp, MAT_NULLSPACE_CLASSID, 1);
+  if (adjoint_fn) PetscAssertPointer(adjoint_fn, 2);
+  if (ctx) PetscAssertPointer(ctx, 3);
+  if (adjoint_fn) *adjoint_fn = sp->adjoint_fn;
+  if (ctx) *ctx = sp->adjoint_ctx;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  MatNullSpaceComputeSpanningVecsAdjoint - Compute the adjoint of the spanning vectors of a nullspace (`MatNullSpaceSetSpanningVecs()`) with respect to a solution variable
+
+  Collective
+
+  Input Parameters:
++ sp - a `MatNullSpace` that has had spanning vectors defined (using `MatNullSpaceSetSpanningVecs()` or `MatNullSpaceCreateFromSpanningVecs()`) and the action of the adjoint defined with `MatNullSpaceSetComputeSpanningVecsAdjoint()`.
+. x  - a solution vector
+- g  - a variation vector that is the same shape as the spanning vectors in `MatNullSpaceGetSpanningVecs()`
+
+  Output Parameter:
+. g_dot_dx - an array of of vectors. `g_dot_dx[i]` should contain the value $\partial_x (g^T s_i(x))$, where $s_i(x)$ is the $i$th spanning vector, treated as a vector-valued function of $x$.
+
+  Level: developer
+
+.seealso: `MatNullSpace`, `MatNullSpaceSetSpanningVecs()`, `MatNullSpaceGetSpanningVecs(), `MatNullSpaceGetSpanningVecs()`, `MatNulllSpaceCreateFromSpanningVecs()`, `MatNullSpaceComputeSpanningVecsAdjoint()`
+@*/
+PetscErrorCode MatNullSpaceComputeSpanningVecsAdjoint(MatNullSpace sp, Vec x, Vec g, const Vec g_dot_dx[])
+{
+  PetscInt n_spanning_vecs;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(sp, MAT_NULLSPACE_CLASSID, 1);
+  PetscValidHeaderSpecific(x, VEC_CLASSID, 2);
+  PetscValidHeaderSpecific(g, VEC_CLASSID, 3);
+  PetscCall(MatNullSpaceGetSpanningVecs(sp, &n_spanning_vecs, NULL));
+  PetscAssertPointer(g_dot_dx, 4);
+  if (PetscDefined(USE_DEBUG)) {
+    for (PetscInt i = 0; i < n_spanning_vecs; i++) { PetscValidHeaderSpecific(g_dot_dx[i], VEC_CLASSID, 4); }
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*@
   MatNullSpaceDestroy - Destroys a data structure used to project vectors out of null spaces.
 
