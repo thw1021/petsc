@@ -119,9 +119,9 @@ PetscErrorCode KSPCGSetObjectiveTarget(KSP ksp, PetscReal obj)
 }
 
 /*@
-  KSPCGGetNormD - Got norm of the direction when the solver is used inside `SNESNEWTONTR`
+  KSPCGGetNormD - Get norm of the direction when the solver is used inside `SNESNEWTONTR`
 
-  Collective
+  Not collective
 
   Input Parameters:
 + ksp    - the iterative context
@@ -135,14 +135,15 @@ PetscErrorCode KSPCGGetNormD(KSP ksp, PetscReal *norm_d)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
+  PetscAssertPointer(norm_d, 2);
   PetscUseMethod(ksp, "KSPCGGetNormD_C", (KSP, PetscReal *), (ksp, norm_d));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  KSPCGGetObjFcn - Get objective function value when the solver is used inside `SNESNEWTONTR`
+  KSPCGGetObjFcn - Get the objective function value
 
-  Collective
+  Not collective
 
   Input Parameters:
 + ksp   - the iterative context
@@ -156,6 +157,7 @@ PetscErrorCode KSPCGGetObjFcn(KSP ksp, PetscReal *o_fcn)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
+  PetscAssertPointer(o_fcn, 2);
   PetscUseMethod(ksp, "KSPCGGetObjFcn_C", (KSP, PetscReal *), (ksp, o_fcn));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
