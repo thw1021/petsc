@@ -393,6 +393,116 @@ PetscErrorCode DMPlexCreateRigidBody(DM dm, PetscInt field, MatNullSpace *sp)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+typedef struct _n_DMAndField *DMAndField;
+
+struct _n_DMAndField {
+  DM       dm;
+  PetscInt field;
+};
+
+static PetscErrorCode DMAndFieldDestroy(void *ctx)
+{
+  DMAndField dm_and_field = NULL;
+
+  PetscFunctionBegin;
+  dm_and_field = (DMAndField)ctx;
+  PetscCall(DMDestroy(&dm_and_field->dm));
+  PetscCall(PetscFree(dm_and_field));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode DMPlexCreateDisplacementRigidBody_Internal(DM dm, Vec projected_coords_local, PetscInt field, const Vec mode[], PetscBool adjoint)
+{
+  void (**field_func)(PetscInt, PetscInt, PetscInt, const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], PetscReal, const PetscReal x[], PetscInt, const PetscScalar[], PetscScalar[]);
+  MPI_Comm     comm;
+  Vec          mode_local[6];
+  PetscSection section, globalSection;
+  PetscInt     dim, dimEmbed, Nf, n, m;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
+  PetscValidHeaderSpecific(projected_coords_local, VEC_CLASSID, 2);
+  PetscCall(PetscObjectGetComm((PetscObject)dm, &comm));
+  PetscCall(DMGetDimension(dm, &dim));
+  PetscCall(DMGetCoordinateDim(dm, &dimEmbed));
+  PetscCall(DMGetNumFields(dm, &Nf));
+  PetscCheck(!Nf || !(field < 0 || field >= Nf), comm, PETSC_ERR_ARG_OUTOFRANGE, "Field %" PetscInt_FMT " is not in [0, %" PetscInt_FMT ")", field, Nf);
+  PetscCheck(dim <= 3, comm, PETSC_ERR_ARG_OUTOFRANGE, "Cannot compute displacement rigid body modes for spatial dimension %" PetscInt_FMT, dim);
+  if (dim == 1 && Nf < 2) {
+    PetscCall(VecSet(mode[0], adjoint ? 0.0 : 1.0));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+  PetscCall(DMGetLocalSection(dm, &section));
+  PetscCall(DMGetGlobalSection(dm, &globalSection));
+  PetscCall(PetscSectionGetConstrainedStorageSize(globalSection, &n));
+  PetscCall(PetscCalloc1(Nf, &field_func));
+
+  // first project coordinates into the local dofs
+  m = (dim * (dim + 1)) / 2;
+  for (PetscInt i = 0; i < m; ++i) { PetscCall(VecDuplicate(projected_coords_local, &mode_local[i])); }
+  for (PetscInt d = 0; d < m; d++) {
+    if (adjoint && d < dim) {
+      PetscCall(VecSet(mode[d], 0.0));
+      continue;
+    }
+    switch (d) {
+      // clang-format off
+    case 0: field_func[field] = DMPlexProjectDisplacementRigidBody_Private_0; break;
+    case 1: field_func[field] = DMPlexProjectDisplacementRigidBody_Private_1; break;
+    case 2: field_func[field] = DMPlexProjectDisplacementRigidBody_Private_2; break;
+    case 3: field_func[field] = DMPlexProjectDisplacementRigidBody_Private_3; break;
+    case 4: field_func[field] = DMPlexProjectDisplacementRigidBody_Private_4; break;
+    case 5: field_func[field] = DMPlexProjectDisplacementRigidBody_Private_5; break;
+    default: PetscUnreachable();
+      // clang-format on
+    }
+    PetscCall(VecCopy(projected_coords_local, mode_local[d]));
+    PetscCall(DMProjectFieldLocal(dm, 0.0, mode_local[d], field_func, INSERT_ALL_VALUES, mode_local[d]));
+    PetscCall(DMLocalToGlobal(dm, mode_local[d], INSERT_VALUES, mode[d]));
+    PetscCall(VecDestroy(&mode_local[d]));
+    if (adjoint) PetscCall(VecScale(mode[d], -1.0));
+  }
+  PetscCall(PetscFree(field_func));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode DMPlexCreateDisplacementRigidBodyAdjoint(MatNullSpace sp, Vec _x, Vec g, const Vec g_dot_dx[], void *ctx)
+{
+  MPI_Comm     comm;
+  Vec          projected_coords_local;
+  PetscSection section, globalSection;
+  PetscInt     dim, dimEmbed, Nf, n;
+  DM           dm;
+  PetscInt     field;
+  DMAndField   dm_and_field;
+
+  PetscFunctionBegin;
+  dm_and_field = (DMAndField)ctx;
+  dm           = dm_and_field->dm;
+  field        = dm_and_field->field;
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 5);
+  PetscCall(PetscObjectGetComm((PetscObject)dm, &comm));
+  PetscCall(DMGetDimension(dm, &dim));
+  PetscCall(DMGetCoordinateDim(dm, &dimEmbed));
+  PetscCall(DMGetNumFields(dm, &Nf));
+  PetscCheck(!Nf || !(field < 0 || field >= Nf), comm, PETSC_ERR_ARG_OUTOFRANGE, "Field %" PetscInt_FMT " is not in [0, %" PetscInt_FMT ")", field, Nf);
+  PetscCheck(dim <= 3, comm, PETSC_ERR_ARG_OUTOFRANGE, "Cannot compute displacement rigid body modes for spatial dimension %" PetscInt_FMT, dim);
+  if (dim == 1 && Nf < 2) {
+    PetscCall(VecSet(g_dot_dx[0], 0.0));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+  PetscCall(DMGetLocalSection(dm, &section));
+  PetscCall(DMGetGlobalSection(dm, &globalSection));
+  PetscCall(PetscSectionGetConstrainedStorageSize(globalSection, &n));
+
+  // first project coordinates into the local dofs
+  PetscCall(DMCreateLocalVector(dm, &projected_coords_local));
+  PetscCall(DMGlobalToLocal(dm, g, INSERT_VALUES, projected_coords_local));
+  PetscCall(DMPlexCreateDisplacementRigidBody_Internal(dm, projected_coords_local, field, g_dot_dx, PETSC_TRUE));
+  PetscCall(VecDestroy(&projected_coords_local));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*@
   DMPlexCreateDisplacementRigidBody - For the default global section, create rigid body modes for coordinates that have been displaced by one of the fields in a solution vector.
 
@@ -416,12 +526,13 @@ PetscErrorCode DMPlexCreateRigidBody(DM dm, PetscInt field, MatNullSpace *sp)
 PetscErrorCode DMPlexCreateDisplacementRigidBody(DM dm, Vec u_global, PetscInt field, MatNullSpace *sp)
 {
   PetscErrorCode (**func)(PetscInt, PetscReal, const PetscReal *, PetscInt, PetscScalar *, void *);
-  void (**field_func)(PetscInt, PetscInt, PetscInt, const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], PetscReal, const PetscReal x[], PetscInt, const PetscScalar[], PetscScalar[]);
-  MPI_Comm     comm;
-  Vec          projected_coords_local;
-  Vec          mode_local[6], mode[6];
-  PetscSection section, globalSection;
-  PetscInt     dim, dimEmbed, Nf, n, m;
+  MPI_Comm       comm;
+  Vec            projected_coords_local;
+  Vec            mode[6];
+  PetscSection   section, globalSection;
+  PetscContainer container;
+  DMAndField     dm_and_field = NULL;
+  PetscInt       dim, dimEmbed, Nf, n, m;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -434,12 +545,15 @@ PetscErrorCode DMPlexCreateDisplacementRigidBody(DM dm, Vec u_global, PetscInt f
   PetscCheck(dim <= 3, comm, PETSC_ERR_ARG_OUTOFRANGE, "Cannot compute displacement rigid body modes for spatial dimension %" PetscInt_FMT, dim);
   if (dim == 1 && Nf < 2) {
     PetscCall(MatNullSpaceCreate(comm, PETSC_TRUE, 0, NULL, sp));
+    PetscCall(VecDuplicate(u_global, &mode[0]));
+    PetscCall(MatNullSpaceSetSpanningVecs(*sp, 1, mode));
+    PetscCall(VecDestroy(&mode[0]));
     PetscFunctionReturn(PETSC_SUCCESS);
   }
   PetscCall(DMGetLocalSection(dm, &section));
   PetscCall(DMGetGlobalSection(dm, &globalSection));
   PetscCall(PetscSectionGetConstrainedStorageSize(globalSection, &n));
-  PetscCall(PetscCalloc2(Nf, &func, Nf, &field_func));
+  PetscCall(PetscCalloc1(Nf, &func));
 
   // first project coordinates into the local dofs
   PetscCall(DMCreateLocalVector(dm, &projected_coords_local));
@@ -448,31 +562,23 @@ PetscErrorCode DMPlexCreateDisplacementRigidBody(DM dm, Vec u_global, PetscInt f
   func[field] = DMPlexProjectCoordinates_Private;
   PetscCall(DMProjectFunctionLocal(dm, 0.0, func, NULL, ADD_ALL_VALUES, projected_coords_local));
   m = (dim * (dim + 1)) / 2;
-  for (PetscInt i = 0; i < m; ++i) {
-    PetscCall(VecDuplicate(projected_coords_local, &mode_local[i]));
-    PetscCall(VecDuplicate(u_global, &mode[i]));
-  }
-  for (PetscInt d = 0; d < m; d++) {
-    switch (d) {
-      // clang-format off
-    case 0: field_func[field] = DMPlexProjectDisplacementRigidBody_Private_0; break;
-    case 1: field_func[field] = DMPlexProjectDisplacementRigidBody_Private_1; break;
-    case 2: field_func[field] = DMPlexProjectDisplacementRigidBody_Private_2; break;
-    case 3: field_func[field] = DMPlexProjectDisplacementRigidBody_Private_3; break;
-    case 4: field_func[field] = DMPlexProjectDisplacementRigidBody_Private_4; break;
-    case 5: field_func[field] = DMPlexProjectDisplacementRigidBody_Private_5; break;
-    default: PetscUnreachable();
-      // clang-format on
-    }
-    PetscCall(VecCopy(projected_coords_local, mode_local[d]));
-    PetscCall(DMProjectFieldLocal(dm, 0.0, mode_local[d], field_func, INSERT_ALL_VALUES, mode_local[d]));
-    PetscCall(DMLocalToGlobal(dm, mode_local[d], INSERT_VALUES, mode[d]));
-    PetscCall(VecDestroy(&mode_local[d]));
-  }
+  for (PetscInt i = 0; i < m; ++i) PetscCall(VecDuplicate(u_global, &mode[i]));
+  PetscCall(DMPlexCreateDisplacementRigidBody_Internal(dm, projected_coords_local, field, mode, PETSC_FALSE));
   PetscCall(MatNullSpaceCreateFromSpanningVecs(comm, m, mode, sp));
   for (PetscInt i = 0; i < m; ++i) PetscCall(VecDestroy(&mode[i]));
+  PetscCall(PetscNew(&dm_and_field));
+  PetscCall(PetscObjectReference((PetscObject)dm));
+  dm_and_field->dm    = dm;
+  dm_and_field->field = field;
+  // create a container for the context so that it will be destroyed when the nullspace is destroyed
+  PetscCall(PetscContainerCreate(comm, &container));
+  PetscCall(PetscContainerSetPointer(container, (void *)dm_and_field));
+  PetscCall(PetscContainerSetUserDestroy(container, DMAndFieldDestroy));
+  PetscCall(PetscObjectCompose((PetscObject)*sp, "__MatNullSpaceSetComputeSpanningVecsAdjoint_ctx_Container", (PetscObject)container));
+  PetscCall(PetscContainerDestroy(&container););
+  PetscCall(MatNullSpaceSetComputeSpanningVecsAdjoint(*sp, DMPlexCreateDisplacementRigidBodyAdjoint, (void *)dm_and_field));
   PetscCall(VecDestroy(&projected_coords_local));
-  PetscCall(PetscFree2(func, field_func));
+  PetscCall(PetscFree(func));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
