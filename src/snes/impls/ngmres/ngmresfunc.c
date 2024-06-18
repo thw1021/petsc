@@ -99,6 +99,7 @@ PetscErrorCode SNESNGMRESFormCombinedSolution_Private(SNES snes, PetscInt ivec, 
   PetscCall(VecMAXPY(XA, l, beta, Xdot));
   /* check the validity of the step */
   PetscCall(VecCopy(XA, Y));
+  PetscCall(SNESLineSearchPreCheck(snes->linesearch, X, Y, &changed_y));
   PetscCall(VecAXPY(Y, -1.0, X));
   PetscCall(SNESLineSearchPostCheck(snes->linesearch, X, Y, XA, &changed_y, &changed_w));
   if (!ngmres->approxfunc) {
