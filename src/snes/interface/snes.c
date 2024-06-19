@@ -958,7 +958,9 @@ PetscErrorCode SNESEWSetFromOptions_Private(SNESKSPEW *kctx, PetscBool print_api
 . -snes_converged_reason                                                       - print the reason for convergence/divergence after each solve
 . -npc_snes_type <type>                                                        - the `SNES` type to use as a nonlinear preconditioner
 . -snes_test_jacobian <optional threshold>                                     - compare the user provided Jacobian with one computed via finite differences to check for errors.  If a threshold is given, display only those entries whose difference is greater than the threshold.
-- -snes_test_jacobian_view                                                     - display the user provided Jacobian, the finite difference Jacobian and the difference between them to help users detect the location of errors in the user provided Jacobian.
+. -snes_test_jacobian_view                                                     - display the user provided Jacobian, the finite difference Jacobian and the difference between them to help users detect the location of errors in the user provided Jacobian.
+. -snes_jacobian_projection_type <type>                                        - `none`, `fixed`, `update`, `nearnullspace`, or `pc_nearnullspace`: see `SNESJacobianProjectionType` and `SNESComputeJacobianProjection()`
+- -snes_jacobian_projection_subspace_type <type>                               - `all`, `fixed`, `auto`, or `auto_once`: see `SNESJacobianProjectionSubspaceType` and `SNESSetJacobianProjectionSubspace()`
 
   Options Database Keys for Eisenstat-Walker method:
 + -snes_ksp_ew                       - use Eisenstat-Walker method for determining linear system convergence
@@ -1155,6 +1157,8 @@ PetscErrorCode SNESSetFromOptions(SNES snes)
   if (flg) PetscCall(SNESSetNPCSide(snes, pcside));
 
   PetscCall(PetscOptionsEnum("-snes_jacobian_projection_type", "Projection modification to the SNES Jacobian", "SNESSetJacobianProjection", SNESJacobianProjectionTypes, (PetscEnum)snes->jac_projection_type, (PetscEnum *)&snes->jac_projection_type, NULL));
+
+  PetscCall(PetscOptionsEnum("-snes_jacobian_projection_subspace_type", "Subspace computation of projection modification to the SNES Jacobian", "SNESSetJacobianProjectionSubspace", SNESJacobianProjectionSubspaceTypes, (PetscEnum)snes->jac_projection_subspace_type, (PetscEnum *)&snes->jac_projection_subspace_type, NULL));
 
 #if defined(PETSC_HAVE_SAWS)
   /*
@@ -3528,6 +3532,7 @@ PetscErrorCode SNESDestroy(SNES *snes)
   PetscCall(SNESMonitorCancel(*snes));
   PetscCall(SNESConvergedReasonViewCancel(*snes));
   PetscCall(MatNullSpaceDestroy(&(*snes)->jac_projection));
+  PetscCall(MatDestroy(&(*snes)->jac_projection_subspace_mat));
   PetscCall(PetscHeaderDestroy(snes));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -5559,11 +5564,13 @@ static PetscErrorCode KSPPreSolve_JacobianProjection(KSP ksp, Vec b, Vec x, void
 {
   SNES         snes = (SNES)ctx;
   Vec          solution;
+  Vec          residual;
   MatNullSpace projection = NULL;
 
   PetscFunctionBegin;
   PetscCall(SNESGetSolution(snes, &solution));
-  if (solution) PetscCall(SNESComputeJacobianProjection(snes, solution, &projection));
+  PetscCall(SNESGetFunction(snes, &residual, NULL, NULL));
+  if (solution) PetscCall(SNESComputeJacobianProjection(snes, solution, residual, &projection));
   PetscCall(KSPSetProjections(ksp, projection, projection));
   PetscCall(MatNullSpaceDestroy(&projection));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -5940,6 +5947,7 @@ PetscErrorCode SNESGetLineSearch(SNES snes, SNESLineSearch *linesearch)
 }
 
 const char *const SNESJacobianProjectionTypes[] = {"NONE", "FIXED", "UPDATE", "NEARNULLSPACE", "PC_NEARNULLSPACE", "SNESJacobianProjectionType", "SNES_JACOBIAN_PROJECT_", NULL};
+const char *const SNESJacobianProjectionSubspaceTypes[] = {"ALL", "FIXED", "AUTO", "AUTO_ONCE", "SNESJacobianProjectionSubspaceType", "SNES_JACOBIAN_PROJECT_SUBSPACE_", NULL};
 
 /*@C
   SNESSetJacobianProjection - Set a projection that will be applied to Newton updates and other systems involving the Jacobian solved with `KSPSolve()`.
@@ -5956,6 +5964,7 @@ const char *const SNESJacobianProjectionTypes[] = {"NONE", "FIXED", "UPDATE", "N
   Calling sequence of `update_fn`:
 + snes       - the `SNES` context
 . x          - the current solution
+. r          - the current residual
 . projection - the nullspace of the updated projection
 - ctx        - the context that was passed as `update_ctx` to `SNESSetJacobianProjection()`
 
@@ -5963,7 +5972,7 @@ const char *const SNESJacobianProjectionTypes[] = {"NONE", "FIXED", "UPDATE", "N
 
 .seealso: [](ch_snes), `SNESGetJacobianProjection()`, `SNESJacobianProjectionType`, `SNESComputeJacobianProjection()`
 @*/
-PetscErrorCode SNESSetJacobianProjection(SNES snes, SNESJacobianProjectionType type, MatNullSpace projection, PetscErrorCode (*update_fn)(SNES snes, Vec x, MatNullSpace *projection, void *ctx), void *update_ctx)
+PetscErrorCode SNESSetJacobianProjection(SNES snes, SNESJacobianProjectionType type, MatNullSpace projection, PetscErrorCode (*update_fn)(SNES snes, Vec x, Vec r, MatNullSpace *projection, void *ctx), void *update_ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
@@ -5997,6 +6006,7 @@ PetscErrorCode SNESSetJacobianProjection(SNES snes, SNESJacobianProjectionType t
   Calling sequence of `update_fn`:
 + snes       - the `SNES` context
 . x          - the current solution
+. r          - the current residual
 . projection - the nullspace of the updated projection
 - ctx        - the context that was passed as `update_ctx` to `SNESSetJacobianProjection()`
 
@@ -6004,7 +6014,7 @@ PetscErrorCode SNESSetJacobianProjection(SNES snes, SNESJacobianProjectionType t
 
 .seealso: [](ch_snes), `SNESSetJacobianProjection()`, `SNESComputeJacobianProjection()`
 @*/
-PetscErrorCode SNESGetJacobianProjection(SNES snes, SNESJacobianProjectionType *type, MatNullSpace *projection, PetscErrorCode (**update_fn)(SNES snes, Vec x, MatNullSpace *projection, void *ctx), void **update_ctx)
+PetscErrorCode SNESGetJacobianProjection(SNES snes, SNESJacobianProjectionType *type, MatNullSpace *projection, PetscErrorCode (**update_fn)(SNES snes, Vec x, Vec r, MatNullSpace *projection, void *ctx), void **update_ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
@@ -6015,14 +6025,80 @@ PetscErrorCode SNESGetJacobianProjection(SNES snes, SNESJacobianProjectionType *
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@C
+  SNESSetJacobianProjectionSubspace - Set a method for modifying the subspace returned by `SNESComputeJacobianProjection()` before it is passed
+  to the linear solver with `KSPSetProjections()`.
+escription
+
+  Logically collective
+
+  Input Parameters:
++ snes         - the `SNES` context
+. type         - a `SNESJacobianProjectionSubspaceType` for the desired behavior
+- subspace_mat - a dense serial matrix (with communicator `PETSC_COMM_SELF`)
+                 whose column space represents linear combinations of the spanning vectors of
+                 the `MatNullSpace` returned by `SNESComputeJacobianProjection()` should
+                 actually be passed as a nullspace to `KSPSetProjections()`
+
+  Level: developer
+
+  Notes:
+  If `type` is `SNES_JACOBIAN_PROJECT_SUBSPACE_ALL`, `subspace_mat` is
+  ignored; if `type` is `SNES_JACOBIAN_PROJECT_SUBSPACE_FIXED`,
+  `subspaces_mat` will be used unchanged every time a projection is computed;
+  if `type` is `SNES_JACOBIAN_PROJECT_SUBSPACE_AUTO`, then at every
+  iteration of the nonlinear solver the current solution will be used to
+  compute the adjoint of the projection subspace using
+  `MatNullSpaceComputeSpanningVecsAdjoint()`, which will be used to
+  determine which subspace of the spanning vectors are (up to second order)
+  equivariants of the nonlinear system.
+
+.seealso: `SNESComputeJacobianProjection()`, `SNESSetJacobianProjection()`, `SNESGetJacobianProjection()`, `SNESGetJacobianProjectionSubspace()`
+@*/
+PetscErrorCode SNESSetJacobianProjectionSubspace(SNES snes, SNESJacobianProjectionSubspaceType type, Mat subspace_mat)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
+  snes->jac_projection_subspace_type = type;
+  PetscCall(PetscObjectReference((PetscObject)subspace_mat));
+  PetscCall(MatDestroy(&snes->jac_projection_subspace_mat));
+  snes->jac_projection_subspace_mat = subspace_mat;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  SNESGetJacobianProjectionSubspace - Get the method for modifying the subspace returned by `SNESComputeJacobianProjection()` before it is passed
+  to the linear solver with `KSPSetProjections()`.
+
+  Logically collective
+
+  Input Parameter:
+. snes - the `SNES` context
+
+  Output Parameters:
++ type         - (optional; pass `NULL` if not needed) the `SNESJacobianProjectionSubspaceType` being used: see `SNESSetJacobianProjectionSubspace()` for interpretation.
+- subspace_mat - (optional; pass `NULL` if not needed) a serial dense matrix, duplicated on every process, whose column space represent the linear combinations
+  of the spanning vectors of the or
+
+@*/
+PetscErrorCode SNESGetJacobianProjectionSubspace(SNES snes, SNESJacobianProjectionSubspaceType *type, Mat *subspace_mat)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
+  if (type) *type = snes->jac_projection_subspace_type;
+  if (subspace_mat) *subspace_mat = snes->jac_projection_subspace_mat;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*@
-  SNESComputeJacobianProjection - Compute the project used to modify linear systems with the Jacobian for the current solution
+  SNESComputeJacobianProjection - Compute the projection used to modify linear systems with the Jacobian for the current solution
 
   Collective
 
   Input Parameters:
 + snes - the `SNES` context
-- x    - an approximate solution to the nonlinear problem
+. x    - an approximate solution to the nonlinear problem
+- r    - the residual associated with `x`
 
   Output Parameters:
 . projection - an orthonormal projection described by its nullspace
@@ -6038,7 +6114,7 @@ PetscErrorCode SNESGetJacobianProjection(SNES snes, SNESJacobianProjectionType *
 
 .seealso: [](ch_snes), `SNESSetJacobianProjection()`, `SNESGetKSP()`, `KSPSetProjections()`
 @*/
-PetscErrorCode SNESComputeJacobianProjection(SNES snes, Vec x, MatNullSpace *projection)
+PetscErrorCode SNESComputeJacobianProjection(SNES snes, Vec x, Vec r, MatNullSpace *projection)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
@@ -6053,7 +6129,7 @@ PetscErrorCode SNESComputeJacobianProjection(SNES snes, Vec x, MatNullSpace *pro
     break;
   case SNES_JACOBIAN_PROJECT_UPDATE:
     *projection = NULL;
-    if (snes->jac_projection_update) PetscCall((*snes->jac_projection_update)(snes, x, projection, snes->jac_projection_ctx));
+    if (snes->jac_projection_update) PetscCall((*snes->jac_projection_update)(snes, x, r, projection, snes->jac_projection_ctx));
     break;
   default: {
     KSP ksp;
@@ -6065,6 +6141,37 @@ PetscErrorCode SNESComputeJacobianProjection(SNES snes, Vec x, MatNullSpace *pro
     PetscCall(MatGetNearNullSpace(A, projection));
     PetscCall(PetscObjectReference((PetscObject)*projection));
   }
+  }
+  if (*projection && snes->jac_projection_subspace_type != SNES_JACOBIAN_PROJECT_SUBSPACE_ALL) {
+    Mat S = NULL;
+    PetscInt iter;
+    SNESJacobianProjectionSubspaceType s_type = snes->jac_projection_subspace_type;
+    PetscBool s_auto = (s_type == SNES_JACOBIAN_PROJECT_SUBSPACE_AUTO || s_type == SNES_JACOBIAN_PROJECT_SUBSPACE_AUTO_ONCE) ? PETSC_TRUE : PETSC_FALSE;
+
+    PetscCall(SNESGetIterationNumber(snes, &iter));
+    if (iter == 0 && s_type == SNES_JACOBIAN_PROJECT_SUBSPACE_AUTO_ONCE) PetscCall(MatDestroy(&snes->jac_projection_subspace_mat));
+    S = snes->jac_projection_subspace_mat;
+
+    PetscCall(PetscObjectReference((PetscObject)S));
+    if (S == NULL && s_auto) {
+      const Vec *V = NULL;
+      Vec *JV;
+      PetscInt n_spanning_vecs;
+      Mat J;
+
+      PetscCall(MatNullSpaceGetSpanningVecs(*projection, &n_spanning_vecs, &V));
+      PetscCall(SNESGetJacobian(snes, &J, NULL, NULL, NULL));
+      PetscCall(PetscCalloc1(n_spanning_vecs, &JV));
+      for (PetscInt i = 0; i < n_spanning_vecs; i++) PetscCall(VecDuplicate(V[i], &JV[i]));
+      PetscCall(MatNullSpaceComputeSpanningVecsAdjoint(*projection, x, r, JV));
+      for (PetscInt i = 0; i < n_spanning_vecs; i++) PetscCall(MatMultAdd(J, V[i], JV[i], JV[i]));
+      for (PetscInt i = 0; i < n_spanning_vecs; i++) PetscCall(VecDestroy(&JV[i]));
+      // TODO: compute nullspace of JV vecs
+      PetscCall(PetscFree(JV));
+    }
+    if (S == NULL) PetscFunctionReturn(PETSC_SUCCESS);
+
+    PetscCall(MatDestroy(&S));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }

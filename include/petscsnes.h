@@ -233,9 +233,34 @@ typedef enum {
 
 PETSC_EXTERN const char *const SNESJacobianProjectionTypes[];
 
-PETSC_EXTERN PetscErrorCode SNESSetJacobianProjection(SNES, SNESJacobianProjectionType, MatNullSpace, PetscErrorCode (*)(SNES, Vec, MatNullSpace *, void *), void *);
-PETSC_EXTERN PetscErrorCode SNESGetJacobianProjection(SNES, SNESJacobianProjectionType *, MatNullSpace *, PetscErrorCode (**)(SNES, Vec, MatNullSpace *, void *), void **);
-PETSC_EXTERN PetscErrorCode SNESComputeJacobianProjection(SNES, Vec, MatNullSpace *);
+/*E
+  SNESJacobianProjectionSubspace - subspace of the `MatNullSpace` to use in `SNESComputeJacobianProjection()`
+
+  Values:
++ `SNES_JACOBIAN_PROJECT_SUBSPACE_ALL`       - project out the whole subspace
+. `SNES_JACOBIAN_PROJECT_SUBSPACE_FIXED`     - project out a fixed subspace every nonlinear iteration
+. `SNES_JACOBIAN_PROJECT_SUBSPACE_AUTO'      - project out a subspace automatically computed (every nonlinear iteration) to be (up to second order) an equivariant for the nonlinear system
+- `SNES_JACOBIAN_PROJECT_SUBSPACE_AUTO_ONCE' - project out a subspace automatically computed (only once) to be (up to second order) invariant
+
+  Level: advanced
+
+.seealso: [](ch_snes), `KSPSetProjections()`, `SNESSetJacobianProjection()`, `SNESComputeJacobianProjection()`, `SNESSetJacobianProjectionSubspace()`
+E*/
+
+typedef enum {
+  SNES_JACOBIAN_PROJECT_SUBSPACE_ALL,
+  SNES_JACOBIAN_PROJECT_SUBSPACE_FIXED,
+  SNES_JACOBIAN_PROJECT_SUBSPACE_AUTO,
+  SNES_JACOBIAN_PROJECT_SUBSPACE_AUTO_ONCE,
+} SNESJacobianProjectionSubspaceType;
+
+PETSC_EXTERN const char *const SNESJacobianProjectionSubspaceTypes[];
+
+PETSC_EXTERN PetscErrorCode SNESSetJacobianProjection(SNES, SNESJacobianProjectionType, MatNullSpace, PetscErrorCode (*)(SNES, Vec, Vec, MatNullSpace *, void *), void *);
+PETSC_EXTERN PetscErrorCode SNESGetJacobianProjection(SNES, SNESJacobianProjectionType *, MatNullSpace *, PetscErrorCode (**)(SNES, Vec, Vec, MatNullSpace *, void *), void **);
+PETSC_EXTERN PetscErrorCode SNESSetJacobianProjectionSubspace(SNES, SNESJacobianProjectionSubspaceType, Mat);
+PETSC_EXTERN PetscErrorCode SNESGetJacobianProjectionSubspace(SNES, SNESJacobianProjectionSubspaceType *, Mat *);
+PETSC_EXTERN PetscErrorCode SNESComputeJacobianProjection(SNES, Vec, Vec, MatNullSpace *);
 
 PETSC_EXTERN PetscErrorCode SNESGetNonlinearStepFailures(SNES, PetscInt *);
 PETSC_EXTERN PetscErrorCode SNESSetMaxNonlinearStepFailures(SNES, PetscInt);

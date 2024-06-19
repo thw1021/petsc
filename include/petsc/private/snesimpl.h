@@ -175,7 +175,9 @@ struct _p_SNES {
 
   SNESJacobianProjectionType jac_projection_type;
   MatNullSpace               jac_projection;
-  PetscErrorCode (*jac_projection_update)(SNES, Vec, MatNullSpace *, void *);
+  PetscErrorCode (*jac_projection_update)(SNES, Vec, Vec, MatNullSpace *, void *);
+  SNESJacobianProjectionSubspaceType jac_projection_subspace_type;
+  Mat                        jac_projection_subspace_mat;
   void *jac_projection_ctx;
 };
 
