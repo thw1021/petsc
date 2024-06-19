@@ -9,8 +9,6 @@
   #define snescomputejacobiandefault_      SNESCOMPUTEJACOBIANDEFAULT
   #define snescomputejacobiandefaultcolor_ SNESCOMPUTEJACOBIANDEFAULTCOLOR
   #define snessetjacobian_                 SNESSETJACOBIAN
-  #define snessetjacobian1_                SNESSETJACOBIAN1
-  #define snessetjacobian2_                SNESSETJACOBIAN2
   #define snessetfunction_                 SNESSETFUNCTION
   #define snessetobjective_                SNESSETOBJECTIVE
   #define snessetngs_                      SNESSETNGS
@@ -37,8 +35,6 @@
   #define snescomputejacobiandefault_      snescomputejacobiandefault
   #define snescomputejacobiandefaultcolor_ snescomputejacobiandefaultcolor
   #define snessetjacobian_                 snessetjacobian
-  #define snessetjacobian1_                snessetjacobian1
-  #define snessetjacobian2_                snessetjacobian2
   #define snessetfunction_                 snessetfunction
   #define snessetobjective_                snessetobjective
   #define snessetngs_                      snessetngs
@@ -216,14 +212,6 @@ PETSC_EXTERN void snessetjacobian_(SNES *snes, Mat *A, Mat *B, void (*func)(SNES
     *ierr = PetscObjectSetFortranCallback((PetscObject)*snes, PETSC_FORTRAN_CALLBACK_CLASS, &_cb.jacobian, (PetscVoidFn *)func, ctx);
     if (!*ierr) *ierr = SNESSetJacobian(*snes, *A, *B, oursnesjacobian, NULL);
   }
-}
-PETSC_EXTERN void snessetjacobian1_(SNES *snes, Mat *A, Mat *B, void (*func)(SNES *, Vec *, Mat *, Mat *, void *, PetscErrorCode *), void *ctx, PetscErrorCode *ierr)
-{
-  snessetjacobian_(snes, A, B, func, ctx, ierr);
-}
-PETSC_EXTERN void snessetjacobian2_(SNES *snes, Mat *A, Mat *B, void (*func)(SNES *, Vec *, Mat *, Mat *, void *, PetscErrorCode *), void *ctx, PetscErrorCode *ierr)
-{
-  snessetjacobian_(snes, A, B, func, ctx, ierr);
 }
 
 static PetscErrorCode oursnespicardfunction(SNES snes, Vec x, Vec f, void *ctx)
