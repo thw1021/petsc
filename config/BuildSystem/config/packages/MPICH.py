@@ -89,9 +89,10 @@ class Configure(config.package.GNUPackage):
     if 'download-mpich-device' in self.argDB:
       mpich_device = self.argDB['download-mpich-device']
     args.append('--with-device='+mpich_device)
-    # meminit: preinitialize memory associated structures and unions to eliminate access warnings from programs like valgrind
-    # dbg: add compiler flag, -g, to all internal compiler flag i.e. MPICHLIB_CFLAGS, MPICHLIB_CXXFLAGS, MPICHLIB_FFLAGS, and MPICHLIB_FCFLAGS, to make debugging easier
-    args.append('--enable-g=meminit,dbg')
+    # meminit: preinitialize memory associated structures and unions to eliminate access warnings from programs like valgrind.
+    # dbg: add compiler flag, -g, to all internal compiler flag i.e. MPICHLIB_CFLAGS, MPICHLIB_CXXFLAGS, MPICHLIB_FFLAGS, and MPICHLIB_FCFLAGS, to make debugging easier.
+    # handlealloc: print the number of outstanding handle objects at finalize
+    args.append('--enable-g=meminit,dbg,handlealloc')
     if not self.setCompilers.isDarwin(self.log) and config.setCompilers.Configure.isClang(self.setCompilers.CC, self.log):
       args.append('pac_cv_have_float16=no')
     if config.setCompilers.Configure.isDarwin(self.log):
