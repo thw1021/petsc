@@ -85,9 +85,7 @@ static PetscErrorCode PetscViewerFlush_ExodusII(PetscViewer v)
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)v->data;
 
   PetscFunctionBegin;
-  if (exo->exoid >= 0) {
-    PetscCallExternal(ex_update, exo->exoid);
-  }
+  if (exo->exoid >= 0) { PetscCallExternal(ex_update, exo->exoid); }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -347,12 +345,12 @@ static PetscErrorCode PetscViewerExodusIISetOrder_ExodusII(PetscViewer viewer, P
 PetscErrorCode PetscViewerExodusIISetZonalVariable(PetscViewer viewer, int num)
 {
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
-  MPI_Comm comm;
+  MPI_Comm              comm;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectGetComm((PetscObject)viewer, &comm));
-  PetscCheck(exo->numZonalVariables == -1,comm, PETSC_ERR_SUP, "The number of zonal variables has already been set to %" PetscInt_FMT " and cannot be overwritten", exo->numZonalVariables);
-  PetscCheck((exo->btype != FILE_MODE_READ) && (exo->btype != FILE_MODE_UNDEFINED),comm, PETSC_ERR_FILE_WRITE, "Cannot set the number of variables because the file is not writable");
+  PetscCheck(exo->numZonalVariables == -1, comm, PETSC_ERR_SUP, "The number of zonal variables has already been set to %" PetscInt_FMT " and cannot be overwritten", exo->numZonalVariables);
+  PetscCheck((exo->btype != FILE_MODE_READ) && (exo->btype != FILE_MODE_UNDEFINED), comm, PETSC_ERR_FILE_WRITE, "Cannot set the number of variables because the file is not writable");
   exo->numZonalVariables = num;
   // Make a call to ex_put_XXX and do error checking
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -378,12 +376,12 @@ PetscErrorCode PetscViewerExodusIISetZonalVariable(PetscViewer viewer, int num)
 PetscErrorCode PetscViewerExodusIISetNodalVariable(PetscViewer viewer, int num)
 {
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
-  MPI_Comm comm;
+  MPI_Comm              comm;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectGetComm((PetscObject)viewer, &comm));
-  PetscCheck(exo->numNodalVariables == -1,comm, PETSC_ERR_SUP, "The number of nodal variables has already been set to %" PetscInt_FMT " and cannot be overwritten", exo->numNodalVariables);
-  PetscCheck((exo->btype != FILE_MODE_READ) && (exo->btype != FILE_MODE_UNDEFINED),comm, PETSC_ERR_FILE_WRITE, "Cannot set the number of variables because the file is not writable");
+  PetscCheck(exo->numNodalVariables == -1, comm, PETSC_ERR_SUP, "The number of nodal variables has already been set to %" PetscInt_FMT " and cannot be overwritten", exo->numNodalVariables);
+  PetscCheck((exo->btype != FILE_MODE_READ) && (exo->btype != FILE_MODE_UNDEFINED), comm, PETSC_ERR_FILE_WRITE, "Cannot set the number of variables because the file is not writable");
   exo->numNodalVariables = num;
   // Make a call to ex_put_XXX and do error checking
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -661,11 +659,9 @@ PetscErrorCode PetscViewerExodusIIGetZonalVariableNames(PetscViewer viewer, int 
 
   PetscFunctionBegin;
   PetscCheck(numNames == exo->numZonalVariables, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Number of requested names does not match the number of stored names");
-  
+
   /* Check if variable names are already stored in the viewer */
-  if (!exo->zonalVariableNames) {
-    PetscCallExternal(ex_get_variable_names, exo->exoid, EX_NODAL, exo->numZonalVariables, exo->zonalVariableNames);
-  }
+  if (!exo->zonalVariableNames) { PetscCallExternal(ex_get_variable_names, exo->exoid, EX_NODAL, exo->numZonalVariables, exo->zonalVariableNames); }
 
   for (int i = 0; i < numNames; i++) {
     ierr = PetscStrncpy(names[i], exo->zonalVariableNames[i], 256);
@@ -698,14 +694,12 @@ PetscErrorCode PetscViewerExodusIIGetNodalVariableNames(PetscViewer viewer, int 
 
   PetscFunctionBegin;
   PetscCheck(numNames == exo->numNodalVariables, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Number of requested names does not match the number of stored names");
-  
+
   /* Check if variable names are already stored in the viewer */
-  if (!exo->nodalVariableNames) {
-    PetscCallExternal(ex_get_variable_names, exo->exoid, EX_NODAL, exo->numNodalVariables, exo->nodalVariableNames);
-  }
+  if (!exo->nodalVariableNames) { PetscCallExternal(ex_get_variable_names, exo->exoid, EX_NODAL, exo->numNodalVariables, exo->nodalVariableNames); }
 
   for (int i = 0; i < numNames; i++) {
-    ierr = PetscStrncpy(names[i], exo->nodalVariableNames[i], 256); 
+    ierr = PetscStrncpy(names[i], exo->nodalVariableNames[i], 256);
     CHKERRQ(ierr);
   }
   PetscFunctionReturn(PETSC_SUCCESS);

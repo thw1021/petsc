@@ -33,7 +33,6 @@ int main(int argc, char **argv)
   PetscCall(PetscViewerView(viewer, PETSC_VIEWER_STDOUT_WORLD));
   PetscCall(PetscViewerFlush(viewer));
 
-
   /* TESTING ZONAL VARIABLE NUMBER & NAME */
   //nZonalVar = 3; /*TOTAL IN TEST*/
   /*
