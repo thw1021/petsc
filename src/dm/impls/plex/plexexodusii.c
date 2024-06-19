@@ -623,6 +623,7 @@ PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetNodalVariableNames(PetscViewer
   PetscFunctionBegin;
   PetscViewerExodusIIGetNodalVariable(viewer, &numNames);
   PetscCheck(numNames >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of names must be non-negative");
+  /**/
 
   /* Allocates memory for an array of pointers to strings. Each pointer in this array will point to a dynamically allocated string */
   ierr = PetscMalloc1(numNames, &exo->nodalVariableNames);
@@ -660,10 +661,17 @@ PetscErrorCode PetscViewerExodusIIGetZonalVariableNames(PetscViewer viewer, int 
 
   PetscFunctionBegin;
   PetscCheck(numNames == exo->numZonalVariables, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Number of requested names does not match the number of stored names");
+  
+  /* Check if variable names are already stored in the viewer */
+  if (!exo->zonalVariableNames) {
+    PetscCallExternal(ex_get_variable_names, exo->exoid, EX_NODAL, exo->numZonalVariables, exo->zonalVariableNames);
+  }
+
   for (int i = 0; i < numNames; i++) {
-    ierr = PetscStrncpy(names[i], exo->zonalVariableNames[i], 256); // Ensure the destination buffer has enough space
+    ierr = PetscStrncpy(names[i], exo->zonalVariableNames[i], 256);
     CHKERRQ(ierr);
   }
+
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -690,15 +698,20 @@ PetscErrorCode PetscViewerExodusIIGetNodalVariableNames(PetscViewer viewer, int 
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
 
   PetscFunctionBegin;
-  PetscCheck(numNames == exo->numZonalVariables, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Number of requested names does not match the number of stored names");
+  PetscCheck(numNames == exo->numNodalVariables, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Number of requested names does not match the number of stored names");
+  
+  /* Check if variable names are already stored in the viewer */
+  if (!exo->nodalVariableNames) {
+    PetscCallExternal(ex_get_variable_names, exo->exoid, EX_NODAL, exo->numNodalVariables, exo->nodalVariableNames);
+  }
 
   for (int i = 0; i < numNames; i++) {
-    ierr = PetscStrncpy(names[i], exo->nodalVariableNames[i], 256); // Ensure the destination buffer has enough space
+    ierr = PetscStrncpy(names[i], exo->nodalVariableNames[i], 256); 
     CHKERRQ(ierr);
   }
+
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-
 /*MC
    PETSCVIEWEREXODUSII - A viewer that writes to an Exodus II file
 
