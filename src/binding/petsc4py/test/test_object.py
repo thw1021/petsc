@@ -68,7 +68,28 @@ class BaseTestObject:
         self.assertEqual(self.obj.getOptionsPrefix(), prefix2 + prefix1)
         self.obj.setOptionsPrefix(None)
         self.assertEqual(self.obj.getOptionsPrefix(), None)
+
+        def opts_handler(obj):
+            obj.setAttr('opts_handler_called', True)
+            self.assertEqual(self.obj.klass, obj.klass)
+            self.assertEqual(self.obj.type, obj.type)
+
+        self.obj.setOptionsHandler(opts_handler)
         self.obj.setFromOptions()
+        missing = [
+            'AO',
+            'DMLabel',
+            'PetscDualSpace',
+            'IS',
+            'ISLocalToGlobalMapping',
+            'MatPartitioning',
+            'MatNullSpace',
+            'PetscRandom',
+            'PetscViewer',
+        ]
+        if self.obj.klass not in missing:
+            self.assertTrue(self.obj.getAttr('opts_handler_called'))
+        self.obj.destroyOptionsHandlers()
 
     def testName(self):
         oldname = self.obj.getName()
