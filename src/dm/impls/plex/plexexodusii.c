@@ -671,7 +671,6 @@ PetscErrorCode PetscViewerExodusIIGetZonalVariableNames(PetscViewer viewer, int 
     ierr = PetscStrncpy(names[i], exo->zonalVariableNames[i], 256);
     CHKERRQ(ierr);
   }
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -709,7 +708,6 @@ PetscErrorCode PetscViewerExodusIIGetNodalVariableNames(PetscViewer viewer, int 
     ierr = PetscStrncpy(names[i], exo->nodalVariableNames[i], 256); 
     CHKERRQ(ierr);
   }
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 /*MC
