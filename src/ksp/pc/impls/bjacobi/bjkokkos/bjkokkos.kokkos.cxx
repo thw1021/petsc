@@ -657,7 +657,10 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc, Vec bin, Vec xout)
 #endif
       auto h_metadata = Kokkos::create_mirror(Kokkos::HostSpace::memory_space(), d_metadata);
       Kokkos::deep_copy(h_metadata, d_metadata);
-      PetscInt count = -1, mbid = 0;
+      PetscInt count = -1;
+#if PCBJKOKKOS_VERBOSE_LEVEL > 1
+      PetscInt mbid = 0;
+#endif
       int      in[2], out[2];
       if (jac->reason) { // -pc_bjkokkos_ksp_converged_reason
 #if PCBJKOKKOS_VERBOSE_LEVEL >= 3
@@ -665,23 +668,23 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc, Vec bin, Vec xout)
         PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Iterations\n"));
   #endif
         // assume species major
-  #if PCBJKOKKOS_VERBOSE_LEVEL < 4
+  #if PCBJKOKKOS_VERBOSE_LEVEL == 3
         if (batch_sz != 1) PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A), "%s: max iterations per species:", ksp_type_idx == BATCH_KSP_BICG_IDX ? "bicg" : "tfqmr"));
         else PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A), "    Linear solve converged due to %s iterations ", ksp_type_idx == BATCH_KSP_BICG_IDX ? "bicg" : "tfqmr"));
   #endif
         for (PetscInt dmIdx = 0, head = 0; dmIdx < jac->num_dms; dmIdx += batch_sz) {
-          for (PetscInt f = 0, idx = head; f < jac->dm_Nf[dmIdx]; f++, s++, idx++) {
-  #if PCBJKOKKOS_VERBOSE_LEVEL >= 4
-            PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A), "%2" PetscInt_FMT ":", s));
-            for (int bid = 0; bid < batch_sz; bid++) PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A), "%3" PetscInt_FMT " ", h_metadata[idx + bid * jac->dm_Nf[dmIdx]].its));
-            PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A), "\n"));
-  #else
+          for (PetscInt f = 0, idx = head; f < jac->dm_Nf[dmIdx]; f++, idx++) {
             for (int bid = 0; bid < batch_sz; bid++) {
               if (h_metadata[idx + bid * jac->dm_Nf[dmIdx]].its > count) {
-                count = h_metadata[idx + bid * jac->dm_Nf[dmIdx]].its;
+                jac->max_nits = count = h_metadata[idx + bid * jac->dm_Nf[dmIdx]].its;
                 mbid  = bid;
               }
             }
+  #if PCBJKOKKOS_VERBOSE_LEVEL >= 4
+            PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A), "%2" PetscInt_FMT ":", f));
+            for (int bid = 0; bid < batch_sz; bid++) PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A), "%3" PetscInt_FMT " ", h_metadata[idx + bid * jac->dm_Nf[dmIdx]].its));
+            PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A), "\n"));
+  #else // == 3
             PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A), "%3" PetscInt_FMT " ", count));
   #endif
           }
@@ -691,28 +694,31 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc, Vec bin, Vec xout)
         PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A), "\n"));
   #endif
 #endif
-        if (count == -1) {
+        if (count == -1) { // < 3
           for (int blkID = 0; blkID < nBlk; blkID++) {
             if (h_metadata[blkID].its > count) {
               jac->max_nits = count = h_metadata[blkID].its;
+#if PCBJKOKKOS_VERBOSE_LEVEL > 1
               mbid                  = blkID;
+#endif
             }
 #if PCBJKOKKOS_VERBOSE_LEVEL > 0
             if (h_metadata[blkID].reason < 0) {
               PetscCall(PetscPrintf(PETSC_COMM_SELF, "ERROR reason=%s, its=%" PetscInt_FMT ". species %" PetscInt_FMT ", batch %" PetscInt_FMT "\n", KSPConvergedReasons[h_metadata[blkID].reason], h_metadata[blkID].its, blkID / batch_sz, blkID % batch_sz));
             }
 #endif
-            PetscCall(PetscLogGpuFlops((PetscLogDouble)h_metadata[blkID].flops));
           }
         }
         in[0] = count;
         in[1] = rank;
         PetscCallMPI(MPI_Allreduce(in, out, 1, MPI_2INT, MPI_MAXLOC, PetscObjectComm((PetscObject)A)));
+#if PCBJKOKKOS_VERBOSE_LEVEL > 1
         if (0 == rank) {
           if (batch_sz != 1)
             PetscCall(PetscPrintf(PETSC_COMM_SELF, "[%d] Linear solve converged due to %s iterations %d, batch %" PetscInt_FMT ", species %" PetscInt_FMT " (max)\n", out[1], KSPConvergedReasons[h_metadata[mbid].reason], out[0], mbid % batch_sz, mbid / batch_sz));
           else PetscCall(PetscPrintf(PETSC_COMM_SELF, "[%d] Linear solve converged due to %s iterations %d, block %" PetscInt_FMT " (max)\n", out[1], KSPConvergedReasons[h_metadata[mbid].reason], out[0], mbid));
         }
+#endif
       }
       for (int blkID = 0; blkID < nBlk; blkID++) {
         PetscCall(PetscLogGpuFlops((PetscLogDouble)h_metadata[blkID].flops));
