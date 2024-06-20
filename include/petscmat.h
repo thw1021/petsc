@@ -713,7 +713,7 @@ PETSC_EXTERN PetscErrorCode MatDenseGetColumnVecWrite(Mat, PetscInt, Vec *);
 PETSC_EXTERN PetscErrorCode MatDenseRestoreColumnVecWrite(Mat, PetscInt, Vec *);
 PETSC_EXTERN PetscErrorCode MatDenseGetSubMatrix(Mat, PetscInt, PetscInt, PetscInt, PetscInt, Mat *);
 PETSC_EXTERN PetscErrorCode MatDenseRestoreSubMatrix(Mat, Mat *);
-PETSC_EXTERN PetscErrorCode MatDenseTallSkinnySVD(Mat, MatReuse, Mat *, Vec *, Mat *);
+PETSC_EXTERN PetscErrorCode MatDenseTSSVD(Mat, MatReuse, Mat *, Vec *, Mat *);
 PETSC_EXTERN PetscErrorCode MatDenseTSQR(Mat, MatReuse, Mat *, Mat *);
 
 PETSC_EXTERN PetscErrorCode MatMult(Mat, Vec, Vec);

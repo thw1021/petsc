@@ -1,4 +1,4 @@
-const char help[] = "Test MatTallSkinnySVD";
+const char help[] = "Test MatDenseTSSVD";
 
 #include <petscmat.h>
 #include <petscsys.h>
@@ -108,7 +108,7 @@ int main(int argc, char **argv)
 
     for (PetscInt iter = 0; iter < 2; iter++) {
       MatReuse reuse = iter ? MAT_REUSE_MATRIX : MAT_INITIAL_MATRIX;
-      PetscCall(MatDenseTallSkinnySVD(X, reuse, &U, &S, &VH));
+      PetscCall(MatDenseTSSVD(X, reuse, &U, &S, &VH));
       PetscCall(MatSVDTest(X, U, S, VH));
     }
     PetscCall(MatDestroy(&U));

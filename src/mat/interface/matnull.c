@@ -435,7 +435,7 @@ PetscErrorCode MatNullSpaceCreateFromSpanningVecs(MPI_Comm comm, PetscInt n, con
     PetscCall(VecCopy(vecs[i], b_i));
     PetscCall(MatDenseRestoreColumnVecWrite(B, i, &b_i));
   }
-  PetscCall(MatDenseTallSkinnySVD(B, MAT_INITIAL_MATRIX, &U, &S, NULL));
+  PetscCall(MatDenseTSSVD(B, MAT_INITIAL_MATRIX, &U, &S, NULL));
   PetscCall(MatDestroy(&B));
   PetscCall(MatGetSize(U, NULL, &r));
   r_orig = r;

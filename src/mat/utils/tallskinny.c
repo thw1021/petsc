@@ -275,7 +275,7 @@ static PetscErrorCode MatDenseComputeSVBUpdate(Mat A, Mat W, Mat Yupdate, PetscB
 
     PetscCall(PetscViewerGetFormat(viewer, &format));
     if (format == PETSC_VIEWER_ASCII_INFO_DETAIL) {
-      PetscCall(PetscViewerASCIIPrintf(viewer, "MatTallSkinnySVD, iter %" PetscInt_FMT ": scaled singular values\n", iter));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "MatDenseTSSVD, iter %" PetscInt_FMT ": scaled singular values\n", iter));
       PetscCall(PetscViewerASCIIPushTab(viewer));
       PetscCall(PetscViewerPushFormat(viewer, PETSC_VIEWER_DEFAULT));
       PetscCall(VecView(D, viewer));
@@ -313,7 +313,7 @@ static PetscErrorCode MatDenseComputeSVBUpdate(Mat A, Mat W, Mat Yupdate, PetscB
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatDenseTallSkinnySVDMonitor(Mat X, Mat Y, Mat YtY, Mat W, PetscInt r, PetscInt iter, PetscViewer viewer)
+static PetscErrorCode MatDenseTSSVDMonitor(Mat X, Mat Y, Mat YtY, Mat W, PetscInt r, PetscInt iter, PetscViewer viewer)
 {
   Mat       Yr;
   Mat       Wr;
@@ -325,18 +325,18 @@ static PetscErrorCode MatDenseTallSkinnySVDMonitor(Mat X, Mat Y, Mat YtY, Mat W,
   PetscFunctionBegin;
   if (viewer == NULL) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(MatGetSize(X, &M, &N));
-  PetscCall(PetscViewerASCIIPrintf(viewer, "MatTallSkinnySVD, iter %" PetscInt_FMT ": %" PetscInt_FMT " x %" PetscInt_FMT " matrix, rank upper bound %" PetscInt_FMT "\n", iter, M, N, r));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "MatDenseTSSVD, iter %" PetscInt_FMT ": %" PetscInt_FMT " x %" PetscInt_FMT " matrix, rank upper bound %" PetscInt_FMT "\n", iter, M, N, r));
   PetscCall(MatDenseGetSubMatrix(Y, PETSC_DECIDE, PETSC_DECIDE, 0, r, &Yr));
   PetscCall(MatHermitianTransposeMatMult(Yr, Yr, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &YtYminusI));
   PetscCall(MatShift(YtYminusI, -1.0));
   PetscCall(MatNorm(YtYminusI, NORM_FROBENIUS, &ortho_err));
-  PetscCall(PetscViewerASCIIPrintf(viewer, "MatTallSkinnySVD, iter %" PetscInt_FMT ": orthogonality error || Y'Y - I ||_F = %e\n", iter, (double)ortho_err));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "MatDenseTSSVD, iter %" PetscInt_FMT ": orthogonality error || Y'Y - I ||_F = %e\n", iter, (double)ortho_err));
   PetscCall(MatDestroy(&YtYminusI));
   PetscCall(MatDenseGetSubMatrix(W, 0, r, PETSC_DECIDE, PETSC_DECIDE, &Wr));
   PetscCall(MatMatMult(Yr, Wr, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &YWminusX));
   PetscCall(MatAXPY(YWminusX, -1.0, X, SAME_NONZERO_PATTERN));
   PetscCall(MatNorm(YWminusX, NORM_FROBENIUS, &recon_err));
-  PetscCall(PetscViewerASCIIPrintf(viewer, "MatTallSkinnySVD, iter %" PetscInt_FMT ": reconstruction error || YW - X ||_F = %e\n", iter, (double)recon_err));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "MatDenseTSSVD, iter %" PetscInt_FMT ": reconstruction error || YW - X ||_F = %e\n", iter, (double)recon_err));
   PetscCall(MatDestroy(&YWminusX));
   PetscCall(MatDenseRestoreSubMatrix(W, &Wr));
   PetscCall(MatDenseRestoreSubMatrix(Y, &Yr));
@@ -344,7 +344,7 @@ static PetscErrorCode MatDenseTallSkinnySVDMonitor(Mat X, Mat Y, Mat YtY, Mat W,
 }
 
 /*@
-  MatDenseTallSkinnySVD - Compute the SVD of a tall skinny dense matrix.
+  MatDenseTSSVD - Compute the SVD of a tall skinny dense matrix.
 
   Collective
 
@@ -367,7 +367,7 @@ static PetscErrorCode MatDenseTallSkinnySVDMonitor(Mat X, Mat Y, Mat YtY, Mat W,
 
 .seealso: [](ch_matrices), `Mat`, `MATDENSE`
 @*/
-PetscErrorCode MatDenseTallSkinnySVD(Mat X, MatReuse reuse, Mat *U, Vec *S, Mat *VH)
+PetscErrorCode MatDenseTSSVD(Mat X, MatReuse reuse, Mat *U, Vec *S, Mat *VH)
 {
   PetscInt          M, N, m, n, r, R, i;
   PetscMPIInt       size, rank;
@@ -404,7 +404,7 @@ PetscErrorCode MatDenseTallSkinnySVD(Mat X, MatReuse reuse, Mat *U, Vec *S, Mat 
 
     PetscCall(MatGetLayouts(X, NULL, &column_layout));
     PetscCall(PetscLayoutGetRanges(column_layout, &ranges));
-    PetscCheck(ranges[1] == N, comm, PETSC_ERR_ARG_SIZ, "MatDenseTallSkinnySVD() requires all columns of X be assigned to the first process");
+    PetscCheck(ranges[1] == N, comm, PETSC_ERR_ARG_SIZ, "MatDenseTSSVD() requires all columns of X be assigned to the first process");
   }
   PetscCall(PetscCitationsRegister(svb_citation, &cite_registered));
   /* Invariant: X = Y * W
@@ -427,7 +427,7 @@ PetscErrorCode MatDenseTallSkinnySVD(Mat X, MatReuse reuse, Mat *U, Vec *S, Mat 
   if (viewer) PetscCall(PetscViewerPushFormat(viewer, format));
   for (i = 0; i < max_it; i++) {
     PetscCall(MatHermitianTransposeMatMult(Y, Y, MAT_REUSE_MATRIX, PETSC_DEFAULT, &A));
-    PetscCall(MatDenseTallSkinnySVDMonitor(X, Y, A, W, R, i, viewer));
+    PetscCall(MatDenseTSSVDMonitor(X, Y, A, W, R, i, viewer));
     PetscCall(MatZeroEntries(Yupdate));
     PetscCall(MatShift(Yupdate, 1.0));
     R = PetscMin(M, N);
@@ -441,7 +441,7 @@ PetscErrorCode MatDenseTallSkinnySVD(Mat X, MatReuse reuse, Mat *U, Vec *S, Mat 
   }
   if (viewer) {
     PetscCall(MatHermitianTransposeMatMult(Y, Y, MAT_REUSE_MATRIX, PETSC_DEFAULT, &A));
-    PetscCall(MatDenseTallSkinnySVDMonitor(X, Y, A, W, R, i, viewer));
+    PetscCall(MatDenseTSSVDMonitor(X, Y, A, W, R, i, viewer));
   }
   r = rank == 0 ? R : 0;
   PetscCall(MatDenseSVD_ProcessArguments(X, reuse, r, R, U, S, VH));
