@@ -1089,6 +1089,7 @@ PetscErrorCode SNESSetFromOptions(SNES snes)
     PetscCall(SNESMonitorSet(snes, SNESMonitorLGRange, ctx, (PetscErrorCode(*)(void **))PetscViewerDestroy));
   }
 
+  PetscCall(PetscOptionsGetViewer(PetscObjectComm((PetscObject)snes), ((PetscObject)snes)->options, ((PetscObject)snes)->prefix, "-snes_converged_reason", &snes->convergedreasonviewer, &snes->convergedreasonformat, NULL));
   flg = PETSC_FALSE;
   PetscCall(PetscOptionsBool("-snes_converged_reason_view_cancel", "Remove all converged reason viewers", "SNESConvergedReasonViewCancel", flg, &flg, &set));
   if (set && flg) PetscCall(SNESConvergedReasonViewCancel(snes));
@@ -4580,26 +4581,20 @@ PetscErrorCode SNESConvergedReasonViewSet(SNES snes, PetscErrorCode (*f)(SNES sn
 @*/
 PetscErrorCode SNESConvergedReasonViewFromOptions(SNES snes)
 {
-  PetscViewer       viewer;
-  PetscBool         flg;
-  static PetscBool  incall = PETSC_FALSE;
-  PetscViewerFormat format;
-  PetscInt          i;
+  static PetscBool incall = PETSC_FALSE;
 
   PetscFunctionBegin;
   if (incall) PetscFunctionReturn(PETSC_SUCCESS);
   incall = PETSC_TRUE;
 
   /* All user-provided viewers are called first, if they exist. */
-  for (i = 0; i < snes->numberreasonviews; i++) PetscCall((*snes->reasonview[i])(snes, snes->reasonviewcontext[i]));
+  for (PetscInt i = 0; i < snes->numberreasonviews; i++) PetscCall((*snes->reasonview[i])(snes, snes->reasonviewcontext[i]));
 
   /* Call PETSc default routine if users ask for it */
-  PetscCall(PetscOptionsGetViewer(PetscObjectComm((PetscObject)snes), ((PetscObject)snes)->options, ((PetscObject)snes)->prefix, "-snes_converged_reason", &viewer, &format, &flg));
-  if (flg) {
-    PetscCall(PetscViewerPushFormat(viewer, format));
-    PetscCall(SNESConvergedReasonView(snes, viewer));
-    PetscCall(PetscViewerPopFormat(viewer));
-    PetscCall(PetscOptionsRestoreViewer(&viewer));
+  if (snes->convergedreasonviewer) {
+    PetscCall(PetscViewerPushFormat(snes->convergedreasonviewer, snes->convergedreasonformat));
+    PetscCall(SNESConvergedReasonView(snes, snes->convergedreasonviewer));
+    PetscCall(PetscViewerPopFormat(snes->convergedreasonviewer));
   }
   incall = PETSC_FALSE;
   PetscFunctionReturn(PETSC_SUCCESS);
