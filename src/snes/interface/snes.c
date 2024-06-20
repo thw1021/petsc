@@ -1158,7 +1158,8 @@ PetscErrorCode SNESSetFromOptions(SNES snes)
 
   PetscCall(PetscOptionsEnum("-snes_jacobian_projection_type", "Projection modification to the SNES Jacobian", "SNESSetJacobianProjection", SNESJacobianProjectionTypes, (PetscEnum)snes->jac_projection_type, (PetscEnum *)&snes->jac_projection_type, NULL));
 
-  PetscCall(PetscOptionsEnum("-snes_jacobian_projection_subspace_type", "Subspace computation of projection modification to the SNES Jacobian", "SNESSetJacobianProjectionSubspace", SNESJacobianProjectionSubspaceTypes, (PetscEnum)snes->jac_projection_subspace_type, (PetscEnum *)&snes->jac_projection_subspace_type, NULL));
+  PetscCall(PetscOptionsEnum("-snes_jacobian_projection_subspace_type", "Subspace computation of projection modification to the SNES Jacobian", "SNESSetJacobianProjectionSubspace", SNESJacobianProjectionSubspaceTypes, (PetscEnum)snes->jac_projection_subspace_type,
+                             (PetscEnum *)&snes->jac_projection_subspace_type, NULL));
 
 #if defined(PETSC_HAVE_SAWS)
   /*
@@ -5946,7 +5947,7 @@ PetscErrorCode SNESGetLineSearch(SNES snes, SNESLineSearch *linesearch)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-const char *const SNESJacobianProjectionTypes[] = {"NONE", "FIXED", "UPDATE", "NEARNULLSPACE", "PC_NEARNULLSPACE", "SNESJacobianProjectionType", "SNES_JACOBIAN_PROJECT_", NULL};
+const char *const SNESJacobianProjectionTypes[]         = {"NONE", "FIXED", "UPDATE", "NEARNULLSPACE", "PC_NEARNULLSPACE", "SNESJacobianProjectionType", "SNES_JACOBIAN_PROJECT_", NULL};
 const char *const SNESJacobianProjectionSubspaceTypes[] = {"ALL", "FIXED", "AUTO", "AUTO_ONCE", "SNESJacobianProjectionSubspaceType", "SNES_JACOBIAN_PROJECT_SUBSPACE_", NULL};
 
 /*@C
@@ -6143,10 +6144,10 @@ PetscErrorCode SNESComputeJacobianProjection(SNES snes, Vec x, Vec r, MatNullSpa
   }
   }
   if (*projection && snes->jac_projection_subspace_type != SNES_JACOBIAN_PROJECT_SUBSPACE_ALL) {
-    Mat S = NULL;
-    PetscInt iter;
+    Mat                                S = NULL;
+    PetscInt                           iter;
     SNESJacobianProjectionSubspaceType s_type = snes->jac_projection_subspace_type;
-    PetscBool s_auto = (s_type == SNES_JACOBIAN_PROJECT_SUBSPACE_AUTO || s_type == SNES_JACOBIAN_PROJECT_SUBSPACE_AUTO_ONCE) ? PETSC_TRUE : PETSC_FALSE;
+    PetscBool                          s_auto = (s_type == SNES_JACOBIAN_PROJECT_SUBSPACE_AUTO || s_type == SNES_JACOBIAN_PROJECT_SUBSPACE_AUTO_ONCE) ? PETSC_TRUE : PETSC_FALSE;
 
     PetscCall(SNESGetIterationNumber(snes, &iter));
     if (iter == 0 && s_type == SNES_JACOBIAN_PROJECT_SUBSPACE_AUTO_ONCE) PetscCall(MatDestroy(&snes->jac_projection_subspace_mat));
@@ -6155,9 +6156,9 @@ PetscErrorCode SNESComputeJacobianProjection(SNES snes, Vec x, Vec r, MatNullSpa
     PetscCall(PetscObjectReference((PetscObject)S));
     if (S == NULL && s_auto) {
       const Vec *V = NULL;
-      Vec *JV;
-      PetscInt n_spanning_vecs;
-      Mat J;
+      Vec       *JV;
+      PetscInt   n_spanning_vecs;
+      Mat        J;
 
       PetscCall(MatNullSpaceGetSpanningVecs(*projection, &n_spanning_vecs, &V));
       PetscCall(SNESGetJacobian(snes, &J, NULL, NULL, NULL));

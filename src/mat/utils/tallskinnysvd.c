@@ -498,3 +498,240 @@ PetscErrorCode MatDenseTallSkinnySVD(Mat X, MatReuse reuse, Mat *U, Vec *S, Mat 
   PetscCall(PetscOptionsRestoreViewer(&viewer));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
+static PetscErrorCode MatDenseTSLQ_Internal(MPI_Comm comm, PetscMPIInt size, PetscMPIInt rank, PetscMPIInt tag, PetscMPIInt start, PetscMPIInt mid, PetscMPIInt stop, PetscBLASInt bn, PetscScalar *AQ, PetscScalar *L, PetscScalar *tau, PetscScalar **work, PetscBLASInt *lwork, PetscScalar *B)
+{
+  PetscBLASInt two_bn = 2 * bn, info;
+
+  PetscFunctionBegin;
+
+  if (start < mid && mid < stop) {
+    PetscScalar *B_lo, *B_hi, *B_this, *B_that;
+    PetscMPIInt  partner = (rank < mid) ? mid + (rank - start) : start + (rank - mid);
+    MPI_Request  reqs[3] = {MPI_REQUEST_NULL, MPI_REQUEST_NULL, MPI_REQUEST_NULL};
+    PetscMPIInt  next_start, next_mid, next_stop;
+    PetscScalar  one = 1.0, zero = 0.0;
+
+    PetscAssert((rank >= start) && (rank < stop) && (((mid - start) == (stop - mid)) || ((mid - start) + 1 == (stop - mid))), PETSC_COMM_SELF, PETSC_ERR_PLIB, "Invariants of splits not respected in TSQR");
+
+    next_start = (rank < mid) ? start : mid;
+    next_mid   = (rank < mid) ? (start + (mid - start) / 2) : (mid + (stop - mid) / 2);
+    next_stop  = (rank < mid) ? mid : stop;
+
+    PetscCall(MatDenseTSLQ_Internal(comm, size, rank, tag, next_start, next_mid, next_stop, bn, AQ, L, tau, work, lwork, B));
+
+    B_lo   = B;
+    B_hi   = &B[bn * bn];
+    B_this = rank < mid ? B_lo : B_hi;
+    B_that = rank < mid ? B_hi : B_lo;
+
+    PetscCall(PetscArraycpy(B_this, L, bn * bn));
+
+    // send / receive B_lo and B_hi
+    if (rank >= mid && partner >= mid) {
+      PetscCallMPI(MPI_Irecv(B_that, bn * bn, MPIU_SCALAR, mid - 1, tag, comm, &reqs[0]));
+    } else {
+      PetscCallMPI(MPI_Irecv(B_that, bn * bn, MPIU_SCALAR, partner, tag, comm, &reqs[0]));
+      PetscCallMPI(MPI_Isend(B_this, bn * bn, MPIU_SCALAR, partner, tag, comm, &reqs[1]));
+    }
+    if (((stop - mid) > (mid - start)) && rank == mid - 1) { PetscCallMPI(MPI_Isend(B_this, bn * bn, MPIU_SCALAR, stop - 1, tag, comm, &reqs[2])); }
+
+    PetscCall(MPI_Waitall(3, reqs, MPI_STATUSES_IGNORE));
+
+    // LQ factorization of B = [L_lo L_hi]
+    if (*work == NULL) {
+      PetscScalar work_dummy;
+
+      *lwork = -1;
+
+      PetscCallBLAS("LAPACKgelqf", LAPACKgelqf_(&bn, &two_bn, B, &bn, tau, &work_dummy, lwork, &info));
+      PetscCheck(info == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in LAPACK gelqf %d", (int)info);
+      *lwork = (PetscBLASInt)PetscRealPart(work_dummy);
+      PetscCall(PetscMalloc1(*lwork, work));
+    }
+
+    PetscCallBLAS("LAPACKgelqf", LAPACKgelqf_(&bn, &two_bn, B, &bn, tau, *work, lwork, &info));
+    PetscCheck(info == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in LAPACK geqlf %d", (int)info);
+
+    PetscCall(PetscArraycpy(L, B, bn * bn));
+
+    // zero out upper triangle of L
+    for (PetscInt j = 0; j < bn; j++)
+      for (PetscInt i = 0; i < j; i++) L[i + j * bn] = 0.0;
+
+    // form new Q
+    PetscCallBLAS("LAPACKorglq", LAPACKorglq_(&bn, &two_bn, &bn, B, &bn, tau, *work, lwork, &info));
+    PetscCheck(info == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in LAPACK orglq %d", (int)info);
+
+    // compute Q_this * AQ
+    PetscCallBLAS("BLASgemm", BLASgemm_("N", "N", &bn, &bn, &bn, &one, B_this, &bn, AQ, &bn, &zero, B_that, &bn));
+    PetscCall(PetscArraycpy(AQ, B_that, bn * bn));
+  } else {
+    // invariant: input AQ is already lower triangular, copy it to L and make AQ = I
+
+    PetscAssert(start == mid && mid == rank && stop == rank + 1, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Invariants of splits not respected in TSQR");
+    PetscCall(PetscArraycpy(L, AQ, bn * bn));
+    PetscCall(PetscArrayzero(AQ, bn * bn));
+    for (PetscInt i = 0; i < bn; i++) AQ[(bn + 1) * i] = 1.0;
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  MatDenseTSQR - Compute the tall skinny QR factorization (TSQR) of a dense matrix
+
+  Collective
+
+  Input Parameters:
++ A     - a dense matrix
+- reuse - `MAT_INITIAL_MATRIX` to create new `Q` and `R` matrices, `MAT_REUSE_MATRIX` to store the results in existing matrices
+
+  Output Parameters:
++ Q - a dense matrix with orthonormal columns
+- R - a dense upper triangular matrix such that $A = QR$
+
+  Level: intermediate
+
+  Note:
+  TSQR should be used for a matrix without too many columns.  If you want to use a QR factorization to solve a least squares problem, use `MatQRFactor()`.
+
+.seealso: [](ch_matrices), `Mat`, `MATDENSE`, `MatFactorQR()`
+@*/
+PetscErrorCode MatDenseTSQR(Mat A, MatReuse reuse, Mat *Q, Mat *R)
+{
+  PetscMPIInt  size, rank;
+  PetscInt     M, N, K, m, n, k;
+  MPI_Comm     comm;
+  MatReuse     reuse_Q = reuse;
+  MatReuse     reuse_R = reuse;
+  VecType      vec_type;
+  Mat          A_local, A_copy;
+  PetscScalar  dummy_work;
+  PetscScalar *tau, *work;
+  PetscScalar *_A, *_Q, *_R;
+  PetscInt     ldA, ldQ, ldR;
+  PetscBLASInt bm, bn, bk, bK, bldA, bldQ, lwork, info;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
+  PetscCall(PetscObjectGetComm((PetscObject)A, &comm));
+  PetscCallMPI(MPI_Comm_size(comm, &size));
+  PetscCallMPI(MPI_Comm_rank(comm, &rank));
+  PetscCall(MatGetSize(A, &M, &N));
+  PetscCall(MatGetLocalSize(A, &m, &n));
+  K = PetscMin(M, N);
+  k = rank == 0 ? K : 0;
+  PetscCheck(reuse == MAT_REUSE_MATRIX || reuse == MAT_INITIAL_MATRIX, comm, PETSC_ERR_ARG_OUTOFRANGE, "reuse must be MAT_REUSE_MATRIX or MAT_INITIAL_MATRIX");
+  PetscCall(MatDenseGetLocalMatrix(A, &A_local));
+  PetscCall(MatGetVecType(A_local, &vec_type));
+  if (reuse == MAT_REUSE_MATRIX) {
+    PetscLayout     a_row, q_row, q_col;
+    PetscBool       row_match, q_col_valid;
+    PetscMPIInt     R_size;
+    PetscInt        r_m, r_n;
+    const PetscInt *q_ranges;
+
+    PetscValidHeaderSpecific(*Q, MAT_CLASSID, 3);
+    PetscValidHeaderSpecific(*R, MAT_CLASSID, 4);
+    PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)*R), &R_size));
+    PetscCheck(R_size == 1, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "R matrix should have PETSC_COMM_SELF communicator");
+    PetscCall(MatGetSize(*R, &r_m, &r_n));
+    PetscCall(MatGetLayouts(A, &a_row, NULL));
+    PetscCall(MatGetLayouts(*Q, &q_row, &q_col));
+    PetscCall(PetscLayoutCompare(a_row, q_row, &row_match));
+    PetscCall(PetscLayoutGetRanges(q_col, &q_ranges));
+    q_col_valid = (q_ranges[1] == K && q_ranges[size] == K) ? PETSC_TRUE : PETSC_FALSE;
+    if (!(row_match && q_col_valid)) {
+      PetscCall(MatDestroy(Q));
+      reuse_Q = MAT_INITIAL_MATRIX;
+    }
+    if (!(r_m == K && r_n == N)) {
+      PetscCall(MatDestroy(R));
+      reuse_R = MAT_INITIAL_MATRIX;
+    }
+  }
+  if (reuse_Q == MAT_INITIAL_MATRIX) PetscCall(MatCreateDenseFromVecType(comm, vec_type, m, k, M, K, PETSC_DEFAULT, NULL, Q));
+  if (reuse_R == MAT_INITIAL_MATRIX) PetscCall(MatCreateDenseFromVecType(PETSC_COMM_SELF, vec_type, K, N, K, N, PETSC_DEFAULT, NULL, R));
+  PetscCall(MatZeroEntries(*Q));
+  PetscCall(MatZeroEntries(*R));
+  PetscCall(MatDuplicate(A_local, MAT_COPY_VALUES, &A_copy));
+  PetscCall(MatDenseGetLDA(A_copy, &ldA));
+  PetscCall(MatDenseGetLDA(*R, &ldR));
+  PetscCall(MatDenseGetLDA(*Q, &ldQ));
+  PetscCall(MatDenseGetArray(A_copy, &_A));
+  PetscCall(MatDenseGetArray(*Q, &_Q));
+  PetscCall(MatDenseGetArray(*R, &_R));
+  PetscCall(PetscBLASIntCast(m, &bm));
+  PetscCall(PetscBLASIntCast(N, &bn));
+  PetscCall(PetscBLASIntCast(K, &bK));
+  PetscCall(PetscBLASIntCast(ldA, &bldA));
+  PetscCall(PetscBLASIntCast(ldQ, &bldQ));
+  PetscCall(PetscMalloc1(N, &tau));
+
+  bk = PetscMin(bm, bn);
+  if (bk > 0) {
+    lwork = -1;
+    PetscCallBLAS("LAPACKgeqrf", LAPACKgeqrf_(&bm, &bn, _A, &bldA, tau, &dummy_work, &lwork, &info));
+    PetscCheck(info == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in LAPACK gelqf %d", (int)info);
+    lwork = (PetscBLASInt)PetscRealPart(dummy_work);
+    PetscCall(PetscMalloc1(lwork, &work));
+
+    PetscCallBLAS("LAPACKgeqrf", LAPACKgeqrf_(&bm, &bn, _A, &bldA, tau, work, &lwork, &info));
+    PetscCheck(info == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in LAPACK gelqf %d", (int)info);
+
+    // construct columns in Q
+    if (ldA == ldQ) {
+      PetscCall(PetscArraycpy(_Q, _A, PetscMin(m, N) * ldA));
+    } else {
+      for (PetscInt j = 0; j < PetscMin(m, N); j++) PetscCall(PetscArraycpy(&_Q[j * ldQ], &_A[j * ldA], m));
+    }
+    PetscCallBLAS("LAPACKorgqr", LAPACKorgqr_(&bm, &bk, &bk, _Q, &bldQ, tau, work, &lwork, &info));
+    PetscCheck(info == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in LAPACK orgqr %d", (int)info);
+
+    PetscCall(PetscFree(work));
+    work  = NULL;
+    lwork = -1;
+  }
+
+  if (size == 1) {
+    // copy upper triangle into R
+    for (PetscInt j = 0; j < N; j++)
+      for (PetscInt i = 0; i < PetscMin(j + 1, K); i++) _R[i + j * ldR] = _A[i + j * ldA];
+  } else {
+    PetscMPIInt  tag;
+    PetscScalar *AQ, *L, *B;
+
+    PetscCall(PetscCommGetNewTag(comm, &tag));
+    PetscCall(PetscCalloc1(N * N, &AQ));
+    PetscCall(PetscMalloc2(N * N, &L, 2 * N * N, &B));
+    // copy upper trapezoid hermitian transpose in AQ
+    for (PetscInt j = 0; j < PetscMin(m, N); j++)
+      for (PetscInt i = j; i < N; i++) AQ[i + j * N] = PetscConj(_A[j + i * ldA]);
+
+    PetscCall(MatDenseTSLQ_Internal(comm, size, rank, tag, 0, size / 2, size, bn, AQ, L, tau, &work, &lwork, B));
+    PetscCall(PetscFree(work));
+
+    // write L^H into R
+    for (PetscInt j = 0; j < N; j++)
+      for (PetscInt i = 0; i < PetscMin(j + 1, K); i++) _R[i + j * ldR] = PetscConj(L[j + i * N]);
+
+    // multiply AQ^H into Q on the right
+
+    if (bk > 0) {
+      PetscScalar *Qcopy, one = 1.0, zero = 0.0;
+
+      PetscCall(PetscMalloc1(K * ldQ, &Qcopy));
+      PetscCallBLAS("BLASgemm", BLASgemm_("N", "C", &bm, &bK, &bk, &one, _Q, &bldQ, AQ, &bn, &zero, Qcopy, &bldQ));
+      PetscCall(PetscArraycpy(_Q, Qcopy, K * ldQ));
+      PetscCall(PetscFree(Qcopy));
+    }
+    PetscCall(PetscFree2(L, B));
+    PetscCall(PetscFree(AQ));
+  }
+  PetscCall(PetscFree(tau));
+  PetscCall(MatDenseRestoreArray(*R, &_R));
+  PetscCall(MatDenseRestoreArray(*Q, &_Q));
+  PetscCall(MatDenseRestoreArray(A_copy, &_A));
+  PetscCall(MatDestroy(&A_copy));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
