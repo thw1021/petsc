@@ -295,10 +295,10 @@ interface function that was called. For instance, if
 function must be (a subroutine) written in Fortran.
 
 If you are using Fortran classes that has bound functions (methods) as in
-`src/snes/tests/ex18f90.F90<PETSC_DOC_OUT_ROOT_PLACEHOLDER/src/snes/tests/ex18f90.F90.html>`__, the context cannot be passed
+`src/snes/tests/ex18f90.F90 <PETSC_DOC_OUT_ROOT_PLACEHOLDER/src/snes/tests/ex18f90.F90.html>`__, the context cannot be passed
 to function pointer setting routines, such as ``SNESSetFunction()`` instead one must use ``SNESSetFunctionNoInterface()``,
 and define the interface directly in the user code, see
-`ex18f90.F90<PETSC_DOC_OUT_ROOT_PLACEHOLDER/src/snes/tests/ex18f90.F90.html>`__
+`ex18f90.F90 <PETSC_DOC_OUT_ROOT_PLACEHOLDER/src/snes/tests/ex18f90.F90.html>`__
 for a full demonstration.
 
 
