@@ -49,4 +49,11 @@
 #define TAOPYTHON   'python'
 #define TAOSNES     'snes'
 
+#define TAOLINESEARCHUNIT     'unit'
+#define TAOLINESEARCHMT       'more-thuente'
+#define TAOLINESEARCHGPCG     'gpcg'
+#define TAOLINESEARCHARMIJO   'armijo'
+#define TAOLINESEARCHOWARMIJO 'owarmijo'
+#define TAOLINESEARCHIPM      'ipm'
+
 #endif
