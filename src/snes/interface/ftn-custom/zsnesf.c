@@ -203,7 +203,7 @@ PETSC_EXTERN void snescomputejacobiandefault_(SNES *, Vec *, Mat *, Mat *, void 
 PETSC_EXTERN void snescomputejacobiandefaultcolor_(SNES *, Vec *, Mat *, Mat *, void *, PetscErrorCode *);
 PETSC_EXTERN void matmffdcomputejacobian_(SNES *, Vec *, Mat *, Mat *, void *, PetscErrorCode *);
 
-PETSC_EXTERN void snessetjacobian_(SNES *snes, Mat *A, Mat *B, SNESJacobianFn func, void *ctx, PetscErrorCode *ierr)
+PETSC_EXTERN void snessetjacobian_(SNES *snes, Mat *A, Mat *B, SNESJacobianFn func, void *ctx, PetscErrorCode *ierr PETSC_F90_2PTR_PROTO(ptr))
 {
   CHKFORTRANNULLFUNCTION(func);
   if ((PetscVoidFn *)func == (PetscVoidFn *)snescomputejacobiandefault_) {
@@ -222,9 +222,9 @@ PETSC_EXTERN void snessetjacobian_(SNES *snes, Mat *A, Mat *B, SNESJacobianFn fu
   }
 }
 
-PETSC_EXTERN void snessetjacobiannointerface_(SNES *snes, Mat *A, Mat *B, SNESJacobianFn J, void *ctx, PetscErrorCode *ierr)
+PETSC_EXTERN void snessetjacobiannointerface_(SNES *snes, Mat *A, Mat *B, SNESJacobianFn J, void *ctx, PetscErrorCode *ierr PETSC_F90_2PTR_PROTO(ptr))
 {
-  snessetjacobian_(snes, A, B, J, ctx, ierr);
+  snessetjacobian_(snes, A, B, J, ctx, ierr PETSC_F90_2PTR_PARAM(ptr));
 }
 
 static PetscErrorCode oursnespicardfunction(SNES snes, Vec x, Vec f, void *ctx)
@@ -252,9 +252,9 @@ PETSC_EXTERN void snessetpicard_(SNES *snes, Vec *r, SNESFunctionFn func, Mat *A
   if (!*ierr) *ierr = SNESSetPicard(*snes, *r, oursnespicardfunction, *A, *B, oursnespicardjacobian, NULL);
 }
 
-PETSC_EXTERN void snessetpicardnointerface_(SNES *snes, Vec *r, SNESFunctionFn func, Mat *A, Mat *B, SNESJacobianFn J, void *ctx, PetscErrorCode *ierr)
+PETSC_EXTERN void snessetpicardnointerface_(SNES *snes, Vec *r, SNESFunctionFn func, Mat *A, Mat *B, SNESJacobianFn J, void *ctx, PetscErrorCode *ierr PETSC_F90_2PTR_PROTO(ptr))
 {
-  snessetpicard_(snes, r, func, A, B, J, ctx, ierr);
+  snessetpicard_(snes, r, func, A, B, J, ctx, ierr PETSC_F90_2PTR_PARAM(ptr));
 }
 
 /*
@@ -273,9 +273,9 @@ PETSC_EXTERN void snessetfunction_(SNES *snes, Vec *r, SNESFunctionFn func, void
   *ierr = SNESSetFunction(*snes, *r, oursnesfunction, NULL);
 }
 
-PETSC_EXTERN void snessetfunctionnointerface_(SNES *snes, Vec *r, SNESFunctionFn func, void *ctx, PetscErrorCode *ierr)
+PETSC_EXTERN void snessetfunctionnointerface_(SNES *snes, Vec *r, SNESFunctionFn func, void *ctx, PetscErrorCode *ierr PETSC_F90_2PTR_PROTO(ptr))
 {
-  snessetfunction_(snes, r, func, ctx, ierr);
+  snessetfunction_(snes, r, func, ctx, ierr PETSC_F90_2PTR_PARAM(ptr));
 }
 
 PETSC_EXTERN void snessetobjective_(SNES *snes, SNESObjectiveFn func, void *ctx, PetscErrorCode *ierr PETSC_F90_2PTR_PROTO(ptr))
@@ -289,9 +289,9 @@ PETSC_EXTERN void snessetobjective_(SNES *snes, SNESObjectiveFn func, void *ctx,
   *ierr = SNESSetObjective(*snes, oursnesobjective, NULL);
 }
 
-PETSC_EXTERN void snessetobjectivenointerface_(SNES *snes, SNESObjectiveFn func, void *ctx, PetscErrorCode *ierr)
+PETSC_EXTERN void snessetobjectivenointerface_(SNES *snes, SNESObjectiveFn func, void *ctx, PetscErrorCode *ierr PETSC_F90_2PTR_PROTO(ptr))
 {
-  snessetobjective_(snes, func, ctx, ierr);
+  snessetobjective_(snes, func, ctx, ierr PETSC_F90_2PTR_PARAM(ptr));
 }
 
 PETSC_EXTERN void snessetngs_(SNES *snes, void (*func)(SNES *, Vec *, Vec *, void *, PetscErrorCode *), void *ctx, PetscErrorCode *ierr)
