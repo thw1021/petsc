@@ -1486,7 +1486,6 @@ PetscErrorCode PetscOptionsClearValue(PetscOptions options, const char name[])
 PetscErrorCode PetscOptionsFindPair(PetscOptions options, const char pre[], const char name[], const char *value[], PetscBool *set)
 {
   char      buf[PETSC_MAX_OPTION_NAME];
-  PetscBool usehashtable = PETSC_TRUE;
   PetscBool matchnumbers = PETSC_TRUE;
 
   PetscFunctionBegin;
@@ -1516,7 +1515,7 @@ PetscErrorCode PetscOptionsFindPair(PetscOptions options, const char pre[], cons
     PetscCheck(valid, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Invalid option '%s' obtained from pre='%s' and name='%s'", key, pre ? pre : "", name);
   }
 
-  if (!options->ht && usehashtable) {
+  if (!options->ht) {
     int          i, ret;
     khiter_t     it;
     khash_t(HO) *ht;
@@ -1532,29 +1531,14 @@ PetscErrorCode PetscOptionsFindPair(PetscOptions options, const char pre[], cons
     options->ht = ht;
   }
 
-  if (usehashtable) { /* fast search */
-    khash_t(HO) *ht = options->ht;
-    khiter_t     it = kh_get(HO, ht, name);
-    if (it != kh_end(ht)) {
-      int i            = kh_val(ht, it);
-      options->used[i] = PETSC_TRUE;
-      if (value) *value = options->values[i];
-      if (set) *set = PETSC_TRUE;
-      PetscFunctionReturn(PETSC_SUCCESS);
-    }
-  } else { /* slow search */
-    int i, N = options->N;
-    for (i = 0; i < N; i++) {
-      int result = PetscOptNameCmp(options->names[i], name);
-      if (!result) {
-        options->used[i] = PETSC_TRUE;
-        if (value) *value = options->values[i];
-        if (set) *set = PETSC_TRUE;
-        PetscFunctionReturn(PETSC_SUCCESS);
-      } else if (result > 0) {
-        break;
-      }
-    }
+  khash_t(HO) *ht = options->ht;
+  khiter_t     it = kh_get(HO, ht, name);
+  if (it != kh_end(ht)) {
+    int i            = kh_val(ht, it);
+    options->used[i] = PETSC_TRUE;
+    if (value) *value = options->values[i];
+    if (set) *set = PETSC_TRUE;
+    PetscFunctionReturn(PETSC_SUCCESS);
   }
 
   /*
