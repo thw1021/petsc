@@ -661,7 +661,7 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc, Vec bin, Vec xout)
 #if PCBJKOKKOS_VERBOSE_LEVEL > 1
       PetscInt mbid = 0;
 #endif
-      int      in[2], out[2];
+      int in[2], out[2];
       if (jac->reason) { // -pc_bjkokkos_ksp_converged_reason
 #if PCBJKOKKOS_VERBOSE_LEVEL >= 3
   #if PCBJKOKKOS_VERBOSE_LEVEL >= 4
@@ -677,7 +677,7 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc, Vec bin, Vec xout)
             for (int bid = 0; bid < batch_sz; bid++) {
               if (h_metadata[idx + bid * jac->dm_Nf[dmIdx]].its > count) {
                 jac->max_nits = count = h_metadata[idx + bid * jac->dm_Nf[dmIdx]].its;
-                mbid  = bid;
+                mbid                  = bid;
               }
             }
   #if PCBJKOKKOS_VERBOSE_LEVEL >= 4
@@ -699,7 +699,7 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc, Vec bin, Vec xout)
             if (h_metadata[blkID].its > count) {
               jac->max_nits = count = h_metadata[blkID].its;
 #if PCBJKOKKOS_VERBOSE_LEVEL > 1
-              mbid                  = blkID;
+              mbid = blkID;
 #endif
             }
 #if PCBJKOKKOS_VERBOSE_LEVEL > 0
