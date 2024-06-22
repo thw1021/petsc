@@ -552,7 +552,7 @@ PetscErrorCode VecDuplicate(Vec v, Vec *newv)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   VecDestroy - Destroys a vector.
 
   Collective
@@ -667,7 +667,7 @@ PetscErrorCode VecDestroyVecs(PetscInt m, Vec *vv[])
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   VecViewFromOptions - View a vector based on values in the options database
 
   Collective
@@ -692,7 +692,7 @@ PetscErrorCode VecViewFromOptions(Vec A, PetscObject obj, const char name[])
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   VecView - Views a vector object.
 
   Collective
@@ -910,7 +910,7 @@ PetscErrorCode VecGetLocalSize(Vec x, PetscInt *size)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   VecGetOwnershipRange - Returns the range of indices owned by
   this process. The vector is laid out with the
   first `n1` elements on the first processor, next `n2` elements on the
@@ -1089,7 +1089,7 @@ PetscErrorCode VecResetArray(Vec vec)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   VecLoad - Loads a vector that has been stored in binary or HDF5 format
   with `VecView()`.
 
@@ -1554,7 +1554,7 @@ PetscErrorCode VecGetBlockSize(Vec v, PetscInt *bs)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   VecSetOptionsPrefix - Sets the prefix used for searching for all
   `Vec` options in the database.
 
@@ -1580,7 +1580,7 @@ PetscErrorCode VecSetOptionsPrefix(Vec v, const char prefix[])
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   VecAppendOptionsPrefix - Appends to the prefix used for searching for all
   `Vec` options in the database.
 
@@ -1606,7 +1606,7 @@ PetscErrorCode VecAppendOptionsPrefix(Vec v, const char prefix[])
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   VecGetOptionsPrefix - Sets the prefix used for searching for all
   Vec options in the database.
 
@@ -1631,6 +1631,35 @@ PetscErrorCode VecGetOptionsPrefix(Vec v, const char *prefix[])
   PetscFunctionBegin;
   PetscValidHeaderSpecific(v, VEC_CLASSID, 1);
   PetscCall(PetscObjectGetOptionsPrefix((PetscObject)v, prefix));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  VecGetState - Gets the state of a `Vec`.
+
+  Not Collective
+
+  Input Parameter:
+. v - the `Vec` context
+
+  Output Parameter:
+. state - the object state
+
+  Level: advanced
+
+  Note:
+  Object state is an integer which gets increased every time
+  the object is changed. By saving and later querying the object state
+  one can determine whether information about the object is still current.
+
+.seealso: [](ch_vectors), `Vec`, `VecCreate()`, `PetscObjectStateGet()`
+@*/
+PetscErrorCode VecGetState(Vec v, PetscObjectState *state)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(v, VEC_CLASSID, 1);
+  PetscAssertPointer(state, 2);
+  PetscCall(PetscObjectStateGet((PetscObject)v, state));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1824,7 +1853,7 @@ PetscErrorCode VecSwap(Vec x, Vec y)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   VecStashViewFromOptions - Processes command line options to determine if/how a `VecStash` object is to be viewed.
 
   Collective

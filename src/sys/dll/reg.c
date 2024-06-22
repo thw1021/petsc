@@ -300,7 +300,7 @@ PetscErrorCode PetscFunctionListAdd_Private(PetscFunctionList *fl, const char na
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@
+/*@C
   PetscFunctionListDestroy - Destroys a list of registered routines.
 
   Input Parameter:
@@ -341,7 +341,7 @@ PetscErrorCode PetscFunctionListDestroy(PetscFunctionList *fl)
     } /* end while */ \
   } while (0)
 
-/*@
+/*@C
   PetscFunctionListClear - Clear a `PetscFunctionList`
 
   Not Collective
@@ -385,6 +385,8 @@ PetscErrorCode PetscFunctionListPrintAll(void)
 /*@C
   PetscFunctionListPrintNonEmpty - Print composed names for non `NULL` function pointers
 
+  Logically Collective, No Fortran Support
+
   Input Parameter:
 . fl - the function list
 
@@ -409,6 +411,8 @@ PetscErrorCode PetscFunctionListPrintNonEmpty(PetscFunctionList fl)
 
 /*MC
   PetscFunctionListFind - Find function registered under given name
+
+  Not Collective, No Fortran Support
 
   Synopsis:
   #include <petscsys.h>
@@ -435,7 +439,7 @@ PetscErrorCode PetscFunctionListFind_Private(PetscFunctionList fl, const char na
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@
+/*@C
   PetscFunctionListView - prints out contents of a `PetscFunctionList`
 
   Collective
@@ -483,7 +487,7 @@ PetscErrorCode PetscFunctionListView(PetscFunctionList list, PetscViewer viewer)
   PetscFunctionListGet - Gets an array the contains the entries in `PetscFunctionList`, this is used
   by help etc.
 
-  Not Collective
+  Not Collective, No Fortran Support
 
   Input Parameter:
 . list - list of types
@@ -521,7 +525,7 @@ PetscErrorCode PetscFunctionListGet(PetscFunctionList list, const char ***array,
 /*@C
   PetscFunctionListPrintTypes - Prints the methods available in a list of functions
 
-  Collective
+  Collective, No Fortran Support
 
   Input Parameters:
 + comm   - the communicator (usually `MPI_COMM_WORLD`)
@@ -553,7 +557,7 @@ PetscErrorCode PetscFunctionListPrintTypes(MPI_Comm comm, FILE *fd, const char p
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@
+/*@C
   PetscFunctionListDuplicate - Creates a new list from a given function list `PetscFunctionList`.
 
   Input Parameter:

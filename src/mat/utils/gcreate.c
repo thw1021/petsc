@@ -98,8 +98,6 @@ PetscErrorCode MatCreate(MPI_Comm comm, Mat *A)
 
   PetscFunctionBegin;
   PetscAssertPointer(A, 2);
-
-  *A = NULL;
   PetscCall(MatInitializePackage());
 
   PetscCall(PetscHeaderCreate(B, MAT_CLASSID, "Mat", "Matrix", "Mat", comm, MatDestroy, MatView));
@@ -124,7 +122,7 @@ PetscErrorCode MatCreate(MPI_Comm comm, Mat *A)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   MatCreateFromOptions - Creates a matrix whose type is set from the options database
 
   Collective
@@ -339,7 +337,7 @@ PetscErrorCode MatSetFromOptions(Mat B)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   MatXAIJSetPreallocation - set preallocation for serial and parallel `MATAIJ`, `MATBAIJ`, and `MATSBAIJ` matrices and their unassembled versions.
 
   Collective
@@ -688,7 +686,7 @@ PetscErrorCode MatSetPreallocationCOO_Basic(Mat A, PetscCount ncoo, PetscInt coo
   Level: beginner
 
   Notes:
-  The indices `coo_i` and `coo_j` may be modified within this function. The caller should not rely on them
+  The indices within `coo_i` and `coo_j` may be modified within this function. The caller should not rely on them
   having any specific value after this function returns. The arrays can be freed or reused immediately
   after this function returns.
 

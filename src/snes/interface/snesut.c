@@ -309,9 +309,9 @@ PetscErrorCode SNESMonitorDefault(SNES snes, PetscInt its, PetscReal fgnorm, Pet
   if (isascii) {
     PetscCall(PetscViewerASCIIAddTab(viewer, ((PetscObject)snes)->tablevel));
     if (format == PETSC_VIEWER_ASCII_INFO_DETAIL) {
-      Vec       dx;
-      PetscReal upnorm;
-      PetscErrorCode (*objective)(SNES, Vec, PetscReal *, void *);
+      Vec              dx;
+      PetscReal        upnorm;
+      SNESObjectiveFn *objective;
 
       PetscCall(SNESGetSolutionUpdate(snes, &dx));
       PetscCall(VecNorm(dx, NORM_2, &upnorm));
@@ -716,7 +716,7 @@ PetscErrorCode SNESMonitorDefaultField(SNES snes, PetscInt its, PetscReal fgnorm
 
   Options Database Keys:
 + -snes_convergence_test default      - see `SNESSetFromOptions()`
-. -snes_stol                          - convergence tolerance in terms of the norm  of the change in the solution between steps
+. -snes_stol                          - convergence tolerance in terms of the norm of the change in the solution between steps
 . -snes_atol <abstol>                 - absolute tolerance of residual norm
 . -snes_rtol <rtol>                   - relative decrease in tolerance norm from the initial 2-norm of the solution
 . -snes_divergence_tolerance <divtol> - if the residual goes above divtol*rnorm0, exit with divergence
@@ -813,7 +813,7 @@ PetscErrorCode SNESConvergedSkip(SNES snes, PetscInt it, PetscReal xnorm, PetscR
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   SNESSetWorkVecs - Allocates a number of work vectors to be used internally by `SNES` solvers
 
   Input Parameters:

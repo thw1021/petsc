@@ -41,7 +41,7 @@ static const char citation[] = "@inproceedings{ZhangELLPACK2018,\n"
   #endif
 #endif /* PETSC_HAVE_IMMINTRIN_H */
 
-/*@C
+/*@
   MatSeqSELLSetPreallocation - For good matrix assembly performance
   the user should preallocate the matrix storage by setting the parameter `nz`
   (or the array `nnz`).
@@ -1607,7 +1607,6 @@ PetscErrorCode MatSetValues_SeqSELL(Mat A, PetscInt m, const PetscInt im[], Pets
       *(cp + a->sliceheight * i) = col;
       *(vp + a->sliceheight * i) = value;
       a->nz++;
-      A->nonzerostate++;
 #if defined(PETSC_HAVE_CUPM)
       inserted = PETSC_TRUE;
 #endif
@@ -1944,6 +1943,7 @@ static struct _MatOps MatOps_Values = {MatSetValues_SeqSELL,
                                        NULL,
                                        /*150*/ NULL,
                                        NULL,
+                                       NULL,
                                        NULL};
 
 static PetscErrorCode MatStoreValues_SeqSELL(Mat mat)
@@ -2038,7 +2038,7 @@ static PetscErrorCode MatSeqSELLSetSliceHeight_SeqSELL(Mat A, PetscInt sliceheig
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   MatSeqSELLGetFillRatio - returns a ratio that indicates the irregularity of the matrix.
 
   Not Collective
@@ -2060,7 +2060,7 @@ PetscErrorCode MatSeqSELLGetFillRatio(Mat A, PetscReal *ratio)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   MatSeqSELLGetMaxSliceWidth - returns the maximum slice width.
 
   Not Collective
@@ -2082,7 +2082,7 @@ PetscErrorCode MatSeqSELLGetMaxSliceWidth(Mat A, PetscInt *slicewidth)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   MatSeqSELLGetAvgSliceWidth - returns the average slice width.
 
   Not Collective
@@ -2104,7 +2104,7 @@ PetscErrorCode MatSeqSELLGetAvgSliceWidth(Mat A, PetscReal *slicewidth)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   MatSeqSELLSetSliceHeight - sets the slice height.
 
   Not Collective
@@ -2129,7 +2129,7 @@ PetscErrorCode MatSeqSELLSetSliceHeight(Mat A, PetscInt sliceheight)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   MatSeqSELLGetVarSliceSize - returns the variance of the slice size.
 
   Not Collective
@@ -2380,7 +2380,7 @@ M*/
 .seealso: `Mat`, `MatCreateSeqSELL()`, `MatCreateSeqAIJ()`, `MatCreateSell()`, `MATSEQSELL`, `MATMPISELL`, `MATSEQAIJ`, `MATMPIAIJ`, `MATAIJ`
 M*/
 
-/*@C
+/*@
   MatCreateSeqSELL - Creates a sparse matrix in `MATSEQSELL` format.
 
   Collective

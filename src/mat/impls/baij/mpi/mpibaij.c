@@ -63,7 +63,7 @@ static PetscErrorCode MatGetRowMaxAbs_MPIBAIJ(Mat A, Vec v, PetscInt idx[])
   const PetscScalar *vb;
 
   PetscFunctionBegin;
-  PetscCall(VecCreateSeq(PETSC_COMM_SELF, m, &vA));
+  PetscCall(MatCreateVecs(a->A, NULL, &vA));
   PetscCall(MatGetRowMaxAbs(a->A, vA, idx));
 
   PetscCall(VecGetArrayWrite(vA, &va));
@@ -73,7 +73,7 @@ static PetscErrorCode MatGetRowMaxAbs_MPIBAIJ(Mat A, Vec v, PetscInt idx[])
     }
   }
 
-  PetscCall(VecCreateSeq(PETSC_COMM_SELF, m, &vB));
+  PetscCall(MatCreateVecs(a->B, NULL, &vB));
   PetscCall(PetscMalloc1(m, &idxb));
   PetscCall(MatGetRowMaxAbs(a->B, vB, idxb));
 
@@ -94,6 +94,23 @@ static PetscErrorCode MatGetRowMaxAbs_MPIBAIJ(Mat A, Vec v, PetscInt idx[])
   PetscCall(PetscFree(idxb));
   PetscCall(VecDestroy(&vA));
   PetscCall(VecDestroy(&vB));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatGetRowSumAbs_MPIBAIJ(Mat A, Vec v)
+{
+  Mat_MPIBAIJ *a = (Mat_MPIBAIJ *)A->data;
+  Vec          vB, vA;
+
+  PetscFunctionBegin;
+  PetscCall(MatCreateVecs(a->A, NULL, &vA));
+  PetscCall(MatGetRowSumAbs(a->A, vA));
+  PetscCall(MatCreateVecs(a->B, NULL, &vB));
+  PetscCall(MatGetRowSumAbs(a->B, vB));
+  PetscCall(VecAXPY(vA, 1.0, vB));
+  PetscCall(VecDestroy(&vB));
+  PetscCall(VecCopy(vA, v));
+  PetscCall(VecDestroy(&vA));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -440,22 +457,11 @@ static PetscErrorCode MatSetValuesBlocked_MPIBAIJ(Mat mat, PetscInt m, const Pet
           if (mat->was_assembled) {
             if (!baij->colmap) PetscCall(MatCreateColmap_MPIBAIJ_Private(mat));
 
-#if defined(PETSC_USE_DEBUG)
-  #if defined(PETSC_USE_CTABLE)
-            {
-              PetscInt data;
-              PetscCall(PetscHMapIGetWithDefault(baij->colmap, in[j] + 1, 0, &data));
-              PetscCheck((data - 1) % bs == 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Incorrect colmap");
-            }
-  #else
-            PetscCheck((baij->colmap[in[j]] - 1) % bs == 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Incorrect colmap");
-  #endif
-#endif
 #if defined(PETSC_USE_CTABLE)
             PetscCall(PetscHMapIGetWithDefault(baij->colmap, in[j] + 1, 0, &col));
-            col = (col - 1) / bs;
+            col = col < 1 ? -1 : (col - 1) / bs;
 #else
-            col = (baij->colmap[in[j]] - 1) / bs;
+            col = baij->colmap[in[j]] < 1 ? -1 : (baij->colmap[in[j]] - 1) / bs;
 #endif
             if (col < 0 && !((Mat_SeqBAIJ *)baij->B->data)->nonew) {
               PetscCall(MatDisAssemble_MPIBAIJ(mat));
@@ -2565,6 +2571,7 @@ static struct _MatOps MatOps_Values = {MatSetValues_MPIBAIJ,
                                        NULL,
                                        /*150*/ NULL,
                                        MatEliminateZeros_MPIBAIJ,
+                                       MatGetRowSumAbs_MPIBAIJ,
                                        NULL};
 
 PETSC_INTERN PetscErrorCode MatConvert_MPIBAIJ_MPISBAIJ(Mat, MatType, MatReuse, Mat *);
@@ -2962,7 +2969,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_MPIBAIJ(Mat B)
 .seealso: `Mat`, `MatCreateBAIJ()`, `MATSEQBAIJ`, `MATMPIBAIJ`, `MatMPIBAIJSetPreallocation()`, `MatMPIBAIJSetPreallocationCSR()`
 M*/
 
-/*@C
+/*@
   MatMPIBAIJSetPreallocation - Allocates memory for a sparse parallel matrix in `MATMPIBAIJ` format
   (block compressed row).
 
@@ -3053,7 +3060,7 @@ PetscErrorCode MatMPIBAIJSetPreallocation(Mat B, PetscInt bs, PetscInt d_nz, con
 }
 
 // PetscClangLinter pragma disable: -fdoc-section-header-unknown
-/*@C
+/*@
   MatCreateBAIJ - Creates a sparse parallel matrix in `MATBAIJ` format
   (block compressed row).
 

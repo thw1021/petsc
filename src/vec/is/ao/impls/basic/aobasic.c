@@ -249,7 +249,7 @@ PETSC_INTERN PetscErrorCode AOCreate_Basic(AO ao)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   AOCreateBasic - Creates a basic application ordering using two integer arrays.
 
   Collective
@@ -290,7 +290,7 @@ PetscErrorCode AOCreateBasic(MPI_Comm comm, PetscInt napp, const PetscInt myapp[
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   AOCreateBasicIS - Creates a basic application ordering using two `IS` index sets.
 
   Collective

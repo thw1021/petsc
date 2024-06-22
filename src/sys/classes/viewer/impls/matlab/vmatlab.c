@@ -1,5 +1,5 @@
-#include <petsc/private/viewerimpl.h>
-#include <mat.h>
+#include <petsc/private/viewerimpl.h> /*I    "petscviewer.h"   I*/
+#include <mat.h>                      /*I    "petscmat.h"      I*/
 
 typedef struct {
   MATFile      *ep;
@@ -7,7 +7,7 @@ typedef struct {
   PetscFileMode btype;
 } PetscViewer_Matlab;
 
-/*@C
+/*@
   PetscViewerMatlabPutArray - Puts an array into the `PETSCVIEWERMATLAB` viewer.
 
   Not Collective, only processor zero saves `array`
@@ -58,7 +58,7 @@ PetscErrorCode PetscViewerMatlabPutVariable(PetscViewer viewer, const char *name
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PetscViewerMatlabGetArray - Gets a variable from a `PETSCVIEWERMATLAB` viewer into an array
 
   Not Collective; only processor zero reads in the array
@@ -67,7 +67,7 @@ PetscErrorCode PetscViewerMatlabPutVariable(PetscViewer viewer, const char *name
 + mfile - the MATLAB file viewer
 . m     - the first dimensions of `array`
 . n     - the second dimensions of `array`
-. array - the array (represented in one dimension)
+. array - the array (represented in one dimension), must of be length `m` * `n`
 - name  - the MATLAB name of `array`
 
   Level: advanced
@@ -77,7 +77,7 @@ PetscErrorCode PetscViewerMatlabPutVariable(PetscViewer viewer, const char *name
 
 .seealso: `PETSCVIEWERMATLAB`, `PetscViewerMatlabPutArray()`
 @*/
-PetscErrorCode PetscViewerMatlabGetArray(PetscViewer mfile, int m, int n, PetscScalar *array, const char *name)
+PetscErrorCode PetscViewerMatlabGetArray(PetscViewer mfile, int m, int n, PetscScalar array[], const char *name)
 {
   PetscViewer_Matlab *ml;
   mxArray            *mat;
@@ -195,7 +195,7 @@ PETSC_EXTERN PetscErrorCode PetscViewerCreate_Matlab(PetscViewer viewer)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PetscViewerMatlabOpen - Opens a MATLAB .mat file for output
 
   Collective

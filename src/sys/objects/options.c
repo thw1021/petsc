@@ -124,7 +124,6 @@ PETSC_INTERN PetscErrorCode PetscOptionsInsertStringYAML_Private(PetscOptions, c
 static PetscErrorCode PetscOptionsMonitor(PetscOptions options, const char name[], const char value[], PetscOptionSource source)
 {
   PetscFunctionBegin;
-  if (!value) value = "";
   if (options->monitorFromOptions) PetscCall(PetscOptionsMonitorDefault(name, value, source, NULL));
   for (PetscInt i = 0; i < options->numbermonitors; i++) PetscCall((*options->monitor[i])(name, value, source, options->monitorcontext[i]));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -266,7 +265,7 @@ PetscErrorCode PetscOptionsDestroyDefault(void)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PetscOptionsValidKey - PETSc Options database keys must begin with one or two dashes (-) followed by a letter.
 
   Not Collective
@@ -354,7 +353,7 @@ static PetscErrorCode PetscOptionsInsertString_Private(PetscOptions options, con
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PetscOptionsInsertString - Inserts options into the database from a string
 
   Logically Collective
@@ -595,7 +594,7 @@ static PetscErrorCode PetscOptionsInsertFilePetsc(MPI_Comm comm, PetscOptions op
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PetscOptionsInsertFile - Inserts options into the database from a file.
 
   Collective
@@ -923,11 +922,11 @@ static PetscBool PetscCIOption(const char *name)
   return found;
 }
 
-/*@C
+/*@
   PetscOptionsView - Prints the options that have been loaded. This is
   useful for debugging purposes.
 
-  Logically Collective
+  Logically Collective, No Fortran Support
 
   Input Parameters:
 + options - options database, use `NULL` for default global database
@@ -1032,7 +1031,7 @@ PETSC_EXTERN PetscErrorCode PetscOptionsViewError(void)
   return PETSC_SUCCESS;
 }
 
-/*@C
+/*@
   PetscOptionsPrefixPush - Designate a prefix to be used by all options insertions to follow.
 
   Logically Collective
@@ -1085,7 +1084,7 @@ PetscErrorCode PetscOptionsPrefixPush(PetscOptions options, const char prefix[])
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PetscOptionsPrefixPop - Remove the latest options prefix, see `PetscOptionsPrefixPush()` for details
 
   Logically Collective on the `MPI_Comm` used when called `PetscOptionsPrefixPush()`
@@ -1110,7 +1109,7 @@ PetscErrorCode PetscOptionsPrefixPop(PetscOptions options)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PetscOptionsClear - Removes all options form the database leaving it empty.
 
   Logically Collective
@@ -1172,7 +1171,7 @@ PetscErrorCode PetscOptionsClear(PetscOptions options)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PetscOptionsSetAlias - Makes a key and alias for another key
 
   Logically Collective
@@ -1238,7 +1237,7 @@ PetscErrorCode PetscOptionsSetAlias(PetscOptions options, const char newname[], 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PetscOptionsSetValue - Sets an option name-value pair in the options
   database, overriding whatever is already present.
 
@@ -1378,6 +1377,7 @@ setvalue:
     options->values[n] = (char *)malloc((len + 1) * sizeof(char));
     if (!options->values[n]) return PETSC_ERR_MEM;
     strcpy(options->values[n], value);
+    options->values[n][len] = '\0';
   } else {
     options->values[n] = NULL;
   }
@@ -1390,12 +1390,12 @@ setvalue:
     options->used[n]    = PETSC_TRUE;
   }
 
-  PetscCall(PetscOptionsMonitor(options, name, value, source));
+  PetscCall(PetscOptionsMonitor(options, name, value ? value : "", source));
   if (pos) *pos = n;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PetscOptionsClearValue - Clears an option name-value pair in the options
   database, overriding whatever is already present.
 
@@ -1677,7 +1677,7 @@ PETSC_EXTERN PetscErrorCode PetscOptionsFindPairPrefix_Private(PetscOptions opti
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PetscOptionsReject - Generates an error if a certain option is given.
 
   Not Collective
@@ -1710,7 +1710,7 @@ PetscErrorCode PetscOptionsReject(PetscOptions options, const char pre[], const 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PetscOptionsHasHelp - Determines whether the "-help" option is in the database.
 
   Not Collective
@@ -1743,7 +1743,7 @@ PetscErrorCode PetscOptionsHasHelpIntro_Internal(PetscOptions options, PetscBool
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PetscOptionsHasName - Determines whether a certain option is given in the database. This returns true whether the option is a number, string or Boolean, even
   if its value is set to false.
 
@@ -1833,7 +1833,7 @@ PetscErrorCode PetscOptionsGetAll(PetscOptions options, char *copts[])
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PetscOptionsUsed - Indicates if PETSc has used a particular option set in the database
 
   Not Collective
@@ -2109,21 +2109,26 @@ PetscErrorCode PetscOptionsMonitorDefault(const char name[], const char value[],
 
   Calling sequence of `monitor`:
 + name   - option name string
-. value  - option value string
+. value  - option value string, a value of `NULL` indicates the option is being removed from the database. A value
+           of "" indicates the option is in the database but has no value.
 . source - option source
 - mctx   - optional monitoring context, as set by `PetscOptionsMonitorSet()`
 
   Calling sequence of `monitordestroy`:
 . mctx - [optional] pointer to context to destroy with
 
+  Options Database Keys:
++ -options_monitor <viewer> - turn on default monitoring
+- -options_monitor_cancel   - turn off any option monitors except the default monitor obtained with `-options_monitor`
+
   Level: intermediate
 
   Notes:
   See `PetscInitialize()` for options related to option database monitoring.
 
-  The default is to do nothing.  To print the name and value of options
+  The default is to do no monitoring.  To print the name and value of options
   being inserted into the database, use `PetscOptionsMonitorDefault()` as the monitoring routine,
-  with a null monitoring context.
+  with a `NULL` monitoring context. Or use the option `-options_monitor` <viewer>.
 
   Several different monitoring routines may be set by calling
   `PetscOptionsMonitorSet()` multiple times; all will be called in the

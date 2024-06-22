@@ -1234,6 +1234,9 @@ static PetscErrorCode MatNestGetSize_Nest(Mat A, PetscInt *M, PetscInt *N)
 
   Level: developer
 
+  Note:
+  `size` refers to the number of submatrices in the row and column directions of the nested matrix
+
 .seealso: [](ch_matrices), `Mat`, `MATNEST`, `MatNestGetSubMat()`, `MatNestGetSubMats()`, `MatCreateNest()`, `MatNestGetLocalISs()`,
           `MatNestGetISs()`
 @*/
@@ -1299,7 +1302,7 @@ static PetscErrorCode MatNestGetLocalISs_Nest(Mat A, IS rows[], IS cols[])
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   MatNestGetLocalISs - Returns the index sets partitioning the row and column spaces of a `MATNEST`
 
   Not Collective
@@ -1339,7 +1342,7 @@ static PetscErrorCode MatNestSetVecType_Nest(Mat A, VecType vtype)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   MatNestSetVecType - Sets the type of `Vec` returned by `MatCreateVecs()`
 
   Not Collective

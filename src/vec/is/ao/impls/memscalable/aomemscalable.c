@@ -445,7 +445,7 @@ PETSC_INTERN PetscErrorCode AOCreate_MemoryScalable(AO ao)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   AOCreateMemoryScalable - Creates a memory scalable application ordering using two integer arrays.
 
   Collective
@@ -486,7 +486,7 @@ PetscErrorCode AOCreateMemoryScalable(MPI_Comm comm, PetscInt napp, const PetscI
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   AOCreateMemoryScalableIS - Creates a memory scalable application ordering using two index sets.
 
   Collective

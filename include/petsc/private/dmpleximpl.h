@@ -233,7 +233,6 @@ typedef struct {
   PetscReal scale[NUM_PETSC_UNITS]; /* The scale for each SI unit */
 
   /* Geometry */
-  PetscBool     ignoreModel;                      /* Ignore the geometry model during refinement */
   PetscReal     minradius;                        /* Minimum distance from cell centroid to face */
   PetscBool     useHashLocation;                  /* Use grid hashing for point location */
   PetscGridHash lbox;                             /* Local box for searching */
@@ -301,14 +300,6 @@ PETSC_INTERN PetscErrorCode VecView_Plex_HDF5_Native_Internal(Vec, PetscViewer);
 PETSC_INTERN PetscErrorCode VecView_Plex_Local_HDF5_Internal(Vec, PetscViewer);
 PETSC_INTERN PetscErrorCode VecLoad_Plex_HDF5_Internal(Vec, PetscViewer);
 PETSC_INTERN PetscErrorCode VecLoad_Plex_HDF5_Native_Internal(Vec, PetscViewer);
-
-struct _n_DMPlexStorageVersion {
-  int major, minor, subminor;
-};
-typedef struct _n_DMPlexStorageVersion *DMPlexStorageVersion;
-
-PETSC_EXTERN PetscErrorCode PetscViewerHDF5GetDMPlexStorageVersionReading(PetscViewer, DMPlexStorageVersion *);
-PETSC_EXTERN PetscErrorCode PetscViewerHDF5GetDMPlexStorageVersionWriting(PetscViewer, DMPlexStorageVersion *);
 #endif
 PETSC_EXTERN PetscErrorCode VecView_Plex_Local_CGNS(Vec, PetscViewer);
 
@@ -358,8 +349,9 @@ PETSC_INTERN PetscErrorCode DMPlexAnchorsModifyMat(DM, PetscSection, PetscInt, P
 PETSC_INTERN PetscErrorCode DMPlexAnchorsModifyMat_Internal(DM, PetscSection, PetscInt, PetscInt, const PetscInt[], const PetscInt ***, PetscInt, PetscInt, const PetscScalar[], PetscInt *, PetscInt *, PetscInt *[], PetscScalar *[], PetscInt[], PetscBool, PetscBool);
 PETSC_INTERN PetscErrorCode DMPlexAnchorsGetSubMatModification(DM, PetscSection, PetscInt, PetscInt, const PetscInt[], const PetscInt ***, PetscInt *, PetscInt *, PetscInt *[], PetscInt[], PetscScalar *[]);
 PETSC_INTERN PetscErrorCode DMPlexLocatePoint_Internal(DM, PetscInt, const PetscScalar[], PetscInt, PetscInt *);
-/* these two are PETSC_EXTERN just because of src/dm/impls/plex/tests/ex18.c */
+/* this is PETSC_EXTERN just because of src/dm/impls/plex/tests/ex18.c */
 PETSC_EXTERN PetscErrorCode DMPlexOrientInterface_Internal(DM);
+PETSC_INTERN PetscErrorCode DMPlexOrientCells_Internal(DM, IS, IS);
 
 /* Applications may use this function */
 PETSC_EXTERN PetscErrorCode DMPlexCreateNumbering_Plex(DM, PetscInt, PetscInt, PetscInt, PetscInt *, PetscSF, IS *);
@@ -826,6 +818,8 @@ PETSC_INTERN PetscErrorCode DMCreateNeumannOverlap_Plex(DM, IS *, Mat *, PetscEr
 PETSC_INTERN PetscErrorCode DMPlexMarkBoundaryFaces_Internal(DM, PetscInt, PetscInt, DMLabel, PetscBool);
 PETSC_INTERN PetscErrorCode DMPlexDistributeOverlap_Internal(DM, PetscInt, MPI_Comm, const char *, PetscSF *, DM *);
 
+PETSC_INTERN PetscErrorCode DMPlexMarkSubmesh_Interpolated(DM, DMLabel, PetscInt, PetscBool, PetscBool, DMLabel, DM);
+
 PETSC_INTERN PetscErrorCode DMPeriodicCoordinateSetUp_Internal(DM);
 
 /* Functions in the vtable */
@@ -855,3 +849,6 @@ PETSC_INTERN void coordMap_shear(PetscInt, PetscInt, PetscInt, const PetscInt[],
 PETSC_INTERN void coordMap_flare(PetscInt, PetscInt, PetscInt, const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]);
 PETSC_INTERN void coordMap_annulus(PetscInt, PetscInt, PetscInt, const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]);
 PETSC_INTERN void coordMap_shell(PetscInt, PetscInt, PetscInt, const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]);
+
+PETSC_EXTERN PetscErrorCode DMSnapToGeomModel_EGADS(DM, PetscInt, PetscInt, const PetscScalar[], PetscScalar[]);
+PETSC_EXTERN PetscErrorCode DMSnapToGeomModel_EGADSLite(DM, PetscInt, PetscInt, const PetscScalar[], PetscScalar[]);

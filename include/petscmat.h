@@ -373,6 +373,7 @@ PETSC_EXTERN PetscErrorCode MatSetOptionsPrefixFactor(Mat, const char[]);
 PETSC_EXTERN PetscErrorCode MatAppendOptionsPrefixFactor(Mat, const char[]);
 PETSC_EXTERN PetscErrorCode MatAppendOptionsPrefix(Mat, const char[]);
 PETSC_EXTERN PetscErrorCode MatGetOptionsPrefix(Mat, const char *[]);
+PETSC_EXTERN PetscErrorCode MatGetState(Mat, PetscObjectState *);
 PETSC_EXTERN PetscErrorCode MatSetErrorIfFailure(Mat, PetscBool);
 
 PETSC_EXTERN PetscFunctionList MatList;
@@ -529,6 +530,7 @@ PETSC_EXTERN PetscErrorCode MatHYPRESetPreallocation(Mat, PetscInt, const PetscI
 
 PETSC_EXTERN PetscErrorCode MatPythonSetType(Mat, const char[]);
 PETSC_EXTERN PetscErrorCode MatPythonGetType(Mat, const char *[]);
+PETSC_EXTERN PetscErrorCode MatPythonCreate(MPI_Comm, PetscInt, PetscInt, PetscInt, PetscInt, const char[], Mat *);
 
 PETSC_EXTERN PetscErrorCode MatResetPreallocation(Mat);
 PETSC_EXTERN PetscErrorCode MatSetUp(Mat);
@@ -2021,8 +2023,14 @@ typedef enum {
   MATOP_FIND_OFFBLOCK_ENTRIES = 143,
   MATOP_MPICONCATENATESEQ     = 144,
   MATOP_DESTROYSUBMATRICES    = 145,
-  MATOP_TRANSPOSE_SOLVE       = 146,
-  MATOP_GET_VALUES_LOCAL      = 147
+  MATOP_MAT_TRANSPOSE_SOLVE   = 146,
+  MATOP_GET_VALUES_LOCAL      = 147,
+  MATOP_CREATE_GRAPH          = 148,
+  /* MATOP_PLACEHOLDER_149=149, */
+  MATOP_TRANSPOSE_SYMBOLIC = 150,
+  MATOP_ELIMINATE_ZEROS    = 151,
+  MATOP_GET_ROW_SUM_ABS    = 152,
+  MATOP_GET_FACTOR         = 153
 } MatOperation;
 PETSC_EXTERN PetscErrorCode MatSetOperation(Mat, MatOperation, void (*)(void));
 PETSC_EXTERN PetscErrorCode MatGetOperation(Mat, MatOperation, void (**)(void));

@@ -246,6 +246,7 @@ static struct _MatOps MatOps_Values = {NULL,
                                        NULL,
                                        /*150*/ NULL,
                                        NULL,
+                                       NULL,
                                        NULL};
 
 /*MC
@@ -277,7 +278,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_Scatter(Mat A)
 }
 
 #include <petsc/private/sfimpl.h>
-/*@C
+/*@
   MatCreateScatter - Creates a new matrix of `MatType` `MATSCATTER`, based on a VecScatter
 
   Collective

@@ -57,19 +57,16 @@ PetscErrorCode DMCreate(MPI_Comm comm, DM *dm)
 
   PetscFunctionBegin;
   PetscAssertPointer(dm, 2);
-  *dm = NULL;
+
   PetscCall(DMInitializePackage());
-
   PetscCall(PetscHeaderCreate(v, DM_CLASSID, "DM", "Distribution Manager", "DM", comm, DMDestroy, DMView));
-
   ((PetscObject)v)->non_cyclic_references = &DMCountNonCyclicReferences;
-
-  v->setupcalled          = PETSC_FALSE;
-  v->setfromoptionscalled = PETSC_FALSE;
-  v->ltogmap              = NULL;
-  v->bind_below           = 0;
-  v->bs                   = 1;
-  v->coloringtype         = IS_COLORING_GLOBAL;
+  v->setupcalled                          = PETSC_FALSE;
+  v->setfromoptionscalled                 = PETSC_FALSE;
+  v->ltogmap                              = NULL;
+  v->bind_below                           = 0;
+  v->bs                                   = 1;
+  v->coloringtype                         = IS_COLORING_GLOBAL;
   PetscCall(PetscSFCreate(comm, &v->sf));
   PetscCall(PetscSFCreate(comm, &v->sectionSF));
   v->labels                    = NULL;
@@ -220,8 +217,8 @@ PetscErrorCode DMClone(DM dm, DM *newdm)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
-  DMSetVecType - Sets the type of vector created with `DMCreateLocalVector()` and `DMCreateGlobalVector()`
+/*@
+  DMSetVecType - Sets the type of vector to be created with `DMCreateLocalVector()` and `DMCreateGlobalVector()`
 
   Logically Collective
 
@@ -250,7 +247,7 @@ PetscErrorCode DMSetVecType(DM dm, VecType ctype)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMGetVecType - Gets the type of vector created with `DMCreateLocalVector()` and `DMCreateGlobalVector()`
 
   Logically Collective
@@ -327,7 +324,7 @@ PetscErrorCode VecSetDM(Vec v, DM dm)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMSetISColoringType - Sets the type of coloring, `IS_COLORING_GLOBAL` or `IS_COLORING_LOCAL` that is created by the `DM`
 
   Logically Collective
@@ -352,7 +349,7 @@ PetscErrorCode DMSetISColoringType(DM dm, ISColoringType ctype)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMGetISColoringType - Gets the type of coloring, `IS_COLORING_GLOBAL` or `IS_COLORING_LOCAL` that is created by the `DM`
 
   Logically Collective
@@ -379,7 +376,7 @@ PetscErrorCode DMGetISColoringType(DM dm, ISColoringType *ctype)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMSetMatType - Sets the type of matrix created with `DMCreateMatrix()`
 
   Logically Collective
@@ -408,7 +405,7 @@ PetscErrorCode DMSetMatType(DM dm, MatType ctype)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMGetMatType - Gets the type of matrix that would be created with `DMCreateMatrix()`
 
   Logically Collective
@@ -490,7 +487,7 @@ PetscErrorCode MatSetDM(Mat A, DM dm)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMSetOptionsPrefix - Sets the prefix prepended to all option names when searching through the options database
 
   Logically Collective
@@ -517,7 +514,7 @@ PetscErrorCode DMSetOptionsPrefix(DM dm, const char prefix[])
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMAppendOptionsPrefix - Appends an additional string to an already existing prefix used for searching for
   `DM` options in the options database.
 
@@ -544,7 +541,7 @@ PetscErrorCode DMAppendOptionsPrefix(DM dm, const char prefix[])
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMGetOptionsPrefix - Gets the prefix used for searching for all
   DM options in the options database.
 
@@ -638,7 +635,7 @@ static PetscErrorCode DMDestroyCoordinates_Private(DMCoordinates *c)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMDestroy - Destroys a `DM`.
 
   Collective
@@ -918,7 +915,7 @@ PetscErrorCode DMSetFromOptions(DM dm)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMViewFromOptions - View a `DM` in a particular way based on a request in the options database
 
   Collective
@@ -943,7 +940,7 @@ PetscErrorCode DMViewFromOptions(DM dm, PetscObject obj, const char name[])
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMView - Views a `DM`. Depending on the `PetscViewer` and its `PetscViewerFormat` it may print some ASCII information about the `DM` to the screen or a file or
   save the `DM` in a binary file to be loaded later or create a visualization of the `DM`
 
@@ -1186,7 +1183,7 @@ PetscErrorCode DMGetBlockSize(DM dm, PetscInt *bs)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMCreateInterpolation - Gets the interpolation matrix between two `DM` objects. The resulting matrix map degrees of freedom in the vector obtained by
   `DMCreateGlobalVector()` on the coarse `DM` to similar vectors on the fine grid `DM`.
 
@@ -2085,7 +2082,7 @@ PetscErrorCode DMCreateFieldDecomposition(DM dm, PetscInt *len, char ***namelist
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMCreateSubDM - Returns an `IS` and `DM` encapsulating a subproblem defined by the fields passed in.
   The fields are defined by `DMCreateFieldIS()`.
 
@@ -2138,7 +2135,7 @@ PetscErrorCode DMCreateSubDM(DM dm, PetscInt numFields, const PetscInt fields[],
 
 .seealso: [](ch_dmbase), `DM`, `DMCreateSubDM()`, `DMPlexSetMigrationSF()`, `DMDestroy()`, `DMView()`, `DMCreateInterpolation()`, `DMCreateColoring()`, `DMCreateMatrix()`, `DMCreateMassMatrix()`, `DMCreateFieldIS()`, `DMCreateDomainDecomposition()`
 @*/
-PetscErrorCode DMCreateSuperDM(DM dms[], PetscInt n, IS **is, DM *superdm)
+PetscErrorCode DMCreateSuperDM(DM dms[], PetscInt n, IS *is[], DM *superdm)
 {
   PetscInt i;
 
@@ -2272,7 +2269,7 @@ PetscErrorCode DMCreateDomainDecomposition(DM dm, PetscInt *n, char ***namelist,
 
 .seealso: [](ch_dmbase), `DM`, `DMCreateDomainDecomposition()`, `DMDestroy()`, `DMView()`, `DMCreateInterpolation()`, `DMCreateColoring()`, `DMCreateMatrix()`, `DMCreateMassMatrix()`, `DMCreateFieldIS()`
 @*/
-PetscErrorCode DMCreateDomainDecompositionScatters(DM dm, PetscInt n, DM *subdms, VecScatter **iscat, VecScatter **oscat, VecScatter **gscat)
+PetscErrorCode DMCreateDomainDecompositionScatters(DM dm, PetscInt n, DM *subdms, VecScatter *iscat[], VecScatter *oscat[], VecScatter *gscat[])
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -3616,7 +3613,7 @@ PetscErrorCode DMSetCoarsenLevel(DM dm, PetscInt level)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMRefineHierarchy - Refines a `DM` object, all levels at once
 
   Collective
@@ -3648,7 +3645,7 @@ PetscErrorCode DMRefineHierarchy(DM dm, PetscInt nlevels, DM dmf[])
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMCoarsenHierarchy - Coarsens a `DM` object, all levels at once
 
   Collective
@@ -3712,8 +3709,10 @@ PetscErrorCode DMSetApplicationContextDestroy(DM dm, PetscErrorCode (*destroy)(v
 
   Level: intermediate
 
-  Note:
+  Notes:
   A user context is a way to pass problem specific information that is accessible whenever the `DM` is available
+  In a multilevel solver, the user context is shared by all the `DM` in the hierarchy; it is thus not advisable
+  to store objects that represent discretized quantities inside the context.
 
 .seealso: [](ch_dmbase), `DM`, `DMGetApplicationContext()`, `DMView()`, `DMCreateGlobalVector()`, `DMCreateInterpolation()`, `DMCreateColoring()`, `DMCreateMatrix()`, `DMCreateMassMatrix()`
 @*/
@@ -3797,7 +3796,7 @@ PetscErrorCode DMHasVariableBounds(DM dm, PetscBool *flg)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMComputeVariableBounds - compute variable bounds used by `SNESVI`.
 
   Logically Collective
@@ -3902,7 +3901,7 @@ PetscErrorCode DMHasCreateInjection(DM dm, PetscBool *flg)
 PetscFunctionList DMList              = NULL;
 PetscBool         DMRegisterAllCalled = PETSC_FALSE;
 
-/*@C
+/*@
   DMSetType - Builds a `DM`, for a particular `DM` implementation.
 
   Collective
@@ -3942,7 +3941,7 @@ PetscErrorCode DMSetType(DM dm, DMType method)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMGetType - Gets the `DM` type name (as a string) from the `DM`.
 
   Not Collective
@@ -3967,7 +3966,7 @@ PetscErrorCode DMGetType(DM dm, DMType *type)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMConvert - Converts a `DM` to another `DM`, either of the same or different type.
 
   Collective
@@ -4081,7 +4080,7 @@ PetscErrorCode DMConvert(DM dm, DMType newtype, DM *M)
 /*@C
   DMRegister -  Adds a new `DM` type implementation
 
-  Not Collective
+  Not Collective, No Fortran Support
 
   Input Parameters:
 + sname    - The name of a new user-defined creation routine
@@ -4117,7 +4116,7 @@ PetscErrorCode DMRegister(const char sname[], PetscErrorCode (*function)(DM))
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMLoad - Loads a DM that has been stored in binary  with `DMView()`.
 
   Collective
@@ -4736,7 +4735,7 @@ PetscErrorCode DMSetSectionSF(DM dm, PetscSF sf)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMCreateSectionSF - Create the `PetscSF` encoding the parallel dof overlap for the `DM` based upon the `PetscSection`s
   describing the data layout.
 
@@ -5024,7 +5023,7 @@ PetscErrorCode DMSetField_Internal(DM dm, PetscInt f, DMLabel label, PetscObject
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMSetField - Set the discretization object for a given `DM` field. Usually one would call `DMAddField()` which automatically handles
   the field numbering.
 
@@ -5053,7 +5052,7 @@ PetscErrorCode DMSetField(DM dm, PetscInt f, DMLabel label, PetscObject disc)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMAddField - Add a field to a `DM` object. A field is a function space defined by of a set of discretization points (geometric entities)
   and a discretization object that defines the function space associated with those points.
 
@@ -5806,7 +5805,7 @@ PetscErrorCode DMFindRegionNum(DM dm, PetscDS ds, PetscInt *num)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMCreateFEDefault - Create a `PetscFE` based on the celltype for the mesh
 
   Not Collective
@@ -6547,12 +6546,12 @@ PetscErrorCode DMSetOutputSequenceNumber(DM dm, PetscInt num, PetscReal val)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMOutputSequenceLoad - Retrieve the sequence value from a `PetscViewer`
 
   Input Parameters:
 + dm     - The original `DM`
-. viewer - The viewer to get it from
+. viewer - The `PetscViewer` to get it from
 . name   - The sequence name
 - num    - The output sequence number
 
@@ -6570,13 +6569,14 @@ PetscErrorCode DMSetOutputSequenceNumber(DM dm, PetscInt num, PetscReal val)
 
 .seealso: [](ch_dmbase), `DM`, `DMGetOutputSequenceNumber()`, `DMSetOutputSequenceNumber()`, `VecView()`
 @*/
-PetscErrorCode DMOutputSequenceLoad(DM dm, PetscViewer viewer, const char *name, PetscInt num, PetscReal *val)
+PetscErrorCode DMOutputSequenceLoad(DM dm, PetscViewer viewer, const char name[], PetscInt num, PetscReal *val)
 {
   PetscBool ishdf5;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 2);
+  PetscAssertPointer(name, 3);
   PetscAssertPointer(val, 5);
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERHDF5, &ishdf5));
   if (ishdf5) {
@@ -6585,6 +6585,46 @@ PetscErrorCode DMOutputSequenceLoad(DM dm, PetscViewer viewer, const char *name,
 
     PetscCall(DMSequenceLoad_HDF5_Internal(dm, name, num, &value, viewer));
     *val = PetscRealPart(value);
+#endif
+  } else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Invalid viewer; open viewer with PetscViewerHDF5Open()");
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  DMGetOutputSequenceLength - Retrieve the number of sequence values from a `PetscViewer`
+
+  Input Parameters:
++ dm     - The original `DM`
+. viewer - The `PetscViewer` to get it from
+- name   - The sequence name
+
+  Output Parameter:
+. len - The length of the output sequence
+
+  Level: intermediate
+
+  Note:
+  This is intended for output that should appear in sequence, for instance
+  a set of timesteps in an `PETSCVIEWERHDF5` file, or a set of realizations of a stochastic system.
+
+  Developer Note:
+  It is unclear at the user API level why a `DM` is needed as input
+
+.seealso: [](ch_dmbase), `DM`, `DMGetOutputSequenceNumber()`, `DMSetOutputSequenceNumber()`, `VecView()`
+@*/
+PetscErrorCode DMGetOutputSequenceLength(DM dm, PetscViewer viewer, const char name[], PetscInt *len)
+{
+  PetscBool ishdf5;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
+  PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 2);
+  PetscAssertPointer(name, 3);
+  PetscAssertPointer(len, 4);
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERHDF5, &ishdf5));
+  if (ishdf5) {
+#if defined(PETSC_HAVE_HDF5)
+    PetscCall(DMSequenceGetLength_HDF5_Internal(dm, name, len, viewer));
 #endif
   } else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Invalid viewer; open viewer with PetscViewerHDF5Open()");
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -6639,7 +6679,7 @@ PetscErrorCode DMSetUseNatural(DM dm, PetscBool useNatural)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMCreateLabel - Create a label of the given name if it does not already exist in the `DM`
 
   Not Collective
@@ -6669,7 +6709,7 @@ PetscErrorCode DMCreateLabel(DM dm, const char name[])
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMCreateLabelAtIndex - Create a label of the given name at the given index. If it already exists in the `DM`, move it to this index.
 
   Not Collective
@@ -6721,7 +6761,7 @@ PetscErrorCode DMCreateLabelAtIndex(DM dm, PetscInt l, const char name[])
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMGetLabelValue - Get the value in a `DMLabel` for the given point, with -1 as the default
 
   Not Collective
@@ -6751,7 +6791,7 @@ PetscErrorCode DMGetLabelValue(DM dm, const char name[], PetscInt point, PetscIn
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMSetLabelValue - Add a point to a `DMLabel` with given value
 
   Not Collective
@@ -6784,7 +6824,7 @@ PetscErrorCode DMSetLabelValue(DM dm, const char name[], PetscInt point, PetscIn
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMClearLabelValue - Remove a point from a `DMLabel` with given value
 
   Not Collective
@@ -6812,7 +6852,7 @@ PetscErrorCode DMClearLabelValue(DM dm, const char name[], PetscInt point, Petsc
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMGetLabelSize - Get the value of `DMLabelGetNumValues()` of a `DMLabel` in the `DM`
 
   Not Collective
@@ -6846,7 +6886,7 @@ PetscErrorCode DMGetLabelSize(DM dm, const char name[], PetscInt *size)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMGetLabelIdIS - Get the `DMLabelGetValueIS()` from a `DMLabel` in the `DM`
 
   Not Collective
@@ -6881,7 +6921,7 @@ PetscErrorCode DMGetLabelIdIS(DM dm, const char name[], IS *ids)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMGetStratumSize - Get the number of points in a label stratum
 
   Not Collective
@@ -6913,7 +6953,7 @@ PetscErrorCode DMGetStratumSize(DM dm, const char name[], PetscInt value, PetscI
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMGetStratumIS - Get the points in a label stratum
 
   Not Collective
@@ -6945,7 +6985,7 @@ PetscErrorCode DMGetStratumIS(DM dm, const char name[], PetscInt value, IS *poin
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMSetStratumIS - Set the points in a label stratum
 
   Not Collective
@@ -6974,7 +7014,7 @@ PetscErrorCode DMSetStratumIS(DM dm, const char name[], PetscInt value, IS point
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMClearLabelStratum - Remove all points from a stratum from a `DMLabel`
 
   Not Collective
@@ -7034,7 +7074,7 @@ PetscErrorCode DMGetNumLabels(DM dm, PetscInt *numLabels)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMGetLabelName - Return the name of nth label
 
   Not Collective
@@ -7053,7 +7093,7 @@ PetscErrorCode DMGetNumLabels(DM dm, PetscInt *numLabels)
 
 .seealso: [](ch_dmbase), `DM`, `DMLabel`, `DMGetLabelByNum()`, `DMGetLabel()`, `DMGetLabelValue()`, `DMSetLabelValue()`, `DMGetStratumIS()`
 @*/
-PetscErrorCode DMGetLabelName(DM dm, PetscInt n, const char **name)
+PetscErrorCode DMGetLabelName(DM dm, PetscInt n, const char *name[])
 {
   DMLabelLink next = dm->labels;
   PetscInt    l    = 0;
@@ -7072,7 +7112,7 @@ PetscErrorCode DMGetLabelName(DM dm, PetscInt n, const char **name)
   SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Label %" PetscInt_FMT " does not exist in this DM", n);
 }
 
-/*@C
+/*@
   DMHasLabel - Determine whether the `DM` has a label of a given name
 
   Not Collective
@@ -7108,7 +7148,7 @@ PetscErrorCode DMHasLabel(DM dm, const char name[], PetscBool *hasLabel)
 }
 
 // PetscClangLinter pragma ignore: -fdoc-section-header-unknown
-/*@C
+/*@
   DMGetLabel - Return the label of a given name, or `NULL`, from a `DM`
 
   Not Collective
@@ -7155,7 +7195,7 @@ PetscErrorCode DMGetLabel(DM dm, const char name[], DMLabel *label)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMGetLabelByNum - Return the nth label on a `DM`
 
   Not Collective
@@ -7190,7 +7230,7 @@ PetscErrorCode DMGetLabelByNum(DM dm, PetscInt n, DMLabel *label)
   SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Label %" PetscInt_FMT " does not exist in this DM", n);
 }
 
-/*@C
+/*@
   DMAddLabel - Add the label to this `DM`
 
   Not Collective
@@ -7229,7 +7269,7 @@ PetscErrorCode DMAddLabel(DM dm, DMLabel label)
 }
 
 // PetscClangLinter pragma ignore: -fdoc-section-header-unknown
-/*@C
+/*@
   DMSetLabel - Replaces the label of a given name, or ignores it if the name is not present
 
   Not Collective
@@ -7278,7 +7318,7 @@ PetscErrorCode DMSetLabel(DM dm, DMLabel label)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMRemoveLabel - Remove the label given by name from this `DM`
 
   Not Collective
@@ -7372,7 +7412,7 @@ PetscErrorCode DMRemoveLabelBySelf(DM dm, DMLabel *label, PetscBool failNotFound
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMGetLabelOutput - Get the output flag for a given label
 
   Not Collective
@@ -7411,7 +7451,7 @@ PetscErrorCode DMGetLabelOutput(DM dm, const char name[], PetscBool *output)
   SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "No label named %s was present in this dm", name);
 }
 
-/*@C
+/*@
   DMSetLabelOutput - Set if a given label should be saved to a `PetscViewer` in calls to `DMView()`
 
   Not Collective
@@ -7548,6 +7588,9 @@ PetscErrorCode DMCopyLabels(DM dmA, DM dmB, PetscCopyMode mode, PetscBool all, D
 
   Labels are matched by name. If the number of labels and their names are equal,
   `DMLabelCompare()` is used to compare each pair of labels with the same name.
+
+  Developer Note:
+  Can automatically generate the Fortran stub because `message` must be freed with `PetscFree()`
 
 .seealso: [](ch_dmbase), `DM`, `DMLabel`, `DMAddLabel()`, `DMCopyLabelsMode`, `DMLabelCompare()`
 @*/
@@ -9148,7 +9191,7 @@ PetscErrorCode DMSetAuxiliaryVec(DM dm, DMLabel label, PetscInt value, PetscInt 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMGetAuxiliaryLabels - Get the labels, values, and parts for all auxiliary vectors in this `DM`
 
   Not Collective
@@ -9259,7 +9302,7 @@ PetscErrorCode DMClearAuxiliaryVec(DM dm)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMPolytopeMatchOrientation - Determine an orientation (transformation) that takes the source face arrangement to the target face arrangement
 
   Not Collective
@@ -9311,7 +9354,7 @@ PetscErrorCode DMPolytopeMatchOrientation(DMPolytopeType ct, const PetscInt sour
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMPolytopeGetOrientation - Determine an orientation (transformation) that takes the source face arrangement to the target face arrangement
 
   Not Collective
@@ -9344,7 +9387,7 @@ PetscErrorCode DMPolytopeGetOrientation(DMPolytopeType ct, const PetscInt source
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMPolytopeMatchVertexOrientation - Determine an orientation (transformation) that takes the source vertex arrangement to the target vertex arrangement
 
   Not Collective
@@ -9396,7 +9439,7 @@ PetscErrorCode DMPolytopeMatchVertexOrientation(DMPolytopeType ct, const PetscIn
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMPolytopeGetVertexOrientation - Determine an orientation (transformation) that takes the source vertex arrangement to the target vertex arrangement
 
   Not Collective
@@ -9429,7 +9472,7 @@ PetscErrorCode DMPolytopeGetVertexOrientation(DMPolytopeType ct, const PetscInt 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMPolytopeInCellTest - Check whether a point lies inside the reference cell of given type
 
   Not Collective
@@ -9527,7 +9570,7 @@ PetscErrorCode DMReorderSectionGetDefault(DM dm, DMReorderDefaultFlag *reorder)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMReorderSectionSetType - Set the type of local section reordering
 
   Logically collective
@@ -9548,7 +9591,7 @@ PetscErrorCode DMReorderSectionSetType(DM dm, MatOrderingType reorder)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMReorderSectionGetType - Get the reordering type for the local section
 
   Not collective

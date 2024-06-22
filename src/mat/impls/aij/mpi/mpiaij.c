@@ -418,7 +418,6 @@ PetscErrorCode MatCreateColmap_MPIAIJ_Private(Mat mat)
     PetscCall(PetscArraymove(ap1 + _i + 1, ap1 + _i, N - _i + 1)); \
     rp1[_i] = col; \
     ap1[_i] = value; \
-    A->nonzerostate++; \
   a_noinsert:; \
     ailen[row] = nrow1; \
   } while (0)
@@ -463,7 +462,6 @@ PetscErrorCode MatCreateColmap_MPIAIJ_Private(Mat mat)
     PetscCall(PetscArraymove(ap2 + _i + 1, ap2 + _i, N - _i + 1)); \
     rp2[_i] = col; \
     ap2[_i] = value; \
-    B->nonzerostate++; \
   b_noinsert:; \
     bilen[row] = nrow2; \
   } while (0)
@@ -580,8 +578,8 @@ PetscErrorCode MatSetValues_MPIAIJ(Mat mat, PetscInt m, const PetscInt im[], Pet
               bilen = b->ilen;
               bj    = b->j;
               ba    = b->a;
-              rp2   = bj + bi[row];
-              ap2   = ba + bi[row];
+              rp2   = PetscSafePointerPlusOffset(bj, bi[row]);
+              ap2   = PetscSafePointerPlusOffset(ba, bi[row]);
               rmax2 = bimax[row];
               nrow2 = bilen[row];
               low2  = 0;
@@ -2155,7 +2153,7 @@ static PetscErrorCode MatGetRowMaxAbs_MPIAIJ(Mat A, Vec v, PetscInt idx[])
   const PetscScalar *vb;
 
   PetscFunctionBegin;
-  PetscCall(VecCreateSeq(PETSC_COMM_SELF, m, &vA));
+  PetscCall(MatCreateVecs(a->A, NULL, &vA));
   PetscCall(MatGetRowMaxAbs(a->A, vA, idx));
 
   PetscCall(VecGetArrayWrite(vA, &va));
@@ -2165,7 +2163,7 @@ static PetscErrorCode MatGetRowMaxAbs_MPIAIJ(Mat A, Vec v, PetscInt idx[])
     }
   }
 
-  PetscCall(VecCreateSeq(PETSC_COMM_SELF, m, &vB));
+  PetscCall(MatCreateVecs(a->B, NULL, &vB));
   PetscCall(PetscMalloc1(m, &idxb));
   PetscCall(MatGetRowMaxAbs(a->B, vB, idxb));
 
@@ -2192,13 +2190,12 @@ static PetscErrorCode MatGetRowMaxAbs_MPIAIJ(Mat A, Vec v, PetscInt idx[])
 static PetscErrorCode MatGetRowSumAbs_MPIAIJ(Mat A, Vec v)
 {
   Mat_MPIAIJ *a = (Mat_MPIAIJ *)A->data;
-  PetscInt    m = A->rmap->n;
   Vec         vB, vA;
 
   PetscFunctionBegin;
-  PetscCall(VecCreateSeq(PETSC_COMM_SELF, m, &vA));
+  PetscCall(MatCreateVecs(a->A, NULL, &vA));
   PetscCall(MatGetRowSumAbs(a->A, vA));
-  PetscCall(VecCreateSeq(PETSC_COMM_SELF, m, &vB));
+  PetscCall(MatCreateVecs(a->B, NULL, &vB));
   PetscCall(MatGetRowSumAbs(a->B, vB));
   PetscCall(VecAXPY(vA, 1.0, vB));
   PetscCall(VecDestroy(&vB));
@@ -2865,7 +2862,8 @@ static struct _MatOps MatOps_Values = {MatSetValues_MPIAIJ,
                                        NULL,
                                        /*150*/ NULL,
                                        MatEliminateZeros_MPIAIJ,
-                                       MatGetRowSumAbs_MPIAIJ};
+                                       MatGetRowSumAbs_MPIAIJ,
+                                       NULL};
 
 static PetscErrorCode MatStoreValues_MPIAIJ(Mat mat)
 {
@@ -3011,7 +3009,10 @@ PetscErrorCode MatDuplicate_MPIAIJ(Mat matin, MatDuplicateOption cpvalues, Mat *
       In fact, MatDuplicate only requires the matrix to be preallocated
       This may happen inside a DMCreateMatrix_Shell */
     if (oldmat->lvec) PetscCall(VecDuplicate(oldmat->lvec, &a->lvec));
-    if (oldmat->Mvctx) PetscCall(VecScatterCopy(oldmat->Mvctx, &a->Mvctx));
+    if (oldmat->Mvctx) {
+      a->Mvctx = oldmat->Mvctx;
+      PetscCall(PetscObjectReference((PetscObject)oldmat->Mvctx));
+    }
     PetscCall(MatDuplicate(oldmat->A, cpvalues, &a->A));
     PetscCall(MatDuplicate(oldmat->B, cpvalues, &a->B));
   }
@@ -4011,7 +4012,7 @@ PetscErrorCode MatMPIAIJSetPreallocationCSR(Mat B, const PetscInt i[], const Pet
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   MatMPIAIJSetPreallocation - Preallocates memory for a sparse parallel matrix in `MATMPIAIJ` format
   (the default parallel PETSc format).  For good matrix assembly performance
   the user should preallocate the matrix storage by setting the parameters
@@ -4356,7 +4357,7 @@ PetscErrorCode MatUpdateMPIAIJWithArray(Mat mat, const PetscScalar v[])
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   MatCreateAIJ - Creates a sparse parallel matrix in `MATAIJ` format
   (the default parallel PETSc format).  For good matrix assembly performance
   the user should preallocate the matrix storage by setting the parameters
@@ -5068,7 +5069,7 @@ PetscErrorCode MatCreateMPIAIJSumSeqAIJSymbolic(MPI_Comm comm, Mat seqmat, Petsc
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   MatCreateMPIAIJSumSeqAIJ - Creates a `MATMPIAIJ` matrix by adding sequential
   matrices from each processor
 
@@ -6931,7 +6932,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_MPIAIJ(Mat B)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   MatCreateMPIAIJWithSplitArrays - creates a `MATMPIAIJ` matrix using arrays that contain the "diagonal"
   and "off-diagonal" part of the matrix in CSR format.
 
@@ -6958,7 +6959,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_MPIAIJ(Mat B)
   Level: advanced
 
   Notes:
-  The `i`, `j`, and `a` arrays ARE NOT copied by this routine into the internal format used by PETSc. The user
+  The `i`, `j`, and `a` arrays ARE NOT copied by this routine into the internal format used by PETSc (even in Fortran). The user
   must free the arrays once the matrix has been destroyed and not before.
 
   The `i` and `j` indices are 0 based

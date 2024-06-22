@@ -1,4 +1,4 @@
-#include <petscsys.h>
+#include <petscsys.h> /*I  "petscviewer.h"  I*/
 
 #if defined(PETSC_NEEDS_UTYPE_TYPEDEFS)
 /* Some systems have inconsistent include files that use but do not
@@ -77,7 +77,7 @@ static PetscErrorCode PetscViewerDestroy_Socket(PetscViewer viewer)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PetscOpenSocket - handles connected to an open port where someone is waiting.
 
   Input Parameters:
@@ -255,7 +255,7 @@ static PetscErrorCode PetscSocketListen(int listenport, int *t)
 
 // "Unknown section 'Environmental Variables'"
 // PetscClangLinter pragma disable: -fdoc-section-header-unknown
-/*@C
+/*@
   PetscViewerSocketOpen - Opens a connection to a MATLAB or other socket based server.
 
   Collective
@@ -397,7 +397,7 @@ PETSC_EXTERN PetscErrorCode PetscViewerCreate_Socket(PetscViewer v)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PetscViewerSocketSetConnection - Sets the machine and port that a PETSc socket
   viewer is to use
 
