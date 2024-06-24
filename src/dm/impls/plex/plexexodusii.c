@@ -67,7 +67,7 @@ static PetscErrorCode PetscViewerView_ExodusII(PetscViewer v, PetscViewer viewer
 }
 
 /*@C
-  PetscViewerFlush_ExodusII - Commits all pending output to file 
+  PetscViewerFlush_ExodusII - Commits all pending output to file
 
   Collective; No Fortran Support
 
@@ -337,8 +337,8 @@ static PetscErrorCode PetscViewerExodusIISetOrder_ExodusII(PetscViewer viewer, P
   Level: intermediate
 
   Notes:
-  The exodusII API does not allow changing the number of variables in a file so this function will return an error 
-  if called twice, called on a read-only file, or called on file for which the number of variables has already been specified 
+  The exodusII API does not allow changing the number of variables in a file so this function will return an error
+  if called twice, called on a read-only file, or called on file for which the number of variables has already been specified
 
 .seealso: `PETSCVIEWEREXODUSII`, `PetscViewer`, `PetscViewerCreate()`, `PetscViewerDestroy()`, `PetscViewerExodusIIOpen()`, `PetscViewerSetType()`, `PetscViewerType`, `PetscViewerExodusIIGetZonalVariable()`
 @*/
@@ -368,8 +368,8 @@ PetscErrorCode PetscViewerExodusIISetZonalVariable(PetscViewer viewer, int num)
   Level: intermediate
 
   Notes:
-  The exodusII API does not allow changing the number of variables in a file so this function will return an error 
-  if called twice, called on a read-only file, or called on file for which the number of variables has already been specified 
+  The exodusII API does not allow changing the number of variables in a file so this function will return an error
+  if called twice, called on a read-only file, or called on file for which the number of variables has already been specified
 
 .seealso: `PETSCVIEWEREXODUSII`, `PetscViewer`, `PetscViewerCreate()`, `PetscViewerDestroy()`, `PetscViewerExodusIIOpen()`, `PetscViewerSetType()`, `PetscViewerType`, `PetscViewerExodusIIGetNodalVariable()`
 @*/
@@ -781,8 +781,7 @@ static PetscErrorCode EXOGetVarIndex_Internal(PetscViewer viewer, int exoid, ex_
   *varIndex = -1;
 
   /* Get Variable Number - replacing PetscCallExternal(ex_get_variable_param, exoid, obj_type, &num_vars); */
-  if (obj_type == EX_NODAL)
-  {
+  if (obj_type == EX_NODAL) {
     PetscCall(PetscViewerExodusIIGetNodalVariable(viewer, &num_vars));
     for (i = 0; i < num_vars; ++i) {
       PetscCall(PetscViewerExodusIIGetNodalVariableNames(viewer, i + 1, &var_name)); /* previously PetscCallExternal(ex_get_variable_name, exoid, obj_type, i + 1, var_name);*/
@@ -794,11 +793,9 @@ static PetscErrorCode EXOGetVarIndex_Internal(PetscViewer viewer, int exoid, ex_
       }
 
       PetscCall(PetscFree(var_name)); // Free the allocated memory
-      if (flg) break;  // Stop the outer loop once a match is found
+      if (flg) break;                 // Stop the outer loop once a match is found
     }
-  }
-  else if (obj_type == EX_ELEM_BLOCK)
-  {
+  } else if (obj_type == EX_ELEM_BLOCK) {
     PetscCall(PetscViewerExodusIIGetZonalVariable(viewer, &num_vars));
     for (i = 0; i < num_vars; ++i) {
       PetscCall(PetscViewerExodusIIGetZonalVariableNames(viewer, i + 1, &var_name)); /* previously PetscCallExternal(ex_get_variable_name, exoid, obj_type, i + 1, var_name);*/
@@ -810,7 +807,7 @@ static PetscErrorCode EXOGetVarIndex_Internal(PetscViewer viewer, int exoid, ex_
       }
 
       PetscCall(PetscFree(var_name)); // Free the allocated memory
-      if (flg) break;  // Stop the outer loop once a match is found
+      if (flg) break;                 // Stop the outer loop once a match is found
     }
   }
   PetscFunctionReturn(PETSC_SUCCESS);
