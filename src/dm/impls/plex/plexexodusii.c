@@ -364,7 +364,6 @@ PetscErrorCode PetscViewerExodusIISetZonalVariable(PetscViewer viewer, int num)
   exo->numZonalVariables = num;
   PetscCall(PetscViewerExodusIIGetId(viewer, &exoid));
   PetscCallExternal(ex_put_variable_param, exoid, EX_ELEM_BLOCK, num);
-  // Make a call to ex_put_XXX and do error checking
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -607,7 +606,6 @@ PetscErrorCode PetscViewerExodusIISetZonalVariableNames(PetscViewer viewer, cons
   for (i = 0; i < numNames; i++) {
     ierr = PetscStrallocpy(names[i], &exo->zonalVariableNames[i]); /*tried removing the &(char **)*/
     PetscCallExternal(ex_put_variable_name, exoid, EX_ELEM_BLOCK, i + 1, *names);
-    CHKERRQ(ierr);
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -630,11 +628,10 @@ PetscErrorCode PetscViewerExodusIISetZonalVariableNames(PetscViewer viewer, cons
 @*/
 PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetNodalVariableNames(PetscViewer viewer, const char **names)
 {
-  PetscErrorCode        ierr;
   int                   i;
   int                   exoid = -1;
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
-  int                   numNames;
+  PetscInt                   numNames;
 
   PetscFunctionBegin;
   PetscViewerExodusIIGetNodalVariable(viewer, &numNames);
@@ -642,16 +639,14 @@ PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetNodalVariableNames(PetscViewer
   /**/
 
   /* Allocates memory for an array of pointers to strings. Each pointer in this array will point to a dynamically allocated string */
-  ierr = PetscMalloc1(numNames, &exo->nodalVariableNames);
-  CHKERRQ(ierr);
+  PetscCall(PetscMalloc1(numNames, &exo->nodalVariableNames));
 
   PetscCall(PetscViewerExodusIIGetId(viewer, &exoid));
   /* Copy names using PetscStrallocpy */
   for (i = 0; i < numNames; i++) {
-    ierr = PetscStrallocpy(names[i], &exo->nodalVariableNames[i]);
-    PetscCallExternal(ex_put_variable_param, exoid, EX_NODAL, numNames);
-    CHKERRQ(ierr);
+    PetscCall(PetscStrallocpy(names[i], &exo->nodalVariableNames[i]));
   }
+  PetscCallExternal(ex_put_variable_names, exoid, EX_NODAL, numNames, names);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
