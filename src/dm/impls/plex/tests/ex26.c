@@ -114,10 +114,13 @@ int main(int argc, char **argv)
       SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "No layout for dimension %" PetscInt_FMT, sdim);
     }
     PetscCall(PetscViewerExodusIIGetId(viewer, &exoid));
-    PetscCallExternal(ex_put_variable_param, exoid, EX_ELEM_BLOCK, numZonalVar);
-    PetscCallExternal(ex_put_variable_names, exoid, EX_ELEM_BLOCK, numZonalVar, zonalVarName);
-    PetscCallExternal(ex_put_variable_param, exoid, EX_NODAL, numNodalVar);
-    PetscCallExternal(ex_put_variable_names, exoid, EX_NODAL, numNodalVar, nodalVarName);
+
+    /* Set Nodal and Zonal Variable Parameters */
+    PetscCall(PetscViewerExodusIISetZonalVariable(viewer, numZonalVar)); /* previously PetscCallExternal(ex_put_variable_param, exoid, EX_ELEM_BLOCK, numZonalVar); */
+    PetscCall(PetscViewerExodusIISetZonalVariableNames(viewer, &zonalVarName)); /* previously PetscCallExternal(ex_put_variable_name, exoid, EX_ELEM_BLOCK, i + 1, zonalVarName); */
+    /* previously PetscCallExternal(ex_put_variable_names, exoid, EX_ELEM_BLOCK, numZonalVar, zonalVarName);*/
+    PetscCall(PetscViewerExodusIISetNodalVariable(viewer, numNodalVar)); /* previously PetscCallExternal(ex_put_variable_param, exoid, EX_NODAL, numNodalVar);*/
+    PetscCall(PetscViewerExodusIISetNodalVariableNames(viewer, &zonalVarName));/* previously PetscCallExternal(ex_put_variable_names, exoid, EX_NODAL, numNodalVar, nodalVarName);*/
     numCS = ex_inquire_int(exoid, EX_INQ_ELEM_BLK);
 
     /*

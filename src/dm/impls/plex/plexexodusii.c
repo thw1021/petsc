@@ -346,12 +346,15 @@ PetscErrorCode PetscViewerExodusIISetZonalVariable(PetscViewer viewer, int num)
 {
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
   MPI_Comm              comm;
+  int                   exoid = -1;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectGetComm((PetscObject)viewer, &comm));
   PetscCheck(exo->numZonalVariables == -1, comm, PETSC_ERR_SUP, "The number of zonal variables has already been set to %" PetscInt_FMT " and cannot be overwritten", exo->numZonalVariables);
   PetscCheck((exo->btype != FILE_MODE_READ) && (exo->btype != FILE_MODE_UNDEFINED), comm, PETSC_ERR_FILE_WRITE, "Cannot set the number of variables because the file is not writable");
   exo->numZonalVariables = num;
+  PetscCall(PetscViewerExodusIIGetId(viewer, &exoid));
+  PetscCallExternal(ex_put_variable_param, exoid, EX_ELEM_BLOCK, num);
   // Make a call to ex_put_XXX and do error checking
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -377,13 +380,15 @@ PetscErrorCode PetscViewerExodusIISetNodalVariable(PetscViewer viewer, int num)
 {
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
   MPI_Comm              comm;
+  int                   exoid = -1;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectGetComm((PetscObject)viewer, &comm));
   PetscCheck(exo->numNodalVariables == -1, comm, PETSC_ERR_SUP, "The number of nodal variables has already been set to %" PetscInt_FMT " and cannot be overwritten", exo->numNodalVariables);
   PetscCheck((exo->btype != FILE_MODE_READ) && (exo->btype != FILE_MODE_UNDEFINED), comm, PETSC_ERR_FILE_WRITE, "Cannot set the number of variables because the file is not writable");
   exo->numNodalVariables = num;
-  // Make a call to ex_put_XXX and do error checking
+  PetscCall(PetscViewerExodusIIGetId(viewer, &exoid));
+  PetscCallExternal(ex_put_variable_param, exoid, EX_NODAL, num); /* Make a call to ex_put_XXX and do error checking */
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -577,6 +582,7 @@ PetscErrorCode PetscViewerExodusIISetZonalVariableNames(PetscViewer viewer, cons
 {
   PetscErrorCode        ierr;
   int                   i, numNames;
+  int                   exoid = -1;
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
 
   PetscFunctionBegin;
@@ -587,9 +593,11 @@ PetscErrorCode PetscViewerExodusIISetZonalVariableNames(PetscViewer viewer, cons
   ierr = PetscMalloc1(numNames, &exo->zonalVariableNames);
   CHKERRQ(ierr);
 
+  PetscCall(PetscViewerExodusIIGetId(viewer, &exoid));
   /* Copy names using PetscStrallocpy */
   for (i = 0; i < numNames; i++) {
     ierr = PetscStrallocpy(names[i], &exo->zonalVariableNames[i]); /*tried removing the &(char **)*/
+    PetscCallExternal(ex_put_variable_name, exoid, EX_ELEM_BLOCK, i + 1, *names);
     CHKERRQ(ierr);
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -615,6 +623,7 @@ PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetNodalVariableNames(PetscViewer
 {
   PetscErrorCode        ierr;
   int                   i;
+  int                   exoid = -1;
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
   int                   numNames;
 
@@ -627,9 +636,11 @@ PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetNodalVariableNames(PetscViewer
   ierr = PetscMalloc1(numNames, &exo->nodalVariableNames);
   CHKERRQ(ierr);
 
+  PetscCall(PetscViewerExodusIIGetId(viewer, &exoid));
   /* Copy names using PetscStrallocpy */
   for (i = 0; i < numNames; i++) {
     ierr = PetscStrallocpy(names[i], &exo->nodalVariableNames[i]);
+    PetscCallExternal(ex_put_variable_param, exoid, EX_NODAL, numNames);
     CHKERRQ(ierr);
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -767,7 +778,7 @@ static PetscErrorCode EXOGetVarIndex_Internal(PetscViewer viewer, int exoid, ex_
 {
   int       num_vars = 0, i, j;
   char      ext_name[MAX_STR_LENGTH + 1];
-  char     *var_name; /* previously char var_name[MAX_STR_LENGTH + 1]; */
+  char     *var_name = NULL; /* previously char var_name[MAX_STR_LENGTH + 1]; */
   const int num_suffix = 5;
   char     *suffix[5];
   PetscBool flg;
@@ -780,34 +791,32 @@ static PetscErrorCode EXOGetVarIndex_Internal(PetscViewer viewer, int exoid, ex_
   suffix[4] = (char *)"_11";
   *varIndex = -1;
 
-  /* Get Variable Number - replacing PetscCallExternal(ex_get_variable_param, exoid, obj_type, &num_vars); */
+  /* Get Variable Number from file - replacing PetscCallExternal(ex_get_variable_param, exoid, obj_type, &num_vars); */
   if (obj_type == EX_NODAL) {
     PetscCall(PetscViewerExodusIIGetNodalVariable(viewer, &num_vars));
     for (i = 0; i < num_vars; ++i) {
-      PetscCall(PetscViewerExodusIIGetNodalVariableNames(viewer, i + 1, &var_name)); /* previously PetscCallExternal(ex_get_variable_name, exoid, obj_type, i + 1, var_name);*/
+      PetscCall(PetscViewerExodusIIGetNodalVariableName(viewer, i + 1, &var_name)); /* previously PetscCallExternal(ex_get_variable_name, exoid, obj_type, i + 1, var_name);*/
       for (j = 0; j < num_suffix; ++j) {
         PetscCall(PetscStrncpy(ext_name, name, MAX_STR_LENGTH));
         PetscCall(PetscStrlcat(ext_name, suffix[j], MAX_STR_LENGTH));
         PetscCall(PetscStrcasecmp(ext_name, var_name, &flg));
         if (flg) *varIndex = i + 1;
       }
-
-      PetscCall(PetscFree(var_name)); // Free the allocated memory
-      if (flg) break;                 // Stop the outer loop once a match is found
+      PetscCall(PetscFree(var_name));
+      if (flg) break;
     }
   } else if (obj_type == EX_ELEM_BLOCK) {
     PetscCall(PetscViewerExodusIIGetZonalVariable(viewer, &num_vars));
     for (i = 0; i < num_vars; ++i) {
-      PetscCall(PetscViewerExodusIIGetZonalVariableNames(viewer, i + 1, &var_name)); /* previously PetscCallExternal(ex_get_variable_name, exoid, obj_type, i + 1, var_name);*/
+      PetscCall(PetscViewerExodusIIGetZonalVariableName(viewer, i + 1, &var_name)); /* previously PetscCallExternal(ex_get_variable_name, exoid, obj_type, i + 1, var_name);*/
       for (j = 0; j < num_suffix; ++j) {
         PetscCall(PetscStrncpy(ext_name, name, MAX_STR_LENGTH));
         PetscCall(PetscStrlcat(ext_name, suffix[j], MAX_STR_LENGTH));
         PetscCall(PetscStrcasecmp(ext_name, var_name, &flg));
         if (flg) *varIndex = i + 1;
       }
-
-      PetscCall(PetscFree(var_name)); // Free the allocated memory
-      if (flg) break;                 // Stop the outer loop once a match is found
+      PetscCall(PetscFree(var_name));
+      if (flg) break;
     }
   }
   PetscFunctionReturn(PETSC_SUCCESS);
