@@ -672,16 +672,24 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc, Vec bin, Vec xout)
         if (batch_sz != 1) PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A), "%s: max iterations per species:", ksp_type_idx == BATCH_KSP_BICG_IDX ? "bicg" : "tfqmr"));
         else PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A), "    Linear solve converged due to %s iterations ", ksp_type_idx == BATCH_KSP_BICG_IDX ? "bicg" : "tfqmr"));
   #endif
-        for (PetscInt dmIdx = 0, head = 0; dmIdx < jac->num_dms; dmIdx += batch_sz) {
-          for (PetscInt f = 0, idx = head; f < jac->dm_Nf[dmIdx]; f++, idx++) {
+        for (PetscInt dmIdx = 0, head = 0, s = 0; dmIdx < jac->num_dms; dmIdx += batch_sz) {
+          for (PetscInt f = 0, idx = head; f < jac->dm_Nf[dmIdx]; f++, idx++, s++) {
             for (int bid = 0; bid < batch_sz; bid++) {
+  #if PCBJKOKKOS_VERBOSE_LEVEL >= 4
+              jac->max_nits += h_metadata[idx + bid * jac->dm_Nf[dmIdx]].its; // report total number of iterations with high verbose
+              if (h_metadata[idx + bid * jac->dm_Nf[dmIdx]].its > count) {
+                count = h_metadata[idx + bid * jac->dm_Nf[dmIdx]].its;
+                mbid  = bid;
+              }
+  #else
               if (h_metadata[idx + bid * jac->dm_Nf[dmIdx]].its > count) {
                 jac->max_nits = count = h_metadata[idx + bid * jac->dm_Nf[dmIdx]].its;
                 mbid                  = bid;
               }
+  #endif
             }
   #if PCBJKOKKOS_VERBOSE_LEVEL >= 4
-            PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A), "%2" PetscInt_FMT ":", f));
+            PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A), "%2" PetscInt_FMT ":", s));
             for (int bid = 0; bid < batch_sz; bid++) PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A), "%3" PetscInt_FMT " ", h_metadata[idx + bid * jac->dm_Nf[dmIdx]].its));
             PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A), "\n"));
   #else // == 3
@@ -1151,6 +1159,15 @@ PetscErrorCode PCBJKOKKOSGetKSP(PC pc, KSP *ksp)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode PCPostSolve_BJKOKKOS(PC pc, KSP ksp, Vec b, Vec x)
+{
+  PC_PCBJKOKKOS *jac = (PC_PCBJKOKKOS *)pc->data;
+
+  PetscFunctionBegin;
+  ksp->its = jac->max_nits;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*MC
      PCBJKOKKOS -  Defines a preconditioner that applies a Krylov solver and preconditioner to the blocks in a `MATSEQAIJ` matrix on the GPU using Kokkos
 
@@ -1196,6 +1213,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_BJKOKKOS(PC pc)
   pc->ops->destroy        = PCDestroy_BJKOKKOS;
   pc->ops->setfromoptions = PCSetFromOptions_BJKOKKOS;
   pc->ops->view           = PCView_BJKOKKOS;
+  pc->ops->postsolve      = PCPostSolve_BJKOKKOS;
 
   jac->rowOffsets   = NULL;
   jac->colIndices   = NULL;
