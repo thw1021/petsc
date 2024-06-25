@@ -312,7 +312,11 @@ struct _p_TS {
   PetscInt               reject, max_reject;
   TSExactFinalTimeOption exact_final_time;
 
-  PetscReal atol, rtol;   /* Relative and absolute tolerance for local truncation error */
+  PetscReal atol, rtol; /* Relative and absolute tolerance for local truncation error */
+  struct {
+    PetscReal atol, rtol, max_time;
+    PetscInt  max_steps;
+  } defaults;
   Vec       vatol, vrtol; /* Relative and absolute tolerance in vector form */
   PetscReal cfltime, cfltime_local;
 
