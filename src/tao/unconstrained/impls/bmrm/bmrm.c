@@ -505,10 +505,11 @@ PETSC_EXTERN PetscErrorCode TaoCreate_BMRM(Tao tao)
   tao->data    = (void *)bmrm;
 
   /* Override default settings (unless already changed) */
-  if (!tao->max_it_changed) tao->max_it = 2000;
-  if (!tao->max_funcs_changed) tao->max_funcs = 4000;
-  if (!tao->gatol_changed) tao->gatol = 1.0e-12;
-  if (!tao->grtol_changed) tao->grtol = 1.0e-12;
+  PetscCall(TaoParametersInitialize(tao));
+  PetscObjectParameterSet(tao, max_it, 2000);
+  PetscObjectParameterSet(tao, max_funcs, 4000);
+  PetscObjectParameterSet(tao, gatol, 1.0e-12);
+  PetscObjectParameterSet(tao, grtol, 1.0e-12);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

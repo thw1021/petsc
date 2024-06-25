@@ -153,16 +153,10 @@ struct _p_Tao {
   PetscReal crtol;
   PetscReal steptol;
   PetscReal fmin;
-  PetscBool max_funcs_changed;
-  PetscBool max_it_changed;
-  PetscBool gatol_changed;
-  PetscBool grtol_changed;
-  PetscBool gttol_changed;
-  PetscBool fmin_changed;
-  PetscBool catol_changed;
-  PetscBool crtol_changed;
-  PetscBool steptol_changed;
-  PetscBool trust0_changed;
+  struct {
+    PetscReal gatol, grtol, gttol, catol, crtol, steptol, fmin, trust0;
+    PetscInt  max_it, max_funcs;
+  } defaults;
   PetscBool printreason;
   PetscBool viewsolution;
   PetscBool viewgradient;
