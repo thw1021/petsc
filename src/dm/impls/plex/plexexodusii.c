@@ -468,10 +468,16 @@ PetscErrorCode PetscViewerExodusIIGetNodalVariable(PetscViewer viewer, int *num)
 PetscErrorCode PetscViewerExodusIISetZonalVariableName(PetscViewer viewer, int idx, const char name[])
 {
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
+  int exoid = -1;
 
   PetscFunctionBegin;
   PetscCheck(idx >= 0 && idx < exo->numZonalVariables, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Variable index out of range");
   PetscCall(PetscStrallocpy(name, (char **)&exo->zonalVariableNames[idx]));
+  PetscCall(PetscViewerExodusIIGetId(viewer, &exoid));
+  // Create an array with a single element and cast away const
+  char *nameArray[1];
+  nameArray[0] = (char *)name;
+  PetscCall(ex_put_variable_names(exoid, EX_ELEM_BLOCK, 1, nameArray));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -489,13 +495,19 @@ PetscErrorCode PetscViewerExodusIISetZonalVariableName(PetscViewer viewer, int i
 
 .seealso: `PETSCVIEWEREXODUSII`, `PetscViewer`, `PetscViewerCreate()`, `PetscViewerDestroy()`, `PetscViewerExodusIIOpen()`, `PetscViewerSetType()`, `PetscViewerType`, `PetscViewerExodusIIGetNodalVariableName()`
 @*/
-PetscErrorCode PetscViewerExodusIISetNodalVariableName(PetscViewer viewer, int idx, const char name[])
+PetscErrorCode PetscViewerExodusIISetNodalVariableName(PetscViewer viewer, int rank, const char name[]) /*previously const char name[]*/
 {
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
+  int exoid = -1;
+  char *nameArray[1];
 
   PetscFunctionBegin;
   PetscCheck(idx >= 0 && idx < exo->numZonalVariables, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Variable index out of range");
   PetscCall(PetscStrallocpy(name, (char **)&exo->nodalVariableNames[idx]));
+  PetscCall(PetscViewerExodusIIGetId(viewer, &exoid));
+  
+  nameArray[0] = (char *)name;
+  PetscCall(ex_put_variable_names(exoid, EX_NODAL, 1, nameArray));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -623,8 +635,8 @@ PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetNodalVariableNames(PetscViewer
   /* Copy names using PetscStrallocpy */
   for (i = 0; i < numNames; i++) {
     PetscCall(PetscStrallocpy(names[i], &exo->nodalVariableNames[i]));
+    PetscCallExternal(ex_put_variable_name, exoid, EX_NODAL, i + 1, *names);
   }
-  PetscCallExternal(ex_put_variable_names, exoid, EX_NODAL, numNames, names);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
