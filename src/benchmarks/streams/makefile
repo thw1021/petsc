@@ -30,10 +30,13 @@ PthreadVersion: PthreadVersion.o
 	@${RM} -f PthreadVersion.o
 
 # make streams [NPMAX=integer_number_of_MPI_processes_to_use] [MPI_BINDING='binding options']
+#
 mpistream:  MPIVersion
 	@if [ "${NPMAX}foo" = "foo" ]; then echo "---------"; printf " Run with [PETSC_OPTIONS=-process_view] make streams NPMAX=<integer number of MPI processes> [MPI_BINDING='-bind-to core -map-by numa']\n or       [I_MPI_PIN_PROCESSOR_LIST=:map=scatter] [PETSC_OPTIONS=-process_view] make streams NPMAX=<integer number of MPI processes>\n"; exit 1 ; fi
 	-@printf "" > scaling.log
 	-@printf "Running streams with '${MPIEXEC} ${MPI_BINDING}' using 'NPMAX=${NPMAX}' \n"
+	-@printf "For OpenMPI, you can set MPI_BINDING=-display-map to show binding. See more with 'mpirun --help binding' \n"
+	-@printf "For MPICH, you can set HYDRA_TOPO_DEBUG=1 to show binding.  See more with 'mpirun -bind-to -help'  \n"
 	-@i=0; while [ $${i} -lt ${NPMAX} ]; do i=`expr $${i} + 1`; \
 	  ${MPIEXEC} ${MPI_BINDING} -n $${i} ./MPIVersion | tee -a scaling.log; \
         done
@@ -59,6 +62,7 @@ openmpstream:  OpenMPVersion
 	@if [ "${NPMAX}foo" = "foo" ]; then echo "---------"; printf " Run with make openmpstream NPMAX=<integer number of threads>\n"; exit 1 ; fi
 	-@printf "" > scaling.log
 	@-@printf "Running openmpstreams using 'NPMAX=${NPMAX}'\n"
+	-@printf "You can set OMP_DISPLAY_AFFINITY=true to show binding, and set OMP_PLACES, OMP_PROC_BIND properly to set binding \n"
 	-@i=0; while [ $${i} -lt ${NPMAX} ]; do i=`expr $${i} + 1`; \
 	  OMP_NUM_THREADS=$${i} ./OpenMPVersion  | tee -a scaling.log;\
         done

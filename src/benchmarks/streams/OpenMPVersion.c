@@ -40,11 +40,11 @@
 /*     program constitutes acceptance of these licensing restrictions.   */
 /*  5. Absolutely no warranty is expressed or implied.                   */
 /*-----------------------------------------------------------------------*/
-# include <stdio.h>
-# include <math.h>
-# include <limits.h>
-# include <float.h>
-# include <sys/time.h>
+#include <stdio.h>
+#include <math.h>
+#include <limits.h>
+#include <float.h>
+#include <sys/time.h>
 #include <stdlib.h>
 
 /* INSTRUCTIONS:
@@ -56,13 +56,13 @@
  */
 
 #if !defined(N)
-#   define N    2000000
+  #define N 8388608
 #endif
 #if !defined(NTIMES)
-#   define NTIMES       50
+  #define NTIMES 50
 #endif
 #if !defined(OFFSET)
-#   define OFFSET       0
+  #define OFFSET 0
 #endif
 
 /*
@@ -86,39 +86,46 @@
  *
  */
 
-# define HLINE "-------------------------------------------------------------\n"
+#define HLINE "-------------------------------------------------------------\n"
 
-# if !defined(MIN)
-# define MIN(x,y) ((x)<(y) ? (x) : (y))
-# endif
-# if !defined(MAX)
-# define MAX(x,y) ((x)>(y) ? (x) : (y))
-# endif
+#if !defined(MIN)
+  #define MIN(x, y) ((x) < (y) ? (x) : (y))
+#endif
+#if !defined(MAX)
+  #define MAX(x, y) ((x) > (y) ? (x) : (y))
+#endif
 
-static double a[N+OFFSET],
-              b[N+OFFSET],
-              c[N+OFFSET];
+static double avgtime[4] = {0}, maxtime[4] = {0}, mintime[4] = {FLT_MAX, FLT_MAX, FLT_MAX, FLT_MAX};
 
-static double avgtime[4] = {0}, maxtime[4] = {0},
-              mintime[4] = {FLT_MAX,FLT_MAX,FLT_MAX,FLT_MAX};
-
-static double bytes[1] = {
-  3 * sizeof(double) * N
-};
+static double bytes[1] = {3 * sizeof(double) * N};
 
 extern double mysecond();
-extern int omp_get_num_threads();
-int main()
+extern int    omp_get_num_threads();
+int           main()
 {
   int          quantum, checktick();
   register int j, k;
-  double       scalar, t, times[4][NTIMES],rate;
+  double       scalar, t, times[4][NTIMES], rate;
   int          size;
-  char         *env;
-  FILE         *fd;
+  char        *env;
+  FILE        *fd;
+  double      *a, *b, *c;
 
   env = getenv("OMP_NUM_THREADS");
-  sscanf(env,"%d",&size);
+  sscanf(env, "%d", &size);
+
+  a = (double *)malloc((N + OFFSET) * sizeof(double) * size);
+  b = (double *)malloc((N + OFFSET) * sizeof(double) * size);
+  c = (double *)malloc((N + OFFSET) * sizeof(double) * size);
+
+  if (!a || !b || !c) {
+    printf("Failed to allocate arrays\n");
+    free(a);
+    free(b);
+    free(c);
+    exit(1);
+  }
+
   /* --- SETUP --- determine precision and check timing --- */
 
   /*printf(HLINE);
@@ -143,7 +150,7 @@ int main()
 
   /* Get initial value for system clock. */
 #pragma omp parallel for
-  for (j=0; j<N; j++) {
+  for (j = 0; j < N; j++) {
     a[j] = 1.0;
     b[j] = 2.0;
     c[j] = 0.0;
@@ -151,10 +158,11 @@ int main()
 
   /*printf(HLINE);*/
 
-  if  ((quantum = checktick()) >= 1) ; /*  printf("Your clock granularity/precision appears to be "
+  if ((quantum = checktick()) >= 1)
+    ; /*  printf("Your clock granularity/precision appears to be "
         "%d microseconds.\n", quantum);*/
   else {
-    ;  /*  printf("Your clock granularity appears to be "
+    ; /*  printf("Your clock granularity appears to be "
         "less than one microsecond.\n");*/
     quantum = 1;
   }
@@ -175,59 +183,60 @@ int main()
   /*  --- MAIN LOOP --- repeat test cases NTIMES times --- */
 
   scalar = 3.0;
-  for (k=0; k<NTIMES; k++)
-  {
+  for (k = 0; k < NTIMES; k++) {
     times[0][k] = mysecond();
 #pragma omp parallel for
-    for (j=0; j<N; j++) a[j] = b[j]+scalar*c[j];
+    for (j = 0; j < N; j++) a[j] = b[j] + scalar * c[j];
     times[0][k] = mysecond() - times[0][k];
   }
 
   /*  --- SUMMARY --- */
 
-  for (k=1; k<NTIMES; k++) {  /* note -- skip first iteration */
-    for (j=0; j<1; j++)
-    {
+  for (k = 1; k < NTIMES; k++) { /* note -- skip first iteration */
+    for (j = 0; j < 1; j++) {
       avgtime[j] = avgtime[j] + times[j][k];
       mintime[j] = MIN(mintime[j], times[j][k]);
       maxtime[j] = MAX(maxtime[j], times[j][k]);
     }
   }
 
-  rate = 1.0E-06 * bytes[0]/mintime[0];
+  rate = 1.0E-06 * bytes[0] / mintime[0];
 
   if (size == 1) {
-    printf("%d %11.4f   Rate (MB/s)\n",size, rate);
-    fd = fopen("flops","w");
-    fprintf(fd,"%g\n",rate);
+    printf("%3d %11.1f   Rate (MB/s) %6.1f\n", size, rate, 1.0);
+    fd = fopen("flops", "w");
+    fprintf(fd, "%lg\n", rate);
     fclose(fd);
   } else {
     double prate;
-    fd = fopen("flops","r");
-    fscanf(fd,"%lg",&prate);
+    fd = fopen("flops", "r");
+    fscanf(fd, "%lg", &prate);
     fclose(fd);
-    printf("%d %11.4f   Rate (MB/s) %g \n", size, rate,rate/prate);
+    printf("%3d %11.1f   Rate (MB/s) %6.1f\n", size, rate, rate / prate);
   }
 
+  free(a);
+  free(b);
+  free(c);
   return 0;
 }
 
-# define        M        20
+#define M 20
 
 int checktick()
 {
   int    i, minDelta, Delta;
   double t1, t2, timesfound[M];
 
-/*  Collect a sequence of M unique time values from the system. */
+  /*  Collect a sequence of M unique time values from the system. */
 
   for (i = 0; i < M; i++) {
     t1 = mysecond();
-    while (((t2=mysecond()) - t1) < 1.0E-6) ;
+    while (((t2 = mysecond()) - t1) < 1.0E-6);
     timesfound[i] = t1 = t2;
   }
 
-/*
+  /*
  * Determine the minimum difference between these M values.
  * This result will be our estimate (in microseconds) for the
  * clock granularity.
@@ -235,8 +244,8 @@ int checktick()
 
   minDelta = 1000000;
   for (i = 1; i < M; i++) {
-    Delta    = (int)(1.0E6 * (timesfound[i]-timesfound[i-1]));
-    minDelta = MIN(minDelta, MAX(Delta,0));
+    Delta    = (int)(1.0E6 * (timesfound[i] - timesfound[i - 1]));
+    minDelta = MIN(minDelta, MAX(Delta, 0));
   }
 
   return minDelta;
@@ -252,6 +261,6 @@ double mysecond()
   struct timeval  tp;
   struct timezone tzp;
 
-  (void) gettimeofday(&tp,&tzp);
-  return ((double) tp.tv_sec + (double) tp.tv_usec * 1.e-6);
+  (void)gettimeofday(&tp, &tzp);
+  return ((double)tp.tv_sec + (double)tp.tv_usec * 1.e-6);
 }

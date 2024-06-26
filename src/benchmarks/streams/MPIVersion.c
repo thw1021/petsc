@@ -23,7 +23,7 @@
            that should be good to about 5% precision.
 */
 
-#define N      2000000
+#define N      8388608
 #define M      20
 #define NTIMES 50
 #define OFFSET 0
@@ -50,9 +50,7 @@
 
 #define HLINE "-------------------------------------------------------------\n"
 
-static double a[N+OFFSET],b[N+OFFSET],c[N+OFFSET];
-
-static double mintime[4] = {FLT_MAX,FLT_MAX,FLT_MAX,FLT_MAX};
+static double mintime[4] = {FLT_MAX, FLT_MAX, FLT_MAX, FLT_MAX};
 
 static int checktick(void)
 {
@@ -64,7 +62,7 @@ static int checktick(void)
   for (int i = 0; i < M; ++i) {
     const double t1 = MPI_Wtime();
 
-    while (((timesfound[i] = MPI_Wtime()) - t1) < 1.0E-6) ;
+    while (((timesfound[i] = MPI_Wtime()) - t1) < 1.0E-6);
   }
 
   /*
@@ -74,37 +72,33 @@ static int checktick(void)
   */
 
   for (int i = 1; i < M; ++i) {
-    int Delta = (int)(1.0E6*(timesfound[i]-timesfound[i-1]));
+    int Delta = (int)(1.0E6 * (timesfound[i] - timesfound[i - 1]));
 
-    minDelta  = PetscMin(minDelta,PetscMax(Delta,0));
+    minDelta = PetscMin(minDelta, PetscMax(Delta, 0));
   }
   return minDelta;
 }
 
-static double bytes[4] = {
-  2 * sizeof(double) * N,
-  2 * sizeof(double) * N,
-  3 * sizeof(double) * N,
-  3 * sizeof(double) * N
-};
+static double bytes[4] = {2 * sizeof(double) * N, 2 * sizeof(double) * N, 3 * sizeof(double) * N, 3 * sizeof(double) * N};
 
-int main(int argc,char **args)
+int main(int argc, char **args)
 {
   const double scalar = 3.0;
-  double       t,times[4][NTIMES],irate[4],rate[4];
-  PetscMPIInt  rank,size,resultlen;
+  double       t, times[4][NTIMES], irate[4], rate[4];
+  PetscMPIInt  rank, size, resultlen;
   char         hostname[MPI_MAX_PROCESSOR_NAME] = {0};
+  double      *a, *b, *c;
 
-  PetscCall(PetscInitialize(&argc,&args,NULL,NULL));
-  PetscCallMPI(MPI_Comm_rank(MPI_COMM_WORLD,&rank));
-  PetscCallMPI(MPI_Comm_size(MPI_COMM_WORLD,&size));
+  PetscCall(PetscInitialize(&argc, &args, NULL, NULL));
+  PetscCallMPI(MPI_Comm_rank(MPI_COMM_WORLD, &rank));
+  PetscCallMPI(MPI_Comm_size(MPI_COMM_WORLD, &size));
+  PetscCall(PetscMalloc3(N + OFFSET, &a, N + OFFSET, &b, N + OFFSET, &c));
 
-  PetscCallMPI(MPI_Get_processor_name(hostname,&resultlen));(void)resultlen;
-  if (rank) PetscCallMPI(MPI_Send(hostname,MPI_MAX_PROCESSOR_NAME,MPI_CHAR,0,0,MPI_COMM_WORLD));
+  PetscCallMPI(MPI_Get_processor_name(hostname, &resultlen));
+  (void)resultlen;
+  if (rank) PetscCallMPI(MPI_Send(hostname, MPI_MAX_PROCESSOR_NAME, MPI_CHAR, 0, 0, MPI_COMM_WORLD));
   else {
-    for (int j = 1; j < size; ++j) {
-      PetscCallMPI(MPI_Recv(hostname,MPI_MAX_PROCESSOR_NAME,MPI_CHAR,j,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE));
-    }
+    for (int j = 1; j < size; ++j) { PetscCallMPI(MPI_Recv(hostname, MPI_MAX_PROCESSOR_NAME, MPI_CHAR, j, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE)); }
   }
   PetscCallMPI(MPI_Barrier(MPI_COMM_WORLD));
 
@@ -130,8 +124,10 @@ int main(int argc,char **args)
 
   if (rank == 0) {
     int quantum;
-    if  ((quantum = checktick()) >= 1) { } /* printf("Your clock granularity/precision appears to be %d microseconds.\n", quantum); */
-    else { } /* printf("Your clock granularity appears to be less than one microsecond.\n");*/
+    if ((quantum = checktick()) >= 1) {
+    } /* printf("Your clock granularity/precision appears to be %d microseconds.\n", quantum); */
+    else {
+    } /* printf("Your clock granularity appears to be less than one microsecond.\n");*/
   }
 
   t = MPI_Wtime();
@@ -151,29 +147,29 @@ int main(int argc,char **args)
   /*   --- MAIN LOOP --- repeat test cases NTIMES times --- */
 
   for (int k = 0; k < NTIMES; ++k) {
-    PetscCallMPI(MPI_Barrier(MPI_COMM_WORLD));
-    times[0][k] = MPI_Wtime();
-    /* should all these barriers be pulled outside of the time call? */
-    PetscCallMPI(MPI_Barrier(MPI_COMM_WORLD));
-    PetscCall(PetscArraycpy(c,a,N));
-    PetscCallMPI(MPI_Barrier(MPI_COMM_WORLD));
-    times[0][k] = MPI_Wtime() - times[0][k];
+    // PetscCallMPI(MPI_Barrier(MPI_COMM_WORLD));
+    // times[0][k] = MPI_Wtime();
+    // /* should all these barriers be pulled outside of the time call? */
+    // PetscCallMPI(MPI_Barrier(MPI_COMM_WORLD));
+    // PetscCall(PetscArraycpy(c, a, N));
+    // PetscCallMPI(MPI_Barrier(MPI_COMM_WORLD));
+    // times[0][k] = MPI_Wtime() - times[0][k];
 
-    times[1][k] = MPI_Wtime();
-    PetscCallMPI(MPI_Barrier(MPI_COMM_WORLD));
-    for (int j = 0; j < N; ++j) b[j] = scalar*c[j];
-    PetscCallMPI(MPI_Barrier(MPI_COMM_WORLD));
-    times[1][k] = MPI_Wtime() - times[1][k];
+    // times[1][k] = MPI_Wtime();
+    // PetscCallMPI(MPI_Barrier(MPI_COMM_WORLD));
+    // for (int j = 0; j < N; ++j) b[j] = scalar * c[j];
+    // PetscCallMPI(MPI_Barrier(MPI_COMM_WORLD));
+    // times[1][k] = MPI_Wtime() - times[1][k];
 
-    times[2][k] = MPI_Wtime();
-    PetscCallMPI(MPI_Barrier(MPI_COMM_WORLD));
-    for (int j = 0; j < N; ++j) c[j] = a[j]+b[j];
-    PetscCallMPI(MPI_Barrier(MPI_COMM_WORLD));
-    times[2][k] = MPI_Wtime() - times[2][k];
+    // times[2][k] = MPI_Wtime();
+    // PetscCallMPI(MPI_Barrier(MPI_COMM_WORLD));
+    // for (int j = 0; j < N; ++j) c[j] = a[j] + b[j];
+    // PetscCallMPI(MPI_Barrier(MPI_COMM_WORLD));
+    // times[2][k] = MPI_Wtime() - times[2][k];
 
     times[3][k] = MPI_Wtime();
-    PetscCallMPI(MPI_Barrier(MPI_COMM_WORLD));
-    for (int j = 0; j < N; ++j) a[j] = b[j]+scalar*c[j];
+    // PetscCallMPI(MPI_Barrier(MPI_COMM_WORLD));
+    for (int j = 0; j < N; ++j) a[j] = b[j] + scalar * c[j];
     PetscCallMPI(MPI_Barrier(MPI_COMM_WORLD));
     times[3][k] = MPI_Wtime() - times[3][k];
   }
@@ -181,11 +177,11 @@ int main(int argc,char **args)
   /*   --- SUMMARY --- */
 
   for (int k = 0; k < NTIMES; ++k) {
-    for (int j = 0; j < 4; ++j) mintime[j] = PetscMin(mintime[j],times[j][k]);
+    for (int j = 0; j < 4; ++j) mintime[j] = PetscMin(mintime[j], times[j][k]);
   }
 
-  for (int j = 0; j < 4; ++j) irate[j] = 1.0E-06 * bytes[j]/mintime[j];
-  PetscCallMPI(MPI_Reduce(irate,rate,4,MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD));
+  for (int j = 0; j < 4; ++j) irate[j] = 1.0E-06 * bytes[j] / mintime[j];
+  PetscCallMPI(MPI_Reduce(irate, rate, 4, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD));
 
   if (rank == 0) {
     FILE *fd;
@@ -193,17 +189,18 @@ int main(int argc,char **args)
     if (size != 1) {
       double prate;
 
-      fd = fopen("flops","r");
-      fscanf(fd,"%lg",&prate);
+      fd = fopen("flops", "r");
+      fscanf(fd, "%lg", &prate);
       fclose(fd);
-      printf("%d %11.4f   Rate (MB/s) %g \n",size,rate[3],rate[3]/prate);
+      printf("%3d %11.1f   Rate (MB/s) %6.1f\n", size, rate[3], rate[3] / prate);
     } else {
-      fd = fopen("flops","w");
-      fprintf(fd,"%g\n",rate[3]);
+      fd = fopen("flops", "w");
+      fprintf(fd, "%g\n", rate[3]);
       fclose(fd);
-      printf("%d %11.4f   Rate (MB/s)\n",size,rate[3]);
+      printf("%3d %11.1f   Rate (MB/s) %6.1f\n", size, rate[3], 1.0);
     }
   }
+  PetscCall(PetscFree3(a, b, c));
   PetscCall(PetscFinalize());
   return 0;
 }
