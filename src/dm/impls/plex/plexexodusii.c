@@ -483,7 +483,6 @@ PetscErrorCode PetscViewerExodusIISetZonalVariableName(PetscViewer viewer, int i
 {
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
   int exoid = -1;
-  char *nameArray[1];
 
   PetscFunctionBegin;
   PetscCheck(idx >= 0 && idx < exo->numZonalVariables, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Variable index out of range");
@@ -496,9 +495,13 @@ PetscErrorCode PetscViewerExodusIISetZonalVariableName(PetscViewer viewer, int i
   PetscCall(ex_put_variable_names(exoid, EX_ELEM_BLOCK, 1, nameArray));
 =======
   
+<<<<<<< HEAD
   nameArray[0] = (char *)name; /* Create an array with a single element and cast away const */
   PetscCall(ex_put_variable_names(exoid, EX_ELEM_BLOCK, 1, nameArray)); /* For File */
 >>>>>>> d4f145e9371 (added file commands to the getters)
+=======
+  PetscCall(ex_put_variable_name(exoid, EX_ELEM_BLOCK, rank, name));
+>>>>>>> 56016dcd2be (fixed file command)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -520,15 +523,18 @@ PetscErrorCode PetscViewerExodusIISetNodalVariableName(PetscViewer viewer, int r
 {
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
   int exoid = -1;
-  char *nameArray[1];
 
   PetscFunctionBegin;
   PetscCheck(idx >= 0 && idx < exo->numZonalVariables, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Variable index out of range");
   PetscCall(PetscStrallocpy(name, (char **)&exo->nodalVariableNames[idx]));
   PetscCall(PetscViewerExodusIIGetId(viewer, &exoid));
   
+<<<<<<< HEAD
   nameArray[0] = (char *)name;
   PetscCall(ex_put_variable_names(exoid, EX_NODAL, 1, nameArray));
+=======
+  PetscCall(ex_put_variable_name(exoid, EX_NODAL, rank, name)); 
+>>>>>>> 56016dcd2be (fixed file command)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
