@@ -1372,6 +1372,7 @@ PetscErrorCode DMCreateMassMatrix(DM dmc, DM dmf, Mat *mat)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dmc, DM_CLASSID, 1);
+  if (!dmf) dmf = dmc;
   PetscValidHeaderSpecific(dmf, DM_CLASSID, 2);
   PetscAssertPointer(mat, 3);
   PetscCall(PetscLogEventBegin(DM_CreateMassMatrix, 0, 0, 0, 0));
