@@ -5763,6 +5763,18 @@ PetscErrorCode DMPlexComputeJacobian_Internal(DM dm, PetscFormKey key, IS cellIS
 
   PetscFunctionBegin;
   PetscCall(PetscLogEventBegin(DMPLEX_JacobianFEM, dm, 0, 0, 0));
+  PetscCall(DMGetLocalSection(dm, &section));
+  PetscCall(DMGetGlobalSection(dm, &globalSection));
+  PetscCall(DMGetAuxiliaryVec(dm, key.label, key.value, key.part, &A));
+  if (A) {
+    PetscCall(VecGetDM(A, &dmAux));
+    PetscCall(DMGetEnclosureRelation(dmAux, dm, &encAux));
+    PetscCall(DMConvert(dmAux, DMPLEX, &plex));
+    PetscCall(DMGetLocalSection(plex, &sectionAux));
+    PetscCall(DMGetDS(dmAux, &probAux));
+    PetscCall(PetscDSGetTotalDimension(probAux, &totDimAux));
+  }
+  PetscCall(DMGetCoordinateField(dm, &coordField));
   if (!cellIS) goto end;
   PetscCall(ISGetPointRange(cellIS, &cStart, &cEnd, &cells));
   PetscCall(ISGetLocalSize(cellIS, &numCells));
@@ -5770,8 +5782,6 @@ PetscErrorCode DMPlexComputeJacobian_Internal(DM dm, PetscFormKey key, IS cellIS
   PetscCall(DMHasBasisTransform(dm, &transform));
   PetscCall(DMGetBasisTransformDM_Internal(dm, &tdm));
   PetscCall(DMGetBasisTransformVec_Internal(dm, &tv));
-  PetscCall(DMGetLocalSection(dm, &section));
-  PetscCall(DMGetGlobalSection(dm, &globalSection));
   PetscCall(DMGetCellDS(dm, cells ? cells[cStart] : cStart, &prob, NULL));
   PetscCall(PetscDSGetNumFields(prob, &Nf));
   PetscCall(PetscDSGetTotalDimension(prob, &totDim));
@@ -5782,18 +5792,8 @@ PetscErrorCode DMPlexComputeJacobian_Internal(DM dm, PetscFormKey key, IS cellIS
   if (hasJac && Jac == JacP) hasPrec = PETSC_FALSE;
   PetscCall(PetscDSHasDynamicJacobian(prob, &hasDyn));
   hasDyn = hasDyn && (X_tShift != 0.0) ? PETSC_TRUE : PETSC_FALSE;
-  PetscCall(DMGetAuxiliaryVec(dm, key.label, key.value, key.part, &A));
-  if (A) {
-    PetscCall(VecGetDM(A, &dmAux));
-    PetscCall(DMGetEnclosureRelation(dmAux, dm, &encAux));
-    PetscCall(DMConvert(dmAux, DMPLEX, &plex));
-    PetscCall(DMGetLocalSection(plex, &sectionAux));
-    PetscCall(DMGetDS(dmAux, &probAux));
-    PetscCall(PetscDSGetTotalDimension(probAux, &totDimAux));
-  }
   PetscCall(PetscMalloc5(numCells * totDim, &u, X_t ? numCells * totDim : 0, &u_t, hasJac ? numCells * totDim * totDim : 0, &elemMat, hasPrec ? numCells * totDim * totDim : 0, &elemMatP, hasDyn ? numCells * totDim * totDim : 0, &elemMatD));
   if (dmAux) PetscCall(PetscMalloc1(numCells * totDimAux, &a));
-  PetscCall(DMGetCoordinateField(dm, &coordField));
   for (c = cStart; c < cEnd; ++c) {
     const PetscInt cell = cells ? cells[c] : c;
     const PetscInt cind = c - cStart;
@@ -6323,7 +6323,6 @@ PetscErrorCode DMPlexComputeJacobian_Action_Internal(DM dm, PetscFormKey key, IS
   PetscBool       hasDyn;
 
   PetscFunctionBegin;
-  if (!cellIS) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(PetscLogEventBegin(DMPLEX_JacobianFEM, dm, 0, 0, 0));
   PetscCall(DMConvert(dm, DMPLEX, &plex));
   PetscCall(ISGetLocalSize(cellIS, &numCells));
