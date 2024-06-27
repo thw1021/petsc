@@ -70,13 +70,13 @@ static PetscErrorCode TaoSetUpEW_Private(Tao tao)
 }
 
 /*@
-  TaoParametersInitialize - Sets all the parameters in `snes` to their default value (when `TaoCreate()` was called) if they
-  currently contain default values
+  TaoParametersInitialize - Sets all the parameters in `tao` to their default value (when `TaoCreate()` was called) if they
+  currently contain default values. Default values are the parameter values when the object's type is set.
 
   Collective
 
   Input Parameter:
-. snes - the `Tao` object
+. tao - the `Tao` object
 
   Level: developer
 
@@ -696,9 +696,11 @@ PetscErrorCode TaoView(Tao tao, PetscViewer viewer)
         PetscCall(PetscViewerASCIIPrintf(viewer, " User Terminated\n"));
         break;
       default:
-        PetscCall(PetscViewerASCIIPrintf(viewer, "\n"));
+        PetscCall(PetscViewerASCIIPrintf(viewer, " %d\n", tao->reason));
         break;
       }
+    } else if (tao->reason == TAO_CONTINUE_ITERATING) {
+      PetscCall(PetscViewerASCIIPrintf(viewer, "Solver never run\n"));
     } else {
       PetscCall(PetscViewerASCIIPrintf(viewer, "Solver failed: "));
       switch (tao->reason) {
