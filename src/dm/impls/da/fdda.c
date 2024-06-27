@@ -221,11 +221,9 @@ PetscErrorCode DMCreateColoring_DA(DM da, ISColoringType ctype, ISColoring *colo
   PetscCall(PetscObjectGetComm((PetscObject)da, &comm));
   PetscCallMPI(MPI_Comm_size(comm, &size));
   if (ctype == IS_COLORING_LOCAL) {
-    if (size == 1) {
-      ctype = IS_COLORING_GLOBAL;
-    } else {
-      PetscCheck((dim == 1) || !((m == 1 && bx == DM_BOUNDARY_PERIODIC) || (n == 1 && by == DM_BOUNDARY_PERIODIC) || (p == 1 && bz == DM_BOUNDARY_PERIODIC)), PetscObjectComm((PetscObject)da), PETSC_ERR_SUP, "IS_COLORING_LOCAL cannot be used for periodic boundary condition having both ends of the domain on the same process");
-    }
+    PetscCheck(!((m == 1 && bx == DM_BOUNDARY_PERIODIC) || (n == 1 && by == DM_BOUNDARY_PERIODIC) || (p == 1 && bz == DM_BOUNDARY_PERIODIC)), PetscObjectComm((PetscObject)da), PETSC_ERR_SUP, "IS_COLORING_LOCAL cannot be used for periodic boundary condition having both ends of the domain on the same process");
+  } else {
+    PetscCheck(!(bx == DM_BOUNDARY_PERIODIC || by == DM_BOUNDARY_PERIODIC || bz == DM_BOUNDARY_PERIODIC), PetscObjectComm((PetscObject)da), PETSC_ERR_SUP, "IS_COLORING_GLOBAL cannot be used for periodic boundary conditions");
   }
 
   /* Tell the DMDA it has 1 degree of freedom per grid point so that the coloring for BAIJ
