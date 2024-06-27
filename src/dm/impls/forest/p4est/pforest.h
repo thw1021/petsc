@@ -4892,6 +4892,30 @@ static PetscErrorCode DMCreateMatrix_pforest(DM dm, Mat *mat)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+  #define DMCreateMassMatrix_pforest _append_pforest(DMCreateMassMatrix)
+static PetscErrorCode DMCreateMassMatrix_pforest(DM dmc, DM dmf, Mat *M)
+{
+  DM plexc, plexf;
+
+  PetscFunctionBegin;
+  PetscCall(DMPforestGetPlex(dmc, &plexc));
+  PetscCall(DMPforestGetPlex(dmf, &plexf));
+  PetscCall(DMCreateMassMatrix(plexc, plexf, M));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+  #define DMCreateMassMatrixLumped_pforest _append_pforest(DMCreateMassMatrixLumped)
+static PetscErrorCode DMCreateMassMatrixLumped_pforest(DM dm, Vec *lm)
+{
+  DM plex;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
+  PetscCall(DMPforestGetPlex(dm, &plex));
+  PetscCall(DMCreateMassMatrixLumped(plex, lm));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
   #define DMProjectFunctionLocal_pforest _append_pforest(DMProjectFunctionLocal)
 static PetscErrorCode DMProjectFunctionLocal_pforest(DM dm, PetscReal time, PetscErrorCode (**funcs)(PetscInt, PetscReal, const PetscReal[], PetscInt, PetscScalar *, void *), void **ctxs, InsertMode mode, Vec localX)
 {
@@ -5136,6 +5160,8 @@ static PetscErrorCode DMInitialize_pforest(DM dm)
   dm->ops->createglobalvector        = DMCreateGlobalVector_pforest;
   dm->ops->createlocalvector         = DMCreateLocalVector_pforest;
   dm->ops->creatematrix              = DMCreateMatrix_pforest;
+  dm->ops->createmassmatrix          = DMCreateMassMatrix_pforest;
+  dm->ops->createmassmatrixlumped    = DMCreateMassMatrixLumped_pforest;
   dm->ops->projectfunctionlocal      = DMProjectFunctionLocal_pforest;
   dm->ops->projectfunctionlabellocal = DMProjectFunctionLabelLocal_pforest;
   dm->ops->projectfieldlocal         = DMProjectFieldLocal_pforest;
