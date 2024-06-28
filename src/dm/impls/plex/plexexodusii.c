@@ -427,6 +427,8 @@ PetscErrorCode PetscViewerExodusIIGetZonalVariable(PetscViewer viewer, int *num)
     PetscCall(PetscObjectGetComm((PetscObject)viewer, &comm));
     PetscCheck(exoid > 0, comm,  PETSC_ERR_FILE_OPEN, "Exodus file is not open");
     PetscCallExternal(ex_get_variable_param, exoid, EX_ELEM_BLOCK, num);
+    exo->numZonalVariables = *num;
+    PetscCall(PetscMalloc1(*num,&exo->zonalVariableNames));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -463,6 +465,8 @@ PetscErrorCode PetscViewerExodusIIGetNodalVariable(PetscViewer viewer, int *num)
     PetscCall(PetscObjectGetComm((PetscObject)viewer, &comm));
     PetscCheck(exoid > 0, comm,  PETSC_ERR_FILE_OPEN, "Exodus file is not open");
     PetscCallExternal(ex_get_variable_param, exoid, EX_NODAL, num);
+    exo->numNodalVariables = *num;
+    PetscCall(PetscMalloc1(*num,&exo->nodalVariableNames));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -544,11 +548,10 @@ PetscErrorCode PetscViewerExodusIIGetZonalVariableName(const PetscViewer viewer,
 
   PetscFunctionBegin;
   PetscCheck(idx >= 0 && idx < exo->numZonalVariables, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Variable index out of range");
-  name = &exo->zonalVariableNames[idx];
-  /* Check if variable names are already stored in the viewer */
-  if (!exo->zonalVariableNames) { 
+  if (!exo->zonalVariableNames[idx]) { 
     PetscCall(PetscViewerExodusIIGetId(viewer, &exoid));
-    PetscCallExternal(ex_get_variable_name,exoid, EX_ELEM_BLOCK, idx, *exo->zonalVariableNames); 
+    PetscCallExternal(ex_get_variable_name,exoid, EX_ELEM_BLOCK, idx, *exo->zonalVariableNames[idx]);
+    **name = *exo->zonalVariableNames[idx];
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
