@@ -3513,6 +3513,45 @@ cdef class Vec(Object):
 
     #
 
+    def concatenate(self, vecs: Sequence[Vec]) -> tuple[Self, list[IS]]:
+        """Concatenate vectors into a single vector.
+
+        Parameters
+        ----------
+        X
+            A list constained the vectors to be concatenated.
+
+        Returns
+        -------
+        Vec
+            The concatenated vector.
+        list[IS]
+            Index sets corresponding to the concatenated components.
+
+        See Also
+        --------
+        petsc.VecConcatenate
+        """
+        vecs = list(vecs)
+        cdef Py_ssize_t i, m = len(vecs)
+        cdef PetscInt n = <PetscInt>m
+        cdef PetscVec newvec = NULL
+        cdef PetscVec *cvecs  = NULL
+        cdef PetscIS  *cisets = NULL
+        cdef object unused1
+        cdef object vec_index_ises = []
+        unused1 = oarray_p(empty_p(n), NULL, <void**>&cvecs)
+        for i from 0 <= i < m:
+            vec = vecs[i]
+            cvecs[i] = (<Vec?>vec).vec if vec is not None else NULL
+        CHKERR(VecConcatenate(n, cvecs, &newvec, &cisets))
+        CHKERR(PetscCLEAR(self.obj)); self.vec = newvec 
+        for i from 0 <= i < m:
+            temp = IS()
+            temp.iset = cisets[i]
+            vec_index_ises.append(temp)
+        return self, vec_index_ises
+
     property sizes:
         """The local and global vector sizes."""
         def __get__(self) -> LayoutSizeSpec:
