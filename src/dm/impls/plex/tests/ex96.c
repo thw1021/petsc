@@ -140,20 +140,7 @@ int main(int argc, char **argv)
     PetscCall(PetscViewerExodusIISetZonalVariableName(viewer, i, zonalVarName[i]));
   }
   PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\nAfter PetscViewerExodusIISet[Nodal/Zonal]VariableName calls: \n"));
-
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Nodal variables: \n"));
-  for (int i = 0; i < nNodalVar; i++) {
-    PetscCall(PetscViewerExodusIIGetNodalVariableName(viewer, i, &tmpName));
-    PetscPrintf(PETSC_COMM_WORLD,"   %d: %s\n",i, tmpName);
-  }
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Zonal variables: \n"));
-  for (int i = 0; i < nZonalVar; i++) {
-    PetscCall(PetscViewerExodusIIGetZonalVariableName(viewer, i, &tmpName));
-    PetscPrintf(PETSC_COMM_WORLD,"   %d: %s\n",i, tmpName);
-  }
-
   PetscCall(PetscViewerView(viewer, PETSC_VIEWER_STDOUT_WORLD));
-
   /*
   TO DO: Test the Names variants
   */
@@ -161,8 +148,18 @@ int main(int argc, char **argv)
   int exoid = -1;
   int idx;
   PetscCall(PetscViewerExodusIIGetId(viewer, &exoid));
-  PetscCall(EXOGetVarIndex_Internal(viewer,exoid,EX_NODAL,"U",&idx));
+  PetscCall(EXOGetVarIndex_Internal(viewer,exoid,EX_NODAL,"Alpha",&idx));
   PetscPrintf(PETSC_COMM_WORLD,"   %s idx %d\n", "Alpha",idx);
+  PetscCall(EXOGetVarIndex_Internal(viewer,exoid,EX_NODAL,"Beta",&idx));
+  PetscPrintf(PETSC_COMM_WORLD,"   %s idx %d\n", "Beta",idx);
+
+
+  // I am not 100% sure this is supposed to work this way, but I am sure you understand what I am trying to do*/
+  for (int i = 0; i < nNodalVar; i++){
+    PetscCall(PetscViewerExodusIIGetNodalVariableName(viewer, i, &tmpName));
+    PetscCall(EXOGetVarIndex_Internal(viewer,exoid,EX_NODAL,tmpName,&idx));
+    PetscPrintf(PETSC_COMM_WORLD,"   %d: %s idx %d\n",i, tmpName,idx);
+  }
 
 /*
   varIdx = 0;
