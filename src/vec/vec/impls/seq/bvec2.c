@@ -759,33 +759,29 @@ You could either 1) use -vec_mdot_use_gemv 0 -vec_maxpy_use_gemv 0 to turn off a
 
 static PetscErrorCode VecDuplicateVecs_Seq_GEMV(Vec w, PetscInt m, Vec *V[])
 {
-  PetscFunctionBegin;
-  // This routine relies on the duplicate operation being VecDuplicate_Seq. If not, bail out to the default.
-  if (w->ops->duplicate != VecDuplicate_Seq) {
-    w->ops->duplicatevecs = VecDuplicateVecs_Default;
-    PetscCall(VecDuplicateVecs(w, m, V));
-  } else {
-    PetscScalar *array;
-    PetscInt64   lda; // use 64-bit as we will do "m * lda"
+  PetscScalar *array;
+  PetscInt64   lda; // use 64-bit as we will do "m * lda"
 
-    PetscCall(PetscMalloc1(m, V));
-    VecGetLocalSizeAligned(w, 64, &lda); // get in lda the 64-bytes aligned local size
-    PetscCall(PetscCalloc1(m * lda, &array));
-    for (PetscInt i = 0; i < m; i++) {
-      Vec v;
-      PetscCall(VecCreateSeqWithLayoutAndArray_Private(w->map, PetscSafePointerPlusOffset(array, i * lda), &v));
-      PetscCall(PetscObjectListDuplicate(((PetscObject)w)->olist, &((PetscObject)v)->olist));
-      PetscCall(PetscFunctionListDuplicate(((PetscObject)w)->qlist, &((PetscObject)v)->qlist));
-      v->ops->view          = w->ops->view;
-      v->stash.ignorenegidx = w->stash.ignorenegidx;
-      (*V)[i]               = v;
-    }
-    // so when the first vector is destroyed it will destroy the array
-    if (m) ((Vec_Seq *)(*V)[0]->data)->array_allocated = array;
-    // disable replacearray of the first vector, as freeing its memory also frees others in the group.
-    // But replacearray of others is ok, as they don't own their array.
-    if (m > 1) (*V)[0]->ops->replacearray = VecReplaceArray_Default_GEMV_Error;
+  /* Junchao how to determine when not to use this? DMCreateLocalVector() has a different duplicate operation than VecCreateSeq */
+
+  PetscFunctionBegin;
+  PetscCall(PetscMalloc1(m, V));
+  VecGetLocalSizeAligned(w, 64, &lda); // get in lda the 64-bytes aligned local size
+  PetscCall(PetscCalloc1(m * lda, &array));
+  for (PetscInt i = 0; i < m; i++) {
+    Vec v;
+    PetscCall(VecCreateSeqWithLayoutAndArray_Private(w->map, PetscSafePointerPlusOffset(array, i * lda), &v));
+    PetscCall(PetscObjectListDuplicate(((PetscObject)w)->olist, &((PetscObject)v)->olist));
+    PetscCall(PetscFunctionListDuplicate(((PetscObject)w)->qlist, &((PetscObject)v)->qlist));
+    v->ops->view          = w->ops->view;
+    v->stash.ignorenegidx = w->stash.ignorenegidx;
+    (*V)[i]               = v;
   }
+  // so when the first vector is destroyed it will destroy the array
+  if (m) ((Vec_Seq *)(*V)[0]->data)->array_allocated = array;
+  // disable replacearray of the first vector, as freeing its memory also frees others in the group.
+  // But replacearray of others is ok, as they don't own their array.
+  if (m > 1) (*V)[0]->ops->replacearray = VecReplaceArray_Default_GEMV_Error;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
