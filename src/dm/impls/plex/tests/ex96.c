@@ -7,10 +7,12 @@ int main(int argc, char **argv)
 {
   DM          dm;
   char        ifilename[PETSC_MAX_PATH_LEN], ofilename[PETSC_MAX_PATH_LEN];
-  PetscInt    nNodalVar = 3;
+  PetscInt    nNodalVar = 4;
   PetscInt    nZonalVar = 3;
   PetscInt    order     = 1;
   PetscViewer viewer;
+  const char *nodalVarName[4] = {"U_x", "U_y", "Alpha", "Beta"};
+  const char *zonalVarName[3] = {"Sigma_11", "Sigma_12", "Sigma_22"};
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
@@ -29,7 +31,7 @@ int main(int argc, char **argv)
   PetscCall(DMViewFromOptions(dm, NULL, "-dm_view"));
 
   PetscCall(PetscViewerExodusIIOpen(PETSC_COMM_WORLD, ofilename, FILE_MODE_WRITE, &viewer));
-  PetscCall(PetscViewerView(viewer, PETSC_VIEWER_STDOUT_WORLD));
+  // PetscCall(PetscViewerView(viewer, PETSC_VIEWER_STDOUT_WORLD));
 
   /* Save the geometry to the file, erasing all previous content */
   PetscCall(PetscViewerExodusIISetOrder(viewer, order));
@@ -37,14 +39,28 @@ int main(int argc, char **argv)
   PetscCall(PetscViewerView(viewer, PETSC_VIEWER_STDOUT_WORLD));
   PetscCall(PetscViewerFlush(viewer));
 
-  /* TESTING ZONAL VARIABLE NUMBER & NAME */
-  //nZonalVar = 3; /*TOTAL IN TEST*/
-  /*
+  /* TESTING VARIABLE NUMBER */
   PetscCall(PetscViewerExodusIISetZonalVariable(viewer, nZonalVar));
-  nZonalVar = 2;
+  nZonalVar = -1;
   PetscCall(PetscViewerExodusIIGetZonalVariable(viewer, &nZonalVar));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Number of zonal variables: %d\n", nZonalVar));
 
+  PetscCall(PetscViewerExodusIISetNodalVariable(viewer, nNodalVar));
+  nNodalVar = -1;
+  PetscCall(PetscViewerExodusIIGetNodalVariable(viewer, &nNodalVar));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Number of nodal variables: %d\n", nNodalVar));
+
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\nAfter PetscViewerExodusIISet[Nodal/Zonal]Variable calls: \n"));
+  PetscCall(PetscViewerView(viewer, PETSC_VIEWER_STDOUT_WORLD));
+
+  for (int i = 0; i < nNodalVar; i++){
+    PetscCall(PetscViewerExodusIISetNodalVariableName(viewer, i, nodalVarName[i]));
+  }
+  for (int i = 0; i < nZonalVar; i++){
+    PetscCall(PetscViewerExodusIISetZonalVariableName(viewer, i, zonalVarName[i]));
+  }
+
+/*
   varIdx = 0;
   strcpy(varName, "zvar1");
   PetscCall(PetscViewerExodusIISetZonalVariableName(viewer, varIdx, varName));
@@ -89,69 +105,69 @@ int main(int argc, char **argv)
   PetscCall(PetscViewerExodusIIGetNodalVariableName(viewer, varIdx, varName));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Name of nodal variable %d: %s\n", varIdx, varName));
   */
-  PetscCall(PetscViewerExodusIISetZonalVariable(viewer, nZonalVar));
   // PetscCall(PetscViewerExodusIISetZonalVariable(viewer, nZonalVar));
+  // // PetscCall(PetscViewerExodusIISetZonalVariable(viewer, nZonalVar));
 
-  PetscCall(PetscViewerExodusIIGetZonalVariable(viewer, &nZonalVar));
+  // PetscCall(PetscViewerExodusIIGetZonalVariable(viewer, &nZonalVar));
 
-  PetscCall(PetscViewerExodusIISetNodalVariable(viewer, nNodalVar));
-  PetscCall(PetscViewerExodusIIGetNodalVariable(viewer, &nNodalVar));
+  // PetscCall(PetscViewerExodusIISetNodalVariable(viewer, nNodalVar));
+  // PetscCall(PetscViewerExodusIIGetNodalVariable(viewer, &nNodalVar));
 
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nNumber of nodal variables: %d\n", nNodalVar));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Number of zonal variables: %d\n", nZonalVar));
+  // PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nNumber of nodal variables: %d\n", nNodalVar));
+  // PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Number of zonal variables: %d\n", nZonalVar));
 
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nMultiple String Names Test\n"));
-  /* TESTING ZONAL MULTIPLE STRINGS SETTER */
-  const char *test1names[] = {"Name1", "Name2", "Name3"}; // Example names
-  PetscCall(PetscViewerExodusIISetZonalVariableNames(viewer, test1names));
+  // PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nMultiple String Names Test\n"));
+  // /* TESTING ZONAL MULTIPLE STRINGS SETTER */
+  // const char *test1names[] = {"Name1", "Name2", "Name3"}; // Example names
+  // PetscCall(PetscViewerExodusIISetZonalVariableNames(viewer, test1names));
 
-  /* Allocate memory for namesFromFunction to store the retrieved names */
-  char *namesFromFunction[3];
-  PetscCall(PetscMalloc1(3, &namesFromFunction));
-  for (int i = 0; i < 3; i++) {
-    PetscCall(PetscMalloc1(256, &namesFromFunction[i])); // Allocate memory for each string
-  }
+  // /* Allocate memory for namesFromFunction to store the retrieved names */
+  // char *namesFromFunction[3];
+  // PetscCall(PetscMalloc1(3, &namesFromFunction));
+  // for (int i = 0; i < 3; i++) {
+  //   PetscCall(PetscMalloc1(256, &namesFromFunction[i])); // Allocate memory for each string
+  // }
 
-  PetscCall(PetscViewerExodusIIGetZonalVariableNames(viewer, 3, namesFromFunction));
+  // PetscCall(PetscViewerExodusIIGetZonalVariableNames(viewer, 3, namesFromFunction));
 
-  /* Check if names were correctly retrieved and copied */
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nZonal Variable Names:\n"));
-  for (int i = 0; i < 3; i++) { PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%d: %s\n", i, namesFromFunction[i])); }
+  // /* Check if names were correctly retrieved and copied */
+  // PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nZonal Variable Names:\n"));
+  // for (int i = 0; i < 3; i++) { PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%d: %s\n", i, namesFromFunction[i])); }
 
-  /* Free allocated memory */
-  for (int i = 0; i < 3; i++) { PetscCall(PetscFree(namesFromFunction[i])); }
+  // /* Free allocated memory */
+  // for (int i = 0; i < 3; i++) { PetscCall(PetscFree(namesFromFunction[i])); }
 
-  /* TESTING ZONAL MULTIPLE STRINGS SETTER */
-  PetscCall(PetscViewerExodusIISetNodalVariableNames(viewer, test1names));
+  // /* TESTING ZONAL MULTIPLE STRINGS SETTER */
+  // PetscCall(PetscViewerExodusIISetNodalVariableNames(viewer, test1names));
 
-  /* Allocate memory for namesFromFunction to store the retrieved names */
-  char *namesFromFunctionZ[3];
-  PetscCall(PetscMalloc1(3, &namesFromFunctionZ));
-  for (int i = 0; i < 3; i++) {
-    PetscCall(PetscMalloc1(256, &namesFromFunctionZ[i])); // Allocate memory for each string
-  }
+  // /* Allocate memory for namesFromFunction to store the retrieved names */
+  // char *namesFromFunctionZ[3];
+  // PetscCall(PetscMalloc1(3, &namesFromFunctionZ));
+  // for (int i = 0; i < 3; i++) {
+  //   PetscCall(PetscMalloc1(256, &namesFromFunctionZ[i])); // Allocate memory for each string
+  // }
 
-  PetscCall(PetscViewerExodusIIGetNodalVariableNames(viewer, 3, namesFromFunctionZ));
+  // PetscCall(PetscViewerExodusIIGetNodalVariableNames(viewer, 3, namesFromFunctionZ));
 
-  /* Check if names were correctly retrieved and copied */
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nNodal Variable Names:\n"));
-  for (int i = 0; i < 3; i++) { PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%d: %s\n", i, namesFromFunctionZ[i])); }
+  // /* Check if names were correctly retrieved and copied */
+  // PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nNodal Variable Names:\n"));
+  // for (int i = 0; i < 3; i++) { PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%d: %s\n", i, namesFromFunctionZ[i])); }
 
-  /* Free allocated memory */
-  for (int i = 0; i < 3; i++) { PetscCall(PetscFree(namesFromFunctionZ[i])); }
+  // /* Free allocated memory */
+  // for (int i = 0; i < 3; i++) { PetscCall(PetscFree(namesFromFunctionZ[i])); }
 
-  /* NODAL */
-  //const char *test2names[] = {"humidity", "porosity", "saturation"};
-  //PetscCall(PetscViewerExodusIISetNodalVariableNames(viewer, test2names));
+  // /* NODAL */
+  // //const char *test2names[] = {"humidity", "porosity", "saturation"};
+  // //PetscCall(PetscViewerExodusIISetNodalVariableNames(viewer, test2names));
 
-  //PetscCall(PetscViewerExodusIIGetNodalVariableNames(viewer, 3, namesFromFunction1));
-  /* Check if names were correctly retrieved and copied */
-  //PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nNodal Variable Names:\n"));
-  //for (int i = 0; i < 3; i++) {
-  //  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%d: %s\n", i, namesFromFunction1[i]));
-  //}
-  //PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nNumber of nodal variables: %d\n", nNodalVar));
-  //PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nNumber of zonal variables: %d\n", nZonalVar));
+  // //PetscCall(PetscViewerExodusIIGetNodalVariableNames(viewer, 3, namesFromFunction1));
+  // /* Check if names were correctly retrieved and copied */
+  // //PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nNodal Variable Names:\n"));
+  // //for (int i = 0; i < 3; i++) {
+  // //  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%d: %s\n", i, namesFromFunction1[i]));
+  // //}
+  // //PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nNumber of nodal variables: %d\n", nNodalVar));
+  // //PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nNumber of zonal variables: %d\n", nZonalVar));
 
   PetscCall(PetscViewerDestroy(&viewer));
   PetscCall(DMDestroy(&dm));
