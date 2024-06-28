@@ -657,6 +657,16 @@ PETSc is able to take adavantage of GPU's and certain accelerator libraries, how
 
 .. _doc_config_accel_cuda:
 
+`OpenMP`
+^^^^^^^^
+
+Use ``--with-openmp`` to allow PETSc to be used within an OpenMP application; this also turns on OpenMP for all the packages that
+PETSc builds using ``--download-xxx``. If your application calls PETSc from within OpenMP threads then also use ``--with-threadsafety``.
+
+Use ``--use-openmp`` to have some PETSc numerical routines use OpenMP to speed up their computations. This implies ``--with-openmp``.
+
+Note that using OpenMP within MPI code must be done carefully to prevent too many OpenMP threads that overload the number of cores.
+
 `CUDA`_
 ^^^^^^^
 

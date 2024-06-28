@@ -653,6 +653,10 @@ how this may be used with OpenMP. In this mode, one may have individual OpenMP t
 is useful when one has many small systems (or sets of ODEs) that must be integrated in an
 "embarrassingly parallel" fashion on multicore systems.
 
+The ./configure option ``--use-openmp`` causes some PETSc numerical kernels to be compiled using OpenMP pragmas to take advantage of multiple cores.
+One must be careful to ensure the number of threads used by each MPI process **times** the number of MPI processes is less than the number of
+cores on the system; otherwise the code will slow down dramatically.
+
 PETSc's MPI-based linear solvers may be accessed from a sequential or non-MPI OpenMP program, see :any:`sec_pcmpi`.
 
 .. seealso::
