@@ -466,7 +466,7 @@ PetscErrorCode PetscViewerExodusIIGetNodalVariable(PetscViewer viewer, int *num)
   PetscCall(PetscViewerExodusIIGetId(viewer, &exoid));
 
   PetscCheck(exo->exoid!= -1, comm,  PETSC_ERR_FILE_OPEN, "File is not open"); /* Error checking */
-  PetscCheck(exo->numNodalVariables != -1, comm, PETSC_ERR_SUP, "Nodal Variables are not set");
+  /*PetscCheck(exo->numNodalVariables != -1, comm, PETSC_ERR_SUP, "Nodal Variables are not set"); */
 
   *num = exo->numNodalVariables;
   
@@ -491,15 +491,18 @@ PetscErrorCode PetscViewerExodusIIGetNodalVariable(PetscViewer viewer, int *num)
 PetscErrorCode PetscViewerExodusIISetZonalVariableName(PetscViewer viewer, int idx, const char name[])
 {
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
-  int exoid = -1;
 
   PetscFunctionBegin;
   PetscCheck(idx >= 0 && idx < exo->numZonalVariables, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Variable index out of range");
   PetscCall(PetscStrallocpy(name, (char **)&exo->zonalVariableNames[idx]));
-  PetscCall(PetscViewerExodusIIGetId(viewer, &exoid));
+  // Create an array with a single element and cast away const
   char *nameArray[1];
   nameArray[0] = (char *)name;
-  PetscCall(ex_put_variable_names(exoid, EX_ELEM_BLOCK, 1, nameArray));
+  PetscCall(ex_put_variable_names(exo->exoid, EX_ELEM_BLOCK, 1, nameArray));
+
+  nameArray[0] = (char *)name; /* Create an array with a single element and cast away const */
+  PetscCall(ex_put_variable_names(exo->exoid, EX_ELEM_BLOCK, 1, nameArray)); /* For File */
+  PetscCall(ex_put_variable_name(exo->exoid, EX_ELEM_BLOCK, idx, name));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -619,7 +622,7 @@ PetscErrorCode PetscViewerExodusIISetZonalVariableNames(PetscViewer viewer, cons
   /* Copy names using PetscStrallocpy */
   for (i = 0; i < numNames; i++) {
     PetscCall(PetscStrallocpy(names[i], &exo->zonalVariableNames[i])); /*tried removing the &(char **)*/
-    PetscCallExternal(ex_put_variable_name, exoid, EX_ELEM_BLOCK, i + 1, *names);
+    PetscCallExternal(ex_put_variable_name, exoid, EX_ELEM_BLOCK, i, *names);
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -658,7 +661,7 @@ PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetNodalVariableNames(PetscViewer
   /* Copy names using PetscStrallocpy */
   for (i = 0; i < numNames; i++) {
     PetscCall(PetscStrallocpy(names[i], &exo->nodalVariableNames[i]));
-    PetscCallExternal(ex_put_variable_name, exoid, EX_NODAL, i + 1, *names);
+    PetscCallExternal(ex_put_variable_name, exoid, EX_NODAL, i, *names);
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
