@@ -2,6 +2,85 @@ static char help[] = "Test PetscViewer_ExodusII\n\n";
 
 #include <petsc.h>
 #include <exodusII.h>
+#include <petsc/private/dmpleximpl.h> /*I   "petscdmplex.h"   I*/
+#include <petsc/private/viewerimpl.h>
+#include <petsc/private/viewerexodusiiimpl.h>
+
+/*
+  EXOGetVarIndex_Internal - Locate a result in an exodus file based on its name
+
+  Collective
+
+  Input Parameters:
++ exoid    - the exodus id of a file (obtained from ex_open or ex_create for instance)
+. obj_type - the type of entity for instance EX_NODAL, EX_ELEM_BLOCK
+- name     - the name of the result
+
+  Output Parameter:
+. varIndex - the location in the exodus file of the result
+
+  Level: beginner
+
+  Notes:
+  The exodus variable index is obtained by comparing the name argument to the
+  names of zonal variables declared in the exodus file. For instance if name is "V"
+  the location in the exodus file will be the first match of "V", "V_X", "V_XX", "V_1", or "V_11"
+  amongst all variables of type obj_type.
+
+.seealso: `DMPlexView_ExodusII_Internal()`, `VecViewPlex_ExodusII_Nodal_Internal()`, `VecLoadNodal_PlexEXO()`, `VecLoadZonal_PlexEXO()`
+*/
+static PetscErrorCode EXOGetVarIndex_Internal(PetscViewer viewer, int exoid, ex_entity_type obj_type, const char name[], int *varIndex)
+{
+  int       num_vars = 0, i, j;
+  char      ext_name[MAX_STR_LENGTH + 1];
+  char     *var_name = NULL; /* previously char var_name[MAX_STR_LENGTH + 1]; */
+  const int num_suffix = 5;
+  char     *suffix[5];
+  PetscBool flg;
+
+  PetscFunctionBegin;
+  suffix[0] = (char *)"";
+  suffix[1] = (char *)"_X";
+  suffix[2] = (char *)"_XX";
+  suffix[3] = (char *)"_1";
+  suffix[4] = (char *)"_11";
+  *varIndex = -1;
+
+  /* Get Variable Number from file - replacing PetscCallExternal(ex_get_variable_param, exoid, obj_type, &num_vars); */
+  if (obj_type == EX_NODAL) {
+    PetscCall(PetscViewerExodusIIGetNodalVariable(viewer, &num_vars));
+    for (i = 0; i < num_vars; ++i) {
+      PetscCall(PetscViewerExodusIIGetNodalVariableName(viewer, i, &var_name));
+      // debug note. Getting the variable name from the viewer works
+      // var_name = ((PetscViewer_ExodusII *)viewer->data)->nodalVariableNames[i];
+      for (j = 0; j < num_suffix; ++j) {
+        PetscCall(PetscStrncpy(ext_name, name, MAX_STR_LENGTH));
+        PetscCall(PetscStrlcat(ext_name, suffix[j], MAX_STR_LENGTH));
+        PetscCall(PetscStrcasecmp(ext_name, var_name, &flg));
+        if (flg) *varIndex = i;
+      }
+      PetscCall(PetscFree(var_name));
+      if (flg) break;
+    }
+  } else if (obj_type == EX_ELEM_BLOCK) {
+    PetscCall(PetscViewerExodusIIGetZonalVariable(viewer, &num_vars));
+    for (i = 0; i < num_vars; ++i) {
+      PetscCall(PetscViewerExodusIIGetZonalVariableName(viewer, i, &var_name)); /* previously PetscCallExternal(ex_get_variable_name, exoid, obj_type, i + 1, var_name);*/
+      // debug note. Getting the variable name from the viewer works
+      // var_name = ((PetscViewer_ExodusII *)viewer->data)->zonalVariableNames[i];
+      for (j = 0; j < num_suffix; ++j) {
+        PetscCall(PetscStrncpy(ext_name, name, MAX_STR_LENGTH));
+        PetscCall(PetscStrlcat(ext_name, suffix[j], MAX_STR_LENGTH));
+        PetscCall(PetscStrcasecmp(ext_name, var_name, &flg));
+        if (flg) *varIndex = i;
+      }
+      PetscCall(PetscFree(var_name));
+      if (flg) break;
+    }
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 
 int main(int argc, char **argv)
 {
@@ -13,6 +92,7 @@ int main(int argc, char **argv)
   PetscViewer viewer;
   const char *nodalVarName[4] = {"U_x", "U_y", "Alpha", "Beta"};
   const char *zonalVarName[3] = {"Sigma_11", "Sigma_12", "Sigma_22"};
+  char       *tmpName = NULL;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
@@ -59,6 +139,30 @@ int main(int argc, char **argv)
   for (int i = 0; i < nZonalVar; i++){
     PetscCall(PetscViewerExodusIISetZonalVariableName(viewer, i, zonalVarName[i]));
   }
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\nAfter PetscViewerExodusIISet[Nodal/Zonal]VariableName calls: \n"));
+
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Nodal variables: \n"));
+  for (int i = 0; i < nNodalVar; i++) {
+    PetscCall(PetscViewerExodusIIGetNodalVariableName(viewer, i, &tmpName));
+    PetscPrintf(PETSC_COMM_WORLD,"   %d: %s\n",i, tmpName);
+  }
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Zonal variables: \n"));
+  for (int i = 0; i < nZonalVar; i++) {
+    PetscCall(PetscViewerExodusIIGetZonalVariableName(viewer, i, &tmpName));
+    PetscPrintf(PETSC_COMM_WORLD,"   %d: %s\n",i, tmpName);
+  }
+
+  PetscCall(PetscViewerView(viewer, PETSC_VIEWER_STDOUT_WORLD));
+
+  /*
+  TO DO: Test the Names variants
+  */
+
+  int exoid = -1;
+  int idx;
+  PetscCall(PetscViewerExodusIIGetId(viewer, &exoid));
+  PetscCall(EXOGetVarIndex_Internal(viewer,exoid,EX_NODAL,"U",&idx));
+  PetscPrintf(PETSC_COMM_WORLD,"   %s idx %d\n", "Alpha",idx);
 
 /*
   varIdx = 0;

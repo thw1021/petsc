@@ -554,14 +554,16 @@ PetscErrorCode PetscViewerExodusIIGetZonalVariableName(const PetscViewer viewer,
 {
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
   int                   exoid = -1;
+  char                 *tmpName = NULL;
 
   PetscFunctionBegin;
   PetscCheck(idx >= 0 && idx < exo->numZonalVariables, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Variable index out of range");
   if (!exo->zonalVariableNames[idx]) { 
     PetscCall(PetscViewerExodusIIGetId(viewer, &exoid));
-    PetscCallExternal(ex_get_variable_name,exoid, EX_ELEM_BLOCK, idx, *exo->zonalVariableNames[idx]);
-    **name = *exo->zonalVariableNames[idx];
+    PetscCallExternal(ex_get_variable_name,exoid, EX_ELEM_BLOCK, idx, tmpName);
+    PetscCall(PetscStrallocpy(tmpName, (char **)&exo->zonalVariableNames[idx]));
   }
+  *name = exo->zonalVariableNames[idx];
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -583,14 +585,16 @@ PetscErrorCode PetscViewerExodusIIGetNodalVariableName(const PetscViewer viewer,
 {
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
   int                   exoid = -1;
+  char                 *tmpName = NULL;
 
   PetscFunctionBegin;
   PetscCheck((idx >= 0) && (idx < exo->numNodalVariables), PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Variable index out of range %d %d", idx,exo->numNodalVariables);
-  /* Check if variable names are already stored in the viewer */
   if (!exo->nodalVariableNames) { 
     PetscCall(PetscViewerExodusIIGetId(viewer, &exoid));
-    PetscCallExternal(ex_get_variable_name,exoid, EX_NODAL, idx, *exo->nodalVariableNames); 
+    PetscCallExternal(ex_get_variable_name,exoid, EX_NODAL, idx, tmpName);
+    PetscCall(PetscStrallocpy(tmpName, (char **)&exo->nodalVariableNames[idx]));
   }
+  *name = exo->nodalVariableNames[idx];
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -765,6 +769,8 @@ PETSC_EXTERN PetscErrorCode PetscViewerCreate_ExodusII(PetscViewer v)
   exo->exoid             = -1;
   exo->numNodalVariables = -1;
   exo->numZonalVariables = -1;
+  exo->nodalVariableNames = NULL;
+  exo->zonalVariableNames = NULL;
 
   PetscCall(PetscObjectComposeFunction((PetscObject)v, "PetscViewerFileSetName_C", PetscViewerFileSetName_ExodusII));
   PetscCall(PetscObjectComposeFunction((PetscObject)v, "PetscViewerFileGetName_C", PetscViewerFileGetName_ExodusII));
@@ -776,7 +782,7 @@ PETSC_EXTERN PetscErrorCode PetscViewerCreate_ExodusII(PetscViewer v)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 /*
-  EXOGetVarIndex - Locate a result in an exodus file based on its name
+  EXOGetVarIndex_Internal - Locate a result in an exodus file based on its name
 
   Collective
 
@@ -796,7 +802,7 @@ PETSC_EXTERN PetscErrorCode PetscViewerCreate_ExodusII(PetscViewer v)
   the location in the exodus file will be the first match of "V", "V_X", "V_XX", "V_1", or "V_11"
   amongst all variables of type obj_type.
 
-.seealso: `EXOGetVarIndex()`, `DMPlexView_ExodusII_Internal()`, `VecViewPlex_ExodusII_Nodal_Internal()`, `VecLoadNodal_PlexEXO()`, `VecLoadZonal_PlexEXO()`
+.seealso: `DMPlexView_ExodusII_Internal()`, `VecViewPlex_ExodusII_Nodal_Internal()`, `VecLoadNodal_PlexEXO()`, `VecLoadZonal_PlexEXO()`
 */
 static PetscErrorCode EXOGetVarIndex_Internal(PetscViewer viewer, int exoid, ex_entity_type obj_type, const char name[], int *varIndex)
 {
