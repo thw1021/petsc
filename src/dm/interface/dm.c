@@ -688,6 +688,14 @@ PetscErrorCode DMDestroy(DM *dm)
     (*dm)->refinehook = NULL;
   }
   {
+    DMFieldHookLink link, next;
+    for (link = (*dm)->fieldhook; link; link = next) {
+      next = link->next;
+      PetscCall(PetscFree(link));
+    }
+    (*dm)->fieldhook = NULL;
+  }
+  {
     DMSubDomainHookLink link, next;
     for (link = (*dm)->subdomainhook; link; link = next) {
       next = link->next;
@@ -2029,6 +2037,8 @@ PetscErrorCode DMCreateFieldIS(DM dm, PetscInt *numFields, char ***fieldNames, I
 @*/
 PetscErrorCode DMCreateFieldDecomposition(DM dm, PetscInt *len, char ***namelist, IS **islist, DM **dmlist)
 {
+  DMFieldHookLink link;
+
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   if (len) {
@@ -2078,7 +2088,127 @@ PetscErrorCode DMCreateFieldDecomposition(DM dm, PetscInt *len, char ***namelist
       /* By default there are no DMs associated with subproblems. */
       if (dmlist) *dmlist = NULL;
     }
-  } else PetscUseTypeMethod(dm, createfielddecomposition, len, namelist, islist, dmlist);
+  } else {
+    PetscUseTypeMethod(dm, createfielddecomposition, len, namelist, islist, dmlist);
+  }
+  for (link = dm->fieldhook; link; link = link->next) {
+    if (link->fieldhook) {
+      for (PetscInt i = 0; i < *len; i++) {
+        if (dmlist && (*dmlist)[i]) PetscCall((*link->fieldhook)(dm, (*dmlist)[i], link->ctx));
+      }
+    }
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  DMFieldDecompositionHookAdd - adds a callback to be run when splitting a nonlinear problem to a subproblem inside fieldsplit
+
+  Logically Collective
+
+  Input Parameters:
++ full      - DM for the full problem on which to run the hook
+. fieldhook - function to run when creating the field decomposition
+. splithook - function to run to update data on split subproblems
+- ctx       - [optional] user-defined context for provide data for the hooks (may be NULL)
+
+  Calling sequence of `fieldhook`:
++ full  - full DM
+. split - subproblem DM to interpolate problem to
+- ctx   - optional user-defined function context
+
+  Calling sequence of `splithook`:
++ full  - full DM
+. scat  - VecScatter that can extract from full problem to subproblem
+. split - subproblem DM
+- ctx   - optional user-defined function context
+
+  Level: advanced
+
+  Notes:
+  If this function is called multiple times, the hooks will be run in the order they are added.
+
+  This function is currently not available from Fortran.
+
+.seealso: `DMCreateFieldDecomposition()`, `PCFIELDSPLIT`
+@*/
+PetscErrorCode DMFieldDecompositionHookAdd(DM full, PetscErrorCode (*fieldhook)(DM full, DM split, void *ctx), PetscErrorCode (*splithook)(DM full, VecScatter scat, DM split, void *ctx), void *ctx)
+{
+  DMFieldHookLink link, *p;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(full, DM_CLASSID, 1);
+  for (p = &full->fieldhook; *p; p = &(*p)->next) { /* Scan to the end of the current list of hooks */
+    if ((*p)->fieldhook == fieldhook && (*p)->splithook == splithook && (*p)->ctx == ctx) PetscFunctionReturn(PETSC_SUCCESS);
+  }
+  PetscCall(PetscNew(&link));
+  link->fieldhook = fieldhook;
+  link->splithook = splithook;
+  link->ctx       = ctx;
+  link->next      = NULL;
+  *p              = link;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  DMFieldDecompositionHookRemove - remove a callback from the list of hooks to be run when interpolating from a full to a split subproblem.
+
+  Logically Collective
+
+  Input Parameters:
++ full      - DM for the full problem on which to run the hook
+. fieldhook - function to run when creating the field decomposition
+. splithook - function to run to update data on split subproblems
+- ctx       - [optional] user-defined context for provide data for the hooks (may be NULL)
+
+  Level: advanced
+
+  Notes:
+  This function does nothing if the hook is not in the list.
+
+  This function is currently not available from Fortran.
+
+.seealso: `DMFieldDecompositionHookAdd()`
+@*/
+PetscErrorCode DMFieldDecompositionHookRemove(DM full, PetscErrorCode (*fieldhook)(DM, DM, void *), PetscErrorCode (*splithook)(DM, VecScatter, DM, void *), void *ctx)
+{
+  DMFieldHookLink link, *p;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(full, DM_CLASSID, 1);
+  for (p = &full->fieldhook; *p; p = &(*p)->next) { /* Search the list of current hooks */
+    if ((*p)->fieldhook == fieldhook && (*p)->splithook == splithook && (*p)->ctx == ctx) {
+      link = *p;
+      *p   = link->next;
+      PetscCall(PetscFree(link));
+      break;
+    }
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  DMFieldDecompositionRestrict - restricts user-defined problem data to a fieldsplit subdm by running hooks registered by DMFieldDecompositionHookRemove()
+
+  Collective if any hooks are
+
+  Input Parameters:
++ full  - full DM to use as a base
+. scat  - scatter from global full problem to subproblem
+- subdm - subdm to update.
+
+  Level: developer
+
+.seealso: `DMFieldDecompositionHookAdd()`
+@*/
+PetscErrorCode DMFieldDecompositionRestrict(DM full, VecScatter scat, DM subdm)
+{
+  DMFieldHookLink link;
+
+  PetscFunctionBegin;
+  for (link = full->fieldhook; link; link = link->next) {
+    if (link->splithook) PetscCall((*link->splithook)(full, scat, subdm, link->ctx));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
