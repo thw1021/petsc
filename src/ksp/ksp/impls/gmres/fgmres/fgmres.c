@@ -227,6 +227,7 @@ static PetscErrorCode KSPSolve_FGMRES(KSP ksp)
     PetscCall(VecCopy(ksp->vec_rhs, VEC_VV(0)));
   }
   /* This may be true only on a subset of MPI ranks; setting it here so it will be detected by the first norm computation in the Krylov method */
+  PetscCall(PetscObjectStateIncrease((PetscObject)VEC_VV(0))); // eliminate the cached norm in case the next line is needed
   if (ksp->reason == KSP_DIVERGED_PC_FAILED) PetscCall(VecSetInf(VEC_VV(0)));
 
   /* now the residual is in VEC_VV(0) - which is what
