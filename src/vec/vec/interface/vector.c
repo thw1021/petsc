@@ -2029,6 +2029,28 @@ PetscErrorCode VecSetLayout(Vec x, PetscLayout map)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@
+  VecSetInf - set infinity into the local part of the vector
+
+  Not Collective
+
+  Input Parameters:
+. xin   - the vector
+
+  Level: developer
+
+  Note:
+  This is used for any subset of MPI processes to indicate an failure in a solver, after the next use of "VecNorm()" if
+  `KSPCheckNorm()` detects an infinity and at least one of the MPI processes has a not converged reason then the `KSP`
+  object collectively is labeled as not converged.
+
+  This cannot be called if `xin` has a cached norm available
+
+  Developer Note:
+  Perhaps this routine should have a name that is indicative of its purpose.
+
+.seealso: [](ch_vectors), `Vec`, `PetscLayout`, `VecGetLayout()`, `VecGetSizes()`, `VecGetOwnershipRange()`, `VecGetOwnershipRanges()`
+@*/
 PetscErrorCode VecSetInf(Vec xin)
 {
   // use of variables one and zero over just doing 1.0/0.0 is deliberate. MSVC complains that
@@ -2036,8 +2058,11 @@ PetscErrorCode VecSetInf(Vec xin)
   // only for *integers* not floats).
   const PetscScalar one = 1.0, zero = 0.0;
   PetscScalar       inf;
+  PetscBool         flg;
 
   PetscFunctionBegin;
+  PetscCall(VecNormAvailable(xin, NORM_2, &flg, NULL));
+  PetscCheck(!flg, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Cannot call VecSetInf() if the vector has a chached norm");
   PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
   inf = one / zero;
   PetscCall(PetscFPTrapPop());
