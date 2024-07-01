@@ -1,6 +1,6 @@
 # -*- mode: makefile -*-
 
-#  This sample GNU Makefile can be used to compile PETSc applications
+#  This SAMPLE GNU Makefile can be used to compile PETSc applications
 #  It relies on pkg_config tool (see $PETSC_DIR/share/petsc/Makefile.basic.user if you cannot use pkg_config)
 #  Copy this file to your source directory as "Makefile" and MODIFY AS NEEDED (see the comment above CFLAGS below).
 #
