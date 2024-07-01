@@ -1,5 +1,5 @@
 #
-#  This is a sample CMakeLists.txt suitable for direct use with a new PETSc application or
+#  This is a SAMPLE CMakeLists.txt suitable for direct use with a new PETSc application or
 #  you can add fragments of the material below to an existing application's CMakeLists.txt
 #
 #  Usage:  To build ex1 from ex1.c
