@@ -3519,7 +3519,7 @@ cdef class Vec(Object):
         Parameters
         ----------
         X
-            A list constained the vectors to be concatenated.
+            The vectors to be concatenated.
 
         Returns
         -------
