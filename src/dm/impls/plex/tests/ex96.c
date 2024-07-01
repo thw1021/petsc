@@ -74,7 +74,6 @@ int main(int argc, char **argv)
   PetscCall(PetscViewerExodusIISetNodalVariableNames(viewer, nodalVarName));
   PetscCall(PetscViewerView(viewer, PETSC_VIEWER_STDOUT_WORLD));
 
-
   int exoid = -1;
   int idx;
   PetscCall(PetscViewerExodusIIGetId(viewer, &exoid));
