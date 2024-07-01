@@ -38,7 +38,7 @@ petsc.pc := $(PETSC_DIR)/$(PETSC_ARCH)/lib/pkgconfig/petsc.pc
 # Additional libraries that support pkg-config can be added to the list of PACKAGES below.
 PACKAGES := $(petsc.pc)
 
-# The following flags may removed if desired
+# The following variables may be removed if desired
 # They pass all the flags that were used to compile PETSc to compile your code, they are generally not needed
 
 CFLAGS_OTHER := $(shell pkg-config --cflags-only-other $(PACKAGES))
