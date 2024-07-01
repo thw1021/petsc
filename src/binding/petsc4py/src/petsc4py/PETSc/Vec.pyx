@@ -3531,6 +3531,7 @@ cdef class Vec(Object):
         See Also
         --------
         petsc.VecConcatenate
+
         """
         vecs = list(vecs)
         cdef Py_ssize_t i, m = len(vecs)
