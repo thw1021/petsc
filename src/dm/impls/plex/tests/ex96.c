@@ -7,30 +7,6 @@ static char help[] = "Test PetscViewer_ExodusII\n\n";
 #include <petsc/private/viewerimpl.h>
 #include <petsc/private/viewerexodusiiimpl.h>
 
-/*
-  EXOGetVarIndex_Internal - Locate a result in an exodus file based on its name
-
-  Collective
-
-  Input Parameters:
-+ exoid    - the exodus id of a file (obtained from ex_open or ex_create for instance)
-. obj_type - the type of entity for instance EX_NODAL, EX_ELEM_BLOCK
-- name     - the name of the result
-
-  Output Parameter:
-. varIndex - the location in the exodus file of the result
-
-  Level: beginner
-
-  Notes:
-  The exodus variable index is obtained by comparing the name argument to the
-  names of zonal variables declared in the exodus file. For instance if name is "V"
-  the location in the exodus file will be the first match of "V", "V_X", "V_XX", "V_1", or "V_11"
-  amongst all variables of type obj_type.
-
-.seealso: `DMPlexView_ExodusII_Internal()`, `VecViewPlex_ExodusII_Nodal_Internal()`, `VecLoadNodal_PlexEXO()`, `VecLoadZonal_PlexEXO()`
-*/
-
 int main(int argc, char **argv)
 {
   DM          dm;
@@ -39,8 +15,8 @@ int main(int argc, char **argv)
   PetscInt    nZonalVar = 3;
   PetscInt    order     = 1;
   PetscViewer viewer;
-  const char *nodalVarName[4] = {"U_x", "U_y", "Alpha", "Beta"};
-  const char *zonalVarName[3] = {"Sigma_11", "Sigma_12", "Sigma_22"};
+  const char *nodalVarName[] = {"U_x", "U_y", "Alpha", "Beta"}; /*don't specify size*/
+  const char *zonalVarName[] = {"Sigma_11", "Sigma_12", "Sigma_22"};
   char       *tmpName = NULL;
 
   PetscFunctionBeginUser;
