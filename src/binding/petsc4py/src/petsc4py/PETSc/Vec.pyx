@@ -3518,7 +3518,7 @@ cdef class Vec(Object):
 
         Parameters
         ----------
-        X
+        vecs
             The vectors to be concatenated.
 
         Returns
