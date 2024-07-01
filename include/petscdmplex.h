@@ -212,6 +212,7 @@ PETSC_EXTERN PetscErrorCode DMPlexCreateEGADSFromFile(MPI_Comm, const char[], DM
 PETSC_EXTERN PetscErrorCode DMPlexCreateEGADSLiteFromFile(MPI_Comm, const char[], DM *);
 
 PETSC_EXTERN PetscErrorCode PetscViewerExodusIIOpen(MPI_Comm comm, const char name[], PetscFileMode type, PetscViewer *exo);
+PETSC_EXTERN PetscErrorCode EXOGetVarIndex_Internal(PetscViewer viewer, int exoid, ex_entity_type obj_type, const char name[], int *varIndex);
 PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetId(PetscViewer, int *);
 PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetOrder(PetscViewer, PetscInt);
 PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetOrder(PetscViewer, PetscInt *);
@@ -229,11 +230,9 @@ PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetNodalVariableName(PetscViewer,
 PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetZonalVariableName(PetscViewer, int, char **);
 PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetNodalVariableName(PetscViewer, int, char **);
 
-/* Set and Get Multiple Names at Once for Zonal */
 PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetZonalVariableNames(PetscViewer, const char **);
 PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetZonalVariableNames(PetscViewer, int, char **);
 
-/* Set and Get Multiple Names at Once for Nodal */
 PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetNodalVariableNames(PetscViewer, const char **);
 PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetNodalVariableNames(PetscViewer, int, char **);
 /* Mesh Partitioning and Distribution */

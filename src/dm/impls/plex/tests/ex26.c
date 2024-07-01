@@ -85,8 +85,8 @@ int main(int argc, char **argv)
     */
 
     /* "Format" the exodus result file, i.e. allocate space for nodal and zonal variables */
-    const char *nodalVarName[4] = {"U_x", "U_y", "Alpha", "Beta"};
-    const char *zonalVarName[3] = {"Sigma_11", "Sigma_12", "Sigma_22"};
+    const char *nodalVarName[] = {"U_x", "U_y", "Alpha", "Beta"}; /* size of array should not be specified in declaration */
+    const char *zonalVarName[] = {"Sigma_11", "Sigma_12", "Sigma_22"};
     numNodalVar     = 4;
     numZonalVar     = 3;
 
@@ -126,7 +126,7 @@ int main(int argc, char **argv)
 
     /* Set Nodal and Zonal Variable Parameters */
     PetscCall(PetscViewerExodusIISetZonalVariable(viewer, numZonalVar)); /* previously PetscCallExternal(ex_put_variable_param, exoid, EX_ELEM_BLOCK, numZonalVar); */
-    PetscCall(PetscViewerExodusIISetZonalVariableNames(viewer, &zonalVarName)); /* previously PetscCallExternal(ex_put_variable_name, exoid, EX_ELEM_BLOCK, i + 1, zonalVarName); */
+    PetscCall(PetscViewerExodusIISetZonalVariableNames(viewer, zonalVarName)); /* previously PetscCallExternal(ex_put_variable_name, exoid, EX_ELEM_BLOCK, i + 1, zonalVarName); */
     /* previously PetscCallExternal(ex_put_variable_names, exoid, EX_ELEM_BLOCK, numZonalVar, zonalVarName);*/
     PetscCall(PetscViewerExodusIISetNodalVariable(viewer, numNodalVar)); /* previously PetscCallExternal(ex_put_variable_param, exoid, EX_NODAL, numNodalVar);*/
     PetscCall(PetscViewerExodusIISetNodalVariableNames(viewer, nodalVarName));/* previously PetscCallExternal(ex_put_variable_names, exoid, EX_NODAL, numNodalVar, nodalVarName);*/
