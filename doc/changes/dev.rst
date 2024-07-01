@@ -15,6 +15,11 @@ Changes: Development
 
 .. rubric:: Sys:
 
+- Deprecated ``PetscOptionsRestoreViewer()`` with ``PetscViewerDestroy()``
+- Deprecated ``PetscOptionsGetViewer()``, ``PetscOptionsGetViewers()`` with ``PetscOptionsCreateViewer()`` and ``PetscOptionsCreateViewers()``
+- Deprecated ``PetscOptionsPushGetViewerOff()``, ``PetscOptionsPopGetViewerOff()``, and ``PetscOptionsGetViewerOff()`` with
+  ``PetscOptionsPushCreateViewerOff()``, ``PetscOptionsPopCreateViewerOff()``, and ``PetscOptionsGetCreateViewerOff()``
+
 .. rubric:: Event Logging:
 
 .. rubric:: PetscViewer:

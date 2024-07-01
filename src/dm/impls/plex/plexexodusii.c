@@ -32,16 +32,8 @@ PetscViewer PETSC_VIEWER_EXODUSII_(MPI_Comm comm)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscViewerExodusIIOpen(comm, "mesh.exo", FILE_MODE_WRITE, &viewer);
-  if (ierr) {
-    ierr = PetscError(PETSC_COMM_SELF, __LINE__, "PETSC_VIEWER_EXODUSII_", __FILE__, PETSC_ERR_PLIB, PETSC_ERROR_INITIAL, " ");
-    PetscFunctionReturn(NULL);
-  }
-  ierr = PetscObjectRegisterDestroy((PetscObject)viewer);
-  if (ierr) {
-    ierr = PetscError(PETSC_COMM_SELF, __LINE__, "PETSC_VIEWER_EXODUSII_", __FILE__, PETSC_ERR_PLIB, PETSC_ERROR_INITIAL, " ");
-    PetscFunctionReturn(NULL);
-  }
+  PetscCallNull(PetscViewerExodusIIOpen(comm, "mesh.exo", FILE_MODE_WRITE, &viewer));
+  PetscCallNull(PetscObjectRegisterDestroy((PetscObject)viewer));
   PetscFunctionReturn(viewer);
 }
 
