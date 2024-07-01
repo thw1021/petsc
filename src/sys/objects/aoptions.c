@@ -1138,9 +1138,11 @@ PetscErrorCode PetscOptionsBoolArray_Private(PetscOptionItems *PetscOptionsObjec
   Notes:
   Must be between a `PetscOptionsBegin()` and a `PetscOptionsEnd()`
 
+  Use `PetscOptionsRestoreViewer()` after using the viewer, do not use `PetscViewerDestroy()`
+
   See `PetscOptionsGetViewer()` for the format of the supplied viewer and its options
 
-.seealso: `PetscOptionsGetViewer()`, `PetscOptionsHasName()`, `PetscOptionsGetString()`, `PetscOptionsGetInt()`,
+.seealso: `PetscOptionsRestoreViewer()`, `PetscOptionsGetViewer()`, `PetscOptionsHasName()`, `PetscOptionsGetString()`, `PetscOptionsGetInt()`,
           `PetscOptionsGetIntArray()`, `PetscOptionsGetRealArray()`, `PetscOptionsBool()`
           `PetscOptionsInt()`, `PetscOptionsString()`, `PetscOptionsReal()`,
           `PetscOptionsName()`, `PetscOptionsBegin()`, `PetscOptionsEnd()`, `PetscOptionsHeadBegin()`,
