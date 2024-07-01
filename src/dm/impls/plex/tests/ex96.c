@@ -30,58 +30,6 @@ static char help[] = "Test PetscViewer_ExodusII\n\n";
 
 .seealso: `DMPlexView_ExodusII_Internal()`, `VecViewPlex_ExodusII_Nodal_Internal()`, `VecLoadNodal_PlexEXO()`, `VecLoadZonal_PlexEXO()`
 */
-static PetscErrorCode EXOGetVarIndex_Internal(PetscViewer viewer, int exoid, ex_entity_type obj_type, const char name[], int *varIndex)
-{
-  int       num_vars = 0, i, j;
-  char      ext_name[MAX_STR_LENGTH + 1];
-  char     *var_name = NULL; /* previously char var_name[MAX_STR_LENGTH + 1]; */
-  char     **var_names;
-  const int num_suffix = 5;
-  char     *suffix[5];
-  PetscBool flg;
-
-  PetscFunctionBegin;
-  suffix[0] = (char *)"";
-  suffix[1] = (char *)"_X";
-  suffix[2] = (char *)"_XX";
-  suffix[3] = (char *)"_1";
-  suffix[4] = (char *)"_11";
-  *varIndex = -1;
-
-  /* Get Variable Number from file - replacing PetscCallExternal(ex_get_variable_param, exoid, obj_type, &num_vars); */
-  if (obj_type == EX_NODAL) {
-    PetscCall(PetscViewerExodusIIGetNodalVariable(viewer, &num_vars));
-    // This does not work and I am not sure I understand why
-    // It would be OK if var_names was declared as char     *var_names[10]
-    // but we can't do this...
-    // PetscCall(PetscMalloc1(num_vars,*var_names));
-    // PetscCall(PetscViewerExodusIIGetNodalVariableNames(viewer, num_vars, var_names));
-    for (i = 0; i < num_vars; ++i) {
-      PetscCall(PetscViewerExodusIIGetNodalVariableName(viewer, i, &var_name));
-      for (j = 0; j < num_suffix; ++j) {
-        PetscCall(PetscStrncpy(ext_name, name, MAX_STR_LENGTH));
-        PetscCall(PetscStrlcat(ext_name, suffix[j], MAX_STR_LENGTH));
-        PetscCall(PetscStrcasecmp(ext_name, var_name, &flg));
-        if (flg) *varIndex = i;
-      }
-      if (flg) break;
-    }
-  } else if (obj_type == EX_ELEM_BLOCK) {
-    PetscCall(PetscViewerExodusIIGetZonalVariable(viewer, &num_vars));
-    for (i = 0; i < num_vars; ++i) {
-      PetscCall(PetscViewerExodusIIGetZonalVariableName(viewer, i, &var_name));
-      for (j = 0; j < num_suffix; ++j) {
-        PetscCall(PetscStrncpy(ext_name, name, MAX_STR_LENGTH));
-        PetscCall(PetscStrlcat(ext_name, suffix[j], MAX_STR_LENGTH));
-        PetscCall(PetscStrcasecmp(ext_name, var_name, &flg));
-        if (flg) *varIndex = i;
-      }
-      if (flg) break;
-    }
-  }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 
 int main(int argc, char **argv)
 {
