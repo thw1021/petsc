@@ -572,7 +572,7 @@ PetscErrorCode PetscViewerExodusIIGetZonalVariableName(const PetscViewer viewer,
 
   PetscFunctionBegin;
   PetscCheck(idx >= 0 && idx < exo->numZonalVariables, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Variable index out of range. Was PetscViewerExodusIISetZonalVariable called?");
-  if (!exo->zonalVariableNames[idx]) { 
+  if (!exo->zonalVariableNames[idx]) {
     PetscCall(PetscViewerExodusIIGetId(viewer, &exoid));
     PetscCallExternal(ex_get_variable_name,exoid, EX_ELEM_BLOCK, idx, tmpName);
     PetscCall(PetscStrallocpy(tmpName, (char **)&exo->zonalVariableNames[idx]));
@@ -702,7 +702,6 @@ PetscErrorCode PetscViewerExodusIIGetZonalVariableNames(PetscViewer viewer, Pets
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
 
   PetscFunctionBegin;
-
   PetscCheck(exo->numZonalVariables>= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "PetscViewerExodusIIGetZonalVariable must be called before PetscViewerExodusIIGetZonalVariableNames");
 
   /* Check if variable names are already stored in the viewer */
@@ -711,7 +710,6 @@ PetscErrorCode PetscViewerExodusIIGetZonalVariableNames(PetscViewer viewer, Pets
   // for (int i = 0; i < numNames; i++) {
   //   PetscCall(PetscStrncpy(names[i], &exo->zonalVariableNames[i]));
   // }
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -830,7 +828,8 @@ PETSC_EXTERN PetscErrorCode EXOGetVarIndex_Internal(PetscViewer viewer, int exoi
     PetscCall(PetscViewerExodusIIGetNodalVariable(viewer, &num_vars));
     for (i = 0; i < num_vars; i++) { /*changed from ++i*/
       PetscCall(PetscViewerExodusIIGetNodalVariableName(viewer, i, &var_name)); /*var_name = ((PetscViewer_ExodusII *)viewer->data)->nodalVariableNames[i];*/
-      if (!var_name) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_MEM, "Memory allocation failed for var_name");/*debug note. Getting the variable name from the viewer works*/ 
+      PetscCheck(var_name, PETSC_COMM_SELF, PETSC_ERR_MEM, "Memory allocation failed for var_name");/*debug note. Getting the variable name from the viewer works*/
+      /*petsccheck*/
       for (j = 0; j < num_suffix; j++) { /*changed from ++j*/
         PetscCall(PetscStrncpy(ext_name, name, MAX_STR_LENGTH));
         PetscCall(PetscStrlcat(ext_name, suffix[j], MAX_STR_LENGTH));
@@ -844,7 +843,7 @@ PETSC_EXTERN PetscErrorCode EXOGetVarIndex_Internal(PetscViewer viewer, int exoi
     PetscCall(PetscViewerExodusIIGetZonalVariable(viewer, &num_vars));
     for (i = 0; i < num_vars; i++) {
       PetscCall(PetscViewerExodusIIGetZonalVariableName(viewer, i, &var_name)); /* previously PetscCallExternal(ex_get_variable_name, exoid, obj_type, i + 1, var_name);*/
-      if (!var_name) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_MEM, "Memory allocation failed for var_name");/*debug note. Getting the variable name from the viewer works*/ 
+      PetscCheck(var_name, PETSC_COMM_SELF, PETSC_ERR_MEM, "Memory allocation failed for var_name");/*debug note. Getting the variable name from the viewer works*/
       // var_name = ((PetscViewer_ExodusII *)viewer->data)->zonalVariableNames[i];
       for (j = 0; j < num_suffix; j++) { /*changed from ++j*/
         PetscCall(PetscStrncpy(ext_name, name, MAX_STR_LENGTH));
