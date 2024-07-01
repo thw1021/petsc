@@ -1812,8 +1812,8 @@ cdef class TS(Object):
         petsc.TSSetTolerances
 
         """
-        cdef PetscReal rrtol = PETSC_DEFAULT
-        cdef PetscReal ratol = PETSC_DEFAULT
+        cdef PetscReal rrtol = PETSC_DETERMINE
+        cdef PetscReal ratol = PETSC_DETERMINE
         cdef PetscVec  vrtol = NULL
         cdef PetscVec  vatol = NULL
         if rtol is None:
@@ -1847,8 +1847,8 @@ cdef class TS(Object):
         petsc.TSGetTolerances
 
         """
-        cdef PetscReal rrtol = PETSC_DEFAULT
-        cdef PetscReal ratol = PETSC_DEFAULT
+        cdef PetscReal rrtol = PETSC_DETERMINE
+        cdef PetscReal ratol = PETSC_DETERMINE
         cdef PetscVec  vrtol = NULL
         cdef PetscVec  vatol = NULL
         CHKERR(TSGetTolerances(self.ts, &ratol, &vatol, &rrtol, &vrtol))

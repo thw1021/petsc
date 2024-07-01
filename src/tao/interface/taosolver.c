@@ -1457,7 +1457,7 @@ PetscErrorCode TaoSetUpdate(Tao tao, PetscErrorCode (*func)(Tao tao, PetscInt it
 
 /*@C
   TaoSetConvergenceTest - Sets the function that is to be used to test
-  for convergence o fthe iterative minimization solution.  The new convergence
+  for convergence of the iterative minimization solution.  The new convergence
   testing routine will replace Tao's default convergence test.
 
   Logically Collective

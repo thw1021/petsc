@@ -1059,14 +1059,14 @@ cdef class SNES(Object):
 
         """
         cdef PetscReal crtol, catol, cstol
-        crtol = catol = cstol = PETSC_DEFAULT
-        cdef PetscInt cmaxit = PETSC_DEFAULT
+        crtol = catol = cstol = PETSC_DETERMINE
+        cdef PetscInt cmaxit = PETSC_DETERMINE
         if rtol   is not None: crtol  = asReal(rtol)
         if atol   is not None: catol  = asReal(atol)
         if stol   is not None: cstol  = asReal(stol)
         if max_it is not None: cmaxit = asInt(max_it)
         CHKERR(SNESSetTolerances(self.snes, catol, crtol, cstol,
-                                 cmaxit, PETSC_DEFAULT))
+                                 cmaxit, PETSC_DETERMINE))
 
     def getTolerances(self) -> tuple[float, float, float, int]:
         """Return the tolerance parameters used in the solver convergence tests.
@@ -1381,8 +1381,8 @@ cdef class SNES(Object):
         getMaxFunctionEvaluations, petsc.SNESSetTolerances
 
         """
-        cdef PetscReal r = PETSC_DEFAULT
-        cdef PetscInt  i = PETSC_DEFAULT
+        cdef PetscReal r = PETSC_DETERMINE
+        cdef PetscInt  i = PETSC_DETERMINE
         cdef PetscInt ival = asInt(max_funcs)
         CHKERR(SNESSetTolerances(self.snes, r, r, r, i, ival))
 

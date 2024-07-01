@@ -222,7 +222,7 @@ static PetscErrorCode TaoSetUp_ALMM(Tao tao)
     auglag->yi_min = 0.0;
     auglag->ytol0  = 0.5;
     auglag->gtol0  = tao->gatol;
-    if (tao->gatol != tao->catol) {
+    if (tao->gatol != tao->defaults.gatol && tao->catol != tao->defaults.catol) {
       PetscCall(PetscInfo(tao, "TAOALMM with PHR: different gradient and constraint tolerances are not supported, setting catol = gatol\n"));
       tao->catol = tao->gatol;
     }

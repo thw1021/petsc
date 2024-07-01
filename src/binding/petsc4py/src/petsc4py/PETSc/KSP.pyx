@@ -952,11 +952,11 @@ cdef class KSP(Object):
 
         """
         cdef PetscReal crtol, catol, cdivtol
-        crtol = catol = cdivtol = PETSC_DEFAULT
+        crtol = catol = cdivtol = PETSC_DETERMINE
         if rtol   is not None: crtol   = asReal(rtol)
         if atol   is not None: catol   = asReal(atol)
         if divtol is not None: cdivtol = asReal(divtol)
-        cdef PetscInt cmaxits = PETSC_DEFAULT
+        cdef PetscInt cmaxits = PETSC_DETERMINE
         if max_it is not None: cmaxits = asInt(max_it)
         CHKERR(KSPSetTolerances(self.ksp, crtol, catol, cdivtol, cmaxits))
 

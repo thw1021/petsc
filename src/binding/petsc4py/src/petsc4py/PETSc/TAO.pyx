@@ -972,7 +972,7 @@ cdef class TAO(Object):
         getTolerances, petsc.TaoSetTolerances
 
         """
-        cdef PetscReal _gatol=PETSC_DEFAULT, _grtol=PETSC_DEFAULT, _gttol=PETSC_DEFAULT
+        cdef PetscReal _gatol=PETSC_DETERMINE, _grtol=PETSC_DETERMINE, _gttol=PETSC_DETERMINE
         if gatol is not None: _gatol = asReal(gatol)
         if grtol is not None: _grtol = asReal(grtol)
         if gttol is not None: _gttol = asReal(gttol)
@@ -1074,7 +1074,7 @@ cdef class TAO(Object):
         getConstraintTolerances, petsc.TaoSetConstraintTolerances
 
         """
-        cdef PetscReal _catol=PETSC_DEFAULT, _crtol=PETSC_DEFAULT
+        cdef PetscReal _catol=PETSC_DETERMINE, _crtol=PETSC_DETERMINE
         if catol is not None: _catol = asReal(catol)
         if crtol is not None: _crtol = asReal(crtol)
         CHKERR(TaoSetConstraintTolerances(self.tao, _catol, _crtol))
