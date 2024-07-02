@@ -2049,7 +2049,7 @@ PetscErrorCode VecSetLayout(Vec x, PetscLayout map)
 
 .seealso: [](ch_vectors), `Vec`, `PetscLayout`, `VecGetLayout()`, `VecGetSizes()`, `VecGetOwnershipRange()`, `VecGetOwnershipRanges()`
 @*/
-PetscErrorCode VecFlag(Vec xin, int flg)
+PetscErrorCode VecFlag(Vec xin, PetscInt flg)
 {
   // use of variables one and zero over just doing 1.0/0.0 is deliberate. MSVC complains that
   // we are dividing by zero in the latter case (ostensibly because dividing by 0 is UB, but
