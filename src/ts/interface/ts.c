@@ -3985,7 +3985,7 @@ PetscErrorCode TSSolve(TS ts, Vec u)
 
     if (!incall) {
       /* Estimate the convergence rate of the time discretization */
-      PetscCall(PetscOptionsGetViewer(PetscObjectComm((PetscObject)ts), ((PetscObject)ts)->options, ((PetscObject)ts)->prefix, "-ts_convergence_estimate", &viewer, &format, &flg));
+      PetscCall(PetscOptionsCreateViewer(PetscObjectComm((PetscObject)ts), ((PetscObject)ts)->options, ((PetscObject)ts)->prefix, "-ts_convergence_estimate", &viewer, &format, &flg));
       if (flg) {
         PetscConvEst conv;
         DM           dm;
@@ -4007,7 +4007,7 @@ PetscErrorCode TSSolve(TS ts, Vec u)
         PetscCall(PetscViewerPushFormat(viewer, format));
         PetscCall(PetscConvEstRateView(conv, alpha, viewer));
         PetscCall(PetscViewerPopFormat(viewer));
-        PetscCall(PetscOptionsRestoreViewer(&viewer));
+        PetscCall(PetscViewerDestroy(&viewer));
         PetscCall(PetscConvEstDestroy(&conv));
         PetscCall(PetscFree(alpha));
         incall = PETSC_FALSE;
