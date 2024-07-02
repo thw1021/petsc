@@ -262,7 +262,7 @@ class BaseTestVec:
         for i in range(rs, re):
             self.assertEqual(z[i], b * N * (N - 1) / 2 + a * i * N)
 
-    def testVecconcate(self):
+    def testConcatenate(self):
         x = self.vec
         y = x.duplicate()
         x.set(1)
