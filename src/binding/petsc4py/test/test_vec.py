@@ -272,8 +272,8 @@ class BaseTestVec:
         self.assertEqual(z.min()[1], x.min()[1])
         self.assertEqual(z.max()[1], y.min()[1])
         np.allclose(z.getArray(), np.concatenate([x.getArray(), y.getArray()]))
-        np.allclose(z.getArray()[0:x.getSize()], x.getArray())
-        np.allclose(z.getArray()[x.getSize():], y.getArray())
+        np.allclose(z.getArray()[0:x.getLocalSize()], x.getArray())
+        np.allclose(z.getArray()[x.getLocalSize():], y.getArray())
 
 # --------------------------------------------------------------------
 
