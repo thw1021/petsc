@@ -176,6 +176,35 @@ class BaseTestDA:
         self.assertEqual(vl.max()[1], 0.0)
         self.da.restoreLocalVec(vl, name)
 
+    def testGetArray(self):
+        for r in [True, False]:
+            vg = self.da.getGlobalVec()
+            vl = self.da.getLocalVec()
+
+            ag = self.da.getVecArray(vg, readonly=r)
+            al = self.da.getVecArray(vl, readonly=r)
+
+            # test reading lower-left and upper-right corners
+            ranges = self.da.getRanges()
+            ranges = list(zip(*ranges))
+            ranges[1] = tuple(x-1 for x in ranges[1])
+            for m_index in ranges:
+                _ = ag[*m_index]
+                _ = al[*m_index]
+
+            # test writing
+            if not r:
+                ag[:] = 1.0
+                al[:] = 1.0
+            else:
+                with self.assertRaises(ValueError):
+                    ag[:] = 1.0
+                with self.assertRaises(ValueError):
+                    al[:] = 1.0
+
+            self.da.restoreGlobalVec(vg)
+            self.da.restoreLocalVec(vl)
+
     def testGetOther(self):
         _ = self.da.getAO()
         _ = self.da.getLGMap()
