@@ -531,8 +531,7 @@ PetscViewer PETSC_VIEWER_SOCKET_(MPI_Comm comm)
     PetscFunctionReturn(NULL);
   }
   if (!flg) { /* PetscViewer not yet created */
-    ierr                              = PetscViewerSocketOpen(ncomm, NULL, 0, &viewer);
-    ((PetscObject)viewer)->persistent = PETSC_TRUE;
+    ierr = PetscViewerSocketOpen(ncomm, NULL, 0, &viewer);
     if (ierr) {
       ierr = PetscError(PETSC_COMM_SELF, __LINE__, "PETSC_VIEWER_SOCKET_", __FILE__, PETSC_ERR_PLIB, PETSC_ERROR_REPEAT, " ");
       PetscFunctionReturn(NULL);
