@@ -2041,7 +2041,7 @@ PetscErrorCode VecSetLayout(Vec x, PetscLayout map)
   Level: developer
 
   Note:
-  This removes the values from the vector norm cache for all processes.
+  This removes the values from the vector norm cache for all processes by calling `PetscObjectIncrease()`.
 
   This is used for any subset of MPI processes to indicate an failure in a solver, after the next use of `VecNorm()` if
   `KSPCheckNorm()` detects an infinity and at least one of the MPI processes has a not converged reason then the `KSP`
