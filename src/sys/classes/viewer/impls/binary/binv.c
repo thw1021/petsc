@@ -1650,8 +1650,7 @@ PetscViewer PETSC_VIEWER_BINARY_(MPI_Comm comm)
         PetscFunctionReturn(NULL);
       }
     }
-    ierr                              = PetscViewerBinaryOpen(ncomm, fname, FILE_MODE_WRITE, &viewer);
-    ((PetscObject)viewer)->persistent = PETSC_TRUE;
+    ierr = PetscViewerBinaryOpen(ncomm, fname, FILE_MODE_WRITE, &viewer);
     if (ierr) {
       ierr = PetscError(PETSC_COMM_SELF, __LINE__, "PETSC_VIEWER_BINARY_", __FILE__, PETSC_ERR_PLIB, PETSC_ERROR_REPEAT, " ");
       PetscFunctionReturn(NULL);

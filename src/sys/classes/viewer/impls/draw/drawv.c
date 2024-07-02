@@ -769,8 +769,7 @@ PetscViewer PETSC_VIEWER_DRAW_(MPI_Comm comm)
     PetscFunctionReturn(NULL);
   }
   if (!flag) { /* PetscViewer not yet created */
-    ierr                              = PetscViewerDrawOpen(ncomm, NULL, NULL, PETSC_DECIDE, PETSC_DECIDE, 300, 300, &viewer);
-    ((PetscObject)viewer)->persistent = PETSC_TRUE;
+    ierr = PetscViewerDrawOpen(ncomm, NULL, NULL, PETSC_DECIDE, PETSC_DECIDE, 300, 300, &viewer);
     if (ierr) {
       ierr = PetscError(PETSC_COMM_SELF, __LINE__, "PETSC_VIEWER_DRAW_", __FILE__, PETSC_ERR_PLIB, PETSC_ERROR_REPEAT, " ");
       PetscFunctionReturn(NULL);
