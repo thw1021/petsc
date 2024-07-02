@@ -3543,10 +3543,9 @@ cdef class Vec(Object):
         cdef object vec_index_ises = []
         unused1 = oarray_p(empty_p(n), NULL, <void**>&cvecs)
         for i from 0 <= i < m:
-            vec = vecs[i]
-            cvecs[i] = (<Vec?>vec).vec if vec is not None else NULL
+            cvecs[i] = (<Vec>vecs[i]).vec
         CHKERR(VecConcatenate(n, cvecs, &newvec, &cisets))
-        CHKERR(PetscCLEAR(self.obj)); self.vec = newvec 
+        CHKERR(PetscCLEAR(self.obj)); self.vec = newvec
         for i from 0 <= i < m:
             temp = IS()
             temp.iset = cisets[i]
