@@ -111,6 +111,8 @@ static PetscErrorCode PetscViewerDestroy_ExodusII(PetscViewer viewer)
 
   PetscFunctionBegin;
   if (exo->exoid >= 0) PetscCallExternal(ex_close, exo->exoid);
+  PetscCall(PetscFree(exo->zonalVariableNames));
+  PetscCall(PetscFree(exo->nodalVariableNames));
   PetscCall(PetscFree(exo->filename));
   PetscCall(PetscFree(exo));
   PetscCall(PetscObjectComposeFunction((PetscObject)viewer, "PetscViewerFileSetName_C", NULL));
@@ -545,15 +547,15 @@ PetscErrorCode PetscViewerExodusIISetNodalVariableName(PetscViewer viewer, int i
 @*/
 PetscErrorCode PetscViewerExodusIIGetZonalVariableName(const PetscViewer viewer, int idx, char **name)
 {
-  PetscViewer_ExodusII *exo     = (PetscViewer_ExodusII *)viewer->data;
-  int                   exoid   = -1;
-  char                 *tmpName = NULL;
+  PetscViewer_ExodusII *exo   = (PetscViewer_ExodusII *)viewer->data;
+  int                   exoid = -1;
+  char                  tmpName[256];
 
   PetscFunctionBegin;
   PetscCheck(idx >= 0 && idx < exo->numZonalVariables, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Variable index out of range. Was PetscViewerExodusIISetZonalVariable called?");
   if (!exo->zonalVariableNames[idx]) {
     PetscCall(PetscViewerExodusIIGetId(viewer, &exoid));
-    PetscCallExternal(ex_get_variable_name, exoid, EX_ELEM_BLOCK, idx, tmpName);
+    PetscCallExternal(ex_get_variable_name, exoid, EX_ELEM_BLOCK, idx + 1, tmpName);
     PetscCall(PetscStrallocpy(tmpName, (char **)&exo->zonalVariableNames[idx]));
   }
   *name = exo->zonalVariableNames[idx];
@@ -576,13 +578,15 @@ PetscErrorCode PetscViewerExodusIIGetZonalVariableName(const PetscViewer viewer,
 @*/
 PetscErrorCode PetscViewerExodusIIGetNodalVariableName(const PetscViewer viewer, int idx, char **name)
 {
-  PetscViewer_ExodusII *exo     = (PetscViewer_ExodusII *)viewer->data;
-  char                 *tmpName = NULL;
+  PetscViewer_ExodusII *exo   = (PetscViewer_ExodusII *)viewer->data;
+  int                   exoid = -1;
+  char                  tmpName[256];
 
   PetscFunctionBegin;
   PetscCheck((idx >= 0) && (idx < exo->numNodalVariables), PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Variable index out of range. Was PetscViewerExodusIISetNodalVariable called?");
-  if (!exo->nodalVariableNames) {
-    PetscCallExternal(ex_get_variable_name, exo->exoid, EX_NODAL, idx, tmpName);
+  if (!exo->nodalVariableNames[idx]) {
+    PetscCall(PetscViewerExodusIIGetId(viewer, &exoid));
+    PetscCallExternal(ex_get_variable_name, exoid, EX_NODAL, idx + 1, tmpName);
     PetscCall(PetscStrallocpy(tmpName, (char **)&exo->nodalVariableNames[idx]));
   }
   *name = exo->nodalVariableNames[idx];
@@ -1886,7 +1890,7 @@ PetscErrorCode PetscViewerExodusIIGetOrder(PetscViewer viewer, PetscInt *order)
   Input Parameters:
 + comm - MPI communicator
 . name - name of file
-- type - type of file
+- mode - access mode
 .vb
     FILE_MODE_WRITE - create new file for binary output
     FILE_MODE_READ - open existing file for binary input
@@ -1901,12 +1905,12 @@ PetscErrorCode PetscViewerExodusIIGetOrder(PetscViewer viewer, PetscInt *order)
 .seealso: `PETSCVIEWEREXODUSII`, `PetscViewer`, `PetscViewerPushFormat()`, `PetscViewerDestroy()`,
           `DMLoad()`, `PetscFileMode`, `PetscViewerSetType()`, `PetscViewerFileSetMode()`, `PetscViewerFileSetName()`
 @*/
-PetscErrorCode PetscViewerExodusIIOpen(MPI_Comm comm, const char name[], PetscFileMode type, PetscViewer *exo)
+PetscErrorCode PetscViewerExodusIIOpen(MPI_Comm comm, const char name[], PetscFileMode mode, PetscViewer *exo)
 {
   PetscFunctionBegin;
   PetscCall(PetscViewerCreate(comm, exo));
   PetscCall(PetscViewerSetType(*exo, PETSCVIEWEREXODUSII));
-  PetscCall(PetscViewerFileSetMode(*exo, type));
+  PetscCall(PetscViewerFileSetMode(*exo, mode));
   PetscCall(PetscViewerFileSetName(*exo, name));
   PetscCall(PetscViewerSetFromOptions(*exo));
   PetscFunctionReturn(PETSC_SUCCESS);
