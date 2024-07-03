@@ -1266,7 +1266,6 @@ PETSC_EXTERN PetscErrorCode DMSNESCheckFromOptions(SNES, Vec);
 PETSC_EXTERN PetscErrorCode DMSNESComputeJacobianAction(DM, Vec, Vec, Vec, void *);
 PETSC_EXTERN PetscErrorCode DMSNESCreateJacobianMF(DM, Vec, void *, Mat *);
 
-/* routines for SNES_NEWTONAL */
 PETSC_EXTERN PetscErrorCode SNESNewtonALSetFunction(SNES, SNESFunctionFn *, void *ctx);
 PETSC_EXTERN PetscErrorCode SNESNewtonALGetFunction(SNES, SNESFunctionFn **, void **ctx);
 PETSC_EXTERN PetscErrorCode SNESNewtonALComputeFunction(SNES, Vec, Vec);
