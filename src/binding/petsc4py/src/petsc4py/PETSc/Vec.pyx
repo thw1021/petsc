@@ -3546,7 +3546,8 @@ cdef class Vec(Object):
         for i from 0 <= i < m:
             cvecs[i] = (<Vec?>vecs[i]).vec
         CHKERR(VecConcatenate(n, cvecs, &newvec, &cisets))
-        CHKERR(PetscCLEAR(self.obj)); self.vec = newvec
+        cdef Vec self = cls()
+        self.vec = newvec
         for i from 0 <= i < m:
             temp = IS()
             temp.iset = cisets[i]
