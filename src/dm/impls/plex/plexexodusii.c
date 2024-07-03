@@ -549,7 +549,7 @@ PetscErrorCode PetscViewerExodusIIGetZonalVariableName(const PetscViewer viewer,
 {
   PetscViewer_ExodusII *exo   = (PetscViewer_ExodusII *)viewer->data;
   int                   exoid = -1;
-  char                  tmpName[256];
+  char                  tmpName[MAX_NAME_LENGTH+1];
 
   PetscFunctionBegin;
   PetscCheck(idx >= 0 && idx < exo->numZonalVariables, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Variable index out of range. Was PetscViewerExodusIISetZonalVariable called?");
@@ -580,7 +580,7 @@ PetscErrorCode PetscViewerExodusIIGetNodalVariableName(const PetscViewer viewer,
 {
   PetscViewer_ExodusII *exo   = (PetscViewer_ExodusII *)viewer->data;
   int                   exoid = -1;
-  char                  tmpName[256];
+  char                  tmpName[MAX_NAME_LENGTH+1];
 
   PetscFunctionBegin;
   PetscCheck((idx >= 0) && (idx < exo->numNodalVariables), PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Variable index out of range. Was PetscViewerExodusIISetNodalVariable called?");
