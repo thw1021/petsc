@@ -3513,7 +3513,8 @@ cdef class Vec(Object):
 
     #
 
-    def concatenate(self, vecs: Sequence[Vec]) -> tuple[Self, list[IS]]:
+    @classmethod
+    def concatenate(cls, vecs: Sequence[Vec]) -> tuple[Self, list[IS]]:
         """Concatenate vectors into a single vector.
 
         Parameters
