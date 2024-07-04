@@ -94,7 +94,8 @@ int main(int argc, char **argv)
   PetscViewer viewer;
   const char *nodalVarName[4] = {"U_x", "U_y", "Alpha", "Beta"};
   const char *zonalVarName[3] = {"Sigma_11", "Sigma_12", "Sigma_22"};
-  char      **varNames;
+  //char      **varNames; /*sarah commentedddddd*/
+  char *varNames[3];
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
@@ -189,8 +190,8 @@ int main(int argc, char **argv)
   PetscCall(PetscViewerExodusIIGetNodalVariable(viewer, &numNVars));
 
   PetscCall(PetscCalloc1(numZVars,&varNames));
-  PetscCall(PetscViewerExodusIIGetZonalVariableNames(viewer, numZVars, varNames));
-  for (int i = 0; i < numZVars; i++){
+  PetscCall(PetscViewerExodusIIGetZonalVariableNames(viewer, numZVars, varNames)); /*SARAH CHNAGED ADDED & address maybe?????*/
+  /* for (int i = 0; i < numZVars; i++){
     PetscPrintf(PETSC_COMM_WORLD,"   Read zonal variable %d: %s\n",i,varNames[i]);
   }
   PetscFree(varNames);
@@ -200,7 +201,7 @@ int main(int argc, char **argv)
     PetscPrintf(PETSC_COMM_WORLD,"   Read nodal variable %d: %s\n",i,varNames[i]);
   }
   PetscFree(varNames);
-
+ */  //SARAH COMMENTED
   PetscCall(PetscViewerView(viewer, PETSC_VIEWER_STDOUT_WORLD));
 
   PetscCall(PetscViewerDestroy(&viewer));
