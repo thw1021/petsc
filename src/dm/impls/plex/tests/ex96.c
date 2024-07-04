@@ -180,7 +180,7 @@ int main(int argc, char **argv)
     PetscPrintf(PETSC_COMM_WORLD,"   Read nodal variable %d: %s\n",i,name);
   }
   PetscCall(PetscViewerView(viewer, PETSC_VIEWER_STDOUT_WORLD));
-  PetscCall(PetscViewerDestroy(&viewer));
+  PetscCall(PetscViewerDestroy(&viewer));   /* Destroyed Viewer */
 
   PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n\nReopenning the output file in Read-only mode\n"));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Testing PetscViewerExodusIIGet[Nodal/Zonal]VariableNames\n"));
@@ -189,25 +189,25 @@ int main(int argc, char **argv)
   PetscCall(PetscViewerExodusIIGetZonalVariable(viewer, &numZVars));
   PetscCall(PetscViewerExodusIIGetNodalVariable(viewer, &numNVars));
   
-  /*Sarah modified*/
+  /* Sarah modified */
   char **varNames;
-  PetscCall(PetscCalloc1(numZVars,&varNames));
-  /*to use ex_get_variable_names in GetZonalVarNames - "Memory must be allocated for the name array before this function is invoked."*/
+  PetscCall(PetscCalloc1(numZVars,&varNames)); /* Memory must be allocated for the name array before getter function is invoked.*/
+  PetscCall(PetscViewerExodusIISetZonalVariableNames(viewer, zonalVarName)); /* Zonal Variables must be set in viewer before calling the getter */
   PetscCall(PetscViewerExodusIIGetZonalVariableNames(viewer, numZVars, varNames)); /*SARAH CHNAGED ADDED & address maybe?????*/
   for (int i = 0; i < numZVars; i++){
     PetscPrintf(PETSC_COMM_WORLD,"   Read zonal variable %d: %s\n",i,varNames[i]);
   }
   PetscFree(varNames);
-  /* 
+  
   PetscCall(PetscCalloc1(numNVars,&varNames));
+  PetscCall(PetscViewerExodusIISetNodalVariableNames(viewer, nodalVarName));
   PetscCall(PetscViewerExodusIIGetNodalVariableNames(viewer, numNVars, varNames));
   for (int i = 0; i < numNVars; i++){
     PetscPrintf(PETSC_COMM_WORLD,"   Read nodal variable %d: %s\n",i,varNames[i]);
   }
   PetscFree(varNames);
- */  //SARAH COMMENTED
+  
   PetscCall(PetscViewerView(viewer, PETSC_VIEWER_STDOUT_WORLD));
-
   PetscCall(PetscViewerDestroy(&viewer));
   PetscCall(DMDestroy(&dm));
   PetscCall(PetscFinalize());
