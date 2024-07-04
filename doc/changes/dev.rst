@@ -13,7 +13,11 @@ Changes: Development
 
 .. rubric:: Configure/Build:
 
+- Add ``--with-openmp-petsc-kernels``
+
 .. rubric:: Sys:
+
+- Add ``PetscPragmaUseOMP``
 
 .. rubric:: Event Logging:
 
