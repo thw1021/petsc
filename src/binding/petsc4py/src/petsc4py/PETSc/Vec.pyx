@@ -3526,10 +3526,10 @@ cdef class Vec(Object):
 
         Returns
         -------
-        Vec
+        vector_out : Vec
             The concatenated vector.
-        list[IS]
-            Index sets corresponding to the concatenated components.
+        indices_list : list[IS]
+            A list of index sets corresponding to the concatenated components.
 
         See Also
         --------
