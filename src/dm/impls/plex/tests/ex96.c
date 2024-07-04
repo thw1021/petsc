@@ -95,7 +95,7 @@ int main(int argc, char **argv)
   const char *nodalVarName[4] = {"U_x", "U_y", "Alpha", "Beta"};
   const char *zonalVarName[3] = {"Sigma_11", "Sigma_12", "Sigma_22"};
   //char      **varNames; /*sarah commentedddddd*/
-  char *varNames[3];
+  //char *varNames[3]; /*sarah moved temporarily*/
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
@@ -147,7 +147,7 @@ int main(int argc, char **argv)
   PetscCall(PetscViewerView(viewer, PETSC_VIEWER_STDOUT_WORLD));
 
   /*
-    TO DO: write test of PetscViewerExodusIISef[Nodal/Zonal]VariableNames
+    TO DO: write test of PetscViewerExodusIISet[Nodal/Zonal]VariableNames
   */
 
   /* 
@@ -188,13 +188,17 @@ int main(int argc, char **argv)
   PetscCall(PetscViewerExodusIISetOrder(viewer, order));
   PetscCall(PetscViewerExodusIIGetZonalVariable(viewer, &numZVars));
   PetscCall(PetscViewerExodusIIGetNodalVariable(viewer, &numNVars));
-
+  
+  /*Sarah modified*/
+  char **varNames;
   PetscCall(PetscCalloc1(numZVars,&varNames));
+  /*to use ex_get_variable_names in GetZonalVarNames - "Memory must be allocated for the name array before this function is invoked."*/
   PetscCall(PetscViewerExodusIIGetZonalVariableNames(viewer, numZVars, varNames)); /*SARAH CHNAGED ADDED & address maybe?????*/
-  /* for (int i = 0; i < numZVars; i++){
+  for (int i = 0; i < numZVars; i++){
     PetscPrintf(PETSC_COMM_WORLD,"   Read zonal variable %d: %s\n",i,varNames[i]);
   }
   PetscFree(varNames);
+  /* 
   PetscCall(PetscCalloc1(numNVars,&varNames));
   PetscCall(PetscViewerExodusIIGetNodalVariableNames(viewer, numNVars, varNames));
   for (int i = 0; i < numNVars; i++){

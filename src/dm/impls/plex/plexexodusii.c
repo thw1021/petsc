@@ -692,11 +692,12 @@ PetscErrorCode PetscViewerExodusIIGetZonalVariableNames(PetscViewer viewer, Pets
   /*SARAH UNCOMMENTED!!!!!*/
   //if (!exo->zonalVariableNames) { 
   PetscCall(PetscViewerExodusIIGetId(viewer, &exoid));
-  //PetscCallExternal(ex_get_variable_names, exoid, EX_ELEM_BLOCK, exo->numZonalVariables, exo->zonalVariableNames); 
+  // 
     //}
-
+  //PetscCallExternal(ex_get_variable_names, exoid, EX_ELEM_BLOCK, exo->numZonalVariables, exo->zonalVariableNames);
   for (int i = 0; i < numNames; i++) {
-    PetscCall(PetscStrncpy(names[i], exo->zonalVariableNames[i], MAX_STR_LENGTH)); 
+  PetscCall(PetscStrncpy(exo->zonalVariableNames[i], names[i],  MAX_STR_LENGTH)); 
+  //PetscCall(PetscStrncpy(names[i], exo->zonalVariableNames[i], MAX_STR_LENGTH)); 
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
