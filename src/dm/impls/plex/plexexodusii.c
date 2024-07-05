@@ -691,8 +691,8 @@ PetscErrorCode PetscViewerExodusIIGetZonalVariableNames(PetscViewer viewer, Pets
   PetscCall(PetscViewerExodusIIGetId(viewer, &exoid));
   if (!exo->zonalVariableNames) { 
     for (int i = 0; i < numNames; i++) {
+      PetscCallExternal(ex_get_variable_name, exoid, EX_ELEM_BLOCK, i+1, exo->zonalVariableNames[i]);
       PetscCall(PetscStrncpy(exo->zonalVariableNames[i], names[i],  MAX_STR_LENGTH)); 
-      PetscCallExternal(ex_get_variable_name, exoid, EX_ELEM_BLOCK, numNames, exo->zonalVariableNames[i]);
     }
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -724,10 +724,10 @@ PetscErrorCode PetscViewerExodusIIGetNodalVariableNames(PetscViewer viewer, int 
 
   /* Check if variable names are already stored in the viewer */
   if (!exo->nodalVariableNames) { 
-      //PetscCallExternal(ex_get_variable_names, exo->exoid, EX_ELEM_BLOCK, exo->numNodalVariables, exo->nodalVariableNames); }
+    /* Copy the names to the output array */
     for (int i = 0; i < numNames; i++) { 
-      PetscCall(PetscStrncpy(exo->nodalVariableNames[i], names[i], 256)); /*SARAH FIX MAX_STR_LENGHT*/
-      PetscCallExternal(ex_get_variable_name, exo->exoid, EX_ELEM_BLOCK, numNames, exo->zonalVariableNames[i]); 
+      PetscCallExternal(ex_get_variable_name, exo->exoid, EX_NODAL, i+1, exo->nodalVariableNames[i]); //numNames
+      PetscCall(PetscStrncpy(exo->nodalVariableNames[i], names[i], MAX_STR_LENGTH)); 
     }
 }
 PetscFunctionReturn(PETSC_SUCCESS);
