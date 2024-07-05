@@ -210,7 +210,7 @@ int main(int argc, char **argv)
   PetscCall(PetscViewerExodusIISetNodalVariableNames(viewer, nodalVarName));
   PetscCall(PetscViewerExodusIIGetNodalVariableNames(viewer, numNVars, varNames));
   for (int i = 0; i < numNVars; i++){
-    PetscPrintf(PETSC_COMM_WORLD,"   Read nodal variable %d: %s\n",i,varNames[i]);
+    PetscPrintf(PETSC_COMM_WORLD,"   Read nodal variable %d: %s\n",i,varNames[i]); /*SARAH CHNAGED TO *VARnames and s to c*/
   }
   /* Free allocated memory for nodal variable names */
   for (int i = 0; i < numNVars; i++) {
