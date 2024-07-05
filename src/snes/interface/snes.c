@@ -676,6 +676,35 @@ static PetscErrorCode DMCoarsenHook_SNESVecSol(DM dm, DM dmc, void *ctx)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode DMFieldSplitHook_SNESVecSol(DM dm, VecScatter scat, DM subdm, void *ctx)
+{
+  SNES snes = (SNES)ctx;
+  Vec  Xfull, Xfull_named = NULL, Xsub;
+
+  PetscFunctionBegin;
+  if (dm == snes->dm) Xfull = snes->vec_sol;
+  else {
+    PetscCall(DMGetNamedGlobalVector(dm, "SNESVecSol", &Xfull_named));
+    Xfull = Xfull_named;
+  }
+  PetscCall(DMGetNamedGlobalVector(subdm, "SNESVecSol", &Xsub));
+  PetscCall(VecScatterBegin(scat, Xfull, Xsub, INSERT_VALUES, SCATTER_FORWARD));
+  PetscCall(VecScatterEnd(scat, Xfull, Xsub, INSERT_VALUES, SCATTER_FORWARD));
+  PetscCall(DMRestoreNamedGlobalVector(subdm, "SNESVecSol", &Xsub));
+  if (Xfull_named) PetscCall(DMRestoreNamedGlobalVector(dm, "SNESVecSol", &Xfull_named));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode DMFieldDecompositionHook_SNESVecSol(DM dm, DM subdm, void *ctx)
+{
+  PetscFunctionBegin;
+  PetscCall(DMFieldDecompositionHookAdd(dm, DMFieldDecompositionHook_SNESVecSol, DMFieldSplitHook_SNESVecSol, ctx));
+  /* Ensure the subdms know how to coarsen state */
+  /* FIXME: How to clean these up afterwards? */
+  PetscCall(DMCoarsenHookAdd(subdm, DMCoarsenHook_SNESVecSol, DMRestrictHook_SNESVecSol, ctx));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /* This may be called to rediscretize the operator on levels of linear multigrid. The DM shuffle is so the user can
  * safely call SNESGetDM() in their residual evaluation routine. */
 static PetscErrorCode KSPComputeOperators_SNES(KSP ksp, Mat A, Mat B, void *ctx)
@@ -694,7 +723,7 @@ static PetscErrorCode KSPComputeOperators_SNES(KSP ksp, Mat A, Mat B, void *ctx)
   else {
     PetscBool has;
 
-    /* We are on a coarser level, this vec was initialized using a DM restrict hook */
+    /* We are on a coarser level (or inside a fieldsplit), this vec was initialized using a DM restrict hook */
     PetscCall(DMHasNamedGlobalVector(snes->dm, "SNESVecSol", &has));
     PetscCheck(has, PetscObjectComm((PetscObject)snes->dm), PETSC_ERR_PLIB, "Missing SNESVecSol");
     PetscCall(DMGetNamedGlobalVector(snes->dm, "SNESVecSol", &Xnamed));
@@ -797,6 +826,7 @@ PetscErrorCode SNESSetUpMatrices(SNES snes)
     PetscCall(SNESGetKSP(snes, &ksp));
     PetscCall(KSPSetComputeOperators(ksp, KSPComputeOperators_SNES, snes));
     PetscCall(DMCoarsenHookAdd(snes->dm, DMCoarsenHook_SNESVecSol, DMRestrictHook_SNESVecSol, snes));
+    PetscCall(DMFieldDecompositionHookAdd(snes->dm, DMFieldDecompositionHook_SNESVecSol, DMFieldSplitHook_SNESVecSol, snes));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -3440,6 +3470,10 @@ PetscErrorCode SNESDestroy(SNES *snes)
   PetscTryTypeMethod(*snes, destroy);
 
   if ((*snes)->dm) PetscCall(DMCoarsenHookRemove((*snes)->dm, DMCoarsenHook_SNESVecSol, DMRestrictHook_SNESVecSol, *snes));
+  if ((*snes)->dm) {
+    PetscCall(DMCoarsenHookRemove((*snes)->dm, DMCoarsenHook_SNESVecSol, DMRestrictHook_SNESVecSol, *snes));
+    PetscCall(DMFieldDecompositionHookRemove((*snes)->dm, DMFieldDecompositionHook_SNESVecSol, DMFieldSplitHook_SNESVecSol, *snes));
+  }
   PetscCall(DMDestroy(&(*snes)->dm));
   PetscCall(KSPDestroy(&(*snes)->ksp));
   PetscCall(SNESLineSearchDestroy(&(*snes)->linesearch));
@@ -5540,6 +5574,7 @@ PetscErrorCode SNESSetDM(SNES snes, DM dm)
       if (sdm->originaldm == snes->dm) sdm->originaldm = dm; /* Grant write privileges to the replacement DM */
     }
     PetscCall(DMCoarsenHookRemove(snes->dm, DMCoarsenHook_SNESVecSol, DMRestrictHook_SNESVecSol, snes));
+    PetscCall(DMFieldDecompositionHookRemove(snes->dm, DMFieldDecompositionHook_SNESVecSol, DMFieldSplitHook_SNESVecSol, snes));
     PetscCall(DMDestroy(&snes->dm));
   }
   snes->dm     = dm;

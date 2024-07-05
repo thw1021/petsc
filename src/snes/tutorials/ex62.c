@@ -50,15 +50,17 @@ typedef struct {
   SolType  sol; /* MMS solution */
 } AppCtx;
 
+// This can be called from PCFieldSplit on only velocity, which is why we check whether p is defined
 static void f1_u(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f1[])
 {
-  const PetscReal mu = PetscRealPart(constants[0]);
-  const PetscInt  Nc = uOff[1] - uOff[0];
-  PetscInt        c, d;
+  const PetscReal   mu = PetscRealPart(constants[0]);
+  const PetscScalar p  = Nf > 1 ? u[uOff[1]] : 0.;
+  const PetscInt    Nc = uOff[1] - uOff[0];
+  PetscInt          c, d;
 
   for (c = 0; c < Nc; ++c) {
     for (d = 0; d < dim; ++d) f1[c * dim + d] = mu * (u_x[c * dim + d] + u_x[d * dim + c]);
-    f1[c * dim + c] -= u[uOff[1]];
+    f1[c * dim + c] -= p;
   }
 }
 
@@ -623,11 +625,10 @@ int main(int argc, char **argv)
   #   Full Schur + Velocity GMG
   test:
     suffix: 2d_p2_p1_gmg_vcycle
-    TODO: broken (requires subDMs hooks)
     requires: triangle
     args: -sol quadratic -dm_refine_hierarchy 2 -vel_petscspace_degree 2 -pres_petscspace_degree 1 \
       -ksp_type fgmres -ksp_atol 1e-9 -snes_error_if_not_converged -pc_use_amat \
-      -pc_type fieldsplit -pc_fieldsplit_type schur -pc_fieldsplit_schur_fact_type full -pc_fieldsplit_off_diag_use_amat \
+      -pc_type fieldsplit -pc_fieldsplit_type schur -pc_fieldsplit_schur_fact_type full  -pc_fieldsplit_schur_precondition full -pc_fieldsplit_off_diag_use_amat \
         -fieldsplit_velocity_pc_type mg -fieldsplit_pressure_ksp_rtol 1e-10 -fieldsplit_pressure_pc_type gamg -fieldsplit_pressure_pc_gamg_esteig_ksp_max_it 10 -fieldsplit_pressure_mg_levels_pc_type sor -fieldsplit_pressure_mg_coarse_pc_type svd
   #   SIMPLE \begin{pmatrix} I & 0 \\ B^T A^{-1} & I \end{pmatrix} \begin{pmatrix} A & 0 \\ 0 & B^T diag(A)^{-1} B \end{pmatrix} \begin{pmatrix} I & diag(A)^{-1} B \\ 0 & I \end{pmatrix}
   test:
