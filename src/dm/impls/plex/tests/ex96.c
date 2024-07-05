@@ -83,7 +83,6 @@ static PetscErrorCode EXOGetVarIndex_Internal2(PetscViewer viewer, int exoid, ex
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-
 int main(int argc, char **argv)
 {
   DM          dm;
@@ -94,8 +93,7 @@ int main(int argc, char **argv)
   PetscViewer viewer;
   const char *nodalVarName[4] = {"U_x", "U_y", "Alpha", "Beta"};
   const char *zonalVarName[3] = {"Sigma_11", "Sigma_12", "Sigma_22"};
-  //char      **varNames; /*sarah commentedddddd*/
-  //char *varNames[3]; /*sarah moved temporarily*/
+  char      **varNames;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
@@ -114,7 +112,6 @@ int main(int argc, char **argv)
   PetscCall(DMViewFromOptions(dm, NULL, "-dm_view"));
 
   PetscCall(PetscViewerExodusIIOpen(PETSC_COMM_WORLD, ofilename, FILE_MODE_WRITE, &viewer));
-  
   // PetscCall(PetscViewerView(viewer, PETSC_VIEWER_STDOUT_WORLD));
 
   /* Save the geometry to the file, erasing all previous content */
@@ -150,7 +147,7 @@ int main(int argc, char **argv)
     TO DO: write test of PetscViewerExodusIISet[Nodal/Zonal]VariableNames
   */
 
-  /* 
+  /*
     Test of PetscViewerExodusIIGet[Nodal/Zonal]VariableName
   */
   char *name;
@@ -161,7 +158,7 @@ int main(int argc, char **argv)
   PetscCall(PetscViewerView(viewer, PETSC_VIEWER_STDOUT_WORLD));
   PetscCall(PetscViewerDestroy(&viewer));
 
-  /* 
+  /*
     Test of PetscViewerExodusIIGet[Nodal/Zonal]VariableName
   */
   PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n\nReopenning the output file in Read-only mode\n"));
@@ -188,15 +185,9 @@ int main(int argc, char **argv)
   PetscCall(PetscViewerExodusIISetOrder(viewer, order));
   PetscCall(PetscViewerExodusIIGetZonalVariable(viewer, &numZVars));
   PetscCall(PetscViewerExodusIIGetNodalVariable(viewer, &numNVars));
-  
-  /* Sarah modified */
-  ///added 2 lines
-  PetscInitialize(&argc, &argv, NULL, NULL);
 
-  char **varNames;
   PetscCall(PetscCalloc1(numZVars,&varNames)); /* Memory must be allocated for the name array before getter function is invoked.*/
-  // PetscCall(PetscViewerExodusIISetZonalVariableNames(viewer, zonalVarName)); /* Zonal Variables must be set in viewer before calling the getter */
-  PetscCall(PetscViewerExodusIIGetZonalVariableNames(viewer, numZVars, varNames)); /*SARAH CHNAGED ADDED & address maybe?????*/
+  PetscCall(PetscViewerExodusIIGetZonalVariableNames(viewer, numZVars, varNames));
   for (int i = 0; i < numZVars; i++){
     PetscPrintf(PETSC_COMM_WORLD,"   Read zonal variable %d: %s\n",i,varNames[i]);
   }
@@ -205,19 +196,18 @@ int main(int argc, char **argv)
       PetscFree(varNames[i]);
   }
   PetscFree(varNames);
-  
+
   PetscCall(PetscCalloc1(numNVars,&varNames));
-  PetscCall(PetscViewerExodusIISetNodalVariableNames(viewer, nodalVarName));
   PetscCall(PetscViewerExodusIIGetNodalVariableNames(viewer, numNVars, varNames));
   for (int i = 0; i < numNVars; i++){
-    PetscPrintf(PETSC_COMM_WORLD,"   Read nodal variable %d: %s\n",i,varNames[i]); /*SARAH CHNAGED TO *VARnames and s to c*/
+    PetscPrintf(PETSC_COMM_WORLD,"   Read nodal variable %d: %s\n",i,varNames[i]);
   }
   /* Free allocated memory for nodal variable names */
   for (int i = 0; i < numNVars; i++) {
       PetscFree(varNames[i]);
   }
   PetscFree(varNames);
-  
+
   PetscCall(PetscViewerView(viewer, PETSC_VIEWER_STDOUT_WORLD));
   PetscCall(PetscViewerDestroy(&viewer));
   PetscCall(DMDestroy(&dm));
