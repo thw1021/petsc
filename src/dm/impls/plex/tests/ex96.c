@@ -195,7 +195,7 @@ int main(int argc, char **argv)
 
   char **varNames;
   PetscCall(PetscCalloc1(numZVars,&varNames)); /* Memory must be allocated for the name array before getter function is invoked.*/
-  PetscCall(PetscViewerExodusIISetZonalVariableNames(viewer, zonalVarName)); /* Zonal Variables must be set in viewer before calling the getter */
+  // PetscCall(PetscViewerExodusIISetZonalVariableNames(viewer, zonalVarName)); /* Zonal Variables must be set in viewer before calling the getter */
   PetscCall(PetscViewerExodusIIGetZonalVariableNames(viewer, numZVars, varNames)); /*SARAH CHNAGED ADDED & address maybe?????*/
   for (int i = 0; i < numZVars; i++){
     PetscPrintf(PETSC_COMM_WORLD,"   Read zonal variable %d: %s\n",i,varNames[i]);

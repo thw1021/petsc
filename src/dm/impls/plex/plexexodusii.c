@@ -691,18 +691,19 @@ PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetNodalVariableNames(PetscViewer
 PetscErrorCode PetscViewerExodusIIGetZonalVariableNames(PetscViewer viewer, PetscInt numNames, char **names)
 {
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
-  int exoid = -1;
+  int  exoid = -1;
 
   PetscFunctionBegin;
   /* Ensures that the number of Zonal variables is correctly assigned */
   PetscCheck(exo->numZonalVariables >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "PetscViewerExodusIIGetZonalVariable must be called before PetscViewerExodusIIGetZonalVariableNames");
   /* Check if variable names are already stored in the viewer */
   PetscCall(PetscViewerExodusIIGetId(viewer, &exoid));
-  if (!exo->zonalVariableNames) { 
-    for (int i = 0; i < numNames; i++) {
+  for (int i = 0; i < numNames; i++) {
+    if (!exo->zonalVariableNames[i]) { 
+      PetscCall(PetscMalloc1(MAX_NAME_LENGTH+1,&exo->zonalVariableNames[i]));
       PetscCallExternal(ex_get_variable_name, exoid, EX_ELEM_BLOCK, i+1, exo->zonalVariableNames[i]);
-      PetscCall(PetscStrncpy(exo->zonalVariableNames[i], names[i],  MAX_STR_LENGTH)); 
     }
+    PetscCall(PetscStrallocpy(exo->zonalVariableNames[i], &names[i])); 
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
