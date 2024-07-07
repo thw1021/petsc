@@ -466,7 +466,7 @@ solving a linear system with the Jacobian :math:`K`:
 
 - :math:`\delta \mathbf x^F` is the full Newton step for a given value of :math:`\lambda`: :math:`K \delta \mathbf x^F = -\mathbf F(\mathbf x, \lambda)`
 
-- :math:`\delta \mathbf x^Q` is the variation in :math:`\mathbf x` with respect to :math:`\lambda`, computed by :math:`K \delta\mathbf x^Q = \mathbf Q(\mathbf x, \lambda)`, where :math:`\mathbf Q(\mathbf x, \lambda) = -\partial \mathbf F (\mathbf x, \lambda) / \partial \mathbf \lambda` is the tangent load vector.
+- :math:`\delta \mathbf x^Q` is the variation in :math:`\mathbf x` with respect to :math:`\lambda`, computed by :math:`K \delta\mathbf x^Q = \mathbf Q(\mathbf x, \lambda)`, where :math:`\mathbf Q(\mathbf x, \lambda) = -\partial \mathbf F (\mathbf x, \lambda) / \partial \lambda` is the tangent load vector.
 
 Often, the tangent load vector :math:`\mathbf Q` is constant within a load increment,
 which corresponds to the case of proportional loading discussed above. By default,

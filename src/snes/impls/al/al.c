@@ -162,7 +162,7 @@ PetscErrorCode SNESNewtonALGetFunction(SNES snes, SNESFunctionFn **func, void **
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
-  PetscTryMethod(snes, "SNESNewtonALGetFunction_C", (SNES, SNESFunctionFn **, void **), (snes, func, ctx));
+  PetscUseMethod(snes, "SNESNewtonALGetFunction_C", (SNES, SNESFunctionFn **, void **), (snes, func, ctx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -203,7 +203,7 @@ PetscErrorCode SNESNewtonALGetLoadParameter(SNES snes, PetscReal *lambda)
   PetscFunctionBeginHot;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
   PetscAssertPointer(lambda, 2);
-  PetscTryMethod(snes, "SNESNewtonALGetLoadParameter_C", (SNES, PetscReal *), (snes, lambda));
+  PetscUseMethod(snes, "SNESNewtonALGetLoadParameter_C", (SNES, PetscReal *), (snes, lambda));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -438,7 +438,7 @@ static PetscErrorCode SNESSolve_NEWTONAL(SNES snes)
             PetscReal dlambda1, dlambda2;
 
             PetscQuadraticRoots(a0, b0 + b1, c0 + c1 + c2, &dlambda1, &dlambda2);
-            deltaLambda = b0 * dlambda1 > b0 * dlambda2 ? dlambda1 : dlambda2;
+            deltaLambda = (b0 * dlambda1) > (b0 * dlambda2) ? dlambda1 : dlambda2;
           }
         }
       }
