@@ -347,10 +347,11 @@ PetscErrorCode KSPSetFromOptions(KSP ksp)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
-  PetscCall(KSPCheckPCMPI(ksp));
 
   PetscCall(PetscObjectGetComm((PetscObject)ksp, &comm));
+  if (!ksp->pc) PetscCall(KSPGetPC(ksp, &ksp->pc));
   PetscCall(PetscObjectGetOptionsPrefix((PetscObject)ksp, &prefix));
+  if (!ksp->skippcsetfromoptions) PetscCall(PCSetFromOptions(ksp->pc));
 
   PetscCall(KSPRegisterAll());
   PetscObjectOptionsBegin((PetscObject)ksp);
@@ -360,11 +361,6 @@ PetscErrorCode KSPSetFromOptions(KSP ksp)
     Set the type if it was never set.
   */
   if (!((PetscObject)ksp)->type_name) PetscCall(KSPSetType(ksp, KSPGMRES));
-
-  if (!ksp->skippcsetfromoptions) {
-    if (!ksp->pc) PetscCall(KSPGetPC(ksp, &ksp->pc));
-    PetscCall(PCSetFromOptions(ksp->pc));
-  }
 
   PetscCall(KSPResetViewers(ksp));
 
@@ -392,7 +388,7 @@ PetscErrorCode KSPSetFromOptions(KSP ksp)
     PetscCall(PetscOptionsBool("-ksp_error_if_not_converged", "Generate error if solver does not converge", "KSPSetErrorIfNotConverged", ksp->errorifnotconverged, &ksp->errorifnotconverged, NULL));
     PetscCall(PetscOptionsGetViewer(comm, ((PetscObject)ksp)->options, prefix, "-ksp_view", &ksp->viewer, &ksp->format, &ksp->view));
     PetscCall(PetscOptionsRestoreViewer(&ksp->convergedreasonviewer));
-    PetscCall(PetscOptionsGetViewer(comm, ((PetscObject)ksp)->options, ((PetscObject)ksp)->prefix, "-ksp_converged_reason", &ksp->convergedreasonviewer, &ksp->convergedreasonformat, NULL));
+    PetscCall(PetscOptionsGetViewer(comm, ((PetscObject)ksp)->options, prefix, "-ksp_converged_reason", &ksp->convergedreasonviewer, &ksp->convergedreasonformat, NULL));
     flg = PETSC_FALSE;
     PetscCall(PetscOptionsBool("-ksp_converged_reason_view_cancel", "Cancel all the converged reason view functions set using KSPConvergedReasonViewSet", "KSPConvergedReasonViewCancel", PETSC_FALSE, &flg, &set));
     if (set && flg) PetscCall(KSPConvergedReasonViewCancel(ksp));
