@@ -3543,13 +3543,17 @@ cdef class Vec(Object):
         cdef PetscVec *cvecs  = NULL
         cdef PetscIS  *cisets = NULL
         cdef object unused1
+        cdef object vec_index_ises = []
         unused1 = oarray_p(empty_p(n), NULL, <void**>&cvecs)
         for i from 0 <= i < m:
             cvecs[i] = (<Vec?>vecs[i]).vec
         CHKERR(VecConcatenate(n, cvecs, &newvec, &cisets))
         cdef Vec self = cls()
         self.vec = newvec
-        vec_index_ises = [ref_IS(cisets[i]) for i from 0 <= i < m]
+        for i from 0 <= i < m:
+            temp = IS()
+            temp.iset = cisets[i]
+            vec_index_ises.append(temp)
         return self, vec_index_ises
 
     property sizes:
