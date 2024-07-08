@@ -1,0 +1,141 @@
+PetscViewer Object: 1 MPI process
+  type: exodusii
+  Filename:    test.exo
+  exoid:       65536
+  IO Mode:     1
+  Mesh order:  1
+  Number of nodal variables:  -1
+  Number of zonal variables:  -1
+Number of zonal variables: 3
+Number of nodal variables: 4
+
+After PetscViewerExodusIISet[Nodal/Zonal]Variable calls: 
+PetscViewer Object: 1 MPI process
+  type: exodusii
+  Filename:    test.exo
+  exoid:       65536
+  IO Mode:     1
+  Mesh order:  1
+  Number of nodal variables:  4
+     0: (null)
+     1: (null)
+     2: (null)
+     3: (null)
+  Number of zonal variables:  3
+     0: (null)
+     1: (null)
+     2: (null)
+
+After PetscViewerExodusIISet[Nodal/Zonal]VariableName calls: 
+PetscViewer Object: 1 MPI process
+  type: exodusii
+  Filename:    test.exo
+  exoid:       65536
+  IO Mode:     1
+  Mesh order:  1
+  Number of nodal variables:  4
+     0: U_x
+     1: U_y
+     2: Alpha
+     3: Beta
+  Number of zonal variables:  3
+     0: Sigma_11
+     1: Sigma_12
+     2: Sigma_22
+
+ testing *names setters
+PetscViewer Object: 1 MPI process
+  type: exodusii
+  Filename:    test.exo
+  exoid:       65536
+  IO Mode:     1
+  Mesh order:  1
+  Number of nodal variables:  4
+     0: U_x
+     1: U_y
+     2: Alpha
+     3: Beta
+  Number of zonal variables:  3
+     0: Sigma_11
+     1: Sigma_12
+     2: Sigma_22
+
+
+Reopenning the output file in Read-only mode
+Testing PetscViewerExodusIIGet[Nodal/Zonal]VariableName
+   Read zonal variable 0: Sigma_11
+   Read zonal variable 1: Sigma_12
+   Read zonal variable 2: Sigma_22
+   Read nodal variable 0: U_x
+   Read nodal variable 1: U_y
+   Read nodal variable 2: Alpha
+   Read nodal variable 3: Beta
+PetscViewer Object: 1 MPI process
+  type: exodusii
+  Filename:    test.exo
+  exoid:       65536
+  IO Mode:     2
+  Mesh order:  1
+  Number of nodal variables:  4
+     0: U_x
+     1: U_y
+     2: Alpha
+     3: Beta
+  Number of zonal variables:  3
+     0: Sigma_11
+     1: Sigma_12
+     2: Sigma_22
+
+
+Reopenning the output file in Read-only mode
+Testing PetscViewerExodusIIGet[Nodal/Zonal]VariableNames
+   Read zonal variable 0: Sigma_11
+   Read zonal variable 1: Sigma_12
+   Read zonal variable 2: Sigma_22
+   Read nodal variable 0: U_x
+   Read nodal variable 1: U_y
+   Read nodal variable 2: Alpha
+   Read nodal variable 3: Beta
+PetscViewer Object: 1 MPI process
+  type: exodusii
+  Filename:    test.exo
+  exoid:       65536
+  IO Mode:     2
+  Mesh order:  1
+  Number of nodal variables:  4
+     0: U_x
+     1: U_y
+     2: Alpha
+     3: Beta
+  Number of zonal variables:  3
+     0: Sigma_11
+     1: Sigma_12
+     2: Sigma_22
+[ 0] 16 bytes
+      [0]  PetscStrallocpy() at /opt/HPC/petsc-sarah/include/petscstring.h:151
+      [0]  PetscViewerExodusIISetZonalVariableName() at /opt/HPC/petsc-sarah/src/dm/impls/plex/plexexodusii.c:517
+      [0]  main() at /opt/HPC/petsc-sarah/src/dm/impls/plex/tests/ex96.c:141
+[ 0] 16 bytes
+      [0]  PetscStrallocpy() at /opt/HPC/petsc-sarah/include/petscstring.h:151
+      [0]  PetscViewerExodusIISetZonalVariableName() at /opt/HPC/petsc-sarah/src/dm/impls/plex/plexexodusii.c:517
+      [0]  main() at /opt/HPC/petsc-sarah/src/dm/impls/plex/tests/ex96.c:141
+[ 0] 16 bytes
+      [0]  PetscStrallocpy() at /opt/HPC/petsc-sarah/include/petscstring.h:151
+      [0]  PetscViewerExodusIISetZonalVariableName() at /opt/HPC/petsc-sarah/src/dm/impls/plex/plexexodusii.c:517
+      [0]  main() at /opt/HPC/petsc-sarah/src/dm/impls/plex/tests/ex96.c:141
+[ 0] 16 bytes
+      [0]  PetscStrallocpy() at /opt/HPC/petsc-sarah/include/petscstring.h:151
+      [0]  PetscViewerExodusIISetNodalVariableName() at /opt/HPC/petsc-sarah/src/dm/impls/plex/plexexodusii.c:542
+      [0]  main() at /opt/HPC/petsc-sarah/src/dm/impls/plex/tests/ex96.c:138
+[ 0] 16 bytes
+      [0]  PetscStrallocpy() at /opt/HPC/petsc-sarah/include/petscstring.h:151
+      [0]  PetscViewerExodusIISetNodalVariableName() at /opt/HPC/petsc-sarah/src/dm/impls/plex/plexexodusii.c:542
+      [0]  main() at /opt/HPC/petsc-sarah/src/dm/impls/plex/tests/ex96.c:138
+[ 0] 16 bytes
+      [0]  PetscStrallocpy() at /opt/HPC/petsc-sarah/include/petscstring.h:151
+      [0]  PetscViewerExodusIISetNodalVariableName() at /opt/HPC/petsc-sarah/src/dm/impls/plex/plexexodusii.c:542
+      [0]  main() at /opt/HPC/petsc-sarah/src/dm/impls/plex/tests/ex96.c:138
+[ 0] 16 bytes
+      [0]  PetscStrallocpy() at /opt/HPC/petsc-sarah/include/petscstring.h:151
+      [0]  PetscViewerExodusIISetNodalVariableName() at /opt/HPC/petsc-sarah/src/dm/impls/plex/plexexodusii.c:542
+      [0]  main() at /opt/HPC/petsc-sarah/src/dm/impls/plex/tests/ex96.c:138

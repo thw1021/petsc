@@ -191,6 +191,9 @@ int main(int argc, char **argv)
   for (int i = 0; i < numZVars; i++){
     PetscPrintf(PETSC_COMM_WORLD,"   Read zonal variable %d: %s\n",i,varNames[i]);
   }
+  // Try a call to EXOGetVarIndex_Internal2 for each of the variable names, as well as "U", "Alpha", and "Gamma"
+  // Once this works, move the updated function back into plexexodusii.c (and rename EXOGetVarIndex_Internal)
+
   /* Free allocated memory for zonal variable names */
   for (int i = 0; i < numZVars; i++) {
       PetscFree(varNames[i]);
@@ -202,6 +205,9 @@ int main(int argc, char **argv)
   for (int i = 0; i < numNVars; i++){
     PetscPrintf(PETSC_COMM_WORLD,"   Read nodal variable %d: %s\n",i,varNames[i]);
   }
+  // Try a call to EXOGetVarIndex_Internal2 for each of the variable names, as well as "U", "Alpha", and "Gamma"
+  // Once this works, move the updated function back into plexexodusii.c (and rename EXOGetVarIndex_Internal)
+
   /* Free allocated memory for nodal variable names */
   for (int i = 0; i < numNVars; i++) {
       PetscFree(varNames[i]);
@@ -215,13 +221,11 @@ int main(int argc, char **argv)
   return 0;
 }
 
-/* TEST
-  build:
-    requires: !complex
-  testset:
-    args: -i ${wPETSC_DIR}/share/petsc/datafiles/meshes/doublet-tet.msh -o test.exo -dm_view
+/*TEST
+
+  test:
+    suffix: 0
     nsize: 1
-    test:
-      suffix: 0
-      args:
-TEST */
+    args: -i ${wPETSC_DIR}/share/petsc/datafiles/meshes/doublet-tet.msh -o test.exo
+
+TEST*/
