@@ -3945,6 +3945,22 @@ cdef class Mat(Object):
 
     #
 
+    def getSchurComplementSubMatrices(self) -> tuple[Mat, Mat, Mat, Mat, Mat]:
+        """Return Schur complement sub-matrices.
+
+        Collective.
+
+        See Also
+        --------
+        petsc.MatSchurComplementGetSubMatrices
+
+        """
+        cdef Mat A00 = Mat(), Ap00 = Mat(), A01 = Mat(), A10 = Mat(), A11 = Mat()
+        CHKERR ( MatSchurComplementGetSubMatrices(self.mat, &A00.mat, &Ap00.mat, &A01.mat, &A10.mat, &A11.mat) )
+        return A00, Ap00, A01, A10, A11
+
+    #
+
     def getLocalSubMatrix(self, IS isrow, IS iscol, Mat submat=None) -> Mat:
         """Return a reference to a submatrix specified in local numbering.
 
