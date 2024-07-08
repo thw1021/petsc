@@ -18,6 +18,10 @@ Changes: Development
 .. rubric:: Sys:
 
 - Add ``PetscPragmaUseOMPKernels``
+- Deprecate ``PetscOptionsRestoreViewer()`` with ``PetscViewerDestroy()``
+- Deprecate ``PetscOptionsGetViewer()``, and ``PetscOptionsGetViewers()`` with ``PetscOptionsCreateViewer()`` and ``PetscOptionsCreateViewers()``
+- Deprecate ``PetscOptionsPushGetViewerOff()``, ``PetscOptionsPopGetViewerOff()``, and ``PetscOptionsGetViewerOff()`` with
+  ``PetscOptionsPushCreateViewerOff()``, ``PetscOptionsPopCreateViewerOff()``, and ``PetscOptionsGetCreateViewerOff()``
 
 .. rubric:: Event Logging:
 
