@@ -1225,8 +1225,10 @@ PetscErrorCode ISSetLayout(IS is, PetscLayout map)
 
   Level: intermediate
 
-  Fortran Notes:
-  `ISGetIndices()` Fortran binding is deprecated (since PETSc 3.19), use `ISGetIndicesF90()`
+  Fortran Note:
+.vb
+  PetscInt, pointer :: ptr(:)
+.ve
 
 .seealso: `IS`, `ISRestoreIndices()`, `ISGetIndicesF90()`
 @*/
@@ -1327,8 +1329,10 @@ PetscErrorCode ISLocate(IS is, PetscInt key, PetscInt *location)
 
   Level: intermediate
 
-  Fortran Notes:
-  `ISRestoreIndices()` Fortran binding is deprecated (since PETSc 3.19), use `ISRestoreIndicesF90()`
+  Fortran Note:
+.vb
+  PetscInt, pointer :: ptr(:)
+.ve
 
 .seealso: `IS`, `ISGetIndices()`, `ISRestoreIndicesF90()`
 @*/

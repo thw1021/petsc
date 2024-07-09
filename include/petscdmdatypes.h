@@ -2,6 +2,7 @@
 
 #include <petscdmtypes.h>
 
+/* MANSEC = DM */
 /* SUBMANSEC = DMDA */
 
 /*E
@@ -51,18 +52,12 @@ typedef enum {
   Level: beginner
 
   Fortran Note:
-  This should be declared as
-$    `DMDALocalInfo` :: info(DMDA_LOCAL_INFO_SIZE)
-     and the entries accessed via
-.vb
-    info(DMDA_LOCAL_INFO_DIM)
-    info(DMDA_LOCAL_INFO_DOF) etc.
-.ve
-   The entries bx,by,bz, st, and da are not accessible from Fortran.
+  This is a derived type
 
 .seealso: [](ch_dmbase), `DMDA`, `DMDACreate1d()`, `DMDACreate2d()`, `DMDACreate3d()`, `DMDestroy()`, `DM`, `DMDAGetLocalInfo()`, `DMDAGetInfo()`
 S*/
 typedef struct {
+  DM              da;
   PetscInt        dim, dof, sw;
   PetscInt        mx, my, mz;    /* global number of grid points in each direction */
   PetscInt        xs, ys, zs;    /* starting point of this processor, excluding ghosts */
@@ -71,5 +66,4 @@ typedef struct {
   PetscInt        gxm, gym, gzm; /* number of grid points on this processor including ghosts */
   DMBoundaryType  bx, by, bz;    /* type of ghost nodes at boundary */
   DMDAStencilType st;
-  DM              da;
 } DMDALocalInfo;
