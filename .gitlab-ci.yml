@@ -147,7 +147,7 @@ uni-complex-float-int64:
 c99-mlib-static-py:
   extends: .stage-1
   variables:
-    CONFIG_OPTS: --with-single-library=0 --with-shared-libraries=0 --with-strict-petscerrorcode CFLAGS=-std=c99 FFLAGS= CXXFLAGS=
+    CONFIG_OPTS: --with-single-library=0 --with-shared-libraries=0 --with-strict-petscerrorcode CFLAGS=-std=c99 FFLAGS=="-ffree-line-length-none -ffree-line-length-0" CXXFLAGS=
     ENABLE_CHECK: 1
     TEST_SEARCH: snes_tutorials-ex19% snes_tutorials-ex5f90t%
     MAKE_TEST_FFLAGS: -Werror -std=f2008
@@ -164,7 +164,7 @@ clang-uni:
 gcc-lto:
   extends: .stage-1
   variables:
-    CONFIG_OPTS: CFLAGS= CXXFLAGS= FFLAGS=
+    CONFIG_OPTS: CFLAGS= CXXFLAGS= FFLAGS="-ffree-line-length-none -ffree-line-length-0"
     MAKE_CFLAGS: -Werror -flto=4 -Werror=odr -Werror=lto-type-mismatch
     MAKE_CXXFLAGS: -Werror -Wextra-semi -flto=4 -Werror=odr -Werror=lto-type-mismatch
     MAKE_FFLAGS: -Werror -flto=4 -Werror=odr -Werror=lto-type-mismatch

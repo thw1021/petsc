@@ -50,7 +50,7 @@ static PetscErrorCode SNESSetUp_Shell(SNES snes)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode SNESSetFromOptions_Shell(SNES snes, PetscOptionItems *PetscOptionsObject)
+static PetscErrorCode SNESSetFromOptions_Shell(SNES snes, PetscOptionItems PetscOptionsObject)
 {
   PetscFunctionBegin;
   PetscOptionsHeadBegin(PetscOptionsObject, "SNES Shell options");

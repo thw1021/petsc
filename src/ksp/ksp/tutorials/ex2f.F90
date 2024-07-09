@@ -335,9 +335,9 @@
       PetscReal rnorm
 
       if (rnorm .le. .05) then
-        flag = 1
+        flag = KSP_CONVERGED_RTOL_NORMAL
       else
-        flag = 0
+        flag = KSP_CONVERGED_ITERATING
       endif
       ierr = 0
 

@@ -292,7 +292,7 @@ cdef int viewcontext(_PyObj ctx, PetscViewer viewer) except -1:
 cdef extern from * nogil:
     struct _MatOps:
         PetscErrorCode (*destroy)(PetscMat) except PETSC_ERR_PYTHON
-        PetscErrorCode (*setfromoptions)(PetscMat, PetscOptionItems*) except PETSC_ERR_PYTHON
+        PetscErrorCode (*setfromoptions)(PetscMat, PetscOptionItems) except PETSC_ERR_PYTHON
         PetscErrorCode (*view)(PetscMat, PetscViewer) except PETSC_ERR_PYTHON
         PetscErrorCode (*duplicate)(PetscMat, PetscMatDuplicateOption, PetscMat*) except PETSC_ERR_PYTHON
         PetscErrorCode (*copy)(PetscMat, PetscMat, PetscMatStructure) except PETSC_ERR_PYTHON
@@ -511,12 +511,12 @@ cdef PetscErrorCode MatDestroy_Python(
 
 cdef PetscErrorCode MatSetFromOptions_Python(
     PetscMat mat,
-    PetscOptionItems *PetscOptionsObject,
+    PetscOptionItems PetscOptionsObject,
     ) except PETSC_ERR_PYTHON with gil:
     FunctionBegin(b"MatSetFromOptions_Python")
     cdef char name[2048], *defval = PyMat(mat).getname()
     cdef PetscBool found = PETSC_FALSE
-    cdef PetscOptionItems *opts "PetscOptionsObject" = PetscOptionsObject
+    cdef PetscOptionItems opts "PetscOptionsObject" = PetscOptionsObject
     CHKERR(PetscOptionsString(
             b"-mat_python_type", b"Python [package.]module[.{class|function}]",
             b"MatPythonSetType", defval, name, sizeof(name), &found)); <void>opts
@@ -1194,7 +1194,7 @@ cdef extern from * nogil:
         PetscErrorCode (*destroy)(PetscPC) except PETSC_ERR_PYTHON
         PetscErrorCode (*setup)(PetscPC) except PETSC_ERR_PYTHON
         PetscErrorCode (*reset)(PetscPC) except PETSC_ERR_PYTHON
-        PetscErrorCode (*setfromoptions)(PetscPC, PetscOptionItems*) except PETSC_ERR_PYTHON
+        PetscErrorCode (*setfromoptions)(PetscPC, PetscOptionItems) except PETSC_ERR_PYTHON
         PetscErrorCode (*view)(PetscPC, PetscViewer) except PETSC_ERR_PYTHON
         PetscErrorCode (*presolve)(PetscPC, PetscKSP, PetscVec, PetscVec) except PETSC_ERR_PYTHON
         PetscErrorCode (*postsolve)(PetscPC, PetscKSP, PetscVec, PetscVec) except PETSC_ERR_PYTHON
@@ -1352,12 +1352,12 @@ cdef PetscErrorCode PCReset_Python(
 
 cdef PetscErrorCode PCSetFromOptions_Python(
     PetscPC pc,
-    PetscOptionItems *PetscOptionsObject,
+    PetscOptionItems PetscOptionsObject,
     ) except PETSC_ERR_PYTHON with gil:
     FunctionBegin(b"PCSetFromOptions_Python")
     cdef char name[2048], *defval = PyPC(pc).getname()
     cdef PetscBool found = PETSC_FALSE
-    cdef PetscOptionItems *opts "PetscOptionsObject" = PetscOptionsObject
+    cdef PetscOptionItems opts "PetscOptionsObject" = PetscOptionsObject
     CHKERR(PetscOptionsString(
             b"-pc_python_type", b"Python [package.]module[.{class|function}]",
             b"PCPythonSetType", defval, name, sizeof(name), &found)); <void>opts
@@ -1469,7 +1469,7 @@ cdef extern from * nogil:
         PetscErrorCode (*destroy)(PetscKSP) except PETSC_ERR_PYTHON
         PetscErrorCode (*setup)(PetscKSP) except PETSC_ERR_PYTHON
         PetscErrorCode (*reset)(PetscKSP) except PETSC_ERR_PYTHON
-        PetscErrorCode (*setfromoptions)(PetscKSP, PetscOptionItems*) except PETSC_ERR_PYTHON
+        PetscErrorCode (*setfromoptions)(PetscKSP, PetscOptionItems) except PETSC_ERR_PYTHON
         PetscErrorCode (*view)(PetscKSP, PetscViewer) except PETSC_ERR_PYTHON
         PetscErrorCode (*solve)(PetscKSP) except PETSC_ERR_PYTHON
         PetscErrorCode (*buildsolution)(PetscKSP, PetscVec, PetscVec*) except PETSC_ERR_PYTHON
@@ -1632,12 +1632,12 @@ cdef PetscErrorCode KSPReset_Python(
 
 cdef PetscErrorCode KSPSetFromOptions_Python(
     PetscKSP ksp,
-    PetscOptionItems *PetscOptionsObject
+    PetscOptionItems PetscOptionsObject
     ) except PETSC_ERR_PYTHON with gil:
     FunctionBegin(b"KSPSetFromOptions_Python")
     cdef char name[2048], *defval = PyKSP(ksp).getname()
     cdef PetscBool found = PETSC_FALSE
-    cdef PetscOptionItems *opts "PetscOptionsObject" = PetscOptionsObject
+    cdef PetscOptionItems opts "PetscOptionsObject" = PetscOptionsObject
     CHKERR(PetscOptionsString(
             b"-ksp_python_type", b"Python [package.]module[.{class|function}]",
             b"KSPPythonSetType", defval, name, sizeof(name), &found)); <void>opts
@@ -1812,7 +1812,7 @@ cdef extern from * nogil:
         PetscErrorCode (*destroy)(PetscSNES) except PETSC_ERR_PYTHON
         PetscErrorCode (*setup)(PetscSNES) except PETSC_ERR_PYTHON
         PetscErrorCode (*reset)(PetscSNES) except PETSC_ERR_PYTHON
-        PetscErrorCode (*setfromoptions)(PetscSNES, PetscOptionItems*) except PETSC_ERR_PYTHON
+        PetscErrorCode (*setfromoptions)(PetscSNES, PetscOptionItems) except PETSC_ERR_PYTHON
         PetscErrorCode (*view)(PetscSNES, PetscViewer) except PETSC_ERR_PYTHON
         PetscErrorCode (*solve)(PetscSNES) except PETSC_ERR_PYTHON
     ctypedef _SNESOps *SNESOps
@@ -1964,12 +1964,12 @@ cdef PetscErrorCode SNESReset_Python(
 
 cdef PetscErrorCode SNESSetFromOptions_Python(
     PetscSNES snes,
-    PetscOptionItems *PetscOptionsObject,
+    PetscOptionItems PetscOptionsObject,
     ) except PETSC_ERR_PYTHON with gil:
     FunctionBegin(b"SNESSetFromOptions_Python")
     cdef char name[2048], *defval = PySNES(snes).getname()
     cdef PetscBool found = PETSC_FALSE
-    cdef PetscOptionItems *opts "PetscOptionsObject" = PetscOptionsObject
+    cdef PetscOptionItems opts "PetscOptionsObject" = PetscOptionsObject
     CHKERR(PetscOptionsString(
             b"-snes_python_type", b"Python [package.]module[.{class|function}]",
             b"SNESPythonSetType", defval, name, sizeof(name), &found)); <void>opts
@@ -2112,7 +2112,7 @@ cdef extern from * nogil:
         PetscErrorCode (*destroy)(PetscTS) except PETSC_ERR_PYTHON
         PetscErrorCode (*setup)(PetscTS) except PETSC_ERR_PYTHON
         PetscErrorCode (*reset)(PetscTS) except PETSC_ERR_PYTHON
-        PetscErrorCode (*setfromoptions)(PetscTS, PetscOptionItems*) except PETSC_ERR_PYTHON
+        PetscErrorCode (*setfromoptions)(PetscTS, PetscOptionItems) except PETSC_ERR_PYTHON
         PetscErrorCode (*view)(PetscTS, PetscViewer) except PETSC_ERR_PYTHON
         PetscErrorCode (*step)(PetscTS) except PETSC_ERR_PYTHON
         PetscErrorCode (*rollback)(PetscTS) except PETSC_ERR_PYTHON
@@ -2303,12 +2303,12 @@ cdef PetscErrorCode TSReset_Python(
 
 cdef PetscErrorCode TSSetFromOptions_Python(
     PetscTS ts,
-    PetscOptionItems *PetscOptionsObject,
+    PetscOptionItems PetscOptionsObject,
     ) except PETSC_ERR_PYTHON with gil:
     FunctionBegin(b"TSSetFromOptions_Python")
     cdef char name[2048], *defval = PyTS(ts).getname()
     cdef PetscBool found = PETSC_FALSE
-    cdef PetscOptionItems *opts "PetscOptionsObject" = PetscOptionsObject
+    cdef PetscOptionItems opts "PetscOptionsObject" = PetscOptionsObject
     CHKERR(PetscOptionsString(
             b"-ts_python_type", b"Python [package.]module[.{class|function}]",
             b"TSPythonSetType", defval, name, sizeof(name), &found)); <void>opts
@@ -2528,7 +2528,7 @@ cdef extern from * nogil:
         PetscErrorCode (*destroy)(PetscTAO) except PETSC_ERR_PYTHON
         PetscErrorCode (*setup)(PetscTAO) except PETSC_ERR_PYTHON
         PetscErrorCode (*solve)(PetscTAO) except PETSC_ERR_PYTHON
-        PetscErrorCode (*setfromoptions)(PetscTAO, PetscOptionItems*) except PETSC_ERR_PYTHON
+        PetscErrorCode (*setfromoptions)(PetscTAO, PetscOptionItems) except PETSC_ERR_PYTHON
         PetscErrorCode (*view)(PetscTAO, PetscViewer) except PETSC_ERR_PYTHON
     ctypedef _TaoOps *TaoOps
     struct _p_TAO:
@@ -2668,12 +2668,12 @@ cdef PetscErrorCode TaoSetUp_Python(
 
 cdef PetscErrorCode TaoSetFromOptions_Python(
     PetscTAO tao,
-    PetscOptionItems *PetscOptionsObject,
+    PetscOptionItems PetscOptionsObject,
     ) except PETSC_ERR_PYTHON with gil:
     FunctionBegin(b"TaoSetFromOptions_Python")
     cdef char name[2048], *defval = PyTao(tao).getname()
     cdef PetscBool found = PETSC_FALSE
-    cdef PetscOptionItems *opts "PetscOptionsObject" = PetscOptionsObject
+    cdef PetscOptionItems opts "PetscOptionsObject" = PetscOptionsObject
     CHKERR(PetscOptionsString(
             b"-tao_python_type", b"Python [package.]module[.{class|function}]",
             b"TaoPythonSetType", defval, name, sizeof(name), &found)); <void>opts

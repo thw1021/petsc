@@ -65,7 +65,7 @@ static PetscErrorCode PetscViewerHDF5CheckNamedObject_Internal(PetscViewer viewe
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscViewerSetFromOptions_HDF5(PetscViewer v, PetscOptionItems *PetscOptionsObject)
+static PetscErrorCode PetscViewerSetFromOptions_HDF5(PetscViewer v, PetscOptionItems PetscOptionsObject)
 {
   PetscBool         flg  = PETSC_FALSE, set;
   PetscViewer_HDF5 *hdf5 = (PetscViewer_HDF5 *)v->data;

@@ -1,4 +1,5 @@
 -include ../../../../../petscdir.mk
+#requirespackage 'PETSC_HAVE_HDF5'
 
 MANSEC         = Sys
 SUBMANSEC      = Viewer

@@ -39,9 +39,9 @@
 !  in them
 !
       module ex73f90tmodule
-#include <petsc/finclude/petscdm.h>
+#include <petsc/finclude/petscdmda.h>
 #include <petsc/finclude/petscmat.h>
-      use petscdm
+      use petscdmda
       use petscmat
       type ex73f90tmodule_type
         DM::da
@@ -101,10 +101,10 @@
       end subroutine MyObjective
 
       program main
-#include <petsc/finclude/petscdm.h>
+#include <petsc/finclude/petscdmda.h>
 #include <petsc/finclude/petscsnes.h>
       use petscdm
-      use petscdmda
+      use petscdm
       use petscsnes
       use ex73f90tmodule
       use ex73f90tmodule_interfaces
@@ -166,7 +166,7 @@
       PetscCallA(DMDACreate2d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE, DM_BOUNDARY_NONE,DMDA_STENCIL_BOX,nfour,nfour,PETSC_DECIDE,PETSC_DECIDE,ione,ione,PETSC_NULL_INTEGER_ARRAY,PETSC_NULL_INTEGER_ARRAY,daphi,ierr))
       PetscCallA(DMSetFromOptions(daphi,ierr))
       PetscCallA(DMSetUp(daphi,ierr))
-      PetscCallA(DMDAGetInfo(daphi,PETSC_NULL_INTEGER,solver%mx,solver%my,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_ENUM,PETSC_NULL_ENUM,PETSC_NULL_ENUM,PETSC_NULL_ENUM,ierr))
+      PetscCallA(DMDAGetInfo(daphi,PETSC_NULL_INTEGER,solver%mx,solver%my,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_DMBOUNDARYTYPE,PETSC_NULL_DMBOUNDARYTYPE,PETSC_NULL_DMBOUNDARYTYPE,PETSC_NULL_DMDASTENCILTYPE,ierr))
       N1 = solver%my*solver%mx
       N2 = solver%my
       flg = .false.
