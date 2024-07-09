@@ -4,7 +4,6 @@
 #if defined(PETSC_HAVE_FORTRAN_CAPS)
   #define kspmonitorset_               KSPMONITORSET
   #define kspsetconvergencetest_       KSPSETCONVERGENCETEST
-  #define kspgetresidualhistory_       KSPGETRESIDUALHISTORY
   #define kspconvergeddefault_         KSPCONVERGEDDEFAULT
   #define kspconvergeddefaultcreate_   KSPCONVERGEDDEFAULTCREATE
   #define kspconvergeddefaultdestroy_  KSPCONVERGEDDEFAULTDESTROY
@@ -23,7 +22,6 @@
 #elif !defined(PETSC_HAVE_FORTRAN_UNDERSCORE)
   #define kspmonitorset_               kspmonitorset
   #define kspsetconvergencetest_       kspsetconvergencetest
-  #define kspgetresidualhistory_       kspgetresidualhistory
   #define kspconvergeddefault_         kspconvergeddefault
   #define kspconvergeddefaultcreate_   kspconvergeddefaultcreate
   #define kspconvergeddefaultdestroy_  kspconvergeddefaultdestroy
@@ -166,11 +164,6 @@ PETSC_EXTERN void kspconvergeddefaultcreate_(PetscFortranAddr *ctx, PetscErrorCo
 PETSC_EXTERN void kspconvergeddefaultdestroy_(PetscFortranAddr *ctx, PetscErrorCode *ierr)
 {
   *ierr = KSPConvergedDefaultDestroy(*(void **)ctx);
-}
-
-PETSC_EXTERN void kspgetresidualhistory_(KSP *ksp, PetscInt *na, PetscErrorCode *ierr)
-{
-  *ierr = KSPGetResidualHistory(*ksp, NULL, na);
 }
 
 PETSC_EXTERN void kspsetcomputerhs_(KSP *ksp, void (*func)(KSP *, Vec *, void *, PetscErrorCode *), void *ctx, PetscErrorCode *ierr)

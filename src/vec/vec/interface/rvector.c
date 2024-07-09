@@ -309,7 +309,7 @@ PetscErrorCode VecNormalize(Vec x, PetscReal *val)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   VecMax - Determines the vector component with maximum real part and its location.
 
   Collective
@@ -349,7 +349,7 @@ PetscErrorCode VecMax(Vec x, PetscInt *p, PetscReal *val)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   VecMin - Determines the vector component with minimum real part and its location.
 
   Collective

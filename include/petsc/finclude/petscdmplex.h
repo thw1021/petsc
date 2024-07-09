@@ -11,4 +11,6 @@
 #define DMPlexInterpolatedFlag PetscEnum
 #define DMPlexTPSType PetscEnum
 
+#define DMPlexTransformType character*(80)
+
 #endif
