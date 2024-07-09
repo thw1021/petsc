@@ -1322,9 +1322,9 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
           for (PetscInt grid = nt; grid < ctx->num_grids; grid++) ctx->sphere_inner_radius_90degree[grid] = ctx->sphere_inner_radius_90degree[0];
         } else if (!flg || nt == 0) {
           if (LANDAU_DIM == 2) {
-            for (PetscInt grid = 0; grid < ctx->num_grids; grid++) ctx->sphere_inner_radius_90degree[grid] = ctx->sphere_inner_radius_90degree[grid] = 0.4; // optimized for R=5, Q4, AMR=0
+            for (PetscInt grid = 0; grid < ctx->num_grids; grid++) ctx->sphere_inner_radius_90degree[grid] = 0.4; // optimized for R=5, Q4, AMR=0
           } else {
-            for (PetscInt grid = 0; grid < ctx->num_grids; grid++) ctx->sphere_inner_radius_90degree[grid] = ctx->sphere_inner_radius_90degree[grid] = 0.577 * 0.40;
+            for (PetscInt grid = 0; grid < ctx->num_grids; grid++) ctx->sphere_inner_radius_90degree[grid] = 0.577 * 0.40;
           }
         }
         nt = LANDAU_MAX_GRIDS;
@@ -1333,9 +1333,9 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
           for (PetscInt grid = nt; grid < ctx->num_grids; grid++) ctx->sphere_inner_radius_45degree[grid] = ctx->sphere_inner_radius_45degree[0];
         } else if (!flg || nt == 0) {
           if (LANDAU_DIM == 2) {
-            for (PetscInt grid = 0; grid < ctx->num_grids; grid++) ctx->sphere_inner_radius_45degree[grid] = ctx->sphere_inner_radius_45degree[grid] = 0.45; // optimized for R=5, Q4, AMR=0
+            for (PetscInt grid = 0; grid < ctx->num_grids; grid++) ctx->sphere_inner_radius_45degree[grid] = 0.45; // optimized for R=5, Q4, AMR=0
           } else {
-            for (PetscInt grid = 0; grid < ctx->num_grids; grid++) ctx->sphere_inner_radius_45degree[grid] = ctx->sphere_inner_radius_45degree[grid] = 0.4; // 3D sphere
+            for (PetscInt grid = 0; grid < ctx->num_grids; grid++) ctx->sphere_inner_radius_45degree[grid] = 0.4; // 3D sphere
           }
         }
         if (ctx->sphere) PetscCall(PetscInfo(ctx->plex[0], "sphere : , 45 degree scaling = %g; 90 degree scaling = %g\n", ctx->sphere_inner_radius_45degree[0], ctx->sphere_inner_radius_90degree[0]));
