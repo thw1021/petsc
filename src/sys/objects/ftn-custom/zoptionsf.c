@@ -316,119 +316,119 @@ PETSC_EXTERN void petscoptionsgetint_(PetscOptions *opt, char *pre, char *name, 
   FREECHAR(name, c2);
 }
 
-PETSC_EXTERN void petscoptionsgetenumprivate_(PetscOptions *options, char *pre, char *name, const char *const *list, PetscEnum *ivalue, PetscBool *flg, PetscErrorCode *ierr, PETSC_FORTRAN_CHARLEN_T len1, PETSC_FORTRAN_CHARLEN_T len2)
+PETSC_EXTERN void petscoptionsgetenumprivate_(PetscOptions *opt, char *pre, char *name, const char *const *list, PetscEnum *ivalue, PetscBool *flg, PetscErrorCode *ierr, PETSC_FORTRAN_CHARLEN_T len1, PETSC_FORTRAN_CHARLEN_T len2)
 {
   char     *c1, *c2;
   PetscBool flag;
 
   FIXCHAR(pre, len1, c1);
   FIXCHAR(name, len2, c2);
-  *ierr = PetscOptionsGetEnum(*options, c1, c2, list, ivalue, &flag);
+  *ierr = PetscOptionsGetEnum(*opt, c1, c2, list, ivalue, &flag);
   if (*ierr) return;
   if (!FORTRANNULLBOOL(flg)) *flg = flag;
   FREECHAR(pre, c1);
   FREECHAR(name, c2);
 }
 
-PETSC_EXTERN void petscoptionsgetbool_(PetscOptions *options, char *pre, char *name, PetscBool *ivalue, PetscBool *flg, PetscErrorCode *ierr, PETSC_FORTRAN_CHARLEN_T len1, PETSC_FORTRAN_CHARLEN_T len2)
+PETSC_EXTERN void petscoptionsgetbool_(PetscOptions *opt, char *pre, char *name, PetscBool *ivalue, PetscBool *flg, PetscErrorCode *ierr, PETSC_FORTRAN_CHARLEN_T len1, PETSC_FORTRAN_CHARLEN_T len2)
 {
   char     *c1, *c2;
   PetscBool flag;
 
   FIXCHAR(pre, len1, c1);
   FIXCHAR(name, len2, c2);
-  *ierr = PetscOptionsGetBool(*options, c1, c2, ivalue, &flag);
+  *ierr = PetscOptionsGetBool(*opt, c1, c2, ivalue, &flag);
   if (*ierr) return;
   if (!FORTRANNULLBOOL(flg)) *flg = flag;
   FREECHAR(pre, c1);
   FREECHAR(name, c2);
 }
 
-PETSC_EXTERN void petscoptionsgetboolarray_(PetscOptions *options, char *pre, char *name, PetscBool *dvalue, PetscInt *nmax, PetscBool *flg, PetscErrorCode *ierr, PETSC_FORTRAN_CHARLEN_T len1, PETSC_FORTRAN_CHARLEN_T len2)
+PETSC_EXTERN void petscoptionsgetboolarray_(PetscOptions *opt, char *pre, char *name, PetscBool *dvalue, PetscInt *nmax, PetscBool *flg, PetscErrorCode *ierr, PETSC_FORTRAN_CHARLEN_T len1, PETSC_FORTRAN_CHARLEN_T len2)
 {
   char     *c1, *c2;
   PetscBool flag;
 
   FIXCHAR(pre, len1, c1);
   FIXCHAR(name, len2, c2);
-  *ierr = PetscOptionsGetBoolArray(*options, c1, c2, dvalue, nmax, &flag);
+  *ierr = PetscOptionsGetBoolArray(*opt, c1, c2, dvalue, nmax, &flag);
   if (*ierr) return;
   if (!FORTRANNULLBOOL(flg)) *flg = flag;
   FREECHAR(pre, c1);
   FREECHAR(name, c2);
 }
 
-PETSC_EXTERN void petscoptionsgetreal_(PetscOptions *options, char *pre, char *name, PetscReal *dvalue, PetscBool *flg, PetscErrorCode *ierr, PETSC_FORTRAN_CHARLEN_T len1, PETSC_FORTRAN_CHARLEN_T len2)
+PETSC_EXTERN void petscoptionsgetreal_(PetscOptions *opt, char *pre, char *name, PetscReal *dvalue, PetscBool *flg, PetscErrorCode *ierr, PETSC_FORTRAN_CHARLEN_T len1, PETSC_FORTRAN_CHARLEN_T len2)
 {
   char     *c1, *c2;
   PetscBool flag;
 
   FIXCHAR(pre, len1, c1);
   FIXCHAR(name, len2, c2);
-  *ierr = PetscOptionsGetReal(*options, c1, c2, dvalue, &flag);
+  *ierr = PetscOptionsGetReal(*opt, c1, c2, dvalue, &flag);
   if (*ierr) return;
   if (!FORTRANNULLBOOL(flg)) *flg = flag;
   FREECHAR(pre, c1);
   FREECHAR(name, c2);
 }
 
-PETSC_EXTERN void petscoptionsgetscalar_(PetscOptions *options, char *pre, char *name, PetscScalar *dvalue, PetscBool *flg, PetscErrorCode *ierr, PETSC_FORTRAN_CHARLEN_T len1, PETSC_FORTRAN_CHARLEN_T len2)
+PETSC_EXTERN void petscoptionsgetscalar_(PetscOptions *opt, char *pre, char *name, PetscScalar *dvalue, PetscBool *flg, PetscErrorCode *ierr, PETSC_FORTRAN_CHARLEN_T len1, PETSC_FORTRAN_CHARLEN_T len2)
 {
   char     *c1, *c2;
   PetscBool flag;
 
   FIXCHAR(pre, len1, c1);
   FIXCHAR(name, len2, c2);
-  *ierr = PetscOptionsGetScalar(*options, c1, c2, dvalue, &flag);
+  *ierr = PetscOptionsGetScalar(*opt, c1, c2, dvalue, &flag);
   if (*ierr) return;
   if (!FORTRANNULLBOOL(flg)) *flg = flag;
   FREECHAR(pre, c1);
   FREECHAR(name, c2);
 }
 
-PETSC_EXTERN void petscoptionsgetscalararray_(PetscOptions *options, char *pre, char *name, PetscScalar *dvalue, PetscInt *nmax, PetscBool *flg, PetscErrorCode *ierr, PETSC_FORTRAN_CHARLEN_T len1, PETSC_FORTRAN_CHARLEN_T len2)
+PETSC_EXTERN void petscoptionsgetscalararray_(PetscOptions *opt, char *pre, char *name, PetscScalar *dvalue, PetscInt *nmax, PetscBool *flg, PetscErrorCode *ierr, PETSC_FORTRAN_CHARLEN_T len1, PETSC_FORTRAN_CHARLEN_T len2)
 {
   char     *c1, *c2;
   PetscBool flag;
 
   FIXCHAR(pre, len1, c1);
   FIXCHAR(name, len2, c2);
-  *ierr = PetscOptionsGetScalarArray(*options, c1, c2, dvalue, nmax, &flag);
+  *ierr = PetscOptionsGetScalarArray(*opt, c1, c2, dvalue, nmax, &flag);
   if (*ierr) return;
   if (!FORTRANNULLBOOL(flg)) *flg = flag;
   FREECHAR(pre, c1);
   FREECHAR(name, c2);
 }
 
-PETSC_EXTERN void petscoptionsgetrealarray_(PetscOptions *options, char *pre, char *name, PetscReal *dvalue, PetscInt *nmax, PetscBool *flg, PetscErrorCode *ierr, PETSC_FORTRAN_CHARLEN_T len1, PETSC_FORTRAN_CHARLEN_T len2)
+PETSC_EXTERN void petscoptionsgetrealarray_(PetscOptions *opt, char *pre, char *name, PetscReal *dvalue, PetscInt *nmax, PetscBool *flg, PetscErrorCode *ierr, PETSC_FORTRAN_CHARLEN_T len1, PETSC_FORTRAN_CHARLEN_T len2)
 {
   char     *c1, *c2;
   PetscBool flag;
 
   FIXCHAR(pre, len1, c1);
   FIXCHAR(name, len2, c2);
-  *ierr = PetscOptionsGetRealArray(*options, c1, c2, dvalue, nmax, &flag);
+  *ierr = PetscOptionsGetRealArray(*opt, c1, c2, dvalue, nmax, &flag);
   if (*ierr) return;
   if (!FORTRANNULLBOOL(flg)) *flg = flag;
   FREECHAR(pre, c1);
   FREECHAR(name, c2);
 }
 
-PETSC_EXTERN void petscoptionsgetintarray_(PetscOptions *options, char *pre, char *name, PetscInt *dvalue, PetscInt *nmax, PetscBool *flg, PetscErrorCode *ierr, PETSC_FORTRAN_CHARLEN_T len1, PETSC_FORTRAN_CHARLEN_T len2)
+PETSC_EXTERN void petscoptionsgetintarray_(PetscOptions *opt, char *pre, char *name, PetscInt *dvalue, PetscInt *nmax, PetscBool *flg, PetscErrorCode *ierr, PETSC_FORTRAN_CHARLEN_T len1, PETSC_FORTRAN_CHARLEN_T len2)
 {
   char     *c1, *c2;
   PetscBool flag;
 
   FIXCHAR(pre, len1, c1);
   FIXCHAR(name, len2, c2);
-  *ierr = PetscOptionsGetIntArray(*options, c1, c2, dvalue, nmax, &flag);
+  *ierr = PetscOptionsGetIntArray(*opt, c1, c2, dvalue, nmax, &flag);
   if (*ierr) return;
   if (!FORTRANNULLBOOL(flg)) *flg = flag;
   FREECHAR(pre, c1);
   FREECHAR(name, c2);
 }
 
-PETSC_EXTERN void petscoptionsgetstring_(PetscOptions *options, char *pre, char *name, char *string, PetscBool *flg, PetscErrorCode *ierr, PETSC_FORTRAN_CHARLEN_T len1, PETSC_FORTRAN_CHARLEN_T len2, PETSC_FORTRAN_CHARLEN_T len)
+PETSC_EXTERN void petscoptionsgetstring_(PetscOptions *opt, char *pre, char *name, char *string, PetscBool *flg, PetscErrorCode *ierr, PETSC_FORTRAN_CHARLEN_T len1, PETSC_FORTRAN_CHARLEN_T len2, PETSC_FORTRAN_CHARLEN_T len)
 {
   char     *c1, *c2, *c3;
   size_t    len3;
@@ -439,7 +439,7 @@ PETSC_EXTERN void petscoptionsgetstring_(PetscOptions *options, char *pre, char 
   c3   = string;
   len3 = len - 1;
 
-  *ierr = PetscOptionsGetString(*options, c1, c2, c3, len3, &flag);
+  *ierr = PetscOptionsGetString(*opt, c1, c2, c3, len3, &flag);
   if (*ierr) return;
   if (!FORTRANNULLBOOL(flg)) *flg = flag;
   FREECHAR(pre, c1);
@@ -451,6 +451,7 @@ PETSC_EXTERN void petscgetprogramname_(char *name, PetscErrorCode *ierr, PETSC_F
 {
   char  *tmp;
   size_t len;
+
   tmp   = name;
   len   = len_in - 1;
   *ierr = PetscGetProgramName(tmp, len);
@@ -460,6 +461,7 @@ PETSC_EXTERN void petscgetprogramname_(char *name, PetscErrorCode *ierr, PETSC_F
 PETSC_EXTERN void petscsubcommgetparent_(PetscSubcomm *scomm, MPI_Fint *pcomm, int *ierr)
 {
   MPI_Comm tcomm;
+
   *ierr  = PetscSubcommGetParent(*scomm, &tcomm);
   *pcomm = MPI_Comm_c2f(tcomm);
 }
@@ -467,6 +469,7 @@ PETSC_EXTERN void petscsubcommgetparent_(PetscSubcomm *scomm, MPI_Fint *pcomm, i
 PETSC_EXTERN void petscsubcommgetcontiguousparent_(PetscSubcomm *scomm, MPI_Fint *pcomm, int *ierr)
 {
   MPI_Comm tcomm;
+
   *ierr  = PetscSubcommGetContiguousParent(*scomm, &tcomm);
   *pcomm = MPI_Comm_c2f(tcomm);
 }
@@ -474,6 +477,7 @@ PETSC_EXTERN void petscsubcommgetcontiguousparent_(PetscSubcomm *scomm, MPI_Fint
 PETSC_EXTERN void petscsubcommgetchild_(PetscSubcomm *scomm, MPI_Fint *ccomm, int *ierr)
 {
   MPI_Comm tcomm;
+
   *ierr  = PetscSubcommGetChild(*scomm, &tcomm);
   *ccomm = MPI_Comm_c2f(tcomm);
 }

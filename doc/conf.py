@@ -77,13 +77,14 @@ extensions = [
     'myst_parser',
     'html5_petsc',
     'sphinx_remove_toctrees',
+    'sphinx_design',
 ]
 
 copybutton_prompt_text = '$ '
 
 bibtex_bibfiles = ['petsc.bib']
 
-myst_enable_extensions = ["fieldlist", "dollarmath", "amsmath", "deflist"]
+myst_enable_extensions = ["fieldlist", "dollarmath", "amsmath", "deflist", "colon_fence"]
 
 remove_from_toctrees = ['manualpages/*/[A-Z]*','changes/2*','changes/3*']
 

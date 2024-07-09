@@ -173,7 +173,7 @@
 
       Interface
         Subroutine DMPlexVecSetClosure(m,sec,v,point,vs,mode,ierr)
-          import tDM,tPetscSection,tVec
+          import tDM,tPetscSection,tVec,eInsertMode
           PetscSection sec
           Vec     v
           PetscInt     point
@@ -186,7 +186,7 @@
 
       Interface
         Subroutine DMPlexMatSetClosure(m,s,gS,A,p,v,mode,ierr)
-          import tDM,tPetscSection,tMat
+          import tDM,tPetscSection,tMat,eInsertMode
           PetscSection s
           PetscSection gS
           Mat     A

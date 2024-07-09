@@ -9,7 +9,7 @@ class Configure(config.package.GNUPackage):
   def __init__(self, framework):
     config.package.GNUPackage.__init__(self, framework)
     self.minversion        = '1.1.26.12'
-    self.gitcommit         = 'v1.1.26.12'
+    self.gitcommit         = '153edaa35fadca576bf088063dec6d24c9763e04' # add-enum-bfort 'v1.1.26.12'
     self.download          = ['git://https://bitbucket.org/petsc/pkg-sowing.git','https://bitbucket.org/petsc/pkg-sowing/get/'+self.gitcommit+'.tar.gz']
     self.downloaddirnames  = ['petsc-pkg-sowing']
     self.downloadonWindows = 1
@@ -156,8 +156,6 @@ and run configure again\n')
           else:
             arch = self.arch
           generatefortranstubs.main(self.petscdir.dir, arch,self.bfort, self.petscdir.dir,0)
-          if self.fortran.fortranIsF90:
-            generatefortranstubs.processf90interfaces(self.petscdir.dir,arch,0)
           self.framework.actions.addArgument('PETSc', 'File creation', 'Generated Fortran stubs')
         except RuntimeError as e:
           raise RuntimeError('*******Error generating Fortran stubs: '+str(e)+'*******\n')

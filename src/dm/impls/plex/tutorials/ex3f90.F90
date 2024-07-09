@@ -2,10 +2,10 @@
 ! DMPlexComputeCellGeometryFVM()
 ! Contributed by Adrian Croucher <a.croucher@auckland.ac.nz>
       program main
-      use petscsys
-      use petscdmplex
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscdmplex.h>
+      use petscsys
+      use petscdmplex
       implicit none
       DM :: dm, dmi
       PetscFV :: fvm

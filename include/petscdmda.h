@@ -6,6 +6,7 @@
 #include <petscao.h>
 #include <petscfe.h>
 
+/* MANSEC = DM */
 /* SUBMANSEC = DMDA */
 
 /*MC

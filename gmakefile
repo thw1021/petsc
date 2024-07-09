@@ -242,12 +242,7 @@ $(OBJDIR)/src/sys/f90-mod/petscsysmod.o   : $(if $(MPIUNI_MOD),$(OBJDIR)/src/sys
 $(OBJDIR)/src/vec/f90-mod/petscvecmod.o   : $(OBJDIR)/src/sys/f90-mod/petscsysmod.o
 $(OBJDIR)/src/mat/f90-mod/petscmatmod.o   : $(OBJDIR)/src/vec/f90-mod/petscvecmod.o
 $(OBJDIR)/src/dm/f90-mod/petscdmmod.o     : $(OBJDIR)/src/mat/f90-mod/petscmatmod.o
-$(OBJDIR)/src/dm/f90-mod/petscdmdamod.o   : $(OBJDIR)/src/dm/f90-mod/petscdmmod.o
-$(OBJDIR)/src/dm/f90-mod/petscdmplexmod.o : $(OBJDIR)/src/dm/f90-mod/petscdmmod.o
-$(OBJDIR)/src/dm/f90-mod/petscdmswarmmod.o : $(OBJDIR)/src/dm/f90-mod/petscdmmod.o
-$(OBJDIR)/src/ksp/f90-mod/petsckspdefmod.o : $(OBJDIR)/src/dm/f90-mod/petscdmplexmod.o
-$(OBJDIR)/src/ksp/f90-mod/petscpcmod.o    : $(OBJDIR)/src/ksp/f90-mod/petsckspdefmod.o
-$(OBJDIR)/src/ksp/f90-mod/petsckspmod.o   : $(OBJDIR)/src/ksp/f90-mod/petscpcmod.o
+$(OBJDIR)/src/ksp/f90-mod/petsckspmod.o   : $(OBJDIR)/src/dm/f90-mod/petscdmmod.o
 $(OBJDIR)/src/snes/f90-mod/petscsnesmod.o : $(OBJDIR)/src/ksp/f90-mod/petsckspmod.o
 $(OBJDIR)/src/ts/f90-mod/petsctsmod.o     : $(OBJDIR)/src/snes/f90-mod/petscsnesmod.o
 $(OBJDIR)/src/tao/f90-mod/petsctaomod.o   : $(OBJDIR)/src/ts/f90-mod/petsctsmod.o

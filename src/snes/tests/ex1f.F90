@@ -54,6 +54,7 @@
 
       program main
 #include <petsc/finclude/petscdraw.h>
+      use petscdraw
       use petscsnes
       implicit none
 !
@@ -83,6 +84,7 @@
       MatFDColoring      fdcoloring
       ISColoring         iscoloring
       PetscBool          pc
+      integer4 imx,imy
       external           postcheck
 
       character(len=PETSC_MAX_PATH_LEN) :: outputString
@@ -253,7 +255,9 @@
       PetscCallA(PetscDrawSetFromOptions(draw,ierr))
 
       PetscCallA(VecGetArrayReadF90(x,lx_v,ierr))
-      PetscCallA(PetscDrawTensorContour(draw,mx,my,PETSC_NULL_REAL,PETSC_NULL_REAL,lx_v,ierr))
+      imx = mx
+      imy = my
+      PetscCallA(PetscDrawTensorContour(draw,imx,imy,PETSC_NULL_REAL_ARRAY,PETSC_NULL_REAL_ARRAY,lx_v,ierr))
       PetscCallA(VecRestoreArrayReadF90(x,lx_v,ierr))
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

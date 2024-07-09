@@ -5,7 +5,8 @@
 #include <petscsys.h>
 #include <petscdrawtypes.h>
 
-/* SUBMANSEC = Sys */
+/* MANSEC = Sys */
+/* SUBMANSEC = Draw */
 
 PETSC_EXTERN PetscClassId PETSC_DRAW_CLASSID;
 
@@ -223,7 +224,7 @@ PETSC_EXTERN PetscErrorCode PetscDrawSetVisible(PetscDraw, PetscBool);
 .seealso: `PetscDraw`, `PetscDrawGetMouseButton()`
 E*/
 typedef enum {
-  PETSC_BUTTON_NONE = 0,
+  PETSC_BUTTON_NONE,
   PETSC_BUTTON_LEFT,
   PETSC_BUTTON_CENTER,
   PETSC_BUTTON_RIGHT,

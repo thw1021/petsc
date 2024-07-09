@@ -1318,6 +1318,7 @@ typedef const char *TSARKIMEXType;
 #define TSARKIMEXARS443 "ars443"
 #define TSARKIMEX4      "4"
 #define TSARKIMEX5      "5"
+
 PETSC_EXTERN PetscErrorCode TSARKIMEXGetType(TS ts, TSARKIMEXType *);
 PETSC_EXTERN PetscErrorCode TSARKIMEXSetType(TS ts, TSARKIMEXType);
 PETSC_EXTERN PetscErrorCode TSARKIMEXSetFullyImplicit(TS, PetscBool);
@@ -1351,6 +1352,7 @@ typedef const char *TSDIRKType;
 #define TSDIRK8614A     "8614a"
 #define TSDIRK8616SAL   "8616sal"
 #define TSDIRKES8516SAL "es8516sal"
+
 PETSC_EXTERN PetscErrorCode TSDIRKGetType(TS ts, TSDIRKType *);
 PETSC_EXTERN PetscErrorCode TSDIRKSetType(TS ts, TSDIRKType);
 PETSC_EXTERN PetscErrorCode TSDIRKRegister(TSDIRKType, PetscInt, PetscInt, const PetscReal[], const PetscReal[], const PetscReal[], const PetscReal[], PetscInt, const PetscReal[]);
@@ -1408,6 +1410,7 @@ typedef const char *TSBasicSymplecticType;
 #define TSBASICSYMPLECTICVELVERLET "2"
 #define TSBASICSYMPLECTIC3         "3"
 #define TSBASICSYMPLECTIC4         "4"
+
 PETSC_EXTERN PetscErrorCode TSBasicSymplecticSetType(TS, TSBasicSymplecticType);
 PETSC_EXTERN PetscErrorCode TSBasicSymplecticGetType(TS, TSBasicSymplecticType *);
 PETSC_EXTERN PetscErrorCode TSBasicSymplecticRegister(TSBasicSymplecticType, PetscInt, PetscInt, PetscReal[], PetscReal[]);

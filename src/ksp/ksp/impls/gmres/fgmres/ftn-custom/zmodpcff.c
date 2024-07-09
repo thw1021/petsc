@@ -27,8 +27,8 @@ static PetscErrorCode ourmoddestroy(void *ctx)
   PetscObjectUseFortranCallbackSubType(ksp, _cb.destroy, (void *, PetscErrorCode *), (_ctx, &ierr));
 }
 
-PETSC_EXTERN void kspfgmresmodifypcnochange_(KSP *, PetscInt *, PetscInt *, PetscReal *, void *, PetscErrorCode *);
-PETSC_EXTERN void kspfgmresmodifypcksp_(KSP *, PetscInt *, PetscInt *, PetscReal *, void *, PetscErrorCode *);
+PETSC_EXTERN void kspfgmresmodifypcnochange_(KSP *k, PetscInt *a, PetscInt *b, PetscReal *c, void *d, PetscErrorCode *ierr) { }
+PETSC_EXTERN void kspfgmresmodifypcksp_(KSP *k, PetscInt *a, PetscInt *b, PetscReal *c, void *d, PetscErrorCode *ierr) { }
 
 PETSC_EXTERN void kspfgmressetmodifypc_(KSP *ksp, void (*fcn)(KSP *, PetscInt *, PetscInt *, PetscReal *, void *, PetscErrorCode *), void *ctx, void (*d)(void *, PetscErrorCode *), PetscErrorCode *ierr)
 {

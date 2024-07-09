@@ -18,7 +18,8 @@
   #define PETSC_DEVICE_ALIGNOF(...) PETSC_MEMALIGN
 #endif
 
-/* SUBMANSEC = Sys */
+/* MANSEC = Sys */
+/* SUBMANSEC = Device */
 
 // REVIEW ME: this should probably go somewhere better, configure-time?
 #define PETSC_HAVE_HOST 1

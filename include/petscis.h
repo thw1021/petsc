@@ -9,6 +9,7 @@
 #include <petscsectiontypes.h>
 #include <petscistypes.h> /*I  "petscis.h" I*/
 
+/* MANSEC = Vec */
 /* SUBMANSEC = IS */
 
 #define IS_FILE_CLASSID 1211218

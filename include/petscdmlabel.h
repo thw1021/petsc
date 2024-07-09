@@ -1,12 +1,15 @@
 #pragma once
 #include <petscis.h>
 
+/* SUBMANSEC = DM */
+
 PETSC_EXTERN PetscClassId DMLABEL_CLASSID;
 
 typedef const char *DMLabelType;
 #define DMLABELCONCRETE  "concrete"
 #define DMLABELEPHEMERAL "ephemeral"
 
+/* MANSEC = DM */
 /* SUBMANSEC = DMLabel */
 
 /*S

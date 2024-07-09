@@ -14,6 +14,7 @@
 #include <petscdmfield.h>
 #include <petscviewer.h>
 
+/* MANSEC = DM */
 /* SUBMANSEC = DMPlex */
 
 PETSC_EXTERN PetscErrorCode PetscPartitionerDMPlexPartition(PetscPartitioner, DM, PetscSection, PetscSection, IS *);
@@ -102,9 +103,9 @@ E*/
 typedef enum {
   DMPLEX_INTERPOLATED_INVALID = -1,
   DMPLEX_INTERPOLATED_NONE    = 0,
-  DMPLEX_INTERPOLATED_PARTIAL,
-  DMPLEX_INTERPOLATED_MIXED,
-  DMPLEX_INTERPOLATED_FULL
+  DMPLEX_INTERPOLATED_PARTIAL = 1,
+  DMPLEX_INTERPOLATED_MIXED   = 2,
+  DMPLEX_INTERPOLATED_FULL    = 3
 } DMPlexInterpolatedFlag;
 
 PETSC_EXTERN PetscErrorCode DMPlexInterpolate(DM, DM *);

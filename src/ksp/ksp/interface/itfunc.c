@@ -2431,13 +2431,7 @@ PetscErrorCode KSPSetResidualHistory(KSP ksp, PetscReal a[], PetscInt na, PetscB
   `KSPBCGSL` does not record the residual norms for the "subiterations" hence the results from `KSPGetResidualHistory()` and `KSPGetIterationNumber()` will be different
 
   Fortran Note:
-  The Fortran version of this routine has a calling sequence
-.vb
-  call KSPGetResidualHistory(KSP ksp, integer na, integer ierr)
-.ve
-  note that you have passed a Fortran array into `KSPSetResidualHistory()` and you need
-  to access the residual values from this Fortran array you provided. Only the `na` (number of
-  residual norms currently held) is set.
+  Call `KSPRestoreResidualHistory()` when access to the history is no longer needed.
 
 .seealso: [](ch_ksp), `KSPSetResidualHistory()`, `KSP`, `KSPGetIterationNumber()`, `KSPSTCG`, `KSPBCGSL`
 @*/

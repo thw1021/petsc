@@ -1,43 +1,42 @@
-        module petsctaodefdummy
-        use petsckspdef
-#include <../src/tao/f90-mod/petsctao.h>
-        end module petsctaodefdummy
-
         module petsctaodef
-        use petsctaodefdummy
-        use petscksp
+        use petsckspdef
+#include <petsc/finclude/petsctao.h>
+#include <petsc/finclude/petsctaolinesearch.h>
+#include <../src/tao/f90-mod/ftn-auto-interfaces/petsctao.h>
+#include <../src/tao/f90-mod/ftn-auto-interfaces/petsctaolinesearch.h>
         end module petsctaodef
 
         module petsctao
         use petsctaodef
         use petscksp
+
 #include <../src/tao/f90-mod/petsctao.h90>
-        interface
 #include <../src/tao/f90-mod/ftn-auto-interfaces/petsctao.h90>
-        end interface
+#include <../src/tao/f90-mod/ftn-auto-interfaces/petsctaolinesearch.h90>
+
+        contains
+
+#include <../src/tao/f90-mod/ftn-auto-interfaces/petsctao.hf90>
+#include <../src/tao/f90-mod/ftn-auto-interfaces/petsctaolinesearch.hf90>
+
         end module petsctao
 
 ! The all encompassing petsc module
 
         module petscdef
-        use petscdmdadef
-        use petscdmplexdef
-        use petscdmnetworkdef
-        use petscdmpatchdef
-        use petscdmforestdef
-        use petscdmlabeldef
+        use petscdmdef
         use petsctsdef
         use petsctaodef
         end module petscdef
 
         module petsc
-        use petscdmda
+        use petscdm
+        use petscdmswarm
         use petscdmplex
         use petscdmnetwork
-        use petscdmpatch
+        use petscdmda
+        use petscdmcomposite
         use petscdmforest
-        use petscdmlabel
-        use petscdt
         use petscts
         use petsctao
         end module petsc

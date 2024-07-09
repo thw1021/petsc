@@ -7,6 +7,7 @@
 #include <petscdmtypes.h>
 #include <petscistypes.h>
 
+/* MANSEC = DM */
 /* SUBMANSEC = DT */
 
 PETSC_EXTERN PetscClassId PETSCQUADRATURE_CLASSID;
@@ -56,10 +57,10 @@ typedef enum {
 .seealso: `PetscQuadrature`
 E*/
 typedef enum {
-  PETSCDTNODES_DEFAULT = -1,
-  PETSCDTNODES_GAUSSJACOBI,
-  PETSCDTNODES_EQUISPACED,
-  PETSCDTNODES_TANHSINH
+  PETSCDTNODES_DEFAULT     = -1,
+  PETSCDTNODES_GAUSSJACOBI = 0,
+  PETSCDTNODES_EQUISPACED  = 1,
+  PETSCDTNODES_TANHSINH    = 2
 } PetscDTNodeType;
 
 PETSC_EXTERN const char *const *const PetscDTNodeTypes;
@@ -91,7 +92,7 @@ E*/
 typedef enum {
   PETSCDTSIMPLEXQUAD_DEFAULT = -1,
   PETSCDTSIMPLEXQUAD_CONIC   = 0,
-  PETSCDTSIMPLEXQUAD_MINSYM
+  PETSCDTSIMPLEXQUAD_MINSYM  = 1
 } PetscDTSimplexQuadratureType;
 
 PETSC_EXTERN const char *const *const PetscDTSimplexQuadratureTypes;

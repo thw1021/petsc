@@ -7,6 +7,7 @@
 #include <petscfv.h>
 #include <petscdstypes.h>
 
+/* MANSEC = DM */
 /* SUBMANSEC = DT */
 
 PETSC_EXTERN PetscClassId PETSCWEAKFORM_CLASSID;

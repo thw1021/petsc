@@ -104,7 +104,7 @@
 #include <petsc/finclude/petscdm.h>
 #include <petsc/finclude/petscsnes.h>
       use petscdm
-      use petscdmda
+      use petscdm
       use petscsnes
       use ex73f90tmodule
       use ex73f90tmodule_interfaces

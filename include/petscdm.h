@@ -4,9 +4,9 @@
 #pragma once
 #include <petscmat.h>
 #include <petscdmtypes.h>
+#include <petscdmlabel.h>
 #include <petscfetypes.h>
 #include <petscdstypes.h>
-#include <petscdmlabel.h>
 #include <petscdt.h>
 
 /* SUBMANSEC = DM */

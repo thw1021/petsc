@@ -427,10 +427,10 @@ PetscErrorCode PetscSFSetRankOrder(PetscSF sf, PetscBool flg)
 . nroots     - number of root vertices on the current process (these are possible targets for other process to attach leaves)
 . nleaves    - number of leaf vertices on the current process, each of these references a root on any process
 . ilocal     - locations of leaves in leafdata buffers, pass `NULL` for contiguous storage (locations must be >= 0, enforced
-during setup in debug mode)
+               during setup in debug mode)
 . localmode  - copy mode for `ilocal`
-. iremote    - remote locations of root vertices for each leaf on the current process (locations must be >= 0, enforced
-during setup in debug mode)
+. iremote    - remote locations of root vertices for each leaf on the current process, length is 2 `nleaves'
+               (locations must be >= 0, enforced during setup in debug mode)
 - remotemode - copy mode for `iremote`
 
   Level: intermediate
@@ -453,7 +453,7 @@ during setup in debug mode)
 
 .seealso: `PetscSF`, `PetscSFType`, `PetscSFCreate()`, `PetscSFView()`, `PetscSFGetGraph()`
 @*/
-PetscErrorCode PetscSFSetGraph(PetscSF sf, PetscInt nroots, PetscInt nleaves, PetscInt *ilocal, PetscCopyMode localmode, PetscSFNode *iremote, PetscCopyMode remotemode)
+PetscErrorCode PetscSFSetGraph(PetscSF sf, PetscInt nroots, PetscInt nleaves, PetscInt ilocal[], PetscCopyMode localmode, PetscSFNode iremote[], PetscCopyMode remotemode)
 {
   PetscBool unique, contiguous;
 
@@ -784,16 +784,12 @@ PetscErrorCode PetscSFDuplicate(PetscSF sf, PetscSFDuplicateOption opt, PetscSF 
 
   The returned `ilocal` and `iremote` might contain values in different order than the input ones in `PetscSFSetGraph()`
 
-  Fortran Notes:
-  The returned `iremote` array is a copy and must be deallocated after use. Consequently, if you
-  want to update the graph, you must call `PetscSFSetGraph()` after modifying the `iremote` array.
-
-  To check for a `NULL` `ilocal` use
-$      if (loc(ilocal) == loc(PETSC_NULL_INTEGER)) then
+  Fortran Note:
+  Use `PetscSFRestoreGraph()` when access to the arrays is no longer needed
 
 .seealso: `PetscSF`, `PetscSFType`, `PetscSFCreate()`, `PetscSFView()`, `PetscSFSetGraph()`
 @*/
-PetscErrorCode PetscSFGetGraph(PetscSF sf, PetscInt *nroots, PetscInt *nleaves, const PetscInt **ilocal, const PetscSFNode **iremote)
+PetscErrorCode PetscSFGetGraph(PetscSF sf, PetscInt *nroots, PetscInt *nleaves, const PetscInt *ilocal[], const PetscSFNode *iremote[])
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sf, PETSCSF_CLASSID, 1);

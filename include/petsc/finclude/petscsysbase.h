@@ -1,22 +1,17 @@
 !
-!
 !  Part of the base include file for Fortran use of PETSc.
-!  Note: This file should contain only define statements and
-!  not the declaration of variables.
+!  Note: This file should contain only define statements
 
 ! No spaces for #defines as some compilers (PGI) also adds
 ! those additional spaces during preprocessing - bad for fixed format
 !
-#if !defined (PETSCSYSDEF_H)
-#define PETSCSYSDEF_H
+#if !defined (PETSCSYSBASEDEF_H)
+#define PETSCSYSBASEDEF_H
 #include "petscconf.h"
 #if defined (PETSC_HAVE_MPIUNI)
 #include "petsc/mpiuni/mpiunifdef.h"
 #endif
 #include "petscversion.h"
-#include "petsc/finclude/petscviewer.h"
-#include "petsc/finclude/petsclog.h"
-#include "petsc/finclude/petscbag.h"
 
 !
 ! The real*8,complex*16 notatiton is used so that the
@@ -29,16 +24,13 @@
 #define integer2 integer(kind=selected_int_kind(3))
 #define integer1 integer(kind=selected_int_kind(1))
 #define PetscBool  logical(kind=4)
-#define PetscBool3  integer(kind=selected_int_kind(5))
 
 #if (PETSC_SIZEOF_VOID_P == 8)
 #define PetscOffset integer8
 #define PetscFortranAddr integer8
-#define PetscCount integer8
 #else
 #define PetscOffset integer4
 #define PetscFortranAddr integer4
-#define PetscCount integer4
 #endif
 
 #if defined(PETSC_USE_64BIT_INDICES)
@@ -47,14 +39,7 @@
 #define PetscInt integer4
 #endif
 #define PetscInt64 integer8
-#define PetscObjectState PetscInt64
-#define PetscObjectId PetscInt64
 
-#if (PETSC_SIZEOF_INT == 4)
-#define PetscFortranInt integer4
-#elif (PETSC_SIZEOF_INT == 8)
-#define PetscFortranInt integer8
-#endif
 !
 ! Fortran does not support unsigned, though ISO_C_BINDING
 ! supports INTEGER(KIND=C_SIZE_T). We don't use that here
@@ -65,41 +50,21 @@
 #define PetscSizeT integer4
 #endif
 !
-#if defined(PETSC_HAVE_MPIUNI)
-#define MPI_Comm MPIUNI_FInt
-#define MPI_Group MPIUNI_FInt
-#define PetscMPIInt MPIUNI_FInt
-#else
 #define MPI_Comm integer4
 #define MPI_Group integer4
-#define PetscMPIInt integer4
-#endif
 !
-#define PetscEnum PetscFortranInt
-#define PetscErrorCode PetscFortranInt
-#define PetscClassId PetscFortranInt
-#define PetscLogEvent PetscFortranInt
-#define PetscLogStage PetscFortranInt
+#define PetscEnum integer4
 #define PetscVoid PetscFortranAddr
-!
-#define PetscDeviceType PetscEnum
-#define PetscDevice type(tPetscDevice)
-#define PetscDeviceContext type(tPetscDeviceContext)
-!
-#define PetscCopyMode PetscEnum
-!
-#define PetscDataType PetscEnum
-#define PetscFPTrap PetscEnum
 !
 #define PetscFortranFloat real(kind=selected_real_kind(5))
 #define PetscFortranDouble real(kind=selected_real_kind(10))
 #define PetscFortranLongDouble real(kind=selected_real_kind(19))
 #if defined(PETSC_USE_REAL_SINGLE)
-#define PetscFortranComplex complex(kind=selected_real_kind(5))
+#define PetscComplex complex(kind=selected_real_kind(5))
 #elif defined(PETSC_USE_REAL_DOUBLE)
-#define PetscFortranComplex complex(kind=selected_real_kind(10))
+#define PetscComplex complex(kind=selected_real_kind(10))
 #elif defined(PETSC_USE_REAL___FLOAT128)
-#define PetscFortranComplex complex(kind=selected_real_kind(20))
+#define PetscComplex complex(kind=selected_real_kind(20))
 #endif
 #define PetscChar(a) character(len = a) ::
 
@@ -127,9 +92,8 @@
 !
 !     Macro for templating between real and complex
 !
-#define PetscComplex PetscFortranComplex
 #if defined(PETSC_USE_COMPLEX)
-#define PetscScalar PetscFortranComplex
+#define PetscScalar PetscComplex
 !
 ! F90 uses real(), conjg() when KIND parameter is used.
 !
@@ -157,19 +121,6 @@
 #define PetscReal PetscFortranDouble
 #endif
 
-!
-!    Allows the matrix Fortran Kernels to work with single precision
-!    matrix data structures
-!
-#define MatScalar PetscScalar
-!
-!     PetscLogDouble variables are used to contain double precision numbers
-!     that are not used in the numerical computations, but rather in logging,
-!     timing etc.
-!
-#define PetscObject type(tPetscObject)
-#define PetscLogDouble PetscFortranDouble
-!
 #define PetscObjectIsNull(obj) (obj%v == 0 .or. obj%v == -2 .or. obj%v == -3)
 !
 !     Macros for error checking
@@ -195,8 +146,6 @@
 #define PetscCheckA(err, c, ierr, s) if (.not.(err)) then; SETERRA(c, ierr, s); endif
 #define PetscCheck(err, c, ierr, s) if (.not.(err)) then; SETERRQ(c, ierr, s); endif
 
-#define PetscMatlabEngine type(tPetscMatlabEngine)
-
 #if !defined(PetscFlush)
 #if defined(PETSC_HAVE_FORTRAN_FLUSH)
 #define PetscFlush(a)    flush(a)
@@ -206,22 +155,5 @@
 #define PetscFlush(a)
 #endif
 #endif
-
-#define PetscRandom type(tPetscRandom)
-#define PetscRandomType character*(80)
-#define PetscBinarySeekType PetscEnum
-
-#define PetscBuildTwoSidedType PetscEnum
-
-#define PetscSubcomm type(tPetscSubcomm)
-#define PetscSubcommType PetscEnum
-
-#define PetscOptions type(tPetscOptions)
-
-#define PetscBench type(tPetscBench)
-
-#define PetscFunctionList PetscFortranAddr
-
-#define PetscInfoCommFlag PetscEnum
 
 #endif

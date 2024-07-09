@@ -1881,7 +1881,7 @@ PetscErrorCode DMGetNearNullSpaceConstructor(DM dm, PetscInt field, PetscErrorCo
 
   Output Parameters:
 + numFields  - The number of fields (or `NULL` if not requested)
-. fieldNames - The number of each field (or `NULL` if not requested)
+. fieldNames - The name of each field (or `NULL` if not requested)
 - fields     - The global indices for each field (or `NULL` if not requested)
 
   Level: intermediate
@@ -1898,7 +1898,7 @@ PetscErrorCode DMGetNearNullSpaceConstructor(DM dm, PetscInt field, PetscErrorCo
 .seealso: [](ch_dmbase), `DM`, `DMAddField()`, `DMGetField()`, `DMDestroy()`, `DMView()`, `DMCreateInterpolation()`, `DMCreateColoring()`, `DMCreateMatrix()`,
           `DMCreateFieldDecomposition()`
 @*/
-PetscErrorCode DMCreateFieldIS(DM dm, PetscInt *numFields, char ***fieldNames, IS **fields)
+PetscErrorCode DMCreateFieldIS(DM dm, PetscInt *numFields, char ***fieldNames, IS *fields[])
 {
   PetscSection section, sectionGlobal;
 
@@ -2030,7 +2030,7 @@ PetscErrorCode DMCreateFieldIS(DM dm, PetscInt *numFields, char ***fieldNames, I
 
 .seealso: [](ch_dmbase), `DM`, `DMAddField()`, `DMCreateFieldIS()`, `DMCreateSubDM()`, `DMCreateDomainDecomposition()`, `DMDestroy()`, `DMView()`, `DMCreateInterpolation()`, `DMCreateColoring()`, `DMCreateMatrix()`, `DMCreateMassMatrix()`, `DMRefine()`, `DMCoarsen()`
 @*/
-PetscErrorCode DMCreateFieldDecomposition(DM dm, PetscInt *len, char ***namelist, IS **islist, DM **dmlist)
+PetscErrorCode DMCreateFieldDecomposition(DM dm, PetscInt *len, char ***namelist, IS *islist[], DM *dmlist[])
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -2119,7 +2119,7 @@ PetscErrorCode DMCreateSubDM(DM dm, PetscInt numFields, const PetscInt fields[],
 }
 
 /*@C
-  DMCreateSuperDM - Returns an arrays of `IS` and `DM` encapsulating a superproblem defined by multiple `DM`s passed in.
+  DMCreateSuperDM - Returns an arrays of `IS` and a single `DM` encapsulating a superproblem defined by multiple `DM`s passed in.
 
   Not collective
 
@@ -2128,7 +2128,7 @@ PetscErrorCode DMCreateSubDM(DM dm, PetscInt numFields, const PetscInt fields[],
 - n   - The number of `DM`s
 
   Output Parameters:
-+ is      - The global indices for each of subproblem within the super `DM`, or NULL
++ is      - The global indices for each of subproblem within the super `DM`, or `NULL`, its length is `n`
 - superdm - The `DM` for the superproblem
 
   Level: intermediate
@@ -2166,7 +2166,7 @@ PetscErrorCode DMCreateSuperDM(DM dms[], PetscInt n, IS *is[], DM *superdm)
 . dm - the `DM` object
 
   Output Parameters:
-+ n           - The number of subproblems in the domain decomposition (or `NULL` if not requested)
++ n           - The number of subproblems in the domain decomposition (or `NULL` if not requested), also the length of the four arrays below
 . namelist    - The name for each subdomain (or `NULL` if not requested)
 . innerislist - The global indices for each inner subdomain (or `NULL`, if not requested)
 . outerislist - The global indices for each outer subdomain (or `NULL`, if not requested)
@@ -2193,7 +2193,7 @@ PetscErrorCode DMCreateSuperDM(DM dms[], PetscInt n, IS *is[], DM *superdm)
 .seealso: [](ch_dmbase), `DM`, `DMCreateFieldDecomposition()`, `DMDestroy()`, `DMCreateDomainDecompositionScatters()`, `DMView()`, `DMCreateInterpolation()`,
           `DMSubDomainHookAdd()`, `DMSubDomainHookRemove()`,`DMCreateColoring()`, `DMCreateMatrix()`, `DMCreateMassMatrix()`, `DMRefine()`, `DMCoarsen()`
 @*/
-PetscErrorCode DMCreateDomainDecomposition(DM dm, PetscInt *n, char ***namelist, IS **innerislist, IS **outerislist, DM **dmlist)
+PetscErrorCode DMCreateDomainDecomposition(DM dm, PetscInt *n, char ***namelist, IS *innerislist[], IS *outerislist[], DM *dmlist[])
 {
   DMSubDomainHookLink link;
   PetscInt            i, l;
@@ -3760,9 +3760,12 @@ PetscErrorCode DMGetApplicationContext(DM dm, void *ctx)
 
   Input Parameters:
 + dm - the DM object
-- f  - the function that computes variable bounds used by SNESVI (use `NULL` to cancel a previous function that was set)
+- f  - the function that computes variable bounds used by `SNESVI` (use `NULL` to cancel a previous function that was set)
 
   Level: intermediate
+
+  Developer Note:
+  Should be called `DMSetComputeVIBounds()` or something similar
 
 .seealso: [](ch_dmbase), `DM`, `DMComputeVariableBounds()`, `DMHasVariableBounds()`, `DMView()`, `DMCreateGlobalVector()`, `DMCreateInterpolation()`, `DMCreateColoring()`, `DMCreateMatrix()`, `DMCreateMassMatrix()`, `DMGetApplicationContext()`,
          `DMSetJacobian()`
@@ -4077,8 +4080,6 @@ PetscErrorCode DMConvert(DM dm, DMType newtype, DM *M)
   PetscCall(PetscObjectStateIncrease((PetscObject)*M));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-
-/*--------------------------------------------------------------------------------------------------------------------*/
 
 /*@C
   DMRegister -  Adds a new `DM` type implementation
@@ -7569,7 +7570,7 @@ PetscErrorCode DMCopyLabels(DM dmA, DM dmB, PetscCopyMode mode, PetscBool all, D
 - dm1 - Second `DM` object
 
   Output Parameters:
-+ equal   - (Optional) Flag whether labels of dm0 and dm1 are the same
++ equal   - (Optional) Flag whether labels of `dm0` and `dm1` are the same
 - message - (Optional) Message describing the difference, or `NULL` if there is no difference
 
   Level: intermediate
@@ -7597,7 +7598,7 @@ PetscErrorCode DMCopyLabels(DM dmA, DM dmB, PetscCopyMode mode, PetscBool all, D
 
 .seealso: [](ch_dmbase), `DM`, `DMLabel`, `DMAddLabel()`, `DMCopyLabelsMode`, `DMLabelCompare()`
 @*/
-PetscErrorCode DMCompareLabels(DM dm0, DM dm1, PetscBool *equal, char **message)
+PetscErrorCode DMCompareLabels(DM dm0, DM dm1, PetscBool *equal, char *message[])
 {
   PetscInt    n, i;
   char        msg[PETSC_MAX_PATH_LEN] = "";

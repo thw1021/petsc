@@ -340,7 +340,7 @@ PetscErrorCode PetscStrendswithwhich(const char a[], const char *const *bs, Pets
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-struct _p_PetscToken {
+struct _n_PetscToken {
   char  token;
   char *array;
   char *current;

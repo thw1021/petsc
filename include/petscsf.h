@@ -7,6 +7,7 @@
 #include <petscsftypes.h>
 #include <petscvec.h> /* for Vec, VecScatter etc */
 
+/* MANSEC = Vec */
 /* SUBMANSEC = PetscSF */
 
 PETSC_EXTERN PetscClassId PETSCSF_CLASSID;
@@ -27,7 +28,7 @@ PETSC_EXTERN PetscClassId PETSCSF_CLASSID;
 .seealso: `PetscSF`, `PetscSFSetGraph()`, `PetscSFSetGraphWithPattern()`
 E*/
 typedef enum {
-  PETSCSF_PATTERN_GENERAL = 0,
+  PETSCSF_PATTERN_GENERAL,
   PETSCSF_PATTERN_ALLGATHER,
   PETSCSF_PATTERN_GATHER,
   PETSCSF_PATTERN_ALLTOALL

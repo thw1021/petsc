@@ -1,10 +1,7 @@
 
 
-! rename MAT_INFO_SIZE and MAT_FACTORINFO_SIZE to enable reuse here
-#define MAT_INFO_SIZE MAT_INFO_SIZE_MOD
-#define MAT_FACTORINFO_SIZE MAT_FACTORINFO_SIZE_MOD
       Interface
-        Subroutine MatFDColoringGetPerturbedColumnsF90(i,array,ierr)
+        Subroutine MatFDColoringGetPerturbedColumns(i,array,ierr)
           import tMatFDColoring
           PetscInt, pointer :: array(:)
           PetscErrorCode  ierr
@@ -13,7 +10,7 @@
       End Interface
 
       Interface
-        Subroutine MatFDColoringRestorePerturbedColumnsF90(i,array,ierr)
+        Subroutine MatFDColoringRestorePerturbedColumns(i,array,ierr)
           import tMatFDColoring
           PetscInt, pointer :: array(:)
           PetscErrorCode ierr
@@ -61,7 +58,7 @@
 
       interface
         subroutine MatSetValue(myMat,i,j,va,mode,ierr)
-          import tMat
+          import tMat, eInsertMode
           Mat :: myMat
           PetscInt :: i,j
           PetscScalar :: va
@@ -70,7 +67,7 @@
         end subroutine
 
         subroutine MatSetValueLocal(myMat,i,j,va,mode,ierr)
-          import tMat
+          import tMat, eInsertMode
           Mat :: myMat
           PetscInt :: i,j
           PetscScalar :: va
@@ -80,29 +77,7 @@
         end interface
 
       Interface
-        Subroutine MatGetRow(v,row,ncols,cols,vals,ierr)
-          import tMat
-          PetscInt cols(*)
-          PetscInt  row,ncols
-          PetscScalar vals(*)
-          PetscErrorCode ierr
-          Mat     v
-        End Subroutine
-      End Interface
-
-      Interface
-        Subroutine MatRestoreRow(v,row,ncols,cols,vals,ierr)
-          import tMat
-          PetscInt  cols(*)
-          PetscInt  row,ncols
-          PetscScalar vals(*)
-          PetscErrorCode ierr
-          Mat     v
-        End Subroutine
-      End Interface
-
-      Interface
-        Subroutine MatGetRowIJF90(v,sh,sym,bl,n,ia,ja,d,ierr)
+        Subroutine MatGetRowIJ(v,sh,sym,bl,n,ia,ja,d,ierr)
           import tMat
           PetscInt, pointer :: ia(:), ja(:)
           PetscInt  n,sh
@@ -113,7 +88,7 @@
       End Interface
 
       Interface
-        Subroutine MatRestoreRowIJF90(v,s,sy,b,n,ia,ja,d,ierr)
+        Subroutine MatRestoreRowIJ(v,s,sy,b,n,ia,ja,d,ierr)
           import tMat
           PetscInt, pointer :: ia(:), ja(:)
           PetscInt  n,s
@@ -124,7 +99,7 @@
       End Interface
 
       Interface
-        Subroutine MatDenseGetArrayF90(v,array,ierr)
+        Subroutine MatDenseGetArray(v,array,ierr)
           import tMat
           PetscScalar, pointer :: array(:,:)
           PetscErrorCode ierr
@@ -133,7 +108,7 @@
       End Interface
 
       Interface
-        Subroutine MatDenseRestoreArrayF90(v,array,ierr)
+        Subroutine MatDenseRestoreArray(v,array,ierr)
           import tMat
           PetscScalar, pointer :: array(:,:)
           PetscErrorCode ierr
@@ -142,7 +117,7 @@
       End Interface
 
       Interface
-        Subroutine MatDenseGetArrayReadF90(v,array,ierr)
+        Subroutine MatDenseGetArrayRead(v,array,ierr)
           import tMat
           PetscScalar, pointer :: array(:,:)
           PetscErrorCode ierr
@@ -151,7 +126,7 @@
       End Interface
 
       Interface
-        Subroutine MatDenseRestoreArrayReadF90(v,array,ierr)
+        Subroutine MatDenseRestoreArrayRead(v,array,ierr)
           import tMat
           PetscScalar, pointer :: array(:,:)
           PetscErrorCode ierr
@@ -160,7 +135,7 @@
       End Interface
 
       Interface
-        Subroutine MatDenseGetArrayWriteF90(v,array,ierr)
+        Subroutine MatDenseGetArrayWrite(v,array,ierr)
           import tMat
           PetscScalar, pointer :: array(:,:)
           PetscErrorCode ierr
@@ -169,7 +144,7 @@
       End Interface
 
       Interface
-        Subroutine MatDenseRestoreArrayWriteF90(v,array,ierr)
+        Subroutine MatDenseRestoreArrayWrite(v,array,ierr)
           import tMat
           PetscScalar, pointer :: array(:,:)
           PetscErrorCode ierr
@@ -178,7 +153,7 @@
       End Interface
 
       Interface
-        Subroutine MatDenseGetColumnF90(v,col,array,ierr)
+        Subroutine MatDenseGetColumn(v,col,array,ierr)
           import tMat
           PetscScalar, pointer :: array(:)
           PetscErrorCode ierr
@@ -188,7 +163,7 @@
       End Interface
 
       Interface
-        Subroutine MatDenseRestoreColumnF90(v,array,ierr)
+        Subroutine MatDenseRestoreColumn(v,array,ierr)
           import tMat
           PetscScalar, pointer :: array(:)
           PetscErrorCode ierr
@@ -197,7 +172,7 @@
       End Interface
 
       Interface
-        Subroutine MatSeqAIJGetArrayF90(v,array,ierr)
+        Subroutine MatSeqAIJGetArray(v,array,ierr)
           import tMat
           PetscScalar, pointer :: array(:)
           PetscErrorCode ierr
@@ -206,7 +181,7 @@
       End Interface
 
       Interface
-        Subroutine MatMPIAIJGetSeqAIJF90(a,b,c,d,ierr)
+        Subroutine MatMPIAIJGetSeqAIJ(a,b,c,d,ierr)
           import tMat
           PetscInt, pointer :: d(:)
           PetscErrorCode ierr
@@ -215,7 +190,7 @@
       End Interface
 
       Interface
-        Subroutine MatMPIAIJRestoreSeqAIJF90(a,b,c,d,ierr)
+        Subroutine MatMPIAIJRestoreSeqAIJ(a,b,c,d,ierr)
           import tMat
           PetscInt, pointer :: d(:)
           PetscErrorCode ierr
@@ -224,7 +199,7 @@
       End Interface
 
       Interface
-        Subroutine MatSeqAIJRestoreArrayF90(v,array,ierr)
+        Subroutine MatSeqAIJRestoreArray(v,array,ierr)
           import tMat
           PetscScalar, pointer :: array(:)
           PetscErrorCode ierr
@@ -233,7 +208,7 @@
       End Interface
 
       Interface
-        Subroutine MatGetGhostsF90(v,array,ierr)
+        Subroutine MatGetGhosts(v,array,ierr)
           import tMat
           PetscInt, pointer :: array(:)
           PetscErrorCode ierr
@@ -241,6 +216,44 @@
         End Subroutine
       End Interface
 
-! revert MAT_INFO_SIZE and MAT_FACTORINFO_SIZE defines
-#undef MAT_INFO_SIZE
-#undef MAT_FACTORINFO_SIZE
+      Interface
+        Subroutine MatDestroyMatrices(n,sm,ierr)
+          import tMat
+          Mat, pointer :: sm(:)
+          PetscInt n
+          PetscErrorCode ierr
+        End Subroutine
+      end Interface
+
+      Interface
+        Subroutine MatCreateSubmatrices(m,n,row,col,scall,sm,ierr)
+          import tMat, tIS, eMatReuse
+          Mat m
+          Mat, pointer :: sm(:)
+          PetscInt n
+          IS row(*), col(*)
+          PetscErrorCode ierr
+          MatReuse scall
+        End Subroutine
+      end Interface
+
+      Interface
+        Subroutine MatDestroySubmatrices(n,sm,ierr)
+          import tMat
+          Mat, pointer :: sm(:)
+          PetscInt n
+          PetscErrorCode ierr
+        End Subroutine
+      end Interface
+
+      Interface
+        Subroutine MatCreateSubmatricesMPI(m,n,row,col,scall,sm,ierr)
+          import tMat, tIS, eMatReuse
+          Mat m
+          Mat, pointer :: sm(:)
+          PetscInt n
+          IS row(*), col(*)
+          MatReuse scall
+          PetscErrorCode ierr
+        End Subroutine
+      end Interface

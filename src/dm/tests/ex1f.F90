@@ -4,15 +4,16 @@
 !
 ! Contributed-by:       Fabian Jakub  <Fabian.Jakub@physik.uni-muenchen.de>
 program main
-#include "petsc/finclude/petsc.h"
-
-  use petsc
+#include "petsc/finclude/petscdmda.h"
+  use petscdmda
   implicit none
 
   PetscInt, parameter :: Ndof=1, stencil_size=1
   PetscInt, parameter :: Nx=3, Ny=3
   PetscErrorCode :: myid, commsize, ierr
   PetscScalar, pointer :: xv1d(:)
+  PetscInt, pointer :: lx(:), ly(:)
+  PetscMPIInt, pointer :: nb(:)
 
   type(tDM) :: da
   type(tVec) :: gVec!, naturalVec
@@ -32,6 +33,11 @@ program main
   PetscCallA(VecRestoreArrayF90(gVec, xv1d, ierr))
 
   PetscCallA(PetscObjectViewFromOptions(gVec, PETSC_NULL_VEC, '-show_gVec', ierr))
+
+  PetscCallA(DMDAGetOwnershipRanges(da, lx, ly, PETSC_NULL_INTEGER_POINTER, ierr))
+  PetscCallA(DMDARestoreOwnershipRanges(da, lx, ly, PETSC_NULL_INTEGER_POINTER, ierr))
+  PetscCallA(DMDAGetNeighbors(da, nb, ierr))
+  PetscCallA(DMDARestoreNeighbors(da, nb, ierr))
 
   PetscCallA(VecDestroy(gVec, ierr))
   PetscCallA(DMDestroy(da, ierr))

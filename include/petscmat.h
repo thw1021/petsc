@@ -246,7 +246,7 @@ PETSC_DEPRECATED_FUNCTION(3, 9, 0, "MatSolverTypeGet()", ) static inline PetscEr
 .seealso: [](sec_matmatproduct), [](ch_matrices), `MatProductSetType()`
 E*/
 typedef enum {
-  MATPRODUCT_UNSPECIFIED = 0,
+  MATPRODUCT_UNSPECIFIED,
   MATPRODUCT_AB,
   MATPRODUCT_AtB,
   MATPRODUCT_ABt,
@@ -567,9 +567,6 @@ PETSC_EXTERN PetscErrorCode MatSetRandom(Mat, PetscRandom);
    For stencil access to vectors see `DMDAVecGetArray()`, `DMDAVecGetArrayF90()`.
 
    For staggered grids, see `DMStagStencil`
-
-   Fortran Note:
-   See `MatSetValuesStencil()` for details.
 
 .seealso: [](ch_matrices), `Mat`, `MatSetValuesStencil()`, `MatSetStencil()`, `MatSetValuesBlockedStencil()`, `DMDAVecGetArray()`, `DMDAVecGetArrayF90()`,
           `DMStagStencil`
@@ -1535,8 +1532,7 @@ typedef struct {
   PetscReal dtcount;       /* maximum nonzeros to be allowed per row */
   PetscReal fill;          /* expected fill, nonzeros in factored matrix/nonzeros in original matrix */
   PetscReal levels;        /* ICC/ILU(levels) */
-  PetscReal pivotinblocks; /* for BAIJ and SBAIJ matrices pivot in factorization on blocks, default 1.0
-                                   factorization may be faster if do not pivot */
+  PetscReal pivotinblocks; /* BAIJ and SBAIJ matrices pivot in factorization on blocks, default 1.0 factorization may be faster if do not pivot */
   PetscReal zeropivot;     /* pivot is called zero if less than this */
   PetscReal shifttype;     /* type of shift added to matrix factor to prevent zero pivots */
   PetscReal shiftamount;   /* how large the shift is */

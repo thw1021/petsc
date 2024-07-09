@@ -3,11 +3,13 @@
 #include <petsc/private/f90impl.h>
 
 #if defined(PETSC_HAVE_FORTRAN_CAPS)
-  #define dmswarmgetfield_     DMSWARMGETFIELD
-  #define dmswarmrestorefield_ DMSWARMRESTOREFIELD
+  #define dmswarmgetfield_                   DMSWARMGETFIELD
+  #define dmswarmrestorefield_               DMSWARMRESTOREFIELD
+  #define dmswarmregisterpetscdatatypefield_ DMSWARMREGISTERPETSCDATATYPEFIELD
 #elif !defined(PETSC_HAVE_FORTRAN_UNDERSCORE) && !defined(FORTRANDOUBLEUNDERSCORE)
-  #define dmswarmgetfield_     dmswarmgetfield
-  #define dmswarmrestorefield_ dmswarmerstorefield
+  #define dmswarmgetfield_                   dmswarmgetfield
+  #define dmswarmrestorefield_               dmswarmerstorefield
+  #define dmswarmregisterpetscdatatypefield_ dmswarmregisterpetscdatatypefield
 #endif
 
 /* Definitions of Fortran Wrapper routines */
@@ -35,8 +37,19 @@ PETSC_EXTERN void dmswarmrestorefield_(DM *dm, char *name, PetscInt *blocksize, 
   FIXCHAR(name, lenN, fieldname);
   *ierr = F90Array1dAccess(ptr, MPIU_SCALAR, (void **)&v PETSC_F90_2PTR_PARAM(ptrd));
   if (*ierr) return;
+  if (*ierr) return;
   *ierr = DMSwarmRestoreField(*dm, fieldname, blocksize, type, (void **)&v);
   if (*ierr) return;
   *ierr = F90Array1dDestroy(ptr, MPIU_SCALAR PETSC_F90_2PTR_PARAM(ptrd));
   FREECHAR(name, fieldname);
+}
+
+PETSC_EXTERN void dmswarmregisterpetscdatatypefield_(DM *dm, char fieldname[], PetscInt *blocksize, PetscDataType *type, int *ierr, PETSC_FORTRAN_CHARLEN_T cl0)
+{
+  char *_cltmp0 = NULL;
+
+  FIXCHAR(fieldname, cl0, _cltmp0);
+  *ierr = DMSwarmRegisterPetscDatatypeField(*dm, _cltmp0, *blocksize, *type);
+  if (*ierr) return;
+  FREECHAR(fieldname, _cltmp0);
 }

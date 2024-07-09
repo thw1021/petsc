@@ -2,6 +2,8 @@
 
 #include <petscsys.h>
 
+/* SUBMANSEC = Sys */
+
 #if defined(PETSC_SKIP_PETSCTABLE_DEPRECATION_WARNING)
   #define PETSC_TABLE_DEPRECATION_WARNING(...)
 #else

@@ -3,8 +3,7 @@
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscmat.h>
 #include <petsc/finclude/petscpc.h>
-      USE petscmat
-      USE petscpc
+      USE petscksp
       implicit none
 
       Mat :: A

@@ -5,6 +5,7 @@
 #include <petscbt.h>
 #include <petscsectiontypes.h>
 
+/* MANSEC = Vec */
 /* SUBMANSEC = PetscSection */
 
 PETSC_EXTERN PetscClassId PETSC_SECTION_CLASSID;

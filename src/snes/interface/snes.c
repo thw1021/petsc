@@ -4424,7 +4424,7 @@ PetscErrorCode SNESSetConvergedReason(SNES snes, SNESConvergedReason reason)
   Level: intermediate
 
   Notes:
-  If 'a' and 'its' are `NULL` then space is allocated for the history. If 'na' is `PETSC_DECIDE` then a
+  If 'a' and 'its' are `NULL` then space is allocated for the history. If 'na' is `PETSC_DECIDE` (or, deprecated, `PETSC_DEFAULT`) then a
   default array of length 1,000 is allocated.
 
   This routine is useful, e.g., when running a code for purposes
@@ -4492,10 +4492,13 @@ PETSC_EXTERN mxArray *SNESGetConvergenceHistoryMatlab(SNES snes)
   of accurate performance monitoring, when no I/O should be done
   during the section of code that is being timed.
 
-  Fortran Note:
-  The calling sequence for this routine in Fortran is
+  Fortran Notes:
+  Return the arrays with ``SNESRestoreConvergenceHistory()`
+
+  Use the arguments
 .vb
-    call SNESGetConvergenceHistory(SNES snes, integer na, integer ierr)
+  PetscReal, pointer :: a(:)
+  PetscInt, pointer :: its(:)
 .ve
 
 .seealso: [](ch_snes), `SNES`, `SNESSolve()`, `SNESSetConvergenceHistory()`

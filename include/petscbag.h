@@ -2,7 +2,8 @@
 
 #include <petscsys.h>
 
-/* SUBMANSEC = Sys */
+/* MANSEC = Sys */
+/* SUBMANSEC = Bag */
 
 /*S
    PetscBag - PETSc object that manages a collection of user data including parameters.

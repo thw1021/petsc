@@ -3552,7 +3552,7 @@ static PetscErrorCode DMPlexCreateTPSMesh_Internal(DM dm, DMPlexTPSType tpstype,
     // Code from DMPlexExtrude
     PetscCall(DMPlexTransformCreate(PetscObjectComm((PetscObject)dm), &tr));
     PetscCall(DMPlexTransformSetDM(tr, dm));
-    PetscCall(DMPlexTransformSetType(tr, DMPLEXEXTRUDE));
+    PetscCall(DMPlexTransformSetType(tr, DMPLEXEXTRUDETYPE));
     PetscCall(PetscObjectGetOptionsPrefix((PetscObject)dm, &prefix));
     PetscCall(PetscObjectSetOptionsPrefix((PetscObject)tr, prefix));
     PetscCall(PetscObjectGetOptions((PetscObject)dm, &options));

@@ -916,6 +916,9 @@ PETSC_EXTERN PetscErrorCode VecTaggerAndGetSubs(VecTagger, PetscInt *, VecTagger
 PETSC_EXTERN PetscErrorCode VecTaggerInitializePackage(void);
 PETSC_EXTERN PetscErrorCode VecTaggerFinalizePackage(void);
 
+PETSC_EXTERN PetscErrorCode PetscViewerMathematicaSetVector(PetscViewer, Vec);
+PETSC_EXTERN PetscErrorCode PetscViewerMathematicaGetVector(PetscViewer, Vec);
+
 #if PetscDefined(USE_DEBUG)
 /* This is an internal debug-only routine that should not be used by users */
 PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecValidValues_Internal(Vec, PetscInt, PetscBool);

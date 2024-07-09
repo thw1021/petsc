@@ -7,6 +7,7 @@
 #include <petscdmtypes.h>
 #include <petscpctypes.h>
 
+/* MANSEC = KSP */
 /* SUBMANSEC = PC */
 
 PETSC_EXTERN PetscErrorCode PCInitializePackage(void);

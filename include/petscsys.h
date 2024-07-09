@@ -2547,3 +2547,6 @@ PETSC_EXTERN PetscErrorCode PetscBLASGetNumThreads(PetscInt *);
    UBSan, assuming PETSc has been configured with `-fsanitize=undefined` as part of the compiler flags
 M*/
 #define PetscSafePointerPlusOffset(ptr, offset) ((ptr) ? (ptr) + (offset) : NULL)
+
+/* this is required to force PetscDevice to be visible at the system level for the Fortran interface */
+#include <petscdevicetypes.h>
