@@ -168,6 +168,7 @@
 !     timing etc.
 !
 #define PetscObject type(tPetscObject)
+#define PetscContainer type(tPetscContainer)
 #define PetscLogDouble PetscFortranDouble
 !
 #define PetscObjectIsNull(obj) (obj%v == 0 .or. obj%v == -2 .or. obj%v == -3)
