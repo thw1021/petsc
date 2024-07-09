@@ -3956,12 +3956,12 @@ cdef class Mat(Object):
 
         """
         cdef Mat A00 = Mat(), Ap00 = Mat(), A01 = Mat(), A10 = Mat(), A11 = Mat()
-        CHKERR ( MatSchurComplementGetSubMatrices(self.mat, &A00.mat, &Ap00.mat, &A01.mat, &A10.mat, &A11.mat) )
-        CHKERR( PetscINCREF(A00.obj) )
-        CHKERR( PetscINCREF(Ap00.obj) )
-        CHKERR( PetscINCREF(A01.obj) )
-        CHKERR( PetscINCREF(A10.obj) )
-        CHKERR( PetscINCREF(A11.obj) )
+        CHKERR(MatSchurComplementGetSubMatrices(self.mat, &A00.mat, &Ap00.mat, &A01.mat, &A10.mat, &A11.mat))
+        CHKERR(PetscINCREF(A00.obj))
+        CHKERR(PetscINCREF(Ap00.obj))
+        CHKERR(PetscINCREF(A01.obj))
+        CHKERR(PetscINCREF(A10.obj))
+        CHKERR(PetscINCREF(A11.obj))
         return A00, Ap00, A01, A10, A11
 
     #
