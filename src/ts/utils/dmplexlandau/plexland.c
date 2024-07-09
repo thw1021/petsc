@@ -594,7 +594,7 @@ static PetscErrorCode GeometryDMLandau(DM base, PetscInt point, PetscInt dim, co
 
   PetscFunctionBegin;
   if (ctx->sphere && dim == 3) { // make sphere: works for one AMR and Q2
-    int nzero = 0, idx;
+    int nzero = 0, idx = 0;
     xyz[0]    = r;
     xyz[1]    = z;
     xyz[2]    = abc[2];
