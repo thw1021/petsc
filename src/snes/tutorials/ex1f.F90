@@ -33,6 +33,9 @@
       PetscScalar   pfive
       PetscReal   tol
       PetscBool   setls
+      PetscReal, pointer :: rhistory(:)
+      PetscInt, pointer :: itshistory(:)
+      PetscInt nhistory
 #if defined(PETSC_USE_LOG)
       PetscViewer viewer
 #endif
@@ -62,6 +65,8 @@
 ! - - - - - - - - - -- - - - - - - - - - - - - - - - - - - - - - - - - -
 
       PetscCallA(SNESCreate(PETSC_COMM_WORLD,snes,ierr))
+
+      PetscCallA(SNESSetConvergenceHistory(snes,PETSC_NULL_REAL_ARRAY,PETSC_NULL_INTEGER_ARRAY,PETSC_DECIDE,PETSC_FALSE,ierr))
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !  Create matrix and vector data structures; set corresponding routines
@@ -130,7 +135,10 @@
       PetscCallA(VecSet(x,pfive,ierr))
       PetscCallA(SNESSolve(snes,PETSC_NULL_VEC,x,ierr))
 
-!  View solver converged reason; we could instead use the option -snes_converged_reason
+      PetscCallA(SNESGetConvergenceHistory(snes,rhistory,itshistory,nhistory,ierr))
+      PetscCallA(SNESRestoreConvergenceHistory(snes,rhistory,itshistory,nhistory,ierr))
+
+! View solver converged reason; we could instead use the option -snes_converged_reason
       PetscCallA(SNESConvergedReasonView(snes,PETSC_VIEWER_STDOUT_WORLD,ierr))
 
       PetscCallA(SNESGetIterationNumber(snes,its,ierr))
@@ -187,7 +195,7 @@
 !      the array.
 
       PetscCall(VecGetArrayReadF90(x,lx_v,ierr))
-      PetscCall(VecGetArrayF90(f,lf_v,ierr))
+      PetscCall(VecGetArray(f,lf_v,ierr))
 
 !  Compute function
 
@@ -197,7 +205,7 @@
 !  Restore vectors
 
       PetscCall(VecRestoreArrayReadF90(x,lx_v,ierr))
-      PetscCall(VecRestoreArrayF90(f,lf_v,ierr))
+      PetscCall(VecRestoreArray(f,lf_v,ierr))
 
       end
 

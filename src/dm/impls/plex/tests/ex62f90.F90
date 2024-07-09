@@ -291,7 +291,7 @@ program ex62f90
         PetscCallA(DMGetLocalSection(pdm, rootSection, ierr))
         PetscCallA(PetscSFCreateInverseSF(natPointSF, natPointSFInv, ierr))
         PetscCallA(PetscSectionCreate(PETSC_COMM_WORLD, leafSection, ierr))
-        PetscCallA(PetscSFDistributeSection(natPointSFInv, rootSection, PETSC_NULL_INTEGER, leafSection, ierr))
+        PetscCallA(PetscSFDistributeSection(natPointSFInv, rootSection, PETSC_NULL_INTEGER_POINTER, leafSection, ierr))
         PetscCallA(DMSetLocalSection(dm, leafSection, ierr))
         PetscCallA(DMPlexCreateGlobalToNaturalSF(pdm, leafSection, natPointSF, natSF, ierr))
         PetscCallA(PetscSFDestroy(natPointSFInv, ierr))

@@ -55,16 +55,17 @@
       end
 
       subroutine FormFunctionLocal(in,x,f,dummy,ierr)
+      use petscdmda
       implicit none
       PetscInt i,j,k,dummy
-      DMDALocalInfo in(DMDA_LOCAL_INFO_SIZE)
-      PetscScalar x(in(DMDA_LOCAL_INFO_DOF),XG_RANGE,YG_RANGE)
-      PetscScalar f(in(DMDA_LOCAL_INFO_DOF),X_RANGE,Y_RANGE)
+      DMDALocalInfo in
+      PetscScalar x(in%DOF,XG_RANGE,YG_RANGE)
+      PetscScalar f(in%DOF,X_RANGE,Y_RANGE)
       PetscErrorCode ierr
 
-      do i=in(DMDA_LOCAL_INFO_XS)+1,in(DMDA_LOCAL_INFO_XS)+in(DMDA_LOCAL_INFO_XM)
-         do j=in(DMDA_LOCAL_INFO_YS)+1,in(DMDA_LOCAL_INFO_YS)+in(DMDA_LOCAL_INFO_YM)
-            do k=1,in(DMDA_LOCAL_INFO_DOF)
+      do i=in%XS+1,in%XS+in%XM
+         do j=in%YS+1,in%YS+in%YM
+            do k=1,in%DOF
                f(k,i,j) = x(k,i,j)*x(k,i,j) - 2.0
             enddo
          enddo

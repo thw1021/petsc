@@ -15,7 +15,7 @@ native    PetscDTNodeType
 # petscdm.h
 native    DMBoundaryType
 native    DMPointLocationType
-native    DMAdaptationType
+native    DMAdaptationCriterion
 native    DMAdaptFlag
 native    PetscUnit
 native    DMAdaptationStrategy
@@ -38,6 +38,7 @@ nativeptr PetscFV
 nativeptr PetscLimiter
 nativeptr PetscPartitioner
 nativeptr DMField
+nativeptr DMInterpolationInfo
 
 nativeptr DMPlexTransform
 
@@ -362,3 +363,4 @@ char VecTaggerType
 char PetscViewerType
 char DMForestTopology
 char DMForestAdaptivityStrategy
+char DMAdaptorType

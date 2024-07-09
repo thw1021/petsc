@@ -10,6 +10,7 @@
 #include "petsc/finclude/petscdt.h"
 
 #define DMType character*(80)
+#define DMAdaptorType character*(80)
 #define DMBoundaryType               PetscEnum
 #define DMBlockingType               PetscEnum
 #define DMPointLocationType          PetscEnum
@@ -23,19 +24,21 @@
 #define DMCopyLabelsMode             PetscEnum
 #define PetscDTSimplexQuadratureType PetscEnum
 #define DMReorderDefaultFlag         PetscEnum
+#define DMAdaptationCriterion        PetscEnum
 
-#define DM               type(tDM)
-#define DMAdaptor        type(tDMAdaptor)
-#define PetscQuadrature  type(tPetscQuadrature)
-#define PetscWeakForm    type(tPetscWeakForm)
-#define PetscDS          type(tPetscDS)
-#define PetscFE          type(tPetscFE)
-#define PetscSpace       type(tPetscSpace)
-#define PetscDualSpace   type(tPetscDualSpace)
-#define PetscFV          type(tPetscFV)
-#define PetscLimiter     type(tPetscLimiter)
-#define PetscPartitioner type(tPetscPartitioner)
-#define DMField          type(tDMField)
+#define DM                  type(tDM)
+#define DMAdaptor           type(tDMAdaptor)
+#define PetscQuadrature     type(tPetscQuadrature)
+#define PetscWeakForm       type(tPetscWeakForm)
+#define PetscDS             type(tPetscDS)
+#define PetscFE             type(tPetscFE)
+#define PetscSpace          type(tPetscSpace)
+#define PetscDualSpace      type(tPetscDualSpace)
+#define PetscFV             type(tPetscFV)
+#define PetscLimiter        type(tPetscLimiter)
+#define PetscPartitioner    type(tPetscPartitioner)
+#define DMField             type(tDMField)
+#define DMInterpolationInfo type(tDMInterpolationInfo)
 
 #define DMDA        'da'
 #define DMCOMPOSITE 'composite'
@@ -50,6 +53,9 @@
 #define DMP4EST     'p4est'
 #define DMP8EST     'p8est'
 #define DMSWARM     'swarm'
+
+#define DMADAPTORGRADIENT 'gradient'
+#define DMADAPTORFLUX     'flux'
 
 #define DMPlexTransform type(tDMPlexTransform)
 
