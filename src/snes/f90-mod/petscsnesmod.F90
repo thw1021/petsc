@@ -44,4 +44,18 @@
         interface
 #include <../src/snes/f90-mod/ftn-auto-interfaces/petscsnes.h90>
         end interface
-        end module
+
+        contains
+
+!       deprecated API
+
+        subroutine SNESGetConvergenceHistoryF90(snes,r,its,na,ierr)
+          SNES snes
+          PetscInt na
+          PetscReal, pointer :: r(:)
+          PetscInt, pointer :: its(:)
+          PetscErrorCode, intent(out) :: ierr
+          call SNESGetConvergenceHistory(snes,r,its,na,ierr)
+        end subroutine
+
+      end module

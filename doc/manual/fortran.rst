@@ -133,24 +133,12 @@ result. For example,
 The result is copied into ``str``.
 
 For PETSc routine arguments that return an array of ``PetscInt``, ``PetscScalar``, ``PetscReal`` or of PETSc objects,
-there are two possibilities. In the first, the Fortran routine must pass in an array of sufficient size to hold the result. For example,
-
-
-.. code-block:: fortran
-
-   PetscInt lx(64)
-   DMDAGetOwnershipRanges(a, lx, PETSC_NULL_INTEGER_ARRAY, PETSC_NULL_INTEGER_ARRAY);
-
-In the second form one passes in a pointer to an array and the PETSc routine returns an array containing the values.
+one passes in a pointer to an array and the PETSc routine returns an array containing the values.
 
 .. code-block:: fortran
 
    PetscScalar, pointer :: array(:)
    PetscCall(VecGetArrayF90(v, array, ierr))
-
-In this second form the PETSc routine often has a name that ends with ``F90``.
-
-The information for which form to use is documented in the manual page of the routine.
 
 Passing Null Pointers
 ^^^^^^^^^^^^^^^^^^^^^
@@ -174,7 +162,16 @@ Where the code expects an array, then use ``PETSC_NULL_XXX_ARRAY``. For example:
 
    PetscCall(MatCreateSeqDense(comm, m, n, PETSC_NULL_SCALAR_ARRAY, A))
 
-Finally when a subroutine returns a ``PetscObject`` through an argument to check if it is `NULL` you must use:
+When a PETSc function returns multiple arrays, such as ``DMDAGetOwnershipRanges()`` and the user does not need
+certain arrays they must pass ``PETSC_NULL_XXX_POINTER`` as the argument. For example,
+
+.. code-block:: fortran
+
+   PetscInt, pointer :: lx(:), ly(:)
+   PetscCallA(DMDAGetOwnershipRanges(da, lx, ly, PETSC_NULL_INTEGER_POINTER, ierr))
+   PetscCallA(DMDARestoreOwnershipRanges(da, lx, ly, PETSC_NULL_INTEGER_POINTER, ierr))
+
+Finally when a subroutine returns a ``PetscObject`` through an argument, to check if it is `NULL` you must use:
 
 .. code-block:: fortran
 
@@ -195,7 +192,8 @@ Note that
 
 will always return true, for any PETSc object.
 
-These specializations are required because of Fortran's strict type checking system and lack of a concept of ``NULL``.
+These specializations with ``NULL`` types are required because of Fortran's strict type checking system and lack of a concept of ``NULL``,
+the Fortran compiler will often warn you if the wrong ``NULL`` type is passed.
 
 Matrix, Vector and IS Indices
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

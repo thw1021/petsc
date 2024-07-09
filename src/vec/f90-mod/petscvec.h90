@@ -67,42 +67,8 @@
       end Subroutine PetscSFGetRootRanks
       end Interface
 
-      Interface VecMin
-      subroutine VecMin1(x,p,val,ierr)
-       import tVec
-       Vec, intent(in) :: x
-       PetscInt, intent(out) ::  p
-       PetscReal, intent(out) ::  val
-       PetscErrorCode, intent(out) :: ierr
-       end subroutine
-      subroutine VecMin2(x,p,val,ierr)
-       import tVec
-       Vec, intent(in) :: x
-       PetscInt, intent(out) ::  p(*)
-       PetscReal, intent(out) ::  val
-       PetscErrorCode, intent(out) :: ierr
-       end subroutine
-      end Interface
-
-      Interface VecMax
-      subroutine VecMax1(x,p,val,ierr)
-       import tVec
-       Vec, intent(in) :: x
-       PetscInt, intent(out) ::  p
-       PetscReal, intent(out) ::  val
-       PetscErrorCode, intent(out) :: ierr
-       end subroutine
-      subroutine VecMax2(x,p,val,ierr)
-       import tVec
-       Vec, intent(in) :: x
-       PetscInt, intent(out) ::  p(*)
-       PetscReal, intent(out) ::  val
-       PetscErrorCode, intent(out) :: ierr
-       end subroutine
-      end Interface
-
       Interface
-        Subroutine VecGetArrayF90(v,array,ierr)
+        Subroutine VecGetArray(v,array,ierr)
           import tVec
           PetscScalar, pointer :: array(:)
           PetscErrorCode ierr
@@ -111,7 +77,7 @@
       End Interface
 
       Interface
-        Subroutine VecRestoreArrayF90(v,array,ierr)
+        Subroutine VecRestoreArray(v,array,ierr)
           import tVec
           PetscScalar, pointer :: array(:)
           PetscErrorCode ierr
@@ -120,7 +86,7 @@
       End Interface
 
       Interface
-        Subroutine VecGetArrayReadF90(v,array,ierr)
+        Subroutine VecGetArrayRead(v,array,ierr)
           import tVec
           PetscScalar, pointer :: array(:)
           PetscErrorCode ierr
@@ -129,7 +95,7 @@
       End Interface
 
       Interface
-        Subroutine VecRestoreArrayReadF90(v,array,ierr)
+        Subroutine VecRestoreArrayRead(v,array,ierr)
           import tVec
           PetscScalar, pointer :: array(:)
           PetscErrorCode ierr
@@ -138,7 +104,7 @@
       End Interface
 
       Interface
-        Subroutine VecGetValuesSectionF90(v,s,p,va,ierr)
+        Subroutine VecGetValuesSection(v,s,p,va,ierr)
           import tVec,tPetscSection
           PetscScalar, pointer :: va(:)
           PetscErrorCode ierr
@@ -149,32 +115,20 @@
       End Interface
 
       Interface
-        Subroutine VecRestoreValuesSectionF90(v,s,p,va,ierr)
+        Subroutine VecRestoreValuesSection(v,s,p,va,ierr)
           import tVec,tPetscSection
           PetscScalar, pointer :: va(:)
           PetscErrorCode ierr
           Vec     v
           PetscSection s
           PetscInt p
-        End Subroutine
-      End Interface
-
-      Interface
-        Subroutine VecSetValuesSectionF90(v,s,p,va,mode,ierr)
-          import tVec,tPetscSection
-          PetscScalar, pointer :: va(:)
-          PetscErrorCode ierr
-          Vec     v
-          PetscSection s
-          PetscInt p
-          InsertMode mode
         End Subroutine
       End Interface
 
 ! -------------------------------------------------------------
 
       Interface
-        Subroutine VecDuplicateVecsF90(v,m,vs,ierr)
+        Subroutine VecDuplicateVecs(v,m,vs,ierr)
           import tVec
           Vec, pointer :: vs(:)
           PetscInt m
@@ -182,20 +136,18 @@
           Vec     v
         End Subroutine
       End Interface
-!
-!  Question: should VecDestroyVecsF90() take the m argument since
-! the array of vectors already knows how long it is? Yes, to
-! match calling sequence for C/C++.
-!
+
       Interface
-        Subroutine VecDestroyVecsF90(m,vs,ierr)
+        Subroutine VecDestroyVecs(m,vs,ierr)
           import tVec
           Vec, pointer :: vs(:)
           PetscInt m
           PetscErrorCode ierr
         End Subroutine
+      end Interface
 
-       subroutine VecScatterRemap(a,b,c,ierr)
+      Interface
+      subroutine VecScatterRemap(a,b,c,ierr)
          import tVecScatter
          VecScatter a ! VecScatter
          PetscInt b (*) ! PetscInt
