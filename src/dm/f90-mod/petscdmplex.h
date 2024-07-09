@@ -23,3 +23,14 @@
       PetscEnum, parameter :: DMPLEX_TPS_SCHWARZ_P = 0
       PetscEnum, parameter :: DMPLEX_TPS_GYROID = 1
 
+#define DMPLEXREFINEREGULAR       'refine_regular'
+#define DMPLEXREFINEALFELD        'refine_alfeld'
+#define DMPLEXREFINEPOWELLSABIN   'refine_powell_sabin'
+#define DMPLEXREFINEBOUNDARYLAYER 'refine_boundary_layer'
+#define DMPLEXREFINESBR           'refine_sbr'
+#define DMPLEXREFINETOBOX         'refine_tobox'
+#define DMPLEXREFINETOSIMPLEX     'refine_tosimplex'
+#define DMPLEXREFINE1D            'refine_1d'
+#define DMPLEXEXTRUDE             'extrude'
+#define DMPLEXCOHESIVEEXTRUDE     'cohesive_extrude'
+#define DMPLEXTRANSFORMFILTER     'transform_filter'
