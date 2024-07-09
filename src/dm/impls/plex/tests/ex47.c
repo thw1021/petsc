@@ -398,9 +398,13 @@ int main(int argc, char **argv)
 
   if (field) {
     const PetscInt Nf         = 1;
-    const PetscInt numComp[1] = {1};
-    const PetscInt numDof[3]  = {0, 0, 1};
     const PetscInt numBC      = 0;
+    const PetscInt numComp[1] = {1};
+    PetscInt       numDof[4]  = {0, 0, 0, 0};
+    PetscInt       dim;
+
+    PetscCall(DMGetDimension(dm, &dim));
+    numDof[dim] = 1;
 
     PetscCall(DMSetNumFields(dm, Nf));
     PetscCall(DMPlexCreateSection(dm, NULL, numComp, numDof, numBC, NULL, NULL, NULL, NULL, &s));
