@@ -3282,7 +3282,7 @@ PetscErrorCode DMPlexRestoreConeRecursive(DM dm, IS points, PetscInt *depth, IS 
   Input Parameters:
 + dm   - The `DMPLEX`
 . p    - The point, which must lie in the chart set with `DMPlexSetChart()`
-- cone - An array of points which are on the in-edges for point `p`, its length must have been previouysly provided with `DMPlexSetConeSize()`
+- cone - An array of points which are on the in-edges for point `p`, its length must have been previously provided with `DMPlexSetConeSize()`
 
   Level: beginner
 
