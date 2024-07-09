@@ -68,6 +68,7 @@
         interface
 #include <../src/dm/f90-mod/ftn-auto-interfaces/petscdm.h90>
         end interface
+
         end module
 
         module petscdmpatch

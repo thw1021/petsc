@@ -152,3 +152,24 @@
        PetscErrorCode z
       end subroutine
       end Interface
+
+     Interface
+      subroutine KSPGetResidualHistory(ksp,r,na,ierr)
+      import tKSP
+       KSP ksp
+       PetscInt na
+       PetscReal, pointer :: r(:)
+       PetscErrorCode, intent(out) :: ierr
+      end subroutine
+     end Interface
+
+     Interface
+      subroutine KSPRestoreConvergenceHistory(ksp,r,na,ierr)
+      import tKSP
+       KSP ksp
+       PetscInt na
+       PetscReal, pointer :: r(:)
+       PetscErrorCode, intent(out) :: ierr
+      end subroutine
+      end Interface
+

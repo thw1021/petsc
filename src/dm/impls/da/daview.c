@@ -169,7 +169,7 @@ PetscErrorCode DMDAGetInfo(DM da, PetscInt *dim, PetscInt *M, PetscInt *N, Petsc
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@
+/*@C
   DMDAGetLocalInfo - Gets information about a given `DMDA` and this MPI process's location in it
 
   Not Collective
@@ -184,9 +184,6 @@ PetscErrorCode DMDAGetInfo(DM da, PetscInt *dim, PetscInt *M, PetscInt *N, Petsc
 
   Note:
   See `DMDALocalInfo` for the information that is returned
-
-  Fortran Note:
-  Pass in an array of type `DMDALocalInfo` of length `DMDA_LOCAL_INFO_SIZE`
 
 .seealso: [](sec_struct), `DM`, `DMDA`, `DMDAGetInfo()`, `DMDAGetCorners()`, `DMDALocalInfo`
 @*/

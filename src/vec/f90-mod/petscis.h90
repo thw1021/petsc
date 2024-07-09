@@ -4,7 +4,7 @@
 !
 
       Interface
-        Subroutine PetscLayoutGetRangesF90(a,b,z)
+        Subroutine PetscLayoutGetRanges(a,b,z)
           import tPetscLayout
           PetscLayout a
           PetscInt, pointer :: b(:)
@@ -13,7 +13,16 @@
       End Interface
 
       Interface
-        Subroutine ISGetIndicesF90(i,array,ierr)
+        Subroutine PetscLayoutRestoreRanges(a,b,z)
+          import tPetscLayout
+          PetscLayout a
+          PetscInt, pointer :: b(:)
+          PetscErrorCode  z
+        End Subroutine
+      End Interface
+
+      Interface
+        Subroutine ISGetIndices(i,array,ierr)
           import tIS
           PetscInt, pointer :: array(:)
           PetscErrorCode  ierr
@@ -22,7 +31,7 @@
       End Interface
 
       Interface
-        Subroutine ISRestoreIndicesF90(i,array,ierr)
+        Subroutine ISRestoreIndices(i,array,ierr)
           import tIS
           PetscInt, pointer :: array(:)
           PetscErrorCode ierr
@@ -31,7 +40,7 @@
       End Interface
 
       Interface
-        Subroutine ISLocalToGlobalMappingGetIndicesF90(i,array,ierr)
+        Subroutine ISLocalToGlobalMappingGetIndices(i,array,ierr)
           import tISLocalToGlobalMapping
           PetscInt, pointer :: array(:)
           PetscErrorCode  ierr
@@ -40,7 +49,25 @@
       End Interface
 
       Interface
-        Subroutine ISLocalToGlobalMappingRestoreIndicesF90(i,array,ierr)
+        Subroutine ISLocalToGlobalMappingRestoreIndices(i,array,ierr)
+          import tISLocalToGlobalMapping
+          PetscInt, pointer :: array(:)
+          PetscErrorCode  ierr
+         ISLocalToGlobalMapping       i
+        End Subroutine
+      End Interface
+
+      Interface
+        Subroutine ISLocalToGlobalMappingGetBlockIndices(i,array,ierr)
+          import tISLocalToGlobalMapping
+          PetscInt, pointer :: array(:)
+          PetscErrorCode  ierr
+         ISLocalToGlobalMapping       i
+        End Subroutine
+      End Interface
+
+      Interface
+        Subroutine ISLocalToGlobalMappingRestoreBlockIndices(i,array,ierr)
           import tISLocalToGlobalMapping
           PetscInt, pointer :: array(:)
           PetscErrorCode  ierr
@@ -51,7 +78,7 @@
 ! ------------------------------------------------------
 
       Interface
-        Subroutine ISBlockGetIndicesF90(i,array,ierr)
+        Subroutine ISBlockGetIndices(i,array,ierr)
           import tIS
           PetscInt, pointer :: array(:)
           PetscErrorCode  ierr
@@ -61,7 +88,7 @@
 
 
       Interface
-        Subroutine ISBlockRestoreIndicesF90(i,array,ierr)
+        Subroutine ISBlockRestoreIndices(i,array,ierr)
           import tIS
           PetscInt, pointer :: array(:)
           PetscErrorCode ierr
@@ -71,26 +98,28 @@
 
 ! ------------------------------------------------------
       Interface
-        Subroutine ISColoringGetISF90(ic,n,isa,ierr)
+        Subroutine ISColoringGetIS(ic,mode,n,isa,ierr)
           import tIS,tISColoring
           IS, pointer :: isa(:)
           PetscInt     n
           PetscErrorCode ierr
+          PetscCopyMode mode
           ISColoring ic
         End Subroutine
       End Interface
 
       Interface
-        Subroutine ISColoringRestoreISF90(ic,isa,ierr)
+        Subroutine ISColoringRestoreIS(ic,mode,isa,ierr)
           import tIS,tISColoring
           IS, pointer :: isa(:)
           PetscErrorCode     ierr
+          PetscCopyMode mode
           ISColoring ic
         End Subroutine
       End Interface
 
       Interface
-        Subroutine PetscSectionGetConstraintIndicesF90(s,p,a,ierr)
+        Subroutine PetscSectionGetConstraintIndices(s,p,a,ierr)
           import tPetscSection
           PetscInt p
           PetscInt, pointer :: a(:)
@@ -100,7 +129,7 @@
       End Interface
 
       Interface
-        Subroutine PetscSectionRestoreConstraintIndicesF90(s,p,a,ierr)
+        Subroutine PetscSectionRestoreConstraintIndices(s,p,a,ierr)
           import tPetscSection
           PetscInt p
           PetscInt, pointer :: a(:)
@@ -110,17 +139,7 @@
       End Interface
 
       Interface
-        Subroutine PetscSectionSetConstraintIndicesF90(s,p,a,ierr)
-          import tPetscSection
-          PetscInt p
-          PetscInt, pointer :: a(:)
-          PetscErrorCode  ierr
-          PetscSection       s
-        End Subroutine
-      End Interface
-
-      Interface
-        Subroutine PetscSectionGetFieldConstraintIndicesF90(s,p,f,a,ierr)
+        Subroutine PetscSectionGetFieldConstraintIndices(s,p,f,a,ierr)
           import tPetscSection
           PetscSection      :: s
           PetscInt          :: p
@@ -131,7 +150,7 @@
       End Interface
 
       Interface
-        Subroutine PetscSectionRestoreFieldConstraintIndicesF90(s,p,f,a,ierr)
+        Subroutine PetscSectionRestoreFieldConstraintIndices(s,p,f,a,ierr)
           import tPetscSection
           PetscSection      :: s
           PetscInt          :: p
@@ -142,18 +161,7 @@
       End Interface
 
       Interface
-        Subroutine PetscSectionSetFieldConstraintIndicesF90(s,p,f,a,ierr)
-          import tPetscSection
-          PetscSection      :: s
-          PetscInt          :: p
-          PetscInt          :: f
-          PetscInt, pointer :: a(:)
-          PetscErrorCode    :: ierr
-        End Subroutine
-      End Interface
-
-      Interface
-        Subroutine PetscSFDistributeSectionF90(sf,rootsection,array,leafsection,ierr)
+        Subroutine PetscSFDistributeSection(sf,rootsection,array,leafsection,ierr)
           import tPetscSection
           import tPetscSF
           PetscSF sf
@@ -164,19 +172,7 @@
       End Interface
 
       Interface
-        Subroutine PetscSFCreateSectionSFF90(pointsf,rootsection,array,leafsection,sf,ierr)
-          import tPetscSection
-          import tPetscSF
-          PetscSF pointsf
-          PetscSF sf
-          PetscInt, pointer :: array(:)
-          PetscErrorCode  ierr
-          PetscSection rootsection,leafsection
-        End Subroutine
-      End Interface
-
-      Interface
-        Subroutine PetscSFCreateRemoteOffsetsF90(sf,rootsection,leafsection,array,ierr)
+        Subroutine PetscSFCreateRemoteOffsets(sf,rootsection,leafsection,array,ierr)
           import tPetscSection
           import tPetscSF
           PetscSF sf
