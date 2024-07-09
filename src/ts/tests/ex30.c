@@ -410,7 +410,7 @@ static PetscErrorCode PostStep(TS ts)
   PetscCall(TSGetStepNumber(ts, &n));
   PetscCall(TSGetTime(ts, &t));
   PetscCall(DMCompositeGetAccessArray(pack, X, nDMs, NULL, printCtx->globXArray));
-  if (printCtx->print_entropy && printCtx->v_target >= 0 &&0) {
+  if (printCtx->print_entropy && printCtx->v_target >= 0 && 0) {
     for (PetscInt grid = 0; grid < ctx->num_grids; grid++) {
       PetscDataType dtype;
       PetscReal    *wp, *coords;
@@ -564,7 +564,7 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
     } else printCtx->print = PETSC_FALSE;
     // create fake particles in batches with threads
     for (PetscInt v_id_0 = 0; v_id_0 < ctx->batch_sz; v_id_0 += numthreads) {
-      PetscReal *xx_t[LANDAU_MAX_GRIDS][EX30_MAX_NUM_THRDS], *yy_t[LANDAU_MAX_GRIDS][EX30_MAX_NUM_THRDS], *zz_t[LANDAU_MAX_GRIDS][EX30_MAX_NUM_THRDS], *wp_t[LANDAU_MAX_GRIDS][EX30_MAX_NUM_THRDS]/* , radiuses[80000] */;
+      PetscReal *xx_t[LANDAU_MAX_GRIDS][EX30_MAX_NUM_THRDS], *yy_t[LANDAU_MAX_GRIDS][EX30_MAX_NUM_THRDS], *zz_t[LANDAU_MAX_GRIDS][EX30_MAX_NUM_THRDS], *wp_t[LANDAU_MAX_GRIDS][EX30_MAX_NUM_THRDS] /* , radiuses[80000] */;
       PetscInt   Np_t[LANDAU_MAX_GRIDS][EX30_MAX_NUM_THRDS];
       // make particles
       for (int tid = 0; tid < numthreads; tid++) {
@@ -585,7 +585,7 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
             else Npi = Npj = Npk = Npp0;
             // User: use glb_v_id to index into your data
             const PetscInt NNreal = Npi * Npj * Npk, NN = NNreal + (dim == 2 ? 3 : 6); // make room for bounding box
-            Np_t[grid][tid]   = NN;
+            Np_t[grid][tid] = NN;
             if (glb_v_id == v_target) nTargetP[grid] = NN;
             PetscCall(PetscMalloc4(NN, &xx_t[grid][tid], NN, &yy_t[grid][tid], NN, &wp_t[grid][tid], dim == 2 ? 1 : NN, &zz_t[grid][tid]));
             hp[0] = (hi[0] - lo[0]) / Npi;
@@ -608,7 +608,7 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
                     p_shift *= ctx->thermal_speed[grid] / ctx->v_0;
                     if (ctx->sphere && PetscSqrtReal(PetscSqr(xx_t[grid][tid][pp]) + PetscSqr(yy_t[grid][tid][pp])) > 0.92 * hi[0]) {
                       wp_t[grid][tid][pp] = 0;
-                    } else  {
+                    } else {
                       maxwellian(dim, x, kT_m, vole, p_shift, &wp_t[grid][tid][pp]);
                       if (ctx->num_grids == 1 && shift != 0) {                          // bi-maxwellian, electron plasma
                         maxwellian(dim, x, kT_m, vole, -p_shift, &wp_t[grid][tid][pp]); // symmetric shift of electron plasma
@@ -634,7 +634,7 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
                         }
                         while (xx_t[grid][tid][pp] >= hi[0] || xx_t[grid][tid][pp] <= lo[0]) xx_t[grid][tid][pp] *= .9;
                         while (yy_t[grid][tid][pp] >= hi[1] || yy_t[grid][tid][pp] <= lo[1]) yy_t[grid][tid][pp] *= .9;
-                      } else {                                                                                               // 2D
+                      } else { // 2D
                         //if (glb_v_id == v_target && pp < 80000) radiuses[pp] = PetscSqrtReal(PetscSqr(xx_t[grid][tid][pp]) + PetscSqr(yy_t[grid][tid][pp]));
                         while (PetscSqrtReal(PetscSqr(xx_t[grid][tid][pp]) + PetscSqr(yy_t[grid][tid][pp])) > 0.92 * hi[0]) { // safety factor for facets of sphere
                           xx_t[grid][tid][pp] *= .9;
@@ -719,7 +719,7 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
             PetscCall(createSwarm(dm, dim, &globSwarmArray[LAND_PACK_IDX(v_id, grid)]));
           }
         } // active
-      }   // threads
+      } // threads
       PetscCheck(ierr != 9999, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Only support one species per grid");
       // make globMpArray
       PetscPragmaOMP(parallel for)
@@ -887,7 +887,7 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
               if (dim == 2) lo[0] = 0;
               else Npi = Npj = Npk = Npp0;
               NN = Npi * Npj * Npk + (dim == 2 ? 3 : 6); // make a regular grid of particles Npp x Npp
-              while (Npi * Npj * Npk < Nv) {     // make stable - no LS
+              while (Npi * Npj * Npk < Nv) {             // make stable - no LS
                 Npi++;
                 Npj++;
                 Npk++;
@@ -933,7 +933,7 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
               }
             }
           } // active
-        }   // threads
+        } // threads
         /* Create particle swarm */
         for (int tid = 0; tid < numthreads; tid++) {
           const PetscInt v_id = v_id_0 + tid, glb_v_id = global_vertex_id_0 + v_id;
@@ -955,7 +955,7 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
               if (ierr_t) ierr = ierr_t;
             }
           } // active
-        }   // threads
+        } // threads
         PetscCheck(ierr != 9999, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Only support one species per grid");
         PetscCheck(!ierr, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Error in OMP loop. ierr = %d", (int)ierr);
         // make globMpArray
@@ -972,7 +972,7 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
               if (ierr_t) ierr = ierr_t;
             }
           } // active
-        }   // threads
+        } // threads
         // create particle mass matrices
         //PetscPragmaOMP(parallel for)
         for (int tid = 0; tid < numthreads; tid++) {
@@ -987,7 +987,7 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
               if (ierr_t) ierr = ierr_t;
             }
           } // active
-        }   // threads
+        } // threads
         PetscCheck(!ierr, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Error in OMP loop. ierr = %d", (int)ierr);
         /* Cleanup */
         for (int tid = 0; tid < numthreads; tid++) {
@@ -997,8 +997,8 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
               PetscCall(PetscFree4(xx_t[grid][tid], yy_t[grid][tid], wp_t[grid][tid], zz_t[grid][tid]));
             }
           } // active
-        }   // threads
-      }     // batch
+        } // threads
+      } // batch
       // view
       if (v_target >= global_vertex_id_0 && v_target < global_vertex_id_0 + ctx->batch_sz) {
         /* Visualize particle field */
@@ -1023,7 +1023,7 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
       PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\tCoarse-graining: %18.12e %19.12e %18.12e %18.12e %g %%\n", (double)moments_1a[0], (double)moments_1a[1], (double)moments_1a[2], (double)moments_1a[3], 100 * (double)(moments_1a[4] / moments_0[0])));
       PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\tLandau:          %18.12e %19.12e %18.12e %18.12e %g %%\n", (double)moments_1b[0], (double)moments_1b[1], (double)moments_1b[2], (double)moments_1b[3], 100 * (double)(moments_1b[4] / moments_0[0])));
       PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Coarse-graining entropy generation = %e ; Landau entropy generation = %e\n", (double)(moments_1a[3] - moments_0[3]), (double)(moments_1b[3] - moments_0[3])));
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "(relative) energy conservation: Coarse-graining = %e, Landau = %e (%g %d)\n", (double)(moments_1a[2] - moments_0[2]) / (double)moments_0[2], energy_error_rel, PetscLog10Real(energy_error_rel), (int)PetscLog10Real(energy_error_rel) ));
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "(relative) energy conservation: Coarse-graining = %e, Landau = %e (%g %d)\n", (double)(moments_1a[2] - moments_0[2]) / (double)moments_0[2], energy_error_rel, PetscLog10Real(energy_error_rel), (int)PetscLog10Real(energy_error_rel)));
     }
     // restore vector
     PetscCall(DMCompositeRestoreAccessArray(pack, X, nDMs, NULL, globXArray));
