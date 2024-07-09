@@ -3141,7 +3141,7 @@ PetscErrorCode DMPlexGetConeRecursiveVertices(DM dm, IS points, IS *expandedPoin
 
 /*@
   DMPlexGetConeRecursive - Expand each given point into its cone points and do that recursively until we end up just with vertices
-  (DAG points of depth 0, i.e. without cones).
+  (DAG points of depth 0, i.e., without cones).
 
   Not Collective
 
@@ -3282,7 +3282,7 @@ PetscErrorCode DMPlexRestoreConeRecursive(DM dm, IS points, PetscInt *depth, IS 
   Input Parameters:
 + dm   - The `DMPLEX`
 . p    - The point, which must lie in the chart set with `DMPlexSetChart()`
-- cone - An array of points which are on the in-edges for point `p`, it's length must have been previouysly provided with `DMPlexSetConeSize()`
+- cone - An array of points which are on the in-edges for point `p`, its length must have been previouysly provided with `DMPlexSetConeSize()`
 
   Level: beginner
 
