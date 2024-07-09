@@ -1630,7 +1630,7 @@ PetscErrorCode MatMultAdd_SeqAIJ(Mat A, Vec xx, Vec yy, Vec zz)
   const PetscScalar *x;
   const MatScalar   *a_a;
   const PetscInt    *ii, *ridx = NULL;
-  PetscInt           m        = A->rmap->n, i;
+  PetscInt           m        = A->rmap->n;
   PetscBool          usecprow = a->compressedrow.use;
 
   PetscFunctionBegin;
