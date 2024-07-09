@@ -324,6 +324,7 @@
         use petscsysdef
         PetscChar(80) PETSC_NULL_CHARACTER = ''
         PetscInt PETSC_NULL_INTEGER, PETSC_NULL_INTEGER_ARRAY(1)
+        PetscInt, pointer :: PETSC_NULL_INTEGER_POINTER(:)
         PetscFortranDouble PETSC_NULL_DOUBLE
         PetscScalar PETSC_NULL_SCALAR, PETSC_NULL_SCALAR_ARRAY(1)
         PetscReal PETSC_NULL_REAL, PETSC_NULL_REAL_ARRAY(1)
@@ -370,6 +371,24 @@
         end interface
         interface PetscInitialize
           module procedure PetscInitializeWithHelp, PetscInitializeNoHelp, PetscInitializeNoArguments
+        end interface
+
+        interface
+          subroutine PetscSetFortranBasePointers(a,b,c,d,e,f,g,h,i,j,k,l,m)
+            character(len=*)           :: a
+            PetscInt b
+            PetscScalar c
+            double precision d
+            PetscReal e
+            PetscBool f
+            PetscEnum g
+            external h
+            MPI_Comm i(*)
+            PetscInt j(*)
+            PetscScalar k(*)
+            PetscReal l(*)
+            PetscInt, pointer :: m(:)
+          end subroutine
         end interface
 
       contains
@@ -447,7 +466,7 @@
      &     PETSC_NULL_BOOL,PETSC_NULL_ENUM,PETSC_NULL_FUNCTION,         &
      &     PETSC_NULL_MPI_COMM,                                         &
      &     PETSC_NULL_INTEGER_ARRAY,PETSC_NULL_SCALAR_ARRAY,            &
-     &     PETSC_NULL_REAL_ARRAY)
+     &     PETSC_NULL_REAL_ARRAY, PETSC_NULL_INTEGER_POINTER)
         end
 
         subroutine PetscSetModuleBlockMPI(freal,fscalar,fsum,finteger)
