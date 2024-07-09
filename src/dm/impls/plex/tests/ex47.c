@@ -398,9 +398,13 @@ int main(int argc, char **argv)
 
   if (field) {
     const PetscInt Nf         = 1;
-    const PetscInt numComp[1] = {1};
-    const PetscInt numDof[3]  = {0, 0, 1};
     const PetscInt numBC      = 0;
+    const PetscInt numComp[1] = {1};
+    PetscInt       numDof[4]  = {0, 0, 0, 0};
+    PetscInt       dim;
+
+    PetscCall(DMGetDimension(dm, &dim));
+    numDof[dim] = 1;
 
     PetscCall(DMSetNumFields(dm, Nf));
     PetscCall(DMPlexCreateSection(dm, NULL, numComp, numDof, numBC, NULL, NULL, NULL, NULL, &s));
@@ -522,16 +526,16 @@ int main(int argc, char **argv)
     test:
       suffix: 0
       args: -quadsmesh
-      output_file: output/test47_0.out
+      output_file: output/ex47_0.out
 
     test:
       suffix: 1
       args: -box -dm_plex_simplex 0 -dm_plex_box_faces 2,5 -dm_distribute
-      output_file: output/test47_1.out
+      output_file: output/ex47_1.out
 
     test:
       suffix: 2
       args: -prismsmesh
-      output_file: output/test47_2.out
+      output_file: output/ex47_2.out
 
 TEST*/
