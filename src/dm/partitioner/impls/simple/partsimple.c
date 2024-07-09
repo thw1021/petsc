@@ -33,7 +33,7 @@ static PetscErrorCode PetscPartitionerView_Simple(PetscPartitioner part, PetscVi
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscPartitionerSetFromOptions_Simple(PetscPartitioner part, PetscOptionItems *PetscOptionsObject)
+static PetscErrorCode PetscPartitionerSetFromOptions_Simple(PetscPartitioner part, PetscOptionItems PetscOptionsObject)
 {
   PetscPartitioner_Simple *p = (PetscPartitioner_Simple *)part->data;
   PetscInt                 num, i;

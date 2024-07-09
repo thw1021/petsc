@@ -52,7 +52,7 @@
 !
 !    Check if this is really a block index set
 !
-      PetscCallA(PetscObjectTypeCompare(set,ISBLOCK,isablock,ierr))
+      PetscCallA(PetscObjectTypeCompare(PetscObjectCast(set),ISBLOCK,isablock,ierr))
       if (.not. isablock) then
         write(6,*) 'Index set is not blocked!'
       endif
