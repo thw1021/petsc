@@ -33,6 +33,18 @@ static PetscErrorCode CharacteristicView(Characteristic c, PetscViewer viewer)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@
+  CharacteristicDestroy - Destroys a `Characteristic` context created with `CharacteristicCreate()`
+
+  Collective
+
+  Input Parameter:
+. c - the `Characteristic` context
+
+  Level: beginner
+
+.seealso: `Characteristic`, `CharacteristicCreate()`
+@*/
 PetscErrorCode CharacteristicDestroy(Characteristic *c)
 {
   PetscFunctionBegin;
@@ -56,6 +68,21 @@ PetscErrorCode CharacteristicDestroy(Characteristic *c)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@
+  CharacteristicCreate - Creates a `Characteristic` context for use with the Method of Characteristics
+
+  Collective
+
+  Input Parameter:
+. comm - MPI communicator
+
+  Output Parameter:
+. c - the `Characteristic` context
+
+  Level: beginner
+
+.seealso: `Characteristic`, `CharacteristicDestroy()`
+@*/
 PetscErrorCode CharacteristicCreate(MPI_Comm comm, Characteristic *c)
 {
   Characteristic newC;
@@ -176,7 +203,7 @@ PetscErrorCode CharacteristicSetType(Characteristic c, CharacteristicType type)
 
   Level: developer
 
-.seealso: [](ch_ts), `CharacteristicCreate()`, `CharacteristicSolve()`, `CharacteristicDestroy()`
+.seealso: [](ch_ts), `Characteristic`, `CharacteristicCreate()`, `CharacteristicSolve()`, `CharacteristicDestroy()`
 @*/
 PetscErrorCode CharacteristicSetUp(Characteristic c)
 {
@@ -289,6 +316,20 @@ PetscErrorCode CharacteristicSetFieldInterpolationLocal(Characteristic c, DM da,
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@
+  CharacteristicSolve - Apply the Method of Characteristics solver
+
+  Collective
+
+  Input Parameter:
++ c        - iterative context obtained from CharacteristicCreate()
+. dt       - the time-step
+- solution - vector holding the solution
+
+  Level: developer
+
+.seealso: [](ch_ts), `Characteristic`, `CharacteristicCreate()`, `CharacteristicDestroy()`
+@*/
 PetscErrorCode CharacteristicSolve(Characteristic c, PetscReal dt, Vec solution)
 {
   CharacteristicPointDA2D Qi;

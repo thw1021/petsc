@@ -20,6 +20,7 @@ PETSC_EXTERN void          *PETSC_NULL_INTEGER_ARRAY_Fortran;
 PETSC_EXTERN void          *PETSC_NULL_SCALAR_ARRAY_Fortran;
 PETSC_EXTERN void          *PETSC_NULL_REAL_ARRAY_Fortran;
 PETSC_EXTERN void          *PETSC_NULL_MPI_COMM_Fortran;
+PETSC_EXTERN void          *PETSC_NULL_INTEGER_POINTER_Fortran;
 PETSC_EXTERN void (*PETSC_NULL_FUNCTION_Fortran)(void);
 
 PETSC_INTERN PetscErrorCode PetscInitFortran_Private(PetscBool, const char *, PetscInt);

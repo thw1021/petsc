@@ -22,7 +22,6 @@
   #define snessetconvergencetest_          SNESSETCONVERGENCETEST
   #define snesconvergeddefault_            SNESCONVERGEDDEFAULT
   #define snesconvergedskip_               SNESCONVERGEDSKIP
-  #define snesgetconvergencehistory_       SNESGETCONVERGENCEHISTORY
   #define snesgetjacobian_                 SNESGETJACOBIAN
   #define snesmonitordefault_              SNESMONITORDEFAULT
   #define snesmonitorsolution_             SNESMONITORSOLUTION
@@ -53,7 +52,6 @@
   #define snesconvergeddefault_            snesconvergeddefault
   #define snesconvergedskip_               snesconvergedskip
   #define snesgetjacobian_                 snesgetjacobian
-  #define snesgetconvergencehistory_       snesgetconvergencehistory
   #define snesmonitordefault_              snesmonitordefault
   #define snesmonitorsolution_             snesmonitorsolution
   #define snesmonitorsolutionupdate_       snesmonitorsolutionupdate
@@ -365,11 +363,6 @@ PETSC_EXTERN void snessetconvergencetest_(SNES *snes, void (*func)(SNES *, Petsc
     if (*ierr) return;
     *ierr = SNESSetConvergenceTest(*snes, oursnestest, *snes, ourdestroy);
   }
-}
-
-PETSC_EXTERN void snesgetconvergencehistory_(SNES *snes, PetscInt *na, PetscErrorCode *ierr)
-{
-  *ierr = SNESGetConvergenceHistory(*snes, NULL, NULL, na);
 }
 
 PETSC_EXTERN void snesmonitordefault_(SNES *snes, PetscInt *its, PetscReal *fgnorm, PetscViewerAndFormat **dummy, PetscErrorCode *ierr)
