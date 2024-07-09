@@ -1625,7 +1625,7 @@ PetscErrorCode DMAdaptorSetMixedSetupFunction(DMAdaptor adaptor, PetscErrorCode 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMAdaptorGetCriterion - Get the adaptation criterion
 
   Not Collective
@@ -1638,7 +1638,7 @@ PetscErrorCode DMAdaptorSetMixedSetupFunction(DMAdaptor adaptor, PetscErrorCode 
 
   Level: advanced
 
-.seealso: `DMAdaptor`, `DMAdaptorSetCrierion()`, `DMAdaptationCriterion`
+.seealso: `DMAdaptor`, `DMAdaptorSetCriterion()`, `DMAdaptationCriterion`
 @*/
 PetscErrorCode DMAdaptorGetCriterion(DMAdaptor adaptor, DMAdaptationCriterion *criterion)
 {
@@ -1649,7 +1649,7 @@ PetscErrorCode DMAdaptorGetCriterion(DMAdaptor adaptor, DMAdaptationCriterion *c
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMAdaptorSetCriterion - Set the adaptation criterion
 
   Not Collective
