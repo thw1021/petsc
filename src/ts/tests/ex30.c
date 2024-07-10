@@ -1023,7 +1023,7 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
       PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\tCoarse-graining: %18.12e %19.12e %18.12e %18.12e %g %%\n", (double)moments_1a[0], (double)moments_1a[1], (double)moments_1a[2], (double)moments_1a[3], 100 * (double)(moments_1a[4] / moments_0[0])));
       PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\tLandau:          %18.12e %19.12e %18.12e %18.12e %g %%\n", (double)moments_1b[0], (double)moments_1b[1], (double)moments_1b[2], (double)moments_1b[3], 100 * (double)(moments_1b[4] / moments_0[0])));
       PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Coarse-graining entropy generation = %e ; Landau entropy generation = %e\n", (double)(moments_1a[3] - moments_0[3]), (double)(moments_1b[3] - moments_0[3])));
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "(relative) energy conservation: Coarse-graining = %e, Landau = %e (%g %d)\n", (double)(moments_1a[2] - moments_0[2]) / (double)moments_0[2], energy_error_rel, PetscLog10Real(energy_error_rel), (int)PetscLog10Real(energy_error_rel)));
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "(relative) energy conservation: Coarse-graining = %e, Landau = %e (%g %d)\n", (double)(moments_1a[2] - moments_0[2]) / (double)moments_0[2], (double)energy_error_rel, PetscLog10Real(energy_error_rel), (int)PetscLog10Real(energy_error_rel)));
     }
     // restore vector
     PetscCall(DMCompositeRestoreAccessArray(pack, X, nDMs, NULL, globXArray));
