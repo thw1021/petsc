@@ -1338,7 +1338,7 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
             for (PetscInt grid = 0; grid < ctx->num_grids; grid++) ctx->sphere_inner_radius_45degree[grid] = 0.4; // 3D sphere
           }
         }
-        if (ctx->sphere) PetscCall(PetscInfo(ctx->plex[0], "sphere : , 45 degree scaling = %g; 90 degree scaling = %g\n", ctx->sphere_inner_radius_45degree[0], ctx->sphere_inner_radius_90degree[0]));
+        if (ctx->sphere) PetscCall(PetscInfo(ctx->plex[0], "sphere : , 45 degree scaling = %g; 90 degree scaling = %g\n", (double)ctx->sphere_inner_radius_45degree[0], (double)ctx->sphere_inner_radius_90degree[0]));
       } else {
         for (PetscInt grid = 0; grid < ctx->num_grids; grid++) {
           switch (ctx->numAMRRefine[grid]) {
