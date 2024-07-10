@@ -3,6 +3,7 @@ charges:       e=-1.602e-19; charges in elementary units:  1.000e+00  1.800e+01
 n:             e:  1.000e+00                           i:  1.000e+00  1.000e-06
 thermal T (K): e= 2.321e+07 i= 1.160e+07  1.160e+07. Normalization grid 0: v_0= 1.876e+07 ( 6.256e-02c) n_0= 1.000e+20 t_0= 1.909e-05 1 batched, view batch 0
 Domain radius (AMR levels) grid 0: par= 5.000e+00 perp= 5.000e+00 (0) , 1: par= 5.835e-02 perp= 5.835e-02 (0) , 2: par= 6.151e-03 perp= 6.151e-03 (0) 
+<<<<<<< HEAD
 0) FormLandau 648 IPs, 24 cells total, Nb=27, Nq=27, dim=3, Tab: Nb=27 Nf=3 Np=27 cdim=3 N=375 nnz=14739
   0) species 0: density=-1.6022277759753e+01, x-momentum=-2.3781317886365e-17, y-momentum=-3.7699197845783e-18, z-momentum=-7.7129239366247e-17, energy=  4.8065850328473e+04
   0) species 1: density= 1.6021989363950e+01, x-momentum=-8.6766677936686e-16, y-momentum=-4.8279264369159e-16, z-momentum=-1.9393304504344e-15, energy=  2.4032492579371e+04
@@ -28,3 +29,32 @@ Particle Moments:	 number density      momentum (par)     energy             ent
 	Landau:          3.345209694066e-07 -4.655627337930e-16 7.209836693991e+04 5.162155e+00 4.752809e-08
 Coarse-graining entropy generation = 9.022452e-01 ; Landau entropy generation = 9.019133e-01
 (relative) energy conservation: Coarse-graining = -1.737187e-12 ; Landau = -7.581296e-12
+=======
+0) FormLandau 648 IPs, 24 cells total, Nb=27, Nq=27, dim=3, Tab: Nb=27 Nf=3 Np=27 cdim=3 N=375
+  0) species 0: density=-1.6022261134987e+01, x-momentum=-1.1855093662196e-19, y-momentum=-6.3211359406829e-17, z-momentum= 2.6555409803319e-18, energy=  4.8065386101799e+04
+  0) species 1: density= 1.6021972739477e+01, x-momentum=-3.8079419784126e-17, y-momentum=-1.4293382211827e-15, z-momentum=-7.8878798124260e-17, energy=  2.4032260470211e+04
+  0) species 2: density= 2.8839550931060e-04, x-momentum= 8.7545968308738e-23, y-momentum=-1.2898439330821e-20, z-momentum=-5.6904879400680e-22, energy=  2.4032260470213e-02
+	  0) Total: charge density= -2.3213814768011e-13, x-momentum= -3.8197883174779e-17, y-momentum= -1.4925624790289e-15, z-momentum= -7.6223826192722e-17, energy=  7.2097670604270e+04 (m_i[0]/m_e = 3670.94, 8 cells)
+0 TS dt 0.1 time 0.
+    0 SNES Function norm 1.035163219317e-02
+    1 SNES Function norm 2.553277679552e-04
+    2 SNES Function norm 1.223073900472e-05
+    3 SNES Function norm 5.857176824584e-07
+    4 SNES Function norm 2.805798077353e-08
+    5 SNES Function norm 1.344096805801e-09
+    6 SNES Function norm 6.438793637985e-11
+    7 SNES Function norm 3.084639086303e-12
+    8 SNES Function norm 1.478017364658e-13
+    Nonlinear solve converged due to CONVERGED_SNORM_RELATIVE iterations 8
+1 TS dt 0.1 time 0.1
+  1) species 0: density=-1.6022261134987e+01, x-momentum=-1.4226112394635e-19, y-momentum=-6.0792920299741e-17, z-momentum= 2.6555409803319e-18, energy=  4.8065318768713e+04
+  1) species 1: density= 1.6021972739477e+01, x-momentum=-4.4879316174148e-17, y-momentum=-1.4293382211827e-15, z-momentum=-8.4318715236278e-17, energy=  2.4032328015624e+04
+  1) species 2: density= 2.8839550931060e-04, x-momentum= 7.2954973590615e-23, y-momentum=-1.4853632623049e-20, z-momentum=-4.9609382041618e-22, energy=  2.3819930519113e-02
+	  1) Total: charge density= -2.2503272032251e-13, x-momentum= -4.5021504343121e-17, y-momentum= -1.4901459951151e-15, z-momentum= -8.1663670349767e-17, energy=  7.2097670604268e+04 (m_i[0]/m_e = 3670.94, 8 cells)
+Particle Moments:	 number density      momentum (par)     energy             entropy            negative weights  : # OMP threads 1.
+	Initial:         3.345206223063e-07  9.206397213739e-18 7.209767060398e+04 1.116798275826e+01 0. %
+	Coarse-graining: 3.345206223067e-07 -4.318578312043e-15 7.209767060429e+04 1.288297501879e+01 13.1685 %
+	Landau:          3.345206223065e-07 -6.179077706038e-16 7.209767060425e+04 1.288253503434e+01 13.1618 %
+Coarse-graining entropy generation = 1.714992e+00 ; Landau entropy generation = 1.714552e+00
+(relative) energy conservation: Coarse-graining = 4.224430e-12, Landau = 3.736391e-12 (-11.4275 -11)
+>>>>>>> 847fe3f9acd (DMLandau: move flag for sphere out of not-file block for users)
