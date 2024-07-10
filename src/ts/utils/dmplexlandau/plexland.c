@@ -721,7 +721,7 @@ static PetscErrorCode LandauDMCreateVMeshes(MPI_Comm comm_self, const PetscInt d
           {0, 1, 2, 3, 8,  11, 10, 9 },
           {4, 7, 6, 5, 12, 13, 14, 15}
         };
-        PetscReal coords[numVerts][3];
+        PetscReal coords[16 /* numVerts */][3];
         for (int j = 0; j < 4; j++) { // inner edge, low
           coords[j][0] = inner_rad * (j == 0 || j == 3 ? 1 : -1);
           coords[j][1] = inner_rad * (j / 2 < 1 ? 1 : -1);
