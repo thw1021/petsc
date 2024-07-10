@@ -3966,6 +3966,7 @@ cdef class Mat(Object):
         See Also
         --------
         petsc.MatCreateSchurComplement
+
         """
         cdef PetscMat newmat = NULL, A11_mat = NULL
         if A11 is not None:
