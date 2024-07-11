@@ -91,8 +91,11 @@ int main(int argc, char **argv)
   PetscInt    nZonalVar = 3;
   PetscInt    order     = 1;
   PetscViewer viewer;
+  int exoid = -1;
+  int index = -1;
   const char *nodalVarName[4] = {"U_x", "U_y", "Alpha", "Beta"};
   const char *zonalVarName[3] = {"Sigma_11", "Sigma_12", "Sigma_22"};
+  const char *testNames[3] = {"U", "Alpha", "Gamma"};
   char      **varNames;
 
   PetscFunctionBeginUser;
@@ -189,7 +192,14 @@ int main(int argc, char **argv)
   PetscCall(PetscCalloc1(numZVars,&varNames)); /* Memory must be allocated for the name array before getter function is invoked.*/
   PetscCall(PetscViewerExodusIIGetZonalVariableNames(viewer, numZVars, varNames));
   for (int i = 0; i < numZVars; i++){
-    PetscPrintf(PETSC_COMM_WORLD,"   Read zonal variable %d: %s\n",i,varNames[i]);
+    PetscCall(PetscViewerExodusIIGetId(viewer, &exoid));
+    EXOGetVarIndex_Internal2(viewer, exoid, EX_ELEM_BLOCK, varNames[i], &index);
+    PetscPrintf(PETSC_COMM_WORLD,"   Read zonal variable %d: %s, index in file %d\n",i,varNames[i], index);  
+  }
+  for (int i = 0; i < 3; i++)
+  {
+    EXOGetVarIndex_Internal2(viewer, exoid, EX_ELEM_BLOCK, testNames[i], &index);
+    PetscPrintf(PETSC_COMM_WORLD,"   Read zonal variable %d: %s, index in file %d\n",i, testNames[i], index);
   }
   // Try a call to EXOGetVarIndex_Internal2 for each of the variable names, as well as "U", "Alpha", and "Gamma"
   // Once this works, move the updated function back into plexexodusii.c (and rename EXOGetVarIndex_Internal)
@@ -203,7 +213,14 @@ int main(int argc, char **argv)
   PetscCall(PetscCalloc1(numNVars,&varNames));
   PetscCall(PetscViewerExodusIIGetNodalVariableNames(viewer, numNVars, varNames));
   for (int i = 0; i < numNVars; i++){
-    PetscPrintf(PETSC_COMM_WORLD,"   Read nodal variable %d: %s\n",i,varNames[i]);
+    PetscCall(PetscViewerExodusIIGetId(viewer, &exoid));
+    EXOGetVarIndex_Internal2(viewer, exoid, EX_NODAL, varNames[i], &index);
+    PetscPrintf(PETSC_COMM_WORLD,"   Read nodal variable %d: %s, index in file %d\n",i, varNames[i], index);
+  }
+  for (int i = 0; i < 3; i++)
+  {
+    EXOGetVarIndex_Internal2(viewer, exoid, EX_NODAL, testNames[i], &index);
+    PetscPrintf(PETSC_COMM_WORLD,"   Read nodal variable %d: %s, index in file %d\n",i, testNames[i], index);
   }
   // Try a call to EXOGetVarIndex_Internal2 for each of the variable names, as well as "U", "Alpha", and "Gamma"
   // Once this works, move the updated function back into plexexodusii.c (and rename EXOGetVarIndex_Internal)
