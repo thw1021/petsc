@@ -687,7 +687,7 @@ PetscErrorCode PetscDSCreate(MPI_Comm comm, PetscDS *ds)
   p->Nf               = 0;
   p->setup            = PETSC_FALSE;
   p->numConstants     = 0;
-  p->numFuncConstants = 2; // Row and col fields
+  p->numFuncConstants = 3; // Row and col fields, cell size
   p->dimEmbed         = -1;
   p->useJacPre        = PETSC_TRUE;
   p->forceQuad        = PETSC_TRUE;
@@ -2893,6 +2893,27 @@ PetscErrorCode PetscDSSetIntegrationParameters(PetscDS ds, PetscInt fieldI, Pets
   PetscValidHeaderSpecific(ds, PETSCDS_CLASSID, 1);
   ds->constants[ds->numConstants]     = fieldI;
   ds->constants[ds->numConstants + 1] = fieldJ;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  PetscDSSetCellParameters - Set the parameters for a particular cell
+
+  Not Collective
+
+  Input Parameters:
++ ds     - The `PetscDS` object
+- volume - The cell volume
+
+  Level: intermediate
+
+.seealso: `PetscDS`, `PetscDSSetConstants()`, `PetscDSGetConstants()`, `PetscDSCreate()`
+@*/
+PetscErrorCode PetscDSSetCellParameters(PetscDS ds, PetscReal volume)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(ds, PETSCDS_CLASSID, 1);
+  ds->constants[ds->numConstants + 2] = volume;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
