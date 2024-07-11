@@ -808,7 +808,8 @@ PETSC_EXTERN PetscErrorCode EXOGetVarIndex_Internal(PetscViewer viewer, int exoi
 {
   int       num_vars = 0, i, j;
   char      ext_name[MAX_STR_LENGTH + 1];
-  char     *var_name   = NULL; /* previously char var_name[MAX_STR_LENGTH + 1]; */
+  char     *var_name = NULL; /* previously char var_name[MAX_STR_LENGTH + 1]; */
+  char     **var_names;
   const int num_suffix = 5;
   char     *suffix[5];
   PetscBool flg;
@@ -824,32 +825,31 @@ PETSC_EXTERN PetscErrorCode EXOGetVarIndex_Internal(PetscViewer viewer, int exoi
   /* Get Variable Number from file - replacing PetscCallExternal(ex_get_variable_param, exoid, obj_type, &num_vars); */
   if (obj_type == EX_NODAL) {
     PetscCall(PetscViewerExodusIIGetNodalVariable(viewer, &num_vars));
-    for (i = 0; i < num_vars; i++) {                                                                 /*changed from ++i*/
-      PetscCall(PetscViewerExodusIIGetNodalVariableName(viewer, i, &var_name));                      /*var_name = ((PetscViewer_ExodusII *)viewer->data)->nodalVariableNames[i];*/
-      PetscCheck(var_name, PETSC_COMM_SELF, PETSC_ERR_MEM, "Memory allocation failed for var_name"); /*debug note. Getting the variable name from the viewer works*/
-      /*petsccheck*/
-      for (j = 0; j < num_suffix; j++) { /*changed from ++j*/
+    // This does not work and I am not sure I understand why
+    // It would be OK if var_names was declared as char     *var_names[10]
+    // but we can't do this...
+    PetscCall(PetscCalloc1(num_vars,&var_names));
+    PetscCall(PetscViewerExodusIIGetNodalVariableNames(viewer, num_vars, var_names));
+    for (i = 0; i < num_vars; ++i) {
+      PetscCall(PetscViewerExodusIIGetNodalVariableName(viewer, i, &var_name));
+      for (j = 0; j < num_suffix; ++j) {
         PetscCall(PetscStrncpy(ext_name, name, MAX_STR_LENGTH));
         PetscCall(PetscStrlcat(ext_name, suffix[j], MAX_STR_LENGTH));
         PetscCall(PetscStrcasecmp(ext_name, var_name, &flg));
         if (flg) *varIndex = i;
       }
-      PetscCall(PetscFree(var_name));
       if (flg) break;
     }
   } else if (obj_type == EX_ELEM_BLOCK) {
     PetscCall(PetscViewerExodusIIGetZonalVariable(viewer, &num_vars));
-    for (i = 0; i < num_vars; i++) {
-      PetscCall(PetscViewerExodusIIGetZonalVariableName(viewer, i, &var_name));                      /* previously PetscCallExternal(ex_get_variable_name, exoid, obj_type, i + 1, var_name);*/
-      PetscCheck(var_name, PETSC_COMM_SELF, PETSC_ERR_MEM, "Memory allocation failed for var_name"); /*debug note. Getting the variable name from the viewer works*/
-      // var_name = ((PetscViewer_ExodusII *)viewer->data)->zonalVariableNames[i];
-      for (j = 0; j < num_suffix; j++) { /*changed from ++j*/
+    for (i = 0; i < num_vars; ++i) {
+      PetscCall(PetscViewerExodusIIGetZonalVariableName(viewer, i, &var_name));
+      for (j = 0; j < num_suffix; ++j) {
         PetscCall(PetscStrncpy(ext_name, name, MAX_STR_LENGTH));
         PetscCall(PetscStrlcat(ext_name, suffix[j], MAX_STR_LENGTH));
         PetscCall(PetscStrcasecmp(ext_name, var_name, &flg));
         if (flg) *varIndex = i;
       }
-      PetscCall(PetscFree(var_name));
       if (flg) break;
     }
   }
