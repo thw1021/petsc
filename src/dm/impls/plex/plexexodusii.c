@@ -111,13 +111,9 @@ static PetscErrorCode PetscViewerDestroy_ExodusII(PetscViewer viewer)
 
   PetscFunctionBegin;
   if (exo->exoid >= 0) PetscCallExternal(ex_close, exo->exoid);
-  for (int i = 0; i < exo->numZonalVariables; i++) {
-      PetscFree(exo->zonalVariableNames[i]);
-  }
+  for (int i = 0; i < exo->numZonalVariables; i++) { PetscFree(exo->zonalVariableNames[i]); }
   PetscCall(PetscFree(exo->zonalVariableNames));
-  for (int i = 0; i < exo->numNodalVariables; i++) {
-      PetscFree(exo->nodalVariableNames[i]);
-  }
+  for (int i = 0; i < exo->numNodalVariables; i++) { PetscFree(exo->nodalVariableNames[i]); }
   PetscCall(PetscFree(exo->nodalVariableNames));
   PetscCall(PetscFree(exo->filename));
   PetscCall(PetscFree(exo));
@@ -555,7 +551,7 @@ PetscErrorCode PetscViewerExodusIIGetZonalVariableName(const PetscViewer viewer,
 {
   PetscViewer_ExodusII *exo   = (PetscViewer_ExodusII *)viewer->data;
   int                   exoid = -1;
-  char                  tmpName[MAX_NAME_LENGTH+1];
+  char                  tmpName[MAX_NAME_LENGTH + 1];
 
   PetscFunctionBegin;
   PetscCheck(idx >= 0 && idx < exo->numZonalVariables, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Variable index out of range. Was PetscViewerExodusIISetZonalVariable called?");
@@ -586,7 +582,7 @@ PetscErrorCode PetscViewerExodusIIGetNodalVariableName(const PetscViewer viewer,
 {
   PetscViewer_ExodusII *exo   = (PetscViewer_ExodusII *)viewer->data;
   int                   exoid = -1;
-  char                  tmpName[MAX_NAME_LENGTH+1];
+  char                  tmpName[MAX_NAME_LENGTH + 1];
 
   PetscFunctionBegin;
   PetscCheck((idx >= 0) && (idx < exo->numNodalVariables), PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Variable index out of range. Was PetscViewerExodusIISetNodalVariable called?");
@@ -693,8 +689,8 @@ PetscErrorCode PetscViewerExodusIIGetZonalVariableNames(PetscViewer viewer, Pets
   PetscCheck(exo->numZonalVariables >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "PetscViewerExodusIIGetZonalVariable must be called before PetscViewerExodusIIGetZonalVariableNames");
   for (int i = 0; i < numNames; i++) {
     if (!exo->zonalVariableNames[i]) { /* Check if each of the variable names are already stored in the viewer */
-      PetscCall(PetscMalloc1(MAX_NAME_LENGTH+1,&exo->zonalVariableNames[i]));
-      PetscCallExternal(ex_get_variable_name, exo->exoid, EX_ELEM_BLOCK, i+1, exo->zonalVariableNames[i]);
+      PetscCall(PetscMalloc1(MAX_NAME_LENGTH + 1, &exo->zonalVariableNames[i]));
+      PetscCallExternal(ex_get_variable_name, exo->exoid, EX_ELEM_BLOCK, i + 1, exo->zonalVariableNames[i]);
     }
     PetscCall(PetscStrallocpy(exo->zonalVariableNames[i], &names[i]));
   }
@@ -727,12 +723,12 @@ PetscErrorCode PetscViewerExodusIIGetNodalVariableNames(PetscViewer viewer, int 
 
   for (int i = 0; i < numNames; i++) {
     if (!exo->nodalVariableNames[i]) { /* Check if each of the variable names are already stored in the viewer */
-      PetscCall(PetscMalloc1(MAX_NAME_LENGTH+1,&exo->nodalVariableNames[i]));
-      PetscCallExternal(ex_get_variable_name, exo->exoid, EX_NODAL, i+1, exo->nodalVariableNames[i]); //numNames
-      }
-      PetscCall(PetscStrallocpy(exo->nodalVariableNames[i], &names[i]));
-}
-PetscFunctionReturn(PETSC_SUCCESS);
+      PetscCall(PetscMalloc1(MAX_NAME_LENGTH + 1, &exo->nodalVariableNames[i]));
+      PetscCallExternal(ex_get_variable_name, exo->exoid, EX_NODAL, i + 1, exo->nodalVariableNames[i]); //numNames
+    }
+    PetscCall(PetscStrallocpy(exo->nodalVariableNames[i], &names[i]));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 /*MC
    PETSCVIEWEREXODUSII - A viewer that writes to an Exodus II file
@@ -800,7 +796,7 @@ PETSC_EXTERN PetscErrorCode EXOGetVarIndex_Internal(PetscViewer viewer, int exoi
   int       num_vars = 0, i, j;
   char      ext_name[MAX_STR_LENGTH + 1];
   char     *var_name = NULL; /* previously char var_name[MAX_STR_LENGTH + 1]; */
-  char     **var_names;
+  char    **var_names;
   const int num_suffix = 5;
   char     *suffix[5];
   PetscBool flg;
@@ -819,7 +815,7 @@ PETSC_EXTERN PetscErrorCode EXOGetVarIndex_Internal(PetscViewer viewer, int exoi
     // This does not work and I am not sure I understand why
     // It would be OK if var_names was declared as char     *var_names[10]
     // but we can't do this...
-    PetscCall(PetscCalloc1(num_vars,&var_names));
+    PetscCall(PetscCalloc1(num_vars, &var_names));
     PetscCall(PetscViewerExodusIIGetNodalVariableNames(viewer, num_vars, var_names));
     for (i = 0; i < num_vars; ++i) {
       PetscCall(PetscViewerExodusIIGetNodalVariableName(viewer, i, &var_name));
