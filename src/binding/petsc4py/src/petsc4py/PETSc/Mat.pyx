@@ -3945,7 +3945,7 @@ cdef class Mat(Object):
 
     #
 
-    def createSchurComplement(self, Mat A00, Mat A00p, Mat A01, Mat A10, Mat A11=None) -> Self:
+    def createSchurComplement(self, Mat A00, Mat Ap00, Mat A01, Mat A10, Mat A11=None) -> Self:
         """Create a `Type.SCHURCOMPLEMENT` matrix.
 
         Collective.
@@ -3954,14 +3954,16 @@ cdef class Mat(Object):
         ----------
         A00
             the upper-left block of the original matrix A = [A00 A01; A10 A11].
-        A00p
-            preconditioning matrix for use in ksp(A00,Ap00) to approximate the action of A00^{-1}.
+        Ap00
+            preconditioning matrix for use in ksp(A00,Ap00) to approximate the
+            action of A00^{-1}.
         A01
             the upper-right block of the original matrix A = [A00 A01; A10 A11].
         A10
             the lower-left block of the original matrix A = [A00 A01; A10 A11].
         A11
-            (optional) the lower-right block of the original matrix A = [A00 A01; A10 A11].
+            Optional lower-right block of the original matrix
+            A = [A00 A01; A10 A11].
 
         See Also
         --------
@@ -3971,7 +3973,7 @@ cdef class Mat(Object):
         cdef PetscMat newmat = NULL, A11_mat = NULL
         if A11 is not None:
             A11_mat = A11.mat
-        CHKERR(MatCreateSchurComplement(A00.mat, A00p.mat, A01.mat, A10.mat, A11_mat, &newmat))
+        CHKERR(MatCreateSchurComplement(A00.mat, Ap00.mat, A01.mat, A10.mat, A11_mat, &newmat))
         CHKERR(PetscCLEAR(self.obj)); self.mat = newmat
         return self
 
