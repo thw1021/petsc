@@ -214,8 +214,8 @@ PETSC_EXTERN PetscErrorCode DMPlexCreateEGADSLiteFromFile(MPI_Comm, const char[]
 PETSC_EXTERN PetscErrorCode PetscViewerExodusIIOpen(MPI_Comm comm, const char name[], PetscFileMode type, PetscViewer *exo);
 PETSC_EXTERN PetscErrorCode EXOGetVarIndex_Internal(PetscViewer viewer, int exoid, ex_entity_type obj_type, const char name[], int *varIndex);
 PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetId(PetscViewer, int *);
-PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetOrder(PetscViewer, PetscInt);
-PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetOrder(PetscViewer, PetscInt *);
+PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetOrder(PetscViewer, int);
+PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetOrder(PetscViewer, int *);
 
 /* SARAH ADDED FUNCTION PROTOTYPES */
 PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetZonalVariable(PetscViewer, int);

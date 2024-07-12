@@ -1,5 +1,3 @@
-#include "petscdmplex.h"
-#include "petscsys.h"
 static char help[] = "Test PetscViewer_ExodusII\n\n";
 
 #include <petsc.h>
@@ -7,33 +5,112 @@ static char help[] = "Test PetscViewer_ExodusII\n\n";
 
 int main(int argc, char **argv)
 {
-  int         exoid;
+  DM          dm;
+  char        ifilename[PETSC_MAX_PATH_LEN], ofilename[PETSC_MAX_PATH_LEN];
+  int         numZVars, numNVars;
+  int         nNodalVar = 4;
+  int         nZonalVar = 3;
+  int         order     = 1;
   PetscViewer viewer;
-  int         CPU_word_size, IO_word_size;
-  float       EXO_version;
+  int         exoid           = -1;
+  int         index           = -1;
+  const char *nodalVarName[4] = {"U_x", "U_y", "Alpha", "Beta"};
+  const char *zonalVarName[3] = {"Sigma_11", "Sigma_12", "Sigma_22"};
+  const char *testNames[3]    = {"U", "Sigma", "Gamma"};
+  char       *name=NULL;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
+  PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "PetscViewer_ExodusII test", "ex96");
+  PetscCall(PetscOptionsString("-i", "Filename to read", "ex96", ifilename, ifilename, sizeof(ifilename), NULL));
+  PetscCall(PetscOptionsString("-o", "Filename to write", "ex96", ofilename, ofilename, sizeof(ofilename), NULL));
+  PetscOptionsEnd();
 
-  PetscCallExternal(ex_opts,EX_VERBOSE + EX_DEBUG);
+#ifdef PETSC_USE_DEBUG
+  PetscCallExternal(ex_opts, EX_VERBOSE + EX_DEBUG);
+#endif
 
-  CPU_word_size = sizeof(PetscReal);
-  IO_word_size  = sizeof(PetscReal);
-  exoid    = ex_open_par("test2.exo", EX_READ, &CPU_word_size, &IO_word_size, &EXO_version, PETSC_COMM_WORLD, MPI_INFO_NULL);
-  int ierr = ex_close(exoid);
-  printf("ierr: %d",ierr);
+  PetscCall(DMPlexCreateFromFile(PETSC_COMM_WORLD, ifilename, NULL, PETSC_TRUE, &dm));
+  PetscCall(DMSetFromOptions(dm));
+  PetscCall(PetscObjectSetName((PetscObject)dm, "ex96"));
+  PetscCall(DMViewFromOptions(dm, NULL, "-dm_view"));
 
-//   PetscCheck(exo->exoid >= 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "ex_open_par failed for %s", exo->filename);
+  PetscCall(PetscViewerExodusIIOpen(PETSC_COMM_WORLD, ofilename, FILE_MODE_WRITE, &viewer));
 
+  /* Save the geometry to the file, erasing all previous content */
+  PetscCall(PetscViewerExodusIISetOrder(viewer, order));
+  PetscCall(DMView(dm, viewer));
+  PetscCall(PetscViewerView(viewer, PETSC_VIEWER_STDOUT_WORLD));
+  PetscCall(PetscViewerFlush(viewer));
 
+  /* Testing Variable Number*/
+  PetscCall(PetscViewerExodusIISetZonalVariable(viewer, nZonalVar));
+  nZonalVar = -1;
+  PetscCall(PetscViewerExodusIIGetZonalVariable(viewer, &nZonalVar));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Number of zonal variables: %d\n", nZonalVar));
 
+  PetscCall(PetscViewerExodusIISetNodalVariable(viewer, nNodalVar));
+  nNodalVar = -1;
+  PetscCall(PetscViewerExodusIIGetNodalVariable(viewer, &nNodalVar));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Number of nodal variables: %d\n", nNodalVar));
+  PetscCall(PetscViewerView(viewer, PETSC_VIEWER_STDOUT_WORLD));
 
-//   PetscCall(PetscViewerExodusIIOpen(PETSC_COMM_WORLD, "test2.exo", FILE_MODE_READ, &viewer));
-//   PetscCall(PetscViewerExodusIIGetId(viewer, &exoid));
-//   PetscPrintf(PETSC_COMM_WORLD,"exoid: %d\n",exoid);
-//   PetscCall(PetscViewerView(viewer, PETSC_VIEWER_STDOUT_WORLD));
-//   PetscCall(PetscViewerDestroy(&viewer));
+  /*
+    Test of PetscViewerExodusIISet[Nodal/Zonal]VariableName
+  */
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Testing PetscViewerExodusIISet[Nodal/Zonal]VariableName\n"));
+  for (int i = 0; i < nNodalVar; i++) { PetscCall(PetscViewerExodusIISetNodalVariableName(viewer, i, nodalVarName[i])); }
+  for (int i = 0; i < nZonalVar; i++) { PetscCall(PetscViewerExodusIISetZonalVariableName(viewer, i, zonalVarName[i])); }
+  PetscCall(PetscViewerView(viewer, PETSC_VIEWER_STDOUT_WORLD));
+  PetscCall(PetscViewerDestroy(&viewer));
 
+  /*
+    Test of PetscViewerExodusIIGet[Nodal/Zonal]VariableName
+  */
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\n\nReopenning the output file in Read-only mode\n"));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Testing PetscViewerExodusIIGet[Nodal/Zonal]VariableName\n"));
+  PetscCall(PetscViewerExodusIIOpen(PETSC_COMM_WORLD, ofilename, FILE_MODE_APPEND, &viewer));
+  PetscCall(PetscViewerExodusIISetOrder(viewer, order));
+  PetscCall(PetscViewerExodusIIGetZonalVariable(viewer, &numZVars));
+  PetscCall(PetscViewerExodusIIGetNodalVariable(viewer, &numNVars));
+
+  for (int i = 0; i < numNVars; i++) {
+    PetscCall(PetscViewerExodusIIGetNodalVariableName(viewer, i, &name));
+    PetscCall(PetscViewerExodusIIGetId(viewer, &exoid));
+    PetscCall(EXOGetVarIndex_Internal(viewer, exoid, EX_NODAL, name, &index));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "   Nodal variable %d: %s, index in file %d\n", i, name, index));
+  }
+  for (int i = 0; i < 3; i++) {
+    PetscCall(EXOGetVarIndex_Internal(viewer, exoid, EX_NODAL, testNames[i], &index));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "   Nodal variable %d: %s, index in file %d\n", i, testNames[i], index));
+  }
+  PetscPrintf(PETSC_COMM_WORLD, "\n");
+
+  for (int i = 0; i < numZVars; i++) {
+    PetscCall(PetscViewerExodusIIGetZonalVariableName(viewer, i, &name));
+    PetscCall(PetscViewerExodusIIGetId(viewer, &exoid));
+    PetscCall(EXOGetVarIndex_Internal(viewer, exoid, EX_ELEM_BLOCK, name, &index));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "   Zonal variable %d: %s, index in file %d\n", i, name, index));
+  }
+  for (int i = 0; i < 3; i++) {
+    PetscCall(EXOGetVarIndex_Internal(viewer, exoid, EX_ELEM_BLOCK, testNames[i], &index));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "   Zonal variable %d: %s, index in file %d\n", i, testNames[i], index));
+  }
+
+  PetscCall(PetscViewerView(viewer, PETSC_VIEWER_STDOUT_WORLD));
+  PetscCall(PetscViewerDestroy(&viewer));
+  PetscCall(DMDestroy(&dm));
   PetscCall(PetscFinalize());
   return 0;
 }
+
+/*TEST
+
+  build:
+    requires: exodusii pnetcdf !complex
+  test:
+    suffix: 0
+    nsize: 1
+    args: -i ${wPETSC_DIR}/share/petsc/datafiles/meshes/FourSquareT-large.exo -o FourSquareT-large_out.exo
+
+TEST*/
