@@ -46,15 +46,13 @@ static PetscErrorCode PetscPythonFindLibraryName(const char pythonexe[], const c
 
 static PetscErrorCode PetscPythonFindLibrary(const char pythonexe[], char pythonlib[], size_t pl)
 {
-  // clang-format off
-  const char *const cmdlines[] = {"-c 'import os, sysconfig; print(os.path.join(sysconfig.get_config_var(\"LIBDIR\"),sysconfig.get_config_var(\"LDLIBRARY\")))'",
+  const char *const cmdlines[] = {"-c 'import os, sysconfig; print(os.path.join(sysconfig.get_config_var(\"LIBDIR\"),sysconfig.get_config_var(\"LDLIBRARY\")))'", //
                                   "-c 'import os, sysconfig; print(os.path.join(sysconfig.get_path(\"stdlib\"),os.path.pardir,\"libpython\"+sysconfig.get_python_version()+\".dylib\"))'",
                                   "-c 'import os, sysconfig; print(os.path.join(sysconfig.get_path(\"stdlib\"),os.path.pardir,\"libpython\"+sysconfig.get_python_version()+\".so\"))'",
                                   "-c 'import os, sysconfig; print(os.path.join(sysconfig.get_config_var(\"LIBPL\"),sysconfig.get_config_var(\"LDLIBRARY\")))'",
                                   "-c 'import sysconfig; print(sysconfig.get_config_var(\"LIBPYTHON\"))'",
                                   "-c 'import os, sysconfig; print(os.path.join(sysconfig.get_config_var(\"LIBDIR\"),\"libpython\"+sysconfig.get_python_version()+\".dylib\"))'",
                                   "-c 'import os, sysconfig; print(os.path.join(sysconfig.get_config_var(\"LIBDIR\"),\"libpython\"+sysconfig.get_python_version()+\".so\"))'"};
-  // clang-format on
 
   PetscBool found = PETSC_FALSE;
 
