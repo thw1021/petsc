@@ -77,8 +77,6 @@ extensions = [
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
-needs_sphinx = '5.0.0'
-
 default_role = 'any'
 
 pygments_style = 'tango'
@@ -403,7 +401,10 @@ def setup(app):
 # a list of builtin themes.
 html_theme = 'pydata_sphinx_theme'
 
-html_theme_options = {'navigation_with_keys': True}
+html_theme_options = {
+    'navigation_with_keys': True,
+    'footer_end': ["theme-version", "last-updated"]
+    }
 
 # -- Options for HTMLHelp output ------------------------------------------
 
