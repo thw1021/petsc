@@ -8,12 +8,12 @@ typedef struct {
   char         *filename;
   PetscFileMode btype;
   int           exoid;
-  PetscInt      order; /* the "order" of the mesh, used to construct tri6, tetra10 cells */
+  int           order; /* the "order" of the mesh, used to construct tri6, tetra10 cells */
 
-  int    numNodalVariables;
-  int    numZonalVariables;
-  char **nodalVariableNames;
-  char **zonalVariableNames;
+  int           numNodalVariables;
+  int           numZonalVariables;
+  char        **nodalVariableNames;
+  char        **zonalVariableNames;
 } PetscViewer_ExodusII;
 
 #endif

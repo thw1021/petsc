@@ -30,6 +30,11 @@ int main(int argc, char **argv)
   PetscInt        sdim, d, pStart, pEnd, p, numCS, set;
   PetscMPIInt     rank, size;
   PetscViewer     viewer;
+  const char *nodalVarName2D[4] = {"U_x", "U_y", "Alpha", "Beta"};
+  const char *zonalVarName2D[3] = {"Sigma_11", "Sigma_22", "Sigma_12"};
+  const char *nodalVarName3D[5] = {"U_x", "U_y", "U_z", "Alpha", "Beta"};
+  const char *zonalVarName3D[6] = {"Sigma_11", "Sigma_22", "Sigma_33", "Sigma_23", "Sigma_13", "Sigma_12"};
+
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
@@ -83,59 +88,35 @@ int main(int argc, char **argv)
     /*
       Note how the exodus file is now open
     */
-
-    /* "Format" the exodus result file, i.e. allocate space for nodal and zonal variables */
-    const char *nodalVarName[] = {"U_x", "U_y", "Alpha", "Beta"}; /* size of array should not be specified in declaration */
-    const char *zonalVarName[] = {"Sigma_11", "Sigma_12", "Sigma_22"};
-    numNodalVar                = 4;
-    numZonalVar                = 3;
-
-    // switch (sdim) {
-    // case 2:
-    //   numNodalVar     = 4;
-    //   const char *nodalVarName[] = {"U_x", "U_y", "Alpha", "Beta"};
-    //   // nodalVarName[0] = (char *)"U_x";
-    //   // nodalVarName[1] = (char *)"U_y";
-    //   // nodalVarName[2] = (char *)"Alpha";
-    //   // nodalVarName[3] = (char *)"Beta";
-    //   numZonalVar     = 3;
-    //   zonalVarName[0] = (char *)"Sigma_11";
-    //   zonalVarName[1] = (char *)"Sigma_22";
-    //   zonalVarName[2] = (char *)"Sigma_12";
-    //   break;
-    // case 3:
-    //   numNodalVar     = 5;
-    //   const char *nodalVarName[] = {"U_x", "U_y", "U_z", "Alpha", "Beta"};
-    //   // nodalVarName[0] = (char *)"U_x";
-    //   // nodalVarName[1] = (char *)"U_y";
-    //   // nodalVarName[2] = (char *)"U_z";
-    //   // nodalVarName[3] = (char *)"Alpha";
-    //   // nodalVarName[4] = (char *)"Beta";
-    //   numZonalVar     = 6;
-    //   zonalVarName[0] = (char *)"Sigma_11";
-    //   zonalVarName[1] = (char *)"Sigma_22";
-    //   zonalVarName[2] = (char *)"Sigma_33";
-    //   zonalVarName[3] = (char *)"Sigma_23";
-    //   zonalVarName[4] = (char *)"Sigma_13";
-    //   zonalVarName[5] = (char *)"Sigma_12";
-    //   break;
-    // default:
-    //   SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "No layout for dimension %" PetscInt_FMT, sdim);
-    // }
     PetscCall(PetscViewerExodusIIGetId(viewer, &exoid));
 
-    /* Set Nodal and Zonal Variable Parameters */
-    PetscCall(PetscViewerExodusIISetZonalVariable(viewer, numZonalVar));       /* previously PetscCallExternal(ex_put_variable_param, exoid, EX_ELEM_BLOCK, numZonalVar); */
-    PetscCall(PetscViewerExodusIISetZonalVariableNames(viewer, zonalVarName)); /* previously PetscCallExternal(ex_put_variable_name, exoid, EX_ELEM_BLOCK, i + 1, zonalVarName); */
-    /* previously PetscCallExternal(ex_put_variable_names, exoid, EX_ELEM_BLOCK, numZonalVar, zonalVarName);*/
-    PetscCall(PetscViewerExodusIISetNodalVariable(viewer, numNodalVar));       /* previously PetscCallExternal(ex_put_variable_param, exoid, EX_NODAL, numNodalVar);*/
-    PetscCall(PetscViewerExodusIISetNodalVariableNames(viewer, nodalVarName)); /* previously PetscCallExternal(ex_put_variable_names, exoid, EX_NODAL, numNodalVar, nodalVarName);*/
-    numCS = ex_inquire_int(exoid, EX_INQ_ELEM_BLK);
+    /* "Format" the exodus result file, i.e. allocate space for nodal and zonal variables */
+    switch (sdim) {
+    case 2:
+      numNodalVar = 4;
+      numZonalVar = 3;
+      PetscCall(PetscViewerExodusIISetZonalVariable(viewer, numZonalVar));
+      PetscCall(PetscViewerExodusIISetZonalVariableNames(viewer, zonalVarName2D));
+      PetscCall(PetscViewerExodusIISetNodalVariable(viewer, numNodalVar));
+      PetscCall(PetscViewerExodusIISetNodalVariableNames(viewer, nodalVarName2D));
+      break;
+    case 3:
+      numNodalVar = 5;
+      numZonalVar = 6;
+      PetscCall(PetscViewerExodusIISetZonalVariable(viewer, numZonalVar));
+      PetscCall(PetscViewerExodusIISetZonalVariableNames(viewer, zonalVarName3D));
+      PetscCall(PetscViewerExodusIISetNodalVariable(viewer, numNodalVar));
+      PetscCall(PetscViewerExodusIISetNodalVariableNames(viewer, nodalVarName3D));
+      break;
+    default:
+      SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "No layout for dimension %" PetscInt_FMT, sdim);
+    }
 
     /*
       An exodusII truth table specifies which fields are saved at which time step
-      It speeds up I/O but reserving space for fieldsin the file ahead of time.
+      It speeds up I/O but reserving space for fields in the file ahead of time.
     */
+    numCS = ex_inquire_int(exoid, EX_INQ_ELEM_BLK);
     PetscCall(PetscMalloc1(numZonalVar * numCS, &truthtable));
     for (i = 0; i < numZonalVar * numCS; ++i) truthtable[i] = 1;
     PetscCallExternal(ex_put_truth_table, exoid, EX_ELEM_BLOCK, numCS, numZonalVar, truthtable);
