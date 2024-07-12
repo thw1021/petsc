@@ -10,6 +10,7 @@ typedef struct {
   PetscReal delta;  /* trust region parameter */
   PetscReal delta0; /* initial radius for trust region */
   PetscReal deltaM; /* maximum radius for trust region */
+  PetscReal deltam; /* minimum radius for trust region */
   PetscReal kmdc;   /* sufficient decrease parameter */
 
   /*
@@ -21,6 +22,7 @@ typedef struct {
       delta = min(delta,deltaM)
 
     The step is accepted if rho > eta1
+    Iteration is stop if delta < deltam
   */
   PetscReal eta1;
   PetscReal eta2;

@@ -940,7 +940,6 @@ PetscErrorCode SNESEWSetFromOptions_Private(SNESKSPEW *kctx, PetscBool print_api
 . -snes_lag_preconditioner_persists <true,false>                               - retains the -snes_lag_preconditioner information across multiple SNESSolve()
 . -snes_lag_jacobian <lag>                                                     - how often Jacobian is rebuilt (use -1 to never rebuild)
 . -snes_lag_jacobian_persists <true,false>                                     - retains the -snes_lag_jacobian information across multiple SNESSolve()
-. -snes_tr_tol <trtol>                                                         - trust region tolerance
 . -snes_convergence_test <default,skip,correct_pressure>                       - convergence test in nonlinear solver. default `SNESConvergedDefault()`. skip `SNESConvergedSkip()` means continue iterating until max_it or some other criterion is reached, saving expense of convergence test. correct_pressure `SNESConvergedCorrectPressure()` has special handling of a pressure null space.
 . -snes_monitor [ascii][:filename][:viewer format]                             - prints residual norm at each iteration. if no filename given prints to stdout
 . -snes_monitor_solution [ascii binary draw][:filename][:viewer format]        - plots solution at each iteration
@@ -1778,7 +1777,6 @@ PetscErrorCode SNESCreate(MPI_Comm comm, SNES *outsnes)
   snes->ttol                 = 0.0;
   snes->abstol               = PetscDefined(USE_REAL_SINGLE) ? 1.e-25 : 1.e-50;
   snes->stol                 = PetscDefined(USE_REAL_SINGLE) ? 1.e-5 : 1.e-8;
-  snes->deltatol             = PetscDefined(USE_REAL_SINGLE) ? 1.e-6 : 1.e-12;
   snes->divtol               = 1.e4;
   snes->rnorm0               = 0;
   snes->nfuncs               = 0;
@@ -3480,7 +3478,7 @@ PetscErrorCode SNESDestroy(SNES *snes)
 
   `SNESSetLagPreconditionerPersists()` allows using the same uniform lagging (for example every second linear solve) across multiple nonlinear solves.
 
-.seealso: [](ch_snes), `SNESSetTrustRegionTolerance()`, `SNESGetLagPreconditioner()`, `SNESSetLagJacobian()`, `SNESGetLagJacobian()`, `SNESSetLagPreconditionerPersists()`,
+.seealso: [](ch_snes), `SNESGetLagPreconditioner()`, `SNESSetLagJacobian()`, `SNESGetLagJacobian()`, `SNESSetLagPreconditionerPersists()`,
           `SNESSetLagJacobianPersists()`, `SNES`, `SNESSolve()`
 @*/
 PetscErrorCode SNESSetLagPreconditioner(SNES snes, PetscInt lag)
@@ -3511,7 +3509,7 @@ PetscErrorCode SNESSetLagPreconditioner(SNES snes, PetscInt lag)
   Note:
   Use `SNESGetSolution()` to extract the fine grid solution after grid sequencing.
 
-.seealso: [](ch_snes), `SNES`, `SNESSetTrustRegionTolerance()`, `SNESGetLagPreconditioner()`, `SNESSetLagJacobian()`, `SNESGetLagJacobian()`, `SNESGetGridSequence()`,
+.seealso: [](ch_snes), `SNES`, `SNESGetLagPreconditioner()`, `SNESSetLagJacobian()`, `SNESGetLagJacobian()`, `SNESGetGridSequence()`,
           `SNESetDM()`
 @*/
 PetscErrorCode SNESSetGridSequence(SNES snes, PetscInt steps)
@@ -3536,7 +3534,7 @@ PetscErrorCode SNESSetGridSequence(SNES snes, PetscInt steps)
 
   Level: intermediate
 
-.seealso: [](ch_snes), `SNESSetTrustRegionTolerance()`, `SNESGetLagPreconditioner()`, `SNESSetLagJacobian()`, `SNESGetLagJacobian()`, `SNESSetGridSequence()`
+.seealso: [](ch_snes), `SNESGetLagPreconditioner()`, `SNESSetLagJacobian()`, `SNESGetLagJacobian()`, `SNESSetGridSequence()`
 @*/
 PetscErrorCode SNESGetGridSequence(SNES snes, PetscInt *steps)
 {
@@ -3565,7 +3563,7 @@ PetscErrorCode SNESGetGridSequence(SNES snes, PetscInt *steps)
 
   The preconditioner is ALWAYS built in the first iteration of a nonlinear solve unless lag is -1
 
-.seealso: [](ch_snes), `SNES`, `SNESSetTrustRegionTolerance()`, `SNESSetLagPreconditioner()`, `SNESSetLagJacobianPersists()`, `SNESSetLagPreconditionerPersists()`
+.seealso: [](ch_snes), `SNES`, `SNESSetLagPreconditioner()`, `SNESSetLagJacobianPersists()`, `SNESSetLagPreconditionerPersists()`
 @*/
 PetscErrorCode SNESGetLagPreconditioner(SNES snes, PetscInt *lag)
 {
@@ -3602,7 +3600,7 @@ PetscErrorCode SNESGetLagPreconditioner(SNES snes, PetscInt *lag)
   If  -1 is used before the very first nonlinear solve the CODE WILL FAIL! because no Jacobian is used, use -2 to indicate you want it recomputed
   at the next Newton step but never again (unless it is reset to another value)
 
-.seealso: [](ch_snes), `SNES`, `SNESSetTrustRegionTolerance()`, `SNESGetLagPreconditioner()`, `SNESSetLagPreconditioner()`, `SNESGetLagJacobianPersists()`, `SNESSetLagPreconditionerPersists()`
+.seealso: [](ch_snes), `SNES`, `SNESGetLagPreconditioner()`, `SNESSetLagPreconditioner()`, `SNESGetLagJacobianPersists()`, `SNESSetLagPreconditionerPersists()`
 @*/
 PetscErrorCode SNESSetLagJacobian(SNES snes, PetscInt lag)
 {
@@ -3634,7 +3632,7 @@ PetscErrorCode SNESSetLagJacobian(SNES snes, PetscInt lag)
 
   The jacobian is ALWAYS built in the first iteration of a nonlinear solve unless lag is -1 or `SNESSetLagJacobianPersists()` was called.
 
-.seealso: [](ch_snes), `SNES`, `SNESSetTrustRegionTolerance()`, `SNESSetLagJacobian()`, `SNESSetLagPreconditioner()`, `SNESGetLagPreconditioner()`, `SNESSetLagJacobianPersists()`, `SNESSetLagPreconditionerPersists()`
+.seealso: [](ch_snes), `SNES`, `SNESSetLagJacobian()`, `SNESSetLagPreconditioner()`, `SNESGetLagPreconditioner()`, `SNESSetLagJacobianPersists()`, `SNESSetLagPreconditionerPersists()`
 
 @*/
 PetscErrorCode SNESGetLagJacobian(SNES snes, PetscInt *lag)
@@ -3732,7 +3730,7 @@ PetscErrorCode SNESSetLagPreconditionerPersists(SNES snes, PetscBool flg)
   Note:
   This is used sometimes with `TS` to prevent `TS` from detecting a false steady state solution
 
-.seealso: [](ch_snes), `SNES`, `TS`, `SNESSetTrustRegionTolerance()`, `SNESSetDivergenceTolerance()`
+.seealso: [](ch_snes), `SNES`, `TS`, `SNESSetDivergenceTolerance()`
 @*/
 PetscErrorCode SNESSetForceIteration(SNES snes, PetscBool force)
 {
@@ -3755,7 +3753,7 @@ PetscErrorCode SNESSetForceIteration(SNES snes, PetscBool force)
 
   Level: intermediate
 
-.seealso: [](ch_snes), `SNES`, `SNESSetForceIteration()`, `SNESSetTrustRegionTolerance()`, `SNESSetDivergenceTolerance()`
+.seealso: [](ch_snes), `SNES`, `SNESSetForceIteration()`, `SNESSetDivergenceTolerance()`
 @*/
 PetscErrorCode SNESGetForceIteration(SNES snes, PetscBool *force)
 {
@@ -3787,7 +3785,7 @@ PetscErrorCode SNESGetForceIteration(SNES snes, PetscBool *force)
 
   Level: intermediate
 
-.seealso: [](ch_snes), `SNESSolve()`, `SNES`, `SNESSetTrustRegionTolerance()`, `SNESSetDivergenceTolerance()`, `SNESSetForceIteration()`
+.seealso: [](ch_snes), `SNESSolve()`, `SNES`, `SNESSetDivergenceTolerance()`, `SNESSetForceIteration()`
 @*/
 PetscErrorCode SNESSetTolerances(SNES snes, PetscReal abstol, PetscReal rtol, PetscReal stol, PetscInt maxit, PetscInt maxf)
 {
@@ -3902,34 +3900,6 @@ PetscErrorCode SNESGetDivergenceTolerance(SNES snes, PetscReal *divtol)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
   if (divtol) *divtol = snes->divtol;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@
-  SNESSetTrustRegionTolerance - Sets the trust region parameter tolerance.
-
-  Logically Collective
-
-  Input Parameters:
-+ snes - the `SNES` context
-- tol  - tolerance
-
-  Options Database Key:
-. -snes_tr_tol <tol> - Sets tol
-
-  Level: intermediate
-
-  Developer Note:
-  Should be SNESTrustRegionSetTolerance()
-
-.seealso: [](ch_snes), `SNES`, `SNESNEWTONTR`, `SNESSetTolerances()`
-@*/
-PetscErrorCode SNESSetTrustRegionTolerance(SNES snes, PetscReal tol)
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
-  PetscValidLogicalCollectiveReal(snes, tol, 2);
-  snes->deltatol = tol;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
