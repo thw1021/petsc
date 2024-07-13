@@ -226,9 +226,10 @@ static PetscErrorCode SNESNewtonALComputeFunction_NEWTONAL(SNES snes, Vec X, Vec
   }
   if (al->scale_rhs && snes->vec_rhs) {
     /* Save original RHS vector values, then scale `snes->vec_rhs` by load parameter */
-    if (!al->vec_rhs_orig) {
-      PetscCall(VecDuplicate(snes->vec_rhs, &al->vec_rhs_orig));
-      PetscCall(VecSwap(snes->vec_rhs, al->vec_rhs_orig));
+    if (!al->vec_rhs_orig) { PetscCall(VecDuplicate(snes->vec_rhs, &al->vec_rhs_orig)); }
+    if (!al->copied_rhs) {
+      PetscCall(VecCopy(snes->vec_rhs, al->vec_rhs_orig));
+      al->copied_rhs = PETSC_TRUE;
     }
     PetscCall(VecAXPBY(snes->vec_rhs, al->lambda, 0.0, al->vec_rhs_orig));
     PetscCall(VecAXPY(Q, 1, al->vec_rhs_orig));
@@ -297,6 +298,7 @@ static PetscErrorCode SNESSolve_NEWTONAL(SNES snes)
     PetscCall(PetscCitationsRegister(NewtonALNormalCitation, &NewtonALNormalCitationSet));
   }
 
+  data->copied_rhs             = PETSC_FALSE;
   data->lambda_update          = 0.0;
   data->lambda                 = 0.0;
   snes->numFailures            = 0;
@@ -509,8 +511,8 @@ static PetscErrorCode SNESSolve_NEWTONAL(SNES snes)
   }
   /* Reset RHS vector, if changed */
   if (data->vec_rhs_orig) {
-    PetscCall(VecSwap(data->vec_rhs_orig, snes->vec_rhs));
-    PetscCall(VecDestroy(&data->vec_rhs_orig));
+    PetscCall(VecCopy(data->vec_rhs_orig, snes->vec_rhs));
+    data->copied_rhs = PETSC_FALSE;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
