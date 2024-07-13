@@ -66,6 +66,11 @@ Changes: Development
 
 .. rubric:: SNES:
 
+- Add ``DMAdaptorMonitor()``, ``DMAdaptorMonitorSet()``,  ``DMAdaptorMonitorCancel()``, ``DMAdaptorMonitorSetFromOptions()``
+- Add ``DMAdaptorMonitorError()``, ``DMAdaptorMonitorErrorDraw()``, ``DMAdaptorMonitorErrorDrawLGCreate()``, ``DMAdaptorMonitorErrorDrawLG()``
+- Add ``DMAdaptorMonitorRegister()``, ``DMAdaptorMonitorRegisterAll()``, ``DMAdaptorMonitorRegisterDestroy()``
+- Add ``DMAdaptorGetCriterion()`` and ``DMAdaptorSetCriterion()``
+
 .. rubric:: SNESLineSearch:
 
 .. rubric:: TS:
@@ -91,6 +96,9 @@ Changes: Development
 - Add refinement argument to ``DMPlexCreateHexCylinderMesh()``
 - Now ``DMPlexComputeBdIntegral()`` takes one function per field
 - Add ``DMPlexCreateEdgeNumbering()``
+- Add ``DMPlexComputeL2FluxDiffVec()`` and ``DMPlexComputeL2FluxDiffVecLocal()``
+- Add ``DMAdaptorSetType()``, ``DMAdaptorGetType()``, ``DMAdaptorRegister()``, ``DMAdaptorRegisterAll()``, ``DMAdaptorRegisterDestroy()``
+- Add ``DMAdaptorGetMixedSetupFunction()`` and ``DMAdaptorSetMixedSetupFunction()``
 
 .. rubric:: FE/FV:
 
