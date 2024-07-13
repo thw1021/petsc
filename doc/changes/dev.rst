@@ -66,6 +66,11 @@ Changes: Development
 
 .. rubric:: SNES:
 
+- Add ``DMAdaptorMonitor()``, ``DMAdaptorMonitorSet()``,  ``DMAdaptorMonitorCancel()``, ``DMAdaptorMonitorSetFromOptions()``
+- Add ``DMAdaptorMonitorError()``, ``DMAdaptorMonitorErrorDraw()``, ``DMAdaptorMonitorErrorDrawLGCreate()``, ``DMAdaptorMonitorErrorDrawLG()``
+- Add ``DMAdaptorMonitorRegister()``, ``DMAdaptorMonitorRegisterAll()``, ``DMAdaptorMonitorRegisterDestroy()``
+- Add ``DMAdaptorGetCriterion()`` and ``DMAdaptorSetCriterion()``
+
 .. rubric:: SNESLineSearch:
 
 .. rubric:: TS:
