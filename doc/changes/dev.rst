@@ -67,6 +67,8 @@ Changes: Development
 
 .. rubric:: SNES:
 
+- Add Newton's method with arc length continuation: ``SNESNEWTONAL``
+
 .. rubric:: SNESLineSearch:
 
 .. rubric:: TS:
