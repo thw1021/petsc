@@ -17,6 +17,7 @@ typedef struct {
   PetscReal                  lambda_min;             /* minimum value of the load parameter */
   PetscBool                  scale_rhs;              /* should the RHS vector be scaled by the load parameter? */
   SNESNewtonALCorrectionType correction_type;        /* type of correction scheme to use */
+  PetscBool                  copied_rhs;             /* has the right-hand side vector been copied? */
 
   Vec vec_rhs_orig; /* original right-hand side vector, used if `scale_rhs == PETSC_TRUE` */
 
