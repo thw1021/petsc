@@ -20,7 +20,7 @@
 
   Level: intermediate
 
-.seealso: [](ch_snes), `SNES`, `SNESNCG`, `SNESSetTrustRegionTolerance()`
+.seealso: [](ch_snes), `SNES`, `SNESNCG`
 @*/
 PetscErrorCode SNESNGSSetTolerances(SNES snes, PetscReal abstol, PetscReal rtol, PetscReal stol, PetscInt maxit)
 {

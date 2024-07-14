@@ -388,6 +388,17 @@ class BaseTestSNES:
         npc = self.snes.getNPC()
         self.assertEqual(npc.appctx, (1, 2, 3))
 
+    def testTRAPI(self):
+        defreg = (1,2,3)
+        defup = (1,2,3,4,5)
+        if self.snes.getType() == PETSc.SNES.Type.NEWTONTR:
+            defreg = self.snes.getTRRegionTolerances()
+            defup = self.snes.getTRUpdateParameters()
+        self.snes.setTRRegionTolerances(*defreg)
+        self.snes.setTRUpdateParameters(*defup)
+        if self.snes.getType() == PETSc.SNES.Type.NEWTONTR:
+            self.assertEqual(defreg, self.snes.getTRRegionTolerances())
+            self.assertEqual(defup, self.snes.getTRUpdateParameters())
 
 # --------------------------------------------------------------------
 

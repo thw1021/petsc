@@ -144,7 +144,6 @@ PETSC_EXTERN PetscErrorCode SNESSetTolerances(SNES, PetscReal, PetscReal, PetscR
 PETSC_EXTERN PetscErrorCode SNESSetDivergenceTolerance(SNES, PetscReal);
 PETSC_EXTERN PetscErrorCode SNESGetTolerances(SNES, PetscReal *, PetscReal *, PetscReal *, PetscInt *, PetscInt *);
 PETSC_EXTERN PetscErrorCode SNESGetDivergenceTolerance(SNES, PetscReal *);
-PETSC_EXTERN PetscErrorCode SNESSetTrustRegionTolerance(SNES, PetscReal);
 PETSC_EXTERN PetscErrorCode SNESGetForceIteration(SNES, PetscBool *);
 PETSC_EXTERN PetscErrorCode SNESSetForceIteration(SNES, PetscBool);
 PETSC_EXTERN PetscErrorCode SNESGetIterationNumber(SNES, PetscInt *);
@@ -200,6 +199,12 @@ typedef enum {
 PETSC_EXTERN const char *const SNESNewtonTRQNTypes[];
 
 PETSC_EXTERN PetscErrorCode SNESNewtonTRSetQNType(SNES, SNESNewtonTRQNType);
+
+PETSC_EXTERN PETSC_DEPRECATED_FUNCTION(3, 22, 0, "SNESNewtonTRSetRegionTolerances()", ) PetscErrorCode SNESSetTrustRegionTolerance(SNES, PetscReal);
+PETSC_EXTERN PetscErrorCode SNESNewtonTRSetRegionTolerances(SNES, PetscReal, PetscReal, PetscReal);
+PETSC_EXTERN PetscErrorCode SNESNewtonTRGetRegionTolerances(SNES, PetscReal *, PetscReal *, PetscReal *);
+PETSC_EXTERN PetscErrorCode SNESNewtonTRSetUpdateParameters(SNES, PetscReal, PetscReal, PetscReal, PetscReal, PetscReal);
+PETSC_EXTERN PetscErrorCode SNESNewtonTRGetUpdateParameters(SNES, PetscReal *, PetscReal *, PetscReal *, PetscReal *, PetscReal *);
 
 PETSC_EXTERN PetscErrorCode SNESNewtonTRDCGetRhoFlag(SNES, PetscBool *);
 PETSC_EXTERN PetscErrorCode SNESNewtonTRDCSetPreCheck(SNES, PetscErrorCode (*)(SNES, Vec, Vec, PetscBool *, void *), void *ctx);

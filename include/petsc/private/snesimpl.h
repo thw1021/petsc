@@ -107,7 +107,6 @@ struct _p_SNES {
   PetscReal divtol;            /* relative divergence tolerance */
   PetscReal abstol;            /* absolute tolerance */
   PetscReal stol;              /* step length tolerance*/
-  PetscReal deltatol;          /* trust region convergence tolerance */
   PetscBool forceiteration;    /* Force SNES to take at least one iteration regardless of the initial residual norm */
   PetscInt  lagpreconditioner; /* SNESSetLagPreconditioner() */
   PetscInt  lagjacobian;       /* SNESSetLagJacobian() */
