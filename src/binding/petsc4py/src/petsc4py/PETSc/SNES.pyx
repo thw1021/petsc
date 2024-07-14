@@ -1,11 +1,12 @@
 # --------------------------------------------------------------------
 
+# FIXME Missing reference petsc.SNESType
 class SNESType(object):
     """SNES solver type.
 
     See Also
     --------
-    petsc.SNESType
+    petsc.SNESGetType
 
     """
     NEWTONLS         = S_(SNESNEWTONLS)
@@ -30,12 +31,13 @@ class SNESType(object):
     PATCH            = S_(SNESPATCH)
 
 
+# FIXME Missing reference petsc.SNESNormSchedule
 class SNESNormSchedule(object):
     """SNES norm schedule.
 
     See Also
     --------
-    petsc.SNESNormSchedule
+    petsc.SNESGetNormSchedule
 
     """
     # native
