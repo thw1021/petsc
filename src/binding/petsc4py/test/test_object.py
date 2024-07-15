@@ -68,7 +68,8 @@ class BaseTestObject:
         self.assertEqual(self.obj.getOptionsPrefix(), prefix2 + prefix1)
         self.obj.setOptionsPrefix(None)
         self.assertEqual(self.obj.getOptionsPrefix(), None)
-        self.obj.setFromOptions()
+        if 'dmda' not in self.obj.getType():
+            self.obj.setFromOptions()
 
         def opts_handler(obj):
             n = obj.getAttr('opts_handler_called')
