@@ -318,12 +318,14 @@ static PetscErrorCode SNESSolve_NEWTONAL(SNES snes)
 
   PetscCall(VecZeroEntries(DeltaX));
 
+  /* set snes->max_its for convergence test */
+  snes->max_its = maxits * maxincs;
+
   /* main incremental-iterative loop */
   for (PetscInt i = 0; i < maxincs || maxincs < 0; i++) {
     PetscReal deltaLambda;
 
     PetscCall(PetscObjectSAWsTakeAccess((PetscObject)snes));
-    snes->iter = 0;
     snes->norm = 0.0;
     PetscCall(PetscObjectSAWsGrantAccess((PetscObject)snes));
     PetscCall(SNESNewtonALComputeFunction(snes, X, Q));
@@ -333,9 +335,9 @@ static PetscErrorCode SNESSolve_NEWTONAL(SNES snes)
     SNESCheckFunctionNorm(snes, fnorm);
 
     /* Monitor convergence */
-    PetscCall(SNESConverged(snes, 0, 0.0, 0.0, fnorm));
-    PetscCall(SNESMonitor(snes, 0, fnorm));
-    if (i == 0 && snes->reason) PetscFunctionReturn(PETSC_SUCCESS);
+    PetscCall(SNESConverged(snes, snes->iter, 0.0, 0.0, fnorm));
+    PetscCall(SNESMonitor(snes, snes->iter, fnorm));
+    if (i == 0 && snes->reason) break;
     for (PetscInt j = 0; j < maxits; j++) {
       PetscReal normsqX_Q, deltaS = 1;
 
@@ -486,7 +488,7 @@ static PetscErrorCode SNESSolve_NEWTONAL(SNES snes)
 
       /* Monitor convergence */
       PetscCall(PetscObjectSAWsTakeAccess((PetscObject)snes));
-      snes->iter  = j + 1;
+      snes->iter++;
       snes->norm  = fnorm;
       snes->ynorm = ynorm;
       snes->xnorm = xnorm;
@@ -495,25 +497,27 @@ static PetscErrorCode SNESSolve_NEWTONAL(SNES snes)
       PetscCall(SNESConverged(snes, snes->iter, xnorm, ynorm, fnorm));
       PetscCall(SNESMonitor(snes, snes->iter, snes->norm));
       if (snes->reason) break;
+      if (j == maxits - 1) {
+        snes->reason = SNES_DIVERGED_MAX_IT;
+        break;
+      }
     }
     if (snes->reason < 0) break;
     if (data->lambda >= data->lambda_max) {
-      snes->iter = i + 1;
       break;
     } else if (maxincs > 0 && i == maxincs - 1) {
       snes->reason = SNES_DIVERGED_MAX_IT;
-      snes->iter   = i + 1;
       break;
     } else {
       snes->reason = SNES_CONVERGED_ITERATING;
-      snes->iter   = 0;
     }
   }
   /* Reset RHS vector, if changed */
-  if (data->vec_rhs_orig) {
+  if (data->copied_rhs) {
     PetscCall(VecCopy(data->vec_rhs_orig, snes->vec_rhs));
     data->copied_rhs = PETSC_FALSE;
   }
+  snes->max_its = maxits; /* reset snes->max_its */
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
