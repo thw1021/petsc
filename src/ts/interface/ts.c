@@ -128,6 +128,7 @@ PetscErrorCode TSSetFromOptions(TS ts)
   if (flg) PetscCall(TSSetTimeStep(ts, time_step));
   PetscCall(PetscOptionsEnum("-ts_exact_final_time", "Option for handling of final time step", "TSSetExactFinalTime", TSExactFinalTimeOptions, (PetscEnum)ts->exact_final_time, (PetscEnum *)&eftopt, &flg));
   if (flg) PetscCall(TSSetExactFinalTime(ts, eftopt));
+
   PetscCall(PetscOptionsInt("-ts_max_snes_failures", "Maximum number of nonlinear solve failures", "TSSetMaxSNESFailures", ts->max_snes_failures, &ts->max_snes_failures, &flg));
   if (flg) PetscCall(TSSetMaxSNESFailures(ts, ts->max_snes_failures));
   PetscCall(PetscOptionsDeprecated("-ts_max_reject", "-ts_max_step_rejections", "3.25", NULL));

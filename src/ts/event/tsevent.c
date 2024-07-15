@@ -31,6 +31,54 @@ PetscErrorCode TSEventInitialize(TSEvent event, TS ts, PetscReal t, Vec U)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*
+  TSEventRecorderResize - Can be used to create the event recorder arrays (event->recsize == 0 && newsize > 0),
+  or to destroy the arrays (newsize == 0), or to resize the arrays and copy over the data (both sizes > 0).
+  When resizing to a smaller positive size, only a part of the data is copied.
+*/
+static PetscErrorCode TSEventRecorderResize(TSEvent event, PetscInt newsize)
+{
+  PetscReal *time     = NULL;
+  PetscInt  *stepnum  = NULL, *nevents = NULL;
+  PetscInt **eventidx = NULL;
+
+  PetscFunctionBegin;
+  if (event->recsize == newsize) PetscFunctionReturn(PETSC_SUCCESS);
+  if (newsize > 0) {
+      // Create new arrays
+      PetscCall(PetscMalloc1(newsize, &time));
+      PetscCall(PetscMalloc1(newsize, &stepnum));
+      PetscCall(PetscMalloc1(newsize, &nevents));
+      PetscCall(PetscMalloc1(newsize, &eventidx));
+      for (PetscInt i = 0; i < newsize; i++) PetscCall(PetscMalloc1(event->nevents, &eventidx[i]));
+
+      // Copy over the data
+      if (event->recsize > 0) {
+          const PetscInt copysize = PetscMin(event->recsize, newsize);
+
+          PetscCall(PetscArraycpy(time, event->recorder.time, copysize));
+          PetscCall(PetscArraycpy(stepnum, event->recorder.stepnum, copysize));
+          PetscCall(PetscArraycpy(nevents, event->recorder.nevents, copysize));
+          for (PetscInt i = 0; i < copysize; i++) PetscCall(PetscArraycpy(eventidx[i], event->recorder.eventidx[i], event->recorder.nevents[i]));
+      }
+  }
+  // Destroy the old arrays
+  if (event->recsize > 0) {
+      for (PetscInt i = 0; i < event->recsize; i++) PetscCall(PetscFree(event->recorder.eventidx[i]));
+      PetscCall(PetscFree(event->recorder.eventidx));
+      PetscCall(PetscFree(event->recorder.nevents));
+      PetscCall(PetscFree(event->recorder.stepnum));
+      PetscCall(PetscFree(event->recorder.time));
+  }
+  // Set the recorder entries
+  event->recorder.time     = time;
+  event->recorder.stepnum  = stepnum;
+  event->recorder.nevents  = nevents;
+  event->recorder.eventidx = eventidx;
+  event->recsize           = newsize;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 PetscErrorCode TSEventDestroy(TSEvent *event)
 {
   PetscFunctionBegin;
@@ -56,12 +104,7 @@ PetscErrorCode TSEventDestroy(TSEvent *event)
   PetscCall(PetscFree((*event)->events_zero));
   PetscCall(PetscFree((*event)->vtol));
 
-  for (PetscInt i = 0; i < (*event)->recsize; i++) PetscCall(PetscFree((*event)->recorder.eventidx[i]));
-  PetscCall(PetscFree((*event)->recorder.eventidx));
-  PetscCall(PetscFree((*event)->recorder.nevents));
-  PetscCall(PetscFree((*event)->recorder.stepnum));
-  PetscCall(PetscFree((*event)->recorder.time));
-
+  PetscCall(TSEventRecorderResize(*event, 0)); // destroys the recorder
   PetscCall(PetscViewerDestroy(&(*event)->monitor));
   PetscCall(PetscFree(*event));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -221,7 +264,8 @@ PetscErrorCode TSSetPostEventSecondStep(TS ts, PetscReal dt2)
   Level: beginner
 
   Notes:
-  One must call `TSSetEventHandler()` before setting the tolerances.
+  One must call `TSSetEventHandler()` before setting the tolerances by this function.
+  The option -ts_event_tol can be subsequently engaged from `TSSetFromOptions()`.
 
   The size of `vtol` should be equal to the number of events on the given process.
 
@@ -244,13 +288,53 @@ PetscErrorCode TSSetEventTolerances(TS ts, PetscReal tol, PetscReal vtol[])
     for (PetscInt i = 0; i < event->nevents; i++) event->vtol[i] = vtol[i];
   } else {
     if (tol != (PetscReal)PETSC_CURRENT) {
-      for (PetscInt i = 0; i < event->nevents; i++) event->vtol[i] = tol;
+      event->tol = tol;
+      for (PetscInt i = 0; i < event->nevents; i++) event->vtol[i] = event->tol;
     }
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@
+// To be called from TSSetFromOptions() via PetscObjectAddOptionsHandler()
+PetscErrorCode TSEventSetFromOptions(PetscObject ts_object, PetscOptionItems *PetscOptionsObject, void *ctx)
+{
+    TS        ts;
+    PetscBool flg;
+    TSEvent   event;
+    TSAdapt   adapt;
+    PetscInt  new_recsize;
+    PetscReal hmin;
+
+    PetscFunctionBegin;
+    ts = (TS)ts_object;
+    PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
+    PetscCheck(ts->event, PetscObjectComm((PetscObject)ts), PETSC_ERR_PLIB, "ts->event not initialised");
+    event       = ts->event;
+    new_recsize = event->recsize;
+
+    PetscCall(TSGetAdapt(ts, &adapt));
+    PetscCall(TSAdaptGetStepLimits(adapt, &hmin, NULL));
+    event->timestep_min = 2 * hmin; // TODO
+
+    PetscOptionsHeadBegin(PetscOptionsObject, "TS Event options");
+    PetscCall(PetscOptionsReal("-ts_event_tol", "Tolerance for zero crossing check of event indicator functions", "TSSetEventTolerances", event->tol, &event->tol, NULL));
+    PetscCall(PetscOptionsName("-ts_event_monitor", "Print choices made by event handler", "", &flg));
+    PetscCall(PetscOptionsInt("-ts_event_recorder_initial_size", "Initial size of event recorder", "", new_recsize, &new_recsize, NULL));
+    PetscCall(PetscOptionsDeprecated("-ts_event_post_eventinterval_step", "-ts_event_post_event_second_step", "3.21", NULL));
+    PetscCall(PetscOptionsReal("-ts_event_post_event_step", "First time step after event", "TSSetPostEventStep", event->timestep_postevent, &event->timestep_postevent, NULL));
+    PetscCall(PetscOptionsReal("-ts_event_post_event_second_step", "Second time step after event", "TSSetPostEventSecondStep", event->timestep_2nd_postevent, &event->timestep_2nd_postevent, NULL));
+    PetscCall(PetscOptionsReal("-ts_event_dt_min", "Minimum time step considered for TSEvent", "", event->timestep_min, &event->timestep_min, NULL));
+    PetscOptionsHeadEnd();
+
+    for (PetscInt i = 0; i < event->nevents; i++) event->vtol[i] = event->tol;
+    if (flg) PetscCall(PetscViewerASCIIOpen(PetscObjectComm((PetscObject)ts), "stdout", &event->monitor));
+    PetscCheck(new_recsize > 0, PetscObjectComm((PetscObject)ts), PETSC_ERR_ARG_OUTOFRANGE, "A positive value is needed in -ts_event_recorder_initial_size");
+    PetscCall(TSEventRecorderResize(event, new_recsize)); // don't use event->recsize instead of new_recsize to avoid short-circuit
+    event->recorder.ctr = 0;
+    PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
   TSSetEventHandler - Sets functions and parameters used for indicating events and handling them
 
   Logically Collective
@@ -286,12 +370,12 @@ PetscErrorCode TSSetEventTolerances(TS ts, PetscReal tol, PetscReal vtol[])
 - ctx          - the context passed as the final argument to `TSSetEventHandler()`
 
   Options Database Keys:
-+ -ts_event_tol tol                       - tolerance for zero crossing check of indicator functions
-. -ts_event_monitor                       - print choices made by event handler
-. -ts_event_recorder_initial_size recsize - initial size of event recorder
-. -ts_event_post_event_step dt1           - first time step after event
-. -ts_event_post_event_second_step dt2    - second time step after event
-- -ts_event_dt_min dt                     - minimum time step considered for TSEvent
++ -ts_event_tol <tol>                       - tolerance for zero crossing check of indicator functions
+. -ts_event_monitor                         - print choices made by event handler
+. -ts_event_recorder_initial_size <recsize> - initial size of event recorder
+. -ts_event_post_event_step <dt1>           - first time step after event
+. -ts_event_post_event_second_step <dt2>    - second time step after event
+- -ts_event_dt_min <dt>                     - minimum time step allowed in TSEvent iterations (default = 2 * ts_adapt_dt_min) TODO
 
   Level: intermediate
 
@@ -311,8 +395,6 @@ PetscErrorCode TSSetEventHandler(TS ts, PetscInt nevents, PetscInt direction[], 
   TSAdapt   adapt;
   PetscReal hmin;
   TSEvent   event;
-  PetscBool flg;
-  PetscReal tol = PetscDefined(USE_REAL_SINGLE) ? 1e-4 : 1e-6;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
@@ -343,6 +425,7 @@ PetscErrorCode TSSetEventHandler(TS ts, PetscInt nevents, PetscInt direction[], 
     event->side[i]           = 2;
     event->side_prev[i]      = 0;
   }
+  PetscObjectParameterSetDefault(event, tol, PetscDefined(USE_REAL_SINGLE) ? 1e-4 : 1e-6);
   event->iterctr                = 0;
   event->processing             = PETSC_FALSE;
   event->revisit_right          = PETSC_FALSE;
@@ -354,78 +437,16 @@ PetscErrorCode TSSetEventHandler(TS ts, PetscInt nevents, PetscInt direction[], 
   event->timestep_2nd_postevent = PETSC_DECIDE;
   PetscCall(TSGetAdapt(ts, &adapt));
   PetscCall(TSAdaptGetStepLimits(adapt, &hmin, NULL));
-  event->timestep_min = hmin;
+  event->timestep_min = 2 * hmin; // TODO
 
-  event->recsize = 8; /* Initial size of the recorder */
-  PetscOptionsBegin(((PetscObject)ts)->comm, ((PetscObject)ts)->prefix, "TS Event options", "TS");
-  {
-    PetscCall(PetscOptionsReal("-ts_event_tol", "Tolerance for zero crossing check of indicator functions", "TSSetEventTolerances", tol, &tol, NULL));
-    PetscCall(PetscOptionsName("-ts_event_monitor", "Print choices made by event handler", "", &flg));
-    PetscCall(PetscOptionsInt("-ts_event_recorder_initial_size", "Initial size of event recorder", "", event->recsize, &event->recsize, NULL));
-    PetscCall(PetscOptionsDeprecated("-ts_event_post_eventinterval_step", "-ts_event_post_event_second_step", "3.21", NULL));
-    PetscCall(PetscOptionsReal("-ts_event_post_event_step", "First time step after event", "", event->timestep_postevent, &event->timestep_postevent, NULL));
-    PetscCall(PetscOptionsReal("-ts_event_post_event_second_step", "Second time step after event", "", event->timestep_2nd_postevent, &event->timestep_2nd_postevent, NULL));
-    PetscCall(PetscOptionsReal("-ts_event_dt_min", "Minimum time step considered for TSEvent", "", event->timestep_min, &event->timestep_min, NULL));
-  }
-  PetscOptionsEnd();
-
-  PetscCall(PetscMalloc1(event->recsize, &event->recorder.time));
-  PetscCall(PetscMalloc1(event->recsize, &event->recorder.stepnum));
-  PetscCall(PetscMalloc1(event->recsize, &event->recorder.nevents));
-  PetscCall(PetscMalloc1(event->recsize, &event->recorder.eventidx));
-  for (PetscInt i = 0; i < event->recsize; i++) PetscCall(PetscMalloc1(event->nevents, &event->recorder.eventidx[i]));
-  /* Initialize the event recorder */
+  PetscCall(TSEventRecorderResize(event, 8)); // initialise the event recorder; its size can be changed later from options
   event->recorder.ctr = 0;
-
-  for (PetscInt i = 0; i < event->nevents; i++) event->vtol[i] = tol;
-  if (flg) PetscCall(PetscViewerASCIIOpen(PetscObjectComm((PetscObject)ts), "stdout", &event->monitor));
+  for (PetscInt i = 0; i < event->nevents; i++) event->vtol[i] = event->tol;
+  PetscCall(PetscObjectAddOptionsHandler((PetscObject)ts, TSEventSetFromOptions, NULL, NULL));
 
   PetscCall(TSEventDestroy(&ts->event));
   ts->event        = event;
   ts->event->refct = 1;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*
-  TSEventRecorderResize - Resizes (2X) the event recorder arrays whenever the recording limit (event->recsize)
-                          is reached.
-*/
-static PetscErrorCode TSEventRecorderResize(TSEvent event)
-{
-  PetscReal *time;
-  PetscInt  *stepnum, *nevents;
-  PetscInt **eventidx;
-  PetscInt   fact = 2;
-
-  PetscFunctionBegin;
-  /* Create larger arrays */
-  PetscCall(PetscMalloc1(fact * event->recsize, &time));
-  PetscCall(PetscMalloc1(fact * event->recsize, &stepnum));
-  PetscCall(PetscMalloc1(fact * event->recsize, &nevents));
-  PetscCall(PetscMalloc1(fact * event->recsize, &eventidx));
-  for (PetscInt i = 0; i < fact * event->recsize; i++) PetscCall(PetscMalloc1(event->nevents, &eventidx[i]));
-
-  /* Copy over data */
-  PetscCall(PetscArraycpy(time, event->recorder.time, event->recsize));
-  PetscCall(PetscArraycpy(stepnum, event->recorder.stepnum, event->recsize));
-  PetscCall(PetscArraycpy(nevents, event->recorder.nevents, event->recsize));
-  for (PetscInt i = 0; i < event->recsize; i++) PetscCall(PetscArraycpy(eventidx[i], event->recorder.eventidx[i], event->recorder.nevents[i]));
-
-  /* Destroy old arrays */
-  for (PetscInt i = 0; i < event->recsize; i++) PetscCall(PetscFree(event->recorder.eventidx[i]));
-  PetscCall(PetscFree(event->recorder.eventidx));
-  PetscCall(PetscFree(event->recorder.nevents));
-  PetscCall(PetscFree(event->recorder.stepnum));
-  PetscCall(PetscFree(event->recorder.time));
-
-  /* Set pointers */
-  event->recorder.time     = time;
-  event->recorder.stepnum  = stepnum;
-  event->recorder.nevents  = nevents;
-  event->recorder.eventidx = eventidx;
-
-  /* Update the size */
-  event->recsize *= fact;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -486,7 +507,7 @@ static PetscErrorCode TSPostEvent(TS ts, PetscReal t, Vec U)
   // Record the event in the event recorder
   PetscCall(TSGetStepNumber(ts, &stepnum));
   ctr = event->recorder.ctr;
-  if (ctr == event->recsize) PetscCall(TSEventRecorderResize(event));
+  if (ctr == event->recsize) PetscCall(TSEventRecorderResize(event, event->recsize * 2)); // reached the recorder capacity limit => increase it (x2)
   event->recorder.time[ctr]    = t;
   event->recorder.stepnum[ctr] = stepnum;
   event->recorder.nevents[ctr] = event->nevents_zero;

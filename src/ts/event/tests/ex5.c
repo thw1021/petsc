@@ -103,7 +103,8 @@ int main(int argc, char **argv)
   PetscCall(TSSetMaxSteps(ts, 10000));
   PetscCall(TSSetMaxTime(ts, 10.0));
   PetscCall(TSSetExactFinalTime(ts, TS_EXACTFINALTIME_MATCHSTEP));
-  PetscCall(TSSetFromOptions(ts));
+  PetscCall(TSGetAdapt(ts, &adapt));
+  PetscCall(TSAdaptSetStepLimits(adapt, PETSC_CURRENT, 0.99));
 
   // Set the event handling
   ctx.dir0 = 0;
@@ -150,8 +151,9 @@ int main(int argc, char **argv)
   }
   if (ctx.cntref > 0) PetscCall(PetscSortReal(ctx.cntref, ctx.ref));
   PetscCall(TSSetEventHandler(ts, n, dir, term, EventFunction, Postevent, &ctx));
-  SetVtols(ctx.rank, ctx.size, 1e-8, 1e-8, ctx.vtol);
-  PetscCall(TSSetEventTolerances(ts, PETSC_DECIDE, ctx.vtol));
+  SetVtols(ctx.rank, ctx.size, EV_TOL, EV_TOL, ctx.vtol);
+  PetscCall(TSSetEventTolerances(ts, PETSC_CURRENT, ctx.vtol));
+  PetscCall(TSSetFromOptions(ts));
 
   // Solution
   PetscCall(TSSolve(ts, sol));
@@ -230,12 +232,12 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
 #endif
 
   if ((Ctx->dir0 == 0 && PetscAbsReal(t - (PetscReal)4.0) < 0.01) || (Ctx->dir0 == -1 && PetscAbsReal(t - (PetscReal)3.0) < 0.01)) {
-    SetVtols(Ctx->rank, Ctx->size, 1e-8, 1e-26, Ctx->vtol); // for better resolution of sin-event at t=5.0
-    PetscCall(TSSetEventTolerances(ts, PETSC_DECIDE, Ctx->vtol));
+    SetVtols(Ctx->rank, Ctx->size, EV_TOL, EV_TOL3, Ctx->vtol); // for better resolution of sin-event at t=5.0
+    PetscCall(TSSetEventTolerances(ts, PETSC_CURRENT, Ctx->vtol));
   }
   if (PetscAbsReal(t - (PetscReal)5.0) < 0.01) {
-    SetVtols(Ctx->rank, Ctx->size, 1e-8, 1e-8, Ctx->vtol); // back to normal
-    PetscCall(TSSetEventTolerances(ts, PETSC_DECIDE, Ctx->vtol));
+    SetVtols(Ctx->rank, Ctx->size, EV_TOL, EV_TOL, Ctx->vtol); // back to normal
+    PetscCall(TSSetEventTolerances(ts, PETSC_CURRENT, Ctx->vtol));
   }
 
   if (Ctx->restart) PetscCall(TSRestartStep(ts));

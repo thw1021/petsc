@@ -258,12 +258,12 @@ int main(int argc, char **argv)
   PetscCall(TSSetMaxTime(ts, 0.125));
   PetscCall(TSSetExactFinalTime(ts, TS_EXACTFINALTIME_MATCHSTEP));
   PetscCall(TSSetTimeStep(ts, 1. / 256.));
-  PetscCall(TSSetFromOptions(ts));
 
   /* Set directions and terminate flags for the two events */
   direction[0] = 0;
   terminate[0] = PETSC_FALSE;
   PetscCall(TSSetEventHandler(ts, 1, direction, terminate, EventFunction, PostEventFunction, (void *)&app));
+  PetscCall(TSSetFromOptions(ts));
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Run timestepping solver

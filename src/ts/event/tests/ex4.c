@@ -103,7 +103,6 @@ int main(int argc, char **argv)
   PetscCall(TSSetMaxSteps(ts, 10000));
   PetscCall(TSSetMaxTime(ts, 4.0));
   PetscCall(TSSetExactFinalTime(ts, TS_EXACTFINALTIME_MATCHSTEP));
-  PetscCall(TSSetFromOptions(ts));
 
   // Set the event handling
   dir0 = 0;
@@ -161,6 +160,7 @@ int main(int argc, char **argv)
   }
   if (ctx.cntref > 0) PetscCall(PetscSortReal(ctx.cntref, ctx.ref));
   PetscCall(TSSetEventHandler(ts, n, dir, term, EventFunction, Postevent, &ctx));
+  PetscCall(TSSetFromOptions(ts));
 
   // Solution
   PetscCall(TSSolve(ts, sol));
