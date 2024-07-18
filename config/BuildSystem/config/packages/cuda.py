@@ -110,7 +110,7 @@ class Configure(config.package.Package):
     else:
       arg_sep = ' '
 
-    return ''.join(' -gencode'+arg_sep+'arch=compute_'+gen+',code=sm_'+gen for gen in self.cudaArchList())
+    return ''.join(' -arch=sm_'+gen for gen in self.cudaArchList())
 
   def clangArchFlags(self):
     if not self.cudaArchIsVersionList():
