@@ -731,11 +731,23 @@ PetscErrorCode MatCreateSchurComplementPmat(Mat A00, Mat A01, Mat A10, Mat A11, 
       PetscCall(MatCopy(A11, *Sp, DIFFERENT_NONZERO_PATTERN));
     }
   } else {
-    Mat AdB;
-    Vec diag;
+    Mat       AdB, T;
+    Vec       diag;
+    PetscBool flg;
 
     if (ainvtype == MAT_SCHUR_COMPLEMENT_AINV_LUMP || ainvtype == MAT_SCHUR_COMPLEMENT_AINV_DIAG) {
-      PetscCall(MatDuplicate(A01, MAT_COPY_VALUES, &AdB));
+      PetscCall(PetscObjectTypeCompare((PetscObject)A01, MATTRANSPOSEVIRTUAL, &flg));
+      if (flg) {
+        PetscCall(MatTransposeGetMat(A01, &T));
+        PetscCall(MatTranspose(T, MAT_INITIAL_MATRIX, &AdB));
+      } else {
+        PetscCall(PetscObjectTypeCompare((PetscObject)A01, MATHERMITIANTRANSPOSEVIRTUAL, &flg));
+        if (flg) {
+          PetscCall(MatHermitianTransposeGetMat(A01, &T));
+          PetscCall(MatHermitianTranspose(T, MAT_INITIAL_MATRIX, &AdB));
+        }
+      }
+      if (!flg) PetscCall(MatDuplicate(A01, MAT_COPY_VALUES, &AdB));
       PetscCall(MatCreateVecs(A00, &diag, NULL));
       if (ainvtype == MAT_SCHUR_COMPLEMENT_AINV_LUMP) {
         PetscCall(MatGetRowSum(A00, diag));
