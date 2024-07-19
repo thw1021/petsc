@@ -35,7 +35,6 @@ int main(int argc, char **argv)
   const char *nodalVarName3D[5] = {"U_x", "U_y", "U_z", "Alpha", "Beta"};
   const char *zonalVarName3D[6] = {"Sigma_11", "Sigma_22", "Sigma_33", "Sigma_23", "Sigma_13", "Sigma_12"};
 
-
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
   PetscCallMPI(MPI_Comm_rank(PETSC_COMM_WORLD, &rank));
@@ -57,8 +56,6 @@ int main(int argc, char **argv)
   /* Create the exodus result file */
   {
     PetscInt numstep = 3, step;
-    // char    *nodalVarName[5];
-    // char    *zonalVarName[6];
     int     *truthtable;
     PetscInt numNodalVar, numZonalVar, i;
 
@@ -111,6 +108,7 @@ int main(int argc, char **argv)
     default:
       SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "No layout for dimension %" PetscInt_FMT, sdim);
     }
+    PetscCall(PetscViewerView(viewer, PETSC_VIEWER_STDOUT_WORLD));
 
     /*
       An exodusII truth table specifies which fields are saved at which time step

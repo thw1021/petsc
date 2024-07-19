@@ -5,7 +5,8 @@ static char help[] = "Test PetscViewer_ExodusII\n\n";
 
 int main(int argc, char **argv)
 {
-  DM          dm;
+  DM          dm, pdm;
+  PetscInt    ovlp = 0;
   char        ifilename[PETSC_MAX_PATH_LEN], ofilename[PETSC_MAX_PATH_LEN];
   int         numZVars, numNVars;
   int         nNodalVar = 4;
@@ -31,6 +32,7 @@ int main(int argc, char **argv)
 #endif
 
   PetscCall(DMPlexCreateFromFile(PETSC_COMM_WORLD, ifilename, NULL, PETSC_TRUE, &dm));
+  PetscCall(DMPlexDistributeSetDefault(dm, PETSC_FALSE));
   PetscCall(DMSetFromOptions(dm));
   PetscCall(PetscObjectSetName((PetscObject)dm, "ex96"));
   PetscCall(DMViewFromOptions(dm, NULL, "-dm_view"));
@@ -42,6 +44,9 @@ int main(int argc, char **argv)
   PetscCall(DMView(dm, viewer));
   PetscCall(PetscViewerView(viewer, PETSC_VIEWER_STDOUT_WORLD));
   PetscCall(PetscViewerFlush(viewer));
+
+  PetscCall(DMPlexDistribute(dm, ovlp, NULL, &pdm));
+  if (!pdm) pdm = dm;
 
   /* Testing Variable Number*/
   PetscCall(PetscViewerExodusIISetZonalVariable(viewer, nZonalVar));
