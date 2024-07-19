@@ -163,7 +163,7 @@ PetscErrorCode AOPetscToApplicationIS(AO ao, IS is)
   Level: beginner
 
   Notes:
-  The index set cannot be of `ISType` `ISSTRIDE`, `ISBLOCK`
+  The index set cannot be of `ISType` `ISSTRIDE` or `ISBLOCK`
 
   Any integers in is that are negative are left unchanged. This
   allows one to convert, for example, neighbor lists that use negative
@@ -350,7 +350,7 @@ PetscErrorCode AOApplicationToPetscPermuteInt(AO ao, PetscInt block, PetscInt ar
   The length of the array should be $block*N$, where `N` is length
   provided to the AOCreate*() method that created the `AO`.
 
-  The permutation takes ``array[i_pet] --> array[i_app]``, where `i_app` is
+  The permutation takes `array[i_pet] --> array[i_app]`, where `i_app` is
   the index of `i` in the application ordering and `i_pet` is the index
   of `i` in the PETSc ordering.
 
@@ -408,7 +408,7 @@ PetscErrorCode AOApplicationToPetscPermuteReal(AO ao, PetscInt block, PetscReal 
   Input Parameter:
 . ao - the application ordering
 
-  Option Database Key:
+  Options Database Key:
 . -ao_type <basic, memoryscalable> - sets the type of the `AO`
 
   Level: beginner
@@ -488,7 +488,7 @@ PetscErrorCode AOSetIS(AO ao, IS isapp, IS ispetsc)
 
   Level: beginner
 
-.seealso: [](sec_ao), `AO`, `AOView()`, `AOCreate()`, `AOSetIS()`, `AODestroy()`, `AOPetscToApplication()`, `AOApplicationToPetsc()`
+.seealso: [](sec_ao), `AO`, `AOView()`, `AOSetIS()`, `AODestroy()`, `AOPetscToApplication()`, `AOApplicationToPetsc()`
 @*/
 PetscErrorCode AOCreate(MPI_Comm comm, AO *ao)
 {
