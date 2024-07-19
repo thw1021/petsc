@@ -110,6 +110,8 @@ class Configure(config.package.Package):
     else:
       arg_sep = ' '
 
+    # generate both SASS and PTX for the arch, see https://stackoverflow.com/a/35657430/3447299
+    # e.g., '-arch=sm_50' is equivalent to '-arch=compute_50 -code=sm_50,compute_50'.
     return ''.join(' -arch=sm_'+gen for gen in self.cudaArchList())
 
   def clangArchFlags(self):
