@@ -878,7 +878,7 @@ PetscErrorCode DMView_PlexExodusII(DM dm, PetscViewer viewer)
     HEX
   };
   MPI_Comm comm;
-  int degree; /* the order of the mesh */
+  int      degree; /* the order of the mesh */
   /* Connectivity Variables */
   PetscInt cellsNotInConnectivity;
   /* Cell Sets */
@@ -1421,7 +1421,7 @@ PetscErrorCode VecView_PlexExodusII_Internal(Vec v, PetscViewer viewer)
   PetscCall(DMGetOutputSequenceNumber(dm, &step, NULL));
   PetscCall(EXOGetVarIndex_Internal(viewer, exoid, EX_NODAL, vecname, &offsetN));
   PetscCall(EXOGetVarIndex_Internal(viewer, exoid, EX_ELEM_BLOCK, vecname, &offsetZ));
-  PetscCheck (!(offsetN >= 0 && offsetZ >= 0), comm, PETSC_ERR_FILE_UNEXPECTED, "Found both nodal and zonal variable %s in exodus file. ", vecname);
+  PetscCheck(!(offsetN >= 0 && offsetZ >= 0), comm, PETSC_ERR_FILE_UNEXPECTED, "Found both nodal and zonal variable %s in exodus file. ", vecname);
   if (offsetN >= 0) {
     PetscCall(VecViewPlex_ExodusII_Nodal_Internal(v, exoid, (int)step + 1, offsetN + 1));
   } else if (offsetZ >= 0) {
@@ -1471,7 +1471,7 @@ PetscErrorCode VecLoad_PlexExodusII_Internal(Vec v, PetscViewer viewer)
   PetscCall(DMGetOutputSequenceNumber(dm, &step, NULL));
   PetscCall(EXOGetVarIndex_Internal(viewer, exoid, EX_NODAL, vecname, &offsetN));
   PetscCall(EXOGetVarIndex_Internal(viewer, exoid, EX_ELEM_BLOCK, vecname, &offsetZ));
-  PetscCheck (!(offsetN >= 0 && offsetZ >= 0), comm, PETSC_ERR_FILE_UNEXPECTED, "Found both nodal and zonal variable %s in exodus file. ", vecname);
+  PetscCheck(!(offsetN >= 0 && offsetZ >= 0), comm, PETSC_ERR_FILE_UNEXPECTED, "Found both nodal and zonal variable %s in exodus file. ", vecname);
   if (offsetN >= 0) PetscCall(VecLoadPlex_ExodusII_Nodal_Internal(v, exoid, (int)step + 1, offsetN + 1));
   else if (offsetZ >= 0) PetscCall(VecLoadPlex_ExodusII_Zonal_Internal(v, exoid, (int)step + 1, offsetZ + 1));
   else SETERRQ(comm, PETSC_ERR_FILE_UNEXPECTED, "Could not find nodal or zonal variable %s in exodus file. ", vecname);

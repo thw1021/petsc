@@ -90,7 +90,7 @@ int main(int argc, char **argv)
     PetscCall(EXOGetVarIndex_Internal(viewer, exoid, EX_NODAL, testNames[i], &index));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "   Nodal variable %d: %s, index in file %d\n", i, testNames[i], index));
   }
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n"));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\n"));
   /* Free allocated memory for zonal variable names */
   for (int i = 0; i < numZVars; i++) { PetscFree(varNames[i]); }
   PetscFree(varNames);

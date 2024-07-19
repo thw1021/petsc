@@ -18,7 +18,7 @@ int main(int argc, char **argv)
   const char *nodalVarName[4] = {"U_x", "U_y", "Alpha", "Beta"};
   const char *zonalVarName[3] = {"Sigma_11", "Sigma_12", "Sigma_22"};
   const char *testNames[3]    = {"U", "Sigma", "Gamma"};
-  char       *varName=NULL;
+  char       *varName         = NULL;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
