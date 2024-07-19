@@ -30,10 +30,10 @@ int main(int argc, char **argv)
   PetscInt        sdim, d, pStart, pEnd, p, numCS, set;
   PetscMPIInt     rank, size;
   PetscViewer     viewer;
-  const char *nodalVarName2D[4] = {"U_x", "U_y", "Alpha", "Beta"};
-  const char *zonalVarName2D[3] = {"Sigma_11", "Sigma_22", "Sigma_12"};
-  const char *nodalVarName3D[5] = {"U_x", "U_y", "U_z", "Alpha", "Beta"};
-  const char *zonalVarName3D[6] = {"Sigma_11", "Sigma_22", "Sigma_33", "Sigma_23", "Sigma_13", "Sigma_12"};
+  const char     *nodalVarName2D[4] = {"U_x", "U_y", "Alpha", "Beta"};
+  const char     *zonalVarName2D[3] = {"Sigma_11", "Sigma_22", "Sigma_12"};
+  const char     *nodalVarName3D[5] = {"U_x", "U_y", "U_z", "Alpha", "Beta"};
+  const char     *zonalVarName3D[6] = {"Sigma_11", "Sigma_22", "Sigma_33", "Sigma_23", "Sigma_13", "Sigma_12"};
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
