@@ -5,7 +5,8 @@ static char help[] = "Test PetscViewer_ExodusII\n\n";
 
 int main(int argc, char **argv)
 {
-  DM          dm;
+  DM          dm, pdm;
+  PetscInt    ovlp = 0;
   char        ifilename[PETSC_MAX_PATH_LEN], ofilename[PETSC_MAX_PATH_LEN];
   int         numZVars, numNVars;
   int         nNodalVar = 4;
@@ -17,13 +18,13 @@ int main(int argc, char **argv)
   const char *nodalVarName[4] = {"U_x", "U_y", "Alpha", "Beta"};
   const char *zonalVarName[3] = {"Sigma_11", "Sigma_12", "Sigma_22"};
   const char *testNames[3]    = {"U", "Sigma", "Gamma"};
-  char       *name=NULL;
+  char       *varName=NULL;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
-  PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "PetscViewer_ExodusII test", "ex96");
-  PetscCall(PetscOptionsString("-i", "Filename to read", "ex96", ifilename, ifilename, sizeof(ifilename), NULL));
-  PetscCall(PetscOptionsString("-o", "Filename to write", "ex96", ofilename, ofilename, sizeof(ofilename), NULL));
+  PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "PetscViewer_ExodusII test", "ex95");
+  PetscCall(PetscOptionsString("-i", "Filename to read", "ex95", ifilename, ifilename, sizeof(ifilename), NULL));
+  PetscCall(PetscOptionsString("-o", "Filename to write", "ex95", ofilename, ofilename, sizeof(ofilename), NULL));
   PetscOptionsEnd();
 
 #ifdef PETSC_USE_DEBUG
@@ -31,8 +32,9 @@ int main(int argc, char **argv)
 #endif
 
   PetscCall(DMPlexCreateFromFile(PETSC_COMM_WORLD, ifilename, NULL, PETSC_TRUE, &dm));
+  PetscCall(DMPlexDistributeSetDefault(dm, PETSC_FALSE));
   PetscCall(DMSetFromOptions(dm));
-  PetscCall(PetscObjectSetName((PetscObject)dm, "ex96"));
+  PetscCall(PetscObjectSetName((PetscObject)dm, "ex95"));
   PetscCall(DMViewFromOptions(dm, NULL, "-dm_view"));
 
   PetscCall(PetscViewerExodusIIOpen(PETSC_COMM_WORLD, ofilename, FILE_MODE_WRITE, &viewer));
@@ -42,6 +44,9 @@ int main(int argc, char **argv)
   PetscCall(DMView(dm, viewer));
   PetscCall(PetscViewerView(viewer, PETSC_VIEWER_STDOUT_WORLD));
   PetscCall(PetscViewerFlush(viewer));
+
+  PetscCall(DMPlexDistribute(dm, ovlp, NULL, &pdm));
+  if (!pdm) pdm = dm;
 
   /* Testing Variable Number*/
   PetscCall(PetscViewerExodusIISetZonalVariable(viewer, nZonalVar));
@@ -75,10 +80,10 @@ int main(int argc, char **argv)
   PetscCall(PetscViewerExodusIIGetNodalVariable(viewer, &numNVars));
 
   for (int i = 0; i < numNVars; i++) {
-    PetscCall(PetscViewerExodusIIGetNodalVariableName(viewer, i, &name));
+    PetscCall(PetscViewerExodusIIGetNodalVariableName(viewer, i, &varName));
     PetscCall(PetscViewerExodusIIGetId(viewer, &exoid));
-    PetscCall(EXOGetVarIndex_Internal(viewer, exoid, EX_NODAL, name, &index));
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "   Nodal variable %d: %s, index in file %d\n", i, name, index));
+    PetscCall(EXOGetVarIndex_Internal(viewer, exoid, EX_NODAL, varName, &index));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "   Nodal variable %d: %s, index in file %d\n", i, varName, index));
   }
   for (int i = 0; i < 3; i++) {
     PetscCall(EXOGetVarIndex_Internal(viewer, exoid, EX_NODAL, testNames[i], &index));
@@ -87,10 +92,10 @@ int main(int argc, char **argv)
   PetscPrintf(PETSC_COMM_WORLD, "\n");
 
   for (int i = 0; i < numZVars; i++) {
-    PetscCall(PetscViewerExodusIIGetZonalVariableName(viewer, i, &name));
+    PetscCall(PetscViewerExodusIIGetZonalVariableName(viewer, i, &varName));
     PetscCall(PetscViewerExodusIIGetId(viewer, &exoid));
-    PetscCall(EXOGetVarIndex_Internal(viewer, exoid, EX_ELEM_BLOCK, name, &index));
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "   Zonal variable %d: %s, index in file %d\n", i, name, index));
+    PetscCall(EXOGetVarIndex_Internal(viewer, exoid, EX_ELEM_BLOCK, varName, &index));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "   Zonal variable %d: %s, index in file %d\n", i, varName, index));
   }
   for (int i = 0; i < 3; i++) {
     PetscCall(EXOGetVarIndex_Internal(viewer, exoid, EX_ELEM_BLOCK, testNames[i], &index));

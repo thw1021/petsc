@@ -307,7 +307,7 @@ static PetscErrorCode PetscViewerExodusIIGetId_ExodusII(PetscViewer viewer, int 
 
 .seealso: `PetscViewer`, `PetscViewerExodusIIOpen()`, `PetscViewerType`, `PetscViewerCreate()`, `PetscViewerDestroy()`, `PetscViewerExodusIISetOrder_ExodusII()`
 @*/
-static PetscErrorCode PetscViewerExodusIIGetOrder_ExodusII(PetscViewer viewer, PetscInt *order)
+static PetscErrorCode PetscViewerExodusIIGetOrder_ExodusII(PetscViewer viewer, int *order)
 {
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
 
@@ -332,7 +332,7 @@ static PetscErrorCode PetscViewerExodusIIGetOrder_ExodusII(PetscViewer viewer, P
 
 .seealso: `PetscViewer`, `PetscViewerExodusIIOpen()`, `PetscViewerType`, `PetscViewerCreate()`, `PetscViewerDestroy()`, `PetscViewerExodusIIGetOrder_ExodusII()`
 @*/
-static PetscErrorCode PetscViewerExodusIISetOrder_ExodusII(PetscViewer viewer, PetscInt order)
+static PetscErrorCode PetscViewerExodusIISetOrder_ExodusII(PetscViewer viewer, int order)
 {
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
 
@@ -409,7 +409,7 @@ PetscErrorCode PetscViewerExodusIISetNodalVariable(PetscViewer viewer, int num)
   PetscCall(PetscMalloc1(num, &exo->nodalVariableNames));
   for (int i = 0; i < num; i++) { exo->nodalVariableNames[i] = NULL; }
   PetscCall(PetscViewerExodusIIGetId(viewer, &exoid));
-  PetscCallExternal(ex_put_variable_param, exoid, EX_NODAL, num); /* Make a call to ex_put_XXX and do error checking */
+  PetscCallExternal(ex_put_variable_param, exoid, EX_NODAL, num);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -494,7 +494,7 @@ PetscErrorCode PetscViewerExodusIIGetNodalVariable(PetscViewer viewer, int *num)
 /*@C
   PetscViewerExodusIISetZonalVariableName - Sets the name of a zonal variable.
 
-  Collective; No Fortran Support
+  Collective;
 
   Input Parameters:
 + viewer - the `PetscViewer` of type `PETSCVIEWEREXODUSII`
@@ -519,7 +519,7 @@ PetscErrorCode PetscViewerExodusIISetZonalVariableName(PetscViewer viewer, int i
 /*@C
   PetscViewerExodusIISetNodalVariableName - Sets the name of a nodal variable.
 
-  Collective; No Fortran Support
+  Collective;
 
   Input Parameters:
 + viewer - the `PetscViewer` of type `PETSCVIEWEREXODUSII`
@@ -544,7 +544,7 @@ PetscErrorCode PetscViewerExodusIISetNodalVariableName(PetscViewer viewer, int i
 /*@C
   PetscViewerExodusIIGetZonalVariableName - Gets the name of a zonal variable.
 
-  Collective; No Fortran Support
+  Collective;
 
   Input Parameters:
 + viewer - the `PetscViewer` of type `PETSCVIEWEREXODUSII`
@@ -577,7 +577,7 @@ PetscErrorCode PetscViewerExodusIIGetZonalVariableName(const PetscViewer viewer,
 /*@C
   PetscViewerExodusIIGetNodalVariableName - Gets the name of a nodal variable.
 
-  Collective; No Fortran Support
+  Collective;
 
   Input Parameters:
 + viewer - the `PetscViewer` of type `PETSCVIEWEREXODUSII`
