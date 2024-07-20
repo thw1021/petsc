@@ -1,6 +1,6 @@
 /*
     The memory scalable AO application ordering routines. These store the
-  orderings on each processor for that processor's range of values, this is more memory efficient than `AOBASIC`
+  orderings on each process for that process' range of values, this is more memory-efficient than `AOBASIC`
 */
 
 #include <../src/vec/is/ao/aoimpl.h> /*I  "petscao.h"   I*/
