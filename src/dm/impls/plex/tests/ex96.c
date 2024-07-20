@@ -13,7 +13,6 @@ int main(int argc, char **argv)
   int         nZonalVar = 3;
   int         order     = 1;
   PetscViewer viewer;
-  int         exoid           = -1;
   int         index           = -1;
   const char *nodalVarName[4] = {"U_x", "U_y", "Alpha", "Beta"};
   const char *zonalVarName[3] = {"Sigma_11", "Sigma_12", "Sigma_22"};
@@ -81,33 +80,30 @@ int main(int argc, char **argv)
 
   PetscCall(PetscCalloc1(numNVars, &varNames));
   PetscCall(PetscViewerExodusIIGetNodalVariableNames(viewer, numNVars, varNames));
-  for (int i = 0; i < numNVars; i++) {
-    PetscCall(PetscViewerExodusIIGetId(viewer, &exoid));
-    PetscCall(EXOGetVarIndex_Internal(viewer, exoid, EX_NODAL, varNames[i], &index));
+  for (int i = 0; i < numZVars; i++) {
+    PetscCall(PetscViewerExodusIIGetNodalVariableIndex(viewer, varNames[i], &index));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "   Nodal variable %d: %s, index in file %d\n", i, varNames[i], index));
   }
   for (int i = 0; i < 3; i++) {
-    PetscCall(EXOGetVarIndex_Internal(viewer, exoid, EX_NODAL, testNames[i], &index));
+    PetscCall(PetscViewerExodusIIGetNodalVariableIndex(viewer, testNames[i], &index));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "   Nodal variable %d: %s, index in file %d\n", i, testNames[i], index));
   }
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\n"));
   /* Free allocated memory for zonal variable names */
-  for (int i = 0; i < numZVars; i++) { PetscFree(varNames[i]); }
+  for (int i = 0; i < numNVars; i++) { PetscFree(varNames[i]); }
   PetscFree(varNames);
 
   PetscCall(PetscCalloc1(numZVars, &varNames)); /* Memory must be allocated for the name array before getter function is invoked. */
   PetscCall(PetscViewerExodusIIGetZonalVariableNames(viewer, numZVars, varNames));
   for (int i = 0; i < numZVars; i++) {
-    PetscCall(PetscViewerExodusIIGetId(viewer, &exoid));
-    PetscCall(EXOGetVarIndex_Internal(viewer, exoid, EX_ELEM_BLOCK, varNames[i], &index));
+    PetscCall(PetscViewerExodusIIGetNodalVariableIndex(viewer, varNames[i], &index));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "   Zonal variable %d: %s, index in file %d\n", i, varNames[i], index));
   }
   for (int i = 0; i < 3; i++) {
-    PetscCall(EXOGetVarIndex_Internal(viewer, exoid, EX_ELEM_BLOCK, testNames[i], &index));
+    PetscCall(PetscViewerExodusIIGetNodalVariableIndex(viewer, testNames[i], &index));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "   Zonal variable %d: %s, index in file %d\n", i, testNames[i], index));
   }
   /* Free allocated memory for nodal variable names */
-  for (int i = 0; i < numNVars; i++) { PetscFree(varNames[i]); }
+  for (int i = 0; i < numZVars; i++) { PetscFree(varNames[i]); }
   PetscFree(varNames);
 
   PetscCall(PetscViewerView(viewer, PETSC_VIEWER_STDOUT_WORLD));
