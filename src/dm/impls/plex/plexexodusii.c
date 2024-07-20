@@ -72,9 +72,9 @@ static PetscErrorCode PetscViewerView_ExodusII(PetscViewer v, PetscViewer viewer
   if (exo->btype) PetscCall(PetscViewerASCIIPrintf(viewer, "IO Mode:     %d\n", exo->btype));
   if (exo->order) PetscCall(PetscViewerASCIIPrintf(viewer, "Mesh order:  %d\n", exo->order));
   PetscCall(PetscViewerASCIIPrintf(viewer, "Number of nodal variables:  %d\n", exo->numNodalVariables));
-  for (int i = 0; i < exo->numNodalVariables; i++) { PetscCall(PetscViewerASCIIPrintf(viewer, "   %d: %s\n", i, exo->nodalVariableNames[i])); }
+  for (int i = 0; i < exo->numNodalVariables; i++) PetscCall(PetscViewerASCIIPrintf(viewer, "   %d: %s\n", i, exo->nodalVariableNames[i]));
   PetscCall(PetscViewerASCIIPrintf(viewer, "Number of zonal variables:  %d\n", exo->numZonalVariables));
-  for (int i = 0; i < exo->numZonalVariables; i++) { PetscCall(PetscViewerASCIIPrintf(viewer, "   %d: %s\n", i, exo->zonalVariableNames[i])); }
+  for (int i = 0; i < exo->numZonalVariables; i++) PetscCall(PetscViewerASCIIPrintf(viewer, "   %d: %s\n", i, exo->zonalVariableNames[i]));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -97,7 +97,7 @@ static PetscErrorCode PetscViewerFlush_ExodusII(PetscViewer v)
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)v->data;
 
   PetscFunctionBegin;
-  if (exo->exoid >= 0) { PetscCallExternal(ex_update, exo->exoid); }
+  if (exo->exoid >= 0) PetscCallExternal(ex_update, exo->exoid);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -121,9 +121,9 @@ static PetscErrorCode PetscViewerDestroy_ExodusII(PetscViewer viewer)
 
   PetscFunctionBegin;
   if (exo->exoid >= 0) PetscCallExternal(ex_close, exo->exoid);
-  for (PetscInt i = 0; i < exo->numZonalVariables; i++) { PetscFree(exo->zonalVariableNames[i]); }
+  for (PetscInt i = 0; i < exo->numZonalVariables; i++) PetscFree(exo->zonalVariableNames[i]);
   PetscCall(PetscFree(exo->zonalVariableNames));
-  for (PetscInt i = 0; i < exo->numNodalVariables; i++) { PetscFree(exo->nodalVariableNames[i]); }
+  for (PetscInt i = 0; i < exo->numNodalVariables; i++) PetscFree(exo->nodalVariableNames[i]);
   PetscCall(PetscFree(exo->nodalVariableNames));
   PetscCall(PetscFree(exo->filename));
   PetscCall(PetscFree(exo));
