@@ -1,4 +1,3 @@
-#include "petscsys.h"
 #define PETSCDM_DLL
 #include <petsc/private/dmpleximpl.h> /*I   "petscdmplex.h"   I*/
 
@@ -37,22 +36,6 @@ PetscViewer PETSC_VIEWER_EXODUSII_(MPI_Comm comm)
   PetscFunctionReturn(viewer);
 }
 
-/*@C
-  PetscViewerView_ExodusII - Views the details of an `PetscViewer` that has been created for ExodusII output.
-
-  Collective; No Fortran Support
-
-  Input Parameters:
-+ v       - the `PetscViewer` context
-- viewer  - the `PetscViewer` used to display the information
-
-  Level: intermediate
-
-  Note:
-  This function provides detailed information about the ExodusII `PetscViewer`, including the filename, exodus ID, IO mode, mesh order, and the number of nodal and zonal variables.
-
-.seealso: `PETSC_VIEWER_EXODUSII_()`, `PetscViewer`, `PetscViewerExodusIIOpen()`, `PetscViewerType`, `PetscViewerCreate()`, `PetscViewerDestroy()`
-@*/
 static PetscErrorCode PetscViewerView_ExodusII(PetscViewer v, PetscViewer viewer)
 {
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)v->data;
@@ -69,20 +52,6 @@ static PetscErrorCode PetscViewerView_ExodusII(PetscViewer v, PetscViewer viewer
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
-  PetscViewerFlush_ExodusII - Commits all pending output to file
-
-  Collective; No Fortran Support
-
-  Input Parameters:
-. v       - the `PetscViewer` context
-
-  Level: intermediate
-
-  Note:
-
-.seealso: `PETSC_VIEWER_EXODUSII_()`, `PetscViewer`, `PetscViewerExodusIIOpen()`, `PetscViewerType`, `PetscViewerCreate()`, `PetscViewerDestroy()`
-@*/
 static PetscErrorCode PetscViewerFlush_ExodusII(PetscViewer v)
 {
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)v->data;
@@ -174,24 +143,6 @@ static PetscErrorCode PetscViewerFileSetName_ExodusII(PetscViewer viewer, const 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
-  PetscViewerFileGetName_ExodusII - Retrieves the filename associated with an ExodusII `PetscViewer`.
-
-  Collective; No Fortran Support
-
-  Input Parameter:
-. viewer - the `PetscViewer` context
-
-  Output Parameter:
-. name - the filename associated with the `PetscViewer`
-
-  Level: intermediate
-
-  Note:
-  This function extracts the filename from the ExodusII `PetscViewer` context and provides it to the caller.
-
-.seealso: `PetscViewer`, `PetscViewerExodusIIOpen()`, `PetscViewerType`, `PetscViewerCreate()`, `PetscViewerDestroy()`, `PetscViewerFileSetMode_ExodusII`, `PetscViewerFileGetMode_ExodusII`
-@*/
 static PetscErrorCode PetscViewerFileGetName_ExodusII(PetscViewer viewer, const char **name)
 {
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
@@ -201,22 +152,6 @@ static PetscErrorCode PetscViewerFileGetName_ExodusII(PetscViewer viewer, const 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
-  PetscViewerFileSetMode_ExodusII - Sets the file mode for an ExodusII `PetscViewer`.
-
-  Collective; No Fortran Support
-
-  Input Parameters:
-+ viewer - the `PetscViewer` context
-- type   - the file mode to be set (`PetscFileMode`)
-
-  Level: intermediate
-
-  Note:
-  This function sets the IO mode for the ExodusII `PetscViewer`, which determines how the file will be accessed (e.g., read, write, or append).
-
-.seealso: `PetscViewer`, `PetscViewerExodusIIOpen()`, `PetscViewerType`, `PetscViewerCreate()`, `PetscViewerDestroy()`, `PetscFileMode`
-@*/
 static PetscErrorCode PetscViewerFileSetMode_ExodusII(PetscViewer viewer, PetscFileMode type)
 {
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
@@ -226,24 +161,6 @@ static PetscErrorCode PetscViewerFileSetMode_ExodusII(PetscViewer viewer, PetscF
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
-  PetscViewerFileGetMode_ExodusII - Gets the file mode for an ExodusII `PetscViewer`.
-
-  Collective; No Fortran Support
-
-  Input Parameter:
-. viewer - the `PetscViewer` context
-
-  Output Parameter:
-. type   - the file mode currently set (`PetscFileMode`)
-
-  Level: intermediate
-
-  Note:
-  This function retrieves the current IO mode of the ExodusII `PetscViewer`, which indicates how the file is being accessed (e.g., read, write, or append).
-
-.seealso: `PetscViewer`, `PetscViewerExodusIIOpen()`, `PetscViewerType`, `PetscViewerCreate()`, `PetscViewerDestroy()`, `PetscFileMode`
-@*/
 static PetscErrorCode PetscViewerFileGetMode_ExodusII(PetscViewer viewer, PetscFileMode *type)
 {
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
@@ -253,24 +170,6 @@ static PetscErrorCode PetscViewerFileGetMode_ExodusII(PetscViewer viewer, PetscF
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
-  PetscViewerExodusIIGetId_ExodusII - Gets the ExodusII file ID for a `PetscViewer`.
-
-  Collective; No Fortran Support
-
-  Input Parameter:
-. viewer - the `PetscViewer` context
-
-  Output Parameter:
-. exoid  - the ExodusII file ID
-
-  Level: intermediate
-
-  Note:
-  This function retrieves the ExodusII file ID from the `PetscViewer` context, which is used to uniquely identify the file in ExodusII operations.
-
-.seealso: `PetscViewer`, `PetscViewerExodusIIOpen()`, `PetscViewerType`, `PetscViewerCreate()`, `PetscViewerDestroy()`
-@*/
 static PetscErrorCode PetscViewerExodusIIGetId_ExodusII(PetscViewer viewer, int *exoid)
 {
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
@@ -280,24 +179,6 @@ static PetscErrorCode PetscViewerExodusIIGetId_ExodusII(PetscViewer viewer, int 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
-  PetscViewerExodusIIGetOrder_ExodusII - Gets the mesh order for a `PetscViewer` used with ExodusII.
-
-  Collective; No Fortran Support
-
-  Input Parameter:
-. viewer - the `PetscViewer` context
-
-  Output Parameter:
-. order  - the mesh order
-
-  Level: intermediate
-
-  Note:
-  This function retrieves the mesh order from the ExodusII `PetscViewer` context.
-
-.seealso: `PetscViewer`, `PetscViewerExodusIIOpen()`, `PetscViewerType`, `PetscViewerCreate()`, `PetscViewerDestroy()`, `PetscViewerExodusIISetOrder_ExodusII()`
-@*/
 static PetscErrorCode PetscViewerExodusIIGetOrder_ExodusII(PetscViewer viewer, int *order)
 {
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
@@ -307,22 +188,6 @@ static PetscErrorCode PetscViewerExodusIIGetOrder_ExodusII(PetscViewer viewer, i
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
-  PetscViewerExodusIISetOrder_ExodusII - Sets the mesh order for a `PetscViewer` used with ExodusII.
-
-  Collective; No Fortran Support
-
-  Input Parameters:
-+ viewer - the `PetscViewer` context
-- order  - the mesh order to set
-
-  Level: intermediate
-
-  Note:
-  This function sets the mesh order in the ExodusII `PetscViewer` context.
-
-.seealso: `PetscViewer`, `PetscViewerExodusIIOpen()`, `PetscViewerType`, `PetscViewerCreate()`, `PetscViewerDestroy()`, `PetscViewerExodusIIGetOrder_ExodusII()`
-@*/
 static PetscErrorCode PetscViewerExodusIISetOrder_ExodusII(PetscViewer viewer, int order)
 {
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
@@ -572,7 +437,9 @@ PetscErrorCode PetscViewerExodusIIGetZonalVariableName(const PetscViewer viewer,
 
   Input Parameters:
 + viewer - the `PetscViewer` of type `PETSCVIEWEREXODUSII`
-+ idx - the index for which you want to save the name
+- idx - the index for which you want to save the name
+
+  Output Parameter:
 - name[] - string array containing name characters
 
   Level: intermediate
@@ -612,7 +479,7 @@ PetscErrorCode PetscViewerExodusIIGetNodalVariableName(const PetscViewer viewer,
 
 .seealso: `PETSCVIEWEREXODUSII`, `PetscViewer`, `PetscViewerCreate()`, `PetscViewerDestroy()`, `PetscViewerExodusIIOpen()`, `PetscViewerSetType()`, `PetscViewerType`, `PetscViewerExodusIIGetZonalVariableNames()`
 @*/
-PetscErrorCode PetscViewerExodusIISetZonalVariableNames(PetscViewer viewer, const char **names)
+PetscErrorCode PetscViewerExodusIISetZonalVariableNames(PetscViewer viewer, const char *names[])
 {
   int                   numNames;
   int                   exoid = -1;
@@ -646,7 +513,7 @@ PetscErrorCode PetscViewerExodusIISetZonalVariableNames(PetscViewer viewer, cons
 
 .seealso: `PETSCVIEWEREXODUSII`, `PetscViewer`, `PetscViewerCreate()`, `PetscViewerDestroy()`, `PetscViewerExodusIIOpen()`, `PetscViewerSetType()`, `PetscViewerType`, `PetscViewerExodusIIGetNodalVariableNames()`
 @*/
-PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetNodalVariableNames(PetscViewer viewer, const char **names)
+PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetNodalVariableNames(PetscViewer viewer, const char *names[])
 {
   int                   numNames;
   int                   exoid = -1;
@@ -671,7 +538,9 @@ PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetNodalVariableNames(PetscViewer
 
   Input Parameters:
 + viewer   - the `PetscViewer` of type `PETSCVIEWEREXODUSII`
-+ numNames - the number of zonal variable names to retrieve
+- numNames - the number of zonal variable names to retrieve
+
+  Output Parameters:
 - names    - 2D array where the zonal variable names will be saved
 
   Level: intermediate
@@ -681,7 +550,7 @@ PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetNodalVariableNames(PetscViewer
 
 .seealso: `PETSCVIEWEREXODUSII`, `PetscViewer`, `PetscViewerCreate()`, `PetscViewerDestroy()`, `PetscViewerExodusIIOpen()`, `PetscViewerSetType()`, `PetscViewerType`, `PetscViewerExodusIISetZonalVariableNames()`
 @*/
-PetscErrorCode PetscViewerExodusIIGetZonalVariableNames(PetscViewer viewer, int numNames, char **names)
+PetscErrorCode PetscViewerExodusIIGetZonalVariableNames(PetscViewer viewer, int numNames, char *names[])
 {
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
 
@@ -704,7 +573,9 @@ PetscErrorCode PetscViewerExodusIIGetZonalVariableNames(PetscViewer viewer, int 
 
   Input Parameters:
 + viewer   - the `PetscViewer` of type `PETSCVIEWEREXODUSII`
-+ numNames - the number of nodal variable names to retrieve
+- numNames - the number of nodal variable names to retrieve
+
+  Output Parameters:
 - names    - 2D array where the nodal variable names will be saved
 
   Level: intermediate
@@ -714,7 +585,7 @@ PetscErrorCode PetscViewerExodusIIGetZonalVariableNames(PetscViewer viewer, int 
 
 .seealso: `PETSCVIEWEREXODUSII`, `PetscViewer`, `PetscViewerCreate()`, `PetscViewerDestroy()`, `PetscViewerExodusIIOpen()`, `PetscViewerSetType()`, `PetscViewerType`, `PetscViewerExodusIISetNodalVariableNames()`
 @*/
-PetscErrorCode PetscViewerExodusIIGetNodalVariableNames(PetscViewer viewer, int numNames, char **names)
+PetscErrorCode PetscViewerExodusIIGetNodalVariableNames(PetscViewer viewer, int numNames, char *names[])
 {
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *)viewer->data;
 
@@ -724,7 +595,7 @@ PetscErrorCode PetscViewerExodusIIGetNodalVariableNames(PetscViewer viewer, int 
   for (int i = 0; i < numNames; i++) {
     if (!exo->nodalVariableNames[i]) { /* Check if each of the variable names are already stored in the viewer */
       PetscCall(PetscMalloc1(MAX_NAME_LENGTH + 1, &exo->nodalVariableNames[i]));
-      PetscCallExternal(ex_get_variable_name, exo->exoid, EX_NODAL, i + 1, exo->nodalVariableNames[i]); //numNames
+      PetscCallExternal(ex_get_variable_name, exo->exoid, EX_NODAL, i + 1, exo->nodalVariableNames[i]); 
     }
     PetscCall(PetscStrallocpy(exo->nodalVariableNames[i], &names[i]));
   }
@@ -768,18 +639,18 @@ PETSC_EXTERN PetscErrorCode PetscViewerCreate_ExodusII(PetscViewer v)
   PetscCall(PetscObjectComposeFunction((PetscObject)v, "PetscViewerGetOrder_C", PetscViewerExodusIIGetOrder_ExodusII));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
 /*
-  EXOGetVarIndex_Internal - Locate a result in an exodus file based on its name
+  PetscViewerExodusIIGetNodalVariableIndex - return the location of a nodal variable in an exodusII file given its name
 
   Collective
 
   Input Parameters:
 + exoid    - the exodus id of a file (obtained from ex_open or ex_create for instance)
-. obj_type - the type of entity for instance EX_NODAL, EX_ELEM_BLOCK
 - name     - the name of the result
 
   Output Parameter:
-. varIndex - the location in the exodus file of the result
+. varIndex - the location of the variable in the exodus file or -1 if the variable is not found
 
   Level: beginner
 
@@ -789,13 +660,12 @@ PETSC_EXTERN PetscErrorCode PetscViewerCreate_ExodusII(PetscViewer v)
   the location in the exodus file will be the first match of "V", "V_X", "V_XX", "V_1", or "V_11"
   amongst all variables of type obj_type.
 
-.seealso: `DMPlexView_ExodusII_Internal()`, `VecViewPlex_ExodusII_Nodal_Internal()`, `VecLoadNodal_PlexEXO()`, `VecLoadZonal_PlexEXO()`
+.seealso: `PetscViewerExodusIISetNodalVariable()`, `PetscViewerExodusIIGetNodalVariable()`, `PetscViewerExodusIISetNodalVariableName()`, `PetscViewerExodusIISetNodalVariableNames()`, `PetscViewerExodusIIGetNodalVariableName()`, `PetscViewerExodusIIGetNodalVariableNames()`
 */
-PETSC_EXTERN PetscErrorCode EXOGetVarIndex_Internal(PetscViewer viewer, int exoid, ex_entity_type obj_type, const char name[], int *varIndex)
+PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetNodalVariableIndex(PetscViewer viewer, const char name[], int *varIndex)
 {
   int       num_vars = 0, i, j;
   char      ext_name[MAX_STR_LENGTH + 1];
-  char     *var_name = NULL; /* previously char var_name[MAX_STR_LENGTH + 1]; */
   char    **var_names;
   const int num_suffix = 5;
   char     *suffix[5];
@@ -809,34 +679,71 @@ PETSC_EXTERN PetscErrorCode EXOGetVarIndex_Internal(PetscViewer viewer, int exoi
   suffix[4] = (char *)"_11";
   *varIndex = -1;
 
-  /* Get Variable Number from file - replacing PetscCallExternal(ex_get_variable_param, exoid, obj_type, &num_vars); */
-  if (obj_type == EX_NODAL) {
-    PetscCall(PetscViewerExodusIIGetNodalVariable(viewer, &num_vars));
-    PetscCall(PetscCalloc1(num_vars, &var_names));
-    PetscCall(PetscViewerExodusIIGetNodalVariableNames(viewer, num_vars, var_names));
-    for (i = 0; i < num_vars; ++i) {
-      for (j = 0; j < num_suffix; ++j) {
-        PetscCall(PetscStrncpy(ext_name, name, MAX_STR_LENGTH));
-        PetscCall(PetscStrlcat(ext_name, suffix[j], MAX_STR_LENGTH));
-        PetscCall(PetscStrcasecmp(ext_name, var_names[i], &flg));
-        if (flg) *varIndex = i;
-      }
-      if (flg) break;
+  PetscCall(PetscViewerExodusIIGetNodalVariable(viewer, &num_vars));
+  PetscCall(PetscCalloc1(num_vars, &var_names));
+  PetscCall(PetscViewerExodusIIGetNodalVariableNames(viewer, num_vars, var_names));
+  for (i = 0; i < num_vars; ++i) {
+    for (j = 0; j < num_suffix; ++j) {
+      PetscCall(PetscStrncpy(ext_name, name, MAX_STR_LENGTH));
+      PetscCall(PetscStrlcat(ext_name, suffix[j], MAX_STR_LENGTH));
+      PetscCall(PetscStrcasecmp(ext_name, var_names[i], &flg));
+      if (flg) *varIndex = i;
     }
-  } else if (obj_type == EX_ELEM_BLOCK) {
-    PetscCall(PetscViewerExodusIIGetZonalVariable(viewer, &num_vars));
-    PetscCall(PetscCalloc1(num_vars, &var_names));
-    PetscCall(PetscViewerExodusIIGetZonalVariableNames(viewer, num_vars, var_names));
-    for (i = 0; i < num_vars; ++i) {
-      PetscCall(PetscViewerExodusIIGetZonalVariableName(viewer, i, &var_name));
-      for (j = 0; j < num_suffix; ++j) {
-        PetscCall(PetscStrncpy(ext_name, name, MAX_STR_LENGTH));
-        PetscCall(PetscStrlcat(ext_name, suffix[j], MAX_STR_LENGTH));
-        PetscCall(PetscStrcasecmp(ext_name, var_name, &flg));
-        if (flg) *varIndex = i;
-      }
-      if (flg) break;
+    if (flg) break;
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+  PetscViewerExodusIIGetZonalVariableIndex - return the location of a zonal variable in an exodusII file given its name
+
+  Collective
+
+  Input Parameters:
++ exoid    - the exodus id of a file (obtained from ex_open or ex_create for instance)
+- name     - the name of the result
+
+  Output Parameter:
+. varIndex - the location of the variable in the exodus file or -1 if the variable is not found
+
+  Level: beginner
+
+  Notes:
+  The exodus variable index is obtained by comparing the name argument to the
+  names of zonal variables declared in the exodus file. For instance if name is "V"
+  the location in the exodus file will be the first match of "V", "V_X", "V_XX", "V_1", or "V_11"
+  amongst all variables of type obj_type.
+
+.seealso: `PetscViewerExodusIISetNodalVariable()`, `PetscViewerExodusIIGetNodalVariable()`, `PetscViewerExodusIISetNodalVariableName()`, `PetscViewerExodusIISetNodalVariableNames()`, `PetscViewerExodusIIGetNodalVariableName()`, `PetscViewerExodusIIGetNodalVariableNames()`
+*/
+PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetZonalVariableIndex(PetscViewer viewer, const char name[], int *varIndex)
+{
+  int       num_vars = 0, i, j;
+  char      ext_name[MAX_STR_LENGTH + 1];
+  char    **var_names;
+  const int num_suffix = 5;
+  char     *suffix[5];
+  PetscBool flg;
+
+  PetscFunctionBegin;
+  suffix[0] = (char *)"";
+  suffix[1] = (char *)"_X";
+  suffix[2] = (char *)"_XX";
+  suffix[3] = (char *)"_1";
+  suffix[4] = (char *)"_11";
+  *varIndex = -1;
+
+  PetscCall(PetscViewerExodusIIGetZonalVariable(viewer, &num_vars));
+  PetscCall(PetscCalloc1(num_vars, &var_names));
+  PetscCall(PetscViewerExodusIIGetZonalVariableNames(viewer, num_vars, var_names));
+  for (i = 0; i < num_vars; ++i) {
+    for (j = 0; j < num_suffix; ++j) {
+      PetscCall(PetscStrncpy(ext_name, name, MAX_STR_LENGTH));
+      PetscCall(PetscStrlcat(ext_name, suffix[j], MAX_STR_LENGTH));
+      PetscCall(PetscStrcasecmp(ext_name, var_names[i], &flg));
+      if (flg) *varIndex = i;
     }
+    if (flg) break;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1380,27 +1287,6 @@ static PetscErrorCode VecViewPlex_ExodusII_Zonal_Internal(Vec v, int exoid, int 
 static PetscErrorCode VecLoadPlex_ExodusII_Nodal_Internal(Vec v, int exoid, int step, int offset);
 static PetscErrorCode VecLoadPlex_ExodusII_Zonal_Internal(Vec v, int exoid, int step, int offset);
 
-/*
-  VecView_PlexExodusII_Internal - Write a Vec corresponding in an exodus file
-
-  Collective
-
-  Input Parameters:
-+ v  - The vector to be written
-- viewer - The PetscViewerExodusII viewer associate to an exodus file
-
-  Level: beginner
-
-  Notes:
-  The exodus result variable index is obtained by comparing the Vec name and the
-  names of variables declared in the exodus file. For instance for a Vec named "V"
-  the location in the exodus file will be the first match of "V", "V_X", "V_XX", "V_1", or "V_11"
-  amongst all variables.
-  In the event where a nodal and zonal variable both match, the function will return an error instead of
-  possibly corrupting the file
-
-.seealso: `EXOGetVarIndex_Internal()`, `DMPlexView_ExodusII()`, `VecView_PlexExodusII()`
-@*/
 PetscErrorCode VecView_PlexExodusII_Internal(Vec v, PetscViewer viewer)
 {
   DM          dm;
@@ -1419,8 +1305,8 @@ PetscErrorCode VecView_PlexExodusII_Internal(Vec v, PetscViewer viewer)
   PetscCall(PetscObjectGetName((PetscObject)v, &vecname));
 
   PetscCall(DMGetOutputSequenceNumber(dm, &step, NULL));
-  PetscCall(EXOGetVarIndex_Internal(viewer, exoid, EX_NODAL, vecname, &offsetN));
-  PetscCall(EXOGetVarIndex_Internal(viewer, exoid, EX_ELEM_BLOCK, vecname, &offsetZ));
+  PetscCall(PetscViewerExodusIIGetNodalVariableIndex(viewer, vecname, &offsetN));
+  PetscCall(PetscViewerExodusIIGetZonalVariableIndex(viewer, vecname, &offsetZ));
   PetscCheck(!(offsetN >= 0 && offsetZ >= 0), comm, PETSC_ERR_FILE_UNEXPECTED, "Found both nodal and zonal variable %s in exodus file. ", vecname);
   if (offsetN >= 0) {
     PetscCall(VecViewPlex_ExodusII_Nodal_Internal(v, exoid, (int)step + 1, offsetN + 1));
@@ -1430,27 +1316,6 @@ PetscErrorCode VecView_PlexExodusII_Internal(Vec v, PetscViewer viewer)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*
-  VecLoad_PlexExodusII_Internal - Write a Vec corresponding in an exodus file
-
-  Collective
-
-  Input Parameters:
-+ v  - The vector to be written
-- viewer - The PetscViewerExodusII viewer associate to an exodus file
-
-  Level: beginner
-
-  Notes:
-  The exodus result variable index is obtained by comparing the Vec name and the
-  names of variables declared in the exodus file. For instance for a Vec named "V"
-  the location in the exodus file will be the first match of "V", "V_X", "V_XX", "V_1", or "V_11"
-  amongst all variables.
-  In the event where a nodal and zonal variable both match, the function will return an error instead of
-  possibly corrupting the file
-
-.seealso: `EXOGetVarIndex_Internal()`, `DMPlexView_ExodusII()`, `VecView_PlexExodusII()`
-@*/
 PetscErrorCode VecLoad_PlexExodusII_Internal(Vec v, PetscViewer viewer)
 {
   DM          dm;
@@ -1469,8 +1334,8 @@ PetscErrorCode VecLoad_PlexExodusII_Internal(Vec v, PetscViewer viewer)
   PetscCall(PetscObjectGetName((PetscObject)v, &vecname));
 
   PetscCall(DMGetOutputSequenceNumber(dm, &step, NULL));
-  PetscCall(EXOGetVarIndex_Internal(viewer, exoid, EX_NODAL, vecname, &offsetN));
-  PetscCall(EXOGetVarIndex_Internal(viewer, exoid, EX_ELEM_BLOCK, vecname, &offsetZ));
+  PetscCall(PetscViewerExodusIIGetNodalVariableIndex(viewer, vecname, &offsetN));
+  PetscCall(PetscViewerExodusIIGetZonalVariableIndex(viewer, vecname, &offsetZ));
   PetscCheck(!(offsetN >= 0 && offsetZ >= 0), comm, PETSC_ERR_FILE_UNEXPECTED, "Found both nodal and zonal variable %s in exodus file. ", vecname);
   if (offsetN >= 0) PetscCall(VecLoadPlex_ExodusII_Nodal_Internal(v, exoid, (int)step + 1, offsetN + 1));
   else if (offsetZ >= 0) PetscCall(VecLoadPlex_ExodusII_Zonal_Internal(v, exoid, (int)step + 1, offsetZ + 1));
@@ -1478,27 +1343,6 @@ PetscErrorCode VecLoad_PlexExodusII_Internal(Vec v, PetscViewer viewer)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*
-  VecViewPlex_ExodusII_Nodal_Internal - Write a Vec corresponding to a nodal field to an exodus file
-
-  Collective
-
-  Input Parameters:
-+ v  - The vector to be written
-. exoid - the exodus id of a file (obtained from ex_open or ex_create for instance)
-. step - the time step to write at (exodus steps are numbered starting from 1)
-- offset - the location of the variable in the file
-
-  Level: beginner
-
-  Notes:
-  The exodus result nodal variable index is obtained by comparing the Vec name and the
-  names of nodal variables declared in the exodus file. For instance for a Vec named "V"
-  the location in the exodus file will be the first match of "V", "V_X", "V_XX", "V_1", or "V_11"
-  amongst all nodal variables.
-
-.seealso: `EXOGetVarIndex_Internal()`, `DMPlexView_ExodusII_Internal()`, `VecLoadNodal_PlexEXO()`, `VecViewZonal_PlexEXO()`, `VecLoadZonal_PlexEXO()`
-@*/
 static PetscErrorCode VecViewPlex_ExodusII_Nodal_Internal(Vec v, int exoid, int step, int offset)
 {
   MPI_Comm           comm;
@@ -1551,27 +1395,6 @@ static PetscErrorCode VecViewPlex_ExodusII_Nodal_Internal(Vec v, int exoid, int 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*
-  VecLoadPlex_ExodusII_Nodal_Internal - Read a Vec corresponding to a nodal field from an exodus file
-
-  Collective
-
-  Input Parameters:
-+ v  - The vector to be written
-. exoid - the exodus id of a file (obtained from ex_open or ex_create for instance)
-. step - the time step to read at (exodus steps are numbered starting from 1)
-- offset - the location of the variable in the file
-
-  Level: beginner
-
-  Notes:
-  The exodus result nodal variable index is obtained by comparing the Vec name and the
-  names of nodal variables declared in the exodus file. For instance for a Vec named "V"
-  the location in the exodus file will be the first match of "V", "V_X", "V_XX", "V_1", or "V_11"
-  amongst all nodal variables.
-
-.seealso: `EXOGetVarIndex_Internal()`, `DMPlexView_ExodusII_Internal()`, `VecViewPlex_ExodusII_Nodal_Internal()`, `VecViewZonal_PlexEXO()`, `VecLoadZonal_PlexEXO()`
-*/
 static PetscErrorCode VecLoadPlex_ExodusII_Nodal_Internal(Vec v, int exoid, int step, int offset)
 {
   MPI_Comm     comm;
@@ -1621,27 +1444,6 @@ static PetscErrorCode VecLoadPlex_ExodusII_Nodal_Internal(Vec v, int exoid, int 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*
-  VecViewPlex_ExodusII_Zonal_Internal - Write a Vec corresponding to a zonal (cell based) field to an exodus file
-
-  Collective
-
-  Input Parameters:
-+ v  - The vector to be written
-. exoid - the exodus id of a file (obtained from ex_open or ex_create for instance)
-. step - the time step to write at (exodus steps are numbered starting from 1)
-- offset - the location of the variable in the file
-
-  Level: beginner
-
-  Notes:
-  The exodus result zonal variable index is obtained by comparing the Vec name and the
-  names of zonal variables declared in the exodus file. For instance for a Vec named "V"
-  the location in the exodus file will be the first match of "V", "V_X", "V_XX", "V_1", or "V_11"
-  amongst all zonal variables.
-
-.seealso: `EXOGetVarIndex_Internal()`, `DMPlexView_ExodusII_Internal()`, `VecViewPlex_ExodusII_Nodal_Internal()`, `VecLoadPlex_ExodusII_Nodal_Internal()`, `VecLoadPlex_ExodusII_Zonal_Internal()`
-*/
 static PetscErrorCode VecViewPlex_ExodusII_Zonal_Internal(Vec v, int exoid, int step, int offset)
 {
   MPI_Comm           comm;
@@ -1718,27 +1520,6 @@ static PetscErrorCode VecViewPlex_ExodusII_Zonal_Internal(Vec v, int exoid, int 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*
-  VecLoadPlex_ExodusII_Zonal_Internal - Read a Vec corresponding to a zonal (cell based) field from an exodus file
-
-  Collective
-
-  Input Parameters:
-+ v  - The vector to be written
-. exoid - the exodus id of a file (obtained from ex_open or ex_create for instance)
-. step - the time step to read at (exodus steps are numbered starting from 1)
-- offset - the location of the variable in the file
-
-  Level: beginner
-
-  Notes:
-  The exodus result zonal variable index is obtained by comparing the Vec name and the
-  names of zonal variables declared in the exodus file. For instance for a Vec named "V"
-  the location in the exodus file will be the first match of "V", "V_X", "V_XX", "V_1", or "V_11"
-  amongst all zonal variables.
-
-.seealso: `EXOGetVarIndex_Internal()`, `DMPlexView_ExodusII_Internal()`, `VecViewPlex_ExodusII_Nodal_Internal()`, `VecLoadPlex_ExodusII_Nodal_Internal()`, `VecLoadPlex_ExodusII_Zonal_Internal()`
-*/
 static PetscErrorCode VecLoadPlex_ExodusII_Zonal_Internal(Vec v, int exoid, int step, int offset)
 {
   MPI_Comm     comm;
