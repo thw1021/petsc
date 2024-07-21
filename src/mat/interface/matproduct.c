@@ -836,7 +836,7 @@ PetscErrorCode MatProductSymbolic(Mat mat)
 
   Input Parameters:
 + mat  - the matrix whose values are to be computed via a matrix-matrix product operation
-- fill - expected fill as ratio of nnz(mat)/(nnz(A) + nnz(B) + nnz(C)); use `PETSC_DEFAULT` if you do not have a good estimate.
+- fill - expected fill as ratio of nnz(mat)/(nnz(A) + nnz(B) + nnz(C)); use `PETSC_DETERMINE` if you do not have a good estimate.
           If the product is a dense matrix, this value is not used.
 
   Level: intermediate
@@ -848,8 +848,8 @@ PetscErrorCode MatProductSetFill(Mat mat, PetscReal fill)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
   MatCheckProduct(mat, 1);
-  if (fill == (PetscReal)PETSC_DEFAULT || fill == (PetscReal)PETSC_DECIDE) mat->product->fill = 2.0;
-  else mat->product->fill = fill;
+  if (fill == (PetscReal)PETSC_DETERMINE) mat->product->fill = 2.0;
+  else if (fill != (PetscReal)PETSC_CURRENT) mat->product->fill = fill;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
