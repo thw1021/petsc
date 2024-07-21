@@ -89,7 +89,7 @@ int main(int argc, char **argv)
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "   Nodal variable %d: %s, index in file %d\n", i, testNames[i], index));
   }
   /* Free allocated memory for zonal variable names */
-  for (int i = 0; i < numNVars; i++) { PetscFree(varNames[i]); }
+  for (int i = 0; i < numNVars; i++) PetscFree(varNames[i]);
   PetscFree(varNames);
 
   PetscCall(PetscCalloc1(numZVars, &varNames)); /* Memory must be allocated for the name array before getter function is invoked. */
@@ -103,7 +103,7 @@ int main(int argc, char **argv)
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "   Zonal variable %d: %s, index in file %d\n", i, testNames[i], index));
   }
   /* Free allocated memory for nodal variable names */
-  for (int i = 0; i < numZVars; i++) { PetscFree(varNames[i]); }
+  for (int i = 0; i < numZVars; i++) PetscFree(varNames[i]);
   PetscFree(varNames);
 
   PetscCall(PetscViewerView(viewer, PETSC_VIEWER_STDOUT_WORLD));
