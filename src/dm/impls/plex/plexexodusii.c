@@ -691,6 +691,8 @@ PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetNodalVariableIndex(PetscViewer
     }
     if (flg) break;
   }
+  for (i = 0; i < num_vars; ++i) PetscCall(PetscFree(var_names[i]));
+  PetscCall(PetscFree(var_names));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -745,6 +747,8 @@ PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetZonalVariableIndex(PetscViewer
     }
     if (flg) break;
   }
+  for (i = 0; i < num_vars; ++i) PetscCall(PetscFree(var_names[i]));
+  PetscCall(PetscFree(var_names));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

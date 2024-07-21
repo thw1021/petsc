@@ -129,3 +129,14 @@ program ex95f90
     PetscCallA(PetscViewerDestroy(viewer, ierr))
     PetscCallA(PetscFinalize(ierr))
 end program ex95f90
+
+/*TEST
+
+  build:
+    requires: exodusii pnetcdf !complex
+  test:
+    suffix: 0
+    nsize: 1
+    args: -i ${wPETSC_DIR}/share/petsc/datafiles/meshes/FourSquareT-large.exo -o FourSquareT-large_out.exo
+
+TEST*/

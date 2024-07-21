@@ -13,7 +13,6 @@ int main(int argc, char **argv)
   int         nZonalVar = 3;
   int         order     = 1;
   PetscViewer viewer;
-  int         exoid           = -1;
   int         index           = -1;
   const char *nodalVarName[4] = {"U_x", "U_y", "Alpha", "Beta"};
   const char *zonalVarName[3] = {"Sigma_11", "Sigma_12", "Sigma_22"};
@@ -79,24 +78,22 @@ int main(int argc, char **argv)
 
   for (int i = 0; i < numNVars; i++) {
     PetscCall(PetscViewerExodusIIGetNodalVariableName(viewer, i, &varName));
-    PetscCall(PetscViewerExodusIIGetId(viewer, &exoid));
-    PetscCall(EXOGetVarIndex_Internal(viewer, exoid, EX_NODAL, varName, &index));
+    PetscCall(PetscViewerExodusIIGetNodalVariableIndex(viewer, varName, &index));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "   Nodal variable %d: %s, index in file %d\n", i, varName, index));
   }
   for (int i = 0; i < 3; i++) {
-    PetscCall(EXOGetVarIndex_Internal(viewer, exoid, EX_NODAL, testNames[i], &index));
+    PetscCall(PetscViewerExodusIIGetNodalVariableIndex(viewer, testNames[i], &index));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "   Nodal variable %d: %s, index in file %d\n", i, testNames[i], index));
   }
   PetscPrintf(PETSC_COMM_WORLD, "\n");
 
   for (int i = 0; i < numZVars; i++) {
     PetscCall(PetscViewerExodusIIGetZonalVariableName(viewer, i, &varName));
-    PetscCall(PetscViewerExodusIIGetId(viewer, &exoid));
-    PetscCall(EXOGetVarIndex_Internal(viewer, exoid, EX_ELEM_BLOCK, varName, &index));
+    PetscCall(PetscViewerExodusIIGetZonalVariableIndex(viewer, varName, &index));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "   Zonal variable %d: %s, index in file %d\n", i, varName, index));
   }
   for (int i = 0; i < 3; i++) {
-    PetscCall(EXOGetVarIndex_Internal(viewer, exoid, EX_ELEM_BLOCK, testNames[i], &index));
+    PetscCall(PetscViewerExodusIIGetZonalVariableIndex(viewer, testNames[i], &index));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "   Zonal variable %d: %s, index in file %d\n", i, testNames[i], index));
   }
 
