@@ -836,7 +836,7 @@ PetscErrorCode MatProductSymbolic(Mat mat)
 
   Input Parameters:
 + mat  - the matrix whose values are to be computed via a matrix-matrix product operation
-- fill - expected fill as ratio of nnz(mat)/(nnz(A) + nnz(B) + nnz(C)); use `PETSC_DETERMINE` if you do not have a good estimate.
+- fill - expected fill as ratio of nnz(mat)/(nnz(A) + nnz(B) + nnz(C)); use `PETSC_DETERMINE` or `PETSC_CURRENT` if you do not have a good estimate.
          If the product is a dense matrix, this value is not used.
 
   Level: intermediate
@@ -844,7 +844,7 @@ PetscErrorCode MatProductSymbolic(Mat mat)
   Notes:
   Use `fill` of `PETSC_DETERMINE` to use the default value.
 
-  A `fill' of `PETSC_CURRENT` means the use current value set. The deprecated `PETSC_DEFAULT` is also supported to mean the current value.
+  The deprecated `PETSC_DEFAULT` is also supported to mean use the current value.
 
 .seealso: [](ch_matrices), `MatProduct`, `PETSC_DETERMINE`, `Mat`, `MatProductSetFromOptions()`, `MatProductSetType()`, `MatProductSetAlgorithm()`, `MatProductCreate()`
 @*/
