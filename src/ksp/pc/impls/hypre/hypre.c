@@ -719,7 +719,7 @@ static PetscErrorCode PCView_HYPRE_ILU(PC pc, PetscViewer viewer)
   if (iascii) {
     PetscCall(PetscViewerASCIIPrintf(viewer, "  HYPRE ILU preconditioning\n"));
     PetscStackCallExternalVoid("hypre_ParILUDataIluType", indx = hypre_ParILUDataIluType(ilu_data));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "    ILU type              %s (%i)\n", HYPREILUType[indx], indx));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "    ILU type              %s (%li)\n", HYPREILUType[indx], indx));
     PetscStackCallExternalVoid("hypre_ParILUDataLfil", indx = hypre_ParILUDataLfil(ilu_data));
     PetscCall(PetscViewerASCIIPrintf(viewer, "    ILU level             %" PetscInt_FMT "\n", indx));
     PetscStackCallExternalVoid("hypre_ParILUDataMaxIter", indx = hypre_ParILUDataMaxIter(ilu_data));
@@ -743,7 +743,7 @@ static PetscErrorCode PCView_HYPRE_ILU(PC pc, PetscViewer viewer)
     PetscStackCallExternalVoid("hypre_ParILUDataLogging", indx = hypre_ParILUDataLogging(ilu_data));
     PetscCall(PetscViewerASCIIPrintf(viewer, "    ILU logging level    %" PetscInt_FMT "\n", indx));
     PetscStackCallExternalVoid("hypre_ParILUDataIterativeSetupType", indx = hypre_ParILUDataIterativeSetupType(ilu_data));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "    ILU iterative setup type           %s (%i)\n", HYPREILUIterSetup[indx], indx));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "    ILU iterative setup type           %s (%li)\n", HYPREILUIterSetup[indx], indx));
     PetscStackCallExternalVoid("hypre_ParILUDataIterativeSetupOption", indx = hypre_ParILUDataIterativeSetupOption(ilu_data));
     PetscCall(PetscViewerASCIIPrintf(viewer, "    ILU iterative setup option         %" PetscInt_FMT "\n", indx));
     PetscStackCallExternalVoid("hypre_ParILUDataIterativeSetupMaxIter", indx = hypre_ParILUDataIterativeSetupMaxIter(ilu_data));
@@ -1354,7 +1354,7 @@ static PetscErrorCode PCView_HYPRE_BoomerAMG(PC pc, PetscViewer viewer)
       PetscCall(PetscViewerASCIIPrintf(viewer, "    Smooth num sweeps    %" PetscInt_FMT "\n", jac->smoothsweeps));
       if (jac->smoothtype == 0) {
         PetscStackCallExternalVoid("hypre_ParAMGDataILUType", indx = hypre_ParAMGDataILUType(amg_data));
-        PetscCall(PetscViewerASCIIPrintf(viewer, "    ILU type              %s (%i)\n", HYPREILUType[indx], indx));
+        PetscCall(PetscViewerASCIIPrintf(viewer, "    ILU type              %s (%li)\n", HYPREILUType[indx], indx));
         PetscStackCallExternalVoid("hypre_ParAMGDataILULevel", indx = hypre_ParAMGDataILULevel(amg_data));
         PetscCall(PetscViewerASCIIPrintf(viewer, "    ILU level             %" PetscInt_FMT "\n", indx));
         PetscStackCallExternalVoid("hypre_ParAMGDataILUMaxIter", indx = hypre_ParAMGDataILUMaxIter(amg_data));
@@ -1378,7 +1378,7 @@ static PetscErrorCode PCView_HYPRE_BoomerAMG(PC pc, PetscViewer viewer)
         PetscStackCallExternalVoid("hypre_ParAMGDataLogging", indx = hypre_ParAMGDataLogging(amg_data));
         PetscCall(PetscViewerASCIIPrintf(viewer, "    ILU logging level    %" PetscInt_FMT "\n", indx));
         PetscStackCallExternalVoid("hypre_ParAMGDataILUIterSetupType", indx = hypre_ParAMGDataILUIterSetupType(amg_data));
-        PetscCall(PetscViewerASCIIPrintf(viewer, "    ILU iterative setup type           %s (%i)\n", HYPREILUIterSetup[indx], indx));
+        PetscCall(PetscViewerASCIIPrintf(viewer, "    ILU iterative setup type           %s (%li)\n", HYPREILUIterSetup[indx], indx));
         PetscStackCallExternalVoid("hypre_ParAMGDataILUIterSetupOption", indx = hypre_ParAMGDataILUIterSetupOption(amg_data));
         PetscCall(PetscViewerASCIIPrintf(viewer, "    ILU iterative setup option         %" PetscInt_FMT "\n", indx));
         PetscStackCallExternalVoid("hypre_ParAMGDataILUIterSetupMaxIter", indx = hypre_ParAMGDataILUIterSetupMaxIter(amg_data));
