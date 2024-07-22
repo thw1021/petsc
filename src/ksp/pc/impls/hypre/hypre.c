@@ -686,7 +686,7 @@ static PetscErrorCode PCSetFromOptions_HYPRE_ILU(PC pc, PetscOptionItems *PetscO
   if (flg) { PetscCallExternal(HYPRE_ILUSetDropThreshold, jac->hsolver, tmpdbl); }
 
   /* ILU: Triangular Solve */
-  PetscCall(PetscOptionsBool("-pc_hypre_ilu_tri_solve", "Enable triangular solve", "None", false, &tmp_truth, &flg));
+  PetscCall(PetscOptionsBool("-pc_hypre_ilu_tri_solve", "Enable triangular solve", "None", PETSC_FALSE, &tmp_truth, &flg));
   if (flg) { PetscCallExternal(HYPRE_ILUSetTriSolve, jac->hsolver, tmp_truth); }
 
   /* ILU: Lower Jacobi iteration */
@@ -698,7 +698,7 @@ static PetscErrorCode PCSetFromOptions_HYPRE_ILU(PC pc, PetscOptionItems *PetscO
   if (flg) { PetscCallExternal(HYPRE_ILUSetUpperJacobiIters, jac->hsolver, indx); }
 
   /* ILU: local reordering */
-  PetscCall(PetscOptionsBool("-pc_hypre_ilu_local_reordering", "Enable local reordering", "None", false, &tmp_truth, &flg));
+  PetscCall(PetscOptionsBool("-pc_hypre_ilu_local_reordering", "Enable local reordering", "None", PETSC_FALSE, &tmp_truth, &flg));
   if (flg) { PetscCallExternal(HYPRE_ILUSetLocalReordering, jac->hsolver, tmp_truth); }
 
   PetscOptionsHeadEnd();
@@ -1032,7 +1032,7 @@ static PetscErrorCode PCSetFromOptions_HYPRE_BoomerAMG(PC pc, PetscOptionItems *
   if (flg) { PetscCallExternal(HYPRE_BoomerAMGSetILUDroptol, jac->hsolver, tmpdbl); }
 
   /* ILU: Triangular Solve */
-  PetscCall(PetscOptionsBool("-pc_hypre_boomeramg_ilu_tri_solve", "Enable triangular solve", "None", false, &tmp_truth, &flg));
+  PetscCall(PetscOptionsBool("-pc_hypre_boomeramg_ilu_tri_solve", "Enable triangular solve", "None", PETSC_FALSE, &tmp_truth, &flg));
   if (flg) { PetscCallExternal(HYPRE_BoomerAMGSetILUTriSolve, jac->hsolver, tmp_truth); }
 
   /* ILU: Lower Jacobi iteration */
@@ -1044,7 +1044,7 @@ static PetscErrorCode PCSetFromOptions_HYPRE_BoomerAMG(PC pc, PetscOptionItems *
   if (flg) { PetscCallExternal(HYPRE_BoomerAMGSetILUUpperJacobiIters, jac->hsolver, indx); }
 
   /* ILU: local reordering */
-  PetscCall(PetscOptionsBool("-pc_hypre_boomeramg_ilu_local_reordering", "Enable local reordering", "None", false, &tmp_truth, &flg));
+  PetscCall(PetscOptionsBool("-pc_hypre_boomeramg_ilu_local_reordering", "Enable local reordering", "None", PETSC_FALSE, &tmp_truth, &flg));
   if (flg) { PetscCallExternal(HYPRE_BoomerAMGSetILULocalReordering, jac->hsolver, tmp_truth); }
 
   /* Number of levels for ILU(k) for Euclid */
