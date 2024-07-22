@@ -232,8 +232,8 @@ PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetNodalVariableName(PetscViewer,
 PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetZonalVariableNames(PetscViewer, const char **);
 PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetNodalVariableNames(PetscViewer, const char **);
 
-PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetZonalVariableNames(PetscViewer, int, char **);
-PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetNodalVariableNames(PetscViewer, int, char **);
+PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetZonalVariableNames(PetscViewer, int, char *[]);
+PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetNodalVariableNames(PetscViewer, int, char *[]);
 /* Mesh Partitioning and Distribution */
 #define DMPLEX_OVERLAP_MANUAL -1
 
