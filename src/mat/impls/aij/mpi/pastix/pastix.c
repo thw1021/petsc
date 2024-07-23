@@ -39,7 +39,6 @@ typedef struct Mat_Pastix_ {
   PetscInt       rhsnbr;            /* Right-hand-side number                                    */
   PetscInt       iparm[IPARM_SIZE]; /* Integer parameters                                        */
   double         dparm[DPARM_SIZE]; /* Floating point parameters                                 */
-  PetscBool      CleanUpPastix;     /* Boolean indicating if we call PaStiX clean step           */
 } Mat_Pastix;
 
 extern PetscErrorCode MatDuplicate_PaStiX(Mat, MatDuplicateOption, Mat *);
@@ -65,6 +64,7 @@ static PetscErrorCode MatSolve_PaStiX(Mat A, Vec b, Vec x)
 
   /* solve phase */
   /*-------------*/
+  PetscCheck(pastix->pastix_data == NULL, PETSC_COMM_SELF, PETSC_ERR_SUP, "PaStiX hasn't been initialized");
   PetscCallExternal(pastix_task_solve, pastix->pastix_data, ldrhs, pastix->rhsnbr, pastix->rhs, ldrhs);
   PetscCallExternal(pastix_task_refine, pastix->pastix_data, ldrhs, pastix->rhsnbr, (PetscScalar *)bptr, ldrhs, pastix->rhs, ldrhs);
 
@@ -99,7 +99,7 @@ static PetscErrorCode MatFactorNumeric_PaStiX(Mat F, Mat A, const MatFactorInfo 
   if (pastix->matstruc == DIFFERENT_NONZERO_PATTERN) F->ops->solve = MatSolve_PaStiX;
 
   /* Perform Numerical Factorization */
-  PetscCheck(pastix->CleanUpPastix, PETSC_COMM_SELF, PETSC_ERR_SUP, "PaStiX hasn't been initialized");
+  PetscCheck(pastix->pastix_data == NULL, PETSC_COMM_SELF, PETSC_ERR_SUP, "PaStiX hasn't been initialized");
   PetscCallExternal(pastix_task_numfact, pastix->pastix_data, pastix->spm);
 
   F->assembled     = PETSC_TRUE;
@@ -248,9 +248,9 @@ static PetscErrorCode MatFactorSymbolic_PaStiX(Mat F, Mat A, IS r, IS c, const M
   PetscCall(MatConvertToSPM(A, MAT_INITIAL_MATRIX, pastix));
 
   /* Ordering - Symbolic factorization - Build SolverMatrix  */
+  PetscCheck(pastix->pastix_data == NULL, PETSC_COMM_SELF, PETSC_ERR_SUP, "PaStiX hasn't been initialized");
   PetscCallExternal(pastix_task_analyze, pastix->pastix_data, pastix->spm);
 
-  pastix->CleanUpPastix = PETSC_TRUE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -284,7 +284,7 @@ static PetscErrorCode MatDestroy_PaStiX(Mat A)
   Mat_Pastix *pastix = (Mat_Pastix *)A->data;
 
   PetscFunctionBegin;
-  if (pastix->CleanUpPastix) {
+  if (pastix->pastix_data != NULL) {
     /* Terminate instance, deallocate memories */
 
     PetscCall(PetscFree(pastix->spm->loc2glob));
@@ -468,8 +468,6 @@ static PetscErrorCode MatGetFactor_pastix(Mat A, MatFactorType ftype, Mat *F, co
   /* Create the pastix structure */
   PetscCall(PetscNew(&pastix));
   B->data = (void *)pastix;
-
-  pastix->CleanUpPastix = PETSC_FALSE;
 
   /* Call to set default pastix options */
   pastixInitParam(pastix->iparm, pastix->dparm);
