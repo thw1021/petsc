@@ -217,7 +217,6 @@ static PetscErrorCode MatFactorNumeric_PaStiX(Mat F, Mat A, const MatFactorInfo 
   Mat_Pastix *pastix = (Mat_Pastix *)(F)->data;
 
   PetscFunctionBegin;
-
   /* If it's the first time we set Mat_Pastix ->  Initialize everything */
   //if (pastix->matstruc == DIFFERENT_NONZERO_PATTERN)
   F->ops->solve = MatSolve_PaStiX;
@@ -236,8 +235,7 @@ static PetscErrorCode MatLUFactorNumeric_PaStiX(Mat F, Mat A, const MatFactorInf
   Mat_Pastix *pastix = (Mat_Pastix *)(F)->data;
 
   PetscFunctionBegin;
-  PetscCheck(pastix->iparm[IPARM_FACTORIZATION] == PastixFactGETRF,
-             PetscObjectComm((PetscObject)F), PETSC_ERR_SUP, "Incorrect factorization type for symbolic and numerical factorization by PaStiX");
+  PetscCheck(pastix->iparm[IPARM_FACTORIZATION] == PastixFactGETRF, PetscObjectComm((PetscObject)F), PETSC_ERR_SUP, "Incorrect factorization type for symbolic and numerical factorization by PaStiX");
   pastix->iparm[IPARM_FACTORIZATION] = PastixFactGETRF;
   PetscCall(MatFactorNumeric_PaStiX(F, A, info));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -248,8 +246,7 @@ static PetscErrorCode MatCholeskyFactorNumeric_PaStiX(Mat F, Mat A, const MatFac
   Mat_Pastix *pastix = (Mat_Pastix *)(F)->data;
 
   PetscFunctionBegin;
-  PetscCheck(pastix->iparm[IPARM_FACTORIZATION] == PastixFactPOTRF,
-             PetscObjectComm((PetscObject)F), PETSC_ERR_SUP, "Incorrect factorization type for symbolic and numerical factorization by PaStiX");
+  PetscCheck(pastix->iparm[IPARM_FACTORIZATION] == PastixFactPOTRF, PetscObjectComm((PetscObject)F), PETSC_ERR_SUP, "Incorrect factorization type for symbolic and numerical factorization by PaStiX");
   pastix->iparm[IPARM_FACTORIZATION] = PastixFactPOTRF;
   PetscCall(MatFactorNumeric_PaStiX(F, A, info));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -281,7 +278,6 @@ static PetscErrorCode MatFactorSymbolic_PaStiX(Mat F, Mat A, IS r, IS c, const M
   /* Ordering - Symbolic factorization - Build SolverMatrix  */
   PetscCheck(pastix->pastix_data, PETSC_COMM_SELF, PETSC_ERR_SUP, "PaStiX hasn't been initialized");
   PetscCallExternal(pastix_task_analyze, pastix->pastix_data, pastix->spm);
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
