@@ -481,13 +481,13 @@ static PetscErrorCode PCSetFromOptions_AMGX(PC pc, PetscOptionItems *PetscOption
   PetscCheck(AmgXControlMap::Selectors.count(option) == 1, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Selector %s not registered for AmgX.", option);
 
   // Double check that the user has selected an appropriate selector for the AMG method
+  amgx->selector = AmgXControlMap::Selectors.at(option);
   if (amgx->amg_method == AmgXAMGMethod::Classical) {
     PetscCheck(amgx->selector == AmgXSelector::PMIS || amgx->selector == AmgXSelector::HMIS, amgx->comm, PETSC_ERR_PLIB, "Chosen selector is not used for AmgX Classical AMG: selector=%s", option);
     amgx->cfg_contents += "amg:interpolator=D2,";
   } else if (amgx->amg_method == AmgXAMGMethod::Aggregation) {
     PetscCheck(amgx->selector == AmgXSelector::Size2 || amgx->selector == AmgXSelector::Size4 || amgx->selector == AmgXSelector::Size8 || amgx->selector == AmgXSelector::MultiPairwise, amgx->comm, PETSC_ERR_PLIB, "Chosen selector is not used for AmgX Aggregation AMG");
   }
-  amgx->selector = AmgXControlMap::Selectors.at(option);
   amgx->cfg_contents += "amg:selector=" + std::string(option) + ",";
 
   // Set presweeps

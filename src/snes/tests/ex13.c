@@ -260,7 +260,7 @@ int main(int argc, char **argv)
     nsize: 4
     test:
       suffix: amgx
-      args: -dm_mat_type aijcusparse -dm_vec_type cuda
+      args: -dm_mat_type aijcusparse -dm_vec_type cuda -pc_amgx_amg_method AGGREGATION -pc_amgx_selector SIZE_2
     test:
       suffix: amgx_cpu
       args: -dm_mat_type aij
