@@ -37,89 +37,11 @@ typedef struct Mat_Pastix_ {
   MatStructure   matstruc;          /* DIFFERENT_NONZERO_PATTERN if uninitilized, SAME otherwise */
   PetscScalar   *rhs;               /* Right-hand-side member                                    */
   PetscInt       rhsnbr;            /* Right-hand-side number                                    */
-  PetscInt       iparm[IPARM_SIZE]; /* Integer parameters                                        */
+  pastix_int_t   iparm[IPARM_SIZE]; /* Integer parameters                                        */
   double         dparm[DPARM_SIZE]; /* Floating point parameters                                 */
 } Mat_Pastix;
 
 extern PetscErrorCode MatDuplicate_PaStiX(Mat, MatDuplicateOption, Mat *);
-
-/*
-  Gather right-hand-side.
-  Call for Solve step.
-  Scatter solution.
- */
-static PetscErrorCode MatSolve_PaStiX(Mat A, Vec b, Vec x)
-{
-  Mat_Pastix        *pastix = (Mat_Pastix *)A->data;
-  const PetscScalar *bptr;
-  PetscInt           ldrhs;
-
-  PetscFunctionBegin;
-  pastix->rhsnbr = 1;
-  ldrhs          = pastix->spm->n;
-
-  PetscCall(VecCopy(b, x));
-  PetscCall(VecGetArray(x, &pastix->rhs));
-  PetscCall(VecGetArrayRead(b, &bptr));
-
-  /* solve phase */
-  /*-------------*/
-  PetscCheck(pastix->pastix_data == NULL, PETSC_COMM_SELF, PETSC_ERR_SUP, "PaStiX hasn't been initialized");
-  PetscCallExternal(pastix_task_solve, pastix->pastix_data, ldrhs, pastix->rhsnbr, pastix->rhs, ldrhs);
-  PetscCallExternal(pastix_task_refine, pastix->pastix_data, ldrhs, pastix->rhsnbr, (PetscScalar *)bptr, ldrhs, pastix->rhs, ldrhs);
-
-  PetscCall(VecRestoreArray(x, &pastix->rhs));
-  PetscCall(VecRestoreArrayRead(b, &bptr));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*
-  Numeric factorisation using PaStiX solver.
-
-  input:
-    F       - PETSc matrix that contains PaStiX interface.
-    A       - PETSC matrix in aij, bail or sbaij format
-    reuse   - MAT_INITIAL_MATRIX: spaces are allocated and values are set for the triple
-              MAT_REUSE_MATRIX:   only the values in v array are updated
-    valOnly - FALSE: spaces are allocated and values are set for the CSC
-              TRUE:  Only fill values
-  output:
-    spm     - The SPM built from A
- */
-static PetscErrorCode MatFactorNumeric_PaStiX(Mat F, Mat A, const MatFactorInfo *info)
-{
-  Mat_Pastix *pastix = (Mat_Pastix *)(F)->data;
-  PetscBool   isSeqAIJ, isSeqSBAIJ;
-
-  PetscFunctionBegin;
-  PetscCall(PetscObjectTypeCompare((PetscObject)A, MATSEQAIJ, &isSeqAIJ));
-  PetscCall(PetscObjectTypeCompare((PetscObject)A, MATSEQSBAIJ, &isSeqSBAIJ));
-
-  /* If it's the first time we set Mat_Pastix ->  Initialize everything */
-  if (pastix->matstruc == DIFFERENT_NONZERO_PATTERN) F->ops->solve = MatSolve_PaStiX;
-
-  /* Perform Numerical Factorization */
-  PetscCheck(pastix->pastix_data == NULL, PETSC_COMM_SELF, PETSC_ERR_SUP, "PaStiX hasn't been initialized");
-  PetscCallExternal(pastix_task_numfact, pastix->pastix_data, pastix->spm);
-
-  F->assembled     = PETSC_TRUE;
-  pastix->matstruc = SAME_NONZERO_PATTERN;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode MatLUFactorNumeric_PaStiX(Mat F, Mat A, const MatFactorInfo *info)
-{
-  PetscFunctionBegin;
-  PetscCall(MatFactorNumeric_PaStiX(F, A, info));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode MatCholeskyFactorNumeric_PaStiX(Mat F, Mat A, const MatFactorInfo *info)
-{
-  PetscFunctionBegin;
-  PetscCall(MatFactorNumeric_PaStiX(F, A, info));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
 
 /*
    convert PETSc matrix to SPM structure
@@ -227,6 +149,113 @@ static PetscErrorCode MatConvertToSPM(Mat A, MatReuse reuse, Mat_Pastix *pastix)
 }
 
 /*
+  Call clean step of PaStiX if initialized
+  Free the CSC matrix.
+ */
+static PetscErrorCode MatDestroy_PaStiX(Mat A)
+{
+  Mat_Pastix *pastix = (Mat_Pastix *)A->data;
+
+  PetscFunctionBegin;
+  if (pastix->pastix_data != NULL) {
+    /* Terminate instance, deallocate memories */
+
+    PetscCall(PetscFree(pastix->spm->loc2glob));
+    spmExit(pastix->spm);
+    PetscCall(PetscFree(pastix->spm));
+    pastixFinalize(&pastix->pastix_data);
+  }
+  PetscCall(PetscFree(A->data));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+  Gather right-hand-side.
+  Call for Solve step.
+  Scatter solution.
+ */
+static PetscErrorCode MatSolve_PaStiX(Mat A, Vec b, Vec x)
+{
+  Mat_Pastix        *pastix = (Mat_Pastix *)A->data;
+  const PetscScalar *bptr;
+  PetscInt           ldrhs;
+
+  PetscFunctionBegin;
+  pastix->rhsnbr = 1;
+  ldrhs          = pastix->spm->n;
+
+  PetscCall(VecCopy(b, x));
+  PetscCall(VecGetArray(x, &pastix->rhs));
+  PetscCall(VecGetArrayRead(b, &bptr));
+
+  /* solve phase */
+  /*-------------*/
+  PetscCheck(pastix->pastix_data == NULL, PETSC_COMM_SELF, PETSC_ERR_SUP, "PaStiX hasn't been initialized");
+  PetscCallExternal(pastix_task_solve, pastix->pastix_data, ldrhs, pastix->rhsnbr, pastix->rhs, ldrhs);
+  PetscCallExternal(pastix_task_refine, pastix->pastix_data, ldrhs, pastix->rhsnbr, (PetscScalar *)bptr, ldrhs, pastix->rhs, ldrhs);
+
+  PetscCall(VecRestoreArray(x, &pastix->rhs));
+  PetscCall(VecRestoreArrayRead(b, &bptr));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+  Numeric factorisation using PaStiX solver.
+
+  input:
+    F       - PETSc matrix that contains PaStiX interface.
+    A       - PETSC matrix in aij, bail or sbaij format
+    reuse   - MAT_INITIAL_MATRIX: spaces are allocated and values are set for the triple
+              MAT_REUSE_MATRIX:   only the values in v array are updated
+    valOnly - FALSE: spaces are allocated and values are set for the CSC
+              TRUE:  Only fill values
+  output:
+    spm     - The SPM built from A
+ */
+static PetscErrorCode MatFactorNumeric_PaStiX(Mat F, Mat A, const MatFactorInfo *info)
+{
+  Mat_Pastix *pastix = (Mat_Pastix *)(F)->data;
+
+  PetscFunctionBegin;
+
+  /* If it's the first time we set Mat_Pastix ->  Initialize everything */
+  //if (pastix->matstruc == DIFFERENT_NONZERO_PATTERN)
+  F->ops->solve = MatSolve_PaStiX;
+
+  /* Perform Numerical Factorization */
+  PetscCheck(pastix->pastix_data == NULL, PETSC_COMM_SELF, PETSC_ERR_SUP, "PaStiX hasn't been initialized");
+  PetscCallExternal(pastix_task_numfact, pastix->pastix_data, pastix->spm);
+
+  F->assembled = PETSC_TRUE;
+  //pastix->matstruc = SAME_NONZERO_PATTERN;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatLUFactorNumeric_PaStiX(Mat F, Mat A, const MatFactorInfo *info)
+{
+  Mat_Pastix *pastix = (Mat_Pastix *)(F)->data;
+
+  PetscFunctionBegin;
+  PetscCheck(pastix->iparm[IPARM_FACTORIZATION] == PastixFactGETRF,
+             PetscObjectComm((PetscObject)F), PETSC_ERR_SUP, "Incorrect factorization type for symbolic and numerical factorization by PaStiX");
+  pastix->iparm[IPARM_FACTORIZATION] = PastixFactGETRF;
+  PetscCall(MatFactorNumeric_PaStiX(F, A, info));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatCholeskyFactorNumeric_PaStiX(Mat F, Mat A, const MatFactorInfo *info)
+{
+  Mat_Pastix *pastix = (Mat_Pastix *)(F)->data;
+
+  PetscFunctionBegin;
+  PetscCheck(pastix->iparm[IPARM_FACTORIZATION] == PastixFactPOTRF,
+             PetscObjectComm((PetscObject)F), PETSC_ERR_SUP, "Incorrect factorization type for symbolic and numerical factorization by PaStiX");
+  pastix->iparm[IPARM_FACTORIZATION] = PastixFactPOTRF;
+  PetscCall(MatFactorNumeric_PaStiX(F, A, info));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
   Perform Ordering step and Symbolic Factorization step
 
   Note the Petsc r and c permutations are ignored
@@ -261,7 +290,7 @@ static PetscErrorCode MatLUFactorSymbolic_PaStiX(Mat F, Mat A, IS r, IS c, const
   Mat_Pastix *pastix = (Mat_Pastix *)F->data;
 
   PetscFunctionBegin;
-  PetscCheck(pastix->iparm[IPARM_FACTORIZATION] == PastixFactGETRF, PetscObjectComm((PetscObject)F), PETSC_ERR_SUP, "Factor type not supported by PaStiX");
+  pastix->iparm[IPARM_FACTORIZATION] = PastixFactGETRF;
   PetscCall(MatFactorSymbolic_PaStiX(F, A, r, c, info));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -272,29 +301,8 @@ static PetscErrorCode MatCholeskyFactorSymbolic_PaStiX(Mat F, Mat A, IS r, const
   Mat_Pastix *pastix = (Mat_Pastix *)F->data;
 
   PetscFunctionBegin;
-  PetscCheck(pastix->iparm[IPARM_FACTORIZATION] == PastixFactSYTRF, PetscObjectComm((PetscObject)F), PETSC_ERR_SUP, "Factor type not supported by PaStiX");
+  pastix->iparm[IPARM_FACTORIZATION] = PastixFactPOTRF;
   PetscCall(MatFactorSymbolic_PaStiX(F, A, r, NULL, info));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*
-  Call clean step of PaStiX if initialized
-  Free the CSC matrix.
- */
-static PetscErrorCode MatDestroy_PaStiX(Mat A)
-{
-  Mat_Pastix *pastix = (Mat_Pastix *)A->data;
-
-  PetscFunctionBegin;
-  if (pastix->pastix_data != NULL) {
-    /* Terminate instance, deallocate memories */
-
-    PetscCall(PetscFree(pastix->spm->loc2glob));
-    spmExit(pastix->spm);
-    PetscCall(PetscFree(pastix->spm));
-    pastixFinalize(&pastix->pastix_data);
-  }
-  PetscCall(PetscFree(A->data));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -482,7 +490,7 @@ static PetscErrorCode MatGetFactor_pastix(Mat A, MatFactorType ftype, Mat *F, co
   pastixInit(&pastix->pastix_data, pastix->comm, pastix->iparm, pastix->dparm);
 
   if (ftype == MAT_FACTOR_CHOLESKY) {
-    pastix->iparm[IPARM_FACTORIZATION] = PastixFactSYTRF;
+    pastix->iparm[IPARM_FACTORIZATION] = PastixFactPOTRF;
   } else {
     pastix->iparm[IPARM_FACTORIZATION] = PastixFactGETRF;
   }
