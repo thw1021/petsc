@@ -190,7 +190,7 @@ static PetscErrorCode MatSolve_PaStiX(Mat A, Vec b, Vec x)
 
   /* solve phase */
   /*-------------*/
-  PetscCheck(pastix->pastix_data == NULL, PETSC_COMM_SELF, PETSC_ERR_SUP, "PaStiX hasn't been initialized");
+  PetscCheck(pastix->pastix_data, PETSC_COMM_SELF, PETSC_ERR_SUP, "PaStiX hasn't been initialized");
   PetscCallExternal(pastix_task_solve, pastix->pastix_data, ldrhs, pastix->rhsnbr, pastix->rhs, ldrhs);
   PetscCallExternal(pastix_task_refine, pastix->pastix_data, ldrhs, pastix->rhsnbr, (PetscScalar *)bptr, ldrhs, pastix->rhs, ldrhs);
 
@@ -223,7 +223,7 @@ static PetscErrorCode MatFactorNumeric_PaStiX(Mat F, Mat A, const MatFactorInfo 
   F->ops->solve = MatSolve_PaStiX;
 
   /* Perform Numerical Factorization */
-  PetscCheck(pastix->pastix_data == NULL, PETSC_COMM_SELF, PETSC_ERR_SUP, "PaStiX hasn't been initialized");
+  PetscCheck(pastix->pastix_data, PETSC_COMM_SELF, PETSC_ERR_SUP, "PaStiX hasn't been initialized");
   PetscCallExternal(pastix_task_numfact, pastix->pastix_data, pastix->spm);
 
   F->assembled = PETSC_TRUE;
@@ -279,7 +279,7 @@ static PetscErrorCode MatFactorSymbolic_PaStiX(Mat F, Mat A, IS r, IS c, const M
   PetscCall(MatConvertToSPM(A, MAT_INITIAL_MATRIX, pastix));
 
   /* Ordering - Symbolic factorization - Build SolverMatrix  */
-  PetscCheck(pastix->pastix_data == NULL, PETSC_COMM_SELF, PETSC_ERR_SUP, "PaStiX hasn't been initialized");
+  PetscCheck(pastix->pastix_data, PETSC_COMM_SELF, PETSC_ERR_SUP, "PaStiX hasn't been initialized");
   PetscCallExternal(pastix_task_analyze, pastix->pastix_data, pastix->spm);
 
   PetscFunctionReturn(PETSC_SUCCESS);
