@@ -44,4 +44,4 @@ Particle Moments:	 number density      momentum (par)     energy             ent
 	Coarse-graining: 3.352430596155e-07  2.992586232492e-15 7.214756014550e+04 5.334252006718e+00 0.0456953 %
 	Landau:          3.352430596155e-07  2.977258726602e-15 7.214756014550e+04 5.334268149160e+00 0.0456778 %
 Coarse-graining entropy generation = 5.909009e-04 ; Landau entropy generation = 6.070433e-04
-(relative) energy conservation: Coarse-graining = 3.532715e-12, Landau = 3.508713e-12 (-11.4549 -11)
+(relative) energy conservation: Coarse-graining = 3.532715e-12, Landau = 3.508713e-12 (-11.4549 -10)
