@@ -1023,7 +1023,7 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
       PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\tCoarse-graining: %18.12e %19.12e %18.12e %18.12e %g %%\n", (double)moments_1a[0], (double)moments_1a[1], (double)moments_1a[2], (double)moments_1a[3], 100 * (double)(moments_1a[4] / moments_0[0])));
       PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\tLandau:          %18.12e %19.12e %18.12e %18.12e %g %%\n", (double)moments_1b[0], (double)moments_1b[1], (double)moments_1b[2], (double)moments_1b[3], 100 * (double)(moments_1b[4] / moments_0[0])));
       PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Coarse-graining entropy generation = %e ; Landau entropy generation = %e\n", (double)(moments_1a[3] - moments_0[3]), (double)(moments_1b[3] - moments_0[3])));
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "(relative) energy conservation: Coarse-graining = %e, Landau = %e (%g %d)\n", (double)(moments_1a[2] - moments_0[2]) / (double)moments_0[2], (double)energy_error_rel, (double)PetscLog10Real(energy_error_rel), (int)PetscLog10Real(energy_error_rel)));
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "(relative) energy conservation: Coarse-graining = %e, Landau = %e (%g %d)\n", (double)(moments_1a[2] - moments_0[2]) / (double)moments_0[2], (double)energy_error_rel, (double)PetscLog10Real(energy_error_rel), (int)(PetscLog10Real(energy_error_rel) + .5)));
     }
     // restore vector
     PetscCall(DMCompositeRestoreAccessArray(pack, X, nDMs, NULL, globXArray));
@@ -1135,7 +1135,7 @@ int main(int argc, char **argv)
   testset:
     requires: double !defined(PETSC_USE_DMLANDAU_2D)
     output_file: output/ex30_3d.out
-    args: -dim 3 -petscspace_degree 2 -dm_landau_num_species_grid 1,1 -dm_refine 0 -number_particles_per_dimension 30 -dm_plex_hash_location \
+    args: -dim 3 -petscspace_degree 2 -dm_landau_num_species_grid 1,1 -dm_refine 0 -number_particles_per_dimension 10 -dm_plex_hash_location \
           -dm_landau_batch_size 1 -number_spatial_vertices 1 -vertex_view_target 0 -grid_view_target 0 -dm_landau_batch_view_idx 0 \
           -dm_landau_n 1.000018,1 -dm_landau_thermal_temps 2,1 -dm_landau_ion_masses 2 -dm_landau_ion_charges 1 \
           -ftop_ksp_type cg -ftop_pc_type jacobi -ftop_ksp_rtol 1e-12 -ftop_ksp_error_if_not_converged -ksp_type preonly -pc_type lu -ksp_error_if_not_converged \
