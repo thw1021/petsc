@@ -160,9 +160,11 @@ static PetscErrorCode MatDestroy_PaStiX(Mat A)
   if (pastix->pastix_data != NULL) {
     /* Terminate instance, deallocate memories */
 
-    PetscCall(PetscFree(pastix->spm->loc2glob));
-    spmExit(pastix->spm);
-    PetscCall(PetscFree(pastix->spm));
+    //PetscCall(PetscFree(pastix->spm->loc2glob));
+    if ( pastix->spm ) {
+      spmExit(pastix->spm);
+      PetscCall(PetscFree(pastix->spm));
+    }
     pastixFinalize(&pastix->pastix_data);
   }
   PetscCall(PetscFree(A->data));
