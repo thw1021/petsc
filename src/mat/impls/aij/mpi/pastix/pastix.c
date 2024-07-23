@@ -148,6 +148,7 @@ static PetscErrorCode MatConvertToSPM(Mat A, MatReuse reuse, Mat_Pastix *pastix)
   /* Get A datas */
   PetscCall(PetscObjectBaseTypeCompare((PetscObject)A, MATSEQAIJ, &isseqaij));
   PetscCall(PetscObjectBaseTypeCompare((PetscObject)A, MATMPIAIJ, &ismpiaij));
+  /* TODO: Block Aij should be handled with dof in spm */
   PetscCall(PetscObjectBaseTypeCompare((PetscObject)A, MATSEQSBAIJ, &isseqsbaij));
   PetscCall(PetscObjectBaseTypeCompare((PetscObject)A, MATMPISBAIJ, &ismpisbaij));
 
@@ -167,6 +168,7 @@ static PetscErrorCode MatConvertToSPM(Mat A, MatReuse reuse, Mat_Pastix *pastix)
     A_loc = A_aij;
   } else SETERRQ(PetscObjectComm((PetscObject)A_aij), PETSC_ERR_SUP, "Not for type %s", ((PetscObject)A)->type_name);
 
+  /* TODO: should be replaced by GetColumnIJ ? */
   PetscCall(MatGetRowIJ(A_loc, 0, PETSC_FALSE, PETSC_FALSE, &n, &row, &col, &flag));
   PetscCheck(flag, PETSC_COMM_SELF, PETSC_ERR_SUP, "GetRowIJ failed");
   PetscCall(MatSeqAIJGetArrayRead(A_loc, &val));
@@ -178,15 +180,15 @@ static PetscErrorCode MatConvertToSPM(Mat A, MatReuse reuse, Mat_Pastix *pastix)
   spm->nnz        = row[n];
   spm->fmttype    = SpmCSR;
   spm->flttype    = SPM_FLTTYPE;
-  spm->replicated = 0;
+  spm->replicated = !(A->rmap->n != A->rmap->N);
 
-  /* Get distribution <=> spm->loc2glob array */
-  if (A->rmap->n != A->rmap->N) {
-    PetscCall(PetscMalloc1(spm->n, &spm->loc2glob));
-    for (i = A->rmap->rstart; i < A->rmap->rend; i++) { spm->loc2glob[i - A->rmap->rstart] = i; }
-  }
   spmUpdateComputedFields(spm);
   spmAlloc(spm);
+
+  /* Get data distribution */
+  if (!spm->replicated) {
+    for (i = A->rmap->rstart; i < A->rmap->rend; i++) { spm->loc2glob[i - A->rmap->rstart] = i; }
+  }
 
   /* Copy  arrays */
   PetscCall(PetscArraycpy(spm->colptr, col, spm->nnz));
