@@ -1,4 +1,4 @@
-static char help[] = "Tests basic creation and destruction of PetscRegressor objects.\n\n";
+static char help[] = "Tests some linear PetscRegressor types with different regularizers.\n\n";
 
 #include <petscregressor.h>
 
