@@ -72,3 +72,37 @@ int main(int argc, char **args)
   PetscCall(PetscFinalize());
   return 0;
 }
+
+/*TEST
+
+   test:
+      suffix: lasso_1
+      nsize: 1
+      args: -regressor_type linear -regressor_linear_type lasso -regressor_regularizer_weight 2 -regressor_linear_fit_intercept
+
+   test:
+      suffix: lasso_2
+      nsize: 2
+      args: -regressor_type linear -regressor_linear_type lasso -regressor_regularizer_weight 2 -regressor_linear_fit_intercept
+
+   test:
+      suffix: ridge_1
+      nsize: 1
+      args: -regressor_type linear -regressor_linear_type ridge -regressor_regularizer_weight 2 -regressor_linear_fit_intercept
+
+   test:
+      suffix: ridge_2
+      nsize: 2
+      args: -regressor_type linear -regressor_linear_type ridge -regressor_regularizer_weight 2 -regressor_linear_fit_intercept
+
+   test:
+      suffix: ols_1
+      nsize: 1
+      args: -regressor_type linear -regressor_linear_type ols -regressor_linear_fit_intercept
+
+   test:
+      suffix: ols_2
+      nsize: 2
+      args: -regressor_type linear -regressor_linear_type ols -regressor_linear_fit_intercept
+
+TEST*/
