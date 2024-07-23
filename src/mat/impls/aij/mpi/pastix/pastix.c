@@ -367,7 +367,7 @@ static PetscErrorCode MatGetInfo_PaStiX(Mat A, MatInfoType flag, MatInfo *info)
 
   PetscFunctionBegin;
   info->block_size        = 1.0;
-  info->nz_allocated      = pastix->iparm[IPARM_NNZEROS];
+  info->nz_allocated      = pastix->iparm[IPARM_ALLOCATED_TERMS];
   info->nz_used           = pastix->iparm[IPARM_NNZEROS];
   info->nz_unneeded       = 0.0;
   info->assemblies        = 0.0;
