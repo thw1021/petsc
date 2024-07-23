@@ -32,8 +32,9 @@ int main(int argc, char **args)
    * coefficients should be for ordinary least squares, LASSO (L1 regularized), and ridge (L2 regularized) regression.
    * See details in section 6.2 of James et al.'s An Introduction to Statistical Learning (ISLR), in the subsection
    * titled "A Simple Special Case for Ridge Regression and the Lasso".
-   * Note that the coefficients we generate with ridge regression (-tao_brgn_regularization_type l2pure -tao_brgn_regularizer_weight <lambda>)
-   * match those of the ISLR formula exactly. For LASSO it does not match the ISLR formula: where they use lambda/2, we need to use lambda.
+   * Note that the coefficients we generate with ridge regression (-regressor_linear_type ridge -regressor_regularizer_weight <lambda>, or, equivalently,
+   * -tao_brgn_regularization_type l2pure -tao_brgn_regularizer_weight <lambda>) match those of the ISLR formula exactly.
+   * For LASSO it does not match the ISLR formula: where they use lambda/2, we need to use lambda.
    * It also doesn't match what Scikit-learn does; in that case their lambda is 1/n_samples of our lambda. Apparently everyone is scaling
    * their loss function by a different value, hence the need to change what "lambda" is. But it's clear that ISLR, Scikit-learn, and we
    * are basically doing the same thing otherwise. */
