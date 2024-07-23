@@ -276,7 +276,7 @@ static PetscErrorCode MatCholeskyFactorSymbolic_PaStiX(Mat F, Mat A, IS r, const
 }
 
 /*
-  Call clean step of PaStiX if pastix->CleanUpPastix == true.
+  Call clean step of PaStiX if initialized
   Free the CSC matrix.
  */
 static PetscErrorCode MatDestroy_PaStiX(Mat A)
