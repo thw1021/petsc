@@ -323,5 +323,9 @@ if __name__ ==  '__main__':
     assert isinstance(args.bfort, (list, tuple))
     bfort_exec = args.bfort[0]
     assert isinstance(bfort_exec, str)
+    try:
+      output = check_output(os.path.join('lib','petsc','bin','maint','getinterfaces.py')+' '+os.path.join('include','*.h'), shell=True).decode('utf-8')
+    except subprocess.CalledProcessError as e:
+      raise SystemError(str(e)+'\n'+e.output.decode(encoding='UTF-8',errors='replace'));
     ret = main(args.petsc_dir, args.petsc_arch, bfort_exec, args.petsc_dir, args.verbose)
   sys.exit(ret)
