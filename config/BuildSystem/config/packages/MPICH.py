@@ -71,9 +71,6 @@ class Configure(config.package.GNUPackage):
     if self.compilerFlags.debugging:
       args.append("--enable-fast=no")
       args.append("--enable-error-messages=all")
-      mpich_device = 'ch3:sock'
-    else:
-      mpich_device = 'ch3:nemesis'
     if self.cuda.found:
       args.append('--with-cuda='+self.cuda.cudaDir)
       if hasattr(self.cuda,'cudaArch'): # MPICH's default to --with-cuda-sm=XX is 'auto', to auto-detect the arch of the visible GPUs (similar to our `native`).
