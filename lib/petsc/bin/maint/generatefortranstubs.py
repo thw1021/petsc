@@ -195,6 +195,7 @@ def processDir(petscdir, petscarch,bfort, verbose, dirpath, dirnames, filenames)
       cmd = 'BFORT_CONFIG_PATH='+os.path.join(petscdir,'lib','petsc','conf')+' '+bfort+' '+' '.join(options+filenames[i:i+split_ct])+' -f90modfile f90module'+str(i)+'.f90'
       try:
         output = check_output(cmd, cwd=dirpath, shell=True).decode('utf-8')
+        print(output)
       except subprocess.CalledProcessError as e:
         raise SystemError(str(e)+'\nIn '+dirpath+'\n'+e.output.decode(encoding='UTF-8',errors='replace'));
     FixDir(petscdir,petscarch, dirpath,outdir,verbose)
@@ -273,6 +274,11 @@ def processf90interfaces(petscdir,petscarch,verbose):
   return
 
 def main(petscdir,petscarch,bfort,dir,verbose):
+  import os,sys
+  sys.path.insert(0, os.path.abspath(os.path.join('lib','petsc','bin','maint')))
+  import getinterfaces
+
+  getinterfaces.main(os.path.join('lib','petsc','conf','bfort-petsc.txt'),'include')
   for p in [ os.path.join(dir,'include'), os.path.join(dir,'src') ]:
     for dirpath, dirnames, filenames in os.walk(p, topdown=True):
       filenames = [i for i in filenames if not i.find('#') > -1 and os.path.splitext(i)[1] in ['.c','.h','.cxx','.cu']]
@@ -323,9 +329,5 @@ if __name__ ==  '__main__':
     assert isinstance(args.bfort, (list, tuple))
     bfort_exec = args.bfort[0]
     assert isinstance(bfort_exec, str)
-    try:
-      output = check_output(os.path.join('lib','petsc','bin','maint','getinterfaces.py')+' '+os.path.join('include','*.h'), shell=True).decode('utf-8')
-    except subprocess.CalledProcessError as e:
-      raise SystemError(str(e)+'\n'+e.output.decode(encoding='UTF-8',errors='replace'));
     ret = main(args.petsc_dir, args.petsc_arch, bfort_exec, args.petsc_dir, args.verbose)
   sys.exit(ret)

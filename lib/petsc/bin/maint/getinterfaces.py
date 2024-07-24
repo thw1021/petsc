@@ -236,7 +236,8 @@ def getaliases():
   # for HDF5
   aliases['hid_t']              = 'int'
 
-def main(args):
+def main(filename,dir):
+  args = [os.path.join('include',i) for i in os.listdir('include') if i.endswith('.h')]
   for i in args:
     getenums(i)
   for i in args:
@@ -267,7 +268,7 @@ def main(args):
   pickle.dump(classes,file)
   pickle.dump(typedefs,file)
 
-  with open(os.path.join('lib','petsc','conf','bfort-petsc.txt'),"w") as fd:
+  with open(filename,"w") as fd:
     for i in enums.keys():
       fd.write("native "+i+'\n')
 
@@ -287,5 +288,5 @@ def main(args):
 # The classes in this file can also be used in other python-programs by using 'import'
 #
 if __name__ ==  '__main__':
-  main(sys.argv[1:])
+  main(sys.argv[1],sys.argv[2])
 
