@@ -52,4 +52,10 @@ int main(int argc, char **args)
       filter: cat ex4a1.tmp
       output_file: output/ex4a.out
 
+   test:
+      suffix: daos
+      args: -myviewer ascii:daos:ex4a1.tmp::append
+      filter: cat daos:ex4a1.tmp
+      output_file: output/ex4a.out
+
 TEST*/
