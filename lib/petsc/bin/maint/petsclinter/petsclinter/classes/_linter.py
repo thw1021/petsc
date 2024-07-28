@@ -548,7 +548,7 @@ class Linter:
       # name
       result_type_spacing = ' +'
     # have to escape the pointers
-    result_spelling    = result_spelling.replace('*', '\*')
+    result_spelling    = result_spelling.replace('*', r'\*')
     func_name_and_type = rf'{result_spelling}{result_type_spacing}{func.spelling} *\('
     # The absolute final check, we need to grep for the symbol across the code-base. This
     # is needed for cases when:

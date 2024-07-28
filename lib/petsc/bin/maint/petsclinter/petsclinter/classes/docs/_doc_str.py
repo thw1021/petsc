@@ -1102,7 +1102,7 @@ class PetscDocString(DocBase):
           # we could not find a suitable section for it
           assert not line.endswith(r'\:')
           eloc = self.make_source_range(':', line, lineno, offset=line.rfind(':'))
-          mess = f'Sowing treats all lines ending with \':\' as header, are you sure \'{textwrap.shorten(stripped, width=35)}\' qualifies? Use \'\:\' to escape the colon if not'
+          mess = r'Sowing treats all lines ending with \':\' as header, are you sure \'{textwrap.shorten(stripped, width=35)}\' qualifies? Use \'\:\' to escape the colon if not'
           self.add_diagnostic_from_source_range(
             Diagnostic.Kind.ERROR, self.diags.section_header_fishy_header, mess, eloc
           )
