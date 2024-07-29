@@ -36,8 +36,11 @@ class Configure(config.package.CMakePackage):
   def formCMakeConfigureArgs(self):
     args = config.package.CMakePackage.formCMakeConfigureArgs(self)
 
-    if not self.blasLapack.checkInclude(self.blasLapack.include, ['cblas.h','lapacke.h']) and not self.blasLapack.mkl:
-      raise RuntimeError('PaStiX requires LAPACKE to work')
+    if not self.libraries.check(self.dlib, 'cblas_dgemm'):
+      raise RuntimeError('PaStiX requires a BLAS library with cblas support')
+
+    if not self.libraries.check(self.dlib, 'LAPACKE_dlange'):
+      raise RuntimeError('PaStiX requires a LAPACK library with LAPACKE support')
 
     if not self.scotch.found and not self.metis.found:
       raise RuntimeError('PaStiX requires an ordering library: either METIS or SCOTCH')
