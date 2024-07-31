@@ -84,12 +84,12 @@ Release Schedule
 
 We provide new releases every 6 months, and patch updates to the current release every month.
 
-Releases (for example: 3.20.0, 3.21.0, etc. with corresponding Git tags v3.2, v3.21, etc):
+Releases (for example: 3.20.0, 3.21.0, etc. with corresponding Git tags v3.20.0, v3.21.0, etc):
 
 - March (end of the month)
 - September (end of the month)
 
-Patch updates (for example: 3.21.1, 2.21.2, etc. with corresponding Git tags v3.2.1, v3.21.2, etc)
+Patch updates (for example: 3.21.1, 2.21.2, etc. with corresponding Git tags v3.21.1, v3.21.2, etc)
 contain the latest release plus crucial bug fixes since that release:
 
 - Last week of every month (or first week on next month - if delayed)
