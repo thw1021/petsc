@@ -475,7 +475,7 @@ static PetscErrorCode PCMPIDestroy(PC pc)
 static PetscErrorCode PCMPIServerBroadcastRequest(PCMPICommand request)
 {
 #if defined(PETSC_HAVE_PTHREAD_MUTEX)
-  PetscMPIInt dummy1 = 1, dummy2;
+  PetscMPIInt dummy = 1;
 #endif
 
   PetscFunctionBegin;
@@ -488,7 +488,7 @@ static PetscErrorCode PCMPIServerBroadcastRequest(PCMPICommand request)
   /* next line ensures the sender has already taken the lock */
 #if defined(PETSC_HAVE_PTHREAD_MUTEX)
   if (PCMPIServerUseShmget) {
-    PetscCallMPI(MPI_Reduce(&dummy1, &dummy2, 1, MPI_INT, MPI_SUM, 0, PC_MPI_COMM_WORLD));
+    PetscCallMPI(MPI_Reduce(MPI_IN_PLACE, &dummy, 1, MPI_INT, MPI_SUM, 0, PC_MPI_COMM_WORLD));
     for (PetscMPIInt i = 1; i < PetscGlobalSize; i++) pthread_mutex_lock(&PCMPIServerLocks[i]);
   }
 #endif
@@ -595,7 +595,9 @@ PetscErrorCode PCMPIServerBegin(void)
 
   while (PETSC_TRUE) {
     PCMPICommand request = PCMPI_CREATE;
-    PetscMPIInt  dummy1  = 1, dummy2;
+#if defined(PETSC_HAVE_PTHREAD_MUTEX)
+    PetscMPIInt dummy = 1;
+#endif
 
     // TODO: can we broadcast the number of active ranks here so only the correct subset of proccesses waits on the later scatters?
 #if defined(PETSC_HAVE_PTHREAD_MUTEX)
@@ -605,7 +607,7 @@ PetscErrorCode PCMPIServerBegin(void)
 #if defined(PETSC_HAVE_PTHREAD_MUTEX)
     if (PCMPIServerUseShmget) {
       /* next line ensures PetscGlobalRank has locked before rank 0 can take the lock back */
-      PetscCallMPI(MPI_Reduce(&dummy1, &dummy2, 1, MPI_INT, MPI_SUM, 0, PC_MPI_COMM_WORLD));
+      PetscCallMPI(MPI_Reduce(MPI_IN_PLACE, &dummy, 1, MPI_INT, MPI_SUM, 0, PC_MPI_COMM_WORLD));
       pthread_mutex_unlock(&PCMPIServerLocks[PetscGlobalRank]);
     }
 #endif
