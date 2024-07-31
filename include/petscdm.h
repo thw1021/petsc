@@ -106,6 +106,9 @@ PETSC_EXTERN PetscErrorCode DMRestrict(DM, Mat, Vec, Mat, DM);
 PETSC_EXTERN PetscErrorCode DMInterpolate(DM, Mat, DM);
 PETSC_EXTERN PetscErrorCode DMInterpolateSolution(DM, DM, Mat, Vec, Vec);
 PETSC_EXTERN PetscErrorCode DMExtrude(DM, PetscInt, DM *);
+PETSC_EXTERN PetscErrorCode DMFieldDecompositionHookAdd(DM, PetscErrorCode (*)(DM, DM, void *), PetscErrorCode (*)(DM, VecScatter, DM, void *), void *);
+PETSC_EXTERN PetscErrorCode DMFieldDecompositionHookRemove(DM, PetscErrorCode (*)(DM, DM, void *), PetscErrorCode (*)(DM, VecScatter, DM, void *), void *);
+PETSC_EXTERN PetscErrorCode DMFieldDecompositionRestrict(DM, VecScatter, DM);
 PETSC_EXTERN PetscErrorCode DMSetFromOptions(DM);
 PETSC_EXTERN PetscErrorCode DMViewFromOptions(DM, PetscObject, const char[]);
 
