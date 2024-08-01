@@ -1554,6 +1554,27 @@ cdef class PC(Object):
             CHKERR(PetscFree(p))
         return subksp
 
+    def getFieldSplitSubIS(self, splitname: str) -> IS:
+        """Return the `IS` for split with splitname.
+
+        Not collective.
+
+        See Also
+        --------
+        petsc.PCFieldSplitGetIS
+
+        """
+        cdef PetscIS *is = NULL
+        cdef const char *cname = NULL
+        try:
+            splitname = str2bytes(splitname, &cname)
+            CHKERR(PCFieldSplitGetSubKSP(self.pc, cname, &p))
+            p = ref_IS(is)
+        finally:
+            CHKERR(PetscFree(is))
+        return p
+
+
     def getFieldSplitSchurGetSubKSP(self) -> list[KSP]:
         """Return the `KSP` for the Schur complement based splits.
 
