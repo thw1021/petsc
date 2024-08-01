@@ -306,8 +306,8 @@ static PetscErrorCode MatView_PaStiX(Mat A, PetscViewer viewer)
 
       PetscCall(PetscViewerASCIIPrintf(viewer, "PaStiX run parameters:\n"));
       PetscCall(PetscViewerASCIIPrintf(viewer, "  Matrix type :                      %s \n", ((spm->mtxtype == SpmSymmetric) ? "Symmetric" : "Unsymmetric")));
-      PetscCall(PetscViewerASCIIPrintf(viewer, "  Level of printing (0,1,2):         %d \n", pastix->iparm[IPARM_VERBOSE]));
-      PetscCall(PetscViewerASCIIPrintf(viewer, "  Number of refinements iterations : %d \n", pastix->iparm[IPARM_NBITER]));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "  Level of printing (0,1,2):         %ld \n", pastix->iparm[IPARM_VERBOSE]));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "  Number of refinements iterations : %ld \n", pastix->iparm[IPARM_NBITER]));
       PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Error :                            %g \n", pastix->dparm[DPARM_RELATIVE_ERROR]));
       if (pastix->iparm[IPARM_VERBOSE] > 0) spmPrintInfo(spm, stdout);
     }
