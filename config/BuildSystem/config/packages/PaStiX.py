@@ -1,4 +1,5 @@
 import config.package
+import re
 
 class Configure(config.package.CMakePackage):
   def __init__(self, framework):
@@ -44,6 +45,11 @@ class Configure(config.package.CMakePackage):
 
     if not self.scotch.found and not self.metis.found:
       raise RuntimeError('PaStiX requires an ordering library: either METIS or SCOTCH')
+
+    blaslapackincludeflag = self.headers.toString(self.blasLapack.include)
+    blaslapackincludedir = re.sub('-I', '', blaslapackincludeflag)
+    if self.blasLapack.include:
+      args.append("-DCMAKE_INCLUDE_PATH={0}".format(blaslapackincludedir))
 
     args.append('-DPASTIX_WITH_FORTRAN=OFF')
     args.append('-DPASTIX_LR_TESTINGS=OFF')
