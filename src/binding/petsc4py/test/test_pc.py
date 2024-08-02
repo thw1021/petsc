@@ -17,6 +17,7 @@ class BaseTestPC:
 
     def tearDown(self):
         self.ksp = None
+        self.pc = None
         PETSc.garbage_cleanup()
 
 class TestFIELDSPLITPC(BaseTestPC, unittest.TestCase):
