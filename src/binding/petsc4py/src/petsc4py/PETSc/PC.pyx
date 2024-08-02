@@ -1564,15 +1564,13 @@ cdef class PC(Object):
         petsc.PCFieldSplitGetIS
 
         """
-        cdef PetscIS *is = NULL
+        cdef IS iset = IS()
         cdef const char *cname = NULL
-        try:
-            splitname = str2bytes(splitname, &cname)
-            CHKERR(PCFieldSplitGetSubKSP(self.pc, cname, &p))
-            p = ref_IS(is)
-        finally:
-            CHKERR(PetscFree(is))
-        return p
+
+        splitname = str2bytes(splitname, &cname)
+        CHKERR(PCFieldSplitGetIS(self.pc, cname, &iset.iset))
+
+        return iset
 
 
     def getFieldSplitSchurGetSubKSP(self) -> list[KSP]:
