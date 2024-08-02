@@ -395,6 +395,40 @@ int main(int argc, char **argv)
       }
       PetscCall(DMSetDimension(dm, dim));
       PetscCall(DMPlexBuildFromCellListParallel(dm, Nc, PETSC_DECIDE, Nv, Ncor, cells, &sfVert, NULL));
+    } else if (trisquadsmesh) {
+      Nc                       = sNLoclCellsMixedTQMesh; //Same on each rank for this example...
+      PetscInt Nv              = sNGlobVertsMixedTQMesh;
+      InitPartForRank[0]       = &sInitialPartitionMixedTQMesh[0][0];
+      InitPartForRank[1]       = &sInitialPartitionMixedTQMesh[1][0];
+      const PetscInt(*Conn)[4] = sConnectivityMixedTQMesh;
+
+      const PetscInt NcorMax = 4;
+      const PetscInt dim     = 2;
+
+      /* Create a PetscSection and taking care to exlude nodes with "-1" into element connectivity: */
+      PetscSection s;
+      PetscInt     vStart = 0, vEnd = Nc;
+      PetscCall(PetscSectionCreate(PETSC_COMM_WORLD, &s));
+      PetscCall(PetscSectionSetNumFields(s, 1));
+      PetscCall(PetscSectionSetFieldComponents(s, 0, 1));
+      PetscCall(PetscSectionSetChart(s, vStart, vEnd));
+
+      PetscCall(PetscMalloc1(Nc * NcorMax, &cells));
+      PetscInt count = 0;
+      for (c = 0; c < Nc; ++c) {
+        PetscInt cell         = (InitPartForRank[rank])[c], cor;
+        PetscInt nbElemVertex = ((-1 == Conn[cell][NcorMax - 1]) ? 3 : 4);
+        for (cor = 0; cor < nbElemVertex; ++cor) {
+          cells[count] = Conn[cell][cor];
+          ++count;
+        }
+        PetscCall(PetscSectionSetDof(s, c, nbElemVertex));
+        PetscCall(PetscSectionSetFieldDof(s, c, 0, nbElemVertex));
+      }
+      PetscCall(PetscSectionSetUp(s));
+      PetscCall(DMSetDimension(dm, dim));
+      PetscCall(DMPlexBuildFromCellSectionParallel(dm, Nc, PETSC_DECIDE, Nv, s, cells, &sfVert, NULL));
+      PetscCall(PetscSectionDestroy(&s));
     } else if (prismsmesh) {
       Nc                       = sNLoclCellsPrismsMesh; //Same on each rank for this example...
       PetscInt Nv              = sNGlobVertsPrismsMesh;
