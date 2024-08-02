@@ -150,13 +150,20 @@ static PetscErrorCode MatDestroy_PaStiX(Mat A)
   Mat_Pastix *pastix = (Mat_Pastix *)A->data;
 
   PetscFunctionBegin;
-  /* Terminate instance, deallocate memories */
+  /* Finalize SPM (matrix handler of PaStiX) */
   if (pastix->spm) {
     spmExit(pastix->spm);
     PetscCall(PetscFree(pastix->spm));
   }
+
+  /* Finalize PaStiX */
   if (pastix->pastix_data) pastixFinalize(&pastix->pastix_data);
+
+  /* Deallocate PaStiX structure */
   PetscCall(PetscFree(A->data));
+
+  /* clear composed functions */
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatFactorGetSolverType_C", NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
