@@ -1554,25 +1554,6 @@ cdef class PC(Object):
             CHKERR(PetscFree(p))
         return subksp
 
-    def getFieldSplitSubIS(self, splitname: str) -> IS:
-        """Return the `IS` for split with splitname.
-
-        Not collective.
-
-        See Also
-        --------
-        petsc.PCFieldSplitGetIS
-
-        """
-        cdef PetscIS field
-        cdef const char *cname = NULL
-
-        splitname = str2bytes(splitname, &cname)
-        CHKERR(PCFieldSplitGetIS(self.pc, cname, &field))
-
-        return ref_IS(field)
-
-
     def getFieldSplitSchurGetSubKSP(self) -> list[KSP]:
         """Return the `KSP` for the Schur complement based splits.
 
@@ -1592,6 +1573,24 @@ cdef class PC(Object):
         finally:
             CHKERR(PetscFree(p))
         return subksp
+
+    def getFieldSplitSubIS(self, splitname: str) -> IS:
+        """Return the `IS` for split with splitname.
+
+        Not collective.
+
+        See Also
+        --------
+        petsc.PCFieldSplitGetIS
+
+        """
+        cdef PetscIS field
+        cdef const char *cname = NULL
+
+        splitname = str2bytes(splitname, &cname)
+        CHKERR(PCFieldSplitGetIS(self.pc, cname, &field))
+
+        return ref_IS(field)
 
     def setFieldSplitSchurFactType(self, ctype: FieldSplitSchurFactType) -> None:
         """Set the type of approximate block factorization.
