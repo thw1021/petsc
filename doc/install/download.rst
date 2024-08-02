@@ -21,8 +21,8 @@ To anchor to a release version (without intermediate fixes), use:
 
    $ git checkout vMAJOR.MINOR.PATCH
 
-We recommend users join the official PETSc :ref:`mailing lists <doc_mail>` to be submit
-any questions they may have directly to the development team, be notified of new
+We recommend users join the official PETSc :ref:`mailing lists <doc_mail>` to submit
+any questions they may have directly to the development team, to be notified of new
 releases, or to simply keep up to date with the current state of the
 library.
 
@@ -97,7 +97,7 @@ contain the latest release plus crucial bug fixes since that release:
 The monthly updates do not contain new features or any development work since the release, they merely contain crucial
 bug fixes.
 
-The ordering of PETSc branches and tags, as of April, is given by: (each level also contains the commits below it)
+The ordering of PETSc branches and tags, as of April 2024 is given by (each level also contains the commits below it):
 
 - April++ (features added since v2.21) main branch
 - April++ (bug fixes since v2.21.1) release branch
