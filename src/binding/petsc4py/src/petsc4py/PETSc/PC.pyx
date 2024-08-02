@@ -1575,7 +1575,7 @@ cdef class PC(Object):
         return subksp
 
     def getFieldSplitSubIS(self, splitname: str) -> IS:
-        """Return the `IS` for split with splitname.
+        """Return the `IS` associated with a given name.
 
         Not collective.
 
