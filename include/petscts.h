@@ -1428,6 +1428,7 @@ PETSC_EXTERN PetscErrorCode TSDiscGradSetFormulation(TS, PetscErrorCode (*)(TS, 
 PETSC_EXTERN PetscErrorCode TSDiscGradGetFormulation(TS, PetscErrorCode (**)(TS, PetscReal, Vec, Mat, void *), PetscErrorCode (**)(TS, PetscReal, Vec, PetscScalar *, void *), PetscErrorCode (**)(TS, PetscReal, Vec, Vec, void *), void *);
 PETSC_EXTERN PetscErrorCode TSDiscGradIsGonzalez(TS, PetscBool *);
 PETSC_EXTERN PetscErrorCode TSDiscGradUseGonzalez(TS, PetscBool);
+PETSC_EXTERN PetscErrorCode TSDiscGradSetSMat(TS ts, PetscErrorCode (*)(TS, PetscInt, PetscInt, Mat*));
 
 /*
        PETSc interface to Sundials

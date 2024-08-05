@@ -19,9 +19,11 @@ typedef struct {
   Vec       X0, X, Xdot;
   void     *funcCtx;
   PetscBool gonzalez;
+  PetscBool runningJacobian;
   PetscErrorCode (*Sfunc)(TS, PetscReal, Vec, Mat, void *);
   PetscErrorCode (*Ffunc)(TS, PetscReal, Vec, PetscScalar *, void *);
   PetscErrorCode (*Gfunc)(TS, PetscReal, Vec, Vec, void *);
+  PetscErrorCode (*userSMat)(TS, PetscInt, PetscInt, Mat*);
 } TS_DiscGrad;
 
 static PetscErrorCode TSDiscGradGetX0AndXdot(TS ts, DM dm, Vec *X0, Vec *Xdot)
@@ -274,6 +276,26 @@ static PetscErrorCode TSGetStages_DiscGrad(TS ts, PetscInt *ns, Vec **Y)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode TSDiscGradFormSMat_Default(PetscInt n, PetscInt m, Mat *S)
+{
+
+  PetscFunctionBegin;
+  PetscCall(MatCreate(PETSC_COMM_WORLD, S));
+  PetscCall(MatSetSizes(*S, PETSC_DECIDE, PETSC_DECIDE, n, n));
+  PetscCall(MatSetFromOptions(*S));
+  PetscCall(MatSetUp(*S));
+  PetscCall(MatAssemblyBegin(*S, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(*S, MAT_FINAL_ASSEMBLY));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode TSDiscGradSetSMat(TS ts, PetscErrorCode (*userSMat)(TS, PetscInt, PetscInt, Mat*)){
+  TS_DiscGrad *dg = (TS_DiscGrad *)ts->data;
+  PetscFunctionBegin;
+  dg->userSMat = userSMat;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*
   This defines the nonlinear equation that is to be solved with SNES
     G(U) = F[t0 + 0.5*dt, U, (U-U0)/dt] = 0
@@ -285,57 +307,167 @@ static PetscErrorCode SNESTSFormFunction_DiscGrad(SNES snes, Vec x, Vec y, TS ts
 {
   TS_DiscGrad *dg = (TS_DiscGrad *)ts->data;
   PetscReal    norm, shift = 1 / (0.5 * ts->time_step);
-  PetscInt     n;
-  Vec          X0, Xdot, Xp, Xdiff;
+  PetscInt     n, dbg = 0, taylor = 0;
+  Vec          X0, Xdot, Xp, Xdiff, unit;
   Mat          S;
+  PetscBool    runningJacobian;
   PetscScalar  F = 0, F0 = 0, Gp;
   Vec          G, SgF;
   DM           dm, dmsave;
-
   PetscFunctionBegin;
-  PetscCall(SNESGetDM(snes, &dm));
 
+  PetscCall(SNESGetDM(snes, &dm));
   PetscCall(VecDuplicate(y, &Xp));
   PetscCall(VecDuplicate(y, &Xdiff));
   PetscCall(VecDuplicate(y, &SgF));
   PetscCall(VecDuplicate(y, &G));
 
+  PetscCall(VecDuplicate(y, &unit));
+  PetscCall(VecZeroEntries(unit));
+  PetscCall(VecShift(unit, 1.));
+  //PetscPrintf(PETSC_COMM_WORLD, "shift %.16g\n", shift);
   PetscCall(VecGetLocalSize(y, &n));
-  PetscCall(MatCreate(PETSC_COMM_WORLD, &S));
-  PetscCall(MatSetSizes(S, PETSC_DECIDE, PETSC_DECIDE, n, n));
-  PetscCall(MatSetFromOptions(S));
-  PetscCall(MatSetUp(S));
-  PetscCall(MatAssemblyBegin(S, MAT_FINAL_ASSEMBLY));
-  PetscCall(MatAssemblyEnd(S, MAT_FINAL_ASSEMBLY));
-
+  if (!dg->userSMat) PetscCall(TSDiscGradFormSMat_Default(n, n, &S));
+  else PetscCall((*dg->userSMat)(ts, n, n, &S));
   PetscCall(TSDiscGradGetX0AndXdot(ts, dm, &X0, &Xdot));
   PetscCall(VecAXPBYPCZ(Xdot, -shift, shift, 0, X0, x)); /* Xdot = shift (x - X0) */
 
-  PetscCall(VecAXPBYPCZ(Xp, -1, 2, 0, X0, x));     /* Xp = 2*x - X0 + (0)*Xmid */
+  PetscCall(VecAXPBYPCZ(Xp, -1, 2, 0, X0, x));     /* Xp = 2*x - X0 + (0)*Xp */
   PetscCall(VecAXPBYPCZ(Xdiff, -1, 1, 0, X0, Xp)); /* Xdiff = xp - X0 + (0)*Xdiff */
+  // hack
+  //PetscCall(VecAXPBYPCZ(Xdiff, -1, 1, 0, X0, x)); /* Xdiff = xp - X0 + (0)*Xdiff */
+  VecViewFromOptions(Xdiff, NULL, "-xdiff_view");
+  if (dg->gonzalez & taylor){
+    Vec taylorX, taylorXp, taylorX0, taylorG;
+    Vec         du, uhat, r, rhat, df;
+    PetscReal   h;
+    PetscReal   taylorF0, taylorF;
+    PetscReal  *es, *hs, *errors;
+    PetscReal   hMax = 1.0, hMin = 1e-6, hMult = 0.1;
+    PetscInt    Nv, v;
+    
+    PetscCall(VecDuplicate(G, &taylorG));
+    PetscCall(VecDuplicate(x, &taylorX));
+    PetscCall(VecDuplicate(Xp, &taylorXp));
+    PetscCall(VecDuplicate(X0, &taylorX0));
 
+    for (h = hMax, Nv = 0; h >= hMin; h *= hMult, ++Nv)
+    ;
+    PetscCall(PetscCalloc3(Nv, &es, Nv, &hs, Nv, &errors));
+    /*
+      F(x+\epsilon h) \approx F(x) - \epsilon \nabla F(x+h) \\
+      \frac{ F(x+\epsilon h - F(x) - \epsilon \nabla F(x+h))}{\epsilon} = O(\epsilon^2)
+
+      so compute F shifted by perturbation, F at x, and \epsilon nabla F(x+h), divide epsilon
+      and plot the error term vs epsilon
+    */
+    Vec perturbation, taylorXhat;
+    PetscRandom rnd;
+    PetscReal   val;
+
+    
+    PetscCall(PetscRandomCreate(PETSC_COMM_WORLD, &rnd));
+    PetscCall(VecDuplicate(taylorX, &perturbation));
+    PetscCall(VecDuplicate(taylorX, &taylorXhat));
+    PetscCall(PetscRandomGetValueReal(rnd, &val));
+    PetscCall(VecZeroEntries(perturbation));
+    PetscCall(VecShift(perturbation, val));
+
+    PetscCall(PetscRandomDestroy(&rnd));
+    for (h = hMax, Nv = 0; h >= hMin; h *= hMult, ++Nv) {
+      
+      PetscCall(VecWAXPY(taylorXhat, h, perturbation, taylorX));
+      /* F(\hat u) \approx F(u) + J(u) (uhat - u) = F(u) + h * J(u) du */
+      /* F(x+\epsilon h) \approx F(x) + \epsilon \nabla  F\cdot h*/
+      // evaluate F(x+ \ epsilon h)
+      PetscCall((*dg->Ffunc)(ts, dg->stage_time, taylorXhat, &taylorF, dg->funcCtx));
+      // evaluate F(x)
+      PetscCall((*dg->Ffunc)(ts, dg->stage_time, taylorX, &taylorF0, dg->funcCtx));
+      // evaluate \nabla F(x + \epsilon h)
+      PetscCall((*dg->Gfunc)(ts, dg->stage_time, taylorXhat, taylorG, dg->funcCtx));
+      PetscReal taylorNablaF;
+      // evaluate \nabla F(x + \epsilon h) \cdot (x_n+1 - x_n)
+      PetscCall(VecDot(Xdiff, taylorG, &taylorNablaF));
+      errors[Nv] = (taylorF - taylorF0 - taylorNablaF)/h;
+      es[Nv] = PetscLog10Real(errors[Nv]);
+      hs[Nv] = PetscLog10Real(h);
+    }
+    PetscReal tol = -1;
+    for (v = 0; v < Nv; ++v) {
+      if ((tol >= 0) && (errors[v] > tol)) break;
+      else if (errors[v] > PETSC_SMALL) break;
+    }
+    PetscBool isLin;
+    if (v == Nv) isLin = PETSC_TRUE;
+    PetscReal slope, intercept;
+    PetscCall(PetscLinearRegression(Nv, hs, es, &slope, &intercept));
+    PetscCall(PetscFree3(es, hs, errors));
+    /* Slope should be about 2 */
+    if (tol >= 0) {
+      PetscCheck(isLin || PetscAbsReal(2 - slope) <= tol, PETSC_COMM_WORLD, PETSC_ERR_ARG_WRONG, "Taylor approximation convergence rate should be 2, not %0.2f", (double)slope);
+    } else {
+      if (!isLin) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Taylor approximation converging at order %3.2f\n", (double)slope));
+      else PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Function appears to be linear\n"));
+    }
+  }
   if (dg->gonzalez) {
     PetscCall((*dg->Sfunc)(ts, dg->stage_time, x, S, dg->funcCtx));
     PetscCall((*dg->Ffunc)(ts, dg->stage_time, Xp, &F, dg->funcCtx));
     PetscCall((*dg->Ffunc)(ts, dg->stage_time, X0, &F0, dg->funcCtx));
     PetscCall((*dg->Gfunc)(ts, dg->stage_time, x, G, dg->funcCtx));
-
     /* Adding Extra Gonzalez Term */
     PetscCall(VecDot(Xdiff, G, &Gp));
     PetscCall(VecNorm(Xdiff, NORM_2, &norm));
-    if (norm < PETSC_SQRT_MACHINE_EPSILON) {
+    //PetscPrintf(PETSC_COMM_WORLD, "norm: %g\n", norm);
+    if (norm < PETSC_SQRT_MACHINE_EPSILON) { //
       Gp = 0;
+      if (dbg) PetscPrintf(PETSC_COMM_WORLD, "Gp IS ZERO\n");
     } else {
+      if (dbg) PetscPrintf(PETSC_COMM_WORLD, "Gp/norm: %g\n", Gp/norm);
+
       /* Gp = (1/|xn+1 - xn|^2) * (F(xn+1) - F(xn) - Gp) */
-      Gp = (F - F0 - Gp) / PetscSqr(norm);
+      #if 0
+      PetscPrintf(PETSC_COMM_WORLD, "F: %g\n", F);
+      PetscPrintf(PETSC_COMM_WORLD, "F0: %g\n", F0);
+      PetscPrintf(PETSC_COMM_WORLD, "Gp_pre: %g\n", Gp);
+      PetscReal diffF = F-F0;
+      PetscPrintf(PETSC_COMM_WORLD, "diffF: %g\n", diffF);
+      #endif 
+      Gp = (F - F0 - Gp) / PetscSqr(norm);// *1.e4
+      if (dbg) {
+        PetscReal deltaNorm;
+        PetscReal diffFF0dn2;
+        PetscReal GdDelta;
+        diffFF0dn2 = (F-F0)/norm;
+        PetscCall(VecDot(G, Xdiff, &GdDelta));
+        PetscReal diff = diffFF0dn2 - GdDelta;
+
+        PetscReal alphaddnorm;
+
+        alphaddnorm = (F-F0-GdDelta)/(norm);
+
+        PetscPrintf(PETSC_COMM_WORLD, "FF0/norm - grad F dot delta: %.16g\n", diff);
+        PetscPrintf(PETSC_COMM_WORLD, "F-F0 - grad F dot delta/norm: %.16g\n", alphaddnorm);
+        PetscPrintf(PETSC_COMM_WORLD, "Gp nonzero: %g, F: %g, F0, %g\n", Gp, F, F0);
+        PetscPrintf(PETSC_COMM_WORLD, "norm: %g\n", norm);
+      }
     }
+    Vec test;
+    PetscReal unitVecNorm, gradVecNorm;
+    
+    PetscCall(VecDuplicate(G, &test));
+    PetscCall(VecZeroEntries(test));
+    PetscCall(VecShift(test, 1.0));
+    PetscCall(VecScale(test, Gp));
+    PetscCall(VecNorm(test, NORM_2, &unitVecNorm));
+    PetscCall(VecNorm(G, NORM_2, &gradVecNorm));
+    //PetscPrintf(PETSC_COMM_WORLD, "||grad F(midpoint)||/||Gon()I||: %.16g        ||grad F(midpoint)||: %.16g         ||Gon()I||: %.16g\n", gradVecNorm/unitVecNorm, gradVecNorm, unitVecNorm);
     PetscCall(VecAXPY(G, Gp, Xdiff));
     PetscCall(MatMult(S, G, SgF)); /* S*gradF */
-
+    VecDestroy(&test);
   } else {
     PetscCall((*dg->Sfunc)(ts, dg->stage_time, x, S, dg->funcCtx));
     PetscCall((*dg->Gfunc)(ts, dg->stage_time, x, G, dg->funcCtx));
-
     PetscCall(MatMult(S, G, SgF)); /* Xdot = S*gradF */
   }
   /* DM monkey-business allows user code to call TSGetDM() inside of functions evaluated on levels of FAS */
@@ -344,10 +476,10 @@ static PetscErrorCode SNESTSFormFunction_DiscGrad(SNES snes, Vec x, Vec y, TS ts
   PetscCall(VecAXPBYPCZ(y, 1, -1, 0, Xdot, SgF));
   ts->dm = dmsave;
   PetscCall(TSDiscGradRestoreX0AndXdot(ts, dm, &X0, &Xdot));
-
   PetscCall(VecDestroy(&Xp));
   PetscCall(VecDestroy(&Xdiff));
   PetscCall(VecDestroy(&SgF));
+  PetscCall(VecDestroy(&unit));
   PetscCall(VecDestroy(&G));
   PetscCall(MatDestroy(&S));
   PetscFunctionReturn(PETSC_SUCCESS);
