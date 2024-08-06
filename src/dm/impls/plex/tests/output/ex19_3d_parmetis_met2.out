@@ -6,7 +6,7 @@ DMinit in 2 dimensions:
   Number of 2-cells per rank: 361 361
 Labels:
   depth: 3 strata with value/size (0 (211), 1 (571), 2 (361))
-  celltype: 3 strata with value/size (0 (211), 1 (571), 3 (361))
+  celltype: 3 strata with value/size (0 (87), 1 (224), 3 (138))
   marker: 1 strata with value/size (1 (79))
   Face Sets: 3 strata with value/size (1 (19), 2 (6), 4 (14))
 DM Object: DMadapt (adapt_) 2 MPI processes
