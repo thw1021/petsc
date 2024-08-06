@@ -97,16 +97,16 @@ contain the latest release plus crucial bug fixes since that release:
 The monthly updates do not contain new features or any development work since the release, they merely contain crucial
 bug fixes.
 
-The ordering of PETSc branches and tags, as of April 2024 is given by (each level also contains the commits below it):
+The ordering of PETSc branches and tags, as of May 2024 is given by (each level also contains the commits below it):
 
-- April (features added since v2.21.0) main branch
-- April (bug fixes since v2.21.1) release branch
-- April (bug fixes since v2.21.0) v2.21.1 tag and tarball
-- March (features added after v.20.0) v2.21.0 tag and tarball
-- February (bug fixes since v2.20.5) v2.20.6 tag and tarball
+- May (features added since v3.21.0) main branch
+- May (bug fixes since v3.21.1) release branch
+- April end (bug fixes since v3.21.0) v3.21.1 tag and tarball
+- March end (features added after v3.20.0) v3.21.0 tag and tarball
+- March end (bug fixes since v3.20.5) v3.20.6 tag and tarball
 - etc
-- November (bug fixes since v2.20.0) v2.20.1 tag and tarball
-- October (features added after v2.19.0) v2.20.0 tag and tarball
+- October end (bug fixes since v3.20.0) v3.20.1 tag and tarball
+- September end (features added after v3.19.0) v3.20.0 tag and tarball
 
 After a new release of PETSc, the old version no longer gets patch updates. I.e., when 3.22.0 is released, bug fixes
 will go to 3.22.x - and petsc-3.21, petsc-3.20, etc., will not get any additional patch updates.
