@@ -63,6 +63,7 @@ $    `DMDALocalInfo` :: info(DMDA_LOCAL_INFO_SIZE)
 .seealso: [](ch_dmbase), `DMDA`, `DMDACreate1d()`, `DMDACreate2d()`, `DMDACreate3d()`, `DMDestroy()`, `DM`, `DMDAGetLocalInfo()`, `DMDAGetInfo()`
 S*/
 typedef struct {
+  DM              da;
   PetscInt        dim, dof, sw;
   PetscInt        mx, my, mz;    /* global number of grid points in each direction */
   PetscInt        xs, ys, zs;    /* starting point of this processor, excluding ghosts */
@@ -71,5 +72,4 @@ typedef struct {
   PetscInt        gxm, gym, gzm; /* number of grid points on this processor including ghosts */
   DMBoundaryType  bx, by, bz;    /* type of ghost nodes at boundary */
   DMDAStencilType st;
-  DM              da;
 } DMDALocalInfo;

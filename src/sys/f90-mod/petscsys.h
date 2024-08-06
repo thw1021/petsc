@@ -28,6 +28,13 @@
 !DEC$ ATTRIBUTES DLLEXPORT::PETSC_NULL_OPTIONS
 #endif
 
+      type, extends(tPetscObject) :: tPetscContainer
+      end type tPetscContainer
+      PetscContainer, parameter :: PETSC_NULL_CONTAINER = tPetscContainer(0)
+#if defined(_WIN32) && defined(PETSC_USE_SHARED_LIBRARIES)
+!DEC$ ATTRIBUTES DLLEXPORT::PETSC_NULL_CONTAINER
+#endif
+
       type, extends(tPetscObject) :: tPetscBench
       end type tPetscBench
       PetscBench, parameter :: PETSC_NULL_BENCH = tPetscBench(0)

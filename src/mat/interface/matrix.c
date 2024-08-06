@@ -7205,7 +7205,9 @@ PetscErrorCode MatICCFactorSymbolic(Mat fact, Mat mat, IS perm, const MatFactorI
   column 0.
 
   Fortran Note:
-  One must pass in as `submat` a `Mat` array of size at least `n`+1.
+.vb
+  Mat, pointer :: submat(:)
+.ve
 
 .seealso: [](ch_matrices), `Mat`, `MatDestroySubMatrices()`, `MatCreateSubMatrix()`, `MatGetRow()`, `MatGetDiagonal()`, `MatReuse`
 @*/
@@ -7249,7 +7251,7 @@ PetscErrorCode MatCreateSubMatrices(Mat mat, PetscInt n, const IS irow[], const 
 }
 
 /*@C
-  MatCreateSubMatricesMPI - Extracts MPI submatrices across a sub communicator of mat (by pairs of `IS` that may live on subcomms).
+  MatCreateSubMatricesMPI - Extracts MPI submatrices across a sub communicator of `mat` (by pairs of `IS` that may live on subcomms).
 
   Collective
 
@@ -7304,7 +7306,7 @@ PetscErrorCode MatCreateSubMatricesMPI(Mat mat, PetscInt n, const IS irow[], con
 }
 
 /*@C
-  MatDestroyMatrices - Destroys an array of matrices.
+  MatDestroyMatrices - Destroys an array of matrices
 
   Collective
 
@@ -7347,16 +7349,12 @@ PetscErrorCode MatDestroyMatrices(PetscInt n, Mat *mat[])
 
   Input Parameters:
 + n   - the number of local matrices
-- mat - the matrices (this is a pointer to the array of matrices, just to match the calling
-                       sequence of `MatCreateSubMatrices()`)
+- mat - the matrices (this is a pointer to the array of matrices, to match the calling sequence of `MatCreateSubMatrices()`)
 
   Level: advanced
 
   Note:
   Frees not only the matrices, but also the array that contains the matrices
-
-  Fortran Note:
-  Does not free the `mat` array.
 
 .seealso: [](ch_matrices), `Mat`, `MatCreateSubMatrices()`, `MatDestroyMatrices()`
 @*/

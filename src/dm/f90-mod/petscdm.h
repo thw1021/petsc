@@ -86,6 +86,14 @@
 #if defined(_WIN32) && defined(PETSC_USE_SHARED_LIBRARIES)
 !DEC$ ATTRIBUTES DLLEXPORT::PETSC_NULL_PARTITIONER
 #endif
+
+      type :: tDMInterpolationInfo
+        PetscFortranAddr:: v PETSC_FORTRAN_TYPE_INITIALIZE
+      end type tDMInterpolationInfo
+      DMInterpolationInfo, parameter :: PETSC_NULL_DM_INTERPOLATION_INFO = tDMInterpolationInfo(0)
+#if defined(_WIN32) && defined(PETSC_USE_SHARED_LIBRARIES)
+!DEC$ ATTRIBUTES DLLEXPORT::PETSC_NULL_DM_INTERPOLATION_INFO
+#endif
 !
 !  Types of periodicity
 !
@@ -107,6 +115,16 @@
       PetscEnum, parameter :: DM_ADAPT_REFINE=1
       PetscEnum, parameter :: DM_ADAPT_COARSEN=2
       PetscEnum, parameter :: DM_ADAPT_RESERVED_COUNT=3
+
+      PetscEnum, parameter :: DM_ADAPTATION_NONE=0
+      PetscEnum, parameter :: DM_ADAPTATION_REFINE=1
+      PetscEnum, parameter :: DM_ADAPTATION_LABEL=2
+      PetscEnum, parameter :: DM_ADAPTATION_METRIC=3
+
+      PetscEnum, parameter :: DM_ADAPTATION_INITIAL=0
+      PetscEnum, parameter :: DM_ADAPTATION_SEQUENTIAL=1
+      PetscEnum, parameter :: DM_ADAPTATION_MULTILEVEL=2
+
 !
 ! DMDA Directions
 !

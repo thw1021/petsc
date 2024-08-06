@@ -255,7 +255,7 @@
 !    - Note that the Fortran interface to VecGetArray() differs from the
 !      C version.  See the users manual for details.
 
-      call VecGetArrayF90(X,lx_v,ierr)
+       call VecGetArrayF90(X,lx_v,ierr)
       CHKERRQ(ierr)
 
 !  Compute initial guess over the locally owned part of the grid
@@ -341,7 +341,7 @@
       DM da
 
 !  Input/output variables:
-      DMDALocalInfo info(DMDA_LOCAL_INFO_SIZE)
+      DMDALocalInfo info
       PetscScalar x(gxs:gxe,gys:gye)
       PetscScalar f(xs:xe,ys:ye)
       PetscErrorCode     ierr
@@ -352,12 +352,12 @@
       PetscScalar u,uxx,uyy
       PetscInt  i,j
 
-      xs     = info(DMDA_LOCAL_INFO_XS)+1
-      xe     = xs+info(DMDA_LOCAL_INFO_XM)-1
-      ys     = info(DMDA_LOCAL_INFO_YS)+1
-      ye     = ys+info(DMDA_LOCAL_INFO_YM)-1
-      mx     = info(DMDA_LOCAL_INFO_MX)
-      my     = info(DMDA_LOCAL_INFO_MY)
+      xs     = info%XS+1
+      xe     = xs+info%XM-1
+      ys     = info%YS+1
+      ye     = ys+info%YM-1
+      mx     = info%MX
+      my     = info%MY
 
       one    = 1.0
       two    = 2.0
@@ -433,7 +433,7 @@
       PetscScalar x(gxs:gxe,gys:gye)
       Mat         A,jac
       PetscErrorCode  ierr
-      DMDALocalInfo info(DMDA_LOCAL_INFO_SIZE)
+      DMDALocalInfo info
 
 !  Local variables:
       PetscInt  row,col(5),i,j,i1,i5

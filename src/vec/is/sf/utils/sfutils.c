@@ -210,17 +210,14 @@ PetscErrorCode PetscSFSetGraphSection(PetscSF sf, PetscSection localSection, Pet
 - rootSection - Section defined on root space
 
   Output Parameters:
-+ remoteOffsets - root offsets in leaf storage, or NULL
++ remoteOffsets - root offsets in leaf storage, or `NULL`, its length will be the size of the chart of `leafSection`
 - leafSection   - Section defined on the leaf space
 
   Level: advanced
 
-  Fortran Notes:
-  In Fortran, use PetscSFDistributeSectionF90()
-
 .seealso: `PetscSF`, `PetscSFCreate()`
 @*/
-PetscErrorCode PetscSFDistributeSection(PetscSF sf, PetscSection rootSection, PetscInt **remoteOffsets, PetscSection leafSection)
+PetscErrorCode PetscSFDistributeSection(PetscSF sf, PetscSection rootSection, PetscInt *remoteOffsets[], PetscSection leafSection)
 {
   PetscSF         embedSF;
   const PetscInt *indices;
@@ -363,12 +360,9 @@ PetscErrorCode PetscSFDistributeSection(PetscSF sf, PetscSection rootSection, Pe
 
   Level: developer
 
-  Fortran Notes:
-  In Fortran, use PetscSFCreateRemoteOffsetsF90()
-
 .seealso: `PetscSF`, `PetscSFCreate()`
 @*/
-PetscErrorCode PetscSFCreateRemoteOffsets(PetscSF sf, PetscSection rootSection, PetscSection leafSection, PetscInt **remoteOffsets)
+PetscErrorCode PetscSFCreateRemoteOffsets(PetscSF sf, PetscSection rootSection, PetscSection leafSection, PetscInt *remoteOffsets[])
 {
   PetscSF         embedSF;
   const PetscInt *indices;
@@ -395,7 +389,7 @@ PetscErrorCode PetscSFCreateRemoteOffsets(PetscSF sf, PetscSection rootSection, 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PetscSFCreateSectionSF - Create an expanded `PetscSF` of dofs, assuming the input `PetscSF` relates points
 
   Collective
