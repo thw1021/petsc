@@ -202,6 +202,47 @@ static PetscErrorCode PCGetInterpolations_BoomerAMG(PC pc, PetscInt *nlevels, Ma
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+
+/*
+  Boolean Vecs are created IN PLACE with using data from BoomerAMG. 
+*/
+static PetscErrorCode PCGetCFMarkers_BoomerAMG(PC pc, PetscInt *n_per_level[], PetscBT *CFMarkers[])
+{
+  PC_HYPRE            *jac  = (PC_HYPRE *)pc->data;
+  PetscBool            same = PETSC_FALSE;
+  PetscInt             num_levels, k, l, m;
+  PetscInt            *n_per_temp;
+  PetscBT             *markertmp;
+  hypre_IntArray     **CF_marker_array;
+
+  PetscFunctionBegin;
+  PetscCall(PetscStrcmp(jac->hypre_type, "boomeramg", &same));
+  PetscCheck(same, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_NOTSAMETYPE, "Hypre type is not BoomerAMG ");
+  num_levels = hypre_ParAMGDataNumLevels((hypre_ParAMGData *)jac->hsolver);
+  PetscCall(PetscMalloc1(num_levels, &markertmp));
+  PetscCall(PetscMalloc1(num_levels, &n_per_temp));
+  CF_marker_array = hypre_ParAMGDataCFMarkerArray((hypre_ParAMGData *)jac->hsolver);
+  for (l = 1; l < num_levels; l++) {
+    m = hypre_IntArraySize(CF_marker_array[num_levels - 1 - l]);
+    n_per_temp[l-1] = m;
+    PetscCall(PetscBTCreate(m, &markertmp[l-1]));
+    PetscCall(PetscBTMemzero(m, markertmp[l-1]));
+    for (k = 0; k < m-1; k++){
+      //printf("%d\n", hypre_IntArrayDataI(CF_marker_array[num_levels - 1 - l],k));
+      if (hypre_IntArrayDataI(CF_marker_array[num_levels - 1 - l],k) > 0) {
+        PetscCall(PetscBTSet(markertmp[l-1], k));
+      }
+    }
+
+    /* We want to own the data, and HYPRE can not touch this matrix any more */
+    //CF_marker_array[num_levels - 1 - l] = NULL;
+
+  }
+  *n_per_level = n_per_temp;
+  *CFMarkers = markertmp;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /* Resets (frees) Hypre's representation of the near null space */
 static PetscErrorCode PCHYPREResetNearNullSpace_Private(PC pc)
 {
@@ -1957,6 +1998,8 @@ static PetscErrorCode PCHYPRESetType_HYPRE(PC pc, const char name[])
     pc->ops->matapply        = PCMatApply_HYPRE_BoomerAMG;
     PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGetInterpolations_C", PCGetInterpolations_BoomerAMG));
     PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGetCoarseOperators_C", PCGetCoarseOperators_BoomerAMG));
+    PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGetCFMarkers_C", 
+    PCGetCFMarkers_BoomerAMG));
     jac->destroy         = HYPRE_BoomerAMGDestroy;
     jac->setup           = HYPRE_BoomerAMGSetup;
     jac->solve           = HYPRE_BoomerAMGSolve;
