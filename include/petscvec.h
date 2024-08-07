@@ -417,6 +417,7 @@ PETSC_EXTERN PetscErrorCode VecScatterView(VecScatter, PetscViewer);
 PETSC_EXTERN PetscErrorCode VecScatterViewFromOptions(VecScatter, PetscObject, const char[]);
 PETSC_EXTERN PetscErrorCode VecScatterRemap(VecScatter, PetscInt[], PetscInt[]);
 PETSC_EXTERN PetscErrorCode VecScatterGetMerged(VecScatter, PetscBool *);
+PETSC_EXTERN PetscErrorCode VecScatterIsCompatible(VecScatter, Vec, Vec, ScatterMode, PetscBool *);
 
 PETSC_EXTERN PetscErrorCode VecGetArray4d(Vec, PetscInt, PetscInt, PetscInt, PetscInt, PetscInt, PetscInt, PetscInt, PetscInt, PetscScalar ****[]);
 PETSC_EXTERN PetscErrorCode VecRestoreArray4d(Vec, PetscInt, PetscInt, PetscInt, PetscInt, PetscInt, PetscInt, PetscInt, PetscInt, PetscScalar ****[]);

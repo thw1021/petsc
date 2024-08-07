@@ -461,6 +461,49 @@ PetscErrorCode VecScatterGetMerged(VecScatter sf, PetscBool *flg)
   if (flg) *flg = sf->vscat.beginandendtogether;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
+/*@
+  VecScatterIsCompatible - Returns true if the scatter is compatible with the given input and output vectors
+
+  Collective
+
+  Input Parameters:
++ sf   - scatter context
+. x    - a vector that defines the shape (parallel data layout of the vector) of vectors from which we scatter
+. y    - a vector that defines the shape (parallel data layout of the vector) of vectors to which we scatter
+- mode - the scattering mode.
+
+  Output Parameter:
+. flg - `PETSC_TRUE` if the input and output vectors are compatible with given scatter context
+
+  Level: developer
+
+.seealso: [](sec_scatter), `VecScatter`, `VecScatterDestroy()`, `VecScatterCreateToAll()`, `VecScatterCreateToZero()`, `PetscSFCreate()`
+@*/
+PetscErrorCode VecScatterIsCompatible(VecScatter sf, Vec x, Vec y, ScatterMode mode, PetscBool *flg)
+{
+  PetscInt  to_n, from_n;
+  PetscBool is1, is2;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(sf, PETSCSF_CLASSID, 1);
+  PetscValidHeaderSpecific(x, VEC_CLASSID, 2);
+  PetscValidHeaderSpecific(y, VEC_CLASSID, 3);
+  PetscAssertPointer(flg, 5);
+
+  PetscCall(VecGetLocalSize(x, &from_n));
+  PetscCall(VecGetLocalSize(y, &to_n));
+  if (mode & SCATTER_REVERSE) {
+    is1  = (to_n == sf->vscat.from_n) ? PETSC_TRUE : PETSC_FALSE;
+    is2  = (from_n == sf->vscat.to_n) ? PETSC_TRUE : PETSC_FALSE;
+    *flg = (is1 && is2) ? PETSC_TRUE : PETSC_FALSE;
+  } else {
+    is1  = (to_n == sf->vscat.to_n) ? PETSC_TRUE : PETSC_FALSE;
+    is2  = (from_n == sf->vscat.from_n) ? PETSC_TRUE : PETSC_FALSE;
+    *flg = (is1 && is2) ? PETSC_TRUE : PETSC_FALSE;
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
 /*@
   VecScatterDestroy - Destroys a scatter context created by `VecScatterCreate()`
 
