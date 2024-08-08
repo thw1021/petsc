@@ -72,14 +72,12 @@ static PetscErrorCode MatConvertToSPM(Mat A, MatReuse reuse, Mat_Pastix *pastix)
 
   if (isseqsbaij || ismpisbaij) PetscCall(MatConvert(A, MATAIJ, reuse, &A_aij));
   else {
-    PetscCall(PetscObjectReference((PetscObject)A));
     A_aij = A;
   }
 
   if (ismpiaij || ismpisbaij) {
     PetscCall(MatMPIAIJGetLocalMat(A_aij, MAT_INITIAL_MATRIX, &A_loc));
   } else if (isseqaij || isseqsbaij) {
-    PetscCall(PetscObjectReference((PetscObject)A_aij));
     A_loc = A_aij;
   } else SETERRQ(PetscObjectComm((PetscObject)A_aij), PETSC_ERR_SUP, "Not for type %s", ((PetscObject)A)->type_name);
 
