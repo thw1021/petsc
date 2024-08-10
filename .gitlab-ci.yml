@@ -15,7 +15,7 @@ stages:
   - stage-3
   - stage-4
 variables:
-  GIT_STRATEGY: fetch
+  GIT_STRATEGY: clone
   GIT_CLEAN_FLAGS: -ffdxq
   TIMEOUT: 450
   EXTRA_OPTIONS: -nox -nox_warning -malloc_dump
