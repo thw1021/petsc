@@ -144,6 +144,10 @@ Changes: Development
 - Add ``PetscViewerExodusIISetNodalVariable()``, ``PetscViewerExodusIISetZonalVariable()``, ``PetscViewerExodusIIGetNodalVariable()``, and ``PetscViewerExodusIIGetZonalVariable()`` to set or get the number of variables in a file
 - Add ``PetscViewerExodusIISetNodalVariableName()``, ``PetscViewerExodusIISetZonalVariableName()``, ``PetscViewerExodusIIGetNodalVariableName()``, and ``PetscViewerExodusIIGetZonalVariableName()`` to set or get a single variable name
 - Add ``PetscViewerExodusIISetNodalVariablesNames()``, ``PetscViewerExodusIISetZonalVariablesNames()``, ``PetscViewerExodusIIGetNodalVariablesNames()``, and ``PetscViewerExodusIIGetZonalVariablesNames()`` to set or get all variable names at the same time (not available in Fortran)
+- Add parallel CGNS reader, enabled by ``-dm_plex_cgns_parallel``
+- Add CGNS function for ``VecLoad()`` of solutions in parallel (must be run with ``-dm_plex_cgns_parallel``)
+- Added ``PetscViewerCGNSOpen()`` convenience function
+- Added ``PetscViewerCGNSGetSolution{Time,Name}()``, ``PetscViewerCGNS{Set,Get}SolutionIndex()``
 
 .. rubric:: FE/FV:
 
