@@ -49,9 +49,6 @@ PETSC_EXTERN PetscErrorCode PetscRegressorSetRegularizerWeight(PetscRegressor, P
 PETSC_EXTERN PetscErrorCode PetscRegressorSetUp(PetscRegressor);
 PETSC_EXTERN PetscErrorCode PetscRegressorSetFromOptions(PetscRegressor);
 PETSC_EXTERN PetscErrorCode PetscRegressorView(PetscRegressor, PetscViewer);
-PETSC_EXTERN PetscErrorCode PetscRegressorSetTraining(PetscRegressor, Mat, Vec);
-// PETSC_EXTERN PetscErrorCode PetscRegressorFit(PetscRegressor);
-// TODO: Decide if PetscRegressorFit() take only an PetscRegressor, or the training data and label (as in Scikit-learn), below.
 PETSC_EXTERN PetscErrorCode PetscRegressorFit(PetscRegressor, Mat, Vec);
 PETSC_EXTERN PetscErrorCode PetscRegressorPredict(PetscRegressor, Mat, Vec);
 PETSC_EXTERN PetscErrorCode PetscRegressorGetTao(PetscRegressor, Tao *);
