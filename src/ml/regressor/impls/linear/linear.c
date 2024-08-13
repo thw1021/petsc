@@ -213,7 +213,7 @@ PetscErrorCode PetscRegressorView_Linear(PetscRegressor regressor, PetscViewer v
 .  ksp - the KSP context
 
    Notes:
-   Depending on the type of the linear regressor and the options that are set, the regressor may use a Tao object instead of a KSP.
+   This routine will always return a KSP, but, depending on the type of the linear regressor and the options that are set, the regressor may actually use a Tao object instead of this KSP.
 
    Level: beginner
 
