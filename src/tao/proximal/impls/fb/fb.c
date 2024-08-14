@@ -23,12 +23,12 @@ static const char adapgm_citation[] = "@article{latafat2023convergence,\n"
 static PetscErrorCode TaoFB_LineSearch_PreApply_Private(TaoLineSearch ls, Vec in, PetscReal *f, Vec out, Vec g)
 {
   PetscReal               temp, diffnorm, inprod;
-  TaoLineSearch_PS *armP = (TaoLineSearch_PS *)ls->data; //TODO cast it after checking ls type?
+  TaoLineSearch_PS *armP = (TaoLineSearch_PS *)ls->data;
 
   PetscFunctionBegin;
 
-  // Input is prox_g(x- step * gradf(x))
-  /* Calculate function at new iterate */
+  /* Input is prox_g(x- step * gradf(x)) *
+   * Calculate function at new iterate i */
   PetscCall(TaoLineSearchComputeObjective(ls, out, &temp));
   /* Check criteria */
   PetscCall(VecWAXPY(armP->work2, -1., in, out));
@@ -46,7 +46,7 @@ static PetscErrorCode TaoFB_LineSearch_PreApply_Private(TaoLineSearch ls, Vec in
 
 static PetscErrorCode TaoFB_LineSearch_PostApply_Private(TaoLineSearch ls, Vec in, PetscReal *f, Vec out, Vec g)
 {
-  TaoLineSearch_PS *armP = (TaoLineSearch_PS *)ls->data; //TODO cast it after checking ls type?
+  TaoLineSearch_PS *armP = (TaoLineSearch_PS *)ls->data;
 
   PetscFunctionBegin;
   if (armP->memorySize > 1) {
@@ -59,7 +59,7 @@ static PetscErrorCode TaoFB_LineSearch_PostApply_Private(TaoLineSearch ls, Vec i
 
 static PetscErrorCode TaoFB_LineSearch_Update_Private(TaoLineSearch ls, Vec in, PetscReal *f, Vec out, Vec g)
 {
-  TaoLineSearch_PS *armP = (TaoLineSearch_PS *)ls->data; //TODO cast it after checking ls type?
+  TaoLineSearch_PS *armP = (TaoLineSearch_PS *)ls->data;
 
   PetscFunctionBegin;
   ls->step = ls->step * armP->eta;
@@ -72,7 +72,7 @@ static PetscErrorCode TaoFB_LineSearch_Update_Private(TaoLineSearch ls, Vec in, 
 static PetscErrorCode TaoFB_LineSearch_PostUpdate_Private(TaoLineSearch ls, Vec xold, PetscReal *f, Vec xnew, Vec g)
 {
   PetscReal inprod, diffnorm;
-  TaoLineSearch_PS *armP = (TaoLineSearch_PS *)ls->data; //TODO cast it after checking ls type?
+  TaoLineSearch_PS *armP = (TaoLineSearch_PS *)ls->data;
 
   PetscFunctionBegin;
   PetscCall(TaoLineSearchComputeObjective(ls, xnew, f));
@@ -90,14 +90,15 @@ static PetscErrorCode TaoFB_ADAPGM_Update_Stepsize_Private(Tao tao)
   PetscReal grad_x_dot, graddiff, xdiff, L, C, min1, min2;
 
   PetscFunctionBegin;
-  /* workvec: v, which is x - step*gradf(x) */
-  //temp \gets sqrt(norm(xnew - xold)
-  /* Gradient eval happens before prox for adaPGM, but after prox for FISTA-variants */
-  /* workvec: (z-x)/step + gradf(x) */
+  /* workvec: v, which is x - step*gradf(x)        *
+   * temp \gets sqrt(norm(xnew - xold)             *
+   * Gradient eval happens before prox for adaPGM, *
+   * but after prox for FISTA-variants             *
+   * workvec: (z-x)/step + gradf(x)                */
 
-  // step update
-  // workvec  : gradf(xnew) - gradf(xold)
-  // workvec2 : xnew - xold
+  /* step update                          *
+   * workvec  : gradf(xnew) - gradf(xold) *
+   * workvec2 : xnew - xold               */
   PetscCall(VecWAXPY(fb->workvec, -1., fb->grad_old, tao->gradient));
   PetscCall(VecWAXPY(fb->workvec2, -1., fb->x_old, tao->solution));
   PetscCall(VecTDot(fb->workvec, fb->workvec2, &grad_x_dot));
@@ -231,7 +232,6 @@ static PetscErrorCode TaoSolve_FB(Tao tao)
     /* Note: DMTaoApplyProximalMap's scale is 1/(2*step) */
     PetscCall(VecWAXPY(fb->dualvec, -tao->step, tao->gradient, tao->solution));
     PetscCall(DMTaoApplyProximalMap(fb->proxterm, fb->reg, tao->step * fb->prox_scale, fb->dualvec, tao->solution, PETSC_FALSE));
-    //PetscCall(TaoFB_Obj_Private(tao, tao->solution, &f));
     tao->nproxs++;
 
     /* -tao_ls_max_funcs 0 -> no linesearch, but constant stepsize

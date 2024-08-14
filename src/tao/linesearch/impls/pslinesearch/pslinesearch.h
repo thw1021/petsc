@@ -1,8 +1,17 @@
 #pragma once
 
-/* Context for an Armijo (nonmonotone) linesearch for proximal
+/* Context for an (nonmonotone) linesearch for proximal
  splitting algorithms.
 
+ Currently, PS supports TAOFB and TAOCV.
+
+ It should be noted that general Armijo-type linesearch is looking for
+ search direction, which is x + step*d. Howvever, for proxiaml-type algorithms,
+ the search direction is NOT a linear combination of two vectors, but rather
+ an output of a proximal operator, which is often called a ``solution map".
+ Therefore, TAOLINESEARCHPS requires a proximal operator inside the linesearch context.
+
+ For TaoFB:
  Given a function f, the current iterate x_k, and a next iterate
  x_{k+1}, find the biggest stepsize tau_k such that
 
@@ -28,11 +37,9 @@
  memory is used to store the previous function values.  The memory is
  initialized 5.
 
- It should be noted that general Armijo-type linesearch is looking for
- search direction, which is x + step*d. Howvever, for proxiaml-type algorithms,
- the search direction is NOT a linear combination of two vectors, but rather
- an output of a proximal operator, which is often called as a ``solution map".
- Therefore, PSARMIJO requires a proximal operator inside the linesearch context.
+ For TaoCV:
+
+ See documentation, and citation contained in TAOCV documentation.
 
  References:
 + * - Armijo, "Minimization of Functions Having Lipschitz Continuous
@@ -44,9 +51,12 @@
 . * - Grippo, Lampariello, and Lucidi, "A Nonmonotone Line Search Technique
     for Newton's Method," SIAM Journal on Numerical Analysis, volume 23,
     pages 707-716, 1986.
-- * - Grippo, Lampariello, and Lucidi, "A Class of Nonmonotone Stabilization
+. * - Grippo, Lampariello, and Lucidi, "A Class of Nonmonotone Stabilization
     Methods in Unconstrained Optimization," Numerische Mathematik, volume 59,
-  pages 779-805, 1991. */
+  pages 779-805, 1991.
+- * - Latafat, Themelis, Stella, and Patrinos, "Adaptive proximal algorithms
+    for convex optimization under local Lipschitz continuity of the gradient,"
+    arXiv preprint arXiv:2301.04431. */
 #include <petsc/private/taolinesearchimpl.h>
 typedef struct {
   PetscReal *memory;

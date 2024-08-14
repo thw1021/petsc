@@ -18,9 +18,9 @@ static const char citation[] = "@article{latafat2023adaptive,\n"
 
 static PetscErrorCode TaoCV_LineSearch_PreApply_Private(TaoLineSearch ls, Vec in, PetscReal *f, Vec out, Vec g)
 {
-  PetscReal               grad_x_dot, xdiffnorm, graddiffnorm;
+  PetscReal         grad_x_dot, xdiffnorm, graddiffnorm;
   TaoLineSearch_PS *armP = (TaoLineSearch_PS *)ls->data;
-  TAO_CV                 *cv = (TAO_CV *)ls->tao->data;
+  TAO_CV           *cv = (TAO_CV *)ls->tao->data;
 
   PetscFunctionBegin;
   armP->xi  = cv->pd_ratio * ls->tao->step * cv->eta * (1 + ls->tao->gatol);
@@ -37,9 +37,11 @@ static PetscErrorCode TaoCV_LineSearch_PreApply_Private(TaoLineSearch ls, Vec in
   armP->D = ls->tao->step * armP->L * (ls->tao->step * armP->C - 1);
 
   cv->eta   *= cv->R;
-  armP->cert = PETSC_INFINITY; // For TAOCV, linesearch needs to go at least once
+  /* For TAOCV, linesearch needs to go at least once */
+  armP->cert = PETSC_INFINITY;
   armP->dualvec_work = cv->dualvec_work;
   armP->dualvec_test = cv->dualvec_test;
+  //TODO dirty trick...
   PetscCall(PetscObjectReference((PetscObject)armP->dualvec_work));
   PetscCall(PetscObjectReference((PetscObject)armP->dualvec_test));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -83,8 +85,8 @@ static PetscErrorCode TaoCV_LineSearch_Update_Private(TaoLineSearch ls, Vec in, 
 static PetscErrorCode TaoCV_LineSearch_PostUpdate_Private(TaoLineSearch ls, Vec in, PetscReal *f, Vec out, Vec g)
 {
   TaoLineSearch_PS *armP = (TaoLineSearch_PS *)ls->data;
-  TAO_CV                 *cv = (TAO_CV *)ls->tao->data;
-  PetscReal               norm1, norm2;
+  TAO_CV           *cv = (TAO_CV *)ls->tao->data;
+  PetscReal         norm1, norm2;
 
   PetscFunctionBegin;
   /* workvec : A^T * y_test */
@@ -121,72 +123,6 @@ static PetscErrorCode TaoCV_ObjGrad_Private(Tao tao, Vec x, PetscReal *f, Vec g)
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-
-#if 0
-//TODO I have this implemented in PS too, but...
-//this needs pd_ratio, eta, x, x_old, grad, grad_old,  step, step_old, nu, sigma, lmap, dualvecs? Aty
-static PetscErrorCode TaoCV_Stepsize_With_LS_Private(Tao tao)
-{
-  TAO_CV   *cv = (TAO_CV *)tao->data;
-  PetscReal xi, grad_x_dot, xdiffnorm, graddiffnorm, L, C, D, min1, min2, min3, temp, temp2, temp3, step_new, rho, norm1, norm2;
-
-  PetscFunctionBegin;
-  // TODO should we use eta for norm estimate, or just use h_map_norm? set bool is still false
-  xi = cv->pd_ratio * tao->step * cv->eta * (1 + tao->gatol);
-  xi *= xi;
-
-  PetscCall(VecWAXPY(cv->workvec, -1., cv->grad_old, tao->gradient));
-  PetscCall(VecWAXPY(cv->workvec2, -1., cv->x_old, tao->solution));
-  PetscCall(VecTDot(cv->workvec, cv->workvec2, &grad_x_dot));
-  PetscCall(VecNorm(cv->workvec2, NORM_2, &xdiffnorm));
-  PetscCall(VecNorm(cv->workvec, NORM_2, &graddiffnorm));
-
-  L = (xdiffnorm == 0) ? 0 : grad_x_dot / (xdiffnorm * xdiffnorm);
-  C = (grad_x_dot == 0) ? 0 : (graddiffnorm * graddiffnorm) / grad_x_dot;
-  D = tao->step * L * (tao->step * C - 1);
-
-  //  cv->h_lmap_norm *= cv->R;
-  cv->eta *= cv->R;
-
-  PetscInt iter = 0;
-  while (1) {
-    min1      = tao->step * PetscSqrtReal(1 + tao->step / cv->step_old);
-    min2      = 1 / (2 * cv->nu * cv->pd_ratio * cv->eta);
-    temp      = 1 - 4 * xi;
-    temp2     = cv->pd_ratio * cv->eta * tao->step; //Unlike no linesearch, this "xi" uses updated norm estimate
-    temp3     = PetscSqrtReal(D * D + temp * temp2 * temp2);
-    min3      = tao->step * PetscSqrtReal(temp / (2 * (1 + tao->gatol) * (temp3 + D)));
-    step_new  = PetscMin(min1, PetscMin(min2, min3));
-    rho       = step_new / tao->step;
-    cv->sigma = cv->pd_ratio * cv->pd_ratio * step_new;
-
-    /* dualvec_work: w = y + sigma *((1+rho) * Ax - rho * Ax_old) */
-    PetscCall(VecWAXPY(cv->dualvec_work, -cv->sigma * rho, cv->Ax_old, tao->dualvec));
-    PetscCall(VecAXPY(cv->dualvec_work, cv->sigma * (1 + rho), cv->Ax));
-    /* dualvec: y = prox_h*(w, sigma) */
-    PetscCall(DMTaoApplyProximalMap(cv->h_prox, cv->reg, cv->sigma * cv->h_scale, cv->dualvec_work, cv->dualvec_test, PETSC_TRUE));
-    /* workvec : A^T * y_test */
-    PetscCall(MatMultTranspose(cv->h_lmap, cv->dualvec_test, cv->workvec));
-    /* norm1 = norm(ATy_test - ATy) */
-    PetscCall(VecWAXPY(cv->workvec2, -1., cv->ATy, cv->workvec));
-    PetscCall(VecNorm(cv->workvec2, NORM_2, &norm1));
-    /* norm2 = norm(y_test - y) */
-    PetscCall(VecWAXPY(cv->dualvec_work2, -1., cv->dualvec_test, tao->dualvec));
-    PetscCall(VecNorm(cv->dualvec_work2, NORM_2, &norm2));
-    if (cv->eta >= norm1 / norm2) {
-      cv->step_old = tao->step;
-      tao->step    = step_new;
-      PetscCall(VecCopy(cv->dualvec_test, tao->dualvec));
-      PetscCall(VecCopy(cv->workvec, cv->ATy));
-      break;
-    }
-    cv->eta *= cv->r;
-    iter++;
-    PetscCheck(iter < 100, PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "LS loop stuck");
-  }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-#endif
 
 static PetscErrorCode TaoCV_Stepsize_No_LS_Private(Tao tao)
 {
@@ -290,9 +226,6 @@ static PetscErrorCode TaoSolve_CV(Tao tao)
       /* dualvec: y = prox_h*(w, sigma) */
       PetscCall(DMTaoApplyProximalMap(cv->h_prox, cv->reg, cv->sigma * cv->h_scale, cv->dualvec_work, tao->dualvec, PETSC_TRUE));
     } else {
-      //PetscCall(TaoCV_Stepsize_With_LS_Private(tao)); //prox_h is done inside this routine for linesearch version
-      //calling this a linesearch a-la Armijo is a strech....
-      // this LS inputs are not really "real" in that all things are done internally...
       // LS needs: x1, x0, grad_1, grad_0, Ax_old, dualvec(y), sigma, pd_ratio, nu, eta
       PetscCall(TaoLineSearchSetInitialStepLength(tao->linesearch, tao->step));
       PetscCall(TaoLineSearchApply(tao->linesearch, cv->x_old, &f, tao->gradient, tao->solution, &tao->step, &ls_status));
@@ -339,7 +272,6 @@ static PetscErrorCode TaoSetFromOptions_CV(Tao tao, PetscOptionItems *PetscOptio
   PetscCall(PetscOptionsReal("-tao_cv_nu", "Stepsize scale parameter nu. Must be  >1+tol.", "", cv->nu, &cv->nu, NULL));
   //TODO TaoCVSetInitialNormEstimate(Tao, PetscReal) ?
   PetscCall(PetscOptionsReal("-tao_cv_eta", "Initial linear map norm estimate. Must be nonnegative", "", cv->eta, &cv->eta, NULL));
-  PetscCall(PetscOptionsReal("-tao_cv_tol", "Stepsize tolerance parameter", "", cv->tol, &cv->tol, NULL));
   PetscCall(TaoLineSearchSetFromOptions(tao->linesearch));
   PetscOptionsHeadEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -400,7 +332,6 @@ static PetscErrorCode TaoSetUp_CV(Tao tao)
   if (!cv->dualvec_work) PetscCall(MatCreateVecs(cv->h_lmap, NULL, &cv->dualvec_work));
   if (!cv->dualvec_work2) PetscCall(MatCreateVecs(cv->h_lmap, NULL, &cv->dualvec_work2));
   //TODO option to set regularizer type??
-  //if L is set, should default stepsize be that? not for sparsa...
   PetscCall(DMCreate(PetscObjectComm((PetscObject)tao), &cv->reg));
   PetscCall(DMTaoSetType(cv->reg, DMTAOL2));
 
@@ -462,7 +393,6 @@ PETSC_EXTERN PetscErrorCode TaoCreate_CV(Tao tao)
   cv->h_scale    = 1.;
   cv->g_scale    = 1.;
   cv->gnorm_norm = 0.;
-  cv->tol        = 1.e-6;
   cv->R          = 0.95;
   cv->r          = 2.;
   cv->pd_ratio   = 0.01;

@@ -168,7 +168,7 @@ static PetscErrorCode TaoLineSearchApply_PS(TaoLineSearch ls, Vec xold, PetscRea
 
    Level: developer
 
-seealso: `TaoLineSearch`, `TAOFB`, `Tao`
+seealso: `TaoLineSearch`, `TAOFB`, `TAOCV`, `Tao`
 M*/
 PETSC_EXTERN PetscErrorCode TaoLineSearchCreate_PS(TaoLineSearch ls)
 {
