@@ -10,5 +10,6 @@ DM: Interfacing Between Solvers and Models/Discretizations
    dmplex
    dmstag
    dmnetwork
+   section
    dt
    fe
