@@ -2816,36 +2816,6 @@ cdef PetscErrorCode TaoPostStep_Python(
 
 # --------------------------------------------------------------------
 
-#cdef extern from * nogil:
-#    struct _DMOps:
-#        PetscErrorCode (*destroy)(PetscDM) except PETSC_ERR_PYTHON
-#        PetscErrorCode (*applyproximalmap)(PetscDM, PetscDM, PetscReal, PetscVec, PetscVec, PetscBool) except PETSC_ERR_PYTHON
-#    ctypedef _DMOps *DMOps
-#    struct _p_DM:
-#        void       *data
-#        DMOps       ops
-#        PetscObject dmtao #TODO??
-#
-#cdef extern from * nogil: # custom.h
-#    PetscErrorCode DMTaoApplyProximalMap(PetscDM, PetscDM, PetscReal, PetscVec, PetscVec, PetscBool)
-#
-#@cython.internal
-#cdef class _PyDM(_PyObj): pass
-#cdef inline _PyDM PyDM(PetscDM dm):
-#    if dm != NULL and dm.data != NULL:
-#        return <_PyDM>dm.data
-#    else:
-#        return _PyDM.__new__(_PyDM)
-
-# TODO I may need DMDestroy_Python, even though DM doesnt really have python implementation
-# just because DMTao needs DMTaoDestroy_Python ???
-#TODO error with incomplete definition of DM
-#But i don't want DMPYTHON -> Meaningless...
-#I only need to destroy DM's compose,context properly, and somehow
-#stash applyproximalmap...
-
-# --------------------------------------------------------------------
-
 cdef extern from * nogil:
     struct _DMTaoOps:
         PetscErrorCode (*destroy)(PetscDMTAO) except PETSC_ERR_PYTHON
