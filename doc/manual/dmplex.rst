@@ -111,6 +111,13 @@ search structures and indices for the different types of points using
 
    DMPlexStratify(dm);
 
+Grid Point Orientations
+~~~~~~~~~~~~~~~~~~~~~~~
+
+TODO: fill this out with regard to orientations.
+
+Should probably reference Hapla and summarize what's there.
+
 Dealing with Periodicity
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -138,11 +145,106 @@ For the default scheme, a call to ``DMLocalizeCoordinates()`` (which usually hap
   PetscCall(PetscPrintf(PETSC_COMM_SELF, "\n"));
   PetscCall(DMPlexRestoreCellCoordinates(dm, cell, &isDG, &numCoords, &array, &coords));
 
-Connecting Grids to Data:
-~~~~~~~~~~~~~~~~~~~~~~~~~
+Connecting Grids to Data Using PetscSection:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 A ``PetscSection`` is used to describe the connection between the grid and it's data.
-The exact methodology to do that is explained in the :any:`ch_petscsection`.
+The basic usage of ``PetscSection`` is described in :any:`ch_petscsection`.
+Using the mesh from :numref:`fig_doubletMesh`, we provide an example of creating a ``PetscSection`` for a single field.
+We can lay out data for a continuous Galerkin :math:`P_3` finite element method,
+
+.. code-block::
+
+   PetscInt pStart, pEnd, cStart, cEnd, c, vStart, vEnd, v, eStart, eEnd, e;
+
+   DMPlexGetChart(dm, &pStart, &pEnd);
+   DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd);   // cells
+   DMPlexGetHeightStratum(dm, 1, &eStart, &eEnd);   // edges
+   DMPlexGetHeightStratum(dm, 2, &vStart, &vEnd);   // vertices, equivalent to DMPlexGetDepthStratum(dm, 0, &vStart, &vEnd);
+   PetscSectionSetChart(s, pStart, pEnd);
+   for(c = cStart; c < cEnd; ++c)
+       PetscSectionSetDof(s, c, 1);
+   for(v = vStart; v < vEnd; ++v)
+       PetscSectionSetDof(s, v, 1);
+   for(e = eStart; e < eEnd; ++e)
+       PetscSectionSetDof(s, e, 2); // two dof on each edge
+   PetscSectionSetUp(s);
+
+``DMPlexGetHeightStratum()`` returns all the points of the requested height
+in the DAG. Since this problem is in two dimensions the edges are at
+height 1 and the vertices at height 2 (the cells are always at height
+0). One can also use ``DMPlexGetDepthStratum()`` to use the depth in the
+DAG to select the points. ``DMPlexGetDepth(dm,&depth)`` returns the depth
+of the DAG, hence ``DMPlexGetDepthStratum(dm,depth-1-h,)`` returns the
+same values as ``DMPlexGetHeightStratum(dm,h,)``.
+
+For :math:`P_3` elements there is one degree of freedom at each vertex, 2 along
+each edge (resulting in a total of 4 degrees of freedom along each edge
+including the vertices, thus being able to reproduce a cubic function)
+and 1 degree of freedom within the cell (the bubble function which is
+zero along all edges).
+
+Now a PETSc local vector can be created manually using this layout,
+
+.. code-block::
+
+   PetscSectionGetStorageSize(s, &n);
+   VecSetSizes(localVec, n, PETSC_DETERMINE);
+   VecSetFromOptions(localVec);
+
+When working with ``DMPLEX`` and ``PetscFE`` (see below) one can simply get the sections (and related vectors) with
+
+.. code-block::
+
+   DMSetLocalSection(dm, s);
+   DMGetLocalVector(dm, &localVec);
+   DMGetGlobalVector(dm, &globalVec);
+
+DMPlex-specific PetscSection Features:
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Closure:
+""""""""
+Closure information can be attached to a ``PetscSection`` to allow for more efficient closure information queries.
+This information can either be set directly with ``DMPlexCreateClosureIndex()`` or generated automatically for a DMPlex via ``DMPlexCreateClosureIndex()``.
+
+Symmetries: Accessing data from different orientations
+""""""""""""""""""""""""""""""""""""""""""""""""""""""
+While mesh point orientation information specifies how one mesh point is oriented with respect to another, it does not describe how the dofs associated with that mesh point should be permuted for that orientation.
+This information is supplied via a ``PetscSectionSym`` object that is attached to the ``PetscSection``.
+Generally the setup and usage of this information is handled automatically by PETSc during setup of a Plex.
+
+Closure Permutation:
+""""""""""""""""""""
+Basically it's just a way of storing closure information onto the PetscSection that something else can access later.
+
+Data Layout using DMPLEX and PetscFE
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A ``DM`` can automatically create the local section if given a description of the discretization, for example using a ``PetscFE`` object. We demonstrate this by creating
+a ``PetscFE`` that can be configured from the command line. It is a single, scalar field, and is added to the ``DM`` using ``DMSetField()``.
+When a local or global vector is requested, the ``DM`` builds the local and global sections automatically.
+
+.. code-block::
+
+  DMPlexIsSimplex(dm, &simplex);
+  PetscFECreateDefault(PETSC_COMM_SELF, dim, 1, simplex, NULL, -1, &fe);
+  DMSetField(dm, 0, NULL, (PetscObject) fe);
+  DMCreateDS(dm);
+
+Here the call to ``DMSetField()`` declares the discretization will have one field with the integer label 0 that has one degree of freedom at each point on the ``DMPlex``.
+To get the :math:`P_3` section above, we can either give the option ``-petscspace_degree 3``, or call ``PetscFECreateLagrange()`` and set the degree directly.
+
+Partitioning and Ordering
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In the same way as ``MatPartitioning`` or
+``MatGetOrdering()``, give the results of a partitioning or ordering of a graph defined by a sparse matrix,
+``PetscPartitionerDMPlexPartition`` or ``DMPlexPermute`` are encoded in
+an ``IS``. However, the graph is not the adjacency graph of the matrix
+but the mesh itself. Once the mesh is partitioned and
+reordered, the data layout from a ``PetscSection`` can be used to
+automatically derive a problem partitioning/ordering.
 
 Influence of Variables on One Another
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
