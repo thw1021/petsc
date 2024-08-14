@@ -64,6 +64,8 @@ static PetscErrorCode TaoLineSearchApply_PSArmijo(TaoLineSearch ls, Vec xold, Pe
   TaoLineSearch_PSARMIJO *armP = (TaoLineSearch_PSARMIJO *)ls->data;
   PetscInt                i, its = 0;
   MPI_Comm                comm;
+  Vec                     vecin, vecout;
+  PetscBool               cj;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectGetComm((PetscObject)ls, &comm));
@@ -121,27 +123,20 @@ static PetscErrorCode TaoLineSearchApply_PSArmijo(TaoLineSearch ls, Vec xold, Pe
 
   ls->step = ls->initstep;
 
-  /* TODO replace below with this */
   if (ls->ops->preapply) PetscUseTypeMethod(ls, preapply, xold, f, xnew, g);
-
-  Vec       vecin, vecout;
-  PetscBool cj;
 
   while (armP->cert >= ls->ftol && ls->nproxeval < ls->max_funcs) {
     /* Calculate iterate */
     ++its;
 
-    // TODO replace below with this
     if (ls->ops->update) PetscUseTypeMethod(ls, update, xold, f, xnew, g);
-//    vecin  = (ls->lmap) ? armP->dualvec_work : armP->work;
-//    vecout = (ls->lmap) ? armP->dualvec_test : xnew;
-    vecin = armP->work;
-    vecout = xnew;
+    vecin  = (ls->lmap) ? armP->dualvec_work : armP->work;
+    vecout = (ls->lmap) ? armP->dualvec_test : xnew;
     cj     = (ls->lmap) ? PETSC_TRUE : PETSC_FALSE;
     PetscCall(DMTaoApplyProximalMap(ls->prox, ls->prox_reg, armP->test_step, vecin, vecout, cj));
     ls->nproxeval++;
     if (ls->ops->postupdate) PetscUseTypeMethod(ls, postupdate, xold, f, xnew, g);
-    PetscCall(TaoLineSearchMonitor(ls, its, *f, ls->step));//TODO Cv is cert how to deal with this generally?
+    PetscCall(TaoLineSearchMonitor(ls, its, *f, ls->step));
   }
 
   /* Check termination */

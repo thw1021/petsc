@@ -18,14 +18,11 @@ static const char citation[] = "@article{latafat2023adaptive,\n"
 
 static PetscErrorCode TaoCV_LineSearch_PreApply_Private(TaoLineSearch ls, Vec in, PetscReal *f, Vec out, Vec g)
 {
-        //TODO make dualvec work inside here?
   PetscReal               grad_x_dot, xdiffnorm, graddiffnorm;
-  TaoLineSearch_PSARMIJO *armP = (TaoLineSearch_PSARMIJO *)ls->data; //TODO cast it after checking ls type?
+  TaoLineSearch_PSARMIJO *armP = (TaoLineSearch_PSARMIJO *)ls->data;
   TAO_CV                 *cv = (TAO_CV *)ls->tao->data;
 
   PetscFunctionBegin;
-  //TODO this is duplicate code. I suppose one can make private method that does this
-
   armP->xi  = cv->pd_ratio * ls->tao->step * cv->eta * (1 + ls->tao->gatol);
   armP->xi *= armP->xi;
 
@@ -41,12 +38,14 @@ static PetscErrorCode TaoCV_LineSearch_PreApply_Private(TaoLineSearch ls, Vec in
 
   cv->eta   *= cv->R;
   armP->cert = PETSC_INFINITY; // For TAOCV, linesearch needs to go at least once
+  armP->dualvec_work = cv->dualvec_work;
+  armP->dualvec_test = cv->dualvec_test;//TODO dirty
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode TaoCV_LineSearch_Update_Private(TaoLineSearch ls, Vec in, PetscReal *f, Vec out, Vec g)
 {
-  TaoLineSearch_PSARMIJO *armP = (TaoLineSearch_PSARMIJO *)ls->data; //TODO cast it after checking ls type?
+  TaoLineSearch_PSARMIJO *armP = (TaoLineSearch_PSARMIJO *)ls->data;
   TAO_CV                 *cv = (TAO_CV *)ls->tao->data;
   PetscReal               min1, min2, min3, rho, temp, temp2, temp3;
 
@@ -71,7 +70,7 @@ static PetscErrorCode TaoCV_LineSearch_Update_Private(TaoLineSearch ls, Vec in, 
 
 static PetscErrorCode TaoCV_LineSearch_PostUpdate_Private(TaoLineSearch ls, Vec in, PetscReal *f, Vec out, Vec g)
 {
-  TaoLineSearch_PSARMIJO *armP = (TaoLineSearch_PSARMIJO *)ls->data; //TODO cast it after checking ls type?
+  TaoLineSearch_PSARMIJO *armP = (TaoLineSearch_PSARMIJO *)ls->data;
   TAO_CV                 *cv = (TAO_CV *)ls->tao->data;
   PetscReal               norm1, norm2;
 
@@ -210,7 +209,7 @@ static PetscErrorCode TaoSolve_CV(Tao tao)
   TAO_CV   *cv = (TAO_CV *)tao->data;
   PetscReal f, gnorm, lip, rho;
   PetscReal pri_res_norm, dual_res_norm, g_val, h_val;
-  //  TaoLineSearchConvergedReason ls_status = TAOLINESEARCH_CONTINUE_ITERATING;
+  TaoLineSearchConvergedReason ls_status = TAOLINESEARCH_CONTINUE_ITERATING;
 
   PetscFunctionBegin;
   PetscCheck(tao->step >= 0, PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "Stepsize cannot be negative");
@@ -277,11 +276,17 @@ static PetscErrorCode TaoSolve_CV(Tao tao)
       /* dualvec: y = prox_h*(w, sigma) */
       PetscCall(DMTaoApplyProximalMap(cv->h_prox, cv->reg, cv->sigma * cv->h_scale, cv->dualvec_work, tao->dualvec, PETSC_TRUE));
     } else {
-      PetscCall(TaoCV_Stepsize_With_LS_Private(tao)); //prox_h is done inside this routine for linesearch version
+      //PetscCall(TaoCV_Stepsize_With_LS_Private(tao)); //prox_h is done inside this routine for linesearch version
       //calling this a linesearch a-la Armijo is a strech....
       // this LS inputs are not really "real" in that all things are done internally...
       // LS needs: x1, x0, grad_1, grad_0, Ax_old, dualvec(y), sigma, pd_ratio, nu, eta
-      //PetscCall(TaoLineSearchApply(tao->linesearch, cv->dualvec, &f, tao->gradient, tao->solution, &tao->step, &ls_status));
+      PetscCall(TaoLineSearchSetInitialStepLength(tao->linesearch, tao->step));
+      PetscCall(TaoLineSearchApply(tao->linesearch, cv->x_old, &f, tao->gradient, tao->solution, &tao->step, &ls_status));
+      PetscCall(TaoAddLineSearchCounts(tao));
+      if (ls_status != TAOLINESEARCH_SUCCESS && ls_status != TAOLINESEARCH_SUCCESS_USER) {
+        tao->step = 0.;
+        tao->reason = TAO_DIVERGED_LS_FAILURE;
+      }
     }
 
     PetscCall(VecAXPY(cv->dualvec_work, -1., tao->dualvec));
