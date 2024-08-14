@@ -26,7 +26,6 @@ static PetscErrorCode TaoFB_LineSearch_PreApply_Private(TaoLineSearch ls, Vec in
   TaoLineSearch_PS *armP = (TaoLineSearch_PS *)ls->data;
 
   PetscFunctionBegin;
-
   /* Input is prox_g(x- step * gradf(x)) *
    * Calculate function at new iterate i */
   PetscCall(TaoLineSearchComputeObjective(ls, out, &temp));
