@@ -10,6 +10,8 @@ static PetscErrorCode TaoLineSearchDestroy_PSArmijo(TaoLineSearch ls)
   PetscFunctionBegin;
   PetscCall(PetscFree(armP->memory));
   if (armP->x) PetscCall(PetscObjectDereference((PetscObject)armP->x));
+  if (armP->dualvec_work) PetscCall(PetscObjectDereference((PetscObject)armP->dualvec_work));
+  if (armP->dualvec_test) PetscCall(PetscObjectDereference((PetscObject)armP->dualvec_test));
   PetscCall(VecDestroy(&armP->work));
   PetscCall(VecDestroy(&armP->work2));
   PetscCall(PetscFree(ls->data));

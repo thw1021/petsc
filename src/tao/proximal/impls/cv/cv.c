@@ -39,7 +39,19 @@ static PetscErrorCode TaoCV_LineSearch_PreApply_Private(TaoLineSearch ls, Vec in
   cv->eta   *= cv->R;
   armP->cert = PETSC_INFINITY; // For TAOCV, linesearch needs to go at least once
   armP->dualvec_work = cv->dualvec_work;
-  armP->dualvec_test = cv->dualvec_test;//TODO dirty
+  armP->dualvec_test = cv->dualvec_test;
+  PetscCall(PetscObjectReference((PetscObject)armP->dualvec_work));
+  PetscCall(PetscObjectReference((PetscObject)armP->dualvec_test));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoCV_LineSearch_PostApply_Private(TaoLineSearch ls, Vec in, PetscReal *f, Vec out, Vec g)
+{
+  TaoLineSearch_PSARMIJO *armP = (TaoLineSearch_PSARMIJO *)ls->data;
+
+  PetscFunctionBegin;
+  PetscCall(PetscObjectDereference((PetscObject)armP->dualvec_work));
+  PetscCall(PetscObjectDereference((PetscObject)armP->dualvec_test));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -395,6 +407,7 @@ static PetscErrorCode TaoSetUp_CV(Tao tao)
   PetscCall(TaoLineSearchSetProxAndLinearMap(tao->linesearch, cv->h_prox, cv->h_scale, cv->reg, cv->h_lmap, cv->h_lmap_norm));
 
   tao->linesearch->ops->preapply   = TaoCV_LineSearch_PreApply_Private;
+  tao->linesearch->ops->postapply  = TaoCV_LineSearch_PostApply_Private;
   tao->linesearch->ops->update     = TaoCV_LineSearch_Update_Private;
   tao->linesearch->ops->postupdate = TaoCV_LineSearch_PostUpdate_Private;
   PetscFunctionReturn(PETSC_SUCCESS);
