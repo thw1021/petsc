@@ -3400,7 +3400,7 @@ cdef class Vec(Object):
         cdef PetscIS indices = NULL
         CHKERR(VecGhostGetGhostIS(self.vec, &indices))
         return ref_IS(indices)
-        
+
     #
 
     def getSubVector(self, IS iset, Vec subvec=None) -> Vec:
