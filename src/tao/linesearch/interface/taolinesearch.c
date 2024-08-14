@@ -635,8 +635,9 @@ PetscErrorCode TaoLineSearchIsUsingTaoRoutines(TaoLineSearch ls, PetscBool *flg)
 }
 
 /*@C
-  TaoLineSearchSetProx - Sets the `DM` contexts that contain
-  appropriate proximal mapping. Used for TAOLINESEARCHPSARMIJO
+  TaoLineSearchSetProxAndLinearMap - Sets the `DM` contexts that contain
+  appropriate proximal mapping, and linear mapping, if necessary.
+  Used for TAOLINESEARCHPSARMIJO
 
   Logically Collective
 
@@ -644,7 +645,9 @@ PetscErrorCode TaoLineSearchIsUsingTaoRoutines(TaoLineSearch ls, PetscBool *flg)
 + ls     - the `TaoLineSearch` context
 . dm0    - the `DM` context that contains appropriate proximal mapping
 . scale0 - scale of dm0 object
-- dm1    - the `DM` context for regularizing metric. This may be NULL
+. dm1    - the `DM` context for regularizing metric. This may be NULL
+. lmap   - the 'Mat` context for linear mapping. May be NULL
+- norm   - norm of lmap, if applicable. Zero if unavailable.
 
   Level: advanced
 
@@ -653,20 +656,26 @@ PetscErrorCode TaoLineSearchIsUsingTaoRoutines(TaoLineSearch ls, PetscBool *flg)
 
 .seealso: [](ch_tao), `Tao`, `TaoLineSearch`, `TaoLineSearchCreate()`, `TaoLineSearchSetGradientRoutine()`, `TaoLineSearchSetObjectiveAndGradientRoutine()`, `TaoLineSearchUseTaoRoutines()`
 @*/
-PetscErrorCode TaoLineSearchSetProx(TaoLineSearch ls, DM dm0, PetscReal scale0, DM dm1)
+PetscErrorCode TaoLineSearchSetProxAndLinearMap(TaoLineSearch ls, DM dm0, PetscReal scale0, DM dm1, Mat lmap, PetscReal lmap_norm)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ls, TAOLINESEARCH_CLASSID, 1);
   PetscValidHeaderSpecific(dm0, DM_CLASSID, 2);
+  PetscValidLogicalCollectiveReal(ls, scale0, 3);
   PetscCheck(scale0 >= 0, PetscObjectComm((PetscObject)ls), PETSC_ERR_USER, "Scale needs to be non-negative.");
-  if (dm1) PetscValidHeaderSpecific(dm1, DM_CLASSID, 2);
+  if (dm1) PetscValidHeaderSpecific(dm1, DM_CLASSID, 4);
+  if (lmap) PetscValidHeaderSpecific(lmap, MAT_CLASSID, 5);
+  PetscValidLogicalCollectiveReal(ls, lmap_norm, 6);
+  PetscCheck(lmap_norm >= 0, PetscObjectComm((PetscObject)ls), PETSC_ERR_USER, "Matrix norm needs to be non-negative.");
   ls->prox       = dm0;
   ls->prox_scale = scale0;
-  if (dm1) {
-    ls->prox_reg = dm1;
-  } else {
-    ls->prox_reg = NULL;
-  }
+  ls->lmap_norm  = lmap_norm;
+
+  if (dm1) ls->prox_reg = dm1;
+  else ls->prox_reg = NULL;
+
+  if (lmap) ls->lmap = lmap;
+  else ls->lmap = NULL;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

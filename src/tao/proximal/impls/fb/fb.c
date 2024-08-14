@@ -3,6 +3,7 @@
 #include <petsc/private/taoimpl.h>
 #include <petsc/private/dmimpl.h>
 #include <petsc/private/taolinesearchimpl.h>
+#include <../src/tao/linesearch/impls/psarmijo/psarmijo.h>
 
 static PetscBool  fasta_cited       = PETSC_FALSE;
 static PetscBool  adapgm_cited      = PETSC_FALSE;
@@ -18,6 +19,70 @@ static const char adapgm_citation[] = "@article{latafat2023convergence,\n"
                                       "journal={arXiv preprint arXiv:2311.18431},\n"
                                       "year={2023}\n"
                                       "}\n";
+
+static PetscErrorCode TaoFB_LineSearch_PreApply_Private(TaoLineSearch ls, Vec in, PetscReal *f, Vec out, Vec g)
+{
+  PetscReal               temp, diffnorm, inprod;
+  TaoLineSearch_PSARMIJO *armP = (TaoLineSearch_PSARMIJO *)ls->data; //TODO cast it after checking ls type?
+
+  PetscFunctionBegin;
+
+  // Input is prox_g(x- step * gradf(x))
+  /* Calculate function at new iterate */
+  PetscCall(TaoLineSearchComputeObjective(ls, out, &temp));
+  /* Check criteria */
+  PetscCall(VecWAXPY(armP->work2, -1., in, out));
+  PetscCall(VecTDot(armP->work2, armP->work2, &diffnorm));
+  PetscCall(VecTDot(armP->work2, g, &inprod));
+  armP->cert = temp - (inprod + (1 / (2 * ls->step)) * diffnorm + armP->ref);
+
+  /* accept xnew */
+  if (armP->cert < ls->rtol) {
+    PetscCall(TaoLineSearchComputeObjective(ls, out, f));
+    ls->reason = TAOLINESEARCH_SUCCESS;
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoFB_LineSearch_PostApply_Private(TaoLineSearch ls, Vec in, PetscReal *f, Vec out, Vec g)
+{
+  TaoLineSearch_PSARMIJO *armP = (TaoLineSearch_PSARMIJO *)ls->data; //TODO cast it after checking ls type?
+
+  PetscFunctionBegin;
+  if (armP->memorySize > 1) {
+    armP->current++;
+    if (armP->current >= armP->memorySize) armP->current = 0;
+    armP->memory[armP->current] = *f;
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoFB_LineSearch_Update_Private(TaoLineSearch ls, Vec in, PetscReal *f, Vec out, Vec g)
+{
+  TaoLineSearch_PSARMIJO *armP = (TaoLineSearch_PSARMIJO *)ls->data; //TODO cast it after checking ls type?
+
+  PetscFunctionBegin;
+  ls->step = ls->step * armP->eta;
+  /* FB: input to prox: x_k - step*gradf(x_k) */
+  PetscCall(VecWAXPY(armP->work, -ls->step, g, in));
+  armP->test_step = ls->step * ls->prox_scale;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoFB_LineSearch_PostUpdate_Private(TaoLineSearch ls, Vec xold, PetscReal *f, Vec xnew, Vec g)
+{
+  PetscReal inprod, diffnorm;
+  TaoLineSearch_PSARMIJO *armP = (TaoLineSearch_PSARMIJO *)ls->data; //TODO cast it after checking ls type?
+
+  PetscFunctionBegin;
+  PetscCall(TaoLineSearchComputeObjective(ls, xnew, f));
+  PetscCall(VecWAXPY(armP->work2, -1., xold, xnew));
+  PetscCall(VecTDot(armP->work2, armP->work2, &diffnorm));
+  PetscCall(VecTDot(armP->work2, g, &inprod));
+
+  armP->cert = *f - (inprod + (1 / (2 * ls->step)) * diffnorm + armP->ref);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
 
 static PetscErrorCode TaoFB_ADAPGM_Update_Stepsize_Private(Tao tao)
 {
@@ -281,7 +346,12 @@ static PetscErrorCode TaoSetUp_FB(Tao tao)
    * However, LS still needs Tao object to find its TaoType */
   PetscCall(TaoLineSearchUseTaoRoutines(tao->linesearch, tao));
   if (fb->smoothterm) PetscCall(TaoLineSearchUseDM(tao->linesearch, fb->smoothterm));
-  PetscCall(TaoLineSearchSetProx(tao->linesearch, fb->proxterm, fb->prox_scale, fb->reg));
+  PetscCall(TaoLineSearchSetProxAndLinearMap(tao->linesearch, fb->proxterm, fb->prox_scale, fb->reg, NULL, 0.));
+
+  tao->linesearch->ops->preapply   = TaoFB_LineSearch_PreApply_Private;
+  tao->linesearch->ops->postapply  = TaoFB_LineSearch_PostApply_Private;
+  tao->linesearch->ops->update     = TaoFB_LineSearch_Update_Private;
+  tao->linesearch->ops->postupdate = TaoFB_LineSearch_PostUpdate_Private;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

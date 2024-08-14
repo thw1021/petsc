@@ -11,7 +11,11 @@ struct _TaoLineSearchOps {
   PetscErrorCode (*computeobjectiveandgts)(TaoLineSearch, Vec, Vec, PetscReal *, PetscReal *, void *);
   PetscErrorCode (*computeproximalmap)(TaoLineSearch, PetscReal, Vec, Vec, PetscBool, void *);
   PetscErrorCode (*setup)(TaoLineSearch);
+  PetscErrorCode (*preapply)(TaoLineSearch, Vec, PetscReal *, Vec, Vec);
   PetscErrorCode (*apply)(TaoLineSearch, Vec, PetscReal *, Vec, Vec);
+  PetscErrorCode (*postapply)(TaoLineSearch, Vec, PetscReal *, Vec, Vec);
+  PetscErrorCode (*update)(TaoLineSearch, Vec, PetscReal *, Vec, Vec);
+  PetscErrorCode (*postupdate)(TaoLineSearch, Vec, PetscReal *, Vec, Vec);
   PetscErrorCode (*view)(TaoLineSearch, PetscViewer);
   PetscErrorCode (*setfromoptions)(TaoLineSearch, PetscOptionItems *);
   PetscErrorCode (*reset)(TaoLineSearch);
@@ -70,6 +74,8 @@ struct _p_TaoLineSearch {
   DM        prox; /* DM that contains proximal map. For PSARMIJO */
   DM        prox_reg;
   PetscReal prox_scale;
+  Mat       lmap;
+  PetscReal lmap_norm;
 };
 
 PETSC_EXTERN PetscLogEvent TAOLINESEARCH_Apply;

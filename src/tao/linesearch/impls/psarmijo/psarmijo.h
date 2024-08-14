@@ -61,4 +61,7 @@ typedef struct {
 
   Vec x; /* Maintain reference to variable vector to check for changes */
   Vec work, work2;
+
+  /* cert = R + <gradf(x), xnew - x> + 1/2step * |xnew - x|_2^2 */
+  PetscReal ref, cert, L, C, D, xi, test_step, step_new;
 } TaoLineSearch_PSARMIJO;

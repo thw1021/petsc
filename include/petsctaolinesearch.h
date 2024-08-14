@@ -109,7 +109,7 @@ PETSC_EXTERN PetscErrorCode TaoLineSearchSetObjectiveAndGTSRoutine(TaoLineSearch
 PETSC_EXTERN PetscErrorCode TaoLineSearchSetObjectiveRoutine(TaoLineSearch, PetscErrorCode (*)(TaoLineSearch, Vec, PetscReal *, void *), void *);
 PETSC_EXTERN PetscErrorCode TaoLineSearchSetGradientRoutine(TaoLineSearch, PetscErrorCode (*)(TaoLineSearch, Vec, Vec, void *), void *);
 PETSC_EXTERN PetscErrorCode TaoLineSearchSetObjectiveAndGradientRoutine(TaoLineSearch, PetscErrorCode (*)(TaoLineSearch, Vec, PetscReal *, Vec, void *), void *);
-PETSC_EXTERN PetscErrorCode TaoLineSearchSetProx(TaoLineSearch, DM, PetscReal, DM);
+PETSC_EXTERN PetscErrorCode TaoLineSearchSetProxAndLinearMap(TaoLineSearch, DM, PetscReal, DM, Mat, PetscReal);
 
 PETSC_EXTERN PetscErrorCode TaoLineSearchComputeObjective(TaoLineSearch, Vec, PetscReal *);
 PETSC_EXTERN PetscErrorCode TaoLineSearchComputeGradient(TaoLineSearch, Vec, Vec);
