@@ -3,7 +3,7 @@
 #include <petsc/private/taoimpl.h>
 #include <petsc/private/dmimpl.h>
 #include <petsc/private/taolinesearchimpl.h>
-#include <../src/tao/linesearch/impls/psarmijo/psarmijo.h>
+#include <../src/tao/linesearch/impls/pslinesearch/pslinesearch.h>
 
 static PetscBool  fasta_cited       = PETSC_FALSE;
 static PetscBool  adapgm_cited      = PETSC_FALSE;
@@ -23,7 +23,7 @@ static const char adapgm_citation[] = "@article{latafat2023convergence,\n"
 static PetscErrorCode TaoFB_LineSearch_PreApply_Private(TaoLineSearch ls, Vec in, PetscReal *f, Vec out, Vec g)
 {
   PetscReal               temp, diffnorm, inprod;
-  TaoLineSearch_PSARMIJO *armP = (TaoLineSearch_PSARMIJO *)ls->data; //TODO cast it after checking ls type?
+  TaoLineSearch_PS *armP = (TaoLineSearch_PS *)ls->data; //TODO cast it after checking ls type?
 
   PetscFunctionBegin;
 
@@ -46,7 +46,7 @@ static PetscErrorCode TaoFB_LineSearch_PreApply_Private(TaoLineSearch ls, Vec in
 
 static PetscErrorCode TaoFB_LineSearch_PostApply_Private(TaoLineSearch ls, Vec in, PetscReal *f, Vec out, Vec g)
 {
-  TaoLineSearch_PSARMIJO *armP = (TaoLineSearch_PSARMIJO *)ls->data; //TODO cast it after checking ls type?
+  TaoLineSearch_PS *armP = (TaoLineSearch_PS *)ls->data; //TODO cast it after checking ls type?
 
   PetscFunctionBegin;
   if (armP->memorySize > 1) {
@@ -59,7 +59,7 @@ static PetscErrorCode TaoFB_LineSearch_PostApply_Private(TaoLineSearch ls, Vec i
 
 static PetscErrorCode TaoFB_LineSearch_Update_Private(TaoLineSearch ls, Vec in, PetscReal *f, Vec out, Vec g)
 {
-  TaoLineSearch_PSARMIJO *armP = (TaoLineSearch_PSARMIJO *)ls->data; //TODO cast it after checking ls type?
+  TaoLineSearch_PS *armP = (TaoLineSearch_PS *)ls->data; //TODO cast it after checking ls type?
 
   PetscFunctionBegin;
   ls->step = ls->step * armP->eta;
@@ -72,7 +72,7 @@ static PetscErrorCode TaoFB_LineSearch_Update_Private(TaoLineSearch ls, Vec in, 
 static PetscErrorCode TaoFB_LineSearch_PostUpdate_Private(TaoLineSearch ls, Vec xold, PetscReal *f, Vec xnew, Vec g)
 {
   PetscReal inprod, diffnorm;
-  TaoLineSearch_PSARMIJO *armP = (TaoLineSearch_PSARMIJO *)ls->data; //TODO cast it after checking ls type?
+  TaoLineSearch_PS *armP = (TaoLineSearch_PS *)ls->data; //TODO cast it after checking ls type?
 
   PetscFunctionBegin;
   PetscCall(TaoLineSearchComputeObjective(ls, xnew, f));
@@ -236,8 +236,8 @@ static PetscErrorCode TaoSolve_FB(Tao tao)
 
     /* -tao_ls_max_funcs 0 -> no linesearch, but constant stepsize
        In this case, constant stepsize needs to be properly chosen for the algorithm to converge.
-       -tao_ls_PSArmijo_memory_size  1 -> monotonic linesearch
-       -tao_ls_PSArmijo_memory_size >1 -> nonmonotonic linesearch */
+       -tao_ls_PS_memory_size  1 -> monotonic linesearch
+       -tao_ls_PS_memory_size >1 -> nonmonotonic linesearch */
     if (!fb->use_adapt && tao->linesearch->max_funcs > 0) {
       fb->step_old = tao->step;
       PetscCall(TaoLineSearchSetInitialStepLength(tao->linesearch, tao->step));
@@ -375,7 +375,7 @@ static PetscErrorCode TaoDestroy_FB(Tao tao)
 PETSC_EXTERN PetscErrorCode TaoCreate_FB(Tao tao)
 {
   TAO_FB     *fb;
-  const char *armijo_type = TAOLINESEARCHPSARMIJO;
+  const char *armijo_type = TAOLINESEARCHPS;
 
   PetscFunctionBegin;
   PetscCall(PetscNew(&fb));

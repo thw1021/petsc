@@ -71,7 +71,7 @@ struct _p_TaoLineSearch {
 
   Tao       tao;
   DM        dm;   /* DM that contains obj, grad routines */
-  DM        prox; /* DM that contains proximal map. For PSARMIJO */
+  DM        prox; /* DM that contains proximal map. For PS */
   DM        prox_reg;
   PetscReal prox_scale;
   Mat       lmap;

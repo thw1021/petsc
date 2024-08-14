@@ -58,7 +58,7 @@
 #define TAOLINESEARCHGPCG     'gpcg'
 #define TAOLINESEARCHARMIJO   'armijo'
 #define TAOLINESEARCHOWARMIJO 'owarmijo'
-#define TAOLINESEARCHPSARMIJO 'psarmijo'
+#define TAOLINESEARCHPS       'ps'
 #define TAOLINESEARCHIPM      'ipm'
 
 #define DMTAOL1      'l1'

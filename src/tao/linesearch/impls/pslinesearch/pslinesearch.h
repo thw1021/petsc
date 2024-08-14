@@ -65,4 +65,4 @@ typedef struct {
   Vec dualvec_work, dualvec_test;
   /* cert = R + <gradf(x), xnew - x> + 1/2step * |xnew - x|_2^2 */
   PetscReal ref, cert, L, C, D, xi, test_step, step_new;
-} TaoLineSearch_PSARMIJO;
+} TaoLineSearch_PS;

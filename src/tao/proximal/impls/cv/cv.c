@@ -5,7 +5,7 @@
 #include <petsc/private/petscimpl.h>
 #include <petsc/private/taoimpl.h>
 #include <petsc/private/taolinesearchimpl.h>
-#include <../src/tao/linesearch/impls/psarmijo/psarmijo.h>
+#include <../src/tao/linesearch/impls/pslinesearch/pslinesearch.h>
 
 static PetscBool  cited      = PETSC_FALSE;
 static const char citation[] = "@article{latafat2023adaptive,\n"
@@ -19,7 +19,7 @@ static const char citation[] = "@article{latafat2023adaptive,\n"
 static PetscErrorCode TaoCV_LineSearch_PreApply_Private(TaoLineSearch ls, Vec in, PetscReal *f, Vec out, Vec g)
 {
   PetscReal               grad_x_dot, xdiffnorm, graddiffnorm;
-  TaoLineSearch_PSARMIJO *armP = (TaoLineSearch_PSARMIJO *)ls->data;
+  TaoLineSearch_PS *armP = (TaoLineSearch_PS *)ls->data;
   TAO_CV                 *cv = (TAO_CV *)ls->tao->data;
 
   PetscFunctionBegin;
@@ -47,7 +47,7 @@ static PetscErrorCode TaoCV_LineSearch_PreApply_Private(TaoLineSearch ls, Vec in
 
 static PetscErrorCode TaoCV_LineSearch_PostApply_Private(TaoLineSearch ls, Vec in, PetscReal *f, Vec out, Vec g)
 {
-  TaoLineSearch_PSARMIJO *armP = (TaoLineSearch_PSARMIJO *)ls->data;
+  TaoLineSearch_PS *armP = (TaoLineSearch_PS *)ls->data;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectDereference((PetscObject)armP->dualvec_work));
@@ -57,7 +57,7 @@ static PetscErrorCode TaoCV_LineSearch_PostApply_Private(TaoLineSearch ls, Vec i
 
 static PetscErrorCode TaoCV_LineSearch_Update_Private(TaoLineSearch ls, Vec in, PetscReal *f, Vec out, Vec g)
 {
-  TaoLineSearch_PSARMIJO *armP = (TaoLineSearch_PSARMIJO *)ls->data;
+  TaoLineSearch_PS *armP = (TaoLineSearch_PS *)ls->data;
   TAO_CV                 *cv = (TAO_CV *)ls->tao->data;
   PetscReal               min1, min2, min3, rho, temp, temp2, temp3;
 
@@ -82,7 +82,7 @@ static PetscErrorCode TaoCV_LineSearch_Update_Private(TaoLineSearch ls, Vec in, 
 
 static PetscErrorCode TaoCV_LineSearch_PostUpdate_Private(TaoLineSearch ls, Vec in, PetscReal *f, Vec out, Vec g)
 {
-  TaoLineSearch_PSARMIJO *armP = (TaoLineSearch_PSARMIJO *)ls->data;
+  TaoLineSearch_PS *armP = (TaoLineSearch_PS *)ls->data;
   TAO_CV                 *cv = (TAO_CV *)ls->tao->data;
   PetscReal               norm1, norm2;
 
@@ -122,7 +122,8 @@ static PetscErrorCode TaoCV_ObjGrad_Private(Tao tao, Vec x, PetscReal *f, Vec g)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-//TODO I have this implemented in PSARMIJO too, but...
+#if 0
+//TODO I have this implemented in PS too, but...
 //this needs pd_ratio, eta, x, x_old, grad, grad_old,  step, step_old, nu, sigma, lmap, dualvecs? Aty
 static PetscErrorCode TaoCV_Stepsize_With_LS_Private(Tao tao)
 {
@@ -185,6 +186,7 @@ static PetscErrorCode TaoCV_Stepsize_With_LS_Private(Tao tao)
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+#endif
 
 static PetscErrorCode TaoCV_Stepsize_No_LS_Private(Tao tao)
 {
@@ -440,7 +442,7 @@ static PetscErrorCode TaoDestroy_CV(Tao tao)
 PETSC_EXTERN PetscErrorCode TaoCreate_CV(Tao tao)
 {
   TAO_CV     *cv;
-  const char *armijo_type = TAOLINESEARCHPSARMIJO;
+  const char *armijo_type = TAOLINESEARCHPS;
 
   PetscFunctionBegin;
   PetscCall(PetscNew(&cv));

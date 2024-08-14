@@ -637,7 +637,7 @@ PetscErrorCode TaoLineSearchIsUsingTaoRoutines(TaoLineSearch ls, PetscBool *flg)
 /*@C
   TaoLineSearchSetProxAndLinearMap - Sets the `DM` contexts that contain
   appropriate proximal mapping, and linear mapping, if necessary.
-  Used for TAOLINESEARCHPSARMIJO
+  Used for TAOLINESEARCHPS
 
   Logically Collective
 
@@ -652,7 +652,7 @@ PetscErrorCode TaoLineSearchIsUsingTaoRoutines(TaoLineSearch ls, PetscBool *flg)
   Level: advanced
 
   Notes:
-  This routine is used in `TAOLINESEARCHPSARMIJO` to compute proximal mapping.
+  This routine is used in `TAOLINESEARCHPS` to compute proximal mapping.
 
 .seealso: [](ch_tao), `Tao`, `TaoLineSearch`, `TaoLineSearchCreate()`, `TaoLineSearchSetGradientRoutine()`, `TaoLineSearchSetObjectiveAndGradientRoutine()`, `TaoLineSearchUseTaoRoutines()`
 @*/

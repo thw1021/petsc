@@ -1,11 +1,11 @@
 #include <petsc/private/taoimpl.h>
 #include <petsc/private/taolinesearchimpl.h>
-#include <../src/tao/linesearch/impls/psarmijo/psarmijo.h>
+#include <../src/tao/linesearch/impls/pslinesearch/pslinesearch.h>
 #include <../src/tao/proximal/impls/cv/cv.h>
 
-static PetscErrorCode TaoLineSearchDestroy_PSArmijo(TaoLineSearch ls)
+static PetscErrorCode TaoLineSearchDestroy_PS(TaoLineSearch ls)
 {
-  TaoLineSearch_PSARMIJO *armP = (TaoLineSearch_PSARMIJO *)ls->data;
+  TaoLineSearch_PS *armP = (TaoLineSearch_PS *)ls->data;
 
   PetscFunctionBegin;
   PetscCall(PetscFree(armP->memory));
@@ -18,35 +18,35 @@ static PetscErrorCode TaoLineSearchDestroy_PSArmijo(TaoLineSearch ls)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoLineSearchSetFromOptions_PSArmijo(TaoLineSearch ls, PetscOptionItems *PetscOptionsObject)
+static PetscErrorCode TaoLineSearchSetFromOptions_PS(TaoLineSearch ls, PetscOptionItems *PetscOptionsObject)
 {
-  TaoLineSearch_PSARMIJO *armP = (TaoLineSearch_PSARMIJO *)ls->data;
+  TaoLineSearch_PS *armP = (TaoLineSearch_PS *)ls->data;
 
   PetscFunctionBegin;
-  PetscOptionsHeadBegin(PetscOptionsObject, "PSArmijo linesearch options");
-  PetscCall(PetscOptionsReal("-tao_ls_PSArmijo_eta", "decrease constant", "", armP->eta, &armP->eta, NULL));
-  PetscCall(PetscOptionsInt("-tao_ls_PSArmijo_memory_size", "number of historical elements", "", armP->memorySize, &armP->memorySize, NULL));
+  PetscOptionsHeadBegin(PetscOptionsObject, "PS linesearch options");
+  PetscCall(PetscOptionsReal("-tao_ls_PS_eta", "decrease constant", "", armP->eta, &armP->eta, NULL));
+  PetscCall(PetscOptionsInt("-tao_ls_PS_memory_size", "number of historical elements", "", armP->memorySize, &armP->memorySize, NULL));
   PetscOptionsHeadEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoLineSearchView_PSArmijo(TaoLineSearch ls, PetscViewer pv)
+static PetscErrorCode TaoLineSearchView_PS(TaoLineSearch ls, PetscViewer pv)
 {
-  TaoLineSearch_PSARMIJO *armP = (TaoLineSearch_PSARMIJO *)ls->data;
+  TaoLineSearch_PS *armP = (TaoLineSearch_PS *)ls->data;
   PetscBool               isascii;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectTypeCompare((PetscObject)pv, PETSCVIEWERASCII, &isascii));
   if (isascii) {
-    PetscCall(PetscViewerASCIIPrintf(pv, "  PSArmijo linesearch"));
+    PetscCall(PetscViewerASCIIPrintf(pv, "  PS linesearch"));
     PetscCall(PetscViewerASCIIPrintf(pv, "eta=%g ", (double)armP->eta));
     PetscCall(PetscViewerASCIIPrintf(pv, "memsize=%" PetscInt_FMT "\n", armP->memorySize));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* @ TaoApply_PSArmijo - This routine performs a linesearch. It
-   backtracks until the (nonmonotone) PSArmijo conditions are satisfied.
+/* @ TaoApply_PS - This routine performs a linesearch. It
+   backtracks until the (nonmonotone) PS conditions are satisfied.
 
    Input Parameters:
 +  ls   - TaoLineSearch context
@@ -61,9 +61,9 @@ static PetscErrorCode TaoLineSearchView_PSArmijo(TaoLineSearch ls, PetscViewer p
 .  xnew - x_{k+1} that satisfies the condition
 -  step - final step length
 @ */
-static PetscErrorCode TaoLineSearchApply_PSArmijo(TaoLineSearch ls, Vec xold, PetscReal *f, Vec g, Vec xnew)
+static PetscErrorCode TaoLineSearchApply_PS(TaoLineSearch ls, Vec xold, PetscReal *f, Vec g, Vec xnew)
 {
-  TaoLineSearch_PSARMIJO *armP = (TaoLineSearch_PSARMIJO *)ls->data;
+  TaoLineSearch_PS *armP = (TaoLineSearch_PS *)ls->data;
   PetscInt                i, its = 0;
   MPI_Comm                comm;
   Vec                     vecin, vecout;
@@ -92,13 +92,13 @@ static PetscErrorCode TaoLineSearchApply_PSArmijo(TaoLineSearch ls, Vec xold, Pe
 
   /* Check linesearch parameters */
   if (armP->eta > 1) {
-    PetscCall(PetscInfo(ls, "PSArmijo line search error: eta (%g) > 1\n", (double)armP->eta));
+    PetscCall(PetscInfo(ls, "PS line search error: eta (%g) > 1\n", (double)armP->eta));
     ls->reason = TAOLINESEARCH_FAILED_BADPARAMETER;
   } else if (armP->memorySize < 1) {
-    PetscCall(PetscInfo(ls, "PSArmijo line search error: memory_size (%" PetscInt_FMT ") < 1\n", armP->memorySize));
+    PetscCall(PetscInfo(ls, "PS line search error: memory_size (%" PetscInt_FMT ") < 1\n", armP->memorySize));
     ls->reason = TAOLINESEARCH_FAILED_BADPARAMETER;
   } else if (PetscIsInfOrNanReal(*f)) {
-    PetscCall(PetscInfo(ls, "PSArmijo line search error: initial function inf or nan\n"));
+    PetscCall(PetscInfo(ls, "PS line search error: initial function inf or nan\n"));
     ls->reason = TAOLINESEARCH_FAILED_BADPARAMETER;
   }
 
@@ -156,23 +156,23 @@ static PetscErrorCode TaoLineSearchApply_PSArmijo(TaoLineSearch ls, Vec xold, Pe
   if (ls->ops->postapply) PetscUseTypeMethod(ls, postapply, xold, f, xnew, g);
   if (ls->reason) PetscFunctionReturn(PETSC_SUCCESS);
 
-  /* Successful termination, update memory. Only FIFO for PSARMIJO */
+  /* Successful termination, update memory. Only FIFO for PS */
   ls->reason = TAOLINESEARCH_SUCCESS;
   PetscCall(PetscInfo(ls, "%" PetscInt_FMT " prox evals in line search, step = %10.4f\n", ls->nproxeval, (double)ls->step));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*MC
-   TAOLINESEARCHPSARMIJO - Special line-search type for proximal splittign algorithms.
+   TAOLINESEARCHPS - Special line-search type for proximal splittign algorithms.
    Should not be used with any other algorithm.
 
    Level: developer
 
 seealso: `TaoLineSearch`, `TAOFB`, `Tao`
 M*/
-PETSC_EXTERN PetscErrorCode TaoLineSearchCreate_PSArmijo(TaoLineSearch ls)
+PETSC_EXTERN PetscErrorCode TaoLineSearchCreate_PS(TaoLineSearch ls)
 {
-  TaoLineSearch_PSARMIJO *armP;
+  TaoLineSearch_PS *armP;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ls, TAOLINESEARCH_CLASSID, 1);
@@ -186,9 +186,9 @@ PETSC_EXTERN PetscErrorCode TaoLineSearchCreate_PSArmijo(TaoLineSearch ls)
   ls->ops->monitor        = NULL;
   ls->ops->setup          = NULL;
   ls->ops->reset          = NULL;
-  ls->ops->apply          = TaoLineSearchApply_PSArmijo;
-  ls->ops->view           = TaoLineSearchView_PSArmijo;
-  ls->ops->destroy        = TaoLineSearchDestroy_PSArmijo;
-  ls->ops->setfromoptions = TaoLineSearchSetFromOptions_PSArmijo;
+  ls->ops->apply          = TaoLineSearchApply_PS;
+  ls->ops->view           = TaoLineSearchView_PS;
+  ls->ops->destroy        = TaoLineSearchDestroy_PS;
+  ls->ops->setfromoptions = TaoLineSearchSetFromOptions_PS;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
