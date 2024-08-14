@@ -33,7 +33,7 @@ static PetscErrorCode TaoLineSearchSetFromOptions_PS(TaoLineSearch ls, PetscOpti
 static PetscErrorCode TaoLineSearchView_PS(TaoLineSearch ls, PetscViewer pv)
 {
   TaoLineSearch_PS *armP = (TaoLineSearch_PS *)ls->data;
-  PetscBool               isascii;
+  PetscBool         isascii;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectTypeCompare((PetscObject)pv, PETSCVIEWERASCII, &isascii));
@@ -64,10 +64,10 @@ static PetscErrorCode TaoLineSearchView_PS(TaoLineSearch ls, PetscViewer pv)
 static PetscErrorCode TaoLineSearchApply_PS(TaoLineSearch ls, Vec xold, PetscReal *f, Vec g, Vec xnew)
 {
   TaoLineSearch_PS *armP = (TaoLineSearch_PS *)ls->data;
-  PetscInt                i, its = 0;
-  MPI_Comm                comm;
-  Vec                     vecin, vecout;
-  PetscBool               cj;
+  PetscInt          i, its = 0;
+  MPI_Comm          comm;
+  Vec               vecin, vecout;
+  PetscBool         cj;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectGetComm((PetscObject)ls, &comm));

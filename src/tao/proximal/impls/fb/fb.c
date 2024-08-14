@@ -22,7 +22,7 @@ static const char adapgm_citation[] = "@article{latafat2023convergence,\n"
 
 static PetscErrorCode TaoFB_LineSearch_PreApply_Private(TaoLineSearch ls, Vec in, PetscReal *f, Vec out, Vec g)
 {
-  PetscReal               temp, diffnorm, inprod;
+  PetscReal         temp, diffnorm, inprod;
   TaoLineSearch_PS *armP = (TaoLineSearch_PS *)ls->data;
 
   PetscFunctionBegin;
@@ -71,7 +71,7 @@ static PetscErrorCode TaoFB_LineSearch_Update_Private(TaoLineSearch ls, Vec in, 
 
 static PetscErrorCode TaoFB_LineSearch_PostUpdate_Private(TaoLineSearch ls, Vec xold, PetscReal *f, Vec xnew, Vec g)
 {
-  PetscReal inprod, diffnorm;
+  PetscReal         inprod, diffnorm;
   TaoLineSearch_PS *armP = (TaoLineSearch_PS *)ls->data;
 
   PetscFunctionBegin;

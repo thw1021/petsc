@@ -20,10 +20,10 @@ static PetscErrorCode TaoCV_LineSearch_PreApply_Private(TaoLineSearch ls, Vec in
 {
   PetscReal         grad_x_dot, xdiffnorm, graddiffnorm;
   TaoLineSearch_PS *armP = (TaoLineSearch_PS *)ls->data;
-  TAO_CV           *cv = (TAO_CV *)ls->tao->data;
+  TAO_CV           *cv   = (TAO_CV *)ls->tao->data;
 
   PetscFunctionBegin;
-  armP->xi  = cv->pd_ratio * ls->tao->step * cv->eta * (1 + ls->tao->gatol);
+  armP->xi = cv->pd_ratio * ls->tao->step * cv->eta * (1 + ls->tao->gatol);
   armP->xi *= armP->xi;
 
   PetscCall(VecWAXPY(cv->workvec, -1., cv->grad_old, ls->tao->gradient));
@@ -36,9 +36,9 @@ static PetscErrorCode TaoCV_LineSearch_PreApply_Private(TaoLineSearch ls, Vec in
   armP->C = (grad_x_dot == 0) ? 0 : (graddiffnorm * graddiffnorm) / grad_x_dot;
   armP->D = ls->tao->step * armP->L * (ls->tao->step * armP->C - 1);
 
-  cv->eta   *= cv->R;
+  cv->eta *= cv->R;
   /* For TAOCV, linesearch needs to go at least once */
-  armP->cert = PETSC_INFINITY;
+  armP->cert         = PETSC_INFINITY;
   armP->dualvec_work = cv->dualvec_work;
   armP->dualvec_test = cv->dualvec_test;
   //TODO dirty trick...
@@ -60,8 +60,8 @@ static PetscErrorCode TaoCV_LineSearch_PostApply_Private(TaoLineSearch ls, Vec i
 static PetscErrorCode TaoCV_LineSearch_Update_Private(TaoLineSearch ls, Vec in, PetscReal *f, Vec out, Vec g)
 {
   TaoLineSearch_PS *armP = (TaoLineSearch_PS *)ls->data;
-  TAO_CV                 *cv = (TAO_CV *)ls->tao->data;
-  PetscReal               min1, min2, min3, rho, temp, temp2, temp3;
+  TAO_CV           *cv   = (TAO_CV *)ls->tao->data;
+  PetscReal         min1, min2, min3, rho, temp, temp2, temp3;
 
   PetscFunctionBegin;
   min1           = ls->tao->step * PetscSqrtReal(1 + ls->tao->step / cv->step_old);
@@ -85,7 +85,7 @@ static PetscErrorCode TaoCV_LineSearch_Update_Private(TaoLineSearch ls, Vec in, 
 static PetscErrorCode TaoCV_LineSearch_PostUpdate_Private(TaoLineSearch ls, Vec in, PetscReal *f, Vec out, Vec g)
 {
   TaoLineSearch_PS *armP = (TaoLineSearch_PS *)ls->data;
-  TAO_CV           *cv = (TAO_CV *)ls->tao->data;
+  TAO_CV           *cv   = (TAO_CV *)ls->tao->data;
   PetscReal         norm1, norm2;
 
   PetscFunctionBegin;
@@ -98,7 +98,7 @@ static PetscErrorCode TaoCV_LineSearch_PostUpdate_Private(TaoLineSearch ls, Vec 
   PetscCall(VecWAXPY(cv->dualvec_work2, -1., cv->dualvec_test, ls->tao->dualvec));
   PetscCall(VecNorm(cv->dualvec_work2, NORM_2, &norm2));
   armP->cert = -cv->eta + norm1 / norm2;
-  *f = armP->cert;
+  *f         = armP->cert;
   if (armP->cert <= ls->ftol) {
     cv->step_old  = ls->tao->step;
     ls->tao->step = armP->step_new;
@@ -156,9 +156,9 @@ static PetscErrorCode TaoCV_Stepsize_No_LS_Private(Tao tao)
 
 static PetscErrorCode TaoSolve_CV(Tao tao)
 {
-  TAO_CV   *cv = (TAO_CV *)tao->data;
-  PetscReal f, gnorm, lip, rho;
-  PetscReal pri_res_norm, dual_res_norm, g_val, h_val;
+  TAO_CV                      *cv = (TAO_CV *)tao->data;
+  PetscReal                    f, gnorm, lip, rho;
+  PetscReal                    pri_res_norm, dual_res_norm, g_val, h_val;
   TaoLineSearchConvergedReason ls_status = TAOLINESEARCH_CONTINUE_ITERATING;
 
   PetscFunctionBegin;
@@ -231,7 +231,7 @@ static PetscErrorCode TaoSolve_CV(Tao tao)
       PetscCall(TaoLineSearchApply(tao->linesearch, cv->x_old, &f, tao->gradient, tao->solution, &tao->step, &ls_status));
       PetscCall(TaoAddLineSearchCounts(tao));
       if (ls_status != TAOLINESEARCH_SUCCESS && ls_status != TAOLINESEARCH_SUCCESS_USER) {
-        tao->step = 0.;
+        tao->step   = 0.;
         tao->reason = TAO_DIVERGED_LS_FAILURE;
       }
     }
