@@ -2883,9 +2883,6 @@ cdef PetscErrorCode DMTaoCreate_Python(
     tops.setup            = DMTaoSetUp_Python
     tops.setfromoptions   = DMTaoSetFromOptions_Python
     tops.applyproximalmap = DMTaoApplyProximalMap_Python
-    #Technically prox lives in DM, not DMTao,
-    #don't want to create DMPYTHON just for that
-    #TODO need special flag in C file for DMTAOPYTHON...
     CHKERR(PetscObjectComposeFunction(
             <PetscObject>dmtao, b"DMTaoPythonSetType_C",
             <PetscVoidFunction>DMTaoPythonSetType_PYTHON))
@@ -2902,13 +2899,12 @@ cdef inline PetscErrorCode DMTaoDestroy_Python_inner(
     PetscDM dm,
     ) except PETSC_ERR_PYTHON with gil:
     try:
-        CHKERR(PetscObjectReference(<PetscObject>dm)) #as DM isnt properly defined in Cython, use this instead
+        CHKERR(PetscObjectReference(<PetscObject>dm))
         CHKERR(DMTaoPythonSetContext(dm, NULL))
     finally:
         CHKERR(PetscObjectDereference(<PetscObject>dm))
     return PETSC_SUCCESS
 
-#but this should go
 cdef PetscErrorCode DMTaoDestroy_Python(
     PetscDMTAO dmtao,
     ) except PETSC_ERR_PYTHON nogil:
@@ -2939,7 +2935,7 @@ cdef PetscErrorCode DMTaoSetUp_Python(
         if found and name[0]:
             CHKERR(DMTaoGetParentDM(dmtao, &pdm))
             CHKERR(DMTaoPythonSetType_PYTHON(pdm, name))
-    if PyDMTao(dmtao).self is None: #TODO cant tell whether the logic is correct here
+    if PyDMTao(dmtao).self is None:
         return PetscSETERR(PETSC_ERR_USER,
                            "Python context not set, call one of \n"
                            " * DMTaoPythonSetType(dm, \"[package.]module.class\")\n"
@@ -2991,9 +2987,9 @@ cdef PetscErrorCode DMTaoApplyProximalMap_Python(
     cdef apply = PyDMTao(tdm0).applyproximalmap
     if apply is not None:
         if tdm1 is not NULL:
-            apply(DMTAO_(tdm0), DMTAO_(tdm1), toReal(scale), Vec_(y), Vec_(g), toBool(flg) )
+            apply(DMTAO_(tdm0), DMTAO_(tdm1), toReal(scale), Vec_(y), Vec_(g), toBool(flg))
         else:
-            apply(DMTAO_(tdm0), None, toReal(scale), Vec_(y), Vec_(g), toBool(flg) )
+            apply(DMTAO_(tdm0), None, toReal(scale), Vec_(y), Vec_(g), toBool(flg))
     return FunctionEnd()
 
 # --------------------------------------------------------------------

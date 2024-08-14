@@ -55,6 +55,7 @@ class DMReorderDefaultFlag(object):
     FALSE  = DM_REORDER_DEFAULT_FALSE
     TRUE   = DM_REORDER_DEFAULT_TRUE
 
+
 class DMTAOType(object):
     """DMTao type."""
     L1      = S_(DMTAOL1)
