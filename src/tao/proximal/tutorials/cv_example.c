@@ -405,7 +405,7 @@ int main(int argc, char **argv)
 /*TEST
 
    build:
-      requires: !complex
+      requires: !complex !single !__float128 !defined(PETSC_USE_64BIT_INDICES)
 
    test:
       suffix: svm
