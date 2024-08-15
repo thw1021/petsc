@@ -620,7 +620,7 @@ PetscErrorCode TaoSetFromOptions(Tao tao)
 
   Input Parameters:
 + tao  - the `Tao` context
-. step - Initial stepsize. Must be non-negative.
+- step - Initial stepsize. Must be non-negative.
 
   Level: beginner
 

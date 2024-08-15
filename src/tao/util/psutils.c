@@ -190,12 +190,12 @@ PetscErrorCode TaoPSSetSmoothTerm(Tao tao, DM dm, PetscReal scale)
   acceleration strategy for `TAOCV, and `TAOFB`.
 
   Input Parameters:
-+ tao - the `Tao` context for the `TAOCV` or `TAOFB` solver
-- use - Bool to denote whether to acceleration
++ tao  - the `Tao` context for the `TAOCV` or `TAOFB` solver
+- flag - Bool to denote whether to acceleration
 
   Level: advanced
 
-.seealso: `Tao`, `TAOFB`, `TAOCV'
+.seealso: `Tao`, `TAOFB`, `TAOCV`
 @*/
 PetscErrorCode TaoPSUseAcceleration(Tao tao, PetscBool flag)
 {
@@ -220,18 +220,17 @@ PetscErrorCode TaoPSUseAcceleration(Tao tao, PetscBool flag)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-//TODO currently can only use THE hard-coded strategy
 /*@
   TaoPSUseAdaptiveStep - Determine whether to use adaptive stepsize
   for `TAOCV, and `TAOFB`.
 
   Input Parameters:
-+ tao - the `Tao` context for the `TAOCV` or `TAOFB` solver
-- use - Bool to denote whether to use adaptive stepsize
++ tao  - the `Tao` context for the `TAOCV` or `TAOFB` solver
+- flag - Bool to denote whether to use adaptive stepsize
 
   Level: advanced
 
-.seealso: `Tao`, `TAOFB`, `TAOCV'
+.seealso: `Tao`, `TAOFB`, `TAOCV`
 @*/
 PetscErrorCode TaoPSUseAdaptiveStep(Tao tao, PetscBool flag)
 {

@@ -590,7 +590,7 @@ PetscErrorCode TaoLineSearchGetNumberFunctionEvaluations(TaoLineSearch ls, Petsc
 . ls - the `TaoLineSearch` context
 
   Output Parameters:
-+ nproxeval - number of proximal mappinge valuations
+. nproxeval - number of proximal mappinge valuations
 
   Level: intermediate
 
@@ -656,7 +656,7 @@ PetscErrorCode TaoLineSearchIsUsingTaoRoutines(TaoLineSearch ls, PetscBool *flg)
 
 .seealso: [](ch_tao), `Tao`, `TaoLineSearch`, `TaoLineSearchCreate()`, `TaoLineSearchSetGradientRoutine()`, `TaoLineSearchSetObjectiveAndGradientRoutine()`, `TaoLineSearchUseTaoRoutines()`
 @*/
-PetscErrorCode TaoLineSearchSetProxAndLinearMap(TaoLineSearch ls, DM dm0, PetscReal scale0, DM dm1, Mat lmap, PetscReal lmap_norm)
+PetscErrorCode TaoLineSearchSetProxAndLinearMap(TaoLineSearch ls, DM dm0, PetscReal scale0, DM dm1, Mat lmap, PetscReal norm)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ls, TAOLINESEARCH_CLASSID, 1);
@@ -665,11 +665,11 @@ PetscErrorCode TaoLineSearchSetProxAndLinearMap(TaoLineSearch ls, DM dm0, PetscR
   PetscCheck(scale0 >= 0, PetscObjectComm((PetscObject)ls), PETSC_ERR_USER, "Scale needs to be non-negative.");
   if (dm1) PetscValidHeaderSpecific(dm1, DM_CLASSID, 4);
   if (lmap) PetscValidHeaderSpecific(lmap, MAT_CLASSID, 5);
-  PetscValidLogicalCollectiveReal(ls, lmap_norm, 6);
-  PetscCheck(lmap_norm >= 0, PetscObjectComm((PetscObject)ls), PETSC_ERR_USER, "Matrix norm needs to be non-negative.");
+  PetscValidLogicalCollectiveReal(ls, norm, 6);
+  PetscCheck(norm >= 0, PetscObjectComm((PetscObject)ls), PETSC_ERR_USER, "Matrix norm needs to be non-negative.");
   ls->prox       = dm0;
   ls->prox_scale = scale0;
-  ls->lmap_norm  = lmap_norm;
+  ls->lmap_norm  = norm;
 
   if (dm1) ls->prox_reg = dm1;
   else ls->prox_reg = NULL;

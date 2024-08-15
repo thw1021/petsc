@@ -59,7 +59,7 @@ static PetscErrorCode DMTaoView_Box(DMTao dm, PetscViewer pv)
   Logically Collective
 
   Input Parameters:
-+ dm - the `DM` containing `DMTAOBOX`
++ dm      - the `DM` containing `DMTAOBOX`
 . lb_real - lowerbound, real number
 . ub_real - upperbound, real number
 . lb_vec  - lowerbound, vector
@@ -103,7 +103,7 @@ PetscErrorCode DMTaoBoxSetContext(DM dm, PetscReal lb_real, PetscReal ub_real, V
     ctx->lb_vec = lb_vec;
   }
   if (ub_vec) {
-    PetscValidHeaderSpecific(ub_vec, VEC_CLASSID, 4);
+    PetscValidHeaderSpecific(ub_vec, VEC_CLASSID, 5);
     PetscCall(PetscObjectReference((PetscObject)ub_vec));
     PetscCall(VecDestroy(&ctx->ub_vec));
     PetscCall(VecMin(ub_vec, NULL, &u_min));

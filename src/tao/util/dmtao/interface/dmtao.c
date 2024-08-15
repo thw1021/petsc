@@ -486,8 +486,8 @@ PetscErrorCode DMTaoSetObjectiveAndGradient(DM dm, PetscErrorCode (*func)(DM dm,
 . dm - the `DM` context
 
   Options Database Keys:
-+ -dmtao_type <type>   - The type of `DMTao` (L1,L2,KL,Simplex,Shell,Python)
-- -dmtao_view          - display information to standard output
++ -dmtao_type <type> - The type of `DMTao` (L1,L2,KL,Simplex,Shell,Python)
+- -dmtao_view        - display information to standard output
 
   Level: beginner
 
