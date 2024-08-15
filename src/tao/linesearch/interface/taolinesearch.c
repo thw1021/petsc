@@ -82,7 +82,7 @@ PetscErrorCode TaoLineSearchView(TaoLineSearch ls, PetscViewer viewer)
     PetscCall(PetscViewerASCIIPrintf(viewer, "total number of function evaluations=%" PetscInt_FMT "\n", ls->nfeval));
     PetscCall(PetscViewerASCIIPrintf(viewer, "total number of gradient evaluations=%" PetscInt_FMT "\n", ls->ngeval));
     PetscCall(PetscViewerASCIIPrintf(viewer, "total number of function/gradient evaluations=%" PetscInt_FMT "\n", ls->nfgeval));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "total number of prox evaluations=%" PetscInt_FMT "\n", ls->nproxeval));
+    if (ls->nproxeval > 0) PetscCall(PetscViewerASCIIPrintf(viewer, "total number of prox evaluations=%" PetscInt_FMT "\n", ls->nproxeval));
 
     if (ls->bounded) PetscCall(PetscViewerASCIIPrintf(viewer, "using variable bounds\n"));
     PetscCall(PetscViewerASCIIPrintf(viewer, "Termination reason: %d\n", (int)ls->reason));

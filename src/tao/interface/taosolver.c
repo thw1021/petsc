@@ -709,7 +709,7 @@ PetscErrorCode TaoView(Tao tao, PetscViewer viewer)
     }
     if (tao->reg) {
       PetscCall(PetscViewerASCIIPushTab(viewer));
-      PetscCall(PetscViewerASCIIPrintf(viewer, "DMTao Regularizer scale: %g\n", tao->reg_scale));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "DMTao Regularizer scale: %g\n", (double)tao->reg_scale));
       PetscCall(DMGetDMTao(tao->reg, &tdm));
       PetscCall(DMTaoView(tdm, viewer));
       PetscCall(PetscViewerASCIIPopTab(viewer));
@@ -717,7 +717,7 @@ PetscErrorCode TaoView(Tao tao, PetscViewer viewer)
     if (tao->dms) {
       for (i = 0; i < tao->num_terms; i++) {
         PetscCall(PetscViewerASCIIPushTab(viewer));
-        PetscCall(PetscViewerASCIIPrintf(viewer, "DMTao scale: %g\n", tao->dm_scales[i]));
+        PetscCall(PetscViewerASCIIPrintf(viewer, "DMTao scale: %g\n", (double)tao->dm_scales[i]));
         PetscCall(DMGetDMTao(tao->dms[i], &tdm));
         PetscCall(DMTaoView(tdm, viewer));
         PetscCall(PetscViewerASCIIPopTab(viewer));

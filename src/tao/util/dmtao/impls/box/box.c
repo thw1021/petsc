@@ -53,11 +53,12 @@ static PetscErrorCode DMTaoView_Box(DMTao dm, PetscViewer pv)
 }
 
 /*@
-  DMTaoBoxSetContext - sets the upperbound and lowerbound context for `DMTAOBox`.
-  One can set either real number bounds, or vector bounds. In all cases,
-  condition lb <= ub needs to be strictly satisfied, and if vectors are given,
-  sizes of lb and ub needs to match. If both lb_real and lb_vec are provided,
-  lb_real is ignored. Likewise for ub_real and ub_vec.
+  DMTaoBoxSetContext - sets the upperbound and lowerbound context for
+  `DMTAOBox`. One can set either real number bounds, or vector bounds.
+  In all cases, condition lb <= ub needs to be strictly satisfied,
+  and if vectors are given, sizes of lb and ub needs to match.
+  If both lb_real and lb_vec are provided  lb_real is ignored.
+  Likewise for ub_real and ub_vec.
 
   Logically Collective
 
