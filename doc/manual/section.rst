@@ -15,7 +15,7 @@ To enable modularity, we encode the operations above in simple data
 structures that can be understood by the linear algebra (``Vec``, ``Mat``, ``KSP``, ``PC``, ``SNES``), time integrator (``TS``), and optimization (``Tao``) engines in PETSc
 without explicit reference to the mesh (topology) or discretization (analysis).
 
-While ``PetscSection`` is currently only employed for ``DMPlex`` and ``DMNetwork`` mesh descriptions, much of it's operation is general enough to be utilized for other types of discretizations.
+While ``PetscSection`` is currently only employed for ``DMPlex``, ``DMForest`` and ``DMNetwork`` mesh descriptions, much of it's operation is general enough to be utilized for other types of discretizations.
 This section will explain the basic concepts of a ``PetscSection`` that are generalizable to other mesh descriptions.
 The more advanced topics that are primarily used by ``DMPlex`` will be overviewed here, but discussed in more detail in the :ref:`ch_unstructured` section.
 
@@ -130,7 +130,7 @@ Conversely, field-major ordering would result in:
 Note that dofs are always contiguous, regardless of the outer dimensional ordering.
 
 Setting the which ordering is done with ``PetscSectionSetPointMajor()``, where ``PETSC_TRUE`` sets point-major and ``PETSC_FALSE`` sets field major.
-The current default is for point-major.
+The current default is for point-major, and many operations on ``DMPlex`` will only work with this ordering. Field-major ordering is provided mainly for compatibility with external packages, such as LibMesh.
 
 
 Working with data
@@ -169,7 +169,7 @@ Global Sections: Constrained and Distributed Data
   TODO: This text needs additional work explaining the "constrained dof" business.
 
 A global vector is missing both the shared dofs which are not owned by this process, as well as *constrained* dofs. These constraints represent essential (Dirichlet)
-boundary conditions. They are dofs that have a given fixed value, so they are present in local vectors for assembly purposes, but absent
+boundary conditions, or algebraic constraints. They are dofs that have a given fixed value, so they are present in local vectors for assembly purposes, but absent
 from global vectors since they are not unknowns in the algebraic solves.
 
 We can indicate constraints in a local section using ``PetscSectionSetConstraintDof()``, to set the number of constrained dofs for a given point, and ``PetscSectionSetConstraintIndices()`` which indicates which dofs on the given point are constrained. Once we have this information, a global section can be created using ``PetscSectionCreateGlobalSection()``. This is done automatically by the ``DM``. A global section returns :math:`-(dof+1)` for the number of dofs on an unowned (ghost) point, and :math:`-(off+1)` for its offset on the owning process. This can be used to create global vectors, just as the local section is used to create local vectors.
