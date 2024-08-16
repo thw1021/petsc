@@ -154,6 +154,8 @@ PetscErrorCode DataCreate(AppCtx *user)
   char vec_data2[] = "vector-housing-scale.dat";
 
   PetscFunctionBegin;
+  user->Q = NULL;
+  user->A = NULL;
   switch (user->probType) {
   case DUAL_SVM:
     PetscCall(PetscViewerBinaryOpen(PETSC_COMM_WORLD, vec_data1, FILE_MODE_READ, &viewer));
@@ -286,7 +288,7 @@ PetscErrorCode DataDestroy(AppCtx *user)
   PetscCall(VecDestroy(&user->workvec));
   PetscCall(VecDestroy(&user->workvec2));
   PetscCall(VecDestroy(&user->workvec3));
-  PetscCall(MatDestroy(&user->Q));
+  if (user->Q) PetscCall(MatDestroy(&user->Q));
   PetscCall(MatDestroy(&user->A));
   PetscCall(VecDestroy(&user->y_translation));
   PetscFunctionReturn(PETSC_SUCCESS);
