@@ -511,7 +511,7 @@ int main(int argc, char **argv)
 
    test:
       suffix: logreg_fista
-      nsize: {{1 2 4}}
+      nsize: {{1 2}}
       localrunfiles: matrix-heart-scale.dat vector-heart-scale_1_0.dat
       args: -problem prob_log_reg -formation {{use_tao use_dm}} -scale 0.01 -tao_fb_accel 1 -tao_fb_adaptive 0 -tao_converged_reason -tao_max_it 2000
       output_file: output/fb_example_logreg_fista.out

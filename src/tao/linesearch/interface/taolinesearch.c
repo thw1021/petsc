@@ -253,6 +253,9 @@ PetscErrorCode TaoLineSearchDestroy(TaoLineSearch *ls)
   PetscCall(VecDestroy(&(*ls)->start_x));
   PetscCall(VecDestroy(&(*ls)->upper));
   PetscCall(VecDestroy(&(*ls)->lower));
+  PetscCall(DMDestroy(&(*ls)->prox));
+  PetscCall(DMDestroy(&(*ls)->prox_reg));
+  PetscCall(MatDestroy(&(*ls)->lmap));
   PetscTryTypeMethod(*ls, destroy);
   if ((*ls)->usemonitor) PetscCall(PetscViewerDestroy(&(*ls)->viewer));
   PetscCall(PetscHeaderDestroy(ls));
@@ -667,15 +670,24 @@ PetscErrorCode TaoLineSearchSetProxAndLinearMap(TaoLineSearch ls, DM dm0, PetscR
   if (lmap) PetscValidHeaderSpecific(lmap, MAT_CLASSID, 5);
   PetscValidLogicalCollectiveReal(ls, norm, 6);
   PetscCheck(norm >= 0, PetscObjectComm((PetscObject)ls), PETSC_ERR_USER, "Matrix norm needs to be non-negative.");
+
+  PetscCall(PetscObjectReference((PetscObject)dm0));
+  PetscCall(DMDestroy(&ls->prox));
   ls->prox       = dm0;
   ls->prox_scale = scale0;
   ls->lmap_norm  = norm;
 
-  if (dm1) ls->prox_reg = dm1;
-  else ls->prox_reg = NULL;
+  if (dm1) {
+    PetscCall(PetscObjectReference((PetscObject)dm1));
+    PetscCall(DMDestroy(&ls->prox_reg));
+    ls->prox_reg = dm1;
+  } else ls->prox_reg = NULL;
 
-  if (lmap) ls->lmap = lmap;
-  else ls->lmap = NULL;
+  if (lmap) {
+    PetscCall(PetscObjectReference((PetscObject)lmap));
+    PetscCall(MatDestroy(&ls->lmap));
+    ls->lmap = lmap;
+  } else ls->lmap = NULL;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

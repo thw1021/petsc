@@ -117,6 +117,7 @@ PetscErrorCode TaoPSSetNonSmoothTermWithLinearMap(Tao tao, DM dm, Mat mat, Petsc
   PetscCall(TaoGetType(tao, &type));
   PetscCall(PetscObjectTypeCompare((PetscObject)tao, TAOCV, &iscv));
   PetscCheck(scale >= 0, PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "Scale cannot be negative");
+  PetscCheck(norm >= 0, PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "Matrix norm cannot be negative");
   /* Currently this function is only used by TAOCV, but
    * TODO TAODY would use this too */
   if (iscv) {
@@ -127,10 +128,11 @@ PetscErrorCode TaoPSSetNonSmoothTermWithLinearMap(Tao tao, DM dm, Mat mat, Petsc
       PetscCall(PetscObjectReference((PetscObject)mat));
     }
     PetscValidLogicalCollectiveReal(tao, norm, 4);
+    PetscValidLogicalCollectiveReal(tao, scale, 5);
     cv->h_prox  = dm;
     cv->h_lmap  = mat;
     cv->h_scale = scale;
-    if (norm) {
+    if (norm > 0) {
       cv->h_lmap_norm   = norm;
       cv->lmap_norm_set = PETSC_TRUE;
     } else {

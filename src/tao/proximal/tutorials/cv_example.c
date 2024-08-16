@@ -42,6 +42,7 @@ typedef struct {
   Mat       Q, A;
   Vec       x0, x, workvec, workvec2, workvec3, q, y_translation;
   PetscReal C, lip, matnorm, g_scale;
+  PetscBool ls;
 } AppCtx;
 
 PetscErrorCode LAD_UserObjGrad_DM(DM dm, Vec X, PetscReal *f, Vec G, void *ptr)
@@ -57,7 +58,7 @@ PetscErrorCode LAD_UserObjGrad_DM(DM dm, Vec X, PetscReal *f, Vec G, void *ptr)
 PetscErrorCode LAD_UserObjGrad(Tao tao, Vec X, PetscReal *f, Vec G, void *ptr)
 {
   PetscFunctionBegin;
-  f = 0;
+  *f = 0;
   PetscCall(VecSet(G, 0.));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -306,6 +307,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *user)
   user->g_scale  = 10.;
   user->formType = USE_TAO;
   user->probType = DUAL_SVM;
+  user->ls       = PETSC_TRUE;
   formtype       = user->formType;
   probtype       = user->probType;
 
@@ -316,6 +318,8 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *user)
   user->formType = (FormType)formtype;
   user->probType = (ProbType)probtype;
 
+  /* Trigger Linesearch by setting norm to zero */
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-ls", &user->ls, NULL));
   /* Box constraint for SVM */
   PetscCall(PetscOptionsGetReal(NULL, NULL, "-C", &user->C, NULL));
   PetscCall(PetscOptionsGetReal(NULL, NULL, "-g_scale", &user->g_scale, NULL));
@@ -389,7 +393,8 @@ int main(int argc, char **argv)
   }
 
   PetscCall(TaoPSSetNonSmoothTerm(tao, gdm, user.g_scale));
-  PetscCall(TaoPSSetNonSmoothTermWithLinearMap(tao, hdm, user.A, user.matnorm, 1.));
+  if (user.ls) PetscCall(TaoPSSetNonSmoothTermWithLinearMap(tao, hdm, user.A, user.matnorm, 1.));
+  else PetscCall(TaoPSSetNonSmoothTermWithLinearMap(tao, hdm, user.A, 0., 1.));
 
   PetscCall(TaoSetFromOptions(tao));
   PetscCall(TaoSolve(tao));
