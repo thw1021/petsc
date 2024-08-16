@@ -17,8 +17,6 @@ without explicit reference to the mesh (topology) or discretization (analysis).
 
 While ``PetscSection`` is currently only employed for ``DMPlex``, ``DMForest`` and ``DMNetwork`` mesh descriptions, much of it's operation is general enough to be utilized for other types of discretizations.
 This section will explain the basic concepts of a ``PetscSection`` that are generalizable to other mesh descriptions.
-The more advanced topics that are primarily used by ``DMPlex`` will be overviewed here, but discussed in more detail in the :ref:`ch_unstructured` section.
-
 
 .. _sec_petscsection_concept:
 
@@ -32,7 +30,7 @@ General concept
   We may want to even move this introductory ``PetscSection`` material to its own pride of place in the user guide and not inside the ``DMPLEX`` discussion.
 
 Specific entries (or collections of entries) in a ``Vec`` (or a simple array) can be associated with a "location" on a mesh (or other types of data structure) using the ``PetscSection`` object.
-A **point** is a ``PetscInt`` that serves as an abstract "index" into arrays from iteratable sets, such as points on a mesh.
+A **point** is a ``PetscInt`` that serves as an abstract "index" into arrays from iterable sets, such as points on a mesh.
 These points can be as simple as the points of a finite difference grid, or cells of a finite volume grid, or as complex as the topological entities of an unstructured mesh (cells, faces, edges, and vertices).
 
 At it's most basic, a ``PetscSection`` is a mapping between the mesh points and a tuple ``(ndof, offset)``, where ``ndof`` is the number of values stored at that mesh point and ``offset`` is the location in the array of that data.
