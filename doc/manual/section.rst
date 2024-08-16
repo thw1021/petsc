@@ -80,7 +80,7 @@ A ``PetscSection`` can represent this additional structure with what are called 
 **Fields** are indexed contiguously from ``[0, num_fields)``.
 To set the number of fields for a ``PetscSection``, call ``PetscSectionSetNumFields()``.
 
-Under the hood, each field is treated as a separate ``PetscSection``.
+Internally, each field is stored in a separate ``PetscSection``.
 In fact, all the concepts and functions presented in :any:`sec_petscsection_concept` were actually applied onto the **default field**, which is indexed as ``0``.
 The fields inherit the same chart as the "parent" ``PetscSection``.
 
@@ -170,9 +170,9 @@ Global Sections: Constrained and Distributed Data
 
 A global vector is missing both the shared dofs which are not owned by this process, as well as *constrained* dofs. These constraints represent essential (Dirichlet)
 boundary conditions. They are dofs that have a given fixed value, so they are present in local vectors for assembly purposes, but absent
-from global vectors since they are never solved for during algebraic solves.
+from global vectors since they are not unknowns in the algebraic solves.
 
-We can indicate constraints in a local section using ``PetscSectionSetConstraintDof()``, to set the number of constrained dofs for a given point, and ``PetscSectionSetConstraintIndices()`` which indicates which dofs on the given point are constrained. Once we have this information, a global section can be created using ``PetscSectionCreateGlobalSection()``, and this is done automatically by the ``DM``. A global section returns :math:`-(dof+1)` for the number of dofs on an unowned point, and :math:`-(off+1)` for its offset on the owning process. This can be used to create global vectors, just as the local section is used to create local vectors.
+We can indicate constraints in a local section using ``PetscSectionSetConstraintDof()``, to set the number of constrained dofs for a given point, and ``PetscSectionSetConstraintIndices()`` which indicates which dofs on the given point are constrained. Once we have this information, a global section can be created using ``PetscSectionCreateGlobalSection()``. This is done automatically by the ``DM``. A global section returns :math:`-(dof+1)` for the number of dofs on an unowned (ghost) point, and :math:`-(off+1)` for its offset on the owning process. This can be used to create global vectors, just as the local section is used to create local vectors.
 
 .. _sec_petscsection_permutation:
 
