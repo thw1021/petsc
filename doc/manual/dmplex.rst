@@ -216,7 +216,7 @@ Generally the setup and usage of this information is handled automatically by PE
 
 Closure Permutation:
 """"""""""""""""""""
-Basically it's just a way of storing closure information onto the PetscSection that something else can access later.
+A permutation of the dof closure of a k-cell may be specified. This allows data to be returned in am order which might be more efficiently processed. For example, for tensor cells such as quadrilaterals, closure data can be permuted to lexicographic order.
 
 Data Layout using DMPLEX and PetscFE
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
