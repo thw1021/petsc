@@ -1795,6 +1795,8 @@ M*/
   #define PetscStackCallExternalVoid(...)
 template <typename F, typename... Args>
 void PetscCallExternal(F, Args...);
+template <typename F, typename... Args>
+void PetscCallExternalAbort(F, Args...);
 #else
   /*MC
     PetscStackCallExternalVoid - Calls an external library routine or user function after pushing the name of the routine on the stack.
@@ -1843,7 +1845,7 @@ void PetscCallExternal(F, Args...);
    Developer Note:
    This is so that when an external package routine results in a crash or corrupts memory, they get blamed instead of PETSc.
 
-.seealso: `PetscCall()`, `PetscStackPushNoCheck()`, `PetscStackPush()`, `PetscStackCallExternalVoid()`
+.seealso: `PetscCall()`, `PetscStackPushNoCheck()`, `PetscStackPush()`, `PetscStackCallExternalVoid()`, `PetscCallExternalAbort()`
 M*/
   #define PetscCallExternal(func, ...) \
     do { \
@@ -1851,5 +1853,33 @@ M*/
       int ierr_petsc_call_external_ = func(__VA_ARGS__); \
       PetscStackPop; \
       PetscCheck(ierr_petsc_call_external_ == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in %s(): error code %d", PetscStringize(func), ierr_petsc_call_external_); \
+    } while (0)
+
+  /*MC
+    PetscCallExternalAbort - Calls an external library routine that returns an error code after pushing the name of the routine on the stack. If the external library function return code indicates an error, this prints the error and aborts
+
+   Input Parameters:
++  func - name of the routine
+-  args - arguments to the routine
+
+   Level: developer
+
+   Notes:
+   This is intended for external package routines that return error codes. Use `PetscStackCallExternalVoid()` for those that do not.
+
+   In debug mode this also checks the memory for corruption at the end of the function call.
+
+   Assumes the error return code of the function is an integer and that a value of 0 indicates success
+
+   Developer Note:
+   This is so that when an external package routine results in a crash or corrupts memory, they get blamed instead of PETSc.
+
+.seealso: `PetscCall()`, `PetscStackPushNoCheck()`, `PetscStackPush()`, `PetscStackCallExternalVoid()`, `PetscCallExternal()`
+M*/
+  #define PetscCallExternalAbort(func, ...) \
+    do { \
+      PetscStackUpdateLine; \
+      int ierr_petsc_call_external_ = func(__VA_ARGS__); \
+      PetscCheckAbort(ierr_petsc_call_external_ == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in %s(): error code %d", PetscStringize(func), ierr_petsc_call_external_); \
     } while (0)
 #endif /* PETSC_CLANG_STATIC_ANALYZER */
