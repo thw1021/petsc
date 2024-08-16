@@ -2396,22 +2396,22 @@ cdef class DM(Object):
 
     def applyTAOproximalmap(
         self, DM dm1, PetscReal scale, Vec y, Vec x, PetscBool flg) -> None:
-        """Computes proximal mapping of DMTaoa
+        """Computes proximal mapping of DMTao.
 
         Logically collective.
 
         Parameters
         ----------
         dm1
-            The `DM` context that contains regularizer `DMTao` context
+            The `DM` context that contains regularizer `DMTao` context.
         scale
-            The scale of regularizer
+            The scale of regularizer.
         y
-            Input vector
+            Input vector.
         x
-            Solution output vector
+            Solution output vector.
         flg
-            Boolean to denote conjugate
+            Boolean to denote conjugate.
 
         See Also
         --------
