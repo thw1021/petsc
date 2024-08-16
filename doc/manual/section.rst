@@ -166,7 +166,7 @@ Global Sections: Constrained and Distributed Data
 ..
   TODO: This text needs additional work explaining the "constrained dof" business.
 
-A global vector is missing both the shared dofs which are not owned by this process, as well as *constrained* dofs. These constraints represent essential (Dirichlet)
+A global vector is missing both the ghosted dofs, which are not owned by this process but are stored in the global vector on a different process and *constrained* dofs. These constraints usually represent essential (Dirichlet)
 boundary conditions, or algebraic constraints. They are dofs that have a given fixed value, so they are present in local vectors for assembly purposes, but absent
 from global vectors since they are not unknowns in the algebraic solves.
 
