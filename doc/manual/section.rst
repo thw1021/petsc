@@ -23,15 +23,9 @@ This section will explain the basic concepts of a ``PetscSection`` that are gene
 General concept
 ~~~~~~~~~~~~~~~
 
-..
-  TODO: This text needs additional work so it can be understood without a detailed (or any) understanding of ``DMPLEX`` because the ``PetscSection`` concept is below ``DM`` in the
-
-..
-  We may want to even move this introductory ``PetscSection`` material to its own pride of place in the user guide and not inside the ``DMPLEX`` discussion.
-
 Specific entries (or collections of entries) in a ``Vec`` (or a simple array) can be associated with a "location" on a mesh (or other types of data structure) using the ``PetscSection`` object.
-A **point** is a ``PetscInt`` that serves as an abstract "index" into arrays from iterable sets, such as points on a mesh.
-These points can be as simple as the points of a finite difference grid, or cells of a finite volume grid, or as complex as the topological entities of an unstructured mesh (cells, faces, edges, and vertices).
+A **point** is a ``PetscInt`` that serves as an abstract "index" into arrays from iterable sets, such as k-cells in a mesh.
+Other iterable set examples can be as simple as the points of a finite difference grid, or cells of a finite volume grid, or as complex as the topological entities of an unstructured mesh (cells, faces, edges, and vertices).
 
 At it's most basic, a ``PetscSection`` is a mapping between the mesh points and a tuple ``(ndof, offset)``, where ``ndof`` is the number of values stored at that mesh point and ``offset`` is the location in the array of that data.
 So given the tuple for a mesh point, its data can be accessed by ``array[offset + d]``, where ``d`` in ``[0, ndof)`` is the dof to access.
