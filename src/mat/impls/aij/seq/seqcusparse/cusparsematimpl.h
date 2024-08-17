@@ -210,6 +210,10 @@ struct Mat_SeqAIJCUSPARSETriFactorStruct {
   PetscScalar *AA_h; /* managed host buffer for moving values to the GPU */
 };
 
+#if defined(__GNUC__) || defined(__GNUG__)
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
 /* This is a larger struct holding all the triangular factors for a solve, transpose solve, and any indices used in a reordering */
 struct Mat_SeqAIJCUSPARSETriFactors {
 #if PETSC_PKG_CUDA_VERSION_LT(11, 4, 0)
@@ -267,6 +271,9 @@ struct Mat_SeqAIJCUSPARSETriFactors {
   PetscLogDouble numericFactFlops; /* Estimated FLOPs in ILU0/ICC0 numeric factorization */
 #endif
 };
+#if defined(__GNUC__) || defined(__GNUG__)
+  #pragma GCC diagnostic pop
+#endif
 
 struct Mat_CusparseSpMV {
   PetscBool initialized;    /* Don't rely on spmvBuffer != NULL to test if the struct is initialized, */
