@@ -861,6 +861,24 @@ PETSC_EXTERN PetscBool petscwaitonerrorflg;
 PETSC_EXTERN PetscBool petscindebugger;
 PETSC_EXTERN PetscBool petscabortmpifinalize;
 
+#if defined(PETSC_CLANG_STATIC_ANALYZER)
+void PETSCABORTWITHERR(MPI_Comm, PetscErrorCode);
+#else
+  #define PETSCABORTWITHIERR(comm, ierr) \
+    do { \
+      PetscMPIInt size_; \
+      MPI_Comm_size(comm, &size_); \
+      if (PetscCIEnabledPortableErrorOutput && (size_ == PetscGlobalSize || petscabortmpifinalize) && ierr != PETSC_ERR_SIG) { \
+        MPI_Finalize(); \
+        exit(0); \
+      } else if (PetscCIEnabledPortableErrorOutput && PetscGlobalSize == 1) { \
+        exit(0); \
+      } else { \
+        MPI_Abort(comm, (PetscMPIInt)ierr); \
+      } \
+    } while (0)
+#endif
+
 /*MC
    PETSCABORT - Call `MPI_Abort()` with an informative error code
 
@@ -903,17 +921,8 @@ void PETSCABORT(MPI_Comm, PetscErrorCode);
       if (petscindebugger) { \
         abort(); \
       } else { \
-        PetscMPIInt size_; \
         ierr_petsc_abort_ = __VA_ARGS__; \
-        MPI_Comm_size(comm, &size_); \
-        if (PetscCIEnabledPortableErrorOutput && (size_ == PetscGlobalSize || petscabortmpifinalize) && ierr_petsc_abort_ != PETSC_ERR_SIG) { \
-          MPI_Finalize(); \
-          exit(0); \
-        } else if (PetscCIEnabledPortableErrorOutput && PetscGlobalSize == 1) { \
-          exit(0); \
-        } else { \
-          MPI_Abort(comm, (PetscMPIInt)ierr_petsc_abort_); \
-        } \
+        PETSCABORTWITHIERR(comm, ierr_petsc_abort_); \
       } \
     } while (0)
 #endif
@@ -1880,6 +1889,9 @@ M*/
     do { \
       PetscStackUpdateLine; \
       int ierr_petsc_call_external_ = func(__VA_ARGS__); \
-      PetscCheckAbort(ierr_petsc_call_external_ == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in %s(): error code %d", PetscStringize(func), ierr_petsc_call_external_); \
+      if (PetscUnlikely(ierr_petsc_call_external_ != 0)) { \
+        (void)PetscError(PETSC_COMM_SELF, __LINE__, PETSC_FUNCTION_NAME, __FILE__, PETSC_ERR_LIB, PETSC_ERROR_INITIAL, "Error in %s(): error code %d", PetscStringize(func), ierr_petsc_call_external_); \
+        PETSCABORTWITHIERR(PETSC_COMM_SELF, PETSC_ERR_LIB); \
+      } \
     } while (0)
 #endif /* PETSC_CLANG_STATIC_ANALYZER */
