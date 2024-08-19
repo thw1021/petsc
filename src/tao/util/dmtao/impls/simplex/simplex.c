@@ -51,7 +51,7 @@ static PetscErrorCode DMTaoApplyProximalMap_Simplex(DMTao tdm0, DMTao tdm1, Pets
   DMTao_Simplex *sctx = (DMTao_Simplex *)tdm0->data;
   PetscBool      is_0_s, is_1_l2 = PETSC_TRUE;
   PetscBool      bget = PETSC_FALSE;
-  PetscReal     *xarray, *yarray, tmax, min, max, sum, size, cumsum = 0;
+  PetscReal     *xarray, *yarray, min, max, sum, size, cumsum = 0, tmax = 0;
   PetscMPIInt    mpi_size, rank;
   MPI_Comm       comm;
   PetscInt       len, i, N;

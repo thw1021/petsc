@@ -233,6 +233,7 @@ cdef extern from * nogil:
     PetscErrorCode DMGetDMTao(PetscDM, PetscDMTAO *)
     PetscErrorCode DMGetDMTaoWrite(PetscDM, PetscDMTAO *)
     PetscErrorCode DMTaoGetParentDM(PetscDMTAO, PetscDM *)
+    PetscErrorCode DMTaoView(PetscDMTAO, PetscViewer)
 
 # --------------------------------------------------------------------
 
