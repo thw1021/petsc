@@ -1889,35 +1889,6 @@ del TAOBNCGType
 # --------------------------------------------------------------------
 
 
-cdef class DMTAO(Object):
-    """DMTAO Object."""
-
-    def __cinit__(self):
-        self.obj   = <PetscObject*> &self.dmtao
-        self.dmtao = NULL
-
-    def view(self, Viewer viewer=None) -> None:
-        """ View the DMTao object.
-
-        Collective.
-
-        Parameters
-        ----------
-        viewer
-            A `Viewer` instance or `None` for the default viewer.
-
-        See Also
-        --------
-        petsc.DMTaoView
-
-        """
-        cdef PetscViewer vwr = NULL
-        if viewer is not None: vwr = viewer.vwr
-        CHKERR(DMTaoView(self.dmtao, vwr))
-
-# --------------------------------------------------------------------
-
-
 class TAOLineSearchType:
     """TAO Line Search Types."""
     UNIT        = S_(TAOLINESEARCHUNIT)

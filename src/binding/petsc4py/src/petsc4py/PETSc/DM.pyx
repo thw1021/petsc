@@ -2314,7 +2314,7 @@ cdef class DM(Object):
         self, objective : DMTAOObjectiveFunction,
         args: tuple[Any, ...] | None = None,
         kargs: dict[str, Any] | None = None) -> None:
-        """Set the `DMTao` objective evaluation function.
+        """Set the DMTao objective evaluation function.
 
         Logically collective.
 
@@ -2329,7 +2329,7 @@ cdef class DM(Object):
 
         See Also
         --------
-        petsc.DMTaoSetObjective
+        petsc.TaoSetObjective
 
         """
         if args  is None: args  = ()
@@ -2357,7 +2357,7 @@ cdef class DM(Object):
 
         See Also
         --------
-        setObjective, setObjectiveGradient, setHessian, petsc.TaoSetGradient
+        petsc.TaoSetGradient
 
         """
         if args is None: args = ()
@@ -2385,7 +2385,7 @@ cdef class DM(Object):
 
         See Also
         --------
-        setTAOObjective, setTAOGradient, petsc.DMTaoSetObjectiveAndGradient
+        petsc.TaoSetObjectiveAndGradient
 
         """
         if args is None: args = ()
@@ -2403,7 +2403,7 @@ cdef class DM(Object):
         Parameters
         ----------
         dm1
-            The `DM` context that contains regularizer `DMTao` context.
+            The `DM` context that contains regularizer DMTao context.
         scale
             The scale of regularizer.
         y
@@ -2413,10 +2413,6 @@ cdef class DM(Object):
         flg
             Boolean to denote conjugate.
 
-        See Also
-        --------
-        petsc.DMTaoApplyProximalMap
-
         """
         if dm1 is not None:
             CHKERR(DMTaoApplyProximalMap(self.dm, dm1.dm, scale, y.vec, x.vec, flg))
@@ -2424,18 +2420,18 @@ cdef class DM(Object):
             CHKERR(DMTaoApplyProximalMap(self.dm, NULL, scale, y.vec, x.vec, flg))
 
     def setTAOType(self, dmtao_type: DMTAOType | str) -> None:
-        """Set the type of the `DMTao`.
+        """Set the type of the DMTao.
 
         Logically collective.
 
         Parameters
         ----------
         tao_type
-            The type of the `DMTao` object.
+            The type of the DMTao object.
 
         See Also
         --------
-        getType, petsc.DMTaoSetType
+        getType
 
         """
         cdef PetscDMTAOType ctype = NULL
@@ -2443,7 +2439,7 @@ cdef class DM(Object):
         CHKERR(DMTaoSetType(self.dm, ctype))
 
     def createTAOPython(self, context: Any = None, comm: Comm | None = None) -> Self:
-        """Create an `DMTao` of Python type.
+        """Create an DMTao of Python type.
 
         Collective.
 
@@ -2453,10 +2449,6 @@ cdef class DM(Object):
             An instance of the Python class implementing the required methods.
         comm
             MPI communicator, defaults to `Sys.getDefaultComm`.
-
-        See Also
-        --------
-        setTAOType, setTAOPythonContext
 
         """
         cdef MPI_Comm ccomm = def_Comm(comm, PETSC_COMM_DEFAULT)
@@ -2472,22 +2464,13 @@ cdef class DM(Object):
 
         Not collective.
 
-        See Also
-        --------
-        petsc_python_dmtao, getTAOPythonContext
-
         """
         CHKERR(DMTaoPythonSetContext(self.dm, <void*>context))
 
     def getTAOPythonContext(self) -> Any:
-        """Return the fully qualified Python name of the class used by the `DMTao`.
+        """Return the fully qualified Python name of the class used by the DMTao.
 
         Not collective.
-
-        See Also
-        --------
-        petsc_python_dmtao, setTAOPythonContext, setTAOPythonType
-        petsc.DMTaoPythonGetType
 
         """
         cdef void *context = NULL
@@ -2500,72 +2483,20 @@ cdef class DM(Object):
 
         Collective.
 
-        See Also
-        --------
-        petsc_python_dmtao, setTAOPythonContext, getTAOPythonType
-        petsc.DMTaoPythonSetType
-
         """
         cdef const char *cval = NULL
         py_type = str2bytes(py_type, &cval)
         CHKERR(DMTaoPythonSetType(self.dm, cval))
 
     def getTAOPythonType(self) -> str:
-        """Return the fully qualified Python name of the class used by the `DMTao`.
+        """Return the fully qualified Python name of the class used by the DMTao.
 
         Not collective.
-
-        See Also
-        --------
-        petsc_python_dmtao, setDMPythonContext, setDMPythonType
-        petsc.DMTaoPythonGetType
 
         """
         cdef const char *cval = NULL
         CHKERR(DMTaoPythonGetType(self.dm, &cval))
         return bytes2str(cval)
-
-    def setTAOOptionsPrefix(self, prefix: str | None) -> None:
-        """Set the prefix used for searching for options in the database.
-
-        Logically collective.
-
-        See Also
-        --------
-        petsc_options, getTAOOptionsPrefix, petsc.DMTaoSetOptionsPrefix
-
-        """
-        cdef const char *cval = NULL
-        prefix = str2bytes(prefix, &cval)
-        CHKERR(DMTaoSetOptionsPrefix(self.dm, cval))
-
-    def getTAOOptionsPrefix(self) -> str:
-        """Return the prefix used for searching for options in the database.
-
-        Not collective.
-
-        See Also
-        --------
-        petsc_options, setTAOOptionsPrefix, petsc.DMTaoGetOptionsPrefix
-
-        """
-        cdef const char *cval = NULL
-        CHKERR(DMTaoGetOptionsPrefix(self.dm, &cval))
-        return bytes2str(cval)
-
-    def appendOptionsPrefix(self, prefix: str | None) -> None:
-        """Append to the prefix used for searching for options in the database.
-
-        Logically collective.
-
-        See Also
-        --------
-        petsc_options, setTAOOptionsPrefix, petsc.DMTaoAppendOptionsPrefix
-
-        """
-        cdef const char *cval = NULL
-        prefix = str2bytes(prefix, &cval)
-        CHKERR(DMTaoAppendOptionsPrefix(self.dm, cval))
 
     def addCoarsenHook(
         self,
@@ -2637,6 +2568,31 @@ cdef class DM(Object):
 
         def __set__(self, value):
             self.setDS(value)
+
+# --------------------------------------------------------------------
+
+
+cdef class DMTAO(Object):
+    """DMTAO Object."""
+
+    def __cinit__(self):
+        self.obj   = <PetscObject*> &self.dmtao
+        self.dmtao = NULL
+
+    def view(self, Viewer viewer=None) -> None:
+        """ View the DMTao object.
+
+        Collective.
+
+        Parameters
+        ----------
+        viewer
+            A `Viewer` instance or `None` for the default viewer.
+
+        """
+        cdef PetscViewer vwr = NULL
+        if viewer is not None: vwr = viewer.vwr
+        CHKERR(DMTaoView(self.dmtao, vwr))
 
 # --------------------------------------------------------------------
 
