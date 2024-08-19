@@ -2,14 +2,14 @@ static char help[] = "Error handling for external library call in void function.
 
 #include <petscsys.h>
 
-int ReturnAnError()
+int ReturnAnError(int)
 {
   return 1;
 }
 
 void MakeAnError()
 {
-  PetscCallExternalAbort(ReturnAnError);
+  PetscCallExternalAbort(ReturnAnError, 0);
 }
 
 int main(int argc, char **argv)
