@@ -862,9 +862,9 @@ PETSC_EXTERN PetscBool petscindebugger;
 PETSC_EXTERN PetscBool petscabortmpifinalize;
 
 #if defined(PETSC_CLANG_STATIC_ANALYZER)
-void PETSCABORTWITHERR(MPI_Comm, PetscErrorCode);
+void PETSCABORTWITHERR_Private(MPI_Comm, PetscErrorCode);
 #else
-  #define PETSCABORTWITHIERR(comm, ierr) \
+  #define PETSCABORTWITHIERR_Private(comm, ierr) \
     do { \
       PetscMPIInt size_; \
       MPI_Comm_size(comm, &size_); \
@@ -922,7 +922,7 @@ void PETSCABORT(MPI_Comm, PetscErrorCode);
         abort(); \
       } else { \
         ierr_petsc_abort_ = __VA_ARGS__; \
-        PETSCABORTWITHIERR(comm, ierr_petsc_abort_); \
+        PETSCABORTWITHIERR_Private(comm, ierr_petsc_abort_); \
       } \
     } while (0)
 #endif
@@ -1891,7 +1891,7 @@ M*/
       int ierr_petsc_call_external_ = func(__VA_ARGS__); \
       if (PetscUnlikely(ierr_petsc_call_external_ != 0)) { \
         (void)PetscError(PETSC_COMM_SELF, __LINE__, PETSC_FUNCTION_NAME, __FILE__, PETSC_ERR_LIB, PETSC_ERROR_INITIAL, "Error in %s(): error code %d", PetscStringize(func), ierr_petsc_call_external_); \
-        PETSCABORTWITHIERR(PETSC_COMM_SELF, PETSC_ERR_LIB); \
+        PETSCABORTWITHIERR_Private(PETSC_COMM_SELF, PETSC_ERR_LIB); \
       } \
     } while (0)
 #endif /* PETSC_CLANG_STATIC_ANALYZER */
