@@ -2395,7 +2395,7 @@ cdef class DM(Object):
         CHKERR(DMTaoSetObjectiveAndGradient(self.dm, DMTAO_ObjGrad, <void*>context))
 
     def applyTAOproximalmap(
-        self, DM dm1, PetscReal scale, Vec y, Vec x, PetscBool flg) -> None:
+            self, DM dm1, scale: float, Vec y, Vec x, flg: bool) -> None:
         """Computes proximal mapping of DMTao.
 
         Logically collective.
@@ -2419,7 +2419,7 @@ cdef class DM(Object):
         else:
             CHKERR(DMTaoApplyProximalMap(self.dm, NULL, scale, y.vec, x.vec, flg))
 
-    def setTAOType(self, dmtao_type: DMTAOType | str) -> None:
+    def setTAOType(self, dmtao_type: Type | str) -> None:
         """Set the type of the DMTao.
 
         Logically collective.
