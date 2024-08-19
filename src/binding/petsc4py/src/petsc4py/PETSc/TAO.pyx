@@ -41,6 +41,8 @@ class TAOType:
     ADMM     = S_(TAOADMM)
     ALMM     = S_(TAOALMM)
     PYTHON   = S_(TAOPYTHON)
+    FB       = S_(TAOFB)
+    CV       = S_(TAOCV)
 
 
 class TAOConvergedReason:
@@ -1894,6 +1896,7 @@ class TAOLineSearchType:
     MORETHUENTE = S_(TAOLINESEARCHMT)
     IPM         = S_(TAOLINESEARCHIPM)
     OWARMIJO    = S_(TAOLINESEARCHOWARMIJO)
+    PS          = S_(TAOLINESEARCHPS)
     GPCG        = S_(TAOLINESEARCHGPCG)
 
 
@@ -1915,6 +1918,7 @@ class TAOLineSearchConvergedReason:
     HALTED_LOWERBOUND     = TAOLINESEARCH_HALTED_LOWERBOUND    # stopped at lower bound
     HALTED_RTOL           = TAOLINESEARCH_HALTED_RTOL          # range of uncertainty is below tolerance
     HALTED_USER           = TAOLINESEARCH_HALTED_USER          # user-defined halt criteria reached
+
 
 # --------------------------------------------------------------------
 
@@ -2178,3 +2182,5 @@ cdef class TAOLineSearch(Object):
 
 del TAOLineSearchType
 del TAOLineSearchConvergedReason
+
+# --------------------------------------------------------------------
