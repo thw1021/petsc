@@ -1,5 +1,4 @@
 -include ../../../../petscdir.mk
-#requiresscalar    real
 
 DIRS     = l2 l1 simplex box zero shell python
 LIBBASE  = libpetsctao

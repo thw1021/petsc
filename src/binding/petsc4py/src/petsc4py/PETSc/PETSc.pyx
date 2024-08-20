@@ -560,7 +560,6 @@ cdef int register() except -1:
     PyPetscType_Register(PETSC_SNES_CLASSID,             SNES)
     PyPetscType_Register(PETSC_TS_CLASSID,               TS)
     PyPetscType_Register(PETSC_TAO_CLASSID,              TAO)
-    PyPetscType_Register(PETSC_DMTAO_CLASSID,            DMTAO)
     PyPetscType_Register(PETSC_PARTITIONER_CLASSID,      Partitioner)
     PyPetscType_Register(PETSC_AO_CLASSID,               AO)
     PyPetscType_Register(PETSC_DM_CLASSID,               DM)
