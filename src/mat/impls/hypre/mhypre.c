@@ -2409,8 +2409,12 @@ M*/
 PETSC_EXTERN PetscErrorCode MatCreate_HYPRE(Mat B)
 {
   Mat_HYPRE *hB;
+#if defined(PETSC_HAVE_HYPRE_DEVICE)
+  HYPRE_MemoryLocation memory_location;
+#endif
 
   PetscFunctionBegin;
+  PetscHYPREInitialize();
   PetscCall(PetscNew(&hB));
 
   hB->inner_free      = PETSC_TRUE;
@@ -2445,7 +2449,8 @@ PETSC_EXTERN PetscErrorCode MatCreate_HYPRE(Mat B)
   B->ops->productsetfromoptions = MatProductSetFromOptions_HYPRE;
 #if defined(PETSC_HAVE_HYPRE_DEVICE)
   B->ops->bindtocpu = MatBindToCPU_HYPRE;
-  B->boundtocpu     = PETSC_FALSE;
+  PetscCallExternal(HYPRE_GetMemoryLocation, &memory_location);
+  B->boundtocpu = (memory_location == HYPRE_MEMORY_HOST) ? PETSC_TRUE : PETSC_FALSE;
 #endif
 
   /* build cache for off array entries formed */
@@ -2475,6 +2480,5 @@ PETSC_EXTERN PetscErrorCode MatCreate_HYPRE(Mat B)
   PetscCall(MatSetVecType(B, VECCUDA));
   #endif
 #endif
-  PetscHYPREInitialize();
   PetscFunctionReturn(PETSC_SUCCESS);
 }
