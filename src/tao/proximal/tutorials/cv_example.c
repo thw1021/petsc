@@ -48,7 +48,7 @@ typedef struct {
 PetscErrorCode LAD_UserObjGrad_DM(DM dm, Vec X, PetscReal *f, Vec G, void *ptr)
 {
   PetscFunctionBegin;
-  f = 0;
+  *f = 0;
   PetscCall(VecSet(G, 0.));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
