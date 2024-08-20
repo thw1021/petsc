@@ -86,7 +86,7 @@ static PetscErrorCode TaoFB_LineSearch_PostUpdate_Private(TaoLineSearch ls, Vec 
 static PetscErrorCode TaoFB_ADAPGM_Update_Stepsize_Private(Tao tao)
 {
   TAO_FB   *fb = (TAO_FB *)tao->data;
-  PetscReal grad_x_dot, graddiff, xdiff, L, C, min1, min2;
+  PetscReal grad_x_dot, graddiff, xdiff, L, C, min1, min2, temp;
 
   PetscFunctionBegin;
   /* workvec: v, which is x - step*gradf(x)        *
@@ -107,7 +107,8 @@ static PetscErrorCode TaoFB_ADAPGM_Update_Stepsize_Private(Tao tao)
   L            = grad_x_dot / xdiff;
   C            = graddiff / grad_x_dot;
   min1         = tao->step * PetscSqrtReal(1 + tao->step / fb->step_old);
-  min2         = tao->step / (2 * PetscSqrtReal(PetscMax(tao->step * L * (tao->step * C - 1), 0)));
+  temp         = PetscMax(tao->step * L * (tao->step * C - 1), 0);
+  min2         = (temp == 0) ? PETSC_INFINITY : (tao->step / (2 * PetscSqrtReal(temp)));
   fb->step_old = tao->step;
   tao->step    = PetscMin(min1, min2);
   PetscFunctionReturn(PETSC_SUCCESS);
