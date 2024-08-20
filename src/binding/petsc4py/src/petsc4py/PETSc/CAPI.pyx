@@ -283,6 +283,16 @@ cdef api PetscTAOLineSearch PyPetscTAOLineSearch_Get(object arg) except ? NULL:
     retv = ob.taols
     return retv
 
+cdef api object PyPetscDMTAO_New(PetscDMTAO arg):
+    cdef DMTAO retv = DMTAO()
+    setref(&retv.dmtao, arg)
+    return retv
+
+cdef api PetscDMTAO PyPetscDMTAO_Get(object arg) except ? NULL:
+    cdef PetscDMTAO retv = NULL
+    cdef DMTAO ob = <DMTAO?> arg
+    retv = ob.dmtao
+    return retv
 
 # -- AO --
 
