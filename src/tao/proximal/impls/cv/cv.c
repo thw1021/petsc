@@ -37,8 +37,7 @@ static PetscErrorCode TaoCV_LineSearch_PreApply_Private(TaoLineSearch ls, Vec in
 
   cv->eta *= cv->R;
   /* For TAOCV, linesearch needs to go at least once */
-  armP->cert         = PETSC_INFINITY;
-  //TODO dirty trick...
+  armP->cert = PETSC_INFINITY;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
