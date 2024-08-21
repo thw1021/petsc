@@ -505,7 +505,7 @@ int main(int argc, char **argv)
 
    test:
       suffix: lasso_ada
-      args: -problem prob_lasso -formation {{use_tao use_dm}} -tao_fb_accel 0 -tao_fb_adaptive 1 -scale 10 -tao_max_it 1000
+      args: -problem prob_lasso -formation {{use_tao use_dm}} -tao_fb_accel 0 -tao_fb_adaptive 1 -scale 10 -tao_max_it 2000
       output_file: output/fb_example_lasso_ada.out
       requires: !single
 

@@ -42,7 +42,7 @@ typedef struct {
   Mat       Q, A;
   Vec       x0, x, workvec, workvec2, workvec3, q, y_translation;
   PetscReal C, lip, matnorm, g_scale;
-  PetscBool ls;
+  PetscBool set_norm;
 } AppCtx;
 
 PetscErrorCode LAD_UserObjGrad_DM(DM dm, Vec X, PetscReal *f, Vec G, void *ptr)
@@ -307,7 +307,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *user)
   user->g_scale  = 10.;
   user->formType = USE_TAO;
   user->probType = DUAL_SVM;
-  user->ls       = PETSC_TRUE;
+  user->set_norm = PETSC_FALSE;
   formtype       = user->formType;
   probtype       = user->probType;
 
@@ -319,7 +319,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *user)
   user->probType = (ProbType)probtype;
 
   /* Trigger Linesearch by setting norm to zero */
-  PetscCall(PetscOptionsGetBool(NULL, NULL, "-ls", &user->ls, NULL));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-set_norm", &user->set_norm, NULL));
   /* Box constraint for SVM */
   PetscCall(PetscOptionsGetReal(NULL, NULL, "-C", &user->C, NULL));
   PetscCall(PetscOptionsGetReal(NULL, NULL, "-g_scale", &user->g_scale, NULL));
@@ -393,8 +393,8 @@ int main(int argc, char **argv)
   }
 
   PetscCall(TaoPSSetNonSmoothTerm(tao, gdm, user.g_scale));
-  if (user.ls) PetscCall(TaoPSSetNonSmoothTermWithLinearMap(tao, hdm, user.A, user.matnorm, 1.));
-  else PetscCall(TaoPSSetNonSmoothTermWithLinearMap(tao, hdm, user.A, 0., 1.));
+  if (!user.set_norm) PetscCall(TaoPSSetNonSmoothTermWithLinearMap(tao, hdm, user.A, 0., 1.));
+  else PetscCall(TaoPSSetNonSmoothTermWithLinearMap(tao, hdm, user.A, user.matnorm, 1.));
 
   PetscCall(TaoSetFromOptions(tao));
   PetscCall(TaoSolve(tao));
@@ -415,19 +415,51 @@ int main(int argc, char **argv)
       requires: !complex !single !__float128 !defined(PETSC_USE_64BIT_INDICES)
 
    test:
-      suffix: svm
+      suffix: svm_norm
       nsize: {{1 2 4}}
       localrunfiles: matrix-heart-scale.dat vector-heart-scale.dat
-      args: -formation {{use_tao use_dm}} -problem dual_svm -g_scale 1 -tao_converged_reason -tao_max_it 1000 -tao_cv_primal_dual_ratio 1 -C 0.1 -tao_gttol 1.e-5
-      output_file: output/cv_example_svm.out
+      args: -formation {{use_tao use_dm}} -problem dual_svm -g_scale 1 -tao_converged_reason -tao_max_it 1000 -tao_cv_primal_dual_ratio 1 -C 0.1 -tao_gttol 1.e-5 -tao_ls_max_funcs 0 -set_norm 1
+      output_file: output/cv_example_svm_norm.out
       requires: !single
 
    test:
-      suffix: lad
+      suffix: svm_norm_ls
+      nsize: {{1 2 4}}
+      localrunfiles: matrix-heart-scale.dat vector-heart-scale.dat
+      args: -formation {{use_tao use_dm}} -problem dual_svm -g_scale 1 -tao_converged_reason -tao_max_it 2000 -tao_cv_primal_dual_ratio 1 -C 0.1 -tao_gttol 1.e-5 -tao_ls_max_funcs 30 -set_norm 1
+      output_file: output/cv_example_svm_norm_ls.out
+      requires: !single
+
+   test:
+      suffix: svm_ls
+      nsize: {{1 2 4}}
+      localrunfiles: matrix-heart-scale.dat vector-heart-scale.dat
+      args: -formation {{use_tao use_dm}} -problem dual_svm -g_scale 1 -tao_converged_reason -tao_max_it 1000 -tao_cv_primal_dual_ratio 1 -C 0.1 -tao_gttol 1.e-5 -set_norm 0 -tao_ls_max_funcs 30
+      output_file: output/cv_example_svm_ls.out
+      requires: !single
+
+   test:
+      suffix: lad_norm
       nsize: {{1 2 4}}
       localrunfiles: matrix-housing-scale.dat vector-housing-scale.dat
-      args: -formation {{use_tao use_dm}} -problem lad -g_scale 10 -tao_max_it 1000 -tao_cv_primal_dual_ratio 1 -C 0.1 -tao_gttol 1.e-5
-      output_file: output/cv_example_lad.out
+      args: -formation {{use_tao use_dm}} -problem lad -g_scale 10 -tao_max_it 1000 -tao_cv_primal_dual_ratio 1 -C 0.1 -tao_gttol 1.e-5 -tao_ls_max_funcs 0 -set_norm 1
+      output_file: output/cv_example_lad_norm.out
+      requires: !single
+
+   test:
+      suffix: lad_norm_ls
+      nsize: {{1 2 4}}
+      localrunfiles: matrix-housing-scale.dat vector-housing-scale.dat
+      args: -formation {{use_tao use_dm}} -problem lad -g_scale 10 -tao_max_it 1000 -tao_cv_primal_dual_ratio 1 -C 0.1 -tao_gttol 1.e-5 -set_norm 1 -tao_ls_max_funcs 30
+      output_file: output/cv_example_lad_norm_ls.out
+      requires: !single
+
+   test:
+      suffix: lad_ls
+      nsize: {{1 2 4}}
+      localrunfiles: matrix-housing-scale.dat vector-housing-scale.dat
+      args: -formation {{use_tao use_dm}} -problem lad -g_scale 10 -tao_max_it 1000 -tao_cv_primal_dual_ratio 1 -C 0.1 -tao_gttol 1.e-5 -set_norm 0 -tao_ls_max_funcs 30
+      output_file: output/cv_example_lad_ls.out
       requires: !single
 
 TEST*/

@@ -18,7 +18,7 @@ typedef struct {
   PetscReal rho;
   PetscReal sigma;
   PetscReal eta;      // lmap_norm estimate
-  PetscReal nu;       // usually 1.1 <= nu <= 1.5
+  PetscReal Theta;    // usually 1.1 <= Theta <= 1.5
   PetscReal pd_ratio; //t variable
   PetscReal R;        //scale factor for estimating linear map norm. Must be <= 1.
   PetscReal r;        //backtracking parameter > 1
