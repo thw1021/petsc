@@ -503,6 +503,7 @@ cdef extern from * nogil:
     PetscClassId PETSC_SNES_CLASSID             "SNES_CLASSID"
     PetscClassId PETSC_TS_CLASSID               "TS_CLASSID"
     PetscClassId PETSC_TAO_CLASSID              "TAO_CLASSID"
+    PetscClassId PETSC_DMTAO_CLASSID            "DMTAO_CLASSID"
     PetscClassId PETSC_AO_CLASSID               "AO_CLASSID"
     PetscClassId PETSC_DM_CLASSID               "DM_CLASSID"
     PetscClassId PETSC_DS_CLASSID               "PETSCDS_CLASSID"
