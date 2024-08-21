@@ -8,12 +8,19 @@
 #endif
 
 #if PetscDefined(HAVE_CUDA)
+  #if defined(__GNUC__) || defined(__GNUG__)
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+  #endif
   #include <cuda.h>
   #include <cuda_runtime.h>
   #include <cublas_v2.h>
   #include <cusolverDn.h>
   #include <cusolverSp.h>
   #include <cufft.h>
+  #if defined(__GNUC__) || defined(__GNUG__)
+    #pragma GCC diagnostic pop
+  #endif
 
 /* cuBLAS does not have cublasGetErrorName(). We create one on our own. */
 PETSC_EXTERN const char *PetscCUBLASGetErrorName(cublasStatus_t); /* PETSC_EXTERN since it is exposed by the CHKERRCUBLAS macro */
