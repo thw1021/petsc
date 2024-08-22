@@ -55,6 +55,17 @@ class DMReorderDefaultFlag(object):
     FALSE  = DM_REORDER_DEFAULT_FALSE
     TRUE   = DM_REORDER_DEFAULT_TRUE
 
+
+class DMTAOType(object):
+    """DMTao type."""
+    L1      = S_(DMTAOL1)
+    L2      = S_(DMTAOL2)
+    SIMPLEX = S_(DMTAOSIMPLEX)
+    BOX     = S_(DMTAOBOX)
+    ZERO    = S_(DMTAOZERO)
+    SHELL   = S_(DMTAOSHELL)
+    PYTHON  = S_(DMTAOPYTHON)
+
 # --------------------------------------------------------------------
 
 
@@ -64,6 +75,7 @@ cdef class DM(Object):
     Type         = DMType
     BoundaryType = DMBoundaryType
     PolytopeType = DMPolytopeType
+    TAOType      = DMTAOType
 
     ReorderDefaultFlag = DMReorderDefaultFlag
 
@@ -2298,6 +2310,216 @@ cdef class DM(Object):
         else:
             CHKERR(DMSNESSetJacobian(self.dm, NULL, NULL))
 
+    def setTAOObjective(
+        self, objective : DMTAOObjectiveFunction,
+        args: tuple[Any, ...] | None = None,
+        kargs: dict[str, Any] | None = None) -> None:
+        """Set the DMTao objective evaluation function.
+
+        Logically collective.
+
+        Parameters
+        ----------
+        objective
+            The objective callback.
+        args
+            Positional arguments for the callback.
+        kargs
+            Keyword arguments for the callback.
+
+        See Also
+        --------
+        petsc.TaoSetObjective
+
+        """
+        if args  is None: args  = ()
+        if kargs is None: kargs = {}
+        context = (objective, args, kargs)
+        self.set_attr('__objective__', context)
+        CHKERR(DMTaoSetObjective(self.dm, DMTAO_Objective, <void*>context))
+
+    def setTAOGradient(
+        self, gradient : DMTAOGradientFunction,
+        args: tuple[Any, ...] | None = None,
+        kargs: dict[str, Any] | None = None) -> None:
+        """Set the gradient evaluation callback.
+
+        Logically collective.
+
+        Parameters
+        ----------
+        gradient
+            The gradient callback.
+        args
+            Positional arguments for the callback.
+        kargs
+            Keyword arguments for the callback.
+
+        See Also
+        --------
+        petsc.TaoSetGradient
+
+        """
+        if args is None: args = ()
+        if kargs is None: kargs = {}
+        context = (gradient, args, kargs)
+        self.set_attr('__gradient__', context)
+        CHKERR(DMTaoSetGradient(self.dm, DMTAO_Gradient, <void*>context))
+
+    def setTAOObjectiveGradient(
+        self, objgrad: DMTAOObjectiveGradientFunction,
+        args: tuple[Any, ...] | None = None,
+        kargs: dict[str, Any] | None = None) -> None:
+        """Set the objective function and gradient evaluation callback.
+
+        Logically collective.
+
+        Parameters
+        ----------
+        objgrad
+            The objective function and gradient callback.
+        args
+            Positional arguments for the callback.
+        kargs
+            Keyword arguments for the callback.
+
+        See Also
+        --------
+        petsc.TaoSetObjectiveAndGradient
+
+        """
+        if args is None: args = ()
+        if kargs is None: kargs = {}
+        context = (objgrad, args, kargs)
+        self.set_attr("__objgrad__", context)
+        CHKERR(DMTaoSetObjectiveAndGradient(self.dm, DMTAO_ObjGrad, <void*>context))
+
+    def applyTAOproximalmap(
+        self, DM dm1, scale: float, Vec y, Vec x, flg: bool) -> None:
+        """Computes proximal mapping of DMTao.
+
+        Logically collective.
+
+        Parameters
+        ----------
+        dm1
+            The `DM` context that contains regularizer DMTao context.
+        scale
+            The scale of regularizer.
+        y
+            Input vector.
+        x
+            Solution output vector.
+        flg
+            Boolean to denote conjugate.
+
+        """
+        if dm1 is not None:
+            CHKERR(DMTaoApplyProximalMap(self.dm, dm1.dm, scale, y.vec, x.vec, flg))
+        else:
+            CHKERR(DMTaoApplyProximalMap(self.dm, NULL, scale, y.vec, x.vec, flg))
+
+    def setTAOType(self, dmtao_type: Type | str) -> None:
+        """Set the type of the DMTao.
+
+        Logically collective.
+
+        Parameters
+        ----------
+        tao_type
+            The type of the DMTao object.
+
+        See Also
+        --------
+        getType
+
+        """
+        cdef PetscDMTAOType ctype = NULL
+        dmtao_type = str2bytes(dmtao_type, &ctype)
+        CHKERR(DMTaoSetType(self.dm, ctype))
+
+    def createTAOPython(self, context: Any = None, comm: Comm | None = None) -> Self:
+        """Create an DMTao of Python type.
+
+        Collective.
+
+        Parameters
+        ----------
+        context
+            An instance of the Python class implementing the required methods.
+        comm
+            MPI communicator, defaults to `Sys.getDefaultComm`.
+
+        """
+        cdef MPI_Comm ccomm = def_Comm(comm, PETSC_COMM_DEFAULT)
+        cdef PetscDM dm = NULL
+        cdef PetscDMTAO dmtao = NULL
+        CHKERR(DMCreate(ccomm, &dm))
+        CHKERR(PetscCLEAR(self.obj)); self.dm = dm
+        CHKERR(DMGetDMTaoWrite(self.dm, &dmtao))
+        CHKERR(DMTaoSetType(self.dm, DMTAOPYTHON))
+        CHKERR(DMTaoPythonSetContext(dmtao, <void*>context))
+        return self
+
+    def setTAOPythonContext(self, context: Any) -> None:
+        """Set the instance of the class implementing the required Python methods.
+
+        Not collective.
+
+        """
+        cdef PetscDMTAO dmtao = NULL
+        CHKERR(DMGetDMTaoWrite(self.dm, &dmtao))
+        CHKERR(DMTaoPythonSetContext(dmtao, <void*>context))
+
+    def getTAOPythonContext(self) -> Any:
+        """Return the fully qualified Python name of the class used by the DMTao.
+
+        Not collective.
+
+        """
+        cdef void *context = NULL
+        cdef PetscDMTAO dmtao = NULL
+        CHKERR(DMGetDMTaoWrite(self.dm, &dmtao))
+        CHKERR(DMTaoPythonGetContext(dmtao, &context))
+        if context == NULL: return None
+        else: return <object> context
+
+    def setTAOPythonType(self, py_type: str) -> None:
+        """Set the fully qualified Python name of the class to be used.
+
+        Collective.
+
+        """
+        cdef const char *cval = NULL
+        cdef PetscDMTAO dmtao = NULL
+        py_type = str2bytes(py_type, &cval)
+        CHKERR(DMGetDMTaoWrite(self.dm, &dmtao))
+        CHKERR(DMTaoPythonSetType(dmtao, cval))
+
+    def getTAOPythonType(self) -> str:
+        """Return the fully qualified Python name of the class used by the DMTao.
+
+        Not collective.
+
+        """
+        cdef const char *cval = NULL
+        cdef PetscDMTAO dmtao = NULL
+        CHKERR(DMGetDMTaoWrite(self.dm, &dmtao))
+        CHKERR(DMTaoPythonGetType(dmtao, &cval))
+        return bytes2str(cval)
+
+    def setTAOFromOptions(self) -> None:
+        """Configure the object from the options database.
+
+        Collective.
+
+        See Also
+        --------
+        petsc_options
+
+        """
+        CHKERR(DMTaoSetFromOptions(self.dm))
+
     def addCoarsenHook(
         self,
         coarsenhook: DMCoarsenHookFunction,
@@ -2371,9 +2593,37 @@ cdef class DM(Object):
 
 # --------------------------------------------------------------------
 
+
+cdef class DMTAO(Object):
+    """DMTAO Object."""
+
+    def __cinit__(self):
+        # TODO: DMTao Prefix Options
+        self.obj   = <PetscObject*> &self.dmtao
+        self.dmtao = NULL
+
+    def view(self, Viewer viewer=None) -> None:
+        """ View the DMTao object.
+
+        Collective.
+
+        Parameters
+        ----------
+        viewer
+            A `Viewer` instance or `None` for the default viewer.
+
+        """
+        cdef PetscViewer vwr = NULL
+        if viewer is not None: vwr = viewer.vwr
+        CHKERR(DMTaoView(self.dmtao, vwr))
+
+
+# --------------------------------------------------------------------
+
 del DMType
 del DMBoundaryType
 del DMPolytopeType
 del DMReorderDefaultFlag
+del DMTAOType
 
 # --------------------------------------------------------------------

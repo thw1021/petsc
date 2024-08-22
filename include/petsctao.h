@@ -258,6 +258,7 @@ typedef const char *TaoType;
 . `DMTAOBOX`     - Box Constraint
 . `DMTAOZERO`    - Zero Cone
 . `DMTAOSHELL`   - Empty Shell
+- `DMTAOPYTHON`  - Python DMTao
 
   Level: beginner
 
@@ -270,6 +271,7 @@ typedef const char *DMTaoType;
 #define DMTAOBOX     "box"
 #define DMTAOZERO    "zero"
 #define DMTAOSHELL   "shell"
+#define DMTAOPYTHON  "python"
 
 PETSC_EXTERN PetscClassId      TAO_CLASSID;
 PETSC_EXTERN PetscClassId      DMTAO_CLASSID;
@@ -625,6 +627,11 @@ PETSC_EXTERN PetscErrorCode DMTaoShellSetProximalMap(DM, PetscErrorCode (*)(DMTa
 PETSC_EXTERN PetscErrorCode DMTaoSetOptionsPrefix(DMTao, const char prefix[]);
 PETSC_EXTERN PetscErrorCode DMTaoAppendOptionsPrefix(DMTao, const char[]);
 PETSC_EXTERN PetscErrorCode DMTaoGetOptionsPrefix(DMTao, const char *[]);
+
+PETSC_EXTERN PetscErrorCode DMTaoPythonSetType(DMTao, const char[]);
+PETSC_EXTERN PetscErrorCode DMTaoPythonGetType(DMTao, const char *[]);
+
+PETSC_EXTERN PetscErrorCode DMTaoDestroy(DMTao *);
 
 /* prox calculus rules options */
 PETSC_EXTERN PetscErrorCode DMTaoSetTranslationVector(DM, Vec);

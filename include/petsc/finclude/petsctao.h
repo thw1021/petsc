@@ -67,5 +67,6 @@
 #define DMTAOBOX     'box'
 #define DMTAOZERO    'zero'
 #define DMTAOSHELL   'shell'
+#define DMTAOPYTHON  'python'
 
 #endif
