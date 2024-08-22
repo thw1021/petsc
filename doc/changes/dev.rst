@@ -88,6 +88,7 @@ Changes: Development
 - Add ``DMAdaptorGetCriterion()`` and ``DMAdaptorSetCriterion()``
 - Add ``DMAdaptorSetOptionsPrefix()``
 - Add Newton's method with arc length continuation: ``SNESNEWTONAL`` with ``SNESNewtonALSetFunction()``, ``SNESNewtonALGetFunction()``, ``SNESNewtonALComputeFunction()``, ``SNESNewtonALGetLoadParameter()``, and ``SNESNewtonALSetCorrectionType()``
+- Add ``SNESResetCounters()`` to reset counters for linear iterations and function evaluations
 
 .. rubric:: SNESLineSearch:
 
