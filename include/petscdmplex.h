@@ -229,8 +229,8 @@ PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetNodalVariable(PetscViewer, int
 PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetZonalVariableName(PetscViewer, int, const char[]);
 PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetNodalVariableName(PetscViewer, int, const char[]);
 
-PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetZonalVariableName(PetscViewer, int, char **);
-PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetNodalVariableName(PetscViewer, int, char **);
+PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetZonalVariableName(PetscViewer, int, const char *[]);
+PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetNodalVariableName(PetscViewer, int, const char *[]);
 
 PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetZonalVariableNames(PetscViewer, const char **);
 PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetNodalVariableNames(PetscViewer, const char **);
