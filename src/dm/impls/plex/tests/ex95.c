@@ -26,7 +26,9 @@ int main(int argc, char **argv)
   PetscCall(PetscOptionsString("-o", "Filename to write", "ex95", ofilename, ofilename, sizeof(ofilename), NULL));
   PetscOptionsEnd();
 
+#ifdef PETSC_USE_DEBUG
   PetscCallExternal(ex_opts, EX_VERBOSE + EX_DEBUG);
+#endif
 
   PetscCall(DMPlexCreateFromFile(PETSC_COMM_WORLD, ifilename, NULL, PETSC_TRUE, &dm));
   PetscCall(DMPlexDistributeSetDefault(dm, PETSC_FALSE));
@@ -34,13 +36,13 @@ int main(int argc, char **argv)
   PetscCall(PetscObjectSetName((PetscObject)dm, "ex95"));
   PetscCall(DMViewFromOptions(dm, NULL, "-dm_view"));
 
-  //   PetscCheck(exo->exoid >= 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "ex_open_par failed for %s", exo->filename);
+  PetscCall(PetscViewerExodusIIOpen(PETSC_COMM_WORLD, ofilename, FILE_MODE_WRITE, &viewer));
 
-  //   PetscCall(PetscViewerExodusIIOpen(PETSC_COMM_WORLD, "test2.exo", FILE_MODE_READ, &viewer));
-  //   PetscCall(PetscViewerExodusIIGetId(viewer, &exoid));
-  //   PetscPrintf(PETSC_COMM_WORLD,"exoid: %d\n",exoid);
-  //   PetscCall(PetscViewerView(viewer, PETSC_VIEWER_STDOUT_WORLD));
-  //   PetscCall(PetscViewerDestroy(&viewer));
+  /* Save the geometry to the file, erasing all previous content */
+  PetscCall(PetscViewerExodusIISetOrder(viewer, order));
+  PetscCall(DMView(dm, viewer));
+  PetscCall(PetscViewerView(viewer, PETSC_VIEWER_STDOUT_WORLD));
+  PetscCall(PetscViewerFlush(viewer));
 
   PetscCall(DMPlexDistribute(dm, ovlp, NULL, &pdm));
   if (!pdm) pdm = dm;
@@ -102,3 +104,14 @@ int main(int argc, char **argv)
   PetscCall(PetscFinalize());
   return 0;
 }
+
+/*TEST
+
+  build:
+    requires: exodusii pnetcdf !complex
+  test:
+    suffix: 0
+    nsize: 1
+    args: -i ${wPETSC_DIR}/share/petsc/datafiles/meshes/FourSquareT-large.exo -o FourSquareT-large_out.exo
+
+TEST*/
