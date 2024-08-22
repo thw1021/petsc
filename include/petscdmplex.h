@@ -214,8 +214,8 @@ PETSC_EXTERN PetscErrorCode DMPlexCreateEGADSFromFile(MPI_Comm, const char[], DM
 PETSC_EXTERN PetscErrorCode DMPlexCreateEGADSLiteFromFile(MPI_Comm, const char[], DM *);
 
 PETSC_EXTERN PetscErrorCode PetscViewerExodusIIOpen(MPI_Comm comm, const char name[], PetscFileMode type, PetscViewer *exo);
-PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetNodalVariableIndex(PetscViewer, const char [], int *);
-PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetZonalVariableIndex(PetscViewer, const char [], int *);
+PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetNodalVariableIndex(PetscViewer, const char[], int *);
+PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetZonalVariableIndex(PetscViewer, const char[], int *);
 PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetId(PetscViewer, int *);
 PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetOrder(PetscViewer, int);
 PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetOrder(PetscViewer, int *);
@@ -235,8 +235,8 @@ PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetNodalVariableName(PetscViewer,
 PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetZonalVariableNames(PetscViewer, const char **);
 PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetNodalVariableNames(PetscViewer, const char **);
 
-PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetZonalVariableNames(PetscViewer, int, char *[]);
-PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetNodalVariableNames(PetscViewer, int, char *[]);
+PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetZonalVariableNames(PetscViewer, int *, char ***);
+PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetNodalVariableNames(PetscViewer, int *, char ***);
 /* Mesh Partitioning and Distribution */
 #define DMPLEX_OVERLAP_MANUAL -1
 

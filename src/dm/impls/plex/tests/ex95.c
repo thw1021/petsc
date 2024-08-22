@@ -97,7 +97,6 @@ int main(int argc, char **argv)
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "   Zonal variable %d: %s, index in file %d\n", i, testNames[i], index));
   }
 
-  PetscCall(PetscViewerView(viewer, PETSC_VIEWER_STDOUT_WORLD));
   PetscCall(PetscViewerDestroy(&viewer));
   PetscCall(DMDestroy(&dm));
   PetscCall(PetscFinalize());
