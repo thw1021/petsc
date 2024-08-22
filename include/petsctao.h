@@ -245,6 +245,8 @@ typedef const char *TaoType;
 #define TAOALMM     "almm"
 #define TAOPYTHON   "python"
 #define TAOSNES     "snes"
+#define TAOFB       "fb"
+#define TAOCV       "cv"
 
 /*J
   DMTaoType - String with the name of a `DMTao` method
@@ -366,6 +368,7 @@ PETSC_EXTERN PetscErrorCode TaoGetSolutionStatus(Tao, PetscInt *, PetscReal *, P
 PETSC_EXTERN PetscErrorCode TaoSetConvergedReason(Tao, TaoConvergedReason);
 PETSC_EXTERN PetscErrorCode TaoSetSolution(Tao, Vec);
 PETSC_EXTERN PetscErrorCode TaoGetSolution(Tao, Vec *);
+PETSC_EXTERN PetscErrorCode TaoGetDualSolution(Tao, Vec *);
 
 PETSC_EXTERN PetscErrorCode TaoSetObjective(Tao, PetscErrorCode (*)(Tao, Vec, PetscReal *, void *), void *);
 PETSC_EXTERN PetscErrorCode TaoGetObjective(Tao, PetscErrorCode (**)(Tao, Vec, PetscReal *, void *), void **);
@@ -376,6 +379,7 @@ PETSC_EXTERN PetscErrorCode TaoGetObjectiveAndGradient(Tao, Vec *, PetscErrorCod
 PETSC_EXTERN PetscErrorCode TaoSetHessian(Tao, Mat, Mat, PetscErrorCode (*)(Tao, Vec, Mat, Mat, void *), void *);
 PETSC_EXTERN PetscErrorCode TaoGetHessian(Tao, Mat *, Mat *, PetscErrorCode (**)(Tao, Vec, Mat, Mat, void *), void **);
 
+PETSC_EXTERN PetscErrorCode TaoSetInitialStep(Tao, PetscReal);
 PETSC_EXTERN PetscErrorCode TaoSetGradientNorm(Tao, Mat);
 PETSC_EXTERN PetscErrorCode TaoGetGradientNorm(Tao, Mat *);
 PETSC_EXTERN PetscErrorCode TaoSetLMVMMatrix(Tao, Mat);
@@ -483,10 +487,12 @@ PETSC_EXTERN PetscErrorCode TaoMonitorGlobalization(Tao, void *);
 PETSC_EXTERN PetscErrorCode TaoMonitorDefaultShort(Tao, void *);
 PETSC_EXTERN PetscErrorCode TaoMonitorConstraintNorm(Tao, void *);
 PETSC_EXTERN PetscErrorCode TaoMonitorSolution(Tao, void *);
+PETSC_EXTERN PetscErrorCode TaoMonitorDualSolution(Tao, void *);
 PETSC_EXTERN PetscErrorCode TaoMonitorResidual(Tao, void *);
 PETSC_EXTERN PetscErrorCode TaoMonitorGradient(Tao, void *);
 PETSC_EXTERN PetscErrorCode TaoMonitorStep(Tao, void *);
 PETSC_EXTERN PetscErrorCode TaoMonitorSolutionDraw(Tao, void *);
+PETSC_EXTERN PetscErrorCode TaoMonitorDualSolutionDraw(Tao, void *);
 PETSC_EXTERN PetscErrorCode TaoMonitorStepDraw(Tao, void *);
 PETSC_EXTERN PetscErrorCode TaoMonitorGradientDraw(Tao, void *);
 PETSC_EXTERN PetscErrorCode TaoAddLineSearchCounts(Tao);
@@ -550,6 +556,12 @@ PETSC_EXTERN PetscErrorCode TaoBoundStep(Vec, Vec, Vec, IS, IS, IS, PetscReal, V
 PETSC_EXTERN PetscErrorCode TaoBoundSolution(Vec, Vec, Vec, PetscReal, PetscInt *, Vec);
 
 PETSC_EXTERN PetscErrorCode MatCreateSubMatrixFree(Mat, IS, IS, Mat *);
+
+PETSC_EXTERN PetscErrorCode TaoPSSetSmoothTerm(Tao, PetscInt);
+PETSC_EXTERN PetscErrorCode TaoPSSetNonSmoothTerm(Tao, PetscInt);
+PETSC_EXTERN PetscErrorCode TaoPSSetNonSmoothTermWithLinearMap(Tao, PetscInt, Mat, PetscReal);
+PETSC_EXTERN PetscErrorCode TaoPSUseAcceleration(Tao, PetscBool);
+PETSC_EXTERN PetscErrorCode TaoPSUseAdaptiveStep(Tao, PetscBool);
 
 PETSC_EXTERN PetscErrorCode TaoSetRegularizer(Tao, DM, PetscReal);
 PETSC_EXTERN PetscErrorCode TaoGetRegularizer(Tao, DM *);

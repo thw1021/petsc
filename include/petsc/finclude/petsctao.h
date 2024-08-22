@@ -50,6 +50,16 @@
 #define TAOALMM     'almm'
 #define TAOPYTHON   'python'
 #define TAOSNES     'snes'
+#define TAOFB       'fb'
+#define TAOCV       'cv'
+
+#define TAOLINESEARCHUNIT     'unit'
+#define TAOLINESEARCHMT       'more-thuente'
+#define TAOLINESEARCHGPCG     'gpcg'
+#define TAOLINESEARCHARMIJO   'armijo'
+#define TAOLINESEARCHOWARMIJO 'owarmijo'
+#define TAOLINESEARCHPS       'ps'
+#define TAOLINESEARCHIPM      'ipm'
 
 #define DMTAOL1      'l1'
 #define DMTAOL2      'l2'

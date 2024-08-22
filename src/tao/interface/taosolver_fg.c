@@ -170,6 +170,12 @@ PetscErrorCode TaoComputeGradient(Tao tao, Vec X, Vec G)
       PetscCall(DMTaoComputeGradient(tao->dms[i], X, tdm->workvec));
       PetscCall(VecAXPY(G, tao->dm_scales[i], tdm->workvec));
     }
+    if (tao->reg) {
+      DMTao tdm;
+      PetscCall(DMGetDMTao(tao->reg, &tdm));
+      PetscCall(DMTaoComputeGradient(tao->reg, X, tdm->workvec));
+      PetscCall(VecAXPY(G, tao->reg_scale, tdm->workvec));
+    }
     PetscCall(PetscLogEventEnd(TAO_ObjGradEval, tao, X, G, NULL));
     tao->nfuncgrads++;
   } else if (tao->num_terms > 0) {
@@ -183,16 +189,15 @@ PetscErrorCode TaoComputeGradient(Tao tao, Vec X, Vec G)
       PetscCall(DMTaoComputeGradient(tao->dms[i], X, tdm->workvec));
       PetscCall(VecAXPY(G, tao->dm_scales[i], tdm->workvec));
     }
+    if (tao->reg) {
+      DMTao tdm;
+      PetscCall(DMGetDMTao(tao->reg, &tdm));
+      PetscCall(DMTaoComputeGradient(tao->reg, X, tdm->workvec));
+      PetscCall(VecAXPY(G, tao->reg_scale, tdm->workvec));
+    }
     PetscCall(PetscLogEventEnd(TAO_ObjGradEval, tao, X, G, NULL));
   } else SETERRQ(PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_WRONGSTATE, "TaoSetGradient() has not been called");
-  if (tao->reg) {
-    DMTao tdm;
-    PetscCall(DMGetDMTao(tao->reg, &tdm));
-    PetscCall(DMTaoComputeGradient(tao->reg, X, tdm->workvec));
-    PetscCall(VecAXPY(G, tao->reg_scale, tdm->workvec));
-  }
   PetscCall(VecLockReadPop(X));
-
   PetscCall(TaoTestGradient(tao, X, G));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -241,6 +246,13 @@ PetscErrorCode TaoComputeObjective(Tao tao, Vec X, PetscReal *f)
       PetscCall(DMTaoComputeObjective(tao->dms[i], X, &obj_temp));
       *f += (tao->dm_scales[i]) * obj_temp;
     }
+    if (tao->reg) {
+      PetscReal obj_temp;
+      DMTao     tdm;
+      PetscCall(DMGetDMTao(tao->reg, &tdm));
+      PetscCall(DMTaoComputeObjective(tao->reg, X, &obj_temp));
+      *f += (tao->reg_scale) * obj_temp;
+    }
     PetscCall(PetscLogEventEnd(TAO_ObjectiveEval, tao, X, NULL, NULL));
     tao->nfuncs++;
   } else if (tao->ops->computeobjectiveandgradient || (tao->num_terms > 0)) {
@@ -259,6 +271,13 @@ PetscErrorCode TaoComputeObjective(Tao tao, Vec X, PetscReal *f)
       PetscCall(DMTaoComputeObjective(tao->dms[i], X, &obj_temp));
       *f += (tao->dm_scales[i]) * obj_temp;
     }
+    if (tao->reg) {
+      PetscReal obj_temp;
+      DMTao     tdm;
+      PetscCall(DMGetDMTao(tao->reg, &tdm));
+      PetscCall(DMTaoComputeObjective(tao->reg, X, &obj_temp));
+      *f += (tao->reg_scale) * obj_temp;
+    }
     PetscCall(PetscLogEventEnd(TAO_ObjGradEval, tao, X, NULL, NULL));
     PetscCall(VecDestroy(&temp));
     tao->nfuncgrads++;
@@ -275,16 +294,15 @@ PetscErrorCode TaoComputeObjective(Tao tao, Vec X, PetscReal *f)
       PetscCall(DMTaoComputeObjective(tao->dms[i], X, &obj_temp));
       *f += (tao->dm_scales[i]) * obj_temp;
     }
+    if (tao->reg) {
+      PetscReal obj_temp;
+      DMTao     tdm;
+      PetscCall(DMGetDMTao(tao->reg, &tdm));
+      PetscCall(DMTaoComputeObjective(tao->reg, X, &obj_temp));
+      *f += (tao->reg_scale) * obj_temp;
+    }
     PetscCall(PetscLogEventEnd(TAO_ObjectiveEval, tao, X, NULL, NULL));
   } else SETERRQ(PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_WRONGSTATE, "TaoSetObjective() has not been called");
-  //TODO  this reduces code duplication, but makes logging weird?
-  if (tao->reg) {
-    PetscReal obj_temp;
-    DMTao     tdm;
-    PetscCall(DMGetDMTao(tao->reg, &tdm));
-    PetscCall(DMTaoComputeObjective(tao->reg, X, &obj_temp));
-    *f += (tao->reg_scale) * obj_temp;
-  }
   PetscCall(PetscInfo(tao, "TAO Function evaluation: %20.19e\n", (double)(*f)));
   PetscCall(VecLockReadPop(X));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -346,7 +364,14 @@ PetscErrorCode TaoComputeObjectiveAndGradient(Tao tao, Vec X, PetscReal *f, Vec 
       *f += (tao->dm_scales[i]) * temp;
       PetscCall(VecAXPY(G, tao->dm_scales[i], tdm->workvec));
     }
-    //TODO technically reg should be here
+    if (tao->reg) {
+      PetscReal temp;
+      DMTao     tdm;
+      PetscCall(DMGetDMTao(tao->reg, &tdm));
+      PetscCall(DMTaoComputeObjectiveAndGradient(tao->reg, X, &temp, tdm->workvec));
+      *f += (tao->reg_scale) * temp;
+      PetscCall(VecAXPY(G, tao->reg_scale, tdm->workvec));
+    }
     PetscCall(PetscLogEventEnd(TAO_ObjGradEval, tao, X, G, NULL));
     tao->nfuncgrads++;
   } else if ((tao->ops->computeobjective && tao->ops->computegradient) || (tao->num_terms > 0)) {
@@ -364,8 +389,6 @@ PetscErrorCode TaoComputeObjectiveAndGradient(Tao tao, Vec X, PetscReal *f, Vec 
     } else {
       PetscCall(VecSet(G, 0));
     }
-    PetscCall(PetscLogEventEnd(TAO_GradientEval, tao, X, G, NULL));
-    tao->ngrads++;
     for (i = 0; i < tao->num_terms; i++) {
       PetscReal temp;
       DMTao     tdm;
@@ -374,7 +397,16 @@ PetscErrorCode TaoComputeObjectiveAndGradient(Tao tao, Vec X, PetscReal *f, Vec 
       *f += (tao->dm_scales[i]) * temp;
       PetscCall(VecAXPY(G, tao->dm_scales[i], tdm->workvec));
     }
-    //TODO technically reg should be here
+    if (tao->reg) {
+      PetscReal temp;
+      DMTao     tdm;
+      PetscCall(DMGetDMTao(tao->reg, &tdm));
+      PetscCall(DMTaoComputeObjectiveAndGradient(tao->reg, X, &temp, tdm->workvec));
+      *f += (tao->reg_scale) * temp;
+      PetscCall(VecAXPY(G, tao->reg_scale, tdm->workvec));
+    }
+    PetscCall(PetscLogEventEnd(TAO_GradientEval, tao, X, G, NULL));
+    tao->ngrads++;
   } else if (tao->num_terms > 0) {
     PetscReal temp;
     DMTao     tdm;
@@ -390,22 +422,18 @@ PetscErrorCode TaoComputeObjectiveAndGradient(Tao tao, Vec X, PetscReal *f, Vec 
       *f += (tao->dm_scales[i]) * temp;
       PetscCall(VecAXPY(G, tao->dm_scales[i], tdm->workvec));
     }
+    if (tao->reg) {
+      PetscReal temp;
+      DMTao     tdm;
+      PetscCall(DMGetDMTao(tao->reg, &tdm));
+      PetscCall(DMTaoComputeObjectiveAndGradient(tao->reg, X, &temp, tdm->workvec));
+      *f += (tao->reg_scale) * temp;
+      PetscCall(VecAXPY(G, tao->reg_scale, tdm->workvec));
+    }
     PetscCall(PetscLogEventEnd(TAO_ObjGradEval, tao, X, G, NULL));
-    //TODO technically reg should be here
-    //TODO how to do func eval count for DMTao? i think its done inside dmtao.c
   } else SETERRQ(PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_WRONGSTATE, "TaoSetObjective() or TaoSetGradient() not set");
-  //TODO  this reduces code duplication, but makes logging weird?
-  if (tao->reg) {
-    PetscReal temp;
-    DMTao     tdm;
-    PetscCall(DMGetDMTao(tao->reg, &tdm));
-    PetscCall(DMTaoComputeObjectiveAndGradient(tao->reg, X, &temp, tdm->workvec));
-    *f += (tao->reg_scale) * temp;
-    PetscCall(VecAXPY(G, tao->reg_scale, tdm->workvec));
-  }
   PetscCall(PetscInfo(tao, "TAO Function evaluation: %20.19e\n", (double)(*f)));
   PetscCall(VecLockReadPop(X));
-
   PetscCall(TaoTestGradient(tao, X, G));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

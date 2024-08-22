@@ -132,6 +132,7 @@ struct _p_Tao {
   Vec        solution;
   Vec        gradient;
   Vec        stepdirection;
+  Vec        dualvec;
   Vec        XL;
   Vec        XU;
   Vec        IL;
