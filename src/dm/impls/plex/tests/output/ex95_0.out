@@ -57,18 +57,3 @@ Testing PetscViewerExodusIIGet[Nodal/Zonal]VariableName
    Zonal variable 0: U, index in file -1
    Zonal variable 1: Sigma, index in file 0
    Zonal variable 2: Gamma, index in file -1
-PetscViewer Object: 1 MPI process
-  type: exodusii
-  Filename:    FourSquareT-large_out.exo
-  exoid:       65536
-  IO Mode:     2
-  Mesh order:  1
-  Number of nodal variables:  4
-     0: U_x
-     1: U_y
-     2: Alpha
-     3: Beta
-  Number of zonal variables:  3
-     0: Sigma_11
-     1: Sigma_12
-     2: Sigma_22
