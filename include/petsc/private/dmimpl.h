@@ -321,7 +321,7 @@ struct _p_DM {
   /* Configuration */
   PetscBool cloneOpts; /* Flag indicating that this is a linked clone and should not respond to some options. This is currently used to prevent transformations from also affecting the coordinate DM */
 
-  PetscObject dmksp, dmsnes, dmts;
+  PetscObject dmksp, dmsnes, dmts, dmtao;
 #ifdef PETSC_HAVE_LIBCEED
   Ceed                ceed;          // LibCEED context
   CeedElemRestriction ceedERestrict; // Map from the local vector (Lvector) to the cells (Evector)
