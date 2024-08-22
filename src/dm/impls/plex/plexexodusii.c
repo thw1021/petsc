@@ -347,7 +347,7 @@ PetscErrorCode PetscViewerExodusIIGetNodalVariable(PetscViewer viewer, int *num)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PetscViewerExodusIISetZonalVariableName - Sets the name of a zonal variable.
 
   Collective;
@@ -372,7 +372,7 @@ PetscErrorCode PetscViewerExodusIISetZonalVariableName(PetscViewer viewer, int i
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PetscViewerExodusIISetNodalVariableName - Sets the name of a nodal variable.
 
   Collective;
