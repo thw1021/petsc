@@ -413,7 +413,7 @@ PetscErrorCode PetscViewerExodusIISetNodalVariableName(PetscViewer viewer, int i
 
 .seealso: `PETSCVIEWEREXODUSII`, `PetscViewer`, `PetscViewerCreate()`, `PetscViewerDestroy()`, `PetscViewerExodusIIOpen()`, `PetscViewerSetType()`, `PetscViewerType`, `PetscViewerExodusIISetZonalVariableName()`
 @*/
-PetscErrorCode PetscViewerExodusIIGetZonalVariableName(const PetscViewer viewer, int idx, char *name[])
+PetscErrorCode PetscViewerExodusIIGetZonalVariableName(PetscViewer viewer, int idx, const char *name[])
 {
   PetscViewer_ExodusII *exo   = (PetscViewer_ExodusII *)viewer->data;
   int                   exoid = -1;
@@ -446,7 +446,7 @@ PetscErrorCode PetscViewerExodusIIGetZonalVariableName(const PetscViewer viewer,
 
 .seealso: `PETSCVIEWEREXODUSII`, `PetscViewer`, `PetscViewerCreate()`, `PetscViewerDestroy()`, `PetscViewerExodusIIOpen()`, `PetscViewerSetType()`, `PetscViewerType`, `PetscViewerExodusIISetNodalVariableName()`
 @*/
-PetscErrorCode PetscViewerExodusIIGetNodalVariableName(const PetscViewer viewer, int idx, char *name[])
+PetscErrorCode PetscViewerExodusIIGetNodalVariableName(PetscViewer viewer, int idx, const char *name[])
 {
   PetscViewer_ExodusII *exo   = (PetscViewer_ExodusII *)viewer->data;
   int                   exoid = -1;
