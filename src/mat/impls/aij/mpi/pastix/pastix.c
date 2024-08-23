@@ -60,7 +60,7 @@ static PetscErrorCode MatConvertToSPM(Mat A, MatReuse reuse, Mat_Pastix *pastix)
   PetscBool          ismpiaij, isseqaij, ismpisbaij, isseqsbaij;
   PetscBool          flag;
   spmatrix_t         spm2, *spm = NULL;
-  int                ierr;
+  int                spm_err;
 
   PetscFunctionBegin;
   /* Get A datas */
@@ -87,7 +87,7 @@ static PetscErrorCode MatConvertToSPM(Mat A, MatReuse reuse, Mat_Pastix *pastix)
   PetscCall(MatSeqAIJGetArrayRead(A_loc, &val));
 
   PetscCall(PetscMalloc1(1, &spm));
-  spmInitDist(spm, pastix->comm);
+  PetscStackCallExternalVoid("spmInitDist", spmInitDist(spm, pastix->comm));
 
   spm->n          = n;
   spm->nnz        = row[n];
@@ -95,8 +95,8 @@ static PetscErrorCode MatConvertToSPM(Mat A, MatReuse reuse, Mat_Pastix *pastix)
   spm->flttype    = SPM_FLTTYPE;
   spm->replicated = !(A->rmap->n != A->rmap->N);
 
-  spmUpdateComputedFields(spm);
-  spmAlloc(spm);
+  PetscStackCallExternalVoid("spmUpdateComputedFields", spmUpdateComputedFields(spm));
+  PetscStackCallExternalVoid("spmAlloc", spmAlloc(spm));
 
   /* Get data distribution */
   if (!spm->replicated) {
@@ -127,9 +127,9 @@ static PetscErrorCode MatConvertToSPM(Mat A, MatReuse reuse, Mat_Pastix *pastix)
   }
 
   /* Update matrix to be in PaStiX format */
-  ierr = spmCheckAndCorrect(spm, &spm2);
-  if (ierr != 0) {
-    spmExit(spm);
+  PetscStackCallExternalVoid("spmCheckAndCorrect", spm_err = spmCheckAndCorrect(spm, &spm2));
+  if (spm_err != 0) {
+    PetscStackCallExternalVoid("spmExit", spmExit(spm));
     *spm = spm2;
   }
 
@@ -150,7 +150,7 @@ static PetscErrorCode MatDestroy_PaStiX(Mat A)
   PetscFunctionBegin;
   /* Finalize SPM (matrix handler of PaStiX) */
   if (pastix->spm) {
-    spmExit(pastix->spm);
+    PetscStackCallExternalVoid("spmExit", spmExit(pastix->spm));
     PetscCall(PetscFree(pastix->spm));
   }
 
@@ -204,7 +204,7 @@ static PetscErrorCode MatSolve_PaStiX(Mat A, Vec b, Vec x)
  */
 static PetscErrorCode MatFactorNumeric_PaStiX(Mat F, Mat A, const MatFactorInfo *info)
 {
-  Mat_Pastix *pastix = (Mat_Pastix *)(F)->data;
+  Mat_Pastix *pastix = (Mat_Pastix *)F->data;
 
   PetscFunctionBegin;
   /* If it's the first time we set Mat_Pastix ->  Initialize everything */
@@ -221,7 +221,7 @@ static PetscErrorCode MatFactorNumeric_PaStiX(Mat F, Mat A, const MatFactorInfo 
 
 static PetscErrorCode MatLUFactorNumeric_PaStiX(Mat F, Mat A, const MatFactorInfo *info)
 {
-  Mat_Pastix *pastix = (Mat_Pastix *)(F)->data;
+  Mat_Pastix *pastix = (Mat_Pastix *)F->data;
 
   PetscFunctionBegin;
   PetscCheck(pastix->iparm[IPARM_FACTORIZATION] == PastixFactGETRF, PetscObjectComm((PetscObject)F), PETSC_ERR_SUP, "Incorrect factorization type for symbolic and numerical factorization by PaStiX");
@@ -232,7 +232,7 @@ static PetscErrorCode MatLUFactorNumeric_PaStiX(Mat F, Mat A, const MatFactorInf
 
 static PetscErrorCode MatCholeskyFactorNumeric_PaStiX(Mat F, Mat A, const MatFactorInfo *info)
 {
-  Mat_Pastix *pastix = (Mat_Pastix *)(F)->data;
+  Mat_Pastix *pastix = (Mat_Pastix *)F->data;
 
   PetscFunctionBegin;
   PetscCheck(pastix->iparm[IPARM_FACTORIZATION] == PastixFactSYTRF, PetscObjectComm((PetscObject)F), PETSC_ERR_SUP, "Incorrect factorization type for symbolic and numerical factorization by PaStiX");
@@ -311,9 +311,9 @@ static PetscErrorCode MatView_PaStiX(Mat A, PetscViewer viewer)
 
       PetscCall(PetscViewerASCIIPrintf(viewer, "PaStiX run parameters:\n"));
       PetscCall(PetscViewerASCIIPrintf(viewer, "  Matrix type :                      %s \n", ((spm->mtxtype == SpmSymmetric) ? "Symmetric" : "Unsymmetric")));
-      PetscCall(PetscViewerASCIIPrintf(viewer, "  Level of printing (0,1,2):         %ld \n", pastix->iparm[IPARM_VERBOSE]));
-      PetscCall(PetscViewerASCIIPrintf(viewer, "  Number of refinements iterations : %ld \n", pastix->iparm[IPARM_NBITER]));
-      PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Error :                            %g \n", pastix->dparm[DPARM_RELATIVE_ERROR]));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "  Level of printing (0,1,2):         %ld \n", (long)pastix->iparm[IPARM_VERBOSE]));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "  Number of refinements iterations : %ld \n", (long)pastix->iparm[IPARM_NBITER]));
+      PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Error :                            %e \n", pastix->dparm[DPARM_RELATIVE_ERROR]));
       if (pastix->iparm[IPARM_VERBOSE] > 0) spmPrintInfo(spm, stdout);
     }
   }
@@ -375,53 +375,15 @@ static PetscErrorCode MatFactorGetSolverType_PaStiX(Mat A, MatSolverType *type)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* Add a pastix layer to do int conversion if needed */
-#define PetscOptionsBoundedInt_PaStiX(_opt_, _text_, _man_, _ptrvalue_, _lb_) \
-  do { \
-    PetscInt  icntl; \
-    PetscBool flg; \
-    PetscCall(PetscOptionsBoundedInt((_opt_), (_text_), (_man_), *(_ptrvalue_), &icntl, &flg, (_lb_))); \
-    if (flg) *(_ptrvalue_) = icntl; \
-  } while (0)
-
-#define PetscOptionsRangeInt_PaStiX(_opt_, _text_, _man_, _ptrvalue_, _lb_, _ub_) \
-  do { \
-    PetscInt  icntl; \
-    PetscBool flg; \
-    PetscCall(PetscOptionsRangeInt((_opt_), (_text_), (_man_), *(_ptrvalue_), &icntl, &flg, (_lb_), (_ub_))); \
-    if (flg) *(_ptrvalue_) = icntl; \
-  } while (0)
-
-#define PetscOptionsReal_PaStiX(_opt_, _text_, _man_, _ptrvalue_) \
-  do { \
-    PetscReal dcntl; \
-    PetscBool flg; \
-    PetscCall(PetscOptionsReal((_opt_), (_text_), (_man_), *(_ptrvalue_), &dcntl, &flg)); \
-    if (flg) *(_ptrvalue_) = dcntl; \
-  } while (0)
-
-#define PetscOptionsBoundedReal_PaStiX(_opt_, _text_, _man_, _ptrvalue_, _lb_) \
-  do { \
-    PetscReal dcntl; \
-    PetscBool flg; \
-    PetscCall(PetscOptionsBoundedReal((_opt_), (_text_), (_man_), *(_ptrvalue_), &dcntl, &flg, (_lb_))); \
-    if (flg) *(_ptrvalue_) = dcntl; \
-  } while (0)
-
-#define PetscOptionsRangeReal_PaStiX(_opt_, _text_, _man_, _ptrvalue_, _lb_, _ub_) \
-  do { \
-    PetscReal dcntl; \
-    PetscBool flg; \
-    PetscCall(PetscOptionsRangeReal((_opt_), (_text_), (_man_), *(_ptrvalue_), &dcntl, &flg, (_lb_), (_ub_))); \
-    if (flg) *(_ptrvalue_) = dcntl; \
-  } while (0)
-
 /* Sets PaStiX options from the options database */
 static PetscErrorCode MatSetFromOptions_PaStiX(Mat A)
 {
   Mat_Pastix   *pastix = (Mat_Pastix *)A->data;
   pastix_int_t *iparm  = pastix->iparm;
   double       *dparm  = pastix->dparm;
+  PetscInt      icntl;
+  PetscReal     dcntl;
+  PetscBool     set;
 
   PetscFunctionBegin;
   PetscOptionsBegin(PetscObjectComm((PetscObject)A), ((PetscObject)A)->prefix, "PaStiX Options", "Mat");
@@ -429,20 +391,35 @@ static PetscErrorCode MatSetFromOptions_PaStiX(Mat A)
   iparm[IPARM_VERBOSE] = 0;
   iparm[IPARM_ITERMAX] = 20;
 
-  PetscOptionsBoundedInt_PaStiX("-mat_pastix_verbose", "iparm[IPARM_VERBOSE]: Verbosity", "None", &iparm[IPARM_VERBOSE], 0);
-  PetscOptionsRangeInt_PaStiX("-mat_pastix_factorization", "iparm[IPARM_FACTORIZATION]: Factorization algorithm", "None", &iparm[IPARM_FACTORIZATION], 0, 4);
-  PetscOptionsBoundedInt_PaStiX("-mat_pastix_itermax", "iparm[IPARM_ITERMAX]: Max iterations", "None", &iparm[IPARM_ITERMAX], 1);
+  PetscCall(PetscOptionsRangeInt("-mat_pastix_verbose", "iparm[IPARM_VERBOSE] : level of printing (0 to 2)", "None", iparm[IPARM_VERBOSE], &icntl, &set, 0, 2));
+  if (set) iparm[IPARM_VERBOSE] = (pastix_int_t)icntl;
 
-  PetscOptionsBoundedReal_PaStiX("-mat_pastix_epsilon_refinement", "dparm[DPARM_EPSILON_REFINEMENT]: Epsilon refinement", "None", &dparm[DPARM_EPSILON_REFINEMENT], -1.);
-  PetscOptionsReal_PaStiX("-mat_pastix_epsilon_magn_ctrl", "dparm[DPARM_EPSILON_MAGN_CTRL]: Epsilon magnitude control", "None", &dparm[DPARM_EPSILON_MAGN_CTRL]);
+  PetscCall(PetscOptionsRangeInt("-mat_pastix_factorization", "iparm[IPARM_FACTORIZATION]: Factorization algorithm", "None", iparm[IPARM_FACTORIZATION], &icntl, &set, 0, 4));
+  if (set) iparm[IPARM_FACTORIZATION] = (pastix_int_t)icntl;
 
-  PetscOptionsRangeInt_PaStiX("-mat_pastix_ordering", "iparm[IPARM_ORDERING]: Ordering algorithm", "None", &iparm[IPARM_ORDERING], 0, 2);
+  PetscCall(PetscOptionsBoundedInt("-mat_pastix_itermax", "iparm[IPARM_ITERMAX]: Max iterations", "None", iparm[IPARM_ITERMAX], &icntl, &set, 1));
+  if (set) iparm[IPARM_ITERMAX] = (pastix_int_t)icntl;
 
-  PetscOptionsBoundedInt_PaStiX("-mat_pastix_thread_nbr", "iparm[IPARM_THREAD_NBR]: Number of thread by MPI node", "None", &iparm[IPARM_THREAD_NBR], -1);
-  PetscOptionsRangeInt_PaStiX("-mat_pastix_scheduler", "iparm[IPARM_SCHEDULER]: Scheduler", "None", &iparm[IPARM_SCHEDULER], 0, 4);
+  PetscCall(PetscOptionsBoundedReal("-mat_pastix_epsilon_refinement", "dparm[DPARM_EPSILON_REFINEMENT]: Epsilon refinement", "None", dparm[DPARM_EPSILON_REFINEMENT], &dcntl, &set, -1.));
+  if (set) dparm[DPARM_EPSILON_REFINEMENT] = (double)dcntl;
 
-  PetscOptionsRangeInt_PaStiX("-mat_pastix_compress_when", "iparm[IPARM_COMPRESS_WHEN]: When to compress", "None", &iparm[IPARM_COMPRESS_WHEN], 0, 3);
-  PetscOptionsBoundedReal_PaStiX("-mat_pastix_compress_tolerance", "dparm[DPARM_COMPRESS_TOLERANCE]: Tolerance for low-rank kernels", "None", &dparm[DPARM_COMPRESS_TOLERANCE], 0);
+  PetscCall(PetscOptionsReal("-mat_pastix_epsilon_magn_ctrl", "dparm[DPARM_EPSILON_MAGN_CTRL]: Epsilon magnitude control", "None", dparm[DPARM_EPSILON_MAGN_CTRL], &dcntl, &set));
+  if (set) dparm[DPARM_EPSILON_MAGN_CTRL] = (double)dcntl;
+
+  PetscCall(PetscOptionsRangeInt("-mat_pastix_ordering", "iparm[IPARM_ORDERING]: Ordering algorithm", "None", iparm[IPARM_ORDERING], &icntl, &set, 0, 2));
+  if (set) iparm[IPARM_ORDERING] = (pastix_int_t)icntl;
+
+  PetscCall(PetscOptionsBoundedInt("-mat_pastix_thread_nbr", "iparm[IPARM_THREAD_NBR]: Number of thread by MPI node", "None", iparm[IPARM_THREAD_NBR], &icntl, &set, -1));
+  if (set) iparm[IPARM_THREAD_NBR] = (pastix_int_t)icntl;
+
+  PetscCall(PetscOptionsRangeInt("-mat_pastix_scheduler", "iparm[IPARM_SCHEDULER]: Scheduler", "None", iparm[IPARM_SCHEDULER], &icntl, &set, 0, 4));
+  if (set) iparm[IPARM_SCHEDULER] = (pastix_int_t)icntl;
+
+  PetscCall(PetscOptionsRangeInt("-mat_pastix_compress_when", "iparm[IPARM_COMPRESS_WHEN]: When to compress", "None", iparm[IPARM_COMPRESS_WHEN], &icntl, &set, 0, 3));
+  if (set) iparm[IPARM_COMPRESS_WHEN] = (pastix_int_t)icntl;
+
+  PetscCall(PetscOptionsBoundedReal("-mat_pastix_compress_tolerance", "dparm[DPARM_COMPRESS_TOLERANCE]: Tolerance for low-rank kernels", "None", dparm[DPARM_COMPRESS_TOLERANCE], &dcntl, &set, 0.));
+  if (set) dparm[DPARM_COMPRESS_TOLERANCE] = (double)dcntl;
 
   PetscOptionsEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -483,7 +460,7 @@ static PetscErrorCode MatGetFactor_pastix(Mat A, MatFactorType ftype, Mat *F, co
   B->data = (void *)pastix;
 
   /* Call to set default pastix options */
-  pastixInitParam(pastix->iparm, pastix->dparm);
+  PetscStackCallExternalVoid("pastixInitParam", pastixInitParam(pastix->iparm, pastix->dparm));
   PetscCall(MatSetFromOptions_PaStiX(B));
 
   /* Get PETSc communicator */
@@ -491,7 +468,7 @@ static PetscErrorCode MatGetFactor_pastix(Mat A, MatFactorType ftype, Mat *F, co
 
   /* Initialise PaStiX structure */
   pastix->iparm[IPARM_SCOTCH_MT] = 0;
-  pastixInit(&pastix->pastix_data, pastix->comm, pastix->iparm, pastix->dparm);
+  PetscStackCallExternalVoid("pastixInit", pastixInit(&pastix->pastix_data, pastix->comm, pastix->iparm, pastix->dparm));
 
   /* Warning: Cholesky in Petsc wrapper does not handle (complex) Hermitian matrices.
      The factorization type can be forced using the parameter
