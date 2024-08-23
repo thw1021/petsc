@@ -64,9 +64,6 @@ class Configure(config.package.CMakePackage):
           cmake_prefix_path.append(dir)
       if self.blasLapack.include:
         cmake_include_path.append(self.headers.toStringNoDupes(self.blasLapack.include)[2:])
-      #if self.blasLapack.dlib:
-      #  args.append('-DBLAS_LIBRARIES="'+self.libraries.toString(self.blasLapack.dlib)+'"')
-      #  args.append('-DLAPACK_LIBRARIES="'+self.libraries.toString(self.blasLapack.dlib)+'"')
 
     if self.metis.found:
       args.append("-DPASTIX_ORDERING_METIS=ON")
@@ -76,9 +73,6 @@ class Configure(config.package.CMakePackage):
           cmake_prefix_path.append(dir)
       if self.metis.include:
         cmake_include_path.append(self.headers.toStringNoDupes(self.metis.include)[2:])
-        #args.append('-DMETIS_INCLUDE_DIRS="'+self.headers.toStringNoDupes(self.metis.include)[2:]+'"')
-      #if self.metis.lib:
-      #  args.append('-DMETIS_LIBRARIES="'+self.libraries.toString(self.metis.lib)+'"')
     else :
       args.append("-DPASTIX_ORDERING_METIS=OFF")
 
@@ -90,9 +84,6 @@ class Configure(config.package.CMakePackage):
           cmake_prefix_path.append(dir)
       if self.scotch.include:
         cmake_include_path.append(self.headers.toStringNoDupes(self.scotch.include)[2:])
-        #args.append('-DSCOTCH_INCLUDE_DIRS="'+self.headers.toStringNoDupes(self.scotch.include)[2:]+'"')
-      #if self.scotch.lib:
-      #  args.append('-DSCOTCH_LIBRARIES="'+self.libraries.toString(self.scotch.lib)+'"')
     else :
       args.append("-DPASTIX_ORDERING_SCOTCH=OFF")
 
@@ -103,9 +94,6 @@ class Configure(config.package.CMakePackage):
           cmake_prefix_path.append(dir)
       if self.hwloc.include:
         cmake_include_path.append(self.headers.toStringNoDupes(self.hwloc.include)[2:])
-        #args.append('-DHWLOC_INCLUDE_DIRS="'+self.headers.toStringNoDupes(self.hwloc.include)[2:]+'"')
-      #if self.hwloc.lib:
-      #  args.append('-DHWLOC_LIBRARIES="'+self.libraries.toString(self.hwloc.lib)+'"')
 
     if self.mpi.found:
       args.append("-DPASTIX_WITH_MPI=ON")
