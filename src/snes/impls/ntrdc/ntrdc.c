@@ -650,10 +650,14 @@ static PetscErrorCode SNESView_NEWTONTRDC(SNES snes, PetscViewer viewer)
 .   -snes_trdc_use_cauchy <use_cauchy>                       - True uses dogleg Cauchy (Steepest Descent direction) step & direction in the trust region algorithm
 -   -snes_trdc_auto_scale_multiphase <auto_scale_multiphase> - True turns on auto-scaling for multivariable block matrix for Cauchy and trust region
 
-   Level: intermediate
+   Level: advanced
 
-   Note:
-   See {cite}`park2021linear`
+   Notes:
+   `SNESNEWTONTRDC` only works for root-finding problems and does not support objective functions.
+   The main difference with respect to `SNESNEWTONTR` is that `SNESNEWTONTRDC` scales the trust region by the norm of the current linearization point.
+   Future version may extend the `SNESNEWTONTR` code and deprecate `SNESNEWTONTRDC`.
+
+   For details, see {cite}`park2021linear`
 
 .seealso: [](ch_snes), `SNESCreate()`, `SNES`, `SNESSetType()`, `SNESNEWTONLS`, `SNESNewtonTRSetTolerances()`,
           `SNESNewtonTRDCPreCheck()`, `SNESNewtonTRDCGetPreCheck()`, `SNESNewtonTRDCSetPostCheck()`, `SNESNewtonTRDCGetPostCheck()`,
