@@ -718,6 +718,36 @@ PetscErrorCode PetscOptionsInt_Private(PetscOptionItems *PetscOptionsObject, con
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+PetscErrorCode PetscOptionsMPIInt_Private(PetscOptionItems *PetscOptionsObject, const char opt[], const char text[], const char man[], PetscMPIInt currentvalue, PetscMPIInt *value, PetscBool *set, PetscMPIInt lb, PetscMPIInt ub)
+{
+  const char        *prefix  = PetscOptionsObject->prefix;
+  const PetscOptions options = PetscOptionsObject->options;
+  PetscBool          wasset;
+
+  PetscFunctionBegin;
+  PetscAssertPointer(opt, 2);
+  PetscAssertPointer(value, 6);
+  if (set) PetscAssertPointer(set, 7);
+  PetscCheck(currentvalue >= lb, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Current value %d less than allowed bound %d", currentvalue, lb);
+  PetscCheck(currentvalue <= ub, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Current value %d greater than allowed bound %d", currentvalue, ub);
+  if (!PetscOptionsObject->count) {
+    PetscOptionItem amsopt;
+
+    PetscCall(PetscOptionItemCreate_Private(PetscOptionsObject, opt, text, man, OPTION_INT, &amsopt));
+    PetscCall(PetscMalloc(sizeof(PetscInt), &amsopt->data));
+    *(PetscMPIInt *)amsopt->data = currentvalue;
+
+    PetscCall(PetscOptionsGetMPIInt(options, prefix, opt, &currentvalue, &wasset));
+    if (wasset) *(PetscMPIInt *)amsopt->data = currentvalue;
+  }
+  PetscCall(PetscOptionsGetMPIInt(options, prefix, opt, value, &wasset));
+  PetscCheck(!wasset || *value >= lb, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Newly set value %d less than allowed bound %d", *value, lb);
+  PetscCheck(!wasset || *value <= ub, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Newly set value %d greater than allowed bound %d", *value, ub);
+  if (set) *set = wasset;
+  if (ShouldPrintHelp(PetscOptionsObject)) { PetscCall((*PetscHelpPrintf)(PetscOptionsObject->comm, "  -%s%s: <now %d : formerly %d>: %s (%s)\n", Prefix(prefix), opt + 1, wasset ? *value : currentvalue, currentvalue, text, ManSection(man))); }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 PetscErrorCode PetscOptionsString_Private(PetscOptionItems *PetscOptionsObject, const char opt[], const char text[], const char man[], const char currentvalue[], char value[], size_t len, PetscBool *set)
 {
   const char *prefix = PetscOptionsObject->prefix;
