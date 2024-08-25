@@ -21,8 +21,8 @@ Simulation parameters:
       ---------- Testing Jacobian -------------
       ||J - Jfd||_F/||J||_F = 0.999818, ||J - Jfd||_F = 7.
     ---------- Testing Jacobian -------------
-    ||J - Jfd||_F/||J||_F = 3.45221e-07, ||J - Jfd||_F = 6.16175e-06
+    ||J - Jfd||_F/||J||_F = 3.45218e-07, ||J - Jfd||_F = 6.1617e-06
     ---------- Testing Jacobian -------------
-    ||J - Jfd||_F/||J||_F = 3.49164e-07, ||J - Jfd||_F = 6.08126e-06
-   1 TS: time 0.1, energy 1.24896, intp -1.05879e-21, ell 0.
+    ||J - Jfd||_F/||J||_F = 3.48913e-07, ||J - Jfd||_F = 6.08916e-06
+   1 TS: time 0.1, energy 1.25295, intp 2.64698e-22, ell 0.
          nonlinear its 1, linear its 1
