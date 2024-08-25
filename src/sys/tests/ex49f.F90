@@ -32,8 +32,7 @@ program main
   implicit none
 
   PetscErrorCode          ierr
-  PetscInt,parameter::    N=3
-  PetscMPIInt,parameter:: mN=3
+  PetscCount,parameter::  N=3
   PetscInt                x(N),x1(N),y(N),z(N)
   PetscMPIInt             mx(N),my(N)
   PetscScalar             s(N)
@@ -68,8 +67,8 @@ program main
   PetscCallA(PetscSortIntWithArrayPair(N,x,y,z,ierr))
 
   PetscCallA(PetscSortMPIInt(N,mx,ierr))
-  PetscCallA(PetscSortMPIIntWithArray(mN,mx,my,ierr))
-  PetscCallA(PetscSortMPIIntWithIntArray(mN,mx,y,ierr))
+  PetscCallA(PetscSortMPIIntWithArray(N,mx,my,ierr))
+  PetscCallA(PetscSortMPIIntWithIntArray(N,mx,y,ierr))
 
   PetscCallA(PetscSortIntWithScalarArray(N,x,s,ierr))
 
