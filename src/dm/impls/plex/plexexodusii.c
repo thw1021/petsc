@@ -1,7 +1,6 @@
 #define PETSCDM_DLL
 #include <petsc/private/dmpleximpl.h> /*I   "petscdmplex.h"   I*/
 
-
 /*@
   DMPlexCreateExodusFromFile - Create a `DMPLEX` mesh from an ExodusII file.
 
