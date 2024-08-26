@@ -20,12 +20,12 @@
 @*/
 PetscErrorCode DMPlexCreateExodusFromFile(MPI_Comm comm, const char filename[], PetscBool interpolate, DM *dm)
 {
+  PetscFunctionBegin;
+#if defined(PETSC_HAVE_EXODUSII)
   PetscMPIInt rank;
   int         CPU_word_size = sizeof(PetscReal), IO_word_size = 0, exoid = -1;
   float       version;
 
-  PetscFunctionBegin;
-#if defined(PETSC_HAVE_EXODUSII)
   PetscAssertPointer(filename, 2);
   PetscCallMPI(MPI_Comm_rank(comm, &rank));
   if (rank == 0) {
