@@ -1,14 +1,11 @@
 #define PETSCDM_DLL
 #include <petsc/private/dmpleximpl.h> /*I   "petscdmplex.h"   I*/
 
-#if defined(PETSC_HAVE_EXODUSII)
-  #include <netcdf.h>
-  #include <exodusII.h>
-#endif
+#include <netcdf.h>
+#include <exodusII.h>
 
 #include <petsc/private/viewerimpl.h>
 #include <petsc/private/viewerexodusiiimpl.h>
-#if defined(PETSC_HAVE_EXODUSII)
 /*@C
   PETSC_VIEWER_EXODUSII_ - Creates an `PETSCVIEWEREXODUSII` `PetscViewer` shared by all processors in a communicator.
 
@@ -135,9 +132,9 @@ static PetscErrorCode PetscViewerFileSetName_ExodusII(PetscViewer viewer, const 
   default:
     SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ORDER, "Must call PetscViewerFileSetMode() before PetscViewerFileSetName()");
   }
-  #if defined(PETSC_USE_64BIT_INDICES)
+#if defined(PETSC_USE_64BIT_INDICES)
   EXO_mode += EX_ALL_INT64_API;
-  #endif
+#endif
   exo->exoid = ex_open_par(name, EXO_mode, &CPU_word_size, &IO_word_size, &EXO_version, PETSC_COMM_WORLD, mpi_info);
   PetscCheck(exo->exoid >= 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "ex_open_par failed for %s", name);
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -862,9 +859,9 @@ PetscErrorCode DMView_PlexExodusII(DM dm, PetscViewer viewer)
     case FILE_MODE_WRITE:
       /* Create an empty file if one already exists*/
       EXO_mode = EX_CLOBBER;
-  #if defined(PETSC_USE_64BIT_INDICES)
+#if defined(PETSC_USE_64BIT_INDICES)
       EXO_mode += EX_ALL_INT64_API;
-  #endif
+#endif
       CPU_word_size = sizeof(PetscReal);
       IO_word_size  = sizeof(PetscReal);
       exo->exoid    = ex_create(exo->filename, EXO_mode, &CPU_word_size, &IO_word_size);
@@ -1282,9 +1279,9 @@ PetscErrorCode DMView_PlexExodusII(DM dm, PetscViewer viewer)
     reopen the file in parallel
   */
   EXO_mode = EX_WRITE;
-  #if defined(PETSC_USE_64BIT_INDICES)
+#if defined(PETSC_USE_64BIT_INDICES)
   EXO_mode += EX_ALL_INT64_API;
-  #endif
+#endif
   CPU_word_size = sizeof(PetscReal);
   IO_word_size  = sizeof(PetscReal);
   exo->exoid    = ex_open_par(exo->filename, EXO_mode, &CPU_word_size, &IO_word_size, &EXO_version, comm, MPI_INFO_NULL);
@@ -1604,7 +1601,6 @@ static PetscErrorCode VecLoadPlex_ExodusII_Zonal_Internal(Vec v, int exoid, int 
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-#endif
 
 /*@
   PetscViewerExodusIIGetId - Get the file id of the `PETSCVIEWEREXODUSII` file
@@ -1729,15 +1725,12 @@ PetscErrorCode PetscViewerExodusIIOpen(MPI_Comm comm, const char name[], PetscFi
 PetscErrorCode DMPlexCreateExodusFromFile(MPI_Comm comm, const char filename[], PetscBool interpolate, DM *dm)
 {
   PetscMPIInt rank;
-#if defined(PETSC_HAVE_EXODUSII)
-  int   CPU_word_size = sizeof(PetscReal), IO_word_size = 0, exoid = -1;
-  float version;
-#endif
+  int         CPU_word_size = sizeof(PetscReal), IO_word_size = 0, exoid = -1;
+  float       version;
 
   PetscFunctionBegin;
   PetscAssertPointer(filename, 2);
   PetscCallMPI(MPI_Comm_rank(comm, &rank));
-#if defined(PETSC_HAVE_EXODUSII)
   if (rank == 0) {
     exoid = ex_open(filename, EX_READ, &CPU_word_size, &IO_word_size, &version);
     PetscCheck(exoid > 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "ex_open(\"%s\",...) did not return a valid file ID", filename);
@@ -1745,12 +1738,8 @@ PetscErrorCode DMPlexCreateExodusFromFile(MPI_Comm comm, const char filename[], 
   PetscCall(DMPlexCreateExodus(comm, exoid, interpolate, dm));
   if (rank == 0) PetscCallExternal(ex_close, exoid);
   PetscFunctionReturn(PETSC_SUCCESS);
-#else
-  SETERRQ(comm, PETSC_ERR_SUP, "This method requires ExodusII support. Reconfigure using --download-exodusii");
-#endif
 }
 
-#if defined(PETSC_HAVE_EXODUSII)
 static PetscErrorCode ExodusGetCellType_Internal(const char *elem_type, DMPolytopeType *ct)
 {
   PetscBool flg;
@@ -1826,7 +1815,6 @@ static PetscErrorCode ExodusGetCellType_Internal(const char *elem_type, DMPolyto
 done:
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-#endif
 
 /*@
   DMPlexCreateExodus - Create a `DMPLEX` mesh from an ExodusII file ID.
@@ -1847,7 +1835,6 @@ done:
 @*/
 PetscErrorCode DMPlexCreateExodus(MPI_Comm comm, PetscInt exoid, PetscBool interpolate, DM *dm)
 {
-#if defined(PETSC_HAVE_EXODUSII)
   PetscMPIInt  num_proc, rank;
   DMLabel      cellSets = NULL, faceSets = NULL, vertSets = NULL;
   PetscSection coordSection;
@@ -1858,10 +1845,8 @@ PetscErrorCode DMPlexCreateExodus(MPI_Comm comm, PetscInt exoid, PetscBool inter
   char title[PETSC_MAX_PATH_LEN + 1];
   int  dim = 0, dimEmbed = 0, numVertices = 0, numCells = 0;
   int  num_cs = 0, num_vs = 0, num_fs = 0;
-#endif
 
   PetscFunctionBegin;
-#if defined(PETSC_HAVE_EXODUSII)
   PetscCallMPI(MPI_Comm_rank(comm, &rank));
   PetscCallMPI(MPI_Comm_size(comm, &num_proc));
   PetscCall(DMCreate(comm, dm));
@@ -2094,7 +2079,4 @@ PetscErrorCode DMPlexCreateExodus(MPI_Comm comm, PetscInt exoid, PetscBool inter
     if (flag[2]) PetscCall(DMCreateLabel(*dm, "Vertex Sets"));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
-#else
-  SETERRQ(comm, PETSC_ERR_SUP, "This method requires ExodusII support. Reconfigure using --download-exodusii");
-#endif
 }
