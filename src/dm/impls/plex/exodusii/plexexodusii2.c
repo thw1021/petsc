@@ -755,7 +755,7 @@ PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetZonalVariableIndex(PetscViewer
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@
+/*
   DMView_PlexExodusII - Write a `DM` to disk in exodus format
 
   Collective
@@ -781,7 +781,7 @@ PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetZonalVariableIndex(PetscViewer
   This function will only handle TRI, TET, QUAD, and HEX cells.
 
 .seealso: `DMPLEX`
-@*/
+*/
 PetscErrorCode DMView_PlexExodusII(DM dm, PetscViewer viewer)
 {
   enum ElemType {
