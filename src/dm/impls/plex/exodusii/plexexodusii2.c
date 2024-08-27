@@ -275,7 +275,7 @@ PetscErrorCode PetscViewerExodusIISetNodalVariable(PetscViewer viewer, int num)
 . viewer - the `PetscViewer` of type `PETSCVIEWEREXODUSII`
 
   Output Parameters:
-. num   - the number variables in the exodusII file
+. num - the number variables in the exodusII file
 
   Level: intermediate
 
@@ -314,7 +314,7 @@ PetscErrorCode PetscViewerExodusIIGetZonalVariable(PetscViewer viewer, int *num)
 . viewer - the `PetscViewer` of type `PETSCVIEWEREXODUSII`
 
   Output Parameters:
-. num   - the number variables in the exodusII file
+. num - the number variables in the exodusII file
 
   Level: intermediate
 
@@ -351,7 +351,7 @@ PetscErrorCode PetscViewerExodusIIGetNodalVariable(PetscViewer viewer, int *num)
 
   Input Parameters:
 + viewer - the `PetscViewer` of type `PETSCVIEWEREXODUSII`
-+ idx   - the index for which you want to save the name
++ idx    - the index for which you want to save the name
 - name   - string containing the name characters
 
   Level: intermediate
@@ -376,7 +376,7 @@ PetscErrorCode PetscViewerExodusIISetZonalVariableName(PetscViewer viewer, int i
 
   Input Parameters:
 + viewer - the `PetscViewer` of type `PETSCVIEWEREXODUSII`
-+ idx   - the index for which you want to save the name
++ idx    - the index for which you want to save the name
 - name   - string containing the name characters
 
   Level: intermediate
@@ -401,7 +401,7 @@ PetscErrorCode PetscViewerExodusIISetNodalVariableName(PetscViewer viewer, int i
 
   Input Parameters:
 + viewer - the `PetscViewer` of type `PETSCVIEWEREXODUSII`
-- idx   - the index for which you want to get the name
+- idx    - the index for which you want to get the name
 
   Output Parameter:
 - name - pointer to the string containing the name characters
@@ -434,10 +434,10 @@ PetscErrorCode PetscViewerExodusIIGetZonalVariableName(PetscViewer viewer, int i
 
   Input Parameters:
 + viewer - the `PetscViewer` of type `PETSCVIEWEREXODUSII`
-- idx - the index for which you want to save the name
+- idx    - the index for which you want to save the name
 
   Output Parameter:
-- name[] - string array containing name characters
+- name - string array containing name characters
 
   Level: intermediate
 
@@ -501,7 +501,7 @@ PetscErrorCode PetscViewerExodusIISetZonalVariableNames(PetscViewer viewer, cons
 
   Input Parameters:
 + viewer - the `PetscViewer` of type `PETSCVIEWEREXODUSII`
-+ names  - 2D array containing the array of string names to be set
+- names  - 2D array containing the array of string names to be set
 
   Level: intermediate
 
@@ -534,11 +534,11 @@ PETSC_EXTERN PetscErrorCode PetscViewerExodusIISetNodalVariableNames(PetscViewer
   Collective; No Fortran Support
 
   Input Parameters:
-+ viewer   - the `PetscViewer` of type `PETSCVIEWEREXODUSII`
-- numNames - the number of zonal variable names to retrieve
++ viewer  - the `PetscViewer` of type `PETSCVIEWEREXODUSII`
+- numVars - the number of zonal variable names to retrieve
 
   Output Parameters:
-- names    - pointer to a 2D array where the zonal variable names will be saved
+. varNames - pointer to a 2D array where the zonal variable names will be saved
 
   Level: intermediate
 
@@ -576,11 +576,11 @@ PetscErrorCode PetscViewerExodusIIGetZonalVariableNames(PetscViewer viewer, int 
   Collective; No Fortran Support
 
   Input Parameters:
-+ viewer   - the `PetscViewer` of type `PETSCVIEWEREXODUSII`
-- numNames - the number of nodal variable names to retrieve
++ viewer  - the `PetscViewer` of type `PETSCVIEWEREXODUSII`
+- numVars - the number of nodal variable names to retrieve
 
   Output Parameters:
-- names    - 2D array where the nodal variable names will be saved
+. varNames - 2D array where the nodal variable names will be saved
 
   Level: intermediate
 
@@ -651,14 +651,14 @@ PETSC_EXTERN PetscErrorCode PetscViewerCreate_ExodusII(PetscViewer v)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*
+/*@
   PetscViewerExodusIIGetNodalVariableIndex - return the location of a nodal variable in an exodusII file given its name
 
   Collective
 
   Input Parameters:
-+ exoid    - the exodus id of a file (obtained from ex_open or ex_create for instance)
-- name     - the name of the result
++ viewer - the `PetscViewer` of type `PETSCVIEWEREXODUSII`
+- name   - the name of the result
 
   Output Parameter:
 . varIndex - the location of the variable in the exodus file or -1 if the variable is not found
@@ -672,7 +672,7 @@ PETSC_EXTERN PetscErrorCode PetscViewerCreate_ExodusII(PetscViewer v)
   amongst all variables of type obj_type.
 
 .seealso: `PetscViewerExodusIISetNodalVariable()`, `PetscViewerExodusIIGetNodalVariable()`, `PetscViewerExodusIISetNodalVariableName()`, `PetscViewerExodusIISetNodalVariableNames()`, `PetscViewerExodusIIGetNodalVariableName()`, `PetscViewerExodusIIGetNodalVariableNames()`
-*/
+@*/
 PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetNodalVariableIndex(PetscViewer viewer, const char name[], int *varIndex)
 {
   int       num_vars = 0, i, j;
@@ -703,14 +703,14 @@ PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetNodalVariableIndex(PetscViewer
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*
+/*@
   PetscViewerExodusIIGetZonalVariableIndex - return the location of a zonal variable in an exodusII file given its name
 
   Collective
 
   Input Parameters:
-+ exoid    - the exodus id of a file (obtained from ex_open or ex_create for instance)
-- name     - the name of the result
++ viewer - the `PetscViewer` of type `PETSCVIEWEREXODUSII`
+- name   - the name of the result
 
   Output Parameter:
 . varIndex - the location of the variable in the exodus file or -1 if the variable is not found
@@ -724,7 +724,7 @@ PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetNodalVariableIndex(PetscViewer
   amongst all variables of type obj_type.
 
 .seealso: `PetscViewerExodusIISetNodalVariable()`, `PetscViewerExodusIIGetNodalVariable()`, `PetscViewerExodusIISetNodalVariableName()`, `PetscViewerExodusIISetNodalVariableNames()`, `PetscViewerExodusIIGetNodalVariableName()`, `PetscViewerExodusIIGetNodalVariableNames()`
-*/
+@*/
 PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetZonalVariableIndex(PetscViewer viewer, const char name[], int *varIndex)
 {
   int       num_vars = 0, i, j;
@@ -755,7 +755,7 @@ PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetZonalVariableIndex(PetscViewer
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*
+/*@
   DMView_PlexExodusII - Write a `DM` to disk in exodus format
 
   Collective
@@ -781,7 +781,7 @@ PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetZonalVariableIndex(PetscViewer
   This function will only handle TRI, TET, QUAD, and HEX cells.
 
 .seealso: `DMPLEX`
-*/
+@*/
 PetscErrorCode DMView_PlexExodusII(DM dm, PetscViewer viewer)
 {
   enum ElemType {
