@@ -140,6 +140,16 @@ cdef inline TAO TAO_(PetscTAO p):
     ob.obj[0] = newRef(p)
     return ob
 
+cdef inline DM DM_(PetscDM p):
+    cdef DM ob = DM.__new__(DM)
+    ob.obj[0] = newRef(p)
+    return ob
+
+cdef inline DMTAO DMTAO_(PetscDMTAO p):
+    cdef DMTAO ob = DMTAO.__new__(DMTAO)
+    ob.obj[0] = newRef(p)
+    return ob
+
 # --------------------------------------------------------------------
 
 cdef object parse_url(object url):
@@ -2806,6 +2816,173 @@ cdef PetscErrorCode TaoPostStep_Python(
 
 # --------------------------------------------------------------------
 
+cdef extern from * nogil:
+    struct _DMTaoOps:
+        PetscErrorCode (*destroy)(PetscDMTAO) except PETSC_ERR_PYTHON
+        PetscErrorCode (*setup)(PetscDMTAO) except PETSC_ERR_PYTHON
+        PetscErrorCode (*setfromoptions)(PetscDMTAO, PetscOptionItems*) except PETSC_ERR_PYTHON
+        PetscErrorCode (*view)(PetscDMTAO, PetscViewer) except PETSC_ERR_PYTHON
+        PetscErrorCode (*applyproximalmap)(PetscDMTAO, PetscDMTAO, PetscReal, PetscVec, PetscVec, PetscBool) except PETSC_ERR_PYTHON
+    ctypedef _DMTaoOps *DMTaoOps
+    struct _p_DMTAO:
+        void *data
+        DMTaoOps ops
+
+# --------------------------------------------------------------------
+
+
+@cython.internal
+cdef class _PyDMTao(_PyObj): pass
+cdef inline _PyDMTao PyDMTao(PetscDMTAO dmtao):
+    if dmtao != NULL and dmtao.data != NULL:
+        return <_PyDMTao>dmtao.data
+    else:
+        return _PyDMTao.__new__(_PyDMTao)
+
+cdef public PetscErrorCode DMTaoPythonGetContext(PetscDMTAO dmtao, void **ctx) \
+    except PETSC_ERR_PYTHON:
+    FunctionBegin(b"DMTaoPythonGetContext")
+    PyDMTao(dmtao).getcontext(ctx)
+    return FunctionEnd()
+
+cdef public PetscErrorCode DMTaoPythonSetContext(PetscDMTAO dmtao, void *ctx) \
+    except PETSC_ERR_PYTHON:
+    FunctionBegin(b"DMTaoPythonSetContext")
+    PyDMTao(dmtao).setcontext(ctx, DMTAO_(dmtao))
+    return FunctionEnd()
+
+cdef PetscErrorCode DMTaoPythonSetType_PYTHON(PetscDMTAO dmtao, const char *name) \
+    except PETSC_ERR_PYTHON with gil:
+    FunctionBegin(b"DMTaoPythonSetType_PYTHON")
+    if name == NULL: return FunctionEnd() # XXX
+    cdef object ctx = createcontext(name)
+    DMTaoPythonSetContext(dmtao, <void*>ctx)
+    PyDMTao(dmtao).setname(name)
+    return FunctionEnd()
+
+cdef PetscErrorCode DMTaoPythonGetType_PYTHON(PetscDMTAO dmtao, const char *name[]) \
+    except PETSC_ERR_PYTHON with gil:
+    FunctionBegin(b"DMTaoPythonGetType_PYTHON")
+    name[0] = PyDMTao(dmtao).getname()
+    return FunctionEnd()
+
+cdef PetscErrorCode DMTaoCreate_Python(
+    PetscDMTAO dmtao,
+    ) except PETSC_ERR_PYTHON with gil:
+    FunctionBegin(b"DMTaoCreate_Python")
+    cdef DMTaoOps tops    = dmtao.ops
+    tops.destroy          = DMTaoDestroy_Python
+    tops.view             = DMTaoView_Python
+    tops.setup            = DMTaoSetUp_Python
+    tops.setfromoptions   = DMTaoSetFromOptions_Python
+    tops.applyproximalmap = DMTaoApplyProximalMap_Python
+    CHKERR(PetscObjectComposeFunction(
+            <PetscObject>dmtao, b"DMTaoPythonSetType_C",
+            <PetscVoidFunction>DMTaoPythonSetType_PYTHON))
+    CHKERR(PetscObjectComposeFunction(
+            <PetscObject>dmtao, b"DMTaoPythonGetType_C",
+            <PetscVoidFunction>DMTaoPythonGetType_PYTHON))
+    #
+    cdef ctx = PyDMTao(NULL)
+    dmtao.data = <void*> ctx
+    Py_INCREF(<PyObject*>dmtao.data)
+    return FunctionEnd()
+
+cdef inline PetscErrorCode DMTaoDestroy_Python_inner(
+    PetscDMTAO dmtao,
+    ) except PETSC_ERR_PYTHON with gil:
+    try:
+        addRef(dmtao)
+        DMTaoPythonSetContext(dmtao, NULL)
+    finally:
+        delRef(dmtao)
+        Py_DECREF(<PyObject*>dmtao.data)
+        dmtao.data = NULL
+    return PETSC_SUCCESS
+
+cdef PetscErrorCode DMTaoDestroy_Python(
+    PetscDMTAO dmtao,
+    ) except PETSC_ERR_PYTHON nogil:
+    FunctionBegin(b"DMTaoDestroy_Python")
+    CHKERR(PetscObjectComposeFunction(
+            <PetscObject>dmtao, b"DMTaoPythonSetType_C",
+            <PetscVoidFunction>NULL))
+    CHKERR(PetscObjectComposeFunction(
+            <PetscObject>dmtao, b"DMTaoPythonGetType_C",
+            <PetscVoidFunction>NULL))
+    #
+    if Py_IsInitialized(): DMTaoDestroy_Python_inner(dmtao)
+    return FunctionEnd()
+
+cdef PetscErrorCode DMTaoSetUp_Python(
+    PetscDMTAO dmtao,
+    ) except PETSC_ERR_PYTHON with gil:
+    FunctionBegin(b"DMTaoSetUp_Python")
+    cdef char name[2048]
+    cdef PetscBool found = PETSC_FALSE
+    if PyDMTao(dmtao).self is None:
+        CHKERR(PetscOptionsGetString(NULL,
+               getPrefix(dmtao), b"-dmtao_python_type",
+               name, sizeof(name), &found))
+        if found and name[0]:
+            CHKERR(DMTaoPythonSetType_PYTHON(dmtao, name))
+    if PyDMTao(dmtao).self is None:
+        return PetscSETERR(PETSC_ERR_USER,
+                           "Python context not set, call one of \n"
+                           " * DMTaoPythonSetType(dmtao, \"[package.]module.class\")\n"
+                           " * DMTaoSetFromOptions(dmtao) and pass option "
+                           "-dmtao_python_type [package.]module.class")
+    #
+    cdef setUp = PyDMTao(dmtao).setUp
+    if setUp is not None:
+        setUp(DMTAO_(dmtao))
+    return FunctionEnd()
+
+cdef PetscErrorCode DMTaoSetFromOptions_Python(
+    PetscDMTAO dmtao,
+    PetscOptionItems *PetscOptionsObject,
+    ) except PETSC_ERR_PYTHON with gil:
+    FunctionBegin(b"DMTaoSetFromOptions_Python")
+    cdef char name[2048], *defval = PyDMTao(dmtao).getname()
+    cdef PetscBool found = PETSC_FALSE
+    cdef PetscOptionItems *opts "PetscOptionsObject" = PetscOptionsObject
+    CHKERR(PetscOptionsString(
+            b"-dmtao_python_type", b"Python [package.]module[.{class|function}]",
+            b"DMTaoPythonSetType", defval, name, sizeof(name), &found)); <void>opts
+    if found and name[0]:
+        CHKERR(DMTaoPythonSetType_PYTHON(dmtao, name))
+    #
+    cdef setFromOptions = PyDMTao(dmtao).setFromOptions
+    if setFromOptions is not None:
+        setFromOptions(DMTAO_(dmtao))
+    return FunctionEnd()
+
+cdef PetscErrorCode DMTaoView_Python(
+    PetscDMTAO dmtao,
+    PetscViewer vwr,
+    ) except PETSC_ERR_PYTHON with gil:
+    FunctionBegin(b"DMTaoView_Python")
+    viewcontext(PyDMTao(dmtao), vwr)
+    cdef view = PyDMTao(dmtao).view
+    if view is not None:
+        view(DMTAO_(dmtao), Viewer_(vwr))
+    return FunctionEnd()
+
+cdef PetscErrorCode DMTaoApplyProximalMap_Python(
+    PetscDMTAO tdm0, PetscDMTAO tdm1, PetscReal scale, PetscVec y, PetscVec g, PetscBool flg,
+    ) except PETSC_ERR_PYTHON with gil:
+    FunctionBegin(b"DMTaoApplyProximalMap_Python")
+
+    cdef apply = PyDMTao(tdm0).applyproximalmap
+    if apply is not None:
+        if tdm1 is not NULL:
+            apply(DMTAO_(tdm0), DMTAO_(tdm1), toReal(scale), Vec_(y), Vec_(g), toBool(flg))
+        else:
+            apply(DMTAO_(tdm0), None, toReal(scale), Vec_(y), Vec_(g), toBool(flg))
+    return FunctionEnd()
+
+# --------------------------------------------------------------------
+
 cdef PetscErrorCode PetscPythonMonitorSet_Python(
     PetscObject obj_p,
     const char *url_p,
@@ -2839,19 +3016,21 @@ cdef PetscErrorCode PetscPythonMonitorSet_Python(
 
 cdef extern from * nogil:
 
-    ctypedef PetscErrorCode MatCreateFunction  (PetscMat)  except PETSC_ERR_PYTHON
-    ctypedef PetscErrorCode PCCreateFunction   (PetscPC)   except PETSC_ERR_PYTHON
-    ctypedef PetscErrorCode KSPCreateFunction  (PetscKSP)  except PETSC_ERR_PYTHON
-    ctypedef PetscErrorCode SNESCreateFunction (PetscSNES) except PETSC_ERR_PYTHON
-    ctypedef PetscErrorCode TSCreateFunction   (PetscTS)   except PETSC_ERR_PYTHON
-    ctypedef PetscErrorCode TaoCreateFunction  (PetscTAO)  except PETSC_ERR_PYTHON
+    ctypedef PetscErrorCode MatCreateFunction   (PetscMat)   except PETSC_ERR_PYTHON
+    ctypedef PetscErrorCode PCCreateFunction    (PetscPC)    except PETSC_ERR_PYTHON
+    ctypedef PetscErrorCode KSPCreateFunction   (PetscKSP)   except PETSC_ERR_PYTHON
+    ctypedef PetscErrorCode SNESCreateFunction  (PetscSNES)  except PETSC_ERR_PYTHON
+    ctypedef PetscErrorCode TSCreateFunction    (PetscTS)    except PETSC_ERR_PYTHON
+    ctypedef PetscErrorCode TaoCreateFunction   (PetscTAO)   except PETSC_ERR_PYTHON
+    ctypedef PetscErrorCode DMTaoCreateFunction (PetscDMTAO) except PETSC_ERR_PYTHON
 
-    PetscErrorCode MatRegister  (const char[], MatCreateFunction*)
-    PetscErrorCode PCRegister   (const char[], PCCreateFunction*)
-    PetscErrorCode KSPRegister  (const char[], KSPCreateFunction*)
-    PetscErrorCode SNESRegister (const char[], SNESCreateFunction*)
-    PetscErrorCode TSRegister   (const char[], TSCreateFunction*)
-    PetscErrorCode TaoRegister  (const char[], TaoCreateFunction*)
+    PetscErrorCode MatRegister   (const char[], MatCreateFunction*)
+    PetscErrorCode PCRegister    (const char[], PCCreateFunction*)
+    PetscErrorCode KSPRegister   (const char[], KSPCreateFunction*)
+    PetscErrorCode SNESRegister  (const char[], SNESCreateFunction*)
+    PetscErrorCode TSRegister    (const char[], TSCreateFunction*)
+    PetscErrorCode TaoRegister   (const char[], TaoCreateFunction*)
+    PetscErrorCode DMTaoRegister (const char[], DMTaoCreateFunction*)
 
     PetscErrorCode (*PetscPythonMonitorSet_C) \
         (PetscObject, const char[]) except PETSC_ERR_PYTHON
@@ -2867,6 +3046,7 @@ cdef public PetscErrorCode PetscPythonRegisterAll() except PETSC_ERR_PYTHON:
     CHKERR(SNESRegister(SNESPYTHON, SNESCreate_Python))
     CHKERR(TSRegister(TSPYTHON, TSCreate_Python))
     CHKERR(TaoRegister(TAOPYTHON, TaoCreate_Python))
+    CHKERR(DMTaoRegister(DMTAOPYTHON, DMTaoCreate_Python))
 
     # Python monitors
     global PetscPythonMonitorSet_C
