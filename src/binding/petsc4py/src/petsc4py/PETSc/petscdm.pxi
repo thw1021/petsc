@@ -203,7 +203,96 @@ cdef extern from * nogil:
     PetscErrorCode DMSNESSetFunction(PetscDM, PetscSNESFunctionFunction, void*)
     PetscErrorCode DMSNESSetJacobian(PetscDM, PetscSNESJacobianFunction, void*)
 
+    ctypedef const char* PetscDMTAOType "DMTaoType"
+    PetscDMTAOType DMTAOL1
+    PetscDMTAOType DMTAOL2
+    PetscDMTAOType DMTAOSIMPLEX
+    PetscDMTAOType DMTAOBOX
+    PetscDMTAOType DMTAOZERO
+    PetscDMTAOType DMTAOSHELL
+    PetscDMTAOType DMTAOPYTHON
+
     PetscErrorCode DMCoarsenHookAdd(PetscDM, PetscDMCoarsenHook, PetscDMRestrictHook, void*)
+
+    PetscErrorCode DMTaoApplyProximalMap(PetscDM, PetscDM, PetscReal, PetscVec, PetscVec, PetscBool)
+    PetscErrorCode DMTaoSetOptionsPrefix(PetscDM, char[])
+    PetscErrorCode DMTaoAppendOptionsPrefix(PetscDM, char[])
+    PetscErrorCode DMTaoGetOptionsPrefix(PetscDM, char*[])
+
+    ctypedef PetscErrorCode PetscDMTaoObjective(PetscDM, PetscVec, PetscReal*, void*) except PETSC_ERR_PYTHON
+    ctypedef PetscErrorCode PetscDMTaoGradient(PetscDM, PetscVec, PetscVec, void*) except PETSC_ERR_PYTHON
+    ctypedef PetscErrorCode PetscDMTaoObjGrad(PetscDM, PetscVec, PetscReal*, PetscVec, void*) except PETSC_ERR_PYTHON
+
+    PetscErrorCode DMTaoSetType(PetscDM, PetscDMTAOType)
+    PetscErrorCode DMTaoSetObjective(PetscDM, PetscDMTaoObjective, void*)
+    PetscErrorCode DMTaoSetGradient(PetscDM, PetscDMTaoGradient, void*)
+    PetscErrorCode DMTaoSetObjectiveAndGradient(PetscDM, PetscDMTaoObjGrad, void*)
+    PetscErrorCode DMTaoPythonSetType(PetscDMTAO, char[])
+    PetscErrorCode DMTaoPythonGetType(PetscDMTAO, char*[])
+
+    PetscErrorCode DMGetDMTao(PetscDM, PetscDMTAO *)
+    PetscErrorCode DMGetDMTaoWrite(PetscDM, PetscDMTAO *)
+    PetscErrorCode DMTaoGetParentDM(PetscDMTAO, PetscDM *)
+    PetscErrorCode DMTaoView(PetscDMTAO, PetscViewer)
+    PetscErrorCode DMTaoSetFromOptions(PetscDM)
+    PetscErrorCode DMTaoDestroy(PetscDMTAO *)
+
+# --------------------------------------------------------------------
+
+cdef inline DMTAO ref_DMTAO(PetscDMTAO dmtao):
+    cdef DMTAO ob = <DMTAO> DMTAO()
+    ob.dmtao = dmtao
+    CHKERR(PetscINCREF(ob.obj))
+    return ob
+
+# --------------------------------------------------------------------
+
+cdef PetscErrorCode DMTAO_Objective(PetscDM   _dm,
+                                    PetscVec  _x,
+                                    PetscReal *_f,
+                                    void      *ctx) except PETSC_ERR_PYTHON with gil:
+
+    cdef DM dm = ref_DM(_dm)
+    cdef Vec x = ref_Vec(_x)
+    context = dm.get_attr("__objective__")
+    if context is None and ctx != NULL: context = <object>ctx
+    assert context is not None and type(context) is tuple # sanity check
+    (objective, args, kargs) = context
+    retv = objective(dm, x, *args, **kargs)
+    _f[0] = asReal(retv)
+    return PETSC_SUCCESS
+
+cdef PetscErrorCode DMTAO_Gradient(PetscDM  _dm,
+                                   PetscVec _x,
+                                   PetscVec _g,
+                                   void     *ctx) except PETSC_ERR_PYTHON with gil:
+
+    cdef DM dm = ref_DM(_dm)
+    cdef Vec x = ref_Vec(_x)
+    cdef Vec g = ref_Vec(_g)
+    context = dm.get_attr("__gradient__")
+    if context is None and ctx != NULL: context = <object>ctx
+    assert context is not None and type(context) is tuple # sanity check
+    (gradient, args, kargs) = context
+    gradient(dm, x, g, *args, **kargs)
+    return PETSC_SUCCESS
+
+cdef PetscErrorCode DMTAO_ObjGrad(PetscDM _dm,
+                                  PetscVec _x,
+                                  PetscReal *_f,
+                                  PetscVec _g,
+                                  void *ctx) except PETSC_ERR_PYTHON with gil:
+
+    cdef DM dm = ref_DM(_dm)
+    cdef Vec x = ref_Vec(_x)
+    cdef Vec g = ref_Vec(_g)
+    context = dm.get_attr("__objgrad__")
+    if context is None and ctx != NULL: context = <object>ctx
+    assert context is not None and type(context) is tuple # sanity check
+    (objgrad, args, kargs) = context
+    retv = objgrad(dm, x, g, *args, **kargs)
+    _f[0] = asReal(retv)
+    return PETSC_SUCCESS
 
 # --------------------------------------------------------------------
 

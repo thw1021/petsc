@@ -740,6 +740,7 @@ PetscErrorCode DMDestroy(DM *dm)
   PetscCall(PetscObjectDestroy(&(*dm)->dmksp));
   PetscCall(PetscObjectDestroy(&(*dm)->dmsnes));
   PetscCall(PetscObjectDestroy(&(*dm)->dmts));
+  PetscCall(PetscObjectDestroy(&(*dm)->dmtao));
 
   if ((*dm)->ctx && (*dm)->ctxdestroy) PetscCall((*(*dm)->ctxdestroy)(&(*dm)->ctx));
   PetscCall(MatFDColoringDestroy(&(*dm)->fd));
