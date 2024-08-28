@@ -61,6 +61,16 @@ except ImportError:
   pass
 import nargs
 
+class dummyxdrlib():
+  def Packer(self):
+    return
+  def Unpacker(self,str):
+    return
+try:
+  import xdrlib
+except ImportError:
+  xdrlib = dummyxdrlib()
+
 import pickle
 import os
 import sys
@@ -83,7 +93,6 @@ Arg class, which wraps the usual value.'''
   def __init__(self, parentAddr = None, parentDirectory = None, load = 1, autoShutdown = 1, readonly = False):
     import atexit
     import time
-    import xdrlib
 
     self.logFile         = None
     self.setupLogFile()
@@ -126,7 +135,6 @@ Arg class, which wraps the usual value.'''
     self.logFile  = open('RDict.log', 'a')
     self.writeLogLine('Unpickling RDict')
     self.__dict__.update(d)
-    import xdrlib
     self.packer   = xdrlib.Packer()
     self.unpacker = xdrlib.Unpacker('')
     self.connectParent(self.parentAddr, self.parentDirectory)
