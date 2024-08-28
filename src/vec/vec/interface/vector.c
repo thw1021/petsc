@@ -806,6 +806,8 @@ PetscErrorCode VecView(Vec vec, PetscViewer viewer)
     PetscUseTypeMethod(vec, view, viewer);
   }
   PetscCall(VecLockReadPop(vec));
+  /* Call flush for proper logging of VecView timings */
+  PetscCall(PetscViewerFlush(viewer));
   PetscCall(PetscLogEventEnd(VEC_View, vec, viewer, 0, 0));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
