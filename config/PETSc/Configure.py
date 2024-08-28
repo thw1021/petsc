@@ -448,8 +448,9 @@ prepend-path PATH "%s"
       self.addMakeMacro('PETSC_FC_INCLUDES',self.headers.toStringNoDupes(allincludes,modinc(allincludes)))
       self.addMakeMacro('PETSC_FC_INCLUDES_INSTALL',self.headers.toStringNoDupes(allincludes_install,modinc(allincludes_install)))
 
-    LIB_DIR = os.path.join(self.installdir.dir,'lib')
-    self.addDefine('LIB_DIR','"'+LIB_DIR+'"')
+    self.addDefine('LIB_DIR','"{}"'.format(os.path.join(self.installdir.dir,'lib')))
+    # Use build dir here for 'make check' to work before 'make install'
+    LIB_DIR = os.path.join(self.petscdir.dir,self.arch.arch,'lib')
 
     if self.framework.argDB['with-single-library']:
       self.petsclib = '-lpetsc'
