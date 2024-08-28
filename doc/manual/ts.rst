@@ -665,14 +665,14 @@ Consider a fast-slow ODE system
 where :math:`u^{slow}` is the slow component and :math:`u^{fast}` is the
 fast component. The fast component can be partitioned additively as
 described above. Thus we want to treat :math:`f^{slow}()` and
-:math:`f^{fast}()` explicitly while the rest terms implicitly when using
+:math:`f^{fast}()` explicitly and the other terms implicitly when using
 TSARKIMEX. This is achieved by using the following APIs:
 
 - ``TSARKIMEXSetFastSlowSplit()`` informs PETSc to use ARKIMEX to solve a fast-slow system.
 
-- ``TSRHSSplitSetIS()`` specifies the index set for the slow/fast component.
+- ``TSRHSSplitSetIS()`` specifies the index set for the slow/fast components.
 
-- ``TSRHSSplitSetRHSFunction()`` specifies the explicit parts :math:`f^{slow}()` and :math:`f^{fast}()`.
+- ``TSRHSSplitSetRHSFunction()`` specifies the parts to be handled explicitly :math:`f^{slow}()` and :math:`f^{fast}()`.
 
 - ``TSRHSSplitSetIFunction()`` and ``TSRHSSplitSetIJacobian()`` specify the implicit part and its Jacobian.
 

@@ -144,7 +144,7 @@ PetscErrorCode TSRHSSplitSetRHSFunction(TS ts, const char splitname[], Vec r, TS
 }
 
 /*@C
-  TSRHSSplitSetIFunction - Set the split implicit function.
+  TSRHSSplitSetIFunction - Set the split implicit function for `TSARKIMEX`
 
   Logically Collective
 
@@ -157,7 +157,7 @@ PetscErrorCode TSRHSSplitSetRHSFunction(TS ts, const char splitname[], Vec r, TS
 
   Level: intermediate
 
-.seealso: [](ch_ts), `TS`, `TSIFunctionFn`, `IS`, `TSRHSSplitSetIS()`
+.seealso: [](ch_ts), `TS`, `TSIFunctionFn`, `IS`, `TSRHSSplitSetIS()`, `TSARKIMEX`
 @*/
 PetscErrorCode TSRHSSplitSetIFunction(TS ts, const char splitname[], Vec r, TSIFunctionFn *ifunc, void *ctx)
 {
@@ -197,7 +197,7 @@ PetscErrorCode TSRHSSplitSetIFunction(TS ts, const char splitname[], Vec r, TSIF
 }
 
 /*@C
-  TSRHSSplitSetIJacobian - Set the Jacobian for the split implicit function.
+  TSRHSSplitSetIJacobian - Set the Jacobian for the split implicit function with `TSARKIMEX`
 
   Logically Collective
 
