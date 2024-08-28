@@ -2535,16 +2535,14 @@ PETSC_EXTERN PetscErrorCode TSCreate_DIRK(TS ts)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* ------------------------------------------------------------ */
-
 /*@
-  TSARKIMEXSetFastSlowSplit - Use ARKIMEX for solving a fast-slow system
+  TSARKIMEXSetFastSlowSplit - Use `TSARKIMEX` for solving a fast-slow system
 
   Logically Collective
 
   Input Parameters:
 + ts       - timestepping context
-- fastslow - `PETSC_TRUE` enables the ARKIMEX solver for a fast-slow system where the RHS is split component-wise.
+- fastslow - `PETSC_TRUE` enables the `TSARKIMEX` solver for a fast-slow system where the RHS is split component-wise.
 
   Options Database Key:
 . -ts_arkimex_fastslowsplit - <true,false>
@@ -2561,7 +2559,7 @@ PetscErrorCode TSARKIMEXSetFastSlowSplit(TS ts, PetscBool fastslow)
 }
 
 /*@
-  TSARKIMEXGetFastSlowSplit - Gets whether to use ARKIMEX for a fast-slow system
+  TSARKIMEXGetFastSlowSplit - Gets whether to use `TSARKIMEX` for a fast-slow system
 
   Not Collective
 
@@ -2569,7 +2567,7 @@ PetscErrorCode TSARKIMEXSetFastSlowSplit(TS ts, PetscBool fastslow)
 . ts - timestepping context
 
   Output Parameter:
-. fastslow - `PETSC_TRUE` if ARKIMEX will be used for solving a fast-slow system, `PETSC_FALSE` otherwise
+. fastslow - `PETSC_TRUE` if `TSARKIMEX` will be used for solving a fast-slow system, `PETSC_FALSE` otherwise
 
   Level: intermediate
 
