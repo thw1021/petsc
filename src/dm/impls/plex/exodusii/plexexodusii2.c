@@ -555,7 +555,7 @@ PetscErrorCode PetscViewerExodusIIGetZonalVariableNames(PetscViewer viewer, int 
   int                   exoid = -1;
 
   PetscFunctionBegin;
-  PetscViewerExodusIIGetZonalVariable(viewer, numVars);
+  PetscCall(PetscViewerExodusIIGetZonalVariable(viewer, numVars));
   /*
     Cache variable names if necessary
   */
@@ -597,7 +597,7 @@ PetscErrorCode PetscViewerExodusIIGetNodalVariableNames(PetscViewer viewer, int 
   int                   exoid = -1;
 
   PetscFunctionBegin;
-  PetscViewerExodusIIGetNodalVariable(viewer, numVars);
+  PetscCall(PetscViewerExodusIIGetNodalVariable(viewer, numVars));
   /*
     Cache variable names if necessary
   */
