@@ -755,33 +755,6 @@ PetscErrorCode PetscViewerExodusIIGetZonalVariableIndex(PetscViewer viewer, cons
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*
-  DMView_PlexExodusII - Write a `DM` to disk in exodus format
-
-  Collective
-
-  Input Parameters:
-+ dm     - The dm to be written
-- viewer - an exodusII viewer
-
-  Level: beginner
-
-  Notes:
-  Not all DM can be written to disk this way. For instance, exodus assume that element blocks (mapped to "Cell sets" labels)
-  consists of sequentially numbered cells. If this is not the case, the exodus file will be corrupted.
-
-  If `dm` has been distributed, only the part of the `DM` on MPI rank 0 (including "ghost" cells and vertices)
-  will be written.
-
-  `DMPLEX` only represents geometry while most post-processing software expect that a mesh also provides information
-  on the discretization space. This function assumes that the file represents Lagrange finite elements of order 1 or 2.
-  The order of the mesh shall be set using `PetscViewerExodusIISetOrder()`
-  It should be extended to use `PetscFE` objects.
-
-  This function will only handle TRI, TET, QUAD, and HEX cells.
-
-.seealso: `DMPLEX`
-*/
 PetscErrorCode DMView_PlexExodusII(DM dm, PetscViewer viewer)
 {
   enum ElemType {

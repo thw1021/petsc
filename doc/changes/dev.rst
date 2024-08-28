@@ -129,6 +129,12 @@ Changes: Development
 - Add ``DMPlexCreateCellNumbering()``
 - Add ``-dm_plex_box_label`` to add "Face Sets" label with current "box" conventions
 - Add "Face Sets" label to simplex meshes using current "box" conventions
+- Caching variable names in a `PetscViewerExodusII` object for faster and  more robust lookups
+- Add `PetscViewerExodusII[Get/Set][Nodal/Zonal]Variable` to set or get the number of variables in a file.
+- Add `PetscViewerExodusII[Get/Set][Nodal/Zonal]VariableName` to set or get variable names one at a time.
+- Add `PetscViewerExodusII[Get/Set][Nodal/Zonal]VariablesNames` to set or get all variable names (not available in Fortran).
+
+
 
 .. rubric:: FE/FV:
 
