@@ -620,7 +620,7 @@ PetscErrorCode PetscViewerExodusIIGetNodalVariableNames(PetscViewer viewer, int 
 .seealso: `PetscViewerExodusIIOpen()`, `PetscViewerCreate()`, `PETSCVIEWERBINARY`, `PETSCVIEWERHDF5`, `DMView()`,
           `PetscViewerFileSetName()`, `PetscViewerFileSetMode()`, `PetscViewerFormat`, `PetscViewerType`, `PetscViewerSetType()`
 M*/
-PetscErrorCode PetscViewerCreate_ExodusII(PetscViewer v)
+PETSC_EXTERN PetscErrorCode PetscViewerCreate_ExodusII(PetscViewer v)
 {
   PetscViewer_ExodusII *exo;
 
