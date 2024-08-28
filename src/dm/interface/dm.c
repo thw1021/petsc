@@ -964,8 +964,8 @@ PetscErrorCode DMViewFromOptions(DM dm, PetscObject obj, const char name[])
 
   `PETSCVIEWEREXODUSII` type:
   The exodusII format assumes that element blocks (mapped to "Cell sets" labels)
-  consists of sequentially numbered cells. 
-  
+  consists of sequentially numbered cells.
+
   If `dm` has been distributed, only the part of the `DM` on MPI rank 0 (including "ghost" cells and vertices) will be written.
 
   Only TRI, TET, QUAD, and HEX cells are supported.
@@ -974,8 +974,6 @@ PetscErrorCode DMViewFromOptions(DM dm, PetscObject obj, const char name[])
   The order of the mesh shall be set using `PetscViewerExodusIISetOrder()`
 
   Variable names can be set and querried using `PetscViewerExodusII[Set/Get][Nodal/Zonal]VariableNames[s]`.
-
-
 
 .seealso: [](ch_dmbase), `DM`, `PetscViewer`, `PetscViewerFormat`, `PetscViewerSetFormat()`, `DMDestroy()`, `DMCreateGlobalVector()`, `DMCreateInterpolation()`, `DMCreateColoring()`, `DMCreateMatrix()`, `DMCreateMassMatrix()`, `DMLoad()`, `PetscObjectSetName()`
 @*/
