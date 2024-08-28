@@ -87,7 +87,7 @@ int main(int argc, char **argv)
     PetscCall(PetscViewerExodusIIGetNodalVariableIndex(viewer, testNames[i], &index));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "   Nodal variable %d: %s, index in file %d\n", i, testNames[i], index));
   }
-  PetscPrintf(PETSC_COMM_WORLD, "\n");
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\n"));
 
   for (int i = 0; i < numZVars; i++) {
     PetscCall(PetscViewerExodusIIGetZonalVariableName(viewer, i, &varName));
