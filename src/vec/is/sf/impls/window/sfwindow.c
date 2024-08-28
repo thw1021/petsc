@@ -24,7 +24,7 @@ struct _n_PetscSFDataLink {
 
 struct _n_PetscSFWinLink {
   PetscBool               inuse;
-  size_t                  bytes;
+  MPI_Aint                bytes;
   void                   *addr;
   void                   *rootdata;
   void                   *leafdata;
@@ -33,6 +33,7 @@ struct _n_PetscSFWinLink {
   PetscSFWindowFlavorType flavor;
   MPI_Aint               *dyn_target_addr;
   PetscBool               epoch;
+  PetscBool               persistent;
   PetscSFWinLink          next;
 };
 
@@ -370,16 +371,14 @@ static PetscErrorCode PetscSFWindowAttach(PetscSF sf, PetscSFWinLink link, void 
   PetscFunctionBegin;
 #if defined(PETSC_HAVE_MPI_FEATURE_DYNAMIC_WINDOW)
   {
-    PetscSF_Window        *w = (PetscSF_Window *)sf->data;
-    MPI_Comm               wcomm;
-    MPI_Aint               winaddr;
-    void                  *addr = rootdata;
-    PetscInt               nranks;
-    static const PetscBool PetscSFWindowNullReplacementAddress[1] = {PETSC_FALSE};
+    PetscSF_Window *w = (PetscSF_Window *)sf->data;
+    MPI_Comm        wcomm;
+    MPI_Aint        winaddr;
+    void           *addr = rootdata;
+    PetscInt        nranks;
     // some Open MPI versions do not support MPI_Win_attach(win,NULL,0);
-    if (PetscDefined(HAVE_OMPI_MAJOR_VERSION)) addr = (void *)PetscSFWindowNullReplacementAddress;
     wcomm = w->window_comm;
-    PetscCallMPI(MPI_Win_attach(link->win, addr, wsize));
+    if (addr != NULL) PetscCallMPI(MPI_Win_attach(link->win, addr, wsize));
     link->addr = addr;
     PetscCheck(w->dynsf, wcomm, PETSC_ERR_ORDER, "Must call PetscSFSetUp()");
     PetscCall(PetscSFGetRootRanks(w->dynsf, &nranks, NULL, NULL, NULL, NULL));
@@ -445,6 +444,35 @@ static PetscErrorCode PetscSFGetWindow(PetscSF sf, MPI_Datatype unit, void *root
     PetscFunctionReturn(PETSC_SUCCESS);
   }
   if (w->flavor != PETSCSF_WINDOW_FLAVOR_CREATE) reuse = PETSC_TRUE;
+  if (PetscDefined(HAVE_MPI_FEATURE_DYNAMIC_WINDOW) && w->flavor == PETSCSF_WINDOW_FLAVOR_DYNAMIC) {
+    // first search for a persistent window
+    for (link = w->wins; reuse && link; link = link->next) {
+      PetscBool match;
+
+      if (!link->persistent) continue;
+      match = (link->flavor == w->flavor && link->rootdata == rootdata && link->leafdata == leafdata) ? PETSC_TRUE : PETSC_FALSE;
+      if (PetscDefined(USE_DEBUG)) {
+        PetscInt matches[2];
+        PetscInt all_matches[2];
+
+        matches[0] = match ? 1 : 0;
+        matches[1] = match ? -1 : 0;
+        PetscCallMPI(MPIU_Allreduce(matches, all_matches, 2, MPIU_INT, MPI_MAX, wcomm));
+        all_matches[1] = -all_matches[1];
+        PetscCheck(all_matches[0] == all_matches[1], wcomm, PETSC_ERR_ARG_INCOMP,
+                   "Inconsistent use across MPI processes of persistent leaf and root data registered with PetscSFRegisterPersistent().\n"
+                   "Either the persistent data was changed on a subset of processes (which is not allowed),\n"
+                   "or persistent data was not deregistered with PetscSFDeregisterPersistent() before being deallocated");
+      }
+      if (match) {
+        PetscCheck(!link->inuse, wcomm, PETSC_ERR_ARG_WRONGSTATE, "Communication already in progress on persistent root and leaf data");
+        PetscCheck(!epoch || !link->epoch, wcomm, PETSC_ERR_ARG_WRONGSTATE, "Communication epoch already open for window");
+        PetscCheck(bytes == link->bytes, wcomm, PETSC_ERR_ARG_WRONGSTATE, "Wrong data type for persistent root and leaf data");
+        *win = link->win;
+        goto found;
+      }
+    }
+  }
   for (link = w->wins; reuse && link; link = link->next) {
     if (w->flavor != link->flavor) continue;
     /* an existing window can be used (1) if it is not in use, (2) if we are
@@ -486,13 +514,14 @@ static PetscErrorCode PetscSFGetWindow(PetscSF sf, MPI_Datatype unit, void *root
     break;
 #if defined(PETSC_HAVE_MPI_FEATURE_DYNAMIC_WINDOW)
   case PETSCSF_WINDOW_FLAVOR_DYNAMIC:
+    PetscCallMPI(MPI_Win_create_dynamic(w->info, wcomm, &link->win));
     PetscCall(PetscSFWindowAttach(sf, link, rootdata, wsize));
     break;
-#endif
   case PETSCSF_WINDOW_FLAVOR_ALLOCATE:
     PetscCallMPI(MPI_Win_allocate(wsize, (PetscMPIInt)bytes, w->info, wcomm, &link->addr, &link->win));
     update = PETSC_TRUE;
     break;
+#endif
 #if defined(PETSC_HAVE_MPI_PROCESS_SHARED_MEMORY)
   case PETSCSF_WINDOW_FLAVOR_SHARED:
     PetscCallMPI(MPI_Win_allocate_shared(wsize, (PetscMPIInt)bytes, w->info, wcomm, &link->addr, &link->win));
@@ -627,7 +656,7 @@ static PetscErrorCode PetscSFRestoreWindow(PetscSF sf, MPI_Datatype unit, void *
   PetscBool               reuse = PETSC_FALSE;
   PetscSFWindowFlavorType flavor;
   void                   *laddr;
-  size_t                  bytes;
+  MPI_Aint                bytes;
   MPI_Comm                wcomm;
 
   PetscFunctionBegin;
@@ -685,8 +714,8 @@ found:
     }
   }
 #if defined(PETSC_HAVE_MPI_FEATURE_DYNAMIC_WINDOW)
-  if (link->flavor == PETSCSF_WINDOW_FLAVOR_DYNAMIC) {
-    PetscCallMPI(MPI_Win_detach(link->win, link->addr));
+  if (link->flavor == PETSCSF_WINDOW_FLAVOR_DYNAMIC && !link->persistent) {
+    if (link->addr != NULL) PetscCallMPI(MPI_Win_detach(link->win, link->addr));
     link->addr = NULL;
   }
 #endif
@@ -694,10 +723,12 @@ found:
     if (sync == PETSCSF_WINDOW_SYNC_LOCK) PetscCallMPI(MPI_Win_fence(MPI_MODE_NOPUT | MPI_MODE_NOSUCCEED, *win));
     PetscCall(PetscMemcpy(array, laddr, sf->nroots * bytes));
   }
-  link->epoch    = PETSC_FALSE;
-  link->inuse    = PETSC_FALSE;
-  link->rootdata = NULL;
-  link->leafdata = NULL;
+  link->epoch = PETSC_FALSE;
+  link->inuse = PETSC_FALSE;
+  if (!link->persistent) {
+    link->rootdata = NULL;
+    link->leafdata = NULL;
+  }
   if (!reuse) {
     PetscCall(PetscFree(link->dyn_target_addr));
     PetscCall(PetscFree(link->reqs));
@@ -762,7 +793,7 @@ static PetscErrorCode PetscSFSetUp_Window(PetscSF sf)
       PetscCall(PetscObjectReference((PetscObject)dynsf_full));
       w->dynsf = dynsf_full;
     }
-
+    if (w->dynsf) PetscCall(PetscSFSetUp(w->dynsf));
     PetscCall(PetscSFDestroy(&dynsf_full));
   }
   switch (w->sync) {
@@ -829,6 +860,87 @@ static PetscErrorCode PetscSFReset_Window(PetscSF sf)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode PetscSFRegisterPersistent_Window(PetscSF sf, MPI_Datatype unit, const void *rootdata, const void *leafdata)
+{
+  PetscSF_Window *w = (PetscSF_Window *)sf->data;
+  MPI_Aint        lb, lb_true, bytes, bytes_true, wsize;
+  PetscBool       is_empty;
+  PetscSFWinLink  link;
+
+  PetscFunctionBegin;
+  PetscCall(PetscSFSetUp(sf));
+  if (w->flavor != PETSCSF_WINDOW_FLAVOR_DYNAMIC) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCallMPI(MPI_Type_get_extent(unit, &lb, &bytes));
+  PetscCallMPI(MPI_Type_get_true_extent(unit, &lb_true, &bytes_true));
+  PetscCheck(lb == 0 && lb_true == 0, PetscObjectComm((PetscObject)sf), PETSC_ERR_SUP, "No support for unit type with nonzero lower bound, write petsc-maint@mcs.anl.gov if you want this feature");
+  PetscCheck(bytes == bytes_true, PetscObjectComm((PetscObject)sf), PETSC_ERR_SUP, "No support for unit type with modified extent, write petsc-maint@mcs.anl.gov if you want this feature");
+  wsize    = (MPI_Aint)(bytes * sf->nroots);
+  is_empty = w->is_empty;
+  if (is_empty) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCall(PetscNew(&link));
+  link->flavor = w->flavor;
+  link->next   = w->wins;
+#if defined(PETSC_HAVE_MPI_FEATURE_DYNAMIC_WINDOW)
+  {
+    MPI_Comm wcomm = w->window_comm;
+    PetscCallMPI(MPI_Win_create_dynamic(w->info, wcomm, &link->win));
+  }
+#endif
+  PetscCall(PetscSFWindowAttach(sf, link, (void *)rootdata, wsize));
+  link->rootdata   = (void *)rootdata;
+  link->leafdata   = (void *)leafdata;
+  link->bytes      = bytes;
+  link->epoch      = PETSC_FALSE;
+  link->inuse      = PETSC_FALSE;
+  link->persistent = PETSC_TRUE;
+  w->wins          = link;
+  if (w->sync == PETSCSF_WINDOW_SYNC_LOCK) {
+    PetscInt i;
+
+    PetscCall(PetscMalloc1(sf->nranks, &link->reqs));
+    for (i = 0; i < sf->nranks; i++) link->reqs[i] = MPI_REQUEST_NULL;
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscSFDeregisterPersistent_Window(PetscSF sf, MPI_Datatype unit, const void *rootdata, const void *leafdata)
+{
+  PetscSF_Window *w = (PetscSF_Window *)sf->data;
+  MPI_Aint        lb, lb_true, bytes, bytes_true;
+  MPI_Comm        wcomm;
+  PetscBool       is_empty;
+  PetscSFWinLink *p;
+
+  PetscFunctionBegin;
+  PetscCall(PetscSFSetUp(sf));
+  if (w->flavor != PETSCSF_WINDOW_FLAVOR_DYNAMIC) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCallMPI(MPI_Type_get_extent(unit, &lb, &bytes));
+  PetscCallMPI(MPI_Type_get_true_extent(unit, &lb_true, &bytes_true));
+  PetscCheck(lb == 0 && lb_true == 0, PetscObjectComm((PetscObject)sf), PETSC_ERR_SUP, "No support for unit type with nonzero lower bound, write petsc-maint@mcs.anl.gov if you want this feature");
+  PetscCheck(bytes == bytes_true, PetscObjectComm((PetscObject)sf), PETSC_ERR_SUP, "No support for unit type with modified extent, write petsc-maint@mcs.anl.gov if you want this feature");
+  wcomm    = w->window_comm;
+  is_empty = w->is_empty;
+  if (is_empty) PetscFunctionReturn(PETSC_SUCCESS);
+  for (p = &w->wins; *p; p = &(*p)->next) {
+    PetscSFWinLink link = *p;
+    if (link->flavor == w->flavor && link->persistent && link->rootdata == rootdata && link->leafdata == leafdata && link->bytes == bytes) {
+      PetscCheck(!link->inuse, wcomm, PETSC_ERR_ARG_WRONGSTATE, "Deregistering a window when communication is still in progress");
+      PetscCheck(!link->epoch, wcomm, PETSC_ERR_ARG_WRONGSTATE, "Deregistering a window with an unconcluded epoch");
+#if defined(PETSC_HAVE_MPI_FEATURE_DYNAMIC_WINDOW)
+      PetscCallMPI(MPI_Win_detach(link->win, link->addr));
+      link->addr = NULL;
+#endif
+      PetscCall(PetscFree(link->dyn_target_addr));
+      PetscCall(PetscFree(link->reqs));
+      PetscCallMPI(MPI_Win_free(&link->win));
+      *p = link->next;
+      PetscCall(PetscFree(link));
+      break;
+    }
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode PetscSFDestroy_Window(PetscSF sf)
 {
   PetscFunctionBegin;
@@ -840,6 +952,8 @@ static PetscErrorCode PetscSFDestroy_Window(PetscSF sf)
   PetscCall(PetscObjectComposeFunction((PetscObject)sf, "PetscSFWindowGetFlavorType_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)sf, "PetscSFWindowSetInfo_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)sf, "PetscSFWindowGetInfo_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)sf, "PetscSFRegisterPersistent_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)sf, "PetscSFDeregisterPersistent_C", NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1080,6 +1194,8 @@ PETSC_INTERN PetscErrorCode PetscSFCreate_Window(PetscSF sf)
   PetscCall(PetscObjectComposeFunction((PetscObject)sf, "PetscSFWindowGetFlavorType_C", PetscSFWindowGetFlavorType_Window));
   PetscCall(PetscObjectComposeFunction((PetscObject)sf, "PetscSFWindowSetInfo_C", PetscSFWindowSetInfo_Window));
   PetscCall(PetscObjectComposeFunction((PetscObject)sf, "PetscSFWindowGetInfo_C", PetscSFWindowGetInfo_Window));
+  PetscCall(PetscObjectComposeFunction((PetscObject)sf, "PetscSFRegisterPersistent_C", PetscSFRegisterPersistent_Window));
+  PetscCall(PetscObjectComposeFunction((PetscObject)sf, "PetscSFDeregisterPersistent_C", PetscSFDeregisterPersistent_Window));
 
 #if defined(PETSC_HAVE_OPENMPI)
   #if PETSC_PKG_OPENMPI_VERSION_LE(1, 6, 0)
