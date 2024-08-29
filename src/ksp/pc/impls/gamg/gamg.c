@@ -1666,9 +1666,10 @@ static PetscErrorCode PCGAMGSetType_GAMG(PC pc, PCGAMGType type)
 
 static PetscErrorCode PCView_GAMG(PC pc, PetscViewer viewer)
 {
-  PC_MG    *mg      = (PC_MG *)pc->data;
-  PC_GAMG  *pc_gamg = (PC_GAMG *)mg->innerctx;
-  PetscReal gc = 0, oc = 0;
+  PC_MG         *mg       = (PC_MG *)pc->data;
+  PC_MG_Levels **mglevels = mg->levels;
+  PC_GAMG       *pc_gamg  = (PC_GAMG *)mg->innerctx;
+  PetscReal      gc, oc;
 
   PetscFunctionBegin;
   PetscCall(PetscViewerASCIIPrintf(viewer, "    GAMG specific options\n"));
@@ -1695,8 +1696,32 @@ static PetscErrorCode PCView_GAMG(PC pc, PetscViewer viewer)
     PetscCall(PetscViewerASCIIPrintf(viewer, "\n"));
   }
   if (pc_gamg->ops->view) PetscCall((*pc_gamg->ops->view)(pc, viewer));
+  gc = oc = 0;
   PetscCall(PCMGGetGridComplexity(pc, &gc, &oc));
   PetscCall(PetscViewerASCIIPrintf(viewer, "      Complexity:    grid = %g    operator = %g\n", (double)gc, (double)oc));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "      Per-level complexity (eqs, active pes, avg nnzs operator, avg nnzs interpolation):\n"));
+  for (PetscInt i = 0; i < mg->nlevels; i++) {
+    MatInfo   info;
+    Mat       A;
+    PetscReal rd[3];
+    PetscInt  rst, ren, N;
+
+    PetscCall(KSPGetOperators(mglevels[i]->smoothd, NULL, &A));
+    PetscCall(MatGetOwnershipRange(A, &rst, &ren));
+    PetscCall(MatGetSize(A, &N, NULL));
+    PetscCall(MatGetInfo(A, MAT_LOCAL, &info));
+    rd[0] = (ren - rst > 0) ? 1 : 0;
+    rd[1] = info.nz_used;
+    rd[2] = 0;
+    if (i) {
+      Mat P;
+      PetscCall(PCMGGetInterpolation(pc, i, &P));
+      PetscCall(MatGetInfo(P, MAT_LOCAL, &info));
+      rd[2] = info.nz_used;
+    }
+    PetscCall(MPIU_Allreduce(MPI_IN_PLACE, rd, 3, MPIU_REAL, MPI_SUM, PetscObjectComm((PetscObject)pc)));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "        %12" PetscInt_FMT " %12" PetscInt_FMT " %12" PetscInt_FMT " %12" PetscInt_FMT "\n", N, (PetscInt)rd[0], (PetscInt)PetscCeilReal(rd[1] / N), (PetscInt)PetscCeilReal(rd[2] / N)));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
