@@ -422,7 +422,7 @@ static PetscErrorCode PetscSFWindowAttach(PetscSF sf, PetscSFWinLink link, void 
 static PetscErrorCode PetscSFGetWindow(PetscSF sf, MPI_Datatype unit, void *rootdata, void *leafdata, PetscSFWindowSyncType sync, PetscBool epoch, PetscMPIInt fenceassert, PetscMPIInt postassert, PetscMPIInt startassert, const MPI_Aint **target_disp, MPI_Request **reqs, MPI_Win *win)
 {
   PetscSF_Window *w = (PetscSF_Window *)sf->data;
-  MPI_Aint        lb, lb_true, bytes, bytes_true;
+  MPI_Aint        bytes;
   PetscSFWinLink  link;
   PetscBool       reuse = PETSC_FALSE, update = PETSC_FALSE;
   MPI_Aint        wsize;
@@ -603,14 +603,12 @@ static PetscErrorCode PetscSFFindWindow(PetscSF sf, MPI_Datatype unit, const voi
 {
   PetscSF_Window *w = (PetscSF_Window *)sf->data;
   PetscSFWinLink  link;
-  MPI_Comm        wcomm;
   PetscBool       is_empty;
   MPI_Aint        bytes;
 
   PetscFunctionBegin;
   PetscCall(PetscSFGetDatatypeSize(PetscObjectComm((PetscObject)sf), unit, &bytes));
   *win     = MPI_WIN_NULL;
-  wcomm    = w->window_comm;
   is_empty = w->is_empty;
   if (is_empty) {
     *reqs = NULL;
@@ -619,7 +617,7 @@ static PetscErrorCode PetscSFFindWindow(PetscSF sf, MPI_Datatype unit, const voi
   }
   for (link = w->wins; link; link = link->next) {
     if (rootdata == link->rootdata && leafdata == link->leafdata && bytes == link->bytes) {
-      PetscCall(PetscInfo(sf, "Window %" PETSC_INTPTR_T_FMT " of flavor %d for comm %" PETSC_INTPTR_T_FMT "\n", (PETSC_INTPTR_T)link->win, link->flavor, (PETSC_INTPTR_T)wcomm));
+      PetscCall(PetscInfo(sf, "Window %" PETSC_INTPTR_T_FMT " of flavor %d for comm %" PETSC_INTPTR_T_FMT "\n", (PETSC_INTPTR_T)link->win, link->flavor, (PETSC_INTPTR_T)w->window_comm));
       *win  = link->win;
       *reqs = link->reqs;
       PetscFunctionReturn(PETSC_SUCCESS);
