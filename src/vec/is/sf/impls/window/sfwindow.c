@@ -430,10 +430,7 @@ static PetscErrorCode PetscSFGetWindow(PetscSF sf, MPI_Datatype unit, void *root
   PetscBool       is_empty;
 
   PetscFunctionBegin;
-  PetscCallMPI(MPI_Type_get_extent(unit, &lb, &bytes));
-  PetscCallMPI(MPI_Type_get_true_extent(unit, &lb_true, &bytes_true));
-  PetscCheck(lb == 0 && lb_true == 0, PetscObjectComm((PetscObject)sf), PETSC_ERR_SUP, "No support for unit type with nonzero lower bound, write petsc-maint@mcs.anl.gov if you want this feature");
-  PetscCheck(bytes == bytes_true, PetscObjectComm((PetscObject)sf), PETSC_ERR_SUP, "No support for unit type with modified extent, write petsc-maint@mcs.anl.gov if you want this feature");
+  PetscCall(PetscSFGetDatatypeSize(PetscObjectComm((PetscObject)sf), unit, &bytes));
   wsize    = (MPI_Aint)(bytes * sf->nroots);
   wcomm    = w->window_comm;
   is_empty = w->is_empty;
@@ -608,10 +605,10 @@ static PetscErrorCode PetscSFFindWindow(PetscSF sf, MPI_Datatype unit, const voi
   PetscSFWinLink  link;
   MPI_Comm        wcomm;
   PetscBool       is_empty;
-  MPI_Aint        lb, bytes;
+  MPI_Aint        bytes;
 
   PetscFunctionBegin;
-  PetscCallMPI(MPI_Type_get_extent(unit, &lb, &bytes));
+  PetscCall(PetscSFGetDatatypeSize(PetscObjectComm((PetscObject)sf), unit, &bytes));
   *win     = MPI_WIN_NULL;
   wcomm    = w->window_comm;
   is_empty = w->is_empty;
@@ -863,17 +860,14 @@ static PetscErrorCode PetscSFReset_Window(PetscSF sf)
 static PetscErrorCode PetscSFRegisterPersistent_Window(PetscSF sf, MPI_Datatype unit, const void *rootdata, const void *leafdata)
 {
   PetscSF_Window *w = (PetscSF_Window *)sf->data;
-  MPI_Aint        lb, lb_true, bytes, bytes_true, wsize;
+  MPI_Aint        bytes, wsize;
   PetscBool       is_empty;
   PetscSFWinLink  link;
 
   PetscFunctionBegin;
   PetscCall(PetscSFSetUp(sf));
   if (w->flavor != PETSCSF_WINDOW_FLAVOR_DYNAMIC) PetscFunctionReturn(PETSC_SUCCESS);
-  PetscCallMPI(MPI_Type_get_extent(unit, &lb, &bytes));
-  PetscCallMPI(MPI_Type_get_true_extent(unit, &lb_true, &bytes_true));
-  PetscCheck(lb == 0 && lb_true == 0, PetscObjectComm((PetscObject)sf), PETSC_ERR_SUP, "No support for unit type with nonzero lower bound, write petsc-maint@mcs.anl.gov if you want this feature");
-  PetscCheck(bytes == bytes_true, PetscObjectComm((PetscObject)sf), PETSC_ERR_SUP, "No support for unit type with modified extent, write petsc-maint@mcs.anl.gov if you want this feature");
+  PetscCall(PetscSFGetDatatypeSize(PetscObjectComm((PetscObject)sf), unit, &bytes));
   wsize    = (MPI_Aint)(bytes * sf->nroots);
   is_empty = w->is_empty;
   if (is_empty) PetscFunctionReturn(PETSC_SUCCESS);
@@ -906,7 +900,7 @@ static PetscErrorCode PetscSFRegisterPersistent_Window(PetscSF sf, MPI_Datatype 
 static PetscErrorCode PetscSFDeregisterPersistent_Window(PetscSF sf, MPI_Datatype unit, const void *rootdata, const void *leafdata)
 {
   PetscSF_Window *w = (PetscSF_Window *)sf->data;
-  MPI_Aint        lb, lb_true, bytes, bytes_true;
+  MPI_Aint        bytes;
   MPI_Comm        wcomm;
   PetscBool       is_empty;
   PetscSFWinLink *p;
@@ -914,10 +908,7 @@ static PetscErrorCode PetscSFDeregisterPersistent_Window(PetscSF sf, MPI_Datatyp
   PetscFunctionBegin;
   PetscCall(PetscSFSetUp(sf));
   if (w->flavor != PETSCSF_WINDOW_FLAVOR_DYNAMIC) PetscFunctionReturn(PETSC_SUCCESS);
-  PetscCallMPI(MPI_Type_get_extent(unit, &lb, &bytes));
-  PetscCallMPI(MPI_Type_get_true_extent(unit, &lb_true, &bytes_true));
-  PetscCheck(lb == 0 && lb_true == 0, PetscObjectComm((PetscObject)sf), PETSC_ERR_SUP, "No support for unit type with nonzero lower bound, write petsc-maint@mcs.anl.gov if you want this feature");
-  PetscCheck(bytes == bytes_true, PetscObjectComm((PetscObject)sf), PETSC_ERR_SUP, "No support for unit type with modified extent, write petsc-maint@mcs.anl.gov if you want this feature");
+  PetscCall(PetscSFGetDatatypeSize(PetscObjectComm((PetscObject)sf), unit, &bytes));
   wcomm    = w->window_comm;
   is_empty = w->is_empty;
   if (is_empty) PetscFunctionReturn(PETSC_SUCCESS);
