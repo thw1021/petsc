@@ -112,7 +112,7 @@ struct _n_PetscOptionItem {
   const char *const *list;  /* used for available values for PetscOptionsEList() */
   char               nlist; /* number of entries in list */
   char              *man;
-  size_t             arraylength; /* number of entries in data in the case that it is an array (of PetscInt etc) */
+  PetscInt           arraylength; /* number of entries in data in the case that it is an array (of PetscInt etc), never a giant value */
   PetscBool          set;         /* the user has changed this value in the GUI */
   PetscOptionType    type;
   PetscOptionItem    next;

@@ -1472,7 +1472,7 @@ PetscErrorCode PetscSectionCreateGlobalSection(PetscSection s, PetscSF sf, Petsc
   PetscInt       *recv = NULL, *neg = NULL;
   PetscInt        pStart, pEnd, p, dof, cdof, off, globalOff = 0, nroots, nlocal, maxleaf;
   PetscInt        numFields, f, numComponents;
-  PetscInt64      foff;
+  PetscCount      foff;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(s, PETSC_SECTION_CLASSID, 1);
@@ -1565,7 +1565,7 @@ PetscErrorCode PetscSectionCreateGlobalSection(PetscSection s, PetscSF sf, Petsc
       if (!includeConstraints && cdof > 0) PetscCall(PetscSectionSetFieldConstraintDof(gs, p, f, cdof));
       PetscCall(PetscSectionGetFieldDof(s, p, f, &dof));
       PetscCall(PetscSectionSetFieldDof(gs, p, f, off < 0 ? -(dof + 1) : dof));
-      PetscCall(PetscSectionSetFieldOffset(gs, p, f, foff));
+      PetscCall(PetscSectionSetFieldOffset(gs, p, f, (PetscInt)foff));
       PetscCall(PetscSectionGetFieldConstraintDof(gs, p, f, &cdof));
       foff = off < 0 ? foff - (dof - cdof) : foff + (dof - cdof);
       PetscCheck(foff < PETSC_INT_MAX, PETSC_COMM_SELF, PETSC_ERR_INT_OVERFLOW, "Offsets too large for 32 bit indices");
@@ -1617,7 +1617,7 @@ PetscErrorCode PetscSectionCreateGlobalSectionCensored(PetscSection s, PetscSF s
   const PetscInt *pind = NULL;
   PetscInt       *neg = NULL, *tmpOff = NULL;
   PetscInt        pStart, pEnd, p, e, dof, cdof, globalOff = 0, nroots;
-  PetscInt64      off;
+  PetscCount      off;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(s, PETSC_SECTION_CLASSID, 1);
@@ -1667,10 +1667,10 @@ PetscErrorCode PetscSectionCreateGlobalSectionCensored(PetscSection s, PetscSF s
     const PetscInt q = pind ? pind[p] : p;
 
     cdof                     = (!includeConstraints && s->bc) ? s->bc->atlasDof[q] : 0;
-    (*gsection)->atlasOff[q] = off;
+    (*gsection)->atlasOff[q] = (PetscInt)off;
     off += (*gsection)->atlasDof[q] > 0 ? (*gsection)->atlasDof[q] - cdof : 0;
+    PetscCheck(off < PETSC_INT_MAX, PETSC_COMM_SELF, PETSC_ERR_INT_OVERFLOW, "Offsets too large for 32 bit indices");
   }
-  PetscCheck(off < PETSC_INT_MAX, PETSC_COMM_SELF, PETSC_ERR_INT_OVERFLOW, "Offsets too large for 32 bit indices");
   PetscCallMPI(MPI_Scan(&off, &globalOff, 1, MPIU_INT, MPI_SUM, PetscObjectComm((PetscObject)s)));
   globalOff -= off;
   for (p = 0, off = 0; p < pEnd - pStart; ++p) {

@@ -4375,7 +4375,7 @@ static PetscErrorCode DMPlexCreateFromOptions_Internal(PetscOptionItems *PetscOp
     PetscCall(PetscStrlen(name, &len));
     if (name[len - 1] == '0') Nl = 10;
     for (PetscInt l = 0; l < Nl; ++l) {
-      if (l > 0) name[len - 1] = '0' + l;
+      if (l > 0) name[len - 1] = (char)('0' + l);
       fulloption[0] = 0;
       PetscCall(PetscStrlcat(fulloption, "-dm_plex_cohesive_label_", 32));
       PetscCall(PetscStrlcat(fulloption, name, PETSC_MAX_PATH_LEN - 32));

@@ -920,7 +920,7 @@ static PetscErrorCode MatCoarsenApply_HEM_private(Mat a_Gmat, const PetscInt n_i
                 PetscCall(PetscCDGetNextPos(agg_llists, lid1, &pos));
                 *pt2++ = gid;
               }
-              *pt3 = (pt2 - pt3) - 1;
+              *pt3 = (PetscInt)(pt2 - pt3 - 1);
               /* clear list */
               PetscCall(PetscCDRemoveAllAt(agg_llists, lid1));
             }

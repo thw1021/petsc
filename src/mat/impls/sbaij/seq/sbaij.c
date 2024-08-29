@@ -797,7 +797,7 @@ static PetscErrorCode MatAssemblyEnd_SeqSBAIJ(Mat A, MatAssemblyType mode)
       PetscCall(PetscFree(a->jshort));
     }
     PetscCall(PetscMalloc1(a->i[A->rmap->n], &a->jshort));
-    for (i = 0; i < a->i[A->rmap->n]; i++) a->jshort[i] = a->j[i];
+    for (i = 0; i < a->i[A->rmap->n]; i++) a->jshort[i] = (short)a->j[i];
     A->ops->mult   = MatMult_SeqSBAIJ_1_ushort;
     A->ops->sor    = MatSOR_SeqSBAIJ_ushort;
     a->free_jshort = PETSC_TRUE;

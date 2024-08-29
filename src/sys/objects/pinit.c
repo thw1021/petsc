@@ -248,7 +248,7 @@ MPI_Op MPIU_SUM = 0;
 
 PETSC_EXTERN void MPIAPI PetscSum_Local(void *in, void *out, PetscMPIInt *cnt, MPI_Datatype *datatype)
 {
-  PetscInt i, count = *cnt;
+  PetscMPIInt i, count = *cnt;
 
   PetscFunctionBegin;
   if (*datatype == MPIU_REAL) {
@@ -275,7 +275,7 @@ PETSC_EXTERN void MPIAPI PetscSum_Local(void *in, void *out, PetscMPIInt *cnt, M
   #if defined(PETSC_HAVE_REAL___FP16)
   else if (*datatype == MPIU___FP16) {
     __fp16 *xin = (__fp16 *)in, *xout = (__fp16 *)out;
-    for (i = 0; i < count; i++) xout[i] += xin[i];
+    for (i = 0; i < count; i++) xout[i] = (__fp16)(xin[i] + xout[i]);
   }
   #endif
   else {

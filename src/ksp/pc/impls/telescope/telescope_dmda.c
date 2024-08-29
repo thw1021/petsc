@@ -45,7 +45,7 @@ static PetscErrorCode _DMDADetermineRankFromGlobalIJK(PetscInt dim, PetscInt i, 
       }
     }
     PetscCheck(pi != -1, PETSC_COMM_SELF, PETSC_ERR_USER, "[dmda-ijk] pi cannot be determined : range %" PetscInt_FMT ", val %" PetscInt_FMT, Mp, i);
-    *_pi = pi;
+    *_pi = (PetscMPIInt)pi;
   }
 
   if (_pj) {
@@ -56,7 +56,7 @@ static PetscErrorCode _DMDADetermineRankFromGlobalIJK(PetscInt dim, PetscInt i, 
       }
     }
     PetscCheck(pj != -1, PETSC_COMM_SELF, PETSC_ERR_USER, "[dmda-ijk] pj cannot be determined : range %" PetscInt_FMT ", val %" PetscInt_FMT, Np, j);
-    *_pj = pj;
+    *_pj = (PetscMPIInt)pj;
   }
 
   if (_pk) {
@@ -67,18 +67,18 @@ static PetscErrorCode _DMDADetermineRankFromGlobalIJK(PetscInt dim, PetscInt i, 
       }
     }
     PetscCheck(pk != -1, PETSC_COMM_SELF, PETSC_ERR_USER, "[dmda-ijk] pk cannot be determined : range %" PetscInt_FMT ", val %" PetscInt_FMT, Pp, k);
-    *_pk = pk;
+    *_pk = (PetscMPIInt)pk;
   }
 
   switch (dim) {
   case 1:
-    *rank_re = pi;
+    *rank_re = (PetscMPIInt)pi;
     break;
   case 2:
-    *rank_re = pi + pj * Mp;
+    *rank_re = (PetscMPIInt)(pi + pj * Mp);
     break;
   case 3:
-    *rank_re = pi + pj * Mp + pk * (Mp * Np);
+    *rank_re = (PetscMPIInt)(pi + pj * Mp + pk * (Mp * Np));
     break;
   }
   PetscFunctionReturn(PETSC_SUCCESS);

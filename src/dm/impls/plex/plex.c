@@ -4703,7 +4703,7 @@ PetscErrorCode DMPlexComputeCellTypes(DM dm)
     PetscCall(DMPlexComputeCellType_Internal(dm, p, pdepth, &ct));
     PetscCheck(ct != DM_POLYTOPE_UNKNOWN && ct != DM_POLYTOPE_UNKNOWN_CELL && ct != DM_POLYTOPE_UNKNOWN_FACE, PETSC_COMM_SELF, PETSC_ERR_SUP, "Point %" PetscInt_FMT " has invalid celltype (%s)", p, DMPolytopeTypes[ct]);
     PetscCall(DMLabelSetValue(ctLabel, p, ct));
-    mesh->cellTypes[p - pStart].value_as_uint8 = ct;
+    mesh->cellTypes[p - pStart].value_as_uint8 = (uint8_t)ct;
   }
   PetscCall(PetscObjectStateGet((PetscObject)ctLabel, &mesh->celltypeState));
   PetscCall(PetscObjectViewFromOptions((PetscObject)ctLabel, NULL, "-dm_plex_celltypes_view"));
@@ -5574,7 +5574,7 @@ PetscErrorCode DMPlexGetCellType(DM dm, PetscInt cell, DMPolytopeType *celltype)
       PetscCall(DMPlexGetCellTypeLabel(dm, &label));
       for (PetscInt p = pStart; p < pEnd; p++) {
         PetscCall(DMLabelGetValue(label, p, &ct));
-        mesh->cellTypes[p - pStart].value_as_uint8 = (DMPolytopeType)ct;
+        mesh->cellTypes[p - pStart].value_as_uint8 = (uint8_t)ct;
       }
     }
     *celltype = (DMPolytopeType)mesh->cellTypes[cell - pStart].value_as_uint8;
@@ -5620,7 +5620,7 @@ PetscErrorCode DMPlexSetCellType(DM dm, PetscInt cell, DMPolytopeType celltype)
   PetscCall(DMPlexGetCellTypeLabel(dm, &label));
   PetscCall(DMLabelSetValue(label, cell, celltype));
   if (!mesh->cellTypes) PetscCall(PetscMalloc1(pEnd - pStart, &mesh->cellTypes));
-  mesh->cellTypes[cell - pStart].value_as_uint8 = celltype;
+  mesh->cellTypes[cell - pStart].value_as_uint8 = (uint8_t)celltype;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

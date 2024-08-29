@@ -82,7 +82,7 @@ static inline PetscMPIInt MPIU_Reduce_local(const void *inbuf, void *inoutbuf, P
 
   PetscFunctionBegin;
   PetscCallMPI(PetscMPIIntCast_Internal(count, &count2));
-  PetscCallMPI(MPI_Reduce_local(inbuf, inoutbuf, count, datatype, op));
+  PetscCallMPI(MPI_Reduce_local(inbuf, inoutbuf, count2, datatype, op));
   PetscFunctionReturn(MPI_SUCCESS);
 }
   #endif

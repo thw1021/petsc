@@ -451,7 +451,8 @@ static PetscErrorCode PetscOptionsInsertFilePetsc(MPI_Comm comm, PetscOptions op
 {
   char       *string, *vstring = NULL, *astring = NULL, *packed = NULL;
   char       *tokens[4];
-  size_t      i, len, bytes;
+  PetscCount  i, bytes;
+  size_t      len;
   FILE       *fd;
   PetscToken  token = NULL;
   int         err;
@@ -837,6 +838,8 @@ PetscErrorCode PetscOptionsInsert(PetscOptions options, int *argc, char ***args,
   PetscMPIInt rank;
   PetscBool   hasArgs     = (argc && *argc) ? PETSC_TRUE : PETSC_FALSE;
   PetscBool   skipPetscrc = PETSC_FALSE, skipPetscrcSet = PETSC_FALSE;
+  char       *eoptions = NULL;
+  size_t      len      = 0;
 
   PetscFunctionBegin;
   PetscCheck(!hasArgs || (args && *args), comm, PETSC_ERR_ARG_NULL, "*argc > 1 but *args not given");
@@ -858,6 +861,7 @@ PetscErrorCode PetscOptionsInsert(PetscOptions options, int *argc, char ***args,
   }
   if (!skipPetscrc) {
     char filename[PETSC_MAX_PATH_LEN];
+
     PetscCall(PetscGetHomeDirectory(filename, sizeof(filename)));
     PetscCallMPI(MPI_Bcast(filename, (int)sizeof(filename), MPI_CHAR, 0, comm));
     if (filename[0]) PetscCall(PetscStrlcat(filename, "/.petscrc", sizeof(filename)));
@@ -867,39 +871,31 @@ PetscErrorCode PetscOptionsInsert(PetscOptions options, int *argc, char ***args,
   }
 
   /* insert environment options */
-  {
-    char  *eoptions = NULL;
-    size_t len      = 0;
-    if (rank == 0) {
-      eoptions = (char *)getenv("PETSC_OPTIONS");
-      PetscCall(PetscStrlen(eoptions, &len));
-    }
-    PetscCallMPI(MPI_Bcast(&len, 1, MPIU_SIZE_T, 0, comm));
-    if (len) {
-      if (rank) PetscCall(PetscMalloc1(len + 1, &eoptions));
-      PetscCallMPI(MPI_Bcast(eoptions, len, MPI_CHAR, 0, comm));
-      if (rank) eoptions[len] = 0;
-      PetscCall(PetscOptionsInsertString_Private(options, eoptions, PETSC_OPT_ENVIRONMENT));
-      if (rank) PetscCall(PetscFree(eoptions));
-    }
+  if (rank == 0) {
+    eoptions = (char *)getenv("PETSC_OPTIONS");
+    PetscCall(PetscStrlen(eoptions, &len));
+  }
+  PetscCallMPI(MPI_Bcast(&len, 1, MPIU_SIZE_T, 0, comm));
+  if (len) {
+    if (rank) PetscCall(PetscMalloc1(len + 1, &eoptions));
+    PetscCallMPI(MPI_Bcast(eoptions, (PetscMPIInt)len, MPI_CHAR, 0, comm));
+    if (rank) eoptions[len] = 0;
+    PetscCall(PetscOptionsInsertString_Private(options, eoptions, PETSC_OPT_ENVIRONMENT));
+    if (rank) PetscCall(PetscFree(eoptions));
   }
 
   /* insert YAML environment options */
-  {
-    char  *eoptions = NULL;
-    size_t len      = 0;
-    if (rank == 0) {
-      eoptions = (char *)getenv("PETSC_OPTIONS_YAML");
-      PetscCall(PetscStrlen(eoptions, &len));
-    }
-    PetscCallMPI(MPI_Bcast(&len, 1, MPIU_SIZE_T, 0, comm));
-    if (len) {
-      if (rank) PetscCall(PetscMalloc1(len + 1, &eoptions));
-      PetscCallMPI(MPI_Bcast(eoptions, len, MPI_CHAR, 0, comm));
-      if (rank) eoptions[len] = 0;
-      PetscCall(PetscOptionsInsertStringYAML_Private(options, eoptions, PETSC_OPT_ENVIRONMENT));
-      if (rank) PetscCall(PetscFree(eoptions));
-    }
+  if (rank == 0) {
+    eoptions = (char *)getenv("PETSC_OPTIONS_YAML");
+    PetscCall(PetscStrlen(eoptions, &len));
+  }
+  PetscCallMPI(MPI_Bcast(&len, 1, MPIU_SIZE_T, 0, comm));
+  if (len) {
+    if (rank) PetscCall(PetscMalloc1(len + 1, &eoptions));
+    PetscCallMPI(MPI_Bcast(eoptions, (PetscMPIInt)len, MPI_CHAR, 0, comm));
+    if (rank) eoptions[len] = 0;
+    PetscCall(PetscOptionsInsertStringYAML_Private(options, eoptions, PETSC_OPT_ENVIRONMENT));
+    if (rank) PetscCall(PetscFree(eoptions));
   }
 
   /* insert command line options here because they take precedence over arguments in petscrc/environment */
@@ -1080,7 +1076,7 @@ PetscErrorCode PetscOptionsPrefixPush(PetscOptions options, const char prefix[])
   PetscCall(PetscStrlen(prefix, &n));
   PetscCheck(n + 1 <= sizeof(options->prefix) - start, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Maximum prefix length %zu exceeded", sizeof(options->prefix));
   PetscCall(PetscArraycpy(options->prefix + start, prefix, n + 1));
-  options->prefixstack[options->prefixind++] = start + n;
+  options->prefixstack[options->prefixind++] = start + (int)n;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

@@ -584,7 +584,7 @@ PETSC_EXTERN PetscErrorCode DMSwarmCollect_General(DM dm, PetscErrorCode (*colle
   DM_Swarm     *swarm = (DM_Swarm *)dm->data;
   DMSwarmDataEx de;
   PetscInt      p, r, npoints, n_points_recv;
-  PetscMPIInt   size, rank;
+  PetscMPIInt   size, rank, len;
   void         *point_buffer, *recv_points;
   void         *ctxlist;
   PetscInt     *n2collect, **collectlist;
@@ -596,8 +596,9 @@ PETSC_EXTERN PetscErrorCode DMSwarmCollect_General(DM dm, PetscErrorCode (*colle
   PetscCall(DMSwarmDataBucketGetSizes(swarm->db, &npoints, NULL, NULL));
   *globalsize = npoints;
   /* Broadcast user context */
+  PetscCall(PetscMPIIntCast(ctx_size, &len));
   PetscCall(PetscMalloc(ctx_size * size, &ctxlist));
-  PetscCallMPI(MPI_Allgather(ctx, ctx_size, MPI_CHAR, ctxlist, ctx_size, MPI_CHAR, PetscObjectComm((PetscObject)dm)));
+  PetscCallMPI(MPI_Allgather(ctx, len, MPI_CHAR, ctxlist, len, MPI_CHAR, PetscObjectComm((PetscObject)dm)));
   PetscCall(PetscMalloc1(size, &n2collect));
   PetscCall(PetscMalloc1(size, &collectlist));
   for (r = 0; r < size; r++) {

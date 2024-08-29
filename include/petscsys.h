@@ -1770,6 +1770,34 @@ static inline PetscErrorCode PetscCountCast(PetscCount a, PetscInt *b)
 }
 
 /*@C
+   PetscInt64Cast - casts a `PetscInt64` to a `PetscInt` (which may be 32-bits in size), generates an
+   error if the `PetscInt` is not large enough to hold the number.
+
+   Not Collective; No Fortran Support
+
+   Input Parameter:
+.  a - the `PetscInt64` value
+
+   Output Parameter:
+.  b - the resulting `PetscInt` value
+
+   Level: advanced
+
+   Note:
+   If integers needed for the applications are too large to fit in 32-bit integers you can ./configure using `--with-64-bit-indices` to make `PetscInt` use 64-bit integers
+
+.seealso: `PetscInt64`, `PetscCount`, `PetscBLASInt`, `PetscMPIInt`, `PetscInt`, `PetscMPIIntCast()`, `PetscBLASIntCast()`, `PetscIntMultError()`, `PetscIntSumError()`, `PetscIntCast()`
+@*/
+static inline PetscErrorCode PetscInt64Cast(PetscInt64 a, PetscInt *b)
+{
+  PetscFunctionBegin;
+  *b = 0;
+  PetscCheck(sizeof(PetscInt64) <= sizeof(PetscInt) || a <= PETSC_MAX_INT, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "%" PetscInt64_FMT " is too big for PetscInt, you may need to ./configure using --with-64-bit-indices", a);
+  *b = (PetscInt)a;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
    PetscBLASIntCast - casts a `PetscInt` (which may be 64-bits in size) to a `PetscBLASInt` (which may be 32-bits in size), generates an
    error if the `PetscBLASInt` is not large enough to hold the number.
 
@@ -1872,11 +1900,11 @@ static inline PetscErrorCode PetscHipBLASIntCast(PetscInt a, PetscHipBLASInt *b)
 
 .seealso: `PetscBLASInt`, `PetscMPIInt`, `PetscInt`, `PetscBLASIntCast()`, `PetscIntCast()`
 @*/
-static inline PetscErrorCode PetscMPIIntCast(PetscInt a, PetscMPIInt *b)
+static inline PetscErrorCode PetscMPIIntCast(PetscCount a, PetscMPIInt *b)
 {
   PetscFunctionBegin;
   *b = 0;
-  PetscCheck(a <= PETSC_MPI_INT_MAX, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "%" PetscInt_FMT " is too big for MPI buffer length. Maximum supported value is %d", a, PETSC_MPI_INT_MAX);
+  PetscCheck(a <= PETSC_MPI_INT_MAX, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "%" PetscCount_FMT " is too big for MPI buffer length. Maximum supported value is %d", a, PETSC_MPI_INT_MAX);
   *b = (PetscMPIInt)a;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -2113,37 +2141,37 @@ PETSC_EXTERN PetscErrorCode PetscGetDate(char[], size_t);
 PETSC_EXTERN PetscErrorCode PetscGetVersion(char[], size_t);
 PETSC_EXTERN PetscErrorCode PetscGetVersionNumber(PetscInt *, PetscInt *, PetscInt *, PetscInt *);
 
-PETSC_EXTERN PetscErrorCode PetscSortedInt(PetscInt, const PetscInt[], PetscBool *);
-PETSC_EXTERN PetscErrorCode PetscSortedInt64(PetscInt, const PetscInt64[], PetscBool *);
-PETSC_EXTERN PetscErrorCode PetscSortedMPIInt(PetscInt, const PetscMPIInt[], PetscBool *);
-PETSC_EXTERN PetscErrorCode PetscSortedReal(PetscInt, const PetscReal[], PetscBool *);
-PETSC_EXTERN PetscErrorCode PetscSortInt(PetscInt, PetscInt[]);
-PETSC_EXTERN PetscErrorCode PetscSortInt64(PetscInt, PetscInt64[]);
-PETSC_EXTERN PetscErrorCode PetscSortCount(PetscInt, PetscCount[]);
-PETSC_EXTERN PetscErrorCode PetscSortReverseInt(PetscInt, PetscInt[]);
+PETSC_EXTERN PetscErrorCode PetscSortedInt(PetscCount, const PetscInt[], PetscBool *);
+PETSC_EXTERN PetscErrorCode PetscSortedInt64(PetscCount, const PetscInt64[], PetscBool *);
+PETSC_EXTERN PetscErrorCode PetscSortedMPIInt(PetscCount, const PetscMPIInt[], PetscBool *);
+PETSC_EXTERN PetscErrorCode PetscSortedReal(PetscCount, const PetscReal[], PetscBool *);
+PETSC_EXTERN PetscErrorCode PetscSortInt(PetscCount, PetscInt[]);
+PETSC_EXTERN PetscErrorCode PetscSortInt64(PetscCount, PetscInt64[]);
+PETSC_EXTERN PetscErrorCode PetscSortCount(PetscCount, PetscCount[]);
+PETSC_EXTERN PetscErrorCode PetscSortReverseInt(PetscCount, PetscInt[]);
 PETSC_EXTERN PetscErrorCode PetscSortedRemoveDupsInt(PetscInt *, PetscInt[]);
-PETSC_EXTERN PetscErrorCode PetscSortedCheckDupsInt(PetscInt, const PetscInt[], PetscBool *);
+PETSC_EXTERN PetscErrorCode PetscSortedCheckDupsInt(PetscCount, const PetscInt[], PetscBool *);
 PETSC_EXTERN PetscErrorCode PetscSortRemoveDupsInt(PetscInt *, PetscInt[]);
 PETSC_EXTERN PetscErrorCode PetscCheckDupsInt(PetscInt, const PetscInt[], PetscBool *);
-PETSC_EXTERN PetscErrorCode PetscFindInt(PetscInt, PetscInt, const PetscInt[], PetscInt *);
-PETSC_EXTERN PetscErrorCode PetscFindMPIInt(PetscMPIInt, PetscInt, const PetscMPIInt[], PetscInt *);
+PETSC_EXTERN PetscErrorCode PetscFindInt(PetscInt, PetscCount, const PetscInt[], PetscInt *);
+PETSC_EXTERN PetscErrorCode PetscFindMPIInt(PetscMPIInt, PetscCount, const PetscMPIInt[], PetscInt *);
 PETSC_EXTERN PetscErrorCode PetscSortIntWithPermutation(PetscInt, const PetscInt[], PetscInt[]);
 PETSC_EXTERN PetscErrorCode PetscSortStrWithPermutation(PetscInt, const char *[], PetscInt[]);
-PETSC_EXTERN PetscErrorCode PetscSortIntWithArray(PetscInt, PetscInt[], PetscInt[]);
+PETSC_EXTERN PetscErrorCode PetscSortIntWithArray(PetscCount, PetscInt[], PetscInt[]);
 PETSC_EXTERN PetscErrorCode PetscSortIntWithCountArray(PetscCount, PetscInt[], PetscCount[]);
-PETSC_EXTERN PetscErrorCode PetscSortIntWithArrayPair(PetscInt, PetscInt[], PetscInt[], PetscInt[]);
+PETSC_EXTERN PetscErrorCode PetscSortIntWithArrayPair(PetscCount, PetscInt[], PetscInt[], PetscInt[]);
 PETSC_EXTERN PetscErrorCode PetscSortIntWithIntCountArrayPair(PetscCount, PetscInt[], PetscInt[], PetscCount[]);
-PETSC_EXTERN PetscErrorCode PetscSortMPIInt(PetscInt, PetscMPIInt[]);
+PETSC_EXTERN PetscErrorCode PetscSortMPIInt(PetscCount, PetscMPIInt[]);
 PETSC_EXTERN PetscErrorCode PetscSortRemoveDupsMPIInt(PetscInt *, PetscMPIInt[]);
-PETSC_EXTERN PetscErrorCode PetscSortMPIIntWithArray(PetscMPIInt, PetscMPIInt[], PetscMPIInt[]);
-PETSC_EXTERN PetscErrorCode PetscSortMPIIntWithIntArray(PetscMPIInt, PetscMPIInt[], PetscInt[]);
-PETSC_EXTERN PetscErrorCode PetscSortIntWithScalarArray(PetscInt, PetscInt[], PetscScalar[]);
-PETSC_EXTERN PetscErrorCode PetscSortIntWithDataArray(PetscInt, PetscInt[], void *, size_t, void *);
-PETSC_EXTERN PetscErrorCode PetscSortReal(PetscInt, PetscReal[]);
-PETSC_EXTERN PetscErrorCode PetscSortRealWithArrayInt(PetscInt, PetscReal[], PetscInt[]);
+PETSC_EXTERN PetscErrorCode PetscSortMPIIntWithArray(PetscCount, PetscMPIInt[], PetscMPIInt[]);
+PETSC_EXTERN PetscErrorCode PetscSortMPIIntWithIntArray(PetscCount, PetscMPIInt[], PetscInt[]);
+PETSC_EXTERN PetscErrorCode PetscSortIntWithScalarArray(PetscCount, PetscInt[], PetscScalar[]);
+PETSC_EXTERN PetscErrorCode PetscSortIntWithDataArray(PetscCount, PetscInt[], void *, size_t, void *);
+PETSC_EXTERN PetscErrorCode PetscSortReal(PetscCount, PetscReal[]);
+PETSC_EXTERN PetscErrorCode PetscSortRealWithArrayInt(PetscCount, PetscReal[], PetscInt[]);
 PETSC_EXTERN PetscErrorCode PetscSortRealWithPermutation(PetscInt, const PetscReal[], PetscInt[]);
 PETSC_EXTERN PetscErrorCode PetscSortRemoveDupsReal(PetscInt *, PetscReal[]);
-PETSC_EXTERN PetscErrorCode PetscFindReal(PetscReal, PetscInt, const PetscReal[], PetscReal, PetscInt *);
+PETSC_EXTERN PetscErrorCode PetscFindReal(PetscReal, PetscCount, const PetscReal[], PetscReal, PetscInt *);
 PETSC_EXTERN PetscErrorCode PetscSortSplit(PetscInt, PetscInt, PetscScalar[], PetscInt[]);
 PETSC_EXTERN PetscErrorCode PetscSortSplitReal(PetscInt, PetscInt, PetscReal[], PetscInt[]);
 PETSC_EXTERN PetscErrorCode PetscProcessTree(PetscInt, const PetscBool[], const PetscInt[], PetscInt *, PetscInt **, PetscInt **, PetscInt **, PetscInt **);
@@ -2241,9 +2269,9 @@ static inline PetscBool PetscBinaryBigEndian(void)
   return ((char *)&_petsc_v)[0] ? PETSC_FALSE : PETSC_TRUE;
 }
 
-PETSC_EXTERN PetscErrorCode PetscBinaryRead(int, void *, PetscInt, PetscInt *, PetscDataType);
+PETSC_EXTERN PetscErrorCode PetscBinaryRead(int, void *, PetscCount, PetscInt *, PetscDataType);
 PETSC_EXTERN PetscErrorCode PetscBinarySynchronizedRead(MPI_Comm, int, void *, PetscInt, PetscInt *, PetscDataType);
-PETSC_EXTERN PetscErrorCode PetscBinaryWrite(int, const void *, PetscInt, PetscDataType);
+PETSC_EXTERN PetscErrorCode PetscBinaryWrite(int, const void *, PetscCount, PetscDataType);
 PETSC_EXTERN PetscErrorCode PetscBinarySynchronizedWrite(MPI_Comm, int, const void *, PetscInt, PetscDataType);
 PETSC_EXTERN PetscErrorCode PetscBinaryOpen(const char[], PetscFileMode, int *);
 PETSC_EXTERN PetscErrorCode PetscBinaryClose(int);
@@ -2258,7 +2286,7 @@ PETSC_EXTERN PetscErrorCode PetscOpenSocket(const char[], int, int *);
 
 PETSC_EXTERN PetscErrorCode PetscBinarySeek(int, off_t, PetscBinarySeekType, off_t *);
 PETSC_EXTERN PetscErrorCode PetscBinarySynchronizedSeek(MPI_Comm, int, off_t, PetscBinarySeekType, off_t *);
-PETSC_EXTERN PetscErrorCode PetscByteSwap(void *, PetscDataType, PetscInt);
+PETSC_EXTERN PetscErrorCode PetscByteSwap(void *, PetscDataType, PetscCount);
 
 PETSC_EXTERN PetscErrorCode PetscSetDebugTerminal(const char[]);
 PETSC_EXTERN PetscErrorCode PetscSetDebugger(const char[], PetscBool);
@@ -2342,14 +2370,14 @@ PETSC_EXTERN PetscErrorCode PetscOmpCtrlBarrier(PetscOmpCtrl);
 PETSC_EXTERN PetscErrorCode PetscOmpCtrlOmpRegionOnMasterBegin(PetscOmpCtrl);
 PETSC_EXTERN PetscErrorCode PetscOmpCtrlOmpRegionOnMasterEnd(PetscOmpCtrl);
 
-PETSC_EXTERN PetscErrorCode PetscSegBufferCreate(size_t, size_t, PetscSegBuffer *);
+PETSC_EXTERN PetscErrorCode PetscSegBufferCreate(size_t, PetscCount, PetscSegBuffer *);
 PETSC_EXTERN PetscErrorCode PetscSegBufferDestroy(PetscSegBuffer *);
-PETSC_EXTERN PetscErrorCode PetscSegBufferGet(PetscSegBuffer, size_t, void *);
+PETSC_EXTERN PetscErrorCode PetscSegBufferGet(PetscSegBuffer, PetscCount, void *);
 PETSC_EXTERN PetscErrorCode PetscSegBufferExtractAlloc(PetscSegBuffer, void *);
 PETSC_EXTERN PetscErrorCode PetscSegBufferExtractTo(PetscSegBuffer, void *);
 PETSC_EXTERN PetscErrorCode PetscSegBufferExtractInPlace(PetscSegBuffer, void *);
-PETSC_EXTERN PetscErrorCode PetscSegBufferGetSize(PetscSegBuffer, size_t *);
-PETSC_EXTERN PetscErrorCode PetscSegBufferUnuse(PetscSegBuffer, size_t);
+PETSC_EXTERN PetscErrorCode PetscSegBufferGetSize(PetscSegBuffer, PetscCount *);
+PETSC_EXTERN PetscErrorCode PetscSegBufferUnuse(PetscSegBuffer, PetscCount);
 
 /*MC
   PetscSegBufferGetInts - access an array of `PetscInt` from a `PetscSegBuffer`
@@ -2377,7 +2405,7 @@ PETSC_EXTERN PetscErrorCode PetscSegBufferUnuse(PetscSegBuffer, size_t);
 .seealso: `PetscSegBuffer`, `PetscSegBufferGet()`, `PetscInitialize()`, `PetscFinalize()`, `PetscInitializeCalled`
 M*/
 /* */
-static inline PetscErrorCode PetscSegBufferGetInts(PetscSegBuffer seg, size_t count, PetscInt *PETSC_RESTRICT *slot)
+static inline PetscErrorCode PetscSegBufferGetInts(PetscSegBuffer seg, PetscCount count, PetscInt *PETSC_RESTRICT *slot)
 {
   return PetscSegBufferGet(seg, count, (void **)slot);
 }

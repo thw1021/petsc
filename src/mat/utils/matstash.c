@@ -816,8 +816,8 @@ static PetscErrorCode MatStashBTSRecv_Private(MPI_Comm comm, const PetscMPIInt t
  */
 static PetscErrorCode MatStashScatterBegin_BTS(Mat mat, MatStash *stash, PetscInt owners[])
 {
-  size_t nblocks;
-  char  *sendblocks;
+  PetscCount nblocks;
+  char      *sendblocks;
 
   PetscFunctionBegin;
   if (PetscDefined(USE_DEBUG)) { /* make sure all processors are either in INSERTMODE or ADDMODE */
@@ -831,8 +831,8 @@ static PetscErrorCode MatStashScatterBegin_BTS(Mat mat, MatStash *stash, PetscIn
   PetscCall(PetscSegBufferGetSize(stash->segsendblocks, &nblocks));
   PetscCall(PetscSegBufferExtractInPlace(stash->segsendblocks, &sendblocks));
   if (stash->first_assembly_done) { /* Set up sendhdrs and sendframes for each rank that we sent before */
-    PetscInt i;
-    size_t   b;
+    PetscInt   i;
+    PetscCount b;
     for (i = 0, b = 0; i < stash->nsendranks; i++) {
       stash->sendframes[i].buffer = &sendblocks[b * stash->blocktype_size];
       /* sendhdr is never actually sent, but the count is used by MatStashBTSSend_Private */
@@ -845,18 +845,20 @@ static PetscErrorCode MatStashScatterBegin_BTS(Mat mat, MatStash *stash, PetscIn
       }
     }
   } else { /* Dynamically count and pack (first time) */
-    PetscInt sendno;
-    size_t   i, rowstart;
+    PetscInt   sendno;
+    PetscCount i, rowstart;
 
     /* Count number of send ranks and allocate for sends */
     stash->nsendranks = 0;
     for (rowstart = 0; rowstart < nblocks;) {
       PetscInt       owner;
       MatStashBlock *sendblock_rowstart = (MatStashBlock *)&sendblocks[rowstart * stash->blocktype_size];
+
       PetscCall(PetscFindInt(sendblock_rowstart->row, stash->size + 1, owners, &owner));
       if (owner < 0) owner = -(owner + 2);
       for (i = rowstart + 1; i < nblocks; i++) { /* Move forward through a run of blocks with the same owner */
         MatStashBlock *sendblock_i = (MatStashBlock *)&sendblocks[i * stash->blocktype_size];
+
         if (sendblock_i->row >= owners[owner + 1]) break;
       }
       stash->nsendranks++;
@@ -869,16 +871,18 @@ static PetscErrorCode MatStashScatterBegin_BTS(Mat mat, MatStash *stash, PetscIn
     for (rowstart = 0; rowstart < nblocks;) {
       PetscInt       owner;
       MatStashBlock *sendblock_rowstart = (MatStashBlock *)&sendblocks[rowstart * stash->blocktype_size];
+
       PetscCall(PetscFindInt(sendblock_rowstart->row, stash->size + 1, owners, &owner));
       if (owner < 0) owner = -(owner + 2);
       stash->sendranks[sendno] = owner;
       for (i = rowstart + 1; i < nblocks; i++) { /* Move forward through a run of blocks with the same owner */
         MatStashBlock *sendblock_i = (MatStashBlock *)&sendblocks[i * stash->blocktype_size];
+
         if (sendblock_i->row >= owners[owner + 1]) break;
       }
       stash->sendframes[sendno].buffer  = sendblock_rowstart;
       stash->sendframes[sendno].pending = 0;
-      stash->sendhdr[sendno].count      = i - rowstart;
+      PetscCall(PetscCountCast(i - rowstart, &stash->sendhdr[sendno].count));
       sendno++;
       rowstart = i;
     }
@@ -888,8 +892,7 @@ static PetscErrorCode MatStashScatterBegin_BTS(Mat mat, MatStash *stash, PetscIn
   /* Encode insertmode on the outgoing messages. If we want to support more than two options, we would need a new
    * message or a dummy entry of some sort. */
   if (mat->insertmode == INSERT_VALUES) {
-    size_t i;
-    for (i = 0; i < nblocks; i++) {
+    for (PetscCount i = 0; i < nblocks; i++) {
       MatStashBlock *sendblock_i = (MatStashBlock *)&sendblocks[i * stash->blocktype_size];
       sendblock_i->row           = -(sendblock_i->row + 1);
     }
@@ -897,6 +900,7 @@ static PetscErrorCode MatStashScatterBegin_BTS(Mat mat, MatStash *stash, PetscIn
 
   if (stash->first_assembly_done) {
     PetscMPIInt i, tag;
+
     PetscCall(PetscCommGetNewTag(stash->comm, &tag));
     for (i = 0; i < stash->nrecvranks; i++) PetscCall(MatStashBTSRecv_Private(stash->comm, &tag, stash->recvranks[i], &stash->recvhdr[i], &stash->recvreqs[i], stash));
     for (i = 0; i < stash->nsendranks; i++) PetscCall(MatStashBTSSend_Private(stash->comm, &tag, i, stash->sendranks[i], &stash->sendhdr[i], &stash->sendreqs[i], stash));

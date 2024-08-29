@@ -13,7 +13,7 @@ PetscFunctionList CharacteristicList              = NULL;
 PetscBool         CharacteristicRegisterAllCalled = PETSC_FALSE;
 
 static PetscErrorCode DMDAGetNeighborsRank(DM, PetscMPIInt[]);
-static PetscInt       DMDAGetNeighborRelative(DM, PetscReal, PetscReal);
+static PetscMPIInt    DMDAGetNeighborRelative(DM, PetscReal, PetscReal);
 
 static PetscErrorCode CharacteristicHeapSort(Characteristic, Queue, PetscInt);
 static PetscErrorCode CharacteristicSiftDown(Characteristic, Queue, PetscInt, PetscInt);
@@ -687,7 +687,8 @@ static PetscErrorCode DMDAGetNeighborsRank(DM da, PetscMPIInt neighbors[])
   PetscBool      IPeriodic = PETSC_FALSE, JPeriodic = PETSC_FALSE;
   MPI_Comm       comm;
   PetscMPIInt    rank;
-  PetscInt     **procs, pi, pj, pim, pip, pjm, pjp, PI, PJ;
+  PetscMPIInt  **procs, pi, pj, pim, pip, pjm, pjp;
+  PetscInt       PI, PJ;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectGetComm((PetscObject)da, &comm));
@@ -711,11 +712,11 @@ static PetscErrorCode DMDAGetNeighborsRank(DM da, PetscMPIInt neighbors[])
   pi  = neighbors[0] % PI;
   pj  = neighbors[0] / PI;
   pim = pi - 1;
-  if (pim < 0) pim = PI - 1;
-  pip = (pi + 1) % PI;
+  if (pim < 0) pim = (PetscMPIInt)PI - 1;
+  pip = (pi + 1) % (PetscMPIInt)PI;
   pjm = pj - 1;
-  if (pjm < 0) pjm = PJ - 1;
-  pjp = (pj + 1) % PJ;
+  if (pjm < 0) pjm = (PetscMPIInt)PJ - 1;
+  pjp = (pj + 1) % (PetscMPIInt)PJ;
 
   neighbors[1] = procs[pj][pim];
   neighbors[2] = procs[pjp][pim];
@@ -750,7 +751,7 @@ static PetscErrorCode DMDAGetNeighborsRank(DM da, PetscMPIInt neighbors[])
     8 | 7 | 6
       |   |
 */
-static PetscInt DMDAGetNeighborRelative(DM da, PetscReal ir, PetscReal jr)
+static PetscMPIInt DMDAGetNeighborRelative(DM da, PetscReal ir, PetscReal jr)
 {
   DMDALocalInfo info;
   PetscReal     is, ie, js, je;

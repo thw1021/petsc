@@ -253,7 +253,7 @@ PetscErrorCode Postevent(TS ts, PetscInt nev_zero, PetscInt evs_zero[], PetscRea
 #endif
 
   // t==6: set the second post-event step
-  if (PetscAbsReal(t - 6.0) < 0.01 && Ctx->dt2_at6 != -2) PetscCall(TSSetPostEventSecondStep(ts, Ctx->dt2_at6));
+  if (PetscAbsReal(t - (PetscReal)6.0) < 0.01 && Ctx->dt2_at6 != -2) PetscCall(TSSetPostEventSecondStep(ts, Ctx->dt2_at6));
 
   // t==7: change the system matrix
   if (PetscAbsReal(t - 7.0) < 0.01 && Ctx->mult7 != 1) {

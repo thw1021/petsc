@@ -477,7 +477,7 @@ static PetscErrorCode THICreate(MPI_Comm comm, THI *inthi)
     PetscCall(PetscOptionsReal("-thi_Ly", "Y Domain size (m)", "", thi->Ly, &thi->Ly, NULL));
     PetscCall(PetscOptionsReal("-thi_Lz", "Z Domain size (m)", "", thi->Lz, &thi->Lz, NULL));
     PetscCall(PetscOptionsString("-thi_hom", "ISMIP-HOM experiment (A or C)", "", homexp, homexp, sizeof(homexp), NULL));
-    switch (homexp[0] = toupper(homexp[0])) {
+    switch (homexp[0] = (char)toupper(homexp[0])) {
     case 'A':
       thi->initialize = THIInitialize_HOM_A;
       thi->no_slip    = PETSC_TRUE;

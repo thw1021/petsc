@@ -487,7 +487,7 @@ static PetscErrorCode VecView_MPI_HDF5_DA(Vec xin, PetscViewer viewer)
 
   PetscCall(VecGetHDF5ChunkSize(da, xin, dimension, timestep, chunkDims));
 
-  PetscCallHDF5Return(filespace, H5Screate_simple, (dim, dims, maxDims));
+  PetscCallHDF5Return(filespace, H5Screate_simple, ((int)dim, dims, maxDims));
 
   #if defined(PETSC_USE_REAL_SINGLE)
   memscalartype  = H5T_NATIVE_FLOAT;
@@ -507,7 +507,7 @@ static PetscErrorCode VecView_MPI_HDF5_DA(Vec xin, PetscViewer viewer)
   if (!H5Lexists(group, vecname, H5P_DEFAULT)) {
     /* Create chunk */
     PetscCallHDF5Return(chunkspace, H5Pcreate, (H5P_DATASET_CREATE));
-    PetscCallHDF5(H5Pset_chunk, (chunkspace, dim, chunkDims));
+    PetscCallHDF5(H5Pset_chunk, (chunkspace, (int)dim, chunkDims));
 
     PetscCallHDF5Return(dset_id, H5Dcreate2, (group, vecname, filescalartype, filespace, H5P_DEFAULT, chunkspace, H5P_DEFAULT));
   } else {
@@ -541,7 +541,7 @@ static PetscErrorCode VecView_MPI_HDF5_DA(Vec xin, PetscViewer viewer)
   #if defined(PETSC_USE_COMPLEX)
   count[dim++] = 2;
   #endif
-  PetscCallHDF5Return(memspace, H5Screate_simple, (dim, count, NULL));
+  PetscCallHDF5Return(memspace, H5Screate_simple, ((int)dim, count, NULL));
   PetscCallHDF5Return(filespace, H5Dget_space, (dset_id));
   PetscCallHDF5(H5Sselect_hyperslab, (filespace, H5S_SELECT_SET, offset, NULL, count, NULL));
 

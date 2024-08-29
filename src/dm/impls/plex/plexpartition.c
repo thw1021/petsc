@@ -1819,9 +1819,9 @@ PetscErrorCode DMPlexRebalanceSharedPoints(DM dm, PetscInt entityDepth, PetscBoo
   nparts = size;
   ncon   = 1;
   PetscCall(PetscMalloc1(ncon * nparts, &tpwgts));
-  for (i = 0; i < ncon * nparts; i++) tpwgts[i] = 1. / (nparts);
+  for (i = 0; i < ncon * nparts; i++) tpwgts[i] = (real_t)(1. / (nparts));
   PetscCall(PetscMalloc1(ncon, &ubvec));
-  for (i = 0; i < ncon; i++) ubvec[i] = 1.05;
+  for (i = 0; i < ncon; i++) ubvec[i] = (real_t)1.05;
 
   PetscCall(PetscMalloc1(ncon * (1 + numNonExclusivelyOwned), &vtxwgt));
   if (ncon == 2) {

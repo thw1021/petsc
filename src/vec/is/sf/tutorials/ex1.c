@@ -195,7 +195,7 @@ int main(int argc, char **argv)
     PetscCall(PetscMalloc2(nrootsalloc, &rootdata, nleavesalloc, &leafdata));
     /* Set rootdata buffer to be broadcast */
     for (i = 0; i < nrootsalloc; i++) rootdata[i] = '*';
-    for (i = 0; i < nroots; i++) rootdata[i * stride] = 'A' + rank * 3 + i; /* rank is very small, so it is fine to compute a char */
+    for (i = 0; i < nroots; i++) rootdata[i * stride] = (char)('A' + rank * 3 + i); /* rank is very small, so it is fine to compute a char */
     /* Initialize local buffer, these values are never used. */
     for (i = 0; i < nleavesalloc; i++) leafdata[i] = '?';
 
@@ -278,10 +278,10 @@ int main(int argc, char **argv)
     PetscCall(PetscMalloc2(nrootsalloc, &rootdata, nleavesalloc, &leafdata));
     /* Initialize rootdata buffer in which the result of the reduction will appear. */
     for (i = 0; i < nrootsalloc; i++) rootdata[i] = -1;
-    for (i = 0; i < nroots; i++) rootdata[i * stride] = 10 * (rank + 1) + i;
+    for (i = 0; i < nroots; i++) rootdata[i * stride] = (signed char)(10 * (rank + 1) + i);
     /* Set leaf values to reduce. */
     for (i = 0; i < nleavesalloc; i++) leafdata[i] = -1;
-    for (i = 0; i < nleaves; i++) leafdata[i * stride] = 50 * (rank + 1) + 10 * i;
+    for (i = 0; i < nleaves; i++) leafdata[i * stride] = (signed char)(50 * (rank + 1) + 10 * i);
     PetscCall(PetscViewerASCIIPrintf(PETSC_VIEWER_STDOUT_WORLD, "## Pre-Reduce Rootdata in type of signed char\n"));
 
     len = 0;
@@ -332,10 +332,10 @@ int main(int argc, char **argv)
     PetscCall(PetscMalloc2(nrootsalloc, &rootdata, nleavesalloc, &leafdata));
     /* Initialize rootdata buffer in which the result of the reduction will appear. */
     for (i = 0; i < nrootsalloc; i++) rootdata[i] = 0;
-    for (i = 0; i < nroots; i++) rootdata[i * stride] = 10 * (rank + 1) + i;
+    for (i = 0; i < nroots; i++) rootdata[i * stride] = (unsigned char)(10 * (rank + 1) + i);
     /* Set leaf values to reduce. */
     for (i = 0; i < nleavesalloc; i++) leafdata[i] = 0;
-    for (i = 0; i < nleaves; i++) leafdata[i * stride] = 50 * (rank + 1) + 10 * i;
+    for (i = 0; i < nleaves; i++) leafdata[i * stride] = (unsigned char)(50 * (rank + 1) + 10 * i);
     PetscCall(PetscViewerASCIIPrintf(PETSC_VIEWER_STDOUT_WORLD, "## Pre-Reduce Rootdata in type of unsigned char\n"));
 
     len = 0;

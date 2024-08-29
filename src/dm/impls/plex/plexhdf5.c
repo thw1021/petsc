@@ -379,7 +379,7 @@ PetscErrorCode DMSequenceGetLength_HDF5_Internal(DM dm, const char seqname[], Pe
   PetscCallHDF5ReturnNoCheck(rdim, H5Sget_simple_extent_dims, (dspace, NULL, NULL));
   PetscCall(PetscMalloc1(rdim, &dims));
   PetscCallHDF5ReturnNoCheck(rdim, H5Sget_simple_extent_dims, (dspace, dims, NULL));
-  *seqlen = dims[0];
+  *seqlen = (PetscInt)dims[0];
   PetscCall(PetscFree(dims));
   PetscCallHDF5(H5Dclose, (dset));
   PetscCallHDF5(H5Gclose, (group));

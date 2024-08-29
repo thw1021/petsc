@@ -193,7 +193,7 @@ static PetscErrorCode DMCreateColoring_Redundant(DM dm, ISColoringType ctype, IS
     SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONG, "Unknown ISColoringType %d", (int)ctype);
   }
   PetscCall(PetscMalloc1(nloc, &colors));
-  for (i = 0; i < nloc; i++) colors[i] = i;
+  for (i = 0; i < nloc; i++) PetscCall(ISColoringValueCast(i, colors + i));
   PetscCall(ISColoringCreate(PetscObjectComm((PetscObject)dm), red->N, nloc, colors, PETSC_OWN_POINTER, coloring));
   PetscCall(ISColoringSetType(*coloring, ctype));
   PetscFunctionReturn(PETSC_SUCCESS);

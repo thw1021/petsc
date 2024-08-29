@@ -31,14 +31,14 @@ PetscInt       divWork(PetscMPIInt, PetscInt, PetscMPIInt);
 
 int main(int argc, char *argv[])
 {
-  PetscReal     r, dt;
-  PetscInt      n;
-  unsigned long i, myNumSim, totalNumSim, numdim;
-  PetscReal    *vol, *St0, x, totalx;
-  PetscMPIInt   size, rank;
-  PetscReal    *eps;
-  himaInfo      hinfo;
-  PetscRandom   ran;
+  PetscReal   r, dt;
+  PetscInt    n;
+  PetscInt    i, myNumSim, totalNumSim, numdim;
+  PetscReal  *vol, *St0, x, totalx;
+  PetscMPIInt size, rank;
+  PetscReal  *eps;
+  himaInfo    hinfo;
+  PetscRandom ran;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, (char *)0, help));

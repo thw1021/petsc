@@ -335,9 +335,12 @@ static PetscErrorCode PCMPIUpdateMatValues(PC pc)
   PetscCall(KSPGetOperators(ksp, NULL, &A));
   PetscCall(PetscLogEventBegin(EventServerDistMPI, NULL, NULL, NULL, NULL));
   if (!PCMPIServerUseShmget) {
+    PetscMPIInt mpi_nz;
+
     PetscCall(MatMPIAIJGetNumberNonzeros(A, &nz));
+    PetscCall(PetscMPIIntCast(nz, &mpi_nz));
     PetscCall(PetscMalloc1(nz, &a));
-    PetscCallMPI(MPI_Scatterv(sa, pc ? km->NZ : NULL, pc ? km->NZdispl : NULL, MPIU_SCALAR, (void *)a, nz, MPIU_SCALAR, 0, comm));
+    PetscCallMPI(MPI_Scatterv(sa, pc ? km->NZ : NULL, pc ? km->NZdispl : NULL, MPIU_SCALAR, (void *)a, mpi_nz, MPIU_SCALAR, 0, comm));
   } else {
     PetscCall(MatGetOwnershipRange(A, &rstart, NULL));
     PCMPIServerAddresses *addresses;

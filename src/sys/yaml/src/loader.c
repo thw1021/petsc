@@ -1,4 +1,4 @@
-
+#pragma clang diagnostic ignored "-Wconversion"
 #include "yaml_private.h"
 
 /*

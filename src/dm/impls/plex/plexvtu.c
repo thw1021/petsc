@@ -109,7 +109,7 @@ static PetscErrorCode DMPlexGetVTKConnectivity(DM dm, PetscBool localized, Piece
     nverts = countconn - startoffset;
     PetscCall(DMPlexVTKGetCellType_Internal(dm, dim, nverts, &celltype));
 
-    types[countcell] = celltype;
+    types[countcell] = (PetscVTKType)celltype;
     countcell++;
   }
   PetscCheck(countcell == piece->ncells, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Inconsistent cell count");
