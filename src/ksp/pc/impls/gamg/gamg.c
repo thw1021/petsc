@@ -154,7 +154,7 @@ static PetscErrorCode PCGAMGCreateLevel_GAMG(PC pc, Mat Amat_fine, PetscInt cr_b
     /* we know that the grid structure can be reused in MatPtAP */
   } else { /* reduce active processors - we know that the grid structure can NOT be reused in MatPtAP */
     PetscInt *counts, *newproc_idx, ii, jj, kk, strideNew, *tidx, ncrs_new, ncrs_eq_new, nloc_old, expand_factor = 1, rfactor = 1;
-    IS        is_eq_newproc, is_eq_num, is_eq_num_prim, new_eq_indices;
+    IS        is_eq_newproc, is_eq_num, new_eq_indices;
     PetscCall(PetscLogEventBegin(petsc_gamg_setup_events[GAMG_REDUCE], 0, 0, 0, 0));
     nloc_old = ncrs_eq / cr_bs;
     PetscCheck(ncrs_eq % cr_bs == 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "ncrs_eq %" PetscInt_FMT " not divisible by cr_bs %" PetscInt_FMT, ncrs_eq, cr_bs);
@@ -189,7 +189,6 @@ static PetscErrorCode PCGAMGCreateLevel_GAMG(PC pc, Mat Amat_fine, PetscInt cr_b
       }
     }
     /* make 'is_eq_newproc' */
-    PetscCall(PetscMalloc1(size, &counts));
     if (pc_gamg->repart) { /* Repartition Cmat_{k} and move columns of P^{k}_{k-1} and coordinates of primal part accordingly */
       Mat adj;
       PetscCall(PetscLogEventBegin(petsc_gamg_setup_events[GAMG_REPART], 0, 0, 0, 0));
@@ -280,31 +279,47 @@ static PetscErrorCode PCGAMGCreateLevel_GAMG(PC pc, Mat Amat_fine, PetscInt cr_b
       }
       PetscCall(MatDestroy(&adj));
 
-      PetscCall(ISCreateGeneral(comm, ncrs_eq, newproc_idx, PETSC_COPY_VALUES, &is_eq_newproc));
-      PetscCall(PetscFree(newproc_idx));
+      PetscCall(ISCreateGeneral(comm, ncrs_eq, newproc_idx, PETSC_OWN_POINTER, &is_eq_newproc));
+      /*
+        Create an index set from the is_eq_newproc index set to indicate the mapping TO
+      */
+      PetscCall(ISPartitioningToNumbering(is_eq_newproc, &is_eq_num));
+      /*
+        Determine how many equations/vertices are assigned to each processor
+      */
+      PetscCall(PetscMalloc1(size, &counts));
+      PetscCall(ISPartitioningCount(is_eq_newproc, size, counts));
+      ncrs_eq_new = counts[rank];
+      PetscCall(ISDestroy(&is_eq_newproc));
+      PetscCall(PetscFree(counts));
       PetscCall(PetscLogEventEnd(petsc_gamg_setup_events[GAMG_REPART], 0, 0, 0, 0));
     } else { /* simple aggregation of parts -- 'is_eq_newproc' */
-      PetscInt targetPE;
+      const PetscInt *ranges;
+      PetscInt        newstart = 0;
+      PetscLayout     ilay;
+
       PetscCheck(new_size != nactive, PETSC_COMM_SELF, PETSC_ERR_PLIB, "new_size==nactive. Should not happen");
       PetscCall(PetscInfo(pc, "%s: Number of equations (loc) %" PetscInt_FMT " with simple aggregation\n", ((PetscObject)pc)->prefix, ncrs_eq));
-      targetPE = (rank / rfactor) * expand_factor;
-      PetscCall(ISCreateStride(comm, ncrs_eq, targetPE, 0, &is_eq_newproc));
+      PetscCallMPI(MPI_Exscan(&ncrs_eq, &newstart, 1, MPIU_INT, MPI_SUM, comm));
+      PetscCall(ISCreateStride(comm, ncrs_eq, newstart, 1, &is_eq_num));
+      PetscCall(ISSetPermutation(is_eq_num));
+      PetscCall(ISGetLayout(is_eq_num, &ilay));
+      PetscCall(PetscLayoutGetRanges(ilay, &ranges));
+      ncrs_eq_new = 0;
+      for (PetscInt r = 0; r < size; r++)
+        if (rank == (r / rfactor) * expand_factor) ncrs_eq_new += ranges[r + 1] - ranges[r];
+      //targetPE = (rank / rfactor) * expand_factor;
+      //PetscCall(ISCreateStride(comm, ncrs_eq, targetPE, 0, &is_eq_newproc));
+      //PetscCall(ISPartitioningToNumbering(is_eq_newproc, &is_eq_num));
+      //PetscCall(PetscMalloc1(size, &counts));
+      //PetscCall(ISPartitioningCount(is_eq_newproc, size, counts));
+      //ncrs_eq_new = counts[rank];
+      //PetscCall(ISDestroy(&is_eq_newproc));
+      //PetscCall(PetscFree(counts));
     } /* end simple 'is_eq_newproc' */
 
-    /*
-      Create an index set from the is_eq_newproc index set to indicate the mapping TO
-    */
-    PetscCall(ISPartitioningToNumbering(is_eq_newproc, &is_eq_num));
-    is_eq_num_prim = is_eq_num;
-    /*
-      Determine how many equations/vertices are assigned to each processor
-    */
-    PetscCall(ISPartitioningCount(is_eq_newproc, size, counts));
-    ncrs_eq_new = counts[rank];
-    PetscCall(ISDestroy(&is_eq_newproc));
     ncrs_new = ncrs_eq_new / cr_bs;
 
-    PetscCall(PetscFree(counts));
     /* data movement scope -- this could be moved to subclasses so that we don't try to cram all auxiliary data into some complex abstracted thing */
     {
       Vec             src_crd, dest_crd;
@@ -322,12 +337,12 @@ static PetscErrorCode PCGAMGCreateLevel_GAMG(PC pc, Mat Amat_fine, PetscInt cr_b
         a block size of ...).  Note, ISs are expanded into equation space by 'cr_bs'.
       */
       PetscCall(PetscMalloc1(ncrs * node_data_sz, &tidx));
-      PetscCall(ISGetIndices(is_eq_num_prim, &idx));
+      PetscCall(ISGetIndices(is_eq_num, &idx));
       for (ii = 0, jj = 0; ii < ncrs; ii++) {
         PetscInt id = idx[ii * cr_bs] / cr_bs; /* get node back */
         for (kk = 0; kk < node_data_sz; kk++, jj++) tidx[jj] = id * node_data_sz + kk;
       }
-      PetscCall(ISRestoreIndices(is_eq_num_prim, &idx));
+      PetscCall(ISRestoreIndices(is_eq_num, &idx));
       PetscCall(ISCreateGeneral(comm, node_data_sz * ncrs, tidx, PETSC_COPY_VALUES, &isscat));
       PetscCall(PetscFree(tidx));
       /*
@@ -382,9 +397,8 @@ static PetscErrorCode PCGAMGCreateLevel_GAMG(PC pc, Mat Amat_fine, PetscInt cr_b
       Invert for MatCreateSubMatrix
     */
     PetscCall(ISInvertPermutation(is_eq_num, ncrs_eq_new, &new_eq_indices));
-    PetscCall(ISSort(new_eq_indices)); /* is this needed? */
+    PetscCall(ISSort(new_eq_indices));
     PetscCall(ISSetBlockSize(new_eq_indices, cr_bs));
-    if (is_eq_num != is_eq_num_prim) { PetscCall(ISDestroy(&is_eq_num_prim)); /* could be same as 'is_eq_num' */ }
     if (Pcolumnperm) {
       PetscCall(PetscObjectReference((PetscObject)new_eq_indices));
       *Pcolumnperm = new_eq_indices;
