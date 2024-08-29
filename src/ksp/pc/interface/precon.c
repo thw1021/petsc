@@ -1105,8 +1105,8 @@ PetscErrorCode PCSetUp(PC pc)
 
 /*@
   PCSetUpOnBlocks - Sets up the preconditioner for each block in
-  the block Jacobi, block Gauss-Seidel, and overlapping Schwarz
-  methods.
+  the block Jacobi, block Gauss-Seidel, overlapping Schwarz, and
+  fieldsplit methods.
 
   Collective
 
