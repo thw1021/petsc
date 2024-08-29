@@ -1,7 +1,7 @@
 -include ../../../../../petscdir.mk
 #requirespackage  'PETSC_HAVE_EXODUSII'
 
-CFLAGS    = ${EXODUSII_INCLUDE}
+CFLAGS    = ${PNETCDF_INCLUDE} ${NETCDF_INCLUDE} ${EXODUSII_INCLUDE}
 MANSEC    = DM
 SUBMANSEC = DMPlex
 
