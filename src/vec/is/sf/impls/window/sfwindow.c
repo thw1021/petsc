@@ -422,7 +422,7 @@ static PetscErrorCode PetscSFWindowAttach(PetscSF sf, PetscSFWinLink link, void 
 static PetscErrorCode PetscSFGetWindow(PetscSF sf, MPI_Datatype unit, void *rootdata, void *leafdata, PetscSFWindowSyncType sync, PetscBool epoch, PetscMPIInt fenceassert, PetscMPIInt postassert, PetscMPIInt startassert, const MPI_Aint **target_disp, MPI_Request **reqs, MPI_Win *win)
 {
   PetscSF_Window *w = (PetscSF_Window *)sf->data;
-  MPI_Aint        lb, lb_true, bytes, bytes_true;
+  MPI_Aint        bytes;
   PetscSFWinLink  link;
   PetscBool       reuse = PETSC_FALSE, update = PETSC_FALSE;
   MPI_Aint        wsize;
