@@ -11,8 +11,6 @@
 
 stages:
   - stage-1
-  - stage-2
-  - stage-3
   - stage-4
 variables:
   GIT_STRATEGY: fetch
@@ -230,7 +228,7 @@ petsc4py-pip:
 
 checksource:
   extends: .test-basic
-  stage: .pre
+  stage: stage-1
   tags:
     - gce-u22-stage1
   script:
@@ -333,11 +331,11 @@ pause-for-approval:
 
 .stage-2:
   extends: .stage-23
-  stage: stage-2
+  stage: stage-1
 
 .stage-3:
   extends: .stage-23
-  stage: stage-3
+  stage: stage-1
 
 #
 # The following provide templates for various OSes for pre/post info
@@ -734,6 +732,8 @@ linux-cxx-cmplx-pkgs-64idx:
   variables:
     TEST_ARCH: arch-ci-linux-cxx-cmplx-pkgs-64idx
     PETSC_OPTIONS: -fp_trap
+    MODULEPATH: /nfs/gce/projects/petsc/soft/u22.04/spack-2024-08-30/modules/linux-ubuntu22.04-x86_64/Core
+    LOAD_MODULES: python/3.13.0rc1-rayc5m7
 
 # Set env vars for 'Kokkos + OpenMP' tests, so that they won't give warnings
 linux-pkgs-dbg-ftn-interfaces:
@@ -964,6 +964,8 @@ linux-opt-cxx-quad:
     - gce-u22-stage3
   variables:
     TEST_ARCH: arch-ci-linux-opt-cxx-quad
+    MODULEPATH: /nfs/gce/projects/petsc/soft/u22.04/spack-2024-08-30/modules/linux-ubuntu22.04-x86_64/Core
+    LOAD_MODULES: python/3.13.0rc1-rayc5m7
 
 linux-ILP64:
   extends:
@@ -1198,7 +1200,7 @@ analyze-pipeline:
 # Base job for a documentation build (runs in venv to allow installing additional packages without root)
 #
 .docs:
-  stage: stage-2
+  stage: stage-1
   tags:
     - linux-docs
   before_script:
