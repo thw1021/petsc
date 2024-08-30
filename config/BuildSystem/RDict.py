@@ -61,16 +61,6 @@ except ImportError:
   pass
 import nargs
 
-class dummyxdrlib():
-  def Packer(self):
-    return
-  def Unpacker(self,str):
-    return
-try:
-  import xdrlib
-except ImportError:
-  xdrlib = dummyxdrlib()
-
 import pickle
 import os
 import sys
@@ -107,8 +97,6 @@ Arg class, which wraps the usual value.'''
     self.isServer        = 0
     self.readonly        = readonly
     self.parentDirectory = parentDirectory
-    self.packer          = xdrlib.Packer()
-    self.unpacker        = xdrlib.Unpacker('')
     self.stopCmd         = pickle.dumps(('stop',))
     self.writeLogLine('Greetings')
     self.connectParent(self.parentAddr, self.parentDirectory)
@@ -119,24 +107,20 @@ Arg class, which wraps the usual value.'''
     return
 
   def __getstate__(self):
-    '''Remove any parent socket object, the XDR translators, and the log file from the dictionary before pickling'''
+    '''Remove any parent socket object, and the log file from the dictionary before pickling'''
     self.writeLogLine('Pickling RDict')
     d = self.__dict__.copy()
     if 'parent'    in d: del d['parent']
     if 'saveTimer' in d: del d['saveTimer']
     if '_setCommandLine' in d: del d['_setCommandLine']
-    del d['packer']
-    del d['unpacker']
     del d['logFile']
     return d
 
   def __setstate__(self, d):
-    '''Reconnect the parent socket object, recreate the XDR translators and reopen the log file after unpickling'''
+    '''Reconnect the parent socket object and reopen the log file after unpickling'''
     self.logFile  = open('RDict.log', 'a')
     self.writeLogLine('Unpickling RDict')
     self.__dict__.update(d)
-    self.packer   = xdrlib.Packer()
-    self.unpacker = xdrlib.Unpacker('')
     self.connectParent(self.parentAddr, self.parentDirectory)
     return
 
