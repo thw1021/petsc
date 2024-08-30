@@ -204,3 +204,28 @@ static inline PetscErrorCode TaoLogConvergenceHistory(Tao tao, PetscReal obj, Pe
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
+typedef struct _TaoTermOps *TaoTermOps;
+
+struct _TaoTermOps {
+  /* Methods set by application */
+  PetscErrorCode (*objective)(TaoTerm, Vec, Vec, PetscReal *);
+  PetscErrorCode (*objectiveandgradient)(TaoTerm, Vec, Vec, PetscReal *, Vec);
+  PetscErrorCode (*gradient)(TaoTerm, Vec, Vec, Vec);
+  PetscErrorCode (*hessian)(TaoTerm, Vec, Vec, Mat, Mat);
+  PetscErrorCode (*proximalmap) (TaoTerm, Vec, TaoTerm, Vec, Vec);
+  PetscErrorCode (*setup)(Tao);
+  PetscErrorCode (*view)(Tao, PetscViewer);
+  PetscErrorCode (*setfromoptions)(Tao, PetscOptionItems *);
+  PetscErrorCode (*destroy)(Tao);
+};
+
+#define MAXTAOMONITORS 10
+
+struct _p_TaoTerm {
+  PETSCHEADER(struct _TaoTermOps);
+  void *data;
+  Vec solution_template;
+  Vec parameter_template;
+};
+

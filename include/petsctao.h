@@ -300,6 +300,7 @@ typedef enum {               /* converged */
 
 PETSC_EXTERN const char **TaoConvergedReasons;
 
+
 PETSC_EXTERN PetscErrorCode TaoInitializePackage(void);
 PETSC_EXTERN PetscErrorCode TaoFinalizePackage(void);
 PETSC_EXTERN PetscErrorCode TaoCreate(MPI_Comm, Tao *);
@@ -510,5 +511,65 @@ PETSC_EXTERN PetscErrorCode TaoBoundStep(Vec, Vec, Vec, IS, IS, IS, PetscReal, V
 PETSC_EXTERN PetscErrorCode TaoBoundSolution(Vec, Vec, Vec, PetscReal, PetscInt *, Vec);
 
 PETSC_EXTERN PetscErrorCode MatCreateSubMatrixFree(Mat, IS, IS, Mat *);
+
+/*S
+   TaoTerm - Abstract PETSc object for a parametric real-valued function that can be a term in a `Tao` objective function
+
+   Level: advanced
+
+.seealso: [](doc_taosolve), [](ch_tao), `TaoTermCreate()`, `TaoTermDestroy()`, `TaoTermSetType()`, `TaoTermType`
+S*/
+typedef struct _p_TaoTerm *TaoTerm;
+
+/*J
+  TaoTermType - String with the name of a `TaoTerm` method
+
+  Values:
++ `TAOTERMTAO`        - uses the callback functions set for the outer containing `Tao`, e.g. `TaoSetObjective()`
+. `TAOTERMSHELL`      - a container for arbitrary user-defined callbacks
+. `TAOTERMSEPARABLE`  - a separable combination of multiple other `TaoTerm`s
+. `TAOTERMDM`         - a term whose value and operations are determined by a `DM`
+. `TAOTERML1`         - $\|x - \theta\|_1$, where $\theta$ are the `TaoTerm` parameters
+. `TAOTERMLINF`       - $\|x - \theta\|_\infty$
+. `TAOTERML2SQUARED`  - $\|x - \theta\|_2^2$
+. `TAOTERMQUADRATIC`  - a quadratic form $(x - \theta)^T Q (x - \theta)$ for a matrix $Q$
+- `TAOTERMKL`         - the KL divergence $D_{KL}(x \| \theta)$
+
+  Level: advanced
+
+.seealso: [](doc_taosolve), [](ch_tao), `TaoTerm`, `TaoTermCreate()`, `TaoTermSetType()`
+J*/
+typedef const char *TaoTermType;
+#define TAOTERMTAO       "tao"
+#define TAOTERMSHELL     "shell"
+#define TAOTERMSEPARABLE "separable"
+#define TAOTERMDM        "dm"
+#define TAOTERML1        "l1"
+#define TAOTERMLINF      "linf"
+#define TAOTERML2SQUARED "l2squared"
+#define TAOTERMQUADRATIC "quadratic"
+#define TAOTERMKL        "kl"
+
+
+PETSC_EXTERN PetscClassId      TAOTERM_CLASSID;
+PETSC_EXTERN PetscFunctionList TaoTermList;
+
+PETSC_EXTERN PetscErrorCode TaoTermCreate(MPI_Comm, TaoTerm *);
+PETSC_EXTERN PetscErrorCode TaoTermDestroy(MPI_Comm, TaoTerm *);
+PETSC_EXTERN PetscErrorCode TaoTermView(TaoTerm, PetscViewer);
+PETSC_EXTERN PetscErrorCode TaoTermSetUp(TaoTerm);
+PETSC_EXTERN PetscErrorCode TaoTermSetOptionsPrefix(Tao, const char[]);
+PETSC_EXTERN PetscErrorCode TaoTermSetFromOptions(Tao);
+
+PETSC_EXTERN PetscErrorCode TaoTermSetSolutionTemplate(TaoTerm, Vec);
+PETSC_EXTERN PetscErrorCode TaoTermGetSolutionTemplate(TaoTerm, Vec *);
+PETSC_EXTERN PetscErrorCode TaoTermSetParameterTemplate(TaoTerm, Vec);
+PETSC_EXTERN PetscErrorCode TaoTermGetParameterTemplate(TaoTerm, Vec *);
+
+PETSC_EXTERN PetscErrorCode TaoTermObjective(TaoTerm, Vec, Vec, PetscReal *);
+PETSC_EXTERN PetscErrorCode TaoTermGradient(TaoTerm, Vec, Vec, Vec);
+PETSC_EXTERN PetscErrorCode TaoTermObjectiveAndGradient(TaoTerm, Vec, Vec, PetscReal *, Vec);
+PETSC_EXTERN PetscErrorCode TaoTermHessian(TaoTerm, Vec, Vec, Mat, Mat);
+PETSC_EXTERN PetscErrorCode TaoTermProximalMap(TaoTerm, Vec, TaoTerm, Vec, Vec, Vec);
 
 #include <petsctao_deprecations.h>
