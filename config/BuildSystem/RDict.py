@@ -469,13 +469,9 @@ Arg class, which wraps the usual value.'''
       p = packet
     else:
       p = pickle.dumps(packet)
-    self.packer.reset()
-    self.packer.pack_uint(len(p))
     if hasattr(s, 'write'):
-      s.write(self.packer.get_buffer())
       s.write(p)
     else:
-      s.sendall(self.packer.get_buffer())
       s.sendall(p)
     self.writeLogLine(source+': Sent packet')
     return
@@ -487,9 +483,6 @@ Arg class, which wraps the usual value.'''
       s.read(4)
       value = pickle.load(s)
     else:
-      # I probably need to check that it actually read these 4 bytes
-      self.unpacker.reset(s.recv(4))
-      length    = self.unpacker.unpack_uint()
       objString = ''
       while len(objString) < length:
         objString += s.recv(length - len(objString))
