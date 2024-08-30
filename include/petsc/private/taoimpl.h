@@ -213,19 +213,21 @@ struct _TaoTermOps {
   PetscErrorCode (*objectiveandgradient)(TaoTerm, Vec, Vec, PetscReal *, Vec);
   PetscErrorCode (*gradient)(TaoTerm, Vec, Vec, Vec);
   PetscErrorCode (*hessian)(TaoTerm, Vec, Vec, Mat, Mat);
-  PetscErrorCode (*proximalmap) (TaoTerm, Vec, TaoTerm, Vec, Vec);
-  PetscErrorCode (*setup)(Tao);
-  PetscErrorCode (*view)(Tao, PetscViewer);
-  PetscErrorCode (*setfromoptions)(Tao, PetscOptionItems *);
-  PetscErrorCode (*destroy)(Tao);
+  PetscErrorCode (*proximalmap)(TaoTerm, Vec, PetscReal, TaoTerm, Vec, PetscReal, Vec);
+  PetscErrorCode (*setup)(TaoTerm);
+  PetscErrorCode (*view)(TaoTerm, PetscViewer);
+  PetscErrorCode (*setfromoptions)(TaoTerm, PetscOptionItems *);
+  PetscErrorCode (*destroy)(TaoTerm);
 };
 
 #define MAXTAOMONITORS 10
 
 struct _p_TaoTerm {
   PETSCHEADER(struct _TaoTermOps);
-  void *data;
-  Vec solution_template;
-  Vec parameter_template;
+  void     *data;
+  PetscBool setup_called;
+  Vec       solution_template;
+  Vec       parameter_template;
 };
 
+PETSC_INTERN PetscErrorCode TaoTermRegisterAll(void);

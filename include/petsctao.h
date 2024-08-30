@@ -300,7 +300,6 @@ typedef enum {               /* converged */
 
 PETSC_EXTERN const char **TaoConvergedReasons;
 
-
 PETSC_EXTERN PetscErrorCode TaoInitializePackage(void);
 PETSC_EXTERN PetscErrorCode TaoFinalizePackage(void);
 PETSC_EXTERN PetscErrorCode TaoCreate(MPI_Comm, Tao *);
@@ -515,7 +514,7 @@ PETSC_EXTERN PetscErrorCode MatCreateSubMatrixFree(Mat, IS, IS, Mat *);
 /*S
    TaoTerm - Abstract PETSc object for a parametric real-valued function that can be a term in a `Tao` objective function
 
-   Level: advanced
+   Level: interm
 
 .seealso: [](doc_taosolve), [](ch_tao), `TaoTermCreate()`, `TaoTermDestroy()`, `TaoTermSetType()`, `TaoTermType`
 S*/
@@ -550,26 +549,37 @@ typedef const char *TaoTermType;
 #define TAOTERMQUADRATIC "quadratic"
 #define TAOTERMKL        "kl"
 
+PETSC_EXTERN PetscErrorCode TaoTermRegister(const char[], PetscErrorCode (*)(TaoTerm));
 
 PETSC_EXTERN PetscClassId      TAOTERM_CLASSID;
 PETSC_EXTERN PetscFunctionList TaoTermList;
 
 PETSC_EXTERN PetscErrorCode TaoTermCreate(MPI_Comm, TaoTerm *);
-PETSC_EXTERN PetscErrorCode TaoTermDestroy(MPI_Comm, TaoTerm *);
+PETSC_EXTERN PetscErrorCode TaoTermDestroy(TaoTerm *);
 PETSC_EXTERN PetscErrorCode TaoTermView(TaoTerm, PetscViewer);
 PETSC_EXTERN PetscErrorCode TaoTermSetUp(TaoTerm);
-PETSC_EXTERN PetscErrorCode TaoTermSetOptionsPrefix(Tao, const char[]);
-PETSC_EXTERN PetscErrorCode TaoTermSetFromOptions(Tao);
+PETSC_EXTERN PetscErrorCode TaoTermSetType(TaoTerm, TaoTermType);
+PETSC_EXTERN PetscErrorCode TaoTermSetFromOptions(TaoTerm);
 
-PETSC_EXTERN PetscErrorCode TaoTermSetSolutionTemplate(TaoTerm, Vec);
-PETSC_EXTERN PetscErrorCode TaoTermGetSolutionTemplate(TaoTerm, Vec *);
-PETSC_EXTERN PetscErrorCode TaoTermSetParameterTemplate(TaoTerm, Vec);
-PETSC_EXTERN PetscErrorCode TaoTermGetParameterTemplate(TaoTerm, Vec *);
-
-PETSC_EXTERN PetscErrorCode TaoTermObjective(TaoTerm, Vec, Vec, PetscReal *);
-PETSC_EXTERN PetscErrorCode TaoTermGradient(TaoTerm, Vec, Vec, Vec);
-PETSC_EXTERN PetscErrorCode TaoTermObjectiveAndGradient(TaoTerm, Vec, Vec, PetscReal *, Vec);
-PETSC_EXTERN PetscErrorCode TaoTermHessian(TaoTerm, Vec, Vec, Mat, Mat);
-PETSC_EXTERN PetscErrorCode TaoTermProximalMap(TaoTerm, Vec, TaoTerm, Vec, Vec, Vec);
+PETSC_EXTERN PetscErrorCode TaoTermShellSetContext(TaoTerm, void *);
+PETSC_EXTERN PetscErrorCode TaoTermShellGetContext(TaoTerm, void *);
+PETSC_EXTERN PetscErrorCode TaoTermShellSetContextDestroy(TaoTerm, PetscErrorCode (*)(void *));
+PETSC_EXTERN PetscErrorCode TaoTermShellSetObjective(TaoTerm, PetscErrorCode (*)(TaoTerm, Vec, Vec, PetscReal *));
+PETSC_EXTERN PetscErrorCode TaoTermShellSetGradient(TaoTerm, PetscErrorCode (*)(TaoTerm, Vec, Vec, Vec));
+PETSC_EXTERN PetscErrorCode TaoTermShellSetObjectiveAndGradient(TaoTerm, PetscErrorCode (*)(TaoTerm, Vec, Vec, PetscReal *, Vec));
+PETSC_EXTERN PetscErrorCode TaoTermShellSetHessian(TaoTerm, PetscErrorCode (*)(TaoTerm, Vec, Vec, Mat, Mat));
+PETSC_EXTERN PetscErrorCode TaoTermShellSetProximalMap(TaoTerm, PetscErrorCode (*)(TaoTerm, Vec, PetscReal, TaoTerm, Vec, PetscReal, Vec));
+PETSC_EXTERN PetscErrorCode TaoTermShellSetView(TaoTerm, PetscErrorCode (*)(TaoTerm, PetscViewer));
+//
+//PETSC_EXTERN PetscErrorCode TaoTermSetSolutionTemplate(TaoTerm, Vec);
+//PETSC_EXTERN PetscErrorCode TaoTermGetSolutionTemplate(TaoTerm, Vec *);
+//PETSC_EXTERN PetscErrorCode TaoTermSetParameterTemplate(TaoTerm, Vec);
+//PETSC_EXTERN PetscErrorCode TaoTermGetParameterTemplate(TaoTerm, Vec *);
+//
+//PETSC_EXTERN PetscErrorCode TaoTermObjective(TaoTerm, Vec, Vec, PetscReal *);
+//PETSC_EXTERN PetscErrorCode TaoTermGradient(TaoTerm, Vec, Vec, Vec);
+//PETSC_EXTERN PetscErrorCode TaoTermObjectiveAndGradient(TaoTerm, Vec, Vec, PetscReal *, Vec);
+//PETSC_EXTERN PetscErrorCode TaoTermHessian(TaoTerm, Vec, Vec, Mat, Mat);
+//PETSC_EXTERN PetscErrorCode TaoTermProximalMap(TaoTerm, Vec, PetscReal, TaoTerm, Vec, PetscReal, Vec);
 
 #include <petsctao_deprecations.h>
