@@ -212,7 +212,8 @@ static PetscErrorCode PCGAMGCreateLevel_GAMG(PC pc, Mat Amat_fine, PetscInt cr_b
         PetscInt           Istart_crs, Iend_crs, ncols, jj, Ii;
         const PetscScalar *vals;
         const PetscInt    *idx;
-        PetscInt          *d_nnz, *o_nnz, M, N;
+        PetscInt          *d_nnz, *o_nnz, M, N, maxnnz = 0, *j_buf = NULL;
+        PetscScalar       *v_buff = NULL;
         static PetscInt    llev = 0; /* ugly but just used for debugging */
         MatType            mtype;
 
@@ -226,8 +227,11 @@ static PetscErrorCode PCGAMGCreateLevel_GAMG(PC pc, Mat Amat_fine, PetscInt cr_b
           PetscCall(MatRestoreRow(Cmat, Ii, &ncols, NULL, NULL));
           if (d_nnz[jj] > ncrs) d_nnz[jj] = ncrs;
           if (o_nnz[jj] > (M / cr_bs - ncrs)) o_nnz[jj] = M / cr_bs - ncrs;
+          if (ncols > maxnnz) maxnnz = ncols;
         }
 
+        PetscCall(PetscMalloc2(maxnnz, &j_buf, maxnnz, &v_buff));
+        for (ii = 0; ii < maxnnz; ii++) v_buff[ii] = 1.;
         PetscCall(MatGetType(Amat_fine, &mtype));
         PetscCall(MatCreate(comm, &tMat));
         PetscCall(MatSetSizes(tMat, ncrs, ncrs, PETSC_DETERMINE, PETSC_DETERMINE));
@@ -239,15 +243,13 @@ static PetscErrorCode PCGAMGCreateLevel_GAMG(PC pc, Mat Amat_fine, PetscInt cr_b
         for (ii = Istart_crs; ii < Iend_crs; ii++) {
           PetscInt dest_row = ii / cr_bs;
           PetscCall(MatGetRow(Cmat, ii, &ncols, &idx, &vals));
-          for (jj = 0; jj < ncols; jj++) {
-            PetscInt    dest_col = idx[jj] / cr_bs;
-            PetscScalar v        = 1.0;
-            PetscCall(MatSetValues(tMat, 1, &dest_row, 1, &dest_col, &v, ADD_VALUES));
-          }
+          for (jj = 0; jj < ncols; jj++) j_buf[jj] = idx[jj] / cr_bs;
+          PetscCall(MatSetValues(tMat, 1, &dest_row, ncols, j_buf, v_buff, ADD_VALUES));
           PetscCall(MatRestoreRow(Cmat, ii, &ncols, &idx, &vals));
         }
         PetscCall(MatAssemblyBegin(tMat, MAT_FINAL_ASSEMBLY));
         PetscCall(MatAssemblyEnd(tMat, MAT_FINAL_ASSEMBLY));
+        PetscCall(PetscFree2(j_buf, v_buff));
 
         if (llev++ == -1) {
           PetscViewer viewer;
