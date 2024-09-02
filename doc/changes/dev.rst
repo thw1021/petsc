@@ -160,6 +160,7 @@ Changes: Development
 - Add degree bounds to ``DMCopyFields()``, ``DMCopyDS()``, ``PetscDSCopy()``, and ``PetscDSSelectDiscretizations()``
 - Add ``PetscFELimitDegree()``
 - Add localizationHeight and sparseLocalize arguments to ``DMPlexCreateBoxMesh()`` for coordinate localization on periodic meshes
+- Add ``DMPlexGetDepthStratumGlobalSize()``
 
 .. rubric:: FE/FV:
 
