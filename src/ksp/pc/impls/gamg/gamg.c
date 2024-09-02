@@ -224,14 +224,12 @@ static PetscErrorCode PCGAMGCreateLevel_GAMG(PC pc, Mat Amat_fine, PetscInt cr_b
           PetscCall(MatGetRow(Cmat, Ii, &ncols, NULL, NULL));
           d_nnz[jj] = ncols / cr_bs;
           o_nnz[jj] = ncols / cr_bs;
+          if (ncols > maxnnz) maxnnz = ncols;
           PetscCall(MatRestoreRow(Cmat, Ii, &ncols, NULL, NULL));
           if (d_nnz[jj] > ncrs) d_nnz[jj] = ncrs;
           if (o_nnz[jj] > (M / cr_bs - ncrs)) o_nnz[jj] = M / cr_bs - ncrs;
-          if (ncols > maxnnz) maxnnz = ncols;
         }
 
-        PetscCall(PetscMalloc2(maxnnz, &j_buf, maxnnz, &v_buff));
-        for (ii = 0; ii < maxnnz; ii++) v_buff[ii] = 1.;
         PetscCall(MatGetType(Amat_fine, &mtype));
         PetscCall(MatCreate(comm, &tMat));
         PetscCall(MatSetSizes(tMat, ncrs, ncrs, PETSC_DETERMINE, PETSC_DETERMINE));
@@ -239,6 +237,8 @@ static PetscErrorCode PCGAMGCreateLevel_GAMG(PC pc, Mat Amat_fine, PetscInt cr_b
         PetscCall(MatSeqAIJSetPreallocation(tMat, 0, d_nnz));
         PetscCall(MatMPIAIJSetPreallocation(tMat, 0, d_nnz, 0, o_nnz));
         PetscCall(PetscFree2(d_nnz, o_nnz));
+        PetscCall(PetscMalloc2(maxnnz, &j_buf, maxnnz, &v_buff));
+        for (ii = 0; ii < maxnnz; ii++) v_buff[ii] = 1.;
 
         for (ii = Istart_crs; ii < Iend_crs; ii++) {
           PetscInt dest_row = ii / cr_bs;
