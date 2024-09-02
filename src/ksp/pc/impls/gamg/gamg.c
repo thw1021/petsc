@@ -214,7 +214,7 @@ static PetscErrorCode PCGAMGCreateLevel_GAMG(PC pc, Mat Amat_fine, PetscInt cr_b
         const PetscInt    *idx;
         PetscInt          *d_nnz, *o_nnz, M, N, maxnnz = 0, *j_buf = NULL;
         PetscScalar       *v_buff = NULL;
-        static PetscInt    llev = 0; /* ugly but just used for debugging */
+        static PetscInt    llev   = 0; /* ugly but just used for debugging */
         MatType            mtype;
 
         PetscCall(PetscMalloc2(ncrs, &d_nnz, ncrs, &o_nnz));
