@@ -1410,13 +1410,15 @@ PetscErrorCode DMPlexLabelsView_HDF5_Internal(DM dm, IS globalPointNumbers, Pets
     IS              valueIS, pvalueIS, globalValueIS;
     const PetscInt *values;
     PetscInt        numValues, v;
-    PetscBool       isDepth, output;
+    PetscBool       isDepth, isCelltype, output;
 
     PetscCall(DMGetLabelByNum(dm, l, &label));
     PetscCall(PetscObjectGetName((PetscObject)label, &name));
     PetscCall(DMGetLabelOutput(dm, name, &output));
     PetscCall(PetscStrncmp(name, "depth", 10, &isDepth));
-    if (isDepth || !output) continue;
+    PetscCall(PetscStrncmp(name, "celltype", 10, &isCelltype));
+    // TODO Should only filter out celltype if it can be calculated
+    if (isDepth || isCelltype || !output) continue;
     PetscCall(PetscViewerHDF5PushGroup(viewer, name));
     PetscCall(DMLabelGetValueIS(label, &valueIS));
     /* Must copy to a new IS on the global comm */
