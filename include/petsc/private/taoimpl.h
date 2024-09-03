@@ -228,6 +228,11 @@ struct _p_TaoTerm {
   PetscBool setup_called;
   Vec       solution_template;
   Vec       parameter_template;
+  PetscInt  nobj;
+  PetscInt  ngrad;
+  PetscInt  nobjgrad;
+  PetscInt  nhess;
+  PetscInt  nprox;
 };
 
 PETSC_INTERN PetscErrorCode TaoTermRegisterAll(void);
