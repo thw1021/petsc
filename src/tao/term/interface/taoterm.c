@@ -238,7 +238,6 @@ PetscErrorCode TaoTermObjective(TaoTerm term, Vec x, Vec params, PetscReal *valu
     PetscCall(PetscLogEventBegin(TAOTERM_ObjectiveEval, term, NULL, NULL, NULL));
     PetscUseTypeMethod(term, objective, x, params, value);
     PetscCall(PetscLogEventEnd(TAOTERM_ObjectiveEval, term, NULL, NULL, NULL));
-    term->nobj++;
   } else if (term->ops->objectiveandgradient) {
     Vec temp;
 
@@ -248,7 +247,6 @@ PetscErrorCode TaoTermObjective(TaoTerm term, Vec x, Vec params, PetscReal *valu
     PetscUseTypeMethod(term, objectiveandgradient, x, params, value, temp);
     PetscCall(PetscLogEventEnd(TAOTERM_ObjGradEval, term, NULL, NULL, NULL));
     PetscCall(VecDestroy(&temp));
-    term->nobjgrad++;
   } else SETERRQ(PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoTerm does not have an objective function.  You should have called TaoSetObjective() or TaoTermShellSetObjective()");
   if (params) PetscCall(VecLockReadPop(params));
   PetscCall(VecLockReadPop(x));
@@ -279,7 +277,6 @@ PetscErrorCode TaoTermObjective(TaoTerm term, Vec x, Vec params, PetscReal *valu
 PetscErrorCode TaoTermGradient(TaoTerm term, Vec x, Vec params, Vec g)
 {
   PetscFunctionBegin;
-  PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
   PetscValidHeaderSpecific(x, VEC_CLASSID, 2);
   PetscCall(VecLockReadPush(x));
@@ -296,14 +293,12 @@ PetscErrorCode TaoTermGradient(TaoTerm term, Vec x, Vec params, Vec g)
     PetscCall(PetscLogEventBegin(TAOTERM_GradientEval, term, NULL, NULL, NULL));
     PetscUseTypeMethod(term, gradient, x, params, g);
     PetscCall(PetscLogEventEnd(TAOTERM_GradientEval, term, NULL, NULL, NULL));
-    term->ngrad++;
   } else if (term->ops->objectiveandgradient) {
     PetscReal value;
 
     PetscCall(PetscLogEventBegin(TAOTERM_ObjGradEval, term, NULL, NULL, NULL));
     PetscUseTypeMethod(term, objectiveandgradient, x, params, &value, g);
     PetscCall(PetscLogEventEnd(TAOTERM_ObjGradEval, term, NULL, NULL, NULL));
-    term->nobjgrad++;
   } else SETERRQ(PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoTerm does not have a gradient function.  You should have called TaoSetGradient() or TaoTermShellSetGradient()");
   if (params) PetscCall(VecLockReadPop(params));
   PetscCall(VecLockReadPop(x));
@@ -334,7 +329,6 @@ PetscErrorCode TaoTermGradient(TaoTerm term, Vec x, Vec params, Vec g)
 PetscErrorCode TaoTermObjectiveAndGradient(TaoTerm term, Vec x, Vec params, PetscReal *value, Vec g)
 {
   PetscFunctionBegin;
-  PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
   PetscValidHeaderSpecific(x, VEC_CLASSID, 2);
   PetscCall(VecLockReadPush(x));
@@ -352,20 +346,68 @@ PetscErrorCode TaoTermObjectiveAndGradient(TaoTerm term, Vec x, Vec params, Pets
     PetscCall(PetscLogEventBegin(TAOTERM_ObjGradEval, term, NULL, NULL, NULL));
     PetscUseTypeMethod(term, objectiveandgradient, x, params, value, g);
     PetscCall(PetscLogEventEnd(TAOTERM_ObjGradEval, term, NULL, NULL, NULL));
-    term->nobjgrad++;
   } else if (term->ops->objective && term->ops->gradient) {
     PetscCall(PetscLogEventBegin(TAOTERM_ObjectiveEval, term, NULL, NULL, NULL));
     PetscUseTypeMethod(term, objective, x, params, value);
     PetscCall(PetscLogEventEnd(TAOTERM_ObjectiveEval, term, NULL, NULL, NULL));
-    term->nobj++;
     PetscCall(PetscLogEventBegin(TAOTERM_GradientEval, term, NULL, NULL, NULL));
     PetscUseTypeMethod(term, gradient, x, params, g);
     PetscCall(PetscLogEventEnd(TAOTERM_GradientEval, term, NULL, NULL, NULL));
-    term->ngrad++;
-  } else SETERRQ(PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoTerm does not have objective and gradient function.  "
-      "You should have called some of the following functions: TaoSetObjective(), TaoSetGradient(), TaoSetObjectiveAndGradient(), TaoTermShellSetObjective(), TaoTermShellSetGradient(), TaoTermShellSetObjectiveAndGradient()");
+  } else
+    SETERRQ(PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE,
+            "TaoTerm does not have objective and gradient function.  "
+            "You should have called some of the following functions: TaoSetObjective(), TaoSetGradient(), TaoSetObjectiveAndGradient(), TaoTermShellSetObjective(), TaoTermShellSetGradient(), TaoTermShellSetObjectiveAndGradient()");
   if (params) PetscCall(VecLockReadPop(params));
   PetscCall(VecLockReadPop(x));
   PetscCall(PetscInfo(term, "TaoTerm value: %20.19e\n", (double)(*value)));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoTermHessian - Evaluate the Hessian of a `TaoTerm` (with respect to the solution variables) for a given set of solution variables and parameters
+
+  Collective
+
+  Input Parameters:
++ term   - a `TaoTerm` representing a parametric function $f(x; p)$
+. x      - the solution variable $x$ in $f(x; p)$
+- params - the parameters $p$ in $f(x; p)$ (may be NULL if the term is not parametric)
+
+  Output Parameters:
+  H    - Hessian matrix
+- Hpre - Precondiitoning matrix
+
+  Level: intermediate
+
+.seealso: [](ch_tao), `Tao`, `TaoTerm`,
+          `TaoTermObjective()`,
+          `TaoTermGradient()`,
+          `TaoTermObjectiveAndGradient()`
+@*/
+PetscErrorCode TaoTermHessian(TaoTerm term, Vec x, Vec params, Mat H, Mat Hpre)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  PetscValidHeaderSpecific(x, VEC_CLASSID, 2);
+  PetscCall(VecLockReadPush(x));
+  PetscCheckSameComm(term, 1, x, 2);
+  if (params) {
+    PetscValidHeaderSpecific(params, VEC_CLASSID, 3);
+    PetscCheckSameComm(term, 1, params, 3);
+    PetscCall(VecLockReadPush(params));
+  }
+  if (H) {
+    PetscValidHeaderSpecific(H, MAT_CLASSID, 4);
+    PetscCheckSameComm(term, 1, H, 4);
+  }
+  if (Hpre) {
+    PetscValidHeaderSpecific(Hpre, MAT_CLASSID, 5);
+    PetscCheckSameComm(term, 1, Hpre, 5);
+  }
+  PetscCall(PetscLogEventBegin(TAOTERM_HessianEval, term, NULL, NULL, NULL));
+  PetscUseTypeMethod(term, hessian, x, params, H, Hpre);
+  PetscCall(PetscLogEventEnd(TAOTERM_HessianEval, term, NULL, NULL, NULL));
+  if (params) PetscCall(VecLockReadPop(params));
+  PetscCall(VecLockReadPop(x));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

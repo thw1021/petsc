@@ -125,6 +125,7 @@ struct _p_Tao {
   PetscInt nconstraints;
   PetscInt niconstraints;
   PetscInt neconstraints;
+  PetscInt nres;
   PetscInt njac;
   PetscInt njac_equality;
   PetscInt njac_inequality;
@@ -177,15 +178,20 @@ struct _p_Tao {
   PetscInt      hist_len;
   PetscBool     hist_reset;
   PetscBool     hist_malloc;
+
+  TaoTerm   term;
+  PetscReal term_scale;
 };
 
 PETSC_EXTERN PetscLogEvent TAO_Solve;
-PETSC_EXTERN PetscLogEvent TAO_ObjectiveEval;
-PETSC_EXTERN PetscLogEvent TAO_GradientEval;
-PETSC_EXTERN PetscLogEvent TAO_ObjGradEval;
-PETSC_EXTERN PetscLogEvent TAO_HessianEval;
 PETSC_EXTERN PetscLogEvent TAO_ConstraintsEval;
 PETSC_EXTERN PetscLogEvent TAO_JacobianEval;
+PETSC_INTERN PetscLogEvent TAO_ResidualEval;
+
+PETSC_INTERN PetscLogEvent TAOTERM_ObjectiveEval;
+PETSC_INTERN PetscLogEvent TAOTERM_GradientEval;
+PETSC_INTERN PetscLogEvent TAOTERM_ObjGradEval;
+PETSC_INTERN PetscLogEvent TAOTERM_HessianEval;
 
 static inline PetscErrorCode TaoLogConvergenceHistory(Tao tao, PetscReal obj, PetscReal resid, PetscReal cnorm, PetscInt totits)
 {
@@ -228,11 +234,8 @@ struct _p_TaoTerm {
   PetscBool setup_called;
   Vec       solution_template;
   Vec       parameter_template;
-  PetscInt  nobj;
-  PetscInt  ngrad;
-  PetscInt  nobjgrad;
-  PetscInt  nhess;
-  PetscInt  nprox;
 };
 
 PETSC_INTERN PetscErrorCode TaoTermRegisterAll(void);
+
+PETSC_INTERN PetscErrorCode TaoTermCreateTao(Tao, TaoTerm *);

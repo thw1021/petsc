@@ -526,7 +526,7 @@ typedef struct _p_TaoTerm *TaoTerm;
   Values:
 + `TAOTERMTAO`        - uses the callback functions set for the outer containing `Tao`, e.g. `TaoSetObjective()`
 . `TAOTERMSHELL`      - a container for arbitrary user-defined callbacks
-. `TAOTERMSEPARABLE`  - a separable combination of multiple other `TaoTerm`s
+. `TAOTERMSUM`        - a sum of multiple other `TaoTerm`s
 . `TAOTERMDM`         - a term whose value and operations are determined by a `DM`
 . `TAOTERML1`         - $\|x - \theta\|_1$, where $\theta$ are the `TaoTerm` parameters
 . `TAOTERMLINF`       - $\|x - \theta\|_\infty$
@@ -539,15 +539,15 @@ typedef struct _p_TaoTerm *TaoTerm;
 .seealso: [](doc_taosolve), [](ch_tao), `TaoTerm`, `TaoTermCreate()`, `TaoTermSetType()`
 J*/
 typedef const char *TaoTermType;
-#define TAOTERMTAO       "tao"
-#define TAOTERMSHELL     "shell"
-#define TAOTERMSEPARABLE "separable"
-#define TAOTERMDM        "dm"
-#define TAOTERML1        "l1"
-#define TAOTERMLINF      "linf"
-#define TAOTERML2SQUARED "l2squared"
-#define TAOTERMQUADRATIC "quadratic"
-#define TAOTERMKL        "kl"
+#define TAOTERMTAO           "tao"
+#define TAOTERMSHELL         "shell"
+#define TAOTERMSUM           "sum"
+#define TAOTERMDM            "dm"
+#define TAOTERML1            "l1"
+#define TAOTERMLINF          "linf"
+#define TAOTERMHALFL2SQUARED "halfl2squared"
+#define TAOTERMQUADRATIC     "quadratic"
+#define TAOTERMKL            "kl"
 
 PETSC_EXTERN PetscErrorCode TaoTermRegister(const char[], PetscErrorCode (*)(TaoTerm));
 
@@ -574,7 +574,7 @@ PETSC_EXTERN PetscErrorCode TaoTermShellSetView(TaoTerm, PetscErrorCode (*)(TaoT
 PETSC_EXTERN PetscErrorCode TaoTermObjective(TaoTerm, Vec, Vec, PetscReal *);
 PETSC_EXTERN PetscErrorCode TaoTermGradient(TaoTerm, Vec, Vec, Vec);
 PETSC_EXTERN PetscErrorCode TaoTermObjectiveAndGradient(TaoTerm, Vec, Vec, PetscReal *, Vec);
-//PETSC_EXTERN PetscErrorCode TaoTermHessian(TaoTerm, Vec, Vec, Mat, Mat);
+PETSC_EXTERN PetscErrorCode TaoTermHessian(TaoTerm, Vec, Vec, Mat, Mat);
 //PETSC_EXTERN PetscErrorCode TaoTermProximalMap(TaoTerm, Vec, PetscReal, TaoTerm, Vec, PetscReal, Vec);
 
 #include <petsctao_deprecations.h>

@@ -7,10 +7,7 @@ PetscFunctionList TaoList              = NULL;
 PetscClassId TAO_CLASSID;
 
 PetscLogEvent TAO_Solve;
-PetscLogEvent TAO_ObjectiveEval;
-PetscLogEvent TAO_GradientEval;
-PetscLogEvent TAO_ObjGradEval;
-PetscLogEvent TAO_HessianEval;
+PetscLogEvent TAO_ResidualEval;
 PetscLogEvent TAO_JacobianEval;
 PetscLogEvent TAO_ConstraintsEval;
 
@@ -132,6 +129,8 @@ PetscErrorCode TaoCreate(MPI_Comm comm, Tao *newtao)
   tao->ops->convergencetest = TaoDefaultConvergenceTest;
 
   tao->hist_reset = PETSC_TRUE;
+
+  PetscCall(TaoTermCreateTao(tao, &tao->term));
   PetscCall(TaoResetStatistics(tao));
   *newtao = tao;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -250,6 +249,7 @@ PetscErrorCode TaoDestroy(Tao *tao)
   }
 
   PetscTryTypeMethod(*tao, destroy);
+  PetscCall(TaoTermDestroy(&(*tao)->term));
   PetscCall(KSPDestroy(&(*tao)->ksp));
   PetscCall(SNESDestroy(&(*tao)->snes_ewdummy));
   PetscCall(TaoLineSearchDestroy(&(*tao)->linesearch));

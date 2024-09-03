@@ -251,18 +251,9 @@ PetscErrorCode TaoComputeHessian(Tao tao, Vec X, Mat H, Mat Hpre)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  PetscValidHeaderSpecific(X, VEC_CLASSID, 2);
-  PetscCheckSameComm(tao, 1, X, 2);
-  PetscCheck(tao->ops->computehessian, PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_WRONGSTATE, "TaoSetHessian() not called");
-
-  ++tao->nhess;
-  PetscCall(VecLockReadPush(X));
-  PetscCall(PetscLogEventBegin(TAO_HessianEval, tao, X, H, Hpre));
-  PetscCallBack("Tao callback Hessian", (*tao->ops->computehessian)(tao, X, H, Hpre, tao->user_hessP));
-  PetscCall(PetscLogEventEnd(TAO_HessianEval, tao, X, H, Hpre));
-  PetscCall(VecLockReadPop(X));
-
+  PetscCall(TaoTermHessian(tao->term, X, NULL, H, Hpre));
   PetscCall(TaoTestHessian(tao));
+  tao->nhess++;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

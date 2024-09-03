@@ -9,6 +9,7 @@ struct _n_TaoTerm_Tao {
 static PetscErrorCode TaoTermDestroy_Tao(TaoTerm term)
 {
   TaoTerm_Tao *tt = (TaoTerm_Tao *)term->data;
+
   PetscFunctionBegin;
   // tt->tao is a weak reference, we do not destroy it
   PetscCall(PetscFree(tt));
@@ -23,7 +24,16 @@ static PetscErrorCode TaoTermObjective_Tao(TaoTerm term, Vec x, Vec params, Pets
   PetscFunctionBegin;
   PetscCheck(params == NULL, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_INCOMP, "TAOTERMTAO does not accept a vector of parameters");
   PetscCheck(tt->tao != NULL, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TAOTERMTAO does not have an outer Tao");
-  PetscUseTypeMethod(tt->tao, computeobjective, x, value, tt->tao->user_objP);
+  if (tt->tao->ops->computeobjective) {
+    PetscUseTypeMethod(tt->tao, computeobjective, x, value, tt->tao->user_objP);
+  } else if (tt->tao->ops->computeobjectiveandgradient) {
+    Vec dummy;
+
+    PetscCall(PetscInfo(tt->tao, "Duplicating variable vector in order to call func/grad routine\n"));
+    PetscCall(VecDuplicate(x, &dummy));
+    PetscUseTypeMethod(tt->tao, computeobjectiveandgradient, x, value, dummy, tt->tao->user_objgradP);
+    PetscCall(VecDestroy(&dummy));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -34,7 +44,12 @@ static PetscErrorCode TaoTermGradient_Tao(TaoTerm term, Vec x, Vec params, Vec g
   PetscFunctionBegin;
   PetscCheck(params == NULL, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_INCOMP, "TAOTERMTAO does not accept a vector of parameters");
   PetscCheck(tt->tao != NULL, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TAOTERMTAO does not have an outer Tao");
-  PetscUseTypeMethod(tt->tao, computegradient, x, g, tt->tao->user_gradP);
+  if (tt->tao->ops->computegradient) PetscUseTypeMethod(tt->tao, computegradient, x, g, tt->tao->user_gradP);
+  else if (tt->tao->ops->computeobjectiveandgradient) {
+    PetscReal dummy;
+
+    PetscUseTypeMethod(tt->tao, computeobjectiveandgradient, x, &dummy, g, tt->tao->user_objgradP);
+  } else SETERRQ(PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoSetGradient() has not been called");
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -47,10 +62,10 @@ static PetscErrorCode TaoTermObjectiveAndGradient_Tao(TaoTerm term, Vec x, Vec p
   PetscCheck(tt->tao != NULL, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TAOTERMTAO does not have an outer Tao");
   if (tt->tao->ops->computeobjectiveandgradient) {
     PetscUseTypeMethod(tt->tao, computeobjectiveandgradient, x, value, g, tt->tao->user_objgradP);
-  } else {
+  } else if (tt->tao->ops->computeobjective && tt->tao->ops->computegradient) {
     PetscUseTypeMethod(tt->tao, computeobjective, x, value, tt->tao->user_objP);
     PetscUseTypeMethod(tt->tao, computegradient, x, g, tt->tao->user_gradP);
-  }
+  } else SETERRQ(PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoSetObjective() or TaoSetGradient() not set");
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -103,6 +118,7 @@ M*/
 PETSC_INTERN PetscErrorCode TaoTermCreate_Tao(TaoTerm term)
 {
   TaoTerm_Tao *tt;
+
   PetscFunctionBegin;
   PetscCall(PetscNew(&tt));
   term->data                      = (void *)tt;
@@ -112,5 +128,17 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Tao(TaoTerm term)
   term->ops->objectiveandgradient = TaoTermObjectiveAndGradient_Tao;
   term->ops->hessian              = TaoTermHessian_Tao;
   term->ops->view                 = TaoTermView_Tao;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PETSC_INTERN PetscErrorCode TaoTermCreateTao(Tao tao, TaoTerm *term)
+{
+  PetscFunctionBegin;
+  PetscCall(TaoTermCreate(PetscObjectComm((PetscObject)tao), term));
+  PetscCall(TaoTermSetType(*term, TAOTERMTAO));
+  {
+    TaoTerm_Tao *tt = (TaoTerm_Tao *)((*term)->data);
+    tt->tao         = tao; // weak reference, do not increment reference count
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }

@@ -45,10 +45,11 @@ PetscErrorCode TaoInitializePackage(void)
   PetscCall(TaoTermRegisterAll());
   /* Register Events */
   PetscCall(PetscLogEventRegister("TaoSolve", TAO_CLASSID, &TAO_Solve));
-  PetscCall(PetscLogEventRegister("TaoObjectiveEval", TAO_CLASSID, &TAO_ObjectiveEval));
-  PetscCall(PetscLogEventRegister("TaoGradientEval", TAO_CLASSID, &TAO_GradientEval));
-  PetscCall(PetscLogEventRegister("TaoObjGradEval", TAO_CLASSID, &TAO_ObjGradEval));
-  PetscCall(PetscLogEventRegister("TaoHessianEval", TAO_CLASSID, &TAO_HessianEval));
+  PetscCall(PetscLogEventRegister("TaoObjectiveEval", TAO_CLASSID, &TAOTERM_ObjectiveEval));
+  PetscCall(PetscLogEventRegister("TaoGradientEval", TAO_CLASSID, &TAOTERM_GradientEval));
+  PetscCall(PetscLogEventRegister("TaoObjGradEval", TAO_CLASSID, &TAOTERM_ObjGradEval));
+  PetscCall(PetscLogEventRegister("TaoHessianEval", TAO_CLASSID, &TAOTERM_HessianEval));
+  PetscCall(PetscLogEventRegister("TaoResidualEval", TAO_CLASSID, &TAO_ResidualEval));
   PetscCall(PetscLogEventRegister("TaoConstrEval", TAO_CLASSID, &TAO_ConstraintsEval));
   PetscCall(PetscLogEventRegister("TaoJacobianEval", TAO_CLASSID, &TAO_JacobianEval));
   /* Process Info */
