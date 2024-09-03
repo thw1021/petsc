@@ -957,13 +957,11 @@ PetscErrorCode DMViewFromOptions(DM dm, PetscObject obj, const char name[])
 
   Notes:
 
-  'PETSCVIEWERHDF5` type:
-  Using this type with `PETSC_VIEWER_HDF5_PETSC` as the `PetscViewerFormat` one can save multiple `DMPLEX`
+  `PetscViewer` = `PETSCVIEWERHDF5` i.e. HDF5 format can be used with `PETSC_VIEWER_HDF5_PETSC` as the `PetscViewerFormat` to save multiple `DMPLEX`
   meshes in a single HDF5 file. This in turn requires one to name the `DMPLEX` object with `PetscObjectSetName()`
   before saving it with `DMView()` and before loading it with `DMLoad()` for identification of the mesh object.
 
-  `PETSCVIEWEREXODUSII` type:
-  The exodusII format assumes that element blocks (mapped to "Cell sets" labels)
+  `PetscViewer` = `PETSCVIEWEREXODUSII` i.e. ExodusII format assumes that element blocks (mapped to "Cell sets" labels)
   consists of sequentially numbered cells.
 
   If `dm` has been distributed, only the part of the `DM` on MPI rank 0 (including "ghost" cells and vertices) will be written.
