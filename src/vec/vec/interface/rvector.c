@@ -1051,7 +1051,7 @@ PetscErrorCode VecSetValuesBlocked(Vec x, PetscInt ni, const PetscInt ix[], cons
   Notes:
   `VecSetValuesLocal()` sets x[ix[i]] = y[i], for i=0,...,ni-1.
 
-  Calls to `VecSetValues()` with the `INSERT_VALUES` and `ADD_VALUES`
+  Calls to `VecSetValuesLocal()` with the `INSERT_VALUES` and `ADD_VALUES`
   options cannot be mixed without intervening calls to the assembly
   routines.
 
@@ -1082,6 +1082,7 @@ PetscErrorCode VecSetValuesLocal(Vec x, PetscInt ni, const PetscInt ix[], const 
 
   PetscCall(PetscLogEventBegin(VEC_SetValues, x, 0, 0, 0));
   if (!x->ops->setvalueslocal) {
+    if (PetscUnlikely(!x->map->mapping && x->ops->getlocaltoglobalmapping)) PetscUseTypeMethod(x, getlocaltoglobalmapping, &x->map->mapping);
     if (x->map->mapping) {
       if (ni > 128) PetscCall(PetscMalloc1(ni, &lix));
       PetscCall(ISLocalToGlobalMappingApply(x->map->mapping, ni, (PetscInt *)ix, lix));
@@ -1142,6 +1143,7 @@ PetscErrorCode VecSetValuesBlockedLocal(Vec x, PetscInt ni, const PetscInt ix[],
   PetscAssertPointer(y, 4);
   PetscValidType(x, 1);
   PetscCall(PetscLogEventBegin(VEC_SetValues, x, 0, 0, 0));
+  if (PetscUnlikely(!x->map->mapping && x->ops->getlocaltoglobalmapping)) PetscUseTypeMethod(x, getlocaltoglobalmapping, &x->map->mapping);
   if (x->map->mapping) {
     if (ni > 128) PetscCall(PetscMalloc1(ni, &lix));
     PetscCall(ISLocalToGlobalMappingApplyBlock(x->map->mapping, ni, (PetscInt *)ix, lix));

@@ -1192,6 +1192,12 @@ int main(int argc, char **argv)
       suffix: gmg_bddc_lev
       args: -mg_levels_pc_type bddc
 
+  # VTU viewer with empty processes
+  test:
+    requires: !complex
+    suffix: vtu_empty
+    args: -quiet -run_type test -dm_plex_simplex 0 -dm_plex_box_faces 2,2 -vec_view vtk:test.vtu:vtk_vtu -petscspace_degree 1 -petscpartitioner_type simple
+
   # Restarting
   testset:
     suffix: restart
@@ -1394,6 +1400,13 @@ int main(int argc, char **argv)
             -ksp_type richardson -ksp_atol 1.0e-8 -ksp_rtol 0.0 -ksp_norm_type unpreconditioned -ksp_monitor_true_residual \
               -pc_type mg -pc_mg_levels 4 \
               -mg_levels_ksp_type gmres -mg_levels_pc_type ilu -mg_levels_ksp_max_it 10
+
+  # Test cgns writer for ranks with no elements
+  test:
+    suffix: cgns
+    nsize: 5
+    requires: cgns
+    args: -quiet -run_type test -dm_plex_simplex 0 -petscspace_degree 1 -dm_plex_box_faces 2,2 -vec_view cgns:test.cgns -dm_refine 0 -petscpartitioner_type simple
 
   # Full solve tensor
   test:

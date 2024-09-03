@@ -14,6 +14,7 @@ Changes: Development
 .. rubric:: Configure/Build:
 
 - Add ``--with-openmp-kernels``
+- Update to work with python-3.13
 
 .. rubric:: Sys:
 
@@ -24,6 +25,7 @@ Changes: Development
   ``PetscOptionsPushCreateViewerOff()``, ``PetscOptionsPopCreateViewerOff()``, and ``PetscOptionsGetCreateViewerOff()``
 - Add ``PetscObjectContainerCompose()``, and ``PetscObjectContainerQuery()``
 - Add ``size_t`` argument to ``PetscMPIErrorString()``
+- Add ``PetscCallExternalAbort()`` for calling external library functions from functions not returning ``PetscErrorCode``
 
 .. rubric:: Event Logging:
 
@@ -69,8 +71,8 @@ Changes: Development
   preconditioners based on an alternating direction iteration, e.g., setting :math:`M` for
   :math:`P = (A + alpha M) M^{-1} (alpha M + B)`
 - Reuse the result of :math:`T = A_{00}^-1 A_{01}` in ``PCApply_FieldSplit_Schur`` with ``-pc_fieldsplit_schur_fact_type full``
-
 - Change the option database keys for coarsening for ``PCGAMG`` to use the prefix ``-pc_gamg_``, for example ``-pc_gamg_mat_coarsen_type``
+- Add ``PCGAMGSetGraphSymmetrize()`` and ``-pc_gamg_graph_symmetrize`` to control symmetrization when coarsening the graph
 
 .. rubric:: KSP:
 
@@ -87,6 +89,9 @@ Changes: Development
 - Add ``DMAdaptorGetCriterion()`` and ``DMAdaptorSetCriterion()``
 - Add ``DMAdaptorSetOptionsPrefix()``
 - Add Newton's method with arc length continuation: ``SNESNEWTONAL`` with ``SNESNewtonALSetFunction()``, ``SNESNewtonALGetFunction()``, ``SNESNewtonALComputeFunction()``, ``SNESNewtonALGetLoadParameter()``, and ``SNESNewtonALSetCorrectionType()``
+- Add ``SNESNewtonTRSetTolerances()`` and ``SNESNewtonTRSetUpdateParameters()`` to programmatically set trust region parameters
+- Deprecate ``SNESSetTrustRegionTolerance()`` in favor of ``SNESNewtonTRSetTolerances()``
+- Add ``SNESResetCounters()`` to reset counters for linear iterations and function evaluations
 
 .. rubric:: SNESLineSearch:
 
@@ -111,6 +116,7 @@ Changes: Development
 - Add ``DMGetSparseLocalize()`` and ``DMSetSparseLocalize()``
 - Add ``DMGeomModelRegister()``, ``DMGeomModelRegisterAll()``, ``DMGeomModelRegisterDestroy()``, ``DMSnapToGeomModel()``, ``DMSetSnapToGeomModel()`` to support registering geometric models
 - Add ``DMGetOutputSequenceLength()``
+- Add an additional return vector to ``DMCreateMassMatrixLumped()`` to retrieve the local mass lumping
 
 .. rubric:: DMSwarm:
 

@@ -285,7 +285,7 @@ static PetscErrorCode VecAssemblyEnd_MPI_BTS(Vec X)
     PetscFunctionReturn(PETSC_SUCCESS);
   }
 
-  PetscCheck(x->segrecvframe, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Missing segrecvframe! Probably you forgot to call VecAssemblyBegin first");
+  PetscCheck(x->segrecvframe, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Missing segrecvframe! Probably you forgot to call VecAssemblyBegin() first");
   PetscCall(VecGetArray(X, &xarray));
   PetscCall(PetscSegBufferExtractInPlace(x->segrecvframe, &frame));
   PetscCall(PetscMalloc2(4 * x->nrecvranks, &some_indices, x->use_status ? 4 * x->nrecvranks : 0, &some_statuses));
@@ -409,7 +409,6 @@ static PetscErrorCode VecGetLocalToGlobalMapping_MPI_VecGhost(Vec X, ISLocalToGl
   PetscInt       *indices, n, nghost, rstart, i;
   IS              ghostis;
   const PetscInt *ghostidx;
-  MPI_Comm        comm;
 
   PetscFunctionBegin;
   if (X->map->mapping) {
@@ -423,11 +422,10 @@ static PetscErrorCode VecGetLocalToGlobalMapping_MPI_VecGhost(Vec X, ISLocalToGl
   /* set local to global mapping for ghosted vector */
   PetscCall(PetscMalloc1(n + nghost, &indices));
   PetscCall(VecGetOwnershipRange(X, &rstart, NULL));
-  for (i = 0; i < n; i++) { indices[i] = rstart + i; }
-  for (i = 0; i < nghost; i++) { indices[n + i] = ghostidx[i]; }
+  for (i = 0; i < n; i++) indices[i] = rstart + i;
+  PetscCall(PetscArraycpy(indices + n, ghostidx, nghost));
   PetscCall(ISRestoreIndices(ghostis, &ghostidx));
-  PetscCall(PetscObjectGetComm((PetscObject)X, &comm));
-  PetscCall(ISLocalToGlobalMappingCreate(comm, 1, n + nghost, indices, PETSC_OWN_POINTER, &X->map->mapping));
+  PetscCall(ISLocalToGlobalMappingCreate(PETSC_COMM_SELF, 1, n + nghost, indices, PETSC_OWN_POINTER, &X->map->mapping));
   *ltg = X->map->mapping;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
