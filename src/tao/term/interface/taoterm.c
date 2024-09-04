@@ -14,28 +14,27 @@ PetscLogEvent TAOTERM_HessianEval;
   Collective
 
   Input Parameters:
-+ term   - a `TaoTerm`
-- viewer - a `PetscViewer`
+. term - a `TaoTerm`
 
   Level: intermediate
 
 .seealso: [](ch_tao), `Tao`, `TaoTerm`, `TaoTermCreate()`, `TaoTermSetUp()`, `TaoTermSetFromOptions()`, `TaoTermView()`, `TaoTermSetType()`
 @*/
-PetscErrorCode TaoTermDestroy(TaoTerm *taoterm)
+PetscErrorCode TaoTermDestroy(TaoTerm *term)
 {
   PetscFunctionBegin;
-  if (!*taoterm) PetscFunctionReturn(PETSC_SUCCESS);
-  PetscValidHeaderSpecific(*taoterm, TAOTERM_CLASSID, 1);
-  if (--((PetscObject)*taoterm)->refct > 0) {
-    *taoterm = NULL;
+  if (!*term) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscValidHeaderSpecific(*term, TAOTERM_CLASSID, 1);
+  if (--((PetscObject)*term)->refct > 0) {
+    *term = NULL;
     PetscFunctionReturn(PETSC_SUCCESS);
   }
 
-  PetscTryTypeMethod(*taoterm, destroy);
-  PetscCall(VecDestroy(&(*taoterm)->solution_template));
-  PetscCall(VecDestroy(&(*taoterm)->parameter_template));
+  PetscTryTypeMethod(*term, destroy);
+  PetscCall(VecDestroy(&(*term)->solution_template));
+  PetscCall(VecDestroy(&(*term)->parameter_template));
 
-  PetscCall(PetscHeaderDestroy(taoterm));
+  PetscCall(PetscHeaderDestroy(term));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -147,7 +146,8 @@ PetscErrorCode TaoTermSetFromOptions(TaoTerm term)
 
   Level: intermediate
 
-  Note: new types of `TaoTerm` can be created with `TaoTermRegister()`
+  Note:
+  New types of `TaoTerm` can be created with `TaoTermRegister()`
 
 .seealso: [](ch_tao), `Tao`, `TaoTerm`, `TaoTermType`, `TaoTermCreate()`, `TaoTermDestroy()`, `TaoTermView()`, `TaoTermSetUp()`, `TaoTermGetType()`
 @*/
@@ -316,8 +316,8 @@ PetscErrorCode TaoTermGradient(TaoTerm term, Vec x, Vec params, Vec g)
 - params - the parameters $p$ in $f(x; p)$ (may be NULL if the term is not parametric)
 
   Output Parameters:
-+ value  - the value of $f(x; p)$
-- g      - the value of $\nabla_x f(x; p)$
++ value - the value of $f(x; p)$
+- g     - the value of $\nabla_x f(x; p)$
 
   Level: intermediate
 
@@ -338,8 +338,8 @@ PetscErrorCode TaoTermObjectiveAndGradient(TaoTerm term, Vec x, Vec params, Pets
     PetscCheckSameComm(term, 1, params, 3);
     PetscCall(VecLockReadPush(params));
   }
-  PetscAssertPointer(value, 3);
-  PetscValidHeaderSpecific(g, VEC_CLASSID, 4);
+  PetscAssertPointer(value, 4);
+  PetscValidHeaderSpecific(g, VEC_CLASSID, 5);
   PetscCheckSameComm(term, 1, g, 5);
   VecCheckSameSize(x, 2, g, 5);
   if (term->ops->objectiveandgradient) {

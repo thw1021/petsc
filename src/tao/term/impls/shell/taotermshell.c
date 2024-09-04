@@ -15,7 +15,7 @@ struct _n_TaoTerm_Shell {
 + term    - a `TaoTerm` of type `TAOTERMSHELL`
 - destroy - the context destroy function
 
-  Calling sequence of `destroy()`:
+  Calling sequence of `destroy`:
 . ctx - the user context provided in `TaoTermShellSetContext()`
 
   Level: intermediate
@@ -78,7 +78,7 @@ static PetscErrorCode TaoTermShellGetContext_Shell(TaoTerm term, void *ctx)
 
   Input Parameters:
 + term - a `TaoTerm` of type `TAOTERMSHELL`
-- ctx - a user context
+- ctx  - a user context
 
   Level: intermediate
 
@@ -191,11 +191,11 @@ static PetscErrorCode TaoTermDestroy_Shell(TaoTerm term)
 + term      - a `TaoTerm` of type `TAOTERMSHELL`
 - objective - an objective function with the same signature as `TaoTermObjective()`
 
-  Calling sequence of `objective()`:
+  Calling sequence of `objective`:
 + term   - the `TaoTerm`
 . x      - a value of the solution variables
 . params - a value of the parameters (may be NULL if the term is not parametric)
-- values - value that will be returned in `TaoTermObjective()`
+- value  - value that will be returned in `TaoTermObjective()`
 
   Level: intermediate
 
@@ -230,7 +230,7 @@ static PetscErrorCode TaoTermShellSetObjective_Shell(TaoTerm term, PetscErrorCod
 + term     - a `TaoTerm` of type `TAOTERMSHELL`
 - gradient - a gradient function with the same signature as `TaoTermGradient()`
 
-  Calling sequence of `gradient()`:
+  Calling sequence of `gradient`:
 + term   - the `TaoTerm`
 . x      - a value of the solution variables
 . params - a value of the parameters (may be NULL if the term is not parametric)
@@ -269,11 +269,11 @@ static PetscErrorCode TaoTermShellSetGradient_Shell(TaoTerm term, PetscErrorCode
 + term       - a `TaoTerm` of type `TAOTERMSHELL`
 - objandgrad - a function with the same signature as `TaoTermObjectiveAndGradient()`
 
-  Calling sequence of `objandgrad()`:
+  Calling sequence of `objandgrad`:
 + term   - the `TaoTerm`
 . x      - a value of the solution variables
 . params - a value of the parameters (may be NULL if the term is not parametric)
-. values - value that will be returned in `TaoTermObjectiveAndGradeint()`
+. value  - value that will be returned in `TaoTermObjectiveAndGradeint()`
 - g      - gradient vector that will be set in `TaoTermObjectiveAndGradient()`
 
   Level: intermediate
@@ -309,12 +309,12 @@ static PetscErrorCode TaoTermShellSetObjectiveAndGradient_Shell(TaoTerm term, Pe
 + term    - a `TaoTerm` of type `TAOTERMSHELL`
 - hessian - a Hessian function with the same signature as `TaoTermHessian()`
 
-  Calling sequence of `hessian()`:
+  Calling sequence of `hessian`:
 + term   - the `TaoTerm`
 . x      - a value of the solution variables
 . params - a value of the parameters (may be NULL if the term is not parametric)
 . H      - Hessian matrix that will be returned in `TaoTermHessian()`
-. Hpre   - preconditioning matrix that will be returned in `TaoTermHessian()`
+- Hpre   - preconditioning matrix that will be returned in `TaoTermHessian()`
 
   Level: intermediate
 
@@ -349,11 +349,13 @@ static PetscErrorCode TaoTermShellSetHessian_Shell(TaoTerm term, PetscErrorCode 
 + term        - a `TaoTerm` of type `TAOTERMSHELL`
 - proximalmap - a proximal map function with the same signature as `TaoTermProximalMap()`
 
-  Calling sequence of `hessian()`:
+  Calling sequence of `hessian`:
 + term    - the `TaoTerm`
 . params  - a value of the parameters (may be NULL if `term` is not parametric)
+. scale   - the scale of `term`
 . g       - a second `TaoTerm`
-. gparams - a second `TaoTerm`
+. gparams - the parameters of `g`
+. gscale  - the scale of `g`
 - sol     - the proximal map solution that will be returned in `TaoTermProximalMap()`
 
   Level: intermediate
@@ -389,9 +391,9 @@ static PetscErrorCode TaoTermShellSetProximalMap_Shell(TaoTerm term, PetscErrorC
 + term - a `TaoTerm` of type `TAOTERMSHELL`
 - view - a function with the same signature as `TaoTermView()`
 
-  Calling sequence of `view()`:
-+ term    - the `TaoTerm`
-- params  - a `PetscViewer`
+  Calling sequence of `view`:
++ term   - the `TaoTerm`
+- viewer - a `PetscViewer`
 
   Level: intermediate
 
