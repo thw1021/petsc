@@ -955,7 +955,7 @@ PetscErrorCode PCSetFailedReason(PC pc, PCFailedReason reason)
 /*@
   PCGetFailedReason - Gets the reason a `PCSetUp()` failed or `PC_NOERROR` if it did not fail
 
-  Logically Collective
+  Logically Collective after a call to `KSPCheckDot()` or  `KSPCheckNorm()` inside a `KSPSolve()`, or after `PCReduceFailedReason()`
 
   Input Parameter:
 . pc - the preconditioner context
@@ -966,40 +966,14 @@ PetscErrorCode PCSetFailedReason(PC pc, PCFailedReason reason)
   Level: advanced
 
   Note:
-  This is the maximum over reason over all ranks in the PC communicator. It is only valid after
+  This is the maximum over reason over all ranks in the `PC` communicator. It is only valid after
   a call `KSPCheckDot()` or  `KSPCheckNorm()` inside a `KSPSolve()` or `PCReduceFailedReason()`.
-  It is not valid immediately after a `PCSetUp()` or `PCApply()`, then use `PCGetFailedReasonRank()`
 
-.seealso: [](ch_ksp), `PC`, `PCCreate()`, `PCApply()`, `PCDestroy()`, `PCGetFailedReasonRank()`, `PCSetFailedReason()`
+  Otherwise it returns the local value,.
+
+.seealso: [](ch_ksp), `PC`, `PCCreate()`, `PCApply()`, `PCDestroy()`, `PCSetFailedReason()`
 @*/
 PetscErrorCode PCGetFailedReason(PC pc, PCFailedReason *reason)
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
-  if (pc->setupcalled < 0) *reason = (PCFailedReason)pc->setupcalled;
-  else *reason = pc->failedreason;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@
-  PCGetFailedReasonRank - Gets the reason a `PCSetUp()` failed or `PC_NOERROR` if it did not fail on this MPI rank
-
-  Not Collective
-
-  Input Parameter:
-. pc - the preconditioner context
-
-  Output Parameter:
-. reason - the reason it failed
-
-  Level: advanced
-
-  Note:
-  Different processes may have different reasons or no reason, see `PCGetFailedReason()`
-
-.seealso: [](ch_ksp), `PC`, `PCCreate()`, `PCApply()`, `PCDestroy()`, `PCGetFailedReason()`, `PCSetFailedReason()`, `PCReduceFailedReason()`
-@*/
-PetscErrorCode PCGetFailedReasonRank(PC pc, PCFailedReason *reason)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);

@@ -62,6 +62,8 @@ important. We use several conventions
 
 #. Typedefs for functions should end in ``Fn`` as in, for example, ``SNESFunctionFn``.
 
+.. _stylePetscCount
+
 PETSc and standard datatypes
 ----------------------------
 
@@ -97,6 +99,12 @@ PETSc and standard datatypes
   simply to prevent a compiler warning. Use the appropriate PETSc cast function unless you
   absolutely know the value will fit in lower precision. Better safe to use the explicit
   cast than sorry later.
+
+# MPI 4.0 supports the use of ``MPI_Count`` (large count) for many MPI functions that previously used ``int`` in a new API where the MPI function
+  names end in ``_c``. Since not all installed MPI implementations have such support, use  ``MPIU_XXX()`` routines
+  that use ``PetscCount`` for count arguments and use the large count MPI versions when possible.
+  When not possible they first check the size of the input count arguments and error if they
+  will not fit in the MPI required ``int``, if they fit then the standard MPI functions are automatically called.
 
 Coding Conventions and Style
 ----------------------------
