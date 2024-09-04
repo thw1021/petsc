@@ -524,22 +524,22 @@ typedef struct _p_TaoTerm *TaoTerm;
   TaoTermType - String with the name of a `TaoTerm` method
 
   Values:
-+ `TAOTERMTAO`        - uses the callback functions set for the outer containing `Tao`, e.g. `TaoSetObjective()`
-. `TAOTERMSHELL`      - a container for arbitrary user-defined callbacks
-. `TAOTERMSUM`        - a sum of multiple other `TaoTerm`s
-. `TAOTERMDM`         - a term whose value and operations are determined by a `DM`
-. `TAOTERML1`         - $\|x - \theta\|_1$, where $\theta$ are the `TaoTerm` parameters
-. `TAOTERMLINF`       - $\|x - \theta\|_\infty$
-. `TAOTERML2SQUARED`  - $\|x - \theta\|_2^2$
-. `TAOTERMQUADRATIC`  - a quadratic form $(x - \theta)^T Q (x - \theta)$ for a matrix $Q$
-- `TAOTERMKL`         - the KL divergence $D_{KL}(x \| \theta)$
++ `TAOTERMTAOCALLBACKS` - uses the callback functions set for the outer containing `Tao`, e.g. `TaoSetObjective()`
+. `TAOTERMSHELL`        - a container for arbitrary user-defined callbacks
+. `TAOTERMSUM`          - a sum of multiple other `TaoTerm`s
+. `TAOTERMDM`           - a term whose value and operations are determined by a `DM`
+. `TAOTERML1`           - $\|x - \theta\|_1$, where $\theta$ are the `TaoTerm` parameters
+. `TAOTERMLINF`         - $\|x - \theta\|_\infty$
+. `TAOTERML2SQUARED`    - $\|x - \theta\|_2^2$
+. `TAOTERMQUADRATIC`    - a quadratic form $(x - \theta)^T Q (x - \theta)$ for a matrix $Q$
+- `TAOTERMKL`           - the KL divergence $D_{KL}(x \| \theta)$
 
   Level: advanced
 
 .seealso: [](doc_taosolve), [](ch_tao), `TaoTerm`, `TaoTermCreate()`, `TaoTermSetType()`
 J*/
 typedef const char *TaoTermType;
-#define TAOTERMTAO           "tao"
+#define TAOTERMTAOCALLBACKS  "taocallbacks"
 #define TAOTERMSHELL         "shell"
 #define TAOTERMSUM           "sum"
 #define TAOTERMDM            "dm"

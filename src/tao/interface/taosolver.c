@@ -130,7 +130,7 @@ PetscErrorCode TaoCreate(MPI_Comm comm, Tao *newtao)
 
   tao->hist_reset = PETSC_TRUE;
 
-  PetscCall(TaoTermCreateTao(tao, &tao->term));
+  PetscCall(TaoTermCreateTaoCallbacks(tao, &tao->term));
   PetscCall(TaoResetStatistics(tao));
   *newtao = tao;
   PetscFunctionReturn(PETSC_SUCCESS);

@@ -4,7 +4,7 @@ PetscBool         TaoTermRegisterAllCalled = PETSC_FALSE;
 PetscFunctionList TaoTermList              = NULL;
 
 PETSC_INTERN PetscErrorCode TaoTermCreate_Shell(TaoTerm);
-PETSC_INTERN PetscErrorCode TaoTermCreate_Tao(TaoTerm);
+PETSC_INTERN PetscErrorCode TaoTermCreate_TaoCallbacks(TaoTerm);
 
 /*@C
   TaoTermRegister - Register an impementation of `TaoTerm`
@@ -46,6 +46,6 @@ PETSC_INTERN PetscErrorCode TaoTermRegisterAll(void)
   if (TaoTermRegisterAllCalled) PetscFunctionReturn(PETSC_SUCCESS);
   TaoTermRegisterAllCalled = PETSC_TRUE;
   PetscCall(TaoTermRegister(TAOTERMSHELL, TaoTermCreate_Shell));
-  PetscCall(TaoTermRegister(TAOTERMTAO, TaoTermCreate_Tao));
+  PetscCall(TaoTermRegister(TAOTERMTAOCALLBACKS, TaoTermCreate_TaoCallbacks));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

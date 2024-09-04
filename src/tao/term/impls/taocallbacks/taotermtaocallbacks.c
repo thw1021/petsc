@@ -1,14 +1,20 @@
 #include <petsc/private/taoimpl.h> /*I "petsctao.h" I*/
 
-typedef struct _n_TaoTerm_Tao TaoTerm_Tao;
+typedef struct _n_TaoTerm_TaoCallbacks TaoTerm_TaoCallbacks;
 
-struct _n_TaoTerm_Tao {
+struct _n_TaoTerm_TaoCallbacks {
   Tao tao;
 };
 
-static PetscErrorCode TaoTermDestroy_Tao(TaoTerm term)
+#define PetscCheckTaoTermCallbacksValid(term, tt, params) \
+  do { \
+    PetscCheck((params) == NULL, PetscObjectComm((PetscObject)(term)), PETSC_ERR_ARG_INCOMP, "TAOTERMTAOCALLBACKS does not accept a vector of parameters"); \
+    PetscCheck((tt)->tao != NULL, PetscObjectComm((PetscObject)(term)), PETSC_ERR_ARG_WRONGSTATE, "TAOTERMTAOCALLBACKS does not have an outer Tao"); \
+  } while (0)
+
+static PetscErrorCode TaoTermDestroy_TaoCallbacks(TaoTerm term)
 {
-  TaoTerm_Tao *tt = (TaoTerm_Tao *)term->data;
+  TaoTerm_TaoCallbacks *tt = (TaoTerm_TaoCallbacks *)term->data;
 
   PetscFunctionBegin;
   // tt->tao is a weak reference, we do not destroy it
@@ -17,13 +23,12 @@ static PetscErrorCode TaoTermDestroy_Tao(TaoTerm term)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoTermObjective_Tao(TaoTerm term, Vec x, Vec params, PetscReal *value)
+static PetscErrorCode TaoTermObjective_TaoCallbacks(TaoTerm term, Vec x, Vec params, PetscReal *value)
 {
-  TaoTerm_Tao *tt = (TaoTerm_Tao *)term->data;
+  TaoTerm_TaoCallbacks *tt = (TaoTerm_TaoCallbacks *)term->data;
 
   PetscFunctionBegin;
-  PetscCheck(params == NULL, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_INCOMP, "TAOTERMTAO does not accept a vector of parameters");
-  PetscCheck(tt->tao != NULL, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TAOTERMTAO does not have an outer Tao");
+  PetscCheckTaoTermCallbacksValid(term, tt, params);
   if (tt->tao->ops->computeobjective) {
     PetscUseTypeMethod(tt->tao, computeobjective, x, value, tt->tao->user_objP);
   } else if (tt->tao->ops->computeobjectiveandgradient) {
@@ -37,13 +42,12 @@ static PetscErrorCode TaoTermObjective_Tao(TaoTerm term, Vec x, Vec params, Pets
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoTermGradient_Tao(TaoTerm term, Vec x, Vec params, Vec g)
+static PetscErrorCode TaoTermGradient_TaoCallbacks(TaoTerm term, Vec x, Vec params, Vec g)
 {
-  TaoTerm_Tao *tt = (TaoTerm_Tao *)term->data;
+  TaoTerm_TaoCallbacks *tt = (TaoTerm_TaoCallbacks *)term->data;
 
   PetscFunctionBegin;
-  PetscCheck(params == NULL, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_INCOMP, "TAOTERMTAO does not accept a vector of parameters");
-  PetscCheck(tt->tao != NULL, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TAOTERMTAO does not have an outer Tao");
+  PetscCheckTaoTermCallbacksValid(term, tt, params);
   if (tt->tao->ops->computegradient) PetscUseTypeMethod(tt->tao, computegradient, x, g, tt->tao->user_gradP);
   else if (tt->tao->ops->computeobjectiveandgradient) {
     PetscReal dummy;
@@ -53,13 +57,12 @@ static PetscErrorCode TaoTermGradient_Tao(TaoTerm term, Vec x, Vec params, Vec g
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoTermObjectiveAndGradient_Tao(TaoTerm term, Vec x, Vec params, PetscReal *value, Vec g)
+static PetscErrorCode TaoTermObjectiveAndGradient_TaoCallbacks(TaoTerm term, Vec x, Vec params, PetscReal *value, Vec g)
 {
-  TaoTerm_Tao *tt = (TaoTerm_Tao *)term->data;
+  TaoTerm_TaoCallbacks *tt = (TaoTerm_TaoCallbacks *)term->data;
 
   PetscFunctionBegin;
-  PetscCheck(params == NULL, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_INCOMP, "TAOTERMTAO does not accept a vector of parameters");
-  PetscCheck(tt->tao != NULL, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TAOTERMTAO does not have an outer Tao");
+  PetscCheckTaoTermCallbacksValid(term, tt, params);
   if (tt->tao->ops->computeobjectiveandgradient) {
     PetscUseTypeMethod(tt->tao, computeobjectiveandgradient, x, value, g, tt->tao->user_objgradP);
   } else if (tt->tao->ops->computeobjective && tt->tao->ops->computegradient) {
@@ -69,21 +72,20 @@ static PetscErrorCode TaoTermObjectiveAndGradient_Tao(TaoTerm term, Vec x, Vec p
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoTermHessian_Tao(TaoTerm term, Vec x, Vec params, Mat H, Mat Hpre)
+static PetscErrorCode TaoTermHessian_TaoCallbacks(TaoTerm term, Vec x, Vec params, Mat H, Mat Hpre)
 {
-  TaoTerm_Tao *tt = (TaoTerm_Tao *)term->data;
+  TaoTerm_TaoCallbacks *tt = (TaoTerm_TaoCallbacks *)term->data;
 
   PetscFunctionBegin;
-  PetscCheck(params == NULL, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_INCOMP, "TAOTERMTAO does not accept a vector of parameters");
-  PetscCheck(tt->tao != NULL, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TAOTERMTAO does not have an outer Tao");
+  PetscCheckTaoTermCallbacksValid(term, tt, params);
   PetscUseTypeMethod(tt->tao, computehessian, x, H, Hpre, tt->tao->user_hessP);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoTermView_Tao(TaoTerm term, PetscViewer viewer)
+static PetscErrorCode TaoTermView_TaoCallbacks(TaoTerm term, PetscViewer viewer)
 {
-  TaoTerm_Tao *tt = (TaoTerm_Tao *)term->data;
-  PetscBool    iascii;
+  TaoTerm_TaoCallbacks *tt = (TaoTerm_TaoCallbacks *)term->data;
+  PetscBool             iascii;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
@@ -101,7 +103,7 @@ static PetscErrorCode TaoTermView_Tao(TaoTerm term, PetscViewer viewer)
 }
 
 /*MC
-  TAOTERMTAO - A `TaoTerm` implementation that accesses the callbacks that have been set to an outer `Tao`, e.g. `TaoSetObjective()`.
+  TAOTERMTAOCALLBACKS - A `TaoTerm` implementation that accesses the callbacks that have been set to an outer `Tao`, e.g. `TaoSetObjective()`.
 
   Level: developer
 
@@ -109,36 +111,36 @@ static PetscErrorCode TaoTermView_Tao(TaoTerm term, PetscViewer viewer)
   If you are interested in creating you own term, you shouldn't use this. Use `TAOTERMSHELL` or create your own
   implementation of `TaoTerm` with `TaoTermRegister()`.
 
-  The `params` argument of `TaoTerm` functions will always be `NULL` for a `TAOTERMTAO`.
+  The `params` argument of `TaoTerm` functions will always be `NULL` for a `TAOTERMTAOCALLBACKS`.
 
-  Developer Note: a `TAOTERMTAO` cannot be shared between `Tao`s.
+  Developer Note: a `TAOTERMTAOCALLBACKS` cannot be shared between `Tao`s.
 
 .seealso: [](ch_tao), `Tao`, `TaoTerm`
 M*/
-PETSC_INTERN PetscErrorCode TaoTermCreate_Tao(TaoTerm term)
+PETSC_INTERN PetscErrorCode TaoTermCreate_TaoCallbacks(TaoTerm term)
 {
-  TaoTerm_Tao *tt;
+  TaoTerm_TaoCallbacks *tt;
 
   PetscFunctionBegin;
   PetscCall(PetscNew(&tt));
   term->data                      = (void *)tt;
-  term->ops->destroy              = TaoTermDestroy_Tao;
-  term->ops->objective            = TaoTermObjective_Tao;
-  term->ops->gradient             = TaoTermGradient_Tao;
-  term->ops->objectiveandgradient = TaoTermObjectiveAndGradient_Tao;
-  term->ops->hessian              = TaoTermHessian_Tao;
-  term->ops->view                 = TaoTermView_Tao;
+  term->ops->destroy              = TaoTermDestroy_TaoCallbacks;
+  term->ops->objective            = TaoTermObjective_TaoCallbacks;
+  term->ops->gradient             = TaoTermGradient_TaoCallbacks;
+  term->ops->objectiveandgradient = TaoTermObjectiveAndGradient_TaoCallbacks;
+  term->ops->hessian              = TaoTermHessian_TaoCallbacks;
+  term->ops->view                 = TaoTermView_TaoCallbacks;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode TaoTermCreateTao(Tao tao, TaoTerm *term)
+PETSC_INTERN PetscErrorCode TaoTermCreateTaoCallbacks(Tao tao, TaoTerm *term)
 {
   PetscFunctionBegin;
   PetscCall(TaoTermCreate(PetscObjectComm((PetscObject)tao), term));
-  PetscCall(TaoTermSetType(*term, TAOTERMTAO));
+  PetscCall(TaoTermSetType(*term, TAOTERMTAOCALLBACKS));
   {
-    TaoTerm_Tao *tt = (TaoTerm_Tao *)((*term)->data);
-    tt->tao         = tao; // weak reference, do not increment reference count
+    TaoTerm_TaoCallbacks *tt = (TaoTerm_TaoCallbacks *)((*term)->data);
+    tt->tao                  = tao; // weak reference, do not increment reference count
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
