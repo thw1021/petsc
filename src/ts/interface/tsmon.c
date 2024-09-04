@@ -769,13 +769,13 @@ PetscErrorCode TSMonitorSolution(TS ts, PetscInt step, PetscReal ptime, Vec u, P
   Collective
 
   Input Parameters:
-+ ts               - the `TS` context
-. step             - current time-step
-. ptime            - current time
-. u                - current state
-- filenametemplate - string containing a format specifier for the integer time step (e.g. %03" PetscInt_FMT ")
++ ts    - the `TS` context
+. step  - current time-step
+. ptime - current time
+. u     - current state
+- ctx   - monitor context
 
-  Level: intermediate
+  Level: developer
 
   Notes:
   The VTK format does not allow writing multiple time steps in the same file, therefore a different file will be written for each time step.
@@ -786,39 +786,42 @@ PetscErrorCode TSMonitorSolution(TS ts, PetscInt step, PetscReal ptime, Vec u, P
 
 .seealso: [](ch_ts), `TS`, `TSMonitorSet()`, `TSMonitorDefault()`, `VecView()`
 @*/
-PetscErrorCode TSMonitorSolutionVTK(TS ts, PetscInt step, PetscReal ptime, Vec u, void *filenametemplate)
+PetscErrorCode TSMonitorSolutionVTK(TS ts, PetscInt step, PetscReal ptime, Vec u, TSMonitorVTKCtx ctx)
 {
   char        filename[PETSC_MAX_PATH_LEN];
   PetscViewer viewer;
 
   PetscFunctionBegin;
   if (step < 0) PetscFunctionReturn(PETSC_SUCCESS); /* -1 indicates interpolated solution */
-  PetscCall(PetscSNPrintf(filename, sizeof(filename), (const char *)filenametemplate, step));
-  PetscCall(PetscViewerVTKOpen(PetscObjectComm((PetscObject)ts), filename, FILE_MODE_WRITE, &viewer));
-  PetscCall(VecView(u, viewer));
-  PetscCall(PetscViewerDestroy(&viewer));
+  if (((ctx->interval > 0) && (!(step % ctx->interval))) || (ctx->interval && ts->reason)) {
+    PetscCall(PetscSNPrintf(filename, sizeof(filename), (const char *)ctx->filenametemplate, step));
+    PetscCall(PetscViewerVTKOpen(PetscObjectComm((PetscObject)ts), filename, FILE_MODE_WRITE, &viewer));
+    PetscCall(VecView(u, viewer));
+    PetscCall(PetscViewerDestroy(&viewer));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-  TSMonitorSolutionVTKDestroy - Destroy filename template string created for use with `TSMonitorSolutionVTK()`
+  TSMonitorSolutionVTKDestroy - Destroy the monitor context created for use with `TSMonitorSolutionVTK()`
 
   Not Collective
 
   Input Parameter:
-. filenametemplate - string containing a format specifier for the integer time step (e.g. %03" PetscInt_FMT ")
+. ctx - the monitor context
 
-  Level: intermediate
+  Level: developer
 
   Note:
   This function is normally passed to `TSMonitorSet()` along with `TSMonitorSolutionVTK()`.
 
 .seealso: [](ch_ts), `TSMonitorSet()`, `TSMonitorSolutionVTK()`
 @*/
-PetscErrorCode TSMonitorSolutionVTKDestroy(void *filenametemplate)
+PetscErrorCode TSMonitorSolutionVTKDestroy(TSMonitorVTKCtx *ctx)
 {
   PetscFunctionBegin;
-  PetscCall(PetscFree(*(char **)filenametemplate));
+  PetscCall(PetscFree((*ctx)->filenametemplate));
+  PetscCall(PetscFree(*ctx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
