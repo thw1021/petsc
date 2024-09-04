@@ -149,7 +149,7 @@ PetscErrorCode TaoTermSetFromOptions(TaoTerm term)
 
   Note: new types of `TaoTerm` can be created with `TaoTermRegister()`
 
-.seealso: [](ch_tao), `Tao`, `TaoTerm`, `TaoTermType`, `TaoTermCreate()`, `TaoTermDestroy()`, `TaoTermView()`, `TaoTermSetUp()`, `TaoTermSetType()`
+.seealso: [](ch_tao), `Tao`, `TaoTerm`, `TaoTermType`, `TaoTermCreate()`, `TaoTermDestroy()`, `TaoTermView()`, `TaoTermSetUp()`, `TaoTermGetType()`
 @*/
 PetscErrorCode TaoTermSetType(TaoTerm term, TaoTermType type)
 {
@@ -179,7 +179,7 @@ PetscErrorCode TaoTermSetType(TaoTerm term, TaoTermType type)
 
   Collective
 
-  Intput Parameter:
+  Input Parameter:
 . comm - communicator for MPI processes that compute the term
 
   Output Parameter:
@@ -212,7 +212,7 @@ PetscErrorCode TaoTermCreate(MPI_Comm comm, TaoTerm *term)
 - params - the parameters $p$ in $f(x; p)$ (may be NULL if the term is not parametric)
 
   Output Parameter:
-. value  - the value of $f(x; p)$
+. value - the value of $f(x; p)$
 
   Level: intermediate
 
@@ -265,7 +265,7 @@ PetscErrorCode TaoTermObjective(TaoTerm term, Vec x, Vec params, PetscReal *valu
 - params - the parameters $p$ in $f(x; p)$ (may be NULL if the term is not parametric)
 
   Output Parameter:
-. g      -  the value of $\nabla_x f(x; p)$
+. g - the value of $\nabla_x f(x; p)$
 
   Level: intermediate
 
@@ -316,8 +316,8 @@ PetscErrorCode TaoTermGradient(TaoTerm term, Vec x, Vec params, Vec g)
 - params - the parameters $p$ in $f(x; p)$ (may be NULL if the term is not parametric)
 
   Output Parameters:
-+ value  -  the value of $f(x; p)$
-- g      -  the value of $\nabla_x f(x; p)$
++ value  - the value of $f(x; p)$
+- g      - the value of $\nabla_x f(x; p)$
 
   Level: intermediate
 
@@ -374,8 +374,8 @@ PetscErrorCode TaoTermObjectiveAndGradient(TaoTerm term, Vec x, Vec params, Pets
 - params - the parameters $p$ in $f(x; p)$ (may be NULL if the term is not parametric)
 
   Output Parameters:
-  H    - Hessian matrix
-- Hpre - Precondiitoning matrix
++ H    - Hessian matrix $\nabla_x^2 f(x;p)$
+- Hpre - precondiitoning matrix
 
   Level: intermediate
 

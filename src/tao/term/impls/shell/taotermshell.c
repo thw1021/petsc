@@ -6,7 +6,7 @@ struct _n_TaoTerm_Shell {
   PetscContainer ctxcontainer;
 };
 
-/*@
+/*@C
   TaoTermShellSetContextDestroy - Set a method to destroy user context resources when a `TAOTERMSHELL` is destroyed
 
   Logically collective
@@ -15,9 +15,12 @@ struct _n_TaoTerm_Shell {
 + term    - a `TaoTerm` of type `TAOTERMSHELL`
 - destroy - the context destroy function
 
+  Calling sequence of `destroy()`:
+. ctx - the user context provided in `TaoTermShellSetContext()`
+
   Level: intermediate
 
-.seealso: [](ch_tao), `Tao`, `TaoTerm`, `TAOTERMSHELL`, `TaoTermShellSetContext()`, `TaoTermShelGetContext()`
+.seealso: [](ch_tao), `Tao`, `TaoTerm`, `TAOTERMSHELL`, `TaoTermShellSetContext()`, `TaoTermShellGetContext()`
 @*/
 PetscErrorCode TaoTermShellSetContextDestroy(TaoTerm term, PetscErrorCode (*destroy)(void *ctx))
 {
@@ -43,7 +46,7 @@ static PetscErrorCode TaoTermShellSetContextDestroy_Shell(TaoTerm mat, PetscErro
 . term - a `TaoTerm` of type `TAOTERMSHELL`
 
   Output Parameter:
-. ctx  - a user context
+. ctx - a user context
 
   Level: intermediate
 
@@ -75,7 +78,7 @@ static PetscErrorCode TaoTermShellGetContext_Shell(TaoTerm term, void *ctx)
 
   Input Parameters:
 + term - a `TaoTerm` of type `TAOTERMSHELL`
-- ctx  - a user context
+- ctx - a user context
 
   Level: intermediate
 
@@ -179,7 +182,7 @@ static PetscErrorCode TaoTermDestroy_Shell(TaoTerm term)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@
+/*@C
   TaoTermShellSetObjective - Set the objective function of a `TAOTERMSHELL`
 
   Logically collective
@@ -187,6 +190,12 @@ static PetscErrorCode TaoTermDestroy_Shell(TaoTerm term)
   Input Parameters:
 + term      - a `TaoTerm` of type `TAOTERMSHELL`
 - objective - an objective function with the same signature as `TaoTermObjective()`
+
+  Calling sequence of `objective()`:
++ term   - the `TaoTerm`
+. x      - a value of the solution variables
+. params - a value of the parameters (may be NULL if the term is not parametric)
+- values - value that will be returned in `TaoTermObjective()`
 
   Level: intermediate
 
@@ -212,7 +221,7 @@ static PetscErrorCode TaoTermShellSetObjective_Shell(TaoTerm term, PetscErrorCod
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@
+/*@C
   TaoTermShellSetGradient - Set the gradient function of a `TAOTERMSHELL`
 
   Logically collective
@@ -220,6 +229,12 @@ static PetscErrorCode TaoTermShellSetObjective_Shell(TaoTerm term, PetscErrorCod
   Input Parameters:
 + term     - a `TaoTerm` of type `TAOTERMSHELL`
 - gradient - a gradient function with the same signature as `TaoTermGradient()`
+
+  Calling sequence of `gradient()`:
++ term   - the `TaoTerm`
+. x      - a value of the solution variables
+. params - a value of the parameters (may be NULL if the term is not parametric)
+- g      - gradient vector that will be set in `TaoTermGradient()`
 
   Level: intermediate
 
@@ -245,7 +260,7 @@ static PetscErrorCode TaoTermShellSetGradient_Shell(TaoTerm term, PetscErrorCode
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@
+/*@C
   TaoTermShellSetObjectiveAndGradient - Set the gradient function of a `TAOTERMSHELL`
 
   Logically collective
@@ -253,6 +268,13 @@ static PetscErrorCode TaoTermShellSetGradient_Shell(TaoTerm term, PetscErrorCode
   Input Parameters:
 + term       - a `TaoTerm` of type `TAOTERMSHELL`
 - objandgrad - a function with the same signature as `TaoTermObjectiveAndGradient()`
+
+  Calling sequence of `objandgrad()`:
++ term   - the `TaoTerm`
+. x      - a value of the solution variables
+. params - a value of the parameters (may be NULL if the term is not parametric)
+. values - value that will be returned in `TaoTermObjectiveAndGradeint()`
+- g      - gradient vector that will be set in `TaoTermObjectiveAndGradient()`
 
   Level: intermediate
 
@@ -278,7 +300,7 @@ static PetscErrorCode TaoTermShellSetObjectiveAndGradient_Shell(TaoTerm term, Pe
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@
+/*@C
   TaoTermShellSetHessian - Set the Hessian function of a `TAOTERMSHELL`
 
   Logically collective
@@ -286,6 +308,13 @@ static PetscErrorCode TaoTermShellSetObjectiveAndGradient_Shell(TaoTerm term, Pe
   Input Parameters:
 + term    - a `TaoTerm` of type `TAOTERMSHELL`
 - hessian - a Hessian function with the same signature as `TaoTermHessian()`
+
+  Calling sequence of `hessian()`:
++ term   - the `TaoTerm`
+. x      - a value of the solution variables
+. params - a value of the parameters (may be NULL if the term is not parametric)
+. H      - Hessian matrix that will be returned in `TaoTermHessian()`
+. Hpre   - preconditioning matrix that will be returned in `TaoTermHessian()`
 
   Level: intermediate
 
@@ -311,7 +340,7 @@ static PetscErrorCode TaoTermShellSetHessian_Shell(TaoTerm term, PetscErrorCode 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@
+/*@C
   TaoTermShellSetProximalMap - Set the proximal map function of a `TAOTERMSHELL`
 
   Logically collective
@@ -319,6 +348,13 @@ static PetscErrorCode TaoTermShellSetHessian_Shell(TaoTerm term, PetscErrorCode 
   Input Parameters:
 + term        - a `TaoTerm` of type `TAOTERMSHELL`
 - proximalmap - a proximal map function with the same signature as `TaoTermProximalMap()`
+
+  Calling sequence of `hessian()`:
++ term    - the `TaoTerm`
+. params  - a value of the parameters (may be NULL if `term` is not parametric)
+. g       - a second `TaoTerm`
+. gparams - a second `TaoTerm`
+- sol     - the proximal map solution that will be returned in `TaoTermProximalMap()`
 
   Level: intermediate
 
@@ -329,7 +365,7 @@ static PetscErrorCode TaoTermShellSetHessian_Shell(TaoTerm term, PetscErrorCode 
           `TaoTermShellSetHessian()`,
           `TaoTermShellSetView()`,
 @*/
-PetscErrorCode TaoTermShellSetProximalMap(TaoTerm term, PetscErrorCode (*proximalmap)(TaoTerm f, Vec fparams, PetscReal fscale, TaoTerm g, Vec gparams, PetscReal gscale, Vec sol))
+PetscErrorCode TaoTermShellSetProximalMap(TaoTerm term, PetscErrorCode (*proximalmap)(TaoTerm term, Vec params, PetscReal scale, TaoTerm g, Vec gparams, PetscReal gscale, Vec sol))
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
@@ -344,7 +380,7 @@ static PetscErrorCode TaoTermShellSetProximalMap_Shell(TaoTerm term, PetscErrorC
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@
+/*@C
   TaoTermShellSetView - Set the view function of a `TAOTERMSHELL`
 
   Logically collective
@@ -352,6 +388,10 @@ static PetscErrorCode TaoTermShellSetProximalMap_Shell(TaoTerm term, PetscErrorC
   Input Parameters:
 + term - a `TaoTerm` of type `TAOTERMSHELL`
 - view - a function with the same signature as `TaoTermView()`
+
+  Calling sequence of `view()`:
++ term    - the `TaoTerm`
+- params  - a `PetscViewer`
 
   Level: intermediate
 

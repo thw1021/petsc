@@ -30,13 +30,13 @@ static PetscErrorCode TaoTermObjective_TaoCallbacks(TaoTerm term, Vec x, Vec par
   PetscFunctionBegin;
   PetscCheckTaoTermCallbacksValid(term, tt, params);
   if (tt->tao->ops->computeobjective) {
-    PetscUseTypeMethod(tt->tao, computeobjective, x, value, tt->tao->user_objP);
+    PetscCallBack("Tao callback objective", (*tt->tao->ops->computeobjective)(tt->tao, x, value, tt->tao->user_objP));
   } else if (tt->tao->ops->computeobjectiveandgradient) {
     Vec dummy;
 
     PetscCall(PetscInfo(tt->tao, "Duplicating variable vector in order to call func/grad routine\n"));
     PetscCall(VecDuplicate(x, &dummy));
-    PetscUseTypeMethod(tt->tao, computeobjectiveandgradient, x, value, dummy, tt->tao->user_objgradP);
+    PetscCallBack("Tao callback objective/gradient", (*tt->tao->ops->computeobjectiveandgradient)(tt->tao, x, value, dummy, tt->tao->user_objgradP));
     PetscCall(VecDestroy(&dummy));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -48,11 +48,12 @@ static PetscErrorCode TaoTermGradient_TaoCallbacks(TaoTerm term, Vec x, Vec para
 
   PetscFunctionBegin;
   PetscCheckTaoTermCallbacksValid(term, tt, params);
-  if (tt->tao->ops->computegradient) PetscUseTypeMethod(tt->tao, computegradient, x, g, tt->tao->user_gradP);
-  else if (tt->tao->ops->computeobjectiveandgradient) {
+  if (tt->tao->ops->computegradient) {
+    PetscCallBack("Tao callback gradient", (*tt->tao->ops->computegradient)(tt->tao, x, g, tt->tao->user_gradP));
+  } else if (tt->tao->ops->computeobjectiveandgradient) {
     PetscReal dummy;
 
-    PetscUseTypeMethod(tt->tao, computeobjectiveandgradient, x, &dummy, g, tt->tao->user_objgradP);
+    PetscCallBack("Tao callback objective/gradient", (*tt->tao->ops->computeobjectiveandgradient)(tt->tao, x, &dummy, g, tt->tao->user_objgradP));
   } else SETERRQ(PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoSetGradient() has not been called");
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -64,10 +65,11 @@ static PetscErrorCode TaoTermObjectiveAndGradient_TaoCallbacks(TaoTerm term, Vec
   PetscFunctionBegin;
   PetscCheckTaoTermCallbacksValid(term, tt, params);
   if (tt->tao->ops->computeobjectiveandgradient) {
+    PetscCallBack("Tao callback objective/gradient", (*tt->tao->ops->computeobjectiveandgradient)(tt->tao, x, value, g, tt->tao->user_objgradP));
     PetscUseTypeMethod(tt->tao, computeobjectiveandgradient, x, value, g, tt->tao->user_objgradP);
   } else if (tt->tao->ops->computeobjective && tt->tao->ops->computegradient) {
-    PetscUseTypeMethod(tt->tao, computeobjective, x, value, tt->tao->user_objP);
-    PetscUseTypeMethod(tt->tao, computegradient, x, g, tt->tao->user_gradP);
+    PetscCallBack("Tao callback objective", (*tt->tao->ops->computeobjective)(tt->tao, x, value, tt->tao->user_objP));
+    PetscCallBack("Tao callback gradient", (*tt->tao->ops->computegradient)(tt->tao, x, g, tt->tao->user_gradP));
   } else SETERRQ(PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoSetObjective() or TaoSetGradient() not set");
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -78,7 +80,8 @@ static PetscErrorCode TaoTermHessian_TaoCallbacks(TaoTerm term, Vec x, Vec param
 
   PetscFunctionBegin;
   PetscCheckTaoTermCallbacksValid(term, tt, params);
-  PetscUseTypeMethod(tt->tao, computehessian, x, H, Hpre, tt->tao->user_hessP);
+  PetscCheck(tt->tao->ops->computehessian, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoSetHessian() not called");
+  PetscCallBack("Tao callback Hessian", (*tt->tao->ops->computehessian)(tt->tao, x, H, Hpre, tt->tao->user_hessP));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
