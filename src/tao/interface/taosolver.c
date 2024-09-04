@@ -130,7 +130,9 @@ PetscErrorCode TaoCreate(MPI_Comm comm, Tao *newtao)
 
   tao->hist_reset = PETSC_TRUE;
 
-  PetscCall(TaoTermCreateTaoCallbacks(tao, &tao->term));
+  PetscCall(TaoTermCreateTaoCallbacks(tao, &tao->orig_callbacks));
+  PetscCall(PetscObjectReference((PetscObject)tao->orig_callbacks));
+  tao->objective_term = tao->orig_callbacks;
   PetscCall(TaoResetStatistics(tao));
   *newtao = tao;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -249,7 +251,8 @@ PetscErrorCode TaoDestroy(Tao *tao)
   }
 
   PetscTryTypeMethod(*tao, destroy);
-  PetscCall(TaoTermDestroy(&(*tao)->term));
+  PetscCall(TaoTermDestroy(&(*tao)->orig_callbacks));
+  PetscCall(TaoTermDestroy(&(*tao)->objective_term));
   PetscCall(KSPDestroy(&(*tao)->ksp));
   PetscCall(SNESDestroy(&(*tao)->snes_ewdummy));
   PetscCall(TaoLineSearchDestroy(&(*tao)->linesearch));

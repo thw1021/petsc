@@ -179,8 +179,10 @@ struct _p_Tao {
   PetscBool     hist_reset;
   PetscBool     hist_malloc;
 
-  TaoTerm   term;
-  PetscReal term_scale;
+  TaoTerm   objective_term;  /* TaoTerm in use */
+  PetscReal objective_scale;
+
+  TaoTerm   orig_callbacks;  /* TAOTERMTAOCALLBACKS for the original callbacks */
 };
 
 PETSC_EXTERN PetscLogEvent TAO_Solve;
@@ -239,3 +241,9 @@ struct _p_TaoTerm {
 PETSC_INTERN PetscErrorCode TaoTermRegisterAll(void);
 
 PETSC_INTERN PetscErrorCode TaoTermCreateTaoCallbacks(Tao, TaoTerm *);
+
+PETSC_INTERN PetscErrorCode TaoTermTaoCallbacksSetObjective(TaoTerm, PetscErrorCode (*) (Tao, Vec, PetscReal *, void *), void *);
+PETSC_INTERN PetscErrorCode TaoTermTaoCallbacksSetGradient(TaoTerm, PetscErrorCode (*) (Tao, Vec, Vec, void *), void *);
+PETSC_INTERN PetscErrorCode TaoTermTaoCallbacksSetObjAndGrad(TaoTerm, PetscErrorCode (*) (Tao, Vec, PetscReal *, Vec, void *), void *);
+PETSC_INTERN PetscErrorCode TaoTermTaoCallbacksSetHessian(TaoTerm, PetscErrorCode (*) (Tao, Vec, Mat, Mat, void *), void *);
+

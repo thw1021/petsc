@@ -524,30 +524,36 @@ typedef struct _p_TaoTerm *TaoTerm;
   TaoTermType - String with the name of a `TaoTerm` method
 
   Values:
-+ `TAOTERMTAOCALLBACKS` - uses the callback functions set for the outer containing `Tao`, e.g. `TaoSetObjective()`
-. `TAOTERMSHELL`        - a container for arbitrary user-defined callbacks
-. `TAOTERMSUM`          - a sum of multiple other `TaoTerm`s
-. `TAOTERMDM`           - a term whose value and operations are determined by a `DM`
-. `TAOTERML1`           - $\|x - \theta\|_1$, where $\theta$ are the `TaoTerm` parameters
-. `TAOTERMLINF`         - $\|x - \theta\|_\infty$
-. `TAOTERML2SQUARED`    - $\|x - \theta\|_2^2$
-. `TAOTERMQUADRATIC`    - a quadratic form $(x - \theta)^T Q (x - \theta)$ for a matrix $Q$
-- `TAOTERMKL`           - the KL divergence $D_{KL}(x \| \theta)$
++ `TAOTERMTAOCALLBACKS`    - uses the callback functions set in `TaoSetObjective()`, `TaoSetGradient()`, etc.
++ `TAOTERMBRGNREGULARIZER` - uses the callback functions set in `TaoBRGNSetRegularizerObjectiveAndGradientRoutine()`, etc.
++ `TAOTERMADMMREGULARIZER` - uses the callback functions set in `TaoADMMSetRegularizerObjectiveAndGradientRoutine()`, etc.
++ `TAOTERMADMMMISFIT`      - uses the callback functions set in `TaoADMMSetMisfitObjectiveAndGradientRoutine()`, etc.
+. `TAOTERMSHELL`           - a container for arbitrary user-defined callbacks
+. `TAOTERMSUM`             - a sum of multiple other `TaoTerm`s
+. `TAOTERMDM`              - a term whose value and operations are determined by a `DM`
+. `TAOTERML1`              - $\|x - \theta\|_1$, where $\theta$ are the `TaoTerm` parameters
+. `TAOTERMLINF`            - $\|x - \theta\|_\infty$
+. `TAOTERML2SQUARED`       - $\|x - \theta\|_2^2$
+. `TAOTERMQUADRATIC`       - a quadratic form $(x - \theta)^T Q (x - \theta)$ for a matrix $Q$
+- `TAOTERMKL`              - the KL divergence $D_{KL}(x \| \theta)$
 
   Level: advanced
 
 .seealso: [](doc_taosolve), [](ch_tao), `TaoTerm`, `TaoTermCreate()`, `TaoTermSetType()`
 J*/
 typedef const char *TaoTermType;
-#define TAOTERMTAOCALLBACKS  "taocallbacks"
-#define TAOTERMSHELL         "shell"
-#define TAOTERMSUM           "sum"
-#define TAOTERMDM            "dm"
-#define TAOTERML1            "l1"
-#define TAOTERMLINF          "linf"
-#define TAOTERMHALFL2SQUARED "halfl2squared"
-#define TAOTERMQUADRATIC     "quadratic"
-#define TAOTERMKL            "kl"
+#define TAOTERMTAOCALLBACKS    "taocallbacks"
+#define TAOTERMBRGNREGULARIZER "brgnregularizer"
+#define TAOTERMADMMREGULARIZER "admmregularizer"
+#define TAOTERMADMMMISFIT      "admmmisfit"
+#define TAOTERMSHELL           "shell"
+#define TAOTERMSUM             "sum"
+#define TAOTERMDM              "dm"
+#define TAOTERML1              "l1"
+#define TAOTERMLINF            "linf"
+#define TAOTERMHALFL2SQUARED   "halfl2squared"
+#define TAOTERMQUADRATIC       "quadratic"
+#define TAOTERMKL              "kl"
 
 PETSC_EXTERN PetscErrorCode TaoTermRegister(const char[], PetscErrorCode (*)(TaoTerm));
 

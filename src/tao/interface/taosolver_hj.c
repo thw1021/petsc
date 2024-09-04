@@ -36,8 +36,7 @@ PetscErrorCode TaoSetHessian(Tao tao, Mat H, Mat Hpre, PetscErrorCode (*func)(Ta
     PetscValidHeaderSpecific(Hpre, MAT_CLASSID, 3);
     PetscCheckSameComm(tao, 1, Hpre, 3);
   }
-  if (ctx) tao->user_hessP = ctx;
-  if (func) tao->ops->computehessian = func;
+  PetscCall(TaoTermTaoCallbacksSetHessian(tao->orig_callbacks, func, ctx));
   if (H) {
     PetscCall(PetscObjectReference((PetscObject)H));
     PetscCall(MatDestroy(&tao->hessian));
@@ -251,7 +250,7 @@ PetscErrorCode TaoComputeHessian(Tao tao, Vec X, Mat H, Mat Hpre)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  PetscCall(TaoTermHessian(tao->term, X, NULL, H, Hpre));
+  PetscCall(TaoTermHessian(tao->objective_term, X, NULL, H, Hpre));
   PetscCall(TaoTestHessian(tao));
   tao->nhess++;
   PetscFunctionReturn(PETSC_SUCCESS);
