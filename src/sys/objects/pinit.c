@@ -223,13 +223,11 @@ PETSC_INTERN void MPIAPI MPIU_MaxSum_Local(void *in, void *out, PetscMPIInt *cnt
 + max - the maximum of `array[2*rank]` over all MPI processes
 - sum - the sum of the `array[2*rank + 1]` over all MPI processes
 
-    Level: developer
+  Level: developer
 
-    The reason sizes[2*i] contains lengths sizes[2*i+1] contains flag of 1 if length is nonzero
-is so that the MPIU_MAXSUM_OP() can set TWO values, if we passed in only sizes[i] with lengths
-there would be no place to store the both needed results.
-*/
-PetscErrorCode PetscMaxSum(MPI_Comm comm, const PetscInt sizes[], PetscInt *max, PetscInt *sum)
+.seealso: `PetscInitialize()`
+@*/
+PetscErrorCode PetscMaxSum(MPI_Comm comm, const PetscInt array[], PetscInt *max, PetscInt *sum)
 {
   PetscFunctionBegin;
 #if defined(PETSC_HAVE_MPI_REDUCE_SCATTER_BLOCK)
@@ -237,7 +235,7 @@ PetscErrorCode PetscMaxSum(MPI_Comm comm, const PetscInt sizes[], PetscInt *max,
     struct {
       PetscInt max, sum;
     } work;
-    PetscCallMPI(MPI_Reduce_scatter_block((void *)sizes, &work, 1, MPIU_2INT, MPIU_MAXSUM_OP, comm));
+    PetscCallMPI(MPI_Reduce_scatter_block((void *)array, &work, 1, MPIU_2INT, MPIU_MAXSUM_OP, comm));
     *max = work.max;
     *sum = work.sum;
   }
@@ -250,7 +248,7 @@ PetscErrorCode PetscMaxSum(MPI_Comm comm, const PetscInt sizes[], PetscInt *max,
     PetscCallMPI(MPI_Comm_size(comm, &size));
     PetscCallMPI(MPI_Comm_rank(comm, &rank));
     PetscCall(PetscMalloc1(size, &work));
-    PetscCall(MPIU_Allreduce((void *)sizes, work, size, MPIU_2INT, MPIU_MAXSUM_OP, comm));
+    PetscCall(MPIU_Allreduce((void *)array, work, size, MPIU_2INT, MPIU_MAXSUM_OP, comm));
     *max = work[rank].max;
     *sum = work[rank].sum;
     PetscCall(PetscFree(work));
@@ -954,6 +952,12 @@ PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char *prog, const char 
   PetscCallMPI(MPI_Op_create(PetscGarbageKeySortedIntersect, 1, &Petsc_Garbage_SetIntersectOp));
   PetscCallMPI(MPI_Type_commit(&MPIU_2SCALAR));
 
+#if defined(PETSC_USE_64BIT_INDICES)
+  PetscCallMPI(MPI_Type_contiguous(2, MPIU_INT, &MPIU_2INT));
+  PetscCallMPI(MPI_Type_commit(&MPIU_2INT));
+  PetscCallMPI(MPI_Type_commit(&MPIU_2INT));
+#endif
+
   /* create datatypes used by MPIU_MAXLOC, MPIU_MINLOC and PetscSplitReduction_Op */
 #if !defined(PETSC_HAVE_MPIUNI)
   {
@@ -976,11 +980,7 @@ PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char *prog, const char 
     PetscCallMPI(MPI_Type_free(&tmpStruct));
     PetscCallMPI(MPI_Type_commit(&MPIU_SCALAR_INT));
   }
-#endif
-
-#if defined(PETSC_USE_64BIT_INDICES)
-  PetscCallMPI(MPI_Type_contiguous(2, MPIU_INT, &MPIU_2INT));
-  PetscCallMPI(MPI_Type_commit(&MPIU_2INT));
+  #if defined(PETSC_USE_64BIT_INDICES)
   {
     int          blockSizes[]   = {1, 1};
     MPI_Aint     blockOffsets[] = {offsetof(struct petsc_mpiu_int_mpiint, a), offsetof(struct petsc_mpiu_int_mpiint, b)};
@@ -990,7 +990,9 @@ PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char *prog, const char 
     PetscCallMPI(MPI_Type_free(&tmpStruct));
     PetscCallMPI(MPI_Type_commit(&MPIU_INT_MPIINT));
   }
+  #endif
 #endif
+
   PetscCallMPI(MPI_Type_contiguous(4, MPI_INT, &MPI_4INT));
   PetscCallMPI(MPI_Type_commit(&MPI_4INT));
   PetscCallMPI(MPI_Type_contiguous(4, MPIU_INT, &MPIU_4INT));
@@ -1818,3 +1820,42 @@ PETSC_EXTERN int lsame(char *a, char *b)
   return 0;
 }
 #endif
+
+static inline PetscMPIInt MPIU_Allreduce_Count(const void *inbuf, void *outbuf, PetscCount count, MPI_Datatype dtype, MPI_Op op, MPI_Comm comm)
+{
+#if !defined(PETSC_HAVE_MPI_LARGE_COUNT)
+  PetscMPIInt count2;
+
+  PetscFunctionBegin;
+  PetscCallMPI(PetscMPIIntCast_Internal(count, &count2));
+  PetscCallMPI(MPI_Allreduce(inbuf, outbuf, count2, dtype, op, comm));
+#else
+  PetscFunctionBegin;
+  PetscCallMPI(MPI_Allreduce_c(inbuf, outbuf, count, dtype, op, comm));
+#endif
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscMPIInt MPIU_Allreduce_Private(const void *inbuf, void *outbuf, PetscCount count, MPI_Datatype dtype, MPI_Op op, MPI_Comm comm)
+{
+  PetscFunctionBegin;
+  if (!PetscDefined(USE_64BIT_INDICES) && count == 1 && dtype == MPIU_INT) {
+    PetscCount incnt, outcnt;
+    void      *inbufd, *outbufd;
+
+    if (inbuf != MPI_IN_PLACE) {
+      incnt  = *(PetscInt32 *)inbuf;
+      inbufd = &incnt;
+    } else {
+      outcnt = *(PetscInt32 *)outbuf;
+      inbufd = (void *)MPI_IN_PLACE;
+    }
+    outbufd = &outcnt;
+    PetscCallMPI(MPIU_Allreduce_Count(inbufd, outbufd, count, MPIU_COUNT, op, comm));
+    PetscCheck(outcnt <= PETSC_INT_MAX, comm, PETSC_ERR_MPI, "Integer overflow in MPI_Allreduce(); reconfigure with --with-64-bit-indices");
+    *(PetscInt32 *)outbuf = (PetscInt32)outcnt;
+  } else {
+    PetscCallMPI(MPIU_Allreduce_Count(inbuf, outbuf, count, dtype, op, comm));
+  }
+  PetscFunctionReturn(MPI_SUCCESS);
+}

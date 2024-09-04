@@ -982,33 +982,6 @@ PetscErrorCode PCGetFailedReason(PC pc, PCFailedReason *reason)
 }
 
 /*@
-  PCGetFailedReasonRank - Gets the reason a `PCSetUp()` failed or `PC_NOERROR` if it did not fail on this MPI rank
-
-  Not Collective
-
-  Input Parameter:
-. pc - the preconditioner context
-
-  Output Parameter:
-. reason - the reason it failed
-
-  Level: advanced
-
-  Note:
-  Different processes may have different reasons or no reason, see `PCGetFailedReason()`
-
-.seealso: [](ch_ksp), `PC`, `PCCreate()`, `PCApply()`, `PCDestroy()`, `PCGetFailedReason()`, `PCSetFailedReason()`, `PCReduceFailedReason()`
-@*/
-PetscErrorCode PCGetFailedReasonRank(PC pc, PCFailedReason *reason)
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
-  if (pc->setupcalled < 0) *reason = (PCFailedReason)pc->setupcalled;
-  else *reason = pc->failedreason;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@
   PCReduceFailedReason - Reduce the failed reason among the MPI processes that share the `PC`
 
   Collective

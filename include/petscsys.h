@@ -1842,7 +1842,7 @@ static inline PetscErrorCode PetscHipBLASIntCast(PetscCount a, PetscHipBLASInt *
 
    Level: advanced
 
-.seealso: `PetscBLASInt`, `PetscMPIInt`, `PetscInt`, `PetscBLASIntCast()`, `PetscIntCast()`
+.seealso: [](stylePetscCount), `PetscBLASInt`, `PetscMPIInt`, `PetscInt`, `PetscBLASIntCast()`, `PetscIntCast()`
 @*/
 static inline PetscErrorCode PetscMPIIntCast(PetscCount a, PetscMPIInt *b)
 {
@@ -2417,62 +2417,6 @@ static inline unsigned int PetscStrHash(const char *str)
   while ((c = (unsigned int)*str++)) hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
   return hash;
 }
-
-  /*MC
-   MPIU_Allreduce - a PETSc replacement for `MPI_Allreduce()` that tries to determine if the call from all the MPI ranks occur from the
-                    same place in the PETSc code. This helps to detect bugs where different MPI ranks follow different code paths
-                    resulting in inconsistent and incorrect calls to `MPI_Allreduce()`.
-
-   Synopsis:
-     #include <petscsys.h>
-     PetscErrorCode MPIU_Allreduce(void *indata,void *outdata,PetscMPIInt count,MPI_Datatype dtype, MPI_Op op, MPI_Comm comm);
-
-   Collective
-
-   Input Parameters:
-+  a - pointer to the input data to be reduced
-.  c - the number of MPI data items in a and b
-.  d - the MPI datatype, for example `MPI_INT`
-.  e - the MPI operation, for example `MPI_SUM`
--  fcomm - the MPI communicator on which the operation occurs
-
-   Output Parameter:
-.  b - the reduced values
-
-   Level: developer
-
-   Notes:
-   In optimized mode this directly calls `MPI_Allreduce()`
-
-   This is defined as a macro that can return error codes internally so it cannot be used in a subroutine that returns void.
-
-   The error code this returns should be checked with `PetscCall()` even though it looks like an MPI function because it always returns PETSc error codes
-
-.seealso: `MPI_Allreduce()`
-M*/
-  #define MPIU_Allreduce(a, b, c, d, e, fcomm) \
-    PetscMacroReturnStandard( \
-    PetscMPIInt a_b1[6], a_b2[6]; \
-    int _mpiu_allreduce_c_int = (int)(c); \
-    a_b1[0] = -(PetscMPIInt)__LINE__; \
-    a_b1[1] = -a_b1[0]; \
-    a_b1[2] = -(PetscMPIInt)PetscStrHash(PETSC_FUNCTION_NAME); \
-    a_b1[3] = -a_b1[2]; \
-    a_b1[4] = -(PetscMPIInt)(c); \
-    a_b1[5] = -a_b1[4]; \
-    \
-    PetscCallMPI(MPI_Allreduce(a_b1, a_b2, 6, MPI_INT, MPI_MAX, fcomm)); \
-    PetscCheck(-a_b2[0] == a_b2[1], PETSC_COMM_SELF, PETSC_ERR_PLIB, "MPI_Allreduce() called in different locations (code lines) on different processors"); \
-    PetscCheck(-a_b2[2] == a_b2[3], PETSC_COMM_SELF, PETSC_ERR_PLIB, "MPI_Allreduce() called in different locations (functions) on different processors"); \
-    PetscCheck(-a_b2[4] == a_b2[5], PETSC_COMM_SELF, PETSC_ERR_PLIB, "MPI_Allreduce() called with different counts %d on different processors", _mpiu_allreduce_c_int); \
-    PetscCallMPI(MPI_Allreduce((a), (b), (c), (d), (e), (fcomm)));)
-#else
-  #define MPIU_Allreduce(a, b, c, d, e, fcomm) PetscMacroReturnStandard(PetscCallMPI(MPI_Allreduce((a), (b), (c), (d), (e), (fcomm))))
-#endif
-
-#if defined(PETSC_HAVE_MPI_PROCESS_SHARED_MEMORY)
-PETSC_EXTERN PetscErrorCode MPIU_Win_allocate_shared(MPI_Aint, PetscMPIInt, MPI_Info, MPI_Comm, void *, MPI_Win *);
-PETSC_EXTERN PetscErrorCode MPIU_Win_shared_query(MPI_Win, PetscMPIInt, MPI_Aint *, PetscMPIInt *, void *);
 #endif
 
 #if !defined(PETSC_HAVE_MPI_LARGE_COUNT)
@@ -2590,42 +2534,11 @@ static inline PetscMPIInt MPIU_Reduce_local(const void *inbuf, void *inoutbuf, P
   #define MPIU_Recv_init(buf, count, dtype, source, tag, comm, request) MPI_Recv_init_c(buf, (MPI_Count)(count), dtype, source, tag, comm, request)
   #define MPIU_Irecv(buf, count, dtype, source, tag, comm, request)     MPI_Irecv_c(buf, (MPI_Count)(count), dtype, source, tag, comm, request)
   #if defined(PETSC_HAVE_MPI_REDUCE_LOCAL)
-    #define MPIU_Reduce_local(inbuf, inoutbuf, count, dtype, op) MPI_Reduce_local_c(inbuf, inoutbuf, (MPI_Count)count, dtype, op)
+    #define MPIU_Reduce_local(inbuf, inoutbuf, count, dtype, op) MPI_Reduce_local_c(inbuf, inoutbuf, (MPI_Count)(count), dtype, op)
   #endif
 #endif
 
-static inline PetscMPIInt MPIU_Allreduce_Private(const void *inbuf, void *outbuf, PetscCount count, MPI_Datatype dtype, MPI_Op op, MPI_Comm comm)
-{
-  PetscCount incnt, outcnt;
-  void      *inbufd, *outbufd;
-
-  PetscFunctionBegin;
-  if (!PetscDefined(PETSC_USE_64BIT_INDICES) && count == 1 && dtype == MPIU_INT) {
-    if (inbuf != MPI_IN_PLACE) {
-      incnt  = *(PetscInt *)inbuf;
-      inbufd = &incnt;
-    } else {
-      outcnt = *(PetscInt *)outbuf;
-      inbufd = (void *)MPI_IN_PLACE;
-    }
-    outbufd = &outcnt;
-  } else {
-    inbufd  = (void *)inbuf;
-    outbufd = (void *)outbuf;
-  }
-#if !defined(PETSC_HAVE_MPI_LARGE_COUNT)
-  PetscMPIInt count2;
-  PetscCallMPI(PetscMPIIntCast_Internal(count, &count2));
-  PetscCallMPI(MPI_Allreduce(inbufd, outbufd, count2, dtype, op, comm));
-#else
-  PetscCallMPI(MPI_Allreduce_c(inbufd, outbufd, count, dtype, op, comm));
-#endif
-  if (!PetscDefined(PETSC_USE_64BIT_INDICES) && count == 1 && dtype == MPIU_INT) {
-    PetscCheck(outcnt <= PETSC_INT_MAX, comm, PETSC_ERR_MPI, "Integer overflow in MPI_Allreduce(); reconfigure with --with-64-bit-indices");
-    *(PetscInt *)outbuf = (PetscInt)outcnt;
-  }
-  PetscFunctionReturn(MPI_SUCCESS);
-}
+PETSC_EXTERN PetscMPIInt MPIU_Allreduce_Private(const void *, void *, PetscCount, MPI_Datatype, MPI_Op, MPI_Comm);
 
 /*MC
    MPIU_Allreduce - A replacement for `MPI_Allreduce()` that (1) performs single-count `MPIU_INT` operations in `PetscCount` to detect
