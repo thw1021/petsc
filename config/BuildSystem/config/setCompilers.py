@@ -530,7 +530,7 @@ class Configure(config.base.Configure):
       # Cray PE compiler wrappers (e.g., cc) when invoked with --version option will complain when CRAY_CPU_TARGET is set to erroneous value, but Cray raw compilers (e.g., craycc) won't. So use this behavior to differentiate cc from craycc.
       canary_value = '5dde31d2'
       (output, error, status) = config.base.Configure.executeShellCommand(
-        f'CRAY_CPU_TARGET="{canary_value}" {compiler} --version',
+        'CRAY_CPU_TARGET="%s" %s --version' % (canary_value, compiler),
         checkCommand=config.base.Configure.passCheckCommand,
         log=log,
       )
