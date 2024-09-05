@@ -335,6 +335,8 @@ PETSC_EXTERN PetscErrorCode TaoSetObjectiveAndGradient(Tao, Vec, PetscErrorCode 
 PETSC_EXTERN PetscErrorCode TaoGetObjectiveAndGradient(Tao, Vec *, PetscErrorCode (**)(Tao, Vec, PetscReal *, Vec, void *), void **);
 PETSC_EXTERN PetscErrorCode TaoSetHessian(Tao, Mat, Mat, PetscErrorCode (*)(Tao, Vec, Mat, Mat, void *), void *);
 PETSC_EXTERN PetscErrorCode TaoGetHessian(Tao, Mat *, Mat *, PetscErrorCode (**)(Tao, Vec, Mat, Mat, void *), void **);
+PETSC_EXTERN PetscErrorCode TaoSetHessianMatrices(Tao, Mat, Mat);
+PETSC_EXTERN PetscErrorCode TaoGetHessianMatrices(Tao, Mat *, Mat *);
 
 PETSC_EXTERN PetscErrorCode TaoSetGradientNorm(Tao, Mat);
 PETSC_EXTERN PetscErrorCode TaoGetGradientNorm(Tao, Mat *);
@@ -567,6 +569,7 @@ PETSC_EXTERN PetscErrorCode TaoTermSetUp(TaoTerm);
 PETSC_EXTERN PetscErrorCode TaoTermSetType(TaoTerm, TaoTermType);
 PETSC_EXTERN PetscErrorCode TaoTermSetFromOptions(TaoTerm);
 
+PETSC_EXTERN PetscErrorCode TaoTermCreateShell(MPI_Comm, void *, PetscErrorCode (*)(void *), TaoTerm *);
 PETSC_EXTERN PetscErrorCode TaoTermShellSetContext(TaoTerm, void *);
 PETSC_EXTERN PetscErrorCode TaoTermShellGetContext(TaoTerm, void *);
 PETSC_EXTERN PetscErrorCode TaoTermShellSetContextDestroy(TaoTerm, PetscErrorCode (*)(void *));

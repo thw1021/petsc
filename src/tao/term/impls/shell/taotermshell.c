@@ -160,7 +160,7 @@ static PetscErrorCode TaoTermDestroy_Shell(TaoTerm term)
   TaoTerm_Shell *shell = (TaoTerm_Shell *)term->data;
 
   PetscFunctionBegin;
-  PetscCall(PetscContainerDestroy(&shell->ctxcontainer));
+  PetscCall(TaoTermShellSetContext_Shell(term, NULL));
   PetscCall(PetscFree(shell));
   term->data                      = NULL;
   term->ops->objective            = NULL;
@@ -424,7 +424,7 @@ static PetscErrorCode TaoTermShellSetView_Shell(TaoTerm term, PetscErrorCode (*v
 
   Level: intermediate
 
-.seealso: [](ch_tao), `Tao`, `TaoTerm`, `TAOTERMSHELL`, `TaoTermShellGetContext()`, `TaoTermShellSetContextDestroy()`,
+.seealso: [](ch_tao), `Tao`, `TaoTerm`, `TaoTermShellGetContext()`, `TaoTermShellSetContextDestroy()`, TaoTermCreateShell()`,
           `TaoTermShellSetObjective()`,
           `TaoTermShellSetGradient()`,
           `TaoTermShellSetObjectiveAndGradient()`,
@@ -451,5 +451,30 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Shell(TaoTerm term)
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetHessian_C", TaoTermShellSetHessian_Shell));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetProximalMap_C", TaoTermShellSetProximalMap_Shell));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetView_C", TaoTermShellSetView_Shell));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoTermCreateShell - Create a `TaoTerm` of type `TAOTERMSHELL` that is ready to accept user-defined callback operations.
+
+  Collective
+
+  Input Parameter:
+. comm - the MPI communicator for computing the term
+
+  Output Parameter:
+. term - a `TaoTerm` of type `TAOTERMSHELL`
+
+  Level: intermediate
+
+.seealso: [](ch_tao), `Tao`, `TaoTerm`, `TAOTERMSHELL`
+@*/
+PetscErrorCode TaoTermCreateShell(MPI_Comm comm, void *ctx, PetscErrorCode (*destroy)(void *ctx), TaoTerm *term)
+{
+  PetscFunctionBegin;
+  PetscCall(TaoTermCreate(comm, term));
+  PetscCall(TaoTermSetType(*term, TAOTERMSHELL));
+  if (ctx) PetscCall(TaoTermShellSetContext(*term, ctx));
+  if (destroy) PetscCall(TaoTermShellSetContextDestroy(*term, destroy));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

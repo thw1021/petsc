@@ -132,7 +132,7 @@ PetscErrorCode TaoCreate(MPI_Comm comm, Tao *newtao)
 
   PetscCall(TaoTermCreateTaoCallbacks(tao, &tao->orig_callbacks));
   PetscCall(PetscObjectReference((PetscObject)tao->orig_callbacks));
-  tao->objective_term = tao->orig_callbacks;
+  tao->objective_term  = tao->orig_callbacks;
   tao->objective_scale = 1.0;
   PetscCall(TaoResetStatistics(tao));
   *newtao = tao;
@@ -2844,7 +2844,10 @@ PetscErrorCode TaoSetObjectiveTerm(Tao tao, TaoTerm term)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 2);
+  if (term) {
+    PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 2);
+    PetscCheckSameComm(tao, 1, term, 2);
+  }
   PetscCall(PetscObjectReference((PetscObject)term));
   PetscCall(TaoTermDestroy(&tao->objective_term));
   tao->objective_term = term;

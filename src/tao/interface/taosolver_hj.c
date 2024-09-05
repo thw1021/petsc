@@ -73,15 +73,78 @@ PetscErrorCode TaoSetHessian(Tao tao, Mat H, Mat Hpre, PetscErrorCode (*func)(Ta
 
   Level: beginner
 
-.seealso: [](ch_tao), `Tao`, `TaoType`, `TaoGetObjective()`, `TaoGetGradient()`, `TaoGetObjectiveAndGradient()`, `TaoSetHessian()`
+.seealso: [](ch_tao), `Tao`, `TaoType`, `TaoGetObjective()`, `TaoGetGradient()`, `TaoGetObjectiveAndGradient()`, `TaoSetHessian()`, `TaoSetHessianMatrices()`, `TaoGetHessianMatrices()`
 @*/
 PetscErrorCode TaoGetHessian(Tao tao, Mat *H, Mat *Hpre, PetscErrorCode (**func)(Tao tao, Vec x, Mat H, Mat Hpre, void *ctx), void **ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
+  PetscCall(TaoGetHessianMatrices(tao, H, Hpre));
+  if (func || ctx) PetscCall(TaoTermTaoCallbacksGetHessian(tao->objective_term, func, ctx));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoSetHessianMatrices - Set the matrices to store the Hessian matrix and its preconditioner in Tao solver algorithms
+
+  Collective
+
+  Input Parameters:
++ tao  - the `Tao` context
+. H    - the Hessian matrix
+- Hpre - the Hessian matrix preconditioner
+
+  Level: intermediate
+
+  Note: If you are using `TaoTerm`s to define this objective, you should use this instead of `TaoSetHessian()` to set the matrices.
+
+.seealso: [](ch_tao), `Tao`, `TaoType`, `TaoGetObjective()`, `TaoGetGradient()`, `TaoGetObjectiveAndGradient()`, `TaoSetHessian()`, `TaoGetHessian()`, `TaoGetHessianMatrices()`,
+@*/
+PetscErrorCode TaoSetHessianMatrices(Tao tao, Mat H, Mat Hpre)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
+  if (H) {
+    PetscValidHeaderSpecific(H, MAT_CLASSID, 2);
+    PetscCheckSameComm(tao, 1, H, 2);
+  }
+  if (Hpre) {
+    PetscValidHeaderSpecific(Hpre, MAT_CLASSID, 3);
+    PetscCheckSameComm(tao, 1, Hpre, 3);
+  }
+  PetscCall(PetscObjectReference((PetscObject)H));
+  PetscCall(MatDestroy(&tao->hessian));
+  tao->hessian = H;
+  PetscCall(PetscObjectReference((PetscObject)Hpre));
+  PetscCall(MatDestroy(&tao->hessian_pre));
+  tao->hessian_pre = Hpre;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoGetHessianMatrices - Get the matrices that store the Hessian matrix and its preconditioner in Tao solver algorithms
+
+  Collective
+
+  Input Parameters:
+. tao  - the `Tao` context
+
+  Output Parameters:
++ H    - the Hessian matrix
+- Hpre - the Hessian matrix preconditioner
+
+  Level: intermediate
+
+  Note: If you are using `TaoTerm`s to define this objective, you should use this instead of `TaoSetHessian()` to set the matrices.
+
+.seealso: [](ch_tao), `Tao`, `TaoType`, `TaoGetObjective()`, `TaoGetGradient()`, `TaoGetObjectiveAndGradient()`, `TaoSetHessian()`, `TaoGetHessian()`, `TaoSetHessianMatrices()`,
+@*/
+PetscErrorCode TaoGetHessianMatrices(Tao tao, Mat *H, Mat *Hpre)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
   if (H) *H = tao->hessian;
   if (Hpre) *Hpre = tao->hessian_pre;
-  if (func || ctx) PetscCall(TaoTermTaoCallbacksGetHessian(tao->objective_term, func, ctx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
