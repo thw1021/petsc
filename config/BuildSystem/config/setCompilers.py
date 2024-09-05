@@ -526,7 +526,6 @@ class Configure(config.base.Configure):
   @staticmethod
   def isCrayPEWrapper(compiler, log):
     '''Returns true if the compiler is a Cray Programming Environment (PE) wrapped compiler'''
-    # NOTE: details on this method in: https://github.com/spack/spack/pull/46086
     try:
       # Cray wrapper compilers (e.g., cc) will complain the erroneous CRAY_CPU_TARGET value in the --version output, but Cray raw compilers (e.g., craycc) won't. So that we can differentiate cc and craycc.
       canary_value = '5dde31d2'
