@@ -219,6 +219,8 @@ struct _MatOps {
   PetscErrorCode (*eliminatezeros)(Mat, PetscBool);
   PetscErrorCode (*getrowsumabs)(Mat, Vec);
   PetscErrorCode (*getfactor)(Mat, MatSolverType, MatFactorType, Mat *);
+  PetscErrorCode (*getblockdiagonal)(Mat, Mat *);
+  PetscErrorCode (*getvblockdiagonal)(Mat, Mat *);
 };
 /*
     If you add MatOps entries above also add them to the MATOP enum

@@ -3624,6 +3624,8 @@ static struct _MatOps MatOps_Values = {MatSetValues_SeqAIJ,
                                        /*150*/ MatTransposeSymbolic_SeqAIJ,
                                        MatEliminateZeros_SeqAIJ,
                                        MatGetRowSumAbs_SeqAIJ,
+                                       NULL,
+                                       NULL,
                                        NULL};
 
 static PetscErrorCode MatSeqAIJSetColumnIndices_SeqAIJ(Mat mat, PetscInt *indices)
