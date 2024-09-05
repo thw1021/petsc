@@ -448,6 +448,7 @@ static PetscErrorCode TSSetUp_BDF(TS ts)
   PetscCall(TSAdaptSetClip(ts->adapt, low, PetscMin(high, two)));
 
   PetscCall(TSGetSNES(ts, &ts->snes));
+  PetscCall(SNESSetDM(ts->snes, ts->dm));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

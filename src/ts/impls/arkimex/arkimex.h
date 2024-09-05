@@ -41,6 +41,7 @@ typedef struct {
 
   /* context for fast-slow split */
   Vec       Y_snes;       /* Work vector for SNES */
+  Vec      *YdotI_fast;   /* Function evaluations for the fast components in YdotI */
   Vec      *YdotRHS_fast; /* Function evaluations for the fast components in YdotRHS */
   Vec      *YdotRHS_slow; /* Function evaluations for the slow components in YdotRHS */
   IS        is_slow, is_fast;

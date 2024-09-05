@@ -114,6 +114,8 @@ static PetscErrorCode TSSetUp_DiscGrad(TS ts)
   PetscCall(TSGetDM(ts, &dm));
   PetscCall(DMCoarsenHookAdd(dm, DMCoarsenHook_TSDiscGrad, DMRestrictHook_TSDiscGrad, ts));
   PetscCall(DMSubDomainHookAdd(dm, DMSubDomainHook_TSDiscGrad, DMSubDomainRestrictHook_TSDiscGrad, ts));
+  PetscCall(TSGetSNES(ts, &ts->snes));
+  PetscCall(SNESSetDM(ts->snes, dm));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

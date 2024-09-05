@@ -1492,6 +1492,7 @@ static PetscErrorCode TSSetUp_RosW(TS ts)
   PetscCall(DMSubDomainHookAdd(dm, DMSubDomainHook_TSRosW, DMSubDomainRestrictHook_TSRosW, ts));
   /* Rosenbrock methods are linearly implicit, so set that unless the user has specifically asked for something else */
   PetscCall(TSGetSNES(ts, &snes));
+  PetscCall(SNESSetDM(snes, dm));
   if (!((PetscObject)snes)->type_name) PetscCall(SNESSetType(snes, SNESKSPONLY));
   PetscCall(DMTSGetRHSJacobian(dm, &rhsjacobian, NULL));
   if (rhsjacobian == TSComputeRHSJacobianConstant) {
