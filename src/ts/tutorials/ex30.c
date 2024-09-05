@@ -257,6 +257,12 @@ static void average(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uO
   obj[0] = u[uOff[P_FIELD_ID]];
 }
 
+/* functionals to be integrated: volume -> \int_\Omega dx */
+static void volume(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar obj[])
+{
+  obj[0] = 1;
+}
+
 /* stable implementation of roots of a*x^2 + b*x + c = 0 */
 static inline void QuadraticRoots(PetscReal a, PetscReal b, PetscReal c, PetscReal x[2])
 {
@@ -390,6 +396,7 @@ typedef struct {
   PetscReal gamma;
   PetscReal D;
   PetscReal c;
+  PetscReal domain_volume;
   PetscInt  ic_num;
   PetscInt  source_num;
   PetscReal x0[2];
@@ -738,7 +745,7 @@ static PetscErrorCode ProjectSource(DM dm, PetscReal time, AppCtx *ctx)
   PetscCall(PetscDSSetObjective(ds, P_FIELD_ID, average));
   PetscCall(DMPlexComputeIntegralFEM(dm, u, vals, NULL));
   PetscCall(PetscDSSetObjective(ds, P_FIELD_ID, zero));
-  PetscCall(VecShift(u, -vals[P_FIELD_ID]));
+  PetscCall(VecShift(u, -vals[P_FIELD_ID] / ctx->domain_volume));
   PetscCall(DMCreateSubDM(dm, 1, &id, &is, NULL));
   PetscCall(VecISSet(u, is, 0));
   PetscCall(ISDestroy(&is));
@@ -871,6 +878,8 @@ static PetscErrorCode SetupProblem(DM dm, AppCtx *ctx)
   PetscDS     ds;
   PetscInt    cdim, dim;
   PetscScalar constants[NUM_CONSTANTS];
+  PetscScalar vals[NUM_FIELDS];
+  Vec         dummy;
 
   PetscFunctionBeginUser;
   constants[R_ID]     = ctx->r;
@@ -899,6 +908,14 @@ static PetscErrorCode SetupProblem(DM dm, AppCtx *ctx)
 
   /* Attach potential nullspace */
   PetscCall(DMSetNullSpaceConstructor(dm, P_FIELD_ID, CreatePotentialNullSpace));
+
+  /* Compute domain volume */
+  PetscCall(DMGetGlobalVector(dm, &dummy));
+  PetscCall(PetscDSSetObjective(ds, P_FIELD_ID, volume));
+  PetscCall(DMPlexComputeIntegralFEM(dm, dummy, vals, NULL));
+  PetscCall(PetscDSSetObjective(ds, P_FIELD_ID, zero));
+  PetscCall(DMRestoreGlobalVector(dm, &dummy));
+  ctx->domain_volume = PetscRealPart(vals[P_FIELD_ID]);
 
   /* Attach source function as auxiliary vector */
   PetscCall(ProjectSource(dm, 0, ctx));
@@ -1032,7 +1049,7 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, DM *dm, AppCtx *ctx)
 }
 
 /* Make potential field zero mean */
-static PetscErrorCode ZeroMeanPotential(DM dm, Vec u)
+static PetscErrorCode ZeroMeanPotential(DM dm, Vec u, PetscScalar domain_volume)
 {
   PetscScalar vals[NUM_FIELDS];
   PetscDS     ds;
@@ -1045,7 +1062,7 @@ static PetscErrorCode ZeroMeanPotential(DM dm, Vec u)
   PetscCall(PetscDSSetObjective(ds, P_FIELD_ID, average));
   PetscCall(DMPlexComputeIntegralFEM(dm, u, vals, NULL));
   PetscCall(PetscDSSetObjective(ds, P_FIELD_ID, zero));
-  PetscCall(VecISShift(u, is, -vals[P_FIELD_ID]));
+  PetscCall(VecISShift(u, is, -vals[P_FIELD_ID] / domain_volume));
   PetscCall(DMPlexComputeIntegralFEM(dm, u, vals, NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1087,7 +1104,7 @@ static PetscErrorCode SetInitialConditionsAndTolerances(TS ts, PetscInt nv, Vec 
     PetscCall(VecDestroy(&vatol));
     PetscCall(VecDestroy(&vrtol));
     PetscCall(ISDestroy(&isp));
-    for (PetscInt i = 0; i < nv; i++) { PetscCall(ZeroMeanPotential(dm, vecs[i])); }
+    for (PetscInt i = 0; i < nv; i++) PetscCall(ZeroMeanPotential(dm, vecs[i], ctx->domain_volume));
     PetscFunctionReturn(PETSC_SUCCESS);
   }
   PetscCall(DMCreateSubDM(dm, NUM_FIELDS - 1, fields + 1, &isp, &dmp));
@@ -1158,7 +1175,7 @@ static PetscErrorCode SetInitialConditionsAndTolerances(TS ts, PetscInt nv, Vec 
     /* scatter from potential only to full space */
     PetscCall(VecScatterBegin(sctp, p, u, INSERT_VALUES, SCATTER_REVERSE));
     PetscCall(VecScatterEnd(sctp, p, u, INSERT_VALUES, SCATTER_REVERSE));
-    PetscCall(ZeroMeanPotential(dm, u));
+    PetscCall(ZeroMeanPotential(dm, u, ctx->domain_volume));
   }
   PetscCall(VecDestroy(&p));
   PetscCall(DMDestroy(&dmp));
@@ -1365,9 +1382,10 @@ static PetscErrorCode PostStage(TS ts, PetscReal stagetime, PetscInt stageindex,
 
   PetscFunctionBeginUser;
   PetscCall(TSGetDM(ts, &dm));
-  PetscCall(ZeroMeanPotential(dm, u));
-
   PetscCall(TSGetApplicationContext(ts, &ctx));
+
+  PetscCall(ZeroMeanPotential(dm, u, ctx->domain_volume));
+
   if (ctx->test_restart) PetscFunctionReturn(PETSC_SUCCESS);
 
   /* monitor linear and nonlinear iterations */
