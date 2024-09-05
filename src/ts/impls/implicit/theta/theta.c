@@ -1044,7 +1044,7 @@ static PetscErrorCode TSSetUp_Theta(TS ts)
     if (!th->vec_lte_work) PetscCall(VecDuplicate(ts->vec_sol, &th->vec_lte_work));
   }
   PetscCall(TSGetSNES(ts, &ts->snes));
-
+  PetscCall(SNESSetDM(ts->snes, ts->dm));
   ts->stifflyaccurate = (!th->endpoint && th->Theta != 1.0) ? PETSC_FALSE : PETSC_TRUE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }

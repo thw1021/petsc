@@ -1117,6 +1117,8 @@ static PetscErrorCode TSSetUp_GLLE(TS ts)
   PetscCall(TSGetDM(ts, &dm));
   PetscCall(DMCoarsenHookAdd(dm, DMCoarsenHook_TSGLLE, DMRestrictHook_TSGLLE, ts));
   PetscCall(DMSubDomainHookAdd(dm, DMSubDomainHook_TSGLLE, DMSubDomainRestrictHook_TSGLLE, ts));
+  PetscCall(TSGetSNES(ts, &ts->snes));
+  PetscCall(SNESSetDM(ts->snes, dm));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 /*------------------------------------------------------------*/

@@ -364,6 +364,7 @@ static PetscErrorCode TSSetUp_Alpha(TS ts)
   }
 
   PetscCall(TSGetSNES(ts, &ts->snes));
+  PetscCall(SNESSetDM(ts->snes, ts->dm));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

@@ -600,6 +600,7 @@ static PetscErrorCode TSSetUp_IRK(TS ts)
   }
   PetscCall(SNESSetJacobian(ts->snes, irk->TJ, irk->TJ, SNESTSFormJacobian, ts));
   PetscCall(VecDestroy(&R));
+  PetscCall(SNESSetDM(ts->snes, dm));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

@@ -350,6 +350,8 @@ static PetscErrorCode TSSetUp_EIMEX(TS ts)
   PetscCall(VecDuplicate(ts->vec_sol, &ext->Z));
   PetscCall(TSGetDM(ts, &dm));
   if (dm) PetscCall(DMCoarsenHookAdd(dm, DMCoarsenHook_TSEIMEX, DMRestrictHook_TSEIMEX, ts));
+  PetscCall(TSGetSNES(ts, &ts->snes));
+  PetscCall(SNESSetDM(ts->snes, dm));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
