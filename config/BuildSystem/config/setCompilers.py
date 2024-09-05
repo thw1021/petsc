@@ -525,9 +525,9 @@ class Configure(config.base.Configure):
 
   @staticmethod
   def isCrayPEWrapper(compiler, log):
-    '''Returns true if the compiler is a Cray Programming Environment (PE) wrapped compiler'''
+    '''Returns true if the compiler is a Cray Programming Environment (PE) compiler wrapper'''
     try:
-      # Cray wrapper compilers (e.g., cc) will complain the erroneous CRAY_CPU_TARGET value in the --version output, but Cray raw compilers (e.g., craycc) won't. So that we can differentiate cc and craycc.
+      # Cray PE compiler wrappers (e.g., cc) when invoked with --version option will complain when CRAY_CPU_TARGET is set to erroneous value, but Cray raw compilers (e.g., craycc) won't. So use this behavior to differentiate cc from craycc.
       canary_value = '5dde31d2'
       (output, error, status) = config.base.Configure.executeShellCommand(
         f'CRAY_CPU_TARGET="{canary_value}" {compiler} --version',
