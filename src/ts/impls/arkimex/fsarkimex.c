@@ -17,7 +17,6 @@ static PetscErrorCode TSARKIMEXSetSplits(TS ts)
     PetscCall(DMClone(dm, &newdm));
     PetscCall(TSGetDM(ark->subts_slow, &subdm));
     PetscCall(DMCopyDMTS(subdm, newdm));
-    PetscCall(DMCopyDMSNES(subdm, newdm));
     PetscCall(TSSetDM(ark->subts_slow, newdm));
     PetscCall(DMDestroy(&newdm));
   }
@@ -25,7 +24,6 @@ static PetscErrorCode TSARKIMEXSetSplits(TS ts)
     PetscCall(DMClone(dm, &newdm));
     PetscCall(TSGetDM(ark->subts_fast, &subdm));
     PetscCall(DMCopyDMTS(subdm, newdm));
-    PetscCall(DMCopyDMSNES(subdm, newdm));
     PetscCall(TSSetDM(ark->subts_fast, newdm));
     PetscCall(DMDestroy(&newdm));
   }
@@ -113,7 +111,7 @@ static PetscErrorCode TSEvaluateStep_ARKIMEX_FastSlowSplit(TS ts, PetscInt order
         PetscCall(VecGetSubVector(X, ark->is_fast, &Xfast));
         if (fasthasE) PetscCall(VecMAXPY(Xfast, s, w, ark->YdotRHS_fast));
         for (j = 0; j < s; j++) w[j] = h * tab->bt[j];
-        PetscCall(VecMAXPY(Xfast, s, w, ark->YdotI));
+        PetscCall(VecMAXPY(Xfast, s, w, ark->YdotI_fast));
         PetscCall(VecRestoreSubVector(X, ark->is_fast, &Xfast));
       }
     } else PetscCall(VecCopy(ts->vec_sol, X));
@@ -133,7 +131,7 @@ static PetscErrorCode TSEvaluateStep_ARKIMEX_FastSlowSplit(TS ts, PetscInt order
         PetscCall(VecGetSubVector(X, ark->is_fast, &Xfast));
         if (fasthasE) PetscCall(VecMAXPY(Xfast, s, w, ark->YdotRHS_fast));
         for (j = 0; j < s; j++) w[j] = h * tab->bembedt[j];
-        PetscCall(VecMAXPY(Xfast, s, w, ark->YdotI));
+        PetscCall(VecMAXPY(Xfast, s, w, ark->YdotI_fast));
         PetscCall(VecRestoreSubVector(X, ark->is_fast, &Xfast));
       }
     } else { /* Rollback and re-complete using (bet-be,be-b) */
@@ -148,7 +146,7 @@ static PetscErrorCode TSEvaluateStep_ARKIMEX_FastSlowSplit(TS ts, PetscInt order
         PetscCall(VecGetSubVector(X, ark->is_fast, &Xfast));
         if (fasthasE) PetscCall(VecMAXPY(Xfast, tab->s, w, ark->YdotRHS_fast));
         for (j = 0; j < s; j++) w[j] = h * (tab->bembedt[j] - tab->bt[j]);
-        PetscCall(VecMAXPY(Xfast, tab->s, w, ark->YdotI));
+        PetscCall(VecMAXPY(Xfast, tab->s, w, ark->YdotI_fast));
         PetscCall(VecRestoreSubVector(X, ark->is_fast, &Xfast));
       }
     }
@@ -179,7 +177,7 @@ static PetscErrorCode TSStep_ARKIMEX_FastSlowSplit(TS ts)
   const PetscInt   s   = tab->s;
   const PetscReal *At = tab->At, *A = tab->A, *ct = tab->ct;
   PetscScalar     *w = ark->work;
-  Vec             *Y = ark->Y, Ydot_fast = ark->Ydot, Ydot0_fast = ark->Ydot0, Z = ark->Z, *YdotRHS_fast = ark->YdotRHS_fast, *YdotRHS_slow = ark->YdotRHS_slow, *YdotI_fast = ark->YdotI, Yfast, Yslow, Xfast, Xslow;
+  Vec             *Y = ark->Y, Ydot_fast = ark->Ydot, Ydot0_fast = ark->Ydot0, Z = ark->Z, *YdotRHS_fast = ark->YdotRHS_fast, *YdotRHS_slow = ark->YdotRHS_slow, *YdotI_fast = ark->YdotI_fast, Yfast, Yslow, Xfast, Xslow;
   PetscBool        extrapolate = ark->extrapolate;
   TSAdapt          adapt;
   SNES             snes;
@@ -345,7 +343,7 @@ static PetscErrorCode TSStep_ARKIMEX_FastSlowSplit(TS ts)
     PetscCall(TSAdaptChoose(adapt, ts, ts->time_step, NULL, &next_time_step, &accept));
     ark->status = accept ? TS_STEP_COMPLETE : TS_STEP_INCOMPLETE;
     if (!accept) { /* Roll back the current step */
-      PetscCall(TSRollBack_ARKIMEX(ts));
+      PetscCall(VecCopy(ts->vec_sol0, ts->vec_sol));
       ts->time_step = next_time_step;
       goto reject_step;
     }
@@ -372,6 +370,8 @@ static PetscErrorCode TSSetUp_ARKIMEX_FastSlowSplit(TS ts)
   Vec         Xfast, Xslow;
 
   PetscFunctionBegin;
+  PetscCall(PetscMalloc1(2 * tab->s, &ark->work));
+  PetscCall(VecDuplicateVecs(ts->vec_sol, tab->s, &ark->Y));
   PetscCall(TSRHSSplitGetIS(ts, "slow", &ark->is_slow));
   PetscCall(TSRHSSplitGetIS(ts, "fast", &ark->is_fast));
   PetscCheck(ark->is_slow || ark->is_fast, PetscObjectComm((PetscObject)ts), PETSC_ERR_USER, "Must set up RHSSplits with TSRHSSplitSetIS() using split names 'slow' or 'fast' or both in order to use -ts_arkimex_fastslow true");
@@ -379,7 +379,7 @@ static PetscErrorCode TSSetUp_ARKIMEX_FastSlowSplit(TS ts)
   PetscCall(VecDestroy(&ark->Ydot));
   PetscCall(VecDestroy(&ark->Ydot0));
   PetscCall(VecDestroy(&ark->Z));
-  PetscCall(VecDestroyVecs(tab->s, &ark->YdotI));
+  PetscCall(VecDestroyVecs(tab->s, &ark->YdotI_fast));
   if (ark->extrapolate && ark->is_slow) { // need to resize these vectors if the fast subvectors is smaller than their original counterparts (which means IS)
     PetscCall(VecDestroyVecs(tab->s, &ark->Y_prev));
     PetscCall(VecDestroyVecs(tab->s, &ark->YdotI_prev));
@@ -390,7 +390,7 @@ static PetscErrorCode TSSetUp_ARKIMEX_FastSlowSplit(TS ts)
   if (ark->is_fast) {
     PetscCall(VecGetSubVector(ts->vec_sol, ark->is_fast, &Xfast));
     PetscCall(VecDuplicateVecs(Xfast, tab->s, &ark->YdotRHS_fast));
-    PetscCall(VecDuplicateVecs(Xfast, tab->s, &ark->YdotI));
+    PetscCall(VecDuplicateVecs(Xfast, tab->s, &ark->YdotI_fast));
     PetscCall(VecDuplicate(Xfast, &ark->Ydot));
     PetscCall(VecDuplicate(Xfast, &ark->Ydot0));
     PetscCall(VecDuplicate(Xfast, &ark->Z));
@@ -412,6 +412,7 @@ static PetscErrorCode TSSetUp_ARKIMEX_FastSlowSplit(TS ts)
   if (ark->subts_fast) { // subts SNESJacobian is set when users set the subts Jacobian, but the main ts SNESJacobian needs to be set too
     SNES snes, snes_fast;
     PetscErrorCode (*func)(SNES, Vec, Mat, Mat, void *);
+    ts->matchsnesdm = PETSC_FALSE;
     PetscCall(TSGetSNES(ts, &snes));
     PetscCall(TSGetSNES(ark->subts_fast, &snes_fast));
     PetscCall(SNESGetJacobian(snes_fast, NULL, NULL, &func, NULL));
@@ -427,10 +428,12 @@ static PetscErrorCode TSReset_ARKIMEX_FastSlowSplit(TS ts)
 
   PetscFunctionBegin;
   if (tab) {
+    PetscCall(PetscFree(ark->work));
+    PetscCall(VecDestroyVecs(tab->s, &ark->Y));
     if (ark->is_fast && ark->is_slow) PetscCall(VecDestroy(&ark->Y_snes));
     PetscCall(VecDestroyVecs(tab->s, &ark->YdotRHS_slow));
     PetscCall(VecDestroyVecs(tab->s, &ark->YdotRHS_fast));
-    PetscCall(VecDestroyVecs(tab->s, &ark->YdotI));
+    PetscCall(VecDestroyVecs(tab->s, &ark->YdotI_fast));
     PetscCall(VecDestroy(&ark->Ydot));
     PetscCall(VecDestroy(&ark->Ydot0));
     PetscCall(VecDestroy(&ark->Z));

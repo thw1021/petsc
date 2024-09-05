@@ -2691,7 +2691,7 @@ PetscErrorCode TSGetSNES(TS ts, SNES *snes)
     PetscCall(PetscObjectSetOptions((PetscObject)ts->snes, ((PetscObject)ts)->options));
     PetscCall(SNESSetFunction(ts->snes, NULL, SNESTSFormFunction, ts));
     PetscCall(PetscObjectIncrementTabLevel((PetscObject)ts->snes, (PetscObject)ts, 1));
-    if (ts->dm) PetscCall(SNESSetDM(ts->snes, ts->dm));
+    if (ts->dm && ts->matchsnesdm) PetscCall(SNESSetDM(ts->snes, ts->dm));
     if (ts->problem_type == TS_LINEAR) PetscCall(SNESSetType(ts->snes, SNESKSPONLY));
   }
   *snes = ts->snes;
@@ -4380,8 +4380,10 @@ PetscErrorCode TSSetDM(TS ts, DM dm)
   }
   ts->dm = dm;
 
-  PetscCall(TSGetSNES(ts, &snes));
-  PetscCall(SNESSetDM(snes, dm));
+  if (ts->matchsnesdm) {
+    PetscCall(TSGetSNES(ts, &snes));
+    PetscCall(SNESSetDM(snes, dm));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -4406,7 +4408,7 @@ PetscErrorCode TSGetDM(TS ts, DM *dm)
   PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
   if (!ts->dm) {
     PetscCall(DMShellCreate(PetscObjectComm((PetscObject)ts), &ts->dm));
-    if (ts->snes) PetscCall(SNESSetDM(ts->snes, ts->dm));
+    if (ts->snes && ts->matchsnesdm) PetscCall(SNESSetDM(ts->snes, ts->dm));
   }
   *dm = ts->dm;
   PetscFunctionReturn(PETSC_SUCCESS);

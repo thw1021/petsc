@@ -9,6 +9,7 @@ static PetscErrorCode TSAdaptChoose_Basic(TSAdapt adapt, TS ts, PetscReal h, Pet
   PetscReal enorma, enormr;
   PetscReal safety = adapt->safety;
   PetscReal hfac_lte, h_lte;
+  DM        dm;
 
   PetscFunctionBegin;
   *next_sc = 0;  /* Reuse the same order scheme */
@@ -22,10 +23,11 @@ static PetscErrorCode TSAdaptChoose_Basic(TSAdapt adapt, TS ts, PetscReal h, Pet
     PetscCheck(adapt->candidates.n >= 1, PetscObjectComm((PetscObject)adapt), PETSC_ERR_ARG_WRONGSTATE, "No candidate has been registered");
     PetscCheck(adapt->candidates.inuse_set, PetscObjectComm((PetscObject)adapt), PETSC_ERR_ARG_WRONGSTATE, "The current in-use scheme is not among the %" PetscInt_FMT " candidates", adapt->candidates.n);
     order = adapt->candidates.order[0];
-    PetscCall(VecDuplicate(ts->vec_sol, &Y));
+    PetscCall(TSGetDM(ts, &dm));
+    PetscCall(DMGetGlobalVector(dm, &Y));
     PetscCall(TSEvaluateStep(ts, order - 1, Y, NULL));
     PetscCall(TSErrorWeightedNorm(ts, ts->vec_sol, Y, adapt->wnormtype, &enorm, &enorma, &enormr));
-    PetscCall(VecDestroy(&Y));
+    PetscCall(DMRestoreGlobalVector(dm, &Y));
   }
 
   if (enorm < 0) {
