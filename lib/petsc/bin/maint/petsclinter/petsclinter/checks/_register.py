@@ -137,6 +137,7 @@ def __register_all_classids() -> None:
     "_p_DMLabel *"                : "DMLABEL_CLASSID",
     "_p_DMPlexTransform *"        : "DMPLEXTRANSFORM_CLASSID",
     "_p_DMSNES *"                 : "DMSNES_CLASSID",
+    "_p_DMTao *"                  : "DMTAO_CLASSID",
     "_p_DMTS *"                   : "DMTS_CLASSID",
     "_p_IS *"                     : "IS_CLASSID",
     "_p_ISLocalToGlobalMapping *" : "IS_LTOGM_CLASSID",

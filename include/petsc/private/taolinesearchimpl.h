@@ -9,8 +9,13 @@ struct _TaoLineSearchOps {
   PetscErrorCode (*computegradient)(TaoLineSearch, Vec, Vec, void *);
   PetscErrorCode (*computeobjectiveandgradient)(TaoLineSearch, Vec, PetscReal *, Vec, void *);
   PetscErrorCode (*computeobjectiveandgts)(TaoLineSearch, Vec, Vec, PetscReal *, PetscReal *, void *);
+  PetscErrorCode (*computeproximalmap)(TaoLineSearch, PetscReal, Vec, Vec, PetscBool, void *);
   PetscErrorCode (*setup)(TaoLineSearch);
+  PetscErrorCode (*preapply)(TaoLineSearch, Vec, PetscReal *, Vec, Vec);
   PetscErrorCode (*apply)(TaoLineSearch, Vec, PetscReal *, Vec, Vec);
+  PetscErrorCode (*postapply)(TaoLineSearch, Vec, PetscReal *, Vec, Vec);
+  PetscErrorCode (*update)(TaoLineSearch, Vec, PetscReal *, Vec, Vec);
+  PetscErrorCode (*postupdate)(TaoLineSearch, Vec, PetscReal *, Vec, Vec);
   PetscErrorCode (*view)(TaoLineSearch, PetscViewer);
   PetscErrorCode (*setfromoptions)(TaoLineSearch, PetscOptionItems *);
   PetscErrorCode (*reset)(TaoLineSearch);
@@ -30,6 +35,7 @@ struct _p_TaoLineSearch {
   PetscBool setupcalled;
   PetscBool usegts;
   PetscBool usetaoroutines;
+  PetscBool usedm;
   PetscBool hasobjective;
   PetscBool hasgradient;
   PetscBool hasobjectiveandgradient;
@@ -54,6 +60,7 @@ struct _p_TaoLineSearch {
   PetscInt                     nfeval;
   PetscInt                     ngeval;
   PetscInt                     nfgeval;
+  PetscInt                     nproxeval;
   TaoLineSearchConvergedReason reason;
 
   PetscReal rtol;    /* relative tol for acceptable step (rtol>0) */
@@ -62,7 +69,13 @@ struct _p_TaoLineSearch {
   PetscReal stepmin; /* lower bound for step */
   PetscReal stepmax; /* upper bound for step */
 
-  Tao tao;
+  Tao       tao;
+  DM        dm;   /* DM that contains obj, grad routines */
+  DM        prox; /* DM that contains proximal map. For PS */
+  DM        prox_reg;
+  PetscReal prox_scale;
+  Mat       lmap;
+  PetscReal lmap_norm;
 };
 
 PETSC_EXTERN PetscLogEvent TAOLINESEARCH_Apply;

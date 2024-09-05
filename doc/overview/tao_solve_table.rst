@@ -291,3 +291,35 @@ Constrained
      - X
      - X
      - General Constraints
+
+----------------------------
+
+Proximal
+===========
+
+.. list-table::
+   :widths: auto
+   :align: center
+   :header-rows: 1
+
+   * - Algorithm
+     - Associated Type
+     - Objective
+     - Gradient
+     - Hessian
+     - Constraints
+     - Jacobian
+   * - Forward-Backward
+     - ``TAOFB``
+     - X
+     - X
+     -
+     -
+     -
+   * - Condat-Vu
+     - ``TAOCV``
+     - X
+     - X
+     -
+     -
+     -
