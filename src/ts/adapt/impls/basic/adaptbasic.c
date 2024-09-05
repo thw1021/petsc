@@ -4,12 +4,12 @@
 static PetscErrorCode TSAdaptChoose_Basic(TSAdapt adapt, TS ts, PetscReal h, PetscInt *next_sc, PetscReal *next_h, PetscBool *accept, PetscReal *wlte, PetscReal *wltea, PetscReal *wlter)
 {
   Vec       Y;
-  DM        dm;
   PetscInt  order = PETSC_DECIDE;
   PetscReal enorm = -1;
   PetscReal enorma, enormr;
   PetscReal safety = adapt->safety;
   PetscReal hfac_lte, h_lte;
+  DM        dm;
 
   PetscFunctionBegin;
   *next_sc = 0;  /* Reuse the same order scheme */
