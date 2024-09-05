@@ -514,7 +514,7 @@ PETSC_EXTERN PetscErrorCode MatCreateSubMatrixFree(Mat, IS, IS, Mat *);
 /*S
    TaoTerm - Abstract PETSc object for a parametric real-valued function that can be a term in a `Tao` objective function
 
-   Level: interm
+   Level: intermediate
 
 .seealso: [](doc_taosolve), [](ch_tao), `TaoTermCreate()`, `TaoTermDestroy()`, `TaoTermSetType()`, `TaoTermType`
 S*/
@@ -582,5 +582,13 @@ PETSC_EXTERN PetscErrorCode TaoTermGradient(TaoTerm, Vec, Vec, Vec);
 PETSC_EXTERN PetscErrorCode TaoTermObjectiveAndGradient(TaoTerm, Vec, Vec, PetscReal *, Vec);
 PETSC_EXTERN PetscErrorCode TaoTermHessian(TaoTerm, Vec, Vec, Mat, Mat);
 //PETSC_EXTERN PetscErrorCode TaoTermProximalMap(TaoTerm, Vec, PetscReal, TaoTerm, Vec, PetscReal, Vec);
+
+PETSC_EXTERN PetscErrorCode TaoGetObjectiveTerm(Tao, TaoTerm *);
+PETSC_EXTERN PetscErrorCode TaoSetObjectiveTerm(Tao, TaoTerm);
+
+PETSC_EXTERN PetscErrorCode TaoTermIsObjectiveDefined(TaoTerm, PetscBool *);
+PETSC_EXTERN PetscErrorCode TaoTermIsGradientDefined(TaoTerm, PetscBool *);
+PETSC_EXTERN PetscErrorCode TaoTermIsObjectiveAndGradientDefined(TaoTerm, PetscBool *);
+PETSC_EXTERN PetscErrorCode TaoTermIsHessianDefined(TaoTerm, PetscBool *);
 
 #include <petsctao_deprecations.h>

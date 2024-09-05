@@ -163,7 +163,7 @@ PetscErrorCode TaoTermSetType(TaoTerm term, TaoTermType type)
   if (issame) PetscFunctionReturn(PETSC_SUCCESS);
 
   PetscCall(PetscFunctionListFind(TaoTermList, type, (void (**)(void)) & create));
-  PetscCheck(create, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_UNKNOWN_TYPE, "Unable to find requested Tao type %s", type);
+  PetscCheck(create, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_UNKNOWN_TYPE, "Unable to find requested TaoTerm type %s", type);
 
   /* Destroy the existing term information */
   PetscTryTypeMethod(term, destroy);
@@ -409,5 +409,105 @@ PetscErrorCode TaoTermHessian(TaoTerm term, Vec x, Vec params, Mat H, Mat Hpre)
   PetscCall(PetscLogEventEnd(TAOTERM_HessianEval, term, NULL, NULL, NULL));
   if (params) PetscCall(VecLockReadPop(params));
   PetscCall(VecLockReadPop(x));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoTermIsObjectiveDefined - Whether this term can call `TaoTermObjective()`.
+
+  Not collective
+
+  Input Parameter:
+. term - a `TaoTerm`
+
+  Output Parameter:
+. is_defined - whether the objective is defined
+
+  Level: intermediate
+
+.seealso: [](ch_tao), `Tao`, `TaoTerm`, `TaoTermObjective()`, `TaoTermShellSetObjective()`, `TaoTermIsGradientDefined()`, `TaoTermIsObjectiveAndGradientDefined()`, `TaoTermIsHessianDefined()`
+@*/
+PetscErrorCode TaoTermIsObjectiveDefined(TaoTerm term, PetscBool *is_defined)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  PetscAssertPointer(is_defined, 2);
+  if (term->ops->isobjectivedefined) PetscUseTypeMethod(term, isobjectivedefined, is_defined);
+  else *is_defined = (term->ops->objective != NULL) ? PETSC_TRUE : PETSC_FALSE;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoTermIsGradientDefined - Whether this term can call `TaoTermGradient()`.
+
+  Not collective
+
+  Input Parameter:
+. term - a `TaoTerm`
+
+  Output Parameter:
+. is_defined - whether the gradient is defined
+
+  Level: intermediate
+
+.seealso: [](ch_tao), `Tao`, `TaoTerm`, `TaoTermGradient()`, `TaoTermShellSetGradient()`, `TaoTermIsObjectiveDefined()`, `TaoTermIsObjectiveAndGradientDefined()`, `TaoTermIsHessianDefined()`
+@*/
+PetscErrorCode TaoTermIsGradientDefined(TaoTerm term, PetscBool *is_defined)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  PetscAssertPointer(is_defined, 2);
+  if (term->ops->isgradientdefined) PetscUseTypeMethod(term, isgradientdefined, is_defined);
+  else *is_defined = (term->ops->gradient != NULL) ? PETSC_TRUE : PETSC_FALSE;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoTermIsObjectiveAndGradientDefined - Whether this term can call `TaoTermObjectiveAndGradient()`.
+
+  Not collective
+
+  Input Parameter:
+. term - a `TaoTerm`
+
+  Output Parameter:
+. is_defined - whether the objective/gradient is defined
+
+  Level: intermediate
+
+.seealso: [](ch_tao), `Tao`, `TaoTerm`, `TaoTermObjectiveAndGradient()`, `TaoTermShellSetObjectiveAndGradient()`, `TaoTermIsObjectiveDefined()`, `TaoTermIsGradientDefined()`, `TaoTermIsHessianDefined()`
+@*/
+PetscErrorCode TaoTermIsObjectiveAndGradientDefined(TaoTerm term, PetscBool *is_defined)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  PetscAssertPointer(is_defined, 2);
+  if (term->ops->isobjectiveandgradientdefined) PetscUseTypeMethod(term, isobjectiveandgradientdefined, is_defined);
+  else *is_defined = (term->ops->objectiveandgradient != NULL) ? PETSC_TRUE : PETSC_FALSE;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoTermIsHessianDefined - Whether this term can call `TaoTermHessian()`.
+
+  Not collective
+
+  Input Parameter:
+. term - a `TaoTerm`
+
+  Output Parameter:
+. is_defined - whether the hessian is defined
+
+  Level: intermediate
+
+.seealso: [](ch_tao), `Tao`, `TaoTerm`, `TaoTermHessian()`, `TaoTermShellSetHessian()`, `TaoTermIsObjectiveDefined()`, `TaoTermIsGradientDefined()`, `TaoTermIsObjectiveAndGradientDefined()`
+@*/
+PetscErrorCode TaoTermIsHessianDefined(TaoTerm term, PetscBool *is_defined)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  PetscAssertPointer(is_defined, 2);
+  if (term->ops->ishessiandefined) PetscUseTypeMethod(term, ishessiandefined, is_defined);
+  else *is_defined = (term->ops->hessian != NULL) ? PETSC_TRUE : PETSC_FALSE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }

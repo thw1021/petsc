@@ -133,6 +133,7 @@ PetscErrorCode TaoCreate(MPI_Comm comm, Tao *newtao)
   PetscCall(TaoTermCreateTaoCallbacks(tao, &tao->orig_callbacks));
   PetscCall(PetscObjectReference((PetscObject)tao->orig_callbacks));
   tao->objective_term = tao->orig_callbacks;
+  tao->objective_scale = 1.0;
   PetscCall(TaoResetStatistics(tao));
   *newtao = tao;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -2819,5 +2820,33 @@ PetscErrorCode TaoMonitorDrawCtxDestroy(TaoMonitorDrawCtx *ictx)
   PetscFunctionBegin;
   PetscCall(PetscViewerDestroy(&(*ictx)->viewer));
   PetscCall(PetscFree(*ictx));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+  TaoGetObjectiveTerm - Get the whole objective function of the `Tao` as a single `TaoTerm`.
+
+*/
+PetscErrorCode TaoGetObjectiveTerm(Tao tao, TaoTerm *term)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
+  PetscAssertPointer(term, 2);
+  *term = tao->objective_term;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+  TaoSetObjectiveTerm - Set the whole objective function of the `Tao` as a single `TaoTerm`.
+
+*/
+PetscErrorCode TaoSetObjectiveTerm(Tao tao, TaoTerm term)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
+  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 2);
+  PetscCall(PetscObjectReference((PetscObject)term));
+  PetscCall(TaoTermDestroy(&tao->objective_term));
+  tao->objective_term = term;
   PetscFunctionReturn(PETSC_SUCCESS);
 }

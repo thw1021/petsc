@@ -11,10 +11,6 @@ typedef struct _TaoOps *TaoOps;
 
 struct _TaoOps {
   /* Methods set by application */
-  PetscErrorCode (*computeobjective)(Tao, Vec, PetscReal *, void *);
-  PetscErrorCode (*computeobjectiveandgradient)(Tao, Vec, PetscReal *, Vec, void *);
-  PetscErrorCode (*computegradient)(Tao, Vec, Vec, void *);
-  PetscErrorCode (*computehessian)(Tao, Vec, Mat, Mat, void *);
   PetscErrorCode (*computeresidual)(Tao, Vec, Vec, void *);
   PetscErrorCode (*computeresidualjacobian)(Tao, Vec, Mat, Mat, void *);
   PetscErrorCode (*computeconstraints)(Tao, Vec, Vec, void *);
@@ -179,10 +175,10 @@ struct _p_Tao {
   PetscBool     hist_reset;
   PetscBool     hist_malloc;
 
-  TaoTerm   objective_term;  /* TaoTerm in use */
+  TaoTerm   objective_term; /* TaoTerm in use */
   PetscReal objective_scale;
 
-  TaoTerm   orig_callbacks;  /* TAOTERMTAOCALLBACKS for the original callbacks */
+  TaoTerm orig_callbacks; /* TAOTERMTAOCALLBACKS for the original callbacks */
 };
 
 PETSC_EXTERN PetscLogEvent TAO_Solve;
@@ -216,16 +212,21 @@ static inline PetscErrorCode TaoLogConvergenceHistory(Tao tao, PetscReal obj, Pe
 typedef struct _TaoTermOps *TaoTermOps;
 
 struct _TaoTermOps {
-  /* Methods set by application */
+  PetscErrorCode (*setfromoptions)(TaoTerm, PetscOptionItems *);
+  PetscErrorCode (*setup)(TaoTerm);
+  PetscErrorCode (*view)(TaoTerm, PetscViewer);
+  PetscErrorCode (*destroy)(TaoTerm);
+
   PetscErrorCode (*objective)(TaoTerm, Vec, Vec, PetscReal *);
   PetscErrorCode (*objectiveandgradient)(TaoTerm, Vec, Vec, PetscReal *, Vec);
   PetscErrorCode (*gradient)(TaoTerm, Vec, Vec, Vec);
   PetscErrorCode (*hessian)(TaoTerm, Vec, Vec, Mat, Mat);
   PetscErrorCode (*proximalmap)(TaoTerm, Vec, PetscReal, TaoTerm, Vec, PetscReal, Vec);
-  PetscErrorCode (*setup)(TaoTerm);
-  PetscErrorCode (*view)(TaoTerm, PetscViewer);
-  PetscErrorCode (*setfromoptions)(TaoTerm, PetscOptionItems *);
-  PetscErrorCode (*destroy)(TaoTerm);
+
+  PetscErrorCode (*isobjectivedefined)(TaoTerm, PetscBool *);
+  PetscErrorCode (*isgradientdefined)(TaoTerm, PetscBool *);
+  PetscErrorCode (*isobjectiveandgradientdefined)(TaoTerm, PetscBool *);
+  PetscErrorCode (*ishessiandefined)(TaoTerm, PetscBool *);
 };
 
 #define MAXTAOMONITORS 10
@@ -242,8 +243,12 @@ PETSC_INTERN PetscErrorCode TaoTermRegisterAll(void);
 
 PETSC_INTERN PetscErrorCode TaoTermCreateTaoCallbacks(Tao, TaoTerm *);
 
-PETSC_INTERN PetscErrorCode TaoTermTaoCallbacksSetObjective(TaoTerm, PetscErrorCode (*) (Tao, Vec, PetscReal *, void *), void *);
-PETSC_INTERN PetscErrorCode TaoTermTaoCallbacksSetGradient(TaoTerm, PetscErrorCode (*) (Tao, Vec, Vec, void *), void *);
-PETSC_INTERN PetscErrorCode TaoTermTaoCallbacksSetObjAndGrad(TaoTerm, PetscErrorCode (*) (Tao, Vec, PetscReal *, Vec, void *), void *);
-PETSC_INTERN PetscErrorCode TaoTermTaoCallbacksSetHessian(TaoTerm, PetscErrorCode (*) (Tao, Vec, Mat, Mat, void *), void *);
+PETSC_INTERN PetscErrorCode TaoTermTaoCallbacksSetObjective(TaoTerm, PetscErrorCode (*)(Tao, Vec, PetscReal *, void *), void *);
+PETSC_INTERN PetscErrorCode TaoTermTaoCallbacksSetGradient(TaoTerm, PetscErrorCode (*)(Tao, Vec, Vec, void *), void *);
+PETSC_INTERN PetscErrorCode TaoTermTaoCallbacksSetObjAndGrad(TaoTerm, PetscErrorCode (*)(Tao, Vec, PetscReal *, Vec, void *), void *);
+PETSC_INTERN PetscErrorCode TaoTermTaoCallbacksSetHessian(TaoTerm, PetscErrorCode (*)(Tao, Vec, Mat, Mat, void *), void *);
 
+PETSC_INTERN PetscErrorCode TaoTermTaoCallbacksGetObjective(TaoTerm, PetscErrorCode (**)(Tao, Vec, PetscReal *, void *), void **);
+PETSC_INTERN PetscErrorCode TaoTermTaoCallbacksGetGradient(TaoTerm, PetscErrorCode (**)(Tao, Vec, Vec, void *), void **);
+PETSC_INTERN PetscErrorCode TaoTermTaoCallbacksGetObjAndGrad(TaoTerm, PetscErrorCode (**)(Tao, Vec, PetscReal *, Vec, void *), void **);
+PETSC_INTERN PetscErrorCode TaoTermTaoCallbacksGetHessian(TaoTerm, PetscErrorCode (**)(Tao, Vec, Mat, Mat, void *), void **);

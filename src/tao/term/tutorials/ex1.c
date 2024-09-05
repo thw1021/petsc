@@ -30,6 +30,6 @@ int main(int argc, char **argv)
 
   test:
     suffix: 1
-    args: -tao_term_type tao
+    args: -tao_term_type taocallbacks
 
 TEST*/
