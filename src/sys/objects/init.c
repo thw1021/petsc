@@ -34,7 +34,7 @@ PetscBool PetscBeganNvshmem       = PETSC_FALSE;
 PetscBool PetscNvshmemInitialized = PETSC_FALSE;
 #endif
 
-PetscBool use_gpu_aware_mpi = PetscDefined(HAVE_MPIUNI) ? PETSC_FALSE : PETSC_TRUE;
+PetscUseGPUMPI use_gpu_aware_mpi = PetscDefined(HAVE_MPIUNI) ? PETSC_USE_GPU_AWARE_MPI_FALSE : PETSC_USE_GPU_AWARE_MPI_TRUE;
 
 PetscBool PetscPrintFunctionList = PETSC_FALSE;
 
@@ -581,9 +581,21 @@ PETSC_INTERN PetscErrorCode PetscOptionsCheckInitial_Private(const char help[])
     }
   }
 
-  PetscCall(PetscOptionsGetBool(NULL, NULL, "-saws_options", &PetscOptionsPublish, NULL));
-  PetscCall(PetscOptionsGetBool(NULL, NULL, "-use_gpu_aware_mpi", &use_gpu_aware_mpi, &flg1));
-  if (!flg1) PetscCall(PetscOptionsGetBool(NULL, NULL, "-sf_use_gpu_aware_mpi", &use_gpu_aware_mpi, &flg1)); // an alias option
+  char tmpstr[32] = {0};
+  PetscCall(PetscOptionsGetString(NULL, NULL, "-use_gpu_aware_mpi", tmpstr, sizeof(tmpstr), &flg1));
+  if (flg1) { // have -use_gpu_aware_mpi in options, no matter if there is a string provided or not
+    PetscBool isAUTO;
+    PetscCall(PetscStrcasecmp("AUTO", tmpstr, &isAUTO)); // auto or AUTO
+    if (isAUTO) {
+      use_gpu_aware_mpi = PETSC_USE_GPU_AWARE_MPI_AUTO;
+    } else {
+      PetscBool use;
+      PetscCall(PetscOptionsGetBool(NULL, NULL, "-use_gpu_aware_mpi", &use, NULL)); // accept bool values such as 0, false, FALSE, NO, etc.
+      use_gpu_aware_mpi = use ? PETSC_USE_GPU_AWARE_MPI_TRUE : PETSC_USE_GPU_AWARE_MPI_FALSE;
+    }
+  } else {
+    use_gpu_aware_mpi = PETSC_USE_GPU_AWARE_MPI_AUTO; // AUTO if the option is not given; petsc will test the MPI to set the value eventually
+  }
 
   /*
        Print basic help message

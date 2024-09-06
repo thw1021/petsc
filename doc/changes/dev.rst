@@ -42,6 +42,8 @@ Changes: Development
 
 .. rubric:: VecScatter / PetscSF:
 
+- The ``-use_gpu_aware_mpi`` option now accepts ``auto`` (default), ``0`` and ``1``. ``auto`` lets petsc use the MPI as is; ``1`` lets petsc use it and error out if the MPI is not actually GPU-aware; ``0`` forces petsc not to use GPU-aware MPI (even it is)
+
 .. rubric:: PF:
 
 .. rubric:: Vec:
