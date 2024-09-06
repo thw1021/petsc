@@ -9,14 +9,14 @@ PetscLogEvent TAOTERM_ObjGradEval;
 PetscLogEvent TAOTERM_HessianEval;
 
 /*@
-  TaoTermDestroy - Destroy a description of a `TaoTerm`
+  TaoTermDestroy - Destroy a `TaoTerm`.
 
   Collective
 
   Input Parameters:
 . term - a `TaoTerm`
 
-  Level: intermediate
+  Level: beginner
 
 .seealso: [](ch_tao), `Tao`, `TaoTerm`, `TaoTermCreate()`, `TaoTermSetUp()`, `TaoTermSetFromOptions()`, `TaoTermView()`, `TaoTermSetType()`
 @*/
@@ -31,15 +31,14 @@ PetscErrorCode TaoTermDestroy(TaoTerm *term)
   }
 
   PetscTryTypeMethod(*term, destroy);
-  PetscCall(VecDestroy(&(*term)->solution_template));
-  PetscCall(VecDestroy(&(*term)->parameter_template));
+  PetscCall(MatDestroy(&(*term)->vec_factory));
 
   PetscCall(PetscHeaderDestroy(term));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  TaoTermView - View a description of a `TaoTerm`
+  TaoTermView - View a description of a `TaoTerm`.
 
   Collective
 
@@ -47,7 +46,7 @@ PetscErrorCode TaoTermDestroy(TaoTerm *term)
 + term   - a `TaoTerm`
 - viewer - a `PetscViewer`
 
-  Level: intermediate
+  Level: beginner
 
 .seealso: [](ch_tao), `Tao`, `TaoTerm`, `TaoTermCreate()`, `TaoTermDestroy()`, `TaoTermSetUp()`, `TaoTermSetFromOptions()`, `TaoTermSetType()`
 @*/
@@ -74,7 +73,7 @@ PetscErrorCode TaoTermView(TaoTerm term, PetscViewer viewer)
 }
 
 /*@
-  TaoTermSetUp - Set up a `TaoTerm`
+  TaoTermSetUp - Set up a `TaoTerm`.
 
   Collective
 
@@ -106,7 +105,7 @@ PetscErrorCode TaoTermSetUp(TaoTerm term)
   Options Database Keys:
 . -taoterm_type <type> - tao, shell, dm, separable, l1, linf, l2squared, quadratic, kl, `TaoTermType` for complete list
 
-  Level: intermediate
+  Level: beginner
 
 .seealso: [](ch_tao), `Tao`, `TaoTerm`, `TaoTermCreate()`, `TaoTermDestroy()`, `TaoTermView()`, `TaoTermSetUp()`, `TaoTermSetType()`
 @*/
@@ -144,7 +143,7 @@ PetscErrorCode TaoTermSetFromOptions(TaoTerm term)
 . -taoterm_type <type> - Sets the method; use -help for a list
    of available methods (for instance, newtonls or newtontr)
 
-  Level: intermediate
+  Level: beginner
 
   Note:
   New types of `TaoTerm` can be created with `TaoTermRegister()`
@@ -185,7 +184,7 @@ PetscErrorCode TaoTermSetType(TaoTerm term, TaoTermType type)
   Output Parameter:
 . term - a new TaoTerm
 
-  Level: intermediate
+  Level: beginner
 
 .seealso: [](ch_tao), `Tao`, `TaoTerm`, `TaoTermDestroy()`, `TaoTermSetUp()`, `TaoTermSetFromOptions()`, `TaoTermView()`, `TaoTermSetType()`
 @*/
@@ -214,7 +213,7 @@ PetscErrorCode TaoTermCreate(MPI_Comm comm, TaoTerm *term)
   Output Parameter:
 . value - the value of $f(x; p)$
 
-  Level: intermediate
+  Level: beginner
 
 .seealso: [](ch_tao), `Tao`, `TaoTerm`,
           `TaoTermGradient()`,
@@ -267,7 +266,7 @@ PetscErrorCode TaoTermObjective(TaoTerm term, Vec x, Vec params, PetscReal *valu
   Output Parameter:
 . g - the value of $\nabla_x f(x; p)$
 
-  Level: intermediate
+  Level: beginner
 
 .seealso: [](ch_tao), `Tao`, `TaoTerm`,
           `TaoTermObjective()`,
@@ -319,7 +318,7 @@ PetscErrorCode TaoTermGradient(TaoTerm term, Vec x, Vec params, Vec g)
 + value - the value of $f(x; p)$
 - g     - the value of $\nabla_x f(x; p)$
 
-  Level: intermediate
+  Level: beginner
 
 .seealso: [](ch_tao), `Tao`, `TaoTerm`,
           `TaoTermObjective()`,
@@ -377,7 +376,7 @@ PetscErrorCode TaoTermObjectiveAndGradient(TaoTerm term, Vec x, Vec params, Pets
 + H    - Hessian matrix $\nabla_x^2 f(x;p)$
 - Hpre - precondiitoning matrix
 
-  Level: intermediate
+  Level: beginner
 
 .seealso: [](ch_tao), `Tao`, `TaoTerm`,
           `TaoTermObjective()`,
@@ -509,5 +508,49 @@ PetscErrorCode TaoTermIsHessianDefined(TaoTerm term, PetscBool *is_defined)
   PetscAssertPointer(is_defined, 2);
   if (term->ops->ishessiandefined) PetscUseTypeMethod(term, ishessiandefined, is_defined);
   else *is_defined = (term->ops->hessian != NULL) ? PETSC_TRUE : PETSC_FALSE;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoTermGetVecType - Get the vector type for solution and parameter `Vec`s created by `TaoTermCreateVecs()`
+
+  Not collective
+
+  Input Parameter:
+. term - a `TaoTerm`
+
+  Output Parameter:
+. type - the `VecType`
+
+  Level: advanced
+
+.seealso: [](ch_tao), `Tao`, `TaoTerm`, `TaoTermSetVecType()`, `TaoTermCreateVecs()`
+@*/
+PetscErrorCode TaoTermGetVecType(TaoTerm term, VecType *type)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  PetscCall(MatGetVecType(term->vec_factory, type));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoTermSetVecType - Set the vector type for solution and parameter `Vec`s created by `TaoTermCreateVecs()`
+
+  Not collective
+
+  Input Parameter:
++ term - a `TaoTerm`
+- type - the `VecType`
+
+  Level: advanced
+
+.seealso: [](ch_tao), `Tao`, `TaoTerm`, `TaoTermGetVecType()`, `TaoTermCreateVecs()`
+@*/
+PetscErrorCode TaoTermSetVecType(TaoTerm term, VecType type)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  PetscCall(MatSetVecType(term->vec_factory, type));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

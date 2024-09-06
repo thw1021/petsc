@@ -454,18 +454,23 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Shell(TaoTerm term)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@
+/*@C
   TaoTermCreateShell - Create a `TaoTerm` of type `TAOTERMSHELL` that is ready to accept user-defined callback operations.
 
   Collective
 
   Input Parameter:
-. comm - the MPI communicator for computing the term
++ comm    - the MPI communicator for computing the term
+. ctx     - (optional) a user context to be used by routines
+- destroy - (optional) a routine to destroy the user context when `term` is destroyed
 
   Output Parameter:
 . term - a `TaoTerm` of type `TAOTERMSHELL`
 
   Level: intermediate
+
+  Calling sequence of `destroy`:
+. ctx - the user context provided in `TaoTermCreateShell()`
 
 .seealso: [](ch_tao), `Tao`, `TaoTerm`, `TAOTERMSHELL`
 @*/

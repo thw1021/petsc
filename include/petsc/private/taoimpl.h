@@ -235,8 +235,7 @@ struct _p_TaoTerm {
   PETSCHEADER(struct _TaoTermOps);
   void     *data;
   PetscBool setup_called;
-  Vec       solution_template;
-  Vec       parameter_template;
+  Mat       vec_factory;
 };
 
 PETSC_INTERN PetscErrorCode TaoTermRegisterAll(void);

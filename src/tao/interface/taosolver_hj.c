@@ -96,7 +96,8 @@ PetscErrorCode TaoGetHessian(Tao tao, Mat *H, Mat *Hpre, PetscErrorCode (**func)
 
   Level: intermediate
 
-  Note: If you are using `TaoTerm`s to define this objective, you should use this instead of `TaoSetHessian()` to set the matrices.
+  Note:
+  If you are using `TaoTerm`s to define this objective, you should use this instead of `TaoSetHessian()` to set the matrices.
 
 .seealso: [](ch_tao), `Tao`, `TaoType`, `TaoGetObjective()`, `TaoGetGradient()`, `TaoGetObjectiveAndGradient()`, `TaoSetHessian()`, `TaoGetHessian()`, `TaoGetHessianMatrices()`,
 @*/
@@ -127,7 +128,7 @@ PetscErrorCode TaoSetHessianMatrices(Tao tao, Mat H, Mat Hpre)
   Collective
 
   Input Parameters:
-. tao  - the `Tao` context
+. tao - the `Tao` context
 
   Output Parameters:
 + H    - the Hessian matrix
@@ -135,7 +136,8 @@ PetscErrorCode TaoSetHessianMatrices(Tao tao, Mat H, Mat Hpre)
 
   Level: intermediate
 
-  Note: If you are using `TaoTerm`s to define this objective, you should use this instead of `TaoSetHessian()` to set the matrices.
+  Note:
+  If you are using `TaoTerm`s to define this objective, you should use this instead of `TaoSetHessian()` to set the matrices.
 
 .seealso: [](ch_tao), `Tao`, `TaoType`, `TaoGetObjective()`, `TaoGetGradient()`, `TaoGetObjectiveAndGradient()`, `TaoSetHessian()`, `TaoGetHessian()`, `TaoSetHessianMatrices()`,
 @*/

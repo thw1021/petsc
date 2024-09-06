@@ -569,6 +569,15 @@ PETSC_EXTERN PetscErrorCode TaoTermSetUp(TaoTerm);
 PETSC_EXTERN PetscErrorCode TaoTermSetType(TaoTerm, TaoTermType);
 PETSC_EXTERN PetscErrorCode TaoTermSetFromOptions(TaoTerm);
 
+PETSC_EXTERN PetscErrorCode TaoTermGetVecType(TaoTerm, VecType *);
+PETSC_EXTERN PetscErrorCode TaoTermSetVecType(TaoTerm, VecType);
+PETSC_EXTERN PetscErrorCode TaoTermGetSizes(TaoTerm, PetscInt *, PetscInt *, PetscInt *, PetscInt *);
+PETSC_EXTERN PetscErrorCode TaoTermSetSizes(TaoTerm, PetscInt, PetscInt, PetscInt, PetscInt);
+PETSC_EXTERN PetscErrorCode TaoTermGetLayouts(TaoTerm, PetscLayout *, PetscLayout *);
+PETSC_EXTERN PetscErrorCode TaoTermSetLayouts(TaoTerm, PetscLayout *, PetscLayout *);
+PETSC_EXTERN PetscErrorCode TaoTermCreateVecs(TaoTerm, Vec *, Vec *);
+PETSC_EXTERN PetscErrorCode TaoTermCreateHessianMatrices(TaoTerm, Mat *, Mat *);
+
 PETSC_EXTERN PetscErrorCode TaoTermObjective(TaoTerm, Vec, Vec, PetscReal *);
 PETSC_EXTERN PetscErrorCode TaoTermGradient(TaoTerm, Vec, Vec, Vec);
 PETSC_EXTERN PetscErrorCode TaoTermObjectiveAndGradient(TaoTerm, Vec, Vec, PetscReal *, Vec);

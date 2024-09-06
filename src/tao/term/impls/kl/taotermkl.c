@@ -10,6 +10,5 @@ MC*/
 PETSC_INTERN PetscErrorCode TaoTermCreate_KL(TaoTerm term)
 {
   PetscFunctionBegin;
-  PetscFunctionReturn(PETSC_SUCCESS);;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
-

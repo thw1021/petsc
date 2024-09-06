@@ -24,7 +24,7 @@ struct _n_TaoTerm_Sum {
   Collective
 
   Input Parameters:
-+ term   - a `TaoTerm` of type `TAOTERMSUM`
++ term      - a `TaoTerm` of type `TAOTERMSUM`
 - subparams - an array of parameters `Vec`s, one for each subterm in the sum.  An entry can be NULL for a subterm that doesn't take parameters.
 
   Output Parameter:
@@ -41,7 +41,7 @@ struct _n_TaoTerm_Sum {
 PetscErrorCode TaoTermSumConcatenateParameters(TaoTerm term, Vec subparams[], Vec *params)
 {
   PetscInt n_terms;
-  Vec      *p;
+  Vec     *p;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
@@ -174,7 +174,7 @@ static PetscErrorCode TaoTermSumSetNumSubterms_Sum(TaoTerm term, PetscInt n_term
 . term - a `TaoTerm` of type `TAOTERMSUM`
 
   Output Parameter:
-. n_Terms - the number of terms that will be in the sum
+. n_terms - the number of terms that will be in the sum
 
   Level: intermediate
 
@@ -250,8 +250,8 @@ static PetscErrorCode TaoTermSumGetSubterm_Sum(TaoTerm term, PetscInt index, con
   Collective
 
   Input Parameters:
-+ term  - a `TaoTerm` of type `TAOTERMSUM`
-. index - a number $0 \leq i < n$, where $n$ is the number of terms in `TaoTermSumGetNumSubterms()`
++ term    - a `TaoTerm` of type `TAOTERMSUM`
+. index   - a number $0 \leq i < n$, where $n$ is the number of terms in `TaoTermSumGetNumSubterms()`
 . name    - the name assigned to the subterm (optional, can be NULL)
 . subterm - the `TaoTerm` for the subterm
 . scale   - the coefficient scaling the term in the sum
@@ -303,14 +303,18 @@ static PetscErrorCode TaoTermSumSetSubterm_Sum(TaoTerm term, PetscInt index, con
   Collective
 
   Input Parameters:
-+ term  - a `TaoTerm` of type `TAOTERMSUM`
++ term    - a `TaoTerm` of type `TAOTERMSUM`
 . name    - the name assigned to the subterm (optional, can be NULL)
 . subterm - the `TaoTerm` for the subterm
 . scale   - the coefficient scaling the term in the sum
 - map     - the map from the term solution space to the subterm solution space (NULL if they are the same space)
 
   Output Parameter:
-. index   - the index of the newly added term (optional, pass NULL if not needed)
+. index - the index of the newly added term (optional, pass NULL if not needed)
+
+  Level: intermediate
+
+.seealso: [](ch_tao), `Tao`, `TaoTerm`, `TAOTERMSUM`
 @*/
 PetscErrorCode TaoTermSumAddSubterm(TaoTerm term, const char name[], TaoTerm subterm, PetscReal scale, Mat map, PetscInt *index)
 {
@@ -383,12 +387,12 @@ static PetscErrorCode TaoTermSetFromOptions_Sum(TaoTerm term, PetscOptionItems *
 
 static PetscErrorCode TaoTermSumGetSummandData(TaoTerm term, PetscInt i, Vec x, Vec params, Vec *x_i, Vec *params_i, PetscReal *scale_i, Mat *map_i, Vec *g_i)
 {
-  TaoTerm_Sum *sum = (TaoTerm_Sum *)term->data;
+  TaoTerm_Sum    *sum     = (TaoTerm_Sum *)term->data;
   TaoTermSummand *summand = &sum->terms[i];
 
   PetscFunctionBegin;
   *scale_i = summand->scale;
-  *x_i = x;
+  *x_i     = x;
   if (map_i) *map_i = summand->map;
   if (summand->map) {
     if (!summand->map_output_temp) PetscCall(MatCreateVecs(summand->map, NULL, &summand->map_output_temp));
@@ -418,7 +422,7 @@ static PetscErrorCode TaoTermObjective_Sum(TaoTerm term, Vec x, Vec params, Pets
 
   PetscFunctionBegin;
   for (PetscInt i = 0; i < sum->n_terms; i++) {
-    PetscReal f_i   = 0.0, scale_i;
+    PetscReal f_i = 0.0, scale_i;
     Vec       x_i, params_i;
 
     PetscCall(TaoTermSumGetSummandData(term, i, x, params, &x_i, &params_i, &scale_i, NULL, NULL));
@@ -445,8 +449,7 @@ static PetscErrorCode TaoTermGradient_Sum(TaoTerm term, Vec x, Vec params, Vec g
     if (map_i) {
       if (scale_i != 1.0) PetscCall(VecScale(g_i, scale_i));
       PetscCall(MatMultHermitianTransposeAdd(map_i, g_i, g, g));
-    }
-    else PetscCall(VecAXPY(g, scale_i, g_i));
+    } else PetscCall(VecAXPY(g, scale_i, g_i));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -454,7 +457,7 @@ static PetscErrorCode TaoTermGradient_Sum(TaoTerm term, Vec x, Vec params, Vec g
 static PetscErrorCode TaoTermObjectiveAndGradient_Sum(TaoTerm term, Vec x, Vec params, PetscReal *value, Vec g)
 {
   TaoTerm_Sum *sum = (TaoTerm_Sum *)term->data;
-  PetscReal f = 0.0;
+  PetscReal    f   = 0.0;
 
   PetscFunctionBegin;
   PetscCall(VecZeroEntries(g));
@@ -469,8 +472,7 @@ static PetscErrorCode TaoTermObjectiveAndGradient_Sum(TaoTerm term, Vec x, Vec p
     if (map_i) {
       if (scale_i != 1.0) PetscCall(VecScale(g_i, scale_i));
       PetscCall(MatMultHermitianTransposeAdd(map_i, g_i, g, g));
-    }
-    else PetscCall(VecAXPY(g, scale_i, g_i));
+    } else PetscCall(VecAXPY(g, scale_i, g_i));
   }
   *value = f;
   PetscFunctionReturn(PETSC_SUCCESS);
