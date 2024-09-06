@@ -42,7 +42,7 @@ Changes: Development
 
 .. rubric:: VecScatter / PetscSF:
 
-- Add ``PetscSFRegisterPersistent()`` and ``PetscSFDeregisterPersistent()`` for safe optimization of persistent communication.
+- Add ``PetscSFRegisterPersistent()`` and ``PetscSFDeregisterPersistent()`` for safe optimization of persistent communication
 
 .. rubric:: PF:
 
