@@ -569,6 +569,12 @@ PETSC_EXTERN PetscErrorCode TaoTermSetUp(TaoTerm);
 PETSC_EXTERN PetscErrorCode TaoTermSetType(TaoTerm, TaoTermType);
 PETSC_EXTERN PetscErrorCode TaoTermSetFromOptions(TaoTerm);
 
+PETSC_EXTERN PetscErrorCode TaoTermObjective(TaoTerm, Vec, Vec, PetscReal *);
+PETSC_EXTERN PetscErrorCode TaoTermGradient(TaoTerm, Vec, Vec, Vec);
+PETSC_EXTERN PetscErrorCode TaoTermObjectiveAndGradient(TaoTerm, Vec, Vec, PetscReal *, Vec);
+PETSC_EXTERN PetscErrorCode TaoTermHessian(TaoTerm, Vec, Vec, Mat, Mat);
+//PETSC_EXTERN PetscErrorCode TaoTermProximalMap(TaoTerm, Vec, PetscReal, TaoTerm, Vec, PetscReal, Vec);
+
 PETSC_EXTERN PetscErrorCode TaoTermCreateShell(MPI_Comm, void *, PetscErrorCode (*)(void *), TaoTerm *);
 PETSC_EXTERN PetscErrorCode TaoTermShellSetContext(TaoTerm, void *);
 PETSC_EXTERN PetscErrorCode TaoTermShellGetContext(TaoTerm, void *);
@@ -580,18 +586,18 @@ PETSC_EXTERN PetscErrorCode TaoTermShellSetHessian(TaoTerm, PetscErrorCode (*)(T
 PETSC_EXTERN PetscErrorCode TaoTermShellSetProximalMap(TaoTerm, PetscErrorCode (*)(TaoTerm, Vec, PetscReal, TaoTerm, Vec, PetscReal, Vec));
 PETSC_EXTERN PetscErrorCode TaoTermShellSetView(TaoTerm, PetscErrorCode (*)(TaoTerm, PetscViewer));
 
-PETSC_EXTERN PetscErrorCode TaoTermObjective(TaoTerm, Vec, Vec, PetscReal *);
-PETSC_EXTERN PetscErrorCode TaoTermGradient(TaoTerm, Vec, Vec, Vec);
-PETSC_EXTERN PetscErrorCode TaoTermObjectiveAndGradient(TaoTerm, Vec, Vec, PetscReal *, Vec);
-PETSC_EXTERN PetscErrorCode TaoTermHessian(TaoTerm, Vec, Vec, Mat, Mat);
-//PETSC_EXTERN PetscErrorCode TaoTermProximalMap(TaoTerm, Vec, PetscReal, TaoTerm, Vec, PetscReal, Vec);
-
-PETSC_EXTERN PetscErrorCode TaoGetObjectiveTerm(Tao, TaoTerm *);
-PETSC_EXTERN PetscErrorCode TaoSetObjectiveTerm(Tao, TaoTerm);
+PETSC_EXTERN PetscErrorCode TaoTermSumSetNumSubterms(TaoTerm, PetscInt);
+PETSC_EXTERN PetscErrorCode TaoTermSumGetNumSubterms(TaoTerm, PetscInt *);
+PETSC_EXTERN PetscErrorCode TaoTermSumSetSubterm(TaoTerm, PetscInt, const char[], TaoTerm, PetscReal, Mat);
+PETSC_EXTERN PetscErrorCode TaoTermSumGetSubterm(TaoTerm, PetscInt, const char **, TaoTerm *, PetscReal *, Mat *);
+PETSC_EXTERN PetscErrorCode TaoTermSumAddSubterm(TaoTerm, const char[], TaoTerm, PetscReal, Mat, PetscInt *);
 
 PETSC_EXTERN PetscErrorCode TaoTermIsObjectiveDefined(TaoTerm, PetscBool *);
 PETSC_EXTERN PetscErrorCode TaoTermIsGradientDefined(TaoTerm, PetscBool *);
 PETSC_EXTERN PetscErrorCode TaoTermIsObjectiveAndGradientDefined(TaoTerm, PetscBool *);
 PETSC_EXTERN PetscErrorCode TaoTermIsHessianDefined(TaoTerm, PetscBool *);
+
+PETSC_EXTERN PetscErrorCode TaoGetObjectiveTerm(Tao, TaoTerm *);
+PETSC_EXTERN PetscErrorCode TaoSetObjectiveTerm(Tao, TaoTerm);
 
 #include <petsctao_deprecations.h>

@@ -1,0 +1,32 @@
+TaoTerm Object: example TaoTerm 1 MPI process
+  type: sum
+  Sum of 3 terms:
+    Summand 0:
+      Scale: 1.
+      Map: unmapped
+      Term:
+        TaoTerm Object: (subterm_0_) 1 MPI process
+          type: shell
+          No user context has been set
+          The following methods have been set:           (none)          
+    Summand 1:
+      Scale: 1.
+      Map: unmapped
+      Term:
+        TaoTerm Object: (subterm_1_) 1 MPI process
+          type: shell
+          No user context has been set
+          The following methods have been set:           (none)          
+    Summand 2:
+      Scale: 1.
+      Map: unmapped
+      Term:
+        TaoTerm Object: (subterm_2_) 1 MPI process
+          type: shell
+          No user context has been set
+          The following methods have been set:           (none)          
+[0] function name: TaoTermSumGetNumSubterms_C
+[0] function name: TaoTermSumSetSubterm_C
+[0] function name: TaoTermSumSetNumSubterms_C
+[0] function name: TaoTermSumAddSubterm_C
+[0] function name: TaoTermSumGetSubterm_C

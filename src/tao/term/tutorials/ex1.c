@@ -26,10 +26,14 @@ int main(int argc, char **argv)
   test:
     suffix: 0_from_options
     output_file: output/ex1_0.out
-    args: -tao_term_type shell
+    args: -taoterm_type shell
 
   test:
     suffix: 1
-    args: -tao_term_type taocallbacks
+    args: -taoterm_type taocallbacks
+
+  test:
+    suffix: 2
+    args: -taoterm_type sum -taoterm_sum_num_subterms 3
 
 TEST*/

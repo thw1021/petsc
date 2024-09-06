@@ -8,6 +8,7 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_TaoCallbacks(TaoTerm);
 PETSC_INTERN PetscErrorCode TaoTermCreate_BRGNRegularizer(TaoTerm);
 PETSC_INTERN PetscErrorCode TaoTermCreate_ADMMRegularizer(TaoTerm);
 PETSC_INTERN PetscErrorCode TaoTermCreate_ADMMMisfit(TaoTerm);
+PETSC_INTERN PetscErrorCode TaoTermCreate_Sum(TaoTerm);
 
 /*@C
   TaoTermRegister - Register an impementation of `TaoTerm`
@@ -26,7 +27,7 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_ADMMMisfit(TaoTerm);
   Then, your term can be chosen with the procedural interface via
 $     TaoTermType(term, "my_term")
   or at runtime via the option
-$     -tao_term_type my_term
+$     -taoterm_type my_term
 
   Level: advanced
 
@@ -53,5 +54,6 @@ PETSC_INTERN PetscErrorCode TaoTermRegisterAll(void)
   PetscCall(TaoTermRegister(TAOTERMBRGNREGULARIZER, TaoTermCreate_BRGNRegularizer));
   PetscCall(TaoTermRegister(TAOTERMADMMREGULARIZER, TaoTermCreate_ADMMRegularizer));
   PetscCall(TaoTermRegister(TAOTERMADMMMISFIT, TaoTermCreate_ADMMMisfit));
+  PetscCall(TaoTermRegister(TAOTERMSUM, TaoTermCreate_Sum));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

@@ -104,7 +104,7 @@ PetscErrorCode TaoTermSetUp(TaoTerm term)
 . term - a `TaoTerm`
 
   Options Database Keys:
-. -tao_term_type <type> - tao, shell, dm, separable, l1, linf, l2squared, quadratic, kl, `TaoTermType` for complete list
+. -taoterm_type <type> - tao, shell, dm, separable, l1, linf, l2squared, quadratic, kl, `TaoTermType` for complete list
 
   Level: intermediate
 
@@ -120,7 +120,7 @@ PetscErrorCode TaoTermSetFromOptions(TaoTerm term)
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
   if (((PetscObject)term)->type_name) deft = ((PetscObject)term)->type_name;
   PetscObjectOptionsBegin((PetscObject)term);
-  PetscCall(PetscOptionsFList("-tao_term_type", "TaoTerm type", "TaoTermType", TaoTermList, deft, type, 256, &flg));
+  PetscCall(PetscOptionsFList("-taoterm_type", "TaoTerm type", "TaoTermType", TaoTermList, deft, type, 256, &flg));
   if (flg) {
     PetscCall(TaoTermSetType(term, type));
   } else {
@@ -141,7 +141,7 @@ PetscErrorCode TaoTermSetFromOptions(TaoTerm term)
 - type - a `TaoTermType`
 
   Options Database Key:
-. -tao_term_type <type> - Sets the method; use -help for a list
+. -taoterm_type <type> - Sets the method; use -help for a list
    of available methods (for instance, newtonls or newtontr)
 
   Level: intermediate
