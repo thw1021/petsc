@@ -8,6 +8,7 @@ struct _n_TaoTermSummand {
   PetscReal scale;
   Mat       map;
   Vec       map_output_temp;
+  Vec       gradient_temp;
 };
 
 typedef struct _n_TaoTerm_Sum TaoTerm_Sum;
@@ -16,6 +17,48 @@ struct _n_TaoTerm_Sum {
   PetscInt        n_terms;
   TaoTermSummand *terms;
 };
+
+/*@
+  TaoTermSumConcatenateParameters - Concatenate the parameters for subterms into a parameter vector for a `TAOTERMSUM`
+
+  Collective
+
+  Input Parameters:
++ term   - a `TaoTerm` of type `TAOTERMSUM`
+- subparams - an array of parameters `Vec`s, one for each subterm in the sum.  An entry can be NULL for a subterm that doesn't take parameters.
+
+  Output Parameter:
+. params - a `Vec` of type `VECNEST` that concatenates all of the parameters
+
+  Level: intermediate
+
+  Note:
+  This is a wrapper around `VecCreateNest()`, but that function does not allow NULL for any of the `Vec`s in the array.  A 0-length
+  vector will be created for each NULL `Vec` that wil be internally ignored by `TAOTERMSUM`.
+
+.seealso: [](ch_tao), `Tao`, `TaoTerm`, `TAOTERMSUM`, `VecCreateNest()`
+@*/
+PetscErrorCode TaoTermSumConcatenateParameters(TaoTerm term, Vec subparams[], Vec *params)
+{
+  PetscInt n_terms;
+  Vec      *p;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  PetscCall(TaoTermSumGetNumSubterms(term, &n_terms));
+  PetscCall(PetscMalloc1(n_terms, &p));
+  for (PetscInt i = 0; i < n_terms; i++) {
+    if (subparams[i]) {
+      PetscValidHeaderSpecific(subparams[i], VEC_CLASSID, 2);
+      p[i] = subparams[i];
+    } else {
+      PetscCall(VecCreateMPIWithArray(PetscObjectComm((PetscObject)term), 1, 0, 0, NULL, &p[i]));
+    }
+  }
+  PetscCall(VecCreateNest(PetscObjectComm((PetscObject)term), n_terms, NULL, p, params));
+  PetscCall(PetscFree(p));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
 
 static PetscErrorCode TaoTermSummandReset(TaoTermSummand *summand)
 {
@@ -338,6 +381,101 @@ static PetscErrorCode TaoTermSetFromOptions_Sum(TaoTerm term, PetscOptionItems *
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode TaoTermSumGetSummandData(TaoTerm term, PetscInt i, Vec x, Vec params, Vec *x_i, Vec *params_i, PetscReal *scale_i, Mat *map_i, Vec *g_i)
+{
+  TaoTerm_Sum *sum = (TaoTerm_Sum *)term->data;
+  TaoTermSummand *summand = &sum->terms[i];
+
+  PetscFunctionBegin;
+  *scale_i = summand->scale;
+  *x_i = x;
+  if (map_i) *map_i = summand->map;
+  if (summand->map) {
+    if (!summand->map_output_temp) PetscCall(MatCreateVecs(summand->map, NULL, &summand->map_output_temp));
+    PetscCall(MatMult(summand->map, x, summand->map_output_temp));
+    *x_i = summand->map_output_temp;
+  }
+  if (g_i) {
+    if (!summand->gradient_temp) PetscCall(VecDuplicate(*x_i, &summand->gradient_temp));
+    *g_i = summand->gradient_temp;
+  }
+  *params_i = NULL;
+  if (params) {
+    Vec      subvec;
+    PetscInt N_i;
+
+    PetscCall(VecNestGetSubVec(params, i, &subvec));
+    PetscCall(VecGetSize(subvec, &N_i));
+    if (N_i > 0) *params_i = subvec;
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoTermObjective_Sum(TaoTerm term, Vec x, Vec params, PetscReal *value)
+{
+  TaoTerm_Sum *sum = (TaoTerm_Sum *)term->data;
+  PetscReal    f   = 0.0;
+
+  PetscFunctionBegin;
+  for (PetscInt i = 0; i < sum->n_terms; i++) {
+    PetscReal f_i   = 0.0, scale_i;
+    Vec       x_i, params_i;
+
+    PetscCall(TaoTermSumGetSummandData(term, i, x, params, &x_i, &params_i, &scale_i, NULL, NULL));
+    PetscCall(TaoTermObjective(term, x_i, params_i, &f_i));
+    f += scale_i * f_i;
+  }
+  *value = f;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoTermGradient_Sum(TaoTerm term, Vec x, Vec params, Vec g)
+{
+  TaoTerm_Sum *sum = (TaoTerm_Sum *)term->data;
+
+  PetscFunctionBegin;
+  PetscCall(VecZeroEntries(g));
+  for (PetscInt i = 0; i < sum->n_terms; i++) {
+    PetscReal scale_i;
+    Vec       x_i, params_i, g_i;
+    Mat       map_i;
+
+    PetscCall(TaoTermSumGetSummandData(term, i, x, params, &x_i, &params_i, &scale_i, &map_i, &g_i));
+    PetscCall(TaoTermGradient(term, x_i, params_i, g_i));
+    if (map_i) {
+      if (scale_i != 1.0) PetscCall(VecScale(g_i, scale_i));
+      PetscCall(MatMultHermitianTransposeAdd(map_i, g_i, g, g));
+    }
+    else PetscCall(VecAXPY(g, scale_i, g_i));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoTermObjectiveAndGradient_Sum(TaoTerm term, Vec x, Vec params, PetscReal *value, Vec g)
+{
+  TaoTerm_Sum *sum = (TaoTerm_Sum *)term->data;
+  PetscReal f = 0.0;
+
+  PetscFunctionBegin;
+  PetscCall(VecZeroEntries(g));
+  for (PetscInt i = 0; i < sum->n_terms; i++) {
+    PetscReal f_i = 0.0, scale_i;
+    Vec       x_i, params_i, g_i;
+    Mat       map_i;
+
+    PetscCall(TaoTermSumGetSummandData(term, i, x, params, &x_i, &params_i, &scale_i, &map_i, &g_i));
+    PetscCall(TaoTermObjectiveAndGradient(term, x_i, params_i, &f_i, g_i));
+    f += scale_i * f_i;
+    if (map_i) {
+      if (scale_i != 1.0) PetscCall(VecScale(g_i, scale_i));
+      PetscCall(MatMultHermitianTransposeAdd(map_i, g_i, g, g));
+    }
+    else PetscCall(VecAXPY(g, scale_i, g_i));
+  }
+  *value = f;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*MC
   TAOTERMSUM - A `TaoTerm` that is a sum of multiple other terms.
 
@@ -353,9 +491,12 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Sum(TaoTerm term)
   PetscCall(PetscNew(&sum));
   term->data = (void *)sum;
 
-  term->ops->destroy        = TaoTermDestroy_Sum;
-  term->ops->view           = TaoTermView_Sum;
-  term->ops->setfromoptions = TaoTermSetFromOptions_Sum;
+  term->ops->destroy              = TaoTermDestroy_Sum;
+  term->ops->view                 = TaoTermView_Sum;
+  term->ops->setfromoptions       = TaoTermSetFromOptions_Sum;
+  term->ops->objective            = TaoTermObjective_Sum;
+  term->ops->gradient             = TaoTermGradient_Sum;
+  term->ops->objectiveandgradient = TaoTermObjectiveAndGradient_Sum;
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermSumGetNumSubterms_C", TaoTermSumGetNumSubterms_Sum));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermSumSetNumSubterms_C", TaoTermSumSetNumSubterms_Sum));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermSumGetSubterm_C", TaoTermSumGetSubterm_Sum));

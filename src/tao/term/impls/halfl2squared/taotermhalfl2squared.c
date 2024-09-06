@@ -52,14 +52,9 @@ static PetscErrorCode TaoTermHessian_Halfl2squared(TaoTerm term, Vec x, Vec para
 
   Level: intermediate
 
-.seealso: [](ch_tao), `Tao`, `TaoTerm`
-          `TaoTermShellSetObjective()`,
-          `TaoTermShellSetGradient()`,
-          `TaoTermShellSetObjectiveAndGradient()`,
-          `TaoTermShellSetHessian()`,
-          `TaoTermShellSetProximalMap()`,
+.seealso: [](ch_tao), `Tao`, `TaoTerm`, `TAOTERML1`
 M*/
-PETSC_INTERN PetscErrorCode TaoTermCreate_L2squared(TaoTerm term)
+PETSC_INTERN PetscErrorCode TaoTermCreate_Halfl2squared(TaoTerm term)
 {
   PetscFunctionBegin;
   term->ops->objective            = TaoTermObjective_Halfl2squared;
