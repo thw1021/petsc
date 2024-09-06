@@ -232,6 +232,7 @@ run-config:
                  echo "Possible error with MFEM check, see below"; \\\n\
                  cat '+mfemchecklog+'; \\\n\
                  echo "********************************************************************"; \\\n\
+                 touch '+os.path.join(self.petscdir.dir,'check_error')+'; \\\n\
                  exit 1) \\\n\
              fi;'])
 
