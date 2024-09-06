@@ -34,7 +34,9 @@ PetscBool PetscBeganNvshmem       = PETSC_FALSE;
 PetscBool PetscNvshmemInitialized = PETSC_FALSE;
 #endif
 
-PetscUseGPUMPI use_gpu_aware_mpi = PetscDefined(HAVE_MPIUNI) ? PETSC_USE_GPU_AWARE_MPI_FALSE : PETSC_USE_GPU_AWARE_MPI_TRUE;
+PetscUseGPUMPI use_gpu_aware_mpi  = PetscDefined(HAVE_MPIUNI) ? PETSC_USE_GPU_AWARE_MPI_FALSE : PETSC_USE_GPU_AWARE_MPI_TRUE;
+PetscBool      mpi_is_gpu_aware   = PETSC_FALSE;
+PetscBool      device_initialized = PETSC_FALSE;
 
 PetscBool PetscPrintFunctionList = PETSC_FALSE;
 

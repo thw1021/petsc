@@ -1567,7 +1567,9 @@ typedef enum {
   PETSC_USE_GPU_AWARE_MPI_FALSE = 0,
   PETSC_USE_GPU_AWARE_MPI_TRUE  = 1
 } PetscUseGPUMPI;
-PETSC_EXTERN PetscUseGPUMPI use_gpu_aware_mpi;
+PETSC_SINGLE_LIBRARY_INTERN PetscUseGPUMPI use_gpu_aware_mpi;  // how petsc should do wrt gpu-aware mpi
+PETSC_SINGLE_LIBRARY_INTERN PetscBool      mpi_is_gpu_aware;   // whether the mpi used is gpu-aware
+PETSC_SINGLE_LIBRARY_INTERN PetscBool      device_initialized; // has petsc ever created device objects?
 
 PETSC_EXTERN PetscLogEvent PETSC_Barrier;
 PETSC_EXTERN PetscLogEvent PETSC_BuildTwoSided;

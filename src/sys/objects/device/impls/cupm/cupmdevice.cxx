@@ -65,20 +65,21 @@ PetscErrorCode Device<T>::DeviceInternal::initialize() noexcept
   // where is this variable defined and when is it set? who knows! but it is defined and set
   // at this point. either way, each device must make this check since I guess MPI might not be
   // aware of all of them?
-  if (use_gpu_aware_mpi != PETSC_USE_GPU_AWARE_MPI_FALSE) { // user requested either 'true' or 'auto'
-    bool aware;
 
-    // For Open MPI, we could do a compile time check with
-    // "defined(PETSC_HAVE_OPENMPI) && defined(MPIX_CUDA_AWARE_SUPPORT) &&
-    // MPIX_CUDA_AWARE_SUPPORT" to see if it is CUDA-aware. However, recent versions of IBM
-    // Spectrum MPI (e.g., 10.3.1) on Summit meet above conditions, but one has to use jsrun
-    // --smpiargs=-gpu to really enable GPU-aware MPI. So we do the check at runtime with a
-    // code that works only with GPU-aware MPI.
-    PetscCall(CUPMAwareMPI_(&aware));
+  // For Open MPI, we could do a compile time check with
+  // "defined(PETSC_HAVE_OPENMPI) && defined(MPIX_CUDA_AWARE_SUPPORT) &&
+  // MPIX_CUDA_AWARE_SUPPORT" to see if it is CUDA-aware. However, recent versions of IBM
+  // Spectrum MPI (e.g., 10.3.1) on Summit meet above conditions, but one has to use jsrun
+  // --smpiargs=-gpu to really enable GPU-aware MPI. So we do the check at runtime with a
+  // code that works only with GPU-aware MPI.
+  bool aware;
 
-    if (use_gpu_aware_mpi == PETSC_USE_GPU_AWARE_MPI_TRUE && !aware) { // user requested to use gpu-aware mpi but the mpi is not gpu-aware
-      PetscCall((*PetscErrorPrintf)("PETSc is configured with GPU support and you explicitly requested to use GPU-aware MPI, however your MPI is not GPU-aware based on PETSc's runtime checking.\n"));
-      PetscCall((*PetscErrorPrintf)("Generally, GPU-aware MPI can improve performance. Check your MPI's documentation to see how to enable GPU-awareness.\n"));
+  PetscCall(CUPMAwareMPI_(&aware));
+  mpi_is_gpu_aware = aware ? PETSC_TRUE : PETSC_FALSE;
+  if (use_gpu_aware_mpi != PETSC_USE_GPU_AWARE_MPI_FALSE) {                       // user requested either 'true' or 'auto'
+    if (use_gpu_aware_mpi == PETSC_USE_GPU_AWARE_MPI_TRUE && !mpi_is_gpu_aware) { // user requested to use gpu-aware mpi but the mpi is not gpu-aware
+      PetscCall((*PetscErrorPrintf)("PETSc is built with GPU support, GPU-aware MPI is explicitly requested, however MPI currently used is not GPU-aware, based on PETSc's runtime checking.\n"));
+      PetscCall((*PetscErrorPrintf)("Generally, GPU-aware MPI can improve performance. Check documentation of currently used MPI for instructions to enable GPU-awareness.\n"));
       PetscCall((*PetscErrorPrintf)("For IBM Spectrum MPI on OLCF Summit, you may need jsrun --smpiargs=-gpu.\n"));
       PetscCall((*PetscErrorPrintf)("For Open MPI, you need to configure it --with-cuda (https://www.open-mpi.org/faq/?category=buildcuda)\n"));
       PetscCall((*PetscErrorPrintf)("For MVAPICH2-GDR, you need to set MV2_USE_CUDA=1 (http://mvapich.cse.ohio-state.edu/userguide/gdr/)\n"));
@@ -86,10 +87,11 @@ PetscErrorCode Device<T>::DeviceInternal::initialize() noexcept
       PetscCall((*PetscErrorPrintf)("Use -use_gpu_aware_mpi 0 to let PETSc not use GPU-aware MPI; Use -use_gpu_aware_mpi auto to let PETSc use the MPI as is.\n"));
       PETSCABORT(PETSC_COMM_SELF, PETSC_ERR_LIB);
     } else {
-      use_gpu_aware_mpi = aware ? PETSC_USE_GPU_AWARE_MPI_TRUE : PETSC_USE_GPU_AWARE_MPI_FALSE; // auto, use the gpu-awareness as is
+      use_gpu_aware_mpi = mpi_is_gpu_aware ? PETSC_USE_GPU_AWARE_MPI_TRUE : PETSC_USE_GPU_AWARE_MPI_FALSE; // auto, use the gpu-awareness as is
     }
   }
-  PetscCall(PetscInfo(nullptr, "Value of using GPU-aware MPI: %d\n", (int)use_gpu_aware_mpi));
+  PetscCall(PetscInfo(nullptr, "Is GPU-aware MPI available? %s; is it in use? %s\n", mpi_is_gpu_aware ? "YES" : "NO", use_gpu_aware_mpi ? "YES" : "NO"));
+  device_initialized = PETSC_TRUE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

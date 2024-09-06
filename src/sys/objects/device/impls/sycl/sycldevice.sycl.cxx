@@ -37,21 +37,26 @@ public:
 
   PetscErrorCode initialize() noexcept
   {
+    bool aware;
+
     PetscFunctionBegin;
     if (initialized()) PetscFunctionReturn(PETSC_SUCCESS);
-    if (syclDevice_.is_gpu() && use_gpu_aware_mpi != PETSC_USE_GPU_AWARE_MPI_FALSE) { // true or auto
-      bool aware = isMPISyclAware_();
+    aware            = isMPISyclAware_();
+    mpi_is_gpu_aware = aware ? PETSC_TRUE : PETSC_FALSE;
 
-      if (use_gpu_aware_mpi == PETSC_USE_GPU_AWARE_MPI_TRUE && !aware) {
-        PetscCall((*PetscErrorPrintf)("PETSc is configured with sycl support, but your MPI is not aware of sycl GPU devices. For better performance, one should use a GPU-aware MPI.\n"));
-        PetscCall((*PetscErrorPrintf)("If you do not care, use option '-use_gpu_aware_mpi 0' to let petsc not use GPU-aware MPI or '-use_gpu_aware_mpi auto' to let PETSc use the MPI as is.\n"));
+    if (syclDevice_.is_gpu() && use_gpu_aware_mpi != PETSC_USE_GPU_AWARE_MPI_FALSE) { // true or auto
+      if (use_gpu_aware_mpi == PETSC_USE_GPU_AWARE_MPI_TRUE && !mpi_is_gpu_aware) {
+        PetscCall((*PetscErrorPrintf)("PETSc is built with GPU support, GPU-aware MPI is explicitly requested, however MPI currently used is not GPU-aware, based on PETSc's runtime checking.\n"));
+        PetscCall((*PetscErrorPrintf)("Generally, GPU-aware MPI can improve performance. Check documentation of currently used MPI for instructions to enable GPU-awareness.\n"));
+        PetscCall((*PetscErrorPrintf)("Use -use_gpu_aware_mpi 0 to let PETSc not use GPU-aware MPI; Use -use_gpu_aware_mpi auto to let PETSc use the MPI as is.\n"));
         PETSCABORT(PETSC_COMM_SELF, PETSC_ERR_LIB);
       } else {
-        use_gpu_aware_mpi = aware ?: PETSC_USE_GPU_AWARE_MPI_TRUE : PETSC_USE_GPU_AWARE_MPI_FALSE; // use the MPI as is
+        use_gpu_aware_mpi = mpi_is_gpu_aware ? PETSC_USE_GPU_AWARE_MPI_TRUE : PETSC_USE_GPU_AWARE_MPI_FALSE; // use the MPI as is
       }
     }
-    PetscCall(PetscInfo(nullptr, "Value of using GPU-aware MPI: %d\n", (int)use_gpu_aware_mpi));
-    devInitialized_ = true;
+    PetscCall(PetscInfo(nullptr, "Is GPU-aware MPI available? %s; is it in use? %s\n", mpi_is_gpu_aware ? "YES" : "NO", use_gpu_aware_mpi ? "YES" : "NO"));
+    devInitialized_    = true;
+    device_initialized = PETSC_TRUE;
     PetscFunctionReturn(PETSC_SUCCESS);
   }
 
