@@ -1210,8 +1210,9 @@ static PetscErrorCode PetscLogViewWarnNoGpuAwareMpi(PetscViewer viewer)
   PetscCall(PetscViewerASCIIPrintf(viewer, "      #                                                        #\n"));
   PetscCall(PetscViewerASCIIPrintf(viewer, "      #   This code was compiled with GPU support and you've   #\n"));
   PetscCall(PetscViewerASCIIPrintf(viewer, "      #   created PETSc/GPU objects, but you intentionally     #\n"));
-  PetscCall(PetscViewerASCIIPrintf(viewer, "      #   used -use_gpu_aware_mpi 0, requiring PETSc to copy   #\n"));
-  PetscCall(PetscViewerASCIIPrintf(viewer, "      #   additional data between the GPU and CPU. To obtain   #\n"));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "      #   used -use_gpu_aware_mpi 0, or didn't use this option #\n"));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "      #   but petsc found the MPI was not GPU-aware, requiring #\n"));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "      #   PETSc to copy data between the GPU and CPU. To obtain#\n"));
   PetscCall(PetscViewerASCIIPrintf(viewer, "      #   meaningful timing results on multi-rank runs, use    #\n"));
   PetscCall(PetscViewerASCIIPrintf(viewer, "      #   GPU-aware MPI instead.                               #\n"));
   PetscCall(PetscViewerASCIIPrintf(viewer, "      #                                                        #\n"));
