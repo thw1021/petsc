@@ -2688,7 +2688,7 @@ PetscErrorCode PetscSFDeregisterPersistent(PetscSF sf, MPI_Datatype unit, const 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode PetscSFGetDatatypeSize(MPI_Comm comm, MPI_Datatype unit, MPI_Aint *size)
+PETSC_INTERN PetscErrorCode PetscSFGetDatatypeSize_Internal(MPI_Comm comm, MPI_Datatype unit, MPI_Aint *size)
 {
   MPI_Aint lb, lb_true, bytes, bytes_true;
 

@@ -742,7 +742,7 @@ inline PetscErrorCode SfInterface<T>::LinkSetUp(PetscSF sf, PetscSFLink link, MP
   } else {
     MPI_Aint nbyte;
 
-    PetscCall(PetscSFGetDatatypeSize(PETSC_COMM_SELF, unit, &nbyte));
+    PetscCall(PetscSFGetDatatypeSize_Internal(PETSC_COMM_SELF, unit, &nbyte));
     if (nbyte % sizeof(int)) { /* If the type size is not multiple of int */
 #if !defined(PETSC_HAVE_DEVICE)
       if (nbyte == 4) PackInit_DumbType<char, 4, 1>(link);

@@ -648,7 +648,7 @@ PetscErrorCode PetscSFLinkSetUp_Host(PetscSF sf, PetscSFLink link, MPI_Datatype 
   } else {
     MPI_Aint nbyte;
 
-    PetscCall(PetscSFGetDatatypeSize(PETSC_COMM_SELF, unit, &nbyte));
+    PetscCall(PetscSFGetDatatypeSize_Internal(PETSC_COMM_SELF, unit, &nbyte));
     if (nbyte % sizeof(int)) { /* If the type size is not multiple of int */
       if (nbyte == 4) PackInit_DumbType_char_4_1(link);
       else if (nbyte % 4 == 0) PackInit_DumbType_char_4_0(link);

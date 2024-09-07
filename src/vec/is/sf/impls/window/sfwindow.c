@@ -433,7 +433,7 @@ static PetscErrorCode PetscSFGetWindow(PetscSF sf, MPI_Datatype unit, void *root
   PetscBool       is_empty;
 
   PetscFunctionBegin;
-  PetscCall(PetscSFGetDatatypeSize(PetscObjectComm((PetscObject)sf), unit, &bytes));
+  PetscCall(PetscSFGetDatatypeSize_Internal(PetscObjectComm((PetscObject)sf), unit, &bytes));
   wsize    = (MPI_Aint)(bytes * sf->nroots);
   wcomm    = w->window_comm;
   is_empty = w->is_empty;
@@ -610,7 +610,7 @@ static PetscErrorCode PetscSFFindWindow(PetscSF sf, MPI_Datatype unit, const voi
   MPI_Aint        bytes;
 
   PetscFunctionBegin;
-  PetscCall(PetscSFGetDatatypeSize(PetscObjectComm((PetscObject)sf), unit, &bytes));
+  PetscCall(PetscSFGetDatatypeSize_Internal(PetscObjectComm((PetscObject)sf), unit, &bytes));
   *win     = MPI_WIN_NULL;
   is_empty = w->is_empty;
   if (is_empty) {
@@ -868,7 +868,7 @@ static PetscErrorCode PetscSFRegisterPersistent_Window(PetscSF sf, MPI_Datatype 
   PetscFunctionBegin;
   PetscCall(PetscSFSetUp(sf));
   if (w->flavor != PETSCSF_WINDOW_FLAVOR_DYNAMIC) PetscFunctionReturn(PETSC_SUCCESS);
-  PetscCall(PetscSFGetDatatypeSize(PetscObjectComm((PetscObject)sf), unit, &bytes));
+  PetscCall(PetscSFGetDatatypeSize_Internal(PetscObjectComm((PetscObject)sf), unit, &bytes));
   wsize    = (MPI_Aint)(bytes * sf->nroots);
   is_empty = w->is_empty;
   if (is_empty) PetscFunctionReturn(PETSC_SUCCESS);
@@ -909,7 +909,7 @@ static PetscErrorCode PetscSFDeregisterPersistent_Window(PetscSF sf, MPI_Datatyp
   PetscFunctionBegin;
   PetscCall(PetscSFSetUp(sf));
   if (w->flavor != PETSCSF_WINDOW_FLAVOR_DYNAMIC) PetscFunctionReturn(PETSC_SUCCESS);
-  PetscCall(PetscSFGetDatatypeSize(PetscObjectComm((PetscObject)sf), unit, &bytes));
+  PetscCall(PetscSFGetDatatypeSize_Internal(PetscObjectComm((PetscObject)sf), unit, &bytes));
   wcomm    = w->window_comm;
   is_empty = w->is_empty;
   if (is_empty) PetscFunctionReturn(PETSC_SUCCESS);
