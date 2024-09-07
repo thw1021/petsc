@@ -31,10 +31,11 @@ static PetscErrorCode PetscViewerFileClose_CGNS(PetscViewer viewer)
 
   PetscFunctionBegin;
   if (cgv->output_times) {
-    size_t     size, width = 32, *steps;
+    PetscCount size, width = 32, *steps;
     char      *solnames;
     PetscReal *times;
     cgsize_t   num_times;
+
     PetscCall(PetscSegBufferGetSize(cgv->output_times, &size));
     PetscCall(PetscSegBufferExtractInPlace(cgv->output_times, &times));
     num_times = size;
@@ -46,7 +47,7 @@ static PetscErrorCode PetscViewerFileClose_CGNS(PetscViewer viewer)
     PetscCallCGNS(cg_goto(cgv->file_num, cgv->base, "Zone_t", cgv->zone, "ZoneIterativeData_t", 1, NULL));
     PetscCall(PetscMalloc(size * width + 1, &solnames));
     PetscCall(PetscSegBufferExtractInPlace(cgv->output_steps, &steps));
-    for (PetscCount i = 0; i < size; i++) PetscCall(PetscSNPrintf(&solnames[i * width], width + 1, "FlowSolution%-20zu", (size_t)steps[i]));
+    for (PetscCount i = 0; i < size; i++) PetscCall(PetscSNPrintf(&solnames[i * width], width + 1, "FlowSolution%-20" PetscCount_Fmt, steps[i]));
     PetscCall(PetscSegBufferDestroy(&cgv->output_steps));
     cgsize_t shape[2] = {(cgsize_t)width, (cgsize_t)size};
     PetscCallCGNS(cg_array_write("FlowSolutionPointers", CGNS_ENUMV(Character), 2, shape, solnames));

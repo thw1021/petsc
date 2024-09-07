@@ -31,18 +31,18 @@ typedef unsigned char PetscVTKType;
 #define PETSC_VTK_INT_MIN -2147483647
 
 /*@C
-   PetscVTKIntCast - casts to a `PetscVTKInt` (which may be 32-bits in size), generates an
-   error if the `PetscVTKInt` is not large enough to hold the number.
+  PetscVTKIntCast - casts to a `PetscVTKInt` (which may be 32-bits in size), generates an
+  error if the `PetscVTKInt` is not large enough to hold the number.
 
-   Not Collective; No Fortran Support
+  Not Collective; No Fortran Support
 
-   Input Parameter:
-.  a - the  value to cast
+  Input Parameter:
+. a - the  value to cast
 
-   Output Parameter:
-.  b - the resulting `PetscVTKInt` value
+  Output Parameter:
+. b - the resulting `PetscVTKInt` value
 
-   Level: advanced
+  Level: advanced
 
 .seealso: `PetscBLASInt`, `PetscMPIInt`, `PetscInt`, `PetscBLASIntCast()`, `PetscIntCast()`
 @*/
