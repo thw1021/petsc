@@ -955,7 +955,7 @@ PetscErrorCode PCSetFailedReason(PC pc, PCFailedReason reason)
 /*@
   PCGetFailedReason - Gets the reason a `PCSetUp()` failed or `PC_NOERROR` if it did not fail
 
-  Logically Collective after a call to `KSPCheckDot()` or  `KSPCheckNorm()` inside a `KSPSolve()`, or after `PCReduceFailedReason()`
+  Not Collective
 
   Input Parameter:
 . pc - the preconditioner context
@@ -966,9 +966,8 @@ PetscErrorCode PCSetFailedReason(PC pc, PCFailedReason reason)
   Level: advanced
 
   Note:
-  This is the maximum over reason over all ranks in the `PC` communicator. It is only valid after
-  a call `KSPCheckDot()` or  `KSPCheckNorm()` inside a `KSPSolve()` or `PCReduceFailedReason()`.
-
+  After call `KSPCheckDot()` or  `KSPCheckNorm()` inside a `KSPSolve()` or a call to `PCReduceFailedReason()`
+  this is the maximum over reason over all ranks in the `PC` communicator and hence logically collective.
   Otherwise it returns the local value,.
 
 .seealso: [](ch_ksp), `PC`, `PCCreate()`, `PCApply()`, `PCDestroy()`, `PCSetFailedReason()`

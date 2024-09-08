@@ -1,4 +1,5 @@
 #pragma once
+/* all of the logging files have problems with automatic integer casting so checking is turned off for them here */
 #pragma GCC diagnostic ignored "-Wconversion"
 
 #include <petsc/private/petscimpl.h>

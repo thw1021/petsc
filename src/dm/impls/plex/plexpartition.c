@@ -1332,7 +1332,7 @@ PetscErrorCode DMPlexPartitionLabelInvert(DM dm, DMLabel rootLabel, PetscSF proc
     if (counter > PETSC_MPI_INT_MAX) locOverflow = PETSC_TRUE;
     PetscCall(MPIU_Allreduce(&locOverflow, &mpiOverflow, 1, MPIU_BOOL, MPI_LOR, comm));
     if (!mpiOverflow) {
-      PetscCall(PetscInfo(dm, "Using  MPI_Alltoallv() for mesh distribution\n"));
+      PetscCall(PetscInfo(dm, "Using MPI_Alltoallv() for mesh distribution\n"));
       leafSize = (PetscInt)counter;
       PetscCall(PetscMalloc1(leafSize, &leafPoints));
       PetscCallMPI(MPI_Alltoallv(rootPoints, scounts, sdispls, MPIU_SF_NODE, leafPoints, rcounts, rdispls, MPIU_SF_NODE, comm));

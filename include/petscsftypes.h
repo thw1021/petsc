@@ -55,7 +55,7 @@ typedef const char *PetscSFType;
 .ve
 
   Notes:
-  Use  `MPI_SF_NODE` when performing MPI operations on arrays of `PetscSFNode`
+  Use  `MPIU_SF_NODE` when performing MPI operations on arrays of `PetscSFNode`
 
   Generally the values of `rank` should be in $[ 0,size)$  and the value of `index` greater than or equal to 0, but there are some situations that violate this.
 

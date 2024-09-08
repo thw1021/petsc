@@ -62,7 +62,7 @@ important. We use several conventions
 
 #. Typedefs for functions should end in ``Fn`` as in, for example, ``SNESFunctionFn``.
 
-.. _stylePetscCount
+.. _stylePetscCount:
 
 PETSc and standard datatypes
 ----------------------------
@@ -85,7 +85,7 @@ PETSc and standard datatypes
   Though ``size_t`` is unsigned and hence can have values larger than those that can be stored
   in a ``PetscCount`` those sizes will never be reached in practice so it is ok to cast with ``(PetscCount)``
   from a ``size_t`` variable to a ``PetscCount`` variable, but **not** a ``PetscInt``.
-  One should not blindly caste from a ``PetscCount`` or a ``PetscInt``
+  One should not blindly cast from a ``PetscCount`` or a ``PetscInt``
   to ``size_t`` since, when the value is negative, it will produce garbage.
 
 # **Never** blindly put in a cast from a higher precision to a longer precision integer such as
