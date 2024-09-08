@@ -1645,8 +1645,8 @@ static PetscErrorCode MatStashScatterBegin_ScaLAPACK(Mat mat, MatStash *stash, P
 
   for (i = 0, count = 0; i < size; i++) {
     if (sizes[i]) {
-      PetscCallMPI(MPI_Isend(sindices + 2 * startv[i], 2 * nlengths[i], MPIU_INT, i, tag1, comm, send_waits + count++));
-      PetscCallMPI(MPI_Isend(svalues + bs2 * startv[i], bs2 * nlengths[i], MPIU_SCALAR, i, tag2, comm, send_waits + count++));
+      PetscCallMPI(MPIU_Isend(sindices + 2 * startv[i], 2 * nlengths[i], MPIU_INT, i, tag1, comm, send_waits + count++));
+      PetscCallMPI(MPIU_Isend(svalues + bs2 * startv[i], bs2 * nlengths[i], MPIU_SCALAR, i, tag2, comm, send_waits + count++));
     }
   }
 #if defined(PETSC_USE_INFO)

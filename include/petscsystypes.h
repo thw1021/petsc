@@ -176,7 +176,7 @@ typedef int PetscClassId;
     `PetscMPIIntCast`(a,&b) checks if the given `PetscInt` a will fit in a `PetscMPIInt`, if not it
     generates a `PETSC_ERR_ARG_OUTOFRANGE` error.
 
-.seealso: `PetscBLASInt`, `PetscInt`, `PetscMPIIntCast()`
+.seealso: [](stylePetscCount), `PetscBLASInt`, `PetscInt`, `PetscMPIIntCast()`
 M*/
 typedef int PetscMPIInt;
 
@@ -208,7 +208,7 @@ typedef size_t PetscSizeT;
 
     Use `PetscCount_FMT` to format with `PetscPrintf()`, `printf()`, and related functions.
 
-.seealso: `PetscInt`, `PetscInt64`, `PetscSizeT`
+.seealso: [](stylePetscCount), `PetscInt`, `PetscInt64`, `PetscSizeT`
 M*/
 typedef ptrdiff_t PetscCount;
 #define PetscCount_FMT "td"
@@ -292,13 +292,15 @@ enum {
   PETSC_INT_MIN = INT_MIN,
   PETSC_INT_MAX = INT_MAX
 };
-
   #define PetscInt_FMT "d"
 #endif
 
+#define PETSC_UINT16_MAX 65535
+
+/* deprecated */
 #define PETSC_MIN_INT    PETSC_INT_MIN
 #define PETSC_MAX_INT    PETSC_INT_MAX
-#define PETSC_MAX_UINT16 65535
+#define PETSC_MAX_UINT16 PETSC_UINT16_MAX
 
 #if defined(PETSC_HAVE_STDINT_H) && defined(PETSC_HAVE_INTTYPES_H) && (defined(PETSC_HAVE_MPIUNI) || defined(PETSC_HAVE_MPI_INT64_T)) /* MPI_INT64_T is not guaranteed to be a macro */
   #define MPIU_INT64     MPI_INT64_T
