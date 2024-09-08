@@ -28,8 +28,8 @@ static PetscErrorCode testIdentity(DM dm, PetscBool dmIsSimplicial, PetscInt cel
     }
   }
 
-  PetscCall(DMPlexReferenceToCoordinates(dm, cell, numPoints, preimage, mapped));
-  PetscCall(DMPlexCoordinatesToReference(dm, cell, numPoints, mapped, inverted));
+  PetscCall(DMPlexReferenceToCoordinates(dm, PETSC_FALSE, cell, numPoints, preimage, mapped));
+  PetscCall(DMPlexCoordinatesToReference(dm, PETSC_FALSE, cell, numPoints, mapped, inverted));
 
   for (i = 0; i < numPoints; i++) {
     PetscReal max = 0.;

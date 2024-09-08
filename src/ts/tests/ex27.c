@@ -106,7 +106,7 @@ static PetscErrorCode SetInitialCoordinates(DM sw)
         if (simplex && sum > 0.0)
           for (d = 0; d < dim; ++d) refcoords[d] -= PetscSqrtReal(dim) * sum;
         vals[n] = 1.0;
-        PetscCall(DMPlexReferenceToCoordinates(dm, c, 1, refcoords, &coords[n * dim]));
+        PetscCall(DMPlexReferenceToCoordinates(dm, PETSC_FALSE, c, 1, refcoords, &coords[n * dim]));
       }
     }
   }

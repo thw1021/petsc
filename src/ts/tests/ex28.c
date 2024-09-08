@@ -1,3 +1,4 @@
+#include "petscsystypes.h"
 static char help[] = "Example application of the Bhatnagar-Gross-Krook (BGK) collision operator.\n\
 This example is a 0D-1V setting for the kinetic equation\n\
 https://en.wikipedia.org/wiki/Bhatnagar%E2%80%93Gross%E2%80%93Krook_operator\n";
@@ -105,7 +106,7 @@ static PetscErrorCode SetInitialCoordinates(DM sw)
         if (simplex && sum > 0.0)
           for (d = 0; d < dim; ++d) refcoords[d] -= PetscSqrtReal(dim) * sum;
         vals[n] = 1.0;
-        PetscCall(DMPlexReferenceToCoordinates(dm, c, 1, refcoords, &coords[n * dim]));
+        PetscCall(DMPlexReferenceToCoordinates(dm, PETSC_FALSE, c, 1, refcoords, &coords[n * dim]));
       }
     }
   }
