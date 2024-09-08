@@ -1,4 +1,5 @@
 #pragma once
+#pragma GCC diagnostic ignored "-Wconversion"
 
 /**********************************const.h*************************************
 
@@ -50,7 +51,7 @@ File Description:
 #define BIT_5   0x20
 #define BIT_6   0x40
 #define BIT_7   0x80
-#define TOP_BIT PETSC_MIN_INT
+#define TOP_BIT PETSC_INT_MIN
 
 #define C 0
 

@@ -1,3 +1,4 @@
+#pragma clang diagnostic ignored "-Wconversion"
 #ifndef YAML_PRIVATE_H
 #define YAML_PRIVATE_H
 
