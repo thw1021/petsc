@@ -64,6 +64,8 @@ Changes: Development
 
 .. rubric:: DMPlex:
 
+- Changed ``DMPlexCoordinatesToReference()`` and ``DMPlexReferenceToCoordinates()`` to allow shutting off FE
+
 .. rubric:: FE/FV:
 
 .. rubric:: DMNetwork:
