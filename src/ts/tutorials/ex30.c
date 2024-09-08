@@ -125,7 +125,7 @@ static void JC_1_c1c1(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt 
 }
 
 /* residual for P when tested against basis functions.
-   The source term always comes from the auxiliary vec because it needs to have zero mean */
+   The source term always comes from the auxiliary data because it needs to have zero mean */
 static void P_0(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f0[])
 {
   PetscScalar S = a[aOff[P_FIELD_ID]];
@@ -228,26 +228,60 @@ static void JP_1_p1c0(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt 
   J[5] = gradp[1];
 }
 
-/* the source term S(x) = exp(-500*||x - x0||^2) */
-static PetscErrorCode source_0(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar *u, void *ctx)
-{
-  PetscReal *x0 = (PetscReal *)ctx;
-  PetscReal  n  = 0;
+/* a collection of gaussian, Dirac-like, source term S(x) = scale * cos(2*pi*(frequency*t + phase)) * exp(-w*||x - x0||^2) */
+typedef struct {
+  PetscInt   n;
+  PetscReal *x0;
+  PetscReal *w;
+  PetscReal *k;
+  PetscReal *p;
+  PetscReal *r;
+  Vec        noise;
+} MultiSourceCtx;
 
-  for (PetscInt d = 0; d < dim; ++d) n += (x[d] - x0[d]) * (x[d] - x0[d]);
-  u[0] = PetscExpReal(-500 * n);
+typedef struct {
+  PetscReal x0[2];
+  PetscReal w;
+  PetscReal k;
+  PetscReal p;
+  PetscReal r;
+} SingleSourceCtx;
+
+static PetscErrorCode gaussian(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar *u, void *ctx)
+{
+  SingleSourceCtx *s  = (SingleSourceCtx *)ctx;
+  const PetscReal *x0 = s->x0;
+  const PetscReal  w  = s->w;
+  const PetscReal  k  = s->k; /* frequency */
+  const PetscReal  p  = s->p; /* phase */
+  const PetscReal  r  = s->r; /* scale */
+  PetscReal        n  = 0;
+
+  for (PetscInt d = 0; d < 2; ++d) n += (x[d] - x0[d]) * (x[d] - x0[d]);
+  u[0] = r * PetscCosReal(2 * PETSC_PI * (k * time + p)) * PetscExpReal(-w * n);
   return PETSC_SUCCESS;
 }
 
-static PetscErrorCode source_1(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar *u, void *ctx)
+static PetscErrorCode source(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar *u, void *ctx)
 {
-  PetscScalar     ut[1];
-  const PetscReal x0[] = {0.25, 0.25};
-  const PetscReal x1[] = {0.75, 0.75};
+  MultiSourceCtx *s = (MultiSourceCtx *)ctx;
 
-  PetscCall(source_0(dim, time, x, Nf, ut, (void *)x0));
-  PetscCall(source_0(dim, time, x, Nf, u, (void *)x1));
-  u[0] += ut[0];
+  u[0] = 0.0;
+  for (PetscInt i = 0; i < s->n; i++) {
+    SingleSourceCtx sctx;
+    PetscScalar     ut[1];
+
+    sctx.x0[0] = s->x0[2 * i];
+    sctx.x0[1] = s->x0[2 * i + 1];
+    sctx.w     = s->w[i];
+    sctx.k     = s->k[i];
+    sctx.p     = s->p[i];
+    sctx.r     = s->r[i];
+
+    PetscCall(gaussian(dim, time, x, Nf, ut, &sctx));
+
+    u[0] += ut[0];
+  }
   return PETSC_SUCCESS;
 }
 
@@ -390,32 +424,31 @@ static PetscErrorCode constantf(PetscInt dim, PetscReal time, const PetscReal xx
 
 /* application context: customizable parameters */
 typedef struct {
-  PetscReal r;
-  PetscReal eps;
-  PetscReal alpha;
-  PetscReal gamma;
-  PetscReal D;
-  PetscReal c;
-  PetscReal domain_volume;
-  PetscInt  ic_num;
-  PetscInt  source_num;
-  PetscReal x0[2];
-  PetscBool lump;
-  PetscBool amr;
-  PetscBool load;
-  char      load_filename[PETSC_MAX_PATH_LEN];
-  PetscBool save;
-  char      save_filename[PETSC_MAX_PATH_LEN];
-  PetscInt  save_every;
-  PetscBool test_restart;
-  PetscBool ellipticity;
-  PetscInt  fix_c;
+  PetscReal       r;
+  PetscReal       eps;
+  PetscReal       alpha;
+  PetscReal       gamma;
+  PetscReal       D;
+  PetscReal       c;
+  PetscReal       domain_volume;
+  PetscInt        ic_num;
+  PetscBool       lump;
+  PetscBool       amr;
+  PetscBool       load;
+  char            load_filename[PETSC_MAX_PATH_LEN];
+  PetscBool       save;
+  char            save_filename[PETSC_MAX_PATH_LEN];
+  PetscInt        save_every;
+  PetscBool       test_restart;
+  PetscBool       ellipticity;
+  PetscInt        fix_c;
+  MultiSourceCtx *source_ctx;
 } AppCtx;
 
 /* process command line options */
 static PetscErrorCode ProcessOptions(AppCtx *options)
 {
-  PetscInt dim = PETSC_STATIC_ARRAY_LENGTH(options->x0);
+  PetscInt tmp;
 
   PetscFunctionBeginUser;
   options->r            = 1.e-1;
@@ -425,9 +458,6 @@ static PetscErrorCode ProcessOptions(AppCtx *options)
   options->c            = 5;
   options->D            = 1.e-2;
   options->ic_num       = 0;
-  options->source_num   = 0;
-  options->x0[0]        = 0.25;
-  options->x0[1]        = 0.25;
   options->lump         = PETSC_FALSE;
   options->amr          = PETSC_FALSE;
   options->load         = PETSC_FALSE;
@@ -444,9 +474,7 @@ static PetscErrorCode ProcessOptions(AppCtx *options)
   PetscCall(PetscOptionsReal("-d", "D", __FILE__, options->D, &options->D, NULL));
   PetscCall(PetscOptionsReal("-eps", "eps", __FILE__, options->eps, &options->eps, NULL));
   PetscCall(PetscOptionsReal("-r", "r", __FILE__, options->r, &options->r, NULL));
-  PetscCall(PetscOptionsRealArray("-x0", "x0", __FILE__, options->x0, &dim, NULL));
   PetscCall(PetscOptionsInt("-ic_num", "ic_num", __FILE__, options->ic_num, &options->ic_num, NULL));
-  PetscCall(PetscOptionsInt("-source_num", "source_num", __FILE__, options->source_num, &options->source_num, NULL));
   PetscCall(PetscOptionsBool("-lump", "use mass lumping", __FILE__, options->lump, &options->lump, NULL));
   PetscCall(PetscOptionsInt("-fix_c", "shift conductivity to always be positive semi-definite", __FILE__, options->fix_c, &options->fix_c, NULL));
   PetscCall(PetscOptionsBool("-amr", "use adaptive mesh refinement", __FILE__, options->amr, &options->amr, NULL));
@@ -457,6 +485,31 @@ static PetscErrorCode ProcessOptions(AppCtx *options)
     if (options->save) PetscCall(PetscOptionsInt("-save_every", "save every n timestep (-1 saves only the last)", __FILE__, options->save_every, &options->save_every, NULL));
   }
   PetscCall(PetscOptionsBool("-monitor_ellipticity", "Dump locations of ellipticity violation", __FILE__, options->ellipticity, &options->ellipticity, NULL));
+  /* source options */
+  PetscCall(PetscNew(&options->source_ctx));
+  options->source_ctx->n = 1;
+
+  PetscCall(PetscOptionsInt("-source_num", "number of sources", __FILE__, options->source_ctx->n, &options->source_ctx->n, NULL));
+  tmp = options->source_ctx->n;
+  PetscCall(PetscMalloc5(2 * tmp, &options->source_ctx->x0, tmp, &options->source_ctx->w, tmp, &options->source_ctx->k, tmp, &options->source_ctx->p, tmp, &options->source_ctx->r));
+  for (PetscInt i = 0; i < options->source_ctx->n; i++) {
+    options->source_ctx->x0[2 * i]     = 0.25;
+    options->source_ctx->x0[2 * i + 1] = 0.25;
+    options->source_ctx->w[i]          = 500;
+    options->source_ctx->k[i]          = 0;
+    options->source_ctx->p[i]          = 0;
+    options->source_ctx->r[i]          = 1;
+  }
+  tmp = 2 * options->source_ctx->n;
+  PetscCall(PetscOptionsRealArray("-source_x0", "source location", __FILE__, options->source_ctx->x0, &tmp, NULL));
+  tmp = options->source_ctx->n;
+  PetscCall(PetscOptionsRealArray("-source_w", "source factor", __FILE__, options->source_ctx->w, &tmp, NULL));
+  tmp = options->source_ctx->n;
+  PetscCall(PetscOptionsRealArray("-source_k", "source frequency", __FILE__, options->source_ctx->k, &tmp, NULL));
+  tmp = options->source_ctx->n;
+  PetscCall(PetscOptionsRealArray("-source_p", "source phase", __FILE__, options->source_ctx->p, &tmp, NULL));
+  tmp = options->source_ctx->n;
+  PetscCall(PetscOptionsRealArray("-source_r", "source scaling", __FILE__, options->source_ctx->r, &tmp, NULL));
   PetscOptionsEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -715,7 +768,6 @@ static PetscErrorCode LoadFromFile(MPI_Comm comm, const char *filename, DM *odm)
 /* Project source function and make it zero-mean */
 static PetscErrorCode ProjectSource(DM dm, PetscReal time, AppCtx *ctx)
 {
-  PetscInt    id = C_FIELD_ID;
   DM          dmAux;
   Vec         u, lu;
   IS          is;
@@ -725,41 +777,39 @@ static PetscErrorCode ProjectSource(DM dm, PetscReal time, AppCtx *ctx)
   PetscErrorCode (*funcs[NUM_FIELDS])(PetscInt, PetscReal, const PetscReal[], PetscInt, PetscScalar *, void *);
 
   PetscFunctionBeginUser;
-  switch (ctx->source_num) {
-  case 0:
-    funcs[P_FIELD_ID] = source_0;
-    ctxs[P_FIELD_ID]  = ctx->x0;
-    break;
-  case 1:
-    funcs[P_FIELD_ID] = source_1;
-    ctxs[P_FIELD_ID]  = NULL;
-    break;
-  default:
-    SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "Unknown source");
-  }
+  funcs[P_FIELD_ID] = source;
+  ctxs[P_FIELD_ID]  = ctx->source_ctx;
   funcs[C_FIELD_ID] = zerof;
   ctxs[C_FIELD_ID]  = NULL;
   PetscCall(DMGetDS(dm, &ds));
   PetscCall(DMGetGlobalVector(dm, &u));
   PetscCall(DMProjectFunction(dm, time, funcs, ctxs, INSERT_ALL_VALUES, u));
+  if (ctx->source_ctx->noise) PetscCall(VecAXPY(u, 1.0, ctx->source_ctx->noise));
+
   PetscCall(PetscDSSetObjective(ds, P_FIELD_ID, average));
   PetscCall(DMPlexComputeIntegralFEM(dm, u, vals, NULL));
   PetscCall(PetscDSSetObjective(ds, P_FIELD_ID, zero));
   PetscCall(VecShift(u, -vals[P_FIELD_ID] / ctx->domain_volume));
-  PetscCall(DMCreateSubDM(dm, 1, &id, &is, NULL));
+
+  PetscCall(PetscObjectQuery((PetscObject)dm, "IS conductivity", (PetscObject *)&is));
+  PetscCheck(is, PetscObjectComm((PetscObject)dm), PETSC_ERR_PLIB, "Missing conductivity IS");
   PetscCall(VecISSet(u, is, 0));
-  PetscCall(ISDestroy(&is));
 
   /* Attach source vector as auxiliary vector:
      Use a different DM to break ref cycles */
-  PetscCall(DMClone(dm, &dmAux));
-  PetscCall(DMCopyDisc(dm, dmAux));
-  PetscCall(DMCreateLocalVector(dmAux, &lu));
-  PetscCall(DMDestroy(&dmAux));
-  PetscCall(DMGlobalToLocal(dm, u, INSERT_VALUES, lu));
-  PetscCall(DMSetAuxiliaryVec(dm, NULL, 0, 0, lu));
-  PetscCall(VecViewFromOptions(lu, NULL, "-aux_view"));
-  PetscCall(VecDestroy(&lu));
+  PetscCall(DMGetAuxiliaryVec(dm, NULL, 0, 0, &lu));
+  if (!lu) {
+    PetscCall(DMClone(dm, &dmAux));
+    PetscCall(DMCopyDisc(dm, dmAux));
+    PetscCall(DMCreateLocalVector(dmAux, &lu));
+    PetscCall(DMDestroy(&dmAux));
+    PetscCall(DMGlobalToLocal(dm, u, INSERT_VALUES, lu));
+    PetscCall(DMSetAuxiliaryVec(dm, NULL, 0, 0, lu));
+    PetscCall(VecViewFromOptions(lu, NULL, "-aux_view"));
+    PetscCall(VecDestroy(&lu));
+  } else {
+    PetscCall(DMGlobalToLocal(dm, u, INSERT_VALUES, lu));
+  }
   PetscCall(DMRestoreGlobalVector(dm, &u));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -801,13 +851,7 @@ static PetscErrorCode DMGetLumpedMass(DM dm, PetscBool local, Vec *lumped_mass)
     IS  is;
 
     PetscCall(PetscObjectQuery((PetscObject)dm, "IS potential", (PetscObject *)&is));
-    if (!is) {
-      PetscInt fields[NUM_FIELDS] = {C_FIELD_ID, P_FIELD_ID};
-
-      PetscCall(DMCreateSubDM(dm, NUM_FIELDS - 1, fields + 1, &is, NULL));
-      PetscCall(PetscObjectCompose((PetscObject)dm, "IS potential", (PetscObject)is));
-      PetscCall(PetscObjectDereference((PetscObject)is));
-    }
+    PetscCheck(is, PetscObjectComm((PetscObject)dm), PETSC_ERR_PLIB, "Missing potential IS");
     if (local) {
       Vec w2, wg;
 
@@ -879,7 +923,9 @@ static PetscErrorCode SetupProblem(DM dm, AppCtx *ctx)
   PetscInt    cdim, dim;
   PetscScalar constants[NUM_CONSTANTS];
   PetscScalar vals[NUM_FIELDS];
+  PetscInt    fields[NUM_FIELDS] = {C_FIELD_ID, P_FIELD_ID};
   Vec         dummy;
+  IS          is;
 
   PetscFunctionBeginUser;
   constants[R_ID]     = ctx->r;
@@ -916,6 +962,14 @@ static PetscErrorCode SetupProblem(DM dm, AppCtx *ctx)
   PetscCall(PetscDSSetObjective(ds, P_FIELD_ID, zero));
   PetscCall(DMRestoreGlobalVector(dm, &dummy));
   ctx->domain_volume = PetscRealPart(vals[P_FIELD_ID]);
+
+  /* Index sets for potential and conductivities */
+  PetscCall(DMCreateSubDM(dm, 1, fields, &is, NULL));
+  PetscCall(PetscObjectCompose((PetscObject)dm, "IS conductivity", (PetscObject)is));
+  PetscCall(ISDestroy(&is));
+  PetscCall(DMCreateSubDM(dm, 1, fields + 1, &is, NULL));
+  PetscCall(PetscObjectCompose((PetscObject)dm, "IS potential", (PetscObject)is));
+  PetscCall(ISDestroy(&is));
 
   /* Attach source function as auxiliary vector */
   PetscCall(ProjectSource(dm, 0, ctx));
@@ -1090,9 +1144,9 @@ static PetscErrorCode SetInitialConditionsAndTolerances(TS ts, PetscInt nv, Vec 
   PetscFunctionBeginUser;
   PetscCall(TSGetDM(ts, &dm));
   PetscCall(TSGetApplicationContext(ts, &ctx));
+  PetscCall(PetscObjectQuery((PetscObject)dm, "IS potential", (PetscObject *)&isp));
+  PetscCheck(isp, PetscObjectComm((PetscObject)dm), PETSC_ERR_PLIB, "Missing potential IS");
   if (valid) {
-    PetscCall(DMCreateSubDM(dm, NUM_FIELDS - 1, fields + 1, &isp, NULL));
-    PetscCall(PetscObjectCompose((PetscObject)dm, "IS potential", (PetscObject)isp));
     PetscCall(DMCreateGlobalVector(dm, &vatol));
     PetscCall(DMCreateGlobalVector(dm, &vrtol));
     PetscCall(TSGetTolerances(ts, &atol, NULL, &rtol, NULL));
@@ -1103,12 +1157,10 @@ static PetscErrorCode SetInitialConditionsAndTolerances(TS ts, PetscInt nv, Vec 
     PetscCall(TSSetTolerances(ts, atol, vatol, rtol, vrtol));
     PetscCall(VecDestroy(&vatol));
     PetscCall(VecDestroy(&vrtol));
-    PetscCall(ISDestroy(&isp));
     for (PetscInt i = 0; i < nv; i++) PetscCall(ZeroMeanPotential(dm, vecs[i], ctx->domain_volume));
     PetscFunctionReturn(PETSC_SUCCESS);
   }
-  PetscCall(DMCreateSubDM(dm, NUM_FIELDS - 1, fields + 1, &isp, &dmp));
-  PetscCall(PetscObjectCompose((PetscObject)dm, "IS potential", (PetscObject)isp));
+  PetscCall(DMCreateSubDM(dm, NUM_FIELDS - 1, fields + 1, NULL, &dmp));
   PetscCall(DMSetMatType(dmp, MATAIJ));
   PetscCall(DMGetDS(dmp, &ds));
   //PetscCall(PetscDSSetResidual(ds, 0, P_0, P_1_aux));
@@ -1193,7 +1245,6 @@ static PetscErrorCode SetInitialConditionsAndTolerances(TS ts, PetscInt nv, Vec 
   PetscCall(TSSetTolerances(ts, atol, vatol, rtol, vrtol));
   PetscCall(VecDestroy(&vatol));
   PetscCall(VecDestroy(&vrtol));
-  PetscCall(ISDestroy(&isp));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1277,6 +1328,8 @@ static PetscErrorCode ResizeTransfer(TS ts, PetscInt nv, Vec vecsin[], Vec vecso
   AppCtx   *ctx;
   DM        dm, adm;
   PetscReal time;
+  PetscInt  fields[NUM_FIELDS] = {C_FIELD_ID, P_FIELD_ID};
+  IS        is;
 
   PetscFunctionBeginUser;
   PetscCall(TSGetDM(ts, &dm));
@@ -1296,6 +1349,12 @@ static PetscErrorCode ResizeTransfer(TS ts, PetscInt nv, Vec vecsin[], Vec vecso
   PetscCall(TSGetTime(ts, &time));
   PetscCall(TSGetApplicationContext(ts, &ctx));
   PetscCall(DMSetNullSpaceConstructor(adm, P_FIELD_ID, CreatePotentialNullSpace));
+  PetscCall(DMCreateSubDM(adm, 1, fields, &is, NULL));
+  PetscCall(PetscObjectCompose((PetscObject)adm, "IS conductivity", (PetscObject)is));
+  PetscCall(ISDestroy(&is));
+  PetscCall(DMCreateSubDM(adm, 1, fields + 1, &is, NULL));
+  PetscCall(PetscObjectCompose((PetscObject)adm, "IS potential", (PetscObject)is));
+  PetscCall(ISDestroy(&is));
   PetscCall(ProjectSource(adm, time, ctx));
   PetscCall(SetInitialConditionsAndTolerances(ts, nv, vecsout, PETSC_TRUE));
   PetscCall(DMDestroy(&adm));
@@ -1343,7 +1402,7 @@ static PetscErrorCode Monitor(TS ts, PetscInt stepnum, PetscReal time, Vec u, vo
 
     PetscCall(DMGetGlobalVector(dm, &ellVec));
     PetscCall(DMProjectField(dm, 0, u, funcs, INSERT_VALUES, ellVec));
-    PetscCall(PetscSNPrintf(filename, sizeof filename, "ellipticity_fail-%03" PetscInt_FMT ".vtu", stepnum));
+    PetscCall(PetscSNPrintf(filename, sizeof filename, "ellipticity_fail-%05" PetscInt_FMT ".vtu", stepnum));
     PetscCall(OutputVTK(dm, filename, &viewer));
     PetscCall(VecView(ellVec, viewer));
     PetscCall(PetscViewerDestroy(&viewer));
@@ -1368,6 +1427,29 @@ static PetscErrorCode MonitorSave(TS ts, PetscInt steps, PetscReal time, Vec u, 
   PetscCall(TSGetDM(ts, &dm));
   PetscCall(TSGetConvergedReason(ts, &reason));
   if ((save_every > 0 && steps % save_every == 0) || (save_every == -1 && reason) || save_every < -1) PetscCall(SaveToFile(dm, u, ctx->save_filename));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/* Resample source if time dependent */
+static PetscErrorCode PreStage(TS ts, PetscReal stagetime)
+{
+  AppCtx   *ctx;
+  PetscBool resample = PETSC_FALSE;
+
+  PetscFunctionBeginUser;
+  PetscCall(TSGetApplicationContext(ts, &ctx));
+  for (PetscInt i = 0; i < ctx->source_ctx->n; i++) {
+    if (ctx->source_ctx->k[i] != 0.0) {
+      resample = PETSC_TRUE;
+      break;
+    }
+  }
+  if (resample) {
+    DM dm;
+
+    PetscCall(TSGetDM(ts, &dm));
+    PetscCall(ProjectSource(dm, stagetime, ctx));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1477,8 +1559,17 @@ static PetscErrorCode Run(MPI_Comm comm, AppCtx *ctx)
     PetscCall(PetscPrintf(comm, "  c    : %g\n", (double)ctx->c));
     if (ctx->load) PetscCall(PetscPrintf(comm, "  load : %s\n", ctx->load_filename));
     else PetscCall(PetscPrintf(comm, "  IC   : %" PetscInt_FMT "\n", ctx->ic_num));
-    PetscCall(PetscPrintf(comm, "  S    : %" PetscInt_FMT "\n", ctx->source_num));
-    PetscCall(PetscPrintf(comm, "  x0   : (%g,%g)\n", (double)ctx->x0[0], (double)ctx->x0[1]));
+    PetscCall(PetscPrintf(comm, "  snum : %" PetscInt_FMT "\n", ctx->source_ctx->n));
+    for (PetscInt i = 0; i < ctx->source_ctx->n; i++) {
+      const PetscReal *x0 = ctx->source_ctx->x0 + 2 * i;
+      const PetscReal  w  = ctx->source_ctx->w[i];
+      const PetscReal  k  = ctx->source_ctx->k[i];
+      const PetscReal  p  = ctx->source_ctx->p[i];
+      const PetscReal  r  = ctx->source_ctx->r[i];
+
+      PetscCall(PetscPrintf(comm, "  x0   : (%g,%g)\n", (double)x0[0], (double)x0[1]));
+      PetscCall(PetscPrintf(comm, "  scals: (%g,%g,%g,%g)\n", (double)w, (double)k, (double)p, (double)r));
+    }
     PetscCall(PetscPrintf(comm, "----------------------------\n"));
   }
 
@@ -1510,6 +1601,7 @@ static PetscErrorCode Run(MPI_Comm comm, AppCtx *ctx)
   PetscCall(TSMonitorSet(ts, MonitorSave, ctx, NULL));
   PetscCall(PetscNew(&actx));
   if (ctx->amr) PetscCall(TSSetResize(ts, PETSC_TRUE, ResizeSetUp, ResizeTransfer, actx));
+  PetscCall(TSSetPreStage(ts, PreStage));
   PetscCall(TSSetPostStage(ts, PostStage));
   PetscCall(TSSetMaxSNESFailures(ts, -1));
   PetscCall(TSSetFromOptions(ts));
@@ -1588,6 +1680,8 @@ int main(int argc, char **argv)
   } else { /* Run the simulation */
     PetscCall(Run(PETSC_COMM_WORLD, &ctx));
   }
+  PetscCall(PetscFree5(ctx.source_ctx->x0, ctx.source_ctx->w, ctx.source_ctx->k, ctx.source_ctx->p, ctx.source_ctx->r));
+  PetscCall(PetscFree(ctx.source_ctx));
   PetscCall(PetscFinalize());
   return 0;
 }

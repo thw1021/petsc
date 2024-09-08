@@ -7,8 +7,9 @@ Simulation parameters:
   D    : 0.01
   c    : 5.
   IC   : 0
-  S    : 0
+  snum : 1
   x0   : (0.25,0.25)
+  (w,k): (500.,0.)
 ----------------------------
   ---------- Testing Jacobian -------------
   Run with -snes_test_jacobian_view and optionally -snes_test_jacobian <threshold> to show difference
