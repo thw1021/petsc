@@ -37,7 +37,6 @@ static PetscErrorCode PetscViewerFileClose_CGNS(PetscViewer viewer)
     cgsize_t   num_times;
 
     PetscCall(PetscSegBufferGetSize(cgv->output_times, &size));
-    size = (size_t)isize;
     PetscCall(PetscSegBufferExtractInPlace(cgv->output_times, &times));
     num_times = size;
     PetscCallCGNS(cg_biter_write(cgv->file_num, cgv->base, "TimeIterValues", num_times));
@@ -48,12 +47,12 @@ static PetscErrorCode PetscViewerFileClose_CGNS(PetscViewer viewer)
     PetscCallCGNS(cg_goto(cgv->file_num, cgv->base, "Zone_t", cgv->zone, "ZoneIterativeData_t", 1, NULL));
     PetscCall(PetscMalloc(size * width + 1, &solnames));
     PetscCall(PetscSegBufferExtractInPlace(cgv->output_steps, &steps));
-    for (PetscCount i = 0; i < size; i++) PetscCall(PetscSNPrintf(&solnames[i * width], width + 1, "FlowSolution%-20" PetscCount_Fmt, steps[i]));
+    for (PetscCount i = 0; i < size; i++) PetscCall(PetscSNPrintf(&solnames[i * width], width + 1, "FlowSolution%-20zu", (size_t)steps[i]));
     PetscCall(PetscSegBufferDestroy(&cgv->output_steps));
     cgsize_t shape[2] = {(cgsize_t)width, (cgsize_t)size};
     PetscCallCGNS(cg_array_write("FlowSolutionPointers", CGNS_ENUMV(Character), 2, shape, solnames));
     // The VTK reader looks for names like FlowSolution*Pointers.
-    for (PetscCount t i = 0; i < size; i++) PetscCall(PetscSNPrintf(&solnames[i * width], width + 1, "%-32s", "CellInfo"));
+    for (PetscCount i = 0; i < size; i++) PetscCall(PetscSNPrintf(&solnames[i * width], width + 1, "%-32s", "CellInfo"));
     PetscCallCGNS(cg_array_write("FlowSolutionCellInfoPointers", CGNS_ENUMV(Character), 2, shape, solnames));
     PetscCall(PetscFree(solnames));
 
@@ -107,12 +106,12 @@ PetscErrorCode PetscViewerCGNSFileOpen_Internal(PetscViewer viewer, PetscInt seq
 PetscErrorCode PetscViewerCGNSCheckBatch_Internal(PetscViewer viewer)
 {
   PetscViewer_CGNS *cgv = (PetscViewer_CGNS *)viewer->data;
-  size_t            num_steps;
+  PetscCount        num_steps;
 
   PetscFunctionBegin;
   if (!cgv->filename_template) PetscFunctionReturn(PETSC_SUCCESS); // Batches are closed when viewer is destroyed
   PetscCall(PetscSegBufferGetSize(cgv->output_times, &num_steps));
-  if (num_steps >= cgv->batch_size) PetscCall(PetscViewerFileClose_CGNS(viewer));
+  if (num_steps >= (PetscCount)cgv->batch_size) PetscCall(PetscViewerFileClose_CGNS(viewer));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

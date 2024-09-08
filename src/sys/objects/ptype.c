@@ -119,12 +119,12 @@ typedef enum {
   PETSC_INT64_SIZE       = sizeof(PetscInt64),
   PETSC_INT32_SIZE       = sizeof(PetscInt32),
   PETSC_BIT_LOGICAL_SIZE = sizeof(char),
-  PETSC_COUNT_SIZE       = sizeof(PetscCount),
+  PETSC_COUNT_SIZE       = sizeof(PetscCount)
 #if defined(PETSC_USE_REAL___FLOAT128)
-  ,
+    ,
   PETSC___FLOAT128_SIZE = sizeof(__float128)
 #elif defined(PETSC_USE_REAL___FP16)
-  ,
+    ,
   PETSC___FP16_SIZE = sizeof(__fp16)
 #endif
 } PetscDataTypeSize;

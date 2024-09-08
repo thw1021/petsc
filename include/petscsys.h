@@ -1723,7 +1723,7 @@ PETSC_EXTERN PetscErrorCode MPIU_File_read_at_all(MPI_File, MPI_Offset, void *, 
 .  a - the `PetscInt64` value
 
    Output Parameter:
-.  b - the resulting `PetscInt` value
+.  b - the resulting `PetscInt` value, or `NULL` if the result is not needed
 
    Level: advanced
 
@@ -1751,7 +1751,7 @@ static inline PetscErrorCode PetscIntCast(PetscCount a, PetscInt *b)
 .  a - the `PetscInt` value
 
    Output Parameter:
-.  b - the resulting `PetscBLASInt` value
+.  b - the resulting `PetscBLASInt` value, or `NULL` if the result is not needed
 
    Level: advanced
 
@@ -1768,7 +1768,7 @@ static inline PetscErrorCode PetscBLASIntCast(PetscCount a, PetscBLASInt *b)
     PetscCheck(a <= (PetscBLASInt)PETSC_BLAS_INT_MAX, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "%" PetscCount_FMT " is too big for BLAS/LAPACK, which is restricted to 32-bit integers. Either you have an invalidly large integer error in your code or you must ./configure PETSc with --with-64-bit-blas-indices for the case you are running", a);
   }
   PetscCheck(a >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Passing negative integer to BLAS/LAPACK routine");
-  *b = (PetscBLASInt)a;
+  if (b) *b = (PetscBLASInt)a;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1781,7 +1781,7 @@ static inline PetscErrorCode PetscBLASIntCast(PetscCount a, PetscBLASInt *b)
 .  a - the `PetscInt` value
 
    Output Parameter:
-.  b - the resulting `PetscCuBLASInt` value
+.  b - the resulting `PetscCuBLASInt` value, or `NULL` if the result is not needed
 
    Level: advanced
 
@@ -1796,7 +1796,7 @@ static inline PetscErrorCode PetscCuBLASIntCast(PetscCount a, PetscCuBLASInt *b)
   *b = 0; /* to prevent compilers erroneously suggesting uninitialized variable */
   PetscCheck(a <= (PetscCount)PETSC_CUBLAS_INT_MAX, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "%" PetscCount_FMT " is too big for cuBLAS, which is restricted to 32-bit integers.", a);
   PetscCheck(a >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Passing negative integer %" PetscCount_FMT "to cuBLAS routine", a);
-  *b = (PetscCuBLASInt)a;
+  if (b) *b = (PetscCuBLASInt)a;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1809,7 +1809,7 @@ static inline PetscErrorCode PetscCuBLASIntCast(PetscCount a, PetscCuBLASInt *b)
 .  a - the `PetscInt` value
 
    Output Parameter:
-.  b - the resulting `PetscHipBLASInt` value
+.  b - the resulting `PetscHipBLASInt` value, or `NULL` if the result is not needed
 
    Level: advanced
 
@@ -1824,7 +1824,7 @@ static inline PetscErrorCode PetscHipBLASIntCast(PetscCount a, PetscHipBLASInt *
   *b = 0; /* to prevent compilers erroneously suggesting uninitialized variable */
   PetscCheck(a <= (PetscCount)PETSC_HIPBLAS_INT_MAX, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "%" PetscCount_FMT " is too big for hipBLAS, which is restricted to 32-bit integers.", a);
   PetscCheck(a >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Passing negative integer %" PetscCount_FMT "to hipBLAS routine", a);
-  *b = (PetscHipBLASInt)a;
+  if (b) *b = (PetscHipBLASInt)a;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1838,7 +1838,7 @@ static inline PetscErrorCode PetscHipBLASIntCast(PetscCount a, PetscHipBLASInt *
 .  a - the `PetscInt` value
 
    Output Parameter:
-.  b - the resulting `PetscMPIInt` value
+.  b - the resulting `PetscMPIInt` value, or `NULL` if the result is not needed
 
    Level: advanced
 
@@ -1849,7 +1849,7 @@ static inline PetscErrorCode PetscMPIIntCast(PetscCount a, PetscMPIInt *b)
   PetscFunctionBegin;
   *b = 0; /* to prevent compilers erroneously suggesting uninitialized variable */
   PetscCheck(a <= (PetscCount)PETSC_MPI_INT_MAX, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "%" PetscCount_FMT " is too big for MPI buffer length. Maximum supported value is %d", a, PETSC_MPI_INT_MAX);
-  *b = (PetscMPIInt)a;
+  if (b) *b = (PetscMPIInt)a;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -2426,7 +2426,7 @@ static inline unsigned int PetscStrHash(const char *str)
 static inline PetscMPIInt PetscMPIIntCast_Internal(PetscCount a, PetscMPIInt *b)
 {
   if (PetscUnlikely(a > (PetscCount)PETSC_MPI_INT_MAX)) return MPI_ERR_COUNT;
-  *b = (PetscMPIInt)(a);
+  *b = (PetscMPIInt)a;
   return MPI_SUCCESS;
 }
 
@@ -2435,7 +2435,7 @@ static inline PetscMPIInt MPIU_Get_count(MPI_Status *status, MPI_Datatype dtype,
   PetscMPIInt count2;
 
   PetscFunctionBegin;
-  *count = 0; /* to prevent incorrect warnings of uninitialized varables */
+  *count = 0; /* to prevent incorrect warnings of uninitialized variables */
   PetscCallMPI(MPI_Get_count(status, dtype, &count2));
   *count = count2;
   PetscFunctionReturn(MPI_SUCCESS);
