@@ -342,3 +342,5 @@ M*/
 `PetscDeviceArrayCopy()`, `PetscDeviceMemset()`
 M*/
 #define PetscDeviceArrayZero(dctx, ptr, n) PetscDeviceMemset((dctx), (ptr), 0, (size_t)(n) * sizeof(*(ptr)))
+
+PETSC_EXTERN PetscErrorCode PetscGetUseGPUAwareMPI(PetscBool *);

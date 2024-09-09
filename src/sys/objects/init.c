@@ -34,7 +34,7 @@ PetscBool PetscBeganNvshmem       = PETSC_FALSE;
 PetscBool PetscNvshmemInitialized = PETSC_FALSE;
 #endif
 
-PetscUseGPUMPI use_gpu_aware_mpi  = PetscDefined(HAVE_MPIUNI) ? PETSC_USE_GPU_AWARE_MPI_FALSE : PETSC_USE_GPU_AWARE_MPI_TRUE;
+PetscUseGPUMPI use_gpu_aware_mpi  = PETSC_USE_GPU_AWARE_MPI_AUTO;
 PetscBool      mpi_is_gpu_aware   = PETSC_FALSE;
 PetscBool      device_initialized = PETSC_FALSE;
 
@@ -670,5 +670,36 @@ PETSC_INTERN PetscErrorCode PetscOptionsCheckInitial_Private(const char help[])
 
   PetscCall(PetscOptionsGetReal(NULL, NULL, "-petsc_sleep", &si, &flg1));
   if (flg1) PetscCall(PetscSleep(si));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PetscGetUseGPUAwareMPI - Get current status of PETSc's GPU-aware MPI usage
+
+  Synopsis:
+  #include <petscdevice.h>
+  PetscErrorCode PetscGetUseGPUAwareMPI(PetscBool *flg)
+
+  Not Collective
+
+  Output Parameter:
+. stat  - The status of PETSc's GPU-aware MPI usage
+
+  Level: beginner
+
+  Notes:
+   One can use the option -use_gpu_aware_mpi {auto, 0/false, 1/true} to control PETSc's GPU-aware MPI usage.
+   auto, the default option, uses MPI as is;  1 forces GPU-aware MPI use, and errors out if unavailable;
+   0 forces non-GPU-aware MPI (even when GPU-aware MPI is available).
+
+   The status is fully decided (true or false) only after the first PETSc GPU object was created.
+   Before that, calling this function will return true only when the option value is true; otherwise
+   it will return false.
+
+@*/
+PetscErrorCode PetscGetUseGPUAwareMPI(PetscBool *flg)
+{
+  PetscFunctionBegin;
+  if (flg) *flg = (use_gpu_aware_mpi == PETSC_USE_GPU_AWARE_MPI_TRUE) ? PETSC_TRUE : PETSC_FALSE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
