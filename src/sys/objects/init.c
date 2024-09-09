@@ -674,11 +674,11 @@ PETSC_INTERN PetscErrorCode PetscOptionsCheckInitial_Private(const char help[])
 }
 
 /*@
-  PetscGetUseGPUAwareMPI - Get current status of PETSc's GPU-aware MPI usage
+  PetscUseGPUAwareMPIGetStatus - Get current status of PETSc's GPU-aware MPI usage
 
   Synopsis:
   #include <petscdevice.h>
-  PetscErrorCode PetscGetUseGPUAwareMPI(PetscBool *flg)
+  PetscErrorCode PetscUseGPUAwareMPIGetStatus(PetscBool *flg)
 
   Not Collective
 
@@ -697,7 +697,7 @@ PETSC_INTERN PetscErrorCode PetscOptionsCheckInitial_Private(const char help[])
    it will return false.
 
 @*/
-PetscErrorCode PetscGetUseGPUAwareMPI(PetscBool *flg)
+PetscErrorCode PetscUseGPUAwareMPIGetStatus(PetscBool *flg)
 {
   PetscFunctionBegin;
   if (flg) *flg = (use_gpu_aware_mpi == PETSC_USE_GPU_AWARE_MPI_TRUE) ? PETSC_TRUE : PETSC_FALSE;
