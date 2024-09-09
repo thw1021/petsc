@@ -7723,7 +7723,7 @@ static PetscErrorCode PCBDDCMatISGetSubassemblingPattern(Mat mat, PetscInt *n_su
     IS              new_ranks, new_ranks_contig;
     MatPartitioning partitioner;
     PetscInt        rstart, rend;
-    PetscMPIInt     irstart = 0, irend;
+    PetscMPIInt     irstart = 0, irend = 0;
     PetscInt       *is_indices, *oldranks;
     PetscMPIInt     size;
     PetscBool       aggregate;
