@@ -5019,7 +5019,7 @@ PetscErrorCode TSSetTolerances(TS ts, PetscReal atol, Vec vatol, PetscReal rtol,
 {
   PetscFunctionBegin;
   if (atol == (PetscReal)PETSC_DETERMINE) {
-    ts->atol = atol = ts->default_atol;
+    ts->atol = ts->default_atol;
   } else if (atol != (PetscReal)PETSC_CURRENT) {
     PetscCheck(atol >= 0.0, PetscObjectComm((PetscObject)ts), PETSC_ERR_ARG_OUTOFRANGE, "Absolute tolerance %g must be non-negative", (double)atol);
     ts->atol = atol;
@@ -5032,7 +5032,7 @@ PetscErrorCode TSSetTolerances(TS ts, PetscReal atol, Vec vatol, PetscReal rtol,
   }
 
   if (rtol == (PetscReal)PETSC_DETERMINE) {
-    ts->rtol = atol = ts->default_rtol;
+    ts->rtol = ts->default_rtol;
   } else if (rtol != (PetscReal)PETSC_CURRENT) {
     PetscCheck(rtol >= 0.0, PetscObjectComm((PetscObject)ts), PETSC_ERR_ARG_OUTOFRANGE, "Relative tolerance %g must be non-negative", (double)rtol);
     ts->rtol = rtol;

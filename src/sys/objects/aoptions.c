@@ -334,7 +334,6 @@ static PetscErrorCode PetscOptionsGetFromTextInput(PetscOptionItems *PetscOption
   PetscBool       bid;
   PetscReal       ir, *valr;
   PetscInt       *vald;
-  size_t          i;
 
   PetscFunctionBegin;
   PetscCall((*PetscPrintf)(PETSC_COMM_WORLD, "%s --------------------\n", PetscOptionsObject->title));
@@ -345,7 +344,7 @@ static PetscErrorCode PetscOptionsGetFromTextInput(PetscOptionItems *PetscOption
     case OPTION_INT_ARRAY:
       PetscCall(PetscPrintf(PETSC_COMM_WORLD, "-%s%s: <", PetscOptionsObject->prefix ? PetscOptionsObject->prefix : "", next->option + 1));
       vald = (PetscInt *)next->data;
-      for (i = 0; i < next->arraylength; i++) {
+      for (PetscInt i = 0; i < next->arraylength; i++) {
         PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%" PetscInt_FMT, vald[i]));
         if (i < next->arraylength - 1) PetscCall(PetscPrintf(PETSC_COMM_WORLD, ","));
       }
@@ -354,7 +353,7 @@ static PetscErrorCode PetscOptionsGetFromTextInput(PetscOptionItems *PetscOption
       if (str[0]) {
         PetscToken token;
         PetscInt   n = 0, nmax = next->arraylength, *dvalue = (PetscInt *)next->data, start, end;
-        size_t     len;
+        size_t     i, len;
         char      *value;
         PetscBool  foundrange;
 
@@ -400,7 +399,7 @@ static PetscErrorCode PetscOptionsGetFromTextInput(PetscOptionItems *PetscOption
     case OPTION_REAL_ARRAY:
       PetscCall(PetscPrintf(PETSC_COMM_WORLD, "-%s%s: <", PetscOptionsObject->prefix ? PetscOptionsObject->prefix : "", next->option + 1));
       valr = (PetscReal *)next->data;
-      for (i = 0; i < next->arraylength; i++) {
+      for (PetscInt i = 0; i < next->arraylength; i++) {
         PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%g", (double)valr[i]));
         if (i < next->arraylength - 1) PetscCall(PetscPrintf(PETSC_COMM_WORLD, ","));
       }
