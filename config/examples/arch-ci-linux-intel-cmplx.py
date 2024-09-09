@@ -42,7 +42,9 @@ if __name__ == '__main__':
     '--download-superlu',
     '--download-superlu_dist',
     '--download-tetgen',
+    '--download-tetgen-build-program',
     '--download-triangle',
+    '--download-triangle-build-program',
     '--download-zlib',
     '--with-strict-petscerrorcode',
   ]
