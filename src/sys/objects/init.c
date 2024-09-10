@@ -683,12 +683,12 @@ PETSC_INTERN PetscErrorCode PetscOptionsCheckInitial_Private(const char help[])
   Not Collective
 
   Output Parameter:
-. flg  - The status of PETSc's GPU-aware MPI usage
+. flg - The status of PETSc's GPU-aware MPI usage
 
   Options Database Keys:
-+ -use_gpu_aware_mpi auto    - default; use the MPI as is
-. -use_gpu_aware_mpi 0       - force non-GPU-aware MPI use in PETSc (even when GPU-aware MPI is available)
-- -use_gpu_aware_mpi 1       - force GPU-aware MPI use in PETSc, and error out if the system MPI is not GPU-aware
++ -use_gpu_aware_mpi auto - use the MPI as is (default)
+. -use_gpu_aware_mpi 0    - force non-GPU-aware MPI use in PETSc (even when GPU-aware MPI is available)
+- -use_gpu_aware_mpi 1    - force GPU-aware MPI use in PETSc, and error out if the system MPI is not GPU-aware
 
   Level: beginner
 
@@ -697,6 +697,7 @@ PETSC_INTERN PetscErrorCode PetscOptionsCheckInitial_Private(const char help[])
   Before that, calling this function will return true only when the option value is true; otherwise
   it will return false.
 
+.seealso: `PetscLogView()`
 @*/
 PetscErrorCode PetscUseGPUAwareMPIGetStatus(PetscBool *flg)
 {
