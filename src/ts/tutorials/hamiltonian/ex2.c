@@ -423,7 +423,7 @@ static PetscErrorCode MonitorEField(TS ts, PetscInt step, PetscReal t, Vec U, vo
   else if (step == 0)
     PetscCall(
       PetscPrintf(PETSC_COMM_WORLD,
-                  "Time	        Sum E            |E|              log(|E|)       E_max            log(E_max)      sum(q)   part: moment-0        moment-1         moment-2        entropy            FEM: moment-0         moment-1      moment-2        entropy.                lost particle entropy\n"));
+                  "Time	        Sum E           |E|              log(|E|)       E_max            log(E_max)      sum(q)   part: moment-0        moment-1         moment-2        entropy            FEM: moment-0         moment-1      moment-2        entropy.                lost particle entropy\n"));
   PetscCall(TSGetDM(ts, &sw));
   PetscCall(DMSwarmGetCellDM(sw, &dm));
   PetscCall(DMGetDimension(sw, &dim));
