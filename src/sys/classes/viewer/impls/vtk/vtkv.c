@@ -302,8 +302,9 @@ PetscErrorCode PetscViewerVTKFWrite(PetscViewer viewer, FILE *fp, const void *da
     size_t      count;
     PetscMPIInt dsize;
     PetscInt64  bytes;
-
 #if defined(PETSC_USE_REAL___FLOAT128)
+    double *tmp;
+
     if (dtype == MPIU___FLOAT128) {
       PetscReal *ttmp = (PetscReal *)data;
 
