@@ -493,7 +493,7 @@ static PetscErrorCode MonitorEField(TS ts, PetscInt step, PetscReal t, Vec U, vo
     PetscCall(DMSwarmRestoreField(sw, DMSwarmPICField_coor, NULL, NULL, (void **)&x));
     PetscCall(DMSwarmRestoreField(sw, "velocity", NULL, NULL, (void **)&v));
     char line[128];
-    PetscCall(PetscSNPrintf(line, 128, "e_phase_%04d.xmf", step));
+    PetscCall(PetscSNPrintf(line, 128, "e_phase_%04d.xmf", (int)step));
     PetscCall(DMSwarmViewXDMF(sw, line));
     PetscCall(DMSwarmGetField(sw, DMSwarmPICField_coor, NULL, NULL, (void **)&x));
     PetscCall(DMSwarmGetField(sw, "velocity", NULL, NULL, (void **)&v));
