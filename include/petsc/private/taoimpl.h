@@ -227,6 +227,9 @@ struct _TaoTermOps {
   PetscErrorCode (*isgradientdefined)(TaoTerm, PetscBool *);
   PetscErrorCode (*isobjectiveandgradientdefined)(TaoTerm, PetscBool *);
   PetscErrorCode (*ishessiandefined)(TaoTerm, PetscBool *);
+  PetscErrorCode (*iscreatehessianmatricesdefined)(TaoTerm, PetscBool *);
+
+  PetscErrorCode (*createhessianmatrices)(TaoTerm, Mat *, Mat *);
 };
 
 #define MAXTAOMONITORS 10
@@ -235,7 +238,8 @@ struct _p_TaoTerm {
   PETSCHEADER(struct _TaoTermOps);
   void     *data;
   PetscBool setup_called;
-  Mat       vec_factory; // right space: solution; left space: parameters
+  Mat       solution_factory;   // dummies used to create vectors
+  Mat       parameters_factory;
 };
 
 PETSC_INTERN PetscErrorCode TaoTermRegisterAll(void);
@@ -251,3 +255,5 @@ PETSC_INTERN PetscErrorCode TaoTermTaoCallbacksGetObjective(TaoTerm, PetscErrorC
 PETSC_INTERN PetscErrorCode TaoTermTaoCallbacksGetGradient(TaoTerm, PetscErrorCode (**)(Tao, Vec, Vec, void *), void **);
 PETSC_INTERN PetscErrorCode TaoTermTaoCallbacksGetObjAndGrad(TaoTerm, PetscErrorCode (**)(Tao, Vec, PetscReal *, Vec, void *), void **);
 PETSC_INTERN PetscErrorCode TaoTermTaoCallbacksGetHessian(TaoTerm, PetscErrorCode (**)(Tao, Vec, Mat, Mat, void *), void **);
+
+PETSC_INTERN PetscErrorCode TaoGetOrCreateHessianMatrices_Collective(Tao, Mat *H, Mat *Hpre);

@@ -75,6 +75,7 @@ static PetscErrorCode TaoSolve_TRON(Tao tao)
   PetscInt                     its;
   TaoLineSearchConvergedReason ls_reason = TAOLINESEARCH_CONTINUE_ITERATING;
   PetscReal                    prered, actred, delta, f, f_new, rhok, gdx, xdiff, stepsize;
+  Mat                          hessian, hessian_pre;
 
   PetscFunctionBegin;
   tron->pgstepsize = 1.0;
@@ -103,6 +104,8 @@ static PetscErrorCode TaoSolve_TRON(Tao tao)
   tron->pgstepsize = 1.0;
   tron->stepsize   = tao->trust;
 
+  PetscCall(TaoGetOrCreateHessianMatrices_Collective(tao, &hessian, &hessian_pre));
+
   tao->reason = TAO_CONTINUE_ITERATING;
   PetscCall(TaoLogConvergenceHistory(tao, tron->f, tron->gnorm, 0.0, tao->ksp_its));
   PetscCall(TaoMonitor(tao, tao->niter, tron->f, tron->gnorm, 0.0, tron->stepsize));
@@ -124,7 +127,7 @@ static PetscErrorCode TaoSolve_TRON(Tao tao)
     f                 = tron->f;
     delta             = tao->trust;
     tron->n_free_last = tron->n_free;
-    PetscCall(TaoComputeHessian(tao, tao->solution, tao->hessian, tao->hessian_pre));
+    PetscCall(TaoComputeHessian(tao, tao->solution, hessian, hessian_pre));
 
     /* Generate index set (IS) of which bound constraints are active */
     PetscCall(ISDestroy(&tron->Free_Local));
@@ -145,13 +148,13 @@ static PetscErrorCode TaoSolve_TRON(Tao tao)
     PetscCall(TaoVecGetSubVec(tao->gradient, tron->Free_Local, tao->subset_type, 0.0, &tron->DXFree));
     PetscCall(VecSet(tron->DXFree, 0.0));
     PetscCall(VecScale(tron->R, -1.0));
-    PetscCall(TaoMatGetSubMat(tao->hessian, tron->Free_Local, tron->diag, tao->subset_type, &tron->H_sub));
-    if (tao->hessian == tao->hessian_pre) {
+    PetscCall(TaoMatGetSubMat(hessian, tron->Free_Local, tron->diag, tao->subset_type, &tron->H_sub));
+    if (hessian == hessian_pre) {
       PetscCall(MatDestroy(&tron->Hpre_sub));
       PetscCall(PetscObjectReference((PetscObject)tron->H_sub));
       tron->Hpre_sub = tron->H_sub;
     } else {
-      PetscCall(TaoMatGetSubMat(tao->hessian_pre, tron->Free_Local, tron->diag, tao->subset_type, &tron->Hpre_sub));
+      PetscCall(TaoMatGetSubMat(hessian_pre, tron->Free_Local, tron->diag, tao->subset_type, &tron->Hpre_sub));
     }
     PetscCall(KSPReset(tao->ksp));
     PetscCall(KSPSetOperators(tao->ksp, tron->H_sub, tron->Hpre_sub));
@@ -179,7 +182,7 @@ static PetscErrorCode TaoSolve_TRON(Tao tao)
       PetscCall(TaoLineSearchApply(tao->linesearch, tron->X_New, &f_new, tron->G_New, tao->stepdirection, &stepsize, &ls_reason));
       PetscCall(TaoAddLineSearchCounts(tao));
 
-      PetscCall(MatMult(tao->hessian, tao->stepdirection, tron->Work));
+      PetscCall(MatMult(hessian, tao->stepdirection, tron->Work));
       PetscCall(VecAYPX(tron->Work, 0.5, tao->gradient));
       PetscCall(VecDot(tao->stepdirection, tron->Work, &prered));
       actred = f_new - f;

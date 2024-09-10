@@ -179,6 +179,7 @@ static PetscErrorCode TaoTermDestroy_Shell(TaoTerm term)
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetHessian_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetProximalMap_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetView_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellCreateHessianMatrices_C", NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -419,6 +420,27 @@ static PetscErrorCode TaoTermShellSetView_Shell(TaoTerm term, PetscErrorCode (*v
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@
+  TaoTermShellSetCreateHessianMatrices - Description
+
+  Logically collective
+
+@*/
+PetscErrorCode TaoTermShellSetCreateHessianMatrices(TaoTerm term, PetscErrorCode(*createhessianmatrices)(TaoTerm term, Mat *H, Mat *Hpre))
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  PetscTryMethod(term, "TaoTermShellSetCreateHessianMatrices_C", (TaoTerm, PetscErrorCode(*)(TaoTerm, Mat *, Mat *)), (term, createhessianmatrices));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoTermShellCreateHessianMatrices_Shell(TaoTerm term, PetscErrorCode(*createhessianmatrices)(TaoTerm, Mat *, Mat *))
+{
+  PetscFunctionBegin;
+  term->ops->createhessianmatrices = createhessianmatrices;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*MC
   TAOTERMSHELL - A `TaoTerm` that collects user-defined callbacks for the operations of the term
 
@@ -451,6 +473,7 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Shell(TaoTerm term)
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetHessian_C", TaoTermShellSetHessian_Shell));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetProximalMap_C", TaoTermShellSetProximalMap_Shell));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetView_C", TaoTermShellSetView_Shell));
+  PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellCreateHessianMatrices_C", TaoTermShellCreateHessianMatrices_Shell));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -460,9 +483,9 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Shell(TaoTerm term)
   Collective
 
   Input Parameter:
-+ comm    - the MPI communicator for computing the term
-. ctx     - (optional) a user context to be used by routines
-- destroy - (optional) a routine to destroy the user context when `term` is destroyed
++ comm            - the MPI communicator for computing the term
+. ctx             - (optional) a user context to be used by routines
+- destroy         - (optional) a routine to destroy the user context when `term` is destroyed
 
   Output Parameter:
 . term - a `TaoTerm` of type `TAOTERMSHELL`

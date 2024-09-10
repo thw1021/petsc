@@ -31,8 +31,8 @@ PetscErrorCode TaoTermDestroy(TaoTerm *term)
   }
 
   PetscTryTypeMethod(*term, destroy);
-  PetscCall(MatDestroy(&(*term)->vec_factory));
-
+  PetscCall(MatDestroy(&(*term)->solution_factory));
+  PetscCall(MatDestroy(&(*term)->parameters_factory));
   PetscCall(PetscHeaderDestroy(term));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -197,8 +197,10 @@ PetscErrorCode TaoTermCreate(MPI_Comm comm, TaoTerm *term)
   PetscCall(TaoInitializePackage());
   PetscCall(PetscHeaderCreate(_term, TAOTERM_CLASSID, "TaoTerm", "Objective function term", "Tao", comm, TaoTermDestroy, TaoTermView));
   *term = _term;
-  PetscCall(MatCreate(comm, &(*term)->vec_factory));
-  PetscCall(MatSetType((*term)->vec_factory, MATDUMMY));
+  PetscCall(MatCreate(comm, &(*term)->solution_factory));
+  PetscCall(MatSetType((*term)->solution_factory, MATDUMMY));
+  PetscCall(MatCreate(comm, &(*term)->parameters_factory));
+  PetscCall(MatSetType((*term)->parameters_factory, MATDUMMY));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -514,7 +516,7 @@ PetscErrorCode TaoTermIsHessianDefined(TaoTerm term, PetscBool *is_defined)
 }
 
 /*@
-  TaoTermGetVecType - Get the vector type for solution and parameter `Vec`s created by `TaoTermCreateVecs()`
+  TaoTermIsCreateHessianMatricesDefined - Whether this term can call `TaoTermCreateHessianMatrices()`.
 
   Not collective
 
@@ -522,145 +524,19 @@ PetscErrorCode TaoTermIsHessianDefined(TaoTerm term, PetscBool *is_defined)
 . term - a `TaoTerm`
 
   Output Parameter:
-. type - the `VecType`
-
-  Level: advanced
-
-.seealso: [](ch_tao), `Tao`, `TaoTerm`, `TaoTermSetVecType()`, `TaoTermCreateVecs()`
-@*/
-PetscErrorCode TaoTermGetVecType(TaoTerm term, VecType *type)
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
-  PetscCall(MatGetVecType(term->vec_factory, type));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@
-  TaoTermSetVecType - Set the vector type for solution and parameter `Vec`s created by `TaoTermCreateVecs()`
-
-  Not collective
-
-  Input Parameter:
-+ term - a `TaoTerm`
-- type - the `VecType`
-
-  Level: advanced
-
-.seealso: [](ch_tao), `Tao`, `TaoTerm`, `TaoTermGetVecType()`, `TaoTermCreateVecs()`
-@*/
-PetscErrorCode TaoTermSetVecType(TaoTerm term, VecType type)
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
-  PetscCall(MatSetVecType(term->vec_factory, type));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@
-  TaoTermGetSizes - Get the sizes of the solution vector and parameter vector of a `TaoTerm`.
-
-  Not collective
-
-  Input Parameter:
-. term - a `TaoTerm`
-
-  Output Parameters:
-+ n_sol_local     - (optional) the local size of a solution vector
-. n_sol_global    - (optional) the global size of a solution vector
-. n_params_local  - (optional) the local size of a parameter vector
-- n_params_global - (optional) the global size of a parameter vector
-
-  Level: beginner
-
-  Note:
-  See `TaoTermSetSizes()` for the rules regarding the sizes of `TaoTerm`s.
-
-.seealso: [](ch_tao), `Tao`, `TaoTerm`,
-  `TaoTermSetSizes()`,
-  `TaoTermSetLayouts()`,
-  `TaoGermGetLayouts()`,
-  `TaoTermSetVecType()`,
-  `TaoTermGetVecType()`,
-  `TaoTermCreateVecs()`
-@*/
-PetscErrorCode TaoTermGetSizes(TaoTerm term, PetscInt *n_sol_local, PetscInt *n_sol_global, PetscInt *n_params_local, PetscInt *n_params_global)
-{
-  PetscBool any_local, any_global;
-
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
-  any_local  = (n_sol_local || n_params_local) ? PETSC_TRUE : PETSC_FALSE;
-  any_global = (n_sol_global || n_params_global) ? PETSC_TRUE : PETSC_FALSE;
-  if (any_local) PetscCall(MatGetLocalSize(term->vec_factory, n_params_local, n_sol_local));
-  if (any_global) PetscCall(MatGetSize(term->vec_factory, n_params_global, n_sol_global));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@
-  TaoTermSetSizes - Set the sizes of the solution vector and parameter vector of a `TaoTerm`.
-
-  Collective
-
-  Input Parameters:
-+ term            - a `TaoTerm`
-. n_sol_local     - the local size of a solution vector (or `PETSC_DECIDE`)
-. n_sol_global    - the global size of a solution vector (or `PETSC_DECIDE`)
-. n_params_local  - the local size of a parameter vector (or `PETSC_DECIDE`)
-- n_params_global - the global size of a parameter vector (or `PETSC_DECIDE`)
-
-  Level: beginner
-
-  Notes:
-  The usage of `PETSC_DECIDE` when not directly specifying both the local and global size of a vector follows the same rules as `VecSetSizes()`.
-
-  The solution space and vector space of a `TaoTerm` follow the same rules as a `Vec` or a `Mat`: the size should be specified before `TaoTermSetUp()` is called.
-  After that, the sizes are fixed.
-
-.seealso: [](ch_tao), `Tao`, `TaoTerm`,
-  `TaoTermGetSizes()`,
-  `TaoTermSetLayouts()`,
-  `TaoGermGetLayouts()`,
-  `TaoTermSetVecType()`,
-  `TaoTermGetVecType()`,
-  `TaoTermCreateVecs()`
-@*/
-PetscErrorCode TaoTermSetSizes(TaoTerm term, PetscInt n_sol_local, PetscInt n_sol_global, PetscInt n_params_local, PetscInt n_params_global)
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
-  PetscCall(MatSetSizes(term->vec_factory, n_params_local, n_params_global, n_sol_local, n_sol_global));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@
-  TaoTermSetLayouts - Set the layouts describing the solution vectors and parameter vectors of a `TaoTerm`.
-
-  Collective
-
-  Input Parameters:
-+ term          - a `TaoTerm`
-. sol_layout    - a `PetscLayout` for the solution space
-- params_layout - a `PetscLayout` for the parameter space
+. is_defined - whether the term can create new Hessian matrices
 
   Level: intermediate
 
-  Note:
-  This can be used in place of `TaoTermSetSizes()`.
-
-.seealso: [](ch_tao), `Tao`, `TaoTerm`,
-  `TaoTermSetSizes()`,
-  `TaoTermGetSizes()`,
-  `TaoGermGetLayouts()`,
-  `TaoTermSetVecType()`,
-  `TaoTermGetVecType()`,
-  `TaoTermCreateVecs()`
+.seealso: [](ch_tao), `Tao`, `TaoTerm`, `TaoTermHessian()`, `TaoTermShellSetHessian()`, `TaoTermIsObjectiveDefined()`, `TaoTermIsGradientDefined()`, `TaoTermIsObjectiveAndGradientDefined()`, `TaoTermIsHessianDefined()`
 @*/
-PetscErrorCode TaoTermSetLayouts(TaoTerm term, PetscLayout sol_layout, PetscLayout params_layout)
+PetscErrorCode TaoTermIsCreateHessianMatricesDefined(TaoTerm term, PetscBool *is_defined)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
-  PetscCall(MatSetLayouts(term->vec_factory, params_layout, sol_layout));
+  PetscAssertPointer(is_defined, 2);
+  if (term->ops->iscreatehessianmatricesdefined) PetscUseTypeMethod(term, iscreatehessianmatricesdefined, is_defined);
+  else *is_defined = (term->ops->createhessianmatrices != NULL) ? PETSC_TRUE : PETSC_FALSE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -673,27 +549,51 @@ PetscErrorCode TaoTermSetLayouts(TaoTerm term, PetscLayout sol_layout, PetscLayo
 . term - a `TaoTerm`
 
   Output Parameters:
-+ sol_layout    - (optional) the `PetscLayout` for the solution space
-- params_layout - (optional) the `PetscLayout` for the parameter space
++ solution_layout    - (optional) the `PetscLayout` for the solution space
+- parameters_layout - (optional) the `PetscLayout` for the parameter space
 
   Level: intermediate
 
-  Note:
-  This can be used in place of `TaoTermSetSizes()`.
-
 .seealso: [](ch_tao), `Tao`, `TaoTerm`,
-  `TaoTermSetSizes()`,
-  `TaoTermGetSizes()`,
-  `TaoGermSetLayouts()`,
-  `TaoTermSetVecType()`,
-  `TaoTermGetVecType()`,
+  `TaoTermGetVecTypes()`,
+  `TaoGermSetSolutionTemplate()`,
+  `TaoGermSetParametersTemplate()`,
   `TaoTermCreateVecs()`
 @*/
-PetscErrorCode TaoTermGetLayouts(TaoTerm term, PetscLayout *sol_layout, PetscLayout *params_layout)
+PetscErrorCode TaoTermGetLayouts(TaoTerm term, PetscLayout *solution_layout, PetscLayout *parameters_layout)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
-  PetscCall(MatGetLayouts(term->vec_factory, params_layout, sol_layout));
+  if (solution_layout) PetscCall(MatGetLayouts(term->solution_factory, solution_layout, NULL));
+  if (parameters_layout) PetscCall(MatGetLayouts(term->parameters_factory, parameters_layout, NULL));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoTermGetVecTypes - Get the vector types of the solution and parameter vectors of a `TaoTerm`
+
+  Not collective
+
+. term - a `TaoTerm`
+
+  Output Parameters:
++ solution_type    - (optional) the `VecType` for the solution space
+- parameters_type - (optional) the `VecType` for the parameter space
+
+  Level: intermediate
+
+.seealso: [](ch_tao), `Tao`, `TaoTerm`,
+  `TaoTermGetLayouts()`,
+  `TaoGermSetSolutionTemplate()`,
+  `TaoGermSetParametersTemplate()`,
+  `TaoTermCreateVecs()`
+@*/
+PetscErrorCode TaoTermGetVecTypes(TaoTerm term, VecType *solution_type, VecType *parameters_type)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  if (solution_type) PetscCall(MatGetVecType(term->solution_factory, solution_type));
+  if (parameters_type) PetscCall(MatGetVecType(term->parameters_factory, parameters_type));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -712,17 +612,42 @@ PetscErrorCode TaoTermGetLayouts(TaoTerm term, PetscLayout *sol_layout, PetscLay
   Level: beginner
 
 .seealso: [](ch_tao), `Tao`, `TaoTerm`,
-  `TaoTermSetSizes()`,
-  `TaoTermGetSizes()`,
-  `TaoGermSetLayouts()`,
+  `TaoTermSetSolutionTemplate()`,
+  `TaoTermGetParametersTemplate()`,
   `TaoGermGetLayouts()`,
-  `TaoTermSetVecType()`,
-  `TaoTermGetVecType()`,
+  `TaoTermGetVecTypes()`,
 @*/
 PetscErrorCode TaoTermCreateVecs(TaoTerm term, Vec *solution, Vec *parameters)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
-  PetscCall(MatCreateVecs(term->vec_factory, solution, parameters));
+  PetscCall(MatCreateVecs(term->solution_factory, NULL, solution));
+  PetscCall(MatCreateVecs(term->parameters_factory, NULL, parameters));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoTermCreateHessianMatrices - Create the matrices that can be inputs to `TaoTermHessian()`
+
+  Collective
+
+  Input Parameter:
+. term - a `TaoTerm`
+
+  Output Parameters:
++ H - (optional) a matrix that can store the Hessian computed in `TaoTermHessian()`
+- Hpre - (optional) a preconditioner matrix that can be computed in `TaoTermHessian()`
+
+  Level: intermediate
+
+.seealso: [](ch_tao), `Tao`, `TaoTerm`, `TaoTermHessian()`
+@*/
+PetscErrorCode TaoTermCreateHessianMatrices(TaoTerm term, Mat *H, Mat *Hpre)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  if (H) PetscAssertPointer(H, 2);
+  if (Hpre) PetscAssertPointer(Hpre, 3);
+  PetscUseTypeMethod(term, createhessianmatrices, H, Hpre);
   PetscFunctionReturn(PETSC_SUCCESS);
 }

@@ -7,10 +7,19 @@
    gradient, and hessian.
 */
 typedef struct {
+  MPI_Comm  comm;
   PetscInt  n;     /* dimension */
   PetscReal alpha; /* condition parameter */
   PetscBool chained;
 } AppCtx;
+
+static PetscErrorCode AppCtxCreateHessianMatrices(AppCtx *usr, Mat *H, Mat *Hpre)
+{
+  PetscFunctionBegin;
+  PetscCall(MatCreateSeqBAIJ(PETSC_COMM_SELF, 2, usr->n, usr->n, 1, NULL, H));
+  if (Hpre) *Hpre = *H;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
 
 /*
   AppCtxFormFunctionGradient - Evaluates the function, f(X), and gradient, G(X).

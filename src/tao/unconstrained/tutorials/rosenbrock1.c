@@ -29,14 +29,17 @@ int main(int argc, char **argv)
   Mat         M;
   Vec         in, out, out2;
   PetscReal   mult_solve_dist;
+  MPI_Comm    comm;
 
   /* Initialize TAO and PETSc */
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, (char *)0, help));
-  PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD, &size));
-  PetscCheck(size == 1, PETSC_COMM_WORLD, PETSC_ERR_WRONG_MPI_SIZE, "Incorrect number of processors");
+  comm = PETSC_COMM_WORLD;
+  PetscCallMPI(MPI_Comm_size(comm, &size));
+  PetscCheck(size == 1, comm, PETSC_ERR_WRONG_MPI_SIZE, "Incorrect number of processors");
 
   /* Initialize problem parameters */
+  user.comm    = comm;
   user.n       = 2;
   user.alpha   = 99.0;
   user.chained = PETSC_FALSE;
@@ -48,12 +51,12 @@ int main(int argc, char **argv)
 
   /* Allocate vectors for the solution and gradient */
   PetscCall(VecCreateSeq(PETSC_COMM_SELF, user.n, &x));
-  PetscCall(MatCreateSeqBAIJ(PETSC_COMM_SELF, 2, user.n, user.n, 1, NULL, &H));
+  PetscCall(AppCtxCreateHessianMatrices(&user, &H, NULL));
 
   /* The TAO code begins here */
 
   /* Create TAO solver with desired solution method */
-  PetscCall(TaoCreate(PETSC_COMM_SELF, &tao));
+  PetscCall(TaoCreate(comm, &tao));
   PetscCall(TaoSetType(tao, TAOLMVM));
 
   /* Set solution vec and an initial guess */
