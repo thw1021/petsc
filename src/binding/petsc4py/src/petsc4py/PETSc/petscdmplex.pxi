@@ -181,6 +181,8 @@ cdef extern from * nogil:
     PetscErrorCode DMPlexSectionLoad(PetscDM, PetscViewer, PetscDM, PetscSF, PetscSF*, PetscSF*)
     PetscErrorCode DMPlexGlobalVectorLoad(PetscDM, PetscViewer, PetscDM, PetscSF, PetscVec)
     PetscErrorCode DMPlexLocalVectorLoad(PetscDM, PetscViewer, PetscDM, PetscSF, PetscVec)
+    
+    PetscErrorCode DMPlexGetRedundantDM(PetscDM, PetscSF*, PetscDM*)
 
     PetscErrorCode DMPlexTransformApply(PetscDMPlexTransform, PetscDM, PetscDM *)
     PetscErrorCode DMPlexTransformCreate(MPI_Comm, PetscDMPlexTransform *)

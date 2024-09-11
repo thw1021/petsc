@@ -3448,6 +3448,12 @@ cdef class DMPlex(DM):
         """
         CHKERR(DMPlexLocalVectorLoad(self.dm, viewer.vwr, sectiondm.dm, sf.sf, vec.vec))
 
+    def getRedundant(self) -> DM:
+        cdef DMPlex newdm = DMPlex()
+        cdef SF sf = SF() 
+        CHKERR(DMPlexGetRedundantDM(self.dm, &sf.sf, &newdm.dm))
+        return newdm
+
 # --------------------------------------------------------------------
 
 
