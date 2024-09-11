@@ -339,10 +339,10 @@ static PetscErrorCode computeParticleMoments(DM sw, PetscReal moments[5], AppCtx
       mom[0] += PetscRealPart(w[idx]);
       mom[1] += PetscRealPart(w[idx]) * c[0];
       for (d = 0; d < dim; ++d) mom[2] += PetscRealPart(w[idx]) * c[d] * c[d];
-      if (w[idx] > PETSC_REAL_MIN) {
+      if (w[idx] * user->m_n0 > PETSC_REAL_MIN) {
         PetscReal ww = w[idx] * user->m_n0;
         mom[3] += ww * PetscLogReal(ww);
-      } else if (w[idx] < 0) {
+      } else if (w[idx] * user->m_n0 < 0) {
         PetscReal ww = -w[idx] * user->m_n0;
         mom[4] += ww * PetscLogReal(ww);
         PetscCall(PetscPrintf(PETSC_COMM_WORLD, "warning, negative weight %" PetscInt_FMT " %e\n", idx, w[idx]));
