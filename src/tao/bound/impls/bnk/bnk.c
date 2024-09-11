@@ -16,19 +16,19 @@ static PetscErrorCode TaoBNKComputeSubHessian(Tao tao)
   PetscCall(MatDestroy(&bnk->Hpre_inactive));
   PetscCall(MatDestroy(&bnk->H_inactive));
   if (bnk->active_idx) {
-    PetscCall(MatCreateSubMatrix(tao->_hessian, bnk->inactive_idx, bnk->inactive_idx, MAT_INITIAL_MATRIX, &bnk->H_inactive));
-    if (tao->_hessian == tao->_hessian_pre) {
+    PetscCall(MatCreateSubMatrix(tao->hessian, bnk->inactive_idx, bnk->inactive_idx, MAT_INITIAL_MATRIX, &bnk->H_inactive));
+    if (tao->hessian == tao->hessian_pre) {
       PetscCall(PetscObjectReference((PetscObject)bnk->H_inactive));
       bnk->Hpre_inactive = bnk->H_inactive;
     } else {
-      PetscCall(MatCreateSubMatrix(tao->_hessian_pre, bnk->inactive_idx, bnk->inactive_idx, MAT_INITIAL_MATRIX, &bnk->Hpre_inactive));
+      PetscCall(MatCreateSubMatrix(tao->hessian_pre, bnk->inactive_idx, bnk->inactive_idx, MAT_INITIAL_MATRIX, &bnk->Hpre_inactive));
     }
     if (bnk->bfgs_pre) PetscCall(PCLMVMSetIS(bnk->bfgs_pre, bnk->inactive_idx));
   } else {
-    PetscCall(PetscObjectReference((PetscObject)tao->_hessian));
-    bnk->H_inactive = tao->_hessian;
-    PetscCall(PetscObjectReference((PetscObject)tao->_hessian_pre));
-    bnk->Hpre_inactive = tao->_hessian_pre;
+    PetscCall(PetscObjectReference((PetscObject)tao->hessian));
+    bnk->H_inactive = tao->hessian;
+    PetscCall(PetscObjectReference((PetscObject)tao->hessian_pre));
+    bnk->Hpre_inactive = tao->hessian_pre;
     if (bnk->bfgs_pre) PetscCall(PCLMVMClearIS(bnk->bfgs_pre));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -284,8 +284,7 @@ PetscErrorCode TaoBNKComputeHessian(Tao tao)
 
   PetscFunctionBegin;
   /* Compute the Hessian */
-  PetscCall(TaoGetOrCreateHessianMatrices_Collective(tao, NULL, NULL));
-  PetscCall(TaoComputeHessian(tao, tao->solution, tao->_hessian, tao->_hessian_pre));
+  PetscCall(TaoComputeHessian(tao, tao->solution, tao->hessian, tao->hessian_pre));
   /* Add a correction to the BFGS preconditioner */
   if (bnk->M) PetscCall(MatLMVMUpdate(bnk->M, tao->solution, bnk->unprojected_gradient));
   /* Prepare the reduced sub-matrices for the inactive set */
@@ -319,11 +318,11 @@ PetscErrorCode TaoBNKEstimateActiveSet(Tao tao, PetscInt asType)
       PetscCall(MatSolve(bnk->M, bnk->unprojected_gradient, bnk->W));
     } else {
       hessComputed = diagExists = PETSC_FALSE;
-      if (tao->_hessian) PetscCall(MatAssembled(tao->_hessian, &hessComputed));
-      if (hessComputed) PetscCall(MatHasOperation(tao->_hessian, MATOP_GET_DIAGONAL, &diagExists));
+      if (tao->hessian) PetscCall(MatAssembled(tao->hessian, &hessComputed));
+      if (hessComputed) PetscCall(MatHasOperation(tao->hessian, MATOP_GET_DIAGONAL, &diagExists));
       if (diagExists) {
         /* BFGS preconditioner doesn't exist so let's invert the absolute diagonal of the Hessian instead onto the gradient */
-        PetscCall(MatGetDiagonal(tao->_hessian, bnk->Xwork));
+        PetscCall(MatGetDiagonal(tao->hessian, bnk->Xwork));
         PetscCall(VecAbs(bnk->Xwork));
         PetscCall(VecMedian(bnk->Diag_min, bnk->Xwork, bnk->Diag_max, bnk->Xwork));
         PetscCall(VecReciprocal(bnk->Xwork));
@@ -426,9 +425,9 @@ PetscErrorCode TaoBNKComputeStep(Tao tao, PetscBool shift, KSPConvergedReason *k
 
   /* Shift the reduced Hessian matrix */
   if (shift && bnk->pert > 0) {
-    PetscCall(PetscObjectTypeCompare((PetscObject)tao->_hessian, MATLMVM, &is_lmvm));
+    PetscCall(PetscObjectTypeCompare((PetscObject)tao->hessian, MATLMVM, &is_lmvm));
     if (is_lmvm) {
-      PetscCall(MatShift(tao->_hessian, bnk->pert));
+      PetscCall(MatShift(tao->hessian, bnk->pert));
     } else {
       PetscCall(MatShift(bnk->H_inactive, bnk->pert));
       if (bnk->H_inactive != bnk->Hpre_inactive) PetscCall(MatShift(bnk->Hpre_inactive, bnk->pert));
@@ -1274,10 +1273,12 @@ PetscErrorCode TaoCreate_BNK(Tao tao)
   PetscFunctionBegin;
   PetscCall(PetscNew(&bnk));
 
-  tao->ops->setup          = TaoSetUp_BNK;
-  tao->ops->view           = TaoView_BNK;
-  tao->ops->setfromoptions = TaoSetFromOptions_BNK;
-  tao->ops->destroy        = TaoDestroy_BNK;
+  tao->ops->setup            = TaoSetUp_BNK;
+  tao->ops->view             = TaoView_BNK;
+  tao->ops->setfromoptions   = TaoSetFromOptions_BNK;
+  tao->ops->destroy          = TaoDestroy_BNK;
+  tao->uses_gradient         = PETSC_TRUE;
+  tao->uses_hessian_matrices = PETSC_TRUE;
 
   /*  Override default settings (unless already changed) */
   PetscCall(TaoParametersInitialize(tao));

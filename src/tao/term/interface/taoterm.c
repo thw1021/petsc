@@ -549,7 +549,7 @@ PetscErrorCode TaoTermIsCreateHessianMatricesDefined(TaoTerm term, PetscBool *is
 . term - a `TaoTerm`
 
   Output Parameters:
-+ solution_layout    - (optional) the `PetscLayout` for the solution space
++ solution_layout   - (optional) the `PetscLayout` for the solution space
 - parameters_layout - (optional) the `PetscLayout` for the parameter space
 
   Level: intermediate
@@ -574,10 +574,11 @@ PetscErrorCode TaoTermGetLayouts(TaoTerm term, PetscLayout *solution_layout, Pet
 
   Not collective
 
+  Input Parameter:
 . term - a `TaoTerm`
 
   Output Parameters:
-+ solution_type    - (optional) the `VecType` for the solution space
++ solution_type   - (optional) the `VecType` for the solution space
 - parameters_type - (optional) the `VecType` for the parameter space
 
   Level: intermediate
@@ -621,8 +622,12 @@ PetscErrorCode TaoTermCreateVecs(TaoTerm term, Vec *solution, Vec *parameters)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
-  PetscCall(MatCreateVecs(term->solution_factory, NULL, solution));
-  PetscCall(MatCreateVecs(term->parameters_factory, NULL, parameters));
+  if (term->ops->createvecs) {
+    PetscUseTypeMethod(term, createvecs, solution, parameters);
+  } else {
+    PetscCall(MatCreateVecs(term->solution_factory, NULL, solution));
+    PetscCall(MatCreateVecs(term->parameters_factory, NULL, parameters));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -635,7 +640,7 @@ PetscErrorCode TaoTermCreateVecs(TaoTerm term, Vec *solution, Vec *parameters)
 . term - a `TaoTerm`
 
   Output Parameters:
-+ H - (optional) a matrix that can store the Hessian computed in `TaoTermHessian()`
++ H    - (optional) a matrix that can store the Hessian computed in `TaoTermHessian()`
 - Hpre - (optional) a preconditioner matrix that can be computed in `TaoTermHessian()`
 
   Level: intermediate

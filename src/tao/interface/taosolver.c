@@ -223,7 +223,20 @@ PetscErrorCode TaoSetUp(Tao tao)
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
   if (tao->setupcalled) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(TaoSetUpEW_Private(tao));
-  PetscCheck(tao->solution, PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_WRONGSTATE, "Must call TaoSetSolution");
+  PetscCall(TaoTermSetUp(tao->objective_term));
+  // TODO: fix this for maps
+  if (!tao->solution) PetscCall(TaoTermCreateVecs(tao->objective_term, &tao->solution, NULL));
+  PetscCheck(tao->solution, PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_WRONGSTATE, "Must call TaoSetSolution()");
+  if (tao->uses_gradient && !tao->gradient) PetscCall(VecDuplicate(tao->solution, &tao->gradient));
+  if (tao->uses_hessian_matrices) {
+    if (!tao->hessian) {
+      PetscBool is_defined;
+
+      PetscCall(TaoTermIsCreateHessianMatricesDefined(tao->objective_term, &is_defined));
+      if (is_defined) PetscCall(TaoTermCreateHessianMatrices(tao->objective_term, &tao->hessian, &tao->hessian_pre));
+    }
+    PetscCheck(tao->hessian, PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_WRONGSTATE, "Must call TaoSetHessian()");
+  }
   PetscTryTypeMethod(tao, setup);
   tao->setupcalled = PETSC_TRUE;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -281,8 +294,8 @@ PetscErrorCode TaoDestroy(Tao *tao)
   PetscCall(VecDestroy(&(*tao)->constraints_equality));
   PetscCall(VecDestroy(&(*tao)->constraints_inequality));
   PetscCall(VecDestroy(&(*tao)->stepdirection));
-  PetscCall(MatDestroy(&(*tao)->_hessian_pre));
-  PetscCall(MatDestroy(&(*tao)->_hessian));
+  PetscCall(MatDestroy(&(*tao)->hessian_pre));
+  PetscCall(MatDestroy(&(*tao)->hessian));
   PetscCall(MatDestroy(&(*tao)->ls_jac));
   PetscCall(MatDestroy(&(*tao)->ls_jac_pre));
   PetscCall(MatDestroy(&(*tao)->jacobian_pre));
@@ -2171,7 +2184,9 @@ PetscErrorCode TaoSetType(Tao tao, TaoType type)
   tao->ops->setfromoptions = NULL;
   tao->ops->destroy        = NULL;
 
-  tao->setupcalled = PETSC_FALSE;
+  tao->setupcalled           = PETSC_FALSE;
+  tao->uses_gradient         = PETSC_FALSE;
+  tao->uses_hessian_matrices = PETSC_FALSE;
 
   PetscCall((*create_xxx)(tao));
   PetscCall(PetscObjectChangeTypeName((PetscObject)tao, type));
@@ -2851,18 +2866,5 @@ PetscErrorCode TaoSetObjectiveTerm(Tao tao, TaoTerm term)
   PetscCall(PetscObjectReference((PetscObject)term));
   PetscCall(TaoTermDestroy(&tao->objective_term));
   tao->objective_term = term;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-PETSC_INTERN PetscErrorCode TaoGetOrCreateHessianMatrices_Collective(Tao tao, Mat *H, Mat *Hpre)
-{
-  PetscFunctionBegin;
-  if (!tao->_hessian) {
-    PetscBool is_defined;
-    PetscCall(TaoTermIsCreateHessianMatricesDefined(tao->objective_term, &is_defined));
-    if (is_defined) PetscCall(TaoTermCreateHessianMatrices(tao->objective_term, &tao->_hessian, &tao->_hessian_pre));
-  }
-  if (H) *H = tao->_hessian;
-  if (Hpre) *Hpre = tao->_hessian_pre;
   PetscFunctionReturn(PETSC_SUCCESS);
 }

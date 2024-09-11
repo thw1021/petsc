@@ -9,12 +9,11 @@ to define the Rosenbrock function.\n";
 
 static PetscErrorCode FormFunctionGradient(TaoTerm, Vec, Vec, PetscReal *, Vec);
 static PetscErrorCode FormHessian(TaoTerm, Vec, Vec, Mat, Mat);
+static PetscErrorCode CreateVecs(TaoTerm, Vec *, Vec *);
+static PetscErrorCode CreateHessianMatrices(TaoTerm, Mat *, Mat *);
 
 int main(int argc, char **argv)
 {
-  PetscReal   zero = 0.0;
-  Vec         x; /* solution vector */
-  Mat         H;
   TaoTerm     objective;
   Tao         tao; /* Tao solver context */
   PetscBool   flg;
@@ -38,12 +37,10 @@ int main(int argc, char **argv)
   PetscCall(PetscOptionsGetReal(NULL, NULL, "-alpha", &user.alpha, &flg));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-chained", &user.chained, &flg));
 
-  /* Allocate vectors for the solution and gradient */
-  PetscCall(VecCreateSeq(comm, user.n, &x));
-  PetscCall(MatCreateSeqBAIJ(comm, 2, user.n, user.n, 1, NULL, &H));
-
   /* Define the objective function */
   PetscCall(TaoTermCreateShell(comm, (void *)&user, NULL /* no destructor is needed for `user` */, &objective));
+  PetscCall(TaoTermShellSetCreateVecs(objective, CreateVecs));
+  PetscCall(TaoTermShellSetCreateHessianMatrices(objective, CreateHessianMatrices));
   PetscCall(TaoTermShellSetObjectiveAndGradient(objective, FormFunctionGradient));
   PetscCall(TaoTermShellSetHessian(objective, FormHessian));
 
@@ -51,13 +48,8 @@ int main(int argc, char **argv)
   PetscCall(TaoCreate(PETSC_COMM_SELF, &tao));
   PetscCall(TaoSetType(tao, TAOLMVM));
 
-  /* Set solution vec and an initial guess */
-  PetscCall(VecSet(x, zero));
-  PetscCall(TaoSetSolution(tao, x));
-
   /* Set routines for function, gradient, hessian evaluation */
   PetscCall(TaoSetObjectiveTerm(tao, objective));
-  PetscCall(TaoSetHessianMatrices(tao, H, H));
 
   /* Check for TAO command line options */
   PetscCall(TaoSetFromOptions(tao));
@@ -66,8 +58,6 @@ int main(int argc, char **argv)
   PetscCall(TaoSolve(tao));
 
   PetscCall(TaoDestroy(&tao));
-  PetscCall(VecDestroy(&x));
-  PetscCall(MatDestroy(&H));
   PetscCall(TaoTermDestroy(&objective));
 
   PetscCall(PetscFinalize());
@@ -78,9 +68,9 @@ int main(int argc, char **argv)
   FormFunctionGradient - Evaluates the function, f(X), and gradient, G(X).
 
   Input Parameters:
-+ term           - the `TaoTerm` for the objective function
-. _params_unused - optional vector of parameters that this rosenbrock function does not use
-- X              - input vector
++ term              - the `TaoTerm` for the objective function
+. parameters_unused - optional vector of parameters that this rosenbrock function does not use
+- X                 - input vector
 
   Output Parameters:
 + f - function value
@@ -91,12 +81,12 @@ int main(int argc, char **argv)
   at the same time.  Evaluating both at once may be more efficient that
   evaluating each separately.
 */
-PetscErrorCode FormFunctionGradient(TaoTerm term, Vec X, Vec _params_unused, PetscReal *f, Vec G)
+PetscErrorCode FormFunctionGradient(TaoTerm term, Vec X, Vec parameters_unused, PetscReal *f, Vec G)
 {
   AppCtx *user;
 
   PetscFunctionBeginUser;
-  PetscCheck(_params_unused == NULL, PetscObjectComm((PetscObject)term), PETSC_ERR_PLIB, "Rosenbrock function does not take a parameter vector");
+  PetscCheck(parameters_unused == NULL, PetscObjectComm((PetscObject)term), PETSC_ERR_PLIB, "Rosenbrock function does not take a parameter vector");
   PetscCall(TaoTermShellGetContext(term, &user));
   PetscCall(AppCtxFormFunctionGradient(user, X, f, G));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -106,10 +96,10 @@ PetscErrorCode FormFunctionGradient(TaoTerm term, Vec X, Vec _params_unused, Pet
   FormHessian - Evaluates Hessian matrix.
 
   Input Parameters:
-+ tao            - the Tao context
-. x              - input vector
-. _params_unused - optional vector of parameters that this rosenbrock function does not use
-- ptr            - optional user-defined context, as set by TaoSetHessian()
++ tao               - the Tao context
+. x                 - input vector
+. parameters_unused - optional vector of parameters that this rosenbrock function does not use
+- ptr               - optional user-defined context, as set by TaoSetHessian()
 
   Output Parameters:
 + H    - Hessian matrix
@@ -118,14 +108,34 @@ PetscErrorCode FormFunctionGradient(TaoTerm term, Vec X, Vec _params_unused, Pet
   Note:  Providing the Hessian may not be necessary.  Only some solvers
   require this matrix.
 */
-PetscErrorCode FormHessian(TaoTerm term, Vec X, Vec _params_unused, Mat H, Mat Hpre)
+PetscErrorCode FormHessian(TaoTerm term, Vec X, Vec parameters_unused, Mat H, Mat Hpre)
 {
   AppCtx *user;
 
   PetscFunctionBeginUser;
-  PetscCheck(_params_unused == NULL, PetscObjectComm((PetscObject)term), PETSC_ERR_PLIB, "Rosenbrock function does not take a parameter vector");
+  PetscCheck(parameters_unused == NULL, PetscObjectComm((PetscObject)term), PETSC_ERR_PLIB, "Rosenbrock function does not take a parameter vector");
   PetscCall(TaoTermShellGetContext(term, &user));
   PetscCall(AppCtxFormHessian(user, X, H, Hpre));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode CreateVecs(TaoTerm term, Vec *solution, Vec *parameters_unused)
+{
+  AppCtx *user;
+
+  PetscFunctionBeginUser;
+  PetscCall(TaoTermShellGetContext(term, &user));
+  PetscCall(AppCtxCreateSolution(user, solution));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode CreateHessianMatrices(TaoTerm term, Mat *H, Mat *Hpre)
+{
+  AppCtx *user;
+
+  PetscFunctionBeginUser;
+  PetscCall(TaoTermShellGetContext(term, &user));
+  PetscCall(AppCtxCreateHessianMatrices(user, H, Hpre));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

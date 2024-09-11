@@ -338,8 +338,8 @@ static PetscErrorCode TaoSolve_ADMM(Tao tao)
   TAO_ADMM *am = (TAO_ADMM *)tao->data;
   PetscInt  N;
   PetscReal reg_func;
-  PetscBool is_reg_shell;
   Vec       tempL;
+  PetscBool is_reg_shell;
 
   PetscFunctionBegin;
   if (am->regswitch != TAO_ADMM_REGULARIZER_SOFT_THRESH) {
@@ -349,8 +349,6 @@ static PetscErrorCode TaoSolve_ADMM(Tao tao)
   }
   tempL = am->workLeft;
   PetscCall(VecGetSize(tempL, &N));
-
-  if (am->Hx && am->ops->misfithess) PetscCall(TaoSetHessian(am->subsolverX, am->Hx, am->Hx, SubHessianUpdate, tao));
 
   if (!am->zJI) {
     /* Currently, B is assumed to be a linear system, i.e., not getting updated*/
@@ -364,18 +362,6 @@ static PetscErrorCode TaoSolve_ADMM(Tao tao)
   is_reg_shell = PETSC_FALSE;
 
   PetscCall(PetscObjectTypeCompare((PetscObject)am->subsolverZ, TAOSHELL, &is_reg_shell));
-
-  if (!is_reg_shell) {
-    switch (am->regswitch) {
-    case (TAO_ADMM_REGULARIZER_USER):
-      break;
-    case (TAO_ADMM_REGULARIZER_SOFT_THRESH):
-      /* Soft Threshold. */
-      break;
-    }
-    if (am->ops->regobjgrad) PetscCall(TaoSetObjectiveAndGradient(am->subsolverZ, NULL, RegObjGradUpdate, tao));
-    if (am->Hz && am->ops->reghess) PetscCall(TaoSetHessian(am->subsolverZ, am->Hz, am->Hzpre, RegHessianUpdate, tao));
-  }
 
   switch (am->update) {
   case TAO_ADMM_UPDATE_BASIC:
@@ -611,6 +597,11 @@ static PetscErrorCode TaoSetUp_ADMM(Tao tao)
   PetscCall(TaoSetObjectiveAndGradient(am->subsolverX, NULL, SubObjGradUpdate, tao));
   PetscCall(TaoSetJacobianEqualityRoutine(am->subsolverX, am->JA, am->JApre, am->ops->misfitjac, am->misfitjacobianP));
   PetscCall(TaoSetJacobianEqualityRoutine(am->subsolverZ, am->JB, am->JBpre, am->ops->regjac, am->regjacobianP));
+  if (am->Hx && am->ops->misfithess) PetscCall(TaoSetHessian(am->subsolverX, am->Hx, am->Hx, SubHessianUpdate, tao));
+  if (am->ops->regobjgrad) PetscCall(TaoSetObjectiveAndGradient(am->subsolverZ, NULL, RegObjGradUpdate, tao));
+  if (am->Hz && am->ops->reghess) PetscCall(TaoSetHessian(am->subsolverZ, am->Hz, am->Hzpre, RegHessianUpdate, tao));
+  PetscCall(TaoSetUp(am->subsolverX));
+  PetscCall(TaoSetUp(am->subsolverZ));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

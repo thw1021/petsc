@@ -9,12 +9,12 @@ static PetscErrorCode TaoBQNKComputeHessian(Tao tao)
 
   PetscFunctionBegin;
   /* Alias the LMVM matrix into the TAO hessian */
-  if (tao->_hessian) PetscCall(MatDestroy(&tao->_hessian));
-  if (tao->_hessian_pre) PetscCall(MatDestroy(&tao->_hessian_pre));
+  if (tao->hessian) PetscCall(MatDestroy(&tao->hessian));
+  if (tao->hessian_pre) PetscCall(MatDestroy(&tao->hessian_pre));
   PetscCall(PetscObjectReference((PetscObject)bqnk->B));
-  tao->_hessian = bqnk->B;
+  tao->hessian = bqnk->B;
   PetscCall(PetscObjectReference((PetscObject)bqnk->B));
-  tao->_hessian_pre = bqnk->B;
+  tao->hessian_pre = bqnk->B;
   /* Update the Hessian with the latest solution */
   if (bqnk->is_spd) {
     gnorm2 = bnk->gnorm * bnk->gnorm;
@@ -26,16 +26,16 @@ static PetscErrorCode TaoBQNKComputeHessian(Tao tao)
     }
     PetscCall(MatLMVMSymBroydenSetDelta(bqnk->B, delta));
   }
-  PetscCall(MatLMVMUpdate(tao->_hessian, tao->solution, bnk->unprojected_gradient));
-  PetscCall(MatLMVMResetShift(tao->_hessian));
+  PetscCall(MatLMVMUpdate(tao->hessian, tao->solution, bnk->unprojected_gradient));
+  PetscCall(MatLMVMResetShift(tao->hessian));
   /* Prepare the reduced sub-matrices for the inactive set */
   PetscCall(MatDestroy(&bnk->H_inactive));
   if (bnk->active_idx) {
-    PetscCall(MatCreateSubMatrixVirtual(tao->_hessian, bnk->inactive_idx, bnk->inactive_idx, &bnk->H_inactive));
+    PetscCall(MatCreateSubMatrixVirtual(tao->hessian, bnk->inactive_idx, bnk->inactive_idx, &bnk->H_inactive));
     PetscCall(PCLMVMSetIS(bqnk->pc, bnk->inactive_idx));
   } else {
-    PetscCall(PetscObjectReference((PetscObject)tao->_hessian));
-    bnk->H_inactive = tao->_hessian;
+    PetscCall(PetscObjectReference((PetscObject)tao->hessian));
+    bnk->H_inactive = tao->hessian;
     PetscCall(PCLMVMClearIS(bqnk->pc));
   }
   PetscCall(MatDestroy(&bnk->Hpre_inactive));
@@ -169,11 +169,12 @@ PETSC_INTERN PetscErrorCode TaoCreate_BQNK(Tao tao)
 
   PetscFunctionBegin;
   PetscCall(TaoCreate_BNK(tao));
-  tao->ops->solve          = TaoSolve_BQNK;
-  tao->ops->setfromoptions = TaoSetFromOptions_BQNK;
-  tao->ops->destroy        = TaoDestroy_BQNK;
-  tao->ops->view           = TaoView_BQNK;
-  tao->ops->setup          = TaoSetUp_BQNK;
+  tao->ops->solve            = TaoSolve_BQNK;
+  tao->ops->setfromoptions   = TaoSetFromOptions_BQNK;
+  tao->ops->destroy          = TaoDestroy_BQNK;
+  tao->ops->view             = TaoView_BQNK;
+  tao->ops->setup            = TaoSetUp_BQNK;
+  tao->uses_hessian_matrices = PETSC_FALSE;
 
   bnk                 = (TAO_BNK *)tao->data;
   bnk->computehessian = TaoBQNKComputeHessian;

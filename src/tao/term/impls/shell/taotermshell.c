@@ -179,7 +179,8 @@ static PetscErrorCode TaoTermDestroy_Shell(TaoTerm term)
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetHessian_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetProximalMap_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetView_C", NULL));
-  PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellCreateHessianMatrices_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetCreateVecs_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetCreateHessianMatrices_C", NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -350,7 +351,7 @@ static PetscErrorCode TaoTermShellSetHessian_Shell(TaoTerm term, PetscErrorCode 
 + term        - a `TaoTerm` of type `TAOTERMSHELL`
 - proximalmap - a proximal map function with the same signature as `TaoTermProximalMap()`
 
-  Calling sequence of `hessian`:
+  Calling sequence of `proximalmap`:
 + term    - the `TaoTerm`
 . params  - a value of the parameters (may be NULL if `term` is not parametric)
 . scale   - the scale of `term`
@@ -420,21 +421,68 @@ static PetscErrorCode TaoTermShellSetView_Shell(TaoTerm term, PetscErrorCode (*v
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@
-  TaoTermShellSetCreateHessianMatrices - Description
+/*@C
+  TaoTermShellSetCreateVecs - Set the routine that creates vectors for a `TaoTerm` of type `TAOTERMSHELL`
 
   Logically collective
 
+  Input Parameters:
++ term       - a `TaoTerm` of type `TAOTERMSHELL`
+- createvecs - a function with the same signature as `TaoTermCreateVecs()`
+
+  Calling sequence of `createvecs`:
++ term       - the `TaoTerm`
+. solution   - (optional) a solution vector for `term`
+- parameters - (optional) a parameter vector for `term`
+
+  Level: intermediate
+
+.seealso: [](ch_tao), `Tao`, `TaoTerm`, `TAOTERMSHELL`, `TaoTermShellGetContext()`, `TaoTermShellSetContextDestroy()`,
+          `TaoTermShellSetCreateHessianMatrices()`
 @*/
-PetscErrorCode TaoTermShellSetCreateHessianMatrices(TaoTerm term, PetscErrorCode(*createhessianmatrices)(TaoTerm term, Mat *H, Mat *Hpre))
+PetscErrorCode TaoTermShellSetCreateVecs(TaoTerm term, PetscErrorCode (*createvecs)(TaoTerm term, Vec *solution, Vec *parameters))
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
-  PetscTryMethod(term, "TaoTermShellSetCreateHessianMatrices_C", (TaoTerm, PetscErrorCode(*)(TaoTerm, Mat *, Mat *)), (term, createhessianmatrices));
+  PetscTryMethod(term, "TaoTermShellSetCreateVecs_C", (TaoTerm, PetscErrorCode(*)(TaoTerm, Vec *, Vec *)), (term, createvecs));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoTermShellCreateHessianMatrices_Shell(TaoTerm term, PetscErrorCode(*createhessianmatrices)(TaoTerm, Mat *, Mat *))
+static PetscErrorCode TaoTermShellSetCreateVecs_Shell(TaoTerm term, PetscErrorCode (*createvecs)(TaoTerm, Vec *, Vec *))
+{
+  PetscFunctionBegin;
+  term->ops->createvecs = createvecs;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  TaoTermShellSetCreateHessianMatrices - Set the routine that creates Hessian matrices for a `TaoTerm` of type `TAOTERMSHELL`
+
+  Logically collective
+
+  Input Parameters:
++ term       - a `TaoTerm` of type `TAOTERMSHELL`
+- createmats - a function with the same signature as `TaoTermCreateHessianMatrices()`
+
+  Calling sequence of `createmats`:
++ f    - the `TaoTerm`
+. H    - (optional) a matrix of the appropriate type and size for the Hessian of `term`
+- Hpre - (optional) a matrix of the appropriate type and size for preconditioning the Hessian of `term`
+
+  Level: intermediate
+
+.seealso: [](ch_tao), `Tao`, `TaoTerm`, `TAOTERMSHELL`, `TaoTermShellGetContext()`, `TaoTermShellSetContextDestroy()`,
+          `TaoTermShellSetCreateVecs()`
+@*/
+PetscErrorCode TaoTermShellSetCreateHessianMatrices(TaoTerm term, PetscErrorCode (*createmats)(TaoTerm f, Mat *H, Mat *Hpre))
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  PetscTryMethod(term, "TaoTermShellSetCreateHessianMatrices_C", (TaoTerm, PetscErrorCode(*)(TaoTerm, Mat *, Mat *)), (term, createmats));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoTermShellCreateHessianMatrices_Shell(TaoTerm term, PetscErrorCode (*createhessianmatrices)(TaoTerm, Mat *, Mat *))
 {
   PetscFunctionBegin;
   term->ops->createhessianmatrices = createhessianmatrices;
@@ -473,7 +521,8 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Shell(TaoTerm term)
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetHessian_C", TaoTermShellSetHessian_Shell));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetProximalMap_C", TaoTermShellSetProximalMap_Shell));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetView_C", TaoTermShellSetView_Shell));
-  PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellCreateHessianMatrices_C", TaoTermShellCreateHessianMatrices_Shell));
+  PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetCreateVecs_C", TaoTermShellSetCreateVecs_Shell));
+  PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetCreateHessianMatrices_C", TaoTermShellCreateHessianMatrices_Shell));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -483,17 +532,17 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Shell(TaoTerm term)
   Collective
 
   Input Parameter:
-+ comm            - the MPI communicator for computing the term
-. ctx             - (optional) a user context to be used by routines
-- destroy         - (optional) a routine to destroy the user context when `term` is destroyed
++ comm    - the MPI communicator for computing the term
+. ctx     - (optional) a user context to be used by routines
+- destroy - (optional) a routine to destroy the user context when `term` is destroyed
 
   Output Parameter:
 . term - a `TaoTerm` of type `TAOTERMSHELL`
 
-  Level: intermediate
-
   Calling sequence of `destroy`:
 . ctx - the user context provided in `TaoTermCreateShell()`
+
+  Level: intermediate
 
 .seealso: [](ch_tao), `Tao`, `TaoTerm`, `TAOTERMSHELL`
 @*/

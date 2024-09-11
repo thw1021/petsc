@@ -50,7 +50,9 @@ int main(int argc, char **argv)
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-test_lmvm", &test_lmvm, &flg));
 
   /* Allocate vectors for the solution and gradient */
-  PetscCall(VecCreateSeq(PETSC_COMM_SELF, user.n, &x));
+  PetscCall(AppCtxCreateSolution(&user, &x));
+
+  /* Allocate the Hessian matrix */
   PetscCall(AppCtxCreateHessianMatrices(&user, &H, NULL));
 
   /* The TAO code begins here */

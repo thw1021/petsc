@@ -13,11 +13,28 @@ typedef struct {
   PetscBool chained;
 } AppCtx;
 
-static PetscErrorCode AppCtxCreateHessianMatrices(AppCtx *usr, Mat *H, Mat *Hpre)
+static PetscErrorCode AppCtxCreateSolution(AppCtx *usr, Vec *solution)
 {
   PetscFunctionBegin;
-  PetscCall(MatCreateSeqBAIJ(PETSC_COMM_SELF, 2, usr->n, usr->n, 1, NULL, H));
-  if (Hpre) *Hpre = *H;
+  PetscCall(VecCreateSeq(PETSC_COMM_SELF, usr->n, solution));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode AppCtxCreateHessianMatrices(AppCtx *usr, Mat *H, Mat *Hpre)
+{
+  Mat hessian;
+
+  PetscFunctionBegin;
+  PetscCall(MatCreateSeqBAIJ(PETSC_COMM_SELF, 2, usr->n, usr->n, 1, NULL, &hessian));
+  if (H) {
+    PetscCall(PetscObjectReference((PetscObject)hessian));
+    *H = hessian;
+  }
+  if (Hpre) {
+    PetscCall(PetscObjectReference((PetscObject)hessian));
+    *Hpre = hessian;
+  }
+  PetscCall(MatDestroy(&hessian));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -73,7 +90,7 @@ static PetscErrorCode AppCtxFormFunctionGradient(AppCtx *user, Vec X, PetscReal 
 }
 
 /*
-  FormHessian - Evaluates Hessian matrix.
+  AppCtxFormHessian - Evaluates Hessian matrix.
 
   Input Parameters:
 + tao   - the Tao context
