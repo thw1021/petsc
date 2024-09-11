@@ -24,8 +24,10 @@ program ex62f90
     type(tIS)                          :: csIS
     PetscInt,dimension(:),pointer      :: csID
     PetscInt,dimension(:),pointer      :: pStartDepth,pEndDepth
-    PetscInt                           :: order = 1
-    PetscInt                           :: sdim,d,pStart,pEnd,p,numCS,set,i,j
+    Integer                            :: order = 1
+    PetscInt                           :: order64 = 1
+    Integer                            :: i
+    PetscInt                           :: sdim,d,pStart,pEnd,p,numCS,set,j
     PetscMPIInt                        :: rank,numProc
     PetscBool                          :: flg
     PetscErrorCode                     :: ierr
@@ -34,7 +36,7 @@ program ex62f90
 
     Character(len=MXSTLN)              :: sJunk
     PetscInt                           :: numstep = 3, step
-    PetscInt                           :: numNodalVar,numZonalVar
+    Integer                            :: numNodalVar,numZonalVar
     character(len=MXNAME),dimension(4) :: nodalVarName2D = ["U_x  ", &
                                                             "U_y  ", &
                                                             "Alpha", &
@@ -106,7 +108,8 @@ program ex62f90
     PetscCheckA(flg,PETSC_COMM_WORLD,PETSC_ERR_ARG_OUTOFRANGE,'missing input file name -i <input file name>')
     PetscCallA(PetscOptionsGetString(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-o',ofilename,flg,ierr))
     PetscCheckA(flg,PETSC_COMM_WORLD,PETSC_ERR_ARG_OUTOFRANGE,'missing output file name -o <output file name>')
-    PetscCallA(PetscOptionsGetInt(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-order',order,flg,ierr))
+    PetscCallA(PetscOptionsGetInt(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-order',order64,flg,ierr))
+    order = order64
     if ((order > 2) .or. (order < 1)) then
         write(IOBuffer,'("Unsupported polynomial order ", I2, " not in [1,2]")') order
         SETERRA(PETSC_COMM_WORLD,PETSC_ERR_ARG_OUTOFRANGE,IOBuffer)
