@@ -149,10 +149,6 @@ def FixDir(petscdir,petscarch,parentdir,dir,verbose):
   ff.write(outbuf)
   ff.close()
 
-  # if dir is empty - remove it
-  if os.path.exists(dir) and os.path.isdir(dir) and os.listdir(dir) == []:
-    os.rmdir(dir)
-
   # save Fortran interface file generated (it is merged with others in a post-processing step)
   for filename in [f for f in os.listdir(parentdir) if re.match(r'f90module[0-9]+.f90', f)]:
     modfile = os.path.join(parentdir, filename)
