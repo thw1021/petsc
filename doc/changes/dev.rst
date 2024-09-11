@@ -43,6 +43,8 @@ Changes: Development
 .. rubric:: VecScatter / PetscSF:
 
 - Add ``PetscSFRegisterPersistent()`` and ``PetscSFDeregisterPersistent()`` for safe optimization of persistent communication
+- Update ``-use_gpu_aware_mpi`` option to accept ``auto``, ``0``, and ``1`` values. Switch default value from ``1`` to ``auto``. ``auto`` uses MPI as is; ``1`` forces GPU-aware MPI use, and errors out if unavailable; ``0`` forces non-GPU-aware MPI (even when GPU-aware MPI is available)
+- Add ``PetscUseGPUAwareMPIGetStatus()`` to return current status of PETSc's GPU-aware MPI usage
 
 .. rubric:: PF:
 
