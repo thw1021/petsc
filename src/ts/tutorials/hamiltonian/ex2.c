@@ -1916,18 +1916,18 @@ static PetscErrorCode InitializeSolveAndSwarm(TS ts, PetscBool useInitial)
   PetscCall(DMGetApplicationContext(sw, &user));
   PetscCall(DMGetDimension(sw, &dim));
   if (useInitial) {
-    /* PetscReal v0[2] = {1., 0.}; -- this does not seem needed */
-    /* if (user->perturbed_weights) { */
-    /*   PetscCall(InitializeParticles_PerturbedWeights(sw, user)); */
-    /* } else { */
-    /*   PetscCall(DMSwarmComputeLocalSizeFromOptions(sw)); */
-    /*   PetscCall(DMSwarmInitializeCoordinates(sw)); */
-    /*   if (user->fake_1D) { */
-    /*     PetscCall(InitializeVelocities_Fake1D(sw, user)); */
-    /*   } else { */
-    /*     PetscCall(DMSwarmInitializeVelocitiesFromOptions(sw, v0)); */
-    /*   } */
-    /* } */
+    PetscReal v0[2] = {1., 0.}; -- this does not seem needed
+    if (user->perturbed_weights) {
+      PetscCall(InitializeParticles_PerturbedWeights(sw, user));
+    } else {
+      PetscCall(DMSwarmComputeLocalSizeFromOptions(sw));
+      PetscCall(DMSwarmInitializeCoordinates(sw));
+      if (user->fake_1D) {
+        PetscCall(InitializeVelocities_Fake1D(sw, user));
+      } else {
+        PetscCall(DMSwarmInitializeVelocitiesFromOptions(sw, v0));
+      }
+    }
     PetscCall(DMSwarmMigrate(sw, PETSC_TRUE));
     PetscCall(DMSwarmTSRedistribute(ts));
   }
