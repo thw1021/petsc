@@ -707,7 +707,8 @@ static PetscErrorCode SetupParameters(MPI_Comm comm, AppCtx *ctx)
   PetscCall(PetscBagRegisterScalar(bag, &p->poissonNumber, 1.0, "poissonNumber", "Non-Dimensional Poisson Number"));
   PetscCall(PetscBagRegisterScalar(bag, &p->vlasovNumber, 1.0, "vlasovNumber", "Non-Dimensional Vlasov Number"));
   PetscCall(PetscBagSetFromOptions(bag));
-  ctx->m_n0 = p->m0 * ctx->masses[0] / ctx->m_n0; // place where we have everything : m0, masses, weight sum (cached in user->m_n0) -- only do once!!!!
+  if (ctx->m_n0 == 0) ctx->m_n0 = 0;
+  else ctx->m_n0 = p->m0 * ctx->masses[0] / ctx->m_n0; // place where we have everything : m0, masses, weight sum (cached in user->m_n0) -- only do once!!!!
   {
     PetscViewer       viewer;
     PetscViewerFormat format;
