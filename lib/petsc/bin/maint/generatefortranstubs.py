@@ -96,7 +96,7 @@ def FixDir(petscdir,petscarch,parentdir,dir,verbose):
   hnames = []
   files = os.listdir(dir)
   if not files:
-    # empty ftn-auto" dir - remove it
+    # empty "ftn-auto" dir - remove it
     os.rmdir(dir)
     return
   for f in files:
