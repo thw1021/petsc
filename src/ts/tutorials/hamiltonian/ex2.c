@@ -1916,7 +1916,7 @@ static PetscErrorCode InitializeSolveAndSwarm(TS ts, PetscBool useInitial)
   PetscCall(DMGetApplicationContext(sw, &user));
   PetscCall(DMGetDimension(sw, &dim));
   if (useInitial) {
-    PetscReal v0[2] = {1., 0.}; -- this does not seem needed
+    PetscReal v0[2] = {1., 0.}; /* this does not seem needed */
     if (user->perturbed_weights) {
       PetscCall(InitializeParticles_PerturbedWeights(sw, user));
     } else {
