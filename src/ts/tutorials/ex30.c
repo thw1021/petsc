@@ -1762,4 +1762,8 @@ int main(int argc, char **argv)
       nsize: {{1 2}separate output}
       args: -dm_refine 1 -dm_plex_simplex 1
 
+  test:
+    suffix: annulus
+    args: -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/annulus-20.exo -ksp_type preonly -pc_type none -c_petscspace_degree 1 -p_petscspace_degree 1 -ts_max_steps 2 -initial_snes_type ksponly -snes_type ksponly -petscpartitioner_type simple -dm_plex_simplex 0 -ts_adapt_type none -source_num 2 -source_k 1,2
+
 TEST*/
