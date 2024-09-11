@@ -26,7 +26,8 @@ int main(int argc, char **argv)
   IS              csIS;
   const PetscInt *csID;
   PetscInt       *pStartDepth, *pEndDepth;
-  PetscInt        order = 1;
+  int             order   = 1;
+  PetscInt        order64 = 1;
   PetscInt        sdim, d, pStart, pEnd, p, numCS, set;
   PetscMPIInt     rank, size;
   PetscViewer     viewer;
@@ -42,9 +43,10 @@ int main(int argc, char **argv)
   PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "FEM Layout Options", "ex26");
   PetscCall(PetscOptionsString("-i", "Filename to read", "ex26", ifilename, ifilename, sizeof(ifilename), NULL));
   PetscCall(PetscOptionsString("-o", "Filename to write", "ex26", ofilename, ofilename, sizeof(ofilename), NULL));
-  PetscCall(PetscOptionsBoundedInt("-order", "FEM polynomial order", "ex26", order, &order, NULL, 1));
+  PetscCall(PetscOptionsBoundedInt("-order", "FEM polynomial order", "ex26", order64, &order64, NULL, 1));
   PetscOptionsEnd();
-  PetscCheck((order >= 1) && (order <= 2), PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Unsupported polynomial order %" PetscInt_FMT " not in [1, 2]", order);
+  order = (int)order64;
+  PetscCheck((order >= 1) && (order <= 2), PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Unsupported polynomial order %d not in [1, 2]", order);
 
   /* Read the mesh from a file in any supported format */
   PetscCall(DMPlexCreateFromFile(PETSC_COMM_WORLD, ifilename, NULL, PETSC_TRUE, &dm));
@@ -57,7 +59,7 @@ int main(int argc, char **argv)
   {
     PetscInt numstep = 3, step;
     int     *truthtable;
-    PetscInt numNodalVar, numZonalVar, i;
+    int      numNodalVar, numZonalVar, i;
 
     /* enable exodus debugging information */
     ex_opts(EX_VERBOSE | EX_DEBUG);
