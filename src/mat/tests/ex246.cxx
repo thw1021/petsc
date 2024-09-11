@@ -1,7 +1,7 @@
 static char help[] = "Tests MATHTOOL with a derived htool::IMatrix<PetscScalar> class\n\n";
 
 #include <petscmat.h>
-#include <htool/misc/petsc.hpp>
+#include <htool/hmatrix/interfaces/virtual_generator.hpp>
 
 static PetscErrorCode GenEntries(PetscInt sdim, PetscInt M, PetscInt N, const PetscInt *J, const PetscInt *K, PetscScalar *ptr, void *ctx)
 {
@@ -18,15 +18,15 @@ static PetscErrorCode GenEntries(PetscInt sdim, PetscInt M, PetscInt N, const Pe
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-class MyIMatrix : public htool::VirtualGenerator<PetscScalar> {
+class MyIMatrix : public htool::VirtualGeneratorInUserNumbering<PetscScalar> {
 private:
   PetscReal *coords;
   PetscInt   sdim;
 
 public:
-  MyIMatrix(PetscInt M, PetscInt N, PetscInt spacedim, PetscReal *gcoords) : htool::VirtualGenerator<PetscScalar>(M, N), coords(gcoords), sdim(spacedim) { }
+  MyIMatrix(PetscInt spacedim, PetscReal *gcoords) : htool::VirtualGeneratorInUserNumbering<PetscScalar>(), coords(gcoords), sdim(spacedim) { }
 
-  void copy_submatrix(PetscInt M, PetscInt N, const PetscInt *J, const PetscInt *K, PetscScalar *ptr) const override
+  virtual void copy_submatrix(PetscInt M, PetscInt N, const PetscInt *J, const PetscInt *K, PetscScalar *ptr) const override
   {
     PetscReal diff = 0.0;
 
@@ -47,7 +47,7 @@ int main(int argc, char **argv)
   PetscInt          m = 100, dim = 3, M, begin = 0;
   PetscMPIInt       size;
   PetscReal        *coords, *gcoords, norm, epsilon, relative;
-  PetscBool         sym = PETSC_FALSE;
+  PetscBool         flg, sym = PETSC_FALSE;
   PetscRandom       rdm;
   MatHtoolKernelFn *kernel = GenEntries;
   MyIMatrix        *imatrix;
@@ -68,7 +68,7 @@ int main(int argc, char **argv)
   PetscCallMPI(MPI_Exscan(&m, &begin, 1, MPIU_INT, MPI_SUM, PETSC_COMM_WORLD));
   PetscCall(PetscArraycpy(gcoords + begin * dim, coords, m * dim));
   PetscCall(MPIU_Allreduce(MPI_IN_PLACE, gcoords, M * dim, MPIU_REAL, MPI_SUM, PETSC_COMM_WORLD));
-  imatrix = new MyIMatrix(M, M, dim, gcoords);
+  imatrix = new MyIMatrix(dim, gcoords);
   PetscCall(MatCreateHtoolFromKernel(PETSC_COMM_WORLD, m, m, M, M, dim, coords, coords, NULL, imatrix, &A)); /* block-wise assembly using htool::IMatrix<PetscScalar>::copy_submatrix() */
   PetscCall(MatSetOption(A, MAT_SYMMETRIC, sym));
   PetscCall(MatSetFromOptions(A));
@@ -81,6 +81,8 @@ int main(int argc, char **argv)
   PetscCall(MatAssemblyBegin(B, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(B, MAT_FINAL_ASSEMBLY));
   PetscCall(MatViewFromOptions(B, NULL, "-B_view"));
+  PetscCall(MatMultEqual(A, B, 10, &flg));
+  PetscCheck(flg, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Ax != Bx");
   PetscCall(MatConvert(A, MATDENSE, MAT_INITIAL_MATRIX, &P));
   PetscCall(MatNorm(P, NORM_FROBENIUS, &relative));
   PetscCall(MatConvert(B, MATDENSE, MAT_INITIAL_MATRIX, &R));
