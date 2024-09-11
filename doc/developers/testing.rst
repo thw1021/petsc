@@ -589,7 +589,7 @@ The string ``vec_is_sf_tests-ex1_basic_1`` gives the following information:
 Let's say that you want to debug a single test as part of development. There
 are two basic methods of doing this: 1) use shell script directly in test
 directory, or 2) use the gmakefile.test from the top level directory. We present both
-workflows. 
+workflows.
 
 Debugging a test using shell the generated scripts
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -776,11 +776,11 @@ Note the use of glob style matching is also accepted in the value field:
 
 .. code-block:: console
 
-   $ make print-test query='requires' queryval='defined(PETSC_HAVE_MPI_GPU_AWARE)'
+   $ make print-test query='requires' queryval='defined(PETSC_HAVE_KOKKOS)'
 
 .. code-block:: console
 
-   $ make print-test query='requires' queryval='*GPU_AWARE*'
+   $ make print-test query='requires' queryval='*KOKKOS*'
 
 Using the ``name`` field is equivalent to the search above:
 
