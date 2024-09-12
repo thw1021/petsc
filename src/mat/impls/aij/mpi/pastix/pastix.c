@@ -71,15 +71,11 @@ static PetscErrorCode MatConvertToSPM(Mat A, MatReuse reuse, Mat_Pastix *pastix)
   PetscCall(PetscObjectBaseTypeCompare((PetscObject)A, MATMPISBAIJ, &ismpisbaij));
 
   if (isseqsbaij || ismpisbaij) PetscCall(MatConvert(A, MATAIJ, reuse, &A_aij));
-  else {
-    A_aij = A;
-  }
+  else A_aij = A;
 
-  if (ismpiaij || ismpisbaij) {
-    PetscCall(MatMPIAIJGetLocalMat(A_aij, MAT_INITIAL_MATRIX, &A_loc));
-  } else if (isseqaij || isseqsbaij) {
-    A_loc = A_aij;
-  } else SETERRQ(PetscObjectComm((PetscObject)A_aij), PETSC_ERR_SUP, "Not for type %s", ((PetscObject)A)->type_name);
+  if (ismpiaij || ismpisbaij) PetscCall(MatMPIAIJGetLocalMat(A_aij, MAT_INITIAL_MATRIX, &A_loc));
+  else if (isseqaij || isseqsbaij) A_loc = A_aij;
+  else SETERRQ(PetscObjectComm((PetscObject)A_aij), PETSC_ERR_SUP, "Not for type %s", ((PetscObject)A)->type_name);
 
   /* Use getRowIJ and the trick CSC/CSR instead of GetColumnIJ for performance */
   PetscCall(MatGetRowIJ(A_loc, 0, PETSC_FALSE, PETSC_FALSE, &n, &row, &col, &flag));
@@ -154,14 +150,14 @@ static PetscErrorCode MatDestroy_PaStiX(Mat A)
     PetscCall(PetscFree(pastix->spm));
   }
 
+  /* clear composed functions */
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatFactorGetSolverType_C", NULL));
+
   /* Finalize PaStiX */
   if (pastix->pastix_data) pastixFinalize(&pastix->pastix_data);
 
   /* Deallocate PaStiX structure */
   PetscCall(PetscFree(A->data));
-
-  /* clear composed functions */
-  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatFactorGetSolverType_C", NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -207,8 +203,6 @@ static PetscErrorCode MatFactorNumeric_PaStiX(Mat F, Mat A, const MatFactorInfo 
   Mat_Pastix *pastix = (Mat_Pastix *)F->data;
 
   PetscFunctionBegin;
-  /* If it's the first time we set Mat_Pastix ->  Initialize everything */
-  //if (pastix->matstruc == DIFFERENT_NONZERO_PATTERN)
   F->ops->solve = MatSolve_PaStiX;
 
   /* Perform Numerical Factorization */
@@ -483,7 +477,7 @@ static PetscErrorCode MatGetFactor_pastix(Mat A, MatFactorType ftype, Mat *F, co
 static PetscErrorCode MatGetFactor_mpiaij_pastix(Mat A, MatFactorType ftype, Mat *F)
 {
   PetscFunctionBegin;
-  PetscCheck(ftype == MAT_FACTOR_LU, PETSC_COMM_SELF, PETSC_ERR_SUP, "Cannot use PETSc SBAIJ matrices with PaStiX LU, use AIJ matrix");
+  PetscCheck(ftype == MAT_FACTOR_LU, PETSC_COMM_SELF, PETSC_ERR_SUP, "Cannot use PETSc AIJ matrices with PaStiX Cholesky, use SBAIJ matrix");
   PetscCall(MatGetFactor_pastix(A, ftype, F, MATMPIAIJ));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -491,7 +485,7 @@ static PetscErrorCode MatGetFactor_mpiaij_pastix(Mat A, MatFactorType ftype, Mat
 static PetscErrorCode MatGetFactor_seqaij_pastix(Mat A, MatFactorType ftype, Mat *F)
 {
   PetscFunctionBegin;
-  PetscCheck(ftype == MAT_FACTOR_LU, PETSC_COMM_SELF, PETSC_ERR_SUP, "Cannot use PETSc SBAIJ matrices with PaStiX LU, use AIJ matrix");
+  PetscCheck(ftype == MAT_FACTOR_LU, PETSC_COMM_SELF, PETSC_ERR_SUP, "Cannot use PETSc AIJ matrices with PaStiX Cholesky, use SBAIJ matrix");
   PetscCall(MatGetFactor_pastix(A, ftype, F, MATSEQAIJ));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -499,7 +493,7 @@ static PetscErrorCode MatGetFactor_seqaij_pastix(Mat A, MatFactorType ftype, Mat
 static PetscErrorCode MatGetFactor_mpisbaij_pastix(Mat A, MatFactorType ftype, Mat *F)
 {
   PetscFunctionBegin;
-  PetscCheck(ftype == MAT_FACTOR_CHOLESKY, PETSC_COMM_SELF, PETSC_ERR_SUP, "Cannot use PETSc AIJ matrices with PaStiX Cholesky, use SBAIJ matrix");
+  PetscCheck(ftype == MAT_FACTOR_CHOLESKY, PETSC_COMM_SELF, PETSC_ERR_SUP, "Cannot use PETSc SBAIJ matrices with PaStiX LU, use AIJ matrix");
   PetscCall(MatGetFactor_pastix(A, ftype, F, MATMPISBAIJ));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -507,7 +501,7 @@ static PetscErrorCode MatGetFactor_mpisbaij_pastix(Mat A, MatFactorType ftype, M
 static PetscErrorCode MatGetFactor_seqsbaij_pastix(Mat A, MatFactorType ftype, Mat *F)
 {
   PetscFunctionBegin;
-  PetscCheck(ftype == MAT_FACTOR_CHOLESKY, PETSC_COMM_SELF, PETSC_ERR_SUP, "Cannot use PETSc AIJ matrices with PaStiX Cholesky, use SBAIJ matrix");
+  PetscCheck(ftype == MAT_FACTOR_CHOLESKY, PETSC_COMM_SELF, PETSC_ERR_SUP, "Cannot use PETSc SBAIJ matrices with PaStiX LU, use AIJ matrix");
   PetscCall(MatGetFactor_pastix(A, ftype, F, MATSEQSBAIJ));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
