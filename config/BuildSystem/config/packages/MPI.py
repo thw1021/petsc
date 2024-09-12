@@ -529,10 +529,13 @@ Unable to run hostname to check the network')
 
     if self.checkLink('#include <mpi.h>\n',
     '''
-      int         buf[1]={0},dest=1,source=1,tag=0;
-      MPI_Count   count=1;
-      MPI_Request req;
-      MPI_Status  stat;
+      int          buf[1]={0},dest=1,source=1,tag=0, combiner, ints[1];
+      MPI_Count    count=1, nints, naddrs, ncounts, ntypes, counts[1];
+      MPI_Request  req;
+      MPI_Status   stat;
+      MPI_Aint     addrs[1];
+      MPI_Datatype types[1]
+
       if (MPI_Send_c(buf,count,MPI_INT,dest,tag,MPI_COMM_WORLD)) return 1;
       if (MPI_Send_init_c(buf,count,MPI_INT,dest,tag,MPI_COMM_WORLD,&req)) return 1;
       if (MPI_Isend_c(buf,count,MPI_INT,dest,tag,MPI_COMM_WORLD,&req)) return 1;
@@ -541,6 +544,8 @@ Unable to run hostname to check the network')
       if (MPI_Irecv_c(buf,count,MPI_INT,source,tag,MPI_COMM_WORLD,&req)) return 1;
       if (MPI_Neighbor_alltoallv_c(0,0,0,MPI_INT,0,0,0,MPI_INT,MPI_COMM_WORLD)) return 1;
       if (MPI_Ineighbor_alltoallv_c(0,0,0,MPI_INT,0,0,0,MPI_INT,MPI_COMM_WORLD,&req)) return 1;
+      if (MPI_Type_get_envelope_c(MPI_INT,&nints,&naddrs,&ncounts,&ntypes,&combiner)) return 1;
+      if (MPI_Type_get_contents_c(MPI_INT,nints,naddrs,ncounts,ntypes,ints,addrs,counts,types)) return 1;
     ''' + ('if (MPI_Reduce_local_c(0,0,0,MPI_INT,MPI_SUM)) return 1;\n' if self.haveReduceLocal == 1 else '')):
       self.addDefine('HAVE_MPI_LARGE_COUNT', 1)
 

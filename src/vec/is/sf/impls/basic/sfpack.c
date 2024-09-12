@@ -509,7 +509,8 @@ PetscErrorCode PetscSFLinkSetUp_Host(PetscSF sf, PetscSFLink link, MPI_Datatype 
 {
   PetscInt    nSignedChar = 0, nUnsignedChar = 0, nInt = 0, nPetscInt = 0, nPetscReal = 0;
   PetscBool   is2Int, is2PetscInt;
-  PetscMPIInt ni, na, nd, combiner;
+  MPI_Count   ni, na, nc, nd;
+  PetscMPIInt combiner;
 #if defined(PETSC_HAVE_COMPLEX)
   PetscInt nPetscComplex = 0;
 #endif
@@ -527,7 +528,7 @@ PetscErrorCode PetscSFLinkSetUp_Host(PetscSF sf, PetscSFLink link, MPI_Datatype 
   PetscCall(MPIPetsc_Type_compare(unit, MPI_2INT, &is2Int));
   PetscCall(MPIPetsc_Type_compare(unit, MPIU_2INT, &is2PetscInt));
   /* TODO: should we also handle Fortran MPI_2REAL? */
-  PetscCallMPI(MPI_Type_get_envelope(unit, &ni, &na, &nd, &combiner));
+  PetscCallMPI(MPIPetsc_Type_get_envelope(unit, &ni, &na, &nc, &nd, &combiner));
   link->isbuiltin = (combiner == MPI_COMBINER_NAMED) ? PETSC_TRUE : PETSC_FALSE; /* unit is MPI builtin */
   link->bs        = 1;                                                           /* default */
 
@@ -656,11 +657,11 @@ PetscErrorCode PetscSFLinkSetUp_Host(PetscSF sf, PetscSFLink link, MPI_Datatype 
       else if (nbyte % 2 == 0) PackInit_DumbType_char_2_0(link);
       else if (nbyte == 1) PackInit_DumbType_char_1_1(link);
       else if (nbyte % 1 == 0) PackInit_DumbType_char_1_0(link);
-      link->bs        = nbyte;
+      PetscCall(PetscIntCast((MPI_Count)nbyte, &link->bs)); // MPI_Count is at least as large as MPI_Aint, per MPI standard
       link->unitbytes = nbyte;
       link->basicunit = MPI_BYTE;
     } else {
-      nInt = nbyte / sizeof(int);
+      PetscCall(PetscIntCast((MPI_Count)(nbyte / sizeof(int)), &nInt));
       if (nInt == 8) PackInit_DumbType_DumbInt_8_1(link);
       else if (nInt % 8 == 0) PackInit_DumbType_DumbInt_8_0(link);
       else if (nInt == 4) PackInit_DumbType_DumbInt_4_1(link);
