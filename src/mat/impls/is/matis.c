@@ -2606,7 +2606,7 @@ static PetscErrorCode MatInvertBlockDiagonal_IS(Mat mat, const PetscScalar **val
   PetscCall(MatSetBlockSize(is->A, bs));
   PetscCall(MatInvertBlockDiagonal(is->A, &lv));
   if (!is->bdiag) PetscCall(PetscMalloc1(bs * mat->rmap->n, &is->bdiag));
-  PetscCallMPI(MPI_Type_contiguous(bs, MPIU_SCALAR, &nodeType));
+  PetscCallMPI(MPI_Type_contiguous((PetscMPIInt)bs, MPIU_SCALAR, &nodeType));
   PetscCallMPI(MPI_Type_commit(&nodeType));
   PetscCall(PetscSFReduceBegin(is->sf, nodeType, lv, is->bdiag, MPI_REPLACE));
   PetscCall(PetscSFReduceEnd(is->sf, nodeType, lv, is->bdiag, MPI_REPLACE));
@@ -3501,9 +3501,9 @@ static PetscErrorCode MatSetPreallocationCOO_IS(Mat A, PetscCount ncoo, PetscInt
 
   PetscFunctionBegin;
   PetscCheck(a->A, PetscObjectComm((PetscObject)A), PETSC_ERR_ORDER, "Need to provide l2g map first via MatSetLocalToGlobalMapping");
-  PetscCheck(ncoo <= PETSC_MAX_INT, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "ncoo %" PetscCount_FMT " overflowed PetscInt; configure --with-64-bit-indices or request support", ncoo);
-  PetscCall(ISGlobalToLocalMappingApply(a->rmapping, IS_GTOLM_MASK, ncoo, coo_i, NULL, coo_i));
-  PetscCall(ISGlobalToLocalMappingApply(a->cmapping, IS_GTOLM_MASK, ncoo, coo_j, NULL, coo_j));
+  PetscCheck(ncoo <= PETSC_INT_MAX, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "ncoo %" PetscCount_FMT " overflowed PetscInt; configure --with-64-bit-indices or request support", ncoo);
+  PetscCall(ISGlobalToLocalMappingApply(a->rmapping, IS_GTOLM_MASK, (PetscInt)ncoo, coo_i, NULL, coo_i));
+  PetscCall(ISGlobalToLocalMappingApply(a->cmapping, IS_GTOLM_MASK, (PetscInt)ncoo, coo_j, NULL, coo_j));
   PetscCall(MatSetPreallocationCOO(a->A, ncoo, coo_i, coo_j));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSetValuesCOO_C", MatSetValuesCOO_IS));
   A->preallocated = PETSC_TRUE;
@@ -3513,8 +3513,8 @@ static PetscErrorCode MatSetPreallocationCOO_IS(Mat A, PetscCount ncoo, PetscInt
 static PetscErrorCode MatISGetAssembled_Private(Mat A, Mat *tA)
 {
   Mat_IS          *a = (Mat_IS *)A->data;
-  PetscObjectState Astate, aAstate       = PETSC_MIN_INT;
-  PetscObjectState Annzstate, aAnnzstate = PETSC_MIN_INT;
+  PetscObjectState Astate, aAstate       = PETSC_INT_MIN;
+  PetscObjectState Annzstate, aAnnzstate = PETSC_INT_MIN;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectStateGet((PetscObject)A, &Astate));
@@ -3560,7 +3560,7 @@ static PetscErrorCode MatISRestoreAssembled_Private(Mat A, Mat *tA)
 static PetscErrorCode MatGetDiagonalBlock_IS(Mat A, Mat *dA)
 {
   Mat_IS          *a = (Mat_IS *)A->data;
-  PetscObjectState Astate, dAstate = PETSC_MIN_INT;
+  PetscObjectState Astate, dAstate = PETSC_INT_MIN;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectStateGet((PetscObject)A, &Astate));
