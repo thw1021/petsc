@@ -75,6 +75,7 @@ Changes: Development
 - Reuse the result of :math:`T = A_{00}^-1 A_{01}` in ``PCApply_FieldSplit_Schur`` with ``-pc_fieldsplit_schur_fact_type full``
 - Change the option database keys for coarsening for ``PCGAMG`` to use the prefix ``-pc_gamg_``, for example ``-pc_gamg_mat_coarsen_type``
 - Add ``PCGAMGSetGraphSymmetrize()`` and ``-pc_gamg_graph_symmetrize`` to control symmetrization when coarsening the graph
+- Add ``MATOP_GET_BLOCK_DIAGONAL`` and ``MATOP_GET_VBLOCK_DIAGONAL`` to set methods returning the diagonal point blocks of a matrix
 
 .. rubric:: KSP:
 
