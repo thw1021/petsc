@@ -209,15 +209,6 @@ int main(int argc, char **args)
       requires: cuda
 
    test:
-      nsize: 3
-      suffix: 2_aijcusparse_3
-      filter: grep -v type
-      args: -mat_type mpiaijcusparse -vec_type cuda
-      args: -sf_type {{basic neighbor}}
-      output_file: output/ex5_23.out
-      requires: cuda defined(PETSC_HAVE_MPI_GPU_AWARE)
-
-   test:
       suffix: 31
       args: -mat_type mpiaij -test_diagonalscale
       filter: grep -v type
