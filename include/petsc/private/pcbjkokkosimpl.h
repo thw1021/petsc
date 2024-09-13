@@ -1,5 +1,9 @@
 #pragma once
 
+#if defined(PETSC_HAVE_CUDA)
+  #include <nvToolsExt.h>
+#endif
+
 #include <petscvec_kokkos.hpp>
 #include <petsc/private/pcimpl.h>
 #include <petsc/private/deviceimpl.h>
