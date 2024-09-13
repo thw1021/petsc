@@ -110,7 +110,7 @@ static PetscErrorCode TaoMappedTermSetGradients(TaoMappedTerm *mt, InsertMode mo
 
 PETSC_INTERN PetscErrorCode TaoMappedTermGradient(TaoMappedTerm *mt, Vec x, Vec params, InsertMode mode, Vec g)
 {
-  Vec Ax, mapped_g, unmapped_g;
+  Vec Ax, mapped_g, unmapped_g = NULL;
 
   PetscFunctionBegin;
   TaoMapppedTermCheckInsertMode(mt, mode);
@@ -123,7 +123,7 @@ PETSC_INTERN PetscErrorCode TaoMappedTermGradient(TaoMappedTerm *mt, Vec x, Vec 
 
 PETSC_INTERN PetscErrorCode TaoMappedTermObjectiveAndGradient(TaoMappedTerm *mt, Vec x, Vec params, InsertMode mode, PetscReal *value, Vec g)
 {
-  Vec       Ax, mapped_g, unmapped_g;
+  Vec       Ax, mapped_g, unmapped_g = NULL;
   PetscReal v;
 
   PetscFunctionBegin;
@@ -212,7 +212,7 @@ static PetscErrorCode TaoMappedTermSetHessians(TaoMappedTerm *mt, InsertMode mod
 PETSC_INTERN PetscErrorCode TaoMappedTermHessian(TaoMappedTerm *mt, Vec x, Vec params, InsertMode mode, Mat H, Mat Hpre)
 {
   Vec Ax;
-  Mat mapped_H, mapped_Hpre, unmapped_H, unmapped_Hpre;
+  Mat mapped_H, mapped_Hpre, unmapped_H = NULL, unmapped_Hpre = NULL;
 
   PetscFunctionBegin;
   TaoMapppedTermCheckInsertMode(mt, mode);
