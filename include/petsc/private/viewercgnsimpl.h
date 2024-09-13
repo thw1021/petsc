@@ -18,6 +18,10 @@ typedef struct {
   PetscSegBuffer output_steps;
   PetscSegBuffer output_times;
   PetscInt       batch_size;
+
+  // Solution reading information
+  PetscInt solution_id; // User set solution index
+  int      sol_index;   // CGNS file solution index for direct access
 } PetscViewer_CGNS;
 
 #define PetscCallCGNS(ierr) \
@@ -54,3 +58,4 @@ typedef struct {
 
 PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscViewerCGNSCheckBatch_Internal(PetscViewer);
 PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscViewerCGNSFileOpen_Internal(PetscViewer, PetscInt);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscViewerCGNSGetSolutionFileIndex_Internal(PetscViewer, int *);
