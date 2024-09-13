@@ -3,7 +3,7 @@ import config.package
 class Configure(config.package.Package):
   def __init__(self, framework):
     config.package.Package.__init__(self, framework)
-    self.gitcommit              = 'ab1c96789919832f4dd7e3e51d670b21e8fa32e1'
+    self.gitcommit              = 'bacbe472d913e97b63b6de6c2b559d22949905c3' # jose/revise-gpu-aware-mpi Sep 20, 2024 to main
     #self.gitcommit              = 'v'+self.version
     self.download               = ['git://https://gitlab.com/slepc/slepc.git','https://gitlab.com/slepc/slepc/-/archive/'+self.gitcommit+'/slepc-'+self.gitcommit+'.tar.gz']
     self.functions              = []
