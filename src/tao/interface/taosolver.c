@@ -131,9 +131,7 @@ PetscErrorCode TaoCreate(MPI_Comm comm, Tao *newtao)
   tao->hist_reset = PETSC_TRUE;
 
   PetscCall(TaoTermCreateTaoCallbacks(tao, &tao->orig_callbacks));
-  PetscCall(PetscObjectReference((PetscObject)tao->orig_callbacks));
-  tao->objective_term  = tao->orig_callbacks;
-  tao->objective_scale = 1.0;
+  PetscCall(TaoMappedTermSetData(&tao->objective_term, NULL, tao->orig_callbacks, 1.0, NULL));
   PetscCall(TaoResetStatistics(tao));
   *newtao = tao;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -223,17 +221,17 @@ PetscErrorCode TaoSetUp(Tao tao)
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
   if (tao->setupcalled) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(TaoSetUpEW_Private(tao));
-  PetscCall(TaoTermSetUp(tao->objective_term));
+  PetscCall(TaoMappedTermSetUp(&tao->objective_term));
   // TODO: fix this for maps
-  if (!tao->solution) PetscCall(TaoTermCreateVecs(tao->objective_term, &tao->solution, NULL));
+  if (!tao->solution) PetscCall(TaoMappedTermCreateVecs(&tao->objective_term, &tao->solution, NULL));
   PetscCheck(tao->solution, PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_WRONGSTATE, "Must call TaoSetSolution()");
   if (tao->uses_gradient && !tao->gradient) PetscCall(VecDuplicate(tao->solution, &tao->gradient));
   if (tao->uses_hessian_matrices) {
     if (!tao->hessian) {
       PetscBool is_defined;
 
-      PetscCall(TaoTermIsCreateHessianMatricesDefined(tao->objective_term, &is_defined));
-      if (is_defined) PetscCall(TaoTermCreateHessianMatrices(tao->objective_term, &tao->hessian, &tao->hessian_pre));
+      PetscCall(TaoTermIsCreateHessianMatricesDefined(tao->objective_term.term, &is_defined));
+      if (is_defined) PetscCall(TaoMappedTermCreateHessianMatrices(&tao->objective_term, &tao->hessian, &tao->hessian_pre));
     }
     PetscCheck(tao->hessian, PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_WRONGSTATE, "Must call TaoSetHessian()");
   }
@@ -265,8 +263,8 @@ PetscErrorCode TaoDestroy(Tao *tao)
   }
 
   PetscTryTypeMethod(*tao, destroy);
+  PetscCall(TaoMappedTermReset(&(*tao)->objective_term));
   PetscCall(TaoTermDestroy(&(*tao)->orig_callbacks));
-  PetscCall(TaoTermDestroy(&(*tao)->objective_term));
   PetscCall(KSPDestroy(&(*tao)->ksp));
   PetscCall(SNESDestroy(&(*tao)->snes_ewdummy));
   PetscCall(TaoLineSearchDestroy(&(*tao)->linesearch));
@@ -2842,12 +2840,11 @@ PetscErrorCode TaoMonitorDrawCtxDestroy(TaoMonitorDrawCtx *ictx)
   TaoGetObjectiveTerm - Get the whole objective function of the `Tao` as a single `TaoTerm`.
 
 */
-PetscErrorCode TaoGetObjectiveTerm(Tao tao, TaoTerm *term)
+PetscErrorCode TaoGetObjectiveTerm(Tao tao, TaoTerm *term, Vec *params, PetscReal *scale, Mat *map)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  PetscAssertPointer(term, 2);
-  *term = tao->objective_term;
+  PetscCall(TaoMappedTermGetData(&tao->objective_term, NULL, term, scale, map));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -2855,7 +2852,7 @@ PetscErrorCode TaoGetObjectiveTerm(Tao tao, TaoTerm *term)
   TaoSetObjectiveTerm - Set the whole objective function of the `Tao` as a single `TaoTerm`.
 
 */
-PetscErrorCode TaoSetObjectiveTerm(Tao tao, TaoTerm term)
+PetscErrorCode TaoSetObjectiveTerm(Tao tao, TaoTerm term, Vec params, PetscReal scale, Mat map)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
@@ -2863,8 +2860,6 @@ PetscErrorCode TaoSetObjectiveTerm(Tao tao, TaoTerm term)
     PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 2);
     PetscCheckSameComm(tao, 1, term, 2);
   }
-  PetscCall(PetscObjectReference((PetscObject)term));
-  PetscCall(TaoTermDestroy(&tao->objective_term));
-  tao->objective_term = term;
+  PetscCall(TaoMappedTermSetData(&tao->objective_term, NULL, term, scale, map));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

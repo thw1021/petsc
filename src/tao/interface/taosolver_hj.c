@@ -80,7 +80,7 @@ PetscErrorCode TaoGetHessian(Tao tao, Mat *H, Mat *Hpre, PetscErrorCode (**func)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
   PetscCall(TaoGetHessianMatrices(tao, H, Hpre));
-  if (func || ctx) PetscCall(TaoTermTaoCallbacksGetHessian(tao->objective_term, func, ctx));
+  if (func || ctx) PetscCall(TaoTermTaoCallbacksGetHessian(tao->objective_term.term, func, ctx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -314,11 +314,7 @@ PetscErrorCode TaoComputeHessian(Tao tao, Vec X, Mat H, Mat Hpre)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  PetscCall(TaoTermHessian(tao->objective_term, X, NULL, H, Hpre));
-  if (tao->objective_scale != 1.0) {
-    if (H) PetscCall(MatScale(H, tao->objective_scale));
-    if (Hpre && Hpre != H) PetscCall(MatScale(Hpre, tao->objective_scale));
-  }
+  PetscCall(TaoMappedTermHessian(&tao->objective_term, X, NULL, INSERT_VALUES, H, Hpre));
   PetscCall(TaoTestHessian(tao));
   tao->nhess++;
   PetscFunctionReturn(PETSC_SUCCESS);

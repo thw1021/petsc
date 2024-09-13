@@ -128,9 +128,8 @@ PetscErrorCode TaoComputeGradient(Tao tao, Vec X, Vec G)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  PetscCall(TaoTermGradient(tao->objective_term, X, NULL, G));
+  PetscCall(TaoMappedTermGradient(&tao->objective_term, X, NULL, INSERT_VALUES, G));
   tao->ngrads++;
-  if (tao->objective_scale != 1.0) PetscCall(VecScale(G, tao->objective_scale));
   PetscCall(TaoTestGradient(tao, X, G));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -159,9 +158,8 @@ PetscErrorCode TaoComputeObjective(Tao tao, Vec X, PetscReal *f)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  PetscCall(TaoTermObjective(tao->objective_term, X, NULL, f));
+  PetscCall(TaoMappedTermObjective(&tao->objective_term, X, NULL, INSERT_VALUES, f));
   tao->nfuncs++;
-  if (tao->objective_scale != 1.0) *f *= tao->objective_scale;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -190,12 +188,8 @@ PetscErrorCode TaoComputeObjectiveAndGradient(Tao tao, Vec X, PetscReal *f, Vec 
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  PetscCall(TaoTermObjectiveAndGradient(tao->objective_term, X, NULL, f, G));
+  PetscCall(TaoMappedTermObjectiveAndGradient(&tao->objective_term, X, NULL, INSERT_VALUES, f, G));
   tao->nfuncgrads++;
-  if (tao->objective_scale != 1.0) {
-    *f *= tao->objective_scale;
-    PetscCall(VecScale(G, tao->objective_scale));
-  }
   PetscCall(TaoTestGradient(tao, X, G));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -255,7 +249,7 @@ PetscErrorCode TaoGetObjective(Tao tao, PetscErrorCode (**func)(Tao tao, Vec x, 
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  if (func || ctx) PetscCall(TaoTermTaoCallbacksGetObjective(tao->objective_term, func, ctx));
+  if (func || ctx) PetscCall(TaoTermTaoCallbacksGetObjective(tao->objective_term.term, func, ctx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -451,7 +445,7 @@ PetscErrorCode TaoGetGradient(Tao tao, Vec *g, PetscErrorCode (**func)(Tao tao, 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
   if (g) *g = tao->gradient;
-  if (func || ctx) PetscCall(TaoTermTaoCallbacksGetGradient(tao->objective_term, func, ctx));
+  if (func || ctx) PetscCall(TaoTermTaoCallbacksGetGradient(tao->objective_term.term, func, ctx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -525,7 +519,7 @@ PetscErrorCode TaoGetObjectiveAndGradient(Tao tao, Vec *g, PetscErrorCode (**fun
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
   if (g) *g = tao->gradient;
-  if (func || ctx) PetscCall(TaoTermTaoCallbacksGetObjAndGrad(tao->objective_term, func, ctx));
+  if (func || ctx) PetscCall(TaoTermTaoCallbacksGetObjAndGrad(tao->objective_term.term, func, ctx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -555,7 +549,7 @@ PetscErrorCode TaoIsObjectiveDefined(Tao tao, PetscBool *flg)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  PetscCall(TaoTermIsObjectiveDefined(tao->objective_term, flg));
+  PetscCall(TaoTermIsObjectiveDefined(tao->objective_term.term, flg));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -585,7 +579,7 @@ PetscErrorCode TaoIsGradientDefined(Tao tao, PetscBool *flg)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  PetscCall(TaoTermIsGradientDefined(tao->objective_term, flg));
+  PetscCall(TaoTermIsGradientDefined(tao->objective_term.term, flg));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -615,6 +609,6 @@ PetscErrorCode TaoIsObjectiveAndGradientDefined(Tao tao, PetscBool *flg)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  PetscCall(TaoTermIsObjectiveAndGradientDefined(tao->objective_term, flg));
+  PetscCall(TaoTermIsObjectiveAndGradientDefined(tao->objective_term.term, flg));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

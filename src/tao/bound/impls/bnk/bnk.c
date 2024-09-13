@@ -1041,9 +1041,13 @@ PetscErrorCode TaoSetUp_BNK(Tao tao)
     PetscCall(TaoSetFunctionLowerBound(bnk->bncg, tao->fmin));
     PetscCall(TaoSetConvergenceTest(bnk->bncg, tao->ops->convergencetest, tao->cnvP));
     {
-      TaoTerm term;
-      PetscCall(TaoGetObjectiveTerm(tao, &term));
-      PetscCall(TaoSetObjectiveTerm(bnk->bncg, term));
+      TaoTerm   term;
+      Vec       params;
+      PetscReal scale;
+      Mat       map;
+
+      PetscCall(TaoGetObjectiveTerm(tao, &term, &params, &scale, &map));
+      PetscCall(TaoSetObjectiveTerm(bnk->bncg, term, params, scale, map));
     }
     PetscCall(PetscObjectCopyFortranFunctionPointers((PetscObject)tao, (PetscObject)bnk->bncg));
     for (i = 0; i < tao->numbermonitors; ++i) {
