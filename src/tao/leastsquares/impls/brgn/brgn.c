@@ -97,9 +97,7 @@ static PetscErrorCode GNObjectiveGradientEval(Tao tao, Vec X, PetscReal *fcn, Ve
   /* add the regularization contribution */
   switch (gn->reg_type) {
   case BRGN_REGULARIZATION_USER:
-    PetscCall((*gn->regularizerobjandgrad)(tao, X, &f_reg, gn->x_work, gn->reg_obj_ctx));
-    *fcn += gn->lambda * f_reg;
-    PetscCall(VecAXPY(G, gn->lambda, gn->x_work));
+    PetscCall(TaoMappedTermObjectiveAndGradient(&gn->regularizer_term, X, NULL, ADD_VALUES, fcn, G));
     break;
   case BRGN_REGULARIZATION_L2PURE:
     /* compute f = f + lambda*0.5*xk'*xk */
@@ -154,8 +152,12 @@ static PetscErrorCode GNComputeHessian(Tao tao, Vec X, Mat H, Mat Hpre, void *pt
 
   switch (gn->reg_type) {
   case BRGN_REGULARIZATION_USER:
-    PetscCall((*gn->regularizerhessian)(tao, X, gn->Hreg, gn->reg_hess_ctx));
-    if (gn->mat_explicit) PetscCall(MatAXPY(gn->H, 1.0, gn->Hreg, DIFFERENT_NONZERO_PATTERN));
+    if (gn->mat_explicit) PetscCall(TaoMappedTermHessian(&gn->regularizer_term, X, NULL, ADD_VALUES, gn->H, NULL));
+    else {
+      gn->regularizer_term.scale = 1.0; // do not scale the matrix explicitly, scaling will happen in GNHessianProduct
+      PetscCall(TaoMappedTermHessian(&gn->regularizer_term, X, NULL, INSERT_VALUES, gn->Hreg, NULL));
+      gn->regularizer_term.scale = gn->lambda;
+    }
     break;
   case BRGN_REGULARIZATION_L2PURE:
     if (gn->mat_explicit) PetscCall(MatShift(gn->H, gn->lambda));
@@ -280,6 +282,7 @@ static PetscErrorCode TaoSetFromOptions_BRGN(Tao tao, PetscOptionItems *PetscOpt
     PetscCall(TaoLineSearchSetType(ls, TAOLINESEARCHUNIT));
   }
   PetscCall(TaoSetFromOptions(gn->subsolver));
+  gn->regularizer_term.scale = gn->lambda;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -393,6 +396,8 @@ static PetscErrorCode TaoDestroy_BRGN(Tao tao)
   PetscCall(MatDestroy(&gn->Hreg));
   PetscCall(TaoDestroy(&gn->subsolver));
   gn->parent = NULL;
+  PetscCall(TaoTermDestroy(&gn->orig_callbacks));
+  PetscCall(TaoMappedTermReset(&gn->regularizer_term));
   PetscCall(PetscFree(tao->data));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -444,6 +449,8 @@ PETSC_EXTERN PetscErrorCode TaoCreate_BRGN(Tao tao)
   PetscCall(TaoCreate(PetscObjectComm((PetscObject)tao), &gn->subsolver));
   PetscCall(TaoSetType(gn->subsolver, TAOBNLS));
   PetscCall(TaoSetOptionsPrefix(gn->subsolver, "tao_brgn_subsolver_"));
+  PetscCall(TaoTermCreateBRGNRegularizer(tao, &gn->orig_callbacks));
+  PetscCall(TaoMappedTermSetData(&gn->regularizer_term, NULL, gn->orig_callbacks, gn->lambda, NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -489,7 +496,8 @@ PetscErrorCode TaoBRGNSetRegularizerWeight(Tao tao, PetscReal lambda)
   /* Initialize lambda here */
 
   PetscFunctionBegin;
-  gn->lambda = lambda;
+  gn->lambda                 = lambda;
+  gn->regularizer_term.scale = lambda;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -570,8 +578,28 @@ PetscErrorCode TaoBRGNSetRegularizerObjectiveAndGradientRoutine(Tao tao, PetscEr
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  if (ctx) gn->reg_obj_ctx = ctx;
-  if (func) gn->regularizerobjandgrad = func;
+  PetscCall(TaoTermTaoCallbacksSetObjAndGrad(gn->orig_callbacks, func, ctx));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+typedef struct _n_BRGNHessianCtx {
+  PetscErrorCode (*orig_func)(Tao, Vec, Mat, void *);
+  void *orig_ctx;
+} BRGNHessianCtx;
+
+static PetscErrorCode TaoBRGNRegularizerHessianRoutine_Internal(Tao tao, Vec u, Mat H, Mat Hpre, void *ctx)
+{
+  BRGNHessianCtx *wrapper_ctx = (BRGNHessianCtx *)ctx;
+
+  PetscFunctionBegin;
+  PetscCall((*wrapper_ctx->orig_func)(tao, u, H, wrapper_ctx->orig_ctx));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode BRGNHessianCtxDestroy(void *ctx)
+{
+  PetscFunctionBegin;
+  PetscCall(PetscFree(ctx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -605,8 +633,20 @@ PetscErrorCode TaoBRGNSetRegularizerHessianRoutine(Tao tao, Mat Hreg, PetscError
     PetscValidHeaderSpecific(Hreg, MAT_CLASSID, 2);
     PetscCheckSameComm(tao, 1, Hreg, 2);
   } else SETERRQ(PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_WRONG, "NULL Hessian detected! User must provide valid Hessian for the regularizer.");
-  if (ctx) gn->reg_hess_ctx = ctx;
-  if (func) gn->regularizerhessian = func;
+  if (func || ctx) {
+    BRGNHessianCtx *wrapper_ctx;
+    PetscContainer  ctx_container;
+
+    PetscCall(PetscNew(&wrapper_ctx));
+    wrapper_ctx->orig_func = func;
+    wrapper_ctx->orig_ctx  = ctx;
+    PetscCall(PetscContainerCreate(PetscObjectComm((PetscObject)tao), &ctx_container));
+    PetscCall(PetscContainerSetPointer(ctx_container, wrapper_ctx));
+    PetscCall(PetscContainerSetUserDestroy(ctx_container, BRGNHessianCtxDestroy));
+    PetscCall(TaoTermTaoCallbacksSetHessian(gn->orig_callbacks, TaoBRGNRegularizerHessianRoutine_Internal, (void *)wrapper_ctx));
+    PetscCall(PetscObjectCompose((PetscObject)gn->orig_callbacks, "__TaoBRGNSetRegularizerHessianRoutine", (PetscObject)ctx_container));
+    PetscCall(PetscContainerDestroy(&ctx_container));
+  }
   if (Hreg) {
     PetscCall(PetscObjectReference((PetscObject)Hreg));
     PetscCall(MatDestroy(&gn->Hreg));

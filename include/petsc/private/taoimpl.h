@@ -263,6 +263,7 @@ struct _p_TaoTerm {
 PETSC_INTERN PetscErrorCode TaoTermRegisterAll(void);
 
 PETSC_INTERN PetscErrorCode TaoTermCreateTaoCallbacks(Tao, TaoTerm *);
+PETSC_INTERN PetscErrorCode TaoTermCreateBRGNRegularizer(Tao, TaoTerm *);
 
 PETSC_INTERN PetscErrorCode TaoTermTaoCallbacksSetObjective(TaoTerm, PetscErrorCode (*)(Tao, Vec, PetscReal *, void *), void *);
 PETSC_INTERN PetscErrorCode TaoTermTaoCallbacksSetGradient(TaoTerm, PetscErrorCode (*)(Tao, Vec, Vec, void *), void *);
