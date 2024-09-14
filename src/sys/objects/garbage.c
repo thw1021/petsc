@@ -133,6 +133,7 @@ PetscErrorCode GarbageKeyAllReduceIntersect_Private(MPI_Comm comm, PetscInt64 *s
   PetscInt     ii, max_entries;
   PetscInt64  *sendset, *recvset;
   MPI_Datatype keyset_type;
+  PetscMPIInt  imax_entries;
 
   PetscFunctionBegin;
   /* Sort keys first for use with `GarbageKeySortedIntersect_Private()`*/
@@ -146,12 +147,13 @@ PetscErrorCode GarbageKeyAllReduceIntersect_Private(MPI_Comm comm, PetscInt64 *s
   for (ii = 1; ii < *entries + 1; ii++) sendset[ii] = set[ii - 1];
 
   /* Create a custom data type to hold the set */
-  PetscCallMPI(MPI_Type_contiguous(max_entries + 1, MPIU_INT64, &keyset_type));
+  PetscCall(PetscMPIIntCast(max_entries, &imax_entries));
+  PetscCallMPI(MPI_Type_contiguous(imax_entries + 1, MPIU_INT64, &keyset_type));
   /* PetscCallMPI(MPI_Type_set_name(keyset_type,"PETSc garbage key set type")); */
   PetscCallMPI(MPI_Type_commit(&keyset_type));
 
   /* Perform custom intersect reduce operation over sets */
-  PetscCallMPI(MPI_Allreduce(sendset, recvset, 1, keyset_type, Petsc_Garbage_SetIntersectOp, comm));
+  PetscCallMPI(MPIU_Allreduce(sendset, recvset, 1, keyset_type, Petsc_Garbage_SetIntersectOp, comm));
 
   PetscCallMPI(MPI_Type_free(&keyset_type));
 
