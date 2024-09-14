@@ -5651,6 +5651,7 @@ PetscErrorCode DMCreateCoordinateDM_Plex(DM dm, DM *cdm)
 
   PetscFunctionBegin;
   PetscCall(DMClone(dm, cdm));
+  PetscCall(PetscObjectComposeFunction((PetscObject)*cdm, "DMGetIsoperiodicPointSF_C", NULL));
   PetscCall(PetscObjectGetOptionsPrefix((PetscObject)dm, &prefix));
   PetscCall(PetscObjectSetOptionsPrefix((PetscObject)*cdm, prefix));
   PetscCall(PetscObjectAppendOptionsPrefix((PetscObject)*cdm, "cdm_"));

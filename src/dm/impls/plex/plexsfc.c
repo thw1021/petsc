@@ -298,20 +298,6 @@ static PetscErrorCode DMPlexCreateBoxMesh_Tensor_SFC_Periodicity_Private(DM dm, 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-// This is a DMGlobalToLocalHook that applies the affine offsets. When extended for rotated periodicity, it'll need to
-// apply a rotatonal transform and similar operations will be needed for fields (e.g., to rotate a velocity vector).
-// We use this crude approach here so we don't have to write new GPU kernels yet.
-static PetscErrorCode DMCoordAddPeriodicOffsets_Private(DM dm, Vec g, InsertMode mode, Vec l, void *ctx)
-{
-  PetscFunctionBegin;
-  // These `VecScatter`s should be merged to improve efficiency; the scatters cannot be overlapped.
-  for (PetscInt i = 0; i < dm->periodic.num_affines; i++) {
-    PetscCall(VecScatterBegin(dm->periodic.affine_to_local[i], dm->periodic.affine[i], l, ADD_VALUES, SCATTER_FORWARD));
-    PetscCall(VecScatterEnd(dm->periodic.affine_to_local[i], dm->periodic.affine[i], l, ADD_VALUES, SCATTER_FORWARD));
-  }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 // Start with an SF for a positive depth (e.g., faces) and create a new SF for matched closure. The caller must ensure
 // that both the donor (root) face and the periodic (leaf) face have consistent orientation, meaning that their closures
 // are isomorphic. It may be useful/necessary for this restriction to be loosened.
@@ -321,8 +307,9 @@ static PetscErrorCode DMCoordAddPeriodicOffsets_Private(DM dm, Vec g, InsertMode
 // + closure_sf - augmented point SF (see `DMGetPointSF()`) that includes the faces and all points in its closure. This
 //   can be used to create a global section and section SF.
 // - is_points - array of index sets for just the points in the closure of `face_sf`. These may be used to apply an affine
-//   transformation to periodic dofs; see DMPeriodicCoordinateSetUp_Internal().
+//   transformation to periodic dofs
 //
+//TODO: Should possibly remove the `is_points` if we get rid of isoperiodic for coordinateDMs
 static PetscErrorCode DMPlexCreateIsoperiodicPointSF_Private(DM dm, PetscInt num_face_sfs, PetscSF *face_sfs, PetscSF *closure_sf, IS **is_points)
 {
   MPI_Comm           comm;
@@ -579,78 +566,6 @@ PetscErrorCode DMPlexMigrateIsoperiodicFaceSF_Internal(DM old_dm, DM dm, PetscSF
   PetscCall(DMPlexSetIsoperiodicFaceTransform(dm, plex->periodic.num_face_sfs, (PetscScalar *)plex->periodic.transform));
   for (PetscInt f = 0; f < plex->periodic.num_face_sfs; f++) PetscCall(PetscSFDestroy(&new_face_sfs[f]));
   PetscCall(PetscFree(new_face_sfs));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-PetscErrorCode DMPeriodicCoordinateSetUp_Internal(DM dm)
-{
-  DM_Plex *plex = (DM_Plex *)dm->data;
-  size_t   count;
-  IS       isdof;
-  PetscInt dim;
-
-  PetscFunctionBegin;
-  if (!plex->periodic.face_sfs) PetscFunctionReturn(PETSC_SUCCESS);
-  PetscCall(DMGetIsoperiodicPointSF_Plex(dm, NULL));
-  PetscCall(PetscObjectComposeFunction((PetscObject)dm, "DMGetIsoperiodicPointSF_C", DMGetIsoperiodicPointSF_Plex));
-
-  PetscCall(DMGetDimension(dm, &dim));
-  dm->periodic.num_affines = plex->periodic.num_face_sfs;
-  PetscCall(PetscMalloc2(dm->periodic.num_affines, &dm->periodic.affine_to_local, dm->periodic.num_affines, &dm->periodic.affine));
-
-  for (PetscInt f = 0; f < plex->periodic.num_face_sfs; f++) {
-    {
-      PetscInt        npoints;
-      const PetscInt *points;
-      IS              is = plex->periodic.periodic_points[f];
-      PetscSegBuffer  seg;
-      PetscSection    section;
-      PetscCall(DMGetLocalSection(dm, &section));
-      PetscCall(PetscSegBufferCreate(sizeof(PetscInt), 32, &seg));
-      PetscCall(ISGetSize(is, &npoints));
-      PetscCall(ISGetIndices(is, &points));
-      for (PetscInt i = 0; i < npoints; i++) {
-        PetscInt point = points[i], off, dof;
-        PetscCall(PetscSectionGetOffset(section, point, &off));
-        PetscCall(PetscSectionGetDof(section, point, &dof));
-        PetscAssert(dof % dim == 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Unexpected dof %" PetscInt_FMT " not divisible by dimension %" PetscInt_FMT, dof, dim);
-        for (PetscInt j = 0; j < dof / dim; j++) {
-          PetscInt *slot;
-          PetscCall(PetscSegBufferGetInts(seg, 1, &slot));
-          *slot = off / dim + j;
-        }
-      }
-      PetscInt *ind;
-      PetscCall(PetscSegBufferGetSize(seg, &count));
-      PetscCall(PetscSegBufferExtractAlloc(seg, &ind));
-      PetscCall(PetscSegBufferDestroy(&seg));
-      PetscCall(ISCreateBlock(PETSC_COMM_SELF, dim, count, ind, PETSC_OWN_POINTER, &isdof));
-    }
-    Vec        L, P;
-    VecType    vec_type;
-    VecScatter scatter;
-    PetscCall(DMGetLocalVector(dm, &L));
-    PetscCall(VecCreate(PETSC_COMM_SELF, &P));
-    PetscCall(VecSetSizes(P, count * dim, count * dim));
-    PetscCall(VecGetType(L, &vec_type));
-    PetscCall(VecSetType(P, vec_type));
-    PetscCall(VecScatterCreate(P, NULL, L, isdof, &scatter));
-    PetscCall(DMRestoreLocalVector(dm, &L));
-    PetscCall(ISDestroy(&isdof));
-
-    {
-      PetscScalar *x;
-      PetscCall(VecGetArrayWrite(P, &x));
-      for (PetscInt i = 0; i < (PetscInt)count; i++) {
-        for (PetscInt j = 0; j < dim; j++) x[i * dim + j] = plex->periodic.transform[f][j][3];
-      }
-      PetscCall(VecRestoreArrayWrite(P, &x));
-    }
-
-    dm->periodic.affine_to_local[f] = scatter;
-    dm->periodic.affine[f]          = P;
-  }
-  PetscCall(DMGlobalToLocalHookAdd(dm, NULL, DMCoordAddPeriodicOffsets_Private, NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -981,12 +896,6 @@ PetscErrorCode DMPlexSetIsoperiodicFaceSF(DM dm, PetscInt num_face_sfs, PetscSF 
   plex->periodic.num_face_sfs = num_face_sfs;
   PetscCall(PetscCalloc1(num_face_sfs, &plex->periodic.face_sfs));
   for (PetscInt i = 0; i < num_face_sfs; i++) plex->periodic.face_sfs[i] = face_sfs[i];
-
-  DM cdm = dm->coordinates[0].dm; // Can't DMGetCoordinateDM because it automatically creates one
-  if (cdm) {
-    PetscCall(DMPlexSetIsoperiodicFaceSF(cdm, num_face_sfs, face_sfs));
-    if (face_sfs) cdm->periodic.setup = DMPeriodicCoordinateSetUp_Internal;
-  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

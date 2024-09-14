@@ -174,12 +174,9 @@ PetscErrorCode DMClone(DM dm, DM *newdm)
       PetscCall(MPIU_Allreduce(&pEnd, &pEndMax, 1, MPIU_INT, MPI_MAX, PetscObjectComm((PetscObject)dm)));
       if (pEndMax >= 0) {
         PetscCall(DMClone(dm->coordinates[i].dm, &ncdm));
+        PetscCall(PetscObjectComposeFunction((PetscObject)ncdm, "DMGetIsoperiodicPointSF_C", NULL));
         PetscCall(DMCopyDisc(dm->coordinates[i].dm, ncdm));
         PetscCall(DMSetLocalSection(ncdm, cs));
-        if (dm->coordinates[i].dm->periodic.setup) {
-          ncdm->periodic.setup = dm->coordinates[i].dm->periodic.setup;
-          PetscCall(ncdm->periodic.setup(ncdm));
-        }
         if (i) PetscCall(DMSetCellCoordinateDM(*newdm, ncdm));
         else PetscCall(DMSetCoordinateDM(*newdm, ncdm));
         PetscCall(DMDestroy(&ncdm));
@@ -772,11 +769,6 @@ PetscErrorCode DMDestroy(DM *dm)
   if ((*dm)->transformDestroy) PetscCall((*(*dm)->transformDestroy)(*dm, (*dm)->transformCtx));
   PetscCall(DMDestroy(&(*dm)->transformDM));
   PetscCall(VecDestroy(&(*dm)->transform));
-  for (PetscInt i = 0; i < (*dm)->periodic.num_affines; i++) {
-    PetscCall(VecScatterDestroy(&(*dm)->periodic.affine_to_local[i]));
-    PetscCall(VecDestroy(&(*dm)->periodic.affine[i]));
-  }
-  if ((*dm)->periodic.num_affines > 0) PetscCall(PetscFree2((*dm)->periodic.affine_to_local, (*dm)->periodic.affine));
 
   PetscCall(DMClearDS(*dm));
   PetscCall(DMDestroy(&(*dm)->dmBC));

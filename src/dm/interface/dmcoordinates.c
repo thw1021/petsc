@@ -1096,6 +1096,7 @@ PetscErrorCode DMSetCoordinateDisc(DM dm, PetscFE disc, PetscBool project)
   }
   // Make a fresh clone of the coordinate DM
   PetscCall(DMClone(cdmOld, &cdmNew));
+  PetscCall(PetscObjectComposeFunction((PetscObject)cdmNew, "DMGetIsoperiodicPointSF_C", NULL));
   cdmNew->cloneOpts = PETSC_TRUE;
   PetscCall(PetscObjectGetOptionsPrefix((PetscObject)cdmOld, &prefix));
   PetscCall(PetscObjectSetOptionsPrefix((PetscObject)cdmNew, prefix));
@@ -1107,10 +1108,6 @@ PetscErrorCode DMSetCoordinateDisc(DM dm, PetscFE disc, PetscBool project)
     PetscCall(DMGetDS(cdmOld, &ds));
     PetscCall(DMGetDS(cdmNew, &nds));
     PetscCall(PetscDSCopyConstants(ds, nds));
-  }
-  if (cdmOld->periodic.setup) {
-    cdmNew->periodic.setup = cdmOld->periodic.setup;
-    PetscCall(cdmNew->periodic.setup(cdmNew));
   }
   if (dm->setfromoptionscalled) PetscCall(DMSetFromOptions(cdmNew));
   if (project) {
