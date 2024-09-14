@@ -95,7 +95,6 @@ int main(int argc, char **args)
   }
 
   PetscCall(MatCreateVecs(A, &u, NULL));
-  PetscCall(VecSetFromOptions(u));
   PetscCall(VecDuplicate(u, &b));
   PetscCall(VecDuplicate(b, &x));
 
@@ -247,7 +246,7 @@ int main(int argc, char **args)
       suffix: hypre_device_cusparse
       output_file: output/ex4_hypre_device.out
       nsize: {{1 2}}
-      requires: hypre cuda defined(PETSC_HAVE_HYPRE_DEVICE)
-      args: -mat_type {{aij aijcusparse}} -vec_type cuda -ksp_converged_reason -pc_type hypre -m 13 -n 17
+      requires: hypre cuda
+      args: -mat_type {{aij aijcusparse}} -ksp_converged_reason -pc_type hypre -m 13 -n 17
 
 TEST*/

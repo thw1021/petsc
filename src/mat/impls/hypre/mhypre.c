@@ -92,6 +92,22 @@ static PetscErrorCode MatHYPRE_CreateFromMat(Mat A, Mat_HYPRE *hA)
     if (!hA->inner_free) hypre_IJMatrixObject(hA->ij) = NULL;
     PetscCallExternal(HYPRE_IJMatrixDestroy, hA->ij);
   }
+
+#if defined(PETSC_HAVE_HYPRE_DEVICE)
+  {
+    /* If the matrix is bound to CPU, either because A is a CPU matrix (e.g., MATMPIAIJ)
+      or because even A is a GPU matrix (e.g., MATMPIAIJCUSPARSE) but it is bound to CPU (thus
+      functions like MATMPIAIJ), we need to call hypre on CPU.
+    */
+    PetscBool boundtocpu;
+    MatBoundToCPU(A, &boundtocpu);
+    if (boundtocpu) {
+      HYPRE_SetMemoryLocation(HYPRE_MEMORY_HOST);
+      HYPRE_SetExecutionPolicy(HYPRE_EXEC_HOST);
+    }
+  }
+#endif
+
   PetscCallExternal(HYPRE_IJMatrixCreate, hA->comm, rstart, rend - 1, cstart, cend - 1, &hA->ij);
   PetscCallExternal(HYPRE_IJMatrixSetObjectType, hA->ij, HYPRE_PARCSR);
   {
@@ -2445,7 +2461,8 @@ PETSC_EXTERN PetscErrorCode MatCreate_HYPRE(Mat B)
   B->ops->productsetfromoptions = MatProductSetFromOptions_HYPRE;
 #if defined(PETSC_HAVE_HYPRE_DEVICE)
   B->ops->bindtocpu = MatBindToCPU_HYPRE;
-  B->boundtocpu     = PETSC_FALSE;
+  //  DO NOT set boundtocpu here; just inherite it from the caller, who might have just converted MATAIJ to MATHYPRE
+  //  B->boundtocpu     = PETSC_FALSE;
 #endif
 
   /* build cache for off array entries formed */
@@ -2465,14 +2482,18 @@ PETSC_EXTERN PetscErrorCode MatCreate_HYPRE(Mat B)
   #if defined(HYPRE_USING_HIP)
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatProductSetFromOptions_seqaijhipsparse_hypre_C", MatProductSetFromOptions_HYPRE));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatProductSetFromOptions_mpiaijhipsparse_hypre_C", MatProductSetFromOptions_HYPRE));
-  PetscCall(PetscDeviceInitialize(PETSC_DEVICE_HIP));
-  PetscCall(MatSetVecType(B, VECHIP));
+  if (!B->boundtocpu) {
+    PetscCall(PetscDeviceInitialize(PETSC_DEVICE_HIP));
+    PetscCall(MatSetVecType(B, VECHIP));
+  }
   #endif
   #if defined(HYPRE_USING_CUDA)
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatProductSetFromOptions_seqaijcusparse_hypre_C", MatProductSetFromOptions_HYPRE));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatProductSetFromOptions_mpiaijcusparse_hypre_C", MatProductSetFromOptions_HYPRE));
-  PetscCall(PetscDeviceInitialize(PETSC_DEVICE_CUDA));
-  PetscCall(MatSetVecType(B, VECCUDA));
+  if (!B->boundtocpu) {
+    PetscCall(PetscDeviceInitialize(PETSC_DEVICE_CUDA));
+    PetscCall(MatSetVecType(B, VECCUDA));
+  }
   #endif
 #endif
   PetscHYPREInitialize();
