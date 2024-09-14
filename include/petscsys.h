@@ -2413,130 +2413,120 @@ PETSC_EXTERN PetscErrorCode MPIU_Win_shared_query(MPI_Win, PetscMPIInt, MPI_Aint
 #endif
 
 #if !defined(PETSC_HAVE_MPI_LARGE_COUNT)
-/* Cast PetscCount <a> to PetscMPIInt <b>, where <a> is likely used for the 'count' argument in MPI routines.
-    It is similar to PetscMPIIntCast() except that here it returns an MPI error code.
-  */
-static inline PetscMPIInt PetscMPIIntCast_Internal(PetscCount a, PetscMPIInt *b)
-{
-  *b = 0; /* to prevent compilers erroneously suggesting uninitialized variable */
-  if (PetscUnlikely(a > (PetscCount)PETSC_MPI_INT_MAX)) return MPI_ERR_COUNT;
-  *b = (PetscMPIInt)a;
-  return MPI_SUCCESS;
-}
+  /*
+   Cast PetscCount <a> to PetscMPIInt <b>, where <a> is likely used for the 'count' argument in MPI routines.
+   It is similar to PetscMPIIntCast() except that here it returns an MPI error code.
+*/
+  #define PetscMPIIntCast_Internal(a, b) \
+    do { \
+      *b = 0; \
+      if (PetscUnlikely(a > (PetscCount)PETSC_MPI_INT_MAX)) return MPI_ERR_COUNT; \
+      *b = (PetscMPIInt)a; \
+    } while (0)
 
 static inline PetscMPIInt MPIU_Get_count(MPI_Status *status, MPI_Datatype dtype, PetscCount *count)
 {
-  PetscMPIInt count2;
+  PetscMPIInt count2, err;
 
-  PetscFunctionBegin;
   *count = 0; /* to prevent incorrect warnings of uninitialized variables */
-  PetscCallMPI(MPI_Get_count(status, dtype, &count2));
+  err    = MPI_Get_count(status, dtype, &count2);
   *count = count2;
-  PetscFunctionReturn(MPI_SUCCESS);
+  return err;
 }
 
 static inline PetscMPIInt MPIU_Send(const void *buf, PetscCount count, MPI_Datatype dtype, PetscMPIInt dest, PetscMPIInt tag, MPI_Comm comm)
 {
-  PetscMPIInt count2;
+  PetscMPIInt count2, err;
 
-  PetscFunctionBegin;
-  PetscCallMPI(PetscMPIIntCast_Internal(count, &count2));
-  PetscCallMPI(MPI_Send((void *)buf, count2, dtype, dest, tag, comm));
-  PetscFunctionReturn(MPI_SUCCESS);
+  PetscMPIIntCast_Internal(count, &count2);
+  err = MPI_Send((void *)buf, count2, dtype, dest, tag, comm);
+  return err;
 }
 
 static inline PetscMPIInt MPIU_Send_init(const void *buf, PetscCount count, MPI_Datatype dtype, PetscMPIInt dest, PetscMPIInt tag, MPI_Comm comm, MPI_Request *request)
 {
-  PetscMPIInt count2;
+  PetscMPIInt count2, err;
 
-  PetscFunctionBegin;
-  PetscCallMPI(PetscMPIIntCast_Internal(count, &count2));
-  PetscCallMPI(MPI_Send_init((void *)buf, count2, dtype, dest, tag, comm, request));
-  PetscFunctionReturn(MPI_SUCCESS);
+  PetscMPIIntCast_Internal(count, &count2);
+  err = MPI_Send_init((void *)buf, count2, dtype, dest, tag, comm, request);
+  return err;
 }
 
 static inline PetscMPIInt MPIU_Isend(const void *buf, PetscCount count, MPI_Datatype dtype, PetscMPIInt dest, PetscMPIInt tag, MPI_Comm comm, MPI_Request *request)
 {
-  PetscMPIInt count2;
+  PetscMPIInt count2, err;
 
-  PetscFunctionBegin;
-  PetscCallMPI(PetscMPIIntCast_Internal(count, &count2));
-  PetscCallMPI(MPI_Isend((void *)buf, count2, dtype, dest, tag, comm, request));
-  PetscFunctionReturn(MPI_SUCCESS);
+  PetscMPIIntCast_Internal(count, &count2);
+  err = MPI_Isend((void *)buf, count2, dtype, dest, tag, comm, request);
+  return err;
 }
 
 static inline PetscMPIInt MPIU_Recv(const void *buf, PetscCount count, MPI_Datatype dtype, PetscMPIInt source, PetscMPIInt tag, MPI_Comm comm, MPI_Status *status)
 {
-  PetscMPIInt count2;
+  PetscMPIInt count2, err;
 
-  PetscFunctionBegin;
-  PetscCallMPI(PetscMPIIntCast_Internal(count, &count2));
-  PetscCallMPI(MPI_Recv((void *)buf, count2, dtype, source, tag, comm, status));
-  PetscFunctionReturn(MPI_SUCCESS);
+  PetscMPIIntCast_Internal(count, &count2);
+  err = MPI_Recv((void *)buf, count2, dtype, source, tag, comm, status);
+  return err;
 }
 
 static inline PetscMPIInt MPIU_Recv_init(const void *buf, PetscCount count, MPI_Datatype dtype, PetscMPIInt source, PetscMPIInt tag, MPI_Comm comm, MPI_Request *request)
 {
-  PetscMPIInt count2;
+  PetscMPIInt count2, err;
 
-  PetscFunctionBegin;
-  PetscCallMPI(PetscMPIIntCast_Internal(count, &count2));
-  PetscCallMPI(MPI_Recv_init((void *)buf, count2, dtype, source, tag, comm, request));
-  PetscFunctionReturn(MPI_SUCCESS);
+  PetscMPIIntCast_Internal(count, &count2);
+  err = MPI_Recv_init((void *)buf, count2, dtype, source, tag, comm, request);
+  return err;
 }
 
 static inline PetscMPIInt MPIU_Irecv(const void *buf, PetscCount count, MPI_Datatype dtype, PetscMPIInt source, PetscMPIInt tag, MPI_Comm comm, MPI_Request *request)
 {
-  PetscMPIInt count2;
+  PetscMPIInt count2, err;
 
-  PetscFunctionBegin;
-  PetscCallMPI(PetscMPIIntCast_Internal(count, &count2));
-  PetscCallMPI(MPI_Irecv((void *)buf, count2, dtype, source, tag, comm, request));
-  PetscFunctionReturn(MPI_SUCCESS);
+  PetscMPIIntCast_Internal(count, &count2);
+  err = MPI_Irecv((void *)buf, count2, dtype, source, tag, comm, request);
+  return err;
 }
 
 static inline PetscMPIInt MPIU_Reduce(const void *inbuf, void *outbuf, PetscCount count, MPI_Datatype dtype, MPI_Op op, PetscMPIInt root, MPI_Comm comm)
 {
-  PetscMPIInt count2;
+  PetscMPIInt count2, err;
 
-  PetscFunctionBegin;
-  PetscCallMPI(PetscMPIIntCast_Internal(count, &count2));
-  PetscCallMPI(MPI_Reduce((void *)inbuf, outbuf, count2, dtype, op, root, comm));
-  PetscFunctionReturn(MPI_SUCCESS);
+  PetscMPIIntCast_Internal(count, &count2);
+  err = MPI_Reduce((void *)inbuf, outbuf, count2, dtype, op, root, comm);
+  return err;
 }
 
   #if defined(PETSC_HAVE_MPI_REDUCE_LOCAL)
 static inline PetscMPIInt MPIU_Reduce_local(const void *inbuf, void *inoutbuf, PetscCount count, MPI_Datatype dtype, MPI_Op op)
 {
-  PetscMPIInt count2;
+  PetscMPIInt count2, err;
 
-  PetscFunctionBegin;
-  PetscCallMPI(PetscMPIIntCast_Internal(count, &count2));
-  PetscCallMPI(MPI_Reduce_local((void *)inbuf, inoutbuf, count2, dtype, op));
-  PetscFunctionReturn(MPI_SUCCESS);
+  PetscMPIIntCast_Internal(count, &count2);
+  err = MPI_Reduce_local((void *)inbuf, inoutbuf, count2, dtype, op);
+  return err;
 }
   #endif
 
 #else
 
-/* on 32 bit systems MPI_Count maybe 64-bit while PetscCount is 32-bit */
-static inline PetscMPIInt PetscCountCast_Internal(MPI_Count a, PetscCount *b)
-{
-  *b = 0; /* to prevent compilers erroneously suggesting uninitialized variable */
-  if (PetscUnlikely(a > (MPI_Count)PETSC_COUNT_MAX)) return MPI_ERR_COUNT;
-  *b = (PetscCount)a;
-  return MPI_SUCCESS;
-}
+  /* on 32 bit systems MPI_Count maybe 64-bit while PetscCount is 32-bit */
+  #define PetscMPICountCast_Internal(a, b) \
+    do { \
+      *b = 0; \
+      if (PetscUnlikely(a > (MPI_Count)PETSC_COUNT_MAX)) return MPI_ERR_COUNT; \
+      *b = (PetscMPIInt)a; \
+    } while (0)
 
 static inline PetscMPIInt MPIU_Get_count(MPI_Status *status, MPI_Datatype dtype, PetscCount *count)
 {
-  MPI_Count count2;
+  MPI_Count count2, err;
 
-  PetscFunctionBegin;
   *count = 0; /* to prevent incorrect warnings of uninitialized variables */
-  PetscCallMPI(MPI_Get_count_c(status, dtype, &count2));
-  PetscCallMPI(PetscCountCast_Internal(count2, count));
-  PetscFunctionReturn(MPI_SUCCESS);
+  err    = MPI_Get_count_c(status, dtype, &count2);
+  if (err) return err;
+ PetscCountCast_Internal(count2, count));
+ return MPI_SUCCESS;
 }
 
   #define MPIU_Reduce(inbuf, outbuf, count, dtype, op, root, comm)      MPI_Reduce_c(inbuf, outbuf, (MPI_Count)(count), dtype, op, root, comm)
@@ -2564,14 +2554,14 @@ static inline unsigned int PetscStrHash(const char *str)
 #endif
 
 /*MC
-  MPIU_Allreduce - A replacement for `MPI_Allreduce()` that (1) performs single-count `MPIU_INT` operations in `PetscCount` to detect
-                   integer overflows and (2) tries to determine if the call from all the MPI ranks occur from the
+  MPIU_Allreduce - A replacement for `MPI_Allreduce()` that (1) performs single-count `MPIU_INT` operations in `PetscInt64` to detect
+                   integer overflows and (2) tries to determine if the call from all the MPI ranks occur in the
                    same place in the PETSc code. This helps to detect bugs where different MPI ranks follow different code paths
                    resulting in inconsistent and incorrect calls to `MPI_Allreduce()`.
 
   Synopsis:
   #include <petscsys.h>
-  PetscErrorCode MPIU_Allreduce(void *indata,void *outdata,PetscCount count,MPI_Datatype dtype, MPI_Op op, MPI_Comm comm);
+  PetscMPIInt MPIU_Allreduce(void *indata,void *outdata,PetscCount count,MPI_Datatype dtype, MPI_Op op, MPI_Comm comm);
 
   Collective
 
@@ -2586,6 +2576,9 @@ static inline unsigned int PetscStrHash(const char *str)
 . b - the reduced values
 
   Level: developer
+
+  Note:
+  Should be wrapped with `PetscCallMPI()` for error checking
 
 .seealso: [](stylePetscCount), `MPI_Allreduce()`
 M*/
@@ -2602,12 +2595,12 @@ M*/
     a_b1[5] = -a_b1[4]; \
     \
     PetscCallMPI(MPI_Allreduce(a_b1, a_b2, 6, MPI_INT, MPI_MAX, fcomm)); \
-    PetscCheck(-a_b2[0] == a_b2[1], PETSC_COMM_SELF, PETSC_ERR_PLIB, "MPIU_Allreduce() called in different locations (code lines) on different processors"); \
-    PetscCheck(-a_b2[2] == a_b2[3], PETSC_COMM_SELF, PETSC_ERR_PLIB, "MPIU_Allreduce() called in different locations (functions) on different processors"); \
-    PetscCheck(-a_b2[4] == a_b2[5], PETSC_COMM_SELF, PETSC_ERR_PLIB, "MPIU_Allreduce() called with different counts %d on different processors", _mpiu_allreduce_c_int); \
+    PetscCheck(-a_b2[0] == a_b2[1], (fcomm), PETSC_ERR_PLIB, "MPIU_Allreduce() called in different locations (code lines) on different processors"); \
+    PetscCheck(-a_b2[2] == a_b2[3], (fcomm), PETSC_ERR_PLIB, "MPIU_Allreduce() called in different locations (functions) on different processors"); \
+    PetscCheck(-a_b2[4] == a_b2[5], (fcomm), PETSC_ERR_PLIB, "MPIU_Allreduce() called with different counts %d on different processors", _mpiu_allreduce_c_int); \
     PetscCallMPI(MPIU_Allreduce_Private((a), (b), (c), (d), (e), (fcomm)));)
 #else
-  #define MPIU_Allreduce(a, b, c, d, e, fcomm) PetscMacroReturnStandard(PetscCallMPI(MPIU_Allreduce_Private((a), (b), (c), (d), (e), (fcomm))))
+  #define MPIU_Allreduce(a, b, c, d, e, fcomm) MPIU_Allreduce_Private((a), (b), (c), (d), (e), (fcomm))
 #endif
 
 #if defined(PETSC_HAVE_MPI_PROCESS_SHARED_MEMORY)
