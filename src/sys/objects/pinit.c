@@ -1829,8 +1829,9 @@ PETSC_EXTERN int lsame(char *a, char *b)
 
 static inline PetscMPIInt MPIU_Allreduce_Count(const void *inbuf, void *outbuf, MPIU_Count count, MPI_Datatype dtype, MPI_Op op, MPI_Comm comm)
 {
+  PetscMPIInt err;
 #if !defined(PETSC_HAVE_MPI_LARGE_COUNT)
-  PetscMPIInt count2, err;
+  PetscMPIInt count2;
 
   PetscMPIIntCast_Internal(count, &count2);
   err = MPI_Allreduce((void *)inbuf, outbuf, count2, dtype, op, comm);

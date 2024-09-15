@@ -2517,22 +2517,23 @@ static inline PetscMPIInt MPIU_Reduce_local(const void *inbuf, void *inoutbuf, M
 #else
 
   /* on 32 bit systems MPI_Count maybe 64-bit while PetscCount is 32-bit */
-  #define PetscMPICountCast_Internal(a, b) \
+  #define PetscCountCast_Internal(a, b) \
     do { \
       *b = 0; \
-      if (PetscUnlikely(a > (MPIU_Count)PETSC_COUNT_MAX)) return MPI_ERR_COUNT; \
+      if (PetscUnlikely(a > (MPI_Count)PETSC_COUNT_MAX)) return MPI_ERR_COUNT; \
       *b = (PetscMPIInt)a; \
     } while (0)
 
 static inline PetscMPIInt MPIU_Get_count(MPI_Status *status, MPI_Datatype dtype, PetscCount *count)
 {
-  MPI_Count count2, err;
+  MPI_Count   count2;
+  PetscMPIInt err;
 
   *count = 0; /* to prevent incorrect warnings of uninitialized variables */
   err    = MPI_Get_count_c(status, dtype, &count2);
   if (err) return err;
- PetscCountCast_Internal(count2, count));
- return MPI_SUCCESS;
+  PetscCountCast_Internal(count2, count);
+  return MPI_SUCCESS;
 }
 
   #define MPIU_Reduce(inbuf, outbuf, count, dtype, op, root, comm)      MPI_Reduce_c(inbuf, outbuf, (MPI_Count)(count), dtype, op, root, comm)

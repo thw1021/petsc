@@ -15,7 +15,7 @@ int main(int argc, char **args)
 /*TEST
 
    test:
-     requires: !defined(PETSC_HAVE_MPI_LARGE_COUNT) defined(PETSC_HAVE_64_BIT_INDICES) 
+     requires: !defined(PETSC_HAVE_MPI_LARGE_COUNT) defined(PETSC_HAVE_64_BIT_INDICES)
      args: -petsc_ci_portable_error_output -error_output_stdout
      filter: grep -E "(PETSC ERROR)" | egrep "(Error Created|CreateError\(\)|main\(\))"
 
