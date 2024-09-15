@@ -1713,8 +1713,14 @@ PETSC_EXTERN PetscErrorCode MPIU_File_write_at_all(MPI_File, MPI_Offset, void *,
 PETSC_EXTERN PetscErrorCode MPIU_File_read_at_all(MPI_File, MPI_Offset, void *, PetscMPIInt, MPI_Datatype, MPI_Status *) PETSC_ATTRIBUTE_MPI_POINTER_WITH_TYPE(3, 5);
 #endif
 
+#if defined(PETSC_HAVE_MPI_COUNT)
+typedef MPI_Count MPIU_Count;
+#else
+typedef PetscInt64 MPIU_Count;
+#endif
+
 /*@C
-   PetscIntCast - casts a `PetscInt64`, `PetscCount`, or `size_t` to a `PetscInt` (which may be 32-bits in size), generates an
+   PetscIntCast - casts a `MPI_Count`, `PetscInt64`, `PetscCount`, or `size_t` to a `PetscInt` (which may be 32-bits in size), generates an
    error if the `PetscInt` is not large enough to hold the number.
 
    Not Collective; No Fortran Support
@@ -1732,17 +1738,17 @@ PETSC_EXTERN PetscErrorCode MPIU_File_read_at_all(MPI_File, MPI_Offset, void *, 
 
 .seealso: `PetscBLASInt`, `PetscMPIInt`, `PetscInt`, `PetscMPIIntCast()`, `PetscBLASIntCast()`, `PetscIntMultError()`, `PetscIntSumError()`
 @*/
-static inline PetscErrorCode PetscIntCast(PetscInt64 a, PetscInt *b)
+static inline PetscErrorCode PetscIntCast(MPIU_Count a, PetscInt *b)
 {
   PetscFunctionBegin;
   if (b) *b = 0; /* to prevent compilers erroneously suggesting uninitialized variable */
-  PetscCheck(sizeof(PetscInt64) <= sizeof(PetscInt) || (a <= (PetscInt64)PETSC_INT_MAX && a >= (PetscInt64)PETSC_INT_MIN), PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "%" PetscInt64_FMT " is too big for PetscInt, you may need to ./configure using --with-64-bit-indices", a);
+  PetscCheck(sizeof(MPIU_Count) <= sizeof(PetscInt) || (a <= (MPIU_Count)PETSC_INT_MAX && a >= (MPIU_Count)PETSC_INT_MIN), PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "%" PetscInt64_FMT " is too big for PetscInt, you may need to ./configure using --with-64-bit-indices", (PetscInt64)a);
   if (b) *b = (PetscInt)a;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-   PetscBLASIntCast - casts a `PetscInt` (which may be 64-bits in size) or `PetscInt64` to a `PetscBLASInt` (which may be 32-bits in size), generates an
+   PetscBLASIntCast - casts a `MPI_Count`, `PetscInt`, `PetscCount` or `PetscInt64` to a `PetscBLASInt` (which may be 32-bits in size), generates an
    error if the `PetscBLASInt` is not large enough to hold the number.
 
    Not Collective; No Fortran Support
@@ -1760,11 +1766,11 @@ static inline PetscErrorCode PetscIntCast(PetscInt64 a, PetscInt *b)
 
 .seealso: `PetscBLASInt`, `PetscMPIInt`, `PetscInt`, `PetscMPIIntCast()`, `PetscIntCast()`
 @*/
-static inline PetscErrorCode PetscBLASIntCast(PetscInt64 a, PetscBLASInt *b)
+static inline PetscErrorCode PetscBLASIntCast(MPIU_Count a, PetscBLASInt *b)
 {
   PetscFunctionBegin;
   if (b) *b = 0; /* to prevent compilers erroneously suggesting uninitialized variable */
-  PetscCheck(sizeof(PetscInt64) <= sizeof(PetscBLASInt) || a <= (PetscInt64)PETSC_BLAS_INT_MAX, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "%" PetscInt64_FMT " is too big for BLAS/LAPACK, which is restricted to 32-bit integers. Either you have an invalidly large integer error in your code or you must ./configure PETSc with --with-64-bit-blas-indices for the case you are running", a);
+  PetscCheck(sizeof(MPIU_Count) <= sizeof(PetscBLASInt) || a <= (MPIU_Count)PETSC_BLAS_INT_MAX, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "%" PetscInt64_FMT " is too big for BLAS/LAPACK, which is restricted to 32-bit integers. Either you have an invalidly large integer error in your code or you must ./configure PETSc with --with-64-bit-blas-indices for the case you are running", (PetscInt64)a);
   PetscCheck(a >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Passing negative integer to BLAS/LAPACK routine");
   if (b) *b = (PetscBLASInt)a;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1788,12 +1794,12 @@ static inline PetscErrorCode PetscBLASIntCast(PetscInt64 a, PetscBLASInt *b)
 
 .seealso: `PetscCuBLASInt`, `PetscBLASInt`, `PetscMPIInt`, `PetscInt`, `PetscBLASIntCast()`, `PetscMPIIntCast()`, `PetscIntCast()`
 @*/
-static inline PetscErrorCode PetscCuBLASIntCast(PetscInt64 a, PetscCuBLASInt *b)
+static inline PetscErrorCode PetscCuBLASIntCast(MPIU_Count a, PetscCuBLASInt *b)
 {
   PetscFunctionBegin;
   if (b) *b = 0; /* to prevent compilers erroneously suggesting uninitialized variable */
-  PetscCheck(sizeof(PetscInt64) <= sizeof(PetscCuBLASInt) || a <= (PetscInt64)PETSC_CUBLAS_INT_MAX, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "%" PetscInt64_FMT " is too big for cuBLAS, which is restricted to 32-bit integers.", a);
-  PetscCheck(a >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Passing negative integer %" PetscInt64_FMT "to cuBLAS routine", a);
+  PetscCheck(sizeof(MPIU_Count) <= sizeof(PetscCuBLASInt) || a <= (MPIU_Count)PETSC_CUBLAS_INT_MAX, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "%" PetscInt64_FMT " is too big for cuBLAS, which is restricted to 32-bit integers.", (PetscInt64)a);
+  PetscCheck(a >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Passing negative integer %" PetscInt64_FMT "to cuBLAS routine", (PetscInt64)a);
   if (b) *b = (PetscCuBLASInt)a;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1816,18 +1822,18 @@ static inline PetscErrorCode PetscCuBLASIntCast(PetscInt64 a, PetscCuBLASInt *b)
 
 .seealso: `PetscHipBLASInt`, `PetscBLASInt`, `PetscMPIInt`, `PetscInt`, `PetscBLASIntCast()`, `PetscMPIIntCast()`, `PetscIntCast()`
 @*/
-static inline PetscErrorCode PetscHipBLASIntCast(PetscInt64 a, PetscHipBLASInt *b)
+static inline PetscErrorCode PetscHipBLASIntCast(MPIU_Count a, PetscHipBLASInt *b)
 {
   PetscFunctionBegin;
   if (b) *b = 0; /* to prevent compilers erroneously suggesting uninitialized variable */
-  PetscCheck(sizeof(PetscInt64) <= sizeof(PetscHipBLASInt) || a <= (PetscInt64)PETSC_HIPBLAS_INT_MAX, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "%" PetscInt64_FMT " is too big for hipBLAS, which is restricted to 32-bit integers.", a);
-  PetscCheck(a >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Passing negative integer %" PetscInt64_FMT "to hipBLAS routine", a);
+  PetscCheck(sizeof(MPIU_Count) <= sizeof(PetscHipBLASInt) || a <= (MPIU_Count)PETSC_HIPBLAS_INT_MAX, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "%" PetscInt64_FMT " is too big for hipBLAS, which is restricted to 32-bit integers.", (PetscInt64)a);
+  PetscCheck(a >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Passing negative integer %" PetscInt64_FMT "to hipBLAS routine", (PetscInt64)a);
   if (b) *b = (PetscHipBLASInt)a;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-   PetscMPIIntCast - casts a `PetscInt` (which may be 64-bits in size) or `PetscCount` to a `PetscMPIInt` (which may be 32-bits in size), generates an
+   PetscMPIIntCast - casts a `MPI_Count`, `PetscInt`, `PetscCount`, or `PetscInt64` to a `PetscMPIInt` (which is always 32-bits in size), generates an
    error if the `PetscMPIInt` is not large enough to hold the number.
 
    Not Collective; No Fortran Support
@@ -1842,11 +1848,11 @@ static inline PetscErrorCode PetscHipBLASIntCast(PetscInt64 a, PetscHipBLASInt *
 
 .seealso: [](stylePetscCount), `PetscBLASInt`, `PetscMPIInt`, `PetscInt`, `PetscBLASIntCast()`, `PetscIntCast()`
 @*/
-static inline PetscErrorCode PetscMPIIntCast(PetscInt64 a, PetscMPIInt *b)
+static inline PetscErrorCode PetscMPIIntCast(MPIU_Count a, PetscMPIInt *b)
 {
   PetscFunctionBegin;
   if (b) *b = 0; /* to prevent compilers erroneously suggesting uninitialized variable */
-  PetscCheck(a <= (PetscInt64)PETSC_MPI_INT_MAX && a >= (PetscInt64)PETSC_MPI_INT_MIN, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "%" PetscInt64_FMT " is too big for MPI buffer length. Maximum supported value is %d", a, PETSC_MPI_INT_MAX);
+  PetscCheck(a <= (MPIU_Count)PETSC_MPI_INT_MAX && a >= (MPIU_Count)PETSC_MPI_INT_MIN, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "%" PetscInt64_FMT " is too big for MPI buffer length. Maximum supported value is %d", (PetscInt64)a, PETSC_MPI_INT_MAX);
   if (b) *b = (PetscMPIInt)a;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -2420,7 +2426,7 @@ PETSC_EXTERN PetscErrorCode MPIU_Win_shared_query(MPI_Win, PetscMPIInt, MPI_Aint
   #define PetscMPIIntCast_Internal(a, b) \
     do { \
       *b = 0; \
-      if (PetscUnlikely(a > (PetscCount)PETSC_MPI_INT_MAX)) return MPI_ERR_COUNT; \
+      if (PetscUnlikely(a > (MPIU_Count)PETSC_MPI_INT_MAX)) return MPI_ERR_COUNT; \
       *b = (PetscMPIInt)a; \
     } while (0)
 
@@ -2434,7 +2440,7 @@ static inline PetscMPIInt MPIU_Get_count(MPI_Status *status, MPI_Datatype dtype,
   return err;
 }
 
-static inline PetscMPIInt MPIU_Send(const void *buf, PetscCount count, MPI_Datatype dtype, PetscMPIInt dest, PetscMPIInt tag, MPI_Comm comm)
+static inline PetscMPIInt MPIU_Send(const void *buf, MPIU_Count count, MPI_Datatype dtype, PetscMPIInt dest, PetscMPIInt tag, MPI_Comm comm)
 {
   PetscMPIInt count2, err;
 
@@ -2443,7 +2449,7 @@ static inline PetscMPIInt MPIU_Send(const void *buf, PetscCount count, MPI_Datat
   return err;
 }
 
-static inline PetscMPIInt MPIU_Send_init(const void *buf, PetscCount count, MPI_Datatype dtype, PetscMPIInt dest, PetscMPIInt tag, MPI_Comm comm, MPI_Request *request)
+static inline PetscMPIInt MPIU_Send_init(const void *buf, MPIU_Count count, MPI_Datatype dtype, PetscMPIInt dest, PetscMPIInt tag, MPI_Comm comm, MPI_Request *request)
 {
   PetscMPIInt count2, err;
 
@@ -2452,7 +2458,7 @@ static inline PetscMPIInt MPIU_Send_init(const void *buf, PetscCount count, MPI_
   return err;
 }
 
-static inline PetscMPIInt MPIU_Isend(const void *buf, PetscCount count, MPI_Datatype dtype, PetscMPIInt dest, PetscMPIInt tag, MPI_Comm comm, MPI_Request *request)
+static inline PetscMPIInt MPIU_Isend(const void *buf, MPIU_Count count, MPI_Datatype dtype, PetscMPIInt dest, PetscMPIInt tag, MPI_Comm comm, MPI_Request *request)
 {
   PetscMPIInt count2, err;
 
@@ -2461,7 +2467,7 @@ static inline PetscMPIInt MPIU_Isend(const void *buf, PetscCount count, MPI_Data
   return err;
 }
 
-static inline PetscMPIInt MPIU_Recv(const void *buf, PetscCount count, MPI_Datatype dtype, PetscMPIInt source, PetscMPIInt tag, MPI_Comm comm, MPI_Status *status)
+static inline PetscMPIInt MPIU_Recv(const void *buf, MPIU_Count count, MPI_Datatype dtype, PetscMPIInt source, PetscMPIInt tag, MPI_Comm comm, MPI_Status *status)
 {
   PetscMPIInt count2, err;
 
@@ -2470,7 +2476,7 @@ static inline PetscMPIInt MPIU_Recv(const void *buf, PetscCount count, MPI_Datat
   return err;
 }
 
-static inline PetscMPIInt MPIU_Recv_init(const void *buf, PetscCount count, MPI_Datatype dtype, PetscMPIInt source, PetscMPIInt tag, MPI_Comm comm, MPI_Request *request)
+static inline PetscMPIInt MPIU_Recv_init(const void *buf, MPIU_Count count, MPI_Datatype dtype, PetscMPIInt source, PetscMPIInt tag, MPI_Comm comm, MPI_Request *request)
 {
   PetscMPIInt count2, err;
 
@@ -2479,7 +2485,7 @@ static inline PetscMPIInt MPIU_Recv_init(const void *buf, PetscCount count, MPI_
   return err;
 }
 
-static inline PetscMPIInt MPIU_Irecv(const void *buf, PetscCount count, MPI_Datatype dtype, PetscMPIInt source, PetscMPIInt tag, MPI_Comm comm, MPI_Request *request)
+static inline PetscMPIInt MPIU_Irecv(const void *buf, MPIU_Count count, MPI_Datatype dtype, PetscMPIInt source, PetscMPIInt tag, MPI_Comm comm, MPI_Request *request)
 {
   PetscMPIInt count2, err;
 
@@ -2488,7 +2494,7 @@ static inline PetscMPIInt MPIU_Irecv(const void *buf, PetscCount count, MPI_Data
   return err;
 }
 
-static inline PetscMPIInt MPIU_Reduce(const void *inbuf, void *outbuf, PetscCount count, MPI_Datatype dtype, MPI_Op op, PetscMPIInt root, MPI_Comm comm)
+static inline PetscMPIInt MPIU_Reduce(const void *inbuf, void *outbuf, MPIU_Count count, MPI_Datatype dtype, MPI_Op op, PetscMPIInt root, MPI_Comm comm)
 {
   PetscMPIInt count2, err;
 
@@ -2498,7 +2504,7 @@ static inline PetscMPIInt MPIU_Reduce(const void *inbuf, void *outbuf, PetscCoun
 }
 
   #if defined(PETSC_HAVE_MPI_REDUCE_LOCAL)
-static inline PetscMPIInt MPIU_Reduce_local(const void *inbuf, void *inoutbuf, PetscCount count, MPI_Datatype dtype, MPI_Op op)
+static inline PetscMPIInt MPIU_Reduce_local(const void *inbuf, void *inoutbuf, MPIU_Count count, MPI_Datatype dtype, MPI_Op op)
 {
   PetscMPIInt count2, err;
 
@@ -2514,7 +2520,7 @@ static inline PetscMPIInt MPIU_Reduce_local(const void *inbuf, void *inoutbuf, P
   #define PetscMPICountCast_Internal(a, b) \
     do { \
       *b = 0; \
-      if (PetscUnlikely(a > (MPI_Count)PETSC_COUNT_MAX)) return MPI_ERR_COUNT; \
+      if (PetscUnlikely(a > (MPIU_Count)PETSC_COUNT_MAX)) return MPI_ERR_COUNT; \
       *b = (PetscMPIInt)a; \
     } while (0)
 
@@ -2541,7 +2547,7 @@ static inline PetscMPIInt MPIU_Get_count(MPI_Status *status, MPI_Datatype dtype,
   #endif
 #endif
 
-PETSC_EXTERN PetscMPIInt MPIU_Allreduce_Private(const void *, void *, PetscCount, MPI_Datatype, MPI_Op, MPI_Comm);
+PETSC_EXTERN PetscMPIInt MPIU_Allreduce_Private(const void *, void *, MPIU_Count, MPI_Datatype, MPI_Op, MPI_Comm);
 
 #if defined(PETSC_USE_DEBUG)
 static inline unsigned int PetscStrHash(const char *str)
@@ -2561,7 +2567,7 @@ static inline unsigned int PetscStrHash(const char *str)
 
   Synopsis:
   #include <petscsys.h>
-  PetscMPIInt MPIU_Allreduce(void *indata,void *outdata,PetscCount count,MPI_Datatype dtype, MPI_Op op, MPI_Comm comm);
+  PetscMPIInt MPIU_Allreduce(void *indata,void *outdata,MPIU_Count count,MPI_Datatype dtype, MPI_Op op, MPI_Comm comm);
 
   Collective
 

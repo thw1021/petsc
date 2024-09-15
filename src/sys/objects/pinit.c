@@ -1827,7 +1827,7 @@ PETSC_EXTERN int lsame(char *a, char *b)
 }
 #endif
 
-static inline PetscMPIInt MPIU_Allreduce_Count(const void *inbuf, void *outbuf, PetscCount count, MPI_Datatype dtype, MPI_Op op, MPI_Comm comm)
+static inline PetscMPIInt MPIU_Allreduce_Count(const void *inbuf, void *outbuf, MPIU_Count count, MPI_Datatype dtype, MPI_Op op, MPI_Comm comm)
 {
 #if !defined(PETSC_HAVE_MPI_LARGE_COUNT)
   PetscMPIInt count2, err;
@@ -1843,7 +1843,7 @@ static inline PetscMPIInt MPIU_Allreduce_Count(const void *inbuf, void *outbuf, 
 /*
      When count is 1 and dtype == MPIU_INT performs the reduction in PetscInt64 to check for integer overflow
 */
-PetscMPIInt MPIU_Allreduce_Private(const void *inbuf, void *outbuf, PetscCount count, MPI_Datatype dtype, MPI_Op op, MPI_Comm comm)
+PetscMPIInt MPIU_Allreduce_Private(const void *inbuf, void *outbuf, MPIU_Count count, MPI_Datatype dtype, MPI_Op op, MPI_Comm comm)
 {
   PetscMPIInt err;
   if (!PetscDefined(USE_64BIT_INDICES) && count == 1 && dtype == MPIU_INT) {
