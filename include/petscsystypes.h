@@ -176,7 +176,7 @@ typedef int PetscClassId;
     `PetscMPIIntCast`(a,&b) checks if the given `PetscInt` a will fit in a `PetscMPIInt`, if not it
     generates a `PETSC_ERR_ARG_OUTOFRANGE` error.
 
-.seealso: `PetscBLASInt`, `PetscInt`, `PetscMPIIntCast()`
+.seealso: [](stylePetscCount), `PetscBLASInt`, `PetscInt`, `PetscMPIIntCast()`
 M*/
 typedef int PetscMPIInt;
 
@@ -208,7 +208,7 @@ typedef size_t PetscSizeT;
 
     Use `PetscCount_FMT` to format with `PetscPrintf()`, `printf()`, and related functions.
 
-.seealso: `PetscInt`, `PetscInt64`, `PetscSizeT`
+.seealso: [](stylePetscCount), `PetscInt`, `PetscInt64`, `PetscSizeT`
 M*/
 typedef ptrdiff_t PetscCount;
 #define PetscCount_FMT "td"
@@ -273,6 +273,14 @@ typedef __int64 PetscInt64;
 
 #else
   #error "cannot determine PetscInt64 type"
+#endif
+
+#if PETSC_SIZEOF_SIZE_T == 4
+  #define PETSC_COUNT_MIN INT_MIN
+  #define PETSC_COUNT_MAX INT_MAX
+#else
+  #define PETSC_COUNT_MIN PETSC_INT64_MIN
+  #define PETSC_COUNT_MAX PETSC_INT64_MAX
 #endif
 
 typedef int32_t PetscInt32;
