@@ -243,13 +243,23 @@ PetscErrorCode TaoSetObjective(Tao tao, PetscErrorCode (*func)(Tao tao, Vec x, P
 
   Level: beginner
 
+  Note:
+  In addition to specifying an objective function using callbacks like
+  `TaoSetObjective()` and `TaoSetGradient()`, Tao also has an object-oriented
+  approach to specifying objective functions with `TaoSetObjectiveTerm()` and
+  `TaoAddObjectiveTerm()`.
+
+  `TaoGetObjective()` will always return the callback specified with
+  `TaoSetObjective()`, even if the objective function has been changed by
+  calling `TaoSetObjectiveTerm()` and/or `TaoAddObjectiveTerm()`.
+
 .seealso: [](ch_tao), `Tao`, `TaoSetGradient()`, `TaoSetHessian()`, `TaoSetObjective()`
 @*/
 PetscErrorCode TaoGetObjective(Tao tao, PetscErrorCode (**func)(Tao tao, Vec x, PetscReal *f, void *ctx), void **ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  if (func || ctx) PetscCall(TaoTermTaoCallbacksGetObjective(tao->objective_term.term, func, ctx));
+  if (func || ctx) PetscCall(TaoTermTaoCallbacksGetObjective(tao->orig_callbacks, func, ctx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -438,6 +448,16 @@ PetscErrorCode TaoSetGradient(Tao tao, Vec g, PetscErrorCode (*func)(Tao tao, Ve
 
   Level: beginner
 
+  Note:
+  In addition to specifying an objective function using callbacks like
+  `TaoSetObjective()` and `TaoSetGradient()`, Tao also has an object-oriented
+  approach to specifying objective functions with `TaoSetObjectiveTerm()` and
+  `TaoAddObjectiveTerm()`.
+
+  `TaoGetGradient()` will always return the callback specified with
+  `TaoSetGradient()`, even if the objective function has been changed by
+  calling `TaoSetObjectiveTerm()` and/or `TaoAddObjectiveTerm()`.
+
 .seealso: [](ch_tao), `Tao`, `TaoSetObjective()`, `TaoSetHessian()`, `TaoSetObjectiveAndGradient()`, `TaoSetGradient()`
 @*/
 PetscErrorCode TaoGetGradient(Tao tao, Vec *g, PetscErrorCode (**func)(Tao tao, Vec x, Vec g, void *ctx), void **ctx)
@@ -445,7 +465,7 @@ PetscErrorCode TaoGetGradient(Tao tao, Vec *g, PetscErrorCode (**func)(Tao tao, 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
   if (g) *g = tao->gradient;
-  if (func || ctx) PetscCall(TaoTermTaoCallbacksGetGradient(tao->objective_term.term, func, ctx));
+  if (func || ctx) PetscCall(TaoTermTaoCallbacksGetGradient(tao->orig_callbacks, func, ctx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -512,6 +532,16 @@ PetscErrorCode TaoSetObjectiveAndGradient(Tao tao, Vec g, PetscErrorCode (*func)
 
   Level: beginner
 
+  Note:
+  In addition to specifying an objective function using callbacks like
+  `TaoSetObjectiveAndGradient()`, Tao also has an object-oriented
+  approach to specifying objective functions with `TaoSetObjectiveTerm()` and
+  `TaoAddObjectiveTerm()`.
+
+  `TaoGetObjectiveAndGradient()` will always return the callback specified with
+  `TaoSetObjectiveAndGradient()`, even if the objective function has been changed by
+  calling `TaoSetObjectiveTerm()` and/or `TaoAddObjectiveTerm()`.
+
 .seealso: [](ch_tao), `Tao`, `TaoSolve()`, `TaoSetObjective()`, `TaoSetGradient()`, `TaoSetHessian()`, `TaoSetObjectiveAndGradient()`
 @*/
 PetscErrorCode TaoGetObjectiveAndGradient(Tao tao, Vec *g, PetscErrorCode (**func)(Tao tao, Vec x, PetscReal *f, Vec g, void *ctx), void **ctx)
@@ -519,7 +549,7 @@ PetscErrorCode TaoGetObjectiveAndGradient(Tao tao, Vec *g, PetscErrorCode (**fun
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
   if (g) *g = tao->gradient;
-  if (func || ctx) PetscCall(TaoTermTaoCallbacksGetObjAndGrad(tao->objective_term.term, func, ctx));
+  if (func || ctx) PetscCall(TaoTermTaoCallbacksGetObjAndGrad(tao->orig_callbacks, func, ctx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

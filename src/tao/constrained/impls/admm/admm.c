@@ -180,7 +180,7 @@ static PetscErrorCode SubObjGradUpdate(Tao tao, Vec x, PetscReal *f, Vec g, void
   PetscFunctionBegin;
   tempJR = am->workJacobianRight;
   PetscCall(ADMMUpdateConstraintResidualVector(parent, x, am->subsolverZ->solution, am->Ax, am->Bz, am->residual));
-  PetscCall((*am->ops->misfitobjgrad)(am->subsolverX, x, f, g, am->misfitobjgradP));
+  PetscCall(TaoMappedTermObjectiveAndGradient(&am->mis_term, x, NULL, INSERT_VALUES, f, g));
 
   am->last_misfit_val = *f;
   /* Objective  Add + yT(Ax+Bz-c) + mu/2*||Ax+Bz-c||_2^2 */
@@ -209,7 +209,7 @@ static PetscErrorCode RegObjGradUpdate(Tao tao, Vec z, PetscReal *f, Vec g, void
   PetscFunctionBegin;
   tempJR = am->workJacobianRight;
   PetscCall(ADMMUpdateConstraintResidualVector(parent, am->subsolverX->solution, z, am->Ax, am->Bz, am->residual));
-  PetscCall((*am->ops->regobjgrad)(am->subsolverZ, z, f, g, am->regobjgradP));
+  PetscCall(TaoMappedTermObjectiveAndGradient(&am->reg_term, z, NULL, INSERT_VALUES, f, g));
   am->last_reg_val = *f;
   /* Objective  Add  + yT(Ax+Bz-c) + mu/2*||Ax+Bz-c||_2^2 */
   PetscCall(VecTDot(am->residual, am->y, &temp));
@@ -278,7 +278,7 @@ static PetscErrorCode SubHessianUpdate(Tao tao, Vec x, Mat H, Mat Hpre, void *pt
   PetscFunctionBegin;
   if (am->Hxchange) {
     /* Case where Hessian gets updated with respect to x vector input. */
-    PetscCall((*am->ops->misfithess)(am->subsolverX, x, H, Hpre, am->misfithessP));
+    PetscCall(TaoMappedTermHessian(&am->mis_term, x, NULL, INSERT_VALUES, H, Hpre));
     PetscCall(ADMMInternalHessianUpdate(am->subsolverX->hessian, am->ATA, am->xJI, am));
   } else if (am->Hxbool) {
     /* Hessian doesn't get updated. H(x) = c */
@@ -298,7 +298,7 @@ static PetscErrorCode RegHessianUpdate(Tao tao, Vec z, Mat H, Mat Hpre, void *pt
   PetscFunctionBegin;
   if (am->Hzchange) {
     /* Case where Hessian gets updated with respect to x vector input. */
-    PetscCall((*am->ops->reghess)(am->subsolverZ, z, H, Hpre, am->reghessP));
+    PetscCall(TaoMappedTermHessian(&am->reg_term, z, NULL, INSERT_VALUES, H, Hpre));
     PetscCall(ADMMInternalHessianUpdate(am->subsolverZ->hessian, am->BTB, am->zJI, am));
   } else if (am->Hzbool) {
     /* Hessian doesn't get updated. H(x) = c */
@@ -461,7 +461,7 @@ static PetscErrorCode TaoSolve_ADMM(Tao tao)
       if (is_reg_shell) {
         PetscCall(ADMML1EpsilonNorm(tao, am->subsolverZ->solution, am->l1epsilon, &reg_func));
       } else {
-        PetscCall((*am->ops->regobjgrad)(am->subsolverZ, am->subsolverX->solution, &reg_func, tempL, am->regobjgradP));
+        PetscCall(TaoMappedTermObjectiveAndGradient(&am->reg_term, am->subsolverX->solution, NULL, INSERT_VALUES, &reg_func, tempL));
       }
       break;
     case TAO_ADMM_REGULARIZER_SOFT_THRESH:
@@ -597,9 +597,24 @@ static PetscErrorCode TaoSetUp_ADMM(Tao tao)
   PetscCall(TaoSetObjectiveAndGradient(am->subsolverX, NULL, SubObjGradUpdate, tao));
   PetscCall(TaoSetJacobianEqualityRoutine(am->subsolverX, am->JA, am->JApre, am->ops->misfitjac, am->misfitjacobianP));
   PetscCall(TaoSetJacobianEqualityRoutine(am->subsolverZ, am->JB, am->JBpre, am->ops->regjac, am->regjacobianP));
-  if (am->Hx && am->ops->misfithess) PetscCall(TaoSetHessian(am->subsolverX, am->Hx, am->Hx, SubHessianUpdate, tao));
-  if (am->ops->regobjgrad) PetscCall(TaoSetObjectiveAndGradient(am->subsolverZ, NULL, RegObjGradUpdate, tao));
-  if (am->Hz && am->ops->reghess) PetscCall(TaoSetHessian(am->subsolverZ, am->Hz, am->Hzpre, RegHessianUpdate, tao));
+  if (am->Hx) {
+    PetscBool is_defined;
+
+    PetscCall(TaoTermIsHessianDefined(am->mis_term.term, &is_defined));
+    if (is_defined) PetscCall(TaoSetHessian(am->subsolverX, am->Hx, am->Hx, SubHessianUpdate, tao));
+  }
+  {
+    PetscBool is_defined;
+
+    PetscCall(TaoTermIsObjectiveAndGradientDefined(am->reg_term.term, &is_defined));
+    if (is_defined) PetscCall(TaoSetObjectiveAndGradient(am->subsolverZ, NULL, RegObjGradUpdate, tao));
+  }
+  if (am->Hz) {
+    PetscBool is_defined;
+
+    PetscCall(TaoTermIsHessianDefined(am->reg_term.term, &is_defined));
+    if (is_defined) PetscCall(TaoSetHessian(am->subsolverZ, am->Hz, am->Hzpre, RegHessianUpdate, tao));
+  }
   PetscCall(TaoSetUp(am->subsolverX));
   PetscCall(TaoSetUp(am->subsolverZ));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -610,6 +625,10 @@ static PetscErrorCode TaoDestroy_ADMM(Tao tao)
   TAO_ADMM *am = (TAO_ADMM *)tao->data;
 
   PetscFunctionBegin;
+  PetscCall(TaoMappedTermReset(&am->mis_term));
+  PetscCall(TaoMappedTermReset(&am->reg_term));
+  PetscCall(TaoTermDestroy(&am->mis_callbacks));
+  PetscCall(TaoTermDestroy(&am->reg_callbacks));
   PetscCall(VecDestroy(&am->z));
   PetscCall(VecDestroy(&am->Ax));
   PetscCall(VecDestroy(&am->Axold));
@@ -702,33 +721,32 @@ PETSC_EXTERN PetscErrorCode TaoCreate_ADMM(Tao tao)
 
   PetscCall(TaoParametersInitialize(tao));
 
-  tao->data           = (void *)am;
-  am->l1epsilon       = 1e-6;
-  am->lambda          = 1e-4;
-  am->mu              = 1.;
-  am->muold           = 0.;
-  am->mueps           = PETSC_MACHINE_EPSILON;
-  am->mumin           = 0.;
-  am->orthval         = 0.2;
-  am->T               = 2;
-  am->parent          = tao;
-  am->update          = TAO_ADMM_UPDATE_BASIC;
-  am->regswitch       = TAO_ADMM_REGULARIZER_SOFT_THRESH;
-  am->tol             = PETSC_SMALL;
-  am->const_norm      = 0;
-  am->resnorm         = 0;
-  am->dualres         = 0;
-  am->ops->regobjgrad = NULL;
-  am->ops->reghess    = NULL;
-  am->gamma           = 1;
-  am->regobjgradP     = NULL;
-  am->reghessP        = NULL;
-  am->gatol_admm      = 1e-8;
-  am->catol_admm      = 0;
-  am->Hxchange        = PETSC_TRUE;
-  am->Hzchange        = PETSC_TRUE;
-  am->Hzbool          = PETSC_TRUE;
-  am->Hxbool          = PETSC_TRUE;
+  tao->data       = (void *)am;
+  am->l1epsilon   = 1e-6;
+  am->lambda      = 1e-4;
+  am->mu          = 1.;
+  am->muold       = 0.;
+  am->mueps       = PETSC_MACHINE_EPSILON;
+  am->mumin       = 0.;
+  am->orthval     = 0.2;
+  am->T           = 2;
+  am->parent      = tao;
+  am->update      = TAO_ADMM_UPDATE_BASIC;
+  am->regswitch   = TAO_ADMM_REGULARIZER_SOFT_THRESH;
+  am->tol         = PETSC_SMALL;
+  am->const_norm  = 0;
+  am->resnorm     = 0;
+  am->dualres     = 0;
+  am->gamma       = 1;
+  am->regobjgradP = NULL;
+  am->reghessP    = NULL;
+  am->gatol_admm  = 1e-8;
+  am->catol_admm  = 0;
+  am->Hxchange    = PETSC_TRUE;
+  am->Hzchange    = PETSC_TRUE;
+  am->Hzbool      = PETSC_TRUE;
+  am->Hxbool      = PETSC_TRUE;
+
 
   PetscCall(TaoCreate(PetscObjectComm((PetscObject)tao), &am->subsolverX));
   PetscCall(TaoSetOptionsPrefix(am->subsolverX, "misfit_"));
@@ -736,6 +754,11 @@ PETSC_EXTERN PetscErrorCode TaoCreate_ADMM(Tao tao)
   PetscCall(TaoCreate(PetscObjectComm((PetscObject)tao), &am->subsolverZ));
   PetscCall(TaoSetOptionsPrefix(am->subsolverZ, "reg_"));
   PetscCall(PetscObjectIncrementTabLevel((PetscObject)am->subsolverZ, (PetscObject)tao, 1));
+
+  PetscCall(TaoTermCreateADMMMisfit(am->subsolverX, &am->mis_callbacks));
+  PetscCall(TaoTermCreateADMMRegularizer(am->subsolverZ, &am->reg_callbacks));
+  PetscCall(TaoMappedTermSetData(&am->mis_term, NULL, 1.0, am->mis_callbacks, NULL));
+  PetscCall(TaoMappedTermSetData(&am->reg_term, NULL, 1.0, am->reg_callbacks, NULL));
 
   PetscCall(TaoSetType(am->subsolverX, TAONLS));
   PetscCall(TaoSetType(am->subsolverZ, TAONLS));
@@ -1090,8 +1113,7 @@ PetscErrorCode TaoADMMSetMisfitObjectiveAndGradientRoutine(Tao tao, PetscErrorCo
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  am->misfitobjgradP     = ctx;
-  am->ops->misfitobjgrad = func;
+  PetscCall(TaoTermTaoCallbacksSetObjAndGrad(am->mis_callbacks, func, ctx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1126,8 +1148,7 @@ PetscErrorCode TaoADMMSetMisfitHessianRoutine(Tao tao, Mat H, Mat Hpre, PetscErr
     PetscValidHeaderSpecific(Hpre, MAT_CLASSID, 3);
     PetscCheckSameComm(tao, 1, Hpre, 3);
   }
-  if (ctx) am->misfithessP = ctx;
-  if (func) am->ops->misfithess = func;
+  if (func || ctx) PetscCall(TaoTermTaoCallbacksSetHessian(am->mis_callbacks, func, ctx));
   if (H) {
     PetscCall(PetscObjectReference((PetscObject)H));
     PetscCall(MatDestroy(&am->Hx));
@@ -1161,8 +1182,7 @@ PetscErrorCode TaoADMMSetRegularizerObjectiveAndGradientRoutine(Tao tao, PetscEr
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  am->regobjgradP     = ctx;
-  am->ops->regobjgrad = func;
+  PetscCall(TaoTermTaoCallbacksSetObjAndGrad(am->reg_callbacks, func, ctx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1197,8 +1217,7 @@ PetscErrorCode TaoADMMSetRegularizerHessianRoutine(Tao tao, Mat H, Mat Hpre, Pet
     PetscValidHeaderSpecific(Hpre, MAT_CLASSID, 3);
     PetscCheckSameComm(tao, 1, Hpre, 3);
   }
-  if (ctx) am->reghessP = ctx;
-  if (func) am->ops->reghess = func;
+  if (func || ctx) PetscCall(TaoTermTaoCallbacksSetHessian(am->reg_callbacks, func, ctx));
   if (H) {
     PetscCall(PetscObjectReference((PetscObject)H));
     PetscCall(MatDestroy(&am->Hz));

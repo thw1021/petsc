@@ -73,6 +73,16 @@ PetscErrorCode TaoSetHessian(Tao tao, Mat H, Mat Hpre, PetscErrorCode (*func)(Ta
 
   Level: beginner
 
+  Note:
+  In addition to specifying an objective function using callbacks like
+  `TaoSetObjectiveAndGradient()` and `TaoSetHessian()`, Tao also has an object-oriented
+  approach to specifying objective functions with `TaoSetObjectiveTerm()` and
+  `TaoAddObjectiveTerm()`.
+
+  `TaoGetHessian()` will always return the callback specified with
+  `TaoSetHessian()`, even if the objective function has been changed by
+  calling `TaoSetObjectiveTerm()` and/or `TaoAddObjectiveTerm()`.
+
 .seealso: [](ch_tao), `Tao`, `TaoType`, `TaoGetObjective()`, `TaoGetGradient()`, `TaoGetObjectiveAndGradient()`, `TaoSetHessian()`, `TaoSetHessianMatrices()`, `TaoGetHessianMatrices()`
 @*/
 PetscErrorCode TaoGetHessian(Tao tao, Mat *H, Mat *Hpre, PetscErrorCode (**func)(Tao tao, Vec x, Mat H, Mat Hpre, void *ctx), void **ctx)
@@ -80,7 +90,7 @@ PetscErrorCode TaoGetHessian(Tao tao, Mat *H, Mat *Hpre, PetscErrorCode (**func)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
   PetscCall(TaoGetHessianMatrices(tao, H, Hpre));
-  if (func || ctx) PetscCall(TaoTermTaoCallbacksGetHessian(tao->objective_term.term, func, ctx));
+  if (func || ctx) PetscCall(TaoTermTaoCallbacksGetHessian(tao->orig_callbacks, func, ctx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

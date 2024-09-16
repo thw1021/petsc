@@ -507,5 +507,6 @@ PETSC_EXTERN PetscErrorCode MatCreateSubMatrixFree(Mat, IS, IS, Mat *);
 
 PETSC_EXTERN PetscErrorCode TaoGetObjectiveTerm(Tao, PetscReal *, TaoTerm *, Vec *, Mat *);
 PETSC_EXTERN PetscErrorCode TaoSetObjectiveTerm(Tao, PetscReal, TaoTerm, Vec, Mat);
+PETSC_EXTERN PetscErrorCode TaoAddObjectiveTerm(Tao, const char *, PetscReal, TaoTerm, Vec, Mat);
 
 #include <petsctao_deprecations.h>

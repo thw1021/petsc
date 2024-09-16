@@ -2837,10 +2837,32 @@ PetscErrorCode TaoMonitorDrawCtxDestroy(TaoMonitorDrawCtx *ictx)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*
+/*@
   TaoGetObjectiveTerm - Get the whole objective function of the `Tao` as a single `TaoTerm`.
+  Returns the objective function in the form $\alpha f(Ax; p)$, where $\alpha$ is a scaing coefficient,
+  $f$ is a `TaoTerm` (a real-valued function), $A$ is an (optional) map and $p$ are the parameters of $f$.
 
-*/
+  Not collective
+
+  Input Parameter:
+. tao - a `Tao` context
+
+  Output Parameters:
++ scale  - the scale of the term
+. term   - a `TaoTerm` for the real-valued function defining the objective
+. params - the vector of parameters for `term`, or `NULL` if no parameters were specified for `term`
+- map    - a map from the solution space of `tao` to the solution space of `term`, if `NULL` then the map is the identity
+
+  Level: intermediate
+
+  Note:
+  Tao has a callback interface for specifying an objective function and an object-oriented interface.
+  If the objective function was defined with callbacks, e.g. `TaoSetObjectiveAndGradient()`, then
+  `TaoGetObjectiveTerm` will return a `TaoTerm` with the type `TAOTERMTAOCALLBACKS` that encapsulates
+  those callbacks.
+
+.seealso: [](ch_tao), `Tao`, `TaoTerm`, `TAOTERMSUM`, `TaoSetObjectiveTerm()`, `TaoAddObjectiveTerm()`
+@*/
 PetscErrorCode TaoGetObjectiveTerm(Tao tao, PetscReal *scale, TaoTerm *term, Vec *params, Mat *map)
 {
   PetscFunctionBegin;
@@ -2850,10 +2872,30 @@ PetscErrorCode TaoGetObjectiveTerm(Tao tao, PetscReal *scale, TaoTerm *term, Vec
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*
-  TaoSetObjectiveTerm - Set the whole objective function of the `Tao` as a single `TaoTerm`.
+/*@
+  TaoSetObjectiveTerm - Set the whole objective function of the `Tao` as a mapped `TaoTerm`.
+  The objective function is specified as `\alpha f(Ax; p)$, where $\alpha$ is a scaing coefficient,
+  $f$ is a `TaoTerm` (a real-valued function), $A$ is an (optional) map and $p$ are the parameters of $f$.
 
-*/
+  Collective
+
+  Input Parameters:
++ tao - a `Tao` context
+. scale  - the scale of the term
+. term   - a `TaoTerm` for the real-valued function defining the objective
+. params - the vector of parameters for `term`, or `NULL` if no parameters were specified for `term`
+- map    - a map from the solution space of `tao` to the solution space of `term`, if `NULL` then the map is the identity
+
+  Level: intermediate
+
+  Note:
+  Tao has a callback interface for specifying an objective function and an object-oriented interface.
+  If the objective function was defined with callbacks, e.g. `TaoSetObjectiveAndGradient()`, then
+  `TaoGetObjectiveTerm` will return a `TaoTerm` with the type `TAOTERMTAOCALLBACKS` that encapsulates
+  those callbacks.
+
+.seealso: [](ch_tao), `Tao`, `TaoTerm`, `TAOTERMSUM`, `TaoSetObjectiveTerm()`, `TaoAddObjectiveTerm()`
+@*/
 PetscErrorCode TaoSetObjectiveTerm(Tao tao, PetscReal scale, TaoTerm term, Vec params, Mat map)
 {
   PetscFunctionBegin;
@@ -2870,5 +2912,81 @@ PetscErrorCode TaoSetObjectiveTerm(Tao tao, PetscReal scale, TaoTerm term, Vec p
   PetscCall(PetscObjectReference((PetscObject)params));
   PetscCall(VecDestroy(&tao->objective_parameters));
   tao->objective_parameters = params;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoAddObjectiveTerm - Add a term to the objective function of a `Tao`.
+  If the original objective function was $f(x)$, the new objective function
+  will be $f(x) + \alpha g(Ax; p)$, where $\alpha$ is the `scale`, $g$ is the `term`,
+  $A$ is the (optional) map, and $p$ are the (optional) parameters of $g$.
+
+  Collective
+
+  Input Parameters:
++ tao    - a `Tao` solver context
+. name   - a name for the new term
+. scale  - scaling coefficient for the new term
+. term   - the real-valued function defining the new term
+. params - (optional) parameters for the new term.  It is up to the each implementation of `TaoTerm` to determine how it behaves when parameters are omitted.
+- map    - (optional) a map from the `tao` solution space to the `term` solution space; if `NULL` the map is assumed to be the identity
+
+  Level: beginner
+
+.seealso: [](ch_tao), `Tao`, `TaoTerm`, `TAOTERMSUM`, `TaoGetObjectiveTerm()`, `TaoSetObjectiveTerm()`
+@*/
+PetscErrorCode TaoAddObjectiveTerm(Tao tao, const char name[], PetscReal scale, TaoTerm term, Vec params, Mat map)
+{
+  PetscBool is_sum;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
+  if (name) PetscAssertPointer(name, 2);
+  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 4);
+  PetscCheckSameComm(tao, 1, term, 4);
+  PetscCall(PetscObjectTypeCompare((PetscObject)tao->objective_term.term, TAOTERMSUM, &is_sum));
+  if (!is_sum) {
+    TaoTerm old_sum;
+
+    PetscCall(TaoTermCreate(PetscObjectComm((PetscObject)tao), &old_sum));
+    PetscCall(TaoTermSetType(old_sum, TAOTERMSUM));
+    PetscCall(TaoTermSumSetNumSubterms(old_sum, 1));
+    PetscCall(TaoTermSumSetSubterm(old_sum, 0, tao->objective_term.name, tao->objective_term.scale, tao->objective_term.term, tao->objective_term.map));
+    PetscCall(TaoMappedTermReset(&tao->objective_term));
+    PetscCall(TaoMappedTermSetData(&tao->objective_term, NULL, 1.0, old_sum, NULL));
+    PetscCall(TaoTermDestroy(&old_sum));
+    // TODO: encapsulate parameters
+  }
+  if (tao->objective_term.scale != 1.0 || tao->objective_term.map != NULL) {
+    PetscInt num_terms;
+
+    PetscCall(TaoTermSumGetNumSubterms(tao->objective_term.term, &num_terms));
+    for (PetscInt i = 0; i < num_terms; i++) {
+      const char *sub_name;
+      PetscReal   sub_scale;
+      Mat         sub_map, new_sub_map;
+      TaoTerm     sub_term;
+
+      PetscCall(TaoTermSumGetSubterm(tao->objective_term.term, i, &sub_name, &sub_scale, &sub_term, &sub_map));
+      sub_scale *= tao->objective_term.scale;
+      if (!sub_map) {
+        // there was no inner map, i.e. map was the identity, so now map is the outer map
+        new_sub_map = tao->objective_term.map;
+        PetscCall(PetscObjectReference((PetscObject)new_sub_map));
+      } else if (!tao->objective_term.map) {
+        // there was no outer map, i.e. map was the identity, so now map is the inner map
+        new_sub_map = sub_map;
+        PetscCall(PetscObjectReference((PetscObject)new_sub_map));
+      } else if (sub_map && tao->objective_term.map) {
+        // multiply together the maps
+        PetscCall(MatMatMult(sub_map, tao->objective_term.map, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &new_sub_map));
+      }
+      PetscCall(TaoTermSumSetSubterm(tao->objective_term.term, i, sub_name, sub_scale, sub_term, new_sub_map));
+      PetscCall(MatDestroy(&new_sub_map));
+      PetscCall(TaoMappedTermSetData(&tao->objective_term, tao->objective_term.name, 1.0, tao->objective_term.term, NULL));
+    }
+  }
+  PetscCall(TaoTermSumAddSubterm(tao->objective_term.term, name, scale, term, map, NULL));
+  // TODO: concatenate parameters
   PetscFunctionReturn(PETSC_SUCCESS);
 }
