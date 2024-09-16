@@ -1,6 +1,6 @@
 #include <petsc/private/taoimpl.h>
 
-PETSC_INTERN PetscErrorCode TaoMappedTermSetData(TaoMappedTerm *mt, const char *name, TaoTerm term, PetscReal scale, Mat map)
+PETSC_INTERN PetscErrorCode TaoMappedTermSetData(TaoMappedTerm *mt, const char *name, PetscReal scale, TaoTerm term, Mat map)
 {
   PetscBool same_name;
 
@@ -31,14 +31,14 @@ PETSC_INTERN PetscErrorCode TaoMappedTermSetData(TaoMappedTerm *mt, const char *
 PETSC_INTERN PetscErrorCode TaoMappedTermReset(TaoMappedTerm *mt)
 {
   PetscFunctionBegin;
-  PetscCall(TaoMappedTermSetData(mt, NULL, NULL, 0.0, NULL));
+  PetscCall(TaoMappedTermSetData(mt, NULL, 0.0, NULL, NULL));
   PetscCall(VecDestroy(&mt->_mapped_gradient));
   PetscCall(MatDestroy(&mt->_mapped_H));
   PetscCall(MatDestroy(&mt->_mapped_Hpre));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode TaoMappedTermGetData(TaoMappedTerm *mt, const char **name, TaoTerm *term, PetscReal *scale, Mat *map)
+PETSC_INTERN PetscErrorCode TaoMappedTermGetData(TaoMappedTerm *mt, const char **name, PetscReal *scale, TaoTerm *term, Mat *map)
 {
   PetscFunctionBegin;
   if (name) *name = mt->name;

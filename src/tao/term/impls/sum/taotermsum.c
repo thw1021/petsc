@@ -188,15 +188,15 @@ static PetscErrorCode TaoTermSumGetNumSubterms_Sum(TaoTerm term, PetscInt *n_ter
 
   Output Parameters:
 + name    - the name assigned to the subterm
-. subterm - the `TaoTerm` for the subterm
 . scale   - the coefficient scaling the term in the sum
+. subterm - the `TaoTerm` for the subterm
 - map     - the map from the term solution space to the subterm solution space (NULL if they are the same space)
 
   Level: intermediate
 
 .seealso: [](ch_tao), `Tao`, `TaoTerm`, `TAOTERMSUM`
 @*/
-PetscErrorCode TaoTermSumGetSubterm(TaoTerm term, PetscInt index, const char **name, TaoTerm *subterm, PetscReal *scale, Mat *map)
+PetscErrorCode TaoTermSumGetSubterm(TaoTerm term, PetscInt index, const char **name, PetscReal *scale, TaoTerm *subterm, Mat *map)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
@@ -204,11 +204,11 @@ PetscErrorCode TaoTermSumGetSubterm(TaoTerm term, PetscInt index, const char **n
   if (subterm) PetscAssertPointer(subterm, 4);
   if (scale) PetscAssertPointer(scale, 5);
   if (map) PetscAssertPointer(map, 6);
-  PetscUseMethod(term, "TaoTermSumGetSubterm_C", (TaoTerm, PetscInt, const char **, TaoTerm *, PetscReal *, Mat *), (term, index, name, subterm, scale, map));
+  PetscUseMethod(term, "TaoTermSumGetSubterm_C", (TaoTerm, PetscInt, const char **, PetscReal *, TaoTerm *, Mat *), (term, index, name, scale, subterm, map));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoTermSumGetSubterm_Sum(TaoTerm term, PetscInt index, const char **name, TaoTerm *subterm, PetscReal *scale, Mat *map)
+static PetscErrorCode TaoTermSumGetSubterm_Sum(TaoTerm term, PetscInt index, const char **name, PetscReal *scale, TaoTerm *subterm, Mat *map)
 {
   TaoTerm_Sum   *sum = (TaoTerm_Sum *)term->data;
   TaoMappedTerm *summand;
@@ -216,7 +216,7 @@ static PetscErrorCode TaoTermSumGetSubterm_Sum(TaoTerm term, PetscInt index, con
   PetscFunctionBegin;
   PetscCheck(index >= 0 && index < sum->n_terms, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Index %" PetscInt_FMT " is not in [0, %" PetscInt_FMT ")", index, sum->n_terms);
   summand = &sum->terms[index];
-  PetscCall(TaoMappedTermGetData(summand, name, subterm, scale, map));
+  PetscCall(TaoMappedTermGetData(summand, name, scale, subterm, map));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -229,15 +229,15 @@ static PetscErrorCode TaoTermSumGetSubterm_Sum(TaoTerm term, PetscInt index, con
 + term    - a `TaoTerm` of type `TAOTERMSUM`
 . index   - a number $0 \leq i < n$, where $n$ is the number of terms in `TaoTermSumGetNumSubterms()`
 . name    - the name assigned to the subterm (optional, can be NULL)
-. subterm - the `TaoTerm` for the subterm
 . scale   - the coefficient scaling the term in the sum
+. subterm - the `TaoTerm` for the subterm
 - map     - the map from the term solution space to the subterm solution space (NULL if they are the same space)
 
   Level: intermediate
 
 .seealso: [](ch_tao), `Tao`, `TaoTerm`, `TAOTERMSUM`
 @*/
-PetscErrorCode TaoTermSumSetSubterm(TaoTerm term, PetscInt index, const char name[], TaoTerm subterm, PetscReal scale, Mat map)
+PetscErrorCode TaoTermSumSetSubterm(TaoTerm term, PetscInt index, const char name[], PetscReal scale, TaoTerm subterm, Mat map)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
@@ -246,11 +246,11 @@ PetscErrorCode TaoTermSumSetSubterm(TaoTerm term, PetscInt index, const char nam
   PetscValidHeaderSpecific(subterm, TAOTERM_CLASSID, 4);
   PetscValidLogicalCollectiveReal(term, scale, 5);
   if (map) PetscValidHeaderSpecific(map, MAT_CLASSID, 6);
-  PetscTryMethod(term, "TaoTermSumSetSubterm_C", (TaoTerm, PetscInt, const char[], TaoTerm, PetscReal, Mat), (term, index, name, subterm, scale, map));
+  PetscTryMethod(term, "TaoTermSumSetSubterm_C", (TaoTerm, PetscInt, const char[], PetscReal, TaoTerm, Mat), (term, index, name, scale, subterm, map));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoTermSumSetSubterm_Sum(TaoTerm term, PetscInt index, const char name[], TaoTerm subterm, PetscReal scale, Mat map)
+static PetscErrorCode TaoTermSumSetSubterm_Sum(TaoTerm term, PetscInt index, const char name[], PetscReal scale, TaoTerm subterm, Mat map)
 {
   TaoTerm_Sum   *sum = (TaoTerm_Sum *)term->data;
   TaoMappedTerm *summand;
@@ -258,7 +258,7 @@ static PetscErrorCode TaoTermSumSetSubterm_Sum(TaoTerm term, PetscInt index, con
   PetscFunctionBegin;
   PetscCheck(index >= 0 && index < sum->n_terms, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Index %" PetscInt_FMT " is not in [0, %" PetscInt_FMT ")", index, sum->n_terms);
   summand = &sum->terms[index];
-  PetscCall(TaoMappedTermSetData(summand, name, subterm, scale, map));
+  PetscCall(TaoMappedTermSetData(summand, name, scale, subterm, map));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -270,8 +270,8 @@ static PetscErrorCode TaoTermSumSetSubterm_Sum(TaoTerm term, PetscInt index, con
   Input Parameters:
 + term    - a `TaoTerm` of type `TAOTERMSUM`
 . name    - the name assigned to the subterm (optional, can be NULL)
-. subterm - the `TaoTerm` for the subterm
 . scale   - the coefficient scaling the term in the sum
+. subterm - the `TaoTerm` for the subterm
 - map     - the map from the term solution space to the subterm solution space (NULL if they are the same space)
 
   Output Parameter:
@@ -281,7 +281,7 @@ static PetscErrorCode TaoTermSumSetSubterm_Sum(TaoTerm term, PetscInt index, con
 
 .seealso: [](ch_tao), `Tao`, `TaoTerm`, `TAOTERMSUM`
 @*/
-PetscErrorCode TaoTermSumAddSubterm(TaoTerm term, const char name[], TaoTerm subterm, PetscReal scale, Mat map, PetscInt *index)
+PetscErrorCode TaoTermSumAddSubterm(TaoTerm term, const char name[], PetscReal scale, TaoTerm subterm, Mat map, PetscInt *index)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
@@ -290,18 +290,18 @@ PetscErrorCode TaoTermSumAddSubterm(TaoTerm term, const char name[], TaoTerm sub
   PetscValidLogicalCollectiveReal(term, scale, 4);
   if (map) PetscValidHeaderSpecific(map, MAT_CLASSID, 5);
   if (index) PetscAssertPointer(index, 6);
-  PetscTryMethod(term, "TaoTermSumAddSubterm_C", (TaoTerm, const char[], TaoTerm, PetscReal, Mat, PetscInt *), (term, name, subterm, scale, map, index));
+  PetscTryMethod(term, "TaoTermSumAddSubterm_C", (TaoTerm, const char[], PetscReal, TaoTerm, Mat, PetscInt *), (term, name, scale, subterm, map, index));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoTermSumAddSubterm_Sum(TaoTerm term, const char name[], TaoTerm subterm, PetscReal scale, Mat map, PetscInt *index)
+static PetscErrorCode TaoTermSumAddSubterm_Sum(TaoTerm term, const char name[], PetscReal scale, TaoTerm subterm, Mat map, PetscInt *index)
 {
   PetscInt n_terms_old;
 
   PetscFunctionBegin;
   PetscCall(TaoTermSumGetNumSubterms(term, &n_terms_old));
   PetscCall(TaoTermSumSetNumSubterms(term, n_terms_old + 1));
-  PetscCall(TaoTermSumSetSubterm(term, n_terms_old, name, subterm, scale, map));
+  PetscCall(TaoTermSumSetSubterm(term, n_terms_old, name, scale, subterm, map));
   if (index) *index = n_terms_old;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -326,7 +326,7 @@ static PetscErrorCode TaoTermSetFromOptions_Sum(TaoTerm term, PetscOptionItems *
     char        newname[256];
     PetscBool   flg;
 
-    PetscCall(TaoTermSumGetSubterm(term, i, &name, &subterm, &scale, &map));
+    PetscCall(TaoTermSumGetSubterm(term, i, &name, &scale, &subterm, &map));
     if (subterm == NULL) {
       char postfix[256];
 
@@ -343,7 +343,7 @@ static PetscErrorCode TaoTermSetFromOptions_Sum(TaoTerm term, PetscOptionItems *
     PetscCall(PetscOptionsString(arg, "The name of the subterm in the sum", "TaoTermSumSetSubterm", name, newname, 256, &flg));
 
     if (map) PetscCall(MatSetFromOptions(map));
-    PetscCall(TaoTermSumSetSubterm(term, i, flg ? newname : name, subterm, scale, map));
+    PetscCall(TaoTermSumSetSubterm(term, i, flg ? newname : name, scale, subterm, map));
     PetscCall(TaoTermDestroy(&subterm));
   }
   PetscOptionsHeadEnd();

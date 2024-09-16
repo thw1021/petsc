@@ -450,7 +450,7 @@ PETSC_EXTERN PetscErrorCode TaoCreate_BRGN(Tao tao)
   PetscCall(TaoSetType(gn->subsolver, TAOBNLS));
   PetscCall(TaoSetOptionsPrefix(gn->subsolver, "tao_brgn_subsolver_"));
   PetscCall(TaoTermCreateBRGNRegularizer(tao, &gn->orig_callbacks));
-  PetscCall(TaoMappedTermSetData(&gn->regularizer_term, NULL, gn->orig_callbacks, gn->lambda, NULL));
+  PetscCall(TaoMappedTermSetData(&gn->regularizer_term, NULL, gn->lambda, gn->orig_callbacks, NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

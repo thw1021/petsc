@@ -192,6 +192,7 @@ struct _p_Tao {
   PetscBool     hist_malloc;
 
   TaoMappedTerm objective_term; /* TaoTerm in use */
+  Vec           objective_parameters;
 
   TaoTerm   orig_callbacks; /* TAOTERMTAOCALLBACKS for the original callbacks */
   PetscBool uses_hessian_matrices;
@@ -275,8 +276,8 @@ PETSC_INTERN PetscErrorCode TaoTermTaoCallbacksGetGradient(TaoTerm, PetscErrorCo
 PETSC_INTERN PetscErrorCode TaoTermTaoCallbacksGetObjAndGrad(TaoTerm, PetscErrorCode (**)(Tao, Vec, PetscReal *, Vec, void *), void **);
 PETSC_INTERN PetscErrorCode TaoTermTaoCallbacksGetHessian(TaoTerm, PetscErrorCode (**)(Tao, Vec, Mat, Mat, void *), void **);
 
-PETSC_INTERN PetscErrorCode TaoMappedTermSetData(TaoMappedTerm *, const char *, TaoTerm, PetscReal, Mat);
-PETSC_INTERN PetscErrorCode TaoMappedTermGetData(TaoMappedTerm *, const char **, TaoTerm *, PetscReal *, Mat *);
+PETSC_INTERN PetscErrorCode TaoMappedTermSetData(TaoMappedTerm *, const char *, PetscReal, TaoTerm, Mat);
+PETSC_INTERN PetscErrorCode TaoMappedTermGetData(TaoMappedTerm *, const char **, PetscReal *, TaoTerm *, Mat *);
 PETSC_INTERN PetscErrorCode TaoMappedTermReset(TaoMappedTerm *);
 PETSC_INTERN PetscErrorCode TaoMappedTermObjective(TaoMappedTerm *, Vec, Vec, InsertMode, PetscReal *);
 PETSC_INTERN PetscErrorCode TaoMappedTermGradient(TaoMappedTerm *, Vec, Vec, InsertMode, Vec);

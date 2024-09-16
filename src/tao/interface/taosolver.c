@@ -131,7 +131,7 @@ PetscErrorCode TaoCreate(MPI_Comm comm, Tao *newtao)
   tao->hist_reset = PETSC_TRUE;
 
   PetscCall(TaoTermCreateTaoCallbacks(tao, &tao->orig_callbacks));
-  PetscCall(TaoMappedTermSetData(&tao->objective_term, NULL, tao->orig_callbacks, 1.0, NULL));
+  PetscCall(TaoMappedTermSetData(&tao->objective_term, NULL, 1.0, tao->orig_callbacks, NULL));
   PetscCall(TaoResetStatistics(tao));
   *newtao = tao;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -264,6 +264,7 @@ PetscErrorCode TaoDestroy(Tao *tao)
 
   PetscTryTypeMethod(*tao, destroy);
   PetscCall(TaoMappedTermReset(&(*tao)->objective_term));
+  PetscCall(VecDestroy(&(*tao)->objective_parameters));
   PetscCall(TaoTermDestroy(&(*tao)->orig_callbacks));
   PetscCall(KSPDestroy(&(*tao)->ksp));
   PetscCall(SNESDestroy(&(*tao)->snes_ewdummy));
@@ -2840,11 +2841,12 @@ PetscErrorCode TaoMonitorDrawCtxDestroy(TaoMonitorDrawCtx *ictx)
   TaoGetObjectiveTerm - Get the whole objective function of the `Tao` as a single `TaoTerm`.
 
 */
-PetscErrorCode TaoGetObjectiveTerm(Tao tao, TaoTerm *term, Vec *params, PetscReal *scale, Mat *map)
+PetscErrorCode TaoGetObjectiveTerm(Tao tao, PetscReal *scale, TaoTerm *term, Vec *params, Mat *map)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  PetscCall(TaoMappedTermGetData(&tao->objective_term, NULL, term, scale, map));
+  PetscCall(TaoMappedTermGetData(&tao->objective_term, NULL, scale, term, map));
+  if (params) *params = tao->objective_parameters;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -2852,7 +2854,7 @@ PetscErrorCode TaoGetObjectiveTerm(Tao tao, TaoTerm *term, Vec *params, PetscRea
   TaoSetObjectiveTerm - Set the whole objective function of the `Tao` as a single `TaoTerm`.
 
 */
-PetscErrorCode TaoSetObjectiveTerm(Tao tao, TaoTerm term, Vec params, PetscReal scale, Mat map)
+PetscErrorCode TaoSetObjectiveTerm(Tao tao, PetscReal scale, TaoTerm term, Vec params, Mat map)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
@@ -2860,6 +2862,13 @@ PetscErrorCode TaoSetObjectiveTerm(Tao tao, TaoTerm term, Vec params, PetscReal 
     PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 2);
     PetscCheckSameComm(tao, 1, term, 2);
   }
-  PetscCall(TaoMappedTermSetData(&tao->objective_term, NULL, term, scale, map));
+  PetscCall(TaoMappedTermSetData(&tao->objective_term, NULL, scale, term, map));
+  if (params) {
+    PetscValidHeaderSpecific(params, VEC_CLASSID, 3);
+    PetscCheckSameComm(tao, 1, params, 3);
+  }
+  PetscCall(PetscObjectReference((PetscObject)params));
+  PetscCall(VecDestroy(&tao->objective_parameters));
+  tao->objective_parameters = params;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
