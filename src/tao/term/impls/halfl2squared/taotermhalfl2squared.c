@@ -6,12 +6,15 @@ static PetscErrorCode TaoTermObjective_Halfl2squared(TaoTerm term, Vec x, Vec pa
   Vec         diff;
 
   PetscFunctionBegin;
-  PetscCall(VecDuplicate(x, &diff));
-  PetscCall(VecCopy(x, diff));
-  PetscCall(VecAXPY(diff, -1.0, params));
+  diff = x;
+  if (params) {
+    PetscCall(VecDuplicate(x, &diff));
+    PetscCall(VecCopy(x, diff));
+    PetscCall(VecAXPY(diff, -1.0, params));
+  }
   PetscCall(VecDot(diff, diff, &v));
-  *value = 2 * PetscRealPart(v);
-  PetscCall(VecDestroy(&diff));
+  *value = 0.5 * PetscRealPart(v);
+  if (params) PetscCall(VecDestroy(&diff));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -20,16 +23,24 @@ static PetscErrorCode TaoTermObjectiveAndGradient_Halfl2squared(TaoTerm term, Ve
   PetscScalar v;
 
   PetscFunctionBegin;
-  PetscCall(VecWAXPY(g, -1.0, params, x));
+  if (params) {
+    PetscCall(VecWAXPY(g, -1.0, params, x));
+  } else {
+    PetscCall(VecCopy(x, g));
+  }
   PetscCall(VecDot(g, g, &v));
-  *value = 2 * PetscRealPart(v);
+  *value = 0.5 * PetscRealPart(v);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode TaoTermGradient_Halfl2squared(TaoTerm term, Vec x, Vec params, Vec g)
 {
   PetscFunctionBegin;
-  PetscCall(VecWAXPY(g, -1.0, params, x));
+  if (params) {
+    PetscCall(VecWAXPY(g, -1.0, params, x));
+  } else {
+    PetscCall(VecCopy(x, g));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

@@ -325,4 +325,9 @@ PetscErrorCode FormHessian(Tao tao, Vec X, Mat H, Mat Hpre, void *ptr)
      requires: !single
      args: -snes_monitor ::ascii_info_detail -tao_type snes -snes_type newtonls -snes_atol 1.e-4 -pc_type lmvm -tao_mf_hessian
 
+   test:
+     suffix: add_terms
+     requires: !single
+     args: -tao_type nls -tao_add_objective_terms reg_ -reg_taoterm_type halfl2squared -tao_monitor_short -tao_view
+
 TEST*/

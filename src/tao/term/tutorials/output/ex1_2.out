@@ -19,8 +19,3 @@ TaoTerm Object: example TaoTerm 1 MPI process
       Term:
         TaoTerm Object: (subterm_2_) 1 MPI process
           type: kl
-[0] function name: TaoTermSumGetNumSubterms_C
-[0] function name: TaoTermSumSetSubterm_C
-[0] function name: TaoTermSumSetNumSubterms_C
-[0] function name: TaoTermSumAddSubterm_C
-[0] function name: TaoTermSumGetSubterm_C

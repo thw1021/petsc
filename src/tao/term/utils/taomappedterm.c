@@ -35,6 +35,7 @@ PETSC_INTERN PetscErrorCode TaoMappedTermReset(TaoMappedTerm *mt)
   PetscCall(VecDestroy(&mt->_mapped_gradient));
   PetscCall(MatDestroy(&mt->_mapped_H));
   PetscCall(MatDestroy(&mt->_mapped_Hpre));
+  PetscCall(PetscFree(mt->prefix));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

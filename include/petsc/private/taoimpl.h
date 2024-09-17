@@ -40,6 +40,7 @@ struct _TaoOps {
 typedef struct _n_TaoMappedTerm TaoMappedTerm;
 
 struct _n_TaoMappedTerm {
+  char     *prefix;
   char     *name;
   TaoTerm   term;
   PetscReal scale;

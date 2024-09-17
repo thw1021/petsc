@@ -49,7 +49,7 @@ int main(int argc, char **argv)
   PetscCall(TaoSetType(tao, TAOLMVM));
 
   /* Set routines for function, gradient, hessian evaluation */
-  PetscCall(TaoSetObjectiveTerm(tao, objective, NULL, 1.0, NULL));
+  PetscCall(TaoSetObjectiveTerm(tao, 1.0, objective, NULL, NULL));
 
   /* Check for TAO command line options */
   PetscCall(TaoSetFromOptions(tao));

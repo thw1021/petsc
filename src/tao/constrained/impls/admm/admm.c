@@ -747,7 +747,6 @@ PETSC_EXTERN PetscErrorCode TaoCreate_ADMM(Tao tao)
   am->Hzbool      = PETSC_TRUE;
   am->Hxbool      = PETSC_TRUE;
 
-
   PetscCall(TaoCreate(PetscObjectComm((PetscObject)tao), &am->subsolverX));
   PetscCall(TaoSetOptionsPrefix(am->subsolverX, "misfit_"));
   PetscCall(PetscObjectIncrementTabLevel((PetscObject)am->subsolverX, (PetscObject)tao, 1));

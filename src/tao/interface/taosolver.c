@@ -381,7 +381,8 @@ PetscErrorCode TaoKSPSetUseEW(Tao tao, PetscBool flag)
 . -tao_fd_hessian              - use hessian computed with finite differences
 . -tao_mf_hessian              - use matrix-free Hessian computed with finite differences
 . -tao_view                    - prints information about the Tao after solving
-- -tao_converged_reason        - prints the reason Tao stopped iterating
+. -tao_converged_reason        - prints the reason Tao stopped iterating
+- -tao_add_objective_terms     - takes a list of options prefixes, a `TaoTerm` will be created for each and added to the objective function
 
   Level: beginner
 
@@ -565,6 +566,35 @@ PetscErrorCode TaoSetFromOptions(Tao tao)
     PetscCall(TaoKSPSetUseEW(tao, tao->ksp_ewconv));
   }
 
+  {
+    const char *prefix;
+
+    PetscCall(PetscObjectGetOptionsPrefix((PetscObject)tao, &prefix));
+    PetscCall(PetscObjectSetOptionsPrefix((PetscObject)tao->orig_callbacks, prefix));
+    PetscCall(PetscObjectAppendOptionsPrefix((PetscObject)tao->orig_callbacks, "callbacks_"));
+    PetscCall(TaoTermSetFromOptions(tao->orig_callbacks));
+  }
+
+  {
+    char    *term_prefixes[8];
+    PetscInt n_terms = PETSC_STATIC_ARRAY_LENGTH(term_prefixes);
+
+    PetscCall(PetscOptionsStringArray("-tao_add_objective_terms", "a list of prefixes for terms to add to the Tao objective function", "TaoAddObjectiveTerm", term_prefixes, &n_terms, NULL));
+    for (PetscInt i = 0; i < n_terms; i++) {
+      TaoTerm     term;
+      const char *prefix;
+
+      PetscCall(TaoTermCreate(PetscObjectComm((PetscObject)tao), &term));
+      PetscCall(PetscObjectGetOptionsPrefix((PetscObject)tao, &prefix));
+      PetscCall(PetscObjectSetOptionsPrefix((PetscObject)term, prefix));
+      PetscCall(PetscObjectAppendOptionsPrefix((PetscObject)term, term_prefixes[i]));
+      PetscCall(TaoTermSetFromOptions(term));
+      PetscCall(TaoAddObjectiveTerm(tao, term_prefixes[i], 1.0, term, NULL, NULL));
+      PetscCall(TaoTermDestroy(&term));
+      PetscCall(PetscFree(term_prefixes[i]));
+    }
+  }
+
   PetscTryTypeMethod(tao, setfromoptions, PetscOptionsObject);
 
   /* process any options handlers added with PetscObjectAddOptionsHandler() */
@@ -639,6 +669,26 @@ PetscErrorCode TaoView(Tao tao, PetscViewer viewer)
 
     PetscCall(PetscViewerASCIIPushTab(viewer));
     PetscTryTypeMethod(tao, view, viewer);
+    PetscCall(PetscViewerASCIIPrintf(viewer, "Objective function:\n"));
+    PetscCall(PetscViewerASCIIPushTab(viewer));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "Scale: %g\n", (double)tao->objective_term.scale));
+    if (tao->objective_term.term == tao->orig_callbacks) {
+      PetscCall(PetscViewerASCIIPrintf(viewer, "Function: defined by callbacks\n"));
+    } else {
+      PetscCall(PetscViewerASCIIPrintf(viewer, "Function:\n"));
+      PetscCall(PetscViewerASCIIPushTab(viewer));
+      PetscCall(TaoTermView(tao->objective_term.term, viewer));
+      PetscCall(PetscViewerASCIIPopTab(viewer));
+    }
+    if (tao->objective_term.map) {
+      PetscCall(PetscViewerASCIIPrintf(viewer, "Map:\n"));
+      PetscCall(PetscViewerASCIIPushTab(viewer));
+      PetscCall(MatView(tao->objective_term.map, viewer));
+      PetscCall(PetscViewerASCIIPopTab(viewer));
+    } else {
+      PetscCall(PetscViewerASCIIPrintf(viewer, "Map: unmapped\n"));
+    }
+    PetscCall(PetscViewerASCIIPopTab(viewer));
     if (tao->linesearch) PetscCall(TaoLineSearchView(tao->linesearch, viewer));
     if (tao->ksp) {
       PetscCall(KSPView(tao->ksp, viewer));
@@ -2838,9 +2888,9 @@ PetscErrorCode TaoMonitorDrawCtxDestroy(TaoMonitorDrawCtx *ictx)
 }
 
 /*@
-  TaoGetObjectiveTerm - Get the whole objective function of the `Tao` as a single `TaoTerm`.
-  Returns the objective function in the form $\alpha f(Ax; p)$, where $\alpha$ is a scaing coefficient,
-  $f$ is a `TaoTerm` (a real-valued function), $A$ is an (optional) map and $p$ are the parameters of $f$.
+  TaoGetObjectiveTerm - Get the whole objective function of the `Tao` as a
+  single `TaoTerm` in the form $\alpha f(Ax; p)$, where $\alpha$ is a scaing
+  coefficient, $f$ is a `TaoTerm`, $A$ is an (optional) map and $p$ are the parameters of $f$.
 
   Not collective
 
@@ -2873,14 +2923,14 @@ PetscErrorCode TaoGetObjectiveTerm(Tao tao, PetscReal *scale, TaoTerm *term, Vec
 }
 
 /*@
-  TaoSetObjectiveTerm - Set the whole objective function of the `Tao` as a mapped `TaoTerm`.
-  The objective function is specified as `\alpha f(Ax; p)$, where $\alpha$ is a scaing coefficient,
-  $f$ is a `TaoTerm` (a real-valued function), $A$ is an (optional) map and $p$ are the parameters of $f$.
+  TaoSetObjectiveTerm - Set the whole objective function of the `Tao` to be
+  $\alpha f(Ax; p)$, where $\alpha$ is a scaing coefficient, $f$ is a
+  `TaoTerm`, $A$ is an (optional) map and $p$ are the parameters of $f$.
 
   Collective
 
   Input Parameters:
-+ tao - a `Tao` context
++ tao    - a `Tao` context
 . scale  - the scale of the term
 . term   - a `TaoTerm` for the real-valued function defining the objective
 . params - the vector of parameters for `term`, or `NULL` if no parameters were specified for `term`
@@ -2894,20 +2944,20 @@ PetscErrorCode TaoGetObjectiveTerm(Tao tao, PetscReal *scale, TaoTerm *term, Vec
   `TaoGetObjectiveTerm` will return a `TaoTerm` with the type `TAOTERMTAOCALLBACKS` that encapsulates
   those callbacks.
 
-.seealso: [](ch_tao), `Tao`, `TaoTerm`, `TAOTERMSUM`, `TaoSetObjectiveTerm()`, `TaoAddObjectiveTerm()`
+.seealso: [](ch_tao), `Tao`, `TaoTerm`, `TAOTERMSUM`, `TaoAddObjectiveTerm()`
 @*/
 PetscErrorCode TaoSetObjectiveTerm(Tao tao, PetscReal scale, TaoTerm term, Vec params, Mat map)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
   if (term) {
-    PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 2);
-    PetscCheckSameComm(tao, 1, term, 2);
+    PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 3);
+    PetscCheckSameComm(tao, 1, term, 3);
   }
   PetscCall(TaoMappedTermSetData(&tao->objective_term, NULL, scale, term, map));
   if (params) {
-    PetscValidHeaderSpecific(params, VEC_CLASSID, 3);
-    PetscCheckSameComm(tao, 1, params, 3);
+    PetscValidHeaderSpecific(params, VEC_CLASSID, 4);
+    PetscCheckSameComm(tao, 1, params, 4);
   }
   PetscCall(PetscObjectReference((PetscObject)params));
   PetscCall(VecDestroy(&tao->objective_parameters));
@@ -2916,10 +2966,10 @@ PetscErrorCode TaoSetObjectiveTerm(Tao tao, PetscReal scale, TaoTerm term, Vec p
 }
 
 /*@
-  TaoAddObjectiveTerm - Add a term to the objective function of a `Tao`.
-  If the original objective function was $f(x)$, the new objective function
-  will be $f(x) + \alpha g(Ax; p)$, where $\alpha$ is the `scale`, $g$ is the `term`,
-  $A$ is the (optional) map, and $p$ are the (optional) parameters of $g$.
+  TaoAddObjectiveTerm - Add a term to the objective function.  If the objective
+  function was $f(x)$, it becomes $f(x) + \alpha g(Ax; p)$, where $\alpha$ is
+  the `scale`, $g$ is the `term`, $A$ is the (optional) map, and $p$ are the
+  (optional) parameters of $g$.
 
   Collective
 
@@ -2955,7 +3005,15 @@ PetscErrorCode TaoAddObjectiveTerm(Tao tao, const char name[], PetscReal scale, 
     PetscCall(TaoMappedTermReset(&tao->objective_term));
     PetscCall(TaoMappedTermSetData(&tao->objective_term, NULL, 1.0, old_sum, NULL));
     PetscCall(TaoTermDestroy(&old_sum));
-    // TODO: encapsulate parameters
+    if (tao->objective_parameters) {
+      // convert the parameters to a VECNEST
+      Vec subvecs[1];
+
+      subvecs[0]                = tao->objective_parameters;
+      tao->objective_parameters = NULL;
+      PetscCall(TaoTermSumConcatenateParameters(old_sum, subvecs, &tao->objective_parameters));
+      PetscCall(VecDestroy(&subvecs[0]));
+    }
   }
   if (tao->objective_term.scale != 1.0 || tao->objective_term.map != NULL) {
     PetscInt num_terms;
@@ -2977,7 +3035,7 @@ PetscErrorCode TaoAddObjectiveTerm(Tao tao, const char name[], PetscReal scale, 
         // there was no outer map, i.e. map was the identity, so now map is the inner map
         new_sub_map = sub_map;
         PetscCall(PetscObjectReference((PetscObject)new_sub_map));
-      } else if (sub_map && tao->objective_term.map) {
+      } else {
         // multiply together the maps
         PetscCall(MatMatMult(sub_map, tao->objective_term.map, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &new_sub_map));
       }
@@ -2987,6 +3045,33 @@ PetscErrorCode TaoAddObjectiveTerm(Tao tao, const char name[], PetscReal scale, 
     }
   }
   PetscCall(TaoTermSumAddSubterm(tao->objective_term.term, name, scale, term, map, NULL));
-  // TODO: concatenate parameters
+  if (tao->objective_parameters || params) {
+    PetscInt num_terms;
+    Vec     *vec_list;
+
+    PetscCall(TaoTermSumGetNumSubterms(tao->objective_term.term, &num_terms));
+    PetscCall(PetscCalloc1(num_terms, &vec_list));
+    if (tao->objective_parameters) {
+      PetscInt num_old_terms;
+      Vec     *old_vecs;
+      PetscCall(VecNestGetSubVecs(tao->objective_parameters, &num_old_terms, &old_vecs));
+      PetscCheck(num_old_terms + 1 == num_terms, PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_WRONGSTATE, "Old parameter VECNEST has the wrong number of subvecs");
+      for (PetscInt i = 0; i < num_old_terms; i++) {
+        PetscInt N;
+
+        PetscCall(VecGetSize(old_vecs[i], &N));
+        if (N > 0) {
+          PetscCall(PetscObjectReference((PetscObject)old_vecs[i]));
+          vec_list[i] = old_vecs[i];
+        }
+      }
+      PetscCall(VecDestroy(&tao->objective_parameters));
+    }
+    PetscCall(PetscObjectReference((PetscObject)params));
+    vec_list[num_terms - 1] = params;
+    PetscCall(TaoTermSumConcatenateParameters(tao->objective_term.term, vec_list, &tao->objective_parameters));
+    for (PetscInt i = 0; i < num_terms; i++) PetscCall(VecDestroy(&vec_list[i]));
+    PetscCall(PetscFree(vec_list));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }

@@ -165,8 +165,7 @@ PetscErrorCode TaoTestHessian(Tao tao)
   Mat               A, B, C, D, hessian;
   Vec               x = tao->solution;
   PetscReal         nrm, gnorm;
-  PetscReal         threshold = 1.e-5;
-  PetscInt          m, n, M, N;
+  PetscReal         threshold      = 1.e-5;
   PetscBool         complete_print = PETSC_FALSE, test = PETSC_FALSE, flg;
   PetscViewer       viewer, mviewer;
   MPI_Comm          comm;
@@ -203,6 +202,7 @@ PetscErrorCode TaoTestHessian(Tao tao)
   else hessian = tao->hessian_pre;
 
   while (hessian) {
+    PetscLayout rmap, cmap;
     PetscCall(PetscObjectBaseTypeCompareAny((PetscObject)hessian, &flg, MATSEQAIJ, MATMPIAIJ, MATSEQDENSE, MATMPIDENSE, MATSEQBAIJ, MATMPIBAIJ, MATSEQSBAIJ, MATMPIBAIJ, ""));
     if (flg) {
       A = hessian;
@@ -212,9 +212,8 @@ PetscErrorCode TaoTestHessian(Tao tao)
     }
 
     PetscCall(MatCreate(PetscObjectComm((PetscObject)A), &B));
-    PetscCall(MatGetSize(A, &M, &N));
-    PetscCall(MatGetLocalSize(A, &m, &n));
-    PetscCall(MatSetSizes(B, m, n, M, N));
+    PetscCall(MatGetLayouts(A, &rmap, &cmap));
+    PetscCall(MatSetLayouts(B, rmap, cmap));
     PetscCall(MatSetType(B, ((PetscObject)A)->type_name));
     PetscCall(MatSetUp(B));
     PetscCall(MatSetOption(B, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE));
@@ -244,7 +243,7 @@ PetscErrorCode TaoTestHessian(Tao tao)
 
       PetscCall(MatAYPX(B, -1.0, A, DIFFERENT_NONZERO_PATTERN));
       PetscCall(MatCreate(PetscObjectComm((PetscObject)A), &C));
-      PetscCall(MatSetSizes(C, m, n, M, N));
+      PetscCall(MatSetLayouts(C, rmap, cmap));
       PetscCall(MatSetType(C, ((PetscObject)A)->type_name));
       PetscCall(MatSetUp(C));
       PetscCall(MatSetOption(C, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE));
