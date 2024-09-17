@@ -16,13 +16,13 @@ picked X_A, obj(X_A) = 1.418471e+00, ||F_A||_2 = 2.482764e-03, obj(X_M) = 1.4184
 picked X_A, obj(X_A) = 1.418470e+00, ||F_A||_2 = 8.361183e-04, obj(X_M) = 1.418470e+00, ||F_M||_2 = 1.165492e-03
     6 SNES Function norm 8.361183483059e-04, Update norm 1.063964488470e-03, Objective 1.418469627383e+00
 picked X_A, obj(X_A) = 1.418469e+00, ||F_A||_2 = 3.412178e-04, obj(X_M) = 1.418469e+00, ||F_M||_2 = 4.793377e-04
-    7 SNES Function norm 3.412178120880e-04, Update norm 3.231528571217e-04, Objective 1.418469477243e+00
+    7 SNES Function norm 3.412178120879e-04, Update norm 3.231528571218e-04, Objective 1.418469477243e+00
 picked X_A, obj(X_A) = 1.418469e+00, ||F_A||_2 = 2.031769e-04, obj(X_M) = 1.418469e+00, ||F_M||_2 = 2.953762e-04
-    8 SNES Function norm 2.031769119520e-04, Update norm 1.321364664994e-04, Objective 1.418469448030e+00
+    8 SNES Function norm 2.031769119519e-04, Update norm 1.321364664993e-04, Objective 1.418469448030e+00
 picked X_A, obj(X_A) = 1.418469e+00, ||F_A||_2 = 1.230674e-04, obj(X_M) = 1.418469e+00, ||F_M||_2 = 2.158998e-04
-    9 SNES Function norm 1.230674225780e-04, Update norm 1.321803825105e-04, Objective 1.418469430444e+00
+    9 SNES Function norm 1.230674225781e-04, Update norm 1.321803825105e-04, Objective 1.418469430444e+00
 picked X_A, obj(X_A) = 1.418469e+00, ||F_A||_2 = 5.101029e-05, obj(X_M) = 1.418469e+00, ||F_M||_2 = 1.091792e-04
-   10 SNES Function norm 5.101029435282e-05, Update norm 1.107336583586e-04, Objective 1.418469423383e+00
+   10 SNES Function norm 5.101029435271e-05, Update norm 1.107336583587e-04, Objective 1.418469423383e+00
     Nonlinear solve converged due to CONVERGED_FNORM_ABS iterations 10
 Tao Object: 1 MPI process
   type: snes
@@ -53,6 +53,10 @@ Tao Object: 1 MPI process
         maxstep=1.000000e+08, minlambda=1.000000e-12
         tolerances: relative=1.000000e-08, absolute=1.000000e-15, lambda=1.000000e-08
         maximum iterations=1
+  Objective function:
+    Scale: 1.
+    Function: defined by callbacks
+    Map: unmapped
   convergence tolerances: gatol=1e-08,   grtol=1e-08,   steptol=0.,   gttol=0.
   Residual in Function/Gradient:=5.10103e-05
   Objective value=1.41847

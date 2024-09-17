@@ -17,6 +17,10 @@ Tao Object: 1 MPI process
         Not a descent direction: 0
         Line search fails: 0
         Matrix has not been preallocated yet
+      Objective function:
+        Scale: 1.
+        Function: defined by callbacks
+        Map: unmapped
       TaoLineSearch Object: (tao_bnk_cg_) 1 MPI process
         type: more-thuente
         maximum function evaluations=30
@@ -45,6 +49,10 @@ Tao Object: 1 MPI process
       dtol: 0
       iter: 0
       othr: 0
+  Objective function:
+    Scale: 1.
+    Function: defined by callbacks
+    Map: unmapped
   TaoLineSearch Object: 1 MPI process
     type: more-thuente
     maximum function evaluations=30

@@ -12,6 +12,10 @@ Tao Object: 2 MPI processes
     Newton steps: 3
     BFGS steps: 0
     Gradient steps: 0
+  Objective function:
+    Scale: 1.
+    Function: defined by callbacks
+    Map: unmapped
   TaoLineSearch Object: 2 MPI processes
     type: more-thuente
     maximum function evaluations=30
