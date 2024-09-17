@@ -1,6 +1,7 @@
 #pragma once
 
 #include <petscsnes.h>
+#include <petsctaoterm.h>
 
 /* SUBMANSEC = Tao */
 
@@ -31,15 +32,6 @@ typedef enum {
   TAO_SUBSET_MATRIXFREE
 } TaoSubsetType;
 PETSC_EXTERN const char *const TaoSubsetTypes[];
-
-/*S
-   Tao - Abstract PETSc object that manages nonlinear optimization solves
-
-   Level: advanced
-
-.seealso: [](doc_taosolve), [](ch_tao), `TaoCreate()`, `TaoDestroy()`, `TaoSetType()`, `TaoType`
-S*/
-typedef struct _p_Tao *Tao;
 
 /*E
   TaoADMMUpdateType - Determine spectral penalty update routine for Lagrange augmented term for `TAOADMM`.
@@ -335,6 +327,8 @@ PETSC_EXTERN PetscErrorCode TaoSetObjectiveAndGradient(Tao, Vec, PetscErrorCode 
 PETSC_EXTERN PetscErrorCode TaoGetObjectiveAndGradient(Tao, Vec *, PetscErrorCode (**)(Tao, Vec, PetscReal *, Vec, void *), void **);
 PETSC_EXTERN PetscErrorCode TaoSetHessian(Tao, Mat, Mat, PetscErrorCode (*)(Tao, Vec, Mat, Mat, void *), void *);
 PETSC_EXTERN PetscErrorCode TaoGetHessian(Tao, Mat *, Mat *, PetscErrorCode (**)(Tao, Vec, Mat, Mat, void *), void **);
+PETSC_EXTERN PetscErrorCode TaoSetHessianMatrices(Tao, Mat, Mat);
+PETSC_EXTERN PetscErrorCode TaoGetHessianMatrices(Tao, Mat *, Mat *);
 
 PETSC_EXTERN PetscErrorCode TaoSetGradientNorm(Tao, Mat);
 PETSC_EXTERN PetscErrorCode TaoGetGradientNorm(Tao, Mat *);
@@ -510,5 +504,9 @@ PETSC_EXTERN PetscErrorCode TaoBoundStep(Vec, Vec, Vec, IS, IS, IS, PetscReal, V
 PETSC_EXTERN PetscErrorCode TaoBoundSolution(Vec, Vec, Vec, PetscReal, PetscInt *, Vec);
 
 PETSC_EXTERN PetscErrorCode MatCreateSubMatrixFree(Mat, IS, IS, Mat *);
+
+PETSC_EXTERN PetscErrorCode TaoGetObjectiveTerm(Tao, PetscReal *, TaoTerm *, Vec *, Mat *);
+PETSC_EXTERN PetscErrorCode TaoSetObjectiveTerm(Tao, PetscReal, TaoTerm, Vec, Mat);
+PETSC_EXTERN PetscErrorCode TaoAddObjectiveTerm(Tao, const char *, PetscReal, TaoTerm, Vec, Mat);
 
 #include <petsctao_deprecations.h>

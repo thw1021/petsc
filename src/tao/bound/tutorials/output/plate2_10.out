@@ -17,6 +17,10 @@ Tao Object: 1 MPI process
         Not a descent direction: 0
         Line search fails: 0
         Matrix has not been preallocated yet
+      Objective function:
+        Scale: 1.
+        Function: defined by callbacks
+        Map: unmapped
       TaoLineSearch Object: (tao_bnk_cg_) 1 MPI process
         type: more-thuente
         maximum function evaluations=30
@@ -26,7 +30,7 @@ Tao Object: 1 MPI process
         total number of function/gradient evaluations=0
         Termination reason: 0
       Active Set subset type: subvec
-      convergence tolerances: gatol=1e-08,       grtol=1e-08,   steptol=0.,       gttol=0.
+      convergence tolerances: gatol=1e-08,       grtol=1e-08,       steptol=0.,       gttol=0.
       Residual in Function/Gradient:=0.
       Objective value=0.
       total number of iterations=0,                              (max: 2000)
@@ -45,6 +49,10 @@ Tao Object: 1 MPI process
       dtol: 0
       iter: 0
       othr: 0
+  Objective function:
+    Scale: 1.
+    Function: defined by callbacks
+    Map: unmapped
   TaoLineSearch Object: 1 MPI process
     type: more-thuente
     maximum function evaluations=30
