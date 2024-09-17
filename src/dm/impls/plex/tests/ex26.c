@@ -26,8 +26,8 @@ int main(int argc, char **argv)
   IS              csIS;
   const PetscInt *csID;
   PetscInt       *pStartDepth, *pEndDepth;
-  int             order   = 1;
-  PetscInt        order64 = 1;
+  int             exo_order   = 1;
+  PetscInt        order = 1;
   PetscInt        sdim, d, pStart, pEnd, p, numCS, set;
   PetscMPIInt     rank, size;
   PetscViewer     viewer;
