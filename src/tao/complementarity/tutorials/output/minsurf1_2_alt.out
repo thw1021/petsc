@@ -6,6 +6,10 @@ mx:4, my:4
   2 TAO,  Function value: 4.46413e-05,  Residual: 8.72658e-05 
 Tao Object: 1 MPI process
   type: ssfls
+  Objective function:
+    Scale: 1.
+    Function: defined by callbacks
+    Map: unmapped
   TaoLineSearch Object: 1 MPI process
     type: armijo
       Armijo linesearch     (projected)    : alpha=1. beta=0.5     sigma=0.0001     memsize=1
