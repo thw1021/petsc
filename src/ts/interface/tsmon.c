@@ -756,10 +756,11 @@ PetscErrorCode TSMonitorDrawError(TS ts, PetscInt step, PetscReal ptime, Vec u, 
 PetscErrorCode TSMonitorSolution(TS ts, PetscInt step, PetscReal ptime, Vec u, PetscViewerAndFormat *vf)
 {
   PetscFunctionBegin;
-  if (vf->view_interval > 0 && !ts->reason && step % vf->view_interval != 0) PetscFunctionReturn(PETSC_SUCCESS);
-  PetscCall(PetscViewerPushFormat(vf->viewer, vf->format));
-  PetscCall(VecView(u, vf->viewer));
-  PetscCall(PetscViewerPopFormat(vf->viewer));
+  if ((vf->view_interval > 0 && !(step % vf->view_interval)) || (vf->view_interval && ts->reason)) {
+    PetscCall(PetscViewerPushFormat(vf->viewer, vf->format));
+    PetscCall(VecView(u, vf->viewer));
+    PetscCall(PetscViewerPopFormat(vf->viewer));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
