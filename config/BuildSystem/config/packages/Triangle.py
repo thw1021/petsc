@@ -17,7 +17,7 @@ class Configure(config.package.Package):
   def setupHelp(self, help):
     import nargs
     config.package.Package.setupHelp(self, help)
-    help.addArgument('TRIANGLE', '-download-triangle-build-program=<bool>', nargs.ArgBool(None, False, 'Build and install the triangle program in addition to the library'))
+    help.addArgument('TRIANGLE', '-download-triangle-build-exec=<bool>', nargs.ArgBool(None, False, 'Build and install the triangle executable in addition to the library'))
     return
 
   def setupDependencies(self, framework):
@@ -126,11 +126,11 @@ triangle_shared:
       output,err,ret = config.package.Package.executeShellCommand('mkdir -p '+os.path.join(self.installDir,'include'), timeout=2500, log=self.log)
       output2,err2,ret2  = config.package.Package.executeShellCommand('cp -f '+os.path.join(self.packageDir,'libtriangle.'+self.setCompilers.AR_LIB_SUFFIX)+' '+os.path.join(self.installDir,'lib'), timeout=60, log = self.log)
       output2,err2,ret2  = config.package.Package.executeShellCommand('cp -f '+os.path.join(self.packageDir, 'src', 'triangle.h')+' '+includeDir, timeout=60, log = self.log)
-      if self.argDB['download-triangle-build-program']:
+      if self.argDB['download-triangle-build-exec']:
         try:
           output3,err3,ret3  = config.package.Package.executeShellCommand('cd '+self.packageDir+' && make clean && '+self.getCompiler()+' '+cflags+' -DNO_PETSC_MALLOC src/triangle.c -o triangle -lm && make clean', timeout=2500, log = self.log)
         except RuntimeError as e:
-          raise RuntimeError('Error building Triangle program: '+str(e))
+          raise RuntimeError('Error building Triangle executable: '+str(e))
         output3,err3,ret3  = config.package.Package.executeShellCommand('cp -f '+os.path.join(self.packageDir,'triangle')+' '+os.path.join(self.installDir,'bin'), timeout=60, log = self.log)
       self.postInstall(output1+err1+output2+err2,'make.inc')
     return self.installDir

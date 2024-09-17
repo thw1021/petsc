@@ -13,7 +13,7 @@ class Configure(config.package.Package):
   def setupHelp(self, help):
     import nargs
     config.package.Package.setupHelp(self, help)
-    help.addArgument('TETGEN', '-download-tetgen-build-program=<bool>', nargs.ArgBool(None, False, 'Build and install the tetgen program in addition to the library'))
+    help.addArgument('TETGEN', '-download-tetgen-build-exec=<bool>', nargs.ArgBool(None, False, 'Build and install the tetgen executable in addition to the library'))
     return
 
   def setupDependencies(self, framework):
@@ -79,7 +79,7 @@ class Configure(config.package.Package):
         output,err,ret = config.package.Package.executeShellCommand('mkdir -p '+os.path.join(self.installDir,'lib'), timeout=2500, log=self.log)
         output,err,ret = config.package.Package.executeShellCommand('mkdir -p '+os.path.join(self.installDir,'include'), timeout=2500, log=self.log)
         output1,err1,ret1  = config.package.Package.executeShellCommand('cd '+self.packageDir+' && make CXX="'+ self.getCompiler() + '" CXXFLAGS="' + cflags + '" PREDCXXFLAGS="' + predcflags + '" tetlib && cp *.a ' + libDir + ' && rm *.a *.o', timeout=2500, log = self.log)
-        if self.argDB['download-tetgen-build-program']:
+        if self.argDB['download-tetgen-build-exec']:
           output2,err2,ret2  = config.package.Package.executeShellCommand('cd '+self.packageDir+' && make CXX="'+ self.getCompiler() + '" CXXFLAGS="' + cflags_exe + '" PREDCXXFLAGS="' + predcflags + '" tetgen && cp tetgen ' + binDir + ' && rm tetgen', timeout=2500, log = self.log)
       except RuntimeError as e:
         raise RuntimeError('Error running make on TetGen: '+str(e))
