@@ -59,6 +59,10 @@ Tao Object: 3 MPI processes
           Number of updates: 30
           Number of rejects: 0
           Number of resets: 1
+  Objective function:
+    Scale: 1.
+    Function: defined by callbacks
+    Map: unmapped
   TaoLineSearch Object: 3 MPI processes
     type: more-thuente
     maximum function evaluations=30
