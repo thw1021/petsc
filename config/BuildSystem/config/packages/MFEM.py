@@ -28,17 +28,19 @@ class Configure(config.package.Package):
 
   def setupDependencies(self, framework):
     config.package.Package.setupDependencies(self, framework)
-    self.hypre  = framework.require('config.packages.hypre',self)
-    self.mpi    = framework.require('config.packages.MPI',self)
-    self.metis  = framework.require('config.packages.metis',self)
-    self.slepc  = framework.require('config.packages.slepc',self)
-    self.ceed   = framework.require('config.packages.libceed',self)
-    self.cuda   = framework.require('config.packages.cuda',self)
-    self.hip    = framework.require('config.packages.hip',self)
-    self.openmp = framework.require('config.packages.openmp',self)
+    self.hypre        = framework.require('config.packages.hypre',self)
+    self.mpi          = framework.require('config.packages.MPI',self)
+    self.metis        = framework.require('config.packages.metis',self)
+    self.slepc        = framework.require('config.packages.slepc',self)
+    self.ceed         = framework.require('config.packages.libceed',self)
+    self.cuda         = framework.require('config.packages.cuda',self)
+    self.hip          = framework.require('config.packages.hip',self)
+    self.openmp       = framework.require('config.packages.openmp',self)
+    self.superlu_dist = framework.require('config.packages.SuperLU_DIST',self)
+    self.netcdf       = framework.require('config.packages.netcdf',self)
     self.scalar = framework.require('PETSc.options.scalarTypes',self)
     self.deps   = [self.mpi,self.hypre,self.metis]
-    self.odeps  = [self.slepc,self.ceed,self.cuda,self.openmp]
+    self.odeps  = [self.slepc,self.ceed,self.cuda,self.openmp,self.superlu_dist,self.netcdf]
     return
 
   def Install(self):
@@ -166,6 +168,20 @@ class Configure(config.package.Package):
         g.write('CEED_LIB = '+self.libraries.toString(self.ceed.lib)+'\n')
         if self.cuda.found:
           g.write('CEED_LIB := $(subst -Wl,-Xlinker=,$(CEED_LIB))\n')
+      if self.superlu_dist.found:
+        g.write('MFEM_USE_SUPERLU = YES\n')
+        g.write('SUPERLU_DIR = '+self.superlu_dist.directory+'\n')
+        g.write('SUPERLU_OPT = '+self.headers.toString(self.superlu_dist.include)+'\n')
+        g.write('SUPERLU_LIB = '+self.libraries.toString(self.superlu_dist.lib)+'\n')
+        if self.cuda.found:
+          g.write('SUPERLU_LIB := $(subst -Wl,-Xlinker=,$(SUPERLU_LIB))\n')
+      if self.netcdf.found:
+        g.write('MFEM_USE_NETCDF = YES\n')
+        g.write('NETCDF_DIR = '+self.netcdf.directory+'\n')
+        g.write('NETCDF_OPT = '+self.headers.toString(self.netcdf.include)+'\n')
+        g.write('NETCDF_LIB = '+self.libraries.toString(self.netcdf.lib)+'\n')
+        if self.cuda.found:
+          g.write('NETCDF_LIB := $(subst -Wl,-Xlinker=,$(NETCDF_LIB))\n')
 
       if self.cuda.found:
         self.pushLanguage('CUDA')
