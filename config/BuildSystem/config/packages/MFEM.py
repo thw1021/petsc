@@ -43,6 +43,15 @@ class Configure(config.package.Package):
     self.odeps  = [self.slepc,self.ceed,self.cuda,self.openmp,self.superlu_dist,self.netcdf]
     return
 
+  def writeConfig(self, g, lib_name, lib_data):
+    if lib_data.found:
+      g.write(f'MFEM_USE_{lib_name.upper()} = YES\n')
+      g.write(f'{lib_name.upper()}_DIR = {lib_data.directory}\n')
+      g.write(f'{lib_name.upper()}_OPT = {self.headers.toString(lib_data.include)}\n')
+      g.write(f'{lib_name.upper()}_LIB = {self.libraries.toString(lib_data.lib)}\n')
+      if self.cuda.found:
+        g.write(f'{lib_name.upper()}_LIB := $(subst -Wl,-Xlinker=,$({lib_name.upper()}_LIB))\n')
+
   def Install(self):
 #    return self.installDir
 #
@@ -161,27 +170,9 @@ class Configure(config.package.Package):
           makedepend = 'slepc-install'
         else:
           makedepend = 'slepc-build'
-      if self.ceed.found:
-        g.write('MFEM_USE_CEED = YES\n')
-        g.write('CEED_DIR = '+self.ceed.directory+'\n')
-        g.write('CEED_OPT = '+self.headers.toString(self.ceed.include)+'\n')
-        g.write('CEED_LIB = '+self.libraries.toString(self.ceed.lib)+'\n')
-        if self.cuda.found:
-          g.write('CEED_LIB := $(subst -Wl,-Xlinker=,$(CEED_LIB))\n')
-      if self.superlu_dist.found:
-        g.write('MFEM_USE_SUPERLU = YES\n')
-        g.write('SUPERLU_DIR = '+self.superlu_dist.directory+'\n')
-        g.write('SUPERLU_OPT = '+self.headers.toString(self.superlu_dist.include)+'\n')
-        g.write('SUPERLU_LIB = '+self.libraries.toString(self.superlu_dist.lib)+'\n')
-        if self.cuda.found:
-          g.write('SUPERLU_LIB := $(subst -Wl,-Xlinker=,$(SUPERLU_LIB))\n')
-      if self.netcdf.found:
-        g.write('MFEM_USE_NETCDF = YES\n')
-        g.write('NETCDF_DIR = '+self.netcdf.directory+'\n')
-        g.write('NETCDF_OPT = '+self.headers.toString(self.netcdf.include)+'\n')
-        g.write('NETCDF_LIB = '+self.libraries.toString(self.netcdf.lib)+'\n')
-        if self.cuda.found:
-          g.write('NETCDF_LIB := $(subst -Wl,-Xlinker=,$(NETCDF_LIB))\n')
+      self.writeConfig(g, 'ceed', self.ceed)
+      self.writeConfig(g, 'superlu', self.superlu_dist)
+      self.writeConfig(g, 'netcdf', self.netcdf)
 
       if self.cuda.found:
         self.pushLanguage('CUDA')
