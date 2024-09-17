@@ -44,13 +44,14 @@ class Configure(config.package.Package):
     return
 
   def writeConfig(self, g, lib_name, lib_data):
+    lib_name_upper = lib_name.upper()
     if lib_data.found:
-      g.write(f'MFEM_USE_{lib_name.upper()} = YES\n')
-      g.write(f'{lib_name.upper()}_DIR = {lib_data.directory}\n')
-      g.write(f'{lib_name.upper()}_OPT = {self.headers.toString(lib_data.include)}\n')
-      g.write(f'{lib_name.upper()}_LIB = {self.libraries.toString(lib_data.lib)}\n')
+      g.write('MFEM_USE_{0} = YES\n'.format(lib_name_upper))
+      g.write('{0}_DIR = {1}\n'.format(lib_name_upper, lib_data.directory))
+      g.write('{0}_OPT = {1}\n'.format(lib_name_upper, self.headers.toString(lib_data.include)))
+      g.write('{0}_LIB = {1}\n'.format(lib_name_upper, self.libraries.toString(lib_data.lib)))
       if self.cuda.found:
-        g.write(f'{lib_name.upper()}_LIB := $(subst -Wl,-Xlinker=,$({lib_name.upper()}_LIB))\n')
+        g.write('{0}_LIB := $(subst -Wl,-Xlinker=,$({0}_LIB))\n'.format(lib_name_upper))
 
   def Install(self):
 #    return self.installDir
