@@ -652,10 +652,14 @@ PetscErrorCode TaoCreateDefaultLineSearch(Tao tao)
 static
 PetscErrorCode TaoHasGradientRoutine(Tao tao, PetscBool* flg)
 {
+  PetscBool has_grad, has_objgrad;
+
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
   PetscAssertPointer(flg,2);
-  *flg = (PetscBool)(tao->ops->computegradient || tao->ops->computeobjectiveandgradient);
+  PetscCall(TaoIsGradientDefined(tao, &has_grad));
+  PetscCall(TaoIsObjectiveAndGradientDefined(tao, &has_objgrad));
+  *flg = (PetscBool)(has_grad || has_objgrad);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
