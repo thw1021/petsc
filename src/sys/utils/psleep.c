@@ -28,6 +28,7 @@
 PetscErrorCode PetscSleep(PetscReal s)
 {
   PetscFunctionBegin;
+  if (PetscCIEnabled) PetscFunctionReturn(PETSC_SUCCESS);
   if (s < 0) getc(stdin);
 
     /* Some systems consider it an error to call nanosleep or usleep for more than one second so we only use them for subsecond sleeps. */

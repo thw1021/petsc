@@ -643,9 +643,13 @@ class generateExamples(Petsc):
     isBuilt=self._isBuilt(exfile,srcDict)
     for test in srcDict:
       if test in self.buildkeys: continue
-      if debug: print(nameSpace(exfile,root), test)
-      srcDict[test]['execname']=execname   # Convenience in generating scripts
       isRun=self._isRun(srcDict[test])
+      # if the next two lines are dropped all scripts are generating included the unneeded
+      # if the unneeded are generated when run they will skip their tests automatically
+      # not generating them saves setup time
+      if not isRun: continue
+      if 'TODO' in srcDict[test]:continue
+      srcDict[test]['execname']=execname   # Convenience in generating scripts
       self.genRunScript(test,root,isRun,srcDict)
       srcDict[test]['isrun']=isRun
       self.addToTests(test,rpath,exfile,execname,srcDict[test])
