@@ -1772,7 +1772,8 @@ int main(int argc, char **argv)
           -ksp_rtol 1e-8 -pc_type mg
   test:
     suffix: 2d_p1_adaptmg_1
-    requires: triangle bamg todo
+    TODO: broken
+    requires: triangle bamg
     args: -petscpartitioner_type simple -dm_refine_hierarchy 3 -dm_plex_box_faces 4,4 -bc_type dirichlet -petscspace_degree 1 \
           -variable_coefficient checkerboard_0 -mat_petscspace_degree 0 -div 16 -k 3 \
           -snes_max_it 1 -ksp_converged_reason \
