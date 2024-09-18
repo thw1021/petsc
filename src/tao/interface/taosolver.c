@@ -2154,7 +2154,7 @@ PetscErrorCode TaoSetType(Tao tao, TaoType type)
   PetscCall(PetscObjectTypeCompare((PetscObject)tao, type, &issame));
   if (issame) PetscFunctionReturn(PETSC_SUCCESS);
 
-  PetscCall(PetscFunctionListFind(TaoList, type, (void (**)(void)) & create_xxx));
+  PetscCall(PetscFunctionListFind(TaoList, type, (void (**)(void))&create_xxx));
   PetscCheck(create_xxx, PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_UNKNOWN_TYPE, "Unable to find requested Tao type %s", type);
 
   /* Destroy the existing solver information */
