@@ -1091,7 +1091,6 @@ static PetscErrorCode fixAggregatesWithSquare(PC pc, Mat Gmat_2, Mat Gmat_1, Pet
           PetscInt gid;
 
           PetscCall(PetscCDIntNdGetID(pos, &gid));
-
           if (gid < my0 || gid >= Iend) {
             PetscCall(PCGAMGHashTableFind(&gid_cpid, gid, &cpid));
             if (cpid != -1) {

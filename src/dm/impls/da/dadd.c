@@ -122,6 +122,7 @@ PetscErrorCode DMDACreatePatchIS(DM da, MatStencil *lower, MatStencil *upper, IS
     else k = lower->k - oz;
     do {
       PetscInt j;
+
       if (skip_j) j = upper->j - oy;
       else j = lower->j - oy;
       do {
