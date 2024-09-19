@@ -15,6 +15,7 @@ cdef extern from * nogil:
     PetscViewerType PETSCVIEWERGLVIS
     PetscViewerType PETSCVIEWERADIOS
     PetscViewerType PETSCVIEWEREXODUSII
+    PetscViewerType PETSCVIEWERPYTHON
 
     ctypedef enum PetscViewerFormat:
         PETSC_VIEWER_DEFAULT
@@ -125,6 +126,10 @@ cdef extern from * nogil:
     PetscErrorCode PetscViewerHDF5PushGroup(PetscViewer, char[])
     PetscErrorCode PetscViewerHDF5PopGroup(PetscViewer)
     PetscErrorCode PetscViewerHDF5GetGroup(PetscViewer, char[], char*[])
+
+    PetscErrorCode PetscViewerPythonSetType(PetscViewer, char[])
+    PetscErrorCode PetscViewerPythonGetType(PetscViewer, char*[])
+    PetscErrorCode PetscViewerPythonViewObject(PetscViewer, PetscObject)
 
     PetscViewer PETSC_VIEWER_STDOUT_(MPI_Comm) except? NULL
     PetscViewer PETSC_VIEWER_STDOUT_SELF
