@@ -1272,7 +1272,7 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
   PetscCheck(non_dim_grid >= 0 && non_dim_grid < ctx->num_species, ctx->comm, PETSC_ERR_ARG_WRONG, "Normalization grid wrong: %" PetscInt_FMT, non_dim_grid);
   ctx->v_0 = ctx->thermal_speed[non_dim_grid]; /* arbitrary units for non dimensionalization: global mean velocity in 1D of electrons */
   ctx->m_0 = ctx->masses[non_dim_grid];        /* arbitrary reference mass, electrons */
-  ctx->t_0 = 8 * PETSC_PI * PetscSqr(ctx->epsilon0 * ctx->m_0 / PetscSqr(ctx->charges[non_dim_grid])) / ctx->lambdas[non_dim_grid][non_dim_grid] / ctx->n_0 * PetscPowReal(ctx->v_0, 3); /* note, this t_0 makes nu[non_dim_grid,non_dim_grid]=1 */
+  ctx->t_0 = 8 * PETSC_PI * PetscSqr(ctx->epsilon0 * ctx->m_0 / PetscSqr(ctx->charges[0])) / ctx->lambdas[non_dim_grid][non_dim_grid] / ctx->n_0 * PetscPowReal(ctx->v_0, 3); /* note, this t_0 makes nu[non_dim_grid,non_dim_grid]=1 */
   /* domain */
   nt = LANDAU_MAX_GRIDS;
   PetscCall(PetscOptionsRealArray("-dm_landau_domain_radius", "Phase space size in units of thermal velocity of grid", "plexland.c", ctx->radius, &nt, &flg));
