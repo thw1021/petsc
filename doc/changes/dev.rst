@@ -28,6 +28,7 @@ Changes: Development
 - Add ``size_t`` argument to ``PetscMPIErrorString()``
 - Add ``PetscCallExternalAbort()`` for calling external library functions from functions not returning ``PetscErrorCode``
 - Add ``PetscRandomSetOptionsPrefix()``
+- Add ``PetscOptionsGetBool3()`` to get a ternary logical value from a command line option
 
 .. rubric:: Event Logging:
 
@@ -45,6 +46,8 @@ Changes: Development
 .. rubric:: VecScatter / PetscSF:
 
 - Add ``PetscSFRegisterPersistent()`` and ``PetscSFDeregisterPersistent()`` for safe optimization of persistent communication
+- Change ``-use_gpu_aware_mpi`` option from PetscBool to PetscBool3, to accept ``auto/unknown``, ``0``, and ``1`` values.  Default is ``1``. ``auto`` (or without using the option) uses MPI as is; ``1`` forces GPU-aware MPI use, and errors out if unavailable; ``0`` forces non-GPU-aware MPI (even when GPU-aware MPI is available)
+- Add ``PetscUseGPUAwareMPIGetStatus()`` to return current status of PETSc's GPU-aware MPI usage
 
 .. rubric:: PF:
 
