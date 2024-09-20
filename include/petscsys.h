@@ -2661,3 +2661,5 @@ PETSC_EXTERN PetscErrorCode PetscBLASGetNumThreads(PetscInt *);
    UBSan, assuming PETSc has been configured with `-fsanitize=undefined` as part of the compiler flags
 M*/
 #define PetscSafePointerPlusOffset(ptr, offset) ((ptr) ? (ptr) + (offset) : NULL)
+
+PETSC_EXTERN PetscErrorCode PetscUseGPUAwareMPIGetStatus(PetscBool3 *);
