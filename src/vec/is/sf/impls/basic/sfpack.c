@@ -658,11 +658,11 @@ PetscErrorCode PetscSFLinkSetUp_Host(PetscSF sf, PetscSFLink link, MPI_Datatype 
       else if (nbyte % 2 == 0) PackInit_DumbType_char_2_0(link);
       else if (nbyte == 1) PackInit_DumbType_char_1_1(link);
       else if (nbyte % 1 == 0) PackInit_DumbType_char_1_0(link);
-      PetscCall(PetscIntCast((MPIU_Count)nbyte, &link->bs)); // MPI_Count is at least as large as MPI_Aint, per MPI standard
+      PetscCall(PetscIntCast(nbyte, &link->bs));
       link->unitbytes = nbyte;
       link->basicunit = MPI_BYTE;
     } else {
-      PetscCall(PetscIntCast((MPIU_Count)(nbyte / sizeof(int)), &nInt));
+      PetscCall(PetscIntCast(nbyte / sizeof(int), &nInt));
       if (nInt == 8) PackInit_DumbType_DumbInt_8_1(link);
       else if (nInt % 8 == 0) PackInit_DumbType_DumbInt_8_0(link);
       else if (nInt == 4) PackInit_DumbType_DumbInt_4_1(link);
