@@ -122,7 +122,6 @@ struct _p_PetscSF {
   PetscBool      collective;           /* Is this SF collective? Currently only SFBASIC/SFWINDOW are not collective */
   PetscLayout    map;                  /* Layout of leaves over all processes when building a patterned graph */
   PetscBool      unknown_input_stream; /* If true, SF does not know which streams root/leafdata is on. Default is false, since we only use petsc default stream */
-  PetscBool      use_gpu_aware_mpi;    /* If true, SF assumes it can pass GPU pointers to MPI */
   PetscBool      use_stream_aware_mpi; /* If true, SF assumes the underlying MPI is cuda-stream aware and we won't sync streams for send/recv buffers passed to MPI */
   PetscInt       maxResidentThreadsPerGPU;
   PetscBool      allow_multi_leaves;

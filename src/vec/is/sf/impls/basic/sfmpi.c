@@ -75,7 +75,7 @@ PetscErrorCode PetscSFLinkCreate_MPI(PetscSF sf, MPI_Datatype unit, PetscMemType
     leafdirect[PETSCSF_REMOTE] = PETSC_FALSE;
   }
 
-  if (sf->use_gpu_aware_mpi) {
+  if (PetscBool3ToBool(use_gpu_aware_mpi)) {
     rootmtype_mpi = rootmtype;
     leafmtype_mpi = leafmtype;
   } else {

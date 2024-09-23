@@ -123,12 +123,6 @@ int main(int argc, char **argv)
         args: -vec_type hip -sf_backend hip
         requires: hip
 
-      test:
-        suffix: 1_cuda_aware_mpi
-        # sf_backend cuda is not needed if compiling only with cuda
-        args: -vec_type cuda -sf_backend cuda
-        requires: cuda defined(PETSC_HAVE_MPI_GPU_AWARE)
-
    testset:
       # N=10 is not divisible by nsize, to trigger Allgatherv/Gatherv in SF
       nsize: 3
@@ -152,11 +146,6 @@ int main(int argc, char **argv)
         args: -vec_type hip -sf_backend hip
         requires: hip
 
-      test:
-        suffix: 2_cuda_aware_mpi
-        args: -vec_type cuda
-        requires: cuda defined(PETSC_HAVE_MPI_GPU_AWARE)
-
    testset:
       # trigger one-to-all pattern in Allgatherv
       nsize: 3
@@ -179,10 +168,5 @@ int main(int argc, char **argv)
         # sf_backend hip is not needed if compiling only with hip
         args: -vec_type hip -sf_backend hip
         requires: hip
-
-      test:
-        suffix: 2_cuda_aware_mpi_onetoall
-        args: -vec_type cuda
-        requires: cuda defined(PETSC_HAVE_MPI_GPU_AWARE)
 
 TEST*/

@@ -1578,10 +1578,13 @@ PETSC_INTERN PetscSpinlock PetscViewerASCIISpinLockStderr;
 PETSC_INTERN PetscSpinlock PetscCommSpinLock;
 #endif
 
+PETSC_SINGLE_LIBRARY_INTERN PetscBool3 use_gpu_aware_mpi;  // how petsc should do wrt gpu-aware mpi
+PETSC_SINGLE_LIBRARY_INTERN PetscBool  mpi_is_gpu_aware;   // whether the mpi used is gpu-aware
+PETSC_SINGLE_LIBRARY_INTERN PetscBool  device_initialized; // has petsc ever created device objects?
+
 PETSC_EXTERN PetscLogEvent PETSC_Barrier;
 PETSC_EXTERN PetscLogEvent PETSC_BuildTwoSided;
 PETSC_EXTERN PetscLogEvent PETSC_BuildTwoSidedF;
-PETSC_EXTERN PetscBool     use_gpu_aware_mpi;
 PETSC_EXTERN PetscBool     PetscPrintFunctionList;
 
 #if defined(PETSC_HAVE_ADIOS)

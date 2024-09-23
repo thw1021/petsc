@@ -34,7 +34,9 @@ PetscBool PetscBeganNvshmem       = PETSC_FALSE;
 PetscBool PetscNvshmemInitialized = PETSC_FALSE;
 #endif
 
-PetscBool use_gpu_aware_mpi = PetscDefined(HAVE_MPIUNI) ? PETSC_FALSE : PETSC_TRUE;
+PetscBool3 use_gpu_aware_mpi  = PETSC_BOOL3_UNKNOWN;
+PetscBool  mpi_is_gpu_aware   = PETSC_FALSE;
+PetscBool  device_initialized = PETSC_FALSE;
 
 PetscBool PetscPrintFunctionList = PETSC_FALSE;
 
@@ -583,8 +585,7 @@ PETSC_INTERN PetscErrorCode PetscOptionsCheckInitial_Private(const char help[])
   }
 
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-saws_options", &PetscOptionsPublish, NULL));
-  PetscCall(PetscOptionsGetBool(NULL, NULL, "-use_gpu_aware_mpi", &use_gpu_aware_mpi, &flg1));
-  if (!flg1) PetscCall(PetscOptionsGetBool(NULL, NULL, "-sf_use_gpu_aware_mpi", &use_gpu_aware_mpi, &flg1)); // an alias option
+  PetscCall(PetscOptionsGetBool3(NULL, NULL, "-use_gpu_aware_mpi", &use_gpu_aware_mpi, NULL));
 
   /*
        Print basic help message
@@ -657,5 +658,39 @@ PETSC_INTERN PetscErrorCode PetscOptionsCheckInitial_Private(const char help[])
 
   PetscCall(PetscOptionsGetReal(NULL, NULL, "-petsc_sleep", &si, &flg1));
   if (flg1) PetscCall(PetscSleep(si));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PetscUseGPUAwareMPIGetStatus - Get current status of PETSc's GPU-aware MPI usage
+
+  Synopsis:
+  #include <petscsys.h>
+  PetscErrorCode PetscUseGPUAwareMPIGetStatus(PetscBool3 *flg)
+
+  Not Collective
+
+  Output Parameter:
+. flg - The status of PETSc's GPU-aware MPI usage
+
+  Options Database Keys:
++ -use_gpu_aware_mpi auto - default; use the MPI as is
+. -use_gpu_aware_mpi 0    - force non-GPU-aware MPI use in PETSc (even when GPU-aware MPI is available)
+- -use_gpu_aware_mpi 1    - force GPU-aware MPI use in PETSc, and error out if the system MPI is not GPU-aware
+
+  Level: beginner
+
+  Notes:
+  The status is fully decided (true or false) after the first PETSc GPU object was created.
+  Before that, a PETSC_BOOL3_UNKNOWN return value means PETSc has yet done the checking to
+  know whether the MPI being used is GPU-aware.
+
+.seealso: `PetscInitialize()`
+@*/
+PetscErrorCode PetscUseGPUAwareMPIGetStatus(PetscBool3 *flg)
+{
+  PetscFunctionBegin;
+  PetscAssertPointer(flg, 1);
+  *flg = use_gpu_aware_mpi;
   PetscFunctionReturn(PETSC_SUCCESS);
 }

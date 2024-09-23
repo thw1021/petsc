@@ -1196,31 +1196,28 @@ static PetscErrorCode PetscLogViewWarnDebugging(PetscViewer viewer)
 static PetscErrorCode PetscLogViewWarnNoGpuAwareMpi(PetscViewer viewer)
 {
 #if defined(PETSC_HAVE_DEVICE)
-  PetscMPIInt size;
-  PetscBool   deviceInitialized = PETSC_FALSE;
 
   PetscFunctionBegin;
-  PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)viewer), &size));
-  for (int i = PETSC_DEVICE_HOST + 1; i < PETSC_DEVICE_MAX; ++i) {
-    const PetscDeviceType dtype = PetscDeviceTypeCast(i);
-    if (PetscDeviceInitialized(dtype)) { /* a non-host device was initialized */
-      deviceInitialized = PETSC_TRUE;
-      break;
-    }
-  }
+  if (!device_initialized) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCall(PetscViewerASCIIPrintf(viewer, "      ## Is GPU-aware MPI available? %s; is it in use? %s.  ##\n", mpi_is_gpu_aware ? "YES" : "NO", PetscBool3ToBool(use_gpu_aware_mpi) ? "YES" : "NO"));
   /* the last condition says petsc is configured with device but it is a pure CPU run, so don't print misleading warnings */
-  if (use_gpu_aware_mpi || size == 1 || !deviceInitialized) PetscFunctionReturn(PETSC_SUCCESS);
+  if (PetscBool3ToBool(use_gpu_aware_mpi)) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(PetscViewerASCIIPrintf(viewer, "\n\n"));
   PetscCall(PetscViewerASCIIPrintf(viewer, "      ##########################################################\n"));
   PetscCall(PetscViewerASCIIPrintf(viewer, "      #                                                        #\n"));
   PetscCall(PetscViewerASCIIPrintf(viewer, "      #                       WARNING!!!                       #\n"));
   PetscCall(PetscViewerASCIIPrintf(viewer, "      #                                                        #\n"));
-  PetscCall(PetscViewerASCIIPrintf(viewer, "      #   This code was compiled with GPU support and you've   #\n"));
-  PetscCall(PetscViewerASCIIPrintf(viewer, "      #   created PETSc/GPU objects, but you intentionally     #\n"));
-  PetscCall(PetscViewerASCIIPrintf(viewer, "      #   used -use_gpu_aware_mpi 0, requiring PETSc to copy   #\n"));
-  PetscCall(PetscViewerASCIIPrintf(viewer, "      #   additional data between the GPU and CPU. To obtain   #\n"));
-  PetscCall(PetscViewerASCIIPrintf(viewer, "      #   meaningful timing results on multi-rank runs, use    #\n"));
-  PetscCall(PetscViewerASCIIPrintf(viewer, "      #   GPU-aware MPI instead.                               #\n"));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "      #   This code used PETSc/GPU objects but without GPU-    #\n"));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "      #   aware MPI. This can result in data copies between    #\n"));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "      #   the CPU and GPU, skewing timing results below.       #\n"));
+
+  if (!mpi_is_gpu_aware) {
+    PetscCall(PetscViewerASCIIPrintf(viewer, "      #   Check documentation of currently used MPI for        #\n"));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "      #   instructions to enable GPU-awareness.                #\n"));
+  } else if (use_gpu_aware_mpi == PETSC_BOOL3_FALSE) {
+    PetscCall(PetscViewerASCIIPrintf(viewer, "      #   GPU-aware MPI usage was suppressed with option       #\n"));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "      #   '-use_gpu_aware_mpi 0'. Switch to '1' to turn it on. #\n"));
+  }
   PetscCall(PetscViewerASCIIPrintf(viewer, "      #                                                        #\n"));
   PetscCall(PetscViewerASCIIPrintf(viewer, "      ##########################################################\n\n\n"));
   PetscFunctionReturn(PETSC_SUCCESS);

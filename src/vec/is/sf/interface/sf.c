@@ -72,7 +72,6 @@ PetscErrorCode PetscSFCreate(MPI_Comm comm, PetscSF *sf)
   b->outgroup  = MPI_GROUP_NULL;
   b->graphset  = PETSC_FALSE;
 #if defined(PETSC_HAVE_DEVICE)
-  b->use_gpu_aware_mpi    = use_gpu_aware_mpi;
   b->use_stream_aware_mpi = PETSC_FALSE;
   b->unknown_input_stream = PETSC_FALSE;
   #if defined(PETSC_HAVE_KOKKOS) /* Prefer kokkos over cuda*/
@@ -767,7 +766,6 @@ PetscErrorCode PetscSFDuplicate(PetscSF sf, PetscSFDuplicateOption opt, PetscSF 
 #if defined(PETSC_HAVE_DEVICE)
   (*newsf)->backend              = sf->backend;
   (*newsf)->unknown_input_stream = sf->unknown_input_stream;
-  (*newsf)->use_gpu_aware_mpi    = sf->use_gpu_aware_mpi;
   (*newsf)->use_stream_aware_mpi = sf->use_stream_aware_mpi;
 #endif
   PetscTryTypeMethod(sf, Duplicate, opt, *newsf);

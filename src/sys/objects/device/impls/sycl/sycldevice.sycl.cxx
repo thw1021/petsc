@@ -37,16 +37,26 @@ public:
 
   PetscErrorCode initialize() noexcept
   {
+    bool aware;
+
     PetscFunctionBegin;
     if (initialized()) PetscFunctionReturn(PETSC_SUCCESS);
-    if (syclDevice_.is_gpu() && use_gpu_aware_mpi) {
-      if (!isMPISyclAware_()) {
-        PetscCall((*PetscErrorPrintf)("PETSc is configured with sycl support, but your MPI is not aware of sycl GPU devices. For better performance, please use a sycl GPU-aware MPI.\n"));
-        PetscCall((*PetscErrorPrintf)("If you do not care, add option -use_gpu_aware_mpi 0. To not see the message again, add the option to your .petscrc, OR add it to the env var PETSC_OPTIONS.\n"));
+    aware            = isMPISyclAware_();
+    mpi_is_gpu_aware = aware ? PETSC_TRUE : PETSC_FALSE;
+
+    if (syclDevice_.is_gpu() && use_gpu_aware_mpi != PETSC_BOOL3_FALSE) { // true or auto
+      if (use_gpu_aware_mpi == PETSC_BOOL3_TRUE && !mpi_is_gpu_aware) {
+        PetscCall((*PetscErrorPrintf)("PETSc is built with GPU support, and GPU-aware MPI is explicitly requested, however the MPI currently used is not GPU-aware, based on PETSc's runtime checking.\n"));
+        PetscCall((*PetscErrorPrintf)("Generally, GPU-aware MPI can improve performance. Check documentation of the currently used MPI for instructions to enable GPU-awareness.\n"));
+        PetscCall((*PetscErrorPrintf)("Use -use_gpu_aware_mpi 0 to let PETSc not use GPU-aware MPI; Use -use_gpu_aware_mpi auto to let PETSc use the MPI as is.\n"));
         PETSCABORT(PETSC_COMM_SELF, PETSC_ERR_LIB);
+      } else {
+        use_gpu_aware_mpi = mpi_is_gpu_aware ? PETSC_BOOL3_TRUE : PETSC_BOOL3_FALSE; // use the MPI as is
       }
     }
-    devInitialized_ = true;
+    PetscCall(PetscInfo(nullptr, "Is GPU-aware MPI available? %s; is it in use? %s\n", mpi_is_gpu_aware ? "YES" : "NO", use_gpu_aware_mpi ? "YES" : "NO"));
+    devInitialized_    = true;
+    device_initialized = PETSC_TRUE;
     PetscFunctionReturn(PETSC_SUCCESS);
   }
 
@@ -102,7 +112,7 @@ private:
   bool isMPISyclAware_() noexcept
   {
     const int  bufSize           = 2;
-    const int  hbuf[bufSize]     = {1, 0};
+    int        hbuf[bufSize]     = {1, 0};
     int       *dbuf              = nullptr;
     bool       awareness         = false;
     const auto SyclSignalHandler = [](int signal, void *ptr) -> PetscErrorCode {
@@ -120,7 +130,10 @@ private:
       // if a segv was triggered in the MPI_Allreduce below, it is very likely due to MPI not being GPU-aware
       awareness = false;
       PetscStackPop;
-    } else if (!MPI_Allreduce(dbuf, dbuf + 1, 1, MPI_INT, MPI_SUM, PETSC_COMM_SELF)) awareness = true;
+    } else if (!MPI_Allreduce(dbuf, dbuf + 1, 1, MPI_INT, MPI_SUM, PETSC_COMM_SELF)) {
+      Q.memcpy(hbuf, dbuf, sizeof(int) * bufSize).wait();
+      awareness = (hbuf[1] == 1) ? true : false; // validate the result
+    }
     MPISyclAwareJumpBufferSet = false;
     PetscCallAbort(PETSC_COMM_SELF, PetscPopSignalHandler());
     ::sycl::free(dbuf, Q);
