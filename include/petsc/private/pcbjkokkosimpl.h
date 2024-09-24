@@ -1,4 +1,9 @@
 #pragma once
+#include <petscconf.h>
+
+#if defined(PETSC_HAVE_CUDA)
+  #include <nvToolsExt.h>
+#endif
 
 #include <petscvec_kokkos.hpp>
 #include <petsc/private/pcimpl.h>
@@ -6,10 +11,6 @@
 #include <petsc/private/kspimpl.h>
 
 #include "Kokkos_Core.hpp"
-
-#if defined(PETSC_HAVE_CUDA)
-  #include <nvToolsExt.h>
-#endif
 
 #define PCBJKOKKOS_SHARED_LEVEL 1 // 0 is shared, 1 is global
 #define PCBJKOKKOS_VEC_SIZE     16
