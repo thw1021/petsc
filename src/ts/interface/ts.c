@@ -4136,7 +4136,7 @@ PetscErrorCode TSSolve(TS ts, Vec u)
 
 
     ts->start_step = ts->steps;  // records starting step 
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "skipICWrite %d step  %d start_step %d /n", ts->skipICWrite, (int)ts->steps, (int)ts->start_step));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "skipICWrite %d step  %d start_step %d \n", ts->skipICWrite, (int)ts->steps, (int)ts->start_step));
     while (!ts->reason) {
       PetscCall(TSMonitor(ts, ts->steps, ts->ptime, ts->vec_sol));
       if (!ts->steprollback || (ts->stepresize && ts->resizerollback)) PetscCall(TSPreStep(ts));
