@@ -15,10 +15,10 @@ int main(int argc, char **argv)
   PetscInt         order     = 1;
   PetscViewer      viewer;
   PetscExodusIIInt index           = -1;
-  const char *nodalVarName[4] = {"U_x", "U_y", "Alpha", "Beta"};
-  const char *zonalVarName[3] = {"Sigma_11", "Sigma_12", "Sigma_22"};
-  const char *testNames[3]    = {"U", "Sigma", "Gamma"};
-  char      **varNames;
+  const char      *nodalVarName[4] = {"U_x", "U_y", "Alpha", "Beta"};
+  const char      *zonalVarName[3] = {"Sigma_11", "Sigma_12", "Sigma_22"};
+  const char      *testNames[3]    = {"U", "Sigma", "Gamma"};
+  char           **varNames;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));

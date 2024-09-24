@@ -3,7 +3,7 @@
 #include <petscviewerexodusii.h>
 
 #if defined(PETSC_HAVE_EXODUSII)
-#include <exodusII.h>
+  #include <exodusII.h>
 
 typedef struct {
   char            *filename;

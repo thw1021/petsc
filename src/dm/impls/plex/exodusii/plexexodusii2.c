@@ -770,12 +770,12 @@ PetscErrorCode DMView_PlexExodusII(DM dm, PetscViewer viewer)
   /* Connectivity Variables */
   PetscInt cellsNotInConnectivity;
   /* Cell Sets */
-  DMLabel            csLabel;
-  IS                 csIS;
-  const PetscInt    *csIdx;
-  PetscInt           num_cs, cs;
-  enum ElemType     *type;
-  PetscBool          hasLabel;
+  DMLabel         csLabel;
+  IS              csIS;
+  const PetscInt *csIdx;
+  PetscInt        num_cs, cs;
+  enum ElemType  *type;
+  PetscBool       hasLabel;
   /* Coordinate Variables */
   DM                 cdm;
   PetscSection       coordSection;
