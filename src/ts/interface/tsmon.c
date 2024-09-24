@@ -758,7 +758,6 @@ PetscErrorCode TSMonitorDrawError(TS ts, PetscInt step, PetscReal ptime, Vec u, 
 PetscErrorCode TSMonitorSolution(TS ts, PetscInt step, PetscReal ptime, Vec u, PetscViewerAndFormat *vf)
 {
   PetscFunctionBegin;
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "in TSMon skip? %d step  %d start_step %d \n", ts->skipICWrite, (int)step, (int)ts->start_step));
   if (ts->skipICWrite && step == ts->start_step) PetscFunctionReturn(PETSC_SUCCESS);
   if ((vf->view_interval > 0 && !(step % vf->view_interval)) || (vf->view_interval && ts->reason)) {
     PetscCall(PetscViewerPushFormat(vf->viewer, vf->format));
