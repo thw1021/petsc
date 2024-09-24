@@ -42,7 +42,7 @@ static PetscErrorCode PetscViewerView_ExodusII(PetscViewer v, PetscViewer viewer
   if (exo->filename) PetscCall(PetscViewerASCIIPrintf(viewer, "Filename:    %s\n", exo->filename));
   if (exo->exoid) PetscCall(PetscViewerASCIIPrintf(viewer, "exoid:       %" PetscExodusIIInt_FMT "\n", exo->exoid));
   if (exo->btype) PetscCall(PetscViewerASCIIPrintf(viewer, "IO Mode:     %d\n", exo->btype));
-  if (exo->order) PetscCall(PetscViewerASCIIPrintf(viewer, "Mesh order:  %" PetscExodusIIInt_FMT "\n", exo->order));
+  if (exo->order) PetscCall(PetscViewerASCIIPrintf(viewer, "Mesh order:  %" PetscInt_FMT "\n", exo->order));
   PetscCall(PetscViewerASCIIPrintf(viewer, "Number of nodal variables:  %" PetscExodusIIInt_FMT "\n", exo->numNodalVariables));
   for (int i = 0; i < exo->numNodalVariables; i++) PetscCall(PetscViewerASCIIPrintf(viewer, "   %d: %s\n", i, exo->nodalVariableNames[i]));
   PetscCall(PetscViewerASCIIPrintf(viewer, "Number of zonal variables:  %" PetscExodusIIInt_FMT "\n", exo->numZonalVariables));
@@ -1276,7 +1276,7 @@ PetscErrorCode VecView_PlexExodusII_Internal(Vec v, PetscViewer viewer)
 
   PetscExodusIIInt exoid, offsetN = -1, offsetZ = -1;
   const char      *vecname;
-  PetscExodusIIInt step;
+  PetscInt         step;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectGetComm((PetscObject)v, &comm));
@@ -1290,9 +1290,9 @@ PetscErrorCode VecView_PlexExodusII_Internal(Vec v, PetscViewer viewer)
   PetscCall(PetscViewerExodusIIGetZonalVariableIndex(viewer, vecname, &offsetZ));
   PetscCheck(!(offsetN >= 0 && offsetZ >= 0), comm, PETSC_ERR_FILE_UNEXPECTED, "Found both nodal and zonal variable %s in exodus file. ", vecname);
   if (offsetN >= 0) {
-    PetscCall(VecViewPlex_ExodusII_Nodal_Internal(v, exoid, step + 1, offsetN + 1));
+    PetscCall(VecViewPlex_ExodusII_Nodal_Internal(v, exoid, (PetscExodusIIInt)step + 1, offsetN + 1));
   } else if (offsetZ >= 0) {
-    PetscCall(VecViewPlex_ExodusII_Zonal_Internal(v, exoid, step + 1, offsetZ + 1));
+    PetscCall(VecViewPlex_ExodusII_Zonal_Internal(v, exoid, (PetscExodusIIInt)step + 1, offsetZ + 1));
   } else SETERRQ(comm, PETSC_ERR_FILE_UNEXPECTED, "Could not find nodal or zonal variable %s in exodus file. ", vecname);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1305,7 +1305,7 @@ PetscErrorCode VecLoad_PlexExodusII_Internal(Vec v, PetscViewer viewer)
 
   PetscExodusIIInt exoid, offsetN = 0, offsetZ = 0;
   const char      *vecname;
-  PetscExodusIIInt step;
+  PetscInt         step;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectGetComm((PetscObject)v, &comm));
@@ -1318,8 +1318,8 @@ PetscErrorCode VecLoad_PlexExodusII_Internal(Vec v, PetscViewer viewer)
   PetscCall(PetscViewerExodusIIGetNodalVariableIndex(viewer, vecname, &offsetN));
   PetscCall(PetscViewerExodusIIGetZonalVariableIndex(viewer, vecname, &offsetZ));
   PetscCheck(!(offsetN >= 0 && offsetZ >= 0), comm, PETSC_ERR_FILE_UNEXPECTED, "Found both nodal and zonal variable %s in exodus file. ", vecname);
-  if (offsetN >= 0) PetscCall(VecLoadPlex_ExodusII_Nodal_Internal(v, exoid, step + 1, offsetN + 1));
-  else if (offsetZ >= 0) PetscCall(VecLoadPlex_ExodusII_Zonal_Internal(v, exoid, step + 1, offsetZ + 1));
+  if (offsetN >= 0) PetscCall(VecLoadPlex_ExodusII_Nodal_Internal(v, exoid, (PetscExodusIIInt)step + 1, offsetN + 1));
+  else if (offsetZ >= 0) PetscCall(VecLoadPlex_ExodusII_Zonal_Internal(v, exoid, (PetscExodusIIInt)step + 1, offsetZ + 1));
   else SETERRQ(comm, PETSC_ERR_FILE_UNEXPECTED, "Could not find nodal or zonal variable %s in exodus file. ", vecname);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1511,7 +1511,7 @@ static PetscErrorCode VecLoadPlex_ExodusII_Zonal_Internal(Vec v, PetscExodusIIIn
   PetscInt          xs, xe, bs;
   PetscBool         useNatural;
   IS                compIS;
-  PetscExodusIIInt *csSize, *csID;
+  PetscInt         *csSize, *csID;
   PetscExodusIIInt  numCS, set, csxs = 0;
 
   PetscFunctionBegin;
