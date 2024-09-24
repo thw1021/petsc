@@ -760,7 +760,7 @@ PetscErrorCode TSMonitorDrawError(TS ts, PetscInt step, PetscReal ptime, Vec u, 
 PetscErrorCode TSMonitorSolution(TS ts, PetscInt step, PetscReal ptime, Vec u, PetscViewerAndFormat *vf)
 {
   PetscFunctionBegin;
-  if (ts->skipICWrite && step == ts->start_step) PetscFunctionReturn(PETSC_SUCCESS);
+  if (ts->skip_initial && step == ts->start_step) PetscFunctionReturn(PETSC_SUCCESS);
   if ((vf->view_interval > 0 && !(step % vf->view_interval)) || (vf->view_interval && ts->reason)) {
     PetscCall(PetscViewerPushFormat(vf->viewer, vf->format));
     PetscCall(VecView(u, vf->viewer));

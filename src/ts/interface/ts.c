@@ -114,7 +114,7 @@ PetscErrorCode TSSetFromOptions(TS ts)
   if (flg) PetscCall(TSSetTimeSpan(ts, nt, tspan));
   PetscCall(PetscOptionsInt("-ts_max_steps", "Maximum number of time steps", "TSSetMaxSteps", ts->max_steps, &ts->max_steps, NULL));
   PetscCall(PetscOptionsInt("-ts_run_steps", "Number of time steps for TSSolve to take", "TSSetRunSteps", ts->run_steps, &ts->run_steps, NULL));
-  PetscCall(PetscOptionsBool("-ts_monitor_solution_skipICWrite", "Skip  writing of initial condition", "ts", ts->skipICWrite, &ts->skipICWrite, NULL));
+  PetscCall(PetscOptionsBool("-ts_monitor_solution_skip_initial", "Skip  writing of initial condition", "ts", ts->skip_initial, &ts->skip_initial, NULL));
   PetscCall(PetscOptionsReal("-ts_init_time", "Initial time", "TSSetTime", ts->ptime, &ts->ptime, NULL));
   PetscCall(PetscOptionsReal("-ts_dt", "Initial time step", "TSSetTimeStep", ts->time_step, &time_step, &flg));
   if (flg) PetscCall(TSSetTimeStep(ts, time_step));
