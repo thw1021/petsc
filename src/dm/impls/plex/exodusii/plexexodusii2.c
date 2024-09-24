@@ -1503,16 +1503,16 @@ static PetscErrorCode VecViewPlex_ExodusII_Zonal_Internal(Vec v, PetscExodusIIIn
 
 static PetscErrorCode VecLoadPlex_ExodusII_Zonal_Internal(Vec v, PetscExodusIIInt exoid, PetscExodusIIInt step, PetscExodusIIInt offset)
 {
-  MPI_Comm          comm;
-  PetscMPIInt       size;
-  DM                dm;
-  Vec               vNatural, vComp;
-  PetscScalar      *varray;
-  PetscInt          xs, xe, bs;
-  PetscBool         useNatural;
-  IS                compIS;
-  PetscInt         *csSize, *csID;
-  PetscExodusIIInt  numCS, set, csxs = 0;
+  MPI_Comm         comm;
+  PetscMPIInt      size;
+  DM               dm;
+  Vec              vNatural, vComp;
+  PetscScalar     *varray;
+  PetscInt         xs, xe, bs;
+  PetscBool        useNatural;
+  IS               compIS;
+  PetscInt        *csSize, *csID;
+  PetscExodusIIInt numCS, set, csxs = 0;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectGetComm((PetscObject)v, &comm));
