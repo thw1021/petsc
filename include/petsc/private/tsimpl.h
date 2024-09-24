@@ -313,7 +313,7 @@ struct _p_TS {
   PetscObjectParameterDeclare(PetscInt, max_steps); /* max number of steps */
   PetscObjectParameterDeclare(PetscInt, run_steps); /* number of steps in current run */
   PetscObjectParameterDeclare(PetscInt, start_step); /* step number at start of current run */
-  PetscObjectParameterDeclare(PetscBool, skipICWrite); /* true alters default of writing initial condition*/
+  PetscObjectParameterDeclare(PetscBool, skip_initial); /* true alters default of writing initial condition*/
   Vec       vatol, vrtol;                           /* Relative and absolute tolerance in vector form */
   PetscReal cfltime, cfltime_local;
 
