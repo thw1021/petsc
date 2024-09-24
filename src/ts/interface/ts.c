@@ -67,8 +67,8 @@ static PetscErrorCode TSAdaptSetDefaultType(TSAdapt adapt, TSAdaptType default_t
 . -ts_monitor_solution_interval <interval>                           - output once every interval (default=1) time steps. Use -1 to only output at the end of the simulation
 . -ts_monitor_solution_vtk <filename.vts,filename.vtu>               - Save each time step to a binary file, use filename-%%03" PetscInt_FMT ".vts (filename-%%03" PetscInt_FMT ".vtu)
 . -ts_monitor_solution_vtk_interval <interval>                       - output once every interval (default=1) time steps. Use -1 to only output at the end of the simulation
+. -ts_monitor_solution_skipICWrite                                   - skip the default writing of initial condition
 - -ts_monitor_envelope                                               - determine maximum and minimum value of each component of the solution over the solution time
-- -ts_monitor_solution_clobberStart                                  - allow TSMonitor to write starting step
   Level: beginner
 
   Notes:
@@ -95,7 +95,6 @@ PetscErrorCode TSSetFromOptions(TS ts)
   const char            *defaultType;
   char                   typeName[256];
 
-  ts->clobberStart=PETSC_TRUE;  // Default preserved but give opportunity to request it be false
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
 
@@ -116,7 +115,7 @@ PetscErrorCode TSSetFromOptions(TS ts)
   if (flg) PetscCall(TSSetTimeSpan(ts, nt, tspan));
   PetscCall(PetscOptionsInt("-ts_max_steps", "Maximum number of time steps", "TSSetMaxSteps", ts->max_steps, &ts->max_steps, NULL));
   PetscCall(PetscOptionsInt("-ts_run_steps", "Number of time steps for TSSolve to take", "TSSetRunSteps", ts->run_steps, &ts->run_steps, NULL));
-  PetscCall(PetscOptionsBool("-ts_monitor_clobberStart", "Allow monitors to write starting step", "None", ts->clobberStart, &ts->clobberStart, NULL));
+  PetscCall(PetscOptionsBool("-ts_monitor_solution_skipICWrite", "Skip  writing of initial condition", "ts", ts->skipICWrite, &ts->skipICWrite, NULL));
   PetscCall(PetscOptionsReal("-ts_init_time", "Initial time", "TSSetTime", ts->ptime, &ts->ptime, NULL));
   PetscCall(PetscOptionsReal("-ts_dt", "Initial time step", "TSSetTimeStep", ts->time_step, &time_step, &flg));
   if (flg) PetscCall(TSSetTimeStep(ts, time_step));
@@ -4123,8 +4122,21 @@ PetscErrorCode TSSolve(TS ts, Vec u)
       PetscCall(TSTrajectorySet(ts->trajectory, ts, ts->steps, ts->ptime, ts->vec_sol));
       PetscCall(TSEventInitialize(ts->event, ts, ts->ptime, ts->vec_sol));
     }
-    ts->start_step = -1; // allows clobbering 
-    if(!ts->clobberStart) ts->start_step = ts->steps;  // records starting step to block clobbering
+
+ //   PetscBool skipWrite = PETSC_FALSE;
+ //   PetscBool              opt, flg, tflg;
+//    tflg =  PETSC_FALSE;
+  //    PetscCall(PetscOptionsBool("-ts_save_trajectory", "Save the solution at each timestep", "TSSetSaveTrajectory", tflg, &tflg, NULL));
+//    PetscCall(PetscOptionsBool("-ts_save_trajectory", "Save the solution at each timestep", "TSSetSaveTrajectory", skipWrite, &skipWrite, NULL));
+//    PetscCall(PetscOptionsBool("-ts_monitor_solution_skipICWrite", "Skip  writing of initial condition", "ts", skipWrite, &skipWrite, NULL));
+  //  ts->skipICWrite = skipWrite;
+//    PetscCall(PetscOptionsBool("-ts_monitor_solution_skipICWrite", "Skip  writing of initial condition", "ts", ts->skipICWrite, &ts->skipICWrite, NULL));
+//    PetscBool useBoxLabel = PETSC_FALSE;
+//    PetscCall(PetscOptionsBool("-dm_plex_box_label", "Create 'Face Sets' assuming boundary faces align with cartesian directions", "DMCreate", useBoxLabel, &useBoxLabel, NULL));
+
+
+    ts->start_step = ts->steps;  // records starting step 
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "skipICWrite %d step  %d start_step %d /n", ts->skipICWrite, (int)ts->steps, (int)ts->start_step));
     while (!ts->reason) {
       PetscCall(TSMonitor(ts, ts->steps, ts->ptime, ts->vec_sol));
       if (!ts->steprollback || (ts->stepresize && ts->resizerollback)) PetscCall(TSPreStep(ts));
