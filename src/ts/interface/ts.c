@@ -36,7 +36,6 @@ static PetscErrorCode TSAdaptSetDefaultType(TSAdapt adapt, TSAdaptType default_t
 . -ts_max_time <time>                                                - maximum time to compute to
 . -ts_time_span <t0,...tf>                                           - sets the time span, solutions are computed and stored for each indicated time
 . -ts_max_steps <steps>                                              - maximum number of time-steps to take
-. -ts_run_steps <steps>                                              - number of time-steps for TSSolve call to take
 . -ts_init_time <time>                                               - initial time to start computation
 . -ts_final_time <time>                                              - final time to compute to (deprecated: use `-ts_max_time`)
 . -ts_dt <dt>                                                        - initial time step
@@ -67,8 +66,8 @@ static PetscErrorCode TSAdaptSetDefaultType(TSAdapt adapt, TSAdaptType default_t
 . -ts_monitor_solution_interval <interval>                           - output once every interval (default=1) time steps. Use -1 to only output at the end of the simulation
 . -ts_monitor_solution_vtk <filename.vts,filename.vtu>               - Save each time step to a binary file, use filename-%%03" PetscInt_FMT ".vts (filename-%%03" PetscInt_FMT ".vtu)
 . -ts_monitor_solution_vtk_interval <interval>                       - output once every interval (default=1) time steps. Use -1 to only output at the end of the simulation
-. -ts_monitor_solution_skipICWrite                                   - skip the default writing of initial condition
 - -ts_monitor_envelope                                               - determine maximum and minimum value of each component of the solution over the solution time
+
   Level: beginner
 
   Notes:
@@ -4123,20 +4122,7 @@ PetscErrorCode TSSolve(TS ts, Vec u)
       PetscCall(TSEventInitialize(ts->event, ts, ts->ptime, ts->vec_sol));
     }
 
- //   PetscBool skipWrite = PETSC_FALSE;
- //   PetscBool              opt, flg, tflg;
-//    tflg =  PETSC_FALSE;
-  //    PetscCall(PetscOptionsBool("-ts_save_trajectory", "Save the solution at each timestep", "TSSetSaveTrajectory", tflg, &tflg, NULL));
-//    PetscCall(PetscOptionsBool("-ts_save_trajectory", "Save the solution at each timestep", "TSSetSaveTrajectory", skipWrite, &skipWrite, NULL));
-//    PetscCall(PetscOptionsBool("-ts_monitor_solution_skipICWrite", "Skip  writing of initial condition", "ts", skipWrite, &skipWrite, NULL));
-  //  ts->skipICWrite = skipWrite;
-//    PetscCall(PetscOptionsBool("-ts_monitor_solution_skipICWrite", "Skip  writing of initial condition", "ts", ts->skipICWrite, &ts->skipICWrite, NULL));
-//    PetscBool useBoxLabel = PETSC_FALSE;
-//    PetscCall(PetscOptionsBool("-dm_plex_box_label", "Create 'Face Sets' assuming boundary faces align with cartesian directions", "DMCreate", useBoxLabel, &useBoxLabel, NULL));
-
-
     ts->start_step = ts->steps;  // records starting step 
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "skipICWrite %d step  %d start_step %d \n", ts->skipICWrite, (int)ts->steps, (int)ts->start_step));
     while (!ts->reason) {
       PetscCall(TSMonitor(ts, ts->steps, ts->ptime, ts->vec_sol));
       if (!ts->steprollback || (ts->stepresize && ts->resizerollback)) PetscCall(TSPreStep(ts));
