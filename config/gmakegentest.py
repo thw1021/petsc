@@ -653,8 +653,8 @@ class generateExamples(Petsc):
         del srcDict[test]
         continue
       if 'TODO' in srcDict[test]:
-        continue
         del srcDict[test]
+        continue
       srcDict[test]['execname']=execname   # Convenience in generating scripts
       self.genRunScript(test,root,isRun,srcDict)
       srcDict[test]['isrun']=isRun
