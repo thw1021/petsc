@@ -25,6 +25,9 @@ PetscErrorCode DMPlexCopy_Internal(DM dmin, PetscBool copyPeriodicity, PetscBool
   MatType              matType;
   PetscBool            dist, useCeed;
   DMReorderDefaultFlag reorder;
+  DM                   cdm;
+  PetscInt             localizationHeight;
+  PetscBool            sparseLocalize;
 
   PetscFunctionBegin;
   PetscCall(DMGetVecType(dmin, &vecType));
@@ -32,9 +35,6 @@ PetscErrorCode DMPlexCopy_Internal(DM dmin, PetscBool copyPeriodicity, PetscBool
   PetscCall(DMGetMatType(dmin, &matType));
   PetscCall(DMSetMatType(dmout, matType));
   if (copyPeriodicity) {
-    DM cdm;
-    PetscInt localizationHeight;
-    PetscBool sparseLocalize;
     PetscCall(DMGetCoordinateDM(dmin, &cdm));
     PetscCall(DMPlexGetMaxProjectionHeight(cdm, &localizationHeight));
     PetscCall(DMGetSparseLocalize(dmin, &sparseLocalize));
@@ -76,6 +76,9 @@ PetscErrorCode DMPlexReplace_Internal(DM dm, DM *ndm)
   Vec              coords;
   const PetscReal *maxCell, *Lstart, *L;
   PetscInt         dim, cdim;
+  DM               cdm;
+  PetscInt         localizationHeight;
+  PetscBool        sparseLocalize;
 
   PetscFunctionBegin;
   if (dm == dmNew) {
@@ -108,9 +111,6 @@ PetscErrorCode DMPlexReplace_Internal(DM dm, DM *ndm)
   dm->coordinates[0].field            = dmNew->coordinates[0].field;
   ((DM_Plex *)dmNew->data)->coordFunc = ((DM_Plex *)dm->data)->coordFunc;
 
-  DM cdm;
-  PetscInt localizationHeight;
-  PetscBool sparseLocalize;
   PetscCall(DMGetCoordinateDM(dmNew, &cdm));
   PetscCall(DMPlexGetMaxProjectionHeight(cdm, &localizationHeight));
   PetscCall(DMGetSparseLocalize(dmNew, &sparseLocalize));
