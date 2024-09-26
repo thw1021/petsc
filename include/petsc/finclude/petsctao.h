@@ -5,6 +5,7 @@
 
 #define Tao type(tTao)
 #define TaoLineSearch type(tTaoLineSearch)
+#define TaoTerm type(tTaoTerm)
 #define TaoConvergedReason PetscEnum
 #define TaoType character*(80)
 #define TaoLineSearchType character*(80)
@@ -49,4 +50,13 @@
 #define TAOPYTHON   'python'
 #define TAOSNES     'snes'
 
+#define TAOTERMTAOCALLBACKS  'tao'
+#define TAOTERMSHELL         'shell'
+#define TAOTERMSUM           'sum'
+#define TAOTERMDM            'dm'
+#define TAOTERML1            'l1'
+#define TAOTERMLINF          'linf'
+#define TAOTERMHALFL2SQUARED 'halfl2squared'
+#define TAOTERMQUADRATIC     'quadratic'
+#define TAOTERMKL            'kl'
 #endif

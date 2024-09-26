@@ -73,6 +73,34 @@ static PetscErrorCode MatAXPY_BasicWithTypeCompare(Mat Y, PetscScalar a, Mat X, 
       PetscCall(MatDestroy(&C));
       PetscFunctionReturn(PETSC_SUCCESS);
     }
+    PetscCall(PetscObjectTypeCompare((PetscObject)X, MATCONSTANTDIAGONAL, &flg));
+    if (flg) {
+      PetscScalar b;
+
+      PetscCall(MatConstantDiagonalGetConstant(X, &b));
+      PetscCall(MatShift(Y, a * b));
+      PetscFunctionReturn(PETSC_SUCCESS);
+    }
+    PetscCall(PetscObjectTypeCompare((PetscObject)X, MATDIAGONAL, &flg));
+    if (flg) {
+      Vec d_X, d_Y;
+
+      PetscCall(MatDiagonalGetDiagonal(X, &d_X));
+
+      PetscCall(PetscObjectQuery((PetscObject)Y, "__MatAXPY_BasicWithTypeCompare_Diagonal", (PetscObject *)&d_Y));
+      if (!d_Y) {
+        Vec _d_Y;
+        PetscCall(VecDuplicate(d_X, &_d_Y));
+        PetscCall(PetscObjectCompose((PetscObject)Y, "__MatAXPY_BasicWithTypeCompare_Diagonal", (PetscObject)_d_Y));
+        d_Y = _d_Y;
+        PetscCall(VecDestroy(&_d_Y));
+      }
+      PetscCall(MatGetDiagonal(Y, d_Y));
+      PetscCall(VecAXPY(d_Y, a, d_X));
+      PetscCall(MatDiagonalSet(Y, d_Y, INSERT_VALUES));
+      PetscCall(MatDiagonalRestoreDiagonal(X, &d_X));
+      PetscFunctionReturn(PETSC_SUCCESS);
+    }
   }
   PetscCall(MatAXPY_Basic(Y, a, X, str));
   PetscFunctionReturn(PETSC_SUCCESS);

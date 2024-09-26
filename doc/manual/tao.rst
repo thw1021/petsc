@@ -54,7 +54,7 @@ The following sections annotate the lines of code in
 
    .. literalinclude:: /../src/tao/unconstrained/tutorials/rosenbrock1.c
       :prepend: #include <petsctao.h>
-      :start-at: typedef struct
+      :start-at: static PetscErrorCode FormFunctionGradient
       :end-at: PetscFinalize
       :append: return ierr;}
 
