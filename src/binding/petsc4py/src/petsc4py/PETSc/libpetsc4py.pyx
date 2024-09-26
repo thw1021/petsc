@@ -18,8 +18,6 @@ cdef extern from "Python.h":
 # --------------------------------------------------------------------
 
 cdef extern from * nogil:
-    ctypedef struct _p_PetscOptionItems
-    ctypedef _p_PetscOptionItems* PetscOptionItems
     PetscErrorCode PetscOptionsString(char[], char[], char[], char[], char[], size_t, PetscBool*)
 
 cdef extern from * nogil: # custom.h
@@ -1881,6 +1879,7 @@ cdef PetscErrorCode SNESCreate_Python(
     ops.view           = SNESView_Python
     ops.solve          = SNESSolve_Python
     #
+    CHKERR(SNESParametersInitialize(snes))
     CHKERR(PetscObjectComposeFunction(
             <PetscObject>snes, b"SNESPythonSetType_C",
             <PetscVoidFunction>SNESPythonSetType_PYTHON))
@@ -2601,6 +2600,7 @@ cdef PetscErrorCode TaoCreate_Python(
     ops.setup          = TaoSetUp_Python
     ops.setfromoptions = TaoSetFromOptions_Python
     #
+    CHKERR(TaoParametersInitialize(tao))
     CHKERR(PetscObjectComposeFunction(
             <PetscObject>tao, b"TaoPythonSetType_C",
             <PetscVoidFunction>TaoPythonSetType_PYTHON))

@@ -55,6 +55,13 @@ class BaseTestSNES:
         tnames = ('rtol', 'atol', 'stol', 'max_it')
         tolvals = [getattr(self.snes, t) for t in tnames]
         self.assertEqual(tuple(tols), tuple(tolvals))
+        dtol = self.snes.getDivergenceTolerance()
+        self.assertTrue(dtol > 0)
+        self.snes.setDivergenceTolerance(PETSc.UNLIMITED)
+        dtol = self.snes.getDivergenceTolerance()
+        self.assertEqual(dtol, PETSc.UNLIMITED)
+        self.snes.setDivergenceTolerance(PETSc.CURRENT)
+        self.assertEqual(dtol, PETSc.UNLIMITED)
 
     def testProperties(self):
         snes = self.snes
@@ -100,6 +107,12 @@ class BaseTestSNES:
         self.assertFalse(snes.use_ew)
         self.assertFalse(snes.use_mf)
         self.assertFalse(snes.use_fd)
+        ouse = snes.use_ksp
+        self.assertEqual(ouse, snes.getUseKSP())
+        snes.use_ksp = not ouse
+        self.assertEqual(not ouse, snes.getUseKSP())
+        snes.setUseKSP(ouse)
+        self.assertEqual(ouse, snes.use_ksp)
 
     def testGetSetFunc(self):
         r, func = self.snes.getFunction()
@@ -309,7 +322,7 @@ class BaseTestSNES:
         self.snes.setParamsEW(**params)
         params = self.snes.getParamsEW()
         self.assertEqual(params['version'], 1)
-        params['version'] = PETSc.DEFAULT
+        params['version'] = PETSc.CURRENT
         self.snes.setParamsEW(**params)
         params = self.snes.getParamsEW()
         self.assertEqual(params['version'], 1)
@@ -375,6 +388,27 @@ class BaseTestSNES:
         npc = self.snes.getNPC()
         self.assertEqual(npc.appctx, (1, 2, 3))
 
+    def testTRAPI(self):
+        newreg = (1,2,3)
+        newup = (1,2,3,4,5)
+        if self.snes.getType() == PETSc.SNES.Type.NEWTONTR:
+            defreg = self.snes.getTRTolerances()
+            defup = self.snes.getTRUpdateParameters()
+        self.snes.setTRTolerances(*newreg)
+        self.snes.setTRUpdateParameters(*newup)
+        if self.snes.getType() == PETSc.SNES.Type.NEWTONTR:
+            self.assertEqual(newreg, self.snes.getTRTolerances())
+            self.assertEqual(newup, self.snes.getTRUpdateParameters())
+        self.snes.setTRTolerances()
+        self.snes.setTRUpdateParameters()
+        if self.snes.getType() == PETSc.SNES.Type.NEWTONTR:
+            self.assertEqual(newreg, self.snes.getTRTolerances())
+            self.assertEqual(newup, self.snes.getTRUpdateParameters())
+        self.snes.setTRTolerances(*(PETSc.DETERMINE,)*3)
+        self.snes.setTRUpdateParameters(*(PETSc.DETERMINE,)*5)
+        if self.snes.getType() == PETSc.SNES.Type.NEWTONTR:
+            self.assertEqual(defreg, self.snes.getTRTolerances())
+            self.assertEqual(defup, self.snes.getTRUpdateParameters())
 
 # --------------------------------------------------------------------
 

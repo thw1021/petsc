@@ -23,7 +23,7 @@ int main(int argc, char **argv)
   PetscBool      order = PETSC_FALSE;
 
   PetscFunctionBeginUser;
-  PetscCall(PetscInitialize(&argc, &argv, (char *)0, help));
+  PetscCall(PetscInitialize(&argc, &argv, NULL, help));
   PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD, &size));
   PetscCheck(size == 1, PETSC_COMM_WORLD, PETSC_ERR_WRONG_MPI_SIZE, "This is a uniprocessor example only!");
 
@@ -32,7 +32,7 @@ int main(int argc, char **argv)
   PetscCall(PetscOptionsGetInt(NULL, NULL, "-d", &d, NULL));
   PetscCall(PetscOptionsGetInt(NULL, NULL, "-vsize", &vsize, NULL));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-order", NULL, &order));
-  PetscCall(PetscOptionsGetViewer(PETSC_COMM_WORLD, NULL, NULL, "-array_view", &vwr, NULL, NULL));
+  PetscCall(PetscOptionsCreateViewer(PETSC_COMM_WORLD, NULL, NULL, "-array_view", &vwr, NULL, NULL));
   PetscCheck(n >= 1 && r >= 1 && d >= 1 && d <= n, PETSC_COMM_WORLD, PETSC_ERR_SUP, "Wrong input n=%" PetscInt_FMT ",r=%" PetscInt_FMT ",d=%" PetscInt_FMT ". They must be >=1 and n>=d", n, r, d);
 
   PetscCall(PetscCalloc6(n, &X, n, &X1, n, &XR, n, &XSO, n, &Y, n, &Z));
@@ -42,7 +42,7 @@ int main(int argc, char **argv)
 
   for (i = 0; i < n; ++i) {
     PetscCall(PetscRandomGetValueReal(rdm, &val));
-    XR[i] = val * ((PetscReal)PETSC_MAX_INT);
+    XR[i] = val * ((PetscReal)PETSC_INT_MAX);
     if (d > 1) XR[i] = XR[i] % (n / d);
     XSO[i] = i;
     if (d > 1) XSO[i] = XSO[i] % (n / d);
@@ -63,7 +63,7 @@ int main(int argc, char **argv)
   PetscCall(PetscRandomDestroy(&rdm2));
 
   if (vwr) PetscCall(PetscIntView(n, order ? XSO : XR, vwr));
-  PetscCall(PetscOptionsRestoreViewer(&vwr));
+  PetscCall(PetscViewerDestroy(&vwr));
   PetscCall(VecCreate(PETSC_COMM_WORLD, &x));
   PetscCall(VecSetSizes(x, PETSC_DECIDE, vsize));
   PetscCall(VecSetFromOptions(x));
@@ -98,7 +98,7 @@ int main(int argc, char **argv)
 
   for (i = 0; i < n; i++) { /* Init X[] */
     PetscCall(PetscRandomGetValueReal(rdm, &val));
-    X[i] = val * ((PetscReal)PETSC_MAX_INT);
+    X[i] = val * ((PetscReal)PETSC_INT_MAX);
     if (d > 1) X[i] = X[i] % (n / d);
   }
   PetscCall(PetscCalloc3(n, &XP, n, &X1P, n, &W));

@@ -3923,9 +3923,9 @@ cdef class Mat(Object):
         cdef PetscIS  *ciscols = NULL
         cdef PetscMat *cmats   = NULL
         cdef Mat mat
-        cdef object unused1 = oarray_p(empty_p(n), NULL, <void**>&cisrows)
+        cdef object unused1 = oarray_p(empty_p(<PetscInt>n), NULL, <void**>&cisrows)
         for i from 0 <= i < n: cisrows[i] = (<IS?>isrows[i]).iset
-        cdef object unused2 = oarray_p(empty_p(n), NULL, <void**>&ciscols)
+        cdef object unused2 = oarray_p(empty_p(<PetscInt>n), NULL, <void**>&ciscols)
         for i from 0 <= i < n: ciscols[i] = (<IS?>iscols[i]).iset
         if submats is not None:
             reuse = MAT_REUSE_MATRIX
@@ -3942,6 +3942,61 @@ cdef class Mat(Object):
                 mat.mat = cmats[i]
         CHKERR(MatDestroyMatrices(<PetscInt>n, &cmats))
         return submats
+
+    #
+
+    def createSchurComplement(self, Mat A00, Mat Ap00, Mat A01, Mat A10, Mat A11=None) -> Self:
+        """Create a `Type.SCHURCOMPLEMENT` matrix.
+
+        Collective.
+
+        Parameters
+        ----------
+        A00
+            the upper-left block of the original matrix A = [A00 A01; A10 A11].
+        Ap00
+            preconditioning matrix for use in ksp(A00,Ap00) to approximate the
+            action of A00^{-1}.
+        A01
+            the upper-right block of the original matrix A = [A00 A01; A10 A11].
+        A10
+            the lower-left block of the original matrix A = [A00 A01; A10 A11].
+        A11
+            Optional lower-right block of the original matrix
+            A = [A00 A01; A10 A11].
+
+        See Also
+        --------
+        petsc.MatCreateSchurComplement
+
+        """
+        cdef PetscMat newmat = NULL, A11_mat = NULL
+        if A11 is not None:
+            A11_mat = A11.mat
+        CHKERR(MatCreateSchurComplement(A00.mat, Ap00.mat, A01.mat, A10.mat, A11_mat, &newmat))
+        CHKERR(PetscCLEAR(self.obj)); self.mat = newmat
+        return self
+
+    #
+
+    def getSchurComplementSubMatrices(self) -> tuple[Mat, Mat, Mat, Mat, Mat]:
+        """Return Schur complement sub-matrices.
+
+        Collective.
+
+        See Also
+        --------
+        petsc.MatSchurComplementGetSubMatrices
+
+        """
+        cdef Mat A00 = Mat(), Ap00 = Mat(), A01 = Mat(), A10 = Mat(), A11 = Mat()
+        CHKERR(MatSchurComplementGetSubMatrices(self.mat, &A00.mat, &Ap00.mat, &A01.mat, &A10.mat, &A11.mat))
+        CHKERR(PetscINCREF(A00.obj))
+        CHKERR(PetscINCREF(Ap00.obj))
+        CHKERR(PetscINCREF(A01.obj))
+        CHKERR(PetscINCREF(A10.obj))
+        CHKERR(PetscINCREF(A11.obj))
+        return A00, Ap00, A01, A10, A11
 
     #
 
@@ -5648,7 +5703,7 @@ cdef class Mat(Object):
             shape_strides[i] = shape[i]
         for i in range(ndim):
             shape_strides[i+ndim] = strides[i]
-        dl_tensor.ndim = ndim
+        dl_tensor.ndim = <int>ndim
         dl_tensor.shape = shape_strides
         dl_tensor.strides = shape_strides + ndim
 

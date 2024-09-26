@@ -76,12 +76,6 @@ static PetscErrorCode DMCreate_Dummy(DM dm)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatOrderingCreate_Dummy(Mat mat, MatOrderingType mtype, IS *isr, IS *isc)
-{
-  PetscFunctionBeginUser;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 static PetscErrorCode MatPartitioningCreate_Dummy(MatPartitioning mat)
 {
   PetscFunctionBeginUser;
@@ -159,7 +153,7 @@ int main(int argc, char **argv)
   PetscReal A[1] = {0.0}, Gamma[1] = {1.0}, b[1] = {1.0}, c[1] = {1.0}, d[1] = {1.0};
 
   PetscFunctionBeginUser;
-  PetscCall(PetscInitialize(&argc, &argv, (char *)0, help));
+  PetscCall(PetscInitialize(&argc, &argv, NULL, help));
   /* TaoLineSearchRegister() also has the same memory leak */
   /* TaoRegister() also has the same memory leak */
   PetscCall(TSGLLEAdaptRegister("dummy", TSGLLEAdaptCreate_Dummy));
@@ -180,7 +174,6 @@ int main(int argc, char **argv)
   PetscCall(KSPRegister("dummy", KSPCreate_Dummy));
   PetscCall(PCRegister("dummy", PCCreate_Dummy));
   PetscCall(DMRegister("dummy", DMCreate_Dummy));
-  PetscCall(MatOrderingRegister("dummy", MatOrderingCreate_Dummy));
   PetscCall(MatPartitioningRegister("dummy", MatPartitioningCreate_Dummy));
   PetscCall(MatRegister("dummy", MatCreate_Dummy));
   PetscCall(PFRegister("dummy", PFCreate_Dummy));

@@ -193,8 +193,8 @@ static PetscErrorCode MatCoarsenApply_MISK_private(IS perm, const PetscInt misk,
         PetscCall(PetscSFBcastEnd(sf, MPIU_INT, lid_state, cpcol_state, MPI_REPLACE));
         ai = matB->compressedrow.i;
         for (ix = 0; ix < matB->compressedrow.nrows; ix++) {
-          const int lidj = matB->compressedrow.rindex[ix]; /* local boundary node */
-          state          = lid_state[lidj];
+          const PetscInt lidj = matB->compressedrow.rindex[ix]; /* local boundary node */
+          state               = lid_state[lidj];
           if (state == MIS_NOT_DONE) {
             /* look at ghosts */
             n   = ai[ix + 1] - ai[ix];
@@ -213,7 +213,7 @@ static PetscErrorCode MatCoarsenApply_MISK_private(IS perm, const PetscInt misk,
         }
         /* all done? */
         t1 = nloc_inner - nDone;
-        PetscCall(MPIU_Allreduce(&t1, &t2, 1, MPIU_INT, MPI_SUM, comm)); /* synchronous version */
+        PetscCallMPI(MPIU_Allreduce(&t1, &t2, 1, MPIU_INT, MPI_SUM, comm)); /* synchronous version */
         if (!t2) break;
       } else break; /* no mpi - all done */
     } /* outer parallel MIS loop */
@@ -276,7 +276,7 @@ static PetscErrorCode MatCoarsenApply_MISK_private(IS perm, const PetscInt misk,
     /* project to make new graph for next MIS, skip if last */
     if (iterIdx < misk - 1) {
       Mat new_mat;
-      PetscCall(MatPtAP(cMat, Prols[iterIdx], MAT_INITIAL_MATRIX, PETSC_DEFAULT, &new_mat));
+      PetscCall(MatPtAP(cMat, Prols[iterIdx], MAT_INITIAL_MATRIX, PETSC_DETERMINE, &new_mat));
       PetscCall(MatDestroy(&cMat));
       cMat = new_mat; // next iter
     } else if (cMat != Gmat) PetscCall(MatDestroy(&cMat));
@@ -288,7 +288,7 @@ static PetscErrorCode MatCoarsenApply_MISK_private(IS perm, const PetscInt misk,
   for (PetscInt iterIdx = misk - 1; iterIdx > 0; iterIdx--) {
     Mat P;
 
-    PetscCall(MatMatMult(Prols[iterIdx - 1], Rtot, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &P));
+    PetscCall(MatMatMult(Prols[iterIdx - 1], Rtot, MAT_INITIAL_MATRIX, PETSC_CURRENT, &P));
     PetscCall(MatDestroy(&Prols[iterIdx - 1]));
     PetscCall(MatDestroy(&Rtot));
     Rtot = P;
@@ -382,7 +382,7 @@ static PetscErrorCode MatCoarsenView_MISK(MatCoarsen coarse, PetscViewer viewer)
   PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)coarse), &rank));
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
   PetscCall(PetscViewerGetFormat(viewer, &format));
-  if (iascii && format == PETSC_VIEWER_ASCII_INFO_DETAIL) {
+  if (iascii && format == PETSC_VIEWER_ASCII_INFO_DETAIL && coarse->agg_lists) {
     PetscCall(PetscViewerASCIIPushSynchronized(viewer));
     PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "  [%d] MISK aggregator\n", rank));
     if (!rank) PetscCall(PetscCoarsenDataView_private(coarse->agg_lists, viewer));
@@ -446,7 +446,7 @@ PETSC_EXTERN PetscErrorCode MatCoarsenCreate_MISK(MatCoarsen coarse)
   Note:
   When the coarsening is used inside `PCGAMG` then the options database key is `-pc_gamg_mat_coarsen_misk_distance`
 
-.seealso: `MATCOARSENMISK`, `MatCoarsen`, `MatCoarseSetFromOptions()`, `MatCoarsenSetType()`, `MatCoarsenRegister()`, `MatCoarsenCreate()`,
+.seealso: `MATCOARSENMISK`, `MatCoarsen`, `MatCoarsenSetFromOptions()`, `MatCoarsenSetType()`, `MatCoarsenRegister()`, `MatCoarsenCreate()`,
           `MatCoarsenDestroy()`, `MatCoarsenSetAdjacency()`, `MatCoarsenMISKGetDistance()`
           `MatCoarsenGetData()`
 @*/
@@ -470,7 +470,7 @@ PetscErrorCode MatCoarsenMISKSetDistance(MatCoarsen crs, PetscInt k)
 
   Level: advanced
 
-.seealso: `MATCOARSENMISK`, `MatCoarsen`, `MatCoarseSetFromOptions()`, `MatCoarsenSetType()`,
+.seealso: `MATCOARSENMISK`, `MatCoarsen`, `MatCoarsenSetFromOptions()`, `MatCoarsenSetType()`,
 `MatCoarsenRegister()`, `MatCoarsenCreate()`, `MatCoarsenDestroy()`,
 `MatCoarsenSetAdjacency()`, `MatCoarsenGetData()`
 @*/

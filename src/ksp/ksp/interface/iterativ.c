@@ -308,7 +308,7 @@ PetscErrorCode KSPMonitorRange_Private(KSP ksp, PetscInt it, PetscReal *per)
   for (i = 0; i < n; ++i) pwork += (PetscAbsScalar(r[i]) > .20 * rmax);
   PetscCall(VecRestoreArrayRead(resid, &r));
   PetscCall(VecDestroy(&resid));
-  PetscCall(MPIU_Allreduce(&pwork, per, 1, MPIU_REAL, MPIU_SUM, PetscObjectComm((PetscObject)ksp)));
+  PetscCallMPI(MPIU_Allreduce(&pwork, per, 1, MPIU_REAL, MPIU_SUM, PetscObjectComm((PetscObject)ksp)));
   *per = *per / N;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1209,11 +1209,11 @@ PetscErrorCode KSPMonitorDynamicTolerance(KSP ksp, PetscInt its, PetscReal fnorm
   PetscCall(PetscObjectTypeCompare((PetscObject)pc, PCDEFLATION, &flg));
   if (flg) {
     PetscCall(PCDeflationGetCoarseKSP(pc, &kspinner));
-    PetscCall(KSPSetTolerances(kspinner, inner_rtol, outer_abstol, outer_dtol, PETSC_DEFAULT));
+    PetscCall(KSPSetTolerances(kspinner, inner_rtol, outer_abstol, outer_dtol, PETSC_CURRENT));
     PetscFunctionReturn(PETSC_SUCCESS);
   }
 
-  /* todo: dynamic tolerance may apply to other types of pc */
+  /* TODO: dynamic tolerance may apply to other types of pc */
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -2132,11 +2132,11 @@ PetscErrorCode KSPCheckSolve(KSP ksp, PC pc, Vec vec)
   PetscFunctionBegin;
   PetscCall(KSPGetPC(ksp, &subpc));
   PetscCall(PCGetFailedReason(subpc, &pcreason));
+  PetscCall(VecFlag(vec, pcreason || (ksp->reason < 0 && ksp->reason != KSP_DIVERGED_ITS)));
   if (pcreason || (ksp->reason < 0 && ksp->reason != KSP_DIVERGED_ITS)) {
     PetscCheck(!pc->erroriffailure, PETSC_COMM_SELF, PETSC_ERR_NOT_CONVERGED, "Detected not converged in KSP inner solve: KSP reason %s PC reason %s", KSPConvergedReasons[ksp->reason], PCFailedReasons[pcreason]);
     PetscCall(PetscInfo(ksp, "Detected not converged in KSP inner solve: KSP reason %s PC reason %s\n", KSPConvergedReasons[ksp->reason], PCFailedReasons[pcreason]));
     pc->failedreason = PC_SUBPC_ERROR;
-    if (vec) PetscCall(VecSetInf(vec));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }

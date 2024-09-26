@@ -665,6 +665,8 @@ PetscErrorCode VecDot_SeqKokkos(Vec xin, Vec yin, PetscScalar *z)
 /* y = x, where x is VECKOKKOS, but y may be not */
 PetscErrorCode VecCopy_SeqKokkos(Vec xin, Vec yin)
 {
+  auto &exec = PetscGetKokkosExecutionSpace();
+
   PetscFunctionBegin;
   PetscCall(PetscLogGpuTimeBegin());
   if (xin != yin) {
@@ -677,15 +679,16 @@ PetscErrorCode VecCopy_SeqKokkos(Vec xin, Vec yin)
         clear y's sync state.
        */
       ykok->v_dual.clear_sync_state();
-      PetscCallCXX(Kokkos::deep_copy(ykok->v_dual, xkok->v_dual));
+      PetscCallCXX(Kokkos::deep_copy(exec, ykok->v_dual, xkok->v_dual));
     } else {
       PetscScalar *yarray;
       PetscCall(VecGetArrayWrite(yin, &yarray));
       PetscScalarKokkosViewHost yv(yarray, yin->map->n);
       if (xkok->v_dual.need_sync_host()) { /* x's device has newer data */
-        PetscCallCXX(Kokkos::deep_copy(yv, xkok->v_dual.view_device()));
+        PetscCallCXX(Kokkos::deep_copy(exec, yv, xkok->v_dual.view_device()));
+        exec.fence(); // finish the deep copy
       } else {
-        PetscCallCXX(Kokkos::deep_copy(yv, xkok->v_dual.view_host()));
+        PetscCallCXX(Kokkos::deep_copy(exec, yv, xkok->v_dual.view_host()));
       }
       PetscCall(VecRestoreArrayWrite(yin, &yarray));
     }
@@ -1809,7 +1812,6 @@ static PetscErrorCode VecDuplicateVecs_SeqKokkos_GEMV(Vec w, PetscInt m, Vec *V[
   PetscInt64   lda; // use 64-bit as we will do "m * lda"
   PetscScalar *array_h, *array_d;
   PetscLayout  map;
-  PetscBool    mdot_use_gemv, maxpy_use_gemv;
 
   PetscFunctionBegin;
   PetscCall(PetscKokkosInitializeCheck()); // as we'll call kokkos_malloc()
@@ -1824,9 +1826,6 @@ static PetscErrorCode VecDuplicateVecs_SeqKokkos_GEMV(Vec w, PetscInt m, Vec *V[
   PetscCallCXX(array_d = static_cast<PetscScalar *>(Kokkos::kokkos_malloc("VecDuplicateVecs", sizeof(PetscScalar) * (m * lda))));
 #endif
 
-  mdot_use_gemv  = (w->ops->mdot == VecMDot_SeqKokkos_GEMV) ? PETSC_TRUE : PETSC_FALSE;
-  maxpy_use_gemv = (w->ops->maxpy == VecMAXPY_SeqKokkos_GEMV) ? PETSC_TRUE : PETSC_FALSE;
-
   // create the m vectors with raw arrays
   for (PetscInt i = 0; i < m; i++) {
     Vec v;
@@ -1834,16 +1833,8 @@ static PetscErrorCode VecDuplicateVecs_SeqKokkos_GEMV(Vec w, PetscInt m, Vec *V[
     PetscCallCXX(static_cast<Vec_Kokkos *>(v->spptr)->v_dual.modify_host()); // as we only init'ed array_h
     PetscCall(PetscObjectListDuplicate(((PetscObject)w)->olist, &((PetscObject)v)->olist));
     PetscCall(PetscFunctionListDuplicate(((PetscObject)w)->qlist, &((PetscObject)v)->qlist));
-    if (mdot_use_gemv) { // inherit w's mdot/maxpy optimization setting
-      v->ops->mdot        = VecMDot_SeqKokkos_GEMV;
-      v->ops->mtdot       = VecMTDot_SeqKokkos_GEMV;
-      v->ops->mdot_local  = VecMDot_SeqKokkos_GEMV;
-      v->ops->mtdot_local = VecMTDot_SeqKokkos_GEMV;
-    }
-    if (maxpy_use_gemv) v->ops->maxpy = VecMAXPY_SeqKokkos_GEMV;
-    v->ops->view          = w->ops->view;
-    v->stash.ignorenegidx = w->stash.ignorenegidx;
-    (*V)[i]               = v;
+    v->ops[0] = w->ops[0];
+    (*V)[i]   = v;
   }
 
   // let the first vector own the raw arrays, so when it is destroyed it will free the arrays

@@ -380,10 +380,10 @@ static PetscErrorCode PCSetUp_GASM(PC pc)
 
     /* Now the subdomains are defined.  Determine their global and max local numbers, if necessary. */
     if (osm->nmax == PETSC_DETERMINE) {
-      PetscMPIInt inwork, outwork;
+      PetscInt inwork, outwork;
       /* determine global number of subdomains and the max number of local subdomains */
       inwork = osm->n;
-      PetscCall(MPIU_Allreduce(&inwork, &outwork, 1, MPI_INT, MPI_MAX, PetscObjectComm((PetscObject)pc)));
+      PetscCallMPI(MPIU_Allreduce(&inwork, &outwork, 1, MPIU_INT, MPI_MAX, PetscObjectComm((PetscObject)pc)));
       osm->nmax = outwork;
     }
     if (osm->N == PETSC_DETERMINE) {
@@ -419,13 +419,13 @@ static PetscErrorCode PCSetUp_GASM(PC pc)
       PetscCall(ISRestoreIndices(osm->ois[i], &oidxi));
       on += oni;
     }
-    PetscCall(ISCreateGeneral(((PetscObject)(pc))->comm, on, oidx, PETSC_OWN_POINTER, &gois));
+    PetscCall(ISCreateGeneral(((PetscObject)pc)->comm, on, oidx, PETSC_OWN_POINTER, &gois));
     nTotalInnerIndices = 0;
     for (i = 0; i < osm->n; i++) {
       PetscCall(ISGetLocalSize(osm->iis[i], &nInnerIndices));
       nTotalInnerIndices += nInnerIndices;
     }
-    PetscCall(VecCreateMPI(((PetscObject)(pc))->comm, nTotalInnerIndices, PETSC_DETERMINE, &x));
+    PetscCall(VecCreateMPI(((PetscObject)pc)->comm, nTotalInnerIndices, PETSC_DETERMINE, &x));
     PetscCall(VecDuplicate(x, &y));
 
     PetscCall(VecCreateMPI(PetscObjectComm((PetscObject)pc), on, PETSC_DECIDE, &osm->gx));
@@ -1042,9 +1042,9 @@ static PetscErrorCode PCGASMGetSubKSP_GASM(PC pc, PetscInt *n, PetscInt *first, 
   PetscFunctionReturn(PETSC_SUCCESS);
 } /* PCGASMGetSubKSP_GASM() */
 
-/*@C
-  PCGASMSetSubdomains - Sets the subdomains for this MPI rank
-  for the additive Schwarz preconditioner with multiple MPI ranks per subdomain, `PCGASM`
+/*@
+  PCGASMSetSubdomains - Sets the subdomains for this MPI process
+  for the additive Schwarz preconditioner with multiple MPI processes per subdomain, `PCGASM`
 
   Collective
 
@@ -1522,6 +1522,9 @@ PetscErrorCode PCGASMCreateSubdomains(Mat A, PetscInt N, PetscInt *n, IS *iis[])
   This is a convenience subroutine that walks each list,
   destroys each `IS` on the list, and then frees the list. At the end the
   list pointers are set to `NULL`.
+
+  Fortran Note:
+  The arrays are not freed, only the `IS` within the arrays are destroyed
 
 .seealso: [](ch_ksp), `PCGASM`, `PCGASMCreateSubdomains()`, `PCGASMSetSubdomains()`
 @*/

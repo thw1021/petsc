@@ -194,6 +194,32 @@ PetscErrorCode PetscRandomSetFromOptions(PetscRandom rnd)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@
+  PetscRandomSetOptionsPrefix - Sets the prefix used for searching for all
+  `PetscRandom` options in the database.
+
+  Logically Collective
+
+  Input Parameters:
++ r      - the random number generator context
+- prefix - the prefix to prepend to all option names
+
+  Level: advanced
+
+  Note:
+  A hyphen (-) must NOT be given at the beginning of the prefix name.
+  The first character of all runtime options is AUTOMATICALLY the hyphen.
+
+.seealso: `PetscRandom`, `PetscRandomSetFromOptions()`
+@*/
+PetscErrorCode PetscRandomSetOptionsPrefix(PetscRandom r, const char prefix[])
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(r, PETSC_RANDOM_CLASSID, 1);
+  PetscCall(PetscObjectSetOptionsPrefix((PetscObject)r, prefix));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 #if defined(PETSC_HAVE_SAWS)
   #include <petscviewersaws.h>
 #endif
@@ -204,7 +230,7 @@ PetscErrorCode PetscRandomSetFromOptions(PetscRandom rnd)
   Collective
 
   Input Parameters:
-+ A    - the  random number generator context
++ A    - the random number generator context
 . obj  - Optional object
 - name - command line option
 
@@ -332,13 +358,10 @@ PetscErrorCode PetscRandomCreate(MPI_Comm comm, PetscRandom *r)
 
   PetscFunctionBegin;
   PetscAssertPointer(r, 2);
-  *r = NULL;
   PetscCall(PetscRandomInitializePackage());
 
   PetscCall(PetscHeaderCreate(rr, PETSC_RANDOM_CLASSID, "PetscRandom", "Random number generator", "Sys", comm, PetscRandomDestroy, PetscRandomView));
-
   PetscCallMPI(MPI_Comm_rank(comm, &rank));
-
   rr->data  = NULL;
   rr->low   = 0.0;
   rr->width = 1.0;

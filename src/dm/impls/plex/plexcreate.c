@@ -244,7 +244,7 @@ PetscErrorCode DMPlexCreateCoordinateSpace(DM dm, PetscInt degree, PetscBool pro
     PetscCall(DMPlexGetHeightStratum(dm, height, &cStart, &cEnd));
     if (cEnd > cStart) PetscCall(DMPlexGetCellType(dm, cStart, &ct));
     gct = (PetscInt)ct;
-    PetscCall(MPIU_Allreduce(MPI_IN_PLACE, &gct, 1, MPIU_INT, MPI_MIN, PetscObjectComm((PetscObject)dm)));
+    PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &gct, 1, MPIU_INT, MPI_MIN, PetscObjectComm((PetscObject)dm)));
     ct = (DMPolytopeType)gct;
     // Work around current bug in PetscDualSpaceSetUp_Lagrange()
     //   Can be seen in plex_tutorials-ex10_1
@@ -840,6 +840,133 @@ static PetscErrorCode DMPlexCreateLineMesh_Internal(DM dm, PetscInt segments, Pe
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+// Creates "Face Sets" label based on the standard box labeling conventions
+static PetscErrorCode DMPlexSetBoxLabel_Internal(DM dm)
+{
+  DM              cdm;
+  PetscSection    csection;
+  Vec             coordinates;
+  DMLabel         label;
+  IS              faces_is;
+  PetscInt        dim, num_face;
+  const PetscInt *faces;
+  PetscInt        faceMarkerBottom, faceMarkerTop, faceMarkerFront, faceMarkerBack, faceMarkerRight, faceMarkerLeft;
+
+  PetscFunctionBeginUser;
+  PetscCall(DMGetDimension(dm, &dim));
+  PetscCheck((dim == 2) || (dim == 3), PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "DMPlex box labeling only supports 2D and 3D meshes, recieved DM of dimension %" PetscInt_FMT, dim);
+  // Get Face Sets label
+  PetscCall(DMGetLabel(dm, "Face Sets", &label));
+  if (label) {
+    PetscCall(DMLabelReset(label));
+  } else {
+    PetscCall(DMCreateLabel(dm, "Face Sets"));
+    PetscCall(DMGetLabel(dm, "Face Sets", &label));
+  }
+  PetscCall(DMPlexMarkBoundaryFaces(dm, 1, label));
+  PetscCall(DMGetStratumIS(dm, "Face Sets", 1, &faces_is));
+  if (!faces_is) PetscFunctionReturn(PETSC_SUCCESS); // No faces on rank
+
+  switch (dim) {
+  case 2:
+    faceMarkerTop    = 3;
+    faceMarkerBottom = 1;
+    faceMarkerRight  = 2;
+    faceMarkerLeft   = 4;
+    break;
+  case 3:
+    faceMarkerBottom = 1;
+    faceMarkerTop    = 2;
+    faceMarkerFront  = 3;
+    faceMarkerBack   = 4;
+    faceMarkerRight  = 5;
+    faceMarkerLeft   = 6;
+    break;
+  default:
+    SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "Dimension %" PetscInt_FMT " not supported", dim);
+  }
+
+  PetscCall(ISGetLocalSize(faces_is, &num_face));
+  PetscCall(ISGetIndices(faces_is, &faces));
+  PetscCall(DMGetCoordinatesLocal(dm, &coordinates));
+  PetscCall(DMGetCoordinateDM(dm, &cdm));
+  PetscCall(DMGetLocalSection(cdm, &csection));
+  for (PetscInt f = 0; f < num_face; ++f) {
+    PetscScalar *coords = NULL;
+    PetscInt     face = faces[f], flip = 1, label_value = -1, coords_size;
+
+    { // Determine if orientation of face is flipped
+      PetscInt        num_cells_support, num_faces, start = -1;
+      const PetscInt *orients, *cell_faces, *cells;
+
+      PetscCall(DMPlexGetSupport(dm, face, &cells));
+      PetscCall(DMPlexGetSupportSize(dm, face, &num_cells_support));
+      PetscCheck(num_cells_support == 1, PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Expected one cell in support of exterior face, but got %" PetscInt_FMT " cells", num_cells_support);
+      PetscCall(DMPlexGetCone(dm, cells[0], &cell_faces));
+      PetscCall(DMPlexGetConeSize(dm, cells[0], &num_faces));
+      for (PetscInt i = 0; i < num_faces; i++) {
+        if (cell_faces[i] == face) start = i;
+      }
+      PetscCheck(start >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_CORRUPT, "Could not find face %" PetscInt_FMT " in cone of its support", face);
+      PetscCall(DMPlexGetConeOrientation(dm, cells[0], &orients));
+      if (orients[start] < 0) flip = -1;
+    }
+
+    // Cannot use DMPlexComputeCellGeometryFVM() for high-order geometry, so must calculate normal vectors manually
+    // Use the vertices (depth 0) of coordinate DM to calculate normal vector
+    PetscCall(DMPlexVecGetClosureAtDepth_Internal(cdm, csection, coordinates, face, 0, &coords_size, &coords));
+    switch (dim) {
+    case 2: {
+      PetscScalar vec[2];
+
+      for (PetscInt d = 0; d < dim; ++d) vec[d] = flip * (PetscRealPart(coords[1 * dim + d]) - PetscRealPart(coords[0 * dim + d]));
+      PetscScalar normal[] = {vec[1], -vec[0]};
+      if (PetscAbsScalar(normal[0]) > PetscAbsScalar(normal[1])) {
+        label_value = PetscRealPart(normal[0]) > 0 ? faceMarkerRight : faceMarkerLeft;
+      } else {
+        label_value = PetscRealPart(normal[1]) > 0 ? faceMarkerTop : faceMarkerBottom;
+      }
+    } break;
+    case 3: {
+      PetscScalar vec1[3], vec2[3], normal[3];
+
+      for (PetscInt d = 0; d < dim; ++d) {
+        vec1[d] = PetscRealPart(coords[1 * dim + d]) - PetscRealPart(coords[0 * dim + d]);
+        vec2[d] = PetscRealPart(coords[2 * dim + d]) - PetscRealPart(coords[1 * dim + d]);
+      }
+
+      // Calculate normal vector via cross-product
+      normal[0] = flip * ((vec1[1] * vec2[2]) - (vec1[2] * vec2[1]));
+      normal[1] = flip * ((vec1[2] * vec2[0]) - (vec1[0] * vec2[2]));
+      normal[2] = flip * ((vec1[0] * vec2[1]) - (vec1[1] * vec2[0]));
+
+      if (PetscAbsScalar(normal[0]) > PetscAbsScalar(normal[1])) {
+        if (PetscAbsScalar(normal[0]) > PetscAbsScalar(normal[2])) {
+          label_value = PetscRealPart(normal[0]) > 0 ? faceMarkerRight : faceMarkerLeft;
+        } else {
+          label_value = PetscRealPart(normal[2]) > 0 ? faceMarkerTop : faceMarkerBottom;
+        }
+      } else {
+        if (PetscAbsScalar(normal[1]) > PetscAbsScalar(normal[2])) {
+          label_value = PetscRealPart(normal[1]) > 0 ? faceMarkerBack : faceMarkerFront;
+        } else {
+          label_value = PetscRealPart(normal[2]) > 0 ? faceMarkerTop : faceMarkerBottom;
+        }
+      }
+    } break;
+    }
+
+    PetscInt previous_label_value; // always 1 due to DMPlexMarkBoundaryFaces call above
+    PetscCall(DMGetLabelValue(dm, "Face Sets", face, &previous_label_value));
+    PetscCall(DMClearLabelValue(dm, "Face Sets", face, previous_label_value));
+    PetscCall(DMSetLabelValue(dm, "Face Sets", face, label_value));
+    PetscCall(DMPlexVecRestoreClosure(cdm, csection, coordinates, face, &coords_size, &coords));
+  }
+  PetscCall(ISRestoreIndices(faces_is, &faces));
+  PetscCall(ISDestroy(&faces_is));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode DMPlexCreateBoxMesh_Simplex_Internal(DM dm, PetscInt dim, const PetscInt faces[], const PetscReal lower[], const PetscReal upper[], const DMBoundaryType periodicity[], PetscBool interpolate)
 {
   DM      boundary, vol;
@@ -856,6 +983,10 @@ static PetscErrorCode DMPlexCreateBoxMesh_Simplex_Internal(DM dm, PetscInt dim, 
   if (bdlabel) PetscCall(DMPlexLabelComplete(vol, bdlabel));
   PetscCall(DMPlexCopy_Internal(dm, PETSC_TRUE, PETSC_FALSE, vol));
   PetscCall(DMPlexReplace_Internal(dm, &vol));
+  if (interpolate) {
+    PetscCall(DMPlexInterpolateInPlace_Internal(dm));
+    PetscCall(DMPlexSetBoxLabel_Internal(dm));
+  }
   PetscCall(DMDestroy(&boundary));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1334,20 +1465,22 @@ static PetscErrorCode DMPlexCreateBoxMesh_Internal(DM dm, DMPlexShape shape, Pet
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMPlexCreateBoxMesh - Creates a mesh on the tensor product of unit intervals (box) using simplices or tensor cells (hexahedra).
 
   Collective
 
   Input Parameters:
-+ comm        - The communicator for the `DM` object
-. dim         - The spatial dimension
-. simplex     - `PETSC_TRUE` for simplices, `PETSC_FALSE` for tensor cells
-. faces       - Number of faces per dimension, or `NULL` for (1,) in 1D and (2, 2) in 2D and (1, 1, 1) in 3D
-. lower       - The lower left corner, or `NULL` for (0, 0, 0)
-. upper       - The upper right corner, or `NULL` for (1, 1, 1)
-. periodicity - The boundary type for the X,Y,Z direction, or `NULL` for `DM_BOUNDARY_NONE`
-- interpolate - Flag to create intermediate mesh pieces (edges, faces)
++ comm               - The communicator for the `DM` object
+. dim                - The spatial dimension
+. simplex            - `PETSC_TRUE` for simplices, `PETSC_FALSE` for tensor cells
+. faces              - Number of faces per dimension, or `NULL` for (1,) in 1D and (2, 2) in 2D and (1, 1, 1) in 3D
+. lower              - The lower left corner, or `NULL` for (0, 0, 0)
+. upper              - The upper right corner, or `NULL` for (1, 1, 1)
+. periodicity        - The boundary type for the X,Y,Z direction, or `NULL` for `DM_BOUNDARY_NONE`
+. interpolate        - Flag to create intermediate mesh pieces (edges, faces)
+. localizationHeight - Flag to localize edges and faces in addition to cells; only significant for periodic meshes
+- sparseLocalize     - Flag to localize coordinates only for cells near the periodic boundary; only significant for periodic meshes
 
   Output Parameter:
 . dm - The `DM` object
@@ -1398,7 +1531,7 @@ static PetscErrorCode DMPlexCreateBoxMesh_Internal(DM dm, DMPlexShape shape, Pet
 
 .seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMSetFromOptions()`, `DMPlexCreateFromFile()`, `DMPlexCreateHexCylinderMesh()`, `DMSetType()`, `DMCreate()`
 @*/
-PetscErrorCode DMPlexCreateBoxMesh(MPI_Comm comm, PetscInt dim, PetscBool simplex, const PetscInt faces[], const PetscReal lower[], const PetscReal upper[], const DMBoundaryType periodicity[], PetscBool interpolate, DM *dm)
+PetscErrorCode DMPlexCreateBoxMesh(MPI_Comm comm, PetscInt dim, PetscBool simplex, const PetscInt faces[], const PetscReal lower[], const PetscReal upper[], const DMBoundaryType periodicity[], PetscBool interpolate, PetscInt localizationHeight, PetscBool sparseLocalize, DM *dm)
 {
   PetscInt       fac[3] = {1, 1, 1};
   PetscReal      low[3] = {0, 0, 0};
@@ -1409,7 +1542,14 @@ PetscErrorCode DMPlexCreateBoxMesh(MPI_Comm comm, PetscInt dim, PetscBool simple
   PetscCall(DMCreate(comm, dm));
   PetscCall(DMSetType(*dm, DMPLEX));
   PetscCall(DMPlexCreateBoxMesh_Internal(*dm, DM_SHAPE_BOX, dim, simplex, faces ? faces : fac, lower ? lower : low, upper ? upper : upp, periodicity ? periodicity : bdt, interpolate));
-  if (periodicity) PetscCall(DMLocalizeCoordinates(*dm));
+  if (periodicity) {
+    DM cdm;
+
+    PetscCall(DMGetCoordinateDM(*dm, &cdm));
+    PetscCall(DMPlexSetMaxProjectionHeight(cdm, localizationHeight));
+    PetscCall(DMSetSparseLocalize(*dm, sparseLocalize));
+    PetscCall(DMLocalizeCoordinates(*dm));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -4244,7 +4384,7 @@ static PetscErrorCode DMPlexCreateFromOptions_Internal(PetscOptionItems *PetscOp
     PetscCall(PetscStrlen(name, &len));
     if (name[len - 1] == '0') Nl = 10;
     for (PetscInt l = 0; l < Nl; ++l) {
-      if (l > 0) name[len - 1] = '0' + l;
+      if (l > 0) name[len - 1] = (char)('0' + l);
       fulloption[0] = 0;
       PetscCall(PetscStrlcat(fulloption, "-dm_plex_cohesive_label_", 32));
       PetscCall(PetscStrlcat(fulloption, name, PETSC_MAX_PATH_LEN - 32));
@@ -4544,6 +4684,12 @@ static PetscErrorCode DMSetFromOptions_Plex(DM dm, PetscOptionItems *PetscOption
     if (saveSF) PetscCall(DMPlexSetMigrationSF(dm, sfMigration));
     PetscCall(PetscSFDestroy(&sfMigration));
   }
+
+  {
+    PetscBool useBoxLabel = PETSC_FALSE;
+    PetscCall(PetscOptionsBool("-dm_plex_box_label", "Create 'Face Sets' assuming boundary faces align with cartesian directions", "DMCreate", useBoxLabel, &useBoxLabel, NULL));
+    if (useBoxLabel) PetscCall(DMPlexSetBoxLabel_Internal(dm));
+  }
   /* Must check CEED options before creating function space for coordinates */
   {
     PetscBool useCeed = PETSC_FALSE, flg;
@@ -4826,7 +4972,8 @@ static PetscErrorCode DMGetDimPoints_Plex(DM dm, PetscInt dim, PetscInt *pStart,
 static PetscErrorCode DMGetNeighbors_Plex(DM dm, PetscInt *nranks, const PetscMPIInt *ranks[])
 {
   PetscSF            sf;
-  PetscInt           niranks, njranks, n;
+  PetscMPIInt        niranks, njranks;
+  PetscInt           n;
   const PetscMPIInt *iranks, *jranks;
   DM_Plex           *data = (DM_Plex *)dm->data;
 
@@ -5007,6 +5154,7 @@ PETSC_EXTERN PetscErrorCode DMCreate_Plex(DM dm)
   mesh->depthState    = -1;
   mesh->celltypeState = -1;
   mesh->printTol      = 1.0e-10;
+  mesh->nonempty_comm = MPI_COMM_SELF;
 
   PetscCall(DMInitialize_Plex(dm));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -5114,11 +5262,11 @@ PetscErrorCode DMPlexBuildFromCellListParallel(DM dm, PetscInt numCells, PetscIn
     const PetscInt len = numCells * numCorners;
 
     /* NVerticesInCells = max(cells) + 1 */
-    NVerticesInCells = PETSC_MIN_INT;
+    NVerticesInCells = PETSC_INT_MIN;
     for (i = 0; i < len; i++)
       if (cells[i] > NVerticesInCells) NVerticesInCells = cells[i];
     ++NVerticesInCells;
-    PetscCall(MPIU_Allreduce(MPI_IN_PLACE, &NVerticesInCells, 1, MPIU_INT, MPI_MAX, PetscObjectComm((PetscObject)dm)));
+    PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &NVerticesInCells, 1, MPIU_INT, MPI_MAX, PetscObjectComm((PetscObject)dm)));
 
     if (numVertices == PETSC_DECIDE && NVertices == PETSC_DECIDE) NVertices = NVerticesInCells;
     else
@@ -5232,7 +5380,7 @@ PetscErrorCode DMPlexBuildCoordinatesFromCellListParallel(DM dm, PetscInt spaceD
     MPI_Datatype coordtype;
 
     /* Need a temp buffer for coords if we have complex/single */
-    PetscCallMPI(MPI_Type_contiguous(spaceDim, MPIU_SCALAR, &coordtype));
+    PetscCallMPI(MPI_Type_contiguous((PetscMPIInt)spaceDim, MPIU_SCALAR, &coordtype));
     PetscCallMPI(MPI_Type_commit(&coordtype));
 #if defined(PETSC_USE_COMPLEX)
     {
@@ -5379,7 +5527,7 @@ PetscErrorCode DMPlexBuildFromCellList(DM dm, PetscInt numCells, PetscInt numVer
     const PetscInt len = numCells * numCorners;
 
     /* NVerticesInCells = max(cells) + 1 */
-    NVerticesInCells = PETSC_MIN_INT;
+    NVerticesInCells = PETSC_INT_MIN;
     for (i = 0; i < len; i++)
       if (cells[i] > NVerticesInCells) NVerticesInCells = cells[i];
     ++NVerticesInCells;

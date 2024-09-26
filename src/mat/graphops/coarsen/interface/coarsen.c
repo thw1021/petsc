@@ -80,7 +80,7 @@ PetscErrorCode MatCoarsenGetType(MatCoarsen coarsen, MatCoarsenType *type)
 
   The user can define additional coarsens; see `MatCoarsenRegister()`.
 
-.seealso: `MatCoarsen`, `MatCoarseSetFromOptions()`, `MatCoarsenSetType()`, `MatCoarsenRegister()`, `MatCoarsenCreate()`,
+.seealso: `MatCoarsen`, `MatCoarsenSetFromOptions()`, `MatCoarsenSetType()`, `MatCoarsenRegister()`, `MatCoarsenCreate()`,
           `MatCoarsenDestroy()`, `MatCoarsenSetAdjacency()`
           `MatCoarsenGetData()`
 @*/
@@ -521,16 +521,14 @@ PetscErrorCode MatCoarsenCreate(MPI_Comm comm, MatCoarsen *newcrs)
   MatCoarsen agg;
 
   PetscFunctionBegin;
-  *newcrs = NULL;
-
+  PetscAssertPointer(newcrs, 2);
   PetscCall(MatInitializePackage());
+
   PetscCall(PetscHeaderCreate(agg, MAT_COARSEN_CLASSID, "MatCoarsen", "Matrix/graph coarsen", "MatCoarsen", comm, MatCoarsenDestroy, MatCoarsenView));
   PetscCall(PetscObjectComposeFunction((PetscObject)agg, "MatCoarsenSetMaximumIterations_C", MatCoarsenSetMaximumIterations_MATCOARSEN));
   PetscCall(PetscObjectComposeFunction((PetscObject)agg, "MatCoarsenSetThreshold_C", MatCoarsenSetThreshold_MATCOARSEN));
   PetscCall(PetscObjectComposeFunction((PetscObject)agg, "MatCoarsenSetStrengthIndex_C", MatCoarsenSetStrengthIndex_MATCOARSEN));
-
   agg->strength_index_size = 0;
-
-  *newcrs = agg;
+  *newcrs                  = agg;
   PetscFunctionReturn(PETSC_SUCCESS);
 }

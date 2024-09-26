@@ -209,13 +209,13 @@ PetscErrorCode VecNorm(Vec x, NormType type, PetscReal *val)
     PetscMPIInt b0 = (PetscMPIInt)flg, b1[2], b2[2];
     b1[0]          = -b0;
     b1[1]          = b0;
-    PetscCall(MPIU_Allreduce(b1, b2, 2, MPI_INT, MPI_MAX, PetscObjectComm((PetscObject)x)));
+    PetscCallMPI(MPIU_Allreduce(b1, b2, 2, MPI_INT, MPI_MAX, PetscObjectComm((PetscObject)x)));
     PetscCheck(-b2[0] == b2[1], PetscObjectComm((PetscObject)x), PETSC_ERR_ARG_WRONGSTATE, "Some MPI processes have cached %s norm, others do not. This may happen when some MPI processes call VecGetArray() and some others do not.", NormTypes[type]);
     if (flg) {
       PetscReal b1[2], b2[2];
       b1[0] = -(*val);
       b1[1] = *val;
-      PetscCall(MPIU_Allreduce(b1, b2, 2, MPIU_REAL, MPIU_MAX, PetscObjectComm((PetscObject)x)));
+      PetscCallMPI(MPIU_Allreduce(b1, b2, 2, MPIU_REAL, MPIU_MAX, PetscObjectComm((PetscObject)x)));
       PetscCheck(-b2[0] == b2[1], PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Difference in cached %s norms: local %g", NormTypes[type], (double)*val);
     }
   }
@@ -873,7 +873,7 @@ PetscErrorCode VecWAXPY(Vec w, PetscScalar alpha, Vec x, Vec y)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   VecSetValues - Inserts or adds values into certain locations of a vector.
 
   Not Collective
@@ -907,6 +907,12 @@ PetscErrorCode VecWAXPY(Vec w, PetscScalar alpha, Vec x, Vec y)
   with homogeneous Dirichlet boundary conditions that you don't want represented
   in the vector.
 
+  Fortran Note:
+  If any of `ix` and `y` are scalars pass them using, for example,
+.vb
+  VecSetValues(mat, one, [ix], [y], INSERT_VALUES)
+.ve
+
 .seealso: [](ch_vectors), `Vec`, `VecAssemblyBegin()`, `VecAssemblyEnd()`, `VecSetValuesLocal()`,
           `VecSetValue()`, `VecSetValuesBlocked()`, `InsertMode`, `INSERT_VALUES`, `ADD_VALUES`, `VecGetValues()`
 @*/
@@ -926,7 +932,7 @@ PetscErrorCode VecSetValues(Vec x, PetscInt ni, const PetscInt ix[], const Petsc
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   VecGetValues - Gets values from certain locations of a vector. Currently
   can only get values on the same processor on which they are owned
 
@@ -938,7 +944,7 @@ PetscErrorCode VecSetValues(Vec x, PetscInt ni, const PetscInt ix[], const Petsc
 - ix - indices where to get them from (in global 1d numbering)
 
   Output Parameter:
-. y - array of values
+. y - array of values, must be passed in with a length of `ni`
 
   Level: beginner
 
@@ -970,7 +976,7 @@ PetscErrorCode VecGetValues(Vec x, PetscInt ni, const PetscInt ix[], PetscScalar
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   VecSetValuesBlocked - Inserts or adds blocks of values into certain locations of a vector.
 
   Not Collective
@@ -1002,6 +1008,12 @@ PetscErrorCode VecGetValues(Vec x, PetscInt ni, const PetscInt ix[], PetscScalar
   with homogeneous Dirichlet boundary conditions that you don't want represented
   in the vector.
 
+  Fortran Note:
+  If any of `ix` and `y` are scalars pass them using, for example,
+.vb
+  VecSetValuesBlocked(mat, one, [ix], [y], INSERT_VALUES)
+.ve
+
 .seealso: [](ch_vectors), `Vec`, `VecAssemblyBegin()`, `VecAssemblyEnd()`, `VecSetValuesBlockedLocal()`,
           `VecSetValues()`
 @*/
@@ -1021,7 +1033,7 @@ PetscErrorCode VecSetValuesBlocked(Vec x, PetscInt ni, const PetscInt ix[], cons
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   VecSetValuesLocal - Inserts or adds values into certain locations of a vector,
   using a local ordering of the nodes.
 
@@ -1039,7 +1051,7 @@ PetscErrorCode VecSetValuesBlocked(Vec x, PetscInt ni, const PetscInt ix[], cons
   Notes:
   `VecSetValuesLocal()` sets x[ix[i]] = y[i], for i=0,...,ni-1.
 
-  Calls to `VecSetValues()` with the `INSERT_VALUES` and `ADD_VALUES`
+  Calls to `VecSetValuesLocal()` with the `INSERT_VALUES` and `ADD_VALUES`
   options cannot be mixed without intervening calls to the assembly
   routines.
 
@@ -1047,6 +1059,12 @@ PetscErrorCode VecSetValuesBlocked(Vec x, PetscInt ni, const PetscInt ix[], cons
   MUST be called after all calls to `VecSetValuesLocal()` have been completed.
 
   `VecSetValuesLocal()` uses 0-based indices in Fortran as well as in C.
+
+  Fortran Note:
+  If any of `ix` and `y` are scalars pass them using, for example,
+.vb
+  VecSetValuesLocal(mat, one, [ix], [y], INSERT_VALUES)
+.ve
 
 .seealso: [](ch_vectors), `Vec`, `VecAssemblyBegin()`, `VecAssemblyEnd()`, `VecSetValues()`, `VecSetLocalToGlobalMapping()`,
           `VecSetValuesBlockedLocal()`
@@ -1064,6 +1082,7 @@ PetscErrorCode VecSetValuesLocal(Vec x, PetscInt ni, const PetscInt ix[], const 
 
   PetscCall(PetscLogEventBegin(VEC_SetValues, x, 0, 0, 0));
   if (!x->ops->setvalueslocal) {
+    if (PetscUnlikely(!x->map->mapping && x->ops->getlocaltoglobalmapping)) PetscUseTypeMethod(x, getlocaltoglobalmapping, &x->map->mapping);
     if (x->map->mapping) {
       if (ni > 128) PetscCall(PetscMalloc1(ni, &lix));
       PetscCall(ISLocalToGlobalMappingApply(x->map->mapping, ni, (PetscInt *)ix, lix));
@@ -1104,6 +1123,12 @@ PetscErrorCode VecSetValuesLocal(Vec x, PetscInt ni, const PetscInt ix[], const 
 
   `VecSetValuesBlockedLocal()` uses 0-based indices in Fortran as well as in C.
 
+  Fortran Note:
+  If any of `ix` and `y` are scalars pass them using, for example,
+.vb
+  VecSetValuesBlockedLocal(mat, one, [ix], [y], INSERT_VALUES)
+.ve
+
 .seealso: [](ch_vectors), `Vec`, `VecAssemblyBegin()`, `VecAssemblyEnd()`, `VecSetValues()`, `VecSetValuesBlocked()`,
           `VecSetLocalToGlobalMapping()`
 @*/
@@ -1118,6 +1143,7 @@ PetscErrorCode VecSetValuesBlockedLocal(Vec x, PetscInt ni, const PetscInt ix[],
   PetscAssertPointer(y, 4);
   PetscValidType(x, 1);
   PetscCall(PetscLogEventBegin(VEC_SetValues, x, 0, 0, 0));
+  if (PetscUnlikely(!x->map->mapping && x->ops->getlocaltoglobalmapping)) PetscUseTypeMethod(x, getlocaltoglobalmapping, &x->map->mapping);
   if (x->map->mapping) {
     if (ni > 128) PetscCall(PetscMalloc1(ni, &lix));
     PetscCall(ISLocalToGlobalMappingApplyBlock(x->map->mapping, ni, (PetscInt *)ix, lix));
@@ -1469,11 +1495,11 @@ PetscErrorCode VecGetSubVectorContiguityAndBS_Private(Vec X, IS is, PetscBool *c
   PetscCall(ISContiguousLocal(is, gstart, gend, &lstart, &red[0]));
   /* block size is given by IS if ibs > 1; otherwise, check the vector */
   if (ibs > 1) {
-    PetscCall(MPIU_Allreduce(MPI_IN_PLACE, red, 1, MPIU_BOOL, MPI_LAND, PetscObjectComm((PetscObject)is)));
+    PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, red, 1, MPIU_BOOL, MPI_LAND, PetscObjectComm((PetscObject)is)));
     bs = ibs;
   } else {
     if (n % vbs || vbs == 1) red[1] = PETSC_FALSE; /* this process invalidate the collectiveness of block size */
-    PetscCall(MPIU_Allreduce(MPI_IN_PLACE, red, 2, MPIU_BOOL, MPI_LAND, PetscObjectComm((PetscObject)is)));
+    PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, red, 2, MPIU_BOOL, MPI_LAND, PetscObjectComm((PetscObject)is)));
     if (red[0] && red[1]) bs = vbs; /* all processes have a valid block size and the access will be contiguous */
   }
 
@@ -2135,7 +2161,7 @@ PetscErrorCode VecRestoreArrayRead(Vec x, const PetscScalar **a)
   The values in this array are NOT valid, the caller of this routine is responsible for putting
   values into the array; any values it does not set will be invalid.
 
-  The array must be returned using a matching call to `VecRestoreArrayRead()`.
+  The array must be returned using a matching call to `VecRestoreArrayWrite()`.
 
   For vectors associated with GPUs, the host and device vectors are not synchronized before
   giving access. If you need correct values in the array use `VecGetArray()`

@@ -65,7 +65,7 @@ static PetscErrorCode PetscViewerHDF5ReadFinalize_Private(PetscViewer viewer, HD
 static PetscErrorCode PetscViewerHDF5ReadSizes_Private(PetscViewer viewer, HDF5ReadCtx ctx, PetscBool setup, PetscLayout *map_)
 {
   PetscViewer_HDF5 *hdf5 = (PetscViewer_HDF5 *)viewer->data;
-  PetscInt          bs, len, N;
+  PetscInt          bs, N;
   PetscLayout       map;
 
   PetscFunctionBegin;
@@ -104,9 +104,8 @@ static PetscErrorCode PetscViewerHDF5ReadSizes_Private(PetscViewer viewer, HDF5R
   PetscCheck(!ctx->complexVal || ctx->dims[ctx->complexInd] == 2, PETSC_COMM_SELF, PETSC_ERR_FILE_UNEXPECTED, "Complex numbers must have exactly 2 parts (%" PRIuHSIZE ")", ctx->dims[ctx->complexInd]);
 
   if (hdf5->horizontal) {
-    PetscInt t;
     /* support horizontal 1D arrays (MATLAB vectors) - swap meaning of blocks and entries */
-    t           = ctx->lenInd;
+    int t       = ctx->lenInd;
     ctx->lenInd = ctx->bsInd;
     ctx->bsInd  = t;
   }
@@ -121,8 +120,7 @@ static PetscErrorCode PetscViewerHDF5ReadSizes_Private(PetscViewer viewer, HDF5R
   }
 
   /* Get global size */
-  len = ctx->dims[ctx->lenInd];
-  N   = (PetscInt)len * bs;
+  PetscCall(PetscIntCast(bs * ctx->dims[ctx->lenInd], &N));
 
   /* Set global size, blocksize and type if not yet set */
   if (map->bs < 0) {

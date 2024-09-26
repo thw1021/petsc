@@ -414,7 +414,7 @@ static inline PETSC_UNUSED PetscErrorCode PetscLogObjectDestroy(PetscObject o)
     #define PETSC_FLOPS_PER_OP 1.0
   #endif
 
-/*@C
+/*@
    PetscLogFlops - Log how many flops are performed in a calculation
 
    Input Parameter:
@@ -425,9 +425,6 @@ static inline PETSC_UNUSED PetscErrorCode PetscLogObjectDestroy(PetscObject o)
    Note:
    To limit the chance of integer overflow when multiplying by a constant, represent the constant as a double,
    not an integer. Use `PetscLogFlops`(4.0*n) not `PetscLogFlops`(4*n)
-
-   Developer Note:
-   Currently Fortran stub generator cannot run through files in include
 
 .seealso: [](ch_profiling), `PetscLogView()`, `PetscLogGpuFlops()`
 @*/
@@ -454,7 +451,7 @@ static inline PetscErrorCode PetscLogFlops(PetscLogDouble n)
 /*
    Logging of MPI activities
 */
-static inline PetscErrorCode PetscMPITypeSize(PetscInt count, MPI_Datatype type, PetscLogDouble *length, PetscLogDouble *length_th)
+static inline PetscErrorCode PetscMPITypeSize(PetscCount count, MPI_Datatype type, PetscLogDouble *length, PetscLogDouble *length_th)
 {
   PetscMPIInt typesize;
 
