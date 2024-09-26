@@ -31,9 +31,9 @@ typedef const char *PetscRegressorType;
    If the list of PetscRegressorLinearTypes changes, be sure to update the list at the top of linear.c as well! */
 typedef const char *PetscRegressorLinearType;
 #define PETSCREGRESSORLINEARDEFAULT "ols"
-#define PETSCREGRESSORLINEAROLS   "ols"
-#define PETSCREGRESSORLINEARLASSO "lasso"
-#define PETSCREGRESSORLINEARRIDGE "ridge"
+#define PETSCREGRESSORLINEAROLS     "ols"
+#define PETSCREGRESSORLINEARLASSO   "lasso"
+#define PETSCREGRESSORLINEARRIDGE   "ridge"
 
 PETSC_EXTERN PetscFunctionList PetscRegressorList;
 PETSC_EXTERN PetscClassId      PETSCREGRESSOR_CLASSID;
