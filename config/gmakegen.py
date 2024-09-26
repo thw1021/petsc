@@ -32,7 +32,7 @@ def getlangsplit(name):
     if loc > -1: return os.path.join(os.path.dirname(name),file[:loc])
     raise RuntimeError("No . in filename")
 
-def stripsplit(line) ml:
+def stripsplit(line):
   return line[len('#requires'):].replace("'","").split()
 
 def parse_makefile(fn, out=None):
