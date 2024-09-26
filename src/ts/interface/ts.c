@@ -65,7 +65,11 @@ static PetscErrorCode TSAdaptSetDefaultType(TSAdapt adapt, TSAdaptType default_t
 . -ts_monitor_draw_error                                             - Monitor error graphically, requires use to have provided TSSetSolutionFunction()
 . -ts_monitor_solution [ascii binary draw][:filename][:viewerformat] - monitors the solution at each timestep
 . -ts_monitor_solution_interval <interval>                           - output once every interval (default=1) time steps. Use -1 to only output at the end of the simulation
+<<<<<<< HEAD
 . -ts_monitor_solution_skip_initial                                  - skip writing of initial condition
+=======
+. -ts_monitor_solution_skip_initial                                  - skip  writing of initial condition
+>>>>>>> MR tidy up
 . -ts_monitor_solution_vtk <filename.vts,filename.vtu>               - Save each time step to a binary file, use filename-%%03" PetscInt_FMT ".vts (filename-%%03" PetscInt_FMT ".vtu)
 . -ts_monitor_solution_vtk_interval <interval>                       - output once every interval (default=1) time steps. Use -1 to only output at the end of the simulation
 - -ts_monitor_envelope                                               - determine maximum and minimum value of each component of the solution over the solution time
@@ -146,8 +150,8 @@ PetscErrorCode TSSetFromOptions(TS ts)
   PetscCall(TSMonitorSetFromOptions(ts, "-ts_monitor", "Monitor time and timestep size", "TSMonitorDefault", TSMonitorDefault, NULL));
   PetscCall(TSMonitorSetFromOptions(ts, "-ts_monitor_extreme", "Monitor extreme values of the solution", "TSMonitorExtreme", TSMonitorExtreme, NULL));
   PetscCall(TSMonitorSetFromOptions(ts, "-ts_monitor_solution", "View the solution at each timestep", "TSMonitorSolution", TSMonitorSolution, NULL));
+  PetscCall(PetscOptionsBool("-ts_monitor_solution_skip_initial", "Skip  writing of initial condition", "ts", ts->skip_initial, &ts->skip_initial, NULL));
   PetscCall(TSMonitorSetFromOptions(ts, "-ts_dmswarm_monitor_moments", "Monitor moments of particle distribution", "TSDMSwarmMonitorMoments", TSDMSwarmMonitorMoments, NULL));
-
   PetscCall(PetscOptionsString("-ts_monitor_python", "Use Python function", "TSMonitorSet", NULL, monfilename, sizeof(monfilename), &flg));
   if (flg) PetscCall(PetscPythonMonitorSet((PetscObject)ts, monfilename));
 
