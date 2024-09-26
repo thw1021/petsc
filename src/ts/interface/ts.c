@@ -36,6 +36,7 @@ static PetscErrorCode TSAdaptSetDefaultType(TSAdapt adapt, TSAdaptType default_t
 . -ts_max_time <time>                                                - maximum time to compute to
 . -ts_time_span <t0,...tf>                                           - sets the time span, solutions are computed and stored for each indicated time
 . -ts_max_steps <steps>                                              - maximum number of time-steps to take
+. -ts_run_steps <steps>                                              - number of time steps for TSSolve to take
 . -ts_init_time <time>                                               - initial time to start computation
 . -ts_final_time <time>                                              - final time to compute to (deprecated: use `-ts_max_time`)
 . -ts_dt <dt>                                                        - initial time step
@@ -64,6 +65,7 @@ static PetscErrorCode TSAdaptSetDefaultType(TSAdapt adapt, TSAdaptType default_t
 . -ts_monitor_draw_error                                             - Monitor error graphically, requires use to have provided TSSetSolutionFunction()
 . -ts_monitor_solution [ascii binary draw][:filename][:viewerformat] - monitors the solution at each timestep
 . -ts_monitor_solution_interval <interval>                           - output once every interval (default=1) time steps. Use -1 to only output at the end of the simulation
+. -ts_monitor_solution_skip_initial                                  - skip  writing of initial condition
 . -ts_monitor_solution_vtk <filename.vts,filename.vtu>               - Save each time step to a binary file, use filename-%%03" PetscInt_FMT ".vts (filename-%%03" PetscInt_FMT ".vtu)
 . -ts_monitor_solution_vtk_interval <interval>                       - output once every interval (default=1) time steps. Use -1 to only output at the end of the simulation
 - -ts_monitor_envelope                                               - determine maximum and minimum value of each component of the solution over the solution time
@@ -114,7 +116,6 @@ PetscErrorCode TSSetFromOptions(TS ts)
   if (flg) PetscCall(TSSetTimeSpan(ts, nt, tspan));
   PetscCall(PetscOptionsInt("-ts_max_steps", "Maximum number of time steps", "TSSetMaxSteps", ts->max_steps, &ts->max_steps, NULL));
   PetscCall(PetscOptionsInt("-ts_run_steps", "Number of time steps for TSSolve to take", "TSSetRunSteps", ts->run_steps, &ts->run_steps, NULL));
-  PetscCall(PetscOptionsBool("-ts_monitor_solution_skip_initial", "Skip  writing of initial condition", "ts", ts->skip_initial, &ts->skip_initial, NULL));
   PetscCall(PetscOptionsReal("-ts_init_time", "Initial time", "TSSetTime", ts->ptime, &ts->ptime, NULL));
   PetscCall(PetscOptionsReal("-ts_dt", "Initial time step", "TSSetTimeStep", ts->time_step, &time_step, &flg));
   if (flg) PetscCall(TSSetTimeStep(ts, time_step));
@@ -145,8 +146,8 @@ PetscErrorCode TSSetFromOptions(TS ts)
   PetscCall(TSMonitorSetFromOptions(ts, "-ts_monitor", "Monitor time and timestep size", "TSMonitorDefault", TSMonitorDefault, NULL));
   PetscCall(TSMonitorSetFromOptions(ts, "-ts_monitor_extreme", "Monitor extreme values of the solution", "TSMonitorExtreme", TSMonitorExtreme, NULL));
   PetscCall(TSMonitorSetFromOptions(ts, "-ts_monitor_solution", "View the solution at each timestep", "TSMonitorSolution", TSMonitorSolution, NULL));
+  PetscCall(PetscOptionsBool("-ts_monitor_solution_skip_initial", "Skip  writing of initial condition", "ts", ts->skip_initial, &ts->skip_initial, NULL));
   PetscCall(TSMonitorSetFromOptions(ts, "-ts_dmswarm_monitor_moments", "Monitor moments of particle distribution", "TSDMSwarmMonitorMoments", TSDMSwarmMonitorMoments, NULL));
-
   PetscCall(PetscOptionsString("-ts_monitor_python", "Use Python function", "TSMonitorSet", NULL, monfilename, sizeof(monfilename), &flg));
   if (flg) PetscCall(PetscPythonMonitorSet((PetscObject)ts, monfilename));
 
