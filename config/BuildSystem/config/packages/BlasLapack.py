@@ -618,6 +618,7 @@ class Configure(config.package.Package):
         self.logPrint('MKL include path not automatically picked up by compiler. Trying to find mkl_spblas.h...')
         if 'with-blaslapack-dir' in self.argDB:
           pathlist = [os.path.join(self.argDB['with-blaslapack-dir'],'include'),
+                      os.path.join(self.argDB['with-blaslapack-dir'],'include','mkl'),
                       os.path.join(self.argDB['with-blaslapack-dir'],'..','include'),
                       os.path.join(self.argDB['with-blaslapack-dir'],'..','..','include')]
         elif 'with-blaslapack-include' in self.argDB:
