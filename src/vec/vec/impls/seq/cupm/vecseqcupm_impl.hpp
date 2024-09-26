@@ -77,6 +77,7 @@ inline PetscErrorCode VecSeq_CUPM<T>::ClearAsyncFunctions(Vec v) noexcept
   PetscCall(PetscObjectComposeFunction(PetscObjectCast(v), VecAsyncFnName(Scale), nullptr));
   PetscCall(PetscObjectComposeFunction(PetscObjectCast(v), VecAsyncFnName(Set), nullptr));
   PetscCall(PetscObjectComposeFunction(PetscObjectCast(v), VecAsyncFnName(Shift), nullptr));
+  PetscCall(PetscObjectComposeFunction(PetscObjectCast(v), VecAsyncFnName(Sign), nullptr));
   PetscCall(PetscObjectComposeFunction(PetscObjectCast(v), VecAsyncFnName(SqrtAbs), nullptr));
   PetscCall(PetscObjectComposeFunction(PetscObjectCast(v), VecAsyncFnName(Swap), nullptr));
   PetscCall(PetscObjectComposeFunction(PetscObjectCast(v), VecAsyncFnName(WAXPY), nullptr));
@@ -106,6 +107,7 @@ inline PetscErrorCode VecSeq_CUPM<T>::InitializeAsyncFunctions(Vec v) noexcept
   PetscCall(PetscObjectComposeFunction(PetscObjectCast(v), VecAsyncFnName(Scale), VecSeq_CUPM<T>::ScaleAsync));
   PetscCall(PetscObjectComposeFunction(PetscObjectCast(v), VecAsyncFnName(Set), VecSeq_CUPM<T>::SetAsync));
   PetscCall(PetscObjectComposeFunction(PetscObjectCast(v), VecAsyncFnName(Shift), VecSeq_CUPM<T>::ShiftAsync));
+  PetscCall(PetscObjectComposeFunction(PetscObjectCast(v), VecAsyncFnName(Sign), VecSeq_CUPM<T>::SignAsync));
   PetscCall(PetscObjectComposeFunction(PetscObjectCast(v), VecAsyncFnName(SqrtAbs), VecSeq_CUPM<T>::SqrtAbsAsync));
   PetscCall(PetscObjectComposeFunction(PetscObjectCast(v), VecAsyncFnName(Swap), VecSeq_CUPM<T>::SwapAsync));
   PetscCall(PetscObjectComposeFunction(PetscObjectCast(v), VecAsyncFnName(WAXPY), VecSeq_CUPM<T>::WAXPYAsync));
@@ -715,6 +717,33 @@ inline PetscErrorCode VecSeq_CUPM<T>::Abs(Vec xin) noexcept
 {
   PetscFunctionBegin;
   PetscCall(AbsAsync(xin, nullptr));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+namespace detail
+{
+
+struct Sign {
+  PETSC_HOSTDEVICE_INLINE_DECL PetscScalar operator()(const PetscScalar &s) const noexcept { return copysign(PetscReal(1.0), PetscRealPart(s)); }
+};
+
+} // namespace detail
+
+// VecSignAsync_Private
+template <device::cupm::DeviceType T>
+inline PetscErrorCode VecSeq_CUPM<T>::SignAsync(Vec xin, PetscDeviceContext dctx) noexcept
+{
+  PetscFunctionBegin;
+  PetscCall(PointwiseUnary_(detail::Sign{}, xin, nullptr, dctx));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+// v->ops->abs
+template <device::cupm::DeviceType T>
+inline PetscErrorCode VecSeq_CUPM<T>::Sign(Vec xin) noexcept
+{
+  PetscFunctionBegin;
+  PetscCall(SignAsync(xin, nullptr));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
