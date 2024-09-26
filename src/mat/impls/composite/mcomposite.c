@@ -883,6 +883,9 @@ PETSC_EXTERN PetscErrorCode MatCreate_Composite(Mat A)
   PetscFunctionBegin;
   PetscCall(PetscNew(&b));
 
+  PetscCall(PetscLayoutSetUp(A->rmap));
+  PetscCall(PetscLayoutSetUp(A->cmap));
+
   b->type        = MAT_COMPOSITE_ADDITIVE;
   b->nmat        = 0;
   b->merge       = PETSC_FALSE;
