@@ -231,6 +231,19 @@ static PetscErrorCode TaoTermHessianMult_L1(TaoTerm term, Vec x, Vec params, Vec
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode TaoTermProximalMap_L1(TaoTerm term, Vec p, PetscReal alpha, TaoTerm g, Vec q, PetscReal beta, Vec x)
+{
+  PetscBool is_l2;
+  PetscFunctionBegin;
+  PetscCall(PetscObjectTypeCompare((PetscObject)g, TAOTERMHALFL2SQUARED, &is_l2));
+  PetscCheck(is_l2, ...);
+  // argmin of alpha * |x - p|_1 + beta/2 * ||x - q||_2^2
+  // if alpha == 0, then x == q
+  // if alpha != 0, then x == argmin_y of |y - p|_1 + (beta/alpha)2 * ||y - q||_2^2
+  // if alpha != 0, then x == argmin_y of |z|_1 + (beta/alpha)2 * ||z + p - q||_2^2
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*@
   TaoTermL1SetEpsilon - Set an $\epsilon$ smoothing parameter.
 

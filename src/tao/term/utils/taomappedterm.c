@@ -262,6 +262,11 @@ static PetscErrorCode TaoMappedTermSetHessians(TaoMappedTerm *mt, InsertMode mod
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+// computes hessian of alpha * f(Ax)
+// the TaoTerm provides H_f = d^2 f
+// so this returns alpha * A^T H_f A
+// if this is a least squares problem, H_f is simple, and doesn't update every time
+// can we detect whether H_f changed and avoid recomputation of A^T H_f A if it has been computed before?
 PETSC_INTERN PetscErrorCode TaoMappedTermHessian(TaoMappedTerm *mt, Vec x, Vec params, InsertMode mode, Mat H, Mat Hpre)
 {
   Vec Ax;
