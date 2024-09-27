@@ -3465,7 +3465,7 @@ cdef class DMPlex(DM):
         """
         cdef DMPlex newdm = DMPlex()
         newdm.create(comm=comm)
-        cdef SF sf = SF() 
+        cdef SF sf = SF()
         CHKERR(DMPlexGetRedundantDM(self.dm, &sf.sf, &newdm.dm))
         return newdm
 
@@ -3487,11 +3487,12 @@ cdef class DMPlex(DM):
         """
         cdef DMPlex newdm = DMPlex()
         newdm.create(comm=comm)
-        cdef SF sf = SF() 
+        cdef SF sf = SF()
         CHKERR(DMPlexGetGatherDM(self.dm, &sf.sf, &newdm.dm))
         return newdm
 
 # --------------------------------------------------------------------
+
 
 class DMPlexTransformType(object):
     """Transformation types."""
