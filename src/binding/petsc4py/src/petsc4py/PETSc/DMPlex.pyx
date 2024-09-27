@@ -3448,14 +3448,50 @@ cdef class DMPlex(DM):
         """
         CHKERR(DMPlexLocalVectorLoad(self.dm, viewer.vwr, sectiondm.dm, sf.sf, vec.vec))
 
-    def getRedundant(self) -> DM:
+    def getRedundantDM(self, comm: Comm | None = None) -> DM:
+        """
+        Get a copy of the DMPLEX that is completely copied on each process.
+
+        Collective.
+
+        Parameters
+        ----------
+        comm
+            MPI communicator, defaults to `Sys.getDefaultComm`.
+
+        See Also
+        --------
+        DMPlex, DMPlex.distribute, DMPlex.getGatherDM
+        """
         cdef DMPlex newdm = DMPlex()
+        newdm.create(comm=comm)
         cdef SF sf = SF() 
         CHKERR(DMPlexGetRedundantDM(self.dm, &sf.sf, &newdm.dm))
         return newdm
 
-# --------------------------------------------------------------------
+    def getGatherDM(self, comm: Comm | None = None) -> DM:
+        """
+        Get a copy of the DMPLEX that gathers all points on the root process
+        of the original’s communicator.
 
+        Collective.
+
+        Parameters
+        ----------
+        comm
+            MPI communicator, defaults to `Sys.getDefaultComm`.
+
+        See Also
+        --------
+        DM, DMPlex, DMPlex.distribute, DMPlex.getRedundantDM, SF
+        """
+        cdef DMPlex newdm = DMPlex()
+        newdm.create(comm=comm)
+        cdef SF sf = SF() 
+        CHKERR(DMPlexGetGatherDM(self.dm, &sf.sf, &newdm.dm))
+        return newdm
+
+# --------------------------------------------------------------------
 
 class DMPlexTransformType(object):
     """Transformation types."""
