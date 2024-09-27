@@ -1321,12 +1321,50 @@ PetscErrorCode VecAbsAsync_Private(Vec v, PetscDeviceContext dctx)
 
   Level: intermediate
 
-.seealso: `Vec`, `VecExp()`, `VecSqrtAbs()`, `VecReciprocal()`, `VecLog()`
+.seealso: `Vec`, `VecExp()`, `VecSqrtAbs()`, `VecReciprocal()`, `VecLog()`, `VecSign()`
 @*/
 PetscErrorCode VecAbs(Vec v)
 {
   PetscFunctionBegin;
   PetscCall(VecAbsAsync_Private(v, NULL));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscScalar ScalarSign_Function(PetscScalar x)
+{
+  PetscReal one = 1.0;
+
+  return PetscCopysignReal(one, PetscRealPart(x));
+}
+
+PetscErrorCode VecSignAsync_Private(Vec v, PetscDeviceContext dctx)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(v, VEC_CLASSID, 1);
+  PetscCall(VecApplyUnary_Private(v, dctx, VecAsyncFnName(Sign), NULL, ScalarSign_Function));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  VecSign - Replaces every element in a vector with its sign.
+
+  Logically collective
+
+  Input Parameter:
+
+. v - the vector
+
+  Level: intermediate
+
+  Note:
+  The value will become `v[i] = copysign(1.0, PetscRealPart(v[i]))`.
+
+.seealso: `Vec`, `VecExp()`, `VecSqrtAbs()`, `VecReciprocal()`, `VecLog()`, `VecAbs()`
+@*/
+PetscErrorCode VecSign(Vec v)
+{
+  PetscFunctionBegin;
+  PetscCall(VecSignAsync_Private(v, NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

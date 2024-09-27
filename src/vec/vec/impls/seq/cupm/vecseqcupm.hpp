@@ -107,6 +107,8 @@ public:
   static PetscErrorCode SetAsync(Vec, PetscScalar, PetscDeviceContext) noexcept;
   static PetscErrorCode Scale(Vec, PetscScalar) noexcept;
   static PetscErrorCode ScaleAsync(Vec, PetscScalar, PetscDeviceContext) noexcept;
+  static PetscErrorCode Sign(Vec) noexcept;
+  static PetscErrorCode SignAsync(Vec, PetscDeviceContext) noexcept;
   static PetscErrorCode TDot(Vec, Vec, PetscScalar *) noexcept;
   static PetscErrorCode Copy(Vec, Vec) noexcept;
   static PetscErrorCode CopyAsync(Vec, Vec, PetscDeviceContext) noexcept;
