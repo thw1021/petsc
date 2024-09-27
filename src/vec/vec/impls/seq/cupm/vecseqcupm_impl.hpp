@@ -1407,7 +1407,7 @@ inline PetscErrorCode VecSeq_CUPM<T>::CopyAsync(Vec xin, Vec yout, PetscDeviceCo
       [[fallthrough]];
 #endif
     case PETSC_OFFLOAD_CPU:
-      mode = PetscOffloadHost(xmask) ? cupmMemcpyHostToHost : cupmMemcpyDeviceToHost;
+      mode = PetscOffloadHost(xmask) ? cupmMemcpyHostToHost : cupmMemcpyDeviceToDevice;
       break;
     case PETSC_OFFLOAD_BOTH:
     case PETSC_OFFLOAD_GPU:
