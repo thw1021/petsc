@@ -38,7 +38,7 @@ struct SignVector_Functor {
 };
 #endif
 
-PETSC_INTERN PetscErrorCode VecSign(Vec v, Vec s)
+PETSC_INTERN PetscErrorCode VecSignOutOfPlace(Vec v, Vec s)
 {
   const PetscScalar *av;
   PetscScalar       *as;
@@ -153,7 +153,7 @@ PETSC_INTERN PetscErrorCode MatApproximateNorm_Private(Mat A, NormType normtype,
     *n = 0.0;
     for (i = 0; i < normsamples; i++) {
       PetscCall(MatMult(A, x, y));
-      PetscCall(VecSign(y, w));
+      PetscCall(VecSignOutOfPlace(y, w));
       PetscCall(MatMultTranspose(A, w, z));
       PetscCall(VecNorm(z, NORM_INFINITY, &normz));
       PetscCall(VecDot(x, z, &dot));

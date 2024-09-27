@@ -433,6 +433,7 @@ static inline PetscErrorCode PetscSortedIntUpperBound(const PetscInt *array, Pet
 #define VEC_Scale_ASYNC_FN_NAME           VEC_ASYNC_FN_NAME("Scale")
 #define VEC_Set_ASYNC_FN_NAME             VEC_ASYNC_FN_NAME("Set")
 #define VEC_Shift_ASYNC_FN_NAME           VEC_ASYNC_FN_NAME("Shift")
+#define VEC_Sign_ASYNC_FN_NAME            VEC_ASYNC_FN_NAME("Sign")
 #define VEC_SqrtAbs_ASYNC_FN_NAME         VEC_ASYNC_FN_NAME("SqrtAbs")
 #define VEC_Swap_ASYNC_FN_NAME            VEC_ASYNC_FN_NAME("Swap")
 #define VEC_WAXPY_ASYNC_FN_NAME           VEC_ASYNC_FN_NAME("WAXPY")
@@ -456,6 +457,7 @@ PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecReciprocalAsync_Private(Vec, Petsc
 PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecScaleAsync_Private(Vec, PetscScalar, PetscDeviceContext);
 PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecSetAsync_Private(Vec, PetscScalar, PetscDeviceContext);
 PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecShiftAsync_Private(Vec, PetscScalar, PetscDeviceContext);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecSignAsync_Private(Vec, PetscDeviceContext);
 PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecSqrtAbsAsync_Private(Vec, PetscDeviceContext);
 PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecSwapAsync_Private(Vec, Vec, PetscDeviceContext);
 PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecWAXPYAsync_Private(Vec, PetscScalar, Vec, Vec, PetscDeviceContext);
