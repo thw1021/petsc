@@ -6,10 +6,10 @@ PetscFunctionList TaoList              = NULL;
 
 PetscClassId TAO_CLASSID;
 
-PetscLogEvent TAO_Solve;
-PetscLogEvent TAO_ResidualEval;
-PetscLogEvent TAO_JacobianEval;
-PetscLogEvent TAO_ConstraintsEval;
+PetscLogEvent              TAO_Solve;
+PETSC_INTERN PetscLogEvent TAO_ResidualEval;
+PetscLogEvent              TAO_JacobianEval;
+PetscLogEvent              TAO_ConstraintsEval;
 
 const char *TaoSubSetTypes[] = {"subvec", "mask", "matrixfree", "TaoSubSetType", "TAO_SUBSET_", NULL};
 

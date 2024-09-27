@@ -3,11 +3,11 @@
 
 PetscClassId TAOTERM_CLASSID;
 
-PetscLogEvent TAOTERM_ObjectiveEval;
-PetscLogEvent TAOTERM_GradientEval;
-PetscLogEvent TAOTERM_ObjGradEval;
-PetscLogEvent TAOTERM_HessianEval;
-PetscLogEvent TAOTERM_HessianMult;
+PETSC_INTERN PetscLogEvent TAOTERM_ObjectiveEval;
+PETSC_INTERN PetscLogEvent TAOTERM_GradientEval;
+PETSC_INTERN PetscLogEvent TAOTERM_ObjGradEval;
+PETSC_INTERN PetscLogEvent TAOTERM_HessianEval;
+PETSC_INTERN PetscLogEvent TAOTERM_HessianMult;
 
 const char *const TaoTermParametersTypes[] = {"optional", "none", "required", "TaoTermParametesrsType", "TAOTERM_PARAMETERS_", NULL};
 
