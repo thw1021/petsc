@@ -7,7 +7,7 @@ class Configure(config.package.CMakePackage):
     self.download               = ['git://https://github.com/Reference-LAPACK/lapack.git','https://github.com/Reference-LAPACK/lapack/archive/'+self.gitcommit+'.tar.gz']
     self.downloaddirnames       = ['netlib-lapack','lapack']
     self.includes               = []
-    self.liblist                = [['liblapacke.a','libcblas.a','liblapack.a','libblas.a'], ['libnlapack.a','libnblas.a']]
+    self.liblist                = [['libnlapack.a','libnblas.a']]
     self.precisions             = ['single','double']
     self.functionsFortran       = 1
     self.buildLanguages         = ['FC']
