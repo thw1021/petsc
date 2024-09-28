@@ -65,7 +65,7 @@ static PetscErrorCode TSAdaptSetDefaultType(TSAdapt adapt, TSAdaptType default_t
 . -ts_monitor_draw_error                                             - Monitor error graphically, requires use to have provided TSSetSolutionFunction()
 . -ts_monitor_solution [ascii binary draw][:filename][:viewerformat] - monitors the solution at each timestep
 . -ts_monitor_solution_interval <interval>                           - output once every interval (default=1) time steps. Use -1 to only output at the end of the simulation
-. -ts_monitor_solution_skip_initial                                  - skip  writing of initial condition
+. -ts_monitor_solution_skip_initial                                  - skip writing of initial condition
 . -ts_monitor_solution_vtk <filename.vts,filename.vtu>               - Save each time step to a binary file, use filename-%%03" PetscInt_FMT ".vts (filename-%%03" PetscInt_FMT ".vtu)
 . -ts_monitor_solution_vtk_interval <interval>                       - output once every interval (default=1) time steps. Use -1 to only output at the end of the simulation
 - -ts_monitor_envelope                                               - determine maximum and minimum value of each component of the solution over the solution time
@@ -147,6 +147,7 @@ PetscErrorCode TSSetFromOptions(TS ts)
   PetscCall(TSMonitorSetFromOptions(ts, "-ts_monitor_extreme", "Monitor extreme values of the solution", "TSMonitorExtreme", TSMonitorExtreme, NULL));
   PetscCall(TSMonitorSetFromOptions(ts, "-ts_monitor_solution", "View the solution at each timestep", "TSMonitorSolution", TSMonitorSolution, NULL));
   PetscCall(TSMonitorSetFromOptions(ts, "-ts_dmswarm_monitor_moments", "Monitor moments of particle distribution", "TSDMSwarmMonitorMoments", TSDMSwarmMonitorMoments, NULL));
+
   PetscCall(PetscOptionsString("-ts_monitor_python", "Use Python function", "TSMonitorSet", NULL, monfilename, sizeof(monfilename), &flg));
   if (flg) PetscCall(PetscPythonMonitorSet((PetscObject)ts, monfilename));
 
@@ -3464,7 +3465,7 @@ PetscErrorCode TSStep(TS ts)
     ts->tspan->worktol = 0; /* In each step of TSSolve() 'tspan->worktol' will be meaningfully defined (later) only once:
                                                    in TSAdaptChoose() or TSEvent_dt_cap(), and then reused till the end of the step */
 
-  PetscCheck(ts->max_time < PETSC_MAX_REAL || ts->run_steps != PETSC_INT_MAX ||  ts->max_steps != PETSC_INT_MAX, PetscObjectComm((PetscObject)ts), PETSC_ERR_ARG_WRONGSTATE, "You must call TSSetMaxTime() or TSSetMaxSteps(), or use -ts_max_time <time> or -ts_max_steps <steps>");
+  PetscCheck(ts->max_time < PETSC_MAX_REAL || ts->run_steps != PETSC_INT_MAX || ts->max_steps != PETSC_INT_MAX, PetscObjectComm((PetscObject)ts), PETSC_ERR_ARG_WRONGSTATE, "You must call TSSetMaxTime(), TSSetMaxSteps(), or TSSetRunSteps() or use -ts_max_time <time>, -ts_max_steps <steps>, -ts_run_steps <steps>");
   PetscCheck(ts->exact_final_time != TS_EXACTFINALTIME_UNSPECIFIED, PetscObjectComm((PetscObject)ts), PETSC_ERR_ARG_WRONGSTATE, "You must call TSSetExactFinalTime() or use -ts_exact_final_time <stepover,interpolate,matchstep> before calling TSStep()");
   PetscCheck(ts->exact_final_time != TS_EXACTFINALTIME_MATCHSTEP || ts->adapt, PetscObjectComm((PetscObject)ts), PETSC_ERR_SUP, "Since TS is not adaptive you cannot use TS_EXACTFINALTIME_MATCHSTEP, suggest TS_EXACTFINALTIME_INTERPOLATE");
 
@@ -4029,7 +4030,7 @@ PetscErrorCode TSSolve(TS ts, Vec u)
   PetscCall(TSSetUp(ts));
   PetscCall(TSTrajectorySetUp(ts->trajectory, ts));
 
-  PetscCheck(ts->max_time < PETSC_MAX_REAL || ts->run_steps != PETSC_INT_MAX || ts->max_steps != PETSC_INT_MAX, PetscObjectComm((PetscObject)ts), PETSC_ERR_ARG_WRONGSTATE, "You must call TSSetMaxTime() or TSSetMaxSteps(), or use -ts_max_time <time> or -ts_max_steps <steps>");
+  PetscCheck(ts->max_time < PETSC_MAX_REAL || ts->run_steps != PETSC_INT_MAX || ts->max_steps != PETSC_INT_MAX, PetscObjectComm((PetscObject)ts), PETSC_ERR_ARG_WRONGSTATE, "You must call TSSetMaxTime(), TSSetMaxSteps(), or TSSetRunSteps() or use -ts_max_time <time>, -ts_max_steps <steps>, -ts_run_steps <steps>");
   PetscCheck(ts->exact_final_time != TS_EXACTFINALTIME_UNSPECIFIED, PetscObjectComm((PetscObject)ts), PETSC_ERR_ARG_WRONGSTATE, "You must call TSSetExactFinalTime() or use -ts_exact_final_time <stepover,interpolate,matchstep> before calling TSSolve()");
   PetscCheck(ts->exact_final_time != TS_EXACTFINALTIME_MATCHSTEP || ts->adapt, PetscObjectComm((PetscObject)ts), PETSC_ERR_SUP, "Since TS is not adaptive you cannot use TS_EXACTFINALTIME_MATCHSTEP, suggest TS_EXACTFINALTIME_INTERPOLATE");
   PetscCheck(!(ts->tspan && ts->exact_final_time != TS_EXACTFINALTIME_MATCHSTEP), PetscObjectComm((PetscObject)ts), PETSC_ERR_SUP, "You must use TS_EXACTFINALTIME_MATCHSTEP when using time span");
@@ -4122,7 +4123,7 @@ PetscErrorCode TSSolve(TS ts, Vec u)
       PetscCall(TSEventInitialize(ts->event, ts, ts->ptime, ts->vec_sol));
     }
 
-    ts->start_step = ts->steps;  // records starting step 
+    ts->start_step = ts->steps; // records starting step
     while (!ts->reason) {
       PetscCall(TSMonitor(ts, ts->steps, ts->ptime, ts->vec_sol));
       if (!ts->steprollback || (ts->stepresize && ts->resizerollback)) PetscCall(TSPreStep(ts));
