@@ -315,7 +315,6 @@ struct _p_TS {
   Vec       vatol, vrtol;                           /* Relative and absolute tolerance in vector form */
   PetscReal cfltime, cfltime_local;
   PetscInt start_step; /* step number at start of current run */
-  PetscBool skip_initial; /* true alters default of writing initial condition*/
 
   PetscBool testjacobian;
   PetscBool testjacobiantranspose;
