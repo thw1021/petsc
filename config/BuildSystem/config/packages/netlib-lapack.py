@@ -7,7 +7,7 @@ class Configure(config.package.CMakePackage):
     self.download               = ['git://https://github.com/Reference-LAPACK/lapack.git','https://github.com/Reference-LAPACK/lapack/archive/'+self.gitcommit+'.tar.gz']
     self.downloaddirnames       = ['netlib-lapack','lapack']
     self.includes               = []
-    self.liblist                = [['libnlapack.a','libnblas.a']]
+    self.liblist                = [['liblapacke.a','libcblas.a','liblapack.a','libblas.a'], ['libnlapack.a','libnblas.a']]
     self.precisions             = ['single','double']
     self.functionsFortran       = 1
     self.buildLanguages         = ['FC']
@@ -21,5 +21,10 @@ class Configure(config.package.CMakePackage):
 
   def formCMakeConfigureArgs(self):
     args = config.package.CMakePackage.formCMakeConfigureArgs(self)
-    args.append('-DLIBRARY_PREFIX=n')
+    if self.argDB['download-pastix']:
+      args.append('-DCBLAS:BOOL=ON')
+      args.append('-DLAPACKE:BOOL=ON')
+      self.liblist = [['liblapacke.a','libcblas.a','liblapack.a','libblas.a']]
+    else:
+      args.append('-DLIBRARY_PREFIX=n')
     return args
