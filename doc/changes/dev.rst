@@ -13,7 +13,7 @@ Changes: Development
 
 .. rubric:: Configure/Build:
 
-- Update --download-pastix to use CMake build, with additional dependency on LAPACKE and CBLAS, can use MKL or --download-netlib-lapack
+- Update --download-pastix to use CMake build, with additional dependency on LAPACKE and CBLAS, can use MKL for ex. --with-blaslapack-dir=${MKLROOT}, or --download-netlib-lapack
 
 .. rubric:: Sys:
 
