@@ -82,6 +82,11 @@ PetscErrorCode TSMonitorSetFromOptions(TS ts, const char name[], const char help
     PetscCall(PetscViewerAndFormatCreate(viewer, format, &vf));
     vf->view_interval = 1;
     PetscCall(PetscOptionsGetInt(((PetscObject)ts)->options, ((PetscObject)ts)->prefix, interval_key, &vf->view_interval, NULL));
+
+    char skip_initial_key[1024];
+    PetscCall(PetscSNPrintf(skip_initial_key, sizeof skip_initial_key, "%s_skip_initial", name));
+    PetscCall(PetscOptionsGetBool(((PetscObject)ts)->options, ((PetscObject)ts)->prefix, skip_initial_key, &vf->view_skip_initial, NULL));
+
     PetscCall(PetscViewerDestroy(&viewer));
     if (monitorsetup) PetscCall((*monitorsetup)(ts, vf));
     PetscCall(TSMonitorSet(ts, (PetscErrorCode (*)(TS, PetscInt, PetscReal, Vec, void *))monitor, vf, (PetscErrorCode (*)(void **))PetscViewerAndFormatDestroy));
@@ -758,6 +763,7 @@ PetscErrorCode TSMonitorDrawError(TS ts, PetscInt step, PetscReal ptime, Vec u, 
 PetscErrorCode TSMonitorSolution(TS ts, PetscInt step, PetscReal ptime, Vec u, PetscViewerAndFormat *vf)
 {
   PetscFunctionBegin;
+  if (vf->view_skip_initial && step == ts->start_step) PetscFunctionReturn(PETSC_SUCCESS);
   if ((vf->view_interval > 0 && !(step % vf->view_interval)) || (vf->view_interval && ts->reason)) {
     PetscCall(PetscViewerPushFormat(vf->viewer, vf->format));
     PetscCall(VecView(u, vf->viewer));

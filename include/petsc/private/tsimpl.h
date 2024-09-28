@@ -311,8 +311,10 @@ struct _p_TS {
   PetscObjectParameterDeclare(PetscReal, atol);
   PetscObjectParameterDeclare(PetscReal, max_time); /* max time allowed */
   PetscObjectParameterDeclare(PetscInt, max_steps); /* max number of steps */
+  PetscObjectParameterDeclare(PetscInt, run_steps); /* number of steps in current run */
   Vec       vatol, vrtol;                           /* Relative and absolute tolerance in vector form */
   PetscReal cfltime, cfltime_local;
+  PetscInt  start_step; /* step number at start of current run */
 
   PetscBool testjacobian;
   PetscBool testjacobiantranspose;
