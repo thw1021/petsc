@@ -1900,7 +1900,7 @@ int initLinearWave(EulerNode *ux, const PetscReal gamma, const PetscReal coord[]
       args: -ufv_vtk_interval 0 -ufv_vtk_monitor 0 \
             -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/square_periodic.msh -dm_plex_gmsh_periodic 0 \
             -ts_monitor_solution cgns:sol-%d.cgns -ts_run_steps 4 -ts_monitor_solution_interval 2 \
-            -viewer_cgns_batch_size 1 -ts_monitor_skip_initial
+            -viewer_cgns_batch_size 1 -ts_monitor_solution_skip_initial
 
     # Test VTK file writing for PetscFV fields with -ts_monitor_solution_vtk
     test:
