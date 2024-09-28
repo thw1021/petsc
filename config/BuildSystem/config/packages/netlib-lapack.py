@@ -21,5 +21,10 @@ class Configure(config.package.CMakePackage):
 
   def formCMakeConfigureArgs(self):
     args = config.package.CMakePackage.formCMakeConfigureArgs(self)
-    args.append('-DLIBRARY_PREFIX=n')
+    if self.argDB['download-pastix']:
+      args.append('-DCBLAS:BOOL=ON')
+      args.append('-DLAPACKE:BOOL=ON')
+      self.liblist = [['liblapacke.a','libcblas.a','liblapack.a','libblas.a']]
+    else:
+      args.append('-DLIBRARY_PREFIX=n')
     return args

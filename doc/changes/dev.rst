@@ -20,6 +20,7 @@ Changes: Development
 - Update to work with python-3.13
 - Change ``MPIU_Allreduce()`` to always returns an MPI error code that should be checked with ``PetscCallMPI()``
 - Add ``PetscCallReturnMPI()``, ``PetscCallMPIReturnMPI()``, ``PetscCheckReturnMPI()`` to check for in PETSc provided MPI callbacks
+- Update --download-pastix to use CMake build, with additional dependency on LAPACKE and CBLAS, can use MKL for ex. --with-blaslapack-dir=${MKLROOT}, or --download-netlib-lapack
 
 .. rubric:: Sys:
 
