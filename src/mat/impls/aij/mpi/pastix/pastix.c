@@ -318,7 +318,7 @@ static PetscErrorCode MatView_PaStiX(Mat A, PetscViewer viewer)
      MATSOLVERPASTIX  - A solver package providing direct solvers (LU) for distributed
   and sequential matrices via the external package PaStiX.
 
-  Use `./configure --download-hwloc --download-metis --download-ptscotch --download-pastix`
+  Use `./configure --download-hwloc --download-metis --download-ptscotch --download-pastix --download-netlib-lapack [or MKL]`
   to have PETSc installed with PasTiX.
 
   Use `-pc_type lu` `-pc_factor_mat_solver_type pastix` to use this direct solver.

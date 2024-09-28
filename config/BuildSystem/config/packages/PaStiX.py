@@ -36,10 +36,10 @@ class Configure(config.package.CMakePackage):
     args = config.package.CMakePackage.formCMakeConfigureArgs(self)
 
     if not self.libraries.check(self.dlib, 'cblas_dgemm'):
-      raise RuntimeError('PaStiX requires a BLAS library with cblas support')
+      raise RuntimeError('PaStiX requires a BLAS library with cblas support. Suggest sepcifying MKL or --download-netlib-lapack')
 
     if not self.libraries.check(self.dlib, 'LAPACKE_dlange'):
-      raise RuntimeError('PaStiX requires a LAPACK library with LAPACKE support')
+      raise RuntimeError('PaStiX requires a LAPACK library with LAPACKE support. Suggest sepcifying MKL or --download-netlib-lapack')
 
     if not self.ptscotch.found and not self.metis.found:
       raise RuntimeError('PaStiX requires an ordering library: either METIS or SCOTCH')
