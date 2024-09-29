@@ -1010,8 +1010,7 @@ PetscErrorCode DMPlexCreateCGNS_Internal_Parallel(MPI_Comm comm, PetscInt cgid, 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-// node_l2g must be freed
-static PetscErrorCode DMPlexCreateNodeNumbering(DM dm, PetscInt *num_local_nodes, PetscInt *num_global_nodes, PetscInt *nStart, PetscInt *nEnd, const PetscInt **node_l2g)
+static PetscErrorCode DMPlexCreateNodeNumbering(DM dm, PetscInt *num_local_nodes, PetscInt *num_global_nodes, PetscInt *nStart, PetscInt *nEnd, PetscInt **node_l2g)
 {
   PetscSection    local_section;
   PetscSF         point_sf;
@@ -1091,7 +1090,7 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
   PetscInt          fvGhostStart;
   PetscInt          topo_dim, coord_dim, num_global_elems;
   PetscInt          cStart, cEnd, num_local_nodes, num_global_nodes, nStart, nEnd;
-  const PetscInt   *node_l2g;
+  PetscInt         *node_l2g;
   Vec               coord;
   DM                colloc_dm, cdm;
   PetscMPIInt       size;

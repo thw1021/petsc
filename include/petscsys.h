@@ -936,6 +936,27 @@ M*/
 #define PetscFree(a) ((PetscErrorCode)((*PetscTrFree)((void *)(a), __LINE__, PETSC_FUNCTION_NAME, __FILE__) || ((a) = PETSC_NULLPTR, PETSC_SUCCESS)))
 
 /*MC
+   PetscFreeConst - Frees const memory
+
+   Synopsis:
+    #include <petscsys.h>
+   PetscErrorCode PetscFreeConst(const void *memory)
+
+   Not Collective
+
+   Input Parameter:
+.   memory - memory to free (the pointer is ALWAYS set to `NULL` upon success)
+
+   Level: beginner
+
+   Note:
+   Albeit this would not be semantically correct if this were a function, this is implemented as a macro, so it can be considered semantically correct.
+
+.seealso: `PetscNew()`, `PetscMalloc()`, `PetscMalloc1()`, `PetscCalloc1()`
+M*/
+#define PetscFreeConst(a) ((PetscErrorCode)((*PetscTrFree)((void *)(a), __LINE__, PETSC_FUNCTION_NAME, __FILE__) || ((a) = PETSC_NULLPTR, PETSC_SUCCESS)))
+
+/*MC
    PetscFree2 - Frees 2 chunks of memory obtained with `PetscMalloc2()`
 
    Synopsis:

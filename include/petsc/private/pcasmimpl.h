@@ -20,7 +20,7 @@ typedef struct {
   PetscBool       sort_indices;  /* flag to sort subdomain indices */
   PetscBool       dm_subdomains; /* whether DM is allowed to define subdomains */
   PCCompositeType loctype;       /* the type of composition for local solves */
-  MatType         sub_mat_type;  /* the type of Mat used for subdomain solves (can be MATSAME or NULL) */
+  char           *sub_mat_type;  /* the type of Mat used for subdomain solves (can be MATSAME or NULL) */
   /* For multiplicative solve */
   Mat *lmats; /* submatrices for overlapping multiplicative (process) subdomain */
 } PC_ASM;

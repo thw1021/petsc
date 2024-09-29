@@ -48,7 +48,7 @@ PetscErrorCode DMStagDuplicateWithoutSetup(DM dm, MPI_Comm comm, DM *newdm)
 
   /* Copy all data unrelated to setup */
   newstag = (DM_Stag *)(*newdm)->data;
-  PetscCall(PetscStrallocpy(stag->coordinateDMType, (char **)&newstag->coordinateDMType));
+  PetscCall(PetscStrallocpy(stag->coordinateDMType, &newstag->coordinateDMType));
   PetscCall(PetscArraycpy(newstag->refineFactor, stag->refineFactor, DMSTAG_MAX_DIM));
 
   /* Copy vectype and mattype from original DM */

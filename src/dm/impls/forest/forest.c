@@ -237,7 +237,7 @@ PetscErrorCode DMForestSetTopology(DM dm, DMForestTopology topology)
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscCheck(!dm->setupcalled, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONGSTATE, "Cannot change the topology after setup");
   PetscCall(PetscFree(forest->topology));
-  PetscCall(PetscStrallocpy((const char *)topology, (char **)&forest->topology));
+  PetscCall(PetscStrallocpy(topology, &forest->topology));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -899,7 +899,7 @@ PetscErrorCode DMForestSetAdaptivityStrategy(DM dm, DMForestAdaptivityStrategy a
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscCall(PetscFree(forest->adaptStrategy));
-  PetscCall(PetscStrallocpy((const char *)adaptStrategy, (char **)&forest->adaptStrategy));
+  PetscCall(PetscStrallocpy(adaptStrategy, &forest->adaptStrategy));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
