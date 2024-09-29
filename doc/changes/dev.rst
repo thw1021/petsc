@@ -38,6 +38,8 @@ Changes: Development
 
 .. rubric:: Vec:
 
+- Add ``VecNestGetSubVecsRead()`` and ``VecNestRestoreSubVecsRead()`` for read-only access to subvectors
+
 .. rubric:: PetscSection:
 
 .. rubric:: PetscPartitioner:
