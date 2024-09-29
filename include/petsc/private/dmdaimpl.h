@@ -30,8 +30,8 @@ typedef struct {
   PetscInt nonxs, nonys, nonzs; /* the nonoverlapping starts in the case of a subdomain da */
   PetscInt nonxm, nonym, nonzm; /* the nonoverlapping sizes in the case of a subdomain da */
 
-  AO     ao;     /* application ordering context */
-  AOType aotype; /* type of application ordering */
+  AO    ao;     /* application ordering context */
+  char *aotype; /* type of application ordering */
 
   char **fieldname;      /* names of individual components in vectors */
   char **coordinatename; /* names of coordinate directions, for example, x, y, z */

@@ -591,7 +591,7 @@ static PetscErrorCode VecRestoreArray_Nest(Vec X, PetscScalar **x)
 static PetscErrorCode VecRestoreArrayRead_Nest(Vec X, const PetscScalar **x)
 {
   PetscFunctionBegin;
-  PetscCall(PetscFree(*x));
+  PetscCall(PetscFreeConst(*x));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

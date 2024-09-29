@@ -81,7 +81,7 @@ PetscErrorCode DMDASetAOType(DM da, AOType aotype)
     PetscFunctionReturn(PETSC_SUCCESS);
   }
   PetscCall(PetscFree(dd->aotype));
-  PetscCall(PetscStrallocpy(aotype, (char **)&dd->aotype));
+  PetscCall(PetscStrallocpy(aotype, &dd->aotype));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

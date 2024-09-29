@@ -1542,8 +1542,8 @@ static PetscErrorCode MatRestoreRowIJ_SeqBAIJ(Mat A, PetscInt oshift, PetscBool 
   PetscFunctionBegin;
   if (!ia) PetscFunctionReturn(PETSC_SUCCESS);
   if ((!blockcompressed && A->rmap->bs > 1) || (symmetric || oshift == 1)) {
-    PetscCall(PetscFree(*ia));
-    if (ja) PetscCall(PetscFree(*ja));
+    PetscCall(PetscFreeConst(*ia));
+    if (ja) PetscCall(PetscFreeConst(*ja));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -2898,8 +2898,8 @@ static PetscErrorCode MatRestoreColumnIJ_SeqBAIJ(Mat A, PetscInt oshift, PetscBo
 {
   PetscFunctionBegin;
   if (!ia) PetscFunctionReturn(PETSC_SUCCESS);
-  PetscCall(PetscFree(*ia));
-  PetscCall(PetscFree(*ja));
+  PetscCall(PetscFreeConst(*ia));
+  PetscCall(PetscFreeConst(*ja));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

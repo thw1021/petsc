@@ -148,9 +148,9 @@ PetscErrorCode DMClone(DM dm, DM *newdm)
   (*newdm)->prealloc_only = dm->prealloc_only;
   (*newdm)->prealloc_skip = dm->prealloc_skip;
   PetscCall(PetscFree((*newdm)->vectype));
-  PetscCall(PetscStrallocpy(dm->vectype, (char **)&(*newdm)->vectype));
+  PetscCall(PetscStrallocpy(dm->vectype, &(*newdm)->vectype));
   PetscCall(PetscFree((*newdm)->mattype));
-  PetscCall(PetscStrallocpy(dm->mattype, (char **)&(*newdm)->mattype));
+  PetscCall(PetscStrallocpy(dm->mattype, &(*newdm)->mattype));
   PetscCall(DMGetDimension(dm, &dim));
   PetscCall(DMSetDimension(*newdm, dim));
   PetscTryTypeMethod(dm, clone, newdm);
@@ -236,14 +236,11 @@ PetscErrorCode DMClone(DM dm, DM *newdm)
 @*/
 PetscErrorCode DMSetVecType(DM dm, VecType ctype)
 {
-  char *tmp;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscAssertPointer(ctype, 2);
-  tmp = (char *)dm->vectype;
-  PetscCall(PetscStrallocpy(ctype, (char **)&dm->vectype));
-  PetscCall(PetscFree(tmp));
+  PetscCall(PetscFree(dm->vectype));
+  PetscCall(PetscStrallocpy(ctype, &dm->vectype));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -394,14 +391,11 @@ PetscErrorCode DMGetISColoringType(DM dm, ISColoringType *ctype)
 @*/
 PetscErrorCode DMSetMatType(DM dm, MatType ctype)
 {
-  char *tmp;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscAssertPointer(ctype, 2);
-  tmp = (char *)dm->mattype;
-  PetscCall(PetscStrallocpy(ctype, (char **)&dm->mattype));
-  PetscCall(PetscFree(tmp));
+  PetscCall(PetscFree(dm->mattype));
+  PetscCall(PetscStrallocpy(ctype, &dm->mattype));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -4084,9 +4078,9 @@ PetscErrorCode DMConvert(DM dm, DMType newtype, DM *M)
       PetscCall(DMSetPeriodicity(*M, maxCell, Lstart, L));
       (*M)->prealloc_only = dm->prealloc_only;
       PetscCall(PetscFree((*M)->vectype));
-      PetscCall(PetscStrallocpy(dm->vectype, (char **)&(*M)->vectype));
+      PetscCall(PetscStrallocpy(dm->vectype, &(*M)->vectype));
       PetscCall(PetscFree((*M)->mattype));
-      PetscCall(PetscStrallocpy(dm->mattype, (char **)&(*M)->mattype));
+      PetscCall(PetscStrallocpy(dm->mattype, &(*M)->mattype));
     }
     PetscCall(PetscLogEventEnd(DM_Convert, dm, 0, 0, 0));
   }

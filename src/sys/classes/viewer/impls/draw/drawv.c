@@ -294,7 +294,7 @@ PetscErrorCode PetscViewerDrawSetDrawType(PetscViewer v, PetscDrawType drawtype)
   vdraw = (PetscViewer_Draw *)v->data;
 
   PetscCall(PetscFree(vdraw->drawtype));
-  PetscCall(PetscStrallocpy(drawtype, (char **)&vdraw->drawtype));
+  PetscCall(PetscStrallocpy(drawtype, &vdraw->drawtype));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
