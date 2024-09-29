@@ -618,9 +618,9 @@ static PetscErrorCode DMVecDuplicate_Moab(Vec x, Vec *y)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode DMVecUserDestroy_Moab(void *user)
+static PetscErrorCode DMVecUserDestroy_Moab(void **user)
 {
-  Vec_MOAB       *vmoab = (Vec_MOAB *)user;
+  Vec_MOAB       *vmoab = (Vec_MOAB *)*user;
   moab::ErrorCode merr;
 
   PetscFunctionBegin;

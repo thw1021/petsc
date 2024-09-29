@@ -115,7 +115,7 @@ static PetscErrorCode MatSetPreallocationCOO_MPIAIJHIPSPARSE(Mat mat, PetscCount
   // Put the COO struct in a container and then attach that to the matrix
   PetscCall(PetscContainerCreate(PETSC_COMM_SELF, &container_d));
   PetscCall(PetscContainerSetPointer(container_d, coo_d));
-  PetscCall(PetscContainerSetUserDestroy(container_d, MatCOOStructDestroy_MPIAIJCUSPARSE));
+  PetscCall(PetscContainerSetCtxDestroy(container_d, MatCOOStructDestroy_MPIAIJCUSPARSE));
   PetscCall(PetscObjectCompose((PetscObject)mat, "__PETSc_MatCOOStruct_Device", (PetscObject)container_d));
   PetscCall(PetscContainerDestroy(&container_d));
   PetscFunctionReturn(PETSC_SUCCESS);
