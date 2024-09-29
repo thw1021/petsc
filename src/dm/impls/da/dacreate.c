@@ -382,7 +382,7 @@ PETSC_EXTERN PetscErrorCode DMCreate_DA(DM da)
   dd->gtol = NULL;
   dd->ltol = NULL;
   dd->ao   = NULL;
-  PetscCall(PetscStrallocpy(AOBASIC, (char **)&dd->aotype));
+  PetscCall(PetscStrallocpy(AOBASIC, &dd->aotype));
   dd->base         = -1;
   dd->bx           = DM_BOUNDARY_NONE;
   dd->by           = DM_BOUNDARY_NONE;

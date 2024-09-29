@@ -801,7 +801,7 @@ static PetscErrorCode IPMUpdateK(Tao tao)
   PetscReal       *newvals;
   PetscReal        newval;
   PetscInt         subsize;
-  const PetscInt  *indices;
+  PetscInt        *indices;
   PetscInt        *nonzeros, *d_nonzeros, *o_nonzeros;
   PetscInt         bigsize;
   PetscInt         r1, r2, r3;

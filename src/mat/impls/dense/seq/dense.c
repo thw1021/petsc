@@ -1007,10 +1007,10 @@ PETSC_INTERN PetscErrorCode MatGetFactor_seqdense_petsc(Mat A, MatFactorType fty
 
   PetscCall(PetscFree((*fact)->solvertype));
   PetscCall(PetscStrallocpy(MATSOLVERPETSC, &(*fact)->solvertype));
-  PetscCall(PetscStrallocpy(MATORDERINGEXTERNAL, (char **)&(*fact)->preferredordering[MAT_FACTOR_LU]));
-  PetscCall(PetscStrallocpy(MATORDERINGEXTERNAL, (char **)&(*fact)->preferredordering[MAT_FACTOR_ILU]));
-  PetscCall(PetscStrallocpy(MATORDERINGEXTERNAL, (char **)&(*fact)->preferredordering[MAT_FACTOR_CHOLESKY]));
-  PetscCall(PetscStrallocpy(MATORDERINGEXTERNAL, (char **)&(*fact)->preferredordering[MAT_FACTOR_ICC]));
+  PetscCall(PetscStrallocpy(MATORDERINGEXTERNAL, &(*fact)->preferredordering[MAT_FACTOR_LU]));
+  PetscCall(PetscStrallocpy(MATORDERINGEXTERNAL, &(*fact)->preferredordering[MAT_FACTOR_ILU]));
+  PetscCall(PetscStrallocpy(MATORDERINGEXTERNAL, &(*fact)->preferredordering[MAT_FACTOR_CHOLESKY]));
+  PetscCall(PetscStrallocpy(MATORDERINGEXTERNAL, &(*fact)->preferredordering[MAT_FACTOR_ICC]));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
