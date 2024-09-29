@@ -130,8 +130,8 @@ PetscErrorCode DMMoabCreateMoab(MPI_Comm comm, moab::Interface *mbiface, moab::T
   /* do the remaining initializations for DMMoab */
   dmmoab->bs        = 1;
   dmmoab->numFields = 1;
-  PetscCall(PetscMalloc(dmmoab->numFields * sizeof(char *), &dmmoab->fieldNames));
-  PetscCall(PetscStrallocpy("DEFAULT", (char **)&dmmoab->fieldNames[0]));
+  PetscCall(PetscMalloc1(dmmoab->numFields, &dmmoab->fieldNames));
+  PetscCall(PetscStrallocpy("DEFAULT", &dmmoab->fieldNames[0]));
   dmmoab->rw_dbglevel            = 0;
   dmmoab->partition_by_rank      = PETSC_FALSE;
   dmmoab->extra_read_options[0]  = '\0';

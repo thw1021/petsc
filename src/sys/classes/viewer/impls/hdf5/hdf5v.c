@@ -127,7 +127,7 @@ static PetscErrorCode PetscViewerDestroy_HDF5(PetscViewer viewer)
   while (hdf5->groups) {
     PetscViewerHDF5GroupList *tmp = hdf5->groups->next;
 
-    PetscCall(PetscFree(hdf5->groups->name));
+    PetscCall(PetscFreeConst(hdf5->groups->name));
     PetscCall(PetscFree(hdf5->groups));
     hdf5->groups = tmp;
   }
@@ -750,7 +750,7 @@ PetscErrorCode PetscViewerHDF5PopGroup(PetscViewer viewer)
   PetscCheck(hdf5->groups, PetscObjectComm((PetscObject)viewer), PETSC_ERR_ARG_WRONGSTATE, "HDF5 group stack is empty, cannot pop");
   groupNode    = hdf5->groups;
   hdf5->groups = hdf5->groups->next;
-  PetscCall(PetscFree(groupNode->name));
+  PetscCall(PetscFreeConst(groupNode->name));
   PetscCall(PetscFree(groupNode));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

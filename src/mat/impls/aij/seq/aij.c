@@ -229,8 +229,8 @@ PetscErrorCode MatRestoreRowIJ_SeqAIJ(Mat A, PetscInt oshift, PetscBool symmetri
   PetscFunctionBegin;
   if (!ia) PetscFunctionReturn(PETSC_SUCCESS);
   if ((symmetric && A->structurally_symmetric != PETSC_BOOL3_TRUE) || oshift == 1) {
-    PetscCall(PetscFree(*ia));
-    if (ja) PetscCall(PetscFree(*ja));
+    PetscCall(PetscFreeConst(*ia));
+    if (ja) PetscCall(PetscFreeConst(*ja));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -275,9 +275,8 @@ PetscErrorCode MatRestoreColumnIJ_SeqAIJ(Mat A, PetscInt oshift, PetscBool symme
 {
   PetscFunctionBegin;
   if (!ia) PetscFunctionReturn(PETSC_SUCCESS);
-
-  PetscCall(PetscFree(*ia));
-  PetscCall(PetscFree(*ja));
+  PetscCall(PetscFreeConst(*ia));
+  PetscCall(PetscFreeConst(*ja));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

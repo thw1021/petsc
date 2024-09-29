@@ -37,8 +37,8 @@ typedef struct {
   PetscInt *dfill, *ofill; /* The diagonal and off-diagonal block-fill to indicate coupling between components */
   PetscInt *materials;     /* The array that caches the material data for each element */
 
-  PetscInt     numFields;
-  const char **fieldNames;
+  PetscInt numFields;
+  char   **fieldNames;
 
   /* level specific data */
   PetscInt  n, nloc, nghost;          /* Number of global, local only and shared vertices for current partition */

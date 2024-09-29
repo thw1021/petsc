@@ -236,8 +236,8 @@ struct _p_DM {
   PetscErrorCode (*ctxdestroy)(void **);
   ISColoringType         coloringtype;
   MatFDColoring          fd;
-  VecType                vectype;    /* type of vector created with DMCreateLocalVector() and DMCreateGlobalVector() */
-  MatType                mattype;    /* type of matrix created with DMCreateMatrix() */
+  char                  *vectype;    /* type of vector created with DMCreateLocalVector() and DMCreateGlobalVector() */
+  char                  *mattype;    /* type of matrix created with DMCreateMatrix() */
   PetscInt               bind_below; /* Local size threshold (in entries/rows) below which Vec/Mat objects are bound to CPU */
   PetscInt               bs;
   DMBlockingType         blocking_type;
@@ -273,7 +273,7 @@ struct _p_DM {
   PetscSection         globalSection;      /* Layout for global vectors */
   PetscLayout          map;                /* Parallel division of unknowns across processes */
   DMReorderDefaultFlag reorderSection;     /* Reorder the local section by default */
-  MatOrderingType      reorderSectionType; /* The type of reordering */
+  char                *reorderSectionType; /* The type of reordering */
 
   // Affine transform applied in DMGlobalToLocal
   struct {

@@ -931,9 +931,34 @@ M*/
 
    It is safe to call `PetscFree()` on a `NULL` pointer.
 
-.seealso: `PetscNew()`, `PetscMalloc()`, `PetscMalloc1()`, `PetscCalloc1()`
+   Developer Note:
+   It can no longer be called on pointers declared const. Use `PetscFreeConst()`.
+
+.seealso: `PetscNew()`, `PetscMalloc()`, `PetscMalloc1()`, `PetscCalloc1()`, `PetscFreeConst()`
 M*/
-#define PetscFree(a) ((PetscErrorCode)((*PetscTrFree)((void *)(a), __LINE__, PETSC_FUNCTION_NAME, __FILE__) || ((a) = PETSC_NULLPTR, PETSC_SUCCESS)))
+#define PetscFree(a) ((PetscErrorCode)((*PetscTrFree)((a), __LINE__, PETSC_FUNCTION_NAME, __FILE__) || ((a) = PETSC_NULLPTR, PETSC_SUCCESS)))
+
+/*MC
+   PetscFreeConst - Frees const memory
+
+   Synopsis:
+    #include <petscsys.h>
+   PetscErrorCode PetscFreeConst(const void *memory)
+
+   Not Collective
+
+   Input Parameter:
+.   memory - memory to free (the pointer is ALWAYS set to `NULL` upon success)
+
+   Level: developer
+
+   Note:
+   Albeit this would not be semantically correct if this were a function, this is implemented as a macro and it explicitly casts the pointer
+   to void before actually freeing the memory.
+
+.seealso: `PetscFree()`, `PetscNew()`, `PetscMalloc()`, `PetscMalloc1()`, `PetscCalloc1()`
+M*/
+#define PetscFreeConst(a) ((PetscErrorCode)((*PetscTrFree)((void *)(a), __LINE__, PETSC_FUNCTION_NAME, __FILE__) || ((a) = PETSC_NULLPTR, PETSC_SUCCESS)))
 
 /*MC
    PetscFree2 - Frees 2 chunks of memory obtained with `PetscMalloc2()`

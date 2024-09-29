@@ -3333,7 +3333,7 @@ PetscErrorCode MatCreateSubMatrix_MPIAIJ_SameRowColDist(Mat mat, IS isrow, IS is
       SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Columns of Bsub (%" PetscInt_FMT ") cannot be smaller than B's (%" PetscInt_FMT ")", BsubN, asub->B->cmap->N);
     }
 
-    PetscCall(PetscFree(garray));
+    PetscCall(PetscFreeConst(garray));
     *submat = M;
 
     /* Save isrow_d, iscol_d and iscol_o used in processor for next request */

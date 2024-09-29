@@ -15,6 +15,8 @@ Changes: Development
 
 .. rubric:: Sys:
 
+- Add ``PetscFreeConst()`` macro to free memory declared const. ``PetscFree()`` can no longer be used on const pointers
+
 .. rubric:: Event Logging:
 
 .. rubric:: PetscViewer:

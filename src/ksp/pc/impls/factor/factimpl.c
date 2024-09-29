@@ -77,7 +77,7 @@ PetscErrorCode PCFactorSetMatOrderingType_Factor(PC pc, MatOrderingType ordering
   PetscFunctionBegin;
   if (!pc->setupcalled) {
     PetscCall(PetscFree(dir->ordering));
-    PetscCall(PetscStrallocpy(ordering, (char **)&dir->ordering));
+    PetscCall(PetscStrallocpy(ordering, &dir->ordering));
   } else {
     PetscCall(PetscStrcmp(dir->ordering, ordering, &flg));
     PetscCheck(flg, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONGSTATE, "Cannot change ordering after use");

@@ -347,7 +347,7 @@ PETSC_INTERN PetscErrorCode PetscLogGlobalNamesDestroy(PetscLogGlobalNames *glob
   *global_names_p = NULL;
   PetscCall(PetscFree(global_names->global_to_local));
   PetscCall(PetscFree(global_names->local_to_global));
-  for (PetscInt i = 0; i < global_names->count_global; i++) { PetscCall(PetscFree(global_names->names[i])); }
+  for (PetscInt i = 0; i < global_names->count_global; i++) { PetscCall(PetscFreeConst(global_names->names[i])); }
   PetscCall(PetscFree(global_names->names));
   PetscCall(PetscFree(global_names));
   PetscFunctionReturn(PETSC_SUCCESS);

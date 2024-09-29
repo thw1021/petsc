@@ -163,8 +163,8 @@ static PetscErrorCode MatRestoreRowIJ_SeqSBAIJ(Mat A, PetscInt oshift, PetscBool
   PetscFunctionBegin;
   if (!ia) PetscFunctionReturn(PETSC_SUCCESS);
   if ((!blockcompressed && A->rmap->bs > 1) || (symmetric || oshift == 1)) {
-    PetscCall(PetscFree(*ia));
-    if (ja) PetscCall(PetscFree(*ja));
+    PetscCall(PetscFreeConst(*ia));
+    if (ja) PetscCall(PetscFreeConst(*ja));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1776,8 +1776,8 @@ PETSC_INTERN PetscErrorCode MatGetFactor_seqsbaij_petsc(Mat A, MatFactorType fty
 
     (*B)->ops->choleskyfactorsymbolic = MatCholeskyFactorSymbolic_SeqSBAIJ;
     (*B)->ops->iccfactorsymbolic      = MatICCFactorSymbolic_SeqSBAIJ;
-    PetscCall(PetscStrallocpy(MATORDERINGNATURAL, (char **)&(*B)->preferredordering[MAT_FACTOR_CHOLESKY]));
-    PetscCall(PetscStrallocpy(MATORDERINGNATURAL, (char **)&(*B)->preferredordering[MAT_FACTOR_ICC]));
+    PetscCall(PetscStrallocpy(MATORDERINGNATURAL, &(*B)->preferredordering[MAT_FACTOR_CHOLESKY]));
+    PetscCall(PetscStrallocpy(MATORDERINGNATURAL, &(*B)->preferredordering[MAT_FACTOR_ICC]));
   } else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "Factor type not supported");
 
   (*B)->factortype     = ftype;

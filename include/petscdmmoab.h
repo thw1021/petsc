@@ -95,7 +95,7 @@ PETSC_EXTERN PetscErrorCode DMMoabRenumberMeshEntities(DM);
 
 PETSC_EXTERN PetscErrorCode DMMoabGetFieldName(DM, PetscInt, const char **);
 PETSC_EXTERN PetscErrorCode DMMoabSetFieldName(DM, PetscInt, const char *);
-PETSC_EXTERN PetscErrorCode DMMoabSetFieldNames(DM, PetscInt, const char *[]);
+PETSC_EXTERN PetscErrorCode DMMoabSetFieldNames(DM, PetscInt, const char *const *);
 PETSC_EXTERN PetscErrorCode DMMoabGetFieldDof(DM, moab::EntityHandle, PetscInt, PetscInt *);
 PETSC_EXTERN PetscErrorCode DMMoabGetFieldDofs(DM, PetscInt, const moab::EntityHandle *, PetscInt, PetscInt *);
 PETSC_EXTERN PetscErrorCode DMMoabGetFieldDofsLocal(DM, PetscInt, const moab::EntityHandle *, PetscInt, PetscInt *);
