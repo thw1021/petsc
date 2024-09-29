@@ -900,7 +900,7 @@ static PetscErrorCode PCASMSetSubMatType_ASM(PC pc, MatType sub_mat_type)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
   PetscCall(PetscFree(osm->sub_mat_type));
-  PetscCall(PetscStrallocpy(sub_mat_type, (char **)&osm->sub_mat_type));
+  PetscCall(PetscStrallocpy(sub_mat_type, &osm->sub_mat_type));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

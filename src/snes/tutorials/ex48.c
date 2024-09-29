@@ -270,7 +270,7 @@ struct _p_THI {
   PetscBool tridiagonal;
   PetscBool coarse2d;
   PetscBool verbose;
-  MatType   mattype;
+  char     *mattype;
 };
 
 struct _n_Units {
@@ -533,7 +533,7 @@ static PetscErrorCode THICreate(MPI_Comm comm, THI *inthi)
     PetscCall(PetscOptionsBool("-thi_coarse2d", "Use a 2D coarse space corresponding to SSA", "", thi->coarse2d, &thi->coarse2d, NULL));
     PetscCall(PetscOptionsBool("-thi_tridiagonal", "Assemble a tridiagonal system (column coupling only) on the finest level", "", thi->tridiagonal, &thi->tridiagonal, NULL));
     PetscCall(PetscOptionsFList("-thi_mat_type", "Matrix type", "MatSetType", MatList, mtype, (char *)mtype, sizeof(mtype), NULL));
-    PetscCall(PetscStrallocpy(mtype, (char **)&thi->mattype));
+    PetscCall(PetscStrallocpy(mtype, &thi->mattype));
     PetscCall(PetscOptionsBool("-thi_verbose", "Enable verbose output (like matrix sizes and statistics)", "", thi->verbose, &thi->verbose, NULL));
   }
   PetscOptionsEnd();

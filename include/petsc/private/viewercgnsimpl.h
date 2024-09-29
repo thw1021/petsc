@@ -5,12 +5,12 @@
 #include <cgnslib.h>
 
 typedef struct {
-  char           *filename_template;
-  char           *filename;
-  PetscFileMode   btype;
-  int             file_num;
-  const PetscInt *node_l2g;
-  int             base, zone;
+  char         *filename_template;
+  char         *filename;
+  PetscFileMode btype;
+  int           file_num;
+  PetscInt     *node_l2g;
+  int           base, zone;
   CGNS_ENUMT(GridLocation_t) grid_loc;
   PetscInt       num_local_nodes, nStart, nEnd;
   PetscInt       eStart, eEnd;

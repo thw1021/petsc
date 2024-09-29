@@ -132,8 +132,8 @@ PetscErrorCode PetscQuadratureDestroy(PetscQuadrature *q)
     *q = NULL;
     PetscFunctionReturn(PETSC_SUCCESS);
   }
-  PetscCall(PetscFree((*q)->points));
-  PetscCall(PetscFree((*q)->weights));
+  PetscCall(PetscFreeConst((*q)->points));
+  PetscCall(PetscFreeConst((*q)->weights));
   PetscCall(PetscHeaderDestroy(q));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

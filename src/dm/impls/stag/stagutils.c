@@ -1112,7 +1112,7 @@ PetscErrorCode DMStagSetCoordinateDMType(DM dm, DMType dmtype)
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMSTAG);
   PetscCall(PetscFree(stag->coordinateDMType));
-  PetscCall(PetscStrallocpy(dmtype, (char **)&stag->coordinateDMType));
+  PetscCall(PetscStrallocpy(dmtype, &stag->coordinateDMType));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
