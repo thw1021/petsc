@@ -891,7 +891,7 @@ PetscErrorCode SNESMonitorSetFromOptions(SNES snes, const char name[], const cha
     PetscCall(PetscViewerAndFormatCreate(viewer, format, &vf));
     PetscCall(PetscViewerDestroy(&viewer));
     if (monitorsetup) PetscCall((*monitorsetup)(snes, vf));
-    PetscCall(SNESMonitorSet(snes, (PetscErrorCode (*)(SNES, PetscInt, PetscReal, void *))monitor, vf, (PetscErrorCode (*)(void **))PetscViewerAndFormatDestroy));
+    PetscCall(SNESMonitorSet(snes, (PetscErrorCode (*)(SNES, PetscInt, PetscReal, void *))monitor, vf, (PetscCtxDestroyFn *)PetscViewerAndFormatDestroy));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1103,7 +1103,7 @@ PetscErrorCode SNESSetFromOptions(SNES snes)
     PetscViewer ctx;
 
     PetscCall(PetscViewerDrawOpen(PetscObjectComm((PetscObject)snes), NULL, NULL, PETSC_DECIDE, PETSC_DECIDE, 400, 300, &ctx));
-    PetscCall(SNESMonitorSet(snes, SNESMonitorLGRange, ctx, (PetscErrorCode (*)(void **))PetscViewerDestroy));
+    PetscCall(SNESMonitorSet(snes, SNESMonitorLGRange, ctx, (PetscCtxDestroyFn *)PetscViewerDestroy));
   }
 
   PetscCall(PetscViewerDestroy(&snes->convergedreasonviewer));
@@ -1249,7 +1249,7 @@ PetscErrorCode SNESResetFromOptions(SNES snes)
 
 .seealso: [](ch_snes), `SNESGetApplicationContext()`, `SNESSetApplicationContext()`
 @*/
-PetscErrorCode SNESSetComputeApplicationContext(SNES snes, PetscErrorCode (*compute)(SNES snes, void **ctx), PetscErrorCode (*destroy)(void **ctx))
+PetscErrorCode SNESSetComputeApplicationContext(SNES snes, PetscErrorCode (*compute)(SNES snes, void **ctx), PetscCtxDestroyFn *destroy)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
@@ -4212,7 +4212,7 @@ M*/
 
 .seealso: [](ch_snes), `SNES`, `SNESSolve()`, `SNESMonitorDefault()`, `SNESMonitorCancel()`, `SNESMonitorFunction`
 @*/
-PetscErrorCode SNESMonitorSet(SNES snes, PetscErrorCode (*f)(SNES, PetscInt, PetscReal, void *), void *mctx, PetscErrorCode (*monitordestroy)(void **))
+PetscErrorCode SNESMonitorSet(SNES snes, PetscErrorCode (*f)(SNES, PetscInt, PetscReal, void *), void *mctx, PetscCtxDestroyFn *monitordestroy)
 {
   PetscInt  i;
   PetscBool identical;
@@ -4641,7 +4641,7 @@ PetscErrorCode SNESConvergedReasonView(SNES snes, PetscViewer viewer)
 
 .seealso: [](ch_snes), `SNES`, `SNESSolve()`, `SNESConvergedReason`, `SNESGetConvergedReason()`, `SNESConvergedReasonView()`, `SNESConvergedReasonViewCancel()`
 @*/
-PetscErrorCode SNESConvergedReasonViewSet(SNES snes, PetscErrorCode (*f)(SNES snes, void *vctx), void *vctx, PetscErrorCode (*reasonviewdestroy)(void **vctx))
+PetscErrorCode SNESConvergedReasonViewSet(SNES snes, PetscErrorCode (*f)(SNES snes, void *vctx), void *vctx, PetscCtxDestroyFn *reasonviewdestroy)
 {
   PetscInt  i;
   PetscBool identical;

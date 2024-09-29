@@ -331,14 +331,14 @@ PetscErrorCode DMSNESSetFunction(DM dm, SNESFunctionFn *f, void *ctx)
 
 .seealso: [](ch_snes), `DMSNES`, `DMSNESSetFunction()`, `SNESSetFunction()`
 @*/
-PetscErrorCode DMSNESSetFunctionContextDestroy(DM dm, PetscErrorCode (*f)(void *))
+PetscErrorCode DMSNESSetFunctionContextDestroy(DM dm, PetscCtxDestroyFn *f)
 {
   DMSNES sdm;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscCall(DMGetDMSNESWrite(dm, &sdm));
-  if (sdm->functionctxcontainer) PetscCall(PetscContainerSetUserDestroy(sdm->functionctxcontainer, f));
+  if (sdm->functionctxcontainer) PetscCall(PetscContainerSetCtxDestroy(sdm->functionctxcontainer, f));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -599,14 +599,14 @@ PetscErrorCode DMSNESSetJacobian(DM dm, SNESJacobianFn *J, void *ctx)
 
 .seealso: [](ch_snes), `DMSNES`, `DMSNESSetJacobian()`
 @*/
-PetscErrorCode DMSNESSetJacobianContextDestroy(DM dm, PetscErrorCode (*f)(void *))
+PetscErrorCode DMSNESSetJacobianContextDestroy(DM dm, PetscCtxDestroyFn *f)
 {
   DMSNES sdm;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscCall(DMGetDMSNESWrite(dm, &sdm));
-  if (sdm->jacobianctxcontainer) PetscCall(PetscContainerSetUserDestroy(sdm->jacobianctxcontainer, f));
+  if (sdm->jacobianctxcontainer) PetscCall(PetscContainerSetCtxDestroy(sdm->jacobianctxcontainer, f));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

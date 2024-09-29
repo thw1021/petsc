@@ -1865,3 +1865,17 @@ PetscMPIInt MPIU_Allreduce_Private(const void *inbuf, void *outbuf, MPIU_Count c
   }
   return err;
 }
+
+/*@C
+  PetscCtxDestroyDefault - An implementation of a `PetscCtxDestroyFn` that uses `PetscFree()` to free the context
+
+  Level: intermediate
+
+.seealso: `PetscObject`, `PetscCtxDestroyFn`, `PetscObjectDestroy()`, `DMSetApplicationContextDestroy()`
+@*/
+PETSC_EXTERN PetscErrorCode PetscCtxDestroyDefault(void **ctx)
+{
+  PetscFunctionBegin;
+  PetscCall(PetscFree(*ctx));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}

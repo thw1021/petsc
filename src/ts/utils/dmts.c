@@ -403,14 +403,14 @@ PetscErrorCode DMTSSetIFunction(DM dm, TSIFunctionFn *func, void *ctx)
 
 .seealso: [](ch_ts), `DMTS`, `DM`, `TS`, `DMTSSetIFunction()`, `TSSetIFunction()`
 @*/
-PetscErrorCode DMTSSetIFunctionContextDestroy(DM dm, PetscErrorCode (*f)(void *))
+PetscErrorCode DMTSSetIFunctionContextDestroy(DM dm, PetscCtxDestroyFn *f)
 {
   DMTS tsdm;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscCall(DMGetDMTSWrite(dm, &tsdm));
-  if (tsdm->ifunctionctxcontainer) PetscCall(PetscContainerSetUserDestroy(tsdm->ifunctionctxcontainer, f));
+  if (tsdm->ifunctionctxcontainer) PetscCall(PetscContainerSetCtxDestroy(tsdm->ifunctionctxcontainer, f));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -514,14 +514,14 @@ PetscErrorCode DMTSSetI2Function(DM dm, TSI2FunctionFn *fun, void *ctx)
 
 .seealso: [](ch_ts), `DMTS`, `TSSetI2FunctionContextDestroy()`, `DMTSSetI2Function()`, `TSSetI2Function()`
 @*/
-PetscErrorCode DMTSSetI2FunctionContextDestroy(DM dm, PetscErrorCode (*f)(void *))
+PetscErrorCode DMTSSetI2FunctionContextDestroy(DM dm, PetscCtxDestroyFn *f)
 {
   DMTS tsdm;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscCall(DMGetDMTSWrite(dm, &tsdm));
-  if (tsdm->i2functionctxcontainer) PetscCall(PetscContainerSetUserDestroy(tsdm->i2functionctxcontainer, f));
+  if (tsdm->i2functionctxcontainer) PetscCall(PetscContainerSetCtxDestroy(tsdm->i2functionctxcontainer, f));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -624,14 +624,14 @@ PetscErrorCode DMTSSetI2Jacobian(DM dm, TSI2JacobianFn *jac, void *ctx)
 
 .seealso: [](ch_ts), `DMTS`, `DM`, `TS`, `TSSetI2JacobianContextDestroy()`, `DMTSSetI2Jacobian()`, `TSSetI2Jacobian()`
 @*/
-PetscErrorCode DMTSSetI2JacobianContextDestroy(DM dm, PetscErrorCode (*f)(void *))
+PetscErrorCode DMTSSetI2JacobianContextDestroy(DM dm, PetscCtxDestroyFn *f)
 {
   DMTS tsdm;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscCall(DMGetDMTSWrite(dm, &tsdm));
-  if (tsdm->i2jacobianctxcontainer) PetscCall(PetscContainerSetUserDestroy(tsdm->i2jacobianctxcontainer, f));
+  if (tsdm->i2jacobianctxcontainer) PetscCall(PetscContainerSetCtxDestroy(tsdm->i2jacobianctxcontainer, f));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -740,14 +740,14 @@ PetscErrorCode DMTSSetRHSFunction(DM dm, TSRHSFunctionFn *func, void *ctx)
 
 .seealso: [](ch_ts), `DMTS`, `TSSetRHSFunctionContextDestroy()`, `DMTSSetRHSFunction()`, `TSSetRHSFunction()`
 @*/
-PetscErrorCode DMTSSetRHSFunctionContextDestroy(DM dm, PetscErrorCode (*f)(void *))
+PetscErrorCode DMTSSetRHSFunctionContextDestroy(DM dm, PetscCtxDestroyFn *f)
 {
   DMTS tsdm;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscCall(DMGetDMTSWrite(dm, &tsdm));
-  if (tsdm->rhsfunctionctxcontainer) PetscCall(PetscContainerSetUserDestroy(tsdm->rhsfunctionctxcontainer, f));
+  if (tsdm->rhsfunctionctxcontainer) PetscCall(PetscContainerSetCtxDestroy(tsdm->rhsfunctionctxcontainer, f));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1050,14 +1050,14 @@ PetscErrorCode DMTSSetIJacobian(DM dm, TSIJacobianFn *func, void *ctx)
 
 .seealso: [](ch_ts), `DMTS`, `TSSetIJacobianContextDestroy()`, `TSSetI2JacobianContextDestroy()`, `DMTSSetIJacobian()`, `TSSetIJacobian()`
 @*/
-PetscErrorCode DMTSSetIJacobianContextDestroy(DM dm, PetscErrorCode (*f)(void *))
+PetscErrorCode DMTSSetIJacobianContextDestroy(DM dm, PetscCtxDestroyFn *f)
 {
   DMTS tsdm;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscCall(DMGetDMTSWrite(dm, &tsdm));
-  if (tsdm->ijacobianctxcontainer) PetscCall(PetscContainerSetUserDestroy(tsdm->ijacobianctxcontainer, f));
+  if (tsdm->ijacobianctxcontainer) PetscCall(PetscContainerSetCtxDestroy(tsdm->ijacobianctxcontainer, f));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1165,14 +1165,14 @@ PetscErrorCode DMTSSetRHSJacobian(DM dm, TSRHSJacobianFn *func, void *ctx)
 
 .seealso: [](ch_ts), `DMTS`, `TS`, `TSSetRHSJacobianContextDestroy()`, `DMTSSetRHSJacobian()`, `TSSetRHSJacobian()`
 @*/
-PetscErrorCode DMTSSetRHSJacobianContextDestroy(DM dm, PetscErrorCode (*f)(void *))
+PetscErrorCode DMTSSetRHSJacobianContextDestroy(DM dm, PetscCtxDestroyFn *f)
 {
   DMTS tsdm;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscCall(DMGetDMTSWrite(dm, &tsdm));
-  if (tsdm->rhsjacobianctxcontainer) PetscCall(PetscContainerSetUserDestroy(tsdm->rhsjacobianctxcontainer, f));
+  if (tsdm->rhsjacobianctxcontainer) PetscCall(PetscContainerSetCtxDestroy(tsdm->rhsjacobianctxcontainer, f));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

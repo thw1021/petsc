@@ -514,7 +514,7 @@ PetscErrorCode KSPConvergedReasonView(KSP ksp, PetscViewer viewer)
 
 .seealso: [](ch_ksp), `KSPConvergedReasonView()`, `KSPConvergedReasonViewCancel()`
 @*/
-PetscErrorCode KSPConvergedReasonViewSet(KSP ksp, PetscErrorCode (*f)(KSP, void *), void *vctx, PetscErrorCode (*reasonviewdestroy)(void **))
+PetscErrorCode KSPConvergedReasonViewSet(KSP ksp, PetscErrorCode (*f)(KSP, void *), void *vctx, PetscCtxDestroyFn *reasonviewdestroy)
 {
   PetscInt  i;
   PetscBool identical;
@@ -2285,7 +2285,7 @@ PetscErrorCode KSPMonitor(KSP ksp, PetscInt it, PetscReal rnorm)
 
 .seealso: [](ch_ksp), `KSPMonitorResidual()`, `KSPMonitorCancel()`, `KSP`
 @*/
-PetscErrorCode KSPMonitorSet(KSP ksp, PetscErrorCode (*monitor)(KSP ksp, PetscInt it, PetscReal rnorm, void *ctx), void *ctx, PetscErrorCode (*monitordestroy)(void **ctx))
+PetscErrorCode KSPMonitorSet(KSP ksp, PetscErrorCode (*monitor)(KSP monitor, PetscInt it, PetscReal rnorm, void *ctx), void *ctx, PetscCtxDestroyFn *monitordestroy)
 {
   PetscInt  i;
   PetscBool identical;

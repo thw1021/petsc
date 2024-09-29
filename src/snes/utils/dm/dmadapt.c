@@ -351,7 +351,7 @@ static PetscErrorCode PetscViewerAndFormatCreate_Internal(PetscViewer viewer, Pe
 
 .seealso: [](ch_snes), `DMAdaptorMonitorError()`, `DMAdaptor`
 @*/
-PetscErrorCode DMAdaptorMonitorSet(DMAdaptor adaptor, PetscErrorCode (*monitor)(DMAdaptor adaptor, PetscInt it, DM odm, DM adm, PetscInt Nf, PetscReal enorms[], Vec error, void *ctx), void *ctx, PetscErrorCode (*monitordestroy)(void **ctx))
+PetscErrorCode DMAdaptorMonitorSet(DMAdaptor adaptor, PetscErrorCode (*monitor)(DMAdaptor adaptor, PetscInt it, DM odm, DM adm, PetscInt Nf, PetscReal enorms[], Vec error, void *ctx), void *ctx, PetscCtxDestroyFn *monitordestroy)
 {
   PetscBool identical;
 
@@ -437,7 +437,7 @@ PetscErrorCode DMAdaptorMonitorSetFromOptions(DMAdaptor adaptor, const char opt[
 
   PetscCall((*cfunc)(viewer, format, ctx, &vf));
   PetscCall(PetscViewerDestroy(&viewer));
-  PetscCall(DMAdaptorMonitorSet(adaptor, mfunc, vf, (PetscErrorCode (*)(void **))dfunc));
+  PetscCall(DMAdaptorMonitorSet(adaptor, mfunc, vf, (PetscCtxDestroyFn *)dfunc));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
