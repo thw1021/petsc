@@ -89,8 +89,8 @@ File Description:
   (a) = (b); \
   (b) = ptr;
 
-#define MAX_FABS(x, y) (PetscAbsScalar(x) > PetscAbsScalar(y)) ? ((PetscScalar)x) : ((PetscScalar)y)
-#define MIN_FABS(x, y) (PetscAbsScalar(x) < PetscAbsScalar(y)) ? ((PetscScalar)x) : ((PetscScalar)y)
+#define MAX_FABS(x, y) (PetscAbsScalar(x) > PetscAbsScalar(y)) ? (x) : (y)
+#define MIN_FABS(x, y) (PetscAbsScalar(x) < PetscAbsScalar(y)) ? (x) : (y)
 
 /* specer's existence ... can be done w/MAX_ABS */
 #define EXISTS(x, y) ((x) == 0.0) ? (y) : (x)

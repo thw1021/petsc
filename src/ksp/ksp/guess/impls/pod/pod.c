@@ -87,7 +87,7 @@ static PetscErrorCode KSPGuessSetUp_POD(KSPGuess guess)
 #else
     PetscCallBLAS("LAPACKsyevx", LAPACKsyevx_("V", "A", "L", &bN, pod->corr, &bN, &rdummy, &rdummy, &idummy, &idummy, &rdummy, &idummy, pod->eigs, pod->eigv, &bN, &sdummy, &pod->lwork, pod->rwork, pod->iwork, pod->iwork + 5 * bN, &lierr));
 #endif
-    PetscCheck(!lierr, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in query to SYEV Lapack routine %d", (int)lierr);
+    PetscCheck(!lierr, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in query to SYEV Lapack routine %" PetscBLASInt_FMT, lierr);
     PetscCall(PetscBLASIntCast((PetscInt)PetscRealPart(sdummy), &pod->lwork));
     PetscCall(PetscMalloc1(pod->lwork + PetscMax(bN * bN, 6 * bN), &pod->swork));
   }
@@ -188,9 +188,9 @@ static PetscErrorCode KSPGuessFormGuess_POD(KSPGuess guess, Vec b, Vec x)
     PetscCall(MatIsSymmetricKnown(guess->A, &set, &symm));
     tsolve = (set && symm) ? PETSC_FALSE : pksp->transpose_solve;
     PetscCallBLAS("LAPACKgetrf", LAPACKgetrf_(&bNen, &bNen, pod->low, &bNen, pod->iwork, &lierr));
-    PetscCheck(!lierr, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in GETRF Lapack routine %d", (int)lierr);
+    PetscCheck(!lierr, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in GETRF Lapack routine %" PetscBLASInt_FMT, lierr);
     PetscCallBLAS("LAPACKgetrs", LAPACKgetrs_(tsolve ? "T" : "N", &bNen, &ione, pod->low, &bNen, pod->iwork, pod->swork, &bNen, &lierr));
-    PetscCheck(!lierr, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in GETRS Lapack routine %d", (int)lierr);
+    PetscCheck(!lierr, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in GETRS Lapack routine %" PetscBLASInt_FMT, lierr);
   }
   /* x = X * V * S * x_low */
   PetscCallBLAS("BLASgemv", BLASgemv_("N", &bN, &bNen, &one, pod->eigv + pod->st * pod->n, &bN, pod->swork, &ione, &zero, pod->swork + pod->n, &ione));
@@ -312,8 +312,8 @@ complete_request:
 #else
   PetscCallBLAS("LAPACKsyevx", LAPACKsyevx_("V", "A", "L", &bN, pod->swork, &bN, &reps, &reps, &idummy, &idummy, &reps, &idummy, pod->eigs, pod->eigv, &bN, pod->swork + bN * bN, &pod->lwork, pod->rwork, pod->iwork, pod->iwork + 5 * bN, &lierr));
 #endif
-  PetscCheck(lierr >= 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in SYEV Lapack routine: illegal argument %d", -(int)lierr);
-  PetscCheck(!lierr, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in SYEV Lapack routine: %d eigenvectors failed to converge", (int)lierr);
+  PetscCheck(lierr >= 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in SYEV Lapack routine: illegal argument %" PetscBLASInt_FMT, -lierr);
+  PetscCheck(!lierr, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in SYEV Lapack routine: %" PetscBLASInt_FMT " eigenvectors failed to converge", lierr);
 
   /* dimension of lower dimensional system */
   pod->st = -1;

@@ -179,8 +179,7 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
           PetscCall(VecDestroy(&locX2));
         }
       }
-      PetscCheck(cellClosure_it - cellClosure == cellClosure_sz * ctx->batch_sz, PETSC_COMM_SELF, PETSC_ERR_PLIB, "iteration wrong %" PetscCount_FMT " != cellClosure_sz = %" PetscInt_FMT, (PetscCount)(cellClosure_it - cellClosure),
-                 cellClosure_sz * ctx->batch_sz);
+      PetscCheck(cellClosure_it - cellClosure == cellClosure_sz * ctx->batch_sz, PETSC_COMM_SELF, PETSC_ERR_PLIB, "iteration wrong %" PetscCount_FMT " != cellClosure_sz = %" PetscInt_FMT, cellClosure_it - cellClosure, cellClosure_sz * ctx->batch_sz);
       PetscCall(DMCompositeRestoreLocalAccessArray(pack, a_X, nDMs, NULL, locXArray));
       PetscCall(DMCompositeRestoreAccessArray(pack, a_X, nDMs, NULL, globXArray));
       PetscCall(PetscFree(locXArray));
@@ -683,7 +682,7 @@ static PetscErrorCode LandauDMCreateVMeshes(MPI_Comm comm_self, const PetscInt d
             {9,  8, 4 }
           };
           const PetscInt *pcell = (const PetscInt *)(ctx->simplex ? &cellsS[0][0] : &cellsT[0][0]);
-          PetscReal       coords[11][2], *flatCoords = (PetscReal *)&coords[0][0];
+          PetscReal       coords[11][2], *flatCoords = &coords[0][0];
           PetscReal       rad = ctx->radius[grid];
           for (j = 0; j < 5; j++) { // outside edge
             PetscReal z, r, theta = -PETSC_PI / 2 + (j % 5) * PETSC_PI / 4;
@@ -1370,7 +1369,9 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
 
   for (ii = ctx->num_species; ii < LANDAU_MAX_SPECIES; ii++) ctx->masses[ii] = ctx->thermal_temps[ii] = ctx->charges[ii] = 0;
   if (ctx->verbose != 0) {
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "masses:        e=%10.3e; ions in proton mass units:   %10.3e %10.3e ...\n", (double)ctx->masses[0], (double)(ctx->masses[1] / 1.6720e-27), (double)(ctx->num_species > 2 ? ctx->masses[2] / 1.6720e-27 : 0)));
+    PetscReal pmassunit = PetscRealConstant(1.6720e-27);
+
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "masses:        e=%10.3e; ions in proton mass units:   %10.3e %10.3e ...\n", (double)ctx->masses[0], (double)(ctx->masses[1] / pmassunit), (double)(ctx->num_species > 2 ? ctx->masses[2] / pmassunit : 0)));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "charges:       e=%10.3e; charges in elementary units: %10.3e %10.3e\n", (double)ctx->charges[0], (double)(-ctx->charges[1] / ctx->charges[0]), (double)(ctx->num_species > 2 ? -ctx->charges[2] / ctx->charges[0] : 0)));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "n:             e: %10.3e                           i: %10.3e %10.3e\n", (double)ctx->n[0], (double)ctx->n[1], (double)(ctx->num_species > 2 ? ctx->n[2] : 0)));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "thermal T (K): e=%10.3e i=%10.3e %10.3e. Normalization grid %d: v_0=%10.3e (%10.3ec) n_0=%10.3e t_0=%10.3e %" PetscInt_FMT " batched, view batch %" PetscInt_FMT "\n", (double)ctx->thermal_temps[0],
@@ -1548,10 +1549,10 @@ static PetscErrorCode CreateStaticData(PetscInt dim, IS grid_batch_is_inv[], Lan
             PetscScalar *valuesOrig = elMat = elemMatrix;
             PetscCall(PetscArrayzero(elMat, totDim * totDim));
             elMat[(fieldA * Nb + q) * totDim + fieldA * Nb + q] = 1;
-            PetscCall(DMPlexGetClosureIndices(ctx->plex[grid], section[grid], globsection[grid], ej, PETSC_TRUE, &numindices, &indices, NULL, (PetscScalar **)&elMat));
+            PetscCall(DMPlexGetClosureIndices(ctx->plex[grid], section[grid], globsection[grid], ej, PETSC_TRUE, &numindices, &indices, NULL, &elMat));
             if (ctx->simplex) {
               PetscCheck(numindices == Nb, ctx->comm, PETSC_ERR_ARG_WRONG, "numindices != Nb numindices=%d Nb=%d", (int)numindices, (int)Nb);
-              for (PetscInt q = 0; q < numindices; ++q) { maps[grid].gIdx[eidx][fieldA][q] = (LandauIdx)indices[q]; }
+              for (PetscInt q = 0; q < numindices; ++q) { maps[grid].gIdx[eidx][fieldA][q] = indices[q]; }
               fullNb++;
             } else {
               for (PetscInt f = 0; f < numindices; ++f) { // look for a non-zero on the diagonal (is this too complicated for simplices?)
@@ -1559,9 +1560,9 @@ static PetscErrorCode CreateStaticData(PetscInt dim, IS grid_batch_is_inv[], Lan
                   // found it
                   if (PetscAbs(PetscRealPart(elMat[f * numindices + f] - 1.)) < PETSC_MACHINE_EPSILON) { // normal vertex 1.0
                     if (plex_batch) {
-                      maps[grid].gIdx[eidx][fieldA][q] = (LandauIdx)plex_batch[indices[f]];
+                      maps[grid].gIdx[eidx][fieldA][q] = plex_batch[indices[f]];
                     } else {
-                      maps[grid].gIdx[eidx][fieldA][q] = (LandauIdx)indices[f];
+                      maps[grid].gIdx[eidx][fieldA][q] = indices[f];
                     }
                     fullNb++;
                   } else { //found a constraint
@@ -1612,7 +1613,7 @@ static PetscErrorCode CreateStaticData(PetscInt dim, IS grid_batch_is_inv[], Lan
               }
             } // !simplex
             // cleanup
-            PetscCall(DMPlexRestoreClosureIndices(ctx->plex[grid], section[grid], globsection[grid], ej, PETSC_TRUE, &numindices, &indices, NULL, (PetscScalar **)&elMat));
+            PetscCall(DMPlexRestoreClosureIndices(ctx->plex[grid], section[grid], globsection[grid], ej, PETSC_TRUE, &numindices, &indices, NULL, &elMat));
             if (elMat != valuesOrig) PetscCall(DMRestoreWorkArray(ctx->plex[grid], numindices * numindices, MPIU_SCALAR, &elMat));
           }
           {                                                        // setup COO assembly
@@ -2393,7 +2394,7 @@ PetscErrorCode DMPlexLandauPrintNorms(Vec X, PetscInt stepi)
     Vec Xloc = globXArray[LAND_PACK_IDX(ctx->batch_view_idx, grid)];
     PetscCall(DMGetDS(ctx->plex[grid], &prob));
     for (ii = ctx->species_offset[grid], i0 = 0; ii < ctx->species_offset[grid + 1]; ii++, i0++) {
-      PetscScalar user[2] = {(PetscScalar)i0, (PetscScalar)ctx->charges[ii]};
+      PetscScalar user[2] = {(PetscScalar)i0, ctx->charges[ii]};
       PetscCall(PetscDSSetConstants(prob, 2, user));
       if (dim == 2) { /* 2/3X + 3V (cylindrical coordinates) */
         PetscCall(PetscDSSetObjective(prob, 0, &f0_s_rden));

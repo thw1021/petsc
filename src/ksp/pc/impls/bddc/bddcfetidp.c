@@ -515,7 +515,7 @@ PetscErrorCode PCBDDCSetupFETIDPMatContext(FETIDPMat_ctx fetidpmat_ctx)
         PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
         PetscCallBLAS("LAPACKgetri", LAPACKgetri_(&B_N, &dummy, &B_N, &B_N, &lwork, &B_lwork, &B_ierr));
         PetscCall(PetscFPTrapPop());
-        PetscCheck(!B_ierr, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in query to GETRI Lapack routine %d", (int)B_ierr);
+        PetscCheck(!B_ierr, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in query to GETRI Lapack routine %" PetscBLASInt_FMT, B_ierr);
         PetscCall(PetscBLASIntCast((PetscInt)PetscRealPart(lwork), &B_lwork));
       }
       PetscCall(PetscMalloc3(mss * mss, &W, mss, &pivots, B_lwork, &Bwork));
@@ -531,9 +531,9 @@ PetscErrorCode PCBDDCSetupFETIDPMatContext(FETIDPMat_ctx fetidpmat_ctx)
         PetscCall(MatDenseRestoreArrayRead(deluxe_ctx->seq_mat[i], &M));
         PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
         PetscCallBLAS("LAPACKgetrf", LAPACKgetrf_(&B_N, &B_N, W, &B_N, pivots, &B_ierr));
-        PetscCheck(!B_ierr, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in GETRF Lapack routine %d", (int)B_ierr);
+        PetscCheck(!B_ierr, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in GETRF Lapack routine %" PetscBLASInt_FMT, B_ierr);
         PetscCallBLAS("LAPACKgetri", LAPACKgetri_(&B_N, W, &B_N, pivots, Bwork, &B_lwork, &B_ierr));
-        PetscCheck(!B_ierr, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in GETRI Lapack routine %d", (int)B_ierr);
+        PetscCheck(!B_ierr, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in GETRI Lapack routine %" PetscBLASInt_FMT, B_ierr);
         PetscCall(PetscFPTrapPop());
         /* silent static analyzer */
         PetscCheck(idxs, PETSC_COMM_SELF, PETSC_ERR_PLIB, "IDXS not present");
@@ -726,7 +726,7 @@ PetscErrorCode PCBDDCSetupFETIDPPCContext(Mat fetimat, FETIDPPC_ctx fetidppc_ctx
     PetscCall(KSPGetPC(ctx->kBD, &mpc));
     PetscCall(KSPGetPC(pcbddc->ksp_D, &pc));
     PetscCall(PCSetType(mpc, PCLU));
-    PetscCall(PCFactorGetMatSolverType(pc, (MatSolverType *)&solver));
+    PetscCall(PCFactorGetMatSolverType(pc, &solver));
     if (solver) PetscCall(PCFactorSetMatSolverType(mpc, solver));
     PetscCall(MatGetOptionsPrefix(fetimat, &prefix));
     PetscCall(KSPSetOptionsPrefix(ctx->kBD, prefix));
@@ -804,7 +804,7 @@ PetscErrorCode PCBDDCSetupFETIDPPCContext(Mat fetimat, FETIDPPC_ctx fetidppc_ctx
         PCType        pctype;
 
         PetscCall(PCGetType(pc, &pctype));
-        PetscCall(PCFactorGetMatSolverType(pc, (MatSolverType *)&solver));
+        PetscCall(PCFactorGetMatSolverType(pc, &solver));
         PetscCall(KSPGetPC(sksp, &pc));
         PetscCall(PCSetType(pc, pctype));
         if (solver) PetscCall(PCFactorSetMatSolverType(pc, solver));

@@ -528,7 +528,7 @@ PetscErrorCode KSPConvergedReasonViewSet(KSP ksp, PetscErrorCode (*f)(KSP, void 
   PetscCheck(ksp->numberreasonviews < MAXKSPREASONVIEWS, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Too many KSP reasonview set");
   ksp->reasonview[ksp->numberreasonviews]          = f;
   ksp->reasonviewdestroy[ksp->numberreasonviews]   = reasonviewdestroy;
-  ksp->reasonviewcontext[ksp->numberreasonviews++] = (void *)vctx;
+  ksp->reasonviewcontext[ksp->numberreasonviews++] = vctx;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -2299,7 +2299,7 @@ PetscErrorCode KSPMonitorSet(KSP ksp, PetscErrorCode (*monitor)(KSP ksp, PetscIn
   PetscCheck(ksp->numbermonitors < MAXKSPMONITORS, PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_OUTOFRANGE, "Too many KSP monitors set");
   ksp->monitor[ksp->numbermonitors]          = monitor;
   ksp->monitordestroy[ksp->numbermonitors]   = monitordestroy;
-  ksp->monitorcontext[ksp->numbermonitors++] = (void *)ctx;
+  ksp->monitorcontext[ksp->numbermonitors++] = ctx;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -2653,7 +2653,7 @@ PetscErrorCode KSPSetConvergenceTest(KSP ksp, PetscErrorCode (*converge)(KSP ksp
   if (ksp->convergeddestroy) PetscCall((*ksp->convergeddestroy)(ksp->cnvP));
   ksp->converged        = converge;
   ksp->convergeddestroy = destroy;
-  ksp->cnvP             = (void *)ctx;
+  ksp->cnvP             = ctx;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

@@ -1443,7 +1443,7 @@ static PetscErrorCode PetscDTSymmetricTridiagonalEigensolve(PetscInt n, PetscRea
   PetscCallBLAS("LAPACKstegr", LAPACKstegr_(&jobz, &range, &bn, diag, subdiag, &VL, &VU, &IL, &IU, &abstol, &bm, eigs, V, &ldz, isuppz, &workquery, &lwork, &iworkquery, &liwork, &info));
   PetscCheck(!info, PETSC_COMM_SELF, PETSC_ERR_PLIB, "xSTEGR error");
   lwork  = (PetscBLASInt)workquery;
-  liwork = (PetscBLASInt)iworkquery;
+  liwork = iworkquery;
   PetscCall(PetscMalloc2(lwork, &work, liwork, &iwork));
   PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
   PetscCallBLAS("LAPACKstegr", LAPACKstegr_(&jobz, &range, &bn, diag, subdiag, &VL, &VU, &IL, &IU, &abstol, &bm, eigs, V, &ldz, isuppz, work, &lwork, iwork, &liwork, &info));

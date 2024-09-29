@@ -1104,7 +1104,7 @@ static PetscErrorCode DMPlexMetricModify_Private(PetscInt dim, PetscReal h_min, 
           }
         }
         PetscCall(LAPACKsyevFail(dim, Mpos));
-        SETERRQ(PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in LAPACK routine %d", (int)lierr);
+        SETERRQ(PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in LAPACK routine %" PetscBLASInt_FMT, lierr);
       }
       PetscCall(PetscFPTrapPop());
     }
@@ -1471,7 +1471,7 @@ static PetscErrorCode DMPlexMetricIntersection_Private(PetscInt dim, PetscScalar
   PetscFunctionBegin;
   /* Isotropic case */
   if (dim == 1) {
-    M2[0] = (PetscScalar)PetscMax(PetscRealPart(M1[0]), PetscRealPart(M2[0]));
+    M2[0] = PetscMax(PetscRealPart(M1[0]), PetscRealPart(M2[0]));
     PetscFunctionReturn(PETSC_SUCCESS);
   }
 
@@ -1503,7 +1503,7 @@ static PetscErrorCode DMPlexMetricIntersection_Private(PetscInt dim, PetscScalar
 #endif
       if (lierr) {
         PetscCall(LAPACKsyevFail(dim, M1));
-        SETERRQ(PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in LAPACK routine %d", (int)lierr);
+        SETERRQ(PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in LAPACK routine %" PetscBLASInt_FMT, lierr);
       }
       PetscCall(PetscFPTrapPop());
 
@@ -1552,7 +1552,7 @@ static PetscErrorCode DMPlexMetricIntersection_Private(PetscInt dim, PetscScalar
           }
         }
         PetscCall(LAPACKsyevFail(dim, evecs));
-        SETERRQ(PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in LAPACK routine %d", (int)lierr);
+        SETERRQ(PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in LAPACK routine %" PetscBLASInt_FMT, lierr);
       }
       PetscCall(PetscFPTrapPop());
 

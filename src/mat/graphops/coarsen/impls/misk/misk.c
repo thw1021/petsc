@@ -364,10 +364,10 @@ static PetscErrorCode MatCoarsenApply_MISK(MatCoarsen coarse)
 
     PetscCall(MatGetLocalSize(mat, &m, &n));
     PetscCall(ISCreateStride(PetscObjectComm((PetscObject)mat), m, 0, 1, &perm));
-    PetscCall(MatCoarsenApply_MISK_private(perm, (PetscInt)k, mat, &coarse->agg_lists));
+    PetscCall(MatCoarsenApply_MISK_private(perm, k, mat, &coarse->agg_lists));
     PetscCall(ISDestroy(&perm));
   } else {
-    PetscCall(MatCoarsenApply_MISK_private(coarse->perm, (PetscInt)k, mat, &coarse->agg_lists));
+    PetscCall(MatCoarsenApply_MISK_private(coarse->perm, k, mat, &coarse->agg_lists));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }

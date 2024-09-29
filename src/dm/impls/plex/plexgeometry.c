@@ -1339,7 +1339,7 @@ PetscErrorCode DMLocatePoints_Plex(DM dm, Vec v, DMPointLocationType ltype, Pets
   } else {
     PetscCall(PetscInfo(dm, "[DMLocatePoints_Plex] terminating_query_type : %" PetscInt_FMT " [outside domain] : %" PetscInt_FMT " [inside initial cell] : %" PetscInt_FMT " [brute-force]\n", terminating_query_type[0], terminating_query_type[1], terminating_query_type[2]));
   }
-  PetscCall(PetscInfo(dm, "[DMLocatePoints_Plex] npoints %" PetscInt_FMT " : time(rank0) %1.2e (sec): points/sec %1.4e\n", numPoints, t1 - t0, (double)((double)numPoints / (t1 - t0))));
+  PetscCall(PetscInfo(dm, "[DMLocatePoints_Plex] npoints %" PetscInt_FMT " : time(rank0) %1.2e (sec): points/sec %1.4e\n", numPoints, t1 - t0, numPoints / (t1 - t0)));
   PetscCall(PetscLogEventEnd(DMPLEX_LocatePoints, 0, 0, 0, 0));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1685,7 +1685,7 @@ PetscErrorCode DMPlexRestoreCellCoordinates(DM dm, PetscInt cell, PetscBool *isD
     PetscCall(DMGetCoordinateDM(dm, &cdm));
     PetscCall(DMGetCoordinateSection(dm, &cs));
     PetscCall(DMGetCoordinatesLocalNoncollective(dm, &coordinates));
-    PetscCall(DMPlexVecRestoreClosure(cdm, cs, coordinates, cell, Nc, (PetscScalar **)coords));
+    PetscCall(DMPlexVecRestoreClosure(cdm, cs, coordinates, cell, Nc, coords));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }

@@ -741,7 +741,7 @@ static PetscErrorCode PCSetUp_Seq(PC pc)
   PetscCall(KSPSetOperators(km->ksps[0], sA, sA));
   PetscCall(KSPSetFromOptions(km->ksps[0]));
   PetscCall(KSPSetUp(km->ksps[0]));
-  PetscCall(PetscInfo((PetscObject)pc, "MPI parallel linear solver system is being solved directly on rank 0 due to its small size\n"));
+  PetscCall(PetscInfo(pc, "MPI parallel linear solver system is being solved directly on rank 0 due to its small size\n"));
   PCMPIKSPCountsSeq++;
   PCMPIServerInSolve = PETSC_FALSE;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -848,11 +848,11 @@ static PetscErrorCode PCSetUp_MPI(PC pc)
   if (pc->flag == DIFFERENT_NONZERO_PATTERN) newmatrix = PETSC_TRUE;
 
   if (newmatrix) {
-    PetscCall(PetscInfo((PetscObject)pc, "New matrix or matrix has changed nonzero structure\n"));
+    PetscCall(PetscInfo(pc, "New matrix or matrix has changed nonzero structure\n"));
     PetscCall(PCMPIServerBroadcastRequest(PCMPI_SET_MAT));
     PetscCall(PCMPISetMat(pc));
   } else {
-    PetscCall(PetscInfo((PetscObject)pc, "Matrix has only changed nonzero values\n"));
+    PetscCall(PetscInfo(pc, "Matrix has only changed nonzero values\n"));
     PetscCall(PCMPIServerBroadcastRequest(PCMPI_UPDATE_MAT_VALUES));
     PetscCall(PCMPIUpdateMatValues(pc));
   }

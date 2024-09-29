@@ -899,7 +899,7 @@ PetscErrorCode DMPlexOrientInterface_Internal(DM dm)
         }
         /* Find index of rank leavesRanks[p][c] among remote ranks */
         /* No need for PetscMPIIntCast because these integers were originally cast from PetscMPIInt. */
-        PetscCall(PetscFindMPIInt((PetscMPIInt)leavesRanks[p][c], nranks, ranks, &ir));
+        PetscCall(PetscFindMPIInt(leavesRanks[p][c], nranks, ranks, &ir));
         PetscCall(PetscMPIIntCast(ir, &r));
         PetscCheck(r >= 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Point %" PetscInt_FMT " cone[%" PetscInt_FMT "]=%" PetscInt_FMT " root (%d,%" PetscInt_FMT ") leaf (%d,%" PetscInt_FMT "): leaf rank not found among remote ranks", p, c, cone[c], rootsRanks[p][c], roots[p][c], leavesRanks[p][c], leaves[p][c]);
         PetscCheck(ranks[r] >= 0 && ranks[r] < size, PETSC_COMM_SELF, PETSC_ERR_PLIB, "p=%" PetscInt_FMT " c=%" PetscInt_FMT " commsize=%d: ranks[%d] = %d makes no sense", p, c, size, r, ranks[r]);

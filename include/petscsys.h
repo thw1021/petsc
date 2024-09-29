@@ -391,6 +391,35 @@ PETSC_EXTERN PetscErrorCode PetscElementalInitialized(PetscBool *);
 PETSC_EXTERN PetscErrorCode PetscElementalFinalizePackage(void);
 #endif
 
+#if defined(PETSC_CHECK_USELESSCAST)
+  #if defined(__GNUC__) && !defined(__clang__) && defined(__cplusplus)
+    #if __GNUC__ >= 8
+      #define PETSC_SILENCE_WUSELESSCAST_BEGIN \
+        do { \
+          _Pragma("GCC diagnostic push"); \
+          _Pragma("GCC diagnostic ignored \"-Wuseless-cast\""); \
+        } while (0)
+      #define PETSC_SILENCE_WUSELESSCAST_END _Pragma("GCC diagnostic pop")
+    #endif
+  #else
+    #define PETSC_SILENCE_WUSELESSCAST_BEGIN (void)0
+    #define PETSC_SILENCE_WUSELESSCAST_END   (void)0
+  #endif
+#else
+  #define PETSC_SILENCE_WUSELESSCAST_BEGIN (void)0
+  #define PETSC_SILENCE_WUSELESSCAST_END   (void)0
+#endif
+
+#if defined(PETSC_CHECK_USELESSCAST)
+  #define PetscMallocCast(m1, r1) ((m1) * sizeof(**(r1)))
+  #define PetscSizeCast(m1, r1)   ((m1) * sizeof(*(r1)))
+  #define PetscSizetCast(m1)      (m1)
+#else
+  #define PetscMallocCast(m1, r1) ((size_t)((size_t)(m1)) * sizeof(**(r1)))
+  #define PetscSizeCast(m1, r1)   ((size_t)(m1) * sizeof(*(r1)))
+  #define PetscSizetCast(m1)      ((size_t)m1)
+#endif
+
 /*MC
    PetscMalloc - Allocates memory, One should use `PetscNew()`, `PetscMalloc1()` or `PetscCalloc1()` usually instead of this
 
@@ -411,11 +440,11 @@ PETSC_EXTERN PetscErrorCode PetscElementalFinalizePackage(void);
    Notes:
    Memory is always allocated at least double aligned
 
-   It is safe to allocate size 0 and pass the resulting pointer (which may or may not be `NULL`) to `PetscFree()`.
+   It is safe to allocate size 0 and pass the resulting pointer to `PetscFree()`.
 
 .seealso: `PetscFree()`, `PetscNew()`
 M*/
-#define PetscMalloc(a, b) ((*PetscTrMalloc)((a), PETSC_FALSE, __LINE__, PETSC_FUNCTION_NAME, __FILE__, (void **)(b)))
+#define PetscMalloc(a, b) PetscMallocA(1, PETSC_FALSE, __LINE__, PETSC_FUNCTION_NAME, __FILE__, PetscSizetCast(a), (b))
 
 /*MC
    PetscRealloc - Reallocates memory
@@ -480,11 +509,11 @@ M*/
    Notes:
    Memory is always allocated at least double aligned. This macro is useful in allocating memory pointed by void pointers
 
-   It is safe to allocate size 0 and pass the resulting pointer (which may or may not be `NULL`) to `PetscFree()`.
+   It is safe to allocate size 0 and pass the resulting pointer to `PetscFree()`.
 
 .seealso: `PetscFree()`, `PetscNew()`
 M*/
-#define PetscCalloc(m, result) PetscMallocA(1, PETSC_TRUE, __LINE__, PETSC_FUNCTION_NAME, __FILE__, (size_t)(m), (result))
+#define PetscCalloc(m, result) PetscMallocA(1, PETSC_TRUE, __LINE__, PETSC_FUNCTION_NAME, __FILE__, PetscSizetCast(m), (result))
 
 /*MC
    PetscMalloc1 - Allocates an array of memory aligned to `PETSC_MEMALIGN`
@@ -520,7 +549,7 @@ M*/
 
 .seealso: `PetscFree()`, `PetscNew()`, `PetscMalloc()`, `PetscCalloc1()`, `PetscMalloc2()`
 M*/
-#define PetscMalloc1(m1, r1) PetscMallocA(1, PETSC_FALSE, __LINE__, PETSC_FUNCTION_NAME, __FILE__, ((size_t)((size_t)(m1)) * sizeof(**(r1))), (r1))
+#define PetscMalloc1(m1, r1) PetscMallocA(1, PETSC_FALSE, __LINE__, PETSC_FUNCTION_NAME, __FILE__, PetscMallocCast(m1, r1), (r1))
 
 /*MC
    PetscCalloc1 - Allocates a cleared (zeroed) array of memory aligned to `PETSC_MEMALIGN`
@@ -544,7 +573,7 @@ M*/
 
 .seealso: `PetscFree()`, `PetscNew()`, `PetscMalloc()`, `PetscMalloc1()`, `PetscCalloc2()`
 M*/
-#define PetscCalloc1(m1, r1) PetscMallocA(1, PETSC_TRUE, __LINE__, PETSC_FUNCTION_NAME, __FILE__, ((size_t)((size_t)(m1)) * sizeof(**(r1))), (r1))
+#define PetscCalloc1(m1, r1) PetscMallocA(1, PETSC_TRUE, __LINE__, PETSC_FUNCTION_NAME, __FILE__, PetscMallocCast(m1, r1), (r1))
 
 /*MC
    PetscMalloc2 - Allocates 2 arrays of memory both aligned to `PETSC_MEMALIGN`
@@ -567,7 +596,7 @@ M*/
 
 .seealso: `PetscFree()`, `PetscNew()`, `PetscMalloc()`, `PetscMalloc1()`, `PetscCalloc2()`
 M*/
-#define PetscMalloc2(m1, r1, m2, r2) PetscMallocA(2, PETSC_FALSE, __LINE__, PETSC_FUNCTION_NAME, __FILE__, ((size_t)((size_t)(m1)) * sizeof(**(r1))), (r1), ((size_t)((size_t)(m2)) * sizeof(**(r2))), (r2))
+#define PetscMalloc2(m1, r1, m2, r2) PetscMallocA(2, PETSC_FALSE, __LINE__, PETSC_FUNCTION_NAME, __FILE__, PetscMallocCast(m1, r1), (r1), PetscMallocCast(m2, r2), (r2))
 
 /*MC
    PetscCalloc2 - Allocates 2 cleared (zeroed) arrays of memory both aligned to `PETSC_MEMALIGN`
@@ -590,7 +619,7 @@ M*/
 
 .seealso: `PetscFree()`, `PetscNew()`, `PetscMalloc()`, `PetscCalloc1()`, `PetscMalloc2()`
 M*/
-#define PetscCalloc2(m1, r1, m2, r2) PetscMallocA(2, PETSC_TRUE, __LINE__, PETSC_FUNCTION_NAME, __FILE__, ((size_t)((size_t)(m1)) * sizeof(**(r1))), (r1), ((size_t)((size_t)(m2)) * sizeof(**(r2))), (r2))
+#define PetscCalloc2(m1, r1, m2, r2) PetscMallocA(2, PETSC_TRUE, __LINE__, PETSC_FUNCTION_NAME, __FILE__, PetscMallocCast(m1, r1), (r1), PetscMallocCast(m2, r2), (r2))
 
 /*MC
    PetscMalloc3 - Allocates 3 arrays of memory, all aligned to `PETSC_MEMALIGN`
@@ -615,8 +644,7 @@ M*/
 
 .seealso: `PetscFree()`, `PetscNew()`, `PetscMalloc()`, `PetscMalloc2()`, `PetscCalloc3()`, `PetscFree3()`
 M*/
-#define PetscMalloc3(m1, r1, m2, r2, m3, r3) \
-  PetscMallocA(3, PETSC_FALSE, __LINE__, PETSC_FUNCTION_NAME, __FILE__, ((size_t)((size_t)(m1)) * sizeof(**(r1))), (r1), ((size_t)((size_t)(m2)) * sizeof(**(r2))), (r2), ((size_t)((size_t)(m3)) * sizeof(**(r3))), (r3))
+#define PetscMalloc3(m1, r1, m2, r2, m3, r3) PetscMallocA(3, PETSC_FALSE, __LINE__, PETSC_FUNCTION_NAME, __FILE__, PetscMallocCast(m1, r1), (r1), PetscMallocCast(m2, r2), (r2), PetscMallocCast(m3, r3), (r3))
 
 /*MC
    PetscCalloc3 - Allocates 3 cleared (zeroed) arrays of memory, all aligned to `PETSC_MEMALIGN`
@@ -641,8 +669,7 @@ M*/
 
 .seealso: `PetscFree()`, `PetscNew()`, `PetscMalloc()`, `PetscCalloc2()`, `PetscMalloc3()`, `PetscFree3()`
 M*/
-#define PetscCalloc3(m1, r1, m2, r2, m3, r3) \
-  PetscMallocA(3, PETSC_TRUE, __LINE__, PETSC_FUNCTION_NAME, __FILE__, ((size_t)((size_t)(m1)) * sizeof(**(r1))), (r1), ((size_t)((size_t)(m2)) * sizeof(**(r2))), (r2), ((size_t)((size_t)(m3)) * sizeof(**(r3))), (r3))
+#define PetscCalloc3(m1, r1, m2, r2, m3, r3) PetscMallocA(3, PETSC_TRUE, __LINE__, PETSC_FUNCTION_NAME, __FILE__, PetscMallocCast(m1, r1), (r1), PetscMallocCast(m2, r2), (r2), PetscMallocCast(m3, r3), (r3))
 
 /*MC
    PetscMalloc4 - Allocates 4 arrays of memory, all aligned to `PETSC_MEMALIGN`
@@ -669,8 +696,7 @@ M*/
 
 .seealso: `PetscFree()`, `PetscNew()`, `PetscMalloc()`, `PetscMalloc2()`, `PetscCalloc4()`, `PetscFree4()`
 M*/
-#define PetscMalloc4(m1, r1, m2, r2, m3, r3, m4, r4) \
-  PetscMallocA(4, PETSC_FALSE, __LINE__, PETSC_FUNCTION_NAME, __FILE__, ((size_t)((size_t)(m1)) * sizeof(**(r1))), (r1), ((size_t)((size_t)(m2)) * sizeof(**(r2))), (r2), ((size_t)((size_t)(m3)) * sizeof(**(r3))), (r3), ((size_t)((size_t)(m4)) * sizeof(**(r4))), (r4))
+#define PetscMalloc4(m1, r1, m2, r2, m3, r3, m4, r4) PetscMallocA(4, PETSC_FALSE, __LINE__, PETSC_FUNCTION_NAME, __FILE__, PetscMallocCast(m1, r1), (r1), PetscMallocCast(m2, r2), (r2), PetscMallocCast(m3, r3), (r3), PetscMallocCast(m4, r4), (r4))
 
 /*MC
    PetscCalloc4 - Allocates 4 cleared (zeroed) arrays of memory, all aligned to `PETSC_MEMALIGN`
@@ -697,8 +723,7 @@ M*/
 
 .seealso: `PetscFree()`, `PetscNew()`, `PetscMalloc()`, `PetscMalloc2()`, `PetscCalloc4()`, `PetscFree4()`
 M*/
-#define PetscCalloc4(m1, r1, m2, r2, m3, r3, m4, r4) \
-  PetscMallocA(4, PETSC_TRUE, __LINE__, PETSC_FUNCTION_NAME, __FILE__, ((size_t)((size_t)(m1)) * sizeof(**(r1))), (r1), ((size_t)((size_t)(m2)) * sizeof(**(r2))), (r2), ((size_t)((size_t)(m3)) * sizeof(**(r3))), (r3), ((size_t)((size_t)(m4)) * sizeof(**(r4))), (r4))
+#define PetscCalloc4(m1, r1, m2, r2, m3, r3, m4, r4) PetscMallocA(4, PETSC_TRUE, __LINE__, PETSC_FUNCTION_NAME, __FILE__, PetscMallocCast(m1, r1), (r1), PetscMallocCast(m2, r2), (r2), PetscMallocCast(m3, r3), (r3), PetscMallocCast(m4, r4), (r4))
 
 /*MC
    PetscMalloc5 - Allocates 5 arrays of memory, all aligned to `PETSC_MEMALIGN`
@@ -728,7 +753,7 @@ M*/
 .seealso: `PetscFree()`, `PetscNew()`, `PetscMalloc()`, `PetscMalloc2()`, `PetscCalloc5()`, `PetscFree5()`
 M*/
 #define PetscMalloc5(m1, r1, m2, r2, m3, r3, m4, r4, m5, r5) \
-  PetscMallocA(5, PETSC_FALSE, __LINE__, PETSC_FUNCTION_NAME, __FILE__, ((size_t)((size_t)(m1)) * sizeof(**(r1))), (r1), ((size_t)((size_t)(m2)) * sizeof(**(r2))), (r2), ((size_t)((size_t)(m3)) * sizeof(**(r3))), (r3), ((size_t)((size_t)(m4)) * sizeof(**(r4))), (r4), ((size_t)((size_t)(m5)) * sizeof(**(r5))), (r5))
+  PetscMallocA(5, PETSC_FALSE, __LINE__, PETSC_FUNCTION_NAME, __FILE__, PetscMallocCast(m1, r1), (r1), PetscMallocCast(m2, r2), (r2), PetscMallocCast(m3, r3), (r3), PetscMallocCast(m4, r4), (r4), PetscMallocCast(m5, r5), (r5))
 
 /*MC
    PetscCalloc5 - Allocates 5 cleared (zeroed) arrays of memory, all aligned to `PETSC_MEMALIGN`
@@ -758,7 +783,7 @@ M*/
 .seealso: `PetscFree()`, `PetscNew()`, `PetscMalloc()`, `PetscMalloc5()`, `PetscFree5()`
 M*/
 #define PetscCalloc5(m1, r1, m2, r2, m3, r3, m4, r4, m5, r5) \
-  PetscMallocA(5, PETSC_TRUE, __LINE__, PETSC_FUNCTION_NAME, __FILE__, ((size_t)((size_t)(m1)) * sizeof(**(r1))), (r1), ((size_t)((size_t)(m2)) * sizeof(**(r2))), (r2), ((size_t)((size_t)(m3)) * sizeof(**(r3))), (r3), ((size_t)((size_t)(m4)) * sizeof(**(r4))), (r4), ((size_t)((size_t)(m5)) * sizeof(**(r5))), (r5))
+  PetscMallocA(5, PETSC_TRUE, __LINE__, PETSC_FUNCTION_NAME, __FILE__, PetscMallocCast(m1, r1), (r1), PetscMallocCast(m2, r2), (r2), PetscMallocCast(m3, r3), (r3), PetscMallocCast(m4, r4), (r4), PetscMallocCast(m5, r5), (r5))
 
 /*MC
    PetscMalloc6 - Allocates 6 arrays of memory, all aligned to `PETSC_MEMALIGN`
@@ -790,7 +815,7 @@ M*/
 .seealso: `PetscFree()`, `PetscNew()`, `PetscMalloc()`, `PetscMalloc2()`, `PetscCalloc6()`, `PetscFree3()`, `PetscFree4()`, `PetscFree5()`, `PetscFree6()`
 M*/
 #define PetscMalloc6(m1, r1, m2, r2, m3, r3, m4, r4, m5, r5, m6, r6) \
-  PetscMallocA(6, PETSC_FALSE, __LINE__, PETSC_FUNCTION_NAME, __FILE__, ((size_t)((size_t)(m1)) * sizeof(**(r1))), (r1), ((size_t)((size_t)(m2)) * sizeof(**(r2))), (r2), ((size_t)((size_t)(m3)) * sizeof(**(r3))), (r3), ((size_t)((size_t)(m4)) * sizeof(**(r4))), (r4), ((size_t)((size_t)(m5)) * sizeof(**(r5))), (r5), ((size_t)((size_t)(m6)) * sizeof(**(r6))), (r6))
+  PetscMallocA(6, PETSC_FALSE, __LINE__, PETSC_FUNCTION_NAME, __FILE__, PetscMallocCast(m1, r1), (r1), PetscMallocCast(m2, r2), (r2), PetscMallocCast(m3, r3), (r3), PetscMallocCast(m4, r4), (r4), PetscMallocCast(m5, r5), (r5), PetscMallocCast(m6, r6), (r6))
 
 /*MC
    PetscCalloc6 - Allocates 6 cleared (zeroed) arrays of memory, all aligned to `PETSC_MEMALIGN`
@@ -822,7 +847,7 @@ M*/
 .seealso: `PetscFree()`, `PetscNew()`, `PetscMalloc()`, `PetscMalloc2()`, `PetscMalloc6()`, `PetscFree6()`
 M*/
 #define PetscCalloc6(m1, r1, m2, r2, m3, r3, m4, r4, m5, r5, m6, r6) \
-  PetscMallocA(6, PETSC_TRUE, __LINE__, PETSC_FUNCTION_NAME, __FILE__, ((size_t)((size_t)(m1)) * sizeof(**(r1))), (r1), ((size_t)((size_t)(m2)) * sizeof(**(r2))), (r2), ((size_t)((size_t)(m3)) * sizeof(**(r3))), (r3), ((size_t)((size_t)(m4)) * sizeof(**(r4))), (r4), ((size_t)((size_t)(m5)) * sizeof(**(r5))), (r5), ((size_t)((size_t)(m6)) * sizeof(**(r6))), (r6))
+  PetscMallocA(6, PETSC_TRUE, __LINE__, PETSC_FUNCTION_NAME, __FILE__, PetscMallocCast(m1, r1), (r1), PetscMallocCast(m2, r2), (r2), PetscMallocCast(m3, r3), (r3), PetscMallocCast(m4, r4), (r4), PetscMallocCast(m5, r5), (r5), PetscMallocCast(m6, r6), (r6))
 
 /*MC
    PetscMalloc7 - Allocates 7 arrays of memory, all aligned to `PETSC_MEMALIGN`
@@ -856,7 +881,7 @@ M*/
 .seealso: `PetscFree()`, `PetscNew()`, `PetscMalloc()`, `PetscMalloc2()`, `PetscCalloc7()`, `PetscFree7()`
 M*/
 #define PetscMalloc7(m1, r1, m2, r2, m3, r3, m4, r4, m5, r5, m6, r6, m7, r7) \
-  PetscMallocA(7, PETSC_FALSE, __LINE__, PETSC_FUNCTION_NAME, __FILE__, ((size_t)((size_t)(m1)) * sizeof(**(r1))), (r1), ((size_t)((size_t)(m2)) * sizeof(**(r2))), (r2), ((size_t)((size_t)(m3)) * sizeof(**(r3))), (r3), ((size_t)((size_t)(m4)) * sizeof(**(r4))), (r4), ((size_t)((size_t)(m5)) * sizeof(**(r5))), (r5), ((size_t)((size_t)(m6)) * sizeof(**(r6))), (r6), ((size_t)((size_t)(m7)) * sizeof(**(r7))), (r7))
+  PetscMallocA(7, PETSC_FALSE, __LINE__, PETSC_FUNCTION_NAME, __FILE__, PetscMallocCast(m1, r1), (r1), PetscMallocCast(m2, r2), (r2), PetscMallocCast(m3, r3), (r3), PetscMallocCast(m4, r4), (r4), PetscMallocCast(m5, r5), (r5), PetscMallocCast(m6, r6), (r6), PetscMallocCast(m7, r7), (r7))
 
 /*MC
    PetscCalloc7 - Allocates 7 cleared (zeroed) arrays of memory, all aligned to `PETSC_MEMALIGN`
@@ -890,7 +915,7 @@ M*/
 .seealso: `PetscFree()`, `PetscNew()`, `PetscMalloc()`, `PetscMalloc2()`, `PetscMalloc7()`, `PetscFree7()`
 M*/
 #define PetscCalloc7(m1, r1, m2, r2, m3, r3, m4, r4, m5, r5, m6, r6, m7, r7) \
-  PetscMallocA(7, PETSC_TRUE, __LINE__, PETSC_FUNCTION_NAME, __FILE__, ((size_t)((size_t)(m1)) * sizeof(**(r1))), (r1), ((size_t)((size_t)(m2)) * sizeof(**(r2))), (r2), ((size_t)((size_t)(m3)) * sizeof(**(r3))), (r3), ((size_t)((size_t)(m4)) * sizeof(**(r4))), (r4), ((size_t)((size_t)(m5)) * sizeof(**(r5))), (r5), ((size_t)((size_t)(m6)) * sizeof(**(r6))), (r6), ((size_t)((size_t)(m7)) * sizeof(**(r7))), (r7))
+  PetscMallocA(7, PETSC_TRUE, __LINE__, PETSC_FUNCTION_NAME, __FILE__, PetscMallocCast(m1, r1), (r1), PetscMallocCast(m2, r2), (r2), PetscMallocCast(m3, r3), (r3), PetscMallocCast(m4, r4), (r4), PetscMallocCast(m5, r5), (r5), PetscMallocCast(m6, r6), (r6), PetscMallocCast(m7, r7), (r7))
 
 /*MC
    PetscNew - Allocates memory of a particular type, zeros the memory! Aligned to `PETSC_MEMALIGN`
@@ -933,7 +958,7 @@ M*/
 
 .seealso: `PetscNew()`, `PetscMalloc()`, `PetscMalloc1()`, `PetscCalloc1()`
 M*/
-#define PetscFree(a) ((PetscErrorCode)((*PetscTrFree)((void *)(a), __LINE__, PETSC_FUNCTION_NAME, __FILE__) || ((a) = PETSC_NULLPTR, PETSC_SUCCESS)))
+#define PetscFree(a) ((PetscErrorCode)((*PetscTrFree)((a), __LINE__, PETSC_FUNCTION_NAME, __FILE__) || ((a) = PETSC_NULLPTR, PETSC_SUCCESS)))
 
 /*MC
    PetscFreeConst - Frees const memory
@@ -1209,7 +1234,7 @@ PETSC_EXTERN PetscBool   PetscCIEnabledPortableErrorOutput; /* error output is s
 PETSC_EXTERN const char *PetscCIFilename(const char *);
 PETSC_EXTERN int         PetscCILinenumber(int);
 
-#define PETSC_SMALLEST_CLASSID ((PetscClassId)1211211)
+#define PETSC_SMALLEST_CLASSID 1211211
 PETSC_EXTERN PetscClassId   PETSC_LARGEST_CLASSID;
 PETSC_EXTERN PetscClassId   PETSC_OBJECT_CLASSID;
 PETSC_EXTERN PetscErrorCode PetscClassIdRegister(const char[], PetscClassId *);
@@ -1640,8 +1665,10 @@ PETSC_EXTERN PetscErrorCode PetscScalarView(PetscInt, const PetscScalar[], Petsc
 M*/
   #define PetscPrefetchBlock(a, n, rw, t) \
     do { \
+      PETSC_SILENCE_WUSELESSCAST_BEGIN; \
       const char *_p = (const char *)(a), *_end = (const char *)((a) + (n)); \
       for (; _p < _end; _p += PETSC_LEVEL1_DCACHE_LINESIZE) PETSC_Prefetch(_p, (rw), (t)); \
+      PETSC_SILENCE_WUSELESSCAST_END; \
     } while (0)
 #endif
 /*
@@ -1879,7 +1906,11 @@ static inline PetscErrorCode PetscMPIIntCast(MPIU_Count a, PetscMPIInt *b)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-#define PetscInt64Mult(a, b) (((PetscInt64)(a)) * ((PetscInt64)(b)))
+#if defined(PETSC_USE_64BIT_INDICES)
+  #define PetscInt64Mult(a, b) ((a) * (b))
+#else
+  #define PetscInt64Mult(a, b) (((PetscInt64)(a)) * ((PetscInt64)(b)))
+#endif
 
 /*@C
   PetscRealIntMultTruncate - Computes the product of a positive `PetscReal` and a positive
@@ -1917,7 +1948,11 @@ static inline PetscInt PetscRealIntMultTruncate(PetscReal a, PetscInt b)
 {
   PetscInt64 r = (PetscInt64)(a * (PetscReal)b);
   if (r > PETSC_INT_MAX - 100) r = PETSC_INT_MAX - 100;
+#if defined(PETSC_USE_64BIT_INDICES)
+  return r;
+#else
   return (PetscInt)r;
+#endif
 }
 
 /*@C
@@ -1953,7 +1988,11 @@ static inline PetscInt PetscIntMultTruncate(PetscInt a, PetscInt b)
 {
   PetscInt64 r = PetscInt64Mult(a, b);
   if (r > PETSC_INT_MAX - 100) r = PETSC_INT_MAX - 100;
+#if defined(PETSC_USE_64BIT_INDICES)
+  return r;
+#else
   return (PetscInt)r;
+#endif
 }
 
 /*@C
@@ -1984,9 +2023,15 @@ static inline PetscInt PetscIntMultTruncate(PetscInt a, PetscInt b)
 @*/
 static inline PetscInt PetscIntSumTruncate(PetscInt a, PetscInt b)
 {
-  PetscInt64 r = ((PetscInt64)a) + ((PetscInt64)b);
+  PetscInt64 r = a;
+
+  r += b;
   if (r > PETSC_INT_MAX - 100) r = PETSC_INT_MAX - 100;
+#if defined(PETSC_USE_64BIT_INDICES)
+  return r;
+#else
   return (PetscInt)r;
+#endif
 }
 
 /*@C
@@ -2019,7 +2064,11 @@ static inline PetscErrorCode PetscIntMultError(PetscInt a, PetscInt b, PetscInt 
   PetscInt64 r = PetscInt64Mult(a, b);
 
   PetscFunctionBegin;
+#if defined(PETSC_USE_64BIT_INDICES)
+  if (result) *result = r;
+#else
   if (result) *result = (PetscInt)r;
+#endif
   if (!PetscDefined(USE_64BIT_INDICES)) {
     PetscCheck(r <= PETSC_INT_MAX, PETSC_COMM_SELF, PETSC_ERR_SUP, "Product of two integers %" PetscInt_FMT " %" PetscInt_FMT " overflow, either you have an invalidly large integer error in your code or you must ./configure PETSc with --with-64-bit-indices for the case you are running", a, b);
   }
@@ -2050,10 +2099,15 @@ static inline PetscErrorCode PetscIntMultError(PetscInt a, PetscInt b, PetscInt 
 @*/
 static inline PetscErrorCode PetscIntSumError(PetscInt a, PetscInt b, PetscInt *result)
 {
-  PetscInt64 r = ((PetscInt64)a) + ((PetscInt64)b);
+  PetscInt64 r = a;
 
   PetscFunctionBegin;
+  r += b;
+#if defined(PETSC_USE_64BIT_INDICES)
+  if (result) *result = r;
+#else
   if (result) *result = (PetscInt)r;
+#endif
   if (!PetscDefined(USE_64BIT_INDICES)) {
     PetscCheck(r <= PETSC_INT_MAX, PETSC_COMM_SELF, PETSC_ERR_SUP, "Sum of two integers %" PetscInt_FMT " %" PetscInt_FMT " overflow, either you have an invalidly large integer error in your code or you must ./configure PETSc with --with-64-bit-indices for the case you are running", a, b);
   }
@@ -2615,6 +2669,7 @@ M*/
 #if defined(PETSC_USE_DEBUG)
   #define MPIU_Allreduce(a, b, c, d, e, fcomm) \
     PetscMacroReturnStandard( \
+    PETSC_SILENCE_WUSELESSCAST_BEGIN; \
     PetscMPIInt a_b1[6], a_b2[6]; \
     int _mpiu_allreduce_c_int = (int)(c); \
     a_b1[0] = -(PetscMPIInt)__LINE__; \
@@ -2624,6 +2679,7 @@ M*/
     a_b1[4] = -(PetscMPIInt)(c); \
     a_b1[5] = -a_b1[4]; \
     \
+    PETSC_SILENCE_WUSELESSCAST_END; \
     PetscCallMPI(MPI_Allreduce(a_b1, a_b2, 6, MPI_INT, MPI_MAX, fcomm)); \
     PetscCheck(-a_b2[0] == a_b2[1], (fcomm), PETSC_ERR_PLIB, "MPIU_Allreduce() called in different locations (code lines) on different processors"); \
     PetscCheck(-a_b2[2] == a_b2[3], (fcomm), PETSC_ERR_PLIB, "MPIU_Allreduce() called in different locations (functions) on different processors"); \

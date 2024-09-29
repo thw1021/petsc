@@ -1192,10 +1192,7 @@ static PetscErrorCode MatView_MPIAIJ_Binary(Mat mat, PetscViewer viewer)
   header[2] = N;
   PetscCallMPI(MPI_Reduce(&nz, &hnz, 1, MPIU_INT64, MPI_SUM, 0, PetscObjectComm((PetscObject)mat)));
   PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)mat), &rank));
-  if (rank == 0) {
-    if (hnz > PETSC_INT_MAX) header[3] = PETSC_INT_MAX;
-    else header[3] = (PetscInt)hnz;
-  }
+  if (rank == 0) PetscCall(PetscIntCast(hnz, &header[3]));
   PetscCall(PetscViewerBinaryWrite(viewer, header, 4, PETSC_INT));
 
   /* fill in and store row lengths  */
@@ -1281,10 +1278,10 @@ static PetscErrorCode MatView_MPIAIJ_ASCIIorDraworSocket(Mat mat, PetscViewer vi
       PetscCall(PetscViewerASCIIPushSynchronized(viewer));
       if (!inodes) {
         PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "[%d] Local rows %" PetscInt_FMT " nz %" PetscInt_FMT " nz alloced %" PetscInt_FMT " mem %g, not using I-node routines\n", rank, mat->rmap->n, (PetscInt)info.nz_used, (PetscInt)info.nz_allocated,
-                                                     (double)info.memory));
+                                                     info.memory));
       } else {
-        PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "[%d] Local rows %" PetscInt_FMT " nz %" PetscInt_FMT " nz alloced %" PetscInt_FMT " mem %g, using I-node routines\n", rank, mat->rmap->n, (PetscInt)info.nz_used, (PetscInt)info.nz_allocated,
-                                                     (double)info.memory));
+        PetscCall(
+          PetscViewerASCIISynchronizedPrintf(viewer, "[%d] Local rows %" PetscInt_FMT " nz %" PetscInt_FMT " nz alloced %" PetscInt_FMT " mem %g, using I-node routines\n", rank, mat->rmap->n, (PetscInt)info.nz_used, (PetscInt)info.nz_allocated, info.memory));
       }
       PetscCall(MatGetInfo(aij->A, MAT_LOCAL, &info));
       PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "[%d] on-diagonal part: nz %" PetscInt_FMT " \n", rank, (PetscInt)info.nz_used));
@@ -3159,7 +3156,7 @@ static PetscErrorCode ISGetSeqIS_Private(Mat mat, IS iscol, IS *isseq)
 .   iscol_o - sequential column index set for retrieving mat->B
 -   garray - column map; garray[i] indicates global location of iscol_o[i] in `iscol`
  */
-static PetscErrorCode ISGetSeqIS_SameColDist_Private(Mat mat, IS isrow, IS iscol, IS *isrow_d, IS *iscol_d, IS *iscol_o, const PetscInt *garray[])
+static PetscErrorCode ISGetSeqIS_SameColDist_Private(Mat mat, IS isrow, IS iscol, IS *isrow_d, IS *iscol_d, IS *iscol_o, PetscInt *garray[])
 {
   Vec             x, cmap;
   const PetscInt *is_idx;
@@ -3289,8 +3286,8 @@ PetscErrorCode MatCreateSubMatrix_MPIAIJ_SameRowColDist(Mat mat, IS isrow, IS is
     PetscCall(MatAssemblyEnd(*submat, MAT_FINAL_ASSEMBLY));
 
   } else { /* call == MAT_INITIAL_MATRIX) */
-    const PetscInt *garray;
-    PetscInt        BsubN;
+    PetscInt *garray;
+    PetscInt  BsubN;
 
     /* Create isrow_d, iscol_d, iscol_o and isgarray (replace isgarray with array?) */
     PetscCall(ISGetSeqIS_SameColDist_Private(mat, isrow, iscol, &isrow_d, &iscol_d, &iscol_o, &garray));

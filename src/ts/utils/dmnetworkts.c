@@ -152,7 +152,7 @@ PetscErrorCode TSMonitorLGCtxNetworkSolution(TS ts, PetscInt step, PetscReal pti
     if (!nvar) continue;
 
     PetscCall(DMNetworkGetLocalVecOffset(dm, e, ALL_COMPONENTS, &offset));
-    PetscCall(PetscDrawLGAddCommonPoint(ctx->lg[i], ptime, (const PetscReal *)(xv + offset)));
+    PetscCall(PetscDrawLGAddCommonPoint(ctx->lg[i], ptime, xv + offset));
     i++;
   }
 
@@ -163,7 +163,7 @@ PetscErrorCode TSMonitorLGCtxNetworkSolution(TS ts, PetscInt step, PetscReal pti
     if (!nvar) continue;
 
     PetscCall(DMNetworkGetLocalVecOffset(dm, v, ALL_COMPONENTS, &offset));
-    PetscCall(PetscDrawLGAddCommonPoint(ctx->lg[i], ptime, (const PetscReal *)(xv + offset)));
+    PetscCall(PetscDrawLGAddCommonPoint(ctx->lg[i], ptime, xv + offset));
     i++;
   }
   if (ctx->semilogy) {

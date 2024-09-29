@@ -1791,7 +1791,7 @@ PetscErrorCode VecUniqueEntries(Vec vec, PetscInt *n, PetscScalar **e)
   SETERRQ(PetscObjectComm((PetscObject)vec), PETSC_ERR_SUP, "Does not work with complex numbers");
 #else
   *n = displs[size];
-  PetscCall(PetscSortRemoveDupsReal(n, (PetscReal *)vals));
+  PetscCall(PetscSortRemoveDupsReal(n, vals));
   if (e) {
     PetscAssertPointer(e, 3);
     PetscCall(PetscMalloc1(*n, e));

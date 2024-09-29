@@ -312,10 +312,10 @@ PetscErrorCode PetscDrawHGDraw(PetscDrawHG hist)
     numBins    = hist->numBins;
     numBinsOld = hist->numBins;
     if (hist->integerBins && (((int)xmax - xmin) + 1.0e-05 > xmax - xmin)) {
-      initSize = (int)((int)(xmax - xmin)) / numBins;
+      initSize = ((int)(xmax - xmin)) / numBins;
       while (initSize * numBins != (int)xmax - xmin) {
         initSize = PetscMax(initSize - 1, 1);
-        numBins  = (int)((int)(xmax - xmin)) / initSize;
+        numBins  = ((int)(xmax - xmin)) / initSize;
         PetscCall(PetscDrawHGSetNumberBins(hist, numBins));
       }
     }

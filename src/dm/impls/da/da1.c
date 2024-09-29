@@ -172,8 +172,8 @@ PetscErrorCode DMSetUp_DA_1D(DM da)
     } else { /* The odd nodes are evenly distributed across the first k nodes */
       /* Regular PETSc Distribution */
       x = M / m + ((M % m) > rank);
-      if (rank >= (M % m)) xs = (rank * (PetscInt)(M / m) + M % m);
-      else xs = rank * (PetscInt)(M / m) + rank;
+      if (rank >= (M % m)) xs = (rank * (M / m) + M % m);
+      else xs = rank * (M / m) + rank;
     }
     PetscCallMPI(MPI_Allgather(&xs, 1, MPIU_INT, dd->lx, 1, MPIU_INT, comm));
     for (i = 0; i < m - 1; i++) dd->lx[i] = dd->lx[i + 1] - dd->lx[i];

@@ -80,7 +80,7 @@ PetscErrorCode DMSwarmMigrate_Push_Basic(DM dm, PetscBool remove_sent_points)
   }
   PetscCall(DMSwarmDataExBegin(de));
   PetscCall(DMSwarmDataExEnd(de));
-  PetscCall(DMSwarmDataExGetRecvData(de, &n_points_recv, (void **)&recv_points));
+  PetscCall(DMSwarmDataExGetRecvData(de, &n_points_recv, &recv_points));
   PetscCall(DMSwarmDataBucketGetSizes(swarm->db, &npoints, NULL, NULL));
   PetscCall(DMSwarmDataBucketSetSizes(swarm->db, npoints + n_points_recv, DMSWARM_DATA_BUCKET_BUFFER_DEFAULT));
   for (p = 0; p < n_points_recv; p++) {
@@ -164,7 +164,7 @@ static PetscErrorCode DMSwarmMigrate_DMNeighborScatter(DM dm, DM dmcell, PetscBo
   PetscCall(DMSwarmDataBucketGetSizes(swarm->db, npoints_prior_migration, NULL, NULL));
   PetscCall(DMSwarmDataExBegin(de));
   PetscCall(DMSwarmDataExEnd(de));
-  PetscCall(DMSwarmDataExGetRecvData(de, &n_points_recv, (void **)&recv_points));
+  PetscCall(DMSwarmDataExGetRecvData(de, &n_points_recv, &recv_points));
   PetscCall(DMSwarmDataBucketGetSizes(swarm->db, &npoints, NULL, NULL));
   PetscCall(DMSwarmDataBucketSetSizes(swarm->db, npoints + n_points_recv, DMSWARM_DATA_BUCKET_BUFFER_DEFAULT));
   for (p = 0; p < n_points_recv; p++) {
@@ -410,7 +410,7 @@ PetscErrorCode DMSwarmMigrate_GlobalToLocal_Basic(DM dm, PetscInt *globalsize)
   PetscCall(DMSwarmRestoreField(dm, DMSwarmField_rank, NULL, NULL, (void **)&rankval));
   PetscCall(DMSwarmDataExBegin(de));
   PetscCall(DMSwarmDataExEnd(de));
-  PetscCall(DMSwarmDataExGetRecvData(de, &n_points_recv, (void **)&recv_points));
+  PetscCall(DMSwarmDataExGetRecvData(de, &n_points_recv, &recv_points));
   PetscCall(DMSwarmDataBucketGetSizes(swarm->db, &npoints, NULL, NULL));
   PetscCall(DMSwarmDataBucketSetSizes(swarm->db, npoints + n_points_recv, DMSWARM_DATA_BUCKET_BUFFER_DEFAULT));
   for (p = 0; p < n_points_recv; p++) {
@@ -557,7 +557,7 @@ PETSC_EXTERN PetscErrorCode DMSwarmCollect_DMDABoundingBox(DM dm, PetscInt *glob
   PetscCall(DMSwarmRestoreField(dm, DMSwarmField_rank, NULL, NULL, (void **)&rankval));
   PetscCall(DMSwarmDataExBegin(de));
   PetscCall(DMSwarmDataExEnd(de));
-  PetscCall(DMSwarmDataExGetRecvData(de, &n_points_recv, (void **)&recv_points));
+  PetscCall(DMSwarmDataExGetRecvData(de, &n_points_recv, &recv_points));
   PetscCall(DMSwarmDataBucketGetSizes(swarm->db, &npoints, NULL, NULL));
   PetscCall(DMSwarmDataBucketSetSizes(swarm->db, npoints + n_points_recv, DMSWARM_DATA_BUCKET_BUFFER_DEFAULT));
   for (p = 0; p < n_points_recv; p++) {
@@ -621,7 +621,7 @@ PETSC_EXTERN PetscErrorCode DMSwarmCollect_General(DM dm, PetscErrorCode (*colle
   /* Define topology */
   PetscCall(DMSwarmDataExTopologyInitialize(de));
   for (PetscMPIInt r = 0; r < size; r++) {
-    if (n2collect[r] > 0) PetscCall(DMSwarmDataExTopologyAddNeighbour(de, (PetscMPIInt)r));
+    if (n2collect[r] > 0) PetscCall(DMSwarmDataExTopologyAddNeighbour(de, r));
   }
   PetscCall(DMSwarmDataExTopologyFinalize(de));
   /* Define send counts */
@@ -645,7 +645,7 @@ PETSC_EXTERN PetscErrorCode DMSwarmCollect_General(DM dm, PetscErrorCode (*colle
   PetscCall(DMSwarmDataExBegin(de));
   PetscCall(DMSwarmDataExEnd(de));
   /* Collect data in DMSwarm container */
-  PetscCall(DMSwarmDataExGetRecvData(de, &n_points_recv, (void **)&recv_points));
+  PetscCall(DMSwarmDataExGetRecvData(de, &n_points_recv, &recv_points));
   PetscCall(DMSwarmDataBucketGetSizes(swarm->db, &npoints, NULL, NULL));
   PetscCall(DMSwarmDataBucketSetSizes(swarm->db, npoints + n_points_recv, DMSWARM_DATA_BUCKET_BUFFER_DEFAULT));
   for (p = 0; p < n_points_recv; p++) {

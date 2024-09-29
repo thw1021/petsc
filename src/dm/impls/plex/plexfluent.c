@@ -86,7 +86,7 @@ static PetscErrorCode DMPlexCreateFluent_ReadValues(PetscViewer viewer, void *da
     PetscCall(PetscMalloc1(count, &fbuf));
     PetscCall(PetscBinaryRead(fdes, fbuf, count, NULL, PETSC_FLOAT));
     PetscCall(PetscByteSwap(fbuf, PETSC_FLOAT, count));
-    for (i = 0; i < count; i++) ((PetscScalar *)data)[i] = (PetscScalar)fbuf[i];
+    for (i = 0; i < count; i++) ((PetscScalar *)data)[i] = fbuf[i];
     PetscCall(PetscFree(fbuf));
   } else {
     PetscCall(PetscViewerASCIIRead(viewer, data, count, NULL, dtype));

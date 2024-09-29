@@ -71,6 +71,7 @@ static PetscErrorCode DMFieldDSGetHeightDisc(DMField field, PetscInt height, Pet
 /* y[m,c] = A[m,n,c] . b[n] */
 #define DMFieldDSdot(y, A, b, m, n, c, cast) \
   do { \
+    PETSC_SILENCE_WUSELESSCAST_BEGIN; \
     PetscInt _i, _j, _k; \
     for (_i = 0; _i < (m); _i++) { \
       for (_k = 0; _k < (c); _k++) (y)[_i * (c) + _k] = 0.; \
@@ -78,6 +79,7 @@ static PetscErrorCode DMFieldDSGetHeightDisc(DMField field, PetscInt height, Pet
         for (_k = 0; _k < (c); _k++) (y)[_i * (c) + _k] += (A)[(_i * (n) + _j) * (c) + _k] * cast((b)[_j]); \
       } \
     } \
+    PETSC_SILENCE_WUSELESSCAST_END; \
   } while (0)
 
 /*
@@ -136,7 +138,7 @@ static PetscErrorCode DMFieldRestoreClosure_Internal(DMField field, PetscInt cel
   } else {
     PetscCall(DMFieldGetDM(field, &fdm));
     PetscCall(DMGetLocalSection(fdm, &s));
-    PetscCall(DMPlexVecRestoreClosure(fdm, s, dsfield->vec, cell, Nc, (PetscScalar **)values));
+    PetscCall(DMPlexVecRestoreClosure(fdm, s, dsfield->vec, cell, Nc, values));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }

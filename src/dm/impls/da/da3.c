@@ -124,7 +124,7 @@ static PetscErrorCode DMView_DA_3d(DM da, PetscViewer viewer)
         xmax = (dd->xe - 1) / dd->w;
 
         /* identify which processor owns the box */
-        PetscCall(PetscSNPrintf(node, sizeof(node), "%d", (int)rank));
+        PetscCall(PetscSNPrintf(node, sizeof(node), "%d", rank));
         PetscCall(PetscDrawString(draw, xmin + (dd->M + 1) * k + .2, ymin + .3, PETSC_DRAW_RED, node));
         /* put in numbers*/
         base = (dd->base + (dd->xe - dd->xs) * (dd->ye - dd->ys) * (k - dd->zs)) / dd->w;

@@ -57,7 +57,7 @@ static PetscErrorCode MatDenseOrthogonalRangeOrComplement(Mat A, PetscBool range
   PetscCall(PetscFree(rwork2));
 #endif
   PetscCall(PetscFPTrapPop());
-  PetscCheck(!lierr, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in GESVD Lapack routine %d", (int)lierr);
+  PetscCheck(!lierr, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in GESVD Lapack routine %" PetscBLASInt_FMT, lierr);
   PetscCall(MatDenseRestoreArray(A, &data));
   for (i = 0; i < n; i++)
     if (sing[i] < PETSC_SMALL) break;
@@ -3321,7 +3321,7 @@ PetscErrorCode PCBDDCAdaptiveSelection(PC pc)
 #else
     PetscCallBLAS("LAPACKsygvx", LAPACKsygvx_(&B_itype, "V", "V", "L", &B_N, St, &B_N, S, &B_N, &zero, &thresh, &B_dummyint, &B_dummyint, &eps, &B_neigs, eigs, eigv, &B_N, &lwork, &B_lwork, B_iwork, B_ifail, &B_ierr));
 #endif
-    PetscCheck(B_ierr == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in query to SYGVX Lapack routine %d", (int)B_ierr);
+    PetscCheck(B_ierr == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in query to SYGVX Lapack routine %" PetscBLASInt_FMT, B_ierr);
     PetscCall(PetscFPTrapPop());
   }
 
@@ -3740,7 +3740,7 @@ PetscErrorCode PCBDDCAdaptiveSelection(PC pc)
               if (upart) {
                 PetscCall(PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer, "     %1.6e\n", (double)eigs[j + eigs_start]));
               } else {
-                PetscCall(PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer, "     %1.6e\n", (double)(1. / eigs[j + eigs_start])));
+                PetscCall(PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer, "     %1.6e\n", (double)(1 / eigs[j + eigs_start])));
               }
             }
           } else {
@@ -5770,7 +5770,7 @@ static PetscErrorCode MatNullSpacePropagateAny_Private(Mat A, IS is, Mat B)
   PetscCall(MatCreateVecs(A, &v, NULL));
   PetscCall(MatCreateVecs(B, &v2, NULL));
   if (!sct) PetscCall(VecScatterCreate(v, is, v2, NULL, &sct));
-  PetscCall(MatNullSpaceGetVecs(NullSpace, &nnsp_has_cnst, &nnsp_size, (const Vec **)&nullvecs));
+  PetscCall(MatNullSpaceGetVecs(NullSpace, &nnsp_has_cnst, &nnsp_size, &nullvecs));
   bsiz = bsiz2 = nnsp_size + !!nnsp_has_cnst;
   PetscCall(PetscMalloc1(bsiz, &nullvecs2));
   PetscCall(VecGetBlockSize(v2, &bs));
@@ -6576,7 +6576,7 @@ PetscErrorCode PCBDDCConstraintsSetUp(PC pc)
         PetscCallBLAS("LAPACKsyev", LAPACKsyev_("V", "U", &Blas_N, correlation_mat, &Blas_LDA, singular_vals, &temp_work, &lwork, rwork, &lierr));
 #endif
         PetscCall(PetscFPTrapPop());
-        PetscCheck(!lierr, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in query to SYEV Lapack routine %d", (int)lierr);
+        PetscCheck(!lierr, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in query to SYEV Lapack routine %" PetscBLASInt_FMT, lierr);
       } else {
 #if !defined(PETSC_MISSING_LAPACK_GESVD)
         /* SVD */
@@ -6603,7 +6603,7 @@ PetscErrorCode PCBDDCConstraintsSetUp(PC pc)
         PetscCallBLAS("LAPACKgesvd", LAPACKgesvd_("O", "N", &Blas_M, &Blas_N, &constraints_data[0], &Blas_LDA, singular_vals, &dummy_scalar, &dummy_int, &dummy_scalar, &dummy_int, &temp_work, &lwork, rwork, &lierr));
   #endif
         PetscCall(PetscFPTrapPop());
-        PetscCheck(!lierr, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in query to GESVD Lapack routine %d", (int)lierr);
+        PetscCheck(!lierr, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in query to GESVD Lapack routine %" PetscBLASInt_FMT, lierr);
 #else
         SETERRQ(PETSC_COMM_SELF, PETSC_ERR_LIB, "This should not happen");
 #endif /* on missing GESVD */
@@ -6721,7 +6721,7 @@ PetscErrorCode PCBDDCConstraintsSetUp(PC pc)
             PetscCallBLAS("LAPACKsyev", LAPACKsyev_("V", "U", &Blas_N, correlation_mat, &Blas_LDA, singular_vals, work, &lwork, rwork, &lierr));
 #endif
             PetscCall(PetscFPTrapPop());
-            PetscCheck(!lierr, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in SYEV Lapack routine %d", (int)lierr);
+            PetscCheck(!lierr, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in SYEV Lapack routine %" PetscBLASInt_FMT, lierr);
             /* retain eigenvalues greater than tol: note that LAPACKsyev gives eigs in ascending order */
             j = 0;
             while (j < temp_constraints && singular_vals[j] / singular_vals[temp_constraints - 1] < tol) j++;
@@ -6755,7 +6755,7 @@ PetscErrorCode PCBDDCConstraintsSetUp(PC pc)
   #else
             PetscCallBLAS("LAPACKgesvd", LAPACKgesvd_("O", "N", &Blas_M, &Blas_N, ptr_to_data, &Blas_LDA, singular_vals, &dummy_scalar, &dummy_int, &dummy_scalar, &dummy_int, work, &lwork, rwork, &lierr));
   #endif
-            PetscCheck(!lierr, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in GESVD Lapack routine %d", (int)lierr);
+            PetscCheck(!lierr, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in GESVD Lapack routine %" PetscBLASInt_FMT, lierr);
             PetscCall(PetscFPTrapPop());
             /* retain eigenvalues greater than tol: note that LAPACKgesvd gives eigs in descending order */
             k = temp_constraints;
@@ -7029,7 +7029,7 @@ PetscErrorCode PCBDDCConstraintsSetUp(PC pc)
       PetscCall(PetscBLASIntCast(max_size_of_constraint, &Blas_LDA));
       lqr_work = -1;
       PetscCallBLAS("LAPACKgeqrf", LAPACKgeqrf_(&Blas_M, &Blas_N, qr_basis, &Blas_LDA, qr_tau, &lqr_work_t, &lqr_work, &lierr));
-      PetscCheck(!lierr, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in query to GEQRF Lapack routine %d", (int)lierr);
+      PetscCheck(!lierr, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in query to GEQRF Lapack routine %" PetscBLASInt_FMT, lierr);
       PetscCall(PetscBLASIntCast((PetscInt)PetscRealPart(lqr_work_t), &lqr_work));
       PetscCall(PetscMalloc1(lqr_work, &qr_work));
       lgqr_work = -1;
@@ -7039,7 +7039,7 @@ PetscErrorCode PCBDDCConstraintsSetUp(PC pc)
       PetscCall(PetscBLASIntCast(max_size_of_constraint, &Blas_LDA));
       if (Blas_K > Blas_M) Blas_K = Blas_M; /* adjust just for computing optimal work */
       PetscCallBLAS("LAPACKorgqr", LAPACKorgqr_(&Blas_M, &Blas_N, &Blas_K, qr_basis, &Blas_LDA, qr_tau, &lgqr_work_t, &lgqr_work, &lierr));
-      PetscCheck(!lierr, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in query to ORGQR/UNGQR Lapack routine %d", (int)lierr);
+      PetscCheck(!lierr, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in query to ORGQR/UNGQR Lapack routine %" PetscBLASInt_FMT, lierr);
       PetscCall(PetscBLASIntCast((PetscInt)PetscRealPart(lgqr_work_t), &lgqr_work));
       PetscCall(PetscMalloc1(lgqr_work, &gqr_work));
       /* array to store rhs and solution of triangular solver */
@@ -7078,7 +7078,7 @@ PetscErrorCode PCBDDCConstraintsSetUp(PC pc)
           PetscCall(PetscBLASIntCast(size_of_constraint, &Blas_LDA));
           PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
           PetscCallBLAS("LAPACKgeqrf", LAPACKgeqrf_(&Blas_M, &Blas_N, qr_basis, &Blas_LDA, qr_tau, qr_work, &lqr_work, &lierr));
-          PetscCheck(!lierr, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in GEQRF Lapack routine %d", (int)lierr);
+          PetscCheck(!lierr, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in GEQRF Lapack routine %" PetscBLASInt_FMT, lierr);
           PetscCall(PetscFPTrapPop());
 
           /* explicitly compute R^-T */
@@ -7090,7 +7090,7 @@ PetscErrorCode PCBDDCConstraintsSetUp(PC pc)
           PetscCall(PetscBLASIntCast(primal_dofs, &Blas_LDB));
           PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
           PetscCallBLAS("LAPACKtrtrs", LAPACKtrtrs_("U", "T", "N", &Blas_N, &Blas_NRHS, qr_basis, &Blas_LDA, trs_rhs, &Blas_LDB, &lierr));
-          PetscCheck(!lierr, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in TRTRS Lapack routine %d", (int)lierr);
+          PetscCheck(!lierr, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in TRTRS Lapack routine %" PetscBLASInt_FMT, lierr);
           PetscCall(PetscFPTrapPop());
 
           /* explicitly compute all columns of Q (Q = [Q1 | Q2]) overwriting QR factorization in qr_basis */
@@ -7100,7 +7100,7 @@ PetscErrorCode PCBDDCConstraintsSetUp(PC pc)
           PetscCall(PetscBLASIntCast(size_of_constraint, &Blas_LDA));
           PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
           PetscCallBLAS("LAPACKorgqr", LAPACKorgqr_(&Blas_M, &Blas_N, &Blas_K, qr_basis, &Blas_LDA, qr_tau, gqr_work, &lgqr_work, &lierr));
-          PetscCheck(!lierr, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in ORGQR/UNGQR Lapack routine %d", (int)lierr);
+          PetscCheck(!lierr, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in ORGQR/UNGQR Lapack routine %" PetscBLASInt_FMT, lierr);
           PetscCall(PetscFPTrapPop());
 
           /* first primal_dofs columns of Q need to be re-scaled in order to be unitary w.r.t constraints

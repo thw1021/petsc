@@ -638,8 +638,8 @@ static PetscErrorCode PetscDrawXGetDisplaySize_Private(const char name[], int *w
   display = XOpenDisplay(name);
   if (display) {
     *has_display = PETSC_TRUE;
-    *width       = (int)DisplayWidth(display, DefaultScreen(display));
-    *height      = (int)DisplayHeight(display, DefaultScreen(display));
+    *width       = DisplayWidth(display, DefaultScreen(display));
+    *height      = DisplayHeight(display, DefaultScreen(display));
     XCloseDisplay(display);
   } else {
     *has_display = PETSC_FALSE;

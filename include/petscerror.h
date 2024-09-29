@@ -1468,12 +1468,14 @@ PETSC_EXTERN PetscStack petscstack;
     do { \
       PetscCheckAbort(!stack__.check || stack__.currentsize > 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Invalid stack size %d, pop %s %s:%d.\n", stack__.currentsize, func__, __FILE__, __LINE__); \
       if (--stack__.currentsize < PETSCSTACKSIZE) { \
+        PETSC_SILENCE_WUSELESSCAST_BEGIN; \
         PetscCheckAbort(!stack__.check || stack__.petscroutine[stack__.currentsize] != 1 || stack__.function[stack__.currentsize] == (const char *)(func__), PETSC_COMM_SELF, PETSC_ERR_PLIB, "Invalid stack: push from %s %s:%d. Pop from %s %s:%d.\n", \
                         stack__.function[stack__.currentsize], stack__.file[stack__.currentsize], stack__.line[stack__.currentsize], func__, __FILE__, __LINE__); \
         stack__.function[stack__.currentsize]     = PETSC_NULLPTR; \
         stack__.file[stack__.currentsize]         = PETSC_NULLPTR; \
         stack__.line[stack__.currentsize]         = 0; \
         stack__.petscroutine[stack__.currentsize] = 0; \
+        PETSC_SILENCE_WUSELESSCAST_END; \
       } \
       stack__.hotdepth = PetscMax(stack__.hotdepth - 1, 0); \
     } while (0)

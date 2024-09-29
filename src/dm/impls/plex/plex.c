@@ -155,9 +155,9 @@ PetscErrorCode DMPlexGetFieldType_Internal(DM dm, PetscSection section, PetscInt
       const char *fieldname;
 
       PetscCall(PetscSectionGetFieldName(section, field, &fieldname));
-      PetscCall(PetscInfo((PetscObject)dm, "Could not classify VTK output type of section field %" PetscInt_FMT " \"%s\"\n", field, fieldname));
+      PetscCall(PetscInfo(dm, "Could not classify VTK output type of section field %" PetscInt_FMT " \"%s\"\n", field, fieldname));
     } else {
-      PetscCall(PetscInfo((PetscObject)dm, "Could not classify VTK output type of section\n"));
+      PetscCall(PetscInfo(dm, "Could not classify VTK output type of section\n"));
     }
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1134,7 +1134,7 @@ static PetscErrorCode DMPlexView_Ascii(DM dm, PetscViewer viewer)
       }
       for (d = 0; d < dof; ++d) {
         if (d > 0) PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, ","));
-        PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "%g", (double)tcoords[d]));
+        PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "%g", tcoords[d]));
       }
       if (drawHasse) color = colors[0 % numColors];
       else color = colors[rank % numColors];
@@ -1172,7 +1172,7 @@ static PetscErrorCode DMPlexView_Ascii(DM dm, PetscViewer viewer)
         PetscCall(PetscSectionGetOffset(coordSection, cone[1], &offB));
         PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "("));
         for (d = 0; d < dof; ++d) {
-          tcoords[d] = (double)(0.5 * scale * PetscRealPart(coords[offA + d] + coords[offB + d]));
+          tcoords[d] = (double)(scale * PetscRealPart(coords[offA + d] + coords[offB + d]) / 2);
           tcoords[d] = PetscAbs(tcoords[d]) < 1e-10 ? 0.0 : tcoords[d];
         }
         /* Rotate coordinates since PGF makes z point out of the page instead of up */
@@ -1183,7 +1183,7 @@ static PetscErrorCode DMPlexView_Ascii(DM dm, PetscViewer viewer)
         }
         for (d = 0; d < dof; ++d) {
           if (d > 0) PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, ","));
-          PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "%g", (double)tcoords[d]));
+          PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "%g", tcoords[d]));
         }
         if (drawHasse) color = colors[1 % numColors];
         else color = colors[rank % numColors];
@@ -1302,7 +1302,7 @@ static PetscErrorCode DMPlexView_Ascii(DM dm, PetscViewer viewer)
       PetscCall(DMPlexRestoreCellCoordinates(dm, c, &isDG, &numCoords, &array, &cellCoords));
       for (d = 0; d < cdim; ++d) {
         if (d > 0) PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, ","));
-        PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "%g", (double)ccoords[d]));
+        PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "%g", ccoords[d]));
       }
       if (drawHasse) color = colors[depth % numColors];
       else color = colors[rank % numColors];
@@ -1458,16 +1458,16 @@ static PetscErrorCode DMPlexView_Ascii(DM dm, PetscViewer viewer)
     lm[0] = numVertices > 0 ? numVertices : PETSC_INT_MAX;
     lm[1] = -numVertices;
     PetscCallMPI(MPIU_Allreduce(lm, gm, 2, MPIU_INT64, MPI_MIN, comm));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "  Cell balance: %.2f (max %" PetscInt_FMT ", min %" PetscInt_FMT, -((double)gm[1]) / ((double)gm[0]), -(PetscInt)gm[1], (PetscInt)gm[0]));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  Cell balance: %.2f (max %" PetscInt64_FMT ", min %" PetscInt64_FMT, -((double)gm[1]) / ((double)gm[0]), -gm[1], gm[0]));
     lm[0] = ect;                     /* edgeCut */
     lm[1] = ectn;                    /* node-aware edgeCut */
     lm[2] = numVertices > 0 ? 0 : 1; /* empty processes */
     PetscCallMPI(MPIU_Allreduce(lm, gm, 3, MPIU_INT64, MPI_SUM, comm));
-    PetscCall(PetscViewerASCIIPrintf(viewer, ", empty %" PetscInt_FMT ")\n", (PetscInt)gm[2]));
+    PetscCall(PetscViewerASCIIPrintf(viewer, ", empty %" PetscInt64_FMT ")\n", gm[2]));
 #if defined(PETSC_HAVE_MPI_PROCESS_SHARED_MEMORY)
-    PetscCall(PetscViewerASCIIPrintf(viewer, "  Edge Cut: %" PetscInt_FMT " (on node %.3f)\n", (PetscInt)(gm[0] / 2), gm[0] ? ((double)gm[1]) / ((double)gm[0]) : 1.));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  Edge Cut: %" PetscInt64_FMT " (on node %.3f)\n", gm[0] / 2, gm[0] ? ((double)gm[1]) / ((double)gm[0]) : 1.));
 #else
-    PetscCall(PetscViewerASCIIPrintf(viewer, "  Edge Cut: %" PetscInt_FMT " (on node %.3f)\n", (PetscInt)(gm[0] / 2), 0.0));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  Edge Cut: %" PetscInt64_FMT " (on node %.3f)\n", gm[0] / 2, 0.0));
 #endif
     PetscCall(ISLocalToGlobalMappingDestroy(&g2l));
     PetscCall(PetscFree(start));
@@ -10655,7 +10655,7 @@ PetscErrorCode DMPlexMonitorThroughput(DM dm, void *dummy)
   if (default_handler) {
     PetscLogEvent      event;
     PetscEventPerfInfo eventInfo;
-    PetscReal          cellRate, flopRate;
+    PetscLogDouble     cellRate, flopRate;
     PetscInt           cStart, cEnd, Nf, N;
     const char        *name;
 
@@ -10667,7 +10667,7 @@ PetscErrorCode DMPlexMonitorThroughput(DM dm, void *dummy)
     N        = (cEnd - cStart) * Nf * eventInfo.count;
     flopRate = eventInfo.flops / eventInfo.time;
     cellRate = N / eventInfo.time;
-    PetscCall(PetscPrintf(PetscObjectComm((PetscObject)dm), "DM (%s) FE Residual Integration: %" PetscInt_FMT " integrals %d reps\n  Cell rate: %.2g/s flop rate: %.2g MF/s\n", name ? name : "unknown", N, eventInfo.count, (double)cellRate, (double)(flopRate / 1.e6)));
+    PetscCall(PetscPrintf(PetscObjectComm((PetscObject)dm), "DM (%s) FE Residual Integration: %" PetscInt_FMT " integrals %d reps\n  Cell rate: %.2g/s flop rate: %.2g MF/s\n", name ? name : "unknown", N, eventInfo.count, cellRate, flopRate / 1.e6));
   } else {
     SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "Plex Throughput Monitor is not supported if logging is turned off or the default log handler is not running. Reconfigure using --with-log and run with -log_view.");
   }

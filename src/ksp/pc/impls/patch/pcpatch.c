@@ -2184,7 +2184,7 @@ static PetscErrorCode MatSetValues_PCPatch_Private(Mat mat, PetscInt m, const Pe
   PetscCall(VecGetSize(data, &nz));
   PetscCall(VecGetArray(data, &array));
   PetscCheck(m == n, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_WRONG, "Only for square insertion");
-  cell = (PetscInt)(idxm[0] / bs); /* use the fact that this is called once per cell */
+  cell = idxm[0] / bs; /* use the fact that this is called once per cell */
   for (i = 0; i < m; i++) {
     PetscCheck(idxm[i] == idxn[i], PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_WRONG, "Row and column indices must match!");
     for (j = 0; j < n; j++) {
