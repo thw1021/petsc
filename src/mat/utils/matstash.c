@@ -231,7 +231,7 @@ static PetscErrorCode MatStashExpand_Private(MatStash *stash, PetscInt incr)
     else cnewnmax = stash->oldnmax / bs2;
   } else cnewnmax = stash->nmax * 2;
   if (cnewnmax < (stash->nmax + incr)) cnewnmax += 2 * incr;
-  PetscCall(PetscCountCast(cnewnmax, &newnmax));
+  PetscCall(PetscIntCast(cnewnmax, &newnmax));
 
   /* Get a MatStashSpace and attach it to stash */
   PetscCall(PetscMatStashSpaceGet(bs2, newnmax, &stash->space));
