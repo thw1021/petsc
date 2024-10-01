@@ -344,7 +344,7 @@ PetscErrorCode PetscBagRegisterBoolArray(PetscBag bag, void *addr, PetscInt msiz
           `PetscBagRegisterInt()`, `PetscBagRegisterBool()`, `PetscBagRegisterScalar()`
           `PetscBagSetFromOptions()`, `PetscBagCreate()`, `PetscBagGetName()`, `PetscBagRegisterEnum()`
 @*/
-PetscErrorCode PetscBagRegisterString(PetscBag bag, void *addr, PetscInt msize, const char *mdefault, const char *name, const char *help)
+PetscErrorCode PetscBagRegisterString(PetscBag bag, void *addr, PetscInt msize, const char *mdefault, const char *name, const char *help) PeNS
 {
   PetscBagItem item;
   char         nname[PETSC_BAG_NAME_LENGTH + 1];
@@ -869,7 +869,7 @@ PetscErrorCode PetscBagLoad(PetscViewer view, PetscBag bag)
 
   Input Parameters:
 + comm    - communicator to share bag
-- bagsize - size of the C structure holding the values, for example sizeof(mystruct)
+- bagsize - size of the C structure holding the values, for example `sizeof(mystruct)`
 
   Output Parameter:
 . bag - the bag of values
@@ -919,7 +919,7 @@ PetscErrorCode PetscBagCreate(MPI_Comm comm, size_t bagsize, PetscBag *bag)
           `PetscBagRegisterReal()`, `PetscBagRegisterInt()`, `PetscBagRegisterBool()`, `PetscBagRegisterScalar()`
           `PetscBagSetFromOptions()`, `PetscBagCreate()`, `PetscBagDestroy()`, `PetscBagRegisterEnum()`
 @*/
-PetscErrorCode PetscBagSetName(PetscBag bag, const char *name, const char *help)
+PetscErrorCode PetscBagSetName(PetscBag bag, const char name[], const char help[])
 {
   PetscFunctionBegin;
   PetscAssertPointer(bag, 1);
@@ -967,7 +967,7 @@ PetscErrorCode PetscBagGetName(PetscBag bag, const char **name)
 
   Output Parameter:
 . data - pointer to memory that will have user-data-structure, this can be cast to a pointer of the type the C struct used in
-    defining the bag
+         defining the bag
 
   Level: intermediate
 
@@ -975,12 +975,12 @@ PetscErrorCode PetscBagGetName(PetscBag bag, const char **name)
           `PetscBagRegisterReal()`, `PetscBagRegisterInt()`, `PetscBagRegisterBool()`, `PetscBagRegisterScalar()`
           `PetscBagSetFromOptions()`, `PetscBagCreate()`, `PetscBagDestroy()`, `PetscBagRegisterEnum()`
 @*/
-PetscErrorCode PetscBagGetData(PetscBag bag, void **data)
+PetscErrorCode PetscBagGetData(PetscBag bag, PeCtx data)
 {
   PetscFunctionBegin;
   PetscAssertPointer(bag, 1);
   PetscAssertPointer(data, 2);
-  *data = bag->structlocation;
+  *(void **)data = bag->structlocation;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

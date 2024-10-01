@@ -8,7 +8,8 @@
       use petscksp
       implicit none
 
-      PetscInt i,n,nz
+      PetscInt i,n
+      PetscCount nz
       PetscBool flg
       PetscErrorCode ierr
       PetscScalar,ALLOCATABLE :: a(:)

@@ -301,8 +301,8 @@ PetscErrorCode PetscOptionsValidKey(const char key[], PetscBool *valid)
 
 static PetscErrorCode PetscOptionsInsertString_Private(PetscOptions options, const char in_str[], PetscOptionSource source)
 {
-  char      *first, *second;
-  PetscToken token;
+  const char *first, *second;
+  PetscToken  token;
 
   PetscFunctionBegin;
   PetscCall(PetscTokenCreate(in_str, ' ', &token));
@@ -450,9 +450,9 @@ static PetscErrorCode PetscOptionsFilename(MPI_Comm comm, const char file[], cha
 static PetscErrorCode PetscOptionsInsertFilePetsc(MPI_Comm comm, PetscOptions options, const char file[], PetscBool require)
 {
   char       *string, *vstring = NULL, *astring = NULL, *packed = NULL;
-  char       *tokens[4];
-  PetscCount  bytes;
+  const char *tokens[4];
   size_t      len;
+  PetscCount  bytes;
   FILE       *fd;
   PetscToken  token = NULL;
   int         err;
@@ -477,6 +477,7 @@ static PetscErrorCode PetscOptionsInsertFilePetsc(MPI_Comm comm, PetscOptions op
     PetscCheck(!isdir || !require, PETSC_COMM_SELF, PETSC_ERR_USER, "Specified options file %s is a directory", fname);
     if (fd && !isdir) {
       PetscSegBuffer vseg, aseg;
+
       PetscCall(PetscSegBufferCreate(1, 4000, &vseg));
       PetscCall(PetscSegBufferCreate(1, 2000, &aseg));
 
@@ -656,11 +657,11 @@ PetscErrorCode PetscOptionsInsertFile(MPI_Comm comm, PetscOptions options, const
 
 .seealso: `PetscOptions`, `PetscOptionsInsertString()`, `PetscOptionsInsertFile()`
 @*/
-PetscErrorCode PetscOptionsInsertArgs(PetscOptions options, int argc, char *args[])
+PetscErrorCode PetscOptionsInsertArgs(PetscOptions options, int argc, const char *const args[])
 {
-  MPI_Comm     comm  = PETSC_COMM_WORLD;
-  int          left  = PetscMax(argc, 0);
-  char *const *eargs = args;
+  MPI_Comm           comm  = PETSC_COMM_WORLD;
+  int                left  = PetscMax(argc, 0);
+  const char *const *eargs = args;
 
   PetscFunctionBegin;
   while (left) {
@@ -832,7 +833,7 @@ static inline PetscErrorCode PetscOptionsSkipPrecedent(PetscOptions options, con
 .seealso: `PetscOptionsDestroy()`, `PetscOptionsView()`, `PetscOptionsInsertString()`, `PetscOptionsInsertFile()`,
           `PetscInitialize()`
 @*/
-PetscErrorCode PetscOptionsInsert(PetscOptions options, int *argc, char ***args, const char file[])
+PetscErrorCode PetscOptionsInsert(PetscOptions options, int *argc, char ***args, const char file[]) PeNS
 {
   MPI_Comm    comm = PETSC_COMM_WORLD;
   PetscMPIInt rank;
@@ -899,7 +900,7 @@ PetscErrorCode PetscOptionsInsert(PetscOptions options, int *argc, char ***args,
   }
 
   /* insert command line options here because they take precedence over arguments in petscrc/environment */
-  if (hasArgs) PetscCall(PetscOptionsInsertArgs(options, *argc - 1, *args + 1));
+  if (hasArgs) PetscCall(PetscOptionsInsertArgs(options, *argc - 1, (const char *const *)*args + 1));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-petsc_ci_portable_error_output", &PetscCIEnabledPortableErrorOutput, NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1805,7 +1806,7 @@ PetscErrorCode PetscOptionsHasName(PetscOptions options, const char pre[], const
 
 .seealso: `PetscOptionsAllUsed()`, `PetscOptionsView()`, `PetscOptionsPush()`, `PetscOptionsPop()`
 @*/
-PetscErrorCode PetscOptionsGetAll(PetscOptions options, char *copts[])
+PetscErrorCode PetscOptionsGetAll(PetscOptions options, char *copts[]) PeNS
 {
   PetscInt i;
   size_t   len = 1, lent = 0;
@@ -2529,7 +2530,7 @@ PetscErrorCode PetscOptionsGetBool3(PetscOptions options, const char pre[], cons
           `PetscOptionsBoolGroupBegin()`, `PetscOptionsBoolGroup()`, `PetscOptionsBoolGroupEnd()`,
           `PetscOptionsFList()`, `PetscOptionsEList()`
 @*/
-PetscErrorCode PetscOptionsGetEList(PetscOptions options, const char pre[], const char opt[], const char *const *list, PetscInt ntext, PetscInt *value, PetscBool *set)
+PetscErrorCode PetscOptionsGetEList(PetscOptions options, const char pre[], const char opt[], const char *const list[], PetscInt ntext, PetscInt *value, PetscBool *set)
 {
   size_t    alen, len = 0, tlen = 0;
   char     *svalue;
@@ -2597,7 +2598,7 @@ PetscErrorCode PetscOptionsGetEList(PetscOptions options, const char pre[], cons
           `PetscOptionsBoolGroupBegin()`, `PetscOptionsBoolGroup()`, `PetscOptionsBoolGroupEnd()`,
           `PetscOptionsFList()`, `PetscOptionsEList()`, `PetscOptionsGetEList()`, `PetscOptionsEnum()`
 @*/
-PetscErrorCode PetscOptionsGetEnum(PetscOptions options, const char pre[], const char opt[], const char *const *list, PetscEnum *value, PetscBool *set)
+PetscErrorCode PetscOptionsGetEnum(PetscOptions options, const char pre[], const char opt[], const char *const list[], PetscEnum *value, PetscBool *set)
 {
   PetscInt  ntext = 0, tval;
   PetscBool fset;
@@ -2914,7 +2915,7 @@ PetscErrorCode PetscOptionsGetString(PetscOptions options, const char pre[], con
 PetscErrorCode PetscOptionsGetBoolArray(PetscOptions options, const char pre[], const char name[], PetscBool dvalue[], PetscInt *nmax, PetscBool *set)
 {
   const char *svalue;
-  char       *value;
+  const char *value;
   PetscInt    n = 0;
   PetscBool   flag;
   PetscToken  token;
@@ -2974,10 +2975,10 @@ PetscErrorCode PetscOptionsGetBoolArray(PetscOptions options, const char pre[], 
           `PetscOptionsScalar()`, `PetscOptionsBoolGroupBegin()`, `PetscOptionsBoolGroup()`, `PetscOptionsBoolGroupEnd()`,
           `PetscOptionsFList()`, `PetscOptionsEList()`, `PetscOptionsGetEList()`, `PetscOptionsEnum()`
 @*/
-PetscErrorCode PetscOptionsGetEnumArray(PetscOptions options, const char pre[], const char name[], const char *const *list, PetscEnum ivalue[], PetscInt *nmax, PetscBool *set)
+PetscErrorCode PetscOptionsGetEnumArray(PetscOptions options, const char pre[], const char name[], const char *const list[], PetscEnum ivalue[], PetscInt *nmax, PetscBool *set)
 {
   const char *svalue;
-  char       *value;
+  const char *value;
   PetscInt    n = 0;
   PetscEnum   evalue;
   PetscBool   flag;
@@ -3045,7 +3046,7 @@ PetscErrorCode PetscOptionsGetEnumArray(PetscOptions options, const char pre[], 
 PetscErrorCode PetscOptionsGetIntArray(PetscOptions options, const char pre[], const char name[], PetscInt ivalue[], PetscInt *nmax, PetscBool *set)
 {
   const char *svalue;
-  char       *value;
+  const char *value;
   PetscInt    n = 0, i, j, start, end, inc, nvalues;
   size_t      len;
   PetscBool   flag, foundrange;
@@ -3066,30 +3067,33 @@ PetscErrorCode PetscOptionsGetIntArray(PetscOptions options, const char pre[], c
   PetscCall(PetscTokenCreate(svalue, ',', &token));
   PetscCall(PetscTokenFind(token, &value));
   while (value && n < *nmax) {
+    char *iivalue;
+
     /* look for form  d-D where d and D are integers */
+    PetscCall(PetscStrallocpy(value, &iivalue));
     foundrange = PETSC_FALSE;
-    PetscCall(PetscStrlen(value, &len));
-    if (value[0] == '-') i = 2;
+    PetscCall(PetscStrlen(iivalue, &len));
+    if (iivalue[0] == '-') i = 2;
     else i = 1;
     for (; i < (int)len; i++) {
-      if (value[i] == '-') {
-        PetscCheck(i != (int)len - 1, PETSC_COMM_SELF, PETSC_ERR_USER, "Error in %" PetscInt_FMT "-th array entry %s", n, value);
-        value[i] = 0;
+      if (iivalue[i] == '-') {
+        PetscCheck(i != (int)len - 1, PETSC_COMM_SELF, PETSC_ERR_USER, "Error in %" PetscInt_FMT "-th array entry %s", n, iivalue);
+        iivalue[i] = 0;
 
-        PetscCall(PetscOptionsStringToInt(value, &start));
+        PetscCall(PetscOptionsStringToInt(iivalue, &start));
         inc = 1;
         j   = i + 1;
         for (; j < (int)len; j++) {
-          if (value[j] == ':') {
-            value[j] = 0;
+          if (iivalue[j] == ':') {
+            iivalue[j] = 0;
 
-            PetscCall(PetscOptionsStringToInt(value + j + 1, &inc));
-            PetscCheck(inc > 0, PETSC_COMM_SELF, PETSC_ERR_USER, "Error in %" PetscInt_FMT "-th array entry,%s cannot have negative increment", n, value + j + 1);
+            PetscCall(PetscOptionsStringToInt(iivalue + j + 1, &inc));
+            PetscCheck(inc > 0, PETSC_COMM_SELF, PETSC_ERR_USER, "Error in %" PetscInt_FMT "-th array entry,%s cannot have negative increment", n, iivalue + j + 1);
             break;
           }
         }
-        PetscCall(PetscOptionsStringToInt(value + i + 1, &end));
-        PetscCheck(end > start, PETSC_COMM_SELF, PETSC_ERR_USER, "Error in %" PetscInt_FMT "-th array entry, %s-%s cannot have decreasing list", n, value, value + i + 1);
+        PetscCall(PetscOptionsStringToInt(iivalue + i + 1, &end));
+        PetscCheck(end > start, PETSC_COMM_SELF, PETSC_ERR_USER, "Error in %" PetscInt_FMT "-th array entry, %s-%s cannot have decreasing list", n, iivalue, iivalue + i + 1);
         nvalues = (end - start) / inc + (end - start) % inc;
         PetscCheck(n + nvalues <= *nmax, PETSC_COMM_SELF, PETSC_ERR_USER, "Error in %" PetscInt_FMT "-th array entry, not enough space left in array (%" PetscInt_FMT ") to contain entire range from %" PetscInt_FMT " to %" PetscInt_FMT, n, *nmax - n, start, end);
         for (; start < end; start += inc) {
@@ -3106,6 +3110,7 @@ PetscErrorCode PetscOptionsGetIntArray(PetscOptions options, const char pre[], c
       ivalue++;
       n++;
     }
+    PetscCall(PetscFree(iivalue));
     PetscCall(PetscTokenFind(token, &value));
   }
   PetscCall(PetscTokenDestroy(&token));
@@ -3141,7 +3146,7 @@ PetscErrorCode PetscOptionsGetIntArray(PetscOptions options, const char pre[], c
 PetscErrorCode PetscOptionsGetRealArray(PetscOptions options, const char pre[], const char name[], PetscReal dvalue[], PetscInt *nmax, PetscBool *set)
 {
   const char *svalue;
-  char       *value;
+  const char *value;
   PetscInt    n = 0;
   PetscBool   flag;
   PetscToken  token;
@@ -3198,7 +3203,7 @@ PetscErrorCode PetscOptionsGetRealArray(PetscOptions options, const char pre[], 
 PetscErrorCode PetscOptionsGetScalarArray(PetscOptions options, const char pre[], const char name[], PetscScalar dvalue[], PetscInt *nmax, PetscBool *set)
 {
   const char *svalue;
-  char       *value;
+  const char *value;
   PetscInt    n = 0;
   PetscBool   flag;
   PetscToken  token;
@@ -3248,7 +3253,7 @@ PetscErrorCode PetscOptionsGetScalarArray(PetscOptions options, const char pre[]
   Notes:
   The `nmax` parameter is used for both input and output.
 
-  The user should pass in an array of pointers to char, to hold all the
+  The user should pass in an array of pointers to `char`, to hold all the
   strings returned by this function.
 
   The user is responsible for deallocating the strings that are
@@ -3261,10 +3266,10 @@ PetscErrorCode PetscOptionsGetScalarArray(PetscOptions options, const char pre[]
           `PetscOptionsBoolGroupBegin()`, `PetscOptionsBoolGroup()`, `PetscOptionsBoolGroupEnd()`,
           `PetscOptionsFList()`, `PetscOptionsEList()`
 @*/
-PetscErrorCode PetscOptionsGetStringArray(PetscOptions options, const char pre[], const char name[], char *strings[], PetscInt *nmax, PetscBool *set)
+PetscErrorCode PetscOptionsGetStringArray(PetscOptions options, const char pre[], const char name[], char *strings[], PetscInt *nmax, PetscBool *set) PeNS
 {
   const char *svalue;
-  char       *value;
+  const char *value;
   PetscInt    n = 0;
   PetscBool   flag;
   PetscToken  token;
@@ -3331,7 +3336,7 @@ PetscErrorCode PetscOptionsGetStringArray(PetscOptions options, const char pre[]
 
 .seealso: `PetscOptionsBegin()`, `PetscOptionsEnd()`, `PetscOptionsScalar()`, `PetscOptionsBool()`, `PetscOptionsString()`, `PetscOptionsSetValue()`
 @*/
-PetscErrorCode PetscOptionsDeprecated_Private(PetscOptionItems *PetscOptionsObject, const char oldname[], const char newname[], const char version[], const char info[])
+PetscErrorCode PetscOptionsDeprecated_Private(PetscOptionItems PetscOptionsObject, const char oldname[], const char newname[], const char version[], const char info[])
 {
   PetscBool         found, quiet;
   const char       *value;
