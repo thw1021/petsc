@@ -32,6 +32,7 @@ Changes: Development
 .. rubric:: Vec:
 
 - Add ``VecNestGetSubVecsRead()`` and ``VecNestRestoreSubVecsRead()`` for read-only access to subvectors
+- Add ``VecPointwiseSign()`` and ``VecSignMode``
 
 .. rubric:: PetscSection:
 
