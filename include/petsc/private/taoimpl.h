@@ -62,7 +62,7 @@ struct _p_Tao {
   void *user_update;
 
   PetscErrorCode (*monitor[MAXTAOMONITORS])(Tao, void *);
-  PetscErrorCode (*monitordestroy[MAXTAOMONITORS])(void **);
+  PetscCtxDestroyFn *monitordestroy[MAXTAOMONITORS];
   void              *monitorcontext[MAXTAOMONITORS];
   PetscInt           numbermonitors;
   void              *cnvP;

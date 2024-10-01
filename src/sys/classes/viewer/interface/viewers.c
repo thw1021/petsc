@@ -114,14 +114,14 @@ PetscErrorCode PetscViewersGetViewer(PetscViewers viewers, PetscInt n, PetscView
 
 .seealso: [](sec_viewers), `DMMonitorSetFromOptions()`, `KSPMonitorSetFromOptions()`, `SNESMonitorSetFromOptions()`
 @*/
-PetscErrorCode PetscMonitorCompare(PetscErrorCode (*nmon)(void), void *nmctx, PetscErrorCode (*nmdestroy)(void **), PetscErrorCode (*mon)(void), void *mctx, PetscErrorCode (*mdestroy)(void **), PetscBool *identical)
+PetscErrorCode PetscMonitorCompare(PetscErrorCode (*nmon)(void), void *nmctx, PetscCtxDestroyFn *nmdestroy, PetscErrorCode (*mon)(void), void *mctx, PetscCtxDestroyFn *mdestroy, PetscBool *identical)
 {
   PetscFunctionBegin;
   PetscAssertPointer(identical, 7);
   *identical = PETSC_FALSE;
   if (nmon == mon && nmdestroy == mdestroy) {
     if (nmctx == mctx) *identical = PETSC_TRUE;
-    else if (nmdestroy == (PetscErrorCode (*)(void **))PetscViewerAndFormatDestroy) {
+    else if (nmdestroy == (PetscCtxDestroyFn *)PetscViewerAndFormatDestroy) {
       PetscViewerAndFormat *old = (PetscViewerAndFormat *)mctx, *newo = (PetscViewerAndFormat *)nmctx;
       if (old->viewer == newo->viewer && old->format == newo->format) *identical = PETSC_TRUE;
     }

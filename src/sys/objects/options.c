@@ -96,9 +96,9 @@ struct _n_PetscOptions {
   /* Monitors */
   PetscBool monitorFromOptions, monitorCancel;
   PetscErrorCode (*monitor[MAXOPTIONSMONITORS])(const char[], const char[], PetscOptionSource, void *); /* returns control to user after */
-  PetscErrorCode (*monitordestroy[MAXOPTIONSMONITORS])(void **);                                        /* callback for monitor destruction */
-  void    *monitorcontext[MAXOPTIONSMONITORS];                                                          /* to pass arbitrary user data into monitor */
-  PetscInt numbermonitors;                                                                              /* to, for instance, detect options being set */
+  PetscCtxDestroyFn *monitordestroy[MAXOPTIONSMONITORS];                                                /* callback for monitor destruction */
+  void              *monitorcontext[MAXOPTIONSMONITORS];                                                /* to pass arbitrary user data into monitor */
+  PetscInt           numbermonitors;                                                                    /* to, for instance, detect options being set */
 };
 
 static PetscOptions defaultoptions = NULL; /* the options database routines query this object for options */
@@ -2141,7 +2141,7 @@ PetscErrorCode PetscOptionsMonitorDefault(const char name[], const char value[],
 
 .seealso: `PetscOptionsMonitorDefault()`, `PetscInitialize()`
 @*/
-PetscErrorCode PetscOptionsMonitorSet(PetscErrorCode (*monitor)(const char name[], const char value[], PetscOptionSource source, void *mctx), void *mctx, PetscErrorCode (*monitordestroy)(void **mctx))
+PetscErrorCode PetscOptionsMonitorSet(PetscErrorCode (*monitor)(const char name[], const char value[], PetscOptionSource source, void *mctx), void *mctx, PetscCtxDestroyFn *monitordestroy)
 {
   PetscOptions options = defaultoptions;
 
