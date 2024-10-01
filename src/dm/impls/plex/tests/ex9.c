@@ -376,8 +376,7 @@ static PetscErrorCode TestVecClosure(DM dm, PetscBool useIndex, PetscBool useSpe
                                         eventInfo.time, eventInfo.time / numRuns));
       PetscCall(PetscSynchronizedFlush(comm, PETSC_STDOUT));
     } else {
-      PetscCall(
-        PetscSynchronizedPrintf(comm, "[%d] %s: %" PetscInt_FMT " Average time per vector closure: %gs standard: %gs\n", rank, useIndex ? (useSpectral ? titleSpecIndex : titleIndex) : (useSpectral ? titleSpec : title), numRuns, eventInfo.time / numRuns, (double)maxTimePerRun));
+      PetscCall(PetscSynchronizedPrintf(comm, "[%d] %s: %" PetscInt_FMT " Average time per vector closure: %gs standard: %gs\n", rank, useIndex ? (useSpectral ? titleSpecIndex : titleIndex) : (useSpectral ? titleSpec : title), numRuns, eventInfo.time / numRuns, (double)maxTimePerRun));
       PetscCall(PetscSynchronizedFlush(comm, PETSC_STDOUT));
       PetscCheck(!user->errors, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Average time for vector closure %g > standard %g", eventInfo.time / numRuns, (double)maxTimePerRun);
     }

@@ -954,6 +954,7 @@ static PetscErrorCode MonitorVTK(TS ts, PetscInt stepnum, PetscReal time, Vec X,
   char        filename[PETSC_MAX_PATH_LEN], *ftable = NULL;
   PetscReal   xnorm;
   PetscBool   rollback;
+  PetscMPIInt fcounti;
 
   PetscFunctionBeginUser;
   PetscCall(TSGetStepRollBack(ts, &rollback));
@@ -1011,9 +1012,10 @@ static PetscErrorCode MonitorVTK(TS ts, PetscInt stepnum, PetscReal time, Vec X,
     PetscCall(VecRestoreArrayRead(cellgeom, &cgeom));
     PetscCall(VecRestoreArrayRead(X, &x));
     PetscCall(DMDestroy(&plex));
-    PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, fmin, (PetscMPIInt)fcount, MPIU_REAL, MPIU_MIN, PetscObjectComm((PetscObject)ts)));
-    PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, fmax, (PetscMPIInt)fcount, MPIU_REAL, MPIU_MAX, PetscObjectComm((PetscObject)ts)));
-    PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, fintegral, (PetscMPIInt)fcount, MPIU_REAL, MPIU_SUM, PetscObjectComm((PetscObject)ts)));
+    PetscCall(PetscMPIIntCast(fcount, &fcounti));
+    PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, fmin, fcounti, MPIU_REAL, MPIU_MIN, PetscObjectComm((PetscObject)ts)));
+    PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, fmax, fcounti, MPIU_REAL, MPIU_MAX, PetscObjectComm((PetscObject)ts)));
+    PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, fintegral, fcounti, MPIU_REAL, MPIU_SUM, PetscObjectComm((PetscObject)ts)));
 
     ftablealloc = fcount * 100;
     ftableused  = 0;
@@ -1331,7 +1333,7 @@ int main(int argc, char **argv)
     for (i = 0; i < DIM; i++) {
       mod->bounds[2 * i]     = 0.;
       mod->bounds[2 * i + 1] = 1.;
-    };
+    }
     dim = DIM;
     { /* a null name means just do a hex box */
       PetscInt  cells[3] = {1, 1, 1}, n = 3;
@@ -1482,7 +1484,7 @@ int main(int argc, char **argv)
       PetscBool      resize;
 
       PetscCall(PetscMemoryGetCurrentUsage(&bytes));
-      PetscCall(PetscInfo(ts, "refinement loop %" PetscInt_FMT ": memory used %g\n", adaptIter, (double)bytes));
+      PetscCall(PetscInfo(ts, "refinement loop %" PetscInt_FMT ": memory used %g\n", adaptIter, bytes));
       PetscCall(DMViewFromOptions(dm, NULL, "-initial_dm_view"));
       PetscCall(VecViewFromOptions(X, NULL, "-initial_vec_view"));
 
