@@ -3489,6 +3489,7 @@ cdef class DMPlex(DM):
         newdm.create(comm=comm)
         cdef SF sf = SF()
         CHKERR(DMPlexGetGatherDM(self.dm, &sf.sf, &newdm.dm))
+        sf.destroy()
         return newdm
 
 # --------------------------------------------------------------------

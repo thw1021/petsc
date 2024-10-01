@@ -185,8 +185,6 @@ cdef extern from * nogil:
     PetscErrorCode DMPlexGetRedundantDM(PetscDM, PetscSF*, PetscDM*)
     PetscErrorCode DMPlexGetGatherDM(PetscDM, PetscSF*, PetscDM*)
 
-    PetscErrorCode PetscPartitionerDMPlexPartition(PetscPartitioner, PetscDM dm, PetscSection, PetscSection, PetscIS*)
-
     PetscErrorCode DMPlexTransformApply(PetscDMPlexTransform, PetscDM, PetscDM *)
     PetscErrorCode DMPlexTransformCreate(MPI_Comm, PetscDMPlexTransform *)
     PetscErrorCode DMPlexTransformDestroy(PetscDMPlexTransform*)
