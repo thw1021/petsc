@@ -367,7 +367,7 @@ static PetscErrorCode PCMPIUpdateMatValues(PC pc)
     matproperties[3] = !isset ? 0 : (isstructurallysymmetric ? 1 : 2);
   }
   PetscCall(MatUpdateMPIAIJWithArray(A, a));
-  if (!PCMPIServerUseShmget) PetscCall(PetscFree(a));
+  if (!PCMPIServerUseShmget) PetscCall(PetscFreeConst(a));
   PetscCallMPI(MPI_Bcast(matproperties, 4, MPIU_INT, 0, comm));
   /* if any of these properties was previously set and is now not set this will result in incorrect properties in A since there is no way to unset a property */
   if (matproperties[0]) PetscCall(MatSetOption(A, MAT_SYMMETRIC, matproperties[0] == 1 ? PETSC_TRUE : PETSC_FALSE));
@@ -741,7 +741,7 @@ static PetscErrorCode PCSetUp_Seq(PC pc)
   PetscCall(KSPSetOperators(km->ksps[0], sA, sA));
   PetscCall(KSPSetFromOptions(km->ksps[0]));
   PetscCall(KSPSetUp(km->ksps[0]));
-  PetscCall(PetscInfo((PetscObject)pc, "MPI parallel linear solver system is being solved directly on rank 0 due to its small size\n"));
+  PetscCall(PetscInfo(pc, "MPI parallel linear solver system is being solved directly on rank 0 due to its small size\n"));
   PCMPIKSPCountsSeq++;
   PCMPIServerInSolve = PETSC_FALSE;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -848,11 +848,11 @@ static PetscErrorCode PCSetUp_MPI(PC pc)
   if (pc->flag == DIFFERENT_NONZERO_PATTERN) newmatrix = PETSC_TRUE;
 
   if (newmatrix) {
-    PetscCall(PetscInfo((PetscObject)pc, "New matrix or matrix has changed nonzero structure\n"));
+    PetscCall(PetscInfo(pc, "New matrix or matrix has changed nonzero structure\n"));
     PetscCall(PCMPIServerBroadcastRequest(PCMPI_SET_MAT));
     PetscCall(PCMPISetMat(pc));
   } else {
-    PetscCall(PetscInfo((PetscObject)pc, "Matrix has only changed nonzero values\n"));
+    PetscCall(PetscInfo(pc, "Matrix has only changed nonzero values\n"));
     PetscCall(PCMPIServerBroadcastRequest(PCMPI_UPDATE_MAT_VALUES));
     PetscCall(PCMPIUpdateMatValues(pc));
   }

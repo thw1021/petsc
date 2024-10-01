@@ -6,15 +6,15 @@
 #include <petsc/private/pcimpl.h>
 
 typedef struct {
-  Mat             fact; /* factored matrix */
-  MatFactorInfo   info;
-  MatOrderingType ordering; /* matrix reordering */
-  char           *solvertype;
-  MatFactorType   factortype;
-  PetscReal       actualfill;
-  PetscBool       inplace;       /* flag indicating in-place factorization */
-  PetscBool       reuseordering; /* reuses previous reordering computed */
-  PetscBool       reusefill;     /* reuse fill from previous LU */
+  Mat           fact; /* factored matrix */
+  MatFactorInfo info;
+  char         *ordering; /* matrix reordering */
+  char         *solvertype;
+  MatFactorType factortype;
+  PetscReal     actualfill;
+  PetscBool     inplace;       /* flag indicating in-place factorization */
+  PetscBool     reuseordering; /* reuses previous reordering computed */
+  PetscBool     reusefill;     /* reuse fill from previous LU */
 } PC_Factor;
 
 PETSC_INTERN PetscErrorCode PCFactorInitialize(PC, MatFactorType);

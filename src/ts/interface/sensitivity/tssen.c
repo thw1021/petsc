@@ -1299,7 +1299,7 @@ PetscErrorCode TSAdjointMonitorSet(TS ts, PetscErrorCode (*adjointmonitor)(TS ts
   PetscCheck(ts->numberadjointmonitors < MAXTSMONITORS, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Too many adjoint monitors set");
   ts->adjointmonitor[ts->numberadjointmonitors]          = adjointmonitor;
   ts->adjointmonitordestroy[ts->numberadjointmonitors]   = adjointmdestroy;
-  ts->adjointmonitorcontext[ts->numberadjointmonitors++] = (void *)adjointmctx;
+  ts->adjointmonitorcontext[ts->numberadjointmonitors++] = adjointmctx;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

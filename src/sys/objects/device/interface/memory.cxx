@@ -555,8 +555,11 @@ PetscErrorCode PetscDeviceMemset(PetscDeviceContext dctx, void *ptr, PetscInt v,
     } else {
       // REVIEW ME: we might potentially need to sync here if the memory is device-allocated
       // (pinned) but being memset by a host dctx
+      PetscMPIInt iv;
+
+      PetscCall(PetscMPIIntCast(v, &iv));
       PetscCall(PetscDeviceCheckCapable_Private(dctx, PetscMemTypeHost(attr.mtype), "memsetting"));
-      std::memset(ptr, static_cast<int>(v), n);
+      std::memset(ptr, iv, n);
     }
   }
   PetscFunctionReturn(PETSC_SUCCESS);

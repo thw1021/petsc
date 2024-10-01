@@ -2497,8 +2497,8 @@ static PetscErrorCode PetscSectionSymLabelReset(PetscSectionSym sym)
   for (i = 0; i <= sl->numStrata; i++) {
     if (sl->modes[i] == PETSC_OWN_POINTER || sl->modes[i] == PETSC_COPY_VALUES) {
       for (j = sl->minMaxOrients[i][0]; j < sl->minMaxOrients[i][1]; j++) {
-        if (sl->perms[i]) PetscCall(PetscFree(sl->perms[i][j]));
-        if (sl->rots[i]) PetscCall(PetscFree(sl->rots[i][j]));
+        if (sl->perms[i]) PetscCall(PetscFreeConst(sl->perms[i][j]));
+        if (sl->rots[i]) PetscCall(PetscFreeConst(sl->rots[i][j]));
       }
       if (sl->perms[i]) {
         const PetscInt **perms = &sl->perms[i][sl->minMaxOrients[i][0]];

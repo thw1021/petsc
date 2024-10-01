@@ -438,8 +438,8 @@ static PetscErrorCode PCSetData_AGG(PC pc, Mat a_A)
       PetscCall(DMGetNumFields(dm, &Nf));
       if (Nf) {
         PetscCall(DMGetField(dm, 0, NULL, &deformation));
-        PetscCall(PetscObjectQuery((PetscObject)deformation, "nearnullspace", (PetscObject *)&mnull));
-        if (!mnull) PetscCall(PetscObjectQuery((PetscObject)deformation, "nullspace", (PetscObject *)&mnull));
+        PetscCall(PetscObjectQuery(deformation, "nearnullspace", (PetscObject *)&mnull));
+        if (!mnull) PetscCall(PetscObjectQuery(deformation, "nullspace", (PetscObject *)&mnull));
       }
     }
   }
@@ -925,7 +925,7 @@ static PetscErrorCode fixAggregatesWithSquare(PC pc, Mat Gmat_2, Mat Gmat_1, Pet
     PetscCall(VecGetArray(mpimat_2->lvec, &cpcol_2_state));
     /* get 'cpcol_2_par_orig' */
     for (kk = 0, j = my0; kk < nloc; kk++, j++) {
-      PetscScalar v = (PetscScalar)lid_parent_gid[kk];
+      PetscScalar v = lid_parent_gid[kk];
 
       PetscCall(VecSetValues(tempVec, 1, &j, &v, INSERT_VALUES));
     }
@@ -994,9 +994,9 @@ static PetscErrorCode fixAggregatesWithSquare(PC pc, Mat Gmat_2, Mat Gmat_1, Pet
           PetscInt cpid   = idx[j];
           NState   statej = (NState)PetscRealPart(cpcol_1_state[cpid]);
 
-          if (IS_SELECTED(statej) && sgidold != (PetscInt)statej) { /* ghost will steal this, remove from my list */
-            lid_parent_gid[lid] = (PetscScalar)statej;              /* send who selected */
-            if (sgidold >= my0 && sgidold < Iend) {                 /* this was mine */
+          if (IS_SELECTED(statej) && sgidold != statej) { /* ghost will steal this, remove from my list */
+            lid_parent_gid[lid] = (PetscScalar)statej;    /* send who selected */
+            if (sgidold >= my0 && sgidold < Iend) {       /* this was mine */
               PetscInt      hav = 0, oldslidj = sgidold - my0;
               PetscCDIntNd *pos, *last        = NULL;
 
@@ -1355,7 +1355,7 @@ static PetscErrorCode PCGAMGConstructProlongator_AGG(PC pc, Mat Amat, PetscCoars
     PetscCall(PetscFree(tmp_ldata));
   } else {
     nbnodes      = bs * nloc;
-    data_w_ghost = (PetscReal *)pc_gamg->data;
+    data_w_ghost = pc_gamg->data;
   }
 
   /* get 'flid_fgid' TODO - move up to get 'stride' and do get null space data above in one step (jj loop) */

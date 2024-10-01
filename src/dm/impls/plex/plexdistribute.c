@@ -1690,7 +1690,7 @@ PetscErrorCode DMPlexMigrate(DM dm, PetscSF sf, DM targetDM)
 @*/
 PetscErrorCode DMPlexRemapMigrationSF(PetscSF sfOverlap, PetscSF sfMigration, PetscSF *sfMigrationNew)
 {
-  PetscSFNode       *newRemote, *permRemote;
+  PetscSFNode       *newRemote, *permRemote = NULL;
   const PetscInt    *oldLeaves;
   const PetscSFNode *oldRemote;
   PetscInt           nroots, nleaves, noldleaves;
@@ -1709,7 +1709,7 @@ PetscErrorCode DMPlexRemapMigrationSF(PetscSF sfOverlap, PetscSF sfMigration, Pe
   }
   PetscCall(PetscSFBcastBegin(sfOverlap, MPIU_SF_NODE, oldRemote, newRemote, MPI_REPLACE));
   PetscCall(PetscSFBcastEnd(sfOverlap, MPIU_SF_NODE, oldRemote, newRemote, MPI_REPLACE));
-  if (oldLeaves) PetscCall(PetscFree(oldRemote));
+  PetscCall(PetscFree(permRemote));
   PetscCall(PetscSFCreate(PetscObjectComm((PetscObject)sfOverlap), sfMigrationNew));
   PetscCall(PetscSFSetGraph(*sfMigrationNew, nroots, nleaves, NULL, PETSC_OWN_POINTER, newRemote, PETSC_OWN_POINTER));
   PetscFunctionReturn(PETSC_SUCCESS);

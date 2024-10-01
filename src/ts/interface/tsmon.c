@@ -134,7 +134,7 @@ PetscErrorCode TSMonitorSet(TS ts, PetscErrorCode (*monitor)(TS ts, PetscInt ste
   PetscCheck(ts->numbermonitors < MAXTSMONITORS, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Too many monitors set");
   ts->monitor[ts->numbermonitors]          = monitor;
   ts->monitordestroy[ts->numbermonitors]   = mdestroy;
-  ts->monitorcontext[ts->numbermonitors++] = (void *)mctx;
+  ts->monitorcontext[ts->numbermonitors++] = mctx;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

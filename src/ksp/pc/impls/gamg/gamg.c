@@ -366,7 +366,7 @@ static PetscErrorCode PCGAMGCreateLevel_GAMG(PC pc, Mat Amat_fine, PetscInt cr_b
         for (ii = 0; ii < ncrs; ii++) {
           for (kk = 0; kk < ndata_rows; kk++) {
             PetscInt    ix = ii * ndata_rows + kk + jj * stride0, jx = ii * node_data_sz + kk * ndata_cols + jj;
-            PetscScalar tt = (PetscScalar)pc_gamg->data[ix];
+            PetscScalar tt = pc_gamg->data[ix];
             PetscCall(VecSetValues(src_crd, 1, &jx, &tt, INSERT_VALUES));
           }
         }
@@ -1839,7 +1839,7 @@ static PetscErrorCode PCSetFromOptions_GAMG(PC pc, PetscOptionItems *PetscOption
     } while (++i < PETSC_MG_MAXLEVELS);
   }
   PetscCall(PetscOptionsInt("-pc_mg_levels", "Set number of MG levels (should get from base class)", "PCGAMGSetNlevels", pc_gamg->Nlevels, &pc_gamg->Nlevels, NULL));
-  PetscCheck(pc_gamg->Nlevels <= PETSC_MG_MAXLEVELS, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_INCOMP, "-pc_mg_levels (%d) >= PETSC_MG_MAXLEVELS (%d)", (int)pc_gamg->Nlevels, (int)PETSC_MG_MAXLEVELS);
+  PetscCheck(pc_gamg->Nlevels <= PETSC_MG_MAXLEVELS, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_INCOMP, "-pc_mg_levels (%d) >= PETSC_MG_MAXLEVELS (%d)", (int)pc_gamg->Nlevels, PETSC_MG_MAXLEVELS);
   n = PETSC_MG_MAXLEVELS;
   PetscCall(PetscOptionsIntArray("-pc_gamg_rank_reduction_factors", "Manual schedule of coarse grid reduction factors that overrides internal heuristics (0 for first reduction puts one process/device)", "PCGAMGSetRankReductionFactors", pc_gamg->level_reduction_factors, &n, &flag));
   if (!flag) i = 0;

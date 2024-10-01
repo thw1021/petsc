@@ -407,7 +407,7 @@ PetscErrorCode PCPatchSetSubMatType(PC pc, MatType sub_mat_type)
 
   PetscFunctionBegin;
   if (patch->sub_mat_type) PetscCall(PetscFree(patch->sub_mat_type));
-  PetscCall(PetscStrallocpy(sub_mat_type, (char **)&patch->sub_mat_type));
+  PetscCall(PetscStrallocpy(sub_mat_type, &patch->sub_mat_type));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -2184,7 +2184,7 @@ static PetscErrorCode MatSetValues_PCPatch_Private(Mat mat, PetscInt m, const Pe
   PetscCall(VecGetSize(data, &nz));
   PetscCall(VecGetArray(data, &array));
   PetscCheck(m == n, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_WRONG, "Only for square insertion");
-  cell = (PetscInt)(idxm[0] / bs); /* use the fact that this is called once per cell */
+  cell = idxm[0] / bs; /* use the fact that this is called once per cell */
   for (i = 0; i < m; i++) {
     PetscCheck(idxm[i] == idxn[i], PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_WRONG, "Row and column indices must match!");
     for (j = 0; j < n; j++) {
@@ -3191,24 +3191,23 @@ PETSC_EXTERN PetscErrorCode PCCreate_Patch(PC pc)
   patch->isNonlinear = PETSC_FALSE;
 
   /* Set some defaults */
-  patch->combined                 = PETSC_FALSE;
-  patch->save_operators           = PETSC_TRUE;
-  patch->local_composition_type   = PC_COMPOSITE_ADDITIVE;
-  patch->precomputeElementTensors = PETSC_FALSE;
-  patch->partition_of_unity       = PETSC_FALSE;
-  patch->codim                    = -1;
-  patch->dim                      = -1;
-  patch->vankadim                 = -1;
-  patch->ignoredim                = -1;
-  patch->pardecomp_overlap        = 0;
-  patch->patchconstructop         = PCPatchConstruct_Star;
-  patch->symmetrise_sweep         = PETSC_FALSE;
-  patch->npatch                   = 0;
-  patch->userIS                   = NULL;
-  patch->optionsSet               = PETSC_FALSE;
-  patch->iterationSet             = NULL;
-  patch->user_patches             = PETSC_FALSE;
-  PetscCall(PetscStrallocpy(MATDENSE, (char **)&patch->sub_mat_type));
+  patch->combined                          = PETSC_FALSE;
+  patch->save_operators                    = PETSC_TRUE;
+  patch->local_composition_type            = PC_COMPOSITE_ADDITIVE;
+  patch->precomputeElementTensors          = PETSC_FALSE;
+  patch->partition_of_unity                = PETSC_FALSE;
+  patch->codim                             = -1;
+  patch->dim                               = -1;
+  patch->vankadim                          = -1;
+  patch->ignoredim                         = -1;
+  patch->pardecomp_overlap                 = 0;
+  patch->patchconstructop                  = PCPatchConstruct_Star;
+  patch->symmetrise_sweep                  = PETSC_FALSE;
+  patch->npatch                            = 0;
+  patch->userIS                            = NULL;
+  patch->optionsSet                        = PETSC_FALSE;
+  patch->iterationSet                      = NULL;
+  patch->user_patches                      = PETSC_FALSE;
   patch->viewPatches                       = PETSC_FALSE;
   patch->viewCells                         = PETSC_FALSE;
   patch->viewPoints                        = PETSC_FALSE;
@@ -3222,6 +3221,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_Patch(PC pc)
   patch->updatemultiplicative              = PCUpdateMultiplicative_PATCH_Linear;
   patch->dofMappingWithoutToWithArtificial = NULL;
   patch->dofMappingWithoutToWithAll        = NULL;
+  PetscCall(PetscStrallocpy(MATDENSE, &patch->sub_mat_type));
 
   pc->data                 = (void *)patch;
   pc->ops->apply           = PCApply_PATCH;

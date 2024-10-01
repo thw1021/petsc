@@ -111,7 +111,7 @@ static PetscErrorCode PetscLogHandlerEventSync_Ex7(PetscLogHandler h, PetscLogEv
   PetscCall(PetscTimeAdd(&time));
   PetscCall(PetscLogHandlerGetState(h, &state));
   PetscCall(PetscLogStateEventGetInfo(state, e, &event_info));
-  PrintData("Event \"%s\" synced: took %g seconds\n", event_info.name, (double)time);
+  PrintData("Event \"%s\" synced: took %g seconds\n", event_info.name, time);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

@@ -15,7 +15,7 @@ PetscErrorCode PCMGMCycle_Private(PC pc, PC_MG_Levels **mglevelsin, PetscBool tr
 {
   PC_MG        *mg = (PC_MG *)pc->data;
   PC_MG_Levels *mgc, *mglevels = *mglevelsin;
-  PetscInt      cycles = (mglevels->level == 1) ? 1 : (PetscInt)mglevels->cycles;
+  PetscInt      cycles = (mglevels->level == 1) ? 1 : mglevels->cycles;
 
   PetscFunctionBegin;
   if (mglevels->eventsmoothsolve) PetscCall(PetscLogEventBegin(mglevels->eventsmoothsolve, 0, 0, 0, 0));
