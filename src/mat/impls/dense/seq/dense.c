@@ -73,7 +73,7 @@ PetscErrorCode MatSeqDenseInvertFactors_Private(Mat A)
       PetscCall(PetscFPTrapPop());
       PetscCall(MatSeqDenseSymmetrize_Private(A, PETSC_FALSE));
     }
-    PetscCheck(!info, PETSC_COMM_SELF, PETSC_ERR_MAT_CH_ZRPVT, "Bad Inversion: zero pivot in row %" PetscInt_FMT, (PetscInt)info - 1);
+    PetscCheck(!info, PETSC_COMM_SELF, PETSC_ERR_MAT_CH_ZRPVT, "Bad Inversion: zero pivot in row %" PetscBLASInt_FMT, info - 1);
     PetscCall(PetscLogFlops((1.0 * A->cmap->n * A->cmap->n * A->cmap->n) / 3.0));
   } else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Matrix must be factored to solve");
 
@@ -359,7 +359,7 @@ restore:
 PetscErrorCode MatDuplicateNoCreate_SeqDense(Mat newi, Mat A, MatDuplicateOption cpvalues)
 {
   Mat_SeqDense *mat = (Mat_SeqDense *)A->data;
-  PetscInt      lda = (PetscInt)mat->lda, j, m, nlda = lda;
+  PetscInt      lda = mat->lda, j, m, nlda = lda;
   PetscBool     isdensecpu;
 
   PetscFunctionBegin;
@@ -884,7 +884,7 @@ PetscErrorCode MatCholeskyFactor_SeqDense(Mat A, IS perm, const MatFactorInfo *f
     PetscCallBLAS("LAPACKsytrf", LAPACKsytrf_("L", &n, mat->v, &mat->lda, mat->pivots, mat->fwork, &mat->lfwork, &info));
     PetscCall(PetscFPTrapPop());
   }
-  PetscCheck(!info, PETSC_COMM_SELF, PETSC_ERR_MAT_CH_ZRPVT, "Bad factorization: zero pivot in row %" PetscInt_FMT, (PetscInt)info - 1);
+  PetscCheck(!info, PETSC_COMM_SELF, PETSC_ERR_MAT_CH_ZRPVT, "Bad factorization: zero pivot in row %" PetscBLASInt_FMT, info - 1);
 
   A->ops->solve             = MatSolve_SeqDense_Cholesky;
   A->ops->matsolve          = MatMatSolve_SeqDense_Cholesky;

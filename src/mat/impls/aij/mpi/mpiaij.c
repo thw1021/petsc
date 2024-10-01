@@ -1257,7 +1257,7 @@ static PetscErrorCode MatView_MPIAIJ_ASCIIorDraworSocket(Mat mat, PetscViewer vi
       PetscInt i, nmax = 0, nmin = PETSC_INT_MAX, navg = 0, *nz, nzlocal = ((Mat_SeqAIJ *)aij->A->data)->nz + ((Mat_SeqAIJ *)aij->B->data)->nz;
       PetscCall(PetscMalloc1(size, &nz));
       PetscCallMPI(MPI_Allgather(&nzlocal, 1, MPIU_INT, nz, 1, MPIU_INT, PetscObjectComm((PetscObject)mat)));
-      for (i = 0; i < (PetscInt)size; i++) {
+      for (i = 0; i < size; i++) {
         nmax = PetscMax(nmax, nz[i]);
         nmin = PetscMin(nmin, nz[i]);
         navg += nz[i];
@@ -7873,7 +7873,7 @@ PETSC_INTERN PetscErrorCode MatCreateGraph_Simple_AIJ(Mat Amat, PetscBool symmet
               }
             }
           }
-          PetscAssert(k / bs < nmax, comm, PETSC_ERR_USER, "k / bs (%d) >= nmax (%d)", (int)(k / bs), (int)nmax);
+          PetscAssert(k / bs < nmax, comm, PETSC_ERR_USER, "k / bs (%" PetscInt_FMT ") >= nmax (%" PetscInt_FMT ")", k / bs, nmax);
           AA[k / bs] = val;
         }
         grow = Istart / bs + brow / bs;
@@ -7900,7 +7900,7 @@ PETSC_INTERN PetscErrorCode MatCreateGraph_Simple_AIJ(Mat Amat, PetscBool symmet
               PetscCall(MatGetRow(b, brow + ii, &ncols, &cols, &vals));
               for (PetscInt k = 0; k < ncols; k += bs) {
                 for (PetscInt jj = 0; jj < bs; jj++) { // cols in block
-                  PetscAssert(k / bs < nmax, comm, PETSC_ERR_USER, "k / bs (%d) >= nmax (%d)", (int)(k / bs), (int)nmax);
+                  PetscAssert(k / bs < nmax, comm, PETSC_ERR_USER, "k / bs (%" PetscInt_FMT ") >= nmax (%" PetscInt_FMT ")", k / bs, nmax);
                   AA[k / bs] += PetscAbs(PetscRealPart(vals[k + jj]));
                 }
               }

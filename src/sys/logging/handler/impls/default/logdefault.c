@@ -905,7 +905,7 @@ static PetscErrorCode PetscLogHandlerDump_Default(PetscLogHandler handler, const
   if (def->petsc_logActions) {
     PetscInt num_actions;
     PetscCall(PetscLogActionArrayGetSize(def->petsc_actions, &num_actions, NULL));
-    PetscCall(PetscFPrintf(PETSC_COMM_SELF, fd, "Actions accomplished %d\n", (int)num_actions));
+    PetscCall(PetscFPrintf(PETSC_COMM_SELF, fd, "Actions accomplished %" PetscInt_FMT "\n", num_actions));
     for (int a = 0; a < num_actions; a++) {
       Action *action;
 
@@ -1026,7 +1026,7 @@ static PetscErrorCode PetscLogHandlerView_Default_Detailed(PetscLogHandler handl
     PetscInt num_objects;
 
     PetscCall(PetscLogObjectArrayGetSize(def->petsc_objects, &num_objects, NULL));
-    PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "LocalObjects[%d] = %d\n", rank, (int)num_objects));
+    PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "LocalObjects[%d] = %" PetscInt_FMT "\n", rank, num_objects));
   }
   PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "LocalMemory[%d] = %g\n", rank, maxMem));
   PetscCall(PetscViewerFlush(viewer));

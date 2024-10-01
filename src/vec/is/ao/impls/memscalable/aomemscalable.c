@@ -275,6 +275,7 @@ static PetscErrorCode AOCreateMemoryScalable_private(MPI_Comm comm, PetscInt nap
   PetscInt           n = napp, ip, ia;
   MPI_Status        *send_status;
   PetscCount         nindices;
+  PetscMPIInt        nsends_i, nreceives_i;
 
   PetscFunctionBegin;
   PetscCall(PetscArrayzero(aomap_loc, n_local));
@@ -347,14 +348,16 @@ static PetscErrorCode AOCreateMemoryScalable_private(MPI_Comm comm, PetscInt nap
     }
   }
   PetscCheck(nsends == count, comm, PETSC_ERR_SUP, "nsends %" PetscInt_FMT " != count %" PetscInt_FMT, nsends, count);
+  PetscCall(PetscMPIIntCast(nsends, &nsends_i));
+  PetscCall(PetscMPIIntCast(nreceives, &nreceives_i));
 
   /* wait on sends */
-  if (nsends) PetscCallMPI(MPI_Waitall((PetscMPIInt)nsends, send_waits, send_status));
+  if (nsends) PetscCallMPI(MPI_Waitall(nsends_i, send_waits, send_status));
 
   /* recvs */
   count = 0;
   for (j = nreceives; j > 0; j--) {
-    PetscCallMPI(MPI_Waitany((PetscMPIInt)nreceives, recv_waits, &widx, &recv_status));
+    PetscCallMPI(MPI_Waitany(nreceives_i, recv_waits, &widx, &recv_status));
     PetscCallMPI(MPIU_Get_count(&recv_status, MPIU_INT, &nindices));
     rbuf = rindices + nmax * widx; /* global index */
 

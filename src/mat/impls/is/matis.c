@@ -2587,13 +2587,15 @@ static PetscErrorCode MatInvertBlockDiagonal_IS(Mat mat, const PetscScalar **val
   MPI_Datatype       nodeType;
   const PetscScalar *lv;
   PetscInt           bs;
+  PetscMPIInt        mbs;
 
   PetscFunctionBegin;
   PetscCall(MatGetBlockSize(mat, &bs));
   PetscCall(MatSetBlockSize(is->A, bs));
   PetscCall(MatInvertBlockDiagonal(is->A, &lv));
   if (!is->bdiag) PetscCall(PetscMalloc1(bs * mat->rmap->n, &is->bdiag));
-  PetscCallMPI(MPI_Type_contiguous((PetscMPIInt)bs, MPIU_SCALAR, &nodeType));
+  PetscCall(PetscMPIIntCast(bs, &mbs));
+  PetscCallMPI(MPI_Type_contiguous(mbs, MPIU_SCALAR, &nodeType));
   PetscCallMPI(MPI_Type_commit(&nodeType));
   PetscCall(PetscSFReduceBegin(is->sf, nodeType, lv, is->bdiag, MPI_REPLACE));
   PetscCall(PetscSFReduceEnd(is->sf, nodeType, lv, is->bdiag, MPI_REPLACE));

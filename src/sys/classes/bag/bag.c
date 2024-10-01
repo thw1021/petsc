@@ -829,7 +829,7 @@ PetscErrorCode PetscBagLoad(PetscViewer view, PetscBag bag)
   PetscCheck(classid == PETSC_BAG_FILE_CLASSID, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Not PetscBag next in binary file");
   PetscCall(PetscViewerBinaryRead(view, &deprecatedbagsize, 1, NULL, PETSC_INT));
   PetscCall(PetscViewerBinaryRead(view, &bagcount, 1, NULL, PETSC_INT));
-  PetscCheck(bagcount == bag->count, comm, PETSC_ERR_ARG_INCOMP, "Bag in file has different number of entries %d then passed in bag %d", (int)bagcount, (int)bag->count);
+  PetscCheck(bagcount == bag->count, comm, PETSC_ERR_ARG_INCOMP, "Bag in file has different number of entries %" PetscInt_FMT " then passed in bag %" PetscInt_FMT, bagcount, bag->count);
   PetscCall(PetscViewerBinaryRead(view, bag->bagname, PETSC_BAG_NAME_LENGTH, NULL, PETSC_CHAR));
   PetscCall(PetscViewerBinaryRead(view, bag->baghelp, PETSC_BAG_HELP_LENGTH, NULL, PETSC_CHAR));
 

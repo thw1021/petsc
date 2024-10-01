@@ -77,7 +77,7 @@ PETSC_EXTERN void MPIAPI PetscSplitReduction_Local(void *in, void *out, PetscMPI
   };
   struct PetscScalarInt *xin  = (struct PetscScalarInt *)in;
   struct PetscScalarInt *xout = (struct PetscScalarInt *)out;
-  PetscInt               i, count = (PetscInt)*cnt;
+  PetscInt               i, count = *cnt;
 
   PetscFunctionBegin;
   if (*datatype != MPIU_SCALAR_INT) {

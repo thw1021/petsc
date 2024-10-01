@@ -410,6 +410,7 @@ PetscErrorCode PetscDrawHGView(PetscDrawHG hist, PetscViewer viewer)
 {
   PetscReal xmax, xmin, *bins, *values, binSize, binLeft, binRight, mean, var;
   PetscInt  numBins, numBinsOld, numValues, initSize, i, p;
+  int       inumBins;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(hist, PETSC_DRAWHG_CLASSID, 1);
@@ -444,7 +445,8 @@ PetscErrorCode PetscDrawHGView(PetscDrawHG hist, PetscViewer viewer)
       while (initSize * numBins != (int)xmax - xmin) {
         initSize = PetscMax(initSize - 1, 1);
         numBins  = (int)((int)xmax - xmin) / initSize;
-        PetscCall(PetscDrawHGSetNumberBins(hist, (int)numBins));
+        PetscCall(PetscMPIIntCast(numBins, &inumBins));
+        PetscCall(PetscDrawHGSetNumberBins(hist, inumBins));
       }
     }
     binSize = (xmax - xmin) / numBins;
@@ -469,9 +471,10 @@ PetscErrorCode PetscDrawHGView(PetscDrawHG hist, PetscViewer viewer)
     for (i = 0; i < numBins; i++) {
       binLeft  = xmin + binSize * i;
       binRight = xmin + binSize * (i + 1);
-      PetscCall(PetscViewerASCIIPrintf(viewer, "Bin %2d (%6.2g - %6.2g): %.0g\n", (int)i, (double)binLeft, (double)binRight, (double)bins[i]));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "Bin %2" PetscInt_FMT " (%6.2g - %6.2g): %.0g\n", i, (double)binLeft, (double)binRight, (double)bins[i]));
     }
-    PetscCall(PetscDrawHGSetNumberBins(hist, (int)numBinsOld));
+    PetscCall(PetscMPIIntCast(numBinsOld, &inumBins));
+    PetscCall(PetscDrawHGSetNumberBins(hist, inumBins));
   }
 
   if (hist->calcStats) {

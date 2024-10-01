@@ -249,6 +249,7 @@ static PetscErrorCode DMFieldEvaluate_DS(DMField field, Vec points, PetscDataTyp
   PetscScalar       *cellBs = NULL, *cellDs = NULL, *cellHs = NULL;
   PetscReal         *cellBr = NULL, *cellDr = NULL, *cellHr = NULL;
   PetscReal         *v, *J, *invJ, *detJ;
+  PetscMPIInt        idim;
 
   PetscFunctionBegin;
   nc = field->numComponents;
@@ -274,7 +275,8 @@ static PetscErrorCode DMFieldEvaluate_DS(DMField field, Vec points, PetscDataTyp
   if (datatype == PETSC_SCALAR) PetscCall(PetscMalloc3(B ? nc * gatherSize : 0, &cellBs, D ? nc * dim * gatherSize : 0, &cellDs, H ? nc * dim * dim * gatherSize : 0, &cellHs));
   else PetscCall(PetscMalloc3(B ? nc * gatherSize : 0, &cellBr, D ? nc * dim * gatherSize : 0, &cellDr, H ? nc * dim * dim * gatherSize : 0, &cellHr));
 
-  PetscCallMPI(MPI_Type_contiguous((PetscMPIInt)dim, MPIU_SCALAR, &pointType));
+  PetscCall(PetscMPIIntCast(dim, &idim));
+  PetscCallMPI(MPI_Type_contiguous(idim, MPIU_SCALAR, &pointType));
   PetscCallMPI(MPI_Type_commit(&pointType));
   PetscCall(VecGetArrayRead(points, &pointsArray));
   PetscCall(PetscSFGatherBegin(cellSF, pointType, pointsArray, cellPoints));
@@ -412,7 +414,8 @@ static PetscErrorCode DMFieldEvaluate_DS(DMField field, Vec points, PetscDataTyp
     if (B) {
       MPI_Datatype Btype;
 
-      PetscCallMPI(MPI_Type_contiguous((PetscMPIInt)nc, origtype, &Btype));
+      PetscCall(PetscMPIIntCast(nc, &idim));
+      PetscCallMPI(MPI_Type_contiguous(idim, origtype, &Btype));
       PetscCallMPI(MPI_Type_commit(&Btype));
       PetscCall(PetscSFScatterBegin(cellSF, Btype, (datatype == PETSC_SCALAR) ? (void *)cellBs : (void *)cellBr, B));
       PetscCall(PetscSFScatterEnd(cellSF, Btype, (datatype == PETSC_SCALAR) ? (void *)cellBs : (void *)cellBr, B));
@@ -421,7 +424,8 @@ static PetscErrorCode DMFieldEvaluate_DS(DMField field, Vec points, PetscDataTyp
     if (D) {
       MPI_Datatype Dtype;
 
-      PetscCallMPI(MPI_Type_contiguous((PetscMPIInt)(nc * dim), origtype, &Dtype));
+      PetscCall(PetscMPIIntCast(nc * dim, &idim));
+      PetscCallMPI(MPI_Type_contiguous(idim, origtype, &Dtype));
       PetscCallMPI(MPI_Type_commit(&Dtype));
       PetscCall(PetscSFScatterBegin(cellSF, Dtype, (datatype == PETSC_SCALAR) ? (void *)cellDs : (void *)cellDr, D));
       PetscCall(PetscSFScatterEnd(cellSF, Dtype, (datatype == PETSC_SCALAR) ? (void *)cellDs : (void *)cellDr, D));
@@ -430,7 +434,8 @@ static PetscErrorCode DMFieldEvaluate_DS(DMField field, Vec points, PetscDataTyp
     if (H) {
       MPI_Datatype Htype;
 
-      PetscCallMPI(MPI_Type_contiguous((PetscMPIInt)(nc * dim * dim), origtype, &Htype));
+      PetscCall(PetscMPIIntCast(nc * dim * dim, &idim));
+      PetscCallMPI(MPI_Type_contiguous(idim, origtype, &Htype));
       PetscCallMPI(MPI_Type_commit(&Htype));
       PetscCall(PetscSFScatterBegin(cellSF, Htype, (datatype == PETSC_SCALAR) ? (void *)cellHs : (void *)cellHr, H));
       PetscCall(PetscSFScatterEnd(cellSF, Htype, (datatype == PETSC_SCALAR) ? (void *)cellHs : (void *)cellHr, H));

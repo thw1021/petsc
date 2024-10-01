@@ -755,10 +755,10 @@ PETSC_EXTERN PetscErrorCode PetscDrawCreate_X(PetscDraw draw)
     xywh[2] = w;
     xywh[3] = h;
     PetscCall(PetscOptionsGetIntArray(((PetscObject)draw)->options, ((PetscObject)draw)->prefix, "-geometry", xywh, &osize, NULL));
-    x = (int)xywh[0];
-    y = (int)xywh[1];
-    w = (int)xywh[2];
-    h = (int)xywh[3];
+    PetscCall(PetscMPIIntCast(xywh[0], &x));
+    PetscCall(PetscMPIIntCast(xywh[1], &y));
+    PetscCall(PetscMPIIntCast(xywh[2], &w));
+    PetscCall(PetscMPIIntCast(xywh[3], &h));
     if (w == PETSC_DECIDE || w == PETSC_DEFAULT) w = 300;
     if (h == PETSC_DECIDE || h == PETSC_DEFAULT) h = 300;
     draw->x = x;
