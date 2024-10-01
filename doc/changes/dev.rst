@@ -11,6 +11,12 @@ Changes: Development
 
 .. rubric:: General:
 
+- Add ``PetscCtxDestroyFn`` as the prototype for all context destroy functions. It is ``PetscErrorCode ()(void **)``. Previously some context destructor
+  setters took ``PetscErrorCode ()(void *)``. But these would not work directly with PETSc objects as contexts and having two different
+  context destructor models added unneeded complexity to the library. This change is not backward compatible
+- Replace ``PetscContainerSetUserDestroy()`` with ``PetscContainerSetCrxDestroy()``. This change is not backward compatible
+- Deprecate ``PetscContainerCtxDestroyDefault`` with ``PetscCtxDestroyDefault()``
+
 .. rubric:: Configure/Build:
 
 .. rubric:: Sys:
