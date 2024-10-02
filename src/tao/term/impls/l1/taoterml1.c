@@ -231,6 +231,38 @@ static PetscErrorCode TaoTermHessianMult_L1(TaoTerm term, Vec x, Vec params, Vec
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode TaoTermProximalMap_L1(TaoTerm term, Vec p, PetscReal alpha, TaoTerm g, Vec q, PetscReal beta, Vec x)
+{
+  PetscBool is_l1, is_l2;
+  PetscReal scale;
+
+  PetscFunctionBegin;
+  PetscCall(PetscObjectTypeCompare((PetscObject)term, TAOTERML1, &is_l1));
+  PetscCheck(is_l1, PetscObjectComm((PetscObject)term), PETSC_ERR_USER, "TaoTermProximalMap_L1 requires first TaoTerm to be of L1 type");
+  /* If Regularizer term is given. If not given, assume HALFL2SQUARED */
+  if (g) {
+    PetscCall(PetscObjectTypeCompare((PetscObject)g, TAOTERMHALFL2SQUARED, &is_l2));
+    PetscCheck(is_l2, PetscObjectComm((PetscObject)term), PETSC_ERR_USER, "TaoTermProximalMap_L1: TAOTERML1 only supports TAOTERMHALFL2SQUARED as regularizer");
+  }
+  // argmin of alpha * |x - p|_1 + beta/2 * ||x - q||_2^2
+  // if alpha == 0, then x == q
+  // if alpha != 0 and p == NULL, then x == argmin_y of |y|_1 + (beta/alpha)2 * ||y - q||_2^2 = SoftTHreshold(beta/2*alpha, q)
+  // if alpha != 0 and p != NULL, then x == argmin_y of |z|_1 + (beta/alpha)2 * ||z + p - q||_2^2 = SoftThreshold(beta/2*alpha, y-p) - q
+  if (alpha == 0) {
+    PetscCall(VecCopy(q, x));
+  } else if (p) {
+    /* Translation Case */
+    //TODO do I want special function for translation + scaling? also current setup doesn't allow scaling
+    //(although scaling doesnt really matter for l1 for now, for things like simplex, it would matter....
+    // Translation: if f(x) = g(x+z), then prox_f(x) = prox_g(x+z)-z
+  } else {
+    /* No translation, regular case */
+    scale = alpha * beta;
+    PetscCall(TaoSoftThreshold(q, -scale, scale, x));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*@
   TaoTermL1SetEpsilon - Set an $\epsilon$ smoothing parameter.
 
@@ -376,6 +408,7 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_L1(TaoTerm term)
   term->ops->hessian               = TaoTermHessian_L1;
   term->ops->hessianmult           = TaoTermHessianMult_L1;
   term->ops->createhessianmatrices = TaoTermCreateHessianMatricesDefault;
+  term->ops->proximalmap           =TaoTermProximalMap_L1;
 
   if (!term->H_mattype) PetscCall(PetscStrallocpy(MATSHELL, &term->H_mattype));
   if (!term->Hpre_mattype) PetscCall(PetscStrallocpy(MATDIAGONAL, &term->Hpre_mattype));
