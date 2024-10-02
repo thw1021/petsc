@@ -12,7 +12,16 @@ iter =   6, Function value 1.52771, Residual: 0.00143288
 iter =   7, Function value 1.52729, Residual: 0.000716629 
 Tao Object: 2 MPI processes
   type: bmrm
-  convergence tolerances: gatol=0.001,  grtol=1e-05,    steptol=0.,   gttol=0.
+  Objective function:
+    Scale (tao_objective_scale): 1.
+    Function:
+      TaoTerm Object: (callbacks_) 2 MPI processes
+        type: taocallbacks
+        solution vector space: N = 80 [VecType mpi (taoterm_solution_vec_type)]
+        parameter vector space: (none)
+        attached to Tao [name omitted]
+    Map: unmapped
+  convergence tolerances: gatol=0.001,   grtol=1e-12,   steptol=0.,   gttol=0.
   Residual in Function/Gradient:=0.000716629
   Objective value=1.52729
   total number of iterations=7,                          (max: 2000)
