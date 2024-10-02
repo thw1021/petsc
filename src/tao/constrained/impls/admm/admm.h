@@ -4,11 +4,7 @@
 typedef struct _TaoADMMOps *TaoADMMOps;
 
 struct _TaoADMMOps {
-  PetscErrorCode (*misfitobjgrad)(Tao, Vec, PetscReal *, Vec, void *);
-  PetscErrorCode (*misfithess)(Tao, Vec, Mat, Mat, void *);
   PetscErrorCode (*misfitjac)(Tao, Vec, Mat, Mat, void *);
-  PetscErrorCode (*regobjgrad)(Tao, Vec, PetscReal *, Vec, void *);
-  PetscErrorCode (*reghess)(Tao, Vec, Mat, Mat, void *);
   PetscErrorCode (*regjac)(Tao, Vec, Mat, Mat, void *);
 };
 
@@ -35,4 +31,8 @@ typedef struct {
   PetscBool              Hxbool, Hzbool;     /* Bool to make sure Hessian gets updated only once for Hchange False case */
   TaoADMMUpdateType      update;             /* update policy for mu */
   TaoADMMRegularizerType regswitch;          /* regularization policy */
+  TaoMappedTerm          mis_term;
+  TaoMappedTerm          reg_term;
+  TaoTerm                mis_callbacks;
+  TaoTerm                reg_callbacks;
 } TAO_ADMM;
