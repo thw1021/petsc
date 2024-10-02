@@ -35,7 +35,8 @@ typedef struct _p_TaoTerm *TaoTerm;
 . `TAOTERMADMMMISFIT`      - uses the callback functions set in `TaoADMMSetMisfitObjectiveAndGradientRoutine()`, etc.
 . `TAOTERMSHELL`           - a container for arbitrary user-defined callbacks
 . `TAOTERMSUM`             - a sum of multiple other `TaoTerm`s
-- `TAOTERMHALFL2SQUARED`   - $\tfrac{1}{2}\|x - p\|_2^2$
+. `TAOTERMHALFL2SQUARED`   - $\tfrac{1}{2}\|x - p\|_2^2$
+- `TAOTERML1`              - $\|x - p\|_1$
 
   Level: intermediate
 
@@ -49,6 +50,7 @@ typedef const char *TaoTermType;
 #define TAOTERMSHELL           "shell"
 #define TAOTERMSUM             "sum"
 #define TAOTERMHALFL2SQUARED   "halfl2squared"
+#define TAOTERML1              "l1"
 
 PETSC_EXTERN PetscErrorCode TaoTermRegister(const char[], PetscErrorCode (*)(TaoTerm));
 
@@ -172,6 +174,10 @@ PETSC_EXTERN PetscErrorCode TaoTermSumGetSubtermMask(TaoTerm, PetscInt, TaoTermM
 PETSC_EXTERN PetscErrorCode TaoTermSumSetSubtermMask(TaoTerm, PetscInt, TaoTermMask);
 
 PETSC_EXTERN PetscErrorCode TaoTermCreateHalfL2Squared(MPI_Comm, PetscInt, PetscInt, TaoTerm *);
+
+PETSC_EXTERN PetscErrorCode TaoTermCreateL1(MPI_Comm, PetscInt, PetscInt, PetscReal, TaoTerm *);
+PETSC_EXTERN PetscErrorCode TaoTermL1SetEpsilon(TaoTerm, PetscReal);
+PETSC_EXTERN PetscErrorCode TaoTermL1GetEpsilon(TaoTerm, PetscReal *);
 
 PETSC_EXTERN PetscErrorCode TaoTermIsObjectiveDefined(TaoTerm, PetscBool *);
 PETSC_EXTERN PetscErrorCode TaoTermIsGradientDefined(TaoTerm, PetscBool *);
