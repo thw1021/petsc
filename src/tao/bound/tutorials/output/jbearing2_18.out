@@ -30,6 +30,15 @@ Tao Object: 1 MPI process
         Not a descent direction: 0
         Line search fails: 0
         Matrix has not been preallocated yet
+      Objective function:
+        Scale (tao_objective_scale): 1.
+        Function:
+          TaoTerm Object: (tao_bnk_callbacks_) 1 MPI process
+            type: taocallbacks
+            solution vector space: N = 96 [VecType seq (taoterm_solution_vec_type)]
+            parameter vector space: (none)
+            attached to Tao [name omitted] (tao_bnk_)
+        Map: unmapped
       TaoLineSearch Object: (tao_bnk_) 1 MPI process
         type: more-thuente
         maximum function evaluations=30
@@ -71,6 +80,15 @@ Tao Object: 1 MPI process
           type: constantdiagonal
           Diagonal value: 1.
       Rescale type: none
+  Objective function:
+    Scale (tao_objective_scale): 1.
+    Function:
+      TaoTerm Object: (callbacks_) 1 MPI process
+        type: taocallbacks
+        solution vector space: N = 96 [VecType seq (taoterm_solution_vec_type)]
+        parameter vector space: (none)
+        attached to Tao [name omitted]
+    Map: unmapped
   TaoLineSearch Object: 1 MPI process
     type: more-thuente
     maximum function evaluations=30
