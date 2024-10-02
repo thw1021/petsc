@@ -87,7 +87,7 @@ typedef struct {
   PetscInt    *precomputedIntFacetTensorLocations; /* Locations of the precomputed tensors for each interior facet. */
   Mat         *mat;                                /* System matrix for each patch */
   Mat         *matWithArtificial;                  /* System matrix including dofs with artificial bcs for each patch */
-  MatType      sub_mat_type;                       /* Matrix type for patch systems */
+  char        *sub_mat_type;                       /* Matrix type for patch systems */
   Vec          patchRHS, patchUpdate;              /* Work vectors for RHS and solution on each patch */
   IS          *dofMappingWithoutToWithArtificial;
   IS          *dofMappingWithoutToWithAll;

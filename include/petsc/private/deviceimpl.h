@@ -57,6 +57,7 @@ extern void PetscCheckCompatibleDeviceContexts(T, int, U, int);
 #elif PetscDefined(HAVE_CXX) && (PetscDefined(USE_DEBUG) || PetscDefined(DEVICE_KEEP_ERROR_CHECKING_MACROS))
   #define PetscValidDeviceType(dtype, argno) \
     do { \
+      PETSC_SILENCE_WUSELESSCAST_BEGIN; \
       PetscDeviceType pvdt_dtype_ = PetscDeviceTypeCast(dtype); \
       int             pvdt_argno_ = (int)(argno); \
       PetscCheck(((int)pvdt_dtype_ >= (int)PETSC_DEVICE_HOST) && ((int)pvdt_dtype_ <= (int)PETSC_DEVICE_MAX), PETSC_COMM_SELF, PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown PetscDeviceType '%d': Argument #%d", pvdt_dtype_, pvdt_argno_); \
@@ -67,33 +68,40 @@ extern void PetscCheckCompatibleDeviceContexts(T, int, U, int);
                 " run configure --help %s for available options", \
                 PetscDeviceTypes[pvdt_dtype_], pvdt_argno_, PetscDeviceTypes[pvdt_dtype_]); \
       } \
+      PETSC_SILENCE_WUSELESSCAST_END; \
     } while (0)
 
   #define PetscCheckCompatibleDeviceTypes(dtype1, argno1, dtype2, argno2) \
     do { \
+      PETSC_SILENCE_WUSELESSCAST_BEGIN; \
       PetscDeviceType pccdt_dtype1_ = PetscDeviceTypeCast(dtype1); \
       PetscDeviceType pccdt_dtype2_ = PetscDeviceTypeCast(dtype2); \
       PetscValidDeviceType(pccdt_dtype1_, 1); \
       PetscValidDeviceType(pccdt_dtype2_, 2); \
       PetscCheck(pccdt_dtype1_ == pccdt_dtype2_, PETSC_COMM_SELF, PETSC_ERR_ARG_NOTSAMETYPE, "PetscDeviceTypes are incompatible: Arguments #%d and #%d. Expected PetscDeviceType '%s' but have '%s' instead", argno1, argno2, PetscDeviceTypes[pccdt_dtype1_], PetscDeviceTypes[pccdt_dtype2_]); \
+      PETSC_SILENCE_WUSELESSCAST_END; \
     } while (0)
 
   #define PetscValidDevice(dev, argno) \
     do { \
+      PETSC_SILENCE_WUSELESSCAST_BEGIN; \
       PetscDevice pvd_dev_   = dev; \
       int         pvd_argno_ = (int)(argno); \
       PetscAssertPointer(pvd_dev_, pvd_argno_); \
       PetscValidDeviceType(pvd_dev_->type, pvd_argno_); \
       PetscCheck(pvd_dev_->id >= 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Invalid PetscDevice: Argument #%d; id %" PetscInt_FMT " < 0", pvd_argno_, pvd_dev_->id); \
       PetscCheck(pvd_dev_->refcnt >= 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Invalid PetscDevice: Argument #%d; negative reference count %" PetscInt_FMT, pvd_argno_, pvd_dev_->refcnt); \
+      PETSC_SILENCE_WUSELESSCAST_END; \
     } while (0)
 
   #define PetscValidDeviceAttribute(dattr, argno) \
     do { \
+      PETSC_SILENCE_WUSELESSCAST_BEGIN; \
       PetscDeviceAttribute pvda_attr_  = (dattr); \
       int                  pvda_argno_ = (int)(argno); \
       PetscCheck((((int)pvda_attr_) >= 0) && (pvda_attr_ <= PETSC_DEVICE_ATTR_MAX), PETSC_COMM_SELF, PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown PetscDeviceAttribute '%d': Argument #%d", (int)pvda_attr_, pvda_argno_); \
       PetscCheck(pvda_attr_ != PETSC_DEVICE_ATTR_MAX, PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Invalid PetscDeviceAttribute '%s': Argument #%d", PetscDeviceAttributes[pvda_attr_], pvda_argno_); \
+      PETSC_SILENCE_WUSELESSCAST_END; \
     } while (0)
 
   /*
@@ -102,23 +110,28 @@ extern void PetscCheckCompatibleDeviceContexts(T, int, U, int);
 */
   #define PetscCheckCompatibleDevices(dev1, argno1, dev2, argno2) \
     do { \
+      PETSC_SILENCE_WUSELESSCAST_BEGIN; \
       PetscDevice pccd_dev1_ = (dev1), pccd_dev2_ = (dev2); \
       int         pccd_argno1_ = (int)(argno1), pccd_argno2_ = (int)(argno2); \
       PetscValidDevice(pccd_dev1_, pccd_argno1_); \
       PetscValidDevice(pccd_dev2_, pccd_argno2_); \
       PetscCheckCompatibleDeviceTypes(pccd_dev1_->type, pccd_argno1_, pccd_dev2_->type, pccd_argno2_); \
+      PETSC_SILENCE_WUSELESSCAST_END; \
     } while (0)
 
   #define PetscValidStreamType(stype, argno) \
     do { \
+      PETSC_SILENCE_WUSELESSCAST_BEGIN; \
       PetscStreamType pvst_stype_ = PetscStreamTypeCast(stype); \
       int             pvst_argno_ = (int)(argno); \
       PetscCheck(((int)pvst_stype_ >= 0) && ((int)pvst_stype_ <= (int)PETSC_STREAM_MAX), PETSC_COMM_SELF, PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown PetscStreamType '%d': Argument #%d", pvst_stype_, pvst_argno_); \
       PetscCheck((int)pvst_stype_ != (int)PETSC_STREAM_MAX, PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Invalid PetscStreamType '%s': Argument #%d", PetscStreamTypes[pvst_stype_], pvst_argno_); \
+      PETSC_SILENCE_WUSELESSCAST_END; \
     } while (0)
 
   #define PetscValidDeviceContext(dctx, argno) \
     do { \
+      PETSC_SILENCE_WUSELESSCAST_BEGIN; \
       PetscDeviceContext pvdc_dctx_  = dctx; \
       int                pvdc_argno_ = (int)(argno); \
       PetscValidHeaderSpecific(pvdc_dctx_, PETSC_DEVICE_CONTEXT_CLASSID, pvdc_argno_); \
@@ -134,15 +147,18 @@ extern void PetscCheckCompatibleDeviceContexts(T, int, U, int);
       PetscCheck(((PetscObject)pvdc_dctx_)->id >= 1, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Invalid PetscDeviceContext: Argument #%d; id %" PetscInt64_FMT " < 1", pvdc_argno_, ((PetscObject)pvdc_dctx_)->id); \
       PetscCheck(pvdc_dctx_->numChildren <= pvdc_dctx_->maxNumChildren, PETSC_COMM_SELF, PETSC_ERR_ARG_CORRUPT, "Invalid PetscDeviceContext: Argument #%d; number of children %" PetscInt_FMT " > max number of children %" PetscInt_FMT, pvdc_argno_, \
                  pvdc_dctx_->numChildren, pvdc_dctx_->maxNumChildren); \
+      PETSC_SILENCE_WUSELESSCAST_END; \
     } while (0)
 
   #define PetscCheckCompatibleDeviceContexts(dctx1, argno1, dctx2, argno2) \
     do { \
+      PETSC_SILENCE_WUSELESSCAST_BEGIN; \
       PetscDeviceContext pccdc_dctx1_ = (dctx1), pccdc_dctx2_ = (dctx2); \
       int                pccdc_argno1_ = (int)(argno1), pccdc_argno2_ = (int)(argno2); \
       PetscValidDeviceContext(pccdc_dctx1_, pccdc_argno1_); \
       PetscValidDeviceContext(pccdc_dctx2_, pccdc_argno2_); \
       if (pccdc_dctx1_->device && pccdc_dctx2_->device) PetscCheckCompatibleDevices(pccdc_dctx1_->device, pccdc_argno1_, pccdc_dctx2_->device, pccdc_argno2_); \
+      PETSC_SILENCE_WUSELESSCAST_END; \
     } while (0)
 #else /* PetscDefined(USE_DEBUG) */
   #define PetscValidDeviceType(dtype, argno)

@@ -15,7 +15,7 @@
   #define ASAN_UNPOISON_MEMORY_REGION(addr, size) ((void)(addr), (void)(size))
 #endif
 
-#if !PetscDefined(HAVE_WINDOWS_COMPILERS) && !defined(__MINGW32__)
+#if !PetscDefined(HAVE_WINDOWS_COMPILERS) && !defined(__MINGW32__) && !defined(PETSC_CHECK_USELESSCAST)
   #include <petsc/private/valgrind/memcheck.h> // VALGRIND_MAKE_MEM_*
 
   // defined in memcheck.h
@@ -94,15 +94,15 @@ static inline PetscErrorCode PetscPoisonMemoryRegion(const void *ptr, size_t siz
   PetscFunctionBegin;
   // cannot check ptr as it may be poisoned
   // PetscAssertPointer(ptr, 1);
-  if (PetscDefined(HAVE_ASAN)) {
-    ASAN_POISON_MEMORY_REGION(ptr, size);
-  } else if (PetscDefined(HAVE_VALGRIND_MEMPOISON)) {
-    (void)VALGRIND_MAKE_MEM_NOACCESS(ptr, size);
-    (void)VALGRIND_MAKE_MEM_UNDEFINED(ptr, size);
-  } else {
-    (void)ptr;
-    (void)size;
-  }
+#if defined(PETSC_HAVE_ASAN)
+  ASAN_POISON_MEMORY_REGION(ptr, size);
+#elif defined(PETSC_HAVE_VALGRIND_MEMPOISON)
+  (void)VALGRIND_MAKE_MEM_NOACCESS(ptr, size);
+  (void)VALGRIND_MAKE_MEM_UNDEFINED(ptr, size);
+#else
+  (void)ptr;
+  (void)size;
+#endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -128,14 +128,14 @@ static inline PetscErrorCode PetscUnpoisonMemoryRegion(const void *ptr, size_t s
   PetscFunctionBegin;
   // cannot check pointer as it is poisoned, duh!
   // PetscAssertPointer(ptr, 1);
-  if (PetscDefined(HAVE_ASAN)) {
-    ASAN_UNPOISON_MEMORY_REGION(ptr, size);
-  } else if (PetscDefined(HAVE_VALGRIND_MEMPOISON)) {
-    (void)VALGRIND_MAKE_MEM_DEFINED(ptr, size);
-  } else {
-    (void)ptr;
-    (void)size;
-  }
+#if defined(PETSC_HAVE_ASAN)
+  ASAN_UNPOISON_MEMORY_REGION(ptr, size);
+#elif defined(PETSC_HAVE_VALGRIND_MEMPOISON)
+  (void)VALGRIND_MAKE_MEM_DEFINED(ptr, size);
+#else
+  (void)ptr;
+  (void)size;
+#endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

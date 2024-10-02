@@ -229,8 +229,8 @@ PetscErrorCode MatRestoreRowIJ_SeqAIJ(Mat A, PetscInt oshift, PetscBool symmetri
   PetscFunctionBegin;
   if (!ia) PetscFunctionReturn(PETSC_SUCCESS);
   if ((symmetric && A->structurally_symmetric != PETSC_BOOL3_TRUE) || oshift == 1) {
-    PetscCall(PetscFree(*ia));
-    if (ja) PetscCall(PetscFree(*ja));
+    PetscCall(PetscFreeConst(*ia));
+    if (ja) PetscCall(PetscFreeConst(*ja));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -275,9 +275,8 @@ PetscErrorCode MatRestoreColumnIJ_SeqAIJ(Mat A, PetscInt oshift, PetscBool symme
 {
   PetscFunctionBegin;
   if (!ia) PetscFunctionReturn(PETSC_SUCCESS);
-
-  PetscCall(PetscFree(*ia));
-  PetscCall(PetscFree(*ja));
+  PetscCall(PetscFreeConst(*ia));
+  PetscCall(PetscFreeConst(*ja));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -905,14 +904,14 @@ static PetscErrorCode MatView_SeqAIJ_ASCII(Mat A, PetscViewer viewer)
         j = a->diag[i];
 #if defined(PETSC_USE_COMPLEX)
         if (PetscImaginaryPart(a->a[j]) > 0.0) {
-          PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g + %g i)", a->j[j], (double)PetscRealPart(1.0 / a->a[j]), (double)PetscImaginaryPart(1.0 / a->a[j])));
+          PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g + %g i)", a->j[j], (double)PetscRealPart(1 / a->a[j]), (double)PetscImaginaryPart(1 / a->a[j])));
         } else if (PetscImaginaryPart(a->a[j]) < 0.0) {
-          PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g - %g i)", a->j[j], (double)PetscRealPart(1.0 / a->a[j]), (double)(-PetscImaginaryPart(1.0 / a->a[j]))));
+          PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g - %g i)", a->j[j], (double)PetscRealPart(1 / a->a[j]), (double)(-PetscImaginaryPart(1 / a->a[j]))));
         } else {
-          PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g) ", a->j[j], (double)PetscRealPart(1.0 / a->a[j])));
+          PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g) ", a->j[j], (double)PetscRealPart(1 / a->a[j])));
         }
 #else
-        PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g) ", a->j[j], (double)(1.0 / a->a[j])));
+        PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g) ", a->j[j], (double)(1 / a->a[j])));
 #endif
 
         /* U part */
@@ -2731,7 +2730,7 @@ PetscErrorCode MatDestroySubMatrix_Private(Mat_SubSppt *submatj)
 
   if (!submatj->allcolumns) {
 #if defined(PETSC_USE_CTABLE)
-    PetscCall(PetscHMapIDestroy((PetscHMapI *)&submatj->cmap));
+    PetscCall(PetscHMapIDestroy(&submatj->cmap));
 #else
     PetscCall(PetscFree(submatj->cmap));
 #endif

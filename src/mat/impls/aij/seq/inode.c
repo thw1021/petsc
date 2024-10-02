@@ -235,8 +235,8 @@ static PetscErrorCode MatRestoreRowIJ_SeqAIJ_Inode(Mat A, PetscInt oshift, Petsc
   if (!blockcompressed) {
     PetscCall(MatRestoreRowIJ_SeqAIJ(A, oshift, symmetric, blockcompressed, n, ia, ja, done));
   } else {
-    PetscCall(PetscFree(*ia));
-    PetscCall(PetscFree(*ja));
+    PetscCall(PetscFreeConst(*ia));
+    PetscCall(PetscFreeConst(*ja));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -340,8 +340,8 @@ static PetscErrorCode MatRestoreColumnIJ_SeqAIJ_Inode(Mat A, PetscInt oshift, Pe
   if (!blockcompressed) {
     PetscCall(MatRestoreColumnIJ_SeqAIJ(A, oshift, symmetric, blockcompressed, n, ia, ja, done));
   } else {
-    PetscCall(PetscFree(*ia));
-    PetscCall(PetscFree(*ja));
+    PetscCall(PetscFreeConst(*ia));
+    PetscCall(PetscFreeConst(*ja));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }

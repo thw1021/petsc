@@ -27,11 +27,11 @@ int main(int argc, char **argv)
   PetscCall(PetscOptionsGetInt(NULL, NULL, "-bins", &b, NULL));
   PetscCall(PetscOptionsGetInt(NULL, NULL, "-color", &c, NULL));
   PetscCall(PetscOptionsHasName(NULL, NULL, "-nolabels", &flg));
-  width  = (int)w;
-  height = (int)h;
-  n      = (int)nn;
-  bins   = (int)b;
-  color  = (int)c;
+  PetscCall(PetscMPIIntCast(w, &width));
+  PetscCall(PetscMPIIntCast(h, &height));
+  PetscCall(PetscMPIIntCast(nn, &n));
+  PetscCall(PetscMPIIntCast(b, &bins));
+  PetscCall(PetscMPIIntCast(c, &color));
   if (flg) {
     xlabel   = NULL;
     ylabel   = NULL;

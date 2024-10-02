@@ -18,5 +18,5 @@ typedef struct {
   PetscBool      singleton_made;
   PetscBool      hold; /* Keep previous image when adding new */
   PetscReal      pause;
-  PetscDrawType  drawtype;
+  char          *drawtype;
 } PetscViewer_Draw;
