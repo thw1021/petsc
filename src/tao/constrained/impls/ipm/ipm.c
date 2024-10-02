@@ -196,14 +196,12 @@ static PetscErrorCode TaoSetup_IPM(Tao tao)
   ipmP->nb = ipmP->mi = ipmP->me = 0;
   ipmP->K                        = NULL;
   PetscCall(VecGetSize(tao->solution, &ipmP->n));
-  if (!tao->gradient) {
-    PetscCall(VecDuplicate(tao->solution, &tao->gradient));
-    PetscCall(VecDuplicate(tao->solution, &tao->stepdirection));
-    PetscCall(VecDuplicate(tao->solution, &ipmP->rd));
-    PetscCall(VecDuplicate(tao->solution, &ipmP->rhs_x));
-    PetscCall(VecDuplicate(tao->solution, &ipmP->work));
-    PetscCall(VecDuplicate(tao->solution, &ipmP->save_x));
-  }
+  if (!tao->gradient) PetscCall(VecDuplicate(tao->solution, &tao->gradient));
+  if (!tao->stepdirection) PetscCall(VecDuplicate(tao->solution, &tao->stepdirection));
+  if (!ipmP->rd) PetscCall(VecDuplicate(tao->solution, &ipmP->rd));
+  if (!ipmP->rhs_x) PetscCall(VecDuplicate(tao->solution, &ipmP->rhs_x));
+  if (!ipmP->work) PetscCall(VecDuplicate(tao->solution, &ipmP->work));
+  if (!ipmP->save_x) PetscCall(VecDuplicate(tao->solution, &ipmP->save_x));
   if (tao->constraints_equality) {
     PetscCall(VecGetSize(tao->constraints_equality, &ipmP->me));
     PetscCall(VecDuplicate(tao->constraints_equality, &ipmP->lambdae));
