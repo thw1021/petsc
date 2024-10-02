@@ -232,7 +232,7 @@ static PetscErrorCode FormFunctionGradient(Tao tao, Vec IC, PetscReal *f, Vec G,
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode FormHessian(Tao tao, Vec U, Mat H, Mat Hpre, void *ctx)
+static PetscErrorCode FormHessianSingle(Tao tao, Vec U, Mat H, void *ctx)
 {
   User           user_ptr = (User)ctx;
   PetscScalar    harr[2];
@@ -261,10 +261,13 @@ static PetscErrorCode FormHessian(Tao tao, Vec U, Mat H, Mat Hpre, void *ctx)
 
   PetscCall(MatAssemblyBegin(H, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(H, MAT_FINAL_ASSEMBLY));
-  if (H != Hpre) {
-    PetscCall(MatAssemblyBegin(Hpre, MAT_FINAL_ASSEMBLY));
-    PetscCall(MatAssemblyEnd(Hpre, MAT_FINAL_ASSEMBLY));
-  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode FormHessian(Tao tao, Vec U, Mat H, Mat Hpre, void *ctx)
+{
+  PetscFunctionBegin;
+  PetscCall(TaoComputeHessianSingle(tao, U, H, Hpre, FormHessianSingle, SAME_NONZERO_PATTERN, ctx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
