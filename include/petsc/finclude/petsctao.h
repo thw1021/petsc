@@ -56,4 +56,5 @@
 #define TAOTERMADMMMISFIT      'admmmisfit'
 #define TAOTERMSHELL           'shell'
 #define TAOTERMSUM             'sum'
+#define TAOTERMHALFL2SQUARED   'halfl2squared'
 #endif
