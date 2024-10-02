@@ -376,7 +376,7 @@ PetscErrorCode FormFunctionGradient(Tao tao, Vec X, PetscReal *fcn, Vec G, void 
 
 /* ------------------------------------------------------------------- */
 /*
-   FormHessian - Evaluates Hessian matrix.
+   FormHessianSingle - Evaluates Hessian matrix.
 
    Input Parameters:
 .  tao  - the Tao context
@@ -384,8 +384,7 @@ PetscErrorCode FormFunctionGradient(Tao tao, Vec X, PetscReal *fcn, Vec G, void 
 .  ptr  - optional user-defined context, as set by TaoSetHessian()
 
    Output Parameters:
-.  A    - Hessian matrix
-.  B    - optionally different preconditioning matrix
+.  H    - Hessian matrix
 
    Notes:
    Due to mesh point reordering with DMs, we must always work
@@ -412,7 +411,7 @@ PetscErrorCode FormFunctionGradient(Tao tao, Vec X, PetscReal *fcn, Vec G, void 
    Option (A) seems cleaner/easier in many cases, and is the procedure
    used in this example.
 */
-PetscErrorCode FormHessian(Tao tao, Vec X, Mat Hptr, Mat Hessian, void *ptr)
+static PetscErrorCode FormHessianSingle(Tao tao, Vec X, Mat Hessian, void *ptr)
 {
   AppCtx    *user = (AppCtx *)ptr;
   PetscInt   i, j, k, row;
@@ -586,6 +585,13 @@ PetscErrorCode FormHessian(Tao tao, Vec X, Mat Hptr, Mat Hessian, void *ptr)
   PetscCall(MatAssemblyEnd(Hessian, MAT_FINAL_ASSEMBLY));
 
   PetscCall(PetscLogFlops(199.0 * xm * ym));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode FormHessian(Tao tao, Vec X, Mat H, Mat Hpre, void *ptr)
+{
+  PetscFunctionBeginUser;
+  PetscCall(TaoComputeHessianSingle(tao, X, H, Hpre, FormHessianSingle, SAME_NONZERO_PATTERN, ptr));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
