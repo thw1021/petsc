@@ -50,4 +50,8 @@
 #define TAOPYTHON   'python'
 #define TAOSNES     'snes'
 
+#define TAOTERMTAOCALLBACKS    'taocallbacks'
+#define TAOTERMBRGNREGULARIZER 'brgnregularizer'
+#define TAOTERMADMMREGULARIZER 'admmregularizer'
+#define TAOTERMADMMMISFIT      'admmmisfit'
 #endif
