@@ -1047,11 +1047,13 @@ PETSC_EXTERN PetscErrorCode TaoCreate_IPM(Tao tao)
   TAO_IPM *ipmP;
 
   PetscFunctionBegin;
-  tao->ops->setup          = TaoSetup_IPM;
-  tao->ops->solve          = TaoSolve_IPM;
-  tao->ops->view           = TaoView_IPM;
-  tao->ops->setfromoptions = TaoSetFromOptions_IPM;
-  tao->ops->destroy        = TaoDestroy_IPM;
+  tao->ops->setup            = TaoSetup_IPM;
+  tao->ops->solve            = TaoSolve_IPM;
+  tao->ops->view             = TaoView_IPM;
+  tao->ops->setfromoptions   = TaoSetFromOptions_IPM;
+  tao->ops->destroy          = TaoDestroy_IPM;
+  tao->uses_gradient         = PETSC_TRUE;
+  tao->uses_hessian_matrices = PETSC_TRUE;
   /* tao->ops->computedual = TaoComputeDual_IPM; */
 
   PetscCall(PetscNew(&ipmP));
