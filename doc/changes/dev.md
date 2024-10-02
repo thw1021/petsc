@@ -72,6 +72,10 @@
 ```{rubric} TAO:
 ```
 
+- Add ``TaoBRGNSetRegularizationType()``, ``TaoBRGNGetRegularizationType()``
+- Add `TaoGetInequalityConstraintsRoutine()`, `TaoGetEqualityConstraintsRoutine()`, `TaoGetJacobianInequalityRoutine()` and `TaoGetJacobianEqualityRoutine()`
+- Add new `TaoTerm` object to manipulate objective function terms with many methods
+
 ```{rubric} PetscRegressor:
 ```
 
