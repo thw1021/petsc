@@ -10,7 +10,11 @@ struct _TaoLineSearchOps {
   PetscErrorCode (*computeobjectiveandgradient)(TaoLineSearch, Vec, PetscReal *, Vec, void *);
   PetscErrorCode (*computeobjectiveandgts)(TaoLineSearch, Vec, Vec, PetscReal *, PetscReal *, void *);
   PetscErrorCode (*setup)(TaoLineSearch);
+  PetscErrorCode (*preapply)(TaoLineSearch, Vec, PetscReal *, Vec, Vec);
   PetscErrorCode (*apply)(TaoLineSearch, Vec, PetscReal *, Vec, Vec);
+  PetscErrorCode (*postapply)(TaoLineSearch, Vec, PetscReal *, Vec, Vec);
+  PetscErrorCode (*update)(TaoLineSearch, Vec, PetscReal *, Vec, Vec);
+  PetscErrorCode (*postupdate)(TaoLineSearch, Vec, PetscReal *, Vec, Vec);
   PetscErrorCode (*view)(TaoLineSearch, PetscViewer);
   PetscErrorCode (*setfromoptions)(TaoLineSearch, PetscOptionItems *);
   PetscErrorCode (*reset)(TaoLineSearch);
@@ -54,6 +58,7 @@ struct _p_TaoLineSearch {
   PetscInt                     nfeval;
   PetscInt                     ngeval;
   PetscInt                     nfgeval;
+  PetscInt                     nproxeval;
   TaoLineSearchConvergedReason reason;
 
   PetscReal rtol;    /* relative tol for acceptable step (rtol>0) */

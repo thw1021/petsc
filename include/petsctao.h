@@ -228,6 +228,8 @@ typedef const char *TaoType;
 #define TAOALMM     "almm"
 #define TAOPYTHON   "python"
 #define TAOSNES     "snes"
+#define TAOFB       "fb"
+#define TAOCV       "cv"
 
 PETSC_EXTERN PetscClassId      TAO_CLASSID;
 PETSC_EXTERN PetscFunctionList TaoList;
@@ -318,6 +320,7 @@ PETSC_EXTERN PetscErrorCode TaoGetSolutionStatus(Tao, PetscInt *, PetscReal *, P
 PETSC_EXTERN PetscErrorCode TaoSetConvergedReason(Tao, TaoConvergedReason);
 PETSC_EXTERN PetscErrorCode TaoSetSolution(Tao, Vec);
 PETSC_EXTERN PetscErrorCode TaoGetSolution(Tao, Vec *);
+PETSC_EXTERN PetscErrorCode TaoGetDualSolution(Tao, Vec *);
 
 PETSC_EXTERN PetscErrorCode TaoSetObjective(Tao, PetscErrorCode (*)(Tao, Vec, PetscReal *, void *), void *);
 PETSC_EXTERN PetscErrorCode TaoGetObjective(Tao, PetscErrorCode (**)(Tao, Vec, PetscReal *, void *), void **);
@@ -438,10 +441,12 @@ PETSC_EXTERN PetscErrorCode TaoMonitorGlobalization(Tao, void *);
 PETSC_EXTERN PetscErrorCode TaoMonitorDefaultShort(Tao, void *);
 PETSC_EXTERN PetscErrorCode TaoMonitorConstraintNorm(Tao, void *);
 PETSC_EXTERN PetscErrorCode TaoMonitorSolution(Tao, void *);
+PETSC_EXTERN PetscErrorCode TaoMonitorDualSolution(Tao, void *);
 PETSC_EXTERN PetscErrorCode TaoMonitorResidual(Tao, void *);
 PETSC_EXTERN PetscErrorCode TaoMonitorGradient(Tao, void *);
 PETSC_EXTERN PetscErrorCode TaoMonitorStep(Tao, void *);
 PETSC_EXTERN PetscErrorCode TaoMonitorSolutionDraw(Tao, void *);
+PETSC_EXTERN PetscErrorCode TaoMonitorDualSolutionDraw(Tao, void *);
 PETSC_EXTERN PetscErrorCode TaoMonitorStepDraw(Tao, void *);
 PETSC_EXTERN PetscErrorCode TaoMonitorGradientDraw(Tao, void *);
 PETSC_EXTERN PetscErrorCode TaoAddLineSearchCounts(Tao);
@@ -538,6 +543,8 @@ PETSC_EXTERN PetscErrorCode TaoALMMGetMultipliers(Tao, Vec *);
 PETSC_EXTERN PetscErrorCode TaoALMMSetMultipliers(Tao, Vec);
 PETSC_EXTERN PetscErrorCode TaoALMMGetPrimalIS(Tao, IS *, IS *);
 PETSC_EXTERN PetscErrorCode TaoALMMGetDualIS(Tao, IS *, IS *);
+
+PETSC_EXTERN PetscErrorCode TaoCVSetInitialNormEstimate(Tao, PetscReal);
 
 PETSC_EXTERN PetscErrorCode TaoVecGetSubVec(Vec, IS, TaoSubsetType, PetscReal, Vec *);
 PETSC_EXTERN PetscErrorCode TaoMatGetSubMat(Mat, IS, Vec, TaoSubsetType, Mat *);

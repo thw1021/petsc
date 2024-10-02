@@ -36,7 +36,10 @@ typedef struct _p_TaoTerm *TaoTerm;
 . `TAOTERMSUM`             - a sum of multiple other `TaoTerm`s
 . `TAOTERML2SQUARED`       - $\tfrac{1}{2}\|x - \theta\|_2^2$
 . `TAOTERML1`              - $\|x - \theta\|_1$
-- `TAOTERMQUADRATIC`       - a quadratic form $\tfrac{1}{2}(x - \theta)^T A (x - \theta)$
+. `TAOTERMQUADRATIC`       - a quadratic form $\tfrac{1}{2}(x - \theta)^T A (x - \theta)$
+. `TAOTERMZERO`            - Indicator function of the set containing the origin - zero cone
+. `TAOTERMBOX`             - Indicator function of the box constraint, $lb \leq x \leq ub$
+- `TAOTERMSIMPLEX`         - Indicator function of the simplex, $x \geq 0, \sum_i x_i = \alpha$.
 
   Level: intermediate
 
@@ -49,9 +52,13 @@ typedef const char *TaoTermType;
 #define TAOTERMADMMMISFIT      "admmmisfit"
 #define TAOTERMSHELL           "shell"
 #define TAOTERMSUM             "sum"
+#define TAOTERMZERO            "zero"
+#define TAOTERMBOX             "box"
+#define TAOTERMSIMPLEX         "simplex"
 #define TAOTERMHALFL2SQUARED   "halfl2squared"
 #define TAOTERML1              "l1"
 #define TAOTERMQUADRATIC       "quadratic"
+#define TAOTERMCONJUGATE       "conjugate"
 
 PETSC_EXTERN PetscErrorCode TaoTermRegister(const char[], PetscErrorCode (*)(TaoTerm));
 
@@ -290,12 +297,16 @@ PETSC_EXTERN PetscErrorCode TaoTermHessian(TaoTerm, Vec, Vec, Mat, Mat);
 PETSC_EXTERN PetscErrorCode TaoTermHessianSingle(TaoTerm, Vec, Vec, Mat, Mat, TaoTermHessianSingleFn *, MatStructure);
 PETSC_EXTERN PetscErrorCode TaoTermHessianMult(TaoTerm, Vec, Vec, Vec, Vec);
 
+PETSC_EXTERN PetscErrorCode TaoTermSetLipschitz(TaoTerm, PetscReal);
+PETSC_EXTERN PetscErrorCode TaoTermGetLipschitz(TaoTerm, PetscReal *);
+
 // TaoTermProximalMap(f, p, alpha, g, q, beta, x);
 // x <- argmin_y alpha * f(y;p) + beta * g(y;q), g is a divergence e.g. g(y;q) == 0.5 * ||x - q||^2
 // x <- prox_{(alpha/beta)*f(.;p),g}(q)
 PETSC_EXTERN PetscErrorCode TaoTermProximalMap(TaoTerm, Vec, PetscReal, TaoTerm, Vec, PetscReal, Vec);
-//PETSC_EXTERN PetscErrorCode TaoTermCreateConvexConjugate(TaoTerm, TaoTerm *);
-//PETSC_EXTERN PetscErrorCode TaoTermCreateConvexConjugateVirtual(TaoTerm, TaoTerm *);
+PETSC_EXTERN PetscErrorCode TaoTermCreateConjugate(TaoTerm, TaoTerm *);
+PETSC_EXTERN PetscErrorCode TaoTermCreateConjugateVirtual(TaoTerm, TaoTerm *);
+PETSC_EXTERN PetscErrorCode TaoTermConjugateGetOriginalType(TaoTerm, TaoTermType *);
 
 PETSC_EXTERN PetscErrorCode TaoTermCreateShell(MPI_Comm, void *, PetscErrorCode (*)(void *), TaoTerm *);
 PETSC_EXTERN PetscErrorCode TaoTermShellSetContext(TaoTerm, void *);
@@ -331,6 +342,13 @@ PETSC_EXTERN PetscErrorCode TaoTermL1GetEpsilon(TaoTerm, PetscReal *);
 PETSC_EXTERN PetscErrorCode TaoTermCreateQuadratic(Mat, TaoTerm *);
 PETSC_EXTERN PetscErrorCode TaoTermQuadraticGetMat(TaoTerm, Mat *);
 PETSC_EXTERN PetscErrorCode TaoTermQuadraticSetMat(TaoTerm, Mat);
+
+PETSC_EXTERN PetscErrorCode TaoTermBoxSetContext(TaoTerm, PetscReal, PetscReal, Vec, Vec);
+
+PETSC_EXTERN PetscErrorCode TaoTermSimplexSetContext(TaoTerm, PetscReal, PetscReal);
+//OR TODO
+PETSC_EXTERN PetscErrorCode TaoTermSimplexSetSize(TaoTerm, PetscReal);
+PETSC_EXTERN PetscErrorCode TaoTermSimplexSetEpsilon(TaoTerm, PetscReal);
 
 PETSC_EXTERN PetscErrorCode TaoTermIsObjectiveDefined(TaoTerm, PetscBool *);
 PETSC_EXTERN PetscErrorCode TaoTermIsGradientDefined(TaoTerm, PetscBool *);

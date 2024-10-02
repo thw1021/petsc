@@ -180,6 +180,7 @@ PetscErrorCode TaoSolve(Tao tao)
   PetscCall(PetscLogEventEnd(TAO_Solve, tao, 0, 0, 0));
 
   PetscCall(VecViewFromOptions(tao->solution, (PetscObject)tao, "-tao_view_solution"));
+  if (tao->dualvec) PetscCall(VecViewFromOptions(tao->dualvec, (PetscObject)tao, "-tao_view_dual_solution"));
 
   tao->ntotalits += tao->niter;
 
@@ -277,6 +278,7 @@ PetscErrorCode TaoDestroy(Tao *tao)
   PetscCall(VecDestroy(&(*tao)->solution));
   PetscCall(VecDestroy(&(*tao)->gradient));
   PetscCall(VecDestroy(&(*tao)->ls_res));
+  PetscCall(VecDestroy(&(*tao)->dualvec));
 
   if ((*tao)->gradient_norm) {
     PetscCall(PetscObjectDereference((PetscObject)(*tao)->gradient_norm));
@@ -1458,6 +1460,32 @@ PetscErrorCode TaoGetSolution(Tao tao, Vec *X)
 }
 
 /*@
+  TaoGetDualSolution - Returns the vector with the current dual solution from the `Tao` object
+  Currently only available for `TAOCV` type.
+
+  Not Collective
+
+  Input Parameter:
+. tao - the `Tao` context
+
+  Output Parameter:
+. X - the current dual solution
+
+  Level: intermediate
+
+.seealso: [](ch_tao), `Tao`, `TaoSolve()`, `TAOCV`
+@*/
+PetscErrorCode TaoGetDualSolution(Tao tao, Vec *X)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
+  PetscAssertPointer(X, 2);
+  PetscCheck(tao->dualvec, PetscObjectComm((PetscObject)tao), PETSC_ERR_SUP, "Dual Solution unavailable.");
+  *X = tao->dualvec;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
   TaoResetStatistics - Initialize the statistics collected by the `Tao` object.
   These statistics include the iteration number, residual norms, and convergence status.
   This routine gets called before solving each optimization problem.
@@ -1865,6 +1893,33 @@ PetscErrorCode TaoMonitorSolution(Tao tao, void *ctx)
 }
 
 /*@C
+  TaoMonitorDualSolution - Views the dual solution at each iteration of `TaoSolve()`
+
+  Collective
+
+  Input Parameters:
++ tao - the `Tao` context
+- ctx - `PetscViewer` context or `NULL`
+
+  Options Database Key:
+. -tao_monitor_dual_solution - view the dual solution
+
+  Level: advanced
+
+.seealso: [](ch_tao), `Tao`, `TaoMonitorDefaultShort()`, `TaoMonitorSet()`
+@*/
+PetscErrorCode TaoMonitorDualSolution(Tao tao, void *ctx)
+{
+  PetscViewer viewer = (PetscViewer)ctx;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
+  PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 2);
+  if (tao->dualvec) PetscCall(VecView(tao->dualvec, viewer));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
   TaoMonitorGradient - Views the gradient at each iteration of `TaoSolve()`
 
   Collective
@@ -1974,6 +2029,38 @@ PetscErrorCode TaoMonitorGradientDraw(Tao tao, void *ctx)
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
   if (!(((ictx->howoften > 0) && (!(tao->niter % ictx->howoften))) || ((ictx->howoften == -1) && tao->reason))) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(VecView(tao->gradient, ictx->viewer));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  TaoMonitorDualSolutionDraw - Plots the dual solution at each iteration of `TaoSolve()`
+
+  Collective
+
+  Input Parameters:
++ tao - the `Tao` context
+- ctx - `TaoMonitorDraw` context
+
+  Options Database Key:
+. -tao_monitor_dual_solution_draw - draw the solution at each iteration
+
+  Level: advanced
+
+  Note:
+  The context created by `TaoMonitorDrawCtxCreate()`, along with `TaoMonitorDualSolutionDraw()`, and `TaoMonitorDrawCtxDestroy()`
+  are passed to `TaoMonitorSet()` to monitor the solution graphically.
+
+.seealso: [](ch_tao), `Tao`, `TaoMonitorSolution()`, `TaoMonitorSet()`, `TaoMonitorGradientDraw()`, `TaoMonitorDrawCtxCreate()`,
+          `TaoMonitorDrawCtxDestroy()`
+@*/
+PetscErrorCode TaoMonitorDualSolutionDraw(Tao tao, void *ctx)
+{
+  TaoMonitorDrawCtx ictx = (TaoMonitorDrawCtx)ctx;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
+  if (!(((ictx->howoften > 0) && (!(tao->niter % ictx->howoften))) || ((ictx->howoften == -1) && tao->reason))) PetscFunctionReturn(PETSC_SUCCESS);
+  if (tao->dualvec) PetscCall(VecView(tao->dualvec, ictx->viewer));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

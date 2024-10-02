@@ -233,14 +233,47 @@ static PetscErrorCode TaoTermHessianMult_L1(TaoTerm term, Vec x, Vec params, Vec
 
 static PetscErrorCode TaoTermProximalMap_L1(TaoTerm term, Vec p, PetscReal alpha, TaoTerm g, Vec q, PetscReal beta, Vec x)
 {
-  PetscBool is_l2;
+  TaoTermProxMapL2Op l2ops;
+  PetscBool          is_l1, is_l2;
+
   PetscFunctionBegin;
-  PetscCall(PetscObjectTypeCompare((PetscObject)g, TAOTERMHALFL2SQUARED, &is_l2));
-  PetscCheck(is_l2, ...);
-  // argmin of alpha * |x - p|_1 + beta/2 * ||x - q||_2^2
-  // if alpha == 0, then x == q
-  // if alpha != 0, then x == argmin_y of |y - p|_1 + (beta/alpha)2 * ||y - q||_2^2
-  // if alpha != 0, then x == argmin_y of |z|_1 + (beta/alpha)2 * ||z + p - q||_2^2
+  PetscCall(PetscObjectTypeCompare((PetscObject)term, TAOTERML1, &is_l1));
+  PetscCheck(is_l1, PetscObjectComm((PetscObject)term), PETSC_ERR_USER, "TaoTermProximalMap_L1 requires first TaoTerm to be of L1 type");
+  /* If Regularizer term is given. If not given, assume HALFL2SQUARED */
+  if (g) {
+    PetscCall(PetscObjectTypeCompare((PetscObject)g, TAOTERMHALFL2SQUARED, &is_l2));
+    PetscCheck(is_l2, PetscObjectComm((PetscObject)term), PETSC_ERR_USER, "TaoTermProximalMap_L1: TAOTERML1 only supports TAOTERMHALFL2SQUARED as regularizer");
+  }
+  PetscCall(TaoTermProxL2FindOps_Internal(q, p, beta, alpha, &l2ops));
+
+  switch (l2ops) {
+  case TAOTERM_PROX_NO_OP:
+    break;
+  case TAOTERM_PROX_ZERO:
+  case TAOTERM_PROX_SOLVE:
+  case TAOTERM_PROX_SOLVE_COMPOSITE:
+    PetscCall(VecZeroEntries(x));
+    break;
+  case TAOTERM_PROX_Q:
+    PetscCall(VecCopy(q, x));
+    break;
+  case TAOTERM_PROX_PROX:
+    PetscCall(TaoSoftThreshold(q, -alpha / beta, alpha / beta, x));
+    break;
+  case TAOTERM_PROX_PROX_TRANS:
+    PetscCall(VecAXPBYPCZ(x, 1., 1., 0., p, q));
+    PetscCall(TaoSoftThreshold(x, -alpha / beta, alpha / beta, x));
+    PetscCall(VecAXPY(x, -1., p));
+    break;
+  case TAOTERM_PROX_SOLVE_PARAM:
+    PetscCall(VecCopy(p, x));
+    break;
+  case TAOTERM_PROX_SOLVE_COMPOSITE_TRANS:
+    PetscCall(TaoSoftThreshold(p, -alpha / beta, alpha / beta, x));
+    break;
+  default:
+    SETERRQ(PetscObjectComm((PetscObject)term), PETSC_ERR_USER, "Invalid problem formulation type.");
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -389,6 +422,7 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_L1(TaoTerm term)
   term->ops->hessian               = TaoTermHessian_L1;
   term->ops->hessianmult           = TaoTermHessianMult_L1;
   term->ops->createhessianmatrices = TaoTermCreateHessianMatricesDefault;
+  term->ops->proximalmap           = TaoTermProximalMap_L1;
 
   if (!term->H_mattype) PetscCall(PetscStrallocpy(MATSHELL, &term->H_mattype));
   if (!term->Hpre_mattype) PetscCall(PetscStrallocpy(MATDIAGONAL, &term->Hpre_mattype));

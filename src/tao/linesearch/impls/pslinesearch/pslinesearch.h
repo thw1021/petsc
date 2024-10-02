@@ -69,6 +69,13 @@ typedef struct {
 
   PetscBool memorySetup;
 
+  PetscReal f_scale, term_scale;
+  TaoTerm   f_term;       //Objective and Gradient term
+  TaoTerm   prox_term;    // Proximal term. Maybe regular (FB) or conjugate (CV)
+  TaoTerm   cj_orig_term; // For conjugate case (CV), the original non-conjugate term
+  Mat       lmap;
+  Vec       f_param, term_param;
+
   Vec x; /* Maintain reference to variable vector to check for changes */
   Vec work, work2;
 
