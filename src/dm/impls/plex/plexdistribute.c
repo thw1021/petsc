@@ -1554,7 +1554,7 @@ PetscErrorCode DMPlexCreatePointSF(DM dm, PetscSF migrationSF, PetscBool ownersh
     PetscCallMPI(MPI_Op_free(&op));
     PetscCallMPI(MPI_Type_free(&datatype));
     for (p = 0; p < nroots; p++) {
-      rootNodes[p].rank  = (PetscMPIInt)rootVote[p].rank;
+      rootNodes[p].rank  = rootVote[p].rank;
       rootNodes[p].index = rootVote[p].index;
     }
     PetscCall(PetscFree(leafVote));
