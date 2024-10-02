@@ -1271,10 +1271,12 @@ PetscErrorCode TaoCreate_BNK(Tao tao)
   PetscFunctionBegin;
   PetscCall(PetscNew(&bnk));
 
-  tao->ops->setup          = TaoSetUp_BNK;
-  tao->ops->view           = TaoView_BNK;
-  tao->ops->setfromoptions = TaoSetFromOptions_BNK;
-  tao->ops->destroy        = TaoDestroy_BNK;
+  tao->ops->setup            = TaoSetUp_BNK;
+  tao->ops->view             = TaoView_BNK;
+  tao->ops->setfromoptions   = TaoSetFromOptions_BNK;
+  tao->ops->destroy          = TaoDestroy_BNK;
+  tao->uses_gradient         = PETSC_TRUE;
+  tao->uses_hessian_matrices = PETSC_TRUE;
 
   /*  Override default settings (unless already changed) */
   PetscCall(TaoParametersInitialize(tao));

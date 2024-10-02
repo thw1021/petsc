@@ -312,12 +312,14 @@ PETSC_EXTERN PetscErrorCode TaoCreate_TRON(Tao tao)
   const char *morethuente_type = TAOLINESEARCHMT;
 
   PetscFunctionBegin;
-  tao->ops->setup          = TaoSetup_TRON;
-  tao->ops->solve          = TaoSolve_TRON;
-  tao->ops->view           = TaoView_TRON;
-  tao->ops->setfromoptions = TaoSetFromOptions_TRON;
-  tao->ops->destroy        = TaoDestroy_TRON;
-  tao->ops->computedual    = TaoComputeDual_TRON;
+  tao->ops->setup            = TaoSetup_TRON;
+  tao->ops->solve            = TaoSolve_TRON;
+  tao->ops->view             = TaoView_TRON;
+  tao->ops->setfromoptions   = TaoSetFromOptions_TRON;
+  tao->ops->destroy          = TaoDestroy_TRON;
+  tao->ops->computedual      = TaoComputeDual_TRON;
+  tao->uses_gradient         = PETSC_TRUE;
+  tao->uses_hessian_matrices = PETSC_TRUE;
 
   PetscCall(PetscNew(&tron));
   tao->data = (void *)tron;
