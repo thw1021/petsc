@@ -69,6 +69,7 @@ Changes: Development
 - Add ``TAOTERMBRGNREGULARIZER`` implementation of ``TaoTerm`` for constructing a term from the callbacks passed to a ``TaoBRGNSetReguarizerObjectiveAndGradientRoutine()``
 - Add ``TAOTERMADMMREGULARIZER`` implementation of ``TaoTerm`` for constructing a term from the callbacks passed to a ``TaoADMMSetReguarizerObjectiveAndGradientRoutine()``
 - Add ``TAOTERMADMMISFIT`` implementation of ``TaoTerm`` for constructing a term from the callbacks passed to a ``TaoADMMSetMisfitObjectiveAndGradientRoutine()``
+- Add ``TAOTERMSHELL`` implementation of ``TaoTerm`` for user-defined callbacks
 
 .. rubric:: DM/DA:
 
