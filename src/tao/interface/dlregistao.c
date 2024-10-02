@@ -14,6 +14,7 @@ PetscErrorCode TaoFinalizePackage(void)
 {
   PetscFunctionBegin;
   PetscCall(PetscFunctionListDestroy(&TaoList));
+  PetscCall(PetscFunctionListDestroy(&TaoTermList));
   TaoPackageInitialized = PETSC_FALSE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -38,14 +39,21 @@ PetscErrorCode TaoInitializePackage(void)
   TaoPackageInitialized = PETSC_TRUE;
   /* Register Classes */
   PetscCall(PetscClassIdRegister("Tao", &TAO_CLASSID));
+  PetscCall(PetscClassIdRegister("TaoTerm", &TAOTERM_CLASSID));
   /* Register Constructors */
   PetscCall(TaoRegisterAll());
+  PetscCall(TaoTermRegisterAll());
   /* Register Events */
   PetscCall(PetscLogEventRegister("TaoSolve", TAO_CLASSID, &TAO_Solve));
   PetscCall(PetscLogEventRegister("TaoObjectiveEval", TAO_CLASSID, &TAO_ObjectiveEval));
   PetscCall(PetscLogEventRegister("TaoGradientEval", TAO_CLASSID, &TAO_GradientEval));
   PetscCall(PetscLogEventRegister("TaoObjGradEval", TAO_CLASSID, &TAO_ObjGradEval));
   PetscCall(PetscLogEventRegister("TaoHessianEval", TAO_CLASSID, &TAO_HessianEval));
+  PetscCall(PetscLogEventRegister("TaoTermObjective", TAOTERM_CLASSID, &TAOTERM_ObjectiveEval));
+  PetscCall(PetscLogEventRegister("TaoTermGradient", TAOTERM_CLASSID, &TAOTERM_GradientEval));
+  PetscCall(PetscLogEventRegister("TaoTermObjGrad", TAOTERM_CLASSID, &TAOTERM_ObjGradEval));
+  PetscCall(PetscLogEventRegister("TaoTermHessian", TAOTERM_CLASSID, &TAOTERM_HessianEval));
+  PetscCall(PetscLogEventRegister("TaoTermHessianMult", TAOTERM_CLASSID, &TAOTERM_HessianMult));
   PetscCall(PetscLogEventRegister("TaoConstrEval", TAO_CLASSID, &TAO_ConstraintsEval));
   PetscCall(PetscLogEventRegister("TaoJacobianEval", TAO_CLASSID, &TAO_JacobianEval));
   /* Process Info */

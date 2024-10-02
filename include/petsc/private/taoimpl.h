@@ -187,6 +187,12 @@ PETSC_EXTERN PetscLogEvent TAO_HessianEval;
 PETSC_EXTERN PetscLogEvent TAO_ConstraintsEval;
 PETSC_EXTERN PetscLogEvent TAO_JacobianEval;
 
+PETSC_INTERN PetscLogEvent TAOTERM_ObjectiveEval;
+PETSC_INTERN PetscLogEvent TAOTERM_GradientEval;
+PETSC_INTERN PetscLogEvent TAOTERM_ObjGradEval;
+PETSC_INTERN PetscLogEvent TAOTERM_HessianEval;
+PETSC_INTERN PetscLogEvent TAOTERM_HessianMult;
+
 static inline PetscErrorCode TaoLogConvergenceHistory(Tao tao, PetscReal obj, PetscReal resid, PetscReal cnorm, PetscInt totits)
 {
   PetscFunctionBegin;
@@ -204,3 +210,43 @@ static inline PetscErrorCode TaoLogConvergenceHistory(Tao tao, PetscReal obj, Pe
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
+typedef struct _TaoTermOps *TaoTermOps;
+
+struct _TaoTermOps {
+  PetscErrorCode (*setfromoptions)(TaoTerm, PetscOptionItems *);
+  PetscErrorCode (*setup)(TaoTerm);
+  PetscErrorCode (*view)(TaoTerm, PetscViewer);
+  PetscErrorCode (*destroy)(TaoTerm);
+
+  PetscErrorCode (*objective)(TaoTerm, Vec, Vec, PetscReal *);
+  PetscErrorCode (*objectiveandgradient)(TaoTerm, Vec, Vec, PetscReal *, Vec);
+  PetscErrorCode (*gradient)(TaoTerm, Vec, Vec, Vec);
+  PetscErrorCode (*hessian)(TaoTerm, Vec, Vec, Mat, Mat);
+  PetscErrorCode (*hessianmult)(TaoTerm, Vec, Vec, Vec, Vec);
+  PetscErrorCode (*proximalmap)(TaoTerm, Vec, PetscReal, TaoTerm, Vec, PetscReal, Vec);
+
+  PetscErrorCode (*isobjectivedefined)(TaoTerm, PetscBool *);
+  PetscErrorCode (*isgradientdefined)(TaoTerm, PetscBool *);
+  PetscErrorCode (*isobjectiveandgradientdefined)(TaoTerm, PetscBool *);
+  PetscErrorCode (*ishessiandefined)(TaoTerm, PetscBool *);
+  PetscErrorCode (*iscreatehessianmatricesdefined)(TaoTerm, PetscBool *);
+
+  PetscErrorCode (*createvecs)(TaoTerm, Vec *, Vec *);
+  PetscErrorCode (*createhessianmatrices)(TaoTerm, Mat *, Mat *);
+};
+
+struct _p_TaoTerm {
+  PETSCHEADER(struct _TaoTermOps);
+  void                 *data;
+  PetscBool             setup_called;
+  Mat                   solution_factory; // dummies used to create vectors
+  Mat                   parameters_factory;
+  Mat                   parameters_factory_orig; // copy so that parameter_factor can be made a reference of solution_factory if parameter space == vector space
+  TaoTermParametersMode parameters_mode;
+  PetscBool             Hpre_is_H; // Hessian mode data
+  char                 *H_mattype;
+  char                 *Hpre_mattype;
+};
+
+PETSC_INTERN PetscErrorCode TaoTermRegisterAll(void);
