@@ -860,7 +860,8 @@ static PetscErrorCode AdvectParticles(TS ts)
   PetscCallMPI(MPIU_Allreduce(&lreset, &reset, 1, MPIU_BOOL, MPI_LOR, PetscObjectComm((PetscObject)sts)));
   if (reset) {
     PetscCall(TSReset(sts));
-    PetscCall(DMSwarmVectorDefineField(sdm, DMSwarmPICField_coor));
+    const char *fieldnames[1] = {"DMSwarmPICField_coor"};
+    PetscCall(DMSwarmVectorDefineField(sdm, 1, fieldnames));
   }
   PetscCall(DMViewFromOptions(sdm, NULL, "-dm_view"));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -932,7 +933,8 @@ int main(int argc, char **argv)
   PetscCall(TSSetRHSFunction(sts, NULL, FreeStreaming, &adv));
   PetscCall(TSSetPostStep(ts, AdvectParticles));
   PetscCall(PetscObjectCompose((PetscObject)ts, "_SwarmTS", (PetscObject)sts));
-  PetscCall(DMSwarmVectorDefineField(sdm, DMSwarmPICField_coor));
+  const char *fieldnames[1] = {DMSwarmPICField_coor};
+  PetscCall(DMSwarmVectorDefineField(sdm, 1, fieldnames));
   PetscCall(DMCreateGlobalVector(sdm, &adv.x0));
   PetscCall(DMSwarmCreateGlobalVectorFromField(sdm, DMSwarmPICField_coor, &xtmp));
   PetscCall(VecCopy(xtmp, adv.x0));

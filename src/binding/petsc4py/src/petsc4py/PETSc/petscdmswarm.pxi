@@ -37,7 +37,7 @@ cdef extern from * nogil:
     PetscErrorCode DMSwarmGetField(PetscDM, const char[], PetscInt*, PetscDataType*, void**)
     PetscErrorCode DMSwarmRestoreField(PetscDM, const char[], PetscInt*, PetscDataType*, void**)
 
-    PetscErrorCode DMSwarmVectorDefineField(PetscDM, const char[])
+    PetscErrorCode DMSwarmVectorDefineField(PetscDM, PetscInt, const char*[])
 
     PetscErrorCode DMSwarmAddPoint(PetscDM)
     PetscErrorCode DMSwarmAddNPoints(PetscDM, PetscInt)
