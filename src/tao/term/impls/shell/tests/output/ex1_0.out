@@ -1,0 +1,13 @@
+TaoTerm Object: 1 MPI process
+  type: shell
+  solution vector space: N = 23 [VecType seq (taoterm_solution_vec_type)]
+  parameter vector space: (required) K = 11 [VecType seq (taoterm_parameters_vec_type)]
+  User context has been set
+  The following methods have been set: objective, gradient,
+objective: 26.4352, gradient norm 12.3669
+TaoTerm Object: 1 MPI process
+  type: shell
+  solution vector space: N = 23 [VecType seq (taoterm_solution_vec_type)]
+  parameter vector space: (required) K = 11 [VecType seq (taoterm_parameters_vec_type)]
+  TaoTermView_Test()
+objective: 26.4352, gradient norm 12.3669
