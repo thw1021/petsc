@@ -21,7 +21,9 @@ typedef struct {
 
 static inline int petsc_geo_mg_compare(const void *a, const void *b)
 {
+  PETSC_SILENCE_WUSELESSCAST_BEGIN;
   return (int)(((GAMGNode *)a)->degree - ((GAMGNode *)b)->degree);
+  PETSC_SILENCE_WUSELESSCAST_END;
 }
 
 // PetscClangLinter pragma disable: -fdoc-sowing-chars
@@ -674,7 +676,7 @@ static PetscErrorCode PCGAMGProlongator_GEO(PC pc, Mat Amat, PetscCoarsenData *a
     if (size > 1) {
       PetscCall(PCGAMGGetDataWithGhosts(Gmat2, dim, pc_gamg->data, &data_stride, &coords));
     } else {
-      coords      = (PetscReal *)pc_gamg->data;
+      coords      = pc_gamg->data;
       data_stride = pc_gamg->data_sz / pc_gamg->data_cell_cols;
     }
     PetscCall(MatDestroy(&Gmat2));

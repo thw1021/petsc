@@ -263,14 +263,6 @@ static PetscErrorCode DMPlexVTKWritePartition_ASCII(DM dm, FILE *fp)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-#if defined(PETSC_USE_REAL_DOUBLE) || defined(PETSC_USE_REAL___FLOAT128)
-typedef double PetscVTKReal;
-#elif defined(PETSC_USE_REAL_SINGLE) || defined(PETSC_USE_REAL___FP16)
-typedef float PetscVTKReal;
-#else
-typedef PetscReal PetscVTKReal;
-#endif
-
 static PetscErrorCode DMPlexVTKWriteSection_ASCII(DM dm, PetscSection section, PetscSection globalSection, Vec v, FILE *fp, PetscInt enforceDof, PetscInt precision, PetscReal scale, PetscInt imag)
 {
   MPI_Comm           comm;
@@ -317,9 +309,9 @@ static PetscErrorCode DMPlexVTKWriteSection_ASCII(DM dm, PetscSection section, P
   enforceDof = PetscMax(enforceDof, maxDof);
   PetscCall(VecGetArray(v, &array));
   if (rank == 0) {
-    PetscVTKReal dval;
-    PetscScalar  val;
-    char         formatString[8];
+    PetscReal   dval;
+    PetscScalar val;
+    char        formatString[8];
 
     PetscCall(PetscSNPrintf(formatString, 8, "%%.%" PetscInt_FMT "e", precision));
     for (p = pStart; p < pEnd; ++p) {
@@ -343,7 +335,7 @@ static PetscErrorCode DMPlexVTKWriteSection_ASCII(DM dm, PetscSection section, P
         for (d = 0; d < dof; d++) {
           if (d > 0) PetscCall(PetscFPrintf(comm, fp, " "));
           val  = array[off + d];
-          dval = (PetscVTKReal)((imag ? PetscImaginaryPart(val) : PetscRealPart(val)) * scale);
+          dval = (imag ? PetscImaginaryPart(val) : PetscRealPart(val)) * scale;
           PetscCall(PetscFPrintf(comm, fp, formatString, dval));
         }
         for (d = dof; d < enforceDof; d++) PetscCall(PetscFPrintf(comm, fp, " 0.0"));
@@ -362,7 +354,7 @@ static PetscErrorCode DMPlexVTKWriteSection_ASCII(DM dm, PetscSection section, P
         for (d = 0; d < maxDof; ++d) {
           if (d > 0) PetscCall(PetscFPrintf(comm, fp, " "));
           val  = remoteValues[p * maxDof + d];
-          dval = (PetscVTKReal)((imag ? PetscImaginaryPart(val) : PetscRealPart(val)) * scale);
+          dval = (imag ? PetscImaginaryPart(val) : PetscRealPart(val)) * scale;
           PetscCall(PetscFPrintf(comm, fp, formatString, dval));
         }
         for (d = maxDof; d < enforceDof; ++d) PetscCall(PetscFPrintf(comm, fp, " 0.0"));
