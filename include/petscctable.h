@@ -24,14 +24,18 @@ typedef PetscInt             *PetscTablePosition;
 
 PETSC_TABLE_DEPRECATION_WARNING("<no direct replacement!>") static inline unsigned long PetscHash(PetscTable ta, unsigned long x)
 {
+  PETSC_SILENCE_WUSELESSCAST_BEGIN;
   return PetscHashMacroImplToGetAroundDeprecationWarning_Private(ta, x);
+  PETSC_SILENCE_WUSELESSCAST_END;
 }
 
 #define PetscHashStepMacroImplToGetAroundDeprecationWarning_Private(ta, x) (1 + (((unsigned long)(x)) % ((unsigned long)((ta)->tablesize - 1))))
 
 PETSC_TABLE_DEPRECATION_WARNING("<no direct replacement!>") static inline unsigned long PetscHashStep(PetscTable ta, unsigned long x)
 {
+  PETSC_SILENCE_WUSELESSCAST_BEGIN;
   return PetscHashStepMacroImplToGetAroundDeprecationWarning_Private(ta, x);
+  PETSC_SILENCE_WUSELESSCAST_END;
 }
 
 PETSC_TABLE_DEPRECATION_WARNING("PetscHMapICreateWithSize()") PETSC_EXTERN PetscErrorCode PetscTableCreate(PetscInt, PetscInt, PetscTable *);

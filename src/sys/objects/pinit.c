@@ -8,7 +8,14 @@
 #include <petsc/private/garbagecollector.h>
 
 #if !defined(PETSC_HAVE_WINDOWS_COMPILERS)
+  #if defined(__cplusplus) && defined(PETSC_CHECK_USELESSCAST)
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wuseless-cast"
+  #endif
   #include <petsc/private/valgrind/valgrind.h>
+  #if defined(__cplusplus) && defined(PETSC_CHECK_USELESSCAST)
+    #pragma GCC diagnostic pop
+  #endif
 #endif
 
 #if defined(PETSC_USE_FORTRAN_BINDINGS)
@@ -1850,14 +1857,15 @@ PetscMPIInt MPIU_Allreduce_Private(const void *inbuf, void *outbuf, MPIU_Count c
     void      *inbufd, *outbufd;
 
     if (inbuf != MPI_IN_PLACE) {
-      incnt  = *(PetscInt32 *)inbuf;
-      inbufd = &incnt;
+      incnt   = *(PetscInt32 *)inbuf;
+      inbufd  = &incnt;
+      outbufd = &outcnt;
+      err     = MPIU_Allreduce_Count(inbufd, outbufd, count, MPIU_INT64, op, comm);
     } else {
-      outcnt = *(PetscInt32 *)outbuf;
-      inbufd = (void *)MPI_IN_PLACE;
+      outcnt  = *(PetscInt32 *)outbuf;
+      outbufd = &outcnt;
+      err     = MPIU_Allreduce_Count(MPI_IN_PLACE, outbufd, count, MPIU_INT64, op, comm);
     }
-    outbufd = &outcnt;
-    err     = MPIU_Allreduce_Count(inbufd, outbufd, count, MPIU_INT64, op, comm);
     if (!err && outcnt > PETSC_INT_MAX) err = MPI_ERR_OTHER;
     *(PetscInt32 *)outbuf = (PetscInt32)outcnt;
   } else {
