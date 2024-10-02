@@ -16,6 +16,7 @@ Changes: Development
 .. rubric:: Sys:
 
 - Add ``PetscFreeConst()`` macro to free memory declared const. ``PetscFree()`` can no longer be used on const pointers
+- Add ``PetscObjectHasFunction()`` to query for the presence of a composed method
 
 .. rubric:: Event Logging:
 
