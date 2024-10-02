@@ -41,6 +41,27 @@ struct _TaoOps {
 
 #define MAXTAOMONITORS 10
 
+typedef struct _n_TaoMappedTerm TaoMappedTerm;
+
+struct _n_TaoMappedTerm {
+  char       *prefix;
+  TaoTerm     term;
+  PetscReal   scale;
+  Mat         map;
+  Vec         _map_output;
+  Vec         _unmapped_gradient;
+  Vec         _mapped_gradient;
+  Mat         _unmapped_H;
+  Mat         _unmapped_Hpre;
+  Mat         _mapped_H;
+  Mat         _mapped_Hpre;
+  TaoTermMask mask;
+};
+
+#define TaoTermObjectiveMasked(a) ((a) & TAOTERM_MASK_OBJECTIVE)
+#define TaoTermGradientMasked(a)  ((a) & TAOTERM_MASK_GRADIENT)
+#define TaoTermHessianMasked(a)   ((a) & TAOTERM_MASK_HESSIAN)
+
 struct _p_Tao {
   PETSCHEADER(struct _TaoOps);
   void *user;
@@ -270,3 +291,15 @@ PETSC_INTERN PetscErrorCode TaoTermTaoCallbacksGetObjective(TaoTerm, PetscErrorC
 PETSC_INTERN PetscErrorCode TaoTermTaoCallbacksGetGradient(TaoTerm, PetscErrorCode (**)(Tao, Vec, Vec, void *), void **);
 PETSC_INTERN PetscErrorCode TaoTermTaoCallbacksGetObjAndGrad(TaoTerm, PetscErrorCode (**)(Tao, Vec, PetscReal *, Vec, void *), void **);
 PETSC_INTERN PetscErrorCode TaoTermTaoCallbacksGetHessian(TaoTerm, PetscErrorCode (**)(Tao, Vec, Mat, Mat, void *), void **);
+
+PETSC_INTERN PetscErrorCode TaoMappedTermSetData(TaoMappedTerm *, const char *, PetscReal, TaoTerm, Mat);
+PETSC_INTERN PetscErrorCode TaoMappedTermGetData(TaoMappedTerm *, const char **, PetscReal *, TaoTerm *, Mat *);
+PETSC_INTERN PetscErrorCode TaoMappedTermReset(TaoMappedTerm *);
+PETSC_INTERN PetscErrorCode TaoMappedTermObjective(TaoMappedTerm *, Vec, Vec, InsertMode, PetscReal *);
+PETSC_INTERN PetscErrorCode TaoMappedTermGradient(TaoMappedTerm *, Vec, Vec, InsertMode, Vec);
+PETSC_INTERN PetscErrorCode TaoMappedTermObjectiveAndGradient(TaoMappedTerm *, Vec, Vec, InsertMode, PetscReal *, Vec);
+PETSC_INTERN PetscErrorCode TaoMappedTermHessian(TaoMappedTerm *, Vec, Vec, InsertMode, Mat, Mat);
+PETSC_INTERN PetscErrorCode TaoMappedTermHessianMult(TaoMappedTerm *, Vec, Vec, Mat, Vec, InsertMode, Vec);
+PETSC_INTERN PetscErrorCode TaoMappedTermSetUp(TaoMappedTerm *);
+PETSC_INTERN PetscErrorCode TaoMappedTermCreateVecs(TaoMappedTerm *, Vec *, Vec *);
+PETSC_INTERN PetscErrorCode TaoMappedTermCreateHessianMatrices(TaoMappedTerm *, Mat *, Mat *);
