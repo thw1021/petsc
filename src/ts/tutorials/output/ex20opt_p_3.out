@@ -29,6 +29,15 @@ Tao Object: 1 MPI process
         Not a descent direction: 0
         Line search fails: 0
         Matrix has not been preallocated yet
+      Objective function:
+        Scale (tao_objective_scale): 1.
+        Function:
+          TaoTerm Object: (tao_bnk_callbacks_) 1 MPI process
+            type: taocallbacks
+            solution vector space: N = 1 [VecType seq (taoterm_solution_vec_type)]
+            parameter vector space: (none)
+            attached to Tao [name omitted] (tao_bnk_)
+        Map: unmapped
       TaoLineSearch Object: (tao_bnk_) 1 MPI process
         type: more-thuente
         maximum function evaluations=30
@@ -37,7 +46,7 @@ Tao Object: 1 MPI process
         total number of gradient evaluations=0
         total number of function/gradient evaluations=0
         Termination reason: 0
-      convergence tolerances: gatol=1e-08,       grtol=1e-08,  steptol=0.,       gttol=0.
+      convergence tolerances: gatol=1e-08,       grtol=1e-08,       steptol=0.,       gttol=0.
       Residual in Function/Gradient:=0.
       Objective value=0.
       total number of iterations=0,                              (max: 2000)
@@ -79,6 +88,15 @@ Tao Object: 1 MPI process
           Number of updates: 18
           Number of rejects: 0
           Number of resets: 0
+  Objective function:
+    Scale (tao_objective_scale): 1.
+    Function:
+      TaoTerm Object: (callbacks_) 1 MPI process
+        type: taocallbacks
+        solution vector space: N = 1 [VecType seq (taoterm_solution_vec_type)]
+        parameter vector space: (none)
+        attached to Tao [name omitted]
+    Map: unmapped
   TaoLineSearch Object: 1 MPI process
     type: more-thuente
     maximum function evaluations=30
@@ -120,7 +138,7 @@ Tao Object: 1 MPI process
             Number of rejects: 0
             Number of resets: 0
   total KSP iterations: 0
-  convergence tolerances: gatol=1e-08,   grtol=1e-08, steptol=0.,   gttol=0.
+  convergence tolerances: gatol=1e-08,   grtol=1e-08,   steptol=0.,   gttol=0.
   Residual in Function/Gradient:=8.34439e-09
   Objective value=1.24426e-09
   total number of iterations=19,                          (max: 50)

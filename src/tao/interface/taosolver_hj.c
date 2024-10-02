@@ -36,8 +36,7 @@ PetscErrorCode TaoSetHessian(Tao tao, Mat H, Mat Hpre, PetscErrorCode (*func)(Ta
     PetscValidHeaderSpecific(Hpre, MAT_CLASSID, 3);
     PetscCheckSameComm(tao, 1, Hpre, 3);
   }
-  if (ctx) tao->user_hessP = ctx;
-  if (func) tao->ops->computehessian = func;
+  PetscCall(TaoTermTaoCallbacksSetHessian(tao->orig_callbacks, func, ctx));
   if (H) {
     PetscCall(PetscObjectReference((PetscObject)H));
     PetscCall(MatDestroy(&tao->hessian));
@@ -74,16 +73,90 @@ PetscErrorCode TaoSetHessian(Tao tao, Mat H, Mat Hpre, PetscErrorCode (*func)(Ta
 
   Level: beginner
 
-.seealso: [](ch_tao), `Tao`, `TaoType`, `TaoGetObjective()`, `TaoGetGradient()`, `TaoGetObjectiveAndGradient()`, `TaoSetHessian()`
+  Note:
+  In addition to specifying an objective function using callbacks like
+  `TaoSetObjectiveAndGradient()` and `TaoSetHessian()`, Tao also has an object-oriented
+  approach to specifying objective functions with `TaoSetObjectiveTerm()` and
+  `TaoAddObjectiveTerm()`.
+
+  `TaoGetHessian()` will always return the callback specified with
+  `TaoSetHessian()`, even if the objective function has been changed by
+  calling `TaoSetObjectiveTerm()` and/or `TaoAddObjectiveTerm()`.
+
+.seealso: [](ch_tao), `Tao`, `TaoType`, `TaoGetObjective()`, `TaoGetGradient()`, `TaoGetObjectiveAndGradient()`, `TaoSetHessian()`, `TaoSetHessianMatrices()`, `TaoGetHessianMatrices()`
 @*/
 PetscErrorCode TaoGetHessian(Tao tao, Mat *H, Mat *Hpre, PetscErrorCode (**func)(Tao tao, Vec x, Mat H, Mat Hpre, void *ctx), void **ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
+  PetscCall(TaoGetHessianMatrices(tao, H, Hpre));
+  if (func || ctx) PetscCall(TaoTermTaoCallbacksGetHessian(tao->orig_callbacks, func, ctx));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoSetHessianMatrices - Set the matrices to store the Hessian matrix and its preconditioner in Tao solver algorithms
+
+  Collective
+
+  Input Parameters:
++ tao  - the `Tao` context
+. H    - the Hessian matrix
+- Hpre - the Hessian matrix preconditioner
+
+  Level: intermediate
+
+  Note:
+  If you are using `TaoTerm`s to define this objective, you should use this instead of `TaoSetHessian()` to set the matrices.
+
+.seealso: [](ch_tao), `Tao`, `TaoType`, `TaoGetObjective()`, `TaoGetGradient()`, `TaoGetObjectiveAndGradient()`, `TaoSetHessian()`, `TaoGetHessian()`, `TaoGetHessianMatrices()`,
+@*/
+PetscErrorCode TaoSetHessianMatrices(Tao tao, Mat H, Mat Hpre)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
+  if (H) {
+    PetscValidHeaderSpecific(H, MAT_CLASSID, 2);
+    PetscCheckSameComm(tao, 1, H, 2);
+  }
+  if (Hpre) {
+    PetscValidHeaderSpecific(Hpre, MAT_CLASSID, 3);
+    PetscCheckSameComm(tao, 1, Hpre, 3);
+  }
+  PetscCall(PetscObjectReference((PetscObject)H));
+  PetscCall(MatDestroy(&tao->hessian));
+  tao->hessian = H;
+  PetscCall(PetscObjectReference((PetscObject)Hpre));
+  PetscCall(MatDestroy(&tao->hessian_pre));
+  tao->hessian_pre = Hpre;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoGetHessianMatrices - Get the matrices that store the Hessian matrix and its preconditioner in Tao solver algorithms
+
+  Collective
+
+  Input Parameters:
+. tao - the `Tao` context
+
+  Output Parameters:
++ H    - the Hessian matrix
+- Hpre - the Hessian matrix preconditioner
+
+  Level: intermediate
+
+  Note:
+  If you are using `TaoTerm`s to define this objective, you should use this instead of `TaoSetHessian()` to set the matrices.
+
+.seealso: [](ch_tao), `Tao`, `TaoType`, `TaoGetObjective()`, `TaoGetGradient()`, `TaoGetObjectiveAndGradient()`, `TaoSetHessian()`, `TaoGetHessian()`, `TaoSetHessianMatrices()`,
+@*/
+PetscErrorCode TaoGetHessianMatrices(Tao tao, Mat *H, Mat *Hpre)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
   if (H) *H = tao->hessian;
   if (Hpre) *Hpre = tao->hessian_pre;
-  if (ctx) *ctx = tao->user_hessP;
-  if (func) *func = tao->ops->computehessian;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -92,8 +165,7 @@ PetscErrorCode TaoTestHessian(Tao tao)
   Mat               A, B, C, D, hessian;
   Vec               x = tao->solution;
   PetscReal         nrm, gnorm;
-  PetscReal         threshold = 1.e-5;
-  PetscInt          m, n, M, N;
+  PetscReal         threshold      = 1.e-5;
   PetscBool         complete_print = PETSC_FALSE, test = PETSC_FALSE, flg;
   PetscViewer       viewer, mviewer;
   MPI_Comm          comm;
@@ -130,6 +202,7 @@ PetscErrorCode TaoTestHessian(Tao tao)
   else hessian = tao->hessian_pre;
 
   while (hessian) {
+    PetscLayout rmap, cmap;
     PetscCall(PetscObjectBaseTypeCompareAny((PetscObject)hessian, &flg, MATSEQAIJ, MATMPIAIJ, MATSEQDENSE, MATMPIDENSE, MATSEQBAIJ, MATMPIBAIJ, MATSEQSBAIJ, MATMPIBAIJ, ""));
     if (flg) {
       A = hessian;
@@ -139,9 +212,8 @@ PetscErrorCode TaoTestHessian(Tao tao)
     }
 
     PetscCall(MatCreate(PetscObjectComm((PetscObject)A), &B));
-    PetscCall(MatGetSize(A, &M, &N));
-    PetscCall(MatGetLocalSize(A, &m, &n));
-    PetscCall(MatSetSizes(B, m, n, M, N));
+    PetscCall(MatGetLayouts(A, &rmap, &cmap));
+    PetscCall(MatSetLayouts(B, rmap, cmap));
     PetscCall(MatSetType(B, ((PetscObject)A)->type_name));
     PetscCall(MatSetUp(B));
     PetscCall(MatSetOption(B, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE));
@@ -171,7 +243,7 @@ PetscErrorCode TaoTestHessian(Tao tao)
 
       PetscCall(MatAYPX(B, -1.0, A, DIFFERENT_NONZERO_PATTERN));
       PetscCall(MatCreate(PetscObjectComm((PetscObject)A), &C));
-      PetscCall(MatSetSizes(C, m, n, M, N));
+      PetscCall(MatSetLayouts(C, rmap, cmap));
       PetscCall(MatSetType(C, ((PetscObject)A)->type_name));
       PetscCall(MatSetUp(C));
       PetscCall(MatSetOption(C, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE));
@@ -245,24 +317,18 @@ PetscErrorCode TaoTestHessian(Tao tao)
   Developer Notes:
   The Hessian test mechanism follows `SNESTestJacobian()`.
 
+  If there is no separate preconditioning matrix, `TaoComputeHessian(tao, X, H, NULL)` and `TaoComputeHessian(tao, X, H, H)` are equivalent.
+
 .seealso: [](ch_tao), `Tao`, `TaoComputeObjective()`, `TaoComputeObjectiveAndGradient()`, `TaoSetHessian()`
 @*/
 PetscErrorCode TaoComputeHessian(Tao tao, Vec X, Mat H, Mat Hpre)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  PetscValidHeaderSpecific(X, VEC_CLASSID, 2);
-  PetscCheckSameComm(tao, 1, X, 2);
-  PetscCheck(tao->ops->computehessian, PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_WRONGSTATE, "TaoSetHessian() not called");
-
-  ++tao->nhess;
-  PetscCall(VecLockReadPush(X));
-  PetscCall(PetscLogEventBegin(TAO_HessianEval, tao, X, H, Hpre));
-  PetscCallBack("Tao callback Hessian", (*tao->ops->computehessian)(tao, X, H, Hpre, tao->user_hessP));
-  PetscCall(PetscLogEventEnd(TAO_HessianEval, tao, X, H, Hpre));
-  PetscCall(VecLockReadPop(X));
-
+  if (Hpre == H) Hpre = NULL;
+  PetscCall(TaoMappedTermHessian(&tao->objective_term, X, tao->objective_parameters, INSERT_VALUES, H, Hpre));
   PetscCall(TaoTestHessian(tao));
+  tao->nhess++;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
