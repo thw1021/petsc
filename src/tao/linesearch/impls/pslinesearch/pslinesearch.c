@@ -11,6 +11,7 @@ static PetscErrorCode TaoLineSearchDestroy_PS(TaoLineSearch ls)
   if (armP->x) PetscCall(PetscObjectDereference((PetscObject)armP->x));
   if (armP->dualvec_work) PetscCall(PetscObjectDereference((PetscObject)armP->dualvec_work));
   if (armP->dualvec_test) PetscCall(PetscObjectDereference((PetscObject)armP->dualvec_test));
+  if (armP->cj_orig_term) PetscCall(TaoTermDestroy(&armP->prox_term)); //Destroy conjugate one, only for TAOCV
   PetscCall(VecDestroy(&armP->work));
   PetscCall(VecDestroy(&armP->work2));
   PetscCall(PetscFree(ls->data));
@@ -66,7 +67,6 @@ static PetscErrorCode TaoLineSearchApply_PS(TaoLineSearch ls, Vec xold, PetscRea
   PetscInt          i, its = 0;
   MPI_Comm          comm;
   Vec               vecin, vecout;
-  PetscBool         cj;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectGetComm((PetscObject)ls, &comm));
@@ -131,10 +131,11 @@ static PetscErrorCode TaoLineSearchApply_PS(TaoLineSearch ls, Vec xold, PetscRea
     ++its;
 
     if (ls->ops->update) PetscUseTypeMethod(ls, update, xold, f, xnew, g);
-    vecin  = (ls->lmap) ? armP->dualvec_work : armP->work;
-    vecout = (ls->lmap) ? armP->dualvec_test : xnew;
-    cj     = (ls->lmap) ? PETSC_TRUE : PETSC_FALSE;
-    PetscCall(DMTaoApplyProximalMap(ls->prox, ls->prox_reg, armP->test_step, vecin, vecout, cj));
+    vecin  = (armP->lmap) ? armP->dualvec_work : armP->work;
+    vecout = (armP->lmap) ? armP->dualvec_test : xnew;
+    //TODO prob need TaoCVGetRegularizer_Internal. use null for now...
+    //    1. here below should be reg_term.scale but ignore for now?
+    PetscCall(TaoTermProximalMap(armP->prox_term, armP->term_param, armP->term_scale * armP->test_step, NULL, vecin, 1., vecout));
     ls->nproxeval++;
     if (ls->ops->postupdate) PetscUseTypeMethod(ls, postupdate, xold, f, xnew, g);
     PetscCall(TaoLineSearchMonitor(ls, its, *f, ls->step));
@@ -161,6 +162,32 @@ static PetscErrorCode TaoLineSearchApply_PS(TaoLineSearch ls, Vec xold, PetscRea
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode TaoLineSearchSetUp_PS(TaoLineSearch ls)
+{
+  TaoLineSearch_PS *armP = (TaoLineSearch_PS *)ls->data;
+  Tao               tao;
+  PetscBool         is_fb, is_cv;
+
+  PetscFunctionBegin;
+  tao = ls->tao;
+
+  PetscCall(PetscObjectTypeCompare((PetscObject)tao, TAOFB, &is_fb));
+  PetscCall(PetscObjectTypeCompare((PetscObject)tao, TAOCV, &is_cv));
+
+  PetscCall(TaoTermSumGetSubterm(tao->objective_term.term, 1, NULL, &armP->f_scale, &armP->f_term, NULL));
+  if (tao->objective_parameters) PetscCall(VecNestGetTaoTermSumSubParameters(tao->objective_parameters, 1, &armP->f_param));
+  if (is_fb) {
+    PetscCall(TaoTermSumGetSubterm(tao->objective_term.term, 2, NULL, &armP->term_scale, &armP->prox_term, NULL));
+    if (tao->objective_parameters) PetscCall(VecNestGetTaoTermSumSubParameters(tao->objective_parameters, 2, &armP->term_param));
+  } else if (is_cv) {
+    PetscCall(TaoTermSumGetSubterm(tao->objective_term.term, 3, NULL, &armP->term_scale, &armP->cj_orig_term, &armP->lmap));
+    //TODO technically cj term is created in cv.c but doing it again. fix later? or dont bother?
+    PetscCall(TaoTermCreateConjugate(armP->cj_orig_term, &armP->prox_term));
+    if (tao->objective_parameters) PetscCall(VecNestGetTaoTermSumSubParameters(tao->objective_parameters, 3, &armP->term_param));
+  } else SETERRQ(PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_WRONG, "This routine applies to TAO_FB and TAO_CV.");
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*MC
    TAOLINESEARCHPS - Special line-search type for proximal splittign algorithms.
    Should not be used with any other algorithm.
@@ -183,7 +210,7 @@ PETSC_EXTERN PetscErrorCode TaoLineSearchCreate_PS(TaoLineSearch ls)
   ls->data                = (void *)armP;
   ls->initstep            = 0;
   ls->ops->monitor        = NULL;
-  ls->ops->setup          = NULL;
+  ls->ops->setup          = TaoLineSearchSetUp_PS;
   ls->ops->reset          = NULL;
   ls->ops->apply          = TaoLineSearchApply_PS;
   ls->ops->view           = TaoLineSearchView_PS;

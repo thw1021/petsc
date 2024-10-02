@@ -19,7 +19,6 @@
  *        h(x) = |\cdot - b|_1        */
 
 #include <petsctao.h>
-#include <petscdm.h>
 #include <petscksp.h>
 #include <petscmat.h>
 
@@ -40,7 +39,7 @@ typedef struct {
   char      file[PETSC_MAX_PATH_LEN];
 } AppCtx;
 
-PetscErrorCode LAD_UserObjGrad_DM(DM dm, Vec X, PetscReal *f, Vec G, void *ptr)
+PetscErrorCode LAD_UserObjGrad_Term(TaoTerm term, Vec X, Vec param, PetscReal *f, Vec G)
 {
   PetscFunctionBegin;
   *f = 0;
@@ -62,12 +61,14 @@ PetscErrorCode LAD_UserObjGrad(Tao tao, Vec X, PetscReal *f, Vec G, void *ptr)
  *
  * f(x) = 0.5 x^T Q x + x^T b
  * grad f = Qx + b                */
-PetscErrorCode SVM_UserObjGrad_DM(DM dm, Vec X, PetscReal *f, Vec G, void *ptr)
+//PetscErrorCode SVM_UserObjGrad_Term(TaoTerm term, Vec X, PetscReal *f, Vec G, void *ptr)
+PetscErrorCode SVM_UserObjGrad_Term(TaoTerm term, Vec X, Vec param, PetscReal *f, Vec G)
 {
-  AppCtx   *user = (AppCtx *)ptr;
+  AppCtx   *user;
   PetscReal temp1, temp2;
 
   PetscFunctionBegin;
+  PetscCall(TaoTermShellGetContext(term, &user));
   PetscCall(MatMult(user->Q, X, G));
   PetscCall(VecTDot(G, X, &temp1));
   PetscCall(VecTDot(X, user->q, &temp2));
@@ -311,10 +312,9 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *user)
 
 int main(int argc, char **argv)
 {
-  DM       fdm, gdm, hdm;
-  Tao      tao;
-  AppCtx   user;
-  PetscInt dm_idx = 0;
+  TaoTerm fterm, gterm, hterm;
+  Tao     tao;
+  AppCtx  user;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, (char *)0, help));
@@ -324,60 +324,59 @@ int main(int argc, char **argv)
   PetscCall(TaoCreate(PETSC_COMM_WORLD, &tao));
   PetscCall(TaoSetSolution(tao, user.x));
   PetscCall(TaoSetType(tao, TAOCV));
-  PetscCall(DMCreate(PETSC_COMM_WORLD, &fdm));
-  PetscCall(DMCreate(PETSC_COMM_WORLD, &gdm));
-  PetscCall(DMCreate(PETSC_COMM_WORLD, &hdm));
+  PetscCall(TaoTermCreate(PETSC_COMM_WORLD, &fterm));
+  PetscCall(TaoTermCreate(PETSC_COMM_WORLD, &gterm));
+  PetscCall(TaoTermCreate(PETSC_COMM_WORLD, &hterm));
+  PetscCall(TaoTermSetType(fterm, TAOTERMSHELL));
+  PetscCall(TaoTermShellSetContext(fterm, (void *)&user));
+  PetscCall(TaoTermSetParametersMode(fterm, TAOTERM_PARAMETERS_NONE));
 
   switch (user.probType) {
   case DUAL_SVM: {
-    PetscCall(DMTaoSetType(gdm, DMTAOBOX));
-    PetscCall(DMTaoSetType(hdm, DMTAOZERO));
-    PetscCall(DMTaoBoxSetContext(gdm, 0, user.C, NULL, NULL));
+    PetscCall(TaoTermSetType(gterm, TAOTERMBOX));
+    PetscCall(TaoTermSetType(hterm, TAOTERMZERO));
+    PetscCall(TaoTermBoxSetContext(gterm, 0, user.C, NULL, NULL));
   } break;
   case LAD:
-    PetscCall(DMTaoSetType(gdm, DMTAOL1));
-    PetscCall(DMTaoSetType(hdm, DMTAOL1));
-    PetscCall(DMTaoSetTranslationVector(hdm, user.y_translation));
+    PetscCall(TaoTermSetType(gterm, TAOTERML1));
+    PetscCall(TaoTermSetType(hterm, TAOTERML1));
     break;
   default:
     SETERRQ(PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "Invalid problem type.");
   }
+  PetscCall(TaoTermSetSolutionTemplate(fterm, user.x));
+  PetscCall(TaoTermSetSolutionTemplate(gterm, user.x));
+  PetscCall(TaoTermSetSolutionTemplate(hterm, user.x));
 
   switch (user.probType) {
   case DUAL_SVM: {
-    PetscCall(DMTaoSetObjectiveAndGradient(fdm, SVM_UserObjGrad_DM, (void *)&user));
-    PetscCall(TaoAddDM(tao, fdm, 1.));
-    PetscCall(TaoPSSetSmoothTerm(tao, dm_idx));
-    dm_idx++;
+    PetscCall(TaoTermShellSetObjectiveAndGradient(fterm, SVM_UserObjGrad_Term));
+    PetscCall(TaoAddObjectiveTerm(tao, NULL, 1., fterm, NULL, NULL));
+    PetscCall(TaoAddObjectiveTerm(tao, NULL, user.g_scale, gterm, NULL, NULL));
+    PetscCall(TaoAddObjectiveTerm(tao, NULL, 1., hterm, NULL, user.A));
   } break;
   case LAD: {
     // LAD's f(x) = Zero()
-    PetscCall(DMTaoSetObjectiveAndGradient(fdm, LAD_UserObjGrad_DM, (void *)&user));
-    PetscCall(TaoAddDM(tao, fdm, 0.));
-    PetscCall(TaoPSSetSmoothTerm(tao, dm_idx));
-    dm_idx++;
+    PetscCall(TaoTermShellSetObjectiveAndGradient(fterm, LAD_UserObjGrad_Term));
+    PetscCall(TaoAddObjectiveTerm(tao, NULL, 1., fterm, NULL, NULL));
+    PetscCall(TaoAddObjectiveTerm(tao, NULL, user.g_scale, gterm, NULL, NULL));
+    PetscCall(TaoAddObjectiveTerm(tao, NULL, 1., hterm, user.y_translation, user.A));
+    PetscCall(TaoTermSetParametersMode(hterm, TAOTERM_PARAMETERS_REQUIRED));
   } break;
   default:
     SETERRQ(PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "Invalid problem type.");
   }
 
-  PetscCall(TaoAddDM(tao, gdm, user.g_scale));
-  PetscCall(TaoPSSetNonSmoothTerm(tao, dm_idx));
-  dm_idx++;
-
-  PetscCall(TaoAddDM(tao, hdm, 1.));
-  if (!user.set_norm) PetscCall(TaoPSSetNonSmoothTermWithLinearMap(tao, dm_idx, user.A, 0.));
-  else PetscCall(TaoPSSetNonSmoothTermWithLinearMap(tao, dm_idx, user.A, user.matnorm));
-
+  if (user.set_norm) PetscCall(TaoCVSetInitialNormEstimate(tao, user.matnorm));
   PetscCall(TaoSetFromOptions(tao));
   PetscCall(TaoSolve(tao));
 
   PetscCall(CompareSolution(&user));
   PetscCall(DataDestroy(&user));
   PetscCall(TaoDestroy(&tao));
-  PetscCall(DMDestroy(&fdm));
-  PetscCall(DMDestroy(&gdm));
-  PetscCall(DMDestroy(&hdm));
+  PetscCall(TaoTermDestroy(&fterm));
+  PetscCall(TaoTermDestroy(&gterm));
+  PetscCall(TaoTermDestroy(&hterm));
   PetscCall(PetscFinalize());
   return 0;
 }

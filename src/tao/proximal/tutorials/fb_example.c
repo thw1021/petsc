@@ -26,19 +26,20 @@ typedef struct {
   char      file[PETSC_MAX_PATH_LEN];
 } AppCtx;
 
-PetscErrorCode Log_UserObjGrad_DM(DM dm, Vec X, PetscReal *f, Vec G, void *ptr)
+PetscErrorCode Log_UserObjGrad_Term(TaoTerm term, Vec X, Vec param, PetscReal *f, Vec G)
 {
-  AppCtx        *user  = (AppCtx *)ptr;
-  const PetscInt ix[1] = {user->n};
-  PetscReal      xlast, gradmean;
-  PetscMPIInt    size, rank;
-  MPI_Comm       comm;
+  AppCtx     *user;
+  PetscReal   xlast, gradmean;
+  PetscMPIInt size, rank;
+  MPI_Comm    comm;
 
   PetscFunctionBegin;
+  PetscCall(TaoTermShellGetContext(term, &user));
   PetscCall(PetscObjectGetComm((PetscObject)X, &comm));
   PetscCallMPI(MPI_Comm_size(comm, &size));
   PetscCallMPI(MPI_Comm_rank(comm, &rank));
 
+  const PetscInt ix[1] = {user->n};
   /* workvecM = A @ x[0:end-1] + x[end] */
   PetscCall(VecGetSubVector(X, user->is_set, &user->xsub));
   PetscCall(MatMult(user->A, user->xsub, user->workvecM));
@@ -148,11 +149,12 @@ PetscErrorCode Log_UserObjGrad(Tao tao, Vec X, PetscReal *f, Vec G, void *ptr)
  *
  * f(x) = 0.5 |Ax-b|_2^2
  * grad f = A^T (A x - b)               */
-PetscErrorCode UserObjGrad_DM(DM dm, Vec X, PetscReal *f, Vec G, void *ptr)
+PetscErrorCode UserObjGrad_Term(TaoTerm term, Vec X, Vec param, PetscReal *f, Vec G)
 {
-  AppCtx *user = (AppCtx *)ptr;
+  AppCtx *user;
 
   PetscFunctionBegin;
+  PetscCall(TaoTermShellGetContext(term, &user));
   PetscCall(MatMult(user->A, X, user->workvec));
   PetscCall(VecAXPY(user->workvec, -1., user->b));
   PetscCall(MatMultTranspose(user->A, user->workvec, G));
@@ -389,11 +391,10 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *user)
 
 int main(int argc, char **argv)
 {
-  DM        fdm, gdm;
+  TaoTerm   fterm, gterm;
   Tao       tao;
   AppCtx    user;
   PetscReal v1, v2;
-  PetscInt  dm_idx = 0;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, (char *)0, help));
@@ -404,32 +405,29 @@ int main(int argc, char **argv)
   PetscCall(TaoCreate(PETSC_COMM_WORLD, &tao));
   PetscCall(TaoSetSolution(tao, user.x));
   PetscCall(TaoSetType(tao, TAOFB));
-  PetscCall(DMCreate(PETSC_COMM_WORLD, &fdm));
-  PetscCall(DMCreate(PETSC_COMM_WORLD, &gdm));
-  PetscCall(DMTaoSetType(gdm, DMTAOL1));
-  PetscCall(DMTaoL1SetContext(gdm, user.scale));
+  PetscCall(TaoTermCreate(PETSC_COMM_WORLD, &fterm));
+  PetscCall(TaoTermCreate(PETSC_COMM_WORLD, &gterm));
+  PetscCall(TaoTermSetType(fterm, TAOTERMSHELL));
+  PetscCall(TaoTermShellSetContext(fterm, (void *)&user));
+  PetscCall(TaoTermSetParametersMode(fterm, TAOTERM_PARAMETERS_NONE));
+  PetscCall(TaoTermSetType(gterm, TAOTERML1));
 
   switch (user.probType) {
   case PROB_LASSO: {
-    PetscCall(DMTaoSetObjectiveAndGradient(fdm, UserObjGrad_DM, (void *)&user));
-    PetscCall(DMTaoSetLipschitz(fdm, user.lip));
-    PetscCall(TaoAddDM(tao, fdm, 1.));
-    PetscCall(TaoPSSetSmoothTerm(tao, dm_idx));
-    dm_idx++;
+    PetscCall(TaoTermShellSetObjectiveAndGradient(fterm, UserObjGrad_Term));
   } break;
   case PROB_LOG_REG: {
-    PetscCall(DMTaoSetObjectiveAndGradient(fdm, Log_UserObjGrad_DM, (void *)&user));
-    PetscCall(DMTaoSetLipschitz(fdm, user.lip));
-    PetscCall(TaoAddDM(tao, fdm, 1.));
-    PetscCall(TaoPSSetSmoothTerm(tao, dm_idx));
-    dm_idx++;
+    PetscCall(TaoTermShellSetObjectiveAndGradient(fterm, Log_UserObjGrad_Term));
   } break;
   default:
     SETERRQ(PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "Invalid problem formulation type.");
   }
 
-  PetscCall(TaoAddDM(tao, gdm, 1.));
-  PetscCall(TaoPSSetNonSmoothTerm(tao, dm_idx));
+  PetscCall(TaoTermSetLipschitz(fterm, user.lip));
+  PetscCall(TaoTermSetSolutionTemplate(fterm, user.x));
+  PetscCall(TaoTermSetSolutionTemplate(gterm, user.x));
+  PetscCall(TaoAddObjectiveTerm(tao, NULL, 1., fterm, NULL, NULL));
+  PetscCall(TaoAddObjectiveTerm(tao, NULL, user.scale, gterm, NULL, NULL));
   PetscCall(TaoSetFromOptions(tao));
   PetscCall(TaoSolve(tao));
 
@@ -449,8 +447,8 @@ int main(int argc, char **argv)
 
   PetscCall(DataDestroy(&user));
   PetscCall(TaoDestroy(&tao));
-  PetscCall(DMDestroy(&fdm));
-  PetscCall(DMDestroy(&gdm));
+  PetscCall(TaoTermDestroy(&fterm));
+  PetscCall(TaoTermDestroy(&gterm));
   PetscCall(PetscFinalize());
   return 0;
 }

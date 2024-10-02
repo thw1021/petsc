@@ -50,6 +50,8 @@
 #define TAOALMM     'almm'
 #define TAOPYTHON   'python'
 #define TAOSNES     'snes'
+#define TAOFB       'fb'
+#define TAOCV       'cv'
 
 #define TAOTERMTAOCALLBACKS    'taocallbacks'
 #define TAOTERMBRGNREGULARIZER 'brgnregularizer'
@@ -60,4 +62,7 @@
 #define TAOTERMHALFL2SQUARED   'halfl2squared'
 #define TAOTERML1              'l1'
 #define TAOTERMQUADRATIC       'quadratic'
+#define TAOTERMZERO            'zero'
+#define TAOTERMBOX             'box'
+#define TAOTERMSIMPLEX         'simplex'
 #endif

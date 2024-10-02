@@ -37,6 +37,27 @@ struct _TaoOps {
 
 #define MAXTAOMONITORS 10
 
+//Given f,g terms with alpha, beta, p, q - possible permutations
+//of proximal map with HALFL2SQUARED regularizer
+//
+//Four-bit representation:
+//ABCD, where
+//A: q
+//B: p
+//C: beta
+//D: alpha
+typedef enum {
+  TAOTERM_PROX_NO_OP,                // XX00, alpha == beta == 0
+  TAOTERM_PROX_ZERO,                 // 0X10, x \gets zero
+  TAOTERM_PROX_Q,                    // 1X10, x \gets q
+  TAOTERM_PROX_PROX,                 // 1011, Regular prox
+  TAOTERM_PROX_PROX_TRANS,           // 1111, prox with translation
+  TAOTERM_PROX_SOLVE,                // X001, Solve(alpha*f)
+  TAOTERM_PROX_SOLVE_PARAM,          // X101, Solve(alpha*f(;p))
+  TAOTERM_PROX_SOLVE_COMPOSITE,      // 0011, Solve(alpha*f() + beta*g())
+  TAOTERM_PROX_SOLVE_COMPOSITE_TRANS // 0111, Solve(alpha*f(;p) + beta*g())
+} TaoTermProxMapL2Op;
+
 typedef struct _n_TaoMappedTerm TaoMappedTerm;
 
 struct _n_TaoMappedTerm {
@@ -90,6 +111,7 @@ struct _p_Tao {
 
   Vec        solution;
   Vec        gradient;
+  Vec        dualvec;
   Vec        stepdirection;
   Vec        XL;
   Vec        XU;
@@ -214,6 +236,7 @@ PETSC_INTERN PetscLogEvent TAOTERM_GradientEval;
 PETSC_INTERN PetscLogEvent TAOTERM_ObjGradEval;
 PETSC_INTERN PetscLogEvent TAOTERM_HessianEval;
 PETSC_INTERN PetscLogEvent TAOTERM_HessianMult;
+PETSC_INTERN PetscLogEvent TAOTERM_ProxMap;
 
 static inline PetscErrorCode TaoLogConvergenceHistory(Tao tao, PetscReal obj, PetscReal resid, PetscReal cnorm, PetscInt totits)
 {
@@ -248,6 +271,13 @@ struct _TaoTermOps {
   TaoTermHessianMultFn          *hessianmult;
   PetscErrorCode (*proximalmap)(TaoTerm, Vec, PetscReal, TaoTerm, Vec, PetscReal, Vec);
 
+  PetscErrorCode (*conjugate_objective)(TaoTerm, Vec, Vec, PetscReal *);
+  PetscErrorCode (*conjugate_objectiveandgradient)(TaoTerm, Vec, Vec, PetscReal *, Vec);
+  PetscErrorCode (*conjugate_gradient)(TaoTerm, Vec, Vec, Vec);
+  //TODO do we need conjugate hessian? cant think of good example
+  PetscErrorCode (*conjugate_hessian)(TaoTerm, Vec, Vec, Mat, Mat);
+  PetscErrorCode (*conjugate_hessianmult)(TaoTerm, Vec, Vec, Vec, Vec);
+
   PetscErrorCode (*isobjectivedefined)(TaoTerm, PetscBool *);
   PetscErrorCode (*isgradientdefined)(TaoTerm, PetscBool *);
   PetscErrorCode (*isobjectiveandgradientdefined)(TaoTerm, PetscBool *);
@@ -267,6 +297,7 @@ struct _p_TaoTerm {
   Mat                   parameters_factory_orig; // copy so that parameter_factor can be made a reference of solution_factory if parameter space == vector space
   TaoTermParametersMode parameters_mode;
   PetscBool             Hpre_is_H; // Hessian mode data
+  PetscReal             lipschitz;
   char                 *H_mattype;
   char                 *Hpre_mattype;
 
@@ -310,3 +341,5 @@ PETSC_INTERN PetscErrorCode TaoMappedTermCreateHessianMatrices(TaoMappedTerm *, 
 
 PETSC_INTERN PetscErrorCode TaoTermHessian_Quadratic(TaoTerm, Vec, Vec, Mat, Mat);
 PETSC_INTERN PetscErrorCode TaoTermHessianMult_Quadratic(TaoTerm, Vec, Vec, Vec, Vec);
+PETSC_INTERN PetscErrorCode TaoTermProxL2FindOps_Internal(Vec, Vec, PetscReal, PetscReal, TaoTermProxMapL2Op *);
+PETSC_INTERN PetscErrorCode TaoTermWorkvecTestCompatibility(Vec, Vec, PetscBool *);
