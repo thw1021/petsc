@@ -232,10 +232,6 @@ static PetscErrorCode PCGetCFMarkers_BoomerAMG(PC pc, PetscInt *n_per_level[], P
         PetscCall(PetscBTSet(markertmp[l-1], k));
       }
     }
-
-    /* We want to own the data, and HYPRE can not touch this matrix any more */
-    //CF_marker_array[num_levels - 1 - l] = NULL;
-
   }
   *n_per_level = n_per_temp;
   *CFMarkers = markertmp;
