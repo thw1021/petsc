@@ -54,6 +54,7 @@ PetscErrorCode TaoInitializePackage(void)
   PetscCall(PetscLogEventRegister("TaoTermObjGrad", TAOTERM_CLASSID, &TAOTERM_ObjGradEval));
   PetscCall(PetscLogEventRegister("TaoTermHessian", TAOTERM_CLASSID, &TAOTERM_HessianEval));
   PetscCall(PetscLogEventRegister("TaoTermHessianMult", TAOTERM_CLASSID, &TAOTERM_HessianMult));
+  PetscCall(PetscLogEventRegister("TaoResidualEval", TAO_CLASSID, &TAO_ResidualEval));
   PetscCall(PetscLogEventRegister("TaoConstrEval", TAO_CLASSID, &TAO_ConstraintsEval));
   PetscCall(PetscLogEventRegister("TaoJacobianEval", TAO_CLASSID, &TAO_JacobianEval));
   /* Process Info */

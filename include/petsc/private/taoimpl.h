@@ -141,6 +141,7 @@ struct _p_Tao {
   PetscInt nconstraints;
   PetscInt niconstraints;
   PetscInt neconstraints;
+  PetscInt nres;
   PetscInt njac;
   PetscInt njac_equality;
   PetscInt njac_inequality;
@@ -205,6 +206,7 @@ PETSC_EXTERN PetscLogEvent TAO_ObjGradEval;
 PETSC_EXTERN PetscLogEvent TAO_HessianEval;
 PETSC_EXTERN PetscLogEvent TAO_ConstraintsEval;
 PETSC_EXTERN PetscLogEvent TAO_JacobianEval;
+PETSC_INTERN PetscLogEvent TAO_ResidualEval;
 
 PETSC_INTERN PetscLogEvent TAOTERM_ObjectiveEval;
 PETSC_INTERN PetscLogEvent TAOTERM_GradientEval;
