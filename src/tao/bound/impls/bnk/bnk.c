@@ -1040,9 +1040,15 @@ PetscErrorCode TaoSetUp_BNK(Tao tao)
     PetscCall(TaoSetTolerances(bnk->bncg, tao->gatol, tao->grtol, tao->gttol));
     PetscCall(TaoSetFunctionLowerBound(bnk->bncg, tao->fmin));
     PetscCall(TaoSetConvergenceTest(bnk->bncg, tao->ops->convergencetest, tao->cnvP));
-    PetscCall(TaoSetObjective(bnk->bncg, tao->ops->computeobjective, tao->user_objP));
-    PetscCall(TaoSetGradient(bnk->bncg, NULL, tao->ops->computegradient, tao->user_gradP));
-    PetscCall(TaoSetObjectiveAndGradient(bnk->bncg, NULL, tao->ops->computeobjectiveandgradient, tao->user_objgradP));
+    {
+      TaoTerm   term;
+      Vec       params;
+      PetscReal scale;
+      Mat       map;
+
+      PetscCall(TaoGetObjectiveTerm(tao, &scale, &term, &params, &map));
+      PetscCall(TaoSetObjectiveTerm(bnk->bncg, scale, term, params, map));
+    }
     PetscCall(PetscObjectCopyFortranFunctionPointers((PetscObject)tao, (PetscObject)bnk->bncg));
     for (i = 0; i < tao->numbermonitors; ++i) {
       PetscCall(TaoMonitorSet(bnk->bncg, tao->monitor[i], tao->monitorcontext[i], tao->monitordestroy[i]));
