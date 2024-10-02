@@ -603,22 +603,7 @@ static PetscErrorCode FormObjectiveGradient(Tao tao, Vec X, PetscReal *f, Vec G,
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* ------------------------------------------------------------------- */
-/*
-   FormHessian - Evaluates Hessian matrix.
-
-   Input Parameters:
-.  tao   - the Tao context
-.  x     - input vector
-.  ptr   - optional user-defined context, as set by TaoSetHessian()
-
-   Output Parameters:
-.  H     - Hessian matrix
-
-   Note:  Providing the Hessian may not be necessary.  Only some solvers
-   require this matrix.
-*/
-static PetscErrorCode FormHessian(Tao tao, Vec X, Mat H, Mat Hpre, void *ptr)
+static PetscErrorCode FormHessianSingle(Tao tao, Vec X, Mat H, void *ptr)
 {
   AppCtx             user = (AppCtx)ptr;
   PetscScalar       *h;
@@ -651,8 +636,32 @@ static PetscErrorCode FormHessian(Tao tao, Vec X, Mat H, Mat Hpre, void *ptr)
 
   PetscCall(VecRestoreArrayReadAndMemType(X, &x));
   PetscCall(VecRestoreArrayReadAndMemType(user->off_process_values, &o));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
 
-  if (Hpre != H) PetscCall(MatCopy(H, Hpre, SAME_NONZERO_PATTERN));
+/* ------------------------------------------------------------------- */
+/*
+   FormHessian - Evaluates Hessian matrix.
+
+   Input Parameters:
+.  tao   - the Tao context
+.  x     - input vector
+.  ptr   - optional user-defined context, as set by TaoSetHessian()
+
+   Output Parameters:
+.  H     - Hessian matrix
+
+   Note:  Providing the Hessian may not be necessary.  Only some solvers
+   require this matrix.
+*/
+static PetscErrorCode FormHessian(Tao tao, Vec X, Mat H, Mat Hpre, void *ptr)
+{
+  PetscFunctionBeginUser;
+  if (H) PetscCall(FormHessianSingle(tao, X, H, ptr));
+  if (Hpre && Hpre != H) {
+    if (H) PetscCall(MatCopy(H, Hpre, SAME_NONZERO_PATTERN));
+    else PetscCall(FormHessianSingle(tao, X, Hpre, ptr));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
