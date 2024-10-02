@@ -121,7 +121,7 @@ PetscErrorCode PetscDLOpen(const char name[], PetscDLMode mode, PetscDLHandle *h
   SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP_SYS, "Cannot use dynamic libraries on this platform");
 #endif
 
-  *handle = (PetscDLHandle)dlhandle;
+  *handle = dlhandle;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -168,7 +168,7 @@ PetscErrorCode PetscDLClose(PetscDLHandle *handle)
     #if defined(PETSC_HAVE_DLERROR)
   dlerror(); /* clear any previous error */
     #endif
-  if (dlclose((dlhandle_t)*handle) < 0) {
+  if (dlclose(*handle) < 0) {
     #if defined(PETSC_HAVE_DLERROR)
     const char *errmsg = dlerror();
     #else
@@ -243,7 +243,7 @@ PetscErrorCode PetscDLSym(PetscDLHandle handle, const char symbol[], void **valu
   */
   #elif defined(PETSC_HAVE_DLFCN_H) /* PETSC_HAVE_WINDOWS_H */
     #if defined(PETSC_HAVE_DLSYM)
-      if (handle) dlhandle = (dlhandle_t)handle;
+      if (handle) dlhandle = handle;
       else {
         #if defined(PETSC_HAVE_DLOPEN)
           /* Attempt to retrieve the main executable's dlhandle. */
@@ -288,7 +288,7 @@ PetscErrorCode PetscDLSym(PetscDLHandle handle, const char symbol[], void **valu
       #if defined(PETSC_HAVE_DLERROR)
         dlerror(); /* clear any previous error */
       #endif /* PETSC_HAVE_DLERROR */
-      dlsymbol = (dlsymbol_t)dlsym(dlhandle, symbol);
+      dlsymbol = dlsym(dlhandle, symbol);
     #else /* PETSC_HAVE_DLSYM */
       SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP_SYS, "Cannot use dynamic libraries on this platform");
     #endif /* PETSC_HAVE_DLSYM */
@@ -297,7 +297,11 @@ PetscErrorCode PetscDLSym(PetscDLHandle handle, const char symbol[], void **valu
   #endif /* PETSC_HAVE_WINDOWS_H */
   // clang-format on
 
+#if defined(PETSC_HAVE_WINDOWS_H)
   *value = *((void **)&dlsymbol);
+#else
+  *value = *(&dlsymbol);
+#endif
 
 #if defined(PETSC_SERIALIZE_FUNCTIONS)
   if (*value) PetscCall(PetscFPTAdd(*value, symbol));

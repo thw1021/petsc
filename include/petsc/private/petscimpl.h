@@ -403,10 +403,12 @@ extern void PetscValidFunction(T, int);
     /*  This check is for subtype methods such as DMDAGetCorners() that do not use the PetscTryMethod() or PetscUseMethod() paradigm */
     #define PetscValidHeaderSpecificType(h, ck, arg, t) \
       do { \
+        PETSC_SILENCE_WUSELESSCAST_BEGIN; \
         PetscBool _7_same; \
         PetscValidHeaderSpecific(h, ck, arg); \
         PetscCall(PetscObjectTypeCompare((PetscObject)(h), t, &_7_same)); \
         PetscCheck(_7_same, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Wrong subtype object:Parameter # %d must have implementation %s it is %s", arg, t, ((PetscObject)(h))->type_name); \
+        PETSC_SILENCE_WUSELESSCAST_END; \
       } while (0)
 
     #define PetscAssertPointer_Internal(ptr, arg, ptype, ptrtype) \
@@ -417,18 +419,22 @@ extern void PetscValidFunction(T, int);
 
     #define PetscValidHeaderSpecific(h, ck, arg) \
       do { \
+        PETSC_SILENCE_WUSELESSCAST_BEGIN; \
         PetscAssertPointer_Internal(h, arg, PETSC_OBJECT, "PetscObject"); \
         if (((PetscObject)(h))->classid != ck) { \
           PetscCheck(((PetscObject)(h))->classid != PETSCFREEDHEADER, PETSC_COMM_SELF, PETSC_ERR_ARG_CORRUPT, "Object already free: Parameter # %d", arg); \
           SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Wrong type of object: Parameter # %d", arg); \
         } \
+        PETSC_SILENCE_WUSELESSCAST_END; \
       } while (0)
 
     #define PetscValidHeader(h, arg) \
       do { \
+        PETSC_SILENCE_WUSELESSCAST_BEGIN; \
         PetscAssertPointer_Internal(h, arg, PETSC_OBJECT, "PetscObject"); \
         PetscCheck(((PetscObject)(h))->classid != PETSCFREEDHEADER, PETSC_COMM_SELF, PETSC_ERR_ARG_CORRUPT, "Object already free: Parameter # %d", arg); \
         PetscCheck(((PetscObject)(h))->classid >= PETSC_SMALLEST_CLASSID && ((PetscObject)(h))->classid <= PETSC_LARGEST_CLASSID, PETSC_COMM_SELF, PETSC_ERR_ARG_CORRUPT, "Invalid type of object: Parameter # %d", arg); \
+        PETSC_SILENCE_WUSELESSCAST_END; \
       } while (0)
 
     #if defined(__cplusplus)
@@ -692,14 +698,14 @@ PETSC_ASSERT_POINTER_IMPL_SPECIALIZATION(PetscComplex, PETSC_COMPLEX);
       do { \
         PetscBool _7_match; \
         PetscCall(PetscObjectTypeCompare(((PetscObject)(a)), (type), &_7_match)); \
-        PetscCheck(_7_match, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Object (%s) is not %s", (char *)(((PetscObject)(a))->type_name), type); \
+        PetscCheck(_7_match, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Object (%s) is not %s", ((PetscObject)(a))->type_name, type); \
       } while (0)
 
     #define PetscCheckTypeNames(a, type1, type2) \
       do { \
         PetscBool _7_match; \
         PetscCall(PetscObjectTypeCompareAny(((PetscObject)(a)), &_7_match, (type1), (type2), "")); \
-        PetscCheck(_7_match, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Object (%s) is not %s or %s", (char *)(((PetscObject)(a))->type_name), type1, type2); \
+        PetscCheck(_7_match, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Object (%s) is not %s or %s", ((PetscObject)(a))->type_name, type1, type2); \
       } while (0)
 
     /*
@@ -1206,7 +1212,7 @@ M*/
           `PetscObjectComposedDataSetIntstar()`, `PetscObjectComposedDataGetInt()`, `PetscObject`,
           `PetscObjectCompose()`, `PetscObjectQuery()`
 M*/
-#define PetscObjectComposedDataGetReal(obj, id, data, flag) ((PetscErrorCode)(((obj)->realcomposedstate ? (data = (obj)->realcomposeddata[id], flag = (PetscBool)((obj)->realcomposedstate[id] == (obj)->state)) : (flag = PETSC_FALSE)), PETSC_SUCCESS))
+#define PetscObjectComposedDataGetReal(obj, id, data, flag) (((obj)->realcomposedstate ? (data = (obj)->realcomposeddata[id], flag = (PetscBool)((obj)->realcomposedstate[id] == (obj)->state)) : (flag = PETSC_FALSE)), PETSC_SUCCESS)
 
 /*MC
    PetscObjectComposedDataSetRealstar - attach `PetscReal` array data to a `PetscObject` that may be retrieved with `PetscObjectComposedDataGetRealstar()`
