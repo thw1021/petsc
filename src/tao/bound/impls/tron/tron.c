@@ -64,7 +64,6 @@ static PetscErrorCode TaoSetup_TRON(Tao tao)
   PetscCall(VecDuplicate(tao->solution, &tron->X_New));
   PetscCall(VecDuplicate(tao->solution, &tron->G_New));
   PetscCall(VecDuplicate(tao->solution, &tron->Work));
-  PetscCall(VecDuplicate(tao->solution, &tao->gradient));
   PetscCall(VecDuplicate(tao->solution, &tao->stepdirection));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
