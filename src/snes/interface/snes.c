@@ -1904,7 +1904,7 @@ PetscErrorCode SNESCreate(MPI_Comm comm, SNES *outsnes)
   /* Create context to compute Eisenstat-Walker relative tolerance for KSP */
   PetscCall(PetscNew(&kctx));
 
-  snes->kspconvctx  = (void *)kctx;
+  snes->kspconvctx  = kctx;
   kctx->version     = 2;
   kctx->rtol_0      = 0.3; /* Eisenstat and Walker suggest rtol_0=.5, but
                              this was too large for some test cases */
@@ -3387,7 +3387,7 @@ PetscErrorCode SNESSetUp(SNES snes)
     }
   }
   if (snes->mf) PetscCall(SNESSetUpMatrixFree_Private(snes, snes->mf_operator, snes->mf_version));
-  if (snes->ops->usercompute && !snes->user) PetscCallBack("SNES callback compute application context", (*snes->ops->usercompute)(snes, (void **)&snes->user));
+  if (snes->ops->usercompute && !snes->user) PetscCallBack("SNES callback compute application context", (*snes->ops->usercompute)(snes, &snes->user));
 
   snes->jac_iter = 0;
   snes->pre_iter = 0;
@@ -3431,7 +3431,7 @@ PetscErrorCode SNESReset(SNES snes)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
   if (snes->ops->userdestroy && snes->user) {
-    PetscCallBack("SNES callback destroy application context", (*snes->ops->userdestroy)((void **)&snes->user));
+    PetscCallBack("SNES callback destroy application context", (*snes->ops->userdestroy)(&snes->user));
     snes->user = NULL;
   }
   if (snes->npc) PetscCall(SNESReset(snes->npc));
@@ -3907,18 +3907,18 @@ PetscErrorCode SNESSetTolerances(SNES snes, PetscReal abstol, PetscReal rtol, Pe
     snes->stol = stol;
   }
 
-  if (maxit == (PetscInt)PETSC_DETERMINE) {
+  if (maxit == PETSC_DETERMINE) {
     snes->max_its = snes->default_max_its;
-  } else if (maxit == (PetscInt)PETSC_UNLIMITED) {
+  } else if (maxit == PETSC_UNLIMITED) {
     snes->max_its = PETSC_INT_MAX;
   } else if (maxit != PETSC_CURRENT) {
     PetscCheck(maxit >= 0, PetscObjectComm((PetscObject)snes), PETSC_ERR_ARG_OUTOFRANGE, "Maximum number of iterations %" PetscInt_FMT " must be non-negative", maxit);
     snes->max_its = maxit;
   }
 
-  if (maxf == (PetscInt)PETSC_DETERMINE) {
+  if (maxf == PETSC_DETERMINE) {
     snes->max_funcs = snes->default_max_funcs;
-  } else if (maxf == (PetscInt)PETSC_UNLIMITED || maxf == -1) {
+  } else if (maxf == PETSC_UNLIMITED || maxf == -1) {
     snes->max_funcs = PETSC_UNLIMITED;
   } else if (maxf != PETSC_CURRENT) {
     PetscCheck(maxf >= 0, PetscObjectComm((PetscObject)snes), PETSC_ERR_ARG_OUTOFRANGE, "Maximum number of function evaluations %" PetscInt_FMT " must be nonnegative", maxf);
@@ -4226,7 +4226,7 @@ PetscErrorCode SNESMonitorSet(SNES snes, PetscErrorCode (*f)(SNES, PetscInt, Pet
   PetscCheck(snes->numbermonitors < MAXSNESMONITORS, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Too many monitors set");
   snes->monitor[snes->numbermonitors]          = f;
   snes->monitordestroy[snes->numbermonitors]   = monitordestroy;
-  snes->monitorcontext[snes->numbermonitors++] = (void *)mctx;
+  snes->monitorcontext[snes->numbermonitors++] = mctx;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -4655,7 +4655,7 @@ PetscErrorCode SNESConvergedReasonViewSet(SNES snes, PetscErrorCode (*f)(SNES sn
   PetscCheck(snes->numberreasonviews < MAXSNESREASONVIEWS, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Too many SNES reasonview set");
   snes->reasonview[snes->numberreasonviews]          = f;
   snes->reasonviewdestroy[snes->numberreasonviews]   = reasonviewdestroy;
-  snes->reasonviewcontext[snes->numberreasonviews++] = (void *)vctx;
+  snes->reasonviewcontext[snes->numberreasonviews++] = vctx;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -5773,7 +5773,8 @@ PetscErrorCode SNESHasNPC(SNES snes, PetscBool *has_npc)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
-  *has_npc = (PetscBool)(snes->npc ? PETSC_TRUE : PETSC_FALSE);
+  PetscAssertPointer(has_npc, 2);
+  *has_npc = snes->npc ? PETSC_TRUE : PETSC_FALSE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

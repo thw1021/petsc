@@ -566,7 +566,7 @@ static PetscErrorCode MatStashScatterBegin_Ref(Mat mat, MatStash *stash, PetscIn
 #if defined(PETSC_USE_INFO)
   PetscCall(PetscInfo(NULL, "No of messages: %d \n", nsends));
   for (PetscMPIInt i = 0; i < size; i++) {
-    if (sizes[i]) PetscCall(PetscInfo(NULL, "Mesg_to: %d: size: %zu bytes\n", i, (size_t)(nlengths[i] * (bs2 * sizeof(PetscScalar) + 2 * sizeof(PetscInt)))));
+    if (sizes[i]) PetscCall(PetscInfo(NULL, "Mesg_to: %d: size: %zu bytes\n", i, (nlengths[i] * (bs2 * sizeof(PetscScalar) + 2 * sizeof(PetscInt)))));
   }
 #endif
   PetscCall(PetscFree(nlengths));

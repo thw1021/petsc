@@ -278,7 +278,7 @@ PetscErrorCode PCTFS_ivec_sort(PetscInt *ar, PetscInt size)
       PetscCheck(top_s - bottom_s < SORT_STACK, PETSC_COMM_SELF, PETSC_ERR_PLIB, "PCTFS_ivec_sort() :: STACK EXHAUSTED!!!");
 
       /* push right hand child iff length > 1 */
-      if ((*top_s = size - ((PetscInt)(pi - ar)))) {
+      if ((*top_s = size - (pi - ar))) {
         *(top_a++) = pi;
         size -= *top_s + 2;
         top_s++;
@@ -378,7 +378,7 @@ PetscErrorCode PCTFS_ivec_sort_companion(PetscInt *ar, PetscInt *ar2, PetscInt s
       PetscCheck(top_s - bottom_s < SORT_STACK, PETSC_COMM_SELF, PETSC_ERR_PLIB, "PCTFS_ivec_sort_companion() :: STACK EXHAUSTED!!!");
 
       /* push right hand child iff length > 1 */
-      if ((*top_s = size - ((PetscInt)(pi - ar)))) {
+      if ((*top_s = size - (pi - ar))) {
         *(top_a++) = pi;
         *(top_a++) = pi2;
         size -= *top_s + 2;
@@ -484,7 +484,7 @@ PetscErrorCode PCTFS_ivec_sort_companion_hack(PetscInt *ar, PetscInt **ar2, Pets
       PetscCheck(top_s - bottom_s < SORT_STACK, PETSC_COMM_SELF, PETSC_ERR_PLIB, "PCTFS_ivec_sort_companion_hack() :: STACK EXHAUSTED!!!");
 
       /* push right hand child iff length > 1 */
-      if ((*top_s = size - ((PetscInt)(pi - ar)))) {
+      if ((*top_s = size - (pi - ar))) {
         *(top_a++) = pi;
         *(top_a++) = (PetscInt *)pi2;
         size -= *top_s + 2;

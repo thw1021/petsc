@@ -3425,7 +3425,7 @@ static PetscErrorCode MatGetFactor_aij_mumps(Mat A, MatFactorType ftype, Mat *F)
     else if (isDiag) mumps->ConvertToTriples = MatConvertToTriples_diagonal_xaij;
     else if (isDense) mumps->ConvertToTriples = MatConvertToTriples_dense_xaij;
     else mumps->ConvertToTriples = MatConvertToTriples_mpiaij_mpiaij;
-    PetscCall(PetscStrallocpy(MATORDERINGEXTERNAL, (char **)&B->preferredordering[MAT_FACTOR_LU]));
+    PetscCall(PetscStrallocpy(MATORDERINGEXTERNAL, &B->preferredordering[MAT_FACTOR_LU]));
     mumps->sym = 0;
   } else {
     B->ops->choleskyfactorsymbolic = MatCholeskyFactorSymbolic_MUMPS;
@@ -3434,7 +3434,7 @@ static PetscErrorCode MatGetFactor_aij_mumps(Mat A, MatFactorType ftype, Mat *F)
     else if (isDiag) mumps->ConvertToTriples = MatConvertToTriples_diagonal_xaij;
     else if (isDense) mumps->ConvertToTriples = MatConvertToTriples_dense_xaij;
     else mumps->ConvertToTriples = MatConvertToTriples_mpiaij_mpisbaij;
-    PetscCall(PetscStrallocpy(MATORDERINGEXTERNAL, (char **)&B->preferredordering[MAT_FACTOR_CHOLESKY]));
+    PetscCall(PetscStrallocpy(MATORDERINGEXTERNAL, &B->preferredordering[MAT_FACTOR_CHOLESKY]));
 #if defined(PETSC_USE_COMPLEX)
     mumps->sym = 2;
 #else
@@ -3526,7 +3526,7 @@ static PetscErrorCode MatGetFactor_sbaij_mumps(Mat A, PETSC_UNUSED MatFactorType
     /* MUMPS option -mat_mumps_icntl_7 1 is automatically set if PETSc ordering is passed into symbolic factorization */
     B->canuseordering = PETSC_TRUE;
   }
-  PetscCall(PetscStrallocpy(MATORDERINGEXTERNAL, (char **)&B->preferredordering[MAT_FACTOR_CHOLESKY]));
+  PetscCall(PetscStrallocpy(MATORDERINGEXTERNAL, &B->preferredordering[MAT_FACTOR_CHOLESKY]));
   B->ops->destroy = MatDestroy_MUMPS;
   B->data         = (void *)mumps;
 
@@ -3560,7 +3560,7 @@ static PetscErrorCode MatGetFactor_baij_mumps(Mat A, MatFactorType ftype, Mat *F
     if (isSeqBAIJ) mumps->ConvertToTriples = MatConvertToTriples_seqbaij_seqaij;
     else mumps->ConvertToTriples = MatConvertToTriples_mpibaij_mpiaij;
     mumps->sym = 0;
-    PetscCall(PetscStrallocpy(MATORDERINGEXTERNAL, (char **)&B->preferredordering[MAT_FACTOR_LU]));
+    PetscCall(PetscStrallocpy(MATORDERINGEXTERNAL, &B->preferredordering[MAT_FACTOR_LU]));
   } else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "Cannot use PETSc BAIJ matrices with MUMPS Cholesky, use SBAIJ or AIJ matrix instead");
 
   B->ops->view    = MatView_MUMPS;
@@ -3640,7 +3640,7 @@ static PetscErrorCode MatGetFactor_sell_mumps(Mat A, MatFactorType ftype, Mat *F
     if (isSeqSELL) mumps->ConvertToTriples = MatConvertToTriples_seqsell_seqaij;
     else SETERRQ(PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "To be implemented");
     mumps->sym = 0;
-    PetscCall(PetscStrallocpy(MATORDERINGEXTERNAL, (char **)&B->preferredordering[MAT_FACTOR_LU]));
+    PetscCall(PetscStrallocpy(MATORDERINGEXTERNAL, &B->preferredordering[MAT_FACTOR_LU]));
   } else SETERRQ(PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "To be implemented");
 
   /* set solvertype */
@@ -3788,7 +3788,7 @@ static PetscErrorCode MatGetFactor_nest_mumps(Mat A, MatFactorType ftype, Mat *F
 #endif
   }
   mumps->ConvertToTriples = MatConvertToTriples_nest_xaij;
-  PetscCall(PetscStrallocpy(MATORDERINGEXTERNAL, (char **)&B->preferredordering[ftype]));
+  PetscCall(PetscStrallocpy(MATORDERINGEXTERNAL, &B->preferredordering[ftype]));
 
   PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)A), &size));
   if (size == 1) {
