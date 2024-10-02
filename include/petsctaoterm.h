@@ -25,6 +25,7 @@ typedef struct _p_TaoTerm *TaoTerm;
 . `TAOTERMSHELL`           - a container for arbitrary user-defined callbacks
 . `TAOTERMSUM`             - a sum of multiple other `TaoTerm`s
 . `TAOTERML2SQUARED`       - $\tfrac{1}{2}\|x - \theta\|_2^2$
+- `TAOTERML1`              - $\|x - \theta\|_1$
 
   Level: intermediate
 
@@ -38,6 +39,7 @@ typedef const char *TaoTermType;
 #define TAOTERMSHELL           "shell"
 #define TAOTERMSUM             "sum"
 #define TAOTERMHALFL2SQUARED   "halfl2squared"
+#define TAOTERML1              "l1"
 
 PETSC_EXTERN PetscErrorCode TaoTermRegister(const char[], PetscErrorCode (*)(TaoTerm));
 
@@ -136,6 +138,9 @@ PETSC_EXTERN PetscErrorCode TaoTermSumConcatenateParameters(TaoTerm, Vec[], Vec 
 PETSC_EXTERN PetscErrorCode TaoTermSumGetParameters(TaoTerm, Vec, Vec **);
 PETSC_EXTERN PetscErrorCode TaoTermSumRestoreParameters(TaoTerm, Vec, Vec **);
 PETSC_EXTERN PetscErrorCode TaoTermSumSetSubtermHessianMatrices(TaoTerm, PetscInt, Mat, Mat, Mat, Mat);
+
+PETSC_EXTERN PetscErrorCode TaoTermL1SetEpsilon(TaoTerm, PetscReal);
+PETSC_EXTERN PetscErrorCode TaoTermL1GetEpsilon(TaoTerm, PetscReal *);
 
 PETSC_EXTERN PetscErrorCode TaoTermIsObjectiveDefined(TaoTerm, PetscBool *);
 PETSC_EXTERN PetscErrorCode TaoTermIsGradientDefined(TaoTerm, PetscBool *);
