@@ -198,6 +198,9 @@ struct _p_Tao {
   PetscInt      hist_len;
   PetscBool     hist_reset;
   PetscBool     hist_malloc;
+
+  PetscBool uses_hessian_matrices;
+  PetscBool uses_gradient;
 };
 
 PETSC_EXTERN PetscLogEvent TAO_Solve;
