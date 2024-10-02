@@ -266,6 +266,70 @@ PetscErrorCode TaoComputeHessian(Tao tao, Vec X, Mat H, Mat Hpre)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@C
+  TaoComputeHessianSingle - Handle the computation of optional Hessian and Hessian preconditioning matrices from a routine for computing just one.
+
+  Logically collective
+
+  Input Parameters:
++ tao            - a `Tao` context
+. x              - a solution vector
+. H              - (optional) a matrix for the Hessian
+. Hpre           - (optional) a matrix for the Hessian preconditioning matrix
+. func           - a callback that computes a single copy of the Hessian matrix
+. copy_structure - if `H` and `Hpre` are distinct matrices, the `str` argument to `MatCopy()` for copying `H` to `Hpre`
+- ctx            - the user context supplied in `TaoSetHessian()`
+
+  Calling sequence of `func`:
++ tao - the `Tao` context
+. x   - input vector
+. H   - Hessian matrix
+- ctx - the user context
+
+  Level: intermediate
+
+  Note:
+  `TaoComputeHessian()` can be called with either matrix being present. All of the following are valid calling sequences\:
+.vb
+    TaoComputeHessian(tao, x, H, NULL);    // no preconditioning matrix requested
+    TaoComputeHessian(tao, x, H, H);       // the preconditioning matrix is the Hessian matrix
+    TaoComputeHessian(tao, x, H, Hpre);    // the preconditioning matrix is distinct from the Hessan matrix
+    TaoComputeHessian(tao, x, NULL, Hpre); // only the preconditioning matrix is requested
+.ve
+  If your code does not construct the Hessian preconditioner any differently than the true Hessian, you can use `TaoComputeHessianSingle()` to correctly
+  handle all of the above cases, using the following pattern\:
+.vb
+    static PetscErrorCode AppComputeHessianSingle(Tao tao, Vec x, Mat H, void *ctx)
+    {
+      // ... your code for computing H
+    }
+
+    static PetscErrorCode AppComputeHessian(Tao tao, Vec x, Mat H, Mat Hpre, void *ctx)
+    {
+      return TaoComputeHessianSingle(tao, x, H, Hpre, AppComputeHessianSingle, SAME_NONZERO_PATTERN, ctx);
+    }
+
+    // ... when setting the Hessian callback function, use AppComputeHessian()
+    TaoSetHessian(tao, H, Hpre, AppComputeHessian, ctx);
+.ve
+
+.seealso: [](ch_tao), `Tao`, `TaoComputeHessian()`
+@*/
+PetscErrorCode TaoComputeHessianSingle(Tao tao, Vec x, Mat H, Mat Hpre, PetscErrorCode (*func)(Tao tao, Vec x, Mat H, void *ctx), MatStructure copy_structure, void *ctx)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
+  PetscValidHeaderSpecific(x, VEC_CLASSID, 2);
+  if (H) PetscValidHeaderSpecific(H, MAT_CLASSID, 3);
+  if (Hpre) PetscValidHeaderSpecific(Hpre, MAT_CLASSID, 4);
+  if (H) PetscCallBack("TaoComputeHessiansSingle() H", (*func)(tao, x, H, ctx));
+  if (Hpre && Hpre != H) {
+    if (H) PetscCall(MatCopy(H, Hpre, copy_structure));
+    else PetscCallBack("TaoComputeHessiansSingle() Hpre", (*func)(tao, x, Hpre, ctx));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*@
   TaoComputeJacobian - Computes the Jacobian matrix that has been
   set with TaoSetJacobianRoutine().
