@@ -982,7 +982,9 @@ inline PetscErrorCode KHashTable<V, H, KE>::resize(size_type req_size) noexcept
           // i == j should never reach this point since occupied(j) (in this case equivalent
           // to occupied(i)) should never be true because we call khash_set_deleted_<true>(i)
           // above!
+          PETSC_SILENCE_WUSELESSCAST_BEGIN;
           PetscAssert(i != j, PETSC_COMM_SELF, PETSC_ERR_PLIB, "i %zu = j %zu. About to swap the same element!", static_cast<std::size_t>(i), static_cast<std::size_t>(j));
+          PETSC_SILENCE_WUSELESSCAST_END;
           // kick out the existing element
           PetscCallCXX(swap(values_[j], key));
           // mark it as deleted in the old hash table
