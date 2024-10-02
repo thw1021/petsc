@@ -54,7 +54,8 @@ PetscErrorCode ex2_1(void)
   PetscCall(VecView(x, PETSC_VIEWER_STDOUT_WORLD));
   PetscCall(DMSwarmDestroyGlobalVectorFromField(dms, "strain", &x));
 
-  PetscCall(DMSwarmVectorDefineField(dms, "strain"));
+  const char *fieldnames[1] = {"strain"};
+  PetscCall(DMSwarmVectorDefineField(dms, 1, fieldnames));
   PetscCall(DMCreateGlobalVector(dms, &x));
   PetscCall(VecView(x, PETSC_VIEWER_STDOUT_WORLD));
   PetscCall(VecDestroy(&x));
