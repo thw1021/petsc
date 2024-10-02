@@ -514,6 +514,10 @@ bounds $c_l$ and $c_u$ to be set using the
 `TaoSetInequalityBounds(Tao,Vec,Vec)` interface. Please refer to the
 documentation for each TAO algorithm for further details.
 
+(sec_tao_term)=
+
+### TaoTerm: object-oriented objective function terms
+
 ### Solving
 
 Once the application and solver have been set up, the solver can be
