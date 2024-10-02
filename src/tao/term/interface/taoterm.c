@@ -195,7 +195,7 @@ PetscErrorCode TaoTermSetUp(TaoTerm term)
 @*/
 PetscErrorCode TaoTermSetFromOptions(TaoTerm term)
 {
-  const char *deft = NULL;
+  const char *deft = TAOTERMSHELL;
   PetscBool   flg;
   char        typeName[256];
   VecType     sol_type, params_type;
@@ -429,7 +429,7 @@ PetscErrorCode TaoTermObjective(TaoTerm term, Vec x, Vec params, PetscReal *valu
     PetscUseTypeMethod(term, objectiveandgradient, x, params, value, temp);
     PetscCall(PetscLogEventEnd(TAOTERM_ObjGradEval, term, NULL, NULL, NULL));
     PetscCall(VecDestroy(&temp));
-  } else SETERRQ(PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoTerm does not have an objective function.  You should have called TaoSetObjective()");
+  } else SETERRQ(PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoTerm does not have an objective function.  You should have called TaoSetObjective() or TaoTermShellSetObjective()");
   if (params) PetscCall(VecLockReadPop(params));
   PetscCall(VecLockReadPop(x));
   PetscCall(PetscInfo(term, "TaoTerm value: %20.19e\n", (double)(*value)));
@@ -488,7 +488,7 @@ PetscErrorCode TaoTermGradient(TaoTerm term, Vec x, Vec params, Vec g)
     PetscCall(PetscLogEventBegin(TAOTERM_ObjGradEval, term, NULL, NULL, NULL));
     PetscUseTypeMethod(term, objectiveandgradient, x, params, &value, g);
     PetscCall(PetscLogEventEnd(TAOTERM_ObjGradEval, term, NULL, NULL, NULL));
-  } else SETERRQ(PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoTerm does not have a gradient function.  You should have called TaoSetGradient()");
+  } else SETERRQ(PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoTerm does not have a gradient function.  You should have called TaoSetGradient() or TaoTermShellSetGradient()");
   if (params) PetscCall(VecLockReadPop(params));
   PetscCall(VecLockReadPop(x));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -554,7 +554,7 @@ PetscErrorCode TaoTermObjectiveAndGradient(TaoTerm term, Vec x, Vec params, Pets
   } else
     SETERRQ(PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE,
             "TaoTerm does not have objective and gradient function.  "
-            "You should have called some of the following functions: TaoSetObjective(), TaoSetGradient(), TaoSetObjectiveAndGradient()");
+            "You should have called some of the following functions: TaoSetObjective(), TaoSetGradient(), TaoSetObjectiveAndGradient(), TaoTermShellSetObjective(), TaoTermShellSetGradient(), TaoTermShellSetObjectiveAndGradient()");
   if (params) PetscCall(VecLockReadPop(params));
   PetscCall(VecLockReadPop(x));
   PetscCall(PetscInfo(term, "TaoTerm value: %20.19e\n", (double)(*value)));
@@ -756,7 +756,13 @@ PetscErrorCode TaoTermHessianMult(TaoTerm term, Vec x, Vec params, Vec v, Vec Hv
 
   Level: intermediate
 
-.seealso: [](ch_tao), `Tao`, `TaoTerm`, `TaoTermObjective()`, `TaoTermIsGradientDefined()`, `TaoTermIsObjectiveAndGradientDefined()`, `TaoTermIsHessianDefined()`
+.seealso: [](sec_tao_term),
+          `TaoTerm`,
+          `TaoTermObjective()`,
+          `TaoTermShellSetObjective()`,
+          `TaoTermIsGradientDefined()`,
+          `TaoTermIsObjectiveAndGradientDefined()`,
+          `TaoTermIsHessianDefined()`
 @*/
 PetscErrorCode TaoTermIsObjectiveDefined(TaoTerm term, PetscBool *is_defined)
 {
@@ -781,7 +787,13 @@ PetscErrorCode TaoTermIsObjectiveDefined(TaoTerm term, PetscBool *is_defined)
 
   Level: intermediate
 
-.seealso: [](ch_tao), `Tao`, `TaoTerm`, `TaoTermGradient()`, `TaoTermIsObjectiveDefined()`, `TaoTermIsObjectiveAndGradientDefined()`, `TaoTermIsHessianDefined()`
+.seealso: [](sec_tao_term),
+          `TaoTerm`,
+          `TaoTermGradient()`,
+          `TaoTermShellSetGradient()`,
+          `TaoTermIsObjectiveDefined()`,
+          `TaoTermIsObjectiveAndGradientDefined()`,
+          `TaoTermIsHessianDefined()`
 @*/
 PetscErrorCode TaoTermIsGradientDefined(TaoTerm term, PetscBool *is_defined)
 {
@@ -806,7 +818,13 @@ PetscErrorCode TaoTermIsGradientDefined(TaoTerm term, PetscBool *is_defined)
 
   Level: intermediate
 
-.seealso: [](ch_tao), `Tao`, `TaoTerm`, `TaoTermObjectiveAndGradient()`, `TaoTermIsObjectiveDefined()`, `TaoTermIsGradientDefined()`, `TaoTermIsHessianDefined()`
+.seealso: [](sec_tao_term),
+          `TaoTerm`,
+          `TaoTermObjectiveAndGradient()`,
+          `TaoTermShellSetObjectiveAndGradient()`,
+          `TaoTermIsObjectiveDefined()`,
+          `TaoTermIsGradientDefined()`,
+          `TaoTermIsHessianDefined()`
 @*/
 PetscErrorCode TaoTermIsObjectiveAndGradientDefined(TaoTerm term, PetscBool *is_defined)
 {
@@ -831,7 +849,13 @@ PetscErrorCode TaoTermIsObjectiveAndGradientDefined(TaoTerm term, PetscBool *is_
 
   Level: intermediate
 
-.seealso: [](ch_tao), `Tao`, `TaoTerm`, `TaoTermHessian()`, `TaoTermIsObjectiveDefined()`, `TaoTermIsGradientDefined()`, `TaoTermIsObjectiveAndGradientDefined()`
+.seealso: [](sec_tao_term),
+          `TaoTerm`,
+          `TaoTermHessian()`,
+          `TaoTermShellSetHessian()`,
+          `TaoTermIsObjectiveDefined()`,
+          `TaoTermIsGradientDefined()`,
+          `TaoTermIsObjectiveAndGradientDefined()`
 @*/
 PetscErrorCode TaoTermIsHessianDefined(TaoTerm term, PetscBool *is_defined)
 {
@@ -856,7 +880,14 @@ PetscErrorCode TaoTermIsHessianDefined(TaoTerm term, PetscBool *is_defined)
 
   Level: intermediate
 
-.seealso: [](ch_tao), `Tao`, `TaoTerm`, `TaoTermHessian()`, `TaoTermIsObjectiveDefined()`, `TaoTermIsGradientDefined()`, `TaoTermIsObjectiveAndGradientDefined()`, `TaoTermIsHessianDefined()`
+.seealso: [](sec_tao_term),
+          `TaoTerm`,
+          `TaoTermCreateHessianMatrices()`,
+          `TaoTermShellSetCreateHessianMatrices()`,
+          `TaoTermIsObjectiveDefined()`,
+          `TaoTermIsGradientDefined()`,
+          `TaoTermIsObjectiveAndGradientDefined()`,
+          `TaoTermIsHessianDefined()`
 @*/
 PetscErrorCode TaoTermIsCreateHessianMatricesDefined(TaoTerm term, PetscBool *is_defined)
 {
