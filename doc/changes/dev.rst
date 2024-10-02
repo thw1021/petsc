@@ -61,6 +61,8 @@ Changes: Development
 
 .. rubric:: TAO:
 
+- Add new ``TaoTerm`` object to manipulate objective function terms with many methods
+
 .. rubric:: DM/DA:
 
 .. rubric:: DMSwarm:

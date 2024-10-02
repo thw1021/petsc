@@ -528,6 +528,11 @@ bounds :math:`c_l` and :math:`c_u` to be set using the
 ``TaoSetInequalityBounds(Tao,Vec,Vec)`` interface. Please refer to the
 documentation for each TAO algorithm for further details.
 
+.. _sec_tao_term:
+
+TaoTerm: object-oriented objective function terms
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 Solving
 ~~~~~~~
 
