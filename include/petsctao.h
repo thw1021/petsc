@@ -1,6 +1,7 @@
 #pragma once
 
 #include <petscsnes.h>
+#include <petsctaoterm.h>
 
 /* SUBMANSEC = Tao */
 
@@ -28,18 +29,6 @@ typedef enum {
   TAO_SUBSET_MATRIXFREE
 } TaoSubsetType;
 PETSC_EXTERN const char *const TaoSubsetTypes[];
-
-/*S
-   Tao - Abstract PETSc object that manages optimization solvers.
-
-   Level: advanced
-
-   Note:
-   `Tao` is the object, while TAO, which stands for Toolkit for Advanced Optimization, is the software package.
-
-.seealso: [](doc_taosolve), [](ch_tao), `TaoCreate()`, `TaoDestroy()`, `TaoSetType()`, `TaoType`
-S*/
-typedef struct _p_Tao *Tao;
 
 /*E
   TaoADMMUpdateType - Determine the spectral penalty update routine for the Lagrange augmented term for `TAOADMM`.
