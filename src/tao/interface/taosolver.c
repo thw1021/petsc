@@ -2167,7 +2167,9 @@ PetscErrorCode TaoSetType(Tao tao, TaoType type)
   tao->ops->setfromoptions = NULL;
   tao->ops->destroy        = NULL;
 
-  tao->setupcalled = PETSC_FALSE;
+  tao->setupcalled           = PETSC_FALSE;
+  tao->uses_gradient         = PETSC_FALSE;
+  tao->uses_hessian_matrices = PETSC_FALSE;
 
   PetscCall((*create_xxx)(tao));
   PetscCall(PetscObjectChangeTypeName((PetscObject)tao, type));
