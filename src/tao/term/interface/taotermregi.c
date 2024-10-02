@@ -7,6 +7,7 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_TaoCallbacks(TaoTerm);
 PETSC_INTERN PetscErrorCode TaoTermCreate_BRGNRegularizer(TaoTerm);
 PETSC_INTERN PetscErrorCode TaoTermCreate_ADMMRegularizer(TaoTerm);
 PETSC_INTERN PetscErrorCode TaoTermCreate_ADMMMisfit(TaoTerm);
+PETSC_INTERN PetscErrorCode TaoTermCreate_Shell(TaoTerm);
 
 /*@C
   TaoTermRegister - Register an impementation of `TaoTerm`
@@ -51,5 +52,6 @@ PETSC_INTERN PetscErrorCode TaoTermRegisterAll(void)
   PetscCall(TaoTermRegister(TAOTERMBRGNREGULARIZER, TaoTermCreate_BRGNRegularizer));
   PetscCall(TaoTermRegister(TAOTERMADMMREGULARIZER, TaoTermCreate_ADMMRegularizer));
   PetscCall(TaoTermRegister(TAOTERMADMMMISFIT, TaoTermCreate_ADMMMisfit));
+  PetscCall(TaoTermRegister(TAOTERMSHELL, TaoTermCreate_Shell));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
