@@ -50,11 +50,16 @@ The following sections annotate the lines of code in
 (tao_example1)=
 
 :::{admonition} Listing: `src/tao/unconstrained/tutorials/rosenbrock1.c`
-```{literalinclude} /../src/tao/unconstrained/tutorials/rosenbrock1.c
-:append: return ierr;}
-:end-at: PetscFinalize
+```{literalinclude} /../src/tao/unconstrained/tutorials/rosenbrock1.h
 :prepend: '#include <petsctao.h>'
 :start-at: typedef struct
+:end-at: static PetscErrorCode AppCtxCreateHessianMatrices
+```
+
+```{literalinclude} /../src/tao/unconstrained/tutorials/rosenbrock1.c
+:start-at: static PetscErrorCode FormFunctionGradient
+:end-at: PetscFinalize
+:append: return 0;}
 ```
 :::
 
