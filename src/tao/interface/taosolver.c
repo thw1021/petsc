@@ -11,6 +11,7 @@ PetscLogEvent TAO_ObjectiveEval;
 PetscLogEvent TAO_GradientEval;
 PetscLogEvent TAO_ObjGradEval;
 PetscLogEvent TAO_HessianEval;
+PetscLogEvent TAO_ResidualEval;
 PetscLogEvent TAO_JacobianEval;
 PetscLogEvent TAO_ConstraintsEval;
 
