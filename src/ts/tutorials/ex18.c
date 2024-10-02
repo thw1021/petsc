@@ -886,6 +886,7 @@ static PetscErrorCode MonitorFunctionals(TS ts, PetscInt stepnum, PetscReal time
     PetscScalar      **fx;
     PetscReal         *fmin, *fmax, *fint, *ftmp, t;
     PetscInt           cStart, cEnd, c, fcount, f, num;
+    PetscMPIInt        fcounti;
 
     size_t ftableused, ftablealloc;
 
@@ -941,9 +942,10 @@ static PetscErrorCode MonitorFunctionals(TS ts, PetscInt stepnum, PetscReal time
     }
     PetscCall(VecRestoreArrayRead(cellgeom, &cgeom));
     PetscCall(VecRestoreArrayRead(X, &x));
-    PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, fmin, (PetscMPIInt)fcount, MPIU_REAL, MPIU_MIN, PetscObjectComm((PetscObject)ts)));
-    PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, fmax, (PetscMPIInt)fcount, MPIU_REAL, MPIU_MAX, PetscObjectComm((PetscObject)ts)));
-    PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, fint, (PetscMPIInt)fcount, MPIU_REAL, MPIU_SUM, PetscObjectComm((PetscObject)ts)));
+    PetscCall(PetscMPIIntCast(fcount, &fcounti));
+    PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, fmin, fcounti, MPIU_REAL, MPIU_MIN, PetscObjectComm((PetscObject)ts)));
+    PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, fmax, fcounti, MPIU_REAL, MPIU_MAX, PetscObjectComm((PetscObject)ts)));
+    PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, fint, fcounti, MPIU_REAL, MPIU_SUM, PetscObjectComm((PetscObject)ts)));
     /* Output functional data */
     ftablealloc = fcount * 100;
     ftableused  = 0;
