@@ -434,9 +434,9 @@ PetscErrorCode TaoComputeResidual(Tao tao, Vec X, Vec F)
   PetscCheckSameComm(tao, 1, X, 2);
   PetscCheckSameComm(tao, 1, F, 3);
   PetscCheck(tao->ops->computeresidual, PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_WRONGSTATE, "TaoSetResidualRoutine() has not been called");
-  PetscCall(PetscLogEventBegin(TAO_ObjectiveEval, tao, X, NULL, NULL));
+  PetscCall(PetscLogEventBegin(TAO_ResidualEval, tao, X, NULL, NULL));
   PetscCallBack("Tao callback least-squares residual", (*tao->ops->computeresidual)(tao, X, F, tao->user_lsresP));
-  PetscCall(PetscLogEventEnd(TAO_ObjectiveEval, tao, X, NULL, NULL));
+  PetscCall(PetscLogEventEnd(TAO_ResidualEval, tao, X, NULL, NULL));
   tao->nfuncs++;
   PetscCall(PetscInfo(tao, "TAO least-squares residual evaluation.\n"));
   PetscFunctionReturn(PETSC_SUCCESS);
