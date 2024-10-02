@@ -170,10 +170,10 @@ static PetscErrorCode PetscRegressorSetUp_Linear(PetscRegressor regressor)
         regressor->regularizer_weight = 0.0; // OLS, by definition, uses a regularizer weight of 0
         break;
       case REGRESSOR_LINEAR_LASSO:
-        gn->reg_type = BRGN_REGULARIZATION_L1DICT;
+        gn->reg_type = TAOBRGN_REGULARIZATION_L1DICT;
         break;
       case REGRESSOR_LINEAR_RIDGE:
-        gn->reg_type = BRGN_REGULARIZATION_L2PURE;
+        gn->reg_type = TAOBRGN_REGULARIZATION_L2PURE;
         break;
       default:
         break;
