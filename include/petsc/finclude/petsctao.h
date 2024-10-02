@@ -54,4 +54,5 @@
 #define TAOTERMBRGNREGULARIZER 'brgnregularizer'
 #define TAOTERMADMMREGULARIZER 'admmregularizer'
 #define TAOTERMADMMMISFIT      'admmmisfit'
+#define TAOTERMSHELL           'shell'
 #endif
