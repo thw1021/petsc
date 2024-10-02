@@ -55,4 +55,5 @@
 #define TAOTERMADMMREGULARIZER 'admmregularizer'
 #define TAOTERMADMMMISFIT      'admmmisfit'
 #define TAOTERMSHELL           'shell'
+#define TAOTERMSUM             'sum'
 #endif
