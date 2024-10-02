@@ -28,12 +28,20 @@ typedef struct _p_TaoTerm *TaoTerm;
   TaoTermType - String with the name of a `TaoTerm` method
 
   Values:
++ `TAOTERMTAOCALLBACKS`    - uses the callback functions set in `TaoSetObjective()`, `TaoSetGradient()`, etc.
+. `TAOTERMBRGNREGULARIZER` - uses the callback functions set in `TaoBRGNSetRegularizerObjectiveAndGradientRoutine()`, etc.
+. `TAOTERMADMMREGULARIZER` - uses the callback functions set in `TaoADMMSetRegularizerObjectiveAndGradientRoutine()`, etc.
+- `TAOTERMADMMMISFIT`      - uses the callback functions set in `TaoADMMSetMisfitObjectiveAndGradientRoutine()`, etc.
 
   Level: intermediate
 
 .seealso: [](ch_tao), [](sec_tao_term), `TaoTerm`, `TaoTermCreate()`, `TaoTermSetType()`
 J*/
 typedef const char *TaoTermType;
+#define TAOTERMTAOCALLBACKS    "taocallbacks"
+#define TAOTERMBRGNREGULARIZER "brgnregularizer"
+#define TAOTERMADMMREGULARIZER "admmregularizer"
+#define TAOTERMADMMMISFIT      "admmmisfit"
 
 PETSC_EXTERN PetscErrorCode TaoTermRegister(const char[], PetscErrorCode (*)(TaoTerm));
 
