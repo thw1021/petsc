@@ -98,7 +98,6 @@ static PetscErrorCode TaoSetup_LCL(Tao tao)
 
   PetscFunctionBegin;
   PetscCheck(tao->state_is, PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_WRONGSTATE, "LCL Solver requires an initial state index set -- use TaoSetStateIS()");
-  PetscCall(VecDuplicate(tao->solution, &tao->gradient));
   PetscCall(VecDuplicate(tao->solution, &tao->stepdirection));
   PetscCall(VecDuplicate(tao->solution, &lclP->W));
   PetscCall(VecDuplicate(tao->solution, &lclP->X0));
