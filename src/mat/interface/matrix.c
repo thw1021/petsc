@@ -4544,19 +4544,19 @@ PetscErrorCode MatFactorGetSolverType(Mat mat, MatSolverType *type)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-typedef struct _MatSolverTypeForSpecifcType *MatSolverTypeForSpecifcType;
-struct _MatSolverTypeForSpecifcType {
-  MatType mtype;
+typedef struct _MatSolverTypeForSpecificType *MatSolverTypeForSpecificType;
+struct _MatSolverTypeForSpecificType {
+  char *mtype;
   /* no entry for MAT_FACTOR_NONE */
   PetscErrorCode (*createfactor[MAT_FACTOR_NUM_TYPES - 1])(Mat, MatFactorType, Mat *);
-  MatSolverTypeForSpecifcType next;
+  MatSolverTypeForSpecificType next;
 };
 
 typedef struct _MatSolverTypeHolder *MatSolverTypeHolder;
 struct _MatSolverTypeHolder {
-  char                       *name;
-  MatSolverTypeForSpecifcType handlers;
-  MatSolverTypeHolder         next;
+  char                        *name;
+  MatSolverTypeForSpecificType handlers;
+  MatSolverTypeHolder          next;
 };
 
 static MatSolverTypeHolder MatSolverTypeHolders = NULL;
@@ -4579,9 +4579,9 @@ static MatSolverTypeHolder MatSolverTypeHolders = NULL;
 @*/
 PetscErrorCode MatSolverTypeRegister(MatSolverType package, MatType mtype, MatFactorType ftype, PetscErrorCode (*createfactor)(Mat, MatFactorType, Mat *))
 {
-  MatSolverTypeHolder         next = MatSolverTypeHolders, prev = NULL;
-  PetscBool                   flg;
-  MatSolverTypeForSpecifcType inext, iprev = NULL;
+  MatSolverTypeHolder          next = MatSolverTypeHolders, prev = NULL;
+  PetscBool                    flg;
+  MatSolverTypeForSpecificType inext, iprev = NULL;
 
   PetscFunctionBegin;
   PetscCall(MatInitializePackage());
@@ -4589,7 +4589,7 @@ PetscErrorCode MatSolverTypeRegister(MatSolverType package, MatType mtype, MatFa
     PetscCall(PetscNew(&MatSolverTypeHolders));
     PetscCall(PetscStrallocpy(package, &MatSolverTypeHolders->name));
     PetscCall(PetscNew(&MatSolverTypeHolders->handlers));
-    PetscCall(PetscStrallocpy(mtype, (char **)&MatSolverTypeHolders->handlers->mtype));
+    PetscCall(PetscStrallocpy(mtype, &MatSolverTypeHolders->handlers->mtype));
     MatSolverTypeHolders->handlers->createfactor[(int)ftype - 1] = createfactor;
     PetscFunctionReturn(PETSC_SUCCESS);
   }
@@ -4608,7 +4608,7 @@ PetscErrorCode MatSolverTypeRegister(MatSolverType package, MatType mtype, MatFa
         inext = inext->next;
       }
       PetscCall(PetscNew(&iprev->next));
-      PetscCall(PetscStrallocpy(mtype, (char **)&iprev->next->mtype));
+      PetscCall(PetscStrallocpy(mtype, &iprev->next->mtype));
       iprev->next->createfactor[(int)ftype - 1] = createfactor;
       PetscFunctionReturn(PETSC_SUCCESS);
     }
@@ -4618,7 +4618,7 @@ PetscErrorCode MatSolverTypeRegister(MatSolverType package, MatType mtype, MatFa
   PetscCall(PetscNew(&prev->next));
   PetscCall(PetscStrallocpy(package, &prev->next->name));
   PetscCall(PetscNew(&prev->next->handlers));
-  PetscCall(PetscStrallocpy(mtype, (char **)&prev->next->handlers->mtype));
+  PetscCall(PetscStrallocpy(mtype, &prev->next->handlers->mtype));
   prev->next->handlers->createfactor[(int)ftype - 1] = createfactor;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -4653,9 +4653,9 @@ PetscErrorCode MatSolverTypeRegister(MatSolverType package, MatType mtype, MatFa
 @*/
 PetscErrorCode MatSolverTypeGet(MatSolverType type, MatType mtype, MatFactorType ftype, PetscBool *foundtype, PetscBool *foundmtype, PetscErrorCode (**createfactor)(Mat A, MatFactorType ftype, Mat *B))
 {
-  MatSolverTypeHolder         next = MatSolverTypeHolders;
-  PetscBool                   flg;
-  MatSolverTypeForSpecifcType inext;
+  MatSolverTypeHolder          next = MatSolverTypeHolders;
+  PetscBool                    flg;
+  MatSolverTypeForSpecificType inext;
 
   PetscFunctionBegin;
   if (foundtype) *foundtype = PETSC_FALSE;
@@ -4717,8 +4717,8 @@ PetscErrorCode MatSolverTypeGet(MatSolverType type, MatType mtype, MatFactorType
 
 PetscErrorCode MatSolverTypeDestroy(void)
 {
-  MatSolverTypeHolder         next = MatSolverTypeHolders, prev;
-  MatSolverTypeForSpecifcType inext, iprev;
+  MatSolverTypeHolder          next = MatSolverTypeHolders, prev;
+  MatSolverTypeForSpecificType inext, iprev;
 
   PetscFunctionBegin;
   while (next) {
@@ -11163,9 +11163,9 @@ PetscErrorCode MatSubdomainsCreateCoalesce(Mat A, PetscInt N, PetscInt *n, IS *i
   PetscCall(PetscObjectGetComm((PetscObject)A, &comm));
   PetscCallMPI(MPI_Comm_size(comm, &size));
   PetscCallMPI(MPI_Comm_rank(comm, &rank));
-  PetscCheck(N >= 1 && N < (PetscInt)size, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "number of subdomains must be > 0 and < %d, got N = %" PetscInt_FMT, size, N);
+  PetscCheck(N >= 1 && N < size, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "number of subdomains must be > 0 and < %d, got N = %" PetscInt_FMT, size, N);
   *n    = 1;
-  k     = ((PetscInt)size) / N + ((PetscInt)size % N > 0); /* There are up to k ranks to a color */
+  k     = size / N + (size % N > 0); /* There are up to k ranks to a color */
   color = rank / k;
   PetscCallMPI(MPI_Comm_split(comm, color, rank, &subcomm));
   PetscCall(PetscMalloc1(1, iss));

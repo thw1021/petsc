@@ -52,6 +52,7 @@ static PetscErrorCode TestPetscFunctionListCreate(PetscViewer viewer, PetscFunct
 static PetscErrorCode TestPetscFunctionListFind(PetscViewer viewer, PetscFunctionList fl, PetscFunctionList fl_dup, size_t *fl_size, size_t *fl_dup_size)
 {
   PetscFunctionBegin;
+  PETSC_SILENCE_WUSELESSCAST_BEGIN;
   // add a bunch of functions, and ensure they are all there
   for (size_t i = 0; i < num_funcs; ++i) {
     PetscVoidFn *func;
@@ -104,6 +105,7 @@ static PetscErrorCode TestPetscFunctionListFind(PetscViewer viewer, PetscFunctio
   PetscCall(PetscFunctionListView(fl_dup, viewer));
   *fl_size     = 0;
   *fl_dup_size = num_funcs;
+  PETSC_SILENCE_WUSELESSCAST_END;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

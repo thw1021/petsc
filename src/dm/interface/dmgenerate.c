@@ -187,9 +187,9 @@ PetscErrorCode DMAdaptLabel(DM dm, DMLabel label, DM *dmAdapt)
 
     (*dmAdapt)->prealloc_only = dm->prealloc_only; /* maybe this should go .... */
     PetscCall(PetscFree((*dmAdapt)->vectype));
-    PetscCall(PetscStrallocpy(dm->vectype, (char **)&(*dmAdapt)->vectype));
+    PetscCall(PetscStrallocpy(dm->vectype, &(*dmAdapt)->vectype));
     PetscCall(PetscFree((*dmAdapt)->mattype));
-    PetscCall(PetscStrallocpy(dm->mattype, (char **)&(*dmAdapt)->mattype));
+    PetscCall(PetscStrallocpy(dm->mattype, &(*dmAdapt)->mattype));
     PetscCall(DMGetApplicationContext(dm, &ctx));
     PetscCall(DMSetApplicationContext(*dmAdapt, ctx));
   }
@@ -259,9 +259,9 @@ PetscErrorCode DMAdaptMetric(DM dm, Vec metric, DMLabel bdLabel, DMLabel rgLabel
   if (*dmAdapt) {
     (*dmAdapt)->prealloc_only = dm->prealloc_only; /* maybe this should go .... */
     PetscCall(PetscFree((*dmAdapt)->vectype));
-    PetscCall(PetscStrallocpy(dm->vectype, (char **)&(*dmAdapt)->vectype));
+    PetscCall(PetscStrallocpy(dm->vectype, &(*dmAdapt)->vectype));
     PetscCall(PetscFree((*dmAdapt)->mattype));
-    PetscCall(PetscStrallocpy(dm->mattype, (char **)&(*dmAdapt)->mattype));
+    PetscCall(PetscStrallocpy(dm->mattype, &(*dmAdapt)->mattype));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
