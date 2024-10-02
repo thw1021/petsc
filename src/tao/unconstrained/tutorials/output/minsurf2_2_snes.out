@@ -40,7 +40,7 @@ Tao Object: 2 MPI processes
           maximum iterations=10000, initial guess is zero
           tolerances: relative=1e-05, absolute=1e-50, divergence=10000.
           left preconditioning
-          not checking for convergence
+          using NONE norm type for convergence test
         PC Object: (sub_) 1 MPI process
           type: ilu
             out-of-place factorization
@@ -68,11 +68,20 @@ Tao Object: 2 MPI processes
         rows=100, cols=100
         total: nonzeros=784, allocated nonzeros=784
         total number of mallocs used during MatSetValues calls=0
-  convergence tolerances: gatol=1e-08,   grtol=1e-05,    steptol=0.,   gttol=0.
+  Objective function:
+    Scale (tao_objective_scale): 1.
+    Function:
+      TaoTerm Object: (callbacks_) 2 MPI processes
+        type: taocallbacks
+        solution vector space: N = 100 [VecType mpi (taoterm_solution_vec_type)]
+        parameter vector space: (none)
+        attached to Tao [name omitted]
+    Map: unmapped
+  convergence tolerances: gatol=1e-08,   grtol=1e-08,   steptol=0.,   gttol=0.
   Residual in Function/Gradient:=9.23151e-08
   Objective value=1.41847
   total number of iterations=3,                          (max: 10000)
   total number of function evaluations=10,                  (max: unlimited)
-  total number of function/gradient evaluations=4,      (max: unlimited)
+  total number of gradient evaluations=4,                  (max: unlimited)
   total number of Hessian evaluations=3
   Solution converged:    User Terminated
