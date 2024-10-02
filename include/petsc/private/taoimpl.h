@@ -282,6 +282,9 @@ PETSC_INTERN PetscErrorCode TaoTermCreateBRGNRegularizer(Tao, TaoTerm *);
 PETSC_INTERN PetscErrorCode TaoTermCreateADMMMisfit(Tao, TaoTerm *);
 PETSC_INTERN PetscErrorCode TaoTermCreateADMMRegularizer(Tao, TaoTerm *);
 
+PETSC_INTERN PetscErrorCode TaoTermCreate_ElementwiseDivergence_Internal(TaoTerm);
+PETSC_INTERN PetscErrorCode TaoTermDestroy_ElementwiseDivergence_Internal(TaoTerm);
+
 PETSC_INTERN PetscErrorCode TaoTermTaoCallbacksSetObjective(TaoTerm, PetscErrorCode (*)(Tao, Vec, PetscReal *, void *), void *);
 PETSC_INTERN PetscErrorCode TaoTermTaoCallbacksSetGradient(TaoTerm, PetscErrorCode (*)(Tao, Vec, Vec, void *), void *);
 PETSC_INTERN PetscErrorCode TaoTermTaoCallbacksSetObjAndGrad(TaoTerm, PetscErrorCode (*)(Tao, Vec, PetscReal *, Vec, void *), void *);

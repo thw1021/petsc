@@ -80,6 +80,7 @@ Changes: Development
 - Add ``TAOTERMADMMISFIT`` implementation of ``TaoTerm`` for constructing a term from the callbacks passed to a ``TaoADMMSetMisfitObjectiveAndGradientRoutine()``
 - Add ``TAOTERMSHELL`` implementation of ``TaoTerm`` for user-defined callbacks
 - Add ``TAOTERMSUM`` implementation of ``TaoTerm`` for scaled, mapped sums of terms
+- Add ``TAOTERMHALFL2SQUARED`` implementation of ``TaoTerm`` for a typical squared-norm penalty function
 
 .. rubric:: DM/DA:
 
