@@ -5,6 +5,7 @@
 
 #define Tao type(tTao)
 #define TaoLineSearch type(tTaoLineSearch)
+#define TaoTerm type(tTaoTerm)
 #define TaoConvergedReason PetscEnum
 #define TaoType character*(80)
 #define TaoLineSearchType character*(80)

@@ -73,6 +73,8 @@ Changes: Development
 
 .. rubric:: TAO:
 
+- Add new ``TaoTerm`` object to manipulate objective function terms with many methods
+
 .. rubric:: DM/DA:
 
 - Deprecate ``DMGetSection()`` and ``DMSetSection()`` for existing ``DMGetLocalSection()`` and ``DMSetLocalSection()``
