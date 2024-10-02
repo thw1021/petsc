@@ -43,13 +43,14 @@ static PetscErrorCode My_Monitor(Tao, void *);
 
 int main(int argc, char **argv)
 {
-  Vec           x;                     /* solution, gradient vectors */
-  PetscBool     viewmat;               /* flags */
-  PetscBool     fddefault, fdcoloring; /* flags */
-  Tao           tao;                   /* TAO solver context */
-  AppCtx        user;                  /* user-defined work context */
+  Vec           x;                                                             /* solution, gradient vectors */
+  PetscBool     viewmat;                                                       /* flags */
+  PetscBool     test_fd_default = PETSC_FALSE, test_fd_coloring = PETSC_FALSE; /* flags */
+  PetscBool     test_fd_taoterm = PETSC_FALSE, test_mffd = PETSC_FALSE;
+  Tao           tao;  /* TAO solver context */
+  AppCtx        user; /* user-defined work context */
   ISColoring    iscoloring;
-  MatFDColoring matfdcoloring;
+  MatFDColoring matfdcoloring = NULL;
 
   /* Initialize TAO */
   PetscFunctionBeginUser;
@@ -91,8 +92,10 @@ int main(int argc, char **argv)
      provided function FormHessian, or the default finite-difference driven Hessian
      functions
   */
-  PetscCall(PetscOptionsHasName(NULL, NULL, "-tao_fddefault", &fddefault));
-  PetscCall(PetscOptionsHasName(NULL, NULL, "-tao_fdcoloring", &fdcoloring));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-test_fd_default", &test_fd_default, NULL));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-test_fd_coloring", &test_fd_coloring, NULL));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-test_fd_taoterm", &test_fd_taoterm, NULL));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-test_mffd", &test_mffd, NULL));
 
   /*
      Create a matrix data structure to store the Hessian and set
@@ -102,15 +105,51 @@ int main(int argc, char **argv)
   PetscCall(DMCreateMatrix(user.dm, &user.H));
   PetscCall(MatSetOption(user.H, MAT_SYMMETRIC, PETSC_TRUE));
 
-  if (fdcoloring) {
+  if (test_fd_coloring) {
     PetscCall(DMCreateColoring(user.dm, IS_COLORING_GLOBAL, &iscoloring));
-    PetscCall(MatFDColoringCreate(user.H, iscoloring, &matfdcoloring));
+    if (!test_fd_taoterm) {
+      PetscCall(MatFDColoringCreate(user.H, iscoloring, &matfdcoloring));
+      PetscCall(MatFDColoringSetFunction(matfdcoloring, (PetscErrorCode (*)(void))FormGradient, (void *)&user));
+      PetscCall(MatFDColoringSetFromOptions(matfdcoloring));
+      PetscCall(MatFDColoringSetUp(user.H, iscoloring, matfdcoloring));
+      PetscCall(TaoSetHessian(tao, user.H, user.H, TaoDefaultComputeHessianColor, (void *)matfdcoloring));
+    } else {
+      TaoTerm term;
+
+      PetscCall(TaoGetTerm(tao, NULL, &term, NULL, NULL));
+      PetscCall(TaoTermSetHessianColoring(term, iscoloring));
+      PetscCall(TaoTermHessianUseFDPush(term));
+      PetscCall(TaoSetHessianMatrices(tao, user.H, user.H));
+    }
     PetscCall(ISColoringDestroy(&iscoloring));
-    PetscCall(MatFDColoringSetFunction(matfdcoloring, (PetscErrorCode (*)(void))FormGradient, (void *)&user));
-    PetscCall(MatFDColoringSetFromOptions(matfdcoloring));
-    PetscCall(TaoSetHessian(tao, user.H, user.H, TaoDefaultComputeHessianColor, (void *)matfdcoloring));
-  } else if (fddefault) {
-    PetscCall(TaoSetHessian(tao, user.H, user.H, TaoDefaultComputeHessian, (void *)NULL));
+  } else if (test_fd_default) {
+    if (!test_fd_taoterm) {
+      PetscCall(TaoSetHessian(tao, user.H, user.H, TaoDefaultComputeHessian, (void *)NULL));
+    } else {
+      TaoTerm term;
+
+      PetscCall(TaoGetTerm(tao, NULL, &term, NULL, NULL));
+      PetscCall(TaoTermHessianUseFDPush(term));
+      PetscCall(TaoSetHessianMatrices(tao, user.H, user.H));
+    }
+  } else if (test_mffd) {
+    if (!test_fd_taoterm) {
+      PetscInt n, N;
+
+      PetscCall(MatGetSize(user.H, &N, NULL));
+      PetscCall(MatGetLocalSize(user.H, &n, NULL));
+      PetscCall(MatDestroy(&user.H));
+      PetscCall(MatCreateMFFD(PetscObjectComm((PetscObject)tao), n, n, N, N, &user.H));
+      PetscCall(TaoSetHessian(tao, user.H, user.H, TaoDefaultComputeHessian, (void *)NULL));
+    } else {
+      TaoTerm term;
+
+      PetscCall(MatDestroy(&user.H));
+      PetscCall(TaoGetTerm(tao, NULL, &term, NULL, NULL));
+      PetscCall(TaoTermCreateHessianMFFD(term, &user.H));
+      PetscCall(TaoSetHessianMatrices(tao, user.H, user.H));
+      PetscCall(TaoTermHessianUseFDPush(term));
+    }
   } else {
     PetscCall(TaoSetHessian(tao, user.H, user.H, FormHessian, (void *)&user));
   }
@@ -136,7 +175,7 @@ int main(int argc, char **argv)
   /* Free PETSc data structures */
   PetscCall(VecDestroy(&x));
   PetscCall(MatDestroy(&user.H));
-  if (fdcoloring) PetscCall(MatFDColoringDestroy(&matfdcoloring));
+  PetscCall(MatFDColoringDestroy(&matfdcoloring));
   PetscCall(PetscFree(user.bottom));
   PetscCall(PetscFree(user.top));
   PetscCall(PetscFree(user.left));
@@ -869,6 +908,28 @@ PetscErrorCode My_Monitor(Tao tao, void *ctx)
       args: -tao_monitor_short -tao_type nls -tao_nls_ksp_max_it 15 -tao_gatol 1.e-4
       filter: grep -v "nls ksp"
       requires: !single
+
+   test:
+      suffix: 2_fd_default
+      nsize: 2
+      args: -tao_monitor_short -tao_type nls -tao_nls_ksp_max_it 15 -tao_gatol 1.e-4 -test_fd_default -test_fd_taoterm {{0 1}}
+      filter: grep -v "nls ksp"
+      requires: !single
+
+   test:
+      suffix: 2_fd_coloring
+      nsize: 2
+      args: -tao_monitor_short -tao_type nls -tao_nls_ksp_max_it 15 -tao_gatol 1.e-4 -test_fd_coloring -test_fd_taoterm {{0 1}}
+      output_file: output/minsurf2_2_fd_default.out
+      filter: grep -v "nls ksp"
+      requires: !single
+
+   test:
+      suffix: 2_mffd
+      nsize: 2
+      args: -tao_monitor_short -tao_type nls -tao_nls_ksp_max_it 15 -tao_gatol 1.e-4 -test_mffd -test_fd_taoterm {{0 1}}
+      filter: grep -v "nls ksp"
+      requires: !single !__float128
 
    test:
       suffix: 2_snes
