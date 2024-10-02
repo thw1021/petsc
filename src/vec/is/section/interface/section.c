@@ -1265,7 +1265,7 @@ PetscErrorCode PetscSectionSetUpBC(PetscSection s)
     const PetscInt last = (s->bc->pEnd - s->bc->pStart) - 1;
 
     PetscCall(PetscSectionSetUp(s->bc));
-    PetscCall(PetscMalloc1(last >= 0 ? s->bc->atlasOff[last] + s->bc->atlasDof[last] : 0, &s->bcIndices));
+    PetscCall(PetscMalloc1((last >= 0 ? (size_t)s->bc->atlasOff[last] + s->bc->atlasDof[last] : 0), &s->bcIndices));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
