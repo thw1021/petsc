@@ -3641,7 +3641,7 @@ PetscErrorCode PetscDSUpdateBoundary(PetscDS ds, PetscInt bd, DMBoundaryConditio
   }
   PetscCheck(b, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Boundary %" PetscInt_FMT " is not in [0, %" PetscInt_FMT ")", bd, n);
   if (name) {
-    PetscCall(PetscFree(b->name));
+    PetscCall(PetscFreeConst(b->name));
     PetscCall(PetscStrallocpy(name, (char **)&b->name));
   }
   b->type = type;
@@ -3649,7 +3649,7 @@ PetscErrorCode PetscDSUpdateBoundary(PetscDS ds, PetscInt bd, DMBoundaryConditio
     const char *name;
 
     b->label = label;
-    PetscCall(PetscFree(b->lname));
+    PetscCall(PetscFreeConst(b->lname));
     PetscCall(PetscObjectGetName((PetscObject)label, &name));
     PetscCall(PetscStrallocpy(name, (char **)&b->lname));
   }
@@ -3911,8 +3911,8 @@ PetscErrorCode PetscDSDestroyBoundary(PetscDS ds)
 
     next = b->next;
     PetscCall(PetscWeakFormDestroy(&b->wf));
-    PetscCall(PetscFree(b->name));
-    PetscCall(PetscFree(b->lname));
+    PetscCall(PetscFreeConst(b->name));
+    PetscCall(PetscFreeConst(b->lname));
     PetscCall(PetscFree(b->values));
     PetscCall(PetscFree(b->comps));
     PetscCall(PetscFree(b));

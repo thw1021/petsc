@@ -102,7 +102,12 @@ PETSC_INTERN PetscErrorCode PCGAMGHashTableCreate(PetscInt, PCGAMGHashTable *);
 PETSC_INTERN PetscErrorCode PCGAMGHashTableDestroy(PCGAMGHashTable *);
 PETSC_INTERN PetscErrorCode PCGAMGHashTableAdd(PCGAMGHashTable *, PetscInt, PetscInt);
 
-#define GAMG_HASH(key) (PetscInt)((((PetscInt64)7) * (PetscInt64)key) % (PetscInt64)a_tab->size)
+#if defined(PETSC_USE_64BIT_INDICES)
+  #define GAMG_HASH(key) ((7 * (key)) % a_tab->size)
+#else
+  #define GAMG_HASH(key) (PetscInt)((((PetscInt64)7) * (PetscInt64)(key)) % (PetscInt64)a_tab->size)
+#endif
+
 static inline PetscErrorCode PCGAMGHashTableFind(PCGAMGHashTable *a_tab, PetscInt a_key, PetscInt *a_data)
 {
   PetscInt kk, idx;

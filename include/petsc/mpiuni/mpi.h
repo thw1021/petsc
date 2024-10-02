@@ -156,7 +156,11 @@ typedef MPIUNI_INT64 MPI_Count;
  from generating warning messages about unused variables while compiling PETSc.
 */
 MPIUni_PETSC_EXTERN void *MPIUNI_TMP;
-#define MPIUNI_ARG(arg) (MPIUNI_TMP = (void *)(MPI_Aint)(arg))
+#if defined(__cplusplus)
+  #define MPIUNI_ARG(arg) void(arg)
+#else
+  #define MPIUNI_ARG(arg) (MPIUNI_TMP = (void *)(MPI_Aint)(arg))
+#endif
 
 #define MPI_IDENT     0
 #define MPI_CONGRUENT 1

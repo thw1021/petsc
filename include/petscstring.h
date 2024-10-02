@@ -368,7 +368,7 @@ static inline PetscErrorCode PetscStrrstr(const char a[], const char b[], char *
   PetscAssertPointer_Private(tmp, 3);
   while (a) {
 #if PetscHasBuiltin(__builtin_strstr)
-    a = (char *)__builtin_strstr(a, b);
+    a = __builtin_strstr(a, b);
 #else
     a = (char *)strstr(a, b);
 #endif
@@ -403,9 +403,9 @@ static inline PetscErrorCode PetscStrstr(const char haystack[], const char needl
   PetscAssertPointer_Private(needle, 2);
   PetscAssertPointer_Private(tmp, 3);
 #if PetscHasBuiltin(__builtin_strstr)
-  *tmp = (char *)__builtin_strstr(haystack, needle);
+  *tmp = __builtin_strstr(haystack, needle);
 #else
-  *tmp = (char *)strstr(haystack, needle);
+  *tmp = strstr(haystack, needle);
 #endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -472,7 +472,7 @@ static inline PetscErrorCode PetscStrchr(const char a[], char b, char *c[])
   PetscAssertPointer_Private(a, 1);
   PetscAssertPointer_Private(c, 3);
 #if PetscHasBuiltin(__builtin_strchr)
-  *c = (char *)__builtin_strchr(a, b);
+  *c = __builtin_strchr(a, b);
 #else
   *c = (char *)strchr(a, b);
 #endif
@@ -502,7 +502,7 @@ static inline PetscErrorCode PetscStrrchr(const char a[], char b, char *c[])
   PetscAssertPointer_Private(a, 1);
   PetscAssertPointer_Private(c, 3);
 #if PetscHasBuiltin(__builtin_strrchr)
-  *c = (char *)__builtin_strrchr(a, b);
+  *c = __builtin_strrchr(a, b);
 #else
   *c = (char *)strrchr(a, b);
 #endif
@@ -787,7 +787,7 @@ static inline PetscErrorCode PetscMemzero(void *a, size_t n)
 .seealso: `PetscMemcpy()`, `PetscMemcmp()`, `PetscArrayzero()`, `PetscMemzero()`, `PetscArraycpy()`, `PetscMemmove()`, `PetscStrallocpy()`,
           `PetscArraymove()`
 M*/
-#define PetscArraycmp(str1, str2, cnt, e) ((sizeof(*(str1)) == sizeof(*(str2))) ? PetscMemcmp((str1), (str2), (size_t)(cnt) * sizeof(*(str1)), (e)) : PETSC_ERR_ARG_SIZ)
+#define PetscArraycmp(str1, str2, cnt, e) ((sizeof(*(str1)) == sizeof(*(str2))) ? PetscMemcmp((str1), (str2), PetscSizeCast(cnt, str1), (e)) : PETSC_ERR_ARG_SIZ)
 
 /*MC
    PetscArraymove - Copies from one array in memory to another, the arrays may overlap. Use `PetscArraycpy()` when the arrays
@@ -813,7 +813,7 @@ M*/
 
 .seealso: `PetscMemcpy()`, `PetscMemcmp()`, `PetscArrayzero()`, `PetscMemzero()`, `PetscArraycpy()`, `PetscMemmove()`, `PetscArraycmp()`, `PetscStrallocpy()`
 M*/
-#define PetscArraymove(str1, str2, cnt) ((sizeof(*(str1)) == sizeof(*(str2))) ? PetscMemmove((str1), (str2), (size_t)(cnt) * sizeof(*(str1))) : PETSC_ERR_ARG_SIZ)
+#define PetscArraymove(str1, str2, cnt) ((sizeof(*(str1)) == sizeof(*(str2))) ? PetscMemmove((str1), (str2), PetscSizeCast(cnt, str1)) : PETSC_ERR_ARG_SIZ)
 
 /*MC
    PetscArraycpy - Copies from one array in memory to another
@@ -838,7 +838,7 @@ M*/
 
 .seealso: `PetscMemcpy()`, `PetscMemcmp()`, `PetscArrayzero()`, `PetscMemzero()`, `PetscArraymove()`, `PetscMemmove()`, `PetscArraycmp()`, `PetscStrallocpy()`
 M*/
-#define PetscArraycpy(str1, str2, cnt) ((sizeof(*(str1)) == sizeof(*(str2))) ? PetscMemcpy((str1), (str2), (size_t)(cnt) * sizeof(*(str1))) : PETSC_ERR_ARG_SIZ)
+#define PetscArraycpy(str1, str2, cnt) ((sizeof(*(str1)) == sizeof(*(str2))) ? PetscMemcpy((str1), (str2), PetscSizeCast(cnt, str1)) : PETSC_ERR_ARG_SIZ)
 
 /*MC
    PetscArrayzero - Zeros an array in memory.
@@ -860,4 +860,4 @@ M*/
 
 .seealso: `PetscMemcpy()`, `PetscMemcmp()`, `PetscMemzero()`, `PetscArraycmp()`, `PetscArraycpy()`, `PetscMemmove()`, `PetscStrallocpy()`, `PetscArraymove()`
 M*/
-#define PetscArrayzero(str1, cnt) PetscMemzero((str1), ((size_t)(cnt)) * sizeof(*(str1)))
+#define PetscArrayzero(str1, cnt) PetscMemzero((str1), PetscSizeCast(cnt, str1))

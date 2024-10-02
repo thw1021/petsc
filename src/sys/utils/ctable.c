@@ -196,7 +196,7 @@ PetscErrorCode PetscTableGetHeadPosition(PetscTable ta, PetscTablePosition *ppos
   /* find first valid place */
   do {
     if (ta->keytable[i]) {
-      *ppos = (PetscTablePosition)&ta->table[i];
+      *ppos = &ta->table[i];
       break;
     }
   } while (i++ < ta->tablesize);
@@ -223,7 +223,7 @@ PetscErrorCode PetscTableGetNext(PetscTable ta, PetscTablePosition *rPosition, P
   PetscCheck(pos, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Null position");
   *data = *pos;
   PetscCheck(*data, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Null data");
-  idex  = (PetscInt)(pos - ta->table);
+  PetscCall(PetscIntCast(pos - ta->table, &idex));
   *pkey = ta->keytable[idex];
   PetscCheck(*pkey, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Null key");
 
