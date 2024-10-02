@@ -77,6 +77,7 @@ int main(int argc, char **argv)
   /* Create TAO solver and set desired solution method */
   PetscCall(TaoCreate(PETSC_COMM_SELF, &tao));
   PetscCall(TaoSetType(tao, TAOBRGN));
+  PetscCall(TaoBRGNSetRegularizationType(tao, TAOBRGN_REGULARIZATION_L1DICT));
 
   /* User set application context: A, D matrice, and b vector. */
   PetscCall(InitializeUserData(&user));

@@ -11,10 +11,6 @@ typedef struct _TaoOps *TaoOps;
 
 struct _TaoOps {
   /* Methods set by application */
-  PetscErrorCode (*computeobjective)(Tao, Vec, PetscReal *, void *);
-  PetscErrorCode (*computeobjectiveandgradient)(Tao, Vec, PetscReal *, Vec, void *);
-  PetscErrorCode (*computegradient)(Tao, Vec, Vec, void *);
-  PetscErrorCode (*computehessian)(Tao, Vec, Mat, Mat, void *);
   PetscErrorCode (*computeresidual)(Tao, Vec, Vec, void *);
   PetscErrorCode (*computeresidualjacobian)(Tao, Vec, Mat, Mat, void *);
   PetscErrorCode (*computeconstraints)(Tao, Vec, Vec, void *);
@@ -200,15 +196,15 @@ struct _p_Tao {
   PetscBool     hist_reset;
   PetscBool     hist_malloc;
 
+  TaoMappedTerm objective_term; /* TaoTerm in use */
+  Vec           objective_parameters;
+
+  TaoTerm   orig_callbacks; /* TAOTERMTAOCALLBACKS for the original callbacks */
   PetscBool uses_hessian_matrices;
   PetscBool uses_gradient;
 };
 
 PETSC_EXTERN PetscLogEvent TAO_Solve;
-PETSC_EXTERN PetscLogEvent TAO_ObjectiveEval;
-PETSC_EXTERN PetscLogEvent TAO_GradientEval;
-PETSC_EXTERN PetscLogEvent TAO_ObjGradEval;
-PETSC_EXTERN PetscLogEvent TAO_HessianEval;
 PETSC_EXTERN PetscLogEvent TAO_ConstraintsEval;
 PETSC_EXTERN PetscLogEvent TAO_JacobianEval;
 PETSC_INTERN PetscLogEvent TAO_ResidualEval;
