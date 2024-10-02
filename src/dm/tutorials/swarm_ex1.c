@@ -47,7 +47,8 @@ PetscErrorCode ex1_1(void)
   PetscCall(DMSwarmCreateGlobalVectorFromField(dms, "viscosity", &x));
   PetscCall(DMSwarmDestroyGlobalVectorFromField(dms, "viscosity", &x));
 
-  PetscCall(DMSwarmVectorDefineField(dms, "strain"));
+  const char *fieldnames[1] = {"strain"};
+  PetscCall(DMSwarmVectorDefineField(dms, 1, fieldnames));
   PetscCall(DMCreateGlobalVector(dms, &x));
   PetscCall(VecDestroy(&x));
 
