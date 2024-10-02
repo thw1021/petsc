@@ -75,6 +75,13 @@ Changes: Development
 
 - Add new ``TaoTerm`` object to manipulate objective function terms with many methods
 
+.. rubric:: TaoTerm:
+
+- Add ``TAOTERMTAOCALLBACKS`` implementation of ``TaoTerm`` for constructing a term from the callbacks passed to a ``Tao`` object
+- Add ``TAOTERMBRGNREGULARIZER`` implementation of ``TaoTerm`` for constructing a term from the callbacks passed to a ``TaoBRGNSetReguarizerObjectiveAndGradientRoutine()``
+- Add ``TAOTERMADMMREGULARIZER`` implementation of ``TaoTerm`` for constructing a term from the callbacks passed to a ``TaoADMMSetReguarizerObjectiveAndGradientRoutine()``
+- Add ``TAOTERMADMMISFIT`` implementation of ``TaoTerm`` for constructing a term from the callbacks passed to a ``TaoADMMSetMisfitObjectiveAndGradientRoutine()``
+
 .. rubric:: DM/DA:
 
 - Deprecate ``DMGetSection()`` and ``DMSetSection()`` for existing ``DMGetLocalSection()`` and ``DMSetLocalSection()``
