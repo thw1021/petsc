@@ -32,7 +32,8 @@ typedef struct _p_TaoTerm *TaoTerm;
 . `TAOTERMBRGNREGULARIZER` - uses the callback functions set in `TaoBRGNSetRegularizerObjectiveAndGradientRoutine()`, etc.
 . `TAOTERMADMMREGULARIZER` - uses the callback functions set in `TaoADMMSetRegularizerObjectiveAndGradientRoutine()`, etc.
 . `TAOTERMADMMMISFIT`      - uses the callback functions set in `TaoADMMSetMisfitObjectiveAndGradientRoutine()`, etc.
-- `TAOTERMSHELL`           - a container for arbitrary user-defined callbacks
+. `TAOTERMSHELL`           - a container for arbitrary user-defined callbacks
+- `TAOTERMSUM`             - a sum of multiple other `TaoTerm`s
 
   Level: intermediate
 
@@ -44,6 +45,7 @@ typedef const char *TaoTermType;
 #define TAOTERMADMMREGULARIZER "admmregularizer"
 #define TAOTERMADMMMISFIT      "admmmisfit"
 #define TAOTERMSHELL           "shell"
+#define TAOTERMSUM             "sum"
 
 PETSC_EXTERN PetscErrorCode TaoTermRegister(const char[], PetscErrorCode (*)(TaoTerm));
 
@@ -76,6 +78,26 @@ typedef enum {
   TAOTERM_PARAMETERS_REQUIRED
 } TaoTermParametersMode;
 PETSC_EXTERN const char *const TaoTermParametersModes[];
+
+/*E
+  TaoTermMask - Determine which evaluation operations are masked.
+
+  Values:
++ `TAOTERM_MASK_NONE`      - do not mask any evaluation routines
+. `TAOTERM_MASK_OBJECTIVE` - override the term's objective function and return 0 instead
+. `TAOTERM_MASK_GRADIENT`  - override the term's gradient and return a zero vector instead
+- `TAOTERM_MASK_HESSIAN`   - override the term's Hessian and return a zero matrix instead
+
+  Level: advanced
+
+.seealso: [](sec_tao_term), `TaoTerm`, `TaoTermSumSetSubtermMask()`, `TaoTermSumGetSubtermMask()`
+E*/
+typedef enum {
+  TAOTERM_MASK_NONE      = 0x0,
+  TAOTERM_MASK_OBJECTIVE = 0x1,
+  TAOTERM_MASK_GRADIENT  = 0x2,
+  TAOTERM_MASK_HESSIAN   = 0x4,
+} TaoTermMask;
 
 PETSC_EXTERN PetscErrorCode TaoTermSetParametersMode(TaoTerm, TaoTermParametersMode);
 PETSC_EXTERN PetscErrorCode TaoTermGetParametersMode(TaoTerm, TaoTermParametersMode *);
@@ -133,6 +155,18 @@ PETSC_EXTERN PetscErrorCode TaoTermShellSetHessianMult(TaoTerm, PetscErrorCode (
 PETSC_EXTERN PetscErrorCode TaoTermShellSetView(TaoTerm, PetscErrorCode (*)(TaoTerm, PetscViewer));
 PETSC_EXTERN PetscErrorCode TaoTermShellSetCreateVecs(TaoTerm, PetscErrorCode (*)(TaoTerm, Vec *, Vec *));
 PETSC_EXTERN PetscErrorCode TaoTermShellSetCreateHessianMatrices(TaoTerm, PetscErrorCode (*)(TaoTerm, Mat *, Mat *));
+
+PETSC_EXTERN PetscErrorCode TaoTermSumSetNumSubterms(TaoTerm, PetscInt);
+PETSC_EXTERN PetscErrorCode TaoTermSumGetNumSubterms(TaoTerm, PetscInt *);
+PETSC_EXTERN PetscErrorCode TaoTermSumSetSubterm(TaoTerm, PetscInt, const char[], PetscReal, TaoTerm, Mat);
+PETSC_EXTERN PetscErrorCode TaoTermSumGetSubterm(TaoTerm, PetscInt, const char **, PetscReal *, TaoTerm *, Mat *);
+PETSC_EXTERN PetscErrorCode TaoTermSumAddSubterm(TaoTerm, const char[], PetscReal, TaoTerm, Mat, PetscInt *);
+PETSC_EXTERN PetscErrorCode TaoTermSumParametersPack(TaoTerm, Vec[], Vec *);
+PETSC_EXTERN PetscErrorCode TaoTermSumParametersUnpack(TaoTerm, Vec *, Vec[]);
+PETSC_EXTERN PetscErrorCode VecNestGetTaoTermSumSubParameters(Vec, PetscInt, Vec *);
+PETSC_EXTERN PetscErrorCode TaoTermSumSetSubtermHessianMatrices(TaoTerm, PetscInt, Mat, Mat, Mat, Mat);
+PETSC_EXTERN PetscErrorCode TaoTermSumGetSubtermMask(TaoTerm, PetscInt, TaoTermMask *);
+PETSC_EXTERN PetscErrorCode TaoTermSumSetSubtermMask(TaoTerm, PetscInt, TaoTermMask);
 
 PETSC_EXTERN PetscErrorCode TaoTermIsObjectiveDefined(TaoTerm, PetscBool *);
 PETSC_EXTERN PetscErrorCode TaoTermIsGradientDefined(TaoTerm, PetscBool *);
