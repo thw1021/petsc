@@ -57,4 +57,5 @@
 #define TAOTERMSHELL           'shell'
 #define TAOTERMSUM             'sum'
 #define TAOTERMHALFL2SQUARED   'halfl2squared'
+#define TAOTERML1              'l1'
 #endif
