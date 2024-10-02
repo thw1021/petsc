@@ -57,15 +57,18 @@ static PetscErrorCode DMFieldView_DA(DMField field, PetscViewer viewer)
 
 #define MEdot(y, A, x, m, c, cast) \
   do { \
+    PETSC_SILENCE_WUSELESSCAST_BEGIN; \
     PetscInt _k, _l; \
     for (_k = 0; _k < (c); _k++) (y)[_k] = 0.; \
     for (_l = 0; _l < (m); _l++) { \
       for (_k = 0; _k < (c); _k++) (y)[_k] += cast((A)[(c) * _l + _k]) * (x)[_l]; \
     } \
+    PETSC_SILENCE_WUSELESSCAST_END; \
   } while (0)
 
 #define MEHess(out, cf, etaB, etaD, dim, nc, cast) \
   do { \
+    PETSC_SILENCE_WUSELESSCAST_BEGIN; \
     PetscInt _m, _j, _k; \
     for (_m = 0; _m < (nc) * (dim) * (dim); _m++) (out)[_m] = 0.; \
     for (_j = 0; _j < (dim); _j++) { \
@@ -78,6 +81,7 @@ static PetscErrorCode DMFieldView_DA(DMField field, PetscViewer viewer)
         } \
       } \
     } \
+    PETSC_SILENCE_WUSELESSCAST_END; \
   } while (0)
 
 static void MultilinearEvaluate(PetscInt dim, PetscReal (*coordRange)[2], PetscInt nc, PetscScalar *cf, PetscScalar *cfWork, PetscInt nPoints, const PetscScalar *points, PetscDataType datatype, void *B, void *D, void *H)
@@ -416,6 +420,7 @@ static PetscErrorCode DMFieldInitialize_DA(DMField field)
   PetscCall(DMGetCoordinates(dm, &coords));
   if (coords) {
     PetscInt           n;
+    PetscMPIInt        dim2;
     const PetscScalar *array;
     PetscReal          mins[3][2] = {
       {PETSC_MAX_REAL, PETSC_MAX_REAL},
@@ -435,7 +440,8 @@ static PetscErrorCode DMFieldInitialize_DA(DMField field)
       }
     }
     PetscCall(VecRestoreArrayRead(coords, &array));
-    PetscCallMPI(MPIU_Allreduce((PetscReal *)mins, &dafield->coordRange[0][0], (PetscMPIInt)(2 * dim), MPIU_REAL, MPI_MIN, PetscObjectComm((PetscObject)dm)));
+    PetscCall(PetscMPIIntCast(2 * dim, &dim2));
+    PetscCallMPI(MPIU_Allreduce(mins, &dafield->coordRange[0][0], dim2, MPIU_REAL, MPI_MIN, PetscObjectComm((PetscObject)dm)));
     for (j = 0; j < dim; j++) dafield->coordRange[j][1] = -dafield->coordRange[j][1];
   } else {
     for (j = 0; j < dim; j++) {

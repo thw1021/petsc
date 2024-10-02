@@ -325,7 +325,7 @@ static PetscErrorCode xxt_generate(xxt_ADT xxt_handle)
     /* compute sqrt(alpha) = sqrt(v_l^T.u_l) - comm portion */
     PetscCall(PCTFS_grop_hc(&alpha, &alpha_w, 1, op, dim));
 
-    alpha = (PetscScalar)PetscSqrtReal((PetscReal)alpha);
+    alpha = PetscSqrtReal(PetscRealPart(alpha));
 
     /* check for small alpha                             */
     /* LATER use this to detect and determine null space */
