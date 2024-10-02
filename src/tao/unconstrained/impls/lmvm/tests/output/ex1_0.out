@@ -8,7 +8,7 @@
   7 TAO,  Function value: 0.0200626,  Residual: 0.0301767 
   8 TAO,  Function value: 0.016036,  Residual: 0.043587 
   9 TAO,  Function value: 0.00661074,  Residual: 0.00529724 
- 10 TAO,  Function value: 4.41935e-19,  Residual: 5.83867e-10 
+ 10 TAO,  Function value: 9.59536e-20,  Residual: 4.75817e-10 
 Tao Object: 1 MPI process
   type: lmvm
     Gradient steps: 1
@@ -25,6 +25,15 @@ Tao Object: 1 MPI process
             type: constantdiagonal
             Diagonal value: 1.
         Rescale type: none
+  Objective function:
+    Scale (tao_objective_scale): 1.
+    Function:
+      TaoTerm Object: (callbacks_) 1 MPI process
+        type: taocallbacks
+        solution vector space: N = 10 [VecType seq (taoterm_solution_vec_type)]
+        parameter vector space: (none)
+        attached to Tao [name omitted]
+    Map: unmapped
   TaoLineSearch Object: 1 MPI process
     type: more-thuente
     maximum function evaluations=30
@@ -34,8 +43,8 @@ Tao Object: 1 MPI process
     total number of function/gradient evaluations=6
     Termination reason: 1
   convergence tolerances: gatol=1e-08,   grtol=1e-08,   steptol=0.,   gttol=0.
-  Residual in Function/Gradient:=5.83867e-10
-  Objective value=4.41935e-19
+  Residual in Function/Gradient:=4.75817e-10
+  Objective value=9.59536e-20
   total number of iterations=10,                          (max: 2000)
   total number of function/gradient evaluations=27,      (max: 4000)
   Solution converged:    ||g(X)|| <= gatol

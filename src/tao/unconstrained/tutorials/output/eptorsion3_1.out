@@ -71,6 +71,15 @@ Tao Object: 1 MPI process
         Not a descent direction: 0
         Line search fails: 0
         Matrix has not been preallocated yet
+      Objective function:
+        Scale (tao_objective_scale): 1.
+        Function:
+          TaoTerm Object: (tao_bnk_cg_callbacks_) 1 MPI process
+            type: taocallbacks
+            solution vector space: N = 100 [VecType seq (taoterm_solution_vec_type)]
+            parameter vector space: (none)
+            attached to Tao [name omitted] (tao_bnk_cg_)
+        Map: unmapped
       TaoLineSearch Object: (tao_bnk_cg_) 1 MPI process
         type: more-thuente
         maximum function evaluations=30
@@ -99,6 +108,15 @@ Tao Object: 1 MPI process
       dtol: 0
       iter: 0
       othr: 0
+  Objective function:
+    Scale (tao_objective_scale): 1.
+    Function:
+      TaoTerm Object: (callbacks_) 1 MPI process
+        type: taocallbacks
+        solution vector space: N = 100 [VecType seq (taoterm_solution_vec_type)]
+        parameter vector space: (none)
+        attached to Tao [name omitted]
+    Map: unmapped
   TaoLineSearch Object: 1 MPI process
     type: more-thuente
     maximum function evaluations=30
@@ -147,6 +165,8 @@ Tao Object: 1 MPI process
   Residual in Function/Gradient:=4.78759e-09
   Objective value=-0.254632
   total number of iterations=4,                          (max: 50)
-  total number of function/gradient evaluations=14,      (max: unlimited)
+  total number of function evaluations=9,                  (max: unlimited)
+  total number of gradient evaluations=4,                  (max: unlimited)
+  total number of function/gradient evaluations=1,      (max: unlimited)
   total number of Hessian evaluations=4
   Solution converged:    ||g(X)|| <= gatol
