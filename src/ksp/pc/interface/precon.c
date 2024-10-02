@@ -2043,19 +2043,14 @@ PetscErrorCode PCGetCoarseOperators(PC pc, PetscInt *num_levels, Mat *coarseOper
 /*@
   PCGetCFMarkers - Gets CF marker arrays for all levels (except the finest level)
 
-  Logically Collective
-
   Input Parameter:
 . pc - the precondition context
 
   Output Parameters:
-- n_per_level - the number or nodes per level (size of num_levels -1)
++ n_per_level - the number or nodes per level (size of num_levels -1)
 - CFMarkers - the Coarse/Fine boolean arrays (size of `num_levels`-1)
 
   Level: advanced
-
-  Developer Note:
-  Why is this here instead of in `PCMG` etc?
 
 .seealso: [](ch_ksp), `PC`, `PCMG`, `PCMGGetRestriction()`, `PCMGSetInterpolation()`, `PCMGGetRScale()`, `PCMGGetInterpolation()`, `PCGetInterpolations()`
 @*/
