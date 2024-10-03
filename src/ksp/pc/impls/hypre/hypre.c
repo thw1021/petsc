@@ -2511,7 +2511,7 @@ PetscErrorCode PCHYPRESetType(PC pc, const char name[])
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@
+/*@C
   PCHYPREGetCFMarkers - Gets CF marker arrays for all levels (except the finest level)
 
   Input Parameter:
@@ -2519,9 +2519,10 @@ PetscErrorCode PCHYPRESetType(PC pc, const char name[])
 
   Output Parameters:
 + n_per_level - the number or nodes per level (size of num_levels -1)
-- CFMarkers - the Coarse/Fine boolean arrays (size of `num_levels`-1)
+- CFMarkers   - the Coarse/Fine boolean arrays (size of `num_levels`-1)
 
-  Note: Caller is responsible for memory management of n_per_level and CFMarkers pointers.
+  Note:
+  Caller is responsible for memory management of n_per_level and CFMarkers pointers.
 
   Level: advanced
 
@@ -2531,7 +2532,7 @@ PetscErrorCode PCHYPREGetCFMarkers(PC pc, PetscInt *n_per_level[], PetscBT *CFMa
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
-  PetscAssertPointer(CFMarkers, 2);
+  PetscAssertPointer(CFMarkers, 3);
   PetscUseMethod(pc, "PCHYPREGetCFMarkers_C", (PC, PetscInt *[], PetscBT *[]), (pc, n_per_level, CFMarkers));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
