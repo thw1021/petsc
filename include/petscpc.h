@@ -118,7 +118,7 @@ PETSC_EXTERN PetscErrorCode PCGetDM(PC, DM *);
 
 PETSC_EXTERN PetscErrorCode PCGetInterpolations(PC, PetscInt *, Mat *[]);
 PETSC_EXTERN PetscErrorCode PCGetCoarseOperators(PC pc, PetscInt *, Mat *[]);
-PETSC_EXTERN PetscErrorCode PCGetCFMarkers(PC pc, PetscInt *[], PetscBT *[]);
+PETSC_EXTERN PetscErrorCode PCHYPREGetCFMarkers(PC pc, PetscInt *[], PetscBT *[]);
 
 PETSC_EXTERN PetscErrorCode PCSetCoordinates(PC, PetscInt, PetscInt, PetscReal[]);
 

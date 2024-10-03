@@ -2040,25 +2040,3 @@ PetscErrorCode PCGetCoarseOperators(PC pc, PetscInt *num_levels, Mat *coarseOper
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@
-  PCGetCFMarkers - Gets CF marker arrays for all levels (except the finest level)
-
-  Input Parameter:
-. pc - the precondition context
-
-  Output Parameters:
-+ n_per_level - the number or nodes per level (size of num_levels -1)
-- CFMarkers - the Coarse/Fine boolean arrays (size of `num_levels`-1)
-
-  Level: advanced
-
-.seealso: [](ch_ksp), `PC`, `PCMG`, `PCMGGetRestriction()`, `PCMGSetInterpolation()`, `PCMGGetRScale()`, `PCMGGetInterpolation()`, `PCGetInterpolations()`
-@*/
-PetscErrorCode PCGetCFMarkers(PC pc, PetscInt *n_per_level[], PetscBT *CFMarkers[])
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
-  PetscAssertPointer(CFMarkers, 2);
-  PetscUseMethod(pc, "PCGetCFMarkers_C", (PC, PetscInt *[], PetscBT *[]), (pc, n_per_level, CFMarkers));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
