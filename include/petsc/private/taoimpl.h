@@ -37,6 +37,27 @@ struct _TaoOps {
 
 #define MAXTAOMONITORS 10
 
+//Given f,g terms with alpha, beta, p, q - possible permutations
+//of proximal map with HALFL2SQUARED regularizer
+//
+//Four-bit representation:
+//ABCD, where
+//A: q
+//B: p
+//C: beta
+//D: alpha
+typedef enum {
+  TAOTERM_PROX_NO_OP,                // XX00, alpha == beta == 0
+  TAOTERM_PROX_ZERO,                 // 0X10, x \gets zero
+  TAOTERM_PROX_Q,                    // 1X10, x \gets q
+  TAOTERM_PROX_PROX,                 // 1011, Regular prox
+  TAOTERM_PROX_PROX_TRANS,           // 1111, prox with translation
+  TAOTERM_PROX_SOLVE,                // X001, Solve(alpha*f)
+  TAOTERM_PROX_SOLVE_PARAM,          // X101, Solve(alpha*f(;p))
+  TAOTERM_PROX_SOLVE_COMPOSITE,      // 0011, Solve(alpha*f() + beta*g())
+  TAOTERM_PROX_SOLVE_COMPOSITE_TRANS // 0111, Solve(alpha*f(;p) + beta*g())
+} TaoTermProxMapL2Op;
+
 typedef struct _n_TaoMappedTerm TaoMappedTerm;
 
 struct _n_TaoMappedTerm {

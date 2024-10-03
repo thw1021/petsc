@@ -231,10 +231,53 @@ static PetscErrorCode TaoTermHessianMult_L1(TaoTerm term, Vec x, Vec params, Vec
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/* Cases:
+ *
+ * Case 1: alpha==beta==0                              -> (XX00) NO_OP
+ * Case 2: beta != 0, alpha == 0, q == NULL            -> (0X10) ZERO
+ * Case 3: beta != 0, alpha == 0, q != NULL            -> (1X10) Q
+ * Case 4: beta == 0, alpha != 0, p == NULL            -> (X001) SOLVE, x \gets zero
+ * Case 5: beta == 0, alpha != 0, p != NULL            -> (X101) SOLVE_PARAM, x \gets p
+ * Case 6: beta != 0, alpha != 0, p == q == NULL       -> (0011) COMPOSITE, x \gets zero
+ * Case 7: beta != 0, alpha != 0, p != NULL, q == NULL -> (0111) COMPOSITE_TRANS, ERROR - No unique solution
+ * Case 8: beta != 0, alpha != 0, p == NULL, q != NULL -> (1011) PROX, x \gets ST(alpha\beta, q)
+ * Case 9: beta != 0, alpha != 0, p != NULL, q != NULL -> (1111) PROX_TRANS, x \gets ST(alpha\beta, q-p) + p
+ *                                                                                                            */
+static PetscErrorCode L1ProxFindMap(Vec q, Vec p, PetscReal beta, PetscReal alpha, TaoTermProxMapL2Op *l2ops)
+{
+  PetscBool a_zb, za_b, a_b;
+
+  PetscFunctionBegin;
+  a_zb = (alpha != 0 && beta == 0);
+  za_b = (alpha == 0 && beta != 0);
+  a_b  = (alpha != 0 && beta != 0);
+
+  if (alpha == 0 && beta == 0) {
+    *l2ops = TAOTERM_PROX_NO_OP;
+  } else if (a_zb && !q) {
+    *l2ops = TAOTERM_PROX_ZERO;
+  } else if (a_zb && q) {
+    *l2ops = TAOTERM_PROX_Q;
+  } else if (za_b && !p) {
+    *l2ops = TAOTERM_PROX_SOLVE;
+  } else if (za_b && p) {
+    *l2ops = TAOTERM_PROX_SOLVE_PARAM;
+  } else if (a_b && !p && !q) {
+    *l2ops = TAOTERM_PROX_SOLVE_COMPOSITE;
+  } else if (a_b && p && !q) {
+    *l2ops = TAOTERM_PROX_SOLVE_COMPOSITE_TRANS;
+  } else if (a_b && q && !p) {
+    *l2ops = TAOTERM_PROX_PROX;
+  } else if (a_b && q && p) {
+    *l2ops = TAOTERM_PROX_PROX_TRANS;
+  } else PetscUnreachable();
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode TaoTermProximalMap_L1(TaoTerm term, Vec p, PetscReal alpha, TaoTerm g, Vec q, PetscReal beta, Vec x)
 {
-  PetscBool is_l1, is_l2;
-  PetscReal scale;
+  TaoTermProxMapL2Op l2ops;
+  PetscBool          is_l1, is_l2;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectTypeCompare((PetscObject)term, TAOTERML1, &is_l1));
@@ -244,21 +287,34 @@ static PetscErrorCode TaoTermProximalMap_L1(TaoTerm term, Vec p, PetscReal alpha
     PetscCall(PetscObjectTypeCompare((PetscObject)g, TAOTERMHALFL2SQUARED, &is_l2));
     PetscCheck(is_l2, PetscObjectComm((PetscObject)term), PETSC_ERR_USER, "TaoTermProximalMap_L1: TAOTERML1 only supports TAOTERMHALFL2SQUARED as regularizer");
   }
-  // argmin of alpha * |x - p|_1 + beta/2 * ||x - q||_2^2
-  // if alpha == 0, then x == q
-  // if alpha != 0 and p == NULL, then x == argmin_y of |y|_1 + (beta/alpha)2 * ||y - q||_2^2 = SoftTHreshold(beta/2*alpha, q)
-  // if alpha != 0 and p != NULL, then x == argmin_y of |z|_1 + (beta/alpha)2 * ||z + p - q||_2^2 = SoftThreshold(beta/2*alpha, y-p) - q
-  if (alpha == 0) {
+  PetscCall(L1ProxFindMap(q, p, beta, alpha, &l2ops));
+
+  switch (l2ops) {
+  case TAOTERM_PROX_NO_OP:
+    break;
+  case TAOTERM_PROX_ZERO:
+  case TAOTERM_PROX_SOLVE:
+  case TAOTERM_PROX_SOLVE_COMPOSITE:
+    PetscCall(VecZeroEntries(x));
+    break;
+  case TAOTERM_PROX_Q:
     PetscCall(VecCopy(q, x));
-  } else if (p) {
-    /* Translation Case */
-    //TODO do I want special function for translation + scaling? also current setup doesn't allow scaling
-    //(although scaling doesnt really matter for l1 for now, for things like simplex, it would matter....
-    // Translation: if f(x) = g(x+z), then prox_f(x) = prox_g(x+z)-z
-  } else {
-    /* No translation, regular case */
-    scale = alpha * beta;
-    PetscCall(TaoSoftThreshold(q, -scale, scale, x));
+    break;
+  case TAOTERM_PROX_PROX:
+    PetscCall(TaoSoftThreshold(q, -alpha/beta, alpha/beta, x));
+    break;
+  case TAOTERM_PROX_PROX_TRANS:
+    PetscCall(VecAXPBYPCZ(x, -1., 1., 0., p, q));
+    PetscCall(TaoSoftThreshold(x, -alpha/beta, alpha/beta, x));
+    PetscCall(VecAXPY(x, 1., p));
+    break;
+  case TAOTERM_PROX_SOLVE_PARAM:
+    PetscCall(VecCopy(p, x));
+    break;
+  case TAOTERM_PROX_SOLVE_COMPOSITE_TRANS:
+    SETERRQ(PetscObjectComm((PetscObject)term), PETSC_ERR_USER, "No unique solution available for this formulation.");
+  default:
+    SETERRQ(PetscObjectComm((PetscObject)term), PETSC_ERR_USER, "Invalid problem formulation type.");
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
