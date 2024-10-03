@@ -34,9 +34,21 @@ typedef struct _p_TaoTerm *TaoTerm;
 . `TAOTERMADMMMISFIT`      - uses the callback functions set in `TaoADMMSetMisfitObjectiveAndGradientRoutine()`, etc.
 . `TAOTERMSHELL`           - a container for arbitrary user-defined callbacks
 . `TAOTERMSUM`             - a sum of multiple other `TaoTerm`s
+<<<<<<< HEAD
 . `TAOTERML2SQUARED`       - $\tfrac{1}{2}\|x - \theta\|_2^2$
 . `TAOTERML1`              - $\|x - \theta\|_1$
 - `TAOTERMQUADRATIC`       - a quadratic form $\tfrac{1}{2}(x - \theta)^T A (x - \theta)$
+=======
+. `TAOTERMDM`              - a term whose value and operations are determined by a `DM`
+. `TAOTERML1`              - $\|x - \theta\|_1$, where $\theta$ are the `TaoTerm` parameters
+. `TAOTERMLINF`            - $\|x - \theta\|_\infty$
+. `TAOTERMZERO`            - Indicator function of the set containing the origin - zero cone
+. `TAOTERMBOX`             - Indicator function of the box constraint, $lb \leq x \leq ub$
+. `TAOTERMSIMPLEX`         - Indicator function of the simplex, $x \geq 0, \sum_i x_i = \alpha$.
+. `TAOTERML2SQUARED`       - $\|x - \theta\|_2^2$
+. `TAOTERMQUADRATIC`       - a quadratic form $(x - \theta)^T Q (x - \theta)$ for a matrix $Q$
+- `TAOTERMKL`              - the KL divergence $D_{KL}(x \| \theta)$
+>>>>>>> 8d2705f9e4a (wip)
 
   Level: intermediate
 
@@ -49,6 +61,9 @@ typedef const char *TaoTermType;
 #define TAOTERMADMMMISFIT      "admmmisfit"
 #define TAOTERMSHELL           "shell"
 #define TAOTERMSUM             "sum"
+#define TAOTERMZERO            "zero"
+#define TAOTERMBOX             "box"
+#define TAOTERMSIMPLEX         "simplex"
 #define TAOTERMHALFL2SQUARED   "halfl2squared"
 #define TAOTERML1              "l1"
 #define TAOTERMQUADRATIC       "quadratic"
@@ -324,6 +339,12 @@ PETSC_EXTERN PetscErrorCode TaoTermL1GetEpsilon(TaoTerm, PetscReal *);
 PETSC_EXTERN PetscErrorCode TaoTermCreateQuadratic(Mat, TaoTerm *);
 PETSC_EXTERN PetscErrorCode TaoTermQuadraticGetMat(TaoTerm, Mat *);
 PETSC_EXTERN PetscErrorCode TaoTermQuadraticSetMat(TaoTerm, Mat);
+PETSC_EXTERN PetscErrorCode TaoTermBoxSetContext(TaoTerm, PetscReal, PetscReal, Vec, Vec);
+
+PETSC_EXTERN PetscErrorCode TaoTermSimplexSetContext(TaoTerm, PetscReal, PetscReal);
+//OR TODO
+PETSC_EXTERN PetscErrorCode TaoTermSimplexSetSize(TaoTerm, PetscReal);
+PETSC_EXTERN PetscErrorCode TaoTermSimplexSetEpsilon(TaoTerm, PetscReal);
 
 PETSC_EXTERN PetscErrorCode TaoTermIsObjectiveDefined(TaoTerm, PetscBool *);
 PETSC_EXTERN PetscErrorCode TaoTermIsGradientDefined(TaoTerm, PetscBool *);
