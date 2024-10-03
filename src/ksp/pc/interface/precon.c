@@ -2039,4 +2039,3 @@ PetscErrorCode PCGetCoarseOperators(PC pc, PetscInt *num_levels, Mat *coarseOper
   PetscUseMethod(pc, "PCGetCoarseOperators_C", (PC, PetscInt *, Mat *[]), (pc, num_levels, coarseOperators));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-
