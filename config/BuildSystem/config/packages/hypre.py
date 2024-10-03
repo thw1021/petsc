@@ -10,8 +10,9 @@ class Configure(config.package.GNUPackage):
     self.versioninclude  = 'HYPRE_config.h'
     self.requiresversion = 1
     #self.gitcommit       = 'v'+self.version
-    self.gitcommit       = 'ee74c20e7a84e4e48eec142c6bb6ff2a75db72f1' # master feb-16-2024 (2.31.0+recursive-make-fix)
-    self.download        = ['git://https://github.com/hypre-space/hypre','https://github.com/hypre-space/hypre/archive/'+self.gitcommit+'.tar.gz']
+    #self.gitcommit       = 'ee74c20e7a84e4e48eec142c6bb6ff2a75db72f1' # master feb-16-2024 (2.31.0+recursive-make-fix)
+    self.gitcommit       = 'balay/fix-hypre_IJMatrixGetValuesParCSR'
+    self.download        = ['git://https://github.com/balay/hypre']
     self.functions       = ['HYPRE_IJMatrixCreate']
     self.includes        = ['HYPRE.h']
     self.liblist         = [['libHYPRE.a']]
@@ -24,7 +25,7 @@ class Configure(config.package.GNUPackage):
     config.package.GNUPackage.setupHelp(self,help)
     import nargs
     help.addArgument('HYPRE', '-with-hypre-gpu-arch=<string>',  nargs.ArgString(None, 0, 'Value passed to hypre\'s --with-gpu-arch= configure option'))
-    help.addArgument('HYPRE', '-download-hypre-openmp', nargs.ArgBool(None, 1, 'Let hypre use OpenMP if available'))    
+    help.addArgument('HYPRE', '-download-hypre-openmp', nargs.ArgBool(None, 1, 'Let hypre use OpenMP if available'))
     return
 
   def setupDependencies(self, framework):
