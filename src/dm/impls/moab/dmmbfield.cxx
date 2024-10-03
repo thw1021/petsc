@@ -155,7 +155,7 @@ PetscErrorCode DMMoabSetGlobalFieldVector(DM dm, Vec fvec)
 
 .seealso: `DMMoabGetFieldName()`, `DMMoabSetFieldName()`
 @*/
-PetscErrorCode DMMoabSetFieldNames(DM dm, PetscInt numFields, const char *fields[])
+PetscErrorCode DMMoabSetFieldNames(DM dm, PetscInt numFields, const char *const *fields)
 {
   PetscInt i;
   DM_Moab *dmmoab;

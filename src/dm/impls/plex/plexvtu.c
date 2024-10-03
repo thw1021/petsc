@@ -22,6 +22,11 @@ static const char precision[] = "UnknownPrecision";
 typedef PetscReal PetscVTUReal;
   #define MPIU_VTUREAL MPIU_REAL
 #endif
+#if defined(PETSC_USE_REAL___FLOAT128) || defined(PETSC_USE_REAL___FP16)
+  #define PetscVTUReal_(a) ((PetscVTUReal)(a))
+#else
+  #define PetscVTUReal_(a) (a)
+#endif
 
 static PetscErrorCode TransferWrite(MPI_Comm comm, PetscViewer viewer, FILE *fp, PetscMPIInt srank, PetscMPIInt root, const void *send, void *recv, PetscCount count, MPI_Datatype mpidatatype, PetscMPIInt tag)
 {
@@ -466,13 +471,13 @@ PetscErrorCode DMPlexVTKWriteAll_VTU(DM dm, PetscViewer viewer)
                   if ((closure[v] >= vStart) && (closure[v] < vEnd)) {
                     PetscCall(PetscSectionGetOffset(coordSection, closure[v], &off));
                     if (dimEmbed != 3) {
-                      y[cnt * 3 + 0] = (PetscVTUReal)PetscRealPart(x[off + 0]);
-                      y[cnt * 3 + 1] = (PetscVTUReal)((dimEmbed > 1) ? PetscRealPart(x[off + 1]) : 0.0);
-                      y[cnt * 3 + 2] = (PetscVTUReal)0.0;
+                      y[cnt * 3 + 0] = PetscVTUReal_(PetscRealPart(x[off + 0]));
+                      y[cnt * 3 + 1] = PetscVTUReal_((dimEmbed > 1) ? PetscRealPart(x[off + 1]) : 0);
+                      y[cnt * 3 + 2] = 0;
                     } else {
-                      y[cnt * 3 + 0] = (PetscVTUReal)PetscRealPart(x[off + 0]);
-                      y[cnt * 3 + 1] = (PetscVTUReal)PetscRealPart(x[off + 1]);
-                      y[cnt * 3 + 2] = (PetscVTUReal)PetscRealPart(x[off + 2]);
+                      y[cnt * 3 + 0] = PetscVTUReal_(PetscRealPart(x[off + 0]));
+                      y[cnt * 3 + 1] = PetscVTUReal_(PetscRealPart(x[off + 1]));
+                      y[cnt * 3 + 2] = PetscVTUReal_(PetscRealPart(x[off + 2]));
                     }
                     cnt++;
                   }
@@ -482,13 +487,13 @@ PetscErrorCode DMPlexVTKWriteAll_VTU(DM dm, PetscViewer viewer)
                 PetscCall(PetscSectionGetOffset(cellCoordSection, c, &off));
                 if (dimEmbed != 3) {
                   for (i = 0; i < dof / dimEmbed; i++) {
-                    y[cnt * 3 + 0] = (PetscVTUReal)PetscRealPart(cx[off + i * dimEmbed + 0]);
-                    y[cnt * 3 + 1] = (PetscVTUReal)((dimEmbed > 1) ? PetscRealPart(cx[off + i * dimEmbed + 1]) : 0.0);
-                    y[cnt * 3 + 2] = (PetscVTUReal)0.0;
+                    y[cnt * 3 + 0] = PetscVTUReal_(PetscRealPart(cx[off + i * dimEmbed + 0]));
+                    y[cnt * 3 + 1] = PetscVTUReal_((dimEmbed > 1) ? PetscRealPart(cx[off + i * dimEmbed + 1]) : 0);
+                    y[cnt * 3 + 2] = 0;
                     cnt++;
                   }
                 } else {
-                  for (i = 0; i < dof; i++) y[cnt * 3 + i] = (PetscVTUReal)PetscRealPart(cx[off + i]);
+                  for (i = 0; i < dof; i++) y[cnt * 3 + i] = PetscVTUReal_(PetscRealPart(cx[off + i]));
                   cnt += dof / dimEmbed;
                 }
               }
@@ -496,9 +501,9 @@ PetscErrorCode DMPlexVTKWriteAll_VTU(DM dm, PetscViewer viewer)
             PetscCheck(cnt == piece.nvertices, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Count does not match");
           } else {
             for (i = 0; i < piece.nvertices; i++) {
-              y[i * 3 + 0] = (PetscVTUReal)PetscRealPart(x[i * dimEmbed + 0]);
-              y[i * 3 + 1] = (PetscVTUReal)((dimEmbed > 1) ? PetscRealPart(x[i * dimEmbed + 1]) : 0.);
-              y[i * 3 + 2] = (PetscVTUReal)((dimEmbed > 2) ? PetscRealPart(x[i * dimEmbed + 2]) : 0.);
+              y[i * 3 + 0] = PetscVTUReal_(PetscRealPart(x[i * dimEmbed + 0]));
+              y[i * 3 + 1] = PetscVTUReal_((dimEmbed > 1) ? PetscRealPart(x[i * dimEmbed + 1]) : 0);
+              y[i * 3 + 2] = PetscVTUReal_((dimEmbed > 2) ? PetscRealPart(x[i * dimEmbed + 2]) : 0);
             }
           }
         }
@@ -592,7 +597,7 @@ PetscErrorCode DMPlexVTKWriteAll_VTU(DM dm, PetscViewer viewer)
                   PetscCall(PetscSectionGetOffset(section, c, &off));
                 }
                 xpoint = &x[off];
-                for (j = 0; j < fbs; j++) y[cnt++] = (PetscVTUReal)(l ? PetscImaginaryPart(xpoint[j]) : PetscRealPart(xpoint[j]));
+                for (j = 0; j < fbs; j++) y[cnt++] = PetscVTUReal_(l ? PetscImaginaryPart(xpoint[j]) : PetscRealPart(xpoint[j]));
                 for (; j < 3; j++) y[cnt++] = 0.;
               }
               PetscCheck(cnt == piece.ncells * 3, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Count does not match");
@@ -617,7 +622,7 @@ PetscErrorCode DMPlexVTKWriteAll_VTU(DM dm, PetscViewer viewer)
                     PetscCall(PetscSectionGetOffset(section, c, &off));
                   }
                   xpoint   = &x[off];
-                  y[cnt++] = (PetscVTUReal)(l ? PetscImaginaryPart(xpoint[i]) : PetscRealPart(xpoint[i]));
+                  y[cnt++] = PetscVTUReal_(l ? PetscImaginaryPart(xpoint[i]) : PetscRealPart(xpoint[i]));
                 }
                 PetscCheck(cnt == piece.ncells, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Count does not match");
                 PetscCall(TransferWrite(comm, viewer, fp, r, 0, y, buffer, piece.ncells, MPIU_VTUREAL, tag));
@@ -670,7 +675,7 @@ PetscErrorCode DMPlexVTKWriteAll_VTU(DM dm, PetscViewer viewer)
                     PetscCall(PetscSectionGetOffset(section, v, &off));
                   }
                   xpoint = &x[off];
-                  for (j = 0; j < fbs; j++) y[cnt++] = (PetscVTUReal)(l ? PetscImaginaryPart(xpoint[j]) : PetscRealPart(xpoint[j]));
+                  for (j = 0; j < fbs; j++) y[cnt++] = PetscVTUReal_(l ? PetscImaginaryPart(xpoint[j]) : PetscRealPart(xpoint[j]));
                   for (; j < 3; j++) y[cnt++] = 0.;
                 }
               } else {
@@ -690,7 +695,7 @@ PetscErrorCode DMPlexVTKWriteAll_VTU(DM dm, PetscViewer viewer)
                         PetscCall(PetscSectionGetOffset(section, closure[v], &voff));
                       }
                       xpoint = &x[voff];
-                      for (j = 0; j < fbs; j++) y[cnt + off++] = (PetscVTUReal)(l ? PetscImaginaryPart(xpoint[j]) : PetscRealPart(xpoint[j]));
+                      for (j = 0; j < fbs; j++) y[cnt + off++] = PetscVTUReal_(l ? PetscImaginaryPart(xpoint[j]) : PetscRealPart(xpoint[j]));
                       for (; j < 3; j++) y[cnt + off++] = 0.;
                     }
                   }
@@ -716,7 +721,7 @@ PetscErrorCode DMPlexVTKWriteAll_VTU(DM dm, PetscViewer viewer)
                       PetscCall(PetscSectionGetOffset(section, v, &off));
                     }
                     xpoint   = &x[off];
-                    y[cnt++] = (PetscVTUReal)(l ? PetscImaginaryPart(xpoint[i]) : PetscRealPart(xpoint[i]));
+                    y[cnt++] = PetscVTUReal_(l ? PetscImaginaryPart(xpoint[i]) : PetscRealPart(xpoint[i]));
                   }
                 } else {
                   for (c = cStart, cnt = 0; c < cEnd; c++) {

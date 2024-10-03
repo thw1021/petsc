@@ -2,6 +2,11 @@
 
 #include <petsc/private/petscimpl.h>
 
+#if defined(__cplusplus) && defined(PETSC_CHECK_USELESSCAST)
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wuseless-cast"
+#endif
+
 #define kh_inline   inline
 #define klib_unused PETSC_UNUSED
 #if !defined(kh_foreach_value)
@@ -252,3 +257,7 @@ static inline PetscHash_t PetscHashCombine(PetscHash_t seed, PetscHash_t hash)
 }
 
 #define PetscHashEqual(a, b) ((a) == (b))
+
+#if defined(__cplusplus) && defined(PETSC_CHECK_USELESSCAST)
+  #pragma GCC diagnostic pop
+#endif

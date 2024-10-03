@@ -782,7 +782,7 @@ PetscErrorCode DMMoabCreateBoxMesh(MPI_Comm comm, PetscInt dim, PetscBool useSim
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode DMMoab_GetReadOptions_Private(PetscBool by_rank, PetscInt numproc, PetscInt dim, PetscInt nghost, MoabReadMode mode, PetscInt dbglevel, const char *dm_opts, const char *extra_opts, const char **read_opts)
+static PetscErrorCode DMMoab_GetReadOptions_Private(PetscBool by_rank, PetscInt numproc, PetscInt dim, PetscInt nghost, MoabReadMode mode, PetscInt dbglevel, const char *dm_opts, const char *extra_opts, char **read_opts)
 {
   char *ropts;
   char  ropts_par[PETSC_MAX_PATH_LEN], ropts_pargh[PETSC_MAX_PATH_LEN];
@@ -842,7 +842,7 @@ PetscErrorCode DMMoabLoadFromFile(MPI_Comm comm, PetscInt dim, PetscInt nghost, 
   moab::ParallelComm *pcomm;
 #endif
   moab::Range verts, elems;
-  const char *readopts;
+  char       *readopts;
 
   PetscFunctionBegin;
   PetscAssertPointer(dm, 6);

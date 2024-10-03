@@ -188,7 +188,7 @@ static PetscErrorCode GmshCellInfoSetUp(void)
 }
 
 #define GmshCellTypeCheck(ct) \
-  PetscMacroReturnStandard(const int _ct_ = (int)ct; PetscCheck(_ct_ >= 0 && _ct_ < (int)PETSC_STATIC_ARRAY_LENGTH(GmshCellMap), PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid Gmsh element type %d", _ct_); PetscCheck(GmshCellMap[_ct_].cellType == _ct_, PETSC_COMM_SELF, PETSC_ERR_SUP, "Unsupported Gmsh element type %d", _ct_); \
+  PetscMacroReturnStandard(const int _ct_ = ct; PetscCheck(_ct_ >= 0 && _ct_ < (int)PETSC_STATIC_ARRAY_LENGTH(GmshCellMap), PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid Gmsh element type %d", _ct_); PetscCheck(GmshCellMap[_ct_].cellType == _ct_, PETSC_COMM_SELF, PETSC_ERR_SUP, "Unsupported Gmsh element type %d", _ct_); \
                            PetscCheck(GmshCellMap[_ct_].polytope != -1, PETSC_COMM_SELF, PETSC_ERR_SUP, "Unsupported Gmsh element type %d", _ct_);)
 
 typedef struct {
@@ -324,17 +324,25 @@ static PetscErrorCode GmshReadPetscInt(GmshFile *gmsh, PetscInt *buf, PetscCount
     int *ibuf = NULL;
     PetscCall(GmshBufferSizeGet(gmsh, count, &ibuf));
     PetscCall(GmshRead(gmsh, ibuf, count, PETSC_ENUM));
-    for (i = 0; i < count; ++i) buf[i] = (PetscInt)ibuf[i];
+    for (i = 0; i < count; ++i) buf[i] = ibuf[i];
   } else if (dataSize == sizeof(long)) {
     long *ibuf = NULL;
     PetscCall(GmshBufferSizeGet(gmsh, count, &ibuf));
     PetscCall(GmshRead(gmsh, ibuf, count, PETSC_LONG));
+#if defined(PETSC_USE_64BIT_INDICES)
+    for (i = 0; i < count; ++i) buf[i] = ibuf[i];
+#else
     for (i = 0; i < count; ++i) buf[i] = (PetscInt)ibuf[i];
+#endif
   } else if (dataSize == sizeof(PetscInt64)) {
     PetscInt64 *ibuf = NULL;
     PetscCall(GmshBufferSizeGet(gmsh, count, &ibuf));
     PetscCall(GmshRead(gmsh, ibuf, count, PETSC_INT64));
+#if defined(PETSC_USE_64BIT_INDICES)
+    for (i = 0; i < count; ++i) buf[i] = ibuf[i];
+#else
     for (i = 0; i < count; ++i) buf[i] = (PetscInt)ibuf[i];
+#endif
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -359,12 +367,12 @@ static PetscErrorCode GmshReadPetscCount(GmshFile *gmsh, PetscCount *buf, PetscC
     long *ibuf = NULL;
     PetscCall(GmshBufferSizeGet(gmsh, count, &ibuf));
     PetscCall(GmshRead(gmsh, ibuf, count, PETSC_LONG));
-    for (i = 0; i < count; ++i) buf[i] = (PetscCount)ibuf[i];
+    for (i = 0; i < count; ++i) buf[i] = ibuf[i];
   } else if (dataSize == sizeof(PetscInt64)) {
     PetscInt64 *ibuf = NULL;
     PetscCall(GmshBufferSizeGet(gmsh, count, &ibuf));
     PetscCall(GmshRead(gmsh, ibuf, count, PETSC_INT64));
-    for (i = 0; i < count; ++i) buf[i] = (PetscCount)ibuf[i];
+    for (i = 0; i < count; ++i) buf[i] = ibuf[i];
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -670,13 +678,14 @@ static PetscErrorCode GmshReadEntities_v40(GmshFile *gmsh, GmshMesh *mesh)
   PetscFunctionBegin;
   PetscCall(PetscViewerRead(viewer, lbuf, 4, NULL, PETSC_LONG));
   if (byteSwap) PetscCall(PetscByteSwap(lbuf, PETSC_LONG, 4));
-  for (i = 0; i < 4; ++i) count[i] = (PetscCount)lbuf[i];
+  for (i = 0; i < 4; ++i) count[i] = lbuf[i];
   PetscCall(GmshEntitiesCreate(count, &mesh->entities));
   for (dim = 0; dim < 4; ++dim) {
     for (index = 0; index < count[dim]; ++index) {
       PetscCall(PetscViewerRead(viewer, &eid, 1, NULL, PETSC_ENUM));
       if (byteSwap) PetscCall(PetscByteSwap(&eid, PETSC_ENUM, 1));
-      PetscCall(GmshEntitiesAdd(mesh->entities, (PetscInt)index, dim, eid, &entity));
+      PetscCall(PetscIntCast(index, &num));
+      PetscCall(GmshEntitiesAdd(mesh->entities, num, dim, eid, &entity));
       PetscCall(PetscViewerRead(viewer, entity->bbox, 6, NULL, PETSC_DOUBLE));
       if (byteSwap) PetscCall(PetscByteSwap(entity->bbox, PETSC_DOUBLE, 6));
       PetscCall(PetscViewerRead(viewer, &lnum, 1, NULL, PETSC_LONG));
@@ -685,7 +694,8 @@ static PetscErrorCode GmshReadEntities_v40(GmshFile *gmsh, GmshMesh *mesh)
       PetscCall(GmshBufferGet(gmsh, num, sizeof(int), &ibuf));
       PetscCall(PetscViewerRead(viewer, ibuf, num, NULL, PETSC_ENUM));
       if (byteSwap) PetscCall(PetscByteSwap(ibuf, PETSC_ENUM, num));
-      entity->numTags = numTags = (int)PetscMin(num, GMSH_MAX_TAGS);
+      PetscCall(PetscMPIIntCast(PetscMin(num, GMSH_MAX_TAGS), &numTags));
+      entity->numTags = numTags;
       for (t = 0; t < numTags; ++t) entity->tags[t] = ibuf[t];
       if (dim == 0) continue;
       PetscCall(PetscViewerRead(viewer, &lnum, 1, NULL, PETSC_LONG));
@@ -803,7 +813,7 @@ static PetscErrorCode GmshReadElements_v40(GmshFile *gmsh, GmshMesh *mesh)
     PetscCall(GmshCellTypeCheck(cellType));
     numVerts = GmshCellMap[cellType].numVerts;
     numNodes = GmshCellMap[cellType].numNodes;
-    numTags  = (int)entity->numTags;
+    PetscCall(PetscMPIIntCast(entity->numTags, &numTags));
     PetscCall(PetscViewerRead(viewer, &numElements, 1, NULL, PETSC_LONG));
     if (byteSwap) PetscCall(PetscByteSwap(&numElements, PETSC_LONG, 1));
     PetscCall(GmshBufferGet(gmsh, (1 + numNodes) * numElements, sizeof(int), &ibuf));
@@ -896,8 +906,8 @@ static PetscErrorCode GmshReadPeriodic_v40(GmshFile *gmsh, PetscInt periodicMap[
         correspondingNode = ibuf[0];
         primaryNode       = ibuf[1];
       }
-      correspondingNode              = (int)nodeMap[correspondingNode];
-      primaryNode                    = (int)nodeMap[primaryNode];
+      PetscCall(PetscMPIIntCast(nodeMap[correspondingNode], &correspondingNode));
+      PetscCall(PetscMPIIntCast(nodeMap[primaryNode], &primaryNode));
       periodicMap[correspondingNode] = primaryNode;
     }
   }
@@ -933,6 +943,7 @@ static PetscErrorCode GmshReadEntities_v41(GmshFile *gmsh, GmshMesh *mesh)
   PetscCount  count[4], index, numTags;
   int         dim, eid, *tags = NULL;
   GmshEntity *entity = NULL;
+  PetscInt    num;
 
   PetscFunctionBegin;
   PetscCall(GmshReadPetscCount(gmsh, count, 4));
@@ -940,12 +951,13 @@ static PetscErrorCode GmshReadEntities_v41(GmshFile *gmsh, GmshMesh *mesh)
   for (dim = 0; dim < 4; ++dim) {
     for (index = 0; index < count[dim]; ++index) {
       PetscCall(GmshReadInt(gmsh, &eid, 1));
-      PetscCall(GmshEntitiesAdd(mesh->entities, (PetscInt)index, dim, eid, &entity));
+      PetscCall(PetscIntCast(index, &num));
+      PetscCall(GmshEntitiesAdd(mesh->entities, num, dim, eid, &entity));
       PetscCall(GmshReadDouble(gmsh, entity->bbox, (dim == 0) ? 3 : 6));
       PetscCall(GmshReadPetscCount(gmsh, &numTags, 1));
       PetscCall(GmshBufferGet(gmsh, numTags, sizeof(int), &tags));
       PetscCall(GmshReadInt(gmsh, tags, numTags));
-      PetscCheck(numTags <= GMSH_MAX_TAGS, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "PETSc currently supports up to %" PetscInt_FMT " tags per entity, not %" PetscCount_FMT, (PetscInt)GMSH_MAX_TAGS, numTags);
+      PetscCheck(numTags <= GMSH_MAX_TAGS, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "PETSc currently supports up to %d tags per entity, not %" PetscCount_FMT, GMSH_MAX_TAGS, numTags);
       PetscCall(PetscIntCast(numTags, &entity->numTags));
       for (PetscInt i = 0; i < entity->numTags; ++i) entity->tags[i] = tags[i];
       if (dim == 0) continue;
@@ -1727,8 +1739,8 @@ PetscErrorCode DMPlexCreateGmsh(MPI_Comm comm, PetscViewer viewer, PetscBool int
   {
     int buf[6];
 
-    buf[0] = (int)dim;
-    buf[1] = (int)order;
+    PetscCall(PetscMPIIntCast(dim, &buf[0]));
+    PetscCall(PetscMPIIntCast(order, &buf[1]));
     buf[2] = periodic;
     buf[3] = isSimplex;
     buf[4] = isHybrid;

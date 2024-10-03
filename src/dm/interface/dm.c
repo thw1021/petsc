@@ -12,10 +12,6 @@
   #include <petscfeceed.h>
 #endif
 
-#if !defined(PETSC_HAVE_WINDOWS_COMPILERS)
-  #include <petsc/private/valgrind/memcheck.h>
-#endif
-
 PetscClassId DM_CLASSID;
 PetscClassId DMLABEL_CLASSID;
 PetscLogEvent DM_Convert, DM_GlobalToLocal, DM_LocalToGlobal, DM_LocalToLocal, DM_LocatePoints, DM_Coarsen, DM_Refine, DM_CreateInterpolation, DM_CreateRestriction, DM_CreateInjection, DM_CreateMatrix, DM_CreateMassMatrix, DM_Load, DM_AdaptInterpolator, DM_ProjectFunction;
@@ -148,9 +144,9 @@ PetscErrorCode DMClone(DM dm, DM *newdm)
   (*newdm)->prealloc_only = dm->prealloc_only;
   (*newdm)->prealloc_skip = dm->prealloc_skip;
   PetscCall(PetscFree((*newdm)->vectype));
-  PetscCall(PetscStrallocpy(dm->vectype, (char **)&(*newdm)->vectype));
+  PetscCall(PetscStrallocpy(dm->vectype, &(*newdm)->vectype));
   PetscCall(PetscFree((*newdm)->mattype));
-  PetscCall(PetscStrallocpy(dm->mattype, (char **)&(*newdm)->mattype));
+  PetscCall(PetscStrallocpy(dm->mattype, &(*newdm)->mattype));
   PetscCall(DMGetDimension(dm, &dim));
   PetscCall(DMSetDimension(*newdm, dim));
   PetscTryTypeMethod(dm, clone, newdm);
@@ -236,14 +232,11 @@ PetscErrorCode DMClone(DM dm, DM *newdm)
 @*/
 PetscErrorCode DMSetVecType(DM dm, VecType ctype)
 {
-  char *tmp;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscAssertPointer(ctype, 2);
-  tmp = (char *)dm->vectype;
-  PetscCall(PetscStrallocpy(ctype, (char **)&dm->vectype));
-  PetscCall(PetscFree(tmp));
+  PetscCall(PetscFree(dm->vectype));
+  PetscCall(PetscStrallocpy(ctype, &dm->vectype));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -394,14 +387,11 @@ PetscErrorCode DMGetISColoringType(DM dm, ISColoringType *ctype)
 @*/
 PetscErrorCode DMSetMatType(DM dm, MatType ctype)
 {
-  char *tmp;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscAssertPointer(ctype, 2);
-  tmp = (char *)dm->mattype;
-  PetscCall(PetscStrallocpy(ctype, (char **)&dm->mattype));
-  PetscCall(PetscFree(tmp));
+  PetscCall(PetscFree(dm->mattype));
+  PetscCall(PetscStrallocpy(ctype, &dm->mattype));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -714,7 +704,7 @@ PetscErrorCode DMDestroy(DM *dm)
   /* Destroy the work arrays */
   {
     DMWorkLink link, next;
-    PetscCheck(!(*dm)->workout, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Work array still checked out %p %p", (void *)(*dm)->workout, (void *)(*dm)->workout->mem);
+    PetscCheck(!(*dm)->workout, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Work array still checked out %p %p", (void *)(*dm)->workout, (*dm)->workout->mem);
     for (link = (*dm)->workin; link; link = next) {
       next = link->next;
       PetscCall(PetscFree(link->mem));
@@ -1710,12 +1700,8 @@ PetscErrorCode DMGetWorkArray(DM dm, PetscInt count, MPI_Datatype dtype, void *m
     PetscCall(PetscMalloc(dsize * count, &link->mem));
     link->bytes = dsize * count;
   }
-  link->next  = dm->workout;
-  dm->workout = link;
-#if defined(__MEMCHECK_H) && (defined(PLAT_amd64_linux) || defined(PLAT_x86_linux) || defined(PLAT_amd64_darwin))
-  VALGRIND_MAKE_MEM_NOACCESS((char *)link->mem + (size_t)dsize * count, link->bytes - (size_t)dsize * count);
-  VALGRIND_MAKE_MEM_UNDEFINED(link->mem, (size_t)dsize * count);
-#endif
+  link->next    = dm->workout;
+  dm->workout   = link;
   *(void **)mem = link->mem;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1990,7 +1976,7 @@ PetscErrorCode DMCreateFieldIS(DM dm, PetscInt *numFields, char ***fieldNames, I
         const char *fieldName;
 
         PetscCall(PetscSectionGetFieldName(section, f, &fieldName));
-        PetscCall(PetscStrallocpy(fieldName, (char **)&(*fieldNames)[f]));
+        PetscCall(PetscStrallocpy(fieldName, &(*fieldNames)[f]));
       }
     }
     if (fields) {
@@ -2089,7 +2075,7 @@ PetscErrorCode DMCreateFieldDecomposition(DM dm, PetscInt *len, char ***namelist
         PetscCall(DMCreateSubDM(dm, 1, &f, islist ? &(*islist)[f] : NULL, dmlist ? &(*dmlist)[f] : NULL));
         if (namelist) {
           PetscCall(PetscSectionGetFieldName(section, f, &fieldName));
-          PetscCall(PetscStrallocpy(fieldName, (char **)&(*namelist)[f]));
+          PetscCall(PetscStrallocpy(fieldName, &(*namelist)[f]));
         }
       }
     } else {
@@ -4084,9 +4070,9 @@ PetscErrorCode DMConvert(DM dm, DMType newtype, DM *M)
       PetscCall(DMSetPeriodicity(*M, maxCell, Lstart, L));
       (*M)->prealloc_only = dm->prealloc_only;
       PetscCall(PetscFree((*M)->vectype));
-      PetscCall(PetscStrallocpy(dm->vectype, (char **)&(*M)->vectype));
+      PetscCall(PetscStrallocpy(dm->vectype, &(*M)->vectype));
       PetscCall(PetscFree((*M)->mattype));
-      PetscCall(PetscStrallocpy(dm->mattype, (char **)&(*M)->mattype));
+      PetscCall(PetscStrallocpy(dm->mattype, &(*M)->mattype));
     }
     PetscCall(PetscLogEventEnd(DM_Convert, dm, 0, 0, 0));
   }
@@ -4173,7 +4159,7 @@ PetscErrorCode DMLoad(DM newdm, PetscViewer viewer)
     char     type[256];
 
     PetscCall(PetscViewerBinaryRead(viewer, &classid, 1, NULL, PETSC_INT));
-    PetscCheck(classid == DM_FILE_CLASSID, PetscObjectComm((PetscObject)newdm), PETSC_ERR_ARG_WRONG, "Not DM next in file, classid found %d", (int)classid);
+    PetscCheck(classid == DM_FILE_CLASSID, PetscObjectComm((PetscObject)newdm), PETSC_ERR_ARG_WRONG, "Not DM next in file, classid found %" PetscInt_FMT, classid);
     PetscCall(PetscViewerBinaryRead(viewer, type, 256, NULL, PETSC_CHAR));
     PetscCall(DMSetType(newdm, type));
     PetscTryTypeMethod(newdm, load, viewer);
@@ -5038,7 +5024,7 @@ PetscErrorCode DMSetField_Internal(DM dm, PetscInt f, DMLabel label, PetscObject
   dm->fields[f].label = label;
   dm->fields[f].disc  = disc;
   PetscCall(PetscObjectReference((PetscObject)label));
-  PetscCall(PetscObjectReference((PetscObject)disc));
+  PetscCall(PetscObjectReference(disc));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -5105,7 +5091,7 @@ PetscErrorCode DMAddField(DM dm, DMLabel label, PetscObject disc)
   dm->fields[Nf].label = label;
   dm->fields[Nf].disc  = disc;
   PetscCall(PetscObjectReference((PetscObject)label));
-  PetscCall(PetscObjectReference((PetscObject)disc));
+  PetscCall(PetscObjectReference(disc));
   PetscCall(DMSetDefaultAdjacency_Private(dm, Nf, disc));
   PetscCall(DMClearDS(dm));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -8930,7 +8916,7 @@ PetscErrorCode DMMonitorSet(DM dm, PetscErrorCode (*f)(DM, void *), void *mctx, 
   PetscCheck(dm->numbermonitors < MAXDMMONITORS, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Too many monitors set");
   dm->monitor[dm->numbermonitors]          = f;
   dm->monitordestroy[dm->numbermonitors]   = monitordestroy;
-  dm->monitorcontext[dm->numbermonitors++] = (void *)mctx;
+  dm->monitorcontext[dm->numbermonitors++] = mctx;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -9007,7 +8993,7 @@ PetscErrorCode DMMonitorSetFromOptions(DM dm, const char name[], const char help
     PetscCall(PetscViewerAndFormatCreate(viewer, format, &vf));
     PetscCall(PetscViewerDestroy(&viewer));
     if (monitorsetup) PetscCall((*monitorsetup)(dm, vf));
-    PetscCall(DMMonitorSet(dm, (PetscErrorCode (*)(DM, void *))monitor, vf, (PetscErrorCode (*)(void **))PetscViewerAndFormatDestroy));
+    PetscCall(DMMonitorSet(dm, monitor, vf, (PetscErrorCode (*)(void **))PetscViewerAndFormatDestroy));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }

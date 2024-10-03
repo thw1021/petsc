@@ -60,8 +60,8 @@ PetscErrorCode MatRestoreColumnIJ_SeqSELL_Color(Mat A, PetscInt oshift, PetscBoo
 {
   PetscFunctionBegin;
   if (!ia) PetscFunctionReturn(PETSC_SUCCESS);
-  PetscCall(PetscFree(*ia));
-  PetscCall(PetscFree(*ja));
+  PetscCall(PetscFreeConst(*ia));
+  PetscCall(PetscFreeConst(*ja));
   PetscCall(PetscFree(*spidx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
