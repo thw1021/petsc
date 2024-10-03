@@ -118,17 +118,17 @@ PETSC_INTERN PetscErrorCode MatGetFactor_seqaij_petsc(Mat A, MatFactorType ftype
     (*B)->ops->lufactorsymbolic  = MatLUFactorSymbolic_SeqAIJ;
 
     PetscCall(MatSetBlockSizesFromMats(*B, A, A));
-    PetscCall(PetscStrallocpy(MATORDERINGND, (char **)&(*B)->preferredordering[MAT_FACTOR_LU]));
-    PetscCall(PetscStrallocpy(MATORDERINGNATURAL, (char **)&(*B)->preferredordering[MAT_FACTOR_ILU]));
-    PetscCall(PetscStrallocpy(MATORDERINGNATURAL, (char **)&(*B)->preferredordering[MAT_FACTOR_ILUDT]));
+    PetscCall(PetscStrallocpy(MATORDERINGND, &(*B)->preferredordering[MAT_FACTOR_LU]));
+    PetscCall(PetscStrallocpy(MATORDERINGNATURAL, &(*B)->preferredordering[MAT_FACTOR_ILU]));
+    PetscCall(PetscStrallocpy(MATORDERINGNATURAL, &(*B)->preferredordering[MAT_FACTOR_ILUDT]));
   } else if (ftype == MAT_FACTOR_CHOLESKY || ftype == MAT_FACTOR_ICC) {
     PetscCall(MatSetType(*B, MATSEQSBAIJ));
     PetscCall(MatSeqSBAIJSetPreallocation(*B, 1, MAT_SKIP_ALLOCATION, NULL));
 
     (*B)->ops->iccfactorsymbolic      = MatICCFactorSymbolic_SeqAIJ;
     (*B)->ops->choleskyfactorsymbolic = MatCholeskyFactorSymbolic_SeqAIJ;
-    PetscCall(PetscStrallocpy(MATORDERINGND, (char **)&(*B)->preferredordering[MAT_FACTOR_CHOLESKY]));
-    PetscCall(PetscStrallocpy(MATORDERINGNATURAL, (char **)&(*B)->preferredordering[MAT_FACTOR_ICC]));
+    PetscCall(PetscStrallocpy(MATORDERINGND, &(*B)->preferredordering[MAT_FACTOR_CHOLESKY]));
+    PetscCall(PetscStrallocpy(MATORDERINGNATURAL, &(*B)->preferredordering[MAT_FACTOR_ICC]));
   } else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "Factor type not supported");
   (*B)->factortype = ftype;
 

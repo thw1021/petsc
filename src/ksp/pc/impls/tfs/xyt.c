@@ -180,17 +180,17 @@ PetscErrorCode XYT_stats(xyt_ADT xyt_handle)
   if (!PCTFS_my_id) {
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%d :: min   xyt_nnz=%" PetscInt_FMT "\n", PCTFS_my_id, vals[0]));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%d :: max   xyt_nnz=%" PetscInt_FMT "\n", PCTFS_my_id, vals[1]));
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%d :: avg   xyt_nnz=%g\n", PCTFS_my_id, (double)(1.0 * vals[2] / PCTFS_num_nodes)));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%d :: avg   xyt_nnz=%g\n", PCTFS_my_id, 1.0 * vals[2] / PCTFS_num_nodes));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%d :: tot   xyt_nnz=%" PetscInt_FMT "\n", PCTFS_my_id, vals[2]));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%d :: xyt   C(2d)  =%g\n", PCTFS_my_id, (double)(vals[2] / (PetscPowReal(1.0 * vals[5], 1.5)))));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%d :: xyt   C(3d)  =%g\n", PCTFS_my_id, (double)(vals[2] / (PetscPowReal(1.0 * vals[5], 1.6667)))));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%d :: min   xyt_n  =%" PetscInt_FMT "\n", PCTFS_my_id, vals[3]));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%d :: max   xyt_n  =%" PetscInt_FMT "\n", PCTFS_my_id, vals[4]));
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%d :: avg   xyt_n  =%g\n", PCTFS_my_id, (double)(1.0 * vals[5] / PCTFS_num_nodes)));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%d :: avg   xyt_n  =%g\n", PCTFS_my_id, 1.0 * vals[5] / PCTFS_num_nodes));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%d :: tot   xyt_n  =%" PetscInt_FMT "\n", PCTFS_my_id, vals[5]));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%d :: min   xyt_buf=%" PetscInt_FMT "\n", PCTFS_my_id, vals[6]));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%d :: max   xyt_buf=%" PetscInt_FMT "\n", PCTFS_my_id, vals[7]));
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%d :: avg   xyt_buf=%g\n", PCTFS_my_id, (double)(1.0 * vals[8] / PCTFS_num_nodes)));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%d :: avg   xyt_buf=%g\n", PCTFS_my_id, 1.0 * vals[8] / PCTFS_num_nodes));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%d :: min   xyt_slv=%g\n", PCTFS_my_id, (double)PetscRealPart(fvals[0])));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%d :: max   xyt_slv=%g\n", PCTFS_my_id, (double)PetscRealPart(fvals[1])));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%d :: avg   xyt_slv=%g\n", PCTFS_my_id, (double)PetscRealPart(fvals[2] / PCTFS_num_nodes)));
@@ -395,7 +395,7 @@ static PetscErrorCode xyt_generate(xyt_ADT xyt_handle)
     /* compute sqrt(alpha) = sqrt(u_l^T.u_l) - comm portion */
     PetscCall(PCTFS_grop_hc(&alpha, &alpha_w, 1, op, dim));
 
-    alpha = (PetscScalar)PetscSqrtReal((PetscReal)alpha);
+    alpha = PetscSqrtReal(PetscRealPart(alpha));
 
     /* check for small alpha                             */
     /* LATER use this to detect and determine null space */
