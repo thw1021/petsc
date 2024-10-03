@@ -2524,6 +2524,8 @@ PetscErrorCode PCHYPRESetType(PC pc, const char name[])
 + n_per_level - the number or nodes per level (size of num_levels -1)
 - CFMarkers - the Coarse/Fine boolean arrays (size of `num_levels`-1)
 
+  Note: Caller is responsible for memory management of n_per_level and CFMarkers pointers.
+  
   Level: advanced
 
 .seealso: [](ch_ksp), `PC`, `PCMG`, `PCMGGetRestriction()`, `PCMGSetInterpolation()`, `PCMGGetRScale()`, `PCMGGetInterpolation()`, `PCGetInterpolations()`
