@@ -1,0 +1,94 @@
+iter =   0, Function value 150.214, Residual: 113.881 
+iter =   1, Function value 13.5918, Residual: 0.974479 
+iter =   2, Function value 13.5747, Residual: 0.0154473 
+iter =   3, Function value 13.5747, Residual: 6.75196e-06 
+iter =   4, Function value 13.5747, Residual: < 1.0e-6 
+Tao Object: 1 MPI process
+  type: nls
+    Newton steps: 4
+    BFGS steps: 0
+    Gradient steps: 0
+    nls ksp atol: 0
+    nls ksp rtol: 4
+    nls ksp ctol: 0
+    nls ksp negc: 0
+    nls ksp dtol: 0
+    nls ksp iter: 0
+    nls ksp othr: 0
+  Objective function:
+    Scale (tao_objective_scale): 1.
+    Function:
+      TaoTerm Object: (objective_) 1 MPI process
+        type: sum
+        solution vector space: N = 20 [VecType standard (taoterm_solution_vec_type)]
+        parameter vector space: (optional) K = 130 [VecType nest (taoterm_parameters_vec_type)]
+        default Hessian MatType (taoterm_hessian_mat_type): shell
+        Sum of 3 terms:
+          Summand 0:
+            Scale (taoterm_sum_data_scale): 1.
+            Map:
+              Mat Object: 1 MPI process
+                type: seqdense
+                rows=100, cols=20
+                total: nonzeros=2000, allocated nonzeros=2000
+                total number of mallocs used during MatSetValues calls=0
+            Term:
+              TaoTerm Object: (data_) 1 MPI process
+                type: halfl2squared
+                solution vector space: N = 100 [VecType standard (taoterm_solution_vec_type)]
+                parameter vector space: (optional) K = 100 [VecType standard (taoterm_parameters_vec_type)]
+                default Hessian MatType (taoterm_hessian_mat_type): shell
+          Summand 1:
+            Scale (taoterm_sum_ridge_scale): 0.1
+            Map: unmapped
+            Term:
+              TaoTerm Object: (ridge_) 1 MPI process
+                type: halfl2squared
+                solution vector space: N = 20 [VecType standard (taoterm_solution_vec_type)]
+                parameter vector space: (optional) K = 20 [VecType standard (taoterm_parameters_vec_type)]
+                default Hessian MatType (taoterm_hessian_mat_type): shell
+          Summand 2:
+            Scale (taoterm_sum_lasso_scale): 0.1
+            Map:
+              Mat Object: 1 MPI process
+                type: seqdense
+                rows=10, cols=20
+                total: nonzeros=200, allocated nonzeros=200
+                total number of mallocs used during MatSetValues calls=0
+            Term:
+              TaoTerm Object: (lasso_) 1 MPI process
+                type: l1
+                solution vector space: N = 10 [VecType standard (taoterm_solution_vec_type)]
+                parameter vector space: (optional) K = 10 [VecType standard (taoterm_parameters_vec_type)]
+                default Hessian MatType (taoterm_hessian_mat_type): shell
+                epsilon (taoterm_l1_epsilon): 0.1
+    Map: unmapped
+  TaoLineSearch Object: 1 MPI process
+    type: more-thuente
+    maximum function evaluations=30
+    tolerances: ftol=0.0001, rtol=1e-10, gtol=0.9
+    total number of function evaluations=0
+    total number of gradient evaluations=0
+    total number of function/gradient evaluations=1
+    Termination reason: 1
+  KSP Object: (tao_nls_) 1 MPI process
+    type: stcg
+    maximum iterations=10000, initial guess is zero
+    tolerances: relative=1e-05, absolute=1e-50, divergence=10000.
+    left preconditioning
+    using UNPRECONDITIONED norm type for convergence test
+  PC Object: (tao_nls_) 1 MPI process
+    type: none
+    linear system matrix = precond matrix:
+    Mat Object: 1 MPI process
+      type: shell
+      rows=20, cols=20
+  total KSP iterations: 44
+  convergence tolerances: gatol=1e-08,   grtol=1e-08,   steptol=0.,   gttol=0.
+  Residual in Function/Gradient:=3.6042e-11
+  Objective value=13.5747
+  total number of iterations=4,                          (max: 50)
+  total number of function evaluations=5,                  (max: unlimited)
+  total number of function/gradient evaluations=5,      (max: unlimited)
+  total number of Hessian evaluations=4
+  Solution converged:    ||g(X)|| <= gatol
