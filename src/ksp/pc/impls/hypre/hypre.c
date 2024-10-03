@@ -203,18 +203,17 @@ static PetscErrorCode PCGetInterpolations_BoomerAMG(PC pc, PetscInt *nlevels, Ma
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-
 /*
   Boolean Vecs are created IN PLACE with using data from BoomerAMG. 
 */
 static PetscErrorCode PCHYPREGetCFMarkers_BoomerAMG(PC pc, PetscInt *n_per_level[], PetscBT *CFMarkers[])
 {
-  PC_HYPRE            *jac  = (PC_HYPRE *)pc->data;
-  PetscBool            same = PETSC_FALSE;
-  PetscInt             num_levels;
-  PetscInt            *n_per_temp;
-  PetscBT             *markertmp;
-  hypre_IntArray     **CF_marker_array;
+  PC_HYPRE        *jac  = (PC_HYPRE *)pc->data;
+  PetscBool        same = PETSC_FALSE;
+  PetscInt         num_levels;
+  PetscInt        *n_per_temp;
+  PetscBT         *markertmp;
+  hypre_IntArray **CF_marker_array;
 
   PetscFunctionBegin;
   PetscCall(PetscStrcmp(jac->hypre_type, "boomeramg", &same));
@@ -224,17 +223,15 @@ static PetscErrorCode PCHYPREGetCFMarkers_BoomerAMG(PC pc, PetscInt *n_per_level
   PetscCall(PetscMalloc1(num_levels, &n_per_temp));
   CF_marker_array = hypre_ParAMGDataCFMarkerArray((hypre_ParAMGData *)jac->hsolver);
   for (PetscInt l = 1; l < num_levels; l++) {
-    PetscInt m = hypre_IntArraySize(CF_marker_array[num_levels - 1 - l]);
-    n_per_temp[l-1] = m;
-    PetscCall(PetscBTCreate(m, &markertmp[l-1]));
-    for (PetscInt k = 0; k < m; k++){
-      if (hypre_IntArrayDataI(CF_marker_array[num_levels - 1 - l],k) > 0) {
-        PetscCall(PetscBTSet(markertmp[l-1], k));
-      }
+    PetscInt m        = hypre_IntArraySize(CF_marker_array[num_levels - 1 - l]);
+    n_per_temp[l - 1] = m;
+    PetscCall(PetscBTCreate(m, &markertmp[l - 1]));
+    for (PetscInt k = 0; k < m; k++) {
+      if (hypre_IntArrayDataI(CF_marker_array[num_levels - 1 - l], k) > 0) { PetscCall(PetscBTSet(markertmp[l - 1], k)); }
     }
   }
   *n_per_level = n_per_temp;
-  *CFMarkers = markertmp;
+  *CFMarkers   = markertmp;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
