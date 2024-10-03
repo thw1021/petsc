@@ -227,7 +227,7 @@ static PetscErrorCode PCHYPREGetCFMarkers_BoomerAMG(PC pc, PetscInt *n_per_level
     n_per_temp[l - 1] = m;
     PetscCall(PetscBTCreate(m, &markertmp[l - 1]));
     for (PetscInt k = 0; k < m; k++) {
-      if (hypre_IntArrayDataI(CF_marker_array[num_levels - 1 - l], k) > 0) PetscCall(PetscBTSet(markertmp[l - 1], k)); 
+      if (hypre_IntArrayDataI(CF_marker_array[num_levels - 1 - l], k) > 0) PetscCall(PetscBTSet(markertmp[l - 1], k));
     }
   }
   *n_per_level = n_per_temp;
