@@ -204,7 +204,7 @@ static PetscErrorCode PCGetInterpolations_BoomerAMG(PC pc, PetscInt *nlevels, Ma
 }
 
 /*
-  Boolean Vecs are created IN PLACE with using data from BoomerAMG. 
+  Boolean Vecs are created IN PLACE with using data from BoomerAMG.
 */
 static PetscErrorCode PCHYPREGetCFMarkers_BoomerAMG(PC pc, PetscInt *n_per_level[], PetscBT *CFMarkers[])
 {
@@ -2522,7 +2522,7 @@ PetscErrorCode PCHYPRESetType(PC pc, const char name[])
 - CFMarkers - the Coarse/Fine boolean arrays (size of `num_levels`-1)
 
   Note: Caller is responsible for memory management of n_per_level and CFMarkers pointers.
-  
+
   Level: advanced
 
 .seealso: [](ch_ksp), `PC`, `PCMG`, `PCMGGetRestriction()`, `PCMGSetInterpolation()`, `PCMGGetRScale()`, `PCMGGetInterpolation()`, `PCGetInterpolations()`
