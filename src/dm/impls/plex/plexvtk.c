@@ -270,6 +270,11 @@ typedef float PetscVTKReal;
 #else
 typedef PetscReal PetscVTKReal;
 #endif
+#if defined(PETSC_USE_REAL___FLOAT128) || defined(PETSC_USE_REAL___FP16)
+  #define PetscVTKReal_(a) ((PetscVTKReal)(a))
+#else
+  #define PetscVTKReal_(a) (a)
+#endif
 
 static PetscErrorCode DMPlexVTKWriteSection_ASCII(DM dm, PetscSection section, PetscSection globalSection, Vec v, FILE *fp, PetscInt enforceDof, PetscInt precision, PetscReal scale, PetscInt imag)
 {
@@ -343,7 +348,7 @@ static PetscErrorCode DMPlexVTKWriteSection_ASCII(DM dm, PetscSection section, P
         for (d = 0; d < dof; d++) {
           if (d > 0) PetscCall(PetscFPrintf(comm, fp, " "));
           val  = array[off + d];
-          dval = (PetscVTKReal)((imag ? PetscImaginaryPart(val) : PetscRealPart(val)) * scale);
+          dval = PetscVTKReal_((imag ? PetscImaginaryPart(val) : PetscRealPart(val)) * scale);
           PetscCall(PetscFPrintf(comm, fp, formatString, dval));
         }
         for (d = dof; d < enforceDof; d++) PetscCall(PetscFPrintf(comm, fp, " 0.0"));
@@ -362,7 +367,7 @@ static PetscErrorCode DMPlexVTKWriteSection_ASCII(DM dm, PetscSection section, P
         for (d = 0; d < maxDof; ++d) {
           if (d > 0) PetscCall(PetscFPrintf(comm, fp, " "));
           val  = remoteValues[p * maxDof + d];
-          dval = (PetscVTKReal)((imag ? PetscImaginaryPart(val) : PetscRealPart(val)) * scale);
+          dval = PetscVTKReal_((imag ? PetscImaginaryPart(val) : PetscRealPart(val)) * scale);
           PetscCall(PetscFPrintf(comm, fp, formatString, dval));
         }
         for (d = maxDof; d < enforceDof; ++d) PetscCall(PetscFPrintf(comm, fp, " 0.0"));
