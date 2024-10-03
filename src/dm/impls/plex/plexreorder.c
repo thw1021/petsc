@@ -652,7 +652,7 @@ PetscErrorCode DMReorderSectionSetType_Plex(DM dm, MatOrderingType reorder)
 {
   PetscFunctionBegin;
   PetscCall(PetscFree(dm->reorderSectionType));
-  PetscCall(PetscStrallocpy(reorder, (char **)&dm->reorderSectionType));
+  PetscCall(PetscStrallocpy(reorder, &dm->reorderSectionType));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

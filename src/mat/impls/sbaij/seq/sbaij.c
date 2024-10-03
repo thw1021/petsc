@@ -163,8 +163,8 @@ static PetscErrorCode MatRestoreRowIJ_SeqSBAIJ(Mat A, PetscInt oshift, PetscBool
   PetscFunctionBegin;
   if (!ia) PetscFunctionReturn(PETSC_SUCCESS);
   if ((!blockcompressed && A->rmap->bs > 1) || (symmetric || oshift == 1)) {
-    PetscCall(PetscFree(*ia));
-    if (ja) PetscCall(PetscFree(*ja));
+    PetscCall(PetscFreeConst(*ia));
+    if (ja) PetscCall(PetscFreeConst(*ja));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -405,7 +405,7 @@ static PetscErrorCode MatView_SeqSBAIJ_ASCII(Mat A, PetscViewer viewer)
           PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g) ", a->j[diag[i]], (double)PetscRealPart(1.0 / a->a[diag[i]])));
         }
 #else
-        PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g) ", a->j[diag[i]], (double)(1.0 / a->a[diag[i]])));
+        PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g) ", a->j[diag[i]], (double)(1 / a->a[diag[i]])));
 #endif
         /* off-diagonal entries */
         for (k = a->i[i]; k < a->i[i + 1] - 1; k++) {
@@ -1164,7 +1164,7 @@ static PetscErrorCode MatZeroRowsColumns_SeqSBAIJ(Mat A, PetscInt is_n, const Pe
         for (k = 0; k < bs; k++) {
           col = bs * baij->j[j] + k;
           if (col <= i) continue;
-          aa = ((MatScalar *)baij->a) + j * bs2 + (i % bs) + bs * k;
+          aa = baij->a + j * bs2 + (i % bs) + bs * k;
           if (!zeroed[i] && zeroed[col]) bb[i] -= aa[0] * xx[col];
           if (zeroed[i] && !zeroed[col]) bb[col] -= aa[0] * xx[i];
         }
@@ -1180,7 +1180,7 @@ static PetscErrorCode MatZeroRowsColumns_SeqSBAIJ(Mat A, PetscInt is_n, const Pe
         for (k = 0; k < bs; k++) {
           col = bs * baij->j[j] + k;
           if (zeroed[col]) {
-            aa    = ((MatScalar *)baij->a) + j * bs2 + (i % bs) + bs * k;
+            aa    = baij->a + j * bs2 + (i % bs) + bs * k;
             aa[0] = 0.0;
           }
         }
@@ -1197,7 +1197,7 @@ static PetscErrorCode MatZeroRowsColumns_SeqSBAIJ(Mat A, PetscInt is_n, const Pe
   for (i = 0; i < is_n; i++) {
     row   = is_idx[i];
     count = (baij->i[row / bs + 1] - baij->i[row / bs]) * bs;
-    aa    = ((MatScalar *)baij->a) + baij->i[row / bs] * bs2 + (row % bs);
+    aa    = baij->a + baij->i[row / bs] * bs2 + (row % bs);
     for (k = 0; k < count; k++) {
       aa[0] = zero;
       aa += bs;
@@ -1776,8 +1776,8 @@ PETSC_INTERN PetscErrorCode MatGetFactor_seqsbaij_petsc(Mat A, MatFactorType fty
 
     (*B)->ops->choleskyfactorsymbolic = MatCholeskyFactorSymbolic_SeqSBAIJ;
     (*B)->ops->iccfactorsymbolic      = MatICCFactorSymbolic_SeqSBAIJ;
-    PetscCall(PetscStrallocpy(MATORDERINGNATURAL, (char **)&(*B)->preferredordering[MAT_FACTOR_CHOLESKY]));
-    PetscCall(PetscStrallocpy(MATORDERINGNATURAL, (char **)&(*B)->preferredordering[MAT_FACTOR_ICC]));
+    PetscCall(PetscStrallocpy(MATORDERINGNATURAL, &(*B)->preferredordering[MAT_FACTOR_CHOLESKY]));
+    PetscCall(PetscStrallocpy(MATORDERINGNATURAL, &(*B)->preferredordering[MAT_FACTOR_ICC]));
   } else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "Factor type not supported");
 
   (*B)->factortype     = ftype;

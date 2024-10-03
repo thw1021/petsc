@@ -57,7 +57,7 @@ PetscErrorCode VecPointwiseMin_Seq(Vec win, Vec xin, Vec yin)
 
 static PetscScalar MaxAbs(PetscScalar x, PetscScalar y)
 {
-  return (PetscScalar)PetscMax(PetscAbsScalar(x), PetscAbsScalar(y));
+  return PetscMax(PetscAbsScalar(x), PetscAbsScalar(y));
 }
 
 PetscErrorCode VecPointwiseMaxAbs_Seq(Vec win, Vec xin, Vec yin)
@@ -883,6 +883,7 @@ static struct _VecOps DvOps = {
   PetscDesignatedInitializer(setpreallocationcoo, VecSetPreallocationCOO_Seq),
   PetscDesignatedInitializer(setvaluescoo, VecSetValuesCOO_Seq),
   PetscDesignatedInitializer(errorwnorm, NULL),
+  PetscDesignatedInitializer(maxpby, NULL),
 };
 
 /*

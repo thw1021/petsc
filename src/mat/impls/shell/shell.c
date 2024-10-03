@@ -1579,7 +1579,7 @@ static PetscErrorCode MatShellSetVecType_Shell(Mat mat, VecType vtype)
 {
   PetscFunctionBegin;
   PetscCall(PetscFree(mat->defaultvectype));
-  PetscCall(PetscStrallocpy(vtype, (char **)&mat->defaultvectype));
+  PetscCall(PetscStrallocpy(vtype, &mat->defaultvectype));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

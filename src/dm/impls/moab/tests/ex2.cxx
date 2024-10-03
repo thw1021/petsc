@@ -79,7 +79,7 @@ PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user)
     PetscCall(PetscPrintf(comm, "Setting field names to DM: \n"));
     for (i = 0; i < user->nfields; i++) PetscCall(PetscPrintf(comm, "\t Field{%" PetscInt_FMT "} = %s.\n", i, user->fieldnames[i]));
   }
-  PetscCall(DMMoabSetFieldNames(user->dm, user->nfields, (const char **)user->fieldnames));
+  PetscCall(DMMoabSetFieldNames(user->dm, user->nfields, user->fieldnames));
   PetscCall(PetscObjectSetName((PetscObject)user->dm, "Structured Mesh"));
   PetscCall(PetscLogEventEnd(user->createMeshEvent, 0, 0, 0, 0));
   PetscFunctionReturn(PETSC_SUCCESS);

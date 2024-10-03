@@ -34,8 +34,8 @@ PetscErrorCode PetscBarrier(PetscObject obj)
     PetscValidHeader(obj, 1);
     PetscCall(PetscObjectGetComm(obj, &comm));
   }
-  PetscCall(PetscLogEventBegin(PETSC_Barrier, obj, 0, 0, 0));
+  PetscCall(PetscLogEventBegin(PETSC_Barrier, 0, 0, 0, 0));
   PetscCallMPI(MPI_Barrier(comm));
-  PetscCall(PetscLogEventEnd(PETSC_Barrier, obj, 0, 0, 0));
+  PetscCall(PetscLogEventEnd(PETSC_Barrier, 0, 0, 0, 0));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

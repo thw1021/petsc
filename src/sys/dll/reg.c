@@ -244,7 +244,7 @@ static PetscErrorCode PetscHMapFuncInsert_Private(PetscHMapFunc map, const char 
     const char *tmp_name;
 
     PetscHashIterGetKey(map, it, tmp_name);
-    PetscCall(PetscFree(tmp_name));
+    PetscCall(PetscFreeConst(tmp_name));
     PetscCall(PetscHMapFuncIterDel(map, it));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -360,7 +360,7 @@ PetscErrorCode PetscFunctionListClear(PetscFunctionList fl)
 {
   PetscFunctionBegin;
   if (fl) {
-    PetscHMapFuncForEach(fl, name, func, PetscCall(PetscFree(name)));
+    PetscHMapFuncForEach(fl, name, func, PetscCall(PetscFreeConst(name)));
     PetscCall(PetscHMapFuncClear(fl->map));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -518,7 +518,7 @@ PetscErrorCode PetscFunctionListGet(PetscFunctionList list, const char ***array,
     PetscCall(PetscMalloc1(size, (char ***)array));
     PetscCall(PetscHMapFuncGetKeys(map, &off, *array));
   }
-  *n = (int)size;
+  PetscCall(PetscMPIIntCast(size, n));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

@@ -210,12 +210,16 @@ PetscErrorCode DMSwarmDataFieldSetSize(DMSwarmDataField df, const PetscInt new_L
   PetscCheck(new_L >= 0, PETSC_COMM_SELF, PETSC_ERR_USER, "Cannot set size of DMSwarmDataField to be < 0");
   if (new_L == df->L) PetscFunctionReturn(PETSC_SUCCESS);
   if (new_L > df->L) {
+    PETSC_SILENCE_WUSELESSCAST_BEGIN;
     PetscCall(PetscRealloc(df->atomic_size * (new_L), &df->data));
+    PETSC_SILENCE_WUSELESSCAST_END;
     /* init new contents */
     PetscCall(PetscMemzero(((char *)df->data) + df->L * df->atomic_size, (new_L - df->L) * df->atomic_size));
   } else {
     /* reallocate pointer list, add +1 in case new_L = 0 */
+    PETSC_SILENCE_WUSELESSCAST_BEGIN;
     PetscCall(PetscRealloc(df->atomic_size * (new_L + 1), &df->data));
+    PETSC_SILENCE_WUSELESSCAST_END;
   }
   df->L = new_L;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -568,7 +572,6 @@ static PetscErrorCode DMSwarmDataBucketView_stdout(MPI_Comm comm, DMSwarmDataBuc
     PetscCall(PetscPrintf(comm, "                            blocksize        = %" PetscInt_FMT " \n", db->field[f]->bs));
     if (db->field[f]->bs != 1) {
       PetscCall(PetscPrintf(comm, "                            atomic size      = %zu [full block, bs=%" PetscInt_FMT "]\n", db->field[f]->atomic_size, db->field[f]->bs));
-      PetscCall(PetscPrintf(comm, "                            atomic size/item = %zu \n", (size_t)(db->field[f]->atomic_size / db->field[f]->bs)));
     } else {
       PetscCall(PetscPrintf(comm, "                            atomic size      = %zu \n", db->field[f]->atomic_size));
     }
@@ -716,7 +719,7 @@ PetscErrorCode DMSwarmDataBucketFillPackedArray(DMSwarmDataBucket db, const Pets
     DMSwarmDataField df = db->field[f];
 
     asize  = df->atomic_size;
-    data   = (void *)df->data;
+    data   = df->data;
     data_p = (void *)((char *)data + index * asize);
     PetscCall(PetscMemcpy((void *)((char *)buf + offset), data_p, asize));
     offset = offset + asize;
@@ -736,7 +739,7 @@ PetscErrorCode DMSwarmDataBucketInsertPackedArray(DMSwarmDataBucket db, const Pe
     DMSwarmDataField df = db->field[f];
 
     data_p = (void *)((char *)data + offset);
-    PetscCall(DMSwarmDataFieldInsertPoint(df, idx, (void *)data_p));
+    PetscCall(DMSwarmDataFieldInsertPoint(df, idx, data_p));
     offset = offset + df->atomic_size;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
