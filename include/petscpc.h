@@ -118,7 +118,6 @@ PETSC_EXTERN PetscErrorCode PCGetDM(PC, DM *);
 
 PETSC_EXTERN PetscErrorCode PCGetInterpolations(PC, PetscInt *, Mat *[]);
 PETSC_EXTERN PetscErrorCode PCGetCoarseOperators(PC pc, PetscInt *, Mat *[]);
-PETSC_EXTERN PetscErrorCode PCHYPREGetCFMarkers(PC pc, PetscInt *[], PetscBT *[]);
 
 PETSC_EXTERN PetscErrorCode PCSetCoordinates(PC, PetscInt, PetscInt, PetscReal[]);
 
@@ -273,6 +272,7 @@ PETSC_EXTERN PetscErrorCode PCHYPRESetEdgeConstantVectors(PC, Vec, Vec, Vec);
 PETSC_EXTERN PetscErrorCode PCHYPREAMSSetInteriorNodes(PC, Vec);
 PETSC_EXTERN PetscErrorCode PCHYPRESetAlphaPoissonMatrix(PC, Mat);
 PETSC_EXTERN PetscErrorCode PCHYPRESetBetaPoissonMatrix(PC, Mat);
+PETSC_EXTERN PetscErrorCode PCHYPREGetCFMarkers(PC pc, PetscInt *[], PetscBT *[]);
 
 PETSC_EXTERN PetscErrorCode PCFieldSplitSetFields(PC, const char[], PetscInt, const PetscInt *, const PetscInt *);
 PETSC_EXTERN PetscErrorCode PCFieldSplitSetType(PC, PCCompositeType);
