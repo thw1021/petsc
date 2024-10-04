@@ -69,9 +69,9 @@ The following sections annotate the lines of code in
 
 Many TAO applications will follow an ordered set of procedures for
 solving an optimization problem: The user creates a `Tao` context and
-selects a default algorithm. Call-back routines as well as vector
+selects a default algorithm. Callback routines as well as vector
 (`Vec`) and matrix (`Mat`) data structures are then set. These
-call-back routines will be used for evaluating the objective function,
+callback routines will be used for evaluating the objective function,
 gradient, and perhaps the Hessian matrix. The user then invokes TAO to
 solve the optimization problem and finally destroys the `Tao` context.
 A list of the necessary functions for performing these steps using TAO
@@ -203,11 +203,17 @@ TaoGetSolution(Tao, Vec*);
 routine. This routine takes the address of a `Vec` in the second
 argument and sets it to the solution vector used in the application.
 
-### User Defined Call-back Routines
+(sec_tao_callbacks)=
 
-Users of TAO are required to provide routines that perform function
-evaluations. Depending on the solver chosen, they may also have to write
-routines that evaluate the gradient vector and Hessian matrix.
+### User Defined Callback Routines
+
+A `Tao` must be able to evaluate a function in order to optimized it;
+depending on the solver chosen, it may also need to evaluate the
+gradient vector and Hessian matrix.  TAO gives users two ways to specify
+this information: with callback functions for the evaluation operations
+(described in this section), or with a `TaoTerm` object that
+encapsulates the functions and its derivatives (see
+{any}`sec_tao_term`).
 
 #### Application Context
 
@@ -434,7 +440,7 @@ Tao use of PETSc and callbacks
 
 Some optimization problems also impose constraints on the variables or
 intermediate application states. The user defines these constraints through
-the appropriate TAO interface functions and call-back routines where necessary.
+the appropriate TAO interface functions and callback routines where necessary.
 
 ##### Variable Bounds
 
@@ -467,7 +473,7 @@ between linear and nonlinear constraints, and implements them through the
 same software interfaces.
 
 In the equality constrained case, TAO assumes that the constraints are
-formulated as $c_e(x) = 0$ and requires the user to implement a call-back
+formulated as $c_e(x) = 0$ and requires the user to implement a callback
 routine for evaluating $c_e(x)$ at a given vector of optimization
 variables,
 
@@ -475,13 +481,13 @@ variables,
 PetscErrorCode EvaluateEqualityConstraints(Tao, Vec, Vec, void*);
 ```
 
-As in the previous call-back routines, the first argument is the TAO solver
+As in the previous callback routines, the first argument is the TAO solver
 object. The second and third arguments are the vector of optimization variables
 (input) and vector of equality constraints (output), respectively. The final
 argument is a pointer to the user-defined application context, cast into
 `(void*)`.
 
-Generally constrained TAO algorithms also require a second user call-back
+Generally constrained TAO algorithms also require a second user callback
 function to compute the constraint Jacobian matrix $\nabla_x c_e(x)$,
 
 ```
@@ -495,7 +501,7 @@ are the constraint Jacobian and its pseudo-inverse (optional), respectively. The
 pseudoinverse is optional, and if not available, the user can simply set it
 to the constraint Jacobian itself.
 
-These call-back functions are then given to the TAO solver using the
+These callback functions are then given to the TAO solver using the
 interface functions
 
 ```
@@ -522,6 +528,113 @@ documentation for each TAO algorithm for further details.
 (sec_tao_term)=
 
 ### TaoTerm: object-oriented objective function terms
+
+In addition to the callback-based approach to specifying the optimization
+problem solved by TAO (see {any}`sec_tao_callbacks`), TAO includes an
+object-oriented interface in `TaoTerm`, which encapsulates a term that
+can appear in the objective function of an optimization problem.
+
+Each `TaoTerm` represents a parameteric real-valued function $f(x; p)$ for
+solution variable $x$ and parameters $p$.  The interface includes methods for
+evaluating $f(x; p)$ (`TaoTermObjective()`),
+$\nabla_x f(x; p)$ (`TaoTermGradient()` and
+`TaoTermObjectiveAndGradient()`), and $\nabla_x^2 f(x; p)$
+(`TaoTermHessian()` and `TaoTermHessianMult()`).
+
+#### Built-in TaoTerm implementations
+
+TAO comes with built-in implementations for `TaoTerm`:
+
+* `TAOTERMHALFL2SQUARED`: $f(x;p) = \tfrac{1}{2} \|x - p\|_2^2$ (See `TaoTermCreateHalfL2Squared()`.)
+* `TAOTERML1`: $f(x;p) = \|x - p\|_1$ (See `TaoTermCreateL1()`.)
+* `TAOTERMQUADRATIC`: $f(x;p) = \tfrac{1}{2}(x - p)^T A (x - p)$ for matrix $A$ (See `TaoTermCreateQuadratic()`.)
+* `TAOTERMSUM`: a sum of other terms implemented by `TaoTerm`, $f(x;p) = \sum_i \alpha_i f(A_i x; p_i)$.
+* `TAOTERMSHELL`: an interface for user-defined terms, see {any}`sec_tao_term_shell`.
+
+#### Specifying TaoTerm Parameters
+
+The parameters $p$ of the parameteric function $f(x;p)$
+implemented by a `TaoTerm` are passed as arguments in the evaluation
+routines.  For some terms, however, omitting the parameters results in a
+default value of $p$ being used.  For `TAOTERMHALFL2SQUARED`,
+`TAOTERML1`, and `TAOTERMQUADRATIC` the default is $p = 0$.  In general,
+the parametric behavior of a `TaoTerm` is determined by `TaoTermGetParametersMode()`:
+
+* `TAOTERM_PARAMETERS_OPTIONAL`: default parameters are used if `NULL` is passed for the parameters argument
+* `TAOTERM_PARAMETERS_NONE`: the term is not parametric, `NULL` is the only valid parameters argument
+* `TAOTERM_PARAMETERS_REQUIRED`: parameters are required, it is an error to pass `NULL` for the parameters argument
+
+#### Using a TaoTerm in a Tao solver
+
+A `TaoTerm` can be set as the whole objective function of a `Tao` solver
+with `TaoSetTerm()`.  A `TaoTerm` can also be added to the
+existing objective function of a `Tao` using `TaoAddTerm()`.
+This is compatible with the callback-based interface.  For example: if you
+have specified an objective function $f(x)$ using callbacks, and a
+regularizer $g(x;p)$ is specified by a `TaoTerm`, you can create the
+objective function $f(x) + \alpha g(Ax; p)$ this way:
+
+```
+PetscErrorCode (*f_obj_grad)(Tao, Vec, PetscReal *, Vec, void *);
+void            *f_ctx;
+PetscReal        alpha;
+Mat              A;
+TaoTerm          g;
+Vec              gradient, p;
+Tao              tao;
+
+TaoSetObjectiveAndGradient(tao, gradient, f_obj_grad, f_ctx); // f(x)
+TaoAddTerm(tao, "regularizer_", alpha, g, p, A);     // + alpha * g(A x ; p)
+```
+
+The example
+<a href="PETSC_DOC_OUT_ROOT_PLACEHOLDER/src/tao/unconstrained/tutorials/elastic_net_regularization.c.html">\$TAO_DIR/src/unconstrained/tutorials/elastic_net_regularization.c</a>
+uses this interface to define the optimization problem $\min_x \tfrac{1}{2} \|Ax - b\|_W^2 + \lambda_2 \tfrac{1}{2}\|x\|_2^2 + \lambda_1 \|D x - y\|_1$:
+
+(tao_example2)=
+
+:::{admonition} Listing: `src/tao/unconstrained/tutorials/elastic_net_regularization.c`
+```{literalinclude} /../src/tao/unconstrained/tutorials/elastic_net_regularization.c
+:start-at: // the model term
+:end-at: TaoSolve
+```
+:::
+
+Regularization terms can also be added to the objective function of a `Tao` solver
+from the command line.  For instance, the elastic net regularizer
+$\frac{0.4}{2} \|x\|_2^2 + 0.7 \|x\|_1$ can be added with the following options:
+
+```
+-tao_add_terms ridge_,lasso_
+-ridge_taoterm_type halfl2squared
+-lasso_taoterm_type l1
+-objective_taoterm_sum_ridge_scale 0.4
+-objective_taoterm_sum_lasso_scale 0.7
+```
+
+In the above, `ridge_`, and `lasso_` could be any unique strings for each term to be added.
+
+(sec_tao_term_shell)=
+
+#### User-defined TaoTerm implementations
+
+A user-defined `TaoTerm` can be defined from callbacks using the
+`TAOTERMSHELL` type.  This interface is very similar to `MATSHELL`:
+there is a single user context that is set with `TaoTermShellSetContext()` and obtained `TaoTermShellGetContext()`,
+and the evaluation routines are set by passing callbacks with the same signature as routines they implement (see for example `TaoTermShellSetObjectiveAndGradient()`).
+As an example,
+<a href="PETSC_DOC_OUT_ROOT_PLACEHOLDER/src/tao/unconstrained/tutorials/rosenbrock1_taoterm.c.html">\$TAO_DIR/src/unconstrained/tutorials/rosenbrock1_taoterm.c</a>
+in {any}`the example below <tao_example3>` demonstrates the same Rosenbrock example as {any}`the first example <tao_example1>`.
+
+(tao_example3)=
+
+:::{admonition} Listing: ``src/tao/unconstrained/tutorials/rosenbrock1_taoterm.c``
+```{literalinclude} /../src/tao/unconstrained/tutorials/rosenbrock1_taoterm.c
+:start-at: static PetscErrorCode FormFunctionGradient
+:end-at: PetscFinalize
+:append: return 0;}
+```
+:::
 
 ### Solving
 
@@ -2445,7 +2558,7 @@ interface functions:
 - `TaoBRGNSetRegularizerObjectiveAndGradientRoutine()` - Provide
   user-call back for evaluating the function value and gradient
   evaluation for the regularization term.
-- `TaoBRGNSetRegularizerHessianRoutine()` - Provide user call-back
+- `TaoBRGNSetRegularizerHessianRoutine()` - Provide user callback
   for evaluating the Hessian of the regularization term.
 
 #### POUNDERS
