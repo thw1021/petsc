@@ -369,9 +369,7 @@ static PetscErrorCode ComputeFieldAtParticles_Primal(SNES snes, DM sw, PetscReal
 
       for (PetscInt d = 0; d < dim; ++d) E[p * dim + d] = 0.;
       PetscCall(PetscFEFreeInterpolateGradient_Static(fe, basisDer, clPhi, dim, invJ, NULL, cp, &E[p * dim]));
-      for (PetscInt d = 0; d < dim; ++d) {
-        E[p * dim + d] *= -1.0;
-      }
+      for (PetscInt d = 0; d < dim; ++d) { E[p * dim + d] *= -1.0; }
     }
     PetscCall(DMPlexVecRestoreClosure(dm, NULL, locPhi, c, NULL, &clPhi));
     PetscCall(DMRestoreWorkArray(dm, Ncp * dim, MPIU_REAL, &pcoord));
@@ -500,9 +498,7 @@ static PetscErrorCode ComputeFieldAtParticles_Mixed(SNES snes, DM sw, PetscReal 
       for (PetscInt d = 0; d < dim; ++d) E[p * dim + d] = 0.;
       PetscCall(PetscFEInterpolateAtPoints_Static(fe, tab, clPhi, &feGeometry, cp, &E[p * dim]));
       PetscCall(PetscFEPushforward(fe, &feGeometry, 1, &E[p * dim]));
-      for (PetscInt d = 0; d < dim; ++d) {
-        E[p * dim + d] *= -2.0;
-      }
+      for (PetscInt d = 0; d < dim; ++d) { E[p * dim + d] *= -2.0; }
     }
     PetscCall(DMPlexVecRestoreClosure(dm, NULL, locPhi, c, NULL, &clPhi));
     PetscCall(DMRestoreWorkArray(dm, Ncp * dim, MPIU_REAL, &pcoord));
@@ -742,16 +738,16 @@ PetscErrorCode RHSObjectiveF(TS ts, PetscReal t, Vec U, PetscScalar *F, void *ct
   for (PetscInt c = cStart; c < cEnd; ++c) {
     PetscInt *points;
     PetscInt  Ncp;
-    PetscReal E  =  phi_vals[c];
+    PetscReal E = phi_vals[c];
 
     PetscCall(DMSwarmSortGetPointsPerCell(sw, c, &Ncp, &points));
     for (PetscInt cp = 0; cp < Ncp; ++cp) {
-      const PetscInt  p  = points[cp];
+      const PetscInt  p     = points[cp];
       const PetscReal x0    = coords[p * dim + 0];
       const PetscReal vy0   = vel[p * dim + 1];
       const PetscReal omega = vy0 / x0;
-      const PetscReal v2 = DMPlex_DotRealD_Internal(dim, &u[(p * 2 + 1) * dim], &u[(p * 2 + 1) * dim]);
-      const PetscReal x2 = DMPlex_DotRealD_Internal(dim, &u[(p * 2 + 0) * dim], &u[(p * 2 + 0) * dim]);
+      const PetscReal v2    = DMPlex_DotRealD_Internal(dim, &u[(p * 2 + 1) * dim], &u[(p * 2 + 1) * dim]);
+      const PetscReal x2    = DMPlex_DotRealD_Internal(dim, &u[(p * 2 + 0) * dim], &u[(p * 2 + 0) * dim]);
       E += 0.5 * m_p * (v2) + 0.5 * PetscSqr(omega) * (x2);
 
       *F += E;
@@ -799,7 +795,7 @@ PetscErrorCode RHSFunctionG(TS ts, PetscReal t, Vec U, Vec G, void *ctx)
     const PetscReal vy0   = vel[p * dim + 1];
     const PetscReal omega = vy0 / x0;
     for (d = 0; d < dim; ++d) {
-      g[(p * 2 + 0) * dim + d] = -(q_p/m_p) * E[p * dim + d] + PetscSqr(omega) * u[(p * 2 + 0) * dim + d];
+      g[(p * 2 + 0) * dim + d] = -(q_p / m_p) * E[p * dim + d] + PetscSqr(omega) * u[(p * 2 + 0) * dim + d];
       g[(p * 2 + 1) * dim + d] = u[(p * 2 + 1) * dim + d];
     }
   }

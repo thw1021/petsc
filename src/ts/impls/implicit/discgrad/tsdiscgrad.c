@@ -20,7 +20,7 @@ typedef struct {
     PetscReal stage_time;
     Vec       X0, X, Xdot;
     void     *funcCtx;
-    TSDGType    discgrad; /* Type of electrostatic model */
+    TSDGType  discgrad; /* Type of electrostatic model */
     PetscErrorCode (*Sfunc)(TS, PetscReal, Vec, Mat, void *);
     PetscErrorCode (*Ffunc)(TS, PetscReal, Vec, PetscScalar *, void *);
     PetscErrorCode (*Gfunc)(TS, PetscReal, Vec, Vec, void *);
@@ -142,7 +142,8 @@ static PetscErrorCode TSView_DiscGrad(TS ts, PetscViewer viewer)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TSDiscGradGetType_DiscGrad(TS ts, TSDGType *dgtype) {
+static PetscErrorCode TSDiscGradGetType_DiscGrad(TS ts, TSDGType *dgtype)
+{
   TS_DiscGrad *dg = (TS_DiscGrad *)ts->data;
 
   PetscFunctionBegin;
@@ -150,7 +151,8 @@ static PetscErrorCode TSDiscGradGetType_DiscGrad(TS ts, TSDGType *dgtype) {
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TSDiscGradSetType_DiscGrad(TS ts, TSDGType dgtype) {
+static PetscErrorCode TSDiscGradSetType_DiscGrad(TS ts, TSDGType dgtype)
+{
   TS_DiscGrad *dg = (TS_DiscGrad *)ts->data;
 
   PetscFunctionBegin;
@@ -309,10 +311,8 @@ static PetscErrorCode SNESTSFormFunction_DiscGrad(SNES snes, Vec x, Vec y, TS ts
   PetscCall(MatSetSizes(S, n, n, PETSC_DECIDE, PETSC_DECIDE));
   PetscCall(MatSetFromOptions(S));
   PetscInt *S_prealloc_arr;
-  PetscCall(PetscMalloc1(n,&S_prealloc_arr));
-  for (PetscInt i=0; i<n; ++i){
-    S_prealloc_arr[i] = 2;
-  }
+  PetscCall(PetscMalloc1(n, &S_prealloc_arr));
+  for (PetscInt i = 0; i < n; ++i) { S_prealloc_arr[i] = 2; }
   PetscCall(MatXAIJSetPreallocation(S, 1, S_prealloc_arr, NULL, NULL, NULL));
   PetscCall(MatSetUp(S));
   PetscCall((*dg->Sfunc)(ts, dg->stage_time, x, S, dg->funcCtx));
@@ -347,11 +347,11 @@ static PetscErrorCode SNESTSFormFunction_DiscGrad(SNES snes, Vec x, Vec y, TS ts
     PetscCall(PetscDTGaussTensorQuadrature(dim, 1, 2, 0.0, 1.0, &quad));
     PetscCall(PetscQuadratureGetData(quad, NULL, NULL, &Nq, &xq, &wq));
     for (q = 0; q < Nq; ++q) {
-      PetscReal xi = xq[q], xim1 = 1-xq[q];
+      PetscReal xi = xq[q], xim1 = 1 - xq[q];
       PetscCall(VecZeroEntries(Xquad));
       PetscCall(VecAXPBYPCZ(Xquad, xi, xim1, 1.0, X0, Xp));
       PetscCall((*dg->Gfunc)(ts, dg->stage_time, Xquad, den, dg->funcCtx));
-      PetscCall(VecAXPY(G,wq[q],den));
+      PetscCall(VecAXPY(G, wq[q], den));
       PetscCall(PetscObjectSetName((PetscObject)den, "den"));
       PetscCall(VecViewFromOptions(den, NULL, "-den_view"));
     }
