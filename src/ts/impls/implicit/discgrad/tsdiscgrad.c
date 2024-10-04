@@ -17,13 +17,13 @@ const char DGCitation[] = "@article{Gonzalez1996,\n"
 const char *DGTypes[] = {"gonzalez", "average", "none", "TSDGType", "DG_", NULL};
 
 typedef struct {
-    PetscReal stage_time;
-    Vec       X0, X, Xdot;
-    void     *funcCtx;
-    TSDGType  discgrad; /* Type of electrostatic model */
-    PetscErrorCode (*Sfunc)(TS, PetscReal, Vec, Mat, void *);
-    PetscErrorCode (*Ffunc)(TS, PetscReal, Vec, PetscScalar *, void *);
-    PetscErrorCode (*Gfunc)(TS, PetscReal, Vec, Vec, void *);
+  PetscReal stage_time;
+  Vec       X0, X, Xdot;
+  void     *funcCtx;
+  TSDGType  discgrad; /* Type of electrostatic model */
+  PetscErrorCode (*Sfunc)(TS, PetscReal, Vec, Mat, void *);
+  PetscErrorCode (*Ffunc)(TS, PetscReal, Vec, PetscScalar *, void *);
+  PetscErrorCode (*Gfunc)(TS, PetscReal, Vec, Vec, void *);
 } TS_DiscGrad;
 
 static PetscErrorCode TSDiscGradGetX0AndXdot(TS ts, DM dm, Vec *X0, Vec *Xdot)
