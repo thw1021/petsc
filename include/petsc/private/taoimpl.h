@@ -235,6 +235,7 @@ PETSC_INTERN PetscLogEvent TAOTERM_GradientEval;
 PETSC_INTERN PetscLogEvent TAOTERM_ObjGradEval;
 PETSC_INTERN PetscLogEvent TAOTERM_HessianEval;
 PETSC_INTERN PetscLogEvent TAOTERM_HessianMult;
+PETSC_INTERN PetscLogEvent TAOTERM_ProxMap;
 
 static inline PetscErrorCode TaoLogConvergenceHistory(Tao tao, PetscReal obj, PetscReal resid, PetscReal cnorm, PetscInt totits)
 {
