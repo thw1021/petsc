@@ -2,8 +2,6 @@
 #include <petsc/private/taoimpl.h>
 
 typedef struct {
-  DM smoothterm, reg, g_prox, h_prox;
-
   Mat h_lmap;                                                /* m * n               */
   Vec workvec, workvec2, grad_old, x_old, ATy;               /* size n              */
   Vec dualvec_work, dualvec_test, dualvec_work2, Ax, Ax_old; /* size m. dualvec = y */

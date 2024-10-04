@@ -49,6 +49,8 @@
 #define TAOALMM     'almm'
 #define TAOPYTHON   'python'
 #define TAOSNES     'snes'
+#define TAOFB       'fb'
+#define TAOCV       'cv'
 
 #define TAOTERMTAOCALLBACKS  'tao'
 #define TAOTERMSHELL         'shell'

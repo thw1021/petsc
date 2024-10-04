@@ -126,59 +126,11 @@ static PetscErrorCode TaoCV_Stepsize_No_LS_Private(Tao tao)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoPSSetSmoothTerm_CV(Tao tao, PetscInt idx)
-{
-  TAO_CV *cv = (TAO_CV *)tao->data;
-
-  PetscFunctionBegin;
-  PetscCheck(idx < tao->num_terms, PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "Index number exceeds number of DMs in Tao object");
-  cv->smoothterm = tao->dms[idx];
-  cv->f_scale    = tao->dm_scales[idx];
-  PetscCall(PetscObjectReference((PetscObject)cv->smoothterm));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode TaoPSSetNonSmoothTerm_CV(Tao tao, PetscInt idx)
-{
-  TAO_CV *cv = (TAO_CV *)tao->data;
-
-  PetscFunctionBegin;
-  PetscCheck(idx < tao->num_terms, PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "Index number exceeds number of DMs in Tao object");
-  cv->g_prox  = tao->dms[idx];
-  cv->g_scale = tao->dm_scales[idx];
-  PetscCall(PetscObjectReference((PetscObject)cv->g_prox));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode TaoPSSetNonSmoothTermWithLinearMap_CV(Tao tao, PetscInt idx, Mat mat, PetscReal norm)
-{
-  TAO_CV *cv = (TAO_CV *)tao->data;
-
-  PetscFunctionBegin;
-  /* Referencing mat here, as destory happens in this file */
-  if (mat) {
-    PetscValidHeaderSpecific(mat, MAT_CLASSID, 3);
-    PetscCall(PetscObjectReference((PetscObject)mat));
-  }
-  PetscValidLogicalCollectiveReal(tao, norm, 4);
-  PetscCheck(idx < tao->num_terms, PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "Index number exceeds number of DMs in Tao object");
-  cv->h_prox  = tao->dms[idx];
-  cv->h_lmap  = mat;
-  cv->h_scale = tao->dm_scales[idx];
-  PetscCall(PetscObjectReference((PetscObject)cv->h_prox));
-  if (norm > 0) {
-    cv->h_lmap_norm   = norm;
-    cv->lmap_norm_set = PETSC_TRUE;
-  } else {
-    cv->h_lmap_norm   = 0.;
-    cv->lmap_norm_set = PETSC_FALSE;
-  }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 static PetscErrorCode TaoSolve_CV(Tao tao)
 {
   TAO_CV                      *cv = (TAO_CV *)tao->data;
+  TaoTerm                      fterm, gterm, hterm;
+  PetscReal                    fscale, gscale, hscale;
   PetscReal                    f, gnorm, lip, rho;
   PetscReal                    pri_res_norm, dual_res_norm, g_val, h_val;
   TaoLineSearchConvergedReason ls_status = TAOLINESEARCH_CONTINUE_ITERATING;
@@ -187,11 +139,14 @@ static PetscErrorCode TaoSolve_CV(Tao tao)
   PetscCheck(tao->step >= 0, PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "Stepsize cannot be negative");
   PetscCheck(cv->R <= 1, PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "Scale factor needs to be equal or less than 1");
   PetscCheck(cv->r > 1, PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "Backtracking factor needs to be greater than 1");
-  PetscCheck(cv->smoothterm, PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "TaoPSSetSmoothTerm needs to be called");
-  PetscCheck(cv->g_prox, PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "TaoPSSetNonSmoothTerm needs to be called");
-  PetscCheck(cv->h_prox, PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "TaoPSSetNonSmoothTermWithLinearMap needs to be called");
-  PetscCall(DMTaoGetLipschitz(cv->smoothterm, &lip));
+//  PetscCall(TaoTermGetLipschitz(cv->smoothterm, &lip));
   PetscCall(PetscCitationsRegister(citation, &cited));
+
+  //TODO WHAT IF objective_term.term is not TAOTERMSUM?
+  //Is it 0-index or 1-index? I am assuming 1,2,3 sequential indexing here...
+  PetscCall(TaoTermSumGetSubterm(tao->objective_term.term, 1, NULL, &cv->f_scale, &fterm, NULL));
+  PetscCall(TaoTermSumGetSubterm(tao->objective_term.term, 2, NULL, &cv->g_scale, &gterm, NULL));
+  PetscCall(TaoTermSumGetSubterm(tao->objective_term.term, 3, NULL, &cv->h_scale, &hterm, &cv->h_lmap));//TODO matdestroy?
 
   // f can be missing as in null operator but still need f obj and grad. (becomes PDHG),
   // both g and h need to be present - (i.e., does not suppoer LV/PAPC)
@@ -209,7 +164,7 @@ static PetscErrorCode TaoSolve_CV(Tao tao)
 
   cv->step_old = tao->step;
 
-  PetscCall(DMTaoComputeObjectiveAndGradient(cv->smoothterm, tao->solution, &f, tao->gradient));
+  PetscCall(TaoTermObjectiveAndGradient(fterm, tao->solution, NULL, &f, tao->gradient));
   if (cv->f_scale != 1) f *= cv->f_scale;
   if (cv->f_scale != 1) PetscCall(VecScale(tao->gradient, cv->f_scale));
   PetscCall(TaoGradientNorm(tao, tao->gradient, NORM_2, &gnorm));
@@ -237,7 +192,7 @@ static PetscErrorCode TaoSolve_CV(Tao tao)
     PetscCall(VecCopy(cv->Ax, cv->Ax_old));
     PetscCall(VecCopy(tao->gradient, cv->grad_old));
     PetscCall(MatMult(cv->h_lmap, tao->solution, cv->Ax));
-    PetscCall(DMTaoComputeObjectiveAndGradient(cv->smoothterm, tao->solution, &f, tao->gradient));
+    PetscCall(TaoTermObjectiveAndGradient(fterm, tao->solution, NULL, &f, tao->gradient));
     if (cv->f_scale != 1) f *= cv->f_scale;
     if (cv->f_scale != 1) PetscCall(VecScale(tao->gradient, cv->f_scale));
     /* workvec = (v - x)/step + grad_x + ATy */
@@ -257,6 +212,7 @@ static PetscErrorCode TaoSolve_CV(Tao tao)
       PetscCall(VecAXPY(cv->dualvec_work, cv->sigma * (1 + rho), cv->Ax));
 
       /* dualvec: y = prox_h*(w, sigma) */
+      PetscCall(TaoTermProximalMap(fter
       PetscCall(DMTaoApplyProximalMap(cv->h_prox, cv->reg, cv->sigma * cv->h_scale, cv->dualvec_work, tao->dualvec, PETSC_TRUE));
     } else {
       // LS needs: x1, x0, grad_1, grad_0, Ax_old, dualvec(y), sigma, pd_ratio, Theta, eta

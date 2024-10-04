@@ -8,6 +8,7 @@ PetscLogEvent TAOTERM_GradientEval;
 PetscLogEvent TAOTERM_ObjGradEval;
 PetscLogEvent TAOTERM_HessianEval;
 PetscLogEvent TAOTERM_HessianMult;
+PetscLogEvent TAOTERM_ProxMap;
 
 const char *const TaoTermParametersTypes[] = {"optional", "none", "required", "TaoTermParametesrsType", "TAOTERM_PARAMETERS_", NULL};
 
@@ -642,6 +643,60 @@ PetscErrorCode TaoTermHessianMult(TaoTerm term, Vec x, Vec params, Vec v, Vec Hv
   PetscCall(PetscLogEventEnd(TAOTERM_HessianMult, term, NULL, NULL, NULL));
   PetscCall(VecLockReadPop(v));
   if (params) PetscCall(VecLockReadPop(params));
+  PetscCall(VecLockReadPop(x));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoTermProximalMap - Evaluate the proximal map of a `TaoTerm` for a given set of solution variables and parameters
+
+  Collective
+
+  Input Parameters:
++ fterm - a `TaoTerm` representing a parametric function $f(x; p)$
+. p     - the parameters $p$ in $f(x; p)$ (may be NULL if the term is not parametric)
+. alpha - scale of function $f(x; p)$
+. gterm - a `TaoTerm` representing a parametric function $g(x; p)$ - a regularizer. May be NULL for HALFL2SQUARED
+. q     - the parameters $q$ in $f(x; q)$ (may be NULL if the term is not parametric)
+. beta  - scale of function $g(x; q)$
+
+  Output Parameters:
+. x - a vector in the solution space
+
+  Level: intermediate
+
+.seealso: [](ch_tao), `Tao`, `TaoTerm`,
+          `TaoTermObjective()`,
+          `TaoTermGradient()`,
+          `TaoTermObjectiveAndGradient()`,
+          `TaoTermHessian()`
+@*/
+PetscErrorCode TaoTermProximalMap(TaoTerm fterm, Vec p, PetscReal alpha, TaoTerm gterm, Vec q, PetscReal beta, Vec x)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(fterm, TAOTERM_CLASSID, 1);
+  if (gterm) PetscValidHeaderSpecific(gterm, TAOTERM_CLASSID, 5);
+  if (p) {
+    PetscValidHeaderSpecific(p, VEC_CLASSID, 2);
+    PetscCheckSameComm(fterm, 1, p, 2);
+    PetscCall(VecLockReadPush(p));
+  }
+  if (q) {
+    PetscValidHeaderSpecific(q, VEC_CLASSID, 5);
+    PetscCheckSameComm(fterm, 1, q, 5);
+    PetscCall(VecLockReadPush(q));
+  }
+  PetscValidHeaderSpecific(x, VEC_CLASSID, 7);
+  PetscValidLogicalCollectiveReal(fterm, alpha, 3);
+  PetscValidLogicalCollectiveReal(fterm, beta, 6);
+  //TODO test comm compat of all possible permutations?
+  PetscCheckSameComm(fterm, 1, x, 7);
+  PetscCall(VecLockReadPush(x));
+  PetscCall(PetscLogEventBegin(TAOTERM_ProxMap, fterm, x, NULL, NULL));
+  PetscUseTypeMethod(fterm, proximalmap, p, alpha, gterm, q, beta, x);
+  PetscCall(PetscLogEventEnd(TAOTERM_ProxMap, fterm, x, NULL, NULL));
+  if (p) PetscCall(VecLockReadPop(p));
+  if (q) PetscCall(VecLockReadPop(q));
   PetscCall(VecLockReadPop(x));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
