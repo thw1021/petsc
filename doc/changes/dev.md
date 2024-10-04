@@ -87,6 +87,7 @@
 - Add `TAOTERMSUM` implementation of `TaoTerm` for scaled, mapped sums of terms
 - Add `TAOTERMHALFL2SQUARED` implementation of `TaoTerm` for a typical squared-norm penalty function
 - Add `TAOTERML1` implementation of `TaoTerm` for a typical 1-norm penalty function
+- Add `TAOTERMQUADRATIC` implementation of `TaoTerm` for a quadratic penalty function
 
 ```{rubric} PetscRegressor:
 ```

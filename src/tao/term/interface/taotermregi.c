@@ -11,6 +11,7 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Shell(TaoTerm);
 PETSC_INTERN PetscErrorCode TaoTermCreate_Sum(TaoTerm);
 PETSC_INTERN PetscErrorCode TaoTermCreate_Halfl2squared(TaoTerm);
 PETSC_INTERN PetscErrorCode TaoTermCreate_L1(TaoTerm);
+PETSC_INTERN PetscErrorCode TaoTermCreate_Quadratic(TaoTerm);
 
 /*@C
   TaoTermRegister - Register an impementation of `TaoTerm`
@@ -59,5 +60,6 @@ PETSC_INTERN PetscErrorCode TaoTermRegisterAll(void)
   PetscCall(TaoTermRegister(TAOTERMSUM, TaoTermCreate_Sum));
   PetscCall(TaoTermRegister(TAOTERMHALFL2SQUARED, TaoTermCreate_Halfl2squared));
   PetscCall(TaoTermRegister(TAOTERML1, TaoTermCreate_L1));
+  PetscCall(TaoTermRegister(TAOTERMQUADRATIC, TaoTermCreate_Quadratic));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
