@@ -1016,6 +1016,7 @@ PetscErrorCode TaoSetUp_BNK(Tao tao)
   if (!bnk->unprojected_gradient_old) PetscCall(VecDuplicate(tao->solution, &bnk->unprojected_gradient_old));
   if (!bnk->Diag_min) PetscCall(VecDuplicate(tao->solution, &bnk->Diag_min));
   if (!bnk->Diag_max) PetscCall(VecDuplicate(tao->solution, &bnk->Diag_max));
+  PetscCall(TaoSetSolution(bnk->bncg, tao->solution));
   if (bnk->max_cg_its > 0) {
     /* Ensure that the important common vectors are shared between BNK and embedded BNCG */
     bnk->bncg_ctx = (TAO_BNCG *)bnk->bncg->data;
@@ -1034,7 +1035,6 @@ PetscErrorCode TaoSetUp_BNK(Tao tao)
     PetscCall(PetscObjectReference((PetscObject)tao->stepdirection));
     PetscCall(VecDestroy(&bnk->bncg->stepdirection));
     bnk->bncg->stepdirection = tao->stepdirection;
-    PetscCall(TaoSetSolution(bnk->bncg, tao->solution));
     /* Copy over some settings from BNK into BNCG */
     PetscCall(TaoSetMaximumIterations(bnk->bncg, bnk->max_cg_its));
     PetscCall(TaoSetTolerances(bnk->bncg, tao->gatol, tao->grtol, tao->gttol));
