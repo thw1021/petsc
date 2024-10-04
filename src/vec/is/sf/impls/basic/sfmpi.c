@@ -10,7 +10,7 @@ static PetscErrorCode PetscSFLinkFinishCommunication_Default(PetscSF sf, PetscSF
   const PetscInt     rootdirect_mpi = link->rootdirect_mpi, leafdirect_mpi = link->leafdirect_mpi;
 
   PetscFunctionBegin;
-  if (sf->debug) {
+  if (sf->monitor) {
     PetscMPIInt rank;
     const char *rootaction = (direction == PETSCSF_ROOT2LEAF) ? "sending to  " : "recving from";
     const char *leafaction = (direction == PETSCSF_ROOT2LEAF) ? "recving from" : "sending to  ";
