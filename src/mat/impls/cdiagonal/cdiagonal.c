@@ -291,7 +291,7 @@ PetscErrorCode MatCreateConstantDiagonal(MPI_Comm comm, PetscInt m, PetscInt n, 
 }
 
 /*MC
-   MATCONSTANTDIAGONAL - MATCONSTANTDIAGONAL = "constant-diagonal" - A diagonal matrix type with a uniform value
+   MATCONSTANTDIAGONAL - "constant-diagonal" - A diagonal matrix type with a uniform value
    along the diagonal.
 
   Level: advanced
