@@ -42,7 +42,7 @@ void pardiso_64init(void *pt, INT_TYPE *mtype, INT_TYPE iparm[])
 {
   int iparm_copy[IPARM_SIZE], mtype_copy, i;
 
-  mtype_copy = *mtype;
+  mtype_copy = (int)*mtype;
   pardisoinit(pt, &mtype_copy, iparm_copy);
   for (i = 0; i < IPARM_SIZE; i++) iparm[i] = iparm_copy[i];
 }

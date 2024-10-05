@@ -1844,9 +1844,6 @@ static PetscErrorCode CreateStaticData(PetscInt dim, IS grid_batch_is_inv[], Lan
 #else
       SETERRQ(ctx->comm, PETSC_ERR_ARG_WRONG, "-landau_device_type kokkos not built");
 #endif
-      /* free */
-      PetscCall(PetscFree4(ww, xx, yy, invJ_a));
-      if (dim == 3) PetscCall(PetscFree(zz));
     } else {                                                                                                                                                                   /* CPU version, just copy in, only use part */
       PetscReal *nu_alpha_p = (PetscReal *)ctx->SData_d.alpha, *nu_beta_p = (PetscReal *)ctx->SData_d.beta, *invMass_p = (PetscReal *)ctx->SData_d.invMass, *lambdas_p = NULL; // why set these ?
       ctx->SData_d.w    = (void *)ww;
@@ -1869,6 +1866,9 @@ static PetscErrorCode CreateStaticData(PetscInt dim, IS grid_batch_is_inv[], Lan
         for (PetscInt gridj = 0; gridj < LANDAU_MAX_GRIDS; gridj++) { (*lambdas)[grid][gridj] = ctx->lambdas[grid][gridj]; }
       }
     }
+    /* free */
+    PetscCall(PetscFree4(ww, xx, yy, invJ_a));
+    if (dim == 3) PetscCall(PetscFree(zz));
     PetscCall(PetscLogEventEnd(ctx->events[7], 0, 0, 0, 0));
   } // initialize
   PetscFunctionReturn(PETSC_SUCCESS);
