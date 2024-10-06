@@ -381,7 +381,7 @@ int main(int argc, char **argv)
       requires: cgns
       args: -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/tut21.cgns
     test:
-      suffix: cgns_read_multi_section
+      suffix: cgns_1
       requires: cgns
       args: -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/box.cgns
 

@@ -546,7 +546,6 @@ PetscErrorCode DMPlexCreateCGNS_Internal_Serial(MPI_Comm comm, PetscInt cgid, Pe
     /* First set sizes */
     for (z = 1, c = 0; z <= nzones; ++z) {
       CGNS_ENUMT(ZoneType_t) zonetype;
-      int nsections;
       CGNS_ENUMT(ElementType_t) cellType;
       cgsize_t       start, end;
       int            nbndry, parentFlag;
