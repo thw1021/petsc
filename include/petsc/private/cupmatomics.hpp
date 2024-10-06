@@ -13,6 +13,7 @@ typedef long long int          llint;
 typedef unsigned long long int ullint;
 
 #if PetscDefined(USING_NVCC)
+PETSC_PRAGMA_DIAGNOSTIC_IGNORED_BEGIN("-Wunused-function")
 /*
   Atomic Insert (exchange) operations
 
@@ -478,7 +479,7 @@ struct AtomicLXOR {
     return op(x, y);
   }
 };
-
+PETSC_PRAGMA_DIAGNOSTIC_IGNORED_END()
 #elif PetscDefined(USING_HCC)
 
   /*
@@ -595,7 +596,7 @@ __device__ static inline double atomicMult(double *address, double val)
   return __longlong_as_double(old);
 }
   #elif defined(PETSC_USE_REAL_SINGLE)
-__device__ static float atomicMult(float *address, float val)
+__device__ static inline float atomicMult(float *address, float val)
 {
   int *address_as_int = (int *)(address);
   int  old            = *address_as_int, assumed;
@@ -688,7 +689,7 @@ __device__ static float atomicMax(float *address, float val)
   #endif
 
   #if PETSC_PKG_HIP_VERSION_LT(5, 7, 0)
-__device__ static llint atomicMin(llint *address, llint val)
+__device__ static inline llint atomicMin(llint *address, llint val)
 {
   ullint *address_as_ull = (ullint *)(address);
   ullint  old            = *address_as_ull, assumed;
@@ -699,7 +700,7 @@ __device__ static llint atomicMin(llint *address, llint val)
   return (llint)old;
 }
 
-__device__ static llint atomicMax(llint *address, llint val)
+__device__ static inline llint atomicMax(llint *address, llint val)
 {
   ullint *address_as_ull = (ullint *)(address);
   ullint  old            = *address_as_ull, assumed;

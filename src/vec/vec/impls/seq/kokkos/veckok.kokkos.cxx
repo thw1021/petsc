@@ -571,7 +571,9 @@ static PetscErrorCode VecMultiDot_SeqKokkos_GEMV(PetscBool conjugate, Vec xin, P
       const auto &A  = Kokkos::View<const PetscScalar **, Kokkos::LayoutLeft>(yarray, lda, m);
       const auto &Y  = Kokkos::subview(A, std::pair<PetscInt, PetscInt>(0, n), Kokkos::ALL);
       auto        zv = PetscScalarKokkosDualView(PetscScalarKokkosView(z_d + i, m), PetscScalarKokkosViewHost(z_h + i, m));
+      PetscCall(PetscLogGpuTimeBegin());
       PetscCallCXX(KokkosBlas::gemv(PetscGetKokkosExecutionSpace(), trans, 1.0, Y, xv, 0.0, zv.view_device()));
+      PetscCall(PetscLogGpuTimeEnd());
       zv.modify_device();
       zv.sync_host();
       PetscCall(PetscLogGpuFlops(PetscMax(m * (2.0 * n - 1), 0.0)));
@@ -595,18 +597,14 @@ static PetscErrorCode VecMultiDot_SeqKokkos_GEMV(PetscBool conjugate, Vec xin, P
 PetscErrorCode VecMDot_SeqKokkos_GEMV(Vec xin, PetscInt nv, const Vec yin[], PetscScalar *z)
 {
   PetscFunctionBegin;
-  PetscCall(PetscLogGpuTimeBegin());
   PetscCall(VecMultiDot_SeqKokkos_GEMV(PETSC_TRUE, xin, nv, yin, z)); // conjugate
-  PetscCall(PetscLogGpuTimeEnd());
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode VecMTDot_SeqKokkos_GEMV(Vec xin, PetscInt nv, const Vec yin[], PetscScalar *z)
 {
   PetscFunctionBegin;
-  PetscCall(PetscLogGpuTimeBegin());
   PetscCall(VecMultiDot_SeqKokkos_GEMV(PETSC_FALSE, xin, nv, yin, z)); // transpose
-  PetscCall(PetscLogGpuTimeEnd());
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -667,6 +665,8 @@ PetscErrorCode VecDot_SeqKokkos(Vec xin, Vec yin, PetscScalar *z)
 /* y = x, where x is VECKOKKOS, but y may be not */
 PetscErrorCode VecCopy_SeqKokkos(Vec xin, Vec yin)
 {
+  auto &exec = PetscGetKokkosExecutionSpace();
+
   PetscFunctionBegin;
   PetscCall(PetscLogGpuTimeBegin());
   if (xin != yin) {
@@ -679,15 +679,16 @@ PetscErrorCode VecCopy_SeqKokkos(Vec xin, Vec yin)
         clear y's sync state.
        */
       ykok->v_dual.clear_sync_state();
-      PetscCallCXX(Kokkos::deep_copy(ykok->v_dual, xkok->v_dual));
+      PetscCallCXX(Kokkos::deep_copy(exec, ykok->v_dual, xkok->v_dual));
     } else {
       PetscScalar *yarray;
       PetscCall(VecGetArrayWrite(yin, &yarray));
       PetscScalarKokkosViewHost yv(yarray, yin->map->n);
       if (xkok->v_dual.need_sync_host()) { /* x's device has newer data */
-        PetscCallCXX(Kokkos::deep_copy(yv, xkok->v_dual.view_device()));
+        PetscCallCXX(Kokkos::deep_copy(exec, yv, xkok->v_dual.view_device()));
+        exec.fence(); // finish the deep copy
       } else {
-        PetscCallCXX(Kokkos::deep_copy(yv, xkok->v_dual.view_host()));
+        PetscCallCXX(Kokkos::deep_copy(exec, yv, xkok->v_dual.view_host()));
       }
       PetscCall(VecRestoreArrayWrite(yin, &yarray));
     }
@@ -1816,9 +1817,7 @@ static PetscErrorCode VecDuplicateVecs_SeqKokkos_GEMV(Vec w, PetscInt m, Vec *V[
   PetscCall(PetscKokkosInitializeCheck()); // as we'll call kokkos_malloc()
   PetscCall(PetscMalloc1(m, V));
   PetscCall(VecGetLayout(w, &map));
-  lda = map->n;
-  lda = ((lda + 31) / 32) * 32; // make every vector 32-elements aligned
-
+  VecGetLocalSizeAligned(w, 64, &lda); // get in lda the 64-bytes aligned local size
   // allocate raw arrays on host and device for the whole m vectors
   PetscCall(PetscCalloc1(m * lda, &array_h));
 #if defined(KOKKOS_ENABLE_DEFAULT_DEVICE_TYPE_HOST)
@@ -1834,9 +1833,8 @@ static PetscErrorCode VecDuplicateVecs_SeqKokkos_GEMV(Vec w, PetscInt m, Vec *V[
     PetscCallCXX(static_cast<Vec_Kokkos *>(v->spptr)->v_dual.modify_host()); // as we only init'ed array_h
     PetscCall(PetscObjectListDuplicate(((PetscObject)w)->olist, &((PetscObject)v)->olist));
     PetscCall(PetscFunctionListDuplicate(((PetscObject)w)->qlist, &((PetscObject)v)->qlist));
-    v->ops->view          = w->ops->view;
-    v->stash.ignorenegidx = w->stash.ignorenegidx;
-    (*V)[i]               = v;
+    v->ops[0] = w->ops[0];
+    (*V)[i]   = v;
   }
 
   // let the first vector own the raw arrays, so when it is destroyed it will free the arrays
@@ -1888,8 +1886,8 @@ PetscErrorCode VecCreate_SeqKokkos(Vec v)
 
   if (mdot_use_gemv) {
     v->ops[0].mdot        = VecMDot_SeqKokkos_GEMV;
-    v->ops[0].mdot_local  = VecMDot_SeqKokkos_GEMV;
     v->ops[0].mtdot       = VecMTDot_SeqKokkos_GEMV;
+    v->ops[0].mdot_local  = VecMDot_SeqKokkos_GEMV;
     v->ops[0].mtdot_local = VecMTDot_SeqKokkos_GEMV;
   }
   if (maxpy_use_gemv) v->ops[0].maxpy = VecMAXPY_SeqKokkos_GEMV;

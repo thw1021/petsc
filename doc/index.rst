@@ -18,10 +18,6 @@ PETSc is developed as :ref:`open-source <doc_license>`, :any:`requests <doc_cree
   .. image:: /images/community/numfocus.png
      :align: center
 
-.. admonition:: News: PETSc 2024 Annual Meeting
-
-  The :any:`2024 Annual Meeting <meetings>` will take place May 23, 24 in Cologne, Germany.
-
 .. admonition:: News: Book on numerical methods using PETSc
 
   **PETSc for Partial Differential Equations: Numerical Solutions in C and Python**, by Ed Bueler.
@@ -68,6 +64,8 @@ Toolkits/libraries that use PETSc
 -  `DAFoam <https://dafoam.github.io>`__ Discrete adjoint solvers
    with `OpenFOAM <https://openfoam.com>`__ for aerodynamic
    optimization
+-  `DAMASK <https://damask-multiphysics.org>`__ Unified multi-physics
+   crystal plasticity simulation package
 -  `DEAL.II <https://www.dealii.org/>`__ C++ based finite element
    simulation package
 -  `DUNE-FEM <https://dune-project.org/sphinx/content/sphinx/dune-fem/>`__ Python and C++ based finite element simulation package

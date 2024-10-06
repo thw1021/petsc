@@ -623,7 +623,7 @@ static PetscErrorCode CreateQuadMesh1(MPI_Comm comm, AppCtx *user, DM *dm)
   lower[1] = (PetscReal)(rank / 2);
   upper[0] = (PetscReal)(rank % 2) + 1.;
   upper[1] = (PetscReal)(rank / 2) + 1.;
-  PetscCall(DMPlexCreateBoxMesh(PETSC_COMM_SELF, 2, PETSC_FALSE, faces, lower, upper, NULL, PETSC_TRUE, dm));
+  PetscCall(DMPlexCreateBoxMesh(PETSC_COMM_SELF, 2, PETSC_FALSE, faces, lower, upper, NULL, PETSC_TRUE, 0, PETSC_TRUE, dm));
   PetscCall(PetscObjectSetName((PetscObject)*dm, "box"));
   // Flip edges to make fault non-oriented
   switch (rank) {
@@ -756,7 +756,7 @@ static PetscErrorCode CreateHexMesh1(MPI_Comm comm, AppCtx *user, DM *dm)
   upper[0] = (PetscReal)(rank % 2) + 1.;
   upper[1] = 1.;
   upper[2] = (PetscReal)(rank / 2) + 1.;
-  PetscCall(DMPlexCreateBoxMesh(PETSC_COMM_SELF, 3, PETSC_FALSE, faces, lower, upper, NULL, PETSC_TRUE, dm));
+  PetscCall(DMPlexCreateBoxMesh(PETSC_COMM_SELF, 3, PETSC_FALSE, faces, lower, upper, NULL, PETSC_TRUE, 0, PETSC_TRUE, dm));
   PetscCall(PetscObjectSetName((PetscObject)*dm, "box"));
   // Flip edges to make fault non-oriented
   switch (rank) {
@@ -1071,6 +1071,19 @@ int main(int argc, char **argv)
             -f0_dm_plex_transform_active fault0  -f0_coarse_dm_view ::ascii_info_detail \
           -f1_dm_refine 1 -f1_dm_plex_transform_type cohesive_extrude \
             -f1_dm_plex_transform_active fault1  -f1_coarse_dm_view ::ascii_info_detail \
+          -dm_view ::ascii_info_detail
+
+  test:
+    suffix: quad_6w
+    args: -dm_plex_simplex 0 -dm_plex_box_faces 3,2 \
+            -dm_plex_cohesive_label_fault0 22,23 \
+            -dm_plex_cohesive_label_fault1 32 \
+          -f0_dm_refine 1 -f0_dm_plex_transform_type cohesive_extrude \
+            -f0_dm_plex_transform_active fault0  -f0_coarse_dm_view ::ascii_info_detail \
+            -f0_dm_plex_transform_cohesive_width 0.05 \
+          -f1_dm_refine 1 -f1_dm_plex_transform_type cohesive_extrude \
+            -f1_dm_plex_transform_active fault1  -f1_coarse_dm_view ::ascii_info_detail \
+            -f1_dm_plex_transform_cohesive_width 0.05 \
           -dm_view ::ascii_info_detail
 
   testset:

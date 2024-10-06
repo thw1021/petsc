@@ -305,6 +305,7 @@ class Package(config.base.Configure):
     return nargs
 
   def rmArgsStartsWith(self,args,rejectstarts):
+    '''Remove an argument that starts with given strings'''
     rejects = []
     if not isinstance(rejectstarts, list): rejectstarts = [rejectstarts]
     for i in rejectstarts:
@@ -312,6 +313,7 @@ class Package(config.base.Configure):
     return self.rmArgs(args,rejects)
 
   def addArgStartsWith(self,args,sw,value):
+    '''Adds another value with the argument that starts with sw, create sw if it does not exist'''
     keep = []
     found = 0
     for i in args:
@@ -323,13 +325,24 @@ class Package(config.base.Configure):
       keep.append(sw+'="' + value + '"')
     return keep
 
+  def rmValueArgStartsWith(self,args,sw,value):
+    '''Remove a value from arguments that start with sw'''
+    if not isinstance(sw, list): sw = [sw]
+    keep = []
+    for i in args:
+      for j in sw:
+        if i.startswith(j+'="'):
+          i = i.replace(value,'')
+      keep.append(i)
+    return keep
+
   def removeWarningFlags(self,flags):
     flags = self.rmArgs(
       flags,
       {
         '-Werror', '-Wall', '-Wwrite-strings', '-Wno-strict-aliasing', '-Wno-unknown-pragmas',
         '-Wno-unused-variable', '-Wno-unused-dummy-argument', '-std=c89', '-pedantic','--coverage',
-        '-Mfree', '-fdefault-integer-8', '-fsanitize=address', '-fstack-protector'
+        '-Mfree', '-fdefault-integer-8', '-fsanitize=address', '-fstack-protector', '-Wconversion'
       }
     )
     return ['-g' if f == '-g3' else f for f in flags]
@@ -373,6 +386,13 @@ class Package(config.base.Configure):
   def removeCoverageFlag(self, flags, pair_prefix=None):
     """Remove --coverage from flags."""
     return self.__remove_flag_pair(flags, '--coverage', pair_prefix)
+
+  def removeOpenMPFlag(self, flags, pair_prefix=None):
+    """Remove -fopenmp from flags."""
+    if hasattr(self,'openmp') and hasattr(self.openmp,'ompflag'):
+      return self.__remove_flag_pair(flags, self.openmp.ompflag, pair_prefix)
+    else:
+      return flags
 
   def removeStdCxxFlag(self,flags):
     '''Remove the -std=[CXX_VERSION] flag from the list of flags, but only for CMake packages'''
@@ -571,11 +591,11 @@ Now rerun configure''' % (self.installDirProvider.dir, '--download-'+self.packag
       alllibs.append(libs)
     return alllibs
 
-  def getIncludeDirs(self, prefix, includeDir):
-    if isinstance(includeDir, list):
-      iDirs = [inc for inc in includeDir if os.path.isabs(inc)] + [os.path.join(prefix, inc) for inc in includeDir if not os.path.isabs(inc)]
-      return [inc for inc in iDirs if os.path.exists(inc)]
-    return os.path.join(prefix, includeDir)
+  def getIncludeDirs(self, prefix, includeDirs):
+    if not isinstance(includeDirs, list):
+      includeDirs = [includeDirs]
+    iDirs = [inc for inc in includeDirs if os.path.isabs(inc)] + [os.path.join(prefix, inc) for inc in includeDirs if not os.path.isabs(inc)]
+    return [inc for inc in iDirs if os.path.exists(inc)]
 
   def addToArgs(self,args,key,value):
     found = 0

@@ -112,7 +112,7 @@ PetscErrorCode DMInitializePackage(void)
   PetscCall(PetscLogEventRegister("DMPlexJacobianFE", DM_CLASSID, &DMPLEX_JacobianFEM));
   PetscCall(PetscLogEventRegister("DMPlexInterpFE", DM_CLASSID, &DMPLEX_InterpolatorFEM));
   PetscCall(PetscLogEventRegister("DMPlexInjectorFE", DM_CLASSID, &DMPLEX_InjectorFEM));
-  PetscCall(PetscLogEventRegister("DMPlexIntegralFEM", DM_CLASSID, &DMPLEX_IntegralFEM));
+  PetscCall(PetscLogEventRegister("DMPlexIntegralFE", DM_CLASSID, &DMPLEX_IntegralFEM));
   PetscCall(PetscLogEventRegister("DMPlexRebalance", DM_CLASSID, &DMPLEX_RebalanceSharedPoints));
   PetscCall(PetscLogEventRegister("DMPlexLocatePoints", DM_CLASSID, &DMPLEX_LocatePoints));
   PetscCall(PetscLogEventRegister("DMPlexTopologyView", DM_CLASSID, &DMPLEX_TopologyView));
@@ -175,6 +175,8 @@ PetscErrorCode DMInitializePackage(void)
 
   PetscCall(DMGenerateRegisterAll());
   PetscCall(PetscRegisterFinalize(DMGenerateRegisterDestroy));
+  PetscCall(DMGeomModelRegisterAll());
+  PetscCall(PetscRegisterFinalize(DMGeomModelRegisterDestroy));
   PetscCall(DMPlexTransformRegisterAll());
   PetscCall(PetscRegisterFinalize(DMPlexTransformRegisterDestroy));
   PetscCall(DMLabelRegisterAll());
@@ -405,6 +407,7 @@ PETSC_EXTERN PetscErrorCode PetscDLLibraryRegister_petscdm(void)
   PetscCall(PetscFEInitializePackage());
   PetscCall(PetscFVInitializePackage());
   PetscCall(DMFieldInitializePackage());
+  PetscCall(PetscDSInitializePackage());
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

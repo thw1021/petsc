@@ -126,7 +126,7 @@ PetscErrorCode TaoSolve_BNTL(Tao tao)
     /* Call general purpose update function */
     if (tao->ops->update) {
       PetscUseTypeMethod(tao, update, tao->niter, tao->user_update);
-      PetscCall(TaoComputeObjectiveAndGradient(tao, tao->solution, &bnk->f, bnk->unprojected_gradient));
+      PetscCall(TaoComputeObjective(tao, tao->solution, &bnk->f));
     }
 
     if (needH && bnk->inactive_idx) {
@@ -229,21 +229,19 @@ PetscErrorCode TaoSolve_BNTL(Tao tao)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*------------------------------------------------------------*/
 static PetscErrorCode TaoSetUp_BNTL(Tao tao)
 {
-  KSP          ksp;
-  PetscVoidFn *valid;
+  KSP       ksp;
+  PetscBool valid;
 
   PetscFunctionBegin;
   PetscCall(TaoSetUp_BNK(tao));
   PetscCall(TaoGetKSP(tao, &ksp));
-  PetscCall(PetscObjectQueryFunction((PetscObject)ksp, "KSPCGSetRadius_C", &valid));
+  PetscCall(PetscObjectHasFunction((PetscObject)ksp, "KSPCGSetRadius_C", &valid));
   PetscCheck(valid, PetscObjectComm((PetscObject)tao), PETSC_ERR_SUP, "Not for KSP type %s. Must use a trust-region CG method for KSP (e.g. KSPNASH, KSPSTCG, KSPGLTR)", ((PetscObject)ksp)->type_name);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*------------------------------------------------------------*/
 static PetscErrorCode TaoSetFromOptions_BNTL(Tao tao, PetscOptionItems *PetscOptionsObject)
 {
   TAO_BNK *bnk = (TAO_BNK *)tao->data;
@@ -254,18 +252,22 @@ static PetscErrorCode TaoSetFromOptions_BNTL(Tao tao, PetscOptionItems *PetscOpt
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*------------------------------------------------------------*/
 /*MC
   TAOBNTL - Bounded Newton Trust Region method with line-search fall-back for nonlinear
             minimization with bound constraints.
 
   Options Database Keys:
-  + -tao_bnk_max_cg_its - maximum number of bounded conjugate-gradient iterations taken in each Newton loop
-  . -tao_bnk_init_type - trust radius initialization method ("constant", "direction", "interpolation")
+  + -tao_bnk_max_cg_its   - maximum number of bounded conjugate-gradient iterations taken in each Newton loop
+  . -tao_bnk_init_type   - trust radius initialization method ("constant", "direction", "interpolation")
   . -tao_bnk_update_type - trust radius update method ("step", "direction", "interpolation")
-  - -tao_bnk_as_type - active-set estimation method ("none", "bertsekas")
+  - -tao_bnk_as_type     - active-set estimation method ("none", "bertsekas")
 
   Level: beginner
+
+  Developer Note:
+  One should control the maximum number of cg iterations through the standard pc_max_it option not with a special
+  ad hoc option
+
 M*/
 PETSC_EXTERN PetscErrorCode TaoCreate_BNTL(Tao tao)
 {
