@@ -458,7 +458,7 @@ PetscErrorCode DMPlexCreateCGNSFromFile_Internal(MPI_Comm comm, const char filen
 
 static PetscErrorCode PetscCGNSGetSectionOfHigherTopologicalOrder(int cgid, int zoneid, int *sectionid)
 {
-  int nsections, s; 
+  int nsections, s;
   CGNS_ENUMT(ElementType_t) cellType;
   CGNS_ENUMT(ElementType_t) prevCellType;
   cgsize_t       start, end;
@@ -479,7 +479,6 @@ static PetscErrorCode PetscCGNSGetSectionOfHigherTopologicalOrder(int cgid, int 
       prevCellType = cellType;
     }
   }
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
