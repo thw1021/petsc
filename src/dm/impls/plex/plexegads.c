@@ -594,7 +594,7 @@ static PetscErrorCode DMPlexCreateEGADS_Internal(MPI_Comm comm, ego context, ego
 
     PetscCall(PetscContainerCreate(PETSC_COMM_SELF, &contextObj));
     PetscCall(PetscContainerSetPointer(contextObj, context));
-    PetscCall(PetscContainerSetUserDestroy(contextObj, DMPlexEGADSDestroy_Private));
+    PetscCall(PetscContainerSetCtxDestroy(contextObj, DMPlexEGADSDestroy_Private));
     PetscCall(PetscObjectCompose((PetscObject)dm, "EGADS Context", (PetscObject)contextObj));
     PetscCall(PetscContainerDestroy(&contextObj));
   }
@@ -984,7 +984,7 @@ static PetscErrorCode DMPlexCreateEGADS(MPI_Comm comm, ego context, ego model, D
 
     PetscCall(PetscContainerCreate(PETSC_COMM_SELF, &contextObj));
     PetscCall(PetscContainerSetPointer(contextObj, context));
-    PetscCall(PetscContainerSetUserDestroy(contextObj, DMPlexEGADSDestroy_Private));
+    PetscCall(PetscContainerSetCtxDestroy(contextObj, DMPlexEGADSDestroy_Private));
     PetscCall(PetscObjectCompose((PetscObject)dm, "EGADS Context", (PetscObject)contextObj));
     PetscCall(PetscContainerDestroy(&contextObj));
   }
@@ -1311,7 +1311,7 @@ static PetscErrorCode DMPlexCreateEGADS_Tess_Internal(MPI_Comm comm, ego context
 
     PetscCall(PetscContainerCreate(PETSC_COMM_SELF, &contextObj));
     PetscCall(PetscContainerSetPointer(contextObj, context));
-    PetscCall(PetscContainerSetUserDestroy(contextObj, DMPlexEGADSDestroy_Private));
+    PetscCall(PetscContainerSetCtxDestroy(contextObj, DMPlexEGADSDestroy_Private));
     PetscCall(PetscObjectCompose((PetscObject)dm, "EGADS Context", (PetscObject)contextObj));
     PetscCall(PetscContainerDestroy(&contextObj));
   }
