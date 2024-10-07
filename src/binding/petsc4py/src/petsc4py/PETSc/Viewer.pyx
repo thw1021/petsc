@@ -17,6 +17,7 @@ class ViewerType(object):
     ADIOS       = S_(PETSCVIEWERADIOS)
     EXODUSII    = S_(PETSCVIEWEREXODUSII)
     PYTHON      = S_(PETSCVIEWERPYTHON)
+    PYVISTA     = S_(PETSCVIEWERPYVISTA)
 
 
 class ViewerFormat(object):

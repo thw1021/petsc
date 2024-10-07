@@ -129,9 +129,6 @@ PetscViewer PETSC_VIEWER_PYTHON_(MPI_Comm comm)
   PetscFunctionReturn(viewer);
 }
 
-// This is extracted from the petsc4py DLL in pythonsys.c
-PETSC_EXTERN PetscErrorCode PyViewerCreate_Python(PetscObject);
-
 /*MC
    PETSCVIEWERPYTHON - A viewer implemented using Python code
 
@@ -142,7 +139,3 @@ PETSC_EXTERN PetscErrorCode PyViewerCreate_Python(PetscObject);
 
 .seealso: [](sec_viewers), `PetscViewer`, `PetscViewerCreate()`, `VecView()`, `DMView()`, `DMPLEX`, `PETSCVIEWERPYVISTA`
 M*/
-PETSC_EXTERN PetscErrorCode PetscViewerCreate_Python(PetscViewer viewer)
-{
-  return PyViewerCreate_Python((PetscObject)viewer);
-}

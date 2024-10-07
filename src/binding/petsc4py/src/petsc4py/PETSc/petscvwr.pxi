@@ -16,6 +16,7 @@ cdef extern from * nogil:
     PetscViewerType PETSCVIEWERADIOS
     PetscViewerType PETSCVIEWEREXODUSII
     PetscViewerType PETSCVIEWERPYTHON
+    PetscViewerType PETSCVIEWERPYVISTA
 
     ctypedef enum PetscViewerFormat:
         PETSC_VIEWER_DEFAULT
