@@ -166,10 +166,11 @@ PetscErrorCode PetscOptionsGetCreateViewerOff(PetscBool *flg)
 
 static PetscErrorCode PetscOptionsCreateViewers_Single(MPI_Comm comm, const char value[], PetscViewer *viewer, PetscViewerFormat *format)
 {
-  char    *loc0_vtype = NULL, *loc1_fname = NULL, *loc2_fmt = NULL, *loc3_fmode = NULL;
-  PetscInt cnt;
-  size_t   viewer_string_length;
-  const char *viewers[] = {PETSCVIEWERASCII, PETSCVIEWERBINARY, PETSCVIEWERDRAW, PETSCVIEWERSOCKET, PETSCVIEWERMATLAB, PETSCVIEWERSAWS, PETSCVIEWERVTK, PETSCVIEWERHDF5, PETSCVIEWERGLVIS, PETSCVIEWEREXODUSII, PETSCVIEWERPYTHON, NULL}; /* list should be automatically generated from PetscViewersList */
+  char       *loc0_vtype = NULL, *loc1_fname = NULL, *loc2_fmt = NULL, *loc3_fmode = NULL;
+  PetscInt    cnt;
+  size_t      viewer_string_length;
+  const char *viewers[] = {PETSCVIEWERASCII, PETSCVIEWERBINARY, PETSCVIEWERDRAW,  PETSCVIEWERSOCKET,   PETSCVIEWERMATLAB, PETSCVIEWERSAWS,
+                           PETSCVIEWERVTK,   PETSCVIEWERHDF5,   PETSCVIEWERGLVIS, PETSCVIEWEREXODUSII, PETSCVIEWERPYTHON, NULL}; /* list should be automatically generated from PetscViewersList */
 
   PetscFunctionBegin;
   PetscCall(PetscStrlen(value, &viewer_string_length));

@@ -98,6 +98,8 @@ static void (*PyErr_NormalizeException)(PyObject **, PyObject **, PyObject **);
 static void (*PyErr_Display)(PyObject *, PyObject *, PyObject *);
 static void (*PyErr_Restore)(PyObject *, PyObject *, PyObject *);
 
+PetscErrorCode (*PyViewerCreate_Python)(PetscObject);
+
 #define PetscDLPyLibOpen(libname)      PetscDLLibraryAppend(PETSC_COMM_SELF, &PetscDLLibrariesLoaded, libname)
 #define PetscDLPyLibSym(symbol, value) PetscDLLibrarySym(PETSC_COMM_SELF, &PetscDLLibrariesLoaded, NULL, symbol, (void **)value)
 #define PetscDLPyLibClose(comm) \
@@ -128,6 +130,7 @@ static PetscErrorCode PetscPythonLoadLibrary(const char pythonlib[])
   PetscCall(PetscDLPyLibSym("PyErr_NormalizeException", &PyErr_NormalizeException));
   PetscCall(PetscDLPyLibSym("PyErr_Display", &PyErr_Display));
   PetscCall(PetscDLPyLibSym("PyErr_Restore", &PyErr_Restore));
+  PetscCall(PetscDLPyLibSym("PetscViewerCreate_Python", &PyViewerCreate_Python));
   /* XXX TODO: check that ALL symbols were there !!! */
   PetscCheck(Py_None, PETSC_COMM_SELF, PETSC_ERR_LIB, "Python: failed to load symbols from Python dynamic library %s", pythonlib);
   PetscCheck(Py_GetVersion, PETSC_COMM_SELF, PETSC_ERR_LIB, "Python: failed to load symbols from Python dynamic library %s", pythonlib);

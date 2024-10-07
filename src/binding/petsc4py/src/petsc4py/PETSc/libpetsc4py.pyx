@@ -413,6 +413,8 @@ cdef PetscErrorCode PetscViewerSetUp_Python(
                name, sizeof(name), &found))
         if found and name[0]:
             CHKERR(PetscViewerPythonSetType_PYTHON(viewer, name))
+        else:
+            CHKERR(PetscViewerPythonSetType_PYTHON(viewer, "petsc4py.lib._pytypes.viewer.petscpyvista.PetscPyVista"))
     if PyVwr(viewer).self is None:
         return PetscSETERR(PETSC_ERR_USER,
                            "Python context not set, call one of \n"
