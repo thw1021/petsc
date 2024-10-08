@@ -3461,7 +3461,8 @@ cdef class DMPlex(DM):
 
         See Also
         --------
-        DMPlex, DMPlex.distribute, DMPlex.getGatherDM
+        DMPlex, distribute, getGatherDM
+        petsc.DMPlexGetRedundantDM
         """
         cdef DMPlex newdm = DMPlex()
         newdm.create(comm=comm)
