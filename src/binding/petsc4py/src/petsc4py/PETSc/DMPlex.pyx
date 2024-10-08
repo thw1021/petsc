@@ -3484,7 +3484,6 @@ cdef class DMPlex(DM):
         petsc.DMPlexGetGatherDM
         """
         cdef DMPlex newdm = DMPlex()
-        newdm.create(comm=comm)
         cdef SF sf = SF()
         CHKERR(DMPlexGetGatherDM(self.dm, &sf.sf, &newdm.dm))
         sf.destroy()
