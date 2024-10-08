@@ -3467,6 +3467,7 @@ cdef class DMPlex(DM):
         newdm.create(comm=comm)
         cdef SF sf = SF()
         CHKERR(DMPlexGetRedundantDM(self.dm, &sf.sf, &newdm.dm))
+        sf.destroy()
         return newdm
 
     def getGatherDM(self, comm: Comm | None = None) -> DM:
