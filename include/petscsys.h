@@ -504,7 +504,7 @@ M*/
    Level: beginner
 
    Note:
-   This uses the sizeof() of the memory type requested to determine the total memory to be allocated, therefore you should not
+   This uses the `sizeof()` of the memory type requested to determine the total memory to be allocated, therefore you should not
          multiply the number of elements requested by the `sizeof()` the type. For example use
 .vb
   PetscInt *id;
@@ -516,7 +516,20 @@ M*/
   PetscMalloc1(10*sizeof(PetscInt),&id);
 .ve
 
-        Does not zero the memory allocated, use `PetscCalloc1()` to obtain memory that has been zeroed.
+  Does not zero the memory allocated, use `PetscCalloc1()` to obtain memory that has been zeroed.
+
+  Note! `PetscMalloc()` takes `size_t` as argument! However most codes use value computed via `int` or `PetscInt` variables. This can overflow in
+  32bit `int` computation - while computation in 64bit `size_t` would not overflow!
+
+  `PetscMalloc()` attempts to work-around this by casting the first variable to `size_t`.
+  This works for most expressions, but not all, such as
+.vb
+  PetscInt *id, a, b;
+  PetscMalloc1(use_a_squared ? a * a * b : a * b, &id); // use_a_squared is cast to size_t, but a and b are still PetscInt
+  PetscMalloc1(a + b * b, &id); // a is cast to size_t, but b * b is performed at PetscInt precision first due to order-of-operations
+.ve
+
+  Its best if any arithmetic that is done for size computations is done with `size_t` type - avoiding arithmetic overflow!
 
 .seealso: `PetscFree()`, `PetscNew()`, `PetscMalloc()`, `PetscCalloc1()`, `PetscMalloc2()`
 M*/
