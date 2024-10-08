@@ -3478,11 +3478,6 @@ cdef class DMPlex(DM):
 
         Collective.
 
-        Parameters
-        ----------
-        comm
-            MPI communicator, defaults to `Sys.getDefaultComm`.
-
         See Also
         --------
         DM, DMPlex, DMPlex.distribute, DMPlex.getRedundantDM, SF
