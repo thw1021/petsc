@@ -3465,7 +3465,6 @@ cdef class DMPlex(DM):
         petsc.DMPlexGetRedundantDM
         """
         cdef DMPlex newdm = DMPlex()
-        newdm.create(comm=comm)
         cdef SF sf = SF()
         CHKERR(DMPlexGetRedundantDM(self.dm, &sf.sf, &newdm.dm))
         sf.destroy()
