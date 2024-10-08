@@ -1879,7 +1879,7 @@ static PetscErrorCode DMPlexCreateHighOrderSurrogate_Internal(DM dm, DM *hdm)
 
 PetscErrorCode DMView_Plex(DM dm, PetscViewer viewer)
 {
-  PetscBool iascii, ishdf5, isvtk, isdraw, flg, isglvis, isexodus, iscgns;
+  PetscBool iascii, ishdf5, isvtk, isdraw, flg, isglvis, isexodus, iscgns, ispython;
   char      name[PETSC_MAX_PATH_LEN];
 
   PetscFunctionBegin;
@@ -1892,6 +1892,7 @@ PetscErrorCode DMView_Plex(DM dm, PetscViewer viewer)
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERGLVIS, &isglvis));
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWEREXODUSII, &isexodus));
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERCGNS, &iscgns));
+  PetscCall(PetscObjectHasFunction((PetscObject)viewer, "PetscViewerPythonViewObject_C", &ispython));
   if (iascii) {
     PetscViewerFormat format;
     PetscCall(PetscViewerGetFormat(viewer, &format));
@@ -1936,6 +1937,8 @@ PetscErrorCode DMView_Plex(DM dm, PetscViewer viewer)
   } else if (iscgns) {
     PetscCall(DMView_PlexCGNS(dm, viewer));
 #endif
+  } else if (ispython) {
+    PetscCall(PetscViewerPythonViewObject(viewer, (PetscObject)dm));
   } else SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "Viewer type %s not yet supported for DMPlex writing", ((PetscObject)viewer)->type_name);
   /* Optionally view the partition */
   PetscCall(PetscOptionsHasName(((PetscObject)dm)->options, ((PetscObject)dm)->prefix, "-dm_partition_view", &flg));

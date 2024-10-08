@@ -557,12 +557,33 @@ void PetscCallReturnMPI(PetscErrorCode);
       ierr_petsc_call_q_ = __VA_ARGS__; \
       if (PetscUnlikely(ierr_petsc_call_q_ != PETSC_SUCCESS)) return PetscError(PETSC_COMM_SELF, __LINE__, PETSC_FUNCTION_NAME, __FILE__, ierr_petsc_call_q_, PETSC_ERROR_REPEAT, " "); \
     } while (0)
+  #define PetscCallPython(...) \
+    do { \
+      PetscErrorCode ierr_petsc_call_q_; \
+      PetscStackUpdateLine; \
+      ierr_petsc_call_q_ = __VA_ARGS__; \
+      if (PetscUnlikely(ierr_petsc_call_q_ != PETSC_SUCCESS)) { \
+        (void)PetscPythonPrintError(); \
+        return PetscError(PETSC_COMM_SELF, __LINE__, PETSC_FUNCTION_NAME, __FILE__, ierr_petsc_call_q_, PETSC_ERROR_REPEAT, " "); \
+      } \
+    } while (0)
   #define PetscCallNull(...) \
     do { \
       PetscErrorCode ierr_petsc_call_q_; \
       PetscStackUpdateLine; \
       ierr_petsc_call_q_ = __VA_ARGS__; \
       if (PetscUnlikely(ierr_petsc_call_q_ != PETSC_SUCCESS)) { \
+        (void)PetscError(PETSC_COMM_SELF, __LINE__, PETSC_FUNCTION_NAME, __FILE__, PETSC_ERR_PLIB, PETSC_ERROR_INITIAL, " "); \
+        PetscFunctionReturn(NULL); \
+      } \
+    } while (0)
+  #define PetscCallPythonNull(...) \
+    do { \
+      PetscErrorCode ierr_petsc_call_q_; \
+      PetscStackUpdateLine; \
+      ierr_petsc_call_q_ = __VA_ARGS__; \
+      if (PetscUnlikely(ierr_petsc_call_q_ != PETSC_SUCCESS)) { \
+        (void)PetscPythonPrintError(); \
         (void)PetscError(PETSC_COMM_SELF, __LINE__, PETSC_FUNCTION_NAME, __FILE__, PETSC_ERR_PLIB, PETSC_ERROR_INITIAL, " "); \
         PetscFunctionReturn(NULL); \
       } \

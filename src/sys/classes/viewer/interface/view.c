@@ -291,7 +291,7 @@ PetscErrorCode PetscViewerSetUp(PetscViewer viewer)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 1);
   if (viewer->setupcalled) PetscFunctionReturn(PETSC_SUCCESS);
-  PetscTryTypeMethod(viewer, setup);
+  PetscTryTypeMethodPython(viewer, setup);
   viewer->setupcalled = PETSC_TRUE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }

@@ -867,6 +867,12 @@ M*/
     PetscCall(PetscObjectQueryFunction((PetscObject)(obj), A, &_7_f)); \
     if (_7_f) PetscCall((*_7_f)C); \
   } while (0)
+#define PetscTryMethodPython(obj, A, B, C) \
+  do { \
+    PetscErrorCode(*_7_f) B; \
+    PetscCall(PetscObjectQueryFunction((PetscObject)(obj), A, &_7_f)); \
+    if (_7_f) PetscCallPython((*_7_f)C); \
+  } while (0)
 
 /*MC
    PetscUseMethod - Queries a `PetscObject` for a method added with `PetscObjectComposeFunction()`, if it exists then calls it, otherwise generates an error.
@@ -932,6 +938,16 @@ M*/
       } \
     } while (0)
 
+  #define PetscTryTypeMethodPython(obj, OP, ...) \
+    do { \
+      if ((obj)->ops->OP) { \
+        PetscErrorCode ierr_p_; \
+        PetscStackUpdateLine; \
+        ierr_p_ = (*(obj)->ops->OP)(obj, __VA_ARGS__); \
+        PetscCallPython(ierr_p_); \
+      } \
+    } while (0)
+
 #else
 
   /*MC
@@ -986,6 +1002,11 @@ M*/
   #define PetscTryTypeMethod(obj, ...) \
     do { \
       if ((obj)->ops->PETSC_FIRST_ARG((__VA_ARGS__, unused))) PetscCall((*(obj)->ops->PETSC_FIRST_ARG((__VA_ARGS__, unused)))(obj PETSC_REST_ARG(__VA_ARGS__))); \
+    } while (0)
+
+  #define PetscTryTypeMethodPython(obj, ...) \
+    do { \
+      if ((obj)->ops->PETSC_FIRST_ARG((__VA_ARGS__, unused))) PetscCallPython((*(obj)->ops->PETSC_FIRST_ARG((__VA_ARGS__, unused)))(obj PETSC_REST_ARG(__VA_ARGS__))); \
     } while (0)
 
 #endif
