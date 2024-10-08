@@ -3467,8 +3467,7 @@ cdef class DMPlex(DM):
         cdef DMPlex newdm = DMPlex()
         cdef SF sf = SF()
         CHKERR(DMPlexGetRedundantDM(self.dm, &sf.sf, &newdm.dm))
-        sf.destroy()
-        return newdm
+        return newdm, sf
 
     def getGatherDM(self) -> tuple[DM, SF]:
         """
