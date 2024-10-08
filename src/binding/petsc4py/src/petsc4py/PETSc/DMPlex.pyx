@@ -3448,7 +3448,7 @@ cdef class DMPlex(DM):
         """
         CHKERR(DMPlexLocalVectorLoad(self.dm, viewer.vwr, sectiondm.dm, sf.sf, vec.vec))
 
-    def getRedundantDM(self, comm: Comm | None = None) -> DM:
+    def getRedundantDM(self) -> tuple[DM, SF]:
         """
         Get a copy of the DMPLEX that is completely copied on each process.
 
