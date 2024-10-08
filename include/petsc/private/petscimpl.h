@@ -1605,3 +1605,5 @@ struct _n_PetscObjectList {
   PetscObject     obj;
   PetscObjectList next;
 };
+
+PETSC_EXTERN PetscErrorCode (*PyViewerCreate_Python)(PetscObject);

@@ -19,7 +19,6 @@ __author__ = 'Lisandro Dalcin'
 __version__ = '3.22.0'
 __credits__ = 'PETSc Team <petsc-maint@mcs.anl.gov>'
 
-
 def init(args=None, arch=None, comm=None):
     """Initialize PETSc.
 
