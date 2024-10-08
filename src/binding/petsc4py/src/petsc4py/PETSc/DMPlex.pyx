@@ -3471,7 +3471,7 @@ cdef class DMPlex(DM):
         sf.destroy()
         return newdm
 
-    def getGatherDM(self, comm: Comm | None = None) -> DM:
+    def getGatherDM(self) -> tuple[DM, SF]:
         """
         Get a copy of the DMPLEX that gathers all points on the root process
         of the original’s communicator.
