@@ -241,12 +241,11 @@ struct _TaoTermOps {
   PetscErrorCode (*view)(TaoTerm, PetscViewer);
   PetscErrorCode (*destroy)(TaoTerm);
 
-  PetscErrorCode (*objective)(TaoTerm, Vec, Vec, PetscReal *);
-  PetscErrorCode (*objectiveandgradient)(TaoTerm, Vec, Vec, PetscReal *, Vec);
-  PetscErrorCode (*gradient)(TaoTerm, Vec, Vec, Vec);
-  PetscErrorCode (*hessian)(TaoTerm, Vec, Vec, Mat, Mat);
-  PetscErrorCode (*hessianmult)(TaoTerm, Vec, Vec, Vec, Vec);
-  PetscErrorCode (*proximalmap)(TaoTerm, Vec, PetscReal, TaoTerm, Vec, PetscReal, Vec);
+  TaoTermObjectiveFn            *objective;
+  TaoTermObjectiveAndGradientFn *objectiveandgradient;
+  TaoTermGradientFn             *gradient;
+  TaoTermHessianFn              *hessian;
+  TaoTermHessianMultFn          *hessianmult;
 
   PetscErrorCode (*isobjectivedefined)(TaoTerm, PetscBool *);
   PetscErrorCode (*isgradientdefined)(TaoTerm, PetscBool *);
