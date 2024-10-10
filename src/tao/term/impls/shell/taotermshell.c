@@ -191,13 +191,7 @@ static PetscErrorCode TaoTermDestroy_Shell(TaoTerm term)
 
   Input Parameters:
 + term      - a `TaoTerm` of type `TAOTERMSHELL`
-- objective - an objective function with the same signature as `TaoTermObjective()`
-
-  Calling sequence of `objective`:
-+ term   - the `TaoTerm`
-. x      - a value of the solution variables
-. params - a value of the parameters (may be NULL if the term is not parametric)
-- value  - value that will be returned in `TaoTermObjective()`
+- objective - a `TaoTermObjectiveFn` function pointer
 
   Level: intermediate
 
@@ -206,16 +200,17 @@ static PetscErrorCode TaoTermDestroy_Shell(TaoTerm term)
           `TaoTermShellSetObjectiveAndGradient()`,
           `TaoTermShellSetHessian()`,
           `TaoTermShellSetView()`,
+          `TaoTermObjectiveFn`
 @*/
-PetscErrorCode TaoTermShellSetObjective(TaoTerm term, PetscErrorCode (*objective)(TaoTerm term, Vec x, Vec params, PetscReal *value))
+PetscErrorCode TaoTermShellSetObjective(TaoTerm term, TaoTermObjectiveFn *objective)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
-  PetscTryMethod(term, "TaoTermShellSetObjective_C", (TaoTerm, PetscErrorCode (*)(TaoTerm, Vec, Vec, PetscReal *)), (term, objective));
+  PetscTryMethod(term, "TaoTermShellSetObjective_C", (TaoTerm, TaoTermObjectiveFn *), (term, objective));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoTermShellSetObjective_Shell(TaoTerm term, PetscErrorCode (*objective)(TaoTerm, Vec, Vec, PetscReal *))
+static PetscErrorCode TaoTermShellSetObjective_Shell(TaoTerm term, TaoTermObjectiveFn *objective)
 {
   PetscFunctionBegin;
   term->ops->objective = objective;
@@ -229,13 +224,7 @@ static PetscErrorCode TaoTermShellSetObjective_Shell(TaoTerm term, PetscErrorCod
 
   Input Parameters:
 + term     - a `TaoTerm` of type `TAOTERMSHELL`
-- gradient - a gradient function with the same signature as `TaoTermGradient()`
-
-  Calling sequence of `gradient`:
-+ term   - the `TaoTerm`
-. x      - a value of the solution variables
-. params - a value of the parameters (may be NULL if the term is not parametric)
-- g      - gradient vector that will be set in `TaoTermGradient()`
+- gradient - a `TaoTermGradientFn` function pointer
 
   Level: intermediate
 
@@ -244,16 +233,17 @@ static PetscErrorCode TaoTermShellSetObjective_Shell(TaoTerm term, PetscErrorCod
           `TaoTermShellSetObjectiveAndGradient()`,
           `TaoTermShellSetHessian()`,
           `TaoTermShellSetView()`,
+          `TaoTermGradientFn`
 @*/
-PetscErrorCode TaoTermShellSetGradient(TaoTerm term, PetscErrorCode (*gradient)(TaoTerm term, Vec x, Vec params, Vec g))
+PetscErrorCode TaoTermShellSetGradient(TaoTerm term, TaoTermGradientFn *gradient)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
-  PetscTryMethod(term, "TaoTermShellSetGradient_C", (TaoTerm, PetscErrorCode (*)(TaoTerm, Vec, Vec, Vec)), (term, gradient));
+  PetscTryMethod(term, "TaoTermShellSetGradient_C", (TaoTerm, TaoTermGradientFn *), (term, gradient));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoTermShellSetGradient_Shell(TaoTerm term, PetscErrorCode (*gradient)(TaoTerm, Vec, Vec, Vec))
+static PetscErrorCode TaoTermShellSetGradient_Shell(TaoTerm term, TaoTermGradientFn *gradient)
 {
   PetscFunctionBegin;
   term->ops->gradient = gradient;
@@ -267,14 +257,7 @@ static PetscErrorCode TaoTermShellSetGradient_Shell(TaoTerm term, PetscErrorCode
 
   Input Parameters:
 + term       - a `TaoTerm` of type `TAOTERMSHELL`
-- objandgrad - a function with the same signature as `TaoTermObjectiveAndGradient()`
-
-  Calling sequence of `objandgrad`:
-+ term   - the `TaoTerm`
-. x      - a value of the solution variables
-. params - a value of the parameters (may be NULL if the term is not parametric)
-. value  - value that will be returned in `TaoTermObjectiveAndGradeint()`
-- g      - gradient vector that will be set in `TaoTermObjectiveAndGradient()`
+- objandgrad - a `TaoTermObjectiveAndGradientFn` function pointer
 
   Level: intermediate
 
@@ -283,16 +266,17 @@ static PetscErrorCode TaoTermShellSetGradient_Shell(TaoTerm term, PetscErrorCode
           `TaoTermShellSetGradient()`,
           `TaoTermShellSetHessian()`,
           `TaoTermShellSetView()`,
+          `TaoTermObjectiveAndGradientFn`
 @*/
-PetscErrorCode TaoTermShellSetObjectiveAndGradient(TaoTerm term, PetscErrorCode (*objandgrad)(TaoTerm term, Vec x, Vec params, PetscReal *value, Vec g))
+PetscErrorCode TaoTermShellSetObjectiveAndGradient(TaoTerm term, TaoTermObjectiveAndGradientFn *objandgrad)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
-  PetscTryMethod(term, "TaoTermShellSetObjectiveAndGradient_C", (TaoTerm, PetscErrorCode (*)(TaoTerm, Vec, Vec, PetscReal *, Vec)), (term, objandgrad));
+  PetscTryMethod(term, "TaoTermShellSetObjectiveAndGradient_C", (TaoTerm, TaoTermObjectiveAndGradientFn *), (term, objandgrad));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoTermShellSetObjectiveAndGradient_Shell(TaoTerm term, PetscErrorCode (*objandgrad)(TaoTerm, Vec, Vec, PetscReal *, Vec))
+static PetscErrorCode TaoTermShellSetObjectiveAndGradient_Shell(TaoTerm term, TaoTermObjectiveAndGradientFn *objandgrad)
 {
   PetscFunctionBegin;
   term->ops->objectiveandgradient = objandgrad;
@@ -306,14 +290,7 @@ static PetscErrorCode TaoTermShellSetObjectiveAndGradient_Shell(TaoTerm term, Pe
 
   Input Parameters:
 + term    - a `TaoTerm` of type `TAOTERMSHELL`
-- hessian - a Hessian function with the same signature as `TaoTermHessian()`
-
-  Calling sequence of `hessian`:
-+ term   - the `TaoTerm`
-. x      - a value of the solution variables
-. params - a value of the parameters (may be NULL if the term is not parametric)
-. H      - Hessian matrix that will be returned in `TaoTermHessian()`
-- Hpre   - preconditioning matrix that will be returned in `TaoTermHessian()`
+- hessian - a `TaoTermHessianFn` function pointer
 
   Level: intermediate
 
@@ -323,16 +300,17 @@ static PetscErrorCode TaoTermShellSetObjectiveAndGradient_Shell(TaoTerm term, Pe
           `TaoTermShellSetObjectiveAndGradient()`,
           `TaoTermShellSetHessianMult()`,
           `TaoTermShellSetView()`,
+          `TaoTermHessianFn`
 @*/
-PetscErrorCode TaoTermShellSetHessian(TaoTerm term, PetscErrorCode (*hessian)(TaoTerm term, Vec x, Vec params, Mat H, Mat Hpre))
+PetscErrorCode TaoTermShellSetHessian(TaoTerm term, TaoTermHessianFn *hessian)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
-  PetscTryMethod(term, "TaoTermShellSetHessian_C", (TaoTerm, PetscErrorCode (*)(TaoTerm, Vec, Vec, Mat, Mat)), (term, hessian));
+  PetscTryMethod(term, "TaoTermShellSetHessian_C", (TaoTerm, TaoTermHessianFn *), (term, hessian));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoTermShellSetHessian_Shell(TaoTerm term, PetscErrorCode (*hessian)(TaoTerm, Vec, Vec, Mat, Mat))
+static PetscErrorCode TaoTermShellSetHessian_Shell(TaoTerm term, TaoTermHessianFn *hessian)
 {
   PetscFunctionBegin;
   term->ops->hessian = hessian;
@@ -346,14 +324,7 @@ static PetscErrorCode TaoTermShellSetHessian_Shell(TaoTerm term, PetscErrorCode 
 
   Input Parameters:
 + term        - a `TaoTerm` of type `TAOTERMSHELL`
-- hessianmult - a Hessian-vector product function with the same signature as `TaoTermHessianMult()`
-
-  Calling sequence of `hessian`:
-+ term   - the `TaoTerm`
-. x      - a value of the solution variables
-. params - a value of the parameters (may be NULL if the term is not parametric)
-. v      - input vector
-- Hv     - the Hessian multiplied by `v`
+- hessianmult - a `TaoTermHessianMultFn` function pointer
 
   Level: intermediate
 
@@ -363,16 +334,17 @@ static PetscErrorCode TaoTermShellSetHessian_Shell(TaoTerm term, PetscErrorCode 
           `TaoTermShellSetObjectiveAndGradient()`,
           `TaoTermShellSetHessian()`,
           `TaoTermShellSetView()`,
+          `TaoTermHessianMultFn`
 @*/
-PetscErrorCode TaoTermShellSetHessianMult(TaoTerm term, PetscErrorCode (*hessianmult)(TaoTerm term, Vec x, Vec params, Vec v, Vec Hv))
+PetscErrorCode TaoTermShellSetHessianMult(TaoTerm term, TaoTermHessianMultFn *hessianmult)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
-  PetscTryMethod(term, "TaoTermShellSetHessianMult_C", (TaoTerm, PetscErrorCode (*)(TaoTerm, Vec, Vec, Vec, Vec)), (term, hessianmult));
+  PetscTryMethod(term, "TaoTermShellSetHessianMult_C", (TaoTerm, TaoTermHessianMultFn *), (term, hessianmult));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoTermShellSetHessianMult_Shell(TaoTerm term, PetscErrorCode (*hessianmult)(TaoTerm, Vec, Vec, Vec, Vec))
+static PetscErrorCode TaoTermShellSetHessianMult_Shell(TaoTerm term, TaoTermHessianMultFn *hessianmult)
 {
   PetscFunctionBegin;
   term->ops->hessianmult = hessianmult;
