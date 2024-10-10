@@ -1131,6 +1131,10 @@ int main(int argc, char **argv)
   test:
     suffix: q1_2d_plex_7
     args: -dm_plex_simplex 0 -petscspace_degree 1 -petscspace_type tensor -qorder 1 -porder 2 -non_affine_coords -convergence
+  test:
+    suffix: q1_2d_plex_8
+    requires: triangle
+    args: -dist_dm_refine 1 -dist_dm_plex_transform_type refine_tobox -petscspace_degree 1 -qorder 1 -convergence
 
   # 2D Q_2 on a quadrilaterial
   test:
