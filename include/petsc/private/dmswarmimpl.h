@@ -39,9 +39,9 @@ typedef struct {
   /* PetscInt overlap; */
   /* PetscErrorCode (*update_overlap)(void); */
 
-  char      vec_field_name[PETSC_MAX_PATH_LEN];
-  PetscBool vec_field_set;
-  PetscInt  vec_field_bs, vec_field_nlocal;
+  const char **vec_field_names;
+  PetscInt     vec_field_num;
+  PetscInt     vec_field_bs, vec_field_nlocal;
 
   PetscBool          issetup;
   DMSwarmType        swarm_type;
@@ -61,6 +61,10 @@ typedef struct {
 
   PetscSimplePointFn *coordFunc; /* Function to set particle coordinates */
   PetscSimplePointFn *velFunc;   /* Function to set particle velocities */
+
+  /* Debugging */
+  PetscInt printCoords;
+  PetscInt printWeights;
 } DM_Swarm;
 
 typedef struct {
@@ -78,3 +82,5 @@ struct _p_DMSwarmSort {
 PETSC_INTERN PetscErrorCode DMSwarmMigrate_Push_Basic(DM, PetscBool);
 PETSC_INTERN PetscErrorCode DMSwarmMigrate_CellDMScatter(DM, PetscBool);
 PETSC_INTERN PetscErrorCode DMSwarmMigrate_CellDMExact(DM, PetscBool);
+
+PETSC_EXTERN PetscErrorCode DMSwarmReplace_Internal(DM, DM *);

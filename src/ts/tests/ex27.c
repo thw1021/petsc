@@ -431,7 +431,8 @@ int main(int argc, char **argv)
   PetscCall(CreateMesh(comm, &dm, &user));
   PetscCall(CreateParticles(dm, &sw, &user));
   PetscCall(DMSetApplicationContext(sw, &user));
-  PetscCall(DMSwarmVectorDefineField(sw, "velocity"));
+  const char *fieldnames[1] = {"velocity"};
+  PetscCall(DMSwarmVectorDefineField(sw, 1, fieldnames));
   PetscCall(TSCreate(comm, &ts));
   PetscCall(TSSetDM(ts, sw));
   PetscCall(TSSetMaxTime(ts, 10.0));
