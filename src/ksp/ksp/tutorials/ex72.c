@@ -788,7 +788,7 @@ int main(int argc, char **args)
       output_file: output/ex72_mumps_redundant.out
       nsize: 8
       requires: datafilespath double !defined(PETSC_USE_64BIT_INDICES) pastix
-      args: -f0 ${DATAFILESPATH}/matrices/medium -ksp_type preonly -pc_type redundant -pc_redundant_number {{8 7 6 5 4 3 2 1}} -redundant_pc_factor_mat_solver_type pastix -num_numfac 2 -num_rhs 2
+      args: -f0 ${DATAFILESPATH}/matrices/medium -ksp_type preonly -pc_type redundant -pc_redundant_number {{8 7 6 5 4 3 2 1}} -redundant_pc_factor_mat_solver_type pastix -num_numfac 2 -num_rhs 2 -mat_pastix_thread_nbr 1
 
    testset:
       suffix: superlu_dist_lu
