@@ -341,12 +341,8 @@ PetscErrorCode DMRefine_Plex(DM dm, MPI_Comm comm, DM *rdm)
     PetscCall(DMGetCoordinateDM(dm, &cdm));
     PetscCall(DMGetCoordinateDM(*rdm, &rcdm));
     PetscCall(DMGetCoordinateDegree_Internal(dm, &cDegree));
-    if (cDegree <= 1) {
-      PetscCall(DMCopyDisc(cdm, rcdm));
-    } else {
-      PetscCall(DMPlexCreateCoordinateSpace(*rdm, cDegree, PETSC_TRUE, NULL));
-      PetscCall(DMGetCoordinateDM(*rdm, &rcdm));
-    }
+    PetscCall(DMPlexCreateCoordinateSpace(*rdm, cDegree, PETSC_TRUE, NULL));
+    PetscCall(DMGetCoordinateDM(*rdm, &rcdm));
     PetscCall(DMPlexGetUseCeed(cdm, &useCeed));
     PetscCall(DMPlexSetUseCeed(rcdm, useCeed));
     if (useCeed) {
