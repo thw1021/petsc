@@ -633,14 +633,8 @@ PetscErrorCode TaoTermHessian(TaoTerm term, Vec x, Vec params, Mat H, Mat Hpre)
 . params         - (optional) a parameter vector
 . H              - (optional) a matrix for the Hessian to be computed
 . Hpre           - (optional) a matrix for the Hessian preconditioning matrix to be computed
-. func           - a callback that computes a single copy of the Hessian matrix
+. func           - a `TaoTermHessianSingleFn` callback that computes a single copy of the Hessian matrix
 - copy_structure - if `H` and `Hpre` are distinct matrices, the `str` argument to `MatCopy()` for copying `H` to `Hpre`
-
-  Calling sequence of `func`:
-+ term   - the `TaoTerm` context
-. x      - the input vector
-. params - the parameter vector
-- H      - Hessian matrix
 
   Level: intermediate
 
@@ -674,9 +668,10 @@ PetscErrorCode TaoTermHessian(TaoTerm term, Vec x, Vec params, Mat H, Mat Hpre)
 .seealso: [](sec_tao_term),
           `TaoTerm`,
           `TaoTermHessian()`,
-          `TaoTermShellSetHessian()`
+          `TaoTermShellSetHessian()`,
+          `TaoTermHessianSingleFn`
 @*/
-PetscErrorCode TaoTermHessianSingle(TaoTerm term, Vec x, Vec params, Mat H, Mat Hpre, PetscErrorCode (*func)(TaoTerm term, Vec x, Vec params, Mat H), MatStructure copy_structure)
+PetscErrorCode TaoTermHessianSingle(TaoTerm term, Vec x, Vec params, Mat H, Mat Hpre, TaoTermHessianSingleFn *func, MatStructure copy_structure)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
