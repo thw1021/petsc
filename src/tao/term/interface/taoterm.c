@@ -320,6 +320,56 @@ PetscErrorCode TaoTermCreate(MPI_Comm comm, TaoTerm *term)
 }
 
 /*@
+  TaoTermCreateConvexConjugate - Create a convex conjugate version of `TaoTerm`
+
+  Collective
+
+  Input Parameter:
+. term - the original `TaoTerm`
+
+  Output Parameter:
+. cc_term - a new TaoTerm, that is convex conjugate of input term
+
+  Level: beginner
+
+.seealso: [](ch_tao), `Tao`, `TaoTerm`, `TaoTermCreateConvexConjugateVirtual()`
+@*/
+PetscErrorCode TaoTermCreateConvexConjugate(TaoTerm term, TaoTerm *cc_term)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  PetscAssertPointer(term, 2);
+  PetscCall(TaoTermCreate(PetscObjectComm((PetscObject)term), cc_term));
+  PetscCall(TaoTermSetType(*cc_term, TAOTERMCONJUGATE));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoTermCreateConvexConjugateVirtual - Create a convex conjugate version of `TaoTerm` virtually
+
+  Collective
+
+  Input Parameter:
+. term - the original `TaoTerm`
+
+  Output Parameter:
+. cc_term - a new TaoTerm, that is convex conjugate of input term
+
+  Level: beginner
+
+.seealso: [](ch_tao), `Tao`, `TaoTerm`, `TaoTermCreateConvexConjugate()`
+@*/
+PetscErrorCode TaoTermCreateConvexConjugateVirtual(TaoTerm term, TaoTerm *cc_term)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  PetscAssertPointer(term, 2);
+  PetscCall(TaoTermCreate(PetscObjectComm((PetscObject)term), cc_term));
+  PetscCall(TaoTermSetType(*cc_term, TAOTERMCONJUGATE));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
   TaoTermObjective - Evaluate a `TaoTerm` for a given set of solution variables and parameters
 
   Collective
@@ -1433,5 +1483,53 @@ PetscErrorCode TaoTermGetParametersType(TaoTerm term, TaoTermParametersType *par
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
   *parameters_type = term->parameters_type;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoTermSetLipschitz - Sets Lipschitz constant of `TaoTerm` object.
+  Lipschitz constant must be non-negative. Lipschitz constant of
+  zero denotes that it is unknown.
+
+  Logically Collective
+
+  Input Parameters:
++ term - the `TaoTerm` context
+- lip  - the Lipschitz constant
+
+  Level: intermediate
+
+.seealso: [](ch_tao), `Tao`, `TaoTerm`, `TaoTermGetLipschitz()`
+@*/
+PetscErrorCode TaoTermSetLipschitz(TaoTerm term, PetscReal lip)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  PetscValidLogicalCollectiveReal(term, lip, 2);
+  PetscCheck(lip >= 0, PetscObjectComm((PetscObject)term), PETSC_ERR_USER, "Lipschitz value must be non-negative");
+  term->lipschitz = lip;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoTermGetLipschitz - Get Lipschitz constant of TaoTerm.
+
+  Not Collective
+
+  Input Parameter:
+. term - the `TaoTerm` context
+
+  Output Parameter:
+. lip - the current Lipschitz constant.
+
+  Level: intermediate
+
+.seealso: [](ch_tao), `Tao`, `TaoTerm`
+@*/
+PetscErrorCode TaoTermGetLipschitz(TaoTerm term, PetscReal *lip)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  *lip = term->lipschitz;
   PetscFunctionReturn(PETSC_SUCCESS);
 }

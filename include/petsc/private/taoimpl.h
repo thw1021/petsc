@@ -106,6 +106,7 @@ struct _p_Tao {
 
   Vec        solution;
   Vec        gradient;
+  Vec        dualvec;
   Vec        stepdirection;
   Vec        XL;
   Vec        XU;
@@ -286,6 +287,7 @@ struct _p_TaoTerm {
   Mat                   parameters_factory_orig; // copy so that parameter_factor can be made a reference of solution_factory if parameter space == vector space
   TaoTermParametersType parameters_type;
   PetscBool             Hpre_is_H;
+  PetscReal             lipschitz;
   char                 *H_mattype;
   char                 *Hpre_mattype;
 };

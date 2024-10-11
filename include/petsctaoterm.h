@@ -43,7 +43,7 @@ typedef const char *TaoTermType;
 #define TAOTERMHALFL2SQUARED   "halfl2squared"
 #define TAOTERMQUADRATIC       "quadratic"
 #define TAOTERMKL              "kl"
-//#define TAOTERMCONJUGATE       "conjugate"
+#define TAOTERMCONJUGATE       "conjugate"
 
 PETSC_EXTERN PetscErrorCode TaoTermRegister(const char[], PetscErrorCode (*)(TaoTerm));
 
@@ -121,12 +121,15 @@ PETSC_EXTERN PetscErrorCode TaoTermHessian(TaoTerm, Vec, Vec, Mat, Mat);
 PETSC_EXTERN PetscErrorCode TaoTermHessianSingle(TaoTerm, Vec, Vec, Mat, Mat, PetscErrorCode (*)(TaoTerm, Vec, Vec, Mat), MatStructure);
 PETSC_EXTERN PetscErrorCode TaoTermHessianMult(TaoTerm, Vec, Vec, Vec, Vec);
 
+PETSC_EXTERN PetscErrorCode TaoTermSetLipschitz(TaoTerm, PetscReal);
+PETSC_EXTERN PetscErrorCode TaoTermGetLipschitz(TaoTerm, PetscReal *);
+
 // TaoTermProximalMap(f, p, alpha, g, q, beta, x);
 // x <- argmin_y alpha * f(y;p) + beta * g(y;q), g is a divergence e.g. g(y;q) == 0.5 * ||x - q||^2
 // x <- prox_{(alpha/beta)*f(.;p),g}(q)
 PETSC_EXTERN PetscErrorCode TaoTermProximalMap(TaoTerm, Vec, PetscReal, TaoTerm, Vec, PetscReal, Vec);
-//PETSC_EXTERN PetscErrorCode TaoTermCreateConvexConjugate(TaoTerm, TaoTerm *);
-//PETSC_EXTERN PetscErrorCode TaoTermCreateConvexConjugateVirtual(TaoTerm, TaoTerm *);
+PETSC_EXTERN PetscErrorCode TaoTermCreateConvexConjugate(TaoTerm, TaoTerm *);
+PETSC_EXTERN PetscErrorCode TaoTermCreateConvexConjugateVirtual(TaoTerm, TaoTerm *);
 
 PETSC_EXTERN PetscErrorCode TaoTermCreateShell(MPI_Comm, void *, PetscErrorCode (*)(void *), TaoTerm *);
 PETSC_EXTERN PetscErrorCode TaoTermShellSetContext(TaoTerm, void *);

@@ -66,7 +66,7 @@ static PetscErrorCode TaoFB_LineSearch_Update_Private(TaoLineSearch ls, Vec in, 
   ls->step = ls->step * armP->eta;
   /* FB: input to prox: x_k - step*gradf(x_k) */
   PetscCall(VecWAXPY(armP->work, -ls->step, g, in));
-  armP->test_step = ls->step * ls->prox_scale;
+  //armP->test_step = ls->step * ls->g_scale;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -153,33 +153,6 @@ static PetscErrorCode TaoFB_ComputeResidual_And_LogConv_Private(Tao tao, PetscRe
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoPSSetSmoothTerm_FB(Tao tao, PetscInt idx)
-{
-  TAO_FB *fb = (TAO_FB *)tao->data;
-  DMTao   tdm;
-
-  PetscFunctionBegin;
-  PetscCheck(idx < tao->num_terms, PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "Index number exceeds number of DMs in Tao object");
-  PetscCall(DMGetDMTao(tao->dms[idx], &tdm));
-  PetscCheck(tdm->ops->computeobjectiveandgradient || tdm->ops->computegradient, PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_WRONGSTATE, "DMTaoSetObjective/Gradient() has not been called");
-  fb->smoothterm = tao->dms[idx];
-  fb->f_scale    = tao->dm_scales[idx];
-  PetscCall(PetscObjectReference((PetscObject)fb->smoothterm));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode TaoPSSetNonSmoothTerm_FB(Tao tao, PetscInt idx)
-{
-  TAO_FB *fb = (TAO_FB *)tao->data;
-
-  PetscFunctionBegin;
-  PetscCheck(idx < tao->num_terms, PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "Index number exceeds number of DMs in Tao object");
-  fb->proxterm   = tao->dms[idx];
-  fb->prox_scale = tao->dm_scales[idx];
-  PetscCall(PetscObjectReference((PetscObject)fb->proxterm));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 static PetscErrorCode TaoPSUseAdaptiveStep_FB(Tao tao, PetscBool flg)
 {
   TAO_FB *fb = (TAO_FB *)tao->data;
@@ -204,15 +177,17 @@ static PetscErrorCode TaoSolve_FB(Tao tao)
 {
   TAO_FB                      *fb = (TAO_FB *)tao->data;
   PetscReal                    f, f_prox;
+  TaoTerm                      fterm, gterm;
   TaoLineSearchConvergedReason ls_status = TAOLINESEARCH_CONTINUE_ITERATING;
 
   PetscFunctionBegin;
   PetscCheck(tao->step >= 0, PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "Stepsize cannot be negative");
   PetscCheck(fb->xi >= 1, PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "Backtracing scale factor needs to be equal or greater than 1");
   PetscCheck(!(fb->use_accel && fb->use_adapt), PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "TaoFB only supports either acceleration or adaptive step, not both");
-  PetscCheck(fb->smoothterm, PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "TaoPSSetSmoothTerm needs to be called");
-  PetscCheck(fb->proxterm, PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "TaoPSSetNonSmoothTerm needs to be called");
-  PetscCall(DMTaoGetLipschitz(fb->smoothterm, &fb->lip));
+//  PetscCall(DMTaoGetLipschitz(fb->smoothterm, &fb->lip));
+
+  PetscCall(TaoTermSumGetSubterm(tao->objective_term.term, 1, NULL, &fb->f_scale, &fterm, NULL));
+  PetscCall(TaoTermSumGetSubterm(tao->objective_term.term, 2, NULL, &fb->g_scale, &gterm, NULL));
 
   if (fb->lip == 0) {
     /* Approximating initial Lipschitz number via two random vectors */
@@ -223,8 +198,8 @@ static PetscErrorCode TaoSolve_FB(Tao tao)
     PetscCall(PetscRandomSetFromOptions(rctx));
     PetscCall(VecSetRandom(fb->workvec, rctx));
     PetscCall(VecSetRandom(fb->workvec2, rctx));
-    PetscCall(DMTaoComputeGradient(fb->smoothterm, fb->workvec, fb->x_old));
-    PetscCall(DMTaoComputeGradient(fb->smoothterm, fb->workvec2, fb->grad_old));
+    PetscCall(TaoTermGradient(fterm, fb->workvec, NULL, fb->x_old));
+    PetscCall(TaoTermGradient(fterm, fb->workvec2, NULL, fb->grad_old));
     if (fb->f_scale != 1) PetscCall(VecScale(fb->x_old, fb->f_scale));
     if (fb->f_scale != 1) PetscCall(VecScale(fb->grad_old, fb->f_scale));
     PetscCall(VecAXPY(fb->grad_old, -1., fb->x_old));
@@ -251,7 +226,7 @@ static PetscErrorCode TaoSolve_FB(Tao tao)
   }
 
   if (fb->use_adapt) PetscCall(PetscCitationsRegister(adapgm_citation, &adapgm_cited));
-  PetscCall(DMTaoComputeObjectiveAndGradient(fb->smoothterm, tao->solution, &f, tao->gradient));
+  PetscCall(TaoTermObjectiveAndGradient(fterm, tao->solution, NULL, &f, tao->gradient));
   if (fb->f_scale != 1) f *= fb->f_scale;
   if (fb->f_scale != 1) PetscCall(VecScale(tao->gradient, fb->f_scale));
 
@@ -265,8 +240,8 @@ static PetscErrorCode TaoSolve_FB(Tao tao)
     if (!fb->use_adapt && tao->linesearch->max_funcs > 0) tao->step *= fb->xi;
     /* Note: DMTaoApplyProximalMap's scale is 1/(2*step) */
     PetscCall(VecWAXPY(fb->dualvec, -tao->step, tao->gradient, tao->solution));
-    PetscCall(DMTaoApplyProximalMap(fb->proxterm, fb->reg, tao->step * fb->prox_scale, fb->dualvec, tao->solution, PETSC_FALSE));
-    tao->nproxs++;
+//    PetscCall(DMTaoApplyProximalMap(fb->proxterm, fb->reg, tao->step * fb->g_scale, fb->dualvec, tao->solution, PETSC_FALSE));
+//    tao->nproxs++;
 
     /* -tao_ls_max_funcs 0 -> no linesearch, but constant stepsize
        In this case, constant stepsize needs to be properly chosen for the algorithm to converge.
@@ -288,18 +263,18 @@ static PetscErrorCode TaoSolve_FB(Tao tao)
     /* Post-processings */
     /* Fixed PGM  and adaPGM */
     if (fb->use_adapt) {
-      PetscCall(DMTaoComputeObjectiveAndGradient(fb->smoothterm, tao->solution, &f, tao->gradient));
+      PetscCall(TaoTermObjectiveAndGradient(fterm, tao->solution, NULL, &f, tao->gradient));
       if (fb->f_scale != 1) f *= fb->f_scale;
       if (fb->f_scale != 1) PetscCall(VecScale(tao->gradient, fb->f_scale));
     }
 
-    PetscCall(DMTaoComputeObjective(fb->proxterm, tao->solution, &f_prox));
-    f_prox *= fb->prox_scale;
+    PetscCall(TaoTermObjective(gterm, tao->solution, NULL, &f_prox));
+    f_prox *= fb->g_scale;
     PetscCall(TaoFB_ComputeResidual_And_LogConv_Private(tao, f + f_prox));
 
     if (!fb->use_accel && !fb->use_adapt) {
       /* fixed and backtracking PGM */
-      PetscCall(DMTaoComputeObjectiveAndGradient(fb->smoothterm, tao->solution, &f, tao->gradient));
+      PetscCall(TaoTermObjectiveAndGradient(fterm, tao->solution, NULL, &f, tao->gradient));
       if (fb->f_scale != 1) f *= fb->f_scale;
       if (fb->f_scale != 1) PetscCall(VecScale(tao->gradient, fb->f_scale));
     } else if (fb->use_accel) {
@@ -311,7 +286,7 @@ static PetscErrorCode TaoSolve_FB(Tao tao)
       PetscCall(VecCopy(tao->solution, fb->x_old));
       PetscCall(VecCopy(tao->gradient, fb->grad_old));
       PetscCall(VecAXPBY(tao->solution, -fb->fista_beta, 1 + fb->fista_beta, fb->x_old));
-      PetscCall(DMTaoComputeObjectiveAndGradient(fb->smoothterm, tao->solution, &f, tao->gradient));
+      PetscCall(TaoTermObjectiveAndGradient(fterm, tao->solution, NULL, &f, tao->gradient));
       if (fb->f_scale != 1) f *= fb->f_scale;
       if (fb->f_scale != 1) PetscCall(VecScale(tao->gradient, fb->f_scale));
     } else if (fb->use_adapt) {
@@ -338,7 +313,6 @@ static PetscErrorCode TaoSetFromOptions_FB(Tao tao, PetscOptionItems *PetscOptio
 
 static PetscErrorCode TaoView_FB(Tao tao, PetscViewer viewer)
 {
-  DMTao     tdm;
   PetscBool isascii;
   TAO_FB   *fb = (TAO_FB *)tao->data;
 
@@ -349,21 +323,7 @@ static PetscErrorCode TaoView_FB(Tao tao, PetscViewer viewer)
     PetscCall(PetscViewerASCIIPrintf(viewer, "Backtracking linesearch scaling parameter: xi=%g\n", (double)fb->xi));
     if (fb->use_accel) PetscCall(PetscViewerASCIIPrintf(viewer, "Using Nesterov-type acceleration\n"));
     else if (fb->use_adapt) PetscCall(PetscViewerASCIIPrintf(viewer, "Using adaPGM-type adaptive stepsize\n"));
-    if (fb->smoothterm) {
-      PetscCall(PetscViewerASCIIPrintf(viewer, "Smooth Term:\n"));
-      PetscCall(DMGetDMTao(fb->smoothterm, &tdm));
-      PetscCall(DMTaoView(tdm, viewer));
-    }
-    if (fb->proxterm) {
-      PetscCall(PetscViewerASCIIPrintf(viewer, "Proximal Term:\n"));
-      PetscCall(DMGetDMTao(fb->proxterm, &tdm));
-      PetscCall(DMTaoView(tdm, viewer));
-    }
-    if (fb->reg) {
-      PetscCall(PetscViewerASCIIPrintf(viewer, "Regularizer Term:\n"));
-      PetscCall(DMGetDMTao(fb->reg, &tdm));
-      PetscCall(DMTaoView(tdm, viewer));
-    }
+    //TODO f g reg view
     PetscCall(PetscViewerASCIIPopTab(viewer));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -380,16 +340,16 @@ static PetscErrorCode TaoSetUp_FB(Tao tao)
   if (!fb->dualvec) PetscCall(VecDuplicate(tao->solution, &fb->dualvec));
   if (!fb->x_old) PetscCall(VecDuplicate(tao->solution, &fb->x_old));
   if (!fb->grad_old) PetscCall(VecDuplicate(tao->solution, &fb->grad_old));
-  PetscCall(DMCreate(PetscObjectComm((PetscObject)tao), &fb->reg));
-  PetscCall(DMTaoSetType(fb->reg, DMTAOL2));
-  PetscCall(TaoLineSearchUseTaoRoutines(tao->linesearch, tao));
-  if (fb->smoothterm) PetscCall(TaoLineSearchUseDM(tao->linesearch, fb->smoothterm));
-  PetscCall(TaoLineSearchSetProxAndLinearMap(tao->linesearch, fb->proxterm, fb->prox_scale, fb->reg, NULL, 0.));
-
-  tao->linesearch->ops->preapply   = TaoFB_LineSearch_PreApply_Private;
-  tao->linesearch->ops->postapply  = TaoFB_LineSearch_PostApply_Private;
-  tao->linesearch->ops->update     = TaoFB_LineSearch_Update_Private;
-  tao->linesearch->ops->postupdate = TaoFB_LineSearch_PostUpdate_Private;
+//  PetscCall(DMCreate(PetscObjectComm((PetscObject)tao), &fb->reg));
+//  PetscCall(DMTaoSetType(fb->reg, DMTAOL2));
+//  PetscCall(TaoLineSearchUseTaoRoutines(tao->linesearch, tao));
+//  if (fb->smoothterm) PetscCall(TaoLineSearchUseDM(tao->linesearch, fb->smoothterm));
+//  PetscCall(TaoLineSearchSetProxAndLinearMap(tao->linesearch, fb->proxterm, fb->g_scale, fb->reg, NULL, 0.));
+//
+//  tao->linesearch->ops->preapply   = TaoFB_LineSearch_PreApply_Private;
+//  tao->linesearch->ops->postapply  = TaoFB_LineSearch_PostApply_Private;
+//  tao->linesearch->ops->update     = TaoFB_LineSearch_Update_Private;
+//  tao->linesearch->ops->postupdate = TaoFB_LineSearch_PostUpdate_Private;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -403,9 +363,9 @@ static PetscErrorCode TaoDestroy_FB(Tao tao)
   PetscCall(VecDestroy(&fb->dualvec));
   PetscCall(VecDestroy(&fb->x_old));
   PetscCall(VecDestroy(&fb->grad_old));
-  PetscCall(DMDestroy(&fb->reg));
-  PetscCall(DMDestroy(&fb->smoothterm));
-  PetscCall(DMDestroy(&fb->proxterm));
+  PetscCall(TaoMappedTermReset(&fb->reg));
+  PetscCall(TaoMappedTermReset(&fb->fterm));
+  PetscCall(TaoMappedTermReset(&fb->gterm));
   PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoPSSetNonSmoothTerm_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoPSSetSmoothTerm_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoPSUseAdaptiveStep_C", NULL));
@@ -433,7 +393,7 @@ M*/
 PETSC_EXTERN PetscErrorCode TaoCreate_FB(Tao tao)
 {
   TAO_FB     *fb;
-  const char *ls_type = TAOLINESEARCHPS;
+//  const char *ls_type = TAOLINESEARCHPS;
 
   PetscFunctionBegin;
   PetscCall(PetscNew(&fb));
@@ -454,13 +414,13 @@ PETSC_EXTERN PetscErrorCode TaoCreate_FB(Tao tao)
 
   fb->lip         = 0.;
   fb->f_scale     = 1.;
-  fb->prox_scale  = 1.;
+  fb->g_scale     = 1.;
   fb->t_fista     = 1;
   fb->t_fista_old = 1;
   fb->fista_beta  = 0.;
   fb->xi          = 1.;
-  fb->smoothterm  = NULL;
-  fb->proxterm    = NULL;
+//  fb->fterm       = NULL;
+//  fb->gterm       = NULL;
   fb->use_accel   = PETSC_TRUE;
   fb->use_adapt   = PETSC_FALSE;
 
@@ -472,11 +432,11 @@ PETSC_EXTERN PetscErrorCode TaoCreate_FB(Tao tao)
    */
   PetscCall(TaoLineSearchCreate(PetscObjectComm((PetscObject)tao), &tao->linesearch));
   PetscCall(PetscObjectIncrementTabLevel((PetscObject)tao->linesearch, (PetscObject)tao, 1));
-  PetscCall(TaoLineSearchSetType(tao->linesearch, ls_type));
+//  PetscCall(TaoLineSearchSetType(tao->linesearch, ls_type));
   PetscCall(TaoLineSearchSetOptionsPrefix(tao->linesearch, tao->hdr.prefix));
 
-  PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoPSSetNonSmoothTerm_C", TaoPSSetNonSmoothTerm_FB));
-  PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoPSSetSmoothTerm_C", TaoPSSetSmoothTerm_FB));
+//  PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoPSSetNonSmoothTerm_C", TaoPSSetNonSmoothTerm_FB));
+//  PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoPSSetSmoothTerm_C", TaoPSSetSmoothTerm_FB));
   PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoPSUseAdaptiveStep_C", TaoPSUseAdaptiveStep_FB));
   PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoPSUseAcceleration_C", TaoPSUseAcceleration_FB));
   PetscFunctionReturn(PETSC_SUCCESS);

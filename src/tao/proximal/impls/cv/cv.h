@@ -21,9 +21,10 @@ typedef struct {
   PetscReal R;        //scale factor for estimating linear map norm. Must be <= 1.
   PetscReal r;        //backtracking parameter > 1
   PetscBool lip_set, lmap_norm_set, approx_lmap_norm;
+  TaoMappedTerm reg_term;
   TaoMappedTerm f_term;
   TaoMappedTerm g_term;
   TaoMappedTerm h_term;
   TaoMappedTerm h_dual_term; // TaoTermCreateConvexConjugate(h_term.term, &h_dual_term.term);
-  TaoMappedTerm reg_term;
+  TaoMappedTerm reg_mapped_term;
 } TAO_CV;

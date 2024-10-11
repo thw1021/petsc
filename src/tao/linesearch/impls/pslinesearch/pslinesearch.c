@@ -2,6 +2,7 @@
 #include <petsc/private/taolinesearchimpl.h>
 #include <../src/tao/linesearch/impls/pslinesearch/pslinesearch.h>
 
+#if 0
 static PetscErrorCode TaoLineSearchDestroy_PS(TaoLineSearch ls)
 {
   TaoLineSearch_PS *armP = (TaoLineSearch_PS *)ls->data;
@@ -191,3 +192,4 @@ PETSC_EXTERN PetscErrorCode TaoLineSearchCreate_PS(TaoLineSearch ls)
   ls->ops->setfromoptions = TaoLineSearchSetFromOptions_PS;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+#endif

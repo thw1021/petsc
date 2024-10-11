@@ -366,9 +366,6 @@ int main(int argc, char **argv)
   PetscCall(TaoAddObjectiveTerm(tao, NULL, 1., gterm, NULL, NULL)); //TODO qvec=trans=param for LAD case
   PetscCall(TaoAddObjectiveTerm(tao, NULL, 1., hterm, NULL, user.A)); //TODO no way to set mat norm yet...
 
-  //if (!user.set_norm) PetscCall(TaoPSSetNonSmoothTermWithLinearMap(tao, dm_idx, user.A, 0.));
-  //else PetscCall(TaoPSSetNonSmoothTermWithLinearMap(tao, dm_idx, user.A, user.matnorm));
-
   PetscCall(TaoSetFromOptions(tao));
   PetscCall(TaoSolve(tao));
 

@@ -2,9 +2,7 @@
 #include <petsc/private/taoimpl.h>
 
 typedef struct {
-  DM reg; /*dm1 term for DMTaoApplyProximalMap */
-  DM smoothterm;
-  DM proxterm;
+  TaoMappedTerm reg, fterm, gterm;
 
   Vec workvec, workvec2, dualvec, x_old, grad_old;
 
@@ -14,7 +12,7 @@ typedef struct {
 
   PetscReal step_old;
   PetscReal f_scale;
-  PetscReal prox_scale;
+  PetscReal g_scale;
 
   PetscBool use_accel;
   PetscBool use_adapt;
