@@ -89,6 +89,15 @@ Tao Object: 1 MPI process
     Pure gradient steps: 1
     Not a descent direction: 0
     Line search fails: 0
+  Objective function:
+    Scale (tao_objective_scale): 1.
+    Function:
+      TaoTerm Object: (callbacks_) 1 MPI process
+        type: taocallbacks
+        solution vector space: N = 48 [VecType seq (taoterm_solution_vec_type)]
+        parameter vector space: (none)
+        attached to Tao [name omitted]
+    Map: unmapped
   TaoLineSearch Object: 1 MPI process
     type: more-thuente
     maximum function evaluations=30
@@ -99,7 +108,7 @@ Tao Object: 1 MPI process
     using variable bounds
     Termination reason: 1
   Active Set subset type: subvec
-  convergence tolerances: gatol=0.0001,   grtol=1e-08,  steptol=0.,   gttol=0.
+  convergence tolerances: gatol=0.0001,   grtol=1e-08,   steptol=0.,   gttol=0.
   Residual in Function/Gradient:=9.73568e-05
   Objective value=1.50566
   total number of iterations=78,                          (max: 2000)
