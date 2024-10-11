@@ -7,3 +7,4 @@ Optimization
 
    Tao/index
    TaoLineSearch/index
+   TaoTerm/index
