@@ -3662,12 +3662,13 @@ static PetscErrorCode DMPlexReferenceToCoordinates_FE(DM dm, PetscFE fe, PetscIn
   Not Collective
 
   Input Parameters:
-+ dm         - The mesh, with coordinate maps defined either by a `PetscDS` for the coordinate `DM` (see `DMGetCoordinateDM()`) or
-               implicitly by the coordinates of the corner vertices of the cell: as an affine map for simplicial elements, or
-               as a multilinear map for tensor-product elements
-. cell       - the cell whose map is used.
-. numPoints  - the number of points to locate
-- realCoords - (numPoints x coordinate dimension) array of coordinates (see `DMGetCoordinateDim()`)
++ dm          - The mesh, with coordinate maps defined either by a `PetscDS` for the coordinate `DM` (see `DMGetCoordinateDM()`) or
+                implicitly by the coordinates of the corner vertices of the cell: as an affine map for simplicial elements, or
+                as a multilinear map for tensor-product elements
+. forceAffine - ignore any coordinate discretization and use an affine model
+. cell        - the cell whose map is used.
+. numPoints   - the number of points to locate
+- realCoords  - (numPoints x coordinate dimension) array of coordinates (see `DMGetCoordinateDim()`)
 
   Output Parameter:
 . refCoords - (`numPoints` x `dimension`) array of reference coordinates (see `DMGetDimension()`)
@@ -3680,7 +3681,7 @@ static PetscErrorCode DMPlexReferenceToCoordinates_FE(DM dm, PetscFE fe, PetscIn
 
 .seealso: `DMPLEX`, `DMPlexReferenceToCoordinates()`
 @*/
-PetscErrorCode DMPlexCoordinatesToReference(DM dm, PetscInt cell, PetscInt numPoints, const PetscReal realCoords[], PetscReal refCoords[])
+PetscErrorCode DMPlexCoordinatesToReference(DM dm, PetscBool forceAffine, PetscInt cell, PetscInt numPoints, const PetscReal realCoords[], PetscReal refCoords[])
 {
   PetscInt dimC, dimR, depth, cStart, cEnd, i;
   DM       coordDM = NULL;
@@ -3710,7 +3711,7 @@ PetscErrorCode DMPlexCoordinatesToReference(DM dm, PetscInt cell, PetscInt numPo
   }
   PetscCall(DMPlexGetSimplexOrBoxCells(dm, 0, &cStart, &cEnd));
   PetscCheck(cell >= cStart && cell < cEnd, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "point %" PetscInt_FMT " not in cell range [%" PetscInt_FMT ",%" PetscInt_FMT ")", cell, cStart, cEnd);
-  if (!fe) { /* implicit discretization: affine or multilinear */
+  if (forceAffine || !fe) { /* implicit discretization: affine or multilinear */
     PetscInt  coneSize;
     PetscBool isSimplex, isTensor;
 
@@ -3745,12 +3746,13 @@ PetscErrorCode DMPlexCoordinatesToReference(DM dm, PetscInt cell, PetscInt numPo
   Not Collective
 
   Input Parameters:
-+ dm        - The mesh, with coordinate maps defined either by a PetscDS for the coordinate `DM` (see `DMGetCoordinateDM()`) or
-               implicitly by the coordinates of the corner vertices of the cell: as an affine map for simplicial elements, or
-               as a multilinear map for tensor-product elements
-. cell      - the cell whose map is used.
-. numPoints - the number of points to locate
-- refCoords - (numPoints x dimension) array of reference coordinates (see `DMGetDimension()`)
++ dm          - The mesh, with coordinate maps defined either by a PetscDS for the coordinate `DM` (see `DMGetCoordinateDM()`) or
+                implicitly by the coordinates of the corner vertices of the cell: as an affine map for simplicial elements, or
+                as a multilinear map for tensor-product elements
+. forceAffine - ignore any coordinate discretization and use an affine model
+. cell        - the cell whose map is used.
+. numPoints   - the number of points to locate
+- refCoords   - (numPoints x dimension) array of reference coordinates (see `DMGetDimension()`)
 
   Output Parameter:
 . realCoords - (numPoints x coordinate dimension) array of coordinates (see `DMGetCoordinateDim()`)
@@ -3759,7 +3761,7 @@ PetscErrorCode DMPlexCoordinatesToReference(DM dm, PetscInt cell, PetscInt numPo
 
 .seealso: `DMPLEX`, `DMPlexCoordinatesToReference()`
 @*/
-PetscErrorCode DMPlexReferenceToCoordinates(DM dm, PetscInt cell, PetscInt numPoints, const PetscReal refCoords[], PetscReal realCoords[])
+PetscErrorCode DMPlexReferenceToCoordinates(DM dm, PetscBool forceAffine, PetscInt cell, PetscInt numPoints, const PetscReal refCoords[], PetscReal realCoords[])
 {
   PetscInt dimC, dimR, depth, cStart, cEnd, i;
   DM       coordDM = NULL;
@@ -3789,7 +3791,7 @@ PetscErrorCode DMPlexReferenceToCoordinates(DM dm, PetscInt cell, PetscInt numPo
   }
   PetscCall(DMPlexGetSimplexOrBoxCells(dm, 0, &cStart, &cEnd));
   PetscCheck(cell >= cStart && cell < cEnd, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "point %" PetscInt_FMT " not in cell range [%" PetscInt_FMT ",%" PetscInt_FMT ")", cell, cStart, cEnd);
-  if (!fe) { /* implicit discretization: affine or multilinear */
+  if (forceAffine || !fe) { /* implicit discretization: affine or multilinear */
     PetscInt  coneSize;
     PetscBool isSimplex, isTensor;
 

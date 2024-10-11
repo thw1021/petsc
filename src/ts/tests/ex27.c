@@ -106,7 +106,7 @@ static PetscErrorCode SetInitialCoordinates(DM sw)
         if (simplex && sum > 0.0)
           for (d = 0; d < dim; ++d) refcoords[d] -= PetscSqrtReal(dim) * sum;
         vals[n] = 1.0;
-        PetscCall(DMPlexReferenceToCoordinates(dm, c, 1, refcoords, &coords[n * dim]));
+        PetscCall(DMPlexReferenceToCoordinates(dm, PETSC_FALSE, c, 1, refcoords, &coords[n * dim]));
       }
     }
   }
@@ -431,7 +431,8 @@ int main(int argc, char **argv)
   PetscCall(CreateMesh(comm, &dm, &user));
   PetscCall(CreateParticles(dm, &sw, &user));
   PetscCall(DMSetApplicationContext(sw, &user));
-  PetscCall(DMSwarmVectorDefineField(sw, "velocity"));
+  const char *fieldnames[1] = {"velocity"};
+  PetscCall(DMSwarmVectorDefineField(sw, 1, fieldnames));
   PetscCall(TSCreate(comm, &ts));
   PetscCall(TSSetDM(ts, sw));
   PetscCall(TSSetMaxTime(ts, 10.0));

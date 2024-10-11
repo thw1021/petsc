@@ -895,7 +895,7 @@ PetscErrorCode DMInterpolationEvaluate(DMInterpolationInfo ctx, DM dm, Vec x, Ve
 
       if (ctx->cells[p] < 0) continue;
       for (d = 0; d < cdim; ++d) pcoords[d] = PetscRealPart(coords[p * cdim + d]);
-      PetscCall(DMPlexCoordinatesToReference(dm, ctx->cells[p], 1, pcoords, xi));
+      PetscCall(DMPlexCoordinatesToReference(dm, PETSC_FALSE, ctx->cells[p], 1, pcoords, xi));
       PetscCall(DMPlexVecGetClosure(dm, NULL, x, ctx->cells[p], &clSize, &xa));
       for (field = 0; field < Nf; ++field) {
         PetscTabulation T;

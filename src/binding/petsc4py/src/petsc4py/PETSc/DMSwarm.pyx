@@ -293,7 +293,7 @@ cdef class DMSwarm(DM):
         CHKERR(DMSwarmRestoreField(self.dm, cfieldname, &blocksize, &ctype, <void**> 0))
 
     def vectorDefineField(self, fieldname: str) -> None:
-        """Set the field from which to define a `Vec` object.
+        """Set the fields from which to define a `Vec` object.
 
         Collective.
 
@@ -303,7 +303,7 @@ cdef class DMSwarm(DM):
         Parameters
         ----------
         fieldname
-            The textual name given to a registered field.
+            The textual names given to a registered field.
 
         See Also
         --------
@@ -312,7 +312,7 @@ cdef class DMSwarm(DM):
         """
         cdef const char *cval = NULL
         fieldname = str2bytes(fieldname, &cval)
-        CHKERR(DMSwarmVectorDefineField(self.dm, cval))
+        CHKERR(DMSwarmVectorDefineField(self.dm, 1, &cval))
 
     def addPoint(self) -> None:
         """Add space for one new point in the `DMSwarm`.

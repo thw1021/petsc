@@ -292,7 +292,7 @@ static PetscErrorCode DMFieldEvaluate_DS(DMField field, Vec points, PetscDataTyp
       PetscInt           closureSize, d, e, f, g;
 
       for (p = 0; p < dim * nq; p++) coordsReal[p] = PetscRealPart(cellPoints[dim * offset + p]);
-      PetscCall(DMPlexCoordinatesToReference(field->dm, c, nq, coordsReal, coordsRef));
+      PetscCall(DMPlexCoordinatesToReference(field->dm, PETSC_FALSE, c, nq, coordsReal, coordsRef));
       PetscCall(PetscFECreateTabulation(cellFE, 1, nq, coordsRef, K, &T));
       PetscCall(PetscQuadratureCreate(PETSC_COMM_SELF, &quad));
       PetscCall(PetscMalloc1(dimR * nq, &quadPoints));
