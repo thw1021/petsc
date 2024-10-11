@@ -107,12 +107,10 @@ PetscErrorCode MatSetRandom(Mat x, PetscRandom rctx)
 PetscErrorCode MatCopyHashToAIJ(Mat A, Mat B)
 {
   PetscFunctionBegin;
-
   PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
   PetscTryTypeMethod(A, copyhashtoaij, B);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-
 
 /*@
   MatFactorGetErrorZeroPivot - returns the pivot value that was determined to be zero and the row it occurred in
