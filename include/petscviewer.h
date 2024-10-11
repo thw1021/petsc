@@ -35,6 +35,7 @@ typedef const char *PetscViewerType;
 #define PETSCVIEWEREXODUSII    "exodusii"
 #define PETSCVIEWERCGNS        "cgns"
 #define PETSCVIEWERPYTHON      "python"
+#define PETSCVIEWERPYVISTA     "pyvista"
 
 PETSC_EXTERN PetscFunctionList PetscViewerList;
 PETSC_EXTERN PetscErrorCode    PetscViewerInitializePackage(void);
@@ -360,6 +361,7 @@ PETSC_EXTERN PetscViewer    PETSC_VIEWER_HDF5_(MPI_Comm);
 PETSC_EXTERN PetscViewer    PETSC_VIEWER_GLVIS_(MPI_Comm);
 PETSC_EXTERN PetscViewer    PETSC_VIEWER_EXODUSII_(MPI_Comm);
 PETSC_EXTERN PetscViewer    PETSC_VIEWER_PYTHON_(MPI_Comm);
+PETSC_EXTERN PetscViewer    PETSC_VIEWER_PYVISTA_(MPI_Comm);
 PETSC_EXTERN PetscViewer    PETSC_VIEWER_MATHEMATICA_WORLD_PRIVATE;
 
 /*MC
