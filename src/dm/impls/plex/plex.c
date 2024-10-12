@@ -1835,7 +1835,7 @@ static PetscErrorCode DrawPolygon_Private(DM dm, PetscDraw draw, PetscInt cell, 
       refCoords[d * 2 + 0] = refCoords[0] + (refVertices[(e + 1) % Nv * 2 + 0] - refCoords[0]) * d / edgeDiv;
       refCoords[d * 2 + 1] = refCoords[1] + (refVertices[(e + 1) % Nv * 2 + 1] - refCoords[1]) * d / edgeDiv;
     }
-    PetscCall(DMPlexReferenceToCoordinates(dm, cell, edgeDiv + 1, refCoords, edgeCoords));
+    PetscCall(DMPlexReferenceToCoordinates(dm, PETSC_FALSE, cell, edgeDiv + 1, refCoords, edgeCoords));
     for (PetscInt d = 0; d < edgeDiv; ++d) {
       PetscCall(PetscDrawTriangle(draw, centroid[0], centroid[1], edgeCoords[d * 2 + 0], edgeCoords[d * 2 + 1], edgeCoords[(d + 1) * 2 + 0], edgeCoords[(d + 1) * 2 + 1], fillColor, fillColor, fillColor));
       PetscCall(PetscDrawLine(draw, edgeCoords[d * 2 + 0], edgeCoords[d * 2 + 1], edgeCoords[(d + 1) * 2 + 0], edgeCoords[(d + 1) * 2 + 1], PETSC_DRAW_BLACK));

@@ -88,8 +88,8 @@ PETSC_EXTERN PetscErrorCode DMSwarmGetField(DM, const char[], PetscInt *, PetscD
 PETSC_EXTERN PetscErrorCode DMSwarmRestoreField(DM, const char[], PetscInt *, PetscDataType *, void **);
 PETSC_EXTERN PetscErrorCode DMSwarmGetFieldInfo(DM, const char[], PetscInt *, PetscDataType *);
 
-PETSC_EXTERN PetscErrorCode DMSwarmVectorDefineField(DM, const char[]);
-PETSC_EXTERN PetscErrorCode DMSwarmVectorGetField(DM, const char *[]);
+PETSC_EXTERN PetscErrorCode DMSwarmVectorDefineField(DM, PetscInt, const char *[]);
+PETSC_EXTERN PetscErrorCode DMSwarmVectorGetField(DM, PetscInt *, const char **[]);
 
 PETSC_EXTERN PetscErrorCode DMSwarmAddPoint(DM);
 PETSC_EXTERN PetscErrorCode DMSwarmAddNPoints(DM, PetscInt);
@@ -121,6 +121,7 @@ PETSC_EXTERN PetscErrorCode DMSwarmViewXDMF(DM, const char *);
 PETSC_EXTERN PetscErrorCode DMSwarmSortGetAccess(DM);
 PETSC_EXTERN PetscErrorCode DMSwarmSortRestoreAccess(DM);
 PETSC_EXTERN PetscErrorCode DMSwarmSortGetPointsPerCell(DM, PetscInt, PetscInt *, PetscInt **);
+PETSC_EXTERN PetscErrorCode DMSwarmSortRestorePointsPerCell(DM, PetscInt, PetscInt *, PetscInt **);
 PETSC_EXTERN PetscErrorCode DMSwarmSortGetNumberOfPointsPerCell(DM, PetscInt, PetscInt *);
 PETSC_EXTERN PetscErrorCode DMSwarmSortGetIsValid(DM, PetscBool *);
 PETSC_EXTERN PetscErrorCode DMSwarmSortGetSizes(DM, PetscInt *, PetscInt *);

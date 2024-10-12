@@ -62,7 +62,12 @@ Changes: Development
 
 .. rubric:: DMSwarm:
 
+- Add ``DMSwarmSortRestorePointsPerCell()``
+- Change ``DMSwarmVectorGetField()`` and ``DMSwarmVectorDefineField()`` to handle multiple fields
+
 .. rubric:: DMPlex:
+
+- Changed ``DMPlexCoordinatesToReference()`` and ``DMPlexReferenceToCoordinates()`` to allow shutting off FE
 
 .. rubric:: FE/FV:
 
