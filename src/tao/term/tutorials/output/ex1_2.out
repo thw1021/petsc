@@ -1,0 +1,26 @@
+TaoTerm Object: example TaoTerm 1 MPI process
+  type: sum
+  solution vector space: N = 10 [VecType standard (taoterm_solution_vec_type)]
+  parameter vector space: (optional) K = 20 [VecType nest (taoterm_parameters_vec_type)]
+  default Hessian MatType (taoterm_hessian_mat_type): shell
+  Sum of 2 terms:
+    Summand 0:
+      Scale (taoterm_sum_subterm_0_scale): 0.5
+      Map: unmapped
+      Term:
+        TaoTerm Object: (subterm_0_) 1 MPI process
+          type: halfl2squared
+          solution vector space: N = 10 [VecType standard (taoterm_solution_vec_type)]
+          parameter vector space: (optional) K = 10 [VecType standard (taoterm_parameters_vec_type)]
+          default Hessian MatType (taoterm_hessian_mat_type): shell
+      Mask (taoterm_sum_subterm_0_mask): objective, hessian
+    Summand 1:
+      Scale (taoterm_sum_subterm_1_scale): 1.
+      Map: unmapped
+      Term:
+        TaoTerm Object: (subterm_1_) 1 MPI process
+          type: l1
+          solution vector space: N = 10 [VecType standard (taoterm_solution_vec_type)]
+          parameter vector space: (optional) K = 10 [VecType standard (taoterm_parameters_vec_type)]
+          default Hessian MatType (taoterm_hessian_mat_type): shell
+          epsilon (taoterm_l1_epsilon): 0.
