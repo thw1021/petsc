@@ -43,7 +43,7 @@
       PetscErrorCode   ierr          ! used to check for functions returning nonzeros
       Vec              x             ! solution vector
       PetscInt         m             ! number of local elements in vector
-      Tao              tao           ! Tao solver context
+      Tao              ta           ! Tao solver context
       Mat              H             ! Hessian matrix
       ISLocalToGlobalMapping isltog  ! local to global mapping object
       PetscBool        flg
@@ -120,31 +120,31 @@
 ! This problems uses bounded variables, so the
 ! method must either be 'tao_tron' or 'tao_blmvm'
 
-      PetscCallA(TaoCreate(PETSC_COMM_WORLD,tao,ierr))
-      PetscCallA(TaoSetType(tao,TAOBLMVM,ierr))
+      PetscCallA(TaoCreate(PETSC_COMM_WORLD,ta,ierr))
+      PetscCallA(TaoSetType(ta,TAOBLMVM,ierr))
 
 !     Set minimization function and gradient, hessian evaluation functions
 
-      PetscCallA(TaoSetObjectiveAndGradient(tao,PETSC_NULL_VEC,FormFunctionGradient,0,ierr))
+      PetscCallA(TaoSetObjectiveAndGradient(ta,PETSC_NULL_VEC,FormFunctionGradient,0,ierr))
 
-      PetscCallA(TaoSetHessian(tao,H,H,FormHessian,0, ierr))
+      PetscCallA(TaoSetHessian(ta,H,H,FormHessian,0, ierr))
 
 ! Set Variable bounds
       PetscCallA(MSA_BoundaryConditions(ierr))
-      PetscCallA(TaoSetVariableBoundsRoutine(tao,MSA_Plate,0,ierr))
+      PetscCallA(TaoSetVariableBoundsRoutine(ta,MSA_Plate,0,ierr))
 
 ! Set the initial solution guess
       PetscCallA(MSA_InitialPoint(x, ierr))
-      PetscCallA(TaoSetSolution(tao,x,ierr))
+      PetscCallA(TaoSetSolution(ta,x,ierr))
 
 ! Check for any tao command line options
-      PetscCallA(TaoSetFromOptions(tao,ierr))
+      PetscCallA(TaoSetFromOptions(ta,ierr))
 
 ! Solve the application
-      PetscCallA(TaoSolve(tao,ierr))
+      PetscCallA(TaoSolve(ta,ierr))
 
 ! Free TAO data structures
-      PetscCallA(TaoDestroy(tao,ierr))
+      PetscCallA(TaoDestroy(ta,ierr))
 
 ! Free PETSc data structures
       PetscCallA(VecDestroy(x,ierr))
@@ -179,13 +179,13 @@
 !  info  - error code
 !
 
-      subroutine FormFunctionGradient(tao,X,fcn,G,dummy,ierr)
+      subroutine FormFunctionGradient(ta,X,fcn,G,dummy,ierr)
       use plate2fmodule
       implicit none
 
 ! Input/output variables
 
-      Tao        tao
+      Tao        ta
       PetscReal      fcn
       Vec              X, G
       PetscErrorCode   ierr
@@ -420,11 +420,11 @@
 !         - Then set matrix entries using the local ordering
 !           by calling MatSetValuesLocal()
 
-      subroutine FormHessian(tao, X, Hessian, Hpc, dummy, ierr)
+      subroutine FormHessian(ta, X, Hessian, Hpc, dummy, ierr)
       use plate2fmodule
       implicit none
 
-      Tao     tao
+      Tao     ta
       Vec            X
       Mat            Hessian,Hpc
       PetscInt       dummy
@@ -795,11 +795,11 @@
 !
 !*/
 
-      subroutine MSA_Plate(tao,xl,xu,dummy,ierr)
+      subroutine MSA_Plate(ta,xl,xu,dummy,ierr)
       use plate2fmodule
       implicit none
 
-      Tao        tao
+      Tao        ta
       Vec              xl,xu
       PetscErrorCode   ierr
       PetscInt         i,j,row

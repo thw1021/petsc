@@ -1747,18 +1747,6 @@ PetscErrorCode MatSetValuesRow(Mat mat, PetscInt row, const PetscScalar v[])
   The routine `MatSetValuesBlockedStencil()` may offer much better efficiency
   for users of block sparse formats (`MATSEQBAIJ` and `MATMPIBAIJ`).
 
-  Fortran Note:
-  `idxm` and `idxn` should be declared as
-$     MatStencil idxm(4,m),idxn(4,n)
-  and the values inserted using
-.vb
-    idxm(MatStencil_i,1) = i
-    idxm(MatStencil_j,1) = j
-    idxm(MatStencil_k,1) = k
-    idxm(MatStencil_c,1) = c
-    etc
-.ve
-
 .seealso: [](ch_matrices), `Mat`, `DMDA`, `MatSetOption()`, `MatAssemblyBegin()`, `MatAssemblyEnd()`, `MatSetValuesBlocked()`, `MatSetValuesLocal()`
           `MatSetValues()`, `MatSetValuesBlockedStencil()`, `MatSetStencil()`, `DMCreateMatrix()`, `DMDAVecGetArray()`, `MatStencil`
 @*/
@@ -3041,21 +3029,6 @@ PetscErrorCode MatSetFactorType(Mat mat, MatFactorType t)
       MatGetInfo(A, MAT_LOCAL, &info);
       mal  = info.mallocs;
       nz_a = info.nz_allocated;
-.ve
-
-  Fortran Note:
-  Declare info as a `MatInfo` array of dimension `MAT_INFO_SIZE`, and then extract the parameters
-  of interest.  See the file ${PETSC_DIR}/include/petsc/finclude/petscmat.h
-  a complete list of parameter names.
-.vb
-      MatInfo info(MAT_INFO_SIZE)
-      double  precision mal, nz_a
-      Mat     A
-      integer ierr
-
-      call MatGetInfo(A, MAT_LOCAL, info, ierr)
-      mal = info(MAT_INFO_MALLOCS)
-      nz_a = info(MAT_INFO_NZ_ALLOCATED)
 .ve
 
 .seealso: [](ch_matrices), `Mat`, `MatInfo`, `MatStashGetInfo()`
@@ -4959,7 +4932,6 @@ PetscErrorCode MatDuplicate(Mat mat, MatDuplicateOption op, Mat *M)
   PetscCheck(!mat->factortype, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_WRONGSTATE, "Not for factored matrix");
   MatCheckPreallocated(mat, 1);
 
-  *M = NULL;
   PetscCall(PetscLogEventBegin(MAT_Convert, mat, 0, 0, 0));
   PetscUseTypeMethod(mat, duplicate, op, M);
   PetscCall(PetscLogEventEnd(MAT_Convert, mat, 0, 0, 0));
@@ -7201,7 +7173,9 @@ PetscErrorCode MatICCFactorSymbolic(Mat fact, Mat mat, IS perm, const MatFactorI
   column 0.
 
   Fortran Note:
-  One must pass in as `submat` a `Mat` array of size at least `n`+1.
+.vb
+  Mat, pointer :: submat(:)
+.ve
 
 .seealso: [](ch_matrices), `Mat`, `MatDestroySubMatrices()`, `MatCreateSubMatrix()`, `MatGetRow()`, `MatGetDiagonal()`, `MatReuse`
 @*/
@@ -7245,7 +7219,7 @@ PetscErrorCode MatCreateSubMatrices(Mat mat, PetscInt n, const IS irow[], const 
 }
 
 /*@C
-  MatCreateSubMatricesMPI - Extracts MPI submatrices across a sub communicator of mat (by pairs of `IS` that may live on subcomms).
+  MatCreateSubMatricesMPI - Extracts MPI submatrices across a sub communicator of `mat` (by pairs of `IS` that may live on subcomms).
 
   Collective
 
@@ -7300,7 +7274,7 @@ PetscErrorCode MatCreateSubMatricesMPI(Mat mat, PetscInt n, const IS irow[], con
 }
 
 /*@C
-  MatDestroyMatrices - Destroys an array of matrices.
+  MatDestroyMatrices - Destroys an array of matrices
 
   Collective
 
@@ -7343,16 +7317,12 @@ PetscErrorCode MatDestroyMatrices(PetscInt n, Mat *mat[])
 
   Input Parameters:
 + n   - the number of local matrices
-- mat - the matrices (this is a pointer to the array of matrices, just to match the calling
-                       sequence of `MatCreateSubMatrices()`)
+- mat - the matrices (this is a pointer to the array of matrices, to match the calling sequence of `MatCreateSubMatrices()`)
 
   Level: advanced
 
   Note:
   Frees not only the matrices, but also the array that contains the matrices
-
-  Fortran Note:
-  Does not free the `mat` array.
 
 .seealso: [](ch_matrices), `Mat`, `MatCreateSubMatrices()`, `MatDestroyMatrices()`
 @*/

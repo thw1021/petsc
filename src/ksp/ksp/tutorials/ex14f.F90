@@ -41,9 +41,14 @@
 !
 !  -------------------------------------------------------------------------
       module ex14fmodule
+#include <petsc/finclude/petscdmda.h>
 #include <petsc/finclude/petscksp.h>
+      use petscis
+      use petscvec
+      use petscdm
       use petscdmda
       use petscksp
+
       Vec      localX
       PetscInt mx,my
       Mat B

@@ -117,7 +117,7 @@ typedef struct _p_PetscObject {
   PetscErrorCode (*python_destroy)(void *);
 
   PetscInt noptionhandler;
-  PetscErrorCode (*optionhandler[PETSC_MAX_OPTIONS_HANDLER])(PetscObject, PetscOptionItems *, void *);
+  PetscErrorCode (*optionhandler[PETSC_MAX_OPTIONS_HANDLER])(PetscObject, PetscOptionItems, void *);
   PetscErrorCode (*optiondestroy[PETSC_MAX_OPTIONS_HANDLER])(PetscObject, void *);
   void *optionctx[PETSC_MAX_OPTIONS_HANDLER];
 #if defined(PETSC_HAVE_SAWS)
@@ -1605,3 +1605,77 @@ struct _n_PetscObjectList {
   PetscObject     obj;
   PetscObjectList next;
 };
+
+/*MC
+   PeOP - indicates an argument to a PETSc function is optional and one can pass `NULL` instead. This is used by the Fortran API generator
+
+   Level: developer
+
+   Notes:
+   This is not part of the PETSc public API and should only be used in PETSc source code.
+
+   Put this in the function declaration in front of each variable that is optional
+
+   Developer Note:
+   Shortened form of PETSc optional
+
+.seealso: `PeNS`, `PeCtx`, `PetscInitialize()`
+M*/
+#define PeOp
+
+/*MC
+   PeNS - indicates a function that does not use the PETSc standard arguments which make it easy to generate automatic language stubs for other languages
+
+   Level: developer
+
+   Notes:
+   This is not part of the PETSc public API and should only be used in PETSc source code.
+
+   Put this at the end of the function declaration closing parathesis
+
+   Developer Note:
+   Shortened form of PETSc non-standard
+
+.seealso: `PeOp`, `PeCtx`, `PetscInitialize()`
+M*/
+#define PeNS
+
+/*MC
+   PeCtx - indicates an argument that returns a pointer to a user defined C struct (or Fortran derived type)
+
+   Level: developer
+
+   Notes:
+   This is not part of the PETSc public API and should only be used in PETSc source code.
+
+   This should not be used for functions that return PETSc objects, or pointers to arrays of unknown type. Thus it is used for, for example,
+   `KSPGetApplicationContext()` but not used for `DMNetworkGetComponent()`
+
+   For pointers to arrays of unknown type and for functions that return PETSc internal objects that are opaque to users, such
+   as `KSPMonitorDynamicToleranceCreate()` a `void **` should be used.
+
+   Fortran Note:
+   Should only be used with user defined Fortran datatypes
+.vb
+   type(tUserType), pointer :: ctx
+.ve
+
+   Developer Note:
+   Put this in function declaration for the argument type instead of `void *`, or `void **`.
+
+   C compilers generate a warning or error if one passes a pointer to a pointer to a specific type (instead of `void`), for example,
+.vb
+   extern calledfunction(void **);
+   SomeCtx *ctx;
+   calledfunction(&ctx);   << warning that it is passing a pointer to a pointer to a SomeCtx instead of a void **
+.ve
+   By using the common practice of prototyping the function as
+.vb
+   extern calledfunction(void *);
+.ve
+   the warning message is averted. `PeCtx` is used in PETSc source code so that the getAPI() code processor knows the argument is
+   actually handled internally as `void **` so it can generate correct bindings for other languages.
+
+.seealso: `PeOp`, `PeNS`, `PetscInitialize()`
+M*/
+#define PeCtx void *
