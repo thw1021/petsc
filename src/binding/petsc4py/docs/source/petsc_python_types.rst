@@ -88,6 +88,7 @@ PETSc Python ode-integrator type (TODO)
 ---------------------------------------
 
 .. _petsc_python_tao:
+.. _petsc_python_dmtao:
 
 PETSc Python optimization solver type (TODO)
 --------------------------------------------

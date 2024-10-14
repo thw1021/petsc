@@ -1,5 +1,6 @@
 #include <petsc/private/taoimpl.h> /*I "petsctao.h" I*/
 #include <petsc/private/snesimpl.h>
+#include <petsc/private/dmimpl.h>
 
 PetscBool         TaoRegisterAllCalled = PETSC_FALSE;
 PetscFunctionList TaoList              = NULL;
@@ -13,6 +14,7 @@ PetscLogEvent TAO_ObjGradEval;
 PetscLogEvent TAO_HessianEval;
 PetscLogEvent TAO_JacobianEval;
 PetscLogEvent TAO_ConstraintsEval;
+PetscLogEvent TAO_FixedPointEval;
 
 const char *TaoSubSetTypes[] = {"subvec", "mask", "matrixfree", "TaoSubSetType", "TAO_SUBSET_", NULL};
 
@@ -66,6 +68,29 @@ static PetscErrorCode TaoSetUpEW_Private(Tao tao)
     kctx = (SNESKSPEW *)tao->snes_ewdummy->kspconvctx;
     PetscCall(SNESEWSetFromOptions_Private(kctx, PETSC_FALSE, PetscObjectComm((PetscObject)tao), ewprefix));
   } else PetscCall(SNESDestroy(&tao->snes_ewdummy));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoDMEnlarge_Static(Tao tao, PetscInt NdmtNew)
+{
+  DM        *tmpdm;
+  PetscReal *s_tmpdm;
+  PetscInt   Nf = tao->num_terms, f;
+
+  PetscFunctionBegin;
+  if (Nf >= NdmtNew) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCall(PetscMalloc1(NdmtNew, &tmpdm));
+  PetscCall(PetscCalloc1(NdmtNew, &s_tmpdm));
+  for (f = 0; f < Nf; ++f) {
+    tmpdm[f]   = tao->dms[f];
+    s_tmpdm[f] = tao->dm_scales[f];
+  }
+  for (f = Nf; f < NdmtNew; ++f) { tmpdm[f] = NULL; }
+  PetscCall(PetscFree(tao->dms));
+  PetscCall(PetscFree(tao->dm_scales));
+  tao->num_terms = NdmtNew;
+  tao->dms       = tmpdm;
+  tao->dm_scales = s_tmpdm;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -127,6 +152,7 @@ PetscErrorCode TaoCreate(MPI_Comm comm, Tao *newtao)
   PetscAssertPointer(newtao, 2);
   PetscCall(TaoInitializePackage());
   PetscCall(TaoLineSearchInitializePackage());
+  PetscCall(DMTaoInitializePackage());
 
   PetscCall(PetscHeaderCreate(tao, TAO_CLASSID, "Tao", "Optimization solver", "Tao", comm, TaoDestroy, TaoView));
   tao->ops->convergencetest = TaoDefaultConvergenceTest;
@@ -179,6 +205,7 @@ PetscErrorCode TaoSolve(Tao tao)
   PetscCall(PetscLogEventEnd(TAO_Solve, tao, 0, 0, 0));
 
   PetscCall(VecViewFromOptions(tao->solution, (PetscObject)tao, "-tao_view_solution"));
+  if (tao->dualvec) PetscCall(VecViewFromOptions(tao->dualvec, (PetscObject)tao, "-tao_view_dual_solution"));
 
   tao->ntotalits += tao->niter;
 
@@ -241,6 +268,8 @@ PetscErrorCode TaoSetUp(Tao tao)
 @*/
 PetscErrorCode TaoDestroy(Tao *tao)
 {
+  PetscInt i;
+
   PetscFunctionBegin;
   if (!*tao) PetscFunctionReturn(PETSC_SUCCESS);
   PetscValidHeaderSpecific(*tao, TAO_CLASSID, 1);
@@ -253,7 +282,10 @@ PetscErrorCode TaoDestroy(Tao *tao)
   PetscCall(KSPDestroy(&(*tao)->ksp));
   PetscCall(SNESDestroy(&(*tao)->snes_ewdummy));
   PetscCall(TaoLineSearchDestroy(&(*tao)->linesearch));
-
+  for (i = 0; i < (*tao)->num_terms; i++) { PetscCall(DMDestroy(&(*tao)->dms[i])); }
+  PetscCall(PetscFree((*tao)->dms));
+  PetscCall(PetscFree((*tao)->dm_scales));
+  if ((*tao)->is_child_dm) PetscCall(PetscObjectCompose((PetscObject)*tao, "TaoGetParentDM", NULL));
   if ((*tao)->ops->convergencedestroy) {
     PetscCall((*(*tao)->ops->convergencedestroy)((*tao)->cnvP));
     if ((*tao)->jacobian_state_inv) PetscCall(MatDestroy(&(*tao)->jacobian_state_inv));
@@ -261,6 +293,7 @@ PetscErrorCode TaoDestroy(Tao *tao)
   PetscCall(VecDestroy(&(*tao)->solution));
   PetscCall(VecDestroy(&(*tao)->gradient));
   PetscCall(VecDestroy(&(*tao)->ls_res));
+  PetscCall(VecDestroy(&(*tao)->dualvec));
 
   if ((*tao)->gradient_norm) {
     PetscCall(PetscObjectDereference((PetscObject)(*tao)->gradient_norm));
@@ -339,33 +372,35 @@ PetscErrorCode TaoKSPSetUseEW(Tao tao, PetscBool flag)
 . tao - the `Tao` solver context
 
   Options Database Keys:
-+ -tao_type <type>             - The algorithm that Tao uses (lmvm, nls, etc.)
-. -tao_gatol <gatol>           - absolute error tolerance for ||gradient||
-. -tao_grtol <grtol>           - relative error tolerance for ||gradient||
-. -tao_gttol <gttol>           - reduction of ||gradient|| relative to initial gradient
-. -tao_max_it <max>            - sets maximum number of iterations
-. -tao_max_funcs <max>         - sets maximum number of function evaluations
-. -tao_fmin <fmin>             - stop if function value reaches fmin
-. -tao_steptol <tol>           - stop if trust region radius less than <tol>
-. -tao_trust0 <t>              - initial trust region radius
-. -tao_view_solution           - view the solution at the end of the optimization process
-. -tao_monitor                 - prints function value and residual norm at each iteration
-. -tao_monitor_short           - same as `-tao_monitor`, but truncates very small values
-. -tao_monitor_constraint_norm - prints objective value, gradient, and constraint norm at each iteration
-. -tao_monitor_globalization   - prints information about the globalization at each iteration
-. -tao_monitor_solution        - prints solution vector at each iteration
-. -tao_monitor_ls_residual     - prints least-squares residual vector at each iteration
-. -tao_monitor_step            - prints step vector at each iteration
-. -tao_monitor_gradient        - prints gradient vector at each iteration
-. -tao_monitor_solution_draw   - graphically view solution vector at each iteration
-. -tao_monitor_step_draw       - graphically view step vector at each iteration
-. -tao_monitor_gradient_draw   - graphically view gradient at each iteration
-. -tao_monitor_cancel          - cancels all monitors (except those set with command line)
-. -tao_fd_gradient             - use gradient computed with finite differences
-. -tao_fd_hessian              - use hessian computed with finite differences
-. -tao_mf_hessian              - use matrix-free Hessian computed with finite differences
-. -tao_view                    - prints information about the Tao after solving
-- -tao_converged_reason        - prints the reason Tao stopped iterating
++ -tao_type <type>                - The algorithm that Tao uses (lmvm, nls, etc.)
+. -tao_gatol <gatol>              - absolute error tolerance for ||gradient||
+. -tao_grtol <grtol>              - relative error tolerance for ||gradient||
+. -tao_gttol <gttol>              - reduction of ||gradient|| relative to initial gradient
+. -tao_max_it <max>               - sets maximum number of iterations
+. -tao_max_funcs <max>            - sets maximum number of function evaluations
+. -tao_fmin <fmin>                - stop if function value reaches fmin
+. -tao_steptol <tol>              - stop if trust region radius less than <tol>
+. -tao_trust0 <t>                 - initial trust region radius
+. -tao_view_solution              - view the solution at the end of the optimization process
+. -tao_view_dual_solution         - view the dual solution at the end of the optimization process
+. -tao_monitor                    - prints function value and residual norm at each iteration
+. -tao_monitor_short              - same as `-tao_monitor`, but truncates very small values
+. -tao_monitor_constraint_norm    - prints objective value, gradient, and constraint norm at each iteration
+. -tao_monitor_globalization      - prints information about the globalization at each iteration
+. -tao_monitor_solution           - prints solution vector at each iteration
+. -tao_monitor_dual_solution      - prints dual  solution vector at each iteration
+. -tao_monitor_ls_residual        - prints least-squares residual vector at each iteration
+. -tao_monitor_step               - prints step vector at each iteration
+. -tao_monitor_gradient           - prints gradient vector at each iteration
+. -tao_monitor_dual_solution_draw - graphically view dual solution vector at each iteration
+. -tao_monitor_step_draw          - graphically view step vector at each iteration
+. -tao_monitor_gradient_draw      - graphically view gradient at each iteration
+. -tao_monitor_cancel             - cancels all monitors (except those set with command line)
+. -tao_fd_gradient                - use gradient computed with finite differences
+. -tao_fd_hessian                 - use hessian computed with finite differences
+. -tao_mf_hessian                 - use matrix-free Hessian computed with finite differences
+. -tao_view                       - prints information about the Tao after solving
+- -tao_converged_reason           - prints the reason Tao stopped iterating
 
   Level: beginner
 
@@ -382,7 +417,7 @@ PetscErrorCode TaoSetFromOptions(Tao tao)
   PetscViewer monviewer;
   PetscBool   flg, found;
   MPI_Comm    comm;
-  PetscReal   catol, crtol, gatol, grtol, gttol;
+  PetscReal   catol, crtol, gatol, grtol, gttol, step;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
@@ -421,6 +456,10 @@ PetscErrorCode TaoSetFromOptions(Tao tao)
   PetscCall(PetscOptionsReal("-tao_gttol", "Stop if the norm of the gradient is less than the norm of the initial gradient times tol", "TaoSetTolerances", tao->gttol, &gttol, NULL));
   PetscCall(TaoSetTolerances(tao, gatol, grtol, gttol));
 
+  step = tao->step;
+  PetscCall(PetscOptionsReal("-tao_initial_step", "Sets initial stepsize", "TaoSetInitialStep", tao->step, &step, NULL));
+  PetscCall(TaoSetInitialStep(tao, step));
+
   PetscCall(PetscOptionsInt("-tao_max_it", "Stop if iteration number exceeds", "TaoSetMaximumIterations", tao->max_it, &tao->max_it, &flg));
   if (flg) PetscCall(TaoSetMaximumIterations(tao, tao->max_it));
 
@@ -447,6 +486,12 @@ PetscErrorCode TaoSetFromOptions(Tao tao)
   if (flg) {
     PetscCall(PetscViewerASCIIOpen(comm, monfilename, &monviewer));
     PetscCall(TaoMonitorSet(tao, TaoMonitorSolution, monviewer, (PetscErrorCode (*)(void **))PetscViewerDestroy));
+  }
+
+  PetscCall(PetscOptionsString("-tao_monitor_dual_solution", "View dual solution vector after each iteration", "TaoMonitorSet", "stdout", monfilename, sizeof(monfilename), &flg));
+  if (flg) {
+    PetscCall(PetscViewerASCIIOpen(comm, monfilename, &monviewer));
+    PetscCall(TaoMonitorSet(tao, TaoMonitorDualSolution, monviewer, (PetscErrorCode(*)(void **))PetscViewerDestroy));
   }
 
   PetscCall(PetscOptionsBool("-tao_converged_reason", "Print reason for Tao converged", "TaoSolve", tao->printreason, &tao->printreason, NULL));
@@ -507,6 +552,15 @@ PetscErrorCode TaoSetFromOptions(Tao tao)
   }
 
   flg = PETSC_FALSE;
+  PetscCall(PetscOptionsBool("-tao_monitor_dual_solution_draw", "Plot dual solution vector at each iteration", "TaoMonitorSet", flg, &flg, NULL));
+  if (flg) {
+    TaoMonitorDrawCtx drawctx;
+    PetscInt          howoften = 1;
+    PetscCall(TaoMonitorDrawCtxCreate(PetscObjectComm((PetscObject)tao), NULL, NULL, PETSC_DECIDE, PETSC_DECIDE, 300, 300, howoften, &drawctx));
+    PetscCall(TaoMonitorSet(tao, TaoMonitorDualSolutionDraw, drawctx, (PetscErrorCode(*)(void **))TaoMonitorDrawCtxDestroy));
+  }
+
+  flg = PETSC_FALSE;
   PetscCall(PetscOptionsBool("-tao_monitor_step_draw", "Plots step at each iteration", "TaoMonitorSet", flg, &flg, NULL));
   if (flg) PetscCall(TaoMonitorSet(tao, TaoMonitorStepDraw, NULL, NULL));
 
@@ -560,6 +614,29 @@ PetscErrorCode TaoSetFromOptions(Tao tao)
 }
 
 /*@
+  TaoSetInitialStep - Sets initial step for `TaoSolve()`.
+
+  Logically Collective
+
+  Input Parameters:
++ tao  - the `Tao` context
+- step - Initial stepsize. Must be non-negative.
+
+  Level: beginner
+
+.seealso: [](ch_tao), `Tao`
+@*/
+PetscErrorCode TaoSetInitialStep(Tao tao, PetscReal step)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
+  PetscValidLogicalCollectiveReal(tao, step, 2);
+  PetscCheck(step >= 0, PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_OUTOFRANGE, "Negative stepsize not allowed");
+  tao->step = step;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
   TaoViewFromOptions - View a `Tao` object based on values in the options database
 
   Collective
@@ -607,8 +684,10 @@ PetscErrorCode TaoViewFromOptions(Tao A, PetscObject obj, const char name[])
 @*/
 PetscErrorCode TaoView(Tao tao, PetscViewer viewer)
 {
+  DMTao     tdm;
   PetscBool isascii, isstring;
   TaoType   type;
+  PetscInt  i;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
@@ -627,6 +706,23 @@ PetscErrorCode TaoView(Tao tao, PetscViewer viewer)
     if (tao->ksp) {
       PetscCall(KSPView(tao->ksp, viewer));
       PetscCall(PetscViewerASCIIPrintf(viewer, "total KSP iterations: %" PetscInt_FMT "\n", tao->ksp_tot_its));
+    }
+    if (tao->reg || tao->dms) PetscCall(PetscViewerASCIIPrintf(viewer, "DMTao objects inside Tao: \n"));
+    if (tao->reg) {
+      PetscCall(PetscViewerASCIIPushTab(viewer));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "DMTao Regularizer scale: %g\n", (double)tao->reg_scale));
+      PetscCall(DMGetDMTao(tao->reg, &tdm));
+      PetscCall(DMTaoView(tdm, viewer));
+      PetscCall(PetscViewerASCIIPopTab(viewer));
+    }
+    if (tao->dms) {
+      for (i = 0; i < tao->num_terms; i++) {
+        PetscCall(PetscViewerASCIIPushTab(viewer));
+        PetscCall(PetscViewerASCIIPrintf(viewer, "DMTao scale: %g\n", (double)tao->dm_scales[i]));
+        PetscCall(DMGetDMTao(tao->dms[i], &tdm));
+        PetscCall(DMTaoView(tdm, viewer));
+        PetscCall(PetscViewerASCIIPopTab(viewer));
+      }
     }
 
     if (tao->XL || tao->XU) PetscCall(PetscViewerASCIIPrintf(viewer, "Active Set subset type: %s\n", TaoSubSetTypes[tao->subset_type]));
@@ -669,6 +765,11 @@ PetscErrorCode TaoView(Tao tao, PetscViewer viewer)
       PetscCall(PetscViewerASCIIPrintf(viewer, "total number of function/gradient evaluations=%" PetscInt_FMT ",", tao->nfuncgrads));
       if (tao->max_funcs == PETSC_UNLIMITED) PetscCall(PetscViewerASCIIPrintf(viewer, "    (max: unlimited)\n"));
       else PetscCall(PetscViewerASCIIPrintf(viewer, "    (max: %" PetscInt_FMT ")\n", tao->max_funcs));
+    }
+    if (tao->nproxs > 0) {
+      PetscCall(PetscViewerASCIIPrintf(viewer, "total number of proximal mapping evaluations=%" PetscInt_FMT ",", tao->nproxs));
+      if (tao->max_funcs == PETSC_UNLIMITED) PetscCall(PetscViewerASCIIPrintf(viewer, "      (max: unlimited)\n"));
+      else PetscCall(PetscViewerASCIIPrintf(viewer, "      (max: %" PetscInt_FMT ")\n", tao->max_funcs));
     }
     if (tao->nhess > 0) PetscCall(PetscViewerASCIIPrintf(viewer, "total number of Hessian evaluations=%" PetscInt_FMT "\n", tao->nhess));
     if (tao->nconstraints > 0) PetscCall(PetscViewerASCIIPrintf(viewer, "total number of constraint function evaluations=%" PetscInt_FMT "\n", tao->nconstraints));
@@ -1342,7 +1443,7 @@ PetscErrorCode TaoGetLineSearch(Tao tao, TaoLineSearch *ls)
 PetscErrorCode TaoAddLineSearchCounts(Tao tao)
 {
   PetscBool flg;
-  PetscInt  nfeval, ngeval, nfgeval;
+  PetscInt  nfeval, ngeval, nfgeval, nproxeval;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
@@ -1350,9 +1451,11 @@ PetscErrorCode TaoAddLineSearchCounts(Tao tao)
     PetscCall(TaoLineSearchIsUsingTaoRoutines(tao->linesearch, &flg));
     if (!flg) {
       PetscCall(TaoLineSearchGetNumberFunctionEvaluations(tao->linesearch, &nfeval, &ngeval, &nfgeval));
+      PetscCall(TaoLineSearchGetNumberProxEvaluations(tao->linesearch, &nproxeval));
       tao->nfuncs += nfeval;
       tao->ngrads += ngeval;
       tao->nfuncgrads += nfgeval;
+      tao->nproxs += nproxeval;
     }
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1386,6 +1489,32 @@ PetscErrorCode TaoGetSolution(Tao tao, Vec *X)
 }
 
 /*@
+  TaoGetDualSolution - Returns the vector with the current dual solution from the `Tao` object
+  Currently only available for `TAOCV` type.
+
+  Not Collective
+
+  Input Parameter:
+. tao - the `Tao` context
+
+  Output Parameter:
+. X - the current dual solution
+
+  Level: intermediate
+
+.seealso: [](ch_tao), `Tao`, `TaoSolve()`, `TAOCV`
+@*/
+PetscErrorCode TaoGetDualSolution(Tao tao, Vec *X)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
+  PetscAssertPointer(X, 2);
+  PetscCheck(tao->dualvec, PetscObjectComm((PetscObject)tao), PETSC_ERR_SUP, "Dual Solution unavailable.");
+  *X = tao->dualvec;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
   TaoResetStatistics - Initialize the statistics collected by the `Tao` object.
   These statistics include the iteration number, residual norms, and convergence status.
   This routine gets called before solving each optimization problem.
@@ -1407,6 +1536,7 @@ PetscErrorCode TaoResetStatistics(Tao tao)
   tao->nfuncs       = 0;
   tao->nfuncgrads   = 0;
   tao->ngrads       = 0;
+  tao->nproxs       = 0;
   tao->nhess        = 0;
   tao->njac         = 0;
   tao->nconstraints = 0;
@@ -1796,6 +1926,33 @@ PetscErrorCode TaoMonitorSolution(Tao tao, void *ctx)
 }
 
 /*@C
+  TaoMonitorDualSolution - Views the dual solution at each iteration of `TaoSolve()`
+
+  Collective
+
+  Input Parameters:
++ tao - the `Tao` context
+- ctx - `PetscViewer` context or `NULL`
+
+  Options Database Key:
+. -tao_monitor_dual_solution - view the dual solution
+
+  Level: advanced
+
+.seealso: [](ch_tao), `Tao`, `TaoMonitorDefaultShort()`, `TaoMonitorSet()`
+@*/
+PetscErrorCode TaoMonitorDualSolution(Tao tao, void *ctx)
+{
+  PetscViewer viewer = (PetscViewer)ctx;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
+  PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 2);
+  if (tao->dualvec) PetscCall(VecView(tao->dualvec, viewer));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
   TaoMonitorGradient - Views the gradient at each iteration of `TaoSolve()`
 
   Collective
@@ -1878,6 +2035,38 @@ PetscErrorCode TaoMonitorSolutionDraw(Tao tao, void *ctx)
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
   if (!(((ictx->howoften > 0) && (!(tao->niter % ictx->howoften))) || ((ictx->howoften == -1) && tao->reason))) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(VecView(tao->solution, ictx->viewer));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  TaoMonitorDualSolutionDraw - Plots the dual solution at each iteration of `TaoSolve()`
+
+  Collective
+
+  Input Parameters:
++ tao - the `Tao` context
+- ctx - `TaoMonitorDraw` context
+
+  Options Database Key:
+. -tao_monitor_dual_solution_draw - draw the solution at each iteration
+
+  Level: advanced
+
+  Note:
+  The context created by `TaoMonitorDrawCtxCreate()`, along with `TaoMonitorDualSolutionDraw()`, and `TaoMonitorDrawCtxDestroy()`
+  are passed to `TaoMonitorSet()` to monitor the solution graphically.
+
+.seealso: [](ch_tao), `Tao`, `TaoMonitorSolution()`, `TaoMonitorSet()`, `TaoMonitorGradientDraw()`, `TaoMonitorDrawCtxCreate()`,
+          `TaoMonitorDrawCtxDestroy()`
+@*/
+PetscErrorCode TaoMonitorDualSolutionDraw(Tao tao, void *ctx)
+{
+  TaoMonitorDrawCtx ictx = (TaoMonitorDrawCtx)ctx;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
+  if (!(((ictx->howoften > 0) && (!(tao->niter % ictx->howoften))) || ((ictx->howoften == -1) && tao->reason))) PetscFunctionReturn(PETSC_SUCCESS);
+  if (tao->dualvec) PetscCall(VecView(tao->dualvec, ictx->viewer));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -2816,5 +3005,107 @@ PetscErrorCode TaoMonitorDrawCtxDestroy(TaoMonitorDrawCtx *ictx)
   PetscFunctionBegin;
   PetscCall(PetscViewerDestroy(&(*ictx)->viewer));
   PetscCall(PetscFree(*ictx));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoGetDMSize - Gets the number `DM` for a `Tao` solver.
+
+  Logically Collective
+
+  Input Parameters:
++ tao - the `Tao` context
+- num - the number of `DM` terms
+
+  Level: intermediate
+
+.seealso: [](ch_tao), `Tao`
+@*/
+PetscErrorCode TaoGetDMSize(Tao tao, PetscInt *num)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
+  *num = tao->num_terms;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoAddDM - Sets an DM to Tao object.
+
+  Input Parameters:
++ tao   - Tao solver context
+. dm    - DM context
+- scale - scale for DMTao
+
+  Level: advanced
+
+.seealso: `DMTao`
+@*/
+PetscErrorCode TaoAddDM(Tao tao, DM dm, PetscReal scale)
+{
+  DMTao tdm;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 2);
+  PetscValidLogicalCollectiveReal(tao, scale, 3);
+  PetscCall(PetscObjectReference((PetscObject)dm));
+  PetscCall(TaoDMEnlarge_Static(tao, tao->num_terms + 1));
+  /* Subtracting by one as it is incremented in above func */
+  tao->dms[tao->num_terms - 1]       = dm;
+  tao->dm_scales[tao->num_terms - 1] = scale;
+  PetscCall(DMGetDMTao(dm, &tdm));
+  if (!tdm->workvec) { PetscCall(VecDuplicate(tao->solution, &tdm->workvec)); }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoClearDM - Remove all `DM` from `Tao`
+
+  Logically Collective
+
+  Input Parameters:
+. tao - Tao solver context
+
+  Level: intermediate
+
+.seealso: `DMTao`, `Tao`
+@*/
+PetscErrorCode TaoClearDM(Tao tao)
+{
+  PetscInt i;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
+  for (i = 0; i < tao->num_terms; i++) PetscCall(DMDestroy(&tao->dms[i]));
+  PetscCall(PetscFree(tao->dms));
+  tao->num_terms = 0;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoGetDM - Return the `DM` for a given index.
+
+  Not Collective
+
+  Input Parameters:
++ tao - Tao solver context
+- idx - The index number
+
+  Output Parameters:
++ dm    - The `DM` at desired index.
+- scale - The according scale parameter for the `DM`
+
+  Level: intermediate
+
+.seealso: `DMTao`, `Tao`
+@*/
+PetscErrorCode TaoGetDM(Tao tao, PetscInt idx, DM *dm, PetscReal *scale)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
+  PetscCheck((idx >= 0) && (idx < tao->num_terms), PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Index number %" PetscInt_FMT " must be in [0, %" PetscInt_FMT ")", idx, tao->num_terms);
+  *dm    = tao->dms[idx];
+  *scale = tao->dm_scales[idx];
   PetscFunctionReturn(PETSC_SUCCESS);
 }
