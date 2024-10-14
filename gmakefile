@@ -32,6 +32,7 @@ libpetsc_shared  := $(LIBDIR)/libpetsc.$(SL_LINKER_SUFFIX)
 libpetsc_soname  := $(call soname_function,$(LIBDIR)/libpetsc)
 libpetsc_libname := $(call libname_function,$(LIBDIR)/libpetsc)
 libpetsc_static  := $(LIBDIR)/libpetsc.$(AR_LIB_SUFFIX)
+libpetsc_prec_obj    := $(OBJDIR)/libpetsc_$(PETSC_PRECISION).o
 libpetscpkgs_shared  := $(foreach pkg, $(pkgs), $(LIBDIR)/libpetsc$(pkg).$(SL_LINKER_SUFFIX))
 libpetscpkgs_soname  := $(foreach pkg, $(pkgs), $(call soname_function,$(LIBDIR)/libpetsc$(pkg)))
 libpetscpkgs_libname := $(foreach pkg, $(pkgs), $(call libname_function,$(LIBDIR)/libpetsc$(pkg)))
@@ -50,11 +51,20 @@ else
 endif
 libpetscall := $(if $(filter-out no,$(BUILDSHAREDLIB)),$(libpetscall_shared),$(libpetscall_static))
 
+libpetsc_prec_shared  := $(LIBDIR)/libpetsc_$(PETSC_PRECISION).$(SL_LINKER_SUFFIX)
+libpetsc_prec_soname  := $(call soname_function,$(LIBDIR)/libpetsc_$(PETSC_PRECISION))
+libpetsc_prec_libname := $(call libname_function,$(LIBDIR)/libpetsc_$(PETSC_PRECISION))
+libpetsc_prec_static  := $(LIBDIR)/libpetsc_$(PETSC_PRECISION).$(AR_LIB_SUFFIX)
+
+libpetsc_prec := $(if $(filter-out no,$(BUILDSHAREDLIB)),$(libpetsc_prec_shared),$(libpetsc_prec_static))
+
 generated      := $(PETSC_ARCH)/lib/petsc/conf/files
 
 libs : $(libpetscall)
 
-.PHONY: libs
+_precision-prefixed-lib: $(libpetsc_prec)
+
+.PHONY: libs _precision-prefixed-lib
 
 .SECONDEXPANSION:		# to expand $$(@D)/.DIR
 
@@ -125,7 +135,26 @@ ifneq ($(DSYMUTIL),true)
 	$(call quiet,DSYMUTIL) $@
 endif
 
+ifeq ($(PETSC_HAS_PRECISION_PREFIX),1)
+
+$(libpetsc_prec_obj) : $(srcs.o) | $$(@D)/.DIR
+	$(call quiet,RELINKER) -r -o $@ $^
+	$(call quiet,NM) --defined-only --extern-only $@ | $(AWK) '{ print $$3 " __petsc_$(PETSC_PRECISION)_" $$3 }' > $@.defs
+	$(call quiet,OBJCOPY) --redefine-syms=$@.defs $@
+
+else
+
+$(libpetsc_prec_obj):
+	$(error a relocatable linker was not found during ./configure, cannot compile prefixed object files)
+
+endif
+
+$(libpetsc_prec_libname) : $(libpetsc_prec_obj) | $$(@D)/.DIR
+	$(SHARED_RECIPE)
+
 $(libpetsc_static) : obj := $(srcs.o)
+
+$(libpetsc_prec_static) : obj := $(libpetsc_prec_obj)
 
 define ARCHIVE_RECIPE_WIN32FE_LIB
   @$(RM) $@ $@.args
