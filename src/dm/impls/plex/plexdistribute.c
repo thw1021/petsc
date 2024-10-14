@@ -450,7 +450,7 @@ PetscErrorCode DMPlexDistributeOwnership(DM dm, PetscSection rootSection, IS *ro
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMPlexCreateOverlapLabel - Compute a label indicating what overlap points should be sent to new processes
 
   Collective
@@ -2181,7 +2181,7 @@ PetscErrorCode DMPlexDistributeGetDefault(DM dm, PetscBool *dist)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMPlexGetGatherDM - Get a copy of the `DMPLEX` that gathers all points on the
   root process of the original's communicator.
 
@@ -2225,7 +2225,7 @@ PetscErrorCode DMPlexGetGatherDM(DM dm, PetscSF *sf, DM *gatherMesh)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   DMPlexGetRedundantDM - Get a copy of the `DMPLEX` that is completely copied on each process.
 
   Collective

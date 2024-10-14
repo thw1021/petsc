@@ -26,7 +26,7 @@ static PetscErrorCode PetscViewerHDF5GetGroup_Internal(PetscViewer, const char *
 
 .seealso: [](sec_viewers), `PETSCVIEWERHDF5`, `PetscViewerHDF5Open()`, `PetscViewerHDF5PushGroup()`, `PetscViewerHDF5PopGroup()`, `PetscViewerHDF5OpenGroup()`, `PetscViewerHDF5WriteGroup()`
 @*/
-PetscErrorCode PetscViewerHDF5GetGroup(PetscViewer viewer, const char path[], char *abspath[])
+PetscErrorCode PetscViewerHDF5GetGroup(PetscViewer viewer, const char path[], const char *abspath[])
 {
   size_t      len;
   PetscBool   relative = PETSC_FALSE;
@@ -65,7 +65,7 @@ static PetscErrorCode PetscViewerHDF5CheckNamedObject_Internal(PetscViewer viewe
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscViewerSetFromOptions_HDF5(PetscViewer v, PetscOptionItems *PetscOptionsObject)
+static PetscErrorCode PetscViewerSetFromOptions_HDF5(PetscViewer v, PetscOptionItems PetscOptionsObject)
 {
   PetscBool         flg  = PETSC_FALSE, set;
   PetscViewer_HDF5 *hdf5 = (PetscViewer_HDF5 *)v->data;

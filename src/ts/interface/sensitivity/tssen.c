@@ -1428,7 +1428,7 @@ PetscErrorCode TSAdjointMonitorDrawSensi(TS ts, PetscInt step, PetscReal ptime, 
 
 .seealso: [](ch_ts), `TSSetSaveTrajectory()`, `TSTrajectorySetUp()`
 @*/
-PetscErrorCode TSAdjointSetFromOptions(TS ts, PetscOptionItems *PetscOptionsObject)
+PetscErrorCode TSAdjointSetFromOptions(TS ts, PetscOptionItems PetscOptionsObject)
 {
   PetscBool tflg, opt;
 

@@ -602,12 +602,12 @@ PetscErrorCode VecDestroy(Vec *v)
   Use `VecDestroyVecs()` to free the space. Use `VecDuplicate()` to form a single
   vector.
 
-  Fortran Notes:
-  The Fortran interface is slightly different from that given below, it
-  requires one to pass in `V` a `Vec` array of size at least `m`.
-  See the [](ch_fortran) for details.
+  Fortran Note:
+.vb
+  Vec, pointer :: V(:)
+.ve
 
-.seealso: [](ch_vectors), `Vec`, [](ch_fortran), `VecDestroyVecs()`, `VecDuplicate()`, `VecCreate()`, `VecDuplicateVecsF90()`
+.seealso: [](ch_vectors), `Vec`, [](ch_fortran), `VecDestroyVecs()`, `VecDuplicate()`, `VecCreate()`
 @*/
 PetscErrorCode VecDuplicateVecs(Vec v, PetscInt m, Vec *V[])
 {
@@ -643,10 +643,6 @@ PetscErrorCode VecDuplicateVecs(Vec v, PetscInt m, Vec *V[])
 - vv - pointer to pointer to array of vector pointers, if `NULL` no vectors are destroyed
 
   Level: intermediate
-
-  Fortran Notes:
-  The Fortran interface is slightly different from that given below.
-  See the [](ch_fortran) for details.
 
 .seealso: [](ch_vectors), `Vec`, [](ch_fortran), `VecDuplicateVecs()`, `VecDestroyVecsf90()`
 @*/
@@ -985,8 +981,8 @@ PetscErrorCode VecGetOwnershipRange(Vec x, PetscInt *low, PetscInt *high)
 
   If `ranges` are used after all vectors that share the ranges has been destroyed, then the program will crash accessing `ranges`.
 
-  Fortran Notes:
-  You must PASS in an array of length `size` + 1, where `size` is the size of the communicator owning the vector
+  Fortran Note:
+  Return `ranges` with `VecRestoreOwnershipRanges()`
 
 .seealso: [](ch_vectors), `Vec`, `MatGetOwnershipRange()`, `MatGetOwnershipRanges()`, `VecGetOwnershipRange()`, `PetscSplitOwnership()`,
           `VecSetSizes()`, `VecCreateMPI()`, `PetscLayout`, `DMDAGetGhostCorners()`, `DM`
@@ -1388,7 +1384,7 @@ PetscErrorCode VecZeroEntries(Vec vec)
 
 .seealso: [](ch_vectors), `Vec`, `VecSetFromOptions()`, `VecSetType()`
 */
-static PetscErrorCode VecSetTypeFromOptions_Private(Vec vec, PetscOptionItems *PetscOptionsObject)
+static PetscErrorCode VecSetTypeFromOptions_Private(Vec vec, PetscOptionItems PetscOptionsObject)
 {
   PetscBool   opt;
   VecType     defaultType;
