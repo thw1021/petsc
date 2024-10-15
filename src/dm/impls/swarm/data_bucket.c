@@ -1,4 +1,4 @@
-#include "../src/dm/impls/swarm/data_bucket.h"
+#include <petsc/private/dmswarmimpl.h> /*I   "petscdmswarm.h"   I*/
 
 /* string helpers */
 PetscErrorCode DMSwarmDataFieldStringInList(const char name[], const PetscInt N, const DMSwarmDataField gfield[], PetscBool *val)
@@ -330,13 +330,10 @@ PetscErrorCode DMSwarmDataFieldAccessPoint(const DMSwarmDataField gfield, const 
 {
   PetscFunctionBegin;
   *ctx_p = NULL;
-#if defined(DMSWARM_DATAFIELD_POINT_ACCESS_GUARD)
-  /* debug mode */
   /* check point is valid */
   PetscCheck(pid >= 0, PETSC_COMM_SELF, PETSC_ERR_USER, "index must be >= 0");
   PetscCheck(pid < gfield->L, PETSC_COMM_SELF, PETSC_ERR_USER, "index must be < %" PetscInt_FMT, gfield->L);
   PetscCheck(gfield->active != PETSC_FALSE, PETSC_COMM_SELF, PETSC_ERR_USER, "Field \"%s\" is not active. You must call DMSwarmDataFieldGetAccess() before point data can be retrivied", gfield->name);
-#endif
   *ctx_p = DMSWARM_DATAFIELD_point_access(gfield->data, pid, gfield->atomic_size);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -344,8 +341,6 @@ PetscErrorCode DMSwarmDataFieldAccessPoint(const DMSwarmDataField gfield, const 
 PetscErrorCode DMSwarmDataFieldAccessPointOffset(const DMSwarmDataField gfield, const size_t offset, const PetscInt pid, void **ctx_p)
 {
   PetscFunctionBegin;
-#if defined(DMSWARM_DATAFIELD_POINT_ACCESS_GUARD)
-  /* debug mode */
   /* check point is valid */
   /* PetscCheck(offset >= 0,PETSC_COMM_SELF,PETSC_ERR_USER,"offset must be >= 0");*/
   /* Note compiler realizes this can never happen with an unsigned PetscInt */
@@ -354,7 +349,6 @@ PetscErrorCode DMSwarmDataFieldAccessPointOffset(const DMSwarmDataField gfield, 
   PetscCheck(pid >= 0, PETSC_COMM_SELF, PETSC_ERR_USER, "index must be >= 0");
   PetscCheck(pid < gfield->L, PETSC_COMM_SELF, PETSC_ERR_USER, "index must be < %" PetscInt_FMT, gfield->L);
   PetscCheck(gfield->active != PETSC_FALSE, PETSC_COMM_SELF, PETSC_ERR_USER, "Field \"%s\" is not active. You must call DMSwarmDataFieldGetAccess() before point data can be retrivied", gfield->name);
-#endif
   *ctx_p = DMSWARM_DATAFIELD_point_access_offset(gfield->data, pid, gfield->atomic_size, offset);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -370,9 +364,7 @@ PetscErrorCode DMSwarmDataFieldRestoreAccess(DMSwarmDataField gfield)
 PetscErrorCode DMSwarmDataFieldVerifyAccess(const DMSwarmDataField gfield, const size_t size)
 {
   PetscFunctionBegin;
-#if defined(DMSWARM_DATAFIELD_POINT_ACCESS_GUARD)
   PetscCheck(gfield->atomic_size == size, PETSC_COMM_SELF, PETSC_ERR_USER, "Field \"%s\" must be mapped to %zu bytes, your intended structure is %zu bytes in length.", gfield->name, gfield->atomic_size, size);
-#endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -441,11 +433,9 @@ PetscErrorCode DMSwarmDataBucketCreateFromSubset(DMSwarmDataBucket DBIn, const P
 PetscErrorCode DMSwarmDataFieldInsertPoint(const DMSwarmDataField field, const PetscInt index, const void *ctx)
 {
   PetscFunctionBegin;
-#if defined(DMSWARM_DATAFIELD_POINT_ACCESS_GUARD)
   /* check point is valid */
   PetscCheck(index >= 0, PETSC_COMM_SELF, PETSC_ERR_USER, "index must be >= 0");
   PetscCheck(index < field->L, PETSC_COMM_SELF, PETSC_ERR_USER, "index must be < %" PetscInt_FMT, field->L);
-#endif
   PetscCall(PetscMemcpy(DMSWARM_DATAFIELD_point_access(field->data, index, field->atomic_size), ctx, field->atomic_size));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -457,11 +447,9 @@ PetscErrorCode DMSwarmDataBucketRemovePointAtIndex(const DMSwarmDataBucket db, c
   PetscBool any_active_fields;
 
   PetscFunctionBegin;
-#if defined(DMSWARM_DATAFIELD_POINT_ACCESS_GUARD)
   /* check point is valid */
   PetscCheck(index >= 0, PETSC_COMM_SELF, PETSC_ERR_USER, "index must be >= 0");
   PetscCheck(index < db->allocated, PETSC_COMM_SELF, PETSC_ERR_USER, "index must be < %" PetscInt_FMT, db->L + db->buffer);
-#endif
   PetscCall(DMSwarmDataBucketQueryForActiveFields(db, &any_active_fields));
   PetscCheck(!any_active_fields, PETSC_COMM_SELF, PETSC_ERR_USER, "Cannot safely remove point as at least one DMSwarmDataField is currently being accessed");
   if (index >= db->L) { /* this point is not in the list - no need to error, but I will anyway */
@@ -486,14 +474,12 @@ PetscErrorCode DMSwarmDataBucketRemovePointAtIndex(const DMSwarmDataBucket db, c
 PetscErrorCode DMSwarmDataFieldCopyPoint(const PetscInt pid_x, const DMSwarmDataField field_x, const PetscInt pid_y, const DMSwarmDataField field_y)
 {
   PetscFunctionBegin;
-#if defined(DMSWARM_DATAFIELD_POINT_ACCESS_GUARD)
   /* check point is valid */
   PetscCheck(pid_x >= 0, PETSC_COMM_SELF, PETSC_ERR_USER, "(IN) index must be >= 0");
   PetscCheck(pid_x < field_x->L, PETSC_COMM_SELF, PETSC_ERR_USER, "(IN) index must be < %" PetscInt_FMT, field_x->L);
   PetscCheck(pid_y >= 0, PETSC_COMM_SELF, PETSC_ERR_USER, "(OUT) index must be >= 0");
   PetscCheck(pid_y < field_y->L, PETSC_COMM_SELF, PETSC_ERR_USER, "(OUT) index must be < %" PetscInt_FMT, field_y->L);
   PetscCheck(field_y->atomic_size == field_x->atomic_size, PETSC_COMM_SELF, PETSC_ERR_USER, "atomic size must match");
-#endif
   PetscCall(PetscMemcpy(DMSWARM_DATAFIELD_point_access(field_y->data, pid_y, field_y->atomic_size), DMSWARM_DATAFIELD_point_access(field_x->data, pid_x, field_x->atomic_size), field_y->atomic_size));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -502,11 +488,9 @@ PetscErrorCode DMSwarmDataFieldCopyPoint(const PetscInt pid_x, const DMSwarmData
 PetscErrorCode DMSwarmDataFieldZeroPoint(const DMSwarmDataField field, const PetscInt index)
 {
   PetscFunctionBegin;
-#if defined(DMSWARM_DATAFIELD_POINT_ACCESS_GUARD)
   /* check point is valid */
   PetscCheck(index >= 0, PETSC_COMM_SELF, PETSC_ERR_USER, "index must be >= 0");
   PetscCheck(index < field->L, PETSC_COMM_SELF, PETSC_ERR_USER, "index must be < %" PetscInt_FMT, field->L);
-#endif
   PetscCall(PetscMemzero(DMSWARM_DATAFIELD_point_access(field->data, index, field->atomic_size), field->atomic_size));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -531,7 +515,7 @@ PetscErrorCode DMSwarmDataBucketZeroPoint(const DMSwarmDataBucket db, const Pets
 PetscErrorCode DMSwarmDataBucketAddPoint(DMSwarmDataBucket db)
 {
   PetscFunctionBegin;
-  PetscCall(DMSwarmDataBucketSetSizes(db, db->L + 1, DMSWARM_DATA_BUCKET_BUFFER_DEFAULT));
+  PetscCall(DMSwarmDataBucketSetSizes(db, db->L + 1, PETSC_DEFAULT));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -539,7 +523,7 @@ PetscErrorCode DMSwarmDataBucketAddPoint(DMSwarmDataBucket db)
 PetscErrorCode DMSwarmDataBucketRemovePoint(DMSwarmDataBucket db)
 {
   PetscFunctionBegin;
-  PetscCall(DMSwarmDataBucketSetSizes(db, db->L - 1, DMSWARM_DATA_BUCKET_BUFFER_DEFAULT));
+  PetscCall(DMSwarmDataBucketSetSizes(db, db->L - 1, PETSC_DEFAULT));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -666,7 +650,7 @@ PetscErrorCode DMSwarmDataBucketInsertValues(DMSwarmDataBucket db1, DMSwarmDataB
   PetscCall(DMSwarmDataBucketGetSizes(db1, &n_mp_points1, NULL, NULL));
   PetscCall(DMSwarmDataBucketGetSizes(db2, &n_mp_points2, NULL, NULL));
   n_mp_points1_new = n_mp_points1 + n_mp_points2;
-  PetscCall(DMSwarmDataBucketSetSizes(db1, n_mp_points1_new, DMSWARM_DATA_BUCKET_BUFFER_DEFAULT));
+  PetscCall(DMSwarmDataBucketSetSizes(db1, n_mp_points1_new, PETSC_DEFAULT));
   for (p = 0; p < n_mp_points2; ++p) {
     /* db1 <<== db2 */
     PetscCall(DMSwarmDataBucketCopyPoint(db2, p, db1, n_mp_points1 + p));
