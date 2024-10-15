@@ -20,6 +20,12 @@ static PetscErrorCode KSPSolve_PREONLY(KSP ksp)
     PetscCheck(flg, PetscObjectComm((PetscObject)ksp), PETSC_ERR_USER, "KSP of type preonly (application of preconditioner only) doesn't make sense with nonzero initial guess you probably want a KSP of type Richardson");
   }
   ksp->its = 0;
+  if (ksp->numbermonitors) {
+    PetscReal norm;
+
+    PetscCall(VecNorm(ksp->vec_rhs, NORM_2, &norm));
+    PetscCall(KSPMonitor(ksp, 0, norm));
+  }
   PetscCall(KSP_PCApply(ksp, ksp->vec_rhs, ksp->vec_sol));
 
   PetscCall(PCReduceFailedReason(ksp->pc));
@@ -38,8 +44,6 @@ static PetscErrorCode KSPSolve_PREONLY(KSP ksp)
     PetscReal norm;
     Mat       A;
 
-    PetscCall(VecNorm(ksp->vec_rhs, NORM_2, &norm));
-    PetscCall(KSPMonitor(ksp, 0, norm));
     PetscCall(VecDuplicate(ksp->vec_rhs, &v));
     PetscCall(PCGetOperators(ksp->pc, &A, NULL));
     PetscCall(KSP_MatMult(ksp, A, ksp->vec_sol, v));
