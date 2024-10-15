@@ -4,7 +4,6 @@
 #include <petscdmda.h>
 #include <petscdmplex.h>
 #include <petscdt.h>
-#include "../src/dm/impls/swarm/data_bucket.h"
 
 #include <petsc/private/petscfeimpl.h> /* For CoordinatesRefToReal() */
 

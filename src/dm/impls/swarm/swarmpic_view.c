@@ -1,6 +1,5 @@
 #include <petscdmda.h>                 /*I  "petscdmda.h"  I*/
 #include <petsc/private/dmswarmimpl.h> /*I  "petscdmswarm.h"  I*/
-#include "../src/dm/impls/swarm/data_bucket.h"
 
 static PetscErrorCode private_PetscViewerCreate_XDMF(MPI_Comm comm, const char filename[], PetscViewer *v)
 {

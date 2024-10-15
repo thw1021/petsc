@@ -7,7 +7,6 @@
 #include <petscdraw.h>
 #include <petscdmplex.h>
 #include <petscblaslapack.h>
-#include "../src/dm/impls/swarm/data_bucket.h"
 #include <petscdmlabel.h>
 #include <petscsection.h>
 
@@ -1474,7 +1473,7 @@ PetscErrorCode DMSwarmAddNPoints(DM dm, PetscInt npoints)
   PetscCall(PetscLogEventBegin(DMSWARM_AddPoints, 0, 0, 0, 0));
   PetscCall(DMSwarmDataBucketGetSizes(swarm->db, &nlocal, NULL, NULL));
   nlocal = nlocal + npoints;
-  PetscCall(DMSwarmDataBucketSetSizes(swarm->db, nlocal, DMSWARM_DATA_BUCKET_BUFFER_DEFAULT));
+  PetscCall(DMSwarmDataBucketSetSizes(swarm->db, nlocal, PETSC_DEFAULT));
   PetscCall(PetscLogEventEnd(DMSWARM_AddPoints, 0, 0, 0, 0));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

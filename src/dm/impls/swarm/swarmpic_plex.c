@@ -1,7 +1,7 @@
 #include <petscdm.h>
 #include <petscdmplex.h>
 #include <petscdmswarm.h>
-#include "../src/dm/impls/swarm/data_bucket.h"
+#include <petsc/private/dmswarmimpl.h>
 
 PetscBool  SwarmProjcite       = PETSC_FALSE;
 const char SwarmProjCitation[] = "@article{PusztayKnepleyAdams2022,\n"
