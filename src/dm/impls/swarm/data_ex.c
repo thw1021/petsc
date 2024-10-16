@@ -68,11 +68,10 @@ DMSwarmDataExEnd()
 ... user calls any getters here ...
 
 */
+#include <petsc/private/dmswarmimpl.h>
 #include <petscvec.h>
 #include <petscmat.h>
 #include <petsc/private/petscimpl.h>
-
-#include "../src/dm/impls/swarm/data_ex.h"
 
 const char *status_names[] = {"initialized", "finalized", "unknown"};
 

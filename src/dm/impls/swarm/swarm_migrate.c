@@ -2,8 +2,6 @@
 #include <petscdmswarm.h>
 #include <petscdmda.h>
 #include <petsc/private/dmswarmimpl.h> /*I   "petscdmswarm.h"   I*/
-#include "../src/dm/impls/swarm/data_bucket.h"
-#include "../src/dm/impls/swarm/data_ex.h"
 
 /*
  User loads desired location (MPI rank) into field DMSwarm_rank
@@ -82,7 +80,7 @@ PetscErrorCode DMSwarmMigrate_Push_Basic(DM dm, PetscBool remove_sent_points)
   PetscCall(DMSwarmDataExEnd(de));
   PetscCall(DMSwarmDataExGetRecvData(de, &n_points_recv, (void **)&recv_points));
   PetscCall(DMSwarmDataBucketGetSizes(swarm->db, &npoints, NULL, NULL));
-  PetscCall(DMSwarmDataBucketSetSizes(swarm->db, npoints + n_points_recv, DMSWARM_DATA_BUCKET_BUFFER_DEFAULT));
+  PetscCall(DMSwarmDataBucketSetSizes(swarm->db, npoints + n_points_recv, PETSC_DEFAULT));
   for (p = 0; p < n_points_recv; p++) {
     void *data_p = (void *)((char *)recv_points + p * sizeof_dmswarm_point);
 
@@ -166,7 +164,7 @@ static PetscErrorCode DMSwarmMigrate_DMNeighborScatter(DM dm, DM dmcell, PetscBo
   PetscCall(DMSwarmDataExEnd(de));
   PetscCall(DMSwarmDataExGetRecvData(de, &n_points_recv, (void **)&recv_points));
   PetscCall(DMSwarmDataBucketGetSizes(swarm->db, &npoints, NULL, NULL));
-  PetscCall(DMSwarmDataBucketSetSizes(swarm->db, npoints + n_points_recv, DMSWARM_DATA_BUCKET_BUFFER_DEFAULT));
+  PetscCall(DMSwarmDataBucketSetSizes(swarm->db, npoints + n_points_recv, PETSC_DEFAULT));
   for (p = 0; p < n_points_recv; p++) {
     void *data_p = (void *)((char *)recv_points + p * sizeof_dmswarm_point);
 
@@ -412,7 +410,7 @@ PetscErrorCode DMSwarmMigrate_GlobalToLocal_Basic(DM dm, PetscInt *globalsize)
   PetscCall(DMSwarmDataExEnd(de));
   PetscCall(DMSwarmDataExGetRecvData(de, &n_points_recv, (void **)&recv_points));
   PetscCall(DMSwarmDataBucketGetSizes(swarm->db, &npoints, NULL, NULL));
-  PetscCall(DMSwarmDataBucketSetSizes(swarm->db, npoints + n_points_recv, DMSWARM_DATA_BUCKET_BUFFER_DEFAULT));
+  PetscCall(DMSwarmDataBucketSetSizes(swarm->db, npoints + n_points_recv, PETSC_DEFAULT));
   for (p = 0; p < n_points_recv; p++) {
     void *data_p = (void *)((char *)recv_points + p * sizeof_dmswarm_point);
 
@@ -559,7 +557,7 @@ PETSC_EXTERN PetscErrorCode DMSwarmCollect_DMDABoundingBox(DM dm, PetscInt *glob
   PetscCall(DMSwarmDataExEnd(de));
   PetscCall(DMSwarmDataExGetRecvData(de, &n_points_recv, (void **)&recv_points));
   PetscCall(DMSwarmDataBucketGetSizes(swarm->db, &npoints, NULL, NULL));
-  PetscCall(DMSwarmDataBucketSetSizes(swarm->db, npoints + n_points_recv, DMSWARM_DATA_BUCKET_BUFFER_DEFAULT));
+  PetscCall(DMSwarmDataBucketSetSizes(swarm->db, npoints + n_points_recv, PETSC_DEFAULT));
   for (p = 0; p < n_points_recv; p++) {
     void *data_p = (void *)((char *)recv_points + p * sizeof_dmswarm_point);
 
@@ -647,7 +645,7 @@ PETSC_EXTERN PetscErrorCode DMSwarmCollect_General(DM dm, PetscErrorCode (*colle
   /* Collect data in DMSwarm container */
   PetscCall(DMSwarmDataExGetRecvData(de, &n_points_recv, (void **)&recv_points));
   PetscCall(DMSwarmDataBucketGetSizes(swarm->db, &npoints, NULL, NULL));
-  PetscCall(DMSwarmDataBucketSetSizes(swarm->db, npoints + n_points_recv, DMSWARM_DATA_BUCKET_BUFFER_DEFAULT));
+  PetscCall(DMSwarmDataBucketSetSizes(swarm->db, npoints + n_points_recv, PETSC_DEFAULT));
   for (p = 0; p < n_points_recv; p++) {
     void *data_p = (void *)((char *)recv_points + p * sizeof_dmswarm_point);
 
