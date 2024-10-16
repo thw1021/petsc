@@ -530,89 +530,53 @@ PetscErrorCode DMSwarmDataBucketRemovePoint(DMSwarmDataBucket db)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*  Should be redone to user PetscViewer */
-static PetscErrorCode DMSwarmDataBucketView_stdout(MPI_Comm comm, DMSwarmDataBucket db)
+static PetscErrorCode DMSwarmDataBucketView_Ascii(MPI_Comm comm, DMSwarmDataBucket db, PetscViewer viewer)
 {
   PetscInt f;
   double   memory_usage_total, memory_usage_total_local = 0.0;
 
   PetscFunctionBegin;
-  PetscCall(PetscPrintf(comm, "DMSwarmDataBucketView: \n"));
-  PetscCall(PetscPrintf(comm, "  L                  = %" PetscInt_FMT " \n", db->L));
-  PetscCall(PetscPrintf(comm, "  buffer             = %" PetscInt_FMT " \n", db->buffer));
-  PetscCall(PetscPrintf(comm, "  allocated          = %" PetscInt_FMT " \n", db->allocated));
-  PetscCall(PetscPrintf(comm, "  nfields registered = %" PetscInt_FMT " \n", db->nfields));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "DMSwarmDataBucketView:\n"));
+  PetscCall(PetscViewerASCIIPushTab(viewer));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "L                  = %" PetscInt_FMT "\n", db->L));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "buffer             = %" PetscInt_FMT "\n", db->buffer));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "allocated          = %" PetscInt_FMT "\n", db->allocated));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "nfields registered = %" PetscInt_FMT "\n", db->nfields));
 
   for (f = 0; f < db->nfields; ++f) {
     double memory_usage_f = (double)(db->field[f]->atomic_size * db->allocated) * 1.0e-6;
     memory_usage_total_local += memory_usage_f;
   }
+  memory_usage_total = memory_usage_total_local;
   PetscCallMPI(MPIU_Allreduce(&memory_usage_total_local, &memory_usage_total, 1, MPI_DOUBLE, MPI_SUM, comm));
-
+  PetscCall(PetscViewerASCIIPushTab(viewer));
   for (f = 0; f < db->nfields; ++f) {
     double memory_usage_f = (double)(db->field[f]->atomic_size * db->allocated) * 1.0e-6;
-    PetscCall(PetscPrintf(comm, "    [%3" PetscInt_FMT "] %15s : Mem. usage       = %1.2e (MB) [rank0]\n", f, db->field[f]->name, memory_usage_f));
-    PetscCall(PetscPrintf(comm, "                            blocksize        = %" PetscInt_FMT " \n", db->field[f]->bs));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "[%3" PetscInt_FMT "] %15s : Mem. usage       = %1.2e (MB) [rank0]\n", f, db->field[f]->name, memory_usage_f));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "                        blocksize        = %" PetscInt_FMT "\n", db->field[f]->bs));
     if (db->field[f]->bs != 1) {
-      PetscCall(PetscPrintf(comm, "                            atomic size      = %zu [full block, bs=%" PetscInt_FMT "]\n", db->field[f]->atomic_size, db->field[f]->bs));
-      PetscCall(PetscPrintf(comm, "                            atomic size/item = %zu \n", (size_t)(db->field[f]->atomic_size / db->field[f]->bs)));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "                        atomic size      = %zu [full block, bs=%" PetscInt_FMT "]\n", db->field[f]->atomic_size, db->field[f]->bs));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "                        atomic size/item = %zu\n", (size_t)(db->field[f]->atomic_size / db->field[f]->bs)));
     } else {
-      PetscCall(PetscPrintf(comm, "                            atomic size      = %zu \n", db->field[f]->atomic_size));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "                        atomic size      = %zu\n", db->field[f]->atomic_size));
     }
   }
-  PetscCall(PetscPrintf(comm, "  Total mem. usage                           = %1.2e (MB) (collective)\n", memory_usage_total));
+  PetscCall(PetscViewerASCIIPopTab(viewer));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "Total mem. usage                           = %1.2e (MB) (collective)\n", memory_usage_total));
+  PetscCall(PetscViewerASCIIPopTab(viewer));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode DMSwarmDataBucketView_Seq(MPI_Comm comm, DMSwarmDataBucket db, const char filename[], DMSwarmDataBucketViewType type)
+PetscErrorCode DMSwarmDataBucketView(MPI_Comm comm, DMSwarmDataBucket db, PetscViewer viewer)
 {
-  PetscFunctionBegin;
-  switch (type) {
-  case DATABUCKET_VIEW_STDOUT:
-    PetscCall(DMSwarmDataBucketView_stdout(PETSC_COMM_SELF, db));
-    break;
-  case DATABUCKET_VIEW_ASCII:
-    SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "No support for ascii output");
-  case DATABUCKET_VIEW_BINARY:
-    SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "No support for binary output");
-  case DATABUCKET_VIEW_HDF5:
-    SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "No support for HDF5 output");
-  default:
-    SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "Unknown viewer method requested");
-  }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode DMSwarmDataBucketView_MPI(MPI_Comm comm, DMSwarmDataBucket db, const char filename[], DMSwarmDataBucketViewType type)
-{
-  PetscFunctionBegin;
-  switch (type) {
-  case DATABUCKET_VIEW_STDOUT:
-    PetscCall(DMSwarmDataBucketView_stdout(comm, db));
-    break;
-  case DATABUCKET_VIEW_ASCII:
-    SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "No support for ascii output");
-  case DATABUCKET_VIEW_BINARY:
-    SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "No support for binary output");
-  case DATABUCKET_VIEW_HDF5:
-    SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "No support for HDF5 output");
-  default:
-    SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "Unknown viewer method requested");
-  }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-PetscErrorCode DMSwarmDataBucketView(MPI_Comm comm, DMSwarmDataBucket db, const char filename[], DMSwarmDataBucketViewType type)
-{
-  PetscMPIInt size;
+  PetscBool isascii;
 
   PetscFunctionBegin;
-  PetscCallMPI(MPI_Comm_size(comm, &size));
-  if (size == 1) {
-    PetscCall(DMSwarmDataBucketView_Seq(comm, db, filename, type));
-  } else {
-    PetscCall(DMSwarmDataBucketView_MPI(comm, db, filename, type));
-  }
+  PetscAssertPointer(db, 2);
+  if (!viewer) PetscCall(PetscViewerASCIIGetStdout(comm, &viewer));
+  PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 2);
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
+  if (isascii) PetscCall(DMSwarmDataBucketView_Ascii(comm, db, viewer));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
