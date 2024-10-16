@@ -259,15 +259,12 @@ PetscErrorCode Device<T>::initialize(MPI_Comm comm, PetscInt *defaultDeviceId, P
     if (initId.first == PETSC_DECIDE) {
       if (ndev) {
         char *pytorch_rank = (char *)getenv("LOCAL_RANK");
-        if (pytorch_rank)
-        {
+        if (pytorch_rank) {
           char *endptr;
 
           initId.first = (PetscInt)strtol(pytorch_rank, &endptr, 10);
           PetscCheck(initId.first < ndev, PETSC_COMM_SELF, PETSC_ERR_LIB, "PyTorch environmental variable LOCAL_RANK %s > number devices %d", pytorch_rank, ndev);
-        }
-        else
-        {
+        } else {
           PetscMPIInt rank;
 
           PetscCallMPI(MPI_Comm_rank(comm, &rank));
