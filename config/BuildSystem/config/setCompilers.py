@@ -95,6 +95,8 @@ class Configure(config.base.Configure):
     if hasattr(self, 'dynamicLinker'):
       desc.append('  Dynamic linker:   '+self.getDynamicLinker()+' '+self.getDynamicLinkerFlags())
       desc.append('  Libraries linked against:   '+self.LIBS)
+    if hasattr(self, 'relocatableLinker'):
+      desc.append('  Relocatable linker:   '+self.getRelocatableLinkerEnv()+' '+self.getRelocatableLinker()+' '+self.getRelocatableLinkerFlags())
     return '\n'.join(desc)+'\n'
 
   def _setupCompiler(self,compiler,desc):
@@ -2666,6 +2668,41 @@ if (dlclose(handle)) {
         del self.dynamicLinker
     return
 
+  def generateRelocatableLinkerGuesses(self):
+    if 'with-relocatable-ld' in self.argDB:
+      yield ([], self.argDB['with-relocatable-ld'], [])
+    # if mpiuni then the relocatable linker is just the linker
+    yield ([], self.CC, [])
+    yield ([], self.CXX, [])
+    # if openmpi, we have to disable libs with environment variables
+    yield (['OMPI_LDFLAGS=""', 'OMPI_LIBS=""'], self.CC, [])
+    yield (['OMPI_LDFLAGS=""', 'OMPI_LIBS=""'], self.CXX, [])
+    # if mpich, use the -nativelinking flag
+    yield ([], self.CC, ['-nativelinking'])
+    yield ([], self.CXX, ['-nativelinking'])
+    self.logPrint('Unable to find working relocatable linker')
+
+  def checkRelocatableLinker(self):
+    '''Check that the relocatable linker can link together object files'''
+    self.relocatableLinking = 0
+    # compile an object file that we will try to turn into a relocatable object file
+    for env, linker, flags in self.generateRelocatableLinkerGuesses():
+      self.logPrint('Checking dynamic linker '+linker+' using environment '+str(env)+' and flags '+str(flags))
+      if self.getExecutable(linker, resultName = 'relocatableLinker'):
+        self.relocatableLinkerEnv   = env
+        self.relocatableLinkerFlags = flags
+        if self.checkLink(body='int foo(int a) {return a + 1;}', shared = 'relocatable'):
+          self.relocatableLinking = 1
+          self.framework.addMakeMacro('RELOCATABLELINKER_FLAGS', ' '.join(self.relocatableLinkerFlags))
+          self.framework.addMakeMacro('RELOCATABLELINKER_ENV', ' '.join(self.relocatableLinkerEnv))
+          break
+        if os.path.isfile(self.linkerObj): os.remove(self.linkerObj)
+        self.delMakeMacro('RELOCATABLELINKER')
+        del self.relocatableLinker
+        del self.relocatableLinkerEnv
+        del self.relocatableLinkerFlags
+    return
+
   def output(self):
     '''Output module data as defines and substitutions'''
     if hasattr(self, 'CC'):
@@ -2886,6 +2923,7 @@ if (dlclose(handle)) {
     self.executeTest(self.checkSharedLinkerPaths)
     self.executeTest(self.checkLibC)
     self.executeTest(self.checkDynamicLinker)
+    self.executeTest(self.checkRelocatableLinker)
     if hasattr(self.framework,'conda_active'):
       del self.framework.additional_error_message
 

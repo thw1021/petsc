@@ -102,6 +102,44 @@ class Linker(config.compile.processor.Processor):
       return base+'.exe'
     return base
 
+class RelocatableLinker(config.compile.processor.Processor):
+  '''Relocatable linker for combining object files'''
+  def __init__(self, argDB):
+    import platform
+    ext = '.o'
+    if platform.system() == 'Windows':
+      ext = '.obj'
+    config.compile.processor.Processor.__init__(self, argDB, ['relocatableLinker'], ['relocatableLinkerFlags'], ext, ext)
+    if platform.system() == 'Windows':
+      self.outputFlag         = '/Fo'
+      self.requiredFlags[-1]  = '/r'
+    else:
+      self.outputFlag         = '-o'
+      self.requiredFlags[-1]  = '-r'
+    self.envName = ['relocatableLinkerEnv']
+    return
+
+  def getEnv(self):
+    flags = []
+    if hasattr(self, 'configCompilers'):
+      flags = [getattr(self.configCompilers, name) for name in self.envName]
+    else:
+      flags = [self.argDB[name] for name in self.envName]
+    return ' '.join(flags)
+
+  def getCommand(self, sourceFiles, outputFile):
+    cmd = config.compile.processor.Processor.getCommand(self, sourceFiles, outputFile)
+    env = self.getEnv()
+    if env:
+      cmd = ' '.join([env, cmd])
+    return cmd
+
+  def getTarget(self, source):
+    import os
+
+    base, ext = os.path.splitext(source)
+    return base+self.targetExtension
+
 class SharedLinker(config.compile.processor.Processor):
   '''The C linker'''
   def __init__(self, argDB):

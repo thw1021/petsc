@@ -75,6 +75,7 @@ class Configure(config.base.Configure):
     names['LD_SHARED'] = 'No shared linker found.'
     names['CC_LD'] = 'No C linker found.'
     names['dynamicLinker'] = 'No dynamic linker found.'
+    names['relocatableLinker'] = 'No relocatable linker found.'
     for language in ['C', 'CUDA', 'HIP', 'SYCL', 'Cxx', 'FC']:
       self.pushLanguage(language)
       key = self.getCompilerFlagsName(language, 0)
@@ -109,7 +110,7 @@ class Configure(config.base.Configure):
         if not hasattr(self.setCompilers, name):
           raise MissingProcessor(self.dispatchNames[name])
         return getattr(self.setCompilers, name)
-      if name in ['CC_LINKER_FLAGS', 'FC_LINKER_FLAGS', 'CXX_LINKER_FLAGS', 'CUDAC_LINKER_FLAGS', 'HIPC_LINKER_FLAGS', 'SYCLC_LINKER_FLAGS','sharedLibraryFlags', 'dynamicLibraryFlags']:
+      if name in ['CC_LINKER_FLAGS', 'FC_LINKER_FLAGS', 'CXX_LINKER_FLAGS', 'CUDAC_LINKER_FLAGS', 'HIPC_LINKER_FLAGS', 'SYCLC_LINKER_FLAGS', 'sharedLibraryFlags', 'dynamicLibraryFlags', 'relocatableLinkerFlags', 'relocatableLinkerEnv']:
         flags = getattr(self.setCompilers, name)
         if not isinstance(flags, list): flags = [flags]
         return ' '.join(flags)

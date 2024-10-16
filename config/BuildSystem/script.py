@@ -284,17 +284,18 @@ import args
 
 class LanguageProcessor(args.ArgumentProcessor):
   def __init__(self, clArgs = None, argDB = None, framework = None, versionControl = None):
-    self.languageModule      = {}
-    self.preprocessorObject  = {}
-    self.compilerObject      = {}
-    self.linkerObject        = {}
-    self.sharedLinkerObject  = {}
-    self.dynamicLinkerObject = {}
-    self.framework           = framework
-    self.versionControl      = versionControl
+    self.languageModule          = {}
+    self.preprocessorObject      = {}
+    self.compilerObject          = {}
+    self.linkerObject            = {}
+    self.sharedLinkerObject      = {}
+    self.dynamicLinkerObject     = {}
+    self.relocatableLinkerObject = {}
+    self.framework               = framework
+    self.versionControl          = versionControl
     args.ArgumentProcessor.__init__(self, clArgs, argDB)
-    self.outputFiles         = {}
-    self.modulePath          = 'config.compile'
+    self.outputFiles             = {}
+    self.modulePath              = 'config.compile'
     return
 
   def getCompilers(self):
@@ -324,11 +325,12 @@ class LanguageProcessor(args.ArgumentProcessor):
     args.ArgumentProcessor.__setstate__(self, d)
     self.__dict__.update(d)
     [self.getLanguageModule(language, moduleName) for language,moduleName in self.languageModule.items()]
-    self.preprocessorObject  = {}
-    self.compilerObject      = {}
-    self.linkerObject        = {}
-    self.sharedLinkerObject  = {}
-    self.dynamicLinkerObject = {}
+    self.preprocessorObject      = {}
+    self.compilerObject          = {}
+    self.linkerObject            = {}
+    self.sharedLinkerObject      = {}
+    self.dynamicLinkerObject     = {}
+    self.relocatableLinkerObject = {}
     return
 
   def setArgDB(self, argDB):
@@ -348,6 +350,9 @@ class LanguageProcessor(args.ArgumentProcessor):
     for obj in self.dynamicLinkerObject.values():
       if not hasattr(obj, 'argDB') or not obj.argDB == argDB:
         obj.argDB = argDB
+    for obj in self.relocatableLinkerObject.values():
+      if not hasattr(obj, 'argDB') or not obj.argDB == argDB:
+        obj.argDB = argDB
     if not self.compilers is None:
       self.compilers.argDB = argDB
       for obj in self.preprocessorObject.values():
@@ -365,6 +370,9 @@ class LanguageProcessor(args.ArgumentProcessor):
       for obj in self.dynamicLinkerObject.values():
         if hasattr(obj, 'configCompilers'):
           obj.configCompilers.argDB = argDB
+      for obj in self.relocatableLinkerObject.values():
+        if hasattr(obj, 'configCompilers'):
+          obj.configCompilers.argDB = argDB
     if not self.libraries is None:
       self.libraries.argDB = argDB
       for obj in self.linkerObject.values():
@@ -374,6 +382,9 @@ class LanguageProcessor(args.ArgumentProcessor):
         if hasattr(obj, 'configLibraries'):
           obj.configLibraries.argDB = argDB
       for obj in self.dynamicLinkerObject.values():
+        if hasattr(obj, 'configLibraries'):
+          obj.configLibraries.argDB = argDB
+      for obj in self.relocatableLinkerObject.values():
         if hasattr(obj, 'configLibraries'):
           obj.configLibraries.argDB = argDB
     return
@@ -479,3 +490,20 @@ class LanguageProcessor(args.ArgumentProcessor):
   def setDynamicLinkerObject(self, language, linker):
     self.dynamicLinkerObject[language] = linker
     return self.getDynamicLinkerObject(language)
+
+  def getRelocatableLinkerObject(self, language):
+    if not language in self.relocatableLinkerObject:
+      self.relocatableLinkerObject[language] = self.getLanguageModule(language).RelocatableLinker(self.argDB)
+      self.relocatableLinkerObject[language].setup()
+    if not self.compilers is None:
+      self.relocatableLinkerObject[language].configCompilers = self.compilers
+    if not self.libraries is None:
+      self.relocatableLinkerObject[language].configLibraries = self.libraries
+    if not self.versionControl is None:
+      self.relocatablekinkerObject[language].versionControl  = self.versionControl
+    return self.relocatableLinkerObject[language]
+
+  def setRelocatableLinkerObject(self, language, linker):
+    self.relocatableLinkerObject[language] = linker
+    return self.getRelocatableLinkerObject(language)
+
