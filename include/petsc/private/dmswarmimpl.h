@@ -80,13 +80,6 @@ PETSC_INTERN PetscErrorCode DMSwarmMigrate_CellDMScatter(DM, PetscBool);
 PETSC_INTERN PetscErrorCode DMSwarmMigrate_CellDMExact(DM, PetscBool);
 
 /* DMSwarmDataBucket */
-typedef enum {
-  DATABUCKET_VIEW_STDOUT = 0,
-  DATABUCKET_VIEW_ASCII,
-  DATABUCKET_VIEW_BINARY,
-  DATABUCKET_VIEW_HDF5
-} DMSwarmDataBucketViewType;
-
 struct _p_DMSwarmDataField {
   char         *registration_function;
   PetscInt      L, bs;
@@ -142,7 +135,7 @@ PETSC_INTERN PetscErrorCode DMSwarmDataBucketCopyPoint(const DMSwarmDataBucket, 
 PETSC_INTERN PetscErrorCode DMSwarmDataBucketCreateFromSubset(DMSwarmDataBucket, const PetscInt, const PetscInt[], DMSwarmDataBucket *);
 PETSC_INTERN PetscErrorCode DMSwarmDataBucketZeroPoint(const DMSwarmDataBucket, const PetscInt);
 
-PETSC_INTERN PetscErrorCode DMSwarmDataBucketView(MPI_Comm, DMSwarmDataBucket, const char[], DMSwarmDataBucketViewType);
+PETSC_INTERN PetscErrorCode DMSwarmDataBucketView(MPI_Comm, DMSwarmDataBucket, PetscViewer);
 
 PETSC_INTERN PetscErrorCode DMSwarmDataBucketAddPoint(DMSwarmDataBucket);
 PETSC_INTERN PetscErrorCode DMSwarmDataBucketRemovePoint(DMSwarmDataBucket);
