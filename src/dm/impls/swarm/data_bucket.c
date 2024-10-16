@@ -1,4 +1,7 @@
-#include "../src/dm/impls/swarm/data_bucket.h"
+#include <petsc/private/dmswarmimpl.h> /*I   "petscdmswarm.h"   I*/
+
+#define DMSWARM_DATAFIELD_point_access(data, index, atomic_size)                (void *)((char *)(data) + (index) * (atomic_size))
+#define DMSWARM_DATAFIELD_point_access_offset(data, index, atomic_size, offset) (void *)((char *)(data) + (index) * (atomic_size) + (offset))
 
 /* string helpers */
 PetscErrorCode DMSwarmDataFieldStringInList(const char name[], const PetscInt N, const DMSwarmDataField gfield[], PetscBool *val)
@@ -330,13 +333,10 @@ PetscErrorCode DMSwarmDataFieldAccessPoint(const DMSwarmDataField gfield, const 
 {
   PetscFunctionBegin;
   *ctx_p = NULL;
-#if defined(DMSWARM_DATAFIELD_POINT_ACCESS_GUARD)
-  /* debug mode */
   /* check point is valid */
   PetscCheck(pid >= 0, PETSC_COMM_SELF, PETSC_ERR_USER, "index must be >= 0");
   PetscCheck(pid < gfield->L, PETSC_COMM_SELF, PETSC_ERR_USER, "index must be < %" PetscInt_FMT, gfield->L);
   PetscCheck(gfield->active != PETSC_FALSE, PETSC_COMM_SELF, PETSC_ERR_USER, "Field \"%s\" is not active. You must call DMSwarmDataFieldGetAccess() before point data can be retrivied", gfield->name);
-#endif
   *ctx_p = DMSWARM_DATAFIELD_point_access(gfield->data, pid, gfield->atomic_size);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -344,8 +344,6 @@ PetscErrorCode DMSwarmDataFieldAccessPoint(const DMSwarmDataField gfield, const 
 PetscErrorCode DMSwarmDataFieldAccessPointOffset(const DMSwarmDataField gfield, const size_t offset, const PetscInt pid, void **ctx_p)
 {
   PetscFunctionBegin;
-#if defined(DMSWARM_DATAFIELD_POINT_ACCESS_GUARD)
-  /* debug mode */
   /* check point is valid */
   /* PetscCheck(offset >= 0,PETSC_COMM_SELF,PETSC_ERR_USER,"offset must be >= 0");*/
   /* Note compiler realizes this can never happen with an unsigned PetscInt */
@@ -354,7 +352,6 @@ PetscErrorCode DMSwarmDataFieldAccessPointOffset(const DMSwarmDataField gfield, 
   PetscCheck(pid >= 0, PETSC_COMM_SELF, PETSC_ERR_USER, "index must be >= 0");
   PetscCheck(pid < gfield->L, PETSC_COMM_SELF, PETSC_ERR_USER, "index must be < %" PetscInt_FMT, gfield->L);
   PetscCheck(gfield->active != PETSC_FALSE, PETSC_COMM_SELF, PETSC_ERR_USER, "Field \"%s\" is not active. You must call DMSwarmDataFieldGetAccess() before point data can be retrivied", gfield->name);
-#endif
   *ctx_p = DMSWARM_DATAFIELD_point_access_offset(gfield->data, pid, gfield->atomic_size, offset);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -370,9 +367,7 @@ PetscErrorCode DMSwarmDataFieldRestoreAccess(DMSwarmDataField gfield)
 PetscErrorCode DMSwarmDataFieldVerifyAccess(const DMSwarmDataField gfield, const size_t size)
 {
   PetscFunctionBegin;
-#if defined(DMSWARM_DATAFIELD_POINT_ACCESS_GUARD)
   PetscCheck(gfield->atomic_size == size, PETSC_COMM_SELF, PETSC_ERR_USER, "Field \"%s\" must be mapped to %zu bytes, your intended structure is %zu bytes in length.", gfield->name, gfield->atomic_size, size);
-#endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -441,11 +436,9 @@ PetscErrorCode DMSwarmDataBucketCreateFromSubset(DMSwarmDataBucket DBIn, const P
 PetscErrorCode DMSwarmDataFieldInsertPoint(const DMSwarmDataField field, const PetscInt index, const void *ctx)
 {
   PetscFunctionBegin;
-#if defined(DMSWARM_DATAFIELD_POINT_ACCESS_GUARD)
   /* check point is valid */
   PetscCheck(index >= 0, PETSC_COMM_SELF, PETSC_ERR_USER, "index must be >= 0");
   PetscCheck(index < field->L, PETSC_COMM_SELF, PETSC_ERR_USER, "index must be < %" PetscInt_FMT, field->L);
-#endif
   PetscCall(PetscMemcpy(DMSWARM_DATAFIELD_point_access(field->data, index, field->atomic_size), ctx, field->atomic_size));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -457,11 +450,9 @@ PetscErrorCode DMSwarmDataBucketRemovePointAtIndex(const DMSwarmDataBucket db, c
   PetscBool any_active_fields;
 
   PetscFunctionBegin;
-#if defined(DMSWARM_DATAFIELD_POINT_ACCESS_GUARD)
   /* check point is valid */
   PetscCheck(index >= 0, PETSC_COMM_SELF, PETSC_ERR_USER, "index must be >= 0");
   PetscCheck(index < db->allocated, PETSC_COMM_SELF, PETSC_ERR_USER, "index must be < %" PetscInt_FMT, db->L + db->buffer);
-#endif
   PetscCall(DMSwarmDataBucketQueryForActiveFields(db, &any_active_fields));
   PetscCheck(!any_active_fields, PETSC_COMM_SELF, PETSC_ERR_USER, "Cannot safely remove point as at least one DMSwarmDataField is currently being accessed");
   if (index >= db->L) { /* this point is not in the list - no need to error, but I will anyway */
@@ -486,14 +477,12 @@ PetscErrorCode DMSwarmDataBucketRemovePointAtIndex(const DMSwarmDataBucket db, c
 PetscErrorCode DMSwarmDataFieldCopyPoint(const PetscInt pid_x, const DMSwarmDataField field_x, const PetscInt pid_y, const DMSwarmDataField field_y)
 {
   PetscFunctionBegin;
-#if defined(DMSWARM_DATAFIELD_POINT_ACCESS_GUARD)
   /* check point is valid */
   PetscCheck(pid_x >= 0, PETSC_COMM_SELF, PETSC_ERR_USER, "(IN) index must be >= 0");
   PetscCheck(pid_x < field_x->L, PETSC_COMM_SELF, PETSC_ERR_USER, "(IN) index must be < %" PetscInt_FMT, field_x->L);
   PetscCheck(pid_y >= 0, PETSC_COMM_SELF, PETSC_ERR_USER, "(OUT) index must be >= 0");
   PetscCheck(pid_y < field_y->L, PETSC_COMM_SELF, PETSC_ERR_USER, "(OUT) index must be < %" PetscInt_FMT, field_y->L);
   PetscCheck(field_y->atomic_size == field_x->atomic_size, PETSC_COMM_SELF, PETSC_ERR_USER, "atomic size must match");
-#endif
   PetscCall(PetscMemcpy(DMSWARM_DATAFIELD_point_access(field_y->data, pid_y, field_y->atomic_size), DMSWARM_DATAFIELD_point_access(field_x->data, pid_x, field_x->atomic_size), field_y->atomic_size));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -502,11 +491,9 @@ PetscErrorCode DMSwarmDataFieldCopyPoint(const PetscInt pid_x, const DMSwarmData
 PetscErrorCode DMSwarmDataFieldZeroPoint(const DMSwarmDataField field, const PetscInt index)
 {
   PetscFunctionBegin;
-#if defined(DMSWARM_DATAFIELD_POINT_ACCESS_GUARD)
   /* check point is valid */
   PetscCheck(index >= 0, PETSC_COMM_SELF, PETSC_ERR_USER, "index must be >= 0");
   PetscCheck(index < field->L, PETSC_COMM_SELF, PETSC_ERR_USER, "index must be < %" PetscInt_FMT, field->L);
-#endif
   PetscCall(PetscMemzero(DMSWARM_DATAFIELD_point_access(field->data, index, field->atomic_size), field->atomic_size));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -531,7 +518,7 @@ PetscErrorCode DMSwarmDataBucketZeroPoint(const DMSwarmDataBucket db, const Pets
 PetscErrorCode DMSwarmDataBucketAddPoint(DMSwarmDataBucket db)
 {
   PetscFunctionBegin;
-  PetscCall(DMSwarmDataBucketSetSizes(db, db->L + 1, DMSWARM_DATA_BUCKET_BUFFER_DEFAULT));
+  PetscCall(DMSwarmDataBucketSetSizes(db, db->L + 1, PETSC_DEFAULT));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -539,93 +526,57 @@ PetscErrorCode DMSwarmDataBucketAddPoint(DMSwarmDataBucket db)
 PetscErrorCode DMSwarmDataBucketRemovePoint(DMSwarmDataBucket db)
 {
   PetscFunctionBegin;
-  PetscCall(DMSwarmDataBucketSetSizes(db, db->L - 1, DMSWARM_DATA_BUCKET_BUFFER_DEFAULT));
+  PetscCall(DMSwarmDataBucketSetSizes(db, db->L - 1, PETSC_DEFAULT));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*  Should be redone to user PetscViewer */
-static PetscErrorCode DMSwarmDataBucketView_stdout(MPI_Comm comm, DMSwarmDataBucket db)
+static PetscErrorCode DMSwarmDataBucketView_Ascii(MPI_Comm comm, DMSwarmDataBucket db, PetscViewer viewer)
 {
   PetscInt f;
   double   memory_usage_total, memory_usage_total_local = 0.0;
 
   PetscFunctionBegin;
-  PetscCall(PetscPrintf(comm, "DMSwarmDataBucketView: \n"));
-  PetscCall(PetscPrintf(comm, "  L                  = %" PetscInt_FMT " \n", db->L));
-  PetscCall(PetscPrintf(comm, "  buffer             = %" PetscInt_FMT " \n", db->buffer));
-  PetscCall(PetscPrintf(comm, "  allocated          = %" PetscInt_FMT " \n", db->allocated));
-  PetscCall(PetscPrintf(comm, "  nfields registered = %" PetscInt_FMT " \n", db->nfields));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "DMSwarmDataBucketView:\n"));
+  PetscCall(PetscViewerASCIIPushTab(viewer));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "L                  = %" PetscInt_FMT "\n", db->L));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "buffer             = %" PetscInt_FMT "\n", db->buffer));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "allocated          = %" PetscInt_FMT "\n", db->allocated));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "nfields registered = %" PetscInt_FMT "\n", db->nfields));
 
   for (f = 0; f < db->nfields; ++f) {
     double memory_usage_f = (double)(db->field[f]->atomic_size * db->allocated) * 1.0e-6;
     memory_usage_total_local += memory_usage_f;
   }
+  memory_usage_total = memory_usage_total_local;
   PetscCallMPI(MPIU_Allreduce(&memory_usage_total_local, &memory_usage_total, 1, MPI_DOUBLE, MPI_SUM, comm));
-
+  PetscCall(PetscViewerASCIIPushTab(viewer));
   for (f = 0; f < db->nfields; ++f) {
     double memory_usage_f = (double)(db->field[f]->atomic_size * db->allocated) * 1.0e-6;
-    PetscCall(PetscPrintf(comm, "    [%3" PetscInt_FMT "] %15s : Mem. usage       = %1.2e (MB) [rank0]\n", f, db->field[f]->name, memory_usage_f));
-    PetscCall(PetscPrintf(comm, "                            blocksize        = %" PetscInt_FMT " \n", db->field[f]->bs));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "[%3" PetscInt_FMT "] %15s : Mem. usage       = %1.2e (MB) [rank0]\n", f, db->field[f]->name, memory_usage_f));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "                        blocksize        = %" PetscInt_FMT "\n", db->field[f]->bs));
     if (db->field[f]->bs != 1) {
-      PetscCall(PetscPrintf(comm, "                            atomic size      = %zu [full block, bs=%" PetscInt_FMT "]\n", db->field[f]->atomic_size, db->field[f]->bs));
-      PetscCall(PetscPrintf(comm, "                            atomic size/item = %zu \n", (size_t)(db->field[f]->atomic_size / db->field[f]->bs)));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "                        atomic size      = %zu [full block, bs=%" PetscInt_FMT "]\n", db->field[f]->atomic_size, db->field[f]->bs));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "                        atomic size/item = %zu\n", (size_t)(db->field[f]->atomic_size / db->field[f]->bs)));
     } else {
-      PetscCall(PetscPrintf(comm, "                            atomic size      = %zu \n", db->field[f]->atomic_size));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "                        atomic size      = %zu\n", db->field[f]->atomic_size));
     }
   }
-  PetscCall(PetscPrintf(comm, "  Total mem. usage                           = %1.2e (MB) (collective)\n", memory_usage_total));
+  PetscCall(PetscViewerASCIIPopTab(viewer));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "Total mem. usage                           = %1.2e (MB) (collective)\n", memory_usage_total));
+  PetscCall(PetscViewerASCIIPopTab(viewer));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode DMSwarmDataBucketView_Seq(MPI_Comm comm, DMSwarmDataBucket db, const char filename[], DMSwarmDataBucketViewType type)
+PetscErrorCode DMSwarmDataBucketView(MPI_Comm comm, DMSwarmDataBucket db, PetscViewer viewer)
 {
-  PetscFunctionBegin;
-  switch (type) {
-  case DATABUCKET_VIEW_STDOUT:
-    PetscCall(DMSwarmDataBucketView_stdout(PETSC_COMM_SELF, db));
-    break;
-  case DATABUCKET_VIEW_ASCII:
-    SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "No support for ascii output");
-  case DATABUCKET_VIEW_BINARY:
-    SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "No support for binary output");
-  case DATABUCKET_VIEW_HDF5:
-    SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "No support for HDF5 output");
-  default:
-    SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "Unknown viewer method requested");
-  }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode DMSwarmDataBucketView_MPI(MPI_Comm comm, DMSwarmDataBucket db, const char filename[], DMSwarmDataBucketViewType type)
-{
-  PetscFunctionBegin;
-  switch (type) {
-  case DATABUCKET_VIEW_STDOUT:
-    PetscCall(DMSwarmDataBucketView_stdout(comm, db));
-    break;
-  case DATABUCKET_VIEW_ASCII:
-    SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "No support for ascii output");
-  case DATABUCKET_VIEW_BINARY:
-    SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "No support for binary output");
-  case DATABUCKET_VIEW_HDF5:
-    SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "No support for HDF5 output");
-  default:
-    SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "Unknown viewer method requested");
-  }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-PetscErrorCode DMSwarmDataBucketView(MPI_Comm comm, DMSwarmDataBucket db, const char filename[], DMSwarmDataBucketViewType type)
-{
-  PetscMPIInt size;
+  PetscBool isascii;
 
   PetscFunctionBegin;
-  PetscCallMPI(MPI_Comm_size(comm, &size));
-  if (size == 1) {
-    PetscCall(DMSwarmDataBucketView_Seq(comm, db, filename, type));
-  } else {
-    PetscCall(DMSwarmDataBucketView_MPI(comm, db, filename, type));
-  }
+  PetscAssertPointer(db, 2);
+  if (!viewer) PetscCall(PetscViewerASCIIGetStdout(comm, &viewer));
+  PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 2);
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
+  if (isascii) PetscCall(DMSwarmDataBucketView_Ascii(comm, db, viewer));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -666,7 +617,7 @@ PetscErrorCode DMSwarmDataBucketInsertValues(DMSwarmDataBucket db1, DMSwarmDataB
   PetscCall(DMSwarmDataBucketGetSizes(db1, &n_mp_points1, NULL, NULL));
   PetscCall(DMSwarmDataBucketGetSizes(db2, &n_mp_points2, NULL, NULL));
   n_mp_points1_new = n_mp_points1 + n_mp_points2;
-  PetscCall(DMSwarmDataBucketSetSizes(db1, n_mp_points1_new, DMSWARM_DATA_BUCKET_BUFFER_DEFAULT));
+  PetscCall(DMSwarmDataBucketSetSizes(db1, n_mp_points1_new, PETSC_DEFAULT));
   for (p = 0; p < n_mp_points2; ++p) {
     /* db1 <<== db2 */
     PetscCall(DMSwarmDataBucketCopyPoint(db2, p, db1, n_mp_points1 + p));
@@ -741,3 +692,7 @@ PetscErrorCode DMSwarmDataBucketInsertPackedArray(DMSwarmDataBucket db, const Pe
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
+/* undefine helper macros */
+#undef DMSWARM_DATAFIELD_point_access
+#undef DMSWARM_DATAFIELD_point_access_offset

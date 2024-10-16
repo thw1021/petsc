@@ -6,8 +6,7 @@
 #include <petscksp.h>     /*I "petscksp.h" I*/
 #include <petscblaslapack.h>
 
-#include <petsc/private/dmswarmimpl.h>         // For the citation and check
-#include "../src/dm/impls/swarm/data_bucket.h" // For DataBucket internals
+#include <petsc/private/dmswarmimpl.h> // For the citation and check
 
 typedef struct _projectConstraintsCtx {
   DM  dm;

@@ -78,3 +78,127 @@ struct _p_DMSwarmSort {
 PETSC_INTERN PetscErrorCode DMSwarmMigrate_Push_Basic(DM, PetscBool);
 PETSC_INTERN PetscErrorCode DMSwarmMigrate_CellDMScatter(DM, PetscBool);
 PETSC_INTERN PetscErrorCode DMSwarmMigrate_CellDMExact(DM, PetscBool);
+
+/* DMSwarmDataBucket */
+struct _p_DMSwarmDataField {
+  char         *registration_function;
+  PetscInt      L, bs;
+  PetscBool     active;
+  size_t        atomic_size;
+  char         *name; /* what are they called */
+  void         *data; /* the data - an array of structs */
+  PetscDataType petsc_type;
+};
+
+struct _p_DMSwarmDataBucket {
+  PetscInt          L;         /* number in use */
+  PetscInt          buffer;    /* memory buffer used for re-allocation */
+  PetscInt          allocated; /* number allocated, this will equal datafield->L */
+  PetscBool         finalised; /* DEPRECATED */
+  PetscInt          nfields;   /* how many fields of this type */
+  DMSwarmDataField *field;     /* the data */
+};
+
+PETSC_INTERN PetscErrorCode DMSwarmDataFieldStringInList(const char[], const PetscInt, const DMSwarmDataField[], PetscBool *);
+PETSC_INTERN PetscErrorCode DMSwarmDataFieldStringFindInList(const char[], const PetscInt, const DMSwarmDataField[], PetscInt *);
+
+PETSC_INTERN PetscErrorCode DMSwarmDataFieldCreate(const char[], const char[], const size_t, const PetscInt, DMSwarmDataField *);
+PETSC_INTERN PetscErrorCode DMSwarmDataFieldDestroy(DMSwarmDataField *);
+PETSC_INTERN PetscErrorCode DMSwarmDataBucketCreate(DMSwarmDataBucket *);
+PETSC_INTERN PetscErrorCode DMSwarmDataBucketDestroy(DMSwarmDataBucket *);
+PETSC_INTERN PetscErrorCode DMSwarmDataBucketQueryForActiveFields(DMSwarmDataBucket, PetscBool *);
+PETSC_INTERN PetscErrorCode DMSwarmDataBucketRegisterField(DMSwarmDataBucket, const char[], const char[], size_t, DMSwarmDataField *);
+
+PETSC_INTERN PetscErrorCode DMSwarmDataFieldGetNumEntries(DMSwarmDataField, PetscInt *);
+PETSC_INTERN PetscErrorCode DMSwarmDataFieldSetBlockSize(DMSwarmDataField, PetscInt);
+PETSC_INTERN PetscErrorCode DMSwarmDataFieldSetSize(DMSwarmDataField, const PetscInt);
+PETSC_INTERN PetscErrorCode DMSwarmDataFieldZeroBlock(DMSwarmDataField, const PetscInt, const PetscInt);
+PETSC_INTERN PetscErrorCode DMSwarmDataFieldGetAccess(const DMSwarmDataField);
+PETSC_INTERN PetscErrorCode DMSwarmDataFieldAccessPoint(const DMSwarmDataField, const PetscInt, void **);
+PETSC_INTERN PetscErrorCode DMSwarmDataFieldAccessPointOffset(const DMSwarmDataField, const size_t, const PetscInt, void **);
+PETSC_INTERN PetscErrorCode DMSwarmDataFieldRestoreAccess(DMSwarmDataField);
+PETSC_INTERN PetscErrorCode DMSwarmDataFieldVerifyAccess(const DMSwarmDataField, const size_t);
+PETSC_INTERN PetscErrorCode DMSwarmDataFieldGetAtomicSize(const DMSwarmDataField, size_t *);
+
+PETSC_INTERN PetscErrorCode DMSwarmDataFieldInsertPoint(const DMSwarmDataField, const PetscInt, const void *);
+PETSC_INTERN PetscErrorCode DMSwarmDataFieldCopyPoint(const PetscInt, const DMSwarmDataField, const PetscInt, const DMSwarmDataField);
+PETSC_INTERN PetscErrorCode DMSwarmDataFieldZeroPoint(const DMSwarmDataField, const PetscInt);
+
+PETSC_INTERN PetscErrorCode DMSwarmDataBucketFinalize(DMSwarmDataBucket);
+PETSC_INTERN PetscErrorCode DMSwarmDataBucketSetInitialSizes(DMSwarmDataBucket, const PetscInt, const PetscInt);
+PETSC_INTERN PetscErrorCode DMSwarmDataBucketSetSizes(DMSwarmDataBucket, const PetscInt, const PetscInt);
+PETSC_INTERN PetscErrorCode DMSwarmDataBucketGetSizes(DMSwarmDataBucket, PetscInt *, PetscInt *, PetscInt *);
+PETSC_INTERN PetscErrorCode DMSwarmDataBucketGetGlobalSizes(MPI_Comm, DMSwarmDataBucket, PetscInt *, PetscInt *, PetscInt *);
+PETSC_INTERN PetscErrorCode DMSwarmDataBucketGetDMSwarmDataFields(DMSwarmDataBucket, PetscInt *, DMSwarmDataField *[]);
+
+PETSC_INTERN PetscErrorCode DMSwarmDataBucketCopyPoint(const DMSwarmDataBucket, const PetscInt, const DMSwarmDataBucket, const PetscInt);
+PETSC_INTERN PetscErrorCode DMSwarmDataBucketCreateFromSubset(DMSwarmDataBucket, const PetscInt, const PetscInt[], DMSwarmDataBucket *);
+PETSC_INTERN PetscErrorCode DMSwarmDataBucketZeroPoint(const DMSwarmDataBucket, const PetscInt);
+
+PETSC_INTERN PetscErrorCode DMSwarmDataBucketView(MPI_Comm, DMSwarmDataBucket, PetscViewer);
+
+PETSC_INTERN PetscErrorCode DMSwarmDataBucketAddPoint(DMSwarmDataBucket);
+PETSC_INTERN PetscErrorCode DMSwarmDataBucketRemovePoint(DMSwarmDataBucket);
+PETSC_INTERN PetscErrorCode DMSwarmDataBucketRemovePointAtIndex(const DMSwarmDataBucket, const PetscInt);
+
+PETSC_INTERN PetscErrorCode DMSwarmDataBucketDuplicateFields(DMSwarmDataBucket, DMSwarmDataBucket *);
+PETSC_INTERN PetscErrorCode DMSwarmDataBucketInsertValues(DMSwarmDataBucket, DMSwarmDataBucket);
+
+/* helpers for parallel send/recv */
+PETSC_INTERN PetscErrorCode DMSwarmDataBucketCreatePackedArray(DMSwarmDataBucket, size_t *, void **);
+PETSC_INTERN PetscErrorCode DMSwarmDataBucketDestroyPackedArray(DMSwarmDataBucket, void **);
+PETSC_INTERN PetscErrorCode DMSwarmDataBucketFillPackedArray(DMSwarmDataBucket, const PetscInt, void *);
+PETSC_INTERN PetscErrorCode DMSwarmDataBucketInsertPackedArray(DMSwarmDataBucket, const PetscInt, void *);
+
+/* DMSwarmDataEx */
+typedef enum {
+  DEOBJECT_INITIALIZED = 0,
+  DEOBJECT_FINALIZED,
+  DEOBJECT_STATE_UNKNOWN
+} DMSwarmDEObjectState;
+
+typedef struct _p_DMSwarmDataEx *DMSwarmDataEx;
+struct _p_DMSwarmDataEx {
+  PetscInt             instance;
+  MPI_Comm             comm;
+  PetscMPIInt          rank;
+  PetscMPIInt          n_neighbour_procs;
+  PetscMPIInt         *neighbour_procs;          /* [n_neighbour_procs] */
+  PetscInt            *messages_to_be_sent;      /* [n_neighbour_procs] */
+  PetscInt            *message_offsets;          /* [n_neighbour_procs] */
+  PetscInt            *messages_to_be_recvieved; /* [n_neighbour_procs] */
+  size_t               unit_message_size;
+  void                *send_message;
+  PetscInt             send_message_length;
+  void                *recv_message;
+  PetscInt             recv_message_length;
+  PetscMPIInt         *send_tags, *recv_tags;
+  PetscInt             total_pack_cnt;
+  PetscInt            *pack_cnt; /* [n_neighbour_procs] */
+  DMSwarmDEObjectState topology_status;
+  DMSwarmDEObjectState message_lengths_status;
+  DMSwarmDEObjectState packer_status;
+  DMSwarmDEObjectState communication_status;
+  MPI_Status          *_stats;
+  MPI_Request         *_requests;
+};
+
+extern const char *status_names[];
+
+PETSC_INTERN PetscErrorCode DMSwarmDataExCreate(MPI_Comm, const PetscInt, DMSwarmDataEx *);
+PETSC_INTERN PetscErrorCode DMSwarmDataExView(DMSwarmDataEx);
+PETSC_INTERN PetscErrorCode DMSwarmDataExDestroy(DMSwarmDataEx);
+PETSC_INTERN PetscErrorCode DMSwarmDataExTopologyInitialize(DMSwarmDataEx);
+PETSC_INTERN PetscErrorCode DMSwarmDataExTopologyAddNeighbour(DMSwarmDataEx, const PetscMPIInt);
+PETSC_INTERN PetscErrorCode DMSwarmDataExTopologyFinalize(DMSwarmDataEx);
+PETSC_INTERN PetscErrorCode DMSwarmDataExInitializeSendCount(DMSwarmDataEx);
+PETSC_INTERN PetscErrorCode DMSwarmDataExAddToSendCount(DMSwarmDataEx, const PetscMPIInt, const PetscInt);
+PETSC_INTERN PetscErrorCode DMSwarmDataExFinalizeSendCount(DMSwarmDataEx);
+PETSC_INTERN PetscErrorCode DMSwarmDataExPackInitialize(DMSwarmDataEx, size_t);
+PETSC_INTERN PetscErrorCode DMSwarmDataExPackData(DMSwarmDataEx, PetscMPIInt, PetscInt, void *);
+PETSC_INTERN PetscErrorCode DMSwarmDataExPackFinalize(DMSwarmDataEx);
+PETSC_INTERN PetscErrorCode DMSwarmDataExBegin(DMSwarmDataEx);
+PETSC_INTERN PetscErrorCode DMSwarmDataExEnd(DMSwarmDataEx);
+PETSC_INTERN PetscErrorCode DMSwarmDataExGetSendData(DMSwarmDataEx, PetscInt *, void **);
+PETSC_INTERN PetscErrorCode DMSwarmDataExGetRecvData(DMSwarmDataEx, PetscInt *, void **);
+PETSC_INTERN PetscErrorCode DMSwarmDataExTopologyGetNeighbours(DMSwarmDataEx, PetscMPIInt *, PetscMPIInt *[]);
