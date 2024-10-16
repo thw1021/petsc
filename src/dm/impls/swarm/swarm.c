@@ -1974,7 +1974,7 @@ static PetscErrorCode DMView_Swarm(DM dm, PetscViewer viewer)
     PetscCall(PetscViewerGetFormat(viewer, &format));
     switch (format) {
     case PETSC_VIEWER_ASCII_INFO_DETAIL:
-      PetscCall(DMSwarmDataBucketView(PetscObjectComm((PetscObject)dm), swarm->db, NULL, DATABUCKET_VIEW_STDOUT));
+      PetscCall(DMSwarmDataBucketView(PetscObjectComm((PetscObject)dm), swarm->db, viewer));
       break;
     default:
       PetscCall(DMView_Swarm_Ascii(dm, viewer));

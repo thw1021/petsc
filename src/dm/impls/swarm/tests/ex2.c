@@ -669,6 +669,12 @@ int main(int argc, char *argv[])
     requires: !complex double
 
   test:
+    suffix: proj_tri_0_info_detail
+    requires: triangle !defined(PETSC_USE_64BIT_INDICES)
+    args: -dm_plex_box_faces 1,1 -dm_view -sw_view ::ascii_info_detail -petscspace_degree 2 -petscfe_default_quadrature_order {{2 3}} -ptof_pc_type lu -ftop_ksp_rtol 1e-15 -ftop_ksp_type lsqr -ftop_pc_type none
+    filter: grep -v marker
+
+  test:
     suffix: proj_tri_0
     requires: triangle
     args: -dm_plex_box_faces 1,1 -dm_view -sw_view -petscspace_degree 2 -petscfe_default_quadrature_order {{2 3}} -ptof_pc_type lu -ftop_ksp_rtol 1e-15 -ftop_ksp_type lsqr -ftop_pc_type none
