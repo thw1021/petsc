@@ -121,9 +121,6 @@ struct _p_DMSwarmDataBucket {
   DMSwarmDataField *field;     /* the data */
 };
 
-#define DMSWARM_DATAFIELD_point_access(data, index, atomic_size)                (void *)((char *)(data) + (index) * (atomic_size))
-#define DMSWARM_DATAFIELD_point_access_offset(data, index, atomic_size, offset) (void *)((char *)(data) + (index) * (atomic_size) + (offset))
-
 PETSC_INTERN PetscErrorCode DMSwarmDataFieldStringInList(const char[], const PetscInt, const DMSwarmDataField[], PetscBool *);
 PETSC_INTERN PetscErrorCode DMSwarmDataFieldStringFindInList(const char[], const PetscInt, const DMSwarmDataField[], PetscInt *);
 

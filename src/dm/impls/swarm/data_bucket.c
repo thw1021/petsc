@@ -1,5 +1,8 @@
 #include <petsc/private/dmswarmimpl.h> /*I   "petscdmswarm.h"   I*/
 
+#define DMSWARM_DATAFIELD_point_access(data, index, atomic_size)                (void *)((char *)(data) + (index) * (atomic_size))
+#define DMSWARM_DATAFIELD_point_access_offset(data, index, atomic_size, offset) (void *)((char *)(data) + (index) * (atomic_size) + (offset))
+
 /* string helpers */
 PetscErrorCode DMSwarmDataFieldStringInList(const char name[], const PetscInt N, const DMSwarmDataField gfield[], PetscBool *val)
 {
@@ -725,3 +728,7 @@ PetscErrorCode DMSwarmDataBucketInsertPackedArray(DMSwarmDataBucket db, const Pe
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
+/* undefine helper macros */
+#undef DMSWARM_DATAFIELD_point_access
+#undef DMSWARM_DATAFIELD_point_access_offset
