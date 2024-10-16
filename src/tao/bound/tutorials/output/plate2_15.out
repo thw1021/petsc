@@ -12,7 +12,7 @@ iter =   1, Function value 1.50567, Residual: 0.00326476
   iter =   1,   Function value 1.50567,   Residual: 0.00332264 
   iter =   2,   Function value 1.50566,   Residual: 0.00201118 
   iter =   3,   Function value 1.50566,   Residual: 0.00125295 
-iter =   2, Function value 1.50566, Residual: 1.2998e-06 
+iter =   2, Function value 1.50566, Residual: 1.29979e-06 
 Tao Object: 1 MPI process
   type: bntl
     Tao Object: (tao_bnk_cg_) 1 MPI process
@@ -34,6 +34,15 @@ Tao Object: 1 MPI process
             Number of updates: 3
             Number of rejects: 0
             Number of resets: 2
+      Objective function:
+        Scale (tao_objective_scale): 1.
+        Function:
+          TaoTerm Object: (callbacks_) 1 MPI process
+            type: taocallbacks
+            solution vector space: N = 48 [VecType seq (taoterm_solution_vec_type)]
+            parameter vector space: (none)
+            attached to Tao [name omitted]
+        Map: unmapped
       TaoLineSearch Object: (tao_bnk_cg_) 1 MPI process
         type: more-thuente
         maximum function evaluations=30
@@ -44,7 +53,7 @@ Tao Object: 1 MPI process
         using variable bounds
         Termination reason: 1
       Active Set subset type: subvec
-      convergence tolerances: gatol=1e-05,       grtol=1e-08,   steptol=0.,       gttol=0.
+      convergence tolerances: gatol=1e-05,       grtol=1e-08,       steptol=0.,       gttol=0.
       Residual in Function/Gradient:=0.00125295
       Objective value=1.50566
       total number of iterations=3,                              (max: 3)
@@ -64,6 +73,15 @@ Tao Object: 1 MPI process
       dtol: 0
       iter: 0
       othr: 0
+  Objective function:
+    Scale (tao_objective_scale): 1.
+    Function:
+      TaoTerm Object: (callbacks_) 1 MPI process
+        type: taocallbacks
+        solution vector space: N = 48 [VecType seq (taoterm_solution_vec_type)]
+        parameter vector space: (none)
+        attached to Tao [name omitted]
+    Map: unmapped
   TaoLineSearch Object: 1 MPI process
     type: more-thuente
     maximum function evaluations=30
@@ -113,10 +131,12 @@ Tao Object: 1 MPI process
         not using I-node routines
   total KSP iterations: 39
   Active Set subset type: subvec
-  convergence tolerances: gatol=1e-05,   grtol=1e-08, steptol=0.,   gttol=0.
-  Residual in Function/Gradient:=1.2998e-06
+  convergence tolerances: gatol=1e-05,   grtol=1e-08,   steptol=0.,   gttol=0.
+  Residual in Function/Gradient:=1.29979e-06
   Objective value=1.50566
   total number of iterations=2,                          (max: 50)
-  total number of function/gradient evaluations=26,      (max: unlimited)
+  total number of function evaluations=7,                  (max: unlimited)
+  total number of gradient evaluations=3,                  (max: unlimited)
+  total number of function/gradient evaluations=16,      (max: unlimited)
   total number of Hessian evaluations=3
   Solution converged:    ||g(X)|| <= gatol
