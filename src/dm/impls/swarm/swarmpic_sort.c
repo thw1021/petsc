@@ -43,7 +43,7 @@ static PetscErrorCode DMSwarmSortCreate(DMSwarmSort *_ctx)
 static PetscErrorCode DMSwarmSortSetup(DMSwarmSort ctx, DM dm, PetscInt ncells)
 {
   PetscInt *swarm_cellid;
-  PetscInt  p, npoints, offset = 0;
+  PetscInt  p, npoints;
   PetscInt  tmp, c, count;
 
   PetscFunctionBegin;
@@ -75,15 +75,10 @@ static PetscErrorCode DMSwarmSortSetup(DMSwarmSort ctx, DM dm, PetscInt ncells)
   PetscCall(DMSwarmSortApplyCellIndexSort(ctx));
 
   /* sum points per cell */
-  for (p = 0; p < ctx->npoints; p++) {
-    if (ctx->list[p].cell_index == DMLOCATEPOINT_POINT_NOT_FOUND) offset++;
-  }
-  for (p = 0; p < ctx->npoints; p++) {
-    if (ctx->list[p].cell_index != DMLOCATEPOINT_POINT_NOT_FOUND) ctx->pcell_offsets[ctx->list[p].cell_index]++;
-  }
+  for (p = 0; p < ctx->npoints; p++) ctx->pcell_offsets[ctx->list[p].cell_index]++;
 
   /* create offset list */
-  count = offset;
+  count = 0;
   for (c = 0; c < ctx->ncells; c++) {
     tmp                   = ctx->pcell_offsets[c];
     ctx->pcell_offsets[c] = count;
