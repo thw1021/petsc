@@ -34,13 +34,13 @@ typedef struct {
 } AppCtx;
 
 /* User provided Routines */
-PetscErrorCode InitializeUserData(AppCtx *);
-PetscErrorCode FormStartingPoint(Vec, AppCtx *);
-PetscErrorCode EvaluateResidual(Tao, Vec, Vec, void *);
-PetscErrorCode EvaluateJacobian(Tao, Vec, Mat, Mat, void *);
-PetscErrorCode EvaluateRegularizerObjectiveAndGradient(Tao, Vec, PetscReal *, Vec, void *);
-PetscErrorCode EvaluateRegularizerHessian(Tao, Vec, Mat, void *);
-PetscErrorCode EvaluateRegularizerHessianProd(Mat, Vec, Vec);
+static PetscErrorCode InitializeUserData(AppCtx *);
+static PetscErrorCode FormStartingPoint(Vec, AppCtx *);
+static PetscErrorCode EvaluateResidual(Tao, Vec, Vec, void *);
+static PetscErrorCode EvaluateJacobian(Tao, Vec, Mat, Mat, void *);
+static PetscErrorCode EvaluateRegularizerObjectiveAndGradient(Tao, Vec, PetscReal *, Vec, void *);
+static PetscErrorCode EvaluateRegularizerHessian(Tao, Vec, Mat, void *);
+static PetscErrorCode EvaluateRegularizerHessianProd(Mat, Vec, Vec);
 
 /*--------------------------------------------------------------------*/
 int main(int argc, char **argv)
@@ -50,12 +50,14 @@ int main(int argc, char **argv)
   Tao         tao;    /* Tao solver context */
   PetscReal   hist[100], resid[100], v1, v2;
   PetscInt    lits[100];
-  AppCtx      user;                                /* user-defined work context */
-  PetscViewer fd;                                  /* used to save result to file */
-  char        resultFile[] = "tomographyResult_x"; /* Debug: change from "tomographyResult_x" to "cs1Result_x" */
+  AppCtx      user;                                 /* user-defined work context */
+  PetscViewer fd;                                   /* used to save result to file */
+  char        resultFile[]  = "tomographyResult_x"; /* Debug: change from "tomographyResult_x" to "cs1Result_x" */
+  PetscBool   test_tao_term = PETSC_FALSE;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-test_tao_term", &test_tao_term, NULL));
 
   /* Create TAO solver and set desired solution method */
   PetscCall(TaoCreate(PETSC_COMM_SELF, &tao));
@@ -84,15 +86,24 @@ int main(int argc, char **argv)
   /* Jacobian matrix fixed as user.A for Linear least square problem. */
   PetscCall(TaoSetJacobianResidualRoutine(tao, user.A, user.A, EvaluateJacobian, (void *)&user));
 
-  /* User set the regularizer objective, gradient, and hessian. Set it the same as using l2prox choice, for testing purpose.  */
-  PetscCall(TaoBRGNSetRegularizerObjectiveAndGradientRoutine(tao, EvaluateRegularizerObjectiveAndGradient, (void *)&user));
-  /* User defined regularizer Hessian setup, here is identity shell matrix */
-  PetscCall(MatCreate(PETSC_COMM_SELF, &Hreg));
-  PetscCall(MatSetSizes(Hreg, PETSC_DECIDE, PETSC_DECIDE, user.N, user.N));
-  PetscCall(MatSetType(Hreg, MATSHELL));
-  PetscCall(MatSetUp(Hreg));
-  PetscCall(MatShellSetOperation(Hreg, MATOP_MULT, (void (*)(void))EvaluateRegularizerHessianProd));
-  PetscCall(TaoBRGNSetRegularizerHessianRoutine(tao, Hreg, EvaluateRegularizerHessian, (void *)&user));
+  if (test_tao_term) {
+    TaoTerm term;
+
+    PetscCall(TaoTermCreateHalfL2Squared(PETSC_COMM_SELF, user.N, user.N, &term));
+    PetscCall(TaoBRGNSetRegularizerTerm(tao, 1.0, term, NULL, NULL));
+    PetscCall(TaoTermDestroy(&term));
+  } else {
+    /* User set the regularizer objective, gradient, and hessian. Set it the same as using l2prox choice, for testing purpose.  */
+    PetscCall(TaoBRGNSetRegularizerObjectiveAndGradientRoutine(tao, EvaluateRegularizerObjectiveAndGradient, (void *)&user));
+    /* User defined regularizer Hessian setup, here is identity shell matrix */
+    PetscCall(MatCreate(PETSC_COMM_SELF, &Hreg));
+    PetscCall(MatSetSizes(Hreg, PETSC_DECIDE, PETSC_DECIDE, user.N, user.N));
+    PetscCall(MatSetType(Hreg, MATSHELL));
+    PetscCall(MatSetUp(Hreg));
+    PetscCall(MatShellSetOperation(Hreg, MATOP_MULT, (void (*)(void))EvaluateRegularizerHessianProd));
+    PetscCall(TaoBRGNSetRegularizerHessianRoutine(tao, Hreg, EvaluateRegularizerHessian, (void *)&user));
+    PetscCall(MatDestroy(&Hreg));
+  }
 
   /* Check for any TAO command line arguments */
   PetscCall(TaoSetFromOptions(tao));
@@ -119,7 +130,6 @@ int main(int argc, char **argv)
   /* Free PETSc data structures */
   PetscCall(VecDestroy(&x));
   PetscCall(VecDestroy(&res));
-  PetscCall(MatDestroy(&Hreg));
   /* Free user data structures */
   PetscCall(MatDestroy(&user.A));
   PetscCall(MatDestroy(&user.D));
@@ -133,7 +143,7 @@ int main(int argc, char **argv)
 
 /*--------------------------------------------------------------------*/
 /* Evaluate residual function A(x)-b in least square problem ||A(x)-b||^2 */
-PetscErrorCode EvaluateResidual(Tao tao, Vec X, Vec F, void *ptr)
+static PetscErrorCode EvaluateResidual(Tao tao, Vec X, Vec F, void *ptr)
 {
   AppCtx *user = (AppCtx *)ptr;
 
@@ -146,7 +156,7 @@ PetscErrorCode EvaluateResidual(Tao tao, Vec X, Vec F, void *ptr)
 }
 
 /*------------------------------------------------------------*/
-PetscErrorCode EvaluateJacobian(Tao tao, Vec X, Mat J, Mat Jpre, void *ptr)
+static PetscErrorCode EvaluateJacobian(Tao tao, Vec X, Mat J, Mat Jpre, void *ptr)
 {
   /* Jacobian is not changing here, so use a empty dummy function here.  J[m][n] = df[m]/dx[n] = A[m][n] for linear least square */
   PetscFunctionBegin;
@@ -154,7 +164,7 @@ PetscErrorCode EvaluateJacobian(Tao tao, Vec X, Mat J, Mat Jpre, void *ptr)
 }
 
 /* ------------------------------------------------------------ */
-PetscErrorCode EvaluateRegularizerObjectiveAndGradient(Tao tao, Vec X, PetscReal *f_reg, Vec G_reg, void *ptr)
+static PetscErrorCode EvaluateRegularizerObjectiveAndGradient(Tao tao, Vec X, PetscReal *f_reg, Vec G_reg, void *ptr)
 {
   PetscFunctionBegin;
   /* compute regularizer objective = 0.5*x'*x */
@@ -165,7 +175,7 @@ PetscErrorCode EvaluateRegularizerObjectiveAndGradient(Tao tao, Vec X, PetscReal
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode EvaluateRegularizerHessianProd(Mat Hreg, Vec in, Vec out)
+static PetscErrorCode EvaluateRegularizerHessianProd(Mat Hreg, Vec in, Vec out)
 {
   PetscFunctionBegin;
   PetscCall(VecCopy(in, out));
@@ -173,7 +183,7 @@ PetscErrorCode EvaluateRegularizerHessianProd(Mat Hreg, Vec in, Vec out)
 }
 
 /* ------------------------------------------------------------ */
-PetscErrorCode EvaluateRegularizerHessian(Tao tao, Vec X, Mat Hreg, void *ptr)
+static PetscErrorCode EvaluateRegularizerHessian(Tao tao, Vec X, Mat Hreg, void *ptr)
 {
   /* Hessian for regularizer objective = 0.5*x'*x is identity matrix, and is not changing*/
   PetscFunctionBegin;
@@ -181,7 +191,7 @@ PetscErrorCode EvaluateRegularizerHessian(Tao tao, Vec X, Mat Hreg, void *ptr)
 }
 
 /* ------------------------------------------------------------ */
-PetscErrorCode FormStartingPoint(Vec X, AppCtx *user)
+static PetscErrorCode FormStartingPoint(Vec X, AppCtx *user)
 {
   PetscFunctionBegin;
   PetscCall(VecSet(X, 0.0));
@@ -189,7 +199,7 @@ PetscErrorCode FormStartingPoint(Vec X, AppCtx *user)
 }
 
 /* ---------------------------------------------------------------------- */
-PetscErrorCode InitializeUserData(AppCtx *user)
+static PetscErrorCode InitializeUserData(AppCtx *user)
 {
   PetscInt    k, n;                                  /* indices for row and columns of D. */
   char        dataFile[] = "tomographyData_A_b_xGT"; /* Matrix A and vectors b, xGT(ground truth) binary files generated by MATLAB. Debug: change from "tomographyData_A_b_xGT" to "cs1Data_A_b_xGT". */
@@ -284,6 +294,6 @@ PetscErrorCode InitializeUserData(AppCtx *user)
    test:
       suffix: 3
       localrunfiles: tomographyData_A_b_xGT
-      args: -tao_monitor -tao_max_it 1000 -tao_brgn_regularization_type user -tao_brgn_regularizer_weight 1e-8 -tao_gatol 1.e-6
+      args: -tao_monitor -tao_max_it 1000 -tao_brgn_regularization_type user -tao_brgn_regularizer_weight 1e-8 -tao_gatol 1.e-6 -test_tao_term {{0 1}}
 
 TEST*/
