@@ -266,6 +266,13 @@ struct _TaoTermOps {
   PetscErrorCode (*hessianmult)(TaoTerm, Vec, Vec, Vec, Vec);
   PetscErrorCode (*proximalmap)(TaoTerm, Vec, PetscReal, TaoTerm, Vec, PetscReal, Vec);
 
+  PetscErrorCode (*conjugate_objective)(TaoTerm, Vec, Vec, PetscReal *);
+  PetscErrorCode (*conjugate_objectiveandgradient)(TaoTerm, Vec, Vec, PetscReal *, Vec);
+  PetscErrorCode (*conjugate_gradient)(TaoTerm, Vec, Vec, Vec);
+  //TODO do we need conjugate hessian? cant think of good example
+  PetscErrorCode (*conjugate_hessian)(TaoTerm, Vec, Vec, Mat, Mat);
+  PetscErrorCode (*conjugate_hessianmult)(TaoTerm, Vec, Vec, Vec, Vec);
+
   PetscErrorCode (*isobjectivedefined)(TaoTerm, PetscBool *);
   PetscErrorCode (*isgradientdefined)(TaoTerm, PetscBool *);
   PetscErrorCode (*isobjectiveandgradientdefined)(TaoTerm, PetscBool *);

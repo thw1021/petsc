@@ -2,7 +2,6 @@
 #include <petsc/private/taolinesearchimpl.h>
 #include <../src/tao/linesearch/impls/pslinesearch/pslinesearch.h>
 
-#if 0
 static PetscErrorCode TaoLineSearchDestroy_PS(TaoLineSearch ls)
 {
   TaoLineSearch_PS *armP = (TaoLineSearch_PS *)ls->data;
@@ -125,6 +124,7 @@ static PetscErrorCode TaoLineSearchApply_PS(TaoLineSearch ls, Vec xold, PetscRea
 
   ls->step = ls->initstep;
 
+#if 0
   if (ls->ops->preapply) PetscUseTypeMethod(ls, preapply, xold, f, xnew, g);
 
   while (armP->cert >= ls->ftol && ls->nproxeval < ls->max_funcs) {
@@ -159,6 +159,7 @@ static PetscErrorCode TaoLineSearchApply_PS(TaoLineSearch ls, Vec xold, PetscRea
   /* Successful termination, update memory. Only FIFO for PS */
   ls->reason = TAOLINESEARCH_SUCCESS;
   PetscCall(PetscInfo(ls, "%" PetscInt_FMT " prox evals in line search, step = %10.4f\n", ls->nproxeval, (double)ls->step));
+#endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -192,4 +193,3 @@ PETSC_EXTERN PetscErrorCode TaoLineSearchCreate_PS(TaoLineSearch ls)
   ls->ops->setfromoptions = TaoLineSearchSetFromOptions_PS;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-#endif

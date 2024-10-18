@@ -395,7 +395,7 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_L1(TaoTerm term)
   term->ops->hessian               = TaoTermHessian_L1;
   term->ops->hessianmult           = TaoTermHessianMult_L1;
   term->ops->createhessianmatrices = TaoTermCreateHessianMatricesDefault;
-  term->ops->proximalmap           =TaoTermProximalMap_L1;
+  term->ops->proximalmap           = TaoTermProximalMap_L1;
 
   if (!term->H_mattype) PetscCall(PetscStrallocpy(MATSHELL, &term->H_mattype));
   if (!term->Hpre_mattype) PetscCall(PetscStrallocpy(MATDIAGONAL, &term->Hpre_mattype));

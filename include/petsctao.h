@@ -502,6 +502,8 @@ PETSC_EXTERN PetscErrorCode TaoALMMSetMultipliers(Tao, Vec);
 PETSC_EXTERN PetscErrorCode TaoALMMGetPrimalIS(Tao, IS *, IS *);
 PETSC_EXTERN PetscErrorCode TaoALMMGetDualIS(Tao, IS *, IS *);
 
+PETSC_EXTERN PetscErrorCode TaoCVSetInitialNormEstimate(Tao, PetscReal);
+
 PETSC_EXTERN PetscErrorCode TaoVecGetSubVec(Vec, IS, TaoSubsetType, PetscReal, Vec *);
 PETSC_EXTERN PetscErrorCode TaoMatGetSubMat(Mat, IS, Vec, TaoSubsetType, Mat *);
 PETSC_EXTERN PetscErrorCode TaoGradientNorm(Tao, Vec, NormType, PetscReal *);

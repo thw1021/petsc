@@ -19,7 +19,6 @@
  *        h(x) = |\cdot - b|_1        */
 
 #include <petsctao.h>
-#include <petscdm.h>
 #include <petscksp.h>
 #include <petscmat.h>
 
@@ -39,6 +38,16 @@ typedef struct {
   PetscBool set_norm;
   char      file[PETSC_MAX_PATH_LEN];
 } AppCtx;
+
+static PetscErrorCode ShellCreateVecs(TaoTerm term, Vec *sol, Vec *param)
+{
+  AppCtx *user;
+
+  PetscFunctionBegin;
+  PetscCall(TaoTermShellGetContext(term, &user));
+  PetscCall(VecDuplicate(user->x0, sol));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
 
 PetscErrorCode LAD_UserObjGrad_Term(TaoTerm term, Vec X, Vec param, PetscReal *f, Vec G)
 {
@@ -325,9 +334,16 @@ int main(int argc, char **argv)
   PetscCall(TaoCreate(PETSC_COMM_WORLD, &tao));
   PetscCall(TaoSetSolution(tao, user.x));
   PetscCall(TaoSetType(tao, TAOCV));
-  PetscCall(TaoTermCreate(PETSC_COMM_WORLD, &fterm));
+  PetscCall(TaoTermCreate(PETSC_COMM_WORLD, &fterm));//TODO try TaoTermCreateShell?
   PetscCall(TaoTermCreate(PETSC_COMM_WORLD, &gterm));
   PetscCall(TaoTermCreate(PETSC_COMM_WORLD, &hterm));
+  PetscCall(TaoTermSetType(fterm, TAOTERMSHELL));
+  PetscCall(TaoTermShellSetContext(fterm, (void *)&user));
+  PetscCall(TaoTermSetParametersType(fterm, TAOTERM_PARAMETERS_NONE));
+//  PetscCall(TaoTermShellSetCreateVecs(fterm, ShellCreateVecs));//TODO seems like too much work to ask? shouldn't this be done internally?
+  //for orig_callbacks, this is doen automatically via TaoSetSolution -> TaoTermSetSolutionTemplate
+  //maybe the
+  //PetscCall(TaoTermSetSolutionTemplate(user.x));
 
   switch (user.probType) {
   case DUAL_SVM: {
@@ -343,29 +359,29 @@ int main(int argc, char **argv)
   default:
     SETERRQ(PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "Invalid problem type.");
   }
+  PetscCall(TaoTermSetSolutionTemplate(fterm, user.x));
+  PetscCall(TaoTermSetSolutionTemplate(gterm, user.x));
+  PetscCall(TaoTermSetSolutionTemplate(hterm, user.x));
 
   switch (user.probType) {
   case DUAL_SVM: {
-    PetscCall(TaoTermSetType(fterm, TAOTERMSHELL));//TODO TaoTermCreateShell?
-    PetscCall(TaoTermShellSetContext(fterm, (void *)&user));
     PetscCall(TaoTermShellSetObjectiveAndGradient(fterm, SVM_UserObjGrad_Term));
     PetscCall(TaoAddObjectiveTerm(tao, NULL, 1., fterm, NULL, NULL));
+    PetscCall(TaoAddObjectiveTerm(tao, NULL, user.g_scale, gterm, NULL, NULL));
+    PetscCall(TaoAddObjectiveTerm(tao, NULL, 1., hterm, NULL, user.A));
   } break;
   case LAD: {
     // LAD's f(x) = Zero()
-    PetscCall(TaoTermSetType(fterm, TAOTERMSHELL));//TODO TaoTermCreateShell?
-    PetscCall(TaoTermShellSetContext(fterm, (void *)&user));
     PetscCall(TaoTermShellSetObjectiveAndGradient(fterm, LAD_UserObjGrad_Term));
-    PetscCall(TaoAddObjectiveTerm(tao, NULL, 0., fterm, NULL, NULL));
+    PetscCall(TaoAddObjectiveTerm(tao, NULL, 1., fterm, NULL, NULL));
+    PetscCall(TaoAddObjectiveTerm(tao, NULL, user.g_scale, gterm, NULL, NULL));
+    PetscCall(TaoAddObjectiveTerm(tao, NULL, 1., hterm, user.y_translation, user.A));
   } break;
   default:
     SETERRQ(PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "Invalid problem type.");
   }
 
-  //First term: f, second term: g, third term: h(Ax)
-  PetscCall(TaoAddObjectiveTerm(tao, NULL, 1., gterm, NULL, NULL)); //TODO qvec=trans=param for LAD case
-  PetscCall(TaoAddObjectiveTerm(tao, NULL, 1., hterm, NULL, user.A)); //TODO no way to set mat norm yet...
-
+  if (user.set_norm) PetscCall(TaoCVSetInitialNormEstimate(tao, user.matnorm));
   PetscCall(TaoSetFromOptions(tao));
   PetscCall(TaoSolve(tao));
 

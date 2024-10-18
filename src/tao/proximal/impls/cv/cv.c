@@ -130,7 +130,6 @@ static PetscErrorCode TaoSolve_CV(Tao tao)
 {
   TAO_CV                      *cv = (TAO_CV *)tao->data;
   TaoTerm                      fterm, gterm, hterm;
-  PetscReal                    fscale, gscale, hscale;
   PetscReal                    f, gnorm, lip, rho;
   PetscReal                    pri_res_norm, dual_res_norm, g_val, h_val;
   TaoLineSearchConvergedReason ls_status = TAOLINESEARCH_CONTINUE_ITERATING;
@@ -146,6 +145,7 @@ static PetscErrorCode TaoSolve_CV(Tao tao)
 
   //TODO WHAT IF objective_term.term is not TAOTERMSUM?
   //Is it 0-index or 1-index? I am assuming 1,2,3 sequential indexing here...
+  //NOTE: 0 is callbacks...
   PetscCall(TaoTermSumGetSubterm(tao->objective_term.term, 1, NULL, &cv->f_scale, &fterm, NULL));
   PetscCall(TaoTermSumGetSubterm(tao->objective_term.term, 2, NULL, &cv->g_scale, &gterm, NULL));
   PetscCall(TaoTermSumGetSubterm(tao->objective_term.term, 3, NULL, &cv->h_scale, &hterm, &cv->h_lmap));//TODO matdestroy?
@@ -160,7 +160,7 @@ static PetscErrorCode TaoSolve_CV(Tao tao)
   if (tao->step == 0 && cv->h_lmap_norm > 0) tao->step = 1 / (2 * cv->Theta * cv->pd_ratio * cv->h_lmap_norm);
   else if (tao->step == 0 && cv->h_lmap_norm == 0) tao->step = 1 / (2 * cv->Theta * cv->pd_ratio * cv->eta);
   /* Checking whether the estimate is not too large */
-  if (cv->lmap_norm_set) PetscCheck(tao->step <= 1 / (2 * cv->Theta * cv->pd_ratio * cv->h_lmap_norm), PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "TaoCV initial Stepsize is too large");
+  if (cv->h_lmap_norm > 0) PetscCheck(tao->step <= 1 / (2 * cv->Theta * cv->pd_ratio * cv->h_lmap_norm), PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "TaoCV initial Stepsize is too large");
   else PetscCheck(tao->step <= 1 / (2 * cv->Theta * cv->pd_ratio * cv->eta), PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "TaoCV initial Stepsize is too large");
   cv->sigma = tao->step * cv->pd_ratio * cv->pd_ratio;
 
@@ -189,7 +189,7 @@ static PetscErrorCode TaoSolve_CV(Tao tao)
     /* x = prog_g(v, step) */
     PetscCall(VecCopy(tao->solution, cv->x_old));
     //PetscCall(DMTaoApplyProximalMap(cv->g_prox, cv->reg, tao->step * cv->g_scale, cv->workvec, tao->solution, PETSC_FALSE));
-    PetscCall(TaoTermProximalMap(cv->g_term.term, NULL, cv->g_term.scale, cv->reg_term.term, cv->workvec, cv->reg_term.scale, tao->solution));
+    PetscCall(TaoTermProximalMap(cv->g_term.term, NULL, tao->step * cv->g_scale, cv->reg_term.term, cv->workvec, cv->reg_term.scale, tao->solution));
     /* update Ax, and grad */
     PetscCall(VecCopy(cv->Ax, cv->Ax_old));
     PetscCall(VecCopy(tao->gradient, cv->grad_old));
@@ -214,8 +214,8 @@ static PetscErrorCode TaoSolve_CV(Tao tao)
       PetscCall(VecAXPY(cv->dualvec_work, cv->sigma * (1 + rho), cv->Ax));
 
       /* dualvec: y = prox_h*(w, sigma) */
-      //PetscCall(TaoTermProximalMap(fter
       //PetscCall(DMTaoApplyProximalMap(cv->h_prox, cv->reg, cv->sigma * cv->h_scale, cv->dualvec_work, tao->dualvec, PETSC_TRUE));
+      PetscCall(TaoTermProximalMap(cv->h_cj_mapped_term.term, NULL, cv->sigma*cv->h_cj_mapped_term.scale, cv->reg_term.term, cv->dualvec_work, cv->reg_term.scale, tao->dualvec));
     } else {
       // LS needs: x1, x0, grad_1, grad_0, Ax_old, dualvec(y), sigma, pd_ratio, Theta, eta
       PetscCall(TaoLineSearchSetInitialStepLength(tao->linesearch, tao->step));
@@ -235,8 +235,10 @@ static PetscErrorCode TaoSolve_CV(Tao tao)
     tao->residual = PetscSqrtReal(pri_res_norm * pri_res_norm) + PetscSqrtReal(dual_res_norm * dual_res_norm);
 
 //    PetscCall(DMTaoComputeObjective(cv->g_prox, tao->solution, &g_val));
+    PetscCall(TaoTermObjective(cv->g_term.term, tao->solution, NULL, &g_val));
     g_val *= cv->g_scale;
 //    PetscCall(DMTaoComputeObjective(cv->h_prox, cv->Ax, &h_val));
+    PetscCall(TaoTermObjective(cv->h_term.term, cv->Ax, NULL, &h_val));
     h_val *= cv->h_scale;
     /* convergence test */
     PetscCall(TaoLogConvergenceHistory(tao, f + g_val + h_val, tao->residual, 0.0, tao->ksp_its));
@@ -262,6 +264,8 @@ static PetscErrorCode TaoSetFromOptions_CV(Tao tao, PetscOptionItems *PetscOptio
   PetscCall(PetscOptionsReal("-tao_cv_backtrack_parameter", "Backtracking parameter r. Must be  >1.", "", cv->r, &cv->r, NULL));
   PetscCall(PetscOptionsReal("-tao_cv_theta", "Stepsize scale parameter theta. Must be  >1+tol.", "", cv->Theta, &cv->Theta, NULL));
   //TODO TaoCVSetInitialNormEstimate(Tao, PetscReal) ?
+  //We are  no longer supporting setting previously known norm... use this
+  PetscCall(PetscOptionsReal("-tao_cv_norm_estimate", "Initial matrix norm estimate. Must be > 0.", "", cv->h_lmap_norm, &cv->h_lmap_norm, NULL));
   PetscCall(PetscOptionsReal("-tao_cv_eta", "Initial linear map norm estimate. Must be nonnegative", "", cv->eta, &cv->eta, NULL));
   PetscCall(TaoLineSearchSetFromOptions(tao->linesearch));
   PetscOptionsHeadEnd();
@@ -289,6 +293,7 @@ static PetscErrorCode TaoView_CV(Tao tao, PetscViewer viewer)
     PetscCall(TaoTermView(cv->g_term.term, viewer));
     PetscCall(PetscViewerASCIIPrintf(viewer, "h Term:\n"));
     PetscCall(TaoTermView(cv->h_term.term, viewer));
+    //TODO should I view h_conjugate?
     PetscCall(MatView(cv->h_term.map, viewer));
     PetscCall(PetscViewerASCIIPopTab(viewer));
   }
@@ -302,17 +307,19 @@ static PetscErrorCode TaoView_CV(Tao tao, PetscViewer viewer)
 // TaoAddObjectiveTerm(tao, "l1_", 1.0, l1, NULL); // describe g
 // TaoAddObjectiveTerm(tao, "simplex_", 1.0, simplex, NULL); // describe h
 // tao->objective_term.term will be {1.0, taosum, map == NULL};
-static PetscErrorCode TaoCVSetUpTerms(Tao tao, TaoMappedTerm *f_term, TaoMappedTerm *g_term, TaoMappedTerm *h_term)
+static PetscErrorCode TaoCVSetUpTerms(Tao tao, TaoMappedTerm *f_term, TaoMappedTerm *g_term, TaoMappedTerm *h_term, TaoMappedTerm *h_conjugate_term)
 {
+  TAO_CV   *cv = (TAO_CV *)tao->data;
   PetscBool is_sum;
+
   PetscFunctionBegin;
   // here we do logic to determine which terms in tao->objective_term.term correspond to which terms in the CV solver
   PetscCheck(g_term->map == NULL, PETSC_COMM_SELF, PETSC_ERR_SUP, "TAOCV: g term cannot have a nontrivial map");
   PetscCall(PetscObjectTypeCompare((PetscObject)tao->objective_term.term, TAOTERMSUM, &is_sum));
   if (is_sum) {
-    PetscInt f_idx = 0;
-    PetscInt g_idx = 1;
-    PetscInt h_idx = 2;
+    PetscInt f_idx = 1;
+    PetscInt g_idx = 2;
+    PetscInt h_idx = 3;
 
     { // f
       TaoTerm f;
@@ -330,7 +337,7 @@ static PetscErrorCode TaoCVSetUpTerms(Tao tao, TaoMappedTerm *f_term, TaoMappedT
       const char *prefix;
 
       PetscCall(TaoTermSumGetSubterm(tao->objective_term.term, g_idx, &prefix, &scale, &g, &map));
-      PetscCall(TaoMappedTermSetData(f_term, prefix, scale, g, map));
+      PetscCall(TaoMappedTermSetData(g_term, prefix, scale, g, map));
     }
     { // h
       TaoTerm h;
@@ -339,7 +346,10 @@ static PetscErrorCode TaoCVSetUpTerms(Tao tao, TaoMappedTerm *f_term, TaoMappedT
       const char *prefix;
 
       PetscCall(TaoTermSumGetSubterm(tao->objective_term.term, h_idx, &prefix, &scale, &h, &map));
-      PetscCall(TaoMappedTermSetData(f_term, prefix, scale, h, map));
+      PetscCall(TaoMappedTermSetData(h_term, prefix, scale, h, map));
+      PetscCall(TaoTermCreateConvexConjugate(h, &cv->h_cj_term));
+      //TODO how does options prefix work for conjugate?
+      PetscCall(TaoMappedTermSetData(h_conjugate_term, prefix, scale, cv->h_cj_term, map));
     }
   }
   //TODO is !is_sum, then what?
@@ -352,6 +362,8 @@ static PetscErrorCode TaoSetUp_CV(Tao tao)
   TAO_CV *cv = (TAO_CV *)tao->data;
 
   PetscFunctionBegin;
+  PetscCall(TaoCVSetUpTerms(tao, &cv->f_term, &cv->g_term, &cv->h_term, &cv->h_cj_mapped_term));
+  //TODO should i set cv->h_lmap after this?
   /* sol sized vectors */
   if (!tao->gradient) PetscCall(VecDuplicate(tao->solution, &tao->gradient));
   if (!cv->workvec) PetscCall(VecDuplicate(tao->solution, &cv->workvec));
@@ -360,23 +372,17 @@ static PetscErrorCode TaoSetUp_CV(Tao tao)
   if (!cv->grad_old) PetscCall(VecDuplicate(tao->solution, &cv->grad_old));
   if (!cv->ATy) PetscCall(VecDuplicate(tao->solution, &cv->ATy));
   /* dual sized vectors */
-  if (!cv->Ax) PetscCall(MatCreateVecs(cv->h_lmap, NULL, &cv->Ax));
-  if (!cv->Ax_old) PetscCall(MatCreateVecs(cv->h_lmap, NULL, &cv->Ax_old));
-  if (!tao->dualvec) PetscCall(MatCreateVecs(cv->h_lmap, NULL, &tao->dualvec));
-  if (!cv->dualvec_test || !cv->lmap_norm_set) PetscCall(MatCreateVecs(cv->h_lmap, NULL, &cv->dualvec_test));
-  if (!cv->dualvec_work) PetscCall(MatCreateVecs(cv->h_lmap, NULL, &cv->dualvec_work));
-  if (!cv->dualvec_work2) PetscCall(MatCreateVecs(cv->h_lmap, NULL, &cv->dualvec_work2));
+  if (!cv->Ax) PetscCall(MatCreateVecs(cv->h_term.map, NULL, &cv->Ax));
+  if (!cv->Ax_old) PetscCall(MatCreateVecs(cv->h_term.map, NULL, &cv->Ax_old));
+  if (!tao->dualvec) PetscCall(MatCreateVecs(cv->h_term.map, NULL, &tao->dualvec));
+  if (!cv->dualvec_test || !cv->lmap_norm_set) PetscCall(MatCreateVecs(cv->h_term.map, NULL, &cv->dualvec_test));
+  if (!cv->dualvec_work) PetscCall(MatCreateVecs(cv->h_term.map, NULL, &cv->dualvec_work));
+  if (!cv->dualvec_work2) PetscCall(MatCreateVecs(cv->h_term.map, NULL, &cv->dualvec_work2));
 
   //TODO I think I need two, but how do I distinguish?
 //  PetscCall(TaoLineSearchUseMappedTerm(tao->linesearch, cv->f_term));
 //  PetscCall(TaoLineSearchUseMappedTerm(tao->linesearch, cv->h_term));
 
-//  if (cv->smoothterm) {
-//    PetscCall(TaoLineSearchUseDM(tao->linesearch, cv->smoothterm));
-//    tao->linesearch->tao = tao; // ls->usetao is still FALSE, but need this for internal methods
-//  } else PetscCall(TaoLineSearchUseTaoRoutines(tao->linesearch, tao));
-//  PetscCall(TaoLineSearchSetProxAndLinearMap(tao->linesearch, cv->h_prox, cv->h_scale, cv->reg, cv->h_lmap, cv->h_lmap_norm));
-//
 //  tao->linesearch->ops->preapply   = TaoCV_LineSearch_PreApply_Private;
 //  tao->linesearch->ops->update     = TaoCV_LineSearch_Update_Private;
 //  tao->linesearch->ops->postupdate = TaoCV_LineSearch_PostUpdate_Private;
@@ -387,7 +393,6 @@ static PetscErrorCode TaoSetUp_CV(Tao tao)
   armP->dualvec_test = cv->dualvec_test;
   PetscCall(PetscObjectReference((PetscObject)armP->dualvec_work));
   PetscCall(PetscObjectReference((PetscObject)armP->dualvec_test));
-  PetscCall(TaoCVSetUpTerms(tao, &cv->f_term, &cv->g_term, &cv->h_term));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -455,15 +460,15 @@ PETSC_EXTERN PetscErrorCode TaoCreate_CV(Tao tao)
 
   tao->data = (void *)cv;
 
-  cv->h_scale    = 1.;
-  cv->g_scale    = 1.;
-  cv->gnorm_norm = 0.;
-  cv->R          = 0.95;
-  cv->r          = 2.;
-  cv->pd_ratio   = 0.01;
-  cv->Theta      = 1.2;
-  cv->eta        = 1.;
-//  cv->smoothterm = NULL;
+  cv->h_scale     = 1.;
+  cv->g_scale     = 1.;
+  cv->gnorm_norm  = 0.;
+  cv->R           = 0.95;
+  cv->r           = 2.;
+  cv->pd_ratio    = 0.01;
+  cv->Theta       = 1.2;
+  cv->eta         = 1.;
+  cv->h_lmap_norm = 0.; //TODO ?
 
   PetscCall(TaoLineSearchCreate(PetscObjectComm((PetscObject)tao), &tao->linesearch));
   PetscCall(PetscObjectIncrementTabLevel((PetscObject)tao->linesearch, (PetscObject)tao, 1));
@@ -480,5 +485,15 @@ PETSC_EXTERN PetscErrorCode TaoCreate_CV(Tao tao)
 //  PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoPSSetSmoothTerm_C", TaoPSSetSmoothTerm_CV));
 //  PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoPSSetNonSmoothTerm_C", TaoPSSetNonSmoothTerm_CV));
 //  PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoPSSetNonSmoothTermWithLinearMap_C", TaoPSSetNonSmoothTermWithLinearMap_CV));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode TaoCVSetInitialNormEstimate(Tao tao, PetscReal norm)
+{
+  TAO_CV *cv = (TAO_CV *)tao->data;
+
+  PetscFunctionBegin;
+  PetscCheck(norm >= 0, PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "Norm cannot be negative");
+  cv->h_lmap_norm = norm;
   PetscFunctionReturn(PETSC_SUCCESS);
 }

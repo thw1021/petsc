@@ -320,56 +320,6 @@ PetscErrorCode TaoTermCreate(MPI_Comm comm, TaoTerm *term)
 }
 
 /*@
-  TaoTermCreateConvexConjugate - Create a convex conjugate version of `TaoTerm`
-
-  Collective
-
-  Input Parameter:
-. term - the original `TaoTerm`
-
-  Output Parameter:
-. cc_term - a new TaoTerm, that is convex conjugate of input term
-
-  Level: beginner
-
-.seealso: [](ch_tao), `Tao`, `TaoTerm`, `TaoTermCreateConvexConjugateVirtual()`
-@*/
-PetscErrorCode TaoTermCreateConvexConjugate(TaoTerm term, TaoTerm *cc_term)
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
-  PetscAssertPointer(term, 2);
-  PetscCall(TaoTermCreate(PetscObjectComm((PetscObject)term), cc_term));
-  PetscCall(TaoTermSetType(*cc_term, TAOTERMCONJUGATE));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@
-  TaoTermCreateConvexConjugateVirtual - Create a convex conjugate version of `TaoTerm` virtually
-
-  Collective
-
-  Input Parameter:
-. term - the original `TaoTerm`
-
-  Output Parameter:
-. cc_term - a new TaoTerm, that is convex conjugate of input term
-
-  Level: beginner
-
-.seealso: [](ch_tao), `Tao`, `TaoTerm`, `TaoTermCreateConvexConjugate()`
-@*/
-PetscErrorCode TaoTermCreateConvexConjugateVirtual(TaoTerm term, TaoTerm *cc_term)
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
-  PetscAssertPointer(term, 2);
-  PetscCall(TaoTermCreate(PetscObjectComm((PetscObject)term), cc_term));
-  PetscCall(TaoTermSetType(*cc_term, TAOTERMCONJUGATE));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@
   TaoTermObjective - Evaluate a `TaoTerm` for a given set of solution variables and parameters
 
   Collective
@@ -724,30 +674,26 @@ PetscErrorCode TaoTermHessianMult(TaoTerm term, Vec x, Vec params, Vec v, Vec Hv
 PetscErrorCode TaoTermProximalMap(TaoTerm fterm, Vec p, PetscReal alpha, TaoTerm gterm, Vec q, PetscReal beta, Vec x)
 {
   PetscFunctionBegin;
+  //TODO no lock here. done in each solvers
+  //Q: how does that work for things like conjugate?
   PetscValidHeaderSpecific(fterm, TAOTERM_CLASSID, 1);
   if (gterm) PetscValidHeaderSpecific(gterm, TAOTERM_CLASSID, 5);
   if (p) {
     PetscValidHeaderSpecific(p, VEC_CLASSID, 2);
     PetscCheckSameComm(fterm, 1, p, 2);
-    PetscCall(VecLockReadPush(p));
   }
   if (q) {
     PetscValidHeaderSpecific(q, VEC_CLASSID, 5);
     PetscCheckSameComm(fterm, 1, q, 5);
-    PetscCall(VecLockReadPush(q));
   }
   PetscValidHeaderSpecific(x, VEC_CLASSID, 7);
   PetscValidLogicalCollectiveReal(fterm, alpha, 3);
   PetscValidLogicalCollectiveReal(fterm, beta, 6);
   //TODO test comm compat of all possible permutations?
   PetscCheckSameComm(fterm, 1, x, 7);
-  PetscCall(VecLockReadPush(x));
   PetscCall(PetscLogEventBegin(TAOTERM_ProxMap, fterm, x, NULL, NULL));
   PetscUseTypeMethod(fterm, proximalmap, p, alpha, gterm, q, beta, x);
   PetscCall(PetscLogEventEnd(TAOTERM_ProxMap, fterm, x, NULL, NULL));
-  if (p) PetscCall(VecLockReadPop(p));
-  if (q) PetscCall(VecLockReadPop(q));
-  PetscCall(VecLockReadPop(x));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

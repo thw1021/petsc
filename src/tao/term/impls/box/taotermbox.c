@@ -22,6 +22,13 @@ static PetscErrorCode TaoTermDestroy_Box(TaoTerm term)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode TaoTermObjective_Box(TaoTerm term, Vec x, Vec params, PetscReal *value)
+{
+  PetscFunctionBegin;
+  *value = 0.;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 //y: input, x: output
 //TODO what if input and output vec are the same?
 static PetscErrorCode TaoTermBoxProx_Internal(TaoTerm term, Vec y, Vec x)
@@ -264,7 +271,7 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Box(TaoTerm term)
   //TODO does making it NULL will error out for TAOTERMSUM?
   //For these, maybe having empty routine that doesnt do anything
   //but merely log petscinfo saying nothing is done, is better?
-  term->ops->objective             = NULL;
+  term->ops->objective             = TaoTermObjective_Box;
   term->ops->gradient              = NULL;
   term->ops->objectiveandgradient  = NULL;
   term->ops->hessian               = NULL;

@@ -10,6 +10,13 @@ static PetscErrorCode TaoTermDestroy_Zero(TaoTerm term)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode TaoTermObjective_Zero(TaoTerm term, Vec x, Vec params, PetscReal *value)
+{
+  PetscFunctionBegin;
+  *value = 0.;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode TaoTermProximalMap_Zero(TaoTerm term, Vec p, PetscReal alpha, TaoTerm g, Vec q, PetscReal beta, Vec x)
 {
   PetscBool          is_zero;
@@ -50,7 +57,7 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Zero(TaoTerm term)
   //TODO does making it NULL will error out for TAOTERMSUM?
   //For these, maybe having empty routine that doesnt do anything
   //but merely log petscinfo saying nothing is done, is better?
-  term->ops->objective             = NULL;
+  term->ops->objective             = TaoTermObjective_Zero;
   term->ops->gradient              = NULL;
   term->ops->objectiveandgradient  = NULL;
   term->ops->hessian               = NULL;
