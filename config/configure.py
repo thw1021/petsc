@@ -196,6 +196,18 @@ def chksynonyms():
     # restore 'sys.argv[l]' from the intermediate var 'name'
     sys.argv[l] = name
 
+def chkpetsc4pydistutils():
+  for l in sys.argv:
+    if l in ['--with-petsc4py',  '--with-petsc4py=1', '--with-petsc4py=true', '--with-petsc4py=yes']:
+      try:
+        import distutils
+      except:
+        print('===============================================================================')
+        print(' *** Install setuptools, i.e. python -m pip install setuptools, then run    ***')
+        print(' *** ./configure again.                                                     ***')
+        print('===============================================================================')
+        sys.exit(3)
+
 def chkwincompilerusinglink():
   for arg in sys.argv:
     if (arg.find('win32fe') >= 0 and (arg.find('ifort') >=0 or arg.find('icl') >=0)):
@@ -428,6 +440,8 @@ def petsc_configure(configure_options):
   except (TypeError, ValueError) as e:
     msg = logger.build_multiline_error_message('ERROR in COMMAND LINE ARGUMENT to ./configure', str(e))
     sys.exit(msg)
+
+  chkpetsc4pydistutils()
   chkbrokencygwin()
   # Disable threads on RHL9
   chkrhl9()
