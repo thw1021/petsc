@@ -2703,6 +2703,14 @@ if (dlclose(handle)) {
         del self.relocatableLinkerFlags
     return
 
+  def checkObjcopy(self):
+    '''Check for objcopy'''
+    compiler = self.getCompiler(lang=self.languages.clanguage)
+    objcopy = 'objcopy'
+    if self.isClang(compiler,self.log):
+        objcopy = 'llvm-objcopy'
+    self.getExecutable(objcopy, getFullPath = 1,setMakeMacro=1, resultName='OBJCOPY')
+
   def output(self):
     '''Output module data as defines and substitutions'''
     if hasattr(self, 'CC'):
@@ -2924,6 +2932,7 @@ if (dlclose(handle)) {
     self.executeTest(self.checkLibC)
     self.executeTest(self.checkDynamicLinker)
     self.executeTest(self.checkRelocatableLinker)
+    self.executeTest(self.checkObjcopy)
     if hasattr(self.framework,'conda_active'):
       del self.framework.additional_error_message
 
