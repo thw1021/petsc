@@ -236,6 +236,9 @@ install-lib:
 	@${PYTHON} ./config/install.py -destDir=${DESTDIR} -no-examples
 	+${OMAKE_SELF} PETSC_ARCH=${PETSC_ARCH} PETSC_DIR=${PETSC_DIR} PETSC_INSTALL=$@ install-builtafterpetsc
 
+install-precision-prefixed-lib:
+	@${PYTHON} ./config/install.py -destDir=${DESTDIR} -precision-prefixed-lib
+
 install-builtafterpetsc:
 	+${OMAKE_SELF} PETSC_ARCH=${PETSC_ARCH} PETSC_DIR=${PETSC_DIR} PETSC_INSTALL=${PETSC_INSTALL} petsc4py-install libmesh-install mfem-install slepc-install hpddm-install amrex-install bamg-install
 
@@ -542,4 +545,4 @@ updatedatafiles:
 .PHONY: info info_h all deletelibs allclean update \
         alletags etags etags_complete etags_noexamples etags_makefiles etags_examples etags_fexamples alldoc allmanpages \
         allcleanhtml  countfortranfunctions \
-        start_configure configure_petsc configure_clean matlabbin install
+        start_configure configure_petsc configure_clean matlabbin install install-precision-prefixed-lib

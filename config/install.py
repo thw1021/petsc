@@ -46,6 +46,7 @@ class Installer(script.Script):
     script.Script.setupHelp(self, help)
     help.addArgument('Installer', '-destDir=<path>', nargs.Arg(None, '', 'Destination Directory for install'))
     help.addArgument('Installer', '-no-examples', nargs.Arg(None, '', 'Skip installing examples'))
+    help.addArgument('Installer', '-precision-prefixed-lib', nargs.Arg(None, '', 'Only install the precision-prefixed library'))
     return
 
 
@@ -518,9 +519,19 @@ for file in files:
     shutil.copystat(src,dst)
     return
 
+  def copyPrecisionPrefixedLib(self, src, dst):
+    '''copyLib, but only the precision prefixed fies'''
+    if self.precision_prefixed_basename in src:
+        self.copyLib(src, dst)
+    return
+
+
   def installLib(self):
-    self.copies.extend(self.copytree(self.archLibDir, self.destLibDir, copyFunc = self.copyLib, exclude = ['.DIR'],recurse = 0))
-    self.copies.extend(self.copytree(os.path.join(self.archLibDir,'pkgconfig'), os.path.join(self.destLibDir,'pkgconfig'), copyFunc = self.copyLib, exclude = ['.DIR'],recurse = 0))
+    copyFunc = self.copyLib
+    if self.argDB['precision-prefixed-lib']:
+        copyFunc = self.copyPrecisionPrefixedLib
+    self.copies.extend(self.copytree(self.archLibDir, self.destLibDir, copyFunc = copyFunc, exclude = ['.DIR'],recurse = 0))
+    self.copies.extend(self.copytree(os.path.join(self.archLibDir,'pkgconfig'), os.path.join(self.destLibDir,'pkgconfig'), copyFunc = copyFunc, exclude = ['.DIR'],recurse = 0))
     return
 
 
@@ -549,6 +560,9 @@ Before use - please copy/install over to specified prefix: %s
     self.setupDirectories()
     self.checkPrefix()
     self.checkDestdir()
+    if self.argDB['precision-prefixed-lib']:
+      precision = self.executeShellCommand(' '.join(['PETSC_ARCH='+PETSC_ARCH, 'make', '-f', PETSC_DIR+'/gmakefile', 'print', 'VAR=PETSC_PRECISION']))[0]
+      self.precision_prefixed_basename = 'petsc_' + precision
     return
 
   def runcopy(self):
@@ -564,15 +578,19 @@ Before use - please copy/install over to specified prefix: %s
         print('Unable to create', self.destDir, 'Perhaps you need to do "sudo make install"')
         print('********************************************************************')
         sys.exit(1)
-    self.installIncludes()
-    self.installConf()
-    self.installBin()
+    if not self.argDB['precision-prefixed-lib']:
+        self.installIncludes()
+        self.installConf()
+        self.installBin()
     self.installLib()
-    self.installShare()
-    self.createUninstaller()
+    if not self.argDB['precision-prefixed-lib']:
+        self.installShare()
+        self.createUninstaller()
     return
 
   def runfix(self):
+    if self.argDB['precision-prefixed-lib']:
+      return
     self.fixConf()
     using_build_backend = any(
       os.environ.get(prefix + '_BUILD_BACKEND')

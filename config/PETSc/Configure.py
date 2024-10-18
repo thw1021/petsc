@@ -211,7 +211,9 @@ class Configure(config.base.Configure):
       fd.write('Version: %s\n' % self.petscdir.version)
       if full:
         fd.write('Cflags: ' + ' '.join([self.setCompilers.CPPFLAGS] + cflags_inc) + '\n')
-      fd.write('Libs: '+self.libraries.toStringNoDupes(['-L${libdir}', self.petsclib], with_rpath=False)+'\n')
+        fd.write('Libs: '+self.libraries.toStringNoDupes(['-L${libdir}', self.petsclib], with_rpath=False)+'\n')
+      else:
+        fd.write('Libs: '+self.libraries.toStringNoDupes(['-L${libdir}', self.precision_prefixed_lib], with_rpath=False)+'\n')
       # Remove RPATH flags from library list.  User can add them using
       # pkg-config --variable=ldflag_rpath and pkg-config --libs-only-L
       fd.write('Libs.private: '+self.libraries.toStringNoDupes([f for f in self.packagelibs+self.complibs if not f.startswith(self.setCompilers.CSharedLinkerFlag)], with_rpath=False)+'\n')
@@ -1441,7 +1443,9 @@ char assert_aligned[(sizeof(struct mystruct)==16)*2-1];
     self.DumpPkgconfig('PETSc.pc')
     self.DumpPkgconfig('petsc.pc')
     if self.precision_prefixed_recipe:
-      self.DumpPkgconfig('petsc_' + str(self.scalartypes.precision).lower() + '.pc', full=False)
+      self.precision_prefixed_name = 'petsc_' + str(self.scalartypes.precision).lower()
+      self.precision_prefixed_lib = '-l' + self.precision_prefixed_name
+      self.DumpPkgconfig(self.precision_prefixed_name + '.pc', full=False)
     self.DumpModule()
     self.postProcessPackages()
     self.framework.log.write('================================================================================\n')
