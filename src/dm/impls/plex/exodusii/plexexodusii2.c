@@ -59,7 +59,7 @@ static PetscErrorCode PetscViewerFlush_ExodusII(PetscViewer v)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscViewerSetFromOptions_ExodusII(PetscViewer v, PetscOptionItems *PetscOptionsObject)
+static PetscErrorCode PetscViewerSetFromOptions_ExodusII(PetscViewer v, PetscOptionItems PetscOptionsObject)
 {
   PetscFunctionBegin;
   PetscOptionsHeadBegin(PetscOptionsObject, "ExodusII PetscViewer Options");
@@ -275,7 +275,7 @@ PetscErrorCode PetscViewerExodusIISetNodalVariable(PetscViewer viewer, PetscExod
   Input Parameters:
 . viewer - a `PetscViewer` of type `PETSCVIEWEREXODUSII`
 
-  Output Parameters:
+  Output Parameter:
 . num - the number variables in the exodusII file
 
   Level: intermediate
@@ -314,7 +314,7 @@ PetscErrorCode PetscViewerExodusIIGetZonalVariable(PetscViewer viewer, PetscExod
   Input Parameters:
 . viewer - a `PetscViewer` of type `PETSCVIEWEREXODUSII`
 
-  Output Parameters:
+  Output Parameter:
 . num - the number variables in the exodusII file
 
   Level: intermediate
@@ -538,7 +538,7 @@ PetscErrorCode PetscViewerExodusIISetNodalVariableNames(PetscViewer viewer, cons
 + viewer  - a `PetscViewer` of type `PETSCVIEWEREXODUSII`
 - numVars - the number of zonal variable names to retrieve
 
-  Output Parameters:
+  Output Parameter:
 . varNames - pointer to a 2D array where the zonal variable names will be saved
 
   Level: intermediate
@@ -580,7 +580,7 @@ PetscErrorCode PetscViewerExodusIIGetZonalVariableNames(PetscViewer viewer, Pets
 + viewer  - a `PetscViewer` of type `PETSCVIEWEREXODUSII`
 - numVars - the number of nodal variable names to retrieve
 
-  Output Parameters:
+  Output Parameter:
 . varNames - 2D array where the nodal variable names will be saved
 
   Level: intermediate
