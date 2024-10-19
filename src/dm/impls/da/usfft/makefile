@@ -1,4 +1,5 @@
 -include ../../../../../petscdir.mk
+#requirespackage    'THIS_IS_BROKEN_BROKEN_STUFF_IS_NEVER_SUPPOSE_TO_BE_IN_PETSC!'
 #requirespackage   'PETSC_HAVE_FFTW'
 #requiresprecision double
 

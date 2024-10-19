@@ -18,7 +18,7 @@
       PetscScalar    one, v
       IS             perm,iperm
       PetscErrorCode ierr
-      PetscReal      info(MAT_FACTORINFO_SIZE)
+      MatFactorInfo  info
 
       PetscCallA(PetscInitialize(PETSC_NULL_CHARACTER, ierr))
       m    = 10

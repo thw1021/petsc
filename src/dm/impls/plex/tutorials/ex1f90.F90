@@ -1,7 +1,7 @@
       program DMPlexTestField
-#include "petsc/finclude/petscdmplex.h"
-#include "petsc/finclude/petscdmlabel.h"
-      use petscdmplex
+#include <petsc/finclude/petscdmplex.h>
+#include <petsc/finclude/petscdmlabel.h>
+      use petscdm
       use petscsys
       implicit none
 
@@ -33,7 +33,7 @@
       PetscCallA(DMCreate(PETSC_COMM_WORLD, dm, ierr))
       PetscCallA(DMSetType(dm, DMPLEX, ierr))
       PetscCallA(DMSetFromOptions(dm, ierr))
-      PetscCallA(DMViewFromOptions(dm, PETSC_NULL_VEC, '-dm_view', ierr))
+      PetscCallA(DMViewFromOptions(dm, PETSC_NULL_OBJECT, '-dm_view', ierr))
       PetscCallA(DMGetDimension(dm, dim, ierr))
 !     Create a scalar field u, a vector field v, and a surface vector field w
       numFields  = 3
