@@ -1019,7 +1019,7 @@ PETSC_EXTERN PetscErrorCode VecCreateSeqViennaCLWithArray(MPI_Comm comm, PetscIn
           `VecViennaCLPlaceArray()`, `VecPlaceArray()`, `VecCreateSeqCUDAWithArrays()`,
           `VecViennaCLAllocateCheckHost()`
 @*/
-PetscErrorCode VecCreateSeqViennaCLWithArrays(MPI_Comm comm, PetscInt bs, PetscInt n, const PetscScalar cpuarray[], const ViennaCLVector *viennaclvec, Vec *V)
+PetscErrorCode VecCreateSeqViennaCLWithArrays(MPI_Comm comm, PetscInt bs, PetscInt n, const PetscScalar cpuarray[], const ViennaCLVector *viennaclvec, Vec *V) PeNS
 {
   PetscMPIInt size;
 

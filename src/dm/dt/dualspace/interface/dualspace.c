@@ -220,7 +220,7 @@ static PetscErrorCode PetscDualSpaceView_ASCII(PetscDualSpace sp, PetscViewer v)
 
 .seealso: `PetscDualSpace`, `PetscDualSpaceView()`, `PetscObjectViewFromOptions()`, `PetscDualSpaceCreate()`
 @*/
-PetscErrorCode PetscDualSpaceViewFromOptions(PetscDualSpace A, PetscObject obj, const char name[])
+PetscErrorCode PetscDualSpaceViewFromOptions(PetscDualSpace A, PeOp PetscObject obj, const char name[])
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A, PETSCDUALSPACE_CLASSID, 1);
@@ -1250,14 +1250,14 @@ PetscErrorCode PetscDualSpaceApplyInteriorDefault(PetscDualSpace sp, const Petsc
 . sp - The dualspace
 
   Output Parameters:
-+ allNodes - A `PetscQuadrature` object containing all evaluation nodes
-- allMat   - A `Mat` for the node-to-dof transformation
++ allNodes - A `PetscQuadrature` object containing all evaluation nodes, pass `NULL` if not needed
+- allMat   - A `Mat` for the node-to-dof transformation, pass `NULL` if not needed
 
   Level: advanced
 
 .seealso: `PetscQuadrature`, `PetscDualSpace`, `PetscDualSpaceCreate()`, `Mat`
 @*/
-PetscErrorCode PetscDualSpaceGetAllData(PetscDualSpace sp, PetscQuadrature *allNodes, Mat *allMat)
+PetscErrorCode PetscDualSpaceGetAllData(PetscDualSpace sp, PeOp PetscQuadrature *allNodes, PeOp Mat *allMat)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCDUALSPACE_CLASSID, 1);
@@ -1354,10 +1354,12 @@ PetscErrorCode PetscDualSpaceCreateAllDataDefault(PetscDualSpace sp, PetscQuadra
 . sp - The dualspace
 
   Output Parameters:
-+ intNodes - A `PetscQuadrature` object containing all evaluation points needed to evaluate interior degrees of freedom
++ intNodes - A `PetscQuadrature` object containing all evaluation points needed to evaluate interior degrees of freedom,
+             pass `NULL` if not needed
 - intMat   - A matrix that computes dual space values from point values: size [spdim0 x (npoints * nc)], where spdim0 is
              the size of the constrained layout (`PetscSectionGetConstrainStorageSize()`) of the dual space section,
              npoints is the number of points in intNodes and nc is `PetscDualSpaceGetNumComponents()`.
+             Pass `NULL` if not needed
 
   Level: advanced
 
@@ -1369,7 +1371,7 @@ PetscErrorCode PetscDualSpaceCreateAllDataDefault(PetscDualSpace sp, PetscQuadra
 
 .seealso: `PetscDualSpace`, `PetscQuadrature`, `Mat`, `PetscDualSpaceCreate()`, `PetscDualSpaceGetDimension()`, `PetscDualSpaceGetNumComponents()`, `PetscQuadratureGetData()`
 @*/
-PetscErrorCode PetscDualSpaceGetInteriorData(PetscDualSpace sp, PetscQuadrature *intNodes, Mat *intMat)
+PetscErrorCode PetscDualSpaceGetInteriorData(PetscDualSpace sp, PeOp PetscQuadrature *intNodes, PeOp Mat *intMat)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCDUALSPACE_CLASSID, 1);
@@ -1599,14 +1601,14 @@ PetscErrorCode PetscDualSpaceApplyFVM(PetscDualSpace sp, PetscInt f, PetscReal t
 
   Output Parameter:
 . subsp - the subspace.  Note that the functionals in the subspace are with respect to the intrinsic geometry of the
-  point, which will be of lesser dimension if height > 0.
+          point, which will be of lesser dimension if height > 0.
 
   Level: advanced
 
   Notes:
   If the dual space is not defined on mesh points of the given height (e.g. if the space is discontinuous and
   pointwise values are not defined on the element boundaries), or if the implementation of `PetscDualSpace` does not
-  support extracting subspaces, then NULL is returned.
+  support extracting subspaces, then `NULL` is returned.
 
   This does not increment the reference count on the returned dual space, and the user should not destroy it.
 
@@ -1667,7 +1669,7 @@ PetscErrorCode PetscDualSpaceGetHeightSubspace(PetscDualSpace sp, PetscInt heigh
 + sp    - the `PetscDualSpace` object
 - point - the point (in the dual space's DM) for which the subspace is desired
 
-  Output Parameters:
+  Output Parameter:
 . bdsp - the subspace.
 
   Level: advanced

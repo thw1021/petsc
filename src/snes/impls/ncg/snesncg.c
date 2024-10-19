@@ -89,7 +89,7 @@ PETSC_EXTERN PetscErrorCode SNESLineSearchCreate_NCGLinear(SNESLineSearch linese
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode SNESSetFromOptions_NCG(SNES snes, PetscOptionItems *PetscOptionsObject)
+static PetscErrorCode SNESSetFromOptions_NCG(SNES snes, PetscOptionItems PetscOptionsObject)
 {
   SNES_NCG      *ncg     = (SNES_NCG *)snes->data;
   PetscBool      debug   = PETSC_FALSE;

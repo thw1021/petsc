@@ -232,7 +232,6 @@ PETSC_EXTERN PetscErrorCode SNESKSPGetUseEW(SNES, PetscBool *);
 PETSC_EXTERN PetscErrorCode SNESKSPSetParametersEW(SNES, PetscInt, PetscReal, PetscReal, PetscReal, PetscReal, PetscReal, PetscReal);
 PETSC_EXTERN PetscErrorCode SNESKSPGetParametersEW(SNES, PetscInt *, PetscReal *, PetscReal *, PetscReal *, PetscReal *, PetscReal *, PetscReal *);
 
-#include <petscdrawtypes.h>
 PETSC_EXTERN PetscErrorCode SNESMonitorLGRange(SNES, PetscInt, PetscReal, void *);
 
 PETSC_EXTERN PetscErrorCode SNESSetApplicationContext(SNES, void *);
@@ -817,8 +816,8 @@ PETSC_EXTERN PetscErrorCode SNESLineSearchSetLambda(SNESLineSearch, PetscReal);
 PETSC_EXTERN PetscErrorCode SNESLineSearchGetDamping(SNESLineSearch, PetscReal *);
 PETSC_EXTERN PetscErrorCode SNESLineSearchSetDamping(SNESLineSearch, PetscReal);
 
-PETSC_EXTERN PetscErrorCode SNESLineSearchGetOrder(SNESLineSearch, PetscInt *order);
-PETSC_EXTERN PetscErrorCode SNESLineSearchSetOrder(SNESLineSearch, PetscInt order);
+PETSC_EXTERN PetscErrorCode SNESLineSearchGetOrder(SNESLineSearch, PetscInt *);
+PETSC_EXTERN PetscErrorCode SNESLineSearchSetOrder(SNESLineSearch, PetscInt);
 
 /*E
     SNESLineSearchReason - indication if the line search has succeeded or failed and why
@@ -868,8 +867,8 @@ PETSC_EXTERN PetscErrorCode SNESLineSearchSetDefaultMonitor(SNESLineSearch, Pets
 PETSC_EXTERN PetscErrorCode SNESLineSearchGetDefaultMonitor(SNESLineSearch, PetscViewer *);
 PETSC_EXTERN PetscErrorCode SNESLineSearchMonitorSolutionUpdate(SNESLineSearch, PetscViewerAndFormat *);
 
-PETSC_EXTERN PetscErrorCode SNESLineSearchAppendOptionsPrefix(SNESLineSearch, const char prefix[]);
-PETSC_EXTERN PetscErrorCode SNESLineSearchGetOptionsPrefix(SNESLineSearch, const char *prefix[]);
+PETSC_EXTERN PetscErrorCode SNESLineSearchAppendOptionsPrefix(SNESLineSearch, const char[]);
+PETSC_EXTERN PetscErrorCode SNESLineSearchGetOptionsPrefix(SNESLineSearch, const char *[]);
 
 /* Shell interface functions */
 PETSC_EXTERN PetscErrorCode SNESLineSearchShellSetApply(SNESLineSearch, SNESLineSearchShellApplyFn, void *);
@@ -1170,11 +1169,11 @@ PETSC_EXTERN PetscErrorCode SNESQNSetRestartType(SNES, SNESQNRestartType);
 
 PETSC_EXTERN PetscErrorCode SNESNASMGetType(SNES, PCASMType *);
 PETSC_EXTERN PetscErrorCode SNESNASMSetType(SNES, PCASMType);
-PETSC_EXTERN PetscErrorCode SNESNASMGetSubdomains(SNES, PetscInt *, SNES **, VecScatter **, VecScatter **, VecScatter **);
-PETSC_EXTERN PetscErrorCode SNESNASMSetSubdomains(SNES, PetscInt, SNES *, VecScatter *, VecScatter *, VecScatter *);
+PETSC_EXTERN PetscErrorCode SNESNASMGetSubdomains(SNES, PetscInt *, SNES *[], VecScatter *[], VecScatter *[], VecScatter *[]);
+PETSC_EXTERN PetscErrorCode SNESNASMSetSubdomains(SNES, PetscInt, SNES[], VecScatter[], VecScatter[], VecScatter[]);
 PETSC_EXTERN PetscErrorCode SNESNASMSetDamping(SNES, PetscReal);
 PETSC_EXTERN PetscErrorCode SNESNASMGetDamping(SNES, PetscReal *);
-PETSC_EXTERN PetscErrorCode SNESNASMGetSubdomainVecs(SNES, PetscInt *, Vec **, Vec **, Vec **, Vec **);
+PETSC_EXTERN PetscErrorCode SNESNASMGetSubdomainVecs(SNES, PetscInt *, Vec *[], Vec *[], Vec *[], Vec *[]);
 PETSC_EXTERN PetscErrorCode SNESNASMSetComputeFinalJacobian(SNES, PetscBool);
 PETSC_EXTERN PetscErrorCode SNESNASMGetSNES(SNES, PetscInt, SNES *);
 PETSC_EXTERN PetscErrorCode SNESNASMGetNumber(SNES, PetscInt *);

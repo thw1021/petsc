@@ -1180,7 +1180,7 @@ PetscErrorCode DMSwarmGetSize(DM dm, PetscInt *n)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@
+/*@C
   DMSwarmRegisterPetscDatatypeField - Register a field to a `DMSWARM` with a native PETSc data type
 
   Collective
@@ -1306,9 +1306,12 @@ PetscErrorCode DMSwarmRegisterUserDatatypeField(DM dm, const char fieldname[], s
   Notes:
   The array must be returned using a matching call to `DMSwarmRestoreField()`.
 
+  Fortran Note:
+  Only works for `type` of `PETSC_SCALAR`
+
 .seealso: `DM`, `DMSWARM`, `DMSwarmRestoreField()`
 @*/
-PetscErrorCode DMSwarmGetField(DM dm, const char fieldname[], PetscInt *blocksize, PetscDataType *type, void **data)
+PetscErrorCode DMSwarmGetField(DM dm, const char fieldname[], PetscInt *blocksize, PetscDataType *type, void **data) PeNS
 {
   DM_Swarm        *swarm = (DM_Swarm *)dm->data;
   DMSwarmDataField gfield;
@@ -1327,7 +1330,7 @@ PetscErrorCode DMSwarmGetField(DM dm, const char fieldname[], PetscInt *blocksiz
 /*@C
   DMSwarmRestoreField - Restore access to the underlying array storing all entries associated with a registered field
 
-  Not Collective, No Fortran Support
+  Not Collective
 
   Input Parameters:
 + dm        - a `DMSWARM`
@@ -1343,9 +1346,12 @@ PetscErrorCode DMSwarmGetField(DM dm, const char fieldname[], PetscInt *blocksiz
   Notes:
   The user must call `DMSwarmGetField()` prior to calling `DMSwarmRestoreField()`.
 
+  Fortran Note:
+  Only works for `type` of `PETSC_SCALAR`
+
 .seealso: `DM`, `DMSWARM`, `DMSwarmGetField()`
 @*/
-PetscErrorCode DMSwarmRestoreField(DM dm, const char fieldname[], PetscInt *blocksize, PetscDataType *type, void **data)
+PetscErrorCode DMSwarmRestoreField(DM dm, const char fieldname[], PetscInt *blocksize, PetscDataType *type, void **data) PeNS
 {
   DM_Swarm        *swarm = (DM_Swarm *)dm->data;
   DMSwarmDataField gfield;
