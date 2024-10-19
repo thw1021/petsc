@@ -2375,7 +2375,7 @@ static PetscErrorCode DMPlexComputeCellGeometryFEM_Implicit(DM dm, PetscInt cell
 
 .seealso: `DMPLEX`, `DMPlexComputeCellGeometryFEM()`, `DMGetCoordinateSection()`, `DMGetCoordinates()`
 @*/
-PetscErrorCode DMPlexComputeCellGeometryAffineFEM(DM dm, PetscInt cell, PetscReal *v0, PetscReal *J, PetscReal *invJ, PetscReal *detJ)
+PetscErrorCode DMPlexComputeCellGeometryAffineFEM(DM dm, PetscInt cell, PetscReal v0[], PetscReal J[], PetscReal invJ[], PetscReal *detJ)
 {
   PetscFunctionBegin;
   PetscCall(DMPlexComputeCellGeometryFEM_Implicit(dm, cell, NULL, v0, J, invJ, detJ));
@@ -2499,7 +2499,7 @@ static PetscErrorCode DMPlexComputeCellGeometryFEM_FE(DM dm, PetscFE fe, PetscIn
 
 .seealso: `DMPLEX`, `DMGetCoordinateSection()`, `DMGetCoordinates()`
 @*/
-PetscErrorCode DMPlexComputeCellGeometryFEM(DM dm, PetscInt cell, PetscQuadrature quad, PetscReal *v, PetscReal *J, PetscReal *invJ, PetscReal *detJ)
+PetscErrorCode DMPlexComputeCellGeometryFEM(DM dm, PetscInt cell, PetscQuadrature quad, PetscReal *v, PetscReal J[], PetscReal invJ[], PetscReal *detJ)
 {
   DM      cdm;
   PetscFE fe = NULL;

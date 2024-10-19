@@ -31,8 +31,8 @@
 !
 
       module ex5f90tmodule
-#include <petsc/finclude/petscdm.h>
-      use petscdmdef
+#include <petsc/finclude/petscdmda.h>
+      use petscdmda
       type userctx
         type(tDM) da
         PetscInt xs,xe,xm,gxs,gxe,gxm
@@ -67,6 +67,7 @@
       subroutine FormFunction(snesIn,X,F,user,ierr)
 #include <petsc/finclude/petscsnes.h>
       use petscsnes
+      use petscdmda
 
 !  Input/output variables:
       type(tSNES)     snesIn
@@ -138,10 +139,9 @@
       end module f90moduleinterfacest
 
       program main
-#include <petsc/finclude/petscdm.h>
+#include <petsc/finclude/petscdmda.h>
 #include <petsc/finclude/petscsnes.h>
       use petscdmda
-      use petscdm
       use petscsnes
       use ex5f90tmodule
       use f90moduleinterfacest
@@ -206,7 +206,7 @@
       PetscCallA(DMDACreate2d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE, DM_BOUNDARY_NONE,DMDA_STENCIL_BOX,nfour,nfour,PETSC_DECIDE,PETSC_DECIDE,ione,ione,PETSC_NULL_INTEGER_ARRAY,PETSC_NULL_INTEGER_ARRAY,user%da,ierr))
       PetscCallA(DMSetFromOptions(user%da,ierr))
       PetscCallA(DMSetUp(user%da,ierr))
-      PetscCallA(DMDAGetInfo(user%da,PETSC_NULL_INTEGER,user%mx,user%my,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_ENUM,PETSC_NULL_ENUM,PETSC_NULL_ENUM,PETSC_NULL_ENUM,ierr))
+      PetscCallA(DMDAGetInfo(user%da,PETSC_NULL_INTEGER,user%mx,user%my,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_DMBOUNDARYTYPE,PETSC_NULL_DMBOUNDARYTYPE,PETSC_NULL_DMBOUNDARYTYPE,PETSC_NULL_DMDASTENCILTYPE,ierr))
 
 !
 !   Visualize the distribution of the array across the processors
