@@ -39,9 +39,9 @@
 !  in them
 !
       module ex73f90tmodule
-#include <petsc/finclude/petscdm.h>
+#include <petsc/finclude/petscdmda.h>
 #include <petsc/finclude/petscmat.h>
-      use petscdm
+      use petscdmda
       use petscmat
       type ex73f90tmodule_type
         DM::da
@@ -101,10 +101,10 @@
       end subroutine MyObjective
 
       program main
-#include <petsc/finclude/petscdm.h>
+#include <petsc/finclude/petscdmda.h>
 #include <petsc/finclude/petscsnes.h>
       use petscdm
-      use petscdmda
+      use petscdm
       use petscsnes
       use ex73f90tmodule
       use ex73f90tmodule_interfaces
@@ -166,7 +166,7 @@
       PetscCallA(DMDACreate2d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE, DM_BOUNDARY_NONE,DMDA_STENCIL_BOX,nfour,nfour,PETSC_DECIDE,PETSC_DECIDE,ione,ione,PETSC_NULL_INTEGER_ARRAY,PETSC_NULL_INTEGER_ARRAY,daphi,ierr))
       PetscCallA(DMSetFromOptions(daphi,ierr))
       PetscCallA(DMSetUp(daphi,ierr))
-      PetscCallA(DMDAGetInfo(daphi,PETSC_NULL_INTEGER,solver%mx,solver%my,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_ENUM,PETSC_NULL_ENUM,PETSC_NULL_ENUM,PETSC_NULL_ENUM,ierr))
+      PetscCallA(DMDAGetInfo(daphi,PETSC_NULL_INTEGER,solver%mx,solver%my,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_DMBOUNDARYTYPE,PETSC_NULL_DMBOUNDARYTYPE,PETSC_NULL_DMBOUNDARYTYPE,PETSC_NULL_DMDASTENCILTYPE,ierr))
       N1 = solver%my*solver%mx
       N2 = solver%my
       flg = .false.
@@ -395,7 +395,7 @@
 !  done using the standard Fortran style of treating the local
 !  vector data as a multidimensional array over the local mesh.
 !  This routine merely handles ghost point scatters and accesses
-!  the local vector data via VecGetArrayF90() and VecRestoreArrayF90().
+!  the local vector data via VecGetArray() and VecRestoreArray().
 !
       subroutine FormInitialGuess(mysnes,Xnest,ierr)
 #include <petsc/finclude/petscsnes.h>
@@ -585,7 +585,7 @@
       hy2inv = one/(hy*hy)
 
       PetscCall(VecGetOwnershipRange(X1,low,high,ierr))
-      PetscCall(VecGetArrayReadF90(X1,lx_v,ierr))
+      PetscCall(VecGetArrayRead(X1,lx_v,ierr))
 
       ii = 0
       do 20 irow=low,high-1
@@ -620,7 +620,7 @@
          endif
  20   continue
 
-      PetscCall(VecRestoreArrayReadF90(X1,lx_v,ierr))
+      PetscCall(VecRestoreArrayRead(X1,lx_v,ierr))
 
       end subroutine FormJacobianLocal
 
@@ -706,7 +706,7 @@
       sc     = solver%lambda
       ione   = 1
 
-      PetscCall(VecGetArrayReadF90(X1,lx_v,ierr))
+      PetscCall(VecGetArrayRead(X1,lx_v,ierr))
       PetscCall(VecGetOwnershipRange(X1,low,high,ierr))
 
 !     Compute function over the locally owned part of the grid
@@ -725,7 +725,7 @@
          PetscCall(VecSetValues(F1,ione,row,v,INSERT_VALUES,ierr))
  20   continue
 
-      PetscCall(VecRestoreArrayReadF90(X1,lx_v,ierr))
+      PetscCall(VecRestoreArrayRead(X1,lx_v,ierr))
 
       PetscCall(VecAssemblyBegin(F1,ierr))
       PetscCall(VecAssemblyEnd(F1,ierr))

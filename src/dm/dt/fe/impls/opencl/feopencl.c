@@ -734,7 +734,6 @@ static PetscErrorCode PetscFEIntegrateResidual_OpenCL(PetscDS prob, PetscFormKey
 }
 
 PETSC_INTERN PetscErrorCode PetscFESetUp_Basic(PetscFE);
-PETSC_INTERN PetscErrorCode PetscFECreateTabulation_Basic(PetscFE, PetscInt, const PetscReal[], PetscInt, PetscTabulation);
 
 static PetscErrorCode PetscFEInitialize_OpenCL(PetscFE fem)
 {
@@ -744,7 +743,7 @@ static PetscErrorCode PetscFEInitialize_OpenCL(PetscFE fem)
   fem->ops->view                    = NULL;
   fem->ops->destroy                 = PetscFEDestroy_OpenCL;
   fem->ops->getdimension            = PetscFEGetDimension_Basic;
-  fem->ops->createtabulation        = PetscFECreateTabulation_Basic;
+  fem->ops->computetabulation       = PetscFECreateTabulation;
   fem->ops->integrateresidual       = PetscFEIntegrateResidual_OpenCL;
   fem->ops->integratebdresidual     = NULL /* PetscFEIntegrateBdResidual_OpenCL */;
   fem->ops->integratejacobianaction = NULL /* PetscFEIntegrateJacobianAction_OpenCL */;
