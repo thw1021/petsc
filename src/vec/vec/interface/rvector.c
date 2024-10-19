@@ -309,7 +309,7 @@ PetscErrorCode VecNormalize(Vec x, PetscReal *val)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   VecMax - Determines the vector component with maximum real part and its location.
 
   Collective
@@ -349,7 +349,7 @@ PetscErrorCode VecMax(Vec x, PetscInt *p, PetscReal *val)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   VecMin - Determines the vector component with minimum real part and its location.
 
   Collective
@@ -2007,13 +2007,15 @@ PetscErrorCode VecRestoreLocalVector(Vec v, Vec w)
   this routine will copy the data to a contiguous array and return a pointer to that. You MUST
   call `VecRestoreArray()` when you no longer need access to the array.
 
-  Fortran Notes:
-  `VecGetArray()` Fortran binding is deprecated (since PETSc 3.19), use `VecGetArrayF90()`
+  Fortran Note:
+.vb
+  PetscScalar, pointer :: a(:)
+.ve
 
-.seealso: [](ch_vectors), `Vec`, `VecRestoreArray()`, `VecGetArrayRead()`, `VecGetArrays()`, `VecGetArrayF90()`, `VecGetArrayReadF90()`, `VecPlaceArray()`, `VecGetArray2d()`,
+.seealso: [](ch_vectors), `Vec`, `VecRestoreArray()`, `VecGetArrayRead()`, `VecGetArrays()`, `VecPlaceArray()`, `VecGetArray2d()`,
           `VecGetArrayPair()`, `VecRestoreArrayPair()`, `VecGetArrayWrite()`, `VecRestoreArrayWrite()`
 @*/
-PetscErrorCode VecGetArray(Vec x, PetscScalar **a)
+PetscErrorCode VecGetArray(Vec x, PetscScalar *a[])
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x, VEC_CLASSID, 1);
@@ -2037,13 +2039,10 @@ PetscErrorCode VecGetArray(Vec x, PetscScalar **a)
 
   Level: beginner
 
-  Fortran Notes:
-  `VecRestoreArray()` Fortran binding is deprecated (since PETSc 3.19), use `VecRestoreArrayF90()`
-
-.seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArrayRead()`, `VecRestoreArrays()`, `VecRestoreArrayF90()`, `VecRestoreArrayReadF90()`, `VecPlaceArray()`, `VecRestoreArray2d()`,
+.seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArrayRead()`, `VecRestoreArrays()`, `VecPlaceArray()`, `VecRestoreArray2d()`,
           `VecGetArrayPair()`, `VecRestoreArrayPair()`
 @*/
-PetscErrorCode VecRestoreArray(Vec x, PetscScalar **a)
+PetscErrorCode VecRestoreArray(Vec x, PetscScalar *a[])
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x, VEC_CLASSID, 1);
@@ -2077,12 +2076,9 @@ PetscErrorCode VecRestoreArray(Vec x, PetscScalar **a)
   implementations may require a copy, but such implementations should cache the contiguous representation so that
   only one copy is performed when this routine is called multiple times in sequence.
 
-  Fortran Notes:
-  `VecGetArrayRead()` Fortran binding is deprecated (since PETSc 3.19), use `VecGetArrayReadF90()`
-
-.seealso: [](ch_vectors), `Vec`, `VecGetArrayReadF90()`, `VecGetArray()`, `VecRestoreArray()`, `VecGetArrayPair()`, `VecRestoreArrayPair()`
+.seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArray()`, `VecGetArrayPair()`, `VecRestoreArrayPair()`
 @*/
-PetscErrorCode VecGetArrayRead(Vec x, const PetscScalar **a)
+PetscErrorCode VecGetArrayRead(Vec x, const PetscScalar *a[])
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x, VEC_CLASSID, 1);
@@ -2116,12 +2112,9 @@ PetscErrorCode VecGetArrayRead(Vec x, const PetscScalar **a)
 
   Level: beginner
 
-  Fortran Notes:
-  `VecRestoreArrayRead()` Fortran binding is deprecated (since PETSc 3.19), use `VecRestoreArrayReadF90()`
-
-.seealso: [](ch_vectors), `Vec`, `VecRestoreArrayReadF90()`, `VecGetArray()`, `VecRestoreArray()`, `VecGetArrayPair()`, `VecRestoreArrayPair()`
+.seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArray()`, `VecGetArrayPair()`, `VecRestoreArrayPair()`
 @*/
-PetscErrorCode VecRestoreArrayRead(Vec x, const PetscScalar **a)
+PetscErrorCode VecRestoreArrayRead(Vec x, const PetscScalar *a[])
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x, VEC_CLASSID, 1);
@@ -2166,13 +2159,10 @@ PetscErrorCode VecRestoreArrayRead(Vec x, const PetscScalar **a)
   For vectors associated with GPUs, the host and device vectors are not synchronized before
   giving access. If you need correct values in the array use `VecGetArray()`
 
-  Fortran Notes:
-  `VecGetArrayWrite()` Fortran binding is deprecated (since PETSc 3.19), use `VecGetArrayWriteF90()`
-
-.seealso: [](ch_vectors), `Vec`, `VecGetArrayWriteF90()`, `VecRestoreArray()`, `VecGetArrayRead()`, `VecGetArrays()`, `VecGetArrayF90()`, `VecGetArrayReadF90()`, `VecPlaceArray()`, `VecGetArray2d()`,
+.seealso: [](ch_vectors), `Vec`, `VecRestoreArray()`, `VecGetArrayRead()`, `VecGetArrays()`, `VecPlaceArray()`, `VecGetArray2d()`,
           `VecGetArrayPair()`, `VecRestoreArrayPair()`, `VecGetArray()`, `VecRestoreArrayWrite()`
 @*/
-PetscErrorCode VecGetArrayWrite(Vec x, PetscScalar **a)
+PetscErrorCode VecGetArrayWrite(Vec x, PetscScalar *a[])
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x, VEC_CLASSID, 1);
@@ -2197,13 +2187,10 @@ PetscErrorCode VecGetArrayWrite(Vec x, PetscScalar **a)
 
   Level: beginner
 
-  Fortran Notes:
-  `VecRestoreArrayWrite()` Fortran binding is deprecated (since PETSc 3.19), use `VecRestoreArrayWriteF90()`
-
-.seealso: [](ch_vectors), `Vec`, `VecRestoreArrayWriteF90()`, `VecGetArray()`, `VecRestoreArrayRead()`, `VecRestoreArrays()`, `VecRestoreArrayF90()`, `VecRestoreArrayReadF90()`, `VecPlaceArray()`, `VecRestoreArray2d()`,
+.seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArrayRead()`, `VecRestoreArrays()`, `VecPlaceArray()`, `VecRestoreArray2d()`,
           `VecGetArrayPair()`, `VecRestoreArrayPair()`, `VecGetArrayWrite()`
 @*/
-PetscErrorCode VecRestoreArrayWrite(Vec x, PetscScalar **a)
+PetscErrorCode VecRestoreArrayWrite(Vec x, PetscScalar *a[])
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x, VEC_CLASSID, 1);
@@ -2317,10 +2304,10 @@ PetscErrorCode VecRestoreArrays(const Vec x[], PetscInt n, PetscScalar **a[])
 
   Use `VecRestoreArrayAndMemType()` when the array access is no longer needed.
 
-.seealso: [](ch_vectors), `Vec`, `VecRestoreArrayAndMemType()`, `VecGetArrayReadAndMemType()`, `VecGetArrayWriteAndMemType()`, `VecRestoreArray()`, `VecGetArrayRead()`, `VecGetArrays()`, `VecGetArrayF90()`, `VecGetArrayReadF90()`,
+.seealso: [](ch_vectors), `Vec`, `VecRestoreArrayAndMemType()`, `VecGetArrayReadAndMemType()`, `VecGetArrayWriteAndMemType()`, `VecRestoreArray()`, `VecGetArrayRead()`, `VecGetArrays()`,
           `VecPlaceArray()`, `VecGetArray2d()`, `VecGetArrayPair()`, `VecRestoreArrayPair()`, `VecGetArrayWrite()`, `VecRestoreArrayWrite()`
 @*/
-PetscErrorCode VecGetArrayAndMemType(Vec x, PetscScalar **a, PetscMemType *mtype)
+PetscErrorCode VecGetArrayAndMemType(Vec x, PetscScalar *a[], PetscMemType *mtype)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x, VEC_CLASSID, 1);
@@ -2350,10 +2337,10 @@ PetscErrorCode VecGetArrayAndMemType(Vec x, PetscScalar **a, PetscMemType *mtype
 
   Level: beginner
 
-.seealso: [](ch_vectors), `Vec`, `VecGetArrayAndMemType()`, `VecGetArray()`, `VecRestoreArrayRead()`, `VecRestoreArrays()`, `VecRestoreArrayF90()`, `VecRestoreArrayReadF90()`,
+.seealso: [](ch_vectors), `Vec`, `VecGetArrayAndMemType()`, `VecGetArray()`, `VecRestoreArrayRead()`, `VecRestoreArrays()`,
           `VecPlaceArray()`, `VecRestoreArray2d()`, `VecGetArrayPair()`, `VecRestoreArrayPair()`
 @*/
-PetscErrorCode VecRestoreArrayAndMemType(Vec x, PetscScalar **a)
+PetscErrorCode VecRestoreArrayAndMemType(Vec x, PetscScalar *a[])
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x, VEC_CLASSID, 1);
@@ -2391,7 +2378,7 @@ PetscErrorCode VecRestoreArrayAndMemType(Vec x, PetscScalar **a)
 
 .seealso: [](ch_vectors), `Vec`, `VecRestoreArrayReadAndMemType()`, `VecGetArrayAndMemType()`, `VecGetArrayWriteAndMemType()`, `VecGetArray()`, `VecRestoreArray()`, `VecGetArrayPair()`, `VecRestoreArrayPair()`
 @*/
-PetscErrorCode VecGetArrayReadAndMemType(Vec x, const PetscScalar **a, PetscMemType *mtype)
+PetscErrorCode VecGetArrayReadAndMemType(Vec x, const PetscScalar *a[], PetscMemType *mtype)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x, VEC_CLASSID, 1);
@@ -2429,7 +2416,7 @@ PetscErrorCode VecGetArrayReadAndMemType(Vec x, const PetscScalar **a, PetscMemT
 
 .seealso: [](ch_vectors), `Vec`, `VecGetArrayReadAndMemType()`, `VecRestoreArrayAndMemType()`, `VecRestoreArrayWriteAndMemType()`, `VecGetArray()`, `VecRestoreArray()`, `VecGetArrayPair()`, `VecRestoreArrayPair()`
 @*/
-PetscErrorCode VecRestoreArrayReadAndMemType(Vec x, const PetscScalar **a)
+PetscErrorCode VecRestoreArrayReadAndMemType(Vec x, const PetscScalar *a[])
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x, VEC_CLASSID, 1);
@@ -2466,7 +2453,7 @@ PetscErrorCode VecRestoreArrayReadAndMemType(Vec x, const PetscScalar **a)
 
 .seealso: [](ch_vectors), `Vec`, `VecRestoreArrayWriteAndMemType()`, `VecGetArrayReadAndMemType()`, `VecGetArrayAndMemType()`, `VecGetArray()`, `VecRestoreArray()`, `VecGetArrayPair()`, `VecRestoreArrayPair()`,
 @*/
-PetscErrorCode VecGetArrayWriteAndMemType(Vec x, PetscScalar **a, PetscMemType *mtype)
+PetscErrorCode VecGetArrayWriteAndMemType(Vec x, PetscScalar *a[], PetscMemType *mtype)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x, VEC_CLASSID, 1);
@@ -2500,7 +2487,7 @@ PetscErrorCode VecGetArrayWriteAndMemType(Vec x, PetscScalar **a, PetscMemType *
 
 .seealso: [](ch_vectors), `Vec`, `VecGetArrayWriteAndMemType()`, `VecRestoreArrayAndMemType()`, `VecGetArray()`, `VecRestoreArray()`, `VecGetArrayPair()`, `VecRestoreArrayPair()`
 @*/
-PetscErrorCode VecRestoreArrayWriteAndMemType(Vec x, PetscScalar **a)
+PetscErrorCode VecRestoreArrayWriteAndMemType(Vec x, PetscScalar *a[])
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x, VEC_CLASSID, 1);
@@ -2588,208 +2575,6 @@ PetscErrorCode VecReplaceArray(Vec vec, const PetscScalar array[])
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*MC
-    VecDuplicateVecsF90 - Creates several vectors of the same type as an existing vector
-    and makes them accessible via a Fortran pointer.
-
-    Synopsis:
-    VecDuplicateVecsF90(Vec x,PetscInt n,{Vec, pointer :: y(:)},integer ierr)
-
-    Collective
-
-    Input Parameters:
-+   x - a vector to mimic
--   n - the number of vectors to obtain
-
-    Output Parameters:
-+   y - Fortran pointer to the array of vectors
--   ierr - error code
-
-    Example of Usage:
-.vb
-#include <petsc/finclude/petscvec.h>
-    use petscvec
-
-    Vec x
-    Vec, pointer :: y(:)
-    ....
-    call VecDuplicateVecsF90(x,2,y,ierr)
-    call VecSet(y(2),alpha,ierr)
-    call VecSet(y(2),alpha,ierr)
-    ....
-    call VecDestroyVecsF90(2,y,ierr)
-.ve
-
-    Level: beginner
-
-    Note:
-    Use `VecDestroyVecsF90()` to free the space.
-
-.seealso: [](ch_vectors), `Vec`, `VecDestroyVecsF90()`, `VecDuplicateVecs()`
-M*/
-
-/*MC
-    VecRestoreArrayF90 - Restores a vector to a usable state after a call to
-    `VecGetArrayF90()`.
-
-    Synopsis:
-    VecRestoreArrayF90(Vec x,{Scalar, pointer :: xx_v(:)},integer ierr)
-
-    Logically Collective
-
-    Input Parameters:
-+   x - vector
--   xx_v - the Fortran pointer to the array
-
-    Output Parameter:
-.   ierr - error code
-
-    Example of Usage:
-.vb
-#include <petsc/finclude/petscvec.h>
-    use petscvec
-
-    PetscScalar, pointer :: xx_v(:)
-    ....
-    call VecGetArrayF90(x,xx_v,ierr)
-    xx_v(3) = a
-    call VecRestoreArrayF90(x,xx_v,ierr)
-.ve
-
-    Level: beginner
-
-.seealso: [](ch_vectors), `Vec`, `VecGetArrayF90()`, `VecGetArray()`, `VecRestoreArray()`, `VecRestoreArrayReadF90()`
-M*/
-
-/*MC
-    VecDestroyVecsF90 - Frees a block of vectors obtained with `VecDuplicateVecsF90()`.
-
-    Synopsis:
-    VecDestroyVecsF90(PetscInt n,{Vec, pointer :: x(:)},PetscErrorCode ierr)
-
-    Collective
-
-    Input Parameters:
-+   n - the number of vectors previously obtained
--   x - pointer to array of vector pointers
-
-    Output Parameter:
-.   ierr - error code
-
-    Level: beginner
-
-.seealso: [](ch_vectors), `Vec`, `VecDestroyVecs()`, `VecDuplicateVecsF90()`
-M*/
-
-/*MC
-    VecGetArrayF90 - Accesses a vector array from Fortran. For default PETSc
-    vectors, `VecGetArrayF90()` returns a pointer to the local data array. Otherwise,
-    this routine is implementation dependent. You MUST call `VecRestoreArrayF90()`
-    when you no longer need access to the array.
-
-    Synopsis:
-    VecGetArrayF90(Vec x,{Scalar, pointer :: xx_v(:)},integer ierr)
-
-    Logically Collective
-
-    Input Parameter:
-.   x - vector
-
-    Output Parameters:
-+   xx_v - the Fortran pointer to the array
--   ierr - error code
-
-    Example of Usage:
-.vb
-#include <petsc/finclude/petscvec.h>
-    use petscvec
-
-    PetscScalar, pointer :: xx_v(:)
-    ....
-    call VecGetArrayF90(x,xx_v,ierr)
-    xx_v(3) = a
-    call VecRestoreArrayF90(x,xx_v,ierr)
-.ve
-
-     Level: beginner
-
-    Note:
-    If you ONLY intend to read entries from the array and not change any entries you should use `VecGetArrayReadF90()`.
-
-.seealso: [](ch_vectors), `Vec`, `VecRestoreArrayF90()`, `VecGetArray()`, `VecRestoreArray()`, `VecGetArrayReadF90()`
-M*/
-
-/*MC
-    VecGetArrayReadF90 - Accesses a read only array from Fortran. For default PETSc
-    vectors, `VecGetArrayF90()` returns a pointer to the local data array. Otherwise,
-    this routine is implementation dependent. You MUST call `VecRestoreArrayReadF90()`
-    when you no longer need access to the array.
-
-    Synopsis:
-    VecGetArrayReadF90(Vec x,{Scalar, pointer :: xx_v(:)},integer ierr)
-
-    Logically Collective
-
-    Input Parameter:
-.   x - vector
-
-    Output Parameters:
-+   xx_v - the Fortran pointer to the array
--   ierr - error code
-
-    Example of Usage:
-.vb
-#include <petsc/finclude/petscvec.h>
-    use petscvec
-
-    PetscScalar, pointer :: xx_v(:)
-    ....
-    call VecGetArrayReadF90(x,xx_v,ierr)
-    a = xx_v(3)
-    call VecRestoreArrayReadF90(x,xx_v,ierr)
-.ve
-
-    Level: beginner
-
-    Note:
-    If you intend to write entries into the array you must use `VecGetArrayF90()`.
-
-.seealso: [](ch_vectors), `Vec`, `VecRestoreArrayReadF90()`, `VecGetArray()`, `VecRestoreArray()`, `VecGetArrayRead()`, `VecRestoreArrayRead()`, `VecGetArrayF90()`
-M*/
-
-/*MC
-    VecRestoreArrayReadF90 - Restores a readonly vector to a usable state after a call to
-    `VecGetArrayReadF90()`.
-
-    Synopsis:
-    VecRestoreArrayReadF90(Vec x,{Scalar, pointer :: xx_v(:)},integer ierr)
-
-    Logically Collective
-
-    Input Parameters:
-+   x - vector
--   xx_v - the Fortran pointer to the array
-
-    Output Parameter:
-.   ierr - error code
-
-    Example of Usage:
-.vb
-#include <petsc/finclude/petscvec.h>
-    use petscvec
-
-    PetscScalar, pointer :: xx_v(:)
-    ....
-    call VecGetArrayReadF90(x,xx_v,ierr)
-    a = xx_v(3)
-    call VecRestoreArrayReadF90(x,xx_v,ierr)
-.ve
-
-    Level: beginner
-
-.seealso: [](ch_vectors), `Vec`, `VecGetArrayReadF90()`, `VecGetArray()`, `VecRestoreArray()`, `VecGetArrayRead()`, `VecRestoreArrayRead()`, `VecRestoreArrayF90()`
-M*/
-
 /*@C
   VecGetArray2d - Returns a pointer to a 2d contiguous array that contains this
   processor's portion of the vector data.  You MUST call `VecRestoreArray2d()`
@@ -2817,7 +2602,7 @@ M*/
 
   For standard PETSc vectors this is an inexpensive call; it does not copy the vector values.
 
-.seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArray()`, `VecGetArrays()`, `VecGetArrayF90()`, `VecPlaceArray()`,
+.seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArray()`, `VecGetArrays()`, `VecPlaceArray()`,
           `VecRestoreArray2d()`, `DMDAVecGetArray()`, `DMDAVecRestoreArray()`, `VecGetArray3d()`, `VecRestoreArray3d()`,
           `VecGetArray1d()`, `VecRestoreArray1d()`, `VecGetArray4d()`, `VecRestoreArray4d()`
 @*/
@@ -2867,7 +2652,7 @@ PetscErrorCode VecGetArray2d(Vec x, PetscInt m, PetscInt n, PetscInt mstart, Pet
 
   For standard PETSc vectors this is an inexpensive call; it does not copy the vector values.
 
-.seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArray()`, `VecGetArrays()`, `VecGetArrayF90()`, `VecPlaceArray()`,
+.seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArray()`, `VecGetArrays()`, `VecPlaceArray()`,
           `VecRestoreArray2d()`, `DMDAVecGetArray()`, `DMDAVecRestoreArray()`, `VecGetArray3d()`, `VecRestoreArray3d()`,
           `VecGetArray1d()`, `VecRestoreArray1d()`, `VecGetArray4d()`, `VecRestoreArray4d()`
 @*/
@@ -2913,7 +2698,7 @@ PetscErrorCode VecGetArray2dWrite(Vec x, PetscInt m, PetscInt n, PetscInt mstart
 
   This routine actually zeros out the `a` pointer.
 
-.seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArray()`, `VecRestoreArrays()`, `VecRestoreArrayF90()`, `VecPlaceArray()`,
+.seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArray()`, `VecRestoreArrays()`, `VecPlaceArray()`,
           `VecGetArray2d()`, `VecGetArray3d()`, `VecRestoreArray3d()`, `DMDAVecGetArray()`, `DMDAVecRestoreArray()`
           `VecGetArray1d()`, `VecRestoreArray1d()`, `VecGetArray4d()`, `VecRestoreArray4d()`
 @*/
@@ -2955,7 +2740,7 @@ PetscErrorCode VecRestoreArray2d(Vec x, PetscInt m, PetscInt n, PetscInt mstart,
 
   This routine actually zeros out the `a` pointer.
 
-.seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArray()`, `VecRestoreArrays()`, `VecRestoreArrayF90()`, `VecPlaceArray()`,
+.seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArray()`, `VecRestoreArrays()`, `VecPlaceArray()`,
           `VecGetArray2d()`, `VecGetArray3d()`, `VecRestoreArray3d()`, `DMDAVecGetArray()`, `DMDAVecRestoreArray()`
           `VecGetArray1d()`, `VecRestoreArray1d()`, `VecGetArray4d()`, `VecRestoreArray4d()`
 @*/
@@ -2997,7 +2782,7 @@ PetscErrorCode VecRestoreArray2dWrite(Vec x, PetscInt m, PetscInt n, PetscInt ms
 
   For standard PETSc vectors this is an inexpensive call; it does not copy the vector values.
 
-.seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArray()`, `VecGetArrays()`, `VecGetArrayF90()`, `VecPlaceArray()`,
+.seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArray()`, `VecGetArrays()`, `VecPlaceArray()`,
           `VecRestoreArray2d()`, `DMDAVecGetArray()`, `DMDAVecRestoreArray()`, `VecGetArray3d()`, `VecRestoreArray3d()`,
           `VecGetArray2d()`, `VecRestoreArray1d()`, `VecGetArray4d()`, `VecRestoreArray4d()`
 @*/
@@ -3040,7 +2825,7 @@ PetscErrorCode VecGetArray1d(Vec x, PetscInt m, PetscInt mstart, PetscScalar *a[
 
   For standard PETSc vectors this is an inexpensive call; it does not copy the vector values.
 
-.seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArray()`, `VecGetArrays()`, `VecGetArrayF90()`, `VecPlaceArray()`,
+.seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArray()`, `VecGetArrays()`, `VecPlaceArray()`,
           `VecRestoreArray2d()`, `DMDAVecGetArray()`, `DMDAVecRestoreArray()`, `VecGetArray3d()`, `VecRestoreArray3d()`,
           `VecGetArray2d()`, `VecRestoreArray1d()`, `VecGetArray4d()`, `VecRestoreArray4d()`
 @*/
@@ -3080,7 +2865,7 @@ PetscErrorCode VecGetArray1dWrite(Vec x, PetscInt m, PetscInt mstart, PetscScala
 
   This routine actually zeros out the `a` pointer.
 
-.seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArray()`, `VecRestoreArrays()`, `VecRestoreArrayF90()`, `VecPlaceArray()`,
+.seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArray()`, `VecRestoreArrays()`, `VecPlaceArray()`,
           `VecGetArray2d()`, `VecGetArray3d()`, `VecRestoreArray3d()`, `DMDAVecGetArray()`, `DMDAVecRestoreArray()`
           `VecGetArray1d()`, `VecRestoreArray2d()`, `VecGetArray4d()`, `VecRestoreArray4d()`
 @*/
@@ -3115,7 +2900,7 @@ PetscErrorCode VecRestoreArray1d(Vec x, PetscInt m, PetscInt mstart, PetscScalar
 
   This routine actually zeros out the `a` pointer.
 
-.seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArray()`, `VecRestoreArrays()`, `VecRestoreArrayF90()`, `VecPlaceArray()`,
+.seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArray()`, `VecRestoreArrays()`, `VecPlaceArray()`,
           `VecGetArray2d()`, `VecGetArray3d()`, `VecRestoreArray3d()`, `DMDAVecGetArray()`, `DMDAVecRestoreArray()`
           `VecGetArray1d()`, `VecRestoreArray2d()`, `VecGetArray4d()`, `VecRestoreArray4d()`
 @*/
@@ -3158,7 +2943,7 @@ PetscErrorCode VecRestoreArray1dWrite(Vec x, PetscInt m, PetscInt mstart, PetscS
 
   For standard PETSc vectors this is an inexpensive call; it does not copy the vector values.
 
-.seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArray()`, `VecGetArrays()`, `VecGetArrayF90()`, `VecPlaceArray()`,
+.seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArray()`, `VecGetArrays()`, `VecPlaceArray()`,
           `VecRestoreArray2d()`, `DMDAVecGetarray()`, `DMDAVecRestoreArray()`, `VecRestoreArray3d()`,
           `VecGetArray1d()`, `VecRestoreArray1d()`, `VecGetArray4d()`, `VecRestoreArray4d()`
 @*/
@@ -3213,7 +2998,7 @@ PetscErrorCode VecGetArray3d(Vec x, PetscInt m, PetscInt n, PetscInt p, PetscInt
 
   For standard PETSc vectors this is an inexpensive call; it does not copy the vector values.
 
-.seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArray()`, `VecGetArrays()`, `VecGetArrayF90()`, `VecPlaceArray()`,
+.seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArray()`, `VecGetArrays()`, `VecPlaceArray()`,
           `VecRestoreArray2d()`, `DMDAVecGetarray()`, `DMDAVecRestoreArray()`, `VecGetArray3d()`, `VecRestoreArray3d()`,
           `VecGetArray1d()`, `VecRestoreArray1d()`, `VecGetArray4d()`, `VecRestoreArray4d()`
 @*/
@@ -3265,7 +3050,7 @@ PetscErrorCode VecGetArray3dWrite(Vec x, PetscInt m, PetscInt n, PetscInt p, Pet
 
   This routine actually zeros out the `a` pointer.
 
-.seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArray()`, `VecRestoreArrays()`, `VecRestoreArrayF90()`, `VecPlaceArray()`,
+.seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArray()`, `VecRestoreArrays()`, `VecPlaceArray()`,
           `VecGetArray2d()`, `VecGetArray3d()`, `DMDAVecGetArray()`, `DMDAVecRestoreArray()`
           `VecGetArray1d()`, `VecRestoreArray1d()`, `VecGetArray4d()`, `VecRestoreArray4d()`, `VecGet`
 @*/
@@ -3309,7 +3094,7 @@ PetscErrorCode VecRestoreArray3d(Vec x, PetscInt m, PetscInt n, PetscInt p, Pets
 
   This routine actually zeros out the `a` pointer.
 
-.seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArray()`, `VecRestoreArrays()`, `VecRestoreArrayF90()`, `VecPlaceArray()`,
+.seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArray()`, `VecRestoreArrays()`, `VecPlaceArray()`,
           `VecGetArray2d()`, `VecGetArray3d()`, `VecRestoreArray3d()`, `DMDAVecGetArray()`, `DMDAVecRestoreArray()`
           `VecGetArray1d()`, `VecRestoreArray1d()`, `VecGetArray4d()`, `VecRestoreArray4d()`, `VecGet`
 @*/
@@ -3359,7 +3144,7 @@ PetscErrorCode VecRestoreArray3dWrite(Vec x, PetscInt m, PetscInt n, PetscInt p,
 
   For standard PETSc vectors this is an inexpensive call; it does not copy the vector values.
 
-.seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArray()`, `VecGetArrays()`, `VecGetArrayF90()`, `VecPlaceArray()`,
+.seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArray()`, `VecGetArrays()`, `VecPlaceArray()`,
           `VecRestoreArray2d()`, `DMDAVecGetarray()`, `DMDAVecRestoreArray()`, `VecGetArray3d()`, `VecRestoreArray3d()`,
           `VecGetArray1d()`, `VecRestoreArray1d()`, `VecRestoreArray4d()`
 @*/
@@ -3420,7 +3205,7 @@ PetscErrorCode VecGetArray4d(Vec x, PetscInt m, PetscInt n, PetscInt p, PetscInt
 
   For standard PETSc vectors this is an inexpensive call; it does not copy the vector values.
 
-.seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArray()`, `VecGetArrays()`, `VecGetArrayF90()`, `VecPlaceArray()`,
+.seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArray()`, `VecGetArrays()`, `VecPlaceArray()`,
           `VecRestoreArray2d()`, `DMDAVecGetarray()`, `DMDAVecRestoreArray()`, `VecGetArray3d()`, `VecRestoreArray3d()`,
           `VecGetArray1d()`, `VecRestoreArray1d()`, `VecGetArray4d()`, `VecRestoreArray4d()`
 @*/
@@ -3477,7 +3262,7 @@ PetscErrorCode VecGetArray4dWrite(Vec x, PetscInt m, PetscInt n, PetscInt p, Pet
 
   This routine actually zeros out the `a` pointer.
 
-.seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArray()`, `VecRestoreArrays()`, `VecRestoreArrayF90()`, `VecPlaceArray()`,
+.seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArray()`, `VecRestoreArrays()`, `VecPlaceArray()`,
           `VecGetArray2d()`, `VecGetArray3d()`, `VecRestoreArray3d()`, `DMDAVecGetArray()`, `DMDAVecRestoreArray()`
           `VecGetArray1d()`, `VecRestoreArray1d()`, `VecGetArray4d()`, `VecGet`
 @*/
@@ -3523,7 +3308,7 @@ PetscErrorCode VecRestoreArray4d(Vec x, PetscInt m, PetscInt n, PetscInt p, Pets
 
   This routine actually zeros out the `a` pointer.
 
-.seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArray()`, `VecRestoreArrays()`, `VecRestoreArrayF90()`, `VecPlaceArray()`,
+.seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArray()`, `VecRestoreArrays()`, `VecPlaceArray()`,
           `VecGetArray2d()`, `VecGetArray3d()`, `VecRestoreArray3d()`, `DMDAVecGetArray()`, `DMDAVecRestoreArray()`
           `VecGetArray1d()`, `VecRestoreArray1d()`, `VecGetArray4d()`, `VecRestoreArray4d()`, `VecGet`
 @*/
@@ -3569,7 +3354,7 @@ PetscErrorCode VecRestoreArray4dWrite(Vec x, PetscInt m, PetscInt n, PetscInt p,
 
   For standard PETSc vectors this is an inexpensive call; it does not copy the vector values.
 
-.seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArray()`, `VecGetArrays()`, `VecGetArrayF90()`, `VecPlaceArray()`,
+.seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArray()`, `VecGetArrays()`, `VecPlaceArray()`,
           `VecRestoreArray2d()`, `DMDAVecGetArray()`, `DMDAVecRestoreArray()`, `VecGetArray3d()`, `VecRestoreArray3d()`,
           `VecGetArray1d()`, `VecRestoreArray1d()`, `VecGetArray4d()`, `VecRestoreArray4d()`
 @*/
@@ -3615,7 +3400,7 @@ PetscErrorCode VecGetArray2dRead(Vec x, PetscInt m, PetscInt n, PetscInt mstart,
 
   This routine actually zeros out the `a` pointer.
 
-.seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArray()`, `VecRestoreArrays()`, `VecRestoreArrayF90()`, `VecPlaceArray()`,
+.seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArray()`, `VecRestoreArrays()`, `VecPlaceArray()`,
           `VecGetArray2d()`, `VecGetArray3d()`, `VecRestoreArray3d()`, `DMDAVecGetArray()`, `DMDAVecRestoreArray()`
           `VecGetArray1d()`, `VecRestoreArray1d()`, `VecGetArray4d()`, `VecRestoreArray4d()`
 @*/
@@ -3658,7 +3443,7 @@ PetscErrorCode VecRestoreArray2dRead(Vec x, PetscInt m, PetscInt n, PetscInt mst
 
   For standard PETSc vectors this is an inexpensive call; it does not copy the vector values.
 
-.seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArray()`, `VecGetArrays()`, `VecGetArrayF90()`, `VecPlaceArray()`,
+.seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArray()`, `VecGetArrays()`, `VecPlaceArray()`,
           `VecRestoreArray2d()`, `DMDAVecGetArray()`, `DMDAVecRestoreArray()`, `VecGetArray3d()`, `VecRestoreArray3d()`,
           `VecGetArray2d()`, `VecRestoreArray1d()`, `VecGetArray4d()`, `VecRestoreArray4d()`
 @*/
@@ -3698,7 +3483,7 @@ PetscErrorCode VecGetArray1dRead(Vec x, PetscInt m, PetscInt mstart, PetscScalar
 
   This routine actually zeros out the `a` pointer.
 
-.seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArray()`, `VecRestoreArrays()`, `VecRestoreArrayF90()`, `VecPlaceArray()`,
+.seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArray()`, `VecRestoreArrays()`, `VecPlaceArray()`,
           `VecGetArray2d()`, `VecGetArray3d()`, `VecRestoreArray3d()`, `DMDAVecGetArray()`, `DMDAVecRestoreArray()`
           `VecGetArray1d()`, `VecRestoreArray2d()`, `VecGetArray4d()`, `VecRestoreArray4d()`
 @*/
@@ -3741,7 +3526,7 @@ PetscErrorCode VecRestoreArray1dRead(Vec x, PetscInt m, PetscInt mstart, PetscSc
 
   For standard PETSc vectors this is an inexpensive call; it does not copy the vector values.
 
-.seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArray()`, `VecGetArrays()`, `VecGetArrayF90()`, `VecPlaceArray()`,
+.seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArray()`, `VecGetArrays()`, `VecPlaceArray()`,
           `VecRestoreArray2d()`, `DMDAVecGetarray()`, `DMDAVecRestoreArray()`, `VecGetArray3d()`, `VecRestoreArray3d()`,
           `VecGetArray1d()`, `VecRestoreArray1d()`, `VecGetArray4d()`, `VecRestoreArray4d()`
 @*/
@@ -3793,7 +3578,7 @@ PetscErrorCode VecGetArray3dRead(Vec x, PetscInt m, PetscInt n, PetscInt p, Pets
 
   This routine actually zeros out the `a` pointer.
 
-.seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArray()`, `VecRestoreArrays()`, `VecRestoreArrayF90()`, `VecPlaceArray()`,
+.seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArray()`, `VecRestoreArrays()`, `VecPlaceArray()`,
           `VecGetArray2d()`, `VecGetArray3d()`, `VecRestoreArray3d()`, `DMDAVecGetArray()`, `DMDAVecRestoreArray()`
           `VecGetArray1d()`, `VecRestoreArray1d()`, `VecGetArray4d()`, `VecRestoreArray4d()`, `VecGet`
 @*/
@@ -3843,7 +3628,7 @@ PetscErrorCode VecRestoreArray3dRead(Vec x, PetscInt m, PetscInt n, PetscInt p, 
 
   For standard PETSc vectors this is an inexpensive call; it does not copy the vector values.
 
-.seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArray()`, `VecGetArrays()`, `VecGetArrayF90()`, `VecPlaceArray()`,
+.seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArray()`, `VecGetArrays()`, `VecPlaceArray()`,
           `VecRestoreArray2d()`, `DMDAVecGetarray()`, `DMDAVecRestoreArray()`, `VecGetArray3d()`, `VecRestoreArray3d()`,
           `VecGetArray1d()`, `VecRestoreArray1d()`, `VecGetArray4d()`, `VecRestoreArray4d()`
 @*/
@@ -3901,7 +3686,7 @@ PetscErrorCode VecGetArray4dRead(Vec x, PetscInt m, PetscInt n, PetscInt p, Pets
 
   This routine actually zeros out the `a` pointer.
 
-.seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArray()`, `VecRestoreArrays()`, `VecRestoreArrayF90()`, `VecPlaceArray()`,
+.seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArray()`, `VecRestoreArrays()`, `VecPlaceArray()`,
           `VecGetArray2d()`, `VecGetArray3d()`, `VecRestoreArray3d()`, `DMDAVecGetArray()`, `DMDAVecRestoreArray()`
           `VecGetArray1d()`, `VecRestoreArray1d()`, `VecGetArray4d()`, `VecRestoreArray4d()`, `VecGet`
 @*/
