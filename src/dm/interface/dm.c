@@ -925,7 +925,7 @@ PetscErrorCode DMSetFromOptions(DM dm)
 
   Input Parameters:
 + dm   - the `DM` object
-. obj  - optional object that provides the prefix for the options database (if `NULL` then the prefix in obj is used)
+. obj  - optional object that provides the prefix for the options database (if `NULL` then the prefix in `obj` is used)
 - name - option string that is used to activate viewing
 
   Level: intermediate
@@ -935,7 +935,7 @@ PetscErrorCode DMSetFromOptions(DM dm)
 
 .seealso: [](ch_dmbase), `DM`, `DMView()`, `PetscObjectViewFromOptions()`, `DMCreate()`
 @*/
-PetscErrorCode DMViewFromOptions(DM dm, PetscObject obj, const char name[])
+PetscErrorCode DMViewFromOptions(DM dm, PeOp PetscObject obj, const char name[])
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -1743,7 +1743,6 @@ PetscErrorCode DMRestoreWorkArray(DM dm, PetscInt count, MPI_Datatype dtype, voi
   DMWorkLink *p, link;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscAssertPointer(mem, 4);
   (void)count;
   (void)dtype;
@@ -1895,7 +1894,7 @@ PetscErrorCode DMGetNearNullSpaceConstructor(DM dm, PetscInt field, PetscErrorCo
 
   Output Parameters:
 + numFields  - The number of fields (or `NULL` if not requested)
-. fieldNames - The number of each field (or `NULL` if not requested)
+. fieldNames - The name of each field (or `NULL` if not requested)
 - fields     - The global indices for each field (or `NULL` if not requested)
 
   Level: intermediate
@@ -1912,7 +1911,7 @@ PetscErrorCode DMGetNearNullSpaceConstructor(DM dm, PetscInt field, PetscErrorCo
 .seealso: [](ch_dmbase), `DM`, `DMAddField()`, `DMGetField()`, `DMDestroy()`, `DMView()`, `DMCreateInterpolation()`, `DMCreateColoring()`, `DMCreateMatrix()`,
           `DMCreateFieldDecomposition()`
 @*/
-PetscErrorCode DMCreateFieldIS(DM dm, PetscInt *numFields, char ***fieldNames, IS **fields)
+PetscErrorCode DMCreateFieldIS(DM dm, PetscInt *numFields, char ***fieldNames, IS *fields[])
 {
   PetscSection section, sectionGlobal;
 
@@ -2044,7 +2043,7 @@ PetscErrorCode DMCreateFieldIS(DM dm, PetscInt *numFields, char ***fieldNames, I
 
 .seealso: [](ch_dmbase), `DM`, `DMAddField()`, `DMCreateFieldIS()`, `DMCreateSubDM()`, `DMCreateDomainDecomposition()`, `DMDestroy()`, `DMView()`, `DMCreateInterpolation()`, `DMCreateColoring()`, `DMCreateMatrix()`, `DMCreateMassMatrix()`, `DMRefine()`, `DMCoarsen()`
 @*/
-PetscErrorCode DMCreateFieldDecomposition(DM dm, PetscInt *len, char ***namelist, IS **islist, DM **dmlist)
+PetscErrorCode DMCreateFieldDecomposition(DM dm, PetscInt *len, char ***namelist, IS *islist[], DM *dmlist[])
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -2133,7 +2132,7 @@ PetscErrorCode DMCreateSubDM(DM dm, PetscInt numFields, const PetscInt fields[],
 }
 
 /*@C
-  DMCreateSuperDM - Returns an arrays of `IS` and `DM` encapsulating a superproblem defined by multiple `DM`s passed in.
+  DMCreateSuperDM - Returns an arrays of `IS` and a single `DM` encapsulating a superproblem defined by multiple `DM`s passed in.
 
   Not collective
 
@@ -2142,7 +2141,7 @@ PetscErrorCode DMCreateSubDM(DM dm, PetscInt numFields, const PetscInt fields[],
 - n   - The number of `DM`s
 
   Output Parameters:
-+ is      - The global indices for each of subproblem within the super `DM`, or NULL
++ is      - The global indices for each of subproblem within the super `DM`, or `NULL`, its length is `n`
 - superdm - The `DM` for the superproblem
 
   Level: intermediate
@@ -2180,7 +2179,7 @@ PetscErrorCode DMCreateSuperDM(DM dms[], PetscInt n, IS *is[], DM *superdm)
 . dm - the `DM` object
 
   Output Parameters:
-+ n           - The number of subproblems in the domain decomposition (or `NULL` if not requested)
++ n           - The number of subproblems in the domain decomposition (or `NULL` if not requested), also the length of the four arrays below
 . namelist    - The name for each subdomain (or `NULL` if not requested)
 . innerislist - The global indices for each inner subdomain (or `NULL`, if not requested)
 . outerislist - The global indices for each outer subdomain (or `NULL`, if not requested)
@@ -2207,7 +2206,7 @@ PetscErrorCode DMCreateSuperDM(DM dms[], PetscInt n, IS *is[], DM *superdm)
 .seealso: [](ch_dmbase), `DM`, `DMCreateFieldDecomposition()`, `DMDestroy()`, `DMCreateDomainDecompositionScatters()`, `DMView()`, `DMCreateInterpolation()`,
           `DMSubDomainHookAdd()`, `DMSubDomainHookRemove()`,`DMCreateColoring()`, `DMCreateMatrix()`, `DMCreateMassMatrix()`, `DMRefine()`, `DMCoarsen()`
 @*/
-PetscErrorCode DMCreateDomainDecomposition(DM dm, PetscInt *n, char ***namelist, IS **innerislist, IS **outerislist, DM **dmlist)
+PetscErrorCode DMCreateDomainDecomposition(DM dm, PetscInt *n, char ***namelist, IS *innerislist[], IS *outerislist[], DM *dmlist[])
 {
   DMSubDomainHookLink link;
   PetscInt            i, l;
@@ -3727,10 +3726,15 @@ PetscErrorCode DMSetApplicationContextDestroy(DM dm, PetscCtxDestroyFn *destroy)
 
   Level: intermediate
 
-  Notes:
+  Note:
   A user context is a way to pass problem specific information that is accessible whenever the `DM` is available
   In a multilevel solver, the user context is shared by all the `DM` in the hierarchy; it is thus not advisable
   to store objects that represent discretized quantities inside the context.
+
+  Fortran Note:
+  This only works when `ctx` is a Fortran derived type (it cannot be a `PetscObject`), we recommend writing a Fortran interface definition for this
+  function that tells the Fortran compiler the derived data type that is passed in as the `ctx` argument. See `DMGetApplicationContext()` for
+  an example.
 
 .seealso: [](ch_dmbase), `DM`, `DMGetApplicationContext()`, `DMView()`, `DMCreateGlobalVector()`, `DMCreateInterpolation()`, `DMCreateColoring()`, `DMCreateMatrix()`, `DMCreateMassMatrix()`
 @*/
@@ -3743,7 +3747,7 @@ PetscErrorCode DMSetApplicationContext(DM dm, void *ctx)
 }
 
 /*@
-  DMGetApplicationContext - Gets a user context from a `DM` object
+  DMGetApplicationContext - Gets a user context from a `DM` object provided with `DMSetApplicationContext()`
 
   Not Collective
 
@@ -3751,16 +3755,36 @@ PetscErrorCode DMSetApplicationContext(DM dm, void *ctx)
 . dm - the `DM` object
 
   Output Parameter:
-. ctx - the user context
+. ctx - a pointer to the user context
 
   Level: intermediate
 
   Note:
   A user context is a way to pass problem specific information that is accessible whenever the `DM` is available
 
+  Fortran Notes:
+  This only works when the context is a Fortran derived type (it cannot be a `PetscObject`) and you **must** write a Fortran interface definition for this
+  function that tells the Fortran compiler the derived data type that is returned as the `ctx` argument. For example,
+.vb
+  Interface DMGetApplicationContext
+    Subroutine DMGetApplicationContext(dm,ctx,ierr)
+  #include <petsc/finclude/petscdm.h>
+      use petscdm
+      DM dm
+      type(tUsertype), pointer :: ctx
+      PetscErrorCode ierr
+    End Subroutine
+  End Interface DMGetApplicationContext
+.ve
+
+  The prototpye for `ctx` must be
+.vb
+  type(tUsertype), pointer :: ctx
+.ve
+
 .seealso: [](ch_dmbase), `DM`, `DMView()`, `DMCreateGlobalVector()`, `DMCreateInterpolation()`, `DMCreateColoring()`, `DMCreateMatrix()`, `DMCreateMassMatrix()`
 @*/
-PetscErrorCode DMGetApplicationContext(DM dm, void *ctx)
+PetscErrorCode DMGetApplicationContext(DM dm, PeCtx ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -3775,9 +3799,12 @@ PetscErrorCode DMGetApplicationContext(DM dm, void *ctx)
 
   Input Parameters:
 + dm - the DM object
-- f  - the function that computes variable bounds used by SNESVI (use `NULL` to cancel a previous function that was set)
+- f  - the function that computes variable bounds used by `SNESVI` (use `NULL` to cancel a previous function that was set)
 
   Level: intermediate
+
+  Developer Note:
+  Should be called `DMSetComputeVIBounds()` or something similar
 
 .seealso: [](ch_dmbase), `DM`, `DMComputeVariableBounds()`, `DMHasVariableBounds()`, `DMView()`, `DMCreateGlobalVector()`, `DMCreateInterpolation()`, `DMCreateColoring()`, `DMCreateMatrix()`, `DMCreateMassMatrix()`, `DMGetApplicationContext()`,
          `DMSetJacobian()`
@@ -4092,8 +4119,6 @@ PetscErrorCode DMConvert(DM dm, DMType newtype, DM *M)
   PetscCall(PetscObjectStateIncrease((PetscObject)*M));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-
-/*--------------------------------------------------------------------------------------------------------------------*/
 
 /*@C
   DMRegister -  Adds a new `DM` type implementation
@@ -7553,7 +7578,7 @@ PetscErrorCode DMCopyLabels(DM dmA, DM dmB, PetscCopyMode mode, PetscBool all, D
 - dm1 - Second `DM` object
 
   Output Parameters:
-+ equal   - (Optional) Flag whether labels of dm0 and dm1 are the same
++ equal   - (Optional) Flag whether labels of `dm0` and `dm1` are the same
 - message - (Optional) Message describing the difference, or `NULL` if there is no difference
 
   Level: intermediate
@@ -7569,7 +7594,7 @@ PetscErrorCode DMCopyLabels(DM dmA, DM dmB, PetscCopyMode mode, PetscBool all, D
 
   message must be freed with `PetscFree()`
 
-  If message is passed as `NULL` and a difference is found, the difference description is printed to stderr in synchronized manner.
+  If message is passed as `NULL` and a difference is found, the difference description is printed to `stderr` in synchronized manner.
 
   Make sure to pass message as `NULL` on all processes or no processes.
 
@@ -7577,11 +7602,11 @@ PetscErrorCode DMCopyLabels(DM dmA, DM dmB, PetscCopyMode mode, PetscBool all, D
   `DMLabelCompare()` is used to compare each pair of labels with the same name.
 
   Developer Note:
-  Can automatically generate the Fortran stub because `message` must be freed with `PetscFree()`
+  Cannot automatically generate the Fortran stub because `message` must be freed with `PetscFree()`
 
 .seealso: [](ch_dmbase), `DM`, `DMLabel`, `DMAddLabel()`, `DMCopyLabelsMode`, `DMLabelCompare()`
 @*/
-PetscErrorCode DMCompareLabels(DM dm0, DM dm1, PetscBool *equal, char **message)
+PetscErrorCode DMCompareLabels(DM dm0, DM dm1, PetscBool *equal, char *message[]) PeNS
 {
   PetscInt    n, i;
   char        msg[PETSC_MAX_PATH_LEN] = "";
