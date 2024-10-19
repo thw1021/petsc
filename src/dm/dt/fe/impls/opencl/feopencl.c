@@ -744,7 +744,7 @@ static PetscErrorCode PetscFEInitialize_OpenCL(PetscFE fem)
   fem->ops->view                    = NULL;
   fem->ops->destroy                 = PetscFEDestroy_OpenCL;
   fem->ops->getdimension            = PetscFEGetDimension_Basic;
-  fem->ops->createtabulation        = PetscFECreateTabulation_Basic;
+  fem->ops->computetabulation       = PetscFECreateTabulation_Basic;
   fem->ops->integrateresidual       = PetscFEIntegrateResidual_OpenCL;
   fem->ops->integratebdresidual     = NULL /* PetscFEIntegrateBdResidual_OpenCL */;
   fem->ops->integratejacobianaction = NULL /* PetscFEIntegrateJacobianAction_OpenCL */;
