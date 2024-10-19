@@ -25,7 +25,7 @@
 
 program main
   use ex22f_mfmodule
-  use petscdmda
+  use petscdm
   implicit none
 
   !
@@ -167,7 +167,7 @@ end program main
 
 ! Small helper to extract the layout, result uses 1-based indexing.
   subroutine GetLayout(da,mx,xs,xe,gxs,gxe,ierr)
-  use petscdmda
+  use petscdm
   implicit none
 
   DM da
@@ -199,7 +199,7 @@ subroutine FormIFunctionLocal(mx,xs,xe,gxs,gxe,x,xdot,f,a,k,s,ierr)
 end subroutine FormIFunctionLocal
 
 subroutine FormIFunction(ts,t,X,Xdot,F,user,ierr)
-  use petscdmda
+  use petscdm
   use petscts
   implicit none
 
@@ -284,7 +284,7 @@ end subroutine FormRHSFunctionLocal
 
 subroutine FormRHSFunction(ts,t,X,F,user,ierr)
   use petscts
-  use petscdmda
+  use petscdm
   implicit none
 
   TS ts
@@ -327,7 +327,7 @@ end subroutine FormRHSFunction
 !
 subroutine FormIJacobian(ts,t,X,Xdot,shift,J,Jpre,user,ierr)
   use petscts
-  use petscdmda
+  use petscdm
   implicit none
 
   TS ts
@@ -393,7 +393,7 @@ end subroutine FormInitialSolutionLocal
 
 subroutine FormInitialSolution(ts,X,user,ierr)
   use petscts
-  use petscdmda
+  use petscdm
   implicit none
 
   TS ts
@@ -503,7 +503,7 @@ end subroutine MyMult
 
 !
 subroutine SaveSolutionToDisk(da,X,gdof,xs,xe)
-  use petscdmda
+  use petscdm
   implicit none
 
   Vec X

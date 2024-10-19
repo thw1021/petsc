@@ -212,17 +212,20 @@ PetscErrorCode PetscSFSetGraphSection(PetscSF sf, PetscSection localSection, Pet
 - rootSection - Section defined on root space
 
   Output Parameters:
-+ remoteOffsets - root offsets in leaf storage, or `NULL`
++ remoteOffsets - root offsets in leaf storage, or `NULL`, its length will be the size of the chart of `leafSection`
 - leafSection   - Section defined on the leaf space
 
   Level: advanced
 
-  Fortran Notes:
-  In Fortran, use PetscSFDistributeSectionF90()
+  Note:
+  Caller must `PetscFree()` `remoteOffsets` if it was requested
+
+  Fortran Note:
+  Use `PetscSFRestoreRemoteOffsets()` when `remoteOffsets` is no longer needed.
 
 .seealso: `PetscSF`, `PetscSFCreate()`
 @*/
-PetscErrorCode PetscSFDistributeSection(PetscSF sf, PetscSection rootSection, PetscInt **remoteOffsets, PetscSection leafSection)
+PetscErrorCode PetscSFDistributeSection(PetscSF sf, PetscSection rootSection, PetscInt *remoteOffsets[], PetscSection leafSection)
 {
   PetscSF         embedSF;
   const PetscInt *indices;
@@ -367,12 +370,15 @@ PetscErrorCode PetscSFDistributeSection(PetscSF sf, PetscSection rootSection, Pe
 
   Level: developer
 
-  Fortran Notes:
-  In Fortran, use PetscSFCreateRemoteOffsetsF90()
+  Note:
+  Caller must `PetscFree()` `remoteOffsets` if it was requested
+
+  Fortran Note:
+  Use `PetscSFRestoreRemoteOffsets()` when `remoteOffsets` is no longer needed.
 
 .seealso: `PetscSF`, `PetscSFCreate()`
 @*/
-PetscErrorCode PetscSFCreateRemoteOffsets(PetscSF sf, PetscSection rootSection, PetscSection leafSection, PetscInt **remoteOffsets)
+PetscErrorCode PetscSFCreateRemoteOffsets(PetscSF sf, PetscSection rootSection, PetscSection leafSection, PetscInt *remoteOffsets[])
 {
   PetscSF         embedSF;
   const PetscInt *indices;
@@ -399,7 +405,7 @@ PetscErrorCode PetscSFCreateRemoteOffsets(PetscSF sf, PetscSection rootSection, 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PetscSFCreateSectionSF - Create an expanded `PetscSF` of dofs, assuming the input `PetscSF` relates points
 
   Collective
@@ -532,7 +538,7 @@ PetscErrorCode PetscSFCreateFromLayouts(PetscLayout rmap, PetscLayout lmap, Pets
 }
 
 /* TODO: handle nooffprocentries like MatZeroRowsMapLocal_Private, since this code is the same */
-PetscErrorCode PetscLayoutMapLocal(PetscLayout map, PetscInt N, const PetscInt idxs[], PetscInt *on, PetscInt **oidxs, PetscInt **ogidxs)
+PetscErrorCode PetscLayoutMapLocal(PetscLayout map, PetscInt N, const PetscInt idxs[], PetscInt *on, PetscInt *oidxs[], PetscInt *ogidxs[])
 {
   PetscInt    *owners = map->range;
   PetscInt     n      = map->n;
