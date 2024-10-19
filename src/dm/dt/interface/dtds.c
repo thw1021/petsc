@@ -2817,14 +2817,14 @@ PetscErrorCode PetscDSSetExactSolutionTimeDerivative(PetscDS prob, PetscInt f, P
 . ds - The `PetscDS` object
 
   Output Parameters:
-+ numConstants - The number of constants
-- constants    - The array of constants, NULL if there are none
++ numConstants - The number of constants, or pass in `NULL` if not required
+- constants    - The array of constants, `NULL` if there are none
 
   Level: intermediate
 
 .seealso: `PetscDS`, `PetscDSSetConstants()`, `PetscDSCreate()`
 @*/
-PetscErrorCode PetscDSGetConstants(PetscDS ds, PetscInt *numConstants, const PetscScalar *constants[])
+PetscErrorCode PetscDSGetConstants(PetscDS ds, PeOp PetscInt *numConstants, PeOp const PetscScalar *constants[])
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ds, PETSCDS_CLASSID, 1);
@@ -3272,7 +3272,7 @@ PetscErrorCode PetscDSGetFaceTabulation(PetscDS prob, PetscTabulation *Tf[])
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode PetscDSGetEvaluationArrays(PetscDS prob, PetscScalar **u, PetscScalar **u_t, PetscScalar **u_x)
+PetscErrorCode PetscDSGetEvaluationArrays(PetscDS prob, PetscScalar *u[], PetscScalar *u_t[], PetscScalar *u_x[])
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(prob, PETSCDS_CLASSID, 1);
@@ -3292,7 +3292,7 @@ PetscErrorCode PetscDSGetEvaluationArrays(PetscDS prob, PetscScalar **u, PetscSc
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode PetscDSGetWeakFormArrays(PetscDS prob, PetscScalar **f0, PetscScalar **f1, PetscScalar **g0, PetscScalar **g1, PetscScalar **g2, PetscScalar **g3)
+PetscErrorCode PetscDSGetWeakFormArrays(PetscDS prob, PetscScalar *f0[], PetscScalar *f1[], PetscScalar *g0[], PetscScalar *g1[], PetscScalar *g2[], PetscScalar *g3[])
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(prob, PETSCDS_CLASSID, 1);
