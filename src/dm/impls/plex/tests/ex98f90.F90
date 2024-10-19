@@ -36,7 +36,7 @@ program ex98f90
       PetscCallA(DMDestroy(dm,ierr))
       dm = pdm
     end if
-    PetscCallA(DMViewFromOptions(dm,PETSC_NULL_OPTIONS,'-dm_view',ierr))
+    PetscCallA(DMViewFromOptions(dm,PETSC_NULL_OBJECT,'-dm_view',ierr))
 
     PetscCallA(DMGetDimension(dm,sdim,ierr))
     PetscCallA(PetscObjectGetComm(dm,comm,ierr))
@@ -97,7 +97,7 @@ program ex98f90
     deallocate(constraints)
     PetscCallA(ISRestoreIndicesF90(setIS,setID,ierr))
     PetscCallA(ISDestroy(setIS,ierr))
-    PetscCallA(PetscObjectViewFromOptions(section,PETSC_NULL_SECTION,'-dm_section_view',ierr))
+    PetscCallA(PetscObjectViewFromOptions(section,PETSC_NULL_OBJECT,'-dm_section_view',ierr))
 
     PetscCallA(PetscSectionDestroy(section,ierr))
     PetscCallA(DMDestroy(dm,ierr))
