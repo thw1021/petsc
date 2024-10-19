@@ -8,7 +8,7 @@
 #include <cgns_io.h>
 #include <ctype.h>
 
-static PetscErrorCode PetscViewerSetFromOptions_CGNS(PetscViewer v, PetscOptionItems *PetscOptionsObject)
+static PetscErrorCode PetscViewerSetFromOptions_CGNS(PetscViewer v, PetscOptionItems PetscOptionsObject)
 {
   PetscViewer_CGNS *cgv = (PetscViewer_CGNS *)v->data;
 

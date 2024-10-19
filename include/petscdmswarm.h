@@ -3,11 +3,12 @@
 #include <petscdm.h>
 #include <petscdt.h>
 
+/* MANSEC = DM */
+/* SUBMANSEC = DMSwarm */
+
 typedef struct _p_DMSwarmDataField  *DMSwarmDataField;
 typedef struct _p_DMSwarmDataBucket *DMSwarmDataBucket;
 typedef struct _p_DMSwarmSort       *DMSwarmSort;
-
-/* SUBMANSEC = DMSwarm */
 
 /*E
    DMSwarmType - Defines the type of `DMSWARM`
@@ -25,19 +26,19 @@ typedef struct _p_DMSwarmSort       *DMSwarmSort;
 .seealso: [](ch_dmbase), `DMSWARM`, `DMSwarmSetType()`
 E*/
 typedef enum {
-  DMSWARM_BASIC = 0,
+  DMSWARM_BASIC,
   DMSWARM_PIC
 } DMSwarmType;
 
 typedef enum {
-  DMSWARM_MIGRATE_BASIC = 0,
+  DMSWARM_MIGRATE_BASIC,
   DMSWARM_MIGRATE_DMCELLNSCATTER,
   DMSWARM_MIGRATE_DMCELLEXACT,
   DMSWARM_MIGRATE_USER
 } DMSwarmMigrateType;
 
 typedef enum {
-  DMSWARM_COLLECT_BASIC = 0,
+  DMSWARM_COLLECT_BASIC,
   DMSWARM_COLLECT_DMDABOUNDINGBOX,
   DMSWARM_COLLECT_GENERAL,
   DMSWARM_COLLECT_USER
@@ -59,7 +60,7 @@ typedef enum {
 .seealso: [](ch_dmbase), `DMSWARM`, `DM`, `DMSwarmInsertPointsUsingCellDM()`
 E*/
 typedef enum {
-  DMSWARMPIC_LAYOUT_REGULAR = 0,
+  DMSWARMPIC_LAYOUT_REGULAR,
   DMSWARMPIC_LAYOUT_GAUSS,
   DMSWARMPIC_LAYOUT_SUBDIVISION
 } DMSwarmPICLayoutType;
@@ -95,7 +96,7 @@ PETSC_EXTERN PetscErrorCode DMSwarmAddPoint(DM);
 PETSC_EXTERN PetscErrorCode DMSwarmAddNPoints(DM, PetscInt);
 PETSC_EXTERN PetscErrorCode DMSwarmRemovePoint(DM);
 PETSC_EXTERN PetscErrorCode DMSwarmRemovePointAtIndex(DM, PetscInt);
-PETSC_EXTERN PetscErrorCode DMSwarmCopyPoint(DM dm, PetscInt, PetscInt);
+PETSC_EXTERN PetscErrorCode DMSwarmCopyPoint(DM, PetscInt, PetscInt);
 
 PETSC_EXTERN PetscErrorCode DMSwarmGetLocalSize(DM, PetscInt *);
 PETSC_EXTERN PetscErrorCode DMSwarmGetSize(DM, PetscInt *);

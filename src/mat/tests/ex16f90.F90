@@ -25,7 +25,7 @@
 !
 !      Create a parallel dense matrix shared by all processors
 !
-      PetscCallA(MatCreateDense(PETSC_COMM_WORLD,PETSC_DECIDE,PETSC_DECIDE,m,n,PETSC_NULL_SCALAR,A,ierr))
+      PetscCallA(MatCreateDense(PETSC_COMM_WORLD,PETSC_DECIDE,PETSC_DECIDE,m,n,PETSC_NULL_SCALAR_ARRAY,A,ierr))
 
 !
 !     Set values into the matrix. All processors set all values.

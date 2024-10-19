@@ -1460,7 +1460,7 @@ PetscErrorCode DMForestGetWeightCapacity(DM dm, PetscReal *capacity)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_EXTERN PetscErrorCode DMSetFromOptions_Forest(DM dm, PetscOptionItems *PetscOptionsObject)
+PETSC_EXTERN PetscErrorCode DMSetFromOptions_Forest(DM dm, PetscOptionItems PetscOptionsObject)
 {
   PetscBool                  flg, flg1, flg2, flg3, flg4;
   DMForestTopology           oldTopo;

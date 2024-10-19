@@ -2,8 +2,6 @@
 #include <petsclayouthdf5.h> /*I   "petsclayoutdf5.h"   I*/
 #include <petscis.h>         /*I   "petscis.h"   I*/
 
-#if defined(PETSC_HAVE_HDF5)
-
 struct _n_HDF5ReadCtx {
   const char *name;
   hid_t       file, group, dataset, dataspace;
@@ -25,7 +23,7 @@ PetscErrorCode PetscViewerHDF5CheckTimestepping_Internal(PetscViewer viewer, con
   PetscFunctionBegin;
   PetscCall(PetscViewerHDF5ReadAttribute(viewer, name, "timestepping", PETSC_BOOL, &hdf5->defTimestepping, &timestepping));
   if (timestepping != hdf5->timestepping) {
-    char *group;
+    const char *group;
 
     PetscCall(PetscViewerHDF5GetGroup(viewer, NULL, &group));
     SETERRQ(PetscObjectComm((PetscObject)viewer), PETSC_ERR_FILE_UNEXPECTED, "Dataset %s/%s stored with timesteps? %s Timestepping pushed? %s", group, name, PetscBools[timestepping], PetscBools[hdf5->timestepping]);
@@ -94,11 +92,11 @@ static PetscErrorCode PetscViewerHDF5ReadSizes_Private(PetscViewer viewer, HDF5R
     const PetscInt *range;
     MPI_Comm        comm;
 
-  #if defined(PETSC_USE_64BIT_INDICES)
+#if defined(PETSC_USE_64BIT_INDICES)
     inttype = H5T_NATIVE_LLONG;
-  #else
+#else
     inttype = H5T_NATIVE_INT;
-  #endif
+#endif
     PetscCall(PetscObjectGetComm((PetscObject)viewer, &comm));
     PetscCall(PetscLayoutCreate(PetscObjectComm((PetscObject)viewer), &cmap));
     cmap->bs = 3;
@@ -239,7 +237,7 @@ static PetscErrorCode PetscViewerHDF5ReadArray_Private(PetscViewer viewer, HDF5R
 static PetscErrorCode PetscViewerHDF5Load_Internal(PetscViewer viewer, const char name[], PetscBool uncompress, PetscLayout map, hid_t datatype, void **newarr)
 {
   PetscBool   has;
-  char       *group;
+  const char *group;
   HDF5ReadCtx h        = NULL;
   hid_t       memspace = 0;
   size_t      unitsize;
@@ -250,14 +248,14 @@ static PetscErrorCode PetscViewerHDF5Load_Internal(PetscViewer viewer, const cha
   PetscCall(PetscViewerHDF5HasDataset(viewer, name, &has));
   PetscCheck(has, PetscObjectComm((PetscObject)viewer), PETSC_ERR_FILE_UNEXPECTED, "Object (dataset) \"%s\" not stored in group %s", name, group);
   PetscCall(PetscViewerHDF5ReadInitialize_Private(viewer, name, &h));
-  #if defined(PETSC_USE_COMPLEX)
+#if defined(PETSC_USE_COMPLEX)
   if (!h->complexVal) {
     H5T_class_t clazz = H5Tget_class(datatype);
     PetscCheck(clazz != H5T_FLOAT, PetscObjectComm((PetscObject)viewer), PETSC_ERR_SUP, "Dataset %s/%s is marked as real but PETSc is configured for complex scalars. The conversion is not yet implemented. Configure with --with-scalar-type=real to read this dataset", group ? group : "", name);
   }
-  #else
+#else
   PetscCheck(!h->complexVal, PetscObjectComm((PetscObject)viewer), PETSC_ERR_SUP, "Dataset %s/%s is marked as complex but PETSc is configured for real scalars. Configure with --with-scalar-type=complex to read this dataset", group, name);
-  #endif
+#endif
 
   PetscCall(PetscViewerHDF5ReadSizes_Private(viewer, h, uncompress, PETSC_TRUE, &map));
   PetscCall(PetscViewerHDF5ReadSelectHyperslab_Private(viewer, h, map, &memspace));
@@ -369,5 +367,3 @@ PetscErrorCode PetscViewerHDF5ReadSizes(PetscViewer viewer, const char name[], P
   PetscCall(PetscLayoutDestroy(&map));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-
-#endif /* defined(PETSC_HAVE_HDF5) */

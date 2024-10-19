@@ -1,12 +1,4 @@
 
-        Interface DMCompositeGetEntriesArray
-        Subroutine DMCompositeGetEntries1(dm1, d,ierr)
-          import tDM
-          DM dm1
-          DM d(*)
-          PetscErrorCode ierr
-        End Subroutine
-
         Interface DMCompositeGetEntries
         Subroutine DMCompositeGetEntries1(dm1, d1,ierr)
           import tDM
@@ -57,14 +49,5 @@
           PetscScalar,pointer :: d2(:)
           PetscScalar,pointer :: d4(:)
           PetscErrorCode ierr
-        End Subroutine
-      End Interface
-
-      Interface DMCompositeGetGlobalISs
-        Subroutine DMCompositeGetGlobalISs(a,b,z)
-          import tDM,tIS
-          DM a
-          IS b(*)
-          PetscErrorCode z
         End Subroutine
       End Interface
