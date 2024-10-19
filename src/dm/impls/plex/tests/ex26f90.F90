@@ -1,6 +1,6 @@
 program ex62f90
-#include "petsc/finclude/petsc.h"
-    use petsc
+#include "petsc/finclude/petscdmplex.h"
+    use petscdmplex
     implicit none
 #include "exodusII.inc"
 
