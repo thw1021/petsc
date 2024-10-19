@@ -10,6 +10,7 @@
 #include <petscspace.h>
 #include <petscdualspace.h>
 
+/* MANSEC = DM */
 /* SUBMANSEC = FE */
 
 /*MC
@@ -23,7 +24,7 @@
 .seealso: `PetscFE`, `PetscFEGeomCreate()`, `PetscFEGeomDestroy()`, `PetscFEGeomGetChunk()`, `PetscFEGeomRestoreChunk()`, `PetscFEGeomGetPoint()`, `PetscFEGeomGetCellPoint()`,
           `PetscFEGeomComplete()`, `PetscSpace`, `PetscDualSpace`
 M*/
-typedef struct _n_PetscFEGeom {
+typedef struct {
   const PetscReal *xi;
   PetscReal       *v;     /* v[Nc*Np*dE]:           The first point in each each in real coordinates */
   PetscReal       *J;     /* J[Nc*Np*dE*dE]:        The Jacobian of the map from reference to real coordinates (if nonsquare it is completed with orthogonal columns) */
