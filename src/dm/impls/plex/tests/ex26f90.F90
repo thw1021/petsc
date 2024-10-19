@@ -1,6 +1,6 @@
 program ex62f90
-#include "petsc/finclude/petsc.h"
-    use petsc
+#include "petsc/finclude/petscdmplex.h"
+    use petscdmplex
     implicit none
 #include "exodusII.inc"
 
@@ -118,7 +118,7 @@ program ex62f90
     PetscCallA(DMPlexDistributeSetDefault(dm,PETSC_FALSE,ierr));
     PetscCallA(DMSetFromOptions(dm,ierr));
     PetscCallA(DMGetDimension(dm, sdim,ierr))
-    PetscCallA(DMViewFromOptions(dm, PETSC_NULL_OPTIONS,'-dm_view',ierr));
+    PetscCallA(DMViewFromOptions(dm, PETSC_NULL_OBJECT,'-dm_view',ierr));
 
     ! Create the exodus result file
 
@@ -300,7 +300,7 @@ program ex62f90
     PetscCallA(ISDestroy(csIS,ierr))
     PetscCallA(PetscSectionSetUp(section,ierr))
     PetscCallA(DMSetLocalSection(dm, section,ierr))
-    PetscCallA(PetscObjectViewFromOptions(section, PETSC_NULL_SECTION, '-dm_section_view',ierr))
+    PetscCallA(PetscObjectViewFromOptions(section, PETSC_NULL_OBJECT, '-dm_section_view',ierr))
     PetscCallA(PetscSectionGetValueLayout(PETSC_COMM_WORLD, section, layout, ierr))
     PetscCallA(PetscLayoutDestroy(layout,ierr))
     PetscCallA(PetscSectionDestroy(section,ierr))
@@ -316,7 +316,7 @@ program ex62f90
     else
         pdm = dm
     end if
-    PetscCallA(DMViewFromOptions(pdm,PETSC_NULL_OPTIONS,'-dm_view',ierr))
+    PetscCallA(DMViewFromOptions(pdm,PETSC_NULL_OBJECT,'-dm_view',ierr))
 
     ! Get DM and IS for each field of dm
     PetscCallA(DMCreateSubDM(pdm, 1_kPI, fieldU,  isU,  dmU,ierr))
@@ -380,12 +380,12 @@ program ex62f90
     ! Restrict to U and Alpha
     PetscCallA(VecISCopy(X, isU, SCATTER_REVERSE, U,ierr))
     PetscCallA(VecISCopy(X, isA, SCATTER_REVERSE, A,ierr))
-    PetscCallA(VecViewFromOptions(UA, PETSC_NULL_OPTIONS, '-ua_vec_view',ierr))
-    PetscCallA(VecViewFromOptions(U, PETSC_NULL_OPTIONS, '-u_vec_view',ierr))
-    PetscCallA(VecViewFromOptions(A, PETSC_NULL_OPTIONS, '-a_vec_view',ierr))
+    PetscCallA(VecViewFromOptions(UA, PETSC_NULL_OBJECT, '-ua_vec_view',ierr))
+    PetscCallA(VecViewFromOptions(U, PETSC_NULL_OBJECT, '-u_vec_view',ierr))
+    PetscCallA(VecViewFromOptions(A, PETSC_NULL_OBJECT, '-a_vec_view',ierr))
     ! restrict to UA2
     PetscCallA(VecISCopy(X, isUA, SCATTER_REVERSE, UA2,ierr))
-    PetscCallA(VecViewFromOptions(UA2, PETSC_NULL_OPTIONS, '-ua2_vec_view',ierr))
+    PetscCallA(VecViewFromOptions(UA2, PETSC_NULL_OBJECT, '-ua2_vec_view',ierr))
 
     ! Getting Natural Vec
     PetscCallA(DMSetOutputSequenceNumber(dmU, 0_kPI, time, ierr))
@@ -464,7 +464,7 @@ program ex62f90
     end do
     PetscCallA(ISRestoreIndicesF90(csIS, csID,ierr))
     PetscCallA(ISDestroy(csIS,ierr))
-    PetscCallA(VecViewFromOptions(S, PETSC_NULL_OPTIONS, '-s_vec_view',ierr))
+    PetscCallA(VecViewFromOptions(S, PETSC_NULL_OBJECT, '-s_vec_view',ierr))
 
     ! Writing zonal variables in Exodus file
     PetscCallA(DMSetOutputSequenceNumber(dmS,0_kPI,time,ierr))

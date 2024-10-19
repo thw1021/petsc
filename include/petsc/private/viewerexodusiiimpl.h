@@ -11,8 +11,8 @@ typedef struct {
   PetscInt         order; /* the "order" of the mesh, used to construct tri6, tetra10 cells */
   PetscExodusIIInt numNodalVariables;
   PetscExodusIIInt numZonalVariables;
-  char           **nodalVariableNames;
-  char           **zonalVariableNames;
+  char            *nodalVariableNames[];
+  char            *zonalVariableNames[];
 } PetscViewer_ExodusII;
 
 #endif

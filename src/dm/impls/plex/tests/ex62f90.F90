@@ -282,7 +282,7 @@ program ex62f90
     PetscCallA(ISDestroy(csIS,ierr))
     PetscCallA(PetscSectionSetUp(section,ierr))
     PetscCallA(DMSetLocalSection(pdm, section,ierr))
-    PetscCallA(PetscObjectViewFromOptions(section, PETSC_NULL_SECTION, '-dm_section_view',ierr))
+    PetscCallA(PetscObjectViewFromOptions(section, PETSC_NULL_OBJECT, '-dm_section_view',ierr))
     PetscCallA(PetscSectionDestroy(section,ierr))
 
     ! Creating section on the sequential DM + creating the GlobalToNatural SF
@@ -291,7 +291,7 @@ program ex62f90
         PetscCallA(DMGetLocalSection(pdm, rootSection, ierr))
         PetscCallA(PetscSFCreateInverseSF(natPointSF, natPointSFInv, ierr))
         PetscCallA(PetscSectionCreate(PETSC_COMM_WORLD, leafSection, ierr))
-        PetscCallA(PetscSFDistributeSection(natPointSFInv, rootSection, PETSC_NULL_INTEGER, leafSection, ierr))
+        PetscCallA(PetscSFDistributeSection(natPointSFInv, rootSection, PETSC_NULL_INTEGER_POINTER, leafSection, ierr))
         PetscCallA(DMSetLocalSection(dm, leafSection, ierr))
         PetscCallA(DMPlexCreateGlobalToNaturalSF(pdm, leafSection, natPointSF, natSF, ierr))
         PetscCallA(PetscSFDestroy(natPointSFInv, ierr))
@@ -362,12 +362,12 @@ program ex62f90
     ! Restrict to U and Alpha
     PetscCallA(VecISCopy(X, isU, SCATTER_REVERSE, U,ierr))
     PetscCallA(VecISCopy(X, isA, SCATTER_REVERSE, A,ierr))
-    PetscCallA(VecViewFromOptions(UA, PETSC_NULL_OPTIONS, '-ua_vec_view',ierr))
-    PetscCallA(VecViewFromOptions(U, PETSC_NULL_OPTIONS, '-u_vec_view',ierr))
-    PetscCallA(VecViewFromOptions(A, PETSC_NULL_OPTIONS, '-a_vec_view',ierr))
+    PetscCallA(VecViewFromOptions(UA, PETSC_NULL_OBJECT, '-ua_vec_view',ierr))
+    PetscCallA(VecViewFromOptions(U, PETSC_NULL_OBJECT, '-u_vec_view',ierr))
+    PetscCallA(VecViewFromOptions(A, PETSC_NULL_OBJECT, '-a_vec_view',ierr))
     ! restrict to UA2
     PetscCallA(VecISCopy(X, isUA, SCATTER_REVERSE, UA2,ierr))
-    PetscCallA(VecViewFromOptions(UA2, PETSC_NULL_OPTIONS, '-ua2_vec_view',ierr))
+    PetscCallA(VecViewFromOptions(UA2, PETSC_NULL_OBJECT, '-ua2_vec_view',ierr))
 
     ! Getting Natural Vec
     PetscCallA(DMSetOutputSequenceNumber(dmU, 0_kPI, time, ierr))
@@ -446,7 +446,7 @@ program ex62f90
     end do
     PetscCallA(ISRestoreIndicesF90(csIS, csID,ierr))
     PetscCallA(ISDestroy(csIS,ierr))
-    PetscCallA(VecViewFromOptions(S, PETSC_NULL_OPTIONS, '-s_vec_view',ierr))
+    PetscCallA(VecViewFromOptions(S, PETSC_NULL_OBJECT, '-s_vec_view',ierr))
 
     ! Writing zonal variables in Exodus file
     PetscCallA(DMSetOutputSequenceNumber(dmS,0_kPI,time,ierr))
