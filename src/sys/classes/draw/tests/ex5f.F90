@@ -4,6 +4,7 @@
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscdraw.h>
       use petscsys
+      use petscdraw
       implicit none
 !
 !  This example demonstrates basic use of the Fortran interface for
@@ -14,8 +15,8 @@
       PetscDrawAxis     axis
       PetscErrorCode    ierr
       PetscBool         flg
-      integer           x,y,width,height
-      PetscScalar       xd,yd
+      integer4         x,y,width,height
+      PetscReal       xd,yd
       PetscReal         ten
       PetscInt          i,n,w,h
       PetscInt          one

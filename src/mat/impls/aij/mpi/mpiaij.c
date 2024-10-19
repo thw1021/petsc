@@ -2647,7 +2647,7 @@ PetscErrorCode MatMPIAIJSetUseScalableIncreaseOverlap(Mat A, PetscBool sc)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatSetFromOptions_MPIAIJ(Mat A, PetscOptionItems *PetscOptionsObject)
+PetscErrorCode MatSetFromOptions_MPIAIJ(Mat A, PetscOptionItems PetscOptionsObject)
 {
   PetscBool sc = PETSC_FALSE, flg;
 

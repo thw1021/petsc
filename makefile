@@ -80,14 +80,14 @@ matlabbin:
             echo "========================================="; \
         fi
 
-allfortranstubs: deletefortranstubs
-	@${PYTHON} lib/petsc/bin/maint/generatefortranstubs.py --petsc-dir=${PETSC_DIR} --petsc-arch=${PETSC_ARCH} --bfort=${BFORT} --mode=generate --verbose=${V}
-	-@${PYTHON} lib/petsc/bin/maint/generatefortranstubs.py --petsc-dir=${PETSC_DIR} --petsc-arch=${PETSC_ARCH} --mode=merge --verbose=${V}
+fortranstubs: deletefortranstubs
+	@${PYTHON} lib/petsc/bin/maint/generatefortranstubs.py --petsc-dir=${PETSC_DIR} --petsc-arch=${PETSC_ARCH}
+
+allfortranstubs: fortranstubs
 
 #copy of allfortranstubs with PETSC_ARCH=''
 allfortranstubsinplace: deletefortranstubs
-	@${PYTHON} lib/petsc/bin/maint/generatefortranstubs.py --petsc-dir=${PETSC_DIR} --petsc-arch='' --bfort=${BFORT} --mode=generate --verbose=${V}
-	-@${PYTHON} lib/petsc/bin/maint/generatefortranstubs.py --petsc-dir=${PETSC_DIR} --petsc-arch='' --mode=merge --verbose=${V}
+	@${PYTHON} lib/petsc/bin/maint/generatefortranstubs.py --petsc-dir=${PETSC_DIR} --petsc-arch='' --verbose=${V}
 
 deleteshared:
 	@for LIBNAME in ${SHLIBS}; \

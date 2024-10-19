@@ -95,7 +95,7 @@ PetscErrorCode DMDAGetFieldNames(DM da, const char *const **names)
 
 .seealso: [](sec_struct), `DM`, `DMDA`, `DMDAGetFieldName()`, `DMDASetCoordinateName()`, `DMDAGetCoordinateName()`, `DMDASetFieldName()`, `DMSetUp()`
 @*/
-PetscErrorCode DMDASetFieldNames(DM da, const char *const *names)
+PetscErrorCode DMDASetFieldNames(DM da, const char *const names[])
 {
   DM_DA   *dd = (DM_DA *)da->data;
   char   **fieldname;
