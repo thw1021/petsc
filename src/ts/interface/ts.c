@@ -114,8 +114,8 @@ PetscErrorCode TSSetFromOptions(TS ts)
   PetscCall(PetscOptionsReal("-ts_max_time", "Maximum time to run to", "TSSetMaxTime", ts->max_time, &ts->max_time, NULL));
   PetscCall(PetscOptionsRealArray("-ts_time_span", "Time span", "TSSetTimeSpan", tspan, &nt, &flg));
   if (flg) PetscCall(TSSetTimeSpan(ts, nt, tspan));
-  PetscCall(PetscOptionsInt("-ts_max_steps", "Maximum number of time steps", "TSSetMaxSteps", ts->max_steps, &ts->max_steps, NULL));
-  PetscCall(PetscOptionsInt("-ts_run_steps", "Number of time steps for TSSolve to take", "TSSetRunSteps", ts->run_steps, &ts->run_steps, NULL));
+  PetscCall(PetscOptionsInt("-ts_max_steps", "Maximum time step number to execute until (possibly with non-zero starting value)", "TSSetMaxSteps", ts->max_steps, &ts->max_steps, NULL));
+  PetscCall(PetscOptionsInt("-ts_run_steps", "Maximum number of time steps for TSSolve to take on each call", "TSSetRunSteps", ts->run_steps, &ts->run_steps, NULL));
   PetscCall(PetscOptionsReal("-ts_init_time", "Initial time", "TSSetTime", ts->ptime, &ts->ptime, NULL));
   PetscCall(PetscOptionsReal("-ts_dt", "Initial time step", "TSSetTimeStep", ts->time_step, &time_step, &flg));
   if (flg) PetscCall(TSSetTimeStep(ts, time_step));
@@ -2833,13 +2833,13 @@ PetscErrorCode TSGetMaxSteps(TS ts, PetscInt *maxsteps)
 }
 
 /*@
-  TSSetRunSteps - Sets the number of steps for TSSolve to use.
+  TSSetRunSteps - Sets the max number of steps to take in each call to `TSSolve`.
 
   Logically Collective
 
   Input Parameters:
 + ts       - the `TS` context obtained from `TSCreate()`
-- runsteps - number of steps to use in this run
+- runsteps - max number of steps to take in each call to `TSSolve`;
 
   Options Database Key:
 . -ts_run_steps <runsteps> - Sets runsteps
@@ -2847,7 +2847,7 @@ PetscErrorCode TSGetMaxSteps(TS ts, PetscInt *maxsteps)
   Level: intermediate
 
   Note:
-  The default number of steps in a single run is 5000
+  The default is PETSC_UNLIMITED
 
 .seealso: [](ch_ts), `TS`, `TSGetRunSteps()`, `TSSetMaxTime()`, `TSSetExactFinalTime()`
 @*/
@@ -2857,16 +2857,16 @@ PetscErrorCode TSSetRunSteps(TS ts, PetscInt runsteps)
   PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
   PetscValidLogicalCollectiveInt(ts, runsteps, 2);
   if (runsteps == PETSC_DETERMINE) {
-    ts->run_steps = ts->default_run_steps;
+    ts->run_steps = PETSC_UNLIMITED;
   } else {
-    PetscCheck(runsteps >= 0, PetscObjectComm((PetscObject)ts), PETSC_ERR_ARG_OUTOFRANGE, "Number of steps to run must be non-negative");
+    PetscCheck(runsteps >= 0, PetscObjectComm((PetscObject)ts), PETSC_ERR_ARG_OUTOFRANGE, "Max number of steps to take in each call to TSSolve must be non-negative");
     ts->run_steps = runsteps;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  TSGetRunSteps - Gets the number of steps for TSSolve to use.
+  TSGetRunSteps - Gets the max number of steps to take in each call to `TSSolve`.
 
   Not Collective
 
@@ -2874,7 +2874,7 @@ PetscErrorCode TSSetRunSteps(TS ts, PetscInt runsteps)
 . ts - the `TS` context obtained from `TSCreate()`
 
   Output Parameter:
-. runsteps - number of steps to use in this run
+. runsteps - max number of steps to take in each call to `TSSolve`. 
 
   Level: advanced
 
@@ -4132,7 +4132,6 @@ PetscErrorCode TSSolve(TS ts, Vec u)
       PetscCall(TSMonitor(ts, ts->steps, ts->ptime, ts->vec_sol));
       if (!ts->steprollback || (ts->stepresize && ts->resizerollback)) PetscCall(TSPreStep(ts));
       PetscCall(TSStep(ts));
-      if ((ts->steps - ts->start_step) == ts->run_steps) ts->reason = TS_CONVERGED_ITS;
       if (ts->testjacobian) PetscCall(TSRHSJacobianTest(ts, NULL));
       if (ts->testjacobiantranspose) PetscCall(TSRHSJacobianTestTranspose(ts, NULL));
       if (ts->quadraturets && ts->costintegralfwd) { /* Must evaluate the cost integral before event is handled. The cost integral value can also be rolled back. */
@@ -4151,7 +4150,8 @@ PetscErrorCode TSSolve(TS ts, Vec u)
       if (!ts->steprollback && ts->resizerollback) PetscCall(TSResize(ts));
       /* check convergence */
       if (!ts->reason) {
-        if (ts->steps >= ts->max_steps) ts->reason = TS_CONVERGED_ITS;
+        if ((ts->steps - ts->start_step) == ts->run_steps) ts->reason = TS_CONVERGED_ITS;
+        else if (ts->steps >= ts->max_steps) ts->reason = TS_CONVERGED_ITS;
         else if (ts->ptime >= ts->max_time) ts->reason = TS_CONVERGED_TIME;
       }
       if (!ts->steprollback) {
