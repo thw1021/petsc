@@ -35,8 +35,8 @@ static PetscErrorCode TSAdaptSetDefaultType(TSAdapt adapt, TSAdaptType default_t
 . -ts_save_trajectory                                                - checkpoint the solution at each time-step
 . -ts_max_time <time>                                                - maximum time to compute to
 . -ts_time_span <t0,...tf>                                           - sets the time span, solutions are computed and stored for each indicated time
-. -ts_max_steps <steps>                                              - maximum number of time-steps to take
-. -ts_run_steps <steps>                                              - number of time steps for TSSolve to take
+. -ts_max_steps <steps>                                              - maximum time-step number to execute until (possibly with nonzero starting value)
+. -ts_run_steps <steps>                                              - maximum number of time steps for TSSolve to take on each call
 . -ts_init_time <time>                                               - initial time to start computation
 . -ts_final_time <time>                                              - final time to compute to (deprecated: use `-ts_max_time`)
 . -ts_dt <dt>                                                        - initial time step
