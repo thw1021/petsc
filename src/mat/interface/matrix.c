@@ -108,7 +108,7 @@ PetscErrorCode MatCopyHashToAIJ(Mat A, Mat B)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
-  PetscTryTypeMethod(A, copyhashtoaij, B);
+  PetscUseTypeMethod(A, copyhashtoaij, B);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
