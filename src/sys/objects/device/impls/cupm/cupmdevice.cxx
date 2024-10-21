@@ -258,8 +258,10 @@ PetscErrorCode Device<T>::initialize(MPI_Comm comm, PetscInt *defaultDeviceId, P
     PetscCall(PetscDeviceCheckDeviceCount_Internal(ndev));
     if (initId.first == PETSC_DECIDE) {
       if (ndev) {
-        char *pytorch_rank = (char *)getenv("LOCAL_RANK");
-        if (pytorch_rank) {
+        char *pytorch_exists = (char *)getenv("TORCHELASTIC_RUN_ID");
+        char *pytorch_rank   = (char *)getenv("LOCAL_RANK");
+
+        if (pytorch_exists && pytorch_rank) {
           char *endptr;
 
           initId.first = (PetscInt)strtol(pytorch_rank, &endptr, 10);
