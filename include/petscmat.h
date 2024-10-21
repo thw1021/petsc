@@ -953,7 +953,7 @@ PETSC_EXTERN PetscErrorCode MatFindZeroDiagonals(Mat, IS *);
 PETSC_EXTERN PetscErrorCode MatFindOffBlockDiagonalEntries(Mat, IS *);
 PETSC_EXTERN PetscErrorCode MatCreateMPIMatConcatenateSeqMat(MPI_Comm, Mat, PetscInt, MatReuse, Mat *);
 
-PETSC_EXTERN PetscErrorCode MatCopyHashToAIJ(Mat A, Mat B);
+PETSC_EXTERN PetscErrorCode MatCopyHashToXAIJ(Mat A, Mat B);
 /*@C
    MatSetValue - Set a single entry into a matrix.
 

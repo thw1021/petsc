@@ -104,11 +104,11 @@ PetscErrorCode MatSetRandom(Mat x, PetscRandom rctx)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatCopyHashToAIJ(Mat A, Mat B)
+PetscErrorCode MatCopyHashToXAIJ(Mat A, Mat B)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
-  PetscUseTypeMethod(A, copyhashtoaij, B);
+  PetscUseTypeMethod(A, copyhashtoxaij, B);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

@@ -27,7 +27,7 @@ int main(int argc, char **argv)
 
   /* Create B */
   PetscCall(MatDuplicate(A, MAT_DO_NOT_COPY_VALUES, &B));
-  PetscCall(MatCopyHashToAIJ(A, B));
+  PetscCall(MatCopyHashToXAIJ(A, B));
   PetscCall(MatView(B, PETSC_VIEWER_STDOUT_WORLD));
 
   PetscCall(MatDestroy(&A));

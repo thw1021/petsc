@@ -1,4 +1,4 @@
-static PetscErrorCode MatCopyHashToAIJ_Seq_Hash(Mat A, Mat B)
+static PetscErrorCode MatCopyHashToXAIJ_Seq_Hash(Mat A, Mat B)
 {
   PetscConcat(Mat_Seq, TYPE) *a = (PetscConcat(Mat_Seq, TYPE) *)A->data;
   PetscHashIter  hi;
@@ -70,7 +70,7 @@ static PetscErrorCode MatCopyHashToAIJ_Seq_Hash(Mat A, Mat B)
 static PetscErrorCode MatAssemblyEnd_Seq_Hash(Mat A, MatAssemblyType type)
 {
   PetscFunctionBegin;
-  PetscCall(MatCopyHashToAIJ(A, A));
+  PetscCall(MatCopyHashToXAIJ(A, A));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -141,7 +141,7 @@ static PetscErrorCode MatSetUp_Seq_Hash(Mat A)
   A->ops->destroy       = MatDestroy_Seq_Hash;
   A->ops->zeroentries   = MatZeroEntries_Seq_Hash;
   A->ops->setrandom     = MatSetRandom_Seq_Hash;
-  A->ops->copyhashtoaij = MatCopyHashToAIJ_Seq_Hash;
+  A->ops->copyhashtoxaij = MatCopyHashToXAIJ_Seq_Hash;
 #if defined(TYPE_BS_ON)
   if (bs > 1) A->ops->setvalues = MatSetValues_Seq_Hash_BS;
   else
