@@ -104,6 +104,28 @@ PetscErrorCode MatSetRandom(Mat x, PetscRandom rctx)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@
+  MatCopyHashToXAIJ - copy hash table entries into an XAIJ matrix type
+
+  Logically Collective
+
+  Input Parameters:
+. A - A matrix in unassembled, hash table form
+
+  Output Parameters
+. B - The XAIJ matrix. This can either be `A` or some matrix of equivalent size, e.g. obtained from `A` via `MatDuplicate()`
+
+  Example:
+.vb
+     PetscCall(MatDuplicate(A, MAT_DO_NOT_COPY_VALUES, &B));
+     PetscCall(MatCopyHashToXAIJ(A, B));
+.ve
+
+  Level: advanced
+
+  Notes:
+  If `B` is `A`, then the hash table data structure will be destroyed. `B` is assembled
+@*/
 PetscErrorCode MatCopyHashToXAIJ(Mat A, Mat B)
 {
   PetscFunctionBegin;
