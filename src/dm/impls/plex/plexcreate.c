@@ -25,6 +25,9 @@ PetscErrorCode DMPlexCopy_Internal(DM dmin, PetscBool copyPeriodicity, PetscBool
   MatType              matType;
   PetscBool            dist, useCeed;
   DMReorderDefaultFlag reorder;
+  DM                   cdm;
+  PetscInt             localizationHeight;
+  PetscBool            sparseLocalize;
 
   PetscFunctionBegin;
   if (dmin == dmout) PetscFunctionReturn(PETSC_SUCCESS);
@@ -33,6 +36,14 @@ PetscErrorCode DMPlexCopy_Internal(DM dmin, PetscBool copyPeriodicity, PetscBool
   PetscCall(DMGetMatType(dmin, &matType));
   PetscCall(DMSetMatType(dmout, matType));
   if (copyPeriodicity) {
+    PetscCall(DMGetCoordinateDM(dmin, &cdm));
+    PetscCall(DMPlexGetMaxProjectionHeight(cdm, &localizationHeight));
+    PetscCall(DMGetSparseLocalize(dmin, &sparseLocalize));
+
+    PetscCall(DMGetCoordinateDM(dmout, &cdm));
+    PetscCall(DMPlexSetMaxProjectionHeight(cdm, localizationHeight));
+    PetscCall(DMSetSparseLocalize(dmout, sparseLocalize));
+
     PetscCall(DMGetPeriodicity(dmin, &maxCell, &Lstart, &L));
     PetscCall(DMSetPeriodicity(dmout, maxCell, Lstart, L));
     PetscCall(DMLocalizeCoordinates(dmout));
@@ -67,6 +78,9 @@ PetscErrorCode DMPlexReplace_Internal(DM dm, DM *ndm)
   Vec              coords;
   const PetscReal *maxCell, *Lstart, *L;
   PetscInt         dim, cdim;
+  DM               cdm;
+  PetscInt         localizationHeight;
+  PetscBool        sparseLocalize;
 
   PetscFunctionBegin;
   if (dm == dmNew) {
@@ -98,6 +112,15 @@ PetscErrorCode DMPlexReplace_Internal(DM dm, DM *ndm)
   PetscCall(DMFieldDestroy(&dm->coordinates[0].field));
   dm->coordinates[0].field            = dmNew->coordinates[0].field;
   ((DM_Plex *)dmNew->data)->coordFunc = ((DM_Plex *)dm->data)->coordFunc;
+
+  PetscCall(DMGetCoordinateDM(dmNew, &cdm));
+  PetscCall(DMPlexGetMaxProjectionHeight(cdm, &localizationHeight));
+  PetscCall(DMGetSparseLocalize(dmNew, &sparseLocalize));
+
+  PetscCall(DMGetCoordinateDM(dm, &cdm));
+  PetscCall(DMPlexSetMaxProjectionHeight(cdm, localizationHeight));
+  PetscCall(DMSetSparseLocalize(dm, sparseLocalize));
+
   PetscCall(DMGetPeriodicity(dmNew, &maxCell, &Lstart, &L));
   PetscCall(DMSetPeriodicity(dm, maxCell, Lstart, L));
   PetscCall(DMPlexGetGlobalToNaturalSF(dmNew, &sf));
