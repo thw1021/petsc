@@ -113,6 +113,7 @@ PetscErrorCode DMPlexReplace_Internal(DM dm, DM *ndm)
   }
   PetscCall(DMDestroyLabelLinkList_Internal(dm));
   PetscCall(DMCopyLabels(dmNew, dm, PETSC_OWN_POINTER, PETSC_TRUE, DM_COPY_LABELS_FAIL));
+  PetscCall(DMCopyDisc(dmNew, dm));
   PetscCall(DMGetCoarseDM(dmNew, &coarseDM));
   PetscCall(DMSetCoarseDM(dm, coarseDM));
   PetscCall(DMDestroy(ndm));
