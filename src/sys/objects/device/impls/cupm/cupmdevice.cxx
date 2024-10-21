@@ -258,6 +258,7 @@ PetscErrorCode Device<T>::initialize(MPI_Comm comm, PetscInt *defaultDeviceId, P
     PetscCall(PetscDeviceCheckDeviceCount_Internal(ndev));
     if (initId.first == PETSC_DECIDE) {
       if (ndev) {
+        /* TORCHELASTIC_RUN_ID is used as a proxy to determine if the current process was launched with torchrun */
         char *pytorch_exists = (char *)getenv("TORCHELASTIC_RUN_ID");
         char *pytorch_rank   = (char *)getenv("LOCAL_RANK");
 
