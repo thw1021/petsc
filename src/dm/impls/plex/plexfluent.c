@@ -219,6 +219,45 @@ static PetscErrorCode DMPlexCreateFluent_ReadSection(PetscViewer viewer, FluentS
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode InsertEdge(PetscInt numCells, PetscInt cell, PetscInt numFaceVertices, const PetscInt face[], PetscBool reverse, PetscInt numCellVertices, PetscInt cellVert[])
+{
+  PetscBool found[2] = {PETSC_FALSE, PETSC_FALSE};
+  PetscInt  idx[2]   = {-1, -1};
+
+  PetscFunctionBegin;
+  PetscCheck(numFaceVertices == 2, PETSC_COMM_SELF, PETSC_ERR_SUP, "We only support edges currently.");
+  for (PetscInt v = 0; v < numFaceVertices; ++v) {
+    for (PetscInt c = 0; c < numCellVertices; ++c) {
+      if (cellVert[c] == face[reverse ? 1 - v : v] - 1 + numCells) {
+        found[v] = PETSC_TRUE;
+        idx[v]   = c;
+        break;
+      }
+    }
+  }
+  if (found[0] && found[1]) {
+    PetscFunctionReturn(PETSC_SUCCESS);
+  } else if (found[0]) {
+    const PetscInt nidx = (idx[0] + 1) % numCellVertices;
+
+    PetscCheck(cellVert[nidx] < 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Error in edge insertion");
+    cellVert[nidx] = face[reverse ? 0 : 1] - 1 + numCells;
+  } else if (found[1]) {
+    const PetscInt nidx = (idx[1] - 1 + numCellVertices) % numCellVertices;
+
+    PetscCheck(cellVert[nidx] < 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Error in edge insertion");
+    cellVert[nidx] = face[reverse ? 1 : 0] - 1 + numCells;
+  } else {
+    idx[0] = 0;
+    while (cellVert[idx[0]] >= 0) ++idx[0];
+    idx[1] = (idx[0] + 1) % numCellVertices;
+    PetscCheck(cellVert[idx[1]] < 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Error in edge insertion");
+    cellVert[idx[0]] = face[reverse ? 1 : 0] - 1 + numCells;
+    cellVert[idx[1]] = face[reverse ? 0 : 1] - 1 + numCells;
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*@C
   DMPlexCreateFluent - Create a `DMPLEX` mesh from a Fluent mesh file <http://aerojet.engr.ucdavis.edu/fluenthelp/html/ug/node1490.htm>.
 
@@ -257,17 +296,22 @@ PetscErrorCode DMPlexCreateFluent(MPI_Comm comm, PetscViewer viewer, PetscBool i
       PetscCall(DMPlexCreateFluent_ReadSection(viewer, &s));
       if (s.index == 2) { /* Dimension */
         dim = s.nd;
-
+        PetscCall(PetscInfo((PetscObject)viewer, "CASE: Found dimension: %" PetscInt_FMT "\n", dim));
       } else if (s.index == 10 || s.index == 2010) { /* Vertices */
-        if (s.zoneID == 0) numVertices = s.last;
-        else {
+        if (s.zoneID == 0) {
+          numVertices = s.last;
+          PetscCall(PetscInfo((PetscObject)viewer, "CASE: Found number of vertices: %" PetscInt_FMT "\n", numVertices));
+        } else {
+          PetscCall(PetscInfo((PetscObject)viewer, "CASE: Found vertex coordinates\n"));
           PetscCheck(!coordsIn, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Currently no support for multiple coordinate sets in Fluent files");
           coordsIn = (PetscScalar *)s.data;
         }
 
       } else if (s.index == 12 || s.index == 2012) { /* Cells */
-        if (s.zoneID == 0) numCells = s.last;
-        else {
+        if (s.zoneID == 0) {
+          numCells = s.last;
+          PetscCall(PetscInfo((PetscObject)viewer, "CASE: Found number of cells %" PetscInt_FMT "\n", numCells));
+        } else {
           switch (s.nd) {
           case 0:
             numCellVertices = PETSC_DETERMINE;
@@ -293,13 +337,14 @@ PetscErrorCode DMPlexCreateFluent(MPI_Comm comm, PetscViewer viewer, PetscBool i
           default:
             numCellVertices = PETSC_DETERMINE;
           }
+          PetscCall(PetscInfo((PetscObject)viewer, "CASE: Found number of cell vertices %" PetscInt_FMT "\n", numCellVertices));
         }
-
       } else if (s.index == 13 || s.index == 2013) { /* Facets */
         if (s.zoneID == 0) {                         /* Header section */
           numFaces = (PetscInt)(s.last - s.first + 1);
           if (s.nd == 0 || s.nd == 5) numFaceVertices = PETSC_DETERMINE;
           else numFaceVertices = s.nd;
+          PetscCall(PetscInfo((PetscObject)viewer, "CASE: Found number of faces %" PetscInt_FMT " face vertices: %" PetscInt_FMT "\n", numFaces, numFaceVertices));
         } else { /* Data section */
           unsigned int z;
 
@@ -345,37 +390,18 @@ PetscErrorCode DMPlexCreateFluent(MPI_Comm comm, PetscViewer viewer, PetscBool i
 
       if (cl > 0) {
         cell = &(cellVertices[(cl - 1) * numCellVertices]);
-        for (v = 0; v < numFaceVertices; v++) {
-          PetscBool found = PETSC_FALSE;
-          for (c = 0; c < numCellVertices; c++) {
-            if (cell[c] < 0) break;
-            if (cell[c] == face[v] - 1 + numCells) {
-              found = PETSC_TRUE;
-              break;
-            }
-          }
-          if (!found) cell[c] = face[v] - 1 + numCells;
-        }
+        PetscCall(InsertEdge(numCells, cl - 1, numFaceVertices, face, PETSC_FALSE, numCellVertices, cell));
       }
       if (cr > 0) {
         cell = &(cellVertices[(cr - 1) * numCellVertices]);
-        for (v = 0; v < numFaceVertices; v++) {
-          PetscBool found = PETSC_FALSE;
-          for (c = 0; c < numCellVertices; c++) {
-            if (cell[c] < 0) break;
-            if (cell[c] == face[v] - 1 + numCells) {
-              found = PETSC_TRUE;
-              break;
-            }
-          }
-          if (!found) cell[c] = face[v] - 1 + numCells;
-        }
+        PetscCall(InsertEdge(numCells, cr - 1, numFaceVertices, face, PETSC_TRUE, numCellVertices, cell));
       }
     }
     for (c = 0; c < numCells; c++) PetscCall(DMPlexSetCone(*dm, c, &cellVertices[c * numCellVertices]));
   }
   PetscCall(DMPlexSymmetrize(*dm));
   PetscCall(DMPlexStratify(*dm));
+  PetscCall(DMViewFromOptions(*dm, NULL, "-cas_dm_view"));
   if (interpolate) {
     DM idm;
 
@@ -384,6 +410,7 @@ PetscErrorCode DMPlexCreateFluent(MPI_Comm comm, PetscViewer viewer, PetscBool i
     *dm = idm;
   }
 
+  PetscCall(DMViewFromOptions(*dm, NULL, "-cas_dm_view"));
   if (rank == 0 && faces) {
     PetscInt        fi, joinSize, meetSize, *fverts, cells[2];
     const PetscInt *join, *meet;
@@ -397,7 +424,7 @@ PetscErrorCode DMPlexCreateFluent(MPI_Comm comm, PetscViewer viewer, PetscBool i
         cells[0] = cl;
         cells[1] = cr;
         PetscCall(DMPlexGetMeet(*dm, 2, cells, &meetSize, &meet));
-        PetscCheck(meetSize == 1, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Could not determine Plex facet for Fluent face %" PetscInt_FMT, f);
+        PetscCheck(meetSize == 1, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Could not determine Plex facet for Fluent face %" PetscInt_FMT " cells: %" PetscInt_FMT ", %" PetscInt_FMT, f, cl, cr);
         PetscCall(DMSetLabelValue_Fast(*dm, &faceSets, "Face Sets", meet[0], faceZoneIDs[f]));
         PetscCall(DMPlexRestoreMeet(*dm, numFaceVertices, fverts, &meetSize, &meet));
       } else {
