@@ -1,0 +1,147 @@
+#include "petscsf.h"
+static char help[] = "Demonstrate CGNS parallel load-save including data\n\n";
+
+#include <petscdmplex.h>
+#include <petscviewerhdf5.h>
+#define EX "ex16.c"
+
+typedef struct {
+  char      infile[PETSC_MAX_PATH_LEN];  /* Input mesh filename */
+  char      outfile[PETSC_MAX_PATH_LEN]; /* Dump/reload mesh filename */
+} AppCtx;
+
+static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
+{
+  PetscBool flg;
+
+  PetscFunctionBeginUser;
+  options->infile[0]     = '\0';
+  options->outfile[0]    = '\0';
+  PetscOptionsBegin(comm, "", "Meshing Problem Options", "DMPLEX");
+  PetscCall(PetscOptionsString("-infile", "The input CGNS file", EX, options->infile, options->infile, sizeof(options->infile), &flg));
+  PetscCall(PetscOptionsString("-outfile", "The output CGNS file", EX, options->outfile, options->outfile, sizeof(options->outfile), &flg));
+  PetscOptionsEnd();
+  PetscCheck(flg, comm, PETSC_ERR_USER_INPUT, "-infile needs to be specified");
+  PetscCheck(flg, comm, PETSC_ERR_USER_INPUT, "-outfile needs to be specified");
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+// @brief Create DM from CGNS file and setup PetscFE to VecLoad solution from that file
+PetscErrorCode ReadCGNSDM(MPI_Comm comm, const char filename[], DM *dm)
+{
+  PetscInt degree;
+
+  PetscFunctionBeginUser;
+  PetscCall(DMPlexCreateFromFile(comm, filename, "ex16_plex", PETSC_TRUE, dm));
+  PetscCall(DMPlexDistributeSetDefault(*dm, PETSC_FALSE));
+  PetscCall(DMSetFromOptions(*dm));
+  PetscCall(DMViewFromOptions(*dm, NULL, "-dm_view"));
+
+  /* Redistribute */
+  PetscCall(DMSetOptionsPrefix(*dm, "redistributed_"));
+  PetscCall(DMSetFromOptions(*dm));
+  PetscCall(DMViewFromOptions(*dm, NULL, "-dm_view"));
+
+  { // Get degree of the natural section
+    PetscFE        fe_natural;
+    PetscDualSpace dual_space_natural;
+
+    PetscCall(DMGetField(*dm, 0, NULL, (PetscObject *)&fe_natural));
+    PetscCall(PetscFEGetDualSpace(fe_natural, &dual_space_natural));
+    PetscCall(PetscDualSpaceGetOrder(dual_space_natural, &degree));
+    PetscCall(DMClearFields(*dm));
+    PetscCall(DMSetLocalSection(*dm, NULL));
+  }
+
+  { // Setup fe to load in the initial condition data
+    PetscFE  fe;
+    PetscInt dim;
+
+    PetscCall(DMGetDimension(*dm, &dim));
+    PetscCall(PetscFECreateLagrange(PETSC_COMM_SELF, dim, 5, PETSC_FALSE, degree, PETSC_DETERMINE, &fe));
+    PetscCall(PetscObjectSetName((PetscObject)fe, "FE for VecLoad"));
+    PetscCall(DMAddField(*dm, NULL, (PetscObject)fe));
+    PetscCall(DMCreateDS(*dm));
+    PetscCall(PetscFEDestroy(&fe));
+  }
+
+  // Set section component names, used when writing out CGNS files
+  PetscSection section;
+  PetscCall(DMGetLocalSection(*dm, &section));
+  PetscCall(PetscSectionSetFieldName(section, 0, ""));
+  PetscCall(PetscSectionSetComponentName(section, 0, 0, "Pressure"));
+  PetscCall(PetscSectionSetComponentName(section, 0, 1, "VelocityX"));
+  PetscCall(PetscSectionSetComponentName(section, 0, 2, "VelocityY"));
+  PetscCall(PetscSectionSetComponentName(section, 0, 3, "VelocityZ"));
+  PetscCall(PetscSectionSetComponentName(section, 0, 4, "Temperature"));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+int main(int argc, char **argv)
+{
+  AppCtx      user;
+  MPI_Comm    comm;
+  const char *infilename;
+
+  PetscFunctionBeginUser;
+  PetscCall(PetscInitialize(&argc, &argv, NULL, help));
+  PetscCall(ProcessOptions(PETSC_COMM_WORLD, &user));
+  infilename = user.infile;
+
+  DM          dm;
+  Vec         V;
+  PetscViewer viewer;
+  const char *name;
+  PetscReal   time;
+  PetscBool   set;
+  comm = PETSC_COMM_WORLD;
+
+
+  // Load DM from CGNS file
+  PetscCall(ReadCGNSDM(comm, infilename, &dm));
+  PetscCall(DMSetOptionsPrefix(dm, "loaded_"));
+  PetscCall(DMViewFromOptions(dm, NULL, "-dm_view"));
+
+  // Load solution from CGNS file
+  PetscCall(PetscViewerCGNSOpen(comm, infilename, FILE_MODE_READ, &viewer));
+  PetscCall(DMGetGlobalVector(dm, &V));
+  PetscCall(PetscViewerCGNSSetSolutionIndex(viewer, 1));
+  { // Test GetSolutionIndex, not needed in application code
+    PetscInt solution_index;
+    PetscCall(PetscViewerCGNSGetSolutionIndex(viewer, &solution_index));
+    PetscCheck(solution_index == 1, comm, PETSC_ERR_ARG_INCOMP, "Returned solution index wrong.");
+  }
+  PetscCall(PetscViewerCGNSGetSolutionName(viewer, &name));
+  PetscCall(PetscViewerCGNSGetSolutionTime(viewer, &time, &set));
+//  PetscCheck(set, comm, PETSC_ERR_RETURN, "Time data wasn't set!");
+  PetscCall(PetscPrintf(comm, "Solution Name: %s, and time %g\n", name, time));
+  PetscCall(VecLoad(V, viewer));
+  PetscCall(PetscViewerDestroy(&viewer));
+
+  // Write loaded solution to CGNS file
+  PetscCall(PetscViewerCGNSOpen(comm, user.outfile, FILE_MODE_WRITE, &viewer));
+  PetscCall(VecView(V, viewer));
+  PetscCall(PetscViewerDestroy(&viewer));
+
+  PetscCall(DMRestoreGlobalVector(dm, &V));
+  PetscCall(DMDestroy(&dm));
+  PetscCallMPI(MPI_Barrier(PETSC_COMM_WORLD));
+
+  PetscCall(PetscFinalize());
+  return 0;
+}
+
+/*TEST
+  build:
+    requires: cgns
+  testset:
+    suffix: cgns
+    requires: !complex
+    nsize: 4
+    args: -infile ${wPETSC_DIR}/share/petsc/datafiles/meshes/2x2x2_Q3_wave.cgns -outfile 2x2x2_Q3_wave_output.cgns
+    args: -dm_plex_cgns_parallel -loaded_dm_view 
+    test:
+      # this partitioner should not shuffle anything, it should yield the same partitioning as the XDMF reader - added just for testing
+      suffix: simple
+      args: -petscpartitioner_type simple
+TEST*/
