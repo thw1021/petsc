@@ -22,7 +22,7 @@ program ex47f90
     PetscCallA(DMCreate(PETSC_COMM_WORLD, dm, ierr))
     PetscCallA(DMSetType(dm, DMPLEX, ierr))
     PetscCallA(DMSetFromOptions(dm, ierr))
-    PetscCallA(DMViewFromOptions(dm,PETSC_NULL_OPTIONS,'-d_view',ierr))
+    PetscCallA(DMViewFromOptions(dm,PETSC_NULL_OBJECT,'-d_view',ierr))
 
     PetscCallA(PetscSectionCreate(PETSC_COMM_WORLD,section,ierr))
     PetscCallA(DMPlexGetChart(dm,pStart,pEnd,ierr))
@@ -37,7 +37,7 @@ program ex47f90
     End Do
     PetscCallA(PetscSectionSetUp(section,ierr))
     PetscCallA(DMSetLocalSection(dm, section,ierr))
-    PetscCallA(PetscSectionViewFromOptions(section,PETSC_NULL_OPTIONS,'-s_view',ierr))
+    PetscCallA(PetscSectionViewFromOptions(section,PETSC_NULL_OBJECT,'-s_view',ierr))
 
     PetscCallA(DMCreateGlobalVector(dm,v,ierr))
 

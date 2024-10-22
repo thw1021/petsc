@@ -1075,7 +1075,7 @@ static PetscErrorCode TSAdjointSetUp_Theta(TS ts)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TSSetFromOptions_Theta(TS ts, PetscOptionItems *PetscOptionsObject)
+static PetscErrorCode TSSetFromOptions_Theta(TS ts, PetscOptionItems PetscOptionsObject)
 {
   TS_Theta *th = (TS_Theta *)ts->data;
 

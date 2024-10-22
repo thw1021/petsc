@@ -567,6 +567,11 @@ static PetscErrorCode ISBlockRestoreIndices_Block(IS is, const PetscInt *idx[])
   Note:
   Call `ISBlockRestoreIndices()` when you no longer need access to the indices
 
+  Fortran Note:
+.vb
+  PetscInt, pointer :: idx(:)
+.ve
+
 .seealso: [](sec_scatter), `IS`, `ISBLOCK`, `ISGetIndices()`, `ISBlockRestoreIndices()`, `ISBlockSetIndices()`, `ISCreateBlock()`
 @*/
 PetscErrorCode ISBlockGetIndices(IS is, const PetscInt *idx[])
@@ -588,6 +593,11 @@ PetscErrorCode ISBlockGetIndices(IS is, const PetscInt *idx[])
 . idx - the integer indices
 
   Level: intermediate
+
+  Fortran Note:
+.vb
+  PetscInt, pointer :: idx(:)
+.ve
 
 .seealso: [](sec_scatter), `IS`, `ISBLOCK`, `ISRestoreIndices()`, `ISBlockGetIndices()`
 @*/

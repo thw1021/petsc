@@ -7,6 +7,7 @@
 #include <petscdmtypes.h>
 #include <petscistypes.h>
 
+/* MANSEC = DM */
 /* SUBMANSEC = DT */
 
 PETSC_EXTERN PetscClassId PETSCQUADRATURE_CLASSID;
@@ -56,10 +57,10 @@ typedef enum {
 .seealso: `PetscQuadrature`
 E*/
 typedef enum {
-  PETSCDTNODES_DEFAULT = -1,
-  PETSCDTNODES_GAUSSJACOBI,
-  PETSCDTNODES_EQUISPACED,
-  PETSCDTNODES_TANHSINH
+  PETSCDTNODES_DEFAULT     = -1,
+  PETSCDTNODES_GAUSSJACOBI = 0,
+  PETSCDTNODES_EQUISPACED  = 1,
+  PETSCDTNODES_TANHSINH    = 2
 } PetscDTNodeType;
 
 PETSC_EXTERN const char *const *const PetscDTNodeTypes;
@@ -91,7 +92,7 @@ E*/
 typedef enum {
   PETSCDTSIMPLEXQUAD_DEFAULT = -1,
   PETSCDTSIMPLEXQUAD_CONIC   = 0,
-  PETSCDTSIMPLEXQUAD_MINSYM
+  PETSCDTSIMPLEXQUAD_MINSYM  = 1
 } PetscDTSimplexQuadratureType;
 
 PETSC_EXTERN const char *const *const PetscDTSimplexQuadratureTypes;
@@ -570,6 +571,23 @@ struct _p_PetscTabulation {
                        T[1] = D[Nr*Np][Nb][Nc][cdim]:       The basis function derivatives at quadrature points
                        T[2] = H[Nr*Np][Nb][Nc][cdim][cdim]: The basis function second derivatives at quadrature points */
 };
+
+/*S
+   PetscTabulation - PETSc object that manages tabulations for finite element methods.
+
+   Level: intermediate
+
+   Note:
+   This is a pointer to a C struct, hence the data in it may be accessed directly.
+
+   Fortran Note:
+   Use `PetscTabulationGetData()` and `PetscTabulationRestoreData()` to access the arrays in the tabulation.
+
+   Developer Note:
+   TODO: put the meaning of the struct fields in this manual page
+
+.seealso: `PetscTabulationDestroy()`, `PetscFECreateTabulation()`, `PetscFEGetCellTabulation()`
+S*/
 typedef struct _p_PetscTabulation *PetscTabulation;
 
 typedef PetscErrorCode (*PetscProbFunc)(const PetscReal[], const PetscReal[], PetscReal[]);

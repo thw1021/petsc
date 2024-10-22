@@ -556,7 +556,7 @@ PetscErrorCode PetscQuadraturePushForward(PetscQuadrature q, PetscInt imageDim, 
   Level: intermediate
 
   Note:
-  This routine owns the references to points and weights, so they must be allocated using `PetscMalloc()` and the user should not free them.
+  `q` owns the references to points and weights, so they must be allocated using `PetscMalloc()` and the user should not free them.
 
 .seealso: `PetscQuadrature`, `PetscQuadratureCreate()`, `PetscQuadratureGetData()`
 @*/

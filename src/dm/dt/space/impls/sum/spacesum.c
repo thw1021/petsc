@@ -224,7 +224,7 @@ static PetscErrorCode PetscSpaceSumSetSubspace_Sum(PetscSpace space, PetscInt s,
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscSpaceSetFromOptions_Sum(PetscSpace sp, PetscOptionItems *PetscOptionsObject)
+static PetscErrorCode PetscSpaceSetFromOptions_Sum(PetscSpace sp, PetscOptionItems PetscOptionsObject)
 {
   PetscSpace_Sum *sum = (PetscSpace_Sum *)sp->data;
   PetscInt        Ns, Nc, Nv, deg, i;

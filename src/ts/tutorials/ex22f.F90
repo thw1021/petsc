@@ -132,7 +132,7 @@
 
 ! Small helper to extract the layout, result uses 1-based indexing.
       subroutine GetLayout(da,mx,xs,xe,gxs,gxe,ierr)
-      use petscdmda
+      use petscdm
       implicit none
 
       DM da

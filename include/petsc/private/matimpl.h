@@ -126,7 +126,7 @@ struct _MatOps {
   /*74*/
   PetscErrorCode (*setvaluesadifor)(Mat, PetscInt, void *);
   PetscErrorCode (*fdcoloringapply)(Mat, MatFDColoring, Vec, void *);
-  PetscErrorCode (*setfromoptions)(Mat, PetscOptionItems *);
+  PetscErrorCode (*setfromoptions)(Mat, PetscOptionItems);
   PetscErrorCode (*placeholder_77)(void);
   PetscErrorCode (*placeholder_78)(void);
   /*79*/
@@ -548,7 +548,7 @@ typedef struct _MatPartitioningOps *MatPartitioningOps;
 struct _MatPartitioningOps {
   PetscErrorCode (*apply)(MatPartitioning, IS *);
   PetscErrorCode (*applynd)(MatPartitioning, IS *);
-  PetscErrorCode (*setfromoptions)(MatPartitioning, PetscOptionItems *);
+  PetscErrorCode (*setfromoptions)(MatPartitioning, PetscOptionItems);
   PetscErrorCode (*destroy)(MatPartitioning);
   PetscErrorCode (*view)(MatPartitioning, PetscViewer);
   PetscErrorCode (*improve)(MatPartitioning, IS *);
@@ -575,7 +575,7 @@ PETSC_INTERN PetscErrorCode MatPartitioningSizesToSep_Private(PetscInt, PetscInt
 typedef struct _MatCoarsenOps *MatCoarsenOps;
 struct _MatCoarsenOps {
   PetscErrorCode (*apply)(MatCoarsen);
-  PetscErrorCode (*setfromoptions)(MatCoarsen, PetscOptionItems *);
+  PetscErrorCode (*setfromoptions)(MatCoarsen, PetscOptionItems);
   PetscErrorCode (*destroy)(MatCoarsen);
   PetscErrorCode (*view)(MatCoarsen, PetscViewer);
 };
@@ -688,7 +688,7 @@ struct _p_MatFDColoring {
 typedef struct _MatColoringOps *MatColoringOps;
 struct _MatColoringOps {
   PetscErrorCode (*destroy)(MatColoring);
-  PetscErrorCode (*setfromoptions)(MatColoring, PetscOptionItems *);
+  PetscErrorCode (*setfromoptions)(MatColoring, PetscOptionItems);
   PetscErrorCode (*view)(MatColoring, PetscViewer);
   PetscErrorCode (*apply)(MatColoring, ISColoring *);
   PetscErrorCode (*weights)(MatColoring, PetscReal **, PetscInt **);

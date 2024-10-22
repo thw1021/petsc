@@ -32,9 +32,10 @@
 !
 
       module ex5f90module
+#include <petsc/finclude/petscsnes.h>
+#include <petsc/finclude/petscdmda.h>
       use petscsnes
       use petscdmda
-#include <petsc/finclude/petscsnes.h>
       type userctx
         PetscInt xs,xe,xm,gxs,gxe,gxm
         PetscInt ys,ye,ym,gys,gye,gym
@@ -202,7 +203,7 @@
       PetscCallA(DMSetFromOptions(da,ierr))
       PetscCallA(DMSetUp(da,ierr))
 
-      PetscCallA(DMDAGetInfo(da,PETSC_NULL_INTEGER,user%mx,user%my,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_ENUM,PETSC_NULL_ENUM,PETSC_NULL_ENUM,PETSC_NULL_ENUM,ierr))
+      PetscCallA(DMDAGetInfo(da,PETSC_NULL_INTEGER,user%mx,user%my,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_DMBOUNDARYTYPE,PETSC_NULL_DMBOUNDARYTYPE,PETSC_NULL_DMBOUNDARYTYPE,PETSC_NULL_DMDASTENCILTYPE,ierr))
 
 !
 !   Visualize the distribution of the array across the processors
