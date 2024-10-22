@@ -240,6 +240,7 @@ typedef struct {
   PetscViewerFormat format;
   PetscDrawLG       lg;
   PetscInt          view_interval;
+  PetscBool         view_skip_initial;
   void             *data;
 } PetscViewerAndFormat;
 PETSC_EXTERN PetscErrorCode PetscViewerAndFormatCreate(PetscViewer, PetscViewerFormat, PetscViewerAndFormat **);

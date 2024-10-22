@@ -35,7 +35,8 @@ static PetscErrorCode TSAdaptSetDefaultType(TSAdapt adapt, TSAdaptType default_t
 . -ts_save_trajectory                                                - checkpoint the solution at each time-step
 . -ts_max_time <time>                                                - maximum time to compute to
 . -ts_time_span <t0,...tf>                                           - sets the time span, solutions are computed and stored for each indicated time
-. -ts_max_steps <steps>                                              - maximum number of time-steps to take
+. -ts_max_steps <steps>                                              - maximum time-step number to execute until (possibly with nonzero starting value)
+. -ts_run_steps <steps>                                              - maximum number of time steps for TSSolve to take on each call
 . -ts_init_time <time>                                               - initial time to start computation
 . -ts_final_time <time>                                              - final time to compute to (deprecated: use `-ts_max_time`)
 . -ts_dt <dt>                                                        - initial time step
@@ -64,6 +65,7 @@ static PetscErrorCode TSAdaptSetDefaultType(TSAdapt adapt, TSAdaptType default_t
 . -ts_monitor_draw_error                                             - Monitor error graphically, requires use to have provided TSSetSolutionFunction()
 . -ts_monitor_solution [ascii binary draw][:filename][:viewerformat] - monitors the solution at each timestep
 . -ts_monitor_solution_interval <interval>                           - output once every interval (default=1) time steps. Use -1 to only output at the end of the simulation
+. -ts_monitor_solution_skip_initial                                  - skip writing of initial condition
 . -ts_monitor_solution_vtk <filename.vts,filename.vtu>               - Save each time step to a binary file, use filename-%%03" PetscInt_FMT ".vts (filename-%%03" PetscInt_FMT ".vtu)
 . -ts_monitor_solution_vtk_interval <interval>                       - output once every interval (default=1) time steps. Use -1 to only output at the end of the simulation
 - -ts_monitor_envelope                                               - determine maximum and minimum value of each component of the solution over the solution time
@@ -112,7 +114,8 @@ PetscErrorCode TSSetFromOptions(TS ts)
   PetscCall(PetscOptionsReal("-ts_max_time", "Maximum time to run to", "TSSetMaxTime", ts->max_time, &ts->max_time, NULL));
   PetscCall(PetscOptionsRealArray("-ts_time_span", "Time span", "TSSetTimeSpan", tspan, &nt, &flg));
   if (flg) PetscCall(TSSetTimeSpan(ts, nt, tspan));
-  PetscCall(PetscOptionsInt("-ts_max_steps", "Maximum number of time steps", "TSSetMaxSteps", ts->max_steps, &ts->max_steps, NULL));
+  PetscCall(PetscOptionsInt("-ts_max_steps", "Maximum time step number to execute until (possibly with non-zero starting value)", "TSSetMaxSteps", ts->max_steps, &ts->max_steps, NULL));
+  PetscCall(PetscOptionsInt("-ts_run_steps", "Maximum number of time steps for TSSolve to take on each call", "TSSetRunSteps", ts->run_steps, &ts->run_steps, NULL));
   PetscCall(PetscOptionsReal("-ts_init_time", "Initial time", "TSSetTime", ts->ptime, &ts->ptime, NULL));
   PetscCall(PetscOptionsReal("-ts_dt", "Initial time step", "TSSetTimeStep", ts->time_step, &time_step, &flg));
   if (flg) PetscCall(TSSetTimeStep(ts, time_step));
@@ -144,7 +147,6 @@ PetscErrorCode TSSetFromOptions(TS ts)
   PetscCall(TSMonitorSetFromOptions(ts, "-ts_monitor_extreme", "Monitor extreme values of the solution", "TSMonitorExtreme", TSMonitorExtreme, NULL));
   PetscCall(TSMonitorSetFromOptions(ts, "-ts_monitor_solution", "View the solution at each timestep", "TSMonitorSolution", TSMonitorSolution, NULL));
   PetscCall(TSMonitorSetFromOptions(ts, "-ts_dmswarm_monitor_moments", "Monitor moments of particle distribution", "TSDMSwarmMonitorMoments", TSDMSwarmMonitorMoments, NULL));
-
   PetscCall(PetscOptionsString("-ts_monitor_python", "Use Python function", "TSMonitorSet", NULL, monfilename, sizeof(monfilename), &flg));
   if (flg) PetscCall(PetscPythonMonitorSet((PetscObject)ts, monfilename));
 
@@ -1908,6 +1910,7 @@ PetscErrorCode TSView(TS ts, PetscViewer viewer)
       PetscCall(PetscViewerASCIIPopTab(viewer));
     }
     if (ts->max_steps < PETSC_INT_MAX) PetscCall(PetscViewerASCIIPrintf(viewer, "  maximum steps=%" PetscInt_FMT "\n", ts->max_steps));
+    if (ts->run_steps < PETSC_INT_MAX) PetscCall(PetscViewerASCIIPrintf(viewer, "  run steps=%" PetscInt_FMT "\n", ts->run_steps));
     if (ts->max_time < PETSC_MAX_REAL) PetscCall(PetscViewerASCIIPrintf(viewer, "  maximum time=%g\n", (double)ts->max_time));
     if (ts->ifuncs) PetscCall(PetscViewerASCIIPrintf(viewer, "  total number of I function evaluations=%" PetscInt_FMT "\n", ts->ifuncs));
     if (ts->ijacs) PetscCall(PetscViewerASCIIPrintf(viewer, "  total number of I Jacobian evaluations=%" PetscInt_FMT "\n", ts->ijacs));
@@ -2829,6 +2832,63 @@ PetscErrorCode TSGetMaxSteps(TS ts, PetscInt *maxsteps)
 }
 
 /*@
+  TSSetRunSteps - Sets the max number of steps to take in each call to `TSSolve`.
+
+  Logically Collective
+
+  Input Parameters:
++ ts       - the `TS` context obtained from `TSCreate()`
+- runsteps - max number of steps to take in each call to `TSSolve`;
+
+  Options Database Key:
+. -ts_run_steps <runsteps> - Sets runsteps
+
+  Level: intermediate
+
+  Note:
+  The default is PETSC_UNLIMITED
+
+.seealso: [](ch_ts), `TS`, `TSGetRunSteps()`, `TSSetMaxTime()`, `TSSetExactFinalTime()`
+@*/
+PetscErrorCode TSSetRunSteps(TS ts, PetscInt runsteps)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
+  PetscValidLogicalCollectiveInt(ts, runsteps, 2);
+  if (runsteps == PETSC_DETERMINE) {
+    ts->run_steps = PETSC_UNLIMITED;
+  } else {
+    PetscCheck(runsteps >= 0, PetscObjectComm((PetscObject)ts), PETSC_ERR_ARG_OUTOFRANGE, "Max number of steps to take in each call to TSSolve must be non-negative");
+    ts->run_steps = runsteps;
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TSGetRunSteps - Gets the max number of steps to take in each call to `TSSolve`.
+
+  Not Collective
+
+  Input Parameter:
+. ts - the `TS` context obtained from `TSCreate()`
+
+  Output Parameter:
+. runsteps - max number of steps to take in each call to `TSSolve`.
+
+  Level: advanced
+
+.seealso: [](ch_ts), `TS`, `TSSetRunSteps()`, `TSGetMaxTime()`, `TSSetMaxTime()`
+@*/
+PetscErrorCode TSGetRunSteps(TS ts, PetscInt *runsteps)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
+  PetscAssertPointer(runsteps, 2);
+  *runsteps = ts->run_steps;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
   TSSetMaxTime - Sets the maximum (or final) time for timestepping.
 
   Logically Collective
@@ -3408,7 +3468,7 @@ PetscErrorCode TSStep(TS ts)
     ts->tspan->worktol = 0; /* In each step of TSSolve() 'tspan->worktol' will be meaningfully defined (later) only once:
                                                    in TSAdaptChoose() or TSEvent_dt_cap(), and then reused till the end of the step */
 
-  PetscCheck(ts->max_time < PETSC_MAX_REAL || ts->max_steps != PETSC_INT_MAX, PetscObjectComm((PetscObject)ts), PETSC_ERR_ARG_WRONGSTATE, "You must call TSSetMaxTime() or TSSetMaxSteps(), or use -ts_max_time <time> or -ts_max_steps <steps>");
+  PetscCheck(ts->max_time < PETSC_MAX_REAL || ts->run_steps != PETSC_INT_MAX || ts->max_steps != PETSC_INT_MAX, PetscObjectComm((PetscObject)ts), PETSC_ERR_ARG_WRONGSTATE, "You must call TSSetMaxTime(), TSSetMaxSteps(), or TSSetRunSteps() or use -ts_max_time <time>, -ts_max_steps <steps>, -ts_run_steps <steps>");
   PetscCheck(ts->exact_final_time != TS_EXACTFINALTIME_UNSPECIFIED, PetscObjectComm((PetscObject)ts), PETSC_ERR_ARG_WRONGSTATE, "You must call TSSetExactFinalTime() or use -ts_exact_final_time <stepover,interpolate,matchstep> before calling TSStep()");
   PetscCheck(ts->exact_final_time != TS_EXACTFINALTIME_MATCHSTEP || ts->adapt, PetscObjectComm((PetscObject)ts), PETSC_ERR_SUP, "Since TS is not adaptive you cannot use TS_EXACTFINALTIME_MATCHSTEP, suggest TS_EXACTFINALTIME_INTERPOLATE");
 
@@ -3973,7 +4033,7 @@ PetscErrorCode TSSolve(TS ts, Vec u)
   PetscCall(TSSetUp(ts));
   PetscCall(TSTrajectorySetUp(ts->trajectory, ts));
 
-  PetscCheck(ts->max_time < PETSC_MAX_REAL || ts->max_steps != PETSC_INT_MAX, PetscObjectComm((PetscObject)ts), PETSC_ERR_ARG_WRONGSTATE, "You must call TSSetMaxTime() or TSSetMaxSteps(), or use -ts_max_time <time> or -ts_max_steps <steps>");
+  PetscCheck(ts->max_time < PETSC_MAX_REAL || ts->run_steps != PETSC_INT_MAX || ts->max_steps != PETSC_INT_MAX, PetscObjectComm((PetscObject)ts), PETSC_ERR_ARG_WRONGSTATE, "You must call TSSetMaxTime(), TSSetMaxSteps(), or TSSetRunSteps() or use -ts_max_time <time>, -ts_max_steps <steps>, -ts_run_steps <steps>");
   PetscCheck(ts->exact_final_time != TS_EXACTFINALTIME_UNSPECIFIED, PetscObjectComm((PetscObject)ts), PETSC_ERR_ARG_WRONGSTATE, "You must call TSSetExactFinalTime() or use -ts_exact_final_time <stepover,interpolate,matchstep> before calling TSSolve()");
   PetscCheck(ts->exact_final_time != TS_EXACTFINALTIME_MATCHSTEP || ts->adapt, PetscObjectComm((PetscObject)ts), PETSC_ERR_SUP, "Since TS is not adaptive you cannot use TS_EXACTFINALTIME_MATCHSTEP, suggest TS_EXACTFINALTIME_INTERPOLATE");
   PetscCheck(!(ts->tspan && ts->exact_final_time != TS_EXACTFINALTIME_MATCHSTEP), PetscObjectComm((PetscObject)ts), PETSC_ERR_SUP, "You must use TS_EXACTFINALTIME_MATCHSTEP when using time span");
@@ -4066,10 +4126,12 @@ PetscErrorCode TSSolve(TS ts, Vec u)
       PetscCall(TSEventInitialize(ts->event, ts, ts->ptime, ts->vec_sol));
     }
 
+    ts->start_step = ts->steps; // records starting step
     while (!ts->reason) {
       PetscCall(TSMonitor(ts, ts->steps, ts->ptime, ts->vec_sol));
       if (!ts->steprollback || (ts->stepresize && ts->resizerollback)) PetscCall(TSPreStep(ts));
       PetscCall(TSStep(ts));
+      if ((ts->steps - ts->start_step) == ts->run_steps) ts->reason = TS_CONVERGED_ITS;
       if (ts->testjacobian) PetscCall(TSRHSJacobianTest(ts, NULL));
       if (ts->testjacobiantranspose) PetscCall(TSRHSJacobianTestTranspose(ts, NULL));
       if (ts->quadraturets && ts->costintegralfwd) { /* Must evaluate the cost integral before event is handled. The cost integral value can also be rolled back. */
@@ -4088,7 +4150,8 @@ PetscErrorCode TSSolve(TS ts, Vec u)
       if (!ts->steprollback && ts->resizerollback) PetscCall(TSResize(ts));
       /* check convergence */
       if (!ts->reason) {
-        if (ts->steps >= ts->max_steps) ts->reason = TS_CONVERGED_ITS;
+        if ((ts->steps - ts->start_step) == ts->run_steps) ts->reason = TS_CONVERGED_ITS;
+        else if (ts->steps >= ts->max_steps) ts->reason = TS_CONVERGED_ITS;
         else if (ts->ptime >= ts->max_time) ts->reason = TS_CONVERGED_TIME;
       }
       if (!ts->steprollback) {

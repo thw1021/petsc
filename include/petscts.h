@@ -406,6 +406,8 @@ PETSC_EXTERN PetscErrorCode TSForwardGetStages(TS, PetscInt *, Mat *[]);
 
 PETSC_EXTERN PetscErrorCode TSSetMaxSteps(TS, PetscInt);
 PETSC_EXTERN PetscErrorCode TSGetMaxSteps(TS, PetscInt *);
+PETSC_EXTERN PetscErrorCode TSSetRunSteps(TS, PetscInt);
+PETSC_EXTERN PetscErrorCode TSGetRunSteps(TS, PetscInt *);
 PETSC_EXTERN PetscErrorCode TSSetMaxTime(TS, PetscReal);
 PETSC_EXTERN PetscErrorCode TSGetMaxTime(TS, PetscReal *);
 PETSC_EXTERN PetscErrorCode TSSetExactFinalTime(TS, TSExactFinalTimeOption);
