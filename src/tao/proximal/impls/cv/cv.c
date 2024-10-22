@@ -329,6 +329,21 @@ static PetscErrorCode TaoCVSetUpTerms(Tao tao, TapMappedTerm *f_term, TaoMappedT
       PetscCall(TaoMappedTermSetData(f_term, prefix, scale, f, map));
     }
 
+      PetscCall(TaoTermSumGetSubterm(tao->objective_term.term, g_idx, &prefix, &scale, &g, &map));
+      PetscCall(TaoMappedTermSetData(g_term, prefix, scale, g, map));
+    }
+    { // h
+      TaoTerm h;
+      PetscReal scale;
+      Mat map;
+      const char *prefix;
+
+      PetscCall(TaoTermSumGetSubterm(tao->objective_term.term, h_idx, &prefix, &scale, &h, &map));
+      PetscCall(TaoMappedTermSetData(h_term, prefix, scale, h, map));
+      PetscCall(TaoTermCreateConjugate(h, &cv->h_cj_term));
+      //TODO how does options prefix work for conjugate?
+      PetscCall(TaoMappedTermSetData(h_conjugate_term, prefix, scale, cv->h_cj_term, map));
+    }
   }
 
   PetscCheck(g_term->map == NULL, PETSC_COMM_SELF, PETSC_ERR_SUP, "TAOCV: g term cannot have a nontrivial map");

@@ -305,6 +305,17 @@ PETSC_EXTERN PetscErrorCode TaoTermHessian(TaoTerm, Vec, Vec, Mat, Mat);
 PETSC_EXTERN PetscErrorCode TaoTermHessianSingle(TaoTerm, Vec, Vec, Mat, Mat, TaoTermHessianSingleFn *, MatStructure);
 PETSC_EXTERN PetscErrorCode TaoTermHessianMult(TaoTerm, Vec, Vec, Vec, Vec);
 
+PETSC_EXTERN PetscErrorCode TaoTermSetLipschitz(TaoTerm, PetscReal);
+PETSC_EXTERN PetscErrorCode TaoTermGetLipschitz(TaoTerm, PetscReal *);
+
+// TaoTermProximalMap(f, p, alpha, g, q, beta, x);
+// x <- argmin_y alpha * f(y;p) + beta * g(y;q), g is a divergence e.g. g(y;q) == 0.5 * ||x - q||^2
+// x <- prox_{(alpha/beta)*f(.;p),g}(q)
+PETSC_EXTERN PetscErrorCode TaoTermProximalMap(TaoTerm, Vec, PetscReal, TaoTerm, Vec, PetscReal, Vec);
+PETSC_EXTERN PetscErrorCode TaoTermCreateConjugate(TaoTerm, TaoTerm *);
+PETSC_EXTERN PetscErrorCode TaoTermCreateConjugateVirtual(TaoTerm, TaoTerm *);
+PETSC_EXTERN PetscErrorCode TaoTermConjugateGetOriginalType(TaoTerm, TaoTermType *);
+
 PETSC_EXTERN PetscErrorCode TaoTermCreateShell(MPI_Comm, void *, PetscErrorCode (*)(void *), TaoTerm *);
 PETSC_EXTERN PetscErrorCode TaoTermShellSetContext(TaoTerm, void *);
 PETSC_EXTERN PetscErrorCode TaoTermShellGetContext(TaoTerm, void *);
