@@ -2873,7 +2873,7 @@ PetscErrorCode TSSetRunSteps(TS ts, PetscInt runsteps)
 . ts - the `TS` context obtained from `TSCreate()`
 
   Output Parameter:
-. runsteps - max number of steps to take in each call to `TSSolve`. 
+. runsteps - max number of steps to take in each call to `TSSolve`.
 
   Level: advanced
 
