@@ -1,13 +1,15 @@
 #include "petscsf.h"
-static char help[] = "Demonstrate CGNS parallel load-save including data\n\n";
+static char help[] = "Simple demonstration of CGNS parallel load-save including data\n\n";
+// As this is a tutorial that is intended to be an easy starting point feel free to make new
+// example files that extend this but please keep this one simple.
 
 #include <petscdmplex.h>
 #include <petscviewerhdf5.h>
 #define EX "ex16.c"
 
 typedef struct {
-  char      infile[PETSC_MAX_PATH_LEN];  /* Input mesh filename */
-  char      outfile[PETSC_MAX_PATH_LEN]; /* Dump/reload mesh filename */
+  char infile[PETSC_MAX_PATH_LEN];  /* Input mesh filename */
+  char outfile[PETSC_MAX_PATH_LEN]; /* Dump/reload mesh filename */
 } AppCtx;
 
 static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
@@ -15,8 +17,8 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   PetscBool flg;
 
   PetscFunctionBeginUser;
-  options->infile[0]     = '\0';
-  options->outfile[0]    = '\0';
+  options->infile[0]  = '\0';
+  options->outfile[0] = '\0';
   PetscOptionsBegin(comm, "", "Meshing Problem Options", "DMPLEX");
   PetscCall(PetscOptionsString("-infile", "The input CGNS file", EX, options->infile, options->infile, sizeof(options->infile), &flg));
   PetscCall(PetscOptionsString("-outfile", "The output CGNS file", EX, options->outfile, options->outfile, sizeof(options->outfile), &flg));
@@ -96,7 +98,6 @@ int main(int argc, char **argv)
   PetscBool   set;
   comm = PETSC_COMM_WORLD;
 
-
   // Load DM from CGNS file
   PetscCall(ReadCGNSDM(comm, infilename, &dm));
   PetscCall(DMSetOptionsPrefix(dm, "loaded_"));
@@ -113,7 +114,6 @@ int main(int argc, char **argv)
   }
   PetscCall(PetscViewerCGNSGetSolutionName(viewer, &name));
   PetscCall(PetscViewerCGNSGetSolutionTime(viewer, &time, &set));
-//  PetscCheck(set, comm, PETSC_ERR_RETURN, "Time data wasn't set!");
   PetscCall(PetscPrintf(comm, "Solution Name: %s, and time %g\n", name, time));
   PetscCall(VecLoad(V, viewer));
   PetscCall(PetscViewerDestroy(&viewer));
