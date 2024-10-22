@@ -347,7 +347,7 @@ static PetscErrorCode TaoCVSetUpTerms(Tao tao, TaoMappedTerm *f_term, TaoMappedT
 
       PetscCall(TaoTermSumGetSubterm(tao->objective_term.term, h_idx, &prefix, &scale, &h, &map));
       PetscCall(TaoMappedTermSetData(h_term, prefix, scale, h, map));
-      PetscCall(TaoTermCreateConvexConjugate(h, &cv->h_cj_term));
+      PetscCall(TaoTermCreateConjugate(h, &cv->h_cj_term));
       //TODO how does options prefix work for conjugate?
       PetscCall(TaoMappedTermSetData(h_conjugate_term, prefix, scale, cv->h_cj_term, map));
     }
