@@ -2,6 +2,8 @@
 static char help[] = "Simple demonstration of CGNS parallel load-save including data\n\n";
 // As this is a tutorial that is intended to be an easy starting point feel free to make new
 // example files that extend this but please keep this one simple.
+// In subsequent examples we will also provide tools to generate an arbitrary size initital
+// CGNS file to support performance benchmarking.
 
 #include <petscdmplex.h>
 #include <petscviewerhdf5.h>
@@ -23,8 +25,8 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   PetscCall(PetscOptionsString("-infile", "The input CGNS file", EX, options->infile, options->infile, sizeof(options->infile), &flg));
   PetscCall(PetscOptionsString("-outfile", "The output CGNS file", EX, options->outfile, options->outfile, sizeof(options->outfile), &flg));
   PetscOptionsEnd();
-  PetscCheck(flg, comm, PETSC_ERR_USER_INPUT, "-infile needs to be specified");
-  PetscCheck(flg, comm, PETSC_ERR_USER_INPUT, "-outfile needs to be specified");
+  PetscCheck(options->infile[0], comm, PETSC_ERR_USER_INPUT, "-infile needs to be specified");
+  PetscCheck(options->outfile[0], comm, PETSC_ERR_USER_INPUT, "-outfile needs to be specified");
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -35,12 +37,6 @@ PetscErrorCode ReadCGNSDM(MPI_Comm comm, const char filename[], DM *dm)
 
   PetscFunctionBeginUser;
   PetscCall(DMPlexCreateFromFile(comm, filename, "ex16_plex", PETSC_TRUE, dm));
-  PetscCall(DMPlexDistributeSetDefault(*dm, PETSC_FALSE));
-  PetscCall(DMSetFromOptions(*dm));
-  PetscCall(DMViewFromOptions(*dm, NULL, "-dm_view"));
-
-  /* Redistribute */
-  PetscCall(DMSetOptionsPrefix(*dm, "redistributed_"));
   PetscCall(DMSetFromOptions(*dm));
   PetscCall(DMViewFromOptions(*dm, NULL, "-dm_view"));
 
@@ -125,7 +121,6 @@ int main(int argc, char **argv)
 
   PetscCall(DMRestoreGlobalVector(dm, &V));
   PetscCall(DMDestroy(&dm));
-  PetscCallMPI(MPI_Barrier(PETSC_COMM_WORLD));
 
   PetscCall(PetscFinalize());
   return 0;
