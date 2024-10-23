@@ -52,11 +52,15 @@ PetscErrorCode ReadCGNSDM(MPI_Comm comm, const char filename[], DM *dm)
   }
 
   { // Setup fe to load in the initial condition data
-    PetscFE  fe;
-    PetscInt dim;
+    PetscFE        fe;
+    PetscInt       dim, cStart, cEnd;
+    DMPolytopeType dm_polytope;
 
     PetscCall(DMGetDimension(*dm, &dim));
-    PetscCall(PetscFECreateLagrange(PETSC_COMM_SELF, dim, 5, PETSC_FALSE, degree, PETSC_DETERMINE, &fe));
+    // Limiting to single topology in this simple example
+    PetscCall(DMPlexGetHeightStratum(*dm, 0, &cStart, &cEnd));
+    PetscCall(DMPlexGetCellType(*dm, cStart, &dm_polytope));
+    PetscCall(PetscFECreateLagrangeByCell(PETSC_COMM_SELF, dim, 5, dm_polytope, degree, PETSC_DETERMINE, &fe));
     PetscCall(PetscObjectSetName((PetscObject)fe, "FE for VecLoad"));
     PetscCall(DMAddField(*dm, NULL, (PetscObject)fe));
     PetscCall(DMCreateDS(*dm));
@@ -134,7 +138,7 @@ int main(int argc, char **argv)
     requires: !complex
     nsize: 4
     args: -infile ${wPETSC_DIR}/share/petsc/datafiles/meshes/2x2x2_Q3_wave.cgns -outfile 2x2x2_Q3_wave_output.cgns
-    args: -dm_plex_cgns_parallel -loaded_dm_view 
+    args: -dm_plex_cgns_parallel -loaded_dm_view
     test:
       # this partitioner should not shuffle anything, it should yield the same partitioning as the XDMF reader - added just for testing
       suffix: simple
