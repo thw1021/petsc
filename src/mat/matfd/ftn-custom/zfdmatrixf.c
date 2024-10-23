@@ -54,6 +54,12 @@ static PetscErrorCode ourmatfdcoloringfunctionsnes(SNES snes, Vec x, Vec y, MatF
    NOTE: FORTRAN USER CANNOT PUT IN A NEW J OR B currently.
 */
 
+#if defined(__clang__) && defined(__has_warning)
+  #if __has_warning("-Wcast-function-type-mismatch")
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Wcast-function-type-mismatch"
+  #endif
+#endif
 PETSC_EXTERN void matfdcoloringsetfunctionts_(MatFDColoring *fd, void (*f)(TS *, double *, Vec *, Vec *, void *, PetscErrorCode *), void *ctx, PetscErrorCode *ierr)
 {
   (*fd)->ftn_func_pointer = (void (*)(void))f;
@@ -69,3 +75,8 @@ PETSC_EXTERN void matfdcoloringsetfunction_(MatFDColoring *fd, void (*f)(SNES *,
 
   *ierr = MatFDColoringSetFunction(*fd, (PetscErrorCodeFn *)ourmatfdcoloringfunctionsnes, *fd);
 }
+#if defined(__clang__) && defined(__has_warning)
+  #if __has_warning("-Wcast-function-type-mismatch")
+    #pragma clang diagnostic pop
+  #endif
+#endif

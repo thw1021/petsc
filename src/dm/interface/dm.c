@@ -8879,6 +8879,12 @@ PetscErrorCode DMGetCompatibility(DM dm1, DM dm2, PetscBool *compatible, PetscBo
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+#if defined(__clang__) && defined(__has_warning)
+  #if __has_warning("-Wcast-function-type-mismatch")
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Wcast-function-type-mismatch"
+  #endif
+#endif
 /*@C
   DMMonitorSet - Sets an additional monitor function that is to be used after a solve to monitor discretization performance.
 
@@ -8927,6 +8933,11 @@ PetscErrorCode DMMonitorSet(DM dm, PetscErrorCode (*f)(DM, void *), void *mctx, 
   dm->monitorcontext[dm->numbermonitors++] = mctx;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+#if defined(__clang__) && defined(__has_warning)
+  #if __has_warning("-Wcast-function-type-mismatch")
+    #pragma clang diagnostic pop
+  #endif
+#endif
 
 /*@
   DMMonitorCancel - Clears all the monitor functions for a `DM` object.

@@ -2870,6 +2870,12 @@ PetscErrorCode SNESTestJacobian(SNES snes)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+#if defined(__clang__) && defined(__has_warning)
+  #if __has_warning("-Wcast-function-type-mismatch")
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Wcast-function-type-mismatch"
+  #endif
+#endif
 /*@
   SNESComputeJacobian - Computes the Jacobian matrix that has been set with `SNESSetJacobian()`.
 
@@ -3166,6 +3172,11 @@ PetscErrorCode SNESComputeJacobian(SNES snes, Vec X, Mat A, Mat B)
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+#if defined(__clang__) && defined(__has_warning)
+  #if __has_warning("-Wcast-function-type-mismatch")
+    #pragma clang diagnostic pop
+  #endif
+#endif
 
 /*@C
   SNESSetJacobian - Sets the function to compute Jacobian as well as the
@@ -4179,6 +4190,12 @@ PetscErrorCode SNESMonitor(SNES snes, PetscInt iter, PetscReal rnorm)
 .seealso: [](ch_snes), `SNESMonitorSet()`, `SNESMonitorSet()`, `SNESMonitorGet()`
 M*/
 
+#if defined(__clang__) && defined(__has_warning)
+  #if __has_warning("-Wcast-function-type-mismatch")
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Wcast-function-type-mismatch"
+  #endif
+#endif
 /*@C
   SNESMonitorSet - Sets an ADDITIONAL function that is to be used at every
   iteration of the nonlinear solver to display the iteration's
@@ -4227,6 +4244,11 @@ PetscErrorCode SNESMonitorSet(SNES snes, PetscErrorCode (*f)(SNES, PetscInt, Pet
   snes->monitorcontext[snes->numbermonitors++] = mctx;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+#if defined(__clang__) && defined(__has_warning)
+  #if __has_warning("-Wcast-function-type-mismatch")
+    #pragma clang diagnostic pop
+  #endif
+#endif
 
 /*@
   SNESMonitorCancel - Clears all the monitor functions for a `SNES` object.
@@ -4606,6 +4628,12 @@ PetscErrorCode SNESConvergedReasonView(SNES snes, PetscViewer viewer)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+#if defined(__clang__) && defined(__has_warning)
+  #if __has_warning("-Wcast-function-type-mismatch")
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Wcast-function-type-mismatch"
+  #endif
+#endif
 /*@C
   SNESConvergedReasonViewSet - Sets an ADDITIONAL function that is to be used at the
   end of the nonlinear solver to display the convergence reason of the nonlinear solver.
@@ -4654,6 +4682,11 @@ PetscErrorCode SNESConvergedReasonViewSet(SNES snes, PetscErrorCode (*f)(SNES sn
   snes->reasonviewcontext[snes->numberreasonviews++] = vctx;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+#if defined(__clang__) && defined(__has_warning)
+  #if __has_warning("-Wcast-function-type-mismatch")
+    #pragma clang diagnostic pop
+  #endif
+#endif
 
 /*@
   SNESConvergedReasonViewFromOptions - Processes command line options to determine if/how a `SNESConvergedReason` is to be viewed at the end of `SNESSolve()`

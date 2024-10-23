@@ -1247,6 +1247,12 @@ PetscErrorCode TSAdjointMonitorSetFromOptions(TS ts, const char name[], const ch
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+#if defined(__clang__) && defined(__has_warning)
+  #if __has_warning("-Wcast-function-type-mismatch")
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Wcast-function-type-mismatch"
+  #endif
+#endif
 /*@C
   TSAdjointMonitorSet - Sets an ADDITIONAL function that is to be used at every
   timestep to display the iteration's  progress.
@@ -1299,6 +1305,11 @@ PetscErrorCode TSAdjointMonitorSet(TS ts, PetscErrorCode (*adjointmonitor)(TS ts
   ts->adjointmonitorcontext[ts->numberadjointmonitors++] = adjointmctx;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+#if defined(__clang__) && defined(__has_warning)
+  #if __has_warning("-Wcast-function-type-mismatch")
+    #pragma clang diagnostic pop
+  #endif
+#endif
 
 /*@C
   TSAdjointMonitorCancel - Clears all the adjoint monitors that have been set on a time-step object.

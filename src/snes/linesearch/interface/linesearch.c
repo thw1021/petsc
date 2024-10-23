@@ -67,6 +67,12 @@ PetscErrorCode SNESLineSearchMonitor(SNESLineSearch ls)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+#if defined(__clang__) && defined(__has_warning)
+  #if __has_warning("-Wcast-function-type-mismatch")
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Wcast-function-type-mismatch"
+  #endif
+#endif
 /*@C
   SNESLineSearchMonitorSet - Sets an ADDITIONAL function that is to be used at every
   iteration of the nonlinear solver to display the iteration's
@@ -113,6 +119,11 @@ PetscErrorCode SNESLineSearchMonitorSet(SNESLineSearch ls, PetscErrorCode (*f)(S
   ls->monitorcontext[ls->numbermonitors++] = mctx;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+#if defined(__clang__) && defined(__has_warning)
+  #if __has_warning("-Wcast-function-type-mismatch")
+    #pragma clang diagnostic pop
+  #endif
+#endif
 
 /*@C
   SNESLineSearchMonitorSolutionUpdate - Monitors each update of the function value the linesearch tries

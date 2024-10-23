@@ -484,6 +484,12 @@ PetscErrorCode KSPConvergedReasonView(KSP ksp, PetscViewer viewer)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+#if defined(__clang__) && defined(__has_warning)
+  #if __has_warning("-Wcast-function-type-mismatch")
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Wcast-function-type-mismatch"
+  #endif
+#endif
 /*@C
   KSPConvergedReasonViewSet - Sets an ADDITIONAL function that is to be used at the
   end of the linear solver to display the convergence reason of the linear solver.
@@ -531,6 +537,11 @@ PetscErrorCode KSPConvergedReasonViewSet(KSP ksp, PetscErrorCode (*f)(KSP, void 
   ksp->reasonviewcontext[ksp->numberreasonviews++] = vctx;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+#if defined(__clang__) && defined(__has_warning)
+  #if __has_warning("-Wcast-function-type-mismatch")
+    #pragma clang diagnostic pop
+  #endif
+#endif
 
 /*@
   KSPConvergedReasonViewCancel - Clears all the reasonview functions for a `KSP` object set with `KSPConvergedReasonViewSet()`
@@ -2235,6 +2246,12 @@ PetscErrorCode KSPMonitor(KSP ksp, PetscInt it, PetscReal rnorm)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+#if defined(__clang__) && defined(__has_warning)
+  #if __has_warning("-Wcast-function-type-mismatch")
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Wcast-function-type-mismatch"
+  #endif
+#endif
 /*@C
   KSPMonitorSet - Sets an ADDITIONAL function to be called at every iteration to monitor
   the residual/error etc.
@@ -2299,6 +2316,11 @@ PetscErrorCode KSPMonitorSet(KSP ksp, PetscErrorCode (*monitor)(KSP ksp, PetscIn
   ksp->monitorcontext[ksp->numbermonitors++] = ctx;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+#if defined(__clang__) && defined(__has_warning)
+  #if __has_warning("-Wcast-function-type-mismatch")
+    #pragma clang diagnostic pop
+  #endif
+#endif
 
 /*@
   KSPMonitorCancel - Clears all monitors for a `KSP` object.

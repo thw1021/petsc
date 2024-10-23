@@ -5413,6 +5413,12 @@ PetscErrorCode TSGetStages(TS ts, PetscInt *ns, Vec **Y)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+#if defined(__clang__) && defined(__has_warning)
+  #if __has_warning("-Wcast-function-type-mismatch")
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Wcast-function-type-mismatch"
+  #endif
+#endif
 /*@C
   TSComputeIJacobianDefaultColor - Computes the Jacobian using finite differences and coloring to exploit matrix sparsity.
 
@@ -5979,3 +5985,8 @@ PetscErrorCode TSPruneIJacobianColor(TS ts, Mat J, Mat B)
   PetscCall(ISColoringDestroy(&iscoloring));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+#if defined(__clang__) && defined(__has_warning)
+  #if __has_warning("-Wcast-function-type-mismatch")
+    #pragma clang diagnostic pop
+  #endif
+#endif
