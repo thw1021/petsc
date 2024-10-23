@@ -16,14 +16,12 @@ typedef struct {
 
 static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 {
-  PetscBool flg;
-
   PetscFunctionBeginUser;
   options->infile[0]  = '\0';
   options->outfile[0] = '\0';
   PetscOptionsBegin(comm, "", "Meshing Problem Options", "DMPLEX");
-  PetscCall(PetscOptionsString("-infile", "The input CGNS file", EX, options->infile, options->infile, sizeof(options->infile), &flg));
-  PetscCall(PetscOptionsString("-outfile", "The output CGNS file", EX, options->outfile, options->outfile, sizeof(options->outfile), &flg));
+  PetscCall(PetscOptionsString("-infile", "The input CGNS file", EX, options->infile, options->infile, sizeof(options->infile), NULL));
+  PetscCall(PetscOptionsString("-outfile", "The output CGNS file", EX, options->outfile, options->outfile, sizeof(options->outfile), NULL));
   PetscOptionsEnd();
   PetscCheck(options->infile[0], comm, PETSC_ERR_USER_INPUT, "-infile needs to be specified");
   PetscCheck(options->outfile[0], comm, PETSC_ERR_USER_INPUT, "-outfile needs to be specified");
@@ -54,12 +52,24 @@ PetscErrorCode ReadCGNSDM(MPI_Comm comm, const char filename[], DM *dm)
   { // Setup fe to load in the initial condition data
     PetscFE        fe;
     PetscInt       dim, cStart, cEnd;
-    DMPolytopeType dm_polytope;
+    PetscInt       ctInt, mincti, maxcti;
+    DMPolytopeType dm_polytope, cti;
+    PetscBool      ctFail = PETSC_FALSE;
 
     PetscCall(DMGetDimension(*dm, &dim));
     // Limiting to single topology in this simple example
     PetscCall(DMPlexGetHeightStratum(*dm, 0, &cStart, &cEnd));
     PetscCall(DMPlexGetCellType(*dm, cStart, &dm_polytope));
+    for (int i = cStart + 1; i < cEnd; i++) {
+      PetscCall(DMPlexGetCellType(*dm, i, &cti));
+      if (cti != dm_polytope) ctFail = PETSC_TRUE;
+    }
+    ctInt = cti;
+    PetscCallMPI(MPIU_Allreduce(&ctInt, &maxcti, 1, MPIU_INT, MPI_MAX, comm));
+    PetscCallMPI(MPIU_Allreduce(&ctInt, &mincti, 1, MPIU_INT, MPI_MIN, comm));
+    if (mincti != maxcti) ctFail = PETSC_TRUE;
+    PetscCheck(!ctFail, comm, PETSC_ERR_RETURN, "Multi-topology not yet supported in this example!");
+    PetscCall(PetscPrintf(comm, "Mesh confirmed to be single topology %d\n", cti));
     PetscCall(PetscFECreateLagrangeByCell(PETSC_COMM_SELF, dim, 5, dm_polytope, degree, PETSC_DETERMINE, &fe));
     PetscCall(PetscObjectSetName((PetscObject)fe, "FE for VecLoad"));
     PetscCall(DMAddField(*dm, NULL, (PetscObject)fe));
