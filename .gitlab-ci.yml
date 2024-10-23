@@ -766,6 +766,8 @@ linux-pkgs-dbg-ftn-interfaces:
     OMP_PROC_BIND: "false"
     OMP_NUM_THREADS: 4
     PETSC_OPTIONS: -fp_trap
+    MODULEPATH: /nfs/gce/projects/petsc/soft/u22.04/spack-2024-09-18/modules/linux-ubuntu22.04-x86_64/Core
+    LOAD_MODULES: llvm/19.1.0-dqibzqq
 
 linux-pkgs-cxx-mlib:
   extends:
