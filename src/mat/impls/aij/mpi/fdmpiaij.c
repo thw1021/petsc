@@ -28,6 +28,12 @@ static PetscErrorCode MatFDColoringMarkHost_AIJ(Mat J)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+#if defined(__clang__) && defined(__has_warning)
+  #if __has_warning("-Wcast-function-type-mismatch")
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Wcast-function-type-mismatch"
+  #endif
+#endif
 PetscErrorCode MatFDColoringApply_BAIJ(Mat J, MatFDColoring coloring, Vec x1, void *sctx)
 {
   PetscErrorCode (*f)(void *, Vec, Vec, void *) = (PetscErrorCode (*)(void *, Vec, Vec, void *))coloring->f;
@@ -399,6 +405,11 @@ PetscErrorCode MatFDColoringApply_AIJ(Mat J, MatFDColoring coloring, Vec x1, voi
   if (!alreadyboundtocpu) PetscCall(VecBindToCPU(x1, PETSC_FALSE));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+#if defined(__clang__) && defined(__has_warning)
+  #if __has_warning("-Wcast-function-type-mismatch")
+    #pragma clang diagnostic pop
+  #endif
+#endif
 
 PetscErrorCode MatFDColoringSetUp_MPIXAIJ(Mat mat, ISColoring iscoloring, MatFDColoring c)
 {

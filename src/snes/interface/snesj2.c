@@ -14,6 +14,12 @@ static PetscErrorCode SNESComputeMFFunctionCtx(void *snes, Vec x, Vec f, void *c
   return SNESComputeMFFunction((SNES)snes, x, f);
 }
 
+#if defined(__clang__) && defined(__has_warning)
+  #if __has_warning("-Wcast-function-type-mismatch")
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Wcast-function-type-mismatch"
+  #endif
+#endif
 /*@
   SNESComputeJacobianDefaultColor - Computes the Jacobian using
   finite differences and coloring to exploit matrix sparsity.
@@ -174,3 +180,8 @@ PetscErrorCode SNESPruneJacobianColor(SNES snes, Mat J, Mat B)
   PetscCall(ISColoringDestroy(&iscoloring));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+#if defined(__clang__) && defined(__has_warning)
+  #if __has_warning("-Wcast-function-type-mismatch")
+    #pragma clang diagnostic pop
+  #endif
+#endif
