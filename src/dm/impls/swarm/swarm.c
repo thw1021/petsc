@@ -127,7 +127,7 @@ PetscErrorCode DMSwarmVectorGetField(DM sw, PetscInt *Nf, const char **fieldname
 }
 
 /*@
-  DMSwarmVectorDefineField - Sets the fields from which to define a `Vec` object
+  DMSwarmVectorDefineField - Sets the field from which to define a `Vec` object
   when `DMCreateLocalVector()`, or `DMCreateGlobalVector()` is called
 
   Collective
@@ -139,14 +139,14 @@ PetscErrorCode DMSwarmVectorGetField(DM sw, PetscInt *Nf, const char **fieldname
   Level: beginner
 
   Notes:
-  Each field with name in `fieldnames` must be defined as having a data type of `PetscScalar`.
+  The field with name `fieldname` must be defined as having a data type of `PetscScalar`.
 
   This function must be called prior to calling `DMCreateLocalVector()`, `DMCreateGlobalVector()`.
   Multiple calls to `DMSwarmVectorDefineField()` are permitted.
 
 .seealso: `DM`, `DMSWARM`, `DMSwarmVectorDefineFields()`, `DMSwarmVectorGetField()`, `DMSwarmRegisterPetscDatatypeField()`, `DMCreateGlobalVector()`, `DMCreateLocalVector()`
 @*/
-PetscErrorCode DMSwarmVectorDefineField(DM dm, PetscInt Nf, const char *fieldnames[])
+PetscErrorCode DMSwarmVectorDefineField(DM dm, const char fieldname[])
 {
   PetscFunctionBegin;
   PetscCall(DMSwarmVectorDefineFields(dm, 1, &fieldname));

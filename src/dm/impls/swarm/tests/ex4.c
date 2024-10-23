@@ -121,7 +121,7 @@ static PetscErrorCode CreateSwarm(DM dm, AppCtx *user, DM *sw)
   }
   {
     const char *fieldnames[2] = {DMSwarmPICField_coor, "velocity"};
-    PetscCall(DMSwarmVectorDefineField(*sw, 2, fieldnames));
+    PetscCall(DMSwarmVectorDefineFields(*sw, 2, fieldnames));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
