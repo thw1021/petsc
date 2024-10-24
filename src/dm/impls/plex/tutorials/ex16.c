@@ -67,7 +67,7 @@ PetscErrorCode ReadCGNSDM(MPI_Comm comm, const char filename[], DM *dm)
     PetscCallMPI(MPIU_Allreduce(&ctInt, &maxcti, 1, MPIU_INT, MPI_MAX, comm));
     PetscCallMPI(MPIU_Allreduce(&ctInt, &mincti, 1, MPIU_INT, MPI_MIN, comm));
     PetscCheck(mincti == maxcti, comm, PETSC_ERR_RETURN, "Multi-topology not yet supported in this example!");
-    PetscCall(PetscPrintf(comm, "Mesh confirmed to be single topology degree %d %s\n", degree, DMPolytopeTypes[cti]));
+    PetscCall(PetscPrintf(comm, "Mesh confirmed to be single topology degree %" PetscInt_FMT " %s\n", degree, DMPolytopeTypes[cti]));
     PetscCall(PetscFECreateLagrangeByCell(PETSC_COMM_SELF, dim, 5, dm_polytope, degree, PETSC_DETERMINE, &fe));
     PetscCall(PetscObjectSetName((PetscObject)fe, "FE for VecLoad"));
     PetscCall(DMAddField(*dm, NULL, (PetscObject)fe));
