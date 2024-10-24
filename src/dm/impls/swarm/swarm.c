@@ -1,4 +1,5 @@
-#include "petscdmswarm.h"
+#include "petscsys.h"
+#include "petscsystypes.h"
 #define PETSCDM_DLL
 #include <petsc/private/dmswarmimpl.h> /*I   "petscdmswarm.h"   I*/
 #include <petsc/private/hashsetij.h>
@@ -1268,13 +1269,16 @@ PetscErrorCode DMSwarmSetCellDM(DM sw, DM dm)
   if (info->coordField) PetscCall(DMSwarmSetCoordinateField(sw, info->coordField));
   // Rebin the cells and set cell_id field
   if (rebin) {
-    PetscInt *cellid, Np;
+    PetscInt *cellid, Np, gNp, gNpOld;
 
     PetscCall(DMSwarmGetLocalSize(sw, &Np));
+    PetscCall(DMSwarmGetSize(sw, &gNpOld));
     PetscCall(DMSwarmGetField(sw, DMSwarmPICField_cellid, NULL, NULL, (void **)&cellid));
     for (PetscInt p = 0; p < Np; ++p) cellid[p] = DMLOCATEPOINT_POINT_NOT_FOUND;
     PetscCall(DMSwarmRestoreField(sw, DMSwarmPICField_cellid, NULL, NULL, (void **)&cellid));
     PetscCall(DMSwarmMigrate(sw, PETSC_FALSE));
+    PetscCall(DMSwarmGetSize(sw, &gNp));
+    PetscCheck(gNp == gNpOld, PetscObjectComm((PetscObject)sw), PETSC_ERR_PLIB, "No particles should be lost in rebinning: %" PetscInt_FMT " != %" PetscInt_FMT, gNp, gNpOld);
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1313,13 +1317,16 @@ PetscErrorCode DMSwarmGetCellDM(DM sw, DM *dm)
     // Set the coordinate field
     PetscCall(DMSwarmSetCoordinateField(sw, newinfo->coordField));
     // Rebin the cells and set cell_id field
-    PetscInt *cellid, Np;
+    PetscInt *cellid, Np, gNp, gNpOld;
 
     PetscCall(DMSwarmGetLocalSize(sw, &Np));
+    PetscCall(DMSwarmGetSize(sw, &gNpOld));
     PetscCall(DMSwarmGetField(sw, DMSwarmPICField_cellid, NULL, NULL, (void **)&cellid));
     for (PetscInt p = 0; p < Np; ++p) cellid[p] = DMLOCATEPOINT_POINT_NOT_FOUND;
     PetscCall(DMSwarmRestoreField(sw, DMSwarmPICField_cellid, NULL, NULL, (void **)&cellid));
     PetscCall(DMSwarmMigrate(sw, PETSC_FALSE));
+    PetscCall(DMSwarmGetSize(sw, &gNp));
+    PetscCheck(gNp == gNpOld, PetscObjectComm((PetscObject)sw), PETSC_ERR_PLIB, "No particles should be lost in rebinning: %" PetscInt_FMT " != %" PetscInt_FMT, gNp, gNpOld);
   }
   PetscCall(PetscMalloc1(n, celldms));
   next = swarm->cellDMs;
