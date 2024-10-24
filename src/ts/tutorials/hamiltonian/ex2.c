@@ -561,6 +561,7 @@ static PetscErrorCode MonitorEField(TS ts, PetscInt step, PetscReal t, Vec U, vo
   PetscCall(PetscDrawSave(draw));
 
   PetscCall(DMSwarmComputeMoments(sw, "velocity", "w_q", pmoments));
+  pmoments[3] *= 0.5;
   DM        dm;
   Vec       phi;
   PetscReal En;
