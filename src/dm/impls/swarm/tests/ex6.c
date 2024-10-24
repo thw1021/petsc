@@ -697,7 +697,7 @@ PetscErrorCode RHSObjectiveF(TS ts, PetscReal t, Vec U, PetscScalar *F, void *ct
   PetscCall(VecGetArrayRead(U, &u));
   PetscCall(VecGetLocalSize(U, &Np));
   PetscCall(DMGetGlobalVector(dm, &phi));
-  PetscCall(VecViewFromOptions(phi,NULL,"-phi_view_dg"));
+  PetscCall(VecViewFromOptions(phi, NULL, "-phi_view_dg"));
   PetscCall(PetscObjectSetName((PetscObject)phi, "potential"));
   PetscInt phi_size;
   PetscCall(VecGetSize(phi, &phi_size));
