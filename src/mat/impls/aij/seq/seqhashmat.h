@@ -135,12 +135,12 @@ static PetscErrorCode MatSetUp_Seq_Hash(Mat A)
 #endif
 
   /* keep a record of the operations so they can be reset when the hash handling is complete */
-  a->cops               = A->ops[0];
-  A->ops->assemblybegin = NULL;
-  A->ops->assemblyend   = MatAssemblyEnd_Seq_Hash;
-  A->ops->destroy       = MatDestroy_Seq_Hash;
-  A->ops->zeroentries   = MatZeroEntries_Seq_Hash;
-  A->ops->setrandom     = MatSetRandom_Seq_Hash;
+  a->cops                = A->ops[0];
+  A->ops->assemblybegin  = NULL;
+  A->ops->assemblyend    = MatAssemblyEnd_Seq_Hash;
+  A->ops->destroy        = MatDestroy_Seq_Hash;
+  A->ops->zeroentries    = MatZeroEntries_Seq_Hash;
+  A->ops->setrandom      = MatSetRandom_Seq_Hash;
   A->ops->copyhashtoxaij = MatCopyHashToXAIJ_Seq_Hash;
 #if defined(TYPE_BS_ON)
   if (bs > 1) A->ops->setvalues = MatSetValues_Seq_Hash_BS;

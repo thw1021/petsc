@@ -121,7 +121,7 @@ static PetscErrorCode MatCopyHashToXAIJ_MPI_Hash(Mat A, Mat B)
 
   PetscFunctionBegin;
   /* Let's figure there's no harm done in doing the scatters for A now even if A != B */
-  PetscCall(MatAssemblyBegin_MPI_Hash(A, /*unused*/MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyBegin_MPI_Hash(A, /*unused*/ MAT_FINAL_ASSEMBLY));
   PetscCall(MatFinishScatterAndSetValues_MPI_Hash(A));
 
   PetscCall(MatCopyHashToXAIJ(a->A, b->A));
