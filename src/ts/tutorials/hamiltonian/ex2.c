@@ -431,7 +431,7 @@ static void f0_Dirichlet(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscI
 {
   const PetscInt Nc = uOff_x[1] - uOff_x[0];
 
-  for (PetscInt c = 0; c < Nc; ++c) f0[0] += PetscSqr(u_x[c]);
+  for (PetscInt c = 0; c < Nc; ++c) f0[0] += 0.5 * PetscSqr(u_x[c]);
 }
 
 static PetscErrorCode computeFieldEnergy(DM dm, Vec u, PetscReal *En)
