@@ -933,7 +933,7 @@ cdef class Mat(Object):
     def preallocateWithMatPreallocator(
         self,
         Mat preallocator,
-        fill_with_zeros: bool = True,
+        fill: bool = True,
     ) -> None:
         """Preallocate memory for the matrix using a preallocator matrix.
 
@@ -943,17 +943,17 @@ cdef class Mat(Object):
         ----------
         preallocator
             The preallocator matrix. It must be of type `Type.PREALLOCATOR`.
-        fill_with_zeros
+        fill
             Flag indicating whether or not to insert zeros into
-            the newly allocated matrix, defaults to True.
+            the newly allocated matrix, defaults to `True`.
 
         See Also
         --------
         petsc.MatPreallocatorPreallocate
 
         """
-        cdef PetscBool fill = asBool(fill_with_zeros)
-        CHKERR(MatPreallocatorPreallocate(preallocator.mat, fill, self.mat))
+        cdef PetscBool cfill = asBool(fill)
+        CHKERR(MatPreallocatorPreallocate(preallocator.mat, cfill, self.mat))
 
     def createAIJWithArrays(
         self,
