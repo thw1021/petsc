@@ -60,16 +60,15 @@ PetscErrorCode ReadCGNSDM(MPI_Comm comm, const char filename[], DM *dm)
     // Limiting to single topology in this simple example
     PetscCall(DMPlexGetHeightStratum(*dm, 0, &cStart, &cEnd));
     PetscCall(DMPlexGetCellType(*dm, cStart, &dm_polytope));
-    for (int i = cStart + 1; i < cEnd; i++) {
+    for (PetscInt i = cStart + 1; i < cEnd; i++) {
       PetscCall(DMPlexGetCellType(*dm, i, &cti));
-      if (cti != dm_polytope) ctFail = PETSC_TRUE;
+      PetscCheck(cti == dm_polytope, comm, PETSC_ERR_RETURN, "Multi-topology not yet supported in this example!");
     }
     ctInt = cti;
     PetscCallMPI(MPIU_Allreduce(&ctInt, &maxcti, 1, MPIU_INT, MPI_MAX, comm));
     PetscCallMPI(MPIU_Allreduce(&ctInt, &mincti, 1, MPIU_INT, MPI_MIN, comm));
-    if (mincti != maxcti) ctFail = PETSC_TRUE;
-    PetscCheck(!ctFail, comm, PETSC_ERR_RETURN, "Multi-topology not yet supported in this example!");
-    PetscCall(PetscPrintf(comm, "Mesh confirmed to be single topology %d\n", cti));
+    PetscCheck(mincti == maxcti, comm, PETSC_ERR_RETURN, "Multi-topology not yet supported in this example!");
+    PetscCall(PetscPrintf(comm, "Mesh confirmed to be single topology %s\n", DMPolytopeTypes[cti]));
     PetscCall(PetscFECreateLagrangeByCell(PETSC_COMM_SELF, dim, 5, dm_polytope, degree, PETSC_DETERMINE, &fe));
     PetscCall(PetscObjectSetName((PetscObject)fe, "FE for VecLoad"));
     PetscCall(DMAddField(*dm, NULL, (PetscObject)fe));
@@ -117,14 +116,9 @@ int main(int argc, char **argv)
   PetscCall(PetscViewerCGNSOpen(comm, infilename, FILE_MODE_READ, &viewer));
   PetscCall(DMGetGlobalVector(dm, &V));
   PetscCall(PetscViewerCGNSSetSolutionIndex(viewer, 1));
-  { // Test GetSolutionIndex, not needed in application code
-    PetscInt solution_index;
-    PetscCall(PetscViewerCGNSGetSolutionIndex(viewer, &solution_index));
-    PetscCheck(solution_index == 1, comm, PETSC_ERR_ARG_INCOMP, "Returned solution index wrong.");
-  }
   PetscCall(PetscViewerCGNSGetSolutionName(viewer, &name));
   PetscCall(PetscViewerCGNSGetSolutionTime(viewer, &time, &set));
-  PetscCall(PetscPrintf(comm, "Solution Name: %s, and time %g\n", name, time));
+  PetscCall(PetscPrintf(comm, "Solution Name: %s, and time %g\n", name, (double)time));
   PetscCall(VecLoad(V, viewer));
   PetscCall(PetscViewerDestroy(&viewer));
 
@@ -150,7 +144,6 @@ int main(int argc, char **argv)
     args: -infile ${wPETSC_DIR}/share/petsc/datafiles/meshes/2x2x2_Q3_wave.cgns -outfile 2x2x2_Q3_wave_output.cgns
     args: -dm_plex_cgns_parallel -loaded_dm_view
     test:
-      # this partitioner should not shuffle anything, it should yield the same partitioning as the XDMF reader - added just for testing
       suffix: simple
       args: -petscpartitioner_type simple
 TEST*/
