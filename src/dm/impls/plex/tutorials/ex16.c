@@ -54,7 +54,6 @@ PetscErrorCode ReadCGNSDM(MPI_Comm comm, const char filename[], DM *dm)
     PetscInt       dim, cStart, cEnd;
     PetscInt       ctInt, mincti, maxcti;
     DMPolytopeType dm_polytope, cti;
-    PetscBool      ctFail = PETSC_FALSE;
 
     PetscCall(DMGetDimension(*dm, &dim));
     // Limiting to single topology in this simple example
