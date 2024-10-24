@@ -1260,6 +1260,7 @@ PetscErrorCode DMSwarmSetCellDM(DM sw, DM dm)
   info->Nf        = Nf;
   info->next      = swarm->cellinfo;
   swarm->cellinfo = info;
+  PetscCall(DMSwarmSortDestroy(&swarm->sort_context));
   // Define the DM fields
   PetscCall(PetscMalloc1(info->Nf, &info->dmFields));
   for (PetscInt f = 0; f < info->Nf; ++f) PetscCall(PetscStrallocpy(dmFields[f], &info->dmFields[f]));
@@ -1312,6 +1313,7 @@ PetscErrorCode DMSwarmGetCellDM(DM sw, DM *dm)
 }
 
     swarm->cellinfo = info->next;
+    PetscCall(DMSwarmSortDestroy(&swarm->sort_context));
     // Define the DM fields
     PetscCall(DMSwarmVectorDefineFields(sw, newinfo->Nf, (const char **)newinfo->dmFields));
     // Set the coordinate field
@@ -2224,6 +2226,16 @@ static PetscErrorCode DMDestroy_Swarm(DM dm)
   PetscCall(PetscObjectListDestroy(&swarm->cellDMs));
   PetscCall(PetscFree(swarm->activeCellDM));
   PetscCall(DMSwarmDataBucketDestroy(&swarm->db));
+  for (PetscInt f = 0; f < swarm->vec_field_num; ++f) PetscCall(PetscFree(swarm->vec_field_names[f]));
+  PetscCall(PetscFree(swarm->vec_field_names));
+  PetscCall(PetscFree(swarm->coord_name));
+  PetscCall(DMSwarmSortDestroy(&swarm->sort_context));
+  while (info) {
+    CellDMInfo tmp = info;
+
+    info = info->next;
+    PetscCall(CellDMInfoDestroy(&tmp));
+  }
   PetscCall(PetscFree(swarm));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
