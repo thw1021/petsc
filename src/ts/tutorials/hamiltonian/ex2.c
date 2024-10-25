@@ -247,17 +247,15 @@ static PetscErrorCode SetupContext(DM dm, DM sw, AppCtx *user)
   PetscFunctionBeginUser;
   PetscCall(PetscObjectGetComm((PetscObject)dm, &comm));
   if (user->efield_monitor) {
-    PetscDraw     draw;
-    PetscDrawAxis axis;
-
-    PetscCall(PetscDrawCreate(comm, NULL, "Max Electric Field", 0, 300, 400, 300, &draw));
-    PetscCall(PetscDrawSetSave(draw, "ex2_Efield"));
-    PetscCall(PetscDrawSetFromOptions(draw));
-    PetscCall(PetscDrawLGCreate(draw, 1, &user->drawlgE));
-    PetscCall(PetscDrawDestroy(&draw));
-    PetscCall(PetscDrawLGGetAxis(user->drawlgE, &axis));
-    PetscCall(PetscDrawAxisSetLabels(axis, "Electron Electric Field", "time", "E_max"));
-    PetscCall(PetscDrawLGSetLimits(user->drawlgE, 0., user->steps * user->stepSize, user->drawlgEmin, 0.));
+    PetscDrawAxis axis_ef;
+    PetscCall(PetscDrawCreate(PETSC_COMM_WORLD, NULL, "monitor_efield", 0, 300, 400, 300, &user->drawef));
+    PetscCall(PetscDrawSetSave(user->drawef, "ex9_Efield"));
+    PetscCall(PetscDrawSetFromOptions(user->drawef));
+    PetscCall(PetscDrawLGCreate(user->drawef, 1, &user->drawlg_ef));
+    PetscCall(PetscDrawLGGetAxis(user->drawlg_ef, &axis_ef));
+    PetscCall(PetscDrawAxisSetLabels(axis_ef, "Electron Electric Field", "time", "E_max"));
+    PetscCall(PetscDrawLGSetLimits(user->drawlg_ef, 0., user->steps * user->stepSize, -10., 0.));
+    PetscCall(PetscDrawAxisSetLimits(axis_ef, 0., user->steps * user->stepSize, -10., 0.));
   }
 
   if (user->initial_monitor) {
@@ -332,61 +330,39 @@ static PetscErrorCode SetupContext(DM dm, DM sw, AppCtx *user)
     PetscCall(PetscDrawSPSetDimension(user->drawspX, 1));
     PetscCall(PetscDrawSPGetAxis(user->drawspX, &axis));
     PetscCall(PetscDrawAxisSetLabels(axis, "Particles", "x", "v"));
-    PetscCall(PetscDrawSPReset(user->drawspX));
+    PetscCall(PetscDrawSetSave(user->positionDraw, "ex9_pos"));
   }
   if (user->poisson_monitor) {
     Vec           rho, rhohat, phi;
     PetscDraw     draw;
     PetscDrawAxis axis;
 
-    PetscCall(PetscDrawCreate(comm, NULL, "Electric_Field", 0, 0, 400, 300, &draw));
-    PetscCall(PetscDrawSetFromOptions(draw));
-    PetscCall(PetscDrawSetSave(draw, "ex9_E_spatial"));
-    PetscCall(PetscDrawSPCreate(draw, 10, &user->drawspE));
-    PetscCall(PetscDrawDestroy(&draw));
-    PetscCall(PetscDrawSPSetDimension(user->drawspE, 1));
-    PetscCall(PetscDrawSPGetAxis(user->drawspE, &axis));
-    PetscCall(PetscDrawAxisSetLabels(axis, "Particles", "x", "E"));
-    PetscCall(PetscDrawSPReset(user->drawspE));
+    PetscCall(PetscDrawCreate(PETSC_COMM_WORLD, NULL, "Poisson_monitor", 0, 0, 400, 300, &user->EDraw));
+    PetscCall(PetscDrawSetFromOptions(user->EDraw));
+    PetscCall(PetscDrawSPCreate(user->EDraw, 10, &user->EDrawSP));
+    PetscCall(PetscDrawSPSetDimension(user->EDrawSP, 1));
+    PetscCall(PetscDrawSPGetAxis(user->EDrawSP, &axis_E));
+    PetscCall(PetscDrawSPReset(user->EDrawSP));
+    PetscCall(PetscDrawAxisSetLabels(axis_E, "Particles", "x", "E"));
+    PetscCall(PetscDrawSetSave(user->EDraw, "ex9_E_spatial"));
 
-    PetscCall(PetscViewerDrawOpen(comm, NULL, "Charge Density", 0, 0, 400, 300, &user->viewerRho));
-    PetscCall(PetscObjectSetOptionsPrefix((PetscObject)user->viewerRho, "rho_"));
-    PetscCall(PetscViewerDrawGetDraw(user->viewerRho, 0, &draw));
-    PetscCall(PetscDrawSetSave(draw, "ex9_rho_spatial"));
-    PetscCall(PetscViewerSetFromOptions(user->viewerRho));
-    PetscCall(DMGetNamedGlobalVector(user->dmPot, "rho", &rho));
-    PetscCall(PetscObjectSetName((PetscObject)rho, "charge_density"));
-    PetscCall(DMRestoreNamedGlobalVector(user->dmPot, "rho", &rho));
+    PetscCall(PetscDrawCreate(PETSC_COMM_WORLD, NULL, "rho_monitor", 0, 0, 400, 300, &user->RhoDraw));
+    PetscCall(PetscDrawSetFromOptions(user->RhoDraw));
+    PetscCall(PetscDrawSPCreate(user->RhoDraw, 10, &user->RhoDrawSP));
+    PetscCall(PetscDrawSPSetDimension(user->RhoDrawSP, 1));
+    PetscCall(PetscDrawSPGetAxis(user->RhoDrawSP, &axis_Rho));
+    PetscCall(PetscDrawSPReset(user->RhoDrawSP));
+    PetscCall(PetscDrawAxisSetLabels(axis_Rho, "Particles", "x", "rho"));
+    PetscCall(PetscDrawSetSave(user->RhoDraw, "ex9_rho_spatial"));
 
-    PetscInt dim, N;
-
-    PetscCall(DMGetDimension(user->dmPot, &dim));
-    if (dim == 1) {
-      PetscCall(DMGetNamedGlobalVector(user->dmPot, "rhohat", &rhohat));
-      PetscCall(VecGetSize(rhohat, &N));
-      PetscCall(MatCreateFFT(comm, dim, &N, MATFFTW, &user->fftPot));
-      PetscCall(DMRestoreNamedGlobalVector(user->dmPot, "rhohat", &rhohat));
-      PetscCall(MatCreateVecs(user->fftPot, &user->fftX, &user->fftY));
-      PetscCall(ISCreateStride(PETSC_COMM_SELF, N, 0, 1, &user->fftReal));
-    }
-
-    PetscCall(PetscViewerDrawOpen(comm, NULL, "rhohat: Charge Density FT", 0, 0, 400, 300, &user->viewerRhoHat));
-    PetscCall(PetscObjectSetOptionsPrefix((PetscObject)user->viewerRhoHat, "rhohat_"));
-    PetscCall(PetscViewerDrawGetDraw(user->viewerRhoHat, 0, &draw));
-    PetscCall(PetscDrawSetSave(draw, "ex9_rho_ft"));
-    PetscCall(PetscViewerSetFromOptions(user->viewerRhoHat));
-    PetscCall(DMGetNamedGlobalVector(user->dmPot, "rhohat", &rhohat));
-    PetscCall(PetscObjectSetName((PetscObject)rhohat, "charge_density_ft"));
-    PetscCall(DMRestoreNamedGlobalVector(user->dmPot, "rhohat", &rhohat));
-
-    PetscCall(PetscViewerDrawOpen(comm, NULL, "Potential", 400, 0, 400, 300, &user->viewerPhi));
-    PetscCall(PetscObjectSetOptionsPrefix((PetscObject)user->viewerPhi, "phi_"));
-    PetscCall(PetscViewerDrawGetDraw(user->viewerPhi, 0, &draw));
-    PetscCall(PetscDrawSetSave(draw, "ex9_phi_spatial"));
-    PetscCall(PetscViewerSetFromOptions(user->viewerPhi));
-    PetscCall(DMGetNamedGlobalVector(user->dmPot, "phi", &phi));
-    PetscCall(PetscObjectSetName((PetscObject)phi, "potential"));
-    PetscCall(DMRestoreNamedGlobalVector(user->dmPot, "phi", &phi));
+    PetscCall(PetscDrawCreate(PETSC_COMM_WORLD, NULL, "potential_monitor", 0, 0, 400, 300, &user->PotDraw));
+    PetscCall(PetscDrawSetFromOptions(user->PotDraw));
+    PetscCall(PetscDrawSPCreate(user->PotDraw, 10, &user->PotDrawSP));
+    PetscCall(PetscDrawSPSetDimension(user->PotDrawSP, 1));
+    PetscCall(PetscDrawSPGetAxis(user->PotDrawSP, &axis_Pot));
+    PetscCall(PetscDrawSPReset(user->PotDrawSP));
+    PetscCall(PetscDrawAxisSetLabels(axis_Pot, "Particles", "x", "potential"));
+    PetscCall(PetscDrawSetSave(user->PotDraw, "ex9_phi_spatial"));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -2002,7 +1978,7 @@ static PetscErrorCode RHSFunction(TS ts, PetscReal t, Vec U, Vec G, void *ctx)
 
 /* J_{ij} = dF_i/dx_j
    J_p = (  0   1)
-         (-w^2  0)
+         (-1  0)
    TODO Now there is another term with w^2 from the electric field. I think we will need to invert the operator.
         Perhaps we can approximate the Jacobian using only the cellwise P-P gradient from Coulomb
 */
@@ -2023,8 +1999,7 @@ static PetscErrorCode RHSJacobian(TS ts, PetscReal t, Vec U, Mat J, Mat P, void 
   for (p = 0; p < Np; ++p) {
     const PetscReal x0      = coords[p * dim + 0];
     const PetscReal vy0     = vel[p * dim + 1];
-    const PetscReal omega   = vy0 / x0;
-    PetscScalar     vals[4] = {0., 1., -PetscSqr(omega), 0.};
+    PetscScalar     vals[4] = {0., 1., -1, 0.};
 
     for (d = 0; d < dim; ++d) {
       const PetscInt rows[2] = {(p * 2 + 0) * dim + d + rStart, (p * 2 + 1) * dim + d + rStart};
@@ -2175,10 +2150,9 @@ PetscErrorCode RHSObjectiveF(TS ts, PetscReal t, Vec U, PetscScalar *F, void *ct
       const PetscInt  p     = points[cp];
       const PetscReal x0    = coords[p * dim + 0];
       const PetscReal vy0   = vel[p * dim + 1];
-      const PetscReal omega = vy0 / x0;
       const PetscReal v2    = DMPlex_DotRealD_Internal(dim, &u[(p * 2 + 1) * dim], &u[(p * 2 + 1) * dim]);
       const PetscReal x2    = DMPlex_DotRealD_Internal(dim, &u[(p * 2 + 0) * dim], &u[(p * 2 + 0) * dim]);
-      E += 0.5 * m_p * (v2) + 0.5 * PetscSqr(omega) * (x2);
+      E += 0.5 * m_p * (v2);
 
       *F += E;
     }
@@ -2202,7 +2176,7 @@ PetscErrorCode RHSFunctionG(TS ts, PetscReal t, Vec U, Vec G, void *ctx)
   const PetscReal   *coords, *vel;
   const PetscScalar *u;
   PetscScalar       *g;
-  PetscReal         *E, m_p = 1., q_p = -1.;
+  PetscReal         *E, q_p = -1.;
   PetscInt           dim, d, Np, p;
 
   PetscFunctionBeginUser;
@@ -2223,9 +2197,8 @@ PetscErrorCode RHSFunctionG(TS ts, PetscReal t, Vec U, Vec G, void *ctx)
   for (p = 0; p < Np; ++p) {
     const PetscReal x0    = coords[p * dim + 0];
     const PetscReal vy0   = vel[p * dim + 1];
-    const PetscReal omega = vy0 / x0;
     for (d = 0; d < dim; ++d) {
-      g[(p * 2 + 0) * dim + d] = -(q_p / m_p) * E[p * dim + d] + PetscSqr(omega) * u[(p * 2 + 0) * dim + d];
+      g[(p * 2 + 0) * dim + d] = -(q_p) * E[p * dim + d];
       g[(p * 2 + 1) * dim + d] = u[(p * 2 + 1) * dim + d];
     }
   }
