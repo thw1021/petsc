@@ -109,10 +109,10 @@ PetscErrorCode MatSetRandom(Mat x, PetscRandom rctx)
 
   Logically Collective
 
-  Input Parameters:
+  Input Parameter:
 . A - A matrix in unassembled, hash table form
 
-  Output Parameters
+  Output Parameter:
 . B - The XAIJ matrix. This can either be `A` or some matrix of equivalent size, e.g. obtained from `A` via `MatDuplicate()`
 
   Example:
@@ -125,6 +125,8 @@ PetscErrorCode MatSetRandom(Mat x, PetscRandom rctx)
 
   Notes:
   If `B` is `A`, then the hash table data structure will be destroyed. `B` is assembled
+
+.seealso: [](ch_matrices), `Mat`, `MAT_USE_HASH_TABLE`
 @*/
 PetscErrorCode MatCopyHashToXAIJ(Mat A, Mat B)
 {
