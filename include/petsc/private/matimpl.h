@@ -4,6 +4,10 @@
 #include <petscmatcoarsen.h>
 #include <petsc/private/petscimpl.h>
 
+#if defined(PETSC_HAVE_CUDA)
+  #include <cusparse.h>
+#endif
+
 PETSC_EXTERN PetscBool      MatRegisterAllCalled;
 PETSC_EXTERN PetscBool      MatSeqAIJRegisterAllCalled;
 PETSC_EXTERN PetscBool      MatOrderingRegisterAllCalled;
@@ -464,6 +468,10 @@ typedef struct { /* used by MatProduct() */
   PetscBool clear;                   /* whether or not to clear the data structures after MatProductNumeric has been called */
   void     *data;                    /* where to stash those structures */
   PetscErrorCode (*destroy)(void *); /* destroy routine */
+
+#if defined(PETSC_HAVE_CUDA)
+  cusparseSpGEMMAlg_t spgemmAlg; /* can be thought as second level algorithms under '-mat_produce_algorithm backend' for CUDA */
+#endif
 } Mat_Product;
 
 struct _p_Mat {

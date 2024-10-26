@@ -32,38 +32,27 @@ Examples:
 #include <petscmat.h>
 #include <petscdevice.h>
 
-#if defined(PETSC_HAVE_CUDA)
-  #include <petscdevice_cuda.h>
-  #define SyncDevice() PetscCallCUDA(cudaDeviceSynchronize())
-#elif defined(PETSC_HAVE_HIP)
-  #include <petscdevice_hip.h>
-  #define SyncDevice() PetscCallHIP(hipDeviceSynchronize())
-#elif defined(PETSC_HAVE_KOKKOS)
-  #include <Kokkos_Core.hpp>
-  #define SyncDevice() Kokkos::fence()
-#else
-  #define SyncDevice()
-#endif
-
 int main(int argc, char **args)
 {
-  Mat            A, P, C;
-  Mat            A2, P2, C2; /* Shadow matrices (of MATAIJ) of A,P,C for initialization and validation */
-  char           matTypeStr[64], prodTypeStr[32];
-  char           fileA[PETSC_MAX_PATH_LEN], fileP[PETSC_MAX_PATH_LEN];
-  PetscViewer    fdA, fdP;
-  PetscBool      flg, flgA, flgP, equal = PETSC_FALSE;
-  PetscLogStage  stage;
-  PetscInt       i, n = 100, nskip = 2, M, N;
-  MatInfo        info;
-  PetscLogDouble tstart = 0, tend = 0, avgTime;
-  PetscMPIInt    size;
-  MatProductType prodType;
-  PetscBool      isAP, isAtP, isAPt, isPtAP, isPAPt;
+  Mat                A, P, C;
+  Mat                A2, P2, C2; /* Shadow matrices (of MATAIJ) of A,P,C for initialization and validation */
+  char               matTypeStr[64], prodTypeStr[32];
+  char               fileA[PETSC_MAX_PATH_LEN], fileP[PETSC_MAX_PATH_LEN];
+  PetscViewer        fdA, fdP;
+  PetscBool          flg, flgA, flgP, equal = PETSC_FALSE;
+  PetscLogStage      stage;
+  PetscInt           i, n = 100, nskip = 2, M, N;
+  MatInfo            info;
+  PetscLogDouble     tstart = 0, tend = 0, avgTime;
+  PetscMPIInt        size;
+  MatProductType     prodType;
+  PetscBool          isAP, isAtP, isAPt, isPtAP, isPAPt;
+  PetscDeviceContext dctx;
 
   PetscFunctionBeginUser;
-  PetscCall(PetscInitialize(&argc, &args, nullptr, help));
+  PetscCall(PetscInitialize(&argc, &args, NULL, help));
   PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD, &size));
+  PetscCall(PetscDeviceContextGetCurrentContext(&dctx));
 
   /* Read options -n */
   PetscCall(PetscOptionsGetInt(NULL, NULL, "-n", &n, NULL));
@@ -148,11 +137,13 @@ int main(int argc, char **args)
   /* Measure  MatProductSymbolic */
   PetscCall(PetscLogStageRegister("MatProductSymbolic", &stage));
   PetscCall(PetscLogStagePush(stage));
-  SyncDevice();
+  PetscCall(PetscDeviceContextSynchronize(dctx));
+
   PetscCallMPI(MPI_Barrier(PETSC_COMM_WORLD));
   PetscCall(PetscTime(&tstart));
   PetscCall(MatProductSymbolic(C));
-  SyncDevice();
+  PetscCall(PetscDeviceContextSynchronize(dctx));
+
   PetscCallMPI(MPI_Barrier(PETSC_COMM_WORLD));
   PetscCall(PetscTime(&tend));
   avgTime = (tend - tstart) * 1e6; /* microseconds */
@@ -163,7 +154,8 @@ int main(int argc, char **args)
   PetscCall(PetscLogStageRegister("MatProductNumeric", &stage));
   for (i = 0; i < n + nskip; i++) {
     if (i == nskip) {
-      SyncDevice();
+      PetscCall(PetscDeviceContextSynchronize(dctx));
+
       PetscCall(PetscLogStagePush(stage));
       PetscCallMPI(MPI_Barrier(PETSC_COMM_WORLD));
       PetscCall(PetscTime(&tstart));
@@ -171,7 +163,8 @@ int main(int argc, char **args)
     PetscCall(MatProductReplaceMats(A, P, NULL, C));
     PetscCall(MatProductNumeric(C));
   }
-  SyncDevice();
+  PetscCall(PetscDeviceContextSynchronize(dctx));
+
   PetscCallMPI(MPI_Barrier(PETSC_COMM_WORLD));
   PetscCall(PetscTime(&tend));
   avgTime = (tend - tstart) * 1e6 / n; /* microseconds */
@@ -201,15 +194,16 @@ int main(int argc, char **args)
     nsize: 1
     filter: grep "DOES_NOT_EXIST"
     output_file: output/empty.out
-    requires: datafilespath !complex double !defined(PETSC_USE_64BIT_INDICES) kokkos_kernels
+    requires: datafilespath !complex double !defined(PETSC_USE_64BIT_INDICES)
 
     test:
       suffix: 1
       requires: cuda
-      args: -mat_type aijcusparse
+      args: -mat_type aijcusparse -mat_product_cusparse_spgemm_alg csr_alg_determinitic
 
     test:
       suffix: 2
+      requires: kokkos_kernels
       args: -mat_type aijkokkos
 
     test:
