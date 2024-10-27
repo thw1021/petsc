@@ -205,6 +205,24 @@ static PetscErrorCode DMPlexCreateFluent_ReadSection(PetscViewer viewer, FluentS
     }
     PetscCall(DMPlexCreateFluent_ReadString(viewer, buffer, ')'));
 
+  } else if (s->index == 39) { /* Label information */
+    char labelName[PETSC_MAX_PATH_LEN];
+    char caseName[PETSC_MAX_PATH_LEN];
+
+    PetscCall(DMPlexCreateFluent_ReadString(viewer, buffer, ')'));
+    snum = sscanf(buffer, "(%d %s %s %d)", &s->zoneID, caseName, labelName, &s->nd);
+    PetscCheck(snum == 4, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "File is not a valid Fluent file");
+    PetscInt depth = 1;
+    do {
+      /* Match parentheses when parsing unknown sections */
+      do PetscCall(PetscViewerRead(viewer, &buffer[0], 1, NULL, PETSC_CHAR));
+      while (buffer[0] != '(' && buffer[0] != ')');
+      if (buffer[0] == '(') depth++;
+      if (buffer[0] == ')') depth--;
+    } while (depth > 0);
+    PetscCall(DMPlexCreateFluent_ReadString(viewer, buffer, '\n'));
+    PetscCall(PetscStrallocpy(labelName, (char **)&s->data));
+    PetscCall(PetscInfo((PetscObject)viewer, "CASE: Zone ID %d is label %s\n", s->zoneID, labelName));
   } else { /* Unknown section type */
     PetscInt depth = 1;
     do {
@@ -277,15 +295,16 @@ static PetscErrorCode InsertEdge(PetscInt numCells, PetscInt cell, PetscInt numF
 @*/
 PetscErrorCode DMPlexCreateFluent(MPI_Comm comm, PetscViewer viewer, PetscBool interpolate, DM *dm)
 {
-  PetscMPIInt  rank;
-  PetscInt     c, v, dim = PETSC_DETERMINE, numCells = 0, numVertices = 0, numCellVertices = PETSC_DETERMINE;
-  PetscInt     numFaces = PETSC_DETERMINE, f, numFaceEntries = PETSC_DETERMINE, numFaceVertices = PETSC_DETERMINE;
-  PetscInt    *faces = NULL, *cellVertices = NULL, *faceZoneIDs = NULL;
-  DMLabel      faceSets = NULL;
-  PetscInt     d, coordSize;
-  PetscScalar *coords, *coordsIn = NULL;
-  PetscSection coordSection;
-  Vec          coordinates;
+  PetscMPIInt   rank;
+  PetscInt      c, v, dim = PETSC_DETERMINE, numCells = 0, numVertices = 0, numCellVertices = PETSC_DETERMINE;
+  PetscInt      numFaces = PETSC_DETERMINE, f, numFaceEntries = PETSC_DETERMINE, numFaceVertices = PETSC_DETERMINE;
+  PetscInt     *faces = NULL, *cellVertices = NULL, *faceZoneIDs = NULL;
+  DMLabel       faceSets = NULL, *zoneLabels = NULL;
+  const char  **zoneNames = NULL;
+  PetscInt      d, coordSize, maxZoneID = 0;
+  PetscScalar  *coords, *coordsIn = NULL;
+  PetscSection  coordSection;
+  Vec           coordinates;
 
   PetscFunctionBegin;
   PetscCallMPI(MPI_Comm_rank(comm, &rank));
@@ -359,6 +378,24 @@ PetscErrorCode DMPlexCreateFluent(MPI_Comm comm, PetscViewer viewer, PetscBool i
           for (z = s.first - 1; z < s.last; z++) faceZoneIDs[z] = s.zoneID;
           PetscCall(PetscFree(s.data));
         }
+      } else if (s.index == 39) { /* Label information */
+        if (s.zoneID >= maxZoneID) {
+          DMLabel     *tmpL;
+          const char **tmp;
+          PetscInt     newmax = maxZoneID + 1;
+
+          while (newmax < s.zoneID + 1) newmax *= 2;
+          PetscCall(PetscCalloc2(newmax, &tmp, newmax, &tmpL));
+          for (PetscInt i = 0; i < maxZoneID; ++i) {
+            tmp[i]  = zoneNames[i];
+            tmpL[i] = zoneLabels[i];
+          }
+          maxZoneID = newmax;
+          PetscCall(PetscFree2(zoneNames, zoneLabels));
+          zoneNames  = tmp;
+          zoneLabels = tmpL;
+        }
+        zoneNames[s.zoneID] = s.data;
       }
     } while (s.index >= 0);
   }
@@ -419,19 +456,23 @@ PetscErrorCode DMPlexCreateFluent(MPI_Comm comm, PetscViewer viewer, PetscBool i
     for (f = 0; f < numFaces; f++) {
       const PetscInt cl = faces[f * numFaceEntries + numFaceVertices] - 1;
       const PetscInt cr = faces[f * numFaceEntries + numFaceVertices + 1] - 1;
+      const PetscInt id = faceZoneIDs[f];
+
       if (cl > 0 && cr > 0) {
         /* If we know both adjoining cells we can use a single-level meet */
         cells[0] = cl;
         cells[1] = cr;
         PetscCall(DMPlexGetMeet(*dm, 2, cells, &meetSize, &meet));
         PetscCheck(meetSize == 1, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Could not determine Plex facet for Fluent face %" PetscInt_FMT " cells: %" PetscInt_FMT ", %" PetscInt_FMT, f, cl, cr);
-        PetscCall(DMSetLabelValue_Fast(*dm, &faceSets, "Face Sets", meet[0], faceZoneIDs[f]));
+        PetscCall(DMSetLabelValue_Fast(*dm, &faceSets, "Face Sets", meet[0], id));
+        if (zoneNames) PetscCall(DMSetLabelValue_Fast(*dm, &zoneLabels[id], zoneNames[id], meet[0], 1));
         PetscCall(DMPlexRestoreMeet(*dm, numFaceVertices, fverts, &meetSize, &meet));
       } else {
         for (fi = 0; fi < numFaceVertices; fi++) fverts[fi] = faces[f * numFaceEntries + fi] + numCells - 1;
         PetscCall(DMPlexGetFullJoin(*dm, numFaceVertices, fverts, &joinSize, &join));
         PetscCheck(joinSize == 1, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Could not determine Plex facet for Fluent face %" PetscInt_FMT, f);
-        PetscCall(DMSetLabelValue_Fast(*dm, &faceSets, "Face Sets", join[0], faceZoneIDs[f]));
+        PetscCall(DMSetLabelValue_Fast(*dm, &faceSets, "Face Sets", join[0], id));
+        if (zoneNames) PetscCall(DMSetLabelValue_Fast(*dm, &zoneLabels[id], zoneNames[id], join[0], 1));
         PetscCall(DMPlexRestoreJoin(*dm, numFaceVertices, fverts, &joinSize, &join));
       }
     }
@@ -447,6 +488,7 @@ PetscErrorCode DMPlexCreateFluent(MPI_Comm comm, PetscViewer viewer, PetscBool i
     flag[0] = faceSets ? PETSC_TRUE : PETSC_FALSE;
     PetscCallMPI(MPI_Bcast(flag, n, MPIU_BOOL, 0, comm));
     if (flag[0]) PetscCall(DMCreateLabel(*dm, "Face Sets"));
+    // TODO Code to create all the zone labels on each process
   }
 
   /* Read coordinates */
@@ -479,6 +521,9 @@ PetscErrorCode DMPlexCreateFluent(MPI_Comm comm, PetscViewer viewer, PetscBool i
     PetscCall(PetscFree(faces));
     PetscCall(PetscFree(faceZoneIDs));
     PetscCall(PetscFree(coordsIn));
+    if (zoneNames) for (PetscInt i = 0; i < maxZoneID; ++i) PetscCall(PetscFree(zoneNames[i]));
+    PetscCall(PetscFree(zoneNames));
+    PetscCall(PetscFree(zoneLabels));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
