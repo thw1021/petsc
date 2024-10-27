@@ -10,21 +10,17 @@ static char help[] = "Simple demonstration of CGNS parallel load-save including 
 #define EX "ex16.c"
 
 typedef struct {
-  char infile[PETSC_MAX_PATH_LEN];  /* Input mesh filename */
-  char outfile[PETSC_MAX_PATH_LEN]; /* Dump/reload mesh filename */
+  char infile[PETSC_MAX_PATH_LEN]; /* Input mesh filename */
 } AppCtx;
 
 static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 {
   PetscFunctionBeginUser;
-  options->infile[0]  = '\0';
-  options->outfile[0] = '\0';
+  options->infile[0] = '\0';
   PetscOptionsBegin(comm, "", "Meshing Problem Options", "DMPLEX");
   PetscCall(PetscOptionsString("-infile", "The input CGNS file", EX, options->infile, options->infile, sizeof(options->infile), NULL));
-  PetscCall(PetscOptionsString("-outfile", "The output CGNS file", EX, options->outfile, options->outfile, sizeof(options->outfile), NULL));
   PetscOptionsEnd();
   PetscCheck(options->infile[0], comm, PETSC_ERR_USER_INPUT, "-infile needs to be specified");
-  PetscCheck(options->outfile[0], comm, PETSC_ERR_USER_INPUT, "-outfile needs to be specified");
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -121,10 +117,8 @@ int main(int argc, char **argv)
   PetscCall(VecLoad(V, viewer));
   PetscCall(PetscViewerDestroy(&viewer));
 
-  // Write loaded solution to CGNS file
-  PetscCall(PetscViewerCGNSOpen(comm, user.outfile, FILE_MODE_WRITE, &viewer));
-  PetscCall(VecView(V, viewer));
-  PetscCall(PetscViewerDestroy(&viewer));
+  // Write loaded solution (e.g. example in TEST below is to CGNS file)
+  PetscCall(VecViewFromOptions(V, NULL, "-vec_view"));
 
   PetscCall(DMRestoreGlobalVector(dm, &V));
   PetscCall(DMDestroy(&dm));
@@ -140,9 +134,9 @@ int main(int argc, char **argv)
     suffix: cgns
     requires: !complex
     nsize: 4
-    args: -infile ${wPETSC_DIR}/share/petsc/datafiles/meshes/2x2x2_Q3_wave.cgns -outfile 2x2x2_Q3_wave_output.cgns
+    args: -infile ${wPETSC_DIR}/share/petsc/datafiles/meshes/2x2x2_Q3_wave.cgns
     args: -dm_plex_cgns_parallel -loaded_dm_view
     test:
       suffix: simple
-      args: -petscpartitioner_type simple
+      args: -vec_view cgns:2x2x2_Q3Vecview.cgns
 TEST*/
