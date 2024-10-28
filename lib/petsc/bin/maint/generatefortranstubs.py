@@ -197,6 +197,7 @@ def generateCStub(petscarch,senums,classes,funname,fun):
   #      self.stringlen    - True indicates the argument is the length of the previous character string
   #      self.const        - indicates the string argument is an input, not an output
   #      self.stars        - indicates the string is (in C) returned by a pointer to a string array
+  print(fun)
   if fun.opaque:
     return
   # temporary

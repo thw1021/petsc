@@ -20,10 +20,10 @@
       PetscCallA(PetscInitialize(ierr))
 
       PetscCallA(DMPlexCreate(PETSC_COMM_WORLD, dm, ierr))
-      firstCell = 0
-      numCells = 2
+      firstCell   = 0
+      numCells    = 2
       numVertices = 6
-      numPoints = numCells+numVertices
+      numPoints   = numCells+numVertices
       PetscCallA(DMPlexSetChart(dm, i0, numPoints, ierr))
       do c=firstCell,numCells-1
          PetscCallA(DMPlexSetConeSize(dm, c, i4, ierr))
@@ -34,24 +34,23 @@
       EC(2) = 3
       EC(3) = 4
       EC(4) = 5
-      pEC => EC
       c = 0
-      write(*,1000) 'cell',c,pEC
+      write(*,1000) 'cell',c,EC
  1000 format (a,i4,50i4)
-      PetscCallA(DMPlexSetCone(dm, c , pEC, ierr))
-      PetscCallA(DMPlexGetCone(dm, c , pEC, ierr))
-      write(*,1000) 'cell',c,pEC
+      PetscCallA(DMPlexSetCone(dm, c , EC, ierr))
+      !PetscCallA(DMPlexGetCone(dm, c , pEC, ierr))
+      !write(*,1000) 'cell',c,pEC
+      !PetscCallA(DMPlexRestoreCone(dm, c, pEC, ierr))
       EC(1) = 4
       EC(2) = 5
       EC(3) = 6
       EC(4) = 7
-      pEC => EC
       c = 1
-      write(*,1000) 'cell',c,pEC
-      PetscCallA(DMPlexSetCone(dm, c , pEC, ierr))
-      PetscCallA(DMPlexGetCone(dm, c , pEC, ierr))
-      write(*,1000) 'cell',c,pEC
-      PetscCallA(DMPlexRestoreCone(dm, c , pEC, ierr))
+      write(*,1000) 'cell',c,EC
+      PetscCallA(DMPlexSetCone(dm, c , EC, ierr))
+      !PetscCallA(DMPlexGetCone(dm, c , pEC, ierr))
+      !write(*,1000) 'cell',c,pEC
+      !PetscCallA(DMPlexRestoreCone(dm, c, pEC, ierr))
 
       PetscCallA(DMPlexSymmetrize(dm, ierr))
       PetscCallA(DMPlexStratify(dm, ierr))

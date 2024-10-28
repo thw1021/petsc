@@ -4768,8 +4768,6 @@ PetscErrorCode DMPlexComputeCellTypes(DM dm)
   PetscInt, pointer :: coveredPints(:)
 .ve
 
-  The `numCoveredPoints` argument is not present in the Fortran binding.
-
 .seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMPlexRestoreJoin()`, `DMPlexGetMeet()`
 @*/
 PetscErrorCode DMPlexGetJoin(DM dm, PetscInt numPoints, const PetscInt points[], PetscInt *numCoveredPoints, const PetscInt *coveredPoints[])
@@ -4838,7 +4836,7 @@ PetscErrorCode DMPlexGetJoin(DM dm, PetscInt numPoints, const PetscInt points[],
 
 .seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMPlexGetJoin()`, `DMPlexGetFullJoin()`, `DMPlexGetMeet()`
 @*/
-PetscErrorCode DMPlexRestoreJoin(DM dm, PetscInt numPoints, PeOp const PetscInt points[], PeOp PetscInt *numCoveredPoints, PeOp const PetscInt *coveredPoints[])
+PetscErrorCode DMPlexRestoreJoin(DM dm, PetscInt numPoints, const PetscInt points[], PetscInt *numCoveredPoints, const PetscInt *coveredPoints[])
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -5048,7 +5046,7 @@ PetscErrorCode DMPlexGetMeet(DM dm, PetscInt numPoints, const PetscInt points[],
 
 .seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMPlexGetMeet()`, `DMPlexGetFullMeet()`, `DMPlexGetJoin()`
 @*/
-PetscErrorCode DMPlexRestoreMeet(DM dm, PetscInt numPoints, PeOp const PetscInt points[], PeOp PetscInt *numCoveredPoints, const PetscInt *coveredPoints[])
+PetscErrorCode DMPlexRestoreMeet(DM dm, PetscInt numPoints, const PetscInt points[], PetscInt *numCoveredPoints, const PetscInt *coveredPoints[])
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
