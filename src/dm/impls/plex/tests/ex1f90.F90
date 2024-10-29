@@ -1,7 +1,6 @@
       program main
 #include <petsc/finclude/petscdmplex.h>
       use petscdmplex
-      use petscsys
       implicit none
 !
 !
@@ -48,12 +47,16 @@
       c = 1
       write(*,1000) 'cell',c,EC
       PetscCallA(DMPlexSetCone(dm, c , EC, ierr))
-      !PetscCallA(DMPlexGetCone(dm, c , pEC, ierr))
-      !write(*,1000) 'cell',c,pEC
-      !PetscCallA(DMPlexRestoreCone(dm, c, pEC, ierr))
+      PetscCallA(DMPlexGetCone(dm, c , pEC, ierr))
+      write(*,1000) 'cell',c,pEC
+      PetscCallA(DMPlexRestoreCone(dm, c, pEC, ierr))
+      CHKMEMQ
 
       PetscCallA(DMPlexSymmetrize(dm, ierr))
       PetscCallA(DMPlexStratify(dm, ierr))
+            !PetscCallA(DMPlexGetCone(dm, c , pEC, ierr))
+      !write(*,1000) 'cell',c,pEC
+      !PetscCallA(DMPlexRestoreCone(dm, c, pEC, ierr))
 
       v = 4
       PetscCallA(DMPlexGetSupport(dm, v , pES, ierr))
