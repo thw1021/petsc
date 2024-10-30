@@ -81,6 +81,9 @@ def generateFortranInterface(petscarch, classes, enums, structs, senums, funname
     return
   if fun.name.find('_') > -1: return
   for k in fun.arguments:
+    if k.array and k.stars and not k.typename == 'char': return
+    if k.stars and k.typename == 'MPI_Fint': return   # TODO add support for returning MPI_Fint
+    if k.stars == 2 and k.typename == 'void': return
     ktypename = k.typename
     if ktypename in CToFortranTypes and not CToFortranTypes[ktypename]:
       fun.opaque = True
@@ -367,6 +370,12 @@ def generateCStub(petscarch,senums,classes,funname,fun):
 
 def generateFortranStub(senums, funname, fun, fd, opts):
   '''For functions with optional arguments generate the Fortran stub that calls the C stub'''
+  for k in fun.arguments:
+    # no C stub if function returns an array, except if it is a string
+    # TODO: generate fillible stub for functions that return arrays
+    if k.array and k.stars and not k.typename == 'char': return
+    if k.stars and k.typename == 'MPI_Fint': return   # TODO add support for returning MPI_Fint
+    if k.stars == 2 and k.typename == 'void': return
   for fi in opts:
     fd.write('  subroutine ' + funname + ''.join(fi) + '(')
     cnt = 0
