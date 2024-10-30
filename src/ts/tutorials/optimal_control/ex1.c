@@ -484,7 +484,7 @@ PetscErrorCode FormObjFunctionGradient(Tao tao, Vec P, PetscReal *f, Vec G, void
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode FormObjHessian(Tao tao, Vec P, Mat H, Mat Hpre, void *ctx)
+static PetscErrorCode FormObjHessianSingle(Tao tao, Vec P, Mat H, void *ctx)
 {
   Aircraft           actx = (Aircraft)ctx;
   const PetscScalar *p;
@@ -520,14 +520,17 @@ PetscErrorCode FormObjHessian(Tao tao, Vec P, Mat H, Mat Hpre, void *ctx)
     PetscCall(MatSetValues(H, 1, ind, 2 * actx->nsteps, cols, harr, INSERT_VALUES));
     PetscCall(MatAssemblyBegin(H, MAT_FINAL_ASSEMBLY));
     PetscCall(MatAssemblyEnd(H, MAT_FINAL_ASSEMBLY));
-    if (H != Hpre) {
-      PetscCall(MatAssemblyBegin(Hpre, MAT_FINAL_ASSEMBLY));
-      PetscCall(MatAssemblyEnd(Hpre, MAT_FINAL_ASSEMBLY));
-    }
   }
   PetscCall(PetscFree(cols));
   PetscCall(PetscFree(harr));
   PetscCall(VecDestroy(&Dir));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode FormObjHessian(Tao tao, Vec P, Mat H, Mat Hpre, void *ctx)
+{
+  PetscFunctionBeginUser;
+  PetscCall(TaoComputeHessianSingle(tao, P, H, Hpre, FormObjHessianSingle, SAME_NONZERO_PATTERN, ctx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

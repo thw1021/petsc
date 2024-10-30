@@ -50,6 +50,15 @@ Tao Object: 2 MPI processes
           Number of updates: 20
       Number of rejects: 0
       Number of resets: 1
+  Objective function:
+    Scale (tao_objective_scale): 1.
+    Function:
+      TaoTerm Object: (callbacks_) 2 MPI processes
+        type: taocallbacks
+        solution vector space: N = 64 [VecType mpi (taoterm_solution_vec_type)]
+        parameter vector space: (none)
+        attached to Tao [name omitted]
+    Map: unmapped
   TaoLineSearch Object: 2 MPI processes
     type: more-thuente
     maximum function evaluations=30
