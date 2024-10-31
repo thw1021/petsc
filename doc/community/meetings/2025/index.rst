@@ -29,4 +29,4 @@ We welcome talks from all perspectives, including
 * contributions to PETSc
 * use of PETSc in applications or libraries
 * development of libraries and packages `called from PETSc <https://petsc.org/release/install/external_software/>`__
-* just curious about using PETSc in  applications
+* just curious about using PETSc in applications
