@@ -81,9 +81,6 @@ def generateFortranInterface(petscarch, classes, enums, structs, senums, funname
     return
   if fun.name.find('_') > -1: return
   for k in fun.arguments:
-    if k.array and k.stars and not k.typename == 'char': return
-    if k.stars and k.typename == 'MPI_Fint': return   # TODO add support for returning MPI_Fint
-    if k.stars == 2 and k.typename == 'void': return
     ktypename = k.typename
     if ktypename in CToFortranTypes and not CToFortranTypes[ktypename]:
       fun.opaque = True
@@ -103,10 +100,14 @@ def generateFortranInterface(petscarch, classes, enums, structs, senums, funname
   if not file.startswith('petsc'): file = 'petsc' + file
   with open(os.path.join(petscarch,'src', mansec,'f90-mod','ftn-auto-interfaces',file),"a") as fd:
     opts = crossCreate(fun)
-    fd.write('  interface ' + funname + '\n')
-
-    # there are multiple interfaces for the function, they are generated in $PETSC_ARCH/src/MANSEC/f90-mod/ftn-auto-interfaces/*.hf90
     if len(opts) > 1:
+      for k in fun.arguments:
+        if k.array and k.stars and not k.typename == 'char': return
+        if k.stars and k.typename == 'MPI_Fint': return   # TODO add support for returning MPI_Fint
+        if k.stars == 2 and k.typename == 'void': return
+
+      # there are multiple interfaces for the function, they are generated in $PETSC_ARCH/src/MANSEC/f90-mod/ftn-auto-interfaces/*.hf90
+      fd.write('  interface ' + funname + '\n')
       fd.write('  module procedure ' + funname)
       cnt = 0
       for fi in opts:
@@ -116,6 +117,7 @@ def generateFortranInterface(petscarch, classes, enums, structs, senums, funname
       fd.write('\n')
     # generate the single needed interface for the function
     else:
+      fd.write('  interface ' + funname + '\n')
       if funname in ['PetscObjectQuery', 'PetscObjectCompose']:
         # for macro polymorphism the objects are passed directly as obj%d
         fun.arguments[0].typename = 'PetscFortranAddr'
