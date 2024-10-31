@@ -509,7 +509,7 @@ for file in files:
     shutil.copy2(src, dst)
     if self.setCompilers.getCompiler().find('win32fe') < 0 and os.path.splitext(dst)[1] == '.'+self.arLibSuffix:
       self.executeShellCommand(self.ranlib+' '+dst)
-    if os.path.splitext(dst)[1] == '.dylib' and shutil.which('install_name_tool'):
+    if os.path.splitext(dst)[1] == '.dylib' and shutil.which('otool') and shutil.which('install_name_tool'):
       [output,err,flg] = self.executeShellCommand("otool -D "+src)
       oldname = output[output.find("\n")+1:]
       installName = oldname.replace(os.path.realpath(self.archDir), self.installDir)
