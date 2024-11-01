@@ -961,6 +961,17 @@ PetscErrorCode MatResetPreallocation(Mat A)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+PetscErrorCode MatResetHash(Mat A)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
+  PetscValidType(A, 1);
+  PetscCheck(A->insertmode == NOT_SET_VALUES, PETSC_COMM_SELF, PETSC_ERR_SUP, "Cannot reset to hash state after setting some values but not yet calling MatAssemblyBegin()/MatAssemblyEnd()");
+  if (A->num_ass == 0) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscUseMethod(A, "MatResetHash_C", (Mat), (A));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*@
   MatSetUp - Sets up the internal matrix data structures for later use.
 

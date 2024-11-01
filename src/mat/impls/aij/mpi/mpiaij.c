@@ -38,6 +38,7 @@ PetscErrorCode MatDestroy_MPIAIJ(Mat mat)
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatIsTranspose_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatMPIAIJSetPreallocation_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatResetPreallocation_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatResetHash_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatMPIAIJSetPreallocationCSR_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatDiagonalScaleLocal_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatConvert_mpiaij_mpibaij_C", NULL));

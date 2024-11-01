@@ -1199,7 +1199,7 @@ PetscErrorCode MatZeroEntries_SeqAIJ(Mat A)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatDestroy_SeqAIJ(Mat A)
+static PetscErrorCode MatClear_SeqAIJ(Mat A)
 {
   Mat_SeqAIJ *a = (Mat_SeqAIJ *)A->data;
 
@@ -1226,6 +1226,22 @@ PetscErrorCode MatDestroy_SeqAIJ(Mat A)
   PetscCall(PetscFree(a->saved_values));
   PetscCall(PetscFree2(a->compressedrow.i, a->compressedrow.rindex));
   PetscCall(MatDestroy_SeqAIJ_Inode(A));
+
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode MatResetHash_SeqAIJ(Mat A)
+{
+  PetscFunctionBegin;
+  PetscCall(MatClear_SeqAIJ(A));
+  PetscCall(MatSetUp_Seq_Hash(A));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode MatDestroy_SeqAIJ(Mat A)
+{
+  PetscFunctionBegin;
+  PetscCall(MatClear_SeqAIJ(A));
   PetscCall(PetscFree(A->data));
 
   /* MatMatMultNumeric_SeqAIJ_SeqAIJ_Sorted may allocate this.
@@ -1279,6 +1295,7 @@ PetscErrorCode MatDestroy_SeqAIJ(Mat A)
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatIsHermitianTranspose_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSeqAIJSetPreallocation_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatResetPreallocation_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatResetHash_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSeqAIJSetPreallocationCSR_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatReorderForNonzeroDiagonal_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatProductSetFromOptions_is_seqaij_C", NULL));
@@ -4934,6 +4951,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_SeqAIJ(Mat B)
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatIsHermitianTranspose_C", MatIsHermitianTranspose_SeqAIJ));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSeqAIJSetPreallocation_C", MatSeqAIJSetPreallocation_SeqAIJ));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatResetPreallocation_C", MatResetPreallocation_SeqAIJ));
+  PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatResetHash_C", MatResetHash_SeqAIJ));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSeqAIJSetPreallocationCSR_C", MatSeqAIJSetPreallocationCSR_SeqAIJ));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatReorderForNonzeroDiagonal_C", MatReorderForNonzeroDiagonal_SeqAIJ));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatProductSetFromOptions_is_seqaij_C", MatProductSetFromOptions_IS_XAIJ));
