@@ -1088,6 +1088,7 @@ PetscErrorCode DMPlexSetIsoperiodicFaceTransform(DM dm, PetscInt n, const PetscS
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscCheck(n == plex->periodic.num_face_sfs, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Number of transforms (%" PetscInt_FMT ") must equal number of isoperiodc face SFs (%" PetscInt_FMT ")", n, plex->periodic.num_face_sfs);
 
+  PetscCall(PetscFree(plex->periodic.transform));
   PetscCall(PetscMalloc1(n, &plex->periodic.transform));
   for (PetscInt i = 0; i < n; i++) {
     for (PetscInt j = 0; j < 4; j++) {
