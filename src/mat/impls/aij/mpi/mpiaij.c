@@ -6,7 +6,14 @@
 #include <petscsf.h>
 #include <petsc/private/hashmapi.h>
 
-PetscErrorCode MatDestroy_MPIAIJ(Mat mat)
+/* defines MatSetValues_MPI_Hash(), MatAssemblyBegin_MPI_Hash(), and  MatAssemblyEnd_MPI_Hash() */
+#define TYPE AIJ
+#define TYPE_AIJ
+#include "../src/mat/impls/aij/mpi/mpihashmat.h"
+#undef TYPE
+#undef TYPE_AIJ
+
+static PetscErrorCode MatClear_MPIAIJ(Mat mat)
 {
   Mat_MPIAIJ *aij = (Mat_MPIAIJ *)mat->data;
 
@@ -26,6 +33,21 @@ PetscErrorCode MatDestroy_MPIAIJ(Mat mat)
   PetscCall(VecScatterDestroy(&aij->Mvctx));
   PetscCall(PetscFree2(aij->rowvalues, aij->rowindices));
   PetscCall(PetscFree(aij->ld));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode MatResetHash_MPIAIJ(Mat mat)
+{
+  PetscFunctionBegin;
+  PetscCall(MatClear(mat));
+  PetscCall(MatSetUp_MPI_Hash(mat));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode MatDestroy_MPIAIJ(Mat mat)
+{
+  PetscFunctionBegin;
+  PetscCall(MatClear_MPIAIJ(mat));
 
   PetscCall(PetscFree(mat->data));
 
@@ -79,13 +101,6 @@ PetscErrorCode MatDestroy_MPIAIJ(Mat mat)
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatSetValuesCOO_C", NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-
-/* defines MatSetValues_MPI_Hash(), MatAssemblyBegin_MPI_Hash(), and  MatAssemblyEnd_MPI_Hash() */
-#define TYPE AIJ
-#define TYPE_AIJ
-#include "../src/mat/impls/aij/mpi/mpihashmat.h"
-#undef TYPE
-#undef TYPE_AIJ
 
 static PetscErrorCode MatGetRowIJ_MPIAIJ(Mat A, PetscInt oshift, PetscBool symmetric, PetscBool inodecompressed, PetscInt *m, const PetscInt *ia[], const PetscInt *ja[], PetscBool *done)
 {
@@ -2868,7 +2883,8 @@ static struct _MatOps MatOps_Values = {MatSetValues_MPIAIJ,
                                        NULL,
                                        NULL,
                                        /*155*/ NULL,
-                                       MatCopyHashToXAIJ_MPI_Hash};
+                                       MatCopyHashToXAIJ_MPI_Hash,
+                                       MatClear_MPIAIJ};
 
 static PetscErrorCode MatStoreValues_MPIAIJ(Mat mat)
 {
@@ -6896,6 +6912,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_MPIAIJ(Mat B)
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatIsTranspose_C", MatIsTranspose_MPIAIJ));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatMPIAIJSetPreallocation_C", MatMPIAIJSetPreallocation_MPIAIJ));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatResetPreallocation_C", MatResetPreallocation_MPIAIJ));
+  PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatResetHash_C", MatResetHash_MPIAIJ));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatMPIAIJSetPreallocationCSR_C", MatMPIAIJSetPreallocationCSR_MPIAIJ));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatDiagonalScaleLocal_C", MatDiagonalScaleLocal_MPIAIJ));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatConvert_mpiaij_mpiaijperm_C", MatConvert_MPIAIJ_MPIAIJPERM));

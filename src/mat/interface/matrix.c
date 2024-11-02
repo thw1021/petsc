@@ -961,6 +961,18 @@ PetscErrorCode MatResetPreallocation(Mat A)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+PetscErrorCode MatClear(Mat A)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
+  PetscValidType(A, 1);
+  PetscUseTypeMethod(A, clear);
+  /* This flag is used to determine whether certain setups occur */
+  A->was_assembled = PETSC_FALSE;
+  A->assembled = PETSC_FALSE;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 PetscErrorCode MatResetHash(Mat A)
 {
   PetscFunctionBegin;

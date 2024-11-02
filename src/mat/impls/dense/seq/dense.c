@@ -3274,6 +3274,7 @@ static struct _MatOps MatOps_Values = {MatSetValues_SeqDense,
                                        NULL,
                                        NULL,
                                        /*155*/ NULL,
+                                       NULL,
                                        NULL};
 
 /*@

@@ -1199,7 +1199,7 @@ PetscErrorCode MatZeroEntries_SeqAIJ(Mat A)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatClear_SeqAIJ(Mat A)
+PetscErrorCode MatClear_SeqAIJ(Mat A)
 {
   Mat_SeqAIJ *a = (Mat_SeqAIJ *)A->data;
 
@@ -1233,7 +1233,7 @@ static PetscErrorCode MatClear_SeqAIJ(Mat A)
 PetscErrorCode MatResetHash_SeqAIJ(Mat A)
 {
   PetscFunctionBegin;
-  PetscCall(MatClear_SeqAIJ(A));
+  PetscCall(MatClear(A));
   PetscCall(MatSetUp_Seq_Hash(A));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -3645,7 +3645,8 @@ static struct _MatOps MatOps_Values = {MatSetValues_SeqAIJ,
                                        NULL,
                                        NULL,
                                        /*155*/ NULL,
-                                       MatCopyHashToXAIJ_Seq_Hash};
+                                       MatCopyHashToXAIJ_Seq_Hash,
+                                       MatClear_SeqAIJ};
 
 static PetscErrorCode MatSeqAIJSetColumnIndices_SeqAIJ(Mat mat, PetscInt *indices)
 {
