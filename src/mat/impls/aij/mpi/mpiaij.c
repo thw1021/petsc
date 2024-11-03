@@ -13,7 +13,7 @@
 #undef TYPE
 #undef TYPE_AIJ
 
-static PetscErrorCode MatClear_MPIAIJ(Mat mat)
+static PetscErrorCode MatReset_MPIAIJ(Mat mat)
 {
   Mat_MPIAIJ *aij = (Mat_MPIAIJ *)mat->data;
 
@@ -46,7 +46,7 @@ PetscErrorCode MatResetHash_MPIAIJ(Mat mat)
 PetscErrorCode MatDestroy_MPIAIJ(Mat mat)
 {
   PetscFunctionBegin;
-  PetscCall(MatClear_MPIAIJ(mat));
+  PetscCall(MatReset_MPIAIJ(mat));
 
   PetscCall(PetscFree(mat->data));
 
@@ -2883,7 +2883,7 @@ static struct _MatOps MatOps_Values = {MatSetValues_MPIAIJ,
                                        NULL,
                                        /*155*/ NULL,
                                        MatCopyHashToXAIJ_MPI_Hash,
-                                       MatClear_MPIAIJ};
+                                       MatReset_MPIAIJ};
 
 static PetscErrorCode MatStoreValues_MPIAIJ(Mat mat)
 {
