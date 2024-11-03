@@ -980,6 +980,7 @@ PetscErrorCode MatResetHash(Mat A)
   PetscValidType(A, 1);
   PetscCheck(A->insertmode == NOT_SET_VALUES, PETSC_COMM_SELF, PETSC_ERR_SUP, "Cannot reset to hash state after setting some values but not yet calling MatAssemblyBegin()/MatAssemblyEnd()");
   if (A->num_ass == 0) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCall(MatClear(A));
   PetscUseMethod(A, "MatResetHash_C", (Mat), (A));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

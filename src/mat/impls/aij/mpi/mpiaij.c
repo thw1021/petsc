@@ -39,7 +39,6 @@ static PetscErrorCode MatClear_MPIAIJ(Mat mat)
 PetscErrorCode MatResetHash_MPIAIJ(Mat mat)
 {
   PetscFunctionBegin;
-  PetscCall(MatClear(mat));
   PetscCall(MatSetUp_MPI_Hash(mat));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
