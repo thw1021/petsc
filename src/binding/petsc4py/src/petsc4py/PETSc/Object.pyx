@@ -149,18 +149,6 @@ cdef class Object:
         prefix = str2bytes(prefix, &cval)
         CHKERR(PetscObjectAppendOptionsPrefix(self.obj[0], cval))
 
-    def setFromOptions(self) -> None:
-        """Configure the object from the options database.
-
-        Collective.
-
-        See Also
-        --------
-        petsc_options, petsc.PetscObjectSetFromOptions
-
-        """
-        CHKERR(PetscObjectSetFromOptions(self.obj[0]))
-
     def viewFromOptions(self, name : str, Object objpre=None) -> None:
         """View the object via command line options.
 
@@ -192,11 +180,11 @@ cdef class Object:
         Parameters
         ----------
         handler
-            The callback function, called at the end of `setFromOptions`.
+            The callback function, called at the end of ``setFromOptions``.
 
         See Also
         --------
-        petsc_options, setFromOptions, petsc.PetscObjectAddOptionsHandler
+        petsc_options, petsc.PetscObjectAddOptionsHandler
 
         """
         if handler is not None:

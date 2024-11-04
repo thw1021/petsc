@@ -68,6 +68,9 @@ class BaseTestObject:
         self.assertEqual(self.obj.getOptionsPrefix(), prefix2 + prefix1)
         self.obj.setOptionsPrefix(None)
         self.assertEqual(self.obj.getOptionsPrefix(), None)
+        if not hasattr(self.obj, 'setFromOptions'):
+            return
+
         if not self.obj.getType() or not 'da' == str(self.obj.getType()):
             self.obj.setFromOptions()
 
