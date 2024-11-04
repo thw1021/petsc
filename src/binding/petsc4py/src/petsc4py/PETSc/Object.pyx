@@ -180,11 +180,11 @@ cdef class Object:
         Parameters
         ----------
         handler
-            The callback function, called at the end of `setFromOptions`.
+            The callback function, called at the end of ``setFromOptions``.
 
         See Also
         --------
-        petsc_options, setFromOptions, petsc.PetscObjectAddOptionsHandler
+        petsc_options, petsc.PetscObjectAddOptionsHandler
 
         """
         if handler is not None:
