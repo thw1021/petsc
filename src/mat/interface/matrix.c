@@ -970,6 +970,9 @@ PetscErrorCode MatReset(Mat A)
   /* This flag is used to determine whether certain setups occur */
   A->was_assembled = PETSC_FALSE;
   A->assembled = PETSC_FALSE;
+  /* Log that the state of this object has changed; this will guarantee that preconditioners get re-setup */
+  A->nonzerostate++;
+  PetscCall(PetscObjectStateIncrease((PetscObject)A));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
