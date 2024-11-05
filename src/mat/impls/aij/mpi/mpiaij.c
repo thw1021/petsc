@@ -38,8 +38,21 @@ static PetscErrorCode MatReset_MPIAIJ(Mat mat)
 
 PetscErrorCode MatResetHash_MPIAIJ(Mat mat)
 {
+  Mat_MPIAIJ *aij = (Mat_MPIAIJ *)mat->data;
+  PetscObjectState Astate, Bstate;
+
   PetscFunctionBegin;
+  /* Save the nonzero states of the component matrices because those are what are used to determine
+    the nonzero state of \p mat */
+  Astate = aij->A->nonzerostate, Bstate = aij->B->nonzerostate;
+  PetscCall(MatReset_MPIAIJ(mat));
+  /* This flag is used to determine whether certain setups occur */
+  mat->was_assembled = PETSC_FALSE;
+  mat->assembled = PETSC_FALSE;
   PetscCall(MatSetUp_MPI_Hash(mat));
+  /* Log that the state of this object has changed; this will guarantee that preconditioners get re-setup */
+  PetscCall(PetscObjectStateIncrease((PetscObject)mat));
+  aij->A->nonzerostate = ++Astate, aij->B->nonzerostate = ++Bstate;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

@@ -1233,7 +1233,14 @@ PetscErrorCode MatReset_SeqAIJ(Mat A)
 PetscErrorCode MatResetHash_SeqAIJ(Mat A)
 {
   PetscFunctionBegin;
+  PetscCall(MatReset_SeqAIJ(mat));
+  /* This flag is used to determine whether certain setups occur */
+  A->was_assembled = PETSC_FALSE;
+  A->assembled = PETSC_FALSE;
   PetscCall(MatSetUp_Seq_Hash(A));
+  /* Log that the state of this object has changed; this will guarantee that preconditioners get re-setup */
+  PetscCall(PetscObjectStateIncrease((PetscObject)A));
+  A->nonzerostate++;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

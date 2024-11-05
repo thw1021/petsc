@@ -967,12 +967,6 @@ PetscErrorCode MatReset(Mat A)
   PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
   PetscValidType(A, 1);
   PetscUseTypeMethod(A, reset);
-  /* This flag is used to determine whether certain setups occur */
-  A->was_assembled = PETSC_FALSE;
-  A->assembled = PETSC_FALSE;
-  /* Log that the state of this object has changed; this will guarantee that preconditioners get re-setup */
-  A->nonzerostate++;
-  PetscCall(PetscObjectStateIncrease((PetscObject)A));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -983,7 +977,6 @@ PetscErrorCode MatResetHash(Mat A)
   PetscValidType(A, 1);
   PetscCheck(A->insertmode == NOT_SET_VALUES, PETSC_COMM_SELF, PETSC_ERR_SUP, "Cannot reset to hash state after setting some values but not yet calling MatAssemblyBegin()/MatAssemblyEnd()");
   if (A->num_ass == 0) PetscFunctionReturn(PETSC_SUCCESS);
-  PetscCall(MatReset(A));
   PetscUseMethod(A, "MatResetHash_C", (Mat), (A));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
