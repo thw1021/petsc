@@ -1233,7 +1233,7 @@ static PetscErrorCode MatReset_SeqAIJ(Mat A)
 PetscErrorCode MatResetHash_SeqAIJ(Mat A)
 {
   PetscFunctionBegin;
-  PetscCall(MatReset_SeqAIJ(mat));
+  PetscCall(MatReset_SeqAIJ(A));
   PetscCall(MatSetUp_Seq_Hash(A));
   A->nonzerostate++;
   PetscFunctionReturn(PETSC_SUCCESS);
