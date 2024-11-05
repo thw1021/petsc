@@ -533,7 +533,6 @@ PETSC_EXTERN PetscErrorCode MatPythonCreate(MPI_Comm, PetscInt, PetscInt, PetscI
 
 PETSC_EXTERN PetscErrorCode MatResetPreallocation(Mat);
 PETSC_EXTERN PetscErrorCode MatResetHash(Mat);
-PETSC_EXTERN PetscErrorCode MatReset(Mat);
 PETSC_EXTERN PetscErrorCode MatSetUp(Mat);
 PETSC_EXTERN PetscErrorCode MatDestroy(Mat *);
 PETSC_EXTERN PetscErrorCode MatGetNonzeroState(Mat, PetscObjectState *);
@@ -2035,8 +2034,7 @@ typedef enum {
   MATOP_GET_FACTOR          = 153,
   MATOP_GET_BLOCK_DIAGONAL  = 154, // NOTE: caller of the two op functions owns the returned matrix
   MATOP_GET_VBLOCK_DIAGONAL = 155, // and need to destroy it after use.
-  MATOP_COPY_HASH_TO_AIJ    = 156,
-  MATOP_CLEAR               = 157
+  MATOP_COPY_HASH_TO_AIJ    = 156
 } MatOperation;
 PETSC_EXTERN PetscErrorCode MatSetOperation(Mat, MatOperation, void (*)(void));
 PETSC_EXTERN PetscErrorCode MatGetOperation(Mat, MatOperation, void (**)(void));

@@ -961,15 +961,6 @@ PetscErrorCode MatResetPreallocation(Mat A)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatReset(Mat A)
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
-  PetscValidType(A, 1);
-  PetscUseTypeMethod(A, reset);
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 PetscErrorCode MatResetHash(Mat A)
 {
   PetscFunctionBegin;
