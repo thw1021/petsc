@@ -683,7 +683,7 @@ Note that using OpenMP within MPI code must be done carefully to prevent too man
    has a `CUDA`_ enabled GPU by consulting https://developer.nvidia.com/cuda-gpus.
 
 On Linux - verify [#]_ that CUDA compatible `NVIDIA driver
-<https://www.nvidia.com/en-us/drivers`__ is installed.
+<https://www.nvidia.com/en-us/drivers>`__ is installed.
 
 On Microsoft Windows - Use either `Cygwin`_ or `WSL`_ the latter of which is entirely untested right
 now. If you have experience with `WSL`_ and/or have successfully built PETSc on Microsoft Windows
