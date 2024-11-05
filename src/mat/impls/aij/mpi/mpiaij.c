@@ -109,13 +109,6 @@ PetscErrorCode MatDestroy_MPIAIJ(Mat mat)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* defines MatSetValues_MPI_Hash(), MatAssemblyBegin_MPI_Hash(), and  MatAssemblyEnd_MPI_Hash() */
-#define TYPE AIJ
-#define TYPE_AIJ
-#include "../src/mat/impls/aij/mpi/mpihashmat.h"
-#undef TYPE
-#undef TYPE_AIJ
-
 static PetscErrorCode MatGetRowIJ_MPIAIJ(Mat A, PetscInt oshift, PetscBool symmetric, PetscBool inodecompressed, PetscInt *m, const PetscInt *ia[], const PetscInt *ja[], PetscBool *done)
 {
   Mat B;
