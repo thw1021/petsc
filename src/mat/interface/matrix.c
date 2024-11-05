@@ -969,6 +969,11 @@ PetscErrorCode MatResetHash(Mat A)
   PetscCheck(A->insertmode == NOT_SET_VALUES, PETSC_COMM_SELF, PETSC_ERR_SUP, "Cannot reset to hash state after setting some values but not yet calling MatAssemblyBegin()/MatAssemblyEnd()");
   if (A->num_ass == 0) PetscFunctionReturn(PETSC_SUCCESS);
   PetscUseMethod(A, "MatResetHash_C", (Mat), (A));
+  /* This flag is used to determine whether certain setups occur */
+  A->was_assembled = PETSC_FALSE;
+  A->assembled = PETSC_FALSE;
+  /* Log that the state of this object has changed; this will guarantee that preconditioners get re-setup */
+  PetscCall(PetscObjectStateIncrease((PetscObject)A));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
