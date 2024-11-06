@@ -1225,9 +1225,7 @@ static PetscErrorCode MatReset_SeqAIJ(Mat A)
   PetscCall(ISDestroy(&a->icol));
   PetscCall(PetscFree(a->saved_values));
   PetscCall(PetscFree2(a->compressedrow.i, a->compressedrow.rindex));
-  /* reset the inode */
   PetscCall(MatDestroy_SeqAIJ_Inode(A));
-  PetscCall(MatCreate_SeqAIJ_Inode(A));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1235,6 +1233,7 @@ PetscErrorCode MatResetHash_SeqAIJ(Mat A)
 {
   PetscFunctionBegin;
   PetscCall(MatReset_SeqAIJ(A));
+  PetscCall(MatCreate_SeqAIJ_Inode(A));
   PetscCall(MatSetUp_Seq_Hash(A));
   A->nonzerostate++;
   PetscFunctionReturn(PETSC_SUCCESS);
