@@ -13,7 +13,7 @@
 #undef TYPE
 #undef TYPE_AIJ
 
-static PetscErrorCode MatReset_MPIAIJ(Mat mat)
+static PetscErrorCode MatClear_MPIAIJ(Mat mat)
 {
   Mat_MPIAIJ *aij = (Mat_MPIAIJ *)mat->data;
 
@@ -44,7 +44,7 @@ PetscErrorCode MatResetHash_MPIAIJ(Mat mat)
   PetscObjectState Astate = aij->A->nonzerostate, Bstate = aij->B->nonzerostate;
 
   PetscFunctionBegin;
-  PetscCall(MatReset_MPIAIJ(mat));
+  PetscCall(MatClear_MPIAIJ(mat));
   PetscCall(MatSetUp_MPI_Hash(mat));
   aij->A->nonzerostate = ++Astate, aij->B->nonzerostate = ++Bstate;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -53,7 +53,7 @@ PetscErrorCode MatResetHash_MPIAIJ(Mat mat)
 PetscErrorCode MatDestroy_MPIAIJ(Mat mat)
 {
   PetscFunctionBegin;
-  PetscCall(MatReset_MPIAIJ(mat));
+  PetscCall(MatClear_MPIAIJ(mat));
 
   PetscCall(PetscFree(mat->data));
 
