@@ -38,7 +38,7 @@ static PetscErrorCode MatReset_MPIAIJ(Mat mat)
 
 PetscErrorCode MatResetHash_MPIAIJ(Mat mat)
 {
-  Mat_MPIAIJ *aij = (Mat_MPIAIJ *)mat->data;
+  Mat_MPIAIJ      *aij = (Mat_MPIAIJ *)mat->data;
   PetscObjectState Astate, Bstate;
 
   PetscFunctionBegin;

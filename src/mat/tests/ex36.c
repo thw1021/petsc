@@ -42,7 +42,7 @@ PetscErrorCode AssembleAndViewA(Mat A)
 
 int main(int argc, char **argv)
 {
-  Mat         A;
+  Mat A;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
