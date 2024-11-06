@@ -39,12 +39,11 @@ static PetscErrorCode MatReset_MPIAIJ(Mat mat)
 PetscErrorCode MatResetHash_MPIAIJ(Mat mat)
 {
   Mat_MPIAIJ      *aij = (Mat_MPIAIJ *)mat->data;
-  PetscObjectState Astate, Bstate;
-
-  PetscFunctionBegin;
   /* Save the nonzero states of the component matrices because those are what are used to determine
     the nonzero state of \p mat */
-  Astate = aij->A->nonzerostate, Bstate = aij->B->nonzerostate;
+  PetscObjectState Astate = aij->A->nonzerostate, Bstate = aij->B->nonzerostate;
+
+  PetscFunctionBegin;
   PetscCall(MatReset_MPIAIJ(mat));
   PetscCall(MatSetUp_MPI_Hash(mat));
   aij->A->nonzerostate = ++Astate, aij->B->nonzerostate = ++Bstate;
