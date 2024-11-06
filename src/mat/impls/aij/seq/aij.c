@@ -1228,7 +1228,6 @@ static PetscErrorCode MatReset_SeqAIJ(Mat A)
   /* reset the inode */
   PetscCall(MatDestroy_SeqAIJ_Inode(A));
   PetscCall(MatCreate_SeqAIJ_Inode(A));
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
