@@ -180,6 +180,10 @@ int main(int argc, char **args)
       args: -ksp_monitor_short -ksp_gmres_cgs_refinement_type refine_always
 
    test:
+      suffix: library_preload
+      args: -ksp_monitor_short -ksp_gmres_cgs_refinement_type refine_always -library_preload
+
+   test:
       suffix: 2
       args: -pc_type sor -pc_sor_symmetric -ksp_monitor_short -ksp_gmres_cgs_refinement_type refine_always
 
