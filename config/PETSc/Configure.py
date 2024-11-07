@@ -454,9 +454,7 @@ prepend-path PATH "%s"
     # Use build dir here for 'make check' to work before 'make install'
     PREINSTALL_LIB_DIR = os.path.join(self.petscdir.dir,self.arch.arch,'lib')
 
-    LIB_NAME_SUFFIX = self.framework.argDB['with-library-name-suffix']
-    self.addMakeMacro('LIB_NAME_SUFFIX', LIB_NAME_SUFFIX)
-
+    self.addMakeMacro('LIB_NAME_SUFFIX', self.framework.argDB['with-library-name-suffix'])
     if self.framework.argDB['with-single-library']:
       self.petsclib = '-lpetsc${LIB_NAME_SUFFIX}'
       self.addDefine('USE_SINGLE_LIBRARY', '1')

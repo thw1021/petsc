@@ -93,11 +93,11 @@ deleteshared:
 	@for LIBNAME in ${SHLIBS}; \
 	do \
 	   if [ -d ${INSTALL_LIB_DIR}/$${LIBNAME}$${LIB_NAME_SUFFIX}.dylib.dSYM ]; then \
-             echo ${RM} -rf ${INSTALL_LIB_DIR}/$${LIB_NAME_SUFFIX}.dylib.dSYM; \
-	     ${RM} -rf ${INSTALL_LIB_DIR}/$${LIB_NAME_SUFFIX}.dylib.dSYM; \
+             echo ${RM} -rf ${INSTALL_LIB_DIR}/$${LIBNAME}$${LIB_NAME_SUFFIX}.dylib.dSYM; \
+	     ${RM} -rf ${INSTALL_LIB_DIR}/$${LIBNAME}$${LIB_NAME_SUFFIX}.dylib.dSYM; \
 	   fi; \
-           echo ${RM} ${INSTALL_LIB_DIR}/$${LIB_NAME_SUFFIX}.${SL_LINKER_SUFFIX}; \
-           ${RM} ${INSTALL_LIB_DIR}/$${LIB_NAME_SUFFIX}.${SL_LINKER_SUFFIX}; \
+           echo ${RM} ${INSTALL_LIB_DIR}/$${LIBNAME}$${LIB_NAME_SUFFIX}.${SL_LINKER_SUFFIX}; \
+           ${RM} ${INSTALL_LIB_DIR}/$${LIBNAME}$${LIB_NAME_SUFFIX}.${SL_LINKER_SUFFIX}; \
 	done
 	@if [ -f ${INSTALL_LIB_DIR}/so_locations ]; then \
           echo ${RM} ${INSTALL_LIB_DIR}/so_locations; \
