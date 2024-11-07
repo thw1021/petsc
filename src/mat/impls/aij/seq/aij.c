@@ -1229,7 +1229,7 @@ static PetscErrorCode MatReset_SeqAIJ(Mat A)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatResetHash_SeqAIJ(Mat A)
+static PetscErrorCode MatResetHash_SeqAIJ(Mat A)
 {
   PetscFunctionBegin;
   PetscCall(MatReset_SeqAIJ(A));

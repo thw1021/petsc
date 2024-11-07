@@ -36,7 +36,7 @@ static PetscErrorCode MatReset_MPIAIJ(Mat mat)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatResetHash_MPIAIJ(Mat mat)
+static PetscErrorCode MatResetHash_MPIAIJ(Mat mat)
 {
   Mat_MPIAIJ *aij = (Mat_MPIAIJ *)mat->data;
   /* Save the nonzero states of the component matrices because those are what are used to determine
