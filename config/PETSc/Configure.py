@@ -159,7 +159,7 @@ class Configure(config.base.Configure):
       self.libraries.libraries.extend(librariessock)
     return
 
-  def DumpPkgconfig(self, petsc_pc):
+  def DumpPkgconfig(self, petsc_pc, full=True):
     ''' Create a pkg-config file '''
     if not os.path.exists(os.path.join(self.petscdir.dir,self.arch.arch,'lib','pkgconfig')):
       os.makedirs(os.path.join(self.petscdir.dir,self.arch.arch,'lib','pkgconfig'))
@@ -170,40 +170,50 @@ class Configure(config.base.Configure):
       else:
         fd.write('prefix='+os.path.join(self.petscdir.dir, self.arch.arch)+'\n')
         cflags_inc.append('-I' + os.path.join(self.petscdir.dir, 'include'))
-      fd.write('exec_prefix=${prefix}\n')
-      fd.write('includedir=${prefix}/include\n')
+      if full:
+        fd.write('exec_prefix=${prefix}\n')
+        fd.write('includedir=${prefix}/include\n')
       fd.write('libdir=${prefix}/lib\n')
 
       with self.setCompilers.Language('C'):
-        fd.write('ccompiler='+self.setCompilers.getCompiler()+'\n')
-        fd.write('cflags_extra='+self.setCompilers.getCompilerFlags().strip()+'\n')
-        fd.write('cflags_dep='+self.compilers.dependenciesGenerationFlag.get('C','')+'\n')
+        if full:
+          fd.write('ccompiler='+self.setCompilers.getCompiler()+'\n')
+          fd.write('cflags_extra='+self.setCompilers.getCompilerFlags().strip()+'\n')
+          fd.write('cflags_dep='+self.compilers.dependenciesGenerationFlag.get('C','')+'\n')
         fd.write('ldflag_rpath='+self.setCompilers.CSharedLinkerFlag+'\n')
-      if hasattr(self.compilers, 'CXX'):
+      if full and hasattr(self.compilers, 'CXX'):
         with self.setCompilers.Language('C++'):
           fd.write('cxxcompiler='+self.setCompilers.getCompiler()+'\n')
           fd.write('cxxflags_extra='+self.setCompilers.getCompilerFlags().strip()+'\n')
-      if hasattr(self.compilers, 'FC'):
+      if full and hasattr(self.compilers, 'FC'):
         with self.setCompilers.Language('FC'):
           fd.write('fcompiler='+self.setCompilers.getCompiler()+'\n')
           fd.write('fflags_extra='+self.setCompilers.getCompilerFlags().strip()+'\n')
       if hasattr(self.compilers, 'CUDAC'):
         with self.setCompilers.Language('CUDA'):
-          fd.write('cudacompiler='+self.setCompilers.getCompiler()+'\n')
-          fd.write('cudaflags_extra='+self.setCompilers.getCompilerFlags().strip()+'\n')
           p = self.framework.require('config.packages.cuda')
+          if full:
+            fd.write('cudacompiler='+self.setCompilers.getCompiler()+'\n')
+            fd.write('cudaflags_extra='+self.setCompilers.getCompilerFlags().strip()+'\n')
+            fd.write('cudainclude='+self.headers.toStringNoDupes(p.include)+'\n')
+            if hasattr(self.setCompilers,'CUDA_CXX'):
+              fd.write('cuda_cxx='+self.setCompilers.CUDA_CXX+'\n')
+              fd.write('cuda_cxxflags='+self.setCompilers.CUDA_CXXFLAGS+'\n')
           fd.write('cudalib='+self.libraries.toStringNoDupes(p.lib)+'\n')
-          fd.write('cudainclude='+self.headers.toStringNoDupes(p.include)+'\n')
-          if hasattr(self.setCompilers,'CUDA_CXX'):
-            fd.write('cuda_cxx='+self.setCompilers.CUDA_CXX+'\n')
-            fd.write('cuda_cxxflags='+self.setCompilers.CUDA_CXXFLAGS+'\n')
 
       fd.write('\n')
-      fd.write('Name: PETSc\n')
-      fd.write('Description: Library to solve ODEs and algebraic equations\n')
+      if full:
+        fd.write('Name: PETSc\n')
+        fd.write('Description: Library to solve ODEs and algebraic equations\n')
+      else:
+        fd.write('Name: ' +  os.path.splitext(petsc_pc)[0] + '\n')
+        fd.write('Description: precision-prefixed version of the PETSc library (not for direct use by other libraries)\n')
       fd.write('Version: %s\n' % self.petscdir.version)
-      fd.write('Cflags: ' + ' '.join([self.setCompilers.CPPFLAGS] + cflags_inc) + '\n')
-      fd.write('Libs: '+self.libraries.toStringNoDupes(['-L${libdir}', self.petsclib], with_rpath=False)+'\n')
+      if full:
+        fd.write('Cflags: ' + ' '.join([self.setCompilers.CPPFLAGS] + cflags_inc) + '\n')
+        fd.write('Libs: '+self.libraries.toStringNoDupes(['-L${libdir}', self.petsclib], with_rpath=False)+'\n')
+      else:
+        fd.write('Libs: '+self.libraries.toStringNoDupes(['-L${libdir}', self.precision_prefixed_lib], with_rpath=False)+'\n')
       # Remove RPATH flags from library list.  User can add them using
       # pkg-config --variable=ldflag_rpath and pkg-config --libs-only-L
       fd.write('Libs.private: '+self.libraries.toStringNoDupes([f for f in self.packagelibs+self.complibs if not f.startswith(self.setCompilers.CSharedLinkerFlag)], with_rpath=False)+'\n')
@@ -1356,6 +1366,18 @@ char assert_aligned[(sizeof(struct mystruct)==16)*2-1];
           break
     return
 
+  def configurePrecisionPrefixedRecipe(self):
+    '''If all tools a present, add a rule for making precision-prefixed object files'''
+    self.precision_prefixed_recipe = False
+    if (hasattr(self.compilers.setCompilers, 'relocatableLinker')
+        and hasattr(self.compilers.setCompilers, 'OBJCOPY')
+        and hasattr(self.programs, 'nm')
+        and hasattr(self.programs, 'awk')
+        ):
+      self.addMakeMacro('PETSC_HAS_PRECISION_PREFIX',1)
+      self.precision_prefixed_recipe = True
+    return
+
   def configure(self):
     if 'package-prefix-hash' in self.argDB:
       # turn off prefix if it was only used to for installing external packages.
@@ -1408,6 +1430,7 @@ char assert_aligned[(sizeof(struct mystruct)==16)*2-1];
     self.executeTest(self.configureCoverageExecutable)
     self.executeTest(self.configureStrictPetscErrorCode)
     self.executeTest(self.configureSanitize)
+    self.executeTest(self.configurePrecisionPrefixedRecipe)
 
     self.Dump()
     self.dumpConfigInfo()
@@ -1419,6 +1442,10 @@ char assert_aligned[(sizeof(struct mystruct)==16)*2-1];
     self.framework.argDB.save(force = True)
     self.DumpPkgconfig('PETSc.pc')
     self.DumpPkgconfig('petsc.pc')
+    if self.precision_prefixed_recipe:
+      self.precision_prefixed_name = 'petsc_' + str(self.scalartypes.precision).lower()
+      self.precision_prefixed_lib = '-l' + self.precision_prefixed_name
+      self.DumpPkgconfig(self.precision_prefixed_name + '.pc', full=False)
     self.DumpModule()
     self.postProcessPackages()
     self.framework.log.write('================================================================================\n')

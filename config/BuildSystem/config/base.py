@@ -396,6 +396,22 @@ class Configure(script.Script):
   def getDynamicLinkerFlags(self):
     return self.framework.getDynamicLinkerObject(self.language[-1]).getFlags()
 
+  def getRelocatableLinker(self):
+    self.getHeaders()
+    linker            = self.framework.getRelocatableLinkerObject(self.language[-1])
+    linker.checkSetup()
+    tmpSource = os.path.join(self.tmpDir, 'conftest'+linker.sourceExtension)
+    reSource = os.path.join(self.tmpDir, 'conftest_relocatable'+linker.sourceExtension)
+    self.linkerSource = linker.getTarget(tmpSource)
+    self.linkerObj    = linker.getTarget(reSource)
+    return linker.getProcessor()
+
+  def getRelocatableLinkerFlags(self):
+    return self.framework.getRelocatableLinkerObject(self.language[-1]).getFlags()
+
+  def getRelocatableLinkerEnv(self):
+    return self.framework.getRelocatableLinkerObject(self.language[-1]).getEnv()
+
   def getPreprocessorCmd(self):
     self.getCompiler()
     preprocessor = self.framework.getPreprocessorObject(self.language[-1])
@@ -431,6 +447,12 @@ class Configure(script.Script):
   def getDynamicLinkerCmd(self):
     self.getDynamicLinker()
     linker = self.framework.getDynamicLinkerObject(self.language[-1])
+    linker.checkSetup()
+    return linker.getCommand(self.linkerSource, self.linkerObj)
+
+  def getRelocatableLinkerCmd(self):
+    self.getRelocatableLinker()
+    linker = self.framework.getRelocatableLinkerObject(self.language[-1])
     linker.checkSetup()
     return linker.getCommand(self.linkerSource, self.linkerObj)
 
@@ -602,6 +624,8 @@ class Configure(script.Script):
       langPushed = 1
     if shared == 'dynamic':
       cmd = self.getDynamicLinkerCmd()
+    elif shared == 'relocatable':
+      cmd = self.getRelocatableLinkerCmd()
     elif shared:
       cmd = self.getSharedLinkerCmd()
     else:

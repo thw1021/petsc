@@ -143,6 +143,8 @@ AC_OUTPUT
     import sys
     self.addMakeMacro('PYTHON',sys.executable)
     self.getExecutable('m4', getFullPath=1, resultName = 'M4')
+    self.getExecutable('nm', getFullPath = 1,setMakeMacro=1)
+    self.getExecutable('awk', getFullPath = 1,setMakeMacro=1)
     return
 
   def configure(self):
