@@ -51,6 +51,7 @@ Changes: Development
 .. rubric:: Mat:
 
 - Add ``MatCopyHashToXAIJ()`` which allows assembling an XAIJ matrix in hash table form into another XAIJ matrix
+- Add ``MatResetHash()`` which allows restting an XAIJ matrix to use a hash table
 
 .. rubric:: MatCoarsen:
 
