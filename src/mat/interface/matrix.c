@@ -972,7 +972,7 @@ PetscErrorCode MatResetPreallocation(Mat A)
   Level: intermediate
 
   Notes:
-  The XAIJ matrix will again delete the hash table data structures after following calls to `MatAssemblyBegin()`/`MatAssemblyEnd()` with `MAT_FINAL_ASSEMBLY`.
+  The matrix will again delete the hash table data structures after following calls to `MatAssemblyBegin()`/`MatAssemblyEnd()` with `MAT_FINAL_ASSEMBLY`.
 
   Currently only supported for `MATAIJ` matrices.
 
