@@ -472,15 +472,20 @@ prepend-path PATH "%s"
       self.addMakeMacro('PETSC_TS_LIB','${PETSC_WITH_EXTERNAL_LIB}')
       self.addMakeMacro('PETSC_TAO_LIB','${PETSC_WITH_EXTERNAL_LIB}')
     else:
-      self.petsclib = '-lpetsctao${LIB_NAME_SUFFIX} -lpetscts${LIB_NAME_SUFFIX} -lpetscsnes${LIB_NAME_SUFFIX} -lpetscksp${LIB_NAME_SUFFIX} -lpetscdm${LIB_NAME_SUFFIX} -lpetscmat${LIB_NAME_SUFFIX} -lpetscvec${LIB_NAME_SUFFIX} -lpetscsys${LIB_NAME_SUFFIX}'
-      self.addMakeMacro('PETSC_SYS_LIB', self.libraries.toStringNoDupes(['-L'+PREINSTALL_LIB_DIR,'-lpetscsys${LIB_NAME_SUFFIX}']+self.packagelibs+self.complibs))
-      self.addMakeMacro('PETSC_VEC_LIB', self.libraries.toStringNoDupes(['-L'+PREINSTALL_LIB_DIR,'-lpetscvec${LIB_NAME_SUFFIX}','-lpetscsys${LIB_NAME_SUFFIX}']+self.packagelibs+self.complibs))
-      self.addMakeMacro('PETSC_MAT_LIB', self.libraries.toStringNoDupes(['-L'+PREINSTALL_LIB_DIR,'-lpetscmat${LIB_NAME_SUFFIX}','-lpetscvec${LIB_NAME_SUFFIX}','-lpetscsys${LIB_NAME_SUFFIX}']+self.packagelibs+self.complibs))
-      self.addMakeMacro('PETSC_DM_LIB',  self.libraries.toStringNoDupes(['-L'+PREINSTALL_LIB_DIR,'-lpetscdm${LIB_NAME_SUFFIX}','-lpetscmat${LIB_NAME_SUFFIX}','-lpetscvec${LIB_NAME_SUFFIX}','-lpetscsys${LIB_NAME_SUFFIX}']+self.packagelibs+self.complibs))
-      self.addMakeMacro('PETSC_KSP_LIB', self.libraries.toStringNoDupes(['-L'+PREINSTALL_LIB_DIR,'-lpetscksp${LIB_NAME_SUFFIX}','-lpetscdm${LIB_NAME_SUFFIX}','-lpetscmat${LIB_NAME_SUFFIX}','-lpetscvec${LIB_NAME_SUFFIX}','-lpetscsys${LIB_NAME_SUFFIX}']+self.packagelibs+self.complibs))
-      self.addMakeMacro('PETSC_SNES_LIB',self.libraries.toStringNoDupes(['-L'+PREINSTALL_LIB_DIR,'-lpetscsnes${LIB_NAME_SUFFIX}','-lpetscksp${LIB_NAME_SUFFIX}','-lpetscdm${LIB_NAME_SUFFIX}','-lpetscmat${LIB_NAME_SUFFIX}','-lpetscvec${LIB_NAME_SUFFIX}','-lpetscsys${LIB_NAME_SUFFIX}']+self.packagelibs+self.complibs))
-      self.addMakeMacro('PETSC_TS_LIB',  self.libraries.toStringNoDupes(['-L'+PREINSTALL_LIB_DIR,'-lpetscts${LIB_NAME_SUFFIX}','-lpetscsnes${LIB_NAME_SUFFIX}','-lpetscksp${LIB_NAME_SUFFIX}','-lpetscdm${LIB_NAME_SUFFIX}','-lpetscmat${LIB_NAME_SUFFIX}','-lpetscvec${LIB_NAME_SUFFIX}','-lpetscsys${LIB_NAME_SUFFIX}']+self.packagelibs+self.complibs))
-      self.addMakeMacro('PETSC_TAO_LIB', self.libraries.toStringNoDupes(['-L'+PREINSTALL_LIB_DIR,'-lpetsctao${LIB_NAME_SUFFIX}','-lpetscts${LIB_NAME_SUFFIX}','-lpetscsnes${LIB_NAME_SUFFIX}','-lpetscksp${LIB_NAME_SUFFIX}','-lpetscdm${LIB_NAME_SUFFIX}','-lpetscmat${LIB_NAME_SUFFIX}','-lpetscvec${LIB_NAME_SUFFIX}','-lpetscsys${LIB_NAME_SUFFIX}']+self.packagelibs+self.complibs))
+      pkgs = ['tao', 'ts', 'snes', 'ksp', 'dm', 'mat', 'vec', 'sys']
+      def liblist_basic(libs):
+        return [ '-lpetsc'+lib+'${LIB_NAME_SUFFIX}' for lib in libs]
+      def liblist(libs):
+        return self.libraries.toStringNoDupes(['-L'+PREINSTALL_LIB_DIR]+liblist_basic(libs)+self.packagelibs+self.complibs)
+      self.petsclib = ' '.join(liblist_basic(pkgs))
+      self.addMakeMacro('PETSC_SYS_LIB', liblist(pkgs[-1:]))
+      self.addMakeMacro('PETSC_VEC_LIB', liblist(pkgs[-2:]))
+      self.addMakeMacro('PETSC_MAT_LIB', liblist(pkgs[-3:]))
+      self.addMakeMacro('PETSC_DM_LIB',  liblist(pkgs[-4:]))
+      self.addMakeMacro('PETSC_KSP_LIB', liblist(pkgs[-5:]))
+      self.addMakeMacro('PETSC_SNES_LIB',liblist(pkgs[-6:]))
+      self.addMakeMacro('PETSC_TS_LIB',  liblist(pkgs[-7:]))
+      self.addMakeMacro('PETSC_TAO_LIB', liblist(pkgs[-8:]))
     self.addMakeMacro('PETSC_LIB','${PETSC_TAO_LIB}')
     self.addMakeMacro('PETSC_LIB_BASIC',self.petsclib)
 
