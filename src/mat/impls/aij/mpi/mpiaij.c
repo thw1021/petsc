@@ -6,7 +6,7 @@
 #include <petscsf.h>
 #include <petsc/private/hashmapi.h>
 
-/* defines MatSetValues_MPI_Hash(), MatAssemblyBegin_MPI_Hash(), and  MatAssemblyEnd_MPI_Hash() */
+/* defines MatSetValues_MPI_Hash(), MatAssemblyBegin_MPI_Hash(), and MatAssemblyEnd_MPI_Hash() */
 #define TYPE AIJ
 #define TYPE_AIJ
 #include "../src/mat/impls/aij/mpi/mpihashmat.h"
@@ -40,7 +40,7 @@ static PetscErrorCode MatResetHash_MPIAIJ(Mat mat)
 {
   Mat_MPIAIJ *aij = (Mat_MPIAIJ *)mat->data;
   /* Save the nonzero states of the component matrices because those are what are used to determine
-    the nonzero state of \p mat */
+    the nonzero state of mat */
   PetscObjectState Astate = aij->A->nonzerostate, Bstate = aij->B->nonzerostate;
 
   PetscFunctionBegin;

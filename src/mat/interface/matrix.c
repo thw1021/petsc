@@ -962,7 +962,7 @@ PetscErrorCode MatResetPreallocation(Mat A)
 }
 
 /*@
-  MatResetHash - Reset the XAIJ matrix so that it will use a hash table for the next round of `MatSetValues()` and `MatAssemblyBegin()` and `MatAssemblyEnd()`.
+  MatResetHash - Reset the XAIJ matrix so that it will use a hash table for the next round of `MatSetValues()` and `MatAssemblyBegin()`/`MatAssemblyEnd()`.
 
   Collective
 
@@ -972,9 +972,9 @@ PetscErrorCode MatResetPreallocation(Mat A)
   Level: intermediate
 
   Notes:
-  The XAIJ matrix will again delete the hash table data structures after following calls to `MatAssemblyBegin()` and `MatAssemblyEnd()` with `MAT_FINAL_ASSEMBLY`.
+  The XAIJ matrix will again delete the hash table data structures after following calls to `MatAssemblyBegin()`/`MatAssemblyEnd()` with `MAT_FINAL_ASSEMBLY`.
 
-  Currently only supported for  `MATAIJ` matrices.
+  Currently only supported for `MATAIJ` matrices.
 
 .seealso: [](ch_matrices), `Mat`, `MatResetPreallocation()`
 @*/
