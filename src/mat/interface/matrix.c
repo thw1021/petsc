@@ -962,7 +962,7 @@ PetscErrorCode MatResetPreallocation(Mat A)
 }
 
 /*@
-  MatResetHash - Reset the XAIJ matrix so that it will use a hash table for the next assembly
+  MatResetHash - Reset the XAIJ matrix so that it will use a hash table for the next round of `MatSetValues()` and `MatAssemblyBegin()` and `MatAssemblyEnd()`.
 
   Collective
 
