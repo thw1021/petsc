@@ -105,10 +105,10 @@ class PetscPyVista:
               else:
                   grid.plot(show_edges=True,off_screen=True,screenshot=name)
           elif pobj.type == 'swarm':
-              spoints, bs = pobj.getField('DMSwarmPIC_coor')
-              n = spoints.shape[0] // bs
-              spoints = spoints.reshape((n, bs))
-              points = np.zeros((n, 3))
+              spoints = pobj.getField('DMSwarmPIC_coor')
+              n       = spoints.shape[0]
+              bs      = spoints.shape[1]
+              points  = np.zeros((n, 3))
               for i in range(n):
                   points[i,:bs] = spoints[i,:]
               pv.plot(points, render_points_as_spheres=True, point_size=20)
