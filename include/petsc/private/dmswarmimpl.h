@@ -75,6 +75,8 @@ typedef struct {
   /* Debugging */
   PetscInt printCoords;
   PetscInt printWeights;
+
+  PetscBool           use_affine_mass;
 } DM_Swarm;
 
 typedef struct {
