@@ -77,6 +77,7 @@ Changes: Development
 - Add ``DMSwarmGetCoordinateField()`` and ``DMSwarmSetCoordinateField()``
 - Add ``DMSwarmComputeMoments()``
 - Add ``DMSwarmPushCellDM()`` and ``DMSwarmPopCellDM()``
+- Add ``DMSwarmGetUseAffineMass()`` and ``DMSwarmSetUseAffineMass()`` to access flag to (not) use affine maps for particle interpolation
 
 .. rubric:: DMPlex:
 
