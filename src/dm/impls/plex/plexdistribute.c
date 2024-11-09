@@ -1196,18 +1196,20 @@ static PetscErrorCode DMPlexDistributeCoordinates(DM dm, PetscSF migrationSF, DM
   PetscCall(DMGetCoordinateDM(dmParallel, &cdmParallel));
   PetscCall(DMCopyDisc(cdm, cdmParallel));
   PetscCall(DMGetCoordinateSection(dm, &originalCoordSection));
-  PetscCall(DMGetCoordinateSection(dmParallel, &newCoordSection));
   PetscCall(DMGetCoordinatesLocal(dm, &originalCoordinates));
   if (originalCoordinates) {
     PetscCall(VecCreate(PETSC_COMM_SELF, &newCoordinates));
     PetscCall(PetscObjectGetName((PetscObject)originalCoordinates, &name));
     PetscCall(PetscObjectSetName((PetscObject)newCoordinates, name));
 
+    PetscCall(PetscSectionCreate(comm, &newCoordSection));
     PetscCall(DMPlexDistributeField(dm, migrationSF, originalCoordSection, originalCoordinates, newCoordSection, newCoordinates));
+    PetscCall(DMSetLocalSection(cdmParallel, newCoordSection));
     PetscCall(DMSetCoordinatesLocal(dmParallel, newCoordinates));
     PetscCall(VecGetBlockSize(originalCoordinates, &bs));
     PetscCall(VecSetBlockSize(newCoordinates, bs));
     PetscCall(VecDestroy(&newCoordinates));
+    PetscCall(PetscSectionDestroy(&newCoordSection));
   }
 
   PetscCall(PetscObjectGetComm((PetscObject)dm, &comm));
