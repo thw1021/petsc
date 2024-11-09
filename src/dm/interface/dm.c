@@ -4940,6 +4940,8 @@ PetscErrorCode DMClearFields(DM dm)
   PetscCall(PetscFree(dm->fields));
   dm->fields = NULL;
   dm->Nf     = 0;
+  PetscCall(DMClearDS(dm));
+  PetscCall(DMSetLocalSection(dm, NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
