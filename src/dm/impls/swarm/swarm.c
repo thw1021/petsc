@@ -395,7 +395,7 @@ static PetscErrorCode DMSwarmComputeMassMatrix_Private(DM dmc, DM dmf, Mat mass,
   PetscInt        dim, Nf, Nq, field, cStart, cEnd, cell, totDim, maxC = 0, totNc = 0, coordDim, num_missing = 0;
   PetscQuadrature quad = NULL; // flag for non-affine and same for all fields
   PetscFEGeom     fegeom;
-  const char  *coordname;
+  const char     *coordname;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectGetComm((PetscObject)mass, &comm));
